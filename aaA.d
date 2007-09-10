@@ -408,16 +408,19 @@ private void _aaRehash_x(aaA*[] newaa, aaA *olde, TypeInfo keyti)
 	aaA *e;
 	aaA **pe;
 
-	//printf("insert('%s')\n", (char *)olde.key);
+	//printf("rehash %p\n", olde);
 	key_hash = olde.hash;
 	i = key_hash % newaa.length;
 	pe = &newaa[i];
 	while ((e = *pe) != null)
 	{   int c;
 
+	    //printf("\te = %p, e.left = %p, e.right = %p\n", e, e.left, e.right);
+	    assert(e.left != e);
+	    assert(e.right != e);
 	    c = key_hash - e.hash;
 	    if (c == 0)
-		c = keyti.compare(olde, e);
+		c = keyti.compare(olde + 1, e + 1);
 	    if (c < 0)
 		pe = &e.left;
 	    else if (c > 0)

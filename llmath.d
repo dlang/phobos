@@ -251,3 +251,18 @@ ulong __DBLULLNG()
 	ret					;
     }
 }
+
+// Convert double in ST0 to uint
+
+uint __DBLULNG()
+{
+    // BUG: should handle NAN's and overflows
+    asm
+    {	naked					;
+	sub	ESP,8				;
+	fistp	qword ptr [ESP]			;
+	pop	EAX				;
+	add	ESP,4				;
+	ret					;
+    }
+}

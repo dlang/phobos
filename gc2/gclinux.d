@@ -85,5 +85,5 @@ void *os_query_stackBottom()
 void os_query_staticdataseg(void **base, uint *nbytes)
 {
     *base = (void *)&__data_start;
-    *nbytes = &_end - &__data_start;
+    *nbytes = (byte *)&_end - (byte *)&__data_start;
 }

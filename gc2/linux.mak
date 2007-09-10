@@ -21,8 +21,8 @@ SRC= gc.d gcx.d gcbits.d win32.d gclinux.d testgc.d win32.mak linux.mak
 
 targets : testgc dmgc.a
 
-testgc : testgc.o $(OBJS) linux.mak ../phobos.a
-	$(CC) -o $@ testgc.o $(OBJS) ../phobos.a -lpthread -lm -g -Xlinker -M
+testgc : testgc.o $(OBJS) linux.mak
+	$(DMD) -of$@ testgc.o gc.o gcx.o gcbits.o gclinux.o -g
 
 testgc.o : testgc.d
 	$(DMD) -c $(DFLAGS) testgc.d

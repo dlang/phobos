@@ -261,10 +261,23 @@ void smoke5(GC *gc)
 
 /* ---------------------------- */
 
+void test1()
+{
+    printf("test1()\n");
+    char[] a=new char[0];
+    uint c = 200000;
+    while (c--)
+	a ~= 'x';
+    //printf("a = '%.*s'\n", a);
+    printf("test1() done\n");
+}
+
 /* ---------------------------- */
 
 int main(int argc, char *argv[])
 {
+    test1();
+
     GC *gc;
 
     printf("GC test start\n");
