@@ -100,7 +100,7 @@ class ZipArchive
 
     void deleteMember(ArchiveMember de)
     {
-	delete directory[de.name];
+	directory.remove(de.name);
     }
 
     void[] build()
