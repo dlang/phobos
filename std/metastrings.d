@@ -85,8 +85,10 @@ template ToString(long I)
     static if (I < 0)
 	const char[] ToString = "-" ~ ToString!(cast(ulong)(-I));
     else
-	const char[] ToString = ToString!(cast(uint)I);
+	const char[] ToString = ToString!(cast(ulong)I);
 }
+
+static assert(ToString!(0x100000000) == "4294967296");
 
 /// ditto
 template ToString(uint U)

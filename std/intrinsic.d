@@ -37,6 +37,7 @@ int bsf(uint v);
  *	The return value is undefined if v is zero.
  * Example:
  * ---
+ * import std.stdio;
  * import std.intrinsic;
  *
  * int main()
@@ -46,9 +47,9 @@ int bsf(uint v);
  *
  *     v = 0x21;
  *     x = bsf(v);
- *     printf("bsf(x%x) = %d\n", v, x);
+ *     writefln("bsf(x%x) = %d", v, x);
  *     x = bsr(v);
- *     printf("bsr(x%x) = %d\n", v, x);
+ *     writefln("bsr(x%x) = %d", v, x);
  *     return 0;
  * } 
  * ---
@@ -88,6 +89,7 @@ p[index / (uint.sizeof*8)] & (1 << (index & ((uint.sizeof*8) - 1)))
  *
  * Example: 
  * ---
+import std.stdio;
 import std.intrinsic;
 
 int main()
@@ -97,20 +99,20 @@ int main()
     array[0] = 2;
     array[1] = 0x100;
 
-    printf("btc(array, 35) = %d\n", <b>btc</b>(array, 35));
-    printf("array = [0]:x%x, [1]:x%x\n", array[0], array[1]);
+    writefln("btc(array, 35) = %d", <b>btc</b>(array, 35));
+    writefln("array = [0]:x%x, [1]:x%x", array[0], array[1]);
 
-    printf("btc(array, 35) = %d\n", <b>btc</b>(array, 35));
-    printf("array = [0]:x%x, [1]:x%x\n", array[0], array[1]);
+    writefln("btc(array, 35) = %d", <b>btc</b>(array, 35));
+    writefln("array = [0]:x%x, [1]:x%x", array[0], array[1]);
 
-    printf("bts(array, 35) = %d\n", <b>bts</b>(array, 35));
-    printf("array = [0]:x%x, [1]:x%x\n", array[0], array[1]);
+    writefln("bts(array, 35) = %d", <b>bts</b>(array, 35));
+    writefln("array = [0]:x%x, [1]:x%x", array[0], array[1]);
 
-    printf("btr(array, 35) = %d\n", <b>btr</b>(array, 35));
-    printf("array = [0]:x%x, [1]:x%x\n", array[0], array[1]);
+    writefln("btr(array, 35) = %d", <b>btr</b>(array, 35));
+    writefln("array = [0]:x%x, [1]:x%x", array[0], array[1]);
 
-    printf("bt(array, 1) = %d\n", <b>bt</b>(array, 1));
-    printf("array = [0]:x%x, [1]:x%x\n", array[0], array[1]);
+    writefln("bt(array, 1) = %d", <b>bt</b>(array, 1));
+    writefln("array = [0]:x%x, [1]:x%x", array[0], array[1]);
 
     return 0;
 } 

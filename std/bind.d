@@ -761,7 +761,7 @@ template dynArgTypes(int i, FuncParams, BoundArgs, int minParamsLeft) {
 		static if (is(T == void)) {	// void means that we aren't adding anything
 			alias tmp res;
 		} else {
-			alias tmp.prependT!(T) res;
+			alias tmp.meta.prependT!(T) res;
 		}
 	}
 	

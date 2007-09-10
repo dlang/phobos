@@ -609,7 +609,7 @@ int ifind(in string s, in string sub)
 	{
 	    size_t imax = s.length - sublength;
 
-	    for (i = 0; i < imax; i++)
+	    for (i = 0; i <= imax; i++)
 	    {
 		if (icmp(s[i .. i + sublength], sub) == 0)
 		    return i;
@@ -653,6 +653,9 @@ unittest
     i = ifind(sPlts, "Un.");
     assert(i == 41);
     i = ifind(sPlts, sPlts);
+    assert(i == 0);
+
+    i = ifind("\u0100", "\u0100");
     assert(i == 0);
 
     // Thanks to Carlos Santander B. and zwang
@@ -806,7 +809,7 @@ unittest
 
 string tolower(string s)
 {
-    bool changed;
+    int changed;
     char[] r;
 
     for (size_t i = 0; i < s.length; i++)
@@ -817,13 +820,13 @@ string tolower(string s)
 	    if (!changed)
 	    {
 		r = s.dup;
-		changed = true;
+		changed = 1;
 	    }
 	    r[i] = cast(char) (c + (cast(char)'a' - 'A'));
 	}
-	else if (c >= 0x7F)
+	else if (c > 0x7F)
 	{
-	    foreach(size_t j, dchar dc; s[i .. length])
+	    foreach (size_t j, dchar dc; s[i .. length])
 	    {
 		if (std.uni.isUniUpper(dc))
 		{
@@ -831,13 +834,15 @@ string tolower(string s)
 		    if (!changed)
 		    {
 			r = s[0 .. i + j].dup;
-			changed = true;
+			changed = 2;
 		    }
 		}
 		if (changed)
 		{
-		    if (r.length != i + j)
-			r = r[0 .. i + j];
+		    if (changed == 1)
+		    {	r = r[0 .. i + j];
+			changed = 2;
+		    }
 		    std.utf.encode(r, dc);
 		}
 	    }
@@ -867,6 +872,11 @@ unittest
     s2 = tolower(s1);
     assert(cmp(s2, "a\u0461b\u0461d") == 0);
     assert(s2 !is s1);
+
+    s1 = "\u0130";
+    s2 = tolower(s1);
+    assert(s2 == "i");
+    assert(s2 !is s1);
 }
 
 /************************************
@@ -875,7 +885,7 @@ unittest
 
 string toupper(string s)
 {
-    bool changed;
+    int changed;
     char[] r;
 
     for (size_t i = 0; i < s.length; i++)
@@ -886,13 +896,13 @@ string toupper(string s)
 	    if (!changed)
 	    {
 		r = s.dup;
-		changed = true;
+		changed = 1;
 	    }
 	    r[i] = cast(char) (c - (cast(char)'a' - 'A'));
 	}
-	else if (c >= 0x7F)
+	else if (c > 0x7F)
 	{
-	    foreach(size_t j, dchar dc; s[i .. length])
+	    foreach (size_t j, dchar dc; s[i .. length])
 	    {
 		if (std.uni.isUniLower(dc))
 		{
@@ -900,13 +910,15 @@ string toupper(string s)
 		    if (!changed)
 		    {
 			r = s[0 .. i + j].dup;
-			changed = true;
+			changed = 2;
 		    }
 		}
 		if (changed)
 		{
-		    if (r.length != i + j)
-			r = r[0 .. i + j];
+		    if (changed == 1)
+		    {	r = r[0 .. i + j];
+			changed = 2;
+		    }
 		    std.utf.encode(r, dc);
 		}
 	    }
