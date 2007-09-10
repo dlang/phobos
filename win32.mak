@@ -15,7 +15,7 @@
 #	This relies on LIB.EXE 8.00 or later, and MAKE.EXE 5.01 or later.
 
 CP=cp
-DIR=\dmd
+DIR=\dmd2
 
 CFLAGS=-mn -6 -r
 #CFLAGS=-g -mn -6 -r

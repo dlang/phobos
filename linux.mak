@@ -9,6 +9,8 @@
 #	make unittest
 #		Build libphobos.a, build and run unit tests
 
+LIB=libphobos2.a
+
 CFLAGS=-O -m32
 #CFLAGS=-g -m32
 
@@ -36,11 +38,11 @@ targets : unittest
 test.o : test.d
 	$(DMD) -c test -g
 
-test : test.o libphobos.a
-	$(CC) -o $@ test.o libphobos.a -lpthread -lm -g
+test : test.o $(LIB)
+	$(CC) -o $@ test.o $(LIB) -lpthread -lm -g
 
-unittest : unittest.o libphobos.a
-	$(CC) -o $@ unittest.o libphobos.a -lpthread -lm -g
+unittest : unittest.o $(LIB)
+	$(CC) -o $@ unittest.o $(LIB) -lpthread -lm -g
 
 unittest.o : unittest.d
 	$(DMD) -c unittest
@@ -196,9 +198,9 @@ ALLSRCS = $(SRC) $(SRC_STD) $(SRC_STD_C) $(SRC_TI) $(SRC_INT) $(SRC_STD_WIN) \
 	$(SRC_ZLIB) $(SRC_GC)
 
 
-#libphobos.a : $(OBJS) internal/gc/dmgc.a linux.mak
-libphobos.a : $(OBJS) internal/gc/dmgc.a $(ZLIB_OBJS) linux.mak
-	rm -f libphobos.a
+#$(LIB) : $(OBJS) internal/gc/dmgc.a linux.mak
+$(LIB) : $(OBJS) internal/gc/dmgc.a $(ZLIB_OBJS) linux.mak
+	rm -f $(LIB)
 	ar -r $@ $(OBJS) $(ZLIB_OBJS) $(GC_OBJS)
 
 ###########################################################
@@ -592,4 +594,4 @@ zip : $(ALLSRCS) linux.mak win32.mak phoboslicense.txt
 	zip phobos $(ALLSRCS) linux.mak win32.mak phoboslicense.txt
 
 clean:
-	$(RM) libphobos.a $(OBJS) unittest unittest.o
+	$(RM) $(LIB) $(OBJS) unittest unittest.o
