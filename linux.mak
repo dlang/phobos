@@ -50,7 +50,7 @@ OBJS= asserterror.o deh2.o switch.o complex.o gcstats.o \
 	dmain2.o outofmemory.o aaA.o adi.o aApply.o file.o \
 	compiler.o system.o moduleinit.o md5.o base64.o \
 	cast.o path.o string.o memset.o math.o mmfile.o \
-	outbuffer.o ctype.o regexp.o random.o linux.o \
+	outbuffer.o ctype.o regexp.o random.o linux.o linuxsocket.o \
 	stream.o switcherr.o array.o gc.o \
 	qsort.o thread.o obj.o utf.o uri.o \
 	crc32.o conv.o arraycast.o errno.o alloca.o cmath2.o \
@@ -136,7 +136,8 @@ SRC_STD_WIN= std/windows/registry.d \
 SRC_STD_C_WIN= std/c/windows/windows.d std/c/windows/com.d \
 	std/c/windows/winsock.d
 
-SRC_STD_C_LINUX= std/c/linux/linux.d std/c/linux/linuxextern.d
+SRC_STD_C_LINUX= std/c/linux/linux.d std/c/linux/linuxextern.d \
+	std/c/linux/socket.d
 
 SRC_ETC=
 
@@ -580,6 +581,9 @@ stdarg.o : std/c/stdarg.d
 
 linux.o : std/c/linux/linux.d
 	$(DMD) -c $(DFLAGS) std/c/linux/linux.d
+
+linuxsocket.o : std/c/linux/socket.d
+	$(DMD) -c $(DFLAGS) std/c/linux/socket.d -oflinuxsocket.o
 
 ### etc
 
