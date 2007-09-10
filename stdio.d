@@ -76,7 +76,7 @@ const int L_tmpnam = _P_tmpdir.length + 12;
 
 alias int fpos_t;
 
-alias char* va_list;
+alias ubyte* va_list;
 
 char *	 tmpnam(char *);
 FILE *	 fopen(char *,char *);

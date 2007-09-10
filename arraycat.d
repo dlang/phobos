@@ -1,6 +1,7 @@
 
 import object;
 import string;
+import stdio;
 
 extern (C):
 
@@ -51,6 +52,8 @@ byte[] _d_arrayappendc(inout byte[] x, in uint size, ...)
 
 byte[] _d_arraycopy(uint size, byte[] from, byte[] to)
 {
+    //printf("f = %p,%d, t = %p,%d\n", (void*)from, from.length, (void*)to, to.length);
+
     if (to.length != from.length)
     {
 	throw new Error("lengths don't match for array copy");

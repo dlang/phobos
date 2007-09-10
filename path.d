@@ -21,7 +21,7 @@ version(Win32)
     const char[1] pathsep = ';';
     const char[2] linesep = "\r\n";
     const char[1] curdir = '.';
-    const char[1] pardir = '..';
+    const char[2] pardir = '..';
 }
 version(linux)
 {
@@ -30,7 +30,7 @@ version(linux)
     const char[1] pathsep = ':';
     const char[1] linesep = "\n";
     const char[1] curdir = '.';
-    const char[1] pardir = '..';
+    const char[2] pardir = '..';
 }
 
 /**************************

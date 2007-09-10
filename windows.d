@@ -8,7 +8,7 @@ extern (Windows)
 
     DWORD GetTickCount();
 
-const uint MAX_PATH = 260;
+const int MAX_PATH = 260;
 
 enum
 {
