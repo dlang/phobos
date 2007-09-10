@@ -1,8 +1,8 @@
 
 # makefile to build linux D garbage collector
 
-DMD=../../../dmd
-#DMD=/dmd/bin/dmd
+#DMD=../../../dmd
+DMD=dmd
 CFLAGS=-g
 #DFLAGS=-unittest -g -release
 DFLAGS=-release -O -inline -I../..

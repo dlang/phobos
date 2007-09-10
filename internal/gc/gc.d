@@ -1,8 +1,25 @@
-//
-// Copyright (C) 2001-2004 by Digital Mars
-// All Rights Reserved
-// Written by Walter Bright
-// www.digitalmars.com
+
+/*
+ *  Copyright (C) 2004 by Digital Mars, www.digitalmars.com
+ *  Written by Walter Bright
+ *
+ *  This software is provided 'as-is', without any express or implied
+ *  warranty. In no event will the authors be held liable for any damages
+ *  arising from the use of this software.
+ *
+ *  Permission is granted to anyone to use this software for any purpose,
+ *  including commercial applications, and to alter it and redistribute it
+ *  freely, subject to the following restrictions:
+ *
+ *  o  The origin of this software must not be misrepresented; you must not
+ *     claim that you wrote the original software. If you use this software
+ *     in a product, an acknowledgment in the product documentation would be
+ *     appreciated but is not required.
+ *  o  Altered source versions must be plainly marked as such, and must not
+ *     be misrepresented as being the original software.
+ *  o  This notice may not be removed or altered from any source
+ *     distribution.
+ */
 
 
 // Storage allocation
@@ -16,6 +33,7 @@ import std.string;
 import gcx;
 import std.outofmemory;
 import gcstats;
+//import std.math;
 
 GC* _gc;
 
@@ -372,7 +390,7 @@ bit[] _d_arraysetlengthb(uint newlength, Array *p)
  */
 
 extern (C)
-Array _d_arrayappend(Array *px, byte[] y, uint size)
+long _d_arrayappend(Array *px, byte[] y, uint size)
 {
 
     uint cap = _gc.capacity(px.data);
@@ -381,15 +399,75 @@ Array _d_arrayappend(Array *px, byte[] y, uint size)
     if (newlength * size > cap)
     {   byte* newdata;
 
-	newdata = cast(byte *)_gc.malloc(newlength * size);
+	//newdata = cast(byte *)_gc.malloc(newlength * size);
+	newdata = cast(byte *)_gc.malloc(newCapacity(newlength, size));
 	memcpy(newdata, px.data, length * size);
 	px.data = newdata;
     }
     px.length = newlength;
     px.data[length * size .. newlength * size] = y[];
-    return *px;
+    return *cast(long*)px;
 }
 
+
+uint newCapacity(uint newlength, uint size)
+{
+    version(none)
+    {
+	newcap = newlength * size;
+    }
+    else
+    {
+	/*
+	 * Better version by davejf:
+	 * This uses an inverse logorithmic algorithm to pre-allocate a bit more
+	 * space for larger arrays.
+	 * - Arrays smaller than 4096 bytes are left as-is, so for the most
+	 * common cases, memory allocation is 1 to 1. The small overhead added
+	 * doesn't effect small array perf. (it's virutally the same as
+	 * current).
+	 * - Larger arrays have some space pre-allocated.
+	 * - As the arrays grow, the relative pre-allocated space shrinks.
+	 * - The logorithmic algorithm allocates relatively more space for
+	 * mid-size arrays, making it very fast for medium arrays (for
+	 * mid-to-large arrays, this turns out to be quite a bit faster than the
+	 * equivalent realloc() code in C, on Linux at least. Small arrays are
+	 * just as fast as GCC).
+	 * - Perhaps most importantly, overall memory usage and stress on the GC
+	 * is decreased significantly for demanding environments.
+	 */
+	uint newcap = newlength * size;
+	uint newext = 0;
+
+	if (newcap > 4096)
+	{
+	    //double mult2 = 1.0 + (size / log10(pow(newcap * 2.0,2.0)));
+
+	    // Redo above line using only integer math
+
+	    int log2plus1(uint c)
+	    {   int i;
+
+		    if (c == 0)
+			i = -1;
+		    else
+			for (i = 1; c >>= 1; i++)
+			    {   }
+		    return i;
+	    }
+
+	    long mult = 100 + (1000L * size) / (6 * log2plus1(newcap));
+	    // testing shows 1.02 for large arrays is about the point of diminishing return
+	    if (mult < 102)
+		mult = 102;
+	    newext = cast(uint)((newcap * mult) / 100);
+	    newext -= newext % size;
+	    //printf("mult: %2.2f, mult2: %2.2f, alloc: %2.2f\n",mult/100.0,mult2,newext / cast(double)size);
+	}
+	newcap = newext > newcap ? newext : newcap;
+    }
+    return newcap;
+}
 
 extern (C)
 byte[] _d_arrayappendc(inout byte[] x, in uint size, ...)
@@ -400,7 +478,8 @@ byte[] _d_arrayappendc(inout byte[] x, in uint size, ...)
     if (newlength * size > cap)
     {   byte* newdata;
 
-	newdata = cast(byte *)_gc.malloc(newlength * size);
+	//printf("_d_arrayappendc(%d, %d)\n", size, newlength);
+	newdata = cast(byte *)_gc.malloc(newCapacity(newlength, size));
 	memcpy(newdata, x, length * size);
 	(cast(void **)(&x))[1] = newdata;
     }

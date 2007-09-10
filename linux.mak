@@ -71,9 +71,8 @@ ZLIB_OBJS= etc/c/zlib/adler32.o etc/c/zlib/compress.o \
 	etc/c/zlib/crc32.o etc/c/zlib/gzio.o \
 	etc/c/zlib/uncompr.o etc/c/zlib/deflate.o \
 	etc/c/zlib/trees.o etc/c/zlib/zutil.o \
-	etc/c/zlib/inflate.o etc/c/zlib/infblock.o \
-	etc/c/zlib/inftrees.o etc/c/zlib/infcodes.o \
-	etc/c/zlib/infutil.o etc/c/zlib/inffast.o
+	etc/c/zlib/inflate.o etc/c/zlib/infback.o \
+	etc/c/zlib/inftrees.o etc/c/zlib/inffast.o
 
 RECLS_OBJS= etc/c/recls/recls_api.o		\
 	etc/c/recls/recls_fileinfo.o		\
@@ -142,44 +141,38 @@ SRC_ETC=
 
 SRC_ETC_C= etc/c/zlib.d
 
-SRC_ZLIB= etc/c/zlib/algorithm.txt \
-	etc/c/zlib/trees.h \
-	etc/c/zlib/inffixed.h \
-	etc/c/zlib/INDEX \
-	etc/c/zlib/zconf.h \
-	etc/c/zlib/compress.c \
-	etc/c/zlib/adler32.c \
-	etc/c/zlib/uncompr.c \
-	etc/c/zlib/deflate.h \
-	etc/c/zlib/example.c \
-	etc/c/zlib/zutil.c \
-	etc/c/zlib/gzio.c \
-	etc/c/zlib/crc32.c \
-	etc/c/zlib/infblock.c \
-	etc/c/zlib/infblock.h \
-	etc/c/zlib/infcodes.c \
-	etc/c/zlib/infcodes.h \
-	etc/c/zlib/inffast.c \
-	etc/c/zlib/inffast.h \
-	etc/c/zlib/zutil.h \
-	etc/c/zlib/inflate.c \
-	etc/c/zlib/trees.c \
-	etc/c/zlib/inftrees.h \
-	etc/c/zlib/infutil.c \
-	etc/c/zlib/infutil.h \
-	etc/c/zlib/minigzip.c \
-	etc/c/zlib/inftrees.c \
-	etc/c/zlib/zlib.html \
-	etc/c/zlib/maketree.c \
-	etc/c/zlib/zlib.h \
-	etc/c/zlib/zlib.3 \
-	etc/c/zlib/FAQ \
-	etc/c/zlib/deflate.c \
-	etc/c/zlib/ChangeLog \
-	etc/c/zlib/win32.mak \
-	etc/c/zlib/linux.mak \
-	etc/c/zlib/zlib.lib \
-	etc/c/zlib/README
+SRC_ZLIB= etc/c/zlib\trees.h \
+	etc/c/zlib\inffixed.h \
+	etc/c/zlib\inffast.h \
+	etc/c/zlib\crc32.h \
+	etc/c/zlib\algorithm.txt \
+	etc/c/zlib\uncompr.c \
+	etc/c/zlib\compress.c \
+	etc/c/zlib\deflate.h \
+	etc/c/zlib\inftrees.h \
+	etc/c/zlib\infback.c \
+	etc/c/zlib\zutil.c \
+	etc/c/zlib\crc32.c \
+	etc/c/zlib\inflate.h \
+	etc/c/zlib\example.c \
+	etc/c/zlib\inffast.c \
+	etc/c/zlib\trees.c \
+	etc/c/zlib\inflate.c \
+	etc/c/zlib\gzio.c \
+	etc/c/zlib\zconf.h \
+	etc/c/zlib\zconf.in.h \
+	etc/c/zlib\minigzip.c \
+	etc/c/zlib\deflate.c \
+	etc/c/zlib\inftrees.c \
+	etc/c/zlib\zutil.h \
+	etc/c/zlib\zlib.3 \
+	etc/c/zlib\zlib.h \
+	etc/c/zlib\adler32.c \
+	etc/c/zlib\ChangeLog \
+	etc/c/zlib\zlib.html \
+	etc/c/zlib\README \
+	etc/c/zlib\win32.mak \
+	etc/c/zlib\linux.mak
 
 SRC_GC= internal/gc/gc.d \
 	internal/gc/gcx.d \
@@ -263,6 +256,23 @@ libphobos.a : $(OBJS) internal/gc/dmgc.a linux.mak
 	ar -r $@ $(OBJS) $(ZLIB_OBJS) $(GC_OBJS) $(RECLS_OBJS)
 
 ###########################################################
+
+internal/gc/dmgc.a:
+	cd internal/gc
+	make -f linux.mak dmgc.a
+	cd ../..
+
+$(RECLS_OBJS):
+	cd etc/c/recls
+	make -f linux.mak
+	cd ../../..
+
+$(ZLIB_OBJS):
+	cd etc/c/zlib
+	make -f linux.mak
+	cd ../../..
+
+###
 
 crc32.o : crc32.d
 	$(DMD) -c $(DFLAGS) crc32.d

@@ -14,18 +14,17 @@ O=.o
 
 # variables
 OBJS = adler32$(O) compress$(O) crc32$(O) gzio$(O) uncompr$(O) deflate$(O) \
-  trees$(O) zutil$(O) inflate$(O) infblock$(O) inftrees$(O) infcodes$(O) \
-  infutil$(O) inffast$(O)
+       trees$(O) zutil$(O) inflate$(O) infback$(O) inftrees$(O) inffast$(O)
 
 all:  zlib.a example minigzip
 
-adler32.o: adler32.c zutil.h zlib.h zconf.h
+adler32.o: adler32.c zlib.h zconf.h
 	$(CC) -c $(cvarsdll) $(CFLAGS) $*.c
 
 compress.o: compress.c zlib.h zconf.h
 	$(CC) -c $(cvarsdll) $(CFLAGS) $*.c
 
-crc32.o: crc32.c zutil.h zlib.h zconf.h
+crc32.o: crc32.c zlib.h zconf.h
 	$(CC) -c $(cvarsdll) $(CFLAGS) $*.c
 
 deflate.o: deflate.c deflate.h zutil.h zlib.h zconf.h
@@ -34,27 +33,19 @@ deflate.o: deflate.c deflate.h zutil.h zlib.h zconf.h
 gzio.o: gzio.c zutil.h zlib.h zconf.h
 	$(CC) -c $(cvarsdll) $(CFLAGS) $*.c
 
-infblock.o: infblock.c zutil.h zlib.h zconf.h infblock.h inftrees.h\
-   infcodes.h infutil.h
+infback.o: infback.c zlib.h zconf.h inftrees.h inflate.h inffast.h
 	$(CC) -c $(cvarsdll) $(CFLAGS) $*.c
 
-infcodes.o: infcodes.c zutil.h zlib.h zconf.h inftrees.h infutil.h\
-   infcodes.h inffast.h
+inflate.o: inflate.c zlib.h zconf.h inftrees.h inflate.h inffast.h
 	$(CC) -c $(cvarsdll) $(CFLAGS) $*.c
 
-inflate.o: inflate.c zutil.h zlib.h zconf.h infblock.h
+inftrees.o: inftrees.c zlib.h zconf.h inftrees.h
 	$(CC) -c $(cvarsdll) $(CFLAGS) $*.c
 
-inftrees.o: inftrees.c zutil.h zlib.h zconf.h inftrees.h
+inffast.o: inffast.c zlib.h zconf.h inftrees.h inflate.h inffast.h
 	$(CC) -c $(cvarsdll) $(CFLAGS) $*.c
 
-infutil.o: infutil.c zutil.h zlib.h zconf.h inftrees.h infutil.h
-	$(CC) -c $(cvarsdll) $(CFLAGS) $*.c
-
-inffast.o: inffast.c zutil.h zlib.h zconf.h inftrees.h infutil.h inffast.h
-	$(CC) -c $(cvarsdll) $(CFLAGS) $*.c
-
-trees.o: trees.c deflate.h zutil.h zlib.h zconf.h
+trees.o: trees.c deflate.h zutil.h zlib.h zconf.h trees.h
 	$(CC) -c $(cvarsdll) $(CFLAGS) $*.c
 
 uncompr.o: uncompr.c zlib.h zconf.h
@@ -72,20 +63,15 @@ minigzip.o: minigzip.c zlib.h zconf.h
 zlib.a: $(OBJS)
 	ar -r $@ $(OBJS)
 
-example: example.o zlib.a
-	$(CC) -o $@ example.o zlib.a -g
+examplee: example.o zlib.a
+	$(LD) $(LDFLAGS) example.o zlib.a
 
 minigzip: minigzip.o zlib.a
-	$(CC) -o $@ minigzip.o zlib.a -g
+	$(LD) $(LDFLAGS) minigzip.o zlib.a
 
 test: example minigzip
-	example
+	./example
 	echo hello world | minigzip | minigzip -d 
 
 clean:
-	del *.o
-	del *.exe
-	del *.dll
-	del *.lib
-	del *.lst
-	del foo.gz
+	rm $(OBJS) zlib.a example minigzip test foo.gz

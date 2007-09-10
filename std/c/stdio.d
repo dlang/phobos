@@ -9,6 +9,8 @@
 
 module std.c.stdio;
 
+private import std.c.stdarg;
+
 extern (C):
 
 version (Win32)
@@ -149,8 +151,6 @@ version (Win32)
 }
 
 alias int fpos_t;
-
-alias ubyte* va_list;
 
 char *	 tmpnam(char *);
 FILE *	 fopen(char *,char *);

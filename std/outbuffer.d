@@ -19,6 +19,7 @@ private
     import std.string;
     import std.c.stdio;
     import std.c.stdlib;
+    import std.c.stdarg;
 }
 
 class OutBuffer

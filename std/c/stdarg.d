@@ -6,7 +6,7 @@
 
 module std.c.stdarg;
 
-typedef void* va_list;
+alias void* va_list;
 
 template va_start(T)
 {

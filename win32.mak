@@ -130,44 +130,38 @@ SRC_ETC=
 
 SRC_ETC_C= etc\c\zlib.d
 
-SRC_ZLIB= etc\c\zlib\algorithm.txt \
-	etc\c\zlib\trees.h \
+SRC_ZLIB= etc\c\zlib\trees.h \
 	etc\c\zlib\inffixed.h \
-	etc\c\zlib\INDEX \
-	etc\c\zlib\zconf.h \
-	etc\c\zlib\compress.c \
-	etc\c\zlib\adler32.c \
-	etc\c\zlib\uncompr.c \
-	etc\c\zlib\deflate.h \
-	etc\c\zlib\example.c \
-	etc\c\zlib\zutil.c \
-	etc\c\zlib\gzio.c \
-	etc\c\zlib\crc32.c \
-	etc\c\zlib\infblock.c \
-	etc\c\zlib\infblock.h \
-	etc\c\zlib\infcodes.c \
-	etc\c\zlib\infcodes.h \
-	etc\c\zlib\inffast.c \
 	etc\c\zlib\inffast.h \
-	etc\c\zlib\zutil.h \
-	etc\c\zlib\inflate.c \
-	etc\c\zlib\trees.c \
+	etc\c\zlib\crc32.h \
+	etc\c\zlib\algorithm.txt \
+	etc\c\zlib\uncompr.c \
+	etc\c\zlib\compress.c \
+	etc\c\zlib\deflate.h \
 	etc\c\zlib\inftrees.h \
-	etc\c\zlib\infutil.c \
-	etc\c\zlib\infutil.h \
+	etc\c\zlib\infback.c \
+	etc\c\zlib\zutil.c \
+	etc\c\zlib\crc32.c \
+	etc\c\zlib\inflate.h \
+	etc\c\zlib\example.c \
+	etc\c\zlib\inffast.c \
+	etc\c\zlib\trees.c \
+	etc\c\zlib\inflate.c \
+	etc\c\zlib\gzio.c \
+	etc\c\zlib\zconf.h \
+	etc\c\zlib\zconf.in.h \
 	etc\c\zlib\minigzip.c \
-	etc\c\zlib\inftrees.c \
-	etc\c\zlib\zlib.html \
-	etc\c\zlib\maketree.c \
-	etc\c\zlib\zlib.h \
-	etc\c\zlib\zlib.3 \
-	etc\c\zlib\FAQ \
 	etc\c\zlib\deflate.c \
+	etc\c\zlib\inftrees.c \
+	etc\c\zlib\zutil.h \
+	etc\c\zlib\zlib.3 \
+	etc\c\zlib\zlib.h \
+	etc\c\zlib\adler32.c \
 	etc\c\zlib\ChangeLog \
+	etc\c\zlib\zlib.html \
+	etc\c\zlib\README \
 	etc\c\zlib\win32.mak \
-	etc\c\zlib\linux.mak \
-	etc\c\zlib\zlib.lib \
-	etc\c\zlib\README
+	etc\c\zlib\linux.mak
 
 SRC_GC= internal\gc\gc.d \
 	internal\gc\gcx.d \
@@ -248,6 +242,21 @@ phobos.lib : $(OBJS) minit.obj internal\gc\dmgc.lib etc\c\zlib\zlib.lib \
 		etc\c\recls\recls.lib etc\c\zlib\zlib.lib
 
 ######################################################
+
+internal\gc\dmgc.lib:
+	cd internal\gc
+	make -f win32.mak dmgc.lib
+	cd ..\..
+
+etc\c\recls\recls.lib:
+	cd etc\c\recls
+	make -f win32.mak recls.lib
+	cd ..\..\..
+
+etc\c\zlib\zlib.lib:
+	cd etc\c\zlib
+	make -f win32.mak zlib.lib
+	cd ..\..\..
 
 ### internal
 

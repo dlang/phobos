@@ -400,32 +400,32 @@ char[] getcwd()
     if (useWfuncs)
     {
 	wchar[] dir;
-	int length;
+	int len;
 	wchar c;
 
-	length = GetCurrentDirectoryW(0, &c);
-	if (!length)
+	len = GetCurrentDirectoryW(0, &c);
+	if (!len)
 	    goto Lerr;
-	dir = new wchar[length];
-	length = GetCurrentDirectoryW(length, dir);
-	if (!length)
+	dir = new wchar[len];
+	len = GetCurrentDirectoryW(len, dir);
+	if (!len)
 	    goto Lerr;
-	return std.utf.toUTF8(dir[0 .. length]); // leave off terminating 0
+	return std.utf.toUTF8(dir[0 .. len]); // leave off terminating 0
     }
     else
     {
 	char[] dir;
-	int length;
+	int len;
 	char c;
 
-	length = GetCurrentDirectoryA(0, &c);
-	if (!length)
+	len = GetCurrentDirectoryA(0, &c);
+	if (!len)
 	    goto Lerr;
-	dir = new char[length];
-	length = GetCurrentDirectoryA(length, dir);
-	if (!length)
+	dir = new char[len];
+	len = GetCurrentDirectoryA(len, dir);
+	if (!len)
 	    goto Lerr;
-	return dir[0 .. length];		// leave off terminating 0
+	return dir[0 .. len];		// leave off terminating 0
     }
 
 Lerr:
@@ -838,9 +838,9 @@ char[] getcwd()
 	throw new FileException("cannot get cwd", getErrno());
     }
 
-    int length = std.string.strlen(p);
-    char[] buf = new char[length];
-    buf[] = p[0 .. length];
+    size_t len = std.string.strlen(p);
+    char[] buf = new char[len];
+    buf[] = p[0 .. len];
     std.c.stdlib.free(p);
     return buf;
 }

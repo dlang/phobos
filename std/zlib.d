@@ -156,7 +156,7 @@ void[] uncompress(void[] srcbuf, uint destlen, int winbits)
 	{   delete destbuf;
 	    throw new ZlibException(err);
 	}
-	err = etc.c.zlib.inflate(&zs, Z_FINISH);
+	err = etc.c.zlib.inflate(&zs, Z_NO_FLUSH);
 	switch (err)
 	{
 	    case Z_OK:
@@ -461,3 +461,64 @@ class UnCompress
 	return destbuf;
     }
 }
+
+/* ========================== unittest ========================= */
+
+private import std.stdio;
+private import std.random;
+
+unittest // by Dave
+{
+    debug(zlib) printf("std.zlib.unittest\n");
+
+    bool CompressThenUncompress (ubyte[] src)
+    {
+      try {
+	ubyte[] dst = cast(ubyte[])std.zlib.compress(cast(void[])src);
+	double ratio = (dst.length / cast(double)src.length);
+	debug(zlib) writef("src.length:  ", src.length, ", dst: ", dst.length, ", Ratio = ", ratio);
+	ubyte[] uncompressedBuf;
+	uncompressedBuf = cast(ubyte[])std.zlib.uncompress(cast(void[])dst);
+	assert(src.length == uncompressedBuf.length);
+	assert(src == uncompressedBuf);
+      }
+      catch {
+	debug(zlib) writefln(" ... Exception thrown when src.length = ", src.length, ".");
+	return false;
+      }
+      return true;
+    }
+
+
+    // smallish buffers
+    for(int idx = 0; idx < 25; idx++) {
+        char[] buf = new char[rand() % 100];
+
+        // Alternate between more & less compressible
+        foreach(inout char c; buf) c = ' ' + (rand() % (idx % 2 ? 91 : 2));
+
+        if(CompressThenUncompress(cast(ubyte[])buf)) {
+            debug(zlib) printf("; Success.\n");
+        } else {
+            return;
+        }
+    }
+
+    // larger buffers
+    for(int idx = 0; idx < 25; idx++) {
+        char[] buf = new char[rand() % 1000/*0000*/];
+
+        // Alternate between more & less compressible
+        foreach(inout char c; buf) c = ' ' + (rand() % (idx % 2 ? 91 : 10));
+
+        if(CompressThenUncompress(cast(ubyte[])buf)) {
+            debug(zlib) printf("; Success.\n");
+        } else {
+            return;
+        }
+    }
+
+    debug(zlib) printf("PASSED std.zlib.unittest\n");
+}
+
+
