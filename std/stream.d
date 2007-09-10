@@ -386,12 +386,14 @@ class Stream : InputStream, OutputStream {
   bool seekable = false;	/// Indicates whether this stream can be seeked within.
   protected bool isopen = true;	/// Indicates whether this stream is open.
 
-  protected bool readEOF = false; /// Indicates whether this stream is at eof
-				 /// after the last read attempt.
+  protected bool readEOF = false; /** Indicates whether this stream is at eof
+				   * after the last read attempt.
+				   */
 
-  protected bool prevCr = false; /// For a non-seekable stream indicates that
-				/// the last readLine or readLineW ended on a
-				/// '\r' character. 
+  protected bool prevCr = false; /** For a non-seekable stream indicates that
+				  * the last readLine or readLineW ended on a
+				  * '\r' character. 
+				  */
 
   this() {}
 
@@ -1319,7 +1321,7 @@ class Stream : InputStream, OutputStream {
    * Get a hash of the stream by reading each byte and using it in a CRC-32
    * checksum.
    */
-  override uint toHash() {
+  override size_t toHash() {
     if (!readable || !seekable)
       return super.toHash();
     ulong pos = position();

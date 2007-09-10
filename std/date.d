@@ -838,7 +838,7 @@ version (linux)
 
     d_time getLocalTZA()
     {
-	int t;
+	__time_t t;
 
 	time(&t);
 	localtime(&t);	// this will set timezone
@@ -852,13 +852,13 @@ version (linux)
     int DaylightSavingTA(d_time dt)
     {
 	tm *tmp;
-	int t;
+	std.c.linux.linux.__time_t t;
 	int dst = 0;
 
 	if (dt != d_time_nan)
 	{
 	    d_time seconds = dt / TicksPerSecond;
-	    t = cast(int) seconds;
+	    t = cast(__time_t) seconds;
 	    if (t == seconds)	// if in range
 	    {
 		tmp = localtime(&t);

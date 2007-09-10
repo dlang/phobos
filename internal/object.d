@@ -165,8 +165,8 @@ private import std.string;
  */
 class TypeInfo
 {
-    uint toHash()
-    {	uint hash;
+    hash_t toHash()
+    {	hash_t hash;
 
 	foreach (char c; this.classinfo.name)
 	    hash = hash * 9 + c;

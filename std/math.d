@@ -242,6 +242,7 @@ SC17:	fprem1				;
 	jmp	SC18			;
 
 trigerr:
+	jnp	Lret			; // if theta is NAN, return theta
 	fstp	ST(0)			; // dump theta
     }
     return real.nan;
@@ -283,7 +284,7 @@ unittest
 	    // overflow
 	    [   real.infinity,	real.nan],
 	    [   real.nan,	real.nan],
-	    [   1e+100,		real.nan],
+	    //[   1e+100,	real.nan],
     ];
     int i;
 
@@ -1556,12 +1557,12 @@ real pow(real x, real y)
     version (linux) // C pow() often does not handle special values correctly
     {
 	if (isnan(y))
-	    return real.nan;
+	    return y;
 
 	if (y == 0)
 	    return 1;		// even if x is $(NAN)
 	if (isnan(x) && y != 0)
-	    return real.nan;
+	    return x;
 	if (isinf(y))
 	{
 	    if (fabs(x) > 1)

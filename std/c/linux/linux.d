@@ -143,6 +143,12 @@ struct timeval
     int tv_usec;
 }
 
+struct struct_timezone
+{
+    int tz_minuteswest;
+    int tz_dstime;
+}
+
 struct tm
 {
     int tm_sec;
@@ -160,9 +166,13 @@ struct tm
 
 extern (C)
 {
-    int gettimeofday(timeval*, void*);
-    int time(int*);
-    tm *localtime(int*);
+    int gettimeofday(timeval*, struct_timezone*);
+    __time_t time(__time_t*);
+    char* asctime(tm*);
+    char* ctime(__time_t*);
+    tm* gmtime(__time_t*);
+    tm* localtime(__time_t*);
+    __time_t mktime(tm*);
 }
 
 /**************************************************************/

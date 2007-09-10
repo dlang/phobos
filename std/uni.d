@@ -488,12 +488,12 @@ Lisnot:
 Lis:
     debug
     {
-	for (int i = 0; i < table.length; i++)
+	for (int i = 0; 1; i++)
 	{
+	    assert(i < table.length);	// should have been in table
 	    if (u >= table[i][0] && u <= table[i][1])
-		return 1;
+		break;
 	}
-	assert(0);		// should have been in table
     }
     return 1;
 }

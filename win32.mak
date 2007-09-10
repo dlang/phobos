@@ -58,7 +58,7 @@ test.exe : test.obj phobos.lib
 
 unittest.exe : unittest.d phobos.lib
 	$(DMD) unittest -g
-	sc unittest.obj -g
+	dmc unittest.obj -g
 
 OBJS= asserterror.obj deh.obj switch.obj complex.obj gcstats.obj \
 	critical.obj object.obj monitor.obj arraycat.obj invariant.obj \

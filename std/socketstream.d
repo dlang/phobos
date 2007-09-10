@@ -81,19 +81,17 @@ class SocketStream: Stream
 	/**
 	 * Attempts to read the entire block, waiting if necessary.
 	 */
-	override uint readBlock(void* _buffer, uint size)
+	override size_t readBlock(void* _buffer, size_t size)
 	{
 	  ubyte* buffer = cast(ubyte*)_buffer;
-	  int len;
-	  uint need = size;
 	  assertReadable();
 	  
-	  if(size == 0)
+	  if (size == 0)
 	    return size;
 	  
-	  len = sock.receive(buffer[0 .. size]);
+	  auto len = sock.receive(buffer[0 .. size]);
 	  readEOF = cast(bool)(len == 0);
-	  if(len < 0) 
+	  if (len == sock.ERROR)
 	    len = 0;
 	  return len;
 	}
@@ -101,18 +99,17 @@ class SocketStream: Stream
 	/**
 	 * Attempts to write the entire block, waiting if necessary.
 	 */
-	override uint writeBlock(void* _buffer, uint size)
+	override size_t writeBlock(void* _buffer, size_t size)
 	{
 	  ubyte* buffer = cast(ubyte*)_buffer;
-	  int len;
 	  assertWriteable();
 
-	  if(size == 0)
+	  if (size == 0)
 	    return size;
 	  
-	  len = sock.send(buffer[0 .. size]);
+	  auto len = sock.send(buffer[0 .. size]);
 	  readEOF = cast(bool)(len == 0);
-	  if(len < 0) 
+	  if (len == sock.ERROR) 
 	    len = 0;
 	  return len;
 	}

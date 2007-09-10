@@ -1375,7 +1375,11 @@ class Socket
 	}
 	
 	/**
-	 * Receive data and get the remote endpoint Address. Returns the number of bytes actually received, 0 if the remote side has closed the connection, or ERROR on failure. If the socket is blocking, receiveFrom waits until there is data to be received.
+	 * Receive data and get the remote endpoint Address.
+	 * If the socket is blocking, receiveFrom waits until there is data to
+	 * be received.
+	 * Returns: the number of bytes actually received,
+	 * 0 if the remote side has closed the connection, or ERROR on failure.
 	 */
 	int receiveFrom(void[] buf, SocketFlags flags, out Address from)
 	{
