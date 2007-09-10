@@ -297,7 +297,6 @@ void* _aaGetRvalue(AA aa, TypeInfo keyti, size_t valuesize, ...)
 	    return null;
 
 	auto pkey = cast(void *)(&valuesize + 1);
-	aaA* e;
 	auto keysize = aligntsize(keyti.tsize());
 	auto len = aa.a.b.length;
 
@@ -306,8 +305,8 @@ void* _aaGetRvalue(AA aa, TypeInfo keyti, size_t valuesize, ...)
 	    auto key_hash = keyti.getHash(pkey);
 	    //printf("hash = %d\n", key_hash);
 	    size_t i = key_hash % len;
-	    auto pe = &aa.a.b[i];
-	    while ((e = *pe) != null)
+	    auto e = aa.a.b[i];
+	    while (e != null)
 	    {   int c;
 
 		c = key_hash - e.hash;
@@ -319,9 +318,9 @@ void* _aaGetRvalue(AA aa, TypeInfo keyti, size_t valuesize, ...)
 		}
 
 		if (c < 0)
-		    pe = &e.left;
+		    e = e.left;
 		else
-		    pe = &e.right;
+		    e = e.right;
 	    }
 	}
 	return null;	// not found, caller will throw exception
@@ -352,7 +351,7 @@ void* _aaIn(AA aa, TypeInfo keyti, ...)
 	    //printf("_aaIn(), .length = %d, .ptr = %x\n", aa.a.length, cast(uint)aa.a.ptr);
 	    auto len = aa.a.b.length;
 
-	    if (len > 1)
+	    if (len)
 	    {
 		auto key_hash = keyti.getHash(pkey);
 		//printf("hash = %d\n", key_hash);

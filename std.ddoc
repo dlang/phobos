@@ -147,3 +147,10 @@ WHITE  = <span style="color:white">$0</span>
 
 RPAREN = )
 LPAREN = (
+
+D_COMMENT = <span class="d_comment">$0</span>
+D_STRING  = <span class="d_string">$0</span>
+D_KEYWORD = <span class="d_keyword">$0</span>
+D_PSYMBOL = <span class="d_psymbol">$0</span>
+D_PARAM   = <span class="d_param">$0</span>
+

@@ -2041,7 +2041,10 @@ struct Pool
 
     int opCmp(Pool *p2)
     {
-	return baseAddr - p2.baseAddr;
+	if (baseAddr < p2.baseAddr)
+	    return -1;
+	else
+	    return baseAddr > p2.baseAddr;
     }
 }
 
