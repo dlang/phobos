@@ -1,7 +1,14 @@
 
-// Copyright (c) 2001-2003 by Digital Mars
-// All Rights Reserved
-// www.digitalmars.com
+/**
+ * Boilerplate:
+ *	$(std_boilerplate.html)
+ * Macros:
+ *	WIKI = StdPath
+ * Copyright:
+ *	Copyright (c) 2001-2005 by Digital Mars
+ *	All Rights Reserved
+ *	www.digitalmars.com
+ */
 
 // File name parsing
 
@@ -13,21 +20,22 @@ private import std.string;
 
 version(Win32)
 {
-    const char[1] sep = "\\";
-    const char[1] altsep = "/";
-    const char[1] pathsep = ";";
-    const char[2] linesep = "\r\n";
-    const char[1] curdir = ".";
-    const char[2] pardir = "..";
+
+    const char[1] sep = "\\";	 /// String used to separate directory names in a path.
+    const char[1] altsep = "/";	 /// Alternate version of sep[], used in Windows.
+    const char[1] pathsep = ";"; /// Path separator string.
+    const char[2] linesep = "\r\n"; /// String used to separate lines.
+    const char[1] curdir = ".";	 /// String representing the current directory.
+    const char[2] pardir = ".."; /// String representing the parent directory.
 }
 version(linux)
 {
-    const char[1] sep = "/";
-    const char[0] altsep;
-    const char[1] pathsep = ":";
-    const char[1] linesep = "\n";
-    const char[1] curdir = ".";
-    const char[2] pardir = "..";
+    const char[1] sep = "/";	 /// String used to separate directory names in a path.
+    const char[0] altsep;	 /// Alternate version of sep[], used in Windows.
+    const char[1] pathsep = ":"; /// Path separator string.
+    const char[1] linesep = "\n"; /// String used to separate lines.
+    const char[1] curdir = ".";	 /// String representing the current directory.
+    const char[2] pardir = ".."; /// String representing the parent directory.
 }
 
 /**************************
@@ -219,54 +227,55 @@ char[] getDrive(char[] fullname)
     }
 
 /****************************
- * Put a default extension on fullname if it doesn't already
- * have an extension.
+ * If filename doesn't already have an extension,
+ * append the extension ext and return the result.
  */
 
-char[] defaultExt(char[] fullname, char[] ext)
+char[] defaultExt(char[] filename, char[] ext)
 {
     char[] existing;
 
-    existing = getExt(fullname);
+    existing = getExt(filename);
     if (existing.length == 0)
     {
-	// Check for fullname ending in '.'
-	if (fullname.length && fullname[fullname.length - 1] == '.')
-	    fullname ~= ext;
+	// Check for filename ending in '.'
+	if (filename.length && filename[filename.length - 1] == '.')
+	    filename ~= ext;
 	else
-	    fullname = fullname ~ "." ~ ext;
+	    filename = filename ~ "." ~ ext;
     }
-    return fullname;
+    return filename;
 }
 
 
 /****************************
- * Strip the old extension off and add the new one.
+ * Strip any existing extension off of filename and add the new extension ext.
+ * Return the result.
  */
 
-char[] addExt(char[] fullname, char[] ext)
+char[] addExt(char[] filename, char[] ext)
 {
     char[] existing;
 
-    existing = getExt(fullname);
+    existing = getExt(filename);
     if (existing.length == 0)
     {
-	// Check for fullname ending in '.'
-	if (fullname.length && fullname[fullname.length - 1] == '.')
-	    fullname ~= ext;
+	// Check for filename ending in '.'
+	if (filename.length && filename[filename.length - 1] == '.')
+	    filename ~= ext;
 	else
-	    fullname = fullname ~ "." ~ ext;
+	    filename = filename ~ "." ~ ext;
     }
     else
     {
-	fullname = fullname[0 .. fullname.length - existing.length] ~ ext;
+	filename = filename[0 .. filename.length - existing.length] ~ ext;
     }
-    return fullname;
+    return filename;
 }
 
 
 /*************************************
- * Determine if absolute path name.
+ * Return !=0 if path is absolute (i.e. it starts from the root directory).
  */
 
 int isabs(char[] path)
@@ -277,7 +286,7 @@ int isabs(char[] path)
 }
 
 /*************************************
- * Join two path components.
+ * Join two path components p1 and p2 and return the result.
  */
 
 char[] join(char[] p1, char[] p2)
@@ -422,7 +431,7 @@ unittest
 
 
 /*********************************
- * Match file name characters.
+ * Match file name characters c1 and c2.
  * Case sensitivity depends on the operating system.
  */
 
@@ -447,20 +456,22 @@ int fncharmatch(dchar c1, dchar c2)
 }
 
 /************************************
- * Match filename strings with pattern[], using the following wildcards:
- *	* match 0 or more characters
- *	? match any character
- *	[chars] match any character that appears between the []
- *	[!chars] match any character that does not appear between the [! ]
+ * Match filename with pattern, using the following wildcards:
+ *
+ *	<table>
+ *	<tr><td><b>*</b> <td>match 0 or more characters
+ *	<tr><td><b>?</b> <td>match any character
+ *	<tr><td><b>[</b><i>chars</i><b>]</b> <td>match any character that appears between the []
+ *	<tr><td><b>[!</b><i>chars</i><b>]</b> <td>match any character that does not appear between the [! ]
+ *	</table>
  *
  * Matching is case sensitive on a file system that is case sensitive.
  *
  * Returns:
- *	true	match
- *	false	no match
+ *	!=0 for match
  */
 
-int fnmatch(char[] name, char[] pattern)
+int fnmatch(char[] filename, char[] pattern)
     in
     {
 	// Verify that pattern[] is valid
@@ -505,23 +516,23 @@ int fnmatch(char[] name, char[] pattern)
 		case '*':
 		    if (pi + 1 == pattern.length)
 			goto match;
-		    for (j = ni; j < name.length; j++)
+		    for (j = ni; j < filename.length; j++)
 		    {
-			if (fnmatch(name[j .. name.length], pattern[pi + 1 .. pattern.length]))
+			if (fnmatch(filename[j .. filename.length], pattern[pi + 1 .. pattern.length]))
 			    goto match;
 		    }
 		    goto nomatch;
 
 		case '?':
-		    if (ni == name.length)
+		    if (ni == filename.length)
 			goto nomatch;
 		    ni++;
 		    break;
 
 		case '[':
-		    if (ni == name.length)
+		    if (ni == filename.length)
 			goto nomatch;
-		    nc = name[ni];
+		    nc = filename[ni];
 		    ni++;
 		    not = 0;
 		    pi++;
@@ -544,16 +555,16 @@ int fnmatch(char[] name, char[] pattern)
 		    break;
 
 		default:
-		    if (ni == name.length)
+		    if (ni == filename.length)
 			goto nomatch;
-		    nc = name[ni];
+		    nc = filename[ni];
 		    if (!fncharmatch(pc, nc))
 			goto nomatch;
 		    ni++;
 		    break;
 	    }
 	}
-	if (ni < name.length)
+	if (ni < filename.length)
 	    goto nomatch;
 
     match:

@@ -1,0 +1,137 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<HTML> 
+
+<!--
+	Copyright (c) 1999-2005 by Digital Mars
+	All Rights Reserved
+	Written by Walter Bright
+	www.digitalmars.com
+  -->
+
+<head>
+<META http-equiv="content-type" content="text/html; charset=utf-8" >
+<title>Digital Mars - The D Programming Language - $(TITLE)</title>
+</head>
+
+<body bgcolor="#FFFFFF">
+<font face="Arial, Helvetica,sans-serif">
+<a href="http://www.digitalmars.com/" target="_top"><IMG SRC="../dmlogo.gif" BORDER=0 WIDTH=270 HEIGHT=53 ALT="www.digitalmars.com"></a>
+
+<a href="http://www.digitalmars.com/" title="www.digitalmars.com" target="_top">Home</a>
+| <a href="http://www.digitalmars.com/advancedsearch.html" title="Search Digital Mars web site"  target="_top">Search</a>
+| <a href="../index.html" title="D Programming Language"  target="_top"><font color="red"><b>D</b></font></a>
+| <a href="http://www.prowiki.org/wiki4d/wiki.cgi?DocComments/Phobos/$(WIKI)"
+	target="_top" title="Read / write comments and feedback">Comments</a>
+
+<br>
+<small><i>Last update $(DATETIME)</i></small>
+<hr>
+<table border=1 cellpadding=4 cellspacing=0 frame="void" summary="this table is for layout only">
+<tr>
+<td valign="top" bgcolor="#eeeeee" nowrap>
+<center>
+<form method="get" action="http://www.google.com/search">
+<input id="q" name="q" size="10" value="RTL Search" onFocus='if(this.value == "RTL Search"){this.value="";}'>
+<input type="hidden" id="domains" name="domains" value="www.digitalmars.com">
+<input type="hidden" id="sitesearch" name="sitesearch" value="www.digitalmars.com/d/phobos">
+<input type="hidden" id="sourceid" name="sourceid" value="google-search">
+<input type="submit" id="submit" name="submit" value="Go">
+</form>
+</center>
+<center><a href="../index.html" title="D Programming Language">D</a></center>
+<center><a href="../lex.html" title="D Language Specification">Language</a></center>
+<center><a href="phobos.html" title="D Runtime Library">Phobos</a></center>
+<center><a href="../comparison.html" title="Language Comparisons">Comparisons</a></center><hr><br>
+
+<a href="object.html" title="root of object heirarchy">object</a><br>
+<br>
+<small>
+<a href="phobos.html#std" title="D standard modules">std</a><br>
+&nbsp;<a href="std_base64.html" title="Encode/decode base64 format">std.base64</a><br>
+&nbsp;<a href="std_boxer.html" title="Box/unbox types">std.boxer</a><br>
+&nbsp;<a href="std_compiler.html" title="Information about the D compiler implementation">std.compiler</a><br>
+&nbsp;<a href="std_conv.html" title="Conversion of strings to integers">std.conv</a><br>
+&nbsp;<a href="std_ctype.html" title="Simple character classification">std.ctype</a><br>
+&nbsp;<a href="std_date.html" title="Date and time functions">std.date</a><br>
+&nbsp;<a href="std_file.html" title="Basic file operations">std.file</a><br>
+&nbsp;<a href="std_format.html" title="Formatted conversions of values to strings">std.format</a><br>
+&nbsp;<a href="std_gc.html" title="Control the garbage collector">std.gc</a><br>
+&nbsp;<a href="std_intrinsic.html" title="Compiler built in intrinsic functions">std.intrinsic</a><br>
+&nbsp;<a href="std_math.html" title="the usual math functions">std.math</a><br>
+&nbsp;<a href="std_md5.html" title="Compute MD5 digests">std.md5</a><br>
+&nbsp;<a href="std_mmfile.html" title="Memory mapped files">std.mmfile</a><br>
+&nbsp;<a href="std_openrj.html" title="Basic database">std.openrj</a><br>
+&nbsp;<a href="std_outbuffer.html" title="Assemble data into an array of bytes">std.outbuffer</a><br>
+&nbsp;<a href="std_path.html" title="Manipulate file names, path names, etc.">std.path</a><br>
+&nbsp;<a href="std_process.html" title="Create/destroy threads">std.process</a><br>
+&nbsp;<a href="std_random.html" title="Random number generation">std.random</a><br>
+&nbsp;<a href="std_recls.html" title="ecursively search file system and FTP sites">std.recls</a><br>
+&nbsp;<a href="std_regexp.html" title="regular expressions">std.regexp</a><br>
+&nbsp;<a href="std_socket.html" title="Sockets">std.socket</a><br>
+&nbsp;<a href="std_socketstream.html" title="Stream for a blocking, connected Socket">std.socketstream</a><br>
+&nbsp;<a href="std_stdint.html" title="Integral types for various purposes">std.stdint</a><br>
+&nbsp;<a href="std_stdio.html" title="Standard I/O">std.stdio</a><br>
+&nbsp;<a href="std_cstream.html" title="Stream I/O">std.cstream</a><br>
+&nbsp;<a href="std_stream.html" title="Stream I/O">std.stream</a><br>
+&nbsp;<a href="std_string.html" title="Basic string operations">std.string</a><br>
+&nbsp;<a href="std_system.html" title="Inquire about the CPU, operating system">std.system</a><br>
+&nbsp;<a href="std_thread.html" title="Thread operations">std.thread</a><br>
+&nbsp;<a href="std_uri.html" title="Encode and decode Uniform Resource Identifiers (URIs)">std.uri</a><br>
+&nbsp;<a href="std_utf.html" title="Encode and decode utf character encodings">std.utf</a><br>
+&nbsp;<a href="std_zip.html" title="Read/write zip archives">std.zip</a><br>
+&nbsp;<a href="std_zlib.html" title="Compression / Decompression of data">std.zlib</a><br>
+<br>
+<a href="phobos.html#std_windows" title="Modules specific to Windows">std.windows</a><br>
+<br>
+<a href="phobos.html#std_linux" title="Modules specific to Windows">std.linux</a><br>
+<br>
+<a href="phobos.html#std_c" title="Standard C functions">std.c</a><br>
+&nbsp;<a href="#stdio" title="Standard C stdio.h">std.c.stdio</a><br>
+<br>
+<a href="phobos.html#std_c_windows" title="C Windows API">std.c.windows</a><br>
+<br>
+<a href="phobos.html#std_c_linux" title="C Linux API">std.c.linux</a><br>
+<br>
+</small>
+</td>
+<td valign="top">
+
+
+<h1 align=center>$(TITLE)</h1>
+
+<dl>
+$(BODY)
+</dl>
+
+
+</td></table>
+<h2>Feedback and Comments</h2>
+
+	Add <a
+	href="http://www.prowiki.org/wiki4d/wiki.cgi?DocComments/Phobos/$(WIKI)"
+	target="_top" title="Wiki 4 D">feedback and comments</a> regarding this
+	page.
+
+<hr><!-- -------------------------------------------- -->
+<small>Copyright &copy; 1999-$(YEAR) by Digital Mars, All Rights Reserved</small><p>
+<!-- Google ad -->
+
+<script type="text/javascript"><!--
+google_ad_client = "pub-5628673096434613";
+google_ad_width = 728;
+google_ad_height = 90;
+google_ad_format = "728x90_as";
+google_ad_channel ="";
+google_page_url = document.location;
+//--></script>
+<script type="text/javascript"
+  src="http://pagead2.googlesyndication.com/pagead/show_ads.js">
+</script>
+
+</font>
+</body>
+</html>
+ 
+
+

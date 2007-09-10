@@ -20,9 +20,13 @@ CFLAGS=-mn -6 -r
 DFLAGS=-O -release
 #DFLAGS=-unittest -g
 
-CC=sc
+CC=dmc
+
 DMD=\dmd\bin\dmd
 #DMD=..\dmd
+
+DOC=..\..\html\d\phobos
+#DOC=..\doc\phobos
 
 .c.obj:
 	$(CC) -c $(CFLAGS) $*
@@ -79,6 +83,8 @@ OBJS= asserterror.obj deh.obj switch.obj complex.obj gcstats.obj \
 	ti_Acfloat.obj ti_Acdouble.obj ti_Acreal.obj \
 	ti_dchar.obj ti_Adchar.obj ti_bit.obj ti_Abit.obj ti_void.obj
 
+DOCS=	$(DOC)\std_path.html $(DOC)\std_math.html $(DOC)\std_outbuffer.html \
+	$(DOC)\std_stream.html
 
 SRC=	errno.c object.d unittest.d crc32.d gcstats.d
 
@@ -348,6 +354,8 @@ phobos.lib : $(OBJS) minit.obj internal\gc\dmgc.lib etc\c\zlib\zlib.lib \
 	lib -c -p32 phobos.lib $(OBJS) minit.obj internal\gc\dmgc.lib \
 		etc\c\recls\recls.lib etc\c\zlib\zlib.lib
 
+html : $(DOCS)
+
 ######################################################
 
 internal\gc\dmgc.lib:
@@ -470,8 +478,8 @@ gc.obj : std\gc.d
 loader.obj : std\loader.d
 	$(DMD) -c $(DFLAGS) std\loader.d
 
-math.obj : std\math.d
-	$(DMD) -c $(DFLAGS) std\math.d
+math.obj $(DOC)\std_math.html : std\math.d
+	$(DMD) -c $(DFLAGS) -Df$(DOC)\std_math.html std\math.d
 
 math2.obj : std\math2.d
 	$(DMD) -c $(DFLAGS) std\math2.d
@@ -491,14 +499,14 @@ moduleinit.obj : std\moduleinit.d
 openrj.obj : std\openrj.d
 	$(DMD) -c $(DFLAGS) std\openrj.d
 
-outbuffer.obj : std\outbuffer.d
-	$(DMD) -c $(DFLAGS) std\outbuffer.d
+outbuffer.obj $(DOC)\std_outbuffer.html : std\outbuffer.d
+	$(DMD) -c $(DFLAGS) -Df$(DOC)\std_outbuffer.html std\outbuffer.d
 
 outofmemory.obj : std\outofmemory.d
 	$(DMD) -c $(DFLAGS) std\outofmemory.d
 
-path.obj : std\path.d
-	$(DMD) -c $(DFLAGS) std\path.d
+path.obj $(DOC)\std_path.html : std\path.d
+	$(DMD) -c $(DFLAGS) -Df$(DOC)\std_path.html std\path.d
 
 perf.obj : std\perf.d
 	$(DMD) -c $(DFLAGS) std\perf.d
@@ -524,8 +532,8 @@ socketstream.obj : std\socketstream.d
 stdio.obj : std\stdio.d
 	$(DMD) -c $(DFLAGS) std\stdio.d
 
-stream.obj : std\stream.d
-	$(DMD) -c $(DFLAGS) -d std\stream.d
+stream.obj $(DOC)\std_stream.html : std\stream.d
+	$(DMD) -c $(DFLAGS) -Df$(DOC)\std_stream.html -d std\stream.d
 
 string.obj : std\string.d
 	$(DMD) -c $(DFLAGS) std\string.d
@@ -728,11 +736,11 @@ ti_int.obj : std\typeinfo\ti_int.d
 
 ######################################################
 
-zip : win32.mak linux.mak phoboslicense.txt $(SRC) \
+zip : win32.mak linux.mak phoboslicense.txt std_boilerplate.html $(SRC) \
 	$(SRC_STD) $(SRC_STD_C) $(SRC_TI) $(SRC_INT) $(SRC_STD_WIN) \
 	$(SRC_STDLINUX) $(SRC_ETC) $(SRC_ETC_C) $(SRC_ZLIB) $(SRC_GC)
 	del phobos.zip
-	zip32 -u phobos win32.mak linux.mak
+	zip32 -u phobos win32.mak linux.mak std_boilerplate.html
 	zip32 -u phobos $(SRC)
 	zip32 -u phobos $(SRC_TI)
 	zip32 -u phobos $(SRC_INT)
@@ -750,10 +758,11 @@ zip : win32.mak linux.mak phoboslicense.txt $(SRC) \
 
 clean:
 	del $(OBJS)
+	del $(DOCS)
 
 install:
 	$(CP) phobos.lib gcstub.obj \dmd\lib
-	$(CP) win32.mak linux.mak phoboslicense.txt minit.obj \dmd\src\phobos
+	$(CP) win32.mak linux.mak phoboslicense.txt minit.obj std_boilerplate.html \dmd\src\phobos
 	$(CP) $(SRC) \dmd\src\phobos
 	$(CP) $(SRC_STD) \dmd\src\phobos\std
 	$(CP) $(SRC_STD_C) \dmd\src\phobos\std\c

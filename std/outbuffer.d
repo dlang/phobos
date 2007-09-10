@@ -1,16 +1,18 @@
 // outbuffer.d
-// Written by Walter Bright
-// Copyright (c) 2001 Digital Mars
-// All Rights Reserved
-// www.digitalmars.com
 
-// OutBuffer provides a way to build up an array of bytes out
-// of raw data. It is useful for things like preparing an
-// array of bytes to write out to a file.
-// OutBuffer's byte order is the format native to the computer.
-// To control the byte order (endianness), use a class derived
-// from OutBuffer.
-// To convert an array of bytes back into raw data, use InBuffer.
+/**
+ * Boilerplate:
+ *	$(std_boilerplate.html)
+ * Macros:
+ *	WIKI = StdOutbuffer
+ * Copyright:
+ *	Copyright (c) 2001-2005 by Digital Mars
+ *	All Rights Reserved
+ *	www.digitalmars.com
+ */
+
+
+// Written by Walter Bright
 
 module std.outbuffer;
 
@@ -21,6 +23,15 @@ private
     import std.c.stdlib;
     import std.c.stdarg;
 }
+
+/*********************************************
+ * OutBuffer provides a way to build up an array of bytes out
+ * of raw data. It is useful for things like preparing an
+ * array of bytes to write out to a file.
+ * OutBuffer's byte order is the format native to the computer.
+ * To control the byte order (endianness), use a class derived
+ * from OutBuffer.
+ */
 
 class OutBuffer
 {
@@ -44,6 +55,15 @@ class OutBuffer
 
     ubyte[] toBytes() { return data[0 .. offset]; }
 
+    /***********************************
+     * Preallocate nbytes more to the size of the internal buffer.
+     *
+     * This is a
+     * speed optimization, a good guess at the maximum size of the resulting
+     * buffer will improve performance by eliminating reallocations and copying.
+     */
+
+
     void reserve(uint nbytes)
 	in
 	{
@@ -62,6 +82,10 @@ class OutBuffer
 	    }
 	}
 
+    /*************************************
+     * Append data to the internal buffer.
+     */
+
     void write(ubyte[] bytes)
 	{
 	    reserve(bytes.length);
@@ -69,80 +93,84 @@ class OutBuffer
 	    offset += bytes.length;
 	}
 
-    void write(ubyte b)
+    void write(ubyte b)		/// ditto
 	{
 	    reserve(ubyte.sizeof);
 	    this.data[offset] = b;
 	    offset += ubyte.sizeof;
 	}
 
-    void write(byte b) { write(cast(ubyte)b); }
-    void write(char c) { write(cast(ubyte)c); }
+    void write(byte b) { write(cast(ubyte)b); }		/// ditto
+    void write(char c) { write(cast(ubyte)c); }		/// ditto
 
-    void write(ushort w)
+    void write(ushort w)		/// ditto
     {
 	reserve(ushort.sizeof);
 	*cast(ushort *)&data[offset] = w;
 	offset += ushort.sizeof;
     }
 
-    void write(short s) { write(cast(ushort)s); }
+    void write(short s) { write(cast(ushort)s); }		/// ditto
 
-    void write(wchar c)
+    void write(wchar c)		/// ditto
     {
 	reserve(wchar.sizeof);
 	*cast(wchar *)&data[offset] = c;
 	offset += wchar.sizeof;
     }
 
-    void write(uint w)
+    void write(uint w)		/// ditto
     {
 	reserve(uint.sizeof);
 	*cast(uint *)&data[offset] = w;
 	offset += uint.sizeof;
     }
 
-    void write(int i) { write(cast(uint)i); }
+    void write(int i) { write(cast(uint)i); }		/// ditto
 
-    void write(ulong l)
+    void write(ulong l)		/// ditto
     {
 	reserve(ulong.sizeof);
 	*cast(ulong *)&data[offset] = l;
 	offset += ulong.sizeof;
     }
 
-    void write(long l) { write(cast(ulong)l); }
+    void write(long l) { write(cast(ulong)l); }		/// ditto
 
-    void write(float f)
+    void write(float f)		/// ditto
     {
 	reserve(float.sizeof);
 	*cast(float *)&data[offset] = f;
 	offset += float.sizeof;
     }
 
-    void write(double f)
+    void write(double f)		/// ditto
     {
 	reserve(double.sizeof);
 	*cast(double *)&data[offset] = f;
 	offset += double.sizeof;
     }
 
-    void write(real f)
+    void write(real f)		/// ditto
     {
 	reserve(real.sizeof);
 	*cast(real *)&data[offset] = f;
 	offset += real.sizeof;
     }
 
-    void write(char[] s)
+    void write(char[] s)		/// ditto
     {
 	write(cast(ubyte[])s);
     }
 
-    void write(OutBuffer buf)
+    void write(OutBuffer buf)		/// ditto
     {
 	write(buf.toBytes());
     }
+
+    /****************************************
+     * Append nbytes of 0 to the internal buffer.
+     */
 
     void fill0(uint nbytes)
     {
@@ -194,6 +222,10 @@ class OutBuffer
 	}
     }
 
+    /**************************************
+     * Convert internal buffer to array of chars.
+     */
+
     char[] toString()
     {
 	//printf("OutBuffer.toString()\n");
@@ -201,7 +233,7 @@ class OutBuffer
     }
 
     /*****************************************
-     * vprintf() into buffer.
+     * Append output of C's vprintf() to internal buffer.
      */
 
     void vprintf(char[] format, va_list args)
@@ -253,7 +285,7 @@ class OutBuffer
     }
 
     /*****************************************
-     * printf() into buffer.
+     * Append output of C's printf() to internal buffer.
      */
 
     void printf(char[] format, ...)
@@ -265,6 +297,8 @@ class OutBuffer
     }
 
     /*****************************************
+     * At offset index into buffer, create nbytes of space by shifting upwards
+     * all data past index.
      */
 
     void spread(uint index, uint nbytes)

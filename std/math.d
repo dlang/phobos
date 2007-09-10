@@ -1,8 +1,20 @@
 // math.d
+
+/**
+ * Boilerplate:
+ *	$(std_boilerplate.html)
+ * Macros:
+ *	WIKI = StdMath
+ */
+
 /*
- *  Copyright (C) 2001-2005 by Digital Mars, www.digitalmars.com
- *  Written by Walter Bright
- *
+ * Author:
+ *	Walter Bright
+ * Copyright:
+ *	Copyright (c) 2001-2005 by Digital Mars,
+ *	All Rights Reserved,
+ *	www.digitalmars.com
+ * License:
  *  This software is provided 'as-is', without any express or implied
  *  warranty. In no event will the authors be held liable for any damages
  *  arising from the use of this software.
@@ -11,15 +23,21 @@
  *  including commercial applications, and to alter it and redistribute it
  *  freely, subject to the following restrictions:
  *
- *  o  The origin of this software must not be misrepresented; you must not
- *     claim that you wrote the original software. If you use this software
- *     in a product, an acknowledgment in the product documentation would be
- *     appreciated but is not required.
- *  o  Altered source versions must be plainly marked as such, and must not
- *     be misrepresented as being the original software.
- *  o  This notice may not be removed or altered from any source
- *     distribution.
+ *  <ul>
+ *  <li> The origin of this software must not be misrepresented; you must not
+ *       claim that you wrote the original software. If you use this software
+ *       in a product, an acknowledgment in the product documentation would be
+ *       appreciated but is not required.
+ *  </li>
+ *  <li> Altered source versions must be plainly marked as such, and must not
+ *       be misrepresented as being the original software.
+ *  </li>
+ *  <li> This notice may not be removed or altered from any source
+ *       distribution.
+ *  </li>
+ *  </ul>
  */
+
 
 module std.math;
 
@@ -28,63 +46,21 @@ module std.math;
 private import std.c.stdio;
 private import std.c.math;
 
-/* Intrinsics */
-
-real cos(real);
-real sin(real);
-real fabs(real);
-real rint(real);
-long rndtol(real);
-real ldexp(real, int);
-
-float sqrt(float);
-double sqrt(double);
-real sqrt(real);
-//creal sqrt(creal);
-
-real acos(real x)		{ return std.c.math.acosl(x); }
-real asin(real x)		{ return std.c.math.asinl(x); }
-real atan(real x)		{ return std.c.math.atanl(x); }
-real atan2(real x, real y)	{ return std.c.math.atan2l(x,y); }
-real cosh(real x)		{ return std.c.math.coshl(x); }
-real sinh(real x)		{ return std.c.math.sinhl(x); }
-real tanh(real x)		{ return std.c.math.tanhl(x); }
-
-//real acosh(real x)		{ return std.c.math.acoshl(x); }
-//real asinh(real x)		{ return std.c.math.asinhl(x); }
-//real atanh(real x)		{ return std.c.math.atanhl(x); }
-
-real exp(real x)		{ return std.c.math.expl(x); }
-real exp2(real x)		{ return std.c.math.exp2l(x); }
-real expm1(real x)		{ return std.c.math.expm1l(x); }
-int  ilogb(real x)		{ return std.c.math.ilogbl(x); }
-real log(real x)		{ return std.c.math.logl(x); }
-real log10(real x)		{ return std.c.math.log10l(x); }
-real log1p(real x)		{ return std.c.math.log1pl(x); }
-real log2(real x)		{ return std.c.math.log2l(x); }
-real logb(real x)		{ return std.c.math.logbl(x); }
-real modf(real x, inout real y)	{ return std.c.math.modfl(x,&y); }
-real cbrt(real x)		{ return std.c.math.cbrtl(x); }
-real erf(real x)		{ return std.c.math.erfl(x); }
-real erfc(real x)		{ return std.c.math.erfcl(x); }
-real ceil(real x)		{ return std.c.math.ceill(x); }
-real floor(real x)		{ return std.c.math.floorl(x); }
-
-const real PI =		0x1.921fb54442d1846ap+1;	// 3.14159 fldpi
-const real LOG2T =	0x1.a934f0979a3715fcp+1;	// 3.32193 fldl2t
-const real LOG2E =	0x1.71547652b82fe178p+0;	// 1.4427 fldl2e
-const real LOG2 =	0x1.34413509f79fef32p-2;	// 0.30103 fldlg2
-const real LN2 =	0x1.62e42fefa39ef358p-1;	// 0.693147 fldln2
-const real E =		2.7182818284590452354L;
-const real LOG10E =	0.43429448190325182765;
-const real LN10 =	2.30258509299404568402;
-const real PI_2 =	1.57079632679489661923;
-const real PI_4 =	0.78539816339744830962;
-const real M_1_PI =	0.31830988618379067154;
-const real M_2_PI =	0.63661977236758134308;
-const real M_2_SQRTPI =	1.12837916709551257390;
-const real SQRT2 =	1.41421356237309504880;
-const real SQRT1_2 =	0.70710678118654752440;
+const real E =		2.7182818284590452354L;  /** e */
+const real LOG2T =	0x1.a934f0979a3715fcp+1; /** log<sub>2</sub>10 */ // 3.32193 fldl2t
+const real LOG2E =	0x1.71547652b82fe178p+0; /** log<sub>2</sub>e */ // 1.4427 fldl2e
+const real LOG2 =	0x1.34413509f79fef32p-2; /** log<sub>10</sub>2 */ // 0.30103 fldlg2
+const real LOG10E =	0.43429448190325182765;  /** log<sub>10</sub>e */
+const real LN2 =	0x1.62e42fefa39ef358p-1; /** ln 2 */	// 0.693147 fldln2
+const real LN10 =	2.30258509299404568402;  /** ln 10 */
+const real PI =		0x1.921fb54442d1846ap+1; /** &pi; */ // 3.14159 fldpi
+const real PI_2 =	1.57079632679489661923;  /** &pi; / 2 */
+const real PI_4 =	0.78539816339744830962;  /** &pi; / 4 */
+const real M_1_PI =	0.31830988618379067154;  /** 1 / &pi; */
+const real M_2_PI =	0.63661977236758134308;  /** 2 / &pi; */
+const real M_2_SQRTPI =	1.12837916709551257390;  /** 2 / &radic;&pi; */
+const real SQRT2 =	1.41421356237309504880;  /** &radic;2 */
+const real SQRT1_2 =	0.70710678118654752440;  /** &radic;&frac12 */
 
 /*
 	Octal versions:
@@ -100,6 +76,316 @@ const real SQRT1_2 =	0.70710678118654752440;
 	LOG2		0.23210 11520 47674 77674 61076 11263 26013 37111
  */
 
+
+/***********************************
+ * Returns cosine of x. x is in radians.
+ *
+ *	<table border=1 cellpadding=4 cellspacing=0>
+ *	<caption>Special Values</caption>
+ *	<tr> <th> x               <th> cos(x) <th> invalid?
+ *	<tr> <td> NAN             <td> NAN    <td> yes
+ *	<tr> <td> &plusmn;&infin; <td> NAN    <td> yes
+ *	</table>
+ */
+
+real cos(real x);	/* intrinsic */
+
+/***********************************
+ * Returns sine of x. x is in radians.
+ *
+ *	<table border=1 cellpadding=4 cellspacing=0>
+ *	<caption>Special Values</caption>
+ *	<tr> <th> x               <th> sin(x)      <th>invalid?
+ *	<tr> <td> NAN             <td> NAN         <td> yes
+ *	<tr> <td> &plusmn;0.0     <td> &plusmn;0.0 <td> no
+ *	<tr> <td> &plusmn;&infin; <td> NAN         <td> yes
+ *	</table>
+ */
+
+real sin(real x);	/* intrinsic */
+
+
+/****************************************************************************
+ * Returns tangent of x. x is in radians.
+ *
+ *	<table border=1 cellpadding=4 cellspacing=0>
+ *	<caption>Special Values</caption>
+ *	<tr> <th> x               <th> tan(x)      <th> invalid?
+ *	<tr> <td> NAN             <td> NAN         <td> yes
+ *	<tr> <td> &plusmn;0.0     <td> &plusmn;0.0 <td> no
+ *	<tr> <td> &plusmn;&infin; <td> NAN         <td> yes
+ *	</table>
+ */
+
+real tan(real x)
+{
+    asm
+    {
+	fld	x[EBP]			; // load theta
+	fxam				; // test for oddball values
+	fstsw	AX			;
+	sahf				;
+	jc	trigerr			; // x is NAN, infinity, or empty
+					  // 387's can handle denormals
+SC18:	fptan				;
+	fstp	ST(0)			; // dump X, which is always 1
+	fstsw	AX			;
+	sahf				;
+	jnp	Lret			; // C2 = 1 (x is out of range)
+
+	// Do argument reduction to bring x into range
+	fldpi				;
+	fxch				;
+SC17:	fprem1				;
+	fstsw	AX			;
+	sahf				;
+	jp	SC17			;
+	fstp	ST(1)			; // remove pi from stack
+	jmp	SC18			;
+
+trigerr:
+	fstp	ST(0)			; // dump theta
+    }
+    return real.nan;
+
+Lret:
+    ;
+}
+
+unittest
+{
+    static real vals[][2] =	// angle,tan
+    [
+	    [   0,   0],
+	    [   .5,  .5463024898],
+	    [   1,   1.557407725],
+	    [   1.5, 14.10141995],
+	    [   2,  -2.185039863],
+	    [   2.5,-.7470222972],
+	    [   3,  -.1425465431],
+	    [   3.5, .3745856402],
+	    [   4,   1.157821282],
+	    [   4.5, 4.637332055],
+	    [   5,  -3.380515006],
+	    [   5.5,-.9955840522],
+	    [   6,  -.2910061914],
+	    [   6.5, .2202772003],
+	    [   10,  .6483608275],
+
+	    // special angles
+	    [   PI_4,	1],
+	    //[	PI_2,	real.infinity],
+	    [   3*PI_4,	-1],
+	    [   PI,	0],
+	    [   5*PI_4,	1],
+	    //[	3*PI_2,	-real.infinity],
+	    [   7*PI_4,	-1],
+	    [   2*PI,	0],
+
+	    // overflow
+	    [   real.infinity,	real.nan],
+	    [   real.nan,	real.nan],
+	    [   1e+100,		real.nan],
+    ];
+    int i;
+
+    for (i = 0; i < vals.length; i++)
+    {
+	real x = vals[i][0];
+	real r = vals[i][1];
+	real t = tan(x);
+
+	//printf("tan(%Lg) = %Lg, should be %Lg\n", x, t, r);
+	assert(mfeq(r, t, .0000001));
+
+	x = -x;
+	r = -r;
+	t = tan(x);
+	//printf("tan(%Lg) = %Lg, should be %Lg\n", x, t, r);
+	assert(mfeq(r, t, .0000001));
+    }
+}
+
+
+real acos(real x)		{ return std.c.math.acosl(x); }
+
+real asin(real x)		{ return std.c.math.asinl(x); }
+real atan(real x)		{ return std.c.math.atanl(x); }
+real atan2(real x, real y)	{ return std.c.math.atan2l(x,y); }
+real cosh(real x)		{ return std.c.math.coshl(x); }
+real sinh(real x)		{ return std.c.math.sinhl(x); }
+real tanh(real x)		{ return std.c.math.tanhl(x); }
+
+//real acosh(real x)		{ return std.c.math.acoshl(x); }
+//real asinh(real x)		{ return std.c.math.asinhl(x); }
+//real atanh(real x)		{ return std.c.math.atanhl(x); }
+
+real fabs(real x);	/* intrinsic */
+real rint(real x);	/* intrinsic */
+long rndtol(real x);	/* intrinsic */
+
+/*******************************************
+ * Compute n * 2<sup>exp</sup>
+ * References: frexp
+ */
+
+real ldexp(real n, int exp);	/* intrinsic */
+
+/***************************************
+ * Compute square root of x.
+ *
+ *	<table border=1 cellpadding=4 cellspacing=0>
+ *	<caption>Special Values</caption>
+ *	<tr>
+ *	<th> x        <th> sqrt(x)  <th> invalid?
+ *	<tr>
+ *	<td> -0.0     <td> -0.0     <td> no
+ *	<tr>
+ *	<td> &lt;0.0  <td> NAN      <td> yes
+ *	<tr>
+ *	<td> +&infin; <td> +&infin; <td> no
+ *	</table>
+ */
+
+float sqrt(float x);	/* intrinsic */
+double sqrt(double x);	/* intrinsic */	/// ditto
+real sqrt(real x);	/* intrinsic */ /// ditto
+
+creal sqrt(creal z)
+{
+    creal c;
+    real x,y,w,r;
+
+    if (z == 0)
+    {
+	c = 0;
+    }
+    else
+    {	real z_re = z.re;
+	real z_im = z.im;
+
+	x = fabs(z_re);
+	y = fabs(z_im);
+	if (x >= y)
+	{
+	    r = y / x;
+	    w = sqrt(x) * sqrt(0.5 * (1 + sqrt(1 + r * r)));
+	}
+	else
+	{
+	    r = x / y;
+	    w = sqrt(y) * sqrt(0.5 * (r + sqrt(1 + r * r)));
+	}
+
+	if (z_re >= 0)
+	{
+	    c = w + (z_im / (w + w)) * 1.0i;
+	}
+	else
+	{
+	    if (z_im < 0)
+		w = -w;
+	    c = z_im / (w + w) + w * 1.0i;
+	}
+    }
+    return c;
+}
+
+/***************************
+ * Cube root.
+ */
+
+real cbrt(real x)		{ return std.c.math.cbrtl(x); }
+
+real exp(real x)		{ return std.c.math.expl(x); }
+real exp2(real x)		{ return std.c.math.exp2l(x); }
+
+/******************************************
+ * Calculates the value of the natural logarithm base (e)
+ * raised to the power of x, minus 1.
+ *
+ * For very small x, expm1(x) is more accurate 
+ * than exp(x)-1. 
+ *
+ *	<table border=1 cellpadding=4 cellspacing=0>
+ *	<caption>Special Values</caption>
+ *	<tr> <th> x           <th> e<sup>x</sup>-1
+ *	<tr> <td> &plusmn;0.0 <td> &plusmn;0.0
+ *	<tr> <td> +&infin;    <td> +&infin;
+ *	<tr> <td> -&infin;    <td> -1.0
+ *	</table>
+ */
+
+real expm1(real x)		{ return std.c.math.expm1l(x); }
+
+int  ilogb(real x)		{ return std.c.math.ilogbl(x); }
+
+/**************************************
+ * Calculate the natural logarithm of x.
+ *
+ *	<table border=1 cellpadding=4 cellspacing=0>
+ *	<caption>Special Values</caption>
+ *	<tr>
+ *	<th> x           <th> log(x)   <th> divide by 0? <th> invalid?
+ *	<tr>
+ *	<td> &plusmn;0.0 <td> -&infin; <td> yes          <td> no
+ *	<tr>
+ *	<td> &lt; 0.0    <td> NAN      <td> no           <td> yes
+ *	<tr>
+ *	<td> +&infin;    <td> +&infin; <td> no           <td> no
+ *	</table>
+ */
+
+real log(real x)		{ return std.c.math.logl(x); }
+
+/**************************************
+ * Calculate the base-10 logarithm of x.
+ *
+ *	<table border=1 cellpadding=4 cellspacing=0>
+ *	<caption>Special Values</caption>
+ *	<tr>
+ *	<th> x           <th> log10(x) <th> divide by 0? <th> invalid?
+ *	<tr>
+ *	<td> &plusmn;0.0 <td> -&infin; <td> yes          <td> no
+ *	<tr>
+ *	<td> &lt; 0.0    <td> NAN      <td> no           <td> yes
+ *	<tr>
+ *	<td> +&infin;    <td> +&infin; <td> no           <td> no
+ *	</table>
+ */
+
+real log10(real x)		{ return std.c.math.log10l(x); }
+
+/******************************************
+ *	Calculates the natural logarithm of 1 + x.
+ *
+ *	For very small x, log1p(x) will be more accurate than 
+ *	log(1 + x). 
+ *
+ *	<table border=1 cellpadding=4 cellspacing=0>
+ *	<caption>Special Values</caption>
+ *	<tr>
+ *	<th> x           <th> log1p(x)    <th> divide by 0? <th> invalid?
+ *	<tr>
+ *	<td> &plusmn;0.0 <td> &plusmn;0.0 <td> no           <td> no
+ *	<tr>
+ *	<td> -1.0        <td> -&infin;    <td> yes          <td> no
+ *	<tr>
+ *	<td> &lt;-1.0    <td> NAN         <td> no           <td> yes
+ *	<tr>
+ *	<td> +&infin;    <td> -&infin;    <td> no           <td> no
+ *	</table>
+ */
+
+real log1p(real x)		{ return std.c.math.log1pl(x); }
+
+real log2(real x)		{ return std.c.math.log2l(x); }
+real logb(real x)		{ return std.c.math.logbl(x); }
+real modf(real x, inout real y)	{ return std.c.math.modfl(x,&y); }
+real erf(real x)		{ return std.c.math.erfl(x); }
+real erfc(real x)		{ return std.c.math.erfcl(x); }
+real ceil(real x)		{ return std.c.math.ceill(x); }
+real floor(real x)		{ return std.c.math.floorl(x); }
 
 /*********************************
  * Is number a nan?
@@ -145,7 +431,9 @@ unittest
 
 /*********************************
  * Is number normalized?
- * Need one for each format because subnormal floats might
+ */
+
+/* Need one for each format because subnormal floats might
  * be converted to normal reals.
  */
 
@@ -159,6 +447,8 @@ int isnormal(float f)
     return e && e != 0x7F800000;
 }
 
+/// ditto
+
 int isnormal(double d)
 {
     uint *p = cast(uint *)&d;
@@ -167,6 +457,8 @@ int isnormal(double d)
     e = p[1] & 0x7FF00000;
     return e && e != 0x7FF00000;
 }
+
+/// ditto
 
 int isnormal(real e)
 {
@@ -190,7 +482,9 @@ unittest
 /*********************************
  * Is number subnormal? (Also called "denormal".)
  * Subnormals have a 0 exponent and a 0 most significant mantissa bit.
- * Need one for each format because subnormal floats might
+ */
+
+/* Need one for each format because subnormal floats might
  * be converted to normal reals.
  */
 
@@ -210,6 +504,8 @@ unittest
 	assert(f != 0);
 }
 
+/// ditto
+
 int issubnormal(double d)
 {
     uint *p = cast(uint *)&d;
@@ -224,6 +520,8 @@ unittest
     for (f = 1; !issubnormal(f); f /= 2)
 	assert(f != 0);
 }
+
+/// ditto
 
 int issubnormal(real e)
 {
@@ -322,129 +620,57 @@ unittest
     assert(isnan(e) && signbit(e));
 }
 
-/****************************************************************************
- * Tangent.
+/***********************************************************************
+ * Calculates the length of the 
+ * hypotenuse of a right-angled triangle with sides of length x and y. 
+ * The hypotenuse is the value of the square root of 
+ * the sums of the squares of x and y:
+ *
+ *	sqrt(x&sup2; + y&sup2;)
+ *
+ * Note that hypot(x, y), hypot(y, x) and
+ * hypot(x, -y) are equivalent.
+ *
+ *	<table border=1 cellpadding=4 cellspacing=0>
+ *	<caption>Special Values</caption>
+ *	<tr>
+ *	<th> x               <th> y           <th> hypot(x, y) <th> invalid?
+ *	<tr>
+ *	<td> x               <td> &plusmn;0.0 <td> |x|         <td> no
+ *	<tr>
+ *	<td> &plusmn;&infin; <td> y           <td> +&infin;    <td> no
+ *	<tr>
+ *	<td> &plusmn;&infin; <td> NAN         <td> +&infin;    <td> no
+ *	</table>
  */
 
-real tan(real x)
+real hypot(real x, real y)
 {
-    asm
-    {
-	fld	x[EBP]			; // load theta
-	fxam				; // test for oddball values
-	fstsw	AX			;
-	sahf				;
-	jc	trigerr			; // x is NAN, infinity, or empty
-					  // 387's can handle denormals
-SC18:	fptan				;
-	fstp	ST(0)			; // dump X, which is always 1
-	fstsw	AX			;
-	sahf				;
-	jnp	Lret			; // C2 = 1 (x is out of range)
-
-	// Do argument reduction to bring x into range
-	fldpi				;
-	fxch				;
-SC17:	fprem1				;
-	fstsw	AX			;
-	sahf				;
-	jp	SC17			;
-	fstp	ST(1)			; // remove pi from stack
-	jmp	SC18			;
-
-trigerr:
-	fstp	ST(0)			; // dump theta
-    }
-    return real.nan;
-
-Lret:
-    ;
-}
-
-unittest
-{
-    static real vals[][2] =	// angle,tan
-    [
-	    [   0,   0],
-	    [   .5,  .5463024898],
-	    [   1,   1.557407725],
-	    [   1.5, 14.10141995],
-	    [   2,  -2.185039863],
-	    [   2.5,-.7470222972],
-	    [   3,  -.1425465431],
-	    [   3.5, .3745856402],
-	    [   4,   1.157821282],
-	    [   4.5, 4.637332055],
-	    [   5,  -3.380515006],
-	    [   5.5,-.9955840522],
-	    [   6,  -.2910061914],
-	    [   6.5, .2202772003],
-	    [   10,  .6483608275],
-
-	    // special angles
-	    [   PI_4,	1],
-	    //[	PI_2,	real.infinity],
-	    [   3*PI_4,	-1],
-	    [   PI,	0],
-	    [   5*PI_4,	1],
-	    //[	3*PI_2,	-real.infinity],
-	    [   7*PI_4,	-1],
-	    [   2*PI,	0],
-
-	    // overflow
-	    [   real.infinity,	real.nan],
-	    [   real.nan,	real.nan],
-	    [   1e+100,		real.nan],
-    ];
-    int i;
-
-    for (i = 0; i < vals.length; i++)
-    {
-	real x = vals[i][0];
-	real r = vals[i][1];
-	real t = tan(x);
-
-	//printf("tan(%Lg) = %Lg, should be %Lg\n", x, t, r);
-	assert(mfeq(r, t, .0000001));
-
-	x = -x;
-	r = -r;
-	t = tan(x);
-	//printf("tan(%Lg) = %Lg, should be %Lg\n", x, t, r);
-	assert(mfeq(r, t, .0000001));
-    }
-}
-
-
-/****************************************************************************
- * hypotenuese.
- * This is based on code from:
- * Cephes Math Library Release 2.1:  January, 1989
- * Copyright 1984, 1987, 1989 by Stephen L. Moshier
- * Direct inquiries to 30 Frost Street, Cambridge, MA 02140
- */
-
-real hypot(real zre, real zim)
-{
+    /*
+     * This is based on code from:
+     * Cephes Math Library Release 2.1:  January, 1989
+     * Copyright 1984, 1987, 1989 by Stephen L. Moshier
+     * Direct inquiries to 30 Frost Street, Cambridge, MA 02140
+     */
 
     const int PRECL = 32;
     const int MAXEXPL = real.max_exp; //16384;
     const int MINEXPL = real.min_exp; //-16384;
 
-    real x, y, b, re, im;
+    real xx, yy, b, re, im;
     int ex, ey, e;
 
     // Note, hypot(INFINITY,NAN) = INFINITY.
-    if (isinf(zre) || isinf(zim))
+    if (isinf(x) || isinf(y))
 	return real.infinity;
 
-    if (isnan(zre))
-	return zre;
-    if (isnan(zim))
-	return zim;
+    if (isnan(x))
+	return x;
+    if (isnan(y))
+	return y;
 
-    re = fabs(zre);
-    im = fabs(zim);
+    re = fabs(x);
+    im = fabs(y);
 
     if (re == 0.0)
 	return im;
@@ -452,8 +678,8 @@ real hypot(real zre, real zim)
 	return re;
 
     // Get the exponents of the numbers
-    x = frexp(re, ex);
-    y = frexp(im, ey);
+    xx = frexp(re, ex);
+    yy = frexp(im, ey);
 
     // Check if one number is tiny compared to the other
     e = ex - ey;
@@ -466,14 +692,14 @@ real hypot(real zre, real zim)
     e = (ex + ey) >> 1;
 
     // Rescale so mean is about 1
-    x = ldexp(re, -e);
-    y = ldexp(im, -e);
+    xx = ldexp(re, -e);
+    yy = ldexp(im, -e);
 
     // Hypotenuse of the right triangle
-    b = sqrt(x * x  +  y * y);
+    b = sqrt(xx * xx  +  yy * yy);
 
     // Compute the exponent of the answer.
-    y = frexp(b, ey);
+    yy = frexp(b, ey);
     ey = e + ey;
 
     // Check it for overflow and underflow.
@@ -520,55 +746,65 @@ unittest
 }
 
 /*********************************************************************
- * Returns:
- *	x such that value=x*2**n, .5 <= |x| < 1.0
- *	x has same sign as value.
- *	*eptr = n
+ * Separate floating point value into significand and exponent.
  *
- *	Special cases:
- *		value	  x	*eptr
- *		+-0.0	+-0.0	  0
- *		+-inf	+-inf	  int.max/int.min
- *		+-NaN	+-NaN	  int.min
- *		+-NaNs	+-NaN	  int.min
+ * Returns:
+ *	<dd> Calculate and return <i>x</i> and exp such that
+ *	value =<i>x</i>*2<sup>exp</sup> and
+ *	.5 &lt;= |<i>x</i>| &lt; 1.0<br>
+ *	<i>x</i> has same sign as value.
+ *
+ *	<table border=1 cellpadding=4 cellspacing=0>
+ *	<caption>Special values</caption>
+ *	<tr>
+ *	<th> value       <th> returns      <th> exp
+ *	<tr>
+ *	<td> &plusmn;0.0 <td>&plusmn;0.0   <td>0
+ *	<tr>
+ *	<td> +&infin;    <td>+&infin;      <td>int.max
+ *	<tr>
+ *	<td> -&infin;    <td>-&infin;      <td>int.min
+ *	<tr>
+ *	<td>&plusmn;NAN  <td>&plusmn;NAN   <td>int.min
+ *	</table>
  */
 
 
-real frexp(real value, out int eptr)
+real frexp(real value, out int exp)
 {
     ushort* vu = cast(ushort*)&value;
     long* vl = cast(long*)&value;
-    uint exp;
+    uint ex;
 
     // If exponent is non-zero
-    exp = vu[4] & 0x7FFF;
-    if (exp)
+    ex = vu[4] & 0x7FFF;
+    if (ex)
     {
-	if (exp == 0x7FFF)
+	if (ex == 0x7FFF)
 	{   // infinity or NaN
 	    if (*vl &  0x7FFFFFFFFFFFFFFF)	// if NaN
 	    {	*vl |= 0xC000000000000000;	// convert NANS to NANQ
-		eptr = int.min;
+		exp = int.min;
 	    }
 	    else if (vu[4] & 0x8000)
 	    {	// negative infinity
-		eptr = int.min;
+		exp = int.min;
 	    }
 	    else
 	    {	// positive infinity
-		eptr = int.max;
+		exp = int.max;
 	    }
 	}
 	else
 	{
-	    eptr = exp - 0x3FFE;
+	    exp = ex - 0x3FFE;
 	    vu[4] = (0x8000 & vu[4]) | 0x3FFE;
 	}
     }
     else if (!*vl)
     {
 	// value is +-0.0
-	eptr = 0;
+	exp = 0;
     }
     else
     {	// denormal
@@ -579,7 +815,7 @@ real frexp(real value, out int eptr)
 	    i--;
 	    *vl <<= 1;
 	} while (*vl > 0);
-	eptr = i;
+	exp = i;
         vu[4] = (0x8000 & vu[4]) | 0x3FFE;
     }
     return value;
@@ -588,7 +824,7 @@ real frexp(real value, out int eptr)
 
 unittest
 {
-    static real vals[][3] =	// x,frexp,eptr
+    static real vals[][3] =	// x,frexp,exp
     [
 	[0.0,	0.0,	0],
 	[-0.0,	-0.0,	0],
@@ -662,6 +898,8 @@ real pow(real x, uint n)
     }
     return p;
 }
+
+/// ditto
 
 real pow(real x, int n)
 {
@@ -777,49 +1015,6 @@ unittest
     assert(pow(x,8) == (x * x) * (x * x) * (x * x) * (x * x));
 }
 
-/*****************************************
- */
-
-creal sqrt(creal z)
-{
-    creal c;
-    real x,y,w,r;
-
-    if (z == 0)
-    {
-	c = 0;
-    }
-    else
-    {	real z_re = z.re;
-	real z_im = z.im;
-
-	x = fabs(z_re);
-	y = fabs(z_im);
-	if (x >= y)
-	{
-	    r = y / x;
-	    w = sqrt(x) * sqrt(0.5 * (1 + sqrt(1 + r * r)));
-	}
-	else
-	{
-	    r = x / y;
-	    w = sqrt(y) * sqrt(0.5 * (r + sqrt(1 + r * r)));
-	}
-
-	if (z_re >= 0)
-	{
-	    c = w + (z_im / (w + w)) * 1.0i;
-	}
-	else
-	{
-	    if (z_im < 0)
-		w = -w;
-	    c = z_im / (w + w) + w * 1.0i;
-	}
-    }
-    return c;
-}
-
 /****************************************
  * Simple function to compare two floating point values
  * to a specified precision.
@@ -846,33 +1041,46 @@ private int iabs(int i)
  
 
 /**************************************
-   int feqrel(real x, real y)
-   To what precision is x equal to y?
-   Public Domain. Author: Don Clugston, 18 Aug 2005.
+ * To what precision is x equal to y?
+ *
+ * Returns: the number of mantissa bits which are equal in x and y.
+ * eg, 0x1.F8p+60 and 0x1.F1p+60 are equal to 5 bits of precision.
+ *
+ *	<table border=1 cellpadding=4 cellspacing=0>
+ *	<caption>Special values</caption>
+ *	<tr>
+ *	<th> x <th> y <th> feqrel(x, y)
+ *	<tr>
+ *	<td> x <td> x <td> real.mant_dig
+ *	<tr>
+ *	<td> x <td> &gt;= 2*x <td> 0
+ *	<tr>
+ *	<td> x <td> &lt;= x/2 <td> 0
+ *	<tr>
+ *	<td> NAN <td> any <td> 0
+ *	<tr>
+ *	<td> any <td> NAN <td> 0
+ *	</table>
+ */
 
-   Returns the number of mantissa bits which are equal in x and y.
-   eg, 0x1.F8p+60 and 0x1.F1p+60 are equal to 5 bits of precision.
-   If x == y, then feqrel(x, y) == real.mant_dig.
-
-   If x and y differ by a factor of two or more, or if one or both
-   is a nan, the return value is 0.
-*/
-
-int feqrel(real a, real b)
+int feqrel(real x, real y)
 {
-    if (a == b)
+    /* Public Domain. Author: Don Clugston, 18 Aug 2005.
+     */
+
+    if (x == y)
 	return real.mant_dig; // ensure diff!=0, cope with INF.
 
-    real diff = fabs(a-b);
+    real diff = fabs(x - y);
 
-    ushort *pa = cast(ushort *)(&a);
-    ushort *pb = cast(ushort *)(&b);
+    ushort *pa = cast(ushort *)(&x);
+    ushort *pb = cast(ushort *)(&y);
     ushort *pd = cast(ushort *)(&diff);
 
-    // The difference in abs(exponent) between a or b and abs(a-b)
-    // is equal to the number of mantissa bits of a which are
-    // equal to b. If negative, a and b have different exponents.
-    // If positive, a and b are equal to 'bitsdiff' bits.
+    // The difference in abs(exponent) between x or y and abs(x-y)
+    // is equal to the number of mantissa bits of x which are
+    // equal to y. If negative, x and y have different exponents.
+    // If positive, x and y are equal to 'bitsdiff' bits.
     // AND with 0x7FFF to form the absolute value.
     // To avoid out-by-1 errors, we subtract 1 so it rounds down
     // if the exponents were different. This means 'bitsdiff' is
