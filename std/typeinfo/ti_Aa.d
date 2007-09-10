@@ -18,7 +18,7 @@ version (all)
 }
 else
 {
-	uint len = s.length;
+	size_t len = s.length;
 	char *str = s;
 
 	while (1)
@@ -73,7 +73,7 @@ else
 	return std.string.cmp(s1, s2);
     }
 
-    int tsize()
+    size_t tsize()
     {
 	return (char[]).sizeof;
     }

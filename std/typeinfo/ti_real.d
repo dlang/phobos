@@ -42,7 +42,7 @@ class TypeInfo_e : TypeInfo
 	return _compare(*cast(real *)p1, *cast(real *)p2);
     }
 
-    int tsize()
+    size_t tsize()
     {
 	return real.sizeof;
     }

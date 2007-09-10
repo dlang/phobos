@@ -63,7 +63,7 @@ class TypeInfo_C : TypeInfo
 	return c;
     }
 
-    int tsize()
+    size_t tsize()
     {
 	return Object.sizeof;
     }

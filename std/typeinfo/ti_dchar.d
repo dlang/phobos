@@ -20,7 +20,7 @@ class TypeInfo_w : TypeInfo
 	return *cast(dchar *)p1 - *cast(dchar *)p2;
     }
 
-    int tsize()
+    size_t tsize()
     {
 	return dchar.sizeof;
     }

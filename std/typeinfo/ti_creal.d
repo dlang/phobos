@@ -43,7 +43,7 @@ class TypeInfo_c : TypeInfo
 	return _compare(*cast(creal *)p1, *cast(creal *)p2);
     }
 
-    int tsize()
+    size_t tsize()
     {
 	return creal.sizeof;
     }

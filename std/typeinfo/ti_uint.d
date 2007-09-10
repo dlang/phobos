@@ -24,7 +24,7 @@ class TypeInfo_k : TypeInfo
 	return 0;
     }
 
-    int tsize()
+    size_t tsize()
     {
 	return uint.sizeof;
     }

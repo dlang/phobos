@@ -1,10 +1,14 @@
 // math.d
 
 /**
- * Boilerplate:
- *	$(std_boilerplate.html)
  * Macros:
  *	WIKI = StdMath
+ *
+ *	TABLE_SV = <table border=1 cellpadding=4 cellspacing=0>
+ *		<caption>Special Values</caption>
+ *		$0</table>
+ *
+ *	NAN = <font color=red>NAN</font>
  */
 
 /*
@@ -44,7 +48,16 @@ module std.math;
 //debug=math;		// uncomment to turn on debugging printf's
 
 private import std.c.stdio;
+private import std.string;
 private import std.c.math;
+
+class NotImplemented : Error
+{
+    this(char[] msg)
+    {
+	super(msg ~ "not implemented");
+    }
+}
 
 const real E =		2.7182818284590452354L;  /** e */
 const real LOG2T =	0x1.a934f0979a3715fcp+1; /** log<sub>2</sub>10 */ // 3.32193 fldl2t
@@ -80,12 +93,11 @@ const real SQRT1_2 =	0.70710678118654752440;  /** &radic;&frac12 */
 /***********************************
  * Returns cosine of x. x is in radians.
  *
- *	<table border=1 cellpadding=4 cellspacing=0>
- *	<caption>Special Values</caption>
- *	<tr> <th> x               <th> cos(x) <th> invalid?
- *	<tr> <td> NAN             <td> NAN    <td> yes
- *	<tr> <td> &plusmn;&infin; <td> NAN    <td> yes
- *	</table>
+ *	$(TABLE_SV
+ *	$(TR $(TH x)               $(TH cos(x)) $(TH invalid?)	)
+ *	$(TR $(TD $(NAN))          $(TD $(NAN)) $(TD yes)	)
+ *	$(TR $(TD &plusmn;&infin;) $(TD $(NAN)) $(TD yes)	)
+ *	)
  */
 
 real cos(real x);	/* intrinsic */
@@ -93,13 +105,12 @@ real cos(real x);	/* intrinsic */
 /***********************************
  * Returns sine of x. x is in radians.
  *
- *	<table border=1 cellpadding=4 cellspacing=0>
- *	<caption>Special Values</caption>
+ *	$(TABLE_SV
  *	<tr> <th> x               <th> sin(x)      <th>invalid?
- *	<tr> <td> NAN             <td> NAN         <td> yes
+ *	<tr> <td> $(NAN)          <td> $(NAN)      <td> yes
  *	<tr> <td> &plusmn;0.0     <td> &plusmn;0.0 <td> no
- *	<tr> <td> &plusmn;&infin; <td> NAN         <td> yes
- *	</table>
+ *	<tr> <td> &plusmn;&infin; <td> $(NAN)      <td> yes
+ *	)
  */
 
 real sin(real x);	/* intrinsic */
@@ -108,13 +119,12 @@ real sin(real x);	/* intrinsic */
 /****************************************************************************
  * Returns tangent of x. x is in radians.
  *
- *	<table border=1 cellpadding=4 cellspacing=0>
- *	<caption>Special Values</caption>
+ *	$(TABLE_SV
  *	<tr> <th> x               <th> tan(x)      <th> invalid?
- *	<tr> <td> NAN             <td> NAN         <td> yes
+ *	<tr> <td> $(NAN)          <td> $(NAN)      <td> yes
  *	<tr> <td> &plusmn;0.0     <td> &plusmn;0.0 <td> no
- *	<tr> <td> &plusmn;&infin; <td> NAN         <td> yes
- *	</table>
+ *	<tr> <td> &plusmn;&infin; <td> $(NAN)      <td> yes
+ *	)
  */
 
 real tan(real x)
@@ -206,45 +216,129 @@ unittest
     }
 }
 
-
+/***************
+ * Calculates the arc cosine of x,
+ * returning a value ranging from -&pi;/2 to &pi;/2.
+ *
+ *	$(TABLE_SV
+ *      <tr> <th> x        <th> acos(x) <th> invalid?
+ *      <tr> <td> &gt;1.0  <td> $(NAN)  <td> yes
+ *      <tr> <td> &lt;-1.0 <td> $(NAN)  <td> yes
+ *      <tr> <td> $(NAN)   <td> $(NAN)  <td> yes
+ *      )
+ */
 real acos(real x)		{ return std.c.math.acosl(x); }
 
+/***************
+ * Calculates the arc sine of x,
+ * returning a value ranging from -&pi;/2 to &pi;/2.
+ *
+ *	$(TABLE_SV
+ *	<tr> <th> x        <th> asin(x)  <th> invalid?
+ *	<tr> <td> &plusmn;0.0    <td> &plusmn;0.0    <td> no
+ *	<tr> <td> &gt;1.0  <td> $(NAN)   <td> yes
+ *	<tr> <td> &lt;-1.0 <td> $(NAN)   <td> yes
+ *       )
+ */
 real asin(real x)		{ return std.c.math.asinl(x); }
+
+/***************
+ * Calculates the arc tangent of x,
+ * returning a value ranging from -&pi;/2 to &pi;/2.
+ *
+ *	$(TABLE_SV
+ *	<tr> <th> x           <th> atan(x)  <th> invalid?
+ *	<tr> <td> &plusmn;0.0       <td> &plusmn;0.0    <td> no
+ *	<tr> <td> &plusmn;&infin;  <td> $(NAN)   <td> yes
+ *       )
+ */
 real atan(real x)		{ return std.c.math.atanl(x); }
+
+/***************
+ * Calculates the arc tangent of y / x,
+ * returning a value ranging from -&pi;/2 to &pi;/2.
+ *
+ *	$(TABLE_SV
+ *	<tr> <th> x           <th> y         <th> atan(x, y)
+ *	<tr> <td> $(NAN)      <td> anything  <td> $(NAN) 
+ *	<tr> <td> anything    <td> $(NAN)    <td> $(NAN) 
+ *	<tr> <td> &plusmn;0.0       <td> &gt; 0.0  <td> &plusmn;0.0 
+ *	<tr> <td> &plusmn;0.0       <td> &plusmn;0.0     <td> &plusmn;0.0 
+ *	<tr> <td> &plusmn;0.0       <td> &lt; 0.0  <td> &plusmn;&pi; 
+ *	<tr> <td> &plusmn;0.0       <td> -0.0      <td> &plusmn;&pi;
+ *	<tr> <td> &gt; 0.0    <td> &plusmn;0.0     <td> &pi;/2 
+ *	<tr> <td> &lt; 0.0    <td> &plusmn;0.0     <td> &pi;/2 
+ *	<tr> <td> &gt; 0.0    <td> &infin;  <td> &plusmn;0.0 
+ *	<tr> <td> &plusmn;&infin;  <td> anything  <td> &plusmn;&pi;/2 
+ *	<tr> <td> &gt; 0.0    <td> -&infin; <td> &plusmn;&pi; 
+ *	<tr> <td> &plusmn;&infin;  <td> &infin;  <td> &plusmn;&pi;/4 	
+ *	<tr> <td> &plusmn;&infin;  <td> -&infin; <td> &plusmn;3&pi;/4
+ *      )
+ */
 real atan2(real x, real y)	{ return std.c.math.atan2l(x,y); }
+
+/***********************************
+ * Calculates the hyperbolic cosine of x.
+ *
+ *	$(TABLE_SV
+ *	<tr> <th> x                <th> cosh(x)     <th> invalid?
+ *	<tr> <td> &plusmn;&infin;  <td> &plusmn;0.0 <td> no 
+ *      )
+ */
 real cosh(real x)		{ return std.c.math.coshl(x); }
+
+/***********************************
+ * Calculates the hyperbolic sine of x.
+ *
+ *	$(TABLE_SV
+ *	<tr> <th> x               <th> sinh(x)         <th> invalid?
+ *	<tr> <td> &plusmn;0.0     <td> &plusmn;0.0     <td> no
+ *	<tr> <td> &plusmn;&infin; <td> &plusmn;&infin; <td> no
+ *      )
+ */
 real sinh(real x)		{ return std.c.math.sinhl(x); }
+
+/***********************************
+ * Calculates the hyperbolic tangent of x.
+ *
+ *	$(TABLE_SV
+ *	<tr> <th> x               <th> tanh(x)      <th> invalid?
+ *	<tr> <td> &plusmn;0.0 	  <td> &plusmn;0.0  <td> no 
+ *	<tr> <td> &plusmn;&infin; <td> &plusmn;1.0  <td> no
+ *      )
+ */
 real tanh(real x)		{ return std.c.math.tanhl(x); }
 
 //real acosh(real x)		{ return std.c.math.acoshl(x); }
 //real asinh(real x)		{ return std.c.math.asinhl(x); }
 //real atanh(real x)		{ return std.c.math.atanhl(x); }
 
-real fabs(real x);	/* intrinsic */
-real rint(real x);	/* intrinsic */
+/*****************************************
+ * Returns x rounded to a long value using the current rounding mode.
+ * If the integer value of x is
+ * greater than long.max, the result is
+ * indeterminate.
+ */
 long rndtol(real x);	/* intrinsic */
 
-/*******************************************
- * Compute n * 2<sup>exp</sup>
- * References: frexp
- */
 
-real ldexp(real n, int exp);	/* intrinsic */
+/*****************************************
+ * Returns x rounded to a long value using the FE_TONEAREST rounding mode.
+ * If the integer value of x is
+ * greater than long.max, the result is
+ * indeterminate.
+ */
+extern (C) real rndtonl(real x);
 
 /***************************************
  * Compute square root of x.
  *
- *	<table border=1 cellpadding=4 cellspacing=0>
- *	<caption>Special Values</caption>
- *	<tr>
- *	<th> x        <th> sqrt(x)  <th> invalid?
- *	<tr>
- *	<td> -0.0     <td> -0.0     <td> no
- *	<tr>
- *	<td> &lt;0.0  <td> NAN      <td> yes
- *	<tr>
- *	<td> +&infin; <td> +&infin; <td> no
- *	</table>
+ *	$(TABLE_SV
+ *	<tr> <th> x        <th> sqrt(x)  <th> invalid?
+ *	<tr> <td> -0.0     <td> -0.0     <td> no
+ *	<tr> <td> &lt;0.0  <td> $(NAN)   <td> yes
+ *	<tr> <td> +&infin; <td> +&infin; <td> no
+ *	)
  */
 
 float sqrt(float x);	/* intrinsic */
@@ -291,13 +385,26 @@ creal sqrt(creal z)
     return c;
 }
 
-/***************************
- * Cube root.
+/**********************
+ * Calculates e<sup>x</sup>.
+ *
+ *	$(TABLE_SV
+ *	<tr> <th> x        <th> exp(x)
+ *	<tr> <td> +&infin; <td> +&infin; 
+ *	<tr> <td> -&infin; <td> +0.0 
+ *	)
  */
-
-real cbrt(real x)		{ return std.c.math.cbrtl(x); }
-
 real exp(real x)		{ return std.c.math.expl(x); }
+
+/**********************
+ * Calculates 2<sup>x</sup>.
+ *
+ *	$(TABLE_SV
+ *	<tr> <th> x <th> exp2(x)
+ *	<tr> <td> +&infin; <td> +&infin; 
+ *	<tr> <td> -&infin; <td> +0.0 
+ *	)
+ */
 real exp2(real x)		{ return std.c.math.exp2l(x); }
 
 /******************************************
@@ -307,33 +414,163 @@ real exp2(real x)		{ return std.c.math.exp2l(x); }
  * For very small x, expm1(x) is more accurate 
  * than exp(x)-1. 
  *
- *	<table border=1 cellpadding=4 cellspacing=0>
- *	<caption>Special Values</caption>
+ *	$(TABLE_SV
  *	<tr> <th> x           <th> e<sup>x</sup>-1
  *	<tr> <td> &plusmn;0.0 <td> &plusmn;0.0
  *	<tr> <td> +&infin;    <td> +&infin;
  *	<tr> <td> -&infin;    <td> -1.0
- *	</table>
+ *	)
  */
 
 real expm1(real x)		{ return std.c.math.expm1l(x); }
 
-int  ilogb(real x)		{ return std.c.math.ilogbl(x); }
+
+/*********************************************************************
+ * Separate floating point value into significand and exponent.
+ *
+ * Returns:
+ *	<dd> Calculate and return <i>x</i> and exp such that
+ *	value =<i>x</i>*2<sup>exp</sup> and
+ *	.5 &lt;= |<i>x</i>| &lt; 1.0<br>
+ *	<i>x</i> has same sign as value.
+ *
+ *	$(TABLE_SV
+ *	<tr> <th> value          <th> returns        <th> exp
+ *	<tr> <td> &plusmn;0.0    <td> &plusmn;0.0    <td> 0
+ *	<tr> <td> +&infin;       <td> +&infin;       <td> int.max
+ *	<tr> <td> -&infin;       <td> -&infin;       <td> int.min
+ *	<tr> <td> &plusmn;$(NAN) <td> &plusmn;$(NAN) <td> int.min
+ *	)
+ */
+
+
+real frexp(real value, out int exp)
+{
+    ushort* vu = cast(ushort*)&value;
+    long* vl = cast(long*)&value;
+    uint ex;
+
+    // If exponent is non-zero
+    ex = vu[4] & 0x7FFF;
+    if (ex)
+    {
+	if (ex == 0x7FFF)
+	{   // infinity or NaN
+	    if (*vl &  0x7FFFFFFFFFFFFFFF)	// if NaN
+	    {	*vl |= 0xC000000000000000;	// convert $(NAN)S to $(NAN)Q
+		exp = int.min;
+	    }
+	    else if (vu[4] & 0x8000)
+	    {	// negative infinity
+		exp = int.min;
+	    }
+	    else
+	    {	// positive infinity
+		exp = int.max;
+	    }
+	}
+	else
+	{
+	    exp = ex - 0x3FFE;
+	    vu[4] = (0x8000 & vu[4]) | 0x3FFE;
+	}
+    }
+    else if (!*vl)
+    {
+	// value is +-0.0
+	exp = 0;
+    }
+    else
+    {	// denormal
+	int i = -0x3FFD;
+
+	do
+	{
+	    i--;
+	    *vl <<= 1;
+	} while (*vl > 0);
+	exp = i;
+        vu[4] = (0x8000 & vu[4]) | 0x3FFE;
+    }
+    return value;
+}
+
+
+unittest
+{
+    static real vals[][3] =	// x,frexp,exp
+    [
+	[0.0,	0.0,	0],
+	[-0.0,	-0.0,	0],
+	[1.0,	.5,	1],
+	[-1.0,	-.5,	1],
+	[2.0,	.5,	2],
+	[155.67e20,	0x1.A5F1C2EB3FE4Fp-1,	74],	// normal
+	[1.0e-320,	0.98829225,		-1063],
+	[real.min,	.5,		-16381],
+	[real.min/2.0L,	.5,		-16382],	// denormal
+
+	[real.infinity,real.infinity,int.max],
+	[-real.infinity,-real.infinity,int.min],
+	[real.nan,real.nan,int.min],
+	[-real.nan,-real.nan,int.min],
+
+	// Don't really support signalling nan's in D
+	//[real.nans,real.nan,int.min],
+	//[-real.nans,-real.nan,int.min],
+    ];
+    int i;
+
+    for (i = 0; i < vals.length; i++)
+    {
+	real x = vals[i][0];
+	real e = vals[i][1];
+	int exp = cast(int)vals[i][2];
+	int eptr;
+	real v = frexp(x, eptr);
+
+	//printf("frexp(%Lg) = %.8Lg, should be %.8Lg, eptr = %d, should be %d\n", x, v, e, eptr, exp);
+	assert(mfeq(e, v, .0000001));
+	assert(exp == eptr);
+    }
+}
+
+
+/******************************************
+ * Extracts the exponent of x as a signed integral value.
+ *
+ * If x is not a special value, the result is the same as
+ * <tt>cast(int)logb(x)</tt>.
+ *
+ *	$(TABLE_SV
+ *	<tr> <th> x               <th>ilogb(x)     <th> Range error?
+ *	<tr> <td> 0               <td> FP_ILOGB0   <td> yes
+ *	<tr> <td> &plusmn;&infin; <td> +&infin;    <td> no
+ *	<tr> <td> $(NAN)          <td> FP_ILOGBNAN <td> no
+ *	)
+ */
+int ilogb(real x)		{ return std.c.math.ilogbl(x); }
+
+alias std.c.math.FP_ILOGB0   FP_ILOGB0;
+alias std.c.math.FP_ILOGBNAN FP_ILOGBNAN;
+
+
+/*******************************************
+ * Compute n * 2<sup>exp</sup>
+ * References: frexp
+ */
+
+real ldexp(real n, int exp);	/* intrinsic */
 
 /**************************************
  * Calculate the natural logarithm of x.
  *
- *	<table border=1 cellpadding=4 cellspacing=0>
- *	<caption>Special Values</caption>
- *	<tr>
- *	<th> x           <th> log(x)   <th> divide by 0? <th> invalid?
- *	<tr>
- *	<td> &plusmn;0.0 <td> -&infin; <td> yes          <td> no
- *	<tr>
- *	<td> &lt; 0.0    <td> NAN      <td> no           <td> yes
- *	<tr>
- *	<td> +&infin;    <td> +&infin; <td> no           <td> no
- *	</table>
+ *	$(TABLE_SV
+ *	<tr> <th> x           <th> log(x)   <th> divide by 0? <th> invalid?
+ *	<tr> <td> &plusmn;0.0 <td> -&infin; <td> yes          <td> no
+ *	<tr> <td> &lt; 0.0    <td> $(NAN)   <td> no           <td> yes
+ *	<tr> <td> +&infin;    <td> +&infin; <td> no           <td> no
+ *	)
  */
 
 real log(real x)		{ return std.c.math.logl(x); }
@@ -341,17 +578,12 @@ real log(real x)		{ return std.c.math.logl(x); }
 /**************************************
  * Calculate the base-10 logarithm of x.
  *
- *	<table border=1 cellpadding=4 cellspacing=0>
- *	<caption>Special Values</caption>
- *	<tr>
- *	<th> x           <th> log10(x) <th> divide by 0? <th> invalid?
- *	<tr>
- *	<td> &plusmn;0.0 <td> -&infin; <td> yes          <td> no
- *	<tr>
- *	<td> &lt; 0.0    <td> NAN      <td> no           <td> yes
- *	<tr>
- *	<td> +&infin;    <td> +&infin; <td> no           <td> no
- *	</table>
+ *	$(TABLE_SV
+ *	<tr> <th> x           <th> log10(x) <th> divide by 0? <th> invalid?
+ *	<tr> <td> &plusmn;0.0 <td> -&infin; <td> yes          <td> no
+ *	<tr> <td> &lt; 0.0    <td> $(NAN)   <td> no           <td> yes
+ *	<tr> <td> +&infin;    <td> +&infin; <td> no           <td> no
+ *	)
  */
 
 real log10(real x)		{ return std.c.math.log10l(x); }
@@ -362,33 +594,368 @@ real log10(real x)		{ return std.c.math.log10l(x); }
  *	For very small x, log1p(x) will be more accurate than 
  *	log(1 + x). 
  *
- *	<table border=1 cellpadding=4 cellspacing=0>
- *	<caption>Special Values</caption>
- *	<tr>
- *	<th> x           <th> log1p(x)    <th> divide by 0? <th> invalid?
- *	<tr>
- *	<td> &plusmn;0.0 <td> &plusmn;0.0 <td> no           <td> no
- *	<tr>
- *	<td> -1.0        <td> -&infin;    <td> yes          <td> no
- *	<tr>
- *	<td> &lt;-1.0    <td> NAN         <td> no           <td> yes
- *	<tr>
- *	<td> +&infin;    <td> -&infin;    <td> no           <td> no
- *	</table>
+ *	$(TABLE_SV
+ *	<tr> <th> x           <th> log1p(x)    <th> divide by 0? <th> invalid?
+ *	<tr> <td> &plusmn;0.0 <td> &plusmn;0.0 <td> no           <td> no
+ *	<tr> <td> -1.0        <td> -&infin;    <td> yes          <td> no
+ *	<tr> <td> &lt;-1.0    <td> $(NAN)      <td> no           <td> yes
+ *	<tr> <td> +&infin;    <td> -&infin;    <td> no           <td> no
+ *	)
  */
 
 real log1p(real x)		{ return std.c.math.log1pl(x); }
 
+/***************************************
+ * Calculates the base-2 logarithm of x:
+ * log<sub>2</sub>x
+ *
+ *	$(TABLE_SV
+ *	<tr> <th> x 	      <th> log2(x)  <th> divide by 0? <th> invalid?
+ *	<tr> <td> &plusmn;0.0 <td> -&infin; <td> yes          <td> no 
+ *	<tr> <td> &lt; 0.0    <td> $(NAN)   <td> no           <td> yes 
+ *	<tr> <td> +&infin;    <td> +&infin; <td> no           <td> no 
+ *	)
+ */
 real log2(real x)		{ return std.c.math.log2l(x); }
+
+/*****************************************
+ * Extracts the exponent of x as a signed integral value.
+ *
+ * If x is subnormal, it is treated as if it were normalized.
+ * For a positive, finite x: 
+ *
+ *	<pre>
+ *	1 &lt;= <i>x</i> * FLT_RADIX<sup>-logb(x)</sup> &lt; FLT_RADIX 
+ *	</pre>
+ *
+ *	$(TABLE_SV
+ *	<tr> <th> x               <th> logb(x)  <th> Divide by 0? 
+ *	<tr> <td> &plusmn;&infin; <td> +&infin; <td> no
+ *	<tr> <td> &plusmn;0.0     <td> -&infin; <td> yes 
+ *	)
+ */
 real logb(real x)		{ return std.c.math.logbl(x); }
+
+/************************************
+ * Calculates the remainder from the calculation x/y.
+ * Returns:
+ * The value of x - i * y, where i is the number of times that y can 
+ * be completely subtracted from x. The result has the same sign as x. 
+ *
+ *	$(TABLE_SV
+ *	<tr> <th> x                 <th> y               <th> modf(x, y) 	<th> invalid?
+ *	<tr> <td> &plusmn;0.0       <td> not 0.0         <td> &plusmn;0.0 	<td> no
+ *	<tr> <td> &plusmn;&infin;   <td> anything        <td> $(NAN) 		<td> yes
+ *	<tr> <td> anything          <td> &plusmn;0.0     <td> $(NAN) 		<td> yes
+ *	<tr> <td> !=&plusmn;&infin; <td> &plusmn;&infin; <td> x 		<td> no
+ *	)
+ */
 real modf(real x, inout real y)	{ return std.c.math.modfl(x,&y); }
+
+/*************************************
+ * Efficiently calculates x * 2<sup>n</sup>.
+ *
+ * scalbn handles underflow and overflow in 
+ * the same fashion as the basic arithmetic operators. 
+ *
+ *	$(TABLE_SV
+ *	<tr> <th> x                <th> scalb(x)
+ *	<tr> <td> &plusmn;&infin; <td> &plusmn;&infin; 
+ *	<tr> <td> &plusmn;0.0      <td> &plusmn;0.0 
+ *	)
+ */
+real scalbn(real x, int n)
+{
+    version (linux)
+	return std.c.math.scalbnl(x, n);
+    else
+	throw new NotImplemented("scalbn");
+}
+
+/***************
+ * Calculates the cube root x.
+ *
+ *	$(TABLE_SV
+ *	<tr> <th> <i>x</i>	<th> cbrt(x)    <th> invalid?
+ *	<tr> <td> &plusmn;0.0	<td> &plusmn;0.0	<td> no 
+ *	<tr> <td> $(NAN)	<td> $(NAN) 	<td> yes 
+ *	<tr> <td> &plusmn;&infin;	<td> &plusmn;&infin; <td> no 
+ *	)
+ */
+real cbrt(real x)		{ return std.c.math.cbrtl(x); }
+
+
+/*******************************
+ * Returns |x|
+ *
+ *	$(TABLE_SV
+ *	<tr> <th> x               <th> fabs(x)
+ *	<tr> <td> &plusmn;0.0     <td> +0.0 
+ *	<tr> <td> &plusmn;&infin; <td> +&infin; 
+ *	)
+ */
+real fabs(real x);	/* intrinsic */
+
+
+/***********************************************************************
+ * Calculates the length of the 
+ * hypotenuse of a right-angled triangle with sides of length x and y. 
+ * The hypotenuse is the value of the square root of 
+ * the sums of the squares of x and y:
+ *
+ *	sqrt(x&sup2; + y&sup2;)
+ *
+ * Note that hypot(x, y), hypot(y, x) and
+ * hypot(x, -y) are equivalent.
+ *
+ *	$(TABLE_SV
+ *	<tr> <th> x               <th> y           <th> hypot(x, y) <th> invalid?
+ *	<tr> <td> x               <td> &plusmn;0.0 <td> |x|         <td> no
+ *	<tr> <td> &plusmn;&infin; <td> y           <td> +&infin;    <td> no
+ *	<tr> <td> &plusmn;&infin; <td> $(NAN)      <td> +&infin;    <td> no
+ *	)
+ */
+
+real hypot(real x, real y)
+{
+    /*
+     * This is based on code from:
+     * Cephes Math Library Release 2.1:  January, 1989
+     * Copyright 1984, 1987, 1989 by Stephen L. Moshier
+     * Direct inquiries to 30 Frost Street, Cambridge, MA 02140
+     */
+
+    const int PRECL = 32;
+    const int MAXEXPL = real.max_exp; //16384;
+    const int MINEXPL = real.min_exp; //-16384;
+
+    real xx, yy, b, re, im;
+    int ex, ey, e;
+
+    // Note, hypot(INFINITY, NAN) = INFINITY.
+    if (isinf(x) || isinf(y))
+	return real.infinity;
+
+    if (isnan(x))
+	return x;
+    if (isnan(y))
+	return y;
+
+    re = fabs(x);
+    im = fabs(y);
+
+    if (re == 0.0)
+	return im;
+    if (im == 0.0)
+	return re;
+
+    // Get the exponents of the numbers
+    xx = frexp(re, ex);
+    yy = frexp(im, ey);
+
+    // Check if one number is tiny compared to the other
+    e = ex - ey;
+    if (e > PRECL)
+	return re;
+    if (e < -PRECL)
+	return im;
+
+    // Find approximate exponent e of the geometric mean.
+    e = (ex + ey) >> 1;
+
+    // Rescale so mean is about 1
+    xx = ldexp(re, -e);
+    yy = ldexp(im, -e);
+
+    // Hypotenuse of the right triangle
+    b = sqrt(xx * xx  +  yy * yy);
+
+    // Compute the exponent of the answer.
+    yy = frexp(b, ey);
+    ey = e + ey;
+
+    // Check it for overflow and underflow.
+    if (ey > MAXEXPL + 2)
+    {
+	//return __matherr(_OVERFLOW, INFINITY, x, y, "hypotl");
+	return real.infinity;
+    }
+    if (ey < MINEXPL - 2)
+	return 0.0;
+
+    // Undo the scaling
+    b = ldexp(b, e);
+    return b;
+}
+
+unittest
+{
+    static real vals[][3] =	// x,y,hypot
+    [
+	[	0,	0,	0],
+	[	0,	-0,	0],
+	[	3,	4,	5],
+	[	-300,	-400,	500],
+	[	real.min, real.min, 4.75473e-4932L],
+	[	real.max/2, real.max/2, 0x1.6a09e667f3bcc908p+16383L /*8.41267e+4931L*/],
+	[	real.infinity, real.nan, real.infinity],
+	[	real.nan, real.nan, real.nan],
+    ];
+    int i;
+
+    for (i = 0; i < vals.length; i++)
+    {
+	real x = vals[i][0];
+	real y = vals[i][1];
+	real z = vals[i][2];
+	real h = hypot(x, y);
+
+	//printf("hypot(%Lg, %Lg) = %Lg, should be %Lg\n", x, y, h, z);
+	//if (!mfeq(z, h, .0000001))
+	    //printf("%La\n", h);
+	assert(mfeq(z, h, .0000001));
+    }
+}
+
+/**********************************
+ * Returns the error function of x.
+ *
+ * <img src="erf.gif" alt="error function">
+ */
 real erf(real x)		{ return std.c.math.erfl(x); }
+
+/**********************************
+ * Returns the complementary error function of x, which is 1 - erf(x).
+ *
+ * <img src="erfc.gif" alt="complementary error function">
+ */
 real erfc(real x)		{ return std.c.math.erfcl(x); }
+
+/***********************************
+ * Calculates ln |&Gamma;(x)|
+ */
+real lgamma(real x)
+{
+    version (linux)
+	return std.c.math.lgammal(x);
+    else
+	throw new NotImplemented("lgamma");
+}
+
+/***********************************
+ * Calculates the gamma function &Gamma;(x)
+ */
+real tgamma(real x)
+{
+    version (linux)
+	return std.c.math.tgammal(x);
+    else
+	throw new NotImplemented("tgamma");
+}
+
+/**************************************
+ * Returns the value of x rounded upward to the next integer
+ * (toward positive infinity).
+ */
 real ceil(real x)		{ return std.c.math.ceill(x); }
+
+/**************************************
+ * Returns the value of x rounded downward to the next integer
+ * (toward negative infinity).
+ */
 real floor(real x)		{ return std.c.math.floorl(x); }
 
+/******************************************
+ * Rounds x to the nearest integer value, using the current rounding 
+ * mode.
+ *
+ * Unlike the rint functions, nearbyint does not raise the 
+ * FE_INEXACT exception. 
+ */
+real nearbyint(real x) { return std.c.math.nearbyintl(x); }
+
+/**********************************
+ * Rounds x to the nearest integer value, using the current rounding
+ * mode.
+ * If the return value is not equal to x, the FE_INEXACT
+ * exception is raised.
+ * <b>nearbyint</b> performs
+ * the same operation, but does not set the FE_INEXACT exception.
+ */
+real rint(real x);	/* intrinsic */
+
+/***************************************
+ * Rounds x to the nearest integer value, using the current rounding
+ * mode.
+ */
+long lrint(real x)
+{
+    version (linux)
+	return std.c.math.llrintl(x);
+    else
+	throw new NotImplemented("lrint");
+}
+
+/*******************************************
+ * Return the value of x rounded to the nearest integer.
+ * If the fractional part of x is exactly 0.5, the return value is rounded to
+ * the even integer. 
+ */
+real round(real x) { return std.c.math.roundl(x); }
+
+/**********************************************
+ * Return the value of x rounded to the nearest integer.
+ *
+ * If the fractional part of x is exactly 0.5, the return value is rounded
+ * away from zero.
+ */
+long lround(real x)
+{
+    version (linux)
+	return std.c.math.llroundl(x);
+    else
+	throw new NotImplemented("lround");
+}
+
+/****************************************************
+ * Returns the integer portion of x, dropping the fractional portion. 
+ *
+ * This is also know as "chop" rounding. 
+ */
+real trunc(real x) { return std.c.math.truncl(x); }
+
+/****************************************************
+ * Calculate the remainder x REM y, following IEC 60559.
+ *
+ * REM is the value of x - y * n, where n is the integer nearest the exact 
+ * value of x / y.
+ * If |n - x / y| == 0.5, n is even.
+ * If the result is zero, it has the same sign as x.
+ * Otherwise, the sign of the result is the sign of x / y.
+ * Precision mode has no affect on the remainder functions.
+ *
+ * remquo returns n in the parameter n.
+ *
+ *	$(TABLE_SV
+ *	<tr> <th> x                  <th> y               <th> remainder(x, y)  <th> n   <th> invalid?
+ *	<tr> <td> &plusmn;0.0        <td> not 0.0         <td> &plusmn;0.0 	<td> 0.0 <td> no
+ *	<tr> <td> &plusmn;&infin;    <td> anything        <td> $(NAN)		<td> ?   <td> yes
+ *	<tr> <td> anything           <td> &plusmn;0.0     <td> $(NAN) 		<td> ?   <td> yes
+ *	<tr> <td> != &plusmn;&infin; <td> &plusmn;&infin; <td> x 		<td> ?   <td> no
+ *	)
+ */
+real remainder(real x, real y) { return std.c.math.remainderl(x, y); }
+
+real remquo(real x, real y, out int n)	/// ditto
+{
+    version (linux)
+	return std.c.math.remquol(x, y, &n);
+    else
+	throw new NotImplemented("remquo");
+}
+
 /*********************************
- * Is number a nan?
+ * Returns !=0 if e is a NaN.
  */
 
 int isnan(real e)
@@ -411,7 +978,7 @@ unittest
 }
 
 /*********************************
- * Is number finite?
+ * Returns !=0 if e is finite.
  */
 
 int isfinite(real e)
@@ -430,16 +997,16 @@ unittest
 
 
 /*********************************
- * Is number normalized?
+ * Returns !=0 if x is normalized.
  */
 
 /* Need one for each format because subnormal floats might
  * be converted to normal reals.
  */
 
-int isnormal(float f)
+int isnormal(float x)
 {
-    uint *p = cast(uint *)&f;
+    uint *p = cast(uint *)&x;
     uint e;
 
     e = *p & 0x7F800000;
@@ -540,7 +1107,7 @@ unittest
 }
 
 /*********************************
- * Is number infinity?
+ * Return !=0 if e is &plusmn;&infin;.
  */
 
 int isinf(real e)
@@ -563,7 +1130,7 @@ unittest
 }
 
 /*********************************
- * Get sign bit.
+ * Return 1 if sign bit of e is set, 0 if not.
  */
 
 int signbit(real e)
@@ -586,7 +1153,7 @@ unittest
 }
 
 /*********************************
- * Copy sign.
+ * Return a value composed of to with from's sign bit.
  */
 
 real copysign(real to, real from)
@@ -620,246 +1187,58 @@ unittest
     assert(isnan(e) && signbit(e));
 }
 
-/***********************************************************************
- * Calculates the length of the 
- * hypotenuse of a right-angled triangle with sides of length x and y. 
- * The hypotenuse is the value of the square root of 
- * the sums of the squares of x and y:
- *
- *	sqrt(x&sup2; + y&sup2;)
- *
- * Note that hypot(x, y), hypot(y, x) and
- * hypot(x, -y) are equivalent.
- *
- *	<table border=1 cellpadding=4 cellspacing=0>
- *	<caption>Special Values</caption>
- *	<tr>
- *	<th> x               <th> y           <th> hypot(x, y) <th> invalid?
- *	<tr>
- *	<td> x               <td> &plusmn;0.0 <td> |x|         <td> no
- *	<tr>
- *	<td> &plusmn;&infin; <td> y           <td> +&infin;    <td> no
- *	<tr>
- *	<td> &plusmn;&infin; <td> NAN         <td> +&infin;    <td> no
- *	</table>
+/******************************************
+ * Creates a quiet NAN with the information from tagp[] embedded in it.
  */
+real nan(char[] tagp) { return std.c.math.nanl(toStringz(tagp)); }
 
-real hypot(real x, real y)
-{
-    /*
-     * This is based on code from:
-     * Cephes Math Library Release 2.1:  January, 1989
-     * Copyright 1984, 1987, 1989 by Stephen L. Moshier
-     * Direct inquiries to 30 Frost Street, Cambridge, MA 02140
-     */
-
-    const int PRECL = 32;
-    const int MAXEXPL = real.max_exp; //16384;
-    const int MINEXPL = real.min_exp; //-16384;
-
-    real xx, yy, b, re, im;
-    int ex, ey, e;
-
-    // Note, hypot(INFINITY,NAN) = INFINITY.
-    if (isinf(x) || isinf(y))
-	return real.infinity;
-
-    if (isnan(x))
-	return x;
-    if (isnan(y))
-	return y;
-
-    re = fabs(x);
-    im = fabs(y);
-
-    if (re == 0.0)
-	return im;
-    if (im == 0.0)
-	return re;
-
-    // Get the exponents of the numbers
-    xx = frexp(re, ex);
-    yy = frexp(im, ey);
-
-    // Check if one number is tiny compared to the other
-    e = ex - ey;
-    if (e > PRECL)
-	return re;
-    if (e < -PRECL)
-	return im;
-
-    // Find approximate exponent e of the geometric mean.
-    e = (ex + ey) >> 1;
-
-    // Rescale so mean is about 1
-    xx = ldexp(re, -e);
-    yy = ldexp(im, -e);
-
-    // Hypotenuse of the right triangle
-    b = sqrt(xx * xx  +  yy * yy);
-
-    // Compute the exponent of the answer.
-    yy = frexp(b, ey);
-    ey = e + ey;
-
-    // Check it for overflow and underflow.
-    if (ey > MAXEXPL + 2)
-    {
-	//return __matherr(_OVERFLOW, INFINITY, x, y, "hypotl");
-	return real.infinity;
-    }
-    if (ey < MINEXPL - 2)
-	return 0.0;
-
-    // Undo the scaling
-    b = ldexp(b, e);
-    return b;
-}
-
-unittest
-{
-    static real vals[][3] =	// x,y,hypot
-    [
-	[	0,	0,	0],
-	[	0,	-0,	0],
-	[	3,	4,	5],
-	[	-300,	-400,	500],
-	[	real.min, real.min, 4.75473e-4932L],
-	[	real.max/2, real.max/2, 0x1.6a09e667f3bcc908p+16383L /*8.41267e+4931L*/],
-	[	real.infinity, real.nan, real.infinity],
-	[	real.nan, real.nan, real.nan],
-    ];
-    int i;
-
-    for (i = 0; i < vals.length; i++)
-    {
-	real x = vals[i][0];
-	real y = vals[i][1];
-	real z = vals[i][2];
-	real h = hypot(x, y);
-
-	//printf("hypot(%Lg, %Lg) = %Lg, should be %Lg\n", x, y, h, z);
-	//if (!mfeq(z, h, .0000001))
-	    //printf("%La\n", h);
-	assert(mfeq(z, h, .0000001));
-    }
-}
-
-/*********************************************************************
- * Separate floating point value into significand and exponent.
+/******************************************
+ * Calculates the next representable value after x in the direction of y. 
  *
- * Returns:
- *	<dd> Calculate and return <i>x</i> and exp such that
- *	value =<i>x</i>*2<sup>exp</sup> and
- *	.5 &lt;= |<i>x</i>| &lt; 1.0<br>
- *	<i>x</i> has same sign as value.
- *
- *	<table border=1 cellpadding=4 cellspacing=0>
- *	<caption>Special values</caption>
- *	<tr>
- *	<th> value       <th> returns      <th> exp
- *	<tr>
- *	<td> &plusmn;0.0 <td>&plusmn;0.0   <td>0
- *	<tr>
- *	<td> +&infin;    <td>+&infin;      <td>int.max
- *	<tr>
- *	<td> -&infin;    <td>-&infin;      <td>int.min
- *	<tr>
- *	<td>&plusmn;NAN  <td>&plusmn;NAN   <td>int.min
- *	</table>
+ * If y > x, the result will be the next largest floating-point value;
+ * if y < x, the result will be the next smallest value.
+ * If x == y, the result is y.
+ * The FE_INEXACT and FE_OVERFLOW exceptions will be raised if x is finite and
+ * the function result is infinite. The FE_INEXACT and FE_UNDERFLOW 
+ * exceptions will be raised if the function value is subnormal, and x is 
+ * not equal to y. 
  */
-
-
-real frexp(real value, out int exp)
+real nextafter(real x, real y)
 {
-    ushort* vu = cast(ushort*)&value;
-    long* vl = cast(long*)&value;
-    uint ex;
-
-    // If exponent is non-zero
-    ex = vu[4] & 0x7FFF;
-    if (ex)
-    {
-	if (ex == 0x7FFF)
-	{   // infinity or NaN
-	    if (*vl &  0x7FFFFFFFFFFFFFFF)	// if NaN
-	    {	*vl |= 0xC000000000000000;	// convert NANS to NANQ
-		exp = int.min;
-	    }
-	    else if (vu[4] & 0x8000)
-	    {	// negative infinity
-		exp = int.min;
-	    }
-	    else
-	    {	// positive infinity
-		exp = int.max;
-	    }
-	}
-	else
-	{
-	    exp = ex - 0x3FFE;
-	    vu[4] = (0x8000 & vu[4]) | 0x3FFE;
-	}
-    }
-    else if (!*vl)
-    {
-	// value is +-0.0
-	exp = 0;
-    }
+    version (linux)
+	return std.c.math.nextafterl(x, y);
     else
-    {	// denormal
-	int i = -0x3FFD;
-
-	do
-	{
-	    i--;
-	    *vl <<= 1;
-	} while (*vl > 0);
-	exp = i;
-        vu[4] = (0x8000 & vu[4]) | 0x3FFE;
-    }
-    return value;
+	throw new NotImplemented("nextafter");
 }
 
+//real nexttoward(real x, real y) { return std.c.math.nexttowardl(x, y); }
 
-unittest
-{
-    static real vals[][3] =	// x,frexp,exp
-    [
-	[0.0,	0.0,	0],
-	[-0.0,	-0.0,	0],
-	[1.0,	.5,	1],
-	[-1.0,	-.5,	1],
-	[2.0,	.5,	2],
-	[155.67e20,	0x1.A5F1C2EB3FE4Fp-1,	74],	// normal
-	[1.0e-320,	0.98829225,		-1063],
-	[real.min,	.5,		-16381],
-	[real.min/2.0L,	.5,		-16382],	// denormal
+/*******************************************
+ * Returns the positive difference between x and y.
+ * Returns:
+ *	<table border=1 cellpadding=4 cellspacing=0>
+ *	<tr> <th> x, y   <th> fdim(x, y)
+ *	<tr> <td> x > y  <td> x - y
+ *	<tr> <td> x <= y <td> +0.0
+ *	</table>
+ */
+real fdim(real x, real y) { return (x > y) ? x - y : +0.0; }
 
-	[real.infinity,real.infinity,int.max],
-	[-real.infinity,-real.infinity,int.min],
-	[real.nan,real.nan,int.min],
-	[-real.nan,-real.nan,int.min],
+/****************************************
+ * Returns the larger of x and y.
+ */
+real fmax(real x, real y) { return x > y ? x : y; }
 
-	// Don't really support signalling nan's in D
-	//[real.nans,real.nan,int.min],
-	//[-real.nans,-real.nan,int.min],
-    ];
-    int i;
+/****************************************
+ * Returns the smaller of x and y.
+ */
+real fmin(real x, real y) { return x < y ? x : y; }
 
-    for (i = 0; i < vals.length; i++)
-    {
-	real x = vals[i][0];
-	real e = vals[i][1];
-	int exp = cast(int)vals[i][2];
-	int eptr;
-	real v = frexp(x, eptr);
-
-	//printf("frexp(%Lg) = %.8Lg, should be %.8Lg, eptr = %d, should be %d\n", x, v, e, eptr, exp);
-	assert(mfeq(e, v, .0000001));
-	assert(exp == eptr);
-    }
-}
+/**************************************
+ * Returns (x * y) + z, rounding only once according to the
+ * current rounding mode.
+ */
+real fma(real x, real y, real z) { return (x * y) + z; }
 
 /*******************************************************************
  * Fast integral powers.
@@ -909,6 +1288,49 @@ real pow(real x, int n)
 	return pow(x, cast(uint)n);
 }
 
+/*********************************************
+ * Calculates x<sup>y</sup>.
+ *
+ * $(TABLE_SV
+ * <tr>
+ * <th> x <th> y <th> pow(x, y) <th> div 0 <th> invalid?
+ * <tr>
+ * <td> anything 	<td> &plusmn;0.0 	<td> 1.0 	<td> no 	<td> no 
+ * <tr>
+ * <td> |x| &gt; 1 	<td> +&infin; 		<td> +&infin; 	<td> no 	<td> no 
+ * <tr>
+ * <td> |x| &lt; 1 	<td> +&infin; 		<td> +0.0 	<td> no 	<td> no 
+ * <tr>
+ * <td> |x| &gt; 1 	<td> -&infin; 		<td> +0.0 	<td> no 	<td> no 
+ * <tr>
+ * <td> |x| &lt; 1 	<td> -&infin; 		<td> +&infin; 	<td> no 	<td> no 
+ * <tr>
+ * <td> +&infin; 	<td> &gt; 0.0 		<td> +&infin; 	<td> no 	<td> no 
+ * <tr>
+ * <td> +&infin; 	<td> &lt; 0.0 		<td> +0.0 	<td> no 	<td> no 
+ * <tr>
+ * <td> -&infin; 	<td> odd integer &gt; 0.0	<td> -&infin; 	<td> no 	<td> no 
+ * <tr>
+ * <td> -&infin;  	<td> &gt; 0.0, not odd integer	<td> +&infin; 	<td> no 	<td> no
+ * <tr>
+ * <td> -&infin; 	<td> odd integer &lt; 0.0  	<td> -0.0 	<td> no 	<td> no 
+ * <tr>
+ * <td> -&infin; 	<td> &lt; 0.0, not odd integer 	<td> +0.0 	<td> no 	<td> no 
+ * <tr>
+ * <td> &plusmn;1.0 	<td> &plusmn;&infin; 		<td> $(NAN) 	<td> no 	<td> yes 
+ * <tr>
+ * <td> &lt; 0.0 	<td> finite, nonintegral 	<td> $(NAN) 	<td> no 	<td> yes
+ * <tr>
+ * <td> &plusmn;0.0 	<td> odd integer &lt; 0.0	<td> &plusmn;&infin; <td> yes 	<td> no 
+ * <tr>
+ * <td> &plusmn;0.0 	<td> &lt; 0.0, not odd integer 	<td> +&infin; 	<td> yes 	<td> no
+ * <tr>
+ * <td> &plusmn;0.0 	<td> odd integer &gt; 0.0	<td> &plusmn;0.0 <td> no 	<td> no 
+ * <tr>
+ * <td> &plusmn;0.0 	<td> &gt; 0.0, not odd integer 	<td> +0.0 	<td> no 	<td> no 
+ * )
+ */
+
 real pow(real x, real y)
 {
     version (linux) // C pow() often does not handle special values correctly
@@ -917,7 +1339,7 @@ real pow(real x, real y)
 	    return real.nan;
 
 	if (y == 0)
-	    return 1;		// even if x is NAN
+	    return 1;		// even if x is $(NAN)
 	if (isnan(x) && y != 0)
 	    return real.nan;
 	if (isinf(y))
@@ -1046,21 +1468,14 @@ private int iabs(int i)
  * Returns: the number of mantissa bits which are equal in x and y.
  * eg, 0x1.F8p+60 and 0x1.F1p+60 are equal to 5 bits of precision.
  *
- *	<table border=1 cellpadding=4 cellspacing=0>
- *	<caption>Special values</caption>
- *	<tr>
- *	<th> x <th> y <th> feqrel(x, y)
- *	<tr>
- *	<td> x <td> x <td> real.mant_dig
- *	<tr>
- *	<td> x <td> &gt;= 2*x <td> 0
- *	<tr>
- *	<td> x <td> &lt;= x/2 <td> 0
- *	<tr>
- *	<td> NAN <td> any <td> 0
- *	<tr>
- *	<td> any <td> NAN <td> 0
- *	</table>
+ *	$(TABLE_SV
+ *	<tr> <th> x      <th> y         <th> feqrel(x, y)
+ *	<tr> <td> x      <td> x         <td> real.mant_dig
+ *	<tr> <td> x      <td> &gt;= 2*x <td> 0
+ *	<tr> <td> x      <td> &lt;= x/2 <td> 0
+ *	<tr> <td> $(NAN) <td> any       <td> 0
+ *	<tr> <td> any    <td> $(NAN)    <td> 0
+ *	)
  */
 
 int feqrel(real x, real y)

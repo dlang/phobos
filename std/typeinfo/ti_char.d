@@ -19,7 +19,7 @@ class TypeInfo_a : TypeInfo
 	return *cast(char *)p1 - *cast(char *)p2;
     }
 
-    int tsize()
+    size_t tsize()
     {
 	return char.sizeof;
     }

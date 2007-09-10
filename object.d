@@ -59,7 +59,7 @@ class TypeInfo
     uint getHash(void *p);
     int equals(void *p1, void *p2);
     int compare(void *p1, void *p2);
-    int tsize();
+    size_t tsize();
     void swap(void *p1, void *p2);
 }
 
@@ -113,7 +113,7 @@ class TypeInfo_Class : TypeInfo
 class TypeInfo_Struct : TypeInfo
 {
     char[] name;
-    uint xsize;
+    size_t xsize;
 
     uint function(void*) xtoHash;
     int function(void*,void*) xopEquals;

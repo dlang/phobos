@@ -9,6 +9,8 @@
 #		Delete unneeded files created by build process
 #	make unittest
 #		Build phobos.lib, build and run unit tests
+#	make html
+#		Build documentation
 # Notes:
 #	This relies on LIB.EXE 8.00 or later, and MAKE.EXE 5.01 or later.
 
@@ -84,7 +86,7 @@ OBJS= asserterror.obj deh.obj switch.obj complex.obj gcstats.obj \
 	ti_dchar.obj ti_Adchar.obj ti_bit.obj ti_Abit.obj ti_void.obj
 
 DOCS=	$(DOC)\std_path.html $(DOC)\std_math.html $(DOC)\std_outbuffer.html \
-	$(DOC)\std_stream.html
+	$(DOC)\std_stream.html $(DOC)\std_string.html
 
 SRC=	errno.c object.d unittest.d crc32.d gcstats.d
 
@@ -478,8 +480,8 @@ gc.obj : std\gc.d
 loader.obj : std\loader.d
 	$(DMD) -c $(DFLAGS) std\loader.d
 
-math.obj $(DOC)\std_math.html : std\math.d
-	$(DMD) -c $(DFLAGS) -Df$(DOC)\std_math.html std\math.d
+math.obj : std\math.d
+	$(DMD) -c $(DFLAGS) std\math.d
 
 math2.obj : std\math2.d
 	$(DMD) -c $(DFLAGS) std\math2.d
@@ -499,14 +501,14 @@ moduleinit.obj : std\moduleinit.d
 openrj.obj : std\openrj.d
 	$(DMD) -c $(DFLAGS) std\openrj.d
 
-outbuffer.obj $(DOC)\std_outbuffer.html : std\outbuffer.d
-	$(DMD) -c $(DFLAGS) -Df$(DOC)\std_outbuffer.html std\outbuffer.d
+outbuffer.obj : std\outbuffer.d
+	$(DMD) -c $(DFLAGS) std\outbuffer.d
 
 outofmemory.obj : std\outofmemory.d
 	$(DMD) -c $(DFLAGS) std\outofmemory.d
 
-path.obj $(DOC)\std_path.html : std\path.d
-	$(DMD) -c $(DFLAGS) -Df$(DOC)\std_path.html std\path.d
+path.obj : std\path.d
+	$(DMD) -c $(DFLAGS) std\path.d
 
 perf.obj : std\perf.d
 	$(DMD) -c $(DFLAGS) std\perf.d
@@ -532,8 +534,8 @@ socketstream.obj : std\socketstream.d
 stdio.obj : std\stdio.d
 	$(DMD) -c $(DFLAGS) std\stdio.d
 
-stream.obj $(DOC)\std_stream.html : std\stream.d
-	$(DMD) -c $(DFLAGS) -Df$(DOC)\std_stream.html -d std\stream.d
+stream.obj : std\stream.d
+	$(DMD) -c $(DFLAGS) -d std\stream.d
 
 string.obj : std\string.d
 	$(DMD) -c $(DFLAGS) std\string.d
@@ -734,13 +736,31 @@ ti_int.obj : std\typeinfo\ti_int.d
 	$(DMD) -c $(DFLAGS) std\typeinfo\ti_int.d
 
 
+################## DOCS ####################################
+
+$(DOC)\std_math.html : std.ddoc std\math.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_math.html std.ddoc std\math.d
+
+$(DOC)\std_outbuffer.html : std.ddoc std\outbuffer.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_outbuffer.html std.ddoc std\outbuffer.d
+
+$(DOC)\std_path.html : std.ddoc std\path.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_path.html std.ddoc std\path.d
+
+$(DOC)\std_stream.html : std.ddoc std\stream.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_stream.html -d std.ddoc std\stream.d
+
+$(DOC)\std_string.html : std.ddoc std\string.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_string.html std.ddoc std\string.d
+
+
 ######################################################
 
-zip : win32.mak linux.mak phoboslicense.txt std_boilerplate.html $(SRC) \
+zip : win32.mak linux.mak phoboslicense.txt std.ddoc $(SRC) \
 	$(SRC_STD) $(SRC_STD_C) $(SRC_TI) $(SRC_INT) $(SRC_STD_WIN) \
 	$(SRC_STDLINUX) $(SRC_ETC) $(SRC_ETC_C) $(SRC_ZLIB) $(SRC_GC)
 	del phobos.zip
-	zip32 -u phobos win32.mak linux.mak std_boilerplate.html
+	zip32 -u phobos win32.mak linux.mak std.ddoc
 	zip32 -u phobos $(SRC)
 	zip32 -u phobos $(SRC_TI)
 	zip32 -u phobos $(SRC_INT)
@@ -762,7 +782,7 @@ clean:
 
 install:
 	$(CP) phobos.lib gcstub.obj \dmd\lib
-	$(CP) win32.mak linux.mak phoboslicense.txt minit.obj std_boilerplate.html \dmd\src\phobos
+	$(CP) win32.mak linux.mak phoboslicense.txt minit.obj std.ddoc \dmd\src\phobos
 	$(CP) $(SRC) \dmd\src\phobos
 	$(CP) $(SRC_STD) \dmd\src\phobos\std
 	$(CP) $(SRC_STD_C) \dmd\src\phobos\std\c

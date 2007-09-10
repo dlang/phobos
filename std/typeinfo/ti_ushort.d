@@ -20,7 +20,7 @@ class TypeInfo_t : TypeInfo
 	return *cast(ushort *)p1 - *cast(ushort *)p2;
     }
 
-    int tsize()
+    size_t tsize()
     {
 	return ushort.sizeof;
     }

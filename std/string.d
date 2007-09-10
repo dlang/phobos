@@ -1,21 +1,25 @@
-/*
- * Written by Walter Bright
- * Digital Mars
- * www.digitalmars.com
- * Placed into Public Domain.
+
+/**
+ * String handling functions.
+ *
+ * To copy or not to copy?
+ * When a function takes a string as a parameter, and returns a string,
+ * is that string the same as the input string, modified in place, or
+ * is it a modified copy of the input string? The D array convention is
+ * "copy-on-write". This means that if no modifications are done, the
+ * original string (or slices of it) can be returned. If any modifications
+ * are done, the returned string is a copy.
+ *
+ * Macros:
+ *	WIKI = StdString
+ * Copyright:
+ *	Public Domain
  */
 
-// String handling functions.
-//
-// To copy or not to copy?
-//
-// When a function takes a string as a parameter, and returns a string,
-// is that string the same as the input string, modified in place, or
-// is it a modified copy of the input string? The D array convention is
-// "copy-on-write". This means that if no modifications are done, the
-// original string (or slices of it) can be returned. If any modifications
-// are done, the returned string is a copy.
-//
+/* Author:
+ *	Walter Bright, Digital Mars, www.digitalmars.com
+ */
+
 // The code is not optimized for speed, that will have to wait
 // until the design is solidified.
 
@@ -55,26 +59,27 @@ extern (C)
     int wcscmp(wchar *, wchar *);
 }
 
-/************** Exceptions ****************/
+/* ************* Exceptions *************** */
 
+/// Thrown on errors in string functions.
 class StringException : Exception
 {
-    this(char[] msg)
+    this(char[] msg)	/// Constructor
     {
 	super(msg);
     }
 }
 
-/************** Constants ****************/
+/* ************* Constants *************** */
 
-const char[16] hexdigits = "0123456789ABCDEF";
-const char[10] digits    = "0123456789";
-const char[8]  octdigits = "01234567";
-const char[26] lowercase = "abcdefghijklmnopqrstuvwxyz";
-const char[26] uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+const char[16] hexdigits = "0123456789ABCDEF";			/// 0..9A..F
+const char[10] digits    = "0123456789";			/// 0..9
+const char[8]  octdigits = "01234567";				/// 0..7
+const char[26] lowercase = "abcdefghijklmnopqrstuvwxyz";	/// a..z
+const char[26] uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";	/// A..Z
 const char[52] letters   = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-			   "abcdefghijklmnopqrstuvwxyz";
-const char[6] whitespace = " \t\v\r\n\f";
+			   "abcdefghijklmnopqrstuvwxyz";	/// A..Za..z
+const char[6] whitespace = " \t\v\r\n\f";			/// ASCII whitespace
 
 /**********************************
  * Returns !=0 if c is whitespace
@@ -86,7 +91,7 @@ int iswhite(dchar c)
 }
 
 /*********************************
- * Convert string to integer / real.
+ * Convert string to integer.
  */
 
 long atoi(char[] s)
@@ -95,7 +100,7 @@ long atoi(char[] s)
 }
 
 /*************************************
- * Convert string to float
+ * Convert string to real.
  */
 
 real atof(char[] s)
@@ -107,16 +112,18 @@ real atof(char[] s)
 }
 
 /**********************************
- * Compare two strings.
+ * Compare two strings. cmp is case sensitive, icmp is case insensitive.
  * Returns:
- *	<0	s1 < s2
- *	=0	s1 == s2
- *	>0	s1 > s2
+ *	<table border=1 cellpadding=4 cellspacing=0>
+ *	<tr> <td> < 0	<td> s1 < s2
+ *	<tr> <td> = 0	<td> s1 == s2
+ *	<tr> <td> > 0	<td> s1 > s2
+ *	</table>
  */
 
 int cmp(char[] s1, char[] s2)
 {
-    uint len = s1.length;
+    size_t len = s1.length;
     int result;
 
     //printf("cmp('%.*s', '%.*s')\n", s1, s2);
@@ -129,12 +136,12 @@ int cmp(char[] s1, char[] s2)
 }
 
 /*********************************
- * Same as cmp() but case insensitive.
+ * ditto
  */
 
 int icmp(char[] s1, char[] s2)
 {
-    uint len = s1.length;
+    size_t len = s1.length;
     int result;
 
     if (s2.length < len)
@@ -145,7 +152,7 @@ int icmp(char[] s1, char[] s2)
     }
     version (linux)
     {
-	for (int i = 0; i < len; i++)
+	for (size_t i = 0; i < len; i++)
 	{
 	    if (s1[i] != s2[i])
 	    {
@@ -188,52 +195,57 @@ unittest
     assert(result > 0);
 }
 
-/*********************************
+/* ********************************
  * Converts a D array of chars to a C-style 0 terminated string.
+ * Deprecated: replaced with toStringz().
  */
 
-deprecated char* toCharz(char[] string)
+deprecated char* toCharz(char[] s)
 {
-    return toStringz(string);
+    return toStringz(s);
 }
 
-char* toStringz(char[] string)
+/*********************************
+ * Convert array of chars s[] to a C-style 0 terminated string.
+ */
+
+char* toStringz(char[] s)
     in
     {
     }
     out (result)
     {
 	if (result)
-	{   assert(strlen(result) == string.length);
-	    assert(memcmp(result, string, string.length) == 0);
+	{   assert(strlen(result) == s.length);
+	    assert(memcmp(result, s, s.length) == 0);
 	}
     }
     body
     {
 	char[] copy;
 
-	if (string.length == 0)
+	if (s.length == 0)
 	    return "";
 
 	/+ Unfortunately, this isn't reliable.
 	   We could make this work if string literals are put
-	   in read-only memory and we test if string[] is pointing into
+	   in read-only memory and we test if s[] is pointing into
 	   that.
 
-	    /* Peek past end of string[], if it's 0, no conversion necessary.
+	    /* Peek past end of s[], if it's 0, no conversion necessary.
 	     * Note that the compiler will put a 0 past the end of static
 	     * strings, and the storage allocator will put a 0 past the end
 	     * of newly allocated char[]'s.
 	     */
-	    char* p = &string[0] + string.length;
+	    char* p = &s[0] + s.length;
 	    if (*p == 0)
-		return string;
+		return s;
 	+/
 
 	// Need to make a copy
-	copy = new char[string.length + 1];
-	copy[0..string.length] = string;
-	copy[string.length] = 0;
+	copy = new char[s.length + 1];
+	copy[0..s.length] = s;
+	copy[s.length] = 0;
 	return copy;
     }
 
@@ -253,9 +265,12 @@ unittest
 }
 
 /******************************************
- * Find first occurrance of c in string s.
- * Return index in s where it is found.
- * Return -1 if not found.
+ * find, ifind _find first occurrance of c in string s.
+ * rfind, irfind _find last occurrance of c in string s.
+ *
+ * find, rfind are case sensitive; ifind, irfind are case insensitive.
+ * Returns:
+ *	Index in s where c is found, -1 if not found.
  */
 
 int find(char[] s, dchar c)
@@ -298,7 +313,7 @@ unittest
 
 
 /******************************************
- * Case insensitive version of find().
+ * ditto
  */
 
 int ifind(char[] s, dchar c)
@@ -358,18 +373,16 @@ unittest
 
 
 /******************************************
- * Find last occurrance of c in string s.
- * Return index in s where it is found.
- * Return -1 if not found.
+ * ditto
  */
 
 int rfind(char[] s, dchar c)
 {
-    int i;
+    size_t i;
 
     if (c <= 0x7F)
     {	// Plain old ASCII
-	for (i = s.length; i-- > 0;)
+	for (i = s.length; i-- != 0;)
 	{
 	    if (s[i] == c)
 		break;
@@ -401,7 +414,7 @@ unittest
 }
 
 /******************************************
- * Case insensitive version of rfind().
+ * ditto
  */
 
 int irfind(char[] s, dchar c)
@@ -412,7 +425,7 @@ int irfind(char[] s, dchar c)
     {	// Plain old ASCII
 	char c1 = std.ctype.tolower(c);
 
-	for (i = s.length; i-- > 0;)
+	for (i = s.length; i-- != 0;)
 	{   char c2 = s[i];
 
 	    c2 = std.ctype.tolower(c2);
@@ -424,7 +437,7 @@ int irfind(char[] s, dchar c)
     {	// c is a universal character
 	dchar c1 = std.uni.toUniLower(c);
 
-	for (i = s.length; i-- > 0;)
+	for (i = s.length; i-- != 0;)
 	{   char cx = s[i];
 
 	    if (cx <= 0x7F)
@@ -469,10 +482,13 @@ unittest
 }
 
 
-/*************************************
- * Find first occurrance of sub[] in string s[].
- * Return index in s[] where it is found.
- * Return -1 if not found.
+/******************************************
+ * find, ifind _find first occurrance of sub[] in string s[].
+ * rfind, irfind _find last occurrance of sub[] in string s[].
+ *
+ * find, rfind are case sensitive; ifind, irfind are case insensitive.
+ * Returns:
+ *	Index in s where c is found, -1 if not found.
  */
 
 int find(char[] s, char[] sub)
@@ -489,7 +505,7 @@ int find(char[] s, char[] sub)
     }
     body
     {
-	int sublength = sub.length;
+	size_t sublength = sub.length;
 
 	if (sublength == 0)
 	    return 0;
@@ -503,13 +519,13 @@ int find(char[] s, char[] sub)
 	}
 	else
 	{
-	    int imax = s.length - sublength + 1;
+	    size_t imax = s.length - sublength + 1;
 
 	    // Remainder of sub[]
 	    char *q = &sub[1];
 	    sublength--;
 
-	    for (int i = 0; i < imax; i++)
+	    for (size_t i = 0; i < imax; i++)
 	    {
 		char *p = memchr(&s[i], c, imax - i);
 		if (!p)
@@ -543,8 +559,8 @@ unittest
     assert(i == 6);
 }
 
-/*************************************
- * Case insensitive version of find().
+/******************************************
+ * ditto
  */
 
 int ifind(char[] s, char[] sub)
@@ -561,7 +577,7 @@ int ifind(char[] s, char[] sub)
     }
     body
     {
-	int sublength = sub.length;
+	size_t sublength = sub.length;
 	int i;
 
 	if (sublength == 0)
@@ -577,7 +593,7 @@ int ifind(char[] s, char[] sub)
 	}
 	else if (c <= 0x7F)
 	{
-	    int imax = s.length - sublength + 1;
+	    size_t imax = s.length - sublength + 1;
 
 	    // Remainder of sub[]
 	    char[] subn = sub[1 .. sublength];
@@ -595,7 +611,7 @@ int ifind(char[] s, char[] sub)
 	}
 	else
 	{
-	    int imax = s.length - sublength;
+	    size_t imax = s.length - sublength;
 
 	    for (i = 0; i < imax; i++)
 	    {
@@ -649,10 +665,8 @@ unittest
     assert(i == -1);
 }
 
-/*************************************
- * Find last occurrance of sub in string s.
- * Return index in s where it is found.
- * Return -1 if not found.
+/******************************************
+ * ditto
  */
 
 int rfind(char[] s, char[] sub)
@@ -705,8 +719,8 @@ unittest
 }
 
 
-/*************************************
- * Case insensitive version of rfind().
+/******************************************
+ * ditto
  */
 
 int irfind(char[] s, char[] sub)
@@ -791,7 +805,7 @@ unittest
 
 
 /************************************
- * Convert string to lower case.
+ * Convert string s[] to lower case.
  */
 
 char[] tolower(char[] s)
@@ -846,7 +860,7 @@ unittest
 }
 
 /************************************
- * Convert string to upper case.
+ * Convert string s[] to upper case.
  */
 
 char[] toupper(char[] s)
@@ -902,7 +916,7 @@ unittest
 
 
 /********************************************
- * Capitalize first character of string, convert rest of string
+ * Capitalize first character of string s[], convert rest of string s[]
  * to lower case.
  */
 
@@ -967,7 +981,7 @@ unittest
 
 
 /********************************************
- * Capitalize all words in string.
+ * Capitalize all words in string s[].
  * Remove leading and trailing whitespace.
  * Replace all sequences of whitespace with a single space.
  */
@@ -1075,13 +1089,13 @@ unittest
 
 
 /********************************************
- * Concatenate all the strings together into one
+ * Concatenate all the strings in words[] together into one
  * string; use sep[] as the separator.
  */
 
 char[] join(char[][] words, char[] sep)
 {
-    uint len;
+    size_t len;
     uint seplen;
     uint i;
     uint j;
@@ -1613,7 +1627,7 @@ unittest
 
 
 /*******************************************
- * Left justify, right justify, or center string
+ * Left justify, right justify, or center string s[]
  * in field width chars wide.
  */
 
@@ -1627,6 +1641,7 @@ char[] ljustify(char[] s, int width)
     return r;
 }
 
+/// ditto
 char[] rjustify(char[] s, int width)
 {
     if (s.length >= width)
@@ -1637,6 +1652,7 @@ char[] rjustify(char[] s, int width)
     return r;
 }
 
+/// ditto
 char[] center(char[] s, int width)
 {
     if (s.length >= width)
@@ -1676,7 +1692,7 @@ unittest
 
 
 /*****************************************
- * Same as rjustify(), but fill with '0's
+ * Same as rjustify(), but fill with '0's.
  */
 
 char[] zfill(char[] s, int width)
@@ -1731,8 +1747,9 @@ unittest
     assert(i == 0);
 }
 
-////////////////////////////////////////////////////////
-// Return a string that is string[] with slice[] replaced by replacement[].
+/*****************************
+ * Return a _string that is string[] with slice[] replaced by replacement[].
+ */
 
 char[] replaceSlice(char[] string, char[] slice, char[] replacement)
 in
@@ -1774,7 +1791,7 @@ unittest
  * Insert sub[] into s[] at location index.
  */
 
-char[] insert(char[] s, int index, char[] sub)
+char[] insert(char[] s, size_t index, char[] sub)
 in
 {
     assert(0 <= index && index <= s.length);
@@ -2021,6 +2038,7 @@ char[] toString(bit b)
     return b ? "true" : "false";
 }
 
+/// ditto
 char[] toString(char c)
 {
     char[] result = new char[2];
@@ -2043,9 +2061,10 @@ unittest
     assert(s2 == "foo");
 }
 
-char[] toString(ubyte ub)  { return toString(cast(uint) ub); }
-char[] toString(ushort us) { return toString(cast(uint) us); }
+char[] toString(ubyte ub)  { return toString(cast(uint) ub); } /// ditto
+char[] toString(ushort us) { return toString(cast(uint) us); } /// ditto
 
+/// ditto
 char[] toString(uint u)
 {   char[uint.sizeof * 3] buffer = void;
     int ndigits;
@@ -2091,6 +2110,7 @@ unittest
     assert(i == 0);
 }
 
+/// ditto
 char[] toString(ulong u)
 {   char[ulong.sizeof * 3] buffer;
     int ndigits;
@@ -2132,9 +2152,10 @@ unittest
     assert(i == 0);
 }
 
-char[] toString(byte b)  { return toString(cast(int) b); }
-char[] toString(short s) { return toString(cast(int) s); }
+char[] toString(byte b)  { return toString(cast(int) b); } /// ditto
+char[] toString(short s) { return toString(cast(int) s); } /// ditto
 
+/// ditto
 char[] toString(int i)
 {   char[1 + int.sizeof * 3] buffer;
     char c;
@@ -2190,6 +2211,7 @@ unittest
     assert(i == 0);
 }
 
+/// ditto
 char[] toString(long i)
 {   char[1 + long.sizeof * 3] buffer;
     char c;
@@ -2247,8 +2269,10 @@ unittest
     assert(i == 0);
 }
 
+/// ditto
 char[] toString(float f) { return toString(cast(double) f); }
 
+/// ditto
 char[] toString(double d)
 {
     char[20] buffer;
@@ -2257,6 +2281,7 @@ char[] toString(double d)
     return toString(buffer).dup;
 }
 
+/// ditto
 char[] toString(real r)
 {
     char[20] buffer;
@@ -2265,8 +2290,10 @@ char[] toString(real r)
     return toString(buffer).dup;
 }
 
+/// ditto
 char[] toString(ifloat f) { return toString(cast(idouble) f); }
 
+/// ditto
 char[] toString(idouble d)
 {
     char[21] buffer;
@@ -2275,6 +2302,7 @@ char[] toString(idouble d)
     return toString(buffer).dup;
 }
 
+/// ditto
 char[] toString(ireal r)
 {
     char[21] buffer;
@@ -2283,8 +2311,10 @@ char[] toString(ireal r)
     return toString(buffer).dup;
 }
 
+/// ditto
 char[] toString(cfloat f) { return toString(cast(cdouble) f); }
 
+/// ditto
 char[] toString(cdouble d)
 {
     char[20 + 1 + 20 + 1] buffer;
@@ -2293,6 +2323,7 @@ char[] toString(cdouble d)
     return toString(buffer).dup;
 }
 
+/// ditto
 char[] toString(creal r)
 {
     char[20 + 1 + 20 + 1] buffer;
@@ -2301,6 +2332,13 @@ char[] toString(creal r)
     return toString(buffer).dup;
 }
 
+/******************************************
+ * Convert value to string in _radix radix.
+ *
+ * radix must be a value from 2 to 36.
+ * value is treated as a signed value only if radix is 10.
+ * The characters A through Z are used to represent values 10 through 36.
+ */
 char[] toString(long value, uint radix)
 in
 {
@@ -2313,6 +2351,7 @@ body
     return toString(cast(ulong)value, radix);
 }
 
+/// ditto
 char[] toString(ulong value, uint radix)
 in
 {
@@ -2361,7 +2400,7 @@ unittest
 }
 
 /*************************************************
- * Convert to char[].
+ * Convert C-style 0 terminated string s to char[] string.
  */
 
 char[] toString(char *s)
@@ -2387,6 +2426,7 @@ unittest
 
 
 /*****************************************************
+ * Format arguments into a string.
  */
 
 
@@ -2404,6 +2444,11 @@ char[] format(...)
 }
 
 
+/*****************************************************
+ * Format arguments into string <i>s</i> which must be large
+ * enough to hold the result. Throws ArrayBoundsError if it is not.
+ * Returns: s
+ */
 char[] sformat(char[] s, ...)
 {   size_t i;
 
@@ -2476,6 +2521,21 @@ unittest
 
 /***********************************************
  * See if character c is in the pattern.
+ * Patterns:
+ *
+ *	A <i>pattern</i> is an array of characters much like a <i>character
+ *	class</i> in regular expressions. A sequence of characters
+ *	can be given, such as "abcde". The '-' can represent a range
+ *	of characters, as "a-e" represents the same pattern as "abcde".
+ *	"a-fA-F0-9" represents all the hex characters.
+ *	If the first character of a pattern is '^', then the pattern
+ *	is negated, i.e. "^0-9" means any character except a digit.
+ *	The functions inPattern, <b>countchars</b>, <b>removeschars</b>,
+ *	and <b>squeeze</b>
+ *	use patterns.
+ *
+ * Note: In the future, the pattern syntax may be improved
+ *	to be more like regular expression character classes.
  */
 
 int inPattern(dchar c, char[] pattern)
@@ -2653,7 +2713,7 @@ unittest
 
 
 /***************************************************
- * Return string where sequences of a character from pattern
+ * Return string where sequences of a character in s[] from pattern[]
  * are replaced with a single instance of that character.
  * If pattern is null, it defaults to all characters.
  */
@@ -2723,7 +2783,7 @@ unittest
 
 
 /**********************************************
- * Return string that is the 'successor' to s.
+ * Return string that is the 'successor' to s[].
  * If the rightmost character is a-zA-Z0-9, it is incremented within
  * its case or digits. If it generates a carry, the process is
  * repeated with the one to its immediate left.
@@ -2794,7 +2854,33 @@ unittest
 
 
 /***********************************************
- * Translate characters in from[] to characters in to[].
+ * Replaces characters in str[] that are in from[]
+ * with corresponding characters in to[] and returns the resulting
+ * string.
+ * Params:
+ *	modifiers = a string of modifier characters
+ * Modifiers:
+		<table border=1 cellspacing=0 cellpadding=5>
+		<tr> <th>Modifier <th>Description
+		<tr> <td><b>c</b> <td>Complement the list of characters in from[]
+		<tr> <td><b>d</b> <td>Removes matching characters with no corresponding replacement in to[]
+		<tr> <td><b>s</b> <td>Removes adjacent duplicates in the replaced characters
+		</table>
+
+	If modifier <b>d</b> is present, then the number of characters
+	in to[] may be only 0 or 1.
+
+	If modifier <b>d</b> is not present and to[] is null,
+	then to[] is taken _to be the same as from[].
+
+	If modifier <b>d</b> is not present and to[] is shorter
+	than from[], then to[] is extended by replicating the
+	last character in to[].
+
+	Both from[] and to[] may contain ranges using the <b>-</b>
+	character, for example <b>a-d</b> is synonymous with <b>abcd</b>.
+	Neither accept a leading <b>^</b> as meaning the complement of
+	the string (use the <b>c</b> modifier for that).
  */
 
 char[] tr(char[] str, char[] from, char[] to, char[] modifiers = null)
@@ -2949,7 +3035,7 @@ unittest
 }
 
 
-/*************************************************
+/* ************************************************
  * Version       : v0.3
  * Author        : David L. 'SpottedTiger' Davis
  * Date Created  : 31.May.05 Compiled and Tested with dmd v0.125
@@ -2960,43 +3046,41 @@ unittest
  * Licence       : Public Domain / Contributed to Digital Mars
  */
 
-/+
- ' final bool isNumeric(in char[], in bool = false)
- ' ---------------------------------------------------------------
- ' [in] char[] s can be formatted in the following ways:
- '
- ' Integer Whole Number:
- ' (for byte, ubyte, short, ushort, int, uint, long, and ulong)
- ' ['+'|'-']digit(s)[U|L|UL]
- '
- ' examples: 123, 123UL, 123L, +123U, -123L
- '
- ' Floating-Point Number:
- ' (for float, double, real, ifloat, idouble, and ireal)
- ' ['+'|'-']digit(s)[.][digit(s)][[e-|e+]digit(s)][i|f|L|Li|fi]]
- '      or [nan|nani|inf|-inf]
- '
- ' examples: +123., -123.01, 123.3e-10f, 123.3e-10fi, 123.3e-10L
- ' 
- ' (for cfloat, cdouble, and creal)
- ' ['+'|'-']digit(s)[.][digit(s)][[e-|e+]digit(s)][+]
- '         [digit(s)[.][digit(s)][[e-|e+]digit(s)][i|f|L|Li|fi]]
- '      or [nan|nani|nan+nani|inf|-inf]
- '
- ' examples: nan, -123e-1+456.9e-10Li, +123e+10+456i, 123+456
- '
- ' [in] bool bAllowSep 
- ' False by default, but when set to true it will accept the 
- ' separator characters "," and "_" within the string, but these  
- ' characters should be stripped from the string before using any 
- ' of the conversion functions like toInt(), toFloat(), and etc 
- ' else an error will occur.
- '
- ' Also please note, that no spaces are allowed within the string  
- ' anywhere whether it's a leading, trailing, or embedded space(s), 
- ' thus they too must be stripped from the string before using this
- ' function, or any of the conversion functions.
- +/
+/**
+ * [in] char[] s can be formatted in the following ways:
+ *
+ * Integer Whole Number:
+ * (for byte, ubyte, short, ushort, int, uint, long, and ulong)
+ * ['+'|'-']digit(s)[U|L|UL]
+ *
+ * examples: 123, 123UL, 123L, +123U, -123L
+ *
+ * Floating-Point Number:
+ * (for float, double, real, ifloat, idouble, and ireal)
+ * ['+'|'-']digit(s)[.][digit(s)][[e-|e+]digit(s)][i|f|L|Li|fi]]
+ *      or [nan|nani|inf|-inf]
+ *
+ * examples: +123., -123.01, 123.3e-10f, 123.3e-10fi, 123.3e-10L
+ * 
+ * (for cfloat, cdouble, and creal)
+ * ['+'|'-']digit(s)[.][digit(s)][[e-|e+]digit(s)][+]
+ *         [digit(s)[.][digit(s)][[e-|e+]digit(s)][i|f|L|Li|fi]]
+ *      or [nan|nani|nan+nani|inf|-inf]
+ *
+ * examples: nan, -123e-1+456.9e-10Li, +123e+10+456i, 123+456
+ *
+ * [in] bool bAllowSep 
+ * False by default, but when set to true it will accept the 
+ * separator characters "," and "_" within the string, but these  
+ * characters should be stripped from the string before using any 
+ * of the conversion functions like toInt(), toFloat(), and etc 
+ * else an error will occur.
+ *
+ * Also please note, that no spaces are allowed within the string  
+ * anywhere whether it's a leading, trailing, or embedded space(s), 
+ * thus they too must be stripped from the string before using this
+ * function, or any of the conversion functions.
+ */
 
 final bool isNumeric(in char[] s, in bool bAllowSep = false)
 {
@@ -3140,13 +3224,13 @@ final bool isNumeric(in char[] s, in bool bAllowSep = false)
     return true;
 }
 
-// Allow any object as a parameter
+/// Allow any object as a parameter
 bool isNumeric(...)
 {
     return isNumeric(_arguments, _argptr);
 }
 
-// Check only the first parameter, all others will be ignored. 
+/// Check only the first parameter, all others will be ignored. 
 bool isNumeric(TypeInfo[] _arguments, va_list _argptr)
 {
     char[]  s  = "";

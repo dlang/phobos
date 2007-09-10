@@ -1,7 +1,5 @@
 
 /**
- * Boilerplate:
- *	$(std_boilerplate.html)
  * Macros:
  *	WIKI = StdPath
  * Copyright:

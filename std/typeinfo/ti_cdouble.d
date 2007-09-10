@@ -42,7 +42,7 @@ class TypeInfo_r : TypeInfo
 	return _compare(*cast(cdouble *)p1, *cast(cdouble *)p2);
     }
 
-    int tsize()
+    size_t tsize()
     {
 	return cdouble.sizeof;
     }

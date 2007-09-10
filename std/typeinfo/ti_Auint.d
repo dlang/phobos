@@ -9,7 +9,7 @@ class TypeInfo_Ak : TypeInfo
 
     uint getHash(void *p)
     {	uint[] s = *cast(uint[]*)p;
-	uint len = s.length;
+	size_t len = s.length;
 	uint *str = s;
 	uint hash = 0;
 
@@ -37,11 +37,11 @@ class TypeInfo_Ak : TypeInfo
     {
 	uint[] s1 = *cast(uint[]*)p1;
 	uint[] s2 = *cast(uint[]*)p2;
-	uint len = s1.length;
+	size_t len = s1.length;
 
 	if (s2.length < len)
 	    len = s2.length;
-	for (uint u = 0; u < len; u++)
+	for (size_t u = 0; u < len; u++)
 	{
 	    int result = s1[u] - s2[u];
 	    if (result)
@@ -50,7 +50,7 @@ class TypeInfo_Ak : TypeInfo
 	return cast(int)s1.length - cast(int)s2.length;
     }
 
-    int tsize()
+    size_t tsize()
     {
 	return (uint[]).sizeof;
     }

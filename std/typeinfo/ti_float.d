@@ -42,7 +42,7 @@ class TypeInfo_f : TypeInfo
 	return _compare(*cast(float *)p1, *cast(float *)p2);
     }
 
-    int tsize()
+    size_t tsize()
     {
 	return float.sizeof;
     }

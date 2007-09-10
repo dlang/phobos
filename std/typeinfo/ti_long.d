@@ -24,7 +24,7 @@ class TypeInfo_l : TypeInfo
 	return 0;
     }
 
-    int tsize()
+    size_t tsize()
     {
 	return long.sizeof;
     }

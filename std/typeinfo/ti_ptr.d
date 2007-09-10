@@ -18,7 +18,7 @@ class TypeInfo_P : TypeInfo
 	return *cast(void* *)p1 - *cast(void* *)p2;
     }
 
-    int tsize()
+    size_t tsize()
     {
 	return (void*).sizeof;
     }

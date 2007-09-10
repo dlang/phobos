@@ -20,7 +20,7 @@ class TypeInfo_g : TypeInfo
 	return *cast(byte *)p1 - *cast(byte *)p2;
     }
 
-    int tsize()
+    size_t tsize()
     {
 	return byte.sizeof;
     }

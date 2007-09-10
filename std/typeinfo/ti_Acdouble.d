@@ -32,7 +32,7 @@ class TypeInfo_Ar : TypeInfo
 
     uint getHash(void *p)
     {	cdouble[] s = *cast(cdouble[]*)p;
-	uint len = s.length;
+	size_t len = s.length;
 	cdouble *str = s;
 	uint hash = 0;
 
@@ -54,7 +54,7 @@ class TypeInfo_Ar : TypeInfo
     {
 	cdouble[] s1 = *cast(cdouble[]*)p1;
 	cdouble[] s2 = *cast(cdouble[]*)p2;
-	uint len = s1.length;
+	size_t len = s1.length;
 
 	if (len != s2.length)
 	    return 0;
@@ -71,7 +71,7 @@ class TypeInfo_Ar : TypeInfo
     {
 	cdouble[] s1 = *cast(cdouble[]*)p1;
 	cdouble[] s2 = *cast(cdouble[]*)p2;
-	uint len = s1.length;
+	size_t len = s1.length;
 
 	if (s2.length < len)
 	    len = s2.length;
@@ -84,7 +84,7 @@ class TypeInfo_Ar : TypeInfo
 	return cast(int)s1.length - cast(int)s2.length;
     }
 
-    int tsize()
+    size_t tsize()
     {
 	return (cdouble[]).sizeof;
     }

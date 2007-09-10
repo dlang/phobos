@@ -9,7 +9,7 @@ class TypeInfo_Ab : TypeInfo
 
     uint getHash(void *p)
     {	ubyte[] s = *cast(ubyte[]*)p;
-	uint len = (s.length + 7) / 8;
+	size_t len = (s.length + 7) / 8;
 	ubyte *str = s;
 	uint hash = 0;
 
@@ -53,13 +53,13 @@ class TypeInfo_Ab : TypeInfo
 	bit[] s1 = *cast(bit[]*)p1;
 	bit[] s2 = *cast(bit[]*)p2;
 
-	uint len = s1.length;
+	size_t len = s1.length;
 
 	if (s2.length != len)
 	    return 0;;
 
 	// Woefully inefficient bit-by-bit comparison
-	for (uint u = 0; u < len; u++)
+	for (size_t u = 0; u < len; u++)
 	{
 	    if (s1[u] != s2[u])
 		return 0;
@@ -72,13 +72,13 @@ class TypeInfo_Ab : TypeInfo
 	bit[] s1 = *cast(bit[]*)p1;
 	bit[] s2 = *cast(bit[]*)p2;
 
-	uint len = s1.length;
+	size_t len = s1.length;
 
 	if (s2.length < len)
 	    len = s2.length;
 
 	// Woefully inefficient bit-by-bit comparison
-	for (uint u = 0; u < len; u++)
+	for (size_t u = 0; u < len; u++)
 	{
 	    int result = s1[u] - s2[u];
 	    if (result)
@@ -87,7 +87,7 @@ class TypeInfo_Ab : TypeInfo
 	return cast(int)s1.length - cast(int)s2.length;
     }
 
-    int tsize()
+    size_t tsize()
     {
 	return (bit[]).sizeof;
     }

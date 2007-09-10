@@ -123,12 +123,11 @@ class TypeInfo
     uint getHash(void *p) { return cast(uint)p; }
     int equals(void *p1, void *p2) { return p1 == p2; }
     int compare(void *p1, void *p2) { return 0; }
-    int tsize() { return 0; }
+    size_t tsize() { return 0; }
     void swap(void *p1, void *p2)
     {
-	int i;
-	int n = tsize();
-	for (i = 0; i < n; i++)
+	size_t n = tsize();
+	for (size_t i = 0; i < n; i++)
 	{   byte t;
 
 	    t = (cast(byte *)p1)[i];
@@ -144,7 +143,7 @@ class TypeInfo_Typedef : TypeInfo
     uint getHash(void *p) { return base.getHash(p); }
     int equals(void *p1, void *p2) { return base.equals(p1, p2); }
     int compare(void *p1, void *p2) { return base.compare(p1, p2); }
-    int tsize() { return base.tsize(); }
+    size_t tsize() { return base.tsize(); }
     void swap(void *p1, void *p2) { return base.swap(p1, p2); }
 
     TypeInfo base;
@@ -174,7 +173,7 @@ class TypeInfo_Pointer : TypeInfo
         return *cast(void* *)p1 - *cast(void* *)p2;
     }
 
-    int tsize()
+    size_t tsize()
     {
 	return (void*).sizeof;
     }
@@ -235,7 +234,7 @@ class TypeInfo_Array : TypeInfo
         return cast(int)a1.length - cast(int)a2.length;
     }
 
-    int tsize()
+    size_t tsize()
     {
 	return (void[]).sizeof;
     }
@@ -290,7 +289,7 @@ class TypeInfo_StaticArray : TypeInfo
         return 0;
     }
 
-    int tsize()
+    size_t tsize()
     {
 	return len * next.tsize();
     }
@@ -329,7 +328,7 @@ class TypeInfo_AssociativeArray : TypeInfo
 
     // BUG: need to add the rest of the functions
 
-    int tsize()
+    size_t tsize()
     {
 	return (void[]).sizeof;
     }
@@ -347,7 +346,7 @@ class TypeInfo_Function : TypeInfo
 
     // BUG: need to add the rest of the functions
 
-    int tsize()
+    size_t tsize()
     {
 	return 0;	// no size for functions
     }
@@ -364,7 +363,7 @@ class TypeInfo_Delegate : TypeInfo
 
     // BUG: need to add the rest of the functions
 
-    int tsize()
+    size_t tsize()
     {	alias int delegate() dg;
 	return dg.sizeof;
     }
@@ -412,7 +411,7 @@ class TypeInfo_Class : TypeInfo
 	return c;
     }
 
-    int tsize()
+    size_t tsize()
     {
 	return Object.sizeof;
     }
@@ -483,13 +482,13 @@ class TypeInfo_Struct : TypeInfo
 	return c;
     }
 
-    int tsize()
+    size_t tsize()
     {
 	return xsize;
     }
 
     char[] name;
-    uint xsize;
+    size_t xsize;
 
     uint function(void*) xtoHash;
     int function(void*,void*) xopEquals;

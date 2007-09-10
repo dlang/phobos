@@ -24,7 +24,7 @@ class TypeInfo_m : TypeInfo
 	return 0;
     }
 
-    int tsize()
+    size_t tsize()
     {
 	return ulong.sizeof;
     }

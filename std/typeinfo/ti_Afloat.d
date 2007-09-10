@@ -32,7 +32,7 @@ class TypeInfo_Af : TypeInfo
 
     uint getHash(void *p)
     {	float[] s = *cast(float[]*)p;
-	uint len = s.length;
+	size_t len = s.length;
 	float *str = s;
 	uint hash = 0;
 
@@ -51,7 +51,7 @@ class TypeInfo_Af : TypeInfo
     {
 	float[] s1 = *cast(float[]*)p1;
 	float[] s2 = *cast(float[]*)p2;
-	uint len = s1.length;
+	size_t len = s1.length;
 
 	if (len != s2.length)
 	    return 0;
@@ -68,7 +68,7 @@ class TypeInfo_Af : TypeInfo
     {
 	float[] s1 = *cast(float[]*)p1;
 	float[] s2 = *cast(float[]*)p2;
-	uint len = s1.length;
+	size_t len = s1.length;
 
 	if (s2.length < len)
 	    len = s2.length;
@@ -81,7 +81,7 @@ class TypeInfo_Af : TypeInfo
 	return cast(int)s1.length - cast(int)s2.length;
     }
 
-    int tsize()
+    size_t tsize()
     {
 	return (float[]).sizeof;
     }

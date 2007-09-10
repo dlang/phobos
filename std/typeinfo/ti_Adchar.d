@@ -9,7 +9,7 @@ class TypeInfo_Aw : TypeInfo
 
     uint getHash(void *p)
     {	dchar[] s = *cast(dchar[]*)p;
-	uint len = s.length;
+	size_t len = s.length;
 	dchar *str = s;
 	uint hash = 0;
 
@@ -37,11 +37,11 @@ class TypeInfo_Aw : TypeInfo
     {
 	dchar[] s1 = *cast(dchar[]*)p1;
 	dchar[] s2 = *cast(dchar[]*)p2;
-	uint len = s1.length;
+	size_t len = s1.length;
 
 	if (s2.length < len)
 	    len = s2.length;
-	for (uint u = 0; u < len; u++)
+	for (size_t u = 0; u < len; u++)
 	{
 	    int result = s1[u] - s2[u];
 	    if (result)
@@ -50,7 +50,7 @@ class TypeInfo_Aw : TypeInfo
 	return cast(int)s1.length - cast(int)s2.length;
     }
 
-    int tsize()
+    size_t tsize()
     {
 	return (dchar[]).sizeof;
     }

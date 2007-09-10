@@ -9,7 +9,7 @@ class TypeInfo_Ag : TypeInfo
 
     uint getHash(void *p)
     {	byte[] s = *cast(byte[]*)p;
-	uint len = s.length;
+	size_t len = s.length;
 	byte *str = s;
 	uint hash = 0;
 
@@ -61,11 +61,11 @@ class TypeInfo_Ag : TypeInfo
     {
 	byte[] s1 = *cast(byte[]*)p1;
 	byte[] s2 = *cast(byte[]*)p2;
-	uint len = s1.length;
+	size_t len = s1.length;
 
 	if (s2.length < len)
 	    len = s2.length;
-	for (uint u = 0; u < len; u++)
+	for (size_t u = 0; u < len; u++)
 	{
 	    int result = s1[u] - s2[u];
 	    if (result)
@@ -74,7 +74,7 @@ class TypeInfo_Ag : TypeInfo
 	return cast(int)s1.length - cast(int)s2.length;
     }
 
-    int tsize()
+    size_t tsize()
     {
 	return (byte[]).sizeof;
     }

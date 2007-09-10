@@ -32,7 +32,7 @@ class TypeInfo_Ae : TypeInfo
 
     uint getHash(void *p)
     {	real[] s = *cast(real[]*)p;
-	uint len = s.length;
+	size_t len = s.length;
 	real *str = s;
 	uint hash = 0;
 
@@ -53,7 +53,7 @@ class TypeInfo_Ae : TypeInfo
     {
 	real[] s1 = *cast(real[]*)p1;
 	real[] s2 = *cast(real[]*)p2;
-	uint len = s1.length;
+	size_t len = s1.length;
 
 	if (len != s2.length)
 	    return 0;
@@ -70,7 +70,7 @@ class TypeInfo_Ae : TypeInfo
     {
 	real[] s1 = *cast(real[]*)p1;
 	real[] s2 = *cast(real[]*)p2;
-	uint len = s1.length;
+	size_t len = s1.length;
 
 	if (s2.length < len)
 	    len = s2.length;
@@ -83,7 +83,7 @@ class TypeInfo_Ae : TypeInfo
 	return cast(int)s1.length - cast(int)s2.length;
     }
 
-    int tsize()
+    size_t tsize()
     {
 	return (real[]).sizeof;
     }

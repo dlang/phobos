@@ -16,7 +16,7 @@ class TypeInfo_D : TypeInfo
 	return *cast(dg *)p1 == *cast(dg *)p2;
     }
 
-    int tsize()
+    size_t tsize()
     {
 	return dg.sizeof;
     }

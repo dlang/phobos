@@ -9,7 +9,7 @@ class TypeInfo_Ah : TypeInfo
 
     uint getHash(void *p)
     {	ubyte[] s = *cast(ubyte[]*)p;
-	uint len = s.length;
+	size_t len = s.length;
 	ubyte *str = s;
 	uint hash = 0;
 
@@ -65,7 +65,7 @@ class TypeInfo_Ah : TypeInfo
 	return std.string.cmp(s1, s2);
     }
 
-    int tsize()
+    size_t tsize()
     {
 	return (ubyte[]).sizeof;
     }

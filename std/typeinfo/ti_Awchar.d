@@ -9,7 +9,7 @@ class TypeInfo_Au : TypeInfo
 
     uint getHash(void *p)
     {	wchar[] s = *cast(wchar[]*)p;
-	uint len = s.length;
+	size_t len = s.length;
 	wchar *str = s;
 	uint hash = 0;
 
@@ -63,7 +63,7 @@ class TypeInfo_Au : TypeInfo
 	return cast(int)s1.length - cast(int)s2.length;
     }
 
-    int tsize()
+    size_t tsize()
     {
 	return (wchar[]).sizeof;
     }

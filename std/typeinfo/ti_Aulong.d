@@ -9,7 +9,7 @@ class TypeInfo_Am : TypeInfo
 
     uint getHash(void *p)
     {	ulong[] s = *cast(ulong[]*)p;
-	uint len = s.length;
+	size_t len = s.length;
 	ulong *str = s;
 	uint hash = 0;
 
@@ -37,11 +37,11 @@ class TypeInfo_Am : TypeInfo
     {
 	ulong[] s1 = *cast(ulong[]*)p1;
 	ulong[] s2 = *cast(ulong[]*)p2;
-	uint len = s1.length;
+	size_t len = s1.length;
 
 	if (s2.length < len)
 	    len = s2.length;
-	for (uint u = 0; u < len; u++)
+	for (size_t u = 0; u < len; u++)
 	{
 	    int result = s1[u] - s2[u];
 	    if (result)
@@ -50,7 +50,7 @@ class TypeInfo_Am : TypeInfo
 	return cast(int)s1.length - cast(int)s2.length;
     }
 
-    int tsize()
+    size_t tsize()
     {
 	return (ulong[]).sizeof;
     }

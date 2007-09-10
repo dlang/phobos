@@ -24,7 +24,7 @@ class TypeInfo_b : TypeInfo
 	return 0;
     }
 
-    int tsize()
+    size_t tsize()
     {
 	return bit.sizeof;
     }

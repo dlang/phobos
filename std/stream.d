@@ -1,6 +1,4 @@
 /**
- * Boilerplate:
- *	$(std_boilerplate.html)
  * Macros:
  *	WIKI = StdStream
  */
