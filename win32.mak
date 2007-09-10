@@ -13,8 +13,8 @@
 #	This relies on LIB.EXE 8.00 or later, and MAKE.EXE 5.01 or later.
 
 CFLAGS=-g -mn -6 -r
-DFLAGS=-O -release
-#DFLAGS=-unittest -g
+#DFLAGS=-O -release
+DFLAGS=-unittest -g
 
 CC=sc
 #DMD=\dmd\bin\dmd
@@ -57,7 +57,7 @@ OBJS= assert.obj deh.obj switch.obj complex.obj gcstats.obj \
 	outbuffer.obj ctype.obj regexp.obj random.obj windows.obj \
 	stream.obj switcherr.obj com.obj array.obj gc.obj adi.obj \
 	qsort.obj math2.obj date.obj dateparse.obj thread.obj obj.obj \
-	iunknown.obj crc32.obj conv.obj arraycast.obj \
+	iunknown.obj crc32.obj conv.obj arraycast.obj utf.obj uri.obj \
 	ti_Aa.obj ti_Ag.obj ti_C.obj ti_int.obj ti_char.obj \
 	ti_wchar.obj ti_uint.obj ti_short.obj ti_ushort.obj \
 	ti_byte.obj ti_ubyte.obj ti_long.obj ti_ulong.obj ti_ptr.obj \
@@ -92,7 +92,7 @@ SRC7=ti_wchar.d ti_uint.d ti_short.d ti_ushort.d \
 	ti_creal.d ti_ireal.d ti_cfloat.d ti_ifloat.d \
 	ti_cdouble.d ti_idouble.d
 
-SRC8=crc32.d stdint.d conv.d gcstats.d
+SRC8=crc32.d stdint.d conv.d gcstats.d utf.d uri.d
 
 phobos.lib : $(OBJS) minit.obj gc2\dmgc.lib win32.mak
 	lib -c phobos.lib $(OBJS) minit.obj gc2\dmgc.lib

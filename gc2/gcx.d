@@ -163,11 +163,11 @@ struct GC
     Gcx *gcx;		// implementation
     static ClassInfo gcLock;	// global lock
 
-    void init()
+    void initialize()
     {
 	gcLock = GCLock.classinfo;
 	gcx = (Gcx *)c.stdlib.calloc(1, Gcx.size);
-	gcx.init();
+	gcx.initialize();
 	version (Win32)
 	{
 	    setStackBottom(win32.os_query_stackBottom());
@@ -760,7 +760,7 @@ struct Gcx
 
     GC_FINALIZER finalizer;	// finalizer function (one per GC)
 
-    void init()
+    void initialize()
     {   int dummy;
 
 	((byte *)this)[0 .. Gcx.size] = 0;
@@ -1165,7 +1165,7 @@ struct Gcx
 	pool = (Pool *)c.stdlib.calloc(1, Pool.size);
 	if (pool)
 	{
-	    pool.init(npages);
+	    pool.initialize(npages);
 	    if (!pool.baseAddr)
 		goto Lerr;
 
@@ -1825,7 +1825,7 @@ struct Pool
     uint ncommitted;	// ncommitted <= npages
     ubyte* pagetable;
 
-    void init(uint npages)
+    void initialize(uint npages)
     {
 	uint poolsize;
 

@@ -1178,8 +1178,34 @@ struct PAINTSTRUCT {
 }
 alias PAINTSTRUCT* PPAINTSTRUCT, NPPAINTSTRUCT, LPPAINTSTRUCT;
 
+// flags for GetDCEx()
+
+enum
+{
+	DCX_WINDOW =           0x00000001,
+	DCX_CACHE =            0x00000002,
+	DCX_NORESETATTRS =     0x00000004,
+	DCX_CLIPCHILDREN =     0x00000008,
+	DCX_CLIPSIBLINGS =     0x00000010,
+	DCX_PARENTCLIP =       0x00000020,
+	DCX_EXCLUDERGN =       0x00000040,
+	DCX_INTERSECTRGN =     0x00000080,
+	DCX_EXCLUDEUPDATE =    0x00000100,
+	DCX_INTERSECTUPDATE =  0x00000200,
+	DCX_LOCKWINDOWUPDATE = 0x00000400,
+	DCX_VALIDATE =         0x00200000,
+}
+
 export
 {
+ BOOL UpdateWindow(HWND hWnd);
+ HWND SetActiveWindow(HWND hWnd);
+ HWND GetForegroundWindow();
+ BOOL PaintDesktop(HDC hdc);
+ BOOL SetForegroundWindow(HWND hWnd);
+ HWND WindowFromDC(HDC hDC);
+ HDC GetDC(HWND hWnd);
+ HDC GetDCEx(HWND hWnd, HRGN hrgnClip, DWORD flags);
  HDC GetWindowDC(HWND hWnd);
  int ReleaseDC(HWND hWnd, HDC hDC);
  HDC BeginPaint(HWND hWnd, LPPAINTSTRUCT lpPaint);
@@ -1194,6 +1220,23 @@ export
  BOOL InvalidateRgn(HWND hWnd, HRGN hRgn, BOOL bErase);
  BOOL ValidateRgn(HWND hWnd, HRGN hRgn);
  BOOL RedrawWindow(HWND hWnd, RECT *lprcUpdate, HRGN hrgnUpdate, UINT flags);
+}
+
+// flags for RedrawWindow()
+enum
+{
+	RDW_INVALIDATE =          0x0001,
+	RDW_INTERNALPAINT =       0x0002,
+	RDW_ERASE =               0x0004,
+	RDW_VALIDATE =            0x0008,
+	RDW_NOINTERNALPAINT =     0x0010,
+	RDW_NOERASE =             0x0020,
+	RDW_NOCHILDREN =          0x0040,
+	RDW_ALLCHILDREN =         0x0080,
+	RDW_UPDATENOW =           0x0100,
+	RDW_ERASENOW =            0x0200,
+	RDW_FRAME =               0x0400,
+	RDW_NOFRAME =             0x0800,
 }
 
 export

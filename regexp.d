@@ -34,6 +34,7 @@
 //debug = regexp;		// uncomment to turn on debugging printf's
 
 import c.stdio;
+import string;
 import ctype;
 import outbuffer;
 
@@ -117,6 +118,7 @@ enum : ubyte
     REanychar,		// any character
     REanystar,		// ".*"
     REstring,		// string of characters
+    REistring,		// string of characters, case insensitive
     REtestbit,		// any in bitmap, non-consuming
     REbit,		// any in the bit map
     REnotbit,		// any not in the bit map
@@ -641,6 +643,13 @@ void printProgram(ubyte[] prog)
 		pc += 1 + uint.size + len * tchar.size;
 		break;
 
+	    case REistring:
+		len = *(uint *)&prog[pc + 1];
+		printf("\tREistring x%x, '%.*s'\n", len,
+			(&prog[pc + 1 + uint.size])[0 .. len]);
+		pc += 1 + uint.size + len * tchar.size;
+		break;
+
 	    case REtestbit:
 		pu = (ushort *)&prog[pc + 1];
 		printf("\tREtestbit %d, %d\n", pu[0], pu[1]);
@@ -897,6 +906,27 @@ int trymatch(int pc, int pcend)
 		    goto Lnomatch;
 		if (memcmp(&program[pc + 1 + uint.size], &input[src], len * tchar.size))
 		    goto Lnomatch;
+		src += len;
+		pc += 1 + uint.size + len * tchar.size;
+		break;
+
+	    case REistring:
+		len = *(uint *)&program[pc + 1];
+		debug(regexp) printf("\tREistring x%x, '%.*s'\n", len,
+			(&program[pc + 1 + uint.size])[0 .. len]);
+		if (src + len > input.length)
+		    goto Lnomatch;
+		version (Win32)
+		{
+		    if (memicmp(cast(char*)&program[pc + 1 + uint.size], &input[src], len * tchar.size))
+			goto Lnomatch;
+		}
+		else
+		{
+		    if (icmp((cast(char*)&program[pc + 1 + uint.size])[0..len],
+			     input[src .. src + len]))
+			goto Lnomatch;
+		}
 		src += len;
 		pc += 1 + uint.size + len * tchar.size;
 		break;
@@ -1617,7 +1647,7 @@ int parseAtom()
 		    {
 			debug(regexp) printf("writing string len %d, c = '%c', pattern[p] = '%c'\n", len+1, c, pattern[p]);
 			buf.reserve(5 + (1 + len) * tchar.size);
-			buf.write(REstring);
+			buf.write((attributes & REA.ignoreCase) ? REistring : REstring);
 			buf.write(len + 1);
 			buf.write(c);
 			buf.write(pattern[p .. p + len]);
@@ -2026,6 +2056,7 @@ void optimize()
 	    case REwchar:
 	    case REiwchar:
 	    case REstring:
+	    case REistring:
 	    case REtestbit:
 	    case REbit:
 	    case REnotbit:
@@ -2125,6 +2156,17 @@ int startchars(Range r, ubyte[] prog)
 		debug(regexp) printf("\tREstring %d, '%c'\n", len, c);
 		if (c <= 0x7F)
 		    r.setbit2(c);
+		return 1;
+
+	    case REistring:
+		len = *(uint *)&prog[i + 1];
+		assert(len);
+		c = *(tchar *)&prog[i + 1 + uint.size];
+		debug(regexp) printf("\tREistring %d, '%c'\n", len, c);
+		if (c <= 0x7F)
+		{   r.setbit2(ctype.toupper((tchar)c));
+		    r.setbit2(ctype.tolower((tchar)c));
+		}
 		return 1;
 
 	    case REtestbit:

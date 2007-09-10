@@ -53,14 +53,13 @@ OBJS= assert.o deh2.o switch.o complex.o gcstats.o \
 	stream.o switcherr.o array.o gc.o adi.o \
 	qsort.o thread.o obj.o \
 	crc32.o conv.o arraycast.o errno.o alloca.o cmath.o \
-	ti_Aa.o ti_Ag.o ti_C.o ti_int.o ti_char.o \
 	ti_wchar.o ti_uint.o ti_short.o ti_ushort.o \
 	ti_byte.o ti_ubyte.o ti_long.o ti_ulong.o ti_ptr.o \
 	ti_float.o ti_double.o ti_real.o ti_delegate.o \
-	date.o dateparse.o llmath.o math2.o \
-	ti_creal.o ti_ireal.o \
-	ti_cfloat.o ti_ifloat.o \
-	ti_cdouble.o ti_idouble.o
+	ti_creal.o ti_ireal.o ti_cfloat.o ti_ifloat.o \
+	ti_cdouble.o ti_idouble.o \
+	ti_Aa.o ti_Ag.o ti_C.o ti_int.o ti_char.o \
+	date.o dateparse.o llmath.o math2.o
 
 HDR=mars.h
 

@@ -21,6 +21,8 @@ import random;
 import date;
 import dateparse;
 import stream;
+import utf;
+import uri;
 
 int main(char[][] args)
 {
@@ -40,6 +42,8 @@ int main(char[][] args)
     a.sort;				// qsort
     date.getUTCtime();			// date
     StreamError se = new StreamError("");	// stream
+    isValidDchar((dchar)0);			// utf
+    uri.ascii2hex(0);				// uri
 
     printf("hello world\n");
     printf("args.length = %d\n", args.length);

@@ -36,7 +36,7 @@ extern (C)
 void gc_init()
 {
     _gc = (GC *) c.stdlib.calloc(1, GC.size);
-    _gc.init();
+    _gc.initialize();
     //_gc.setStackBottom(_atopsp);
     _gc.scanStaticData();
 }

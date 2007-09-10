@@ -71,12 +71,12 @@ void smoke()
 printf("smoke.1\n");
 
     gc = newGC();
-    gc.init();
+    gc.initialize();
     deleteGC(gc);
 printf("smoke.2\n");
 
     gc = newGC();
-    gc.init();
+    gc.initialize();
     char *p = (char *)gc.malloc(10);
     assert(p);
     strcpy(p, "Hello!");
@@ -112,7 +112,7 @@ void smoke2()
     printf("--------------------------smoke2()\n");
 
     gc = newGC();
-    gc.init();
+    gc.initialize();
 
     for (i = 0; i < SMOKE2_SIZE; i++)
     {
@@ -154,7 +154,7 @@ void smoke3()
     printf("--------------------------smoke3()\n");
 
     gc = newGC();
-    gc.init();
+    gc.initialize();
 
 //    for (i = 0; i < 1000000; i++)
     for (i = 0; i < 1000; i++)
@@ -187,7 +187,7 @@ void smoke4()
     printf("--------------------------smoke4()\n");
 
     gc = newGC();
-    gc.init();
+    gc.initialize();
 
     for (i = 0; i < 80000; i++)
     {
@@ -271,7 +271,7 @@ int main(int argc, char *argv[])
 
     gc = newGC();
 printf("gc = %p\n", gc);
-    gc.init();
+    gc.initialize();
 
     smoke();
     smoke2();
