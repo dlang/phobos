@@ -67,6 +67,7 @@ OBJS= asserterror.o deh2.o switch.o complex.o gcstats.o \
 	ti_Aint.o ti_Auint.o ti_Along.o ti_Aulong.o ti_Awchar.o \
 	ti_Afloat.o ti_Adouble.o ti_Areal.o \
 	ti_Acfloat.o ti_Acdouble.o ti_Acreal.o \
+	ti_Abit.o ti_void.o \
 	date.o dateparse.o llmath.o math2.o Czlib.o Dzlib.o zip.o recls.o
 
 ZLIB_OBJS= etc/c/zlib/adler32.o etc/c/zlib/compress.o \
@@ -120,10 +121,11 @@ SRC_TI=	\
 	std/typeinfo/ti_int.d std/typeinfo/ti_char.d \
 	std/typeinfo/ti_Aint.d std/typeinfo/ti_Auint.d \
 	std/typeinfo/ti_Along.d std/typeinfo/ti_Aulong.d \
-	std\typeinfo/ti_Afloat.d std\typeinfo/ti_Adouble.d \
-	std\typeinfo/ti_Areal.d \
-	std\typeinfo/ti_Acfloat.d std\typeinfo/ti_Acdouble.d \
-	std\typeinfo/ti_Acreal.d \
+	std/typeinfo/ti_Afloat.d std/typeinfo/ti_Adouble.d \
+	std/typeinfo/ti_Areal.d \
+	std/typeinfo/ti_Acfloat.d std/typeinfo/ti_Acdouble.d \
+	std/typeinfo/ti_Acreal.d \
+	std/typeinfo/ti_Abit.d std/typeinfo/ti_void.d \
 	std/typeinfo/ti_Awchar.d std/typeinfo/ti_dchar.d
 
 SRC_INT=	\
@@ -599,6 +601,9 @@ Czlib.o : etc/c/zlib.d
 
 ### std/typeinfo
 
+ti_void.o : std/typeinfo/ti_void.d
+	$(DMD) -c $(DFLAGS) std/typeinfo/ti_void.d
+
 ti_wchar.o : std/typeinfo/ti_wchar.d
 	$(DMD) -c $(DFLAGS) std/typeinfo/ti_wchar.d
 
@@ -667,6 +672,9 @@ ti_AC.o : std/typeinfo/ti_AC.d
 
 ti_Ag.o : std/typeinfo/ti_Ag.d
 	$(DMD) -c $(DFLAGS) std/typeinfo/ti_Ag.d
+
+ti_Abit.o : std/typeinfo/ti_Abit.d
+	$(DMD) -c $(DFLAGS) std/typeinfo/ti_Abit.d
 
 ti_Aubyte.o : std/typeinfo/ti_Aubyte.d
 	$(DMD) -c $(DFLAGS) std/typeinfo/ti_Aubyte.d

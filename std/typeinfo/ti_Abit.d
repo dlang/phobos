@@ -1,15 +1,15 @@
 
 private import std.string;
 
-// ubyte[]
+// bit[]
 
-class TypeInfo_Ah : TypeInfo
+class TypeInfo_Ab : TypeInfo
 {
-    char[] toString() { return "ubyte[]"; }
+    char[] toString() { return "bit[]"; }
 
     uint getHash(void *p)
     {	ubyte[] s = *cast(ubyte[]*)p;
-	uint len = s.length;
+	uint len = (s.length + 7) / 8;
 	ubyte *str = s;
 	uint hash = 0;
 
@@ -50,30 +50,46 @@ class TypeInfo_Ah : TypeInfo
 
     int equals(void *p1, void *p2)
     {
-	ubyte[] s1 = *cast(ubyte[]*)p1;
-	ubyte[] s2 = *cast(ubyte[]*)p2;
+	bit[] s1 = *cast(bit[]*)p1;
+	bit[] s2 = *cast(bit[]*)p2;
 
-	return s1.length == s2.length &&
-	       memcmp(cast(ubyte *)s1, cast(ubyte *)s2, s1.length) == 0;
+	uint len = s1.length;
+
+	if (s2.length != len)
+	    return 0;;
+
+	// Woefully inefficient bit-by-bit comparison
+	for (uint u = 0; u < len; u++)
+	{
+	    if (s1[u] != s2[u])
+		return 0;
+	}
+	return 1;
     }
 
     int compare(void *p1, void *p2)
     {
-	char[] s1 = *cast(char[]*)p1;
-	char[] s2 = *cast(char[]*)p2;
+	bit[] s1 = *cast(bit[]*)p1;
+	bit[] s2 = *cast(bit[]*)p2;
 
-	return std.string.cmp(s1, s2);
+	uint len = s1.length;
+
+	if (s2.length < len)
+	    len = s2.length;
+
+	// Woefully inefficient bit-by-bit comparison
+	for (uint u = 0; u < len; u++)
+	{
+	    int result = s1[u] - s2[u];
+	    if (result)
+		return result;
+	}
+	return cast(int)s1.length - cast(int)s2.length;
     }
 
     int tsize()
     {
-	return (ubyte[]).sizeof;
+	return (bit[]).sizeof;
     }
 }
 
-// void[]
-
-class TypeInfo_Av : TypeInfo_Ah
-{
-    char[] toString() { return "void[]"; }
-}

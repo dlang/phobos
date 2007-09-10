@@ -47,7 +47,7 @@ test.obj : test.d
 	$(DMD) -c test -g
 
 test.exe : test.obj phobos.lib
-	$(DMD) test.obj -g
+	$(DMD) test.obj -g -L/map
 
 unittest.exe : unittest.d phobos.lib
 	$(DMD) unittest -g
@@ -76,7 +76,7 @@ OBJS= asserterror.obj deh.obj switch.obj complex.obj gcstats.obj \
 	ti_Aint.obj ti_Auint.obj ti_Along.obj ti_Aulong.obj ti_Awchar.obj \
 	ti_Afloat.obj ti_Adouble.obj ti_Areal.obj \
 	ti_Acfloat.obj ti_Acdouble.obj ti_Acreal.obj \
-	ti_dchar.obj ti_Adchar.obj ti_bit.obj
+	ti_dchar.obj ti_Adchar.obj ti_bit.obj ti_Abit.obj ti_void.obj
 
 
 SRC=	errno.c object.d unittest.d crc32.d gcstats.d
@@ -116,7 +116,8 @@ SRC_TI=	\
 	std\typeinfo\ti_Areal.d \
 	std\typeinfo\ti_Acfloat.d std\typeinfo\ti_Acdouble.d \
 	std\typeinfo\ti_Acreal.d \
-	std\typeinfo\ti_Awchar.d std\typeinfo\ti_dchar.d
+	std\typeinfo\ti_Awchar.d std\typeinfo\ti_dchar.d \
+	std\typeinfo\ti_Abit.d std\typeinfo\ti_void.d
 
 SRC_INT=	\
 	internal\switch.d internal\complex.c internal\critical.c \
@@ -579,6 +580,9 @@ windows.obj : std\c\windows\windows.d
 
 ### std\typeinfo
 
+ti_void.obj : std\typeinfo\ti_void.d
+	$(DMD) -c $(DFLAGS) std\typeinfo\ti_void.d
+
 ti_bit.obj : std\typeinfo\ti_bit.d
 	$(DMD) -c $(DFLAGS) std\typeinfo\ti_bit.d
 
@@ -650,6 +654,9 @@ ti_AC.obj : std\typeinfo\ti_AC.d
 
 ti_Ag.obj : std\typeinfo\ti_Ag.d
 	$(DMD) -c $(DFLAGS) std\typeinfo\ti_Ag.d
+
+ti_Abit.obj : std\typeinfo\ti_Abit.d
+	$(DMD) -c $(DFLAGS) std\typeinfo\ti_Abit.d
 
 ti_Aubyte.obj : std\typeinfo\ti_Aubyte.d
 	$(DMD) -c $(DFLAGS) std\typeinfo\ti_Aubyte.d
