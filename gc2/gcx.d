@@ -508,7 +508,6 @@ struct GC
 	//debug(PRINTF) printf("+GC.scanStaticData()\n");
 	os_query_staticdataseg(&pbot, &nbytes);
 	ptop = pbot + nbytes;
-printf("static data seg = x%x .. x%x\n", pbot, ptop);
 	addRange(pbot, ptop);
 	//debug(PRINTF) printf("-GC.scanStaticData()\n");
     }

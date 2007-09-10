@@ -82,7 +82,6 @@ extern (C) int main(int argc, char **argv)
 	_STD_critical_term();
 	_STD_monitor_staticdtor();
     }
-    return 0;
     return result;
 }
 

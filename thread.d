@@ -742,11 +742,11 @@ class Thread
 	result = sigfillset(&sigact.sa_mask);
 	if (result)
 	    goto Lfail;
-	sigact.sa_handler = pauseHandler;
+	sigact.sa_handler = &pauseHandler;
 	result = sigaction(SIGUSR1, &sigact, null);
 	if (result)
 	    goto Lfail;
-	sigact.sa_handler = resumeHandler;
+	sigact.sa_handler = &resumeHandler;
 	result = sigaction(SIGUSR2, &sigact, null);
 	if (result)
 	    goto Lfail;

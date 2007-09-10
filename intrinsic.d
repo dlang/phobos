@@ -1,6 +1,6 @@
 
 
-// Copyright (c) 1999-2002 by Digital Mars
+// Copyright (c) 1999-2003 by Digital Mars
 // All Rights Reserved
 // written by Walter Bright
 // www.digitalmars.com
@@ -17,6 +17,8 @@ int btc(uint *p, uint bitnum);
 int btr(uint *p, uint bitnum);
 int bts(uint *p, uint bitnum);
 
+uint bswap(uint v);
+
 ubyte  inp(uint);
 ushort inpw(uint);
 uint   inpl(uint);
@@ -25,11 +27,4 @@ ubyte  outp(uint, ubyte);
 ushort outpw(uint, ushort);
 uint   outpl(uint, uint);
 
-real cos(real);
-real fabs(real);
-real rint(real);
-long rndtol(real);
-real sin(real);
-real ldexp(real, int);
-real sqrt(real);
 
