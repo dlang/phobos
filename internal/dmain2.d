@@ -20,6 +20,8 @@ extern (C) void _moduleCtor();
 extern (C) void _moduleDtor();
 extern (C) void _moduleUnitTests();
 
+extern (C) bool no_catch_exceptions = false;
+
 /***********************************
  * The D main() function supplied by the user's program
  */
@@ -56,7 +58,7 @@ extern (C) int main(int argc, char **argv)
 	am = cast(char[] *) alloca(argc * (char[]).sizeof);
     }
 
-    try
+    if (no_catch_exceptions)
     {
 	_moduleCtor();
 	_moduleUnitTests();
@@ -73,12 +75,33 @@ extern (C) int main(int argc, char **argv)
 	_moduleDtor();
 	gc_term();
     }
-    catch (Object o)
+    else
     {
-	printf("Error: ");
-	o.print();
-	exit(EXIT_FAILURE);
+	try
+	{
+	    _moduleCtor();
+	    _moduleUnitTests();
+
+	    for (i = 0; i < argc; i++)
+	    {
+		int len = strlen(argv[i]);
+		am[i] = argv[i][0 .. len];
+	    }
+
+	    args = am[0 .. argc];
+
+	    result = main(args);
+	    _moduleDtor();
+	    gc_term();
+	}
+	catch (Object o)
+	{
+	    printf("Error: ");
+	    o.print();
+	    exit(EXIT_FAILURE);
+	}
     }
+
     version (linux)
     {
 	free(am);

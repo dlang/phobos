@@ -1677,13 +1677,13 @@ private int mfeq(real x, real y, real precision)
 }
 
 // Returns true if x is +0.0 (This function is used in unit tests)
-bit isPosZero(real x)
+bool isPosZero(real x)
 {
     return (x == 0) && (signbit(x) == 0);
 }
 
 // Returns true if x is -0.0 (This function is used in unit tests)
-bit isNegZero(real x)
+bool isNegZero(real x)
 {
     return (x == 0) && signbit(x);
 }

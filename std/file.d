@@ -1164,6 +1164,7 @@ struct DirEntry
     {	size_t len = std.string.strlen(fd.d_name);
 	name = std.path.join(path, fd.d_name[0 .. len]);
 	d_type = fd.d_type;
+	didstat = 0;
     }
 
     int isdir()

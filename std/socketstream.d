@@ -62,7 +62,7 @@ class SocketStream: Stream
 	    return size;
 	  
 	  len = sock.receive(buffer[0 .. size]);
-	  readEOF = cast(bit)(len == 0);
+	  readEOF = cast(bool)(len == 0);
 	  if(len < 0) 
 	    len = 0;
 	  return len;
@@ -78,7 +78,7 @@ class SocketStream: Stream
 	    return size;
 	  
 	  len = sock.send(buffer[0 .. size]);
-	  readEOF = cast(bit)(len == 0);
+	  readEOF = cast(bool)(len == 0);
 	  if(len < 0) 
 	    len = 0;
 	  return len;

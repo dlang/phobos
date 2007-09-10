@@ -82,7 +82,7 @@ class UtfException : Exception
  * Returns: true if it is, false if not.
  */
 
-bit isValidDchar(dchar c)
+bool isValidDchar(dchar c)
 {
     /* Note: FFFE and FFFF are specifically permitted by the
      * Unicode standard for application internal use, but are not

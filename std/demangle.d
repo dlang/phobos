@@ -40,7 +40,7 @@ import std.demangle;
 
 int main()
 {   char[] buffer;
-    bit inword;
+    bool inword;
     int c;
 
     while ((c = fgetc(stdin)) != EOF)
@@ -120,7 +120,7 @@ char[] demangle(char[] name)
 	    name[ni + 2] == 'T')
 	{
 	    size_t nisave = ni;
-	    bit err;
+	    bool err;
 	    ni += 3;
 	    try
 	    {
@@ -170,6 +170,7 @@ char[] demangle(char[] name)
 	{
 	    case 'v':	p = "void";	goto L1;
 	    case 'b':	p = "bit";	goto L1;
+	    case 'x':	p = "bool";	goto L1;
 	    case 'g':	p = "byte";	goto L1;
 	    case 'h':	p = "ubyte";	goto L1;
 	    case 's':	p = "short";	goto L1;

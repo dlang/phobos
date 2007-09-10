@@ -79,3 +79,10 @@ class TypeInfo_Av : TypeInfo_Ah
 {
     char[] toString() { return "void[]"; }
 }
+
+// bool[]
+
+class TypeInfo_Ax : TypeInfo_Ah
+{
+    char[] toString() { return "bool[]"; }
+}

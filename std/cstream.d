@@ -16,8 +16,8 @@ class CFile : Stream {
   this(FILE* cfile, FileMode mode, bool seekable = false) {
     super();
     this.file = cfile;
-    readable = cast(bit)(mode & FileMode.In);
-    writeable = cast(bit)(mode & FileMode.Out);
+    readable = cast(bool)(mode & FileMode.In);
+    writeable = cast(bool)(mode & FileMode.Out);
     this.seekable = seekable;
   }
 
@@ -46,7 +46,7 @@ class CFile : Stream {
   }
   override size_t readBlock(void* buffer, size_t size) {
     size_t n = fread(buffer,1,size,cfile);
-    readEOF = cast(bit)(n == 0);
+    readEOF = cast(bool)(n == 0);
     return n;
   }
   override size_t writeBlock(void* buffer, size_t size) {

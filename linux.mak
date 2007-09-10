@@ -57,18 +57,18 @@ OBJS= asserterror.o deh2.o switch.o complex.o gcstats.o \
 	process.o syserror.o \
 	socket.o socketstream.o stdarg.o stdio.o format.o \
 	perf.o openrj.o uni.o trace.o boxer.o \
-	demangle.o cover.o mangle.o \
+	demangle.o cover.o bitarray.o \
 	ti_wchar.o ti_uint.o ti_short.o ti_ushort.o \
 	ti_byte.o ti_ubyte.o ti_long.o ti_ulong.o ti_ptr.o \
 	ti_float.o ti_double.o ti_real.o ti_delegate.o \
 	ti_creal.o ti_ireal.o ti_cfloat.o ti_ifloat.o \
 	ti_cdouble.o ti_idouble.o \
 	ti_Aa.o ti_AC.o ti_Ag.o ti_Aubyte.o ti_Aushort.o ti_Ashort.o \
-	ti_C.o ti_int.o ti_char.o ti_dchar.o ti_Adchar.o ti_bit.o \
+	ti_C.o ti_int.o ti_char.o ti_dchar.o ti_Adchar.o \
 	ti_Aint.o ti_Auint.o ti_Along.o ti_Aulong.o ti_Awchar.o \
 	ti_Afloat.o ti_Adouble.o ti_Areal.o \
 	ti_Acfloat.o ti_Acdouble.o ti_Acreal.o \
-	ti_Abit.o ti_void.o \
+	ti_void.o \
 	date.o dateparse.o llmath.o math2.o Czlib.o Dzlib.o zip.o recls.o
 
 ZLIB_OBJS= etc/c/zlib/adler32.o etc/c/zlib/compress.o \
@@ -100,7 +100,7 @@ SRC_STD= std/zlib.d std/zip.d std/stdint.d std/conv.d std/utf.d std/uri.d \
 	std/regexp.d std/random.d std/stream.d std/process.d std/recls.d \
 	std/socket.d std/socketstream.d std/loader.d std/stdarg.d \
 	std/stdio.d std/format.d std/perf.d std/openrj.d std/uni.d \
-	std/boxer.d std/cstream.d std/demangle.d std/cover.d
+	std/boxer.d std/cstream.d std/demangle.d std/cover.d std/bitarray.d
 
 SRC_STD_C= std/c/process.d std/c/stdlib.d std/c/time.d std/c/stdio.d \
 	std/c/math.d std/c/stdarg.d std/c/stddef.d
@@ -110,7 +110,7 @@ SRC_TI=	\
 	std/typeinfo/ti_short.d std/typeinfo/ti_ushort.d \
 	std/typeinfo/ti_byte.d std/typeinfo/ti_ubyte.d \
 	std/typeinfo/ti_long.d std/typeinfo/ti_ulong.d \
-	std/typeinfo/ti_ptr.d std/typeinfo/ti_bit.d \
+	std/typeinfo/ti_ptr.d \
 	std/typeinfo/ti_float.d std/typeinfo/ti_double.d \
 	std/typeinfo/ti_real.d std/typeinfo/ti_delegate.d \
 	std/typeinfo/ti_creal.d std/typeinfo/ti_ireal.d \
@@ -127,7 +127,7 @@ SRC_TI=	\
 	std/typeinfo/ti_Areal.d \
 	std/typeinfo/ti_Acfloat.d std/typeinfo/ti_Acdouble.d \
 	std/typeinfo/ti_Acreal.d \
-	std/typeinfo/ti_Abit.d std/typeinfo/ti_void.d \
+	std/typeinfo/ti_void.d \
 	std/typeinfo/ti_Awchar.d std/typeinfo/ti_dchar.d
 
 SRC_INT=	\
@@ -137,7 +137,7 @@ SRC_INT=	\
 	internal/memset.d internal/arraycast.d internal/aaA.d internal/adi.d \
 	internal/dmain2.d internal/cast.d internal/qsort.d internal/deh2.d \
 	internal/cmath2.d internal/obj.d internal/mars.h internal/aApply.d \
-	internal/object.d internal/trace.d internal/qsort2.d internal/match.d
+	internal/object.d internal/trace.d internal/qsort2.d
 
 SRC_STD_WIN= std/windows/registry.d \
 	std/windows/iunknown.d std/windows/charset.d
@@ -438,9 +438,6 @@ invariant.o : internal/invariant.d
 llmath.o : internal/llmath.d
 	$(DMD) -c $(DFLAGS) internal/llmath.d
 
-match.o : internal/match.d
-	$(DMD) -c $(DFLAGS) internal/match.d
-
 memset.o : internal/memset.d
 	$(DMD) -c $(DFLAGS) internal/memset.d
 
@@ -475,6 +472,9 @@ asserterror.o : std/asserterror.d
 
 base64.o : std/base64.d
 	$(DMD) -c $(DFLAGS) std/base64.d
+
+bitarray.o : std/bitarray.d
+	$(DMD) -c $(DFLAGS) std/bitarray.d
 
 boxer.o : std/boxer.d
 	$(DMD) -c $(DFLAGS) std/boxer.d

@@ -20,12 +20,12 @@ private import std.math, std.string, std.c.stdlib, std.c.stdio;
  * compare floats with given precision
  */
 
-bit feq(real a, real b)
+bool feq(real a, real b)
 {
 	return feq(a, b, 0.000001);
 } 
  
-bit feq(real a, real b, real eps)
+bool feq(real a, real b, real eps)
 {
 	return abs(a - b) <= eps;
 }
@@ -761,7 +761,7 @@ real atof(char[] s)
 	while (s[i] == '\t' || s[i] == ' ')
 		if (++i >= s.length)
 			return real.nan;
-	bit neg = false;
+	bool neg = false;
 	if (s[i] == '-')
 	{
 		neg = true;
@@ -771,7 +771,7 @@ real atof(char[] s)
 		i++;
 	if (i >= s.length)
 		return real.nan;
-	bit hex;
+	bool hex;
 	if (s[s.length - 1] == 'h')
 	{
 		hex = true;
@@ -859,7 +859,7 @@ real atof(char[] s)
 	}
 	if (++i >= s.length)
 		return real.nan;
-	bit eneg = false;
+	bool eneg = false;
 	if (s[i] == '-')
 	{
 		eneg = true;

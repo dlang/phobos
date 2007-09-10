@@ -37,3 +37,7 @@ class TypeInfo_h : TypeInfo
     }
 }
 
+class TypeInfo_x : TypeInfo_h
+{
+    char[] toString() { return "bool"; }
+}

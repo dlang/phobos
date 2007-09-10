@@ -1730,6 +1730,8 @@ char[] replace(char[] s, char[] from, char[] to)
     int istart;
 
     //printf("replace('%.*s','%.*s','%.*s')\n", s, from, to);
+    if (from.length == 0)
+	return s;
     istart = 0;
     while (istart < s.length)
     {
@@ -1758,6 +1760,10 @@ unittest
 
     r = replace(s, from, to);
     i = cmp(r, "This is a silly silly list");
+    assert(i == 0);
+
+    r = replace(s, "", to);
+    i = cmp(r, "This is a foo foo list");
     assert(i == 0);
 }
 
@@ -2168,7 +2174,7 @@ char[] translate(char[] s, char[] transtab, char[] delchars)
     {
 	char[] r;
 	int count;
-	bit[256] deltab;
+	bool[256] deltab;
 
 	deltab[] = false;
 	foreach (char c; delchars)
@@ -2220,7 +2226,7 @@ unittest
  * Convert to char[].
  */
 
-char[] toString(bit b)
+char[] toString(bool b)
 {
     return b ? "true" : "false";
 }

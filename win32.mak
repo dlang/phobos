@@ -73,7 +73,7 @@ OBJS= asserterror.obj deh.obj switch.obj complex.obj gcstats.obj \
 	socket.obj socketstream.obj loader.obj stdarg.obj format.obj stdio.obj \
 	perf.obj openrj.obj uni.obj winsock.obj oldsyserror.obj \
 	errno.obj boxer.obj cstream.obj charset.obj \
-	realtest.obj gamma.obj demangle.obj cover.obj match.obj \
+	realtest.obj gamma.obj demangle.obj cover.obj \
 	ti_Aa.obj ti_Ag.obj ti_C.obj ti_int.obj ti_char.obj \
 	ti_wchar.obj ti_uint.obj ti_short.obj ti_ushort.obj \
 	ti_byte.obj ti_ubyte.obj ti_long.obj ti_ulong.obj ti_ptr.obj \
@@ -148,7 +148,7 @@ SRC_INT=	\
 	internal\memset.d internal\arraycast.d internal\aaA.d internal\adi.d \
 	internal\dmain2.d internal\cast.d internal\qsort.d internal\deh2.d \
 	internal\cmath2.d internal\obj.d internal\mars.h internal\aApply.d \
-	internal\object.d internal\trace.d internal\qsort2.d internal\match.d
+	internal\object.d internal\trace.d internal\qsort2.d
 
 SRC_STD_WIN= std\windows\registry.d \
 	std\windows\iunknown.d std\windows\syserror.d std\windows\charset.d
@@ -426,9 +426,6 @@ gcstub.obj : internal\gc\gcstub.d
 
 invariant.obj : internal\invariant.d
 	$(DMD) -c $(DFLAGS) internal\invariant.d
-
-match.obj : internal\match.d
-	$(DMD) -c $(DFLAGS) internal\match.d
 
 memset.obj : internal\memset.d
 	$(DMD) -c $(DFLAGS) internal\memset.d

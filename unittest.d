@@ -47,6 +47,7 @@ import std.md5;
 import std.stdio;
 import std.conv;
 import std.boxer;
+import std.bitarray;
 
 int main(char[][] args)
 {
@@ -102,6 +103,10 @@ printf("test2\n");
     std.math.lgamma(3);
 
     std.demangle.demangle("hello");
+
+    BitArray ba;			// std.bitarray
+    ba.length = 3;
+    ba[0] = true;
 
     printf("Success\n!");
     return 0;

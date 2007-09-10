@@ -100,6 +100,7 @@ private
     import std.string;
     import std.ctype;
     import std.outbuffer;
+    import std.bitarray;
 }
 
 /** Regular expression to extract an _email address */
@@ -335,6 +336,21 @@ unittest
  *	attributes = Regular expression attributes.
  * Returns:
  *	corresponding RegExp if found, null if not.
+ * Example:
+ * ---
+ * import std.stdio;
+ * import std.regexp;
+ *
+ * void main()
+ * {
+ *     if (m; std.regexp.search("abcdef", "c"))
+ *     {
+ *         writefln("%s[%s]%s", m.pre, m.match(0), m.post);
+ *     }
+ * }
+ * // Prints:
+ * // ab[c]def
+ * ---
  */
 
 RegExp search(char[] string, char[] pattern, char[] attributes = null)
@@ -388,41 +404,51 @@ class RegExp
 	return new RegExp(pattern, attributes);
     }
 
-    /**********
-     * Determine if there is an initial match with string[].
+    /************************************
+     * Set up for start of foreach loop.
      * Returns:
-     *	$(B this) if there is a match, null if not
+     *	search() returns instance of RegExp set up to _search string[].
      * Example:
-     *  This makes it possible
-     *  to use RegExp's in a $(I MatchExpression):
      * ---
-     * if (RegExp("^abc") ~~ string)
-     *     writefln("string starts with 'abc'");
+     * import std.stdio;
+     * import std.regexp;
+     *
+     * void main()
+     * {
+     *     foreach(m; RegExp("ab").search("abcabcabab"))
+     *     {
+     *         writefln("%s[%s]%s", m.pre, m.match(0), m.post);
+     *     }
+     * }
+     * // Prints:
+     * // [ab]cabcabab
+     * // abc[ab]cabab
+     * // abcabc[ab]ab
+     * // abcabcab[ab]
      * ---
      */
-    public RegExp opMatch(char[] string)
+
+    public RegExp search(rchar[] string)
     {
-	return test(input, 0) ? this : null;
+	input = string;
+	pmatch[0].rm_eo = 0;
+	return this;
     }
 
-    /************
-     * Determine next match in string.
-     * Returns:
-     *	$(B this) if there is a match, null if not
-     * Example:
-     *  This makes it possible, along with $(B opMatch) operator overload,
-     *  to use RegExp's in a $(I WhileStatement):
-     * ---
-     * RegExp r = new RegExp("[a..c]");
-     * writef("'");
-     * while (r ~~ "abdd3cce")
-     *     writef(_match.match(0));
-     * writefln("'");     // writes 'abcc'
-     * ---
-     */
-    public RegExp opNext()
+    /** ditto */
+    public int opApply(int delegate(inout RegExp) dg)
     {
-	return test(input, pmatch[0].rm_eo) ? this : null;
+	int result;
+	RegExp r = this;
+
+	while (test())
+	{
+	    result = dg(r);
+	    if (result)
+		break;
+	}
+
+	return result;
     }
 
     /******************
@@ -725,7 +751,7 @@ public int find(rchar[] string)
     return i;
 }
 
-deprecated alias find search;
+//deprecated alias find search;
 
 unittest
 {
@@ -2090,7 +2116,7 @@ class Range
     uint maxb;
     OutBuffer buf;
     ubyte* base;
-    bit[] bits;
+    BitArray bits;
 
     this(OutBuffer buf)
     {
@@ -2102,6 +2128,7 @@ class Range
     void setbitmax(uint u)
     {   uint b;
 
+	//printf("setbitmax(x%x), maxc = x%x\n", u, maxc);
 	if (u > maxc)
 	{
 	    maxc = u;
@@ -2113,8 +2140,10 @@ class Range
 		buf.fill0(b - maxb + 1);
 		base = &buf.data[u];
 		maxb = b + 1;
-		bits = (cast(bit*)this.base)[0 .. maxc + 1];
+		//bits = (cast(bit*)this.base)[0 .. maxc + 1];
+		bits.ptr = cast(uint*)this.base;
 	    }
+	    bits.len = maxc + 1;
 	}
     }
 

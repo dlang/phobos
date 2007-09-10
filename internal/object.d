@@ -43,7 +43,7 @@ extern (C)
 }
 
 /// Standard boolean type. Implemented as a $(B bit) type.
-alias bit bool;
+alias bool bit;
 
 version (X86_64)
 {
@@ -611,43 +611,4 @@ class Error : Exception
 }
 
 //extern (C) int nullext = 0;
-
-/* ***************************** _Match **************************** */
-
-/* **
- * Default type for _match.
- * Implemented as a proxy for RegExp, so that object doesn't pull in
- * the entire std.regexp.
- */
-
-import std.regexp;
-
-struct _Match
-{
-    char[] match(size_t n)
-    {
-	return (cast(RegExp)this).match(n);
-    }
-
-    _Match* opNext()
-    {
-	RegExp r = (cast(RegExp)this).opNext();
-	if (r)
-	    return cast(_Match*)this;
-	r = cast(RegExp)this;
-	delete r;
-	return null;
-    }
-
-    char[] pre()
-    {
-	return (cast(RegExp)this).pre();
-    }
-
-    char[] post()
-    {
-	return (cast(RegExp)this).post();
-    }
-}
-
 

@@ -197,7 +197,7 @@ class Protocol
 	}
 	
 	
-	bit getProtocolByName(char[] name)
+	bool getProtocolByName(char[] name)
 	{
 		protoent* proto;
 		proto = getprotobyname(toStringz(name));
@@ -209,7 +209,7 @@ class Protocol
 	
 	
 	// Same as getprotobynumber().
-	bit getProtocolByType(ProtocolType type)
+	bool getProtocolByType(ProtocolType type)
 	{
 		protoent* proto;
 		proto = getprotobynumber(type);
@@ -269,7 +269,7 @@ class Service
 	}
 	
 	
-	bit getServiceByName(char[] name, char[] protocolName)
+	bool getServiceByName(char[] name, char[] protocolName)
 	{
 		servent* serv;
 		serv = getservbyname(toStringz(name), toStringz(protocolName));
@@ -281,7 +281,7 @@ class Service
 	
 	
 	// Any protocol name will be matched.
-	bit getServiceByName(char[] name)
+	bool getServiceByName(char[] name)
 	{
 		servent* serv;
 		serv = getservbyname(toStringz(name), null);
@@ -292,7 +292,7 @@ class Service
 	}
 	
 	
-	bit getServiceByPort(ushort port, char[] protocolName)
+	bool getServiceByPort(ushort port, char[] protocolName)
 	{
 		servent* serv;
 		serv = getservbyport(port, toStringz(protocolName));
@@ -304,7 +304,7 @@ class Service
 	
 	
 	// Any protocol name will be matched.
-	bit getServiceByPort(ushort port)
+	bool getServiceByPort(ushort port)
 	{
 		servent* serv;
 		serv = getservbyport(port, null);
@@ -411,7 +411,7 @@ class InternetHost
 	}
 	
 	
-	bit getHostByName(char[] name)
+	bool getHostByName(char[] name)
 	{
 		hostent* he = gethostbyname(toStringz(name));
 		if(!he)
@@ -422,7 +422,7 @@ class InternetHost
 	}
 	
 	
-	bit getHostByAddr(uint addr)
+	bool getHostByAddr(uint addr)
 	{
 		uint x = htonl(addr);
 		hostent* he = gethostbyaddr(&x, 4, cast(int)AddressFamily.INET);
@@ -435,7 +435,7 @@ class InternetHost
 	
 	
 	//shortcut
-	bit getHostByAddr(char[] addr)
+	bool getHostByAddr(char[] addr)
 	{
 		uint x = inet_addr(std.string.toStringz(addr));
 		hostent* he = gethostbyaddr(&x, 4, cast(int)AddressFamily.INET);
@@ -922,7 +922,7 @@ class Socket
 	AddressFamily _family;
 	
 	version(Win32)
-		bit _blocking = false;
+		bool _blocking = false;
 	
 	
 	// For use with accepting().
@@ -972,7 +972,7 @@ class Socket
 	}
 	
 	
-	bit blocking() // getter
+	bool blocking() // getter
 	{
 		version(Win32)
 		{
@@ -985,7 +985,7 @@ class Socket
 	}
 	
 	
-	void blocking(bit byes) // setter
+	void blocking(bool byes) // setter
 	{
 		version(Win32)
 		{
@@ -1019,7 +1019,7 @@ class Socket
 	}
 	
 	
-	bit isAlive() // getter
+	bool isAlive() // getter
 	{
 		int type, typesize = type.sizeof;
 		return !getsockopt(sock, SOL_SOCKET, SO_TYPE, cast(char*)&type, &typesize);
@@ -1439,7 +1439,7 @@ class Socket
 	
 	
 	/+
-	bit poll(events)
+	bool poll(events)
 	{
 		int WSAEventSelect(socket_t s, WSAEVENT hEventObject, int lNetworkEvents); // Winsock 2 ?
 		int poll(pollfd* fds, int nfds, int timeout); // Unix ?

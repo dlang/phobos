@@ -259,7 +259,7 @@ class MmFile
 			  errNo();
 			}
 
-			data = p[0 .. size];
+			data = p[0 .. initial_map];
 		}
 		else
 		{

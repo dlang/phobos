@@ -3,8 +3,7 @@
  * Macros:
  *	WIKI = StdPath
  * Copyright:
- *	Copyright (c) 2001-2006 by Digital Mars
- *	All Rights Reserved
+ *	Placed into public domain.
  *	www.digitalmars.com
  *
  * Grzegorz Adam Hankiewicz added some documentation.
@@ -537,7 +536,12 @@ int isabs(char[] path)
 {
     char[] d = getDrive(path);
 
-    return d.length < path.length && path[d.length] == sep[0];
+    version (Windows)
+    {
+	return d.length && d.length < path.length && path[d.length] == sep[0];
+    }
+    else
+	return d.length < path.length && path[d.length] == sep[0];
 }
 
 unittest

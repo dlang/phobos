@@ -1,6 +1,6 @@
 
 // Written by Walter Bright
-// Copyright (c) 2002-2003 Digital Mars
+// Copyright (c) 2002-2006 Digital Mars
 // All Rights Reserved
 // www.digitalmars.com
 // Some parts contributed by David L. Davis
@@ -1174,7 +1174,7 @@ cfloat toCfloat(in char[] s)
     real   r1;
     real   r2;
     cfloat cf;
-    bit    b = 0;
+    bool    b = 0;
     char*  endptr;
 
     if (!s.length)
@@ -1255,7 +1255,7 @@ cdouble toCdouble(in char[] s)
     real    r1;
     real    r2;
     cdouble cd;
-    bit     b = 0;
+    bool     b = 0;
     char*   endptr;
 
     if (!s.length)
@@ -1332,7 +1332,7 @@ creal toCreal(in char[] s)
     real   r1;
     real   r2;
     creal  cr;
-    bit    b = 0;
+    bool    b = 0;
     char*  endptr;
 
     if (!s.length)
@@ -1419,7 +1419,7 @@ unittest
  * Grammar:
  * ['+'|'-'] string floating-point digit {digit}
  */
-private bit getComplexStrings(in char[] s, out char[] s1, out char[] s2)
+private bool getComplexStrings(in char[] s, out char[] s1, out char[] s2)
 {
     int len = s.length;
 
@@ -1471,18 +1471,18 @@ private bit getComplexStrings(in char[] s, out char[] s1, out char[] s2)
 /****************************************
  * Main function to compare reals with given precision
  */
-private bit feq(in real rx, in real ry, in real precision)
+private bool feq(in real rx, in real ry, in real precision)
 {
     if (rx == ry)
         return 1;
     
     if (isnan(rx))
-        return cast(bit)isnan(ry);
+        return cast(bool)isnan(ry);
 
     if (isnan(ry))
         return 0;
        
-    return cast(bit)(fabs(rx - ry) <= precision);
+    return cast(bool)(fabs(rx - ry) <= precision);
 }
 
 /****************************************
@@ -1493,24 +1493,24 @@ private bit feq(in real rx, in real ry, in real precision)
  *  1   match
  *  0   nomatch
  */
-private bit feq(in real r1, in real r2)
+private bool feq(in real r1, in real r2)
 {
     if (r1 == r2)
         return 1;
     
     if (isnan(r1))
-        return cast(bit)isnan(r2);
+        return cast(bool)isnan(r2);
 
     if (isnan(r2))
         return 0;
         
-    return cast(bit)(feq(r1, r2, 0.000001L));
+    return cast(bool)(feq(r1, r2, 0.000001L));
 } 
  
 /****************************************
  * compare ireals with given precision
  */
-private bit feq(in ireal r1, in ireal r2)
+private bool feq(in ireal r1, in ireal r2)
 {
     real rx = cast(real)r1;
     real ry = cast(real)r2;
@@ -1519,7 +1519,7 @@ private bit feq(in ireal r1, in ireal r2)
         return 1;
     
     if (isnan(rx)) 
-        return cast(bit)isnan(ry);
+        return cast(bool)isnan(ry);
 
     if (isnan(ry))
         return 0;
@@ -1530,7 +1530,7 @@ private bit feq(in ireal r1, in ireal r2)
 /****************************************
  * compare creals with given precision
  */
-private bit feq(in creal r1, in creal r2)
+private bool feq(in creal r1, in creal r2)
 {
     real r1a = fabs(cast(real)r1.re - cast(real)r2.re);
     real r2b = fabs(cast(real)r1.im - cast(real)r2.im);
@@ -1540,7 +1540,7 @@ private bit feq(in creal r1, in creal r2)
         return 1;
     
     if (isnan(r1a))
-        return cast(bit)isnan(r2b);
+        return cast(bool)isnan(r2b);
 
     if (isnan(r2b))
         return 0;

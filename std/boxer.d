@@ -49,12 +49,12 @@ private import std.utf;
   * Finally, you can discover whether unboxing as a certain type is legal by
   * using the unboxable template or method:
   *
-  *     bit unboxable!(T) (Box value);
-  *     bit Box.unboxable(TypeInfo T);
+  *     bool unboxable!(T) (Box value);
+  *     bool Box.unboxable(TypeInfo T);
   */
   
 /** Return the next type in an array typeinfo, or null if there is none. */
-private bit isArrayTypeInfo(TypeInfo type)
+private bool isArrayTypeInfo(TypeInfo type)
 {
     char[] name = type.classinfo.name;
     return name.length >= 10 && name[9] == 'A' && name != "TypeInfo_AssociativeArray";
@@ -63,7 +63,8 @@ private bit isArrayTypeInfo(TypeInfo type)
 /** The type class returned from Box.findTypeClass; the order of entries is important. */
 private enum TypeClass
 {
-    Bit, /**< bit */
+    Bool, /**< bool */
+    Bit = Bool,	// for backwards compatibility
     Integer, /**< byte, ubyte, short, ushort, int, uint, long, ulong */
     Float, /**< float, double, real */
     Complex, /**< cfloat, cdouble, creal */
@@ -105,7 +106,8 @@ struct Box
                 return TypeClass.Other;
             switch (type.classinfo.name[9])
             {
-                case 'b': return TypeClass.Bit;
+                //case 'b': return TypeClass.Bit;
+                case 'x': return TypeClass.Bool;
                 case 'g', 'h', 's', 't', 'i', 'k', 'l', 'm': return TypeClass.Integer;
                 case 'f', 'd', 'e': return TypeClass.Float;
                 case 'q', 'r', 'c': return TypeClass.Complex;
@@ -118,7 +120,7 @@ struct Box
             /* Use the name returned from toString, which might (but hopefully doesn't) include an allocation. */
             switch (type.toString)
             {
-                case "bit": return TypeClass.Bit;
+                case "bool": return TypeClass.Bool;
                 case "byte", "ubyte", "short", "ushort", "int", "uint", "long", "ulong": return TypeClass.Integer;
                 case "float", "real", "double": return TypeClass.Float;
                 case "cfloat", "cdouble", "creal": return TypeClass.Complex;
@@ -129,7 +131,7 @@ struct Box
     }
     
     /** Return whether this value could be unboxed as the given type without throwing. */
-    bit unboxable(TypeInfo test)
+    bool unboxable(TypeInfo test)
     {
         if (type is test)
             return true;
@@ -158,7 +160,7 @@ struct Box
             return (cast(TypeInfo_Pointer)type).next is (cast(TypeInfo_Pointer)test).next;
         
         if ((ta == tb && ta != TypeClass.Other)
-        || (ta == TypeClass.Bit && tb == TypeClass.Integer)
+        || (ta == TypeClass.Bool && tb == TypeClass.Integer)
         || (ta <= TypeClass.Integer && tb == TypeClass.Float)
         || (ta <= TypeClass.Imaginary && tb == TypeClass.Complex))
             return true;
@@ -207,7 +209,7 @@ struct Box
         return string;
     }
     
-    private bit opEqualsInternal(Box other, bit inverted)
+    private bool opEqualsInternal(Box other, bool inverted)
     {
         if (type != other.type)
         {
@@ -238,16 +240,16 @@ struct Box
             assert (0);
         }
         
-        return cast(bit)type.equals(data, other.data);
+        return cast(bool)type.equals(data, other.data);
     }
     
     /** Implement the equals operator. */
-    bit opEquals(Box other)
+    bool opEquals(Box other)
     {
         return opEqualsInternal(other, false);
     }
     
-    private float opCmpInternal(Box other, bit inverted)
+    private float opCmpInternal(Box other, bool inverted)
     {
         if (type != other.type)
         {
@@ -434,8 +436,8 @@ private template unboxCastInteger(T)
             return cast(T) *cast(long*) value.data;
         if (value.type is typeid(ulong))
             return cast(T) *cast(ulong*) value.data;
-        if (value.type is typeid(bit))
-            return cast(T) *cast(bit*) value.data;
+        if (value.type is typeid(bool))
+            return cast(T) *cast(bool*) value.data;
         if (value.type is typeid(byte))
             return cast(T) *cast(byte*) value.data;
         if (value.type is typeid(ubyte))
@@ -602,7 +604,7 @@ template unbox(T : void*)
   */
 template unboxable(T)
 {
-    bit unboxable(Box value)
+    bool unboxable(Box value)
     {
         return value.unboxable(typeid(T));
     }
@@ -614,7 +616,7 @@ private template unboxTest(T)
     T unboxTest(Box value)
     {
         T result;
-        bit unboxable = value.unboxable(typeid(T));
+        bool unboxable = value.unboxable(typeid(T));
         
         try result = unbox!(T) (value);
         catch (UnboxException error)
@@ -641,7 +643,7 @@ unittest
     Box a, b;
     
     /* Call the function, catch UnboxException, return that it threw correctly. */
-    bit fails(void delegate()func)
+    bool fails(void delegate()func)
     {
         try func();
         catch (UnboxException error)
@@ -719,7 +721,7 @@ unittest
     assert (box(4) > box(3.0));
     assert (box(0+3i) < box(0+4i));
     
-    /* Assert that casting from bit to int works. */
+    /* Assert that casting from bool to int works. */
     assert (1 == unboxTest!(int)(box(true)));
     assert (box(1) == box(true));
  
@@ -746,8 +748,8 @@ unittest
     assert (unboxTest!(void*)(box(p))); // int[]
     assert (unboxTest!(void*)(box(new A))); // Object
     
-    /* Assert that we can't unbox an integer as bit. */
-    assert (!unboxable!(bit) (box(4)));
+    /* Assert that we can't unbox an integer as bool. */
+    assert (!unboxable!(bool) (box(4)));
     
     /* Assert that we can't unbox a struct as another struct. */
     SA sa;

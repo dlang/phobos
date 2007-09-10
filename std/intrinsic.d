@@ -1,11 +1,10 @@
 
 
-// Copyright (c) 1999-2003 by Digital Mars
-// All Rights Reserved
 // written by Walter Bright
 // www.digitalmars.com
+// Placed into the public domain
 
-/* These functions are built-in intrinsics to the compiler.
+/** These functions are built-in intrinsics to the compiler.
  */
 
 module std.intrinsic;

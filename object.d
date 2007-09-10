@@ -3,7 +3,8 @@
 
 module object;
 
-alias bit bool;
+//alias bit bool;
+alias bool bit;
 
 alias typeof(int.sizeof) size_t;
 alias typeof(cast(void*)0 - cast(void*)0) ptrdiff_t;
@@ -129,14 +130,3 @@ class Error : Exception
     this(char[] msg, Error next);
 }
 
-// Default type for _match
-
-struct _Match
-{
-    void* handle;
-
-    char[] match(size_t n);
-    _Match* opNext();
-    char[] pre();
-    char[] post();
-}

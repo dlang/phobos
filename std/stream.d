@@ -380,15 +380,15 @@ class Stream : InputStream, OutputStream {
   private import std.string, crc32, std.c.stdlib, std.c.stdio;
 
   // stream abilities
-  bit readable = false;		/// Indicates whether this stream can be read from.
-  bit writeable = false;	/// Indicates whether this stream can be written to.
-  bit seekable = false;		/// Indicates whether this stream can be seeked within.
-  protected bit isopen = true;	/// Indicates whether this stream is open.
+  bool readable = false;	/// Indicates whether this stream can be read from.
+  bool writeable = false;	/// Indicates whether this stream can be written to.
+  bool seekable = false;	/// Indicates whether this stream can be seeked within.
+  protected bool isopen = true;	/// Indicates whether this stream is open.
 
-  protected bit readEOF = false; /// Indicates whether this stream is at eof
+  protected bool readEOF = false; /// Indicates whether this stream is at eof
 				 /// after the last read attempt.
 
-  protected bit prevCr = false;	/// For a non-seekable stream indicates that
+  protected bool prevCr = false; /// For a non-seekable stream indicates that
 				/// the last readLine or readLineW ended on a
 				/// '\r' character. 
 
@@ -712,7 +712,7 @@ class Stream : InputStream, OutputStream {
       }
       if (fmt[i] == '%') {	// a field
 	i++;
-	bit suppress = false;
+	bool suppress = false;
 	if (fmt[i] == '*') {	// suppress assignment
 	  suppress = true;
 	  i++;
@@ -745,7 +745,7 @@ class Stream : InputStream, OutputStream {
 	      c = getc();
 	      count++;
 	    }
-	    bit neg = false;
+	    bool neg = false;
 	    if (c == '-') {
 	      neg = true;
 	      c = getc();
@@ -846,7 +846,7 @@ class Stream : InputStream, OutputStream {
 	      c = getc();
 	      count++;
 	    }
-	    bit neg = false;
+	    bool neg = false;
 	    if (c == '-') {
 	      neg = true;
 	      c = getc();
@@ -881,7 +881,7 @@ class Stream : InputStream, OutputStream {
 	      c = getc();
 	      count++;
 	      if (width) {
-		bit expneg = false;
+		bool expneg = false;
 		if (c == '-') {
 		  expneg = true;
 		  width--;
@@ -1249,7 +1249,7 @@ class Stream : InputStream, OutputStream {
   }
 
   // returns true if end of stream is reached, false otherwise
-  bit eof() { 
+  bool eof() { 
     // for unseekable streams we only know the end when we read it
     if (readEOF && !ungetAvailable())
       return true;
@@ -1366,7 +1366,7 @@ class FilterStream : Stream {
   /// Property indicating when this stream closes to close the source stream as
   /// well.
   /// Defaults to true.
-  bit nestClose = true;
+  bool nestClose = true;
 
   /// Construct a FilterStream for the given source.
   this(Stream source) {
@@ -1455,7 +1455,7 @@ class BufferedStream : FilterStream {
   ubyte[] buffer;       // buffer, if any
   uint bufferCurPos;    // current position in buffer
   uint bufferLen;       // amount of data in buffer
-  bit bufferDirty = false;
+  bool bufferDirty = false;
   uint bufferSourcePos; // position in buffer of source stream position
   ulong streamPos;      // absolute position in source stream
 
@@ -1796,8 +1796,8 @@ class File: Stream {
   this(HANDLE hFile, FileMode mode) {
     super();
     this.hFile = hFile;
-    readable = cast(bit)(mode & FileMode.In);
-    writeable = cast(bit)(mode & FileMode.Out);
+    readable = cast(bool)(mode & FileMode.In);
+    writeable = cast(bool)(mode & FileMode.Out);
     version(Windows) {
       seekable = GetFileType(hFile) == 1; // FILE_TYPE_DISK
     } else {
@@ -1831,8 +1831,8 @@ class File: Stream {
     int access, share, createMode;
     parseMode(mode, access, share, createMode);
     seekable = true;
-    readable = cast(bit)(mode & FileMode.In);
-    writeable = cast(bit)(mode & FileMode.Out);
+    readable = cast(bool)(mode & FileMode.In);
+    writeable = cast(bool)(mode & FileMode.Out);
     version (Win32) {
       if (std.file.useWfuncs) {
 	hFile = CreateFileW(std.utf.toUTF16z(filename), access, share,
@@ -2737,7 +2737,7 @@ class SliceStream : FilterStream {
     ulong pos;  // our position relative to low
     ulong low; // low stream offset.
     ulong high; // high stream offset.
-    bit bounded; // upper-bounded by high.
+    bool bounded; // upper-bounded by high.
   }
 
   /***
@@ -2905,18 +2905,18 @@ class SliceStream : FilterStream {
 }
 
 // helper functions
-private bit iswhite(char c) {
+private bool iswhite(char c) {
   return c == ' ' || c == '\t' || c == '\r' || c == '\n';
 }
 
-private bit isdigit(char c) {
+private bool isdigit(char c) {
   return c >= '0' && c <= '9';
 }
 
-private bit isoctdigit(char c) {
+private bool isoctdigit(char c) {
   return c >= '0' && c <= '7';
 }
 
-private bit ishexdigit(char c) {
+private bool ishexdigit(char c) {
   return isdigit(c) || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f');
 }

@@ -38,6 +38,8 @@ private import std.utf;
 private import std.c.stdlib;
 private import std.string;
 
+alias bool bit;
+
 version (Windows)
 {
     version (DigitalMars)
@@ -81,6 +83,7 @@ enum Mangle : char
 {
     Tvoid     = 'v',
     Tbit      = 'b',
+    Tbool     = 'x',
     Tbyte     = 'g',
     Tubyte    = 'h',
     Tshort    = 's',
@@ -130,6 +133,8 @@ private TypeInfo primitiveTypeInfo(Mangle m)
       ti = typeid(void);break;
     case Mangle.Tbit:
       ti = typeid(bit);break;
+    case Mangle.Tbool:
+      ti = typeid(bool);break;
     case Mangle.Tbyte:
       ti = typeid(byte);break;
     case Mangle.Tubyte:
@@ -325,7 +330,7 @@ $(I FormatChar):
 	<dd>The corresponding argument is formatted in a manner consistent
 	with its type:
 	<dl>
-	    <dt>$(B bit)
+	    <dt>$(B bool)
 	    <dd>The result is <tt>'true'</tt> or <tt>'false'</tt>.
 	    <dt>integral types
 	    <dd>The $(B %d) format is used.
@@ -351,7 +356,7 @@ $(I FormatChar):
 	and is formatted as an integer. If the argument is a signed type
 	and the $(I FormatChar) is $(B d) it is converted to
 	a signed string of characters, otherwise it is treated as
-	unsigned. An argument of type $(B bit) is formatted as '1'
+	unsigned. An argument of type $(B bool) is formatted as '1'
 	or '0'. The base used is binary for $(B b), octal for $(B o),
 	decimal
 	for $(B d), and hexadecimal for $(B x) or $(B X).
@@ -456,7 +461,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
 
     void formatArg(char fc)
     {
-	bit vbit;
+	bool vbit;
 	ulong vnumber;
 	char vchar;
 	dchar vdchar;
@@ -604,7 +609,8 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
 	switch (m)
 	{
 	    case Mangle.Tbit:
-		vbit = va_arg!(bit)(argptr);
+	    case Mangle.Tbool:
+		vbit = va_arg!(bool)(argptr);
 		if (fc != 's')
 		{   vnumber = vbit;
 		    goto Lnumber;

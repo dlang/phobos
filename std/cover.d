@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2005 by Digital Mars, www.digitalmars.com
+ *  Copyright (C) 2005-2006 by Digital Mars, www.digitalmars.com
  *  Written by Walter Bright
  *
  *  This software is provided 'as-is', without any express or implied
@@ -36,20 +36,21 @@ module std.cover;
 
 private import std.stdio;
 private import std.file;
+private import std.bitarray;
 
 private
 {
     struct Cover
     {
 	char[] filename;
-	bit[] valid;
+	BitArray valid;
 	uint[] data;
     }
 
     Cover[] gdata;
     char[] srcpath;
     char[] dstpath;
-    bit merge;
+    bool merge;
 }
 
 /***********************************
@@ -78,12 +79,12 @@ void setDestDir(char[] pathname)
  *		created.
  */
 
-void setMerge(bit flag)
+void setMerge(bool flag)
 {
     merge = flag;
 }
 
-extern (C) void _d_cover_register(char[] filename, bit[] valid, uint[] data)
+extern (C) void _d_cover_register(char[] filename, BitArray valid, uint[] data)
 {
     //printf("_d_cover_register()\n");
     //printf("\tfilename = '%.*s'\n", filename);

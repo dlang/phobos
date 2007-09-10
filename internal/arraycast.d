@@ -87,6 +87,8 @@ void[] _d_arraycast_frombit(uint tsize, void[] a)
 
 unittest
 {
+    version (D_Bits)
+    {
     bit[int.sizeof * 3 * 8] b;
     int[] i;
     short[] s;
@@ -96,6 +98,7 @@ unittest
 
     s = cast(short[])b;
     assert(s.length == 6);
+    }
 }
 
 
