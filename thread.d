@@ -1,4 +1,4 @@
-// Copyright (c) 2002 by Digital Mars
+// Copyright (c) 2002-2003 by Digital Mars
 // All Rights Reserved
 // written by Walter Bright
 // www.digitalmars.com
@@ -301,8 +301,9 @@ class Thread
 
 	t.state = TS.RUNNING;
 	t.id = GetCurrentThreadId();
-	t.hdl = GetCurrentThread();
+	t.hdl = Thread.getCurrentThreadHandle();
 	t.stackBottom = os_query_stackBottom();
+
 	synchronized (threadLock)
 	{
 	    assert(!allThreads[0]);
@@ -312,6 +313,34 @@ class Thread
 	}
     }
 
+    static ~this()
+    {
+	CloseHandle(allThreads[0].hdl);
+	allThreads[0].hdl = GetCurrentThread();
+    }
+          
+    /********************************************
+     * Returns the handle of the current thread.
+     * This is needed because GetCurrentThread() always returns -2 which
+     * is a pseudo-handle representing the current thread.
+     * The returned thread handle is a windows resource and must be explicitly
+     * closed.
+     * Many thanks to Justin (jhenzie@mac.com) for figuring this out
+     * and providing the fix.
+     */
+    static thread_hdl getCurrentThreadHandle()
+    {
+	thread_hdl currentThread = GetCurrentThread();
+	thread_hdl actualThreadHandle;
+	thread_hdl currentProcess = cast(thread_hdl)-1;
+
+	uint access = cast(uint)0x00000002;
+
+	DuplicateHandle(currentProcess, currentThread, currentProcess,
+			 &actualThreadHandle, cast(uint)0, TRUE, access);
+
+	return actualThreadHandle;
+     }
 }
 
 

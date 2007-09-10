@@ -124,6 +124,8 @@ enum
 	ERROR_ACCESS_DENIED =              5,
 	ERROR_INVALID_HANDLE =             6,
 	ERROR_NO_MORE_FILES =              18,
+	ERROR_MORE_DATA =		   234,
+	ERROR_NO_MORE_ITEMS =		   259,
 }
 
 enum
@@ -239,10 +241,13 @@ struct SECURITY_ATTRIBUTES {
     BOOL bInheritHandle;
 }
 
+alias SECURITY_ATTRIBUTES* PSECURITY_ATTRIBUTES, LPSECURITY_ATTRIBUTES;
+
 struct FILETIME {
     DWORD dwLowDateTime;
     DWORD dwHighDateTime;
 }
+alias FILETIME* PFILETIME;
 
 struct WIN32_FIND_DATA {
     DWORD dwFileAttributes;
@@ -295,6 +300,56 @@ export
 
 HMODULE LoadLibraryA(LPCSTR lpLibFileName);
 FARPROC GetProcAddress(HMODULE hModule, LPCSTR lpProcName);
+
+//
+// Registry Specific Access Rights.
+//
+
+enum
+{
+	KEY_QUERY_VALUE =         0x0001,
+	KEY_SET_VALUE =           0x0002,
+	KEY_CREATE_SUB_KEY =      0x0004,
+	KEY_ENUMERATE_SUB_KEYS =  0x0008,
+	KEY_NOTIFY =              0x0010,
+	KEY_CREATE_LINK =         0x0020,
+
+	KEY_READ =       ((STANDARD_RIGHTS_READ | KEY_QUERY_VALUE | KEY_ENUMERATE_SUB_KEYS | KEY_NOTIFY)   & ~SYNCHRONIZE),
+	KEY_WRITE =      ((STANDARD_RIGHTS_WRITE | KEY_SET_VALUE | KEY_CREATE_SUB_KEY) & ~SYNCHRONIZE),
+	KEY_EXECUTE =    (KEY_READ & ~SYNCHRONIZE),
+	KEY_ALL_ACCESS = ((STANDARD_RIGHTS_ALL | KEY_QUERY_VALUE | KEY_SET_VALUE | KEY_CREATE_SUB_KEY | KEY_ENUMERATE_SUB_KEYS | KEY_NOTIFY | KEY_CREATE_LINK) & ~SYNCHRONIZE),
+}
+
+//
+// Key creation/open disposition
+//
+
+const int REG_CREATED_NEW_KEY =         0x00000001;   // New Registry Key created
+const int REG_OPENED_EXISTING_KEY =     0x00000002;   // Existing Key opened
+
+
+//
+//
+// Predefined Value Types.
+//
+enum
+{
+	REG_NONE =                    0,   // No value type
+	REG_SZ =                      1,   // Unicode nul terminated string
+	REG_EXPAND_SZ =               2,   // Unicode nul terminated string
+                                            // (with environment variable references)
+	REG_BINARY =                  3,   // Free form binary
+	REG_DWORD =                   4,   // 32-bit number
+	REG_DWORD_LITTLE_ENDIAN =     4,   // 32-bit number (same as REG_DWORD)
+	REG_DWORD_BIG_ENDIAN =        5,   // 32-bit number
+	REG_LINK =                    6,   // Symbolic Link (unicode)
+	REG_MULTI_SZ =                7,   // Multiple Unicode strings
+	REG_RESOURCE_LIST =           8,   // Resource list in the resource map
+	REG_FULL_RESOURCE_DESCRIPTOR = 9,  // Resource list in the hardware description
+	REG_RESOURCE_REQUIREMENTS_LIST = 10,
+	REG_QWORD =			11,
+	REG_QWORD_LITTLE_ENDIAN =	11,
+}
 
 /*
  * MessageBox() Flags
@@ -424,11 +479,29 @@ enum
 	REG_RESOURCE_REQUIREMENTS_LIST = ( 10 ),
 }
 
-export LONG  RegDeleteKeyA(HKEY hKey, LPCSTR lpSubKey);
-export LONG  RegCloseKey(HKEY hKey);
+export LONG RegDeleteKeyA(HKEY hKey, LPCSTR lpSubKey);
+export LONG RegDeleteValueA(HKEY hKey, LPCSTR lpValueName);
+
+export LONG  RegEnumKeyExA(HKEY hKey, DWORD dwIndex, LPSTR lpName, LPDWORD lpcbName, LPDWORD lpReserved, LPSTR lpClass, LPDWORD lpcbClass, FILETIME* lpftLastWriteTime);
+export LONG RegEnumValueA(HKEY hKey, DWORD dwIndex, LPSTR lpValueName, LPDWORD lpcbValueName, LPDWORD lpReserved,
+    LPDWORD lpType, LPBYTE lpData, LPDWORD lpcbData);
+
+export LONG RegCloseKey(HKEY hKey);
+export LONG RegFlushKey(HKEY hKey);
+
+export LONG RegOpenKeyA(HKEY hKey, LPCSTR lpSubKey, PHKEY phkResult);
+export LONG RegOpenKeyExA(HKEY hKey, LPCSTR lpSubKey, DWORD ulOptions, REGSAM samDesired, PHKEY phkResult);
+
+export LONG RegQueryInfoKeyA(HKEY hKey, LPSTR lpClass, LPDWORD lpcbClass,
+    LPDWORD lpReserved, LPDWORD lpcSubKeys, LPDWORD lpcbMaxSubKeyLen, LPDWORD lpcbMaxClassLen,
+    LPDWORD lpcValues, LPDWORD lpcbMaxValueNameLen, LPDWORD lpcbMaxValueLen, LPDWORD lpcbSecurityDescriptor,
+    PFILETIME lpftLastWriteTime);
+
+export LONG RegQueryValueA(HKEY hKey, LPCSTR lpSubKey, LPSTR lpValue,
+    LPLONG lpcbValue);
 
 export LONG RegCreateKeyExA(HKEY hKey, LPCSTR lpSubKey, DWORD Reserved, LPSTR lpClass,
-    DWORD dwOptions, REGSAM samDesired, SECURITY_ATTRIBUTES* lpSecurityAttributes,
+   DWORD dwOptions, REGSAM samDesired, SECURITY_ATTRIBUTES* lpSecurityAttributes,
     PHKEY phkResult, LPDWORD lpdwDisposition);
 
 export LONG RegSetValueExA(HKEY hKey, LPCSTR lpValueName, DWORD Reserved, DWORD dwType, BYTE* lpData, DWORD cbData);
@@ -494,7 +567,7 @@ enum
 
 enum
 {
-	FILE_READ_DATA =            ( 0x0001 ),    // file & pipe
+	FILE_READ_DATA =            ( 0x0001 ),   // file & pipe
 	FILE_LIST_DIRECTORY =       ( 0x0001 ),    // directory
 
 	FILE_WRITE_DATA =           ( 0x0002 ),    // file & pipe
@@ -716,6 +789,9 @@ enum
 }
 
 export HANDLE GetCurrentThread();
+export BOOL DuplicateHandle (HANDLE sourceProcess, HANDLE sourceThread,
+        HANDLE targetProcessHandle, HANDLE *targetHandle, DWORD access, 
+        BOOL inheritHandle, DWORD options);
 export DWORD GetCurrentThreadId();
 export BOOL SetThreadPriority(HANDLE hThread, int nPriority);
 export BOOL SetThreadPriorityBoost(HANDLE hThread, BOOL bDisablePriorityBoost);
@@ -1742,5 +1818,7 @@ export
  BOOL PeekMessageA(MSG *lpMsg, HWND hWnd, UINT wMsgFilterMin, UINT wMsgFilterMax, UINT wRemoveMsg);
  HWND GetFocus();
 }
+
+export DWORD ExpandEnvironmentStringsA(LPCSTR lpSrc, LPSTR lpDst, DWORD nSize);
 
 }

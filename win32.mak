@@ -58,6 +58,7 @@ OBJS= assert.obj deh.obj switch.obj complex.obj gcstats.obj \
 	stream.obj switcherr.obj com.obj array.obj gc.obj adi.obj \
 	qsort.obj math2.obj date.obj dateparse.obj thread.obj obj.obj \
 	iunknown.obj crc32.obj conv.obj arraycast.obj utf.obj uri.obj \
+	registry.obj \
 	ti_Aa.obj ti_Ag.obj ti_C.obj ti_int.obj ti_char.obj \
 	ti_wchar.obj ti_uint.obj ti_short.obj ti_ushort.obj \
 	ti_byte.obj ti_ubyte.obj ti_long.obj ti_ulong.obj ti_ptr.obj \
@@ -101,6 +102,8 @@ SRC8=crc32.d stdint.d conv.d gcstats.d utf.d uri.d ti_Aubyte.d \
 SRC9=ti_Aint.d ti_Auint.d ti_Along.d ti_Aulong.d ti_Awchar.d ti_dchar.d \
 	ti_Adchar.d
 
+SRC10=D\win32\registry.d
+
 phobos.lib : $(OBJS) minit.obj gc2\dmgc.lib win32.mak
 	lib -c phobos.lib $(OBJS) minit.obj gc2\dmgc.lib
 
@@ -129,6 +132,10 @@ moduleinit.obj : moduleinit.d
 monitor.obj : mars.h monitor.c
 outofmemory.obj : outofmemory.d
 qsort.obj : qsort.d
+
+registry.obj : D\win32\registry.d
+	$(DMD) -c $(DFLAGS) D\win32\registry.d
+
 switch.obj : switch.d
 system.obj : system.d
 thread.obj : thread.d
@@ -149,7 +156,7 @@ ti_char.obj : ti_char.d
 ti_int.obj : ti_int.d
 
 zip : win32.mak linux.mak $(HDR) $(SRC) $(SRC2) $(SRC3) $(SRC4) $(SRC5) $(SRC6) $(SRC7) \
-	$(SRC8)
+	$(SRC8) $(SRC9) $(SRC10)
 	del phobos.zip
 	zip32 -u phobos win32.mak linux.mak $(HDR)
 	zip32 -u phobos $(SRC)
@@ -161,6 +168,7 @@ zip : win32.mak linux.mak $(HDR) $(SRC) $(SRC2) $(SRC3) $(SRC4) $(SRC5) $(SRC6) 
 	zip32 -u phobos $(SRC7)
 	zip32 -u phobos $(SRC8)
 	zip32 -u phobos $(SRC9)
+	zip32 -u phobos $(SRC10)
 
 clean:
 	del $(OBJS)

@@ -75,6 +75,7 @@ SRC= mars.h switch.d complex.c critical.c minit.asm \
 	outbuffer.d unittest.d stream.d ctype.d random.d adi.d \
 	math2.d thread.d obj.d iunknown.d intrinsic.d time.d memset.d \
 	array.d switcherr.d arraycast.d errno.c alloca.d cmath2.d \
+	D/win32/d \
 	ti_wchar.d ti_uint.d ti_short.d ti_ushort.d \
 	ti_byte.d ti_ubyte.d ti_long.d ti_ulong.d ti_ptr.d \
 	ti_float.d ti_double.d ti_real.d ti_delegate.d \

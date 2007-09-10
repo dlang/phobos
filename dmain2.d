@@ -66,7 +66,6 @@ extern (C) int main(int argc, char **argv)
 
 	result = main(args);
     }
-
     catch (Object o)
     {
 	printf("Error: ");
