@@ -1,10 +1,10 @@
-﻿/**
+/**
  * C's &lt;locale.h&gt;
  * License: Public Domain
  * Standards:
- *	ISO/IEC 9899:1999 §7.11 
+ *	ISO/IEC 9899:1999 7.11 
  * Macros:
- *	WIKI=Phobos/StdCCType
+ *	WIKI=Phobos/StdCLocale
  */
 module std.c.locale;
 
@@ -26,8 +26,8 @@ struct lconv{
 	char* grouping;
 
 	/** The international currency symbol applicable to the current locale.
-	 * The ﬁrst three characters contain the alphabetic international
-	 * currency symbol in accordance with those speciﬁed in ISO 4217.
+	 * The first three characters contain the alphabetic international
+	 * currency symbol in accordance with those specified in ISO 4217.
 	 * The fourth character	(immediately preceding the null character)
 	 * is the character used to separate the international currency symbol
 	 * from the monetary quantity.
@@ -135,11 +135,11 @@ const LC_COLLATE = 3;
  **/
 const LC_MONETARY = 4;
 
-/// The program’s entire locale.
+/// The program's entire locale.
 const LC_ALL = 6;
 
 /** The setlocale function selects the appropriate portion of the program's
- * locale as speciﬁed by the category and locale arguments.
+ * locale as specified by the category and locale arguments.
  **/
 char* setlocale(int category, char* locale);
 

@@ -262,12 +262,12 @@ struct Interface
     int offset;			/// offset to Interface 'this' from Object 'this'
 }
 
+import std.moduleinit;
 /**
  * Runtime type information about a class. Can be retrieved for any class type
  * or instance by using the .classinfo property.
  * A pointer to this appears as the first entry in the class's vtbl[].
  */
-import std.moduleinit;
 class ClassInfo : Object
 {
     byte[] init;		/** class static initializer

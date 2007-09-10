@@ -328,7 +328,7 @@ size_t readln(FILE* fp, inout char[] buf)
 		{
 		    if (c >= 0xD800 && c <= 0xDBFF)
 		    {
-			if ((c2 == FGETWC(fp)) != -1 ||
+			if ((c2 = FGETWC(fp)) != -1 ||
 			    c2 < 0xDC00 && c2 > 0xDFFF)
 			{
 			    StdioException("unpaired UTF-16 surrogate");
@@ -475,7 +475,7 @@ size_t readln(FILE* fp, inout char[] buf)
 		    {
 			if (c >= 0xD800 && c <= 0xDBFF)
 			{
-			    if ((c2 == FGETWC(fp)) != -1 ||
+			    if ((c2 = FGETWC(fp)) != -1 ||
 				c2 < 0xDC00 && c2 > 0xDFFF)
 			    {
 				StdioException("unpaired UTF-16 surrogate");

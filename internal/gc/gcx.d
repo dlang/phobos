@@ -104,17 +104,19 @@ debug (LOGGING)
 		if (!data)
 		{
 		    data = cast(Log *)std.c.stdlib.malloc(allocdim * Log.sizeof);
+		    if (!data && allocdim)
+			_d_OutOfMemory();
 		}
 		else
 		{   Log *newdata;
 
 		    newdata = cast(Log *)std.c.stdlib.malloc(allocdim * Log.sizeof);
-		    assert(newdata);
+		    if (!newdata && allocdim)
+			_d_OutOfMemory();
 		    memcpy(newdata, data, dim * Log.sizeof);
 		    std.c.stdlib.free(data);
 		    data = newdata;
 		}
-		assert(!allocdim || data);
 	    }
 	}
 
@@ -178,6 +180,8 @@ class GC
     {
 	gcLock = GCLock.classinfo;
 	gcx = cast(Gcx *)std.c.stdlib.calloc(1, Gcx.sizeof);
+	if (!gcx)
+	    _d_OutOfMemory();
 	gcx.initialize();
 	version (Win32)
 	{
@@ -1047,7 +1051,8 @@ struct Gcx
 	    void **newroots;
 
 	    newroots = cast(void **)std.c.stdlib.malloc(newdim * newroots[0].sizeof);
-	    assert(newroots);
+	    if (!newroots)
+		_d_OutOfMemory();
 	    if (roots)
 	    {   memcpy(newroots, roots, nroots * newroots[0].sizeof);
 		std.c.stdlib.free(roots);
@@ -1088,7 +1093,8 @@ struct Gcx
 	    Range *newranges;
 
 	    newranges = cast(Range *)std.c.stdlib.malloc(newdim * newranges[0].sizeof);
-	    assert(newranges);
+	    if (!newranges)
+		_d_OutOfMemory();
 	    if (ranges)
 	    {   memcpy(newranges, ranges, nranges * newranges[0].sizeof);
 		std.c.stdlib.free(ranges);
@@ -1341,6 +1347,12 @@ struct Gcx
 	// Minimum of POOLSIZE
 	if (npages < POOLSIZE/PAGESIZE)
 	    npages = POOLSIZE/PAGESIZE;
+	else if (npages > POOLSIZE/PAGESIZE)
+	{   // Give us 150% of requested size, so there's room to extend
+	    auto n = npages + (npages >> 1);
+	    if (n < size_t.max/PAGESIZE)
+		npages = n;
+	}
 
 	// Allocate successively larger pools up to 8 megs
 	if (npools)
@@ -2080,6 +2092,8 @@ struct Pool
 	noptrs.alloc(poolsize / 16);
 
 	pagetable = cast(ubyte*)std.c.stdlib.malloc(npages);
+	if (!pagetable)
+	    _d_OutOfMemory();
 	memset(pagetable, B_UNCOMMITTED, npages);
 
 	this.npages = npages;

@@ -1618,7 +1618,7 @@ private:
     }
 
 private:
-    this();
+    this() {  }
 
 /// \name Hives
 //@{

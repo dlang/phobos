@@ -833,7 +833,7 @@ byte[] _d_arrayappendcT(TypeInfo ti, inout byte[] x, ...)
     byte *argp = cast(byte *)(&ti + 2);
 
     *cast(size_t *)&x = newlength;
-    (cast(byte *)x)[length * sizeelem .. newsize] = argp[0 .. sizeelem];
+    x.ptr[length * sizeelem .. newsize] = argp[0 .. sizeelem];
     assert((cast(size_t)x.ptr & 15) == 0);
     assert(_gc.capacity(x.ptr) > x.length * sizeelem);
     return x;
