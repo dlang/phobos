@@ -30,6 +30,9 @@
  * language used is the same as that commonly used, however, some of the very
  * advanced forms may behave slightly differently.
  *
+ * std.regexp is designed to work only with valid UTF strings as input.
+ * To validate untrusted input, use std.utf.validate().
+ *
  * In the following guide, $(I pattern)[] refers to a
  * $(LINK2 http://www.digitalmars.com/ctg/regular.html, regular expression).
  * The $(I attributes)[] refers to

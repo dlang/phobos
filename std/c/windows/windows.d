@@ -522,7 +522,8 @@ const HKEY HKEY_CURRENT_USER =           cast(HKEY)(0x80000001);
 const HKEY HKEY_LOCAL_MACHINE =          cast(HKEY)(0x80000002);
 const HKEY HKEY_USERS =                  cast(HKEY)(0x80000003);
 const HKEY HKEY_PERFORMANCE_DATA =       cast(HKEY)(0x80000004);
-
+const HKEY HKEY_PERFORMANCE_TEXT =       cast(HKEY)(0x80000050);
+const HKEY HKEY_PERFORMANCE_NLSTEXT =    cast(HKEY)(0x80000060);
 const HKEY HKEY_CURRENT_CONFIG =         cast(HKEY)(0x80000005);
 const HKEY HKEY_DYN_DATA =               cast(HKEY)(0x80000006);
 

@@ -16,6 +16,7 @@ alias dchar[] dstring;
 
 extern (C)
 {   int printf(char *, ...);
+    void trace_term();
 }
 
 class Object
@@ -165,11 +166,11 @@ class TypeInfo_Invariant : TypeInfo_Const
 
 class Exception : Object
 {
-    char[] msg;
+    string msg;
 
-    this(char[] msg);
-    void print();
-    char[] toString();
+    this(string msg);
+    override void print();
+    override string toString();
 }
 
 // Non-recoverable errors
@@ -178,7 +179,7 @@ class Error : Exception
 {
     Error next;
 
-    this(char[] msg);
-    this(char[] msg, Error next);
+    this(string msg);
+    this(string msg, Error next);
 }
 
