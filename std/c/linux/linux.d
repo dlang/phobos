@@ -399,7 +399,22 @@ extern (C)
 	char *pw_shell;
     }
 
+    const size_t _SIGSET_NWORDS = 1024 / (8 * uint.sizeof);
+    struct sigset_t
+    {
+	uint[_SIGSET_NWORDS] __val;
+    }
+
     int getpwnam_r(char*, passwd*, void*, size_t, passwd**);
+    passwd* getpwnam(char*);
+    passwd* getpwuid(uid_t);
+    int getpwuid_r(uid_t, passwd*, char*, size_t, passwd**);
+    int kill(pid_t, int);
+    int sem_close(sem_t*);
+    int sigemptyset(sigset_t*);
+    int sigfillset(sigset_t*);
+    int sigismember(sigset_t*, int);
+    int sigsuspend(sigset_t*);
 }
 
 extern (C)

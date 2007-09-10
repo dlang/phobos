@@ -233,6 +233,9 @@ d_time TimeFromYear(int y)
 int YearFromTime(d_time t)
 {   int y;
 
+    if (t == d_time_nan)
+	return 0;
+
     // Hazard a guess
     //y = 1970 + cast(int) (t / (365.2425 * msPerDay));
     // Use integer only math

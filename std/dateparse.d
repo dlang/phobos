@@ -76,7 +76,7 @@ struct DateParse
 	    (minutes < 0 || minutes > 59) ||
 	    (seconds < 0 || seconds > 59) ||
 	    (tzcorrection != tzcorrection.init &&
-	     ((tzcorrection < -1200 || tzcorrection > 1200) ||
+	     ((tzcorrection < -2300 || tzcorrection > 2300) ||
 	      (tzcorrection % 10)))
 	    )
 	{

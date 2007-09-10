@@ -106,7 +106,7 @@ TOP=
 NAVIGATION_PHOBOS=
 <div class="navblock">
     $(UL
-	$(LI <a href="object.html" title="root of object heirarchy">object</a>)
+	$(LI <a href="object.html" title="root of object hierarchy">object</a>)
     )
     <h2><a href="phobos.html#std" title="D standard modules">std</a></h2>
     $(UL

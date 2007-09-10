@@ -717,7 +717,7 @@ enum SocketShutdown: int
 {
 	RECEIVE =  SD_RECEIVE,	/// socket receives are disallowed
 	SEND =     SD_SEND,	/// socket sends are disallowed
-	BOTH =     SD_RECEIVE,	/// both RECEIVE and SEND
+	BOTH =     SD_BOTH,	/// both RECEIVE and SEND
 }
 
 

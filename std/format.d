@@ -7,7 +7,7 @@
  */
 
 /*
- *  Copyright (C) 2004-2005 by Digital Mars, www.digitalmars.com
+ *  Copyright (C) 2004-2006 by Digital Mars, www.digitalmars.com
  *  Written by Walter Bright
  *
  *  This software is provided 'as-is', without any express or implied
@@ -792,6 +792,12 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
 		formatArg(fc);
 		return;
 
+	    case Mangle.Tenum:
+		ti = (cast(TypeInfo_Enum)ti).base;
+		m = cast(Mangle)ti.classinfo.name[9];
+		formatArg(fc);
+		return;
+
 	    case Mangle.Tstruct:
 	    {	TypeInfo_Struct tis = cast(TypeInfo_Struct)ti;
 		s = tis.xtoString(argptr);
@@ -1370,5 +1376,12 @@ unittest
     Object c = null;
     r = std.string.format(c);
     assert(r == "null");
+
+    enum TestEnum
+    {
+	    Value1, Value2
+    }
+    r = std.string.format("%s", TestEnum.Value2);
+    assert(r == "1");
 }
 

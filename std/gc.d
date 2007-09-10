@@ -90,7 +90,7 @@ void genCollectNoStack();
 void minimize();
 
 /***************************************
- * disable() temporarilly disables garbage collection cycle, enable()
+ * disable() temporarily disables garbage collection cycle, enable()
  * then reenables them.
  *
  * This is used for brief time critical sections of code, so the amount of time

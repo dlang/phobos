@@ -111,7 +111,7 @@ void os_query_staticdataseg(void **base, uint *nbytes)
     uint size = 0;
 
     // Tests show the following does not work reliably.
-    // The reason is that the data segment is arbitrarilly divided
+    // The reason is that the data segment is arbitrarily divided
     // up into PAGE_READWRITE and PAGE_WRITECOPY.
     // This means there are multiple regions to query, and
     // can even wind up including the code segment.

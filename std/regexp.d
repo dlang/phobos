@@ -3120,3 +3120,26 @@ public rchar[] replaceOld(rchar[] format)
 
 }
 
+unittest
+{   // Created and placed in public domain by Don Clugston
+
+    auto m = regexp.search("aBC r s", `bc\x20r[\40]s`, "i");
+    assert(m.pre=="a");
+    assert(m.match(0)=="BC r s");
+    auto m2 = regexp.search("7xxyxxx", `^\d([a-z]{2})\D\1`);
+    assert(m2.match(0)=="7xxyxx");
+    // Just check the parsing.
+    auto m3 = regexp.search("dcbxx", `ca|b[\d\]\D\s\S\w-\W]`);
+    auto m4 = regexp.search("xy", `[^\ca-\xFa\r\n\b\f\t\v\0123]{2,485}$`);
+    auto m5 = regexp.search("xxx", `^^\r\n\b{13,}\f{4}\t\v\u02aF3a\w\W`);
+    auto m6 = regexp.search("xxy", `.*y`);
+    assert(m6.match(0)=="xxy");
+    auto m7 = regexp.search("QWDEfGH", "(ca|b|defg)+", "i");
+    assert(m7.match(0)=="DEfG");
+    auto m8 = regexp.search("dcbxx", `a?\B\s\S`);
+    auto m9 = regexp.search("dcbxx", `[-w]`);
+    auto m10 = regexp.search("dcbsfd", `aB[c-fW]dB|\d|\D|\u012356|\w|\W|\s|\S`, "i");
+    auto m11 = regexp.search("dcbsfd", `[]a-]`);
+    m.replaceOld(`a&b\1c`);
+    m.replace(`a$&b$'$1c`);
+}
