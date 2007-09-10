@@ -262,10 +262,23 @@ class ClassInfo : Object
     uint flags;
     //	1:			// IUnknown
     //	2:			// has no possible pointers into GC memory
+    //	4:			// has offTi[] member
     void *deallocator;
+    OffsetTypeInfo[] offTi;
 }
 
 private import std.string;
+
+/**
+ * Array of pairs giving the offset and type information for each
+ * member in an aggregate.
+ */
+struct OffsetTypeInfo
+{
+    size_t offset;	/// Offset of member from start of object
+    TypeInfo ti;	/// TypeInfo for this member
+}
+
 
 /**
  * Runtime type information about a type.
@@ -330,6 +343,9 @@ class TypeInfo
 
     /// Get flags for type: 1 means GC should scan for pointers
     uint flags() { return 0; }
+
+    /// Get type information on the contents of the type; null if not available
+    OffsetTypeInfo[] offTi() { return null; }
 }
 
 class TypeInfo_Typedef : TypeInfo
@@ -704,6 +720,11 @@ class TypeInfo_Class : TypeInfo
     }
 
     uint flags() { return 1; }
+
+    OffsetTypeInfo[] offTi()
+    {
+	return (info.flags & 4) ? info.offTi : null;
+    }
 
     ClassInfo info;
 }
