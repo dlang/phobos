@@ -60,7 +60,7 @@ OBJS= asserterror.obj deh.obj switch.obj complex.obj gcstats.obj \
 	cast.obj syserror.obj path.obj string.obj memset.obj math.obj \
 	outbuffer.obj ctype.obj regexp.obj random.obj windows.obj \
 	stream.obj switcherr.obj com.obj array.obj gc.obj mmfile.obj \
-	qsort.obj qsort.2.d math2.obj date.obj dateparse.obj thread.obj obj.obj \
+	qsort.obj math2.obj date.obj dateparse.obj thread.obj obj.obj \
 	iunknown.obj crc32.obj conv.obj arraycast.obj utf.obj uri.obj \
 	Czlib.obj Dzlib.obj zip.obj process.obj registry.obj recls.obj \
 	socket.obj socketstream.obj loader.obj stdarg.obj format.obj stdio.obj \
@@ -119,14 +119,16 @@ SRC_INT=	\
 	internal\memset.d internal\arraycast.d internal\aaA.d internal\adi.d \
 	internal\dmain2.d internal\cast.d internal\qsort.d internal\deh2.d \
 	internal\cmath2.d internal\obj.d internal\mars.h internal\aApply.d \
-	internal\object.d internal\trace.d
+	internal\object.d internal\trace.d internal\qsort2.d
 
 SRC_STD_WIN= std\windows\registry.d \
 	std\windows\iunknown.d
 
-SRC_STD_C_WIN= std\c\windows\windows.d std\c\windows\com.d
+SRC_STD_C_WIN= std\c\windows\windows.d std\c\windows\com.d \
+	std\c\windows\winsock.d
 
-SRC_STD_C_LINUX= std\c\linux\linux.d std\c\linux\linuxextern.d
+SRC_STD_C_LINUX= std\c\linux\linux.d std\c\linux\linuxextern.d \
+	std\c\linux\socket.d
 
 SRC_ETC=
 

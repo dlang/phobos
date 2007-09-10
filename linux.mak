@@ -37,7 +37,7 @@ test.o : test.d
 	$(DMD) -c test -g
 
 test : test.o libphobos.a
-	$(CC) -o $@ test.o libphobos.a -lpthread -g
+	$(CC) -o $@ test.o libphobos.a -lpthread -lm -g
 
 unittest : unittest.o libphobos.a
 	$(CC) -o $@ unittest.o libphobos.a -lpthread -lm -g
@@ -52,7 +52,7 @@ OBJS= asserterror.o deh2.o switch.o complex.o gcstats.o \
 	cast.o path.o string.o memset.o math.o mmfile.o \
 	outbuffer.o ctype.o regexp.o random.o linux.o \
 	stream.o switcherr.o array.o gc.o \
-	qsort.o qsort2.o thread.o obj.o utf.o uri.o \
+	qsort.o thread.o obj.o utf.o uri.o \
 	crc32.o conv.o arraycast.o errno.o alloca.o cmath2.o \
 	process.o syserror.o \
 	socket.o socketstream.o stdarg.o stdio.o format.o \
@@ -128,12 +128,13 @@ SRC_INT=	\
 	internal/memset.d internal/arraycast.d internal/aaA.d internal/adi.d \
 	internal/dmain2.d internal/cast.d internal/qsort.d internal/deh2.d \
 	internal/cmath2.d internal/obj.d internal/mars.h internal/aApply.d \
-	internal/object.d internal/trace.d
+	internal/object.d internal/trace.d internal/qsort2.d
 
 SRC_STD_WIN= std/windows/registry.d \
 	std/windows/iunknown.d
 
-SRC_STD_C_WIN= std/c/windows/windows.d std/c/windows/com.d
+SRC_STD_C_WIN= std/c/windows/windows.d std/c/windows/com.d \
+	std/c/windows/winsock.d
 
 SRC_STD_C_LINUX= std/c/linux/linux.d std/c/linux/linuxextern.d
 

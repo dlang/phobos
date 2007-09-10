@@ -731,7 +731,14 @@ unittest
     assert(s == "hello world! true 57 1000000000x foo");
 
     s = std.string.format(1.67, " %A ", -1.28, float.nan);
-    assert(s == "1.67 -0X1.47AE147AE147BP+0 nan");
+    /* The host C library is used to format floats.
+     * C99 doesn't specify what the hex digit before the decimal point
+     * is for %A.
+     */
+    version (linux)
+	assert(s == "1.67 -0XA.3D70A3D70A3D8P-3 nan");
+    else
+	assert(s == "1.67 -0X1.47AE147AE147BP+0 nan");
 
     s = std.string.format("%x %X", 0x1234AF, 0xAFAFAFAF);
     assert(s == "1234af AFAFAFAF");

@@ -14,6 +14,9 @@ else
   DATAGRP      EQU     DGROUP
 endif
 
+public __nullext
+__nullext	equ 0
+
 	extrn	__moduleinfo_array:near
 
 ; These segments bracket FM, which contains the list of ModuleInfo pointers

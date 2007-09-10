@@ -327,6 +327,7 @@ unittest
 	catch (UtfError u)
 	{
 	    i = 23;
+	    delete u;
 	}
 	assert(i == 23);
     }

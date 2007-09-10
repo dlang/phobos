@@ -102,7 +102,8 @@ void _moduleCtor2(ModuleInfo[] mi, int skip)
 	ModuleInfo m = mi[i];
 
 	debug printf("\tmodule[%d] = '%p'\n", i, m);
-	if (!m) continue;
+	if (!m)
+	    continue;
 	debug printf("\tmodule[%d] = '%.*s'\n", i, m.name);
 	if (m.flags & MIctordone)
 	    continue;
@@ -170,6 +171,9 @@ extern (C) void _moduleUnitTests()
     for (uint i = 0; i < _moduleinfo_array.length; i++)
     {
 	ModuleInfo m = _moduleinfo_array[i];
+
+	if (!m)
+	    continue;
 
 	debug printf("\tmodule[%d] = '%.*s'\n", i, m.name);
 	if (m.unitTest)

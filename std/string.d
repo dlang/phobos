@@ -893,33 +893,66 @@ unittest
 
 
 /********************************************
- * Capitalize first character of string.
+ * Capitalize first character of string, convert rest of string
+ * to lower case.
  */
 
 char[] capitalize(char[] s)
 {
-    if (s.length)
-    {
-	char c = s[0];
-	if ('a' <= c && c <= 'z')
-	{   char[] r = new char[s.length];
-	    r[] = s;
-	    s = r;
-	    s[0] = c - (cast(char)'a' - 'A');
+    int changed;
+    int i;
+    char[] r = s;
+
+    changed = 0;
+
+    foreach (size_t i, dchar c; s)
+    {	dchar c2;
+
+	if (i == 0)
+	{
+	    c2 = std.uni.toUniUpper(c);
+	    if (c != c2)
+	    {
+		changed = 1;
+		r = null;
+	    }
 	}
+	else
+	{
+	    c2 = std.uni.toUniLower(c);
+	    if (c != c2)
+	    {
+		if (!changed)
+		{   changed = 1;
+		    r = s[0 .. i].dup;
+		}
+	    }
+	}
+	if (changed)
+	    std.utf.encode(r, c2);
     }
-    return s;
+    return r;
 }
+
 
 unittest
 {
-    debug(string) printf("string.capitalize.unittest\n");
+    debug(string) printf("string.toupper.capitalize\n");
 
-    char[] s1 = "foL";
+    char[] s1 = "FoL";
     char[] s2;
 
     s2 = capitalize(s1);
-    assert(cmp(s2, "FoL") == 0);
+    assert(cmp(s2, "Fol") == 0);
+    assert(s2 !== s1);
+
+    s2 = capitalize(s1[0 .. 2]);
+    assert(cmp(s2, "Fo") == 0);
+    assert(s2.ptr == s1.ptr);
+
+    s1 = "fOl";
+    s2 = capitalize(s1);
+    assert(cmp(s2, "Fol") == 0);
     assert(s2 !== s1);
 }
 
@@ -951,7 +984,7 @@ char[] capwords(char[] s)
 	    case '\v':
 		if (inword)
 		{
-		    r ~= s[istart .. i];
+		    r ~= capitalize(s[istart .. i]);
 		    inword = 0;
 		}
 		break;
@@ -969,35 +1002,7 @@ char[] capwords(char[] s)
     }
     if (inword)
     {
-	r ~= s[istart .. i];
-    }
-
-    // Go back through r and capitalize the words
-    inword = 0;
-    for (i = 0; i < r.length; i++)
-    {
-	char c = r[i];
-
-	if (c >= 'A' && c <= 'Z')
-	{
-	    if (inword == 1)
-	    {
-		c += cast(char)'a' - 'A';
-		r[i] = c;
-	    }
-	    inword = 1;
-	}
-	else if (c >= 'a' && c <= 'z')
-	{
-	    if (inword == 0)
-	    {
-		c -= cast(char)'a' - 'A';
-		r[i] = c;
-	    }
-	    inword = 1;
-	}
-	else
-	    inword = 0;
+	r ~= capitalize(s[istart .. i]);
     }
 
     return r;
@@ -1012,8 +1017,51 @@ unittest
     char[] s2;
 
     s2 = capwords(s1);
-    //printf("s2 = '%.*s'\n", s2);
-    assert(cmp(s2, "Foo Abc(Ad)* (Q Ptt") == 0);
+    //writefln("s2 = '%s'", s2);
+    assert(cmp(s2, "Foo Abc(ad)* (q Ptt") == 0);
+}
+
+/********************************************
+ * Return a string that consists of s[] repeated n times.
+ */
+
+char[] repeat(char[] s, size_t n)
+{
+    if (n == 0)
+	return null;
+    if (n == 1)
+	return s;
+    char[] r = new char[n * s.length];
+    if (s.length == 1)
+	r[] = s[0];
+    else
+    {	size_t len = s.length;
+
+	for (size_t i = 0; i < n * len; i += len)
+	{
+	    r[i .. i + len] = s[];
+	}
+    }
+    return r;
+}
+
+
+unittest
+{
+    debug(string) printf("string.repeat.unittest\n");
+
+    char[] s;
+
+    s = repeat("1234", 0);
+    assert(s is null);
+    s = repeat("1234", 1);
+    assert(cmp(s, "1234") == 0);
+    s = repeat("1234", 2);
+    assert(cmp(s, "12341234") == 0);
+    s = repeat("1", 4);
+    assert(cmp(s, "1111") == 0);
+    s = repeat(null, 4);
+    assert(s is null);
 }
 
 
@@ -1433,12 +1481,124 @@ char[] strip(char[] s)
 
 unittest
 {
+    debug(string) printf("string.strip.unittest\n");
     char[] s;
     int i;
 
     s = strip("  foo\t ");
     i = cmp(s, "foo");
     assert(i == 0);
+}
+
+/*******************************************
+ * Returns s[] sans trailing delimiter[], if any.
+ * If delimiter[] is null, removes trailing CR, LF, or CRLF, if any.
+ */
+
+char[] chomp(char[] s, char[] delimiter = null)
+{
+    if (delimiter is null)
+    {   size_t len = s.length;
+
+	if (len)
+	{   char c = s[len - 1];
+
+	    if (c == '\r')			// if ends in CR
+		len--;
+	    else if (c == '\n')			// if ends in LF
+	    {
+		len--;
+		if (len && s[len - 1] == '\r')
+		    len--;			// remove CR-LF
+	    }
+	}
+	return s[0 .. len];
+    }
+    else if (s.length >= delimiter.length)
+    {
+	if (s[length - delimiter.length .. length] == delimiter)
+	    return s[0 .. length - delimiter.length];
+    }
+    return s;
+}
+
+unittest
+{
+    debug(string) printf("string.chomp.unittest\n");
+    char[] s;
+
+    s = chomp(null);
+    assert(s is null);
+    s = chomp("hello");
+    assert(s == "hello");
+    s = chomp("hello\n");
+    assert(s == "hello");
+    s = chomp("hello\r");
+    assert(s == "hello");
+    s = chomp("hello\r\n");
+    assert(s == "hello");
+    s = chomp("hello\n\r");
+    assert(s == "hello\n");
+    s = chomp("hello\n\n");
+    assert(s == "hello\n");
+    s = chomp("hello\r\r");
+    assert(s == "hello\r");
+    s = chomp("hello\nxxx\n");
+    assert(s == "hello\nxxx");
+
+    s = chomp(null, null);
+    assert(s is null);
+    s = chomp("hello", "o");
+    assert(s == "hell");
+    s = chomp("hello", "p");
+    assert(s == "hello");
+    s = chomp("hello", null);
+    assert(s == "hello");
+    s = chomp("hello", "llo");
+    assert(s == "he");
+}
+
+
+/***********************************************
+ * Returns s[] sans trailing character, if there is one.
+ * If last two characters are CR-LF, then both are removed.
+ */
+
+char[] chop(char[] s)
+{   size_t len = s.length;
+
+    if (len)
+    {
+	if (len >= 2 && s[len - 1] == '\n' && s[len - 2] == '\r')
+	    return s[0 .. len - 2];
+
+	// If we're in a tail of a UTF-8 sequence, back up
+	while ((s[len - 1] & 0xC0) == 0x80)
+	{
+	    len--;
+	    if (len == 0)
+		throw new std.utf.UtfError("invalid UTF sequence", 0);
+	}
+
+	return s[0 .. len - 1];
+    }
+    return s;
+}
+
+
+unittest
+{
+    debug(string) printf("string.chop.unittest\n");
+    char[] s;
+
+    s = chop(null);
+    assert(s is null);
+    s = chop("hello");
+    assert(s == "hell");
+    s = chop("hello\r\n");
+    assert(s == "hello");
+    s = chop("hello\n\r");
+    assert(s == "hello\n");
 }
 
 
@@ -1658,9 +1818,9 @@ unittest
  * Count up all instances of sub[] in s[].
  */
 
-int count(char[] s, char[] sub)
+size_t count(char[] s, char[] sub)
 {
-    int i;
+    size_t i;
     int j;
     int count = 0;
 
@@ -1748,19 +1908,29 @@ unittest
 
 /************************************
  * Construct translation table for translate().
+ * BUG: only works with ASCII
  */
 
 char[] maketrans(char[] from, char[] to)
     in
     {
 	assert(from.length == to.length);
+	assert(from.length <= 128);
+	foreach (char c; from)
+	{
+	    assert(c <= 0x7F);
+	}
+	foreach (char c; to)
+	{
+	    assert(c <= 0x7F);
+	}
     }
     body
     {
 	char[] t = new char[256];
 	int i;
 
-	for (i = 0; i < 256; i++)
+	for (i = 0; i < t.length; i++)
 	    t[i] = cast(char)i;
 
 	for (i = 0; i < from.length; i++)
@@ -1772,6 +1942,7 @@ char[] maketrans(char[] from, char[] to)
 /******************************************
  * Translate characters in s[] using table created by maketrans().
  * Delete chars in delchars[].
+ * BUG: only works with ASCII
  */
 
 char[] translate(char[] s, char[] transtab, char[] delchars)
@@ -1782,29 +1953,27 @@ char[] translate(char[] s, char[] transtab, char[] delchars)
     body
     {
 	char[] r;
-	int i;
 	int count;
 	bit[256] deltab;
 
 	deltab[] = false;
-	for (i = 0; i < delchars.length; i++)
+	foreach (char c; delchars)
 	{
-	    deltab[delchars[i]] = true;
+	    deltab[c] = true;
 	}
 
 	count = 0;
-	for (i = 0; i < s.length; i++)
+	foreach (char c; s)
 	{
-	    if (!deltab[s[i]])
+	    if (!deltab[c])
 		count++;
 	    //printf("s[%d] = '%c', count = %d\n", i, s[i], count);
 	}
 
 	r = new char[count];
 	count = 0;
-	for (i = 0; i < s.length; i++)
-	{   char c = s[i];
-
+	foreach (char c; s)
+	{
 	    if (!deltab[c])
 	    {
 		r[count] = transtab[c];
@@ -2294,3 +2463,477 @@ unittest
     assert(i == 0);
 }
 
+
+/***********************************************
+ * See if character c is in the pattern.
+ */
+
+int inPattern(dchar c, char[] pattern)
+{
+    int result = 0;
+    int range = 0;
+    dchar lastc;
+
+    foreach (size_t i, dchar p; pattern)
+    {
+	if (p == '^' && i == 0)
+	{   result = 1;
+	    if (i + 1 == pattern.length)
+		return (c == p);	// or should this be an error?
+	}
+	else if (range)
+	{
+	    range = 0;
+	    if (lastc <= c && c <= p || c == p)
+		return result ^ 1;
+	}
+	else if (p == '-' && i > result && i + 1 < pattern.length)
+	{
+	    range = 1;
+	    continue;
+	}
+	else if (c == p)
+	    return result ^ 1;
+	lastc = p;
+    }
+    return result;
+}
+
+
+unittest
+{
+    debug(string) printf("std.string.inPattern.unittest\n");
+
+    int i;
+
+    i = inPattern('x', "x");
+    assert(i == 1);
+    i = inPattern('x', "y");
+    assert(i == 0);
+    i = inPattern('x', cast(char[])null);
+    assert(i == 0);
+    i = inPattern('x', "^y");
+    assert(i == 1);
+    i = inPattern('x', "yxxy");
+    assert(i == 1);
+    i = inPattern('x', "^yxxy");
+    assert(i == 0);
+    i = inPattern('x', "^abcd");
+    assert(i == 1);
+    i = inPattern('^', "^^");
+    assert(i == 0);
+    i = inPattern('^', "^");
+    assert(i == 1);
+    i = inPattern('^', "a^");
+    assert(i == 1);
+    i = inPattern('x', "a-z");
+    assert(i == 1);
+    i = inPattern('x', "A-Z");
+    assert(i == 0);
+    i = inPattern('x', "^a-z");
+    assert(i == 0);
+    i = inPattern('x', "^A-Z");
+    assert(i == 1);
+    i = inPattern('-', "a-");
+    assert(i == 1);
+    i = inPattern('-', "^A-");
+    assert(i == 0);
+    i = inPattern('a', "z-a");
+    assert(i == 1);
+    i = inPattern('z', "z-a");
+    assert(i == 1);
+    i = inPattern('x', "z-a");
+    assert(i == 0);
+}
+
+
+/***********************************************
+ * See if character c is in the intersection of the patterns.
+ */
+
+int inPattern(dchar c, char[][] patterns)
+{   int result;
+
+    foreach (char[] pattern; patterns)
+    {
+	if (!inPattern(c, pattern))
+	{   result = 0;
+	    break;
+	}
+	result = 1;
+    }
+    return result;
+}
+
+
+/********************************************
+ * Count characters in s that match pattern.
+ */
+
+size_t countchars(char[] s, char[] pattern)
+{
+    size_t count;
+
+    foreach (dchar c; s)
+    {
+	count += inPattern(c, pattern);
+    }
+    return count;
+}
+
+
+unittest
+{
+    debug(string) printf("std.string.count.unittest\n");
+
+    size_t c;
+
+    c = countchars("abc", "a-c");
+    assert(c == 3);
+    c = countchars("hello world", "or");
+    assert(c == 3);
+}
+
+
+/********************************************
+ * Return string that is s with all characters removed that match pattern.
+ */
+
+char[] removechars(char[] s, char[] pattern)
+{
+    char[] r = s;
+    int changed;
+    size_t j;
+
+    foreach (size_t i, dchar c; s)
+    {
+	if (!inPattern(c, pattern))
+	{
+	    if (changed)
+	    {
+		if (r is s)
+		    r = s[0 .. j].dup;
+		std.utf.encode(r, c);
+	    }
+	}
+	else if (!changed)
+	{   changed = 1;
+	    j = i;
+	}
+    }
+    if (changed && r is s)
+	r = s[0 .. j].dup;
+    return r;
+}
+
+
+unittest
+{
+    debug(string) printf("std.string.remove.unittest\n");
+
+    char[] r;
+
+    r = removechars("abc", "a-c");
+    assert(r is null);
+    r = removechars("hello world", "or");
+    assert(r == "hell wld");
+    r = removechars("hello world", "d");
+    assert(r == "hello worl");
+}
+
+
+/***************************************************
+ * Return string where sequences of a character from pattern
+ * are replaced with a single instance of that character.
+ * If pattern is null, it defaults to all characters.
+ */
+
+char[] squeeze(char[] s, char[] pattern = null)
+{
+    char[] r = s;
+    dchar lastc;
+    size_t lasti;
+    int run;
+    int changed;
+
+    foreach (size_t i, dchar c; s)
+    {
+	if (run && lastc == c)
+	{
+	    changed = 1;
+	}
+	else if (pattern is null || inPattern(c, pattern))
+	{
+	    run = 1;
+	    if (changed)
+	    {	if (r is s)
+		    r = s[0 .. lasti].dup;
+		std.utf.encode(r, c);
+	    }
+	    else
+		lasti = i + std.utf.stride(s, i);
+	    lastc = c;
+	}
+	else
+	{
+	    run = 0;
+	    if (changed)
+	    {	if (r is s)
+		    r = s[0 .. lasti].dup;
+		std.utf.encode(r, c);
+	    }
+	}
+    }
+    if (changed)
+    {
+	if (r is s)
+	    r = s[0 .. lasti];
+    }
+    return r;
+}
+
+
+unittest
+{
+    debug(string) printf("std.string.squeeze.unittest\n");
+    char[] s,r;
+
+    r = squeeze("hello");
+    //writefln("r = '%s'", r);
+    assert(r == "helo");
+    s = "abcd";
+    r = squeeze(s);
+    assert(r is s);
+    s = "xyzz";
+    r = squeeze(s);
+    assert(r.ptr == s.ptr);	// should just be a slice
+    r = squeeze("hello goodbyee", "oe");
+    assert(r == "hello godbye");
+}
+
+
+/**********************************************
+ * Return string that is the 'successor' to s.
+ * If the rightmost character is a-zA-Z0-9, it is incremented within
+ * its case or digits. If it generates a carry, the process is
+ * repeated with the one to its immediate left.
+ */
+
+char[] succ(char[] s)
+{
+    if (s.length && isalnum(s[length - 1]))
+    {
+	char[] r = s.dup;
+	size_t i = r.length - 1;
+
+	while (1)
+	{   dchar c = s[i];
+	    dchar carry;
+
+	    switch (c)
+	    {
+		case '9':
+		    c = '0';
+		    carry = '1';
+		    goto Lcarry;
+		case 'z':
+		case 'Z':
+		    c -= 'Z' - 'A';
+		    carry = c;
+		Lcarry:
+		    r[i] = c;
+		    if (i == 0)
+		    {
+			char[] t = new char[r.length + 1];
+			t[0] = carry;
+			t[1 .. length] = r[];
+			return t;
+		    }
+		    i--;
+		    break;
+
+		default:
+		    if (std.ctype.isalnum(c))
+			r[i]++;
+		    return r;
+	    }
+	}
+    }
+    return s;
+}
+
+unittest
+{
+    debug(string) printf("std.string.succ.unittest\n");
+
+    char[] r;
+
+    r = succ(null);
+    assert(r is null);
+    r = succ("!@#$%");
+    assert(r == "!@#$%");
+    r = succ("1");
+    assert(r == "2");
+    r = succ("9");
+    assert(r == "10");
+    r = succ("999");
+    assert(r == "1000");
+    r = succ("zz99");
+    assert(r == "aaa00");
+}
+
+
+/***********************************************
+ * Translate characters in from[] to characters in to[].
+ */
+
+char[] tr(char[] str, char[] from, char[] to, char[] modifiers = null)
+{
+    int mod_c;
+    int mod_d;
+    int mod_s;
+
+    foreach (char c; modifiers)
+    {
+	switch (c)
+	{
+	    case 'c':	mod_c = 1; break;	// complement
+	    case 'd':	mod_d = 1; break;	// delete unreplaced chars
+	    case 's':	mod_s = 1; break;	// squeeze duplicated replaced chars
+	}
+    }
+
+    if (to is null && !mod_d)
+	to = from;
+
+    char[] result = new char[str.length];
+    result.length = 0;
+    int m;
+    dchar lastc;
+
+    foreach (dchar c; str)
+    {	dchar lastf;
+	dchar lastt;
+	dchar newc;
+	int n = 0;
+
+	for (size_t i = 0; i < from.length; )
+	{
+	    dchar f = std.utf.decode(from, i);
+	    //writefln("\tf = '%s', c = '%s', lastf = '%x', '%x', i = %d, %d", f, c, lastf, dchar.init, i, from.length);
+	    if (f == '-' && lastf != dchar.init && i < from.length)
+	    {
+		dchar nextf = std.utf.decode(from, i);
+		//writefln("\tlastf = '%s', c = '%s', nextf = '%s'", lastf, c, nextf);
+		if (lastf <= c && c <= nextf)
+		{
+		    n += c - lastf - 1;
+		    if (mod_c)
+			goto Lnotfound;
+		    goto Lfound;
+		}
+		n += nextf - lastf;
+		lastf = lastf.init;
+		continue;
+	    }
+
+	    if (c == f)
+	    {	if (mod_c)
+		    goto Lnotfound;
+		goto Lfound;
+	    }
+	    lastf = f;
+	    n++;
+	}
+	if (!mod_c)
+	    goto Lnotfound;
+	n = 0;			// consider it 'found' at position 0
+
+    Lfound:
+
+	// Find the nth character in to[]
+	//writefln("\tc = '%s', n = %d", c, n);
+	dchar nextt;
+	for (size_t i = 0; i < to.length; )
+	{   dchar t = std.utf.decode(to, i);
+	    if (t == '-' && lastt != dchar.init && i < to.length)
+	    {
+		nextt = std.utf.decode(to, i);
+		//writefln("\tlastt = '%s', c = '%s', nextt = '%s', n = %d", lastt, c, nextt, n);
+		n -= nextt - lastt;
+		if (n < 0)
+		{
+		    newc = nextt + n + 1;
+		    goto Lnewc;
+		}
+		lastt = dchar.init;
+		continue;
+	    }
+	    if (n == 0)
+	    {	newc = t;
+		goto Lnewc;
+	    }
+	    lastt = t;
+	    nextt = t;
+	    n--;
+	}
+	if (mod_d)
+	    continue;
+	newc = nextt;
+
+      Lnewc:
+	if (mod_s && m && newc == lastc)
+	    continue;
+	std.utf.encode(result, newc);
+	m = 1;
+	lastc = newc;
+	continue;
+
+      Lnotfound:
+	std.utf.encode(result, c);
+	lastc = c;
+	m = 0;
+    }
+    return result;
+}
+
+unittest
+{
+    debug(string) printf("std.string.tr.unittest\n");
+
+    char[] r;
+    //writefln("r = '%s'", r);
+
+    r = tr("abcdef", "cd", "CD");
+    assert(r == "abCDef");
+
+    r = tr("abcdef", "b-d", "B-D");
+    assert(r == "aBCDef");
+
+    r = tr("abcdefgh", "b-dh", "B-Dx");
+    assert(r == "aBCDefgx");
+
+    r = tr("abcdefgh", "b-dh", "B-CDx");
+    assert(r == "aBCDefgx");
+
+    r = tr("abcdefgh", "b-dh", "B-BCDx");
+    assert(r == "aBCDefgx");
+
+    r = tr("abcdef", "ef", "*", "c");
+    assert(r == "****ef");
+
+    r = tr("abcdef", "ef", "", "d");
+    assert(r == "abcd");
+
+    r = tr("hello goodbye", "lo", null, "s");
+    assert(r == "helo godbye");
+
+    r = tr("hello goodbye", "lo", "x", "s");
+    assert(r == "hex gxdbye");
+
+    r = tr("14-Jul-87", "a-zA-Z", " ", "cs");
+    assert(r == " Jul ");
+
+    r = tr("Abc", "AAA", "XYZ");
+    assert(r == "Xbc");
+}

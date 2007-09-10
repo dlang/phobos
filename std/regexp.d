@@ -2,7 +2,7 @@
 // Regular Expressions
 
 /*
- *  Copyright (C) 2000-2004 by Digital Mars, www.digitalmars.com
+ *  Copyright (C) 2000-2005 by Digital Mars, www.digitalmars.com
  *  Written by Walter Bright
  *
  *  This software is provided 'as-is', without any express or implied
@@ -117,9 +117,9 @@ class RegExp
 
 
 private:
-    uint src;			// current source index in input[]
-    uint src_start;		// starting index for match in input[]
-    uint p;			// position of parser in pattern[]
+    size_t src;			// current source index in input[]
+    size_t src_start;		// starting index for match in input[]
+    size_t p;			// position of parser in pattern[]
     regmatch_t gmatch;		// match for the entire regular expression
 				// (serves as storage for pmatch[0])
 
@@ -138,8 +138,8 @@ enum : ubyte
     REend,		// end of program
     REchar,		// single character
     REichar,		// single character, case insensitive
-    REwchar,		// single wide character
-    REiwchar,		// single wide character, case insensitive
+    REdchar,		// single UCS character
+    REidchar,		// single wide character, case insensitive
     REanychar,		// any character
     REanystar,		// ".*"
     REstring,		// string of characters
@@ -172,7 +172,7 @@ enum : ubyte
 };
 
 // BUG: should this include '$'?
-private int isword(rchar c) { return isalnum(c) || c == '_'; }
+private int isword(dchar c) { return isalnum(c) || c == '_'; }
 
 private uint inf = ~0u;
 
@@ -185,10 +185,10 @@ public void compile(rchar[] pattern, rchar[] attributes)
     //printf("RegExp.compile('%.*s', '%.*s')\n", pattern, attributes);
 
     this.attributes = 0;
-    for (uint i = 0; i < attributes.length; i++)
+    foreach (rchar c; attributes)
     {   REA att;
 
-	switch (attributes[i])
+	switch (c)
 	{
 	    case 'g': att = REA.global;		break;
 	    case 'i': att = REA.ignoreCase;	break;
@@ -236,7 +236,8 @@ public void compile(rchar[] pattern, rchar[] attributes)
 }
 
 /********************************************
- * Split string[] into an array of strings, using the regular expression as the separator.
+ * Split string[] into an array of strings, using the regular
+ * expression as the separator.
  * Returns:
  * 	array of slices into string[]
  */
@@ -341,7 +342,7 @@ unittest
  *	-1	no match
  */
 
-public int search(rchar[] string)
+public int find(rchar[] string)
 {
     int i;
 
@@ -353,15 +354,17 @@ public int search(rchar[] string)
     return i;
 }
 
+deprecated alias find search;
+
 unittest
 {
-    debug(regexp) printf("regexp.search.unittest()\n");
+    debug(regexp) printf("regexp.find.unittest()\n");
 
     int i;
     RegExp r = new RegExp("abc", null);
-    i = r.search("xabcy");
+    i = r.find("xabcy");
     assert(i == 1);
-    i = r.search("cba");
+    i = r.find("cba");
     assert(i == -1);
 }
 
@@ -553,7 +556,7 @@ public int test()
 
 public int test(char[] string, int startindex)
 {
-    rchar firstc;
+    char firstc;
     uint si;
 
     input = string;
@@ -564,7 +567,7 @@ public int test(char[] string, int startindex)
     {
 	return 0;			// fail
     }
-    debug(regexp) printProgram(program);
+    //debug(regexp) printProgram(program);
 
     // First character optimization
     firstc = 0;
@@ -598,7 +601,7 @@ public int test(char[] string, int startindex)
 	{
 	    pmatch[0].rm_so = si;
 	    pmatch[0].rm_eo = src;
-	    debug(regexp) printf("start = %d, end = %d\n", gmatch.rm_so, gmatch.rm_eo);
+	    //debug(regexp) printf("start = %d, end = %d\n", gmatch.rm_so, gmatch.rm_eo);
 	    return 1;
 	}
 	// If possible match must start at beginning, we are done
@@ -615,7 +618,7 @@ public int test(char[] string, int startindex)
 	}
 	if (si == input.length)
 	    break;
-	debug(regexp) printf("Starting new try: '%.*s'\n", input[si + 1 .. input.length]);
+	//debug(regexp) printf("Starting new try: '%.*s'\n", input[si + 1 .. input.length]);
     }
     return 0;		// no match
 }
@@ -633,7 +636,7 @@ int chr(inout uint si, rchar c)
 
 void printProgram(ubyte[] prog)
 {
-  debug(regexp)
+  //debug(regexp)
   {
     uint pc;
     uint len;
@@ -660,14 +663,14 @@ void printProgram(ubyte[] prog)
 		pc += 1 + char.sizeof;
 		break;
 
-	    case REwchar:
-		printf("\tREwchar '%c'\n", *cast(wchar *)&prog[pc + 1]);
-		pc += 1 + wchar.sizeof;
+	    case REdchar:
+		printf("\tREdchar '%c'\n", *cast(dchar *)&prog[pc + 1]);
+		pc += 1 + dchar.sizeof;
 		break;
 
-	    case REiwchar:
-		printf("\tREiwchar '%c'\n", *cast(wchar *)&prog[pc + 1]);
-		pc += 1 + wchar.sizeof;
+	    case REidchar:
+		printf("\tREidchar '%c'\n", *cast(dchar *)&prog[pc + 1]);
+		pc += 1 + dchar.sizeof;
 		break;
 
 	    case REanychar:
@@ -898,21 +901,21 @@ int trymatch(int pc, int pcend)
 		pc += 1 + char.sizeof;
 		break;
 
-	    case REwchar:
-		debug(regexp) printf("\tREwchar '%c', src = '%c'\n", *(cast(wchar *)&program[pc + 1]), input[src]);
+	    case REdchar:
+		debug(regexp) printf("\tREdchar '%c', src = '%c'\n", *(cast(dchar *)&program[pc + 1]), input[src]);
 		if (src == input.length)
 		    goto Lnomatch;
-		if (*(cast(wchar *)&program[pc + 1]) != input[src])
+		if (*(cast(dchar *)&program[pc + 1]) != input[src])
 		    goto Lnomatch;
 		src++;
-		pc += 1 + wchar.sizeof;
+		pc += 1 + dchar.sizeof;
 		break;
 
-	    case REiwchar:
-		debug(regexp) printf("\tREiwchar '%c', src = '%c'\n", *(cast(wchar *)&program[pc + 1]), input[src]);
+	    case REidchar:
+		debug(regexp) printf("\tREidchar '%c', src = '%c'\n", *(cast(dchar *)&program[pc + 1]), input[src]);
 		if (src == input.length)
 		    goto Lnomatch;
-		c1 = *(cast(wchar *)&program[pc + 1]);
+		c1 = *(cast(dchar *)&program[pc + 1]);
 		c2 = input[src];
 		if (c1 != c2)
 		{
@@ -924,7 +927,7 @@ int trymatch(int pc, int pcend)
 			goto Lnomatch;
 		}
 		src++;
-		pc += 1 + wchar.sizeof;
+		pc += 1 + dchar.sizeof;
 		break;
 
 	    case REanychar:
@@ -1479,7 +1482,7 @@ int parsePiece()
 	    p++;
 	    if (p == plength)
 		goto Lerr;
-	    if (pattern[p] == '}')		// {n,}
+	    if (pattern[p] == /*{*/ '}')	// {n,}
 	    {	m = inf;
 		goto Lnm;
 	    }
@@ -1494,7 +1497,7 @@ int parsePiece()
 		if (p == plength)
 		    goto Lerr;
 	    } while (isdigit(pattern[p]));
-	    if (pattern[p] != '}')
+	    if (pattern[p] != /*{*/ '}')
 		goto Lerr;
 	    goto Lnm;
 
@@ -1694,10 +1697,10 @@ int parseAtom()
 			break;
 		    }
 		}
-		if (c & ~0xFF)
+		if (c >= 0x80)
 		{
-		    // Convert to wchar opcode
-		    op = (op == REchar) ? REwchar : REiwchar;
+		    // Convert to dchar opcode
+		    op = (op == REchar) ? REdchar : REidchar;
 		    buf.write(op);
 		    buf.write(c);
 		}
@@ -1927,7 +1930,7 @@ int parseRange()
     (cast(ushort *)&buf.data[offset])[1] = cast(ushort)r.maxb;
     if (attributes & REA.ignoreCase)
     {
-	// BUG: what about wchar?
+	// BUG: what about dchar?
 	r.setbitmax(0x7F);
 	for (c = 'a'; c <= 'z'; c++)
 	{
@@ -1981,7 +1984,7 @@ body
 	    if (p == pattern.length)
 		goto Lretc;
 	    c = pattern[p];
-	    // Note: we are deliberately not allowing wchar letters
+	    // Note: we are deliberately not allowing dchar letters
 	    if (!(('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z')))
 	    {
 	     Lcerr:
@@ -2095,8 +2098,8 @@ void optimize()
 	    case REeol:
 	    case REchar:
 	    case REichar:
-	    case REwchar:
-	    case REiwchar:
+	    case REdchar:
+	    case REidchar:
 	    case REstring:
 	    case REistring:
 	    case REtestbit:
@@ -2184,8 +2187,8 @@ int starrchars(Range r, ubyte[] prog)
 		}
 		return 1;
 
-	    case REwchar:
-	    case REiwchar:
+	    case REdchar:
+	    case REidchar:
 		return 1;
 
 	    case REanychar:
@@ -2503,3 +2506,196 @@ private static rchar[] replace3(rchar[] format, rchar[] input, regmatch_t[] pmat
 
 }
 
+/****************************************************
+ * Search str for regular expression pattern.
+ * If match, return a RegExp for the match.
+ * If no match, return null.
+ */
+
+RegExp search(char[] str, char[] pattern, char[] attributes = null)
+{
+    RegExp r = new RegExp(pattern, attributes);
+
+    if (r.test(str))
+    {
+    }
+    else
+    {	delete r;
+	r = null;
+    }
+    return r;
+}
+
+
+/******************************************************
+ * Search str for pattern, replace occurrences with format.
+ */
+
+char[] sub(char[] str, char[] pattern, char[] format, char[] attributes = null)
+{
+    RegExp r = new RegExp(pattern, attributes);
+    char[] result = r.replace(str, format);
+    delete r;
+    return result;
+}
+
+unittest
+{
+    debug(regexp) printf("regexp.sub.unittest\n");
+
+    char[] r = sub("hello", "ll", "ss");
+    assert(r == "hesso");
+}
+
+/*******************************************************
+ * Search str for pattern, replace occurrences with string
+ * returned from dg.
+ */
+
+char[] sub(char[] str, char[] pattern, char[] delegate(RegExp) dg, char[] attributes = null)
+{
+    RegExp r = new RegExp(pattern, attributes);
+    rchar[] result;
+    int lastindex;
+    int offset;
+
+    result = str;
+    lastindex = 0;
+    offset = 0;
+    while (r.test(str, lastindex))
+    {
+	int so = r.pmatch[0].rm_so;
+	int eo = r.pmatch[0].rm_eo;
+
+	rchar[] replacement = dg(r);
+	result = replaceSlice(result, result[offset + so .. offset + eo], replacement);
+
+	if (r.attributes & RegExp.REA.global)
+	{
+	    offset += replacement.length - (eo - so);
+
+	    if (lastindex == eo)
+		lastindex++;		// always consume some source
+	    else
+		lastindex = eo;
+	}
+	else
+	    break;
+    }
+    delete r;
+
+    return result;
+}
+
+unittest
+{
+    debug(regexp) printf("regexp.sub.unittest\n");
+
+    char[] foo(RegExp r) { return "ss"; }
+
+    char[] r = sub("hello", "ll", delegate char[](RegExp r) { return "ss"; });
+    assert(r == "hesso");
+}
+
+
+/*************************************************
+ * Search string[] for match with pattern[].
+ * Returns:
+ *	>=0	index of match
+ *	-1	no match
+ */
+
+int find(rchar[] string, char[] pattern, char[] attributes = null)
+{
+    int i = -1;
+
+    RegExp r = new RegExp(pattern, attributes);
+    if (r.test(string))
+    {
+	i = r.pmatch[0].rm_so;
+    }
+    delete r;
+    return i;
+}
+
+unittest
+{
+    debug(regexp) printf("regexp.find.unittest\n");
+
+    int i;
+    i = find("xabcy", "abc");
+    assert(i == 1);
+    i = find("cba", "abc");
+    assert(i == -1);
+}
+
+
+
+/*************************************************
+ * Search string[] for last match with pattern[].
+ * Returns:
+ *	>=0	index of match
+ *	-1	no match
+ */
+
+int rfind(rchar[] string, char[] pattern, char[] attributes = null)
+{
+    int i = -1;
+    int lastindex = 0;
+
+    RegExp r = new RegExp(pattern, attributes);
+    while (r.test(string, lastindex))
+    {   int eo = r.pmatch[0].rm_eo;
+	i = r.pmatch[0].rm_so;
+	if (lastindex == eo)
+	    lastindex++;		// always consume some source
+	else
+	    lastindex = eo;
+    }
+    delete r;
+    return i;
+}
+
+unittest
+{
+    int i;
+
+    debug(regexp) printf("regexp.rfind.unittest\n");
+    i = rfind("abcdefcdef", "c");
+    assert(i == 6);
+    i = rfind("abcdefcdef", "cd");
+    assert(i == 6);
+    i = rfind("abcdefcdef", "x");
+    assert(i == -1);
+    i = rfind("abcdefcdef", "xy");
+    assert(i == -1);
+    i = rfind("abcdefcdef", "");
+    assert(i == 10);
+}
+
+
+/********************************************
+ * Split string[] into an array of strings, using the regular
+ * expression as the separator.
+ * Returns:
+ * 	array of slices into string[]
+ */
+
+char[][] split(char[] string, char[] pattern, char[] attributes = null)
+{
+    RegExp r = new RegExp(pattern, attributes);
+    char[][] result = r.split(string);
+    delete r;
+    return result;
+}
+
+unittest
+{
+    debug(regexp) printf("regexp.split.unittest()\n");
+    char[][] result;
+
+    result = split("ab", "a*");
+    assert(result.length == 2);
+    assert(result[0] == "");
+    assert(result[1] == "b");
+}

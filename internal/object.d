@@ -305,3 +305,4 @@ class Error : Exception
     }
 }
 
+//extern (C) int nullext = 0;

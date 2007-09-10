@@ -251,3 +251,74 @@ extern(C)
     void seekdir(DIR* dir, off_t offset);
 }
 
+
+extern(C)
+{
+	private import std.intrinsic;
+	
+	
+	char* strerror(int errnum);
+	
+	int select(int nfds, fd_set* readfds, fd_set* writefds, fd_set* errorfds, timeval* timeout);
+	int fcntl(int s, int f, ...);
+	
+	
+	enum
+	{
+		EINTR = 4,
+		EINPROGRESS = 115,
+	}
+	
+	
+	const uint FD_SETSIZE = 1024;
+	//const uint NFDBITS = 8 * int.sizeof; // DMD 0.110: 8 * (int).sizeof is not an expression
+	const int NFDBITS = 32;
+	
+	
+	struct fd_set
+	{
+		int[FD_SETSIZE / NFDBITS] fds_bits;
+		alias fds_bits __fds_bits;
+	}
+	
+	
+	int FDELT(int d)
+	{
+		return d / NFDBITS;
+	}
+	
+	
+	int FDMASK(int d)
+	{
+		return 1 << (d % NFDBITS);
+	}
+	
+	
+	// Removes.
+	void FD_CLR(int fd, fd_set* set)
+	{
+		btr(cast(uint*)&set.fds_bits.ptr[FDELT(fd)], cast(uint)(fd % NFDBITS));
+	}
+	
+	
+	// Tests.
+	int FD_ISSET(int fd, fd_set* set)
+	{
+		return bt(cast(uint*)&set.fds_bits.ptr[FDELT(fd)], cast(uint)(fd % NFDBITS));
+	}
+	
+	
+	// Adds.
+	void FD_SET(int fd, fd_set* set)
+	{
+		bts(cast(uint*)&set.fds_bits.ptr[FDELT(fd)], cast(uint)(fd % NFDBITS));
+	}
+	
+	
+	// Resets to zero.
+	void FD_ZERO(fd_set* set)
+	{
+		set.fds_bits[] = 0;
+	}
+}
+

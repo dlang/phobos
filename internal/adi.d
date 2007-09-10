@@ -1,13 +1,33 @@
 //_ adi.d
-// Copyright (c) 2000-2003 by Digital Mars
-// All Rights Reserved
-// www.digitalmars.com
-// Written by Walter Bright
+
+/*
+ *  Copyright (C) 2000-2005 by Digital Mars, www.digitalmars.com
+ *  Written by Walter Bright
+ *
+ *  This software is provided 'as-is', without any express or implied
+ *  warranty. In no event will the authors be held liable for any damages
+ *  arising from the use of this software.
+ *
+ *  Permission is granted to anyone to use this software for any purpose,
+ *  including commercial applications, and to alter it and redistribute it
+ *  freely, in both source and binary form, subject to the following
+ *  restrictions:
+ *
+ *  o  The origin of this software must not be misrepresented; you must not
+ *     claim that you wrote the original software. If you use this software
+ *     in a product, an acknowledgment in the product documentation would be
+ *     appreciated but is not required.
+ *  o  Altered source versions must be plainly marked as such, and must not
+ *     be misrepresented as being the original software.
+ *  o  This notice may not be removed or altered from any source
+ *     distribution.
+ */
 
 // Dynamic array property support routines
 
 //debug=adi;		// uncomment to turn on debugging printf's
 
+import std.stdio;
 import std.c.stdio;
 import std.c.stdlib;
 import std.string;
@@ -18,6 +38,178 @@ struct Array
 {
     int length;
     void *ptr;
+}
+
+/**********************************************
+ * Reverse array of chars.
+ * Handled separately because embedded multibyte encodings should not be
+ * reversed.
+ */
+
+extern (C) long _adReverseChar(char[] a)
+{
+    if (a.length > 1)
+    {
+	char[6] tmp;
+	char* lo = a.ptr;
+	char* hi = &a[length - 1];
+
+	while (lo < hi)
+	{   char clo = *lo;
+	    char chi = *hi;
+
+	    if (clo <= 0x7F && chi <= 0x7F)
+	    {
+		*lo = chi;
+		*hi = clo;
+		lo++;
+		hi--;
+		continue;
+	    }
+
+	    int stridelo = std.utf.UTF8stride[clo];
+
+	    int stridehi = 1;
+	    while ((chi & 0xC0) == 0x80)
+	    {
+		chi = *--hi;
+		stridehi++;
+		assert(hi >= lo);
+	    }
+	    if (lo == hi)
+		break;
+
+	    if (stridelo == stridehi)
+	    {
+
+		memcpy(tmp, lo, stridelo);
+		memcpy(lo, hi, stridelo);
+		memcpy(hi, tmp, stridelo);
+		lo += stridelo;
+		hi -= stridehi;
+		continue;
+	    }
+
+	    /* Shift the whole array. This is woefully inefficient
+	     */
+	    //writefln("stridelo = %d, stridehi = %d", stridelo, stridehi);
+	    memcpy(tmp, hi, stridehi);
+	    memcpy(hi + stridehi - stridelo, lo, stridelo);
+	    memmove(lo + stridehi, lo + stridelo , hi - (lo + stridelo));
+	    memcpy(lo, tmp, stridehi);
+
+	    lo += stridehi;
+	    hi -= stridelo;
+	}
+    }
+    return *cast(long*)(&a);
+}
+
+unittest
+{
+    char[] a = "abcd";
+    char[] r;
+
+    r = a.dup.reverse;
+    //writefln(r);
+    assert(r == "dcba");
+
+    a = "a\u1235\u1234c";
+    //writefln(a);
+    r = a.dup.reverse;
+    //writefln(r);
+    assert(r == "c\u1234\u1235a");
+
+    a = "ab\u1234c";
+    //writefln(a);
+    r = a.dup.reverse;
+    //writefln(r);
+    assert(r == "c\u1234ba");
+}
+
+
+/**********************************************
+ * Reverse array of wchars.
+ * Handled separately because embedded multiword encodings should not be
+ * reversed.
+ */
+
+extern (C) long _adReverseWchar(wchar[] a)
+{
+    if (a.length > 1)
+    {
+	wchar[2] tmp;
+	wchar* lo = a.ptr;
+	wchar* hi = &a[length - 1];
+
+	while (lo < hi)
+	{   wchar clo = *lo;
+	    wchar chi = *hi;
+
+	    if ((clo < 0xD800 || clo > 0xDFFF) &&
+		(chi < 0xD800 || chi > 0xDFFF))
+	    {
+		*lo = chi;
+		*hi = clo;
+		lo++;
+		hi--;
+		continue;
+	    }
+
+	    int stridelo = 1 + (clo >= 0xD800 && clo <= 0xDBFF);
+
+	    int stridehi = 1;
+	    if (chi >= 0xDC00 && chi <= 0xDFFF)
+	    {
+		chi = *--hi;
+		stridehi++;
+		assert(hi >= lo);
+	    }
+	    if (lo == hi)
+		break;
+
+	    if (stridelo == stridehi)
+	    {	int tmp;
+
+		assert(stridelo == 2);
+		assert(tmp.sizeof == 2 * (*lo).sizeof);
+		tmp = *cast(int*)lo;
+		*cast(int*)lo = *cast(int*)hi;
+		*cast(int*)hi = tmp;
+		lo += stridelo;
+		hi -= stridehi;
+		continue;
+	    }
+
+	    /* Shift the whole array. This is woefully inefficient
+	     */
+	    memcpy(tmp, hi, stridehi * wchar.sizeof);
+	    memcpy(hi + stridehi - stridelo, lo, stridelo * wchar.sizeof);
+	    memmove(lo + stridehi, lo + stridelo , (hi - (lo + stridelo)) * wchar.sizeof);
+	    memcpy(lo, tmp, stridehi * wchar.sizeof);
+
+	    lo += stridehi;
+	    hi -= stridelo;
+	}
+    }
+    return *cast(long*)(&a);
+}
+
+unittest
+{
+    wchar[] a = "abcd";
+    wchar[] r;
+
+    r = a.dup.reverse;
+    assert(r == "dcba");
+
+    a = "a\U00012356\U00012346c";
+    r = a.dup.reverse;
+    assert(r == "c\U00012346\U00012356a");
+
+    a = "ab\U00012345c";
+    r = a.dup.reverse;
+    assert(r == "c\U00012345ba");
 }
 
 

@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2000-2004 by Digital Mars, www.digitalmars.com
+ *  Copyright (C) 2004-2005 by Digital Mars, www.digitalmars.com
  *  Written by Walter Bright
  *
  *  This software is provided 'as-is', without any express or implied
@@ -8,7 +8,8 @@
  *
  *  Permission is granted to anyone to use this software for any purpose,
  *  including commercial applications, and to alter it and redistribute it
- *  freely, subject to the following restrictions:
+ *  freely, in both source and binary form, subject to the following
+ *  restrictions:
  *
  *  o  The origin of this software must not be misrepresented; you must not
  *     claim that you wrote the original software. If you use this software
@@ -19,7 +20,6 @@
  *  o  This notice may not be removed or altered from any source
  *     distribution.
  */
-
 
 module std.uri;
 
