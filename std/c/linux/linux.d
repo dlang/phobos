@@ -173,6 +173,10 @@ extern (C)
     tm* gmtime(__time_t*);
     tm* localtime(__time_t*);
     __time_t mktime(tm*);
+    char* asctime_r(tm* t, char* buf);
+    char* ctime_r(__time_t* timep, char* buf);
+    tm* gmtime_r(__time_t* timep, tm* result);
+    tm* localtime_r(__time_t* timep, tm* result);
 }
 
 /**************************************************************/

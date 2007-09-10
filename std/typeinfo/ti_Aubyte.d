@@ -83,7 +83,7 @@ class TypeInfo_Av : TypeInfo_Ah
 
 // bool[]
 
-class TypeInfo_Ax : TypeInfo_Ah
+class TypeInfo_Ab : TypeInfo_Ah
 {
     char[] toString() { return "bool[]"; }
 }

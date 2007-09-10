@@ -76,7 +76,7 @@ const dchar PS = '\u2029';	/// UTF paragraph separator
 version (Windows)
     const char[2] newline = "\r\n";
 else version (linux)
-    const char[2] newline = "\n";
+    const char[1] newline = "\n";
 
 /**********************************
  * Returns !=0 if c is whitespace

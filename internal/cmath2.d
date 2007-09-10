@@ -107,7 +107,7 @@ void _Cmul()
  *	ST0	imaginary part
  */
 
-creal _Cdiv()
+void _Cdiv()
 {
     real x_re, x_im;
     real y_re, y_im;
@@ -166,8 +166,13 @@ creal _Cdiv()
 	    q_im = 0.0 * (x_im * y_re - x_re * y_im); 
 	}
     }
-+/
     return q_re + q_im * 1.0i;
++/
+    asm
+    {
+	fld	q_re;
+	fld	q_im;
+    }
 }
 
 /****************************

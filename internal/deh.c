@@ -33,7 +33,9 @@ extern DWORD _except_list;
 
 #include	"mars.h"
 
-extern ClassInfo _Class_9Exception;
+extern ClassInfo D9Exception7__ClassZ;
+
+#define _Class_9Exception D9Exception7__ClassZ
 
 typedef int (__pascal *fp_t)();   // function pointer in ambient memory model
 
@@ -411,7 +413,9 @@ void _d_monitor_epilog(void *x, void *y, Object *h)
 
 #include	"mars.h"
 
-extern ClassInfo _Class_9Exception;
+extern ClassInfo D9Exception7__ClassZ;
+
+#define _Class_9Exception D9Exception7__ClassZ
 
 typedef int (*fp_t)();   // function pointer in ambient memory model
 

@@ -33,13 +33,13 @@ const
      * version_major.version_minor
      */
     uint version_major = 0;
-    uint version_minor = 0;	/// ditto
+    uint version_minor = 176;	/// ditto
 
 
     /**
      * The version of the D Programming Language Specification
      * supported by the compiler.
      */
-    uint D_major = 0;
-    uint D_minor = 134;
+    uint D_major = 1;
+    uint D_minor = 0;
 }

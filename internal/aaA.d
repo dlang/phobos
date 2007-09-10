@@ -42,6 +42,13 @@ static uint[] prime_list = [
     1610612741UL, 4294967291UL
 ];
 
+/* This is the type of the return value for dynamic arrays.
+ * It should be a type that is returned in registers.
+ * Although DMD will return types of Array in registers,
+ * gcc will not, so we instead use a 'long'.
+ */
+alias long ArrayRet_t;
+
 struct Array
 {
     size_t length;
@@ -77,7 +84,7 @@ struct AA
     {
 	// This is here only to retain binary compatibility with the
 	// old way we did AA's. Should eventually be removed.
-	int reserved;
+	//int reserved;
     }
 }
 
@@ -451,7 +458,7 @@ void _aaDel(AA aa, TypeInfo keyti, ...)
  * Produce array of values from aa.
  */
 
-long _aaValues(AA aa, size_t keysize, size_t valuesize)
+ArrayRet_t _aaValues(AA aa, size_t keysize, size_t valuesize)
     in
     {
 	assert(keysize == aligntsize(keysize));
@@ -492,7 +499,7 @@ long _aaValues(AA aa, size_t keysize, size_t valuesize)
 	    }
 	    assert(resi == a.length);
 	}
-	return *cast(long*)(&a);
+	return *cast(ArrayRet_t*)(&a);
     }
 
 
@@ -500,7 +507,7 @@ long _aaValues(AA aa, size_t keysize, size_t valuesize)
  * Rehash an array.
  */
 
-long _aaRehash(AA* paa, TypeInfo keyti)
+void* _aaRehash(AA* paa, TypeInfo keyti)
     in
     {
 	//_aaInvAh(paa);
@@ -587,7 +594,7 @@ long _aaRehash(AA* paa, TypeInfo keyti)
 
 	    *paa.a = newb;
 	}
-	return *cast(long*)paa;
+	return (*paa).a;
     }
 
 
@@ -595,7 +602,7 @@ long _aaRehash(AA* paa, TypeInfo keyti)
  * Produce array of N byte keys from aa.
  */
 
-long _aaKeys(AA aa, size_t keysize)
+ArrayRet_t _aaKeys(AA aa, size_t keysize)
     {
 	byte[] res;
 	size_t resi;
@@ -632,7 +639,7 @@ long _aaKeys(AA aa, size_t keysize)
 	Array a;
 	a.length = len;
 	a.ptr = res;
-	return *cast(long*)(&a);
+	return *cast(ArrayRet_t*)(&a);
     }
 
 

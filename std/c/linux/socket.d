@@ -35,6 +35,8 @@ int setsockopt(int s, int level, int optname, void* optval, int optlen);
 uint inet_addr(char* cp);
 char* inet_ntoa(in_addr ina);
 hostent* gethostbyname(char* name);
+int gethostbyname_r(char* name, hostent* ret, void* buf, size_t buflen, hostent** result, int* h_errnop);
+int gethostbyname2_r(char* name, int af, hostent* ret, void* buf, size_t buflen, hostent** result, int* h_errnop);
 hostent* gethostbyaddr(void* addr, int len, int type);
 protoent* getprotobyname(char* name);
 protoent* getprotobynumber(int number);
@@ -44,6 +46,7 @@ int gethostname(char* name, int namelen);
 int getaddrinfo(char* nodename, char* servname, addrinfo* hints, addrinfo** res);
 void freeaddrinfo(addrinfo* ai);
 int getnameinfo(sockaddr* sa, socklen_t salen, char* node, socklen_t nodelen, char* service, socklen_t servicelen, int flags);
+
 
 
 enum: int

@@ -37,7 +37,7 @@ class TypeInfo_h : TypeInfo
     }
 }
 
-class TypeInfo_x : TypeInfo_h
+class TypeInfo_b : TypeInfo_h
 {
     char[] toString() { return "bool"; }
 }

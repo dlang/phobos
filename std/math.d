@@ -347,24 +347,24 @@ real atan(real x)		{ return std.c.math.atanl(x); }
  * Calculates the arc tangent of y / x,
  * returning a value ranging from -&pi;/2 to &pi;/2.
  *
- *	$(TABLE_SV
- *	<tr> <th> x           <th> y         <th> atan(x, y)
- *	<tr> <td> $(NAN)      <td> anything  <td> $(NAN) 
- *	<tr> <td> anything    <td> $(NAN)    <td> $(NAN) 
- *	<tr> <td> &plusmn;0.0       <td> &gt; 0.0  <td> &plusmn;0.0 
- *	<tr> <td> &plusmn;0.0       <td> &plusmn;0.0     <td> &plusmn;0.0 
- *	<tr> <td> &plusmn;0.0       <td> &lt; 0.0  <td> &plusmn;&pi; 
- *	<tr> <td> &plusmn;0.0       <td> -0.0      <td> &plusmn;&pi;
- *	<tr> <td> &gt; 0.0    <td> &plusmn;0.0     <td> &pi;/2 
- *	<tr> <td> &lt; 0.0    <td> &plusmn;0.0     <td> &pi;/2 
- *	<tr> <td> &gt; 0.0    <td> &infin;  <td> &plusmn;0.0 
- *	<tr> <td> &plusmn;&infin;  <td> anything  <td> &plusmn;&pi;/2 
- *	<tr> <td> &gt; 0.0    <td> -&infin; <td> &plusmn;&pi; 
- *	<tr> <td> &plusmn;&infin;  <td> &infin;  <td> &plusmn;&pi;/4 	
- *	<tr> <td> &plusmn;&infin;  <td> -&infin; <td> &plusmn;3&pi;/4
+ *      $(TABLE_SV
+ *      <tr> <th> y           <th> x         <th> atan(y, x)
+ *      <tr> <td> $(NAN)      <td> anything  <td> $(NAN) 
+ *      <tr> <td> anything    <td> $(NAN)    <td> $(NAN) 
+ *      <tr> <td> &plusmn;0.0       <td> &gt; 0.0  <td> &plusmn;0.0 
+ *      <tr> <td> &plusmn;0.0       <td> &plusmn;0.0     <td> &plusmn;0.0 
+ *      <tr> <td> &plusmn;0.0       <td> &lt; 0.0  <td> &plusmn;&pi; 
+ *      <tr> <td> &plusmn;0.0       <td> -0.0      <td> &plusmn;&pi;
+ *      <tr> <td> &gt; 0.0    <td> &plusmn;0.0     <td> &pi;/2 
+ *      <tr> <td> &lt; 0.0    <td> &plusmn;0.0     <td> &pi;/2 
+ *      <tr> <td> &gt; 0.0    <td> &infin;  <td> &plusmn;0.0 
+ *      <tr> <td> &plusmn;&infin;  <td> anything  <td> &plusmn;&pi;/2 
+ *      <tr> <td> &gt; 0.0    <td> -&infin; <td> &plusmn;&pi; 
+ *      <tr> <td> &plusmn;&infin;  <td> &infin;  <td> &plusmn;&pi;/4    
+ *      <tr> <td> &plusmn;&infin;  <td> -&infin; <td> &plusmn;3&pi;/4
  *      )
  */
-real atan2(real x, real y)	{ return std.c.math.atan2l(x,y); }
+real atan2(real y, real x)      { return std.c.math.atan2l(y,x); }
 
 /***********************************
  * Calculates the hyperbolic cosine of x.

@@ -57,7 +57,7 @@ OBJS = asserterror.o deh2.o switch.o complex.o gcstats.o \
 	process.o syserror.o \
 	socket.o socketstream.o stdarg.o stdio.o format.o \
 	perf.o openrj.o uni.o trace.o boxer.o \
-	demangle.o cover.o bitarray.o aApplyR.o \
+	demangle.o cover.o bitarray.o bind.o aApplyR.o \
 	signals.o cpuid.o traits.o typetuple.o \
 	ti_wchar.o ti_uint.o ti_short.o ti_ushort.o \
 	ti_byte.o ti_ubyte.o ti_long.o ti_ulong.o ti_ptr.o \
@@ -94,7 +94,7 @@ SRC_STD= std/zlib.d std/zip.d std/stdint.d std/conv.d std/utf.d std/uri.d \
 	std/socket.d std/socketstream.d std/loader.d std/stdarg.d \
 	std/stdio.d std/format.d std/perf.d std/openrj.d std/uni.d \
 	std/boxer.d std/cstream.d std/demangle.d std/cover.d std/bitarray.d \
-	std/signals.d std/cpuid.d std/typetuple.d std/traits.d
+	std/signals.d std/cpuid.d std/typetuple.d std/traits.d std/bind.d
 
 SRC_STD_C= std/c/process.d std/c/stdlib.d std/c/time.d std/c/stdio.d \
 	std/c/math.d std/c/stdarg.d std/c/stddef.d std/c/fenv.d std/c/string.d \
@@ -306,6 +306,9 @@ asserterror.o : std/asserterror.d
 
 base64.o : std/base64.d
 	$(DMD) -c $(DFLAGS) std/base64.d
+
+bind.o : std/bind.d
+	$(DMD) -c $(DFLAGS) std/bind.d
 
 bitarray.o : std/bitarray.d
 	$(DMD) -c $(DFLAGS) std/bitarray.d
@@ -601,4 +604,4 @@ zip : $(ALLSRCS) linux.mak win32.mak phoboslicense.txt
 	zip phobos $(ALLSRCS) linux.mak win32.mak phoboslicense.txt
 
 clean:
-	$(RM) $(OBJS) unittest unittest.o
+	$(RM) libphobos.a $(OBJS) unittest unittest.o

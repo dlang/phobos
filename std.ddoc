@@ -111,6 +111,7 @@ NAVIGATION_PHOBOS=
     <h2><a href="phobos.html#std" title="D standard modules">std</a></h2>
     $(UL
 	$(LI <a href="std_base64.html" title="Encode/decode base64 format">std.base64</a>)
+	$(LI <a href="std_bind" title="Function argument binding">std.bind</a>)
 	$(LI <a href="std_bitarray.html" title="Arrays of bits">std.bitarray</a>)
 	$(LI <a href="std_boxer.html" title="Box/unbox types">std.boxer</a>)
 	$(LI <a href="std_compiler.html" title="Information about the D compiler implementation">std.compiler</a>)

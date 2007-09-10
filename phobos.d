@@ -124,6 +124,12 @@ D language compiler. Also, check out the
 	<dt><a href="std_base64.html"><b>std.base64</b></a>
 	<dd>Encode/decode base64 format.
 
+	<dt><a href="std_bind.html"><b>std.bind</b></a>
+	<dd>Bind function arguments.
+
+	<dt><a href="std_bitarray.html"><b>std.bitarray</b></a>
+	<dd>Arrays of bits.
+
 	<dt><a href="std_boxer.html"><b>std.boxer</b></a>
 	<dd>Box/unbox types.
 

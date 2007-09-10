@@ -1593,3 +1593,47 @@ class Socket
 	+/
 }
 
+
+/// TcpSocket is a shortcut class for a TCP Socket.
+class TcpSocket: Socket
+{
+	/// Constructs a blocking TCP Socket.
+	this(AddressFamily family)
+	{
+		super(family, SocketType.STREAM, ProtocolType.TCP);
+	}
+	
+	/// Constructs a blocking TCP Socket.
+	this()
+	{
+		this(cast(AddressFamily)AddressFamily.INET);
+	}
+	
+	
+	//shortcut
+	/// Constructs a blocking TCP Socket and connects to an InternetAddress.
+	this(Address connectTo)
+	{
+		this(connectTo.addressFamily());
+		connect(connectTo);
+	}
+}
+
+
+/// UdpSocket is a shortcut class for a UDP Socket.
+class UdpSocket: Socket
+{
+	/// Constructs a blocking UDP Socket.
+	this(AddressFamily family)
+	{
+		super(family, SocketType.DGRAM, ProtocolType.UDP);
+	}
+	
+	
+	/// Constructs a blocking UDP Socket.
+	this()
+	{
+		this(cast(AddressFamily)AddressFamily.INET);
+	}
+}
+
