@@ -13,6 +13,8 @@
  *	$(LINK2 http://www.digitalmars.com/d/ascii-table.html, ASCII Table),
  *	$(LINK2 http://en.wikipedia.org/wiki/Unicode, Wikipedia),
  *	$(LINK2 http://www.unicode.org, The Unicode Consortium)
+ * Trademarks:
+ *	Unicode(tm) is a trademark of Unicode, Inc.
  */
 
 

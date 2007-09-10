@@ -24,7 +24,7 @@
  */
 
 /**********************************************
- * $(LINK2 ../../../ctg/regular.html, Regular expressions)
+ * $(LINK2 http://www.digitalmars.com/ctg/regular.html, Regular expressions)
  * are a powerful method of string pattern matching.
  * The regular expression
  * language used is the same as that commonly used, however, some of the very

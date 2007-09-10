@@ -17,7 +17,7 @@ DDOC = <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 
 <body>
 <div id="heading">
-	<a href="http://www.digitalmars.com/" target="_top"><img src="../dmlogo.gif" width="270" height="53" border="0" alt="www.digitalmars.com" /></a>
+	<a href="http://www.digitalmars.com/" target="_top"><img src="../dmlogo.gif" width="270" height="53" border="0" alt="www.digitalmars.com"></a>
 
 	<a href="http://www.digitalmars.com/" title="www.digitalmars.com" target="_top">Home</a>
 	| <a href="http://www.digitalmars.com/advancedsearch.html" title="Search Digital Mars web site" target="_top">Search</a>

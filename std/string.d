@@ -3690,6 +3690,30 @@ unittest
  * in one of a known set of strings, and the program will helpfully
  * autocomplete the string once sufficient characters have been
  * entered that uniquely identify it.
+ * Example:
+ * ---
+ * import std.stdio;
+ * import std.string;
+ * 
+ * void main()
+ * {
+ *    static char[][] list = [ "food", "foxy" ];
+ * 
+ *    auto abbrevs = std.string.abbrev(list);
+ * 
+ *    foreach (key, value; abbrevs)
+ *    {
+ *       writefln("%s => %s", key, value);
+ *    }
+ * }
+ * ---
+ * produces the output:
+ * <pre>
+ * fox =&gt; foxy
+ * food =&gt; food
+ * foxy =&gt; foxy
+ * foo =&gt; food
+ * </pre>
  */
 
 char[][char[]] abbrev(char[][] values)
@@ -3804,6 +3828,20 @@ unittest
 
 /******************************************
  * Wrap text into a paragraph.
+ *
+ * The input text string s is formed into a paragraph
+ * by breaking it up into a sequence of lines, delineated
+ * by \n, such that the number of columns is not exceeded
+ * on each line.
+ * The last line is terminated with a \n.
+ * Params:
+ *	s = text string to be wrapped
+ *	columns = maximum number of _columns in the paragraph
+ *	firstindent = string used to _indent first line of the paragraph
+ *	indent = string to use to _indent following lines of the paragraph
+ *	tabsize = column spacing of tabs
+ * Returns:
+ *	The resulting paragraph.
  */
 
 char[] wrap(char[] s, int columns = 80, char[] firstindent = null,
@@ -3863,7 +3901,7 @@ char[] wrap(char[] s, int columns = 80, char[] firstindent = null,
 	    result ~= '\n';
 	    result ~= indent;
 	}
-	else
+	else if (result.length != firstindent.length)
 	    result ~= ' ';
 	result ~= s[wordstart .. s.length];
     }
@@ -3883,6 +3921,8 @@ unittest
     assert(wrap(" a bc   df ", 3) == "a\nbc\ndf\n");
     //writefln("'%s'", wrap(" abcd   df ",3));
     assert(wrap(" abcd   df ", 3) == "abcd\ndf\n");
+    assert(wrap("x") == "x\n");
+    assert(wrap("u u") == "u u\n");
 }
 
 
