@@ -20,7 +20,7 @@ real ldexp(real, int);
 float sqrt(float);
 double sqrt(double);
 real sqrt(real);
-creal sqrt(creal);
+//creal sqrt(creal);
 
 
 extern (C)
@@ -247,6 +247,7 @@ int signbit(real e)
 {
     ubyte* pe = (ubyte *)&e;
 
+//printf("e = %Lg\n", e);
     return (pe[9] & 0x80) != 0;
 }
 
@@ -652,6 +653,49 @@ unittest
     assert(pow(x,2) == x * x);
     assert(pow(x,3) == x * x * x);
     assert(pow(x,8) == (x * x) * (x * x) * (x * x) * (x * x));
+}
+
+/*****************************************
+ */
+
+creal sqrt(creal z)
+{
+    creal c;
+    real x,y,w,r;
+
+    if (z == 0)
+    {
+	c = 0;
+    }
+    else
+    {	real z_re = z.re;
+	real z_im = z.im;
+
+	x = fabs(z_re);
+	y = fabs(z_im);
+	if (x >= y)
+	{
+	    r = y / x;
+	    w = sqrt(x) * sqrt(0.5 * (1 + sqrt(1 + r * r)));
+	}
+	else
+	{
+	    r = x / y;
+	    w = sqrt(y) * sqrt(0.5 * (r + sqrt(1 + r * r)));
+	}
+
+	if (z_re >= 0)
+	{
+	    c = w + (z_im / (w + w)) * 1.0i;
+	}
+	else
+	{
+	    if (z_im < 0)
+		w = -w;
+	    c = z_im / (w + w) + w * 1.0i;
+	}
+    }
+    return c;
 }
 
 /****************************************

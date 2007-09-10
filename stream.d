@@ -137,14 +137,14 @@ class Stream
 			{
 				switch (ch)
 				{
-					case "\r":
+					case '\r':
 					{
 						ch = getc();
-						if (ch != "\n")
+						if (ch != '\n')
 							ungetc(ch);
 					}
 					
-					case "\n":
+					case '\n':
 						return result;
 					
 					default:
@@ -176,14 +176,14 @@ class Stream
 			{
 				switch (c)
 				{
-					case "\r":
+					case '\r':
 					{
 						c = getcw();
-						if (c != "\n")
+						if (c != '\n')
 							ungetcw(c);
 					}
 					
-					case "\n":
+					case '\n':
 						return result;
 					
 					default:
@@ -276,11 +276,11 @@ class Stream
 		char c = getc();
 		while (i < fmt.length)
 		{
-			if (fmt[i] == "%")	// a field
+			if (fmt[i] == '%')	// a field
 			{
 				i++;
 				bit suppress = false;
-				if (fmt[i] == "*")	// suppress assignment
+				if (fmt[i] == '*')	// suppress assignment
 				{
 					suppress = true;
 					i++;
@@ -289,17 +289,17 @@ class Stream
 				int width = 0;
 				while (isdigit(fmt[i]))
 				{
-					width = width * 10 + (fmt[i] - "0");
+					width = width * 10 + (fmt[i] - '0');
 					i++;
 				}
 				if (width == 0)
 					width = -1;
 				// D string?
 				bit dstr = false;
-				if (fmt[i] == ".")
+				if (fmt[i] == '.')
 				{
 					i++;
-					if (fmt[i] == "*")
+					if (fmt[i] == '*')
 					{
 						dstr = true;
 						i++;
@@ -307,23 +307,23 @@ class Stream
 				}
 				// read the modifier
 				char modifier = fmt[i];
-				if (modifier == "h" || modifier == "l" || modifier == "L")
+				if (modifier == 'h' || modifier == 'l' || modifier == 'L')
 					i++;
 				else
 					modifier = 0;
 				// check the typechar and act accordingly
 				switch (fmt[i])
 				{
-					case "d":	// decimal/hexadecimal/octal integer
-					case "D":
-					case "u":
-					case "U":
-					case "o":
-					case "O":
-					case "x":
-					case "X":
-					case "i":
-					case "I":
+					case 'd':	// decimal/hexadecimal/octal integer
+					case 'D':
+					case 'u':
+					case 'U':
+					case 'o':
+					case 'O':
+					case 'x':
+					case 'X':
+					case 'i':
+					case 'I':
 					{
 						while (iswhite(c))
 						{
@@ -331,71 +331,71 @@ class Stream
 							count++;
 						}
 						bit neg = false;
-						if (c == "-")
+						if (c == '-')
 						{
 							neg = true;
 							c = getc();
 							count++;
 						}
-						else if (c == "+")
+						else if (c == '+')
 						{
 							c = getc();
 							count++;
 						}
 						char ifmt = fmt[i] | 0x20;
-						if (ifmt == "i")	// undetermined base
+						if (ifmt == 'i')	// undetermined base
 						{
-							if (c == "0")	// octal or hex
+							if (c == '0')	// octal or hex
 							{
 								c = getc();
 								count++;
-								if (c == "x" || c == "X")	// hex
+								if (c == 'x' || c == 'X')	// hex
 								{
-									ifmt = "x";
+									ifmt = 'x';
 									c = getc();
 									count++;
 								}
 								else	// octal
-									ifmt = "o";
+									ifmt = 'o';
 							}
 							else	// decimal
-								ifmt = "d";
+								ifmt = 'd';
 						}
 						long n = 0;
 						switch (ifmt)
 						{
-							case "d":	// decimal
-							case "u":
+							case 'd':	// decimal
+							case 'u':
 							{
 								while (isdigit(c) && width)
 								{
-									n = n * 10 + (c - "0");
+									n = n * 10 + (c - '0');
 									width--;
 									c = getc();
 									count++;
 								}
 							} break;
 							
-							case "o":	// octal
+							case 'o':	// octal
 							{
 								while (isoctdigit(c) && width)
 								{
-									n = n * 010 + (c - "0");
+									n = n * 010 + (c - '0');
 									width--;
 									c = getc();
 									count++;
 								}
 							} break;
 							
-							case "x":	// hexadecimal
+							case 'x':	// hexadecimal
 							{
 								while (ishexdigit(c) && width)
 								{
 									n *= 0x10;
 									if (isdigit(c))
-										n += c - "0";
+										n += c - '0';
 									else
-										n += 0xA + (c | 0x20) - "a";
+										n += 0xA + (c | 0x20) - 'a';
 									width--;
 									c = getc();
 									count++;
@@ -408,12 +408,12 @@ class Stream
 						// to appropriate type
 						switch (modifier)
 						{
-							case "h":	// short
+							case 'h':	// short
 							{
 								*cast(short*)*arg = n;
 							} break;
 							
-							case "L":	// long
+							case 'L':	// long
 							{
 								*cast(long*)*arg = n;
 							} break;
@@ -424,12 +424,12 @@ class Stream
 						i++;
 					} break;
 					
-					case "f":	// float
-					case "F":
-					case "e":
-					case "E":
-					case "g":
-					case "G":
+					case 'f':	// float
+					case 'F':
+					case 'e':
+					case 'E':
+					case 'g':
+					case 'G':
 					{
 						while (iswhite(c))
 						{
@@ -437,13 +437,13 @@ class Stream
 							count++;
 						}
 						bit neg = false;
-						if (c == "-")
+						if (c == '-')
 						{
 							neg = true;
 							c = getc();
 							count++;
 						}
-						else if (c == "+")
+						else if (c == '+')
 						{
 							c = getc();
 							count++;
@@ -451,12 +451,12 @@ class Stream
 						real n = 0;
 						while (isdigit(c) && width)
 						{
-							n = n * 10 + (c - "0");
+							n = n * 10 + (c - '0');
 							width--;
 							c = getc();
 							count++;
 						}
-						if (width && c == ".")
+						if (width && c == '.')
 						{
 							width--;
 							c = getc();
@@ -464,7 +464,7 @@ class Stream
 							double frac = 1;
 							while (isdigit(c) && width)
 							{
-								n = n * 10 + (c - "0");
+								n = n * 10 + (c - '0');
 								frac *= 10;
 								width--;
 								c = getc();
@@ -472,7 +472,7 @@ class Stream
 							}
 							n /= frac;
 						}
-						if (width && (c == "e" || c == "E"))
+						if (width && (c == 'e' || c == 'E'))
 						{
 							width--;
 							c = getc();
@@ -480,14 +480,14 @@ class Stream
 							if (width)
 							{
 								bit expneg = false;
-								if (c == "-")
+								if (c == '-')
 								{
 									expneg = true;
 									width--;
 									c = getc();
 									count++;
 								}
-								else if (c == "+")
+								else if (c == '+')
 								{
 									width--;
 									c = getc();
@@ -496,7 +496,7 @@ class Stream
 								real exp = 0;
 								while (isdigit(c) && width)
 								{
-									exp = exp * 10 + (c - "0");
+									exp = exp * 10 + (c - '0');
 									width--;
 									c = getc();
 									count++;
@@ -519,12 +519,12 @@ class Stream
 						// to appropriate type
 						switch (modifier)
 						{
-							case "l":	// double
+							case 'l':	// double
 							{
 								*cast(double*)*arg = n;
 							} break;
 							
-							case "L":	// real
+							case 'L':	// real
 							{
 								*cast(real*)*arg = n;
 							} break;
@@ -535,7 +535,7 @@ class Stream
 						i++;
 					} break;
 					
-					case "s":	// ANSI string
+					case 's':	// ANSI string
 					{
 						while (iswhite(c))
 						{
@@ -559,7 +559,7 @@ class Stream
 						i++;
 					} break;
 					
-					case "c":	// character(s)
+					case 'c':	// character(s)
 					{
 						char* s = cast(char*)*arg;
 						if (width < 0)
@@ -579,7 +579,7 @@ class Stream
 						i++;
 					} break;
 					
-					case "n":	// number of chars read so far
+					case 'n':	// number of chars read so far
 					{
 						*cast(int*)*arg = count;
 						i++;
@@ -1444,22 +1444,22 @@ class SliceStream : Stream
 // helper functions
 private bit iswhite(char c)
 {
-	return c == " " || c == "\t" || c == "\r" || c == "\n";
+	return c == ' ' || c == '\t' || c == '\r' || c == '\n';
 }
 
 private bit isdigit(char c)
 {
-	return c >= "0" && c <= "9";
+	return c >= '0' && c <= '9';
 }
 
 private bit isoctdigit(char c)
 {
-	return c >= "0" && c <= "7";
+	return c >= '0' && c <= '7';
 }
 
 private bit ishexdigit(char c)
 {
-	return isdigit(c) || (c >= "A" && c <= "F") || (c >= "a" && c <= "f");
+	return isdigit(c) || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f');
 }
 
 // standard IO devices

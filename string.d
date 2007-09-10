@@ -365,17 +365,17 @@ unittest
 
     int i;
 
-    i = find(null, cast(char[])'a');
+    i = find(null, "a");
     assert(i == -1);
-    i = find("def", cast(char[])'a');
+    i = find("def", "a");
     assert(i == -1);
-    i = find("abba", cast(char[])'a');
+    i = find("abba", "a");
     assert(i == 0);
-    i = find("def", cast(char[])'f');
+    i = find("def", "f");
     assert(i == 2);
-    i = find("dfefffg", 'fff');
+    i = find("dfefffg", "fff");
     assert(i == 3);
-    i = find("dfeffgfff", 'fff');
+    i = find("dfeffgfff", "fff");
     assert(i == 6);
 }
 
@@ -547,11 +547,11 @@ char[] capwords(char[] s)
 	switch (s[i])
 	{
 	    case ' ':
-	    case \t:
-	    case \f:
-	    case \r:
-	    case \n:
-	    case \v:
+	    case '\t':
+	    case '\f':
+	    case '\r':
+	    case '\n':
+	    case '\v':
 		if (inword)
 		{
 		    r ~= s[istart .. i];
@@ -695,11 +695,11 @@ char[][] split(char[] s)
 	switch (s[i])
 	{
 	    case ' ':
-	    case \t:
-	    case \f:
-	    case \r:
-	    case \n:
-	    case \v:
+	    case '\t':
+	    case '\f':
+	    case '\r':
+	    case '\n':
+	    case '\v':
 		if (inword)
 		{
 		    words ~= s[istart .. i];
@@ -924,11 +924,11 @@ char[][] splitlines(char[] s)
     {	char c;
 
 	c = s[i];
-	if (c == \r || c == \n)
+	if (c == '\r' || c == '\n')
 	{
 	    nlines++;
 	    istart = i + 1;
-	    if (c == \r && i + 1 < s.length && s[i + 1] == \n)
+	    if (c == '\r' && i + 1 < s.length && s[i + 1] == '\n')
 	    {
 		i++;
 		istart++;
@@ -945,12 +945,12 @@ char[][] splitlines(char[] s)
     {	char c;
 
 	c = s[i];
-	if (c == \r || c == \n)
+	if (c == '\r' || c == '\n')
 	{
 	    lines[nlines] = s[istart .. i];
 	    nlines++;
 	    istart = i + 1;
-	    if (c == \r && i + 1 < s.length && s[i + 1] == \n)
+	    if (c == '\r' && i + 1 < s.length && s[i + 1] == '\n')
 	    {
 		i++;
 		istart++;
@@ -1304,7 +1304,7 @@ char[] expandtabs(char[] s, int tabsize)
 	char c;
 
 	c = s[i];
-	if (c == \t)
+	if (c == '\t')
 	{   int tabstop;
 
 	    r ~= s[istart .. i];

@@ -284,7 +284,7 @@ unittest
     i = string.cmp(result[1], "b");
     assert(i == 0);
 
-    r = new RegExp('<(\/)?([^<>]+)>', null);
+    r = new RegExp("<(\\/)?([^<>]+)>", null);
     result = r.split("a<b>font</b>bar<TAG>hello</TAG>");
 
     for (i = 0; i < result.length; i++)
@@ -568,7 +568,7 @@ int test(char[] string, int startindex)
 	    if (attributes & REA.multiline)
 	    {
 		// Scan for the next \n
-		if (!chr(si, \n))
+		if (!chr(si, '\n'))
 		    break;		// no match if '\n' not found
 	    }
 	    else
@@ -892,7 +892,7 @@ int trymatch(int pc, int pcend)
 		debug(regexp) printf("\tREanychar\n");
 		if (src == input.length)
 		    goto Lnomatch;
-		if (!(attributes & REA.dotmatchlf) && input[src] == (tchar)\n)
+		if (!(attributes & REA.dotmatchlf) && input[src] == (tchar)'\n')
 		    goto Lnomatch;
 		src++;
 		pc++;
@@ -1008,7 +1008,7 @@ int trymatch(int pc, int pcend)
 		}
 		else if (attributes & REA.multiline)
 		{
-		    if (input[src - 1] != \n)
+		    if (input[src - 1] != '\n')
 			goto Lnomatch;
 		}
 		else
@@ -1021,7 +1021,7 @@ int trymatch(int pc, int pcend)
 		if (src == input.length)
 		{
 		}
-		else if (attributes & REA.multiline && input[src] == \n)
+		else if (attributes & REA.multiline && input[src] == '\n')
 		    src++;
 		else
 		    goto Lnomatch;
@@ -1081,7 +1081,7 @@ int trymatch(int pc, int pcend)
 		    s1 = src;
 		    if (src == input.length)
 			break;
-		    if (!(attributes & REA.dotmatchlf) && input[src] == \n)
+		    if (!(attributes & REA.dotmatchlf) && input[src] == '\n')
 			break;
 		    src++;
 		    s2 = src;
@@ -1540,7 +1540,7 @@ int parseAtom()
 		buf.write(REeol);
 		break;
 
-	    case '\':
+	    case '\\':
 		p++;
 		if (p == pattern.length)
 		{   error("no character past '\\'");
@@ -1633,7 +1633,7 @@ int parseAtom()
 			    case '|':
 			    case '[':	case ']':
 			    case '.':	case '^':
-			    case '$':	case '\':
+			    case '$':	case '\\':
 			    case '}':
 				break;
 
@@ -1781,7 +1781,7 @@ int parseRange()
 		p++;
 		break;
 
-	    case '\':
+	    case '\\':
 		p++;
 		r.setbitmax(cmax);
 		if (p == pattern.length)
@@ -1908,6 +1908,9 @@ Lerr:
 void error(char[] msg)
 {
     errors++;
+    debug(regexp) printf("error: %.*s\n", msg);
+//assert(0);
+//*(char*)0=0;
     throw new RegExpError(msg);
 }
 
@@ -1925,12 +1928,12 @@ body
     c = pattern[p];		// none of the cases are multibyte
     switch (c)
     {
-	case 'b':    c = \b;	break;
-	case 'f':    c = \f;	break;
-	case 'n':    c = \n;	break;
-	case 'r':    c = \r;	break;
-	case 't':    c = \t;	break;
-	case 'v':    c = \v;	break;
+	case 'b':    c = '\b';	break;
+	case 'f':    c = '\f';	break;
+	case 'n':    c = '\n';	break;
+	case 'r':    c = '\r';	break;
+	case 't':    c = '\t';	break;
+	case 'v':    c = '\v';	break;
 
 	// BUG: Perl does \a and \e too, should we?
 
@@ -2315,7 +2318,7 @@ public tchar[] replaceOld(tchar[] format)
 		buf.write(input[pmatch[0].rm_so .. pmatch[0].rm_eo]);
 		break;
 
-	    case '\':
+	    case '\\':
 		if (i + 1 < format.length)
 		{
 		    c = format[++i];
@@ -2404,7 +2407,7 @@ private tchar[] replace3(tchar[] format, tchar[] input, regmatch_t[] pmatch)
 		rm_eo = pmatch[0].rm_so;
 		goto Lstring;
 
-	    case \':
+	    case '\'':
 		rm_so = pmatch[0].rm_eo;
 		rm_eo = input.length;
 		goto Lstring;

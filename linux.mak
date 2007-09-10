@@ -36,7 +36,7 @@ test.o : test.d
 	$(DMD) -c test -g
 
 test : test.o libphobos.a
-	$(CC) -o $@ test.o libphobos.a -g
+	$(CC) -o $@ test.o libphobos.a -lpthread -g
 
 unittest : unittest.o libphobos.a
 	$(CC) -o $@ unittest.o libphobos.a -lpthread -lm -g
@@ -47,10 +47,10 @@ unittest.o : unittest.d
 OBJS= assert.o deh2.o switch.o complex.o gcstats.o \
 	critical.o object.o monitor.o arraycat.o invariant.o \
 	dmain2.o outofmemory.o achar.o aaA.o adi.o file.o \
-	compiler.o system.o moduleinit.o cmath.o \
+	compiler.o system.o moduleinit.o \
 	cast.o syserror.o path.o string.o memset.o math.o \
 	outbuffer.o ctype.o regexp.o random.o linux.o \
-	stream.o switcherr.o array.o gc.o adi.o \
+	stream.o switcherr.o array.o gc.o \
 	qsort.o thread.o obj.o utf.o uri.o \
 	crc32.o conv.o arraycast.o errno.o alloca.o cmath2.o \
 	ti_wchar.o ti_uint.o ti_short.o ti_ushort.o \
@@ -59,7 +59,7 @@ OBJS= assert.o deh2.o switch.o complex.o gcstats.o \
 	ti_creal.o ti_ireal.o ti_cfloat.o ti_ifloat.o \
 	ti_cdouble.o ti_idouble.o \
 	ti_Aa.o ti_AC.o ti_Ag.o ti_Aubyte.o ti_Aushort.o ti_Ashort.o \
-	ti_C.o ti_int.o ti_char.o \
+	ti_C.o ti_int.o ti_char.o ti_dchar.o ti_Adchar.o \
 	ti_Aint.o ti_Auint.o ti_Along.o ti_Aulong.o ti_Awchar.o \
 	date.o dateparse.o llmath.o math2.o
 
@@ -74,7 +74,7 @@ SRC= mars.h switch.d complex.c critical.c minit.asm \
 	moduleinit.d cast.d math.d qsort.d \
 	outbuffer.d unittest.d stream.d ctype.d random.d adi.d \
 	math2.d thread.d obj.d iunknown.d intrinsic.d time.d memset.d \
-	array.d switcherr.d arraycast.d errno.c alloca.d cmath.d cmath2.d \
+	array.d switcherr.d arraycast.d errno.c alloca.d cmath2.d \
 	ti_wchar.d ti_uint.d ti_short.d ti_ushort.d \
 	ti_byte.d ti_ubyte.d ti_long.d ti_ulong.d ti_ptr.d \
 	ti_float.d ti_double.d ti_real.d ti_delegate.d \
@@ -82,7 +82,7 @@ SRC= mars.h switch.d complex.c critical.c minit.asm \
 	ti_cdouble.d ti_idouble.d \
 	ti_Aa.d ti_AC.d ti_Ag.d ti_Aubyte.d ti_Aushort.d ti_Ashort.o \
 	ti_Aint.d ti_Auint.d ti_Along.d ti_Aulong.d ti_Awchar.d \
-	ti_C.d ti_int.d ti_char.d \
+	ti_C.d ti_int.d ti_char.d ti_dchar.d ti_Adchar.d \
 	crc32.d stdint.d conv.d gcstats.d linux.d deh2.d date.d llmath.d \
 	win32.mak linux.mak
 
@@ -116,9 +116,6 @@ assert.o : assert.d
 cast.o : cast.d
 	$(DMD) -c $(DFLAGS) cast.d
 
-cmath.o : cmath.d
-	$(DMD) -c $(DFLAGS) cmath.d
-
 cmath2.o : cmath2.d
 	$(DMD) -c $(DFLAGS) cmath2.d
 
@@ -147,7 +144,7 @@ dateparse.o : dateparse.d date.d
 	$(DMD) -c $(DFLAGS) dateparse.d
 
 deh2.o : deh2.d
-	$(DMD) -c $(DFLAGS) deh2.d
+	$(DMD) -c $(DFLAGS) -release deh2.d
 
 dmain2.o : dmain2.d
 	$(DMD) -c $(DFLAGS) dmain2.d
@@ -233,6 +230,9 @@ thread.o : thread.d
 
 ti_wchar.o : ti_wchar.d
 	$(DMD) -c $(DFLAGS) ti_wchar.d
+
+ti_dchar.o : ti_dchar.d
+	$(DMD) -c $(DFLAGS) ti_dchar.d
 
 ti_uint.o : ti_uint.d
 	$(DMD) -c $(DFLAGS) ti_uint.d
@@ -320,6 +320,9 @@ ti_Along.o : ti_Along.d
 
 ti_Awchar.o : ti_Awchar.d
 	$(DMD) -c $(DFLAGS) ti_Awchar.d
+
+ti_Adchar.o : ti_Adchar.d
+	$(DMD) -c $(DFLAGS) ti_Adchar.d
 
 ti_C.o : ti_C.d
 	$(DMD) -c $(DFLAGS) ti_C.d

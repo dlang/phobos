@@ -52,7 +52,7 @@ unittest.exe : unittest.d phobos.lib
 OBJS= assert.obj deh.obj switch.obj complex.obj gcstats.obj \
 	critical.obj object.obj monitor.obj arraycat.obj invariant.obj \
 	dmain2.obj outofmemory.obj achar.obj aaA.obj adi.obj file.obj \
-	compiler.obj system.obj moduleinit.obj cmath.obj \
+	compiler.obj system.obj moduleinit.obj \
 	cast.obj syserror.obj path.obj string.obj memset.obj math.obj \
 	outbuffer.obj ctype.obj regexp.obj random.obj windows.obj \
 	stream.obj switcherr.obj com.obj array.obj gc.obj adi.obj \
@@ -66,7 +66,8 @@ OBJS= assert.obj deh.obj switch.obj complex.obj gcstats.obj \
 	ti_cfloat.obj ti_ifloat.obj \
 	ti_cdouble.obj ti_idouble.obj \
 	ti_AC.obj ti_Aubyte.obj ti_Aushort.obj ti_Ashort.obj \
-	ti_Aint.obj ti_Auint.obj ti_Along.obj ti_Aulong.obj ti_Awchar.obj
+	ti_Aint.obj ti_Auint.obj ti_Along.obj ti_Aulong.obj ti_Awchar.obj \
+	ti_dchar.obj ti_Adchar.obj
 
 HDR=mars.h
 
@@ -94,10 +95,11 @@ SRC7=ti_wchar.d ti_uint.d ti_short.d ti_ushort.d \
 	ti_creal.d ti_ireal.d ti_cfloat.d ti_ifloat.d \
 	ti_cdouble.d ti_idouble.d
 
-SRC8=crc32.d stdint.d conv.d gcstats.d utf.d uri.d cmath.d ti_Aubyte.d \
+SRC8=crc32.d stdint.d conv.d gcstats.d utf.d uri.d ti_Aubyte.d \
 	ti_Aushort.d ti_Ashort.d
 
-SRC9=ti_Aint.d ti_Auint.d ti_Along.d ti_Aulong.d ti_Awchar.d
+SRC9=ti_Aint.d ti_Auint.d ti_Along.d ti_Aulong.d ti_Awchar.d ti_dchar.d \
+	ti_Adchar.d
 
 phobos.lib : $(OBJS) minit.obj gc2\dmgc.lib win32.mak
 	lib -c phobos.lib $(OBJS) minit.obj gc2\dmgc.lib
@@ -108,7 +110,6 @@ adi.obj : adi.d
 arraycat.obj : arraycat.d
 assert.obj : assert.d
 cast.obj : cast.d
-cmath.obj : cmath.d
 compiler.obj : compiler.d
 complex.obj : mars.h complex.c
 critical.obj : mars.h critical.c
@@ -142,6 +143,7 @@ ti_Auint.obj : ti_Auint.d
 ti_Along.obj : ti_Along.d
 ti_Aulong.obj : ti_Aulong.d
 ti_Awchar.obj : ti_Awchar.d
+ti_Adchar.obj : ti_Adchar.d
 ti_C.obj : ti_C.d
 ti_char.obj : ti_char.d
 ti_int.obj : ti_int.d

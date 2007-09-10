@@ -1161,26 +1161,26 @@ real atof(char[] s)
 		return real.nan;
 	real result = 0;
 	uint i = 0;
-	while (s[i] == "\t" || s[i] == " ")
+	while (s[i] == '\t' || s[i] == ' ')
 		if (++i >= s.length)
 			return real.nan;
 	bit neg = false;
-	if (s[i] == "-")
+	if (s[i] == '-')
 	{
 		neg = true;
 		i++;
 	}
-	else if (s[i] == "+")
+	else if (s[i] == '+')
 		i++;
 	if (i >= s.length)
 		return real.nan;
 	bit hex;
-	if (s[s.length - 1] == "h")
+	if (s[s.length - 1] == 'h')
 	{
 		hex = true;
 		s.length = s.length - 1;
 	}
-	else if (i + 1 < s.length && s[i] == "0" && s[i+1] == "x")
+	else if (i + 1 < s.length && s[i] == '0' && s[i+1] == 'x')
 	{
 		hex = true;
 		i += 2;
@@ -1189,28 +1189,28 @@ real atof(char[] s)
 	}
 	else
 		hex = false;
-	while (s[i] != ".")
+	while (s[i] != '.')
 	{
 		if (hex)
 		{
-			if ((s[i] == "p" || s[i] == "P"))
+			if ((s[i] == 'p' || s[i] == 'P'))
 				break;
 			result *= 0x10;
 		}
 		else
 		{
-			if ((s[i] == "e" || s[i] == "E"))
+			if ((s[i] == 'e' || s[i] == 'E'))
 				break;
 			result *= 10;
 		}
-		if (s[i] >= "0" && s[i] <= "9")
-			result += s[i] - "0";
+		if (s[i] >= '0' && s[i] <= '9')
+			result += s[i] - '0';
 		else if (hex)
 		{
-			if (s[i] >= "a" && s[i] <= "f")
-				result += s[i] - "a" + 10;
-			else if (s[i] >= "A" && s[i] <= "F")
-				result += s[i] - "A" + 10;
+			if (s[i] >= 'a' && s[i] <= 'f')
+				result += s[i] - 'a' + 10;
+			else if (s[i] >= 'A' && s[i] <= 'F')
+				result += s[i] - 'A' + 10;
 			else
 				return real.nan;
 		}
@@ -1219,7 +1219,7 @@ real atof(char[] s)
 		if (++i >= s.length)
 			goto done;
 	}
-	if (s[i] == ".")
+	if (s[i] == '.')
 	{
 		if (++i >= s.length)
 			goto done;
@@ -1228,25 +1228,25 @@ real atof(char[] s)
 		{
 			if (hex)
 			{
-				if ((s[i] == "p" || s[i] == "P"))
+				if ((s[i] == 'p' || s[i] == 'P'))
 					break;
 				result *= 0x10;
 			}
 			else
 			{
-				if ((s[i] == "e" || s[i] == "E"))
+				if ((s[i] == 'e' || s[i] == 'E'))
 					break;
 				result *= 10;
 			}
 			k *= (hex ? 0x10 : 10);
-			if (s[i] >= "0" && s[i] <= "9")
-				result += s[i] - "0";
+			if (s[i] >= '0' && s[i] <= '9')
+				result += s[i] - '0';
 			else if (hex)
 			{
-				if (s[i] >= "a" && s[i] <= "f")
-					result += s[i] - "a" + 10;
-				else if (s[i] >= "A" && s[i] <= "F")
-					result += s[i] - "A" + 10;
+				if (s[i] >= 'a' && s[i] <= 'f')
+					result += s[i] - 'a' + 10;
+				else if (s[i] >= 'A' && s[i] <= 'F')
+					result += s[i] - 'A' + 10;
 				else
 					return real.nan;
 			}
@@ -1263,12 +1263,12 @@ real atof(char[] s)
 	if (++i >= s.length)
 		return real.nan;
 	bit eneg = false;
-	if (s[i] == "-")
+	if (s[i] == '-')
 	{
 		eneg = true;
 		i++;
 	}
-	else if (s[i] == "+")
+	else if (s[i] == '+')
 		i++;
 	if (i >= s.length)
 		return real.nan;
@@ -1276,8 +1276,8 @@ real atof(char[] s)
 	while (i < s.length)
 	{
 		e *= 10;
-		if (s[i] >= "0" && s[i] <= "9")
-			e += s[i] - "0";
+		if (s[i] >= '0' && s[i] <= '9')
+			e += s[i] - '0';
 		else
 			return real.nan;
 		i++;

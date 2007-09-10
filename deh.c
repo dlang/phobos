@@ -33,7 +33,7 @@ extern DWORD _except_list;
 
 #include	"mars.h"
 
-extern ClassInfo _Class_Exception;
+extern ClassInfo _Class_9Exception;
 
 typedef int (__pascal *fp_t)();   // function pointer in ambient memory model
 
@@ -149,7 +149,7 @@ EXCEPTION_DISPOSITION _d_framehandler(
 			    ci = **(ClassInfo ***)(exception_record->ExceptionInformation[0]);
 			}
 			else
-			    ci = &_Class_Exception;
+			    ci = &_Class_9Exception;
 		    }
 
 		    if (_d_isbaseof(ci, pcb->type))
@@ -255,24 +255,24 @@ Object *_d_translate_se_to_d_exception(EXCEPTION_RECORD *exception_record)
             break;
 
         case STATUS_INTEGER_DIVIDE_BY_ZERO:
-            pti = _d_create_exception_object(&_Class_Exception, "Integer Divide by Zero");
+            pti = _d_create_exception_object(&_Class_9Exception, "Integer Divide by Zero");
             break;
 
         case STATUS_FLOAT_DIVIDE_BY_ZERO:
-            pti = _d_create_exception_object(&_Class_Exception, "Float Divide by Zero");
+            pti = _d_create_exception_object(&_Class_9Exception, "Float Divide by Zero");
             break;
 
         case STATUS_ACCESS_VIOLATION:
-            pti = _d_create_exception_object(&_Class_Exception, "Access Violation");
+            pti = _d_create_exception_object(&_Class_9Exception, "Access Violation");
             break;
 
         case STATUS_STACK_OVERFLOW:
-            pti = _d_create_exception_object(&_Class_Exception, "Stack Overflow");
+            pti = _d_create_exception_object(&_Class_9Exception, "Stack Overflow");
             break;
 
         // convert all other exception codes into a Win32Exception
         default:
-            pti = _d_create_exception_object(&_Class_Exception, "Win32 Exception");
+            pti = _d_create_exception_object(&_Class_9Exception, "Win32 Exception");
             break;
     }
 
@@ -411,7 +411,7 @@ void _d_monitor_epilog(void *x, void *y, Object *h)
 
 #include	"mars.h"
 
-extern ClassInfo _Class_Exception;
+extern ClassInfo _Class_9Exception;
 
 typedef int (*fp_t)();   // function pointer in ambient memory model
 

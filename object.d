@@ -1,6 +1,8 @@
 
 extern (C) static int printf(char *, ...);
 
+alias bit bool;
+
 class Object
 {
     void print()

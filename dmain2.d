@@ -32,14 +32,17 @@ extern (C) int main(int argc, char **argv)
     char[][] args;
     int i;
     int result;
+    int myesp;
+    int myebx;
 
     version (linux)
     {
 	_STI_monitor_staticctor();
 	_STI_critical_init();
 	gc_init();
-	//am = (char[] *) malloc(argc * (char[]).size);
-	am = (char[] *) alloca(argc * (char[]).size);
+	am = (char[] *) malloc(argc * (char[]).size);
+	// BUG: alloca() conflicts with try-catch-finally stack unwinding
+	//am = (char[] *) alloca(argc * (char[]).size);
     }
     version (Win32)
     {
@@ -75,10 +78,11 @@ extern (C) int main(int argc, char **argv)
     gc_term();
     version (linux)
     {
-	//free(am);
+	free(am);
 	_STD_critical_term();
 	_STD_monitor_staticdtor();
     }
+    return 0;
     return result;
 }
 

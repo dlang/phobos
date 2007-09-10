@@ -1,5 +1,5 @@
 
-debug=uri;		// uncomment to turn on debugging printf's
+//debug=uri;		// uncomment to turn on debugging printf's
 
 /* ====================== URI Functions ================ */
 
@@ -193,6 +193,8 @@ private dchar[] URI_Decode(char[] string, uint reservedSet)
     dchar C;
     char* s;
 
+    //printf("URI_Decode('%.*s')\n", string);
+
     // Result array, allocated on stack
     dchar* R;
     uint Rlen;
@@ -334,9 +336,9 @@ unittest
     char[] r;
 
     r = encode(s);
-    printf("r = '%.*s'\n", r);
+    //printf("r = '%.*s'\n", r);
     assert(r == t);
     r = decode(t);
-    printf("r = '%.*s'\n", r);
+    //printf("r = '%.*s'\n", r);
     assert(r == s);
 }

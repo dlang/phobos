@@ -3,7 +3,7 @@
 // All Rights Reserved
 // Written by Walter Bright
 
-// Exception handling support
+// Exception handling support for linux
 
 //debug=1;
 
@@ -16,6 +16,7 @@ alias int (*fp_t)();   // function pointer in ambient memory model
 struct DHandlerInfo
 {
     uint offset;		// offset from function address to start of guarded section
+    uint endoffset;		// offset of end of guarded section
     int prev_index;		// previous table index
     uint cioffset;		// offset to DCatchInfo data from start of table (!=0 if try-catch)
     void *finally_code;		// pointer to finally code to execute
@@ -74,21 +75,23 @@ DHandlerTable *__eh_finddata(void *address)
 {
     FuncTable *ft;
 
-    debug printf("__eh_finddata(address = x%x)\n", address);
-    debug printf("_deh_beg = x%x, _deh_end = x%x\n", &_deh_beg, &_deh_end);
+//    debug printf("__eh_finddata(address = x%x)\n", address);
+//    debug printf("_deh_beg = x%x, _deh_end = x%x\n", &_deh_beg, &_deh_end);
     for (ft = (FuncTable *)&_deh_beg;
 	 ft < (FuncTable *)&_deh_end;
 	 ft++)
     {
-	debug printf("\tfptr = x%x, fsize = x%x, handlertable = x%x\n",
-		ft.fptr, ft.fsize, ft.handlertable);
+//	debug printf("\tfptr = x%x, fsize = x%03x, handlertable = x%x\n",
+//		ft.fptr, ft.fsize, ft.handlertable);
 
 	if (ft.fptr <= address &&
 	    address < (void *)((char *)ft.fptr + ft.fsize))
 	{
+//	    debug printf("\tfound handler table\n");
 	    return ft.handlertable;
 	}
     }
+//    debug printf("\tnot found\n");
     return null;
 }
 
@@ -140,6 +143,10 @@ extern (Windows) void _d_throw(Object *h)
 	mov regebp,EBP	;
     }
 
+//static uint abc;
+//if (++abc == 2) *(char *)0=0;
+
+//int count = 0;
     while (1)		// for each function on the stack
     {
         DHandlerTable *handler_table;
@@ -162,6 +169,7 @@ extern (Windows) void _d_throw(Object *h)
 	}
 
 	debug printf("found caller, EBP = x%x, retaddr = x%x\n", regebp, retaddr);
+//if (++count == 12) *(char*)0=0;
         handler_table = __eh_finddata((void *)retaddr);   // find static data associated with function
         if (!handler_table)         // if no static data
         {   
@@ -181,14 +189,29 @@ extern (Windows) void _d_throw(Object *h)
 
         // Find start index for retaddr in static data
         dim = handler_table.nhandlers;
+
+	debug
+	{
+	    printf("handler_info[]:\n");
+	    for (int i = 0; i < dim; i++)
+	    {
+		phi = &handler_table.handler_info[i];
+		printf("\t[%d]: offset = x%04x, endoffset = x%04x, prev_index = %d, cioffset = x%04x, finally_code = %x\n",
+			i, phi.offset, phi.endoffset, phi.prev_index, phi.cioffset, phi.finally_code);
+	    }
+	}
+
         index = -1;
         for (int i = 0; i < dim; i++)
         {   
 	    phi = &handler_table.handler_info[i];
 
-            if ((uint)retaddr >= funcoffset + phi.offset)
+	    debug printf("i = %d, phi.offset = %04x\n", i, funcoffset + phi.offset);
+            if (cast(uint)retaddr > funcoffset + phi.offset &&
+		cast(uint)retaddr <= funcoffset + phi.endoffset)
                 index = i;
         }
+	debug printf("index = %d\n", index);
 
 	// walk through handler table, checking each handler
 	// with an index smaller than the current table_index

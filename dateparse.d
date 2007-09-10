@@ -167,9 +167,9 @@ private:
 		    goto Lret;
 
 		case ' ':
-		case \n:
-		case \r:
-		case \t:
+		case '\n':
+		case '\r':
+		case '\t':
 		case ',':
 		    si++;
 		    break;

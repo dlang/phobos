@@ -16,21 +16,21 @@ import string;
 
 version(Win32)
 {
-    const char[1] sep = '\';
-    const char[1] altsep = '/';
-    const char[1] pathsep = ';';
+    const char[1] sep = "\\";
+    const char[1] altsep = "/";
+    const char[1] pathsep = ";";
     const char[2] linesep = "\r\n";
-    const char[1] curdir = '.';
-    const char[2] pardir = '..';
+    const char[1] curdir = ".";
+    const char[2] pardir = "..";
 }
 version(linux)
 {
-    const char[1] sep = '/';
+    const char[1] sep = "/";
     const char[0] altsep;
-    const char[1] pathsep = ':';
+    const char[1] pathsep = ":";
     const char[1] linesep = "\n";
-    const char[1] curdir = '.';
-    const char[2] pardir = '..';
+    const char[1] curdir = ".";
+    const char[2] pardir = "..";
 }
 
 /**************************
@@ -50,7 +50,7 @@ char[] getExt(char[] fullname)
 	i--;
 	version(Win32)
 	{
-	    if (fullname[i] == ':' || fullname[i] == '\')
+	    if (fullname[i] == ':' || fullname[i] == '\\')
 		break;
 	}
 	version(linux)
@@ -69,35 +69,35 @@ unittest
     char[] result;
 
     version (Win32)
-	result = getExt('d:\path\foo.bat');
+	result = getExt("d:\\path\\foo.bat");
     version (linux)
-	result = getExt('/path/foo.bat');
+	result = getExt("/path/foo.bat");
     i = cmp(result, "bat");
     assert(i == 0);
 
     version (Win32)
-	result = getExt('d:\path\foo.');
+	result = getExt("d:\\path\\foo.");
     version (linux)
-	result = getExt('d/path/foo.');
+	result = getExt("d/path/foo.");
     i = cmp(result, "");
     assert(i == 0);
 
     version (Win32)
-	result = getExt('d:\path\foo');
+	result = getExt("d:\\path\\foo");
     version (linux)
-	result = getExt('d/path/foo');
+	result = getExt("d/path/foo");
     i = cmp(result, "");
     assert(i == 0);
 
     version (Win32)
-	result = getExt('d:\path.bar\foo');
+	result = getExt("d:\\path.bar\\foo");
     version (linux)
-	result = getExt('/path.bar/foo');
+	result = getExt("/path.bar/foo");
 
     i = cmp(result, "");
     assert(i == 0);
 
-    result = getExt('foo');
+    result = getExt("foo");
     i = cmp(result, "");
     assert(i == 0);
 }
@@ -120,7 +120,7 @@ char[] getBaseName(char[] fullname)
 	{
 	    version(Win32)
 	    {
-		if (fullname[i - 1] == ':' || fullname[i - 1] == '\')
+		if (fullname[i - 1] == ':' || fullname[i - 1] == '\\')
 		    break;
 	    }
 	    version(linux)
@@ -139,17 +139,17 @@ unittest
     char[] result;
 
     version (Win32)
-	result = getBaseName('d:\path\foo.bat');
+	result = getBaseName("d:\\path\\foo.bat");
     version (linux)
-	result = getBaseName('/path/foo.bat');
+	result = getBaseName("/path/foo.bat");
     //printf("result = '%.*s'\n", result);
     i = cmp(result, "foo.bat");
     assert(i == 0);
 
     version (Win32)
-	result = getBaseName('a\b');
+	result = getBaseName("a\\b");
     version (linux)
-	result = getBaseName('a/b');
+	result = getBaseName("a/b");
     i = cmp(result, "b");
     assert(i == 0);
 }
@@ -175,7 +175,7 @@ char[] getDirName(char[] fullname)
 	    {
 		if (fullname[i - 1] == ':')
 		    break;
-		if (fullname[i - 1] == '\')
+		if (fullname[i - 1] == '\\')
 		{   i--;
 		    break;
 		}
@@ -237,7 +237,7 @@ char[] defaultExt(char[] fullname, char[] ext)
 	if (fullname.length && fullname[fullname.length - 1] == '.')
 	    fullname ~= ext;
 	else
-	    fullname = fullname ~ '.' ~ ext;
+	    fullname = fullname ~ "." ~ ext;
     }
     return fullname;
 }
@@ -258,7 +258,7 @@ char[] addExt(char[] fullname, char[] ext)
 	if (fullname.length && fullname[fullname.length - 1] == '.')
 	    fullname ~= ext;
 	else
-	    fullname = fullname ~ '.' ~ ext;
+	    fullname = fullname ~ "." ~ ext;
     }
     else
     {
@@ -306,16 +306,16 @@ char[] join(char[] p1, char[] p2)
 	    {
 		p = p1 ~ p2;
 	    }
-	    else if (p2[0] == '\')
+	    else if (p2[0] == '\\')
 	    {
 		if (d1.length == 0)
 		    p = p2;
-		else if (p1[p1.length - 1] == '\')
+		else if (p1[p1.length - 1] == '\\')
 		    p = p1 ~ p2[1 .. p2.length];
 		else
 		    p = p1 ~ p2;
 	    }
-	    else if (p1[p1.length - 1] == '\')
+	    else if (p1[p1.length - 1] == '\\')
 	    {
 		p = p1 ~ p2;
 	    }
@@ -352,73 +352,73 @@ unittest
 
     p = join("foo", "bar");
     version (Win32)
-	i = cmp(p, 'foo\bar');
+	i = cmp(p, "foo\\bar");
     version (linux)
-	i = cmp(p, 'foo/bar');
+	i = cmp(p, "foo/bar");
     assert(i == 0);
 
     version (Win32)
-    {	p = join('foo\', 'bar');
-	i = cmp(p, 'foo\bar');
+    {	p = join("foo\\", "bar");
+	i = cmp(p, "foo\\bar");
     }
     version (linux)
-    {	p = join('foo/', 'bar');
-	i = cmp(p, 'foo/bar');
-    }
-    assert(i == 0);
-
-    version (Win32)
-    {	p = join('foo', '\bar');
-	i = cmp(p, '\bar');
-    }
-    version (linux)
-    {	p = join('foo', '/bar');
-	i = cmp(p, '/bar');
+    {	p = join("foo/", "bar");
+	i = cmp(p, "foo/bar");
     }
     assert(i == 0);
 
     version (Win32)
-    {	p = join('foo\', '\bar');
-	i = cmp(p, '\bar');
+    {	p = join("foo", "\\bar");
+	i = cmp(p, "\\bar");
     }
     version (linux)
-    {	p = join('foo/', '/bar');
-	i = cmp(p, '/bar');
+    {	p = join("foo", "/bar");
+	i = cmp(p, "/bar");
+    }
+    assert(i == 0);
+
+    version (Win32)
+    {	p = join("foo\\", "\\bar");
+	i = cmp(p, "\\bar");
+    }
+    version (linux)
+    {	p = join("foo/", "/bar");
+	i = cmp(p, "/bar");
     }
     assert(i == 0);
 
     version(Win32)
     {
-	p = join('d:', 'bar');
-	i = cmp(p, 'd:bar');
+	p = join("d:", "bar");
+	i = cmp(p, "d:bar");
 	assert(i == 0);
 
-	p = join('d:\', 'bar');
-	i = cmp(p, 'd:\bar');
+	p = join("d:\\", "bar");
+	i = cmp(p, "d:\\bar");
 	assert(i == 0);
 
-	p = join('d:\', '\bar');
-	i = cmp(p, 'd:\bar');
+	p = join("d:\\", "\\bar");
+	i = cmp(p, "d:\\bar");
 	assert(i == 0);
 
-	p = join('d:\foo', 'bar');
-	i = cmp(p, 'd:\foo\bar');
+	p = join("d:\\foo", "bar");
+	i = cmp(p, "d:\\foo\\bar");
 	assert(i == 0);
 
-	p = join('d:', '\bar');
-	i = cmp(p, 'd:\bar');
+	p = join("d:", "\\bar");
+	i = cmp(p, "d:\\bar");
 	assert(i == 0);
 
-	p = join('foo', 'd:');
-	i = cmp(p, 'd:');
+	p = join("foo", "d:");
+	i = cmp(p, "d:");
 	assert(i == 0);
 
-	p = join('foo', 'd:\');
-	i = cmp(p, 'd:\');
+	p = join("foo", "d:\\");
+	i = cmp(p, "d:\\");
 	assert(i == 0);
 
-	p = join('foo', 'd:\bar');
-	i = cmp(p, 'd:\bar');
+	p = join("foo", "d:\\bar");
+	i = cmp(p, "d:\\bar");
 	assert(i == 0);
     }
 }
