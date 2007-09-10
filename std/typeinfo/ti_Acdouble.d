@@ -31,7 +31,7 @@ class TypeInfo_Ar : TypeInfo
 {
     string toString() { return "cdouble[]"; }
 
-    hash_t getHash(void *p)
+    hash_t getHash(in void *p)
     {	cdouble[] s = *cast(cdouble[]*)p;
 	size_t len = s.length;
 	cdouble *str = s.ptr;
@@ -51,7 +51,7 @@ class TypeInfo_Ar : TypeInfo
 	return hash;
     }
 
-    int equals(void *p1, void *p2)
+    int equals(in void *p1, in void *p2)
     {
 	cdouble[] s1 = *cast(cdouble[]*)p1;
 	cdouble[] s2 = *cast(cdouble[]*)p2;
@@ -68,7 +68,7 @@ class TypeInfo_Ar : TypeInfo
 	return 1;
     }
 
-    int compare(void *p1, void *p2)
+    int compare(in void *p1, in void *p2)
     {
 	cdouble[] s1 = *cast(cdouble[]*)p1;
 	cdouble[] s2 = *cast(cdouble[]*)p2;

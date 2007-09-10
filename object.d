@@ -68,9 +68,9 @@ struct OffsetTypeInfo
 
 class TypeInfo
 {
-    hash_t getHash(void *p);
-    int equals(void *p1, void *p2);
-    int compare(void *p1, void *p2);
+    hash_t getHash(in void *p);
+    int equals(in void *p1, in void *p2);
+    int compare(in void *p1, in void *p2);
     size_t tsize();
     void swap(void *p1, void *p2);
     TypeInfo next();
@@ -138,10 +138,10 @@ class TypeInfo_Struct : TypeInfo
     string name;
     void[] m_init;
 
-    uint function(void*) xtoHash;
-    int function(void*,void*) xopEquals;
-    int function(void*,void*) xopCmp;
-    string function(void*) xtoString;
+    uint function(in void*) xtoHash;
+    int function(in void*, in void*) xopEquals;
+    int function(in void*, in void*) xopCmp;
+    string function(const(void)*) xtoString;
 
     uint m_flags;
 }

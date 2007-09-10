@@ -9,7 +9,7 @@ class TypeInfo_As : TypeInfo
 {
     string toString() { return "short[]"; }
 
-    hash_t getHash(void *p)
+    hash_t getHash(in void *p)
     {	short[] s = *cast(short[]*)p;
 	size_t len = s.length;
 	short *str = s.ptr;
@@ -39,7 +39,7 @@ class TypeInfo_As : TypeInfo
 	return hash;
     }
 
-    int equals(void *p1, void *p2)
+    int equals(in void *p1, in void *p2)
     {
 	short[] s1 = *cast(short[]*)p1;
 	short[] s2 = *cast(short[]*)p2;
@@ -48,7 +48,7 @@ class TypeInfo_As : TypeInfo
 	       memcmp(cast(void *)s1, cast(void *)s2, s1.length * short.sizeof) == 0;
     }
 
-    int compare(void *p1, void *p2)
+    int compare(in void *p1, in void *p2)
     {
 	short[] s1 = *cast(short[]*)p1;
 	short[] s2 = *cast(short[]*)p2;
@@ -88,7 +88,7 @@ class TypeInfo_At : TypeInfo_As
 {
     string toString() { return "ushort[]"; }
 
-    int compare(void *p1, void *p2)
+    int compare(in void *p1, in void *p2)
     {
 	ushort[] s1 = *cast(ushort[]*)p1;
 	ushort[] s2 = *cast(ushort[]*)p2;

@@ -31,7 +31,7 @@ class TypeInfo_Aq : TypeInfo
 {
     string toString() { return "cfloat[]"; }
 
-    hash_t getHash(void *p)
+    hash_t getHash(in void *p)
     {	cfloat[] s = *cast(cfloat[]*)p;
 	size_t len = s.length;
 	cfloat *str = s.ptr;
@@ -49,7 +49,7 @@ class TypeInfo_Aq : TypeInfo
 	return hash;
     }
 
-    int equals(void *p1, void *p2)
+    int equals(in void *p1, in void *p2)
     {
 	cfloat[] s1 = *cast(cfloat[]*)p1;
 	cfloat[] s2 = *cast(cfloat[]*)p2;
@@ -66,7 +66,7 @@ class TypeInfo_Aq : TypeInfo
 	return 1;
     }
 
-    int compare(void *p1, void *p2)
+    int compare(in void *p1, in void *p2)
     {
 	cfloat[] s1 = *cast(cfloat[]*)p1;
 	cfloat[] s2 = *cast(cfloat[]*)p2;

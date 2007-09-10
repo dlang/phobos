@@ -7,17 +7,17 @@ class TypeInfo_l : TypeInfo
 {
     string toString() { return "long"; }
 
-    hash_t getHash(void *p)
+    hash_t getHash(in void *p)
     {
 	return *cast(uint *)p + (cast(uint *)p)[1];
     }
 
-    int equals(void *p1, void *p2)
+    int equals(in void *p1, in void *p2)
     {
 	return *cast(long *)p1 == *cast(long *)p2;
     }
 
-    int compare(void *p1, void *p2)
+    int compare(in void *p1, in void *p2)
     {
 	if (*cast(long *)p1 < *cast(long *)p2)
 	    return -1;

@@ -9,7 +9,7 @@ class TypeInfo_Al : TypeInfo
 {
     string toString() { return "long[]"; }
 
-    hash_t getHash(void *p)
+    hash_t getHash(in void *p)
     {	long[] s = *cast(long[]*)p;
 	size_t len = s.length;
 	auto str = s.ptr;
@@ -26,7 +26,7 @@ class TypeInfo_Al : TypeInfo
 	return hash;
     }
 
-    int equals(void *p1, void *p2)
+    int equals(in void *p1, in void *p2)
     {
 	long[] s1 = *cast(long[]*)p1;
 	long[] s2 = *cast(long[]*)p2;
@@ -35,7 +35,7 @@ class TypeInfo_Al : TypeInfo
 	       memcmp(cast(void *)s1, cast(void *)s2, s1.length * long.sizeof) == 0;
     }
 
-    int compare(void *p1, void *p2)
+    int compare(in void *p1, in void *p2)
     {
 	long[] s1 = *cast(long[]*)p1;
 	long[] s2 = *cast(long[]*)p2;
@@ -76,7 +76,7 @@ class TypeInfo_Am : TypeInfo_Al
 {
     string toString() { return "ulong[]"; }
 
-    int compare(void *p1, void *p2)
+    int compare(in void *p1, in void *p2)
     {
 	ulong[] s1 = *cast(ulong[]*)p1;
 	ulong[] s2 = *cast(ulong[]*)p2;

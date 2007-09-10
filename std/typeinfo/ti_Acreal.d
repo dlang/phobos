@@ -31,7 +31,7 @@ class TypeInfo_Ac : TypeInfo
 {
     string toString() { return "creal[]"; }
 
-    hash_t getHash(void *p)
+    hash_t getHash(in void *p)
     {	creal[] s = *cast(creal[]*)p;
 	size_t len = s.length;
 	creal *str = s.ptr;
@@ -52,7 +52,7 @@ class TypeInfo_Ac : TypeInfo
 	return hash;
     }
 
-    int equals(void *p1, void *p2)
+    int equals(in void *p1, in void *p2)
     {
 	creal[] s1 = *cast(creal[]*)p1;
 	creal[] s2 = *cast(creal[]*)p2;
@@ -69,7 +69,7 @@ class TypeInfo_Ac : TypeInfo
 	return 1;
     }
 
-    int compare(void *p1, void *p2)
+    int compare(in void *p1, in void *p2)
     {
 	creal[] s1 = *cast(creal[]*)p1;
 	creal[] s2 = *cast(creal[]*)p2;

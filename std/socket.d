@@ -1307,14 +1307,14 @@ class Socket
 	 * buffer space left, send waits.
 	 */
 	//returns number of bytes actually sent, or -1 on error
-	int send(void[] buf, SocketFlags flags)
+	int send(const(void)[] buf, SocketFlags flags)
 	{
 		int sent = .send(sock, buf.ptr, buf.length, cast(int)flags);
 		return sent;
 	}
 	
 	/// ditto
-	int send(void[] buf)
+	int send(const(void)[] buf)
 	{
 		return send(buf, SocketFlags.NONE);
 	}
@@ -1322,14 +1322,14 @@ class Socket
 	/**
 	 * Send data to a specific destination Address. If the destination address is not specified, a connection must have been made and that address is used. If the socket is blocking and there is no buffer space left, sendTo waits.
 	 */
-	int sendTo(void[] buf, SocketFlags flags, Address to)
+	int sendTo(const(void)[] buf, SocketFlags flags, Address to)
 	{
 		int sent = .sendto(sock, buf.ptr, buf.length, cast(int)flags, to.name(), to.nameLen());
 		return sent;
 	}
 	
 	/// ditto
-	int sendTo(void[] buf, Address to)
+	int sendTo(const(void)[] buf, Address to)
 	{
 		return sendTo(buf, SocketFlags.NONE, to);
 	}
@@ -1337,7 +1337,7 @@ class Socket
 	
 	//assumes you connect()ed
 	/// ditto
-	int sendTo(void[] buf, SocketFlags flags)
+	int sendTo(const(void)[] buf, SocketFlags flags)
 	{
 		int sent = .sendto(sock, buf.ptr, buf.length, cast(int)flags, null, 0);
 		return sent;
@@ -1346,7 +1346,7 @@ class Socket
 	
 	//assumes you connect()ed
 	/// ditto
-	int sendTo(void[] buf)
+	int sendTo(const(void)[] buf)
 	{
 		return sendTo(buf, SocketFlags.NONE);
 	}

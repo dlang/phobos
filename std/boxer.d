@@ -234,9 +234,9 @@ struct Box
      * This is initially null and cannot be assigned directly.
      * Returns: the type of the contained object.
      */
-    TypeInfo type()
+    const TypeInfo type()
     {
-        return p_type;
+        return cast(TypeInfo)p_type;
     }
     
     /**
@@ -244,7 +244,7 @@ struct Box
      * This is initially null and cannot be assigned directly.
      * Returns: the data array.
      */
-    void[] data()
+    const const(void)[] data()
     {
         size_t size = type.tsize();
         

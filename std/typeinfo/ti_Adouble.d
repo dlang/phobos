@@ -31,7 +31,7 @@ class TypeInfo_Ad : TypeInfo
 {
     string toString() { return "double[]"; }
 
-    hash_t getHash(void *p)
+    hash_t getHash(in void *p)
     {	double[] s = *cast(double[]*)p;
 	size_t len = s.length;
 	auto str = s.ptr;
@@ -49,7 +49,7 @@ class TypeInfo_Ad : TypeInfo
 	return hash;
     }
 
-    int equals(void *p1, void *p2)
+    int equals(in void *p1, in void *p2)
     {
 	double[] s1 = *cast(double[]*)p1;
 	double[] s2 = *cast(double[]*)p2;
@@ -66,7 +66,7 @@ class TypeInfo_Ad : TypeInfo
 	return 1;
     }
 
-    int compare(void *p1, void *p2)
+    int compare(in void *p1, in void *p2)
     {
 	double[] s1 = *cast(double[]*)p1;
 	double[] s2 = *cast(double[]*)p2;

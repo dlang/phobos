@@ -6,17 +6,17 @@ class TypeInfo_u : TypeInfo
 {
     string toString() { return "wchar"; }
 
-    hash_t getHash(void *p)
+    hash_t getHash(in void *p)
     {
 	return *cast(wchar *)p;
     }
 
-    int equals(void *p1, void *p2)
+    int equals(in void *p1, in void *p2)
     {
 	return *cast(wchar *)p1 == *cast(wchar *)p2;
     }
 
-    int compare(void *p1, void *p2)
+    int compare(in void *p1, in void *p2)
     {
 	return *cast(wchar *)p1 - *cast(wchar *)p2;
     }

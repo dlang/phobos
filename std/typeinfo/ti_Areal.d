@@ -31,7 +31,7 @@ class TypeInfo_Ae : TypeInfo
 {
     string toString() { return "real[]"; }
 
-    hash_t getHash(void *p)
+    hash_t getHash(in void *p)
     {	real[] s = *cast(real[]*)p;
 	size_t len = s.length;
 	auto str = s.ptr;
@@ -50,7 +50,7 @@ class TypeInfo_Ae : TypeInfo
 	return hash;
     }
 
-    int equals(void *p1, void *p2)
+    int equals(in void *p1, in void *p2)
     {
 	real[] s1 = *cast(real[]*)p1;
 	real[] s2 = *cast(real[]*)p2;
@@ -67,7 +67,7 @@ class TypeInfo_Ae : TypeInfo
 	return 1;
     }
 
-    int compare(void *p1, void *p2)
+    int compare(in void *p1, in void *p2)
     {
 	real[] s1 = *cast(real[]*)p1;
 	real[] s2 = *cast(real[]*)p2;

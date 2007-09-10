@@ -9,7 +9,7 @@ class TypeInfo_Ai : TypeInfo
 {
     string toString() { return "int[]"; }
 
-    hash_t getHash(void *p)
+    hash_t getHash(in void *p)
     {	int[] s = *cast(int[]*)p;
 	auto len = s.length;
 	auto str = s.ptr;
@@ -26,7 +26,7 @@ class TypeInfo_Ai : TypeInfo
 	return hash;
     }
 
-    int equals(void *p1, void *p2)
+    int equals(in void *p1, in void *p2)
     {
 	int[] s1 = *cast(int[]*)p1;
 	int[] s2 = *cast(int[]*)p2;
@@ -35,7 +35,7 @@ class TypeInfo_Ai : TypeInfo
 	       memcmp(cast(void *)s1, cast(void *)s2, s1.length * int.sizeof) == 0;
     }
 
-    int compare(void *p1, void *p2)
+    int compare(in void *p1, in void *p2)
     {
 	int[] s1 = *cast(int[]*)p1;
 	int[] s2 = *cast(int[]*)p2;
@@ -74,7 +74,7 @@ class TypeInfo_Ak : TypeInfo_Ai
 {
     string toString() { return "uint[]"; }
 
-    int compare(void *p1, void *p2)
+    int compare(in void *p1, in void *p2)
     {
 	uint[] s1 = *cast(uint[]*)p1;
 	uint[] s2 = *cast(uint[]*)p2;

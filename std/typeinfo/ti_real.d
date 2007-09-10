@@ -9,7 +9,7 @@ class TypeInfo_e : TypeInfo
 {
     string toString() { return "real"; }
 
-    hash_t getHash(void *p)
+    hash_t getHash(in void *p)
     {
 	return (cast(uint *)p)[0] + (cast(uint *)p)[1] + (cast(ushort *)p)[4];
     }
@@ -34,12 +34,12 @@ class TypeInfo_e : TypeInfo
 	return (d1 == d2) ? 0 : ((d1 < d2) ? -1 : 1);
     }
 
-    int equals(void *p1, void *p2)
+    int equals(in void *p1, in void *p2)
     {
 	return _equals(*cast(real *)p1, *cast(real *)p2);
     }
 
-    int compare(void *p1, void *p2)
+    int compare(in void *p1, in void *p2)
     {
 	return _compare(*cast(real *)p1, *cast(real *)p2);
     }

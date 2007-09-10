@@ -31,7 +31,7 @@ class TypeInfo_Af : TypeInfo
 {
     string toString() { return "float[]"; }
 
-    hash_t getHash(void *p)
+    hash_t getHash(in void *p)
     {	float[] s = *cast(float[]*)p;
 	size_t len = s.length;
 	auto str = s.ptr;
@@ -48,7 +48,7 @@ class TypeInfo_Af : TypeInfo
 	return hash;
     }
 
-    int equals(void *p1, void *p2)
+    int equals(in void *p1, in void *p2)
     {
 	float[] s1 = *cast(float[]*)p1;
 	float[] s2 = *cast(float[]*)p2;
@@ -65,7 +65,7 @@ class TypeInfo_Af : TypeInfo
 	return 1;
     }
 
-    int compare(void *p1, void *p2)
+    int compare(in void *p1, in void *p2)
     {
 	float[] s1 = *cast(float[]*)p1;
 	float[] s2 = *cast(float[]*)p2;

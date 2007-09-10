@@ -7,17 +7,17 @@ class TypeInfo_g : TypeInfo
 {
     string toString() { return "byte"; }
 
-    hash_t getHash(void *p)
+    hash_t getHash(in void *p)
     {
 	return *cast(byte *)p;
     }
 
-    int equals(void *p1, void *p2)
+    int equals(in void *p1, in void *p2)
     {
 	return *cast(byte *)p1 == *cast(byte *)p2;
     }
 
-    int compare(void *p1, void *p2)
+    int compare(in void *p1, in void *p2)
     {
 	return *cast(byte *)p1 - *cast(byte *)p2;
     }

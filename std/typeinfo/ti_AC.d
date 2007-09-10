@@ -4,7 +4,7 @@ module std.typeinfo.ti_AC;
 
 class TypeInfo_AC : TypeInfo
 {
-    hash_t getHash(void *p)
+    hash_t getHash(in void *p)
     {	Object[] s = *cast(Object[]*)p;
 	hash_t hash = 0;
 
@@ -16,7 +16,7 @@ class TypeInfo_AC : TypeInfo
 	return hash;
     }
 
-    int equals(void *p1, void *p2)
+    int equals(in void *p1, in void *p2)
     {
 	Object[] s1 = *cast(Object[]*)p1;
 	Object[] s2 = *cast(Object[]*)p2;
@@ -38,7 +38,7 @@ class TypeInfo_AC : TypeInfo
 	return 0;
     }
 
-    int compare(void *p1, void *p2)
+    int compare(in void *p1, in void *p2)
     {
 	Object[] s1 = *cast(Object[]*)p1;
 	Object[] s2 = *cast(Object[]*)p2;

@@ -10,7 +10,7 @@ class TypeInfo_Ag : TypeInfo
 {
     string toString() { return "byte[]"; }
 
-    hash_t getHash(void *p)
+    hash_t getHash(in void *p)
     {	byte[] s = *cast(byte[]*)p;
 	size_t len = s.length;
 	byte *str = s.ptr;
@@ -51,7 +51,7 @@ class TypeInfo_Ag : TypeInfo
 	return hash;
     }
 
-    int equals(void *p1, void *p2)
+    int equals(in void *p1, in void *p2)
     {
 	byte[] s1 = *cast(byte[]*)p1;
 	byte[] s2 = *cast(byte[]*)p2;
@@ -60,7 +60,7 @@ class TypeInfo_Ag : TypeInfo
 	       memcmp(cast(byte *)s1, cast(byte *)s2, s1.length) == 0;
     }
 
-    int compare(void *p1, void *p2)
+    int compare(in void *p1, in void *p2)
     {
 	byte[] s1 = *cast(byte[]*)p1;
 	byte[] s2 = *cast(byte[]*)p2;
@@ -100,7 +100,7 @@ class TypeInfo_Ah : TypeInfo_Ag
 {
     string toString() { return "ubyte[]"; }
 
-    int compare(void *p1, void *p2)
+    int compare(in void *p1, in void *p2)
     {
 	char[] s1 = *cast(char[]*)p1;
 	char[] s2 = *cast(char[]*)p2;
@@ -144,7 +144,7 @@ class TypeInfo_Aa : TypeInfo_Ag
 {
     string toString() { return "char[]"; }
 
-    hash_t getHash(void *p)
+    hash_t getHash(in void *p)
     {	char[] s = *cast(char[]*)p;
 	hash_t hash = 0;
 

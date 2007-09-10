@@ -378,13 +378,13 @@ class TypeInfo
     }
 
     /// Returns a hash of the instance of a type.
-    hash_t getHash(void *p) { return cast(uint)p; }
+    hash_t getHash(in void *p) { return cast(uint)p; }
 
     /// Compares two instances for equality.
-    int equals(void *p1, void *p2) { return cast(int)(p1 == p2); }
+    int equals(in void *p1, in void *p2) { return cast(int)(p1 == p2); }
 
     /// Compares two instances for &lt;, ==, or &gt;.
-    int compare(void *p1, void *p2) { return 0; }
+    int compare(in void *p1, in void *p2) { return 0; }
 
     /// Returns size of the type.
     size_t tsize() { return 0; }
@@ -430,9 +430,9 @@ class TypeInfo_Typedef : TypeInfo
 		 this.base == c.base));
     }
 
-    hash_t getHash(void *p) { return base.getHash(p); }
-    int equals(void *p1, void *p2) { return base.equals(p1, p2); }
-    int compare(void *p1, void *p2) { return base.compare(p1, p2); }
+    hash_t getHash(in void *p) { return base.getHash(p); }
+    int equals(in void *p1, in void *p2) { return base.equals(p1, p2); }
+    int compare(in void *p1, in void *p2) { return base.compare(p1, p2); }
     size_t tsize() { return base.tsize(); }
     void swap(void *p1, void *p2) { return base.swap(p1, p2); }
 
@@ -461,17 +461,17 @@ class TypeInfo_Pointer : TypeInfo
 		 this.m_next == c.m_next);
     }
 
-    hash_t getHash(void *p)
+    hash_t getHash(in void *p)
     {
         return cast(uint)*cast(void* *)p;
     }
 
-    int equals(void *p1, void *p2)
+    int equals(in void *p1, in void *p2)
     {
         return cast(int)(*cast(void* *)p1 == *cast(void* *)p2);
     }
 
-    int compare(void *p1, void *p2)
+    int compare(in void *p1, in void *p2)
     {
 	if (*cast(void* *)p1 < *cast(void* *)p2)
 	    return -1;
@@ -512,7 +512,7 @@ class TypeInfo_Array : TypeInfo
 		 this.value == c.value));
     }
 
-    hash_t getHash(void *p)
+    hash_t getHash(in void *p)
     {	size_t sz = value.tsize();
 	hash_t hash = 0;
 	void[] a = *cast(void[]*)p;
@@ -521,7 +521,7 @@ class TypeInfo_Array : TypeInfo
         return hash;
     }
 
-    int equals(void *p1, void *p2)
+    int equals(in void *p1, in void *p2)
     {
 	void[] a1 = *cast(void[]*)p1;
 	void[] a2 = *cast(void[]*)p2;
@@ -536,7 +536,7 @@ class TypeInfo_Array : TypeInfo
         return 1;
     }
 
-    int compare(void *p1, void *p2)
+    int compare(in void *p1, in void *p2)
     {
 	void[] a1 = *cast(void[]*)p1;
 	void[] a2 = *cast(void[]*)p2;
@@ -593,7 +593,7 @@ class TypeInfo_StaticArray : TypeInfo
 		 this.value == c.value));
     }
 
-    hash_t getHash(void *p)
+    hash_t getHash(in void *p)
     {	size_t sz = value.tsize();
 	hash_t hash = 0;
 	for (size_t i = 0; i < len; i++)
@@ -601,7 +601,7 @@ class TypeInfo_StaticArray : TypeInfo
         return hash;
     }
 
-    int equals(void *p1, void *p2)
+    int equals(in void *p1, in void *p2)
     {
 	size_t sz = value.tsize();
 
@@ -613,7 +613,7 @@ class TypeInfo_StaticArray : TypeInfo
         return 1;
     }
 
-    int compare(void *p1, void *p2)
+    int compare(in void *p1, in void *p2)
     {
 	size_t sz = value.tsize();
 
@@ -754,14 +754,14 @@ class TypeInfo_Class : TypeInfo
 		 this.info.name == c.classinfo.name);
     }
 
-    hash_t getHash(void *p)
+    hash_t getHash(in void *p)
     {
 	Object o = *cast(Object*)p;
 	assert(o);
 	return o.toHash();
     }
 
-    int equals(void *p1, void *p2)
+    int equals(in void *p1, in void *p2)
     {
 	Object o1 = *cast(Object*)p1;
 	Object o2 = *cast(Object*)p2;
@@ -769,7 +769,7 @@ class TypeInfo_Class : TypeInfo
 	return (o1 is o2) || (o1 && o1.opEquals(o2));
     }
 
-    int compare(void *p1, void *p2)
+    int compare(in void *p1, in void *p2)
     {
 	Object o1 = *cast(Object*)p1;
 	Object o2 = *cast(Object*)p2;
@@ -817,7 +817,7 @@ class TypeInfo_Interface : TypeInfo
 		 this.info.name == c.classinfo.name);
     }
 
-    hash_t getHash(void *p)
+    hash_t getHash(in void *p)
     {
 	Interface* pi = **cast(Interface ***)*cast(void**)p;
 	Object o = cast(Object)(*cast(void**)p - pi.offset);
@@ -825,7 +825,7 @@ class TypeInfo_Interface : TypeInfo
 	return o.toHash();
     }
 
-    int equals(void *p1, void *p2)
+    int equals(in void *p1, in void *p2)
     {
 	Interface* pi = **cast(Interface ***)*cast(void**)p1;
 	Object o1 = cast(Object)(*cast(void**)p1 - pi.offset);
@@ -835,7 +835,7 @@ class TypeInfo_Interface : TypeInfo
 	return o1 == o2 || (o1 && o1.opCmp(o2) == 0);
     }
 
-    int compare(void *p1, void *p2)
+    int compare(in void *p1, in void *p2)
     {
 	Interface* pi = **cast(Interface ***)*cast(void**)p1;
 	Object o1 = cast(Object)(*cast(void**)p1 - pi.offset);
@@ -881,7 +881,7 @@ class TypeInfo_Struct : TypeInfo
 		 this.init.length == s.init.length);
     }
 
-    hash_t getHash(void *p)
+    hash_t getHash(in void *p)
     {	hash_t h;
 
 	assert(p);
@@ -895,15 +895,16 @@ class TypeInfo_Struct : TypeInfo
 	    // A sorry hash algorithm.
 	    // Should use the one for strings.
 	    // BUG: relies on the GC not moving objects
+	    auto q = p;
 	    for (size_t i = 0; i < init.length; i++)
-	    {	h = h * 9 + *cast(ubyte*)p;
-		p++;
+	    {	h = h * 9 + *cast(ubyte*)q;
+		q++;
 	    }
 	}
 	return h;
     }
 
-    int equals(void *p2, void *p1)
+    int equals(in void *p2, in void *p1)
     {	int c;
 
 	if (p1 == p2)
@@ -918,7 +919,7 @@ class TypeInfo_Struct : TypeInfo
 	return c;
     }
 
-    int compare(void *p2, void *p1)
+    int compare(in void *p2, in void *p1)
     {
 	int c = 0;
 
@@ -952,10 +953,10 @@ class TypeInfo_Struct : TypeInfo
     string name;
     void[] m_init;	// initializer; init.ptr == null if 0 initialize
 
-    hash_t function(void*) xtoHash;
-    int function(void*,void*) xopEquals;
-    int function(void*,void*) xopCmp;
-    string function(void*) xtoString;
+    hash_t function(in void*) xtoHash;
+    int function(in void*, in void*) xopEquals;
+    int function(in void*, in void*) xopCmp;
+    string function(const(void)*) xtoString;
 
     uint m_flags;
 }
@@ -996,17 +997,17 @@ class TypeInfo_Tuple : TypeInfo
 	return 0;
     }
 
-    hash_t getHash(void *p)
+    hash_t getHash(in void *p)
     {
         assert(0);
     }
 
-    int equals(void *p1, void *p2)
+    int equals(in void *p1, in void *p2)
     {
         assert(0);
     }
 
-    int compare(void *p1, void *p2)
+    int compare(in void *p1, in void *p2)
     {
         assert(0);
     }
@@ -1027,9 +1028,9 @@ class TypeInfo_Const : TypeInfo
     string toString() { return "const " ~ base.toString(); }
 
     int opEquals(Object o) { return base.opEquals(o); }
-    hash_t getHash(void *p) { return base.getHash(p); }
-    int equals(void *p1, void *p2) { return base.equals(p1, p2); }
-    int compare(void *p1, void *p2) { return base.compare(p1, p2); }
+    hash_t getHash(in void *p) { return base.getHash(p); }
+    int equals(in void *p1, in void *p2) { return base.equals(p1, p2); }
+    int compare(in void *p1, in void *p2) { return base.compare(p1, p2); }
     size_t tsize() { return base.tsize(); }
     void swap(void *p1, void *p2) { return base.swap(p1, p2); }
 

@@ -7,7 +7,7 @@ class TypeInfo_r : TypeInfo
 {
     string toString() { return "cdouble"; }
 
-    hash_t getHash(void *p)
+    hash_t getHash(in void *p)
     {
 	return (cast(uint *)p)[0] + (cast(uint *)p)[1] +
 	       (cast(uint *)p)[2] + (cast(uint *)p)[3];
@@ -34,12 +34,12 @@ class TypeInfo_r : TypeInfo
         return result;
     }
 
-    int equals(void *p1, void *p2)
+    int equals(in void *p1, in void *p2)
     {
 	return _equals(*cast(cdouble *)p1, *cast(cdouble *)p2);
     }
 
-    int compare(void *p1, void *p2)
+    int compare(in void *p1, in void *p2)
     {
 	return _compare(*cast(cdouble *)p1, *cast(cdouble *)p2);
     }
