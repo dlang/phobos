@@ -9,6 +9,8 @@
 #	make unittest
 #		Build libphobos.a, build and run unit tests
 
+LIB=libphobos.a
+
 CFLAGS=-O -m32
 #CFLAGS=-g -m32
 
@@ -36,11 +38,11 @@ targets : unittest
 test.o : test.d
 	$(DMD) -c test -g
 
-test : test.o libphobos.a
-	$(CC) -o $@ test.o libphobos.a -lpthread -lm -g
+test : test.o $(LIB)
+	$(CC) -o $@ test.o $(LIB) -lpthread -lm -g
 
-unittest : unittest.o libphobos.a
-	$(CC) -o $@ unittest.o libphobos.a -lpthread -lm -g
+unittest : unittest.o $(LIB)
+	$(CC) -o $@ unittest.o $(LIB) -lpthread -lm -g
 
 unittest.o : unittest.d
 	$(DMD) -c unittest
@@ -58,7 +60,7 @@ OBJS = asserterror.o deh2.o switch.o complex.o gcstats.o \
 	socket.o socketstream.o stdarg.o stdio.o format.o \
 	perf.o openrj.o uni.o trace.o boxer.o \
 	demangle.o cover.o bitarray.o bind.o aApplyR.o \
-	signals.o cpuid.o traits.o typetuple.o \
+	signals.o cpuid.o traits.o typetuple.o loader.o \
 	ti_wchar.o ti_uint.o ti_short.o ti_ushort.o \
 	ti_byte.o ti_ubyte.o ti_long.o ti_ulong.o ti_ptr.o \
 	ti_float.o ti_double.o ti_real.o ti_delegate.o \
@@ -195,9 +197,9 @@ ALLSRCS = $(SRC) $(SRC_STD) $(SRC_STD_C) $(SRC_TI) $(SRC_INT) $(SRC_STD_WIN) \
 	$(SRC_ZLIB) $(SRC_GC)
 
 
-#libphobos.a : $(OBJS) internal/gc/dmgc.a linux.mak
-libphobos.a : $(OBJS) internal/gc/dmgc.a $(ZLIB_OBJS) linux.mak
-	rm -f libphobos.a
+#$(LIB) : $(OBJS) internal/gc/dmgc.a linux.mak
+$(LIB) : $(OBJS) internal/gc/dmgc.a $(ZLIB_OBJS) linux.mak
+	rm -f $(LIB)
 	ar -r $@ $(OBJS) $(ZLIB_OBJS) $(GC_OBJS)
 
 ###########################################################
@@ -353,6 +355,9 @@ format.o : std/format.d
 
 gc.o : std/gc.d
 	$(DMD) -c $(DFLAGS) std/gc.d
+
+loader.o : std/loader.d
+	$(DMD) -c $(DFLAGS) std/loader.d
 
 math.o : std/math.d
 	$(DMD) -c $(DFLAGS) std/math.d
@@ -588,4 +593,4 @@ zip : $(ALLSRCS) linux.mak win32.mak phoboslicense.txt
 	zip phobos $(ALLSRCS) linux.mak win32.mak phoboslicense.txt
 
 clean:
-	$(RM) libphobos.a $(OBJS) unittest unittest.o
+	$(RM) $(LIB) $(OBJS) unittest unittest.o

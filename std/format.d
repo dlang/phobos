@@ -1,3 +1,6 @@
+
+// Written in the D programming language.
+
 /**
  * This module implements the workhorse functionality for string and I/O formatting.
  * It's comparable to C99's vsprintf().
@@ -120,6 +123,9 @@ enum Mangle : char
     Tenum     = 'E',
     Ttypedef  = 'T',
     Tdelegate = 'D',
+
+    Tconst    = 'x',
+    Tinvariant = 'y',
 }
 
 // return the TypeInfo for a primitive type and null otherwise.
@@ -874,6 +880,8 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
 
 	    case Mangle.Tstruct:
 	    {	TypeInfo_Struct tis = cast(TypeInfo_Struct)ti;
+		if (tis.xtoString is null)
+		    throw new FormatError("Can't convert " ~ tis.toString() ~ " to string: \"string toString()\" not defined");
 		s = tis.xtoString(argptr);
 		argptr += (tis.tsize() + 3) & ~3;
 		goto Lputstr;
@@ -1026,9 +1034,9 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
 	if (m == Mangle.Tarray)
 	{
 	    Mangle m2 = cast(Mangle)ti.classinfo.name[10];
-	    char[]  fmt;			// format string
-	    wchar[] wfmt;
-	    dchar[] dfmt;
+	    string  fmt;			// format string
+	    wstring wfmt;
+	    dstring dfmt;
 
 	    /* For performance reasons, this code takes advantage of the
 	     * fact that most format strings will be ASCII, and that the
@@ -1194,7 +1202,7 @@ Lerror:
 unittest
 {
     int i;
-    char[] s;
+    string s;
 
     debug(format) printf("std.format.format.unittest\n");
  
@@ -1280,7 +1288,7 @@ unittest
     assert(s == "0.00001000");
 
     s = "helloworld";
-    char[] r;
+    string r;
     r = std.string.format("%.2s", s[0..5]);
     assert(r == "he");
     r = std.string.format("%.20s", s[0..5]);
@@ -1343,7 +1351,7 @@ unittest
     r = std.string.format(arrulong);
     assert(r == "[100,999,0,0]");
 
-    char[][] arr2 = new char[][4];
+    string[] arr2 = new char[][4];
     arr2[0] = "hello";
     arr2[1] = "world";
     arr2[3] = "foo";

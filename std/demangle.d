@@ -1,4 +1,3 @@
-
 // Written in the D programming language.
 
 /*
@@ -14,6 +13,7 @@
 /* Authors:
  *	Walter Bright, Digital Mars, www.digitalmars.com
  *	Thomas Kuehne
+ *	Frits van Bommel
  */
 
 module std.demangle;
@@ -80,10 +80,10 @@ int main()
 -------------------
  */
 
-char[] demangle(char[] name)
+string demangle(string name)
 {
     size_t ni = 2;
-    char[] delegate() fparseTemplateInstanceName;
+    string delegate() fparseTemplateInstanceName;
 
     static void error()
     {
@@ -97,7 +97,7 @@ char[] demangle(char[] name)
 	    error();
 	return cast(ubyte)
 	      ( (c >= 'a') ? c - 'a' + 10 :
-	        (c >= 'A') ? c - 'A' + 10 :
+		(c >= 'A') ? c - 'A' + 10 :
 			     c - '0'
 	      );
     }
@@ -117,13 +117,13 @@ char[] demangle(char[] name)
 	return result;
     }
 
-    char[] parseSymbolName()
+    string parseSymbolName()
     {
 	//writefln("parseSymbolName() %d", ni);
 	size_t i = parseNumber();
 	if (ni + i > name.length)
 	    error();
-	char[] result;
+	string result;
 	if (i >= 5 &&
 	    name[ni] == '_' &&
 	    name[ni + 1] == '_' &&
@@ -154,10 +154,10 @@ char[] demangle(char[] name)
 	return result;
     }
 
-    char[] parseQualifiedName()
+    string parseQualifiedName()
     {
 	//writefln("parseQualifiedName() %d", ni);
-	char[] result;
+	string result;
 
 	while (ni < name.length && isdigit(name[ni]))
 	{
@@ -168,19 +168,19 @@ char[] demangle(char[] name)
 	return result;
     }
 
-    char[] parseType(char[] identifier = null)
+    string parseType(string identifier = null)
     {
 	//writefln("parseType() %d", ni);
 	int isdelegate = 0;
+	bool hasthisptr = false; /// For function/delegate types: expects a 'this' pointer as last argument
       Lagain:
 	if (ni >= name.length)
 	    error();
-	char[] p;
+	string p;
 	switch (name[ni++])
 	{
 	    case 'v':	p = "void";	goto L1;
-	    case 'b':	p = "bit";	goto L1;
-	    case 'x':	p = "bool";	goto L1;
+	    case 'b':	p = "bool";	goto L1;
 	    case 'g':	p = "byte";	goto L1;
 	    case 'h':	p = "ubyte";	goto L1;
 	    case 's':	p = "short";	goto L1;
@@ -227,13 +227,17 @@ char[] demangle(char[] name)
 		isdelegate = 1;
 		goto Lagain;
 
+	    case 'M':
+		hasthisptr = true;
+		goto Lagain;
+
 	    case 'F':				// D function
 	    case 'U':				// C function
 	    case 'W':				// Windows function
 	    case 'V':				// Pascal function
 	    case 'R':				// C++ function
 	    {	char mc = name[ni - 1];
-		char[] args;
+		string args;
 
 		while (1)
 		{
@@ -244,7 +248,8 @@ char[] demangle(char[] name)
 			break;
 		    if (c == 'X')
 		    {
-		        args ~= " ...";
+			if (!args.length) error();
+			args ~= " ...";
 			break;
 		    }
 		    if (args.length)
@@ -275,6 +280,12 @@ char[] demangle(char[] name)
 			    break;
 		    }
 		    break;
+		}
+		if (hasthisptr || isdelegate) {
+		    // add implicit 'this'/context pointer
+		    if (args.length)
+			args ~= ", ";
+		    args ~= "void*";
 		}
 		ni++;
 		if (!isdelegate && identifier.length)
@@ -322,9 +333,9 @@ char[] demangle(char[] name)
 	assert(0);
     }
 
-    char[] parseTemplateInstanceName()
+    string parseTemplateInstanceName()
     {
-	char[] result = parseSymbolName() ~ "!(";
+	auto result = parseSymbolName() ~ "!(";
 	int nargs;
 
 	while (1)
@@ -414,9 +425,8 @@ char[] demangle(char[] name)
 			    for (i = 0; i < n; i++)
 			    {	char c;
 
-				c = cast(char)
-					((ascii2hex(name[ni + i * 2]) << 4) +
-					 ascii2hex(name[ni + i * 2 + 1]));
+				c = (ascii2hex(name[ni + i * 2]) << 4) +
+				     ascii2hex(name[ni + i * 2 + 1]);
 				result ~= c;
 			    }
 			    ni += n * 2;
@@ -459,8 +469,12 @@ char[] demangle(char[] name)
 
     try
     {
-	char[] result = parseQualifiedName();
+	auto result = parseQualifiedName();
 	result = parseType(result);
+	while(ni < name.length){
+		result ~= " . " ~ parseType(parseQualifiedName());
+	}
+
 	if (ni != name.length)
 	    goto Lnot;
 	return result;
@@ -479,7 +493,7 @@ unittest
 {
     debug(demangle) printf("demangle.demangle.unittest\n");
 
-    static char[][2][] table =
+    static string[2][] table =
     [
 	[ "printf",	"printf" ],
 	[ "_foo",	"_foo" ],
@@ -496,12 +510,14 @@ unittest
 	[ "_D8demangle4testFLAiXi", "int demangle.test(lazy int[] ...)"] 
     ];
 
-    foreach (char[][2] name; table)
+    foreach (string[2] name; table)
     {
-	char[] r = demangle(name[0]);
+	string r = demangle(name[0]);
 	//writefln("[ \"%s\", \"%s\" ],", name[0], r);
 	assert(r == name[1]);
     }
 }
+
+
 
 

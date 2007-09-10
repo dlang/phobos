@@ -1,3 +1,5 @@
+// Written in the D programming language
+
 /*
 	Copyright (C) 2004-2005 Christopher E. Miller
 	
@@ -84,7 +86,7 @@ class SocketException: Exception
 {
 	int errorCode; /// Platform-specific error code.
 	
-	this(char[] msg, int err = 0)
+	this(string msg, int err = 0)
 	{
 		errorCode = err;
 		
@@ -185,8 +187,8 @@ enum ProtocolType: int
 class Protocol
 {
 	ProtocolType type;	/// These members are populated when one of the following functions are called without failure:
-	char[] name;		/// ditto
-	char[][] aliases;	/// ditto
+	string name;		/// ditto
+	string[] aliases;	/// ditto
 	
 	
 	void populate(protoent* proto)
@@ -203,7 +205,7 @@ class Protocol
 		
 		if(i)
 		{
-			aliases = new char[][i];
+			aliases = new string[i];
 			for(i = 0; i != aliases.length; i++)
 			{
 				aliases[i] = std.string.toString(proto.p_aliases[i]).dup;
@@ -216,7 +218,7 @@ class Protocol
 	}
 	
 	/** Returns false on failure */
-	bool getProtocolByName(char[] name)
+	bool getProtocolByName(string name)
 	{
 		protoent* proto;
 		proto = getprotobyname(toStringz(name));
@@ -246,7 +248,7 @@ unittest
 	Protocol proto = new Protocol;
 	assert(proto.getProtocolByType(ProtocolType.TCP));
 	printf("About protocol TCP:\n\tName: %.*s\n", proto.name);
-	foreach(char[] s; proto.aliases)
+	foreach(string s; proto.aliases)
 	{
 		printf("\tAlias: %.*s\n", s);
 	}
@@ -259,10 +261,10 @@ unittest
 class Service
 {
 	/** These members are populated when one of the following functions are called without failure: */
-	char[] name;
-	char[][] aliases;	/// ditto
+	string name;
+	string[] aliases;	/// ditto
 	ushort port;		/// ditto
-	char[] protocolName;	/// ditto
+	string protocolName;	/// ditto
 	
 	
 	void populate(servent* serv)
@@ -280,7 +282,7 @@ class Service
 		
 		if(i)
 		{
-			aliases = new char[][i];
+			aliases = new string[i];
 			for(i = 0; i != aliases.length; i++)
 			{
 				aliases[i] = std.string.toString(serv.s_aliases[i]).dup;
@@ -296,7 +298,7 @@ class Service
 	 * If a protocol name is omitted, any protocol will be matched.
 	 * Returns: false on failure.
 	 */
-	bool getServiceByName(char[] name, char[] protocolName)
+	bool getServiceByName(string name, string protocolName)
 	{
 		servent* serv;
 		serv = getservbyname(toStringz(name), toStringz(protocolName));
@@ -309,7 +311,7 @@ class Service
 	
 	// Any protocol name will be matched.
 	/// ditto
-	bool getServiceByName(char[] name)
+	bool getServiceByName(string name)
 	{
 		servent* serv;
 		serv = getservbyname(toStringz(name), null);
@@ -321,7 +323,7 @@ class Service
 	
 	
 	/// ditto
-	bool getServiceByPort(ushort port, char[] protocolName)
+	bool getServiceByPort(ushort port, string protocolName)
 	{
 		servent* serv;
 		serv = getservbyport(port, toStringz(protocolName));
@@ -353,7 +355,7 @@ unittest
 	{
 		printf("About service epmap:\n\tService: %.*s\n\tPort: %d\n\tProtocol: %.*s\n",
 			serv.name, serv.port, serv.protocolName);
-		foreach(char[] s; serv.aliases)
+		foreach(string s; serv.aliases)
 		{
 			printf("\tAlias: %.*s\n", s);
 		}
@@ -373,7 +375,7 @@ class HostException: Exception
 	int errorCode;	/// Platform-specific error code.
 	
 	
-	this(char[] msg, int err = 0)
+	this(string msg, int err = 0)
 	{
 		errorCode = err;
 		super(msg);
@@ -386,8 +388,8 @@ class HostException: Exception
 class InternetHost
 {
 	/** These members are populated when one of the following functions are called without failure: */
-	char[] name;
-	char[][] aliases;	/// ditto
+	string name;
+	string[] aliases;	/// ditto
 	uint32_t[] addrList;	/// ditto
 	
 	
@@ -414,7 +416,7 @@ class InternetHost
 		
 		if(i)
 		{
-			aliases = new char[][i];
+			aliases = new string[i];
 			for(i = 0; i != aliases.length; i++)
 			{
 				aliases[i] = std.string.toString(he.h_aliases[i]).dup;
@@ -449,7 +451,7 @@ class InternetHost
 	/**
 	 * Resolve host name. Returns false if unable to resolve.
 	 */	
-	bool getHostByName(char[] name)
+	bool getHostByName(string name)
 	{
 		hostent* he = gethostbyname(toStringz(name));
 		if(!he)
@@ -480,7 +482,7 @@ class InternetHost
 	 * dotted-decimal form $(I a.b.c.d).
 	 * Returns false if unable to resolve.
 	 */	
-	bool getHostByAddr(char[] addr)
+	bool getHostByAddr(string addr)
 	{
 		uint x = inet_addr(std.string.toStringz(addr));
 		hostent* he = gethostbyaddr(&x, 4, cast(int)AddressFamily.INET);
@@ -501,7 +503,7 @@ unittest
 	assert(ih.addrList.length);
 	InternetAddress ia = new InternetAddress(ih.addrList[0], InternetAddress.PORT_ANY);
 	printf("IP address = %.*s\nname = %.*s\n", ia.toAddrString(), ih.name);
-	foreach(int i, char[] s; ih.aliases)
+	foreach(int i, string s; ih.aliases)
 	{
 		printf("aliases[%d] = %.*s\n", i, s);
 	}
@@ -510,7 +512,7 @@ unittest
 	
 	assert(ih.getHostByAddr(ih.addrList[0]));
 	printf("name = %.*s\n", ih.name);
-	foreach(int i, char[] s; ih.aliases)
+	foreach(int i, string s; ih.aliases)
 	{
 		printf("aliases[%d] = %.*s\n", i, s);
 	}
@@ -522,7 +524,7 @@ unittest
  */
 class AddressException: Exception
 {
-	this(char[] msg)
+	this(string msg)
 	{
 		super(msg);
 	}
@@ -537,7 +539,7 @@ abstract class Address
 	protected sockaddr* name();
 	protected int nameLen();
 	AddressFamily addressFamily();	/// Family of this address.
-	char[] toString();		/// Human readable string representing this address.
+	string toString();		/// Human readable string representing this address.
 }
 
 /**
@@ -568,7 +570,7 @@ class UnknownAddress: Address
 	}
 	
 	
-	char[] toString()
+	string toString()
 	{
 		return "Unknown";
 	}
@@ -632,7 +634,7 @@ class InternetAddress: Address
 	 *          object.
 	 *   port = may be PORT_ANY as stated below.
 	 */
-	this(char[] addr, ushort port)
+	this(string addr, ushort port)
 	{
 		uint uiaddr = parse(addr);
 		if(ADDR_NONE == uiaddr)
@@ -666,19 +668,19 @@ class InternetAddress: Address
 	}
 	
 	/// Human readable string representing the IPv4 address in dotted-decimal form.	
-	char[] toAddrString()
+	string toAddrString()
 	{
 		return std.string.toString(inet_ntoa(sin.sin_addr)).dup;
 	}
 	
 	/// Human readable string representing the IPv4 port.
-	char[] toPortString()
+	string toPortString()
 	{
 		return std.string.toString(port());
 	}
 	
 	/// Human readable string representing the IPv4 address and port in the form $(I a.b.c.d:e).
-	char[] toString()
+	string toString()
 	{
 		return toAddrString() ~ ":" ~ toPortString();
 	}
@@ -689,7 +691,7 @@ class InternetAddress: Address
 	 * If the string is not a legitimate IPv4 address,
 	 * ADDR_NONE is returned.
 	 */
-	static uint parse(char[] addr)
+	static uint parse(string addr)
 	{
 		return ntohl(inet_addr(std.string.toStringz(addr)));
 	}
@@ -706,7 +708,7 @@ unittest
 /** */
 class SocketAcceptException: SocketException
 {
-	this(char[] msg, int err = 0)
+	this(string msg, int err = 0)
 	{
 		super(msg, err);
 	}
@@ -752,44 +754,21 @@ extern(C) struct timeval
 class SocketSet
 {
 	private:
-	uint nbytes; // Win32: excludes uint.sizeof "count".
-	byte* buf;
+	uint maxsockets; /// max desired sockets, the fd_set might be capable of holding more
+	fd_set set;
 	
 	
 	version(Win32)
 	{
 		uint count()
 		{
-			return *(cast(uint*)buf);
-		}
-		
-		
-		void count(int setter)
-		{
-			*(cast(uint*)buf) = setter;
-		}
-		
-		
-		socket_t* first()
-		{
-			return cast(socket_t*)(buf + uint.sizeof);
+			return set.fd_count;
 		}
 	}
 	else version(BsdSockets)
 	{
-		int maxfd = -1;
-		
-		
-		socket_t* first()
-		{
-			return cast(socket_t*)buf;
-		}
-	}
-	
-	
-	fd_set* _fd_set()
-	{
-		return cast(fd_set*)buf;
+		int maxfd;
+		uint count;
 	}
 	
 	
@@ -798,19 +777,8 @@ class SocketSet
 	/// Set the maximum amount of sockets that may be added.
 	this(uint max)
 	{
-		version(Win32)
-		{
-			nbytes = max * socket_t.sizeof;
-			buf = (new byte[nbytes + uint.sizeof]).ptr;
-			count = 0;
-		}
-		else version(BsdSockets)
-		{
-			nbytes = max / NFDBITS * socket_t.sizeof;
-			if(max % NFDBITS)
-				nbytes += socket_t.sizeof;
-			buf = (new byte[nbytes]).ptr; // new initializes to 0.
-		}
+		maxsockets = max;
+		reset();
 	}
 	
 	/// Uses the default maximum for the system.
@@ -822,14 +790,12 @@ class SocketSet
 	/// Reset the SocketSet so that there are 0 Sockets in the collection.	
 	void reset()
 	{
-		version(Win32)
-		{
-			count = 0;
-		}
-		else version(BsdSockets)
+		FD_ZERO(&set);
+		
+		version(BsdSockets)
 		{
 			maxfd = -1;
-			buf[0 .. nbytes] = 0;
+			count = 0;
 		}
 	}
 	
@@ -838,21 +804,19 @@ class SocketSet
 	in
 	{
 		// Make sure too many sockets don't get added.
-		version(Win32)
+		assert(count < maxsockets);
+		version(BsdSockets)
 		{
-			assert(count < max);
-		}
-		else version(BsdSockets)
-		{
-			assert(FDELT(s) < nbytes / socket_t.sizeof);
+			assert(FDELT(s) < (FD_SETSIZE / NFDBITS));
 		}
 	}
 	body
 	{
-		FD_SET(s, _fd_set);
+		FD_SET(s, &set);
 		
 		version(BsdSockets)
 		{
+			++count;
 			if(s > maxfd)
 				maxfd = s;
 		}
@@ -866,7 +830,12 @@ class SocketSet
 	
 	void remove(socket_t s)
 	{
-		FD_CLR(s, _fd_set);
+		FD_CLR(s, &set);
+		version(BsdSockets)
+		{
+			--count;
+			// note: adjusting maxfd would require scanning the set, not worth it
+		}
 	}
 	
 	
@@ -878,7 +847,7 @@ class SocketSet
 	
 	int isSet(socket_t s)
 	{
-		return FD_ISSET(s, _fd_set);
+		return FD_ISSET(s, &set);
 	}
 	
 	
@@ -892,24 +861,13 @@ class SocketSet
 	/// Return maximum amount of sockets that can be added, like FD_SETSIZE.
 	uint max()
 	{
-		version(Win32)
-		{
-			return nbytes / socket_t.sizeof;
-		}
-		else version(BsdSockets)
-		{
-			return nbytes / socket_t.sizeof * NFDBITS;
-		}
-		else
-		{
-			static assert(0);
-		}
+		return maxsockets;
 	}
 	
 	
 	fd_set* toFd_set()
 	{
-		return _fd_set;
+		return &set;
 	}
 	
 	
@@ -917,7 +875,7 @@ class SocketSet
 	{
 		version(Win32)
 		{
-			return 0;
+			return count;
 		}
 		else version(BsdSockets)
 		{
@@ -1036,7 +994,7 @@ class Socket
 	
 	
 	/// ditto
-	this(AddressFamily af, SocketType type, char[] protocolName)
+	this(AddressFamily af, SocketType type, string protocolName)
 	{
 		protoent* proto;
 		proto = getprotobyname(toStringz(protocolName));
@@ -1268,7 +1226,7 @@ class Socket
 	
 	
 	/// Returns the local machine's host name. Idea from mango.
-	static char[] hostName() // getter
+	static string hostName() // getter
 	{
 		char[256] result; // Host names are limited to 255 chars.
 		if(_SOCKET_ERROR == .gethostname(result.ptr, result.length))

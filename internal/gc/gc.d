@@ -145,6 +145,7 @@ void gc_init()
 void gc_term()
 {
     _gc.fullCollectNoStack();
+    _gc.Dtor();
 }
 
 Object _d_newclass(ClassInfo ci)
@@ -157,6 +158,7 @@ Object _d_newclass(ClassInfo ci)
 	p = std.c.stdlib.malloc(ci.init.length);
 	if (!p)
 	    _d_OutOfMemory();
+	debug(PRINTF) printf(" COM object p = %p\n", p);
     }
     else
     {
