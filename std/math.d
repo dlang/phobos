@@ -1,8 +1,25 @@
 // math.d
-// Written by Walter Bright
-// Copyright (c) 2001-2003 Digital Mars
-// All Rights Reserved
-// www.digitalmars.com
+/*
+ *  Copyright (C) 2001-2005 by Digital Mars, www.digitalmars.com
+ *  Written by Walter Bright
+ *
+ *  This software is provided 'as-is', without any express or implied
+ *  warranty. In no event will the authors be held liable for any damages
+ *  arising from the use of this software.
+ *
+ *  Permission is granted to anyone to use this software for any purpose,
+ *  including commercial applications, and to alter it and redistribute it
+ *  freely, subject to the following restrictions:
+ *
+ *  o  The origin of this software must not be misrepresented; you must not
+ *     claim that you wrote the original software. If you use this software
+ *     in a product, an acknowledgment in the product documentation would be
+ *     appreciated but is not required.
+ *  o  Altered source versions must be plainly marked as such, and must not
+ *     be misrepresented as being the original software.
+ *  o  This notice may not be removed or altered from any source
+ *     distribution.
+ */
 
 module std.math;
 
@@ -820,4 +837,232 @@ private int mfeq(real x, real y, real precision)
     if (isnan(y))
 	return 0;
     return fabs(x - y) <= precision;
+}
+
+/*******************************************
+ * Submitted by Don Clugston
+ * http://www.digitalmars.com/drn-bin/wwwnews?digitalmars.D/27735
+ *
+ *  "How equal" are two reals x and y?
+ *  Returns the number of mantissa bits which are equal in x and y;
+ *  this is similar to the concept of "significant figures".
+ *  For example, 0x1.F8p+60 and 0x1.F1p+60 are equal to 5 bits of precision.
+ *  If x==y, then precisionEquality(a,b) == real.mant_dig.
+ *
+ *  If x and y differ by a factor of two or more, then they have no
+ *  bits in common, so this function returns a value which is <=0.
+ *  Returns 0 if they differ by a factor of >=2 but < 4,
+ *  returns 1 for factors >=4 but <8, etc.
+ *
+ *  If the numbers have opposite sign, the difference in orders
+ *  of magnitude is based on the IEEE binary encoding.
+ *  For example, -1 and +1 differ by half the number line.
+ *
+ *  Pretend the numbers were fixed point. In the IEEE extended format,
+ *  there are about 32768 digits in front of the decimal point, and
+ *  the same number behind. But only the first 64 bits after the first '1'
+ *  bit are recorded.
+ *
+ *  If the exponents are different, then the return value
+ *  is negative, and gives the number of (binary) orders of
+ *  magnitude of difference between a and b.
+ */
+
+private int iabs(int i)
+{
+    return i >= 0 ? i : -i;
+}
+ 
+int precisionEquality(real a, real b)
+{
+    real diff = a-b;
+    ushort *pa = cast(ushort *)(&a);
+    ushort *pb = cast(ushort *)(&b);
+    ushort *pd = cast(ushort *)(&diff);
+
+    // The difference in exponent between 'a' and 'a-b'
+    // is equal to the number of mantissa bits of a which are
+    // equal to b. If the difference is negative, then a and b
+    // have different exponents. If it is positive, then a and b
+    // are equal to that number of decimal places. 
+    // AND with 0x7FFF to form the absolute value.
+    // Subtract 1 so that we round downwards.
+    int bitsdiff = ( ((pa[4]&0x7FFF) + (pb[4]&0x7FFF)-1)>>1) - (pd[4]&0x7FFF);
+
+    if ((pd[4]&0x7FFF) == 0)	// Difference is zero or denormal
+    {
+	if (a==b)
+	    return real.mant_dig;
+	// 'diff' is denormal, so the number of equal bits is higher;
+	// we need to add the number of zeros that lie at the start of
+	// its mantissa. We do this by multiplying by 2^real.mant_dig
+	diff*=0x1p+63;
+	return bitsdiff + real.mant_dig-(pd[4]&0x7FFF);
+    }
+
+    if (bitsdiff > 0)
+	return bitsdiff + 1;
+
+    // Check for NAN or Infinity.     
+    if (pd[4]&0x7FFF==0x7FFF)	// Result is NAN or INF
+    {
+	if (a==b)	// both were +INF or both were -INF.
+	{
+	    return real.mant_dig;
+	}
+	if (isnan(diff))
+	{
+	    return -65535;  // at least one was a NAN.
+	}
+	// fall through for comparisons of INF with large reals.
+    }
+    // Return the negative of the absolute value of
+    // the difference in exponents.
+
+    if ((pa[4]^pb[4])&0x8000)	// do they have opposite signs?
+    {	// Convert the 'offset' exponent format to twos-complement,
+	// then do a normal subtraction.
+	return 1-iabs(pa[4]-(0x8000-pb[4]));
+    }
+    return 1-iabs(pa[4]-pb[4]);
+}
+
+unittest
+{
+    // Exact equality
+    assert(precisionEquality(real.max,real.max)==real.mant_dig);
+    assert(precisionEquality(0,0)==real.mant_dig);
+    assert(precisionEquality(7.1824,7.1824)==real.mant_dig);
+    assert(precisionEquality(real.infinity,real.infinity)==real.mant_dig);
+
+    // one bit off exact equality
+    assert(precisionEquality(1+real.epsilon,1)==real.mant_dig-1);
+    assert(precisionEquality(1,1+real.epsilon)==real.mant_dig-1);
+    // one bit below. Must round off correctly when exponents are different.
+    assert(precisionEquality(1,1-real.epsilon)==real.mant_dig-1); 
+    assert(precisionEquality(1-real.epsilon,1)==real.mant_dig-1);
+    assert(precisionEquality(-1-real.epsilon,-1)==real.mant_dig-1);
+    assert(precisionEquality(-1+real.epsilon,-1)==real.mant_dig-1);
+
+    // Numbers that are close
+    assert(precisionEquality(0x1.Bp+5, 0x1.B8p+5)==5); 
+    assert(precisionEquality(0x1.8p+10, 0x1.Cp+10)==2);
+    assert(precisionEquality(1, 1.1249)==4);
+    assert(precisionEquality(1.5, 1)==1); 
+
+    // Extreme inequality
+    assert(precisionEquality(real.nan,0)==-65535);
+    assert(precisionEquality(0,-real.nan)==-65535);
+    assert(precisionEquality(real.nan,real.infinity)==-65535); 
+    assert(precisionEquality(real.infinity,-real.infinity)==-65533);
+    assert(precisionEquality(-real.max,real.infinity)==-65532);
+    assert(precisionEquality(-real.max,real.max)==-65531);
+
+    // Numbers that are half the number line apart
+    // Note that (real.max_exp-real.min_exp) = 32765
+    assert(precisionEquality(-real.max,0)==-32765);
+    assert(precisionEquality(-1,1)==-32765);
+    assert(precisionEquality(real.min,1)==-16381);
+
+    // Numbers that differ by one order of magnitude
+    assert(precisionEquality(real.max,real.infinity)==0);
+    assert(precisionEquality(1, 2)==0);
+    assert(precisionEquality(2, 1)==0);
+    assert(precisionEquality(1.5*(1-real.epsilon), 1)==2);
+    assert(precisionEquality(4*(1-real.epsilon), 1)==0);
+    assert(precisionEquality(4, 1)==-1);
+}
+
+
+/**************************************
+   int feqrel(real x, real y)
+   To what precision is x equal to y?
+   Public Domain. Author: Don Clugston, 18 Aug 2005.
+
+   Returns the number of mantissa bits which are equal in x and y.
+   eg, 0x1.F8p+60 and 0x1.F1p+60 are equal to 5 bits of precision.
+   If x == y, then feqrel(x, y) == real.mant_dig.
+
+   If x and y differ by a factor of two or more, or if one or both
+   is a nan, the return value is 0.
+*/
+
+int feqrel(real a, real b)
+{
+    if (a == b)
+	return real.mant_dig; // ensure diff!=0, cope with INF.
+
+    real diff = fabs(a-b);
+
+    ushort *pa = cast(ushort *)(&a);
+    ushort *pb = cast(ushort *)(&b);
+    ushort *pd = cast(ushort *)(&diff);
+
+    // The difference in abs(exponent) between a or b and abs(a-b)
+    // is equal to the number of mantissa bits of a which are
+    // equal to b. If negative, a and b have different exponents.
+    // If positive, a and b are equal to 'bitsdiff' bits.
+    // AND with 0x7FFF to form the absolute value.
+    // To avoid out-by-1 errors, we subtract 1 so it rounds down
+    // if the exponents were different. This means 'bitsdiff' is
+    // always 1 lower than we want, except that if bitsdiff==0,
+    // they could have 0 or 1 bits in common.
+    int bitsdiff = ( ((pa[4]&0x7FFF) + (pb[4]&0x7FFF)-1)>>1) - pd[4];
+
+    if (pd[4] == 0)
+    {	// Difference is denormal
+	// For denormals, we need to add the number of zeros that
+	// lie at the start of diff's mantissa.
+	// We do this by multiplying by 2^real.mant_dig
+	diff *= 0x1p+63;
+	return bitsdiff + real.mant_dig - pd[4];
+    }
+
+    if (bitsdiff > 0)
+	return bitsdiff + 1; // add the 1 we subtracted before
+
+    // Avoid out-by-1 errors when factor is almost 2.
+    return (bitsdiff == 0) ? (pa[4] == pb[4]) : 0;
+}
+
+unittest
+{
+   // Exact equality
+   assert(feqrel(real.max,real.max)==real.mant_dig);
+   assert(feqrel(0,0)==real.mant_dig);
+   assert(feqrel(7.1824,7.1824)==real.mant_dig);
+   assert(feqrel(real.infinity,real.infinity)==real.mant_dig);
+
+   // a few bits away from exact equality
+   real w=1;
+   for (int i=1; i<real.mant_dig-1; ++i) {
+      assert(feqrel(1+w*real.epsilon,1)==real.mant_dig-i);
+      assert(feqrel(1-w*real.epsilon,1)==real.mant_dig-i);
+      assert(feqrel(1,1+(w-1)*real.epsilon)==real.mant_dig-i+1);
+      w*=2;
+   }
+   assert(feqrel(1.5+real.epsilon,1.5)==real.mant_dig-1);
+   assert(feqrel(1.5-real.epsilon,1.5)==real.mant_dig-1);
+   assert(feqrel(1.5-real.epsilon,1.5+real.epsilon)==real.mant_dig-2);
+
+   // Numbers that are close
+   assert(feqrel(0x1.Bp+84, 0x1.B8p+84)==5);
+   assert(feqrel(0x1.8p+10, 0x1.Cp+10)==2);
+   assert(feqrel(1.5*(1-real.epsilon), 1)==2);
+   assert(feqrel(1.5, 1)==1);
+   assert(feqrel(2*(1-real.epsilon), 1)==1);
+
+   // Factors of 2
+   assert(feqrel(real.max,real.infinity)==0);
+   assert(feqrel(2*(1-real.epsilon), 1)==1);
+   assert(feqrel(1, 2)==0);
+   assert(feqrel(4, 1)==0);
+
+   // Extreme inequality
+   assert(feqrel(real.nan,real.nan)==0);
+   assert(feqrel(0,-real.nan)==0);
+   assert(feqrel(real.nan,real.infinity)==0);
+   assert(feqrel(real.infinity,-real.infinity)==0);
+   assert(feqrel(-real.max,real.infinity)==0);
+   assert(feqrel(real.max,-real.max)==0);
 }

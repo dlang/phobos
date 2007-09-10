@@ -31,6 +31,7 @@ private import std.uni;
 private import std.array;
 private import std.format;
 private import std.ctype;
+private import std.stdarg;
 
 extern (C)
 {
@@ -2946,3 +2947,340 @@ unittest
     r = tr("Abc", "AAA", "XYZ");
     assert(r == "Xbc");
 }
+
+
+/*************************************************
+ * Version       : v0.3
+ * Author        : David L. 'SpottedTiger' Davis
+ * Date Created  : 31.May.05 Compiled and Tested with dmd v0.125
+ * Date Modified : 01.Jun.05 Modified the function to handle the
+ *               :           imaginary and complex float-point 
+ *               :           datatypes.
+ *               :
+ * Licence       : Public Domain / Contributed to Digital Mars
+ */
+
+/+
+ ' final bool isNumeric(in char[], in bool = false)
+ ' ---------------------------------------------------------------
+ ' [in] char[] s can be formatted in the following ways:
+ '
+ ' Integer Whole Number:
+ ' (for byte, ubyte, short, ushort, int, uint, long, and ulong)
+ ' ['+'|'-']digit(s)[U|L|UL]
+ '
+ ' examples: 123, 123UL, 123L, +123U, -123L
+ '
+ ' Floating-Point Number:
+ ' (for float, double, real, ifloat, idouble, and ireal)
+ ' ['+'|'-']digit(s)[.][digit(s)][[e-|e+]digit(s)][i|f|L|Li|fi]]
+ '      or [nan|nani|inf|-inf]
+ '
+ ' examples: +123., -123.01, 123.3e-10f, 123.3e-10fi, 123.3e-10L
+ ' 
+ ' (for cfloat, cdouble, and creal)
+ ' ['+'|'-']digit(s)[.][digit(s)][[e-|e+]digit(s)][+]
+ '         [digit(s)[.][digit(s)][[e-|e+]digit(s)][i|f|L|Li|fi]]
+ '      or [nan|nani|nan+nani|inf|-inf]
+ '
+ ' examples: nan, -123e-1+456.9e-10Li, +123e+10+456i, 123+456
+ '
+ ' [in] bool bAllowSep 
+ ' False by default, but when set to true it will accept the 
+ ' separator characters "," and "_" within the string, but these  
+ ' characters should be stripped from the string before using any 
+ ' of the conversion functions like toInt(), toFloat(), and etc 
+ ' else an error will occur.
+ '
+ ' Also please note, that no spaces are allowed within the string  
+ ' anywhere whether it's a leading, trailing, or embedded space(s), 
+ ' thus they too must be stripped from the string before using this
+ ' function, or any of the conversion functions.
+ +/
+
+final bool isNumeric(in char[] s, in bool bAllowSep = false)
+{
+    int    iLen = s.length;
+    bool   bDecimalPoint = false;
+    bool   bExponent = false;
+    bool   bComplex = false;
+    char[] sx = std.string.tolower(s); 
+    int    j  = 0;
+    char   c;
+
+    //writefln("isNumeric(char[], bool = false) called!");
+    // Empty string, return false
+    if (iLen == 0)
+        return false;
+    
+    // Check for NaN (Not a Number)
+    if (sx == "nan" || sx == "nani" || sx == "nan+nani")
+        return true;
+        
+    // Check for Infinity
+    if (sx == "inf" || sx == "-inf")
+        return true;
+     
+    // A sign is allowed only in the 1st character   
+    if (sx[0] == '-' || sx[0] == '+')
+        j++;
+            
+    for (int i = j; i < iLen; i++)
+    {
+        c = sx[i];
+    
+        // Digits are good, continue checking 
+        // with the next character... ;)
+        if (c >= '0' && c <= '9') 
+            continue;
+
+        // Check for the complex type, and if found 
+        // reset the flags for checking the 2nd number.  
+        else if (c == '+')
+            if (i > 0) 
+            {
+                bDecimalPoint = false;
+                bExponent = false;
+                bComplex = true;
+                continue;
+            }
+            else
+                return false;
+                
+        // Allow only one exponent per number   
+        else if (c == 'e')  
+        {
+            // A 2nd exponent found, return not a number
+            if (bExponent)
+                return false;
+                
+            if (i + 1 < iLen)
+            {
+                // Look forward for the sign, and if 
+                // missing then this is not a number.
+                if (sx[i + 1] != '-' && sx[i + 1] != '+')
+                    return false;
+                else
+                {
+                    bExponent = true;
+                    i++;    
+                }    
+            }        
+            else
+                // Ending in "E", return not a number
+                return false;        
+        }  
+        // Allow only one decimal point per number to be used
+        else if (c == '.' )
+        {
+            // A 2nd decimal point found, return not a number
+            if (bDecimalPoint)
+                return false;
+            
+            bDecimalPoint = true;
+            continue;
+        }   
+        // Check for ending literal characters: "f,u,l,i,ul,fi,li",
+        // and wheater they're being used with the correct datatype.
+        else if (i == iLen - 2)
+        {
+            // Integer Whole Number
+            if (sx[i..iLen] == "ul" && 
+               (!bDecimalPoint && !bExponent && !bComplex))
+                return true;
+            // Floating-Point Number
+            else if ((sx[i..iLen] == "fi" || sx[i..iLen] == "li") &&
+                     (bDecimalPoint || bExponent || bComplex))
+                return true;
+            else if (sx[i..iLen] == "ul" && 
+                    (bDecimalPoint || bExponent || bComplex))
+                return false;    
+            // Could be a Integer or a Float, thus
+            // all these suffixes are valid for both  
+            else if (sx[i..iLen] == "ul" || 
+                     sx[i..iLen] == "fi" || 
+                     sx[i..iLen] == "li")
+                return true;
+            else    
+                return false;
+        }
+        else if (i == iLen - 1)
+        {
+            // Integer Whole Number
+            if ((c == 'u' || c == 'l') && 
+                (!bDecimalPoint && !bExponent && !bComplex))
+                return true;
+            // Check to see if the last character in the string 
+            // is the required 'i' character
+            else if (bComplex)
+                if (c == 'i')
+                    return true;
+                else 
+                    return false;        
+            // Floating-Point Number
+            else if ((c == 'l' || c == 'f' || c == 'i') &&
+                     (bDecimalPoint || bExponent))
+                return true;
+            // Could be a Integer or a Float, thus  
+            // all these suffixes are valid for both 
+            else if (c == 'l' || c == 'f' || c == 'i')
+                return true;
+            else
+                return false;
+        }
+        else
+            // Check if separators are allow  
+            // to be in the numeric string
+            if (bAllowSep == true && (c == '_' || c == ','))
+                continue;
+            else    
+                return false;       
+    }     
+    
+    return true;
+}
+
+// Allow any object as a parameter
+bool isNumeric(...)
+{
+    return isNumeric(_arguments, _argptr);
+}
+
+// Check only the first parameter, all others will be ignored. 
+bool isNumeric(TypeInfo[] _arguments, va_list _argptr)
+{
+    char[]  s  = "";
+    wchar[] ws = "";
+    dchar[] ds = "";
+
+    //writefln("isNumeric(...) called!");
+    if (_arguments.length == 0)
+        return false;
+
+    if (_arguments[0] == typeid(char[]))
+        return isNumeric(va_arg!(char[])(_argptr));
+    else if (_arguments[0] == typeid(wchar[]))
+        return isNumeric(std.utf.toUTF8(va_arg!(wchar[])(_argptr)));
+    else if (_arguments[0] == typeid(dchar[]))
+        return isNumeric(std.utf.toUTF8(va_arg!(dchar[])(_argptr)));
+    else if (_arguments[0] == typeid(real))
+        return true;
+    else if (_arguments[0] == typeid(double)) 
+        return true;   
+    else if (_arguments[0] == typeid(float)) 
+        return true;  
+    else if (_arguments[0] == typeid(ulong)) 
+        return true; 
+    else if (_arguments[0] == typeid(long)) 
+        return true;   
+    else if (_arguments[0] == typeid(uint)) 
+        return true;  
+    else if (_arguments[0] == typeid(int)) 
+        return true;   
+    else if (_arguments[0] == typeid(ushort)) 
+        return true;   
+    else if (_arguments[0] == typeid(short)) 
+        return true;   
+    else if (_arguments[0] == typeid(ubyte)) 
+    {
+       s.length = 1;
+       s[0]= va_arg!(ubyte)(_argptr);
+       return isNumeric(cast(char[])s);
+    }
+    else if (_arguments[0] == typeid(byte)) 
+    {
+       s.length = 1;
+       s[0] = va_arg!(byte)(_argptr);
+       return isNumeric(cast(char[])s);
+    }
+    else if (_arguments[0] == typeid(ireal))
+        return true;
+    else if (_arguments[0] == typeid(idouble)) 
+        return true;   
+    else if (_arguments[0] == typeid(ifloat)) 
+        return true;  
+    else if (_arguments[0] == typeid(creal))
+        return true;
+    else if (_arguments[0] == typeid(cdouble)) 
+        return true;   
+    else if (_arguments[0] == typeid(cfloat)) 
+        return true;  
+    else if (_arguments[0] == typeid(char))
+    {
+        s.length = 1;
+        s[0] = va_arg!(char)(_argptr);
+        return isNumeric(s);
+    }
+    else if (_arguments[0] == typeid(wchar))
+    {
+        ws.length = 1;
+        ws[0] = va_arg!(wchar)(_argptr);
+        return isNumeric(std.utf.toUTF8(ws));
+    }
+    else if (_arguments[0] == typeid(dchar))
+    { 
+        ds.length =  1;
+        ds[0] = va_arg!(dchar)(_argptr);
+        return isNumeric(std.utf.toUTF8(ds));
+    }
+    //else if (_arguments[0] == typeid(cent)) 
+    //    return true;   
+    //else if (_arguments[0] == typeid(ucent)) 
+    //    return true;  
+    else       
+       return false; 
+}
+
+unittest
+{
+    writefln( "isNumeric(in char[], bool = false).unittest" );
+    char[] s;
+
+    // Test the isNumeric(in char[]) function
+    assert(isNumeric("1") == true );
+    assert(isNumeric("1.0") == true );
+    assert(isNumeric("1e-1") == true );
+    assert(isNumeric("12345xxxx890") == false );
+    assert(isNumeric("567L") == true );
+    assert(isNumeric("23UL") == true );
+    assert(isNumeric("-123..56f") == false );
+    assert(isNumeric("12.3.5.6") == false );
+    assert(isNumeric(" 12.356") == false );
+    assert(isNumeric("123 5.6") == false );
+    assert(isNumeric("1233E-1+1.0e-1i") == true );
+ 
+    assert(isNumeric("123.00E-5+1234.45E-12Li") == true);
+    assert(isNumeric("123.00e-5+1234.45E-12iL") == false);
+    assert(isNumeric("123.00e-5+1234.45e-12uL") == false);
+    assert(isNumeric("123.00E-5+1234.45e-12lu") == false);
+  
+    assert(isNumeric("123fi") == true);
+    assert(isNumeric("123li") == true);
+    assert(isNumeric("--123L") == false);
+    assert(isNumeric("+123.5UL") == false);
+    assert(isNumeric("123f") == true);
+    assert(isNumeric("123.u") == false);
+
+    assert(isNumeric(std.string.toString(real.nan)) == true);
+    assert(isNumeric(std.string.toString(-real.infinity)) == true);
+    assert(isNumeric(std.string.toString(123e+2+1234.78Li)) == true);
+
+    s = "$250.99-";
+    assert(isNumeric(s[1..s.length - 2]) == true);
+    assert(isNumeric(s) == false);
+    assert(isNumeric(s[0..s.length - 1]) == false);
+
+    // These test calling the isNumeric(...) function
+    assert(isNumeric(1,123UL) == true);
+    assert(isNumeric('2') == true);
+    assert(isNumeric('x') == false);
+    assert(isNumeric(cast(byte)0x57) == false); // 'W'
+    assert(isNumeric(cast(byte)0x37) == true);  // '7'
+    assert(isNumeric(cast(wchar[])"145.67") == true);
+    assert(isNumeric(cast(dchar[])"145.67U") == false);
+    assert(isNumeric(123_000.23fi) == true);
+    assert(isNumeric(123.00E-5+1234.45E-12Li) == true);
+    assert(isNumeric(real.nan) == true);
+    assert(isNumeric(-real.infinity) == true);
+}
+

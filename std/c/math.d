@@ -4,6 +4,8 @@
  * www.digitalmars.com
  */
 
+module std.c.math;
+
 extern (C):
 
 alias float float_t;

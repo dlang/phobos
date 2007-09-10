@@ -22,11 +22,12 @@ module std.stream;
  *  OutputStream      interface for writing
  *  Stream            abstract base of stream implementations
  *    File            an OS file stream
- *    BufferedStream  a buffered stream wrapping another stream
- *      BufferedFile  a buffered File
- *    EndianStream    a wrapper stream for swapping byte order and BOMs
+ *    FilterStream    a base-class for wrappers around another stream
+ *      BufferedStream  a buffered stream wrapping another stream
+ *        BufferedFile  a buffered File
+ *      EndianStream    a wrapper stream for swapping byte order and BOMs
+ *      SliceStream     a portion of another stream
  *    MemoryStream    a stream entirely stored in main memory
- *    SliceStream     a portion of another stream
  *    TArrayStream    a stream wrapping an array-like buffer
  */
 
@@ -35,26 +36,21 @@ module std.stream;
 class StreamException: Exception {
   this(char[] msg) { super(msg); }
 }
-alias StreamException StreamError; // for backwards compatibility
 
 // thrown when unable to read data from Stream
 class ReadException: StreamException {
   this(char[] msg) { super(msg); }
 }
-alias ReadException ReadError; // for backwards compatibility
 
 // thrown when unable to write data to Stream
 class WriteException: StreamException {
   this(char[] msg) { super(msg); }
 }
-alias WriteException WriteError; // for backwards compatibility
 
 // thrown when unable to move Stream pointer
 class SeekException: StreamException {
   this(char[] msg) { super(msg); }
 }
-alias SeekException SeekError; // for backwards compatibility
-
 
 // seek whence...
 enum SeekPos {
@@ -1121,7 +1117,7 @@ class Stream : InputStream, OutputStream {
   void close() {
     if (isopen)
       flush();
-    readEOF = isopen = readable = writeable = seekable = false;
+    readEOF = prevCr = isopen = readable = writeable = seekable = false;
   }
 
   // creates a string in memory containing copy of stream data
@@ -1189,9 +1185,72 @@ class Stream : InputStream, OutputStream {
   }
 }
 
+// Base class for streams that wrap a backing source stream
+class FilterStream : Stream {
+  private Stream s;              // source stream
+  bit nestClose = true; // close the source when this stream closes
+
+  // Construct a FilterStream around source
+  this(Stream source) {
+    s = source;
+    resetSource();
+  }
+
+  // source getter/setter
+  final Stream source(){return s;}
+  void source(Stream s) {
+    close();
+    this.s = s;
+    resetSource();
+  }
+
+  // set this streams state for a new or changed source
+  void resetSource() {
+    if (s !is null) {
+      readable = s.readable;
+      writeable = s.writeable;
+      seekable = s.seekable;
+      isopen = s.isOpen();
+    } else {
+      readable = writeable = seekable = false;
+      isopen = false;
+    }
+    readEOF = prevCr = false;
+  }
+
+  // read from source
+  size_t readBlock(void* buffer, size_t size) {
+    size_t res = s.readBlock(buffer,size);
+    readEOF = res == 0;
+    return res;
+  }
+
+  // write to source
+  size_t writeBlock(void* buffer, size_t size) {
+    return s.writeBlock(buffer,size);
+  }
+
+  // close stream
+  override void close() { 
+    if (isopen) {
+      super.close();
+      if (nestClose)
+	s.close();
+    }
+  }
+
+  // seek on source
+  override ulong seek(long offset, SeekPos whence) {
+    readEOF = false;
+    return s.seek(offset,whence);
+  }
+
+  override size_t available () { return s.available(); }
+  override void flush() { super.flush(); s.flush(); }
+}
+
 // A stream that wraps a source stream in a buffer
-class BufferedStream : Stream {
-  Stream s;             // source stream
+class BufferedStream : FilterStream {
   ubyte[] buffer;       // buffer, if any
   uint bufferCurPos;    // current position in buffer
   uint bufferLen;       // amount of data in buffer
@@ -1218,36 +1277,16 @@ class BufferedStream : Stream {
   const uint DefaultBufferSize = 8192;
 
   this(Stream source, uint bufferSize = DefaultBufferSize) {
-    super();
+    super(source);
     if (bufferSize)
       buffer = new ubyte[bufferSize];
-    s = source;
-    updateAttribs();
   }
 
-  void updateAttribs() {
-    if (s !is null) {
-      readable = s.readable;
-      writeable = s.writeable;
-      seekable = s.seekable;
-      isopen = s.isOpen();
-    } else {
-      readable = writeable = seekable = false;
-      isopen = false;
-    }
-    readEOF = false;
+  protected void resetSource() {
+    super.resetSource();
     streamPos = 0;
     bufferLen = bufferSourcePos = bufferCurPos = 0;
     bufferDirty = false;
-  }
-
-  // close source and stream
-  override void close() {
-    if (isopen) {
-      super.close();
-      s.close();
-      updateAttribs();
-    }
   }
 
   // reads block of data of specified size using any buffered data
@@ -1281,14 +1320,12 @@ class BufferedStream : Stream {
 
     if (len >= buffer.length) {
       // buffer can't hold the data so fill output buffer directly
-      size_t siz = s.readBlock(outbuf, len);
+      size_t siz = super.readBlock(outbuf, len);
       readsize += siz;
       streamPos += siz;
-      readEOF = siz == 0;
     } else {
       // read a new block into buffer
-      bufferLen = s.readBlock(buffer, buffer.length);
-      readEOF = bufferLen == 0;
+      bufferLen = super.readBlock(buffer, buffer.length);
       if (bufferLen < len) len = bufferLen;
       outbuf[0 .. len] = buffer[0 .. len];
       bufferSourcePos = bufferLen;
@@ -1413,8 +1450,7 @@ class BufferedStream : Stream {
 	    }
 	  }
 	  flush();
-	  size_t res = s.readBlock(buffer,buffer.length);
-          readEOF = res == 0;
+	  size_t res = super.readBlock(buffer,buffer.length);
 	  if(!res) break L0; // EOF
 	  bufferSourcePos = bufferLen = res;
 	  streamPos += res;
@@ -1447,7 +1483,6 @@ class BufferedStream : Stream {
     assert(bufferLen == 0);
   }
   body {
-    super.flush();
     if (writeable && bufferDirty) {
       if (bufferSourcePos != 0 && seekable) {
 	// move actual file pointer to front of buffer
@@ -1459,6 +1494,7 @@ class BufferedStream : Stream {
 	throw new WriteException("Unable to write to stream");
       }
     }
+    super.flush();
     long diff = cast(long)bufferCurPos-bufferSourcePos;
     if (diff != 0 && seekable) {
       // move actual file pointer to current position
@@ -1479,11 +1515,10 @@ class BufferedStream : Stream {
       return false;
     if (bufferLen == buffer.length)
       flush();
-    size_t res = s.readBlock(&buffer[bufferLen],buffer.length-bufferLen);
+    size_t res = super.readBlock(&buffer[bufferLen],buffer.length-bufferLen);
     bufferSourcePos +=  res;
     bufferLen += res;
     streamPos += res;
-    readEOF = res == 0;
     return readEOF;
   }
 
@@ -1497,7 +1532,6 @@ class BufferedStream : Stream {
   size_t available() {
     return bufferLen - bufferCurPos;
   }
-
 }
 
 // generic File error, base class for all
@@ -1703,7 +1737,7 @@ class File: Stream {
   override ulong seek(long offset, SeekPos rel) {
     assertSeekable();
     version (Win32) {
-      int hi = cast(int)((offset>>32) & 0xFFFFFFFF);
+      int hi = cast(int)(offset>>32);
       uint low = SetFilePointer(hFile, offset, &hi, rel);
       if ((low == INVALID_SET_FILE_POINTER) && (GetLastError() != 0))
 	throw new SeekException("unable to move file pointer");
@@ -1715,6 +1749,15 @@ class File: Stream {
     }
     readEOF = false;
     return result;
+  }
+
+  override size_t available() {
+    if (seekable) {
+      ulong lavail = size - position;
+      if (lavail > size_t.max) lavail = size_t.max;
+      return cast(size_t)lavail;
+    }
+    return 0;
   }
 
   // OS-specific property, just in case somebody wants
@@ -1744,6 +1787,7 @@ class File: Stream {
     file.open("stream.$$$");
     // should be ok to read
     assert(file.readable);
+    assert(file.available == file.size);
     char[] line = file.readLine();
     char[] exp = "Testing stream.d:";
     assert(line[0] == 'T');
@@ -1821,14 +1865,14 @@ class BufferedFile: BufferedStream {
   void open(char[] filename, FileMode mode = FileMode.In) {
     File sf = cast(File)s;
     sf.open(filename,mode);
-    updateAttribs();
+    resetSource();
   }
 
   // creates file in requested mode
   void create(char[] filename, FileMode mode = FileMode.Out) {
     File sf = cast(File)s;
     sf.create(filename,mode);
-    updateAttribs();
+    resetSource();
   }
 
   // run a few tests same as File
@@ -1900,20 +1944,14 @@ ubyte[][NBOMS] ByteOrderMarks =
   ];
 
 // A stream that wraps a source stream with endian support
-class EndianStream : Stream {
-  Stream s;             // source stream
+class EndianStream : FilterStream {
   Endian endian;        // endianness of the source stream
 
   // Construct an Endian stream with specified endianness, defaulting
   // to the native endiannes.
   this(Stream source, Endian end = std.system.endian) {
-    super();
-    s = source;
+    super(source);
     endian = end;
-    readable = s.readable;
-    writeable = s.writeable;
-    seekable = s.seekable;
-    isopen = s.isOpen();
   }
 
   /* Return -1 if no BOM and otherwise read the BOM and return it.
@@ -2007,10 +2045,6 @@ class EndianStream : Stream {
     }
   }
 
-  size_t readBlock(void* buffer, size_t size) {
-    return s.readBlock(buffer,size);
-  }
-
   void read(out short x) { readExact(&x, x.sizeof); fixBO(&x,x.sizeof); }
   void read(out ushort x) { readExact(&x, x.sizeof); fixBO(&x,x.sizeof); }
   void read(out int x) { readExact(&x, x.sizeof); fixBO(&x,x.sizeof); }
@@ -2063,9 +2097,6 @@ class EndianStream : Stream {
     writeBlock(bom,bom.length);
   }
 
-  size_t writeBlock(void* buffer, size_t size) {
-    return s.writeBlock(buffer,size);
-  }
   void write(short x) { fixBO(&x,x.sizeof); writeExact(&x, x.sizeof); }
   void write(ushort x) { fixBO(&x,x.sizeof); writeExact(&x, x.sizeof); }
   void write(int x) { fixBO(&x,x.sizeof); writeExact(&x, x.sizeof); }
@@ -2091,23 +2122,6 @@ class EndianStream : Stream {
     }
   }
 
-  // close stream
-  override void close() { 
-    if (isopen) {
-      super.close();
-      s.close();
-    }
-  }
-
-  override ulong seek(long offset, SeekPos whence) {
-    return s.seek(offset,whence);
-  }
-
-  override size_t available () {
-    return s.available();
-  }
-
-  override void flush() { super.flush(); s.flush();  }
   override bool eof() { return s.eof() && !ungetAvailable();  }
   override ulong size() { return s.size();  }
 
@@ -2200,8 +2214,8 @@ class EndianStream : Stream {
 // The Buffer type must support .length, opIndex and opSlice
 class TArrayStream(Buffer): Stream {
   Buffer buf; // current data
-  size_t len; // current data length
-  size_t cur; // current file position
+  ulong len;  // current data length
+  ulong cur;  // current file position
 
   // use this buffer, non-copying.
   this(Buffer buf) {
@@ -2231,8 +2245,9 @@ class TArrayStream(Buffer): Stream {
   override size_t writeBlock(void* buffer, size_t size) {
     assertWriteable();
     ubyte* cbuf = cast(ubyte*) buffer;
-    if (cur + size > buf.length)
-      size = buf.length - cur;
+    ulong blen = buf.length;
+    if (cur + size > blen)
+      size = blen - cur;
     ubyte[] ubuf = cast(ubyte[])buf[cur .. cur + size];
     ubuf[] = cbuf[0 .. size];
     cur += size;
@@ -2264,7 +2279,12 @@ class TArrayStream(Buffer): Stream {
   override size_t available () { return len - cur; }
 
   // returns pointer to stream data
-  ubyte[] data() { return cast(ubyte[])buf [0 .. len]; }
+  ubyte[] data() { 
+    if (len > size_t.max)
+      throw new StreamException("Stream too big");
+    void[] res = buf[0 .. len];
+    return cast(ubyte[])res;
+  }
 
   override char[] toString() {
     return cast(char[]) data ();
@@ -2323,7 +2343,6 @@ class MemoryStream: TArrayStream!(ubyte[]) {
     return super.writeBlock(buffer,size);
   }
 
-  /* Test the whole class. */
   unittest {
     MemoryStream m;
 
@@ -2370,45 +2389,28 @@ class MemoryStream: TArrayStream!(ubyte[]) {
   }
 }
 
-
 import std.mmfile;
-// TODO: why check isopen and silently proceed?
-
 // stream wrapping memory-mapped files
 class MmFileStream : TArrayStream!(MmFile) {
 
-  // constructor to wrap file
   this(MmFile file) {
     super (file);
     MmFile.Mode mode = file.mode;
     writeable = mode > MmFile.Mode.Read;
   }
 
-  override size_t readBlock(void* buffer, size_t size) {
-    if (isopen)
-      return super.readBlock(buffer,size);
-    else
-      return 0;
-  }
-
-  override size_t writeBlock(void* buffer, size_t size) {
-    if (isopen)
-      return super.writeBlock(buffer,size);
-    else
-      return 0;
-  }
-
-  // flush stream
   override void flush() {
-    if (isopen)
+    if (isopen) {
+      super.flush();
       buf.flush();
+    }
   }
 
-  // close stream
   override void close() {
     if (isopen) {
       super.close();
       delete buf;
+      buf = null;
     }
   }
 }
@@ -2416,7 +2418,6 @@ class MmFileStream : TArrayStream!(MmFile) {
 unittest {
   MmFile mf = new MmFile("testing.txt",MmFile.Mode.ReadWriteNew,100,null);
   MmFileStream m;
-
   m = new MmFileStream (mf);
   m.writeString ("Hello, world");
   assert (m.position () == 12);
@@ -2427,7 +2428,8 @@ unittest {
   assert (m.seekSet (4));
   assert (m.readString (4) == "o, w");
   m.writeString ("ie");
-  assert ((cast(char[]) m.data())[0 .. 12] == "Hello, wield");
+  ubyte[] dd = m.data();
+  assert ((cast(char[]) dd)[0 .. 12] == "Hello, wield");
   m.position = 12;
   m.writeString ("Foo");
   assert (m.position () == 15);
@@ -2445,112 +2447,72 @@ unittest {
 
 // slices off a portion of another stream, making seeking
 // relative to the boundaries of the slice.
-class SliceStream : Stream {
-  Stream base; // stream to base this off of.
-  ulong pos;  // our position relative to low
-  ulong low; // low stream offset.
-  ulong high; // high stream offset.
-  bit bounded; // upper-bounded by high.
-  bit nestClose; // if set, close base when closing this stream.
+class SliceStream : FilterStream {
+  private {
+    ulong pos;  // our position relative to low
+    ulong low; // low stream offset.
+    ulong high; // high stream offset.
+    bit bounded; // upper-bounded by high.
+  }
 
-  // set the base stream and the low offset but leave the high unbounded.
-  this (Stream base, ulong low)
+  // set the s stream and the low offset but leave the high unbounded.
+  this (Stream s, ulong low)
   in {
-    assert (base !is null);
-    assert (low <= base.size ());
+    assert (low <= s.size ());
   }
   body {
-    super ();
-    this.base = base;
+    super(s);
     this.low = low;
     this.high = 0;
     this.bounded = false;
-    readable = base.readable;
-    writeable = base.writeable;
-    seekable = base.seekable;
-    isopen = base.isOpen();
   }
 
-  // set the base stream, the low offset, and the high offset.
-  this (Stream base, ulong low, ulong high)
+  // set the source stream, the low offset, and the high offset.
+  this (Stream s, ulong low, ulong high)
   in {
-    assert (base !is null);
     assert (low <= high);
-    assert (high <= base.size ());
+    assert (high <= s.size ());
   }
   body {
-    super ();
-    this.base = base;
+    super(s);
     this.low = low;
     this.high = high;
     this.bounded = true;
-    readable = base.readable;
-    writeable = base.writeable;
-    seekable = base.seekable;
-    isopen = base.isOpen();
   }
 
   invariant {
     if (bounded)
       assert (pos <= high - low);
     else
-      assert (pos <= base.size - low);
-  }
-
-  override bool isOpen () {
-    if (isopen)
-      return base.isOpen();
-    else
-      return false;
-  }
-
-  override void flush() { 
-    if (isopen) {
-      super.flush();
-      base.flush();
-    }
-  }
-
-  override void close () {
-    if (isopen) {
-      super.close();
-      if (nestClose)
-	base.close();
-    }
+      assert (pos <= s.size - low);
   }
 
   override size_t readBlock (void *buffer, size_t size) {
     assertReadable();
-    if (bounded) {
-      if (size > high - low + pos)
-	size = high - low + pos;
-    }
-
-    ulong bp = base.position;
+    if (bounded && size > high - low - pos)
+	size = high - low - pos;
+    ulong bp = s.position;
     if (seekable)
-      base.position = low + pos;
-    size_t ret = base.readBlock(buffer, size);
+      s.position = low + pos;
+    size_t ret = super.readBlock(buffer, size);
     if (seekable) {
-      pos = base.position - low;
-      base.position = bp;
+      pos = s.position - low;
+      s.position = bp;
     }
     return ret;
   }
 
   override size_t writeBlock (void *buffer, size_t size) {
     assertWriteable();
-    if (bounded) {
-      if (size > high - low + pos)
-	size = high - low + pos;
-    }
-
-    ulong bp = base.position;
+    if (bounded && size > high - low - pos)
+	size = high - low - pos;
+    ulong bp = s.position;
     if (seekable)
-      base.position = low + pos;
-    size_t ret = base.writeBlock(buffer, size);
+      s.position = low + pos;
+    size_t ret = s.writeBlock(buffer, size);
     if (seekable) {
-      pos = base.position - low;
-      base.position = bp;
+      pos = s.position - low;
+      s.position = bp;
     }
     return ret;
   }
@@ -2560,40 +2522,45 @@ class SliceStream : Stream {
     long spos;
 
     switch (rel) {
-      case SeekPos.Set: {
+      case SeekPos.Set:
 	spos = offset;
 	break;
-      }
-      case SeekPos.Current: {
+      case SeekPos.Current:
 	spos = pos + offset;
 	break;
-      }
-      case SeekPos.End: {
+      case SeekPos.End:
 	if (bounded)
 	  spos = high - low + offset;
 	else
-	  spos = base.size - low + offset;
+	  spos = s.size - low + offset;
 	break;
-      }
     }
 
     if (spos < 0)
       pos = 0;
     else if (bounded && spos > high - low)
       pos = high - low;
-    else if (!bounded && spos > base.size - low)
-      pos = base.size - low;
+    else if (!bounded && spos > s.size - low)
+      pos = s.size - low;
     else
       pos = spos;
 
+    readEOF = false;
     return pos;
   }
 
   override size_t available () {
-    return size - pos;
+    size_t res = s.available;
+    ulong bp = s.position;
+    if (bp <= pos+low && pos+low <= bp+res) {
+      if (!bounded || bp+res <= high)
+	return bp + res - pos - low;
+      else if (high <= bp+res)
+	return high - pos - low;
+    }
+    return 0;
   }
 
-  /* Test the whole class. */
   unittest {
     MemoryStream m;
     SliceStream s;
@@ -2627,7 +2594,6 @@ class SliceStream : Stream {
 
     s = new SliceStream (m, 4);
     assert (s.size () == 14);
-    assert (s.available == 14);
     assert (s.toString () == "Vrooorld\nBlaho");
     s.seekEnd (0);
     assert (s.available == 0);
@@ -2636,7 +2602,6 @@ class SliceStream : Stream {
     assert (s.position () == 25);
     assert (s.seekSet (0) == 0);
     assert (s.size () == 25);
-    assert (s.available == 25);
     assert (m.position () == 18);
     assert (m.size () == 29);
     assert (m.toString() == "HellVrooorld\nBlaho, etcetera.");
@@ -2659,28 +2624,3 @@ private bit isoctdigit(char c) {
 private bit ishexdigit(char c) {
   return isdigit(c) || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f');
 }
-
-// standard IO devices
-deprecated File stdin, stdout, stderr;
-
-version (Win32) {
-  // API imports
-  private extern(Windows) {
-    HANDLE GetStdHandle(DWORD);
-  }
-
-  static this() {
-    // open standard I/O devices
-    stdin = new File(GetStdHandle(cast(uint)-10), FileMode.In);
-    stdout = new File(GetStdHandle(cast(uint)-11), FileMode.Out);
-    stderr = new File(GetStdHandle(cast(uint)-12), FileMode.Out);
-  }
-} else version (linux) {
-  static this() {
-    // open standard I/O devices
-    stdin = new File(0, FileMode.In);
-    stdout = new File(1, FileMode.Out);
-    stderr = new File(2, FileMode.Out);
-  }
-}
-

@@ -1,5 +1,5 @@
 
-module uni;
+module std.uni;
 
 int isUniLower(dchar c)
 {

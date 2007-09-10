@@ -804,7 +804,7 @@ uint getAttributes(char[] name)
 
 int exists(char[] name)
 {
-    return access(toStringz(name),0) != 0;
+    return access(toStringz(name),0) == 0;
 
 /+
     struct_stat statbuf;

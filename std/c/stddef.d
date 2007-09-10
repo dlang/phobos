@@ -5,6 +5,8 @@
  * Placed into Public Domain.
  */
 
+module std.c.stddef;
+
 version (Win32)
 {
     alias wchar wchar_t;
