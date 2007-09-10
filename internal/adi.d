@@ -236,12 +236,21 @@ unittest
 
 extern (C) int _adEq(Array a1, Array a2, TypeInfo ti)
 {
+    //printf("a1.length = %d, a2.length = %d\n", a1.length, a2.length);
     if (a1.length != a2.length)
 	return 0;		// not equal
     int sz = ti.tsize();
     //printf("sz = %d\n", sz);
     void *p1 = a1.ptr;
     void *p2 = a2.ptr;
+
+/+
+    for (int i = 0; i < a1.length; i++)
+    {
+	printf("%4x %4x\n", (cast(short*)p1)[i], (cast(short*)p2)[i]);
+    }
++/
+
     for (int i = 0; i < a1.length; i++)
     {
 	if (!ti.equals(p1 + i * sz, p2 + i * sz))

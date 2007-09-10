@@ -429,25 +429,23 @@ char[] toUTF8(char[4] buf, dchar c)
     }
     body
     {
-	uint L;
-
 	if (c <= 0x7F)
 	{
 	    buf[0] = cast(char) c;
-	    L = 1;
+	    return buf[0 .. 1];
 	}
 	else if (c <= 0x7FF)
 	{
 	    buf[0] = cast(char)(0xC0 | (c >> 6));
 	    buf[1] = cast(char)(0x80 | (c & 0x3F));
-	    L = 2;
+	    return buf[0 .. 2];
 	}
 	else if (c <= 0xFFFF)
 	{
 	    buf[0] = cast(char)(0xE0 | (c >> 12));
 	    buf[1] = cast(char)(0x80 | ((c >> 6) & 0x3F));
 	    buf[2] = cast(char)(0x80 | (c & 0x3F));
-	    L = 3;
+	    return buf[0 .. 3];
 	}
 	else if (c <= 0x10FFFF)
 	{
@@ -455,13 +453,12 @@ char[] toUTF8(char[4] buf, dchar c)
 	    buf[1] = cast(char)(0x80 | ((c >> 12) & 0x3F));
 	    buf[2] = cast(char)(0x80 | ((c >> 6) & 0x3F));
 	    buf[3] = cast(char)(0x80 | (c & 0x3F));
-	    L = 4;
+	    return buf[0 .. 4];
 	}
 	else
 	{
 	    assert(0);
 	}
-	return buf[0 .. L];
     }
 
 char[] toUTF8(char[] s)
@@ -477,10 +474,25 @@ char[] toUTF8(char[] s)
 char[] toUTF8(wchar[] s)
 {
     char[] r;
+    size_t i;
+    size_t slen = s.length;
 
-    foreach (dchar c; s)
-    {
-	encode(r, c);
+    r.length = slen;
+
+    for (i = 0; i < slen; i++)
+    {	wchar c = s[i];
+
+	if (c <= 0x7F)
+	    r[i] = c;		// fast path for ascii
+	else
+	{
+	    r.length = i;
+	    foreach (dchar c; s[i .. slen])
+	    {
+		encode(r, c);
+	    }
+	    break;
+	}
     }
     return r;
 }
@@ -488,10 +500,25 @@ char[] toUTF8(wchar[] s)
 char[] toUTF8(dchar[] s)
 {
     char[] r;
+    size_t i;
+    size_t slen = s.length;
 
-    foreach (dchar c; s)
-    {
-	encode(r, c);
+    r.length = slen;
+
+    for (i = 0; i < slen; i++)
+    {	dchar c = s[i];
+
+	if (c <= 0x7F)
+	    r[i] = c;		// fast path for ascii
+	else
+	{
+	    r.length = i;
+	    foreach (dchar c; s[i .. slen])
+	    {
+		encode(r, c);
+	    }
+	    break;
+	}
     }
     return r;
 }
@@ -505,32 +532,39 @@ wchar[] toUTF16(wchar[2] buf, dchar c)
     }
     body
     {
-	uint L;
-
 	if (c <= 0xFFFF)
 	{
 	    buf[0] = cast(wchar) c;
-	    L = 1;
+	    return buf[0 .. 1];
 	}
 	else
 	{
 	    buf[0] = (((c - 0x10000) >> 10) & 0x3FF) + 0xD800;
 	    buf[1] = ((c - 0x10000) & 0x3FF) + 0xDC00;
-	    L = 2;
+	    return buf[0 .. 2];
 	}
-	return buf[0 .. L];
     }
 
 wchar[] toUTF16(char[] s)
 {
     wchar[] r;
+    size_t slen = s.length;
 
-    r.length = s.length;
+    r.length = slen;
     r.length = 0;
-    for (size_t i = 0; i < s.length; )
+    for (size_t i = 0; i < slen; )
     {
-	dchar c = decode(s, i);
-	encode(r, c);
+	dchar c = s[i];
+	if (c <= 0x7F)
+	{
+	    i++;
+	    r ~= c;
+	}
+	else
+	{
+	    c = decode(s, i);
+	    encode(r, c);
+	}
     }
     return r;
 }
@@ -538,13 +572,23 @@ wchar[] toUTF16(char[] s)
 wchar* toUTF16z(char[] s)
 {
     wchar[] r;
+    size_t slen = s.length;
 
-    r.length = s.length + 1;
+    r.length = slen + 1;
     r.length = 0;
-    for (size_t i = 0; i < s.length; )
+    for (size_t i = 0; i < slen; )
     {
-	dchar c = decode(s, i);
-	encode(r, c);
+	dchar c = s[i];
+	if (c <= 0x7F)
+	{
+	    i++;
+	    r ~= c;
+	}
+	else
+	{
+	    c = decode(s, i);
+	    encode(r, c);
+	}
     }
     r ~= "\000";
     return r;
@@ -563,8 +607,11 @@ wchar[] toUTF16(wchar[] s)
 wchar[] toUTF16(dchar[] s)
 {
     wchar[] r;
+    size_t slen = s.length;
 
-    for (size_t i = 0; i < s.length; i++)
+    r.length = slen;
+    r.length = 0;
+    for (size_t i = 0; i < slen; i++)
     {
 	encode(r, s[i]);
     }
@@ -576,25 +623,39 @@ wchar[] toUTF16(dchar[] s)
 dchar[] toUTF32(char[] s)
 {
     dchar[] r;
+    size_t slen = s.length;
+    size_t j = 0;
 
-    for (size_t i = 0; i < s.length; )
+    r.length = slen;		// r[] will never be longer than s[]
+    for (size_t i = 0; i < slen; )
     {
-	dchar c = decode(s, i);
-	r ~= c;
+	dchar c = s[i];
+	if (c >= 0x80)
+	    c = decode(s, i);
+	else
+	    i++;		// c is ascii, no need for decode
+	r[j++] = c;
     }
-    return r;
+    return r[0 .. j];
 }
 
 dchar[] toUTF32(wchar[] s)
 {
     dchar[] r;
+    size_t slen = s.length;
+    size_t j = 0;
 
-    for (size_t i = 0; i < s.length; )
+    r.length = slen;		// r[] will never be longer than s[]
+    for (size_t i = 0; i < slen; )
     {
-	dchar c = decode(s, i);
-	r ~= c;
+	dchar c = s[i];
+	if (c >= 0x80)
+	    c = decode(s, i);
+	else
+	    i++;		// c is ascii, no need for decode
+	r[j++] = c;
     }
-    return r;
+    return r[0 .. j];
 }
 
 dchar[] toUTF32(dchar[] s)
@@ -607,4 +668,65 @@ dchar[] toUTF32(dchar[] s)
 	return s;
     }
 
+/* ================================ tests ================================== */
 
+unittest
+{
+    debug(utf) printf("utf.toUTF.unittest\n");
+
+    char[] c;
+    wchar[] w;
+    dchar[] d;
+
+    c = "hello";
+    w = toUTF16(c);
+    assert(w == "hello");
+    d = toUTF32(c);
+    assert(d == "hello");
+
+    c = toUTF8(w);
+    assert(c == "hello");
+    d = toUTF32(w);
+    assert(d == "hello");
+
+    c = toUTF8(d);
+    assert(c == "hello");
+    w = toUTF16(d);
+    assert(w == "hello");
+
+
+    c = "hel\u1234o";
+    w = toUTF16(c);
+    assert(w == "hel\u1234o");
+    d = toUTF32(c);
+    assert(d == "hel\u1234o");
+
+    c = toUTF8(w);
+    assert(c == "hel\u1234o");
+    d = toUTF32(w);
+    assert(d == "hel\u1234o");
+
+    c = toUTF8(d);
+    assert(c == "hel\u1234o");
+    w = toUTF16(d);
+    assert(w == "hel\u1234o");
+
+
+    c = "he\U0010AAAAllo";
+    w = toUTF16(c);
+    //foreach (wchar c; w) printf("c = x%x\n", c);
+    //foreach (wchar c; cast(wchar[])"he\U0010AAAAllo") printf("c = x%x\n", c);
+    assert(w == "he\U0010AAAAllo");
+    d = toUTF32(c);
+    assert(d == "he\U0010AAAAllo");
+
+    c = toUTF8(w);
+    assert(c == "he\U0010AAAAllo");
+    d = toUTF32(w);
+    assert(d == "he\U0010AAAAllo");
+
+    c = toUTF8(d);
+    assert(c == "he\U0010AAAAllo");
+    w = toUTF16(d);
+    assert(w == "he\U0010AAAAllo");
+}
