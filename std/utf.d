@@ -243,6 +243,8 @@ dchar decode(wchar[] s, inout size_t idx)
 	    {   msg = "illegal UTF-16 value";
 		goto Lerr;
 	    }
+	    else
+		i++;
 	}
 	else
 	{
@@ -476,9 +478,9 @@ char[] toUTF8(wchar[] s)
 {
     char[] r;
 
-    for (int i = 0; i < s.length; i++)
+    foreach (dchar c; s)
     {
-	encode(r, cast(dchar)s[i]);
+	encode(r, c);
     }
     return r;
 }
@@ -487,9 +489,9 @@ char[] toUTF8(dchar[] s)
 {
     char[] r;
 
-    for (int i = 0; i < s.length; i++)
+    foreach (dchar c; s)
     {
-	encode(r, s[i]);
+	encode(r, c);
     }
     return r;
 }

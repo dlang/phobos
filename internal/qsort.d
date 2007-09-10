@@ -43,7 +43,7 @@ an array of large structures to be sorted, rather than an array of pointers to
 structures.  The default value is optimized for a high cost for compares. */ 
 
 
-extern (C) Array _adSort(Array a, TypeInfo ti)
+extern (C) long _adSort(Array a, TypeInfo ti)
 {
   byte* base;
   byte*[40] stack;		// stack
@@ -123,7 +123,7 @@ extern (C) Array _adSort(Array a, TypeInfo ti)
       limit = sp[1];
     }
     else				// else stack empty, all done
-      return a;
+      return *cast(long*)(&a);
   }
 }
 

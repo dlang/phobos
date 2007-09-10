@@ -1,5 +1,5 @@
 
-/* Written by Walter Bright
+/* Written by Walter Bright and Christopher E. Miller
  * www.digitalmars.com
  * Placed into public domain.
  */
@@ -227,3 +227,28 @@ int remap_file_pages(void*, size_t, int, size_t, int);
 int shm_open(char*, int, int);
 int shm_unlink(char*);
 }
+
+extern(C)
+{
+    struct dirent
+    {
+	int d_ino;
+	off_t d_off;
+	ushort d_reclen;
+	ubyte d_type;
+	char[256] d_name;
+    }
+    
+    struct DIR
+    {
+	// Managed by OS.
+    }
+    
+    DIR* opendir(char* name);
+    int closedir(DIR* dir);
+    dirent* readdir(DIR* dir);
+    void rewinddir(DIR* dir);
+    off_t telldir(DIR* dir);
+    void seekdir(DIR* dir, off_t offset);
+}
+

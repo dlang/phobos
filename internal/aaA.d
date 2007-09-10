@@ -326,7 +326,7 @@ void _aaDel(aaA*[] aa, TypeInfo keyti, ...)
  * Produce array of v byte values from aa.
  */
 
-Array _aaValues(aaA*[] aa, uint k, uint v)
+long _aaValues(aaA*[] aa, uint k, uint v)
     {
 	uint resi;
 	Array a;
@@ -340,7 +340,7 @@ Array _aaValues(aaA*[] aa, uint k, uint v)
 		_aaValues_x(aa[i], a.ptr, resi, k, v);
 	}
 	assert(resi == a.length);
-	return a;
+	return *cast(long*)(&a);
     }
 
 void _aaValues_x(aaA *e, void *ptr, inout uint resi, uint k, uint v)
@@ -375,6 +375,7 @@ aaA*[] _aaRehash(aaA*[]* paa, TypeInfo keyti)
 	aaA*[] newaa;
 	int i;
 
+	//printf("Rehash\n");
 	aa = *paa;
 	len = _aaLen(aa);
 	if (len < 1)
@@ -445,7 +446,7 @@ private void _aaRehash_x(aaA*[] newaa, aaA *olde, TypeInfo keyti)
  * Produce array of N byte keys from aa.
  */
 
-Array _aaKeys(aaA*[] aa, uint n)
+long _aaKeys(aaA*[] aa, uint n)
     {
 	uint len;
 	byte[] res;
@@ -465,7 +466,7 @@ Array _aaKeys(aaA*[] aa, uint n)
 	Array a;
 	a.length = len;
 	a.ptr = res;
-	return a;
+	return *cast(long*)(&a);
     }
 
 private

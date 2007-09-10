@@ -18,8 +18,18 @@ const
 	linux,			// all linux systems
     }
 
-    Family family = Family.Win32;
-
+    version (Win32)
+    {
+	Family family = Family.Win32;
+    }
+    else version (linux)
+    {
+	Family family = Family.linux;
+    }
+    else
+    {
+	static assert(0);
+    }
 
     // More specific operating system name
     enum OS
@@ -36,7 +46,14 @@ const
 
     enum Endian { BigEndian, LittleEndian }
 
-    Endian endian = Endian.LittleEndian;
+    version(LittleEndian)
+    {
+        Endian endian = Endian.LittleEndian;
+    }
+    else
+    {
+        Endian endian = Endian.BigEndian;
+    }
 }
 
 // The rest should get filled in dynamically at runtime

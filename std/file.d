@@ -1,7 +1,25 @@
 
-// Copyright (c) 2001-2003 by Digital Mars
-// All Rights Reserved
-// www.digitalmars.com
+/*
+ *  Copyright (C) 2001-2004 by Digital Mars, www.digitalmars.com
+ * Written by Walter Bright, Christopher E. Miller, Andre Fornacon
+ *
+ *  This software is provided 'as-is', without any express or implied
+ *  warranty. In no event will the authors be held liable for any damages
+ *  arising from the use of this software.
+ *
+ *  Permission is granted to anyone to use this software for any purpose,
+ *  including commercial applications, and to alter it and redistribute it
+ *  freely, subject to the following restrictions:
+ *
+ *  o  The origin of this software must not be misrepresented; you must not
+ *     claim that you wrote the original software. If you use this software
+ *     in a product, an acknowledgment in the product documentation would be
+ *     appreciated but is not required.
+ *  o  Altered source versions must be plainly marked as such, and must not
+ *     be misrepresented as being the original software.
+ *  o  This notice may not be removed or altered from any source
+ *     distribution.
+ */
 
 module std.file;
 
@@ -420,6 +438,19 @@ Lerr:
 char[][] listdir(char[] pathname)
 {
     char[][] result;
+    
+    bool listing(char[] filename)
+    {
+	result ~= filename;
+	return true; // continue
+    }
+    
+    listdir(pathname, &listing);
+    return result;
+}
+
+void listdir(char[] pathname, bool delegate(char[] filename) callback)
+{
     char[] c;
     HANDLE h;
 
@@ -432,18 +463,17 @@ char[][] listdir(char[] pathname)
 	if (h != INVALID_HANDLE_VALUE)
 	{
 	    do
-	    {   int i;
-		int clength;
+	    {	int clength;
 
 		// Skip "." and ".."
 		if (std.string.wcscmp(fileinfo.cFileName, ".") == 0 ||
 		    std.string.wcscmp(fileinfo.cFileName, "..") == 0)
 		    continue;
 
-		i = result.length;
-		result.length = i + 1;
 		clength = std.string.wcslen(fileinfo.cFileName);
-		result[i] = std.utf.toUTF8(fileinfo.cFileName[0 .. clength]);
+		// toUTF8() returns a new buffer
+		if (!callback(std.utf.toUTF8(fileinfo.cFileName[0 .. clength])))
+		    break;
 	    } while (FindNextFileW(h,&fileinfo) != FALSE);
 	    FindClose(h);
 	}
@@ -453,11 +483,10 @@ char[][] listdir(char[] pathname)
 	WIN32_FIND_DATA fileinfo;
 
 	h = FindFirstFileA(toMBSz(c), &fileinfo);
-	if (h != INVALID_HANDLE_VALUE)
+	if (h != INVALID_HANDLE_VALUE)	// should we throw exception if invalid?
 	{
 	    do
-	    {   int i;
-		int clength;
+	    {	int clength;
 		wchar[] wbuf;
 		int n;
 
@@ -466,23 +495,19 @@ char[][] listdir(char[] pathname)
 		    std.string.strcmp(fileinfo.cFileName, "..") == 0)
 		    continue;
 
-		i = result.length;
-		result.length = i + 1;
 		clength = std.string.strlen(fileinfo.cFileName);
-
-		//result[i] = fileinfo.cFileName[0 .. clength].dup;
 
 		// Convert cFileName[] to unicode
 		wbuf.length = MultiByteToWideChar(0,0,fileinfo.cFileName,clength,null,0);
 		n = MultiByteToWideChar(0,0,fileinfo.cFileName,clength,cast(wchar*)wbuf,wbuf.length);
 		assert(n == wbuf.length);
-		result[i] = std.utf.toUTF8(wbuf);
-
+		// toUTF8() returns a new buffer
+		if (!callback(std.utf.toUTF8(wbuf)))
+		    break;
 	    } while (FindNextFileA(h,&fileinfo) != FALSE);
 	    FindClose(h);
 	}
     }
-    return result;
 }
 
 /******************************************
@@ -825,8 +850,39 @@ char[] getcwd()
 
 char[][] listdir(char[] pathname)
 {
-    assert(0);		// BUG: not implemented
-    return null;
+    char[][] result;
+    
+    bool listing(char[] filename)
+    {
+	result ~= filename;
+	return true; // continue
+    }
+    
+    listdir(pathname, &listing);
+    return result;
+}
+
+void listdir(char[] pathname, bool delegate(char[] filename) callback)
+{
+    DIR* h;
+    dirent* fdata;
+    
+    h = opendir(toStringz(pathname));
+    if (h)	// if !h, should we throw exception?
+    {
+	while((fdata = readdir(h)) != null)
+	{
+	    // Skip "." and ".."
+	    if (!std.string.strcmp(fdata.d_name, ".") ||
+		!std.string.strcmp(fdata.d_name, ".."))
+		    continue;
+	    
+	    int len = std.string.strlen(fdata.d_name);
+	    if (!callback(fdata.d_name[0 .. len].dup))
+		break;
+	}
+	closedir(h);
+    }
 }
 
 }

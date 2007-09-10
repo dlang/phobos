@@ -25,10 +25,10 @@ struct Array
  * Support for array.reverse property.
  */
 
-extern (C) Array _adReverse(Array a, int szelem)
+extern (C) long _adReverse(Array a, int szelem)
     out (result)
     {
-	assert(result is a);
+	assert(result is *cast(long*)(&a));
     }
     body
     {
@@ -67,7 +67,7 @@ extern (C) Array _adReverse(Array a, int szelem)
 		    //delete tmp;
 	    }
 	}
-	return a;
+	return *cast(long*)(&a);
     }
 
 unittest
@@ -157,10 +157,10 @@ unittest
  * Support for array.dup property.
  */
 
-extern (C) Array _adDup(Array a, int szelem)
+extern (C) long _adDup(Array a, int szelem)
     out (result)
     {
-	assert(memcmp(result.ptr, a.ptr, a.length * szelem) == 0);
+	assert(memcmp((*cast(Array*)&result).ptr, a.ptr, a.length * szelem) == 0);
     }
     body
     {
@@ -171,7 +171,7 @@ extern (C) Array _adDup(Array a, int szelem)
 	r.ptr = cast(void *) new byte[size];
 	r.length = a.length;
 	memcpy(r.ptr, a.ptr, size);
-	return r;
+	return *cast(long*)(&r);
     }
 
 unittest
@@ -194,10 +194,10 @@ unittest
  * Support for array.dup property for bit[].
  */
 
-extern (C) Array _adDupBit(Array a)
+extern (C) long _adDupBit(Array a)
     out (result)
     {
-	assert(memcmp(result.ptr, a.ptr, (a.length + 7) / 8) == 0);
+	assert(memcmp((*cast(Array*)(&result)).ptr, a.ptr, (a.length + 7) / 8) == 0);
     }
     body
     {
@@ -208,7 +208,7 @@ extern (C) Array _adDupBit(Array a)
 	r.ptr = cast(void *) new uint[size];
 	r.length = a.length;
 	memcpy(r.ptr, a.ptr, size);
-	return r;
+	return *cast(long*)(&r);
     }
 
 unittest
