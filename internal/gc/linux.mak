@@ -47,4 +47,4 @@ zip : $(SRC)
 	zip dmgc $(SRC)
 
 clean:
-	rm $(OBJS) dmgc.a testgc
+	rm $(OBJS) dmgc.a testgc testgc.o

@@ -85,7 +85,7 @@ struct struct_stat	// distinguish it from the stat() function
 
 unittest
 {
-    assert(struct_stat.size == 88);
+    assert(struct_stat.sizeof == 88);
 }
 
 enum : int

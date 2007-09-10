@@ -673,12 +673,12 @@ class Thread
 		    else
 			npause++;	// count of paused threads
 		}
+	    }
 
-		// Wait for each paused thread to acknowledge
-		while (npause--)
-		{
-		    sem_wait(&flagSuspend);
-		}
+	    // Wait for each paused thread to acknowledge
+	    while (npause--)
+	    {
+		sem_wait(&flagSuspend);
 	    }
 	}
     }

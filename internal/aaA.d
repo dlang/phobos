@@ -1,5 +1,5 @@
 //_ aaA.d
-// Copyright (c) 2000-2003 by Digital Mars
+// Copyright (c) 2000-2004 by Digital Mars
 // Written by Walter Bright
 
 import std.c.stdio;
@@ -8,6 +8,16 @@ import std.string;
 import std.outofmemory;
 
 // Implementation of associative array
+
+static uint[] prime_list = [
+    97ul,         389ul,
+    1543ul,       6151ul,
+    24593ul,      98317ul,
+    393241ul,     1572869ul,
+    6291469ul,    25165843ul,
+    100663319ul,  402653189ul,
+    1610612741ul, 4294967291ul
+];
 
 struct Array
 {
@@ -19,7 +29,11 @@ struct aaA
 {
     aaA *left;
     aaA *right;
-    uint hash;
+    union
+    {
+        uint nodes; // used in the head element to store the total # of AA elements
+        uint hash;
+    }
     /* key   */
     /* value */
 }
@@ -36,7 +50,7 @@ void _aaInvAh(aaA*[] aa)
 {
     uint i;
 
-    for (i = 0; i < aa.length; i++)
+    for (i = 1; i < aa.length; i++)
     {
 	if (aa[i])
 	    _aaInvAh_x(aa[i]);
@@ -110,19 +124,22 @@ int _aaLen(aaA*[] aa)
     out (result)
     {
 	assert(result >= 0);
-	//printf("_aaLen()-\n");
-    }
-    body
-    {
+
 	int len = 0;
 	uint i;
 
-	for (i = 0; i < aa.length; i++)
+	for (i = 1; i < aa.length; i++)
 	{
 	    if (aa[i])
 		len += _aaLen_x(aa[i]);
 	}
-	return len;
+	assert(len == result);
+
+	//printf("_aaLen()-\n");
+    }
+    body
+    {
+	return aa.length ? aa[0].nodes : 0;
     }
 
 private int _aaLen_x(aaA *e)
@@ -171,12 +188,13 @@ void *_aaGet(aaA*[] *aa, TypeInfo keyti, int valuesize, ...)
 	{
 	    alias aaA *pa;
 
-	    *aa = new pa[10];
+	    *aa = new pa[prime_list[0] + 1];
+	    (*aa)[0] = cast(aaA *) cast(void*) new byte[aaA.sizeof];
 	}
 
 	key_hash = keyti.getHash(pkey);
 	//printf("hash = %d\n", key_hash);
-	i = key_hash % (*aa).length;
+	i = (key_hash % ((*aa).length - 1)) + 1;
 	pe = &(*aa)[i];
 	while ((e = *pe) != null)
 	{   int c;
@@ -201,6 +219,14 @@ void *_aaGet(aaA*[] *aa, TypeInfo keyti, int valuesize, ...)
 	memcpy(e + 1, pkey, keysize);
 	e.hash = key_hash;
 	*pe = e;
+
+	uint nodes = ++(*aa)[0].nodes;
+	//printf("length = %d, nodes = %d\n", (*aa).length, nodes);
+	if (nodes > (*aa).length * 4)
+	{
+	    _aaRehash(aa,keyti);
+	}
+
     Lret:
 	return cast(void *)(e + 1) + keysize;
     }
@@ -227,11 +253,11 @@ int _aaIn(aaA*[] aa, TypeInfo keyti, ...)
 	uint i;
 	aaA *e;
 
-	if (aa.length)
+	if (aa.length > 1)
 	{
 	    key_hash = keyti.getHash(pkey);
 	    //printf("hash = %d\n", key_hash);
-	    i = key_hash % aa.length;
+	    i = (key_hash % (aa.length - 1)) + 1;
 	    e = aa[i];
 	    while (e != null)
 	    {   int c;
@@ -268,11 +294,11 @@ void _aaDel(aaA*[] aa, TypeInfo keyti, ...)
 	aaA *e;
 	aaA **pe;
 
-	if (aa.length)
+	if (aa.length > 1)
 	{
 	    key_hash = keyti.getHash(pkey);
 	    //printf("hash = %d\n", key_hash);
-	    i = key_hash % aa.length;
+	    i = (key_hash % (aa.length - 1)) + 1;
 	    pe = &aa[i];
 	    while ((e = *pe) != null)	// null means not found
 	    {   int c;
@@ -308,6 +334,8 @@ void _aaDel(aaA*[] aa, TypeInfo keyti, ...)
 			    e.right = null;
 			}
 
+			aa[0].nodes--;
+
 			// Should notify GC that e can be free'd now
 			break;
 		    }
@@ -334,7 +362,7 @@ long _aaValues(aaA*[] aa, uint k, uint v)
 	a.length = _aaLen(aa);
 	a.ptr = new byte[a.length * v];
 	resi = 0;
-	for (uint i = 0; i < aa.length; i++)
+	for (uint i = 1; i < aa.length; i++)
 	{
 	    if (aa[i])
 		_aaValues_x(aa[i], a.ptr, resi, k, v);
@@ -378,14 +406,24 @@ aaA*[] _aaRehash(aaA*[]* paa, TypeInfo keyti)
 	//printf("Rehash\n");
 	aa = *paa;
 	len = _aaLen(aa);
-	if (len < 1)
-	    len = 1;
-	newaa = new aaA*[len];
-
-	for (i = 0; i < aa.length; i++)
+	if (len)
 	{
-	    if (aa[i])
-		_aaRehash_x(newaa, aa[i], keyti);
+	    for (i = 0; i < prime_list.length - 1; i++)
+	    {
+		if (len <= prime_list[i])
+		    break;
+	    }
+	    len = prime_list[i] + 1;
+	    newaa = new aaA*[len];
+	    newaa[0] = cast(aaA *) cast(void*) new byte[aaA.sizeof];
+
+	    for (i = 1; i < aa.length; i++)
+	    {
+		if (aa[i])
+		    _aaRehash_x(newaa, aa[i], keyti);
+	    }
+
+	    newaa[0].nodes = aa[0].nodes;
 	}
 
 	*paa = newaa;
@@ -411,7 +449,7 @@ private void _aaRehash_x(aaA*[] newaa, aaA *olde, TypeInfo keyti)
 
 	//printf("rehash %p\n", olde);
 	key_hash = olde.hash;
-	i = key_hash % newaa.length;
+	i = (key_hash % (newaa.length - 1)) + 1;
 	pe = &newaa[i];
 	while ((e = *pe) != null)
 	{   int c;
@@ -456,7 +494,7 @@ long _aaKeys(aaA*[] aa, uint n)
 	len = _aaLen(aa);
 	res = new byte[len * n];
 	resi = 0;
-	for (i = 0; i < aa.length; i++)
+	for (i = 1; i < aa.length; i++)
 	{
 	    if (aa[i])
 		_aaKeys_x(aa[i], res, resi, n);
@@ -525,7 +563,7 @@ int _aaApply(aaA*[] aa, int keysize, dg_t dg)
 	return result;
     }
 
-    for (uint i = 0; i < aa.length; i++)
+    for (uint i = 1; i < aa.length; i++)
     {
 	if (aa[i])
 	{
@@ -565,7 +603,7 @@ int _aaApply2(aaA*[] aa, int keysize, dg2_t dg)
 	return result;
     }
 
-    for (uint i = 0; i < aa.length; i++)
+    for (uint i = 1; i < aa.length; i++)
     {
 	if (aa[i])
 	{

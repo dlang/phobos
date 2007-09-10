@@ -17,7 +17,7 @@ DFLAGS=-O -release
 
 CC=gcc
 #DMD=/dmd/bin/dmd
-DMD=../dmd
+DMD=dmd
 
 .c.o:
 	$(CC) -c $(CFLAGS) $*.c
@@ -246,31 +246,128 @@ SRC_RECLS= \
 	etc/c/recls/linux.mak \
 	etc/c/recls/recls.lib
 
+SRC_STLSOFT_NEW= \
+	etc/c/stlsoft/winstl_file_path_buffer.h \
+	etc/c/stlsoft/inetstl_connection.h \
+	etc/c/stlsoft/inetstl_filesystem_traits.h \
+	etc/c/stlsoft/inetstl_findfile_sequence.h \
+	etc/c/stlsoft/inetstl_searchspec_sequence.h \
+	etc/c/stlsoft/inetstl_session.h \
+	etc/c/stlsoft/stlsoft.h \
+	etc/c/stlsoft/stlsoft_allocator_base.h \
+	etc/c/stlsoft/inetstl.h \
+	etc/c/stlsoft/stlsoft_auto_buffer.h \
+	etc/c/stlsoft/stlsoft_cccap_dmc.h \
+	etc/c/stlsoft/stlsoft_cccap_gcc.h \
+	etc/c/stlsoft/stlsoft_char_traits.h \
+	etc/c/stlsoft/stlsoft_constraints.h \
+	etc/c/stlsoft/stlsoft_exceptions.h \
+	etc/c/stlsoft/stlsoft_iterator.h \
+	etc/c/stlsoft/stlsoft_meta.h \
+	etc/c/stlsoft/stlsoft_new_allocator.h \
+	etc/c/stlsoft/stlsoft_any_caster.h \
+	etc/c/stlsoft/stlsoft_nulldef.h \
+	etc/c/stlsoft/stlsoft_sap_cast.h \
+	etc/c/stlsoft/stlsoft_searchspec_sequence.h \
+	etc/c/stlsoft/stlsoft_sign_traits.h \
+	etc/c/stlsoft/stlsoft_simple_algorithms.h \
+	etc/c/stlsoft/stlsoft_simple_string.h \
+	etc/c/stlsoft/stlsoft_size_traits.h \
+	etc/c/stlsoft/stlsoft_string_access.h \
+	etc/c/stlsoft/stlsoft_string_tokeniser.h \
+	etc/c/stlsoft/stlsoft_type_traits.h \
+	etc/c/stlsoft/unixstl.h \
+	etc/c/stlsoft/unixstl_filesystem_traits.h \
+	etc/c/stlsoft/unixstl_file_path_buffer.h \
+	etc/c/stlsoft/unixstl_glob_sequence.h \
+	etc/c/stlsoft/unixstl_string_access.h \
+	etc/c/stlsoft/unixstl_thread_mutex.h \
+	etc/c/stlsoft/winstl.h \
+	etc/c/stlsoft/winstl_atomic_functions.h \
+	etc/c/stlsoft/winstl_char_conversions.h \
+	etc/c/stlsoft/winstl_filesystem_traits.h \
+	etc/c/stlsoft/winstl_spin_mutex.h \
+	etc/c/stlsoft/winstl_findfile_sequence.h \
+	etc/c/stlsoft/winstl_processheap_allocator.h \
+	etc/c/stlsoft/winstl_system_version.h \
+	etc/c/stlsoft/stlsoft_null.h
+
+SRC_RECLS_NEW= \
+	etc/c/recls/recls_compiler_gcc.h \
+	etc/c/recls/recls_retcodes.h \
+	etc/c/recls/EntryFunctions.h \
+	etc/c/recls/recls_platform_types.h \
+	etc/c/recls/recls.h \
+	etc/c/recls/recls_wininet_dl.h \
+	etc/c/recls/ReclsFileSearch.h \
+	etc/c/recls/ReclsFileSearchDirectoryNode_unix.cpp \
+	etc/c/recls/ReclsFileSearchDirectoryNode_unix.h \
+	etc/c/recls/ReclsFileSearchDirectoryNode_win32.cpp \
+	etc/c/recls/ReclsFileSearchDirectoryNode_win32.h \
+	etc/c/recls/recls_wininet_dl.cpp \
+	etc/c/recls/ReclsFileSearch_unix.cpp \
+	etc/c/recls/ReclsFileSearch_win32.cpp \
+	etc/c/recls/recls_win32.h \
+	etc/c/recls/ReclsFtpSearch.h \
+	etc/c/recls/ReclsFtpSearchDirectoryNode_win32.cpp \
+	etc/c/recls/ReclsFtpSearchDirectoryNode_win32.h \
+	etc/c/recls/recls_util_win32.cpp \
+	etc/c/recls/ReclsFtpSearch_win32.cpp \
+	etc/c/recls/recls_util_unix.cpp \
+	etc/c/recls/recls_api.cpp \
+	etc/c/recls/recls_util.h \
+	etc/c/recls/recls_api_unix.cpp \
+	etc/c/recls/recls_api_win32.cpp \
+	etc/c/recls/recls_util.cpp \
+	etc/c/recls/recls_assert.h \
+	etc/c/recls/recls_compiler.h \
+	etc/c/recls/recls_compiler_dmc.h \
+	etc/c/recls/recls_platform.h \
+	etc/c/recls/recls_debug.h \
+	etc/c/recls/recls_defs.h \
+	etc/c/recls/recls_fileinfo.cpp \
+	etc/c/recls/recls_fileinfo_unix.cpp \
+	etc/c/recls/recls_fileinfo_win32.cpp \
+	etc/c/recls/recls_unix.h \
+	etc/c/recls/recls_ftp.h \
+	etc/c/recls/recls_ftp_api_win32.cpp \
+	etc/c/recls/recls_internal.cpp \
+	etc/c/recls/recls_internal.h \
+	etc/c/recls/recls_roots_win32.cpp \
+	etc/c/recls/recls_language.h \
+	etc/c/recls/recls_roots_unix.cpp \
+	etc/c/recls/win32.mak \
+	etc/c/recls/linux.mak
+
 ALLSRCS = $(SRC) $(SRC_STD) $(SRC_STD_C) $(SRC_TI) $(SRC_INT) $(SRC_STD_WIN) \
 	$(SRC_STD_C_WIN) $(SRC_STD_C_LINUX) $(SRC_ETC) $(SRC_ETC_C) \
 	$(SRC_ZLIB) $(SRC_GC) \
 	$(SRC_RECLS) $(SRC_STLSOFT)
 
 
-libphobos.a : $(OBJS) internal/gc/dmgc.a linux.mak
+#libphobos.a : $(OBJS) internal/gc/dmgc.a linux.mak
+libphobos.a : $(OBJS) internal/gc/dmgc.a $(ZLIB_OBJS) $(RECLS_OBJS) linux.mak
 	ar -r $@ $(OBJS) $(ZLIB_OBJS) $(GC_OBJS) $(RECLS_OBJS)
 
 ###########################################################
 
 internal/gc/dmgc.a:
-	cd internal/gc
-	make -f linux.mak dmgc.a
-	cd ../..
+#	cd internal/gc
+#	make -f linux.mak dmgc.a
+#	cd ../..
+	make -C ./internal/gc -f linux.mak dmgc.a
 
 $(RECLS_OBJS):
-	cd etc/c/recls
-	make -f linux.mak
-	cd ../../..
+#	cd etc/c/recls
+#	make -f linux.mak
+#	cd ../../..
+	make -C ./etc/c/recls -f linux.mak
 
 $(ZLIB_OBJS):
-	cd etc/c/zlib
-	make -f linux.mak
-	cd ../../..
+#	cd etc/c/zlib
+#	make -f linux.mak
+#	cd ../../..
+	make -C ./etc/c/zlib -f linux.mak
 
 ###
 

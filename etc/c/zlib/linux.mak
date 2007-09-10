@@ -63,11 +63,11 @@ minigzip.o: minigzip.c zlib.h zconf.h
 zlib.a: $(OBJS)
 	ar -r $@ $(OBJS)
 
-examplee: example.o zlib.a
-	$(LD) $(LDFLAGS) example.o zlib.a
+example: example.o zlib.a
+	$(CC) -o $@ example.o zlib.a -g
 
 minigzip: minigzip.o zlib.a
-	$(LD) $(LDFLAGS) minigzip.o zlib.a
+	$(CC) -o $@ minigzip.o zlib.a -g
 
 test: example minigzip
 	./example

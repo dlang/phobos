@@ -13,6 +13,13 @@ class TypeInfo_Aa : TypeInfo
 	char *str = s;
 	uint hash = 0;
 
+version (none)
+{
+	foreach (char c; s)
+	    hash = hash * 31 + c;
+}
+else
+{
 	while (1)
 	{
 	    switch (len)
@@ -44,7 +51,7 @@ class TypeInfo_Aa : TypeInfo
 		    break;
 	    }
 	}
-
+}
 	return hash;
     }
 

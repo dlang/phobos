@@ -1,10 +1,12 @@
 
-// Copyright (C) 2001-2003 by Digital Mars, www.digitalmars.com
+// Copyright (C) 2001-2004 by Digital Mars, www.digitalmars.com
 // All Rights Reserved
 // Written by Walter Bright
 
 import std.c.linux.linuxextern;
+import std.c.linux.linux;
 
+/+
 extern (C)
 {
     // from <sys/mman.h>
@@ -17,6 +19,7 @@ extern (C)
     enum { MAP_SHARED = 1, MAP_PRIVATE = 2, MAP_TYPE = 0x0F,
 	   MAP_FIXED = 0x10, MAP_FILE = 0, MAP_ANON = 0x20 }
 }
++/
 
 /***********************************
  * Map memory.
