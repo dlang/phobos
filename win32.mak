@@ -15,6 +15,7 @@
 #	This relies on LIB.EXE 8.00 or later, and MAKE.EXE 5.01 or later.
 
 CP=cp
+DIR=\dmd
 
 CFLAGS=-mn -6 -r
 #CFLAGS=-g -mn -6 -r
@@ -26,7 +27,7 @@ DFLAGS=-O -release -nofloat -w
 
 CC=dmc
 
-DMD=\dmd\bin\dmd
+DMD=$(DIR)\bin\dmd
 #DMD=..\dmd
 
 DOC=..\..\html\d\phobos
@@ -843,18 +844,18 @@ cleanhtml:
 	del $(DOCS)
 
 install:
-	$(CP) phobos.lib gcstub.obj \dmd\lib
-	$(CP) win32.mak linux.mak phoboslicense.txt minit.obj std.ddoc \dmd\src\phobos
-	$(CP) $(SRC) \dmd\src\phobos
-	$(CP) $(SRC_STD) \dmd\src\phobos\std
-	$(CP) $(SRC_STD_C) \dmd\src\phobos\std\c
-	$(CP) $(SRC_TI) \dmd\src\phobos\std\typeinfo
-	$(CP) $(SRC_INT) \dmd\src\phobos\internal
-	$(CP) $(SRC_STD_WIN) \dmd\src\phobos\std\windows
-	$(CP) $(SRC_STD_C_WIN) \dmd\src\phobos\std\c\windows
-	$(CP) $(SRC_STD_C_LINUX) \dmd\src\phobos\std\c\linux
-	$(CP) $(SRC_ETC) \dmd\src\phobos\etc
-	$(CP) $(SRC_ETC_C) \dmd\src\phobos\etc\c
-	$(CP) $(SRC_ZLIB) \dmd\src\phobos\etc\c\zlib
-	$(CP) $(SRC_GC) \dmd\src\phobos\internal\gc
+	$(CP) phobos.lib gcstub.obj $(DIR)\lib
+	$(CP) win32.mak linux.mak phoboslicense.txt minit.obj std.ddoc $(DIR)\src\phobos
+	$(CP) $(SRC) $(DIR)\src\phobos
+	$(CP) $(SRC_STD) $(DIR)\src\phobos\std
+	$(CP) $(SRC_STD_C) $(DIR)\src\phobos\std\c
+	$(CP) $(SRC_TI) $(DIR)\src\phobos\std\typeinfo
+	$(CP) $(SRC_INT) $(DIR)\src\phobos\internal
+	$(CP) $(SRC_STD_WIN) $(DIR)\src\phobos\std\windows
+	$(CP) $(SRC_STD_C_WIN) $(DIR)\src\phobos\std\c\windows
+	$(CP) $(SRC_STD_C_LINUX) $(DIR)\src\phobos\std\c\linux
+	$(CP) $(SRC_ETC) $(DIR)\src\phobos\etc
+	$(CP) $(SRC_ETC_C) $(DIR)\src\phobos\etc\c
+	$(CP) $(SRC_ZLIB) $(DIR)\src\phobos\etc\c\zlib
+	$(CP) $(SRC_GC) $(DIR)\src\phobos\internal\gc
 

@@ -16,7 +16,7 @@ module std.compiler;
 const
 {
     /// Vendor specific string naming the compiler, for example: "Digital Mars D".
-    char[] name = "Digital Mars D";
+    string name = __VENDOR__;
 
     /// Master list of D compiler vendors.
     enum Vendor
@@ -32,8 +32,8 @@ const
      * The vendor specific version number, as in
      * version_major.version_minor
      */
-    uint version_major = 1;
-    uint version_minor = 15;	/// ditto
+    uint version_major = __VERSION__ / 1000;
+    uint version_minor = __VERSION__ % 1000;	/// ditto
 
 
     /**

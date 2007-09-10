@@ -660,7 +660,7 @@ d_time parse(char[] s)
 	//writefln("weekday = %d, ampm = %d, tzcorrection = %d", dp.weekday, 1, dp.tzcorrection);
 
 	time = MakeTime(dp.hour, dp.minute, dp.second, dp.ms);
-	if (dp.tzcorrection == Date.tzcorrection.init)
+	if (dp.tzcorrection == int.min)
 	    time -= LocalTZA;
 	else
 	{

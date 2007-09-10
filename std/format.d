@@ -1014,6 +1014,11 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
     {	ti = arguments[j++];
 	//printf("test1: '%.*s' %d\n", ti.classinfo.name, ti.classinfo.name.length);
 	//ti.print();
+
+	flags = 0;
+	precision = 0;
+	field_width = 0;
+
 	if (ti.classinfo.name.length < 10)
 	    goto Lerror;
 	m = cast(Mangle)ti.classinfo.name[9];
@@ -1175,9 +1180,6 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
 	}
 	else
 	{
-	    field_width = 0;
-	    flags = 0;
-	    precision = 0;
 	    formatArg('s');
 	}
     }
@@ -1463,5 +1465,8 @@ unittest
     assert(r == "[[h,e,l,l,o],[b,e,t,t,y]]");
     r = std.string.format("%s", aa);
     assert(r == "[3:[h,e,l,l,o],4:[b,e,t,t,y]]");
+
+    r = std.string.format(">%14d<, ", 15, [1,2,3]);
+    assert(r == ">            15<, [1,2,3]");
 }
 
