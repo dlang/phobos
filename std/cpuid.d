@@ -220,7 +220,7 @@ private:
      */
     private void getVendorString()
     {
-	char* dst = vendorStr;
+	char* dst = vendorStr.ptr;
 	// puts the vendor string into dst
 	asm
 	{
@@ -236,7 +236,7 @@ private:
     private void getProcessorString()
     {
 	char[48] buffer;
-	char* dst = buffer;
+	char* dst = buffer.ptr;
 	// puts the processor string into dst
 	asm
 	{

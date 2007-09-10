@@ -328,13 +328,13 @@ void test3()
     int[char[]] X;
 
     for(int i = 1; i <= n; i++) {
-        int len = sprintf(str,"%x",i);
+        int len = sprintf(str.ptr,"%x",i);
         X[str[0..len].dup] = i;
     }
 
     int c;
     for(int i = n; i > 0; i--) {
-        int len = sprintf(str,"%d",i);
+        int len = sprintf(str.ptr,"%d",i);
         if(str[0..len] in X) c++;
     }
 

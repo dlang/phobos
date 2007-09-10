@@ -12,7 +12,7 @@ class TypeInfo_Al : TypeInfo
     hash_t getHash(void *p)
     {	long[] s = *cast(long[]*)p;
 	size_t len = s.length;
-	long *str = s;
+	auto str = s.ptr;
 	hash_t hash = 0;
 
 	while (len)

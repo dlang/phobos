@@ -337,7 +337,7 @@ class MmFile
 		debug (MMFILE) printf("MmFile.flush()\n");
 		version (Win32)
 		{
-			FlushViewOfFile(data, data.length);
+			FlushViewOfFile(data.ptr, data.length);
 		}
 		else version (linux)
 		{
@@ -431,7 +431,7 @@ class MmFile
 			/* Note that under Windows 95, UnmapViewOfFile() seems to return
 			* random values, not TRUE or FALSE.
 			*/
-			if (data && UnmapViewOfFile(data) == FALSE &&
+			if (data && UnmapViewOfFile(data.ptr) == FALSE &&
 				(dwVersion & 0x80000000) == 0)
 				errNo();
 		} else {

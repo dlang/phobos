@@ -276,7 +276,7 @@ version(Windows)
         char    szFileName[260]; // Need to use a constant here
 
 	// http://msdn.microsoft.com/library/default.asp?url=/library/en-us/dllproc/base/getmodulefilename.asp
-        uint    cch = GetModuleFileNameA(cast(HModule_)hModule, szFileName, szFileName.length);
+        uint cch = GetModuleFileNameA(cast(HModule_)hModule, szFileName.ptr, szFileName.length);
 
 	if (cch == 0)
 	{
@@ -660,7 +660,7 @@ public:
 	    char szFileName[260]; // Need to use a constant here
 
 	    // http://msdn.microsoft.com/library/default.asp?url=/library/en-us/dllproc/base/getmodulefilename.asp
-	    uint cch = GetModuleFileNameA(cast(HModule_)m_hModule, szFileName, szFileName.length);
+	    uint cch = GetModuleFileNameA(cast(HModule_)m_hModule, szFileName.ptr, szFileName.length);
 	    if (cch == 0)
 		throw new ExeModuleException(GetLastError());
 

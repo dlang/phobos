@@ -1,5 +1,10 @@
 //_ adi.d
 
+/**
+ * Part of the D programming language runtime library.
+ * Dynamic array property support routines
+ */
+
 /*
  *  Copyright (C) 2000-2006 by Digital Mars, www.digitalmars.com
  *  Written by Walter Bright
@@ -22,8 +27,6 @@
  *  o  This notice may not be removed or altered from any source
  *     distribution.
  */
-
-// Dynamic array property support routines
 
 //debug=adi;		// uncomment to turn on debugging printf's
 
@@ -87,9 +90,9 @@ extern (C) long _adReverseChar(char[] a)
 	    if (stridelo == stridehi)
 	    {
 
-		memcpy(tmp, lo, stridelo);
+		memcpy(tmp.ptr, lo, stridelo);
 		memcpy(lo, hi, stridelo);
-		memcpy(hi, tmp, stridelo);
+		memcpy(hi, tmp.ptr, stridelo);
 		lo += stridelo;
 		hi--;
 		continue;
@@ -97,11 +100,11 @@ extern (C) long _adReverseChar(char[] a)
 
 	    /* Shift the whole array. This is woefully inefficient
 	     */
-	    memcpy(tmp, hi, stridehi);
-	    memcpy(tmplo, lo, stridelo);
+	    memcpy(tmp.ptr, hi, stridehi);
+	    memcpy(tmplo.ptr, lo, stridelo);
 	    memmove(lo + stridehi, lo + stridelo , hi - (lo + stridelo));
-	    memcpy(lo, tmp, stridehi);
-	    memcpy(hi + stridehi - stridelo, tmplo, stridelo);
+	    memcpy(lo, tmp.ptr, stridehi);
+	    memcpy(hi + stridehi - stridelo, tmplo.ptr, stridelo);
 
 	    lo += stridehi;
 	    hi = hi - 1 + (stridehi - stridelo);
@@ -192,10 +195,10 @@ extern (C) long _adReverseWchar(wchar[] a)
 
 	    /* Shift the whole array. This is woefully inefficient
 	     */
-	    memcpy(tmp, hi, stridehi * wchar.sizeof);
+	    memcpy(tmp.ptr, hi, stridehi * wchar.sizeof);
 	    memcpy(hi + stridehi - stridelo, lo, stridelo * wchar.sizeof);
 	    memmove(lo + stridehi, lo + stridelo , (hi - (lo + stridelo)) * wchar.sizeof);
-	    memcpy(lo, tmp, stridehi * wchar.sizeof);
+	    memcpy(lo, tmp.ptr, stridehi * wchar.sizeof);
 
 	    lo += stridehi;
 	    hi = hi - 1 + (stridehi - stridelo);
@@ -241,7 +244,7 @@ extern (C) long _adReverse(Array a, int szelem)
 	    void* lo = a.ptr;
 	    void* hi = a.ptr + (a.length - 1) * szelem;
 
-	    tmp = buffer;
+	    tmp = buffer.ptr;
 	    if (szelem > 16)
 	    {
 		//version (Win32)

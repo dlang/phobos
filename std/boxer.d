@@ -276,7 +276,7 @@ struct Box
         
         args[0..(char[]).sizeof] = (cast(void*) &format)[0..(char[]).sizeof];
         args[(char[]).sizeof..length] = data;
-        std.format.doFormat(&putc, arguments, args);
+        std.format.doFormat(&putc, arguments, args.ptr);
         delete args;
         
         return string;
@@ -313,7 +313,7 @@ struct Box
             assert (0);
         }
         
-        return cast(bool)type.equals(data, other.data);
+        return cast(bool)type.equals(data.ptr, other.data.ptr);
     }
 
     /**
@@ -368,7 +368,7 @@ struct Box
             assert (0);
         }
         
-        return type.compare(data, other.data);
+        return type.compare(data.ptr, other.data.ptr);
     }
 
     /**
@@ -385,7 +385,7 @@ struct Box
      */
     hash_t toHash()
     {
-        return type.getHash(data);
+        return type.getHash(data.ptr);
     }
 }
 
@@ -422,7 +422,7 @@ body
     if (size <= result.p_shortData.length)
         result.p_shortData[0..size] = data[0..size];
     else
-        result.p_longData = data[0..size].dup;
+        result.p_longData = data[0..size].dup.ptr;
         
     return result;
 }
@@ -470,7 +470,7 @@ void boxArrayToArguments(Box[] arguments, out TypeInfo[] types, out void* data)
         dataLength += argumentLength(item.data.length);
         
     types = new TypeInfo[arguments.length];
-    pointer = data = new void[dataLength];
+    pointer = data = (new void[dataLength]).ptr;
 
     /* Stash both types and data. */
     foreach (size_t index, Box item; arguments)
@@ -690,7 +690,7 @@ template unbox(T : T*)
         if (typeid(void*) is value.type && *cast(void**) value.data is null)
             return null;
         if (typeid(T[]) is value.type)
-            return *cast(T[]*) value.data;
+            return (*cast(T[]*) value.data).ptr;
         
         throw new UnboxException(value, typeid(T*));
     }
@@ -705,7 +705,7 @@ template unbox(T : void*)
         if (cast(TypeInfo_Pointer) value.type)
             return *cast(void**) value.data;
         if (isArrayTypeInfo(value.type))
-            return *cast(void[]*) value.data;
+            return (*cast(void[]*) value.data).ptr;
         if (typeid(Object) == value.type)
             return *cast(Object*) value.data;
         

@@ -520,9 +520,9 @@ class TypeInfo_StaticArray : TypeInfo
 	ubyte* pbuffer;
 
 	if (sz < buffer.sizeof)
-	    tmp = buffer;
+	    tmp = buffer.ptr;
 	else
-	    tmp = pbuffer = new ubyte[sz];
+	    tmp = pbuffer = (new ubyte[sz]).ptr;
 
 	for (size_t u = 0; u < len; u += sz)
 	{   size_t o = u * sz;
@@ -742,7 +742,7 @@ class TypeInfo_Struct : TypeInfo
 	return this is o ||
 		((s = cast(TypeInfo_Struct)o) !is null &&
 		 this.name == s.name &&
-		 this.xsize == s.xsize);
+		 this.init.length == s.init.length);
     }
 
     hash_t getHash(void *p)
@@ -759,7 +759,7 @@ class TypeInfo_Struct : TypeInfo
 	    // A sorry hash algorithm.
 	    // Should use the one for strings.
 	    // BUG: relies on the GC not moving objects
-	    for (size_t i = 0; i < xsize; i++)
+	    for (size_t i = 0; i < init.length; i++)
 	    {	h = h * 9 + *cast(ubyte*)p;
 		p++;
 	    }
@@ -778,7 +778,7 @@ class TypeInfo_Struct : TypeInfo
 	    c = (*xopEquals)(p1, p2);
 	else
 	    // BUG: relies on the GC not moving objects
-	    c = (memcmp(p1, p2, xsize) == 0);
+	    c = (memcmp(p1, p2, init.length) == 0);
 	return c;
     }
 
@@ -796,7 +796,7 @@ class TypeInfo_Struct : TypeInfo
 		    c = (*xopCmp)(p1, p2);
 		else
 		    // BUG: relies on the GC not moving objects
-		    c = memcmp(p1, p2, xsize);
+		    c = memcmp(p1, p2, init.length);
 	    }
 	    else
 		c = -1;
@@ -806,11 +806,11 @@ class TypeInfo_Struct : TypeInfo
 
     size_t tsize()
     {
-	return xsize;
+	return init.length;
     }
 
     char[] name;
-    size_t xsize;
+    byte[] init;	// initializer; init.ptr == null if 0 initialize
 
     hash_t function(void*) xtoHash;
     int function(void*,void*) xopEquals;

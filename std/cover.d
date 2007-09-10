@@ -143,7 +143,7 @@ static ~this()
 	    }
 	}
 
-	FILE *flst = std.c.stdio.fopen(lstfilename, "wb");
+	FILE *flst = std.c.stdio.fopen(lstfilename.ptr, "wb");
 	if (!flst)
 	    throw new std.file.FileException(lstfilename, "cannot open for write");
 

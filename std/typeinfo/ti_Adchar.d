@@ -12,7 +12,7 @@ class TypeInfo_Aw : TypeInfo
     hash_t getHash(void *p)
     {	dchar[] s = *cast(dchar[]*)p;
 	size_t len = s.length;
-	dchar *str = s;
+	dchar *str = s.ptr;
 	hash_t hash = 0;
 
 	while (len)

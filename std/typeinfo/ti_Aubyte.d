@@ -13,7 +13,7 @@ class TypeInfo_Ah : TypeInfo
     hash_t getHash(void *p)
     {	ubyte[] s = *cast(ubyte[]*)p;
 	size_t len = s.length;
-	ubyte *str = s;
+	ubyte *str = s.ptr;
 	hash_t hash = 0;
 
 	while (1)

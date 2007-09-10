@@ -1163,7 +1163,7 @@ private char[] expandFromDatabase(char[] path)
 	// Obtain info from database.
 	passwd *verify;
 	std.c.stdlib.setErrno(0);
-	if (getpwnam_r(username, &result, extra_memory, extra_memory_size,
+	if (getpwnam_r(username.ptr, &result, extra_memory, extra_memory_size,
 		&verify) == 0)
 	{
 	    // Failure if verify doesn't point at result.

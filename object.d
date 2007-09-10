@@ -111,7 +111,7 @@ class TypeInfo_Interface : TypeInfo
 class TypeInfo_Struct : TypeInfo
 {
     char[] name;
-    size_t xsize;
+    byte[] init;
 
     uint function(void*) xtoHash;
     int function(void*,void*) xopEquals;

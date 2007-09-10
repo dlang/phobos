@@ -117,7 +117,7 @@ void[] read(char[] name)
 
     buf = new byte[size];
 
-    if (ReadFile(h,buf,size,&numread,null) != 1)
+    if (ReadFile(h,buf.ptr,size,&numread,null) != 1)
 	goto err2;
 
     if (numread != size)
@@ -161,7 +161,7 @@ void write(char[] name, void[] buffer)
     if (h == INVALID_HANDLE_VALUE)
 	goto err;
 
-    if (WriteFile(h,buffer,buffer.length,&numwritten,null) != 1)
+    if (WriteFile(h,buffer.ptr,buffer.length,&numwritten,null) != 1)
 	goto err2;
 
     if (buffer.length != numwritten)
@@ -205,7 +205,7 @@ void append(char[] name, void[] buffer)
 
     SetFilePointer(h, 0, null, FILE_END);
 
-    if (WriteFile(h,buffer,buffer.length,&numwritten,null) != 1)
+    if (WriteFile(h,buffer.ptr,buffer.length,&numwritten,null) != 1)
 	goto err2;
 
     if (buffer.length != numwritten)
@@ -462,7 +462,7 @@ char[] getcwd()
 	if (!len)
 	    goto Lerr;
 	dir = new wchar[len];
-	len = GetCurrentDirectoryW(len, dir);
+	len = GetCurrentDirectoryW(len, dir.ptr);
 	if (!len)
 	    goto Lerr;
 	return std.utf.toUTF8(dir[0 .. len]); // leave off terminating 0
@@ -477,7 +477,7 @@ char[] getcwd()
 	if (!len)
 	    goto Lerr;
 	dir = new char[len];
-	len = GetCurrentDirectoryA(len, dir);
+	len = GetCurrentDirectoryA(len, dir.ptr);
 	if (!len)
 	    goto Lerr;
 	return dir[0 .. len];		// leave off terminating 0
@@ -507,13 +507,13 @@ struct DirEntry
 	size_t wlength;
 	size_t n;
 
-	clength = std.string.strlen(fd.cFileName);
+	clength = std.string.strlen(fd.cFileName.ptr);
 
 	// Convert cFileName[] to unicode
-	wlength = MultiByteToWideChar(0,0,fd.cFileName,clength,null,0);
+	wlength = MultiByteToWideChar(0,0,fd.cFileName.ptr,clength,null,0);
 	if (wlength > wbuf.length)
 	    wbuf.length = wlength;
-	n = MultiByteToWideChar(0,0,fd.cFileName,clength,cast(wchar*)wbuf,wlength);
+	n = MultiByteToWideChar(0,0,fd.cFileName.ptr,clength,cast(wchar*)wbuf,wlength);
 	assert(n == wlength);
 	// toUTF8() returns a new buffer
 	name = std.path.join(path, std.utf.toUTF8(wbuf[0 .. wlength]));
@@ -527,7 +527,7 @@ struct DirEntry
 
     void init(char[] path, WIN32_FIND_DATAW *fd)
     {
-	size_t clength = std.string.wcslen(fd.cFileName);
+	size_t clength = std.string.wcslen(fd.cFileName.ptr);
 	name = std.path.join(path, std.utf.toUTF8(fd.cFileName[0 .. clength]));
 	size = (cast(ulong)fd.nFileSizeHigh << 32) | fd.nFileSizeLow;
 	creationTime = std.date.FILETIME2d_time(&fd.ftCreationTime);
@@ -762,8 +762,8 @@ void listdir(char[] pathname, bool delegate(DirEntry* de) callback)
 		do
 		{
 		    // Skip "." and ".."
-		    if (std.string.wcscmp(fileinfo.cFileName, ".") == 0 ||
-			std.string.wcscmp(fileinfo.cFileName, "..") == 0)
+		    if (std.string.wcscmp(fileinfo.cFileName.ptr, ".") == 0 ||
+			std.string.wcscmp(fileinfo.cFileName.ptr, "..") == 0)
 			continue;
 
 		    de.init(pathname, &fileinfo);
@@ -789,8 +789,8 @@ void listdir(char[] pathname, bool delegate(DirEntry* de) callback)
 		do
 		{
 		    // Skip "." and ".."
-		    if (std.string.strcmp(fileinfo.cFileName, ".") == 0 ||
-			std.string.strcmp(fileinfo.cFileName, "..") == 0)
+		    if (std.string.strcmp(fileinfo.cFileName.ptr, ".") == 0 ||
+			std.string.strcmp(fileinfo.cFileName.ptr, "..") == 0)
 			continue;
 
 		    de.init(pathname, &fileinfo);
@@ -948,7 +948,7 @@ void write(char[] name, void[] buffer)
     if (fd == -1)
         goto err;
 
-    numwritten = std.c.linux.linux.write(fd, buffer, buffer.length);
+    numwritten = std.c.linux.linux.write(fd, buffer.ptr, buffer.length);
     if (buffer.length != numwritten)
         goto err2;
 
@@ -979,7 +979,7 @@ void append(char[] name, void[] buffer)
     if (fd == -1)
         goto err;
 
-    numwritten = std.c.linux.linux.write(fd, buffer, buffer.length);
+    numwritten = std.c.linux.linux.write(fd, buffer.ptr, buffer.length);
     if (buffer.length != numwritten)
         goto err2;
 
@@ -1219,7 +1219,7 @@ struct DirEntry
     ubyte didstat;			// done lazy evaluation of stat()
 
     void init(char[] path, dirent *fd)
-    {	size_t len = std.string.strlen(fd.d_name);
+    {	size_t len = std.string.strlen(fd.d_name.ptr);
 	name = std.path.join(path, fd.d_name[0 .. len]);
 	d_type = fd.d_type;
 	didstat = 0;
@@ -1367,8 +1367,8 @@ void listdir(char[] pathname, bool delegate(DirEntry* de) callback)
 	    while((fdata = readdir(h)) != null)
 	    {
 		// Skip "." and ".."
-		if (!std.string.strcmp(fdata.d_name, ".") ||
-		    !std.string.strcmp(fdata.d_name, ".."))
+		if (!std.string.strcmp(fdata.d_name.ptr, ".") ||
+		    !std.string.strcmp(fdata.d_name.ptr, ".."))
 			continue;
 
 		de.init(pathname, fdata);

@@ -420,7 +420,7 @@ class Stream : InputStream, OutputStream {
   // reads block of data big enough to fill the given
   // array, returns actual number of bytes read
   size_t read(ubyte[] buffer) {
-    return readBlock(buffer, buffer.length);
+    return readBlock(buffer.ptr, buffer.length);
   }
 
   // read a single value of desired type,
@@ -598,7 +598,7 @@ class Stream : InputStream, OutputStream {
   // ReadException on error
   char[] readString(size_t length) {
     char[] result = new char[length];
-    readExact(result, length);
+    readExact(result.ptr, length);
     return result;
   }
 
@@ -606,7 +606,7 @@ class Stream : InputStream, OutputStream {
   // ReadException on error
   wchar[] readStringW(size_t length) {
     wchar[] result = new wchar[length];
-    readExact(result, result.length * wchar.sizeof);
+    readExact(result.ptr, result.length * wchar.sizeof);
     return result;
   }
 
@@ -1045,7 +1045,7 @@ class Stream : InputStream, OutputStream {
   // writes the given array of bytes, returns
   // actual number of bytes written
   size_t write(ubyte[] buffer) {
-    return writeBlock(buffer, buffer.length);
+    return writeBlock(buffer.ptr, buffer.length);
   }
 
   // write a single value of desired type,
@@ -1107,12 +1107,12 @@ class Stream : InputStream, OutputStream {
 
   // writes a string, throws WriteException on error
   void writeString(char[] s) {
-    writeExact(s, s.length);
+    writeExact(s.ptr, s.length);
   }
 
   // writes a Unicode string, throws WriteException on error
   void writeStringW(wchar[] s) {
-    writeExact(s, s.length * wchar.sizeof);
+    writeExact(s.ptr, s.length * wchar.sizeof);
   }
 
   // writes data to stream using vprintf() syntax,
@@ -1121,7 +1121,7 @@ class Stream : InputStream, OutputStream {
     // shamelessly stolen from OutBuffer,
     // by Walter's permission
     char[1024] buffer;
-    char* p = buffer;
+    char* p = buffer.ptr;
     char* f = toStringz(format);
     size_t psize = buffer.length;
     size_t count;
@@ -1196,8 +1196,8 @@ class Stream : InputStream, OutputStream {
     } else {
       ubyte[128] buf;
       while (!s.eof()) {
-	size_t m = s.readBlock(buf, buf.length);
-	writeExact(buf, m);
+	size_t m = s.readBlock(buf.ptr, buf.length);
+	writeExact(buf.ptr, m);
       }
     }
   }
@@ -1211,8 +1211,8 @@ class Stream : InputStream, OutputStream {
     ubyte[128] buf;
     while (count > 0) {
       size_t n = cast(size_t)(count<buf.length ? count : buf.length);
-      s.readExact(buf, n);
-      writeExact(buf, n);
+      s.readExact(buf.ptr, n);
+      writeExact(buf.ptr, n);
       count -= n;
     }
   }
@@ -1537,7 +1537,7 @@ class BufferedStream : FilterStream {
       streamPos += siz;
     } else {
       // read a new block into buffer
-      bufferLen = super.readBlock(buffer, buffer.length);
+      bufferLen = super.readBlock(buffer.ptr, buffer.length);
       if (bufferLen < len) len = bufferLen;
       outbuf[0 .. len] = buffer[0 .. len];
       bufferSourcePos = bufferLen;
@@ -1562,7 +1562,7 @@ class BufferedStream : FilterStream {
       // buffer is empty so fill it if possible
       if ((len < buffer.length) && (readable)) {
 	// read in data if the buffer is currently empty
-	bufferLen = s.readBlock(buffer,buffer.length);
+	bufferLen = s.readBlock(buffer.ptr, buffer.length);
 	bufferSourcePos = bufferLen;
 	streamPos += bufferLen;
 	  
@@ -1663,7 +1663,7 @@ class BufferedStream : FilterStream {
 	    }
 	  }
 	  flush();
-	  size_t res = super.readBlock(buffer,buffer.length);
+	  size_t res = super.readBlock(buffer.ptr, buffer.length);
 	  if(!res) break L0; // EOF
 	  bufferSourcePos = bufferLen = res;
 	  streamPos += res;
@@ -1702,7 +1702,7 @@ class BufferedStream : FilterStream {
 	streamPos = s.seek(-bufferSourcePos, SeekPos.Current);
       }
       // write buffer out
-      bufferSourcePos = s.writeBlock(buffer,bufferLen);
+      bufferSourcePos = s.writeBlock(buffer.ptr, bufferLen);
       if (bufferSourcePos != bufferLen) {
 	throw new WriteException("Unable to write to stream");
       }
@@ -2360,7 +2360,7 @@ class EndianStream : FilterStream {
 
   wchar[] readStringW(size_t length) {
     wchar[] result = new wchar[length];
-    readExact(result, result.length * wchar.sizeof);
+    readExact(result.ptr, result.length * wchar.sizeof);
     fixBlockBO(&result,2,length);
     return result;
   }
@@ -2368,7 +2368,7 @@ class EndianStream : FilterStream {
   /// Write the specified BOM b to the source stream.
   void writeBOM(BOM b) {
     ubyte[] bom = ByteOrderMarks[b];
-    writeBlock(bom,bom.length);
+    writeBlock(bom.ptr, bom.length);
   }
 
   void write(short x) { fixBO(&x,x.sizeof); writeExact(&x, x.sizeof); }

@@ -33,8 +33,8 @@ deprecated class SysError
 
 	    default:
 		result = new char[uint.sizeof * 3 + 1];
-		sprintf(result, "%u", errcode);
-		result = result[0 .. strlen(result)];
+		auto len = sprintf(result.ptr, "%u", errcode);
+		result = result[0 .. len];
 		break;
 	}
 

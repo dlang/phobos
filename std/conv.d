@@ -886,7 +886,7 @@ float toFloat(in char[] s)
     f = strtof(sz, &endptr);
     if (getErrno() == ERANGE)
 	goto Lerr;
-    if (endptr && (endptr == s || *endptr != 0))
+    if (endptr && (endptr == s.ptr || *endptr != 0))
 	goto Lerr;
 
     return f;
@@ -950,7 +950,7 @@ double toDouble(in char[] s)
     f = strtod(sz, &endptr);
     if (getErrno() == ERANGE)
 	goto Lerr;
-    if (endptr && (endptr == s || *endptr != 0))
+    if (endptr && (endptr == s.ptr || *endptr != 0))
 	goto Lerr;
 
     return f;
@@ -1016,7 +1016,7 @@ real toReal(in char[] s)
     f = strtold(sz, &endptr);
     if (getErrno() == ERANGE)
 	goto Lerr;
-    if (endptr && (endptr == s || *endptr != 0))
+    if (endptr && (endptr == s.ptr || *endptr != 0))
 	goto Lerr;
 
     return f;

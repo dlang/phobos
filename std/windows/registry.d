@@ -589,7 +589,7 @@ body
     {
         cchName = name.length;
 
-        res = RegEnumKeyExA(hkey, index, name, cchName, RESERVED, null, null, null);
+        res = RegEnumKeyExA(hkey, index, name.ptr, cchName, RESERVED, null, null, null);
 
         if(ERROR_MORE_DATA != res)
         {
@@ -694,7 +694,7 @@ body
 
     if(ERROR_MORE_DATA == res)
     {
-        data = new byte[cbData];
+        data = (new byte[cbData]).ptr;
 
         res = RegQueryValueExA( hkey, toStringz(name), RESERVED, type, data
                             ,   cbData);
@@ -752,14 +752,14 @@ body
 {
     char[]  data    =   new char[256];
     DWORD   cbData  =   data.sizeof;
-    LONG    res     =   RegQueryValueExA(   hkey, toStringz(name), RESERVED, type
-                                        ,   data, cbData);
+    LONG    res     =   RegQueryValueExA( hkey, toStringz(name), RESERVED, type
+                                        , data.ptr, cbData);
 
     if(ERROR_MORE_DATA == res)
     {
         data.length = cbData;
 
-        res = RegQueryValueExA(hkey, toStringz(name), RESERVED, type, data, cbData);
+        res = RegQueryValueExA(hkey, toStringz(name), RESERVED, type, data.ptr, cbData);
     }
     else if(ERROR_SUCCESS == res)
     {
@@ -869,13 +869,13 @@ body
     byte[]  data    =   new byte[100];
     DWORD   cbData  =   data.sizeof;
     LONG    res     =   RegQueryValueExA(   hkey, toStringz(name), RESERVED, type
-                                        ,   data, cbData);
+                                        ,   data.ptr, cbData);
 
     if(ERROR_MORE_DATA == res)
     {
         data.length = cbData;
 
-        res = RegQueryValueExA(hkey, toStringz(name), RESERVED, type, data, cbData);
+        res = RegQueryValueExA(hkey, toStringz(name), RESERVED, type, data.ptr, cbData);
     }
 
     if(ERROR_SUCCESS != res)
@@ -1312,7 +1312,7 @@ public:
     {
         Reg_SetValueExA_(m_hkey, name, asEXPAND_SZ 
                                             ? REG_VALUE_TYPE.REG_EXPAND_SZ
-                                            : REG_VALUE_TYPE.REG_SZ, value
+                                            : REG_VALUE_TYPE.REG_SZ, value.ptr
                         , value.length);
     }
 
@@ -1349,7 +1349,7 @@ public:
             base = 1 + top;
         }
 
-        Reg_SetValueExA_(m_hkey, name, REG_VALUE_TYPE.REG_MULTI_SZ, cs, cs.length);
+        Reg_SetValueExA_(m_hkey, name, REG_VALUE_TYPE.REG_MULTI_SZ, cs.ptr, cs.length);
     }
 
     /// Sets the named value with the given binary value
@@ -1359,7 +1359,7 @@ public:
     /// \note If a value corresponding to the requested name is not found, a RegistryException is thrown
     void setValue(char[] name, byte[] value)
     {
-        Reg_SetValueExA_(m_hkey, name, REG_VALUE_TYPE.REG_BINARY, value, value.length);
+        Reg_SetValueExA_(m_hkey, name, REG_VALUE_TYPE.REG_BINARY, value.ptr, value.length);
     }
 
     /// Deletes the named value
@@ -1480,7 +1480,7 @@ public:
         DWORD   cchRequired =   ExpandEnvironmentStringsA(lpSrc, null, 0);
         char[]  newValue    =   new char[cchRequired];
 
-        if(!ExpandEnvironmentStringsA(lpSrc, newValue, newValue.length))
+        if(!ExpandEnvironmentStringsA(lpSrc, newValue.ptr, newValue.length))
         {
             throw new Win32Exception("Failed to expand environment variables");
         }
@@ -1990,7 +1990,7 @@ public:
 
         assert(ERROR_SUCCESS == res);
 
-        res     =   Reg_EnumValueName_(hkey, index, sName, cchName);
+        res = Reg_EnumValueName_(hkey, index, sName.ptr, cchName);
 
         if(ERROR_SUCCESS != res)
         {
@@ -2027,7 +2027,7 @@ public:
         {
             DWORD   cchName =   1 + cchValueMaxLen;
 
-	    res     =   Reg_EnumValueName_(hkey, index, sName, cchName);
+	    res = Reg_EnumValueName_(hkey, index, sName.ptr, cchName);
             if(ERROR_NO_MORE_ITEMS == res)
             {
                 // Enumeration complete
@@ -2117,7 +2117,7 @@ public:
 
         assert(ERROR_SUCCESS == res);
 
-        res     =   Reg_EnumValueName_(hkey, index, sName, cchName);
+        res     =   Reg_EnumValueName_(hkey, index, sName.ptr, cchName);
 
         if(ERROR_SUCCESS != res)
         {
@@ -2154,7 +2154,7 @@ public:
         {
             DWORD   cchName =   1 + cchValueMaxLen;
 
-	    res = Reg_EnumValueName_(hkey, index, sName, cchName);
+	    res = Reg_EnumValueName_(hkey, index, sName.ptr, cchName);
             if(ERROR_NO_MORE_ITEMS == res)
             {
                 // Enumeration complete

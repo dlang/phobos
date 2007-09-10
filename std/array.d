@@ -18,7 +18,7 @@ class ArrayBoundsError : Error
 
 	char[] buffer = new char[19 + filename.length + linnum.sizeof * 3 + 1];
 	int len;
-	len = sprintf(buffer, "ArrayBoundsError %.*s(%u)", filename, linnum);
+	len = sprintf(buffer.ptr, "ArrayBoundsError %.*s(%u)", filename, linnum);
 	super(buffer[0..len]);
     }
 }

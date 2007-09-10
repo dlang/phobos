@@ -816,7 +816,7 @@ wchar* toUTF16z(char[] s)
 	}
     }
     r ~= "\000";
-    return r;
+    return r.ptr;
 }
 
 /** ditto */

@@ -58,7 +58,7 @@ extern (C) long _adSort(Array a, TypeInfo ti)
 
   base = cast(byte *)a.ptr;
   thresh = _maxspan * width;             // init threshold
-  sp = stack;                            // init stack pointer
+  sp = stack.ptr;                        // init stack pointer
   limit = base + a.length * width;	 // pointer past end of array
   while (1)                              // repeat until done then return
   {
@@ -120,7 +120,7 @@ extern (C) long _adSort(Array a, TypeInfo ti)
       i += width;
     }
 
-    if (sp > stack)			// if any entries on stack...
+    if (sp > stack.ptr)			// if any entries on stack...
     {
       sp -= 2;				// pop the base and limit
       base = sp[0];

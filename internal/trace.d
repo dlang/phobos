@@ -356,7 +356,7 @@ else
 	    calls,tl,tr,fl,fr,pl,pr,id);
 }
 	if (id !is s.Sident)
-	    free(id);
+	    free(id.ptr);
     }
 }
 
@@ -428,7 +428,7 @@ void trace_term()
 	trace_merge();
 
 	// Report results
-	fplog = fopen(trace_logfilename,"w");
+	fplog = fopen(trace_logfilename.ptr, "w");
 	//fplog = std.c.stdio.stdout;
 	if (fplog)
 	{   nsymbols = 0;
@@ -439,7 +439,7 @@ void trace_term()
 	}
 
 	// Output function link order
-	fpdef = fopen(trace_deffilename,"w");
+	fpdef = fopen(trace_deffilename.ptr, "w");
 	if (fpdef)
 	{   fprintf(fpdef,"\nFUNCTIONS\n");
 	    trace_order(root);
@@ -685,7 +685,7 @@ static void trace_merge()
     SymPair *sfanin;
     SymPair **psp;
 
-    if (trace_logfilename && (fp = fopen(trace_logfilename,"r")) != null)
+    if (trace_logfilename && (fp = fopen(trace_logfilename.ptr, "r")) != null)
     {
 	buf = null;
 	sfanin = null;

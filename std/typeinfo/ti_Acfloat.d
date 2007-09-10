@@ -34,7 +34,7 @@ class TypeInfo_Aq : TypeInfo
     hash_t getHash(void *p)
     {	cfloat[] s = *cast(cfloat[]*)p;
 	size_t len = s.length;
-	cfloat *str = s;
+	cfloat *str = s.ptr;
 	hash_t hash = 0;
 
 	while (len)

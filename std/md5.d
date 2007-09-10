@@ -245,11 +245,11 @@ struct MD5_CTX
       /* Transform as many times as possible. */
       if (inputLen >= partLen)
       {
-	    std.c.string.memcpy(&buffer[index], input, partLen);
-	    transform (buffer);
+	    std.c.string.memcpy(&buffer[index], input.ptr, partLen);
+	    transform (buffer.ptr);
 
 	    for (i = partLen; i + 63 < inputLen; i += 64)
-	       transform ((cast(ubyte[])input)[i .. i + 64]);
+	       transform ((cast(ubyte[])input)[i .. i + 64].ptr);
 
 	    index = 0;
       }
@@ -273,7 +273,7 @@ struct MD5_CTX
       /* Save number of bits */
       cnt[0] = cast(uint)count;
       cnt[1] = cast(uint)(count >> 32);
-      Encode (bits, cnt, 8);
+      Encode (bits.ptr, cnt.ptr, 8);
 
       /* Pad out to 56 mod 64. */
       index = (cast(uint)count >> 3) & (64 - 1);
@@ -284,7 +284,7 @@ struct MD5_CTX
       update (bits);
 
       /* Store state in digest */
-      Encode (digest, state, 16);
+      Encode (digest.ptr, state.ptr, 16);
 
       /* Zeroize sensitive information. */
       std.c.string.memset (this, 0, MD5_CTX.sizeof);
@@ -322,7 +322,7 @@ struct MD5_CTX
 	   d = state[3];
       uint[16] x;
 
-      Decode (x, block, 64);
+      Decode (x.ptr, block, 64);
 
       /* Round 1 */
       FF (a, b, c, d, x[ 0], S11, 0xd76aa478); /* 1 */

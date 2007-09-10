@@ -231,7 +231,7 @@ char* zlibVersion();
 
 int deflateInit(z_streamp strm, int level)
 {
-    return deflateInit_(strm, level, ZLIB_VERSION, z_stream.sizeof);
+    return deflateInit_(strm, level, ZLIB_VERSION.ptr, z_stream.sizeof);
 }
 /* 
      Initializes the internal stream state for compression. The fields
@@ -356,7 +356,7 @@ int deflateEnd(z_streamp strm);
 
 int inflateInit(z_streamp strm)
 {
-    return inflateInit_(strm, ZLIB_VERSION, z_stream.sizeof);
+    return inflateInit_(strm, ZLIB_VERSION.ptr, z_stream.sizeof);
 }
 /* 
      Initializes the internal stream state for decompression. The fields
@@ -501,7 +501,7 @@ int deflateInit2(z_streamp strm,
                  int  strategy)
 {
     return deflateInit2_(strm, level, method, windowBits, memLevel,
-                         strategy, ZLIB_VERSION, z_stream.sizeof);
+                         strategy, ZLIB_VERSION.ptr, z_stream.sizeof);
 }
 /*
      This is another version of deflateInit with more compression options. The
@@ -753,7 +753,7 @@ int deflateSetHeader(z_streamp strm, gz_headerp head);
 
 int inflateInit2(z_streamp strm, int windowBits)
 {
-    return inflateInit2_(strm, windowBits, ZLIB_VERSION, z_stream.sizeof);
+    return inflateInit2_(strm, windowBits, ZLIB_VERSION.ptr, z_stream.sizeof);
 }
 /*   
      This is another version of inflateInit with an extra parameter. The
@@ -858,7 +858,7 @@ int inflateReset(z_streamp strm);
 
 int inflateBackInit(z_stream* strm, int windowBits, ubyte* window)
 {
-    return inflateBackInit_(strm, windowBits, window, ZLIB_VERSION, z_stream.sizeof);   
+    return inflateBackInit_(strm, windowBits, window, ZLIB_VERSION.ptr, z_stream.sizeof);   
 }
 /*
      Initialize the internal stream state for decompression using inflateBack()

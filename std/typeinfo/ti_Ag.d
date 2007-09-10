@@ -12,7 +12,7 @@ class TypeInfo_Ag : TypeInfo
     hash_t getHash(void *p)
     {	byte[] s = *cast(byte[]*)p;
 	size_t len = s.length;
-	byte *str = s;
+	byte *str = s.ptr;
 	hash_t hash = 0;
 
 	while (1)

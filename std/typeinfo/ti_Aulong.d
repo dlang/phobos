@@ -12,7 +12,7 @@ class TypeInfo_Am : TypeInfo
     hash_t getHash(void *p)
     {	ulong[] s = *cast(ulong[]*)p;
 	size_t len = s.length;
-	ulong *str = s;
+	auto str = s.ptr;
 	hash_t hash = 0;
 
 	while (len)

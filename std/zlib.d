@@ -342,7 +342,7 @@ class Compress
     body
     {
 	void[] destbuf;
-	ubyte[512] tmpbuf;
+	ubyte[512] tmpbuf = void;
 	int err;
 
 	if (!inited)
@@ -352,7 +352,7 @@ class Compress
 	 * zs.avail_out is set nonzero by deflate in previous compress()
 	 */
 	//tmpbuf = new void[zs.avail_out];
-	zs.next_out = tmpbuf;
+	zs.next_out = tmpbuf.ptr;
 	zs.avail_out = tmpbuf.length;
 
 	while( (err = deflate(&zs, mode)) != Z_STREAM_END)
@@ -364,7 +364,7 @@ class Compress
 		else if(zs.avail_out == 0)
 		{
 		    destbuf ~= tmpbuf;
-		    zs.next_out = tmpbuf;
+		    zs.next_out = tmpbuf.ptr;
 		    zs.avail_out = tmpbuf.length;
 		    continue;
 		}

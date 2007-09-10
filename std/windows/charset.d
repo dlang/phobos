@@ -68,7 +68,7 @@ char* toMBSz(char[] s, uint codePage = 0)
 			sysErrorString(GetLastError()));
 	    }
 
-	    return result;
+	    return result.ptr;
 	}
     }
     return std.string.toStringz(s);

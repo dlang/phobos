@@ -127,7 +127,7 @@ int cmp(char[] s1, char[] s2)
     //printf("cmp('%.*s', '%.*s')\n", s1, s2);
     if (s2.length < len)
 	len = s2.length;
-    result = memcmp(s1, s2, len);
+    result = memcmp(s1.ptr, s2.ptr, len);
     if (result == 0)
 	result = cast(int)s1.length - cast(int)s2.length;
     return result;
@@ -146,7 +146,7 @@ int icmp(char[] s1, char[] s2)
 	len = s2.length;
     version (Win32)
     {
-	result = memicmp(s1, s2, len);
+	result = memicmp(s1.ptr, s2.ptr, len);
     }
     version (linux)
     {
@@ -215,7 +215,7 @@ char* toStringz(char[] s)
     {
 	if (result)
 	{   assert(strlen(result) == s.length);
-	    assert(memcmp(result, s, s.length) == 0);
+	    assert(memcmp(result, s.ptr, s.length) == 0);
 	}
     }
     body
@@ -244,7 +244,7 @@ char* toStringz(char[] s)
 	copy = new char[s.length + 1];
 	copy[0..s.length] = s;
 	copy[s.length] = 0;
-	return copy;
+	return copy.ptr;
     }
 
 unittest
@@ -275,7 +275,7 @@ int find(char[] s, dchar c)
 {
     if (c <= 0x7F)
     {	// Plain old ASCII
-	auto p = cast(char*)memchr(s, c, s.length);
+	auto p = cast(char*)memchr(s.ptr, c, s.length);
 	if (p)
 	    return p - cast(char *)s;
 	else
@@ -496,7 +496,7 @@ int find(char[] s, char[] sub)
 	else
 	{
 	    assert(0 <= result && result < s.length - sub.length + 1);
-	    assert(memcmp(&s[result], sub, sub.length) == 0);
+	    assert(memcmp(&s[result], sub.ptr, sub.length) == 0);
 	}
     }
     body
@@ -511,7 +511,7 @@ int find(char[] s, char[] sub)
 	    auto c = sub[0];
 	    if (sublength == 1)
 	    {
-		auto p = cast(char*)memchr(s, c, s.length);
+		auto p = cast(char*)memchr(s.ptr, c, s.length);
 		if (p)
 		    return p - &s[0];
 	    }
@@ -677,7 +677,7 @@ int rfind(char[] s, char[] sub)
 	else
 	{
 	    assert(0 <= result && result < s.length - sub.length + 1);
-	    assert(memcmp(&s[0] + result, sub, sub.length) == 0);
+	    assert(memcmp(&s[0] + result, sub.ptr, sub.length) == 0);
 	}
     }
     body
@@ -2479,8 +2479,8 @@ char[] toString(double d)
 {
     char[20] buffer;
 
-    sprintf(buffer, "%g", d);
-    return std.string.toString(buffer).dup;
+    int len = sprintf(buffer.ptr, "%g", d);
+    return buffer[0 .. len].dup;
 }
 
 /// ditto
@@ -2488,8 +2488,8 @@ char[] toString(real r)
 {
     char[20] buffer;
 
-    sprintf(buffer, "%Lg", r);
-    return std.string.toString(buffer).dup;
+    int len = sprintf(buffer.ptr, "%Lg", r);
+    return buffer[0 .. len].dup;
 }
 
 /// ditto
@@ -2500,8 +2500,8 @@ char[] toString(idouble d)
 {
     char[21] buffer;
 
-    sprintf(buffer, "%gi", d);
-    return std.string.toString(buffer).dup;
+    int len = sprintf(buffer.ptr, "%gi", d);
+    return buffer[0 .. len].dup;
 }
 
 /// ditto
@@ -2509,8 +2509,8 @@ char[] toString(ireal r)
 {
     char[21] buffer;
 
-    sprintf(buffer, "%Lgi", r);
-    return std.string.toString(buffer).dup;
+    int len = sprintf(buffer.ptr, "%Lgi", r);
+    return buffer[0 .. len].dup;
 }
 
 /// ditto
@@ -2521,8 +2521,8 @@ char[] toString(cdouble d)
 {
     char[20 + 1 + 20 + 1] buffer;
 
-    sprintf(buffer, "%g+%gi", d.re, d.im);
-    return std.string.toString(buffer).dup;
+    int len = sprintf(buffer.ptr, "%g+%gi", d.re, d.im);
+    return buffer[0 .. len].dup;
 }
 
 /// ditto
@@ -2530,8 +2530,8 @@ char[] toString(creal r)
 {
     char[20 + 1 + 20 + 1] buffer;
 
-    sprintf(buffer, "%Lg+%Lgi", r.re, r.im);
-    return std.string.toString(buffer).dup;
+    int len = sprintf(buffer.ptr, "%Lg+%Lgi", r.re, r.im);
+    return buffer[0 .. len].dup;
 }
 
 

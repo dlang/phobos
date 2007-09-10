@@ -34,7 +34,7 @@ class TypeInfo_Af : TypeInfo
     hash_t getHash(void *p)
     {	float[] s = *cast(float[]*)p;
 	size_t len = s.length;
-	float *str = s;
+	auto str = s.ptr;
 	hash_t hash = 0;
 
 	while (len)

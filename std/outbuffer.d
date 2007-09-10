@@ -245,7 +245,7 @@ class OutBuffer
 	int count;
 
 	f = toStringz(format);
-	p = buffer;
+	p = buffer.ptr;
 	psize = buffer.length;
 	for (;;)
 	{

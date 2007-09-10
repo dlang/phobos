@@ -34,7 +34,7 @@ class TypeInfo_Ar : TypeInfo
     hash_t getHash(void *p)
     {	cdouble[] s = *cast(cdouble[]*)p;
 	size_t len = s.length;
-	cdouble *str = s;
+	cdouble *str = s.ptr;
 	hash_t hash = 0;
 
 	while (len)

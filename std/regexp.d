@@ -816,7 +816,7 @@ public void compile(rchar[] pattern, rchar[] attributes)
 
     if (re_nsub > oldre_nsub)
     {
-	if (pmatch is &gmatch)
+	if (pmatch.ptr is &gmatch)
 	    pmatch = null;
 	pmatch.length = re_nsub + 1;
     }
@@ -1774,13 +1774,13 @@ int trymatch(int pc, int pcend)
 		    for (; count < m; count++)
 		    {   int s1;
 
-			memcpy(psave, pmatch, (re_nsub + 1) * regmatch_t.sizeof);
+			memcpy(psave, pmatch.ptr, (re_nsub + 1) * regmatch_t.sizeof);
 			s1 = src;
 
 			if (trymatch(pop + len, program.length))
 			{
 			    src = s1;
-			    memcpy(pmatch, psave, (re_nsub + 1) * regmatch_t.sizeof);
+			    memcpy(pmatch.ptr, psave, (re_nsub + 1) * regmatch_t.sizeof);
 			    break;
 			}
 
@@ -1803,7 +1803,7 @@ int trymatch(int pc, int pcend)
 		    {   int s1;
 			int s2;
 
-			memcpy(psave, pmatch, (re_nsub + 1) * regmatch_t.sizeof);
+			memcpy(psave, pmatch.ptr, (re_nsub + 1) * regmatch_t.sizeof);
 			s1 = src;
 			if (!trymatch(pop, pop + len))
 			{   debug(regexp) printf("\tdoesn't match subexpression\n");
@@ -1826,7 +1826,7 @@ int trymatch(int pc, int pcend)
 			    if (trymatch(pop + len, program.length))
 			    {
 				src = s1;		// no match
-				memcpy(pmatch, psave, (re_nsub + 1) * regmatch_t.sizeof);
+				memcpy(pmatch.ptr, psave, (re_nsub + 1) * regmatch_t.sizeof);
 				break;
 			    }
 			}

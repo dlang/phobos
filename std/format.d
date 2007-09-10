@@ -580,7 +580,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
 		{   int n;
 
 		    sl = fbuf.length;
-		    n = snprintf(fbuf, sl, format, field_width, precision, v);
+		    n = snprintf(fbuf.ptr, sl, format.ptr, field_width, precision, v);
 		    //printf("format = '%s', n = %d\n", cast(char*)format, n);
 		    if (n >= 0 && n < sl)
 		    {	sl = n;

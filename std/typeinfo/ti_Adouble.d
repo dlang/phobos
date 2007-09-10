@@ -34,7 +34,7 @@ class TypeInfo_Ad : TypeInfo
     hash_t getHash(void *p)
     {	double[] s = *cast(double[]*)p;
 	size_t len = s.length;
-	double *str = s;
+	auto str = s.ptr;
 	hash_t hash = 0;
 
 	while (len)
