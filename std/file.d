@@ -264,6 +264,22 @@ ulong getSize(char[] name)
     return (cast(ulong)resulth << 32) + resultl;
 }
 
+/***************************************************
+ * Does file (or directory) exist?
+ */
+
+int exists(char[] name)
+{
+    uint result;
+
+    if (useWfuncs)
+	// http://msdn.microsoft.com/library/default.asp?url=/library/en-us/fileio/base/getfileattributes.asp
+	result = GetFileAttributesW(std.utf.toUTF16z(name));
+    else
+	result = GetFileAttributesA(toMBSz(name));
+
+    return (result == 0xFFFFFFFF) ? 0 : 1;
+}
 
 /***************************************************
  * Get file attributes.
@@ -699,6 +715,24 @@ uint getAttributes(char[] name)
     }
 
     return statbuf.st_mode;
+}
+
+/****************************************************
+ * Does file/directory exist?
+ */
+
+int exists(char[] name)
+{
+    struct_stat statbuf;
+    char *namez;
+
+    namez = toStringz(name);
+    if (std.c.linux.linux.stat(namez, &statbuf))
+    {
+	return 0;
+    }
+
+    return 1;
 }
 
 /****************************************************

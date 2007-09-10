@@ -1,7 +1,10 @@
 
-module std.assertexception;
+module std.asserterror;
 
-class AssertError : Object
+import std.c.stdio;
+import std.c.stdlib;
+
+class AssertError : Error
 {
   private:
 
@@ -12,18 +15,32 @@ class AssertError : Object
     {
 	this.linnum = linnum;
 	this.filename = filename;
-    }
 
-  public:
+	char* buffer;
+	size_t len;
+	int count;
 
-    /***************************************
-     * If nobody catches the AssertError, this winds up
-     * getting called by the startup code.
-     */
+	/* This code is careful to not use gc allocated memory,
+	 * as that may be the source of the problem.
+	 * Instead, stick with C functions.
+	 * We'll never free the malloc'd memory, but that doesn't matter,
+	 * as we're aborting anyway.
+	 */
 
-    void print()
-    {
-	printf("AssertError Failure %s(%u)\n", cast(char *)filename, linnum);
+	len = 22 + filename.length + uint.sizeof * 3 + 1;
+	buffer = cast(char*)std.c.stdlib.malloc(len);
+	if (buffer == null)
+	    super("AssertError internal failure");
+	else
+	{
+	    version (Win32) alias _snprintf snprintf;
+	    count = snprintf(buffer, len, "AssertError Failure %.*s(%u)",
+		filename, linnum);
+	    if (count >= len || count == -1)
+		super("AssertError internal failure");
+	    else
+		super(buffer[0 .. count]);
+	}
     }
 }
 
@@ -35,7 +52,7 @@ class AssertError : Object
 
 extern (C) static void _d_assert(char[] filename, uint line)
 {
-    //printf("_d_assert(%s, %d)\n", (char *)filename, line);
+    //printf("_d_assert(%s, %d)\n", cast(char *)filename, line);
     AssertError a = new AssertError(filename, line);
     //printf("assertion %p created\n", a);
     throw a;

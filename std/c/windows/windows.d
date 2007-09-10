@@ -98,25 +98,41 @@ extern (Windows)
     alias DWORD   *LPCOLORREF;
     alias WORD    ATOM;
 
-alias FARPROC DLGPROC;
-alias FARPROC TIMERPROC;
-alias FARPROC GRAYSTRINGPROC;
-alias FARPROC WNDENUMPROC;
-alias FARPROC HOOKPROC;
-alias FARPROC SENDASYNCPROC;
-
-alias FARPROC EDITWORDBREAKPROCA;
-alias FARPROC EDITWORDBREAKPROCW;
-
-alias FARPROC PROPENUMPROCA;
-alias FARPROC PROPENUMPROCW;
-
-alias FARPROC PROPENUMPROCEXA;
-alias FARPROC PROPENUMPROCEXW;
-
-
-alias FARPROC DRAWSTATEPROC;
-
+version (0)
+{   // Properly prototyped versions
+    alias BOOL function(HWND, UINT, WPARAM, LPARAM) DLGPROC;
+    alias VOID function(HWND, UINT, UINT, DWORD) TIMERPROC;
+    alias BOOL function(HDC, LPARAM, int) GRAYSTRINGPROC;
+    alias BOOL function(HWND, LPARAM) WNDENUMPROC;
+    alias LRESULT function(int code, WPARAM wParam, LPARAM lParam) HOOKPROC;
+    alias VOID function(HWND, UINT, DWORD, LRESULT) SENDASYNCPROC;
+    alias BOOL function(HWND, LPCSTR, HANDLE) PROPENUMPROCA;
+    alias BOOL function(HWND, LPCWSTR, HANDLE) PROPENUMPROCW;
+    alias BOOL function(HWND, LPSTR, HANDLE, DWORD) PROPENUMPROCEXA;
+    alias BOOL function(HWND, LPWSTR, HANDLE, DWORD) PROPENUMPROCEXW;
+    alias int function(LPSTR lpch, int ichCurrent, int cch, int code)
+       EDITWORDBREAKPROCA;
+    alias int function(LPWSTR lpch, int ichCurrent, int cch, int code)
+       EDITWORDBREAKPROCW;
+    alias BOOL function(HDC hdc, LPARAM lData, WPARAM wData, int cx, int cy)
+       DRAWSTATEPROC;
+}
+else
+{
+    alias FARPROC DLGPROC;
+    alias FARPROC TIMERPROC;
+    alias FARPROC GRAYSTRINGPROC;
+    alias FARPROC WNDENUMPROC;
+    alias FARPROC HOOKPROC;
+    alias FARPROC SENDASYNCPROC;
+    alias FARPROC EDITWORDBREAKPROCA;
+    alias FARPROC EDITWORDBREAKPROCW;
+    alias FARPROC PROPENUMPROCA;
+    alias FARPROC PROPENUMPROCW;
+    alias FARPROC PROPENUMPROCEXA;
+    alias FARPROC PROPENUMPROCEXW;
+    alias FARPROC DRAWSTATEPROC;
+}
 
 WORD HIWORD(int l) { return cast(WORD)((l >> 16) & 0xFFFF); }
 WORD LOWORD(int l) { return cast(WORD)l; }
