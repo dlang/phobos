@@ -1057,6 +1057,11 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
     {	ti = arguments[j++];
 	//printf("test1: '%.*s' %d\n", ti.classinfo.name, ti.classinfo.name.length);
 	//ti.print();
+
+	flags = 0;
+	precision = 0;
+	field_width = 0;
+
 	ti = skipCI(ti);
 	int mi = 9;
 	do
@@ -1251,9 +1256,6 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
 	}
 	else
 	{
-	    field_width = 0;
-	    flags = 0;
-	    precision = 0;
 	    formatArg('s');
 	}
     }
@@ -1549,5 +1551,8 @@ unittest
 	else
 	    assert(r == " 98");
     }
+
+    r = std.string.format(">%14d<, ", 15, [1,2,3]);
+    assert(r == ">            15<, [1,2,3]");
 }
 
