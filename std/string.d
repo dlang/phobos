@@ -263,8 +263,8 @@ unittest
 }
 
 /******************************************
- * find, ifind _find first occurrance of c in string s.
- * rfind, irfind _find last occurrance of c in string s.
+ * find, ifind _find first occurrence of c in string s.
+ * rfind, irfind _find last occurrence of c in string s.
  *
  * find, rfind are case sensitive; ifind, irfind are case insensitive.
  * Returns:
@@ -479,8 +479,8 @@ unittest
 
 
 /******************************************
- * find, ifind _find first occurrance of sub[] in string s[].
- * rfind, irfind _find last occurrance of sub[] in string s[].
+ * find, ifind _find first occurrence of sub[] in string s[].
+ * rfind, irfind _find last occurrence of sub[] in string s[].
  *
  * find, rfind are case sensitive; ifind, irfind are case insensitive.
  * Returns:
@@ -612,7 +612,7 @@ int ifind(char[] s, char[] sub)
 	{
 	    size_t imax = s.length - sublength;
 
-	    for (i = 0; i < imax; i++)
+	    for (i = 0; i <= imax; i++)
 	    {
 		if (icmp(s[i .. i + sublength], sub) == 0)
 		    return i;
@@ -656,6 +656,9 @@ unittest
     i = ifind(sPlts, "Un.");
     assert(i == 41);
     i = ifind(sPlts, sPlts);
+    assert(i == 0);
+
+    i = ifind("\u0100", "\u0100");
     assert(i == 0);
 
     // Thanks to Carlos Santander B. and zwang
@@ -807,10 +810,10 @@ unittest
  * Convert string s[] to lower case.
  */
 
-char[] tolower(char[] s)
+string tolower(string s)
 {
-    bool changed;
-    auto r = s;
+    int changed;
+    char[] r;
 
     for (size_t i = 0; i < s.length; i++)
     {
@@ -820,13 +823,13 @@ char[] tolower(char[] s)
 	    if (!changed)
 	    {
 		r = s.dup;
-		changed = true;
+		changed = 1;
 	    }
 	    r[i] = cast(char) (c + (cast(char)'a' - 'A'));
 	}
-	else if (c >= 0x7F)
+	else if (c > 0x7F)
 	{
-	    foreach(size_t j, dchar dc; s[i .. length])
+	    foreach (size_t j, dchar dc; s[i .. length])
 	    {
 		if (std.uni.isUniUpper(dc))
 		{
@@ -834,20 +837,22 @@ char[] tolower(char[] s)
 		    if (!changed)
 		    {
 			r = s[0 .. i + j].dup;
-			changed = true;
+			changed = 2;
 		    }
 		}
 		if (changed)
 		{
-		    if (r.length != i + j)
-			r = r[0 .. i + j];
+		    if (changed == 1)
+		    {	r = r[0 .. i + j];
+			changed = 2;
+		    }
 		    std.utf.encode(r, dc);
 		}
 	    }
 	    break;
 	}
     }
-    return r;
+    return changed ? r : s;
 }
 
 unittest
@@ -870,16 +875,21 @@ unittest
     s2 = tolower(s1);
     assert(cmp(s2, "a\u0461b\u0461d") == 0);
     assert(s2 !is s1);
+
+    s1 = "\u0130";
+    s2 = tolower(s1);
+    assert(s2 == "i");
+    assert(s2 !is s1);
 }
 
 /************************************
  * Convert string s[] to upper case.
  */
 
-char[] toupper(char[] s)
+string toupper(string s)
 {
-    bool changed;
-    auto r = s;
+    int changed;
+    char[] r;
 
     for (size_t i = 0; i < s.length; i++)
     {
@@ -889,13 +899,13 @@ char[] toupper(char[] s)
 	    if (!changed)
 	    {
 		r = s.dup;
-		changed = true;
+		changed = 1;
 	    }
 	    r[i] = cast(char) (c - (cast(char)'a' - 'A'));
 	}
-	else if (c >= 0x7F)
+	else if (c > 0x7F)
 	{
-	    foreach(size_t j, dchar dc; s[i .. length])
+	    foreach (size_t j, dchar dc; s[i .. length])
 	    {
 		if (std.uni.isUniLower(dc))
 		{
@@ -903,20 +913,22 @@ char[] toupper(char[] s)
 		    if (!changed)
 		    {
 			r = s[0 .. i + j].dup;
-			changed = true;
+			changed = 2;
 		    }
 		}
 		if (changed)
 		{
-		    if (r.length != i + j)
-			r = r[0 .. i + j];
+		    if (changed == 1)
+		    {	r = r[0 .. i + j];
+			changed = 2;
+		    }
 		    std.utf.encode(r, dc);
 		}
 	    }
 	    break;
 	}
     }
-    return r;
+    return changed ? r : s;
 }
 
 unittest

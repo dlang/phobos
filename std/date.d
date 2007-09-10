@@ -763,6 +763,7 @@ version (Win32)
 	{
 	    case TIME_ZONE_ID_STANDARD:
 	    case TIME_ZONE_ID_DAYLIGHT:
+	    case TIME_ZONE_ID_UNKNOWN:
 		//printf("bias = %d\n", tzi.Bias);
 		//printf("standardbias = %d\n", tzi.StandardBias);
 		//printf("daylightbias = %d\n", tzi.DaylightBias);

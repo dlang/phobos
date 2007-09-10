@@ -34,7 +34,7 @@ import std.stdio;
 
 void main()
 {
-  char[] s = Format!("Arg %s = %s", "foo", 27);
+  string s = Format!("Arg %s = %s", "foo", 27);
   writefln(s); // "Arg foo = 27"
 }
  * ---
@@ -51,7 +51,7 @@ template Format(A...)
 	const char[] Format = ToString!(A[0]) ~ Format!(A[1..$]);
 }
 
-template FormatString(char[] F, A...)
+template FormatString(string F, A...)
 {
     static if (F.length == 0)
 	const char[] FormatString = Format!(A);
@@ -85,8 +85,10 @@ template ToString(long I)
     static if (I < 0)
 	const char[] ToString = "-" ~ ToString!(cast(ulong)(-I));
     else
-	const char[] ToString = ToString!(cast(uint)I);
+	const char[] ToString = ToString!(cast(ulong)I);
 }
+
+static assert(ToString!(0x100000000) == "4294967296");
 
 /// ditto
 template ToString(uint U)
@@ -131,7 +133,7 @@ template ToString(bool B)
 }
 
 /// ditto
-template ToString(char[] S)
+template ToString(string S)
 {
     const char[] ToString = S;
 }
@@ -144,7 +146,7 @@ template ToString(char C)
 
 unittest
 {
-    char[] s = Format!("hel%slo", "world", -138, 'c', true);
+    string s = Format!("hel%slo", "world", -138, 'c', true);
     assert(s == "helworldlo-138ctrue");
 }
 
@@ -159,7 +161,7 @@ unittest
  *	.rest = s
  */
 
-template ParseUinteger(char[] s)
+template ParseUinteger(string s)
 {
     static if (s.length == 0)
     {	const char[] value = "";
@@ -186,7 +188,7 @@ template ParseUinteger(char[] s)
  *	.rest = s
  */
 
-template ParseInteger(char[] s)
+template ParseInteger(string s)
 {
     static if (s.length == 0)
     {	const char[] value = "";
