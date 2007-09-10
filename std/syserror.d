@@ -1,4 +1,4 @@
-
+// Written in the D programming language
 // Placed in public domain.
 // Written by Walter Bright
 // Convert Win32 error code to string

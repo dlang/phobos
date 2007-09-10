@@ -1,3 +1,5 @@
+// Written in the D programming language
+
 /**
  * Compress/decompress data using the $(LINK2 http://www._zlib.net, zlib library).
  *

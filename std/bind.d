@@ -1,3 +1,5 @@
+// Written in the D programming language
+
 /**
  * Bind function arguments to functions.
  *

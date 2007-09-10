@@ -1,3 +1,5 @@
+// Written in the D programming language
+
 /*
 	Copyright (C) 2004 Christopher E. Miller
 	

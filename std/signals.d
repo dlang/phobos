@@ -1,3 +1,4 @@
+// Written in the D programming language
 // This is part of the Phobos runtime libary for the D programming language.
 
 /********************************

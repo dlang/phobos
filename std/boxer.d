@@ -1,3 +1,5 @@
+// Written in the D programming language
+
 /**
  * This module is a set of types and functions for converting any object (value
  * or heap) into a generic box type, allowing the user to pass that object

@@ -165,8 +165,11 @@ class TypeInfo_Invariant : TypeInfo_Const
 class Exception : Object
 {
     string msg;
+    Exception next;
 
     this(string msg);
+    this(string msg, Error next);
+
     void print();
     string toString();
 }
@@ -175,8 +178,6 @@ class Exception : Object
 
 class Error : Exception
 {
-    Error next;
-
     this(string msg);
     this(string msg, Error next);
 }

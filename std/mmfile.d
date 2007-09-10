@@ -1,3 +1,5 @@
+// Written in the D programming language
+
 /* Copyright 2004-2005 by Digital Mars
  * Written by Walter Bright and Matthew Wilson
  *

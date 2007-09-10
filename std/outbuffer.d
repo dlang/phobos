@@ -1,4 +1,4 @@
-// outbuffer.d
+// Written in the D programming language
 
 /**
  * Boilerplate:

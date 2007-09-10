@@ -1,4 +1,6 @@
 
+// Written in the D programming language
+
 /**
  *
 	D constrains integral types to specific sizes. But efficiency

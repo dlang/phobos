@@ -1,3 +1,5 @@
+// Written in the D programming language
+
 /***********************
  * Macros:
  *	WIKI = StdBitarray

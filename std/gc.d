@@ -1,3 +1,4 @@
+// Written in the D programming language
 
 /*
  *  Copyright (C) 1999-2006 by Digital Mars, www.digitalmars.com

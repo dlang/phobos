@@ -1,3 +1,5 @@
+// Written in the D programming language
+
 /**
  * Identify the characteristics of the host CPU.
  *

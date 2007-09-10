@@ -1,3 +1,4 @@
+// Written in the D programming language
 
 /* This module is obsolete and will be removed eventually */
 

@@ -1,4 +1,4 @@
-// math.d
+// Written in the D programming language
 
 /**
  * Macros:

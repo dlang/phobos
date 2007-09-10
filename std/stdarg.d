@@ -1,5 +1,6 @@
 
 /*
+ * Written in the D programming language.
  * Placed in public domain.
  * Written by Hauke Duden and Walter Bright
  */

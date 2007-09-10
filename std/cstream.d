@@ -1,3 +1,5 @@
+// Written in the D programming language
+
 /**
  * The std.cstream module bridges std.c.stdio (or std.stdio) and std.stream.
  * Both std.c.stdio and std.stream are publicly imported by std.cstream.

@@ -1053,6 +1053,7 @@ class TypeInfo_Invariant : TypeInfo_Const
 class Exception : Object
 {
     string msg;
+    Exception next;
 
     /**
      * Constructor; msg is a descriptive message for the exception.
@@ -1060,6 +1061,12 @@ class Exception : Object
     this(string msg)
     {
 	this.msg = msg;
+    }
+
+    this(string msg, Exception next)
+    {
+	this.msg = msg;
+	this.next = next;
     }
 
     void print()
@@ -1075,7 +1082,6 @@ class Exception : Object
  */
 class Error : Exception
 {
-    Error next;
 
     /**
      * Constructor; msg is a descriptive message for the exception.
@@ -1085,10 +1091,9 @@ class Error : Exception
 	super(msg);
     }
 
-    this(string msg, Error next)
+    this(string msg, Exception next)
     {
-	super(msg);
-	this.next = next;
+	super(msg, next);
     }
 }
 

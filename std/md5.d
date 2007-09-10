@@ -1,3 +1,5 @@
+// Written in the D programming language
+
 /* md5.d - RSA Data Security, Inc., MD5 message-digest algorithm
  * Derived from the RSA Data Security, Inc. MD5 Message-Digest Algorithm.
  */
