@@ -142,7 +142,7 @@ EXCEPTION_DISPOSITION _d_framehandler(
 			    ci = &_Class_Exception;
 		    }
 
-		    if (_d_isbaseof(pcb->type, ci))
+		    if (_d_isbaseof(ci, pcb->type))
 		    {   // Matched the catch type, so we've found the handler.
 			int regebp;
 

@@ -58,7 +58,7 @@ void _d_monitorexit(Object *h);
 void _d_monitorrelease(Object *h);
 
 int _d_isbaseof(ClassInfo *b, ClassInfo *c);
-Object * __ddecl _d_dynamic_cast(ClassInfo *ci, Object *o);
+Object *_d_dynamic_cast(Object *o, ClassInfo *ci);
 
 Object * __ddecl __d_newclass(ClassInfo *ci);
 void __ddecl _d_delclass(Object **p);
