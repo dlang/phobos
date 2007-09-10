@@ -96,8 +96,8 @@ enum
 
 version (Win32)
 {
-    FILE _iob[_NFILE];
-    void function() _fcloseallp;
+    extern FILE _iob[_NFILE];
+    extern void function() _fcloseallp;
 }
 
 version (Win32)
@@ -140,9 +140,9 @@ version (Win32)
 
 version (linux)
 {
-    FILE *stdin;
-    FILE *stdout;
-    FILE *stderr;
+    extern FILE *stdin;
+    extern FILE *stdout;
+    extern FILE *stderr;
 }
 
 version (Win32)

@@ -5,20 +5,8 @@ module object;
 
 alias bit bool;
 
-version (X86_64)
-{
-    alias ulong size_t;
-    alias long ptrdiff_t;
-}
-else version (X86)
-{
-    alias uint size_t;
-    alias int ptrdiff_t;
-}
-else
-{
-    static assert(0);
-}
+alias typeof(int.sizeof) size_t;
+alias typeof(cast(void*)0 - cast(void*)0) ptrdiff_t;
 
 extern (C)
 {   int printf(char *, ...);
