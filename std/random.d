@@ -1,3 +1,7 @@
+/**
+ * Macros:
+ *	WIKI = StdRandom
+ */
 
 // random.d
 // www.digitalmars.com
@@ -24,11 +28,26 @@ version (linux)
 private uint seed;		// starting seed
 private uint index;		// ith random number
 
-void rand_seed(uint s, uint i)
+/**
+ * The random number generator is seeded at program startup with a random value.
+ This ensures that each program generates a different sequence of random
+ numbers. To generate a repeatable sequence, use rand_seed() to start the
+ sequence. seed and index start it, and each successive value increments index.
+ This means that the $(I n)th random number of the sequence can be directly
+ generated
+ by passing index + $(I n) to rand_seed().
+ */
+
+void rand_seed(uint seed, uint index)
 {
-     seed = s;
-     index = i;
+     .seed = seed;
+     .index = index;
 }
+
+/**
+ * Get the next random number in sequence.
+ * BUGS: shares a global single state, not multithreaded
+ */
 
 uint rand()
 {

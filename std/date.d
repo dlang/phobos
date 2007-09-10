@@ -1,5 +1,13 @@
 
-// Copyright (c) 1999-2004 by Digital Mars
+/**
+ * Dates are represented in several formats. The date implementation revolves
+ * around a central type, d_time, from which other formats are converted to and
+ * from.
+ * Macros:
+ *	WIKI = StdDate
+ */
+
+// Copyright (c) 1999-2005 by Digital Mars
 // All Rights Reserved
 // written by Walter Bright
 // www.digitalmars.com
@@ -9,10 +17,22 @@ module std.date;
 private import std.stdio;
 private import std.dateparse;
 
+/**
+ * d_time is a signed arithmetic type giving the time elapsed since January 1,
+ * 1970.
+ * Negative values are for dates preceding 1970. The time unit used is Ticks.
+ * Ticks are milliseconds or smaller intervals.
+ *
+ * The usual arithmetic operations can be performed on d_time, such as adding,
+ * subtracting, etc. Elapsed time in Ticks can be computed by subtracting a
+ * starting d_time from an ending d_time. 
+ */
 alias long d_time;
-//typedef double d_time;
 
-d_time d_time_nan = long.min; //double.nan;
+/**
+ * A value for d_time that does not represent a valid time.
+ */
+d_time d_time_nan = long.min;
 
 struct Date
 {
@@ -43,7 +63,7 @@ enum
 	msPerHour      = 60 * msPerMinute,
 	msPerDay       = 86400000,
 	TicksPerMs     = 1,
-	TicksPerSecond = 1000,
+	TicksPerSecond = 1000,			/// Will be at least 1000
 	TicksPerMinute = TicksPerSecond * 60,
 	TicksPerHour   = TicksPerMinute * 60,
 	TicksPerDay    = TicksPerHour   * 24,
@@ -55,13 +75,11 @@ d_time LocalTZA = 0;
 const char[] daystr = "SunMonTueWedThuFriSat";
 const char[] monstr = "JanFebMarAprMayJunJulAugSepOctNovDec";
 
-static int mdays[12] = [ 0,31,59,90,120,151,181,212,243,273,304,334 ];
+int mdays[12] = [ 0,31,59,90,120,151,181,212,243,273,304,334 ];
 
 /********************************
- * Compute ISO 8601 week based year.
- * Week 1 is first week with Jan 4 in it.
- * Monday is start of week.
- * Weeks are 1..53
+ * Compute year and week [1..53] from t. The ISO 8601 week 1 is the first week
+ * of the year that includes January 4. Monday is the first day of the week.
  */
 
 void toISO8601YearWeek(d_time t, out int year, out int week)
@@ -118,7 +136,7 @@ void toISO8601YearWeek(d_time t, out int year, out int week)
     week = (yday - ydaybeg) / 7 + 1;
 }
 
-/************************************
+/* ***********************************
  * Divide time by divisor. Always round down, even if d is negative.
  */
 
@@ -323,14 +341,18 @@ int WeekDay(d_time t)
     return w;
 }
 
-// Convert from UTC to local time
+/***********************************
+ * Convert from UTC to local time.
+ */
 
 d_time UTCtoLocalTime(d_time t)
 {
     return t + LocalTZA + DaylightSavingTA(t);
 }
 
-// Convert from local time to UTC
+/***********************************
+ * Convert from local time to UTC.
+ */
 
 d_time LocalTimetoUTC(d_time t)
 {
@@ -407,6 +429,25 @@ d_time TimeClip(d_time time)
     return toInteger(time);
 }
 
+/*************************************
+ * Converts UTC time into a text string of the form:
+ * "Www Mmm dd hh:mm:ss GMT+-TZ yyyy".
+ * For example, "Tue Apr 02 02:04:57 GMT-0800 1996".
+ * If time is invalid, i.e. is d_time_nan,
+ * the string "Invalid date" is returned.
+ *
+ * Example:
+ * ------------------------------------
+  d_time lNow;
+  char[] lNowString;
+
+  // Grab the date and time relative to UTC
+  lNow = std.date.getUTCtime();
+  // Convert this into the local date and time for display.
+  lNowString = std.date.toString(lNow);
+ * ------------------------------------
+ */
+
 char[] toString(d_time time)
 {
     d_time t;
@@ -455,6 +496,11 @@ char[] toString(d_time time)
     return buffer[0 .. len];
 }
 
+/***********************************
+ * Converts t into a text string of the form: "Www, dd Mmm yyyy hh:mm:ss UTC".
+ * If t is invalid, "Invalid date" is returned.
+ */
+
 char[] toUTCString(d_time t)
 {
     // Years are supposed to be -285616 .. 285616, or 7 digits
@@ -476,6 +522,12 @@ char[] toUTCString(d_time t)
 
     return buffer[0 .. len];
 }
+
+/************************************
+ * Converts the date portion of time into a text string of the form: "Www Mmm dd
+ * yyyy", for example, "Tue Apr 02 1996".
+ * If time is invalid, "Invalid date" is returned.
+ */
 
 char[] toDateString(d_time time)
 {
@@ -506,6 +558,12 @@ char[] toDateString(d_time time)
 
     return buffer[0 .. len];
 }
+
+/******************************************
+ * Converts the time portion of t into a text string of the form: "hh:mm:ss
+ * GMT+-TZ", for example, "02:04:57 GMT-0800".
+ * If t is invalid, "Invalid date" is returned.
+ */
 
 char[] toTimeString(d_time time)
 {
@@ -549,6 +607,12 @@ char[] toTimeString(d_time time)
     // Lop off terminating 0
     return buffer[0 .. len];
 }
+
+
+/******************************************
+ * Parses s as a textual date string, and returns it as a d_time.
+ * If the string is not a valid date, d_time_nan is returned.
+ */
 
 d_time parse(char[] s)
 {
@@ -596,6 +660,9 @@ version (Win32)
     private import std.c.windows.windows;
     //import c.time;
 
+    /******
+     * Get current UTC time.
+     */
     d_time getUTCtime()
     {
 	SYSTEMTIME st;
@@ -803,7 +870,14 @@ version (linux)
 
 /+ ====================== DOS File Time =============================== +/
 
+/***
+ * Type representing the DOS file date/time format.
+ */
 typedef uint DosFileTime;
+
+/************************************
+ * Convert from DOS file date/time to d_time.
+ */
 
 d_time toDtime(DosFileTime time)
 {
@@ -835,6 +909,10 @@ d_time toDtime(DosFileTime time)
 
     return t;
 }
+
+/****************************************
+ * Convert from d_time to DOS file date/time.
+ */
 
 DosFileTime toDosFileTime(d_time t)
 {   uint dt;

@@ -1,3 +1,7 @@
+/**
+ * Macros:
+ *	WIKI = StdFile
+ */
 
 /*
  *  Copyright (C) 2001-2004 by Digital Mars, www.digitalmars.com
@@ -46,6 +50,7 @@ static this()
 }
 
 /***********************************
+ * Exception thrown for file I/O errors.
  */
 
 class FileException : Exception
@@ -70,14 +75,12 @@ class FileException : Exception
     }
 }
 
-/***********************************
+/* **********************************
  * Basic File operations.
  */
 
 /********************************************
- * Read a file.
- * Returns:
- *	array of bytes read
+ * Read file name[], return array of bytes read.
  */
 
 void[] read(char[] name)
@@ -129,9 +132,7 @@ err1:
 }
 
 /*********************************************
- * Write a file.
- * Returns:
- *	0	success
+ * Write buffer[] to file name[].
  */
 
 void write(char[] name, void[] buffer)
@@ -172,7 +173,7 @@ err:
 
 
 /*********************************************
- * Append to a file.
+ * Append buffer[] to file name[].
  */
 
 void append(char[] name, void[] buffer)
@@ -215,7 +216,7 @@ err:
 
 
 /***************************************************
- * Rename a file.
+ * Rename file from[] to to[].
  */
 
 void rename(char[] from, char[] to)
@@ -232,7 +233,7 @@ void rename(char[] from, char[] to)
 
 
 /***************************************************
- * Delete a file.
+ * Delete file name[].
  */
 
 void remove(char[] name)
@@ -249,7 +250,7 @@ void remove(char[] name)
 
 
 /***************************************************
- * Get file size.
+ * Get size of file name[].
  */
 
 ulong getSize(char[] name)
@@ -284,7 +285,8 @@ ulong getSize(char[] name)
 }
 
 /***************************************************
- * Does file (or directory) exist?
+ * Does file name[] (or directory) exist?
+ * Return 1 if it does, 0 if not.
  */
 
 int exists(char[] name)
@@ -301,7 +303,7 @@ int exists(char[] name)
 }
 
 /***************************************************
- * Get file attributes.
+ * Get file name[] attributes.
  */
 
 uint getAttributes(char[] name)
@@ -320,7 +322,7 @@ uint getAttributes(char[] name)
 }
 
 /****************************************************
- * Is name a file?
+ * Is name[] a file? Error if name[] doesn't exist.
  */
 
 int isfile(char[] name)
@@ -329,7 +331,7 @@ int isfile(char[] name)
 }
 
 /****************************************************
- * Is name a directory?
+ * Is name[] a directory? Error if name[] doesn't exist.
  */
 
 int isdir(char[] name)
@@ -338,7 +340,7 @@ int isdir(char[] name)
 }
 
 /****************************************************
- * Change directory.
+ * Change directory to pathname[].
  */
 
 void chdir(char[] pathname)
@@ -356,7 +358,7 @@ void chdir(char[] pathname)
 }
 
 /****************************************************
- * Make directory.
+ * Make directory pathname[].
  */
 
 void mkdir(char[] pathname)
@@ -374,7 +376,7 @@ void mkdir(char[] pathname)
 }
 
 /****************************************************
- * Remove directory.
+ * Remove directory pathname[].
  */
 
 void rmdir(char[] pathname)
@@ -433,7 +435,7 @@ Lerr:
 }
 
 /***************************************************
- * Return contents of directory.
+ * Return contents of directory pathname[].
  */
 
 char[][] listdir(char[] pathname)
@@ -538,7 +540,7 @@ char* toMBSz(char[] s)
 
 
 /***************************************************
- * Copy a file.
+ * Copy a file from[] to[].
  */
 
 void copy(char[] from, char[] to)

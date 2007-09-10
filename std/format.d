@@ -1,5 +1,13 @@
+/**
+ * This module implements the workhorse functionality for string and I/O formatting.
+ * It's comparable to C99's vsprintf().
+ *
+ * Macros:
+ *	WIKI = StdFormat
+ */
+
 /*
- *  Copyright (C) 2004 by Digital Mars, www.digitalmars.com
+ *  Copyright (C) 2004-2005 by Digital Mars, www.digitalmars.com
  *  Written by Walter Bright
  *
  *  This software is provided 'as-is', without any express or implied
@@ -49,6 +57,25 @@ else
     // Use C99 snprintf
     extern (C) int snprintf(char* s, size_t n, char* format, ...);
 }
+
+/**********************************************************************
+ * Signals a mismatch between a format and its corresponding argument.
+ */
+class FormatError : Error
+{
+  private:
+
+    this()
+    {
+	super("std.format");
+    }
+
+    this(char[] msg)
+    {
+	super("std.format " ~ msg);
+    }
+}
+
 
 enum Mangle : char
 {
@@ -150,8 +177,261 @@ private TypeInfo primitiveTypeInfo(Mangle m)
 }
 
 /************************************
- * Convert arguments to tchar's according to format strings and feed to putc().
- * This is the core workhorse routine for all the various formatters.
+ * Interprets variadic argument list pointed to by argptr whose types are given
+ * by arguments[], formats them according to embedded format strings in the
+ * variadic argument list, and sends the resulting characters to putc.
+ *
+ * The variadic arguments are consumed in order.
+ * Each is formatted into a sequence of chars, using the default format
+ * specification for its type, and the
+ * characters are sequentially passed to putc.
+ * If a char[], wchar[], or dchar[]
+ * argument is encountered, it is interpreted as a format string. As many
+ * arguments as specified in the format string are consumed and formatted
+ * according to the format specifications in that string and passed to putc. If
+ * there are too few remaining arguments, a FormatError is thrown. If there are
+ * more remaining arguments than needed by the format specification, the default
+ * processing of arguments resumes until they are all consumed.
+ *
+ * Params:
+ *	putc =	Output is sent do this delegate, character by character.
+ *	arguments = Array of TypeInfo's, one for each argument to be formatted.
+ *	argptr = Points to variadic argument list.
+ *
+ * Throws:
+ *	Mismatched arguments and formats result in a FormatError being thrown.
+ *
+ * Format_String:
+ *	<a name="format-string">$(I Format strings)</a>
+ *	consist of characters interspersed with
+ *	$(I format specifications). Characters are simply copied
+ *	to the output (such as putc) after any necessary conversion
+ *	to the corresponding UTF-8 sequence.
+ *
+ *	A $(I format specification) starts with a '%' character,
+ *	and has the following grammar:
+
+<pre>
+$(I FormatSpecification):
+    $(B '%%')
+    $(B '%') $(I Flags) $(I Width) $(I Precision) $(I FormatChar)
+
+$(I Flags):
+    $(I empty)
+    $(B '-') $(I Flags)
+    $(B '+') $(I Flags)
+    $(B '#') $(I Flags)
+    $(B '0') $(I Flags)
+    $(B ' ') $(I Flags)
+
+$(I Width):
+    $(I empty)
+    $(I Integer)
+    $(B '*')
+
+$(I Precision):
+    $(I empty)
+    $(B '.')
+    $(B '.') $(I Integer)
+    $(B '.*')
+
+$(I Integer):
+    $(I Digit)
+    $(I Digit) $(I Integer)
+
+$(I Digit):
+    $(B '0')
+    $(B '1')
+    $(B '2')
+    $(B '3')
+    $(B '4')
+    $(B '5')
+    $(B '6')
+    $(B '7')
+    $(B '8')
+    $(B '9')
+
+$(I FormatChar):
+    $(B 's')
+    $(B 'b')
+    $(B 'd')
+    $(B 'o')
+    $(B 'x')
+    $(B 'X')
+    $(B 'e')
+    $(B 'E')
+    $(B 'f')
+    $(B 'F')
+    $(B 'g')
+    $(B 'G')
+    $(B 'a')
+    $(B 'A')
+</pre>
+    <dl>
+    <dt>$(I Flags)
+    <dl>
+	<dt>$(B '-')
+	<dd>
+	Left justify the result in the field.
+	It overrides any $(B 0) flag.
+
+	<dt>$(B '+')
+	<dd>Prefix positive numbers in a signed conversion with a $(B +).
+	It overrides any $(I space) flag.
+
+	<dt>$(B '#')
+	<dd>Use alternative formatting:
+	<dl>
+	    <dt>For $(B 'o'):
+	    <dd> Add to precision as necessary so that the first digit
+	    of the octal formatting is a '0', even if both the argument
+	    and the $(I Precision) are zero.
+	    <dt> For $(B 'x') ($(B 'X')):
+	    <dd> If non-zero, prefix result with $(B 0x) ($(B 0X)).
+	    <dt> For floating point formatting:
+	    <dd> Always insert the decimal point.
+	    <dt> For $(B 'g') ($(B 'G')):
+	    <dd> Do not elide trailing zeros.
+	</dl>
+
+	<dt>$(B '0')
+	<dd> For integer and floating point formatting when not nan or
+	infinity, use leading zeros
+	to pad rather than spaces.
+	Ignore if there's a $(I Precision).
+
+	<dt>$(B ' ')
+	<dd>Prefix positive numbers in a signed conversion with a space.
+    </dl>
+
+    <dt>$(I Width)
+    <dd>
+    Specifies the minimum field width.
+    If the width is a $(B *), the next argument, which must be
+    of type $(B int), is taken as the width.
+    If the width is negative, it is as if the $(B -) was given
+    as a $(I Flags) character.
+
+    <dt>$(I Precision)
+    <dd> Gives the precision for numeric conversions.
+    If the precision is a $(B *), the next argument, which must be
+    of type $(B int), is taken as the precision. If it is negative,
+    it is as if there was no $(I Precision).
+
+    <dt>$(I FormatChar)
+    <dd>
+    <dl>
+	<dt>$(B 's')
+	<dd>The corresponding argument is formatted in a manner consistent
+	with its type:
+	<dl>
+	    <dt>$(B bit)
+	    <dd>The result is <tt>'true'</tt> or <tt>'false'</tt>.
+	    <dt>integral types
+	    <dd>The $(B %d) format is used.
+	    <dt>floating point types
+	    <dd>The $(B %g) format is used.
+	    <dt>string types
+	    <dd>The result is the string converted to UTF-8.
+	    A $(I Precision) specifies the maximum number of characters
+	    to use in the result.
+	    <dt>classes derived from $(B Object)
+	    <dd>The result is the string returned from the class instance's
+	    $(B .toString()) method.
+	    A $(I Precision) specifies the maximum number of characters
+	    to use in the result.
+	    <dt>non-string static and dynamic arrays
+	    <dd>The result is [s<sub>0</sub>, s<sub>1</sub>, ...]
+	    where s<sub>k</sub> is the kth element 
+	    formatted with the default format.
+	</dl>
+
+	<dt>$(B 'b','d','o','x','X')
+	<dd> The corresponding argument must be an integral type
+	and is formatted as an integer. If the argument is a signed type
+	and the $(I FormatChar) is $(B d) it is converted to
+	a signed string of characters, otherwise it is treated as
+	unsigned. An argument of type $(B bit) is formatted as '1'
+	or '0'. The base used is binary for $(B b), octal for $(B o),
+	decimal
+	for $(B d), and hexadecimal for $(B x) or $(B X).
+	$(B x) formats using lower case letters, $(B X) uppercase.
+	If there are fewer resulting digits than the $(I Precision),
+	leading zeros are used as necessary.
+	If the $(I Precision) is 0 and the number is 0, no digits
+	result.
+
+	<dt>$(B 'e','E')
+	<dd> A floating point number is formatted as one digit before
+	the decimal point, $(I Precision) digits after, the $(I FormatChar),
+	&plusmn;, followed by at least a two digit exponent: $(I d.dddddd)e$(I &plusmn;dd).
+	If there is no $(I Precision), six
+	digits are generated after the decimal point.
+	If the $(I Precision) is 0, no decimal point is generated.
+
+	<dt>$(B 'f','F')
+	<dd> A floating point number is formatted in decimal notation.
+	The $(I Precision) specifies the number of digits generated
+	after the decimal point. It defaults to six. At least one digit
+	is generated before the decimal point. If the $(I Precision)
+	is zero, no decimal point is generated.
+
+	<dt>$(B 'g','G')
+	<dd> A floating point number is formatted in either $(B e) or
+	$(B f) format for $(B g); $(B E) or $(B F) format for
+	$(B G).
+	The $(B f) format is used if the exponent for an $(B e) format
+	is greater than -5 and less than the $(I Precision).
+	The $(I Precision) specifies the number of significant
+	digits, and defaults to one.
+	Trailing zeros are elided after the decimal point, if the fractional
+	part is zero then no decimal point is generated.
+
+	<dt>$(B 'a','A')
+	<dd> A floating point number is formatted in hexadecimal
+	exponential notation 0x$(I h.hhhhhh)p$(I &plusmn;d).
+	There is one hexadecimal digit before the decimal point, and as
+	many after as specified by the $(I Precision).
+	If the $(I Precision) is zero, no decimal point is generated.
+	If there is no $(I Precision), as many hexadecimal digits as
+	necessary to exactly represent the mantissa are generated.
+	The exponent is written in as few digits as possible,
+	but at least one, is in decimal, and represents a power of 2 as in
+	$(I h.hhhhhh)*2<sup>$(I &plusmn;d)</sup>.
+	The exponent for zero is zero.
+	The hexadecimal digits, x and p are in upper case if the
+	$(I FormatChar) is upper case.
+    </dl>
+
+    Floating point NaN's are formatted as $(B nan) if the
+    $(I FormatChar) is lower case, or $(B NAN) if upper.
+    Floating point infinities are formatted as $(B inf) or
+    $(B infinity) if the
+    $(I FormatChar) is lower case, or $(B INF) or $(B INFINITY) if upper.
+    </dl>
+
+Example:
+
+-------------------------
+import std.c.stdio;
+import std.format;
+
+void formattedPrint(...)
+{
+    void putc(char c)
+    {
+	fputc(c, stdout);
+    }
+
+    std.format.doFormat(&putc, _arguments, _argptr);
+}
+
+...
+
+int x = 27;
+// prints 'The answer is 27:6'
+formattedPrint("The answer is %s:", x, 6);
+------------------------
  */
 
 void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
@@ -778,22 +1058,6 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
 
 Lerror:
     throw new FormatError();
-}
-
-
-class FormatError : Error
-{
-  private:
-
-    this()
-    {
-	super("std.format");
-    }
-
-    this(char[] msg)
-    {
-	super("std.format " ~ msg);
-    }
 }
 
 /* ======================== Unit Tests ====================================== */
