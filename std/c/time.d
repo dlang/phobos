@@ -4,7 +4,7 @@
  * Authors: Walter Bright, Digital Mars, www.digitalmars.com
  * License: Public Domain
  * Macros:
- *	WIKI=Phobos/StdCString
+ *	WIKI=Phobos/StdCTime
  */
 
 module std.c.time;
@@ -13,25 +13,39 @@ private import std.c.stddef;
 
 extern (C):
 
+alias int clock_t;
+
 version (Windows)
-{   const uint CLOCKS_PER_SEC = 1000;
+{   const clock_t CLOCKS_PER_SEC = 1000;
 }
 else version (linux)
-{   const uint CLOCKS_PER_SEC = 1000000;
+{   const clock_t CLOCKS_PER_SEC = 1000000;
 }
 else version (darwin)
 {
-    const uint CLOCKS_PER_SEC = 100;
+    const clock_t CLOCKS_PER_SEC = 100;
 }
 else
 {
     static assert(0);
 }
 
-const uint CLK_TCK        = 1000;
+version (Windows)
+{
+    const clock_t CLK_TCK        = 1000;
+}
+else version (linux)
+{
+    extern (C) int sysconf(int);
+    const clock_t CLK_TCK = cast(clock_t) sysconf(2);
+}
+else
+{
+    static assert(0);
+}
+
 const uint TIMEOFFSET     = 315558000;
 
-alias int clock_t;
 alias int time_t;
 
 extern int daylight;

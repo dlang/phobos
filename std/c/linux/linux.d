@@ -68,24 +68,25 @@ enum
 
 struct struct_stat	// distinguish it from the stat() function
 {
-    ulong st_dev;
+    ulong st_dev;	/// device
     ushort __pad1;
-    uint st_ino;
-    uint st_mode;
-    uint st_nlink;
-    uint st_uid;
-    uint st_gid;
-    ulong st_rdev;
+    uint st_ino;	/// file serial number
+    uint st_mode;	/// file mode
+    uint st_nlink;	/// link count
+    uint st_uid;	/// user ID of file's owner
+    uint st_gid;	/// user ID of group's owner
+    ulong st_rdev;	/// if device then device number
     ushort __pad2;
-    int st_size;
-    int st_blksize;
-    int st_blocks;
+    int st_size;	/// file size in bytes
+    int st_blksize;	/// optimal I/O block size
+    int st_blocks;	/// number of allocated 512 byte blocks
     int st_atime;
-    uint __unused1;
+    uint st_atimensec;
     int st_mtime;
-    uint __unused2;
+    uint st_mtimensec;
     int st_ctime;
-    uint __unused3;
+    uint st_ctimensec;
+
     uint __unused4;
     uint __unused5;
 }
@@ -105,7 +106,11 @@ enum : int
     S_IFLNK  = 0120000,
     S_IFSOCK = 0140000,
 
-    S_IFMT   = 0170000
+    S_IFMT   = 0170000,
+
+    S_IREAD  = 0000400,
+    S_IWRITE = 0000200,
+    S_IEXEC  = 0000100,
 }
 
 extern (C)
@@ -494,3 +499,16 @@ extern (C)
     int sem_destroy(sem_t*);
 }
 
+extern (C)
+{
+    /* from utime.h
+     */
+
+    struct utimbuf
+    {
+	__time_t actime;
+	__time_t modtime;
+    }
+
+    int utime(char* filename, utimbuf* buf);
+}

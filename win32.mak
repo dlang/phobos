@@ -65,7 +65,7 @@ OBJS= asserterror.obj deh.obj switch.obj complex.obj gcstats.obj \
 	dmain2.obj outofmemory.obj aaA.obj adi.obj aApply.obj file.obj \
 	compiler.obj system.obj moduleinit.obj md5.obj base64.obj \
 	cast.obj syserror.obj path.obj string.obj memset.obj math.obj \
-	outbuffer.obj ctype.obj regexp.obj random.obj windows.obj \
+	outbuffer.obj ctype.obj regexp.obj random.obj windows.obj stat.obj \
 	stream.obj switcherr.obj com.obj array.obj gc.obj mmfile.obj \
 	qsort.obj math2.obj date.obj dateparse.obj thread.obj obj.obj \
 	iunknown.obj crc32.obj conv.obj arraycast.obj utf.obj uri.obj \
@@ -185,7 +185,7 @@ SRC_STD_WIN= std\windows\registry.d \
 	std\windows\iunknown.d std\windows\syserror.d std\windows\charset.d
 
 SRC_STD_C_WIN= std\c\windows\windows.d std\c\windows\com.d \
-	std\c\windows\winsock.d
+	std\c\windows\winsock.d std\c\windows\stat.d
 
 SRC_STD_C_LINUX= std\c\linux\linux.d std\c\linux\linuxextern.d \
 	std\c\linux\socket.d
@@ -486,6 +486,9 @@ Czlib.obj : etc\c\zlib.d
 
 com.obj : std\c\windows\com.d
 	$(DMD) -c $(DFLAGS) std\c\windows\com.d
+
+stat.obj : std\c\windows\stat.d
+	$(DMD) -c $(DFLAGS) std\c\windows\stat.d
 
 winsock.obj : std\c\windows\winsock.d
 	$(DMD) -c $(DFLAGS) std\c\windows\winsock.d

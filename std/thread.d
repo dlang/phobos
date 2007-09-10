@@ -664,6 +664,18 @@ class Thread
     {
 	if (this is getThis())
 	    error("wait on self");
+
+	/* Sean Kelly writes:
+	 * Change to:
+	 *   if (state != TS.INITIAL)
+	 * Because it is not only legal to call pthread_join on a thread that
+	 * has run and finished, but calling pthread_join or pthread_detach is
+	 * required for the thread resources to be released.  However, it is
+	 * illegal to call pthread_join more than once, and I believe it is also
+	 * illegal to detach a thread that has already been joined, so 'id'
+	 * should probably be cleared after join/detach is called, and this
+	 * value tested along with 'state' before performing thread ops.
+	 */
 	if (state == TS.RUNNING)
 	{   int result;
 	    void *value;

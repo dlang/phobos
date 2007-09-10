@@ -42,7 +42,7 @@ extern (C)
     void* memcpy(void *, void *, size_t);
 }
 
-/// Standard boolean type. Implemented as a $(B bit) type.
+/// Standard boolean type.
 alias bool bit;
 
 version (X86_64)
@@ -569,6 +569,7 @@ class TypeInfo_Struct : TypeInfo
     hash_t function(void*) xtoHash;
     int function(void*,void*) xopEquals;
     int function(void*,void*) xopCmp;
+    char[] function(void*) xtoString;
 }
 
 /**

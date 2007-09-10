@@ -1,5 +1,5 @@
 
-// Copyright (C) 2001-2004 by Digital Mars
+// Copyright (C) 2001-2006 by Digital Mars
 // All Rights Reserved
 // Written by Walter Bright
 // www.digitalmars.com
@@ -8,6 +8,7 @@
 
 import std.c.stdio;
 import std.c.stdlib;
+import std.c.string;
 import std.string;
 
 import gcstats;

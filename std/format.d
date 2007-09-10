@@ -789,6 +789,13 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
 		formatArg(fc);
 		return;
 
+	    case Mangle.Tstruct:
+	    {	TypeInfo_Struct tis = cast(TypeInfo_Struct)ti;
+		s = tis.xtoString(argptr);
+		argptr += (tis.tsize() + 3) & ~3;
+		goto Lputstr;
+	    }
+
 	    default:
 		goto Lerror;
 	}

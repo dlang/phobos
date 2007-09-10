@@ -175,19 +175,19 @@ unittest
     int result;
 
     debug(string) printf("string.cmp.unittest\n");
-    result = cmp("abc", "abc");
+    result = icmp("abc", "abc");
     assert(result == 0);
-    result = cmp(null, null);
+    result = icmp(null, null);
     assert(result == 0);
-    result = cmp("", "");
+    result = icmp("", "");
     assert(result == 0);
-    result = cmp("abc", "abcd");
+    result = icmp("abc", "abcd");
     assert(result < 0);
-    result = cmp("abcd", "abc");
+    result = icmp("abcd", "abc");
     assert(result > 0);
-    result = cmp("abc", "abd");
+    result = icmp("abc", "abd");
     assert(result < 0);
-    result = cmp("bbc", "abc");
+    result = icmp("bbc", "abc");
     assert(result > 0);
 }
 

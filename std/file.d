@@ -294,6 +294,42 @@ ulong getSize(char[] name)
     return (cast(ulong)resulth << 32) + resultl;
 }
 
+/*************************
+ * Get creation/access/modified times of file name[].
+ * Throws: FileException on error.
+ */
+
+void getTimes(char[] name, out d_time ftc, out d_time fta, out d_time ftm)
+{
+    HANDLE findhndl;
+
+    if (useWfuncs)
+    {
+	WIN32_FIND_DATAW filefindbuf;
+
+	findhndl = FindFirstFileW(std.utf.toUTF16z(name), &filefindbuf);
+	ftc = std.date.FILETIME2d_time(&filefindbuf.ftCreationTime);
+	fta = std.date.FILETIME2d_time(&filefindbuf.ftLastAccessTime);
+	ftm = std.date.FILETIME2d_time(&filefindbuf.ftLastWriteTime);
+    }
+    else
+    {
+	WIN32_FIND_DATA filefindbuf;
+
+	findhndl = FindFirstFileA(toMBSz(name), &filefindbuf);
+	ftc = std.date.FILETIME2d_time(&filefindbuf.ftCreationTime);
+	fta = std.date.FILETIME2d_time(&filefindbuf.ftLastAccessTime);
+	ftm = std.date.FILETIME2d_time(&filefindbuf.ftLastWriteTime);
+    }
+
+    if (findhndl == cast(HANDLE)-1)
+    {
+	throw new FileException(name, GetLastError());
+    }
+    FindClose(findhndl);
+}
+
+
 /***************************************************
  * Does file name[] (or directory) exist?
  * Return 1 if it does, 0 if not.
@@ -1046,6 +1082,28 @@ uint getAttributes(char[] name)
     return statbuf.st_mode;
 }
 
+/*************************
+ * Get creation/access/modified times of file name[].
+ * Throws: FileException on error.
+ */
+
+void getTimes(char[] name, out d_time ftc, out d_time fta, out d_time ftm)
+{
+    struct_stat statbuf;
+    char *namez;
+
+    namez = toStringz(name);
+    if (std.c.linux.linux.stat(namez, &statbuf))
+    {
+	throw new FileException(name, getErrno());
+    }
+
+    ftc = cast(d_time)statbuf.st_ctime * std.date.TicksPerSecond;
+    fta = cast(d_time)statbuf.st_atime * std.date.TicksPerSecond;
+    ftm = cast(d_time)statbuf.st_mtime * std.date.TicksPerSecond;
+}
+
+
 /****************************************************
  * Does file/directory exist?
  */
@@ -1331,23 +1389,141 @@ void listdir(char[] pathname, bool delegate(DirEntry* de) callback)
 
 
 /***************************************************
- * Copy a file.
- * Bugs:
- *	If the file is very large, this won't work.
- *	Doesn't maintain the file timestamps.
+ * Copy a file. File timestamps are preserved.
  */
 
 void copy(char[] from, char[] to)
 {
+  version (all)
+  {
+    struct_stat statbuf;
+
+    char* fromz = toStringz(from);
+    char* toz = toStringz(to);
+    //printf("file.copy(from='%s', to='%s')\n", fromz, toz);
+
+    int fd = std.c.linux.linux.open(fromz, O_RDONLY);
+    if (fd == -1)
+    {
+        //printf("\topen error, errno = %d\n",getErrno());
+        goto err1;
+    }
+
+    //printf("\tfile opened\n");
+    if (std.c.linux.linux.fstat(fd, &statbuf))
+    {
+        //printf("\tfstat error, errno = %d\n",getErrno());
+        goto err2;
+    }
+
+    int fdw = std.c.linux.linux.open(toz, O_CREAT | O_WRONLY | O_TRUNC, 0660);
+    if (fdw == -1)
+    {
+        //printf("\topen error, errno = %d\n",getErrno());
+        goto err2;
+    }
+
+    size_t BUFSIZ = 4069 * 16;
+    void* buf = std.c.stdlib.malloc(BUFSIZ);
+    if (!buf)
+    {	BUFSIZ = 4096;
+	buf = std.c.stdlib.malloc(BUFSIZ);
+    }
+    if (!buf)
+    {
+        //printf("\topen error, errno = %d\n",getErrno());
+        goto err4;
+    }
+
+    for (size_t size = statbuf.st_size; size; )
+    {	size_t toread = (size > BUFSIZ) ? BUFSIZ : size;
+
+	auto n = std.c.linux.linux.read(fd, buf, toread);
+	if (n != toread)
+	{
+	    //printf("\tread error, errno = %d\n",getErrno());
+	    goto err5;
+	}
+	n = std.c.linux.linux.write(fdw, buf, toread);
+	if (n != toread)
+	{
+	    //printf("\twrite error, errno = %d\n",getErrno());
+	    goto err5;
+	}
+	size -= toread;
+    }
+
+    std.c.stdlib.free(buf);
+
+    if (std.c.linux.linux.close(fdw) == -1)
+    {
+	//printf("\tclose error, errno = %d\n",getErrno());
+        goto err2;
+    }
+
+    utimbuf utim;
+    utim.actime = cast(__time_t)statbuf.st_atime;
+    utim.modtime = cast(__time_t)statbuf.st_mtime;
+    if (utime(toz, &utim) == -1)
+    {
+	//printf("\tutime error, errno = %d\n",getErrno());
+	goto err3;
+    }
+
+    if (std.c.linux.linux.close(fd) == -1)
+    {
+	//printf("\tclose error, errno = %d\n",getErrno());
+        goto err1;
+    }
+
+    return;
+
+err5:
+    std.c.stdlib.free(buf);
+err4:
+    std.c.linux.linux.close(fdw);
+err3:
+    std.c.stdio.remove(toz);
+err2:
+    std.c.linux.linux.close(fd);
+err1:
+    throw new FileException(from, getErrno());
+  }
+  else
+  {
     void[] buffer;
 
     buffer = read(from);
     write(to, buffer);
     delete buffer;
+  }
 }
 
 
 
+}
+
+unittest
+{
+    //printf("std.file.unittest\n");
+    void[] buf;
+
+    buf = new void[10];
+    (cast(byte[])buf)[] = 3;
+    write("unittest_write.tmp", buf);
+    void buf2[] = read("unittest_write.tmp");
+    assert(buf == buf2);
+
+    copy("unittest_write.tmp", "unittest_write2.tmp");
+    buf2 = read("unittest_write2.tmp");
+    assert(buf == buf2);
+
+    remove("unittest_write.tmp");
+    if (exists("unittest_write.tmp"))
+	assert(0);
+    remove("unittest_write2.tmp");
+    if (exists("unittest_write2.tmp"))
+	assert(0);
 }
 
 unittest

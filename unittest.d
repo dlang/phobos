@@ -49,6 +49,7 @@ import std.conv;
 import std.boxer;
 import std.bitarray;
 import std.uni;
+import std.file;
 
 int main(char[][] args)
 {
@@ -110,6 +111,8 @@ printf("test2\n");
     ba[0] = true;
 
     std.uni.isUniAlpha('A');
+
+    std.file.exists("foo");
 
     printf("Success\n!");
     return 0;

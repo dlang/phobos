@@ -31,7 +31,7 @@ class AssertError : Error
 	len = 23 + filename.length + uint.sizeof * 3 + msg.length + 1;
 	buffer = cast(char*)std.c.stdlib.malloc(len);
 	if (buffer == null)
-	    super("AssertError internal failure");
+	    super("AssertError no memory");
 	else
 	{
 	    version (Win32) alias _snprintf snprintf;
@@ -71,7 +71,7 @@ extern (C) static void _d_assert(char[] filename, uint line)
 
 extern (C) static void _d_assert_msg(char[] msg, char[] filename, uint line)
 {
-    //printf("_d_assert(%s, %d)\n", cast(char *)filename, line);
+    //printf("_d_assert_msg(%s, %d)\n", cast(char *)filename, line);
     AssertError a = new AssertError(filename, line, msg);
     //printf("assertion %p created\n", a);
     throw a;

@@ -732,7 +732,7 @@ unittest
  *	$(TABLE_SV
  *	<tr> <th> x               <th>ilogb(x)     <th> Range error?
  *	<tr> <td> 0               <td> FP_ILOGB0   <td> yes
- *	<tr> <td> &plusmn;&infin; <td> +&infin;    <td> no
+ *	<tr> <td> &plusmn;&infin; <td> int.max     <td> no
  *	<tr> <td> $(NAN)          <td> FP_ILOGBNAN <td> no
  *	)
  */

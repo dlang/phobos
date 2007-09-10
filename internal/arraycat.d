@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2004 by Digital Mars, www.digitalmars.com
+ *  Copyright (C) 2004-2006 by Digital Mars, www.digitalmars.com
  *  Written by Walter Bright
  *
  *  This software is provided 'as-is', without any express or implied
@@ -27,6 +27,7 @@ import object;
 import std.string;
 import std.c.string;
 import std.c.stdio;
+import std.c.stdarg;
 
 extern (C):
 
@@ -179,3 +180,37 @@ bit[] _d_arraysetbit2(bit[] ba, bit value)
     return ba;
 }
 
+void* _d_arrayliteral(size_t size, size_t length, ...)
+{
+    byte[] result;
+
+    //printf("_d_arrayliteral(size = %d, length = %d)\n", size, length);
+    if (length == 0 || size == 0)
+	result = null;
+    else
+    {
+	result = new byte[length * size];
+	*cast(size_t *)&result = length;	// jam length
+
+	va_list q;
+	va_start!(size_t)(q, length);
+
+	size_t stacksize = (size + int.sizeof - 1) & ~(int.sizeof - 1);
+
+	if (stacksize == size)
+	{
+	    memcpy(result.ptr, q, length * size);
+	}
+	else
+	{
+	    for (size_t i = 0; i < length; i++)
+	    {
+		memcpy(result.ptr + i * size, q, size);
+		q += stacksize;
+	    }
+	}
+
+	va_end(q);
+    }
+    return result.ptr;
+}
