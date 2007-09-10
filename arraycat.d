@@ -18,7 +18,8 @@ byte[] _d_arraycat(byte[] x, byte[] y, uint size)
     memcpy(a, x, x.length * size);
     //a[0 .. x.length * size] = x[];
     memcpy(&a[x.length * size], y, y.length * size);
-    a.length = length;
+    *(int *)&a = length;	// jam length
+    //a.length = length;
     return a;
 }
 
@@ -26,6 +27,26 @@ byte[] _d_arrayappend(byte[] *px, byte[] y, uint size)
 {
     *px = _d_arraycat(*px, y, size);
     return *px;
+}
+
+byte[] _d_arrayappendc(inout byte[] x, in uint size, ...)
+{
+    byte[] a;
+    uint length;
+    void *argp;
+
+    //printf("size = %d\n", size);
+    length = x.length + 1;
+    a = new byte[length * size];
+    memcpy(a, x, x.length * size);
+    argp = &size + 1;
+    //printf("*argp = %llx\n", *(long *)argp);
+    memcpy(&a[x.length * size], argp, size);
+    //printf("a[0] = %llx\n", *(long *)&a[0]);
+    *(int *)&a = length;	// jam length
+    //printf("a[0] = %llx\n", *(long *)&a[0]);
+    x = a;
+    return a;
 }
 
 byte[] _d_arraycopy(uint size, byte[] from, byte[] to)

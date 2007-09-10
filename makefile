@@ -26,7 +26,7 @@ OBJS= assert.obj deh.obj modulo.obj new.obj switch.obj complex.obj \
 	critical.obj interface.obj object.obj monitor.obj arraycat.obj invariant.obj \
 	dmain2.obj outofmemory.obj achar.obj aaAh4.obj adi.obj file.obj \
 	compiler.obj system.obj arraysetlength.obj minit.obj moduleinit.obj \
-	cast.obj
+	cast.obj syserror.obj filename.obj string.obj
 
 HDR=mars.h
 
@@ -34,10 +34,10 @@ SRC= modulo.c new.cpp switch.d complex.c critical.c fpu.d \
 	aa.c vaa.c interface.c arraysetlength.cpp minit.asm
 
 SRC2=deh.c object.d gc.d math.d stdio.d stdlib.d time.d monitor.c arraycat.d \
-	string.d windows.d
+	string.d windows.d filename.d
 
 SRC3=winbase.d windef.d invariant.d assert.d RegExp.d dmain2.d dateparse.d \
-	outofmemory.d
+	outofmemory.d syserror.d
 
 SRC4=dchar.d ctype.d achar.d aaAh4.d adi.d file.d compiler.d system.d \
 	moduleinit.d cast.d
@@ -45,10 +45,10 @@ SRC4=dchar.d ctype.d achar.d aaAh4.d adi.d file.d compiler.d system.d \
 phobos.lib : $(OBJS) gc\dmgc.lib makefile
 	del phobos.lib
 	lib phobos /c/noi +critical+assert+deh+object+arraysetlength;
-	lib phobos /noi +interface+modulo+new+switch+monitor;
+	lib phobos /noi +interface+modulo+new+switch+monitor+string;
 	lib phobos /noi +arraycat+invariant+dmain2+achar+outofmemory;
-	lib phobos /noi +aaAh4+adi+file+compiler+system;
-	lib phobos /noi +minit+moduleinit+cast+gc\dmgc.lib;
+	lib phobos /noi +aaAh4+adi+file+compiler+system+syserror;
+	lib phobos /noi +minit+moduleinit+cast+filename+gc\dmgc.lib;
 
 
 aaAh4.obj : aaAh4.d

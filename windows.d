@@ -8,6 +8,8 @@ extern (Windows)
 
     DWORD GetTickCount();
 
+const uint MAX_PATH = 260;
+
 enum
 {
     FILE_BEGIN           = 0,
@@ -98,6 +100,23 @@ struct SECURITY_ATTRIBUTES {
     BOOL bInheritHandle;
 }
 
+struct FILETIME {
+    DWORD dwLowDateTime;
+    DWORD dwHighDateTime;
+}
+
+struct WIN32_FIND_DATA {
+    DWORD dwFileAttributes;
+    FILETIME ftCreationTime;
+    FILETIME ftLastAccessTime;
+    FILETIME ftLastWriteTime;
+    DWORD nFileSizeHigh;
+    DWORD nFileSizeLow;
+    DWORD dwReserved0;
+    DWORD dwReserved1;
+    char   cFileName[ MAX_PATH ];
+    char   cAlternateFileName[ 14 ];
+}
 
 BOOL CloseHandle(HANDLE hObject);
 
@@ -111,10 +130,35 @@ HANDLE CreateFileA(
     HANDLE hTemplateFile
     );
 
+BOOL DeleteFileA(char *lpFileName);
+
+BOOL FindClose(HANDLE hFindFile);
+
+HANDLE FindFirstFileA(
+    char *lpFileName,
+    out WIN32_FIND_DATA lpFindFileData
+    );
+
+BOOL FindNextFileA(
+    HANDLE hFindFile,
+    out WIN32_FIND_DATA lpFindFileData
+    );
+
+BOOL GetExitCodeThread(
+    HANDLE hThread,
+    DWORD *lpExitCode
+    );
+
+DWORD GetLastError();
+
+DWORD GetFileAttributesA(char *lpFileName);
+
 DWORD GetFileSize(
     HANDLE hFile,
     DWORD *lpFileSizeHigh
     );
+
+BOOL MoveFileA(char *from, char *to);
 
 BOOL ReadFile(
     HANDLE hFile,
