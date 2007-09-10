@@ -290,7 +290,6 @@ void write(char[] name, byte[] buffer)
 {
     int fd;
     int numwritten;
-    int len;
     char *namez;
 
     namez = toStringz(name);
@@ -298,8 +297,8 @@ void write(char[] name, byte[] buffer)
     if (fd == -1)
         goto err;
 
-    numwritten = linux.write(fd, buffer, len);
-    if (len != numwritten)
+    numwritten = linux.write(fd, buffer, buffer.length);
+    if (buffer.length != numwritten)
         goto err2;
 
     if (linux.close(fd) == -1)
@@ -322,7 +321,6 @@ void append(char[] name, byte[] buffer)
 {
     int fd;
     int numwritten;
-    int len;
     char *namez;
 
     namez = toStringz(name);
@@ -330,8 +328,8 @@ void append(char[] name, byte[] buffer)
     if (fd == -1)
         goto err;
 
-    numwritten = linux.write(fd, buffer, len);
-    if (len != numwritten)
+    numwritten = linux.write(fd, buffer, buffer.length);
+    if (buffer.length != numwritten)
         goto err2;
 
     if (linux.close(fd) == -1)

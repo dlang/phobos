@@ -1,5 +1,5 @@
 //_ aaAh4.d
-// Copyright (c) 2000-2002 by Digital Mars
+// Copyright (c) 2000-2003 by Digital Mars
 // Written by Walter Bright
 
 import c.stdio;
@@ -489,4 +489,46 @@ void _aaKeys_x(aaA *e, byte[] res, inout uint resi, uint n)
     }
 
 
+/**********************************************
+ * 'apply' for associative arrays - to support foreach
+ */
 
+// dg is D, but _aaApply() is C
+extern (D) typedef int delegate(void *) dg_t;
+
+int _aaApply(aaA*[] aa, int keysize, dg_t dg)
+{   int result;
+
+    //printf("_aaApply(aa = x%llx, keysize = %d, dg = x%llx)\n", aa, keysize, dg);
+
+    int treewalker(aaA* e)
+    {	int result;
+
+	do
+	{
+	    //printf("treewalker(e = %p, dg = x%llx)\n", e, dg);
+	    result = dg((void *)(e + 1) + keysize);
+	    if (result)
+		break;
+	    if (e.right)
+	    {	result = treewalker(e.right);
+		if (result)
+		    break;
+	    }
+	    e = e.left;
+	} while (e);
+
+	return result;
+    }
+
+    for (uint i = 0; i < aa.length; i++)
+    {
+	if (aa[i])
+	{
+	    result = treewalker(aa[i]);
+	    if (result)
+		break;
+	}
+    }
+    return result;
+}
