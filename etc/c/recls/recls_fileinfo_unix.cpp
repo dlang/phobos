@@ -179,7 +179,7 @@ inline void RC_PreIncrement(rc_atomic_t volatile *p)
 #else /* ? RECLS_UNIX_USE_ATOMIC_OPERATIONS */
 	stlsoft::lock_scope<mutex_t>		lock(s_mx);
 
-	return ++(*p);
+	++(*p);
 #endif /* !RECLS_UNIX_USE_ATOMIC_OPERATIONS */
 }
 

@@ -140,3 +140,86 @@ extern (C)
     int time(int*);
     tm *localtime(int*);
 }
+
+/**************************************************************/
+// Memory mapping from <sys/mman.h> and <bits/mman.h>
+
+enum
+{
+	PROT_NONE	= 0,
+	PROT_READ	= 1,
+	PROT_WRITE	= 2,
+	PROT_EXEC	= 4,
+}
+
+// Memory mapping sharing types
+
+enum
+{	MAP_SHARED	= 1,
+	MAP_PRIVATE	= 2,
+	MAP_TYPE	= 0x0F,
+	MAP_FIXED	= 0x10,
+	MAP_FILE	= 0,
+	MAP_ANONYMOUS	= 0x20,
+	MAP_ANON	= 0x20,
+	MAP_GROWSDOWN	= 0x100,
+	MAP_DENYWRITE	= 0x800,
+	MAP_EXECUTABLE	= 0x1000,
+	MAP_LOCKED	= 0x2000,
+	MAP_NORESERVE	= 0x4000,
+	MAP_POPULATE	= 0x8000,
+	MAP_NONBLOCK	= 0x10000,
+}
+
+// Values for msync()
+
+enum
+{	MS_ASYNC	= 1,
+	MS_INVALIDATE	= 2,
+	MS_SYNC		= 4,
+}
+
+// Values for mlockall()
+
+enum
+{
+	MCL_CURRENT	= 1,
+	MCL_FUTURE	= 2,
+}
+
+// Values for mremap()
+
+enum
+{
+	MREMAP_MAYMOVE	= 1,
+}
+
+// Values for madvise
+
+enum
+{	MADV_NORMAL	= 0,
+	MADV_RANDOM	= 1,
+	MADV_SEQUENTIAL	= 2,
+	MADV_WILLNEED	= 3,
+	MADV_DONTNEED	= 4,
+}
+
+extern (C)
+{
+void* mmap(void*, size_t, int, int, int, off_t);
+const void* MAP_FAILED = cast(void*)-1;
+
+int munmap(void*, size_t);
+int mprotect(void*, size_t, int);
+int msync(void*, size_t, int);
+int madvise(void*, size_t, int);
+int mlock(void*, size_t);
+int munlock(void*, size_t);
+int mlockall(int);
+int munlockall();
+void* mremap(void*, size_t, size_t, int);
+int mincore(void*, size_t, ubyte*);
+int remap_file_pages(void*, size_t, int, size_t, int);
+int shm_open(char*, int, int);
+int shm_unlink(char*);
+}

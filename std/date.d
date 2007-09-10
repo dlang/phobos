@@ -1,5 +1,5 @@
 
-// Copyright (c) 1999-2003 by Digital Mars
+// Copyright (c) 1999-2004 by Digital Mars
 // All Rights Reserved
 // written by Walter Bright
 // www.digitalmars.com
@@ -639,6 +639,8 @@ version (Win32)
 	DWORD r;
 	TIME_ZONE_INFORMATION tzi;
 
+	/* http://msdn.microsoft.com/library/en-us/sysinfo/base/gettimezoneinformation.asp
+	 */
 	r = GetTimeZoneInformation(&tzi);
 	switch (r)
 	{
@@ -670,6 +672,8 @@ version (Win32)
 	d_time ts;
 	d_time td;
 
+	/* http://msdn.microsoft.com/library/en-us/sysinfo/base/gettimezoneinformation.asp
+	 */
 	r = GetTimeZoneInformation(&tzi);
 	t = 0;
 	switch (r)
@@ -693,6 +697,10 @@ version (Win32)
 		    //printf("no DST\n");
 		}
 		break;
+
+	    case TIME_ZONE_ID_UNKNOWN:
+		// Daylight savings time not used in this time zone
+		break;
 	}
 	return t;
     }
@@ -706,12 +714,14 @@ version (linux)
     d_time getUTCtime()
     {   timeval tv;
 
+	printf("getUTCtime()\n");
 	if (gettimeofday(&tv, null))
 	{   // Some error happened - try time() instead
 	    return time(null) * TicksPerSecond;
 	}
 
-	return tv.tv_sec * TicksPerSecond + (tv.tv_usec / (1000000 / TicksPerSecond));
+	return tv.tv_sec * cast(d_time)TicksPerSecond +
+		(tv.tv_usec / (1000000 / cast(d_time)TicksPerSecond));
     }
 
     d_time getLocalTZA()

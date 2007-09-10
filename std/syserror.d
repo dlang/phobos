@@ -1,5 +1,5 @@
 
-// Copyright (c) 2001 by Digital Mars
+// Copyright (c) 2001-2004 by Digital Mars
 // www.digitalmars.com
 // Convert Win32 error code to string
 
@@ -26,6 +26,7 @@ class SysError
 	    case 15:	result = "invalid drive";	break;
 	    case 21:	result = "not ready";		break;
 	    case 32:	result = "sharing violation";	break;
+	    case 87:	result = "invalid parameter";	break;
 
 	    default:
 		result = new char[uint.size * 3 + 1];

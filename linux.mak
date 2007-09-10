@@ -49,7 +49,7 @@ OBJS= asserterror.o deh2.o switch.o complex.o gcstats.o \
 	critical.o object.o monitor.o arraycat.o invariant.o \
 	dmain2.o outofmemory.o aaA.o adi.o aApply.o file.o \
 	compiler.o system.o moduleinit.o md5.o base64.o \
-	cast.o path.o string.o memset.o math.o \
+	cast.o path.o string.o memset.o math.o mmfile.o \
 	outbuffer.o ctype.o regexp.o random.o linux.o \
 	stream.o switcherr.o array.o gc.o \
 	qsort.o thread.o obj.o utf.o uri.o \
@@ -73,7 +73,13 @@ ZLIB_OBJS= etc/c/zlib/adler32.o etc/c/zlib/compress.o \
 	etc/c/zlib/inftrees.o etc/c/zlib/infcodes.o \
 	etc/c/zlib/infutil.o etc/c/zlib/inffast.o
 
-RECLS_OBJS=
+RECLS_OBJS= etc/c/recls/recls_api.o		\
+	etc/c/recls/recls_fileinfo.o		\
+	etc/c/recls/recls_internal.o		\
+	etc/c/recls/recls_util.o		\
+	etc/c/recls/recls_api_unix.o		\
+	etc/c/recls/recls_fileinfo_unix.o	\
+	etc/c/recls/recls_util_unix.o
 
 GC_OBJS= internal/gc/gc.o internal/gc/gcx.o \
 	internal/gc/gcbits.o internal/gc/gclinux.o
@@ -84,7 +90,7 @@ SRC_STD= std/zlib.d std/zip.d std/stdint.d std/conv.d std/utf.d std/uri.d \
 	std/gc.d std/math.d std/string.d std/path.d std/date.d \
 	std/ctype.d std/file.d std/compiler.d std/system.d std/moduleinit.d \
 	std/outbuffer.d std/math2.d std/thread.d std/md5.d std/base64.d \
-	std/asserterror.d std/dateparse.d std/outofmemory.d \
+	std/asserterror.d std/dateparse.d std/outofmemory.d std/mmfile.d \
 	std/intrinsic.d std/array.d std/switcherr.d std/syserror.d \
 	std/regexp.d std/random.d std/stream.d std/process.d std/recls.d
 
@@ -361,6 +367,9 @@ math2.o : std/math2.d
 
 md5.o : std/md5.d
 	$(DMD) -c $(DFLAGS) std/md5.d
+
+mmfile.o : std/mmfile.d
+	$(DMD) -c $(DFLAGS) std/mmfile.d
 
 moduleinit.o : std/moduleinit.d
 	$(DMD) -c $(DFLAGS) std/moduleinit.d

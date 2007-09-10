@@ -57,7 +57,7 @@ OBJS= asserterror.obj deh.obj switch.obj complex.obj gcstats.obj \
 	compiler.obj system.obj moduleinit.obj md5.obj base64.obj \
 	cast.obj syserror.obj path.obj string.obj memset.obj math.obj \
 	outbuffer.obj ctype.obj regexp.obj random.obj windows.obj \
-	stream.obj switcherr.obj com.obj array.obj gc.obj \
+	stream.obj switcherr.obj com.obj array.obj gc.obj mmfile.obj \
 	qsort.obj math2.obj date.obj dateparse.obj thread.obj obj.obj \
 	iunknown.obj crc32.obj conv.obj arraycast.obj utf.obj uri.obj \
 	Czlib.obj Dzlib.obj zip.obj process.obj registry.obj recls.obj \
@@ -79,7 +79,7 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 	std\gc.d std\math.d std\string.d std\path.d std\date.d \
 	std\ctype.d std\file.d std\compiler.d std\system.d std\moduleinit.d \
 	std\outbuffer.d std\math2.d std\thread.d std\md5.d std\base64.d \
-	std\asserterror.d std\dateparse.d std\outofmemory.d \
+	std\asserterror.d std\dateparse.d std\outofmemory.d std\mmfile.d \
 	std\intrinsic.d std\array.d std\switcherr.d std\syserror.d \
 	std\regexp.d std\random.d std\stream.d std\process.d std\recls.d
 
@@ -236,7 +236,8 @@ SRC_RECLS= \
 
 phobos.lib : $(OBJS) minit.obj internal\gc\dmgc.lib etc\c\zlib\zlib.lib \
 	win32.mak etc\c\recls\recls.lib
-	lib -c phobos.lib $(OBJS) minit.obj internal\gc\dmgc.lib etc\c\zlib\zlib.lib
+	lib -c phobos.lib $(OBJS) minit.obj internal\gc\dmgc.lib \
+		etc\c\recls\recls.lib etc\c\zlib\zlib.lib
 
 ######################################################
 
@@ -333,6 +334,9 @@ math2.obj : std\math2.d
 
 md5.obj : std\md5.d
 	$(DMD) -c $(DFLAGS) -inline std\md5.d
+
+mmfile.obj : std\mmfile.d
+	$(DMD) -c $(DFLAGS) std\mmfile.d
 
 moduleinit.obj : std\moduleinit.d
 	$(DMD) -c $(DFLAGS) std\moduleinit.d

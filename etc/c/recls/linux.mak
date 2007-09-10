@@ -37,7 +37,7 @@ F_NOLOGO	=
 CCFLAGS	= $(F_WARN_ALL) $(F_WARN_AS_ERR) $(F_OPT_SPEED) $(F_TARG_PENTIUM) $(F_NOLOGO)
 CCDEFS	= -DNDEBUG -DUNIX -D_M_IX86
 
-CCARGS	= $(CCFLAGS) $(CCDEFS) -c -I$(RECLS_INCLUDE) -I$(STLSOFT_RECLS_PATCH_INCLUDE) -I$(STLSOFT_INCLUDE) -I$(INCLUDE)
+CCARGS	= $(CCFLAGS) $(CCDEFS) -c -I. -I$(STLSOFT_INCLUDE)
 
 ################################################################################
 # Objects
