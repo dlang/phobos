@@ -4,6 +4,8 @@
 
 module std.c.process;
 
+import std.c.stddef;
+
 extern (C):
 
 void exit(int);
@@ -55,21 +57,21 @@ void _endthread();
 void _endthreadex(uint);
 
 
-int _wsystem(wchar *);
-int _wspawnl(int, wchar *, wchar *, ...);
-int _wspawnle(int, wchar *, wchar *, ...);
-int _wspawnlp(int, wchar *, wchar *, ...);
-int _wspawnlpe(int, wchar *, wchar *, ...);
-int _wspawnv(int, wchar *, wchar **);
-int _wspawnve(int, wchar *, wchar **, wchar **);
-int _wspawnvp(int, wchar *, wchar **);
-int _wspawnvpe(int, wchar *, wchar **, wchar **);
+int _wsystem(wchar_t *);
+int _wspawnl(int, wchar_t *, wchar_t *, ...);
+int _wspawnle(int, wchar_t *, wchar_t *, ...);
+int _wspawnlp(int, wchar_t *, wchar_t *, ...);
+int _wspawnlpe(int, wchar_t *, wchar_t *, ...);
+int _wspawnv(int, wchar_t *, wchar_t **);
+int _wspawnve(int, wchar_t *, wchar_t **, wchar_t **);
+int _wspawnvp(int, wchar_t *, wchar_t **);
+int _wspawnvpe(int, wchar_t *, wchar_t **, wchar_t **);
 
-int _wexecl(wchar *, wchar *, ...);
-int _wexecle(wchar *, wchar *, ...);
-int _wexeclp(wchar *, wchar *, ...);
-int _wexeclpe(wchar *, wchar *, ...);
-int _wexecv(wchar *, wchar **);
-int _wexecve(wchar *, wchar **, wchar **);
-int _wexecvp(wchar *, wchar **);
-int _wexecvpe(wchar *, wchar **, wchar **);
+int _wexecl(wchar_t *, wchar_t *, ...);
+int _wexecle(wchar_t *, wchar_t *, ...);
+int _wexeclp(wchar_t *, wchar_t *, ...);
+int _wexeclpe(wchar_t *, wchar_t *, ...);
+int _wexecv(wchar_t *, wchar_t **);
+int _wexecve(wchar_t *, wchar_t **, wchar_t **);
+int _wexecvp(wchar_t *, wchar_t **);
+int _wexecvpe(wchar_t *, wchar_t **, wchar_t **);

@@ -273,3 +273,129 @@ unittest
 }
 
 
+/**********************************
+ * Same thing, but for wide chars.
+ */
+
+int _d_switch_dstring(dchar[][] table, dchar[] ca)
+    in
+    {
+	//printf("in _d_switch_dstring()\n");
+	assert(table.length >= 0);
+	assert(ca.length >= 0);
+
+	// Make sure table[] is sorted correctly
+	int j;
+
+	for (j = 1; j < table.length; j++)
+	{
+	    int len1 = table[j - 1].length;
+	    int len2 = table[j].length;
+
+	    assert(len1 <= len2);
+	    if (len1 == len2)
+	    {
+		int c;
+
+		c = memcmp(table[j - 1], table[j], len1 * dchar.sizeof);
+		assert(c < 0);	// c==0 means a duplicate
+	    }
+	}
+    }
+    out (result)
+    {
+	int i;
+	int c;
+
+	//printf("out _d_switch_string()\n");
+	if (result == -1)
+	{
+	    // Not found
+	    for (i = 0; i < table.length; i++)
+	    {
+		if (table[i].length == ca.length)
+		{   c = memcmp(table[i], ca, ca.length * dchar.sizeof);
+		    assert(c != 0);
+		}
+	    }
+	}
+	else
+	{
+	    assert(0 <= result && result < table.length);
+	    for (i = 0; 1; i++)
+	    {
+		assert(i < table.length);
+		if (table[i].length == ca.length)
+		{
+		    c = memcmp(table[i], ca, ca.length * dchar.sizeof);
+		    if (c == 0)
+		    {
+			assert(i == result);
+			break;
+		    }
+		}
+	    }
+	}
+    }
+    body
+    {
+	//printf("body _d_switch_ustring()\n");
+	int low;
+	int high;
+	int mid;
+	int c;
+	dchar[] pca;
+
+	low = 0;
+	high = table.length;
+
+    /*
+	// Print table
+	wprintf("ca[] = '%.*s'\n", ca);
+	for (mid = 0; mid < high; mid++)
+	{
+	    pca = table[mid];
+	    wprintf("table[%d] = %d, '%.*s'\n", mid, pca.length, pca);
+	}
+    */
+
+	// Do binary search
+	while (low < high)
+	{
+	    mid = (low + high) >> 1;
+	    pca = table[mid];
+	    c = ca.length - pca.length;
+	    if (c == 0)
+	    {
+		c = memcmp(ca, pca, ca.length * dchar.sizeof);
+		if (c == 0)
+		{   //printf("found %d\n", mid);
+		    return mid;
+		}
+	    }
+	    if (c < 0)
+	    {
+		high = mid;
+	    }
+	    else
+	    {
+		low = mid + 1;
+	    }
+	}
+	//printf("not found\n");
+	return -1;		// not found
+    }
+
+
+unittest
+{
+    switch (cast(dchar []) "c")
+    {
+         case "coo":
+         default:
+             break;
+    }
+}
+
+
+

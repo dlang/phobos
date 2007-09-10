@@ -3,7 +3,6 @@ module object;
 
 extern (C)
 {   int printf(char *, ...);
-    int wprintf(wchar *, ...);
 }
 
 alias bit bool;

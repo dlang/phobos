@@ -1,4 +1,3 @@
-
 /*
  * Placed in public domain.
  * Written by Hauke Duden and Walter Bright
@@ -28,4 +27,10 @@ template va_arg(T)
 
 void va_end(va_list ap)
 {
+
+}
+
+void va_copy(out va_list dest, va_list src)
+{
+    dest = src;
 }

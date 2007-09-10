@@ -32,7 +32,7 @@ version(linux)
 
 version(Win32)
 {
-	typedef uint socket_t = ~0;
+	typedef uint socket_t = ~0u;
 }
 else version(BsdSockets)
 {
@@ -76,7 +76,7 @@ version(Win32)
 		
 		const int IOCPARM_MASK =  0x7f;
 		const int IOC_IN =        cast(int)0x80000000;
-		const int FIONBIO =       IOC_IN | ((uint.sizeof & IOCPARM_MASK) << 16) | (102 << 8) | 126;
+		const int FIONBIO =       cast(int)(IOC_IN | ((uint.sizeof & IOCPARM_MASK) << 16) | (102 << 8) | 126);
 		const int SOL_SOCKET =    0xFFFF;
 		const int SO_TYPE =       0x1008;
 		
@@ -543,7 +543,7 @@ class InternetAddress: Address
 	
 	public:
 	const uint ADDR_ANY = 0;
-	const uint ADDR_NONE = cast(int)-1;
+	const uint ADDR_NONE = cast(uint)-1;
 	const ushort PORT_ANY = 0;
 	
 	
@@ -1356,7 +1356,7 @@ class Socket
 			fe = checkError ? checkError.toFd_set() : null;
 		}
 		
-		int result = .select(socket_t.max - 1, fr, fw, fe, tv);
+		int result = .select(cast(int)(socket_t.max - 1), fr, fw, fe, tv);
 		
 		version(Win32)
 		{

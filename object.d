@@ -3,11 +3,6 @@
 
 module object;
 
-extern (C)
-{   int printf(char *, ...);
-    int wprintf(wchar *, ...);
-}
-
 alias bit bool;
 
 version (AMD64)
@@ -15,10 +10,18 @@ version (AMD64)
     alias ulong size_t;
     alias long ptrdiff_t;
 }
-else
+else version (X86)
 {
     alias uint size_t;
     alias int ptrdiff_t;
+}
+else
+{
+    static assert(0);
+}
+
+extern (C)
+{   int printf(char *, ...);
 }
 
 class Object

@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2001, 2002
  * Pavel "EvilOne" Minayev
- *  with buffering added by Ben Hinkle
+ *  with buffering and endian support added by Ben Hinkle
  *
  * Permission to use, copy, modify, distribute and sell this software
  * and its documentation for any purpose is hereby granted without fee,
@@ -21,6 +21,7 @@ module std.stream;
  *    File            an OS file stream
  *    BufferedStream  a buffered stream wrapping another stream
  *      BufferedFile  a buffered File
+ *    EndianStream    a wrapper stream for swapping byte order and BOMs
  *    MemoryStream    a stream entirely stored in main memory
  *    SliceStream     a portion of another stream
  *    TArrayStream    a stream wrapping an array-like buffer
@@ -68,7 +69,13 @@ import std.format;
 alias std.format.va_list va_list;
 private import std.c.stdio;
 alias std.c.stdio.va_list c_va_list;
-private import std.utf;
+
+private 
+{
+  import std.system;    // for Endian enumeration
+  import std.intrinsic; // for bswap
+  import std.utf;
+}
 
 version (Windows)
 {
@@ -99,10 +106,15 @@ interface InputStream
   void read(out float x); 
   void read(out double x);
   void read(out real x); 
+  void read(out ifloat x); 
+  void read(out idouble x);
   void read(out ireal x);
+  void read(out cfloat x); 
+  void read(out cdouble x);
   void read(out creal x);
   void read(out char x); 
   void read(out wchar x); 
+  void read(out dchar x); 
 	
   // reads a string, written earlier by write()
   void read(out char[] s);
@@ -182,10 +194,15 @@ interface OutputStream
   void write(float x);
   void write(double x);
   void write(real x); 
+  void write(ifloat x);
+  void write(idouble x);
   void write(ireal x);
+  void write(cfloat x);
+  void write(cdouble x);
   void write(creal x);
   void write(char x); 
   void write(wchar x);
+  void write(dchar x);
 	
   // writes a string, together with its length
   void write(char[] s);
@@ -267,10 +284,15 @@ class Stream : InputStream, OutputStream
   void read(out float x) { readExact(&x, x.sizeof); }
   void read(out double x) { readExact(&x, x.sizeof); }
   void read(out real x) { readExact(&x, x.sizeof); }
+  void read(out ifloat x) { readExact(&x, x.sizeof); }
+  void read(out idouble x) { readExact(&x, x.sizeof); }
   void read(out ireal x) { readExact(&x, x.sizeof); }
+  void read(out cfloat x) { readExact(&x, x.sizeof); }
+  void read(out cdouble x) { readExact(&x, x.sizeof); }
   void read(out creal x) { readExact(&x, x.sizeof); }
   void read(out char x) { readExact(&x, x.sizeof); }
   void read(out wchar x) { readExact(&x, x.sizeof); }
+  void read(out dchar x) { readExact(&x, x.sizeof); }
 	
   // reads a string, written earlier by write()
   void read(out char[] s)
@@ -865,10 +887,15 @@ class Stream : InputStream, OutputStream
   void write(float x) { writeExact(&x, x.sizeof); }
   void write(double x) { writeExact(&x, x.sizeof); }
   void write(real x) { writeExact(&x, x.sizeof); }
+  void write(ifloat x) { writeExact(&x, x.sizeof); }
+  void write(idouble x) { writeExact(&x, x.sizeof); }
   void write(ireal x) { writeExact(&x, x.sizeof); }
+  void write(cfloat x) { writeExact(&x, x.sizeof); }
+  void write(cdouble x) { writeExact(&x, x.sizeof); }
   void write(creal x) { writeExact(&x, x.sizeof); }
   void write(char x) { writeExact(&x, x.sizeof); }
   void write(wchar x) { writeExact(&x, x.sizeof); }
+  void write(dchar x) { writeExact(&x, x.sizeof); }
 	
   // writes a string, together with its length
   void write(char[] s)
@@ -1090,13 +1117,11 @@ class Stream : InputStream, OutputStream
     return crc;
   }
 
-
 }
 
 // A stream that wraps a source stream in a buffer
 class BufferedStream : Stream 
 {
-
   Stream s;             // source stream
   ubyte[] buffer;       // buffer, if any
   uint bufferCurPos;    // current position in buffer
@@ -1781,6 +1806,310 @@ class BufferedFile: BufferedStream
 
 }
 
+enum BOM { UTF8, UTF16LE, UTF16BE, UTF32LE, UTF32BE }
+
+private const int NBOMS = 5;
+Endian[NBOMS] BOMEndian = [std.system.endian, 
+		       Endian.LittleEndian, Endian.BigEndian,
+		       Endian.LittleEndian, Endian.BigEndian];
+
+ubyte[][NBOMS] ByteOrderMarks;
+ubyte[3] BOM_UTF8_data = [0xEF, 0xBB, 0xBF];
+ubyte[2] BOM_UTF16LE_data = [0xFF, 0xFE];
+ubyte[2] BOM_UTF16BE_data = [0xFE, 0xFF];
+ubyte[4] BOM_UTF32LE_data = [0xFF, 0xFE, 0x00, 0x00];
+ubyte[4] BOM_UTF32BE_data = [0x00, 0x00, 0xFE, 0xFF];
+
+// A stream that wraps a source stream with endian support
+class EndianStream : Stream 
+{
+  Stream s;             // source stream
+  Endian endian;        // endianness of the source stream
+
+  // Construct an Endian stream with specified endianness, defaulting
+  // to the native endiannes.
+  this(Stream source, Endian end = std.system.endian) 
+  {
+    super();
+    s = source;
+    endian = end;
+    readable = s.readable;
+    writeable = s.writeable;
+    seekable = s.seekable;
+    isopen = s.isOpen();
+  }
+
+  /* Return -1 if no BOM and otherwise read the BOM and return it.
+   * If there is no BOM then the bytes read are pushed back onto
+   * the ungetc buffer or ungetcw buffer. Pass ungetCharSize == 2
+   * to use ungetcw instead of ungetc.
+   */
+  int readBOM(int ungetCharSize = 1)
+  {
+    ubyte[4] BOM_buffer;
+    int n = 0;       // the number of read bytes
+    int result = -1; // the last match or -1
+    for (int i=0; i < NBOMS; ++i)
+      {
+	int j;
+	ubyte[] bom = ByteOrderMarks[i];
+	for (j=0; j < bom.length; ++j)
+	  {
+	    if (n <= j) // have to read more
+	      {
+		if (eof()) 
+		  break;
+		readExact(&BOM_buffer[n++],1);
+	      }
+	    if (BOM_buffer[j] != bom[j]) 
+	      break;
+	  }
+	if (j == bom.length) // found a match
+	  result = i;
+      }
+    int m = 0;
+    if (result != -1)
+    {
+      endian = BOMEndian[result]; // set stream endianness
+      m = ByteOrderMarks[result].length;
+    }
+    if ((ungetCharSize == 1 && result == -1) || (result == BOM.UTF8))
+      {
+	while (n-- > m)
+	  ungetc(BOM_buffer[n]);
+      }
+    else  // should eventually support unget for dchar as well
+      {
+	if (n & 1) // make sure we have an even number of bytes
+	  readExact(&BOM_buffer[n++],1);
+	while (n > m)
+	  {
+	    n -= 2;
+	    wchar cw = *(cast(wchar*)&BOM_buffer[n]);
+	    fixBO(&cw,2);
+	    ungetcw(cw);
+	  }
+      }
+    return result;
+  }
+
+  // Correct the byte order of buffer to match native endianness.
+  // size must be even
+  final void fixBO(void* buffer, uint size)
+  {
+    if (endian != std.system.endian) 
+      {
+	ubyte* startb = cast(ubyte*)buffer;
+	uint* start = cast(uint*)buffer;
+	switch (size)
+	  {
+	  case 0: break;
+	  case 2: 
+	    {
+	      ubyte x = *startb;
+	      *startb = *(startb+1);
+	      *(startb+1) = x;
+	      break;
+	    }
+	  case 4:
+	    {
+	      *start = bswap(*start);
+	      break;
+	    }
+	  default:
+	    {
+	      uint* end = cast(uint*)(buffer + size - uint.sizeof);
+	      while (start < end)
+		{
+		  uint x = bswap(*start);
+		  *start = bswap(*end);
+		  *end = x;
+		  ++start;
+		  --end;
+		}
+	      startb = cast(ubyte*)start;
+	      ubyte* endb = cast(ubyte*)end;
+	      int len = uint.sizeof - (startb - endb);
+	      if (len > 0)
+		fixBO(startb,len);
+	    }
+	  }
+      }
+  }
+
+  uint readBlock(void* buffer, uint size)
+  {
+    return s.readBlock(buffer,size);
+  }
+
+  void read(out short x) { readExact(&x, x.sizeof); fixBO(&x,x.sizeof); }
+  void read(out ushort x) { readExact(&x, x.sizeof); fixBO(&x,x.sizeof); }
+  void read(out int x) { readExact(&x, x.sizeof); fixBO(&x,x.sizeof); }
+  void read(out uint x) { readExact(&x, x.sizeof); fixBO(&x,x.sizeof); }
+  void read(out long x) { readExact(&x, x.sizeof); fixBO(&x,x.sizeof); }
+  void read(out ulong x) { readExact(&x, x.sizeof); fixBO(&x,x.sizeof); }
+  void read(out float x) { readExact(&x, x.sizeof); fixBO(&x,x.sizeof); }
+  void read(out double x) { readExact(&x, x.sizeof); fixBO(&x,x.sizeof); }
+  void read(out real x) { readExact(&x, x.sizeof); fixBO(&x,x.sizeof); }
+  void read(out ifloat x) { readExact(&x, x.sizeof); fixBO(&x,x.sizeof); }
+  void read(out idouble x) { readExact(&x, x.sizeof); fixBO(&x,x.sizeof); }
+  void read(out ireal x) { readExact(&x, x.sizeof); fixBO(&x,x.sizeof); }
+  void read(out cfloat x) { readExact(&x, x.sizeof); fixBO(&x,x.sizeof); }
+  void read(out cdouble x) { readExact(&x, x.sizeof); fixBO(&x,x.sizeof); }
+  void read(out creal x) { readExact(&x, x.sizeof); fixBO(&x,x.sizeof); }
+  void read(out wchar x) { readExact(&x, x.sizeof); fixBO(&x,x.sizeof); }
+  void read(out dchar x) { readExact(&x, x.sizeof); fixBO(&x,x.sizeof); }
+
+  wchar[] readStringW(uint length)
+  {
+    wchar[] result = new wchar[length];
+    readExact(result, result.length * wchar.sizeof);
+    while (length--)
+      fixBO(&result[length],2);
+    return result;
+  }
+  
+  // Write the specified BOM to the source stream
+  void writeBOM(BOM b) 
+  {
+    ubyte[] bom = ByteOrderMarks[b];
+    writeBlock(bom,bom.length);
+  }
+
+  uint writeBlock(void* buffer, uint size)
+  {
+    return s.writeBlock(buffer,size);
+  }
+  void write(short x) { fixBO(&x,x.sizeof); writeExact(&x, x.sizeof); }
+  void write(ushort x) { fixBO(&x,x.sizeof); writeExact(&x, x.sizeof); }
+  void write(int x) { fixBO(&x,x.sizeof); writeExact(&x, x.sizeof); }
+  void write(uint x) { fixBO(&x,x.sizeof); writeExact(&x, x.sizeof); }
+  void write(long x) { fixBO(&x,x.sizeof); writeExact(&x, x.sizeof); }
+  void write(ulong x) { fixBO(&x,x.sizeof); writeExact(&x, x.sizeof); }
+  void write(float x) { fixBO(&x,x.sizeof); writeExact(&x, x.sizeof); }
+  void write(double x) { fixBO(&x,x.sizeof); writeExact(&x, x.sizeof); }
+  void write(real x) { fixBO(&x,x.sizeof); writeExact(&x, x.sizeof); }
+  void write(ifloat x) { fixBO(&x,x.sizeof); writeExact(&x, x.sizeof); }
+  void write(idouble x) { fixBO(&x,x.sizeof); writeExact(&x, x.sizeof); }
+  void write(ireal x) { fixBO(&x,x.sizeof); writeExact(&x, x.sizeof); }
+  void write(cfloat x) { fixBO(&x,x.sizeof); writeExact(&x, x.sizeof); }
+  void write(cdouble x) { fixBO(&x,x.sizeof); writeExact(&x, x.sizeof); }
+  void write(creal x) { fixBO(&x,x.sizeof); writeExact(&x, x.sizeof); }
+  void write(wchar x) { fixBO(&x,x.sizeof); writeExact(&x, x.sizeof); }
+  void write(dchar x) { fixBO(&x,x.sizeof); writeExact(&x, x.sizeof); }
+
+  void writeStringW(wchar[] str)
+  {
+    foreach(wchar cw;str)
+      {
+	fixBO(&cw,2);
+	s.writeExact(&cw, 2);
+      }
+  }
+
+  // close stream
+  override void close() 
+  { 
+    if (isopen) {
+      s.close();
+      isopen = false;
+    }
+  }
+
+  override ulong seek(long offset, SeekPos whence)
+  {
+     return s.seek(offset,whence);
+  }
+
+  override void flush() { super.flush(); s.flush();  }
+  override bit eof() { return s.eof();  }
+  override ulong size() { return s.size();  }
+  
+  unittest {
+    MemoryStream m;
+    m = new MemoryStream ();
+    EndianStream em = new EndianStream(m,Endian.BigEndian);
+    uint x = 0x11223344;
+    em.write(x);
+    assert( m.data[0] == 0x11 );
+    assert( m.data[1] == 0x22 );
+    assert( m.data[2] == 0x33 );
+    assert( m.data[3] == 0x44 );
+    em.position(0);
+    ushort x2 = 0x5566;
+    em.write(x2);
+    assert( m.data[0] == 0x55 );
+    assert( m.data[1] == 0x66 );
+    em.position(0);
+    static ubyte[12] x3 = [1,2,3,4,5,6,7,8,9,10,11,12];
+    em.fixBO(x3,12);
+    if (std.system.endian == Endian.LittleEndian) {
+      assert( x3[0] == 12 );
+      assert( x3[1] == 11 );
+      assert( x3[2] == 10 );
+      assert( x3[4] == 8 );
+      assert( x3[5] == 7 );
+      assert( x3[6] == 6 );
+      assert( x3[8] == 4 );
+      assert( x3[9] == 3 );
+      assert( x3[10] == 2 );
+      assert( x3[11] == 1 );
+    }
+    em.endian = Endian.LittleEndian;
+    em.write(x);
+    assert( m.data[0] == 0x44 );
+    assert( m.data[1] == 0x33 );
+    assert( m.data[2] == 0x22 );
+    assert( m.data[3] == 0x11 );
+    em.position(0);
+    em.write(x2);
+    assert( m.data[0] == 0x66 );
+    assert( m.data[1] == 0x55 );
+    em.position(0);
+    em.fixBO(x3,12);
+    if (std.system.endian == Endian.BigEndian) {
+      assert( x3[0] == 12 );
+      assert( x3[1] == 11 );
+      assert( x3[2] == 10 );
+      assert( x3[4] == 8 );
+      assert( x3[5] == 7 );
+      assert( x3[6] == 6 );
+      assert( x3[8] == 4 );
+      assert( x3[9] == 3 );
+      assert( x3[10] == 2 );
+      assert( x3[11] == 1 );
+    }
+    em.writeBOM(BOM.UTF8);
+    assert( m.position() == 3 );
+    assert( m.data[0] == 0xEF );
+    assert( m.data[1] == 0xBB );
+    assert( m.data[2] == 0xBF );
+    em.writeString ("Hello, world");
+    em.position(0);
+    assert( m.position() == 0 );
+    assert( em.readBOM == BOM.UTF8 );
+    assert( m.position() == 3 );
+    assert( em.getc() == 'H' );
+    em.position(0);
+    em.writeBOM(BOM.UTF16BE);
+    assert( m.data[0] == 0xFE );
+    assert( m.data[1] == 0xFF );
+    em.position(0);
+    em.writeBOM(BOM.UTF16LE);
+    assert( m.data[0] == 0xFF );
+    assert( m.data[1] == 0xFE );
+    em.position(0);
+    em.writeString ("Hello, world");
+    em.position(0);
+    assert( em.readBOM == -1 );
+    assert( em.getc() == 'H' );
+    assert( em.getc() == 'e' );
+    assert( em.getc() == 'l' );
+    assert( em.getc() == 'l' );
+    em.position(0);
+  }
+}
+
 // Parameterized stream class that wraps an array-like type.
 // The Buffer type must support .length, opIndex and opSlice
 class TArrayStream(Buffer): Stream
@@ -2158,10 +2487,17 @@ version (Win32)
 
   static this()
     {
+      // init ByteOrderMarks
+      ByteOrderMarks[BOM.UTF8] = BOM_UTF8_data;
+      ByteOrderMarks[BOM.UTF16LE] = BOM_UTF16LE_data;
+      ByteOrderMarks[BOM.UTF16BE] = BOM_UTF16BE_data;
+      ByteOrderMarks[BOM.UTF32LE] = BOM_UTF32LE_data;
+      ByteOrderMarks[BOM.UTF32BE] = BOM_UTF32BE_data;
+
       // open standard I/O devices
-      stdin = new File(GetStdHandle(-10), FileMode.In);
-      stdout = new File(GetStdHandle(-11), FileMode.Out);
-      stderr = new File(GetStdHandle(-12), FileMode.Out);
+      stdin = new File(GetStdHandle(cast(uint)-10), FileMode.In);
+      stdout = new File(GetStdHandle(cast(uint)-11), FileMode.Out);
+      stderr = new File(GetStdHandle(cast(uint)-12), FileMode.Out);
     }
 }
 
@@ -2169,6 +2505,13 @@ version (linux)
 {
   static this()
     {
+      // init ByteOrderMarks
+      ByteOrderMarks[BOM.UTF8] = BOM_UTF8_data;
+      ByteOrderMarks[BOM.UTF16LE] = BOM_UTF16LE_data;
+      ByteOrderMarks[BOM.UTF16BE] = BOM_UTF16BE_data;
+      ByteOrderMarks[BOM.UTF32LE] = BOM_UTF32LE_data;
+      ByteOrderMarks[BOM.UTF32BE] = BOM_UTF32BE_data;
+
       // open standard I/O devices
       stdin = new File(0, FileMode.In);
       stdout = new File(1, FileMode.Out);
@@ -2176,5 +2519,3 @@ version (linux)
     }
 }
 
-import std.string;
-import std.file;

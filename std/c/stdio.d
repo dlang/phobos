@@ -9,6 +9,7 @@
 
 module std.c.stdio;
 
+import std.c.stddef;
 private import std.c.stdarg;
 
 extern (C):
@@ -236,38 +237,38 @@ int	 getche();
 int      kbhit();
 char *   tempnam (char *dir, char *pfx);
 
-wchar *  _wtmpnam(wchar *);
-FILE *  _wfopen(wchar *, wchar *);
-FILE *  _wfsopen(wchar *, wchar *, int);
-FILE *  _wfreopen(wchar *, wchar *, FILE *);
-wchar *  fgetws(wchar *, int, FILE *);
-int  fputws(wchar *, FILE *);
-wchar *  _getws(wchar *);
-int  _putws(wchar *);
-//int  wprintf(wchar *, ...);
-int  fwprintf(FILE *, wchar *, ...);
-int  vwprintf(wchar *, va_list);
-int  vfwprintf(FILE *, wchar *, va_list);
-int  swprintf(wchar *, wchar *, ...);
-int  vswprintf(wchar *, wchar *, va_list);
-int  _snwprintf(wchar *, size_t, wchar *, ...);
-int  _vsnwprintf(wchar *, size_t, wchar *, va_list);
-int  wscanf(wchar *, ...);
-int  fwscanf(FILE *, wchar *, ...);
-int  swscanf(wchar *, wchar *, ...);
-int  _wremove(wchar *);
-void  _wperror(wchar *);
-FILE *  _wfdopen(int, wchar *);
-wchar *  _wtempnam(wchar *, wchar *);
-wchar  fgetwc(FILE *);
-wchar  _fgetwchar();
-wchar  fputwc(wchar, FILE *);
-wchar  _fputwchar(wchar);
-wchar  ungetwc(wchar, FILE *);
+wchar_t *  _wtmpnam(wchar_t *);
+FILE *  _wfopen(wchar_t *, wchar_t *);
+FILE *  _wfsopen(wchar_t *, wchar_t *, int);
+FILE *  _wfreopen(wchar_t *, wchar_t *, FILE *);
+wchar_t *  fgetws(wchar_t *, int, FILE *);
+int  fputws(wchar_t *, FILE *);
+wchar_t *  _getws(wchar_t *);
+int  _putws(wchar_t *);
+//int  wprintf(wchar_t *, ...);
+int  fwprintf(FILE *, wchar_t *, ...);
+int  vwprintf(wchar_t *, va_list);
+int  vfwprintf(FILE *, wchar_t *, va_list);
+int  swprintf(wchar_t *, wchar_t *, ...);
+int  vswprintf(wchar_t *, wchar_t *, va_list);
+int  _snwprintf(wchar_t *, size_t, wchar_t *, ...);
+int  _vsnwprintf(wchar_t *, size_t, wchar_t *, va_list);
+int  wscanf(wchar_t *, ...);
+int  fwscanf(FILE *, wchar_t *, ...);
+int  swscanf(wchar_t *, wchar_t *, ...);
+int  _wremove(wchar_t *);
+void  _wperror(wchar_t *);
+FILE *  _wfdopen(int, wchar_t *);
+wchar_t *  _wtempnam(wchar_t *, wchar_t *);
+wchar_t  fgetwc(FILE *);
+wchar_t  _fgetwchar_t();
+wchar_t  fputwc(wchar_t, FILE *);
+wchar_t  _fputwchar_t(wchar_t);
+wchar_t  ungetwc(wchar_t, FILE *);
 
-wchar	 getwchar()		{ return fgetwc(stdin); }
-wchar	 putwchar(wchar c)	{ return fputwc(c,stdout); }
-wchar	 getwc(FILE *fp)	{ return fgetwc(fp); }
-wchar	 putwc(wchar c, FILE *fp)	{ return fputwc(c, fp); }
+wchar_t	 getwchar_t()		{ return fgetwc(stdin); }
+wchar_t	 putwchar_t(wchar_t c)	{ return fputwc(c,stdout); }
+wchar_t	 getwc(FILE *fp)	{ return fgetwc(fp); }
+wchar_t	 putwc(wchar_t c, FILE *fp)	{ return fputwc(c, fp); }
 
 int fwide(FILE* fp, int mode);

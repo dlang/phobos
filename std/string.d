@@ -39,9 +39,6 @@ extern (C)
     int memcmp(void *, void *, uint);
     int memicmp(char *, char *, uint);
     char *strcpy(char *, char *);
-    int atoi(char *);
-    long atoll(char *);
-    double atof(char *);
     char *strstr(char *, char *);
     char *strchr(char *, char);
     char *strrchr(char *, char);
@@ -90,13 +87,13 @@ int iswhite(dchar c)
 
 long atoi(char[] s)
 {
-    return atoi(toStringz(s));
+    return std.c.stdlib.atoi(toStringz(s));
 }
 
 real atof(char[] s)
 {
     // BUG: should implement atold()
-    return atof(toStringz(s));
+    return std.c.stdlib.atof(toStringz(s));
 }
 
 /**********************************

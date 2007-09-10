@@ -203,14 +203,30 @@ struct GC
     }
 
     void *malloc(size_t size)
+    {	void *p;
+
+	if (std.thread.Thread.nthreads == 1)
+	{
+	    /* The reason this works is because none of the gc code
+	     * can start up a new thread from within mallocNoSync().
+	     * Skip the sync for speed reasons.
+	     */
+	    return mallocNoSync(size);
+	}
+	else synchronized (gcLock)
+	{
+	    p = mallocNoSync(size);
+	}
+	return p;
+    }
+
+    void *mallocNoSync(size_t size)
     {   void *p = null;
 	Bins bin;
 
 	//debug(PRINTF) printf("GC::malloc(size = %d, gcx = %p)\n", size, gcx);
 	assert(gcx);
 	//debug(PRINTF) printf("gcx.self = %x, pthread_self() = %x\n", gcx.self, pthread_self());
-	synchronized (gcLock)
-	{
 	if (size)
 	{
 	    size += SENTINEL_EXTRA;
@@ -225,7 +241,18 @@ struct GC
 		{
 		    if (!gcx.allocPage(bin))	// try to find a new page
 		    {
-			if (!gcx.fullcollectshell())	// collect to find a new page
+			if (std.thread.Thread.nthreads == 1)
+			{
+			    /* Then we haven't locked it yet. Be sure
+			     * and lock for a collection, since a finalizer
+			     * may start a new thread.
+			     */
+			    synchronized (gcLock)
+			    {
+				gcx.fullcollectshell();
+			    }
+			}
+			else if (!gcx.fullcollectshell())	// collect to find a new page
 			{
 			    //gcx.newPool(1);
 			}
@@ -257,7 +284,6 @@ struct GC
 	    p = sentinel_add(p);
 	    sentinel_init(p, size);
 	    gcx.log_malloc(p, size);
-	}
 	}
 	return p;
     }

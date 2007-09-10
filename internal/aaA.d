@@ -234,17 +234,17 @@ void *_aaGet(aaA*[] *aa, TypeInfo keyti, int valuesize, ...)
 /*************************************************
  * Determine if key is in aa.
  * Returns:
- *	0	not in aa
- *	!=0	in aa
+ *	null	not in aa
+ *	!=null	in aa, return pointer to value
  */
 
-int _aaIn(aaA*[] aa, TypeInfo keyti, ...)
+void* _aaIn(aaA*[] aa, TypeInfo keyti, ...)
     in
     {
     }
     out (result)
     {
-	assert(result == 0 || result == 1);
+	//assert(result == 0 || result == 1);
     }
     body
     {
@@ -267,7 +267,7 @@ int _aaIn(aaA*[] aa, TypeInfo keyti, ...)
 		{
 		    c = keyti.compare(pkey, e + 1);
 		    if (c == 0)
-			return 1;
+			return cast(void *)(e + 1) + keyti.sizeof;
 		}
 
 		if (c < 0)
@@ -278,7 +278,7 @@ int _aaIn(aaA*[] aa, TypeInfo keyti, ...)
 	}
 
 	// Not found
-	return 0;
+	return null;
     }
 
 /*************************************************

@@ -6,6 +6,8 @@
 
 module std.c.time;
 
+import std.c.stddef;
+
 extern (C):
 
 version (Windows)
@@ -64,8 +66,8 @@ void sleep(time_t);
 void usleep(uint);
 void msleep(uint);
 
-wchar *_wasctime(tm *);
-wchar *_wctime(time_t *);
-size_t wcsftime(wchar *, size_t, wchar *, tm *);
-wchar *_wstrdate(wchar *);
-wchar *_wstrtime(wchar *);
+wchar_t *_wasctime(tm *);
+wchar_t *_wctime(time_t *);
+size_t wcsftime(wchar_t *, size_t, wchar_t *, tm *);
+wchar_t *_wstrdate(wchar_t *);
+wchar_t *_wstrtime(wchar_t *);
