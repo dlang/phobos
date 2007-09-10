@@ -1,4 +1,9 @@
 
+/**
+ * Macros:
+ *	WIKI = StdCompiler
+ */
+
 /* Written by Walter Bright
  * www.digitalmars.com
  * Placed into Public Domain
@@ -10,27 +15,31 @@ module std.compiler;
 
 const
 {
-    // Vendor specific string naming the compiler
+    /// Vendor specific string naming the compiler, for example: "Digital Mars D".
     char[] name = "Digital Mars D";
 
-    // Master list of D compiler vendors
+    /// Master list of D compiler vendors.
     enum Vendor
     {
-	DigitalMars = 1
+	DigitalMars = 1,	/// Digital Mars
     }
 
-    // Which vendor we are
+    /// Which vendor produced this compiler.
     Vendor vendor = Vendor.DigitalMars;
 
 
-    // The vendor specific version number, as in
-    // version_major.version_minor
+    /**
+     * The vendor specific version number, as in
+     * version_major.version_minor
+     */
     uint version_major = 0;
-    uint version_minor = 0;
+    uint version_minor = 0;	/// ditto
 
 
-    // The version of the D Programming Language Specification
-    // Supported by the compiler
+    /**
+     * The version of the D Programming Language Specification
+     * supported by the compiler.
+     */
     uint D_major = 0;
-    uint D_minor = 0;
+    uint D_minor = 134;
 }

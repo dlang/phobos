@@ -1,3 +1,13 @@
+
+/**
+ * Forms the symbols available to all D programs. Includes
+ * Object, which is the root of the class object heirarchy.
+ *
+ * This module is implicitly imported.
+ * Macros:
+ *	WIKI = Object
+ */
+
 /*
  *  Copyright (C) 2004-2005 by Digital Mars, www.digitalmars.com
  *  Written by Walter Bright
@@ -25,16 +35,32 @@
 module object;
 
 extern (C)
-{   int printf(char *, ...);
+{   /// C's printf function.
+    int printf(char *, ...);
+
     int memcmp(void *, void *, size_t);
     void* memcpy(void *, void *, size_t);
 }
 
+/// Standard boolean type. Implemented as a $(B bit) type.
 alias bit bool;
 
 version (X86_64)
 {
+    /**
+     * An unsigned integral type large enough to span the memory space. Use for
+     * array indices and pointer offsets for maximal portability to
+     * architectures that have different memory address ranges. This is
+     * analogous to C's size_t.
+     */
     alias ulong size_t;
+
+    /**
+     * A signed integral type large enough to span the memory space. Use for
+     * pointer differences and for size_t differences for maximal portability to
+     * architectures that have different memory address ranges. This is
+     * analogous to C's ptrdiff_t.
+     */
     alias long ptrdiff_t;
 }
 else
@@ -43,6 +69,9 @@ else
     alias int ptrdiff_t;
 }
 
+/******************
+ * All D class objects inherit from Object.
+ */
 class Object
 {
     void print()
@@ -50,43 +79,70 @@ class Object
 	printf("%.*s\n", toString());
     }
 
+    /**
+     * Convert Object to a human readable string.
+     */
     char[] toString()
     {
 	return this.classinfo.name;
     }
 
+    /**
+     * Compute hash function for Object.
+     */
     uint toHash()
     {
 	// BUG: this prevents a compacting GC from working, needs to be fixed
 	return cast(uint)cast(void *)this;
     }
 
+    /**
+     * Compare with another Object obj.
+     * Returns:
+     *	$(TABLE
+     *  $(TR $(TD this &lt; obj) $(TD &lt; 0))
+     *  $(TR $(TD this == obj) $(TD 0))
+     *  $(TR $(TD this &gt; obj) $(TD &gt; 0))
+     *  )
+     */
     int opCmp(Object o)
     {
 	// BUG: this prevents a compacting GC from working, needs to be fixed
 	return cast(int)cast(void *)this - cast(int)cast(void *)o;
     }
 
+    /**
+     * Returns !=0 if this object does have the same contents as obj.
+     */
     int opEquals(Object o)
     {
 	return this is o;
     }
 }
 
+/**
+ * Information about an interface.
+ */
 struct Interface
 {
-    ClassInfo classinfo;
+    ClassInfo classinfo;	/// .classinfo for this interface
     void *[] vtbl;
     int offset;			// offset to Interface 'this' from Object 'this'
 }
 
+/**
+ * Runtime type information about a class. Can be retrieved for any class type
+ * or instance by using the .classinfo property.
+ */
 class ClassInfo : Object
 {
-    byte[] init;		// class static initializer
-    char[] name;		// class name
-    void *[] vtbl;		// virtual function pointer table
-    Interface[] interfaces;
-    ClassInfo base;
+    byte[] init;		/** class static initializer
+				 * (init.length gives size in bytes of class)
+				 */
+    char[] name;		/// class name
+    void *[] vtbl;		/// virtual function pointer table
+    Interface[] interfaces;	/// interfaces this class implements
+    ClassInfo base;		/// base class
     void *destructor;
     void (*classInvariant)(Object);
     uint flags;
@@ -96,6 +152,11 @@ class ClassInfo : Object
 
 private import std.string;
 
+/**
+ * Runtime type information about a type.
+ * Can be retrieved for any type using a
+ * <a href="../expression.html#typeidexpression">TypeidExpression</a>.
+ */
 class TypeInfo
 {
     uint toHash()
@@ -120,10 +181,19 @@ class TypeInfo
 	return this is o || this.classinfo.name == o.classinfo.name;
     }
 
+    /// Returns a hash of the instance of a type.
     uint getHash(void *p) { return cast(uint)p; }
+
+    /// Compares two instances for equality.
     int equals(void *p1, void *p2) { return p1 == p2; }
+
+    /// Compares two instances for &lt;, ==, or &gt;.
     int compare(void *p1, void *p2) { return 0; }
+
+    /// Returns size of the type.
     size_t tsize() { return 0; }
+
+    /// Swaps two instances of the type.
     void swap(void *p1, void *p2)
     {
 	size_t n = tsize();
@@ -495,10 +565,16 @@ class TypeInfo_Struct : TypeInfo
     int function(void*,void*) xopCmp;
 }
 
+/**
+ * All recoverable exceptions should be derived from class Exception.
+ */
 class Exception : Object
 {
     char[] msg;
 
+    /**
+     * Constructor; msg is a descriptive message for the exception.
+     */
     this(char[] msg)
     {
 	this.msg = msg;
@@ -512,10 +588,16 @@ class Exception : Object
     char[] toString() { return msg; }
 }
 
+/**
+ * All irrecoverable exceptions should be derived from class Error.
+ */
 class Error : Exception
 {
     Error next;
 
+    /**
+     * Constructor; msg is a descriptive message for the exception.
+     */
     this(char[] msg)
     {
 	super(msg);

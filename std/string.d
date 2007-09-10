@@ -510,29 +510,32 @@ int find(char[] s, char[] sub)
 	if (sublength == 0)
 	    return 0;
 
-	char c = sub[0];
-	if (sublength == 1)
+	if (s.length >= sublength)
 	{
-	    char *p = memchr(s, c, s.length);
-	    if (p)
-		return p - &s[0];
-	}
-	else
-	{
-	    size_t imax = s.length - sublength + 1;
-
-	    // Remainder of sub[]
-	    char *q = &sub[1];
-	    sublength--;
-
-	    for (size_t i = 0; i < imax; i++)
+	    char c = sub[0];
+	    if (sublength == 1)
 	    {
-		char *p = memchr(&s[i], c, imax - i);
-		if (!p)
-		    break;
-		i = p - &s[0];
-		if (memcmp(p + 1, q, sublength) == 0)
-		    return i;
+		char *p = memchr(s, c, s.length);
+		if (p)
+		    return p - &s[0];
+	    }
+	    else
+	    {
+		size_t imax = s.length - sublength + 1;
+
+		// Remainder of sub[]
+		char *q = &sub[1];
+		sublength--;
+
+		for (size_t i = 0; i < imax; i++)
+		{
+		    char *p = memchr(&s[i], c, imax - i);
+		    if (!p)
+			break;
+		    i = p - &s[0];
+		    if (memcmp(p + 1, q, sublength) == 0)
+			return i;
+		}
 	    }
 	}
 	return -1;
@@ -1486,7 +1489,7 @@ char[] stripl(char[] s)
     return s[i .. s.length];
 }
 
-char[] stripr(char[] s)
+char[] stripr(char[] s) /// ditto
 {
     uint i;
 
@@ -1498,7 +1501,7 @@ char[] stripr(char[] s)
     return s[0 .. i];
 }
 
-char[] strip(char[] s)
+char[] strip(char[] s) /// ditto
 {
     return stripr(stripl(s));
 }

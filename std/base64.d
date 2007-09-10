@@ -1,3 +1,14 @@
+/**
+ * Encodes/decodes MIME base64 data.
+ *
+ * Macros:
+ *	WIKI=StdBase64
+ * References:
+ *	<a href="http://en.wikipedia.org/wiki/Base64">Wikipedia Base64</a>$(BR)
+ *	<a href="http://www.ietf.org/rfc/rfc2045.txt">RFC 2045</a>$(BR)
+ */
+
+
 /* base64.d
  * Modified from C. Miller's version, his copyright is below.
  */
@@ -24,6 +35,9 @@
 
 module std.base64;
 
+/**
+ */
+
 class Base64Exception: Exception
 {
 	this(char[] msg)
@@ -32,6 +46,9 @@ class Base64Exception: Exception
 	}
 }
 
+
+/**
+ */
 
 class Base64CharException: Base64Exception
 {
@@ -45,7 +62,11 @@ class Base64CharException: Base64Exception
 const char[] array = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
 
-uint encodeLength(uint slen) //returns the number of bytes needed to encode a string of this length
+/**
+ * Returns the number of bytes needed to encode a string of length slen.
+ */
+
+uint encodeLength(uint slen)
 {
 	uint result;
 	result = slen / 3;
@@ -54,8 +75,16 @@ uint encodeLength(uint slen) //returns the number of bytes needed to encode a st
 	return result * 4;
 }
 
+/**
+ * Encodes str[] and places the result in buf[].
+ * Params:
+ *	str = string to encode
+ * 	buf = destination buffer, must be large enough for the result.
+ * Returns:
+ *	slice into buf[] representing encoded result
+ */
 
-char[] encode(char[] str, char[] buf) //buf must be large enough
+char[] encode(char[] str, char[] buf)
 in
 {
 	assert(buf.length >= encodeLength(str.length));
@@ -110,6 +139,10 @@ body
 }
 
 
+/**
+ * Encodes str[] and returns the result.
+ */
+
 char[] encode(char[] str)
 {
 	return encode(str, new char[encodeLength(str.length)]);
@@ -126,13 +159,28 @@ unittest
 }
 
 
-uint decodeLength(uint elen) //returns the number of bytes needed to decode an encoded string of this length
+/**
+ * Returns the number of bytes needed to decode an encoded string of this
+ * length.
+ */
+uint decodeLength(uint elen)
 {
 	return elen / 4 * 3;
 }
 
 
-char[] decode(char[] estr, char[] buf) //buf must be large enough to store decoded string
+/**
+ * Decodes str[] and places the result in buf[].
+ * Params:
+ *	str = string to encode
+ * 	buf = destination buffer, must be large enough for the result.
+ * Returns:
+ *	slice into buf[] representing encoded result
+ * Errors:
+ *	Throws Base64Exception on invalid base64 encoding in estr[].
+ *	Throws Base64CharException on invalid base64 character in estr[].
+ */
+char[] decode(char[] estr, char[] buf)
 in
 {
 	assert(buf.length + 2 >= decodeLength(estr.length)); //account for '=' padding
@@ -212,6 +260,12 @@ body
 	return buf[0 .. (bp - &buf[0])];
 }
 
+/**
+ * Decodes estr[] and returns the result.
+ * Errors:
+ *	Throws Base64Exception on invalid base64 encoding in estr[].
+ *	Throws Base64CharException on invalid base64 character in estr[].
+ */
 
 char[] decode(char[] estr)
 {

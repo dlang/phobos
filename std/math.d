@@ -8,7 +8,8 @@
  *		<caption>Special Values</caption>
  *		$0</table>
  *
- *	NAN = <font color=red>NAN</font>
+ *	NAN = $(RED NAN)
+ *	SUP = <span style="vertical-align:super;font-size:smaller">$0</span>
  */
 
 /*
@@ -386,7 +387,7 @@ creal sqrt(creal z)
 }
 
 /**********************
- * Calculates e<sup>x</sup>.
+ * Calculates e$(SUP x).
  *
  *	$(TABLE_SV
  *	<tr> <th> x        <th> exp(x)
@@ -397,7 +398,7 @@ creal sqrt(creal z)
 real exp(real x)		{ return std.c.math.expl(x); }
 
 /**********************
- * Calculates 2<sup>x</sup>.
+ * Calculates 2$(SUP x).
  *
  *	$(TABLE_SV
  *	<tr> <th> x <th> exp2(x)
@@ -415,7 +416,7 @@ real exp2(real x)		{ return std.c.math.exp2l(x); }
  * than exp(x)-1. 
  *
  *	$(TABLE_SV
- *	<tr> <th> x           <th> e<sup>x</sup>-1
+ *	<tr> <th> x           <th> e$(SUP x)-1
  *	<tr> <td> &plusmn;0.0 <td> &plusmn;0.0
  *	<tr> <td> +&infin;    <td> +&infin;
  *	<tr> <td> -&infin;    <td> -1.0
@@ -429,8 +430,8 @@ real expm1(real x)		{ return std.c.math.expm1l(x); }
  * Separate floating point value into significand and exponent.
  *
  * Returns:
- *	<dd> Calculate and return <i>x</i> and exp such that
- *	value =<i>x</i>*2<sup>exp</sup> and
+ *	Calculate and return <i>x</i> and exp such that
+ *	value =<i>x</i>*2$(SUP exp) and
  *	.5 &lt;= |<i>x</i>| &lt; 1.0<br>
  *	<i>x</i> has same sign as value.
  *
@@ -556,7 +557,7 @@ alias std.c.math.FP_ILOGBNAN FP_ILOGBNAN;
 
 
 /*******************************************
- * Compute n * 2<sup>exp</sup>
+ * Compute n * 2$(SUP exp)
  * References: frexp
  */
 
@@ -625,7 +626,7 @@ real log2(real x)		{ return std.c.math.log2l(x); }
  * For a positive, finite x: 
  *
  *	<pre>
- *	1 &lt;= <i>x</i> * FLT_RADIX<sup>-logb(x)</sup> &lt; FLT_RADIX 
+ *	1 &lt;= <i>x</i> * FLT_RADIX$(SUP -logb(x)) &lt; FLT_RADIX 
  *	</pre>
  *
  *	$(TABLE_SV
@@ -653,7 +654,7 @@ real logb(real x)		{ return std.c.math.logbl(x); }
 real modf(real x, inout real y)	{ return std.c.math.modfl(x,&y); }
 
 /*************************************
- * Efficiently calculates x * 2<sup>n</sup>.
+ * Efficiently calculates x * 2$(SUP n).
  *
  * scalbn handles underflow and overflow in 
  * the same fashion as the basic arithmetic operators. 
@@ -1289,7 +1290,7 @@ real pow(real x, int n)
 }
 
 /*********************************************
- * Calculates x<sup>y</sup>.
+ * Calculates x$(SUP y).
  *
  * $(TABLE_SV
  * <tr>

@@ -86,7 +86,8 @@ OBJS= asserterror.obj deh.obj switch.obj complex.obj gcstats.obj \
 	ti_dchar.obj ti_Adchar.obj ti_bit.obj ti_Abit.obj ti_void.obj
 
 DOCS=	$(DOC)\std_path.html $(DOC)\std_math.html $(DOC)\std_outbuffer.html \
-	$(DOC)\std_stream.html $(DOC)\std_string.html
+	$(DOC)\std_stream.html $(DOC)\std_string.html $(DOC)\std_base64.html \
+	$(DOC)\object.html $(DOC)\std_compiler.html
 
 SRC=	errno.c object.d unittest.d crc32.d gcstats.d
 
@@ -738,6 +739,12 @@ ti_int.obj : std\typeinfo\ti_int.d
 
 ################## DOCS ####################################
 
+$(DOC)\std_base64.html : std.ddoc std\base64.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_base64.html std.ddoc std\base64.d
+
+$(DOC)\std_compiler.html : std.ddoc std\compiler.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_compiler.html std.ddoc std\compiler.d
+
 $(DOC)\std_math.html : std.ddoc std\math.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_math.html std.ddoc std\math.d
 
@@ -752,6 +759,9 @@ $(DOC)\std_stream.html : std.ddoc std\stream.d
 
 $(DOC)\std_string.html : std.ddoc std\string.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_string.html std.ddoc std\string.d
+
+$(DOC)\object.html : std.ddoc internal\object.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\object.html std.ddoc internal\object.d
 
 
 ######################################################
@@ -778,6 +788,9 @@ zip : win32.mak linux.mak phoboslicense.txt std.ddoc $(SRC) \
 
 clean:
 	del $(OBJS)
+	del $(DOCS)
+
+cleanhtml:
 	del $(DOCS)
 
 install:
