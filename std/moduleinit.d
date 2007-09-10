@@ -67,18 +67,19 @@ extern (C) int _fatexit(void *);
 
 extern (C) void _moduleCtor()
 {
+    debug printf("_moduleCtor()\n");
     version (linux)
     {
-	int length = 0;
+	int len = 0;
 	ModuleReference *mr;
 
 	for (mr = _Dmodule_ref; mr; mr = mr.next)
-	    length++;
-	_moduleinfo_array = new ModuleInfo[length];
-	length = 0;
+	    len++;
+	_moduleinfo_array = new ModuleInfo[len];
+	len = 0;
 	for (mr = _Dmodule_ref; mr; mr = mr.next)
-	{   _moduleinfo_array[length] = mr.mod;
-	    length++;
+	{   _moduleinfo_array[len] = mr.mod;
+	    len++;
 	}
     }
 
@@ -89,7 +90,7 @@ extern (C) void _moduleCtor()
     }
 
     _moduleinfo_dtors = new ModuleInfo[_moduleinfo_array.length];
-    //printf("_moduleinfo_dtors = x%x\n", (void *)_moduleinfo_dtors);
+    debug printf("_moduleinfo_dtors = x%x\n", cast(void *)_moduleinfo_dtors);
     _moduleCtor2(_moduleinfo_array, 0);
 }
 
@@ -100,7 +101,9 @@ void _moduleCtor2(ModuleInfo[] mi, int skip)
     {
 	ModuleInfo m = mi[i];
 
-//	debug printf("\tmodule[%d] = '%.*s'\n", i, m.name);
+	debug printf("\tmodule[%d] = '%p'\n", i, m);
+	if (!m) continue;
+	debug printf("\tmodule[%d] = '%.*s'\n", i, m.name);
 	if (m.flags & MIctordone)
 	    continue;
 	debug printf("\tmodule[%d] = '%.*s', m = x%x\n", i, m.name, m);

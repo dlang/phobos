@@ -8,3 +8,9 @@ int getErrno()
 {
     return errno;
 }
+
+int setErrno(int newno)
+{
+    errno = newno;
+    return newno;
+}

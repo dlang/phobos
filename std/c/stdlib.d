@@ -36,3 +36,6 @@ enum
     int    random(int num);
     void   randomize();
 
+    int getErrno();
+    int setErrno(int);
+

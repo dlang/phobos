@@ -24,6 +24,7 @@
 module std.file;
 
 private import std.c.stdio;
+private import std.c.stdlib;
 private import std.path;
 private import std.string;
 

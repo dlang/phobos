@@ -48,7 +48,7 @@ const int SOCKET_ERROR = -1;
 
 private:
 
-import std.string, std.stdint;
+import std.string, std.stdint, std.c.stdlib;
 
 
 version(Win32)

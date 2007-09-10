@@ -95,7 +95,19 @@ bit[] _d_arraycopybit(bit[] from, bit[] to)
 	if (cast(void *)to + nbytes <= cast(void *)from ||
 	    cast(void *)from + nbytes <= cast(void *)to)
 	{
-	    memcpy(cast(void *)to, cast(void *)from, nbytes);
+	    nbytes = to.length / 8;
+	    if (nbytes)
+		memcpy(cast(void *)to, cast(void *)from, nbytes);
+
+	    if (to.length & 7)
+	    {
+		/* Copy trailing bits.
+		 */
+		static ubyte[8] masks = [0,1,3,7,0x0F,0x1F,0x3F,0x7F];
+		ubyte mask = masks[to.length & 7];
+		(cast(ubyte*)to)[nbytes] &= ~mask;
+		(cast(ubyte*)to)[nbytes] |= (cast(ubyte*)from)[nbytes] & mask;
+	    }
 	}
 	else
 	{

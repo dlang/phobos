@@ -28,6 +28,7 @@ private import std.c.stdlib;
 private import std.utf;
 private import std.array;
 private import std.format;
+private import std.ctype;
 
 extern (C)
 {
@@ -265,10 +266,12 @@ int find(char[] s, dchar c)
     }
 
     // c is a universal character
-    char[4] buf;
-    char[] t;
-    t = std.utf.toUTF8(buf, c);
-    return find(s, t);
+    foreach (int i, dchar c2; s)
+    {
+	if (c == c2)
+	    return i;
+    }
+    return -1;
 }
 
 unittest
@@ -284,6 +287,63 @@ unittest
     i = find("abba", cast(dchar)'a');
     assert(i == 0);
     i = find("def", cast(dchar)'f');
+    assert(i == 2);
+}
+
+
+/******************************************
+ * Case insensitive version of find().
+ */
+
+int ifind(char[] s, dchar c)
+{
+    char* p;
+
+    if (c <= 0x7F)
+    {	// Plain old ASCII
+	char c1 = std.ctype.tolower(c);
+
+	foreach (int i, char c2; s)
+	{
+	    c2 = std.ctype.tolower(c2);
+	    if (c1 == c2)
+		return i;
+	}
+	return -1;
+    }
+
+    // c is a universal character
+    foreach (int i, dchar c2; s)
+    {
+	if (c == c2)
+	    return i;
+    }
+    return -1;
+}
+
+unittest
+{
+    debug(string) printf("string.ifind.unittest\n");
+
+    int i;
+
+    i = ifind(null, cast(dchar)'a');
+    assert(i == -1);
+    i = ifind("def", cast(dchar)'a');
+    assert(i == -1);
+    i = ifind("Abba", cast(dchar)'a');
+    assert(i == 0);
+    i = ifind("def", cast(dchar)'F');
+    assert(i == 2);
+
+    char[] sPlts = "Mars: the fourth Rock (Planet) from the Sun.";
+
+    i = ifind("def", cast(char)'f');
+    assert(i == 2);
+
+    i = ifind(sPlts, cast(char)'P');
+    assert(i == 23);
+    i = ifind(sPlts, cast(char)'R');
     assert(i == 2);
 }
 
@@ -330,6 +390,62 @@ unittest
     i = rfind("def", cast(dchar)'f');
     assert(i == 2);
 }
+
+/******************************************
+ * Case insensitive version of rfind().
+ */
+
+int irfind(char[] s, dchar c)
+{
+    int i;
+
+    if (c <= 0x7F)
+    {	// Plain old ASCII
+	char c1 = std.ctype.tolower(c);
+
+	for (i = s.length; i-- > 0;)
+	{   char c2 = s[i];
+
+	    c2 = std.ctype.tolower(c2);
+	    if (c1 == c2)
+		break;
+	}
+	return i;
+    }
+
+    // c is a universal character
+    char[4] buf;
+    char[] t;
+    t = std.utf.toUTF8(buf, c);
+    return irfind(s, t);
+}
+
+unittest
+{
+    debug(string) printf("string.irfind.unittest\n");
+
+    int i;
+
+    i = irfind(null, cast(dchar)'a');
+    assert(i == -1);
+    i = irfind("def", cast(dchar)'a');
+    assert(i == -1);
+    i = irfind("AbbA", cast(dchar)'a');
+    assert(i == 3);
+    i = irfind("def", cast(dchar)'F');
+    assert(i == 2);
+
+    char[] sPlts = "Mars: the fourth Rock (Planet) from the Sun.";
+
+    i = irfind("def", cast(char)'f');
+    assert(i == 2);
+
+    i = irfind(sPlts, cast(char)'M');
+    assert(i == 34);
+    i = irfind(sPlts, cast(char)'S');
+    assert(i == 40);
+}
+
 
 /*************************************
  * Find first occurrance of sub[] in string s[].
@@ -406,6 +522,105 @@ unittest
 }
 
 /*************************************
+ * Case insensitive version of find().
+ */
+
+int ifind(char[] s, char[] sub)
+    out (result)
+    {
+	if (result == -1)
+	{
+	}
+	else
+	{
+	    assert(0 <= result && result < s.length - sub.length + 1);
+	    assert(icmp(s[result .. result + sub.length], sub) == 0);
+	}
+    }
+    body
+    {
+	int sublength = sub.length;
+	int i;
+
+	if (sublength == 0)
+	    return 0;
+
+	if (s.length < sublength)
+	    return -1;
+
+	char c = sub[0];
+	if (sublength == 1)
+	{
+	    i = ifind(s, c);
+	}
+	else if (c <= 0x7F)
+	{
+	    int imax = s.length - sublength + 1;
+
+	    // Remainder of sub[]
+	    char[] subn = sub[1 .. sublength];
+
+	    for (i = 0; i < imax; i++)
+	    {
+		int j = ifind(s[i .. imax], c);
+		if (j == -1)
+		    return -1;
+		i += j;
+		if (icmp(s[i + 1 .. i + sublength], subn) == 0)
+		    break;
+	    }
+	}
+	else
+	{
+	    int imax = s.length - sublength;
+
+	    for (i = 0; i < imax; i++)
+	    {
+		if (icmp(s[i .. i + sublength], sub) == 0)
+		    break;
+	    }
+	}
+	return i;
+    }
+
+
+unittest
+{
+    debug(string) printf("string.ifind.unittest\n");
+
+    int i;
+
+    i = ifind(null, "a");
+    assert(i == -1);
+    i = ifind("def", "a");
+    assert(i == -1);
+    i = ifind("abba", "a");
+    assert(i == 0);
+    i = ifind("def", "f");
+    assert(i == 2);
+    i = ifind("dfefffg", "fff");
+    assert(i == 3);
+    i = ifind("dfeffgfff", "fff");
+    assert(i == 6);
+
+    char[] sPlts = "Mars: the fourth Rock (Planet) from the Sun.";
+    char[] sMars = "Who\'s \'My Favorite Maritian?\'";
+
+    i = ifind(sMars, "MY fAVe");
+    assert(i == -1);
+    i = ifind(sMars, "mY fAVOriTe");
+    assert(i == 7);
+    i = ifind(sPlts, "mArS:");
+    assert(i == 0);
+    i = ifind(sPlts, "rOcK");
+    assert(i == 17);
+    i = ifind(sPlts, "Un.");
+    assert(i == 41);
+    i = ifind(sPlts, sPlts);
+    assert(i == 0);
+}
+
+/*************************************
  * Find last occurrance of sub in string s.
  * Return index in s where it is found.
  * Return -1 if not found.
@@ -447,6 +662,7 @@ unittest
 {
     int i;
 
+    debug(string) printf("string.rfind.unittest\n");
     i = rfind("abcdefcdef", "c");
     assert(i == 6);
     i = rfind("abcdefcdef", "cd");
@@ -458,6 +674,81 @@ unittest
     i = rfind("abcdefcdef", "");
     assert(i == 10);
 }
+
+
+/*************************************
+ * Case insensitive version of rfind().
+ */
+
+int irfind(char[] s, char[] sub)
+    out (result)
+    {
+	if (result == -1)
+	{
+	}
+	else
+	{
+	    assert(0 <= result && result < s.length - sub.length + 1);
+	    assert(icmp(s[result .. result + sub.length], sub) == 0);
+	}
+    }
+    body
+    {
+	char c;
+
+	if (sub.length == 0)
+	    return s.length;
+	c = sub[0];
+	if (sub.length == 1)
+	    return irfind(s, c);
+	c = std.ctype.tolower(c);
+	for (int i = s.length - sub.length; i >= 0; i--)
+	{
+	    if (std.ctype.tolower(s[i]) == c)
+	    {
+		if (icmp(s[i + 1 .. i + sub.length], sub[1 .. sub.length]) == 0)
+		    return i;
+	    }
+	}
+	return -1;
+    }
+
+unittest
+{
+    int i;
+
+    debug(string) printf("string.irfind.unittest\n");
+    i = irfind("abcdefCdef", "c");
+    assert(i == 6);
+    i = irfind("abcdefCdef", "cD");
+    assert(i == 6);
+    i = irfind("abcdefcdef", "x");
+    assert(i == -1);
+    i = irfind("abcdefcdef", "xy");
+    assert(i == -1);
+    i = irfind("abcdefcdef", "");
+    assert(i == 10);
+
+    char[] sPlts = "Mars: the fourth Rock (Planet) from the Sun.";
+    char[] sMars = "Who\'s \'My Favorite Maritian?\'";
+    
+    i = irfind("abcdefcdef", "c");
+    assert(i == 6);
+    i = irfind("abcdefcdef", "cd");
+    assert(i == 6);
+    i = irfind( "abcdefcdef", "def" );
+    assert(i == 7);
+    
+    i = irfind(sMars, "RiTE maR");
+    assert(i == 14);
+    i = irfind(sPlts, "FOuRTh");
+    assert(i == 10);
+    i = irfind(sMars, "whO\'s \'MY");
+    assert(i == 0);
+    i = irfind(sMars, sMars);
+    assert(i == 0);
+}
+
 
 /************************************
  * Convert string to lower case.

@@ -110,7 +110,6 @@ extern (C)
     int lseek(int, int, int);
     int fstat(int, struct_stat*);
     int stat(char*, struct_stat*);
-    int getErrno();
     int chdir(char*);
     int mkdir(char*, int);
     int rmdir(char*);
