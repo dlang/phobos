@@ -1,6 +1,8 @@
 
 // double
 
+module std.typeinfo.ti_double;
+
 private import std.math;
 
 class TypeInfo_d : TypeInfo

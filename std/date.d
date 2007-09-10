@@ -32,7 +32,7 @@ alias long d_time;
 /**
  * A value for d_time that does not represent a valid time.
  */
-d_time d_time_nan = long.min;
+const d_time d_time_nan = long.min;
 
 struct Date
 {
@@ -75,7 +75,7 @@ d_time LocalTZA = 0;
 const char[] daystr = "SunMonTueWedThuFriSat";
 const char[] monstr = "JanFebMarAprMayJunJulAugSepOctNovDec";
 
-int mdays[12] = [ 0,31,59,90,120,151,181,212,243,273,304,334 ];
+const int[12] mdays = [ 0,31,59,90,120,151,181,212,243,273,304,334 ];
 
 /********************************
  * Compute year and week [1..53] from t. The ISO 8601 week 1 is the first week
@@ -651,6 +651,14 @@ version (Win32)
 	n = SYSTEMTIME2d_time(&st, 0);
 	return n;
 	//return c.time.time(null) * TicksPerSecond;
+    }
+
+    static d_time FILETIME2d_time(FILETIME *ft)
+    {   SYSTEMTIME st;
+
+	if (!FileTimeToSystemTime(ft, &st))
+	    return d_time_nan;
+	return SYSTEMTIME2d_time(&st, 0);
     }
 
     static d_time SYSTEMTIME2d_time(SYSTEMTIME *st, d_time t)

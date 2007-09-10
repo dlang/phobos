@@ -1,6 +1,8 @@
 
 // creal
 
+module std.typeinfo.ti_creal;
+
 class TypeInfo_c : TypeInfo
 {
     char[] toString() { return "creal"; }

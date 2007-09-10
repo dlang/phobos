@@ -1,4 +1,6 @@
 
+module std.typeinfo.ti_Adchar;
+
 private import std.string;
 
 // dchar[]

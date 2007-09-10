@@ -1,4 +1,6 @@
 
+module std.typeinfo.ti_wchar;
+
 
 class TypeInfo_u : TypeInfo
 {

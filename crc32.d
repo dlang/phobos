@@ -12,7 +12,7 @@
  */
 
 // CRC-32 calculation
-module crc;
+module crc32;
 
 private uint[256] crc32_table =
 [

@@ -21,6 +21,8 @@
  *     distribution.
  */
 
+module std.typeinfo.ti_Adouble;
+
 private import std.string;
 private import std.typeinfo.ti_double;
 

@@ -1,4 +1,6 @@
 
+module std.typeinfo.Aa;
+
 private import std.string;
 
 // char[]

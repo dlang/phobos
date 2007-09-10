@@ -67,6 +67,13 @@ private
     import std.outbuffer;
 }
 
+/** Regexp to extract an email address */
+const char[] email =
+    r"[a-zA-Z]([.]?([[a-zA-Z0-9_]-]+)*)?@([[a-zA-Z0-9_]\-_]+\.)+[a-zA-Z]{2,6}";
+
+/** Regexp to extract a url */
+const char[] url = r"(([h|H][t|T]|[f|F])[t|T][p|P]([s|S]?)\:\/\/|~/|/)?([\w]+:\w+@)?(([a-zA-Z]{1}([\w\-]+\.)+([\w]{2,5}))(:[\d]{1,5})?)?((/?\w+/)+|/?)(\w+\.[\w]{3,4})?([,]\w+)*((\?\w+=\w+)?(&\w+=\w+)*([,]\w*)*)?";
+
 /************************************
  * One of these gets thrown on compilation error
  */

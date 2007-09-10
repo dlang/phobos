@@ -1,6 +1,8 @@
 
 // ulong
 
+module std.typeinfo.ti_ulong;
+
 class TypeInfo_m : TypeInfo
 {
     char[] toString() { return "ulong"; }

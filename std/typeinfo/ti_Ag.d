@@ -1,4 +1,6 @@
 
+module std.typeinfo.ti_Ag;
+
 private import std.string;
 
 // byte[]

@@ -1,4 +1,6 @@
 
+module std.typeinfo.ti_Auint;
+
 private import std.string;
 
 // uint[]

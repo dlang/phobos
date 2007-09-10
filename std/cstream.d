@@ -1,4 +1,9 @@
-// Written by Ben Hinkle and put in the public domain.
+/**
+ * Authors: Ben Hinkle
+ * License: public domain
+ */
+
+module std.cstream;
 
 import std.stream;
 import std.c.stdio;

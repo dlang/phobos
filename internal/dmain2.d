@@ -79,7 +79,6 @@ extern (C) int main(int argc, char **argv)
 	o.print();
 	exit(EXIT_FAILURE);
     }
-
     version (linux)
     {
 	free(am);

@@ -1,6 +1,8 @@
 
 // ubyte
 
+module std.typeinfo.ti_ubyte;
+
 class TypeInfo_h : TypeInfo
 {
     char[] toString() { return "ubyte"; }

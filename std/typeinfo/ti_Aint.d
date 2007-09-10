@@ -1,4 +1,6 @@
 
+module std.typeinfo.ti_Aint;
+
 private import std.string;
 
 // int[]

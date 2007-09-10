@@ -1,4 +1,6 @@
 
+module std.typeinfo.ti_Awchar;
+
 private import std.string;
 
 // wchar[]

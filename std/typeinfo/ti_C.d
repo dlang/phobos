@@ -21,6 +21,8 @@
  *     distribution.
  */
 
+module std.typeinfo.ti_C;
+
 private import std.string;
 
 // Object

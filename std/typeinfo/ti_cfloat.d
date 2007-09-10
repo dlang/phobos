@@ -1,6 +1,8 @@
 
 // cfloat
 
+module std.typeinfo.ti_cfloat;
+
 class TypeInfo_q : TypeInfo
 {
     char[] toString() { return "cfloat"; }

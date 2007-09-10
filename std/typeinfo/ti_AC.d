@@ -1,3 +1,4 @@
+module std.typeinfo.ti_AC;
 
 private import std.string;
 

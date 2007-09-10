@@ -1,4 +1,6 @@
 
+module std.typeinfo.ti_Abit;
+
 private import std.string;
 
 // bit[]

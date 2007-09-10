@@ -1,6 +1,8 @@
 
 // real
 
+module std.typeinfo.ti_real;
+
 private import std.math;
 
 class TypeInfo_e : TypeInfo

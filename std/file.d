@@ -41,6 +41,7 @@ private import std.c.windows.windows;
 private import std.utf;
 private import std.windows.syserror;
 private import std.windows.charset;
+private import std.date;
 
 int useWfuncs = 1;
 
@@ -82,6 +83,8 @@ class FileException : Exception
 
 /********************************************
  * Read file name[], return array of bytes read.
+ * Throws:
+ *	FileException on error.
  */
 
 void[] read(char[] name)
@@ -134,6 +137,7 @@ err1:
 
 /*********************************************
  * Write buffer[] to file name[].
+ * Throws: FileException on error.
  */
 
 void write(char[] name, void[] buffer)
@@ -175,6 +179,7 @@ err:
 
 /*********************************************
  * Append buffer[] to file name[].
+ * Throws: FileException on error.
  */
 
 void append(char[] name, void[] buffer)
@@ -218,6 +223,7 @@ err:
 
 /***************************************************
  * Rename file from[] to to[].
+ * Throws: FileException on error.
  */
 
 void rename(char[] from, char[] to)
@@ -235,6 +241,7 @@ void rename(char[] from, char[] to)
 
 /***************************************************
  * Delete file name[].
+ * Throws: FileException on error.
  */
 
 void remove(char[] name)
@@ -252,6 +259,7 @@ void remove(char[] name)
 
 /***************************************************
  * Get size of file name[].
+ * Throws: FileException on error.
  */
 
 ulong getSize(char[] name)
@@ -305,6 +313,7 @@ int exists(char[] name)
 
 /***************************************************
  * Get file name[] attributes.
+ * Throws: FileException on error.
  */
 
 uint getAttributes(char[] name)
@@ -323,7 +332,8 @@ uint getAttributes(char[] name)
 }
 
 /****************************************************
- * Is name[] a file? Error if name[] doesn't exist.
+ * Is name[] a file?
+ * Throws: FileException if name[] doesn't exist.
  */
 
 int isfile(char[] name)
@@ -332,7 +342,8 @@ int isfile(char[] name)
 }
 
 /****************************************************
- * Is name[] a directory? Error if name[] doesn't exist.
+ * Is name[] a directory?
+ * Throws: FileException if name[] doesn't exist.
  */
 
 int isdir(char[] name)
@@ -342,6 +353,7 @@ int isdir(char[] name)
 
 /****************************************************
  * Change directory to pathname[].
+ * Throws: FileException on error.
  */
 
 void chdir(char[] pathname)
@@ -360,6 +372,7 @@ void chdir(char[] pathname)
 
 /****************************************************
  * Make directory pathname[].
+ * Throws: FileException on error.
  */
 
 void mkdir(char[] pathname)
@@ -378,6 +391,7 @@ void mkdir(char[] pathname)
 
 /****************************************************
  * Remove directory pathname[].
+ * Throws: FileException on error.
  */
 
 void rmdir(char[] pathname)
@@ -396,6 +410,7 @@ void rmdir(char[] pathname)
 
 /****************************************************
  * Get current directory.
+ * Throws: FileException on error.
  */
 
 char[] getcwd()
@@ -436,7 +451,91 @@ Lerr:
 }
 
 /***************************************************
+ * Directory Entry
+ */
+
+struct DirEntry
+{
+    char[] name;			/// file or directory name
+    ulong size = ~0ul;			/// size of file in bytes
+    d_time creationTime = d_time_nan;	/// time of file creation
+    d_time lastAccessTime = d_time_nan;	/// time file was last accessed
+    d_time lastWriteTime = d_time_nan;	/// time file was last written to
+    uint attributes;		// Windows file attributes OR'd together
+
+    void init(char[] path, WIN32_FIND_DATA *fd)
+    {
+	wchar[] wbuf;
+	size_t clength;
+	size_t wlength;
+	size_t n;
+
+	clength = std.string.strlen(fd.cFileName);
+
+	// Convert cFileName[] to unicode
+	wlength = MultiByteToWideChar(0,0,fd.cFileName,clength,null,0);
+	if (wlength > wbuf.length)
+	    wbuf.length = wlength;
+	n = MultiByteToWideChar(0,0,fd.cFileName,clength,cast(wchar*)wbuf,wlength);
+	assert(n == wlength);
+	// toUTF8() returns a new buffer
+	name = std.path.join(path, std.utf.toUTF8(wbuf[0 .. wlength]));
+
+	size = (cast(ulong)fd.nFileSizeHigh << 32) | fd.nFileSizeLow;
+	creationTime = std.date.FILETIME2d_time(&fd.ftCreationTime);
+	lastAccessTime = std.date.FILETIME2d_time(&fd.ftLastAccessTime);
+	lastWriteTime = std.date.FILETIME2d_time(&fd.ftLastWriteTime);
+	attributes = fd.dwFileAttributes;
+    }
+
+    void init(char[] path, WIN32_FIND_DATAW *fd)
+    {
+	size_t clength = std.string.wcslen(fd.cFileName);
+	name = std.path.join(path, std.utf.toUTF8(fd.cFileName[0 .. clength]));
+	size = (cast(ulong)fd.nFileSizeHigh << 32) | fd.nFileSizeLow;
+	creationTime = std.date.FILETIME2d_time(&fd.ftCreationTime);
+	lastAccessTime = std.date.FILETIME2d_time(&fd.ftLastAccessTime);
+	lastWriteTime = std.date.FILETIME2d_time(&fd.ftLastWriteTime);
+	attributes = fd.dwFileAttributes;
+    }
+
+    /****
+     * Return !=0 if DirEntry is a directory.
+     */
+    int isdir()
+    {
+	return attributes & FILE_ATTRIBUTE_DIRECTORY;
+    }
+
+    /****
+     * Return !=0 if DirEntry is a file.
+     */
+    int isfile()
+    {
+	return !(attributes & FILE_ATTRIBUTE_DIRECTORY);
+    }
+}
+
+
+/***************************************************
  * Return contents of directory pathname[].
+ * The names in the contents do not include the pathname.
+ * Throws: FileException on error
+ * Example:
+ *	This program lists all the files and subdirectories in its
+ *	path argument.
+ * ----
+ * import std.stdio;
+ * import std.file;
+ *
+ * void main(char[][] args)
+ * {
+ *    char[][] dirs = std.file.listdir(args[1]);
+ *
+ *    foreach (char[] d; dirs)
+ *	writefln(d);
+ * }
+ * ----
  */
 
 char[][] listdir(char[] pathname)
@@ -453,10 +552,129 @@ char[][] listdir(char[] pathname)
     return result;
 }
 
+
+/*****************************************************
+ * Return all the files in the directory and its subdirectories
+ * that match pattern.
+ * Params:
+ *	pathname = Directory name
+ *	pattern = String with wildcards, such as $(RED "*.d"). The supported
+ *		wildcard strings are described under fnmatch() in
+ *		$(LINK2 std_path.html, std.path).
+ * Example:
+ *	This program lists all the files with a "d" extension in
+ *	the path passed as the first argument.
+ * ----
+ * import std.stdio;
+ * import std.file;
+ *
+ * void main(char[][] args)
+ * {
+ *    char[][] d_source_files = std.file.listdir(args[1], "*.d");
+ *
+ *    foreach (char[] d; d_source_files)
+ *	writefln(d);
+ * }
+ * ----
+ */
+
+char[][] listdir(char[] pathname, char[] pattern)
+{   char[][] result;
+    
+    bool callback(DirEntry* de)
+    {
+	if (de.isdir)
+	    listdir(de.name, &callback);
+	else
+	{   if (std.path.fnmatch(de.name, pattern))
+		result ~= de.name;
+	}
+	return true; // continue
+    }
+    
+    listdir(pathname, &callback);
+    return result;
+}
+
+/******************************************************
+ * For each file and directory name in pathname[],
+ * pass it to the callback delegate.
+ * Params:
+ *	callback =	Delegate that processes each
+ *			filename in turn. Returns true to
+ *			continue, false to stop.
+ * Example:
+ *	This program lists all the files in its
+ *	path argument, including the path.
+ * ----
+ * import std.stdio;
+ * import std.path;
+ * import std.file;
+ *
+ * void main(char[][] args)
+ * {
+ *    char[] pathname = args[1];
+ *    char[][] result;
+ *
+ *    bool listing(char[] filename)
+ *    {
+ *      result ~= std.path.join(pathname, filename);
+ *      return true; // continue
+ *    }
+ *
+ *    listdir(pathname, &listing);
+ *
+ *    foreach (char[] name; result)
+ *      writefln("%s", name);
+ * }
+ * ----
+ */
+
 void listdir(char[] pathname, bool delegate(char[] filename) callback)
+{
+    bool listing(DirEntry* de)
+    {
+	return callback(std.path.getBaseName(de.name));
+    }
+
+    listdir(pathname, &listing);
+}
+
+/******************************************************
+ * For each file and directory DirEntry in pathname[],
+ * pass it to the callback delegate.
+ * Params:
+ *	callback =	Delegate that processes each
+ *			DirEntry in turn. Returns true to
+ *			continue, false to stop.
+ * Example:
+ *	This program lists all the files in its
+ *	path argument and all subdirectories thereof.
+ * ----
+ * import std.stdio;
+ * import std.file;
+ *
+ * void main(char[][] args)
+ * {
+ *    bool callback(DirEntry* de)
+ *    {
+ *      if (de.isdir)
+ *        listdir(de.name, &callback);
+ *      else
+ *        writefln(de.name);
+ *      return true;
+ *    }
+ *
+ *    listdir(args[1], &callback);
+ * }
+ * ----
+ */
+
+void listdir(char[] pathname, bool delegate(DirEntry* de) callback)
 {
     char[] c;
     HANDLE h;
+    DirEntry de;
 
     c = std.path.join(pathname, "*.*");
     if (useWfuncs)
@@ -466,20 +684,24 @@ void listdir(char[] pathname, bool delegate(char[] filename) callback)
 	h = FindFirstFileW(std.utf.toUTF16z(c), &fileinfo);
 	if (h != INVALID_HANDLE_VALUE)
 	{
-	    do
-	    {	int clength;
+	    try
+	    {
+		do
+		{
+		    // Skip "." and ".."
+		    if (std.string.wcscmp(fileinfo.cFileName, ".") == 0 ||
+			std.string.wcscmp(fileinfo.cFileName, "..") == 0)
+			continue;
 
-		// Skip "." and ".."
-		if (std.string.wcscmp(fileinfo.cFileName, ".") == 0 ||
-		    std.string.wcscmp(fileinfo.cFileName, "..") == 0)
-		    continue;
-
-		clength = std.string.wcslen(fileinfo.cFileName);
-		// toUTF8() returns a new buffer
-		if (!callback(std.utf.toUTF8(fileinfo.cFileName[0 .. clength])))
-		    break;
-	    } while (FindNextFileW(h,&fileinfo) != FALSE);
-	    FindClose(h);
+		    de.init(pathname, &fileinfo);
+		    if (!callback(&de))
+			break;
+		} while (FindNextFileW(h,&fileinfo) != FALSE);
+	    }
+	    finally
+	    {
+		FindClose(h);
+	    }
 	}
     }
     else
@@ -489,30 +711,24 @@ void listdir(char[] pathname, bool delegate(char[] filename) callback)
 	h = FindFirstFileA(toMBSz(c), &fileinfo);
 	if (h != INVALID_HANDLE_VALUE)	// should we throw exception if invalid?
 	{
-	    wchar[] wbuf;
-	    do
-	    {	int clength;
-		int wlength;
-		int n;
+	    try
+	    {
+		do
+		{
+		    // Skip "." and ".."
+		    if (std.string.strcmp(fileinfo.cFileName, ".") == 0 ||
+			std.string.strcmp(fileinfo.cFileName, "..") == 0)
+			continue;
 
-		// Skip "." and ".."
-		if (std.string.strcmp(fileinfo.cFileName, ".") == 0 ||
-		    std.string.strcmp(fileinfo.cFileName, "..") == 0)
-		    continue;
-
-		clength = std.string.strlen(fileinfo.cFileName);
-
-		// Convert cFileName[] to unicode
-		wlength = MultiByteToWideChar(0,0,fileinfo.cFileName,clength,null,0);
-		if (wlength > wbuf.length)
-		    wbuf.length = wlength;
-		n = MultiByteToWideChar(0,0,fileinfo.cFileName,clength,cast(wchar*)wbuf,wlength);
-		assert(n == wlength);
-		// toUTF8() returns a new buffer
-		if (!callback(std.utf.toUTF8(wbuf[0 .. wlength])))
-		    break;
-	    } while (FindNextFileA(h,&fileinfo) != FALSE);
-	    FindClose(h);
+		    de.init(pathname, &fileinfo);
+		    if (!callback(&de))
+			break;
+		} while (FindNextFileA(h,&fileinfo) != FALSE);
+	    }
+	    finally
+	    {
+		FindClose(h);
+	    }
 	}
     }
 }
@@ -555,6 +771,7 @@ void copy(char[] from, char[] to)
 version (linux)
 {
 
+private import std.date;
 private import std.c.linux.linux;
 
 extern (C) char* strerror(int);
@@ -893,6 +1110,89 @@ char[] getcwd()
 }
 
 /***************************************************
+ * Directory Entry
+ */
+
+struct DirEntry
+{
+    char[] name;			/// file or directory name
+    ulong _size = ~0ul;			// size of file in bytes
+    d_time _creationTime = d_time_nan;	// time of file creation
+    d_time _lastAccessTime = d_time_nan; // time file was last accessed
+    d_time _lastWriteTime = d_time_nan;	// time file was last written to
+    ubyte d_type;
+    ubyte didstat;			// done lazy evaluation of stat()
+
+    void init(char[] path, dirent *fd)
+    {	size_t len = std.string.strlen(fd.d_name);
+	name = std.path.join(path, fd.d_name[0 .. len]);
+	d_type = fd.d_type;
+    }
+
+    int isdir()
+    {
+	return d_type & DT_DIR;
+    }
+
+    int isfile()
+    {
+	return d_type & DT_REG;
+    }
+
+    ulong size()
+    {
+	if (!didstat)
+	    doStat();
+	return _size;
+    }
+
+    d_time creationTime()
+    {
+	if (!didstat)
+	    doStat();
+	return _creationTime;
+    }
+
+    d_time lastAccessTime()
+    {
+	if (!didstat)
+	    doStat();
+	return _lastAccessTime;
+    }
+
+    d_time lastWriteTime()
+    {
+	if (!didstat)
+	    doStat();
+	return _lastWriteTime;
+    }
+
+    /* This is to support lazy evaluation, because doing stat's is
+     * expensive and not always needed.
+     */
+
+    void doStat()
+    {
+	int fd;
+	struct_stat statbuf;
+	char* namez;
+
+	namez = toStringz(name);
+	if (std.c.linux.linux.stat(namez, &statbuf))
+	{
+	    //printf("\tstat error, errno = %d\n",getErrno());
+	    return;
+	}
+	_size = statbuf.st_size;
+	_creationTime = statbuf.st_ctime * std.date.TicksPerSecond;
+	_lastAccessTime = statbuf.st_atime * std.date.TicksPerSecond;
+	_lastWriteTime = statbuf.st_mtime * std.date.TicksPerSecond;
+	didstat = 1;
+    }
+}
+
+
+/***************************************************
  * Return contents of directory.
  */
 
@@ -910,26 +1210,61 @@ char[][] listdir(char[] pathname)
     return result;
 }
 
+char[][] listdir(char[] pathname, char[] pattern)
+{   char[][] result;
+    
+    bool callback(DirEntry* de)
+    {
+	if (de.isdir)
+	    listdir(de.name, &callback);
+	else
+	{   if (std.path.fnmatch(de.name, pattern))
+		result ~= de.name;
+	}
+	return true; // continue
+    }
+    
+    listdir(pathname, &callback);
+    return result;
+}
+
 void listdir(char[] pathname, bool delegate(char[] filename) callback)
+{
+    bool listing(DirEntry* de)
+    {
+	return callback(std.path.getBaseName(de.name));
+    }
+
+    listdir(pathname, &listing);
+}
+
+void listdir(char[] pathname, bool delegate(DirEntry* de) callback)
 {
     DIR* h;
     dirent* fdata;
-    
+    DirEntry de;
+
     h = opendir(toStringz(pathname));
     if (h)
     {
-	while((fdata = readdir(h)) != null)
+	try
 	{
-	    // Skip "." and ".."
-	    if (!std.string.strcmp(fdata.d_name, ".") ||
-		!std.string.strcmp(fdata.d_name, ".."))
-		    continue;
-	    
-	    int len = std.string.strlen(fdata.d_name);
-	    if (!callback(fdata.d_name[0 .. len].dup))
-		break;
+	    while((fdata = readdir(h)) != null)
+	    {
+		// Skip "." and ".."
+		if (!std.string.strcmp(fdata.d_name, ".") ||
+		    !std.string.strcmp(fdata.d_name, ".."))
+			continue;
+
+		de.init(pathname, fdata);
+		if (!callback(&de))	    
+		    break;
+	    }
 	}
-	closedir(h);
+	finally
+	{
+	    closedir(h);
+	}
     }
     else
     {
@@ -939,16 +1274,15 @@ void listdir(char[] pathname, bool delegate(char[] filename) callback)
 
 /***************************************************
  * Copy a file.
+ * Bugs:
+ *	If the file is very large, this won't work.
+ *	Doesn't maintain the file timestamps.
  */
 
 void copy(char[] from, char[] to)
 {
     void[] buffer;
 
-    /* If the file is very large, this won't work, but
-     * it's a good start.
-     * BUG: it should maintain the file timestamps
-     */
     buffer = read(from);
     write(to, buffer);
     delete buffer;

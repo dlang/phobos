@@ -1,6 +1,8 @@
 
 // cdouble
 
+module std.typeinfo.ti_cdouble;
+
 class TypeInfo_r : TypeInfo
 {
     char[] toString() { return "cdouble"; }

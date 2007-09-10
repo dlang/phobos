@@ -1,6 +1,8 @@
 
 // int
 
+module std.typeinfo.ti_int;
+
 class TypeInfo_i : TypeInfo
 {
     char[] toString() { return "int"; }

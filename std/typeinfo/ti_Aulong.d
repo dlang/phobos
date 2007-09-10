@@ -1,4 +1,6 @@
 
+module std.typeinfo.ti_Aulong;
+
 private import std.string;
 
 // ulong[]

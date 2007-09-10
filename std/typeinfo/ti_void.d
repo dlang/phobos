@@ -1,6 +1,8 @@
 
 // void
 
+module std.typeinfo.ti_void;
+
 class TypeInfo_v : TypeInfo
 {
     char[] toString() { return "void"; }

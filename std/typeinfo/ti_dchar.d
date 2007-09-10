@@ -1,6 +1,8 @@
 
 // dchar
 
+module std.typeinfo.ti_dchar;
+
 class TypeInfo_w : TypeInfo
 {
     char[] toString() { return "dchar"; }

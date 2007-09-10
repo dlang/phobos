@@ -1,6 +1,8 @@
 
 // pointer
 
+module std.typeinfo.ti_ptr;
+
 class TypeInfo_P : TypeInfo
 {
     uint getHash(void *p)

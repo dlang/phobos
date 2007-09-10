@@ -1,4 +1,5 @@
 
+module std.typeinfo.ti_char;
 
 class TypeInfo_a : TypeInfo
 {

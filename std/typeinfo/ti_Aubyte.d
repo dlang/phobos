@@ -1,4 +1,6 @@
 
+module std.typeinfo.ti_Aubyte;
+
 private import std.string;
 
 // ubyte[]

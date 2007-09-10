@@ -1,6 +1,8 @@
 
 // bit
 
+module std.typeinfo.ti_bit;
+
 class TypeInfo_b : TypeInfo
 {
     char[] toString() { return "bit"; }

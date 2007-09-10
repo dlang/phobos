@@ -1,6 +1,8 @@
 
 // float
 
+module std.typeinfo.ti_float;
+
 private import std.math;
 
 class TypeInfo_f : TypeInfo

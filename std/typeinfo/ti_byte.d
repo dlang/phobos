@@ -1,6 +1,8 @@
 
 // byte
 
+module std.typeinfo.ti_byte;
+
 class TypeInfo_g : TypeInfo
 {
     char[] toString() { return "byte"; }

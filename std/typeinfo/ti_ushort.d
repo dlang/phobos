@@ -1,6 +1,8 @@
 
 // ushort
 
+module std.typeinfo.ti_ushort;
+
 class TypeInfo_t : TypeInfo
 {
     char[] toString() { return "ushort"; }

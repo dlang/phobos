@@ -31,7 +31,7 @@ version(linux)
     private import std.outofmemory;
 }
 
-version(Win32)
+version(Windows)
 {
 
     /** String used to separate directory names in a path. Under
@@ -67,6 +67,20 @@ version(linux)
     const char[2] pardir = ".."; /// String representing the parent directory.
 }
 
+/*****************************
+ * Compare file names.
+ * Returns:
+ *	<table border=1 cellpadding=4 cellspacing=0>
+ *	<tr> <td> &lt; 0	<td> filename1 &lt; filename2
+ *	<tr> <td> = 0	<td> filename1 == filename2
+ *	<tr> <td> &gt; 0	<td> filename1 &gt; filename2
+ *	</table>
+ */
+
+version (Windows) alias std.string.cmp fcmp;
+
+version (linux) alias std.string.icmp fcmp;
+
 /**************************
  * Extracts the extension from a filename or path.
  *
@@ -85,14 +99,14 @@ version(linux)
  * -----
  * version(Win32)
  * {
- *     getExt(r"d:\path\foo.bat") => "bat"
- *     getExt(r"d:\path.two\bar") => null
+ *     getExt(r"d:\path\foo.bat") // "bat"
+ *     getExt(r"d:\path.two\bar") // null
  * }
  * version(linux)
  * {
- *     getExt(r"/home/user.name/bar.")  => ""
- *     getExt(r"d:\\path.two\\bar") => "two\\bar"
- *     getExt(r"/home/user/.resource") => "resource"
+ *     getExt(r"/home/user.name/bar.")  // ""
+ *     getExt(r"d:\\path.two\\bar")     // "two\\bar"
+ *     getExt(r"/home/user/.resource")  // "resource"
  * }
  * -----
  */
@@ -290,7 +304,7 @@ unittest
     int i;
     char[] result;
 
-    version (Win32)
+    version (Windows)
 	result = getBaseName("d:\\path\\foo.bat");
     version (linux)
 	result = getBaseName("/path/foo.bat");
@@ -298,7 +312,7 @@ unittest
     i = cmp(result, "foo.bat");
     assert(i == 0);
 
-    version (Win32)
+    version (Windows)
 	result = getBaseName("a\\b");
     version (linux)
 	result = getBaseName("a/b");
@@ -507,6 +521,7 @@ char[] addExt(char[] filename, char[] ext)
  * version(Win32)
  * {
  *     isabs(r"relative\path") => 0
+ *     isabs(r"\relative\path") => 0
  *     isabs(r"d:\absolute") => 1
  * }
  * version(linux)
@@ -524,13 +539,30 @@ int isabs(char[] path)
     return d.length < path.length && path[d.length] == sep[0];
 }
 
+unittest
+{
+    debug(path) printf("path.isabs.unittest\n");
+
+    version (Windows)
+    {
+	assert(isabs(r"relative\path") == 0);
+	assert(isabs(r"\relative\path") == 0);
+	assert(isabs(r"d:\absolute") == 1);
+    }
+    version (linux)
+    {
+	assert(isabs("/home/user") == 1);
+	assert(isabs("foo") == 0);
+    }
+}
+
 /*************************************
  * Joins two path components.
  *
  * If p1 doesn't have a trailing path separator, one will be appended
- * to it before concating p2.
+ * to it before concatting p2.
  *
- * Returns: p1 + p2. However, if p2 is an absolute path, only p2
+ * Returns: p1 ~ p2. However, if p2 is an absolute path, only p2
  * will be returned.
  *
  * Throws: Nothing.
