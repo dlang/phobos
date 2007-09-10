@@ -210,11 +210,19 @@ void _gc_assert(unsigned line)
     (void)line;
 #if USEROOT
     WPRINTF(L"GC assert fail: gc.c(%d)\n", line);
+    exit(0);
 #else
     printf("GC assert fail: gc.c(%d)\n", line);
-#endif
     exit(0);
+#endif
 }
+
+#if __DMC__
+void __cdecl _assert(void *e,void *file,unsigned line)
+{
+    printf("GC assert fail: %s(%d)\n", file, line);
+}
+#endif
 
 const unsigned binsize[B_MAX] = { 16,32,64,128,256,512,1024,2048,4096 };
 const unsigned notbinsize[B_MAX] = { ~(16u-1),~(32u-1),~(64u-1),~(128u-1),~(256u-1),
@@ -291,16 +299,15 @@ GC::~GC()
 void GC::init()
 {
     gcx = new Gcx();
+    setStackBottom(os_query_stackBottom());
 }
 
 void GC::setStackBottom(void *p)
 {
     thread_invariant(gcx);
 #if STACKGROWSDOWN
-    p = (void *)((unsigned *)p + 4);
     if (p > gcx->stackBottom)
 #else
-    p = (void *)((unsigned *)p - 4);
     if (p < gcx->stackBottom)
 #endif
     {
@@ -330,7 +337,8 @@ char *GC::strdup(const char *s)
     {
 	len = strlen(s) + 1;
 	p = (char *)malloc(len);
-	memcpy(p, s, len);
+	if (p)
+	    memcpy(p, s, len);
     }
     return p;
 }
@@ -422,7 +430,8 @@ void *GC::malloc(size_t size)
 
 		    gcx->newPool(1);		// allocate new pool to find a new page
 		    result = gcx->allocPage(bin);
-		    assert(result);
+		    if (!result)
+			return NULL;
 		}
 		p = gcx->bucket[bin];
 	    }
@@ -438,6 +447,8 @@ void *GC::malloc(size_t size)
 	else
 	{
 	    p = gcx->bigAlloc(size);
+	    if (!p)
+		return NULL;
 	}
 	size -= SENTINEL_EXTRA;
 	p = sentinel_add(p);
@@ -511,7 +522,10 @@ void *GC::mallocdup(void *o, size_t size)
 
     thread_invariant(gcx);
     p = malloc(size);
-    return memcpy(p, o, size);
+    if (p)
+	return memcpy(p, o, size);
+    else
+	return NULL;
 }
 
 /****************************************
@@ -918,6 +932,11 @@ Pool *Gcx::newPool(unsigned npages)
     return NULL;
 }
 
+/****************************************
+ * Allocate a chunk of memory that is larger than a page.
+ * Return NULL if out of memory.
+ */
+
 void *Gcx::bigAlloc(unsigned size)
 {
     Pool *pool;
@@ -963,13 +982,14 @@ void *Gcx::bigAlloc(unsigned size)
 	    case 1:
 		// Allocate new pool
 		pool = newPool(npages);
-		assert(pool);
+		if (!pool)
+		    goto Lnomemory;
 		pn = pool->allocPages(npages);
 		assert(pn != ~0u);
 		goto L1;
 
 	    case 2:
-		assert(zero);
+		goto Lnomemory;
 	}
     }
 
@@ -984,6 +1004,10 @@ void *Gcx::bigAlloc(unsigned size)
     #endif
     //printf("\tp = %x\n", p);
     return p;
+
+  Lnomemory:
+    assert(zero);
+    return NULL;
 }
 
 /*******************************
@@ -1572,11 +1596,11 @@ Pool::Pool(unsigned npages)
 
     if (!baseAddr)
     {
-	WPRINTF(L"GC fail: poolsize = x%x, errno = %d\n", poolsize, errno);
+	//WPRINTF(L"GC fail: poolsize = x%x, errno = %d\n", poolsize, errno);
 #if USEROOT
 	PRINTF("message = '%s'\n", sys_errlist[errno]);
 #else
-	printf("message = '%s'\n", sys_errlist[errno]);
+	//printf("message = '%s'\n", sys_errlist[errno]);
 #endif
 	npages = 0;
 	poolsize = 0;

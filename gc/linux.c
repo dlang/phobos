@@ -91,3 +91,13 @@ int os_mem_unmap(void *base, unsigned nbytes)
 
 
 
+/**********************************************
+ * Determine "bottom" of stack (actually the top on x86 systems).
+ */
+
+void *os_query_stackBottom()
+{
+    int x;
+
+    return (void *)(&x + 4);
+}

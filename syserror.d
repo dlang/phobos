@@ -5,7 +5,7 @@
 
 class SysError
 {
-    import stdio;
+    import c.stdio;
     import string;
 
     static char[] msg(uint errcode)

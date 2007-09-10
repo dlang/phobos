@@ -1,6 +1,6 @@
 
 CFLAGS=-g -mn -6 -r -Igc
-DFLAGS=-unittest
+DFLAGS=-unittest -g
 CC=sc
 
 .c.obj:
@@ -10,7 +10,7 @@ CC=sc
 	$(CC) -c $(CFLAGS) $*
 
 .d.obj:
-	..\mars $(DFLAGS) $*
+	..\dmd $(DFLAGS) $*
 
 .asm.obj:
 	$(CC) -c $*
@@ -22,44 +22,48 @@ unittest : unittest.exe
 
 test : test.exe
 
-test.exe : test.d phobos.lib ..\mars.exe
-	..\mars test -g
-	sc -mn test.obj -g
+test.obj : test.d
+	..\dmd test -g
 
-unittest.exe : unittest.d phobos.lib ..\mars.exe
-	..\mars unittest -g
+test.exe : test.obj phobos.lib ..\dmd.exe
+	sc test.obj -g
+
+unittest.exe : unittest.d phobos.lib ..\dmd.exe
+	..\dmd unittest -g
 	sc unittest.obj -g
 
 OBJS= assert.obj deh.obj modulo.obj new.obj switch.obj complex.obj \
-	critical.obj interface.obj object.obj monitor.obj arraycat.obj invariant.obj \
+	critical.obj object.obj monitor.obj arraycat.obj invariant.obj \
 	dmain2.obj outofmemory.obj achar.obj aaAh4.obj adi.obj file.obj \
 	compiler.obj system.obj arraysetlength.obj minit.obj moduleinit.obj \
 	cast.obj syserror.obj path.obj string.obj memset.obj math.obj \
-	outbuffer.obj
+	outbuffer.obj ctype.obj regexp.obj random.obj windows.obj \
+	stream.obj switcherr.obj com.obj array.obj
 
 HDR=mars.h
 
 SRC= modulo.c new.cpp switch.d complex.c critical.c fpu.d \
 	aa.c vaa.c interface.c arraysetlength.cpp minit.asm
 
-SRC2=deh.c object.d gc.d math.d stdio.d stdlib.d time.d monitor.c arraycat.d \
+SRC2=deh.c object.d gc.d math.d c\stdio.d c\stdlib.d time.d monitor.c arraycat.d \
 	string.d windows.d path.d
 
-SRC3=winbase.d windef.d invariant.d assert.d RegExp.d dmain2.d dateparse.d \
+SRC3=invariant.d assert.d RegExp.d dmain2.d dateparse.d \
 	outofmemory.d syserror.d
 
 SRC4=dchar.d ctype.d achar.d aaAh4.d adi.d file.d compiler.d system.d \
 	moduleinit.d cast.d math.d
 
-SRC5=outbuffer.d unittest.d
+SRC5=outbuffer.d unittest.d stream.d ctype.d regexp.d random.d
 
 phobos.lib : $(OBJS) gc\dmgc.lib makefile
 	del phobos.lib
 	lib phobos /c/noi +critical+assert+deh+object+arraysetlength;
-	lib phobos /noi +interface+modulo+new+switch+monitor+string;
+	lib phobos /noi +modulo+new+switch+monitor+string;
 	lib phobos /noi +arraycat+invariant+dmain2+achar+outofmemory;
-	lib phobos /noi +aaAh4+adi+file+compiler+system+syserror;
-	lib phobos /noi +math+outbuffer;
+	lib phobos /noi +aaAh4+adi+file+compiler+system+syserror+stream;
+	lib phobos /noi +math+outbuffer+ctype+regexp+random+windows+switcherr;
+	lib phobos /noi +com+array;
 	lib phobos /noi +minit+moduleinit+cast+path+memset+gc\dmgc.lib;
 
 

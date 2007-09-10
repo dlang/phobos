@@ -1,10 +1,12 @@
 
+module c.stdlib;
+
 extern (C):
 
     const int EXIT_SUCCESS = 0;
     const int EXIT_FAILURE = 1;
 
-    int    atexit(void (*)(void));
+    int    atexit(void (*)());
     void   exit(int);
     void   _exit(int);
 

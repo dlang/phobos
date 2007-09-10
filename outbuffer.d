@@ -12,9 +12,9 @@
 // from OutBuffer.
 // To convert an array of bytes back into raw data, use InBuffer.
 
-import stdio;
+import c.stdio;
 import string;
-import stdlib;
+import c.stdlib;
 
 class OutBuffer
 {
@@ -41,7 +41,7 @@ class OutBuffer
     void reserve(uint nbytes)
 	in
 	{
-	    assert(offset + nbytes > offset);
+	    assert(offset + nbytes >= offset);
 	}
 	out
 	{
@@ -49,7 +49,7 @@ class OutBuffer
 	}
 	body
 	{
-	    //printf("OutBuffer.reserve: length = %d, offset = %d, nbytes = %d\n", data.length, offset, nbytes);
+	    //c.stdio.printf("OutBuffer.reserve: length = %d, offset = %d, nbytes = %d\n", data.length, offset, nbytes);
 	    if (data.length < offset + nbytes)
 	    {
 		data.length = (offset + nbytes) * 2;
@@ -206,7 +206,7 @@ class OutBuffer
 	uint psize;
 	int count;
 
-	f = toCharz(format);
+	f = toStringz(format);
 	p = buffer;
 	psize = buffer.length;
 	for (;;)

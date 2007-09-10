@@ -380,7 +380,17 @@ void _d_monitor_prolog(void *x, void *y, Object *h)
 void _d_monitor_epilog(void *x, void *y, Object *h)
 {
     //printf("_d_monitor_epilog(x=%p, y=%p, h=%p)\n", x, y, h);
+    __asm
+    {
+	push	EAX
+	push	EDX
+    }
     _d_monitorexit(h);
+    __asm
+    {
+	pop	EDX
+	pop	EAX
+    }
 }
 
 

@@ -64,6 +64,28 @@ pthread_t pthread_self()
 }
 
 /**********************************************
+ * Determine "bottom" of stack (actually the top on Win32 systems).
+ */
+
+#if __DMC__
+extern "C"
+{
+    extern void * __cdecl _atopsp;
+}
+#endif
+
+void *os_query_stackBottom()
+{
+#if __DMC__
+    //return _atopsp;		// not needed
+#endif
+    _asm
+    {
+	mov	EAX, FS:4
+    }
+}
+
+/**********************************************
  * Determine base address and size of static data segment.
  */
 
@@ -95,8 +117,8 @@ void os_query_staticdataseg(void **base, unsigned *nbytes)
     // Tests show the following does not work reliably.
     // The reason is that the data segment is arbitrarilly divided
     // up into PAGE_READWRITE and PAGE_WRITECOPY.
-    // This means there are multiple regions to query.
-    // The AllocationBase winds up including the code segment memory, too.
+    // This means there are multiple regions to query, and
+    // can even wind up including the code segment.
     assert(0);				// fix implementation
 
     GetSystemInfo(&si);

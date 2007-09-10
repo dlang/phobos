@@ -1,6 +1,9 @@
-// Copyright (C) 2000 by Digital Mars
+
+
+// Copyright (c) 2000-2002 by Digital Mars
 // All Rights Reserved
-// Written by Walter Bright
+// written by Walter Bright
+// www.digitalmars.com
 
 
 
@@ -32,9 +35,7 @@ void _STD_monitor_staticdtor()
 
 void _d_monitorenter(Object *h)
 {
-#if 0
-    printf("_d_monitorenter(%p)\n", h);
-#else
+    //printf("_d_monitorenter(%p)\n", h);
     if (!h->monitor)
     {	CRITICAL_SECTION *cs;
 
@@ -52,17 +53,13 @@ void _d_monitorenter(Object *h)
 	    free(cs);
     }
     EnterCriticalSection((CRITICAL_SECTION *)h->monitor);
-#endif
 }
 
 void _d_monitorexit(Object *h)
 {
-#if 0
-    printf("_d_monitorexit(%p)\n", h);
-#else
+    //printf("_d_monitorexit(%p)\n", h);
     assert(h->monitor);
     LeaveCriticalSection((CRITICAL_SECTION *)h->monitor);
-#endif
 }
 
 /***************************************

@@ -13,7 +13,7 @@
 
 GC gc;
 
-extern "C" void *_atopsp;
+//extern "C" void *_atopsp;
 
 void new_finalizer(void *p, void *dummy);
 
@@ -23,7 +23,7 @@ extern "C"
 void gc_init()
 {
     gc.init();
-    gc.setStackBottom(_atopsp);
+    //gc.setStackBottom(_atopsp);
     gc.scanStaticData();
 }
 
@@ -37,10 +37,20 @@ Object * __ddecl __d_newclass(ClassInfo *ci)
     void *p;
 
     //printf("__d_newclass(ci = %p)\n", ci);
-    p = gc.malloc(ci->initlen);
-    //printf(" p = %p\n", p);
-    if (!p)
-	_d_OutOfMemory();
+    if (ci->flags & 1)			// if COM object
+    {
+	p = (Object *)malloc(ci->initlen);
+	if (!p)
+	    _d_OutOfMemory();
+    }
+    else
+    {
+	p = gc.malloc(ci->initlen);
+	//printf(" p = %p\n", p);
+	if (!p)
+	    _d_OutOfMemory();
+	gc.setFinalizer(p, new_finalizer);
+    }
 
 #if 0
     printf("p = %p\n", p);
@@ -55,7 +65,6 @@ Object * __ddecl __d_newclass(ClassInfo *ci)
     printf("init[4] = %x\n", ((unsigned *)ci->init)[4]);
 #endif
 
-    gc.setFinalizer(p, new_finalizer);
 
     // Initialize it
     p = memcpy(p, ci->init, ci->initlen);
@@ -141,11 +150,15 @@ void new_finalizer(void *p, void *dummy)
     {
 	ClassInfo *c = **pc;
 
-	if (c->destructor)
+	do
 	{
-	    fp_t fp = (fp_t)c->destructor;
-	    (*fp)((Object *)p);		// call destructor
-	}
+	    if (c->destructor)
+	    {
+		fp_t fp = (fp_t)c->destructor;
+		(*fp)((Object *)p);		// call destructor
+	    }
+	    c = c->baseClass;
+	} while (c);
 	*pc = NULL;			// zero vptr
     }
 }

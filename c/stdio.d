@@ -1,4 +1,6 @@
 
+module c.stdio;
+
 extern (C):
 
 const int _NFILE = 60;
@@ -86,7 +88,7 @@ int	 fseek(FILE *,int,int);
 int	 ftell(FILE *);
 char *	 fgets(char *,int,FILE *);
 int	 fgetc(FILE *);
-int	 _fgetchar(void);
+int	 _fgetchar();
 int	 fflush(FILE *);
 int	 fclose(FILE *);
 int	 fputs(char *,FILE *);
@@ -97,7 +99,7 @@ int	 puts(char *);
 int	 ungetc(int,FILE *);
 size_t	 fread(void *,size_t,size_t,FILE *);
 size_t	 fwrite(void *,size_t,size_t,FILE *);
-int	 printf(char *,...);
+//int	 printf(char *,...);
 int	 fprintf(FILE *,char *,...);
 int	 vfprintf(FILE *,char *,va_list);
 int	 vprintf(char *,va_list);
@@ -113,8 +115,8 @@ int	 rename(char *,char *);
 void	 perror(char *);
 int	 fgetpos(FILE *,fpos_t *);
 int	 fsetpos(FILE *,fpos_t *);
-FILE *	 tmpfile(void);
-int	 _rmtmp(void);
+FILE *	 tmpfile();
+int	 _rmtmp();
 int      _fillbuf(FILE *);
 int      _flushbu(int, FILE *);
 
@@ -134,14 +136,14 @@ int  fileno(FILE *fp)	{ return fp._file; }
 
 int      unlink(char *);
 FILE *	 fdopen(int, char *);
-int	 fgetchar(void);
+int	 fgetchar();
 int	 fputchar(int);
-int	 fcloseall(void);
+int	 fcloseall();
 int	 filesize(char *);
-int	 flushall(void);
-int	 getch(void);
-int	 getche(void);
-int      kbhit(void);
+int	 flushall();
+int	 getch();
+int	 getche();
+int      kbhit();
 char *   tempnam (char *dir, char *pfx);
 int      _snprintf(char *,size_t,char *,...);
 int	 _vsnprintf(char *,size_t,char *,va_list);
@@ -170,10 +172,9 @@ void  _wperror(wchar *);
 FILE *  _wfdopen(int, wchar *);
 wchar *  _wtempnam(wchar *, wchar *);
 wchar  fgetwc(FILE *);
-wchar  _fgetwchar(void);
+wchar  _fgetwchar();
 wchar  fputwc(wchar, FILE *);
 wchar  _fputwchar(wchar);
-wchar  getwchar(void);
 wchar  ungetwc(wchar, FILE *);
 
 wchar	 getwchar()		{ return fgetwc(stdin); }

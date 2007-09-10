@@ -1,6 +1,5 @@
 
 import object;
-import stdio;
 
 void _d_invariant(Object o)
 {   ClassInfo c;

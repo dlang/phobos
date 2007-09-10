@@ -1,7 +1,7 @@
 
 import object;
-import stdio;
-import stdlib;
+import c.stdio;
+import c.stdlib;
 import string;
 
 extern (C) void gc_init();
@@ -47,12 +47,14 @@ extern (C) int main(int argc, char **argv)
 
 	result = main(args);
     }
+
     catch (Object o)
     {
 	printf("Error: ");
 	o.print();
 	result = EXIT_FAILURE;
     }
+
     gc_term();
     return result;
 }

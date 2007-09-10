@@ -1,5 +1,5 @@
 
-import stdio;
+import c.stdio;
 import string;
 
 /******************************************************

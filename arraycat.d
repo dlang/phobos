@@ -1,7 +1,7 @@
 
 import object;
 import string;
-import stdio;
+import c.stdio;
 
 extern (C):
 

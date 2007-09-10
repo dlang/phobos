@@ -16,6 +16,7 @@ typedef struct Interface
 {
     struct ClassInfo *classinfo;
     struct Vtbl vtbl;
+    int offset;
 } Interface;
 
 typedef struct Object
@@ -43,6 +44,8 @@ typedef struct ClassInfo
 
     void *destructor;
     void *invariant;
+
+    int flags;
 } ClassInfo;
 
 typedef struct Exception

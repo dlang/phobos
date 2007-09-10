@@ -2,8 +2,8 @@
 // Copyright (c) 2000-2001 by Digital Mars
 // Written by Walter Bright
 
-import stdio;
-import stdlib;
+import c.stdio;
+import c.stdlib;
 import string;
 import outofmemory;
 
@@ -239,7 +239,7 @@ int *_aaGetAh4(aaAh4*[] *aa, char[] key)
 	//printf("create new one\n");
 	e = (aaAh4 *) calloc(1, aaAh4.size);
 	if (!e)
-	    OutOfMemory._d_OutOfMemory();
+	    _d_OutOfMemory();
 	e->key = key;
 	e->hash = key_hash;
 	*pe = e;

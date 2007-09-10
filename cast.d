@@ -1,6 +1,6 @@
 
 import object;
-import stdio;
+import c.stdio;
 
 /*************************************
  * Attempts to cast Object o to class c.

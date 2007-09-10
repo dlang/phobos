@@ -71,7 +71,7 @@ void smoke()
 
     gc = new GC();
     gc->init();
-    gc->setStackBottom(stackbottom);
+    //gc->setStackBottom(stackbottom);
     char *p = (char *)gc->malloc(10);
     assert(p);
     strcpy(p, "Hello!");
@@ -110,7 +110,7 @@ void smoke2()
 
     gc = new GC();
     gc->init();
-    gc->setStackBottom(stackbottom);
+    //gc->setStackBottom(stackbottom);
 
     for (i = 0; i < SMOKE2_SIZE; i++)
     {
@@ -153,7 +153,7 @@ void smoke3()
 
     gc = new GC();
     gc->init();
-    gc->setStackBottom(stackbottom);
+    //gc->setStackBottom(stackbottom);
 
     for (i = 0; i < 1000000; i++)
 //    for (i = 0; i < 1000; i++)
@@ -187,7 +187,7 @@ void smoke4()
 
     gc = new GC();
     gc->init();
-    gc->setStackBottom(stackbottom);
+    //gc->setStackBottom(stackbottom);
 
     for (i = 0; i < 80000; i++)
     {
@@ -275,7 +275,7 @@ int main(int argc, char *argv[])
 
     gc = new GC();
     gc->init();
-    gc->setStackBottom(stackbottom);
+    //gc->setStackBottom(stackbottom);
 
     smoke();
     smoke2();

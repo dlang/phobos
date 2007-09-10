@@ -22,7 +22,7 @@
 
 debug(string)
 {
-    import stdio;	// for printf()
+    import c.stdio;	// for printf()
 }
 
 extern (C)
@@ -30,7 +30,9 @@ extern (C)
     // Functions from the C library.
     int strlen(char *);
     int strcmp(char *, char *);
-    int memcmp(char *, char *, uint);
+    char* strcat(char *, char *);
+    int memcmp(void *, void *, uint);
+    int memicmp(char *, char *, uint);
     char *strcpy(char *, char *);
     int atoi(char *);
     long atoll(char *);
@@ -44,7 +46,7 @@ extern (C)
 
 /************** Exceptions ****************/
 
-class StringException : Exception
+class StringError : Error
 {
     this(char[] msg)
     {
@@ -78,13 +80,13 @@ private int iswhite(char c)
 
 long atoi(char[] s)
 {
-    return atoll(toCharz(s));
+    return atoi(toStringz(s));
 }
 
 extended atof(char[] s)
 {
     // BUG: should implement atold()
-    return atof(toCharz(s));
+    return atof(toStringz(s));
 }
 
 /**********************************
@@ -100,9 +102,27 @@ int cmp(char[] s1, char[] s2)
     uint len = s1.length;
     int result;
 
+    //printf("cmp('%.*s', '%.*s')\n", s1, s2);
     if (s2.length < len)
 	len = s2.length;
     result = memcmp(s1, s2, len);
+    if (result == 0)
+	result = cast(int)s1.length - cast(int)s2.length;
+    return result;
+}
+
+/*********************************
+ * Same as cmp() but case insensitive.
+ */
+
+int icmp(char[] s1, char[] s2)
+{
+    uint len = s1.length;
+    int result;
+
+    if (s2.length < len)
+	len = s2.length;
+    result = memicmp(s1, s2, len);
     if (result == 0)
 	result = cast(int)s1.length - cast(int)s2.length;
     return result;
@@ -133,7 +153,12 @@ unittest
  * Converts a D array of chars to a C-style 0 terminated string.
  */
 
-char* toCharz(char[] string)
+deprecated char* toCharz(char[] string)
+{
+    return toStringz(string);
+}
+
+char* toStringz(char[] string)
     in
     {
 	if (string)
@@ -158,7 +183,7 @@ char* toCharz(char[] string)
 	if (string == null)
 	    return null;
 
-	p = &string[string.length];
+	p = &string[0] + string.length;
 
 	// Peek past end of string[], if it's 0, no conversion necessary.
 	// Note that the compiler will put a 0 past the end of static
@@ -175,12 +200,12 @@ char* toCharz(char[] string)
 
 unittest
 {
-    debug(string) printf("string.toCharz.unittest\n");
+    debug(string) printf("string.toStringz.unittest\n");
 
-    char* p = toCharz("foo");
+    char* p = toStringz("foo");
     assert(strlen(p) == 3);
     char foo[] = "abbzxyzzy";
-    p = toCharz(foo[3..5]);
+    p = toStringz(foo[3..5]);
     assert(strlen(p) == 2);
 }
 
@@ -277,14 +302,23 @@ int find(char[] s, char[] sub)
 
 	if (sub.length == 0)
 	    return 0;
-	imax = s.length - sub.length + 1;
-	c = sub[0];
-	for (int i = 0; i < imax; i++)
+	if (sub.length == 1)
 	{
-	    if (s[i] == c)
+	    char *p = memchr(s, sub[0], s.length);
+	    if (p)
+		return p - &s[0];
+	}
+	else
+	{
+	    imax = s.length - sub.length + 1;
+	    c = sub[0];
+	    for (int i = 0; i < imax; i++)
 	    {
-		if (memcmp(&s[i + 1], &sub[1], sub.length - 1) == 0)
-		    return i;
+		if (s[i] == c)
+		{
+		    if (memcmp(&s[i + 1], &sub[1], sub.length - 1) == 0)
+			return i;
+		}
 	    }
 	}
 	return -1;
@@ -734,15 +768,17 @@ char[][] splitlines(char[] s)
 {
     uint i;
     uint istart;
+    uint nlines;
     char[][] lines;
 
+    nlines = 0;
     for (i = 0; i < s.length; i++)
     {	char c;
 
 	c = s[i];
 	if (c == \r || c == \n)
 	{
-	    lines ~= s[istart .. i];
+	    nlines++;
 	    istart = i + 1;
 	    if (c == \r && i + 1 < s.length && s[i + 1] == \n)
 	    {
@@ -752,7 +788,33 @@ char[][] splitlines(char[] s)
 	}
     }
     if (istart != i)
-	lines ~= s[istart .. i];
+	nlines++;
+
+    lines = new char[nlines][];
+    nlines = 0;
+    istart = 0;
+    for (i = 0; i < s.length; i++)
+    {	char c;
+
+	c = s[i];
+	if (c == \r || c == \n)
+	{
+	    lines[nlines] = s[istart .. i];
+	    nlines++;
+	    istart = i + 1;
+	    if (c == \r && i + 1 < s.length && s[i + 1] == \n)
+	    {
+		i++;
+		istart++;
+	    }
+	}
+    }
+    if (istart != i)
+    {	lines[nlines] = s[istart .. i];
+	nlines++;
+    }
+
+    assert(nlines == lines.length);
     return lines;
 }
 
@@ -949,6 +1011,98 @@ unittest
     assert(i == 0);
 }
 
+////////////////////////////////////////////////////////
+// Return a string that is string[] with slice[] replaced by replacement[].
+
+char[] replaceSlice(char[] string, char[] slice, char[] replacement)
+in
+{
+    // Verify that slice[] really is a slice of string[]
+    int so = (char*)slice - (char*)string;
+    assert(so >= 0);
+    //printf("string.length = %d, so = %d, slice.length = %d\n", string.length, so, slice.length);
+    assert(string.length >= so + slice.length);
+}
+body
+{
+    char[] result;
+    int so = (char*)slice - (char*)string;
+
+    result.length = string.length - slice.length + replacement.length;
+
+    result[0 .. so] = string[0 .. so];
+    result[so .. so + replacement.length] = replacement;
+    result[so + replacement.length .. result.length] = string[so + slice.length .. string.length];
+
+    return result;
+}
+
+unittest
+{
+    debug(string) printf("string.replaceSlice.unittest()\n");
+
+    char[] string = "hello";
+    char[] slice = string[2 .. 4];
+
+    char[] r = replaceSlice(string, slice, "bar");
+    int i;
+    i = cmp(r, "hebaro");
+    assert(i == 0);
+}
+
+/**********************************************
+ * Insert sub[] into s[] at location index.
+ */
+
+char[] insert(char[] s, int index, char[] sub)
+in
+{
+    assert(0 <= index && index <= s.length);
+}
+body
+{
+    if (sub.length == 0)
+	return s;
+
+    if (s.length == 0)
+	return sub;
+
+    int newlength = s.length + sub.length;
+    char[] result = new char[newlength];
+
+    result[0 .. index] = s[0 .. index];
+    result[index .. index + sub.length] = sub;
+    result[index + sub.length .. newlength] = s[index .. s.length];
+    return result;
+}
+
+unittest
+{
+    debug(string) printf("string.insert.unittest\n");
+
+    char[] r;
+    int i;
+
+    r = insert("abcd", 0, "e");
+    i = cmp(r, "eabcd");
+    assert(i == 0);
+
+    r = insert("abcd", 4, "e");
+    i = cmp(r, "abcde");
+    assert(i == 0);
+
+    r = insert("abcd", 2, "ef");
+    i = cmp(r, "abefcd");
+    assert(i == 0);
+
+    r = insert(null, 0, "e");
+    i = cmp(r, "e");
+    assert(i == 0);
+
+    r = insert("abcd", 0, null);
+    i = cmp(r, "abcd");
+    assert(i == 0);
+}
 
 /***********************************************
  * Count up all instances of sub[] in s[].
@@ -1123,5 +1277,54 @@ unittest
     r = translate(s, t, "kg");
     //printf("r = '%.*s'\n", r);
     i = cmp(r, "ThE quiC Do Fox");
+    assert(i == 0);
+}
+
+/***********************************************
+ * Convert to char[].
+ */
+
+char[] toString(uint u)
+{   char[uint.size * 3] buffer;
+    int ndigits;
+    char c;
+    char[] result;
+
+    ndigits = 0;
+    if (u < 10)
+	// Avoid storage allocation for simple stuff
+	result = digits[u .. u + 1];
+    else
+    {
+	while (u)
+	{
+	    c = (u % 10) + '0';
+	    u /= 10;
+	    ndigits++;
+	    buffer[buffer.length - ndigits] = c;
+	}
+	result = new char[ndigits];
+	result[] = buffer[buffer.length - ndigits .. buffer.length];
+    }
+    return result;
+}
+
+unittest
+{
+    debug(string) printf("string.toString.unittest\n");
+
+    char[] r;
+    int i;
+
+    r = toString(0);
+    i = cmp(r, "0");
+    assert(i == 0);
+
+    r = toString(9);
+    i = cmp(r, "9");
+    assert(i == 0);
+
+    r = toString(123);
+    i = cmp(r, "123");
     assert(i == 0);
 }

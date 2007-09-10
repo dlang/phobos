@@ -4,7 +4,7 @@
 // All Rights Reserved
 // www.digitalmars.com
 
-import stdio;
+import c.stdio;
 
 extern (C)
 {

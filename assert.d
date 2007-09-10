@@ -1,6 +1,6 @@
 
 import object;
-import stdio;
+import c.stdio;
 
 class Assert : Object
 {
@@ -26,17 +26,18 @@ class Assert : Object
     {
 	printf("Assertion Failure %s(%u)\n", (char *)filename, linnum);
     }
+}
 
-    /********************************************
-     * Called by the compiler generated module assert function.
-     * Builds an Assert exception and throws it.
-     */
 
-    extern (C) static void _d_assert(char[] filename, uint line)
-    {
-	printf("_d_assert(%s, %d)\n", (char *)filename, line);
-	Assert a = new Assert(filename, line);
-	printf("assertion %p created\n", a);
-	throw a;
-    }
+/********************************************
+ * Called by the compiler generated module assert function.
+ * Builds an Assert exception and throws it.
+ */
+
+extern (C) static void _d_assert(char[] filename, uint line)
+{
+    //printf("_d_assert(%s, %d)\n", (char *)filename, line);
+    Assert a = new Assert(filename, line);
+    //printf("assertion %p created\n", a);
+    throw a;
 }

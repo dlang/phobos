@@ -1,7 +1,7 @@
 
 import object;
-import stdio;
-import stdlib;
+import c.stdio;
+import c.stdlib;
 import string;
 
 enum

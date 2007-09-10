@@ -2,8 +2,8 @@
 // Copyright (c) 2000 by Digital Mars
 // Written by Walter Bright
 
-import stdio;
-import stdlib;
+import c.stdio;
+import c.stdlib;
 import string;
 import outofmemory;
 

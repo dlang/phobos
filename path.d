@@ -9,7 +9,7 @@
 
 debug(path)
 {
-    import stdio;	// for printf()
+    import c.stdio;	// for printf()
 }
 
 import string;
@@ -45,9 +45,9 @@ char[] getExt(char[] fullname)
     i = fullname.length;
     while (i > 0)
     {
-	i--;
-	if (fullname[i] == '.')
+	if (fullname[i - 1] == '.')
 	    break;
+	i--;
 	version(Win32)
 	{
 	    if (fullname[i] == ':' || fullname[i] == '\')
@@ -60,6 +60,29 @@ char[] getExt(char[] fullname)
 	}
     }
     return fullname[i .. fullname.length];
+}
+
+unittest
+{
+    debug(path) printf("path.getExt.unittest\n");
+    int i;
+    char[] result;
+
+    result = getExt('d:\path\foo.bat');
+    i = cmp(result, "bat");
+    assert(i == 0);
+
+    result = getExt('d:\path\foo.');
+    i = cmp(result, "");
+    assert(i == 0);
+
+    result = getExt('d:\path\foo');
+    i = cmp(result, "");
+    assert(i == 0);
+
+    result = getExt('d:\path.bar\foo');
+    i = cmp(result, "");
+    assert(i == 0);
 }
 
 /**************************
@@ -176,6 +199,31 @@ char[] defaultExt(char[] fullname, char[] ext)
 	    fullname ~= ext;
 	else
 	    fullname = fullname ~ '.' ~ ext;
+    }
+    return fullname;
+}
+
+
+/****************************
+ * Strip the old extension off and add the new one.
+ */
+
+char[] addExt(char[] fullname, char[] ext)
+{
+    char[] existing;
+
+    existing = getExt(fullname);
+    if (existing.length == 0)
+    {
+	// Check for fullname ending in '.'
+	if (fullname.length && fullname[fullname.length - 1] == '.')
+	    fullname ~= ext;
+	else
+	    fullname = fullname ~ '.' ~ ext;
+    }
+    else
+    {
+	fullname = fullname[0 .. fullname.length - existing.length] ~ ext;
     }
     return fullname;
 }
@@ -367,6 +415,9 @@ int fnmatch(char[] name, char[] pattern)
 		case ']':
 		    assert(inbracket);
 		    inbracket = false;
+		    break;
+
+		default:
 		    break;
 	    }
 	}

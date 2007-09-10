@@ -1,6 +1,6 @@
 
 import object;
-import stdio;
+import c.stdio;
 
 class OutOfMemory : Object
 {
@@ -8,9 +8,10 @@ class OutOfMemory : Object
     {
 	printf("Out of memory\n");
     }
-
-    extern (C) static void _d_OutOfMemory()
-    {
-	throw (OutOfMemory)(void *)OutOfMemory.classinfo.init;
-    }
 }
+
+extern (C) static void _d_OutOfMemory()
+{
+    throw (OutOfMemory)(void *)OutOfMemory.classinfo.init;
+}
+

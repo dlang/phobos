@@ -1,15 +1,15 @@
 
-// Copyright (c) 2001 by Digital Mars
+// Copyright (c) 2001-2002 by Digital Mars
 // All Rights Reserved
 // www.digitalmars.com
 
-import stdio;
+import c.stdio;
 import string;
 
 /***********************************
  */
 
-class FileException : Exception
+class FileError : Error
 {
     import syserror;
 
@@ -52,7 +52,7 @@ byte[] read(char[] name)
     byte[] buf;
     char* namez;
 
-    namez = toCharz(name);
+    namez = toStringz(name);
     h = CreateFileA(namez,GENERIC_READ,FILE_SHARE_READ,null,OPEN_EXISTING,
 	FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,(HANDLE)null);
     if (h == INVALID_HANDLE_VALUE)
@@ -77,7 +77,7 @@ err2:
 err:
     delete buf;
 err1:
-    throw new FileException(name, GetLastError());
+    throw new FileError(name, GetLastError());
 }
 
 /*********************************************
@@ -91,7 +91,7 @@ void write(char[] name, byte[] buffer)
     HANDLE h;
     DWORD numwritten;
 
-    h = CreateFileA(toCharz(name),GENERIC_WRITE,0,null,CREATE_ALWAYS,
+    h = CreateFileA(toStringz(name),GENERIC_WRITE,0,null,CREATE_ALWAYS,
 	FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,(HANDLE)null);
     if (h == INVALID_HANDLE_VALUE)
 	goto err;
@@ -109,7 +109,7 @@ void write(char[] name, byte[] buffer)
 err2:
     CloseHandle(h);
 err:
-    throw new FileException(name, GetLastError());
+    throw new FileError(name, GetLastError());
 }
 
 
@@ -122,7 +122,7 @@ void append(char[] name, byte[] buffer)
     HANDLE h;
     DWORD numwritten;
 
-    h = CreateFileA(toCharz(name),GENERIC_WRITE,0,null,OPEN_ALWAYS,
+    h = CreateFileA(toStringz(name),GENERIC_WRITE,0,null,OPEN_ALWAYS,
 	FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,(HANDLE)null);
     if (h == INVALID_HANDLE_VALUE)
 	goto err;
@@ -142,7 +142,7 @@ void append(char[] name, byte[] buffer)
 err2:
     CloseHandle(h);
 err:
-    throw new FileException(name, GetLastError());
+    throw new FileError(name, GetLastError());
 }
 
 
@@ -154,9 +154,9 @@ void rename(char[] from, char[] to)
 {
     BOOL result;
 
-    result = MoveFileA(toCharz(from), toCharz(to));
+    result = MoveFileA(toStringz(from), toStringz(to));
     if (!result)
-	throw new FileException(to, GetLastError());
+	throw new FileError(to, GetLastError());
 }
 
 
@@ -168,9 +168,9 @@ void remove(char[] name)
 {
     BOOL result;
 
-    result = DeleteFileA(toCharz(name));
+    result = DeleteFileA(toStringz(name));
     if (!result)
-	throw new FileException(name, GetLastError());
+	throw new FileError(name, GetLastError());
 }
 
 
@@ -183,10 +183,10 @@ uint getSize(char[] name)
     WIN32_FIND_DATA filefindbuf;
     HANDLE findhndl;
 
-    findhndl = FindFirstFileA(toCharz(name), filefindbuf);
+    findhndl = FindFirstFileA(toStringz(name), &filefindbuf);
     if (findhndl == (HANDLE)-1)
     {
-	throw new FileException(name, GetLastError());
+	throw new FileError(name, GetLastError());
     }
     FindClose(findhndl);
     return filefindbuf.nFileSizeLow;
@@ -201,10 +201,10 @@ uint getAttributes(char[] name)
 {
     uint result;
 
-    result = GetFileAttributesA(toCharz(name));
+    result = GetFileAttributesA(toStringz(name));
     if (result == 0xFFFFFFFF)
     {
-	throw new FileException(name, GetLastError());
+	throw new FileError(name, GetLastError());
     }
     return result;
 }

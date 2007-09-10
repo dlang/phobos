@@ -1,9 +1,8 @@
 
+extern (C) static int printf(char *, ...);
 
 class Object
 {
-    extern (C) static int printf(char *, ...);
-
     void print()
     {
 	printf("Object %p\n", this);
@@ -21,7 +20,7 @@ class Object
 
     int cmp(Object o)
     {
-	return 0; (char *)(void *)this - (char *)(void *)o;
+	return (char *)(void *)this - (char *)(void *)o;
     }
 }
 
@@ -29,6 +28,7 @@ struct Interface
 {
     ClassInfo classinfo;
     void *[] vtbl;
+    int offset;			// offset to Interface 'this' from Object 'this'
 }
 
 class ClassInfo : Object
@@ -40,6 +40,8 @@ class ClassInfo : Object
     ClassInfo base;
     void *destructor;
     void (*_invariant)(Object);
+    uint flags;
+    //	1:			// IUnknown
 }
 
 class Exception : Object
