@@ -13,13 +13,11 @@ class TypeInfo_v : TypeInfo
 
     int equals(void *p1, void *p2)
     {
-	assert(0);
 	return *cast(byte *)p1 == *cast(byte *)p2;
     }
 
     int compare(void *p1, void *p2)
     {
-	assert(0);
 	return *cast(byte *)p1 - *cast(byte *)p2;
     }
 
@@ -32,7 +30,6 @@ class TypeInfo_v : TypeInfo
     {
 	byte t;
 
-	assert(0);
 	t = *cast(byte *)p1;
 	*cast(byte *)p1 = *cast(byte *)p2;
 	*cast(byte *)p2 = t;

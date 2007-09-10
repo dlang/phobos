@@ -1387,7 +1387,7 @@ class BufferedStream : Stream {
 	throw new WriteException("Unable to write to stream");
       }
     }
-    long diff = bufferCurPos-bufferSourcePos;
+    long diff = cast(long)bufferCurPos-bufferSourcePos;
     if (diff != 0 && seekable) {
       // move actual file pointer to current position
       streamPos = s.seek(diff, SeekPos.Current);
@@ -1417,7 +1417,7 @@ class BufferedStream : Stream {
 
   // returns size of stream
   ulong size() {
-    flush();
+    if (bufferDirty) flush();
     return s.size();
   }
 
@@ -1785,12 +1785,17 @@ class BufferedFile: BufferedStream {
       assert(file.position() == 18 + 13 + 4);
     // we must be at the end of file
     assert(file.eof());
+    long oldsize = file.size();
     file.close();
     // no operations are allowed when file is closed
     assert(!file.readable && !file.writeable && !file.seekable);
     file.open("stream.$$$");
     // should be ok to read
     assert(file.readable);
+    // test getc/ungetc and size()
+    char c1 = file.getc();
+    file.ungetc(c1);
+    assert( file.size() == oldsize );
     assert(!std.string.cmp(file.readLine(), "Testing stream.d:"));
     // jump over "Hello, "
     file.seek(7, SeekPos.Current);

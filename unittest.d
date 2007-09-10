@@ -44,6 +44,7 @@ import std.zlib;
 import std.md5;
 import std.stdio;
 import std.conv;
+import std.boxer;
 
 int main(char[][] args)
 {
@@ -76,6 +77,7 @@ printf("test2\n");
 
     writefln("hello world!");			// std.format
 
+    Box abox;
 {
     creal c = 3.0 + 4.0i;
     c = sqrt(c);

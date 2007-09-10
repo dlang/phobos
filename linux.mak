@@ -56,7 +56,7 @@ OBJS= asserterror.o deh2.o switch.o complex.o gcstats.o \
 	crc32.o conv.o arraycast.o errno.o alloca.o cmath2.o \
 	process.o syserror.o \
 	socket.o socketstream.o stdarg.o stdio.o format.o \
-	perf.o openrj.o uni.o trace.o \
+	perf.o openrj.o uni.o trace.o boxer.o \
 	ti_wchar.o ti_uint.o ti_short.o ti_ushort.o \
 	ti_byte.o ti_ubyte.o ti_long.o ti_ulong.o ti_ptr.o \
 	ti_float.o ti_double.o ti_real.o ti_delegate.o \
@@ -98,7 +98,8 @@ SRC_STD= std/zlib.d std/zip.d std/stdint.d std/conv.d std/utf.d std/uri.d \
 	std/intrinsic.d std/array.d std/switcherr.d std/syserror.d \
 	std/regexp.d std/random.d std/stream.d std/process.d std/recls.d \
 	std/socket.d std/socketstream.d std/loader.d std/stdarg.d \
-	std/stdio.d std/format.d std/perf.d std/openrj.d std/uni.d
+	std/stdio.d std/format.d std/perf.d std/openrj.d std/uni.d \
+	std/boxer.d
 
 SRC_STD_C= std/c/process.d std/c/stdlib.d std/c/time.d std/c/stdio.d \
 	std/c/math.d std/c/stdarg.d std/c/stddef.d
@@ -470,6 +471,9 @@ asserterror.o : std/asserterror.d
 
 base64.o : std/base64.d
 	$(DMD) -c $(DFLAGS) std/base64.d
+
+boxer.o : std/boxer.d
+	$(DMD) -c $(DFLAGS) std/boxer.d
 
 compiler.o : std/compiler.d
 	$(DMD) -c $(DFLAGS) std/compiler.d

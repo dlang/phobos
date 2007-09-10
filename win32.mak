@@ -65,7 +65,7 @@ OBJS= asserterror.obj deh.obj switch.obj complex.obj gcstats.obj \
 	Czlib.obj Dzlib.obj zip.obj process.obj registry.obj recls.obj \
 	socket.obj socketstream.obj loader.obj stdarg.obj format.obj stdio.obj \
 	perf.obj openrj.obj uni.obj winsock.obj oldsyserror.obj \
-	errno.obj \
+	errno.obj boxer.obj \
 	ti_Aa.obj ti_Ag.obj ti_C.obj ti_int.obj ti_char.obj \
 	ti_wchar.obj ti_uint.obj ti_short.obj ti_ushort.obj \
 	ti_byte.obj ti_ubyte.obj ti_long.obj ti_ulong.obj ti_ptr.obj \
@@ -90,7 +90,7 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 	std\intrinsic.d std\array.d std\switcherr.d std\syserror.d \
 	std\regexp.d std\random.d std\stream.d std\process.d std\recls.d \
 	std\socket.d std\socketstream.d std\loader.d std\stdarg.d std\format.d \
-	std\stdio.d std\perf.d std\openrj.d std\uni.d
+	std\stdio.d std\perf.d std\openrj.d std\uni.d std\boxer.d
 
 SRC_STD_C= std\c\process.d std\c\stdlib.d std\c\time.d std\c\stdio.d \
 	std\c\math.d std\c\stdarg.d std\c\stddef.d
@@ -435,6 +435,9 @@ asserterror.obj : std\asserterror.d
 
 base64.obj : std\base64.d
 	$(DMD) -c $(DFLAGS) -inline std\base64.d
+
+boxer.obj : std\boxer.d
+	$(DMD) -c $(DFLAGS) std\boxer.d
 
 compiler.obj : std\compiler.d
 	$(DMD) -c $(DFLAGS) std\compiler.d
