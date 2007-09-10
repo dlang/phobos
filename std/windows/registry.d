@@ -644,6 +644,7 @@ in
 }
 body
 {
+    // See bugzilla 961 on this
     union U
     {
         uint    dw;
@@ -679,6 +680,8 @@ body
             case    REG_VALUE_TYPE.REG_SZ:
             case    REG_VALUE_TYPE.REG_EXPAND_SZ:
                 value = std.string.toString(cast(char*)data);
+		if (value.ptr == cast(char*)&u.qw)
+		    value = value.dup;		// don't point into the stack
                 break;
 version(LittleEndian)
 {
@@ -1425,7 +1428,8 @@ public:
         return value;
     }
 
-    /// Obtains the current value as a string, within which any environment variables have undergone expansion
+    /// Obtains the current value as a string, within which any environment
+    /// variables have undergone expansion
     ///
     /// \return The contents of the value
     /// \note This function works with the same value-types as Value_SZ().
@@ -1438,7 +1442,8 @@ public:
 
         return value;
  +/
-
+	// ExpandEnvironemntStrings():
+	//	http://msdn2.microsoft.com/en-us/library/ms724265.aspx
         LPCSTR  lpSrc       =   toStringz(value);
         DWORD   cchRequired =   ExpandEnvironmentStringsA(lpSrc, null, 0);
         char[]  newValue    =   new char[cchRequired];
@@ -1448,7 +1453,7 @@ public:
             throw new Win32Exception("Failed to expand environment variables");
         }
 
-        return newValue;
+        return std.string.toString(newValue.ptr);	// remove trailing 0
     }
 
     /// Obtains the current value as an array of strings

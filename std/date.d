@@ -593,6 +593,7 @@ string toDateString(d_time time)
  * Converts the time portion of t into a text string of the form: "hh:mm:ss
  * GMT+-TZ", for example, "02:04:57 GMT-0800".
  * If t is invalid, "Invalid date" is returned.
+ * The input must be in UTC, and the output is in local time.
  */
 
 string toTimeString(d_time time)
@@ -757,17 +758,22 @@ version (Win32)
 	TIME_ZONE_INFORMATION tzi;
 
 	/* http://msdn.microsoft.com/library/en-us/sysinfo/base/gettimezoneinformation.asp
+	 * http://msdn2.microsoft.com/en-us/library/ms725481.aspx
 	 */
 	r = GetTimeZoneInformation(&tzi);
+	//printf("bias = %d\n", tzi.Bias);
+	//printf("standardbias = %d\n", tzi.StandardBias);
+	//printf("daylightbias = %d\n", tzi.DaylightBias);
 	switch (r)
 	{
 	    case TIME_ZONE_ID_STANDARD:
-	    case TIME_ZONE_ID_DAYLIGHT:
-	    case TIME_ZONE_ID_UNKNOWN:
-		//printf("bias = %d\n", tzi.Bias);
-		//printf("standardbias = %d\n", tzi.StandardBias);
-		//printf("daylightbias = %d\n", tzi.DaylightBias);
 		t = -(tzi.Bias + tzi.StandardBias) * cast(d_time)(60 * TicksPerSecond);
+		break;
+	    case TIME_ZONE_ID_DAYLIGHT:
+		//t = -(tzi.Bias + tzi.DaylightBias) * cast(d_time)(60 * TicksPerSecond);
+		//break;
+	    case TIME_ZONE_ID_UNKNOWN:
+		t = -(tzi.Bias) * cast(d_time)(60 * TicksPerSecond);
 		break;
 
 	    default:

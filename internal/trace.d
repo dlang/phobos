@@ -401,7 +401,7 @@ static void trace_init()
 /////////////////////////////////
 // Terminate.
 
-void trace_term()
+extern (C) void trace_term()
 {
     //printf("trace_term()\n");
     if (trace_inited == 1)

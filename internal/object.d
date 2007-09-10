@@ -40,6 +40,7 @@ import std.outofmemory;
 extern (C)
 {   /// C's printf function.
     int printf(in char *, ...);
+    void trace_term();
 
     int memcmp(in void *, in void *, size_t);
     void* memcpy(void *, in void *, size_t);
