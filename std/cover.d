@@ -28,6 +28,8 @@
  *	$(LI the execution counters are 32 bits in size, and can overflow)
  *	$(LI inline asm statements are not counted)
  *	)
+ * Macros:
+ *	WIKI = StdCover
  */
 
 module std.cover;
@@ -171,7 +173,8 @@ static ~this()
 	    }
 	}
 
-	fwritefln(flst, "%s is %s%% covered", c.filename, (nyes * 100) / (nyes + nno));
+	if (nyes + nno)		// no divide by 0 bugs
+	    fwritefln(flst, "%s is %s%% covered", c.filename, (nyes * 100) / (nyes + nno));
 
 	std.c.stdio.fclose(flst);
     }

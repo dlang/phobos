@@ -53,7 +53,7 @@ L1:	mov	ESI,ECX		;
 	mov	ECX,EDX		;
 	mov	EBX,EAX		;	// [ECX,EBX] = [EDX,EAX]
 	xor	EAX,EAX		;
-	cwd			;	// [EDX,EAX] = 0
+	cdq			;	// [EDX,EAX] = 0
 	even			;
 L4:	cmp	ESI,ECX		;	// is [ECX,EBX] > [ESI,EDI]?
 	ja	L3		;	// yes

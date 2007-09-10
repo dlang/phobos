@@ -1,5 +1,11 @@
 /****
  * Demangle D mangled names.
+ * Macros:
+ *	WIKI = StdDemangle
+ */
+
+/* Author:
+ *	Walter Bright, Digital Mars, www.digitalmars.com
  */
 
 module std.demangle;

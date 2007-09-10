@@ -23,8 +23,6 @@ class AssertError : Error
 	/* This code is careful to not use gc allocated memory,
 	 * as that may be the source of the problem.
 	 * Instead, stick with C functions.
-	 * We'll never free the malloc'd memory, but that doesn't matter,
-	 * as we're aborting anyway.
 	 */
 
 	len = 22 + filename.length + uint.sizeof * 3 + 1;
@@ -40,6 +38,14 @@ class AssertError : Error
 		super("AssertError internal failure");
 	    else
 		super(buffer[0 .. count]);
+	}
+    }
+
+    ~this()
+    {
+	if (msg.ptr)
+	{   std.c.stdlib.free(msg.ptr);
+	    msg = null;
 	}
     }
 }
