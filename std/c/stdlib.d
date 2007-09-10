@@ -49,9 +49,12 @@ struct lldiv_t { long quot,rem; }
     int getErrno();
     int setErrno(int);
 
+const int ERANGE = 34;	// on both Windows and linux
+
 double atof(char *);
 int    atoi(char *);
 int    atol(char *);
+float  strtof(char *,char **);
 double strtod(char *,char **);
 real   strtold(char *,char **);
 long   strtol(char *,char **,int);

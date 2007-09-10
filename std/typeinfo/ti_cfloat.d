@@ -16,8 +16,19 @@ class TypeInfo_q : TypeInfo
     }
 
     static int _compare(cfloat f1, cfloat f2)
-    {
-        return f1 < f2 ? -1 : f1 > f2 ? 1 : 0;
+    {   int result;
+
+	if (f1.re < f2.re)
+	    result = -1;
+	else if (f1.re > f2.re)
+	    result = 1;
+	else if (f1.im < f2.im)
+	    result = -1;
+	else if (f1.im > f2.im)
+	    result = 1;
+	else
+	    result = 0;
+        return result;
     }
 
     int equals(void *p1, void *p2)

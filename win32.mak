@@ -65,6 +65,7 @@ OBJS= asserterror.obj deh.obj switch.obj complex.obj gcstats.obj \
 	Czlib.obj Dzlib.obj zip.obj process.obj registry.obj recls.obj \
 	socket.obj socketstream.obj loader.obj stdarg.obj format.obj stdio.obj \
 	perf.obj openrj.obj uni.obj winsock.obj oldsyserror.obj \
+	errno.obj \
 	ti_Aa.obj ti_Ag.obj ti_C.obj ti_int.obj ti_char.obj \
 	ti_wchar.obj ti_uint.obj ti_short.obj ti_ushort.obj \
 	ti_byte.obj ti_ubyte.obj ti_long.obj ti_ulong.obj ti_ptr.obj \
@@ -362,6 +363,8 @@ etc\c\zlib\zlib.lib:
 	cd etc\c\zlib
 	make -f win32.mak zlib.lib
 	cd ..\..\..
+
+errno.obj : errno.c
 
 ### internal
 

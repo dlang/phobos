@@ -28,25 +28,6 @@ import std.c.stdio;
 
 extern (C):
 
-byte[] _d_arraycat(byte[] x, byte[] y, uint size)
-{   byte[] a;
-    uint length;
-
-    if (!x.length)
-	return y;
-    if (!y.length)
-	return x;
-
-    length = x.length + y.length;
-    a = new byte[length * size];
-    memcpy(a, x, x.length * size);
-    //a[0 .. x.length * size] = x[];
-    memcpy(&a[x.length * size], y, y.length * size);
-    *cast(int *)&a = length;	// jam length
-    //a.length = length;
-    return a;
-}
-
 byte[] _d_arraycatn(uint size, uint n, ...)
 {   byte[] a;
     uint length;

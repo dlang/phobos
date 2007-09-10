@@ -43,6 +43,7 @@ import std.uri;
 import std.zlib;
 import std.md5;
 import std.stdio;
+import std.conv;
 
 int main(char[][] args)
 {
@@ -53,7 +54,8 @@ int main(char[][] args)
 printf("test1\n");
     fncharmatch('a', 'b');		// path
     isnan(1.0);				// math
-    feq(1.0, 2.0);			// math2
+    std.math2.feq(1.0, 2.0);		// math2
+    std.conv.toDouble("1.0");		// std.conv
 printf("test1\n");
     OutBuffer b = new OutBuffer();	// outbuffer
     std.ctype.tolower('A');		// ctype

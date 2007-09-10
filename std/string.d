@@ -49,7 +49,6 @@ extern (C)
     void *memmove(void *, void *, uint);
     void *memset(void *, uint, uint);
     char* strerror(int);
-    real strtold(char*, char**);
 
     int wcslen(wchar *);
     int wcscmp(wchar *, wchar *);

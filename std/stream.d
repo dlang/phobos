@@ -213,13 +213,13 @@ interface OutputStream {
   // writes a line, throws WriteException on error
   void writeLine(char[] s);
 
-  // writes a UNICODE line, throws WriteException on error
+  // writes a Unicode line, throws WriteException on error
   void writeLineW(wchar[] s);
 
   // writes a string, throws WriteException on error
   void writeString(char[] s);
 
-  // writes a UNICODE string, throws WriteException on error
+  // writes a Unicode string, throws WriteException on error
   void writeStringW(wchar[] s);
 
   // writes data to stream using vprintf() syntax,
@@ -248,17 +248,27 @@ class Stream : InputStream, OutputStream {
   bit seekable = false;
   protected bit isopen = true;
 
+  // flag that last readBlock resulted in eof
+  protected bit readEOF = false;
+
   this() {}
 
   // reads block of data of specified size,
   // returns actual number of bytes read
+  // returning 0 indicates end-of-file
   abstract size_t readBlock(void* buffer, size_t size);
 
   // reads block of data of specified size,
   // throws ReadException on error
   void readExact(void* buffer, size_t size) {
-    size_t readsize = readBlock(buffer, size);
-    if (readsize != size)
+    for(;;) {
+      if (!size) return;
+      size_t readsize = readBlock(buffer, size); // return 0 on eof
+      if (readsize == 0) break;
+      buffer += readsize;
+      size -= readsize;
+    }
+    if (size != 0)
       throw new ReadException("not enough data in stream");
   }
 
@@ -465,6 +475,7 @@ class Stream : InputStream, OutputStream {
 
   // unget buffer
   private wchar[] unget;
+  final int ungetAvailable() { return unget.length > 1; }
 
   // reads and returns next character from the stream,
   // handles characters pushed back by ungetc()
@@ -876,7 +887,7 @@ class Stream : InputStream, OutputStream {
       writeString("\n");
   }
 
-  // writes a UNICODE line, throws WriteException on error
+  // writes a Unicode line, throws WriteException on error
   void writeLineW(wchar[] s) {
     writeStringW(s);
     version (Win32)
@@ -892,7 +903,7 @@ class Stream : InputStream, OutputStream {
     writeExact(s, s.length);
   }
 
-  // writes a UNICODE string, throws WriteException on error
+  // writes a Unicode string, throws WriteException on error
   void writeStringW(wchar[] s) {
     writeExact(s, s.length * wchar.sizeof);
   }
@@ -962,10 +973,18 @@ class Stream : InputStream, OutputStream {
   // copies all data from given stream into this one,
   // may throw ReadException or WriteException on failure
   void copyFrom(Stream s) {
-    ulong pos = s.position();
-    s.position(0);
-    copyFrom(s, s.size());
-    s.position(pos);
+    if (seekable) {
+      ulong pos = s.position();
+      s.position(0);
+      copyFrom(s, s.size());
+      s.position(pos);
+    } else {
+      ubyte[128] buf;
+      while (!s.eof()) {
+	size_t m = s.readBlock(buf, buf.length);
+	writeExact(buf, m);
+      }
+    }
   }
 
   // copies specified number of bytes from given stream into
@@ -1001,16 +1020,25 @@ class Stream : InputStream, OutputStream {
 
   // returns size of stream
   ulong size() {
+    assertSeekable();
     ulong pos = position(), result = seek(0, SeekPos.End);
     position(pos);
     return result;
   }
 
   // returns true if end of stream is reached, false otherwise
-  bit eof() { return position() == size(); }
+  bit eof() { 
+    // for unseekable streams we only know the end when we read it
+    if (readEOF && !ungetAvailable())
+      return true;
+    else if (seekable)
+      return position() == size(); 
+    else
+      return false;
+  }
 
   // returns true if the stream is open
-  bit isOpen() { return isopen; }
+  bool isOpen() { return isopen; }
 
   // flush the buffer if writeable
   void flush() {
@@ -1022,7 +1050,7 @@ class Stream : InputStream, OutputStream {
   void close() {
     if (isopen)
       flush();
-    isopen = readable = writeable = seekable = false;
+    readEOF = isopen = readable = writeable = seekable = false;
   }
 
   // creates a string in memory containing copy of stream data
@@ -1049,8 +1077,8 @@ class Stream : InputStream, OutputStream {
       result = new char[blockSize];
       while ((rdlen = readBlock(&result[pos], blockSize)) > 0) {
 	pos += rdlen;
-	result.length = result.length + blockSize;
 	blockSize += rdlen;
+	result.length = result.length + blockSize;
       }
     }
     return result[0 .. pos];
@@ -1063,7 +1091,8 @@ class Stream : InputStream, OutputStream {
     ulong pos = position();
     uint crc = init_crc32 ();
     position(0);
-    for (ulong i = 0; i < size(); i++) {
+    ulong len = size();
+    for (ulong i = 0; i < len; i++) {
       ubyte c;
       read(c);
       crc = update_crc32(c, crc);
@@ -1135,6 +1164,7 @@ class BufferedStream : Stream {
       readable = writeable = seekable = false;
       isopen = false;
     }
+    readEOF = false;
     streamPos = 0;
     bufferLen = bufferSourcePos = bufferCurPos = 0;
     bufferDirty = false;
@@ -1151,45 +1181,49 @@ class BufferedStream : Stream {
 
   // reads block of data of specified size using any buffered data
   // returns actual number of bytes read
-  override size_t readBlock(void* result, size_t size) {
+  override size_t readBlock(void* result, size_t len) {
+    if (len == 0) return 0;
+
     assertReadable();
 
-    ubyte* buf = cast(ubyte*)result;
+    ubyte* outbuf = cast(ubyte*)result;
     size_t readsize = 0;
 
-    if (bufferCurPos + size <= bufferLen) {
+    if (bufferCurPos + len < bufferLen) {
       // buffer has all the data so copy it
-      buf[0 .. size] = buffer[bufferCurPos .. bufferCurPos+size];
-      bufferCurPos += size;
-      readsize = size;
+      outbuf[0 .. len] = buffer[bufferCurPos .. bufferCurPos+len];
+      bufferCurPos += len;
+      readsize = len;
       goto ExitRead;
     }
 
     readsize = bufferLen - bufferCurPos;
     if (readsize > 0) {
       // buffer has some data so copy what is left
-      buf[0 .. readsize] = buffer[bufferCurPos .. bufferLen];
-      buf += readsize;
+      outbuf[0 .. readsize] = buffer[bufferCurPos .. bufferLen];
+      outbuf += readsize;
       bufferCurPos += readsize;
-      size -= readsize;
+      len -= readsize;
     }
 
     flush();
 
-    if (size >= buffer.length) {
+    if (len >= buffer.length) {
       // buffer can't hold the data so fill output buffer directly
-      size_t siz = s.readBlock(buf, size);
+      size_t siz = s.readBlock(outbuf, len);
       readsize += siz;
       streamPos += siz;
+      readEOF = siz == 0;
     } else {
       // read a new block into buffer
       bufferLen = s.readBlock(buffer, buffer.length);
-      if (bufferLen < size) size = bufferLen;
-      buf[0 .. size] = buffer[0 .. size];
+      readEOF = bufferLen == 0;
+      if (bufferLen < len) len = bufferLen;
+      outbuf[0 .. len] = buffer[0 .. len];
       bufferSourcePos = bufferLen;
       streamPos += bufferLen;
-      bufferCurPos = size;
-      readsize += size;
+      bufferCurPos = len;
+      readsize += len;
     }
 
   ExitRead:
@@ -1198,7 +1232,7 @@ class BufferedStream : Stream {
 
   // write block of data of specified size
   // returns actual number of bytes written
-  override size_t writeBlock(void* result, size_t size) {
+  override size_t writeBlock(void* result, size_t len) {
     assertWriteable();
 
     ubyte* buf = cast(ubyte*)result;
@@ -1206,26 +1240,26 @@ class BufferedStream : Stream {
 
     if (bufferLen == 0) {
       // buffer is empty so fill it if possible
-      if ((size < buffer.length) && (readable)) {
+      if ((len < buffer.length) && (readable)) {
 	// read in data if the buffer is currently empty
 	bufferLen = s.readBlock(buffer,buffer.length);
 	bufferSourcePos = bufferLen;
 	streamPos += bufferLen;
 	  
-      } else if (size >= buffer.length) {
+      } else if (len >= buffer.length) {
 	// buffer can't hold the data so write it directly and exit
-	writesize = s.writeBlock(buf,size);
+	writesize = s.writeBlock(buf,len);
 	streamPos += writesize;
 	goto ExitWrite;
       }
     }
 
-    if (bufferCurPos + size <= buffer.length) {
+    if (bufferCurPos + len <= buffer.length) {
       // buffer has space for all the data so copy it and exit
-      buffer[bufferCurPos .. bufferCurPos+size] = buf[0 .. size];
-      bufferCurPos += size;
+      buffer[bufferCurPos .. bufferCurPos+len] = buf[0 .. len];
+      bufferCurPos += len;
       bufferLen = bufferCurPos > bufferLen ? bufferCurPos : bufferLen;
-      writesize = size;
+      writesize = len;
       bufferDirty = true;
       goto ExitWrite;
     }
@@ -1236,7 +1270,7 @@ class BufferedStream : Stream {
       buffer[bufferCurPos .. buffer.length] = buf[0 .. writesize];
       bufferCurPos = bufferLen = buffer.length;
       buf += writesize;
-      size -= writesize;
+      len -= writesize;
       bufferDirty = true;
     }
 
@@ -1245,7 +1279,7 @@ class BufferedStream : Stream {
 
     flush();
 
-    writesize += writeBlock(buf,size);
+    writesize += writeBlock(buf,len);
 
   ExitWrite:
     return writesize;
@@ -1262,6 +1296,7 @@ class BufferedStream : Stream {
     } else {
       bufferCurPos += offset;
     }
+    readEOF = false;
     return streamPos-bufferSourcePos+bufferCurPos;
   }
 
@@ -1318,7 +1353,7 @@ class BufferedStream : Stream {
   } // template TreadLine(T)
 
   override char[] readLine(char[] inBuffer) {
-    if (unget.length > 1)
+    if (ungetAvailable())
       return super.readLine(inBuffer);
     else
       return TreadLine!(char).readLine(inBuffer);
@@ -1326,7 +1361,7 @@ class BufferedStream : Stream {
   alias Stream.readLine readLine;
 
   override wchar[] readLineW(wchar[] inBuffer) {
-    if (unget.length > 1)
+    if (ungetAvailable())
       return super.readLineW(inBuffer);
     else
       return TreadLine!(wchar).readLine(inBuffer);
@@ -1342,7 +1377,7 @@ class BufferedStream : Stream {
   body {
     super.flush();
     if (writeable && bufferDirty) {
-      if (bufferSourcePos != 0) {
+      if (bufferSourcePos != 0 && seekable) {
 	// move actual file pointer to front of buffer
 	streamPos = s.seek(-bufferSourcePos, SeekPos.Current);
       }
@@ -1353,7 +1388,7 @@ class BufferedStream : Stream {
       }
     }
     long diff = bufferCurPos-bufferSourcePos;
-    if (diff != 0) {
+    if (diff != 0 && seekable) {
       // move actual file pointer to current position
       streamPos = s.seek(diff, SeekPos.Current);
     }
@@ -1363,23 +1398,21 @@ class BufferedStream : Stream {
   }
 
   // returns true if end of stream is reached, false otherwise
-  override bit eof() {
+  override bool eof() {
     if ((buffer.length == 0) || !readable) {
       return super.eof();
     }
-    if (bufferCurPos == bufferLen) {
-      if ((bufferLen != buffer.length) &&
-	  (bufferLen != 0)) {
-	return true;
-      }
-    }
-    else
+    // some simple tests to avoid flushing
+    if (ungetAvailable() || bufferCurPos != bufferLen)
       return false;
-    size_t res = s.readBlock(buffer,buffer.length);
-    bufferSourcePos = bufferLen = res;
+    if (bufferLen == buffer.length)
+      flush();
+    size_t res = s.readBlock(&buffer[bufferLen],buffer.length-bufferLen);
+    bufferSourcePos +=  res;
+    bufferLen += res;
     streamPos += res;
-    bufferCurPos = 0;
-    return res == 0;
+    readEOF = res == 0;
+    return readEOF;
   }
 
   // returns size of stream
@@ -1572,6 +1605,7 @@ class File: Stream {
   version (Win32) {
     // returns size of stream
     ulong size() {
+      assertSeekable();
       uint sizehi;
       uint sizelow = GetFileSize(hFile,&sizehi);
       return (cast(ulong)sizehi << 32) + sizelow;
@@ -1587,6 +1621,7 @@ class File: Stream {
       if (size == -1)
 	size = 0;
     }
+    readEOF = (size == 0);
     return size;
   }
 
@@ -1615,6 +1650,7 @@ class File: Stream {
       if (result == 0xFFFFFFFF)
 	throw new SeekException("unable to move file pointer");
     }
+    readEOF = false;
     return result;
   }
 
@@ -1983,7 +2019,7 @@ class EndianStream : Stream {
   }
 
   override void flush() { super.flush(); s.flush();  }
-  override bit eof() { return s.eof();  }
+  override bool eof() { return s.eof() && !ungetAvailable();  }
   override ulong size() { return s.size();  }
 
   unittest {

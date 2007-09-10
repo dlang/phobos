@@ -202,7 +202,7 @@ ulong _d_new(uint length, uint size)
 	result = 0;
     else
     {
-	p = _gc.malloc(length * size);
+	p = _gc.malloc(length * size + 1);
 	debug(PRINTF) printf(" p = %p\n", p);
 	memset(p, 0, length * size);
 	result = cast(ulong)length + (cast(ulong)cast(uint)p << 32);
@@ -215,12 +215,12 @@ ulong _d_newarrayi(uint length, uint size, ...)
     void *p;
     ulong result;
 
-    debug(PRINTF) printf("_d_newarrayi(length = %d, size = %d)\n", length, size);
+    //debug(PRINTF) printf("_d_newarrayi(length = %d, size = %d)\n", length, size);
     if (length == 0 || size == 0)
 	result = 0;
     else
     {   void* q = cast(void*)(&size + 1);	// pointer to initializer
-	p = _gc.malloc(length * size);
+	p = _gc.malloc(length * size + 1);
 	debug(PRINTF) printf(" p = %p\n", p);
 	if (size == 1)
 	    memset(p, *cast(ubyte*)q, length);
@@ -245,7 +245,7 @@ ulong _d_newbitarray(uint length, bit value)
     if (length == 0)
 	result = 0;
     else
-    {	uint size = (length + 7) >> 3;	// number of bytes
+    {	uint size = (length + 8) >> 3;	// number of bytes
 	ubyte fill = value ? 0xFF : 0;
 
 	p = _gc.malloc(size);
@@ -361,9 +361,9 @@ byte[] _d_arraysetlength(uint newlength, uint sizeelem, Array *p)
 	    if (newsize > size)
 	    {
 		uint cap = _gc.capacity(p.data);
-		if (cap < newsize)
+		if (cap <= newsize)
 		{
-		    newdata = cast(byte *)_gc.malloc(newsize);
+		    newdata = cast(byte *)_gc.malloc(newsize + 1);
 		    newdata[0 .. size] = p.data[0 .. size];
 		}
 		newdata[size .. newsize] = 0;
@@ -371,7 +371,7 @@ byte[] _d_arraysetlength(uint newlength, uint sizeelem, Array *p)
 	}
 	else
 	{
-	    newdata = cast(byte *)_gc.calloc(newsize, 1);
+	    newdata = cast(byte *)_gc.calloc(newsize + 1, 1);
 	}
     }
     else
@@ -408,9 +408,9 @@ bit[] _d_arraysetlengthb(uint newlength, Array *p)
 	    if (newsize > size)
 	    {
 		uint cap = _gc.capacity(p.data);
-		if (cap < newsize)
+		if (cap <= newsize)
 		{
-		    newdata = cast(byte *)_gc.malloc(newsize);
+		    newdata = cast(byte *)_gc.malloc(newsize + 1);
 		    newdata[0 .. size] = p.data[0 .. size];
 		}
 		newdata[size .. newsize] = 0;
@@ -418,7 +418,7 @@ bit[] _d_arraysetlengthb(uint newlength, Array *p)
 	}
 	else
 	{
-	    newdata = cast(byte *)_gc.calloc(newsize, 1);
+	    newdata = cast(byte *)_gc.calloc(newsize + 1, 1);
 	}
     }
     else
@@ -447,7 +447,7 @@ long _d_arrayappend(Array *px, byte[] y, uint size)
     {   byte* newdata;
 
 	//newdata = cast(byte *)_gc.malloc(newlength * size);
-	newdata = cast(byte *)_gc.malloc(newCapacity(newlength, size));
+	newdata = cast(byte *)_gc.malloc(newCapacity(newlength, size) + 1);
 	memcpy(newdata, px.data, length * size);
 	px.data = newdata;
     }
@@ -468,7 +468,7 @@ long _d_arrayappendb(Array *px, bit[] y)
     {	void* newdata;
 
 	//newdata = _gc.malloc(newlength * size);
-	newdata = _gc.malloc(newCapacity(newsize, 1));
+	newdata = _gc.malloc(newCapacity(newsize, 1) + 1);
 	memcpy(newdata, px.data, (length + 7) / 8);
 	px.data = cast(byte*)newdata;
     }
@@ -492,7 +492,7 @@ uint newCapacity(uint newlength, uint size)
 {
     version(none)
     {
-	newcap = newlength * size;
+	uint newcap = newlength * size;
     }
     else
     {
@@ -543,6 +543,7 @@ uint newCapacity(uint newlength, uint size)
 	    //printf("mult: %2.2f, mult2: %2.2f, alloc: %2.2f\n",mult/100.0,mult2,newext / cast(double)size);
 	}
 	newcap = newext > newcap ? newext : newcap;
+	//printf("newcap = %d, newlength = %d, size = %d\n", newcap, newlength, size);
     }
     return newcap;
 }
@@ -553,11 +554,18 @@ byte[] _d_arrayappendc(inout byte[] x, in uint size, ...)
     size_t cap = _gc.capacity(x);
     size_t length = x.length;
     size_t newlength = length + 1;
-    if (newlength * size > cap)
+
+    assert(cap == 0 || length * size <= cap);
+
+    //printf("_d_arrayappendc(size = %d, ptr = %p, length = %d, cap = %d)\n", size, x.ptr, x.length, cap);
+
+    if (newlength * size >= cap)
     {   byte* newdata;
 
-	//printf("_d_arrayappendc(%d, %d)\n", size, newlength);
-	newdata = cast(byte *)_gc.malloc(newCapacity(newlength, size));
+	//printf("_d_arrayappendc(size = %d, newlength = %d, cap = %d)\n", size, newlength, cap);
+	cap = newCapacity(newlength, size);
+	assert(cap >= newlength * size);
+	newdata = cast(byte *)_gc.malloc(cap + 1);
 	memcpy(newdata, x, length * size);
 	(cast(void **)(&x))[1] = newdata;
     }
@@ -565,27 +573,44 @@ byte[] _d_arrayappendc(inout byte[] x, in uint size, ...)
 
     *cast(size_t *)&x = newlength;
     (cast(byte *)x)[length * size .. newlength * size] = argp[0 .. size];
+    assert((cast(uint)x.ptr & 15) == 0);
+    assert(_gc.capacity(x.ptr) > x.length * size);
     return x;
-
-/+
-    byte[] a;
-    uint length;
-    void *argp;
-
-    //printf("size = %d\n", size);
-    length = x.length + 1;
-    a = new byte[length * size];
-    memcpy(a, x, x.length * size);
-    argp = &size + 1;
-    //printf("*argp = %llx\n", *cast(long *)argp);
-    memcpy(&a[x.length * size], argp, size);
-    //printf("a[0] = %llx\n", *cast(long *)&a[0]);
-    *cast(int *)&a = length;	// jam length
-    //printf("a[0] = %llx\n", *cast(long *)&a[0]);
-    x = a;
-    return a;
-+/
 }
+
+extern (C)
+byte[] _d_arraycat(byte[] x, byte[] y, uint size)
+out (result)
+{
+    //printf("_d_arraycat(%d,%p ~ %d,%p size = %d => %d,%p)\n", x.length, x.ptr, y.length, y.ptr, size, result.length, result.ptr);
+    assert(result.length == x.length + y.length);
+    for (uint i = 0; i < x.length * size; i++)
+	assert((cast(byte*)result)[i] == (cast(byte*)x)[i]);
+    for (uint i = 0; i < y.length * size; i++)
+	assert((cast(byte*)result)[x.length * size + i] == (cast(byte*)y)[i]);
+
+    uint cap = _gc.capacity(result.ptr);
+    assert(!cap || cap > result.length * size);
+}
+body
+{   byte[] a;
+    uint len;
+
+    if (!y.length)
+	return x;
+    if (!x.length)
+	return y;
+
+    len = x.length + y.length;
+    a = new byte[len * size];
+    memcpy(a, x, x.length * size);
+    //a[0 .. x.length * size] = x[];
+    memcpy(&a[x.length * size], y, y.length * size);
+    *cast(int *)&a = len;	// jam length
+    //a.length = len;
+    return a;
+}
+
 
 
 extern (C)
