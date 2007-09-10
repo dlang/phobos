@@ -50,8 +50,10 @@ int _d_switch_string(char[][] table, char[] ca)
 	    // Not found
 	    for (i = 0; i < table.length; i++)
 	    {
-		c = memcmp(table[i], ca, ca.length);
-		assert(c != 0);
+		if (table[i].length == ca.length)
+		{   c = memcmp(table[i], ca, ca.length);
+		    assert(c != 0);
+		}
 	    }
 	}
 	else
@@ -60,11 +62,14 @@ int _d_switch_string(char[][] table, char[] ca)
 	    for (i = 0; 1; i++)
 	    {
 		assert(i < table.length);
-		c = memcmp(table[i], ca, ca.length);
-		if (c == 0)
+		if (table[i].length == ca.length)
 		{
-		    assert(i == result);
-		    break;
+		    c = memcmp(table[i], ca, ca.length);
+		    if (c == 0)
+		    {
+			assert(i == result);
+			break;
+		    }
 		}
 	    }
 	}
@@ -117,3 +122,139 @@ int _d_switch_string(char[][] table, char[] ca)
 	//printf("not found\n");
 	return -1;		// not found
     }
+
+unittest
+{
+    switch ((char []) "c")
+    {
+         case "coo":
+         default:
+             break;
+    }
+}
+
+/**********************************
+ * Same thing, but for wide chars.
+ */
+
+int _d_switch_ustring(wchar[][] table, wchar[] ca)
+    in
+    {
+	//printf("in _d_switch_ustring()\n");
+	assert(table.length >= 0);
+	assert(ca.length >= 0);
+
+	// Make sure table[] is sorted correctly
+	int i;
+
+	for (i = 1; i < table.length; i++)
+	{
+	    int len1 = table[i - 1].length;
+	    int len2 = table[i].length;
+
+	    assert(len1 <= len2);
+	    if (len1 == len2)
+	    {
+		int c;
+
+		c = memcmp(table[i - 1], table[i], len1 * wchar.size);
+		assert(c < 0);	// c==0 means a duplicate
+	    }
+	}
+    }
+    out (result)
+    {
+	int i;
+	int c;
+
+	//printf("out _d_switch_string()\n");
+	if (result == -1)
+	{
+	    // Not found
+	    for (i = 0; i < table.length; i++)
+	    {
+		if (table[i].length == ca.length)
+		{   c = memcmp(table[i], ca, ca.length * wchar.size);
+		    assert(c != 0);
+		}
+	    }
+	}
+	else
+	{
+	    assert(0 <= result && result < table.length);
+	    for (i = 0; 1; i++)
+	    {
+		assert(i < table.length);
+		if (table[i].length == ca.length)
+		{
+		    c = memcmp(table[i], ca, ca.length * wchar.size);
+		    if (c == 0)
+		    {
+			assert(i == result);
+			break;
+		    }
+		}
+	    }
+	}
+    }
+    body
+    {
+	//printf("body _d_switch_ustring()\n");
+	int low;
+	int high;
+	int mid;
+	int c;
+	wchar[] pca;
+
+	low = 0;
+	high = table.length;
+
+    /*
+	// Print table
+	wprintf("ca[] = '%.*s'\n", ca);
+	for (mid = 0; mid < high; mid++)
+	{
+	    pca = table[mid];
+	    wprintf("table[%d] = %d, '%.*s'\n", mid, pca.length, pca);
+	}
+    */
+
+	// Do binary search
+	while (low < high)
+	{
+	    mid = (low + high) >> 1;
+	    pca = table[mid];
+	    c = ca.length - pca.length;
+	    if (c == 0)
+	    {
+		c = memcmp(ca, pca, ca.length * wchar.size);
+		if (c == 0)
+		{   //printf("found %d\n", mid);
+		    return mid;
+		}
+	    }
+	    if (c < 0)
+	    {
+		high = mid;
+	    }
+	    else
+	    {
+		low = mid + 1;
+	    }
+	}
+	//printf("not found\n");
+	return -1;		// not found
+    }
+
+
+unittest
+{
+    switch ((wchar []) "c")
+    {
+         case "coo":
+         default:
+             break;
+    }
+}
+
+

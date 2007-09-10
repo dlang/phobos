@@ -1,51 +1,55 @@
 
-// Copyright (C) 2001 by Digital Mars
+// Copyright (C) 2001-2002 by Digital Mars
 // All Rights Reserved
 // Written by Walter Bright
+// www.digitalmars.com
 
 // GC tester program
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <assert.h>
+import c.stdio;
+import c.stdlib;
+import string;
 
-#include "gc.h"
-
-void *stackbottom;
+import gcstats;
+import gc;
+import gcx;
+import random;
 
 void printStats(GC *gc)
 {
     GCStats stats;
 
-    gc->getStats(&stats);
+    gc.getStats(stats);
     printf("poolsize = x%x, usedsize = x%x, freelistsize = x%x, freeblocks = %d, pageblocks = %d\n",
 	stats.poolsize, stats.usedsize, stats.freelistsize, stats.freeblocks, stats.pageblocks);
 }
 
-#define PERMUTE(key)	(key + 1)
-
-void fill(void *p, unsigned key, unsigned size)
+uint PERMUTE(uint key)
 {
-    unsigned i;
-    char *q = (char *)p;
+    return key + 1;
+}
+
+void fill(void *p, uint key, uint size)
+{
+    uint i;
+    byte *q = (byte *)p;
 
     for (i = 0; i < size; i++)
     {
 	key = PERMUTE(key);
-	q[i] = (char)key;
+	q[i] = (byte)key;
     }
 }
 
-void verify(void *p, unsigned key, unsigned size)
+void verify(void *p, uint key, uint size)
 {
-    unsigned i;
-    char *q = (char *)p;
+    uint i;
+    byte *q = (byte *)p;
 
     for (i = 0; i < size; i++)
     {
 	key = PERMUTE(key);
-	assert(q[i] == (char)key);
+	assert(q[i] == (byte)key);
     }
 }
 
@@ -62,39 +66,36 @@ void smoke()
 
     printf("--------------------------smoke()\n");
 
-    gc = new GC();
-    delete gc;
+    gc = newGC();
+    deleteGC(gc);
 
-    gc = new GC();
-    gc->init();
-    delete gc;
+    gc = newGC();
+    gc.init();
+    deleteGC(gc);
 
-    gc = new GC();
-    gc->init();
-    //gc->setStackBottom(stackbottom);
-    char *p = (char *)gc->malloc(10);
+    gc = newGC();
+    gc.init();
+    char *p = (char *)gc.malloc(10);
     assert(p);
     strcpy(p, "Hello!");
-    char *p2 = gc->strdup(p);
-    printf("p2 = %x, '%s'\n", p2, p2);
-    int result = strcmp(p, p2);
-    assert(result == 0);
-    gc->strdup(p);
+//    char *p2 = gc.strdup(p);
+//    printf("p2 = %x, '%s'\n", p2, p2);
+//    int result = strcmp(p, p2);
+//    assert(result == 0);
+//    gc.strdup(p);
 
     printf("p  = %x\n", p);
-    p = NULL;
-    gc->fullcollect();
+    p = null;
+    gc.fullCollect();
     printStats(gc);
 
-    delete gc;
+    deleteGC(gc);
 }
 
 /* ---------------------------- */
 
 void finalizer(void *p, void *dummy)
 {
-    (void)p;
-    (void)dummy;
 }
 
 void smoke2()
@@ -103,21 +104,20 @@ void smoke2()
     int *p;
     int i;
 
-    #define SMOKE2_SIZE	100
+    const int SMOKE2_SIZE = 100;
     int *foo[SMOKE2_SIZE];
 
     printf("--------------------------smoke2()\n");
 
-    gc = new GC();
-    gc->init();
-    //gc->setStackBottom(stackbottom);
+    gc = newGC();
+    gc.init();
 
     for (i = 0; i < SMOKE2_SIZE; i++)
     {
-	p = (int *)gc->calloc(i + 1, 500);
+	p = (int *)gc.calloc(i + 1, 500);
 	p[0] = i * 3;
 	foo[i] = p;
-	gc->setFinalizer(p, finalizer);
+	gc.setFinalizer((void *)p, &finalizer);
     }
 
     for (i = 0; i < SMOKE2_SIZE; i += 2)
@@ -126,19 +126,19 @@ void smoke2()
 	if (p[0] != i * 3)
 	{
 	    printf("p = %x, i = %d, p[0] = %d\n", p, i, p[0]);
-	    fflush(stdout);
+	    //c.stdio.fflush(stdout);
 	}
 	assert(p[0] == i * 3);
-	gc->free(p);
+	gc.free(p);
     }
 
-    p = NULL;
-    memset(foo, 0, sizeof(foo));
+    p = null;
+    foo[] = null;
 
-    gc->fullcollect();
+    gc.fullCollect();
     printStats(gc);
 
-    delete gc;
+    deleteGC(gc);
 }
 
 /* ---------------------------- */
@@ -151,28 +151,27 @@ void smoke3()
 
     printf("--------------------------smoke3()\n");
 
-    gc = new GC();
-    gc->init();
-    //gc->setStackBottom(stackbottom);
+    gc = newGC();
+    gc.init();
 
-    for (i = 0; i < 1000000; i++)
-//    for (i = 0; i < 1000; i++)
+//    for (i = 0; i < 1000000; i++)
+    for (i = 0; i < 1000; i++)
     {
-	unsigned size = rand() % 2048;
-	p = (int *)gc->malloc(size);
+	uint size = rand() % 2048;
+	p = (int *)gc.malloc(size);
 	memset(p, i, size);
 
 	size = rand() % 2048;
-	p = (int *)gc->realloc(p, size);
+	p = (int *)gc.realloc(p, size);
 	memset(p, i + 1, size);
     }
 
-    p = NULL;
+    p = null;
     desregs();
-    gc->fullcollect();
+    gc.fullCollect();
     printStats(gc);
 
-    delete gc;
+    deleteGC(gc);
 }
 
 /* ---------------------------- */
@@ -185,58 +184,56 @@ void smoke4()
 
     printf("--------------------------smoke4()\n");
 
-    gc = new GC();
-    gc->init();
-    //gc->setStackBottom(stackbottom);
+    gc = newGC();
+    gc.init();
 
     for (i = 0; i < 80000; i++)
     {
-	unsigned size = i;
-	p = (int *)gc->malloc(size);
+	uint size = i;
+	p = (int *)gc.malloc(size);
 	memset(p, i, size);
 
 	size = rand() % 2048;
-	gc->check(p);
-	p = (int *)gc->realloc(p, size);
+	gc.check(p);
+	p = (int *)gc.realloc(p, size);
 	memset(p, i + 1, size);
     }
 
-    p = NULL;
+    p = null;
     desregs();
-    gc->fullcollect();
+    gc.fullCollect();
     printStats(gc);
 
-    delete gc;
+    deleteGC(gc);
 }
 
 /* ---------------------------- */
 
 void smoke5(GC *gc)
 {
-    char *p;
+    byte *p;
     int i;
     int j;
-    #define SMOKE5_SIZE 1000
-    char *array[SMOKE5_SIZE];
-    unsigned offset[SMOKE5_SIZE];
+    const int SMOKE5_SIZE = 1000;
+    byte *array[SMOKE5_SIZE];
+    uint offset[SMOKE5_SIZE];
 
     printf("--------------------------smoke5()\n");
-
-    memset(array, 0, sizeof(array));
-    memset(offset, 0, sizeof(offset));
+    //printf("gc = %p\n", gc);
+    //printf("gc = %p, gcx = %p, self = %x\n", gc, gc.gcx, gc.gcx.self);
 
     for (j = 0; j < 20; j++)
     {
-	for (i = 0; i < 4000; i++)
+	for (i = 0; i < 2000 /*4000*/; i++)
 	{
-	    unsigned size = (rand() % 2048) + 1;
-	    unsigned index = rand() % SMOKE5_SIZE;
+	    uint size = (rand() % 2048) + 1;
+	    uint index = rand() % SMOKE5_SIZE;
 
 	    //printf("index = %d, size = %d\n", index, size);
 	    p = array[index] - offset[index];
-	    p = (char *)gc->realloc(p, size);
+	    p = (byte *)gc.realloc(p, size);
 	    if (array[index])
-	    {	unsigned s;
+	    {	uint s;
 
 		//printf("\tverify = %d\n", p[0]);
 		s = offset[index];
@@ -251,12 +248,12 @@ void smoke5(GC *gc)
 
 	    //printf("p[0] = %d\n", p[0]);
 	}
-	gc->fullcollect();
+	gc.fullCollect();
     }
 
-    p = NULL;
-    memset(array, 0, sizeof(array));
-    gc->fullcollect();
+    p = null;
+    array[] = null;
+    gc.fullCollect();
     printStats(gc);
 }
 
@@ -270,21 +267,30 @@ int main(int argc, char *argv[])
 
     printf("GC test start\n");
 
-    (void)argc;
-    stackbottom = &argv;
-
-    gc = new GC();
-    gc->init();
-    //gc->setStackBottom(stackbottom);
+    gc = newGC();
+printf("gc = %p\n", gc);
+    gc.init();
 
     smoke();
     smoke2();
     smoke3();
     smoke4();
+printf("gc = %p\n", gc);
     smoke5(gc);
 
-    delete gc;
+    deleteGC(gc);
 
     printf("GC test success\n");
     return EXIT_SUCCESS;
+}
+
+GC *newGC()
+{
+    return (GC *)c.stdlib.calloc(1, GC.size);
+}
+
+void deleteGC(GC *gc)
+{
+    gc.Dtor();
+    c.stdlib.free(gc);
 }

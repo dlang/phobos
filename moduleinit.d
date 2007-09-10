@@ -26,7 +26,7 @@ class ModuleCtorError : Exception
 {
     this(ModuleInfo m)
     {
-	msg = "circular initialization dependency with module " ~ m.name;
+	super("circular initialization dependency with module " ~ m.name);
     }
 }
 
@@ -49,10 +49,10 @@ extern (C) void _moduleCtor()
     _fatexit(&_moduleDtor);
 
     _moduleinfo_dtors = new ModuleInfo[_moduleinfo_array.length];
-    _moduleCtor2(_moduleinfo_array);
+    _moduleCtor2(_moduleinfo_array, 0);
 }
 
-void _moduleCtor2(ModuleInfo[] mi)
+void _moduleCtor2(ModuleInfo[] mi, int skip)
 {
     //printf("_moduleCtor2(): %d modules\n", mi.length);
     for (uint i = 0; i < mi.length; i++)
@@ -66,10 +66,13 @@ void _moduleCtor2(ModuleInfo[] mi)
 	if (m.ctor || m.dtor)
 	{
 	    if (m.flags & MIctorstart)
+	    {	if (skip)
+		    continue;
 		throw new ModuleCtorError(m);
+	    }
 
 	    m.flags |= MIctorstart;
-	    _moduleCtor2(m.importedModules);
+	    _moduleCtor2(m.importedModules, 0);
 	    if (m.ctor)
 		(*m.ctor)();
 	    m.flags &= ~MIctorstart;
@@ -82,7 +85,7 @@ void _moduleCtor2(ModuleInfo[] mi)
 	else
 	{
 	    m.flags |= MIctordone;
-	    _moduleCtor2(m.importedModules);
+	    _moduleCtor2(m.importedModules, 1);
 	}
     }
 }

@@ -22,7 +22,7 @@ class FileError : Error
 
     this(char[] name, char[] message)
     {
-	msg = name ~ ": " ~ message;
+	super(name ~ ": " ~ message);
     }
 
     this(char[] name, uint errno)

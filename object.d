@@ -20,7 +20,12 @@ class Object
 
     int cmp(Object o)
     {
-	return (char *)(void *)this - (char *)(void *)o;
+	return (int)(void *)this - (int)(void *)o;
+    }
+
+    int eq(Object o)
+    {
+	return this === o;
     }
 }
 
@@ -42,6 +47,26 @@ class ClassInfo : Object
     void (*_invariant)(Object);
     uint flags;
     //	1:			// IUnknown
+}
+
+class TypeInfo
+{
+    uint getHash(void *p) { return (uint)p; }
+    int equals(void *p1, void *p2) { return p1 == p2; }
+    int compare(void *p1, void *p2) { return 0; }
+    int tsize() { return 0; }
+    void swap(void *p1, void *p2)
+    {
+	int i;
+	int n = tsize();
+	for (i = 0; i < n; i++)
+	{   byte t;
+
+	    t = ((byte *)p1)[i];
+	    ((byte *)p1)[i] = ((byte *)p2)[i];
+	    ((byte *)p2)[i] = t;
+	}
+    }
 }
 
 class Exception : Object
@@ -76,28 +101,4 @@ class Error : Exception
 	this.next = next;
     }
 }
-
-extern (C)
-{
-    // These are helper functions internal to the D runtime library (phobos.lib)
-    void*[]  _aaRehashAh(void*[] paa);
-    char[][] _aaKeys8(void*[] paa);
-    int[]    _aaValues8_4(void*[] paa);
-}
-
-int[char[]] rehash(int[char[]] aa)
-{
-    return (int[char[]]) _aaRehashAh((void*[])aa);
-}
-
-char[][] keys(int[char[]] aa)
-{
-    return (char[][]) _aaKeys8((void*[])aa);
-}
-
-int[] values(int[char[]] aa)
-{
-    return (int[]) _aaValues8_4((void*[])aa);
-}
-
 

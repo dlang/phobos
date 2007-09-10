@@ -6,7 +6,7 @@ alias int HRESULT;
 enum : int
 {
 	S_OK = 0,
-	E_NOINTERFACE = 0x80004002,
+	E_NOINTERFACE = cast(int)0x80004002,
 }
 
 struct GUID {          // size is 16

@@ -1,15 +1,20 @@
 
-#include <windows.h>
+// Copyright (C) 2001-2002 by Digital Mars
+// All Rights Reserved
+// www.digitalmars.com
+// Written by Walter Bright
 
-#include "os.h"
+import windows;
+
+alias int pthread_t;
 
 /***********************************
  * Map memory.
  */
 
-void *os_mem_map(unsigned nbytes)
+void *os_mem_map(uint nbytes)
 {
-    return VirtualAlloc(NULL, nbytes, MEM_RESERVE, PAGE_READWRITE);
+    return VirtualAlloc(null, nbytes, MEM_RESERVE, PAGE_READWRITE);
 }
 
 /***********************************
@@ -19,12 +24,12 @@ void *os_mem_map(unsigned nbytes)
  *	!=0	failure
  */
 
-int os_mem_commit(void *base, unsigned offset, unsigned nbytes)
+int os_mem_commit(void *base, uint offset, uint nbytes)
 {
     void *p;
 
-    p = VirtualAlloc((char *)base + offset, nbytes, MEM_COMMIT, PAGE_READWRITE);
-    return (p == NULL);
+    p = VirtualAlloc(base + offset, nbytes, MEM_COMMIT, PAGE_READWRITE);
+    return (p == null);
 }
 
 
@@ -35,9 +40,9 @@ int os_mem_commit(void *base, unsigned offset, unsigned nbytes)
  *	!=0	failure
  */
 
-int os_mem_decommit(void *base, unsigned offset, unsigned nbytes)
+int os_mem_decommit(void *base, uint offset, uint nbytes)
 {
-    return VirtualFree((char *)base + offset, nbytes, MEM_DECOMMIT) == 0; 
+    return VirtualFree(base + offset, nbytes, MEM_DECOMMIT) == 0; 
 }
 
 /***********************************
@@ -48,9 +53,8 @@ int os_mem_decommit(void *base, unsigned offset, unsigned nbytes)
  *	!=0	failure
  */
 
-int os_mem_unmap(void *base, unsigned nbytes)
+int os_mem_unmap(void *base, uint nbytes)
 {
-    (void)nbytes;
     return VirtualFree(base, 0, MEM_RELEASE) == 0; 
 }
 
@@ -60,6 +64,7 @@ int os_mem_unmap(void *base, unsigned nbytes)
 
 pthread_t pthread_self()
 {
+    //printf("pthread_self() = %x\n", GetCurrentThreadId());
     return (pthread_t) GetCurrentThreadId();
 }
 
@@ -67,21 +72,13 @@ pthread_t pthread_self()
  * Determine "bottom" of stack (actually the top on Win32 systems).
  */
 
-#if __DMC__
-extern "C"
-{
-    extern void * __cdecl _atopsp;
-}
-#endif
-
 void *os_query_stackBottom()
 {
-#if __DMC__
-    //return _atopsp;		// not needed
-#endif
-    _asm
+    asm
     {
-	mov	EAX, FS:4
+	naked			;
+	mov	EAX,FS:4	;
+	ret			;
     }
 }
 
@@ -89,30 +86,29 @@ void *os_query_stackBottom()
  * Determine base address and size of static data segment.
  */
 
-#if __DMC__
-extern "C"
+extern (C)
 {
-    extern int __cdecl _xi_a;	// &_xi_a just happens to be start of data segment
-    extern int __cdecl _edata;	// &_edata is start of BSS segment
-    extern int __cdecl _end;	// &_end is past end of BSS
+    extern int _xi_a;	// &_xi_a just happens to be start of data segment
+    extern int _edata;	// &_edata is start of BSS segment
+    extern int _end;	// &_end is past end of BSS
 }
 
-void os_query_staticdataseg(void **base, unsigned *nbytes)
+void os_query_staticdataseg(void **base, uint *nbytes)
 {
     *base = (void *)&_xi_a;
-    *nbytes = (unsigned)((char *)&_end - (char *)&_xi_a);
+    *nbytes = (uint)((char *)&_end - (char *)&_xi_a);
 }
-#endif
 
-#if _MSC_VER
-void os_query_staticdataseg(void **base, unsigned *nbytes)
+/++++
+
+void os_query_staticdataseg(void **base, uint *nbytes)
 {
     static char dummy = 6;
     SYSTEM_INFO si;
     MEMORY_BASIC_INFORMATION mbi;
     char *p;
-    void *bottom = NULL;
-    unsigned size = 0;
+    void *bottom = null;
+    uint size = 0;
 
     // Tests show the following does not work reliably.
     // The reason is that the data segment is arbitrarilly divided
@@ -122,14 +118,14 @@ void os_query_staticdataseg(void **base, unsigned *nbytes)
     assert(0);				// fix implementation
 
     GetSystemInfo(&si);
-    p = (char *)((unsigned)(&dummy) & ~(si.dwPageSize - 1));
+    p = (char *)((uint)(&dummy) & ~(si.dwPageSize - 1));
     while (VirtualQuery(p, &mbi, sizeof(mbi)) == sizeof(mbi) &&
         mbi.Protect & (PAGE_READWRITE | PAGE_WRITECOPY) &&
         !(mbi.Protect & PAGE_GUARD) &&
         mbi.AllocationBase != 0)
     {
 	bottom = (void *)mbi.BaseAddress;
-	size = (unsigned)mbi.RegionSize;
+	size = (uint)mbi.RegionSize;
 
 	printf("dwPageSize        = x%x\n", si.dwPageSize);
 	printf("&dummy            = %p\n", &dummy);
@@ -147,4 +143,5 @@ void os_query_staticdataseg(void **base, unsigned *nbytes)
     *base = bottom;
     *nbytes = size;
 }
-#endif
+
+++++/

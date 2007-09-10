@@ -200,7 +200,7 @@ void compile(tchar[] pattern, tchar[] attributes)
 
     if (re_nsub > oldre_nsub)
     {
-	if (pmatch == &gmatch)
+	if (pmatch === &gmatch)
 	    pmatch = null;
 	pmatch.length = re_nsub + 1;
     }
@@ -470,7 +470,10 @@ public tchar[][] exec()
     result = new tchar[pmatch.length][];
     for (int i = 0; i < pmatch.length; i++)
     {
-	result[i] = input[pmatch[i].rm_so .. pmatch[i].rm_eo];
+	if (pmatch[i].rm_so == pmatch[i].rm_eo)
+	    result[i] = null;
+	else
+	    result[i] = input[pmatch[i].rm_so .. pmatch[i].rm_eo];
     }
 
     return result;
@@ -1795,6 +1798,9 @@ int parseRange()
 			}
 			rs = RS.start;
 			continue;
+
+		    default:
+			break;
 		}
 		c2 = escape();
 		goto Lrange;
@@ -2390,7 +2396,8 @@ static tchar[] replace3(tchar[] format, tchar[] input, regmatch_t[] pmatch)
 		break;
 
 	    Lstring:
-		buf.write(input[rm_so .. rm_eo]);
+		if (rm_so != rm_eo)
+		    buf.write(input[rm_so .. rm_eo]);
 		break;
 
 	    default:

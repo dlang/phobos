@@ -1,58 +1,40 @@
+// Copyright (c) 1999-2002 by Digital Mars
+// All Rights Reserved
+// written by Walter Bright
+// www.digitalmars.com
 
-class GC
-{
-    /***********************************
-     * Run a full garbage collection cycle.
-     */
+import gcstats;
 
-    void fullCollect();
+void addRoot(void *p);		// add p to list of roots
+void removeRoot(void *p);	// remove p from list of roots
 
-    /***********************************
-     * Run a generational garbage collection cycle.
-     * Takes less time than a fullcollect(), but isn't
-     * as effective.
-     */
+void addRange(void *pbot, void *ptop);	// add range to scan for roots
+void removeRange(void *pbot);		// remove range
 
-    void genCollect();
+/***********************************
+ * Run a full garbage collection cycle.
+ */
 
-    /***********************************
-     * If a collection hasn't been run in a while,
-     * run a collection. This is useful to embed
-     * in an idle loop or place in a low priority thread.
-     */
+void fullCollect();
 
-    void lazyCollect();
+/***********************************
+ * Run a generational garbage collection cycle.
+ * Takes less time than a fullcollect(), but isn't
+ * as effective.
+ */
 
-    /***************************************
-     * Disable and enable collections. They must be
-     * a matched pair, and can nest.
-     * By default collections are enabled.
-     */
+void genCollect();
+void genCollectNoStack();
 
-    void disable();
-    void enable();
+void minimize();	// minimize physical memory usage
 
-    /****************************************
-     * Run all pending destructors.
-     */
+/***************************************
+ * Disable and enable collections. They must be
+ * a matched pair, and can nest.
+ * By default collections are enabled.
+ */
 
-    void runDestructors();
+void disable();
+void enable();
 
-    /*****************************
-     * The stomper is a memory debugging aid.
-     * It helps flush out initialization and dangling pointer
-     * bugs by stomping on allocated and free'd memory.
-     * With the stomper running, it's extremely unlikely that deleted
-     * and collected memory will inadvertantly
-     * contain valid data.
-     * Stomping, of course, slows down execution, so
-     * it can be adjusted dynamically.
-     *	level	0	no stomping, run at max speed
-     *		1	stomp on new's, delete's,
-     *			cause array resizes to always copy & stomp
-     *		2	add sentinels before and after objects to detect
-     *			over and underruns
-     */
-
-    void setStomper(int level);
-}
+void getStats(out GCStats stats);

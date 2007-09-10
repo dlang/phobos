@@ -104,16 +104,32 @@ char[] getBaseName(char[] fullname)
 	    version(Win32)
 	    {
 		if (fullname[i - 1] == ':' || fullname[i - 1] == '\')
-		    return null;
+		    break;
 	    }
 	    version(linux)
 	    {
 		if (fullname[i - 1] == '/')
-		    return null;
+		    break;
 	    }
 	}
 	return fullname[i .. fullname.length];
     }
+
+unittest
+{
+    debug(path) printf("path.getBaseName.unittest\n");
+    int i;
+    char[] result;
+
+    result = getBaseName('d:\path\foo.bat');
+    //printf("result = '%.*s'\n", result);
+    i = cmp(result, "foo.bat");
+    assert(i == 0);
+
+    result = getBaseName('a\b');
+    i = cmp(result, "b");
+    assert(i == 0);
+}
 
 
 /**************************

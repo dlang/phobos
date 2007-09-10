@@ -42,3 +42,4 @@ uint os_major = 4;
 uint os_minor = 0;
 
 
+// processor: i386

@@ -7,7 +7,7 @@ void _d_invariant(Object o)
     //printf("__d_invariant(%p)\n", o);
 
     // BUG: needs to be filename/line of caller, not library routine
-    assert(o != null);	// just do null check, not invariant check
+    assert(o !== null);	// just do null check, not invariant check
 
     c = o.classinfo;
     do

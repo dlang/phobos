@@ -24,32 +24,6 @@ byte[] _d_arraycat(byte[] x, byte[] y, uint size)
     return a;
 }
 
-byte[] _d_arrayappend(byte[] *px, byte[] y, uint size)
-{
-    *px = _d_arraycat(*px, y, size);
-    return *px;
-}
-
-byte[] _d_arrayappendc(inout byte[] x, in uint size, ...)
-{
-    byte[] a;
-    uint length;
-    void *argp;
-
-    //printf("size = %d\n", size);
-    length = x.length + 1;
-    a = new byte[length * size];
-    memcpy(a, x, x.length * size);
-    argp = &size + 1;
-    //printf("*argp = %llx\n", *(long *)argp);
-    memcpy(&a[x.length * size], argp, size);
-    //printf("a[0] = %llx\n", *(long *)&a[0]);
-    *(int *)&a = length;	// jam length
-    //printf("a[0] = %llx\n", *(long *)&a[0]);
-    x = a;
-    return a;
-}
-
 byte[] _d_arraycopy(uint size, byte[] from, byte[] to)
 {
     //printf("f = %p,%d, t = %p,%d\n", (void*)from, from.length, (void*)to, to.length);
@@ -70,3 +44,43 @@ byte[] _d_arraycopy(uint size, byte[] from, byte[] to)
     return to;
 }
 
+bit[] _d_arraycopybit(bit[] from, bit[] to)
+{
+    //printf("f = %p,%d, t = %p,%d\n", (void*)from, from.length, (void*)to, to.length);
+    uint nbytes;
+
+    if (to.length != from.length)
+    {
+	throw new Error("lengths don't match for array copy");
+    }
+    else
+    {
+	nbytes = (to.length + 7) / 8;
+	if ((void *)to + nbytes <= (void *)from ||
+	    (void *)from + nbytes <= (void *)to)
+	{
+	    memcpy((void *)to, (void *)from, nbytes);
+	}
+	else
+	{
+	    throw new Error("overlapping array copy");
+	}
+    }
+    return to;
+}
+
+bit[] _d_arraysetbit(bit[] ba, uint lwr, uint upr, bit value)
+in
+{
+    //printf("_d_arraysetbit(ba.length = %d, lwr = %u, upr = %u, value = %d)\n", ba.length, lwr, upr, value);
+    assert(lwr <= upr);
+    assert(upr <= ba.length);
+}
+body
+{
+    // Inefficient; lots of room for improvement here
+    for (uint i = lwr; i < upr; i++)
+	ba[i] = value;
+
+    return ba;
+}

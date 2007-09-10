@@ -42,6 +42,8 @@ extern (C)
     char *strrchr(char *, char);
     char *memchr(char *, char, uint);
     void *memcpy(void *, void *, uint);
+    void *memmove(void *, void *, uint);
+    void *memset(void *, uint, uint);
 }
 
 /************** Exceptions ****************/
@@ -50,7 +52,7 @@ class StringError : Error
 {
     this(char[] msg)
     {
-	this.msg = msg;
+	super(msg);
     }
 }
 
@@ -180,8 +182,8 @@ char* toStringz(char[] string)
 	char* p;
 	char[] copy;
 
-	if (string == null)
-	    return null;
+	if (string.length == 0)
+	    return "";
 
 	p = &string[0] + string.length;
 
@@ -207,6 +209,10 @@ unittest
     char foo[] = "abbzxyzzy";
     p = toStringz(foo[3..5]);
     assert(strlen(p) == 2);
+
+    char[] test = "";
+    p = toStringz(test);
+    assert(*p == 0);
 }
 
 /******************************************
@@ -437,7 +443,7 @@ unittest
 
     s2 = toupper(s1);
     assert(cmp(s2, "FOL") == 0);
-    assert(s2 != s1);
+    assert(s2 !== s1);
 }
 
 
@@ -469,7 +475,7 @@ unittest
 
     s2 = capitalize(s1);
     assert(cmp(s2, "FoL") == 0);
-    assert(s2 != s1);
+    assert(s2 !== s1);
 }
 
 
@@ -1236,9 +1242,9 @@ char[] translate(char[] s, char[] transtab, char[] delchars)
 	int count;
 	bit[256] deltab;
 
-	deltab[] = 0;
+	deltab[] = false;
 	for (i = 0; i < delchars.length; i++)
-	    deltab[delchars[i]] = 1;
+	    deltab[delchars[i]] = true;
 
 	count = 0;
 	for (i = 0; i < s.length; i++)
@@ -1328,3 +1334,30 @@ unittest
     i = cmp(r, "123");
     assert(i == 0);
 }
+
+/*************************************************
+ * Convert to char[].
+ */
+
+char[] toString(char *s)
+{
+    return s ? s[0 .. strlen(s)] : cast(char[])null;
+}
+
+unittest
+{
+    debug(string) printf("string.toString.unittest\n");
+
+    char[] r;
+    int i;
+
+    r = toString(null);
+    i = cmp(r, "");
+    assert(i == 0);
+
+    r = toString("foo\0");
+    i = cmp(r, "foo");
+    assert(i == 0);
+}
+
+

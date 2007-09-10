@@ -219,7 +219,7 @@ Object *_d_create_exception_object(ClassInfo *ci, char *msg)
 {
     Exception *exc;
 
-    exc = (Exception *)__d_newclass(ci);
+    exc = (Exception *)_d_newclass(ci);
     // BUG: what if _d_newclass() throws an out of memory exception?
 
     if (msg)

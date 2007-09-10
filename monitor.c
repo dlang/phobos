@@ -35,7 +35,7 @@ void _STD_monitor_staticdtor()
 
 void _d_monitorenter(Object *h)
 {
-    //printf("_d_monitorenter(%p)\n", h);
+    //printf("_d_monitorenter(%p), %p\n", h, h->monitor);
     if (!h->monitor)
     {	CRITICAL_SECTION *cs;
 
@@ -52,7 +52,9 @@ void _d_monitorenter(Object *h)
 	if (cs)			// if we didn't use it
 	    free(cs);
     }
+    //printf("-_d_monitorenter(%p)\n", h);
     EnterCriticalSection((CRITICAL_SECTION *)h->monitor);
+    //printf("-_d_monitorenter(%p)\n", h);
 }
 
 void _d_monitorexit(Object *h)
