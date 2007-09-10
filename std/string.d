@@ -1475,6 +1475,22 @@ unittest
  * Convert to char[].
  */
 
+char[] toString(bit b)
+{
+    return b ? "true" : "false";
+}
+
+char[] toString(char c)
+{
+    char[] result = new char[2];
+    result[0] = c;
+    result[1] = 0;
+    return result;
+}
+
+char[] toString(ubyte ub)  { return toString(cast(uint) ub); }
+char[] toString(ushort us) { return toString(cast(uint) us); }
+
 char[] toString(uint u)
 {   char[uint.size * 3] buffer;
     int ndigits;
@@ -1507,6 +1523,93 @@ unittest
     char[] r;
     int i;
 
+    r = toString(0u);
+    i = cmp(r, "0");
+    assert(i == 0);
+
+    r = toString(9u);
+    i = cmp(r, "9");
+    assert(i == 0);
+
+    r = toString(123u);
+    i = cmp(r, "123");
+    assert(i == 0);
+}
+
+char[] toString(ulong u)
+{   char[ulong.size * 3] buffer;
+    int ndigits;
+    char c;
+    char[] result;
+
+    if (u < 0x1_0000_0000)
+	return toString(cast(uint)u);
+    ndigits = 0;
+    while (u)
+    {
+	c = (u % 10) + '0';
+	u /= 10;
+	ndigits++;
+	buffer[buffer.length - ndigits] = c;
+    }
+    result = new char[ndigits];
+    result[] = buffer[buffer.length - ndigits .. buffer.length];
+    return result;
+}
+
+unittest
+{
+    debug(string) printf("string.toString(ulong).unittest\n");
+
+    char[] r;
+    int i;
+
+    r = toString(0ul);
+    i = cmp(r, "0");
+    assert(i == 0);
+
+    r = toString(9ul);
+    i = cmp(r, "9");
+    assert(i == 0);
+
+    r = toString(123ul);
+    i = cmp(r, "123");
+    assert(i == 0);
+}
+
+char[] toString(byte b)  { return toString(cast(int) b); }
+char[] toString(short s) { return toString(cast(int) s); }
+
+char[] toString(int i)
+{   char[1 + int.size * 3] buffer;
+    char c;
+    char[] result;
+
+    if (i >= 0)
+	return toString(cast(uint)i);
+
+    uint u = -i;
+    int ndigits = 1;
+    while (u)
+    {
+	c = (u % 10) + '0';
+	u /= 10;
+	buffer[buffer.length - ndigits] = c;
+	ndigits++;
+    }
+    buffer[buffer.length - ndigits] = '-';
+    result = new char[ndigits];
+    result[] = buffer[buffer.length - ndigits .. buffer.length];
+    return result;
+}
+
+unittest
+{
+    debug(string) printf("string.toString(int).unittest\n");
+
+    char[] r;
+    int i;
+
     r = toString(0);
     i = cmp(r, "0");
     assert(i == 0);
@@ -1518,6 +1621,129 @@ unittest
     r = toString(123);
     i = cmp(r, "123");
     assert(i == 0);
+
+    r = toString(-0);
+    i = cmp(r, "0");
+    assert(i == 0);
+
+    r = toString(-9);
+    i = cmp(r, "-9");
+    assert(i == 0);
+
+    r = toString(-123);
+    i = cmp(r, "-123");
+    assert(i == 0);
+}
+
+char[] toString(long i)
+{   char[1 + long.size * 3] buffer;
+    char c;
+    char[] result;
+
+    if (i >= 0)
+	return toString(cast(ulong)i);
+    if (cast(int)i == i)
+	return toString(cast(int)i);
+
+    ulong u = -i;
+    int ndigits = 1;
+    while (u)
+    {
+	c = (u % 10) + '0';
+	u /= 10;
+	buffer[buffer.length - ndigits] = c;
+	ndigits++;
+    }
+    buffer[buffer.length - ndigits] = '-';
+    result = new char[ndigits];
+    result[] = buffer[buffer.length - ndigits .. buffer.length];
+    return result;
+}
+
+unittest
+{
+    debug(string) printf("string.toString(long).unittest\n");
+
+    char[] r;
+    int i;
+
+    r = toString(0l);
+    i = cmp(r, "0");
+    assert(i == 0);
+
+    r = toString(9l);
+    i = cmp(r, "9");
+    assert(i == 0);
+
+    r = toString(123l);
+    i = cmp(r, "123");
+    assert(i == 0);
+
+    r = toString(-0l);
+    i = cmp(r, "0");
+    assert(i == 0);
+
+    r = toString(-9l);
+    i = cmp(r, "-9");
+    assert(i == 0);
+
+    r = toString(-123l);
+    i = cmp(r, "-123");
+    assert(i == 0);
+}
+
+char[] toString(float f) { return toString(cast(double) f); }
+
+char[] toString(double d)
+{
+    char[20] buffer;
+
+    sprintf(buffer, "%g", d);
+    return toString(buffer).dup;
+}
+
+char[] toString(real r)
+{
+    char[20] buffer;
+
+    sprintf(buffer, "%Lg", r);
+    return toString(buffer).dup;
+}
+
+char[] toString(ifloat f) { return toString(cast(idouble) f); }
+
+char[] toString(idouble d)
+{
+    char[21] buffer;
+
+    sprintf(buffer, "%gi", d);
+    return toString(buffer).dup;
+}
+
+char[] toString(ireal r)
+{
+    char[21] buffer;
+
+    sprintf(buffer, "%Lgi", r);
+    return toString(buffer).dup;
+}
+
+char[] toString(cfloat f) { return toString(cast(cdouble) f); }
+
+char[] toString(cdouble d)
+{
+    char[20 + 1 + 20 + 1] buffer;
+
+    sprintf(buffer, "%g+%gi", d.re, d.im);
+    return toString(buffer).dup;
+}
+
+char[] toString(creal r)
+{
+    char[20 + 1 + 20 + 1] buffer;
+
+    sprintf(buffer, "%Lg+%Lgi", r.re, r.im);
+    return toString(buffer).dup;
 }
 
 /*************************************************

@@ -828,6 +828,7 @@ enum
 }
 
 export HANDLE GetCurrentThread();
+export HANDLE GetCurrentProcess();
 export BOOL DuplicateHandle (HANDLE sourceProcess, HANDLE sourceThread,
         HANDLE targetProcessHandle, HANDLE *targetHandle, DWORD access, 
         BOOL inheritHandle, DWORD options);

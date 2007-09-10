@@ -121,6 +121,11 @@ d_time floor(d_time d)
     return d;
 }
 
+d_time floor(real d)
+{
+    return cast(d_time)d;
+}
+
 d_time dmod(d_time n, d_time d)
 {   d_time r;
 

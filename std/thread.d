@@ -334,7 +334,10 @@ class Thread
     {
 	thread_hdl currentThread = GetCurrentThread();
 	thread_hdl actualThreadHandle;
-	thread_hdl currentProcess = cast(thread_hdl)-1;
+
+	//thread_hdl currentProcess = cast(thread_hdl)-1;
+	thread_hdl currentProcess = GetCurrentProcess(); // http://www.digitalmars.com/drn-bin/wwwnews?D/21217
+
 
 	uint access = cast(uint)0x00000002;
 

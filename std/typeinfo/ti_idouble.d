@@ -15,7 +15,7 @@ class TypeInfo_p : TypeInfo
 
     int compare(void *p1, void *p2)
     {
-	return *(double *)p1 - *(double *)p2;
+	return cast(int)(*(double *)p1 - *(double *)p2);
     }
 
     int tsize()
