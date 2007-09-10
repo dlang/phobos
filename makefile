@@ -1,5 +1,6 @@
 
 CFLAGS=-g -mn -6 -r -Igc
+DFLAGS=-unittest
 CC=sc
 
 .c.obj:
@@ -9,7 +10,7 @@ CC=sc
 	$(CC) -c $(CFLAGS) $*
 
 .d.obj:
-	..\mars $*
+	..\mars $(DFLAGS) $*
 
 .asm.obj:
 	$(CC) -c $*
@@ -26,7 +27,7 @@ OBJS= assert.obj deh.obj modulo.obj new.obj switch.obj complex.obj \
 	critical.obj interface.obj object.obj monitor.obj arraycat.obj invariant.obj \
 	dmain2.obj outofmemory.obj achar.obj aaAh4.obj adi.obj file.obj \
 	compiler.obj system.obj arraysetlength.obj minit.obj moduleinit.obj \
-	cast.obj syserror.obj filename.obj string.obj
+	cast.obj syserror.obj path.obj string.obj
 
 HDR=mars.h
 
@@ -34,7 +35,7 @@ SRC= modulo.c new.cpp switch.d complex.c critical.c fpu.d \
 	aa.c vaa.c interface.c arraysetlength.cpp minit.asm
 
 SRC2=deh.c object.d gc.d math.d stdio.d stdlib.d time.d monitor.c arraycat.d \
-	string.d windows.d filename.d
+	string.d windows.d path.d
 
 SRC3=winbase.d windef.d invariant.d assert.d RegExp.d dmain2.d dateparse.d \
 	outofmemory.d syserror.d
@@ -48,7 +49,7 @@ phobos.lib : $(OBJS) gc\dmgc.lib makefile
 	lib phobos /noi +interface+modulo+new+switch+monitor+string;
 	lib phobos /noi +arraycat+invariant+dmain2+achar+outofmemory;
 	lib phobos /noi +aaAh4+adi+file+compiler+system+syserror;
-	lib phobos /noi +minit+moduleinit+cast+filename+gc\dmgc.lib;
+	lib phobos /noi +minit+moduleinit+cast+path+gc\dmgc.lib;
 
 
 aaAh4.obj : aaAh4.d

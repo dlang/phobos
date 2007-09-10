@@ -1042,4 +1042,86 @@ unittest
 }
 
 
+/************************************
+ * Construct translation table for translate().
+ */
 
+char[] maketrans(char[] from, char[] to)
+    in
+    {
+	assert(from.length == to.length);
+    }
+    body
+    {
+	char[] t = new char[256];
+	int i;
+
+	for (i = 0; i < 256; i++)
+	    t[i] = cast(char)i;
+
+	for (i = 0; i < from.length; i++)
+	    t[from[i]] = to[i];
+
+	return t;
+    }
+
+/******************************************
+ * Translate characters in s[] using table created by maketrans().
+ * Delete chars in delchars[].
+ */
+
+char[] translate(char[] s, char[] transtab, char[] delchars)
+    in
+    {
+	assert(transtab.length == 256);
+    }
+    body
+    {
+	char[] r;
+	int i;
+	int count;
+	bit[256] deltab;
+
+	deltab[] = 0;
+	for (i = 0; i < delchars.length; i++)
+	    deltab[delchars[i]] = 1;
+
+	count = 0;
+	for (i = 0; i < s.length; i++)
+	{
+	    if (!deltab[s[i]])
+		count++;
+	}
+
+	r = new char[count];
+	count = 0;
+	for (i = 0; i < s.length; i++)
+	{   char c = s[i];
+
+	    if (!deltab[c])
+	    {
+		r[count] = transtab[c];
+		count++;
+	    }
+	}
+
+	return r;
+    }
+
+unittest
+{
+    debug(string) printf("string.translate.unittest\n");
+
+    char[] from = "abcdef";
+    char[] to   = "ABCDEF";
+    char[] s    = "The quick dog fox";
+    char[] t;
+    char[] r;
+    int i;
+
+    t = maketrans(from, to);
+    r = translate(s, t, "kg");
+    //printf("r = '%.*s'\n", r);
+    i = cmp(r, "ThE quiC Do Fox");
+    assert(i == 0);
+}
