@@ -55,8 +55,8 @@ struct GCBits
     }
     body
     {
-	return (cast(bit *)(data + 1))[i];
-	//return data[1 + (i >> BITS_SHIFT)] & (1 << (i & BITS_MASK));
+	//return (cast(bit *)(data + 1))[i];
+	return data[1 + (i >> BITS_SHIFT)] & (1 << (i & BITS_MASK));
     }
 
     void set(uint i)
@@ -66,8 +66,8 @@ struct GCBits
     }
     body
     {
-	(cast(bit *)(data + 1))[i] = 1;
-	//data[1 + (i >> BITS_SHIFT)] |= (1 << (i & BITS_MASK));
+	//(cast(bit *)(data + 1))[i] = 1;
+	data[1 + (i >> BITS_SHIFT)] |= (1 << (i & BITS_MASK));
     }
 
     void clear(uint i)
@@ -77,8 +77,8 @@ struct GCBits
     }
     body
     {
-	(cast(bit *)(data + 1))[i] = 0;
-	//data[1 + (i >> BITS_SHIFT)] &= ~(1 << (i & BITS_MASK));
+	//(cast(bit *)(data + 1))[i] = 0;
+	data[1 + (i >> BITS_SHIFT)] &= ~(1 << (i & BITS_MASK));
     }
 
     uint testClear(uint i)
@@ -102,13 +102,13 @@ struct GCBits
 	else
 	{   uint result;
 
-	    result = (cast(bit *)(data + 1))[i];
-	    (cast(bit *)(data + 1))[i] = 0;
+	    //result = (cast(bit *)(data + 1))[i];
+	    //(cast(bit *)(data + 1))[i] = 0;
 
-	    //uint *p = &data[1 + (i >> BITS_SHIFT)];
-	    //uint mask = (1 << (i & BITS_MASK));
-	    //result = *p & mask;
-	    //*p &= ~mask;
+	    uint *p = &data[1 + (i >> BITS_SHIFT)];
+	    uint mask = (1 << (i & BITS_MASK));
+	    result = *p & mask;
+	    *p &= ~mask;
 	    return result;
 	}
     }

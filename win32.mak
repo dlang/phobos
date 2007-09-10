@@ -73,7 +73,7 @@ OBJS= asserterror.obj deh.obj switch.obj complex.obj gcstats.obj \
 	socket.obj socketstream.obj loader.obj stdarg.obj format.obj stdio.obj \
 	perf.obj openrj.obj uni.obj winsock.obj oldsyserror.obj \
 	errno.obj boxer.obj cstream.obj charset.obj \
-	realtest.obj gamma.obj demangle.obj cover.obj \
+	realtest.obj gamma.obj demangle.obj cover.obj bitarray.obj \
 	ti_Aa.obj ti_Ag.obj ti_C.obj ti_int.obj ti_char.obj \
 	ti_wchar.obj ti_uint.obj ti_short.obj ti_ushort.obj \
 	ti_byte.obj ti_ubyte.obj ti_long.obj ti_ulong.obj ti_ptr.obj \
@@ -85,7 +85,9 @@ OBJS= asserterror.obj deh.obj switch.obj complex.obj gcstats.obj \
 	ti_Aint.obj ti_Auint.obj ti_Along.obj ti_Aulong.obj ti_Awchar.obj \
 	ti_Afloat.obj ti_Adouble.obj ti_Areal.obj \
 	ti_Acfloat.obj ti_Acdouble.obj ti_Acreal.obj \
-	ti_dchar.obj ti_Adchar.obj ti_bit.obj ti_Abit.obj ti_void.obj
+	ti_dchar.obj ti_Adchar.obj ti_void.obj
+
+#	ti_bit.obj ti_Abit.obj
 
 DOCS=	$(DOC)\std_path.html $(DOC)\std_math.html $(DOC)\std_outbuffer.html \
 	$(DOC)\std_stream.html $(DOC)\std_string.html $(DOC)\std_base64.html \
@@ -97,6 +99,7 @@ DOCS=	$(DOC)\std_path.html $(DOC)\std_math.html $(DOC)\std_outbuffer.html \
 	$(DOC)\std_utf.html \
 	$(DOC)\std_cover.html \
 	$(DOC)\std_regexp.html \
+	$(DOC)\std_bitarray.html \
 	$(DOC)\std_stdio.html \
 	$(DOC)\std_windows_charset.html
 
@@ -111,17 +114,17 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 	std\regexp.d std\random.d std\stream.d std\process.d std\recls.d \
 	std\socket.d std\socketstream.d std\loader.d std\stdarg.d std\format.d \
 	std\stdio.d std\perf.d std\openrj.d std\uni.d std\boxer.d \
-	std\cstream.d std\demangle.d std\cover.d
+	std\cstream.d std\demangle.d std\cover.d std\bitarray.d
 
 SRC_STD_C= std\c\process.d std\c\stdlib.d std\c\time.d std\c\stdio.d \
-	std\c\math.d std\c\stdarg.d std\c\stddef.d
+	std\c\math.d std\c\stdarg.d std\c\stddef.d std\c\fenv.d
 
 SRC_TI=	\
 	std\typeinfo\ti_wchar.d std\typeinfo\ti_uint.d \
 	std\typeinfo\ti_short.d std\typeinfo\ti_ushort.d \
 	std\typeinfo\ti_byte.d std\typeinfo\ti_ubyte.d \
 	std\typeinfo\ti_long.d std\typeinfo\ti_ulong.d \
-	std\typeinfo\ti_ptr.d std\typeinfo\ti_bit.d \
+	std\typeinfo\ti_ptr.d \
 	std\typeinfo\ti_float.d std\typeinfo\ti_double.d \
 	std\typeinfo\ti_real.d std\typeinfo\ti_delegate.d \
 	std\typeinfo\ti_creal.d std\typeinfo\ti_ireal.d \
@@ -139,7 +142,9 @@ SRC_TI=	\
 	std\typeinfo\ti_Acfloat.d std\typeinfo\ti_Acdouble.d \
 	std\typeinfo\ti_Acreal.d \
 	std\typeinfo\ti_Awchar.d std\typeinfo\ti_dchar.d \
-	std\typeinfo\ti_Abit.d std\typeinfo\ti_void.d
+	std\typeinfo\ti_void.d
+
+#	std\typeinfo\ti_bit.d std\typeinfo\ti_Abit.d
 
 SRC_INT=	\
 	internal\switch.d internal\complex.c internal\critical.c \
@@ -459,6 +464,9 @@ asserterror.obj : std\asserterror.d
 base64.obj : std\base64.d
 	$(DMD) -c $(DFLAGS) -inline std\base64.d
 
+bitarray.obj : std\bitarray.d
+	$(DMD) -c $(DFLAGS) -inline std\bitarray.d
+
 boxer.obj : std\boxer.d
 	$(DMD) -c $(DFLAGS) std\boxer.d
 
@@ -767,6 +775,9 @@ ti_int.obj : std\typeinfo\ti_int.d
 
 $(DOC)\std_base64.html : std.ddoc std\base64.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_base64.html std.ddoc std\base64.d
+
+$(DOC)\std_bitarray.html : std.ddoc std\bitarray.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_bitarray.html std.ddoc std\bitarray.d
 
 $(DOC)\std_compiler.html : std.ddoc std\compiler.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_compiler.html std.ddoc std\compiler.d

@@ -33,7 +33,7 @@
  *	$(LINK2 http://www.ietf.org/rfc/rfc3986.txt, RFC 3986)<br>
  *	$(LINK2 http://en.wikipedia.org/wiki/Uniform_resource_identifier, Wikipedia)
  * Macros:
- *	WIKI = StdUri
+ *	WIKI = Phobos/StdUri
  */
 
 module std.uri;

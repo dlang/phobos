@@ -3,7 +3,7 @@
  * It's comparable to C99's vsprintf().
  *
  * Macros:
- *	WIKI = StdFormat
+ *	WIKI = Phobos/StdFormat
  */
 
 /*
@@ -37,8 +37,6 @@ import std.stdarg;	// caller will need va_list
 private import std.utf;
 private import std.c.stdlib;
 private import std.string;
-
-alias bool bit;
 
 version (Windows)
 {

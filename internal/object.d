@@ -5,7 +5,7 @@
  *
  * This module is implicitly imported.
  * Macros:
- *	WIKI = Object
+ *	WIKI = Phobos/Object
  */
 
 /*

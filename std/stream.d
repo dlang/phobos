@@ -1,6 +1,6 @@
 /**
  * Macros:
- *	WIKI = StdStream
+ *	WIKI = Phobos/StdStream
  */
 
 /*

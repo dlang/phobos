@@ -1,7 +1,7 @@
 
 /**
  * Macros:
- *	WIKI = StdPath
+ *	WIKI = Phobos/StdPath
  * Copyright:
  *	Placed into public domain.
  *	www.digitalmars.com

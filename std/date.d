@@ -4,7 +4,7 @@
  * around a central type, d_time, from which other formats are converted to and
  * from.
  * Macros:
- *	WIKI = StdDate
+ *	WIKI = Phobos/StdDate
  */
 
 // Copyright (c) 1999-2005 by Digital Mars

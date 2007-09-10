@@ -12,7 +12,7 @@
  *	)
  *
  * Macros:
- *	WIKI = StdZip
+ *	WIKI = Phobos/StdZip
  */
 
 module std.zip;

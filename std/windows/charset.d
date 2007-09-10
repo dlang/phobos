@@ -3,7 +3,7 @@
 /**
  * Support UTF-8 on Windows 95, 98 and ME systems.
  * Macros:
- *	WIKI = StdWindowsCharset
+ *	WIKI = Phobos/StdWindowsCharset
  */
 
 module std.windows.charset;

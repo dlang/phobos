@@ -1,6 +1,6 @@
 /**
  * Macros:
- *	WIKI = StdRandom
+ *	WIKI = Phobos/StdRandom
  */
 
 // random.d

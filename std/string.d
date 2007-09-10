@@ -11,7 +11,7 @@
  * are done, the returned string is a copy.
  *
  * Macros:
- *	WIKI = StdString
+ *	WIKI = Phobos/StdString
  * Copyright:
  *	Public Domain
  */

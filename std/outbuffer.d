@@ -4,7 +4,7 @@
  * Boilerplate:
  *	$(std_boilerplate.html)
  * Macros:
- *	WIKI = StdOutbuffer
+ *	WIKI = Phobos/StdOutbuffer
  * Copyright:
  *	Copyright (c) 2001-2005 by Digital Mars
  *	All Rights Reserved

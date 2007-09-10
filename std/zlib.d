@@ -5,7 +5,7 @@
  *	$(LINK2 http://en.wikipedia.org/wiki/Zlib, Wikipedia)
  *
  * Macros:
- *	WIKI = StdZlib
+ *	WIKI = Phobos/StdZlib
  */
 
 

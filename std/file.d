@@ -1,6 +1,6 @@
 /**
  * Macros:
- *	WIKI = StdFile
+ *	WIKI = Phobos/StdFile
  */
 
 /*

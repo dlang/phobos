@@ -1,7 +1,7 @@
 /****
  * Demangle D mangled names.
  * Macros:
- *	WIKI = StdDemangle
+ *	WIKI = Phobos/StdDemangle
  */
 
 /* Author:

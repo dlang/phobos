@@ -2,7 +2,7 @@
 
 /**
  * Macros:
- *	WIKI = StdMath
+ *	WIKI = Phobos/StdMath
  *
  *	TABLE_SV = <table border=1 cellpadding=4 cellspacing=0>
  *		<caption>Special Values</caption>

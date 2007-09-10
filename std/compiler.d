@@ -1,7 +1,7 @@
 
 /**
  * Macros:
- *	WIKI = StdCompiler
+ *	WIKI = Phobos/StdCompiler
  */
 
 /**

@@ -2,7 +2,7 @@
  * Encodes/decodes MIME base64 data.
  *
  * Macros:
- *	WIKI=StdBase64
+ *	WIKI=Phobos/StdBase64
  * References:
  *	<a href="http://en.wikipedia.org/wiki/Base64">Wikipedia Base64</a>$(BR)
  *	<a href="http://www.ietf.org/rfc/rfc2045.txt">RFC 2045</a>$(BR)

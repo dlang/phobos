@@ -29,7 +29,7 @@
  *	$(LI inline asm statements are not counted)
  *	)
  * Macros:
- *	WIKI = StdCover
+ *	WIKI = Phobos/StdCover
  */
 
 module std.cover;
