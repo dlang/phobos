@@ -60,7 +60,7 @@ OBJS = asserterror.o deh2.o switch.o complex.o gcstats.o \
 	socket.o socketstream.o stdarg.o stdio.o format.o \
 	perf.o openrj.o uni.o trace.o boxer.o \
 	demangle.o cover.o bitarray.o bind.o aApplyR.o \
-	signals.o cpuid.o traits.o typetuple.o \
+	signals.o cpuid.o traits.o typetuple.o loader.o \
 	c_stdio.o \
 	ti_wchar.o ti_uint.o ti_short.o ti_ushort.o \
 	ti_byte.o ti_ubyte.o ti_long.o ti_ulong.o ti_ptr.o \
@@ -356,6 +356,9 @@ format.o : std/format.d
 
 gc.o : std/gc.d
 	$(DMD) -c $(DFLAGS) std/gc.d
+
+loader.o : std/loader.d
+	$(DMD) -c $(DFLAGS) std/loader.d
 
 math.o : std/math.d
 	$(DMD) -c $(DFLAGS) std/math.d

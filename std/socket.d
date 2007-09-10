@@ -1,3 +1,5 @@
+// Written in the D programming language
+
 /*
 	Copyright (C) 2004-2005 Christopher E. Miller
 	
@@ -752,44 +754,21 @@ extern(C) struct timeval
 class SocketSet
 {
 	private:
-	uint nbytes; // Win32: excludes uint.sizeof "count".
-	byte* buf;
+	uint maxsockets; /// max desired sockets, the fd_set might be capable of holding more
+	fd_set set;
 	
 	
 	version(Win32)
 	{
 		uint count()
 		{
-			return *(cast(uint*)buf);
-		}
-		
-		
-		void count(int setter)
-		{
-			*(cast(uint*)buf) = setter;
-		}
-		
-		
-		socket_t* first()
-		{
-			return cast(socket_t*)(buf + uint.sizeof);
+			return set.fd_count;
 		}
 	}
 	else version(BsdSockets)
 	{
-		int maxfd = -1;
-		
-		
-		socket_t* first()
-		{
-			return cast(socket_t*)buf;
-		}
-	}
-	
-	
-	fd_set* _fd_set()
-	{
-		return cast(fd_set*)buf;
+		int maxfd;
+		uint count;
 	}
 	
 	
@@ -798,19 +777,8 @@ class SocketSet
 	/// Set the maximum amount of sockets that may be added.
 	this(uint max)
 	{
-		version(Win32)
-		{
-			nbytes = max * socket_t.sizeof;
-			buf = (new byte[nbytes + uint.sizeof]).ptr;
-			count = 0;
-		}
-		else version(BsdSockets)
-		{
-			nbytes = max / NFDBITS * socket_t.sizeof;
-			if(max % NFDBITS)
-				nbytes += socket_t.sizeof;
-			buf = (new byte[nbytes]).ptr; // new initializes to 0.
-		}
+		maxsockets = max;
+		reset();
 	}
 	
 	/// Uses the default maximum for the system.
@@ -822,14 +790,12 @@ class SocketSet
 	/// Reset the SocketSet so that there are 0 Sockets in the collection.	
 	void reset()
 	{
-		version(Win32)
-		{
-			count = 0;
-		}
-		else version(BsdSockets)
+		FD_ZERO(&set);
+		
+		version(BsdSockets)
 		{
 			maxfd = -1;
-			buf[0 .. nbytes] = 0;
+			count = 0;
 		}
 	}
 	
@@ -838,21 +804,19 @@ class SocketSet
 	in
 	{
 		// Make sure too many sockets don't get added.
-		version(Win32)
+		assert(count < maxsockets);
+		version(BsdSockets)
 		{
-			assert(count < max);
-		}
-		else version(BsdSockets)
-		{
-			assert(FDELT(s) < nbytes / socket_t.sizeof);
+			assert(FDELT(s) < (FD_SETSIZE / NFDBITS));
 		}
 	}
 	body
 	{
-		FD_SET(s, _fd_set);
+		FD_SET(s, &set);
 		
 		version(BsdSockets)
 		{
+			++count;
 			if(s > maxfd)
 				maxfd = s;
 		}
@@ -866,7 +830,12 @@ class SocketSet
 	
 	void remove(socket_t s)
 	{
-		FD_CLR(s, _fd_set);
+		FD_CLR(s, &set);
+		version(BsdSockets)
+		{
+			--count;
+			// note: adjusting maxfd would require scanning the set, not worth it
+		}
 	}
 	
 	
@@ -878,7 +847,7 @@ class SocketSet
 	
 	int isSet(socket_t s)
 	{
-		return FD_ISSET(s, _fd_set);
+		return FD_ISSET(s, &set);
 	}
 	
 	
@@ -892,24 +861,13 @@ class SocketSet
 	/// Return maximum amount of sockets that can be added, like FD_SETSIZE.
 	uint max()
 	{
-		version(Win32)
-		{
-			return nbytes / socket_t.sizeof;
-		}
-		else version(BsdSockets)
-		{
-			return nbytes / socket_t.sizeof * NFDBITS;
-		}
-		else
-		{
-			static assert(0);
-		}
+		return maxsockets;
 	}
 	
 	
 	fd_set* toFd_set()
 	{
-		return _fd_set;
+		return &set;
 	}
 	
 	
@@ -917,7 +875,7 @@ class SocketSet
 	{
 		version(Win32)
 		{
-			return 0;
+			return count;
 		}
 		else version(BsdSockets)
 		{

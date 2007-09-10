@@ -1,3 +1,6 @@
+
+// Written in the D programming language.
+
 /* /////////////////////////////////////////////////////////////////////////////
  * File:        loader.d (originally from synsoft.win32.loader)
  *
@@ -71,18 +74,11 @@ version(Windows)
 }
 else version(linux)
 {
+    private import std.c.linux.linux;
+
     extern(C)
     {
-        const int RTLD_NOW  =   0x00002; /* Correct for Red Hat 8 */
-
-        typedef void    *HModule_;
-
-        HModule_    dlopen(char *path, int mode);
-        int         dlclose(HModule_ handle);
-        void        *dlsym(HModule_ handle, char *symbolName);
-        char        *dlerror();
-
-	char* strerror(int);
+	alias void* HModule_;
     }
 }
 else
@@ -312,7 +308,8 @@ else version(linux)
     }
     body
     {
-        ExeModuleInfo   mi = s_modules[moduleName];
+	ExeModuleInfo*   mi_p = moduleName in s_modules;
+	ExeModuleInfo   mi = mi_p is null ? null : *mi_p;
 
         if(null !is mi)
         {
@@ -330,11 +327,11 @@ else version(linux)
             }
             else
             {
-                ExeModuleInfo   mi  =   new ExeModuleInfo(hmod, moduleName);
+                ExeModuleInfo   mi2  =   new ExeModuleInfo(hmod, moduleName);
 
-                s_modules[moduleName]   =   mi;
+                s_modules[moduleName]   =   mi2;
 
-                return cast(HXModule)mi;
+                return cast(HXModule)mi2;
             }
         }
     }
@@ -391,7 +388,7 @@ else version(linux)
             {
                 record_error_();
             }
-            delete s_modules[name];
+            s_modules.remove(name);
             delete mi;
         }
 

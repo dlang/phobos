@@ -1,4 +1,3 @@
-
 // Written in the D programming language.
 
 /*
@@ -14,6 +13,7 @@
 /* Authors:
  *	Walter Bright, Digital Mars, www.digitalmars.com
  *	Thomas Kuehne
+ *	Frits van Bommel
  */
 
 module std.demangle;
@@ -97,7 +97,7 @@ string demangle(string name)
 	    error();
 	return cast(ubyte)
 	      ( (c >= 'a') ? c - 'a' + 10 :
-	        (c >= 'A') ? c - 'A' + 10 :
+		(c >= 'A') ? c - 'A' + 10 :
 			     c - '0'
 	      );
     }
@@ -172,6 +172,7 @@ string demangle(string name)
     {
 	//writefln("parseType() %d", ni);
 	int isdelegate = 0;
+	bool hasthisptr = false; /// For function/delegate types: expects a 'this' pointer as last argument
       Lagain:
 	if (ni >= name.length)
 	    error();
@@ -179,8 +180,7 @@ string demangle(string name)
 	switch (name[ni++])
 	{
 	    case 'v':	p = "void";	goto L1;
-	    case 'b':	p = "bit";	goto L1;
-	    case 'x':	p = "bool";	goto L1;
+	    case 'b':	p = "bool";	goto L1;
 	    case 'g':	p = "byte";	goto L1;
 	    case 'h':	p = "ubyte";	goto L1;
 	    case 's':	p = "short";	goto L1;
@@ -227,6 +227,10 @@ string demangle(string name)
 		isdelegate = 1;
 		goto Lagain;
 
+	    case 'M':
+		hasthisptr = true;
+		goto Lagain;
+
 	    case 'F':				// D function
 	    case 'U':				// C function
 	    case 'W':				// Windows function
@@ -244,7 +248,8 @@ string demangle(string name)
 			break;
 		    if (c == 'X')
 		    {
-		        args ~= " ...";
+			if (!args.length) error();
+			args ~= " ...";
 			break;
 		    }
 		    if (args.length)
@@ -275,6 +280,12 @@ string demangle(string name)
 			    break;
 		    }
 		    break;
+		}
+		if (hasthisptr || isdelegate) {
+		    // add implicit 'this'/context pointer
+		    if (args.length)
+			args ~= ", ";
+		    args ~= "void*";
 		}
 		ni++;
 		if (!isdelegate && identifier.length)
@@ -414,9 +425,8 @@ string demangle(string name)
 			    for (i = 0; i < n; i++)
 			    {	char c;
 
-				c = cast(char)
-					((ascii2hex(name[ni + i * 2]) << 4) +
-					 ascii2hex(name[ni + i * 2 + 1]));
+				c = (ascii2hex(name[ni + i * 2]) << 4) +
+				     ascii2hex(name[ni + i * 2 + 1]);
 				result ~= c;
 			    }
 			    ni += n * 2;
@@ -461,6 +471,10 @@ string demangle(string name)
     {
 	auto result = parseQualifiedName();
 	result = parseType(result);
+	while(ni < name.length){
+		result ~= " . " ~ parseType(parseQualifiedName());
+	}
+
 	if (ni != name.length)
 	    goto Lnot;
 	return result;
@@ -503,5 +517,7 @@ unittest
 	assert(r == name[1]);
     }
 }
+
+
 
 

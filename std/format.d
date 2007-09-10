@@ -1,3 +1,6 @@
+
+// Written in the D programming language.
+
 /**
  * This module implements the workhorse functionality for string and I/O formatting.
  * It's comparable to C99's vsprintf().
@@ -917,6 +920,8 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
 
 	    case Mangle.Tstruct:
 	    {	TypeInfo_Struct tis = cast(TypeInfo_Struct)ti;
+		if (tis.xtoString is null)
+		    throw new FormatError("Can't convert " ~ tis.toString() ~ " to string: \"string toString()\" not defined");
 		s = tis.xtoString(argptr);
 		argptr += (tis.tsize() + 3) & ~3;
 		goto Lputstr;
