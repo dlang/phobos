@@ -354,7 +354,7 @@ else
 	fprintf(fplog,"%7d\t%3lld.%07lld\t%3lld.%07lld\t%3lld.%07lld\t%.*s\n",
 	    calls,tl,tr,fl,fr,pl,pr,id);
 }
-	if (id !== s.Sident)
+	if (id !is s.Sident)
 	    free(id);
     }
 }

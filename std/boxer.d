@@ -136,11 +136,11 @@ struct Box
         
         TypeInfo_Class ca = cast(TypeInfo_Class) type, cb = cast(TypeInfo_Class) test;
         
-        if (ca !== null && cb !== null)
+        if (ca !is null && cb !is null)
         {
             ClassInfo ia = (*cast(Object *) data).classinfo, ib = cb.info;
             
-            for ( ; ia !== null; ia = ia.base)
+            for ( ; ia !is null; ia = ia.base)
                 if (ia is ib)
                     return true;
             return false;
@@ -320,7 +320,7 @@ body
 Box box(TypeInfo type, void* data)
 in
 {
-    assert(type !== null);
+    assert(type !is null);
 }
 body
 {
@@ -407,7 +407,7 @@ private template unboxCastReal(T)
 {
     T unboxCastReal(Box value)
     {
-        assert (value.type !== null);
+        assert (value.type !is null);
         
         if (value.type is typeid(float))
             return cast(T) *cast(float*) value.data;
@@ -424,7 +424,7 @@ private template unboxCastInteger(T)
 {
     T unboxCastInteger(Box value)
     {
-        assert (value.type !== null);
+        assert (value.type !is null);
         
         if (value.type is typeid(int))
             return cast(T) *cast(int*) value.data;
@@ -453,7 +453,7 @@ private template unboxCastComplex(T)
 {
     T unboxCastComplex(Box value)
     {
-        assert (value.type !== null);
+        assert (value.type !is null);
         
         if (value.type is typeid(cfloat))
             return cast(T) *cast(cfloat*) value.data;
@@ -476,7 +476,7 @@ private template unboxCastImaginary(T)
 {
     T unboxCastImaginary(Box value)
     {
-        assert (value.type !== null);
+        assert (value.type !is null);
         
         if (value.type is typeid(ifloat))
             return cast(T) *cast(ifloat*) value.data;
@@ -499,7 +499,7 @@ template unbox(T)
 {
     T unbox(Box value)
     {
-        assert (value.type !== null);
+        assert (value.type !is null);
         
         if (typeid(T) is value.type)
             return *cast(T*) value.data;
@@ -529,7 +529,7 @@ template unbox(T : Object)
 {
     T unbox(Box value)
     {
-        assert (value.type !== null);
+        assert (value.type !is null);
         
         if (typeid(T) == value.type || cast(TypeInfo_Class) value.type)
         {
@@ -553,7 +553,7 @@ template unbox(T : T[])
 {
     T[] unbox(Box value)
     {
-        assert (value.type !== null);
+        assert (value.type !is null);
         
         if (typeid(T[]) is value.type)
             return *cast(T[]*) value.data;
@@ -567,7 +567,7 @@ template unbox(T : T*)
 {
     T* unbox(Box value)
     {
-        assert (value.type !== null);
+        assert (value.type !is null);
         
         if (typeid(T*) is value.type)
             return *cast(T**) value.data;
@@ -584,7 +584,7 @@ template unbox(T : void*)
 {
     T unbox(Box value)
     {
-        assert (value.type !== null);
+        assert (value.type !is null);
         
         if (cast(TypeInfo_Pointer) value.type)
             return *cast(void**) value.data;
@@ -689,7 +689,7 @@ unittest
     assert(array.length == 3);
     assert(unboxTest!(int)(array[0]) == 16);
     assert(unboxTest!(char[])(array[1]) == "foobar");
-    assert(unboxTest!(Object)(array[2]) !== null);
+    assert(unboxTest!(Object)(array[2]) !is null);
     
     /* Convert the box array back into arguments. */
     TypeInfo[] array_types;
@@ -724,7 +724,7 @@ unittest
     assert (box(1) == box(true));
  
     /* Assert that unboxing to an object works properly. */
-    assert (unboxTest!(B)(box(cast(A)new B)) !== null);
+    assert (unboxTest!(B)(box(cast(A)new B)) !is null);
     
     /* Assert that illegal object casting fails properly. */   
     assert (fails(delegate void() { unboxTest!(B)(box(new A)); }));

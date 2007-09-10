@@ -37,6 +37,7 @@ import std.regexp;
 import std.random;
 import std.date;
 import std.dateparse;
+import std.cstream;
 import std.stream;
 import std.utf;
 import std.uri;
@@ -67,7 +68,8 @@ printf("test2\n");
     a.reverse;				// adi
     a.sort;				// qsort
     std.date.getUTCtime();			// date
-    StreamError se = new StreamError("");	// stream
+    Exception e = new ReadException(""); // stream
+    din.eof();                           // cstream
     isValidDchar(cast(dchar)0);			// utf
     std.uri.ascii2hex(0);			// uri
     std.zlib.adler32(0,null);			// D.zlib

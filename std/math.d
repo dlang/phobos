@@ -334,9 +334,10 @@ SC17:	fprem1				;
 	jp	SC17			;
 	fstp	ST(1)			; // remove pi from stack
 	jmp	SC18			;
-    }
 
 trigerr:
+	fstp	ST(0)			; // dump theta
+    }
     return real.nan;
 
 Lret:

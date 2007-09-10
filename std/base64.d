@@ -75,7 +75,8 @@ body
 	sp = &str[0];
 	for(stri = 0; stri != strmax; stri++)
 	{
-		x = (*sp++ << 16) | (*sp++ << 8) | (*sp++);
+		x = (sp[0] << 16) | (sp[1] << 8) | (sp[2]);
+		sp+= 3;
 		*bp++ = array[(x & 0b11111100_00000000_00000000) >> 18];
 		*bp++ = array[(x & 0b00000011_11110000_00000000) >> 12];
 		*bp++ = array[(x & 0b00000000_00001111_11000000) >> 6];
@@ -85,7 +86,8 @@ body
 	switch(strleft)
 	{
 		case 2:
-			x = (*sp++ << 16) | (*sp++ << 8);
+			x = (sp[0] << 16) | (sp[1] << 8);
+			sp += 2;
 			*bp++ = array[(x & 0b11111100_00000000_00000000) >> 18];
 			*bp++ = array[(x & 0b00000011_11110000_00000000) >> 12];
 			*bp++ = array[(x & 0b00000000_00001111_11000000) >> 6];
@@ -180,8 +182,9 @@ body
 	bp = &buf[0];
 	for(estri = 0; estri != estrmax; estri++)
 	{
-		x = arrayIndex(*sp++) << 18 | arrayIndex(*sp++) << 12;
-		
+		x = arrayIndex(sp[0]) << 18 | arrayIndex(sp[1]) << 12;
+		sp += 2;
+
 		ch = *sp++;
 		if(ch == '=')
 		{

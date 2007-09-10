@@ -233,6 +233,47 @@ void *_aaGet(aaA*[] *aa, TypeInfo keyti, int valuesize, ...)
 
 
 /*************************************************
+ * Get pointer to value in associative array indexed by key.
+ * Returns null if it is not already there.
+ */
+
+void *_aaGetRvalue(aaA*[] aa, TypeInfo keyti, int valuesize, ...)
+    {
+	void *pkey = cast(void *)(&valuesize + 1);
+	uint key_hash;
+	uint i;
+	aaA *e;
+	aaA **pe;
+	int keysize = keyti.tsize();
+
+	if (aa.length)
+	{
+	    key_hash = keyti.getHash(pkey);
+	    //printf("hash = %d\n", key_hash);
+	    i = (key_hash % (aa.length - 1)) + 1;
+	    pe = &aa[i];
+	    while ((e = *pe) != null)
+	    {   int c;
+
+		c = key_hash - e.hash;
+		if (c == 0)
+		{
+		    c = keyti.compare(pkey, e + 1);
+		    if (c == 0)
+			return cast(void *)(e + 1) + keysize;
+		}
+
+		if (c < 0)
+		    pe = &e.left;
+		else
+		    pe = &e.right;
+	    }
+	}
+	return null;	// not found, caller will throw exception
+    }
+
+
+/*************************************************
  * Determine if key is in aa.
  * Returns:
  *	null	not in aa

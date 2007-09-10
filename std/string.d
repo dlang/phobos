@@ -199,12 +199,6 @@ deprecated char* toCharz(char[] string)
 char* toStringz(char[] string)
     in
     {
-	if (string)
-	{
-	    // No embedded 0's
-	    for (uint i = 0; i < string.length; i++)
-		assert(string[i] != 0);
-	}
     }
     out (result)
     {
@@ -902,7 +896,7 @@ unittest
 
     s2 = toupper(s1);
     assert(cmp(s2, "FOL") == 0);
-    assert(s2 !== s1);
+    assert(s2 !is s1);
 }
 
 
@@ -958,7 +952,7 @@ unittest
 
     s2 = capitalize(s1);
     assert(cmp(s2, "Fol") == 0);
-    assert(s2 !== s1);
+    assert(s2 !is s1);
 
     s2 = capitalize(s1[0 .. 2]);
     assert(cmp(s2, "Fo") == 0);
@@ -967,7 +961,7 @@ unittest
     s1 = "fOl";
     s2 = capitalize(s1);
     assert(cmp(s2, "Fol") == 0);
-    assert(s2 !== s1);
+    assert(s2 !is s1);
 }
 
 

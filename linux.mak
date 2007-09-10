@@ -51,7 +51,7 @@ OBJS= asserterror.o deh2.o switch.o complex.o gcstats.o \
 	compiler.o system.o moduleinit.o md5.o base64.o \
 	cast.o path.o string.o memset.o math.o mmfile.o \
 	outbuffer.o ctype.o regexp.o random.o linux.o linuxsocket.o \
-	stream.o switcherr.o array.o gc.o \
+	stream.o cstream.o switcherr.o array.o gc.o \
 	qsort.o thread.o obj.o utf.o uri.o \
 	crc32.o conv.o arraycast.o errno.o alloca.o cmath2.o \
 	process.o syserror.o \
@@ -99,7 +99,7 @@ SRC_STD= std/zlib.d std/zip.d std/stdint.d std/conv.d std/utf.d std/uri.d \
 	std/regexp.d std/random.d std/stream.d std/process.d std/recls.d \
 	std/socket.d std/socketstream.d std/loader.d std/stdarg.d \
 	std/stdio.d std/format.d std/perf.d std/openrj.d std/uni.d \
-	std/boxer.d
+	std/boxer.d std/cstream.d
 
 SRC_STD_C= std/c/process.d std/c/stdlib.d std/c/time.d std/c/stdio.d \
 	std/c/math.d std/c/stdarg.d std/c/stddef.d
@@ -481,6 +481,9 @@ compiler.o : std/compiler.d
 conv.o : std/conv.d
 	$(DMD) -c $(DFLAGS) std/conv.d
 
+cstream.o : std/cstream.d
+	$(DMD) -c $(DFLAGS) std/cstream.d
+
 ctype.o : std/ctype.d
 	$(DMD) -c $(DFLAGS) std/ctype.d
 
@@ -551,7 +554,7 @@ stdio.o : std/stdio.d
 	$(DMD) -c $(DFLAGS) std/stdio.d
 
 stream.o : std/stream.d
-	$(DMD) -c $(DFLAGS) std/stream.d
+	$(DMD) -c $(DFLAGS) -d std/stream.d
 
 string.o : std/string.d
 	$(DMD) -c $(DFLAGS) std/string.d

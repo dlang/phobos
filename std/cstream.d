@@ -1,0 +1,147 @@
+// Written by Ben Hinkle and put in the public domain.
+
+import std.stream;
+import std.c.stdio;
+
+// wraps a FILE* in a stream class
+class CFile : Stream {
+  FILE* cfile;
+
+  // Construct a CFile from the given FILE* with mode and optional seekable state
+  this(FILE* cfile, FileMode mode, bool seekable = false) {
+    super();
+    this.file = cfile;
+    readable = cast(bit)(mode & FileMode.In);
+    writeable = cast(bit)(mode & FileMode.Out);
+    this.seekable = seekable;
+  }
+
+  ~this() { close(); }
+
+  FILE* file() { return cfile; }
+  void file(FILE* cfile) {
+    this.cfile = cfile; 
+    isopen = true;
+  }
+
+  override void flush() { fflush(cfile); }
+  override void close() { 
+    if (isopen)
+      fclose(cfile); 
+    isopen = readable = writeable = seekable = false; 
+  }
+  override bool eof() { 
+    return cast(bool)(readEOF || feof(cfile)); 
+  }
+  override char getc() { 
+    return cast(char)fgetc(cfile); 
+  }
+  override char ungetc(char c) { 
+    return cast(char)std.c.stdio.ungetc(c,cfile); 
+  }
+  override size_t readBlock(void* buffer, size_t size) {
+    size_t n = fread(buffer,1,size,cfile);
+    readEOF = cast(bit)(n == 0);
+    return n;
+  }
+  override size_t writeBlock(void* buffer, size_t size) {
+    return fwrite(buffer,1,size,cfile);
+  }
+  override ulong seek(long offset, SeekPos rel) {
+    readEOF = false;
+    if (fseek(cfile,cast(int)offset,rel) != 0)
+      throw new SeekException("unable to move file pointer");
+    return ftell(cfile);
+  }
+  override void writeLine(char[] s) {
+    writeString(s);
+    writeString("\n");
+  }
+  override void writeLineW(wchar[] s) {
+    writeStringW(s);
+    writeStringW("\n");
+  }
+  // run a few tests
+  unittest {
+    FILE* f = fopen("stream.txt","w");
+    assert(f !is null);
+    CFile file = new CFile(f,FileMode.Out);
+    int i = 666;
+    // should be ok to write
+    assert(file.writeable);
+    file.writeLine("Testing stream.d:");
+    file.writeString("Hello, world!");
+    file.write(i);
+    // string#1 + string#2 + int should give exacly that
+    version (Win32)
+      assert(file.position() == 19 + 13 + 4);
+    version (linux)
+      assert(file.position() == 18 + 13 + 4);
+    file.close();
+    // no operations are allowed when file is closed
+    assert(!file.readable && !file.writeable && !file.seekable);
+    f = fopen("stream.txt","r");
+    file = new CFile(f,FileMode.In,true);
+    // should be ok to read
+    assert(file.readable);
+    char[] line = file.readLine();
+    char[] exp = "Testing stream.d:";
+    assert(line[0] == 'T');
+    assert(line.length == exp.length);
+    assert(!std.string.cmp(line, "Testing stream.d:"));
+    // jump over "Hello, "
+    file.seek(7, SeekPos.Current);
+    version (Win32)
+      assert(file.position() == 19 + 7);
+    version (linux)
+      assert(file.position() == 18 + 7);
+    assert(!std.string.cmp(file.readString(6), "world!"));
+    i = 0; file.read(i);
+    assert(i == 666);
+    // string#1 + string#2 + int should give exacly that
+    version (Win32)
+      assert(file.position() == 19 + 13 + 4);
+    version (linux)
+      assert(file.position() == 18 + 13 + 4);
+    // we must be at the end of file
+    file.close();
+    f = fopen("stream.txt","w+");
+    file = new CFile(f,FileMode.In|FileMode.Out,true);
+    file.writeLine("Testing stream.d:");
+    file.writeLine("Another line");
+    file.writeLine("");
+    file.writeLine("That was blank");
+    file.position = 0;
+    char[][] lines;
+    foreach(char[] line; file) {
+      lines ~= line.dup;
+    }
+    assert( lines.length == 5 );
+    assert( lines[0] == "Testing stream.d:");
+    assert( lines[1] == "Another line");
+    assert( lines[2] == "");
+    assert( lines[3] == "That was blank");
+    file.position = 0;
+    lines = new char[][5];
+    foreach(ulong n, char[] line; file) {
+      lines[n-1] = line.dup;
+    }
+    assert( lines[0] == "Testing stream.d:");
+    assert( lines[1] == "Another line");
+    assert( lines[2] == "");
+    assert( lines[3] == "That was blank");
+    file.close();
+    remove("stream.txt");
+  }
+}
+
+// standard IO devices
+CFile din, dout, derr;
+
+static this() {
+  // open standard I/O devices
+  din = new CFile(std.c.stdio.stdin,FileMode.In);
+  dout = new CFile(std.c.stdio.stdout,FileMode.Out);
+  derr = new CFile(std.c.stdio.stderr,FileMode.Out);
+}
+

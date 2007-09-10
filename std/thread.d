@@ -228,7 +228,7 @@ class Thread
 	    {   Thread t;
 
 		t = allThreads[i];
-		if (t && t !== tthis && t.state == TS.RUNNING)
+		if (t && t !is tthis && t.state == TS.RUNNING)
 		    t.pause();
 	    }
 	}
@@ -244,7 +244,7 @@ class Thread
 	    {   Thread t;
 
 		t = allThreads[i];
-		if (t && t !== tthis && t.state == TS.RUNNING)
+		if (t && t !is tthis && t.state == TS.RUNNING)
 		    t.resume();
 	    }
 	}
@@ -664,7 +664,7 @@ class Thread
 	    {   Thread t;
 
 		t = allThreads[i];
-		if (t && t !== tthis && t.state == TS.RUNNING)
+		if (t && t !is tthis && t.state == TS.RUNNING)
 		{   int result;
 
 		    result = pthread_kill(t.id, SIGUSR1);
@@ -693,7 +693,7 @@ class Thread
 	    {   Thread t;
 
 		t = allThreads[i];
-		if (t && t !== tthis && t.state == TS.RUNNING)
+		if (t && t !is tthis && t.state == TS.RUNNING)
 		    t.resume();
 	    }
 	}
@@ -776,7 +776,24 @@ class Thread
 
 	t.state = TS.RUNNING;
 	t.id = pthread_self();
-	t.stackBottom = cast(void*)__libc_stack_end;
+
+	version (none)
+	{
+	    // See discussion: http://autopackage.org/forums/viewtopic.php?t=22
+	    static void** libc_stack_end;
+
+	    if (libc_stack_end == libc_stack_end.init)
+	    {
+		void* handle = dlopen(null, RTLD_NOW);
+		libc_stack_end = cast(void **)dlsym(handle, "__libc_stack_end");
+		dlclose(handle);
+	    }
+	    t.stackBottom = *libc_stack_end;
+	}
+	else
+	{
+	    t.stackBottom = cast(void*)__libc_stack_end;
+	}
 
 	assert(!allThreads[0]);
 	allThreads[0] = t;

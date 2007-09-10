@@ -344,7 +344,7 @@ public char[] Search_GetErrorString(in recls_rc_t rc)
 public char[] Search_GetEntryPath(in recls_info_t entry)
 in
 {
-    assert(null !== entry);
+    assert(null !is entry);
 }
 body
 {
@@ -363,7 +363,7 @@ version(Windows)
 public char Search_GetEntryDrive(in recls_info_t entry)
 in
 {
-    assert(null !== entry);
+    assert(null !is entry);
 }
 body
 {
@@ -376,7 +376,7 @@ body
 public char[] Search_GetEntryDirectory(in recls_info_t entry)
 in
 {
-    assert(null !== entry);
+    assert(null !is entry);
 }
 body
 {
@@ -393,7 +393,7 @@ body
 public char[] Search_GetEntryDirectoryPath(in recls_info_t entry)
 in
 {
-    assert(null !== entry);
+    assert(null !is entry);
 }
 body
 {
@@ -410,7 +410,7 @@ body
 public char[] Search_GetEntryFile(in recls_info_t entry)
 in
 {
-    assert(null !== entry);
+    assert(null !is entry);
 }
 body
 {
@@ -427,7 +427,7 @@ body
 public char[] Search_GetEntryShortFile(in recls_info_t entry)
 in
 {
-    assert(null !== entry);
+    assert(null !is entry);
 }
 body
 {
@@ -444,7 +444,7 @@ body
 public char[] Search_GetEntryFileName(in recls_info_t entry)
 in
 {
-    assert(null !== entry);
+    assert(null !is entry);
 }
 body
 {
@@ -461,7 +461,7 @@ body
 public char[] Search_GetEntryFileExt(in recls_info_t entry)
 in
 {
-    assert(null !== entry);
+    assert(null !is entry);
 }
 body
 {
@@ -478,7 +478,7 @@ body
 public char[][] Search_GetEntryDirectoryParts(in recls_info_t entry)
 in
 {
-    assert(null !== entry);
+    assert(null !is entry);
 }
 body
 {
@@ -503,7 +503,7 @@ body
 public boolean Search_IsEntryReadOnly(in recls_info_t entry)
 in
 {
-    assert(null !== entry);
+    assert(null !is entry);
 }
 body
 {
@@ -513,7 +513,7 @@ body
 public boolean Search_IsEntryDirectory(in recls_info_t entry)
 in
 {
-    assert(null !== entry);
+    assert(null !is entry);
 }
 body
 {
@@ -523,7 +523,7 @@ body
 public boolean Search_IsEntryLink(in recls_info_t entry)
 in
 {
-    assert(null !== entry);
+    assert(null !is entry);
 }
 body
 {
@@ -533,7 +533,7 @@ body
 public recls_filesize_t Search_GetEntrySize(in recls_info_t entry)
 in
 {
-    assert(null !== entry);
+    assert(null !is entry);
 }
 body
 {
@@ -545,7 +545,7 @@ body
 public recls_time_t Search_GetEntryCreationTime(in recls_info_t entry)
 in
 {
-    assert(null !== entry);
+    assert(null !is entry);
 }
 body
 {
@@ -555,7 +555,7 @@ body
 public recls_time_t Search_GetEntryModificationTime(in recls_info_t entry)
 in
 {
-    assert(null !== entry);
+    assert(null !is entry);
 }
 body
 {
@@ -565,7 +565,7 @@ body
 public recls_time_t Search_GetEntryLastAccessTime(in recls_info_t entry)
 in
 {
-    assert(null !== entry);
+    assert(null !is entry);
 }
 body
 {
@@ -575,7 +575,7 @@ body
 public recls_time_t Search_GetEntryLastStatusChangeTime(in recls_info_t entry)
 in
 {
-    assert(null !== entry);
+    assert(null !is entry);
 }
 body
 {
@@ -630,7 +630,7 @@ public:
         Entry   CurrentEntry()
         in
         {
-            assert(null !== m_hSrch);
+            assert(null !is m_hSrch);
         }
         body
         {
@@ -797,7 +797,7 @@ public class Entry
             // we just add a reference, and then release it
             recls_info_t    entry   =   Search_CopyEntry(m_entry);
 
-            assert(null !== entry);
+            assert(null !is entry);
 
             Recls_CloseDetails(entry);
         }
@@ -834,7 +834,7 @@ private:
     }
     ~this()
     {
-        if(null !== m_entry)
+        if(null !is m_entry)
         {
             Search_CloseEntry(m_entry);
         }
@@ -847,7 +847,7 @@ public:
     char[]              GetPath()
     in
     {
-        assert(null !== m_entry);
+        assert(null !is m_entry);
     }
     body
     {
@@ -859,7 +859,7 @@ public:
     char[]              Path()
     in
     {
-        assert(null !== m_entry);
+        assert(null !is m_entry);
     }
     body
     {
@@ -873,7 +873,7 @@ version(Windows)
     char                Drive()
     in
     {
-        assert(null !== m_entry);
+        assert(null !is m_entry);
     }
     body
     {
@@ -886,7 +886,7 @@ version(Windows)
     char[]              Directory()
     in
     {
-        assert(null !== m_entry);
+        assert(null !is m_entry);
     }
     body
     {
@@ -898,7 +898,7 @@ version(Windows)
     char[]              DirectoryPath()
     in
     {
-        assert(null !== m_entry);
+        assert(null !is m_entry);
     }
     body
     {
@@ -910,7 +910,7 @@ version(Windows)
     char[][]            DirectoryParts()
     in
     {
-        assert(null !== m_entry);
+        assert(null !is m_entry);
     }
     body
     {
@@ -922,7 +922,7 @@ version(Windows)
     char[]              File()
     in
     {
-        assert(null !== m_entry);
+        assert(null !is m_entry);
     }
     body
     {
@@ -934,7 +934,7 @@ version(Windows)
     char[]              ShortFile()
     in
     {
-        assert(null !== m_entry);
+        assert(null !is m_entry);
     }
     body
     {
@@ -946,7 +946,7 @@ version(Windows)
     char[]              FileName()
     in
     {
-        assert(null !== m_entry);
+        assert(null !is m_entry);
     }
     body
     {
@@ -958,7 +958,7 @@ version(Windows)
     char[]              FileExt()
     in
     {
-        assert(null !== m_entry);
+        assert(null !is m_entry);
     }
     body
     {
@@ -969,7 +969,7 @@ version(Windows)
     recls_time_t        CreationTime()
     in
     {
-        assert(null !== m_entry);
+        assert(null !is m_entry);
     }
     body
     {
@@ -979,7 +979,7 @@ version(Windows)
     recls_time_t        ModificationTime()
     in
     {
-        assert(null !== m_entry);
+        assert(null !is m_entry);
     }
     body
     {
@@ -989,7 +989,7 @@ version(Windows)
     recls_time_t        LastAccessTime()
     in
     {
-        assert(null !== m_entry);
+        assert(null !is m_entry);
     }
     body
     {
@@ -999,7 +999,7 @@ version(Windows)
     recls_time_t        LastStatusChangeTime()
     in
     {
-        assert(null !== m_entry);
+        assert(null !is m_entry);
     }
     body
     {
@@ -1010,7 +1010,7 @@ version(Windows)
     recls_filesize_t    Size()
     in
     {
-        assert(null !== m_entry);
+        assert(null !is m_entry);
     }
     body
     {
@@ -1021,7 +1021,7 @@ version(Windows)
     boolean             IsReadOnly()
     in
     {
-        assert(null !== m_entry);
+        assert(null !is m_entry);
     }
     body
     {
@@ -1031,7 +1031,7 @@ version(Windows)
     boolean             IsDirectory()
     in
     {
-        assert(null !== m_entry);
+        assert(null !is m_entry);
     }
     body
     {
@@ -1041,7 +1041,7 @@ version(Windows)
     boolean             IsLink()
     in
     {
-        assert(null !== m_entry);
+        assert(null !is m_entry);
     }
     body
     {

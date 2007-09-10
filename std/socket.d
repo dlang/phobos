@@ -1339,12 +1339,12 @@ class Socket
 		//make sure none of the SocketSet's are the same object
 		if(checkRead)
 		{
-			assert(checkRead !== checkWrite);
-			assert(checkRead !== checkError);
+			assert(checkRead !is checkWrite);
+			assert(checkRead !is checkError);
 		}
 		if(checkWrite)
 		{
-			assert(checkWrite !== checkError);
+			assert(checkWrite !is checkError);
 		}
 	}
 	body

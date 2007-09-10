@@ -354,8 +354,8 @@ private:
     this(char[] name, char[] value/* , Record record */)
     in
     {
-        assert(null !== name);
-        assert(null !== value);
+        assert(null !is name);
+        assert(null !is value);
     }
     body
     {
@@ -390,7 +390,7 @@ public:
     {
         Field   f   =   cast(Field)(rhs);
 
-        if(null === f)
+        if(null is f)
         {
             throw new InvalidTypeException("Attempt to compare a Field with an instance of another type");
         }
@@ -402,7 +402,7 @@ public:
     {
         int res;
 
-        if(this === rhs)
+        if(this is rhs)
         {
             res = 0;
         }
@@ -499,13 +499,13 @@ public:
     Field   getField(char[] fieldName)
     in
     {
-        assert(null !== fieldName);
+        assert(null !is fieldName);
     }
     body
     {
         Field   field   =   findField(fieldName);
 
-        if(null === field)
+        if(null is field)
         {
             throw new InvalidKeyException("field not found");
         }
@@ -516,18 +516,18 @@ public:
     Field   findField(char[] fieldName)
     in
     {
-        assert(null !== fieldName);
+        assert(null !is fieldName);
     }
     body
     {
         Field   *pfield =   (fieldName in m_values);
 
-        return (null === pfield) ? null : *pfield;
+        return (null is pfield) ? null : *pfield;
     }
 
     int hasField(char[] fieldName)
     {
-        return null !== findField(fieldName);
+        return null !is findField(fieldName);
     }
 
     Database database()
@@ -799,7 +799,7 @@ public:
 
         foreach(Record record; m_records)
         {
-            if(null !== record.findField(fieldName))
+            if(null !is record.findField(fieldName))
             {
                 records ~= record;
             }
@@ -817,7 +817,7 @@ public:
         {
             Field   field   =   record.findField(fieldName);
 
-            if(null !== field)
+            if(null !is field)
             {
                 // Since there can be more than one field with the same name in
                 // the same record, we need to search all fields in this record
@@ -829,7 +829,7 @@ public:
                         int res =   cmp(field.name, fieldName);
 
                         if( 0 == res &&
-                            (   null === fieldValue ||
+                            (   null is fieldValue ||
                                 field.value == fieldValue))
                         {
                             records ~= record;
@@ -847,7 +847,7 @@ public:
                     foreach(Field field; record)
                     {
                         if( field.name == fieldName &&
-                            (   null === fieldValue ||
+                            (   null is fieldValue ||
                                 field.value == fieldValue))
                         {
                             records ~= record;

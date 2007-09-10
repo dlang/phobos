@@ -44,7 +44,7 @@ auto class PerformanceCounterScope(T)
 	this(T counter)
 	in
 	{
-	    assert(null !== counter);
+	    assert(null !is counter);
 	}
 	body
 	{

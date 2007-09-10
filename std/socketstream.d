@@ -24,14 +24,10 @@ module std.socketstream;
 private import std.stream;
 private import std.socket;
 
-
 class SocketStream: Stream
 {
 	private:
-	bit prevCr = false;
-	bit atEof = false;
 	Socket sock;
-	
 	
 	public:
 	this(Socket sock, FileMode mode)
@@ -44,186 +40,60 @@ class SocketStream: Stream
 		this.sock = sock;
 	}
 	
-	
 	this(Socket sock)
 	{
 		writeable = readable = true;
 		this.sock = sock;
 	}
 	
-	
 	Socket socket()
 	{
 		return sock;
 	}
 	
-	
 	override uint readBlock(void* _buffer, uint size)
-	in
 	{
-		assert(readable);
+	  ubyte* buffer = cast(ubyte*)_buffer;
+	  int len;
+	  uint need = size;
+	  assertReadable();
+	  
+	  if(size == 0)
+	    return size;
+	  
+	  len = sock.receive(buffer[0 .. size]);
+	  readEOF = cast(bit)(len == 0);
+	  if(len < 0) 
+	    len = 0;
+	  return len;
 	}
-	body
-	{
-		ubyte* buffer = cast(ubyte*)_buffer;
-		int len;
-		uint need = size;
-		
-		for(;;)
-		{
-			if(!need)
-				return size;
-			
-			len = sock.receive(buffer[0 .. need]);
-			if(len <= 0)
-			{
-				if(!len)
-					atEof = true;
-				break;
-			}
-			
-			buffer += len;
-			need -= len;
-		}
-		return size - need;
-	}
-	
-	
-	override char getc()
-	{
-		char ch;
-		
-		if(prevCr)
-		{
-			prevCr = false;
-			ch = super.getc();
-			if(ch != '\n')
-				return ch;
-		}
-		
-		return super.getc();
-	}
-	
-	
-	override wchar getcw()
-	{
-		wchar ch;
-		
-		if(prevCr)
-		{
-			prevCr = false;
-			ch = super.getcw();
-			if(ch != '\n')
-				return ch;
-		}
-		
-		return super.getcw();
-	}
-	
-	
-	override char[] readLine()
-	{
-		char[] result;
-		try
-		{
-			for(;;)
-			{
-				char ch = getc();
-				switch(ch)
-				{
-					case '\r':
-						prevCr = true;
-					case '\n':
-						return result;
-					
-					default:
-						result ~= ch;
-				}
-			}
-		}
-		catch(ReadError re)
-		{
-			if(!eof())
-				throw re;
-		}
-		return result;
-	}
-	
-	
-	override wchar[] readLineW()
-	{
-		wchar[] result;
-		try
-		{
-			for(;;)
-			{
-				char ch = getcw();
-				switch(ch)
-				{
-					case '\r':
-						prevCr = true;
-					case '\n':
-						return result;
-					
-					default:
-						result ~= ch;
-				}
-			}
-		}
-		catch(ReadError re)
-		{
-			if(!eof())
-				throw re;
-		}
-		return result;
-	}
-	
 	
 	override uint writeBlock(void* _buffer, uint size)
-	in
 	{
-		assert(writeable);
+	  ubyte* buffer = cast(ubyte*)_buffer;
+	  int len;
+	  assertWriteable();
+
+	  if(size == 0)
+	    return size;
+	  
+	  len = sock.send(buffer[0 .. size]);
+	  readEOF = cast(bit)(len == 0);
+	  if(len < 0) 
+	    len = 0;
+	  return len;
 	}
-	body
-	{
-		ubyte* buffer = cast(ubyte*)_buffer;
-		int len;
-		uint need = size;
-		
-		for(;;)
-		{
-			if(!need)
-				return size;
-			
-			len = sock.send(buffer[0 .. need]);
-			if(len <= 0)
-				break;
-			
-			buffer += len;
-			need -= len;
-		}
-		return size - need;
-	}
-	
 	
 	override ulong seek(long offset, SeekPos whence)
 	{
-		throw new SeekError("Cannot seek a socket.");
+		throw new SeekException("Cannot seek a socket.");
 		return 0;
 	}
-	
 	
 	override char[] toString()
 	{
 		return sock.toString();
 	}
-	
-	
-	override bit eof()
-	{
-		return atEof;
-	}
-	
 	
 	override void close()
 	{

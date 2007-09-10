@@ -210,7 +210,7 @@ version(Windows)
     private HXModule ExeModule_Load_(in char[] moduleName)
     in
     {
-        assert(null !== moduleName);
+        assert(null !is moduleName);
     }
     body
     {
@@ -227,7 +227,7 @@ version(Windows)
     private HXModule ExeModule_AddRef_(in HXModule hModule)
     in
     {
-        assert(null !== hModule);
+        assert(null !is hModule);
     }
     body
     {
@@ -237,7 +237,7 @@ version(Windows)
     private void ExeModule_Release_(inout HXModule hModule)
     in
     {
-        assert(null !== hModule);
+        assert(null !is hModule);
     }
     body
     {
@@ -251,7 +251,7 @@ version(Windows)
     private void *ExeModule_GetSymbol_(inout HXModule hModule, in char[] symbolName)
     in
     {
-        assert(null !== hModule);
+        assert(null !is hModule);
     }
     body
     {
@@ -332,13 +332,13 @@ else version(linux)
     private HXModule ExeModule_Load_(in char[] moduleName)
     in
     {
-        assert(null !== moduleName);
+        assert(null !is moduleName);
     }
     body
     {
         ExeModuleInfo   mi = s_modules[moduleName];
 
-        if(null !== mi)
+        if(null !is mi)
         {
             return (++mi.m_cRefs, cast(HXModule)mi);
         }
@@ -366,21 +366,21 @@ else version(linux)
     private HXModule ExeModule_AddRef_(in HXModule hModule)
     in
     {
-        assert(null !== hModule);
+        assert(null !is hModule);
 
         ExeModuleInfo   mi = cast(ExeModuleInfo)hModule;
 
         assert(0 < mi.m_cRefs);
-        assert(null !== mi.m_hmod);
-        assert(null !== mi.m_name);
-        assert(null !== s_modules[mi.m_name]);
+        assert(null !is mi.m_hmod);
+        assert(null !is mi.m_name);
+        assert(null !is s_modules[mi.m_name]);
         assert(mi is s_modules[mi.m_name]);
     }
     body
     {
         ExeModuleInfo   mi = cast(ExeModuleInfo)hModule;
 
-        if(null !== mi)
+        if(null !is mi)
         {
             return (++mi.m_cRefs, hModule);
         }
@@ -393,14 +393,14 @@ else version(linux)
     private void ExeModule_Release_(inout HXModule hModule)
     in
     {
-        assert(null !== hModule);
+        assert(null !is hModule);
 
         ExeModuleInfo   mi = cast(ExeModuleInfo)hModule;
 
         assert(0 < mi.m_cRefs);
-        assert(null !== mi.m_hmod);
-        assert(null !== mi.m_name);
-        assert(null !== s_modules[mi.m_name]);
+        assert(null !is mi.m_hmod);
+        assert(null !is mi.m_name);
+        assert(null !is s_modules[mi.m_name]);
         assert(mi is s_modules[mi.m_name]);
     }
     body
@@ -425,14 +425,14 @@ else version(linux)
     private void *ExeModule_GetSymbol_(inout HXModule hModule, in char[] symbolName)
     in
     {
-        assert(null !== hModule);
+        assert(null !is hModule);
 
         ExeModuleInfo   mi = cast(ExeModuleInfo)hModule;
 
         assert(0 < mi.m_cRefs);
-        assert(null !== mi.m_hmod);
-        assert(null !== mi.m_name);
-        assert(null !== s_modules[mi.m_name]);
+        assert(null !is mi.m_hmod);
+        assert(null !is mi.m_name);
+        assert(null !is s_modules[mi.m_name]);
         assert(mi is s_modules[mi.m_name]);
     }
     body
@@ -456,14 +456,14 @@ else version(linux)
     private char[] ExeModule_GetPath_(HXModule hModule)
     in
     {
-        assert(null !== hModule);
+        assert(null !is hModule);
 
         ExeModuleInfo   mi = cast(ExeModuleInfo)hModule;
 
         assert(0 < mi.m_cRefs);
-        assert(null !== mi.m_hmod);
-        assert(null !== mi.m_name);
-        assert(null !== s_modules[mi.m_name]);
+        assert(null !is mi.m_hmod);
+        assert(null !is mi.m_name);
+        assert(null !is s_modules[mi.m_name]);
         assert(mi is s_modules[mi.m_name]);
     }
     body
@@ -509,7 +509,7 @@ public:
     this(in HXModule hModule, boolean bTakeOwnership)
     in
     {
-        assert(null !== hModule);
+        assert(null !is hModule);
     }
     body
     {
@@ -538,7 +538,7 @@ public:
     this(char[] moduleName)
     in
     {
-        assert(null !== moduleName);
+        assert(null !is moduleName);
     }
     body
     {
@@ -574,7 +574,7 @@ public:
     /// calls do not result in an error, and are simply ignored.
     void close()
     {
-        if(null !== m_hModule)
+        if(null !is m_hModule)
         {
 	    version (Windows)
 	    {

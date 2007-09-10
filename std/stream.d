@@ -63,12 +63,8 @@ enum SeekPos {
   End
 }
 
-import std.format;
-alias std.format.va_list va_list;
-private import std.c.stdio;
-alias std.c.stdio.va_list c_va_list;
-
 private {
+  import std.format;
   import std.system;    // for Endian enumeration
   import std.intrinsic; // for bswap
   import std.utf;
@@ -150,10 +146,12 @@ interface InputStream {
 
   // reads and returns next character from the stream,
   // handles characters pushed back by ungetc()
+  // return char.init on EOF
   char getc();
 
   // reads and returns next Unicode character from the
   // stream, handles characters pushed back by ungetc()
+  // return wchar.init on EOF
   wchar getcw();
 
   // pushes back character c into the stream; only has
@@ -164,7 +162,7 @@ interface InputStream {
   // has effect on further calls to getc() and getcw()
   wchar ungetcw(wchar c);
 
-  int vscanf(char[] fmt, c_va_list args);
+  int vscanf(char[] fmt, va_list args);
 
   int scanf(char[] format, ...);
 
@@ -226,7 +224,7 @@ interface OutputStream {
 
   // writes data to stream using vprintf() syntax,
   // returns number of bytes written
-  size_t vprintf(char[] format, c_va_list args);
+  size_t vprintf(char[] format, va_list args);
 
   // writes data to stream using printf() syntax,
   // returns number of bytes written
@@ -256,6 +254,9 @@ class Stream : InputStream, OutputStream {
 
   // flag that last readBlock resulted in eof
   protected bit readEOF = false;
+
+  // flag that last getc got \r
+  protected bit prevCr = false;
 
   this() {}
 
@@ -331,35 +332,31 @@ class Stream : InputStream, OutputStream {
   // allocates a new string
   char[] readLine(char[] result) {
     size_t strlen = 0;
-    try {
-      char ch = getc();
-      while (readable) {
-	switch (ch) {
-	case '\r': {
+    char ch = getc();
+    while (readable) {
+      switch (ch) {
+      case '\r':
+	if (seekable) {
 	  ch = getc();
 	  if (ch != '\n')
 	    ungetc(ch);
+	} else {
+	  prevCr = true;
 	}
+      case '\n':
+      case char.init:
+	result.length = strlen;
+	return result;
 
-	case '\n':
-	  result.length = strlen;
-	  return result;
-
-	default:
-	  if (strlen < result.length) {
-	    result[strlen] = ch;
-	  } else {
-	    result ~= ch;
-	  }
-	  strlen++;
+      default:
+	if (strlen < result.length) {
+	  result[strlen] = ch;
+	} else {
+	  result ~= ch;
 	}
-	ch = getc();
+	strlen++;
       }
-    } catch (ReadException e) {
-      // either this is end of stream, which is okay,
-      // or something bad occured while reading
-      if (!eof())
-	throw e;
+      ch = getc();
     }
     result.length = strlen;
     return result;
@@ -377,35 +374,31 @@ class Stream : InputStream, OutputStream {
   // fills supplied buffer if line fits and otherwise allocates a new string.
   wchar[] readLineW(wchar[] result) {
     size_t strlen = 0;
-    try {
-      wchar c = getcw();
-      while (readable) {
-	switch (c) {
-	case '\r': {
+    wchar c = getcw();
+    while (readable) {
+      switch (c) {
+      case '\r':
+	if (seekable) {
 	  c = getcw();
 	  if (c != '\n')
 	    ungetcw(c);
+	} else {
+	  prevCr = true;
 	}
+      case '\n':
+      case wchar.init:
+	result.length = strlen;
+	return result;
 
-	case '\n':
-	  result.length = strlen;
-	  return result;
-
-	default:
-	  if (strlen < result.length) {
-	    result[strlen] = c;
-	  } else {
-	    result ~= c;
-	  }
-	  strlen++;
+      default:
+	if (strlen < result.length) {
+	  result[strlen] = c;
+	} else {
+	  result ~= c;
 	}
-	c = getcw();
+	strlen++;
       }
-    } catch (ReadException e) {
-      // either this is end of stream, which is okay,
-      // or something bad occured while reading
-      if (!eof())
-	throw e;
+      c = getcw();
     }
     result.length = strlen;
     return result;
@@ -485,26 +478,43 @@ class Stream : InputStream, OutputStream {
 
   // reads and returns next character from the stream,
   // handles characters pushed back by ungetc()
+  // returns char.init on eof.
   char getc() {
     char c;
+    if (prevCr) {
+      prevCr = false;
+      c = getc();
+      if (c != '\n') 
+	return c;
+    }
     if (unget.length > 1) {
       c = unget[unget.length - 1];
       unget.length = unget.length - 1;
     } else {
-      read(c);
+      readBlock(&c,1);
     }
     return c;
   }
 
   // reads and returns next Unicode character from the
   // stream, handles characters pushed back by ungetc()
+  // returns wchar.init on eof.
   wchar getcw() {
     wchar c;
+    if (prevCr) {
+      prevCr = false;
+      c = getcw();
+      if (c != '\n') 
+	return c;
+    }
     if (unget.length > 1) {
       c = unget[unget.length - 1];
       unget.length = unget.length - 1;
     } else {
-      read(c);
+      void* buf = &c;
+      size_t n = readBlock(buf,2);
+      if (n == 1 && readBlock(buf+1,1) == 0)
+          throw new ReadException("not enough data in stream");
     }
     return c;
   }
@@ -512,6 +522,7 @@ class Stream : InputStream, OutputStream {
   // pushes back character c into the stream; only has
   // effect on further calls to getc() and getcw()
   char ungetc(char c) {
+    if (c == c.init) return c;
     // first byte is a dummy so that we never set length to 0
     if (unget.length == 0)
       unget.length = 1;
@@ -522,6 +533,7 @@ class Stream : InputStream, OutputStream {
   // pushes back Unicode character c into the stream; only
   // has effect on further calls to getc() and getcw()
   wchar ungetcw(wchar c) {
+    if (c == c.init) return c;
     // first byte is a dummy so that we never set length to 0
     if (unget.length == 0)
       unget.length = 1;
@@ -529,300 +541,293 @@ class Stream : InputStream, OutputStream {
     return c;
   }
 
-  int vscanf(char[] fmt, c_va_list args) {
+  int vscanf(char[] fmt, va_list args) {
     void** arg = cast(void**) args;
     int count = 0, i = 0;
-    try {
-      char c = getc();
-      while (i < fmt.length) {
-	if (fmt[i] == '%') {	// a field
+    char c = getc();
+    while (i < fmt.length && !eof()) {
+      if (fmt[i] == '%') {	// a field
+	i++;
+	bit suppress = false;
+	if (fmt[i] == '*') {	// suppress assignment
+	  suppress = true;
 	  i++;
-	  bit suppress = false;
-	  if (fmt[i] == '*') {	// suppress assignment
-	    suppress = true;
+	}
+	// read field width
+	int width = 0;
+	while (isdigit(fmt[i])) {
+	  width = width * 10 + (fmt[i] - '0');
+	  i++;
+	}
+	if (width == 0)
+	  width = -1;
+	// D string?
+	bit dstr = false;
+	if (fmt[i] == '.') {
+	  i++;
+	  if (fmt[i] == '*') {
+	    dstr = true;
 	    i++;
 	  }
-	  // read field width
-	  int width = 0;
-	  while (isdigit(fmt[i])) {
-	    width = width * 10 + (fmt[i] - '0');
-	    i++;
-	  }
-	  if (width == 0)
-	    width = -1;
-	  // D string?
-	  bit dstr = false;
-	  if (fmt[i] == '.') {
-	    i++;
-	    if (fmt[i] == '*') {
-	      dstr = true;
-	      i++;
+	}
+	// read the modifier
+	char modifier = fmt[i];
+	if (modifier == 'h' || modifier == 'l' || modifier == 'L')
+	  i++;
+	else
+	  modifier = 0;
+	// check the typechar and act accordingly
+	switch (fmt[i]) {
+	case 'd':	// decimal/hexadecimal/octal integer
+	case 'D':
+	case 'u':
+	case 'U':
+	case 'o':
+	case 'O':
+	case 'x':
+	case 'X':
+	case 'i':
+	case 'I':
+	  {
+	    while (iswhite(c)) {
+	      c = getc();
+	      count++;
 	    }
-	  }
-	  // read the modifier
-	  char modifier = fmt[i];
-	  if (modifier == 'h' || modifier == 'l' || modifier == 'L')
-	    i++;
-	  else
-	    modifier = 0;
-	  // check the typechar and act accordingly
-	  switch (fmt[i]) {
-	  case 'd':	// decimal/hexadecimal/octal integer
-	  case 'D':
-	  case 'u':
-	  case 'U':
-	  case 'o':
-	  case 'O':
-	  case 'x':
-	  case 'X':
-	  case 'i':
-	  case 'I':
-	    {
-	      while (iswhite(c)) {
+	    bit neg = false;
+	    if (c == '-') {
+	      neg = true;
+	      c = getc();
+	      count++;
+	    } else if (c == '+') {
+	      c = getc();
+	      count++;
+	    }
+	    char ifmt = fmt[i] | 0x20;
+	    if (ifmt == 'i')	{ // undetermined base
+	      if (c == '0')	{ // octal or hex
 		c = getc();
 		count++;
-	      }
-	      bit neg = false;
-	      if (c == '-') {
-		neg = true;
-		c = getc();
-		count++;
-	      } else if (c == '+') {
-		c = getc();
-		count++;
-	      }
-	      char ifmt = fmt[i] | 0x20;
-	      if (ifmt == 'i')	{ // undetermined base
-		if (c == '0')	{ // octal or hex
+		if (c == 'x' || c == 'X')	{ // hex
+		  ifmt = 'x';
 		  c = getc();
 		  count++;
-		  if (c == 'x' || c == 'X')	{ // hex
-		    ifmt = 'x';
-		    c = getc();
-		    count++;
-		  } else {	// octal
-		    ifmt = 'o';
-		  }
+		} else {	// octal
+		  ifmt = 'o';
 		}
-		else	// decimal
-		  ifmt = 'd';
 	      }
-	      long n = 0;
-	      switch (ifmt) {
-	      case 'd':	// decimal
-	      case 'u': {
-		while (isdigit(c) && width) {
-		  n = n * 10 + (c - '0');
-		  width--;
-		  c = getc();
-		  count++;
-		}
-	      } break;
-
-	      case 'o': {	// octal
-		while (isoctdigit(c) && width) {
-		  n = n * 010 + (c - '0');
-		  width--;
-		  c = getc();
-		  count++;
-		}
-	      } break;
-
-	      case 'x': {	// hexadecimal
-		while (ishexdigit(c) && width) {
-		  n *= 0x10;
-		  if (isdigit(c))
-		    n += c - '0';
-		  else
-		    n += 0xA + (c | 0x20) - 'a';
-		  width--;
-		  c = getc();
-		  count++;
-		}
-	      } break;
-	      }
-	      if (neg)
-		n = -n;
-	      // check the modifier and cast the pointer
-	      // to appropriate type
-	      switch (modifier) {
-	      case 'h': {	// short
-		*cast(short*)*arg = n;
-	      } break;
-
-	      case 'L': {	// long
-		*cast(long*)*arg = n;
-	      } break;
-
-	      default:	// int
-		*cast(int*)*arg = n;
-	      }
-	      i++;
-	    } break;
-
-	  case 'f':	// float
-	  case 'F':
-	  case 'e':
-	  case 'E':
-	  case 'g':
-	  case 'G':
-	    {
-	      while (iswhite(c)) {
-		c = getc();
-		count++;
-	      }
-	      bit neg = false;
-	      if (c == '-') {
-		neg = true;
-		c = getc();
-		count++;
-	      } else if (c == '+') {
-		c = getc();
-		count++;
-	      }
-	      real n = 0;
+	      else	// decimal
+		ifmt = 'd';
+	    }
+	    long n = 0;
+	    switch (ifmt) {
+	    case 'd':	// decimal
+	    case 'u': {
 	      while (isdigit(c) && width) {
 		n = n * 10 + (c - '0');
 		width--;
 		c = getc();
 		count++;
 	      }
-	      if (width && c == '.') {
-		width--;
-		c = getc();
-		count++;
-		double frac = 1;
-		while (isdigit(c) && width) {
-		  n = n * 10 + (c - '0');
-		  frac *= 10;
-		  width--;
-		  c = getc();
-		  count++;
-		}
-		n /= frac;
-	      }
-	      if (width && (c == 'e' || c == 'E')) {
-		width--;
-		c = getc();
-		count++;
-		if (width) {
-		  bit expneg = false;
-		  if (c == '-') {
-		    expneg = true;
-		    width--;
-		    c = getc();
-		    count++;
-		  } else if (c == '+') {
-		    width--;
-		    c = getc();
-		    count++;
-		  }
-		  real exp = 0;
-		  while (isdigit(c) && width) {
-		    exp = exp * 10 + (c - '0');
-		    width--;
-		    c = getc();
-		    count++;
-		  }
-		  if (expneg) {
-		    while (exp--)
-		      n /= 10;
-		  } else {
-		    while (exp--)
-		      n *= 10;
-		  }
-		}
-	      }
-	      if (neg)
-		n = -n;
-	      // check the modifier and cast the pointer
-	      // to appropriate type
-	      switch (modifier) {
-	      case 'l': {	// double
-		*cast(double*)*arg = n;
-	      } break;
-
-	      case 'L': {	// real
-		*cast(real*)*arg = n;
-	      } break;
-
-	      default:	// float
-		*cast(float*)*arg = n;
-	      }
-	      i++;
 	    } break;
 
-	  case 's': {	// ANSI string
+	    case 'o': {	// octal
+	      while (isoctdigit(c) && width) {
+		n = n * 010 + (c - '0');
+		width--;
+		c = getc();
+		count++;
+	      }
+	    } break;
+
+	    case 'x': {	// hexadecimal
+	      while (ishexdigit(c) && width) {
+		n *= 0x10;
+		if (isdigit(c))
+		  n += c - '0';
+		else
+		  n += 0xA + (c | 0x20) - 'a';
+		width--;
+		c = getc();
+		count++;
+	      }
+	    } break;
+	    }
+	    if (neg)
+	      n = -n;
+	    // check the modifier and cast the pointer
+	    // to appropriate type
+	    switch (modifier) {
+	    case 'h': {	// short
+	      *cast(short*)*arg = n;
+	    } break;
+
+	    case 'L': {	// long
+	      *cast(long*)*arg = n;
+	    } break;
+
+	    default:	// int
+	      *cast(int*)*arg = n;
+	    }
+	    i++;
+	  } break;
+
+	case 'f':	// float
+	case 'F':
+	case 'e':
+	case 'E':
+	case 'g':
+	case 'G':
+	  {
 	    while (iswhite(c)) {
 	      c = getc();
 	      count++;
 	    }
-	    char[] s;
-	    while (!iswhite(c)) {
-	      s ~= c;
+	    bit neg = false;
+	    if (c == '-') {
+	      neg = true;
+	      c = getc();
+	      count++;
+	    } else if (c == '+') {
 	      c = getc();
 	      count++;
 	    }
-	    if (dstr)	// D string (char[])
-	      *cast(char[]*)*arg = s;
-	    else {		// C string (char*)
-	      s ~= 0;
-	      (cast(char*)*arg)[0 .. s.length] = s[];
+	    real n = 0;
+	    while (isdigit(c) && width) {
+	      n = n * 10 + (c - '0');
+	      width--;
+	      c = getc();
+	      count++;
+	    }
+	    if (width && c == '.') {
+	      width--;
+	      c = getc();
+	      count++;
+	      double frac = 1;
+	      while (isdigit(c) && width) {
+		n = n * 10 + (c - '0');
+		frac *= 10;
+		width--;
+		c = getc();
+		count++;
+	      }
+	      n /= frac;
+	    }
+	    if (width && (c == 'e' || c == 'E')) {
+	      width--;
+	      c = getc();
+	      count++;
+	      if (width) {
+		bit expneg = false;
+		if (c == '-') {
+		  expneg = true;
+		  width--;
+		  c = getc();
+		  count++;
+		} else if (c == '+') {
+		  width--;
+		  c = getc();
+		  count++;
+		}
+		real exp = 0;
+		while (isdigit(c) && width) {
+		  exp = exp * 10 + (c - '0');
+		  width--;
+		  c = getc();
+		  count++;
+		}
+		if (expneg) {
+		  while (exp--)
+		    n /= 10;
+		} else {
+		  while (exp--)
+		    n *= 10;
+		}
+	      }
+	    }
+	    if (neg)
+	      n = -n;
+	    // check the modifier and cast the pointer
+	    // to appropriate type
+	    switch (modifier) {
+	    case 'l': {	// double
+	      *cast(double*)*arg = n;
+	    } break;
+
+	    case 'L': {	// real
+	      *cast(real*)*arg = n;
+	    } break;
+
+	    default:	// float
+	      *cast(float*)*arg = n;
 	    }
 	    i++;
 	  } break;
 
-	  case 'c': {	// character(s)
-	    char* s = cast(char*)*arg;
-	    if (width < 0)
-	      width = 1;
-	    else
-	      while (iswhite(c)) {
-	      c = getc();
-	      count++;
-	    }
-	    while (width--) {
-	      *(s++) = c;
-	      c = getc();
-	      count++;
-	    }
-	    i++;
-	  } break;
-
-	  case 'n': {	// number of chars read so far
-	    *cast(int*)*arg = count;
-	    i++;
-	  } break;
-
-	  default:	// read character as is
-	    goto nws;
-	  }
-	  arg++;
-	} else if (iswhite(fmt[i])) {	// skip whitespace
-	  while (iswhite(c))
+	case 's': {	// ANSI string
+	  while (iswhite(c)) {
 	    c = getc();
+	    count++;
+	  }
+	  char[] s;
+	  while (!iswhite(c) && c != char.init) {
+	    s ~= c;
+	    c = getc();
+	    count++;
+	  }
+	  if (dstr)	// D string (char[])
+	    *cast(char[]*)*arg = s;
+	  else {		// C string (char*)
+	    s ~= 0;
+	    (cast(char*)*arg)[0 .. s.length] = s[];
+	  }
 	  i++;
-	} else {	// read character as is
-	nws:
-	  if (fmt[i] != c)
-	    break;
-	  c = getc();
+	} break;
+
+	case 'c': {	// character(s)
+	  char* s = cast(char*)*arg;
+	  if (width < 0)
+	    width = 1;
+	  else
+	    while (iswhite(c)) {
+	    c = getc();
+	    count++;
+	  }
+	  while (width-- && !eof()) {
+	    *(s++) = c;
+	    c = getc();
+	    count++;
+	  }
 	  i++;
+	} break;
+
+	case 'n': {	// number of chars read so far
+	  *cast(int*)*arg = count;
+	  i++;
+	} break;
+
+	default:	// read character as is
+	  goto nws;
 	}
+	arg++;
+      } else if (iswhite(fmt[i])) {	// skip whitespace
+	while (iswhite(c))
+	  c = getc();
+	i++;
+      } else {	// read character as is
+      nws:
+	if (fmt[i] != c)
+	  break;
+	c = getc();
+	i++;
       }
-      ungetc(c);
-    } catch (ReadException e) {
-      // either this is end of stream, which is okay,
-      // or something bad occured while reading
-      if (!eof())
-	throw e;
     }
+    ungetc(c);
     return count;
   }
 
   int scanf(char[] format, ...) {
-    c_va_list ap;
-    ap = cast(c_va_list) &format;
+    va_list ap;
+    ap = cast(va_list) &format;
     ap += format.sizeof;
     return vscanf(format, ap);
   }
@@ -837,7 +842,14 @@ class Stream : InputStream, OutputStream {
   // writes block of data of specified size,
   // throws WriteException on error
   void writeExact(void* buffer, size_t size) {
-    if (writeBlock(buffer, size) != size)
+    for(;;) {
+      if (!size) return;
+      size_t writesize = writeBlock(buffer, size);
+      if (writesize == 0) break;
+      buffer += writesize;
+      size -= writesize;
+    }
+    if (size != 0)
       throw new WriteException("unable to write to stream");
   }
 
@@ -916,7 +928,7 @@ class Stream : InputStream, OutputStream {
 
   // writes data to stream using vprintf() syntax,
   // returns number of bytes written
-  size_t vprintf(char[] format, c_va_list args) {
+  size_t vprintf(char[] format, va_list args) {
     // shamelessly stolen from OutBuffer,
     // by Walter's permission
     char[1024] buffer;
@@ -950,8 +962,8 @@ class Stream : InputStream, OutputStream {
   // writes data to stream using printf() syntax,
   // returns number of bytes written
   size_t printf(char[] format, ...) {
-    c_va_list ap;
-    ap = cast(c_va_list) &format;
+    va_list ap;
+    ap = cast(va_list) &format;
     ap += format.sizeof;
     return vprintf(format, ap);
   }
@@ -1161,7 +1173,7 @@ class BufferedStream : Stream {
   }
 
   void updateAttribs() {
-    if (s !== null) {
+    if (s !is null) {
       readable = s.readable;
       writeable = s.writeable;
       seekable = s.seekable;
@@ -1349,6 +1361,7 @@ class BufferedStream : Stream {
 	  }
 	  flush();
 	  size_t res = s.readBlock(buffer,buffer.length);
+          readEOF = res == 0;
 	  if(!res) break L0; // EOF
 	  bufferSourcePos = bufferLen = res;
 	  streamPos += res;
@@ -1578,15 +1591,6 @@ class File: Stream {
   void create(char[] filename, FileMode mode) {
     close();
     open(filename, mode | FileMode.OutNew);
-  }
-
-  override void flush() {
-    super.flush();
-    version (Win32) {
-      if (isopen && this !== .stdout) {
-	FlushFileBuffers(hFile);
-      }
-    }
   }
 
   // closes file, if it is open; otherwise, does nothing
@@ -1971,6 +1975,27 @@ class EndianStream : Stream {
   void read(out creal x) { readExact(&x, x.sizeof); fixBlockBO(&x,real.sizeof,2); }
   void read(out wchar x) { readExact(&x, x.sizeof); fixBO(&x,x.sizeof); }
   void read(out dchar x) { readExact(&x, x.sizeof); fixBO(&x,x.sizeof); }
+
+  wchar getcw() {
+    wchar c;
+    if (prevCr) {
+      prevCr = false;
+      c = getcw();
+      if (c != '\n') 
+	return c;
+    }
+    if (unget.length > 1) {
+      c = unget[unget.length - 1];
+      unget.length = unget.length - 1;
+    } else {
+      void* buf = &c;
+      size_t n = readBlock(buf,2);
+      if (n == 1 && readBlock(buf+1,1) == 0)
+          throw new ReadException("not enough data in stream");
+      fixBO(&c,c.sizeof);
+    }
+    return c;
+  }
 
   wchar[] readStringW(size_t length) {
     wchar[] result = new wchar[length];
@@ -2378,7 +2403,7 @@ class SliceStream : Stream {
   // set the base stream and the low offset but leave the high unbounded.
   this (Stream base, ulong low)
   in {
-    assert (base !== null);
+    assert (base !is null);
     assert (low <= base.size ());
   }
   body {
@@ -2396,7 +2421,7 @@ class SliceStream : Stream {
   // set the base stream, the low offset, and the high offset.
   this (Stream base, ulong low, ulong high)
   in {
-    assert (base !== null);
+    assert (base !is null);
     assert (low <= high);
     assert (high <= base.size ());
   }
@@ -2583,12 +2608,11 @@ private bit ishexdigit(char c) {
 }
 
 // standard IO devices
-File stdin, stdout, stderr;
+deprecated File stdin, stdout, stderr;
 
 version (Win32) {
   // API imports
   private extern(Windows) {
-    private import std.c.windows.windows;
     HANDLE GetStdHandle(DWORD);
   }
 

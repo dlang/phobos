@@ -77,7 +77,22 @@ int os_mem_unmap(void *base, uint nbytes)
 
 void *os_query_stackBottom()
 {
-    return __libc_stack_end;
+    version (none)
+    {	// See discussion: http://autopackage.org/forums/viewtopic.php?t=22
+	static void** libc_stack_end;
+
+	if (libc_stack_end == libc_stack_end.init)
+	{
+	    void* handle = dlopen(null, RTLD_NOW);
+	    libc_stack_end = cast(void **)dlsym(handle, "__libc_stack_end");
+	    dlclose(handle);
+	}
+	return *libc_stack_end;
+    }
+    else
+    {	// This doesn't resolve on all versions of Linux
+	return __libc_stack_end;
+    }
 }
 
 
