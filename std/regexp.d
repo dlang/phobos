@@ -1,6 +1,6 @@
 
 // Regular Expressions
-// Copyright (c) 2000-2003 by Digital Mars
+// Copyright (c) 2000-2004 by Digital Mars
 // All Rights Reserved
 // Written by Walter Bright
 // www.digitalmars.com
@@ -510,7 +510,7 @@ public tchar[][] exec()
 
 public int test(tchar[] string)
 {
-    return test(string, pmatch[0].rm_eo);
+    return test(string, 0 /*pmatch[0].rm_eo*/);
 }
 
 /************************************************

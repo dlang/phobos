@@ -15,8 +15,8 @@
 CP=cp
 
 CFLAGS=-g -mn -6 -r
-#DFLAGS=-O -release
-DFLAGS=-unittest -g
+DFLAGS=-O -release
+#DFLAGS=-unittest -g
 
 CC=sc
 #DMD=\dmd\bin\dmd
@@ -53,8 +53,8 @@ unittest.exe : unittest.d phobos.lib
 
 OBJS= asserterror.obj deh.obj switch.obj complex.obj gcstats.obj \
 	critical.obj object.obj monitor.obj arraycat.obj invariant.obj \
-	dmain2.obj outofmemory.obj aaA.obj adi.obj file.obj \
-	compiler.obj system.obj moduleinit.obj md5.obj \
+	dmain2.obj outofmemory.obj aaA.obj adi.obj aApply.obj file.obj \
+	compiler.obj system.obj moduleinit.obj md5.obj base64.obj \
 	cast.obj syserror.obj path.obj string.obj memset.obj math.obj \
 	outbuffer.obj ctype.obj regexp.obj random.obj windows.obj \
 	stream.obj switcherr.obj com.obj array.obj gc.obj \
@@ -78,7 +78,7 @@ SRC=	errno.c object.d unittest.d crc32.d gcstats.d
 SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 	std\gc.d std\math.d std\string.d std\path.d std\date.d \
 	std\ctype.d std\file.d std\compiler.d std\system.d std\moduleinit.d \
-	std\outbuffer.d std\math2.d std\thread.d std\md5.d \
+	std\outbuffer.d std\math2.d std\thread.d std\md5.d std\base64.d \
 	std\asserterror.d std\dateparse.d std\outofmemory.d \
 	std\intrinsic.d std\array.d std\switcherr.d std\syserror.d \
 	std\regexp.d std\random.d std\stream.d std\process.d std\recls.d
@@ -111,7 +111,7 @@ SRC_INT=	\
 	internal\arraycat.d internal\invariant.d internal\monitor.c \
 	internal\memset.d internal\arraycast.d internal\aaA.d internal\adi.d \
 	internal\dmain2.d internal\cast.d internal\qsort.d internal\deh2.d \
-	internal\cmath2.d internal\obj.d internal\mars.h
+	internal\cmath2.d internal\obj.d internal\mars.h internal\aApply.d
 
 SRC_STD_WIN= std\windows\registry.d \
 	std\windows\iunknown.d
@@ -245,6 +245,9 @@ phobos.lib : $(OBJS) minit.obj internal\gc\dmgc.lib etc\c\zlib\zlib.lib \
 aaA.obj : internal\aaA.d
 	$(DMD) -c $(DFLAGS) internal\aaA.d
 
+aApply.obj : internal\aApply.d
+	$(DMD) -c $(DFLAGS) internal\aApply.d
+
 adi.obj : internal\adi.d
 	$(DMD) -c $(DFLAGS) internal\adi.d
 
@@ -297,6 +300,9 @@ array.obj : std\array.d
 
 asserterror.obj : std\asserterror.d
 	$(DMD) -c $(DFLAGS) std\asserterror.d
+
+base64.obj : std\base64.d
+	$(DMD) -c $(DFLAGS) -inline std\base64.d
 
 compiler.obj : std\compiler.d
 	$(DMD) -c $(DFLAGS) std\compiler.d

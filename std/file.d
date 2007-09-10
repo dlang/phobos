@@ -52,7 +52,7 @@ private int useWfuncs = 1;
 static this()
 {
     // Win 95, 98, ME do not implement the W functions
-    useWfuncs = (GetVersion() >= 0x80000000);
+    useWfuncs = (GetVersion() < 0x80000000);
 }
 
 /********************************************

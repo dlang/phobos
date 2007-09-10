@@ -47,8 +47,8 @@ unittest.o : unittest.d
 
 OBJS= asserterror.o deh2.o switch.o complex.o gcstats.o \
 	critical.o object.o monitor.o arraycat.o invariant.o \
-	dmain2.o outofmemory.o aaA.o adi.o file.o \
-	compiler.o system.o moduleinit.o md5.o \
+	dmain2.o outofmemory.o aaA.o adi.o aApply.o file.o \
+	compiler.o system.o moduleinit.o md5.o base64.o \
 	cast.o path.o string.o memset.o math.o \
 	outbuffer.o ctype.o regexp.o random.o linux.o \
 	stream.o switcherr.o array.o gc.o \
@@ -83,7 +83,7 @@ SRC=	errno.c object.d unittest.d crc32.d gcstats.d
 SRC_STD= std/zlib.d std/zip.d std/stdint.d std/conv.d std/utf.d std/uri.d \
 	std/gc.d std/math.d std/string.d std/path.d std/date.d \
 	std/ctype.d std/file.d std/compiler.d std/system.d std/moduleinit.d \
-	std/outbuffer.d std/math2.d std/thread.d std/md5.d \
+	std/outbuffer.d std/math2.d std/thread.d std/md5.d std/base64.d \
 	std/asserterror.d std/dateparse.d std/outofmemory.d \
 	std/intrinsic.d std/array.d std/switcherr.d std/syserror.d \
 	std/regexp.d std/random.d std/stream.d std/process.d std/recls.d
@@ -116,7 +116,7 @@ SRC_INT=	\
 	internal/arraycat.d internal/invariant.d internal/monitor.c \
 	internal/memset.d internal/arraycast.d internal/aaA.d internal/adi.d \
 	internal/dmain2.d internal/cast.d internal/qsort.d internal/deh2.d \
-	internal/cmath2.d internal/obj.d internal/mars.h
+	internal/cmath2.d internal/obj.d internal/mars.h internal/aApply.d
 
 SRC_STD_WIN= std/windows/registry.d \
 	std/windows/iunknown.d
@@ -261,6 +261,9 @@ gcstats.o : gcstats.d
 aaA.o : internal/aaA.d
 	$(DMD) -c $(DFLAGS) internal/aaA.d
 
+aApply.o : internal/aApply.d
+	$(DMD) -c $(DFLAGS) internal/aApply.d
+
 adi.o : internal/adi.d
 	$(DMD) -c $(DFLAGS) internal/adi.d
 
@@ -325,6 +328,9 @@ array.o : std/array.d
 
 asserterror.o : std/asserterror.d
 	$(DMD) -c $(DFLAGS) std/asserterror.d
+
+base64.o : std/base64.d
+	$(DMD) -c $(DFLAGS) std/base64.d
 
 compiler.o : std/compiler.d
 	$(DMD) -c $(DFLAGS) std/compiler.d
