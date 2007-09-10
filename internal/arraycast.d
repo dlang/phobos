@@ -26,7 +26,7 @@ void[] _d_arraycast(uint tsize, uint fsize, void[] a)
 
 unittest
 {
-    byte[int.size * 3] b;
+    byte[int.sizeof * 3] b;
     int[] i;
     short[] s;
 
@@ -64,7 +64,7 @@ void[] _d_arraycast_frombit(uint tsize, void[] a)
 
 unittest
 {
-    bit[int.size * 3 * 8] b;
+    bit[int.sizeof * 3 * 8] b;
     int[] i;
     short[] s;
 

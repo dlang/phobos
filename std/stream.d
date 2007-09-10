@@ -60,7 +60,13 @@ enum SeekPos
     End
   }
 
-import std.c.stdio;
+private import std.c.stdio;
+
+version (Windows)
+{
+    private import std.utf;
+    private import std.file;
+}
 
 // Interface for readable streams
 interface InputStream
@@ -1384,8 +1390,16 @@ class File: Stream
 	    access |= GENERIC_WRITE;
 	  }
 	seekable = true;
-	hFile = CreateFileA(toStringz(filename), access, share,
+	if (std.file.useWfuncs)
+	{
+	    hFile = CreateFileW(std.utf.toUTF16z(filename), access, share,
 			    null, OPEN_ALWAYS, 0, null);
+	}
+	else
+	{
+	    hFile = CreateFileA(std.file.toMBSz(filename), access, share,
+			    null, OPEN_ALWAYS, 0, null);
+	}
 	if (hFile == INVALID_HANDLE_VALUE)
 	  throw new OpenError("file '" ~ filename ~ "' not found");
       }
@@ -1421,16 +1435,24 @@ class File: Stream
     version (Win32)
       {
 	if (mode & FileMode.In)
-	  {
+	{
 	    access |= GENERIC_READ;
 	    share |= FILE_SHARE_READ;
-	  }
+	}
 	if (mode & FileMode.Out)
-	  {
+	{
 	    access |= GENERIC_WRITE;
-	  }
-	hFile = CreateFileA(toStringz(filename), access, share,
+	}
+	if (std.file.useWfuncs)
+	{
+	    hFile = CreateFileW(std.utf.toUTF16z(filename), access, share,
 			    null, CREATE_ALWAYS, 0, null);
+	}
+	else
+	{
+	    hFile = CreateFileA(std.file.toMBSz(filename), access, share,
+			    null, CREATE_ALWAYS, 0, null);
+	}
 	seekable = true;
 	readable = cast(bit)(mode & FileMode.In);
 	writeable = cast(bit)(mode & FileMode.Out);

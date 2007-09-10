@@ -224,6 +224,7 @@ char* toStringz(char[] string)
 	// Need to make a copy
 	copy = new char[string.length + 1];
 	copy[0..string.length] = string;
+	copy[string.length] = 0;
 	return copy;
     }
 

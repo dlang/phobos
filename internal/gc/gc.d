@@ -1,5 +1,5 @@
 //
-// Copyright (C) 2001-2003 by Digital Mars
+// Copyright (C) 2001-2004 by Digital Mars
 // All Rights Reserved
 // Written by Walter Bright
 // www.digitalmars.com
@@ -40,7 +40,7 @@ void _d_monitorrelease(Object h);
 
 void gc_init()
 {
-    _gc = cast(GC *) std.c.stdlib.calloc(1, GC.size);
+    _gc = cast(GC *) std.c.stdlib.calloc(1, GC.sizeof);
     _gc.initialize();
     //_gc.setStackBottom(_atopsp);
     _gc.scanStaticData();

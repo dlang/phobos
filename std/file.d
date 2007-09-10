@@ -47,7 +47,7 @@ version (Win32)
 private import std.c.windows.windows;
 private import std.utf;
 
-private int useWfuncs = 1;
+int useWfuncs = 1;
 
 static this()
 {

@@ -98,14 +98,14 @@ debug (LOGGING)
 		assert(dim + nentries <= allocdim);
 		if (!data)
 		{
-		    data = cast(Log *)std.c.stdlib.malloc(allocdim * Log.size);
+		    data = cast(Log *)std.c.stdlib.malloc(allocdim * Log.sizeof);
 		}
 		else
 		{   Log *newdata;
 
-		    newdata = cast(Log *)std.c.stdlib.malloc(allocdim * Log.size);
+		    newdata = cast(Log *)std.c.stdlib.malloc(allocdim * Log.sizeof);
 		    assert(newdata);
-		    memcpy(newdata, data, dim * Log.size);
+		    memcpy(newdata, data, dim * Log.sizeof);
 		    std.c.stdlib.free(data);
 		    data = newdata;
 		}
@@ -121,7 +121,7 @@ debug (LOGGING)
 
 	void remove(uint i)
 	{
-	    memmove(data + i, data + i + 1, (dim - i) * Log.size);
+	    memmove(data + i, data + i + 1, (dim - i) * Log.sizeof);
 	    dim--;
 	}
 
@@ -139,7 +139,7 @@ debug (LOGGING)
 	{
 	    reserve(from.dim - dim);
 	    assert(from.dim <= allocdim);
-	    memcpy(data, from.data, from.dim * Log.size);
+	    memcpy(data, from.data, from.dim * Log.sizeof);
 	    dim = from.dim;
 	}
 
@@ -167,7 +167,7 @@ struct GC
     void initialize()
     {
 	gcLock = GCLock.classinfo;
-	gcx = cast(Gcx *)std.c.stdlib.calloc(1, Gcx.size);
+	gcx = cast(Gcx *)std.c.stdlib.calloc(1, Gcx.sizeof);
 	gcx.initialize();
 	version (Win32)
 	{
@@ -629,7 +629,7 @@ struct GC
 	uint bsize = 0;
 
 	//debug(PRINTF) printf("getStats()\n");
-	memset(&stats, 0, GCStats.size);
+	memset(&stats, 0, GCStats.sizeof);
 
 	synchronized (gcLock)
 	{
@@ -764,7 +764,7 @@ struct Gcx
     void initialize()
     {   int dummy;
 
-	(cast(byte *)this)[0 .. Gcx.size] = 0;
+	(cast(byte *)this)[0 .. Gcx.sizeof] = 0;
 	stackBottom = cast(char *)&dummy;
 	log_init();
 	debug (THREADINVARIANT)
@@ -862,10 +862,10 @@ struct Gcx
 	    uint newdim = rootdim * 2 + 16;
 	    void **newroots;
 
-	    newroots = cast(void **)std.c.stdlib.malloc(newdim * newroots[0].size);
+	    newroots = cast(void **)std.c.stdlib.malloc(newdim * newroots[0].sizeof);
 	    assert(newroots);
 	    if (roots)
-	    {   memcpy(newroots, roots, nroots * newroots[0].size);
+	    {   memcpy(newroots, roots, nroots * newroots[0].sizeof);
 		std.c.stdlib.free(roots);
 	    }
 	    roots = newroots;
@@ -884,7 +884,7 @@ struct Gcx
 	    if (roots[i] == p)
 	    {
 		nroots--;
-		memmove(roots + i, roots + i + 1, (nroots - i) * roots[0].size);
+		memmove(roots + i, roots + i + 1, (nroots - i) * roots[0].sizeof);
 		return;
 	    }
 	}
@@ -903,10 +903,10 @@ struct Gcx
 	    uint newdim = rangedim * 2 + 16;
 	    Range *newranges;
 
-	    newranges = cast(Range *)std.c.stdlib.malloc(newdim * newranges[0].size);
+	    newranges = cast(Range *)std.c.stdlib.malloc(newdim * newranges[0].sizeof);
 	    assert(newranges);
 	    if (ranges)
-	    {   memcpy(newranges, ranges, nranges * newranges[0].size);
+	    {   memcpy(newranges, ranges, nranges * newranges[0].sizeof);
 		std.c.stdlib.free(ranges);
 	    }
 	    ranges = newranges;
@@ -927,7 +927,7 @@ struct Gcx
 	    if (ranges[i].pbot == pbot)
 	    {
 		nranges--;
-		memmove(ranges + i, ranges + i + 1, (nranges - i) * ranges[0].size);
+		memmove(ranges + i, ranges + i + 1, (nranges - i) * ranges[0].sizeof);
 		return;
 	    }
 	}
@@ -1166,7 +1166,7 @@ struct Gcx
 		npages = n;
 	}
 
-	pool = cast(Pool *)std.c.stdlib.calloc(1, Pool.size);
+	pool = cast(Pool *)std.c.stdlib.calloc(1, Pool.sizeof);
 	if (pool)
 	{
 	    pool.initialize(npages);
@@ -1174,7 +1174,7 @@ struct Gcx
 		goto Lerr;
 
 	    newnpools = npools + 1;
-	    newpooltable = cast(Pool **)std.c.stdlib.realloc(pooltable, newnpools * (Pool *).size);
+	    newpooltable = cast(Pool **)std.c.stdlib.realloc(pooltable, newnpools * (Pool *).sizeof);
 	    if (!newpooltable)
 		goto Lerr;
 
@@ -1184,7 +1184,7 @@ struct Gcx
 		if (pool.opCmp(newpooltable[i]) < 0)
 		     break;
 	    }
-	    memmove(newpooltable + i + 1, newpooltable + i, (npools - i) * (Pool *).size);
+	    memmove(newpooltable + i + 1, newpooltable + i, (npools - i) * (Pool *).sizeof);
 	    newpooltable[i] = pool;
 
 	    pooltable = newpooltable;
@@ -1708,7 +1708,7 @@ struct Gcx
 	    Log log;
 
 	    log.p = p;
-	    log.size = size;
+	    log.sizeof = size;
 	    log.line = GC.line;
 	    log.file = GC.file;
 	    log.parent = null;
@@ -1996,7 +1996,7 @@ version (SENTINEL)
 {
     const uint SENTINEL_PRE = 0xF4F4F4F4;	// 32 bits
     const ubyte SENTINEL_POST = 0xF5;		// 8 bits
-    const uint SENTINEL_EXTRA = 2 * uint.size + 1;
+    const uint SENTINEL_EXTRA = 2 * uint.sizeof + 1;
 
     uint* sentinel_size(void *p)  { return &(cast(uint *)p)[-2]; }
     uint* sentinel_pre(void *p)   { return &(cast(uint *)p)[-1]; }
@@ -2017,12 +2017,12 @@ version (SENTINEL)
 
     void *sentinel_add(void *p)
     {
-	return p + 2 * uint.size;
+	return p + 2 * uint.sizeof;
     }
 
     void *sentinel_sub(void *p)
     {
-	return p - 2 * uint.size;
+	return p - 2 * uint.sizeof;
     }
 }
 else

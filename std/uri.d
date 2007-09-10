@@ -161,7 +161,7 @@ private char[] URI_Encode(dchar[] string, uint unescapedSet)
 		R = R2;
 	    }
 
-	    while (L--)
+	    for (j = 0; j < L; j++)
 	    {
 		R[Rlen] = '%';
 		R[Rlen + 1] = hex2ascii[Octet[j] >> 4];
@@ -344,4 +344,7 @@ unittest
     r = decode(t);
     //printf("r = '%.*s'\n", r);
     assert(r == s);
+
+    r = encode( decode("%E3%81%82%E3%81%82") );
+    assert(r == "%E3%81%82%E3%81%82");
 }

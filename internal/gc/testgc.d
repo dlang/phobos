@@ -1,5 +1,5 @@
 
-// Copyright (C) 2001-2003 by Digital Mars
+// Copyright (C) 2001-2004 by Digital Mars
 // All Rights Reserved
 // Written by Walter Bright
 // www.digitalmars.com
@@ -301,7 +301,7 @@ printf("gc = %p\n", gc);
 
 GC *newGC()
 {
-    return cast(GC *)std.c.stdlib.calloc(1, GC.size);
+    return cast(GC *)std.c.stdlib.calloc(1, GC.sizeof);
 }
 
 void deleteGC(GC *gc)

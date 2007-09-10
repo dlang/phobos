@@ -68,8 +68,32 @@ class ClassInfo : Object
     void *deallocator;
 }
 
+private import std.string;
+
 class TypeInfo
 {
+    uint toHash()
+    {	uint hash;
+
+	foreach (char c; this.classinfo.name)
+	    hash = hash * 9 + c;
+	return hash;
+    }
+
+    int opCmp(Object o)
+    {
+	return std.string.cmp(this.classinfo.name, o.classinfo.name);
+    }
+
+    int opEquals(Object o)
+    {
+	/* TypeInfo instances are singletons, but duplicates can exist
+	 * across DLL's. Therefore, comparing for a name match is
+	 * sufficient.
+	 */
+	return this === o || this.classinfo.name == o.classinfo.name;
+    }
+
     uint getHash(void *p) { return cast(uint)p; }
     int equals(void *p1, void *p2) { return p1 == p2; }
     int compare(void *p1, void *p2) { return 0; }

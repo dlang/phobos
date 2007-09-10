@@ -35,7 +35,7 @@ struct GCBits
     {
 	if (data)
 	{
-	    assert(nwords * data[0].size * 8 >= nbits);
+	    assert(nwords * data[0].sizeof * 8 >= nbits);
 	}
     }
 
@@ -43,7 +43,7 @@ struct GCBits
     {
 	this.nbits = nbits;
 	nwords = (nbits + (BITS_PER_WORD - 1)) >> BITS_SHIFT;
-	data = cast(uint *)calloc(nwords + 2, uint.size);
+	data = cast(uint *)calloc(nwords + 2, uint.sizeof);
 	if (!data)
 	    _d_OutOfMemory();
     }
@@ -115,7 +115,7 @@ struct GCBits
 
     void zero()
     {
-	memset(data + 1, 0, nwords * uint.size);
+	memset(data + 1, 0, nwords * uint.sizeof);
     }
 
     void copy(GCBits *f)
@@ -125,7 +125,7 @@ struct GCBits
     }
     body
     {
-	memcpy(data + 1, f.data + 1, nwords * uint.size);
+	memcpy(data + 1, f.data + 1, nwords * uint.sizeof);
     }
 
     uint *base()

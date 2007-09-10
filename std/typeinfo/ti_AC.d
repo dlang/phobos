@@ -7,12 +7,13 @@ class TypeInfo_AC : TypeInfo
 {
     uint getHash(void *p)
     {	Object[] s = *cast(Object[]*)p;
-	uint len = s.length;
 	uint hash = 0;
 
-	for (uint u = 0; u < len; u++)
-	    hash += s[u].toHash();
-
+	foreach (Object o; s)
+	{
+	    if (o)
+		hash += o.toHash();
+	}
 	return hash;
     }
 
@@ -23,11 +24,13 @@ class TypeInfo_AC : TypeInfo
 
 	if (s1.length == s2.length)
 	{
-	    for (uint u = 0; u < s1.length; u++)
-	    {
+	    for (size_t u = 0; u < s1.length; u++)
+	    {	Object o1 = s1[u];
+		Object o2 = s2[u];
+
 		// Do not pass null's to Object.opEquals()
-		if (s1[u] === s2[u] ||
-		    (s1[u] !== null && s2[u] !== null && s1[u].opEquals(s2[u])))
+		if (o1 === o2 ||
+		    (o1 !== null && o2 !== null && o1.opEquals(o2)))
 		    continue;
 		return 0;
 	    }
@@ -45,7 +48,7 @@ class TypeInfo_AC : TypeInfo
 	c = cast(int)s1.length - cast(int)s2.length;
 	if (c == 0)
 	{
-	    for (uint u = 0; u < s1.length; u++)
+	    for (size_t u = 0; u < s1.length; u++)
 	    {	Object o1 = s1[u];
 		Object o2 = s2[u];
 
