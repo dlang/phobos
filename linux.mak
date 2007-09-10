@@ -54,7 +54,7 @@ OBJS = asserterror.o deh2.o switch.o complex.o gcstats.o \
 	stream.o cstream.o switcherr.o array.o gc.o \
 	qsort.o thread.o obj.o utf.o uri.o \
 	Dcrc32.o conv.o arraycast.o errno.o alloca.o cmath2.o \
-	process.o syserror.o \
+	process.o syserror.o metastrings.o \
 	socket.o socketstream.o stdarg.o stdio.o format.o \
 	perf.o openrj.o uni.o trace.o boxer.o \
 	demangle.o cover.o bitarray.o bind.o aApplyR.o \
@@ -94,7 +94,8 @@ SRC_STD= std/zlib.d std/zip.d std/stdint.d std/conv.d std/utf.d std/uri.d \
 	std/socket.d std/socketstream.d std/loader.d std/stdarg.d \
 	std/stdio.d std/format.d std/perf.d std/openrj.d std/uni.d \
 	std/boxer.d std/cstream.d std/demangle.d std/cover.d std/bitarray.d \
-	std/signals.d std/cpuid.d std/typetuple.d std/traits.d std/bind.d
+	std/signals.d std/cpuid.d std/typetuple.d std/traits.d std/bind.d \
+	std/metastrings.d
 
 SRC_STD_C= std/c/process.d std/c/stdlib.d std/c/time.d std/c/stdio.d \
 	std/c/math.d std/c/stdarg.d std/c/stddef.d std/c/fenv.d std/c/string.d \
@@ -361,6 +362,9 @@ math2.o : std/math2.d
 
 md5.o : std/md5.d
 	$(DMD) -c $(DFLAGS) std/md5.d
+
+metastrings.o : std/metastrings.d
+	$(DMD) -c $(DFLAGS) std/metastrings.d
 
 mmfile.o : std/mmfile.d
 	$(DMD) -c $(DFLAGS) std/mmfile.d

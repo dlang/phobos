@@ -55,8 +55,8 @@ struct lldiv_t { long quot,rem; }
 	int (*compare)(void *elem1, void *elem2));	/// ditto
 
     char* getenv(char*);	///
-    int   setenv(char*, char*, int);	/// ditto
-    void  unsetenv(char*);	/// ditto
+    int   setenv(char*, char*, int); /// extension to ISO C standard, not available on all platforms
+    void  unsetenv(char*); /// extension to ISO C standard, not available on all platforms
 
     int    rand();	///
     void   srand(uint);	/// ditto

@@ -290,14 +290,19 @@ class TypeInfo
     hash_t toHash()
     {	hash_t hash;
 
-	foreach (char c; this.classinfo.name)
+	foreach (char c; this.toString())
 	    hash = hash * 9 + c;
 	return hash;
     }
 
     int opCmp(Object o)
     {
-	return std.string.cmp(this.classinfo.name, o.classinfo.name);
+	if (this is o)
+	    return 0;
+	TypeInfo ti = cast(TypeInfo)o;
+	if (ti is null)
+	    return 1;
+	return std.string.cmp(this.toString(), ti.toString());
     }
 
     int opEquals(Object o)
@@ -306,7 +311,10 @@ class TypeInfo
 	 * across DLL's. Therefore, comparing for a name match is
 	 * sufficient.
 	 */
-	return this is o || this.classinfo.name == o.classinfo.name;
+	if (this is o)
+	    return 1;
+	TypeInfo ti = cast(TypeInfo)o;
+	return ti && this.toString() == ti.toString();
     }
 
     /// Returns a hash of the instance of a type.

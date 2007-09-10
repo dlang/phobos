@@ -68,7 +68,7 @@ int isxdigit(dchar c) { return (c <= 0x7F) ? _ctype[c] & (_HEX)      : 0; }
 int isgraph(dchar c)  { return (c <= 0x7F) ? _ctype[c] & (_ALP|_DIG|_PNC) : 0; }
 
 /**
- * Returns !=0 if c is a printing character except for the space character.
+ * Returns !=0 if c is a printing character including the space character.
  */
 int isprint(dchar c)  { return (c <= 0x7F) ? _ctype[c] & (_ALP|_DIG|_PNC|_BLK) : 0; }
 

@@ -72,7 +72,7 @@ OBJS= asserterror.obj deh.obj switch.obj complex.obj gcstats.obj \
 	Czlib.obj Dzlib.obj zip.obj process.obj registry.obj \
 	socket.obj socketstream.obj loader.obj stdarg.obj format.obj stdio.obj \
 	perf.obj openrj.obj uni.obj winsock.obj oldsyserror.obj \
-	errno.obj boxer.obj cstream.obj charset.obj \
+	errno.obj boxer.obj cstream.obj charset.obj metastrings.obj \
 	gamma.obj demangle.obj cover.obj bitarray.obj aApplyR.obj \
 	signals.obj cpuid.obj typetuple.obj traits.obj bind.obj \
 	ti_Ag.obj ti_C.obj ti_int.obj ti_char.obj \
@@ -106,6 +106,7 @@ DOCS=	$(DOC)\std_path.html $(DOC)\std_math.html $(DOC)\std_outbuffer.html \
 	$(DOC)\std_demangle.html \
 	$(DOC)\std_gc.html \
 	$(DOC)\std_intrinsic.html \
+	$(DOC)\std_metastrings.html \
 	$(DOC)\std_mmfile.html \
 	$(DOC)\std_openrj.html \
 	$(DOC)\std_outofmemory.html \
@@ -149,7 +150,8 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 	std\socket.d std\socketstream.d std\loader.d std\stdarg.d std\format.d \
 	std\stdio.d std\perf.d std\openrj.d std\uni.d std\boxer.d \
 	std\cstream.d std\demangle.d std\cover.d std\bitarray.d \
-	std\signals.d std\cpuid.d std\typetuple.d std\traits.d std\bind.d
+	std\signals.d std\cpuid.d std\typetuple.d std\traits.d std\bind.d \
+	std\metastrings.d
 
 SRC_STD_C= std\c\process.d std\c\stdlib.d std\c\time.d std\c\stdio.d \
 	std\c\math.d std\c\stdarg.d std\c\stddef.d std\c\fenv.d std\c\string.d \
@@ -393,6 +395,9 @@ math2.obj : std\math2.d
 
 md5.obj : std\md5.d
 	$(DMD) -c $(DFLAGS) -inline std\md5.d
+
+metastrings.obj : std\metastrings.d
+	$(DMD) -c $(DFLAGS) -inline std\metastrings.d
 
 mmfile.obj : std\mmfile.d
 	$(DMD) -c $(DFLAGS) std\mmfile.d
@@ -693,6 +698,9 @@ $(DOC)\std_math.html : std.ddoc std\math.d
 
 $(DOC)\std_md5.html : std.ddoc std\md5.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_md5.html std.ddoc std\md5.d
+
+$(DOC)\std_metastrings.html : std.ddoc std\metastrings.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_metastrings.html std.ddoc std\metastrings.d
 
 $(DOC)\std_mmfile.html : std.ddoc std\mmfile.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_mmfile.html std.ddoc std\mmfile.d

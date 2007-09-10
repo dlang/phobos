@@ -597,14 +597,57 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
 	    return;
 	}
 
-	void putArray(void* p, size_t len, TypeInfo ti) {
+	void putArray(void* p, size_t len, TypeInfo valti)
+	{
 	  putc('[');
-	  size_t tsize = ti.tsize();
-	  while (len--) {
-	    doFormat(putc, (&ti)[0 .. 1], p);
+	  size_t tsize = valti.tsize();
+	  auto argptrSave = argptr;
+	  auto tiSave = ti;
+	  ti = valti;
+	  m = cast(Mangle)valti.classinfo.name[9];
+	  while (len--)
+	  {
+	    //doFormat(putc, (&valti)[0 .. 1], p);
+	    argptr = p;
+	    formatArg('s');
+
 	    p += tsize;
 	    if (len > 0) putc(',');
 	  }
+	  ti = tiSave;
+	  argptr = argptrSave;
+	  putc(']');
+	}
+
+	void putAArray(ubyte[long] vaa, TypeInfo valti, TypeInfo keyti)
+	{
+	  putc('[');
+	  bool comma=false;
+	  auto argptrSave = argptr;
+	  auto tiSave = ti;
+	  foreach(inout fakevalue; vaa)
+	  {
+	    if (comma) putc(',');
+	    comma = true;
+	    // the key comes before the value
+	    ubyte* key = &fakevalue - long.sizeof;
+
+	    //doFormat(putc, (&keyti)[0..1], key);
+	    argptr = key;
+	    ti = keyti;
+	    m = cast(Mangle)keyti.classinfo.name[9];
+	    formatArg('s');
+
+	    putc(':');
+	    ubyte* value = key + keyti.tsize;
+	    //doFormat(putc, (&valti)[0..1], value);
+	    argptr = value;
+	    ti = valti;
+	    m = cast(Mangle)valti.classinfo.name[9];
+	    formatArg('s');
+	  }
+	  ti = tiSave;
+	  argptr = argptrSave;
 	  putc(']');
 	}
 
@@ -754,6 +797,16 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
 		  putArray(va.ptr, va.length, (cast(TypeInfo_Array)ti).next);
 		  return;
 		}
+		if (ti.classinfo.name.length == 25 &&
+		    ti.classinfo.name[9..25] == "AssociativeArray") 
+		{ // associative array
+		  ubyte[long] vaa = va_arg!(ubyte[long])(argptr);
+		  putAArray(vaa,
+			(cast(TypeInfo_AssociativeArray)ti).next,
+			(cast(TypeInfo_AssociativeArray)ti).key);
+		  return;
+		}
+
 		m2 = cast(Mangle)ti.classinfo.name[10];
 		switch (m2)
 		{

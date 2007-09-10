@@ -36,7 +36,7 @@ import std.outofmemory;
 
 // Auto-rehash and pre-allocate - Dave Fladebo
 
-static uint[] prime_list = [
+static size_t[] prime_list = [
     97UL,         389UL,
     1543UL,       6151UL,
     24593UL,      98317UL,

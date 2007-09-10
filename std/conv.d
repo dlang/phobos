@@ -112,9 +112,9 @@ int toInt(char[] s)
 	char c = s[i];
 	if (c >= '0' && c <= '9')
 	{
-	    uint v1 = v;
-	    v = v * 10 + (c - '0');
-	    if (cast(uint)v < v1)
+	    if (v < int.max/10 || (v == int.max/10 && c + sign <= '7'))
+		v = v * 10 + (c - '0');
+	    else
 		goto Loverflow;
 	}
 	else if (c == '-' && i == 0)
@@ -197,6 +197,7 @@ unittest
 	"123h",
 	"2147483648",
 	"-2147483649",
+	"5656566565",
     ];
 
     for (int j = 0; j < errors.length; j++)
@@ -235,9 +236,9 @@ uint toUint(char[] s)
 	char c = s[i];
 	if (c >= '0' && c <= '9')
 	{
-	    uint v1 = v;
-	    v = v * 10 + (c - '0');
-	    if (v < v1)
+	    if (v < uint.max/10 || (v == uint.max/10 && c <= '5'))
+		v = v * 10 + (c - '0');
+	    else
 		goto Loverflow;
 	}
 	else
@@ -331,9 +332,9 @@ long toLong(char[] s)
 	char c = s[i];
 	if (c >= '0' && c <= '9')
 	{
-	    ulong v1 = cast(ulong)v;
-	    v = v * 10 + (c - '0');
-	    if (cast(ulong)v < v1)
+	    if (v < long.max/10 || (v == long.max/10 && c + sign <= '7'))
+		v = v * 10 + (c - '0');
+	    else
 		goto Loverflow;
 	}
 	else if (c == '-' && i == 0)
@@ -460,9 +461,9 @@ ulong toUlong(char[] s)
 	char c = s[i];
 	if (c >= '0' && c <= '9')
 	{
-	    ulong v1 = v;
-	    v = v * 10 + (c - '0');
-	    if (v < v1)
+	    if (v < ulong.max/10 || (v == ulong.max/10 && c <= '5'))
+		v = v * 10 + (c - '0');
+	    else
 		goto Loverflow;
 	}
 	else

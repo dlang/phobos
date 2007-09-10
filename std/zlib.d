@@ -15,7 +15,7 @@ module std.zlib;
 
 //debug=zlib;		// uncomment to turn on debugging printf's
 
-private import etc.c.zlib;
+private import etc.c.zlib, std.gc;
 
 // Values for 'mode'
 
@@ -117,6 +117,7 @@ body
 
     destlen = srcbuf.length + ((srcbuf.length + 1023) / 1024) + 12;
     destbuf = new void[destlen];
+    std.gc.hasNoPointers(destbuf.ptr);
     err = etc.c.zlib.compress2(cast(ubyte *)destbuf, &destlen, cast(ubyte *)srcbuf, srcbuf.length, level);
     if (err)
     {	delete destbuf;
@@ -157,6 +158,7 @@ void[] uncompress(void[] srcbuf, uint destlen = 0u, int winbits = 15)
 	etc.c.zlib.z_stream zs;
 
 	destbuf = new void[destlen];
+	std.gc.hasNoPointers(destbuf.ptr);
 
 	zs.next_in = cast(ubyte*) srcbuf;
 	zs.avail_in = srcbuf.length;
@@ -298,13 +300,14 @@ class Compress
 	}
 
 	destbuf = new void[zs.avail_in + buf.length];
-	zs.next_out = cast(ubyte*) destbuf;
+	std.gc.hasNoPointers(destbuf.ptr);
+	zs.next_out = cast(ubyte*) destbuf.ptr;
 	zs.avail_out = destbuf.length;
 
 	if (zs.avail_in)
 	    buf = cast(void[])zs.next_in[0 .. zs.avail_in] ~ buf;
 
-	zs.next_in = cast(ubyte*) buf;
+	zs.next_in = cast(ubyte*) buf.ptr;
 	zs.avail_in = buf.length;
 
 	err = deflate(&zs, Z_NO_FLUSH);
@@ -463,6 +466,7 @@ class UnCompress
 	if (!destbufsize)
 	    destbufsize = buf.length * 2;
 	destbuf = new void[zs.avail_in * 2 + destbufsize];
+	std.gc.hasNoPointers(destbuf.ptr);
 	zs.next_out = cast(ubyte*) destbuf;
 	zs.avail_out = destbuf.length;
 
@@ -507,6 +511,7 @@ class UnCompress
 
       L1:
 	destbuf = new void[zs.avail_in * 2 + 100];
+	std.gc.hasNoPointers(destbuf.ptr);
 	zs.next_out = cast(ubyte*) destbuf;
 	zs.avail_out = destbuf.length;
 
