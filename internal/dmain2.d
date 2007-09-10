@@ -70,7 +70,7 @@ extern (C) int main(int argc, char **argv)
     {
 	printf("Error: ");
 	o.print();
-	result = EXIT_FAILURE;
+	exit(EXIT_FAILURE);
     }
 
     _moduleDtor();

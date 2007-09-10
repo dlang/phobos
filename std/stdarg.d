@@ -4,6 +4,8 @@
  * Written by Hauke Duden and Walter Bright
  */
 
+/* This is for use with variable argument lists with extern(D) linkage. */
+
 module std.stdarg;
 
 alias void* va_list;

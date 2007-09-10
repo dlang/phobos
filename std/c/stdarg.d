@@ -3,6 +3,8 @@
  * Written by Hauke Duden and Walter Bright
  */
 
+/* This is for use with extern(C) variable argument lists. */
+
 module std.c.stdarg;
 
 alias void* va_list;

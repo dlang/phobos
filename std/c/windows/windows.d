@@ -1,6 +1,14 @@
 
 module std.c.windows.windows;
 
+version (Windows)
+{
+}
+else
+{
+    static assert(0);		// Windows only
+}
+
 extern (Windows)
 {
     alias uint ULONG;

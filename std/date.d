@@ -348,6 +348,12 @@ d_time MakeTime(d_time hour, d_time min, d_time sec, d_time ms)
 	return  d_time_nan;
    +/
 
+    if (hour == d_time_nan ||
+	min ==  d_time_nan ||
+	sec ==  d_time_nan ||
+	ms ==   d_time_nan)
+	return d_time_nan;
+
     hour = toInteger(hour);
     min = toInteger(min);
     sec = toInteger(sec);
@@ -374,6 +380,11 @@ d_time MakeDay(d_time year, d_time month, d_time date)
 	!Port::isfinite(date))
 	return  d_time.init;
  +/
+
+    if (year  == d_time_nan ||
+	month == d_time_nan ||
+	date  == d_time_nan)
+	return d_time_nan;
 
     year = toInteger(year);
     month = toInteger(month);
@@ -477,10 +488,8 @@ char[] toDateString(d_time time)
     // "Tue Apr 02 1996"
     char[] buffer = new char[29 + 7 + 1];
 
-  /+
-    if (Port::isnan(time))
+    if (time == d_time_nan)
 	return "Invalid Date";
-   +/
 
     dst = DaylightSavingTA(time);
     offset = LocalTZA + dst;
@@ -511,10 +520,8 @@ char[] toTimeString(d_time time)
     // "02:04:57 GMT-0800"
     char[] buffer = new char[17 + 1];
 
-  /+
-    if (Port::isnan(time))
+    if (time == d_time_nan)
 	return "Invalid Date";
-   +/
 
     dst = DaylightSavingTA(time);
     offset = LocalTZA + dst;

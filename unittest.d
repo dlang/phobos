@@ -24,6 +24,7 @@ import std.utf;
 import std.uri;
 import std.zlib;
 import std.md5;
+import std.stdio;
 
 int main(char[][] args)
 {
@@ -52,6 +53,8 @@ printf("test2\n");
 
     ubyte[16] buf;
     std.md5.sum(buf,"");
+
+    writefln("hello world!");			// std.format
 
 {
     creal c = 3.0 + 4.0i;

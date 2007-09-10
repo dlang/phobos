@@ -368,4 +368,8 @@ unittest
 
     r = encode( decode("%E3%81%82%E3%81%82") );
     assert(r == "%E3%81%82%E3%81%82");
+
+    r = encodeComponent("c++");
+    //printf("r = '%.*s'\n", r);
+    assert(r == "c%2B%2B");
 }

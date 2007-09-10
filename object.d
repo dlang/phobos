@@ -73,6 +73,16 @@ class TypeInfo_Class : TypeInfo
     ClassInfo info;
 }
 
+class TypeInfo_Struct : TypeInfo
+{
+    char[] name;
+    uint xsize;
+
+    uint function(void*) xtoHash;
+    int function(void*,void*) xopEquals;
+    int function(void*,void*) xopCmp;
+}
+
 // Recoverable errors
 
 class Exception : Object

@@ -267,7 +267,7 @@ void* _aaIn(aaA*[] aa, TypeInfo keyti, ...)
 		{
 		    c = keyti.compare(pkey, e + 1);
 		    if (c == 0)
-			return cast(void *)(e + 1) + keyti.sizeof;
+			return cast(void *)(e + 1) + keyti.tsize();
 		}
 
 		if (c < 0)

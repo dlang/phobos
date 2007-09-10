@@ -81,11 +81,11 @@ struct regmatch_t
     int rm_eo;			// index past end of match
 }
 
-alias char tchar;		// so we can make a wchar version
+private alias char rchar;	// so we can make a wchar version
 
 class RegExp
 {
-    public this(tchar[] pattern, tchar[] attributes)
+    public this(rchar[] pattern, rchar[] attributes)
     {
 	pmatch = (&gmatch)[0 .. 1];
 	compile(pattern, attributes);
@@ -94,13 +94,13 @@ class RegExp
     uint re_nsub;		// number of parenthesized subexpression matches
     regmatch_t[] pmatch;	// array [re_nsub + 1]
 
-    tchar[] input;		// the string to search
+    rchar[] input;		// the string to search
 
     // per instance:
 
-    tchar[] pattern;		// source text of the regular expression
+    rchar[] pattern;		// source text of the regular expression
 
-    tchar[] flags;		// source text of the attributes parameter
+    rchar[] flags;		// source text of the attributes parameter
 
     int errors;
 
@@ -172,7 +172,7 @@ enum : ubyte
 };
 
 // BUG: should this include '$'?
-private int isword(tchar c) { return isalnum(c) || c == '_'; }
+private int isword(rchar c) { return isalnum(c) || c == '_'; }
 
 private uint inf = ~0u;
 
@@ -180,7 +180,7 @@ private uint inf = ~0u;
  * Throws RegExpError on error
  */
 
-void compile(tchar[] pattern, tchar[] attributes)
+public void compile(rchar[] pattern, rchar[] attributes)
 {
     //printf("RegExp.compile('%.*s', '%.*s')\n", pattern, attributes);
 
@@ -241,11 +241,11 @@ void compile(tchar[] pattern, tchar[] attributes)
  * 	array of slices into string[]
  */
 
-public tchar[][] split(tchar[] string)
+public rchar[][] split(rchar[] string)
 {
     debug(regexp) printf("regexp.split()\n");
 
-    tchar[][] result;
+    rchar[][] result;
 
     if (string.length)
     {
@@ -289,8 +289,8 @@ unittest
     debug(regexp) printf("regexp.split.unittest()\n");
 
     RegExp r = new RegExp("a*?", null);
-    tchar[][] result;
-    tchar[] j;
+    rchar[][] result;
+    rchar[] j;
     int i;
 
     result = r.split("ab");
@@ -341,7 +341,7 @@ unittest
  *	-1	no match
  */
 
-public int search(tchar[] string)
+public int search(rchar[] string)
 {
     int i;
 
@@ -373,9 +373,9 @@ unittest
  *	if not global, return array of all matches
  */
 
-public tchar[][] match(tchar[] string)
+public rchar[][] match(rchar[] string)
 {
-    tchar[][] result;
+    rchar[][] result;
 
     if (attributes & REA.global)
     {
@@ -403,8 +403,8 @@ unittest
     debug(regexp) printf("regexp.match.unittest()\n");
 
     int i;
-    tchar[][] result;
-    tchar[] j;
+    rchar[][] result;
+    rchar[] j;
     RegExp r;
 
     r = new RegExp("a[bc]", null);
@@ -429,9 +429,9 @@ unittest
  * Return the new string.
  */
 
-public tchar[] replace(tchar[] string, tchar[] format)
+public rchar[] replace(rchar[] string, rchar[] format)
 {
-    tchar[] result;
+    rchar[] result;
     int lastindex;
     int offset;
 
@@ -446,7 +446,7 @@ public tchar[] replace(tchar[] string, tchar[] format)
 	int so = pmatch[0].rm_so;
 	int eo = pmatch[0].rm_eo;
 
-	tchar[] replacement = replace(format);
+	rchar[] replacement = replace(format);
 	result = replaceSlice(result, result[offset + so .. offset + eo], replacement);
 
 	if (attributes & REA.global)
@@ -470,7 +470,7 @@ unittest
     debug(regexp) printf("regexp.replace.unittest()\n");
 
     int i;
-    tchar[] result;
+    rchar[] result;
     RegExp r;
 
     r = new RegExp("a[bc]", "g");
@@ -486,7 +486,7 @@ unittest
  *	array of slices into string[] representing matches
  */
 
-public tchar[][] exec(tchar[] string)
+public rchar[][] exec(rchar[] string)
 {
     debug(regexp) printf("regexp.exec(string = '%.*s')\n", string);
     input = string;
@@ -501,14 +501,14 @@ public tchar[][] exec(tchar[] string)
  *	array of slices into string[] representing matches
  */
 
-public tchar[][] exec()
+public rchar[][] exec()
 {
     if (!test())
 	return null;
 
-    tchar[][] result;
+    rchar[][] result;
 
-    result = new tchar[][pmatch.length];
+    result = new rchar[][pmatch.length];
     for (int i = 0; i < pmatch.length; i++)
     {
 	if (pmatch[i].rm_so == pmatch[i].rm_eo)
@@ -527,7 +527,7 @@ public tchar[][] exec()
  *	!=0	match
  */
 
-public int test(tchar[] string)
+public int test(rchar[] string)
 {
     return test(string, 0 /*pmatch[0].rm_eo*/);
 }
@@ -551,9 +551,9 @@ public int test()
  *	!=0	match
  */
 
-int test(char[] string, int startindex)
+public int test(char[] string, int startindex)
 {
-    tchar firstc;
+    rchar firstc;
     uint si;
 
     input = string;
@@ -620,7 +620,7 @@ int test(char[] string, int startindex)
     return 0;		// no match
 }
 
-int chr(inout uint si, tchar c)
+int chr(inout uint si, rchar c)
 {
     for (; si < input.length; si++)
     {
@@ -679,14 +679,14 @@ void printProgram(ubyte[] prog)
 		len = *cast(uint *)&prog[pc + 1];
 		printf("\tREstring x%x, '%.*s'\n", len,
 			(&prog[pc + 1 + uint.sizeof])[0 .. len]);
-		pc += 1 + uint.sizeof + len * tchar.sizeof;
+		pc += 1 + uint.sizeof + len * rchar.sizeof;
 		break;
 
 	    case REistring:
 		len = *cast(uint *)&prog[pc + 1];
 		printf("\tREistring x%x, '%.*s'\n", len,
 			(&prog[pc + 1 + uint.sizeof])[0 .. len]);
-		pc += 1 + uint.sizeof + len * tchar.sizeof;
+		pc += 1 + uint.sizeof + len * rchar.sizeof;
 		break;
 
 	    case REtestbit:
@@ -887,8 +887,8 @@ int trymatch(int pc, int pcend)
 		c2 = input[src];
 		if (c1 != c2)
 		{
-		    if (islower(cast(tchar)c2))
-			c2 = std.ctype.toupper(cast(tchar)c2);
+		    if (islower(cast(rchar)c2))
+			c2 = std.ctype.toupper(cast(rchar)c2);
 		    else
 			goto Lnomatch;
 		    if (c1 != c2)
@@ -916,8 +916,8 @@ int trymatch(int pc, int pcend)
 		c2 = input[src];
 		if (c1 != c2)
 		{
-		    if (islower(cast(tchar)c2))
-			c2 = std.ctype.toupper(cast(tchar)c2);
+		    if (islower(cast(rchar)c2))
+			c2 = std.ctype.toupper(cast(rchar)c2);
 		    else
 			goto Lnomatch;
 		    if (c1 != c2)
@@ -931,7 +931,7 @@ int trymatch(int pc, int pcend)
 		debug(regexp) printf("\tREanychar\n");
 		if (src == input.length)
 		    goto Lnomatch;
-		if (!(attributes & REA.dotmatchlf) && input[src] == cast(tchar)'\n')
+		if (!(attributes & REA.dotmatchlf) && input[src] == cast(rchar)'\n')
 		    goto Lnomatch;
 		src++;
 		pc++;
@@ -943,10 +943,10 @@ int trymatch(int pc, int pcend)
 			(&program[pc + 1 + uint.sizeof])[0 .. len]);
 		if (src + len > input.length)
 		    goto Lnomatch;
-		if (memcmp(&program[pc + 1 + uint.sizeof], &input[src], len * tchar.sizeof))
+		if (memcmp(&program[pc + 1 + uint.sizeof], &input[src], len * rchar.sizeof))
 		    goto Lnomatch;
 		src += len;
-		pc += 1 + uint.sizeof + len * tchar.sizeof;
+		pc += 1 + uint.sizeof + len * rchar.sizeof;
 		break;
 
 	    case REistring:
@@ -957,7 +957,7 @@ int trymatch(int pc, int pcend)
 		    goto Lnomatch;
 		version (Win32)
 		{
-		    if (memicmp(cast(char*)&program[pc + 1 + uint.sizeof], &input[src], len * tchar.sizeof))
+		    if (memicmp(cast(char*)&program[pc + 1 + uint.sizeof], &input[src], len * rchar.sizeof))
 			goto Lnomatch;
 		}
 		else
@@ -967,7 +967,7 @@ int trymatch(int pc, int pcend)
 			goto Lnomatch;
 		}
 		src += len;
-		pc += 1 + uint.sizeof + len * tchar.sizeof;
+		pc += 1 + uint.sizeof + len * rchar.sizeof;
 		break;
 
 	    case REtestbit:
@@ -1256,8 +1256,8 @@ int trymatch(int pc, int pcend)
 		    c1 = input[src - 1];
 		    c2 = input[src];
 		    if (!(
-			  (isword(cast(tchar)c1) && !isword(cast(tchar)c2)) ||
-			  (!isword(cast(tchar)c1) && isword(cast(tchar)c2))
+			  (isword(cast(rchar)c1) && !isword(cast(rchar)c2)) ||
+			  (!isword(cast(rchar)c1) && isword(cast(rchar)c2))
 			 )
 		       )
 			goto Lnomatch;
@@ -1272,8 +1272,8 @@ int trymatch(int pc, int pcend)
 		c1 = input[src - 1];
 		c2 = input[src];
 		if (
-		    (isword(cast(tchar)c1) && !isword(cast(tchar)c2)) ||
-		    (!isword(cast(tchar)c1) && isword(cast(tchar)c2))
+		    (isword(cast(rchar)c1) && !isword(cast(rchar)c2)) ||
+		    (!isword(cast(rchar)c1) && isword(cast(rchar)c2))
 		   )
 		    goto Lnomatch;
 		pc++;
@@ -1354,7 +1354,7 @@ int trymatch(int pc, int pcend)
 		    if (icmp(input[src .. src + len], input[so .. eo]))
 			goto Lnomatch;
 		}
-		else if (memcmp(&input[src], &input[so], len * tchar.sizeof))
+		else if (memcmp(&input[src], &input[so], len * rchar.sizeof))
 		    goto Lnomatch;
 		src += len;
 		pc += 2;
@@ -1526,7 +1526,7 @@ Lerr:
 int parseAtom()
 {   ubyte op;
     uint offset;
-    tchar c;
+    rchar c;
 
     //printf("parseAtom() '%.*s'\n", pattern[p .. pattern.length]);
     if (p < pattern.length)
@@ -1655,7 +1655,7 @@ int parseAtom()
 		    int len;
 
 		    for (q = p; q < pattern.length; ++q)
-		    {	tchar qc = pattern[q];
+		    {	rchar qc = pattern[q];
 
 			switch (qc)
 			{
@@ -1685,7 +1685,7 @@ int parseAtom()
 		    if (len > 0)
 		    {
 			debug(regexp) printf("writing string len %d, c = '%c', pattern[p] = '%c'\n", len+1, c, pattern[p]);
-			buf.reserve(5 + (1 + len) * tchar.sizeof);
+			buf.reserve(5 + (1 + len) * rchar.sizeof);
 			buf.write((attributes & REA.ignoreCase) ? REistring : REstring);
 			buf.write(len + 1);
 			buf.write(c);
@@ -1853,13 +1853,13 @@ int parseRange()
 
 		    case 'w':
 			for (i = 0; i <= cmax; i++)
-			    if (isword(cast(tchar)i))
+			    if (isword(cast(rchar)i))
 				r.bits[i] = 1;
 			goto Lrs;
 
 		    case 'W':
 			for (i = 1; i <= cmax; i++)
-			    if (!isword(cast(tchar)i))
+			    if (!isword(cast(rchar)i))
 				r.bits[i] = 1;
 			goto Lrs;
 
@@ -1962,7 +1962,7 @@ in
 body
 {   int c;
     int i;
-    tchar tc;
+    rchar tc;
 
     c = pattern[p];		// none of the cases are multibyte
     switch (c)
@@ -2129,7 +2129,7 @@ void optimize()
 		uint offset;
 
 		offset = i;
-		if (startchars(r, prog[i .. prog.length]))
+		if (starrchars(r, prog[i .. prog.length]))
 		{
 		    debug(regexp) printf("\tfilter built\n");
 		    buf.spread(offset, 1 + 4 + r.maxb);
@@ -2154,8 +2154,8 @@ void optimize()
 // Return 1 if success, 0 if we can't build a filter or
 // if there is no point to one.
 
-int startchars(Range r, ubyte[] prog)
-{   tchar c;
+int starrchars(Range r, ubyte[] prog)
+{   rchar c;
     uint maxc;
     uint maxb;
     uint len;
@@ -2165,7 +2165,7 @@ int startchars(Range r, ubyte[] prog)
     ubyte* pop;
     int i;
 
-    //printf("RegExp.startchars(prog = %p, progend = %p)\n", prog, progend);
+    //printf("RegExp.starrchars(prog = %p, progend = %p)\n", prog, progend);
     for (i = 0; i < prog.length;)
     {
 	switch (prog[i])
@@ -2180,7 +2180,7 @@ int startchars(Range r, ubyte[] prog)
 		c = prog[i + 1];
 		if (c <= 0x7F)
 		{   r.setbit2(c);
-		    r.setbit2(std.ctype.tolower(cast(tchar)c));
+		    r.setbit2(std.ctype.tolower(cast(rchar)c));
 		}
 		return 1;
 
@@ -2194,7 +2194,7 @@ int startchars(Range r, ubyte[] prog)
 	    case REstring:
 		len = *cast(uint *)&prog[i + 1];
 		assert(len);
-		c = *cast(tchar *)&prog[i + 1 + uint.sizeof];
+		c = *cast(rchar *)&prog[i + 1 + uint.sizeof];
 		debug(regexp) printf("\tREstring %d, '%c'\n", len, c);
 		if (c <= 0x7F)
 		    r.setbit2(c);
@@ -2203,11 +2203,11 @@ int startchars(Range r, ubyte[] prog)
 	    case REistring:
 		len = *cast(uint *)&prog[i + 1];
 		assert(len);
-		c = *cast(tchar *)&prog[i + 1 + uint.sizeof];
+		c = *cast(rchar *)&prog[i + 1 + uint.sizeof];
 		debug(regexp) printf("\tREistring %d, '%c'\n", len, c);
 		if (c <= 0x7F)
-		{   r.setbit2(std.ctype.toupper(cast(tchar)c));
-		    r.setbit2(std.ctype.tolower(cast(tchar)c));
+		{   r.setbit2(std.ctype.toupper(cast(rchar)c));
+		    r.setbit2(std.ctype.tolower(cast(rchar)c));
 		}
 		return 1;
 
@@ -2240,8 +2240,8 @@ int startchars(Range r, ubyte[] prog)
 
 	    case REor:
 		len = (cast(uint *)&prog[i + 1])[0];
-		return startchars(r, prog[i + 1 + uint.sizeof .. prog.length]) &&
-		       startchars(r, prog[i + 1 + uint.sizeof + len .. prog.length]);
+		return starrchars(r, prog[i + 1 + uint.sizeof .. prog.length]) &&
+		       starrchars(r, prog[i + 1 + uint.sizeof + len .. prog.length]);
 
 	    case REgoto:
 		len = (cast(uint *)&prog[i + 1])[0];
@@ -2258,7 +2258,7 @@ int startchars(Range r, ubyte[] prog)
 		n   = (cast(uint *)&prog[i + 1])[1];
 		m   = (cast(uint *)&prog[i + 1])[2];
 		pop = &prog[i + 1 + uint.sizeof * 3];
-		if (!startchars(r, pop[0 .. len]))
+		if (!starrchars(r, pop[0 .. len]))
 		    return 0;
 		if (n)
 		    return 1;
@@ -2270,7 +2270,7 @@ int startchars(Range r, ubyte[] prog)
 		len = (cast(uint *)&prog[i + 1])[0];
 		n   = (cast(uint *)&prog[i + 1])[1];
 		pop = &prog[0] + i + 1 + uint.sizeof * 2;
-		return startchars(r, pop[0 .. len]);
+		return starrchars(r, pop[0 .. len]);
 
 	    case REend:
 		return 0;
@@ -2310,14 +2310,14 @@ int startchars(Range r, ubyte[] prog)
 	    case REword:
 		r.setbitmax(0x7F);
 		for (c = 0; c <= r.maxc; c++)
-		    if (isword(cast(tchar)c))
+		    if (isword(cast(rchar)c))
 			r.bits[c] = 1;
 		return 1;
 
 	    case REnotword:
 		r.setbitmax(0x7F);
 		for (c = 0; c <= r.maxc; c++)
-		    if (!isword(cast(tchar)c))
+		    if (!isword(cast(rchar)c))
 			r.bits[c] = 1;
 		return 1;
 
@@ -2337,16 +2337,16 @@ int startchars(Range r, ubyte[] prog)
  *	\c	replace with char c
  */
 
-public tchar[] replaceOld(tchar[] format)
+public rchar[] replaceOld(rchar[] format)
 {
     OutBuffer buf;
-    tchar[] result;
-    tchar c;
+    rchar[] result;
+    rchar c;
 
 //printf("replace: this = %p so = %d, eo = %d\n", this, pmatch[0].rm_so, pmatch[0].rm_eo);
 //printf("3input = '%.*s'\n", input);
     buf = new OutBuffer();
-    buf.reserve(format.length * tchar.sizeof);
+    buf.reserve(format.length * rchar.sizeof);
     for (uint i; i < format.length; i++)
     {
 	c = format[i];
@@ -2378,7 +2378,7 @@ public tchar[] replaceOld(tchar[] format)
 		break;
 	}
     }
-    result = cast(tchar[])buf.toBytes();
+    result = cast(rchar[])buf.toBytes();
     return result;
 }
 
@@ -2397,18 +2397,18 @@ public tchar[] replaceOld(tchar[] format)
 //
 //	Any other $ are left as is.
 
-public tchar[] replace(tchar[] format)
+public rchar[] replace(rchar[] format)
 {
     return replace3(format, input, pmatch[0 .. re_nsub + 1]);
 }
 
 // Static version that doesn't require a RegExp object to be created
 
-private tchar[] replace3(tchar[] format, tchar[] input, regmatch_t[] pmatch)
+private static rchar[] replace3(rchar[] format, rchar[] input, regmatch_t[] pmatch)
 {
     OutBuffer buf;
-    tchar[] result;
-    tchar c;
+    rchar[] result;
+    rchar c;
     uint c2;
     int rm_so;
     int rm_eo;
@@ -2417,7 +2417,7 @@ private tchar[] replace3(tchar[] format, tchar[] input, regmatch_t[] pmatch)
 
 //    printf("replace3(format = '%.*s', input = '%.*s')\n", format, input);
     buf = new OutBuffer();
-    buf.reserve(format.length * tchar.sizeof);
+    buf.reserve(format.length * rchar.sizeof);
     for (f = 0; f < format.length; f++)
     {
 	c = format[f];
@@ -2430,7 +2430,7 @@ private tchar[] replace3(tchar[] format, tchar[] input, regmatch_t[] pmatch)
 	++f;
 	if (f == format.length)
 	{
-	    buf.write(cast(tchar)'$');
+	    buf.write(cast(rchar)'$');
 	    break;
 	}
 	c = format[f];
@@ -2458,7 +2458,7 @@ private tchar[] replace3(tchar[] format, tchar[] input, regmatch_t[] pmatch)
 		{
 		    if (i == 0)
 		    {
-			buf.write(cast(tchar)'$');
+			buf.write(cast(rchar)'$');
 			buf.write(c);
 			continue;
 		    }
@@ -2472,7 +2472,7 @@ private tchar[] replace3(tchar[] format, tchar[] input, regmatch_t[] pmatch)
 		    }
 		    if (i == 0)
 		    {
-			buf.write(cast(tchar)'$');
+			buf.write(cast(rchar)'$');
 			buf.write(c);
 			c = c2;
 			goto L1;
@@ -2492,12 +2492,12 @@ private tchar[] replace3(tchar[] format, tchar[] input, regmatch_t[] pmatch)
 		break;
 
 	    default:
-		buf.write(cast(tchar)'$');
+		buf.write(cast(rchar)'$');
 		buf.write(c);
 		break;
 	}
     }
-    result = cast(tchar[])buf.toBytes();
+    result = cast(rchar[])buf.toBytes();
     return result;
 }
 

@@ -3,6 +3,7 @@ module object;
 
 extern (C)
 {   int printf(char *, ...);
+    int memcmp(void *, void *, size_t);
 }
 
 alias bit bool;
@@ -170,6 +171,79 @@ class TypeInfo_Class : TypeInfo
     }
 
     ClassInfo info;
+}
+
+class TypeInfo_Struct : TypeInfo
+{
+    char[] toString() { return name; }
+
+    uint getHash(void *p)
+    {	uint h;
+
+	assert(p);
+	if (xtoHash)
+	    h = (*xtoHash)(p);
+	else
+	{
+	    // A sorry hash algorithm.
+	    // Should use the one for strings.
+	    // BUG: relies on the GC not moving objects
+	    for (size_t i = 0; i < xsize; i++)
+	    {	h = h * 9 + *cast(ubyte*)p;
+		p++;
+	    }
+	}
+	return h;
+    }
+
+    int equals(void *p2, void *p1)
+    {	int c;
+
+	if (p1 == p2)
+	    c = 1;
+	else if (!p1 || !p2)
+	    c = 0;
+	else if (xopEquals)
+	    c = (*xopEquals)(p1, p2);
+	else
+	    // BUG: relies on the GC not moving objects
+	    c = (memcmp(p1, p2, xsize) == 0);
+	return c;
+    }
+
+    int compare(void *p2, void *p1)
+    {
+	int c = 0;
+
+	// Regard null references as always being "less than"
+	if (p1 != p2)
+	{
+	    if (p1)
+	    {	if (!p2)
+		    c = 1;
+		else if (xopCmp)
+		    c = (*xopCmp)(p1, p2);
+		else
+		    // BUG: relies on the GC not moving objects
+		    c = memcmp(p1, p2, xsize);
+	    }
+	    else
+		c = -1;
+	}
+	return c;
+    }
+
+    int tsize()
+    {
+	return xsize;
+    }
+
+    char[] name;
+    uint xsize;
+
+    uint function(void*) xtoHash;
+    int function(void*,void*) xopEquals;
+    int function(void*,void*) xopCmp;
 }
 
 class Exception : Object

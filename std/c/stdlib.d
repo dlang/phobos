@@ -60,3 +60,6 @@ long   atoll(char *);
 long   strtoll(char *,char **,int);
 ulong  strtoull(char *,char **,int);
 
+char* itoa(int, char*, int);
+char* ultoa(uint, char*, int);
+

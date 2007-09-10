@@ -52,6 +52,7 @@ void _STI_critical_init()
 {
     if (!inited)
     {	InitializeCriticalSection(&critical_section.cs);
+	dcs_list = &critical_section;
 	inited = 1;
     }
 }
@@ -65,7 +66,6 @@ void _STD_critical_term()
 	    DeleteCriticalSection(&dcs_list->cs);
 	    dcs_list = dcs_list->next;
 	}
-	DeleteCriticalSection(&critical_section.cs);
     }
 }
 

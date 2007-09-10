@@ -266,9 +266,11 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
 
 
 	    case Mangle.Tchar:
-		if (fc != 's')
-		    goto Lerror;
 		vchar = va_arg!(char)(argptr);
+		if (fc != 's')
+		{   vnumber = vchar;
+		    goto Lnumber;
+		}
 	    L2:
 		putstr((&vchar)[0 .. 1]);
 		return;
@@ -281,7 +283,9 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
 		vdchar = va_arg!(dchar)(argptr);
 	    L1:
 		if (fc != 's')
-		    goto Lerror;
+		{   vnumber = vdchar;
+		    goto Lnumber;
+		}
 		if (vdchar <= 0x7F)
 		{   vchar = cast(char)vdchar;
 		    goto L2;
