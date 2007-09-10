@@ -74,7 +74,7 @@ OBJS= asserterror.obj deh.obj switch.obj complex.obj gcstats.obj \
 	perf.obj openrj.obj uni.obj winsock.obj oldsyserror.obj \
 	errno.obj boxer.obj cstream.obj charset.obj \
 	gamma.obj demangle.obj cover.obj bitarray.obj aApplyR.obj \
-	signals.obj cpuid.obj \
+	signals.obj cpuid.obj typetuple.obj traits.obj \
 	ti_Aa.obj ti_Ag.obj ti_C.obj ti_int.obj ti_char.obj \
 	ti_wchar.obj ti_uint.obj ti_short.obj ti_ushort.obj \
 	ti_byte.obj ti_ubyte.obj ti_long.obj ti_ulong.obj ti_ptr.obj \
@@ -117,6 +117,8 @@ DOCS=	$(DOC)\std_path.html $(DOC)\std_math.html $(DOC)\std_outbuffer.html \
 	$(DOC)\std_stdio.html \
 	$(DOC)\std_system.html \
 	$(DOC)\std_thread.html \
+	$(DOC)\std_traits.html \
+	$(DOC)\std_typetuple.html \
 	$(DOC)\std_uni.html \
 	$(DOC)\std_uri.html \
 	$(DOC)\std_utf.html \
@@ -146,7 +148,7 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 	std\socket.d std\socketstream.d std\loader.d std\stdarg.d std\format.d \
 	std\stdio.d std\perf.d std\openrj.d std\uni.d std\boxer.d \
 	std\cstream.d std\demangle.d std\cover.d std\bitarray.d \
-	std\signals.d std\cpuid.d
+	std\signals.d std\cpuid.d std\typetuple.d std\traits.d
 
 SRC_STD_C= std\c\process.d std\c\stdlib.d std\c\time.d std\c\stdio.d \
 	std\c\math.d std\c\stdarg.d std\c\stddef.d std\c\fenv.d std\c\string.d \
@@ -454,6 +456,12 @@ system.obj : std\system.d
 thread.obj : std\thread.d
 	$(DMD) -c $(DFLAGS) std\thread.d
 
+traits.obj : std\traits.d
+	$(DMD) -c $(DFLAGS) std\traits.d -oftraits.obj
+
+typetuple.obj : std\typetuple.d
+	$(DMD) -c $(DFLAGS) std\typetuple.d -oftypetuple.obj
+
 uni.obj : std\uni.d
 	$(DMD) -c $(DFLAGS) std\uni.d
 
@@ -753,6 +761,12 @@ $(DOC)\std_system.html : std.ddoc std\system.d
 
 $(DOC)\std_thread.html : std.ddoc std\thread.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_thread.html std.ddoc std\thread.d
+
+$(DOC)\std_traits.html : std.ddoc std\traits.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_traits.html std.ddoc std\traits.d
+
+$(DOC)\std_typetuple.html : std.ddoc std\typetuple.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_typetuple.html std.ddoc std\typetuple.d
 
 $(DOC)\std_uni.html : std.ddoc std\uni.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_uni.html std.ddoc std\uni.d

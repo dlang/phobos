@@ -733,6 +733,50 @@ class TypeInfo_Struct : TypeInfo
     char[] function(void*) xtoString;
 }
 
+class TypeInfo_Tuple : TypeInfo
+{
+    TypeInfo[] elements;
+
+    char[] toString()
+    {
+	char[] s;
+	s = "(";
+	foreach (i, element; elements)
+	{
+	    if (i)
+		s ~= ',';
+	    s ~= element.toString();
+	}
+	s ~= ")";
+        return s;
+    }
+
+    hash_t getHash(void *p)
+    {
+        assert(0);
+    }
+
+    int equals(void *p1, void *p2)
+    {
+        assert(0);
+    }
+
+    int compare(void *p1, void *p2)
+    {
+        assert(0);
+    }
+
+    size_t tsize()
+    {
+        assert(0);
+    }
+
+    void swap(void *p1, void *p2)
+    {
+        assert(0);
+    }
+}
+
 /**
  * All recoverable exceptions should be derived from class Exception.
  */

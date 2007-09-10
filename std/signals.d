@@ -11,10 +11,10 @@
  * longer necessary to instrument the slots.
  *
  * References:
- *	$(LINK2 http://scottcollins.net/articles/a-deeper-look-at-signals-and-_slots.html, A Deeper Look at Signals and Slots)$(BR)
+ *	$(LINK2 http://scottcollins.net/articles/a-deeper-look-at-_signals-and-slots.html, A Deeper Look at Signals and Slots)$(BR)
  *	$(LINK2 http://en.wikipedia.org/wiki/Observer_pattern, Observer pattern)$(BR)
  *	$(LINK2 http://en.wikipedia.org/wiki/Signals_and_slots, Wikipedia)$(BR)
- *	$(LINK2 http://boost.org/doc/html/signals.html, Boost Signals)$(BR)
+ *	$(LINK2 http://boost.org/doc/html/$(SIGNALS).html, Boost Signals)$(BR)
  *	$(LINK2 http://doc.trolltech.com/4.1/signalsandslots.html, Qt)$(BR)
  *
  *	There has been a great deal of discussion in the D newsgroups
@@ -42,8 +42,12 @@
  *	is passed to connect(), such as a struct member function,
  *	a nested function or a COM interface, undefined behavior
  *	will result.
+ *
+ *	Not safe for multiple threads operating on the same signals
+ *	or slots.
  * Macros:
  *	WIKI = Phobos/StdSignals
+ *	SIGNALS=signals
  * Copyright:
  *	Public Domain
  * Author: Walter Bright, Digital Mars, www.digitalmars.com
@@ -52,8 +56,8 @@
 module std.signals;
 
 import std.stdio;
-import std.c.stdlib;
-import std.outofmemory;
+import std.c.stdlib : calloc, realloc, free;
+import std.outofmemory : _d_OutOfMemory;
 
 // Special function for internal use only.
 // Use of this is where the slot had better be a delegate
@@ -70,6 +74,7 @@ extern (C) Object _d_toObject(void* p);
  * Example:
 ---
 import std.signals;
+import std.stdio;
 
 class Observer
 {   // our slot
@@ -141,7 +146,7 @@ template Signal(T1...)
      */
     void emit( T1 i )
     {
-        foreach (slot; slots)
+        foreach (slot; slots[0 .. slots_idx])
 	{   if (slot)
 		slot(i);
 	}
@@ -154,31 +159,34 @@ template Signal(T1...)
     {
 	/* Do this:
 	 *    slots ~= slot;
-	 * but use malloc() instead
+	 * but use malloc() and friends instead
 	 */
 	auto len = slots.length;
-	auto startlen = len;
-	if (len == 0)
+	if (slots_idx == len)
 	{
-	    len = 4;
-	    auto p = std.c.stdlib.calloc(slot_t.sizeof, len);
-	    if (!p)
-		_d_OutOfMemory();
-	    slots = (cast(slot_t*)p)[0 .. len];
+	    if (slots.length == 0)
+	    {
+		len = 4;
+		auto p = std.signals.calloc(slot_t.sizeof, len);
+		if (!p)
+		    std.signals._d_OutOfMemory();
+		slots = (cast(slot_t*)p)[0 .. len];
+	    }
+	    else
+	    {
+		len = len * 2 + 4;
+		auto p = std.signals.realloc(slots.ptr, slot_t.sizeof * len);
+		if (!p)
+		    std.signals._d_OutOfMemory();
+		slots = (cast(slot_t*)p)[0 .. len];
+		slots[slots_idx + 1 .. length] = null;
+	    }
 	}
-	else
-	{
-	    len += len + 4;
-	    auto p = std.c.stdlib.realloc(slots.ptr, slot_t.sizeof * len);
-	    if (!p)
-		_d_OutOfMemory();
-	    slots = (cast(slot_t*)p)[0 .. len];
-	    slots[startlen .. len] = null;
-	}
-	slots[startlen] = slot;
+	slots[slots_idx++] = slot;
 
+     L1:
 	Object o = _d_toObject(slot.ptr);
-	o.notifyRegister(&this.unhook);
+	o.notifyRegister(&unhook);
     }
 
     /***
@@ -187,14 +195,18 @@ template Signal(T1...)
     void disconnect( slot_t slot)
     {
 	debug (signal) writefln("Signal.disconnect(slot)");
-	foreach (inout dg; slots)
+	for (size_t i = 0; i < slots_idx; )
 	{
-	    if (dg == slot)
-	    {	dg = null;
+	    if (slots[i] == slot)
+	    {	slots_idx--;
+		slots[i] = slots[slots_idx];
+		slots[slots_idx] = null;	// not strictly necessary
 
 		Object o = _d_toObject(slot.ptr);
-		o.notifyUnRegister(&this.unhook);
+		o.notifyUnRegister(&unhook);
 	    }
+	    else
+		i++;
 	}
     }
 
@@ -206,10 +218,15 @@ template Signal(T1...)
     void unhook(Object o)
     {
 	debug (signal) writefln("Signal.unhook(o = %s)", cast(void*)o);
-	foreach (inout slot; slots)
+	for (size_t i = 0; i < slots_idx; )
 	{
-	    if (slot.ptr is o)
-		slot = null;
+	    if (_d_toObject(slots[i].ptr) is o)
+	    {	slots_idx--;
+		slots[i] = slots[slots_idx];
+		slots[slots_idx] = null;	// not strictly necessary
+	    }
+	    else
+		i++;
 	}
     }
 
@@ -225,20 +242,21 @@ template Signal(T1...)
 	 */
 	if (slots)
 	{
-	    foreach (slot; slots)
+	    foreach (slot; slots[0 .. slots_idx])
 	    {
 		if (slot)
 		{   Object o = _d_toObject(slot.ptr);
-		    o.notifyUnRegister(&this.unhook);
+		    o.notifyUnRegister(&unhook);
 		}
 	    }
-	    free(slots.ptr);
+	    std.signals.free(slots.ptr);
 	    slots = null;
 	}
     }
 
   private:
-    slot_t[] slots;	// the slots to call from emit()
+    slot_t[] slots;		// the slots to call from emit()
+    size_t slots_idx;		// used length of slots[]
 }
 
 // A function whose sole purpose is to get this module linked in

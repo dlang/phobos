@@ -40,9 +40,10 @@
  * Authors:
  *	Matthew Wilson
  * References:
- *	$(LINK2 http://www.openrj.org/, Open-RJ)
+ *	$(LINK2 http://www.$(OPENRJ).org/, Open-RJ)
  * Macros:
  *	WIKI=Phobos/StdOpenrj
+ *	OPENRJ=openrj
  */
 
 /* /////////////////////////////////////////////////////////////////////////////

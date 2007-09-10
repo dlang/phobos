@@ -21,7 +21,7 @@ extern (C) void _moduleCtor();
 extern (C) void _moduleDtor();
 extern (C) void _moduleUnitTests();
 
-extern (C) bool no_catch_exceptions = false;
+extern (C) bool no_catch_exceptions;
 
 /***********************************
  * The D main() function supplied by the user's program

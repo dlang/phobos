@@ -119,6 +119,11 @@ class TypeInfo_Struct : TypeInfo
     char[] function(void*) xtoString;
 }
 
+class TypeInfo_Tuple : TypeInfo
+{
+    TypeInfo[] elements;
+}
+
 // Recoverable errors
 
 class Exception : Object
