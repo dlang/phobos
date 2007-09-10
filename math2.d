@@ -12,7 +12,6 @@
  */
  
 module math2;
-import intrinsic;
 private import math, string, c.stdlib, c.stdio;
 
 //debug=math2;
@@ -48,7 +47,7 @@ long abs(long n)
 real abs(real n)
 {
 	// just let the compiler handle it
-	return intrinsic.fabs(n);
+	return math.fabs(n);
 }
 
 /*********************************
@@ -487,7 +486,7 @@ unittest
 
 real acos(real x) 
 {
-	return atan2(intrinsic.sqrt(1 - x * x), x);
+	return atan2(math.sqrt(1 - x * x), x);
 }
 
 unittest
@@ -502,7 +501,7 @@ unittest
 
 real asin(real x)
 {
-	return atan2(x, intrinsic.sqrt(1 - x * x));
+	return atan2(x, math.sqrt(1 - x * x));
 }
 
 unittest
@@ -528,7 +527,7 @@ real atan(real x)
 
 unittest
 {
-	assert(feq(atan(intrinsic.sqrt(3)), PI / 3));
+	assert(feq(atan(math.sqrt(3.0L)), PI / 3));
 }
 
 
@@ -549,7 +548,7 @@ real atan2(real y, real x)
 
 unittest
 {
-	assert(feq(atan2(1, intrinsic.sqrt(3)), PI / 6));
+	assert(feq(atan2(1, math.sqrt(3.0L)), PI / 6));
 }
 
 
@@ -573,7 +572,7 @@ unittest
 
 real asec(real x)
 {
-	return intrinsic.cos(1.0 / x);
+	return math.cos(1.0 / x);
 }
 
 
@@ -583,7 +582,7 @@ real asec(real x)
 
 real acosec(real x)
 {
-	return intrinsic.sin(1.0 / x);
+	return math.sin(1.0 / x);
 }
 
 /*************************************
@@ -604,7 +603,7 @@ real tan(real x)
 
 unittest
 {
-	assert(feq(tan(PI / 3), intrinsic.sqrt(3)));
+	assert(feq(tan(PI / 3), math.sqrt(3)));
 }
 +/
 
@@ -625,7 +624,7 @@ real cot(real x)
 
 unittest
 {
-	assert(feq(cot(PI / 6), intrinsic.sqrt(3)));
+	assert(feq(cot(PI / 6), math.sqrt(3.0L)));
 }
 
 /*************************************
@@ -1057,7 +1056,7 @@ real acosh(real x)
 	else if (x > 1.0e10)
 		return log(2) + log(x);
 	else
-		return log(x + intrinsic.sqrt((x - 1) * (x + 1)));
+		return log(x + math.sqrt((x - 1) * (x + 1)));
 }
 
 unittest
@@ -1082,8 +1081,8 @@ real asinh(real x)
 	{
 		real z = x * x;
 		return x > 0 ? 
-			log1p(x + z / (1.0 + intrinsic.sqrt(1.0 + z))) :
-			-log1p(-x + z / (1.0 + intrinsic.sqrt(1.0 + z)));
+			log1p(x + z / (1.0 + math.sqrt(1.0 + z))) :
+			-log1p(-x + z / (1.0 + math.sqrt(1.0 + z)));
 	}
 }
 

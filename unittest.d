@@ -45,6 +45,12 @@ int main(char[][] args)
     isValidDchar((dchar)0);			// utf
     uri.ascii2hex(0);				// uri
 
+{
+    creal c = 3.0 + 4.0i;
+    c = sqrt(c);
+    printf("re = %Lg, im = %Lg\n", c.re, c.im);
+}
+
     printf("hello world\n");
     printf("args.length = %d\n", args.length);
     for (int i = 0; i < args.length; i++)

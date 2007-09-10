@@ -62,7 +62,7 @@ byte[] _d_arraycatn(uint size, uint n, ...)
 
 byte[] _d_arraycopy(uint size, byte[] from, byte[] to)
 {
-    //printf("f = %p,%d, t = %p,%d\n", (void*)from, from.length, (void*)to, to.length);
+    //printf("f = %p,%d, t = %p,%d, size = %d\n", (void*)from, from.length, (void*)to, to.length, size);
 
     if (to.length != from.length)
     {

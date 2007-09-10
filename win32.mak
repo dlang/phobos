@@ -52,7 +52,7 @@ unittest.exe : unittest.d phobos.lib
 OBJS= assert.obj deh.obj switch.obj complex.obj gcstats.obj \
 	critical.obj object.obj monitor.obj arraycat.obj invariant.obj \
 	dmain2.obj outofmemory.obj achar.obj aaA.obj adi.obj file.obj \
-	compiler.obj system.obj moduleinit.obj \
+	compiler.obj system.obj moduleinit.obj cmath.obj \
 	cast.obj syserror.obj path.obj string.obj memset.obj math.obj \
 	outbuffer.obj ctype.obj regexp.obj random.obj windows.obj \
 	stream.obj switcherr.obj com.obj array.obj gc.obj adi.obj \
@@ -68,7 +68,7 @@ OBJS= assert.obj deh.obj switch.obj complex.obj gcstats.obj \
 
 HDR=mars.h
 
-SRC= switch.d complex.c critical.c errno.c alloca.d cmath.d \
+SRC= switch.d complex.c critical.c errno.c alloca.d cmath2.d \
 	minit.asm linux.d deh2.d date.d linuxextern.d llmath.d
 
 SRC2=deh.c object.d gc.d math.d c\stdio.d c\stdlib.d time.d monitor.c arraycat.d \
@@ -92,7 +92,7 @@ SRC7=ti_wchar.d ti_uint.d ti_short.d ti_ushort.d \
 	ti_creal.d ti_ireal.d ti_cfloat.d ti_ifloat.d \
 	ti_cdouble.d ti_idouble.d
 
-SRC8=crc32.d stdint.d conv.d gcstats.d utf.d uri.d
+SRC8=crc32.d stdint.d conv.d gcstats.d utf.d uri.d cmath.d
 
 phobos.lib : $(OBJS) minit.obj gc2\dmgc.lib win32.mak
 	lib -c phobos.lib $(OBJS) minit.obj gc2\dmgc.lib
@@ -103,6 +103,7 @@ adi.obj : adi.d
 arraycat.obj : arraycat.d
 assert.obj : assert.d
 cast.obj : cast.d
+cmath.obj : cmath.d
 compiler.obj : compiler.d
 complex.obj : mars.h complex.c
 critical.obj : mars.h critical.c

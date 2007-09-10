@@ -7,7 +7,21 @@
 module math;
 
 import c.stdio;
-import intrinsic;
+
+/* Intrinsics */
+
+real cos(real);
+real fabs(real);
+real rint(real);
+long rndtol(real);
+real sin(real);
+real ldexp(real, int);
+
+float sqrt(float);
+double sqrt(double);
+real sqrt(real);
+creal sqrt(creal);
+
 
 extern (C)
 {

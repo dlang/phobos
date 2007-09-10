@@ -8,6 +8,8 @@
 /* These functions are built-in intrinsics to the compiler.
  */
 
+module math;
+
 int bsf(uint v);
 int bsr(uint v);
 int bt(uint *p, uint bitnum);
@@ -28,5 +30,6 @@ real fabs(real);
 real rint(real);
 long rndtol(real);
 real sin(real);
-real sqrt(real);
 real ldexp(real, int);
+real sqrt(real);
+
