@@ -69,6 +69,7 @@ bit[] _d_arraycatb(bit[] x, bit[] y)
     uint a_length;
     uint x_bytes;
 
+    //printf("_d_arraycatb(x.ptr = %p, x.length = %d, y.ptr = %p, y.length = %d)\n", x.ptr, x.length, y.ptr, y.length);
     if (!x.length)
 	return y;
     if (!y.length)
@@ -170,6 +171,7 @@ bit[] _d_arraysetbit2(bit[] ba, bit value)
     memset(ba.ptr, val, len >> 3);
     for (uint i = len & ~7; i < len; i++)
 	ba[i] = value;
+    //printf("-_d_arraysetbit2(ba.ptr = %p, ba.length = %d, value = %d)\n", ba.ptr, ba.length, ba[0]);
     return ba;
 }
 

@@ -25,8 +25,7 @@ class TypeInfo_v : TypeInfo
 
     int tsize()
     {
-	assert(0);
-	return byte.sizeof;
+	return void.sizeof;
     }
 
     void swap(void *p1, void *p2)

@@ -58,8 +58,10 @@ extern (C) long _adReverseChar(char[] a)
 	{   char clo = *lo;
 	    char chi = *hi;
 
+	    //printf("lo = %d, hi = %d\n", lo, hi);
 	    if (clo <= 0x7F && chi <= 0x7F)
 	    {
+		//printf("\tascii\n");
 		*lo = chi;
 		*hi = clo;
 		lo++;
@@ -79,6 +81,7 @@ extern (C) long _adReverseChar(char[] a)
 	    if (lo == hi)
 		break;
 
+	    //printf("\tstridelo = %d, stridehi = %d\n", stridelo, stridehi);
 	    if (stridelo == stridehi)
 	    {
 
@@ -86,7 +89,7 @@ extern (C) long _adReverseChar(char[] a)
 		memcpy(lo, hi, stridelo);
 		memcpy(hi, tmp, stridelo);
 		lo += stridelo;
-		hi -= stridehi;
+		hi--;
 		continue;
 	    }
 
@@ -99,7 +102,7 @@ extern (C) long _adReverseChar(char[] a)
 	    memcpy(lo, tmp, stridehi);
 
 	    lo += stridehi;
-	    hi -= stridelo;
+	    hi = hi - 1 + (stridehi - stridelo);
 	}
     }
     return *cast(long*)(&a);
@@ -177,7 +180,7 @@ extern (C) long _adReverseWchar(wchar[] a)
 		*cast(int*)lo = *cast(int*)hi;
 		*cast(int*)hi = tmp;
 		lo += stridelo;
-		hi -= stridehi;
+		hi--;
 		continue;
 	    }
 
@@ -189,7 +192,7 @@ extern (C) long _adReverseWchar(wchar[] a)
 	    memcpy(lo, tmp, stridehi * wchar.sizeof);
 
 	    lo += stridehi;
-	    hi -= stridelo;
+	    hi = hi - 1 + (stridehi - stridelo);
 	}
     }
     return *cast(long*)(&a);

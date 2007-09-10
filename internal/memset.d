@@ -76,10 +76,30 @@ long *_memset64(long *p, long value, int count)
     return pstart;
 }
 
+cdouble *_memset128(cdouble *p, cdouble value, int count)
+{
+    cdouble *pstart = p;
+    cdouble *ptop;
+
+    for (ptop = &p[count]; p < ptop; p++)
+	*p = value;
+    return pstart;
+}
+
 real *_memset80(real *p, real value, int count)
 {
     real *pstart = p;
     real *ptop;
+
+    for (ptop = &p[count]; p < ptop; p++)
+	*p = value;
+    return pstart;
+}
+
+creal *_memset160(creal *p, creal value, int count)
+{
+    creal *pstart = p;
+    creal *ptop;
 
     for (ptop = &p[count]; p < ptop; p++)
 	*p = value;
