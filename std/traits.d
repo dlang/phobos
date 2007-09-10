@@ -85,3 +85,43 @@ template FieldTypeTuple(S)
     else
 	static assert(0, "argument is not struct or class");
 }
+
+
+/***
+ * Get a TypeTuple of the base class and base interfaces of
+ * this class or interface.
+ * Example:
+ * ---
+ * import std.traits, std.typetuple, std.stdio;
+ * interface I { }
+ * class A { }
+ * class B : A, I { }
+ *
+ * void main()
+ * {
+ *     alias BaseTypeTuple!(B) TL;
+ *     writefln(typeid(TL));	// prints: (A,I)
+ * }
+ * ---
+ */
+
+template BaseTypeTuple(A)
+{
+    static if (is(A P == super))
+	alias P BaseTypeTuple;
+    else
+	static assert(0, "argument is not a class or interface");
+}
+
+unittest
+{
+    interface I { }
+    class A { }
+    class B : A, I { }
+
+    alias BaseTypeTuple!(B) TL;
+    assert(TL.length == 2);
+    assert(is (TL[0] == A));
+    assert(is (TL[1] == I));
+}
+

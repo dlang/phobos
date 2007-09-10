@@ -696,7 +696,10 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
 
 	    case Mangle.Tclass:
 		vobject = va_arg!(Object)(argptr);
-		s = vobject.toString();
+		if (vobject is null)
+		    s = "null";
+		else
+		    s = vobject.toString();
 		goto Lputstr;
 
 	    case Mangle.Tpointer:
@@ -1363,5 +1366,9 @@ unittest
     assert(r == "f");
     r = std.string.format("%X", 15);
     assert(r == "F");
+
+    Object c = null;
+    r = std.string.format(c);
+    assert(r == "null");
 }
 

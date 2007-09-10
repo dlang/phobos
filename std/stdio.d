@@ -1,4 +1,6 @@
 
+// Written in the D programming language.
+
 /* Written by Walter Bright
  * www.digitalmars.com
  * Placed in the Public Domain.

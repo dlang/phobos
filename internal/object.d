@@ -324,6 +324,16 @@ class TypeInfo
 class TypeInfo_Typedef : TypeInfo
 {
     char[] toString() { return name; }
+
+    int opEquals(Object o)
+    {   TypeInfo_Typedef c;
+
+	return this is o ||
+		((c = cast(TypeInfo_Typedef)o) !is null &&
+		 this.name == c.name &&
+		 this.base == c.base);
+    }
+
     hash_t getHash(void *p) { return base.getHash(p); }
     int equals(void *p1, void *p2) { return base.equals(p1, p2); }
     int compare(void *p1, void *p2) { return base.compare(p1, p2); }
@@ -341,6 +351,14 @@ class TypeInfo_Enum : TypeInfo_Typedef
 class TypeInfo_Pointer : TypeInfo
 {
     char[] toString() { return next.toString() ~ "*"; }
+
+    int opEquals(Object o)
+    {   TypeInfo_Pointer c;
+
+	return this is o ||
+		((c = cast(TypeInfo_Pointer)o) !is null &&
+		 this.next == c.next);
+    }
 
     hash_t getHash(void *p)
     {
@@ -375,6 +393,14 @@ class TypeInfo_Pointer : TypeInfo
 class TypeInfo_Array : TypeInfo
 {
     char[] toString() { return next.toString() ~ "[]"; }
+
+    int opEquals(Object o)
+    {   TypeInfo_Array c;
+
+	return this is o ||
+		((c = cast(TypeInfo_Array)o) !is null &&
+		 this.next == c.next);
+    }
 
     hash_t getHash(void *p)
     {	size_t sz = next.tsize();
@@ -438,6 +464,15 @@ class TypeInfo_StaticArray : TypeInfo
     char[] toString()
     {
 	return next.toString() ~ "[" ~ std.string.toString(len) ~ "]";
+    }
+
+    int opEquals(Object o)
+    {   TypeInfo_StaticArray c;
+
+	return this is o ||
+		((c = cast(TypeInfo_StaticArray)o) !is null &&
+		 this.len == c.len &&
+		 this.next == c.next);
     }
 
     hash_t getHash(void *p)
@@ -510,6 +545,15 @@ class TypeInfo_AssociativeArray : TypeInfo
 	return next.toString() ~ "[" ~ key.toString() ~ "]";
     }
 
+    int opEquals(Object o)
+    {   TypeInfo_AssociativeArray c;
+
+	return this is o ||
+		((c = cast(TypeInfo_AssociativeArray)o) !is null &&
+		 this.key == c.key &&
+		 this.next == c.next);
+    }
+
     // BUG: need to add the rest of the functions
 
     size_t tsize()
@@ -526,6 +570,14 @@ class TypeInfo_Function : TypeInfo
     char[] toString()
     {
 	return next.toString() ~ "()";
+    }
+
+    int opEquals(Object o)
+    {   TypeInfo_Function c;
+
+	return this is o ||
+		((c = cast(TypeInfo_Function)o) !is null &&
+		 this.next == c.next);
     }
 
     // BUG: need to add the rest of the functions
@@ -545,6 +597,14 @@ class TypeInfo_Delegate : TypeInfo
 	return next.toString() ~ " delegate()";
     }
 
+    int opEquals(Object o)
+    {   TypeInfo_Delegate c;
+
+	return this is o ||
+		((c = cast(TypeInfo_Delegate)o) !is null &&
+		 this.next == c.next);
+    }
+
     // BUG: need to add the rest of the functions
 
     size_t tsize()
@@ -558,6 +618,14 @@ class TypeInfo_Delegate : TypeInfo
 class TypeInfo_Class : TypeInfo
 {
     char[] toString() { return info.name; }
+
+    int opEquals(Object o)
+    {   TypeInfo_Class c;
+
+	return this is o ||
+		((c = cast(TypeInfo_Class)o) !is null &&
+		 this.info.name == c.classinfo.name);
+    }
 
     hash_t getHash(void *p)
     {
@@ -606,6 +674,14 @@ class TypeInfo_Class : TypeInfo
 class TypeInfo_Interface : TypeInfo
 {
     char[] toString() { return info.name; }
+
+    int opEquals(Object o)
+    {   TypeInfo_Interface c;
+
+	return this is o ||
+		((c = cast(TypeInfo_Interface)o) !is null &&
+		 this.info.name == c.classinfo.name);
+    }
 
     hash_t getHash(void *p)
     {
@@ -659,6 +735,15 @@ class TypeInfo_Interface : TypeInfo
 class TypeInfo_Struct : TypeInfo
 {
     char[] toString() { return name; }
+
+    int opEquals(Object o)
+    {   TypeInfo_Struct s;
+
+	return this is o ||
+		((s = cast(TypeInfo_Struct)o) !is null &&
+		 this.name == s.name &&
+		 this.xsize == s.xsize);
+    }
 
     hash_t getHash(void *p)
     {	hash_t h;
@@ -749,6 +834,24 @@ class TypeInfo_Tuple : TypeInfo
 	}
 	s ~= ")";
         return s;
+    }
+
+    int opEquals(Object o)
+    {
+	if (this is o)
+	    return 1;
+
+	auto t = cast(TypeInfo_Tuple)o;
+	if (t && elements.length == t.elements.length)
+	{
+	    for (size_t i = 0; i < elements.length; i++)
+	    {
+		if (elements[i] != t.elements[i])
+		    return 0;
+	    }
+	    return 1;
+	}
+	return 0;
     }
 
     hash_t getHash(void *p)

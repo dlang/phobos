@@ -1,11 +1,19 @@
+
+// Written in the D programming language.
+
+/*
+ * Placed into the Public Domain.
+ */
+
 /****
  * Demangle D mangled names.
  * Macros:
  *	WIKI = Phobos/StdDemangle
  */
 
-/* Author:
+/* Authors:
  *	Walter Bright, Digital Mars, www.digitalmars.com
+ *	Thomas Kuehne
  */
 
 module std.demangle;
@@ -234,6 +242,11 @@ char[] demangle(char[] name)
 		    char c = name[ni];
 		    if (c == 'Z')
 			break;
+		    if (c == 'X')
+		    {
+		        args ~= " ...";
+			break;
+		    }
 		    if (args.length)
 			args ~= ", ";
 		    switch (c)
@@ -245,6 +258,11 @@ char[] demangle(char[] name)
 
 			case 'K':
 			    args ~= "inout ";
+			    ni++;
+			    goto default;
+
+			case 'L':
+			    args ~= "lazy ";
 			    ni++;
 			    goto default;
 
@@ -472,6 +490,9 @@ unittest
 	[ "_D4test58__T9factorialVde67666666666666860140VG5aa5_68656c6c6fVPvnZ9factorialf", "float test.factorial!(double 4.2, char[5] \"hello\"c, void* null).factorial" ],
 	[ "_D4test101__T9factorialVde67666666666666860140Vrc9a999999999999d9014000000000000000c00040VG5aa5_68656c6c6fVPvnZ9factorialf", "float test.factorial!(double 4.2, cdouble 6.8+3i, char[5] \"hello\"c, void* null).factorial" ],
 	[ "_D4test34__T3barVG3uw3_616263VG3wd3_646566Z1xi", "int test.bar!(wchar[3] \"abc\"w, dchar[3] \"def\"d).x" ],
+	[ "_D8demangle4testFLC6ObjectLDFLiZiZi", "int demangle.test(lazy class Object, lazy int delegate(lazy int))"],
+	[ "_D8demangle4testFAiXi", "int demangle.test(int[] ...)"],
+	[ "_D8demangle4testFLAiXi", "int demangle.test(lazy int[] ...)"] 
     ];
 
     foreach (char[][2] name; table)
@@ -481,3 +502,5 @@ unittest
 	assert(r == name[1]);
     }
 }
+
+

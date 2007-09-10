@@ -144,6 +144,8 @@ NAVIGATION_PHOBOS=
 	$(LI <a href="std_string.html" title="Basic string operations">std.string</a>)
 	$(LI <a href="std_system.html" title="Inquire about the CPU, operating system">std.system</a>)
 	$(LI <a href="std_thread.html" title="Thread operations">std.thread</a>)
+	$(LI <a href="std_traits.html" title="Type traits">std.traits</a>)
+	$(LI <a href="std_typetuple.html" title="Type tuples">std.typetuple</a>)
 	$(LI <a href="std_uni.html" title="Unicode classification">std.uni</a>)
 	$(LI <a href="std_uri.html" title="Encode and decode Uniform Resource Identifiers (URIs)">std.uri</a>)
 	$(LI <a href="std_utf.html" title="Encode and decode utf character encodings">std.utf</a>)
