@@ -3,7 +3,7 @@
 
 #DMD=../../../dmd
 DMD=dmd
-CFLAGS=-g
+CFLAGS=-g -m32
 #DFLAGS=-unittest -g -release
 DFLAGS=-release -O -inline -I../..
 #DFLAGS=-release -inline -O
@@ -43,8 +43,8 @@ gclinux.o : gclinux.d
 	$(DMD) -c $(DFLAGS) gclinux.d
 
 zip : $(SRC)
-	rm dmgc.zip
+	$(RM) dmgc.zip
 	zip dmgc $(SRC)
 
 clean:
-	rm $(OBJS) dmgc.a testgc testgc.o
+	$(RM) $(OBJS) dmgc.a testgc testgc.o

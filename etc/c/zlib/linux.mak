@@ -2,7 +2,7 @@
 
 CC=gcc
 LD=link
-CFLAGS=-O
+CFLAGS=-O -m32
 LDFLAGS=
 O=.o
 
@@ -74,4 +74,4 @@ test: example minigzip
 	echo hello world | minigzip | minigzip -d 
 
 clean:
-	rm $(OBJS) zlib.a example minigzip test foo.gz
+	$(RM) $(OBJS) zlib.a example minigzip minigzip.o test foo.gz

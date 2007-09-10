@@ -9,8 +9,8 @@
 #	make unittest
 #		Build libphobos.a, build and run unit tests
 
-CFLAGS=-O
-#CFLAGS=-g
+CFLAGS=-O -m32
+#CFLAGS=-g -m32
 
 DFLAGS=-O -release -w
 #DFLAGS=-unittest -w
@@ -45,7 +45,7 @@ unittest : unittest.o libphobos.a
 unittest.o : unittest.d
 	$(DMD) -c unittest
 
-OBJS= asserterror.o deh2.o switch.o complex.o gcstats.o \
+OBJS = asserterror.o deh2.o switch.o complex.o gcstats.o \
 	critical.o object.o monitor.o arraycat.o invariant.o \
 	dmain2.o outofmemory.o aaA.o adi.o aApply.o file.o \
 	compiler.o system.o moduleinit.o md5.o base64.o \
@@ -53,7 +53,7 @@ OBJS= asserterror.o deh2.o switch.o complex.o gcstats.o \
 	outbuffer.o ctype.o regexp.o random.o linux.o linuxsocket.o \
 	stream.o cstream.o switcherr.o array.o gc.o \
 	qsort.o thread.o obj.o utf.o uri.o \
-	crc32.o conv.o arraycast.o errno.o alloca.o cmath2.o \
+	Dcrc32.o conv.o arraycast.o errno.o alloca.o cmath2.o \
 	process.o syserror.o \
 	socket.o socketstream.o stdarg.o stdio.o format.o \
 	perf.o openrj.o uni.o trace.o boxer.o \
@@ -71,7 +71,7 @@ OBJS= asserterror.o deh2.o switch.o complex.o gcstats.o \
 	ti_void.o \
 	date.o dateparse.o llmath.o math2.o Czlib.o Dzlib.o zip.o
 
-ZLIB_OBJS= etc/c/zlib/adler32.o etc/c/zlib/compress.o \
+ZLIB_OBJS = etc/c/zlib/adler32.o etc/c/zlib/compress.o \
 	etc/c/zlib/crc32.o etc/c/zlib/gzio.o \
 	etc/c/zlib/uncompr.o etc/c/zlib/deflate.o \
 	etc/c/zlib/trees.o etc/c/zlib/zutil.o \
@@ -172,7 +172,6 @@ SRC_ZLIB= etc/c/zlib\trees.h \
 	etc/c/zlib\zlib.h \
 	etc/c/zlib\adler32.c \
 	etc/c/zlib\ChangeLog \
-	etc/c/zlib\zlib.html \
 	etc/c/zlib\README \
 	etc/c/zlib\win32.mak \
 	etc/c/zlib\linux.mak
@@ -212,8 +211,8 @@ $(ZLIB_OBJS):
 
 ###
 
-crc32.o : crc32.d
-	$(DMD) -c $(DFLAGS) crc32.d
+Dcrc32.o : crc32.d
+	$(DMD) -c $(DFLAGS) crc32.d -ofDcrc32.o
 
 errno.o : errno.c
 
@@ -580,8 +579,8 @@ ti_bit.o : std/typeinfo/ti_bit.d
 ##########################################################333
 
 zip : $(ALLSRCS) linux.mak win32.mak phoboslicense.txt
-	rm phobos.zip
+	$(RM) phobos.zip
 	zip phobos $(ALLSRCS) linux.mak win32.mak phoboslicense.txt
 
 clean:
-	rm $(OBJS) unittest unittest.o
+	$(RM) $(OBJS) unittest unittest.o

@@ -730,9 +730,9 @@ char[] toUTF8(dchar[] s)
 	else
 	{
 	    r.length = i;
-	    foreach (dchar c; s[i .. slen])
+	    foreach (dchar d; s[i .. slen])
 	    {
-		encode(r, c);
+		encode(r, d);
 	    }
 	    break;
 	}

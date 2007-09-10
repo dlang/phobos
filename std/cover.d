@@ -124,14 +124,14 @@ static ~this()
 		if (i >= c.data.length)
 		    break;
 		int count = 0;
-		foreach (char c; lstlines[i])
+		foreach (char c2; lstlines[i])
 		{
-		    switch (c)
+		    switch (c2)
 		    {	case ' ':
 			    continue;
 			case '0': case '1': case '2': case '3': case '4':
 			case '5': case '6': case '7': case '8': case '9':
-			    count = count * 10 + c - '0';
+			    count = count * 10 + c2 - '0';
 			    continue;
 			default:
 			    break;

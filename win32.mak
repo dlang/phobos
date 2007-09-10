@@ -222,7 +222,6 @@ SRC_ZLIB= etc\c\zlib\trees.h \
 	etc\c\zlib\zlib.h \
 	etc\c\zlib\adler32.c \
 	etc\c\zlib\ChangeLog \
-	etc\c\zlib\zlib.html \
 	etc\c\zlib\README \
 	etc\c\zlib\win32.mak \
 	etc\c\zlib\linux.mak
