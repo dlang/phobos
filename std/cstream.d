@@ -1,6 +1,10 @@
 /**
+ * The std.cstream module bridges std.c.stdio (or std.stdio) and std.stream.
+ * Both std.c.stdio and std.stream are publicly imported by std.cstream.
  * Authors: Ben Hinkle
- * License: public domain
+ * License: Public Domain
+ * Macros:
+ *	WIKI=Phobos/StdCstream
  */
 
 module std.cstream;
@@ -8,11 +12,19 @@ module std.cstream;
 import std.stream;
 import std.c.stdio;
 
-// wraps a FILE* in a stream class
+/**
+ * A Stream wrapper for a C file of type FILE*.
+ */
 class CFile : Stream {
   FILE* cfile;
 
-  // Construct a CFile from the given FILE* with mode and optional seekable state
+  /**
+   * Create the stream wrapper for the given C file.
+   * Params:
+   *   mode = a bitwise combination of $(B FileMode.In) for a readable file
+   *          and $(B FileMode.Out) for a writeable file.
+   *   seekable = indicates if the stream should be _seekable.
+   */
   this(FILE* cfile, FileMode mode, bool seekable = false) {
     super();
     this.file = cfile;
@@ -21,51 +33,103 @@ class CFile : Stream {
     this.seekable = seekable;
   }
 
+  /**
+   * Closes the stream.
+   */
   ~this() { close(); }
 
+  /**
+   * Property to get or set the underlying file for this stream.
+   * Setting the file marks the stream as open.
+   */
   FILE* file() { return cfile; }
+
+  /**
+   * Ditto
+   */
   void file(FILE* cfile) {
     this.cfile = cfile; 
     isopen = true;
   }
 
+  /**
+   * Overrides of the $(B Stream) methods to call the underlying $(B FILE*)
+   * C functions.
+   */
   override void flush() { fflush(cfile); }
+
+  /**
+   * Ditto
+   */
   override void close() { 
     if (isopen)
       fclose(cfile); 
     isopen = readable = writeable = seekable = false; 
   }
+
+  /**
+   * Ditto
+   */
   override bool eof() { 
     return cast(bool)(readEOF || feof(cfile)); 
   }
+
+  /**
+   * Ditto
+   */
   override char getc() { 
     return cast(char)fgetc(cfile); 
   }
+
+  /**
+   * Ditto
+   */
   override char ungetc(char c) { 
     return cast(char)std.c.stdio.ungetc(c,cfile); 
   }
+
+  /**
+   * Ditto
+   */
   override size_t readBlock(void* buffer, size_t size) {
     size_t n = fread(buffer,1,size,cfile);
     readEOF = cast(bool)(n == 0);
     return n;
   }
+
+  /**
+   * Ditto
+   */
   override size_t writeBlock(void* buffer, size_t size) {
     return fwrite(buffer,1,size,cfile);
   }
+
+  /**
+   * Ditto
+   */
   override ulong seek(long offset, SeekPos rel) {
     readEOF = false;
     if (fseek(cfile,cast(int)offset,rel) != 0)
       throw new SeekException("unable to move file pointer");
     return ftell(cfile);
   }
+
+  /**
+   * Ditto
+   */
   override void writeLine(char[] s) {
     writeString(s);
     writeString("\n");
   }
+
+  /**
+   * Ditto
+   */
   override void writeLineW(wchar[] s) {
     writeStringW(s);
     writeStringW("\n");
   }
+
   // run a few tests
   unittest {
     FILE* f = fopen("stream.txt","w");
@@ -140,8 +204,20 @@ class CFile : Stream {
   }
 }
 
-// standard IO devices
-CFile din, dout, derr;
+/**
+ * CFile wrapper of std.c.stdio.stdin (not seekable).
+ */
+CFile din;
+
+/**
+ * CFile wrapper of std.c.stdio.stdout (not seekable).
+ */
+CFile dout;
+
+/**
+ * CFile wrapper of std.c.stdio.stderr (not seekable).
+ */
+CFile derr;
 
 static this() {
   // open standard I/O devices

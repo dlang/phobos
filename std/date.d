@@ -34,19 +34,23 @@ alias long d_time;
  */
 const d_time d_time_nan = long.min;
 
+/**
+ * Time broken down into its components.
+ */
 struct Date
 {
-    int year = int.min;	// our "nan" Date value
-    int month;		// 1..12
-    int day;		// 1..31
-    int hour;		// 0..23
-    int minute;		// 0..59
-    int second;		// 0..59
-    int ms;		// 0..999
-    int weekday;	// 0: not specified
-			// 1..7: Sunday..Saturday
-    int tzcorrection = int.min;	// -1200..1200 correction in hours
+    int year = int.min;	/// use int.min as "nan" year value
+    int month;		/// 1..12
+    int day;		/// 1..31
+    int hour;		/// 0..23
+    int minute;		/// 0..59
+    int second;		/// 0..59
+    int ms;		/// 0..999
+    int weekday;	/// 0: not specified
+			/// 1..7: Sunday..Saturday
+    int tzcorrection = int.min;	/// -1200..1200 correction in hours
 
+    /// Parse date out of string s[] and store it in this Date instance.
     void parse(char[] s)
     {
 	DateParse dp;
@@ -220,7 +224,9 @@ int YearFromTime(d_time t)
 {   int y;
 
     // Hazard a guess
-    y = 1970 + cast(int) (t / (365.2425 * msPerDay));
+    //y = 1970 + cast(int) (t / (365.2425 * msPerDay));
+    // Use integer only math
+    y = 1970 + cast(int) (t / (3652425 * (msPerDay / 10000)));
 
     if (TimeFromYear(y) <= t)
     {
@@ -360,7 +366,8 @@ d_time LocalTimetoUTC(d_time t)
     return t - LocalTZA - DaylightSavingTA(t - LocalTZA);
 }
 
-d_time MakeTime(int hour, int min, int sec, int ms)
+
+d_time MakeTime(d_time hour, d_time min, d_time sec, d_time ms)
 {
     return hour * TicksPerHour +
 	   min * TicksPerMinute +
@@ -369,7 +376,7 @@ d_time MakeTime(int hour, int min, int sec, int ms)
 }
 
 
-d_time MakeDay(int year, int month, int date)
+d_time MakeDay(d_time year, d_time month, d_time date)
 {   d_time t;
     int y;
     int m;

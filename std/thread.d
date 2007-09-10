@@ -50,11 +50,17 @@ extern (C)
 	stdfp start_addr, void* arglist, uint initflag,
 	thread_id* thrdaddr);
 
-// This is equivalent to a HANDLE from windows.d
+/**
+ * The type of the thread handle used by the operating system.
+ * For Windows, it is equivalent to a HANDLE from windows.d.
+ */
 alias HANDLE thread_hdl;
 
 alias uint thread_id;
 
+/**
+ * Thrown for errors.
+ */
 class ThreadError : Error
 {
     this(char[] s)
@@ -63,27 +69,48 @@ class ThreadError : Error
     }
 }
 
+/**
+ * One of these is created for each thread.
+ */
 class Thread
 {
+    /**
+     * Constructor used by classes derived from Thread that override main(). 
+     */
     this()
     {
     }
 
+    /**
+     * Constructor used by classes derived from Thread that override run().
+     */
     this(int (*fp)(void *), void *arg)
     {
 	this.fp = fp;
 	this.arg = arg;
     }
 
+    /**
+     * Constructor used by classes derived from Thread that override run().
+     */
     this(int delegate() dg)
     {
 	this.dg = dg;
     }
 
+    /**
+     * The handle to this thread assigned by the operating system. This is set
+     * to thread_id.init if the thread hasn't been started yet.
+     */
     thread_hdl hdl;
+
     thread_id id;
     void* stackBottom;
 
+    /**
+     * Create a new thread and start it running. The new thread initializes
+     * itself and then calls run(). start() can only be called once.
+     */
     void start()
     {
 	if (state != TS.INITIAL)
@@ -116,6 +143,12 @@ class Thread
 	}
     }
 
+    /**
+     * Entry point for a thread. If not overridden, it calls the function
+     * pointer fp and argument arg passed in the constructor, or the delegate
+     * dg.
+     * Returns: the thread exit code, which is normally 0.
+     */
     int run()
     {
 	if (fp)
@@ -159,26 +192,39 @@ class Thread
 	}
     }
 
+    /**
+     * The state of a thread.
+     */
     enum TS
     {
-	INITIAL,
-	RUNNING,
-	TERMINATED
+	INITIAL,	/// The thread hasn't been started yet.
+	RUNNING,	/// The thread is running or paused.
+	TERMINATED	/// The thread has ended.
     }
 
+    /**
+     * Returns the state of a thread.
+     */
     TS getState()
     {
 	return state;
     }
 
+    /**
+     * The priority of a thread.
+     */
     enum PRIORITY
     {
-	INCREASE,
-	DECREASE,
-	IDLE,
-	CRITICAL
+	INCREASE,	/// Increase thread priority
+	DECREASE,	/// Decrease thread priority
+	IDLE,		/// Assign thread low priority
+	CRITICAL	/// Assign thread high priority
     }
 
+    /**
+     * Adjust the priority of this thread.
+     * Throws: ThreadError if cannot set priority
+     */
     void setPriority(PRIORITY p)
     {
 	int nPriority;
@@ -203,6 +249,10 @@ class Thread
 	    error("set priority");
     }
 
+    /**
+     * Returns a reference to the Thread for the thread that called the
+     * function.
+     */
     static Thread getThis()
     {
 	thread_id id;
@@ -226,23 +276,35 @@ class Thread
 	return result;
     }
 
+    /**
+     * Returns an array of all the threads currently running.
+     */
     static Thread[] getAll()
     {
 	return allThreads[0 .. allThreadsDim];
     }
 
+    /**
+     * Suspend execution of this thread.
+     */
     void pause()
     {
 	if (state != TS.RUNNING || SuspendThread(hdl) == 0xFFFFFFFF)
 	    error("cannot pause");
     }
 
+    /**
+     * Resume execution of this thread.
+     */
     void resume()
     {
 	if (state != TS.RUNNING || ResumeThread(hdl) == 0xFFFFFFFF)
 	    error("cannot resume");
     }
 
+    /**
+     * Suspend execution of all threads but this thread.
+     */
     static void pauseAll()
     {
 	if (nthreads > 1)
@@ -259,6 +321,9 @@ class Thread
 	}
     }
 
+    /**
+     * Resume execution of all paused threads.
+     */
     static void resumeAll()
     {
 	if (nthreads > 1)
@@ -275,11 +340,17 @@ class Thread
 	}
     }
 
+    /**
+     * Give up the remainder of this thread's time slice.
+     */
     static void yield()
     {
 	Sleep(0);
     }
 
+    /**
+     *
+     */
     static uint nthreads = 1;
 
   private:
@@ -302,7 +373,7 @@ class Thread
     }
 
 
-    /************************************************
+    /* ***********************************************
      * This is just a wrapper to interface between C rtl and Thread.run().
      */
 

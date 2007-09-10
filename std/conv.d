@@ -1,12 +1,51 @@
 
-// Written by Walter Bright
-// Copyright (c) 2002-2006 Digital Mars
-// All Rights Reserved
-// www.digitalmars.com
-// Some parts contributed by David L. Davis
+/*
+ *  Copyright (C) 2002-2006 by Digital Mars, www.digitalmars.com
+ *  Written by Walter Bright
+ * Some parts contributed by David L. Davis
+ *
+ *  This software is provided 'as-is', without any express or implied
+ *  warranty. In no event will the authors be held liable for any damages
+ *  arising from the use of this software.
+ *
+ *  Permission is granted to anyone to use this software for any purpose,
+ *  including commercial applications, and to alter it and redistribute it
+ *  freely, subject to the following restrictions:
+ *
+ *  o  The origin of this software must not be misrepresented; you must not
+ *     claim that you wrote the original software. If you use this software
+ *     in a product, an acknowledgment in the product documentation would be
+ *     appreciated but is not required.
+ *  o  Altered source versions must be plainly marked as such, and must not
+ *     be misrepresented as being the original software.
+ *  o  This notice may not be removed or altered from any source
+ *     distribution.
+ */
 
-// Conversion building blocks. These differ from the C equivalents by
-// checking for overflow and not allowing whitespace.
+/***********
+ * Conversion building blocks. These differ from the C equivalents
+ * <tt>atoi()</tt> and <tt>atol()</tt> by
+ * checking for overflow and not allowing whitespace.
+ *
+ * For conversion to signed types, the grammar recognized is:
+ * <pre>
+$(I Integer):
+    $(I Sign UnsignedInteger)
+    $(I UnsignedInteger)
+
+$(I Sign):
+    $(B +)
+    $(B -)
+ * </pre>
+ * For conversion to signed types, the grammar recognized is:
+ * <pre>
+$(I UnsignedInteger):
+    $(I DecimalDigit)
+    $(I DecimalDigit) $(I UnsignedInteger)
+ * </pre>
+ * Macros:
+ *	WIKI=Phobos/StdConv
+ */
 
 module std.conv;
 
@@ -18,8 +57,11 @@ private import std.stdio; // for writefln() and printf()
 
 //debug=conv;		// uncomment to turn on debugging printf's
 
-/************** Exceptions ****************/
+/* ************* Exceptions *************** */
 
+/**
+ * Thrown on conversion errors, which happens on deviation from the grammar.
+ */
 class ConvError : Error
 {
     this(char[] s)
@@ -33,6 +75,9 @@ private void conv_error(char[] s)
     throw new ConvError(s);
 }
 
+/**
+ * Thrown on conversion overflow errors.
+ */
 class ConvOverflowError : Error
 {
     this(char[] s)
@@ -47,9 +92,7 @@ private void conv_overflow(char[] s)
 }
 
 /***************************************************************
- * Convert character string to int.
- * Grammar:
- *	['+'|'-'] digit {digit}
+ * Convert character string to the return type.
  */
 
 int toInt(char[] s)
@@ -173,9 +216,7 @@ unittest
 
 
 /*******************************************************
- * Convert character string to uint.
- * Grammar:
- *	digit {digit}
+ * ditto
  */
 
 uint toUint(char[] s)
@@ -269,10 +310,8 @@ unittest
     }
 }
 
-/***************************************************************
- * Convert character string to long.
- * Grammar:
- *	['+'|'-'] digit {digit}
+/*******************************************************
+ * ditto
  */
 
 long toLong(char[] s)
@@ -402,9 +441,7 @@ unittest
 
 
 /*******************************************************
- * Convert character string to ulong.
- * Grammar:
- *	digit {digit}
+ * ditto
  */
 
 ulong toUlong(char[] s)
@@ -506,10 +543,8 @@ unittest
 }
 
 
-/***************************************************************
- * Convert character string to short.
- * Grammar:
- *	['+'|'-'] digit {digit}
+/*******************************************************
+ * ditto
  */
 
 short toShort(char[] s)
@@ -592,9 +627,7 @@ unittest
 
 
 /*******************************************************
- * Convert character string to ushort.
- * Grammar:
- *	digit {digit}
+ * ditto
  */
 
 ushort toUshort(char[] s)
@@ -671,10 +704,8 @@ unittest
 }
 
 
-/***************************************************************
- * Convert character string to byte.
- * Grammar:
- *	['+'|'-'] digit {digit}
+/*******************************************************
+ * ditto
  */
 
 byte toByte(char[] s)
@@ -757,9 +788,7 @@ unittest
 
 
 /*******************************************************
- * Convert character string to ubyte.
- * Grammar:
- *	digit {digit}
+ * ditto
  */
 
 ubyte toUbyte(char[] s)
@@ -836,8 +865,8 @@ unittest
 }
 
 
-/***************************************************************
- * Convert character string to float.
+/*******************************************************
+ * ditto
  */
 
 float toFloat(in char[] s)
@@ -899,8 +928,8 @@ unittest
     assert(toString(f) == toString(float.nan));
 }
 
-/***************************************************************
- * Convert character string to double.
+/*******************************************************
+ * ditto
  */
 
 double toDouble(in char[] s)
@@ -965,10 +994,8 @@ unittest
     //assert(cast(real)d == cast(real)double.nan);
 }
 
-/***************************************************************
- * Convert character string to real.
- * Grammar:
- * ['+'|'-'] digit {digit}
+/*******************************************************
+ * ditto
  */
 real toReal(in char[] s)
 {
@@ -1045,8 +1072,8 @@ version (none)
      * Should it match what toString(ifloat) does with the 'i' suffix?
      */
 
-/***************************************************************
- * Convert character string to ifloat.
+/*******************************************************
+ * ditto
  */
 
 ifloat toIfloat(in char[] s)
@@ -1083,8 +1110,8 @@ unittest
     assert(feq(cast(ireal)ift, cast(ireal)ifloat.nan));
 }
 
-/***************************************************************
- * Convert character string to idouble.
+/*******************************************************
+ * ditto
  */
 
 idouble toIdouble(in char[] s)
@@ -1122,8 +1149,8 @@ unittest
     assert(toString(id) == toString(idouble.nan));
 }
 
-/***************************************************************
- * Convert character string to ireal.
+/*******************************************************
+ * ditto
  */
 
 ireal toIreal(in char[] s)
@@ -1162,10 +1189,9 @@ unittest
     assert(toString(ir) == toString(ireal.nan));
 }
 
-/***************************************************************
- * Convert character string to cfloat.
- * Grammar:
- * ['+'|'-'] digit {digit}
+
+/*******************************************************
+ * ditto
  */
 cfloat toCfloat(in char[] s)
 {
@@ -1243,10 +1269,8 @@ unittest
     assert(feq(cast(creal)cf, cast(creal)cfloat.nan));
 }
 
-/***************************************************************
- * Convert character string to cdouble.
- * Grammar:
- * ['+'|'-'] digit {digit}
+/*******************************************************
+ * ditto
  */
 cdouble toCdouble(in char[] s)
 {
@@ -1320,10 +1344,8 @@ unittest
     assert(feq(cast(creal)cd, cast(creal)cdouble.nan));
 }
 
-/***************************************************************
- * Convert character string to creal.
- * Grammar:
- * ['+'|'-'] digit {digit}
+/*******************************************************
+ * ditto
  */
 creal toCreal(in char[] s)
 {
@@ -1414,7 +1436,7 @@ unittest
 
 }
 
-/***************************************************************
+/* **************************************************************
  * Splits a complex float (cfloat, cdouble, and creal) into two workable strings.
  * Grammar:
  * ['+'|'-'] string floating-point digit {digit}
@@ -1468,7 +1490,7 @@ private bool getComplexStrings(in char[] s, out char[] s1, out char[] s2)
 
 // feq() functions now used only in unittesting
 
-/****************************************
+/* ***************************************
  * Main function to compare reals with given precision
  */
 private bool feq(in real rx, in real ry, in real precision)
@@ -1485,7 +1507,7 @@ private bool feq(in real rx, in real ry, in real precision)
     return cast(bool)(fabs(rx - ry) <= precision);
 }
 
-/****************************************
+/* ***************************************
  * (Note: Copied here from std.math's mfeq() function for unittesting)
  * Simple function to compare two floating point values
  * to a specified precision.
@@ -1507,7 +1529,7 @@ private bool feq(in real r1, in real r2)
     return cast(bool)(feq(r1, r2, 0.000001L));
 } 
  
-/****************************************
+/* ***************************************
  * compare ireals with given precision
  */
 private bool feq(in ireal r1, in ireal r2)
@@ -1527,7 +1549,7 @@ private bool feq(in ireal r1, in ireal r2)
     return feq(rx, ry, 0.000001L);
 } 
 
-/****************************************
+/* ***************************************
  * compare creals with given precision
  */
 private bool feq(in creal r1, in creal r2)

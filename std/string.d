@@ -102,9 +102,8 @@ long atoi(char[] s)
 
 real atof(char[] s)
 {   char* endptr;
-    real result;
 
-    result = strtold(toStringz(s), &endptr);
+    auto result = strtold(toStringz(s), &endptr);
     return result;
 }
 
@@ -120,7 +119,7 @@ real atof(char[] s)
 
 int cmp(char[] s1, char[] s2)
 {
-    size_t len = s1.length;
+    auto len = s1.length;
     int result;
 
     //printf("cmp('%.*s', '%.*s')\n", s1, s2);
@@ -138,7 +137,7 @@ int cmp(char[] s1, char[] s2)
 
 int icmp(char[] s1, char[] s2)
 {
-    size_t len = s1.length;
+    auto len = s1.length;
     int result;
 
     if (s2.length < len)
@@ -272,11 +271,9 @@ unittest
 
 int find(char[] s, dchar c)
 {
-    char* p;
-
     if (c <= 0x7F)
     {	// Plain old ASCII
-	p = cast(char*)memchr(s, c, s.length);
+	auto p = cast(char*)memchr(s, c, s.length);
 	if (p)
 	    return p - cast(char *)s;
 	else
@@ -502,17 +499,17 @@ int find(char[] s, char[] sub)
     }
     body
     {
-	size_t sublength = sub.length;
+	auto sublength = sub.length;
 
 	if (sublength == 0)
 	    return 0;
 
 	if (s.length >= sublength)
 	{
-	    char c = sub[0];
+	    auto c = sub[0];
 	    if (sublength == 1)
 	    {
-		char *p = cast(char*)memchr(s, c, s.length);
+		auto p = cast(char*)memchr(s, c, s.length);
 		if (p)
 		    return p - &s[0];
 	    }
@@ -577,7 +574,7 @@ int ifind(char[] s, char[] sub)
     }
     body
     {
-	size_t sublength = sub.length;
+	auto sublength = sub.length;
 	int i;
 
 	if (sublength == 0)
@@ -586,7 +583,7 @@ int ifind(char[] s, char[] sub)
 	if (s.length < sublength)
 	    return -1;
 
-	char c = sub[0];
+	auto c = sub[0];
 	if (sublength == 1)
 	{
 	    i = ifind(s, c);
@@ -600,7 +597,7 @@ int ifind(char[] s, char[] sub)
 
 	    for (i = 0; i < imax; i++)
 	    {
-		int j = ifind(s[i .. imax], c);
+		auto j = ifind(s[i .. imax], c);
 		if (j == -1)
 		    return -1;
 		i += j;
@@ -817,7 +814,7 @@ char[] tolower(char[] s)
     changed = 0;
     for (i = 0; i < s.length; i++)
     {
-	char c = s[i];
+	auto c = s[i];
 	if ('A' <= c && c <= 'Z')
 	{
 	    if (!changed)
@@ -872,7 +869,7 @@ char[] toupper(char[] s)
     changed = 0;
     for (i = 0; i < s.length; i++)
     {
-	char c = s[i];
+	auto c = s[i];
 	if ('a' <= c && c <= 'z')
 	{
 	    if (!changed)
@@ -989,12 +986,10 @@ unittest
 char[] capwords(char[] s)
 {
     char[] r;
-    int inword;
-    int i;
-    int istart;
+    bool inword = false;
+    size_t istart = 0;
+    size_t i;
 
-    istart = 0;
-    inword = 0;
     for (i = 0; i < s.length; i++)
     {
 	switch (s[i])
@@ -1008,7 +1003,7 @@ char[] capwords(char[] s)
 		if (inword)
 		{
 		    r ~= capitalize(s[istart .. i]);
-		    inword = 0;
+		    inword = false;
 		}
 		break;
 
@@ -1018,7 +1013,7 @@ char[] capwords(char[] s)
 		    if (r.length)
 			r ~= ' ';
 		    istart = i;
-		    inword = 1;
+		    inword = true;
 		}
 		break;
 	}
@@ -1058,7 +1053,7 @@ char[] repeat(char[] s, size_t n)
     if (s.length == 1)
 	r[] = s[0];
     else
-    {	size_t len = s.length;
+    {	auto len = s.length;
 
 	for (size_t i = 0; i < n * len; i += len)
 	{
@@ -1095,23 +1090,22 @@ unittest
 
 char[] join(char[][] words, char[] sep)
 {
-    size_t len;
-    uint seplen;
-    uint i;
-    uint j;
     char[] result;
 
     if (words.length)
     {
-	len = 0;
+	size_t len = 0;
+	size_t i;
+
 	for (i = 0; i < words.length; i++)
 	    len += words[i].length;
 
-	seplen = sep.length;
+	auto seplen = sep.length;
 	len += (words.length - 1) * seplen;
 
 	result = new char[len];
 
+	size_t j;
 	i = 0;
 	while (true)
 	{
@@ -1157,12 +1151,11 @@ unittest
 
 char[][] split(char[] s)
 {
-    uint i;
-    uint istart;
-    int inword;
+    size_t i;
+    size_t istart = 0;
+    bool inword = false;
     char[][] words;
 
-    inword = 0;
     for (i = 0; i < s.length; i++)
     {
 	switch (s[i])
@@ -1176,14 +1169,14 @@ char[][] split(char[] s)
 		if (inword)
 		{
 		    words ~= s[istart .. i];
-		    inword = 0;
+		    inword = false;
 		}
 		break;
 
 	    default:
 		if (!inword)
 		{   istart = i;
-		    inword = 1;
+		    inword = true;
 		}
 		break;
 	}
@@ -1224,8 +1217,8 @@ char[][] split(char[] s, char[] delim)
     }
     body
     {
-	uint i;
-	uint j;
+	size_t i;
+	size_t j;
 	char[][] words;
 
 	i = 0;
@@ -1233,9 +1226,9 @@ char[][] split(char[] s, char[] delim)
 	{
 	    if (delim.length == 1)
 	    {	char c = delim[0];
-		uint nwords = 0;
-		char *p = &s[0];
-		char *pend = p + s.length;
+		size_t nwords = 0;
+		char* p = &s[0];
+		char* pend = p + s.length;
 
 		while (true)
 		{
@@ -1274,7 +1267,7 @@ char[][] split(char[] s, char[] delim)
 		assert(wordi + 1 == nwords);
 	    }
 	    else
-	    {	uint nwords = 0;
+	    {	size_t nwords = 0;
 
 		while (true)
 		{
@@ -1522,10 +1515,10 @@ unittest
 char[] chomp(char[] s, char[] delimiter = null)
 {
     if (delimiter is null)
-    {   size_t len = s.length;
+    {   auto len = s.length;
 
 	if (len)
-	{   char c = s[len - 1];
+	{   auto c = s[len - 1];
 
 	    if (c == '\r')			// if ends in CR
 		len--;
@@ -1589,7 +1582,7 @@ unittest
  */
 
 char[] chop(char[] s)
-{   size_t len = s.length;
+{   auto len = s.length;
 
     if (len)
     {
@@ -1713,7 +1706,7 @@ char[] replace(char[] s, char[] from, char[] to)
 {
     char[] p;
     int i;
-    int istart;
+    size_t istart;
 
     //printf("replace('%.*s','%.*s','%.*s')\n", s, from, to);
     if (from.length == 0)
@@ -2457,7 +2450,7 @@ char[] toString(double d)
     char[20] buffer;
 
     sprintf(buffer, "%g", d);
-    return toString(buffer).dup;
+    return std.string.toString(buffer).dup;
 }
 
 /// ditto
@@ -2466,7 +2459,7 @@ char[] toString(real r)
     char[20] buffer;
 
     sprintf(buffer, "%Lg", r);
-    return toString(buffer).dup;
+    return std.string.toString(buffer).dup;
 }
 
 /// ditto
@@ -2478,7 +2471,7 @@ char[] toString(idouble d)
     char[21] buffer;
 
     sprintf(buffer, "%gi", d);
-    return toString(buffer).dup;
+    return std.string.toString(buffer).dup;
 }
 
 /// ditto
@@ -2487,7 +2480,7 @@ char[] toString(ireal r)
     char[21] buffer;
 
     sprintf(buffer, "%Lgi", r);
-    return toString(buffer).dup;
+    return std.string.toString(buffer).dup;
 }
 
 /// ditto
@@ -2499,7 +2492,7 @@ char[] toString(cdouble d)
     char[20 + 1 + 20 + 1] buffer;
 
     sprintf(buffer, "%g+%gi", d.re, d.im);
-    return toString(buffer).dup;
+    return std.string.toString(buffer).dup;
 }
 
 /// ditto
@@ -2508,8 +2501,9 @@ char[] toString(creal r)
     char[20 + 1 + 20 + 1] buffer;
 
     sprintf(buffer, "%Lg+%Lgi", r.re, r.im);
-    return toString(buffer).dup;
+    return std.string.toString(buffer).dup;
 }
+
 
 /******************************************
  * Convert value to string in _radix radix.
@@ -2903,13 +2897,13 @@ char[] squeeze(char[] s, char[] pattern = null)
     dchar lastc;
     size_t lasti;
     int run;
-    int changed;
+    bool changed;
 
     foreach (size_t i, dchar c; s)
     {
 	if (run && lastc == c)
 	{
-	    changed = 1;
+	    changed = true;
 	}
 	else if (pattern is null || inPattern(c, pattern))
 	{
@@ -3770,9 +3764,9 @@ unittest
  * leftmost column, which is numbered starting from 0.
  */
 
-int column(char[] string, int tabsize = 8)
+size_t column(char[] string, int tabsize = 8)
 {
-    int column;
+    size_t column;
 
     foreach (dchar c; string)
     {

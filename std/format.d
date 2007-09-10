@@ -50,8 +50,11 @@ version (Windows)
 version (DigitalMarsC)
 {
     // This is DMC's internal floating point formatting function
-    extern (C) char* function(int c, int flags, int precision, real* pdval,
-	char* buf, int* psl, int width) __pfloatfmt;
+    extern (C)
+    {
+	extern char* function(int c, int flags, int precision, real* pdval,
+	    char* buf, int* psl, int width) __pfloatfmt;
+    }
 }
 else
 {
@@ -126,6 +129,7 @@ enum Mangle : char
 private TypeInfo primitiveTypeInfo(Mangle m) 
 {
   TypeInfo ti;
+
   switch (m)
     {
     case Mangle.Tvoid:
@@ -835,6 +839,27 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
 		goto Lerror;
 	}
 
+	if (!signed)
+	{
+	    switch (m)
+	    {
+		case Mangle.Tbyte:
+		    vnumber &= 0xFF;
+		    break;
+
+		case Mangle.Tshort:
+		    vnumber &= 0xFFFF;
+		    break;
+
+		case Mangle.Tint:
+		    vnumber &= 0xFFFFFFFF;
+		    break;
+
+		default:
+		    break;
+	    }
+	}
+
 	if (flags & FLprecision && fc != 'p')
 	    flags &= ~FL0pad;
 
@@ -1294,5 +1319,29 @@ unittest
     dchar dc = 'a';
     r = std.string.format("%d", dc);
     assert(r == "97");
+
+    byte b = byte.max;
+    r = std.string.format("%x", b);
+    assert(r == "7f");
+    r = std.string.format("%x", ++b);
+    assert(r == "80");
+    r = std.string.format("%x", ++b);
+    assert(r == "81");
+
+    short sh = short.max;
+    r = std.string.format("%x", sh);
+    assert(r == "7fff");
+    r = std.string.format("%x", ++sh);
+    assert(r == "8000");
+    r = std.string.format("%x", ++sh);
+    assert(r == "8001");
+
+    i = int.max;
+    r = std.string.format("%x", i);
+    assert(r == "7fffffff");
+    r = std.string.format("%x", ++i);
+    assert(r == "80000000");
+    r = std.string.format("%x", ++i);
+    assert(r == "80000001");
 }
 

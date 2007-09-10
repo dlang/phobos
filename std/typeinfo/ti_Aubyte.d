@@ -1,8 +1,8 @@
 
 module std.typeinfo.ti_Aubyte;
 
-private import std.c.string;
 private import std.string;
+private import std.c.string;
 
 // ubyte[]
 

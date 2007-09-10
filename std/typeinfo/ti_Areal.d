@@ -23,7 +23,6 @@
 
 module std.typeinfo.ti_Areal;
 
-private import std.string;
 private import std.typeinfo.ti_real;
 
 // real[]

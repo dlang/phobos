@@ -1,10 +1,12 @@
 
 /**
+ * Information about the target operating system, environment, and CPU
  * Authors: Walter Bright, www.digitalmars.com
  * License: Public Domain
+ * Macros:
+ *	WIKI = Phobos/StdSystem
  */
 
-// Information about the target operating system, environment, and CPU
 
 module std.system;
 
@@ -44,12 +46,17 @@ const
 	RedHatLinux,
     }
 
-    // Big-endian or Little-endian?
+    /// Byte order endiannes
 
-    enum Endian { BigEndian, LittleEndian }
+    enum Endian
+    {
+	BigEndian,	/// big endian byte order
+	LittleEndian	/// little endian byte order
+    }
 
     version(LittleEndian)
     {
+	/// Native system endiannes
         Endian endian = Endian.LittleEndian;
     }
     else

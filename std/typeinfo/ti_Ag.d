@@ -1,7 +1,6 @@
 
 module std.typeinfo.ti_Ag;
 
-private import std.string;
 private import std.c.string;
 
 // byte[]

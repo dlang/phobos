@@ -678,13 +678,16 @@ body
 	return result;
     }
 
-    foreach (e; aa.a.b)
+    if (aa.a)
     {
-	if (e)
+	foreach (e; aa.a.b)
 	{
-	    result = treewalker(e);
-	    if (result)
-		break;
+	    if (e)
+	    {
+		result = treewalker(e);
+		if (result)
+		    break;
+	    }
 	}
     }
     return result;
@@ -728,13 +731,16 @@ body
 	return result;
     }
 
-    foreach (e; aa.a.b)
+    if (aa.a)
     {
-	if (e)
+	foreach (e; aa.a.b)
 	{
-	    result = treewalker(e);
-	    if (result)
-		break;
+	    if (e)
+	    {
+		result = treewalker(e);
+		if (result)
+		    break;
+	    }
 	}
     }
     return result;

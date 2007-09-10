@@ -2480,11 +2480,10 @@ Lretc:
 
 void optimize()
 {   ubyte[] prog;
-    int i;
 
     debug(regexp) printf("RegExp.optimize()\n");
     prog = buf.toBytes();
-    for (i = 0; 1;)
+    for (size_t i = 0; 1;)
     {
 	//printf("\tprog[%d] = %d, %d\n", i, prog[i], REstring);
 	switch (prog[i])
@@ -2564,10 +2563,9 @@ int starrchars(Range r, ubyte[] prog)
     uint n;
     uint m;
     ubyte* pop;
-    int i;
 
     //printf("RegExp.starrchars(prog = %p, progend = %p)\n", prog, progend);
-    for (i = 0; i < prog.length;)
+    for (size_t i = 0; i < prog.length;)
     {
 	switch (prog[i])
 	{
@@ -2774,31 +2772,28 @@ public rchar[] replace(rchar[] format)
 
 private static rchar[] replace3(rchar[] format, rchar[] input, regmatch_t[] pmatch)
 {
-    OutBuffer buf;
     rchar[] result;
-    rchar c;
     uint c2;
     int rm_so;
     int rm_eo;
     int i;
-    int f;
 
 //    printf("replace3(format = '%.*s', input = '%.*s')\n", format, input);
-    buf = new OutBuffer();
-    buf.reserve(format.length * rchar.sizeof);
-    for (f = 0; f < format.length; f++)
+    result.length = format.length;
+    result.length = 0;
+    for (size_t f = 0; f < format.length; f++)
     {
-	c = format[f];
+	auto c = format[f];
       L1:
 	if (c != '$')
 	{
-	    buf.write(c);
+	    result ~= c;
 	    continue;
 	}
 	++f;
 	if (f == format.length)
 	{
-	    buf.write(cast(rchar)'$');
+	    result ~= '$';
 	    break;
 	}
 	c = format[f];
@@ -2826,8 +2821,8 @@ private static rchar[] replace3(rchar[] format, rchar[] input, regmatch_t[] pmat
 		{
 		    if (i == 0)
 		    {
-			buf.write(cast(rchar)'$');
-			buf.write(c);
+			result ~= '$';
+			result ~= c;
 			continue;
 		    }
 		}
@@ -2840,8 +2835,8 @@ private static rchar[] replace3(rchar[] format, rchar[] input, regmatch_t[] pmat
 		    }
 		    if (i == 0)
 		    {
-			buf.write(cast(rchar)'$');
-			buf.write(c);
+			result ~= '$';
+			result ~= c;
 			c = c2;
 			goto L1;
 		    }
@@ -2856,16 +2851,15 @@ private static rchar[] replace3(rchar[] format, rchar[] input, regmatch_t[] pmat
 
 	    Lstring:
 		if (rm_so != rm_eo)
-		    buf.write(input[rm_so .. rm_eo]);
+		    result ~= input[rm_so .. rm_eo];
 		break;
 
 	    default:
-		buf.write(cast(rchar)'$');
-		buf.write(c);
+		result ~= '$';
+		result ~= c;
 		break;
 	}
     }
-    result = cast(rchar[])buf.toBytes();
     return result;
 }
 
@@ -2891,22 +2885,20 @@ private static rchar[] replace3(rchar[] format, rchar[] input, regmatch_t[] pmat
 
 public rchar[] replaceOld(rchar[] format)
 {
-    OutBuffer buf;
     rchar[] result;
-    rchar c;
 
 //printf("replace: this = %p so = %d, eo = %d\n", this, pmatch[0].rm_so, pmatch[0].rm_eo);
 //printf("3input = '%.*s'\n", input);
-    buf = new OutBuffer();
-    buf.reserve(format.length * rchar.sizeof);
-    for (uint i; i < format.length; i++)
+    result.length = format.length;
+    result.length = 0;
+    for (size_t i; i < format.length; i++)
     {
-	c = format[i];
+	auto c = format[i];
 	switch (c)
 	{
 	    case '&':
 //printf("match = '%.*s'\n", input[pmatch[0].rm_so .. pmatch[0].rm_eo]);
-		buf.write(input[pmatch[0].rm_so .. pmatch[0].rm_eo]);
+		result ~= input[pmatch[0].rm_so .. pmatch[0].rm_eo];
 		break;
 
 	    case '\\':
@@ -2918,19 +2910,18 @@ public rchar[] replaceOld(rchar[] format)
 
 			i = c - '0';
 			if (i <= re_nsub && pmatch[i].rm_so != pmatch[i].rm_eo)
-			    buf.write(input[pmatch[i].rm_so .. pmatch[i].rm_eo]);
+			    result ~= input[pmatch[i].rm_so .. pmatch[i].rm_eo];
 			break;
 		    }
 		}
-		buf.write(c);
+		result ~= c;
 		break;
 
 	    default:
-		buf.write(c);
+		result ~= c;
 		break;
 	}
     }
-    result = cast(rchar[])buf.toBytes();
     return result;
 }
 

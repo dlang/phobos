@@ -9,7 +9,7 @@
  */
 
 /*
- *  Copyright (C) 2004-2005 by Digital Mars, www.digitalmars.com
+ *  Copyright (C) 2004-2006 by Digital Mars, www.digitalmars.com
  *  Written by Walter Bright
  *
  *  This software is provided 'as-is', without any express or implied
@@ -62,6 +62,7 @@ version (X86_64)
      * analogous to C's ptrdiff_t.
      */
     alias long ptrdiff_t;
+
     alias ulong hash_t;
 }
 else
@@ -563,7 +564,7 @@ class TypeInfo_Struct : TypeInfo
     char[] name;
     size_t xsize;
 
-    uint function(void*) xtoHash;
+    hash_t function(void*) xtoHash;
     int function(void*,void*) xopEquals;
     int function(void*,void*) xopCmp;
 }

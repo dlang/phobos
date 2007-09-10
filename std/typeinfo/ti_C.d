@@ -23,8 +23,6 @@
 
 module std.typeinfo.ti_C;
 
-private import std.string;
-
 // Object
 
 class TypeInfo_C : TypeInfo

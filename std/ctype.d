@@ -1,44 +1,87 @@
-
 /*
- *  Copyright (C) 2004-2005 by Digital Mars, www.digitalmars.com
- *  Written by Walter Bright
- *
- *  This software is provided 'as-is', without any express or implied
- *  warranty. In no event will the authors be held liable for any damages
- *  arising from the use of this software.
- *
- *  Permission is granted to anyone to use this software for any purpose,
- *  including commercial applications, and to alter it and redistribute it
- *  freely, in both source and binary form, subject to the following
- *  restrictions:
- *
- *  o  The origin of this software must not be misrepresented; you must not
- *     claim that you wrote the original software. If you use this software
- *     in a product, an acknowledgment in the product documentation would be
- *     appreciated but is not required.
- *  o  Altered source versions must be plainly marked as such, and must not
- *     be misrepresented as being the original software.
- *  o  This notice may not be removed or altered from any source
- *     distribution.
+ * Placed into the Public Domain.
+ * Digital Mars, www.digitalmars.com
+ * Written by Walter Bright
  */
 
-// Simple ASCII char classification functions
+/**
+ * Simple ASCII character classification functions.
+ * For Unicode classification, see $(LINK2 std_uni.html, std.uni).
+ * References:
+ *	$(LINK2 http://www.digitalmars.com/d/ascii-table.html, ASCII Table),
+ *	$(LINK2 http://en.wikipedia.org/wiki/Ascii, Wikipedia)
+ * Macros:
+ *	WIKI=Phobos/StdCtype
+ */
 
 module std.ctype;
 
+/**
+ * Returns !=0 if c is a letter in the range (0..9, a..z, A..Z).
+ */
 int isalnum(dchar c)  { return (c <= 0x7F) ? _ctype[c] & (_ALP|_DIG) : 0; }
+
+/**
+ * Returns !=0 if c is an ascii upper or lower case letter.
+ */
 int isalpha(dchar c)  { return (c <= 0x7F) ? _ctype[c] & (_ALP)      : 0; }
+
+/**
+ * Returns !=0 if c is a control character.
+ */
 int iscntrl(dchar c)  { return (c <= 0x7F) ? _ctype[c] & (_CTL)      : 0; }
+
+/**
+ * Returns !=0 if c is a digit.
+ */
 int isdigit(dchar c)  { return (c <= 0x7F) ? _ctype[c] & (_DIG)      : 0; }
+
+/**
+ * Returns !=0 if c is lower case ascii letter.
+ */
 int islower(dchar c)  { return (c <= 0x7F) ? _ctype[c] & (_LC)       : 0; }
+
+/**
+ * Returns !=0 if c is a punctuation character.
+ */
 int ispunct(dchar c)  { return (c <= 0x7F) ? _ctype[c] & (_PNC)      : 0; }
+
+/**
+ * Returns !=0 if c is a space, tab, vertical tab, form feed,
+ * carriage return, or linefeed.
+ */
 int isspace(dchar c)  { return (c <= 0x7F) ? _ctype[c] & (_SPC)      : 0; }
+
+/**
+ * Returns !=0 if c is an upper case ascii character.
+ */
 int isupper(dchar c)  { return (c <= 0x7F) ? _ctype[c] & (_UC)       : 0; }
+
+/**
+ * Returns !=0 if c is a hex digit (0..9, a..f, A..F).
+ */
 int isxdigit(dchar c) { return (c <= 0x7F) ? _ctype[c] & (_HEX)      : 0; }
+
+/**
+ * Returns !=0 if c is a printing character except for the space character.
+ */
 int isgraph(dchar c)  { return (c <= 0x7F) ? _ctype[c] & (_ALP|_DIG|_PNC) : 0; }
+
+/**
+ * Returns !=0 if c is a printing character except for the space character.
+ */
 int isprint(dchar c)  { return (c <= 0x7F) ? _ctype[c] & (_ALP|_DIG|_PNC|_BLK) : 0; }
+
+/**
+ * Returns !=0 if c is in the ascii character set, i.e. in the range 0..0x7F.
+ */
 int isascii(dchar c)  { return c <= 0x7F; }
 
+
+/**
+ * If c is an upper case ascii character,
+ * return the lower case equivalent, otherwise return c.
+ */
 dchar tolower(dchar c)
     out (result)
     {
@@ -49,6 +92,11 @@ dchar tolower(dchar c)
 	return isupper(c) ? c + (cast(dchar)'a' - 'A') : c;
     }
 
+
+/**
+ * If c is a lower case ascii character,
+ * return the upper case equivalent, otherwise return c.
+ */
 dchar toupper(dchar c)
     out (result)
     {

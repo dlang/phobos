@@ -23,7 +23,6 @@
 
 module std.typeinfo.ti_Acdouble;
 
-private import std.string;
 private import std.typeinfo.ti_cdouble;
 
 // cdouble[]

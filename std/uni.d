@@ -1,6 +1,26 @@
+/*
+ * Placed into the Public Domain.
+ * Digital Mars, www.digitalmars.com
+ * Written by Walter Bright
+ */
+
+/**
+ * Simple Unicode character classification functions.
+ * For ASCII classification, see $(LINK2 std_ctype.html, std.ctype).
+ * Macros:
+ *	WIKI=Phobos/StdUni
+ * References:
+ *	$(LINK2 http://www.digitalmars.com/d/ascii-table.html, ASCII Table),
+ *	$(LINK2 http://en.wikipedia.org/wiki/Unicode, Wikipedia),
+ *	$(LINK2 http://www.unicode.org, The Unicode Consortium)
+ */
+
 
 module std.uni;
 
+/**
+ * Returns !=0 if c is a Unicode lower case character.
+ */
 int isUniLower(dchar c)
 {
     if (c <= 0x7F)
@@ -9,6 +29,9 @@ int isUniLower(dchar c)
     return isUniAlpha(c) && c == toUniLower(c);
 }
 
+/**
+ * Returns !=0 if c is a Unicode upper case character.
+ */
 int isUniUpper(dchar c)
 {
     if (c <= 0x7F)
@@ -17,6 +40,10 @@ int isUniUpper(dchar c)
     return isUniAlpha(c) && c == toUniUpper(c);
 }
 
+/**
+ * If c is a Unicode upper case character, return the lower case
+ * equivalent, otherwise return c.
+ */
 dchar toUniLower(dchar c)
 {
     if (c >= 'A' && c <= 'Z')
@@ -79,6 +106,10 @@ dchar toUniLower(dchar c)
     return c;
 }
 
+/**
+ * If c is a Unicode lower case character, return the upper case
+ * equivalent, otherwise return c.
+ */
 dchar toUniUpper(dchar c)
 {
     if (c >= 'a' && c <= 'z')
@@ -143,7 +174,7 @@ dchar toUniUpper(dchar c)
 
 
 /*******************************
- * Return !=0 if unicode alpha.
+ * Return !=0 if u is a Unicode alpha character.
  */
 
 int isUniAlpha(dchar u)

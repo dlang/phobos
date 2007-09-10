@@ -24,6 +24,14 @@
 	Thanks to Benjamin Herr for his assistance.
 */
 
+/**
+ * Notes: For Win32 systems, link with ws2_32.lib. 
+ * Example: See /dmd/samples/d/listener.d.
+ * Authors: Christopher E. Miller 
+ * Macros:
+ *	WIKI=Phobos/StdSocket
+ */
+
 module std.socket;
 
 private import std.string, std.stdint, std.c.string, std.c.stdlib;
@@ -71,9 +79,10 @@ else
 }
 
 
+/// Base exception thrown from a Socket.
 class SocketException: Exception
 {
-	int errorCode; // Platform-specific error code.
+	int errorCode; /// Platform-specific error code.
 	
 	
 	this(char[] msg, int err = 0)
@@ -127,47 +136,58 @@ static ~this()
 	}
 }
 
-
+/**
+ * The communication domain used to resolve an address.
+ */
 enum AddressFamily: int
 {
-	UNSPEC =     AF_UNSPEC,
-	UNIX =       AF_UNIX,
-	INET =       AF_INET,
-	IPX =        AF_IPX,
-	APPLETALK =  AF_APPLETALK,
-	INET6 =      AF_INET6,
+	UNSPEC =     AF_UNSPEC,	///
+	UNIX =       AF_UNIX,	/// local communication
+	INET =       AF_INET,	/// internet protocol version 4
+	IPX =        AF_IPX,	/// novell IPX
+	APPLETALK =  AF_APPLETALK,	/// appletalk
+	INET6 =      AF_INET6,	// internet protocol version 6
 }
 
 
+/**
+ * Communication semantics
+ */
 enum SocketType: int
 {
-	STREAM =     SOCK_STREAM,
-	DGRAM =      SOCK_DGRAM,
-	RAW =        SOCK_RAW,
-	RDM =        SOCK_RDM,
-	SEQPACKET =  SOCK_SEQPACKET,
+	STREAM =     SOCK_STREAM,	/// sequenced, reliable, two-way communication-based byte streams
+	DGRAM =      SOCK_DGRAM,	/// connectionless, unreliable datagrams with a fixed maximum length; data may be lost or arrive out of order
+	RAW =        SOCK_RAW,		/// raw protocol access
+	RDM =        SOCK_RDM,		/// reliably-delivered message datagrams
+	SEQPACKET =  SOCK_SEQPACKET,	/// sequenced, reliable, two-way connection-based datagrams with a fixed maximum length
 }
 
 
+/**
+ * Protocol
+ */
 enum ProtocolType: int
 {
-	IP =    IPPROTO_IP,
-	ICMP =  IPPROTO_ICMP,
-	IGMP =  IPPROTO_IGMP,
-	GGP =   IPPROTO_GGP,
-	TCP =   IPPROTO_TCP,
-	PUP =   IPPROTO_PUP,
-	UDP =   IPPROTO_UDP,
-	IDP =   IPPROTO_IDP,
-	IPV6 =  IPPROTO_IPV6,
+	IP =    IPPROTO_IP,	/// internet protocol version 4
+	ICMP =  IPPROTO_ICMP,	/// internet control message protocol
+	IGMP =  IPPROTO_IGMP,	/// internet group management protocol
+	GGP =   IPPROTO_GGP,	/// gateway to gateway protocol
+	TCP =   IPPROTO_TCP,	/// transmission control protocol
+	PUP =   IPPROTO_PUP,	/// PARC universal packet protocol
+	UDP =   IPPROTO_UDP,	/// user datagram protocol
+	IDP =   IPPROTO_IDP,	/// Xerox NS protocol
+	IPV6 =  IPPROTO_IPV6,	/// internet protocol version 6
 }
 
 
+/**
+ * Protocol is a class for retrieving protocol information.
+ */
 class Protocol
 {
-	ProtocolType type;
-	char[] name;
-	char[][] aliases;
+	ProtocolType type;	/// These members are populated when one of the following functions are called without failure:
+	char[] name;		/// ditto
+	char[][] aliases;	/// ditto
 	
 	
 	void populate(protoent* proto)
@@ -196,7 +216,7 @@ class Protocol
 		}
 	}
 	
-	
+	/** Returns false on failure */
 	bool getProtocolByName(char[] name)
 	{
 		protoent* proto;
@@ -208,6 +228,7 @@ class Protocol
 	}
 	
 	
+	/** Returns false on failure */
 	// Same as getprotobynumber().
 	bool getProtocolByType(ProtocolType type)
 	{
@@ -233,12 +254,16 @@ unittest
 }
 
 
+/**
+ * Service is a class for retrieving service information.
+ */
 class Service
 {
+	/** These members are populated when one of the following functions are called without failure: */
 	char[] name;
-	char[][] aliases;
-	ushort port;
-	char[] protocolName;
+	char[][] aliases;	/// ditto
+	ushort port;		/// ditto
+	char[] protocolName;	/// ditto
 	
 	
 	void populate(servent* serv)
@@ -268,7 +293,10 @@ class Service
 		}
 	}
 	
-	
+	/**
+	 * If a protocol name is omitted, any protocol will be matched.
+	 * Returns: false on failure.
+	 */
 	bool getServiceByName(char[] name, char[] protocolName)
 	{
 		servent* serv;
@@ -281,6 +309,7 @@ class Service
 	
 	
 	// Any protocol name will be matched.
+	/// ditto
 	bool getServiceByName(char[] name)
 	{
 		servent* serv;
@@ -292,6 +321,7 @@ class Service
 	}
 	
 	
+	/// ditto
 	bool getServiceByPort(ushort port, char[] protocolName)
 	{
 		servent* serv;
@@ -304,6 +334,7 @@ class Service
 	
 	
 	// Any protocol name will be matched.
+	/// ditto
 	bool getServiceByPort(ushort port)
 	{
 		servent* serv;
@@ -335,9 +366,12 @@ unittest
 }
 
 
+/**
+ * Base exception thrown from an InternetHost.
+ */
 class HostException: Exception
 {
-	int errorCode;
+	int errorCode;	/// Platform-specific error code.
 	
 	
 	this(char[] msg, int err = 0)
@@ -347,12 +381,15 @@ class HostException: Exception
 	}
 }
 
-
+/**
+ * InternetHost is a class for resolving IPv4 addresses.
+ */
 class InternetHost
 {
+	/** These members are populated when one of the following functions are called without failure: */
 	char[] name;
-	char[][] aliases;
-	uint32_t[] addrList;
+	char[][] aliases;	/// ditto
+	uint32_t[] addrList;	/// ditto
 	
 	
 	void validHostent(hostent* he)
@@ -410,7 +447,9 @@ class InternetHost
 		}
 	}
 	
-	
+	/**
+	 * Resolve host name. Returns false if unable to resolve.
+	 */	
 	bool getHostByName(char[] name)
 	{
 		hostent* he = gethostbyname(toStringz(name));
@@ -422,6 +461,9 @@ class InternetHost
 	}
 	
 	
+	/**
+	 * Resolve IPv4 address number. Returns false if unable to resolve.
+	 */	
 	bool getHostByAddr(uint addr)
 	{
 		uint x = htonl(addr);
@@ -434,7 +476,11 @@ class InternetHost
 	}
 	
 	
-	//shortcut
+	/**
+	 * Same as previous, but addr is an IPv4 address string in the
+	 * dotted-decimal form $(I a.b.c.d).
+	 * Returns false if unable to resolve.
+	 */	
 	bool getHostByAddr(char[] addr)
 	{
 		uint x = inet_addr(std.string.toStringz(addr));
@@ -472,6 +518,9 @@ unittest
 }
 
 
+/**
+ * Base exception thrown from an Address.
+ */
 class AddressException: Exception
 {
 	this(char[] msg)
@@ -481,15 +530,20 @@ class AddressException: Exception
 }
 
 
+/**
+ * Address is an abstract class for representing a network addresses.
+ */
 abstract class Address
 {
 	protected sockaddr* name();
 	protected int nameLen();
-	AddressFamily addressFamily();
-	char[] toString();
+	AddressFamily addressFamily();	/// Family of this address.
+	char[] toString();		/// Human readable string representing this address.
 }
 
-
+/**
+ *
+ */
 class UnknownAddress: Address
 {
 	protected:
@@ -522,6 +576,10 @@ class UnknownAddress: Address
 }
 
 
+/**
+ * InternetAddress is a class that represents an IPv4 (internet protocol version
+ * 4) address and port.
+ */
 class InternetAddress: Address
 {
 	protected:
@@ -546,31 +604,35 @@ class InternetAddress: Address
 	
 	
 	public:
-	const uint ADDR_ANY = INADDR_ANY;
-	const uint ADDR_NONE = INADDR_NONE;
-	const ushort PORT_ANY = 0;
+	const uint ADDR_ANY = INADDR_ANY;	/// Any IPv4 address number.
+	const uint ADDR_NONE = INADDR_NONE;	/// An invalid IPv4 address number.
+	const ushort PORT_ANY = 0;		/// Any IPv4 port number.
 	
-	
+	/// Overridden to return AddressFamily.INET.
 	AddressFamily addressFamily()
 	{
 		return cast(AddressFamily)AddressFamily.INET;
 	}
 	
-	
+	/// Returns the IPv4 port number.
 	ushort port()
 	{
 		return ntohs(sin.sin_port);
 	}
 	
-	
+	/// Returns the IPv4 address number.
 	uint addr()
 	{
 		return ntohl(sin.sin_addr.s_addr);
 	}
 	
-	
-	//-port- can be PORT_ANY
-	//-addr- is an IP address or host name
+	/**
+	 * Params:
+	 *   addr = an IPv4 address string in the dotted-decimal form a.b.c.d,
+	 *          or a host name that will be resolved using an InternetHost
+	 *          object.
+	 *   port = may be PORT_ANY as stated below.
+	 */
 	this(char[] addr, ushort port)
 	{
 		uint uiaddr = parse(addr);
@@ -586,41 +648,48 @@ class InternetAddress: Address
 		sin.sin_port = htons(port);
 	}
 	
-	
+	/**
+	 * Construct a new Address. addr may be ADDR_ANY (default) and port may
+	 * be PORT_ANY, and the actual numbers may not be known until a connection
+	 * is made.
+	 */
 	this(uint addr, ushort port)
 	{
 		sin.sin_addr.s_addr = htonl(addr);
 		sin.sin_port = htons(port);
 	}
 	
-	
+	/// ditto	
 	this(ushort port)
 	{
 		sin.sin_addr.s_addr = 0; //any, "0.0.0.0"
 		sin.sin_port = htons(port);
 	}
 	
-	
+	/// Human readable string representing the IPv4 address in dotted-decimal form.	
 	char[] toAddrString()
 	{
 		return std.string.toString(inet_ntoa(sin.sin_addr)).dup;
 	}
 	
-	
+	/// Human readable string representing the IPv4 port.
 	char[] toPortString()
 	{
 		return std.string.toString(port());
 	}
 	
-	
+	/// Human readable string representing the IPv4 address and port in the form $(I a.b.c.d:e).
 	char[] toString()
 	{
 		return toAddrString() ~ ":" ~ toPortString();
 	}
 	
-	
-	//-addr- is an IP address in the format "a.b.c.d"
-	//returns ADDR_NONE on failure
+	/**
+	 * Parse an IPv4 address string in the dotted-decimal form $(I a.b.c.d)
+	 * and return the number.
+	 * If the string is not a legitimate IPv4 address,
+	 * ADDR_NONE is returned.
+	 */
 	static uint parse(char[] addr)
 	{
 		return ntohl(inet_addr(std.string.toStringz(addr)));
@@ -635,6 +704,7 @@ unittest
 }
 
 
+/** */
 class SocketAcceptException: SocketException
 {
 	this(char[] msg, int err = 0)
@@ -643,30 +713,32 @@ class SocketAcceptException: SocketException
 	}
 }
 
-
+/// How a socket is shutdown:
 enum SocketShutdown: int
 {
-	RECEIVE =  SD_RECEIVE,
-	SEND =     SD_SEND,
-	BOTH =     SD_RECEIVE,
+	RECEIVE =  SD_RECEIVE,	/// socket receives are disallowed
+	SEND =     SD_SEND,	/// socket sends are disallowed
+	BOTH =     SD_RECEIVE,	/// both RECEIVE and SEND
 }
 
 
+/// Flags may be OR'ed together:
 enum SocketFlags: int
 {
-	NONE =       0,
+	NONE =       0,		/// no flags specified 
 	
-	OOB =        MSG_OOB, //out of band
-	PEEK =       MSG_PEEK, //only for receiving
-	DONTROUTE =  MSG_DONTROUTE, //only for sending
+	OOB =        MSG_OOB,	/// out-of-band stream data
+	PEEK =       MSG_PEEK,	/// peek at incoming data without removing it from the queue, only for receiving
+	DONTROUTE =  MSG_DONTROUTE, /// data should not be subject to routing; this flag may be ignored. Only for sending
 }
 
 
+/// Duration timeout value.
 extern(C) struct timeval
 {
 	// D interface
-	int seconds;
-	int microseconds;
+	int seconds;		/// Number of seconds.
+	int microseconds;	/// Number of additional microseconds.
 	
 	// C interface
 	deprecated
@@ -677,7 +749,7 @@ extern(C) struct timeval
 }
 
 
-//a set of sockets for Socket.select()
+/// A collection of sockets for use with Socket.select.
 class SocketSet
 {
 	private:
@@ -723,6 +795,8 @@ class SocketSet
 	
 	
 	public:
+
+	/// Set the maximum amount of sockets that may be added.
 	this(uint max)
 	{
 		version(Win32)
@@ -740,13 +814,13 @@ class SocketSet
 		}
 	}
 	
-	
+	/// Uses the default maximum for the system.
 	this()
 	{
 		this(FD_SETSIZE);
 	}
 	
-	
+	/// Reset the SocketSet so that there are 0 Sockets in the collection.	
 	void reset()
 	{
 		version(Win32)
@@ -785,12 +859,11 @@ class SocketSet
 		}
 	}
 	
-	
+	/// Add a Socket to the collection. Adding more than the maximum has dangerous side affects.
 	void add(Socket s)
 	{
 		add(s.sock);
 	}
-	
 	
 	void remove(socket_t s)
 	{
@@ -798,11 +871,11 @@ class SocketSet
 	}
 	
 	
+	/// Remove this Socket from the collection.
 	void remove(Socket s)
 	{
 		remove(s.sock);
 	}
-	
 	
 	int isSet(socket_t s)
 	{
@@ -810,13 +883,14 @@ class SocketSet
 	}
 	
 	
+	/// Returns nonzero if this Socket is in the collection.
 	int isSet(Socket s)
 	{
 		return isSet(s.sock);
 	}
 	
-	
-	// Max sockets that can be added, like FD_SETSIZE.
+
+	// Return maximum amount of sockets that can be added, like FD_SETSIZE.
 	uint max()
 	{
 		version(Win32)
@@ -854,28 +928,29 @@ class SocketSet
 }
 
 
+/// The level at which a socket option is defined:
 enum SocketOptionLevel: int
 {
-	SOCKET =  SOL_SOCKET,
-	IP =      ProtocolType.IP,
-	ICMP =    ProtocolType.ICMP,
-	IGMP =    ProtocolType.IGMP,
-	GGP =     ProtocolType.GGP,
-	TCP =     ProtocolType.TCP,
-	PUP =     ProtocolType.PUP,
-	UDP =     ProtocolType.UDP,
-	IDP =     ProtocolType.IDP,
-	IPV6 =    ProtocolType.IPV6,
+	SOCKET =  SOL_SOCKET,		/// socket level
+	IP =      ProtocolType.IP,	/// internet protocol version 4 level
+	ICMP =    ProtocolType.ICMP,	///
+	IGMP =    ProtocolType.IGMP,	///
+	GGP =     ProtocolType.GGP,	///
+	TCP =     ProtocolType.TCP,	/// transmission control protocol level
+	PUP =     ProtocolType.PUP,	///
+	UDP =     ProtocolType.UDP,	/// user datagram protocol level
+	IDP =     ProtocolType.IDP,	///
+	IPV6 =    ProtocolType.IPV6,	/// internet protocol version 6 level
 }
 
-
+/// Linger information for use with SocketOption.LINGER.
 extern(C) struct linger
 {
 	// D interface
 	version(Win32)
 	{
-		uint16_t on;
-		uint16_t time;
+		uint16_t on;	/// Nonzero for on.
+		uint16_t time;	/// Linger time.
 	}
 	else version(BsdSockets)
 	{
@@ -892,29 +967,34 @@ extern(C) struct linger
 }
 
 
+/// Specifies a socket option:
 enum SocketOption: int
 {
-	DEBUG =                SO_DEBUG,
-	BROADCAST =            SO_BROADCAST,
-	REUSEADDR =            SO_REUSEADDR,
-	LINGER =               SO_LINGER,
-	OOBINLINE =            SO_OOBINLINE,
-	SNDBUF =               SO_SNDBUF,
-	RCVBUF =               SO_RCVBUF,
-	DONTROUTE =            SO_DONTROUTE,
+	DEBUG =                SO_DEBUG,	/// record debugging information
+	BROADCAST =            SO_BROADCAST,	/// allow transmission of broadcast messages
+	REUSEADDR =            SO_REUSEADDR,	/// allow local reuse of address
+	LINGER =               SO_LINGER,	/// linger on close if unsent data is present
+	OOBINLINE =            SO_OOBINLINE,	/// receive out-of-band data in band
+	SNDBUF =               SO_SNDBUF,	/// send buffer size
+	RCVBUF =               SO_RCVBUF,	/// receive buffer size
+	DONTROUTE =            SO_DONTROUTE,	/// do not route
 	
 	// SocketOptionLevel.TCP:
-	TCP_NODELAY =          .TCP_NODELAY,
+	TCP_NODELAY =          .TCP_NODELAY,	/// disable the Nagle algorithm for send coalescing
 	
 	// SocketOptionLevel.IPV6:
-	IPV6_UNICAST_HOPS =    .IPV6_UNICAST_HOPS,
-	IPV6_MULTICAST_IF =    .IPV6_MULTICAST_IF,
-	IPV6_MULTICAST_LOOP =  .IPV6_MULTICAST_LOOP,
-	IPV6_JOIN_GROUP =      .IPV6_JOIN_GROUP,
-	IPV6_LEAVE_GROUP =     .IPV6_LEAVE_GROUP,
+	IPV6_UNICAST_HOPS =    .IPV6_UNICAST_HOPS,	///
+	IPV6_MULTICAST_IF =    .IPV6_MULTICAST_IF,	///
+	IPV6_MULTICAST_LOOP =  .IPV6_MULTICAST_LOOP,	///
+	IPV6_JOIN_GROUP =      .IPV6_JOIN_GROUP,	///
+	IPV6_LEAVE_GROUP =     .IPV6_LEAVE_GROUP,	///
 }
 
 
+/**
+ *  Socket is a class that creates a network communication endpoint using the
+ * Berkeley sockets interface.
+ */
 class Socket
 {
 	private:
@@ -922,7 +1002,7 @@ class Socket
 	AddressFamily _family;
 	
 	version(Win32)
-		bool _blocking = false;
+	    bool _blocking = false;	/// Property to get or set whether the socket is blocking or nonblocking.
 	
 	
 	// For use with accepting().
@@ -932,6 +1012,12 @@ class Socket
 	
 	
 	public:
+
+	/**
+	 * Create a blocking socket. If a single protocol type exists to support
+	 * this socket type within the address family, the ProtocolType may be
+	 * omitted.
+	 */
 	this(AddressFamily af, SocketType type, ProtocolType protocol)
 	{
 		sock = cast(socket_t)socket(af, type, protocol);
@@ -943,12 +1029,14 @@ class Socket
 	
 	// A single protocol exists to support this socket type within the
 	// protocol family, so the ProtocolType is assumed.
+	/// ditto
 	this(AddressFamily af, SocketType type)
 	{
 		this(af, type, cast(ProtocolType)0); // Pseudo protocol number.
 	}
 	
 	
+	/// ditto
 	this(AddressFamily af, SocketType type, char[] protocolName)
 	{
 		protoent* proto;
@@ -1012,27 +1100,32 @@ class Socket
 		throw new SocketException("Unable to set socket blocking", _lasterr());
 	}
 	
-	
+
+	/// Get the socket's address family.	
 	AddressFamily addressFamily() // getter
 	{
 		return _family;
 	}
 	
-	
+	/// Property that indicates if this is a valid, alive socket.
 	bool isAlive() // getter
 	{
 		int type, typesize = type.sizeof;
 		return !getsockopt(sock, SOL_SOCKET, SO_TYPE, cast(char*)&type, &typesize);
 	}
 	
-	
+	/// Associate a local address with this socket.
 	void bind(Address addr)
 	{
 		if(_SOCKET_ERROR == .bind(sock, addr.name(), addr.nameLen()))
 			throw new SocketException("Unable to bind socket", _lasterr());
 	}
 	
-	
+	/**
+	 * Establish a connection. If the socket is blocking, connect waits for
+	 * the connection to be made. If the socket is nonblocking, connect
+	 * returns immediately and the connection attempt is still in progress.
+	 */
 	void connect(Address to)
 	{
 		if(_SOCKET_ERROR == .connect(sock, to.name(), to.nameLen()))
@@ -1061,15 +1154,23 @@ class Socket
 		}
 	}
 	
-	
-	//need to bind() first
+	/**
+	 * Listen for an incoming connection. bind must be called before you can
+	 * listen. The backlog is a request of how many pending incoming
+	 * connections are queued until accept'ed.
+	 */
 	void listen(int backlog)
 	{
 		if(_SOCKET_ERROR == .listen(sock, backlog))
 			throw new SocketException("Unable to listen on socket", _lasterr());
 	}
 	
-	
+	/**
+	 * Called by accept when a new Socket must be created for a new
+	 * connection. To use a derived class, override this method and return an
+	 * instance of your class. The returned Socket's handle must not be set;
+	 * Socket has a protected constructor this() to use in this situation.
+	 */
 	// Override to use a derived class.
 	// The returned socket's handle must not be set.
 	protected Socket accepting()
@@ -1077,7 +1178,11 @@ class Socket
 		return new Socket;
 	}
 	
-	
+	/**
+	 * Accept an incoming connection. If the socket is blocking, accept
+	 * waits for a connection request. Throws SocketAcceptException if unable
+	 * to accept. See accepting for use with derived classes.
+	 */
 	Socket accept()
 	{
 		socket_t newsock;
@@ -1107,7 +1212,7 @@ class Socket
 		return newSocket;
 	}
 	
-	
+	/// Disables sends and/or receives.
 	void shutdown(SocketShutdown how)
 	{
 		.shutdown(sock, cast(int)how);
@@ -1126,7 +1231,12 @@ class Socket
 		}
 	}
 	
-	
+
+	/**
+	 * Immediately drop any connections and release socket resources.
+	 * Calling shutdown before close is recommended for connection-oriented
+	 * sockets. The Socket object is no longer usable after close.
+	 */
 	//calling shutdown() before this is recommended
 	//for connection-oriented sockets
 	void close()
@@ -1152,7 +1262,7 @@ class Socket
 	}
 	
 	
-	// Returns the local machine's host name. Idea from mango.
+	/// Returns the local machine's host name. Idea from mango.
 	static char[] hostName() // getter
 	{
 		char[256] result; // Host names are limited to 255 chars.
@@ -1161,7 +1271,7 @@ class Socket
 		return std.string.toString(cast(char*)result).dup;
 	}
 	
-	
+	/// Remote endpoint Address.
 	Address remoteAddress()
 	{
 		Address addr = newFamilyObject();
@@ -1172,7 +1282,7 @@ class Socket
 		return addr;
 	}
 	
-	
+	/// Local endpoint Address.
 	Address localAddress()
 	{
 		Address addr = newFamilyObject();
@@ -1183,10 +1293,14 @@ class Socket
 		return addr;
 	}
 	
-	
+	/// Send or receive error code.
 	const int ERROR = _SOCKET_ERROR;
 	
-	
+	/**
+	 * Send data on the connection. Returns the number of bytes actually
+	 * sent, or ERROR on failure. If the socket is blocking and there is no
+	 * buffer space left, send waits.
+	 */
 	//returns number of bytes actually sent, or -1 on error
 	int send(void[] buf, SocketFlags flags)
 	{
@@ -1194,20 +1308,22 @@ class Socket
 		return sent;
 	}
 	
-	
+	/// ditto
 	int send(void[] buf)
 	{
 		return send(buf, SocketFlags.NONE);
 	}
 	
-	
+	/**
+	 * Send data to a specific destination Address. If the destination address is not specified, a connection must have been made and that address is used. If the socket is blocking and there is no buffer space left, sendTo waits.
+	 */
 	int sendTo(void[] buf, SocketFlags flags, Address to)
 	{
 		int sent = .sendto(sock, buf, buf.length, cast(int)flags, to.name(), to.nameLen());
 		return sent;
 	}
 	
-	
+	/// ditto
 	int sendTo(void[] buf, Address to)
 	{
 		return sendTo(buf, SocketFlags.NONE, to);
@@ -1215,6 +1331,7 @@ class Socket
 	
 	
 	//assumes you connect()ed
+	/// ditto
 	int sendTo(void[] buf, SocketFlags flags)
 	{
 		int sent = .sendto(sock, buf, buf.length, cast(int)flags, null, 0);
@@ -1223,12 +1340,19 @@ class Socket
 	
 	
 	//assumes you connect()ed
+	/// ditto
 	int sendTo(void[] buf)
 	{
 		return sendTo(buf, SocketFlags.NONE);
 	}
 	
-	
+
+	/**
+	 * Receive data on the connection. Returns the number of bytes actually
+	 * received, 0 if the remote side has closed the connection, or ERROR on
+	 * failure. If the socket is blocking, receive waits until there is data
+	 * to be received.
+	 */
 	//returns number of bytes actually received, 0 on connection closure, or -1 on error
 	int receive(void[] buf, SocketFlags flags)
 	{
@@ -1239,13 +1363,15 @@ class Socket
 		return read;
 	}
 	
-	
+	/// ditto
 	int receive(void[] buf)
 	{
 		return receive(buf, SocketFlags.NONE);
 	}
 	
-	
+	/**
+	 * Receive data and get the remote endpoint Address. Returns the number of bytes actually received, 0 if the remote side has closed the connection, or ERROR on failure. If the socket is blocking, receiveFrom waits until there is data to be received.
+	 */
 	int receiveFrom(void[] buf, SocketFlags flags, out Address from)
 	{
 		if(!buf.length) //return 0 and don't think the connection closed
@@ -1259,6 +1385,7 @@ class Socket
 	}
 	
 	
+	/// ditto
 	int receiveFrom(void[] buf, out Address from)
 	{
 		return receiveFrom(buf, SocketFlags.NONE, from);
@@ -1266,6 +1393,7 @@ class Socket
 	
 	
 	//assumes you connect()ed
+	/// ditto
 	int receiveFrom(void[] buf, SocketFlags flags)
 	{
 		if(!buf.length) //return 0 and don't think the connection closed
@@ -1277,12 +1405,14 @@ class Socket
 	
 	
 	//assumes you connect()ed
+	/// ditto
 	int receiveFrom(void[] buf)
 	{
 		return receiveFrom(buf, SocketFlags.NONE);
 	}
 	
-	
+
+	/// Get a socket option. Returns the number of bytes written to result.	
 	//returns the length, in bytes, of the actual result - very different from getsockopt()
 	int getOption(SocketOptionLevel level, SocketOption option, void[] result)
 	{
@@ -1292,21 +1422,22 @@ class Socket
 		return len;
 	}
 	
-	
-	// Common case for integer and boolean options.
+
+	/// Common case of getting integer and boolean options.	
 	int getOption(SocketOptionLevel level, SocketOption option, out int32_t result)
 	{
 		return getOption(level, option, (&result)[0 .. 1]);
 	}
-	
-	
+
+
+	/// Get the linger option.	
 	int getOption(SocketOptionLevel level, SocketOption option, out linger result)
 	{
 		//return getOption(cast(SocketOptionLevel)SocketOptionLevel.SOCKET, SocketOption.LINGER, (&result)[0 .. 1]);
 		return getOption(level, option, (&result)[0 .. 1]); 
 	}
 	
-	
+	// Set a socket option.
 	void setOption(SocketOptionLevel level, SocketOption option, void[] value)
 	{
 		if(_SOCKET_ERROR == .setsockopt(sock, cast(int)level, cast(int)option, value, value.length))
@@ -1314,20 +1445,24 @@ class Socket
 	}
 	
 	
-	// Common case for integer and boolean options.
+	/// Common case for setting integer and boolean options.
 	void setOption(SocketOptionLevel level, SocketOption option, int32_t value)
 	{
 		setOption(level, option, (&value)[0 .. 1]);
 	}
-	
-	
+
+
+	/// Set the linger option.
 	void setOption(SocketOptionLevel level, SocketOption option, linger value)
 	{
 		//setOption(cast(SocketOptionLevel)SocketOptionLevel.SOCKET, SocketOption.LINGER, (&value)[0 .. 1]);
 		setOption(level, option, (&value)[0 .. 1]);
 	}
 	
-	
+
+	/**
+	 * Wait for a socket to change status. A wait timeout timeval or int microseconds may be specified; if a timeout is not specified or the timeval is null, the maximum timeout is used. The timeval timeout has an unspecified value when select returns. Returns the number of sockets with status changes, 0 on timeout, or -1 on interruption. If the return value is greater than 0, the SocketSets are updated to only contain the sockets having status changes. For a connecting socket, a write status change means the connection is established and it's able to send. For a listening socket, a read status change means there is an incoming connection request and it's able to accept.
+	 */
 	//SocketSet's updated to include only those sockets which an event occured
 	//returns the number of events, 0 on timeout, or -1 on interruption
 	//for a connect()ing socket, writeability means connected
@@ -1420,8 +1555,9 @@ class Socket
 		
 		return result;
 	}
-	
-	
+
+
+	/// ditto
 	static int select(SocketSet checkRead, SocketSet checkWrite, SocketSet checkError, int microseconds)
 	{
 		timeval tv;
@@ -1431,6 +1567,7 @@ class Socket
 	}
 	
 	
+	/// ditto
 	//maximum timeout
 	static int select(SocketSet checkRead, SocketSet checkWrite, SocketSet checkError)
 	{
@@ -1448,14 +1585,16 @@ class Socket
 }
 
 
+/// TcpSocket is a shortcut class for a TCP Socket.
 class TcpSocket: Socket
 {
+	/// Constructs a blocking TCP Socket.
 	this(AddressFamily family)
 	{
 		super(family, SocketType.STREAM, ProtocolType.TCP);
 	}
 	
-	
+	/// Constructs a blocking TCP Socket.
 	this()
 	{
 		this(cast(AddressFamily)AddressFamily.INET);
@@ -1463,6 +1602,7 @@ class TcpSocket: Socket
 	
 	
 	//shortcut
+	/// Constructs a blocking TCP Socket and connects to an InternetAddress.
 	this(Address connectTo)
 	{
 		this(connectTo.addressFamily());
@@ -1471,14 +1611,17 @@ class TcpSocket: Socket
 }
 
 
+/// UdpSocket is a shortcut class for a UDP Socket.
 class UdpSocket: Socket
 {
+	/// Constructs a blocking UDP Socket.
 	this(AddressFamily family)
 	{
 		super(family, SocketType.DGRAM, ProtocolType.UDP);
 	}
 	
 	
+	/// Constructs a blocking UDP Socket.
 	this()
 	{
 		this(cast(AddressFamily)AddressFamily.INET);
