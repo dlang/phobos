@@ -169,6 +169,8 @@ interface InputStream {
   int scanf(char[] format, ...);
 
   size_t available();
+  bool eof();
+  bool isOpen();
 }
 
 // Interface for writable streams
@@ -235,6 +237,10 @@ interface OutputStream {
 
   // writes data with trailing newline and returns self
   Stream writefln(...);
+
+  void flush();
+  void close();
+  bool isOpen();
 }
 
 // base class for all streams; not really abstract,

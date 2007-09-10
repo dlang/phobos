@@ -28,6 +28,7 @@ module std.gc;
 
 //debug = PRINTF;
 
+import std.c.stdarg;
 import std.c.stdlib;
 import std.string;
 import gcx;
@@ -219,7 +220,10 @@ ulong _d_newarrayi(uint length, uint size, ...)
     if (length == 0 || size == 0)
 	result = 0;
     else
-    {   void* q = cast(void*)(&size + 1);	// pointer to initializer
+    {
+	//void* q = cast(void*)(&size + 1);	// pointer to initializer
+	va_list q;
+	va_start!(uint)(q, size);			// q is pointer to ... initializer
 	p = _gc.malloc(length * size + 1);
 	debug(PRINTF) printf(" p = %p\n", p);
 	if (size == 1)
@@ -231,6 +235,7 @@ ulong _d_newarrayi(uint length, uint size, ...)
 		memcpy(p + u * size, q, size);
 	    }
 	}
+	va_end(q);
 	result = cast(ulong)length + (cast(ulong)cast(uint)p << 32);
     }
     return result;
