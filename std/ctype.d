@@ -4,24 +4,22 @@
 // All Rights Reserved
 // www.digitalmars.com
 
-// Simple char classification functions
-
-// BUG: need to upgrade to unicode
+// Simple ASCII char classification functions
 
 module std.ctype;
 
-int isalnum(dchar c)	{ return _ctype[1 + c] & (_ALP|_DIG); }
-int isalpha(dchar c)	{ return _ctype[1 + c] & (_ALP); }
-int iscntrl(dchar c)	{ return _ctype[1 + c] & (_CTL); }
-int isdigit(dchar c)	{ return _ctype[1 + c] & (_DIG); }
-int isgraph(dchar c)	{ return _ctype[1 + c] & (_ALP|_DIG|_PNC); }
-int islower(dchar c)	{ return _ctype[1 + c] & (_LC); }
-int isprint(dchar c)	{ return _ctype[1 + c] & (_ALP|_DIG|_PNC|_BLK); }
-int ispunct(dchar c)	{ return _ctype[1 + c] & (_PNC); }
-int isspace(dchar c)	{ return _ctype[1 + c] & (_SPC); }
-int isupper(dchar c)	{ return _ctype[1 + c] & (_UC); }
-int isxdigit(dchar c)	{ return _ctype[1 + c] & (_HEX); }
-int isascii(dchar c)	{ return c <= 0x7F; }
+int isalnum(dchar c)  { return (c <= 0x7F) ? _ctype[c] & (_ALP|_DIG) : 0; }
+int isalpha(dchar c)  { return (c <= 0x7F) ? _ctype[c] & (_ALP)      : 0; }
+int iscntrl(dchar c)  { return (c <= 0x7F) ? _ctype[c] & (_CTL)      : 0; }
+int isdigit(dchar c)  { return (c <= 0x7F) ? _ctype[c] & (_DIG)      : 0; }
+int islower(dchar c)  { return (c <= 0x7F) ? _ctype[c] & (_LC)       : 0; }
+int ispunct(dchar c)  { return (c <= 0x7F) ? _ctype[c] & (_PNC)      : 0; }
+int isspace(dchar c)  { return (c <= 0x7F) ? _ctype[c] & (_SPC)      : 0; }
+int isupper(dchar c)  { return (c <= 0x7F) ? _ctype[c] & (_UC)       : 0; }
+int isxdigit(dchar c) { return (c <= 0x7F) ? _ctype[c] & (_HEX)      : 0; }
+int isgraph(dchar c)  { return (c <= 0x7F) ? _ctype[c] & (_ALP|_DIG|_PNC) : 0; }
+int isprint(dchar c)  { return (c <= 0x7F) ? _ctype[c] & (_ALP|_DIG|_PNC|_BLK) : 0; }
+int isascii(dchar c)  { return c <= 0x7F; }
 
 dchar tolower(dchar c)
     out (result)
@@ -58,8 +56,8 @@ enum
     _ALP =	_UC|_LC,
 }
 
-ubyte _ctype[257] =
-[	0,
+ubyte _ctype[128] =
+[
 	_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,
 	_CTL,_CTL|_SPC,_CTL|_SPC,_CTL|_SPC,_CTL|_SPC,_CTL|_SPC,_CTL,_CTL,
 	_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,
@@ -77,8 +75,6 @@ ubyte _ctype[257] =
 	_LC,_LC,_LC,_LC,_LC,_LC,_LC,_LC,
 	_LC,_LC,_LC,_LC,_LC,_LC,_LC,_LC,
 	_LC,_LC,_LC,_PNC,_PNC,_PNC,_PNC,_CTL
-
-	// the remaining 128 bytes are 0
 ];
 
 

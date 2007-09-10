@@ -716,7 +716,7 @@ version (linux)
     d_time getUTCtime()
     {   timeval tv;
 
-	printf("getUTCtime()\n");
+	//printf("getUTCtime()\n");
 	if (gettimeofday(&tv, null))
 	{   // Some error happened - try time() instead
 	    return time(null) * TicksPerSecond;

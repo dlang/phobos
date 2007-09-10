@@ -12,10 +12,12 @@ extern (C):
 Object _d_interface_cast(void* p, ClassInfo c)
 {   Object o;
 
+    //printf("_d_interface_cast(p = %p, c = '%.*s')\n", p, c.name);
     if (p)
     {
 	Interface *pi = **cast(Interface ***)p;
 
+	//printf("\tpi.offset = %d\n", pi.offset);
 	o = cast(Object)(p - pi.offset);
 	return _d_dynamic_cast(o, c);
     }
@@ -26,13 +28,16 @@ Object _d_dynamic_cast(Object o, ClassInfo c)
 {   ClassInfo oc;
     uint offset = 0;
 
-    //printf("__d_dynamic_cast(o = %p, c = %p)\n", o, c);
+    //printf("_d_dynamic_cast(o = %p, c = '%.*s')\n", o, c.name);
 
     if (o)
     {
 	oc = o.classinfo;
 	if (_d_isbaseof2(oc, c, offset))
+	{
+	    //printf("\toffset = %d\n", offset);
 	    o = cast(Object)(cast(void*)o + offset);
+	}
 	else
 	    o = null;
     }
@@ -54,8 +59,18 @@ int _d_isbaseof2(ClassInfo oc, ClassInfo c, inout uint offset)
 	    ClassInfo ic;
 
 	    ic = oc.interfaces[i].classinfo;
-	    if (ic === c || _d_isbaseof2(ic, c, offset))
-	    {	offset += oc.interfaces[i].offset;
+	    if (ic === c)
+	    {	offset = oc.interfaces[i].offset;
+		return 1;
+	    }
+	}
+	for (i = 0; i < oc.interfaces.length; i++)
+	{
+	    ClassInfo ic;
+
+	    ic = oc.interfaces[i].classinfo;
+	    if (_d_isbaseof2(ic, c, offset))
+	    {	offset = oc.interfaces[i].offset;
 		return 1;
 	    }
 	}

@@ -1,4 +1,5 @@
 
+// uint
 
 class TypeInfo_k : TypeInfo
 {
@@ -14,7 +15,11 @@ class TypeInfo_k : TypeInfo
 
     int compare(void *p1, void *p2)
     {
-	return *cast(uint *)p1 - *cast(uint *)p2;
+	if (*cast(uint*) p1 < *cast(uint*) p2)
+	    return -1;
+	else if (*cast(uint*) p1 > *cast(uint*) p2)
+	    return 1;
+	return 0;
     }
 
     int tsize()

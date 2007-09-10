@@ -19,21 +19,23 @@ class Object
 {
     void print()
     {
-	printf("Object %p\n", this);
+	printf("%.*s %p\n", this.classinfo.name, this);
     }
 
     char[] toString()
     {
-	return "Object";
+	return this.classinfo.name;
     }
 
     uint toHash()
     {
+	// BUG: this prevents a compacting GC from working, needs to be fixed
 	return cast(uint)cast(void *)this;
     }
 
     int opCmp(Object o)
     {
+	// BUG: this prevents a compacting GC from working, needs to be fixed
 	return cast(int)cast(void *)this - cast(int)cast(void *)o;
     }
 
