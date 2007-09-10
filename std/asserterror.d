@@ -38,7 +38,9 @@ class AssertError : Error
 	    count = snprintf(buffer, len, "AssertError Failure %.*s(%u) %.*s",
 		filename, linnum, msg);
 	    if (count >= len || count == -1)
-		super("AssertError internal failure");
+	    {	super("AssertError internal failure");
+		std.c.stdlib.free(buffer);
+	    }
 	    else
 		super(buffer[0 .. count]);
 	}
@@ -46,7 +48,7 @@ class AssertError : Error
 
     ~this()
     {
-	if (msg.ptr)
+	if (msg.ptr && msg[12] == 'F')	// if it was allocated with malloc()
 	{   std.c.stdlib.free(msg.ptr);
 	    msg = null;
 	}

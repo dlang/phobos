@@ -416,10 +416,105 @@ Loverflow:
     _d_OutOfMemory();
 }
 
+/**
+ * For non-zero initializers
+ */
+extern (C)
+byte[] _d_arraysetlength2(size_t newlength, size_t sizeelem, Array *p, ...)
+in
+{
+    assert(sizeelem);
+    assert(!p.length || p.data);
+}
+body
+{
+    byte* newdata;
+
+    debug(PRINTF)
+    {
+	printf("_d_arraysetlength2(p = %p, sizeelem = %d, newlength = %d)\n", p, sizeelem, newlength);
+	if (p)
+	    printf("\tp.data = %p, p.length = %d\n", p.data, p.length);
+    }
+
+    if (newlength)
+    {
+	version (D_InlineAsm_X86)
+	{
+	    size_t newsize = void;
+
+	    asm
+	    {
+		mov	EAX,newlength	;
+		mul	EAX,sizeelem	;
+		mov	newsize,EAX	;
+		jc	Loverflow	;
+	    }
+	}
+	else
+	{
+	    size_t newsize = sizeelem * newlength;
+
+	    if (newsize / newlength != sizeelem)
+		goto Loverflow;
+	}
+	//printf("newsize = %x, newlength = %x\n", newsize, newlength);
+
+	size_t size = p.length * sizeelem;
+	if (p.length)
+	{
+	    newdata = p.data;
+	    if (newlength > p.length)
+	    {
+		size_t cap = _gc.capacity(p.data);
+
+		if (cap <= newsize)
+		{
+		    newdata = cast(byte *)_gc.malloc(newsize + 1);
+		    newdata[0 .. size] = p.data[0 .. size];
+		}
+	    }
+	}
+	else
+	{
+	    newdata = cast(byte *)_gc.malloc(newsize + 1);
+	}
+
+	va_list q;
+	va_start!(Array *)(q, p);	// q is pointer to initializer
+
+	if (newsize > size)
+	{
+	    if (sizeelem == 1)
+		newdata[size .. newsize] = *(cast(byte*)q);
+	    else
+	    {
+		for (size_t u = size; u < newsize; u += sizeelem)
+		{
+		    memcpy(newdata + u, q, sizeelem);
+		}
+	    }
+	}
+    }
+    else
+    {
+	newdata = null;
+    }
+
+    p.data = newdata;
+    p.length = newlength;
+    return newdata[0 .. newlength];
+
+Loverflow:
+    _d_OutOfMemory();
+}
+
 /***************************
  * Resize bit[] arrays.
  */
 
+version (none)
+{
 extern (C)
 bit[] _d_arraysetlengthb(size_t newlength, Array *p)
 {
@@ -461,6 +556,7 @@ bit[] _d_arraysetlengthb(size_t newlength, Array *p)
     p.data = newdata;
     p.length = newlength;
     return (cast(bit *)newdata)[0 .. newlength];
+}
 }
 
 /****************************************

@@ -18,7 +18,7 @@ class Object
 {
     void print();
     char[] toString();
-    uint toHash();
+    hash_t toHash();
     int opCmp(Object o);
     int opEquals(Object o);
 }
