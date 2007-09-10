@@ -1419,7 +1419,7 @@ void copy(char[] from, char[] to)
         goto err2;
     }
 
-    size_t BUFSIZ = 4069 * 16;
+    size_t BUFSIZ = 4096 * 16;
     void* buf = std.c.stdlib.malloc(BUFSIZ);
     if (!buf)
     {	BUFSIZ = 4096;

@@ -597,14 +597,26 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
 	    return;
 	}
 
+	static Mangle getMan(TypeInfo ti)
+	{
+	  auto m = cast(Mangle)ti.classinfo.name[9];
+	  if (ti.classinfo.name.length == 20 &&
+	      ti.classinfo.name[9..20] == "StaticArray")
+		m = cast(Mangle)'G';
+	  return m;
+	}
+
 	void putArray(void* p, size_t len, TypeInfo valti)
 	{
+	  //printf("\nputArray(len = %u), tsize = %u\n", len, valti.tsize());
 	  putc('[');
 	  size_t tsize = valti.tsize();
 	  auto argptrSave = argptr;
 	  auto tiSave = ti;
+	  auto mSave = m;
 	  ti = valti;
-	  m = cast(Mangle)valti.classinfo.name[9];
+	  //printf("\n%.*s\n", valti.classinfo.name);
+	  m = getMan(valti);
 	  while (len--)
 	  {
 	    //doFormat(putc, (&valti)[0 .. 1], p);
@@ -614,6 +626,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
 	    p += tsize;
 	    if (len > 0) putc(',');
 	  }
+	  m = mSave;
 	  ti = tiSave;
 	  argptr = argptrSave;
 	  putc(']');
@@ -625,6 +638,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
 	  bool comma=false;
 	  auto argptrSave = argptr;
 	  auto tiSave = ti;
+	  auto mSave = m;
 	  foreach(inout fakevalue; vaa)
 	  {
 	    if (comma) putc(',');
@@ -635,7 +649,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
 	    //doFormat(putc, (&keyti)[0..1], key);
 	    argptr = key;
 	    ti = keyti;
-	    m = cast(Mangle)keyti.classinfo.name[9];
+	    m = getMan(keyti);
 	    formatArg('s');
 
 	    putc(':');
@@ -643,9 +657,10 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
 	    //doFormat(putc, (&valti)[0..1], value);
 	    argptr = value;
 	    ti = valti;
-	    m = cast(Mangle)valti.classinfo.name[9];
+	    m = getMan(valti);
 	    formatArg('s');
 	  }
+	  m = mSave;
 	  ti = tiSave;
 	  argptr = argptrSave;
 	  putc(']');
@@ -788,6 +803,10 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
 	    case Mangle.Tcreal:
 		vcreal = va_arg!(creal)(argptr);
 		goto Lcomplex;
+
+	    case Mangle.Tsarray:
+		putArray(argptr, (cast(TypeInfo_StaticArray)ti).len, (cast(TypeInfo_StaticArray)ti).next);
+		return;
 
 	    case Mangle.Tarray:
 	        if (ti.classinfo.name.length == 14 &&
@@ -1436,5 +1455,11 @@ unittest
     }
     r = std.string.format("%s", TestEnum.Value2);
     assert(r == "1");
+
+    char[5][int] aa = ([3:"hello", 4:"betty"]);
+    r = std.string.format("%s", aa.values);
+    assert(r == "[[h,e,l,l,o],[b,e,t,t,y]]");
+    r = std.string.format("%s", aa);
+    assert(r == "[3:[h,e,l,l,o],4:[b,e,t,t,y]]");
 }
 

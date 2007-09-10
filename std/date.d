@@ -394,7 +394,9 @@ int WeekDay(d_time t)
 
 d_time UTCtoLocalTime(d_time t)
 {
-    return t + LocalTZA + DaylightSavingTA(t);
+    return (t == d_time_nan)
+	? d_time_nan
+	: t + LocalTZA + DaylightSavingTA(t);
 }
 
 /***********************************
@@ -403,7 +405,9 @@ d_time UTCtoLocalTime(d_time t)
 
 d_time LocalTimetoUTC(d_time t)
 {
-    return t - LocalTZA - DaylightSavingTA(t - LocalTZA);
+    return (t == d_time_nan)
+	? d_time_nan
+	: t - LocalTZA - DaylightSavingTA(t - LocalTZA);
 }
 
 

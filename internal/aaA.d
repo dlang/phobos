@@ -28,10 +28,13 @@
  */
 
 
+//import std.stdio;
+import std.c.stdarg;
 import std.c.stdio;
 import std.c.stdlib;
 import std.c.string;
 import std.string;
+
 import std.outofmemory;
 
 // Auto-rehash and pre-allocate - Dave Fladebo
@@ -81,15 +84,6 @@ struct BB
 struct AA
 {
     BB* a;
-    version (X86_64)
-    {
-    }
-    else
-    {
-	// This is here only to retain binary compatibility with the
-	// old way we did AA's. Should eventually be removed.
-	//int reserved;
-    }
 }
 
 /**********************************
@@ -300,6 +294,7 @@ void* _aaGet(AA* aa, TypeInfo keyti, size_t valuesize, ...)
 
 void* _aaGetRvalue(AA aa, TypeInfo keyti, size_t valuesize, ...)
     {
+	//printf("_aaGetRvalue(valuesize = %u)\n", valuesize);
 	if (!aa.a)
 	    return null;
 
@@ -738,4 +733,89 @@ body
     }
     return result;
 }
+
+
+/***********************************
+ * Construct an associative array of type ti from
+ * length pairs of key/value pairs.
+ */
+
+extern (C)
+BB* _d_assocarrayliteralT(TypeInfo_AssociativeArray ti, size_t length, ...)
+{
+    auto valuesize = ti.next.tsize();		// value size
+    auto keyti = ti.key;
+    auto keysize = keyti.tsize();		// key size
+    BB* result;
+
+    //printf("_d_assocarrayliteralT(keysize = %d, valuesize = %d, length = %d)\n", keysize, valuesize, length);
+    //writefln("tivalue = %s", ti.next.classinfo.name);
+    if (length == 0 || valuesize == 0 || keysize == 0)
+    {
+	;
+    }
+    else
+    {
+	va_list q;
+	va_start!(size_t)(q, length);
+
+	result = new BB();
+	size_t i;
+
+	for (i = 0; i < prime_list.length - 1; i++)
+	{
+	    if (length <= prime_list[i])
+		break;
+	}
+	auto len = prime_list[i];
+	result.b = new aaA*[len];
+
+	size_t keystacksize   = (keysize   + int.sizeof - 1) & ~(int.sizeof - 1);
+	size_t valuestacksize = (valuesize + int.sizeof - 1) & ~(int.sizeof - 1);
+
+	size_t keytsize = aligntsize(keysize);
+
+	for (size_t j = 0; j < length; j++)
+	{   void* pkey = q;
+	    q += keystacksize;
+	    void* pvalue = q;
+	    q += valuestacksize;
+	    aaA* e;
+
+	    auto key_hash = keyti.getHash(pkey);
+	    //printf("hash = %d\n", key_hash);
+	    i = key_hash % len;
+	    auto pe = &result.b[i];
+	    while (1)
+	    {
+		e = *pe;
+		if (!e)
+		{
+		    // Not found, create new elem
+		    //printf("create new one\n");
+		    e = cast(aaA *) cast(void*) new void[aaA.sizeof + keytsize + valuesize];
+		    memcpy(e + 1, pkey, keysize);
+		    e.hash = key_hash;
+		    *pe = e;
+		    result.nodes++;
+		    break;
+		}
+		if (key_hash == e.hash)
+		{
+		    auto c = keyti.compare(pkey, e + 1);
+		    if (c == 0)
+			break;
+		    pe = (c < 0) ? &e.left : &e.right;
+		}
+		else
+		    pe = (key_hash < e.hash) ? &e.left : &e.right;
+	    }
+	    memcpy(cast(void *)(e + 1) + keytsize, pvalue, valuesize);
+	}
+
+	va_end(q);
+    }
+    return result;
+}
+
 
