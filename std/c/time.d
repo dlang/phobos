@@ -37,7 +37,11 @@ version (Windows)
 else version (linux)
 {
     extern (C) int sysconf(int);
-    const clock_t CLK_TCK = cast(clock_t) sysconf(2);
+    extern clock_t CLK_TCK;
+    /*static this()
+    {
+	CLK_TCK = cast(clock_t) sysconf(2);
+    }*/
 }
 else
 {
