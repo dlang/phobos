@@ -3,6 +3,8 @@
  *
  * References:
  *	$(LINK2 http://en.wikipedia.org/wiki/Zlib, Wikipedia)
+ * License:
+ *	Public Domain
  *
  * Macros:
  *	WIKI = Phobos/StdZlib
@@ -309,7 +311,7 @@ class Compress
 	{   delete destbuf;
 	    error(err);
 	}
-	destbuf.length = zs.total_out;
+	destbuf.length = destbuf.length - zs.avail_out;
 	return destbuf;
     }
 
@@ -339,24 +341,39 @@ class Compress
     body
     {
 	void[] destbuf;
+	void[] tmpbuf;
 	int err;
 
 	if (!inited)
 	    return null;
 
-	destbuf = new void[zs.avail_in];
-	zs.next_out = cast(ubyte*) destbuf;
-	zs.avail_out = destbuf.length;
+	/* may be  zs.avail_out+<some constant>
+	 * zs.avail_out is set nonzero by deflate in previous compress()
+	 */
+	tmpbuf = new void[zs.avail_out];
+	zs.next_out = cast(ubyte*) tmpbuf;
+	zs.avail_out = tmpbuf.length;
 
-	err = deflate(&zs, mode);
-	if (err != Z_STREAM_END)
+	while( (err = deflate(&zs, mode)) != Z_STREAM_END)
 	{
-	    delete destbuf;
 	    if (err == Z_OK)
+	    {
+		if (zs.avail_out != 0 && mode != Z_FINISH)
+		    break;
+		else if(zs.avail_out == 0)
+		{
+		    destbuf ~= tmpbuf;
+		    zs.next_out = cast(ubyte*) tmpbuf;
+		    zs.avail_out = tmpbuf.length;
+		    continue;
+		}
 		err = Z_BUF_ERROR;
+	    }
+	    delete destbuf;
 	    error(err);
 	}
-	destbuf = cast(void[])((cast(ubyte *)destbuf)[0 .. zs.next_out - cast(ubyte*)destbuf]);
+	destbuf ~= tmpbuf[0 .. (tmpbuf.length - zs.avail_out)];
+
 	if (mode == Z_FINISH)
 	{
 	    err = deflateEnd(&zs);
@@ -459,7 +476,7 @@ class UnCompress
 	{   delete destbuf;
 	    error(err);
 	}
-	destbuf.length = zs.total_out;
+	destbuf.length = destbuf.length - zs.avail_out;
 	return destbuf;
     }
 
@@ -575,4 +592,21 @@ unittest // by Dave
     debug(zlib) printf("PASSED std.zlib.unittest\n");
 }
 
+
+unittest // by Artem Rebrov
+{
+    Compress cmp = new Compress;
+    UnCompress decmp = new UnCompress;
+
+    void[] input;
+    input = "tesatdffadf";
+
+    void[] buf = cmp.compress(input);
+    buf ~= cmp.flush();
+    void[] output = decmp.uncompress(buf);
+
+    //writefln("input = '%s'", cast(char[])input);
+    //writefln("output = '%s'", cast(char[])output);
+    assert( output[] == input[] );
+}
 

@@ -19,7 +19,7 @@ CP=cp
 CFLAGS=-mn -6 -r
 #CFLAGS=-g -mn -6 -r
 
-DFLAGS=-O -release
+DFLAGS=-O -release -nofloat
 #DFLAGS=-unittest -g
 #DFLAGS=-unittest -cov -g
 
@@ -69,7 +69,7 @@ OBJS= asserterror.obj deh.obj switch.obj complex.obj gcstats.obj \
 	stream.obj switcherr.obj com.obj array.obj gc.obj mmfile.obj \
 	qsort.obj math2.obj date.obj dateparse.obj thread.obj obj.obj \
 	iunknown.obj crc32.obj conv.obj arraycast.obj utf.obj uri.obj \
-	Czlib.obj Dzlib.obj zip.obj process.obj registry.obj recls.obj \
+	Czlib.obj Dzlib.obj zip.obj process.obj registry.obj \
 	socket.obj socketstream.obj loader.obj stdarg.obj format.obj stdio.obj \
 	perf.obj openrj.obj uni.obj winsock.obj oldsyserror.obj \
 	errno.obj boxer.obj cstream.obj charset.obj \
@@ -94,15 +94,28 @@ DOCS=	$(DOC)\std_path.html $(DOC)\std_math.html $(DOC)\std_outbuffer.html \
 	$(DOC)\object.html $(DOC)\std_compiler.html $(DOC)\std_format.html \
 	$(DOC)\std_random.html $(DOC)\std_file.html $(DOC)\std_date.html \
 	$(DOC)\std_md5.html $(DOC)\std_zip.html $(DOC)\std_zlib.html \
-	$(DOC)\std_demangle.html \
-	$(DOC)\std_uri.html \
-	$(DOC)\std_utf.html \
-	$(DOC)\std_cover.html \
-	$(DOC)\std_regexp.html \
 	$(DOC)\std_bitarray.html \
+	$(DOC)\std_conv.html \
+	$(DOC)\std_boxer.html \
+	$(DOC)\std_cover.html \
+	$(DOC)\std_cstream.html \
+	$(DOC)\std_ctype.html \
+	$(DOC)\std_demangle.html \
+	$(DOC)\std_gc.html \
+	$(DOC)\std_intrinsic.html \
+	$(DOC)\std_mmfile.html \
+	$(DOC)\std_openrj.html \
 	$(DOC)\std_process.html \
+	$(DOC)\std_regexp.html \
+	$(DOC)\std_socket.html \
+	$(DOC)\std_socketstream.html \
 	$(DOC)\std_stdint.html \
 	$(DOC)\std_stdio.html \
+	$(DOC)\std_system.html \
+	$(DOC)\std_thread.html \
+	$(DOC)\std_uni.html \
+	$(DOC)\std_uri.html \
+	$(DOC)\std_utf.html \
 	$(DOC)\std_windows_charset.html \
 	$(DOC)\std_c_fenv.html \
 	$(DOC)\std_c_math.html \
@@ -113,9 +126,10 @@ DOCS=	$(DOC)\std_path.html $(DOC)\std_math.html $(DOC)\std_outbuffer.html \
 	$(DOC)\std_c_stdlib.html \
 	$(DOC)\std_c_string.html \
 	$(DOC)\std_c_time.html \
-	$(DOC)\std_c_wcharh.html
+	$(DOC)\std_c_wcharh.html \
+	$(DOC)\phobos.html
 
-SRC=	errno.c object.d unittest.d crc32.d gcstats.d
+SRC=	errno.c object.d unittest.d crc32.d gcstats.d phobos.d
 
 SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 	std\gc.d std\math.d std\string.d std\path.d std\date.d \
@@ -123,7 +137,7 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 	std\outbuffer.d std\math2.d std\thread.d std\md5.d std\base64.d \
 	std\asserterror.d std\dateparse.d std\outofmemory.d std\mmfile.d \
 	std\intrinsic.d std\array.d std\switcherr.d std\syserror.d \
-	std\regexp.d std\random.d std\stream.d std\process.d std\recls.d \
+	std\regexp.d std\random.d std\stream.d std\process.d \
 	std\socket.d std\socketstream.d std\loader.d std\stdarg.d std\format.d \
 	std\stdio.d std\perf.d std\openrj.d std\uni.d std\boxer.d \
 	std\cstream.d std\demangle.d std\cover.d std\bitarray.d
@@ -223,167 +237,10 @@ SRC_GC= internal\gc\gc.d \
 	internal\gc\win32.mak \
 	internal\gc\linux.mak
 
-SRC_STLSOFT= \
-	etc\c\stlsoft\stlsoft_null_mutex.h \
-	etc\c\stlsoft\unixstl_string_access.h \
-	etc\c\stlsoft\unixstl.h \
-	etc\c\stlsoft\winstl_tls_index.h \
-	etc\c\stlsoft\unixstl_environment_variable.h \
-	etc\c\stlsoft\unixstl_functionals.h \
-	etc\c\stlsoft\unixstl_current_directory.h \
-	etc\c\stlsoft\unixstl_limits.h \
-	etc\c\stlsoft\unixstl_current_directory_scope.h \
-	etc\c\stlsoft\unixstl_filesystem_traits.h \
-	etc\c\stlsoft\unixstl_findfile_sequence.h \
-	etc\c\stlsoft\unixstl_glob_sequence.h \
-	etc\c\stlsoft\winstl.h \
-	etc\c\stlsoft\winstl_atomic_functions.h \
-	etc\c\stlsoft\stlsoft_cccap_gcc.h \
-	etc\c\stlsoft\stlsoft_lock_scope.h \
-	etc\c\stlsoft\unixstl_thread_mutex.h \
-	etc\c\stlsoft\unixstl_spin_mutex.h \
-	etc\c\stlsoft\unixstl_process_mutex.h \
-	etc\c\stlsoft\stlsoft_null.h \
-	etc\c\stlsoft\stlsoft_nulldef.h \
-	etc\c\stlsoft\winstl_thread_mutex.h \
-	etc\c\stlsoft\winstl_spin_mutex.h \
-	etc\c\stlsoft\winstl_system_version.h \
-	etc\c\stlsoft\winstl_findfile_sequence.h \
-	etc\c\stlsoft\unixstl_readdir_sequence.h \
-	etc\c\stlsoft\stlsoft.h \
-	etc\c\stlsoft\stlsoft_static_initialisers.h \
-	etc\c\stlsoft\stlsoft_iterator.h \
-	etc\c\stlsoft\stlsoft_cccap_dmc.h \
-	etc\c\stlsoft\winstl_filesystem_traits.h
-
-SRC_RECLS= \
-	etc\c\recls\recls_compiler.h \
-	etc\c\recls\recls_language.h \
-	etc\c\recls\recls_unix.h \
-	etc\c\recls\recls_retcodes.h \
-	etc\c\recls\recls_assert.h \
-	etc\c\recls\recls_platform.h \
-	etc\c\recls\recls_win32.h \
-	etc\c\recls\recls.h \
-	etc\c\recls\recls_util.h \
-	etc\c\recls\recls_compiler_dmc.h \
-	etc\c\recls\recls_compiler_gcc.h \
-	etc\c\recls\recls_platform_types.h \
-	etc\c\recls\recls_internal.h \
-	etc\c\recls\recls_debug.h \
-	etc\c\recls\recls_fileinfo_win32.cpp \
-	etc\c\recls\recls_api_unix.cpp \
-	etc\c\recls\recls_api.cpp \
-	etc\c\recls\recls_util_win32.cpp \
-	etc\c\recls\recls_util_unix.cpp \
-	etc\c\recls\recls_util.cpp \
-	etc\c\recls\recls_internal.cpp \
-	etc\c\recls\recls_fileinfo.cpp \
-	etc\c\recls\recls_defs.h \
-	etc\c\recls\recls_fileinfo_unix.cpp \
-	etc\c\recls\recls_api_win32.cpp \
-	etc\c\recls\win32.mak \
-	etc\c\recls\linux.mak \
-	etc\c\recls\recls.lib
-
-
-SRC_STLSOFT_NEW= \
-	etc\c\stlsoft\winstl_file_path_buffer.h \
-	etc\c\stlsoft\inetstl_connection.h \
-	etc\c\stlsoft\inetstl_filesystem_traits.h \
-	etc\c\stlsoft\inetstl_findfile_sequence.h \
-	etc\c\stlsoft\inetstl_searchspec_sequence.h \
-	etc\c\stlsoft\inetstl_session.h \
-	etc\c\stlsoft\stlsoft.h \
-	etc\c\stlsoft\stlsoft_allocator_base.h \
-	etc\c\stlsoft\inetstl.h \
-	etc\c\stlsoft\stlsoft_auto_buffer.h \
-	etc\c\stlsoft\stlsoft_cccap_dmc.h \
-	etc\c\stlsoft\stlsoft_cccap_gcc.h \
-	etc\c\stlsoft\stlsoft_char_traits.h \
-	etc\c\stlsoft\stlsoft_constraints.h \
-	etc\c\stlsoft\stlsoft_exceptions.h \
-	etc\c\stlsoft\stlsoft_iterator.h \
-	etc\c\stlsoft\stlsoft_meta.h \
-	etc\c\stlsoft\stlsoft_new_allocator.h \
-	etc\c\stlsoft\stlsoft_any_caster.h \
-	etc\c\stlsoft\stlsoft_nulldef.h \
-	etc\c\stlsoft\stlsoft_sap_cast.h \
-	etc\c\stlsoft\stlsoft_searchspec_sequence.h \
-	etc\c\stlsoft\stlsoft_sign_traits.h \
-	etc\c\stlsoft\stlsoft_simple_algorithms.h \
-	etc\c\stlsoft\stlsoft_simple_string.h \
-	etc\c\stlsoft\stlsoft_size_traits.h \
-	etc\c\stlsoft\stlsoft_string_access.h \
-	etc\c\stlsoft\stlsoft_string_tokeniser.h \
-	etc\c\stlsoft\stlsoft_type_traits.h \
-	etc\c\stlsoft\unixstl.h \
-	etc\c\stlsoft\unixstl_filesystem_traits.h \
-	etc\c\stlsoft\unixstl_file_path_buffer.h \
-	etc\c\stlsoft\unixstl_glob_sequence.h \
-	etc\c\stlsoft\unixstl_string_access.h \
-	etc\c\stlsoft\unixstl_thread_mutex.h \
-	etc\c\stlsoft\winstl.h \
-	etc\c\stlsoft\winstl_atomic_functions.h \
-	etc\c\stlsoft\winstl_char_conversions.h \
-	etc\c\stlsoft\winstl_filesystem_traits.h \
-	etc\c\stlsoft\winstl_spin_mutex.h \
-	etc\c\stlsoft\winstl_findfile_sequence.h \
-	etc\c\stlsoft\winstl_processheap_allocator.h \
-	etc\c\stlsoft\winstl_system_version.h \
-	etc\c\stlsoft\stlsoft_null.h
-
-SRC_RECLS_NEW= \
-	etc\c\recls\recls_compiler_gcc.h \
-	etc\c\recls\recls_retcodes.h \
-	etc\c\recls\EntryFunctions.h \
-	etc\c\recls\recls_platform_types.h \
-	etc\c\recls\recls.h \
-	etc\c\recls\recls_wininet_dl.h \
-	etc\c\recls\ReclsFileSearch.h \
-	etc\c\recls\ReclsFileSearchDirectoryNode_unix.cpp \
-	etc\c\recls\ReclsFileSearchDirectoryNode_unix.h \
-	etc\c\recls\ReclsFileSearchDirectoryNode_win32.cpp \
-	etc\c\recls\ReclsFileSearchDirectoryNode_win32.h \
-	etc\c\recls\recls_wininet_dl.cpp \
-	etc\c\recls\ReclsFileSearch_unix.cpp \
-	etc\c\recls\ReclsFileSearch_win32.cpp \
-	etc\c\recls\recls_win32.h \
-	etc\c\recls\ReclsFtpSearch.h \
-	etc\c\recls\ReclsFtpSearchDirectoryNode_win32.cpp \
-	etc\c\recls\ReclsFtpSearchDirectoryNode_win32.h \
-	etc\c\recls\recls_util_win32.cpp \
-	etc\c\recls\ReclsFtpSearch_win32.cpp \
-	etc\c\recls\recls_util_unix.cpp \
-	etc\c\recls\recls_api.cpp \
-	etc\c\recls\recls_util.h \
-	etc\c\recls\recls_api_unix.cpp \
-	etc\c\recls\recls_api_win32.cpp \
-	etc\c\recls\recls_util.cpp \
-	etc\c\recls\recls_assert.h \
-	etc\c\recls\recls_compiler.h \
-	etc\c\recls\recls_compiler_dmc.h \
-	etc\c\recls\recls_platform.h \
-	etc\c\recls\recls_debug.h \
-	etc\c\recls\recls_defs.h \
-	etc\c\recls\recls_fileinfo.cpp \
-	etc\c\recls\recls_fileinfo_unix.cpp \
-	etc\c\recls\recls_fileinfo_win32.cpp \
-	etc\c\recls\recls_unix.h \
-	etc\c\recls\recls_ftp.h \
-	etc\c\recls\recls_ftp_api_win32.cpp \
-	etc\c\recls\recls_internal.cpp \
-	etc\c\recls\recls_internal.h \
-	etc\c\recls\recls_roots_win32.cpp \
-	etc\c\recls\recls_language.h \
-	etc\c\recls\recls_roots_unix.cpp \
-	etc\c\recls\win32.mak \
-	etc\c\recls\linux.mak
-
 phobos.lib : $(OBJS) minit.obj internal\gc\dmgc.lib etc\c\zlib\zlib.lib \
-	win32.mak etc\c\recls\recls.lib
+	win32.mak
 	lib -c -p32 phobos.lib $(OBJS) minit.obj internal\gc\dmgc.lib \
-		etc\c\recls\recls.lib etc\c\zlib\zlib.lib
+		etc\c\zlib\zlib.lib
 
 html : $(DOCS)
 
@@ -393,11 +250,6 @@ internal\gc\dmgc.lib:
 	cd internal\gc
 	make -f win32.mak dmgc.lib
 	cd ..\..
-
-etc\c\recls\recls.lib:
-	cd etc\c\recls
-	make -f win32.mak recls.lib
-	cd ..\..\..
 
 etc\c\zlib\zlib.lib:
 	cd etc\c\zlib
@@ -556,9 +408,6 @@ process.obj : std\process.d
 
 random.obj : std\random.d
 	$(DMD) -c $(DFLAGS) std\random.d
-
-recls.obj : std\recls.d
-	$(DMD) -c $(DFLAGS) std\recls.d
 
 regexp.obj : std\regexp.d
 	$(DMD) -c $(DFLAGS) std\regexp.d
@@ -785,17 +634,32 @@ ti_int.obj : std\typeinfo\ti_int.d
 
 ################## DOCS ####################################
 
+$(DOC)\phobos.html : std.ddoc phobos.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\phobos.html std.ddoc phobos.d
+
 $(DOC)\std_base64.html : std.ddoc std\base64.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_base64.html std.ddoc std\base64.d
 
 $(DOC)\std_bitarray.html : std.ddoc std\bitarray.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_bitarray.html std.ddoc std\bitarray.d
 
+$(DOC)\std_boxer.html : std.ddoc std\boxer.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_boxer.html std.ddoc std\boxer.d
+
 $(DOC)\std_compiler.html : std.ddoc std\compiler.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_compiler.html std.ddoc std\compiler.d
 
+$(DOC)\std_conv.html : std.ddoc std\conv.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_conv.html std.ddoc std\conv.d
+
 $(DOC)\std_cover.html : std.ddoc std\cover.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_cover.html std.ddoc std\cover.d
+
+$(DOC)\std_cstream.html : std.ddoc std\cstream.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_cstream.html std.ddoc std\cstream.d
+
+$(DOC)\std_ctype.html : std.ddoc std\ctype.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_ctype.html std.ddoc std\ctype.d
 
 $(DOC)\std_date.html : std.ddoc std\date.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_date.html std.ddoc std\date.d
@@ -809,11 +673,23 @@ $(DOC)\std_file.html : std.ddoc std\file.d
 $(DOC)\std_format.html : std.ddoc std\format.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_format.html std.ddoc std\format.d
 
+$(DOC)\std_gc.html : std.ddoc std\gc.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_gc.html std.ddoc std\gc.d
+
+$(DOC)\std_intrinsic.html : std.ddoc std\intrinsic.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_intrinsic.html std.ddoc std\intrinsic.d
+
 $(DOC)\std_math.html : std.ddoc std\math.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_math.html std.ddoc std\math.d
 
 $(DOC)\std_md5.html : std.ddoc std\md5.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_md5.html std.ddoc std\md5.d
+
+$(DOC)\std_mmfile.html : std.ddoc std\mmfile.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_mmfile.html std.ddoc std\mmfile.d
+
+$(DOC)\std_openrj.html : std.ddoc std\openrj.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_openrj.html std.ddoc std\openrj.d
 
 $(DOC)\std_outbuffer.html : std.ddoc std\outbuffer.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_outbuffer.html std.ddoc std\outbuffer.d
@@ -830,6 +706,12 @@ $(DOC)\std_random.html : std.ddoc std\random.d
 $(DOC)\std_regexp.html : std.ddoc std\regexp.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_regexp.html std.ddoc std\regexp.d
 
+$(DOC)\std_socket.html : std.ddoc std\socket.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_socket.html std.ddoc std\socket.d
+
+$(DOC)\std_socketstream.html : std.ddoc std\socketstream.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_socketstream.html std.ddoc std\socketstream.d
+
 $(DOC)\std_stdint.html : std.ddoc std\stdint.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_stdint.html std.ddoc std\stdint.d
 
@@ -841,6 +723,15 @@ $(DOC)\std_stream.html : std.ddoc std\stream.d
 
 $(DOC)\std_string.html : std.ddoc std\string.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_string.html std.ddoc std\string.d
+
+$(DOC)\std_system.html : std.ddoc std\system.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_system.html std.ddoc std\system.d
+
+$(DOC)\std_thread.html : std.ddoc std\thread.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_thread.html std.ddoc std\thread.d
+
+$(DOC)\std_uni.html : std.ddoc std\uni.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_uni.html std.ddoc std\uni.d
 
 $(DOC)\std_uri.html : std.ddoc std\uri.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_uri.html std.ddoc std\uri.d
@@ -910,8 +801,6 @@ zip : win32.mak linux.mak phoboslicense.txt std.ddoc $(SRC) \
 	zip32 -u phobos $(SRC_ETC_C)
 	zip32 -u phobos $(SRC_ZLIB)
 	zip32 -u phobos $(SRC_GC)
-	zip32 -u phobos $(SRC_RECLS)
-	zip32 -u phobos $(SRC_STLSOFT)
 
 clean:
 	del $(OBJS)
@@ -935,6 +824,4 @@ install:
 	$(CP) $(SRC_ETC_C) \dmd\src\phobos\etc\c
 	$(CP) $(SRC_ZLIB) \dmd\src\phobos\etc\c\zlib
 	$(CP) $(SRC_GC) \dmd\src\phobos\internal\gc
-	$(CP) $(SRC_RECLS) \dmd\src\phobos\etc\c\recls
-	$(CP) $(SRC_STLSOFT) \dmd\src\phobos\etc\c\stlsoft
 

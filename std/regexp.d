@@ -31,7 +31,7 @@
  * advanced forms may behave slightly differently.
  *
  * In the following guide, $(I pattern)[] refers to a
- * $(LINK2 ../../../ctg/regular.html, regular expression).
+ * $(LINK2 http://www.digitalmars.com/ctg/regular.html, regular expression).
  * The $(I attributes)[] refers to
 	a string controlling the interpretation
 	of the regular expression.
