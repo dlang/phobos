@@ -1,8 +1,10 @@
 
+// Written in the D programming language.
+
 /*
  *  Copyright (C) 2002-2006 by Digital Mars, www.digitalmars.com
  *  Written by Walter Bright
- * Some parts contributed by David L. Davis
+ *  Some parts contributed by David L. Davis
  *
  *  This software is provided 'as-is', without any express or implied
  *  warranty. In no event will the authors be held liable for any damages
@@ -66,7 +68,7 @@ class ConvError : Error
 {
     this(char[] s)
     {
-	super("Error: conversion " ~ s);
+	super("conversion " ~ s);
     }
 }
 

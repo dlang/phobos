@@ -9,6 +9,7 @@
 module std.c.linux.linux;
 
 public import std.c.linux.linuxextern;
+public import std.c.linux.pthread;
 
 alias int pid_t;
 alias int off_t;
@@ -415,97 +416,6 @@ extern (C)
     int sigfillset(sigset_t*);
     int sigismember(sigset_t*, int);
     int sigsuspend(sigset_t*);
-}
-
-extern (C)
-{
-    /*  pthread declarations taken from pthread headers and
-        http://svn.dsource.org/projects/bindings/trunk/pthreads.d
-    */
-
-    /* from bits/types.h
-    */
-
-    typedef int __time_t;
-
-    /* from time.h
-    */
-
-    struct timespec
-    {
-        __time_t tv_sec;    /* seconds   */
-        int tv_nsec;        /* nanosecs. */
-    }
-
-    /* from bits/pthreadtypes.h
-    */
-
-    struct _pthread_descr_struct
-    {
-    /*  Not defined in the headers ???
-        Just needed here to typedef
-        the _pthread_descr pointer
-    */
-    }
-
-    typedef _pthread_descr_struct* _pthread_descr;
-
-    struct _pthread_fastlock
-    {
-        int __status;
-        int __spinlock;
-    }
-
-    typedef long __pthread_cond_align_t;
-
-    struct pthread_cond_t 
-    {
-        _pthread_fastlock __c_lock;
-        _pthread_descr    __c_waiting;
-        char[48
-            - _pthread_fastlock.sizeof
-            - _pthread_descr.sizeof
-            - __pthread_cond_align_t.sizeof
-            ] __padding;
-        __pthread_cond_align_t __align;
-    }
-
-    struct pthread_condattr_t
-    {
-        int __dummy;
-    }
-
-    struct pthread_mutex_t
-    {
-        int         __m_reserved;
-        int         __m_count;
-        _pthread_descr  __m_owner;
-        int         __m_kind;
-        _pthread_fastlock __m_lock;
-    }
-
-    struct pthread_mutexattr_t
-    {
-        int __mutexkind;
-    }
-
-    /* from pthread.h
-    */
-
-    int pthread_mutex_init(pthread_mutex_t*, pthread_mutexattr_t*);
-    int pthread_mutex_destroy(pthread_mutex_t*);
-    int pthread_mutex_trylock(pthread_mutex_t*);
-    int pthread_mutex_lock(pthread_mutex_t*);
-    int pthread_mutex_unlock(pthread_mutex_t*);
-
-    int pthread_mutexattr_init(pthread_mutexattr_t*);
-    int pthread_mutexattr_destroy(pthread_mutexattr_t*);
-
-    int pthread_cond_init(pthread_cond_t*, pthread_condattr_t*);
-    int pthread_cond_destroy(pthread_cond_t*);
-    int pthread_cond_signal(pthread_cond_t*);
-    int pthread_cond_wait(pthread_cond_t*, pthread_mutex_t*);
-    int pthread_cond_timedwait(pthread_cond_t*, pthread_mutex_t*, timespec*);
 }
 
 extern (C)

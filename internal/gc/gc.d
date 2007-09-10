@@ -228,11 +228,58 @@ ulong _d_newarrayi(size_t length, size_t size, ...)
 	debug(PRINTF) printf(" p = %p\n", p);
 	if (size == 1)
 	    memset(p, *cast(ubyte*)q, length);
+	else if (size == int.sizeof)
+	{
+	    int init = *cast(int*)q;
+	    for (uint u = 0; u < length; u++)
+	    {
+		(cast(int*)p)[u] = init;
+	    }
+	}
 	else
 	{
 	    for (uint u = 0; u < length; u++)
 	    {
 		memcpy(p + u * size, q, size);
+	    }
+	}
+	va_end(q);
+	result = cast(ulong)length + (cast(ulong)cast(uint)p << 32);
+    }
+    return result;
+}
+
+ulong _d_newarrayii(size_t length, size_t size, size_t isize ...)
+{
+    void *p;
+    ulong result;
+
+    //debug(PRINTF) printf("_d_newarrayii(length = %d, size = %d, isize = %d)\n", length, size, isize);
+    if (length == 0 || size == 0)
+	result = 0;
+    else
+    {
+	//void* q = cast(void*)(&size + 1);	// pointer to initializer
+	va_list q;
+	va_start!(size_t)(q, isize);		// q is pointer to ... initializer
+	size *= length;
+	p = _gc.malloc(size * isize + 1);
+	debug(PRINTF) printf(" p = %p\n", p);
+	if (isize == 1)
+	    memset(p, *cast(ubyte*)q, size);
+	else if (isize == int.sizeof)
+	{
+	    int init = *cast(int*)q;
+	    for (uint u = 0; u < size; u++)
+	    {
+		(cast(int*)p)[u] = init;
+	    }
+	}
+	else
+	{
+	    for (uint u = 0; u < size; u++)
+	    {
+		memcpy(p + u * isize, q, isize);
 	    }
 	}
 	va_end(q);
