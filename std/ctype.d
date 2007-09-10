@@ -1,44 +1,46 @@
 
 // Written by Walter Bright
-// Copyright (c) 2001-2003 Digital Mars
+// Copyright (c) 2001-2004 Digital Mars
 // All Rights Reserved
 // www.digitalmars.com
 
 // Simple char classification functions
 
+// BUG: need to upgrade to unicode
+
 module std.ctype;
 
-int isalnum(char c)	{ return _ctype[1 + c] & (_ALP|_DIG); }
-int isalpha(char c)	{ return _ctype[1 + c] & (_ALP); }
-int iscntrl(char c)	{ return _ctype[1 + c] & (_CTL); }
-int isdigit(char c)	{ return _ctype[1 + c] & (_DIG); }
-int isgraph(char c)	{ return _ctype[1 + c] & (_ALP|_DIG|_PNC); }
-int islower(char c)	{ return _ctype[1 + c] & (_LC); }
-int isprint(char c)	{ return _ctype[1 + c] & (_ALP|_DIG|_PNC|_BLK); }
-int ispunct(char c)	{ return _ctype[1 + c] & (_PNC); }
-int isspace(char c)	{ return _ctype[1 + c] & (_SPC); }
-int isupper(char c)	{ return _ctype[1 + c] & (_UC); }
-int isxdigit(char c)	{ return _ctype[1 + c] & (_HEX); }
-int isascii(char c)	{ return c <= 0x7F; }
+int isalnum(dchar c)	{ return _ctype[1 + c] & (_ALP|_DIG); }
+int isalpha(dchar c)	{ return _ctype[1 + c] & (_ALP); }
+int iscntrl(dchar c)	{ return _ctype[1 + c] & (_CTL); }
+int isdigit(dchar c)	{ return _ctype[1 + c] & (_DIG); }
+int isgraph(dchar c)	{ return _ctype[1 + c] & (_ALP|_DIG|_PNC); }
+int islower(dchar c)	{ return _ctype[1 + c] & (_LC); }
+int isprint(dchar c)	{ return _ctype[1 + c] & (_ALP|_DIG|_PNC|_BLK); }
+int ispunct(dchar c)	{ return _ctype[1 + c] & (_PNC); }
+int isspace(dchar c)	{ return _ctype[1 + c] & (_SPC); }
+int isupper(dchar c)	{ return _ctype[1 + c] & (_UC); }
+int isxdigit(dchar c)	{ return _ctype[1 + c] & (_HEX); }
+int isascii(dchar c)	{ return c <= 0x7F; }
 
-char tolower(char c)
+dchar tolower(dchar c)
     out (result)
     {
 	assert(!isupper(result));
     }
     body
     {
-	return isupper(c) ? c + (cast(char)'a' - 'A') : c;
+	return isupper(c) ? c + (cast(dchar)'a' - 'A') : c;
     }
 
-char toupper(char c)
+dchar toupper(dchar c)
     out (result)
     {
 	assert(!islower(result));
     }
     body
     {
-	return islower(c) ? c - (cast(char)'a' - 'A') : c;
+	return islower(c) ? c - (cast(dchar)'a' - 'A') : c;
     }
 
 private:

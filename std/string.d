@@ -76,7 +76,7 @@ const char[6] whitespace = " \t\v\r\n\f";
  * Returns !=0 if c is whitespace
  */
 
-int iswhite(char c)
+int iswhite(dchar c)
 {
     return find(whitespace, c) != -1;
 }
@@ -248,15 +248,24 @@ unittest
  * Return -1 if not found.
  */
 
-int find(char[] s, char c)
+int find(char[] s, dchar c)
 {
     char* p;
 
-    p = memchr(s, c, s.length);
-    if (p)
-	return p - cast(char *)s;
-    else
-	return -1;
+    if (c <= 0x7F)
+    {	// Plain old ASCII
+	p = memchr(s, c, s.length);
+	if (p)
+	    return p - cast(char *)s;
+	else
+	    return -1;
+    }
+
+    // c is a universal character
+    char[4] buf;
+    char[] t;
+    t = std.utf.toUTF8(buf, c);
+    return find(s, t);
 }
 
 unittest
@@ -265,13 +274,13 @@ unittest
 
     int i;
 
-    i = find(null, cast(char)'a');
+    i = find(null, cast(dchar)'a');
     assert(i == -1);
-    i = find("def", cast(char)'a');
+    i = find("def", cast(dchar)'a');
     assert(i == -1);
-    i = find("abba", cast(char)'a');
+    i = find("abba", cast(dchar)'a');
     assert(i == 0);
-    i = find("def", cast(char)'f');
+    i = find("def", cast(dchar)'f');
     assert(i == 2);
 }
 
@@ -282,16 +291,25 @@ unittest
  * Return -1 if not found.
  */
 
-int rfind(char[] s, char c)
+int rfind(char[] s, dchar c)
 {
     int i;
 
-    for (i = s.length; i-- > 0;)
-    {
-	if (s[i] == c)
-	    break;
+    if (c <= 0x7F)
+    {	// Plain old ASCII
+	for (i = s.length; i-- > 0;)
+	{
+	    if (s[i] == c)
+		break;
+	}
+	return i;
     }
-    return i;
+
+    // c is a universal character
+    char[4] buf;
+    char[] t;
+    t = std.utf.toUTF8(buf, c);
+    return rfind(s, t);
 }
 
 unittest
@@ -300,13 +318,13 @@ unittest
 
     int i;
 
-    i = rfind(null, cast(char)'a');
+    i = rfind(null, cast(dchar)'a');
     assert(i == -1);
-    i = rfind("def", cast(char)'a');
+    i = rfind("def", cast(dchar)'a');
     assert(i == -1);
-    i = rfind("abba", cast(char)'a');
+    i = rfind("abba", cast(dchar)'a');
     assert(i == 3);
-    i = rfind("def", cast(char)'f');
+    i = rfind("def", cast(dchar)'f');
     assert(i == 2);
 }
 

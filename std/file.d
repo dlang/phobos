@@ -47,6 +47,14 @@ version (Win32)
 private import std.c.windows.windows;
 private import std.utf;
 
+private int useWfuncs = 1;
+
+static this()
+{
+    // Win 95, 98, ME do not implement the W functions
+    useWfuncs = (GetVersion() >= 0x80000000);
+}
+
 /********************************************
  * Read a file.
  * Returns:
@@ -59,15 +67,27 @@ void[] read(char[] name)
     DWORD numread;
     HANDLE h;
     byte[] buf;
-    wchar* namez;
 
-    namez = std.utf.toUTF16z(name);
-    h = CreateFileW(namez,GENERIC_READ,FILE_SHARE_READ,null,OPEN_EXISTING,
-	FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,(HANDLE)null);
+    if (useWfuncs)
+    {
+	wchar* namez = std.utf.toUTF16z(name);
+	h = CreateFileW(namez,GENERIC_READ,FILE_SHARE_READ,null,OPEN_EXISTING,
+	    FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,(HANDLE)null);
+    }
+    else
+    {
+	char* namez = toMBSz(name);
+	h = CreateFileA(namez,GENERIC_READ,FILE_SHARE_READ,null,OPEN_EXISTING,
+	    FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,(HANDLE)null);
+    }
+
     if (h == INVALID_HANDLE_VALUE)
 	goto err1;
 
     size = GetFileSize(h, null);
+    if (size == INVALID_FILE_SIZE)
+	goto err2;
+
     buf = new byte[size];
 
     if (ReadFile(h,buf,size,&numread,null) != 1)
@@ -99,11 +119,19 @@ void write(char[] name, void[] buffer)
 {
     HANDLE h;
     DWORD numwritten;
-    wchar* namez;
 
-    namez = std.utf.toUTF16z(name);
-    h = CreateFileW(namez,GENERIC_WRITE,0,null,CREATE_ALWAYS,
-	FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,(HANDLE)null);
+    if (useWfuncs)
+    {
+	wchar* namez = std.utf.toUTF16z(name);
+	h = CreateFileW(namez,GENERIC_WRITE,0,null,CREATE_ALWAYS,
+	    FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,(HANDLE)null);
+    }
+    else
+    {
+	char* namez = toMBSz(name);
+	h = CreateFileA(namez,GENERIC_WRITE,0,null,CREATE_ALWAYS,
+	    FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,(HANDLE)null);
+    }
     if (h == INVALID_HANDLE_VALUE)
 	goto err;
 
@@ -132,11 +160,19 @@ void append(char[] name, void[] buffer)
 {
     HANDLE h;
     DWORD numwritten;
-    wchar* namez;
 
-    namez = std.utf.toUTF16z(name);
-    h = CreateFileW(namez,GENERIC_WRITE,0,null,OPEN_ALWAYS,
-	FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,(HANDLE)null);
+    if (useWfuncs)
+    {
+	wchar* namez = std.utf.toUTF16z(name);
+	h = CreateFileW(namez,GENERIC_WRITE,0,null,OPEN_ALWAYS,
+	    FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,(HANDLE)null);
+    }
+    else
+    {
+	char* namez = toMBSz(name);
+	h = CreateFileA(namez,GENERIC_WRITE,0,null,OPEN_ALWAYS,
+	    FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,(HANDLE)null);
+    }
     if (h == INVALID_HANDLE_VALUE)
 	goto err;
 
@@ -167,7 +203,10 @@ void rename(char[] from, char[] to)
 {
     BOOL result;
 
-    result = MoveFileW(std.utf.toUTF16z(from), std.utf.toUTF16z(to));
+    if (useWfuncs)
+	result = MoveFileW(std.utf.toUTF16z(from), std.utf.toUTF16z(to));
+    else
+	result = MoveFileA(toMBSz(from), toMBSz(to));
     if (!result)
 	throw new FileException(to, GetLastError());
 }
@@ -181,7 +220,10 @@ void remove(char[] name)
 {
     BOOL result;
 
-    result = DeleteFileW(std.utf.toUTF16z(name));
+    if (useWfuncs)
+	result = DeleteFileW(std.utf.toUTF16z(name));
+    else
+	result = DeleteFileA(toMBSz(name));
     if (!result)
 	throw new FileException(name, GetLastError());
 }
@@ -193,16 +235,33 @@ void remove(char[] name)
 
 ulong getSize(char[] name)
 {
-    WIN32_FIND_DATAW filefindbuf;
     HANDLE findhndl;
+    uint resulth;
+    uint resultl;
 
-    findhndl = FindFirstFileW(std.utf.toUTF16z(name), &filefindbuf);
+    if (useWfuncs)
+    {
+	WIN32_FIND_DATAW filefindbuf;
+
+	findhndl = FindFirstFileW(std.utf.toUTF16z(name), &filefindbuf);
+	resulth = filefindbuf.nFileSizeHigh;
+	resultl = filefindbuf.nFileSizeLow;
+    }
+    else
+    {
+	WIN32_FIND_DATA filefindbuf;
+
+	findhndl = FindFirstFileA(toMBSz(name), &filefindbuf);
+	resulth = filefindbuf.nFileSizeHigh;
+	resultl = filefindbuf.nFileSizeLow;
+    }
+
     if (findhndl == (HANDLE)-1)
     {
 	throw new FileException(name, GetLastError());
     }
     FindClose(findhndl);
-    return filefindbuf.nFileSizeLow;
+    return ((ulong)resulth << 32) + resultl;
 }
 
 
@@ -214,7 +273,10 @@ uint getAttributes(char[] name)
 {
     uint result;
 
-    result = GetFileAttributesW(std.utf.toUTF16z(name));
+    if (useWfuncs)
+	result = GetFileAttributesW(std.utf.toUTF16z(name));
+    else
+	result = GetFileAttributesA(toMBSz(name));
     if (result == 0xFFFFFFFF)
     {
 	throw new FileException(name, GetLastError());
@@ -245,8 +307,14 @@ int isdir(char[] name)
  */
 
 void chdir(char[] pathname)
-{
-    if (!SetCurrentDirectoryW(std.utf.toUTF16z(pathname)))
+{   BOOL result;
+
+    if (useWfuncs)
+	result = SetCurrentDirectoryW(std.utf.toUTF16z(pathname));
+    else
+	result = SetCurrentDirectoryA(toMBSz(pathname));
+
+    if (!result)
     {
 	throw new FileException(pathname, GetLastError());
     }
@@ -257,8 +325,14 @@ void chdir(char[] pathname)
  */
 
 void mkdir(char[] pathname)
-{
-    if (!CreateDirectoryW(std.utf.toUTF16z(pathname), null))
+{   BOOL result;
+
+    if (useWfuncs)
+	result = CreateDirectoryW(std.utf.toUTF16z(pathname), null);
+    else
+	result = CreateDirectoryA(toMBSz(pathname), null);
+
+    if (!result)
     {
 	throw new FileException(pathname, GetLastError());
     }
@@ -269,8 +343,14 @@ void mkdir(char[] pathname)
  */
 
 void rmdir(char[] pathname)
-{
-    if (!RemoveDirectoryW(std.utf.toUTF16z(pathname)))
+{   BOOL result;
+
+    if (useWfuncs)
+	result = RemoveDirectoryW(std.utf.toUTF16z(pathname));
+    else
+	result = RemoveDirectoryA(toMBSz(pathname));
+
+    if (!result)
     {
 	throw new FileException(pathname, GetLastError());
     }
@@ -282,22 +362,39 @@ void rmdir(char[] pathname)
 
 char[] getcwd()
 {
-    wchar[] dir;
-    int length;
-    wchar c;
+    if (useWfuncs)
+    {
+	wchar[] dir;
+	int length;
+	wchar c;
 
-    length = GetCurrentDirectoryW(0, &c);
-    if (!length)
-    {
-	throw new FileException("getcwd", GetLastError());
+	length = GetCurrentDirectoryW(0, &c);
+	if (!length)
+	    goto Lerr;
+	dir = new wchar[length];
+	length = GetCurrentDirectoryW(length, dir);
+	if (!length)
+	    goto Lerr;
+	return std.utf.toUTF8(dir[0 .. length]); // leave off terminating 0
     }
-    dir = new wchar[length];
-    length = GetCurrentDirectoryW(length, dir);
-    if (!length)
+    else
     {
-	throw new FileException("getcwd", GetLastError());
+	char[] dir;
+	int length;
+	char c;
+
+	length = GetCurrentDirectoryA(0, &c);
+	if (!length)
+	    goto Lerr;
+	dir = new char[length];
+	length = GetCurrentDirectoryA(length, dir);
+	if (!length)
+	    goto Lerr;
+	return dir[0 .. length];		// leave off terminating 0
     }
-    return std.utf.toUTF8(dir[0 .. length]);		// leave off terminating 0
+
+Lerr:
+    throw new FileException("getcwd", GetLastError());
 }
 
 /***************************************************
@@ -309,29 +406,82 @@ char[][] listdir(char[] pathname)
     char[][] result;
     char[] c;
     HANDLE h;
-    WIN32_FIND_DATAW fileinfo;
 
     c = std.path.join(pathname, "*.*");
-    h = FindFirstFileW(std.utf.toUTF16z(c), &fileinfo);
-    if (h != INVALID_HANDLE_VALUE)
+    if (useWfuncs)
     {
-        do
-        {   int i;
-	    int clength;
+	WIN32_FIND_DATAW fileinfo;
 
-            // Skip "." and ".."
-            if (std.string.wcscmp(fileinfo.cFileName, ".") == 0 ||
-                std.string.wcscmp(fileinfo.cFileName, "..") == 0)
-                continue;
+	h = FindFirstFileW(std.utf.toUTF16z(c), &fileinfo);
+	if (h != INVALID_HANDLE_VALUE)
+	{
+	    do
+	    {   int i;
+		int clength;
 
-	    i = result.length;
-	    result.length = i + 1;
-	    clength = std.string.wcslen(fileinfo.cFileName);
-	    result[i] = std.utf.toUTF8(fileinfo.cFileName[0 .. clength]);
-        } while (FindNextFileW(h,&fileinfo) != FALSE);
-        FindClose(h);
+		// Skip "." and ".."
+		if (std.string.wcscmp(fileinfo.cFileName, ".") == 0 ||
+		    std.string.wcscmp(fileinfo.cFileName, "..") == 0)
+		    continue;
+
+		i = result.length;
+		result.length = i + 1;
+		clength = std.string.wcslen(fileinfo.cFileName);
+		result[i] = std.utf.toUTF8(fileinfo.cFileName[0 .. clength]);
+	    } while (FindNextFileW(h,&fileinfo) != FALSE);
+	    FindClose(h);
+	}
+    }
+    else
+    {
+	WIN32_FIND_DATA fileinfo;
+
+	h = FindFirstFileA(toMBSz(c), &fileinfo);
+	if (h != INVALID_HANDLE_VALUE)
+	{
+	    do
+	    {   int i;
+		int clength;
+
+		// Skip "." and ".."
+		if (std.string.strcmp(fileinfo.cFileName, ".") == 0 ||
+		    std.string.strcmp(fileinfo.cFileName, "..") == 0)
+		    continue;
+
+		i = result.length;
+		result.length = i + 1;
+		clength = std.string.strlen(fileinfo.cFileName);
+		result[i] = fileinfo.cFileName[0 .. clength].dup;
+	    } while (FindNextFileA(h,&fileinfo) != FALSE);
+	    FindClose(h);
+	}
     }
     return result;
+}
+
+/******************************************
+ * Since Win 9x does not support the "W" API's, first convert
+ * to wchar, then convert to multibyte using the current code
+ * page.
+ * (Thanks to yaneurao for this)
+ */
+
+char* toMBSz(char[] s)
+{
+    // Only need to do this if any chars have the high bit set
+    foreach (char c; s)
+    {
+	if (c >= 0x80)
+	{   char[] result;
+	    int i;
+	    wchar* ws = std.utf.toUTF16z(s);
+	    result.length = WideCharToMultiByte(0, 0, ws, -1, null, 0, null, null);
+	    i = WideCharToMultiByte(0, 0, ws, -1, result, result.length, null, null);
+	    assert(i == result.length);
+	    return result;
+	}
+    }
+    return std.string.toStringz(s);
 }
 
 }

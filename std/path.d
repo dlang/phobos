@@ -426,7 +426,7 @@ unittest
  * Case sensitivity depends on the operating system.
  */
 
-int fncharmatch(char c1, char c2)
+int fncharmatch(dchar c1, dchar c2)
 {
     version (Win32)
     {

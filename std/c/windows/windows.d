@@ -228,6 +228,7 @@ enum
 }
 
 const HANDLE INVALID_HANDLE_VALUE = (HANDLE)-1;
+const DWORD INVALID_FILE_SIZE = (DWORD)0xFFFFFFFF;
 
 struct OVERLAPPED {
     DWORD   Internal;
@@ -337,6 +338,7 @@ export
 
 HMODULE LoadLibraryA(LPCSTR lpLibFileName);
 FARPROC GetProcAddress(HMODULE hModule, LPCSTR lpProcName);
+DWORD GetVersion();
 
 //
 // Registry Specific Access Rights.
@@ -1857,5 +1859,17 @@ export
 }
 
 export DWORD ExpandEnvironmentStringsA(LPCSTR lpSrc, LPSTR lpDst, DWORD nSize);
+
+export
+{
+ BOOL IsValidCodePage(UINT CodePage);
+ UINT GetACP();
+ UINT GetOEMCP();
+ //BOOL GetCPInfo(UINT CodePage, LPCPINFO lpCPInfo);
+ BOOL IsDBCSLeadByte(BYTE TestChar);
+ BOOL IsDBCSLeadByteEx(UINT CodePage, BYTE TestChar);
+ int MultiByteToWideChar(UINT CodePage, DWORD dwFlags, LPCSTR lpMultiByteStr, int cchMultiByte, LPWSTR lpWideCharStr, int cchWideChar);
+ int WideCharToMultiByte(UINT CodePage, DWORD dwFlags, LPCWSTR lpWideCharStr, int cchWideChar, LPSTR lpMultiByteStr, int cchMultiByte, LPCSTR lpDefaultChar, LPBOOL lpUsedDefaultChar);
+}
 
 }

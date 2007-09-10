@@ -538,4 +538,4 @@ zip : $(ALLSRCS) linux.mak win32.mak
 	zip phobos $(ALLSRCS) linux.mak win32.mak
 
 clean:
-	rm $(OBJS)
+	rm $(OBJS) unittest unittest.o

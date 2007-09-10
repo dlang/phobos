@@ -52,7 +52,6 @@ void _STI_critical_init()
 {
     if (!inited)
     {	InitializeCriticalSection(&critical_section.cs);
-	dcs_list = &critical_section;
 	inited = 1;
     }
 }
@@ -122,7 +121,6 @@ void _STI_critical_init()
 {
     if (!inited)
     {	pthread_mutex_init(&critical_section.cs, 0);
-	dcs_list = &critical_section;
 	inited = 1;
     }
 }

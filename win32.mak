@@ -83,7 +83,7 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 	std\intrinsic.d std\array.d std\switcherr.d std\syserror.d \
 	std\regexp.d std\random.d std\stream.d std\process.d std\recls.d
 
-SRC_STD_C= std\c\process.d std\c\stdlib.d std\c\time.d std\c\stdio.d
+SRC_STD_C= std\c\process.d std\c\stdlib.d std\c\time.d std\c\stdio.d std\c\math.d
 
 SRC_TI=	\
 	std\typeinfo\ti_wchar.d std\typeinfo\ti_uint.d \

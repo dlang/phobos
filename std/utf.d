@@ -397,6 +397,47 @@ void validate(dchar[] s)
 
 /* =================== Conversion to UTF8 ======================= */
 
+char[] toUTF8(char[4] buf, dchar c)
+    in
+    {
+	assert(isValidDchar(c));
+    }
+    body
+    {
+	uint L;
+
+	if (c <= 0x7F)
+	{
+	    buf[0] = cast(char) c;
+	    L = 1;
+	}
+	else if (c <= 0x7FF)
+	{
+	    buf[0] = cast(char)(0xC0 | (c >> 6));
+	    buf[1] = cast(char)(0x80 | (c & 0x3F));
+	    L = 2;
+	}
+	else if (c <= 0xFFFF)
+	{
+	    buf[0] = cast(char)(0xE0 | (c >> 12));
+	    buf[1] = cast(char)(0x80 | ((c >> 6) & 0x3F));
+	    buf[2] = cast(char)(0x80 | (c & 0x3F));
+	    L = 3;
+	}
+	else if (c <= 0x10FFFF)
+	{
+	    buf[0] = cast(char)(0xF0 | (c >> 18));
+	    buf[1] = cast(char)(0x80 | ((c >> 12) & 0x3F));
+	    buf[2] = cast(char)(0x80 | ((c >> 6) & 0x3F));
+	    buf[3] = cast(char)(0x80 | (c & 0x3F));
+	    L = 4;
+	}
+	else
+	{
+	    assert(0);
+	}
+	return buf[0 .. L];
+    }
 
 char[] toUTF8(char[] s)
     in
