@@ -1613,6 +1613,7 @@ class BufferedStream : FilterStream {
     return streamPos-bufferSourcePos+bufferCurPos;
   }
 
+  // Buffered readLine - Dave Fladebo
   // reads a line, terminated by either CR, LF, CR/LF, or EOF
   // reusing the memory in buffer if result will fit, otherwise
   // will reallocate (using concatenation)

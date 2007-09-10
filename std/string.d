@@ -2311,15 +2311,15 @@ unittest
     char[] r;
     int i;
 
-    r = toString(0ul);
+    r = toString(0uL);
     i = cmp(r, "0");
     assert(i == 0);
 
-    r = toString(9ul);
+    r = toString(9uL);
     i = cmp(r, "9");
     assert(i == 0);
 
-    r = toString(123ul);
+    r = toString(123uL);
     i = cmp(r, "123");
     assert(i == 0);
 }
@@ -2416,27 +2416,27 @@ unittest
     char[] r;
     int i;
 
-    r = toString(0l);
+    r = toString(0L);
     i = cmp(r, "0");
     assert(i == 0);
 
-    r = toString(9l);
+    r = toString(9L);
     i = cmp(r, "9");
     assert(i == 0);
 
-    r = toString(123l);
+    r = toString(123L);
     i = cmp(r, "123");
     assert(i == 0);
 
-    r = toString(-0l);
+    r = toString(-0L);
     i = cmp(r, "0");
     assert(i == 0);
 
-    r = toString(-9l);
+    r = toString(-9L);
     i = cmp(r, "-9");
     assert(i == 0);
 
-    r = toString(-123l);
+    r = toString(-123L);
     i = cmp(r, "-123");
     assert(i == 0);
 }

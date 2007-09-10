@@ -1,5 +1,5 @@
 //
-// Copyright (C) 2001-2004 by Digital Mars
+// Copyright (C) 2001-2006 by Digital Mars
 // All Rights Reserved
 // Written by Walter Bright
 // www.digitalmars.com
@@ -216,7 +216,8 @@ class GC
 
 	if (std.thread.Thread.nthreads == 1)
 	{
-	    /* The reason this works is because none of the gc code
+	    /* Single-threaded no-sync - Dave Fladebo.
+	     * The reason this works is because none of the gc code
 	     * can start up a new thread from within mallocNoSync().
 	     * Skip the sync for speed reasons.
 	     */
@@ -241,6 +242,7 @@ class GC
 	    size += SENTINEL_EXTRA;
 
 	    // Compute size bin
+	    // Cache previous binsize lookup - Dave Fladebo.
 	    static size_t lastsize = -1;
 	    static Bins lastbin;
 	    if (size == lastsize)
@@ -289,6 +291,7 @@ class GC
 		// Return next item from free list
 		gcx.bucket[bin] = (cast(List *)p).next;
 		//memset(p + size, 0, binsize[bin] - size);
+		// 'inline' memset - Dave Fladebo.
 		foreach(inout byte b; cast(byte[])(p + size)[0..binsize[bin] - size]) { b = 0; }
 		//debug(PRINTF) printf("\tmalloc => %x\n", p);
 		debug (MEMSTOMP) memset(p, 0xF0, size);

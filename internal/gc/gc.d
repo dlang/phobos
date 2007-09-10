@@ -528,7 +528,7 @@ size_t newCapacity(size_t newlength, size_t size)
     else
     {
 	/*
-	 * Better version by davejf:
+	 * Better version by Dave Fladebo:
 	 * This uses an inverse logorithmic algorithm to pre-allocate a bit more
 	 * space for larger arrays.
 	 * - Arrays smaller than 4096 bytes are left as-is, so for the most

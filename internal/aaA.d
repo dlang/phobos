@@ -30,15 +30,16 @@ import std.string;
 import std.outofmemory;
 
 // Implementation of associative array
+// Auto-rehash and pre-allocate - Dave Fladebo
 
 static uint[] prime_list = [
-    97ul,         389ul,
-    1543ul,       6151ul,
-    24593ul,      98317ul,
-    393241ul,     1572869ul,
-    6291469ul,    25165843ul,
-    100663319ul,  402653189ul,
-    1610612741ul, 4294967291ul
+    97UL,         389UL,
+    1543UL,       6151UL,
+    24593UL,      98317UL,
+    393241UL,     1572869UL,
+    6291469UL,    25165843UL,
+    100663319UL,  402653189UL,
+    1610612741UL, 4294967291UL
 ];
 
 struct Array

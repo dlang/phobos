@@ -458,7 +458,7 @@ Lerr:
 struct DirEntry
 {
     char[] name;			/// file or directory name
-    ulong size = ~0ul;			/// size of file in bytes
+    ulong size = ~0UL;			/// size of file in bytes
     d_time creationTime = d_time_nan;	/// time of file creation
     d_time lastAccessTime = d_time_nan;	/// time file was last accessed
     d_time lastWriteTime = d_time_nan;	/// time file was last written to
@@ -1153,7 +1153,7 @@ char[] getcwd()
 struct DirEntry
 {
     char[] name;			/// file or directory name
-    ulong _size = ~0ul;			// size of file in bytes
+    ulong _size = ~0UL;			// size of file in bytes
     d_time _creationTime = d_time_nan;	// time of file creation
     d_time _lastAccessTime = d_time_nan; // time file was last accessed
     d_time _lastWriteTime = d_time_nan;	// time file was last written to
