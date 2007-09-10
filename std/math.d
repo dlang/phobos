@@ -50,6 +50,7 @@ module std.math;
 
 //debug=math;		// uncomment to turn on debugging printf's
 
+private import std.stdio;
 private import std.c.stdio;
 private import std.string;
 private import std.c.math;
@@ -1641,7 +1642,7 @@ body
     }
     else
     {
-	i = A.length - 1;
+	int i = A.length - 1;
 	real r = A[i];
 	while (--i >= 0)
 	{

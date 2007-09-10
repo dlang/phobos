@@ -115,28 +115,6 @@ unittest
 }
 
 /*********************************
- * Polynomial of X
- */
- 
-real poly(real x, real[] coefficients)
-{
-	debug (math2) printf("poly(), coefficients.length = %d\n", coefficients.length);
-	if (!coefficients.length)
-		return 0;
-	real result = coefficients[coefficients.length - 1];
-	for (int i = coefficients.length - 2; i >= 0; i--)
-		result = result * x + coefficients[i];
-	return result;
-}
-
-unittest
-{
-	debug (math2) printf("unittest.poly()\n");
-	static real[4] k = [ 4, 3, 2, 1 ];
-	assert(feq(poly(2, k), cast(real) 8 * 1 + 4 * 2 + 2 * 3 + 4));
-}
-
-/*********************************
  * Sign
  */
 
