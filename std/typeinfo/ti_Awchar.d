@@ -1,7 +1,7 @@
 
 module std.typeinfo.ti_Awchar;
 
-private import std.string;
+private import std.c.string;
 
 // wchar[]
 

@@ -1,7 +1,7 @@
 
 /* Trace dynamic profiler.
  * For use with the Digital Mars DMD compiler.
- * Copyright (C) 1995-2005 by Digital Mars
+ * Copyright (C) 1995-2006 by Digital Mars
  * All Rights Reserved
  * Written by Walter Bright
  * www.digitalmars.com
@@ -12,6 +12,7 @@ module internal.trace;
 import std.stdio;
 import std.ctype;
 import std.string;
+import std.c.string;
 import std.c.stdlib;
 
 extern (C):

@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2002-2004 by Digital Mars, www.digitalmars.com
+ *  Copyright (C) 2002-2006 by Digital Mars, www.digitalmars.com
  *  Written by Walter Bright
  *
  *  This software is provided 'as-is', without any express or implied
@@ -18,6 +18,18 @@
  *     be misrepresented as being the original software.
  *  o  This notice may not be removed or altered from any source
  *     distribution.
+ */
+
+/**************************
+ * The thread module defines the class $(B Thread).
+ *
+ * $(B Thread) is the basis
+ * for writing multithreaded applications. Each thread
+ * has a unique instance of class $(B Thread) associated with it.
+ * It is important to use the $(B Thread) class to create and manage
+ * threads as the garbage collector needs to know about all the threads.
+ * Macros:
+ *	WIKI=Phobos/StdThread
  */
 
 module std.thread;
@@ -112,6 +124,12 @@ class Thread
 	    return dg();
     }
 
+    /*****************************
+     * Wait for this thread to terminate.
+     * Simply returns if thread has already terminated.
+     * Throws: $(B ThreadError) if the thread hasn't begun yet or
+     * is called on itself.
+     */
     void wait()
     {
 	if (this is getThis())
@@ -123,6 +141,13 @@ class Thread
 	}
     }
 
+    /******************************
+     * Wait for this thread to terminate or until milliseconds time has
+     * elapsed, whichever occurs first.
+     * Simply returns if thread has already terminated.
+     * Throws: $(B ThreadError) if the thread hasn't begun yet or
+     * is called on itself.
+     */
     void wait(uint milliseconds)
     {
 	if (this is getThis())

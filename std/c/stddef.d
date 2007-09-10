@@ -1,8 +1,10 @@
-/*
- * Written by Walter Bright
- * Digital Mars
- * www.digitalmars.com
- * Placed into Public Domain.
+
+/**
+ * C's &lt;stddef.h&gt;
+ * Authors: Walter Bright, Digital Mars, www.digitalmars.com
+ * License: Public Domain
+ * Macros:
+ *	WIKI=Phobos/StdCStddef
  */
 
 module std.c.stddef;

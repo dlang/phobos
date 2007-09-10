@@ -26,7 +26,7 @@
 
 module std.socket;
 
-private import std.string, std.stdint, std.c.stdlib;
+private import std.string, std.stdint, std.c.string, std.c.stdlib;
 
 
 version(linux)

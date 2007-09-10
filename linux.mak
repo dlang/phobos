@@ -103,7 +103,7 @@ SRC_STD= std/zlib.d std/zip.d std/stdint.d std/conv.d std/utf.d std/uri.d \
 	std/boxer.d std/cstream.d std/demangle.d std/cover.d std/bitarray.d
 
 SRC_STD_C= std/c/process.d std/c/stdlib.d std/c/time.d std/c/stdio.d \
-	std/c/math.d std/c/stdarg.d std/c/stddef.d std/c/fenv.d
+	std/c/math.d std/c/stdarg.d std/c/stddef.d std/c/fenv.d std/c/string.d
 
 SRC_TI=	\
 	std/typeinfo/ti_wchar.d std/typeinfo/ti_uint.d \

@@ -4,7 +4,7 @@
 // www.digitalmars.com
 // Written by Walter Bright
 
-import std.string;
+import std.c.string;
 import std.c.stdlib;
 import std.outofmemory;
 import std.intrinsic;

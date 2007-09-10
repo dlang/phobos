@@ -23,6 +23,7 @@
 
 
 import std.c.stdio;
+import std.c.string;
 import std.string;
 
 /******************************************************

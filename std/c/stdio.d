@@ -1,8 +1,10 @@
-/*
- * Written by Walter Bright
- * Digital Mars
- * www.digitalmars.com
- * Placed into Public Domain.
+
+/**
+ * C's &lt;stdio.h&gt;
+ * Authors: Walter Bright, Digital Mars, www.digitalmars.com
+ * License: Public Domain
+ * Macros:
+ *	WIKI=Phobos/StdCStdio
  */
 
 
@@ -16,15 +18,15 @@ extern (C):
 
 version (Win32)
 {
-    const int _NFILE = 60;
-    const int BUFSIZ = 0x4000;
-    const int EOF = -1;
-    const int FOPEN_MAX = 20;
-    const int FILENAME_MAX = 256;  // 255 plus NULL
-    const int TMP_MAX = 32767;
-    const int _SYS_OPEN = 20;
-    const int SYS_OPEN = _SYS_OPEN;
-    const wchar WEOF = 0xFFFF;
+    const int _NFILE = 60;	///
+    const int BUFSIZ = 0x4000;	///
+    const int EOF = -1;		///
+    const int FOPEN_MAX = 20;	///
+    const int FILENAME_MAX = 256;  /// 255 plus NULL
+    const int TMP_MAX = 32767;	///
+    const int _SYS_OPEN = 20;	///
+    const int SYS_OPEN = _SYS_OPEN;	///
+    const wchar WEOF = 0xFFFF;		///
 }
 
 version (linux)
@@ -77,7 +79,7 @@ struct _iobuf
     }
 }
 
-alias _iobuf FILE;
+alias _iobuf FILE;	///
 
 enum
 {
@@ -131,11 +133,11 @@ version (linux)
 
 version (Win32)
 {
-    const FILE *stdin  = &_iob[0];
-    const FILE *stdout = &_iob[1];
-    const FILE *stderr = &_iob[2];
-    const FILE *stdaux = &_iob[3];
-    const FILE *stdprn = &_iob[4];
+    const FILE *stdin  = &_iob[0];	///
+    const FILE *stdout = &_iob[1];	///
+    const FILE *stderr = &_iob[2];	///
+    const FILE *stdaux = &_iob[3];	///
+    const FILE *stdprn = &_iob[4];	///
 }
 
 version (linux)
@@ -152,63 +154,72 @@ version (Win32)
     const int L_tmpnam = _P_tmpdir.length + 12;
 }
 
-alias int fpos_t;
+alias int fpos_t;	///
 
-char *	 tmpnam(char *);
-FILE *	 fopen(char *,char *);
-FILE *	 _fsopen(char *,char *,int );
-FILE *	 freopen(char *,char *,FILE *);
-int	 fseek(FILE *,int,int);
-int	 ftell(FILE *);
-char *	 fgets(char *,int,FILE *);
-int	 fgetc(FILE *);
-int	 _fgetchar();
-int	 fflush(FILE *);
-int	 fclose(FILE *);
-int	 fputs(char *,FILE *);
-char *	 gets(char *);
-int	 fputc(int,FILE *);
-int	 _fputchar(int);
-int	 puts(char *);
-int	 ungetc(int,FILE *);
-size_t	 fread(void *,size_t,size_t,FILE *);
-size_t	 fwrite(void *,size_t,size_t,FILE *);
-//int	 printf(char *,...);
-int	 fprintf(FILE *,char *,...);
-int	 vfprintf(FILE *,char *,va_list);
-int	 vprintf(char *,va_list);
-int	 sprintf(char *,char *,...);
-int	 vsprintf(char *,char *,va_list);
-int	 scanf(char *,...);
-int	 fscanf(FILE *,char *,...);
-int	 sscanf(char *,char *,...);
-void	 setbuf(FILE *,char *);
-int	 setvbuf(FILE *,char *,int,size_t);
-int	 remove(char *);
-int	 rename(char *,char *);
-void	 perror(char *);
-int	 fgetpos(FILE *,fpos_t *);
-int	 fsetpos(FILE *,fpos_t *);
-FILE *	 tmpfile();
+char *	 tmpnam(char *);	///
+FILE *	 fopen(char *,char *);	///
+FILE *	 _fsopen(char *,char *,int );	///
+FILE *	 freopen(char *,char *,FILE *);	///
+int	 fseek(FILE *,int,int);	///
+int	 ftell(FILE *);	///
+char *	 fgets(char *,int,FILE *);	///
+int	 fgetc(FILE *);	///
+int	 _fgetchar();	///
+int	 fflush(FILE *);	///
+int	 fclose(FILE *);	///
+int	 fputs(char *,FILE *);	///
+char *	 gets(char *);	///
+int	 fputc(int,FILE *);	///
+int	 _fputchar(int);	///
+int	 puts(char *);	///
+int	 ungetc(int,FILE *);	///
+size_t	 fread(void *,size_t,size_t,FILE *);	///
+size_t	 fwrite(void *,size_t,size_t,FILE *);	///
+//int	 printf(char *,...);	///
+int	 fprintf(FILE *,char *,...);	///
+int	 vfprintf(FILE *,char *,va_list);	///
+int	 vprintf(char *,va_list);	///
+int	 sprintf(char *,char *,...);	///
+int	 vsprintf(char *,char *,va_list);	///
+int	 scanf(char *,...);	///
+int	 fscanf(FILE *,char *,...);	///
+int	 sscanf(char *,char *,...);	///
+void	 setbuf(FILE *,char *);	///
+int	 setvbuf(FILE *,char *,int,size_t);	///
+int	 remove(char *);	///
+int	 rename(char *,char *);	///
+void	 perror(char *);	///
+int	 fgetpos(FILE *,fpos_t *);	///
+int	 fsetpos(FILE *,fpos_t *);	///
+FILE *	 tmpfile();	///
 int	 _rmtmp();
 int      _fillbuf(FILE *);
 int      _flushbu(int, FILE *);
 
-int  getw(FILE *FHdl);
-int  putw(int Word, FILE *FilePtr);
+int  getw(FILE *FHdl);	///
+int  putw(int Word, FILE *FilePtr);	///
 
+///
 int  getchar()		{ return getc(stdin);		}
+///
 int  putchar(int c)	{ return putc(c,stdout);	}
+///
 int  getc(FILE *fp)	{ return fgetc(fp);		}
+///
 int  putc(int c,FILE *fp) { return fputc(c,fp);		}
 
 version (Win32)
 {
+    ///
     int  ferror(FILE *fp)	{ return fp._flag&_IOERR;	}
+    ///
     int  feof(FILE *fp)	{ return fp._flag&_IOEOF;	}
+    ///
     void clearerr(FILE *fp)	{ fp._flag &= ~(_IOERR|_IOEOF); }
+    ///
     void rewind(FILE *fp)	{ fseek(fp,0L,SEEK_SET); fp._flag&=~_IOERR; }
     int  _bufsize(FILE *fp)	{ return fp._bufsiz; }
+    ///
     int  fileno(FILE *fp)	{ return fp._file; }
     int  _snprintf(char *,size_t,char *,...);
     int  _vsnprintf(char *,size_t,char *,va_list);
@@ -226,50 +237,54 @@ version (linux)
     int  vsnprintf(char *,size_t,char *,va_list);
 }
 
-int      unlink(char *);
-FILE *	 fdopen(int, char *);
-int	 fgetchar();
-int	 fputchar(int);
-int	 fcloseall();
-int	 filesize(char *);
-int	 flushall();
-int	 getch();
-int	 getche();
-int      kbhit();
-char *   tempnam (char *dir, char *pfx);
+int      unlink(char *);	///
+FILE *	 fdopen(int, char *);	///
+int	 fgetchar();	///
+int	 fputchar(int);	///
+int	 fcloseall();	///
+int	 filesize(char *);	///
+int	 flushall();	///
+int	 getch();	///
+int	 getche();	///
+int      kbhit();	///
+char *   tempnam (char *dir, char *pfx);	///
 
-wchar_t *  _wtmpnam(wchar_t *);
+wchar_t *  _wtmpnam(wchar_t *);	///
 FILE *  _wfopen(wchar_t *, wchar_t *);
 FILE *  _wfsopen(wchar_t *, wchar_t *, int);
 FILE *  _wfreopen(wchar_t *, wchar_t *, FILE *);
-wchar_t *  fgetws(wchar_t *, int, FILE *);
-int  fputws(wchar_t *, FILE *);
+wchar_t *  fgetws(wchar_t *, int, FILE *);	///
+int  fputws(wchar_t *, FILE *);	///
 wchar_t *  _getws(wchar_t *);
 int  _putws(wchar_t *);
-int  wprintf(wchar_t *, ...);
-int  fwprintf(FILE *, wchar_t *, ...);
-int  vwprintf(wchar_t *, va_list);
-int  vfwprintf(FILE *, wchar_t *, va_list);
-int  swprintf(wchar_t *, wchar_t *, ...);
-int  vswprintf(wchar_t *, wchar_t *, va_list);
+int  wprintf(wchar_t *, ...);	///
+int  fwprintf(FILE *, wchar_t *, ...);	///
+int  vwprintf(wchar_t *, va_list);	///
+int  vfwprintf(FILE *, wchar_t *, va_list);	///
+int  swprintf(wchar_t *, wchar_t *, ...);	///
+int  vswprintf(wchar_t *, wchar_t *, va_list);	///
 int  _snwprintf(wchar_t *, size_t, wchar_t *, ...);
 int  _vsnwprintf(wchar_t *, size_t, wchar_t *, va_list);
-int  wscanf(wchar_t *, ...);
-int  fwscanf(FILE *, wchar_t *, ...);
-int  swscanf(wchar_t *, wchar_t *, ...);
+int  wscanf(wchar_t *, ...);	///
+int  fwscanf(FILE *, wchar_t *, ...);	///
+int  swscanf(wchar_t *, wchar_t *, ...);	///
 int  _wremove(wchar_t *);
 void  _wperror(wchar_t *);
 FILE *  _wfdopen(int, wchar_t *);
 wchar_t *  _wtempnam(wchar_t *, wchar_t *);
-wchar_t  fgetwc(FILE *);
+wchar_t  fgetwc(FILE *);	///
 wchar_t  _fgetwchar_t();
-wchar_t  fputwc(wchar_t, FILE *);
+wchar_t  fputwc(wchar_t, FILE *);	///
 wchar_t  _fputwchar_t(wchar_t);
-wchar_t  ungetwc(wchar_t, FILE *);
+wchar_t  ungetwc(wchar_t, FILE *);	///
 
+///
 wchar_t	 getwchar_t()		{ return fgetwc(stdin); }
+///
 wchar_t	 putwchar_t(wchar_t c)	{ return fputwc(c,stdout); }
+///
 wchar_t	 getwc(FILE *fp)	{ return fgetwc(fp); }
+///
 wchar_t	 putwc(wchar_t c, FILE *fp)	{ return fputwc(c, fp); }
 
-int fwide(FILE* fp, int mode);
+int fwide(FILE* fp, int mode);	///

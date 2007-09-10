@@ -1,10 +1,15 @@
 
-/* Interface to the C header file process.h
+/**
+ * C's &lt;process.h&gt;
+ * Authors: Walter Bright, Digital Mars, www.digitalmars.com
+ * License: Public Domain
+ * Macros:
+ *	WIKI=Phobos/StdCProcess
  */
 
 module std.c.process;
 
-import std.c.stddef;
+private import std.c.stddef;
 
 extern (C):
 

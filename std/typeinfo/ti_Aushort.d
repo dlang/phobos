@@ -1,6 +1,7 @@
 
 module std.typeinfo.ti_Aushort;
 
+private import std.c.string;
 private import std.string;
 
 // ushort[]

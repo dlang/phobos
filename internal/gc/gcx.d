@@ -31,6 +31,7 @@ debug (PRINTF) import std.c.stdio;
 
 import std.c.stdio;
 import std.c.stdlib;
+import std.c.string;
 import gcbits;
 import std.outofmemory;
 import std.gc;

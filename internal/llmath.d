@@ -221,6 +221,19 @@ real __U64_LDBL()
     }
 }
 
+// Same as __U64_LDBL, but return result as double in [EDX,EAX]
+ulong __ULLNGDBL()
+{
+    asm
+    {	naked					;
+	call __U64_LDBL				;
+	sub  ESP,8				;
+	fstp double ptr [ESP]			;
+	pop  EAX				;
+	pop  EDX				;
+	ret					;
+    }
+}
 
 // Convert double to ulong
 

@@ -29,6 +29,7 @@
 module std.process;
 
 private import std.c.stdlib;
+private import std.c.string;
 private import std.string;
 private import std.c.process;
 

@@ -29,10 +29,12 @@
 // This code is derived from the
 // RSA Data Security, Inc. MD5 Message-Digest Algorithm.
 
-import std.md5;
-import std.string;
-import std.c.stdio;
-import std.stdio;
+module std.md5;
+
+private import std.stdio;
+private import std.string;
+private import std.c.stdio;
+private import std.c.string;
 
 int main(char[][] args)
 {
@@ -243,7 +245,7 @@ struct MD5_CTX
       /* Transform as many times as possible. */
       if (inputLen >= partLen)
       {
-	    memcpy(&buffer[index], input, partLen);
+	    std.c.string.memcpy(&buffer[index], input, partLen);
 	    transform (buffer);
 
 	    for (i = partLen; i + 63 < inputLen; i += 64)
@@ -256,7 +258,7 @@ struct MD5_CTX
 
       /* Buffer remaining input */
       if (inputLen - i)
-	    memcpy(&buffer[index], &input[i], inputLen-i);
+	    std.c.string.memcpy(&buffer[index], &input[i], inputLen-i);
     }
 
     /** MD5 finalization. Ends an MD5 message-digest operation, writing the
@@ -285,7 +287,7 @@ struct MD5_CTX
       Encode (digest, state, 16);
 
       /* Zeroize sensitive information. */
-      memset (this, 0, MD5_CTX.sizeof);
+      std.c.string.memset (this, 0, MD5_CTX.sizeof);
     }
 
     /* MD5 basic transformation. Transforms state based on block.

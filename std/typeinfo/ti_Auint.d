@@ -1,7 +1,7 @@
 
 module std.typeinfo.ti_Auint;
 
-private import std.string;
+private import std.c.string;
 
 // uint[]
 

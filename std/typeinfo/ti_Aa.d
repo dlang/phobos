@@ -2,6 +2,7 @@
 module std.typeinfo.Aa;
 
 private import std.string;
+private import std.c.string;
 
 // char[]
 

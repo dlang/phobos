@@ -25,6 +25,7 @@ module arraycat;
 
 import object;
 import std.string;
+import std.c.string;
 import std.c.stdio;
 
 extern (C):

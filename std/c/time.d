@@ -1,12 +1,15 @@
 
-/* Written by Walter Bright
- * www.digitalmars.com
- * Placed into public domain.
+/**
+ * C's &lt;time.h&gt;
+ * Authors: Walter Bright, Digital Mars, www.digitalmars.com
+ * License: Public Domain
+ * Macros:
+ *	WIKI=Phobos/StdCString
  */
 
 module std.c.time;
 
-import std.c.stddef;
+private import std.c.stddef;
 
 extern (C):
 

@@ -1,7 +1,7 @@
 
 module std.typeinfo.ti_Adchar;
 
-private import std.string;
+private import std.c.string;
 
 // dchar[]
 

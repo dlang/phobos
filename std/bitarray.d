@@ -120,6 +120,7 @@ struct BitArray
 	for (size_t i = 0; i < len; i++)
 	{   bool b = opIndex(i);
 	    result = dg(b);
+	    (*this)[i] = b;
 	    if (result)
 		break;
 	}
@@ -134,6 +135,7 @@ struct BitArray
 	for (size_t i = 0; i < len; i++)
 	{   bool b = opIndex(i);
 	    result = dg(i, b);
+	    (*this)[i] = b;
 	    if (result)
 		break;
 	}

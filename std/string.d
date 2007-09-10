@@ -30,6 +30,7 @@ module std.string;
 private import std.stdio;
 private import std.c.stdio;
 private import std.c.stdlib;
+private import std.c.string;
 private import std.utf;
 private import std.uni;
 private import std.array;
@@ -39,21 +40,6 @@ private import std.stdarg;
 
 extern (C)
 {
-    // Functions from the C library.
-    int strlen(char *);
-    int strcmp(char *, char *);
-    char* strcat(char *, char *);
-    int memcmp(void *, void *, uint);
-    int memicmp(char *, char *, uint);
-    char *strcpy(char *, char *);
-    char *strstr(char *, char *);
-    char *strchr(char *, char);
-    char *strrchr(char *, char);
-    char *memchr(char *, char, uint);
-    void *memcpy(void *, void *, uint);
-    void *memmove(void *, void *, uint);
-    void *memset(void *, uint, uint);
-    char* strerror(int);
 
     int wcslen(wchar *);
     int wcscmp(wchar *, wchar *);
@@ -290,7 +276,7 @@ int find(char[] s, dchar c)
 
     if (c <= 0x7F)
     {	// Plain old ASCII
-	p = memchr(s, c, s.length);
+	p = cast(char*)memchr(s, c, s.length);
 	if (p)
 	    return p - cast(char *)s;
 	else
@@ -526,7 +512,7 @@ int find(char[] s, char[] sub)
 	    char c = sub[0];
 	    if (sublength == 1)
 	    {
-		char *p = memchr(s, c, s.length);
+		char *p = cast(char*)memchr(s, c, s.length);
 		if (p)
 		    return p - &s[0];
 	    }
@@ -540,7 +526,7 @@ int find(char[] s, char[] sub)
 
 		for (size_t i = 0; i < imax; i++)
 		{
-		    char *p = memchr(&s[i], c, imax - i);
+		    char *p = cast(char*)memchr(&s[i], c, imax - i);
 		    if (!p)
 			break;
 		    i = p - &s[0];
@@ -1254,7 +1240,7 @@ char[][] split(char[] s, char[] delim)
 		while (true)
 		{
 		    nwords++;
-		    p = memchr(p, c, pend - p);
+		    p = cast(char*)memchr(p, c, pend - p);
 		    if (!p)
 			break;
 		    p++;
@@ -1269,7 +1255,7 @@ char[][] split(char[] s, char[] delim)
 		i = 0;
 		while (true)
 		{
-		    p = memchr(&s[i], c, s.length - i);
+		    p = cast(char*)memchr(&s[i], c, s.length - i);
 		    if (!p)
 		    {
 			words[wordi] = s[i .. s.length];

@@ -48,22 +48,22 @@ alias int fexcept_t;	/// Floating point status flags
 /// The various floating point exceptions
 enum
 {
-    FE_INVALID		= 1,
-    FE_DENORMAL		= 2,
-    FE_DIVBYZERO	= 4,
-    FE_OVERFLOW		= 8,
-    FE_UNDERFLOW	= 0x10,
-    FE_INEXACT		= 0x20,
+    FE_INVALID		= 1,		///
+    FE_DENORMAL		= 2,		///
+    FE_DIVBYZERO	= 4,		///
+    FE_OVERFLOW		= 8,		///
+    FE_UNDERFLOW	= 0x10,		///
+    FE_INEXACT		= 0x20,		///
     FE_ALL_EXCEPT	= 0x3F,		/// Mask of all the exceptions
 }
 
 /// Rounding modes
 enum
 {
-    FE_TONEAREST	= 0,
-    FE_UPWARD		= 0x800,
-    FE_DOWNWARD		= 0x400,
-    FE_TOWARDZERO	= 0xC00,
+    FE_TONEAREST	= 0,		///
+    FE_UPWARD		= 0x800,	///
+    FE_DOWNWARD		= 0x400,	///
+    FE_TOWARDZERO	= 0xC00,	///
 }
 
 version (Windows)
@@ -73,7 +73,7 @@ version (Windows)
     /// Default floating point environment
     fenv_t* FE_DFL_ENV = &_FE_DFL_ENV;
 }
-else version (linux
+else version (linux)
 {
     /// Default floating point environment
     fenv_t* FE_DFL_ENV = cast(fenv_t*)(-1);
@@ -86,27 +86,27 @@ else
 /// Floating point precision
 enum
 {
-    FE_FLTPREC	= 0,
-    FE_DBLPREC	= 0x200,
-    FE_LDBLPREC	= 0x300,
+    FE_FLTPREC	= 0,			///
+    FE_DBLPREC	= 0x200,		///
+    FE_LDBLPREC	= 0x300,		///
 }
 
-int fetestexcept(int excepts);
-int feraiseexcept(int excepts);
-int feclearexcept(int excepts);
-//int fegetexcept(fexcept_t *flagp,int excepts);
-//int fesetexcept(fexcept_t *flagp,int excepts);
-int fegetround();
-int fesetround(int round);
-int fegetprec();
-int fesetprec(int prec);
-int fegetenv(fenv_t *envp);
-int fesetenv(fenv_t *envp);
-//void feprocentry(fenv_t *envp);
-//void feprocexit(const fenv_t *envp);
+int fetestexcept(int excepts);		///
+int feraiseexcept(int excepts);		///
+int feclearexcept(int excepts);		///
+//int fegetexcept(fexcept_t *flagp,int excepts);	///
+//int fesetexcept(fexcept_t *flagp,int excepts);	///
+int fegetround();			///
+int fesetround(int round);		///
+int fegetprec();			///
+int fesetprec(int prec);		///
+int fegetenv(fenv_t *envp);		///
+int fesetenv(fenv_t *envp);		///
+//void feprocentry(fenv_t *envp);	///
+//void feprocexit(const fenv_t *envp);	///
 
-int fegetexceptflag(fexcept_t *flagp,int excepts);
-int fesetexceptflag(fexcept_t *flagp,int excepts);
-int feholdexcept(fenv_t *envp);
-int feupdateenv(fenv_t *envp);
+int fegetexceptflag(fexcept_t *flagp,int excepts);	///
+int fesetexceptflag(fexcept_t *flagp,int excepts);	///
+int feholdexcept(fenv_t *envp);		///
+int feupdateenv(fenv_t *envp);		///
 

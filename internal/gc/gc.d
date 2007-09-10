@@ -30,7 +30,7 @@ module std.gc;
 
 import std.c.stdarg;
 import std.c.stdlib;
-import std.string;
+import std.c.string;
 import gcx;
 import std.outofmemory;
 import gcstats;

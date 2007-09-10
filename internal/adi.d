@@ -30,6 +30,7 @@
 import std.stdio;
 import std.c.stdio;
 import std.c.stdlib;
+import std.c.string;
 import std.string;
 import std.outofmemory;
 

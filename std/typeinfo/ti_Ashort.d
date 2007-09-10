@@ -2,6 +2,7 @@
 module std.typeinfo.ti_Ashort;
 
 private import std.string;
+private import std.c.string;
 
 // short[]
 

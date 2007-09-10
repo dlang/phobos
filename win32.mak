@@ -101,7 +101,17 @@ DOCS=	$(DOC)\std_path.html $(DOC)\std_math.html $(DOC)\std_outbuffer.html \
 	$(DOC)\std_regexp.html \
 	$(DOC)\std_bitarray.html \
 	$(DOC)\std_stdio.html \
-	$(DOC)\std_windows_charset.html
+	$(DOC)\std_windows_charset.html \
+	$(DOC)\std_c_fenv.html \
+	$(DOC)\std_c_math.html \
+	$(DOC)\std_c_process.html \
+	$(DOC)\std_c_stdarg.html \
+	$(DOC)\std_c_stddef.html \
+	$(DOC)\std_c_stdio.html \
+	$(DOC)\std_c_stdlib.html \
+	$(DOC)\std_c_string.html \
+	$(DOC)\std_c_time.html \
+	$(DOC)\std_c_wcharh.html
 
 SRC=	errno.c object.d unittest.d crc32.d gcstats.d
 
@@ -117,7 +127,7 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 	std\cstream.d std\demangle.d std\cover.d std\bitarray.d
 
 SRC_STD_C= std\c\process.d std\c\stdlib.d std\c\time.d std\c\stdio.d \
-	std\c\math.d std\c\stdarg.d std\c\stddef.d std\c\fenv.d
+	std\c\math.d std\c\stdarg.d std\c\stddef.d std\c\fenv.d std\c\string.d
 
 SRC_TI=	\
 	std\typeinfo\ti_wchar.d std\typeinfo\ti_uint.d \
@@ -841,6 +851,36 @@ $(DOC)\std_windows_charset.html : std.ddoc std\windows\charset.d
 
 $(DOC)\object.html : std.ddoc internal\object.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\object.html std.ddoc internal\object.d
+
+$(DOC)\std_c_fenv.html : std.ddoc std\c\fenv.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_c_fenv.html std.ddoc std\c\fenv.d
+
+$(DOC)\std_c_math.html : std.ddoc std\c\math.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_c_math.html std.ddoc std\c\math.d
+
+$(DOC)\std_c_process.html : std.ddoc std\c\process.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_c_process.html std.ddoc std\c\process.d
+
+$(DOC)\std_c_stdarg.html : std.ddoc std\c\stdarg.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_c_stdarg.html std.ddoc std\c\stdarg.d
+
+$(DOC)\std_c_stddef.html : std.ddoc std\c\stddef.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_c_stddef.html std.ddoc std\c\stddef.d
+
+$(DOC)\std_c_stdio.html : std.ddoc std\c\stdio.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_c_stdio.html std.ddoc std\c\stdio.d
+
+$(DOC)\std_c_stdlib.html : std.ddoc std\c\stdlib.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_c_stdlib.html std.ddoc std\c\stdlib.d
+
+$(DOC)\std_c_string.html : std.ddoc std\c\string.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_c_string.html std.ddoc std\c\string.d
+
+$(DOC)\std_c_time.html : std.ddoc std\c\time.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_c_time.html std.ddoc std\c\time.d
+
+$(DOC)\std_c_wcharh.html : std.ddoc std\c\wcharh.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_c_wcharh.html std.ddoc std\c\wcharh.d
 
 
 ######################################################

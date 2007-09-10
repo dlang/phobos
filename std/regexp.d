@@ -24,14 +24,14 @@
  */
 
 /**********************************************
- * $(LINK2 "../../ctg/regular.html", Regular expressions)
+ * $(LINK2 ../../../ctg/regular.html, Regular expressions)
  * are a powerful method of string pattern matching.
  * The regular expression
  * language used is the same as that commonly used, however, some of the very
  * advanced forms may behave slightly differently.
  *
  * In the following guide, $(I pattern)[] refers to a
- * $(LINK2 "../../ctg/regular.html", regular expression).
+ * $(LINK2 ../../../ctg/regular.html, regular expression).
  * The $(I attributes)[] refers to
 	a string controlling the interpretation
 	of the regular expression.
@@ -97,6 +97,7 @@ private
 {
     import std.c.stdio;
     import std.c.stdlib;
+    import std.c.string;
     import std.string;
     import std.ctype;
     import std.outbuffer;

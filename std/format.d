@@ -36,6 +36,7 @@ import std.stdarg;	// caller will need va_list
 
 private import std.utf;
 private import std.c.stdlib;
+private import std.c.string;
 private import std.string;
 
 version (Windows)

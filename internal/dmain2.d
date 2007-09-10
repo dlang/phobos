@@ -6,6 +6,7 @@
 
 import object;
 import std.c.stdio;
+import std.c.string;
 import std.c.stdlib;
 import std.string;
 

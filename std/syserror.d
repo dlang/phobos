@@ -10,6 +10,7 @@ module std.syserror;
 deprecated class SysError
 {
     private import std.c.stdio;
+    private import std.c.string;
     private import std.string;
 
     static char[] msg(uint errcode)
