@@ -2046,7 +2046,7 @@ char[] toString(ubyte ub)  { return toString(cast(uint) ub); }
 char[] toString(ushort us) { return toString(cast(uint) us); }
 
 char[] toString(uint u)
-{   char[uint.sizeof * 3] buffer;
+{   char[uint.sizeof * 3] buffer = void;
     int ndigits;
     char c;
     char[] result;

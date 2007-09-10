@@ -9,17 +9,18 @@ class TypeInfo_Aa : TypeInfo
 
     uint getHash(void *p)
     {	char[] s = *cast(char[]*)p;
-	uint len = s.length;
-	char *str = s;
 	uint hash = 0;
 
-version (none)
+version (all)
 {
 	foreach (char c; s)
-	    hash = hash * 31 + c;
+	    hash = hash * 11 + c;
 }
 else
 {
+	uint len = s.length;
+	char *str = s;
+
 	while (1)
 	{
 	    switch (len)

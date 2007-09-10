@@ -104,6 +104,7 @@ enum : int
 
 extern (C)
 {
+    int access(char*, int);
     int open(char*, int, ...);
     int read(int, void*, int);
     int write(int, void*, int);

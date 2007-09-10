@@ -598,22 +598,34 @@ out (result)
     assert(!cap || cap > result.length * size);
 }
 body
-{   byte[] a;
-    uint len;
+{
+    version (none)
+    {
+	/* Cannot use this optimization because:
+	 *  char[] a, b;
+	 *  char c = 'a';
+	 *	b = a ~ c;
+	 *	c = 'b';
+	 * will change the contents of b.
+	 */
+	if (!y.length)
+	    return x;
+	if (!x.length)
+	    return y;
+    }
 
-    if (!y.length)
-	return x;
-    if (!x.length)
-	return y;
+    size_t xlen = x.length * size;
+    size_t ylen = y.length * size;
+    size_t len = xlen + ylen;
+    if (!len)
+	return null;
 
-    len = x.length + y.length;
-    a = new byte[len * size];
-    memcpy(a, x, x.length * size);
-    //a[0 .. x.length * size] = x[];
-    memcpy(&a[x.length * size], y, y.length * size);
-    *cast(int *)&a = len;	// jam length
-    //a.length = len;
-    return a;
+    byte* p = cast(byte*)_gc.malloc(len + 1);
+    memcpy(p, x, xlen);
+    memcpy(p + xlen, y, ylen);
+    p[len] = 0;
+
+    return p[0 .. x.length + y.length];
 }
 
 

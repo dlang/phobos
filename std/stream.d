@@ -1,3 +1,4 @@
+
 /*
  * Copyright (c) 2001-2005
  * Pavel "EvilOne" Minayev
@@ -162,9 +163,9 @@ interface InputStream {
   // has effect on further calls to getc() and getcw()
   wchar ungetcw(wchar c);
 
-  int vscanf(char[] fmt, va_list args);
+  int vreadf(TypeInfo[] arguments, va_list args);
 
-  int scanf(char[] format, ...);
+  int readf(...);
 
   size_t available();
   bool eof();
@@ -231,10 +232,10 @@ interface OutputStream {
   size_t printf(char[] format, ...);
 
   // writes data to stream using writef() syntax and returns self
-  Stream writef(...);
+  OutputStream writef(...);
 
   // writes data with trailing newline and returns self
-  Stream writefln(...);
+  OutputStream writefln(...);
 
   void flush();
   void close();
@@ -541,11 +542,40 @@ class Stream : InputStream, OutputStream {
     return c;
   }
 
-  int vscanf(char[] fmt, va_list args) {
-    void** arg = cast(void**) args;
+  int vreadf(TypeInfo[] arguments, va_list args) {
+    char[] fmt;
+    int j = 0;
     int count = 0, i = 0;
     char c = getc();
-    while (i < fmt.length && !eof()) {
+    while ((j < arguments.length || i < fmt.length) && !eof()) {
+      if (fmt.length == 0 || i == fmt.length) {
+	i = 0;
+	if (arguments[j] is typeid(char[])) {
+	  fmt = va_arg!(char[])(args);
+	  j++;
+	  continue;
+	} else if (arguments[j] is typeid(int*) ||
+		   arguments[j] is typeid(byte*) ||
+		   arguments[j] is typeid(short*) ||
+		   arguments[j] is typeid(long*)) {
+	  fmt = "%d";
+	} else if (arguments[j] is typeid(uint*) ||
+		   arguments[j] is typeid(ubyte*) ||
+		   arguments[j] is typeid(ushort*) ||
+		   arguments[j] is typeid(ulong*)) {
+	  fmt = "%d";
+	} else if (arguments[j] is typeid(float*) ||
+		   arguments[j] is typeid(double*) ||
+		   arguments[j] is typeid(real*)) {
+	  fmt = "%f";
+	} else if (arguments[j] is typeid(char[]*) ||
+		   arguments[j] is typeid(wchar[]*) ||
+		   arguments[j] is typeid(dchar[]*)) {
+	  fmt = "%s";
+	} else if (arguments[j] is typeid(char*)) {
+	  fmt = "%c";
+	}
+      }
       if (fmt[i] == '%') {	// a field
 	i++;
 	bit suppress = false;
@@ -561,21 +591,9 @@ class Stream : InputStream, OutputStream {
 	}
 	if (width == 0)
 	  width = -1;
-	// D string?
-	bit dstr = false;
-	if (fmt[i] == '.') {
+	// skip any modifier if present
+	if (fmt[i] == 'h' || fmt[i] == 'l' || fmt[i] == 'L')
 	  i++;
-	  if (fmt[i] == '*') {
-	    dstr = true;
-	    i++;
-	  }
-	}
-	// read the modifier
-	char modifier = fmt[i];
-	if (modifier == 'h' || modifier == 'l' || modifier == 'L')
-	  i++;
-	else
-	  modifier = 0;
 	// check the typechar and act accordingly
 	switch (fmt[i]) {
 	case 'd':	// decimal/hexadecimal/octal integer
@@ -654,20 +672,32 @@ class Stream : InputStream, OutputStream {
 	    }
 	    if (neg)
 	      n = -n;
-	    // check the modifier and cast the pointer
-	    // to appropriate type
-	    switch (modifier) {
-	    case 'h': {	// short
-	      *cast(short*)*arg = n;
-	    } break;
-
-	    case 'L': {	// long
-	      *cast(long*)*arg = n;
-	    } break;
-
-	    default:	// int
-	      *cast(int*)*arg = n;
+	    if (arguments[j] is typeid(int*)) {
+	      int* p = va_arg!(int*)(args);
+	      *p = n;
+	    } else if (arguments[j] is typeid(short*)) {
+	      short* p = va_arg!(short*)(args);
+	      *p = n;
+	    } else if (arguments[j] is typeid(byte*)) {
+	      byte* p = va_arg!(byte*)(args);
+	      *p = n;
+	    } else if (arguments[j] is typeid(long*)) {
+	      long* p = va_arg!(long*)(args);
+	      *p = n;
+	    } else if (arguments[j] is typeid(uint*)) {
+	      uint* p = va_arg!(uint*)(args);
+	      *p = n;
+	    } else if (arguments[j] is typeid(ushort*)) {
+	      ushort* p = va_arg!(ushort*)(args);
+	      *p = n;
+	    } else if (arguments[j] is typeid(ubyte*)) {
+	      ubyte* p = va_arg!(ubyte*)(args);
+	      *p = n;
+	    } else if (arguments[j] is typeid(ulong*)) {
+	      ulong* p = va_arg!(ulong*)(args);
+	      *p = n;
 	    }
+	    j++;
 	    i++;
 	  } break;
 
@@ -746,45 +776,62 @@ class Stream : InputStream, OutputStream {
 	    }
 	    if (neg)
 	      n = -n;
-	    // check the modifier and cast the pointer
-	    // to appropriate type
-	    switch (modifier) {
-	    case 'l': {	// double
-	      *cast(double*)*arg = n;
-	    } break;
-
-	    case 'L': {	// real
-	      *cast(real*)*arg = n;
-	    } break;
-
-	    default:	// float
-	      *cast(float*)*arg = n;
+	    if (arguments[j] is typeid(float*)) {
+	      float* p = va_arg!(float*)(args);
+	      *p = n;
+	    } else if (arguments[j] is typeid(double*)) {
+	      double* p = va_arg!(double*)(args);
+	      *p = n;
+	    } else if (arguments[j] is typeid(real*)) {
+	      real* p = va_arg!(real*)(args);
+	      *p = n;
 	    }
+	    j++;
 	    i++;
 	  } break;
 
-	case 's': {	// ANSI string
+	case 's': {	// string
 	  while (iswhite(c)) {
 	    c = getc();
 	    count++;
 	  }
 	  char[] s;
+	  char[]* p;
+	  size_t strlen;
+	  if (arguments[j] is typeid(char[]*)) {
+	    p = va_arg!(char[]*)(args);
+	    s = *p;
+	  }
 	  while (!iswhite(c) && c != char.init) {
-	    s ~= c;
+	    if (strlen < s.length) {
+	      s[strlen] = c;
+	    } else {
+	      s ~= c;
+	    }
+	    strlen++;
 	    c = getc();
 	    count++;
 	  }
-	  if (dstr)	// D string (char[])
-	    *cast(char[]*)*arg = s;
-	  else {		// C string (char*)
+	  s = s[0 .. strlen];
+	  if (arguments[j] is typeid(char[]*)) {
+	    *p = s;
+	  } else if (arguments[j] is typeid(char*)) {
 	    s ~= 0;
-	    (cast(char*)*arg)[0 .. s.length] = s[];
+	    char* p = va_arg!(char*)(args);
+	    p[0 .. s.length] = s[];
+	  } else if (arguments[j] is typeid(wchar[]*)) {
+	    wchar[]* p = va_arg!(wchar[]*)(args);
+	    *p = toUTF16(s);
+	  } else if (arguments[j] is typeid(dchar[]*)) {
+	    dchar[]* p = va_arg!(dchar[]*)(args);
+	    *p = toUTF32(s);
 	  }
+	  j++;
 	  i++;
 	} break;
 
 	case 'c': {	// character(s)
-	  char* s = cast(char*)*arg;
+	  char* s = va_arg!(char*)(args);
 	  if (width < 0)
 	    width = 1;
 	  else
@@ -797,18 +844,20 @@ class Stream : InputStream, OutputStream {
 	    c = getc();
 	    count++;
 	  }
+	  j++;
 	  i++;
 	} break;
 
 	case 'n': {	// number of chars read so far
-	  *cast(int*)*arg = count;
+	  int* p = va_arg!(int*)(args);
+	  *p = count;
+	  j++;
 	  i++;
 	} break;
 
 	default:	// read character as is
 	  goto nws;
 	}
-	arg++;
       } else if (iswhite(fmt[i])) {	// skip whitespace
 	while (iswhite(c))
 	  c = getc();
@@ -825,11 +874,8 @@ class Stream : InputStream, OutputStream {
     return count;
   }
 
-  int scanf(char[] format, ...) {
-    va_list ap;
-    ap = cast(va_list) &format;
-    ap += format.sizeof;
-    return vscanf(format, ap);
+  int readf(...) {
+    return vreadf(_arguments, _argptr);
   }
 
   // returns estimated number of bytes available for immediate reading
@@ -976,13 +1022,13 @@ class Stream : InputStream, OutputStream {
   }
 
   // writes data to stream using writef() syntax,
-  Stream writef(...) {
+  OutputStream writef(...) {
     doFormat(&doFormatCallback,_arguments,_argptr);
     return this;
   }
 
   // writes data with trailing newline
-  Stream writefln(...) {
+  OutputStream writefln(...) {
     doFormat(&doFormatCallback,_arguments,_argptr);
     writeLine("");
     return this;

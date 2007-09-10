@@ -804,6 +804,9 @@ uint getAttributes(char[] name)
 
 int exists(char[] name)
 {
+    return access(toStringz(name),0) != 0;
+
+/+
     struct_stat statbuf;
     char *namez;
 
@@ -812,8 +815,8 @@ int exists(char[] name)
     {
 	return 0;
     }
-
     return 1;
++/
 }
 
 /****************************************************
