@@ -43,6 +43,7 @@ class OutBuffer
     {
 	//printf("this = %p, offset = %x, data.length = %u\n", this, offset, data.length);
 	assert(offset <= data.length);
+	assert(data.length <= std.gc.capacity(data.ptr));
     }
 
     this()
@@ -73,13 +74,15 @@ class OutBuffer
 	out
 	{
 	    assert(offset + nbytes <= data.length);
+	    assert(data.length <= std.gc.capacity(data.ptr));
 	}
 	body
 	{
-	    //c.stdio.printf("OutBuffer.reserve: length = %d, offset = %d, nbytes = %d\n", data.length, offset, nbytes);
 	    if (data.length < offset + nbytes)
 	    {
+		//std.c.stdio.printf("OutBuffer.reserve: ptr = %p, length = %d, offset = %d, nbytes = %d, capacity = %d\n", data.ptr, data.length, offset, nbytes, std.gc.capacity(data.ptr));
 		data.length = (offset + nbytes) * 2;
+		//std.c.stdio.printf("OutBuffer.reserve: ptr = %p, length = %d, capacity = %d\n", data.ptr, data.length, std.gc.capacity(data.ptr));
 		std.gc.hasPointers(data.ptr);
 	    }
 	}

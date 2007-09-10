@@ -20,6 +20,7 @@ CFLAGS=-mn -6 -r
 #CFLAGS=-g -mn -6 -r
 
 DFLAGS=-O -release -nofloat -w
+#DFLAGS=-nofloat -w
 #DFLAGS=-unittest -g -w
 #DFLAGS=-unittest -cov -g
 

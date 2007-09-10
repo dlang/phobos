@@ -33,7 +33,7 @@ const
      * version_major.version_minor
      */
     uint version_major = 1;
-    uint version_minor = 002;	/// ditto
+    uint version_minor = 15;	/// ditto
 
 
     /**

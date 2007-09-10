@@ -1018,6 +1018,30 @@ class TypeInfo_Tuple : TypeInfo
     }
 }
 
+class TypeInfo_Const : TypeInfo
+{
+    char[] toString() { return "const " ~ base.toString(); }
+
+    int opEquals(Object o) { return base.opEquals(o); }
+    hash_t getHash(void *p) { return base.getHash(p); }
+    int equals(void *p1, void *p2) { return base.equals(p1, p2); }
+    int compare(void *p1, void *p2) { return base.compare(p1, p2); }
+    size_t tsize() { return base.tsize(); }
+    void swap(void *p1, void *p2) { return base.swap(p1, p2); }
+
+    TypeInfo next() { return base.next(); }
+    uint flags() { return base.flags(); }
+    void[] init() { return base.init(); }
+
+    TypeInfo base;
+}
+
+class TypeInfo_Invariant : TypeInfo_Const
+{
+    char[] toString() { return "invariant " ~ base.toString(); }
+}
+
+
 /**
  * All recoverable exceptions should be derived from class Exception.
  */

@@ -463,7 +463,10 @@ class GC
 		if (i == pool.ncommitted)
 		    break;
 		if (pool.pagetable[i] != B_FREE)
+		{   if (sz < minsz)
+			return 0;
 		    break;
+		}
 	    }
 	    if (sz >= minsz)
 	    {
@@ -473,11 +476,14 @@ class GC
 		auto u = pool.extendPages(minsz - sz);
 		if (u == ~0u)
 		    return 0;
+		sz = minsz;
 	    }
 	    else
 		return 0;
 	    debug (MEMSTOMP) memset(p + psize, 0xF0, (psz + sz) * PAGESIZE - psize);
 	    memset(pool.pagetable + pagenum + psz, B_PAGEPLUS, sz);
+	    gcx.p_cache = null;
+	    gcx.size_cache = 0;
 	    return (psz + sz) * PAGESIZE;
 	}
     }

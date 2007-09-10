@@ -148,6 +148,15 @@ class TypeInfo_Tuple : TypeInfo
     TypeInfo[] elements;
 }
 
+class TypeInfo_Const : TypeInfo
+{
+    TypeInfo next;
+}
+
+class TypeInfo_Invariant : TypeInfo_Const
+{
+}
+
 // Recoverable errors
 
 class Exception : Object

@@ -1,3 +1,6 @@
+
+/* This module is obsolete and will be removed eventually */
+
 /*
  * Copyright (c) 2002
  * Pavel "EvilOne" Minayev

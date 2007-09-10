@@ -103,8 +103,7 @@ extern (C) int main(size_t argc, char **argv)
 	    }
 	    else
 	    {
-		fprintf(stderr, "Error: ");
-		fprintf(stderr, "%.*s", o.toString());
+		fprintf(stderr, "Error: %.*s\n", o.toString());
 	    }
 	    exit(EXIT_FAILURE);
 	}
