@@ -208,20 +208,25 @@ char* toStringz(char[] string)
     }
     body
     {
-	char* p;
 	char[] copy;
 
 	if (string.length == 0)
 	    return "";
 
-	p = &string[0] + string.length;
+	/+ Unfortunately, this isn't reliable.
+	   We could make this work if string literals are put
+	   in read-only memory and we test if string[] is pointing into
+	   that.
 
-	// Peek past end of string[], if it's 0, no conversion necessary.
-	// Note that the compiler will put a 0 past the end of static
-	// strings, and the storage allocator will put a 0 past the end
-	// of newly allocated char[]'s.
-	if (*p == 0)
-	    return string;
+	    /* Peek past end of string[], if it's 0, no conversion necessary.
+	     * Note that the compiler will put a 0 past the end of static
+	     * strings, and the storage allocator will put a 0 past the end
+	     * of newly allocated char[]'s.
+	     */
+	    char* p = &string[0] + string.length;
+	    if (*p == 0)
+		return string;
+	+/
 
 	// Need to make a copy
 	copy = new char[string.length + 1];

@@ -1,3 +1,9 @@
+/*
+ *  Placed into the public domain.
+ *  Written by Walter Bright
+ *  www.digitalmars.com
+ */
+
 
 #include <math.h>
 

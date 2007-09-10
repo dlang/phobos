@@ -1,4 +1,5 @@
 /*
+	Portions of this file are:
 	Copyright Prototronics, 1987
 	Totem Lake P.O. 8117
 	Kirkland, Washington 98034
@@ -7,6 +8,9 @@
 
 	June 11, 1987 from Ray Gardner's
 	Denver, Colorado) public domain version
+
+	Use qsort2.d instead of this file if a redistributable version of
+	_adSort() is required.
 */
 
 

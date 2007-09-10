@@ -66,6 +66,13 @@ printf("test2\n");
     printf("args.length = %d\n", args.length);
     for (int i = 0; i < args.length; i++)
 	printf("args[%d] = '%s'\n", i, cast(char *)args[i]);
+
+    int[3] x;
+    x[0] = 3;
+    x[1] = 45;
+    x[2] = -1;
+    x.sort;
+
     printf("Success\n!");
     return 0;
 }

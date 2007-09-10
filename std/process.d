@@ -46,6 +46,20 @@ private void toAStringz(char[][] a, char**az)
     *az = null;
 }
 
+
+/* ========================================================== */
+
+int spawnvp(int mode, char[] pathname, char[][] argv)
+{
+    char** argv_ = cast(char**)alloca((char*).sizeof * (1 + argv.length));
+
+    toAStringz(argv, argv_);
+
+    return std.c.process.spawnvp(mode, toStringz(pathname), argv_);
+}
+
+/* ========================================================== */
+
 int execv(char[] pathname, char[][] argv)
 {
     char** argv_ = cast(char**)alloca((char*).sizeof * (1 + argv.length));

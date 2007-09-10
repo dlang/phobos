@@ -60,7 +60,7 @@ OBJS= asserterror.obj deh.obj switch.obj complex.obj gcstats.obj \
 	cast.obj syserror.obj path.obj string.obj memset.obj math.obj \
 	outbuffer.obj ctype.obj regexp.obj random.obj windows.obj \
 	stream.obj switcherr.obj com.obj array.obj gc.obj mmfile.obj \
-	qsort.obj math2.obj date.obj dateparse.obj thread.obj obj.obj \
+	qsort.obj qsort.2.d math2.obj date.obj dateparse.obj thread.obj obj.obj \
 	iunknown.obj crc32.obj conv.obj arraycast.obj utf.obj uri.obj \
 	Czlib.obj Dzlib.obj zip.obj process.obj registry.obj recls.obj \
 	socket.obj socketstream.obj loader.obj stdarg.obj format.obj stdio.obj \
@@ -334,7 +334,7 @@ SRC_RECLS_NEW= \
 
 phobos.lib : $(OBJS) minit.obj internal\gc\dmgc.lib etc\c\zlib\zlib.lib \
 	win32.mak etc\c\recls\recls.lib
-	lib -c phobos.lib $(OBJS) minit.obj internal\gc\dmgc.lib \
+	lib -c -p32 phobos.lib $(OBJS) minit.obj internal\gc\dmgc.lib \
 		etc\c\recls\recls.lib etc\c\zlib\zlib.lib
 
 ######################################################
@@ -679,7 +679,7 @@ ti_int.obj : std\typeinfo\ti_int.d
 
 ######################################################
 
-zip : win32.mak linux.mak $(SRC) \
+zip : win32.mak linux.mak phoboslicense.txt $(SRC) \
 	$(SRC_STD) $(SRC_STD_C) $(SRC_TI) $(SRC_INT) $(SRC_STD_WIN) \
 	$(SRC_STDLINUX) $(SRC_ETC) $(SRC_ETC_C) $(SRC_ZLIB) $(SRC_GC)
 	del phobos.zip
@@ -704,7 +704,7 @@ clean:
 
 install:
 	$(CP) phobos.lib gcstub.obj \dmd\lib
-	$(CP) win32.mak linux.mak minit.obj \dmd\src\phobos
+	$(CP) win32.mak linux.mak phoboslicense.txt minit.obj \dmd\src\phobos
 	$(CP) $(SRC) \dmd\src\phobos
 	$(CP) $(SRC_STD) \dmd\src\phobos\std
 	$(CP) $(SRC_STD_C) \dmd\src\phobos\std\c

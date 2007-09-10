@@ -1,4 +1,10 @@
 
+/*
+ * Placed into the Public Domain
+ * written by Walter Bright
+ * www.digitalmars.com
+ */
+
 void _d_invariant(Object o)
 {   ClassInfo c;
 

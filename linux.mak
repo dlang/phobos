@@ -52,7 +52,7 @@ OBJS= asserterror.o deh2.o switch.o complex.o gcstats.o \
 	cast.o path.o string.o memset.o math.o mmfile.o \
 	outbuffer.o ctype.o regexp.o random.o linux.o \
 	stream.o switcherr.o array.o gc.o \
-	qsort.o thread.o obj.o utf.o uri.o \
+	qsort.o qsort2.o thread.o obj.o utf.o uri.o \
 	crc32.o conv.o arraycast.o errno.o alloca.o cmath2.o \
 	process.o syserror.o \
 	socket.o socketstream.o stdarg.o stdio.o format.o \
@@ -700,9 +700,9 @@ ti_bit.o : std/typeinfo/ti_bit.d
 
 ##########################################################333
 
-zip : $(ALLSRCS) linux.mak win32.mak
+zip : $(ALLSRCS) linux.mak win32.mak phoboslicense.txt
 	rm phobos.zip
-	zip phobos $(ALLSRCS) linux.mak win32.mak
+	zip phobos $(ALLSRCS) linux.mak win32.mak phoboslicense.txt
 
 clean:
 	rm $(OBJS) unittest unittest.o

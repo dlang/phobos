@@ -887,3 +887,22 @@ void listdir(char[] pathname, bool delegate(char[] filename) callback)
 }
 
 }
+
+/***************************************************
+ * Copy a file.
+ */
+
+void copy(char[] from, char[] to)
+{
+    void[] buffer;
+
+    /* If the file is very large, this won't work, but
+     * it's a good start.
+     */
+    buffer = read(from);
+    write(to, buffer);
+    delete buffer;
+}
+
+
+
