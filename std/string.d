@@ -1,4 +1,6 @@
 
+// Written in the D programming language.
+
 /**
  * String handling functions.
  *
@@ -807,36 +809,40 @@ unittest
 
 char[] tolower(char[] s)
 {
-    int changed;
-    int i;
-    char[] r = s;
+    bool changed;
+    auto r = s;
 
-    changed = 0;
-    for (i = 0; i < s.length; i++)
+    for (size_t i = 0; i < s.length; i++)
     {
 	auto c = s[i];
 	if ('A' <= c && c <= 'Z')
 	{
 	    if (!changed)
-	    {	r = s.dup;
-		changed = 1;
+	    {
+		r = s.dup;
+		changed = true;
 	    }
 	    r[i] = c + (cast(char)'a' - 'A');
 	}
 	else if (c >= 0x7F)
 	{
-	    foreach (size_t j, dchar dc; s[i .. length])
+	    foreach(size_t j, dchar dc; s[i .. length])
 	    {
-		if (!changed)
+		if (std.uni.isUniUpper(dc))
 		{
-		    if (!std.uni.isUniUpper(dc))
-			continue;
-
-		    r = s[0 .. i + j].dup;
-		    changed = 1;
+		    dc = std.uni.toUniLower(dc);
+		    if (!changed)
+		    {
+			r = s[0 .. i + j].dup;
+			changed = true;
+		    }
 		}
-		dc = std.uni.toUniLower(dc);
-		std.utf.encode(r, dc);
+		if (changed)
+		{
+		    if (r.length != i + j)
+			r = r[0 .. i + j];
+		    std.utf.encode(r, dc);
+		}
 	    }
 	    break;
 	}
@@ -854,6 +860,16 @@ unittest
     s2 = tolower(s1);
     assert(cmp(s2, "fol") == 0);
     assert(s2 != s1);
+
+    s1 = "A\u0100B\u0101d";
+    s2 = tolower(s1);
+    assert(cmp(s2, "a\u0101b\u0101d") == 0);
+    assert(s2 !is s1);
+
+    s1 = "A\u0460B\u0461d";
+    s2 = tolower(s1);
+    assert(cmp(s2, "a\u0461b\u0461d") == 0);
+    assert(s2 !is s1);
 }
 
 /************************************
@@ -862,36 +878,40 @@ unittest
 
 char[] toupper(char[] s)
 {
-    int changed;
-    int i;
-    char[] r = s;
+    bool changed;
+    auto r = s;
 
-    changed = 0;
-    for (i = 0; i < s.length; i++)
+    for (size_t i = 0; i < s.length; i++)
     {
 	auto c = s[i];
 	if ('a' <= c && c <= 'z')
 	{
 	    if (!changed)
-	    {	r = s.dup;
-		changed = 1;
+	    {
+		r = s.dup;
+		changed = true;
 	    }
 	    r[i] = c - (cast(char)'a' - 'A');
 	}
 	else if (c >= 0x7F)
 	{
-	    foreach (size_t j, dchar dc; s[i .. length])
+	    foreach(size_t j, dchar dc; s[i .. length])
 	    {
-		if (!changed)
+		if (std.uni.isUniLower(dc))
 		{
-		    if (!std.uni.isUniLower(dc))
-			continue;
-
-		    r = s[0 .. i + j].dup;
-		    changed = 1;
+		    dc = std.uni.toUniUpper(dc);
+		    if (!changed)
+		    {
+			r = s[0 .. i + j].dup;
+			changed = true;
+		    }
 		}
-		dc = std.uni.toUniUpper(dc);
-		std.utf.encode(r, dc);
+		if (changed)
+		{
+		    if (r.length != i + j)
+			r = r[0 .. i + j];
+		    std.utf.encode(r, dc);
+		}
 	    }
 	    break;
 	}
@@ -908,6 +928,16 @@ unittest
 
     s2 = toupper(s1);
     assert(cmp(s2, "FOL") == 0);
+    assert(s2 !is s1);
+
+    s1 = "a\u0100B\u0101d";
+    s2 = toupper(s1);
+    assert(cmp(s2, "A\u0100B\u0100D") == 0);
+    assert(s2 !is s1);
+
+    s1 = "a\u0460B\u0461d";
+    s2 = toupper(s1);
+    assert(cmp(s2, "A\u0460B\u0460D") == 0);
     assert(s2 !is s1);
 }
 

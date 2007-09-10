@@ -74,6 +74,7 @@ OBJS= asserterror.obj deh.obj switch.obj complex.obj gcstats.obj \
 	perf.obj openrj.obj uni.obj winsock.obj oldsyserror.obj \
 	errno.obj boxer.obj cstream.obj charset.obj \
 	gamma.obj demangle.obj cover.obj bitarray.obj aApplyR.obj \
+	signals.obj cpuid.obj \
 	ti_Aa.obj ti_Ag.obj ti_C.obj ti_int.obj ti_char.obj \
 	ti_wchar.obj ti_uint.obj ti_short.obj ti_ushort.obj \
 	ti_byte.obj ti_ubyte.obj ti_long.obj ti_ulong.obj ti_ptr.obj \
@@ -98,6 +99,7 @@ DOCS=	$(DOC)\std_path.html $(DOC)\std_math.html $(DOC)\std_outbuffer.html \
 	$(DOC)\std_conv.html \
 	$(DOC)\std_boxer.html \
 	$(DOC)\std_cover.html \
+	$(DOC)\std_cpuid.html \
 	$(DOC)\std_cstream.html \
 	$(DOC)\std_ctype.html \
 	$(DOC)\std_demangle.html \
@@ -108,6 +110,7 @@ DOCS=	$(DOC)\std_path.html $(DOC)\std_math.html $(DOC)\std_outbuffer.html \
 	$(DOC)\std_outofmemory.html \
 	$(DOC)\std_process.html \
 	$(DOC)\std_regexp.html \
+	$(DOC)\std_signals.html \
 	$(DOC)\std_socket.html \
 	$(DOC)\std_socketstream.html \
 	$(DOC)\std_stdint.html \
@@ -119,6 +122,7 @@ DOCS=	$(DOC)\std_path.html $(DOC)\std_math.html $(DOC)\std_outbuffer.html \
 	$(DOC)\std_utf.html \
 	$(DOC)\std_windows_charset.html \
 	$(DOC)\std_c_fenv.html \
+	$(DOC)\std_c_locale.html \
 	$(DOC)\std_c_math.html \
 	$(DOC)\std_c_process.html \
 	$(DOC)\std_c_stdarg.html \
@@ -141,10 +145,12 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 	std\regexp.d std\random.d std\stream.d std\process.d \
 	std\socket.d std\socketstream.d std\loader.d std\stdarg.d std\format.d \
 	std\stdio.d std\perf.d std\openrj.d std\uni.d std\boxer.d \
-	std\cstream.d std\demangle.d std\cover.d std\bitarray.d
+	std\cstream.d std\demangle.d std\cover.d std\bitarray.d \
+	std\signals.d std\cpuid.d
 
 SRC_STD_C= std\c\process.d std\c\stdlib.d std\c\time.d std\c\stdio.d \
-	std\c\math.d std\c\stdarg.d std\c\stddef.d std\c\fenv.d std\c\string.d
+	std\c\math.d std\c\stdarg.d std\c\stddef.d std\c\fenv.d std\c\string.d \
+	std\c\locale.d
 
 SRC_TI=	\
 	std\typeinfo\ti_wchar.d std\typeinfo\ti_uint.d \
@@ -346,6 +352,9 @@ conv.obj : std\conv.d
 cover.obj : std\cover.d
 	$(DMD) -c $(DFLAGS) std\cover.d
 
+cpuid.obj : std\cpuid.d
+	$(DMD) -c $(DFLAGS) std\cpuid.d -ofcpuid.obj
+
 cstream.obj : std\cstream.d
 	$(DMD) -c $(DFLAGS) std\cstream.d
 
@@ -414,6 +423,9 @@ random.obj : std\random.d
 
 regexp.obj : std\regexp.d
 	$(DMD) -c $(DFLAGS) std\regexp.d
+
+signals.obj : std\signals.d
+	$(DMD) -c $(DFLAGS) std\signals.d -ofsignals.obj
 
 socket.obj : std\socket.d
 	$(DMD) -c $(DFLAGS) std\socket.d -ofsocket.obj
@@ -658,6 +670,9 @@ $(DOC)\std_conv.html : std.ddoc std\conv.d
 $(DOC)\std_cover.html : std.ddoc std\cover.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_cover.html std.ddoc std\cover.d
 
+$(DOC)\std_cpuid.html : std.ddoc std\cpuid.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_cpuid.html std.ddoc std\cpuid.d
+
 $(DOC)\std_cstream.html : std.ddoc std\cstream.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_cstream.html std.ddoc std\cstream.d
 
@@ -712,6 +727,9 @@ $(DOC)\std_random.html : std.ddoc std\random.d
 $(DOC)\std_regexp.html : std.ddoc std\regexp.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_regexp.html std.ddoc std\regexp.d
 
+$(DOC)\std_signals.html : std.ddoc std\signals.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_signals.html std.ddoc std\signals.d
+
 $(DOC)\std_socket.html : std.ddoc std\socket.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_socket.html std.ddoc std\socket.d
 
@@ -759,6 +777,9 @@ $(DOC)\object.html : std.ddoc internal\object.d
 
 $(DOC)\std_c_fenv.html : std.ddoc std\c\fenv.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_c_fenv.html std.ddoc std\c\fenv.d
+
+$(DOC)\std_c_locale.html : std.ddoc std\c\locale.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_c_locale.html std.ddoc std\c\locale.d
 
 $(DOC)\std_c_math.html : std.ddoc std\c\math.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_c_math.html std.ddoc std\c\math.d

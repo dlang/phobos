@@ -1,6 +1,6 @@
 
 /*
- *  Copyright (C) 1999-2005 by Digital Mars, www.digitalmars.com
+ *  Copyright (C) 1999-2006 by Digital Mars, www.digitalmars.com
  *  Written by Walter Bright
  *
  *  This software is provided 'as-is', without any express or implied
@@ -50,6 +50,8 @@ import std.boxer;
 import std.bitarray;
 import std.uni;
 import std.file;
+import std.signals;
+import std.cpuid;
 
 int main(char[][] args)
 {
@@ -116,6 +118,10 @@ printf("test2\n");
 
     foreach_reverse (dchar d; "hello"c) { ; }
     foreach_reverse (k, dchar d; "hello"c) { ; }
+
+    std.signals.linkin();
+
+    writefln(std.cpuid.toString());
 
     printf("Success\n!");
     return 0;

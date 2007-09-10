@@ -151,7 +151,7 @@ class Object
      */
     final void notifyRegister(void delegate(Object) dg)
     {
-	printf("notifyRegister(dg = %llx, o = %p)\n", dg, this);
+	//printf("notifyRegister(dg = %llx, o = %p)\n", dg, this);
 	synchronized (this)
 	{
 	    Monitor* m = cast(Monitor*)(cast(void**)this)[1];
@@ -208,7 +208,7 @@ class Object
 
 extern (C) void _d_notify_release(Object o)
 {
-    printf("_d_notify_release(o = %p)\n", o);
+    //printf("_d_notify_release(o = %p)\n", o);
     Monitor* m = cast(Monitor*)(cast(void**)o)[1];
     if (m.delegates.length)
     {
@@ -222,7 +222,7 @@ extern (C) void _d_notify_release(Object o)
 	foreach (dg; dgs)
 	{
 	    if (dg)
-	    {	printf("calling dg = %llx (%p)\n", dg, o);
+	    {	//printf("calling dg = %llx (%p)\n", dg, o);
 		dg(o);
 	    }
 	}

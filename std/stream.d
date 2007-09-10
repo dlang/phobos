@@ -1625,7 +1625,7 @@ class BufferedStream : FilterStream {
   // reusing the memory in buffer if result will fit, otherwise
   // will reallocate (using concatenation)
   template TreadLine(T) {
-    override T[] readLine(T[] inBuffer)
+    T[] readLine(T[] inBuffer)
       {
 	size_t    lineSize = 0;
 	bool    haveCR = false;
