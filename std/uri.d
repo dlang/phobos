@@ -21,6 +21,18 @@
  *     distribution.
  */
 
+/*************************
+ * Encode and decode Uniform Resource Identifiers (URIs).
+ * URIs are used in internet transfer protocols.
+ * Valid URI characters consist of letters, digits,
+ * and the characters ;/?:@&=+$,-_.!~*'(). Escape sequences consist of '%'
+ * followed by two hex digits.
+ *
+ * See_Also:
+ *	$(LINK2 http://www.ietf.org/rfc/rfc3986.txt, RFC 3986)<br>
+ *	$(LINK2 http://en.wikipedia.org/wiki/Uniform_resource_identifier, Wikipedia)
+ */
+
 module std.uri;
 
 //debug=uri;		// uncomment to turn on debugging printf's
@@ -319,6 +331,12 @@ LthrowURIerror:
     return null;
 }
 
+/*************************************
+ * Decodes the URI string encodedURI into a UTF-8 string and returns it. Escape
+ * sequences that resolve to valid URI characters are not replaced. Escape
+ * sequences that resolve to the '#' character are not replaced.
+ */
+
 char[] decode(char[] encodedURI)
 {
     dchar[] s;
@@ -326,6 +344,11 @@ char[] decode(char[] encodedURI)
     s = URI_Decode(encodedURI, URI_Reserved | URI_Hash);
     return std.utf.toUTF8(s);
 }
+
+/*******************************
+ * Decodes the URI string encodedURI into a UTF-8 string and returns it. All
+ * escape sequences are decoded.
+ */
 
 char[] decodeComponent(char[] encodedURIComponent)
 {
@@ -335,6 +358,11 @@ char[] decodeComponent(char[] encodedURIComponent)
     return std.utf.toUTF8(s);
 }
 
+/*****************************
+ * Encodes the UTF-8 string uri into a URI and returns that URI. Any character
+ * not a valid URI character is escaped. The '#' character is not escaped.
+ */
+
 char[] encode(char[] uri)
 {
     dchar[] s;
@@ -342,6 +370,11 @@ char[] encode(char[] uri)
     s = std.utf.toUTF32(uri);
     return URI_Encode(s, URI_Reserved | URI_Hash | URI_Alpha | URI_Digit | URI_Mark);
 }
+
+/********************************
+ * Encodes the UTF-8 string uriComponent into a URI and returns that URI.
+ * Any character not a letter, digit, or one of -_.!~*'() is escaped.
+ */
 
 char[] encodeComponent(char[] uriComponent)
 {

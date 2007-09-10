@@ -90,8 +90,9 @@ const dchar PS = '\u2029';	/// UTF paragraph separator
 
 int iswhite(dchar c)
 {
-    return (c <= 0x7F) ? find(whitespace, c) != -1
-		       : (c == PS || c == LS);
+    return (c <= 0x7F)
+		? find(whitespace, c) != -1
+		: (c == PS || c == LS);
 }
 
 /*********************************

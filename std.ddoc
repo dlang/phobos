@@ -52,6 +52,7 @@ DDOC = <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 &nbsp;<a href="std_boxer.html" title="Box/unbox types">std.boxer</a><br>
 &nbsp;<a href="std_compiler.html" title="Information about the D compiler implementation">std.compiler</a><br>
 &nbsp;<a href="std_conv.html" title="Conversion of strings to integers">std.conv</a><br>
+&nbsp;<a href="std_cover.html" title="D coverage analyzer">std.cover</a><br>
 &nbsp;<a href="std_ctype.html" title="Simple character classification">std.ctype</a><br>
 &nbsp;<a href="std_date.html" title="Date and time functions">std.date</a><br>
 &nbsp;<a href="std_demangle.html" title="Demangle D names">std.demangle</a><br>

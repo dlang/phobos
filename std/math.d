@@ -1612,7 +1612,7 @@ in
 }
 body
 {
-    version (D_InlineAsm)
+    version (D_InlineAsm_X86)
     {
 	asm	// assembler by W. Bright
 	{

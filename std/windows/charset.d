@@ -83,7 +83,7 @@ char* toMBSz(char[] s, uint codePage = 0)
  *   0 - ANSI,
  *   1 - OEM,
  *   2 - Mac
- * Authors: Steward Gordon, Walter Bright
+ * Authors: Stewart Gordon, Walter Bright
  */
 
 char[] fromMBSz(char* s, int codePage = 0)

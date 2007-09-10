@@ -36,8 +36,10 @@ const
     {
 	Windows95 = 1,
 	Windows98,
+	WindowsME,
 	WindowsNT,
 	Windows2000,
+	WindowsXP,
 
 	RedHatLinux,
     }
@@ -58,7 +60,7 @@ const
 
 // The rest should get filled in dynamically at runtime
 
-OS os = OS.WindowsNT;
+OS os = OS.WindowsXP;
 
 // Operating system version as in
 // os_major.os_minor

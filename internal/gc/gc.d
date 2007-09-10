@@ -1,6 +1,6 @@
 
 /*
- *  Copyright (C) 2004 by Digital Mars, www.digitalmars.com
+ *  Copyright (C) 2004-2005 by Digital Mars, www.digitalmars.com
  *  Written by Walter Bright
  *
  *  This software is provided 'as-is', without any express or implied
@@ -193,7 +193,7 @@ void _d_delclass(Object *p)
     }
 }
 
-ulong _d_new(uint length, uint size)
+ulong _d_new(size_t length, size_t size)
 {
     void *p;
     ulong result;
@@ -211,7 +211,7 @@ ulong _d_new(uint length, uint size)
     return result;
 }
 
-ulong _d_newarrayi(uint length, uint size, ...)
+ulong _d_newarrayi(size_t length, size_t size, ...)
 {
     void *p;
     ulong result;
@@ -223,7 +223,7 @@ ulong _d_newarrayi(uint length, uint size, ...)
     {
 	//void* q = cast(void*)(&size + 1);	// pointer to initializer
 	va_list q;
-	va_start!(uint)(q, size);			// q is pointer to ... initializer
+	va_start!(size_t)(q, size);		// q is pointer to ... initializer
 	p = _gc.malloc(length * size + 1);
 	debug(PRINTF) printf(" p = %p\n", p);
 	if (size == 1)
@@ -241,7 +241,7 @@ ulong _d_newarrayi(uint length, uint size, ...)
     return result;
 }
 
-ulong _d_newbitarray(uint length, bit value)
+ulong _d_newbitarray(size_t length, bit value)
 {
     void *p;
     ulong result;
@@ -250,7 +250,7 @@ ulong _d_newbitarray(uint length, bit value)
     if (length == 0)
 	result = 0;
     else
-    {	uint size = (length + 8) >> 3;	// number of bytes
+    {	size_t size = (length + 8) >> 3;	// number of bytes
 	ubyte fill = value ? 0xFF : 0;
 
 	p = _gc.malloc(size);
@@ -263,7 +263,7 @@ ulong _d_newbitarray(uint length, bit value)
 
 struct Array
 {
-    uint length;
+    size_t length;
     byte *data;
 };
 
@@ -342,10 +342,15 @@ void _d_callfinalizer(void *p)
  */
 
 extern (C)
-byte[] _d_arraysetlength(uint newlength, uint sizeelem, Array *p)
+byte[] _d_arraysetlength(size_t newlength, size_t sizeelem, Array *p)
+in
+{
+    assert(sizeelem);
+    assert(!p.length || p.data);
+}
+body
 {
     byte* newdata;
-    uint newsize;
 
     debug(PRINTF)
     {
@@ -354,18 +359,37 @@ byte[] _d_arraysetlength(uint newlength, uint sizeelem, Array *p)
 	    printf("\tp.data = %p, p.length = %d\n", p.data, p.length);
     }
 
-    assert(sizeelem);
-    assert(!p.length || p.data);
     if (newlength)
     {
-	newsize = sizeelem * newlength;
-	if (p.length)
-	{   uint size = p.length * sizeelem;
+	version (D_InlineAsm_X86)
+	{
+	    size_t newsize = void;
 
-	    newdata = p.data;
-	    if (newsize > size)
+	    asm
 	    {
-		uint cap = _gc.capacity(p.data);
+		mov	EAX,newlength	;
+		mul	EAX,sizeelem	;
+		mov	newsize,EAX	;
+		jc	Loverflow	;
+	    }
+	}
+	else
+	{
+	    size_t newsize = sizeelem * newlength;
+
+	    if (newsize / newlength != sizeelem)
+		goto Loverflow;
+	}
+	//printf("newsize = %x, newlength = %x\n", newsize, newlength);
+
+	if (p.length)
+	{
+	    newdata = p.data;
+	    if (newlength > p.length)
+	    {
+		size_t size = p.length * sizeelem;
+		size_t cap = _gc.capacity(p.data);
+
 		if (cap <= newsize)
 		{
 		    newdata = cast(byte *)_gc.malloc(newsize + 1);
@@ -387,6 +411,9 @@ byte[] _d_arraysetlength(uint newlength, uint sizeelem, Array *p)
     p.data = newdata;
     p.length = newlength;
     return newdata[0 .. newlength];
+
+Loverflow:
+    _d_OutOfMemory();
 }
 
 /***************************
@@ -394,10 +421,10 @@ byte[] _d_arraysetlength(uint newlength, uint sizeelem, Array *p)
  */
 
 extern (C)
-bit[] _d_arraysetlengthb(uint newlength, Array *p)
+bit[] _d_arraysetlengthb(size_t newlength, Array *p)
 {
     byte* newdata;
-    uint newsize;
+    size_t newsize;
 
     debug (PRINTF)
 	printf("p = %p, newlength = %d\n", p, newlength);
@@ -407,12 +434,12 @@ bit[] _d_arraysetlengthb(uint newlength, Array *p)
     {
 	newsize = ((newlength + 31) >> 5) * 4;	// # bytes rounded up to uint
 	if (p.length)
-	{   uint size = ((p.length + 31) >> 5) * 4;
+	{   size_t size = ((p.length + 31) >> 5) * 4;
 
 	    newdata = p.data;
 	    if (newsize > size)
 	    {
-		uint cap = _gc.capacity(p.data);
+		size_t cap = _gc.capacity(p.data);
 		if (cap <= newsize)
 		{
 		    newdata = cast(byte *)_gc.malloc(newsize + 1);
@@ -442,16 +469,15 @@ bit[] _d_arraysetlengthb(uint newlength, Array *p)
  */
 
 extern (C)
-long _d_arrayappend(Array *px, byte[] y, uint size)
+long _d_arrayappend(Array *px, byte[] y, size_t size)
 {
 
-    uint cap = _gc.capacity(px.data);
-    uint length = px.length;
-    uint newlength = length + y.length;
+    size_t cap = _gc.capacity(px.data);
+    size_t length = px.length;
+    size_t newlength = length + y.length;
     if (newlength * size > cap)
     {   byte* newdata;
 
-	//newdata = cast(byte *)_gc.malloc(newlength * size);
 	newdata = cast(byte *)_gc.malloc(newCapacity(newlength, size) + 1);
 	memcpy(newdata, px.data, length * size);
 	px.data = newdata;
@@ -465,10 +491,10 @@ extern (C)
 long _d_arrayappendb(Array *px, bit[] y)
 {
 
-    uint cap = _gc.capacity(px.data);
-    uint length = px.length;
-    uint newlength = length + y.length;
-    uint newsize = (newlength + 7) / 8;
+    size_t cap = _gc.capacity(px.data);
+    size_t length = px.length;
+    size_t newlength = length + y.length;
+    size_t newsize = (newlength + 7) / 8;
     if (newsize > cap)
     {	void* newdata;
 
@@ -493,11 +519,11 @@ long _d_arrayappendb(Array *px, bit[] y)
 }
 
 
-uint newCapacity(uint newlength, uint size)
+size_t newCapacity(size_t newlength, size_t size)
 {
     version(none)
     {
-	uint newcap = newlength * size;
+	size_t newcap = newlength * size;
     }
     else
     {
@@ -519,8 +545,8 @@ uint newCapacity(uint newlength, uint size)
 	 * - Perhaps most importantly, overall memory usage and stress on the GC
 	 * is decreased significantly for demanding environments.
 	 */
-	uint newcap = newlength * size;
-	uint newext = 0;
+	size_t newcap = newlength * size;
+	size_t newext = 0;
 
 	if (newcap > 4096)
 	{
@@ -528,22 +554,22 @@ uint newCapacity(uint newlength, uint size)
 
 	    // Redo above line using only integer math
 
-	    int log2plus1(uint c)
+	    static int log2plus1(size_t c)
 	    {   int i;
 
-		    if (c == 0)
-			i = -1;
-		    else
-			for (i = 1; c >>= 1; i++)
-			    {   }
-		    return i;
+		if (c == 0)
+		    i = -1;
+		else
+		    for (i = 1; c >>= 1; i++)
+			{   }
+		return i;
 	    }
 
 	    long mult = 100 + (1000L * size) / (6 * log2plus1(newcap));
 	    // testing shows 1.02 for large arrays is about the point of diminishing return
 	    if (mult < 102)
 		mult = 102;
-	    newext = cast(uint)((newcap * mult) / 100);
+	    newext = cast(size_t)((newcap * mult) / 100);
 	    newext -= newext % size;
 	    //printf("mult: %2.2f, mult2: %2.2f, alloc: %2.2f\n",mult/100.0,mult2,newext / cast(double)size);
 	}
@@ -554,7 +580,7 @@ uint newCapacity(uint newlength, uint size)
 }
 
 extern (C)
-byte[] _d_arrayappendc(inout byte[] x, in uint size, ...)
+byte[] _d_arrayappendc(inout byte[] x, in size_t size, ...)
 {
     size_t cap = _gc.capacity(x);
     size_t length = x.length;
@@ -578,23 +604,23 @@ byte[] _d_arrayappendc(inout byte[] x, in uint size, ...)
 
     *cast(size_t *)&x = newlength;
     (cast(byte *)x)[length * size .. newlength * size] = argp[0 .. size];
-    assert((cast(uint)x.ptr & 15) == 0);
+    assert((cast(size_t)x.ptr & 15) == 0);
     assert(_gc.capacity(x.ptr) > x.length * size);
     return x;
 }
 
 extern (C)
-byte[] _d_arraycat(byte[] x, byte[] y, uint size)
+byte[] _d_arraycat(byte[] x, byte[] y, size_t size)
 out (result)
 {
     //printf("_d_arraycat(%d,%p ~ %d,%p size = %d => %d,%p)\n", x.length, x.ptr, y.length, y.ptr, size, result.length, result.ptr);
     assert(result.length == x.length + y.length);
-    for (uint i = 0; i < x.length * size; i++)
+    for (size_t i = 0; i < x.length * size; i++)
 	assert((cast(byte*)result)[i] == (cast(byte*)x)[i]);
-    for (uint i = 0; i < y.length * size; i++)
+    for (size_t i = 0; i < y.length * size; i++)
 	assert((cast(byte*)result)[x.length * size + i] == (cast(byte*)y)[i]);
 
-    uint cap = _gc.capacity(result.ptr);
+    size_t cap = _gc.capacity(result.ptr);
     assert(!cap || cap > result.length * size);
 }
 body
