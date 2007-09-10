@@ -80,6 +80,10 @@ else
     alias uint hash_t;
 }
 
+alias char[] string;
+alias wchar[] wstring;
+alias dchar[] dstring;
+
 /* *************************
  * Internal struct pointed to by the hidden .monitor member.
  */

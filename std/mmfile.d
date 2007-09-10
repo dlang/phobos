@@ -1,8 +1,25 @@
-// Copyright (c) 2004 by Digital Mars
-// All Rights Reserved
-// written by Walter Bright and Matthew Wilson (Synesis Software Pty Ltd.)
-// www.digitalmars.com
-// www.synesis.com.au/software
+/* Copyright 2004-2005 by Digital Mars
+ * Written by Walter Bright and Matthew Wilson
+ *
+ * This software is provided 'as-is', without any express or implied
+ * warranty. In no event will the authors be held liable for any damages
+ * arising from the use of this software.
+ *
+ * Permission is granted to anyone to use this software for any purpose,
+ * including commercial applications, and to alter it and redistribute it
+ * freely, in both source and binary form, subject to the following
+ * restrictions:
+ *
+ * -  The origin of this software must not be misrepresented; you must not
+ *    claim that you wrote the original software. If you use this software
+ *    in a product, an acknowledgment in the product documentation would be
+ *    appreciated but is not required.
+ * -  Altered source versions must be plainly marked as such, and must not
+ *    be misrepresented as being the original software.
+ * -  This notice may not be removed or altered from any source
+ *    distribution.
+ *
+ */
 
 /**
  * Read and write memory mapped files.

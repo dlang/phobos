@@ -8,51 +8,28 @@
  *
  * Author:      Matthew Wilson
  *
- * License:     (Licensed under the Synesis Software Standard Source License)
+ * License:
  *
- *              Copyright (C) 2002-2004, Synesis Software Pty Ltd.
+ * Copyright 2003-2004 by Matthew Wilson and Synesis Software
+ * Written by Matthew Wilson
  *
- *              All rights reserved.
+ * This software is provided 'as-is', without any express or implied
+ * warranty. In no event will the authors be held liable for any damages
+ * arising from the use of this software.
  *
- *              www:        http://www.synesis.com.au/software
- *                          http://www.synsoft.org/
+ * Permission is granted to anyone to use this software for any purpose,
+ * including commercial applications, and to alter it and redistribute it
+ * freely, in both source and binary form, subject to the following
+ * restrictions:
  *
- *              email:      submissions@synsoft.org  for submissions
- *                          admin@synsoft.org        for other enquiries
- *
- *              Redistribution and use in source and binary forms, with or
- *              without modification, are permitted provided that the following
- *              conditions are met:
- *
- *              (i) Redistributions of source code must retain the above
- *              copyright notice and contact information, this list of
- *              conditions and the following disclaimer.
- *
- *              (ii) Any derived versions of this software (howsoever modified)
- *              remain the sole property of Synesis Software.
- *
- *              (iii) Any derived versions of this software (howsoever modified)
- *              remain subject to all these conditions.
- *
- *              (iv) Neither the name of Synesis Software nor the names of any
- *              subdivisions, employees or agents of Synesis Software, nor the
- *              names of any other contributors to this software may be used to
- *              endorse or promote products derived from this software without
- *              specific prior written permission.
- *
- *              This source code is provided by Synesis Software "as is" and any
- *              warranties, whether expressed or implied, including, but not
- *              limited to, the implied warranties of merchantability and
- *              fitness for a particular purpose are disclaimed. In no event
- *              shall the Synesis Software be liable for any direct, indirect,
- *              incidental, special, exemplary, or consequential damages
- *              (including, but not limited to, procurement of substitute goods
- *              or services; loss of use, data, or profits; or business
- *              interruption) however caused and on any theory of liability,
- *              whether in contract, strict liability, or tort (including
- *              negligence or otherwise) arising in any way out of the use of
- *              this software, even if advised of the possibility of such
- *              damage.
+ * -  The origin of this software must not be misrepresented; you must not
+ *    claim that you wrote the original software. If you use this software
+ *    in a product, an acknowledgment in the product documentation would be
+ *    appreciated but is not required.
+ * -  Altered source versions must be plainly marked as such, and must not
+ *    be misrepresented as being the original software.
+ * -  This notice may not be removed or altered from any source
+ *    distribution.
  *
  * ////////////////////////////////////////////////////////////////////////// */
 

@@ -10,6 +10,10 @@ alias typeof(int.sizeof) size_t;
 alias typeof(cast(void*)0 - cast(void*)0) ptrdiff_t;
 alias size_t hash_t;
 
+alias char[] string;
+alias wchar[] wstring;
+alias dchar[] dstring;
+
 extern (C)
 {   int printf(char *, ...);
 }
