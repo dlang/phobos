@@ -33,7 +33,7 @@
 
 import std.utf;
 
-debug=apply;
+//debug=apply;
 
 /**********************************************/
 /* 1 argument versions */
