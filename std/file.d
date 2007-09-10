@@ -458,6 +458,8 @@ char[][] listdir(char[] pathname)
 	    do
 	    {   int i;
 		int clength;
+		wchar[] wbuf;
+		int n;
 
 		// Skip "." and ".."
 		if (std.string.strcmp(fileinfo.cFileName, ".") == 0 ||
@@ -467,7 +469,15 @@ char[][] listdir(char[] pathname)
 		i = result.length;
 		result.length = i + 1;
 		clength = std.string.strlen(fileinfo.cFileName);
-		result[i] = fileinfo.cFileName[0 .. clength].dup;
+
+		//result[i] = fileinfo.cFileName[0 .. clength].dup;
+
+		// Convert cFileName[] to unicode
+		wbuf.length = MultiByteToWideChar(0,0,fileinfo.cFileName,clength,null,0);
+		n = MultiByteToWideChar(0,0,fileinfo.cFileName,clength,cast(wchar*)wbuf,wbuf.length);
+		assert(n == wbuf.length);
+		result[i] = std.utf.toUTF8(wbuf);
+
 	    } while (FindNextFileA(h,&fileinfo) != FALSE);
 	    FindClose(h);
 	}

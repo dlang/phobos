@@ -969,10 +969,10 @@ unittest
             {
                 printf( "UnitTest failure for RegistryException:\n"
                         "  x.message [%d;\"%.*s\"] does not equal [%d;\"%.*s\"]\n"
-                    ,   x.message.length, x.message
+                    ,   x.msg.length, x.msg
                     ,   string.length, string);
             }
-            assert(message == x.message);
+            assert(message == x.msg);
         }
     }
     catch(Exception /* x */)

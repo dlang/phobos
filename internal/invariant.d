@@ -10,9 +10,9 @@ void _d_invariant(Object o)
     c = o.classinfo;
     do
     {
-	if (c._invariant)
+	if (c.classInvariant)
 	{
-	    (*c._invariant)(o);
+	    (*c.classInvariant)(o);
 	}
 	c = c.base;
     } while (c);

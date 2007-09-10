@@ -623,6 +623,11 @@ char[] capwords(char[] s)
 
 	if (c >= 'A' && c <= 'Z')
 	{
+	    if (inword == 1)
+	    {
+		c += cast(char)'a' - 'A';
+		r[i] = c;
+	    }
 	    inword = 1;
 	}
 	else if (c >= 'a' && c <= 'z')
@@ -646,12 +651,12 @@ unittest
 {
     debug(string) printf("string.capwords.unittest\n");
 
-    char[] s1 = "\tfoo abc(aD)*  \t  (q P  ";
+    char[] s1 = "\tfoo abc(aD)*  \t  (q PTT  ";
     char[] s2;
 
     s2 = capwords(s1);
     //printf("s2 = '%.*s'\n", s2);
-    assert(cmp(s2, "Foo Abc(AD)* (Q P") == 0);
+    assert(cmp(s2, "Foo Abc(Ad)* (Q Ptt") == 0);
 }
 
 
@@ -1485,7 +1490,21 @@ char[] toString(char c)
     char[] result = new char[2];
     result[0] = c;
     result[1] = 0;
-    return result;
+    return result[0 .. 1];
+}
+
+unittest
+{
+    debug(string) printf("string.toString(char).unittest\n");
+
+    char[] s = "foo";
+    char[] s2;
+    foreach (char c; s)
+    {
+	s2 ~= std.string.toString(c);
+    }
+    //printf("%.*s", s2);
+    assert(s2 == "foo");
 }
 
 char[] toString(ubyte ub)  { return toString(cast(uint) ub); }

@@ -58,7 +58,7 @@ class ClassInfo : Object
     Interface[] interfaces;
     ClassInfo base;
     void *destructor;
-    void (*_invariant)(Object);
+    void (*classInvariant)(Object);
     uint flags;
     //	1:			// IUnknown
     void *deallocator;
