@@ -1,6 +1,8 @@
 
 // Information about the target operating system, environment, and CPU
 
+module std.system;
+
 const
 {
 

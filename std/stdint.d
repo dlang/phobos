@@ -1,4 +1,5 @@
 
+module std.stdint;
 
 /* Exact sizes */
 

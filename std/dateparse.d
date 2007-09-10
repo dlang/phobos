@@ -6,9 +6,12 @@
 
 module std.dateparse;
 
-import std.string;
-import std.c.stdlib;
-import std.date;
+private
+{
+    import std.string;
+    import std.c.stdlib;
+    import std.date;
+}
 
 //debug=log;
 

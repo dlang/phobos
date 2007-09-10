@@ -1,6 +1,7 @@
 
-import object;
-import std.c.stdio;
+module std.array;
+
+private import std.c.stdio;
 
 class ArrayBoundsError : Error
 {

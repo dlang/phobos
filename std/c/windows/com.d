@@ -1,6 +1,8 @@
 
-import std.c.windows.windows;
-import std.string;
+module std.c.windows.com;
+
+private import std.c.windows.windows;
+private import std.string;
 
 alias WCHAR OLECHAR;
 alias OLECHAR *LPOLESTR;

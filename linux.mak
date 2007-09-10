@@ -11,6 +11,7 @@
 
 CFLAGS=-O
 #CFLAGS=-g
+
 DFLAGS=-O -release
 #DFLAGS=-unittest
 
@@ -44,15 +45,16 @@ unittest : unittest.o libphobos.a
 unittest.o : unittest.d
 	$(DMD) -c unittest
 
-OBJS= assert.o deh2.o switch.o complex.o gcstats.o \
+OBJS= asserterror.o deh2.o switch.o complex.o gcstats.o \
 	critical.o object.o monitor.o arraycat.o invariant.o \
 	dmain2.o outofmemory.o aaA.o adi.o file.o \
 	compiler.o system.o moduleinit.o \
-	cast.o syserror.o path.o string.o memset.o math.o \
+	cast.o path.o string.o memset.o math.o \
 	outbuffer.o ctype.o regexp.o random.o linux.o \
 	stream.o switcherr.o array.o gc.o \
 	qsort.o thread.o obj.o utf.o uri.o \
 	crc32.o conv.o arraycast.o errno.o alloca.o cmath2.o \
+	process.o syserror.o \
 	ti_wchar.o ti_uint.o ti_short.o ti_ushort.o \
 	ti_byte.o ti_ubyte.o ti_long.o ti_ulong.o ti_ptr.o \
 	ti_float.o ti_double.o ti_real.o ti_delegate.o \
@@ -61,12 +63,23 @@ OBJS= assert.o deh2.o switch.o complex.o gcstats.o \
 	ti_Aa.o ti_AC.o ti_Ag.o ti_Aubyte.o ti_Aushort.o ti_Ashort.o \
 	ti_C.o ti_int.o ti_char.o ti_dchar.o ti_Adchar.o \
 	ti_Aint.o ti_Auint.o ti_Along.o ti_Aulong.o ti_Awchar.o \
-	date.o dateparse.o llmath.o math2.o
+	date.o dateparse.o llmath.o math2.o Czlib.o Dzlib.o zip.o
+
+ZLIBOBJS= etc/c/zlib/adler32.o etc/c/zlib/compress.o \
+	etc/c/zlib/crc32.o etc/c/zlib/gzio.o \
+	etc/c/zlib/uncompr.o etc/c/zlib/deflate.o \
+	etc/c/zlib/trees.o etc/c/zlib/zutil.o \
+	etc/c/zlib/inflate.o etc/c/zlib/infblock.o \
+	etc/c/zlib/inftrees.o etc/c/zlib/infcodes.o \
+	etc/c/zlib/infutil.o etc/c/zlib/inffast.o
+
+GCOBJS= internal/gc/gc.o internal/gc/gcx.o \
+	internal/gc/gcbits.o internal/gc/gclinux.o
 
 #SRC= mars.h switch.d complex.c critical.c minit.asm \
 #	deh.c object.d gc.d math.d c/stdio.d c/stdlib.d time.d monitor.c \
 #	arraycat.d string.d windows.d path.d linuxextern.d \
-#	invariant.d assert.d regexp.d dmain2.d dateparse.d \
+#	invariant.d asserterror.d regexp.d dmain2.d dateparse.d \
 #	outofmemory.d syserror.d utf.d uri.d \
 #	ctype.d aaA.d adi.d file.d compiler.d system.d \
 #	moduleinit.d cast.d math.d qsort.d \
@@ -91,9 +104,9 @@ SRCSTD= std/zlib.d std/zip.d std/stdint.d std/conv.d std/utf.d std/uri.d \
 	std/gc.d std/math.d std/string.d std/path.d std/date.d \
 	std/ctype.d std/file.d std/compiler.d std/system.d std/moduleinit.d \
 	std/outbuffer.d std/math2.d std/thread.d \
-	std/assert.d std/dateparse.d std/outofmemory.d \
-	std/intrinsic.d std/array.d std/switcherr.d \
-	std/regexp.d std/random.d std/stream.d
+	std/asserterror.d std/dateparse.d std/outofmemory.d \
+	std/intrinsic.d std/array.d std/switcherr.d std/syserror.d \
+	std/regexp.d std/random.d std/stream.d std/process.d
 
 SRCSTDC= std/c/process.d std/c/stdlib.d std/c/time.d std/c/stdio.d
 
@@ -125,7 +138,7 @@ SRCINT=	\
 	internal/dmain2.d internal/cast.d internal/qsort.d internal/deh2.d \
 	internal/cmath2.d internal/obj.d internal/mars.h
 
-SRCSTDWIN= std/windows/registry.d std/windows/syserror.d \
+SRCSTDWIN= std/windows/registry.d \
 	std/windows/iunknown.d
 
 SRCSTDCWIN= std/c/windows/windows.d std/c/windows/com.d
@@ -134,44 +147,44 @@ SRCSTDCLINUX= std/c/linux/linux.d std/c/linux/linuxextern.d
 
 SRCETC= etc/c/zlib.d
 
-SRCZLIB= etc/c/zlib\algorithm.txt \
-	etc/c/zlib\trees.h \
-	etc/c/zlib\inffixed.h \
-	etc/c/zlib\INDEX \
-	etc/c/zlib\zconf.h \
-	etc/c/zlib\compress.c \
-	etc/c/zlib\adler32.c \
-	etc/c/zlib\uncompr.c \
-	etc/c/zlib\deflate.h \
-	etc/c/zlib\example.c \
-	etc/c/zlib\zutil.c \
-	etc/c/zlib\gzio.c \
-	etc/c/zlib\crc32.c \
-	etc/c/zlib\infblock.c \
-	etc/c/zlib\infblock.h \
-	etc/c/zlib\infcodes.c \
-	etc/c/zlib\infcodes.h \
-	etc/c/zlib\inffast.c \
-	etc/c/zlib\inffast.h \
-	etc/c/zlib\zutil.h \
-	etc/c/zlib\inflate.c \
-	etc/c/zlib\trees.c \
-	etc/c/zlib\inftrees.h \
-	etc/c/zlib\infutil.c \
-	etc/c/zlib\infutil.h \
-	etc/c/zlib\minigzip.c \
-	etc/c/zlib\inftrees.c \
-	etc/c/zlib\zlib.html \
-	etc/c/zlib\maketree.c \
-	etc/c/zlib\zlib.h \
-	etc/c/zlib\zlib.3 \
-	etc/c/zlib\FAQ \
-	etc/c/zlib\deflate.c \
-	etc/c/zlib\ChangeLog \
-	etc/c/zlib\win32.mak \
-	etc/c/zlib\linux.mak \
-	etc/c/zlib\zlib.lib \
-	etc/c/zlib\README
+SRCZLIB= etc/c/zlib/algorithm.txt \
+	etc/c/zlib/trees.h \
+	etc/c/zlib/inffixed.h \
+	etc/c/zlib/INDEX \
+	etc/c/zlib/zconf.h \
+	etc/c/zlib/compress.c \
+	etc/c/zlib/adler32.c \
+	etc/c/zlib/uncompr.c \
+	etc/c/zlib/deflate.h \
+	etc/c/zlib/example.c \
+	etc/c/zlib/zutil.c \
+	etc/c/zlib/gzio.c \
+	etc/c/zlib/crc32.c \
+	etc/c/zlib/infblock.c \
+	etc/c/zlib/infblock.h \
+	etc/c/zlib/infcodes.c \
+	etc/c/zlib/infcodes.h \
+	etc/c/zlib/inffast.c \
+	etc/c/zlib/inffast.h \
+	etc/c/zlib/zutil.h \
+	etc/c/zlib/inflate.c \
+	etc/c/zlib/trees.c \
+	etc/c/zlib/inftrees.h \
+	etc/c/zlib/infutil.c \
+	etc/c/zlib/infutil.h \
+	etc/c/zlib/minigzip.c \
+	etc/c/zlib/inftrees.c \
+	etc/c/zlib/zlib.html \
+	etc/c/zlib/maketree.c \
+	etc/c/zlib/zlib.h \
+	etc/c/zlib/zlib.3 \
+	etc/c/zlib/FAQ \
+	etc/c/zlib/deflate.c \
+	etc/c/zlib/ChangeLog \
+	etc/c/zlib/win32.mak \
+	etc/c/zlib/linux.mak \
+	etc/c/zlib/zlib.lib \
+	etc/c/zlib/README
 
 SRCGC= internal/gc/gc.d \
 	internal/gc/gcx.d \
@@ -187,8 +200,7 @@ ALLSRCS = $(SRC) $(SRCSTD) $(SRCSTDC) $(SRCTI) $(SRCINT) $(SRCSTDWIN) \
 
 
 libphobos.a : $(OBJS) internal/gc/dmgc.a linux.mak
-	ar -r $@ $(OBJS) internal/gc/gc.o internal/gc/gcx.o \
-	internal/gc/gcbits.o internal/gc/gclinux.o
+	ar -r $@ $(OBJS) $(ZLIBOBJS) $(GCOBJS)
 
 ###########################################################
 
@@ -267,8 +279,8 @@ switch.o : internal/switch.d
 array.o : std/array.d
 	$(DMD) -c $(DFLAGS) std/array.d
 
-assert.o : std/assert.d
-	$(DMD) -c $(DFLAGS) std/assert.d
+asserterror.o : std/asserterror.d
+	$(DMD) -c $(DFLAGS) std/asserterror.d
 
 compiler.o : std/compiler.d
 	$(DMD) -c $(DFLAGS) std/compiler.d
@@ -312,6 +324,9 @@ outofmemory.o : std/outofmemory.d
 path.o : std/path.d
 	$(DMD) -c $(DFLAGS) std/path.d
 
+process.o : std/process.d
+	$(DMD) -c $(DFLAGS) std/process.d
+
 random.o : std/random.d
 	$(DMD) -c $(DFLAGS) std/random.d
 
@@ -329,6 +344,9 @@ switcherr.o : std/switcherr.d
 
 system.o : std/system.d
 	$(DMD) -c $(DFLAGS) std/system.d
+
+syserror.o : std/syserror.d
+	$(DMD) -c $(DFLAGS) std/syserror.d
 
 thread.o : std/thread.d
 	$(DMD) -c $(DFLAGS) std/thread.d
@@ -465,9 +483,9 @@ ti_int.o : std/typeinfo/ti_int.d
 
 ##########################################################333
 
-zip : $(ALLSRCS)
+zip : $(ALLSRCS) linux.mak win32.mak
 	rm phobos.zip
-	zip phobos $(ALLSRCS)
+	zip phobos $(ALLSRCS) linux.mak win32.mak
 
 clean:
 	rm $(OBJS)

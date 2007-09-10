@@ -18,12 +18,14 @@
 // The code is not optimized for speed, that will have to wait
 // until the design is solidified.
 
+module std.string;
+
 //debug=string;		// uncomment to turn on debugging printf's
 
-debug(string)
-{
-    import std.c.stdio;	// for printf()
-}
+private import std.c.stdio;
+private import std.c.stdlib;
+private import std.outbuffer;
+private import std.utf;
 
 extern (C)
 {
@@ -48,7 +50,7 @@ extern (C)
 
 /************** Exceptions ****************/
 
-class StringError : Error
+class StringException : Exception
 {
     this(char[] msg)
     {
@@ -1187,7 +1189,7 @@ body
 
 unittest
 {
-    debug(string) printf("string.replaceSlice.unittest()\n");
+    debug(string) printf("string.replaceSlice.unittest\n");
 
     char[] string = "hello";
     char[] slice = string[2 .. 4];
@@ -1462,7 +1464,7 @@ char[] toString(uint u)
 
 unittest
 {
-    debug(string) printf("string.toString.unittest\n");
+    debug(string) printf("string.toString(uint).unittest\n");
 
     char[] r;
     int i;
@@ -1491,7 +1493,7 @@ char[] toString(char *s)
 
 unittest
 {
-    debug(string) printf("string.toString.unittest\n");
+    debug(string) printf("string.toString(char*).unittest\n");
 
     char[] r;
     int i;
@@ -1505,4 +1507,101 @@ unittest
     assert(i == 0);
 }
 
+
+/*****************************************************
+ */
+
+char[] format(char[] fmt, ...)
+{
+    OutBuffer b = new OutBuffer();
+    va_list ap;
+    ap = cast(va_list)&fmt;
+    ap += fmt.size;
+    b.reserve(fmt.length);
+    int fmtlength = fmt.length;
+    char[] s;
+
+    for (int i = 0; i < fmtlength; i++)
+    {
+	char c = fmt[i];
+	if (c != '%')
+	{   b.write(c);
+	    continue;
+	}
+	i++;
+	if (i == fmtlength)
+	{   b.write(c);
+	    continue;
+	}
+	c = fmt[i];
+	switch (c)
+	{
+	    case '%':
+		b.write(c);
+		break;
+
+	    case 'c':
+	    {	dchar dc;
+
+		dc = *cast(dchar*)ap;
+		ap += dc.size;
+		if (dc <= 0x7F)
+		    b.write(cast(char)dc);
+		else
+		{   char[] s;
+
+		    if (!isValidDchar(dc))
+			throw new StringException("invalid dchar value");
+		    std.utf.encode(s, dc);
+		    b.write(cast(ubyte[])s);
+		}
+		break;
+	    }
+
+	    case 's':
+		s = *cast(char[]*)ap;
+		ap += s.size;
+		b.write(cast(ubyte[])s);
+		break;
+
+	    default:
+		throw new StringException("invalid format");
+		break;
+	}
+    }
+
+    return cast(char[])b.toBytes();
+}
+
+unittest
+{
+    debug(string) printf("std.string.format.unittest\n");
+
+    char[] r;
+    int i;
+
+    r = format(null);
+    i = cmp(r, "");
+    assert(i == 0);
+
+    r = format("foo");
+    i = cmp(r, "foo");
+    assert(i == 0);
+
+    r = format("foo%%");
+    i = cmp(r, "foo%");
+    assert(i == 0);
+
+    r = format("foo%c", 'C');
+    i = cmp(r, "fooC");
+    assert(i == 0);
+
+    r = format("%s foo", "bar");
+    i = cmp(r, "bar foo");
+    assert(i == 0);
+
+    r = format("%s foo %s", "bar", "abc");
+    i = cmp(r, "bar foo abc");
+    assert(i == 0);
+}
 

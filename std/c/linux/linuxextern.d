@@ -7,6 +7,8 @@
  * Put them separate so they'll be externed - do not link in linuxextern.o
  */
 
+module std.c.linux.linuxextern;
+
 extern (C)
 {
     void* __libc_stack_end;

@@ -8,7 +8,7 @@ module std.math;
 
 //debug=math;		// uncomment to turn on debugging printf's
 
-import std.c.stdio;
+private import std.c.stdio;
 
 /* Intrinsics */
 

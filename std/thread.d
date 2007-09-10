@@ -3,6 +3,8 @@
 // written by Walter Bright
 // www.digitalmars.com
 
+module std.thread;
+
 //debug=thread;
 
 /* ================================ Win32 ================================= */
@@ -10,7 +12,7 @@
 version (Win32)
 {
 
-import std.c.windows.windows;
+private import std.c.windows.windows;
 
 extern (Windows) alias uint (*stdfp)(void *);
 

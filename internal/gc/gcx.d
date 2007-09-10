@@ -29,6 +29,7 @@ version = MULTI_THREADED;	// produce multithreaded version
 
 debug (PRINTF) import std.c.stdio;
 
+import std.c.stdio;
 import std.c.stdlib;
 import gcbits;
 import std.outofmemory;
@@ -814,7 +815,7 @@ struct Gcx
 		}
 		if (i + 1 < npools)
 		{
-		    assert(pool.cmp(pooltable[i + 1]) < 0);
+		    assert(pool.opCmp(pooltable[i + 1]) < 0);
 		}
 		else if (i + 1 == npools)
 		{
@@ -1177,7 +1178,7 @@ struct Gcx
 	    // Sort pool into newpooltable[]
 	    for (i = 0; i < npools; i++)
 	    {
-		if (pool.cmp(newpooltable[i]) < 0)
+		if (pool.opCmp(newpooltable[i]) < 0)
 		     break;
 	    }
 	    memmove(newpooltable + i + 1, newpooltable + i, (npools - i) * (Pool *).size);
@@ -1978,7 +1979,7 @@ struct Pool
      * Used for sorting pooltable[]
      */
 
-    int cmp(Pool *p2)
+    int opCmp(Pool *p2)
     {
 	return baseAddr - p2.baseAddr;
     }

@@ -1,10 +1,15 @@
 
+module std.moduleinit;
+
 //debug = 1;
 
-import object;
-import std.c.stdio;
-import std.c.stdlib;
-import std.string;
+private
+{
+    import object;
+    import std.c.stdio;
+    import std.c.stdlib;
+    import std.string;
+}
 
 enum
 {   MIctorstart = 1,	// we've started constructing it

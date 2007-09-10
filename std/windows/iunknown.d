@@ -1,7 +1,7 @@
 
 module std.windows.iunknown;
 
-import std.c.windows.windows;
+private import std.c.windows.windows;
 
 alias int HRESULT;
 

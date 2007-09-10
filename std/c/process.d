@@ -2,6 +2,8 @@
 /* Interface to the C header file process.h
  */
 
+module std.c.process;
+
 extern (C):
 
 void exit(int);

@@ -9,12 +9,7 @@ module std.path;
 
 //debug=path;		// uncomment to turn on debugging printf's
 
-debug(path)
-{
-    import std.c.stdio;	// for printf()
-}
-
-import std.string;
+private import std.string;
 
 version(Win32)
 {

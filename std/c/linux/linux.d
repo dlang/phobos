@@ -52,7 +52,7 @@ enum
     O_APPEND = 02000,
 }
 
-struct stat
+struct struct_stat	// distinguish it from the stat() function
 {
     ulong st_dev;
     ushort __pad1;
@@ -78,9 +78,21 @@ struct stat
 
 unittest
 {
-    assert(stat.size == 88);
+    assert(struct_stat.size == 88);
 }
 
+enum : int
+{
+    S_IFIFO  = 0010000,
+    S_IFCHR  = 0020000,
+    S_IFDIR  = 0040000,
+    S_IFBLK  = 0060000,
+    S_IFREG  = 0100000,
+    S_IFLNK  = 0120000,
+    S_IFSOCK = 0140000,
+
+    S_IFMT   = 0170000
+}
 
 extern (C)
 {
@@ -89,8 +101,13 @@ extern (C)
     int write(int, void*, int);
     int close(int);
     int lseek(int, int, int);
-    int fstat(int, stat*);
+    int fstat(int, struct_stat*);
+    int stat(char*, struct_stat*);
     int getErrno();
+    int chdir(char*);
+    int mkdir(char*, int);
+    int rmdir(char*);
+    char* getcwd(char*, int);
 }
 
 struct timeval

@@ -4,7 +4,7 @@
  * Purpose:     Win32 Registry manipulation
  *
  * Created      15th March 2003
- * Updated:     6th November 2003
+ * Updated:     18th October 2003
  *
  * Author:      Matthew Wilson
  *
@@ -58,8 +58,8 @@
 
 
 
-/** \file std/windows/registry.d This file contains
- * the \c std.windows.registry.* classes
+/** \file D/win32/registry.d This file contains
+ * the \c D.win32.registry.* classes
  */
 
 /* ////////////////////////////////////////////////////////////////////////// */
@@ -69,10 +69,6 @@ module std.windows.registry;
 /* /////////////////////////////////////////////////////////////////////////////
  * Imports
  */
-
-import std.windows.error_codes;
-import std.windows.exceptions;
-import std.windows.types;
 
 //import synsoft.types;
 /+ + These are borrowed from synsoft.types, until such time as something similar is in Phobos ++
@@ -106,6 +102,165 @@ public enum Endian
     ,   Ambient =   Big
   }
 +/
+}
+/+
+ +/
+
+
+//import synsoft.win32.types;
+/+ + These are borrowed from synsoft.win32.types for the moment, but will not be
+ + needed once I've convinced Walter to use strong typedefs for things like HKEY +
+ +/
+public typedef uint Reserved;
+public typedef void *HKEY;
+public alias HKEY   *PHKEY;
+public alias char   *LPCSTR;
+public alias int    LONG;
+public alias uint   DWORD;
+public alias DWORD  *LPDWORD;
+public alias void   *LPSECURITY_ATTRIBUTES;
+public alias char   *LPSTR;
+public alias char   *LPCSTR;
+public alias void   *LPCVOID;
+public struct FILETIME
+{
+    DWORD   dwLowDateTime;
+    DWORD   dwHighDateTime;
+};
+/+
+ +/
+
+
+//import synsoft.win32.error_codes;
+/+ +++++++ These are in here for now, but will be in windows.d very soon +++++++
+ +/
+public const LONG   ERROR_SUCCESS           =   0;
+public const LONG   ERROR_ACCESS_DENIED     =   5;
+public const LONG   ERROR_MORE_DATA         =   234;
+public const LONG   ERROR_NO_MORE_ITEMS     =   259;
+/+
+ +/
+
+
+//import synsoft.win32.exception;
+/+ +++ This is in here, until the Phobos exception hierarchy is implemented ++++
+ +/
+class Win32Exception
+    : Exception
+{
+/// \name Construction
+//@{
+public:
+    /// \brief Creates an instance of the exception
+    ///
+    /// \param message The message associated with the exception
+    this(char[] message)
+    {
+        this(message, GetLastError());
+    }
+    /// \brief Creates an instance of the exception, with the given 
+    ///
+    /// \param message The message associated with the exception
+    /// \param error The Win32 error number associated with the exception
+    this(char[] message, int error)
+    {
+        char    sz[24]; // Enough for the three " ()" characters and a 64-bit integer value
+        int     cch = wsprintfA(sz, " (%d)", error);
+
+        m_message = message;
+        m_error   = error;
+
+        super(message ~ sz[0 .. cch]);
+    }
+//@}
+
+/// \name Attributes
+//@{
+public:
+    /// Returns the message string associated with the exception
+    char[] Message()
+    {
+        return m_message;
+    }
+
+    /// Returns the Win32 error code associated with the exception
+    int Error()
+    {
+        return m_error;
+    }
+
+    /// Converts the error code into a string
+    ///
+    /// \note Not yet implemented
+    char[] LookupError(char[] moduleName)
+    {
+        return null;
+    }
+
+//@}
+
+/// \name Members
+//@{
+private:
+    char[]  m_message;
+    int     m_error;
+//@}
+}
+
+unittest
+{
+    // (i) Test that we can throw and catch one by its own type
+    try
+    {
+        char[]  message =   "Test 1";
+        int     code    =   3;
+        char[]  string  =   "Test 1 (3)";
+
+        try
+        {
+            throw new Win32Exception(message, code);
+        }
+        catch(Win32Exception x)
+        {
+            assert(x.Error == code);
+            if(message != x.Message)
+            {
+                printf( "UnitTest failure for Win32Exception:\n"
+                        "  x.message [%d;\"%.*s\"] does not equal [%d;\"%.*s\"]\n"
+                    ,   x.Message.length, x.Message
+                    ,   message.length, message);
+            }
+            assert(message == x.Message);
+        }
+    }
+    catch(Exception /* x */)
+    {
+        int code_flow_should_never_reach_here = 0;
+        assert(code_flow_should_never_reach_here);
+    }
+
+    // (ii) Catch that can throw and be caught by Exception
+    {
+        char[]  message =   "Test 2";
+        int     code    =   3;
+        char[]  string  =   "Test 2 (3)";
+
+        try
+        {
+            throw new Win32Exception(message, code);
+        }
+        catch(Exception x)
+        {
+            if(string != x.toString())
+            {
+                printf( "UnitTest failure for Win32Exception:\n"
+                        "  x.toString() [%d;\"%.*s\"] does not equal [%d;\"%.*s\"]\n"
+                    ,   x.toString().length, x.toString()
+                    ,   string.length, string);
+            }
+            assert(string == x.toString());
+        }
+    }
 }
 /+
  +/
@@ -192,12 +347,12 @@ char[][] tokenise(char[] source, char delimiter, boolean bElideBlanks, boolean b
  +/
 
 
-import std.string;
+private import std.string;
 
 /* ////////////////////////////////////////////////////////////////////////// */
 
-/// \defgroup group_std_windows_reg std.windows.registry
-/// \ingroup group_std_windows
+/// \defgroup group_D_win32_reg D.win32.registry
+/// \ingroup group_D_win32
 /// \brief This library provides Win32 Registry facilities
 
 /* /////////////////////////////////////////////////////////////////////////////
@@ -893,7 +1048,7 @@ body
 ////////////////////////////////////////////////////////////////////////////////
 // RegistryException
 
-/// Exception class thrown by the std.windows.registry classes
+/// Exception class thrown by the D.win32.registry classes
 ///
 /// \ingroup group_D_win32_reg
 

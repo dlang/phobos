@@ -31,11 +31,14 @@
 	an error.
  */
 
+module std.regexp;
+
 //debug = regexp;		// uncomment to turn on debugging printf's
 
 private
 {
     import std.c.stdio;
+    import std.c.stdlib;
     import std.string;
     import std.ctype;
     import std.outbuffer;

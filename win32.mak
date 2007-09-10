@@ -15,8 +15,8 @@
 CP=cp
 
 CFLAGS=-g -mn -6 -r
-DFLAGS=-O -release
-#DFLAGS=-unittest -g
+#DFLAGS=-O -release
+DFLAGS=-unittest -g
 
 CC=sc
 #DMD=\dmd\bin\dmd
@@ -51,7 +51,7 @@ unittest.exe : unittest.d phobos.lib
 	$(DMD) unittest -g
 	sc unittest.obj -g
 
-OBJS= assert.obj deh.obj switch.obj complex.obj gcstats.obj \
+OBJS= asserterror.obj deh.obj switch.obj complex.obj gcstats.obj \
 	critical.obj object.obj monitor.obj arraycat.obj invariant.obj \
 	dmain2.obj outofmemory.obj aaA.obj adi.obj file.obj \
 	compiler.obj system.obj moduleinit.obj \
@@ -60,7 +60,7 @@ OBJS= assert.obj deh.obj switch.obj complex.obj gcstats.obj \
 	stream.obj switcherr.obj com.obj array.obj gc.obj \
 	qsort.obj math2.obj date.obj dateparse.obj thread.obj obj.obj \
 	iunknown.obj crc32.obj conv.obj arraycast.obj utf.obj uri.obj \
-	registry.obj Czlib.obj Dzlib.obj zip.obj \
+	Czlib.obj Dzlib.obj zip.obj process.obj registry.obj \
 	ti_Aa.obj ti_Ag.obj ti_C.obj ti_int.obj ti_char.obj \
 	ti_wchar.obj ti_uint.obj ti_short.obj ti_ushort.obj \
 	ti_byte.obj ti_ubyte.obj ti_long.obj ti_ulong.obj ti_ptr.obj \
@@ -79,9 +79,9 @@ SRCSTD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 	std\gc.d std\math.d std\string.d std\path.d std\date.d \
 	std\ctype.d std\file.d std\compiler.d std\system.d std\moduleinit.d \
 	std\outbuffer.d std\math2.d std\thread.d \
-	std\assert.d std\dateparse.d std\outofmemory.d \
-	std\intrinsic.d std\array.d std\switcherr.d \
-	std\regexp.d std\random.d std\stream.d
+	std\asserterror.d std\dateparse.d std\outofmemory.d \
+	std\intrinsic.d std\array.d std\switcherr.d std\syserror.d \
+	std\regexp.d std\random.d std\stream.d std\process.d
 
 SRCSTDC= std\c\process.d std\c\stdlib.d std\c\time.d std\c\stdio.d
 
@@ -113,7 +113,7 @@ SRCINT=	\
 	internal\dmain2.d internal\cast.d internal\qsort.d internal\deh2.d \
 	internal\cmath2.d internal\obj.d internal\mars.h
 
-SRCSTDWIN= std\windows\registry.d std\windows\syserror.d \
+SRCSTDWIN= std\windows\registry.d \
 	std\windows\iunknown.d
 
 SRCSTDCWIN= std\c\windows\windows.d std\c\windows\com.d
@@ -230,8 +230,8 @@ switch.obj : internal\switch.d
 array.obj : std\array.d
 	$(DMD) -c $(DFLAGS) std\array.d
 
-assert.obj : std\assert.d
-	$(DMD) -c $(DFLAGS) std\assert.d
+asserterror.obj : std\asserterror.d
+	$(DMD) -c $(DFLAGS) std\asserterror.d
 
 compiler.obj : std\compiler.d
 	$(DMD) -c $(DFLAGS) std\compiler.d
@@ -275,6 +275,9 @@ outofmemory.obj : std\outofmemory.d
 path.obj : std\path.d
 	$(DMD) -c $(DFLAGS) std\path.d
 
+process.obj : std\process.d
+	$(DMD) -c $(DFLAGS) std\process.d
+
 random.obj : std\random.d
 	$(DMD) -c $(DFLAGS) std\random.d
 
@@ -289,6 +292,9 @@ string.obj : std\string.d
 
 switcherr.obj : std\switcherr.d
 	$(DMD) -c $(DFLAGS) std\switcherr.d
+
+syserror.obj : std\syserror.d
+	$(DMD) -c $(DFLAGS) std\syserror.d
 
 system.obj : std\system.d
 	$(DMD) -c $(DFLAGS) std\system.d
@@ -315,9 +321,6 @@ iunknown.obj : std\windows\iunknown.d
 
 registry.obj : std\windows\registry.d
 	$(DMD) -c $(DFLAGS) std\windows\registry.d
-
-syserror.obj : std\windows\syserror.d
-	$(DMD) -c $(DFLAGS) std\windows\syserror.d
 
 ### etc\c
 
@@ -472,7 +475,7 @@ install:
 	$(CP) $(SRCINT) \dmd\src\phobos\internal
 	$(CP) $(SRCSTDWIN) \dmd\src\phobos\std\windows
 	$(CP) $(SRCSTDCWIN) \dmd\src\phobos\std\c\windows
-	$(CP) $(SRCSTDCLINUX) \dmd\src\phobos\std\linux
+	$(CP) $(SRCSTDCLINUX) \dmd\src\phobos\std\c\linux
 	$(CP) $(SRCETC) \dmd\src\phobos\etc\c
 	$(CP) $(SRCZLIB) \dmd\src\phobos\etc\c\zlib
 	$(CP) $(SRCGC) \dmd\src\phobos\internal\gc

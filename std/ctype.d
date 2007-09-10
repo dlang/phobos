@@ -1,11 +1,12 @@
-// ctype.d
+
 // Written by Walter Bright
-// Copyright (c) 2001 Digital Mars
+// Copyright (c) 2001-2003 Digital Mars
 // All Rights Reserved
 // www.digitalmars.com
 
 // Simple char classification functions
 
+module std.ctype;
 
 int isalnum(char c)	{ return _ctype[1 + c] & (_ALP|_DIG); }
 int isalpha(char c)	{ return _ctype[1 + c] & (_ALP); }

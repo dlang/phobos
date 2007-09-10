@@ -1,5 +1,5 @@
 
-import std.string;
+private import std.string;
 
 // Object[]
 
@@ -25,9 +25,9 @@ class TypeInfo_AC : TypeInfo
 	{
 	    for (uint u = 0; u < s1.length; u++)
 	    {
-		// Do not pass null's to Object.eq()
+		// Do not pass null's to Object.opEquals()
 		if (s1[u] === s2[u] ||
-		    (s1[u] !== null && s2[u] !== null && s1[u].eq(s2[u])))
+		    (s1[u] !== null && s2[u] !== null && s1[u].opEquals(s2[u])))
 		    continue;
 		return 0;
 	    }
@@ -59,7 +59,7 @@ class TypeInfo_AC : TypeInfo
 		    {	c = 1;
 			break;
 		    }
-		    c = o1.cmp(o2);
+		    c = o1.opCmp(o2);
 		    if (c)
 			break;
 		}

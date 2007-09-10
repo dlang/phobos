@@ -13,7 +13,7 @@ extern (C):
 
 int _d_obj_eq(Object o1, Object o2)
 {
-    return o1 === o2 || (o1 && o1.eq(o2));
+    return o1 === o2 || (o1 && o1.opEquals(o2));
 }
 
 
@@ -23,6 +23,6 @@ int _d_obj_eq(Object o1, Object o2)
 
 int _d_obj_cmp(Object o1, Object o2)
 {
-    return o1.cmp(o2);
+    return o1.opCmp(o2);
 }
 

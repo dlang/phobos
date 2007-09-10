@@ -7,6 +7,8 @@
 // Description of UTF-8 at:
 // http://www.cl.cam.ac.uk/~mgk25/unicode.html#utf-8
 
+module std.utf;
+
 //debug=utf;		// uncomment to turn on debugging printf's
 
 class UtfError : Error

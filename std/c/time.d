@@ -1,4 +1,6 @@
 
+module std.c.time;
+
 extern (C):
 
 const uint CLOCKS_PER_SEC = 1000;

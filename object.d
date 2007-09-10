@@ -21,12 +21,12 @@ class Object
 	return (uint)(void *)this;
     }
 
-    int cmp(Object o)
+    int opCmp(Object o)
     {
 	return (int)(void *)this - (int)(void *)o;
     }
 
-    int eq(Object o)
+    int opEquals(Object o)
     {
 	return this === o;
     }

@@ -1,7 +1,7 @@
 
 // Identify the compiler used and its various features.
 
-
+module std.compiler;
 
 const
 {

@@ -12,9 +12,14 @@
 // from OutBuffer.
 // To convert an array of bytes back into raw data, use InBuffer.
 
-import std.string;
-import std.c.stdio;
-import std.c.stdlib;
+module std.outbuffer;
+
+private
+{
+    import std.string;
+    import std.c.stdio;
+    import std.c.stdlib;
+}
 
 class OutBuffer
 {

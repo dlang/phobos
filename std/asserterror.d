@@ -1,8 +1,7 @@
 
-import object;
-import std.c.stdio;
+module std.assertexception;
 
-class Assert : Object
+class AssertError : Object
 {
   private:
 
@@ -18,26 +17,26 @@ class Assert : Object
   public:
 
     /***************************************
-     * If nobody catches the Assert, this winds up
+     * If nobody catches the AssertError, this winds up
      * getting called by the startup code.
      */
 
     void print()
     {
-	printf("Assertion Failure %s(%u)\n", (char *)filename, linnum);
+	printf("AssertErrorion Failure %s(%u)\n", (char *)filename, linnum);
     }
 }
 
 
 /********************************************
  * Called by the compiler generated module assert function.
- * Builds an Assert exception and throws it.
+ * Builds an AssertError exception and throws it.
  */
 
 extern (C) static void _d_assert(char[] filename, uint line)
 {
     //printf("_d_assert(%s, %d)\n", (char *)filename, line);
-    Assert a = new Assert(filename, line);
+    AssertError a = new AssertError(filename, line);
     //printf("assertion %p created\n", a);
     throw a;
 }

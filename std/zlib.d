@@ -5,7 +5,7 @@
 
 module std.zlib;
 
-debug=zlib;		// uncomment to turn on debugging printf's
+//debug=zlib;		// uncomment to turn on debugging printf's
 
 private import etc.c.zlib;
 

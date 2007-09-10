@@ -1,6 +1,5 @@
 
-import object;
-import std.c.stdio;
+module std.switcherr;
 
 class SwitchError : Object
 {

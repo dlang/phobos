@@ -1,4 +1,6 @@
 
+module std.c.windows.windows;
+
 extern (Windows)
 {
     alias uint ULONG;
@@ -22,7 +24,7 @@ extern (Windows)
     alias LPSTR PTSTR, LPTSTR;
     alias LPCSTR LPCTSTR;
 
-    alias WCHAR* LPCWSTR, PCWSTR;
+    alias WCHAR* LPWSTR, LPCWSTR, PCWSTR;
 
     alias uint DWORD;
     alias int BOOL;
@@ -262,8 +264,32 @@ struct WIN32_FIND_DATA {
     char   cAlternateFileName[ 14 ];
 }
 
+struct WIN32_FIND_DATAW {
+    DWORD dwFileAttributes;
+    FILETIME ftCreationTime;
+    FILETIME ftLastAccessTime;
+    FILETIME ftLastWriteTime;
+    DWORD nFileSizeHigh;
+    DWORD nFileSizeLow;
+    DWORD dwReserved0;
+    DWORD dwReserved1;
+    WCHAR  cFileName[ 260  ];
+    WCHAR  cAlternateFileName[ 14 ];
+}
+
 export
 {
+BOOL SetCurrentDirectoryA(LPCSTR lpPathName);
+BOOL SetCurrentDirectoryW(LPCWSTR lpPathName);
+DWORD GetCurrentDirectoryA(DWORD nBufferLength, LPSTR lpBuffer);
+DWORD GetCurrentDirectoryW(DWORD nBufferLength, LPWSTR lpBuffer);
+BOOL CreateDirectoryA(LPCSTR lpPathName, LPSECURITY_ATTRIBUTES lpSecurityAttributes);
+BOOL CreateDirectoryW(LPCWSTR lpPathName, LPSECURITY_ATTRIBUTES lpSecurityAttributes);
+BOOL CreateDirectoryExA(LPCSTR lpTemplateDirectory, LPCSTR lpNewDirectory, LPSECURITY_ATTRIBUTES lpSecurityAttributes);
+BOOL CreateDirectoryExW(LPCWSTR lpTemplateDirectory, LPCWSTR lpNewDirectory, LPSECURITY_ATTRIBUTES lpSecurityAttributes);
+BOOL RemoveDirectoryA(LPCSTR lpPathName);
+BOOL RemoveDirectoryW(LPCWSTR lpPathName);
+
 BOOL   CloseHandle(HANDLE hObject);
 HANDLE CreateFileA(char *lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode,
 	SECURITY_ATTRIBUTES *lpSecurityAttributes, DWORD dwCreationDisposition,

@@ -1,5 +1,5 @@
 
-import std.c.stdio;
+module std.outofmemory;
 
 class OutOfMemory : Object
 {

@@ -3,6 +3,8 @@
 // www.digitalmars.com
 // Convert Win32 error code to string
 
+module std.syserror;
+
 class SysError
 {
     private import std.c.stdio;

@@ -1,5 +1,5 @@
 
-import std.string;
+private import std.string;
 
 // ubyte[]
 

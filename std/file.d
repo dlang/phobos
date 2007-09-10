@@ -1,17 +1,20 @@
 
-// Copyright (c) 2001-2002 by Digital Mars
+// Copyright (c) 2001-2003 by Digital Mars
 // All Rights Reserved
 // www.digitalmars.com
 
+module std.file;
+
 private import std.c.stdio;
+private import std.path;
 private import std.string;
 
 /***********************************
  */
 
-class FileError : Error
+class FileException : Exception
 {
-    private import std.windows.syserror;
+    private import std.syserror;
 
     uint errno;			// operating system error code
 
@@ -49,7 +52,7 @@ private import std.c.windows.windows;
  *	array of bytes read
  */
 
-byte[] read(char[] name)
+void[] read(char[] name)
 {
     DWORD size;
     DWORD numread;
@@ -82,7 +85,7 @@ err2:
 err:
     delete buf;
 err1:
-    throw new FileError(name, GetLastError());
+    throw new FileException(name, GetLastError());
 }
 
 /*********************************************
@@ -91,7 +94,7 @@ err1:
  *	0	success
  */
 
-void write(char[] name, byte[] buffer)
+void write(char[] name, void[] buffer)
 {
     HANDLE h;
     DWORD numwritten;
@@ -114,7 +117,7 @@ void write(char[] name, byte[] buffer)
 err2:
     CloseHandle(h);
 err:
-    throw new FileError(name, GetLastError());
+    throw new FileException(name, GetLastError());
 }
 
 
@@ -122,7 +125,7 @@ err:
  * Append to a file.
  */
 
-void append(char[] name, byte[] buffer)
+void append(char[] name, void[] buffer)
 {
     HANDLE h;
     DWORD numwritten;
@@ -147,7 +150,7 @@ void append(char[] name, byte[] buffer)
 err2:
     CloseHandle(h);
 err:
-    throw new FileError(name, GetLastError());
+    throw new FileException(name, GetLastError());
 }
 
 
@@ -161,7 +164,7 @@ void rename(char[] from, char[] to)
 
     result = MoveFileA(toStringz(from), toStringz(to));
     if (!result)
-	throw new FileError(to, GetLastError());
+	throw new FileException(to, GetLastError());
 }
 
 
@@ -175,7 +178,7 @@ void remove(char[] name)
 
     result = DeleteFileA(toStringz(name));
     if (!result)
-	throw new FileError(name, GetLastError());
+	throw new FileException(name, GetLastError());
 }
 
 
@@ -183,7 +186,7 @@ void remove(char[] name)
  * Get file size.
  */
 
-uint getSize(char[] name)
+ulong getSize(char[] name)
 {
     WIN32_FIND_DATA filefindbuf;
     HANDLE findhndl;
@@ -191,7 +194,7 @@ uint getSize(char[] name)
     findhndl = FindFirstFileA(toStringz(name), &filefindbuf);
     if (findhndl == (HANDLE)-1)
     {
-	throw new FileError(name, GetLastError());
+	throw new FileException(name, GetLastError());
     }
     FindClose(findhndl);
     return filefindbuf.nFileSizeLow;
@@ -209,7 +212,120 @@ uint getAttributes(char[] name)
     result = GetFileAttributesA(toStringz(name));
     if (result == 0xFFFFFFFF)
     {
-	throw new FileError(name, GetLastError());
+	throw new FileException(name, GetLastError());
+    }
+    return result;
+}
+
+/****************************************************
+ * Is name a file?
+ */
+
+int isfile(char[] name)
+{
+    return (getAttributes(name) & FILE_ATTRIBUTE_DIRECTORY) == 0;
+}
+
+/****************************************************
+ * Is name a directory?
+ */
+
+int isdir(char[] name)
+{
+    return (getAttributes(name) & FILE_ATTRIBUTE_DIRECTORY) != 0;
+}
+
+/****************************************************
+ * Change directory.
+ */
+
+void chdir(char[] pathname)
+{
+    if (!SetCurrentDirectoryA(toStringz(pathname)))
+    {
+	throw new FileException(pathname, GetLastError());
+    }
+}
+
+/****************************************************
+ * Make directory.
+ */
+
+void mkdir(char[] pathname)
+{
+    if (!CreateDirectoryA(toStringz(pathname), null))
+    {
+	throw new FileException(pathname, GetLastError());
+    }
+}
+
+/****************************************************
+ * Remove directory.
+ */
+
+void rmdir(char[] pathname)
+{
+    if (!RemoveDirectoryA(toStringz(pathname)))
+    {
+	throw new FileException(pathname, GetLastError());
+    }
+}
+
+/****************************************************
+ * Get current directory.
+ */
+
+char[] getcwd()
+{
+    char[] dir;
+    int length;
+    char c;
+
+    length = GetCurrentDirectoryA(0, &c);
+    if (!length)
+    {
+	throw new FileException("getcwd", GetLastError());
+    }
+    dir = new char[length];
+    length = GetCurrentDirectoryA(length, dir);
+    if (!length)
+    {
+	throw new FileException("getcwd", GetLastError());
+    }
+    return dir[0 .. length];		// leave off terminating 0
+}
+
+/***************************************************
+ * Return contents of directory.
+ */
+
+char[][] listdir(char[] pathname)
+{
+    char[][] result;
+    char[] c;
+    HANDLE h;
+    WIN32_FIND_DATA fileinfo;
+
+    c = std.path.join(pathname, "*.*");
+    h = FindFirstFileA(toStringz(c), &fileinfo);
+    if (h != INVALID_HANDLE_VALUE)
+    {
+        do
+        {   int i;
+	    int clength;
+
+            // Skip "." and ".."
+            if (std.string.strcmp(fileinfo.cFileName, ".") == 0 ||
+                std.string.strcmp(fileinfo.cFileName, "..") == 0)
+                continue;
+
+	    i = result.length;
+	    result.length = i + 1;
+	    clength = std.string.strlen(fileinfo.cFileName);
+	    result[i] = new char[clength];
+	    result[i][] = fileinfo.cFileName[0 .. clength];
+        } while (FindNextFileA(h,&fileinfo) != FALSE);
+        FindClose(h);
     }
     return result;
 }
@@ -229,12 +345,12 @@ private import std.c.linux.linux;
  *	array of bytes read
  */
 
-byte[] read(char[] name)
+void[] read(char[] name)
 {
     uint size;
     uint numread;
     int fd;
-    stat statbuf;
+    struct_stat statbuf;
     byte[] buf;
     char *namez;
 
@@ -277,7 +393,7 @@ err:
     delete buf;
 
 err1:
-    throw new FileError(name, getErrno());
+    throw new FileException(name, getErrno());
 }
 
 /*********************************************
@@ -286,7 +402,7 @@ err1:
  *	0	success
  */
 
-void write(char[] name, byte[] buffer)
+void write(char[] name, void[] buffer)
 {
     int fd;
     int numwritten;
@@ -309,7 +425,7 @@ void write(char[] name, byte[] buffer)
 err2:
     std.c.linux.linux.close(fd);
 err:
-    throw new FileError(name, getErrno());
+    throw new FileException(name, getErrno());
 }
 
 
@@ -317,7 +433,7 @@ err:
  * Append to a file.
  */
 
-void append(char[] name, byte[] buffer)
+void append(char[] name, void[] buffer)
 {
     int fd;
     int numwritten;
@@ -340,7 +456,7 @@ void append(char[] name, byte[] buffer)
 err2:
     std.c.linux.linux.close(fd);
 err:
-    throw new FileError(name, getErrno());
+    throw new FileException(name, getErrno());
 }
 
 
@@ -354,7 +470,7 @@ void rename(char[] from, char[] to)
     char *toz = toStringz(to);
 
     if (std.c.stdio.rename(fromz, toz) == -1)
-	throw new FileError(to, getErrno());
+	throw new FileException(to, getErrno());
 }
 
 
@@ -365,7 +481,7 @@ void rename(char[] from, char[] to)
 void remove(char[] name)
 {
     if (std.c.stdio.remove(toStringz(name)) == -1)
-	throw new FileError(name, getErrno());
+	throw new FileException(name, getErrno());
 }
 
 
@@ -373,11 +489,11 @@ void remove(char[] name)
  * Get file size.
  */
 
-uint getSize(char[] name)
+ulong getSize(char[] name)
 {
     uint size;
     int fd;
-    stat statbuf;
+    struct_stat statbuf;
     char *namez;
 
     namez = toStringz(name);
@@ -409,7 +525,7 @@ err2:
     std.c.linux.linux.close(fd);
 err:
 err1:
-    throw new FileError(name, getErrno());
+    throw new FileException(name, getErrno());
 }
 
 
@@ -419,7 +535,100 @@ err1:
 
 uint getAttributes(char[] name)
 {
-    return 0;
+    struct_stat statbuf;
+    char *namez;
+
+    namez = toStringz(name);
+    if (std.c.linux.linux.stat(namez, &statbuf))
+    {
+	throw new FileException(name, getErrno());
+    }
+
+    return statbuf.st_mode;
+}
+
+/****************************************************
+ * Is name a file?
+ */
+
+int isfile(char[] name)
+{
+    return getAttributes(name) & S_IFREG;	// regular file
+}
+
+/****************************************************
+ * Is name a directory?
+ */
+
+int isdir(char[] name)
+{
+    return getAttributes(name) & S_IFDIR;
+}
+
+/****************************************************
+ * Change directory.
+ */
+
+void chdir(char[] pathname)
+{
+    if (std.c.linux.linux.chdir(toStringz(pathname)) == 0)
+    {
+	throw new FileException(pathname, getErrno());
+    }
+}
+
+/****************************************************
+ * Make directory.
+ */
+
+void mkdir(char[] pathname)
+{
+    if (std.c.linux.linux.mkdir(toStringz(pathname), 0777) == 0)
+    {
+	throw new FileException(pathname, getErrno());
+    }
+}
+
+/****************************************************
+ * Remove directory.
+ */
+
+void rmdir(char[] pathname)
+{
+    if (std.c.linux.linux.rmdir(toStringz(pathname)) == 0)
+    {
+	throw new FileException(pathname, getErrno());
+    }
+}
+
+/****************************************************
+ * Get current directory.
+ */
+
+char[] getcwd()
+{   char* p;
+
+    p = std.c.linux.linux.getcwd(null, 0);
+    if (!p)
+    {
+	throw new FileException("cannot get cwd", getErrno());
+    }
+
+    int length = std.string.strlen(p);
+    char[] buf = new char[length];
+    buf[] = p[0 .. length];
+    std.c.stdlib.free(p);
+    return buf;
+}
+
+/***************************************************
+ * Return contents of directory.
+ */
+
+char[][] listdir(char[] pathname)
+{
+    assert(0);		// BUG: not implemented
+    return null;
 }
 
 }

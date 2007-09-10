@@ -1,4 +1,7 @@
 
+
+module std.uri;
+
 //debug=uri;		// uncomment to turn on debugging printf's
 
 /* ====================== URI Functions ================ */

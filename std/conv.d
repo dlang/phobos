@@ -1,12 +1,13 @@
 
-// conv.d
 // Written by Walter Bright
-// Copyright (c) 2002 Digital Mars
+// Copyright (c) 2002-2003 Digital Mars
 // All Rights Reserved
 // www.digitalmars.com
 
 // Conversion building blocks. These differ from the C equivalents by
 // checking for overflow and not allowing whitespace.
+
+module std.conv;
 
 //debug=conv;		// uncomment to turn on debugging printf's
 

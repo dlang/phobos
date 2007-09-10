@@ -2,6 +2,7 @@
 // random.d
 // www.digitalmars.com
 
+module std.random;
 
 // Segments of the code in this file Copyright (c) 1997 by Rick Booth
 // From "Inner Loops" by Rick Booth, Addison-Wesley
@@ -13,7 +14,7 @@ version (Win32)
 
 version (linux)
 {
-    import std.c.linux.linux;
+    private import std.c.linux.linux;
 }
 
 /* ===================== Random ========================= */
@@ -94,7 +95,6 @@ static this()
     rand_seed((uint) s, (uint)(s >> 32));
 }
 
-//import std.c.stdio;
 
 unittest
 {
