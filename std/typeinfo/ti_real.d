@@ -29,7 +29,7 @@ class TypeInfo_e : TypeInfo
 	    }
 	    return 1;
 	}
-	return (d1 < d2) ? -1 : 1;
+	return (d1 == d2) ? 0 : ((d1 < d2) ? -1 : 1);
     }
 
     int equals(void *p1, void *p2)

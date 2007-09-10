@@ -70,6 +70,8 @@ extern (C) int main(int argc, char **argv)
 	args = am[0 .. argc];
 
 	result = main(args);
+	_moduleDtor();
+	gc_term();
     }
     catch (Object o)
     {
@@ -78,8 +80,6 @@ extern (C) int main(int argc, char **argv)
 	exit(EXIT_FAILURE);
     }
 
-    _moduleDtor();
-    gc_term();
     version (linux)
     {
 	free(am);

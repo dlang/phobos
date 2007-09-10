@@ -5,6 +5,8 @@ private import std.string;
 
 class TypeInfo_Ag : TypeInfo
 {
+    char[] toString() { return "byte[]"; }
+
     uint getHash(void *p)
     {	byte[] s = *cast(byte[]*)p;
 	uint len = s.length;

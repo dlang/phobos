@@ -795,7 +795,7 @@ int exists(char[] name)
 
 int isfile(char[] name)
 {
-    return getAttributes(name) & S_IFREG;	// regular file
+    return (getAttributes(name) & S_IFMT) == S_IFREG;	// regular file
 }
 
 /****************************************************
@@ -804,7 +804,7 @@ int isfile(char[] name)
 
 int isdir(char[] name)
 {
-    return getAttributes(name) & S_IFDIR;
+    return (getAttributes(name) & S_IFMT) == S_IFDIR;
 }
 
 /****************************************************
@@ -887,7 +887,7 @@ void listdir(char[] pathname, bool delegate(char[] filename) callback)
     dirent* fdata;
     
     h = opendir(toStringz(pathname));
-    if (h)	// if !h, should we throw exception?
+    if (h)
     {
 	while((fdata = readdir(h)) != null)
 	{
@@ -901,6 +901,10 @@ void listdir(char[] pathname, bool delegate(char[] filename) callback)
 		break;
 	}
 	closedir(h);
+    }
+    else
+    {
+        throw new FileException(pathname, getErrno());
     }
 }
 

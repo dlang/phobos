@@ -48,6 +48,8 @@ extern (C)
     void *memcpy(void *, void *, uint);
     void *memmove(void *, void *, uint);
     void *memset(void *, uint, uint);
+    char* strerror(int);
+    real strtold(char*, char**);
 
     int wcslen(wchar *);
     int wcscmp(wchar *, wchar *);
@@ -92,10 +94,16 @@ long atoi(char[] s)
     return std.c.stdlib.atoi(toStringz(s));
 }
 
+/*************************************
+ * Convert string to float
+ */
+
 real atof(char[] s)
-{
-    // BUG: should implement atold()
-    return std.c.stdlib.atof(toStringz(s));
+{   char* endptr;
+    real result;
+
+    result = strtold(toStringz(s), &endptr);
+    return result;
 }
 
 /**********************************

@@ -307,18 +307,24 @@ void _d_callfinalizer(void *p)
 	{
 	    ClassInfo c = **pc;
 
-	    do
+	    try
 	    {
-		if (c.destructor)
+		do
 		{
-		    fp_t fp = cast(fp_t)c.destructor;
-		    (*fp)(cast(Object)p);		// call destructor
-		}
-		c = c.base;
-	    } while (c);
-	    if ((cast(void**)p)[1])	// if monitor is not null
-		_d_monitorrelease(cast(Object)p);
-	    *pc = null;			// zero vptr
+		    if (c.destructor)
+		    {
+			fp_t fp = cast(fp_t)c.destructor;
+			(*fp)(cast(Object)p);		// call destructor
+		    }
+		    c = c.base;
+		} while (c);
+		if ((cast(void**)p)[1])	// if monitor is not null
+		    _d_monitorrelease(cast(Object)p);
+	    }
+	    finally
+	    {
+		*pc = null;			// zero vptr
+	    }
 	}
     }
 }
@@ -447,6 +453,37 @@ long _d_arrayappend(Array *px, byte[] y, uint size)
     }
     px.length = newlength;
     memcpy(px.data + length * size, y, y.length * size);
+    return *cast(long*)px;
+}
+
+extern (C)
+long _d_arrayappendb(Array *px, bit[] y)
+{
+
+    uint cap = _gc.capacity(px.data);
+    uint length = px.length;
+    uint newlength = length + y.length;
+    uint newsize = (newlength + 7) / 8;
+    if (newsize > cap)
+    {	void* newdata;
+
+	//newdata = _gc.malloc(newlength * size);
+	newdata = _gc.malloc(newCapacity(newsize, 1));
+	memcpy(newdata, px.data, (length + 7) / 8);
+	px.data = cast(byte*)newdata;
+    }
+    px.length = newlength;
+    if ((length & 7) == 0)
+	// byte aligned, straightforward copy
+	memcpy(px.data + length / 8, y, (y.length + 7) / 8);
+    else
+    {	bit* x = cast(bit*)px.data;
+
+	for (size_t u = 0; u < y.length; u++)
+	{
+	    x[length + u] = y[u];
+	}
+    }
     return *cast(long*)px;
 }
 

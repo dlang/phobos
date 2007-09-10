@@ -9,6 +9,7 @@ module std.c.linux.linux;
 import std.c.linux.linuxextern;
 
 alias int off_t;
+alias uint mode_t;
 
 enum : int
 {
@@ -109,11 +110,13 @@ extern (C)
     int close(int);
     int lseek(int, int, int);
     int fstat(int, struct_stat*);
+    int lstat(char*, struct_stat*);
     int stat(char*, struct_stat*);
     int chdir(char*);
     int mkdir(char*, int);
     int rmdir(char*);
     char* getcwd(char*, int);
+    int chmod(char*, mode_t);
 }
 
 struct timeval
@@ -256,8 +259,6 @@ extern(C)
 {
 	private import std.intrinsic;
 	
-	
-	char* strerror(int errnum);
 	
 	int select(int nfds, fd_set* readfds, fd_set* writefds, fd_set* errorfds, timeval* timeout);
 	int fcntl(int s, int f, ...);
