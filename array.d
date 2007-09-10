@@ -2,7 +2,7 @@
 import object;
 import c.stdio;
 
-class ArrayBoundsError : Object
+class ArrayBoundsError : Error
 {
   private:
 
@@ -13,18 +13,11 @@ class ArrayBoundsError : Object
     {
 	this.linnum = linnum;
 	this.filename = filename;
-    }
 
-  public:
-
-    /***************************************
-     * If nobody catches the ArrayBoundsError, this winds up
-     * getting called by the startup code.
-     */
-
-    void print()
-    {
-	printf("ArrayBoundsError %s(%u)\n", (char *)filename, linnum);
+	char[] buffer = new char[19 + filename.length + linnum.size * 3 + 1];
+	int length;
+	length = sprintf(buffer, "ArrayBoundsError %.*s(%u)", filename, linnum);
+	super(buffer[0..length]);
     }
 }
 

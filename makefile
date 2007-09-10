@@ -15,8 +15,8 @@
 CFLAGS=-g -mn -6 -r
 DFLAGS=-unittest -g
 CC=sc
-#DMD=\dmd\bin\dmd
-DMD=..\dmd
+DMD=\dmd\bin\dmd
+#DMD=..\dmd
 
 .c.obj:
 	$(CC) -c $(CFLAGS) $*

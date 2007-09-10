@@ -47,6 +47,7 @@ class ClassInfo : Object
     void (*_invariant)(Object);
     uint flags;
     //	1:			// IUnknown
+    void *deallocator;
 }
 
 class TypeInfo

@@ -1,5 +1,5 @@
 
-// Copyright (c) 2001 by Digital Mars
+// Copyright (c) 2001-2003 by Digital Mars
 // All Rights Reserved
 // www.digitalmars.com
 
@@ -46,20 +46,20 @@ char[] getExt(char[] fullname)
     while (i > 0)
     {
 	if (fullname[i - 1] == '.')
-	    break;
+	    return fullname[i .. fullname.length];
 	i--;
 	version(Win32)
 	{
 	    if (fullname[i] == ':' || fullname[i] == '\')
-		return null;
+		break;
 	}
 	version(linux)
 	{
 	    if (fullname[i] == '/')
-		return null;
+		break;
 	}
     }
-    return fullname[i .. fullname.length];
+    return null;
 }
 
 unittest
@@ -81,6 +81,10 @@ unittest
     assert(i == 0);
 
     result = getExt('d:\path.bar\foo');
+    i = cmp(result, "");
+    assert(i == 0);
+
+    result = getExt('foo');
     i = cmp(result, "");
     assert(i == 0);
 }
