@@ -13,17 +13,15 @@ module std.utf;
 
 class UtfError : Error
 {
-    uint idx;	// index in string of where error occurred
+    size_t idx;	// index in string of where error occurred
 
-    this(char[] s, uint i)
+    this(char[] s, size_t i)
     {
 	idx = i;
 	super(s);
     }
 }
 
-
-//alias uint dchar;
 
 bit isValidDchar(dchar c)
 {
@@ -40,7 +38,7 @@ unittest
 
 /* =================== Decode ======================= */
 
-dchar decode(char[] s, inout uint idx)
+dchar decode(char[] s, inout size_t idx)
     in
     {
 	assert(idx >= 0 && idx < s.length);
@@ -51,9 +49,9 @@ dchar decode(char[] s, inout uint idx)
     }
     body
     {
-	uint len = s.length;
+	size_t len = s.length;
 	dchar V;
-	uint i = idx;
+	size_t i = idx;
 	char u = s[i];
 
 	if (u & 0x80)
@@ -127,7 +125,7 @@ dchar decode(char[] s, inout uint idx)
     }
 
 unittest
-{   uint i;
+{   size_t i;
     dchar c;
 
     debug(utf) printf("utf.decode.unittest\n");
@@ -180,7 +178,7 @@ unittest
 
 /********************************************************/
 
-dchar decode(wchar[] s, inout uint idx)
+dchar decode(wchar[] s, inout size_t idx)
     in
     {
 	assert(idx >= 0 && idx < s.length);
@@ -193,7 +191,7 @@ dchar decode(wchar[] s, inout uint idx)
     {
 	char[] msg;
 	dchar V;
-	uint i = idx;
+	size_t i = idx;
 	uint u = s[i];
 
 	if (u & ~0x7F)
@@ -235,14 +233,14 @@ dchar decode(wchar[] s, inout uint idx)
 
 /********************************************************/
 
-dchar decode(dchar[] s, inout uint idx)
+dchar decode(dchar[] s, inout size_t idx)
     in
     {
 	assert(idx >= 0 && idx < s.length);
     }
     body
     {
-	uint i = idx;
+	size_t i = idx;
 	dchar c = s[i];
 
 	if (!isValidDchar(c))
@@ -364,8 +362,8 @@ void encode(inout dchar[] s, dchar c)
 
 void validate(char[] s)
 {
-    uint len = s.length;
-    uint i;
+    size_t len = s.length;
+    size_t i;
 
     for (i = 0; i < len; )
     {
@@ -375,8 +373,8 @@ void validate(char[] s)
 
 void validate(wchar[] s)
 {
-    uint len = s.length;
-    uint i;
+    size_t len = s.length;
+    size_t i;
 
     for (i = 0; i < len; )
     {
@@ -386,8 +384,8 @@ void validate(wchar[] s)
 
 void validate(dchar[] s)
 {
-    uint len = s.length;
-    uint i;
+    size_t len = s.length;
+    size_t i;
 
     for (i = 0; i < len; )
     {
@@ -473,13 +471,36 @@ char[] toUTF8(dchar[] s)
 
 /* =================== Conversion to UTF16 ======================= */
 
+wchar[] toUTF16(wchar[2] buf, dchar c)
+    in
+    {
+	assert(isValidDchar(c));
+    }
+    body
+    {
+	uint L;
+
+	if (c <= 0xFFFF)
+	{
+	    buf[0] = cast(wchar) c;
+	    L = 1;
+	}
+	else
+	{
+	    buf[0] = (((c - 0x10000) >> 10) & 0x3FF) + 0xD800;
+	    buf[1] = ((c - 0x10000) & 0x3FF) + 0xDC00;
+	    L = 2;
+	}
+	return buf[0 .. L];
+    }
+
 wchar[] toUTF16(char[] s)
 {
     wchar[] r;
 
     r.length = s.length;
     r.length = 0;
-    for (uint i = 0; i < s.length; )
+    for (size_t i = 0; i < s.length; )
     {
 	dchar c = decode(s, i);
 	encode(r, c);
@@ -493,7 +514,7 @@ wchar* toUTF16z(char[] s)
 
     r.length = s.length + 1;
     r.length = 0;
-    for (uint i = 0; i < s.length; )
+    for (size_t i = 0; i < s.length; )
     {
 	dchar c = decode(s, i);
 	encode(r, c);
@@ -516,7 +537,7 @@ wchar[] toUTF16(dchar[] s)
 {
     wchar[] r;
 
-    for (uint i = 0; i < s.length; i++)
+    for (size_t i = 0; i < s.length; i++)
     {
 	encode(r, s[i]);
     }
@@ -529,7 +550,7 @@ dchar[] toUTF32(char[] s)
 {
     dchar[] r;
 
-    for (uint i = 0; i < s.length; )
+    for (size_t i = 0; i < s.length; )
     {
 	dchar c = decode(s, i);
 	r ~= c;
@@ -541,7 +562,7 @@ dchar[] toUTF32(wchar[] s)
 {
     dchar[] r;
 
-    for (uint i = 0; i < s.length; )
+    for (size_t i = 0; i < s.length; )
     {
 	dchar c = decode(s, i);
 	r ~= c;

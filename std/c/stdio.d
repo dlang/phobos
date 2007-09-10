@@ -1,3 +1,11 @@
+/*
+ * Written by Walter Bright
+ * Digital Mars
+ * www.digitalmars.com
+ * Placed into Public Domain.
+ */
+
+
 
 module std.c.stdio;
 
@@ -85,7 +93,7 @@ enum
 
 version (Win32)
 {
-    FILE _iob[_NFILE];	// BUG: should be extern
+    FILE _iob[_NFILE];
 }
 
 version (Win32)
@@ -262,3 +270,4 @@ wchar	 putwchar(wchar c)	{ return fputwc(c,stdout); }
 wchar	 getwc(FILE *fp)	{ return fgetwc(fp); }
 wchar	 putwc(wchar c, FILE *fp)	{ return fputwc(c, fp); }
 
+int fwide(FILE* fp, int mode);

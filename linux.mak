@@ -55,14 +55,14 @@ OBJS= asserterror.o deh2.o switch.o complex.o gcstats.o \
 	qsort.o thread.o obj.o utf.o uri.o \
 	crc32.o conv.o arraycast.o errno.o alloca.o cmath2.o \
 	process.o syserror.o \
-	socket.o socketstream.o stdarg.o \
+	socket.o socketstream.o stdarg.o stdio.o format.o \
 	ti_wchar.o ti_uint.o ti_short.o ti_ushort.o \
 	ti_byte.o ti_ubyte.o ti_long.o ti_ulong.o ti_ptr.o \
 	ti_float.o ti_double.o ti_real.o ti_delegate.o \
 	ti_creal.o ti_ireal.o ti_cfloat.o ti_ifloat.o \
 	ti_cdouble.o ti_idouble.o \
 	ti_Aa.o ti_AC.o ti_Ag.o ti_Aubyte.o ti_Aushort.o ti_Ashort.o \
-	ti_C.o ti_int.o ti_char.o ti_dchar.o ti_Adchar.o \
+	ti_C.o ti_int.o ti_char.o ti_dchar.o ti_Adchar.o ti_bit.o \
 	ti_Aint.o ti_Auint.o ti_Along.o ti_Aulong.o ti_Awchar.o \
 	date.o dateparse.o llmath.o math2.o Czlib.o Dzlib.o zip.o recls.o
 
@@ -94,7 +94,8 @@ SRC_STD= std/zlib.d std/zip.d std/stdint.d std/conv.d std/utf.d std/uri.d \
 	std/asserterror.d std/dateparse.d std/outofmemory.d std/mmfile.d \
 	std/intrinsic.d std/array.d std/switcherr.d std/syserror.d \
 	std/regexp.d std/random.d std/stream.d std/process.d std/recls.d \
-	std/socket.d std/socketstream.d std/loader.d std/stdarg.d
+	std/socket.d std/socketstream.d std/loader.d std/stdarg.d \
+	std/stdio.d std/format.d
 
 SRC_STD_C= std/c/process.d std/c/stdlib.d std/c/time.d std/c/stdio.d \
 	std/c/math.d std/c/stdarg.d
@@ -117,7 +118,8 @@ SRC_TI=	\
 	std/typeinfo/ti_int.d std/typeinfo/ti_char.d \
 	std/typeinfo/ti_Aint.d std/typeinfo/ti_Auint.d \
 	std/typeinfo/ti_Along.d std/typeinfo/ti_Aulong.d \
-	std/typeinfo/ti_Awchar.d std/typeinfo/ti_dchar.d
+	std/typeinfo/ti_Awchar.d std/typeinfo/ti_dchar.d \
+	std/typeinfo/ti_bit.d
 
 SRC_INT=	\
 	internal/switch.d internal/complex.c internal/critical.c \
@@ -366,6 +368,9 @@ dateparse.o : std/dateparse.d std/date.d
 file.o : std/file.d
 	$(DMD) -c $(DFLAGS) std/file.d
 
+format.o : std/format.d
+	$(DMD) -c $(DFLAGS) std/format.d
+
 gc.o : std/gc.d
 	$(DMD) -c $(DFLAGS) std/gc.d
 
@@ -410,6 +415,9 @@ socket.o : std/socket.d
 
 socketstream.o : std/socketstream.d
 	$(DMD) -c $(DFLAGS) std/socketstream.d
+
+stdio.o : std/stdio.d
+	$(DMD) -c $(DFLAGS) std/stdio.d
 
 stream.o : std/stream.d
 	$(DMD) -c $(DFLAGS) std/stream.d
@@ -564,6 +572,9 @@ ti_char.o : std/typeinfo/ti_char.d
 
 ti_int.o : std/typeinfo/ti_int.d
 	$(DMD) -c $(DFLAGS) std/typeinfo/ti_int.d
+
+ti_bit.o : std/typeinfo/ti_bit.d
+	$(DMD) -c $(DFLAGS) std/typeinfo/ti_bit.d
 
 
 ##########################################################333

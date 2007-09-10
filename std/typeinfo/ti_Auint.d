@@ -5,6 +5,8 @@ private import std.string;
 
 class TypeInfo_Ak : TypeInfo
 {
+    char[] toString() { return "uint[]"; }
+
     uint getHash(void *p)
     {	uint[] s = *cast(uint[]*)p;
 	uint len = s.length;

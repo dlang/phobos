@@ -61,7 +61,7 @@ OBJS= asserterror.obj deh.obj switch.obj complex.obj gcstats.obj \
 	qsort.obj math2.obj date.obj dateparse.obj thread.obj obj.obj \
 	iunknown.obj crc32.obj conv.obj arraycast.obj utf.obj uri.obj \
 	Czlib.obj Dzlib.obj zip.obj process.obj registry.obj recls.obj \
-	socket.obj socketstream.obj loader.obj stdarg.obj \
+	socket.obj socketstream.obj loader.obj stdarg.obj format.obj stdio.obj \
 	ti_Aa.obj ti_Ag.obj ti_C.obj ti_int.obj ti_char.obj \
 	ti_wchar.obj ti_uint.obj ti_short.obj ti_ushort.obj \
 	ti_byte.obj ti_ubyte.obj ti_long.obj ti_ulong.obj ti_ptr.obj \
@@ -71,7 +71,7 @@ OBJS= asserterror.obj deh.obj switch.obj complex.obj gcstats.obj \
 	ti_cdouble.obj ti_idouble.obj \
 	ti_AC.obj ti_Aubyte.obj ti_Aushort.obj ti_Ashort.obj \
 	ti_Aint.obj ti_Auint.obj ti_Along.obj ti_Aulong.obj ti_Awchar.obj \
-	ti_dchar.obj ti_Adchar.obj
+	ti_dchar.obj ti_Adchar.obj ti_bit.obj
 
 
 SRC=	errno.c object.d unittest.d crc32.d gcstats.d
@@ -83,7 +83,8 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 	std\asserterror.d std\dateparse.d std\outofmemory.d std\mmfile.d \
 	std\intrinsic.d std\array.d std\switcherr.d std\syserror.d \
 	std\regexp.d std\random.d std\stream.d std\process.d std\recls.d \
-	std\socket.d std\socketstream.d std\loader.d std\stdarg.d
+	std\socket.d std\socketstream.d std\loader.d std\stdarg.d std\format.d \
+	std\stdio.d
 
 SRC_STD_C= std\c\process.d std\c\stdlib.d std\c\time.d std\c\stdio.d \
 	std\c\math.d std\c\stdarg.d
@@ -93,7 +94,7 @@ SRC_TI=	\
 	std\typeinfo\ti_short.d std\typeinfo\ti_ushort.d \
 	std\typeinfo\ti_byte.d std\typeinfo\ti_ubyte.d \
 	std\typeinfo\ti_long.d std\typeinfo\ti_ulong.d \
-	std\typeinfo\ti_ptr.d \
+	std\typeinfo\ti_ptr.d std\typeinfo\ti_bit.d \
 	std\typeinfo\ti_float.d std\typeinfo\ti_double.d \
 	std\typeinfo\ti_real.d std\typeinfo\ti_delegate.d \
 	std\typeinfo\ti_creal.d std\typeinfo\ti_ireal.d \
@@ -332,6 +333,9 @@ dateparse.obj : std\dateparse.d std\date.d
 file.obj : std\file.d
 	$(DMD) -c $(DFLAGS) std\file.d
 
+format.obj : std\format.d
+	$(DMD) -c $(DFLAGS) std\format.d
+
 gc.obj : std\gc.d
 	$(DMD) -c $(DFLAGS) std\gc.d
 
@@ -382,6 +386,9 @@ socket.obj : std\socket.d
 
 socketstream.obj : std\socketstream.d
 	$(DMD) -c $(DFLAGS) std\socketstream.d -ofsocketstream.obj
+
+stdio.obj : std\stdio.d
+	$(DMD) -c $(DFLAGS) std\stdio.d
 
 stream.obj : std\stream.d
 	$(DMD) -c $(DFLAGS) std\stream.d
@@ -442,6 +449,9 @@ windows.obj : std\c\windows\windows.d
 	$(DMD) -c $(DFLAGS) std\c\windows\windows.d
 
 ### std\typeinfo
+
+ti_bit.obj : std\typeinfo\ti_bit.d
+	$(DMD) -c $(DFLAGS) std\typeinfo\ti_bit.d
 
 ti_wchar.obj : std\typeinfo\ti_wchar.d
 	$(DMD) -c $(DFLAGS) std\typeinfo\ti_wchar.d

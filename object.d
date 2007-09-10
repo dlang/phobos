@@ -3,8 +3,10 @@
 
 module object;
 
-extern (C) int printf(char *, ...);
-extern (C) int wprintf(wchar *, ...);
+extern (C)
+{   int printf(char *, ...);
+    int wprintf(wchar *, ...);
+}
 
 alias bit bool;
 

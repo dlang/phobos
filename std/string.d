@@ -1,8 +1,9 @@
-// string.d
-// Written by Walter Bright
-// Copyright (c) 2001 Digital Mars
-// All Rights Reserved
-// www.digitalmars.com
+/*
+ * Written by Walter Bright
+ * Digital Mars
+ * www.digitalmars.com
+ * Placed into Public Domain.
+ */
 
 // String handling functions.
 //
@@ -24,8 +25,9 @@ module std.string;
 
 private import std.c.stdio;
 private import std.c.stdlib;
-private import std.outbuffer;
 private import std.utf;
+private import std.array;
+private import std.format;
 
 extern (C)
 {
@@ -1795,89 +1797,49 @@ unittest
 /*****************************************************
  */
 
-char[] format(char[] fmt, ...)
+
+char[] format(...)
 {
-    OutBuffer b = new OutBuffer();
-    va_list ap;
-    ap = cast(va_list)&fmt;
-    ap += fmt.sizeof;
-    b.reserve(fmt.length);
-    int fmtlength = fmt.length;
     char[] s;
-    int i;
 
-    char getchar()
+    void putc(dchar c)
     {
-	if (i == fmtlength)
-	{
-	    throw new StringException("invalid format");
-	}
-	char c = fmt[i];
-	i++;
-	return c;
+	std.utf.encode(s, c);
     }
 
-    for (i = 0; i < fmtlength; )
-    {
-	char c = fmt[i];
-	i++;
-	if (c != '%')
-	{   b.write(c);
-	    continue;
-	}
-	int istart = i - 1;
-	c = getchar();
-	switch (c)
-	{
-	    case '%':
-		b.write(c);
-		break;
-
-	    case 'c':
-	    {	dchar dc;
-
-		dc = *cast(dchar*)ap;
-		ap += dc.sizeof;
-		if (dc <= 0x7F)
-		    b.write(cast(char)dc);
-		else
-		{   char[] s;
-
-		    if (!isValidDchar(dc))
-			throw new StringException("invalid dchar value");
-		    std.utf.encode(s, dc);
-		    b.write(cast(ubyte[])s);
-		}
-		break;
-	    }
-
-	    case 'd':
-	    case 'o':
-	    case 'u':
-	    case 'x':
-	    case 'X':
-	    {	uint u;
-
-		u = *cast(uint*)ap;
-		ap += u.sizeof;
-		b.printf(fmt[istart .. i], u);
-		break;
-	    }
-
-	    case 's':
-		s = *cast(char[]*)ap;
-		ap += s.sizeof;
-		b.write(cast(ubyte[])s);
-		break;
-
-	    default:
-		throw new StringException("invalid format");
-		break;
-	}
-    }
-
-    return cast(char[])b.toBytes();
+    std.format.doFormat(&putc, _arguments, _argptr);
+    return s;
 }
+
+
+char[] sformat(char[] s, ...)
+{   size_t i;
+
+    void putc(dchar c)
+    {
+	if (c <= 0x7F)
+	{
+	    if (i >= s.length)
+		throw new ArrayBoundsError("std.string.sformat", 0);
+	    s[i] = c;
+	    ++i;
+	}
+	else
+	{   char[4] buf;
+	    char[] b;
+
+	    b = std.utf.toUTF8(buf, c);
+	    if (i + b.length > s.length)
+		throw new ArrayBoundsError("std.string.sformat", 0);
+	    s[i..i+b.length] = b[];
+	    i += b.length;
+	}
+    }
+
+    std.format.doFormat(&putc, _arguments, _argptr);
+    return s;
+}
+
 
 unittest
 {
@@ -1885,11 +1847,11 @@ unittest
 
     char[] r;
     int i;
-
+/+
     r = format(null);
     i = cmp(r, "");
     assert(i == 0);
-
++/
     r = format("foo");
     i = cmp(r, "foo");
     assert(i == 0);
@@ -1898,7 +1860,7 @@ unittest
     i = cmp(r, "foo%");
     assert(i == 0);
 
-    r = format("foo%c", 'C');
+    r = format("foo%s", 'C');
     i = cmp(r, "fooC");
     assert(i == 0);
 
@@ -1914,7 +1876,7 @@ unittest
     i = cmp(r, "foo -123");
     assert(i == 0);
 
-    r = format("foo %u", 123);
+    r = format("foo %d", 123);
     i = cmp(r, "foo 123");
     assert(i == 0);
 }

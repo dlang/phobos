@@ -5,6 +5,8 @@ private import std.string;
 
 class TypeInfo_Am : TypeInfo
 {
+    char[] toString() { return "ulong[]"; }
+
     uint getHash(void *p)
     {	ulong[] s = *cast(ulong[]*)p;
 	uint len = s.length;
