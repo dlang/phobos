@@ -819,6 +819,11 @@ int exists(char[] name)
 +/
 }
 
+unittest
+{
+    assert(exists("."));
+}
+
 /****************************************************
  * Is name a file?
  */

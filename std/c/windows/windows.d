@@ -525,21 +525,6 @@ const HKEY HKEY_DYN_DATA =               cast(HKEY)(0x80000006);
 
 enum
 {
-	KEY_QUERY_VALUE =         (0x0001),
-	KEY_SET_VALUE =           (0x0002),
-	KEY_CREATE_SUB_KEY =      (0x0004),
-	KEY_ENUMERATE_SUB_KEYS =  (0x0008),
-	KEY_NOTIFY =              (0x0010),
-	KEY_CREATE_LINK =         (0x0020),
-
-	KEY_READ =                cast(int)((STANDARD_RIGHTS_READ | KEY_QUERY_VALUE | KEY_ENUMERATE_SUB_KEYS | KEY_NOTIFY) & (~SYNCHRONIZE)),
-	KEY_WRITE =               cast(int)((STANDARD_RIGHTS_WRITE | KEY_SET_VALUE | KEY_CREATE_SUB_KEY) & (~SYNCHRONIZE)),
-	KEY_EXECUTE =             cast(int)(KEY_READ & ~SYNCHRONIZE),
-	KEY_ALL_ACCESS =          cast(int)((STANDARD_RIGHTS_ALL | KEY_QUERY_VALUE | KEY_SET_VALUE | KEY_CREATE_SUB_KEY | KEY_ENUMERATE_SUB_KEYS | KEY_NOTIFY | KEY_CREATE_LINK) & (~SYNCHRONIZE)),
-}
-
-enum
-{
 	REG_OPTION_RESERVED =         (0x00000000),   // Parameter is reserved
 
 	REG_OPTION_NON_VOLATILE =     (0x00000000),   // Key is preserved
@@ -558,23 +543,6 @@ enum
 	REG_OPTION_OPEN_LINK =        (0x00000008),   // Open symbolic link
 
 	REG_LEGAL_OPTION = (REG_OPTION_RESERVED | REG_OPTION_NON_VOLATILE | REG_OPTION_VOLATILE | REG_OPTION_CREATE_LINK | REG_OPTION_BACKUP_RESTORE | REG_OPTION_OPEN_LINK),
-}
-
-enum
-{
-	REG_NONE =                    ( 0 ),   // No value type
-	REG_SZ =                      ( 1 ),   // Unicode nul terminated string
-	REG_EXPAND_SZ =               ( 2 ),   // Unicode nul terminated string
-                                            // (with environment variable references)
-	REG_BINARY =                  ( 3 ),   // Free form binary
-	REG_DWORD =                   ( 4 ),   // 32-bit number
-	REG_DWORD_LITTLE_ENDIAN =     ( 4 ),   // 32-bit number (same as REG_DWORD)
-	REG_DWORD_BIG_ENDIAN =        ( 5 ),   // 32-bit number
-	REG_LINK =                    ( 6 ),   // Symbolic Link (unicode)
-	REG_MULTI_SZ =                ( 7 ),   // Multiple Unicode strings
-	REG_RESOURCE_LIST =           ( 8 ),   // Resource list in the resource map
-	REG_FULL_RESOURCE_DESCRIPTOR = ( 9 ),  // Resource list in the hardware description
-	REG_RESOURCE_REQUIREMENTS_LIST = ( 10 ),
 }
 
 export LONG RegDeleteKeyA(HKEY hKey, LPCSTR lpSubKey);

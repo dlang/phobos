@@ -8,6 +8,7 @@ module std.c.linux.linux;
 
 import std.c.linux.linuxextern;
 
+alias int pid_t;
 alias int off_t;
 alias uint mode_t;
 
@@ -118,6 +119,12 @@ extern (C)
     int rmdir(char*);
     char* getcwd(char*, int);
     int chmod(char*, mode_t);
+    int fork();
+    int dup(int);
+    int dup2(int, int);
+    int pipe(int[2]);
+    pid_t wait(int*);
+    int waitpid(pid_t, int*, int);
 }
 
 struct timeval

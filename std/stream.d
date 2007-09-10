@@ -1,4 +1,3 @@
-
 /*
  * Copyright (c) 2001-2005
  * Pavel "EvilOne" Minayev
@@ -163,7 +162,7 @@ interface InputStream {
   // has effect on further calls to getc() and getcw()
   wchar ungetcw(wchar c);
 
-  int vreadf(TypeInfo[] arguments, va_list args);
+  int vreadf(TypeInfo[] arguments, void* args);
 
   int readf(...);
 
@@ -236,6 +235,9 @@ interface OutputStream {
 
   // writes data with trailing newline and returns self
   OutputStream writefln(...);
+
+  // writes data with optional trailing newline and returns self
+  OutputStream writefx(TypeInfo[] arguments, void* argptr, int newline = false);
 
   void flush();
   void close();
@@ -542,7 +544,7 @@ class Stream : InputStream, OutputStream {
     return c;
   }
 
-  int vreadf(TypeInfo[] arguments, va_list args) {
+  int vreadf(TypeInfo[] arguments, void* args) {
     char[] fmt;
     int j = 0;
     int count = 0, i = 0;
@@ -1023,14 +1025,19 @@ class Stream : InputStream, OutputStream {
 
   // writes data to stream using writef() syntax,
   OutputStream writef(...) {
-    doFormat(&doFormatCallback,_arguments,_argptr);
-    return this;
+    return writefx(_arguments,_argptr,0);
   }
 
   // writes data with trailing newline
   OutputStream writefln(...) {
-    doFormat(&doFormatCallback,_arguments,_argptr);
-    writeLine("");
+    return writefx(_arguments,_argptr,1);
+  }
+
+  // writes data with optional trailing newline
+  OutputStream writefx(TypeInfo[] arguments, void* argptr, int newline=false) {
+    doFormat(&doFormatCallback,arguments,argptr);
+    if (newline) 
+      writeLine("");
     return this;
   }
 

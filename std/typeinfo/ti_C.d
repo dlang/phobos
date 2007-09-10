@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2004 by Digital Mars, www.digitalmars.com
+ *  Copyright (C) 2004-2005 by Digital Mars, www.digitalmars.com
  *  Written by Walter Bright
  *
  *  This software is provided 'as-is', without any express or implied
@@ -39,7 +39,7 @@ class TypeInfo_C : TypeInfo
 	Object o1 = *cast(Object*)p1;
 	Object o2 = *cast(Object*)p2;
 
-	return o1 == o2 || (o1 && o1.opCmp(o2) == 0);
+	return o1 == o2;
     }
 
     int compare(void *p1, void *p2)

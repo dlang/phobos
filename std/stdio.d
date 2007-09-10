@@ -40,7 +40,7 @@ else
     void __fp_unlock(FILE* fp) { }
 }
 
-private void writex(FILE* fp, TypeInfo[] arguments, void* argptr, int newline)
+void writefx(FILE* fp, TypeInfo[] arguments, void* argptr, int newline=false)
 {   int orientation;
 
     orientation = fwide(fp, 0);
@@ -120,21 +120,20 @@ private void writex(FILE* fp, TypeInfo[] arguments, void* argptr, int newline)
 
 void writef(...)
 {
-    writex(stdout, _arguments, _argptr, 0);
+    writefx(stdout, _arguments, _argptr, 0);
 }
 
 void writefln(...)
 {
-    writex(stdout, _arguments, _argptr, 1);
+    writefx(stdout, _arguments, _argptr, 1);
 }
 
 void fwritef(FILE* fp, ...)
 {
-    writex(fp, _arguments, _argptr, 0);
+    writefx(fp, _arguments, _argptr, 0);
 }
 
 void fwritefln(FILE* fp, ...)
 {
-    writex(fp, _arguments, _argptr, 1);
+    writefx(fp, _arguments, _argptr, 1);
 }
-

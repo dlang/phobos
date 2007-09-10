@@ -90,6 +90,64 @@ enum Mangle : char
     Tdelegate = 'D',
 }
 
+// return the TypeInfo for a primitive type and null otherwise.
+// This is required since for arrays of ints we only have the mangled
+// char to work from. If arrays always subclassed TypeInfo_Array this
+// routine could go away.
+private TypeInfo primitiveTypeInfo(Mangle m) 
+{
+  TypeInfo ti;
+  switch (m)
+    {
+    case Mangle.Tvoid:
+      ti = typeid(void);break;
+    case Mangle.Tbit:
+      ti = typeid(bit);break;
+    case Mangle.Tbyte:
+      ti = typeid(byte);break;
+    case Mangle.Tubyte:
+      ti = typeid(ubyte);break;
+    case Mangle.Tshort:
+      ti = typeid(short);break;
+    case Mangle.Tushort:
+      ti = typeid(ushort);break;
+    case Mangle.Tint:
+      ti = typeid(int);break;
+    case Mangle.Tuint:
+      ti = typeid(uint);break;
+    case Mangle.Tlong:
+      ti = typeid(long);break;
+    case Mangle.Tulong:
+      ti = typeid(ulong);break;
+    case Mangle.Tfloat:
+      ti = typeid(float);break;
+    case Mangle.Tdouble:
+      ti = typeid(double);break;
+    case Mangle.Treal:
+      ti = typeid(real);break;
+    case Mangle.Tifloat:
+      ti = typeid(ifloat);break;
+    case Mangle.Tidouble:
+      ti = typeid(idouble);break;
+    case Mangle.Tireal:
+      ti = typeid(ireal);break;
+    case Mangle.Tcfloat:
+      ti = typeid(cfloat);break;
+    case Mangle.Tcdouble:
+      ti = typeid(cdouble);break;
+    case Mangle.Tcreal:
+      ti = typeid(creal);break;
+    case Mangle.Tchar:
+      ti = typeid(char);break;
+    case Mangle.Twchar:
+      ti = typeid(wchar);break;
+    case Mangle.Tdchar:
+      ti = typeid(dchar);
+    default:
+      ti = null;
+    }
+  return ti;
+}
 
 /************************************
  * Convert arguments to tchar's according to format strings and feed to putc().
@@ -251,6 +309,16 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
 	    return;
 	}
 
+	void putArray(void* p, size_t len, TypeInfo ti) {
+	  putc('[');
+	  size_t tsize = ti.tsize();
+	  while (len--) {
+	    doFormat(putc, (&ti)[0 .. 1], p);
+	    p += tsize;
+	    if (len > 0) putc(',');
+	  }
+	  putc(']');
+	}
 
 	//printf("formatArg(fc = '%c', m = '%c')\n", fc, m);
 	switch (m)
@@ -385,8 +453,14 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
 		vcreal = va_arg!(creal)(argptr);
 		goto Lcomplex;
 
-
 	    case Mangle.Tarray:
+	        if (ti.classinfo.name.length == 14 &&
+		    ti.classinfo.name[9..14] == "Array") 
+		{ // array of non-primitive types
+		  void[] va = va_arg!(void[])(argptr);
+		  putArray(va.ptr, va.length, (cast(TypeInfo_Array)ti).next);
+		  return;
+		}
 		m2 = cast(Mangle)ti.classinfo.name[10];
 		switch (m2)
 		{
@@ -408,8 +482,12 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
 			putstr(s);
 			break;
 
-		    default:
-			goto Lerror;
+  		    default:
+		        TypeInfo ti2 = primitiveTypeInfo(m2);
+			if (!ti2)
+			  goto Lerror;
+			void[] va = va_arg!(void[])(argptr);
+			putArray(va.ptr, va.length, ti2);
 		}
 		return;
 
@@ -813,5 +891,22 @@ unittest
     assert(r == "hello");
     r = std.string.format("%8s", s[0..5]);
     assert(r == "   hello");
+
+    int[] arr = new int[4];
+    arr[0] = 100;
+    arr[1] = -999;
+    arr[3] = 0;
+    r = std.string.format(arr);
+    assert(r == "[100,-999,0,0]");
+    r = std.string.format("%s",arr);
+    assert(r == "[100,-999,0,0]");
+
+    char[][] arr2 = new char[][4];
+    arr2[0] = "hello";
+    arr2[1] = "world";
+    arr2[3] = "foo";
+    r = std.string.format(arr2);
+    assert(r == "[hello,world,,foo]");
+
 }
 
