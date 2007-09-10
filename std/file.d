@@ -31,6 +31,7 @@ private import std.c.stdio;
 private import std.c.stdlib;
 private import std.path;
 private import std.string;
+private import std.regexp;
 
 /* =========================== Win32 ======================= */
 
@@ -555,12 +556,13 @@ char[][] listdir(char[] pathname)
 
 /*****************************************************
  * Return all the files in the directory and its subdirectories
- * that match pattern.
+ * that match pattern or regular expression r.
  * Params:
  *	pathname = Directory name
  *	pattern = String with wildcards, such as $(RED "*.d"). The supported
  *		wildcard strings are described under fnmatch() in
  *		$(LINK2 std_path.html, std.path).
+ *	r = Regular expression, for more powerful _pattern matching.
  * Example:
  *	This program lists all the files with a "d" extension in
  *	the path passed as the first argument.
@@ -571,6 +573,21 @@ char[][] listdir(char[] pathname)
  * void main(char[][] args)
  * {
  *    char[][] d_source_files = std.file.listdir(args[1], "*.d");
+ *
+ *    foreach (char[] d; d_source_files)
+ *	writefln(d);
+ * }
+ * ----
+ * A regular expression version that searches for all files with "d" or
+ * "obj" extensions:
+ * ----
+ * import std.stdio;
+ * import std.file;
+ * import std.regexp;
+ *
+ * void main(char[][] args)
+ * {
+ *    char[][] d_source_files = std.file.listdir(args[1], RegExp(r"\.(d|obj)$"));
  *
  *    foreach (char[] d; d_source_files)
  *	writefln(d);
@@ -587,6 +604,26 @@ char[][] listdir(char[] pathname, char[] pattern)
 	    listdir(de.name, &callback);
 	else
 	{   if (std.path.fnmatch(de.name, pattern))
+		result ~= de.name;
+	}
+	return true; // continue
+    }
+    
+    listdir(pathname, &callback);
+    return result;
+}
+
+/** Ditto */
+
+char[][] listdir(char[] pathname, RegExp r)
+{   char[][] result;
+    
+    bool callback(DirEntry* de)
+    {
+	if (de.isdir)
+	    listdir(de.name, &callback);
+	else
+	{   if (r.test(de.name))
 		result ~= de.name;
 	}
 	return true; // continue
@@ -1219,6 +1256,24 @@ char[][] listdir(char[] pathname, char[] pattern)
 	    listdir(de.name, &callback);
 	else
 	{   if (std.path.fnmatch(de.name, pattern))
+		result ~= de.name;
+	}
+	return true; // continue
+    }
+    
+    listdir(pathname, &callback);
+    return result;
+}
+
+char[][] listdir(char[] pathname, RegExp r)
+{   char[][] result;
+    
+    bool callback(DirEntry* de)
+    {
+	if (de.isdir)
+	    listdir(de.name, &callback);
+	else
+	{   if (r.test(de.name))
 		result ~= de.name;
 	}
 	return true; // continue

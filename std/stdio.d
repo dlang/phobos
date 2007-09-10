@@ -4,6 +4,14 @@
  * Placed in the Public Domain.
  */
 
+/********************************
+ * Standard I/O functions that extend $(B std.c.stdio).
+ * $(B std.c.stdio) is automatically imported when importing
+ * $(B std.stdio).
+ * Macros:
+ *	WIKI=Phobos/StdStdio
+ */
+
 module std.stdio;
 
 import std.c.stdio;
@@ -118,20 +126,41 @@ void writefx(FILE* fp, TypeInfo[] arguments, void* argptr, int newline=false)
 }
 
 
+/***********************************
+ * Arguments are formatted per the
+ * $(LINK2 std_format.html#format-string, format strings)
+ * and written to $(B stdout).
+ */
+
 void writef(...)
 {
     writefx(stdout, _arguments, _argptr, 0);
 }
+
+/***********************************
+ * Same as $(B writef), but a newline is appended
+ * to the output.
+ */
 
 void writefln(...)
 {
     writefx(stdout, _arguments, _argptr, 1);
 }
 
+/***********************************
+ * Same as $(B writef), but output is sent to the
+ * stream fp instead of $(B stdout).
+ */
+
 void fwritef(FILE* fp, ...)
 {
     writefx(fp, _arguments, _argptr, 0);
 }
+
+/***********************************
+ * Same as $(B writefln), but output is sent to the
+ * stream fp instead of $(B stdout).
+ */
 
 void fwritefln(FILE* fp, ...)
 {

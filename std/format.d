@@ -757,6 +757,8 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
 			dchar[] sd = va_arg!(dchar[])(argptr);
 			s = toUTF8(sd);
 		    Lputstr:
+			if (fc != 's')
+			    throw new FormatError("string");
 			if (flags & FLprecision && precision < s.length)
 			    s = s[0 .. precision];
 			putstr(s);

@@ -21,6 +21,7 @@
  *     distribution.
  */
 
+module arraycat;
 
 import object;
 import std.string;

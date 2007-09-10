@@ -23,6 +23,41 @@
  *     distribution.
  */
 
+/**********************************************
+ * $(LINK2 "../../ctg/regular.html", Regular expressions)
+ * are a powerful method of string pattern matching.
+ * The regular expression
+ * language used is the same as that commonly used, however, some of the very
+ * advanced forms may behave slightly differently.
+ *
+ * In the following guide, $(I pattern)[] refers to a
+ * $(LINK2 "../../ctg/regular.html", regular expression).
+ * The $(I attributes)[] refers to
+	a string controlling the interpretation
+	of the regular expression.
+	It consists of a sequence of one or more
+	of the following characters:
+
+	<table border=1 cellspacing=0 cellpadding=5>
+	<th>Attribute
+	<th>Action
+	<tr>
+	<td> $(B g)
+	<td>global; repeat over the whole input string
+	</tr>
+	<tr>
+	<td> $(B i)
+	<td> case insensitive
+	</tr>
+	<tr>
+	<td> $(B m)
+	<td> treat as multiple lines separated by newlines
+	</tr>
+	</table>
+
+ * Macros:
+ *	WIKI = StdRegexp
+ */
 
 /*
 	Escape sequences:
@@ -67,18 +102,18 @@ private
     import std.outbuffer;
 }
 
-/** Regexp to extract an email address */
+/** Regular expression to extract an _email address */
 const char[] email =
     r"[a-zA-Z]([.]?([[a-zA-Z0-9_]-]+)*)?@([[a-zA-Z0-9_]\-_]+\.)+[a-zA-Z]{2,6}";
 
-/** Regexp to extract a url */
+/** Regular expression to extract a _url */
 const char[] url = r"(([h|H][t|T]|[f|F])[t|T][p|P]([s|S]?)\:\/\/|~/|/)?([\w]+:\w+@)?(([a-zA-Z]{1}([\w\-]+\.)+([\w]{2,5}))(:[\d]{1,5})?)?((/?\w+/)+|/?)(\w+\.[\w]{3,4})?([,]\w+)*((\?\w+=\w+)?(&\w+=\w+)*([,]\w*)*)?";
 
 /************************************
- * One of these gets thrown on compilation error
+ * One of these gets thrown on compilation errors
  */
 
-class RegExpError : Error
+class RegExpException : Exception
 {
     this(char[] msg)
     {
@@ -94,12 +129,338 @@ struct regmatch_t
 
 private alias char rchar;	// so we can make a wchar version
 
+/******************************************************
+ * Search string for matches with regular expression
+ * pattern with attributes.
+ * Replace each match with string generated from format.
+ * Params:
+ *	string = String to search.
+ *	pattern = Regular expression pattern.
+ *	format = Replacement string format.
+ *	attributes = Regular expression attributes.
+ * Returns: the resulting string.
+ */
+
+char[] sub(char[] string, char[] pattern, char[] format, char[] attributes = null)
+{
+    RegExp r = new RegExp(pattern, attributes);
+    char[] result = r.replace(string, format);
+    delete r;
+    return result;
+}
+
+unittest
+{
+    debug(regexp) printf("regexp.sub.unittest\n");
+
+    char[] r = sub("hello", "ll", "ss");
+    assert(r == "hesso");
+}
+
+/*******************************************************
+ * Search string for matches with regular expression
+ * pattern with attributes.
+ * Pass each match to delegate dg.
+ * Replace each match with the return value from dg.
+ * Params:
+ *	string = String to search.
+ *	pattern = Regular expression pattern.
+ *	dg = Delegate
+ *	attributes = Regular expression attributes.
+ * Returns: the resulting string.
+ */
+
+char[] sub(char[] string, char[] pattern, char[] delegate(RegExp) dg, char[] attributes = null)
+{
+    RegExp r = new RegExp(pattern, attributes);
+    rchar[] result;
+    int lastindex;
+    int offset;
+
+    result = string;
+    lastindex = 0;
+    offset = 0;
+    while (r.test(string, lastindex))
+    {
+	int so = r.pmatch[0].rm_so;
+	int eo = r.pmatch[0].rm_eo;
+
+	rchar[] replacement = dg(r);
+	result = replaceSlice(result, result[offset + so .. offset + eo], replacement);
+
+	if (r.attributes & RegExp.REA.global)
+	{
+	    offset += replacement.length - (eo - so);
+
+	    if (lastindex == eo)
+		lastindex++;		// always consume some source
+	    else
+		lastindex = eo;
+	}
+	else
+	    break;
+    }
+    delete r;
+
+    return result;
+}
+
+unittest
+{
+    debug(regexp) printf("regexp.sub.unittest\n");
+
+    char[] foo(RegExp r) { return "ss"; }
+
+    char[] r = sub("hello", "ll", delegate char[](RegExp r) { return "ss"; });
+    assert(r == "hesso");
+}
+
+
+/*************************************************
+ * Search string[] for first match with pattern[] with attributes[].
+ * Params:
+ *	string = String to search.
+ *	pattern = Regular expression pattern.
+ *	attributes = Regular expression attributes.
+ * Returns:
+ *	index into string[] of match if found, -1 if no match.
+ */
+
+int find(rchar[] string, char[] pattern, char[] attributes = null)
+{
+    int i = -1;
+
+    RegExp r = new RegExp(pattern, attributes);
+    if (r.test(string))
+    {
+	i = r.pmatch[0].rm_so;
+    }
+    delete r;
+    return i;
+}
+
+unittest
+{
+    debug(regexp) printf("regexp.find.unittest\n");
+
+    int i;
+    i = find("xabcy", "abc");
+    assert(i == 1);
+    i = find("cba", "abc");
+    assert(i == -1);
+}
+
+
+
+/*************************************************
+ * Search string[] for last match with pattern[] with attributes[].
+ * Params:
+ *	string = String to search.
+ *	pattern = Regular expression pattern.
+ *	attributes = Regular expression attributes.
+ * Returns:
+ *	index into string[] of match if found, -1 if no match.
+ */
+
+int rfind(rchar[] string, char[] pattern, char[] attributes = null)
+{
+    int i = -1;
+    int lastindex = 0;
+
+    RegExp r = new RegExp(pattern, attributes);
+    while (r.test(string, lastindex))
+    {   int eo = r.pmatch[0].rm_eo;
+	i = r.pmatch[0].rm_so;
+	if (lastindex == eo)
+	    lastindex++;		// always consume some source
+	else
+	    lastindex = eo;
+    }
+    delete r;
+    return i;
+}
+
+unittest
+{
+    int i;
+
+    debug(regexp) printf("regexp.rfind.unittest\n");
+    i = rfind("abcdefcdef", "c");
+    assert(i == 6);
+    i = rfind("abcdefcdef", "cd");
+    assert(i == 6);
+    i = rfind("abcdefcdef", "x");
+    assert(i == -1);
+    i = rfind("abcdefcdef", "xy");
+    assert(i == -1);
+    i = rfind("abcdefcdef", "");
+    assert(i == 10);
+}
+
+
+/********************************************
+ * Split string[] into an array of strings, using the regular
+ * expression pattern[] with attributes[] as the separator.
+ *	string = String to search.
+ *	pattern = Regular expression pattern.
+ *	attributes = Regular expression attributes.
+ * Returns:
+ * 	array of slices into string[]
+ */
+
+char[][] split(char[] string, char[] pattern, char[] attributes = null)
+{
+    RegExp r = new RegExp(pattern, attributes);
+    char[][] result = r.split(string);
+    delete r;
+    return result;
+}
+
+unittest
+{
+    debug(regexp) printf("regexp.split.unittest()\n");
+    char[][] result;
+
+    result = split("ab", "a*");
+    assert(result.length == 2);
+    assert(result[0] == "");
+    assert(result[1] == "b");
+}
+
+/****************************************************
+ * Search string[] for first match with pattern[] with attributes[].
+ * Params:
+ *	string = String to search.
+ *	pattern = Regular expression pattern.
+ *	attributes = Regular expression attributes.
+ * Returns:
+ *	corresponding RegExp if found, null if not.
+ */
+
+RegExp search(char[] string, char[] pattern, char[] attributes = null)
+{
+    RegExp r = new RegExp(pattern, attributes);
+
+    if (r.test(string))
+    {
+    }
+    else
+    {	delete r;
+	r = null;
+    }
+    return r;
+}
+
+/* ********************************* RegExp ******************************** */
+
+/*****************************
+ * RegExp is a class to handle regular expressions.
+ *
+ * It is the core foundation for adding powerful string pattern matching
+ * capabilities to programs like grep, text editors, awk, sed, etc.
+ */
 class RegExp
 {
-    public this(rchar[] pattern, rchar[] attributes)
+    /*****
+     * Construct a RegExp object. Compile pattern
+     * with <i>attributes</i> into
+     * an internal form for fast execution.
+     * Params:
+     *	pattern = regular expression
+     *  attributes = _attributes
+     * Throws: RegExpException if there are any compilation errors.
+     */
+    public this(rchar[] pattern, rchar[] attributes = null)
     {
 	pmatch = (&gmatch)[0 .. 1];
 	compile(pattern, attributes);
+    }
+
+    /*****
+     * Generate instance of RegExp.
+     * Params:
+     *	pattern = regular expression
+     *  attributes = _attributes
+     * Throws: RegExpException if there are any compilation errors.
+     */
+    public static RegExp opCall(rchar[] pattern, rchar[] attributes = null)
+    {
+	return new RegExp(pattern, attributes);
+    }
+
+    /**********
+     * Determine if there is an initial match with string[].
+     * Returns:
+     *	$(B this) if there is a match, null if not
+     * Example:
+     *  This makes it possible
+     *  to use RegExp's in a $(I MatchExpression):
+     * ---
+     * if (RegExp("^abc") ~~ string)
+     *     writefln("string starts with 'abc'");
+     * ---
+     */
+    public RegExp opMatch(char[] string)
+    {
+	return test(input, 0) ? this : null;
+    }
+
+    /************
+     * Determine next match in string.
+     * Returns:
+     *	$(B this) if there is a match, null if not
+     * Example:
+     *  This makes it possible, along with $(B opMatch) operator overload,
+     *  to use RegExp's in a $(I WhileStatement):
+     * ---
+     * RegExp r = new RegExp("[a..c]");
+     * writef("'");
+     * while (r ~~ "abdd3cce")
+     *     writef(_match.match(0));
+     * writefln("'");     // writes 'abcc'
+     * ---
+     */
+    public RegExp opNext()
+    {
+	return test(input, pmatch[0].rm_eo) ? this : null;
+    }
+
+    /******************
+     * Retrieve match n.
+     *
+     * n==0 means the matched substring, n>0 means the
+     * n'th parenthesized subexpression.
+     * if n is larger than the number of parenthesized subexpressions,
+     * null is returned.
+     */
+    public char[] match(size_t n)
+    {
+	if (n >= pmatch.length)
+	    return null;
+	else
+	{   size_t rm_so, rm_eo;
+	    rm_so = pmatch[n].rm_so;
+	    rm_eo = pmatch[n].rm_eo;
+	    if (rm_so == rm_eo)
+		return null;
+	    return input[rm_so .. rm_eo];
+	}
+    }
+
+    /*******************
+     * Return the slice of the input that precedes the matched substring.
+     */
+    public char[] pre()
+    {
+	return input[0 .. pmatch[0].rm_so];
+    }
+
+    /*******************
+     * Return the slice of the input that follows the matched substring.
+     */
+    public char[] post()
+    {
+	return input[pmatch[0].rm_eo .. $];
     }
 
     uint re_nsub;		// number of parenthesized subexpression matches
@@ -187,8 +548,8 @@ private int isword(dchar c) { return isalnum(c) || c == '_'; }
 
 private uint inf = ~0u;
 
-/*********************************
- * Throws RegExpError on error
+/* ********************************
+ * Throws RegExpException on error
  */
 
 public void compile(rchar[] pattern, rchar[] attributes)
@@ -347,10 +708,9 @@ unittest
 }
 
 /*************************************************
- * Search string[] for match.
+ * Search string[] for match with regular expression.
  * Returns:
- *	>=0	index of match
- *	-1	no match
+ *	index of match if successful, -1 if not found
  */
 
 public int find(rchar[] string)
@@ -383,8 +743,8 @@ unittest
 /*************************************************
  * Search string[] for match.
  * Returns:
- *	if global, return same value as exec(string)
- *	if not global, return array of all matches
+ *	If global attribute, return same value as exec(string).
+ *	If not global attribute, return array of all matches.
  */
 
 public rchar[][] match(rchar[] string)
@@ -437,10 +797,10 @@ unittest
 
 /*************************************************
  * Find regular expression matches in string[]. Replace those matches
- * with a new string composed of format[] merged with the result of the
+ * with a new _string composed of format[] merged with the result of the
  * matches.
  * If global, replace all matches. Otherwise, replace first match.
- * Return the new string.
+ * Returns: the new _string
  */
 
 public rchar[] replace(rchar[] string, rchar[] format)
@@ -510,7 +870,8 @@ public rchar[][] exec(rchar[] string)
 }
 
 /*************************************************
- * Search string[] for next match.
+ * Pick up where last exec(string) or exec() left off,
+ * searching string[] for next match.
  * Returns:
  *	array of slices into string[] representing matches
  */
@@ -536,9 +897,7 @@ public rchar[][] exec()
 
 /************************************************
  * Search string[] for match.
- * Returns:
- *	0	no match
- *	!=0	match
+ * Returns: 0 for no match, !=0 for match
  */
 
 public int test(rchar[] string)
@@ -547,10 +906,8 @@ public int test(rchar[] string)
 }
 
 /************************************************
- * Pick up where last test() left off, and search again.
- * Returns:
- *	0	no match
- *	!=0	match
+ * Pick up where last test(string) or test() left off, and search again.
+ * Returns: 0 for no match, !=0 for match
  */
 
 public int test()
@@ -559,10 +916,8 @@ public int test()
 }
 
 /************************************************
- * Test input[] starting at startindex against compiled in pattern[].
- * Returns:
- *	0	no match
- *	!=0	match
+ * Test string[] starting at startindex against regular expression.
+ * Returns: 0 for no match, !=0 for match
  */
 
 public int test(char[] string, int startindex)
@@ -1966,7 +2321,7 @@ void error(char[] msg)
     debug(regexp) printf("error: %.*s\n", msg);
 //assert(0);
 //*(char*)0=0;
-    throw new RegExpError(msg);
+    throw new RegExpException(msg);
 }
 
 // p is following the \ char
@@ -2346,72 +2701,39 @@ int starrchars(Range r, ubyte[] prog)
 
 /* ==================== replace ======================= */
 
-/************************************
- * This version of replace() uses:
- *	&	replace with the match
- *	\n	replace with the nth parenthesized match, n is 1..9
- *	\c	replace with char c
+/***********************
+ * After a match is found with test(), this function
+ * will take the match results and, using the format
+ * string, generate and return a new string.
+ * The format string has the formatting characters:
+ *	<table border=1 cellspacing=0 cellpadding=5>
+	$(TR $(TH Format) $(TH Replaced With))
+	$(TR
+	$(TD $(B $$))	$(TD $)
+	)
+	$(TR
+	$(TD $(B $&))	$(TD The matched substring.)
+	)
+	$(TR
+	$(TD $(B $`))	$(TD The portion of string that precedes the matched substring.)
+	)
+	$(TR
+	$(TD $(B $'))	$(TD The portion of string that follows the matched substring.)
+	)
+	$(TR
+	$(TD $(B $n))	$(TD The nth capture, where n is a single digit 1-9
+			and $n is not followed by a decimal digit.)
+	)
+	$(TR
+	$(TD $(B $nn))	$(TD The nnth capture, where nn is a two-digit decimal
+			number 01-99.
+			If nnth capture is undefined or more than the number
+			of parenthesized subexpressions, use the empty
+			string instead.)
+	)
+	</table>
+	Any other $ are left as is.
  */
-
-public rchar[] replaceOld(rchar[] format)
-{
-    OutBuffer buf;
-    rchar[] result;
-    rchar c;
-
-//printf("replace: this = %p so = %d, eo = %d\n", this, pmatch[0].rm_so, pmatch[0].rm_eo);
-//printf("3input = '%.*s'\n", input);
-    buf = new OutBuffer();
-    buf.reserve(format.length * rchar.sizeof);
-    for (uint i; i < format.length; i++)
-    {
-	c = format[i];
-	switch (c)
-	{
-	    case '&':
-//printf("match = '%.*s'\n", input[pmatch[0].rm_so .. pmatch[0].rm_eo]);
-		buf.write(input[pmatch[0].rm_so .. pmatch[0].rm_eo]);
-		break;
-
-	    case '\\':
-		if (i + 1 < format.length)
-		{
-		    c = format[++i];
-		    if (c >= '1' && c <= '9')
-		    {   uint i;
-
-			i = c - '0';
-			if (i <= re_nsub && pmatch[i].rm_so != pmatch[i].rm_eo)
-			    buf.write(input[pmatch[i].rm_so .. pmatch[i].rm_eo]);
-			break;
-		    }
-		}
-		buf.write(c);
-		break;
-
-	    default:
-		buf.write(c);
-		break;
-	}
-    }
-    result = cast(rchar[])buf.toBytes();
-    return result;
-}
-
-// This version of replace uses:
-//	$$	$
-//	$&	The matched substring.
-//	$`	The portion of string that precedes the matched substring.
-//	$'	The portion of string that follows the matched substring.
-//	$n	The nth capture, where n is a single digit 1-9
-//		and $n is not followed by a decimal digit.
-//	$nn	The nnth capture, where nn is a two-digit decimal
-//		number 01-99.
-//		If nnth capture is undefined or more than the number
-//		of parenthesized subexpressions, use the empty
-//		string instead.
-//
-//	Any other $ are left as is.
 
 public rchar[] replace(rchar[] format)
 {
@@ -2517,198 +2839,70 @@ private static rchar[] replace3(rchar[] format, rchar[] input, regmatch_t[] pmat
     return result;
 }
 
-}
-
-/****************************************************
- * Search str for regular expression pattern.
- * If match, return a RegExp for the match.
- * If no match, return null.
+/************************************
+ * Like replace(char[] format), but uses old style formatting:
+		<table border=1 cellspacing=0 cellpadding=5>
+		<th>Format
+		<th>Description
+		<tr>
+		<td><b>&</b>
+		<td>replace with the match
+		</tr>
+		<tr>
+		<td><b>\</b><i>n</i>
+		<td>replace with the <i>n</i>th parenthesized match, <i>n</i> is 1..9
+		</tr>
+		<tr>
+		<td><b>\</b><i>c</i>
+		<td>replace with char <i>c</i>.
+		</tr>
+		</table>
  */
 
-RegExp search(char[] str, char[] pattern, char[] attributes = null)
+public rchar[] replaceOld(rchar[] format)
 {
-    RegExp r = new RegExp(pattern, attributes);
-
-    if (r.test(str))
-    {
-    }
-    else
-    {	delete r;
-	r = null;
-    }
-    return r;
-}
-
-
-/******************************************************
- * Search str for pattern, replace occurrences with format.
- */
-
-char[] sub(char[] str, char[] pattern, char[] format, char[] attributes = null)
-{
-    RegExp r = new RegExp(pattern, attributes);
-    char[] result = r.replace(str, format);
-    delete r;
-    return result;
-}
-
-unittest
-{
-    debug(regexp) printf("regexp.sub.unittest\n");
-
-    char[] r = sub("hello", "ll", "ss");
-    assert(r == "hesso");
-}
-
-/*******************************************************
- * Search str for pattern, replace occurrences with string
- * returned from dg.
- */
-
-char[] sub(char[] str, char[] pattern, char[] delegate(RegExp) dg, char[] attributes = null)
-{
-    RegExp r = new RegExp(pattern, attributes);
+    OutBuffer buf;
     rchar[] result;
-    int lastindex;
-    int offset;
+    rchar c;
 
-    result = str;
-    lastindex = 0;
-    offset = 0;
-    while (r.test(str, lastindex))
+//printf("replace: this = %p so = %d, eo = %d\n", this, pmatch[0].rm_so, pmatch[0].rm_eo);
+//printf("3input = '%.*s'\n", input);
+    buf = new OutBuffer();
+    buf.reserve(format.length * rchar.sizeof);
+    for (uint i; i < format.length; i++)
     {
-	int so = r.pmatch[0].rm_so;
-	int eo = r.pmatch[0].rm_eo;
-
-	rchar[] replacement = dg(r);
-	result = replaceSlice(result, result[offset + so .. offset + eo], replacement);
-
-	if (r.attributes & RegExp.REA.global)
+	c = format[i];
+	switch (c)
 	{
-	    offset += replacement.length - (eo - so);
+	    case '&':
+//printf("match = '%.*s'\n", input[pmatch[0].rm_so .. pmatch[0].rm_eo]);
+		buf.write(input[pmatch[0].rm_so .. pmatch[0].rm_eo]);
+		break;
 
-	    if (lastindex == eo)
-		lastindex++;		// always consume some source
-	    else
-		lastindex = eo;
+	    case '\\':
+		if (i + 1 < format.length)
+		{
+		    c = format[++i];
+		    if (c >= '1' && c <= '9')
+		    {   uint i;
+
+			i = c - '0';
+			if (i <= re_nsub && pmatch[i].rm_so != pmatch[i].rm_eo)
+			    buf.write(input[pmatch[i].rm_so .. pmatch[i].rm_eo]);
+			break;
+		    }
+		}
+		buf.write(c);
+		break;
+
+	    default:
+		buf.write(c);
+		break;
 	}
-	else
-	    break;
     }
-    delete r;
-
+    result = cast(rchar[])buf.toBytes();
     return result;
 }
 
-unittest
-{
-    debug(regexp) printf("regexp.sub.unittest\n");
-
-    char[] foo(RegExp r) { return "ss"; }
-
-    char[] r = sub("hello", "ll", delegate char[](RegExp r) { return "ss"; });
-    assert(r == "hesso");
 }
 
-
-/*************************************************
- * Search string[] for match with pattern[].
- * Returns:
- *	>=0	index of match
- *	-1	no match
- */
-
-int find(rchar[] string, char[] pattern, char[] attributes = null)
-{
-    int i = -1;
-
-    RegExp r = new RegExp(pattern, attributes);
-    if (r.test(string))
-    {
-	i = r.pmatch[0].rm_so;
-    }
-    delete r;
-    return i;
-}
-
-unittest
-{
-    debug(regexp) printf("regexp.find.unittest\n");
-
-    int i;
-    i = find("xabcy", "abc");
-    assert(i == 1);
-    i = find("cba", "abc");
-    assert(i == -1);
-}
-
-
-
-/*************************************************
- * Search string[] for last match with pattern[].
- * Returns:
- *	>=0	index of match
- *	-1	no match
- */
-
-int rfind(rchar[] string, char[] pattern, char[] attributes = null)
-{
-    int i = -1;
-    int lastindex = 0;
-
-    RegExp r = new RegExp(pattern, attributes);
-    while (r.test(string, lastindex))
-    {   int eo = r.pmatch[0].rm_eo;
-	i = r.pmatch[0].rm_so;
-	if (lastindex == eo)
-	    lastindex++;		// always consume some source
-	else
-	    lastindex = eo;
-    }
-    delete r;
-    return i;
-}
-
-unittest
-{
-    int i;
-
-    debug(regexp) printf("regexp.rfind.unittest\n");
-    i = rfind("abcdefcdef", "c");
-    assert(i == 6);
-    i = rfind("abcdefcdef", "cd");
-    assert(i == 6);
-    i = rfind("abcdefcdef", "x");
-    assert(i == -1);
-    i = rfind("abcdefcdef", "xy");
-    assert(i == -1);
-    i = rfind("abcdefcdef", "");
-    assert(i == 10);
-}
-
-
-/********************************************
- * Split string[] into an array of strings, using the regular
- * expression as the separator.
- * Returns:
- * 	array of slices into string[]
- */
-
-char[][] split(char[] string, char[] pattern, char[] attributes = null)
-{
-    RegExp r = new RegExp(pattern, attributes);
-    char[][] result = r.split(string);
-    delete r;
-    return result;
-}
-
-unittest
-{
-    debug(regexp) printf("regexp.split.unittest()\n");
-    char[][] result;
-
-    result = split("ab", "a*");
-    assert(result.length == 2);
-    assert(result[0] == "");
-    assert(result[1] == "b");
-}

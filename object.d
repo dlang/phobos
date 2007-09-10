@@ -129,3 +129,14 @@ class Error : Exception
     this(char[] msg, Error next);
 }
 
+// Default type for _match
+
+struct _Match
+{
+    void* handle;
+
+    char[] match(size_t n);
+    _Match* opNext();
+    char[] pre();
+    char[] post();
+}

@@ -84,6 +84,12 @@ const char[6] whitespace = " \t\v\r\n\f";			/// ASCII whitespace
 const dchar LS = '\u2028';	/// UTF line separator
 const dchar PS = '\u2029';	/// UTF paragraph separator
 
+/// Newline sequence for this system
+version (Windows)
+    const char[2] newline = "\r\n";
+else version (linux)
+    const char[2] newline = "\n";
+
 /**********************************
  * Returns !=0 if c is whitespace
  */

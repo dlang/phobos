@@ -21,6 +21,7 @@ CFLAGS=-mn -6 -r
 
 DFLAGS=-O -release
 #DFLAGS=-unittest -g
+#DFLAGS=-unittest -cov -g
 
 CC=dmc
 
@@ -72,7 +73,7 @@ OBJS= asserterror.obj deh.obj switch.obj complex.obj gcstats.obj \
 	socket.obj socketstream.obj loader.obj stdarg.obj format.obj stdio.obj \
 	perf.obj openrj.obj uni.obj winsock.obj oldsyserror.obj \
 	errno.obj boxer.obj cstream.obj charset.obj \
-	realtest.obj gamma.obj demangle.obj \
+	realtest.obj gamma.obj demangle.obj cover.obj match.obj \
 	ti_Aa.obj ti_Ag.obj ti_C.obj ti_int.obj ti_char.obj \
 	ti_wchar.obj ti_uint.obj ti_short.obj ti_ushort.obj \
 	ti_byte.obj ti_ubyte.obj ti_long.obj ti_ulong.obj ti_ptr.obj \
@@ -92,7 +93,11 @@ DOCS=	$(DOC)\std_path.html $(DOC)\std_math.html $(DOC)\std_outbuffer.html \
 	$(DOC)\std_random.html $(DOC)\std_file.html $(DOC)\std_date.html \
 	$(DOC)\std_md5.html $(DOC)\std_zip.html $(DOC)\std_zlib.html \
 	$(DOC)\std_demangle.html \
+	$(DOC)\std_uri.html \
 	$(DOC)\std_utf.html \
+	$(DOC)\std_cover.html \
+	$(DOC)\std_regexp.html \
+	$(DOC)\std_stdio.html \
 	$(DOC)\std_windows_charset.html
 
 SRC=	errno.c object.d unittest.d crc32.d gcstats.d
@@ -106,7 +111,7 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 	std\regexp.d std\random.d std\stream.d std\process.d std\recls.d \
 	std\socket.d std\socketstream.d std\loader.d std\stdarg.d std\format.d \
 	std\stdio.d std\perf.d std\openrj.d std\uni.d std\boxer.d \
-	std\cstream.d std\demangle.d
+	std\cstream.d std\demangle.d std\cover.d
 
 SRC_STD_C= std\c\process.d std\c\stdlib.d std\c\time.d std\c\stdio.d \
 	std\c\math.d std\c\stdarg.d std\c\stddef.d
@@ -143,7 +148,7 @@ SRC_INT=	\
 	internal\memset.d internal\arraycast.d internal\aaA.d internal\adi.d \
 	internal\dmain2.d internal\cast.d internal\qsort.d internal\deh2.d \
 	internal\cmath2.d internal\obj.d internal\mars.h internal\aApply.d \
-	internal\object.d internal\trace.d internal\qsort2.d
+	internal\object.d internal\trace.d internal\qsort2.d internal\match.d
 
 SRC_STD_WIN= std\windows\registry.d \
 	std\windows\iunknown.d std\windows\syserror.d std\windows\charset.d
@@ -422,6 +427,9 @@ gcstub.obj : internal\gc\gcstub.d
 invariant.obj : internal\invariant.d
 	$(DMD) -c $(DFLAGS) internal\invariant.d
 
+match.obj : internal\match.d
+	$(DMD) -c $(DFLAGS) internal\match.d
+
 memset.obj : internal\memset.d
 	$(DMD) -c $(DFLAGS) internal\memset.d
 
@@ -462,6 +470,9 @@ compiler.obj : std\compiler.d
 
 conv.obj : std\conv.d
 	$(DMD) -c $(DFLAGS) std\conv.d
+
+cover.obj : std\cover.d
+	$(DMD) -c $(DFLAGS) std\cover.d
 
 cstream.obj : std\cstream.d
 	$(DMD) -c $(DFLAGS) std\cstream.d
@@ -763,6 +774,9 @@ $(DOC)\std_base64.html : std.ddoc std\base64.d
 $(DOC)\std_compiler.html : std.ddoc std\compiler.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_compiler.html std.ddoc std\compiler.d
 
+$(DOC)\std_cover.html : std.ddoc std\cover.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_cover.html std.ddoc std\cover.d
+
 $(DOC)\std_date.html : std.ddoc std\date.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_date.html std.ddoc std\date.d
 
@@ -790,11 +804,20 @@ $(DOC)\std_path.html : std.ddoc std\path.d
 $(DOC)\std_random.html : std.ddoc std\random.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_random.html std.ddoc std\random.d
 
+$(DOC)\std_regexp.html : std.ddoc std\regexp.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_regexp.html std.ddoc std\regexp.d
+
+$(DOC)\std_stdio.html : std.ddoc std\stdio.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_stdio.html std.ddoc std\stdio.d
+
 $(DOC)\std_stream.html : std.ddoc std\stream.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_stream.html -d std.ddoc std\stream.d
 
 $(DOC)\std_string.html : std.ddoc std\string.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_string.html std.ddoc std\string.d
+
+$(DOC)\std_uri.html : std.ddoc std\uri.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_uri.html std.ddoc std\uri.d
 
 $(DOC)\std_utf.html : std.ddoc std\utf.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_utf.html std.ddoc std\utf.d

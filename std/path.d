@@ -511,7 +511,8 @@ char[] addExt(char[] filename, char[] ext)
 /*************************************
  * Checks if path is absolute.
  *
- * Returns: non zero if the path starts from the root directory,
+ * Returns: non-zero if the path starts from the root directory (Linux) or
+ * drive letter and root directory (Windows),
  * zero otherwise.
  *
  * Throws: Nothing.
