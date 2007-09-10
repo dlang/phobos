@@ -1,7 +1,9 @@
 
 module std.switcherr;
 
-class SwitchError : Object
+import std.stdio;
+
+class SwitchError : Error
 {
   private:
 
@@ -12,7 +14,12 @@ class SwitchError : Object
     {
 	this.linnum = linnum;
 	this.filename = filename;
+
+	char[] buffer = new char[17 + filename.length + linnum.sizeof * 3 + 1];
+	int len = sprintf(buffer, "Switch Default %.*s(%u)", filename, linnum);
+	super(buffer[0..len]);
     }
+
 
   public:
 

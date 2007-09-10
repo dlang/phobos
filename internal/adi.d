@@ -207,7 +207,7 @@ extern (C) long _adDupBit(Array a)
 	size = (a.length + 31) / 32;
 	r.ptr = cast(void *) new uint[size];
 	r.length = a.length;
-	memcpy(r.ptr, a.ptr, size);
+	memcpy(r.ptr, a.ptr, size * uint.sizeof);
 	return *cast(long*)(&r);
     }
 

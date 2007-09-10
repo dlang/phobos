@@ -93,7 +93,7 @@ version(Windows)
         alias HMODULE HModule_;
     }
 }
-else version(Linux)
+else version(linux)
 {
     extern(C)
     {
@@ -282,7 +282,7 @@ version(Windows)
         return szFileName[0 .. cch].dup;
     }
 }
-else version(Linux)
+else version(linux)
 {
     private class ExeModuleInfo
     {

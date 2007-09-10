@@ -405,7 +405,7 @@ long _d_arrayappend(Array *px, byte[] y, uint size)
 	px.data = newdata;
     }
     px.length = newlength;
-    px.data[length * size .. newlength * size] = y[];
+    memcpy(px.data + length * size, y, y.length * size);
     return *cast(long*)px;
 }
 
