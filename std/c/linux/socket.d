@@ -359,8 +359,8 @@ struct addrinfo
 	int32_t ai_socktype;
 	int32_t ai_protocol;
 	size_t ai_addrlen;
-	char* ai_canonname;
 	sockaddr* ai_addr;
+	char* ai_canonname;
 	addrinfo* ai_next;
 }
 

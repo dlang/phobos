@@ -3,12 +3,19 @@
  * Macros:
  *	WIKI = StdPath
  * Copyright:
- *	Copyright (c) 2001-2005 by Digital Mars
+ *	Copyright (c) 2001-2006 by Digital Mars
  *	All Rights Reserved
  *	www.digitalmars.com
+ *
+ * Grzegorz Adam Hankiewicz added some documentation.
+ *
+ * This module is used to parse file names. All the operations
+ * work only on strings; they don't perform any input/output
+ * operations. This means that if a path contains a directory name
+ * with a dot, functions like getExt() will work with it just as
+ * if it was a file. To differentiate these cases,
+ * use the std.file module first (i.e. std.file.isDir()).
  */
-
-// File name parsing
 
 module std.path;
 
@@ -27,26 +34,67 @@ version(linux)
 version(Win32)
 {
 
-    const char[1] sep = "\\";	 /// String used to separate directory names in a path.
-    const char[1] altsep = "/";	 /// Alternate version of sep[], used in Windows.
-    const char[1] pathsep = ";"; /// Path separator string.
+    /** String used to separate directory names in a path. Under
+     *  Windows this is a backslash, under Linux a slash. */
+    const char[1] sep = "\\";
+    /** Alternate version of sep[] used in Windows (a slash). Under
+     *  Linux this is empty. */
+    const char[1] altsep = "/";
+    /** Path separator string. A semi colon under Windows, a colon
+     *  under Linux. */
+    const char[1] pathsep = ";";
+    /** String used to separate lines, \r\n under Windows and \n
+     * under Linux. */
     const char[2] linesep = "\r\n"; /// String used to separate lines.
     const char[1] curdir = ".";	 /// String representing the current directory.
     const char[2] pardir = ".."; /// String representing the parent directory.
 }
 version(linux)
 {
-    const char[1] sep = "/";	 /// String used to separate directory names in a path.
-    const char[0] altsep;	 /// Alternate version of sep[], used in Windows.
-    const char[1] pathsep = ":"; /// Path separator string.
-    const char[1] linesep = "\n"; /// String used to separate lines.
+    /** String used to separate directory names in a path. Under
+     *  Windows this is a backslash, under Linux a slash. */
+    const char[1] sep = "/";
+    /** Alternate version of sep[] used in Windows (a slash). Under
+     *  Linux this is empty. */
+    const char[0] altsep;
+    /** Path separator string. A semi colon under Windows, a colon
+     *  under Linux. */
+    const char[1] pathsep = ":";
+    /** String used to separate lines, \r\n under Windows and \n
+     * under Linux. */
+    const char[1] linesep = "\n";
     const char[1] curdir = ".";	 /// String representing the current directory.
     const char[2] pardir = ".."; /// String representing the parent directory.
 }
 
 /**************************
- * Get extension.
- * For example, "d:\path\foo.bat" returns "bat".
+ * Extracts the extension from a filename or path.
+ *
+ * This function will search fullname from the end until the
+ * first dot, path separator or first character of fullname is
+ * reached. Under Windows, the drive letter separator (<i>colon</i>)
+ * also terminates the search.
+ *
+ * Returns: If a dot was found, characters to its right are
+ * returned. If a path separator was found, or fullname didn't
+ * contain any dots or path separators, returns null.
+ *
+ * Throws: Nothing.
+ *
+ * Examples:
+ * -----
+ * version(Win32)
+ * {
+ *     getExt(r"d:\path\foo.bat") => "bat"
+ *     getExt(r"d:\path.two\bar") => null
+ * }
+ * version(linux)
+ * {
+ *     getExt(r"/home/user.name/bar.")  => ""
+ *     getExt(r"d:\\path.two\\bar") => "two\\bar"
+ *     getExt(r"/home/user/.resource") => "resource"
+ * }
+ * -----
  */
 
 char[] getExt(char[] fullname)
@@ -114,8 +162,33 @@ unittest
 }
 
 /**************************
- * Get name without extension.
- * For example, "d:\path\foo.bat" returns "d:\path\foo".
+ * Returns the extensionless version of a filename or path.
+ *
+ * This function will search fullname from the end until the
+ * first dot, path separator or first character of fullname is
+ * reached. Under Windows, the drive letter separator (<i>colon</i>)
+ * also terminates the search.
+ *
+ * Returns: If a dot was found, characters to its left are
+ * returned. If a path separator was found, or fullname didn't
+ * contain any dots or path separators, returns null.
+ *
+ * Throws: Nothing.
+ *
+ * Examples:
+ * -----
+ * version(Win32)
+ * {
+ *     getName(r"d:\path\foo.bat") => "d:\path\foo"
+ *     getName(r"d:\path.two\bar") => null
+ * }
+ * version(linux)
+ * {
+ *     getName("/home/user.name/bar.")  => "/home/user.name/bar"
+ *     getName(r"d:\path.two\bar") => "d:\path"
+ *     getName("/home/user/.resource") => "/home/user/"
+ * }
+ * -----
  */
 
 char[] getName(char[] fullname)
@@ -151,11 +224,39 @@ unittest
     result = getName("foo.bar");
     i = cmp(result, "foo");
     assert(i == 0);
+
+    result = getName("d:\\path.two\\bar");
+    version (Win32)
+	i = cmp(result, null);
+    version (linux)
+	i = cmp(result, "d:\\path");
+    assert(i == 0);
 }
 
 /**************************
- * Get base name.
- * For example, "d:\path\foo.bat" returns "foo.bat".
+ * Extracts the base name of a path.
+ *
+ * This function will search fullname from the end until the
+ * first path separator or first character of fullname is
+ * reached. Under Windows, the drive letter separator (<i>colon</i>)
+ * also terminates the search.
+ *
+ * Returns: If a path separator was found, all the characters to its
+ * right are returned. Otherwise, fullname is returned.
+ *
+ * Throws: Nothing.
+ *
+ * Examples:
+ * -----
+ * version(Win32)
+ * {
+ *     getBaseName(r"d:\path\foo.bat") => "foo.bat"
+ * }
+ * version(linux)
+ * {
+ *     getBaseName("/home/user.name/bar.")  => "bar."
+ * }
+ * -----
  */
 
 char[] getBaseName(char[] fullname)
@@ -207,8 +308,34 @@ unittest
 
 
 /**************************
- * Get directory name.
- * For example, "d:\path\foo.bat" returns "d:\path".
+ * Extracts the directory part of a path.
+ *
+ * This function will search fullname from the end until the
+ * first path separator or first character of fullname is
+ * reached. Under Windows, the drive letter separator (<i>colon</i>)
+ * also terminates the search.
+ *
+ * Returns: If a path separator was found, all the characters to its
+ * left are returned. Otherwise, fullname is returned.
+ *
+ * Under Windows, the found path separator will be included in the
+ * returned string if it is preceeded by a colon.
+ *
+ * Throws: Nothing.
+ *
+ * Examples:
+ * -----
+ * version(Win32)
+ * {
+ *     getDirName(r"d:\path\foo.bat") => "d:\path"
+ *     getDirName(getDirName(r"d:\path\foo.bat")) => "d:\"
+ * }
+ * version(linux)
+ * {
+ *     getDirName("/home/user")  => "/home"
+ *     getDirName(getDirName("/home/user"))  => ""
+ * }
+ * -----
  */
 
 char[] getDirName(char[] fullname)
@@ -244,8 +371,21 @@ char[] getDirName(char[] fullname)
 
 
 /********************************
- * Get drive.
- * For example, "d:\path\foo.bat" returns "d:".
+ * Extracts the drive letter of a path.
+ *
+ * This function will search fullname for a colon from the beginning.
+ *
+ * Returns: If a colon is found, all the characters to its left
+ * plus the colon are returned.  Otherwise, null is returned.
+ *
+ * Under Linux, this function always returns null immediately.
+ *
+ * Throws: Nothing.
+ *
+ * Examples:
+ * -----
+ * getDrive(r"d:\path\foo.bat") => "d:"
+ * -----
  */
 
 char[] getDrive(char[] fullname)
@@ -273,8 +413,24 @@ char[] getDrive(char[] fullname)
     }
 
 /****************************
- * If filename doesn't already have an extension,
- * append the extension ext and return the result.
+ * Appends a default extension to a filename.
+ *
+ * This function first searches filename for an extension and
+ * appends ext if there is none. ext should not have any leading
+ * dots, one will be inserted between filename and ext if filename
+ * doesn't already end with one.
+ *
+ * Returns: filename if it contains an extension, otherwise filename
+ * + ext.
+ *
+ * Throws: Nothing.
+ *
+ * Examples:
+ * -----
+ * defaultExt("foo.txt", "raw") => "foo.txt"
+ * defaultExt("foo.", "raw") => "foo.raw"
+ * defaultExt("bar", "raw") => "bar.raw"
+ * -----
  */
 
 char[] defaultExt(char[] filename, char[] ext)
@@ -295,8 +451,26 @@ char[] defaultExt(char[] filename, char[] ext)
 
 
 /****************************
- * Strip any existing extension off of filename and add the new extension ext.
- * Return the result.
+ * Adds or replaces an extension to a filename.
+ *
+ * This function first searches filename for an extension and
+ * replaces it with ext if found.  If there is no extension, ext
+ * will be appended. ext should not have any leading dots, one will
+ * be inserted between filename and ext if filename doesn't already
+ * end with one.
+ *
+ * Returns: filename + ext if filename is extensionless. Otherwise
+ * strips filename's extension off, appends ext and returns the
+ * result.
+ *
+ * Throws: Nothing.
+ *
+ * Examples:
+ * -----
+ * addExt("foo.txt", "raw") => "foo.raw"
+ * addExt("foo.", "raw") => "foo.raw"
+ * addExt("bar", "raw") => "bar.raw"
+ * -----
  */
 
 char[] addExt(char[] filename, char[] ext)
@@ -321,7 +495,26 @@ char[] addExt(char[] filename, char[] ext)
 
 
 /*************************************
- * Return !=0 if path is absolute (i.e. it starts from the root directory).
+ * Checks if path is absolute.
+ *
+ * Returns: non zero if the path starts from the root directory,
+ * zero otherwise.
+ *
+ * Throws: Nothing.
+ *
+ * Examples:
+ * -----
+ * version(Win32)
+ * {
+ *     isabs(r"relative\path") => 0
+ *     isabs(r"d:\absolute") => 1
+ * }
+ * version(linux)
+ * {
+ *     isabs("/home/user") => 1
+ *     isabs("foo") => 0
+ * }
+ * -----
  */
 
 int isabs(char[] path)
@@ -332,7 +525,29 @@ int isabs(char[] path)
 }
 
 /*************************************
- * Join two path components p1 and p2 and return the result.
+ * Joins two path components.
+ *
+ * If p1 doesn't have a trailing path separator, one will be appended
+ * to it before concating p2.
+ *
+ * Returns: p1 + p2. However, if p2 is an absolute path, only p2
+ * will be returned.
+ *
+ * Throws: Nothing.
+ *
+ * Examples:
+ * -----
+ * version(Win32)
+ * {
+ *     join(r"c:\foo", "bar") => "c:\foo\bar"
+ *     join("foo", r"d:\bar") => "d:\bar"
+ * }
+ * version(linux)
+ * {
+ *     join("/foo/", "bar") => "/foo/bar"
+ *     join("/foo", "/bar") => "/bar"
+ * }
+ * -----
  */
 
 char[] join(char[] p1, char[] p2)
@@ -477,8 +692,28 @@ unittest
 
 
 /*********************************
- * Match file name characters c1 and c2.
- * Case sensitivity depends on the operating system.
+ * Matches filename characters.
+ *
+ * Under Windows, the comparison is done ignoring case. Under Linux
+ * an exact match is performed.
+ *
+ * Returns: non zero if c1 matches c2, zero otherwise.
+ *
+ * Throws: Nothing.
+ *
+ * Examples:
+ * -----
+ * version(Win32)
+ * {
+ *     fncharmatch('a', 'b') => 0
+ *     fncharmatch('A', 'a') => 1
+ * }
+ * version(linux)
+ * {
+ *     fncharmatch('a', 'b') => 0
+ *     fncharmatch('A', 'a') => 0
+ * }
+ * -----
  */
 
 int fncharmatch(dchar c1, dchar c2)
@@ -502,19 +737,50 @@ int fncharmatch(dchar c1, dchar c2)
 }
 
 /************************************
- * Match filename with pattern, using the following wildcards:
+ * Matches a pattern against a filename.
  *
- *	<table>
- *	<tr><td><b>*</b> <td>match 0 or more characters
- *	<tr><td><b>?</b> <td>match any character
- *	<tr><td><b>[</b><i>chars</i><b>]</b> <td>match any character that appears between the []
- *	<tr><td><b>[!</b><i>chars</i><b>]</b> <td>match any character that does not appear between the [! ]
- *	</table>
+ * Some characters of pattern have special a meaning (they are
+ * <i>meta-characters</i>) and <b>can't</b> be escaped. These are:
+ * <p><table>
+ * <tr><td><b>*</b></td>
+ *     <td>Matches 0 or more instances of any character.</td></tr>
+ * <tr><td><b>?</b></td>
+ *     <td>Matches exactly one instances of any character.</td></tr>
+ * <tr><td><b>[</b><i>chars</i><b>]</b></td>
+ *     <td>Matches one instance of any character that appears
+ *     between the brackets.</td></tr>
+ * <tr><td><b>[!</b><i>chars</i><b>]</b></td>
+ *     <td>Matches one instance of any character that does not appear
+ *     between the brackets after the exclamation mark.</td></tr>
+ * </table><p>
+ * Internally individual character comparisons are done calling
+ * fncharmatch(), so its rules apply here too. Note that path
+ * separators and dots don't stop a meta-character from matching
+ * further portions of the filename.
  *
- * Matching is case sensitive on a file system that is case sensitive.
+ * Returns: non zero if pattern matches filename, zero otherwise.
  *
- * Returns:
- *	!=0 for match
+ * See_Also: fncharmatch().
+ *
+ * Throws: Nothing.
+ *
+ * Examples:
+ * -----
+ * version(Win32)
+ * {
+ *     fnmatch("foo.bar", "*") => 1
+ *     fnmatch(r"foo/foo\bar", "f*b*r") => 1
+ *     fnmatch("foo.bar", "f?bar") => 0
+ *     fnmatch("Goo.bar", "[fg]???bar") => 1
+ *     fnmatch(r"d:\foo\bar", "d*foo?bar") => 1
+ * }
+ * version(linux)
+ * {
+ *     fnmatch("Go*.bar", "[fg]???bar") => 0
+ *     fnmatch("/foo*home/bar", "?foo*bar") => 1
+ *     fnmatch("foobar", "foo?bar") => 1
+ * }
+ * -----
  */
 
 int fnmatch(char[] filename, char[] pattern)
@@ -666,16 +932,17 @@ unittest
  * match the value stored in the user database.
  *
  * When the environment variable version is used, the path won't
- * be modified if the environment variable doesn't exist. When the
- * database version is used, the path won't be modified if the user
- * doesn't exist in the database or there is not enough memory to
- * perform the query.
+ * be modified if the environment variable doesn't exist or it
+ * is empty. When the database version is used, the path won't be
+ * modified if the user doesn't exist in the database or there is
+ * not enough memory to perform the query.
  *
  * Returns: inputPath with the tilde expanded, or just inputPath
  * if it could not be expanded.
  * For Windows, expandTilde() merely returns its argument inputPath.
  *
- * Throws: std.OutOfMemory
+ * Throws: std.OutOfMemory if there is not enough memory to perform
+ * the database lookup for the <i>~user</i> syntax.
  *
  * Examples:
  * -----
@@ -701,7 +968,7 @@ unittest
  * }
  * -----
  * Version: Available since v0.143.
- * Authors: Grzegorz Adam Hankiewicz, Thomas Kuehne.
+ * Authors: Grzegorz Adam Hankiewicz, Thomas Kühne.
  */
 
 char[] expandTilde(char[] inputPath)
