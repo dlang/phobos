@@ -10,6 +10,7 @@ class ArrayBoundsError : Error
     uint linnum;
     char[] filename;
 
+  public:
     this(char[] filename, uint linnum)
     {
 	this.linnum = linnum;

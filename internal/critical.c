@@ -75,6 +75,8 @@ void _STD_critical_term()
 
 #if linux
 
+#include	<stdio.h>
+#include	<stdlib.h>
 #include	<pthread.h>
 
 /******************************************
@@ -97,8 +99,16 @@ static D_CRITICAL_SECTION critical_section;
 static pthread_mutexattr_t _criticals_attr;
 static volatile int inited;
 
+void _STI_critical_init(void);
+void _STD_critical_term(void);
+
 void _d_criticalenter(D_CRITICAL_SECTION *dcs)
 {
+    if (!inited)
+    {	_STI_critical_init();
+	atexit(_STD_critical_term);
+    }
+    //printf("_d_criticalenter(dcs = x%x)\n", dcs);
     if (!dcs->next)
     {
 	pthread_mutex_lock(&critical_section.cs);
@@ -121,7 +131,8 @@ void _d_criticalexit(D_CRITICAL_SECTION *dcs)
 void _STI_critical_init()
 {
     if (!inited)
-    {	pthread_mutexattr_init(&_criticals_attr);
+    {	//printf("_STI_critical_init()\n");
+	pthread_mutexattr_init(&_criticals_attr);
 	pthread_mutexattr_settype(&_criticals_attr, PTHREAD_MUTEX_RECURSIVE_NP);
 
 	// The global critical section doesn't need to be recursive
@@ -133,7 +144,8 @@ void _STI_critical_init()
 void _STD_critical_term()
 {
     if (inited)
-    {	inited = 0;
+    {	//printf("_STI_critical_term()\n");
+	inited = 0;
 	while (dcs_list)
 	{
 	    pthread_mutex_destroy(&dcs_list->cs);

@@ -409,6 +409,12 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
 		}
 		return;
 
+	    case Mangle.Ttypedef:
+		ti = (cast(TypeInfo_Typedef)ti).base;
+		m = cast(Mangle)ti.classinfo.name[9];
+		formatArg(fc);
+		return;
+
 	    default:
 		goto Lerror;
 	}
@@ -468,36 +474,35 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
 		!(fc == 'o' && flags & FLhash))
 	    {
 		putstr(null);
+		return;
 	    }
-	    else
+	    if (vnumber < base)
 	    {	vchar = '0' + vnumber;
 		goto L2;
 	    }
 	}
-	else
-	{
-	    int n = tmpbuf.length;
-	    char c;
-	    int hexoffset = uc ? ('A' - ('9' + 1)) : ('a' - ('9' + 1));
 
-	    while (vnumber)
-	    {
-		c = (vnumber % base) + '0';
-		if (c > '9')
-		    c += hexoffset;
-		vnumber /= base;
-		tmpbuf[--n] = c;
-	    }
-	    if (tmpbuf.length - n < precision && precision < tmpbuf.length)
-	    {
-		int m = tmpbuf.length - precision;
-		tmpbuf[m .. n] = '0';
-		n = m;
-	    }
-	    else if (flags & FLhash && fc == 'o')
-		prefix = "0";
-	    putstr(tmpbuf[n .. tmpbuf.length]);
+	int n = tmpbuf.length;
+	char c;
+	int hexoffset = uc ? ('A' - ('9' + 1)) : ('a' - ('9' + 1));
+
+	while (vnumber)
+	{
+	    c = (vnumber % base) + '0';
+	    if (c > '9')
+		c += hexoffset;
+	    vnumber /= base;
+	    tmpbuf[--n] = c;
 	}
+	if (tmpbuf.length - n < precision && precision < tmpbuf.length)
+	{
+	    int m = tmpbuf.length - precision;
+	    tmpbuf[m .. n] = '0';
+	    n = m;
+	}
+	else if (flags & FLhash && fc == 'o')
+	    prefix = "0";
+	putstr(tmpbuf[n .. tmpbuf.length]);
 	return;
 
     Lreal:

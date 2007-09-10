@@ -60,12 +60,12 @@ class TypeInfo
     void swap(void *p1, void *p2);
 }
 
-class TypeInfoTypedef : TypeInfo
+class TypeInfo_Typedef : TypeInfo
 {
     TypeInfo base;
 }
 
-class TypeInfoClass : TypeInfo
+class TypeInfo_Class : TypeInfo
 {
     ClassInfo info;
 }

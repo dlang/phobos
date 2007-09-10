@@ -114,7 +114,7 @@ class TypeInfo
     }
 }
 
-class TypeInfoTypedef : TypeInfo
+class TypeInfo_Typedef : TypeInfo
 {
     uint getHash(void *p) { return base.getHash(p); }
     int equals(void *p1, void *p2) { return base.equals(p1, p2); }
@@ -125,7 +125,7 @@ class TypeInfoTypedef : TypeInfo
     TypeInfo base;
 }
 
-class TypeInfoClass : TypeInfo
+class TypeInfo_Class : TypeInfo
 {
     char[] toString() { return info.name; }
 

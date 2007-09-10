@@ -606,7 +606,7 @@ public:
 public:
     class Enumerator
     {
-    private:
+    public:
         this(hrecls_t hSrch, recls_rc_t lastError)
         {
             m_hSrch     =   hSrch;

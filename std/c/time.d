@@ -8,7 +8,21 @@ module std.c.time;
 
 extern (C):
 
-const uint CLOCKS_PER_SEC = 1000;
+version (Windows)
+{   const uint CLOCKS_PER_SEC = 1000;
+}
+else version (linux)
+{   const uint CLOCKS_PER_SEC = 1000000;
+}
+else version (darwin)
+{
+    const uint CLOCKS_PER_SEC = 100;
+}
+else
+{
+    static assert(0);
+}
+
 const uint CLK_TCK        = 1000;
 const uint TIMEOFFSET     = 315558000;
 

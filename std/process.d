@@ -3,6 +3,10 @@
  *  Copyright (C) 2003-2004 by Digital Mars, www.digitalmars.com
  *  Written by Matthew Wilson and Walter Bright
  *
+ *  Incorporating idea (for execvpe() on Linux) from Russ Lewis
+ *
+ *  Updated: 21st August 2004
+ *
  *  This software is provided 'as-is', without any express or implied
  *  warranty. In no event will the authors be held liable for any damages
  *  arising from the use of this software.
@@ -37,7 +41,7 @@ private void toAStringz(char[][] a, char**az)
 {
     foreach(char[] s; a)
     {
-	*az++ = toStringz(s);
+        *az++ = toStringz(s);
     }
     *az = null;
 }
@@ -47,6 +51,7 @@ int execv(char[] pathname, char[][] argv)
     char** argv_ = cast(char**)alloca((char*).sizeof * (1 + argv.length));
 
     toAStringz(argv, argv_);
+
     return std.c.process.execv(toStringz(pathname), argv_);
 }
 
@@ -55,26 +60,69 @@ int execve(char[] pathname, char[][] argv, char[][] envp)
     char** argv_ = cast(char**)alloca((char*).sizeof * (1 + argv.length));
     char** envp_ = cast(char**)alloca((char*).sizeof * (1 + envp.length));
 
-
     toAStringz(argv, argv_);
     toAStringz(envp, envp_);
+
     return std.c.process.execve(toStringz(pathname), argv_, envp_);
 }
 
 int execvp(char[] pathname, char[][] argv)
 {
     char** argv_ = cast(char**)alloca((char*).sizeof * (1 + argv.length));
+
     toAStringz(argv, argv_);
+
     return std.c.process.execvp(toStringz(pathname), argv_);
 }
 
 int execvpe(char[] pathname, char[][] argv, char[][] envp)
 {
+version(linux)
+{
+    // Is pathname rooted?
+    if(pathname[0] == '/')
+    {
+        // Yes, so just call execve()
+        return execve(pathname, argv, envp);
+    }
+    else
+    {
+        // No, so must traverse PATHs, looking for first match
+        char[][]    envPaths    =   std.string.split(std.string.toString(std.c.stdlib.getenv("PATH")), ":");
+        int         iRet        =   0;
+
+        // Note: if any call to execve() succeeds, this process will cease 
+        // execution, so there's no need to check the execve() result through
+        // the loop.
+
+        foreach(char[] pathDir; envPaths)
+        {
+            char[]  composite   =   pathDir ~ "/" ~ pathname;
+
+            iRet = execve(composite, argv, envp);
+        }
+        if(0 != iRet)
+        {
+            iRet = execve(pathname, argv, envp);
+        }
+
+        return iRet;
+    }
+}
+else version(Windows)
+{
     char** argv_ = cast(char**)alloca((char*).sizeof * (1 + argv.length));
     char** envp_ = cast(char**)alloca((char*).sizeof * (1 + envp.length));
+
     toAStringz(argv, argv_);
     toAStringz(envp, envp_);
+
     return std.c.process.execvpe(toStringz(pathname), argv_, envp_);
+}
+else
+{
+    static assert(0);
+} // version
 }
 
 /* ////////////////////////////////////////////////////////////////////////// */
@@ -83,11 +131,35 @@ version(MainTest)
 {
     int main(char[][] args)
     {
-//	int i = execv(args[1], args[2 .. args.length]);
-	int i = execvp(args[1], args[2 .. args.length]);
+        if(args.length < 2)
+        {
+            printf("Must supply executable (and optional arguments)\n");
 
-	printf("exec??() has returned! Error code: %d; errno: %d\n", i, /* errno */0);
+            return 1;
+        }
+        else
+        {
+            char[][]    dummy_env;
+            
+            dummy_env ~= "VAL0=value";
+            dummy_env ~= "VAL1=value";
 
-	return 0;
+/+
+            foreach(char[] arg; args)
+            {
+                printf("%.*s\n", arg);
+            }
++/
+
+//          int i = execv(args[1], args[1 .. args.length]);
+//          int i = execvp(args[1], args[1 .. args.length]);
+            int i = execvpe(args[1], args[1 .. args.length], dummy_env);
+
+            printf("exec??() has returned! Error code: %d; errno: %d\n", i, /* std.c.stdlib.getErrno() */-1);
+
+            return 0;
+        }
     }
 }
+
+/* ////////////////////////////////////////////////////////////////////////// */
