@@ -1,5 +1,11 @@
-/* zlib.d
- * A D interface to the zlib library, www.gzip.org/zlib
+/**
+ * Compress/decompress data using the $(LINK2 http://www._zlib.net, zlib library).
+ *
+ * References:
+ *	$(LINK2 http://en.wikipedia.org/wiki/Zlib, Wikipedia)
+ *
+ * Macros:
+ *	WIKI = StdZlib
  */
 
 
@@ -45,6 +51,8 @@ class ZlibException : Exception
 }
 
 /**************************************************
+ * Compute the Adler32 checksum of the data in buf[]. adler is the starting
+ * value when computing a cumulative checksum.
  */
 
 uint adler32(uint adler, void[] buf)
@@ -65,6 +73,8 @@ unittest
 }
 
 /*********************************
+ * Compute the CRC32 checksum of the data in buf[]. crc is the starting value
+ * when computing a cumulative checksum.
  */
 
 uint crc32(uint crc, void[] buf)
@@ -85,6 +95,11 @@ unittest
 }
 
 /*********************************************
+ * Compresses the data in srcbuf[] using compression _level level.
+ * The default value
+ * for level is 6, legal values are 1..9, with 1 being the least compression
+ * and 9 being the most.
+ * Returns the compressed data.
  */
 
 void[] compress(void[] srcbuf, int level)
@@ -111,6 +126,7 @@ body
 }
 
 /*********************************************
+ * ditto
  */
 
 void[] compress(void[] buf)
@@ -119,19 +135,14 @@ void[] compress(void[] buf)
 }
 
 /*********************************************
+ * Decompresses the data in srcbuf[].
+ * Params: destlen = size of the uncompressed data.
+ * It need not be accurate, but the decompression will be faster if the exact
+ * size is supplied.
+ * Returns: the decompressed data.
  */
 
-void[] uncompress(void[] srcbuf)
-{
-    return uncompress(srcbuf, 0, 15);
-}
-
-void[] uncompress(void[] srcbuf, uint destlen)
-{
-    return uncompress(srcbuf, destlen, 15);
-}
-
-void[] uncompress(void[] srcbuf, uint destlen, int winbits)
+void[] uncompress(void[] srcbuf, uint destlen = 0u, int winbits = 15)
 {
     int err;
     void[] destbuf;
@@ -212,6 +223,7 @@ void arrayPrint(ubyte[] array)
 +/
 
 /*********************************************
+ * Used when the data to be compressed is not all in one buffer.
  */
 
 class Compress
@@ -231,10 +243,10 @@ class Compress
     }
 
   public:
-    this()
-    {
-    }
 
+    /**
+     * Construct. level is the same as for D.zlib.compress().
+     */
     this(int level)
     in
     {
@@ -243,6 +255,11 @@ class Compress
     body
     {
 	this.level = level;
+    }
+
+    /// ditto
+    this()
+    {
     }
 
     ~this()
@@ -257,6 +274,11 @@ class Compress
 	}
     }
 
+    /**
+     * Compress the data in buf and return the compressed data.
+     * The buffers
+     * returned from successive calls to this should be concatenated together.
+     */
     void[] compress(void[] buf)
     {	int err;
 	void[] destbuf;
@@ -291,12 +313,25 @@ class Compress
 	return destbuf;
     }
 
-    void[] flush()
-    {
-	return flush(Z_FINISH);
-    }
-
-    void[] flush(int mode)
+    /***
+     * Compress and return any remaining data.
+     * The returned data should be appended to that returned by compress().
+     * Params:
+     *	mode = one of the following: 
+     *		$(DL
+		    $(DT Z_SYNC_FLUSH )
+		    $(DD Syncs up flushing to the next byte boundary.
+			Used when more data is to be compressed later on.)
+		    $(DT Z_FULL_FLUSH )
+		    $(DD Syncs up flushing to the next byte boundary.
+			Used when more data is to be compressed later on,
+			and the decompressor needs to be restartable at this
+			point.)
+		    $(DT Z_FINISH)
+		    $(DD (default) Used when finished compressing the data. )
+		)
+     */
+    void[] flush(int mode = Z_FINISH)
     in
     {
 	assert(mode == Z_FINISH || mode == Z_SYNC_FLUSH || mode == Z_FULL_FLUSH);
@@ -333,6 +368,10 @@ class Compress
     }
 }
 
+/******
+ * Used when the data to be decompressed is not all in one buffer.
+ */
+
 class UnCompress
 {
   private:
@@ -351,13 +390,18 @@ class UnCompress
     }
 
   public:
-    this()
-    {
-    }
 
+    /**
+     * Construct. destbufsize is the same as for D.zlib.uncompress().
+     */
     this(uint destbufsize)
     {
 	this.destbufsize = destbufsize;
+    }
+
+    /** ditto */
+    this()
+    {
     }
 
     ~this()
@@ -373,6 +417,11 @@ class UnCompress
 	done = 1;
     }
 
+    /**
+     * Decompress the data in buf and return the decompressed data.
+     * The buffers returned from successive calls to this should be concatenated
+     * together.
+     */
     void[] uncompress(void[] buf)
     in
     {
@@ -414,6 +463,11 @@ class UnCompress
 	return destbuf;
     }
 
+    /**
+     * Decompress and return any remaining data.
+     * The returned data should be appended to that returned by uncompress().
+     * The UnCompress object cannot be used further.
+     */
     void[] flush()
     in
     {

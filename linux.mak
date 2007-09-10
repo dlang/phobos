@@ -147,7 +147,7 @@ SRC_STD_C_WIN= std/c/windows/windows.d std/c/windows/com.d \
 SRC_STD_C_LINUX= std/c/linux/linux.d std/c/linux/linuxextern.d \
 	std/c/linux/socket.d
 
-SRC_ETC=
+SRC_ETC=  etc/gamma.d etc/realtest.d
 
 SRC_ETC_C= etc/c/zlib.d
 

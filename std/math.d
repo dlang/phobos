@@ -10,6 +10,8 @@
  *
  *	NAN = $(RED NAN)
  *	SUP = <span style="vertical-align:super;font-size:smaller">$0</span>
+ *	GAMMA =  &#915;
+ *	INTEGRAL = &#8747;
  */
 
 /*
@@ -625,9 +627,9 @@ real log2(real x)		{ return std.c.math.log2l(x); }
  * If x is subnormal, it is treated as if it were normalized.
  * For a positive, finite x: 
  *
- *	<pre>
- *	1 &lt;= <i>x</i> * FLT_RADIX$(SUP -logb(x)) &lt; FLT_RADIX 
- *	</pre>
+ * <pre>
+ * 1 &lt;= <i>x</i> * FLT_RADIX$(SUP -logb(x)) &lt; FLT_RADIX 
+ * </pre>
  *
  *	$(TABLE_SV
  *	<tr> <th> x               <th> logb(x)  <th> Divide by 0? 
@@ -833,25 +835,57 @@ real erf(real x)		{ return std.c.math.erfl(x); }
 real erfc(real x)		{ return std.c.math.erfcl(x); }
 
 /***********************************
- * Calculates ln |&Gamma;(x)|
+ * Natural logarithm of gamma function.
+ *
+ * Returns the base e (2.718...) logarithm of the absolute
+ * value of the gamma function of the argument.
+ *
+ * For reals, lgamma is equivalent to log(fabs(tgamma(x))).
+ *
+ *	$(TABLE_SV
+ *	<tr> <th> x               <th> log$(GAMMA)(x) <th>invalid?
+ *	<tr> <td> NaN             <td> NaN           <td> yes
+ *	<tr> <td> integer <= 0    <td> +&infin;      <td> yes
+ *	<tr> <td> 1, 2            <td> +0.0          <td> no
+ *	<tr> <td> &plusmn;&infin;  <td> +&infin;      <td> no
+ *	)
  */
+/* Documentation prepared by Don Clugston */
 real lgamma(real x)
 {
-    version (linux)
-	return std.c.math.lgammal(x);
-    else
-	throw new NotImplemented("lgamma");
+    return std.c.math.lgammal(x);
+
+    // Use etc.gamma.lgamma for those C systems that are missing it
 }
 
 /***********************************
- * Calculates the gamma function &Gamma;(x)
+ *  The gamma function, $(GAMMA)(x)
+ *
+ *  Generalizes the factorial function to real and complex numbers.
+ *  Like x!, $(GAMMA)(x+1) = x*$(GAMMA)(x).
+ *
+ *  Mathematically, if z.re > 0 then
+ *   $(GAMMA)(z) =<big>$(INTEGRAL)<sub><small>0</small></sub><sup>&infin;</sup></big>t<sup>z-1</sup>e<sup>-t</sup>dt
+ *
+ *	$(TABLE_SV
+ *	<tr> <th> x               <th> $(GAMMA)(x)   <th>invalid?
+ *	<tr> <td> NAN             <td> NAN           <td> yes
+ *	<tr> <td> &plusmn;0.0     <td> &plusmn;&infin;      <td> yes
+ *	<tr> <td> integer > 0     <td> (x-1)!        <td> no
+ *	<tr> <td> integer < 0     <td> NAN           <td> yes
+ *	<tr> <td> +&infin;        <td> +&infin;      <td> no
+ *	<tr> <td> -&infin;        <td> NAN           <td> yes
+ *	)
+ *
+ *  References:
+ *     cephes, $(LINK http://en.wikipedia.org/wiki/Gamma_function)
  */
+/* Documentation prepared by Don Clugston */
 real tgamma(real x)
 {
-    version (linux)
-	return std.c.math.tgammal(x);
-    else
-	throw new NotImplemented("tgamma");
+    return std.c.math.tgammal(x);
+
+    // Use etc.gamma.tgamma for those C systems that are missing it
 }
 
 /**************************************
@@ -1561,3 +1595,70 @@ unittest
    assert(feqrel(-real.max,real.infinity)==0);
    assert(feqrel(real.max,-real.max)==0);
 }
+
+
+/***********************************
+ * Evaluate polynomial A(x) = a<sub>0</sub> + a<sub>1</sub>x + a<sub>2</sub>x&sup2; + a<sub>3</sub>x&sup3; ...
+ *
+ * Uses Horner's rule A(x) = a<sub>0</sub> + x(a<sub>1</sub> + x(a<sub>2</sub> + x(a<sub>3</sub> + ...)))
+ * Params:
+ *	A =	array of coefficients a<sub>0</sub>, a<sub>1</sub>, etc.
+ */ 
+real poly(real x, real[] A)
+in
+{
+    assert(A.length > 0);
+}
+body
+{
+    version (D_InlineAsm)
+    {
+	asm	// assembler by W. Bright
+	{
+	    // EDX = (A.length - 1) * real.sizeof
+	    mov     ECX,A[EBP]		; // ECX = A.length
+	    dec     ECX			;
+	    lea     EDX,[ECX][ECX*8]	;
+	    add     EDX,ECX		;
+	    add     EDX,A+4[EBP]	;
+	    fld     real ptr [EDX]	; // ST0 = coeff[ECX]
+	    jecxz   return_ST		;
+	    fld     x[EBP]		; // ST0 = x
+	    fxch    ST(1)		; // ST1 = x, ST0 = r
+	    align   4			;
+    L2:     fmul    ST,ST(1)		; // r *= x
+	    fld     real ptr -10[EDX]	;
+	    sub     EDX,10		; // deg--
+	    faddp   ST(1),ST		;
+	    dec     ECX			;
+	    jne     L2			;
+	    fxch    ST(1)		; // ST1 = r, ST0 = x
+	    fstp    ST(0)		; // dump x
+	    align   4			;
+    return_ST:				;
+	    ;
+	}
+    }
+    else
+    {
+	i = A.length - 1;
+	real r = A[i];
+	while (--i >= 0)
+	{
+	    r *= x;
+	    r += A[i];
+	}
+	return r;
+    }
+}
+
+unittest
+{
+    debug (math) printf("math.poly.unittest\n");
+    real x = 3.1;
+    static real pp[] = [56.1, 32.7, 6];
+
+    assert( poly(x, pp) == (56.1L + (32.7L + 6L * x) * x) );
+}
+
+

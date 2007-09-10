@@ -97,6 +97,9 @@ printf("test2\n");
     x[2] = -1;
     x.sort;
 
+    std.math.tgamma(3);
+    std.math.lgamma(3);
+
     printf("Success\n!");
     return 0;
 }

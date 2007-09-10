@@ -1,4 +1,20 @@
 
+/**
+ * Read/write data in the $(LINK2 http://www.info-_zip.org, zip archive) format.
+ * Makes use of the etc.c.zlib compression library.
+ *
+ * Bugs: 
+ *	$(UL
+ *	$(LI Multi-disk zips not supported.)
+ *	$(LI Only Zip version 20 formats are supported.)
+ *	$(LI Only supports compression modes 0 (no compression) and 8 (deflate).)
+ *	$(LI Does not support encryption.)
+ *	)
+ *
+ * Macros:
+ *	WIKI = StdZip
+ */
+
 module std.zip;
 
 private import std.zlib;
@@ -7,9 +23,8 @@ private import std.intrinsic;
 
 //debug=print;
 
-/* Throw this on errors.
+/** Thrown on error.
  */
-
 class ZipException : Exception
 {
     this(char[] msg)
@@ -18,27 +33,36 @@ class ZipException : Exception
     }
 }
 
+/**
+ * A member of the ZipArchive.
+ */
 class ArchiveMember
 {
-    ushort madeVersion = 20;
-    ushort extractVersion = 20;
-    ushort flags;
-    ushort compressionMethod;
-    std.date.DosFileTime time;
-    uint crc32;
-    uint compressedSize;
-    uint expandedSize;
-    ushort diskNumber;
-    ushort internalAttributes;
-    uint externalAttributes;
+    ushort madeVersion = 20;	/// Read Only
+    ushort extractVersion = 20;	/// Read Only
+    ushort flags;		/// Read/Write: normally set to 0
+    ushort compressionMethod;	/// Read/Write: 0 for compression, 8 for deflate
+    std.date.DosFileTime time;	/// Read/Write: Last modified time of the member. It's in the DOS date/time format.
+    uint crc32;			/// Read Only: cyclic redundancy check (CRC) value
+    uint compressedSize;	/// Read Only: size of data of member in compressed form.
+    uint expandedSize;		/// Read Only: size of data of member in expanded form.
+    ushort diskNumber;		/// Read Only: should be 0.
+    ushort internalAttributes;	/// Read/Write
+    uint externalAttributes;	/// Read/Write
 
     private uint offset;
 
+    /**
+     * Read/Write: Usually the file name of the archive member; it is used to
+     * index the archive directory for the member. Each member must have a unique
+     * name[]. Do not change without removing member from the directory first.
+     */
     char[] name;
-    ubyte[] extra;
-    char[] comment;
-    ubyte[] compressedData;
-    ubyte[] expandedData;
+
+    ubyte[] extra;		/// Read/Write: extra data for this member.
+    char[] comment;		/// Read/Write: comment associated with this member.
+    ubyte[] compressedData;	/// Read Only: data of member in compressed form.
+    ubyte[] expandedData;	/// Read/Write: data of member in uncompressed form.
 
     debug(print)
     {
@@ -60,16 +84,33 @@ class ArchiveMember
     }
 }
 
+/**
+ * Object representing the entire archive.
+ * ZipArchives are collections of ArchiveMembers.
+ */
 class ZipArchive
 {
-    ubyte[] data;	// representing the entire Zip contents
+    ubyte[] data;	/// Read Only: array representing the entire contents of the archive.
     uint endrecOffset;
 
-    uint diskNumber;
-    uint diskStartDir;
-    uint numEntries;
-    uint totalEntries;
-    char[] comment;
+    uint diskNumber;	/// Read Only: 0 since multi-disk zip archives are not supported.
+    uint diskStartDir;	/// Read Only: 0 since multi-disk zip archives are not supported.
+    uint numEntries;	/// Read Only: number of ArchiveMembers in the directory.
+    uint totalEntries;	/// Read Only: same as totalEntries.
+    char[] comment;	/// Read/Write: the archive comment. Must be less than 65536 bytes in length.
+
+    /**
+     * Read Only: array indexed by the name of each member of the archive.
+     * Example:
+     *  All the members of the archive can be accessed with a foreach loop:
+     * --------------------
+     * ZipArchive archive = new ZipArchive(data);
+     * foreach (ArchiveMember am; archive.directory)
+     * {
+     *     writefln("member name is '%s'", am.name);
+     * }
+     * --------------------
+     */
     ArchiveMember[char[]] directory;
 
     debug (print)
@@ -86,23 +127,36 @@ class ZipArchive
 
     /* ============ Creating a new archive =================== */
 
-    /* Constructor to use when creating a new archive.
+    /** Constructor to use when creating a new archive.
      */
-
     this()
     {
     }
 
+    /** Add de to the archive.
+     */
     void addMember(ArchiveMember de)
     {
 	directory[de.name] = de;
     }
 
+    /** Delete de from the archive.
+     */
     void deleteMember(ArchiveMember de)
     {
 	directory.remove(de.name);
     }
 
+    /**
+     * Construct an archive out of the current members of the archive.
+     *
+     * Fills in the properties data[], diskNumber, diskStartDir, numEntries,
+     * totalEntries, and directory[].
+     * For each ArchiveMember, fills in properties crc32, compressedSize,
+     * compressedData[].
+     *
+     * Returns: array representing the entire archive.
+     */
     void[] build()
     {	uint i;
 	uint directoryOffset;
@@ -224,7 +278,19 @@ class ZipArchive
 
     /* ============ Reading an existing archive =================== */
 
-    /* Constructor to use when reading an existing archive.
+    /**
+     * Constructor to use when reading an existing archive.
+     *
+     * Fills in the properties data[], diskNumber, diskStartDir, numEntries,
+     * totalEntries, comment[], and directory[].
+     * For each ArchiveMember, fills in
+     * properties madeVersion, extractVersion, flags, compressionMethod, time,
+     * crc32, compressedSize, expandedSize, compressedData[], diskNumber,
+     * internalAttributes, externalAttributes, name[], extra[], comment[].
+     * Use expand() to get the expanded data for each ArchiveMember.
+     *
+     * Params:
+     *	buffer = the entire contents of the archive.
      */
 
     this(void[] buffer)
@@ -324,6 +390,13 @@ class ZipArchive
 	    throw new ZipException("invalid directory entry 3");
     }
 
+    /*****
+     * Decompress the contents of archive member de and return the expanded
+     * data.
+     *
+     * Fills in properties extractVersion, flags, compressionMethod, time,
+     * crc32, compressedSize, expandedSize, expandedData[], name[], extra[].
+     */
     ubyte[] expand(ArchiveMember de)
     {	uint namelen;
 	uint extralen;

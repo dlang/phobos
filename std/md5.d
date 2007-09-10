@@ -2,6 +2,69 @@
  * Derived from the RSA Data Security, Inc. MD5 Message-Digest Algorithm.
  */
 
+/**
+ * Computes MD5 digests of arbitrary data. MD5 digests are 16 byte quantities that are like a checksum or crc, but are more robust. 
+ *
+ * There are two ways to do this. The first does it all in one function call to
+ * sum(). The second is for when the data is buffered. 
+ *
+ * Bugs:
+ * MD5 digests have been demonstrated to not be unique.
+ *
+ * Author:
+ * The routines and algorithms are derived from the
+ * $(I RSA Data Security, Inc. MD5 Message-Digest Algorithm).
+ *
+ * References:
+ *	$(LINK2 http://en.wikipedia.org/wiki/Md5, Wikipedia on MD5)
+ *
+ * Macros:
+ *	WIKI = StdMd5
+ */
+
+/++++++++++++++++++++++++++++++++
+ Example:
+
+--------------------
+// This code is derived from the
+// RSA Data Security, Inc. MD5 Message-Digest Algorithm.
+
+import std.md5;
+import std.string;
+import std.c.stdio;
+import std.stdio;
+
+int main(char[][] args)
+{
+    foreach (char[] arg; args)
+	 MDFile(arg);
+    return 0;
+}
+
+/* Digests a file and prints the result. */
+void MDFile(char[] filename)
+{
+    FILE* file;
+    MD5_CTX context;
+    int len;
+    ubyte[4 * 1024] buffer;
+    ubyte digest[16];
+
+    if ((file = fopen(std.string.toStringz(filename), "rb")) == null)
+	writefln("%s can't be opened", filename);
+    else
+    {
+	context.start();
+	while ((len = fread(buffer, 1, buffer.size, file)) != 0)
+	    context.update(buffer[0 .. len]);
+	context.finish(digest);
+	fclose(file);
+
+	writefln("MD5 (%s) = %s", filename, digestToString(digest));
+    }
+}
+--------------------
+ +/
 
 /* Copyright (C) 1991-2, RSA Data Security, Inc. Created 1991. All
 rights reserved.
@@ -30,7 +93,51 @@ module std.md5;
 
 import std.string;
 
-/* MD5 context. */
+/***************************************
+ * Computes MD5 digest of array of data.
+ */
+
+void sum(ubyte[16] digest, void[] data)
+{
+    MD5_CTX context;
+
+    context.start();
+    context.update(data);
+    context.finish(digest);
+}
+
+/******************
+ * Prints a message digest in hexadecimal to stdout.
+ */
+void printDigest(ubyte digest[16])
+{
+    foreach (ubyte u; digest)
+	printf("%02x", u);
+}
+
+/****************************************
+ * Converts MD5 digest to a string.
+ */
+
+char[] digestToString(ubyte[16] digest)
+{
+    char[] result = new char[32];
+    int i;
+
+    foreach (ubyte u; digest)
+    {
+	result[i] = std.string.hexdigits[u >> 4];
+	result[i + 1] = std.string.hexdigits[u & 15];
+	i += 2;
+    }
+    return result;
+}
+
+/**
+ * Holds context of MD5 computation.
+ *
+ * Used when data to be digested is buffered.
+ */
 struct MD5_CTX
 {
     uint state[4] =                                   /* state (ABCD) */
@@ -108,14 +215,15 @@ struct MD5_CTX
 	a += b;
     }
 
-    /* MD5 initialization. Begins an MD5 operation, writing a new context.
+    /**
+     * MD5 initialization. Begins an MD5 operation, writing a new context.
      */
     void start()
     {
 	*this = MD5_CTX.init;
     }
 
-    /* MD5 block update operation. Continues an MD5 message-digest
+    /** MD5 block update operation. Continues an MD5 message-digest
       operation, processing another message block, and updating the
       context.
      */
@@ -151,8 +259,8 @@ struct MD5_CTX
 	    memcpy(&buffer[index], &input[i], inputLen-i);
     }
 
-    /* MD5 finalization. Ends an MD5 message-digest operation, writing the
-     * the message digest and zeroizing the context.
+    /** MD5 finalization. Ends an MD5 message-digest operation, writing the
+     * the message to digest and zeroing the context.
      */
     void finish(ubyte[16] digest)         /* message digest */
     {
@@ -334,27 +442,6 @@ struct MD5_CTX
     }
 }
 
-/*************************************
- * Computes MD5 digest of array of data
- */
-
-void sum(ubyte[16] digest, void[] data)
-{
-    MD5_CTX context;
-
-    context.start();
-    context.update(data);
-    context.finish(digest);
-}
-
-/* Prints a message digest in hexadecimal.
- */
-void printDigest(ubyte digest[16])
-{
-    foreach (ubyte u; digest)
-	printf("%02x", u);
-}
-
 unittest
 {
     debug(md5) printf("std.md5.unittest\n");
@@ -384,5 +471,7 @@ unittest
 	"1234567890123456789012345678901234567890");
     assert(digest == cast(ubyte[])x"57edf4a22be3c955ac49da2e2107b67a");
 
+    assert(digestToString(cast(ubyte[16])x"c3fcd3d76192e4007dfb496cca67e13b")
+        == "C3FCD3D76192E4007DFB496CCA67E13B");
 }
 

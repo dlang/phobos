@@ -72,6 +72,7 @@ OBJS= asserterror.obj deh.obj switch.obj complex.obj gcstats.obj \
 	socket.obj socketstream.obj loader.obj stdarg.obj format.obj stdio.obj \
 	perf.obj openrj.obj uni.obj winsock.obj oldsyserror.obj \
 	errno.obj boxer.obj cstream.obj \
+	realtest.obj gamma.obj \
 	ti_Aa.obj ti_Ag.obj ti_C.obj ti_int.obj ti_char.obj \
 	ti_wchar.obj ti_uint.obj ti_short.obj ti_ushort.obj \
 	ti_byte.obj ti_ubyte.obj ti_long.obj ti_ulong.obj ti_ptr.obj \
@@ -87,7 +88,9 @@ OBJS= asserterror.obj deh.obj switch.obj complex.obj gcstats.obj \
 
 DOCS=	$(DOC)\std_path.html $(DOC)\std_math.html $(DOC)\std_outbuffer.html \
 	$(DOC)\std_stream.html $(DOC)\std_string.html $(DOC)\std_base64.html \
-	$(DOC)\object.html $(DOC)\std_compiler.html
+	$(DOC)\object.html $(DOC)\std_compiler.html $(DOC)\std_format.html \
+	$(DOC)\std_random.html $(DOC)\std_file.html $(DOC)\std_date.html \
+	$(DOC)\std_md5.html $(DOC)\std_zip.html $(DOC)\std_zlib.html
 
 SRC=	errno.c object.d unittest.d crc32.d gcstats.d
 
@@ -148,7 +151,7 @@ SRC_STD_C_WIN= std\c\windows\windows.d std\c\windows\com.d \
 SRC_STD_C_LINUX= std\c\linux\linux.d std\c\linux\linuxextern.d \
 	std\c\linux\socket.d
 
-SRC_ETC=
+SRC_ETC= etc\gamma.d etc\realtest.d
 
 SRC_ETC_C= etc\c\zlib.d
 
@@ -586,6 +589,12 @@ stdarg.obj : std\c\stdarg.d
 
 ### etc
 
+gamma.obj : etc\gamma.d
+	$(DMD) -c $(DFLAGS) etc\gamma.d
+
+realtest.obj : etc\realtest.d
+	$(DMD) -c $(DFLAGS) etc\realtest.d
+
 ### etc\c
 
 Czlib.obj : etc\c\zlib.d
@@ -745,8 +754,20 @@ $(DOC)\std_base64.html : std.ddoc std\base64.d
 $(DOC)\std_compiler.html : std.ddoc std\compiler.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_compiler.html std.ddoc std\compiler.d
 
+$(DOC)\std_date.html : std.ddoc std\date.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_date.html std.ddoc std\date.d
+
+$(DOC)\std_file.html : std.ddoc std\file.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_file.html std.ddoc std\file.d
+
+$(DOC)\std_format.html : std.ddoc std\format.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_format.html std.ddoc std\format.d
+
 $(DOC)\std_math.html : std.ddoc std\math.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_math.html std.ddoc std\math.d
+
+$(DOC)\std_md5.html : std.ddoc std\md5.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_md5.html std.ddoc std\md5.d
 
 $(DOC)\std_outbuffer.html : std.ddoc std\outbuffer.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_outbuffer.html std.ddoc std\outbuffer.d
@@ -754,11 +775,20 @@ $(DOC)\std_outbuffer.html : std.ddoc std\outbuffer.d
 $(DOC)\std_path.html : std.ddoc std\path.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_path.html std.ddoc std\path.d
 
+$(DOC)\std_random.html : std.ddoc std\random.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_random.html std.ddoc std\random.d
+
 $(DOC)\std_stream.html : std.ddoc std\stream.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_stream.html -d std.ddoc std\stream.d
 
 $(DOC)\std_string.html : std.ddoc std\string.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_string.html std.ddoc std\string.d
+
+$(DOC)\std_zip.html : std.ddoc std\zip.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_zip.html std.ddoc std\zip.d
+
+$(DOC)\std_zlib.html : std.ddoc std\zlib.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_zlib.html std.ddoc std\zlib.d
 
 $(DOC)\object.html : std.ddoc internal\object.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\object.html std.ddoc internal\object.d
