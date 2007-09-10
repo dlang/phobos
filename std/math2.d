@@ -259,9 +259,9 @@ unittest
 int sum(int[] n)
 {
 	long result = 0;
-	for (uint i = 0; i < n.length; i++)
-		result += n[i];
-	return result;
+	for (size_t i = 0; i < n.length; i++)
+	    result += n[i];
+	return cast(int)result;
 }
 
 unittest

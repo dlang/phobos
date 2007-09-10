@@ -528,6 +528,7 @@ private:
 	    }
 	    dp = nextToken();
 	}
+	assert(0);
     }
 
     int parseCalendarDate(int n1)

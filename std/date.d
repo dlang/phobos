@@ -198,7 +198,7 @@ d_time toInteger(d_time n)
 
 int Day(d_time t)
 {
-    return floor(t, msPerDay);
+    return cast(int)floor(t, msPerDay);
 }
 
 int LeapYear(int y)
@@ -810,6 +810,9 @@ version (Win32)
 	    case TIME_ZONE_ID_UNKNOWN:
 		// Daylight savings time not used in this time zone
 		break;
+
+	    default:
+		assert(0);
 	}
 	return t;
     }
@@ -869,7 +872,7 @@ version (linux)
 		dt -= LocalTZA;
 
 		int year = YearFromTime(dt);
-		int leap = LeapYear(dt);
+		int leap = LeapYear(cast(int)dt);
 		//writefln("year = %s, leap = %s, month = %s", year, leap, MonthFromTime(dt));
 
 		d_time start = TimeFromYear(year);		// Jan 1

@@ -223,7 +223,6 @@ private char[] URI_Encode(dchar[] string, uint unescapedSet)
 
 LthrowURIerror:
     throw new URIerror();
-    return null;
 }
 
 uint ascii2hex(dchar c)
@@ -344,7 +343,6 @@ private dchar[] URI_Decode(char[] string, uint reservedSet)
 
 LthrowURIerror:
     throw new URIerror();
-    return null;
 }
 
 /*************************************

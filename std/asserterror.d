@@ -6,8 +6,6 @@ import std.c.stdlib;
 
 class AssertError : Error
 {
-  private:
-
     uint linnum;
     char[] filename;
 

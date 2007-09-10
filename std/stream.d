@@ -771,65 +771,69 @@ class Stream : InputStream, OutputStream {
 		ifmt = 'd';
 	    }
 	    long n = 0;
-	    switch (ifmt) {
-	    case 'd':	// decimal
-	    case 'u': {
-	      while (isdigit(c) && width) {
-		n = n * 10 + (c - '0');
-		width--;
-		c = getc();
-		count++;
-	      }
-	    } break;
+	    switch (ifmt)
+	    {
+		case 'd':	// decimal
+		case 'u': {
+		  while (isdigit(c) && width) {
+		    n = n * 10 + (c - '0');
+		    width--;
+		    c = getc();
+		    count++;
+		  }
+		} break;
 
-	    case 'o': {	// octal
-	      while (isoctdigit(c) && width) {
-		n = n * 010 + (c - '0');
-		width--;
-		c = getc();
-		count++;
-	      }
-	    } break;
+		case 'o': {	// octal
+		  while (isoctdigit(c) && width) {
+		    n = n * 010 + (c - '0');
+		    width--;
+		    c = getc();
+		    count++;
+		  }
+		} break;
 
-	    case 'x': {	// hexadecimal
-	      while (ishexdigit(c) && width) {
-		n *= 0x10;
-		if (isdigit(c))
-		  n += c - '0';
-		else
-		  n += 0xA + (c | 0x20) - 'a';
-		width--;
-		c = getc();
-		count++;
-	      }
-	    } break;
+		case 'x': {	// hexadecimal
+		  while (ishexdigit(c) && width) {
+		    n *= 0x10;
+		    if (isdigit(c))
+		      n += c - '0';
+		    else
+		      n += 0xA + (c | 0x20) - 'a';
+		    width--;
+		    c = getc();
+		    count++;
+		  }
+		} break;
+
+		default:
+		    assert(0);
 	    }
 	    if (neg)
 	      n = -n;
 	    if (arguments[j] is typeid(int*)) {
 	      int* p = va_arg!(int*)(args);
-	      *p = n;
+	      *p = cast(int)n;
 	    } else if (arguments[j] is typeid(short*)) {
 	      short* p = va_arg!(short*)(args);
-	      *p = n;
+	      *p = cast(short)n;
 	    } else if (arguments[j] is typeid(byte*)) {
 	      byte* p = va_arg!(byte*)(args);
-	      *p = n;
+	      *p = cast(byte)n;
 	    } else if (arguments[j] is typeid(long*)) {
 	      long* p = va_arg!(long*)(args);
 	      *p = n;
 	    } else if (arguments[j] is typeid(uint*)) {
 	      uint* p = va_arg!(uint*)(args);
-	      *p = n;
+	      *p = cast(uint)n;
 	    } else if (arguments[j] is typeid(ushort*)) {
 	      ushort* p = va_arg!(ushort*)(args);
-	      *p = n;
+	      *p = cast(ushort)n;
 	    } else if (arguments[j] is typeid(ubyte*)) {
 	      ubyte* p = va_arg!(ubyte*)(args);
-	      *p = n;
+	      *p = cast(ubyte)n;
 	    } else if (arguments[j] is typeid(ulong*)) {
 	      ulong* p = va_arg!(ulong*)(args);
-	      *p = n;
+	      *p = cast(ulong)n;
 	    }
 	    j++;
 	    i++;
@@ -951,14 +955,14 @@ class Stream : InputStream, OutputStream {
 	    *p = s;
 	  } else if (arguments[j] is typeid(char*)) {
 	    s ~= 0;
-	    char* p = va_arg!(char*)(args);
-	    p[0 .. s.length] = s[];
+	    char* q = va_arg!(char*)(args);
+	    q[0 .. s.length] = s[];
 	  } else if (arguments[j] is typeid(wchar[]*)) {
-	    wchar[]* p = va_arg!(wchar[]*)(args);
-	    *p = toUTF16(s);
+	    wchar[]* q = va_arg!(wchar[]*)(args);
+	    *q = toUTF16(s);
 	  } else if (arguments[j] is typeid(dchar[]*)) {
-	    dchar[]* p = va_arg!(dchar[]*)(args);
-	    *p = toUTF32(s);
+	    dchar[]* q = va_arg!(dchar[]*)(args);
+	    *q = toUTF32(s);
 	  }
 	  j++;
 	  i++;
@@ -1203,7 +1207,7 @@ class Stream : InputStream, OutputStream {
   void copyFrom(Stream s, ulong count) {
     ubyte[128] buf;
     while (count > 0) {
-      size_t n = count<buf.length ? count : buf.length;
+      size_t n = cast(size_t)(count<buf.length ? count : buf.length);
       s.readExact(buf, n);
       writeExact(buf, n);
       count -= n;
@@ -1230,7 +1234,7 @@ class Stream : InputStream, OutputStream {
   /***
    * Sets file position. Equivalent to calling seek(pos, SeekPos.Set).
    */
-  void position(ulong pos) { seek(pos, SeekPos.Set); }
+  void position(ulong pos) { seek(cast(long)pos, SeekPos.Set); }
 
   /***
    * Returns current file position. Equivalent to seek(0, SeekPos.Current).
@@ -1290,7 +1294,7 @@ class Stream : InputStream, OutputStream {
     if (seekable) {
       ulong orig_pos = position();
       position(0);
-      blockSize = size();
+      blockSize = cast(size_t)size();
       result = new char[blockSize];
       while (blockSize > 0) {
 	rdlen = readBlock(&result[pos], blockSize);
@@ -1960,12 +1964,12 @@ class File: Stream {
     assertSeekable();
     version (Win32) {
       int hi = cast(int)(offset>>32);
-      uint low = SetFilePointer(hFile, offset, &hi, rel);
+      uint low = SetFilePointer(hFile, cast(int)offset, &hi, rel);
       if ((low == INVALID_SET_FILE_POINTER) && (GetLastError() != 0))
 	throw new SeekException("unable to move file pointer");
       ulong result = (cast(ulong)hi << 32) + low;
     } else version (linux) {
-      ulong result = lseek(hFile, offset, rel);
+      ulong result = lseek(hFile, cast(int)offset, rel);
       if (result == 0xFFFFFFFF)
 	throw new SeekException("unable to move file pointer");
     }
@@ -2055,7 +2059,7 @@ class File: Stream {
     file.position = 0;
     lines = new char[][4];
     foreach(ulong n, char[] line; file) {
-      lines[n-1] = line.dup;
+      lines[cast(size_t)(n-1)] = line.dup;
     }
     assert( lines[0] == "Testing stream.d:");
     assert( lines[1] == "Another line");
@@ -2125,7 +2129,7 @@ class BufferedFile: BufferedStream {
       assert(file.position() == 18 + 13 + 4);
     // we must be at the end of file
     assert(file.eof());
-    long oldsize = file.size();
+    long oldsize = cast(long)file.size();
     file.close();
     // no operations are allowed when file is closed
     assert(!file.readable && !file.writeable && !file.seekable);
@@ -2508,8 +2512,8 @@ class TArrayStream(Buffer): Stream {
     assertReadable();
     ubyte* cbuf = cast(ubyte*) buffer;
     if (len - cur < size)
-      size = len - cur;
-    ubyte[] ubuf = cast(ubyte[])buf[cur .. cur + size];
+      size = cast(size_t)(len - cur);
+    ubyte[] ubuf = cast(ubyte[])buf[cast(size_t)cur .. cast(size_t)(cur + size)];
     cbuf[0 .. size] = ubuf[];
     cur += size;
     return size;
@@ -2520,8 +2524,8 @@ class TArrayStream(Buffer): Stream {
     ubyte* cbuf = cast(ubyte*) buffer;
     ulong blen = buf.length;
     if (cur + size > blen)
-      size = blen - cur;
-    ubyte[] ubuf = cast(ubyte[])buf[cur .. cur + size];
+      size = cast(size_t)(blen - cur);
+    ubyte[] ubuf = cast(ubyte[])buf[cast(size_t)cur .. cast(size_t)(cur + size)];
     ubuf[] = cbuf[0 .. size];
     cur += size;
     if (cur > len)
@@ -2535,8 +2539,10 @@ class TArrayStream(Buffer): Stream {
 
     switch (rel) {
     case SeekPos.Set: scur = offset; break;
-    case SeekPos.Current: scur = cur + offset; break;
-    case SeekPos.End: scur = len + offset; break;
+    case SeekPos.Current: scur = cast(long)(cur + offset); break;
+    case SeekPos.End: scur = cast(long)(len + offset); break;
+    default:
+	assert(0);
     }
 
     if (scur < 0)
@@ -2544,18 +2550,18 @@ class TArrayStream(Buffer): Stream {
     else if (scur > len)
       cur = len;
     else
-      cur = scur;
+      cur = cast(ulong)scur;
 
     return cur;
   }
 
-  override size_t available () { return len - cur; }
+  override size_t available () { return cast(size_t)(len - cur); }
 
   /// Get the current memory data in total.
   ubyte[] data() { 
     if (len > size_t.max)
       throw new StreamException("Stream too big");
-    void[] res = buf[0 .. len];
+    void[] res = buf[0 .. cast(size_t)len];
     return cast(ubyte[])res;
   }
 
@@ -2608,7 +2614,7 @@ class MemoryStream: TArrayStream!(ubyte[]) {
   /// Ensure the stream can hold count bytes.
   void reserve(size_t count) {
     if (cur + count > buf.length)
-      buf.length = (cur + count) * 2;
+      buf.length = cast(uint)((cur + count) * 2);
   }
 
   override size_t writeBlock(void* buffer, size_t size) {
@@ -2787,7 +2793,7 @@ class SliceStream : FilterStream {
   override size_t readBlock (void *buffer, size_t size) {
     assertReadable();
     if (bounded && size > high - low - pos)
-	size = high - low - pos;
+	size = cast(size_t)(high - low - pos);
     ulong bp = s.position;
     if (seekable)
       s.position = low + pos;
@@ -2802,7 +2808,7 @@ class SliceStream : FilterStream {
   override size_t writeBlock (void *buffer, size_t size) {
     assertWriteable();
     if (bounded && size > high - low - pos)
-	size = high - low - pos;
+	size = cast(size_t)(high - low - pos);
     ulong bp = s.position;
     if (seekable)
       s.position = low + pos;
@@ -2823,14 +2829,16 @@ class SliceStream : FilterStream {
 	spos = offset;
 	break;
       case SeekPos.Current:
-	spos = pos + offset;
+	spos = cast(long)(pos + offset);
 	break;
       case SeekPos.End:
 	if (bounded)
-	  spos = high - low + offset;
+	  spos = cast(long)(high - low + offset);
 	else
-	  spos = s.size - low + offset;
+	  spos = cast(long)(s.size - low + offset);
 	break;
+      default:
+	assert(0);
     }
 
     if (spos < 0)
@@ -2840,7 +2848,7 @@ class SliceStream : FilterStream {
     else if (!bounded && spos > s.size - low)
       pos = s.size - low;
     else
-      pos = spos;
+      pos = cast(ulong)spos;
 
     readEOF = false;
     return pos;
@@ -2851,9 +2859,9 @@ class SliceStream : FilterStream {
     ulong bp = s.position;
     if (bp <= pos+low && pos+low <= bp+res) {
       if (!bounded || bp+res <= high)
-	return bp + res - pos - low;
+	return cast(size_t)(bp + res - pos - low);
       else if (high <= bp+res)
-	return high - pos - low;
+	return cast(size_t)(high - pos - low);
     }
     return 0;
   }

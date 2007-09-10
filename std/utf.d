@@ -667,10 +667,7 @@ char[] toUTF8(char[4] buf, dchar c)
 	    buf[3] = cast(char)(0x80 | (c & 0x3F));
 	    return buf[0 .. 4];
 	}
-	else
-	{
-	    assert(0);
-	}
+	assert(0);
     }
 
 /*******************

@@ -686,7 +686,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
 
 	    case Mangle.Tlong:
 		signed = 1;
-		vnumber = va_arg!(long)(argptr);
+		vnumber = cast(ulong)va_arg!(long)(argptr);
 		goto Lnumber;
 
 	    case Mangle.Tulong:
@@ -873,6 +873,10 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
 	    }
 	    if (precision == 0 || !(flags & FLprecision))
 	    {	vchar = '0' + vnumber;
+		if (vnumber < 10)
+		    vchar = '0' + vnumber;
+		else
+		    vchar = (uc ? 'A' - 10 : 'a' - 10) + vnumber;
 		goto L2;
 	    }
 	}
@@ -1343,5 +1347,14 @@ unittest
     assert(r == "80000000");
     r = std.string.format("%x", ++i);
     assert(r == "80000001");
+
+    r = std.string.format("%x", 10);
+    assert(r == "a");
+    r = std.string.format("%X", 10);
+    assert(r == "A");
+    r = std.string.format("%x", 15);
+    assert(r == "f");
+    r = std.string.format("%X", 15);
+    assert(r == "F");
 }
 

@@ -2394,7 +2394,7 @@ char[] toString(long i)
     if (cast(int)i == i)
 	return toString(cast(int)i);
 
-    ulong u = -i;
+    ulong u = cast(ulong)(-i);
     int ndigits = 1;
     while (u)
     {
@@ -2536,12 +2536,12 @@ body
     uint i = buffer.length;
 
     if (value < radix && value < hexdigits.length)
-	return hexdigits[value .. value + 1];
+	return hexdigits[cast(size_t)value .. cast(size_t)value + 1];
 
     do
     {	ubyte c;
 
-	c = value % radix;
+	c = cast(ubyte)(value % radix);
 	value = value / radix;
 	i--;
 	buffer[i] = (c < 10) ? c + '0' : c + 'A' - 10;
@@ -3069,6 +3069,7 @@ char[] tr(char[] str, char[] from, char[] to, char[] modifiers = null)
 	    case 'c':	mod_c = 1; break;	// complement
 	    case 'd':	mod_d = 1; break;	// delete unreplaced chars
 	    case 's':	mod_s = 1; break;	// squeeze duplicated replaced chars
+	    default:	assert(0);
 	}
     }
 

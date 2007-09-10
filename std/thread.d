@@ -159,6 +159,7 @@ class Thread
 	    return fp(arg);
 	else if (dg)
 	    return dg();
+	assert(0);
     }
 
     /*****************************
@@ -247,6 +248,8 @@ class Thread
 	    case PRIORITY.CRITICAL:
 		nPriority = THREAD_PRIORITY_TIME_CRITICAL;
 		break;
+	    default:
+		assert(0);
 	}
 
 	if (SetThreadPriority(hdl, nPriority) == THREAD_PRIORITY_ERROR_RETURN)
@@ -654,6 +657,7 @@ class Thread
 	    return fp(arg);
 	else if (dg)
 	    return dg();
+	assert(0);
     }
 
     void wait()

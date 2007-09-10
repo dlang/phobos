@@ -531,9 +531,9 @@ struct DirEntry
  *
  * void main(char[][] args)
  * {
- *    char[][] dirs = std.file.listdir(args[1]);
+ *    auto dirs = std.file.listdir(args[1]);
  *
- *    foreach (char[] d; dirs)
+ *    foreach (d; dirs)
  *	writefln(d);
  * }
  * ----
@@ -572,9 +572,9 @@ char[][] listdir(char[] pathname)
  *
  * void main(char[][] args)
  * {
- *    char[][] d_source_files = std.file.listdir(args[1], "*.d");
+ *    auto d_source_files = std.file.listdir(args[1], "*.d");
  *
- *    foreach (char[] d; d_source_files)
+ *    foreach (d; d_source_files)
  *	writefln(d);
  * }
  * ----
@@ -587,9 +587,9 @@ char[][] listdir(char[] pathname)
  *
  * void main(char[][] args)
  * {
- *    char[][] d_source_files = std.file.listdir(args[1], RegExp(r"\.(d|obj)$"));
+ *    auto d_source_files = std.file.listdir(args[1], RegExp(r"\.(d|obj)$"));
  *
- *    foreach (char[] d; d_source_files)
+ *    foreach (d; d_source_files)
  *	writefln(d);
  * }
  * ----
@@ -650,7 +650,7 @@ char[][] listdir(char[] pathname, RegExp r)
  *
  * void main(char[][] args)
  * {
- *    char[] pathname = args[1];
+ *    auto pathname = args[1];
  *    char[][] result;
  *
  *    bool listing(char[] filename)
@@ -661,7 +661,7 @@ char[][] listdir(char[] pathname, RegExp r)
  *
  *    listdir(pathname, &listing);
  *
- *    foreach (char[] name; result)
+ *    foreach (name; result)
  *      writefln("%s", name);
  * }
  * ----
@@ -1222,9 +1222,10 @@ struct DirEntry
 	    return;
 	}
 	_size = statbuf.st_size;
-	_creationTime = statbuf.st_ctime * std.date.TicksPerSecond;
-	_lastAccessTime = statbuf.st_atime * std.date.TicksPerSecond;
-	_lastWriteTime = statbuf.st_mtime * std.date.TicksPerSecond;
+	_creationTime = cast(d_time)statbuf.st_ctime * std.date.TicksPerSecond;
+	_lastAccessTime = cast(d_time)statbuf.st_atime * std.date.TicksPerSecond;
+	_lastWriteTime = cast(d_time)statbuf.st_mtime * std.date.TicksPerSecond;
+
 	didstat = 1;
     }
 }
@@ -1328,6 +1329,7 @@ void listdir(char[] pathname, bool delegate(DirEntry* de) callback)
     }
 }
 
+
 /***************************************************
  * Copy a file.
  * Bugs:
@@ -1347,4 +1349,18 @@ void copy(char[] from, char[] to)
 
 
 }
+
+unittest
+{
+    listdir (".", delegate bool (DirEntry * de)
+    {
+	auto s = std.string.format("%s : c %s, w %s, a %s", de.name,
+		toUTCString (de.creationTime),
+		toUTCString (de.lastWriteTime),
+		toUTCString (de.lastAccessTime));
+	return true;
+    }
+    );
+}
+
 

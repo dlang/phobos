@@ -193,7 +193,7 @@ class CFile : Stream {
     file.position = 0;
     lines = new char[][5];
     foreach(ulong n, char[] line; file) {
-      lines[n-1] = line.dup;
+      lines[cast(size_t)(n-1)] = line.dup;
     }
     assert( lines[0] == "Testing stream.d:");
     assert( lines[1] == "Another line");

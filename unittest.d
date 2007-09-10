@@ -48,6 +48,7 @@ import std.stdio;
 import std.conv;
 import std.boxer;
 import std.bitarray;
+import std.uni;
 
 int main(char[][] args)
 {
@@ -107,6 +108,8 @@ printf("test2\n");
     BitArray ba;			// std.bitarray
     ba.length = 3;
     ba[0] = true;
+
+    std.uni.isUniAlpha('A');
 
     printf("Success\n!");
     return 0;

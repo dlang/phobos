@@ -148,5 +148,4 @@ void *_d_interface_vtbl(ClassInfo ic, Object o)
 	}
     }
     assert(0);
-    return null;
 }

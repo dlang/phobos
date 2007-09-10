@@ -129,6 +129,7 @@ extern (C) long _adSort(Array a, TypeInfo ti)
     else				// else stack empty, all done
       return *cast(long*)(&a);
   }
+  assert(0);
 }
 
 

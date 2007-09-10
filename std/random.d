@@ -108,7 +108,7 @@ static this()
 	}
 	else
 	{
-	    s = (cast(long)tv.tv_sec << 32) + tv.tv_usec;
+	    s = cast(ulong)((cast(long)tv.tv_sec << 32) + tv.tv_usec);
 	}
     }
     rand_seed(cast(uint) s, cast(uint)(s >> 32));

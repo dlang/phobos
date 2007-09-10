@@ -19,8 +19,8 @@ CP=cp
 CFLAGS=-mn -6 -r
 #CFLAGS=-g -mn -6 -r
 
-DFLAGS=-O -release -nofloat
-#DFLAGS=-unittest -g
+DFLAGS=-O -release -nofloat -w
+#DFLAGS=-unittest -g -w
 #DFLAGS=-unittest -cov -g
 
 CC=dmc
@@ -73,7 +73,7 @@ OBJS= asserterror.obj deh.obj switch.obj complex.obj gcstats.obj \
 	socket.obj socketstream.obj loader.obj stdarg.obj format.obj stdio.obj \
 	perf.obj openrj.obj uni.obj winsock.obj oldsyserror.obj \
 	errno.obj boxer.obj cstream.obj charset.obj \
-	realtest.obj gamma.obj demangle.obj cover.obj bitarray.obj \
+	gamma.obj demangle.obj cover.obj bitarray.obj \
 	ti_Aa.obj ti_Ag.obj ti_C.obj ti_int.obj ti_char.obj \
 	ti_wchar.obj ti_uint.obj ti_short.obj ti_ushort.obj \
 	ti_byte.obj ti_ubyte.obj ti_long.obj ti_ulong.obj ti_ptr.obj \
@@ -190,7 +190,7 @@ SRC_STD_C_WIN= std\c\windows\windows.d std\c\windows\com.d \
 SRC_STD_C_LINUX= std\c\linux\linux.d std\c\linux\linuxextern.d \
 	std\c\linux\socket.d
 
-SRC_ETC= etc\gamma.d etc\realtest.d
+SRC_ETC= etc\gamma.d
 
 SRC_ETC_C= etc\c\zlib.d
 
@@ -477,9 +477,6 @@ stdarg.obj : std\c\stdarg.d
 
 gamma.obj : etc\gamma.d
 	$(DMD) -c $(DFLAGS) etc\gamma.d
-
-realtest.obj : etc\realtest.d
-	$(DMD) -c $(DFLAGS) etc\realtest.d
 
 ### etc\c
 
@@ -820,7 +817,7 @@ install:
 	$(CP) $(SRC_STD_WIN) \dmd\src\phobos\std\windows
 	$(CP) $(SRC_STD_C_WIN) \dmd\src\phobos\std\c\windows
 	$(CP) $(SRC_STD_C_LINUX) \dmd\src\phobos\std\c\linux
-	#$(CP) $(SRC_ETC) \dmd\src\phobos\etc
+	$(CP) $(SRC_ETC) \dmd\src\phobos\etc
 	$(CP) $(SRC_ETC_C) \dmd\src\phobos\etc\c
 	$(CP) $(SRC_ZLIB) \dmd\src\phobos\etc\c\zlib
 	$(CP) $(SRC_GC) \dmd\src\phobos\internal\gc

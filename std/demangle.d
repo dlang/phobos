@@ -87,9 +87,11 @@ char[] demangle(char[] name)
     {
 	if (!isxdigit(c))
 	    error();
-	return (c >= 'a') ? c - 'a' + 10 :
-	       (c >= 'A') ? c - 'A' + 10 :
-			    c - '0';
+	return cast(ubyte)
+	      ( (c >= 'a') ? c - 'a' + 10 :
+	        (c >= 'A') ? c - 'A' + 10 :
+			     c - '0'
+	      );
     }
 
     size_t parseNumber()
@@ -265,6 +267,7 @@ char[] demangle(char[] name)
 			case 'U': p = "extern (C) ";       break; // C function
 			case 'W': p = "extern (Windows) "; break; // Windows function
 			case 'V': p = "extern (Pascal) ";  break; // Pascal function
+			default:  assert(0);
 		    }
 		    p ~= parseType() ~ " " ~ identifier ~ "(" ~ args ~ ")";
 		    return p;
@@ -298,6 +301,7 @@ char[] demangle(char[] name)
 		p = name[i .. length];
 		goto L1;
 	}
+	assert(0);
     }
 
     char[] parseTemplateInstanceName()
@@ -330,8 +334,11 @@ char[] demangle(char[] name)
 			for (i = 0; i < 10; i++)
 			{   ubyte b;
 
-			    b = (ascii2hex(name[ni + i * 2]) << 4) +
-				 ascii2hex(name[ni + i * 2 + 1]);
+			    b = cast(ubyte)
+				(
+				 (ascii2hex(name[ni + i * 2]) << 4) +
+				  ascii2hex(name[ni + i * 2 + 1])
+				);
 			    p[i] = b;
 			}
 			result ~= format(r);

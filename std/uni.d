@@ -464,7 +464,7 @@ int isUniAlpha(dchar u)
 
     low = 0;
     high = table.length - 1;
-    while (low <= high)
+    while (cast(int)low <= cast(int)high)
     {
 	mid = (low + high) >> 1;
 	if (u < table[mid][0])
@@ -498,4 +498,15 @@ Lis:
     return 1;
 }
 
-
+unittest
+{
+    for (uint i = 0; i < 0x80; i++)
+    {
+	if (i >= 'A' && i <= 'Z')
+	    assert(isUniAlpha(i));
+	else if (i >= 'a' && i <= 'z')
+	    assert(isUniAlpha(i));
+	else
+	    assert(!isUniAlpha(i));
+    }
+}

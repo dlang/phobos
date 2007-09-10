@@ -123,7 +123,6 @@ class SocketStream: Stream
 	override ulong seek(long offset, SeekPos whence)
 	{
 		throw new SeekException("Cannot seek a socket.");
-		return 0;
 	}
 	
 	/**

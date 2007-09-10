@@ -133,6 +133,9 @@ body
 		
 		case 0:
 			break;
+
+		default:
+			assert(0);
 	}
 	
 	return buf[0 .. (bp - &buf[0])];
@@ -211,6 +214,7 @@ body
 		if(ch == '/')
 			return 'Z' - 'A' + 1 + 'z' - 'a' + 1 + '9' - '0' + 1 + 1;
 		badc(ch);
+		assert(0);
 	}
 	
 	

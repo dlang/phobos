@@ -968,8 +968,8 @@ enum
 //
 
 int MAKELANGID(int p, int s) { return ((cast(WORD)s) << 10) | cast(WORD)p; }
-WORD PRIMARYLANGID(int lgid) { return cast(WORD)lgid & 0x3ff; }
-WORD SUBLANGID(int lgid)     { return cast(WORD)lgid >> 10; }
+WORD PRIMARYLANGID(int lgid) { return cast(WORD)(lgid & 0x3ff); }
+WORD SUBLANGID(int lgid)     { return cast(WORD)(lgid >> 10); }
 
 
 struct FLOATING_SAVE_AREA {

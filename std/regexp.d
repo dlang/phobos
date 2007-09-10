@@ -39,24 +39,61 @@
 	of the following characters:
 
 	<table border=1 cellspacing=0 cellpadding=5>
-	<th>Attribute
-	<th>Action
+	<caption>Attribute Characters</caption>
+	$(TR $(TH Attribute) $(TH Action))
 	<tr>
-	<td> $(B g)
-	<td>global; repeat over the whole input string
+	$(TD $(B g))
+	$(TD global; repeat over the whole input string)
 	</tr>
 	<tr>
-	<td> $(B i)
-	<td> case insensitive
+	$(TD $(B i))
+	$(TD case insensitive)
 	</tr>
 	<tr>
-	<td> $(B m)
-	<td> treat as multiple lines separated by newlines
+	$(TD $(B m))
+	$(TD treat as multiple lines separated by newlines)
 	</tr>
 	</table>
+ *
+ * The $(I format)[] string has the formatting characters:
+ *
+ *	<table border=1 cellspacing=0 cellpadding=5>
+	<caption>Formatting Characters</caption>
+	$(TR $(TH Format) $(TH Replaced With))
+	$(TR
+	$(TD $(B $$))	$(TD $)
+	)
+	$(TR
+	$(TD $(B $&))	$(TD The matched substring.)
+	)
+	$(TR
+	$(TD $(B $`))	$(TD The portion of string that precedes the matched substring.)
+	)
+	$(TR
+	$(TD $(B $'))	$(TD The portion of string that follows the matched substring.)
+	)
+	$(TR
+	$(TD $(B $(DOLLAR))$(I n)) $(TD The $(I n)th capture, where $(I n)
+			is a single digit 1-9
+			and $$(I n) is not followed by a decimal digit.)
+	)
+	$(TR
+	$(TD $(B $(DOLLAR))$(I nn)) $(TD The $(I nn)th capture, where $(I nn)
+			is a two-digit decimal
+			number 01-99.
+			If $(I nn)th capture is undefined or more than the number
+			of parenthesized subexpressions, use the empty
+			string instead.)
+	)
+	</table>
 
+ *	Any other $ are left as is.
+ *
+ * References:
+ *	$(LINK2 http://en.wikipedia.org/wiki/Regular_expressions, Wikipedia)
  * Macros:
  *	WIKI = StdRegexp
+ *	DOLLAR = $
  */
 
 /*
@@ -98,6 +135,7 @@ private
     import std.c.stdio;
     import std.c.stdlib;
     import std.c.string;
+    import std.stdio;
     import std.string;
     import std.ctype;
     import std.outbuffer;
@@ -140,7 +178,20 @@ private alias char rchar;	// so we can make a wchar version
  *	pattern = Regular expression pattern.
  *	format = Replacement string format.
  *	attributes = Regular expression attributes.
- * Returns: the resulting string.
+ * Returns:
+ *	the resulting string
+ * Example:
+ *	Replace the letters 'a' with the letters 'ZZ'.
+ * ---
+ * s = "Strap a rocket engine on a chicken."
+ * sub(s, "a", "ZZ")        // result: StrZZp a rocket engine on a chicken.
+ * sub(s, "a", "ZZ", "g")   // result: StrZZp ZZ rocket engine on ZZ chicken.
+ * ---
+ *	The replacement format can reference the matches using
+ *	the $&amp;, $$, $', $`, $0 .. $99 notation:
+ * ---
+ * sub(s, "[ar]", "[$&]", "g") // result: St[r][a]p [a] [r]ocket engine on [a] chi
+ * ---
  */
 
 char[] sub(char[] string, char[] pattern, char[] format, char[] attributes = null)
@@ -170,6 +221,17 @@ unittest
  *	dg = Delegate
  *	attributes = Regular expression attributes.
  * Returns: the resulting string.
+ * Example:
+ * Capitalize the letters 'a' and 'r':
+ * ---
+ * s = "Strap a rocket engine on a chicken.";
+ * sub(s, "[ar]",
+ *    delegate char[] (RegExp m)
+ *    {
+ *         return toupper(m.match(0));
+ *    },
+ *    "g");    // result: StRAp A Rocket engine on A chicken.
+ * ---
  */
 
 char[] sub(char[] string, char[] pattern, char[] delegate(RegExp) dg, char[] attributes = null)
@@ -194,11 +256,10 @@ char[] sub(char[] string, char[] pattern, char[] delegate(RegExp) dg, char[] att
 	if (r.attributes & RegExp.REA.global &&		// global, so replace all
 	    !(r.attributes & RegExp.REA.ignoreCase) &&	// not ignoring case
 	    !(r.attributes & RegExp.REA.multiline) &&	// not multiline
-	    pattern == slice &&				// simple pattern (exact match, no special characters) 
-	    format == replacement)			// simple format, not $ formats
+	    pattern == slice)				// simple pattern (exact match, no special characters) 
 	{
 	    debug(regexp)
-		printf("pattern: %.*s, slice: %.*s, format: %.*s, replacement: %.*s\n",pattern,result[offset + so .. offset + eo],format,replacement);
+		printf("pattern: %.*s, slice: %.*s, replacement: %.*s\n",pattern,result[offset + so .. offset + eo],replacement);
 	    result = std.string.replace(result,slice,replacement);
 	    break;
 	}
@@ -230,6 +291,18 @@ unittest
 
     char[] r = sub("hello", "ll", delegate char[](RegExp r) { return "ss"; });
     assert(r == "hesso");
+
+    r = sub("hello", "l", delegate char[](RegExp r) { return "l"; }, "g");
+    assert(r == "hello");
+
+    auto s = sub("Strap a rocket engine on a chicken.",
+		 "[ar]",
+	         delegate char[] (RegExp m)
+	         {
+		    return std.string.toupper(m.match(0));
+	         },
+	         "g");
+    assert(s == "StRAp A Rocket engine on A chicken.");
 }
 
 
@@ -241,6 +314,12 @@ unittest
  *	attributes = Regular expression attributes.
  * Returns:
  *	index into string[] of match if found, -1 if no match.
+ * Example:
+ * ---
+ * auto s = "abcabcabab";
+ * std.regexp.find(s, "b");    // match, returns 1
+ * std.regexp.find(s, "f");    // no match, returns -1
+ * ---
  */
 
 int find(rchar[] string, char[] pattern, char[] attributes = null)
@@ -277,6 +356,12 @@ unittest
  *	attributes = Regular expression attributes.
  * Returns:
  *	index into string[] of match if found, -1 if no match.
+ * Example:
+ * ---
+ * auto s = "abcabcabab";
+ * std.regexp.find(s, "b");    // match, returns 9
+ * std.regexp.find(s, "f");    // no match, returns -1
+ * ---
  */
 
 int rfind(rchar[] string, char[] pattern, char[] attributes = null)
@@ -318,11 +403,23 @@ unittest
 /********************************************
  * Split string[] into an array of strings, using the regular
  * expression pattern[] with attributes[] as the separator.
+ * Params:
  *	string = String to search.
  *	pattern = Regular expression pattern.
  *	attributes = Regular expression attributes.
  * Returns:
  * 	array of slices into string[]
+ * Example:
+ * ---
+ * foreach (s; split("abcabcabab", "C.", "i"))
+ * {
+ *     writefln("s = '%s'", s);
+ * }
+ * // Prints:
+ * // s = 'ab'
+ * // s = 'b'
+ * // s = 'bab'
+ * ---
  */
 
 char[][] split(char[] string, char[] pattern, char[] attributes = null)
@@ -342,6 +439,15 @@ unittest
     assert(result.length == 2);
     assert(result[0] == "");
     assert(result[1] == "b");
+
+    foreach (i, s; split("abcabcabab", "C.", "i"))
+    {
+	writefln("s[%d] = '%s'", i, s);
+	if (i == 0) assert(s == "ab");
+	else if (i == 1) assert(s == "b");
+	else if (i == 2) assert(s == "bab");
+	else assert(0);
+    }
 }
 
 /****************************************************
@@ -359,7 +465,7 @@ unittest
  *
  * void main()
  * {
- *     if (m; std.regexp.search("abcdef", "c"))
+ *     if (auto m = std.regexp.search("abcdef", "c"))
  *     {
  *         writefln("%s[%s]%s", m.pre, m.match(0), m.post);
  *     }
@@ -383,6 +489,27 @@ RegExp search(char[] string, char[] pattern, char[] attributes = null)
     return r;
 }
 
+unittest
+{
+    debug(regexp) printf("regexp.string.unittest()\n");
+
+    if (auto m = std.regexp.search("abcdef", "c()"))
+    {
+	auto result = std.string.format("%s[%s]%s", m.pre, m.match(0), m.post);
+	assert(result == "ab[c]def");
+	assert(m.match(1) == null);
+	assert(m.match(2) == null);
+    }
+    else
+	assert(0);
+
+    if (auto n = std.regexp.search("abcdef", "g"))
+    {
+	assert(0);
+    }
+}
+
+
 /* ********************************* RegExp ******************************** */
 
 /*****************************
@@ -401,6 +528,12 @@ class RegExp
      *	pattern = regular expression
      *  attributes = _attributes
      * Throws: RegExpException if there are any compilation errors.
+     * Example:
+     *  Declare two variables and assign to them a RegExp object:
+     * ---
+     * auto r = new RegExp("pattern");
+     * auto s = new RegExp(r"p[1-5]\s*");
+     * ---
      */
     public this(rchar[] pattern, rchar[] attributes = null)
     {
@@ -414,10 +547,34 @@ class RegExp
      *	pattern = regular expression
      *  attributes = _attributes
      * Throws: RegExpException if there are any compilation errors.
+     * Example:
+     *  Declare two variables and assign to them a RegExp object:
+     * ---
+     * auto r = RegExp("pattern");
+     * auto s = RegExp(r"p[1-5]\s*");
+     * ---
      */
     public static RegExp opCall(rchar[] pattern, rchar[] attributes = null)
     {
 	return new RegExp(pattern, attributes);
+    }
+
+    unittest
+    {
+	debug(regexp) printf("regexp.opCall.unittest()\n");
+	auto r1 = RegExp("hello", "m");
+	char[] msg;
+	try
+	{
+	    auto r2 = RegExp("hello", "q");
+	    assert(0);
+	}
+	catch (RegExpException ree)
+	{
+	    msg = ree.toString();
+	    //writefln("message: %s", ree);
+	}
+	assert(msg == "unrecognized attribute");
     }
 
     /************************************
@@ -465,6 +622,23 @@ class RegExp
 	}
 
 	return result;
+    }
+
+    unittest
+    {
+	debug(regexp) printf("regexp.search.unittest()\n");
+
+	int i;
+	foreach(m; RegExp("ab").search("abcabcabab"))
+	{
+	    auto s = std.string.format("%s[%s]%s", m.pre, m.match(0), m.post);
+	    if (i == 0) assert(s == "[ab]cabcabab");
+	    else if (i == 1) assert(s == "abc[ab]cabab");
+	    else if (i == 2) assert(s == "abcabc[ab]ab");
+	    else if (i == 3) assert(s == "abcabcab[ab]");
+	    else assert(0);
+	    i++;
+	}
     }
 
     /******************
@@ -907,6 +1081,11 @@ unittest
     r = new RegExp("a[bc]", "g");
     result = r.replace("1ab2ac3", "x$&y");
     i = std.string.cmp(result, "1xaby2xacy3");
+    assert(i == 0);
+
+    r = new RegExp("ab", "g");
+    result = r.replace("1ab2ac3", "xy");
+    i = std.string.cmp(result, "1xy2ac3");
     assert(i == 0);
 }
 
@@ -1840,6 +2019,7 @@ int parseRegexp()
 		break;
 	}
     }
+    assert(0);
 }
 
 int parsePiece()
@@ -1947,6 +2127,7 @@ int parsePiece()
 
 Lerr:
     error("badly formed {n,m}");
+    assert(0);
 }
 
 int parseAtom()
@@ -2165,11 +2346,11 @@ class Range
 	    maxc = u;
 	    b = u / 8;
 	    if (b >= maxb)
-	    {	uint u;
+	    {	uint u2;
 
-		u = base ? base - &buf.data[0] : 0;
+		u2 = base ? base - &buf.data[0] : 0;
 		buf.fill0(b - maxb + 1);
-		base = &buf.data[u];
+		base = &buf.data[u2];
 		maxb = b + 1;
 		//bits = (cast(bit*)this.base)[0 .. maxc + 1];
 		bits.ptr = cast(uint*)this.base;
@@ -2245,6 +2426,8 @@ int parseRange()
 			break;
 		    case RS.start:
 			break;
+		    default:
+			assert(0);
 		}
 		p++;
 		break;
@@ -2348,6 +2531,9 @@ int parseRange()
 			    r.bits[c] = 1;
 			rs = RS.start;
 			break;
+
+		    default:
+			assert(0);
 		}
 		continue;
 	}
@@ -2752,6 +2938,9 @@ int starrchars(Range r, ubyte[] prog)
 
 	    case REbackref:
 		return 0;
+
+	    default:
+		assert(0);
 	}
     }
     return 1;
@@ -2763,34 +2952,6 @@ int starrchars(Range r, ubyte[] prog)
  * After a match is found with test(), this function
  * will take the match results and, using the format
  * string, generate and return a new string.
- * The format string has the formatting characters:
- *	<table border=1 cellspacing=0 cellpadding=5>
-	$(TR $(TH Format) $(TH Replaced With))
-	$(TR
-	$(TD $(B $$))	$(TD $)
-	)
-	$(TR
-	$(TD $(B $&))	$(TD The matched substring.)
-	)
-	$(TR
-	$(TD $(B $`))	$(TD The portion of string that precedes the matched substring.)
-	)
-	$(TR
-	$(TD $(B $'))	$(TD The portion of string that follows the matched substring.)
-	)
-	$(TR
-	$(TD $(B $n))	$(TD The nth capture, where n is a single digit 1-9
-			and $n is not followed by a decimal digit.)
-	)
-	$(TR
-	$(TD $(B $nn))	$(TD The nnth capture, where nn is a two-digit decimal
-			number 01-99.
-			If nnth capture is undefined or more than the number
-			of parenthesized subexpressions, use the empty
-			string instead.)
-	)
-	</table>
-	Any other $ are left as is.
  */
 
 public rchar[] replace(rchar[] format)
@@ -2936,11 +3097,11 @@ public rchar[] replaceOld(rchar[] format)
 		{
 		    c = format[++i];
 		    if (c >= '1' && c <= '9')
-		    {   uint i;
+		    {   uint j;
 
-			i = c - '0';
-			if (i <= re_nsub && pmatch[i].rm_so != pmatch[i].rm_eo)
-			    result ~= input[pmatch[i].rm_so .. pmatch[i].rm_eo];
+			j = c - '0';
+			if (j <= re_nsub && pmatch[j].rm_so != pmatch[j].rm_eo)
+			    result ~= input[pmatch[j].rm_so .. pmatch[j].rm_eo];
 			break;
 		    }
 		}

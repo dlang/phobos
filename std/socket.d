@@ -269,7 +269,7 @@ class Service
 	void populate(servent* serv)
 	{
 		name = std.string.toString(serv.s_name).dup;
-		port = ntohs(serv.s_port);
+		port = ntohs(cast(ushort)serv.s_port);
 		protocolName = std.string.toString(serv.s_proto).dup;
 		
 		int i;

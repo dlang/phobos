@@ -103,49 +103,52 @@ class MmFile
 	    
 			if (dwVersion & 0x80000000 && (dwVersion & 0xFF) == 3)
 			{
-				throw new FileException(filename,
-							"Win32s does not implement mm files");
+			    throw new FileException(filename,
+				"Win32s does not implement mm files");
 			}
 	    
 			switch (mode)
 			{
-				case Mode.Read:
-					dwDesiredAccess2 = GENERIC_READ;
-					dwShareMode = FILE_SHARE_READ;
-					dwCreationDisposition = OPEN_EXISTING;
-					flProtect = PAGE_READONLY;
-					dwDesiredAccess = FILE_MAP_READ;
-					break;
-	
-				case Mode.ReadWriteNew:
-					assert(size != 0);
-					dwDesiredAccess2 = GENERIC_READ | GENERIC_WRITE;
-					dwShareMode = FILE_SHARE_READ | FILE_SHARE_WRITE;
-					dwCreationDisposition = CREATE_ALWAYS;
-					flProtect = PAGE_READWRITE;
-					dwDesiredAccess = FILE_MAP_WRITE;
-					break;
-	
-				case Mode.ReadWrite:
-					dwDesiredAccess2 = GENERIC_READ | GENERIC_WRITE;
-					dwShareMode = FILE_SHARE_READ | FILE_SHARE_WRITE;
-					dwCreationDisposition = OPEN_ALWAYS;
-					flProtect = PAGE_READWRITE;
-					dwDesiredAccess = FILE_MAP_WRITE;
-					break;
-	
-				case Mode.ReadCopyOnWrite:
-					if (dwVersion & 0x80000000)
-					{
-						throw new FileException(filename,
-							"Win9x does not implement copy on write");
-					}
-					dwDesiredAccess2 = GENERIC_READ | GENERIC_WRITE;
-					dwShareMode = FILE_SHARE_READ | FILE_SHARE_WRITE;
-					dwCreationDisposition = OPEN_EXISTING;
-					flProtect = PAGE_WRITECOPY;
-					dwDesiredAccess = FILE_MAP_COPY;
-					break;
+			    case Mode.Read:
+				dwDesiredAccess2 = GENERIC_READ;
+				dwShareMode = FILE_SHARE_READ;
+				dwCreationDisposition = OPEN_EXISTING;
+				flProtect = PAGE_READONLY;
+				dwDesiredAccess = FILE_MAP_READ;
+				break;
+
+			    case Mode.ReadWriteNew:
+				assert(size != 0);
+				dwDesiredAccess2 = GENERIC_READ | GENERIC_WRITE;
+				dwShareMode = FILE_SHARE_READ | FILE_SHARE_WRITE;
+				dwCreationDisposition = CREATE_ALWAYS;
+				flProtect = PAGE_READWRITE;
+				dwDesiredAccess = FILE_MAP_WRITE;
+				break;
+
+			    case Mode.ReadWrite:
+				dwDesiredAccess2 = GENERIC_READ | GENERIC_WRITE;
+				dwShareMode = FILE_SHARE_READ | FILE_SHARE_WRITE;
+				dwCreationDisposition = OPEN_ALWAYS;
+				flProtect = PAGE_READWRITE;
+				dwDesiredAccess = FILE_MAP_WRITE;
+				break;
+
+			    case Mode.ReadCopyOnWrite:
+				if (dwVersion & 0x80000000)
+				{
+				    throw new FileException(filename,
+					"Win9x does not implement copy on write");
+				}
+				dwDesiredAccess2 = GENERIC_READ | GENERIC_WRITE;
+				dwShareMode = FILE_SHARE_READ | FILE_SHARE_WRITE;
+				dwCreationDisposition = OPEN_EXISTING;
+				flProtect = PAGE_WRITECOPY;
+				dwDesiredAccess = FILE_MAP_COPY;
+				break;
+
+			    default:
+				assert(0);
 			}
 		
 			if (useWfuncs)
@@ -242,6 +245,9 @@ class MmFile
 					oflag = O_RDWR;
 					fmode = 0;
 					break;
+
+				default:
+					assert(0);
 			}
 	
 			if (filename.length)
@@ -265,7 +271,7 @@ class MmFile
 				if (prot & PROT_WRITE && size > statbuf.st_size)
 				{
 					// Need to make the file size bytes big
-					std.c.linux.linux.lseek(fd, size - 1, SEEK_SET);
+					std.c.linux.linux.lseek(fd, cast(int)(size - 1), SEEK_SET);
 					char c = 0;
 					std.c.linux.linux.write(fd, &c, 1);
 				}
@@ -447,7 +453,7 @@ class MmFile
 			p = MapViewOfFileEx(hFileMap, dwDesiredAccess, hi, cast(uint)start, len, address);
 			if (!p) errNo();
 		} else {
-			p = mmap(address, len, prot, flags, fd, start);
+			p = mmap(address, len, prot, flags, fd, cast(int)start);
 			if (p == MAP_FAILED) errNo();
 		}
 		data = p[0 .. len];

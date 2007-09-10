@@ -212,8 +212,8 @@ class ZipArchive
 	    putUint  (i + 14, de.crc32);
 	    putUint  (i + 18, de.compressedSize);
 	    putUint  (i + 22, de.expandedData.length);
-	    putUshort(i + 26, de.name.length);
-	    putUshort(i + 28, de.extra.length);
+	    putUshort(i + 26, cast(ushort)de.name.length);
+	    putUshort(i + 28, cast(ushort)de.extra.length);
 	    i += 30;
 
 	    data[i .. i + de.name.length] = cast(ubyte[])de.name[];
@@ -238,9 +238,9 @@ class ZipArchive
 	    putUint  (i + 16, de.crc32);
 	    putUint  (i + 20, de.compressedSize);
 	    putUint  (i + 24, de.expandedSize);
-	    putUshort(i + 28, de.name.length);
-	    putUshort(i + 30, de.extra.length);
-	    putUshort(i + 32, de.comment.length);
+	    putUshort(i + 28, cast(ushort)de.name.length);
+	    putUshort(i + 30, cast(ushort)de.extra.length);
+	    putUshort(i + 32, cast(ushort)de.comment.length);
 	    putUshort(i + 34, de.diskNumber);
 	    putUshort(i + 36, de.internalAttributes);
 	    putUint  (i + 38, de.externalAttributes);
@@ -260,13 +260,13 @@ class ZipArchive
 	// Write end record
 	endrecOffset = i;
 	data[i .. i + 4] = cast(ubyte[])"PK\x05\x06";
-	putUshort(i + 4,  diskNumber);
-	putUshort(i + 6,  diskStartDir);
-	putUshort(i + 8,  numEntries);
-	putUshort(i + 10, totalEntries);
+	putUshort(i + 4,  cast(ushort)diskNumber);
+	putUshort(i + 6,  cast(ushort)diskStartDir);
+	putUshort(i + 8,  cast(ushort)numEntries);
+	putUshort(i + 10, cast(ushort)totalEntries);
 	putUint  (i + 12, directorySize);
 	putUint  (i + 16, directoryOffset);
-	putUshort(i + 20, comment.length);
+	putUshort(i + 20, cast(ushort)comment.length);
 	i += 22;
 
 	// Write archive comment
@@ -450,6 +450,7 @@ class ZipArchive
 	    default:
 		throw new ZipException("unsupported compression method");
 	}
+	assert(0);
     }
 
     /* ============ Utility =================== */
@@ -488,8 +489,8 @@ class ZipArchive
 	}
 	else
 	{
-	    data[0] = cast(ubyte)us;
-	    data[1] = cast(ubyte)(us >> 8);
+	    data[i] = cast(ubyte)us;
+	    data[i + 1] = cast(ubyte)(us >> 8);
 	}
     }
 

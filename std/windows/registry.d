@@ -384,13 +384,14 @@ private REG_VALUE_TYPE _RVT_from_Endian(Endian endian)
     {
         case    Endian.Big:
             return REG_VALUE_TYPE.REG_DWORD_BIG_ENDIAN;
-            break;
+
         case    Endian.Little:
             return REG_VALUE_TYPE.REG_DWORD_LITTLE_ENDIAN;
-            break;
+
         default:
             throw new RegistryException("Invalid Endian specified");
     }
+    assert(0);
 }
 
 private uint swap(in uint i)
@@ -711,7 +712,7 @@ body
             case    REG_VALUE_TYPE.REG_BINARY:
             case    REG_VALUE_TYPE.REG_MULTI_SZ:
                 throw new RegistryException("Cannot read the given value as a string");
-                break;
+
             case    REG_VALUE_TYPE.REG_SZ:
             case    REG_VALUE_TYPE.REG_EXPAND_SZ:
                 value = std.string.toString(cast(char*)data);
@@ -775,7 +776,7 @@ body
         {
             default:
                 throw new RegistryException("Cannot read the given value as a string");
-                break;
+
             case    REG_VALUE_TYPE.REG_MULTI_SZ:
                 break;
         }
@@ -807,7 +808,7 @@ body
         {
             default:
                 throw new RegistryException("Cannot read the given value as a 32-bit integer");
-                break;
+
 version(LittleEndian)
 {
             case    REG_VALUE_TYPE.REG_DWORD_LITTLE_ENDIAN:
@@ -850,7 +851,7 @@ body
         {
             default:
                 throw new RegistryException("Cannot read the given value as a 64-bit integer");
-                break;
+
             case    REG_VALUE_TYPE.REG_QWORD_LITTLE_ENDIAN:
                 break;
         }
@@ -887,7 +888,7 @@ body
         {
             default:
                 throw new RegistryException("Cannot read the given value as a string");
-                break;
+
             case    REG_VALUE_TYPE.REG_BINARY:
                 data.length = cbData;
                 value = data;
@@ -1748,8 +1749,8 @@ public:
         for(DWORD index = 0; 0 == result; ++index)
         {
             DWORD   cchName;
-            LONG    res =   Reg_EnumKeyName_(hkey, index, sName, cchName);
 
+            res =   Reg_EnumKeyName_(hkey, index, sName, cchName);
             assert(ERROR_MORE_DATA != res);
 
             if(ERROR_NO_MORE_ITEMS == res)
@@ -1881,8 +1882,8 @@ public:
         for(DWORD index = 0; 0 == result; ++index)
         {
             DWORD   cchName;
-            LONG    res     =   Reg_EnumKeyName_(hkey, index, sName, cchName);
 
+	    res     =   Reg_EnumKeyName_(hkey, index, sName, cchName);
             assert(ERROR_MORE_DATA != res);
 
             if(ERROR_NO_MORE_ITEMS == res)
@@ -2025,8 +2026,8 @@ public:
         for(DWORD index = 0; 0 == result; ++index)
         {
             DWORD   cchName =   1 + cchValueMaxLen;
-            LONG    res     =   Reg_EnumValueName_(hkey, index, sName, cchName);
 
+	    res     =   Reg_EnumValueName_(hkey, index, sName, cchName);
             if(ERROR_NO_MORE_ITEMS == res)
             {
                 // Enumeration complete
@@ -2152,8 +2153,8 @@ public:
         for(DWORD index = 0; 0 == result; ++index)
         {
             DWORD   cchName =   1 + cchValueMaxLen;
-            LONG    res     =   Reg_EnumValueName_(hkey, index, sName, cchName);
 
+	    res = Reg_EnumValueName_(hkey, index, sName, cchName);
             if(ERROR_NO_MORE_ITEMS == res)
             {
                 // Enumeration complete

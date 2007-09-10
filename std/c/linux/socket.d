@@ -173,7 +173,7 @@ else version(LittleEndian)
 	
 	uint16_t htons(uint16_t x)
 	{
-		return (x >> 8) | (x << 8);
+		return cast(uint16_t)((x >> 8) | (x << 8));
 	}
 
 

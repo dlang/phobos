@@ -749,9 +749,9 @@ static void trace_merge()
 
 			p++;
 			count = strtoul(p,&p,10);
-			t = strtoull(p,&p,10);
+			t = cast(long)strtoull(p,&p,10);
 			s.totaltime += t;
-			t = strtoull(p,&p,10);
+			t = cast(long)strtoull(p,&p,10);
 			s.functime += t;
 		    }
 		    break;

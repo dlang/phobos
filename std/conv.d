@@ -329,7 +329,7 @@ long toLong(char[] s)
 	char c = s[i];
 	if (c >= '0' && c <= '9')
 	{
-	    ulong v1 = v;
+	    ulong v1 = cast(ulong)v;
 	    v = v * 10 + (c - '0');
 	    if (cast(ulong)v < v1)
 		goto Loverflow;
@@ -893,6 +893,7 @@ float toFloat(in char[] s)
         
   Lerr:
     conv_error(s ~ " not representable as a float");
+    assert(0);
 }
  
 unittest
@@ -956,6 +957,7 @@ double toDouble(in char[] s)
         
   Lerr:
     conv_error(s ~ " not representable as a double");
+    assert(0);
 }
 
 unittest
@@ -1021,6 +1023,7 @@ real toReal(in char[] s)
         
   Lerr:
     conv_error(s ~ " not representable as a real");
+    assert(0);
 }
 
 unittest

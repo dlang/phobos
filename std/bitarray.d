@@ -157,6 +157,7 @@ struct BitArray
 	    {	case 0: assert(b == true); break;
 		case 1: assert(b == false); break;
 		case 2: assert(b == true); break;
+		default: assert(0);
 	    }
 	    i++;
 	}
@@ -167,6 +168,7 @@ struct BitArray
 	    {	case 0: assert(b == true); break;
 		case 1: assert(b == false); break;
 		case 2: assert(b == true); break;
+		default: assert(0);
 	    }
 	}
     }
@@ -301,7 +303,7 @@ struct BitArray
 	ubyte mask;
 
 	n = this.length & 7;
-	mask = (1 << n) - 1;
+	mask = cast(ubyte)((1 << n) - 1);
 	//printf("i = %d, n = %d, mask = %x, %x, %x\n", i, n, mask, p1[i], p2[i]);
 	return (mask == 0) || (p1[i] & mask) == (p2[i] & mask);
     }
@@ -349,7 +351,7 @@ struct BitArray
 		break;		// not equal
 	}
 	for (uint j = i * 8; j < len; j++)
-	{   ubyte mask = 1 << j;
+	{   ubyte mask = cast(ubyte)(1 << j);
 	    int c;
 
 	    c = cast(int)(p1[i] & mask) - cast(int)(p2[i] & mask);

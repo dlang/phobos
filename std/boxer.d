@@ -189,6 +189,7 @@ struct Box
                 default: return TypeClass.Other;
             }
         }
+	assert(0);
     }
     
     /** Return whether this value could be unboxed as the given type without throwing. */

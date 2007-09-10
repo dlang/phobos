@@ -45,9 +45,10 @@ class TypeInfo_Am : TypeInfo
 	    len = s2.length;
 	for (size_t u = 0; u < len; u++)
 	{
-	    int result = s1[u] - s2[u];
-	    if (result)
-		return result;
+	    if (s1[u] < s2[u])
+		return -1;
+	    else if (s1[u] > s2[u])
+		return 1;
 	}
 	return cast(int)s1.length - cast(int)s2.length;
     }

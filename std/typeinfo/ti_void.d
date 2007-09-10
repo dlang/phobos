@@ -10,7 +10,6 @@ class TypeInfo_v : TypeInfo
     hash_t getHash(void *p)
     {
 	assert(0);
-	return *cast(byte *)p;
     }
 
     int equals(void *p1, void *p2)
