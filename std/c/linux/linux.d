@@ -1,5 +1,5 @@
 
-/* Written by Walter Bright and Christopher E. Miller
+/* Written by Walter Bright, Christopher E. Miller, and many others.
  * www.digitalmars.com
  * Placed into public domain.
  */
@@ -11,6 +11,9 @@ import std.c.linux.linuxextern;
 alias int pid_t;
 alias int off_t;
 alias uint mode_t;
+
+alias uint uid_t;
+alias uint gid_t;
 
 enum : int
 {
@@ -345,3 +348,21 @@ extern (C)
     char* dlerror();
 }
 
+extern (C)
+{
+    /* from <pwd.h>
+     */
+
+    struct passwd
+    {
+	char *pw_name;
+	char *pw_passwd;
+	uid_t pw_uid;
+	gid_t pw_gid;
+	char *pw_gecos;
+	char *pw_dir;
+	char *pw_shell;
+    }
+
+    int getpwnam_r(char*, passwd*, void*, size_t, passwd**);
+}

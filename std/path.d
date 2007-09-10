@@ -13,8 +13,16 @@
 module std.path;
 
 //debug=path;		// uncomment to turn on debugging printf's
+//private import std.stdio;
 
 private import std.string;
+
+version(linux)
+{
+    private import std.c.stdlib;
+    private import std.c.linux.linux;
+    private import std.outofmemory;
+}
 
 version(Win32)
 {
@@ -102,6 +110,46 @@ unittest
 
     result = getExt("foo");
     i = cmp(result, "");
+    assert(i == 0);
+}
+
+/**************************
+ * Get name without extension.
+ * For example, "d:\path\foo.bat" returns "d:\path\foo".
+ */
+
+char[] getName(char[] fullname)
+{
+    uint i;
+
+    i = fullname.length;
+    while (i > 0)
+    {
+	if (fullname[i - 1] == '.')
+	    return fullname[0 .. i - 1];
+	i--;
+	version(Win32)
+	{
+	    if (fullname[i] == ':' || fullname[i] == '\\')
+		break;
+	}
+	version(linux)
+	{
+	    if (fullname[i] == '/')
+		break;
+	}
+    }
+    return null;
+}
+
+unittest
+{
+    debug(path) printf("path.getName.unittest\n");
+    int i;
+    char[] result;
+
+    result = getName("foo.bar");
+    i = cmp(result, "foo");
     assert(i == 0);
 }
 
@@ -597,4 +645,249 @@ unittest
     assert(!fnmatch("foo.bar", "[gh]???bar"));
     assert(!fnmatch("foo.bar", "[!fg]*bar"));
     assert(!fnmatch("foo.bar", "[fg]???baz"));
+}
+
+/**
+ * Performs tilde expansion in paths.
+ *
+ * There are two ways of using tilde expansion in a path. One
+ * involves using the tilde alone or followed by a path separator. In
+ * this case, the tilde will be expanded with the value of the
+ * environment variable <i>HOME</i>.  The second way is putting
+ * a username after the tilde (i.e. <tt>~john/Mail</tt>). Here,
+ * the username will be searched for in the user database
+ * (i.e. <tt>/etc/passwd</tt> on Unix systems) and will expand to
+ * whatever path is stored there.  The username is considered the
+ * string after the tilde ending at the first instance of a path
+ * separator.
+ *
+ * Note that using the <i>~user</i> syntax may give different
+ * values from just <i>~</i> if the environment variable doesn't
+ * match the value stored in the user database.
+ *
+ * When the environment variable version is used, the path won't
+ * be modified if the environment variable doesn't exist. When the
+ * database version is used, the path won't be modified if the user
+ * doesn't exist in the database or there is not enough memory to
+ * perform the query.
+ *
+ * Returns: inputPath with the tilde expanded, or just inputPath
+ * if it could not be expanded.
+ * For Windows, expandTilde() merely returns its argument inputPath.
+ *
+ * Throws: std.OutOfMemory
+ *
+ * Examples:
+ * -----
+ * import std.path;
+ *
+ * void process_file(char[] filename)
+ * {
+ *     char[] path = expandTilde(filename);
+ *     ...
+ * }
+ * -----
+ *
+ * -----
+ * import std.path;
+ *
+ * const char[] RESOURCE_DIR_TEMPLATE = "~/.applicationrc";
+ * char[] RESOURCE_DIR;    // This gets expanded in main().
+ *
+ * int main(char[][] args)
+ * {
+ *     RESOURCE_DIR = expandTilde(RESOURCE_DIR_TEMPLATE);
+ *     ...
+ * }
+ * -----
+ * Version: Available since v0.143.
+ * Authors: Grzegorz Adam Hankiewicz, Thomas Kuehne.
+ */
+
+char[] expandTilde(char[] inputPath)
+{
+    version(linux)
+    {
+	static assert(sep.length == 1);
+
+        // Return early if there is no tilde in path.
+        if (inputPath.length < 1 || inputPath[0] != '~')
+	    return inputPath;
+
+	if (inputPath.length == 1 || inputPath[1] == sep[0])
+	    return expandFromEnvironment(inputPath);
+        else
+	    return expandFromDatabase(inputPath);
+    }
+    else version(Windows)
+    {
+	// Put here real windows implementation.
+	return inputPath;
+    }
+    else
+    {
+	static assert(0); // Guard. Implement on other platforms.
+    }
+}
+
+
+unittest
+{
+    debug(path) printf("path.expandTilde.unittest\n");
+
+    version (linux)
+    {
+	// Retrieve the current home variable.
+	char* c_home = getenv("HOME");
+
+	// Testing when there is no environment variable.
+	unsetenv("HOME");
+	assert(expandTilde("~/") == "~/");
+	assert(expandTilde("~") == "~");
+
+	// Testing when an environment variable is set.
+	int ret = setenv("HOME", "dmd/test\0", 1);
+	assert(ret == 0);
+	assert(expandTilde("~/") == "dmd/test/");
+	assert(expandTilde("~") == "dmd/test");
+
+	// The same, but with a variable ending in a slash.
+	ret = setenv("HOME", "dmd/test/\0", 1);
+	assert(ret == 0);
+	assert(expandTilde("~/") == "dmd/test/");
+	assert(expandTilde("~") == "dmd/test");
+
+	// Recover original HOME variable before continuing.
+	if (c_home)
+	    setenv("HOME", c_home, 1);
+	else
+	    unsetenv("HOME");
+
+	// Test user expansion for root. Are there unices without /root?
+	assert(expandTilde("~root") == "/root");
+	assert(expandTilde("~root/") == "/root/");
+	assert(expandTilde("~Idontexist/hey") == "~Idontexist/hey");
+    }
+}
+
+version (linux)
+{
+
+/**
+ * Replaces the tilde from path with the environment variable HOME.
+ */
+private char[] expandFromEnvironment(char[] path)
+{
+    assert(path.length >= 1);
+    assert(path[0] == '~');
+    
+    // Get HOME and use that to replace the tilde.
+    char* home = getenv("HOME");
+    if (home == null)
+        return path;
+
+    return combineCPathWithDPath(home, path, 1);
+}
+
+
+/**
+ * Joins a path from a C string to the remainder of path.
+ *
+ * The last path separator from c_path is discarded. The result
+ * is joined to path[char_pos .. length] if char_pos is smaller
+ * than length, otherwise path is not appended to c_path.
+ */
+private char[] combineCPathWithDPath(char* c_path, char[] path, int char_pos)
+{
+    assert(c_path != null);
+    assert(path.length > 0);
+    assert(char_pos >= 0);
+
+    // Search end of C string
+    size_t end = std.string.strlen(c_path);
+
+    // Remove trailing path separator, if any
+    if (end && c_path[end - 1] == sep[0])
+	end--;
+
+    // Create our own copy, as lifetime of c_path is undocumented
+    char[] cp = c_path[0 .. end].dup;
+
+    // Do we append something from path?
+    if (char_pos < path.length)
+	cp ~= path[char_pos .. length];
+
+    return cp;
+}
+
+
+/**
+ * Replaces the tilde from path with the path from the user database.
+ */
+private char[] expandFromDatabase(char[] path)
+{
+    assert(path.length > 2 || (path.length == 2 && path[1] != sep[0]));
+    assert(path[0] == '~');
+
+    // Extract username, searching for path separator.
+    char[] username;
+    int last_char = find(path, sep[0]);
+
+    if (last_char == -1)
+    {
+        username = path[1 .. length] ~ '\0';
+	last_char = username.length + 1;
+    }
+    else
+    {
+        username = path[1 .. last_char] ~ '\0';
+    }
+    assert(last_char > 1);
+    
+    // Reserve C memory for the getpwnam_r() function.
+    passwd result;
+    int extra_memory_size = 5 * 1024;
+    void* extra_memory;
+
+    while (1)
+    {
+	extra_memory = std.c.stdlib.malloc(extra_memory_size);
+	if (extra_memory == null)
+	    goto Lerror;
+
+	// Obtain info from database.
+	passwd *verify;
+	std.c.stdlib.setErrno(0);
+	if (getpwnam_r(username, &result, extra_memory, extra_memory_size,
+		&verify) == 0)
+	{
+	    // Failure if verify doesn't point at result.
+	    if (verify != &result)
+		// username is not found, so return path[]
+		goto Lnotfound;
+	    break;
+	}
+
+	if (std.c.stdlib.getErrno() != ERANGE)
+	    goto Lerror;
+
+	// extra_memory isn't large enough
+	std.c.stdlib.free(extra_memory);
+	extra_memory_size *= 2;
+    }
+
+    path = combineCPathWithDPath(result.pw_dir, path, last_char);
+
+Lnotfound:
+    std.c.stdlib.free(extra_memory);
+    return path;
+
+Lerror:
+    // Errors are going to be caused by running out of memory
+    if (extra_memory)
+	std.c.stdlib.free(extra_memory);
+    _d_OutOfMemory();
+    return null;
+}
+
 }

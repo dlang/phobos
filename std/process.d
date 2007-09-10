@@ -49,13 +49,16 @@ private void toAStringz(char[][] a, char**az)
 
 /* ========================================================== */
 
-int spawnvp(int mode, char[] pathname, char[][] argv)
+version (Windows)
 {
-    char** argv_ = cast(char**)alloca((char*).sizeof * (1 + argv.length));
+    int spawnvp(int mode, char[] pathname, char[][] argv)
+    {
+	char** argv_ = cast(char**)alloca((char*).sizeof * (1 + argv.length));
 
-    toAStringz(argv, argv_);
+	toAStringz(argv, argv_);
 
-    return std.c.process.spawnvp(mode, toStringz(pathname), argv_);
+	return std.c.process.spawnvp(mode, toStringz(pathname), argv_);
+    }
 }
 
 /* ========================================================== */

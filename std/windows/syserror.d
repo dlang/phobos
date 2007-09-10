@@ -5,6 +5,7 @@
 
 module std.windows.syserror;
 
+private import std.windows.charset;
 private import std.c.windows.windows;
 
 char[] sysErrorString(uint errcode)
@@ -27,7 +28,16 @@ char[] sysErrorString(uint errcode)
     /* Remove \r\n from error string */
     if (r >= 2)
 	r -= 2;
-    result = buffer[0..r].dup;
+
+    /* Create 0 terminated copy on GC heap because fromMBSz()
+     * may return it.
+     */
+    result = new char[r + 1];
+    result[0 .. r] = buffer[0 .. r];
+    result[r] = 0;
+
+    result = std.windows.charset.fromMBSz(result.ptr);
+
     LocalFree(cast(HLOCAL)buffer);
     return result;
 }

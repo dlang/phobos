@@ -7,11 +7,17 @@
  *	TABLE_SV = <table border=1 cellpadding=4 cellspacing=0>
  *		<caption>Special Values</caption>
  *		$0</table>
+ *	SVH = $(TR $(TH $1) $(TH $2))
+ *	SV  = $(TR $(TD $1) $(TD $2))
  *
  *	NAN = $(RED NAN)
  *	SUP = <span style="vertical-align:super;font-size:smaller">$0</span>
  *	GAMMA =  &#915;
  *	INTEGRAL = &#8747;
+ *	INTEGRATE = $(BIG &#8747;<sub>$(SMALL $1)</sub><sup>$2</sup>)
+ *	POWER = $1<sup>$2</sup>
+ *	BIGSUM = $(BIG &Sigma; <sup>$2</sup><sub>$(SMALL $1)</sub>)
+ *	CHOOSE = $(BIG &#40;) <sup>$(SMALL $1)</sup><sub>$(SMALL $2)</sub> $(BIG &#41;)
  */
 
 /*
@@ -95,6 +101,80 @@ const real SQRT1_2 =	0.70710678118654752440;  /** &radic;&frac12 */
 
 
 /***********************************
+ * Calculates the absolute value
+ *
+ * For complex numbers, abs(z) = sqrt( $(POWER z.re, 2) + $(POWER z.im, 2) )
+ * = hypot(z.re, z.im).
+ */
+real abs(real x)
+{
+    return fabs(x);
+}
+
+/** ditto */
+long abs(long x)
+{
+    return x>=0 ? x : -x;
+}
+
+/** ditto */
+int abs(int x)
+{
+    return x>=0 ? x : -x;
+}
+
+/** ditto */
+real abs(creal z)
+{
+    return hypot(z.re, z.im);
+}
+
+/** ditto */
+real abs(ireal y)
+{
+    return fabs(y.im);
+}
+
+
+unittest
+{
+    assert(isPosZero(abs(-0.0L)));
+    assert(isnan(abs(real.nan)));
+    assert(abs(-real.infinity) == real.infinity);
+    assert(abs(-3.2Li) == 3.2L);
+    assert(abs(71.6Li) == 71.6L);
+    assert(abs(-56) == 56);
+    assert(abs(2321312L)  == 2321312L);
+    assert(abs(-1+1i) == sqrt(2.0));
+}
+
+/***********************************
+ * Complex conjugate
+ *
+ *  conj(x + iy) = x - iy
+ *
+ * Note that z * conj(z) = $(POWER z.re, 2) - $(POWER z.im, 2)
+ * is always a real number
+ */
+creal conj(creal z)
+{
+    return z.re - z.im*1i;
+}
+
+/** ditto */
+ireal conj(ireal y)
+{
+    return -y;
+}
+
+unittest
+{
+    assert(conj(7 + 3i) == 7-3i);
+    ireal z = -3.2Li;
+    assert(conj(z) == -z);
+}
+
+/***********************************
  * Returns cosine of x. x is in radians.
  *
  *	$(TABLE_SV
@@ -102,6 +182,8 @@ const real SQRT1_2 =	0.70710678118654752440;  /** &radic;&frac12 */
  *	$(TR $(TD $(NAN))          $(TD $(NAN)) $(TD yes)	)
  *	$(TR $(TD &plusmn;&infin;) $(TD $(NAN)) $(TD yes)	)
  *	)
+ * Bugs:
+ *	Results are undefined if |x| >= $(POWER 2,64).
  */
 
 real cos(real x);	/* intrinsic */
@@ -115,6 +197,8 @@ real cos(real x);	/* intrinsic */
  *	<tr> <td> &plusmn;0.0     <td> &plusmn;0.0 <td> no
  *	<tr> <td> &plusmn;&infin; <td> $(NAN)      <td> yes
  *	)
+ * Bugs:
+ *	Results are undefined if |x| >= $(POWER 2,64).
  */
 
 real sin(real x);	/* intrinsic */
@@ -316,6 +400,105 @@ real tanh(real x)		{ return std.c.math.tanhl(x); }
 //real acosh(real x)		{ return std.c.math.acoshl(x); }
 //real asinh(real x)		{ return std.c.math.asinhl(x); }
 //real atanh(real x)		{ return std.c.math.atanhl(x); }
+
+/***********************************
+ * Calculates the inverse hyperbolic cosine of x.
+ *
+ *  Mathematically, acosh(x) = log(x + sqrt( x*x - 1))
+ *
+ * $(TABLE_DOMRG
+ *  $(DOMAIN 1..&infin;)
+ *  $(RANGE  1..log(real.max), &infin;) )
+ *	$(TABLE_SV
+ *    $(SVH  x,     acosh(x) )
+ *    $(SV  $(NAN), $(NAN) )
+ *    $(SV  <1,     $(NAN) )
+ *    $(SV  1,      0       )
+ *    $(SV  +&infin;,+&infin;)
+ *  )
+ */   
+real acosh(real x)
+{
+    if (x > 1/real.epsilon)
+	return LN2 + log(x);
+    else
+	return log(x + sqrt(x*x - 1));
+}
+
+unittest
+{
+    assert(isnan(acosh(0.9)));
+    assert(isnan(acosh(real.nan)));
+    assert(acosh(1)==0.0);
+    assert(acosh(real.infinity) == real.infinity);
+}
+
+/***********************************
+ * Calculates the inverse hyperbolic sine of x.
+ *
+ *  Mathematically,
+ *  ---------------
+ *  asinh(x) =  log( x + sqrt( x*x + 1 )) // if x >= +0
+ *  asinh(x) = -log(-x + sqrt( x*x + 1 )) // if x <= -0
+ *  -------------
+ *
+ *	$(TABLE_SV
+ *    $(SVH  x,             asinh(x)       )
+ *    $(SV  $(NAN),         $(NAN)         )
+ *    $(SV  &plusmn;0,      &plusmn;0      )
+ *    $(SV  &plusmn;&infin;,&plusmn;&infin;)
+ *  )
+ */
+real asinh(real x)
+{   
+    if (fabs(x) > 1 / real.epsilon)   // beyond this point, x*x + 1 == x*x
+	return copysign(LN2 + log(fabs(x)), x);
+    else
+    {
+	// sqrt(x*x + 1) ==  1 + x * x / ( 1 + sqrt(x*x + 1) )
+	return copysign(log1p(fabs(x) + x*x / (1 + sqrt(x*x + 1)) ), x);
+    }
+}
+
+unittest
+{
+    assert(isPosZero(asinh(0.0)));
+    assert(isNegZero(asinh(-0.0)));
+    assert(asinh(real.infinity) == real.infinity);
+    assert(asinh(-real.infinity) == -real.infinity);
+    assert(isnan(asinh(real.nan)));
+}
+
+/***********************************
+ * Calculates the inverse hyperbolic tangent of x,
+ * returning a value from ranging from -1 to 1.
+ *  
+ * Mathematically, atanh(x) = log( (1+x)/(1-x) ) / 2
+ *  
+ *
+ * $(TABLE_DOMRG
+ *  $(DOMAIN -&infin;..&infin;)
+ *  $(RANGE  -1..1) )
+ *	$(TABLE_SV
+ *    $(SVH  x,     acosh(x) )
+ *    $(SV  $(NAN), $(NAN) )
+ *    $(SV  &plusmn;0, &plusmn;0)
+ *    $(SV  -&infin;, -0)
+ *  )
+ */   
+real atanh(real x)
+{
+    // log( (1+x)/(1-x) ) == log ( 1 + (2*x)/(1-x) )
+    return  0.5 * log1p( 2 * x / (1 - x) );
+}
+
+unittest
+{
+    assert(isPosZero(atanh(0.0)));
+    assert(isNegZero(atanh(-0.0)));
+    assert(isnan(atanh(real.nan)));
+    assert(isNegZero(atanh(-real.infinity))); 
+}
 
 /*****************************************
  * Returns x rounded to a long value using the current rounding mode.
@@ -628,9 +811,9 @@ real log2(real x)		{ return std.c.math.log2l(x); }
  * If x is subnormal, it is treated as if it were normalized.
  * For a positive, finite x: 
  *
- * <pre>
- * 1 &lt;= <i>x</i> * FLT_RADIX$(SUP -logb(x)) &lt; FLT_RADIX 
- * </pre>
+ * -----
+ * 1 <= $(I x) * FLT_RADIX$(SUP -logb(x)) < FLT_RADIX 
+ * -----
  *
  *	$(TABLE_SV
  *	<tr> <th> x               <th> logb(x)  <th> Divide by 0? 
@@ -841,14 +1024,13 @@ real erfc(real x)		{ return std.c.math.erfcl(x); }
  * Returns the base e (2.718...) logarithm of the absolute
  * value of the gamma function of the argument.
  *
- * For reals, lgamma is equivalent to log(fabs(tgamma(x))).
+ * For reals, lgamma is equivalent to log(fabs(gamma(x))).
  *
  *	$(TABLE_SV
- *	<tr> <th> x               <th> log$(GAMMA)(x) <th>invalid?
- *	<tr> <td> NaN             <td> NaN           <td> yes
+ *	<tr> <th> x               <th> lgamma(x)     <th>invalid?
+ *	<tr> <td> $(NAN)          <td> $(NAN)        <td> yes
  *	<tr> <td> integer <= 0    <td> +&infin;      <td> yes
- *	<tr> <td> 1, 2            <td> +0.0          <td> no
- *	<tr> <td> &plusmn;&infin;  <td> +&infin;      <td> no
+ *	<tr> <td> &plusmn;&infin; <td> +&infin;      <td> no
  *	)
  */
 /* Documentation prepared by Don Clugston */
@@ -860,26 +1042,28 @@ real lgamma(real x)
 }
 
 /***********************************
- *  The gamma function, $(GAMMA)(x)
+ *  The Gamma function, $(GAMMA)(x)
  *
- *  Generalizes the factorial function to real and complex numbers.
+ *  $(GAMMA)(x) is a generalisation of the factorial function
+ *  to real and complex numbers.
  *  Like x!, $(GAMMA)(x+1) = x*$(GAMMA)(x).
  *
  *  Mathematically, if z.re > 0 then
  *   $(GAMMA)(z) =<big>$(INTEGRAL)<sub><small>0</small></sub><sup>&infin;</sup></big>t<sup>z-1</sup>e<sup>-t</sup>dt
  *
  *	$(TABLE_SV
- *	<tr> <th> x               <th> $(GAMMA)(x)   <th>invalid?
- *	<tr> <td> NAN             <td> NAN           <td> yes
- *	<tr> <td> &plusmn;0.0     <td> &plusmn;&infin;      <td> yes
- *	<tr> <td> integer > 0     <td> (x-1)!        <td> no
- *	<tr> <td> integer < 0     <td> NAN           <td> yes
- *	<tr> <td> +&infin;        <td> +&infin;      <td> no
- *	<tr> <td> -&infin;        <td> NAN           <td> yes
+ *	<tr> <th> x               <th> $(GAMMA)(x)     <th>invalid?
+ *	<tr> <td> $(NAN)          <td> $(NAN)          <td> yes
+ *	<tr> <td> &plusmn;0.0     <td> &plusmn;&infin; <td> yes
+ *	<tr> <td> integer > 0     <td> (x-1)!          <td> no
+ *	<tr> <td> integer < 0     <td> $(NAN)          <td> yes
+ *	<tr> <td> +&infin;        <td> +&infin;        <td> no
+ *	<tr> <td> -&infin;        <td> $(NAN)          <td> yes
  *	)
  *
  *  References:
- *     cephes, $(LINK http://en.wikipedia.org/wiki/Gamma_function)
+ *	$(LINK http://en.wikipedia.org/wiki/Gamma_function),
+ *	$(LINK http://www.netlib.org/cephes/ldoubdoc.html#gamma)
  */
 /* Documentation prepared by Don Clugston */
 real tgamma(real x)
@@ -956,7 +1140,7 @@ long lround(real x)
 /****************************************************
  * Returns the integer portion of x, dropping the fractional portion. 
  *
- * This is also know as "chop" rounding. 
+ * This is also known as "chop" rounding. 
  */
 real trunc(real x) { return std.c.math.truncl(x); }
 
@@ -1492,11 +1676,17 @@ private int mfeq(real x, real y, real precision)
     return fabs(x - y) <= precision;
 }
 
-private int iabs(int i)
+// Returns true if x is +0.0 (This function is used in unit tests)
+bit isPosZero(real x)
 {
-    return i >= 0 ? i : -i;
+    return (x == 0) && (signbit(x) == 0);
 }
- 
+
+// Returns true if x is -0.0 (This function is used in unit tests)
+bit isNegZero(real x)
+{
+    return (x == 0) && signbit(x);
+}
 
 /**************************************
  * To what precision is x equal to y?

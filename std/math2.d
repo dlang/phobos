@@ -641,6 +641,7 @@ real cosech(real x)
  * Hyperbolic arccosine
  */
 
+/+
 real acosh(real x)
 {
 	if (x <= 1)
@@ -656,11 +657,13 @@ unittest
 	assert(acosh(0.5) == 0);
 	assert(feq(acosh(cosh(3)), 3));
 }
++/
 
 /*************************************
  * Hyperbolic arcsine
  */
 
+/+
 real asinh(real x)
 {
 	if (!x)
@@ -683,11 +686,12 @@ unittest
 	assert(asinh(0) == 0);
 	assert(feq(asinh(sinh(3)), 3));
 }
++/
 
 /*************************************
  * Hyperbolic arctangent
  */
-
+/+
 real atanh(real x)
 {
 	if (!x)
@@ -710,6 +714,7 @@ unittest
 	assert(atanh(0) == 0);
 	assert(feq(atanh(tanh(0.5)), 0.5));
 }
++/
 
 /*************************************
  * Hyperbolic arccotangent

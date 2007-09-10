@@ -96,7 +96,7 @@ byte[] _d_arraycopy(uint size, byte[] from, byte[] to)
 
     if (to.length != from.length)
     {
-	throw new Error("lengths don't match for array copy");
+	throw new Error(std.string.format("lengths don't match for array copy, %s = %s", to.length, from.length));
     }
     else if (cast(byte *)to + to.length * size <= cast(byte *)from ||
 	cast(byte *)from + from.length * size <= cast(byte *)to)

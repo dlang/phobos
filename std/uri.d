@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2004-2005 by Digital Mars, www.digitalmars.com
+ *  Copyright (C) 2004-2006 by Digital Mars, www.digitalmars.com
  *  Written by Walter Bright
  *
  *  This software is provided 'as-is', without any express or implied
@@ -25,8 +25,9 @@
  * Encode and decode Uniform Resource Identifiers (URIs).
  * URIs are used in internet transfer protocols.
  * Valid URI characters consist of letters, digits,
- * and the characters ;/?:@&=+$,-_.!~*'(). Escape sequences consist of '%'
- * followed by two hex digits.
+ * and the characters $(B ;/?:@&amp;=+$,-_.!~*'())
+ * Reserved URI characters are $(B ;/?:@&amp;=+$,)
+ * Escape sequences consist of $(B %) followed by two hex digits.
  *
  * See_Also:
  *	$(LINK2 http://www.ietf.org/rfc/rfc3986.txt, RFC 3986)<br>
@@ -42,6 +43,7 @@ module std.uri;
 private import std.ctype;
 private import std.c.stdlib;
 private import std.utf;
+private import std.stdio;
 
 class URIerror : Error
 {
@@ -116,9 +118,13 @@ private char[] URI_Encode(dchar[] string, uint unescapedSet)
 	    {	char* R2;
 
 		Rsize *= 2;
-		R2 = cast(char *)alloca(Rsize * char.sizeof);
-		if (!R2)
-		    goto LthrowURIerror;
+		if (Rsize > 1024)
+		    R2 = new char[Rsize];
+		else
+		{   R2 = cast(char *)alloca(Rsize * char.sizeof);
+		    if (!R2)
+			goto LthrowURIerror;
+		}
 		R2[0..Rlen] = R[0..Rlen];
 		R = R2;
 	    }
@@ -187,9 +193,13 @@ private char[] URI_Encode(dchar[] string, uint unescapedSet)
 	    {	char *R2;
 
 		Rsize = 2 * (Rlen + L * 3);
-		R2 = cast(char *)alloca(Rsize * char.sizeof);
-		if (!R2)
-		    goto LthrowURIerror;
+		if (Rsize > 1024)
+		    R2 = new char[Rsize];
+		else
+		{   R2 = cast(char *)alloca(Rsize * char.sizeof);
+		    if (!R2)
+			goto LthrowURIerror;
+		}
 		R2[0..Rlen] = R[0..Rlen];
 		R = R2;
 	    }
@@ -241,9 +251,13 @@ private dchar[] URI_Decode(char[] string, uint reservedSet)
 
     // Preallocate result buffer R guaranteed to be large enough for result
     Rsize = len;
-    R = cast(dchar *)alloca(Rsize * dchar.sizeof);
-    if (!R)
-	goto LthrowURIerror;
+    if (Rsize > 1024 / dchar.sizeof)
+	R = new dchar[Rsize];
+    else
+    {	R = cast(dchar *)alloca(Rsize * dchar.sizeof);
+	if (!R)
+	    goto LthrowURIerror;
+    }
     Rlen = 0;
 
     for (k = 0; k != len; k++)
@@ -332,9 +346,9 @@ LthrowURIerror:
 }
 
 /*************************************
- * Decodes the URI string encodedURI into a UTF-8 string and returns it. Escape
- * sequences that resolve to valid URI characters are not replaced. Escape
- * sequences that resolve to the '#' character are not replaced.
+ * Decodes the URI string encodedURI into a UTF-8 string and returns it.
+ * Escape sequences that resolve to reserved URI characters are not replaced.
+ * Escape sequences that resolve to the '#' character are not replaced.
  */
 
 char[] decode(char[] encodedURI)
@@ -393,10 +407,10 @@ unittest
     char[] r;
 
     r = encode(s);
-    //printf("r = '%.*s'\n", r);
+    debug(uri) printf("r = '%.*s'\n", r);
     assert(r == t);
     r = decode(t);
-    //printf("r = '%.*s'\n", r);
+    debug(uri) printf("r = '%.*s'\n", r);
     assert(r == s);
 
     r = encode( decode("%E3%81%82%E3%81%82") );
@@ -405,4 +419,13 @@ unittest
     r = encodeComponent("c++");
     //printf("r = '%.*s'\n", r);
     assert(r == "c%2B%2B");
+
+    char[] str = new char[10_000_000];
+    str[] = 'A';
+    r = encodeComponent(str);
+    foreach (char c; r)
+	assert(c == 'A');
+
+    r = decode("%41%42%43");
+    debug(uri) writefln(r);
 }

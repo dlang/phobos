@@ -40,6 +40,8 @@ struct lldiv_t { long quot,rem; }
 	int (*compare)(void *elem1, void *elem2));
 
     char* getenv(char*);
+    int   setenv(char*, char*, int);
+    void  unsetenv(char*);
 
     int    rand();
     void   srand(uint);
