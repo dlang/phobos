@@ -14,8 +14,8 @@ LIB=libphobos2.a
 CFLAGS=-O -m32
 #CFLAGS=-g -m32
 
-DFLAGS=-O -release -w
-#DFLAGS=-unittest -w
+DFLAGS=-O -release
+#DFLAGS=-unittest
 
 CC=gcc
 #DMD=/dmd/bin/dmd
@@ -61,7 +61,7 @@ OBJS = asserterror.o deh2.o switch.o complex.o gcstats.o \
 	perf.o openrj.o uni.o trace.o boxer.o \
 	demangle.o cover.o bitarray.o bind.o aApplyR.o \
 	signals.o cpuid.o traits.o typetuple.o loader.o \
-	c_stdio.o \
+	c_stdio.o hiddenfunc.o \
 	ti_wchar.o ti_uint.o ti_short.o ti_ushort.o \
 	ti_byte.o ti_ubyte.o ti_long.o ti_ulong.o ti_ptr.o \
 	ti_float.o ti_double.o ti_real.o ti_delegate.o \
@@ -98,7 +98,7 @@ SRC_STD= std/zlib.d std/zip.d std/stdint.d std/conv.d std/utf.d std/uri.d \
 	std/stdio.d std/format.d std/perf.d std/openrj.d std/uni.d \
 	std/boxer.d std/cstream.d std/demangle.d std/cover.d std/bitarray.d \
 	std/signals.d std/cpuid.d std/typetuple.d std/traits.d std/bind.d \
-	std/metastrings.d
+	std/metastrings.d std/hiddenfunc.d
 
 SRC_STD_C= std/c/process.d std/c/stdlib.d std/c/time.d std/c/stdio.d \
 	std/c/math.d std/c/stdarg.d std/c/stddef.d std/c/fenv.d std/c/string.d \
@@ -356,6 +356,9 @@ format.o : std/format.d
 
 gc.o : std/gc.d
 	$(DMD) -c $(DFLAGS) std/gc.d
+
+hiddenfunc.o : std/hiddenfunc.d
+	$(DMD) -c $(DFLAGS) std/hiddenfunc.d
 
 loader.o : std/loader.d
 	$(DMD) -c $(DFLAGS) std/loader.d

@@ -31,9 +31,11 @@ class ModuleInfo
 
     uint flags;		// initialization state
 
-    void (*ctor)();
-    void (*dtor)();
-    void (*unitTest)();
+    void (*ctor)();	// module static constructor
+    void (*dtor)();	// module static destructor
+    void (*unitTest)();	// module unit tests
+
+    const(MemberInfo[]) function(string) xgetMembers;	// module getMembers() function
 
     /******************
      * Return collection of all modules in the program.

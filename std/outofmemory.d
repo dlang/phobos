@@ -27,7 +27,7 @@ class OutOfMemoryException : Exception
 	super(s);
     }
 
-    string toString()
+    override string toString()
     {
 	return s;
     }

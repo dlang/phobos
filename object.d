@@ -53,12 +53,15 @@ class ClassInfo : Object
     //	2:			// has no possible pointers into GC memory
     //	4:			// has offTi[] member
     //	8:			// has constructors
+    // 16:			// has xgetMembers member
     void *deallocator;
     OffsetTypeInfo[] offTi;
     void* defaultConstructor;	// default Constructor
+    const(MemberInfo[]) function(string) xgetMembers;
 
     static ClassInfo find(string classname);
     Object create();
+    const(MemberInfo[]) getMembers(string);
 }
 
 struct OffsetTypeInfo
@@ -145,6 +148,8 @@ class TypeInfo_Struct : TypeInfo
     string function(const(void)*) xtoString;
 
     uint m_flags;
+
+    const(MemberInfo[]) function(string) xgetMembers;
 }
 
 class TypeInfo_Tuple : TypeInfo
@@ -159,6 +164,36 @@ class TypeInfo_Const : TypeInfo
 
 class TypeInfo_Invariant : TypeInfo_Const
 {
+}
+
+abstract class MemberInfo
+{
+    string name();
+}
+
+class MemberInfo_field : MemberInfo
+{
+    this(string name, TypeInfo ti, size_t offset);
+
+    override string name();
+    TypeInfo typeInfo();
+    size_t offset();
+}
+
+class MemberInfo_function : MemberInfo
+{
+    enum
+    {	Virtual = 1,
+	Member = 2,
+	Static = 4,
+    }
+
+    this(string name, TypeInfo ti, void* fp, uint flags);
+
+    override string name();
+    TypeInfo typeInfo();
+    void* fp();
+    uint flags();
 }
 
 // Recoverable errors

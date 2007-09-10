@@ -289,9 +289,11 @@ class ClassInfo : Object
     //	2:			// has no possible pointers into GC memory
     //	4:			// has offTi[] member
     //	8:			// has constructors
+    // 16:			// has xgetMembers member
     void *deallocator;
     OffsetTypeInfo[] offTi;
     void function(Object) defaultConstructor;	// default Constructor
+    const(MemberInfo[]) function(string) xgetMembers;
 
     /*************
      * Search all modules for ClassInfo corresponding to classname.
@@ -326,7 +328,22 @@ class ClassInfo : Object
 	}
 	return o;
     }
+
+    /*************************
+     * Search for all members with the name 'name'.
+     * If name[] is null, return all members.
+     */
+    const(MemberInfo[]) getMembers(string name)
+    {
+	if (flags & 16 && xgetMembers)
+	{
+	    return xgetMembers(name);
+	}
+	return null;
+    }
 }
+
+/* ========================================================================== */
 
 private import std.string;
 
@@ -713,7 +730,7 @@ class TypeInfo_Function : TypeInfo
 	return 0;	// no size for functions
     }
 
-    TypeInfo next;
+    TypeInfo next;	// function return type
 }
 
 class TypeInfo_Delegate : TypeInfo
@@ -740,7 +757,7 @@ class TypeInfo_Delegate : TypeInfo
 
     uint flags() { return 1; }
 
-    TypeInfo next;
+    TypeInfo next;	// delegate return type
 }
 
 class TypeInfo_Class : TypeInfo
@@ -960,6 +977,8 @@ class TypeInfo_Struct : TypeInfo
     string function(const(void)*) xtoString;
 
     uint m_flags;
+
+    const(MemberInfo[]) function(string) xgetMembers;
 }
 
 class TypeInfo_Tuple : TypeInfo
@@ -1026,26 +1045,76 @@ class TypeInfo_Tuple : TypeInfo
 
 class TypeInfo_Const : TypeInfo
 {
-    string toString() { return "const " ~ base.toString(); }
+    override string toString() { return "const " ~ base.toString(); }
 
-    int opEquals(Object o) { return base.opEquals(o); }
-    hash_t getHash(in void *p) { return base.getHash(p); }
-    int equals(in void *p1, in void *p2) { return base.equals(p1, p2); }
-    int compare(in void *p1, in void *p2) { return base.compare(p1, p2); }
-    size_t tsize() { return base.tsize(); }
-    void swap(void *p1, void *p2) { return base.swap(p1, p2); }
+    override int opEquals(Object o) { return base.opEquals(o); }
+    override hash_t getHash(in void *p) { return base.getHash(p); }
+    override int equals(in void *p1, in void *p2) { return base.equals(p1, p2); }
+    override int compare(in void *p1, in void *p2) { return base.compare(p1, p2); }
+    override size_t tsize() { return base.tsize(); }
+    override void swap(void *p1, void *p2) { return base.swap(p1, p2); }
 
-    TypeInfo next() { return base.next(); }
-    uint flags() { return base.flags(); }
-    void[] init() { return base.init(); }
+    override TypeInfo next() { return base.next(); }
+    override uint flags() { return base.flags(); }
+    override void[] init() { return base.init(); }
 
     TypeInfo base;
 }
 
 class TypeInfo_Invariant : TypeInfo_Const
 {
-    string toString() { return "invariant " ~ base.toString(); }
+    override string toString() { return "invariant " ~ base.toString(); }
 }
+
+/* ========================================================================== */
+
+abstract class MemberInfo
+{
+    string name();
+}
+
+class MemberInfo_field : MemberInfo
+{
+    this(string name, TypeInfo ti, size_t offset)
+    {
+	m_name = name;
+	m_typeinfo = ti;
+	m_offset = offset;
+    }
+
+    string name() { return m_name; }
+    TypeInfo typeInfo() { return m_typeinfo; }
+    size_t offset() { return m_offset; }
+
+    string m_name;
+    TypeInfo m_typeinfo;
+    size_t m_offset;
+}
+
+class MemberInfo_function : MemberInfo
+{
+    this(string name, TypeInfo ti, void* fp, uint flags)
+    {
+	m_name = name;
+	m_typeinfo = ti;
+	m_fp = fp;
+	m_flags = flags;
+    }
+
+    string name() { return m_name; }
+    TypeInfo typeInfo() { return m_typeinfo; }
+    void* fp() { return m_fp; }
+    uint flags() { return m_flags; }
+
+
+    string m_name;
+    TypeInfo m_typeinfo;
+    void* m_fp;
+    uint m_flags;
+}
+
+
+/* ========================================================================== */
 
 
 /**
@@ -1070,12 +1139,12 @@ class Exception : Object
 	this.next = next;
     }
 
-    void print()
+    override void print()
     {
 	printf("%.*s\n", toString());
     }
 
-    string toString() { return msg; }
+    override string toString() { return msg; }
 }
 
 /**
