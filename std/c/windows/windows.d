@@ -357,6 +357,8 @@ DWORD  GetLastError();
 DWORD  GetFileAttributesA(char *lpFileName);
 DWORD  GetFileAttributesW(wchar *lpFileName);
 DWORD  GetFileSize(HANDLE hFile, DWORD *lpFileSizeHigh);
+BOOL   CopyFileA(LPCSTR lpExistingFileName, LPCSTR lpNewFileName, BOOL bFailIfExists);
+BOOL   CopyFileW(LPCWSTR lpExistingFileName, LPCWSTR lpNewFileName, BOOL bFailIfExists);
 BOOL   MoveFileA(char *from, char *to);
 BOOL   MoveFileW(LPCWSTR lpExistingFileName, LPCWSTR lpNewFileName);
 BOOL   ReadFile(HANDLE hFile, void *lpBuffer, DWORD nNumberOfBytesToRead,

@@ -1456,7 +1456,7 @@ char[] stripl(char[] s)
 
     for (i = 0; i < s.length; i++)
     {
-	if (!iswhite(s[i]))
+	if (!std.ctype.isspace(s[i]))
 	    break;
     }
     return s[i .. s.length];
@@ -1468,7 +1468,7 @@ char[] stripr(char[] s)
 
     for (i = s.length; i > 0; i--)
     {
-	if (!iswhite(s[i - 1]))
+	if (!std.ctype.isspace(s[i - 1]))
 	    break;
     }
     return s[0 .. i];

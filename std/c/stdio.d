@@ -246,7 +246,7 @@ wchar_t *  fgetws(wchar_t *, int, FILE *);
 int  fputws(wchar_t *, FILE *);
 wchar_t *  _getws(wchar_t *);
 int  _putws(wchar_t *);
-//int  wprintf(wchar_t *, ...);
+int  wprintf(wchar_t *, ...);
 int  fwprintf(FILE *, wchar_t *, ...);
 int  vwprintf(wchar_t *, va_list);
 int  vfwprintf(FILE *, wchar_t *, va_list);

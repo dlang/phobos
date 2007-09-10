@@ -536,6 +536,24 @@ char* toMBSz(char[] s)
     return std.string.toStringz(s);
 }
 
+
+/***************************************************
+ * Copy a file.
+ */
+
+void copy(char[] from, char[] to)
+{
+    BOOL result;
+
+    if (useWfuncs)
+	result = CopyFileW(std.utf.toUTF16z(from), std.utf.toUTF16z(to), false);
+    else
+	result = CopyFileA(toMBSz(from), toMBSz(to), false);
+    if (!result)
+         throw new FileException(to, GetLastError());
+}
+
+
 }
 
 /* =========================== linux ======================= */
@@ -886,8 +904,6 @@ void listdir(char[] pathname, bool delegate(char[] filename) callback)
     }
 }
 
-}
-
 /***************************************************
  * Copy a file.
  */
@@ -898,6 +914,7 @@ void copy(char[] from, char[] to)
 
     /* If the file is very large, this won't work, but
      * it's a good start.
+     * BUG: it should maintain the file timestamps
      */
     buffer = read(from);
     write(to, buffer);
@@ -905,4 +922,6 @@ void copy(char[] from, char[] to)
 }
 
 
+
+}
 
