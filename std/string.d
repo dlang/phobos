@@ -81,13 +81,17 @@ const char[52] letters   = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 			   "abcdefghijklmnopqrstuvwxyz";	/// A..Za..z
 const char[6] whitespace = " \t\v\r\n\f";			/// ASCII whitespace
 
+const dchar LS = '\u2028';	/// UTF line separator
+const dchar PS = '\u2029';	/// UTF paragraph separator
+
 /**********************************
  * Returns !=0 if c is whitespace
  */
 
 int iswhite(dchar c)
 {
-    return find(whitespace, c) != -1;
+    return (c <= 0x7F) ? find(whitespace, c) != -1
+		       : (c == PS || c == LS);
 }
 
 /*********************************
@@ -1604,7 +1608,7 @@ char[] chop(char[] s)
 	{
 	    len--;
 	    if (len == 0)
-		throw new std.utf.UtfError("invalid UTF sequence", 0);
+		throw new std.utf.UtfException("invalid UTF sequence", 0);
 	}
 
 	return s[0 .. len - 1];
@@ -1882,44 +1886,58 @@ unittest
  * tabsize is the distance between tab stops.
  */
 
-char[] expandtabs(char[] s, int tabsize)
+char[] expandtabs(char[] string, int tabsize = 8)
 {
-    char[] r;
-    int i;
-    int istart;
-    int col;
-    static char[8] spaces = "        ";
+    bool changes = false;
+    char[] result = string;
+    int column;
+    int nspaces;
 
-    col = 0;
-    for (i = 0; i < s.length; i++)
+    foreach (size_t i, dchar c; string)
     {
-	char c;
-
-	c = s[i];
-	if (c == '\t')
-	{   int tabstop;
-
-	    r ~= s[istart .. i];
-	    istart = i + 1;
-
-	    tabstop = col + tabsize;
-	    tabstop -= tabstop % tabsize;
-	    while (col < tabstop)
-	    {
-		int n = tabstop - col;
-		if (n > spaces.length)
-		    n = spaces.length;
-		r ~= spaces[0 .. n];
-		col += n;
-	    }
-	}
-	else
+	switch (c)
 	{
-	    col++;
+	    case '\t':
+		nspaces = tabsize - (column % tabsize);
+		if (!changes)
+		{
+		    changes = true;
+		    result = null;
+		    result.length = string.length + nspaces - 1;
+		    result.length = i + nspaces;
+		    result[0 .. i] = string[0 .. i];
+		    result[i .. i + nspaces] = ' ';
+		}
+		else
+		{   int j = result.length;
+		    result.length = j + nspaces;
+		    result[j .. j + nspaces] = ' ';
+		}
+		column += nspaces;
+		break;
+
+	    case '\r':
+	    case '\n':
+	    case PS:
+	    case LS:
+		column = 0;
+		goto L1;
+
+	    default:
+		column++;
+	    L1:
+		if (changes)
+		{
+		    if (c <= 0x7F)
+			result ~= c;
+		    else
+			std.utf.encode(result, c);
+		}
+		break;
 	}
     }
-    r ~= s[istart .. i];
-    return r;
+
+    return result;
 }
 
 unittest
@@ -1933,7 +1951,166 @@ unittest
     r = expandtabs(s, 8);
     i = cmp(r, "This    is       a fofof        of list");
     assert(i == 0);
+
+    r = expandtabs(null);
+    assert(r == null);
+    r = expandtabs("");
+    assert(r.length == 0);
+    r = expandtabs("a");
+    assert(r == "a");
+    r = expandtabs("\t");
+    assert(r == "        ");
+    r = expandtabs(  "  ab\tasdf ");
+    //writefln("r = '%s'", r);
+    assert(r == "  ab    asdf ");
+    // TODO: need UTF test case
 }
+
+
+/*******************************************
+ * Replace spaces in string with the optimal number of tabs.
+ * Trailing spaces or tabs in a line are removed.
+ * Params:
+ *	string = String to convert.
+ *	tabsize = Tab columns are tabsize spaces apart. tabsize defaults to 8.
+ */
+
+char[] entab(char[] string, int tabsize = 8)
+{
+    bool changes = false;
+    char[] result = string;
+
+    int nspaces = 0;
+    int nwhite = 0;
+    int column = 0;			// column number
+
+    foreach (size_t i, dchar c; string)
+    {   
+
+	void change()
+	{
+	    changes = true;
+	    result = null;
+	    result.length = string.length;
+	    result.length = i;
+	    result[0 .. i] = string[0 .. i];
+	}
+
+	switch (c)
+	{   
+	    case '\t':
+		nwhite++;
+		if (nspaces)
+		{
+		    if (!changes)
+			change();
+
+		    int j = result.length - nspaces;
+		    int ntabs = (((column - nspaces) % tabsize) + nspaces) / tabsize;
+		    result.length = j + ntabs;
+		    result[j .. j + ntabs] = '\t';
+		    nwhite += ntabs - nspaces;
+		    nspaces = 0;
+		}
+		column = (column + tabsize) / tabsize * tabsize;
+		break;
+
+	    case '\r':
+	    case '\n':
+	    case PS:
+	    case LS:
+		// Truncate any trailing spaces or tabs
+		if (nwhite)
+		{
+		    if (!changes)
+			change();
+		    result = result[0 .. result.length - nwhite];
+		}
+		break;
+
+	    default:
+		if (nspaces >= 2 && (column % tabsize) == 0)
+		{
+		    if (!changes)
+			change();
+
+		    int j = result.length - nspaces;
+		    int ntabs = (nspaces + tabsize - 1) / tabsize;
+		    result.length = j + ntabs;
+		    result[j .. j + ntabs] = '\t';
+		    nwhite += ntabs - nspaces;
+		    nspaces = 0;
+		}
+		if (c == ' ')
+		{   nwhite++;
+		    nspaces++;
+		}
+		else
+		{   nwhite = 0;
+		    nspaces = 0;
+		}
+		column++;
+		break;
+	}
+	if (changes)
+	{
+	    if (c <= 0x7F)
+		result ~= c;
+	    else
+		std.utf.encode(result, c);
+	}
+    }
+
+    // Truncate any trailing spaces or tabs
+    if (nwhite)
+	result = result[0 .. result.length - nwhite];
+
+    return result;
+}
+
+unittest
+{
+    debug(string) printf("string.entab.unittest\n");
+
+    char[] r;
+
+    r = entab(null);
+    assert(r == null);
+    r = entab("");
+    assert(r.length == 0);
+    r = entab("a");
+    assert(r == "a");
+    r = entab("        ");
+    assert(r == "");
+    r = entab("        x");
+    assert(r == "\tx");
+    r = entab("  ab    asdf ");
+    assert(r == "  ab\tasdf");
+    r = entab("  ab     asdf ");
+    assert(r == "  ab\t asdf");
+    r = entab("  ab \t   asdf ");
+    assert(r == "  ab\t   asdf");
+    r = entab("1234567 \ta");
+    assert(r == "1234567\t\ta");
+    r = entab("1234567  \ta");
+    assert(r == "1234567\t\ta");
+    r = entab("1234567   \ta");
+    assert(r == "1234567\t\ta");
+    r = entab("1234567    \ta");
+    assert(r == "1234567\t\ta");
+    r = entab("1234567     \ta");
+    assert(r == "1234567\t\ta");
+    r = entab("1234567      \ta");
+    assert(r == "1234567\t\ta");
+    r = entab("1234567       \ta");
+    assert(r == "1234567\t\ta");
+    r = entab("1234567        \ta");
+    assert(r == "1234567\t\ta");
+    r = entab("1234567         \ta");
+    assert(r == "1234567\t\t\ta");
+    // TODO: need UTF test case
+}
+
 
 
 /************************************
@@ -3320,7 +3497,7 @@ bool isNumeric(TypeInfo[] _arguments, va_list _argptr)
 
 unittest
 {
-    writefln( "isNumeric(in char[], bool = false).unittest" );
+    debug (string) printf("isNumeric(in char[], bool = false).unittest\n");
     char[] s;
 
     // Test the isNumeric(in char[]) function
@@ -3370,4 +3547,349 @@ unittest
     assert(isNumeric(real.nan) == true);
     assert(isNumeric(-real.infinity) == true);
 }
+
+
+/*****************************
+ * Soundex algorithm.
+ *
+ * The Soundex algorithm converts a word into 4 characters
+ * based on how the word sounds phonetically. The idea is that
+ * two spellings that sound alike will have the same Soundex
+ * value, which means that Soundex can be used for fuzzy matching
+ * of names.
+ *
+ * Params:
+ *	string = String to convert to Soundex representation.
+ *	buffer = Optional 4 char array to put the resulting Soundex
+ *		characters into. If null, the return value
+ *		buffer will be allocated on the heap.
+ * Returns:
+ *	The four character array with the Soundex result in it.
+ *	Returns null if there is no Soundex representation for the string.
+ *
+ * See_Also:
+ *	$(LINK2 http://en.wikipedia.org/wiki/Soundex, Wikipedia),
+ *	$(LINK2 http://www.archives.gov/publications/general-info-leaflets/55.html, The Soundex Indexing System)
+ *
+ * Bugs:
+ *	Only works well with English names.
+ *	There are other arguably better Soundex algorithms,
+ *	but this one is the standard one.
+ */
+
+char[] soundex(char[] string, char[] buffer = null)
+in
+{
+    assert(!buffer || buffer.length >= 4);
+}
+out (result)
+{
+    if (result)
+    {
+	assert(result.length == 4);
+	assert(result[0] >= 'A' && result[0] <= 'Z');
+	foreach (char c; result[1 .. 4])
+	    assert(c >= '0' && c <= '6');
+    }
+}
+body
+{
+    static char[26] dex =
+    // ABCDEFGHIJKLMNOPQRSTUVWXYZ
+      "01230120022455012623010202";
+
+    int b = 0;
+    char lastc;
+    foreach (char c; string)
+    {
+	if (c >= 'a' && c <= 'z')
+	    c -= 'a' - 'A';
+	else if (c >= 'A' && c <= 'Z')
+	{
+	    ;
+	}
+	else
+	{   lastc = lastc.init;
+	    continue;
+	}
+	if (b == 0)
+	{
+	    if (!buffer)
+		buffer = new char[4];
+	    buffer[0] = c;
+	    b++;
+	    lastc = dex[c - 'A'];
+	}
+	else
+	{
+	    if (c == 'H' || c == 'W')
+		continue;
+	    if (c == 'A' || c == 'E' || c == 'I' || c == 'O' || c == 'U')
+		lastc = lastc.init;
+	    c = dex[c - 'A'];
+	    if (c != '0' && c != lastc)
+	    {
+		buffer[b] = c;
+		b++;
+		lastc = c;
+	    }
+	}
+	if (b == 4)
+	    goto Lret;
+    }
+    if (b == 0)
+	buffer = null;
+    else
+	buffer[b .. 4] = '0';
+Lret:
+    return buffer;
+}
+
+unittest
+{   char[4] buffer;
+
+    assert(soundex(null) == null);
+    assert(soundex("") == null);
+    assert(soundex("0123^&^^**&^") == null);
+    assert(soundex("Euler") == "E460");
+    assert(soundex(" Ellery ") == "E460");
+    assert(soundex("Gauss") == "G200");
+    assert(soundex("Ghosh") == "G200");
+    assert(soundex("Hilbert") == "H416");
+    assert(soundex("Heilbronn") == "H416");
+    assert(soundex("Knuth") == "K530");
+    assert(soundex("Kant", buffer) == "K530");
+    assert(soundex("Lloyd") == "L300");
+    assert(soundex("Ladd") == "L300");
+    assert(soundex("Lukasiewicz", buffer) == "L222");
+    assert(soundex("Lissajous") == "L222");
+    assert(soundex("Robert") == "R163");
+    assert(soundex("Rupert") == "R163");
+    assert(soundex("Rubin") == "R150");
+    assert(soundex("Washington") == "W252");
+    assert(soundex("Lee") == "L000");
+    assert(soundex("Gutierrez") == "G362");
+    assert(soundex("Pfister") == "P236");
+    assert(soundex("Jackson") == "J250");
+    assert(soundex("Tymczak") == "T522");
+    assert(soundex("Ashcraft") == "A261");
+
+    assert(soundex("Woo") == "W000");
+    assert(soundex("Pilgrim") == "P426");
+    assert(soundex("Flingjingwaller") == "F452");
+    assert(soundex("PEARSE") == "P620");
+    assert(soundex("PIERCE") == "P620");
+    assert(soundex("Price") == "P620");
+    assert(soundex("CATHY") == "C300");
+    assert(soundex("KATHY") == "K300");
+    assert(soundex("Jones") == "J520");
+    assert(soundex("johnsons") == "J525");
+    assert(soundex("Hardin") == "H635");
+    assert(soundex("Martinez") == "M635");
+}
+
+
+/***************************************************
+ * Construct an associative array consisting of all
+ * abbreviations that uniquely map to the strings in values.
+ *
+ * This is useful in cases where the user is expected to type
+ * in one of a known set of strings, and the program will helpfully
+ * autocomplete the string once sufficient characters have been
+ * entered that uniquely identify it.
+ */
+
+char[][char[]] abbrev(char[][] values)
+{
+    char[][char[]] result;
+
+    // Make a copy when sorting so we follow COW principles.
+    values = values.dup.sort;
+
+    size_t values_length = values.length;
+    size_t lasti = values_length;
+    size_t nexti;
+
+    char[] nv;
+    char[] lv;
+
+    for (size_t i = 0; i < values_length; i = nexti)
+    {	char[] value = values[i];
+
+	// Skip dups
+	for (nexti = i + 1; nexti < values_length; nexti++)
+	{   nv = values[nexti];
+	    if (value != values[nexti])
+		break;
+	}
+
+	for (size_t j = 0; j < value.length; j += std.utf.stride(value, j))
+	{   char[] v = value[0 .. j];
+
+	    if ((nexti == values_length || j > nv.length || v != nv[0 .. j]) &&
+		(lasti == values_length || j > lv.length || v != lv[0 .. j]))
+		result[v] = value;
+	}
+	result[value] = value;
+	lasti = i;
+	lv = value;
+    }
+
+    return result;
+}
+
+unittest
+{
+    debug(string) printf("string.abbrev.unittest\n");
+
+    char[][] values;
+    values ~= "hello";
+    values ~= "hello";
+    values ~= "he";
+
+    char[][char[]] r;
+
+    r = abbrev(values);
+    char[][] keys = r.keys.dup;
+    keys.sort;
+
+    assert(keys.length == 4);
+    assert(keys[0] == "he");
+    assert(keys[1] == "hel");
+    assert(keys[2] == "hell");
+    assert(keys[3] == "hello");
+
+    assert(r[keys[0]] == "he");
+    assert(r[keys[1]] == "hello");
+    assert(r[keys[2]] == "hello");
+    assert(r[keys[3]] == "hello");
+}
+
+
+/******************************************
+ * Compute column number after string if string starts in the
+ * leftmost column, which is numbered starting from 0.
+ */
+
+int column(char[] string, int tabsize = 8)
+{
+    int column;
+
+    foreach (dchar c; string)
+    {
+	switch (c)
+	{
+	    case '\t':
+		column = (column + tabsize) / tabsize * tabsize;
+		break;
+
+	    case '\r':
+	    case '\n':
+	    case PS:
+	    case LS:
+		column = 0;
+		break;
+
+	    default:
+		column++;
+		break;
+	}
+    }
+    return column;
+}
+
+unittest
+{
+    debug(string) printf("string.column.unittest\n");
+
+    assert(column(null) == 0);
+    assert(column("") == 0);
+    assert(column("\t") == 8);
+    assert(column("abc\t") == 8);
+    assert(column("12345678\t") == 16);
+}
+
+/******************************************
+ * Wrap text into a paragraph.
+ */
+
+char[] wrap(char[] s, int columns = 80, char[] firstindent = null,
+	char[] indent = null, int tabsize = 8)
+{
+    char[] result;
+    int col;
+    int spaces;
+    bool inword;
+    bool first = true;
+    size_t wordstart;
+
+    result.length = firstindent.length + s.length;
+    result.length = firstindent.length;
+    result[] = firstindent[];
+    col = column(result, tabsize);
+    foreach (size_t i, dchar c; s)
+    {
+	if (iswhite(c))
+	{
+	    if (inword)
+	    {
+		if (first)
+		{
+		    ;
+		}
+		else if (col + 1 + (i - wordstart) > columns)
+		{
+		    result ~= '\n';
+		    result ~= indent;
+		    col = column(indent, tabsize);
+		}
+		else
+		{   result ~= ' ';
+		    col += 1;
+		}
+		result ~= s[wordstart .. i];
+		col += i - wordstart;
+		inword = false;
+		first = false;
+	    }
+	}
+	else
+	{
+	    if (!inword)
+	    {
+		wordstart = i;
+		inword = true;
+	    }
+	}
+    }
+
+    if (inword)
+    {
+	if (col + 1 + (s.length - wordstart) >= columns)
+	{
+	    result ~= '\n';
+	    result ~= indent;
+	}
+	else
+	    result ~= ' ';
+	result ~= s[wordstart .. s.length];
+    }
+    result ~= '\n';
+
+    return result;
+}
+
+unittest
+{
+    debug(string) printf("string.wrap.unittest\n");
+
+    assert(wrap(null) == "\n");
+    assert(wrap(" a b   df ") == "a b df\n");
+    //writefln("'%s'", wrap(" a b   df ",3));
+    assert(wrap(" a b   df ", 3) == "a b\ndf\n");
+    assert(wrap(" a bc   df ", 3) == "a\nbc\ndf\n");
+    //writefln("'%s'", wrap(" abcd   df ",3));
+    assert(wrap(" abcd   df ", 3) == "abcd\ndf\n");
+}
+
 

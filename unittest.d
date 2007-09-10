@@ -37,6 +37,7 @@ import std.regexp;
 import std.random;
 import std.date;
 import std.dateparse;
+import std.demangle;
 import std.cstream;
 import std.stream;
 import std.utf;
@@ -99,6 +100,8 @@ printf("test2\n");
 
     std.math.tgamma(3);
     std.math.lgamma(3);
+
+    std.demangle.demangle("hello");
 
     printf("Success\n!");
     return 0;

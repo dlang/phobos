@@ -40,6 +40,7 @@ version (Win32)
 private import std.c.windows.windows;
 private import std.utf;
 private import std.windows.syserror;
+private import std.windows.charset;
 
 int useWfuncs = 1;
 
@@ -488,9 +489,10 @@ void listdir(char[] pathname, bool delegate(char[] filename) callback)
 	h = FindFirstFileA(toMBSz(c), &fileinfo);
 	if (h != INVALID_HANDLE_VALUE)	// should we throw exception if invalid?
 	{
+	    wchar[] wbuf;
 	    do
 	    {	int clength;
-		wchar[] wbuf;
+		int wlength;
 		int n;
 
 		// Skip "." and ".."
@@ -501,11 +503,13 @@ void listdir(char[] pathname, bool delegate(char[] filename) callback)
 		clength = std.string.strlen(fileinfo.cFileName);
 
 		// Convert cFileName[] to unicode
-		wbuf.length = MultiByteToWideChar(0,0,fileinfo.cFileName,clength,null,0);
-		n = MultiByteToWideChar(0,0,fileinfo.cFileName,clength,cast(wchar*)wbuf,wbuf.length);
-		assert(n == wbuf.length);
+		wlength = MultiByteToWideChar(0,0,fileinfo.cFileName,clength,null,0);
+		if (wlength > wbuf.length)
+		    wbuf.length = wlength;
+		n = MultiByteToWideChar(0,0,fileinfo.cFileName,clength,cast(wchar*)wbuf,wlength);
+		assert(n == wlength);
 		// toUTF8() returns a new buffer
-		if (!callback(std.utf.toUTF8(wbuf)))
+		if (!callback(std.utf.toUTF8(wbuf[0 .. wlength])))
 		    break;
 	    } while (FindNextFileA(h,&fileinfo) != FALSE);
 	    FindClose(h);
@@ -518,24 +522,12 @@ void listdir(char[] pathname, bool delegate(char[] filename) callback)
  * to wchar, then convert to multibyte using the current code
  * page.
  * (Thanks to yaneurao for this)
+ * Deprecated: use std.windows.charset.toMBSz instead.
  */
 
 char* toMBSz(char[] s)
 {
-    // Only need to do this if any chars have the high bit set
-    foreach (char c; s)
-    {
-	if (c >= 0x80)
-	{   char[] result;
-	    int i;
-	    wchar* ws = std.utf.toUTF16z(s);
-	    result.length = WideCharToMultiByte(0, 0, ws, -1, null, 0, null, null);
-	    i = WideCharToMultiByte(0, 0, ws, -1, result, result.length, null, null);
-	    assert(i == result.length);
-	    return result;
-	}
-    }
-    return std.string.toStringz(s);
+    return std.windows.charset.toMBSz(s);
 }
 
 

@@ -147,36 +147,37 @@ d_time floor(d_time d, int divisor)
     return d / divisor;
 }
 
-d_time dmod(d_time n, d_time d)
+int dmod(d_time n, d_time d)
 {   d_time r;
 
     r = n % d;
     if (r < 0)
 	r += d;
-    return r;
+    assert(cast(int)r == r);
+    return cast(int)r;
 }
 
-d_time HourFromTime(d_time t)
+int HourFromTime(d_time t)
 {
     return dmod(floor(t, msPerHour), HoursPerDay);
 }
 
-d_time MinFromTime(d_time t)
+int MinFromTime(d_time t)
 {
     return dmod(floor(t, msPerMinute), MinutesPerHour);
 }
 
-d_time SecFromTime(d_time t)
+int SecFromTime(d_time t)
 {
     return dmod(floor(t, TicksPerSecond), 60);
 }
 
-d_time msFromTime(d_time t)
+int msFromTime(d_time t)
 {
     return dmod(t / (TicksPerSecond / 1000), 1000);
 }
 
-d_time TimeWithinDay(d_time t)
+int TimeWithinDay(d_time t)
 {
     return dmod(t, msPerDay);
 }
@@ -359,19 +360,8 @@ d_time LocalTimetoUTC(d_time t)
     return t - LocalTZA - DaylightSavingTA(t - LocalTZA);
 }
 
-d_time MakeTime(d_time hour, d_time min, d_time sec, d_time ms)
+d_time MakeTime(int hour, int min, int sec, int ms)
 {
-    if (hour == d_time_nan ||
-	min ==  d_time_nan ||
-	sec ==  d_time_nan ||
-	ms ==   d_time_nan)
-	return d_time_nan;
-
-    hour = toInteger(hour);
-    min = toInteger(min);
-    sec = toInteger(sec);
-    ms = toInteger(ms);
-
     return hour * TicksPerHour +
 	   min * TicksPerMinute +
 	   sec * TicksPerSecond +
@@ -379,25 +369,14 @@ d_time MakeTime(d_time hour, d_time min, d_time sec, d_time ms)
 }
 
 
-d_time MakeDay(d_time year, d_time month, d_time date)
+d_time MakeDay(int year, int month, int date)
 {   d_time t;
     int y;
     int m;
     int leap;
 
-    if (year  == d_time_nan ||
-	month == d_time_nan ||
-	date  == d_time_nan)
-    {
-	return d_time_nan;
-    }
-
-    year = toInteger(year);
-    month = toInteger(month);
-    date = toInteger(date);
-
     y = cast(int)(year + floor(month, 12));
-    m = cast(int)dmod(month, 12);
+    m = dmod(month, 12);
 
     leap = LeapYear(y);
     t = TimeFromYear(y) + cast(d_time)mdays[m] * msPerDay;
@@ -485,7 +464,7 @@ char[] toString(d_time time)
 	&daystr[WeekDay(t) * 3],
 	&monstr[MonthFromTime(t) * 3],
 	DateFromTime(t),
-	cast(int)HourFromTime(t), cast(int)MinFromTime(t), cast(int)SecFromTime(t),
+	HourFromTime(t), MinFromTime(t), SecFromTime(t),
 	sign, hr, mn,
 	cast(long)YearFromTime(t));
 
@@ -515,7 +494,7 @@ char[] toUTCString(d_time t)
 	&daystr[WeekDay(t) * 3], DateFromTime(t),
 	&monstr[MonthFromTime(t) * 3],
 	YearFromTime(t),
-	cast(int)HourFromTime(t), cast(int)MinFromTime(t), cast(int)SecFromTime(t));
+	HourFromTime(t), MinFromTime(t), SecFromTime(t));
 
     // Ensure no buggy buffer overflows
     assert(len < buffer.length);
@@ -598,7 +577,7 @@ char[] toTimeString(d_time time)
     //printf("hr = %d, offset = %g, LocalTZA = %g, dst = %g, + = %g\n", hr, offset, LocalTZA, dst, LocalTZA + dst);
 
     len = sprintf(buffer, "%02d:%02d:%02d GMT%c%02d%02d",
-	cast(int)HourFromTime(t), cast(int)MinFromTime(t), cast(int)SecFromTime(t),
+	HourFromTime(t), MinFromTime(t), SecFromTime(t),
 	sign, hr, mn);
 
     // Ensure no buggy buffer overflows

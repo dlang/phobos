@@ -50,7 +50,7 @@ unittest : unittest.exe
 test : test.exe
 
 test.obj : test.d
-	$(DMD) -c test -g
+	$(DMD) -c test -g -unittest
 
 test.exe : test.obj phobos.lib
 	$(DMD) test.obj -g -L/map
@@ -71,8 +71,8 @@ OBJS= asserterror.obj deh.obj switch.obj complex.obj gcstats.obj \
 	Czlib.obj Dzlib.obj zip.obj process.obj registry.obj recls.obj \
 	socket.obj socketstream.obj loader.obj stdarg.obj format.obj stdio.obj \
 	perf.obj openrj.obj uni.obj winsock.obj oldsyserror.obj \
-	errno.obj boxer.obj cstream.obj \
-	realtest.obj gamma.obj \
+	errno.obj boxer.obj cstream.obj charset.obj \
+	realtest.obj gamma.obj demangle.obj \
 	ti_Aa.obj ti_Ag.obj ti_C.obj ti_int.obj ti_char.obj \
 	ti_wchar.obj ti_uint.obj ti_short.obj ti_ushort.obj \
 	ti_byte.obj ti_ubyte.obj ti_long.obj ti_ulong.obj ti_ptr.obj \
@@ -90,7 +90,10 @@ DOCS=	$(DOC)\std_path.html $(DOC)\std_math.html $(DOC)\std_outbuffer.html \
 	$(DOC)\std_stream.html $(DOC)\std_string.html $(DOC)\std_base64.html \
 	$(DOC)\object.html $(DOC)\std_compiler.html $(DOC)\std_format.html \
 	$(DOC)\std_random.html $(DOC)\std_file.html $(DOC)\std_date.html \
-	$(DOC)\std_md5.html $(DOC)\std_zip.html $(DOC)\std_zlib.html
+	$(DOC)\std_md5.html $(DOC)\std_zip.html $(DOC)\std_zlib.html \
+	$(DOC)\std_demangle.html \
+	$(DOC)\std_utf.html \
+	$(DOC)\std_windows_charset.html
 
 SRC=	errno.c object.d unittest.d crc32.d gcstats.d
 
@@ -103,7 +106,7 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 	std\regexp.d std\random.d std\stream.d std\process.d std\recls.d \
 	std\socket.d std\socketstream.d std\loader.d std\stdarg.d std\format.d \
 	std\stdio.d std\perf.d std\openrj.d std\uni.d std\boxer.d \
-	std\cstream.d
+	std\cstream.d std\demangle.d
 
 SRC_STD_C= std\c\process.d std\c\stdlib.d std\c\time.d std\c\stdio.d \
 	std\c\math.d std\c\stdarg.d std\c\stddef.d
@@ -143,7 +146,7 @@ SRC_INT=	\
 	internal\object.d internal\trace.d internal\qsort2.d
 
 SRC_STD_WIN= std\windows\registry.d \
-	std\windows\iunknown.d std\windows\syserror.d
+	std\windows\iunknown.d std\windows\syserror.d std\windows\charset.d
 
 SRC_STD_C_WIN= std\c\windows\windows.d std\c\windows\com.d \
 	std\c\windows\winsock.d
@@ -472,6 +475,9 @@ date.obj : std\dateparse.d std\date.d
 dateparse.obj : std\dateparse.d std\date.d
 	$(DMD) -c $(DFLAGS) std\dateparse.d
 
+demangle.obj : std\demangle.d
+	$(DMD) -c $(DFLAGS) std\demangle.d
+
 file.obj : std\file.d
 	$(DMD) -c $(DFLAGS) std\file.d
 
@@ -572,6 +578,9 @@ zip.obj : std\zip.d
 	$(DMD) -c $(DFLAGS) std\zip.d
 
 ### std\windows
+
+charset.obj : std\windows\charset.d
+	$(DMD) -c $(DFLAGS) std\windows\charset.d
 
 iunknown.obj : std\windows\iunknown.d
 	$(DMD) -c $(DFLAGS) std\windows\iunknown.d
@@ -757,6 +766,9 @@ $(DOC)\std_compiler.html : std.ddoc std\compiler.d
 $(DOC)\std_date.html : std.ddoc std\date.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_date.html std.ddoc std\date.d
 
+$(DOC)\std_demangle.html : std.ddoc std\demangle.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_demangle.html std.ddoc std\demangle.d
+
 $(DOC)\std_file.html : std.ddoc std\file.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_file.html std.ddoc std\file.d
 
@@ -784,11 +796,17 @@ $(DOC)\std_stream.html : std.ddoc std\stream.d
 $(DOC)\std_string.html : std.ddoc std\string.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_string.html std.ddoc std\string.d
 
+$(DOC)\std_utf.html : std.ddoc std\utf.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_utf.html std.ddoc std\utf.d
+
 $(DOC)\std_zip.html : std.ddoc std\zip.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_zip.html std.ddoc std\zip.d
 
 $(DOC)\std_zlib.html : std.ddoc std\zlib.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_zlib.html std.ddoc std\zlib.d
+
+$(DOC)\std_windows_charset.html : std.ddoc std\windows\charset.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_windows_charset.html std.ddoc std\windows\charset.d
 
 $(DOC)\object.html : std.ddoc internal\object.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\object.html std.ddoc internal\object.d

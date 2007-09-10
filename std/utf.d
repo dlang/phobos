@@ -22,17 +22,29 @@
  *     distribution.
  */
 
-// Description of UTF-8 at:
-// http://www.cl.cam.ac.uk/~mgk25/unicode.html#utf-8
-// http://anubis.dkuug.dk/JTC1/SC2/WG2/docs/n1335
-
+/********************************************
+ * Encode and decode UTF-8, UTF-16 and UTF-32 strings.
+ *
+ * For Win32 systems, the C wchar_t type is UTF-16 and corresponds to the D
+ * wchar type.
+ * For linux systems, the C wchar_t type is UTF-32 and corresponds to
+ * the D utf.dchar type. 
+ *
+ * UTF character support is restricted to (\u0000 &lt;= character &lt;= \U0010FFFF).
+ *
+ * See_Also:
+ *	$(LINK2 http://en.wikipedia.org/wiki/Unicode, Wikipedia)<br>
+ *	$(LINK http://www.cl.cam.ac.uk/~mgk25/unicode.html#utf-8)<br>
+ *	$(LINK http://anubis.dkuug.dk/JTC1/SC2/WG2/docs/n1335)
+ */
+ 
 module std.utf;
 
 private import std.stdio;
 
 //debug=utf;		// uncomment to turn on debugging printf's
 
-class UtfError : Error
+deprecated class UtfError : Error
 {
     size_t idx;	// index in string of where error occurred
 
@@ -43,6 +55,30 @@ class UtfError : Error
     }
 }
 
+/**********************************
+ * Exception class that is thrown upon any errors.
+ */
+
+class UtfException : Exception
+{
+    size_t idx;	/// index in string of where error occurred
+
+    this(char[] s, size_t i)
+    {
+	idx = i;
+	super(s);
+    }
+}
+
+/*******************************
+ * Test if c is a valid UTF-32 character.
+ *
+ * \uFFFE and \uFFFF are considered valid by this function,
+ * as they are permitted for internal use by an application,
+ * but they are not allowed for interchange by the Unicode standard.
+ *
+ * Returns: true if it is, false if not.
+ */
 
 bit isValidDchar(dchar c)
 {
@@ -64,12 +100,6 @@ unittest
 }
 
 
-/* This array gives the length of a UTF-8 sequence indexed by the value
- * of the leading byte. An FF represents an illegal starting value of
- * a UTF-8 sequence.
- * FF is used instead of 0 to avoid having loops hang.
- */
-
 ubyte[256] UTF8stride =
 [
     1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
@@ -90,15 +120,34 @@ ubyte[256] UTF8stride =
     4,4,4,4,4,4,4,4,5,5,5,5,6,6,0xFF,0xFF,
 ];
 
+/**
+ * stride() returns the length of a UTF-8 sequence starting at index i
+ * in string s.
+ * Returns:
+ *	The number of bytes in the UTF-8 sequence or
+ *	0xFF meaning s[i] is not the start of of UTF-8 sequence.
+ */
+
 uint stride(char[] s, size_t i)
 {
     return UTF8stride[s[i]];
 }
 
+/**
+ * stride() returns the length of a UTF-16 sequence starting at index i
+ * in string s.
+ */
+
 uint stride(wchar[] s, size_t i)
 {   uint u = s[i];
     return 1 + (u >= 0xD800 && u <= 0xDBFF);
 }
+
+/**
+ * stride() returns the length of a UTF-32 sequence starting at index i
+ * in string s.
+ * Returns: The return value will always be 1.
+ */
 
 uint stride(dchar[] s, size_t i)
 {
@@ -106,9 +155,9 @@ uint stride(dchar[] s, size_t i)
 }
 
 /*******************************************
- * Given an index into an array of char's,
- * and assuming that index is at the start of a UTF character,
- * determine the number of UCS characters up to that index.
+ * Given an index i into an array of characters s[],
+ * and assuming that index i is at the start of a UTF character,
+ * determine the number of UCS characters up to that index i.
  */
 
 size_t toUCSindex(char[] s, size_t i)
@@ -127,10 +176,12 @@ size_t toUCSindex(char[] s, size_t i)
     if (j > i)
     {
       Lerr:
-	throw new UtfError("1invalid UTF-8 sequence", j);
+	throw new UtfException("1invalid UTF-8 sequence", j);
     }
     return n;
 }
+
+/** ditto */
 
 size_t toUCSindex(wchar[] s, size_t i)
 {
@@ -146,10 +197,12 @@ size_t toUCSindex(wchar[] s, size_t i)
     if (j > i)
     {
       Lerr:
-	throw new UtfError("2invalid UTF-16 sequence", j);
+	throw new UtfException("2invalid UTF-16 sequence", j);
     }
     return n;
 }
+
+/** ditto */
 
 size_t toUCSindex(dchar[] s, size_t i)
 {
@@ -157,7 +210,7 @@ size_t toUCSindex(dchar[] s, size_t i)
 }
 
 /******************************************
- * Given a UCS index into an array of characters, return the UTF index.
+ * Given a UCS index n into an array of characters s[], return the UTF index.
  */
 
 size_t toUTFindex(char[] s, size_t n)
@@ -168,11 +221,13 @@ size_t toUTFindex(char[] s, size_t n)
     {
 	uint j = UTF8stride[s[i]];
 	if (j == 0xFF)
-	    throw new UtfError("3invalid UTF-8 sequence", i);
+	    throw new UtfException("3invalid UTF-8 sequence", i);
 	i += j;
     }
     return i;
 }
+
+/** ditto */
 
 size_t toUTFindex(wchar[] s, size_t n)
 {
@@ -186,12 +241,20 @@ size_t toUTFindex(wchar[] s, size_t n)
     return i;
 }
 
+/** ditto */
+
 size_t toUTFindex(dchar[] s, size_t n)
 {
     return n;
 }
 
 /* =================== Decode ======================= */
+
+/***************
+ * Decodes and returns character starting at s[idx]. idx is advanced past the
+ * decoded character. If the character is not well formed, a UtfException is
+ * thrown and idx remains unchanged.
+ */
 
 dchar decode(char[] s, inout size_t idx)
     in
@@ -277,7 +340,7 @@ dchar decode(char[] s, inout size_t idx)
 
       Lerr:
 	//printf("\ndecode: idx = %d, i = %d, length = %d s = \n'%.*s'\n%x\n'%.*s'\n", idx, i, s.length, s, s[i], s[i .. length]);
-	throw new UtfError("4invalid UTF-8 sequence", i);
+	throw new UtfException("4invalid UTF-8 sequence", i);
     }
 
 unittest
@@ -324,7 +387,7 @@ unittest
 	    c = decode(s4[j], i);
 	    assert(0);
 	}
-	catch (UtfError u)
+	catch (UtfException u)
 	{
 	    i = 23;
 	    delete u;
@@ -333,7 +396,7 @@ unittest
     }
 }
 
-/********************************************************/
+/** ditto */
 
 dchar decode(wchar[] s, inout size_t idx)
     in
@@ -387,10 +450,10 @@ dchar decode(wchar[] s, inout size_t idx)
 	return cast(dchar)u;
 
       Lerr:
-	throw new UtfError(msg, i);
+	throw new UtfException(msg, i);
     }
 
-/********************************************************/
+/** ditto */
 
 dchar decode(dchar[] s, inout size_t idx)
     in
@@ -408,11 +471,15 @@ dchar decode(dchar[] s, inout size_t idx)
 	return c;
 
       Lerr:
-	throw new UtfError("5invalid UTF-32 value", i);
+	throw new UtfException("5invalid UTF-32 value", i);
     }
 
 
 /* =================== Encode ======================= */
+
+/*******************************
+ * Encodes character c and appends it to array s[].
+ */
 
 void encode(inout char[] s, dchar c)
     in
@@ -481,7 +548,7 @@ unittest
     assert(s == "abcda\xC2\xA9\xE2\x89\xA0");
 }
 
-/********************************************************/
+/** ditto */
 
 void encode(inout wchar[] s, dchar c)
     in
@@ -507,6 +574,8 @@ void encode(inout wchar[] s, dchar c)
 	s = r;
     }
 
+/** ditto */
+
 void encode(inout dchar[] s, dchar c)
     in
     {
@@ -519,6 +588,11 @@ void encode(inout dchar[] s, dchar c)
 
 /* =================== Validation ======================= */
 
+/***********************************
+ * Checks to see if string is well formed or not. Throws a UtfException if it is
+ * not. Use to check all untrusted input for correctness.
+ */
+
 void validate(char[] s)
 {
     size_t len = s.length;
@@ -530,6 +604,8 @@ void validate(char[] s)
     }
 }
 
+/** ditto */
+
 void validate(wchar[] s)
 {
     size_t len = s.length;
@@ -540,6 +616,8 @@ void validate(wchar[] s)
 	decode(s, i);
     }
 }
+
+/** ditto */
 
 void validate(dchar[] s)
 {
@@ -593,6 +671,10 @@ char[] toUTF8(char[4] buf, dchar c)
 	}
     }
 
+/*******************
+ * Encodes string s into UTF-8 and returns the encoded string.
+ */
+
 char[] toUTF8(char[] s)
     in
     {
@@ -602,6 +684,8 @@ char[] toUTF8(char[] s)
     {
 	return s;
     }
+
+/** ditto */
 
 char[] toUTF8(wchar[] s)
 {
@@ -628,6 +712,8 @@ char[] toUTF8(wchar[] s)
     }
     return r;
 }
+
+/** ditto */
 
 char[] toUTF8(dchar[] s)
 {
@@ -677,6 +763,12 @@ wchar[] toUTF16(wchar[2] buf, dchar c)
 	}
     }
 
+/****************
+ * Encodes string s into UTF-16 and returns the encoded string.
+ * toUTF16z() is suitable for calling the 'W' functions in the Win32 API that take
+ * an LPWSTR or LPCWSTR argument.
+ */
+
 wchar[] toUTF16(char[] s)
 {
     wchar[] r;
@@ -700,6 +792,8 @@ wchar[] toUTF16(char[] s)
     }
     return r;
 }
+
+/** ditto */
 
 wchar* toUTF16z(char[] s)
 {
@@ -726,6 +820,8 @@ wchar* toUTF16z(char[] s)
     return r;
 }
 
+/** ditto */
+
 wchar[] toUTF16(wchar[] s)
     in
     {
@@ -735,6 +831,8 @@ wchar[] toUTF16(wchar[] s)
     {
 	return s;
     }
+
+/** ditto */
 
 wchar[] toUTF16(dchar[] s)
 {
@@ -751,6 +849,10 @@ wchar[] toUTF16(dchar[] s)
 }
 
 /* =================== Conversion to UTF32 ======================= */
+
+/*****
+ * Encodes string s into UTF-32 and returns the encoded string.
+ */
 
 dchar[] toUTF32(char[] s)
 {
@@ -771,6 +873,8 @@ dchar[] toUTF32(char[] s)
     return r[0 .. j];
 }
 
+/** ditto */
+
 dchar[] toUTF32(wchar[] s)
 {
     dchar[] r;
@@ -789,6 +893,8 @@ dchar[] toUTF32(wchar[] s)
     }
     return r[0 .. j];
 }
+
+/** ditto */
 
 dchar[] toUTF32(dchar[] s)
     in

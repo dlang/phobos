@@ -54,6 +54,7 @@ DDOC = <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 &nbsp;<a href="std_conv.html" title="Conversion of strings to integers">std.conv</a><br>
 &nbsp;<a href="std_ctype.html" title="Simple character classification">std.ctype</a><br>
 &nbsp;<a href="std_date.html" title="Date and time functions">std.date</a><br>
+&nbsp;<a href="std_demangle.html" title="Demangle D names">std.demangle</a><br>
 &nbsp;<a href="std_file.html" title="Basic file operations">std.file</a><br>
 &nbsp;<a href="std_format.html" title="Formatted conversions of values to strings">std.format</a><br>
 &nbsp;<a href="std_gc.html" title="Control the garbage collector">std.gc</a><br>
@@ -81,6 +82,7 @@ DDOC = <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 &nbsp;<a href="std_utf.html" title="Encode and decode utf character encodings">std.utf</a><br>
 &nbsp;<a href="std_zip.html" title="Read/write zip archives">std.zip</a><br>
 &nbsp;<a href="std_zlib.html" title="Compression / Decompression of data">std.zlib</a><br>
+&nbsp;<a href="std_windows_charset.html" title="Conversion to/from Windows character sets">std.windows.charset</a><br>
 <br>
 <a href="phobos.html#std_windows" title="Modules specific to Windows">std.windows</a><br>
 <br>
