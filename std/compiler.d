@@ -32,8 +32,8 @@ const
      * The vendor specific version number, as in
      * version_major.version_minor
      */
-    uint version_major = 0;
-    uint version_minor = 176;	/// ditto
+    uint version_major = 1;
+    uint version_minor = 002;	/// ditto
 
 
     /**
