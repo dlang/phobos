@@ -1307,6 +1307,76 @@ class BufferedStream : Stream
     return streamPos-bufferSourcePos+bufferCurPos;
   }
 
+  // reads a line, terminated by either CR, LF, CR/LF, or EOF
+  // reusing the memory in buffer if result will fit, otherwise
+  // will reallocate (using concatenation)
+  template TreadLine(T) {
+    override T[] readLine(T[] inBuffer)
+      {
+	uint    lineSize = 0;
+	bool    haveCR = false;
+	T       c = '\0';
+	uint    idx = 0;
+	ubyte*  pc = cast(ubyte*)&c;
+
+      L0:
+	for(;;) {
+	  uint start = bufferCurPos;
+	L1:
+	  foreach(ubyte b; buffer[start .. bufferLen]) {
+	    bufferCurPos++;
+	    pc[idx] = b;
+	    if(idx < T.sizeof - 1) {
+	      idx++;
+	      continue L1;
+	    } else {
+	      idx = 0;
+	    }
+	    if(c == '\n' || haveCR) {
+	      if(haveCR && c != '\n') bufferCurPos--;
+	      break L0;
+	    } else {
+	      if(c == '\r') {
+		haveCR = true;
+	      } else {
+		if(lineSize < inBuffer.length) {
+		  inBuffer[lineSize] = c;
+		} else {
+		  inBuffer ~= c;
+		}
+		lineSize++;
+	      }
+	    }
+	  }
+	  flush();
+	  uint res = s.readBlock(buffer,buffer.length);
+	  if(!res) break L0; // EOF
+	  bufferSourcePos = bufferLen = res;
+	  streamPos += res;
+	}
+
+	return inBuffer[0 .. lineSize];
+      }
+  } // template TreadLine(T)
+
+  override char[] readLine(char[] inBuffer)
+  {
+    if (unget.length > 1)
+      return super.readLine(inBuffer);
+    else
+      return TreadLine!(char).readLine(inBuffer);
+  }
+  alias Stream.readLine readLine;
+
+  override wchar[] readLineW(wchar[] inBuffer)
+  {
+    if (unget.length > 1)
+      return super.readLineW(inBuffer);
+    else
+      return TreadLine!(wchar).readLine(inBuffer);
+  }
+  alias Stream.readLineW readLineW;
+
   override void flush()
   out
   {
@@ -1937,6 +2007,17 @@ class EndianStream : Stream
       }
   }
 
+  // Correct the byte order of buffer in blocks repeatedly
+  // size must be even
+  final void fixBlockBO(void* buffer, uint size, uint repeat)
+  {
+    while (repeat--)
+      {
+	fixBO(buffer,size);
+	buffer += size;
+      }
+  }
+
   uint readBlock(void* buffer, uint size)
   {
     return s.readBlock(buffer,size);
@@ -1954,9 +2035,9 @@ class EndianStream : Stream
   void read(out ifloat x) { readExact(&x, x.sizeof); fixBO(&x,x.sizeof); }
   void read(out idouble x) { readExact(&x, x.sizeof); fixBO(&x,x.sizeof); }
   void read(out ireal x) { readExact(&x, x.sizeof); fixBO(&x,x.sizeof); }
-  void read(out cfloat x) { readExact(&x, x.sizeof); fixBO(&x,x.sizeof); }
-  void read(out cdouble x) { readExact(&x, x.sizeof); fixBO(&x,x.sizeof); }
-  void read(out creal x) { readExact(&x, x.sizeof); fixBO(&x,x.sizeof); }
+  void read(out cfloat x) { readExact(&x, x.sizeof); fixBlockBO(&x,float.sizeof,2); }
+  void read(out cdouble x) { readExact(&x, x.sizeof); fixBlockBO(&x,double.sizeof,2); }
+  void read(out creal x) { readExact(&x, x.sizeof); fixBlockBO(&x,real.sizeof,2); }
   void read(out wchar x) { readExact(&x, x.sizeof); fixBO(&x,x.sizeof); }
   void read(out dchar x) { readExact(&x, x.sizeof); fixBO(&x,x.sizeof); }
 
@@ -1964,8 +2045,7 @@ class EndianStream : Stream
   {
     wchar[] result = new wchar[length];
     readExact(result, result.length * wchar.sizeof);
-    while (length--)
-      fixBO(&result[length],2);
+    fixBlockBO(&result,2,length);
     return result;
   }
   
@@ -1992,9 +2072,9 @@ class EndianStream : Stream
   void write(ifloat x) { fixBO(&x,x.sizeof); writeExact(&x, x.sizeof); }
   void write(idouble x) { fixBO(&x,x.sizeof); writeExact(&x, x.sizeof); }
   void write(ireal x) { fixBO(&x,x.sizeof); writeExact(&x, x.sizeof); }
-  void write(cfloat x) { fixBO(&x,x.sizeof); writeExact(&x, x.sizeof); }
-  void write(cdouble x) { fixBO(&x,x.sizeof); writeExact(&x, x.sizeof); }
-  void write(creal x) { fixBO(&x,x.sizeof); writeExact(&x, x.sizeof); }
+  void write(cfloat x) { fixBlockBO(&x,float.sizeof,2); writeExact(&x, x.sizeof); }
+  void write(cdouble x) { fixBlockBO(&x,double.sizeof,2); writeExact(&x, x.sizeof); }
+  void write(creal x) { fixBlockBO(&x,real.sizeof,2); writeExact(&x, x.sizeof);  }
   void write(wchar x) { fixBO(&x,x.sizeof); writeExact(&x, x.sizeof); }
   void write(dchar x) { fixBO(&x,x.sizeof); writeExact(&x, x.sizeof); }
 
@@ -2169,6 +2249,15 @@ class TArrayStream(Buffer): Stream
 
     return cur;
   }
+
+  // returns pointer to stream data
+  ubyte[] data() { return cast(ubyte[])buf [0 .. len]; }
+
+  override char[] toString()
+  {
+    return cast(char[]) data ();
+  }
+	
 }
 /* Test the TArrayStream */
 unittest
@@ -2214,20 +2303,13 @@ class MemoryStream: TArrayStream!(ubyte[])
     if (cur + count > buf.length)
       buf.length = (cur + count) * 2;
   }
-	
-  // returns pointer to stream data
-  ubyte[] data() { return buf [0 .. len]; }
-	
+
   override uint writeBlock(void* buffer, uint size)
   {
     reserve(size);
     return super.writeBlock(buffer,size);
   }
-  override char[] toString()
-  {
-    return cast(char[]) data ();
-  }
-
+	
   /* Test the whole class. */
   unittest
   {
@@ -2256,18 +2338,56 @@ class MemoryStream: TArrayStream!(ubyte[])
 }
 
 
-/****************************
-  BVH 8/04: 
-  currently fails due to MmFile being auto, so leaving commented out
-  until MmFile can be used in objects
-
 import std.mmfile;
+
 // stream wrapping memory-mapped files
-alias TArrayStream!(MmFile) MmFileStream;
+class MmFileStream : TArrayStream!(MmFile)
+{
+
+  // constructor to wrap file
+  this(MmFile file)
+  {
+    super (file);
+    MmFile.Mode mode = file.mode;
+    writeable = mode > MmFile.Mode.Read;
+  }
+
+  override uint readBlock(void* buffer, uint size)
+  {
+    if (isopen)
+      return super.readBlock(buffer,size);
+    else
+      return 0;
+  }
+
+  override uint writeBlock(void* buffer, uint size)
+  {
+    if (isopen)
+      return super.writeBlock(buffer,size);
+    else
+      return 0;
+  }
+
+  // flush stream
+  override void flush() 
+  { 
+    if (isopen)
+      buf.flush();
+  }
+
+  // close stream
+  override void close() 
+  { 
+    if (isopen) {
+      delete buf;
+      isopen = false;
+    }
+  }
+}
 
 unittest
 {
-  MmFile mf = new MmFile("testing.txt");
+  MmFile mf = new MmFile("testing.txt",MmFile.Mode.ReadWriteNew,100,null);
   MmFileStream m;
 
   m = new MmFileStream (mf);
@@ -2275,18 +2395,26 @@ unittest
   assert (m.position () == 12);
   assert (m.seekSet (0) == 0);
   assert (m.seekCur (4) == 4);
-  assert (m.seekEnd (-8) == 4);
-  assert (m.size () == 12);
+  assert (m.seekEnd (-8) == 92);
+  assert (m.size () == 100);
+  assert (m.seekSet (4));
   assert (m.readString (4) == "o, w");
   m.writeString ("ie");
-  assert (cast(char[]) m.data () == "Hello, wield");
-  m.seekEnd (0);
+  assert ((cast(char[]) m.data())[0 .. 12] == "Hello, wield");
+  m.seekSet (12);
   m.writeString ("Foo");
   assert (m.position () == 15);
   m.writeString ("Foo foo foo foo foo foo foo");
   assert (m.position () == 42);
+  m.close();
+  mf = new MmFile("testing.txt");
+  m = new MmFileStream (mf);
+  assert (!m.writeable);
+  char[] str = m.readString(12);
+  assert (str == "Hello, wield");
+  m.close();
+  std.file.remove("testing.txt");
 }
-********************************/
 
 // slices off a portion of another stream, making seeking
 // relative to the boundaries of the slice.
@@ -2518,4 +2646,5 @@ version (linux)
       stderr = new File(2, FileMode.Out);
     }
 }
+
 

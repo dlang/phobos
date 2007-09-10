@@ -231,6 +231,7 @@ void *_aaGet(aaA*[] *aa, TypeInfo keyti, int valuesize, ...)
 	return cast(void *)(e + 1) + keysize;
     }
 
+
 /*************************************************
  * Determine if key is in aa.
  * Returns:
@@ -253,6 +254,7 @@ void* _aaIn(aaA*[] aa, TypeInfo keyti, ...)
 	uint i;
 	aaA *e;
 
+	//printf("_aaIn(), aa.length = %d, .ptr = %x\n", aa.length, cast(uint)aa.ptr);
 	if (aa.length > 1)
 	{
 	    key_hash = keyti.getHash(pkey);
@@ -280,6 +282,7 @@ void* _aaIn(aaA*[] aa, TypeInfo keyti, ...)
 	// Not found
 	return null;
     }
+
 
 /*************************************************
  * Delete key entry in aa[].

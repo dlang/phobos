@@ -182,9 +182,12 @@ class TypeInfo_Struct : TypeInfo
 
 	assert(p);
 	if (xtoHash)
+	{   //printf("getHash() using xtoHash\n");
 	    h = (*xtoHash)(p);
+	}
 	else
 	{
+	    //printf("getHash() using default hash\n");
 	    // A sorry hash algorithm.
 	    // Should use the one for strings.
 	    // BUG: relies on the GC not moving objects

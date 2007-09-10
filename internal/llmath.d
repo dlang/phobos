@@ -224,6 +224,8 @@ real __U64_LDBL()
 
 // Convert double to ulong
 
+private short roundTo0 = 0xFBF;
+
 ulong __DBLULLNG()
 {
     // BUG: should handle NAN's and overflows
@@ -232,22 +234,29 @@ ulong __DBLULLNG()
 	push	EDX				;
 	push	EAX				;
 	fld	double ptr [ESP]		;
+	sub	ESP,8				;
 	fld	real ptr adjust			;
-	fcompp					;
+	fcomp					;
 	fstsw	AX				;
+	fstcw	8[ESP]				;
+	fldcw	roundTo0			;
 	sahf					;
-	jb	L1				;
+	jae	L1				;
 	fld	real ptr adjust			;
 	fsubp	ST(1), ST			;
 	fistp	qword ptr [ESP]			;
 	pop	EAX				;
 	pop	EDX				;
+	fldcw	[ESP]				;
+	add	ESP,8				;
 	add	EDX,0x8000_0000			;
 	ret					;
     L1:						;
 	fistp	qword ptr [ESP]			;
 	pop	EAX				;
 	pop	EDX				;
+	fldcw	[ESP]				;
+	add	ESP,8				;
 	ret					;
     }
 }
@@ -259,10 +268,13 @@ uint __DBLULNG()
     // BUG: should handle NAN's and overflows
     asm
     {	naked					;
-	sub	ESP,8				;
+	sub	ESP,16				;
+	fstcw	8[ESP]				;
+	fldcw	roundTo0			;
 	fistp	qword ptr [ESP]			;
+	fldcw	8[ESP]				;
 	pop	EAX				;
-	add	ESP,4				;
+	add	ESP,12				;
 	ret					;
     }
 }

@@ -23,9 +23,11 @@ module std.string;
 
 //debug=string;		// uncomment to turn on debugging printf's
 
+private import std.stdio;
 private import std.c.stdio;
 private import std.c.stdlib;
 private import std.utf;
+private import std.uni;
 private import std.array;
 private import std.format;
 private import std.ctype;
@@ -306,14 +308,17 @@ int ifind(char[] s, dchar c)
 	    if (c1 == c2)
 		return i;
 	}
-	return -1;
     }
+    else
+    {	// c is a universal character
+	dchar c1 = std.uni.toUniLower(c);
 
-    // c is a universal character
-    foreach (int i, dchar c2; s)
-    {
-	if (c == c2)
-	    return i;
+	foreach (int i, dchar c2; s)
+	{
+	    c2 = std.uni.toUniLower(c2);
+	    if (c1 == c2)
+		return i;
+	}
     }
     return -1;
 }
@@ -394,7 +399,7 @@ unittest
 
 int irfind(char[] s, dchar c)
 {
-    int i;
+    size_t i;
 
     if (c <= 0x7F)
     {	// Plain old ASCII
@@ -407,14 +412,27 @@ int irfind(char[] s, dchar c)
 	    if (c1 == c2)
 		break;
 	}
-	return i;
     }
+    else
+    {	// c is a universal character
+	dchar c1 = std.uni.toUniLower(c);
 
-    // c is a universal character
-    char[4] buf;
-    char[] t;
-    t = std.utf.toUTF8(buf, c);
-    return irfind(s, t);
+	for (i = s.length; i-- > 0;)
+	{   char cx = s[i];
+
+	    if (cx <= 0x7F)
+		continue;		// skip, since c is not ASCII
+	    if ((cx & 0xC0) == 0x80)
+		continue;		// skip non-starting UTF-8 chars
+
+	    size_t j = i;
+	    dchar c2 = std.utf.decode(s, j);
+	    c2 = std.uni.toUniLower(c2);
+	    if (c1 == c2)
+		break;
+	}
+    }
+    return i;
 }
 
 unittest
@@ -691,19 +709,30 @@ int irfind(char[] s, char[] sub)
     }
     body
     {
-	char c;
+	dchar c;
 
 	if (sub.length == 0)
 	    return s.length;
 	c = sub[0];
 	if (sub.length == 1)
 	    return irfind(s, c);
-	c = std.ctype.tolower(c);
-	for (int i = s.length - sub.length; i >= 0; i--)
+	if (c <= 0x7F)
 	{
-	    if (std.ctype.tolower(s[i]) == c)
+	    c = std.ctype.tolower(c);
+	    for (int i = s.length - sub.length; i >= 0; i--)
 	    {
-		if (icmp(s[i + 1 .. i + sub.length], sub[1 .. sub.length]) == 0)
+		if (std.ctype.tolower(s[i]) == c)
+		{
+		    if (icmp(s[i + 1 .. i + sub.length], sub[1 .. sub.length]) == 0)
+			return i;
+		}
+	    }
+	}
+	else
+	{
+	    for (int i = s.length - sub.length; i >= 0; i--)
+	    {
+		if (icmp(s[i .. i + sub.length], sub) == 0)
 		    return i;
 	    }
 	}
@@ -755,6 +784,7 @@ char[] tolower(char[] s)
 {
     int changed;
     int i;
+    char[] r = s;
 
     changed = 0;
     for (i = 0; i < s.length; i++)
@@ -763,15 +793,30 @@ char[] tolower(char[] s)
 	if ('A' <= c && c <= 'Z')
 	{
 	    if (!changed)
-	    {	char[] r = new char[s.length];
-		r[] = s;
-		s = r;
+	    {	r = s.dup;
 		changed = 1;
 	    }
-	    s[i] = c + (cast(char)'a' - 'A');
+	    r[i] = c + (cast(char)'a' - 'A');
+	}
+	else if (c >= 0x7F)
+	{
+	    foreach (size_t j, dchar dc; s[i .. length])
+	    {
+		if (!changed)
+		{
+		    if (!std.uni.isUniUpper(dc))
+			continue;
+
+		    r = s[0 .. i + j].dup;
+		    changed = 1;
+		}
+		dc = std.uni.toUniLower(dc);
+		std.utf.encode(r, dc);
+	    }
+	    break;
 	}
     }
-    return s;
+    return r;
 }
 
 unittest
@@ -794,6 +839,7 @@ char[] toupper(char[] s)
 {
     int changed;
     int i;
+    char[] r = s;
 
     changed = 0;
     for (i = 0; i < s.length; i++)
@@ -802,15 +848,30 @@ char[] toupper(char[] s)
 	if ('a' <= c && c <= 'z')
 	{
 	    if (!changed)
-	    {	char[] r = new char[s.length];
-		r[] = s;
-		s = r;
+	    {	r = s.dup;
 		changed = 1;
 	    }
-	    s[i] = c - (cast(char)'a' - 'A');
+	    r[i] = c - (cast(char)'a' - 'A');
+	}
+	else if (c >= 0x7F)
+	{
+	    foreach (size_t j, dchar dc; s[i .. length])
+	    {
+		if (!changed)
+		{
+		    if (!std.uni.isUniLower(dc))
+			continue;
+
+		    r = s[0 .. i + j].dup;
+		    changed = 1;
+		}
+		dc = std.uni.toUniUpper(dc);
+		std.utf.encode(r, dc);
+	    }
+	    break;
 	}
     }
-    return s;
+    return r;
 }
 
 unittest
@@ -2056,6 +2117,65 @@ char[] toString(creal r)
     return toString(buffer).dup;
 }
 
+char[] toString(long value, uint radix)
+in
+{
+    assert(radix >= 2 && radix <= 36);
+}
+body
+{
+    if (radix == 10)
+	return toString(value);		// handle signed cases only for radix 10
+    return toString(cast(ulong)value, radix);
+}
+
+char[] toString(ulong value, uint radix)
+in
+{
+    assert(radix >= 2 && radix <= 36);
+}
+body
+{
+    char[value.sizeof * 8] buffer;
+    uint i = buffer.length;
+
+    if (value < radix && value < hexdigits.length)
+	return hexdigits[value .. value + 1];
+
+    do
+    {	ubyte c;
+
+	c = value % radix;
+	value = value / radix;
+	i--;
+	buffer[i] = (c < 10) ? c + '0' : c + 'A' - 10;
+    } while (value);
+    return buffer[i .. length].dup;
+}
+
+unittest
+{
+    debug(string) printf("string.toString(ulong, uint).unittest\n");
+
+    char[] r;
+    int i;
+
+    r = toString(-10L, 10u);
+    assert(r == "-10");
+
+    r = toString(15L, 2u);
+    //writefln("r = '%s'", r);
+    assert(r == "1111");
+
+    r = toString(1L, 2u);
+    //writefln("r = '%s'", r);
+    assert(r == "1");
+
+    r = toString(0x1234AFL, 16u);
+    //writefln("r = '%s'", r);
+    assert(r == "1234AF");
+}
+
 /*************************************************
  * Convert to char[].
  */
@@ -2125,7 +2245,7 @@ char[] sformat(char[] s, ...)
     }
 
     std.format.doFormat(&putc, _arguments, _argptr);
-    return s;
+    return s[0 .. i];
 }
 
 

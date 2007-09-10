@@ -8,7 +8,7 @@
  * Memory mapped files.
  */
 
-module mmfile;
+module std.mmfile;
 
 private import std.file;
 private import std.c.stdio;
@@ -44,7 +44,7 @@ else
 }
 
 
-auto class MmFile
+class MmFile
 {
     enum Mode
     {	Read,		// read existing file
@@ -65,6 +65,7 @@ auto class MmFile
     this(char[] filename, Mode mode, size_t size, void* address)
     {
 	this.filename = filename;
+	this.mMode = mode;
 
 	version (Win32)
 	{
@@ -335,6 +336,12 @@ auto class MmFile
 	return data.length;
     }
 
+    Mode mode()
+    {
+	debug (MMFILE) printf("MmFile.mode()\n");
+	return mMode;
+    }
+
     void[] opSlice()
     {
 	debug (MMFILE) printf("MmFile.opSlice()\n");
@@ -363,6 +370,7 @@ auto class MmFile
   private:
     char[] filename;
     void[] data;
+    Mode   mMode;
 
     version (Win32)
     {
@@ -407,4 +415,5 @@ auto class MmFile
 	    static assert(0);
 	}
 */
+
 

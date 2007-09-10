@@ -24,8 +24,11 @@
 
 // Description of UTF-8 at:
 // http://www.cl.cam.ac.uk/~mgk25/unicode.html#utf-8
+// http://anubis.dkuug.dk/JTC1/SC2/WG2/docs/n1335
 
 module std.utf;
+
+private import std.stdio;
 
 //debug=utf;		// uncomment to turn on debugging printf's
 
@@ -47,11 +50,10 @@ bit isValidDchar(dchar c)
      * Unicode standard for application internal use, but are not
      * allowed for interchange.
      * (thanks to Arcane Jill)
-     * However, we still mark them as invalid.
      */
 
     return c < 0xD800 ||
-	(c > 0xDFFF && c <= 0x10FFFF && c != 0xFFFE && c != 0xFFFF);
+	(c > 0xDFFF && c <= 0x10FFFF /*&& c != 0xFFFE && c != 0xFFFF*/);
 }
 
 unittest
@@ -59,6 +61,134 @@ unittest
     debug(utf) printf("utf.isValidDchar.unittest\n");
     assert(isValidDchar(cast(dchar)'a') == true);
     assert(isValidDchar(cast(dchar)0x1FFFFF) == false);
+}
+
+
+/* This array gives the length of a UTF-8 sequence indexed by the value
+ * of the leading byte. An FF represents an illegal starting value of
+ * a UTF-8 sequence.
+ * FF is used instead of 0 to avoid having loops hang.
+ */
+
+ubyte[256] UTF8stride =
+[
+    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+    0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
+    0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
+    0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
+    0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
+    2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,
+    2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,
+    3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,
+    4,4,4,4,4,4,4,4,5,5,5,5,6,6,0xFF,0xFF,
+];
+
+uint stride(char[] s, size_t i)
+{
+    return UTF8stride[s[i]];
+}
+
+uint stride(wchar[] s, size_t i)
+{   uint u = s[i];
+    return 1 + (u >= 0xD800 && u <= 0xDBFF);
+}
+
+uint stride(dchar[] s, size_t i)
+{
+    return 1;
+}
+
+/*******************************************
+ * Given an index into an array of char's,
+ * and assuming that index is at the start of a UTF character,
+ * determine the number of UCS characters up to that index.
+ */
+
+size_t toUCSindex(char[] s, size_t i)
+{
+    size_t n;
+    size_t j;
+    size_t stride;
+
+    for (j = 0; j < i; j += stride)
+    {
+	stride = UTF8stride[s[j]];
+	if (stride == 0xFF)
+	    goto Lerr;
+	n++;
+    }
+    if (j > i)
+    {
+      Lerr:
+	throw new UtfError("1invalid UTF-8 sequence", j);
+    }
+    return n;
+}
+
+size_t toUCSindex(wchar[] s, size_t i)
+{
+    size_t n;
+    size_t j;
+
+    for (j = 0; j < i; )
+    {	uint u = s[j];
+
+	j += 1 + (u >= 0xD800 && u <= 0xDBFF);
+	n++;
+    }
+    if (j > i)
+    {
+      Lerr:
+	throw new UtfError("2invalid UTF-16 sequence", j);
+    }
+    return n;
+}
+
+size_t toUCSindex(dchar[] s, size_t i)
+{
+    return i;
+}
+
+/******************************************
+ * Given a UCS index into an array of characters, return the UTF index.
+ */
+
+size_t toUTFindex(char[] s, size_t n)
+{
+    size_t i;
+
+    while (n--)
+    {
+	uint j = UTF8stride[s[i]];
+	if (j == 0xFF)
+	    throw new UtfError("3invalid UTF-8 sequence", i);
+	i += j;
+    }
+    return i;
+}
+
+size_t toUTFindex(wchar[] s, size_t n)
+{
+    size_t i;
+
+    while (n--)
+    {	wchar u = s[i];
+
+	i += 1 + (u >= 0xD800 && u <= 0xDBFF);
+    }
+    return i;
+}
+
+size_t toUTFindex(dchar[] s, size_t n)
+{
+    return n;
 }
 
 /* =================== Decode ======================= */
@@ -146,7 +276,8 @@ dchar decode(char[] s, inout size_t idx)
 	return V;
 
       Lerr:
-	throw new UtfError("invalid UTF-8 sequence", i);
+	//printf("\ndecode: idx = %d, i = %d, length = %d s = \n'%.*s'\n%x\n'%.*s'\n", idx, i, s.length, s, s[i], s[i .. length]);
+	throw new UtfError("4invalid UTF-8 sequence", i);
     }
 
 unittest
@@ -276,7 +407,7 @@ dchar decode(dchar[] s, inout size_t idx)
 	return c;
 
       Lerr:
-	throw new UtfError("invalid UTF-32 value", i);
+	throw new UtfError("5invalid UTF-32 value", i);
     }
 
 

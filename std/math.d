@@ -648,13 +648,103 @@ real pow(real x, uint n)
 real pow(real x, int n)
 {
     if (n < 0)
-	return std.c.math.powl(x, n);
+	return pow(x, cast(real)n);
     else
 	return pow(x, cast(uint)n);
 }
 
 real pow(real x, real y)
 {
+    version (linux) // C pow() often does not handle special values correctly
+    {
+	if (isnan(y))
+	    return real.nan;
+
+	if (y == 0)
+	    return 1;		// even if x is NAN
+	if (isnan(x) && y != 0)
+	    return real.nan;
+	if (isinf(y))
+	{
+	    if (fabs(x) > 1)
+	    {
+		if (signbit(y))
+		    return +0.0;
+		else
+		    return real.infinity;
+	    }
+	    else if (fabs(x) == 1)
+	    {
+		return real.nan;
+	    }
+	    else // < 1
+	    {
+		if (signbit(y))
+		    return real.infinity;
+		else
+		    return +0.0;
+	    }
+	}
+	if (isinf(x))
+	{
+	    if (signbit(x))
+	    {   long i;
+
+		i = cast(long)y;
+		if (y > 0)
+		{
+		    if (i == y && i & 1)
+			return -real.infinity;
+		    else
+			return real.infinity;
+		}
+		else if (y < 0)
+		{
+		    if (i == y && i & 1)
+			return -0.0;
+		    else
+			return +0.0;
+		}
+	    }
+	    else
+	    {
+		if (y > 0)
+		    return real.infinity;
+		else if (y < 0)
+		    return +0.0;
+	    }
+	}
+
+	if (x == 0.0)
+	{
+	    if (signbit(x))
+	    {   long i;
+
+		i = cast(long)y;
+		if (y > 0)
+		{
+		    if (i == y && i & 1)
+			return -0.0;
+		    else
+			return +0.0;
+		}
+		else if (y < 0)
+		{
+		    if (i == y && i & 1)
+			return -real.infinity;
+		    else
+			return real.infinity;
+		}
+	    }
+	    else
+	    {
+		if (y > 0)
+		    return +0.0;
+		else if (y < 0)
+		    return real.infinity;
+	    }
+	}
+    }
     return std.c.math.powl(x, y);
 }
 

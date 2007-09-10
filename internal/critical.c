@@ -97,14 +97,13 @@ typedef struct D_CRITICAL_SECTION
 static D_CRITICAL_SECTION *dcs_list;
 static D_CRITICAL_SECTION critical_section;
 static pthread_mutexattr_t _criticals_attr;
-static volatile int inited;
 
 void _STI_critical_init(void);
 void _STD_critical_term(void);
 
 void _d_criticalenter(D_CRITICAL_SECTION *dcs)
 {
-    if (!inited)
+    if (!dcs_list)
     {	_STI_critical_init();
 	atexit(_STD_critical_term);
     }
@@ -125,33 +124,33 @@ void _d_criticalenter(D_CRITICAL_SECTION *dcs)
 
 void _d_criticalexit(D_CRITICAL_SECTION *dcs)
 {
+    //printf("_d_criticalexit(dcs = x%x)\n", dcs);
     pthread_mutex_unlock(&dcs->cs);
 }
 
 void _STI_critical_init()
 {
-    if (!inited)
+    if (!dcs_list)
     {	//printf("_STI_critical_init()\n");
 	pthread_mutexattr_init(&_criticals_attr);
 	pthread_mutexattr_settype(&_criticals_attr, PTHREAD_MUTEX_RECURSIVE_NP);
 
 	// The global critical section doesn't need to be recursive
 	pthread_mutex_init(&critical_section.cs, 0);
-	inited = 1;
+	dcs_list = &critical_section;
     }
 }
 
 void _STD_critical_term()
 {
-    if (inited)
+    if (dcs_list)
     {	//printf("_STI_critical_term()\n");
-	inited = 0;
 	while (dcs_list)
 	{
+	    //printf("\tlooping... %x\n", dcs_list);
 	    pthread_mutex_destroy(&dcs_list->cs);
 	    dcs_list = dcs_list->next;
 	}
-	pthread_mutex_destroy(&critical_section.cs);
     }
 }
 
