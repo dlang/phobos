@@ -83,6 +83,31 @@ byte[] _d_arraycatn(uint size, uint n, ...)
     return a;
 }
 
+bit[] _d_arraycatb(bit[] x, bit[] y)
+{   bit[] a;
+    uint a_length;
+    uint x_bytes;
+
+    if (!x.length)
+	return y;
+    if (!y.length)
+	return x;
+
+    a_length = x.length + y.length;
+    a = new bit[a_length];
+    x_bytes = (x.length + 7) >> 3;
+    memcpy(a.ptr, x.ptr, x_bytes);
+    if ((x.length & 7) == 0)
+	memcpy(cast(void*)a.ptr + x_bytes, y.ptr, (y.length + 7) >> 3);
+    else
+    {	uint x_length = x.length;
+	uint y_length = y.length;
+	for (uint i = 0; i < y_length; i++)
+	    a[x_length + i] = y[i];
+    }
+    return a;
+}
+
 byte[] _d_arraycopy(uint size, byte[] from, byte[] to)
 {
     //printf("f = %p,%d, t = %p,%d, size = %d\n", (void*)from, from.length, (void*)to, to.length, size);
@@ -155,3 +180,15 @@ body
 
     return ba;
 }
+
+bit[] _d_arraysetbit2(bit[] ba, bit value)
+{
+    //printf("_d_arraysetbit2(ba.ptr = %p, ba.length = %d, value = %d)\n", ba.ptr, ba.length, value);
+    size_t len = ba.length;
+    uint val = -cast(int)value;
+    memset(ba.ptr, val, len >> 3);
+    for (uint i = len & ~7; i < len; i++)
+	ba[i] = value;
+    return ba;
+}
+

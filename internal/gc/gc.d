@@ -550,9 +550,9 @@ uint newCapacity(uint newlength, uint size)
 extern (C)
 byte[] _d_arrayappendc(inout byte[] x, in uint size, ...)
 {
-    uint cap = _gc.capacity(x);
-    uint length = x.length;
-    uint newlength = length + 1;
+    size_t cap = _gc.capacity(x);
+    size_t length = x.length;
+    size_t newlength = length + 1;
     if (newlength * size > cap)
     {   byte* newdata;
 
@@ -563,7 +563,7 @@ byte[] _d_arrayappendc(inout byte[] x, in uint size, ...)
     }
     byte *argp = cast(byte *)(&size + 1);
 
-    *cast(int *)&x = newlength;
+    *cast(size_t *)&x = newlength;
     (cast(byte *)x)[length * size .. newlength * size] = argp[0 .. size];
     return x;
 
@@ -588,3 +588,17 @@ byte[] _d_arrayappendc(inout byte[] x, in uint size, ...)
 }
 
 
+extern (C)
+bit[] _d_arrayappendcb(inout bit[] x, bit b)
+{
+    if (x.length & 7)
+    {
+	*cast(size_t *)&x = x.length + 1;
+    }
+    else
+    {
+	x.length = x.length + 1;
+    }
+    x[x.length - 1] = b;
+    return x;
+}

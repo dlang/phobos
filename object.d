@@ -5,7 +5,7 @@ module object;
 
 alias bit bool;
 
-version (AMD64)
+version (X86_64)
 {
     alias ulong size_t;
     alias long ptrdiff_t;
@@ -66,6 +66,43 @@ class TypeInfo
 class TypeInfo_Typedef : TypeInfo
 {
     TypeInfo base;
+    char[] name;
+}
+
+class TypeInfo_Enum : TypeInfo_Typedef
+{
+}
+
+class TypeInfo_Pointer : TypeInfo
+{
+    TypeInfo next;
+}
+
+class TypeInfo_Array : TypeInfo
+{
+    TypeInfo next;
+}
+
+class TypeInfo_StaticArray : TypeInfo
+{
+    TypeInfo next;
+    size_t len;
+}
+
+class TypeInfo_AssociativeArray : TypeInfo
+{
+    TypeInfo next;
+    TypeInfo key;
+}
+
+class TypeInfo_Function : TypeInfo
+{
+    TypeInfo next;
+}
+
+class TypeInfo_Delegate : TypeInfo
+{
+    TypeInfo next;
 }
 
 class TypeInfo_Class : TypeInfo

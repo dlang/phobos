@@ -28,12 +28,28 @@ private import std.c.stdlib;
 private import std.path;
 private import std.string;
 
+/* =========================== Win32 ======================= */
+
+version (Win32)
+{
+
+private import std.c.windows.windows;
+private import std.utf;
+private import std.windows.syserror;
+
+int useWfuncs = 1;
+
+static this()
+{
+    // Win 95, 98, ME do not implement the W functions
+    useWfuncs = (GetVersion() < 0x80000000);
+}
+
 /***********************************
  */
 
 class FileException : Exception
 {
-    private import std.syserror;
 
     uint errno;			// operating system error code
 
@@ -49,7 +65,7 @@ class FileException : Exception
 
     this(char[] name, uint errno)
     {
-	this(name, SysError.msg(errno));
+	this(name, sysErrorString(errno));
 	this.errno = errno;
     }
 }
@@ -57,22 +73,6 @@ class FileException : Exception
 /***********************************
  * Basic File operations.
  */
-
-/* =========================== Win32 ======================= */
-
-version (Win32)
-{
-
-private import std.c.windows.windows;
-private import std.utf;
-
-int useWfuncs = 1;
-
-static this()
-{
-    // Win 95, 98, ME do not implement the W functions
-    useWfuncs = (GetVersion() < 0x80000000);
-}
 
 /********************************************
  * Read a file.
@@ -562,6 +562,33 @@ version (linux)
 {
 
 private import std.c.linux.linux;
+
+extern (C) char* strerror(int);
+
+/***********************************
+ */
+
+class FileException : Exception
+{
+
+    uint errno;			// operating system error code
+
+    this(char[] name)
+    {
+	this(name, "file I/O");
+    }
+
+    this(char[] name, char[] message)
+    {
+	super(name ~ ": " ~ message);
+    }
+
+    this(char[] name, uint errno)
+    {	char* s = strerror(errno);
+	this(name, std.string.toString(s).dup);
+	this.errno = errno;
+    }
+}
 
 /********************************************
  * Read a file.

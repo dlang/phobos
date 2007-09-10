@@ -64,7 +64,7 @@ OBJS= asserterror.obj deh.obj switch.obj complex.obj gcstats.obj \
 	iunknown.obj crc32.obj conv.obj arraycast.obj utf.obj uri.obj \
 	Czlib.obj Dzlib.obj zip.obj process.obj registry.obj recls.obj \
 	socket.obj socketstream.obj loader.obj stdarg.obj format.obj stdio.obj \
-	perf.obj openrj.obj uni.obj winsock.obj \
+	perf.obj openrj.obj uni.obj winsock.obj oldsyserror.obj \
 	ti_Aa.obj ti_Ag.obj ti_C.obj ti_int.obj ti_char.obj \
 	ti_wchar.obj ti_uint.obj ti_short.obj ti_ushort.obj \
 	ti_byte.obj ti_ubyte.obj ti_long.obj ti_ulong.obj ti_ptr.obj \
@@ -129,7 +129,7 @@ SRC_INT=	\
 	internal\object.d internal\trace.d internal\qsort2.d
 
 SRC_STD_WIN= std\windows\registry.d \
-	std\windows\iunknown.d
+	std\windows\iunknown.d std\windows\syserror.d
 
 SRC_STD_C_WIN= std\c\windows\windows.d std\c\windows\com.d \
 	std\c\windows\winsock.d
@@ -523,8 +523,8 @@ string.obj : std\string.d
 switcherr.obj : std\switcherr.d
 	$(DMD) -c $(DFLAGS) std\switcherr.d
 
-syserror.obj : std\syserror.d
-	$(DMD) -c $(DFLAGS) std\syserror.d
+oldsyserror.obj : std\syserror.d
+	$(DMD) -c $(DFLAGS) std\syserror.d -ofoldsyserror.obj
 
 system.obj : std\system.d
 	$(DMD) -c $(DFLAGS) std\system.d
@@ -554,6 +554,9 @@ iunknown.obj : std\windows\iunknown.d
 
 registry.obj : std\windows\registry.d
 	$(DMD) -c $(DFLAGS) std\windows\registry.d
+
+syserror.obj : std\windows\syserror.d
+	$(DMD) -c $(DFLAGS) std\windows\syserror.d
 
 ### std\c
 

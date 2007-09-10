@@ -1027,20 +1027,38 @@ class Stream : InputStream, OutputStream {
 
   // creates a string in memory containing copy of stream data
   override char[] toString() {
-    if (!readable || !seekable)
+    if (!readable)
       return super.toString();
-    ulong pos = position();
+    size_t pos;
+    size_t rdlen;
+    size_t blockSize;
     char[] result;
-    result.length = size();
-    position(0);
-    readBlock(result, result.length);
-    position(pos);
-    return result;
+    if (seekable) {
+      ulong orig_pos = position();
+      position(0);
+      blockSize = size();
+      result = new char[blockSize];
+      while (blockSize > 0) {
+	rdlen = readBlock(&result[pos], blockSize);
+	pos += rdlen;
+	blockSize -= rdlen;
+      }
+      position(orig_pos);
+    } else {
+      blockSize = 4096;
+      result = new char[blockSize];
+      while ((rdlen = readBlock(&result[pos], blockSize)) > 0) {
+	pos += rdlen;
+	result.length = result.length + blockSize;
+	blockSize += rdlen;
+      }
+    }
+    return result[0 .. pos];
   }
 
   // calculates CRC-32 of data in stream
   override uint toHash() {
-    if (!readable)
+    if (!readable || !seekable)
       return super.toHash();
     ulong pos = position();
     uint crc = init_crc32 ();
@@ -1398,7 +1416,10 @@ enum FileMode {
 
 version (Win32) {
   private import std.c.windows.windows;
-  extern (Windows) void FlushFileBuffers(HANDLE hFile);
+  extern (Windows) {
+    void FlushFileBuffers(HANDLE hFile);
+    DWORD  GetFileType(HANDLE hFile);
+  }
 }
 version (linux) {
   private import std.c.linux.linux;
@@ -1432,6 +1453,12 @@ class File: Stream {
     this.hFile = hFile;
     readable = cast(bit)(mode & FileMode.In);
     writeable = cast(bit)(mode & FileMode.Out);
+    version(Windows) {
+      seekable = GetFileType(hFile) == 1; // FILE_TYPE_DISK
+    } else {
+      ulong result = lseek(hFile, 0, 0);
+      seekable = (result != ~0);
+    }
   }
 
   // opens file in requested mode
@@ -1578,9 +1605,11 @@ class File: Stream {
   override ulong seek(long offset, SeekPos rel) {
     assertSeekable();
     version (Win32) {
-      uint result = SetFilePointer(hFile, offset, null, rel);
-      if (result == 0xFFFFFFFF)
+      int hi = cast(int)((offset>>32) & 0xFFFFFFFF);
+      uint low = SetFilePointer(hFile, offset, &hi, rel);
+      if ((low == INVALID_SET_FILE_POINTER) && (GetLastError() != 0))
 	throw new SeekException("unable to move file pointer");
+      ulong result = (cast(ulong)hi << 32) + low;
     } else version (linux) {
       ulong result = lseek(hFile, offset, rel);
       if (result == 0xFFFFFFFF)

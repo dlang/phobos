@@ -1,0 +1,33 @@
+
+// Placed in public domain
+// Convert Win32 error code to string
+// Based on code written by Regan Heath
+
+module std.windows.syserror;
+
+private import std.c.windows.windows;
+
+char[] sysErrorString(uint errcode)
+{
+    char[] result;
+    char* buffer;
+    DWORD r;
+
+    r = FormatMessageA( 
+	    FORMAT_MESSAGE_ALLOCATE_BUFFER | 
+	    FORMAT_MESSAGE_FROM_SYSTEM | 
+	    FORMAT_MESSAGE_IGNORE_INSERTS,
+	    null,
+	    errcode,
+	    MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), // Default language
+	    cast(LPTSTR)&buffer,
+	    0,
+	    null);
+
+    /* Remove \r\n from error string */
+    if (r >= 2)
+	r -= 2;
+    result = buffer[0..r].dup;
+    LocalFree(cast(HLOCAL)buffer);
+    return result;
+}

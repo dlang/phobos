@@ -578,7 +578,7 @@ unittest
 	[-1.0,	-.5,	1],
 	[2.0,	.5,	2],
 	[155.67e20,	0x1.A5F1C2EB3FE4Fp-1,	74],	// normal
-	[1.0e-320,	0x1.FAp-1,		-1063],
+	[1.0e-320,	0.98829225,		-1063],
 	[real.min,	.5,		-16381],
 	[real.min/2.0L,	.5,		-16382],	// denormal
 
@@ -601,7 +601,7 @@ unittest
 	int eptr;
 	real v = frexp(x, eptr);
 
-	//printf("frexp(%Lg) = %Lg, should be %Lg, eptr = %d, should be %d\n", x, v, e, eptr, exp);
+	//printf("frexp(%Lg) = %.8Lg, should be %.8Lg, eptr = %d, should be %d\n", x, v, e, eptr, exp);
 	assert(mfeq(e, v, .0000001));
 	assert(exp == eptr);
     }

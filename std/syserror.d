@@ -1,11 +1,13 @@
 
-// Copyright (c) 2001-2004 by Digital Mars
-// www.digitalmars.com
+// Placed in public domain.
+// Written by Walter Bright
 // Convert Win32 error code to string
 
 module std.syserror;
 
-class SysError
+// Deprecated - instead use std.windows.syserror.sysErrorString()
+
+deprecated class SysError
 {
     private import std.c.stdio;
     private import std.string;

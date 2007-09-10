@@ -50,11 +50,11 @@ class TypeInfo_Au : TypeInfo
     {
 	wchar[] s1 = *cast(wchar[]*)p1;
 	wchar[] s2 = *cast(wchar[]*)p2;
-	uint len = s1.length;
+	size_t len = s1.length;
 
 	if (s2.length < len)
 	    len = s2.length;
-	for (uint u = 0; u < len; u++)
+	for (size_t u = 0; u < len; u++)
 	{
 	    int result = s1[u] - s2[u];
 	    if (result)

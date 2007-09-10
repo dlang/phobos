@@ -61,6 +61,7 @@ extern (Windows)
     typedef void *HANDLE;
     alias void *PVOID;
     alias HANDLE HGLOBAL;
+    alias HANDLE HLOCAL;
     alias LONG HRESULT;
     alias LONG SCODE;
     alias HANDLE HINSTANCE;
@@ -369,6 +370,18 @@ BOOL   WriteFile(HANDLE hFile, void *lpBuffer, DWORD nNumberOfBytesToWrite,
 	DWORD *lpNumberOfBytesWritten, OVERLAPPED *lpOverlapped);
 DWORD  GetModuleFileNameA(HMODULE hModule, LPSTR lpFilename, DWORD nSize);
 }
+
+struct MEMORYSTATUS {
+    DWORD dwLength;
+    DWORD dwMemoryLoad;
+    DWORD dwTotalPhys;
+    DWORD dwAvailPhys;
+    DWORD dwTotalPageFile;
+    DWORD dwAvailPageFile;
+    DWORD dwTotalVirtual;
+    DWORD dwAvailVirtual;
+};
+alias MEMORYSTATUS *LPMEMORYSTATUS;
 
 
 export
@@ -695,6 +708,25 @@ enum
 
 export
 {
+ BOOL GlobalUnlock(HGLOBAL hMem);
+ HGLOBAL GlobalFree(HGLOBAL hMem);
+ UINT GlobalCompact(DWORD dwMinFree);
+ void GlobalFix(HGLOBAL hMem);
+ void GlobalUnfix(HGLOBAL hMem);
+ LPVOID GlobalWire(HGLOBAL hMem);
+ BOOL GlobalUnWire(HGLOBAL hMem);
+ void GlobalMemoryStatus(LPMEMORYSTATUS lpBuffer);
+ HLOCAL LocalAlloc(UINT uFlags, UINT uBytes);
+ HLOCAL LocalReAlloc(HLOCAL hMem, UINT uBytes, UINT uFlags);
+ LPVOID LocalLock(HLOCAL hMem);
+ HLOCAL LocalHandle(LPCVOID pMem);
+ BOOL LocalUnlock(HLOCAL hMem);
+ UINT LocalSize(HLOCAL hMem);
+ UINT LocalFlags(HLOCAL hMem);
+ HLOCAL LocalFree(HLOCAL hMem);
+ UINT LocalShrink(HLOCAL hMem, UINT cbNewSize);
+ UINT LocalCompact(UINT uMinFree);
+ BOOL FlushInstructionCache(HANDLE hProcess, LPCVOID lpBaseAddress, DWORD dwSize);
  LPVOID VirtualAlloc(LPVOID lpAddress, DWORD dwSize, DWORD flAllocationType, DWORD flProtect);
  BOOL VirtualFree(LPVOID lpAddress, DWORD dwSize, DWORD dwFreeType);
  BOOL VirtualProtect(LPVOID lpAddress, DWORD dwSize, DWORD flNewProtect, PDWORD lpflOldProtect);
@@ -753,6 +785,221 @@ export BOOL DosDateTimeToFileTime(WORD wFatDate, WORD wFatTime, FILETIME* lpFile
 export DWORD GetTickCount();
 export BOOL SetSystemTimeAdjustment(DWORD dwTimeAdjustment, BOOL bTimeAdjustmentDisabled);
 export BOOL GetSystemTimeAdjustment(DWORD* lpTimeAdjustment, DWORD* lpTimeIncrement, BOOL* lpTimeAdjustmentDisabled);
+export DWORD FormatMessageA(DWORD dwFlags, LPCVOID lpSource, DWORD dwMessageId, DWORD dwLanguageId, LPSTR lpBuffer, DWORD nSize, void* *Arguments);export DWORD FormatMessageW(DWORD dwFlags, LPCVOID lpSource, DWORD dwMessageId, DWORD dwLanguageId, LPWSTR lpBuffer, DWORD nSize, void* *Arguments);
+
+enum
+{
+	FORMAT_MESSAGE_ALLOCATE_BUFFER = 0x00000100,
+	FORMAT_MESSAGE_IGNORE_INSERTS =  0x00000200,
+	FORMAT_MESSAGE_FROM_STRING =     0x00000400,
+	FORMAT_MESSAGE_FROM_HMODULE =    0x00000800,
+	FORMAT_MESSAGE_FROM_SYSTEM =     0x00001000,
+	FORMAT_MESSAGE_ARGUMENT_ARRAY =  0x00002000,
+	FORMAT_MESSAGE_MAX_WIDTH_MASK =  0x000000FF,
+};
+
+
+//
+//  Language IDs.
+//
+//  The following two combinations of primary language ID and
+//  sublanguage ID have special semantics:
+//
+//    Primary Language ID   Sublanguage ID      Result
+//    -------------------   ---------------     ------------------------
+//    LANG_NEUTRAL          SUBLANG_NEUTRAL     Language neutral
+//    LANG_NEUTRAL          SUBLANG_DEFAULT     User default language
+//    LANG_NEUTRAL          SUBLANG_SYS_DEFAULT System default language
+//
+
+//
+//  Primary language IDs.
+//
+
+enum
+{
+	LANG_NEUTRAL                     = 0x00,
+
+	LANG_AFRIKAANS                   = 0x36,
+	LANG_ALBANIAN                    = 0x1c,
+	LANG_ARABIC                      = 0x01,
+	LANG_BASQUE                      = 0x2d,
+	LANG_BELARUSIAN                  = 0x23,
+	LANG_BULGARIAN                   = 0x02,
+	LANG_CATALAN                     = 0x03,
+	LANG_CHINESE                     = 0x04,
+	LANG_CROATIAN                    = 0x1a,
+	LANG_CZECH                       = 0x05,
+	LANG_DANISH                      = 0x06,
+	LANG_DUTCH                       = 0x13,
+	LANG_ENGLISH                     = 0x09,
+	LANG_ESTONIAN                    = 0x25,
+	LANG_FAEROESE                    = 0x38,
+	LANG_FARSI                       = 0x29,
+	LANG_FINNISH                     = 0x0b,
+	LANG_FRENCH                      = 0x0c,
+	LANG_GERMAN                      = 0x07,
+	LANG_GREEK                       = 0x08,
+	LANG_HEBREW                      = 0x0d,
+	LANG_HUNGARIAN                   = 0x0e,
+	LANG_ICELANDIC                   = 0x0f,
+	LANG_INDONESIAN                  = 0x21,
+	LANG_ITALIAN                     = 0x10,
+	LANG_JAPANESE                    = 0x11,
+	LANG_KOREAN                      = 0x12,
+	LANG_LATVIAN                     = 0x26,
+	LANG_LITHUANIAN                  = 0x27,
+	LANG_NORWEGIAN                   = 0x14,
+	LANG_POLISH                      = 0x15,
+	LANG_PORTUGUESE                  = 0x16,
+	LANG_ROMANIAN                    = 0x18,
+	LANG_RUSSIAN                     = 0x19,
+	LANG_SERBIAN                     = 0x1a,
+	LANG_SLOVAK                      = 0x1b,
+	LANG_SLOVENIAN                   = 0x24,
+	LANG_SPANISH                     = 0x0a,
+	LANG_SWEDISH                     = 0x1d,
+	LANG_THAI                        = 0x1e,
+	LANG_TURKISH                     = 0x1f,
+	LANG_UKRAINIAN                   = 0x22,
+	LANG_VIETNAMESE                  = 0x2a,
+}
+//
+//  Sublanguage IDs.
+//
+//  The name immediately following SUBLANG_ dictates which primary
+//  language ID that sublanguage ID can be combined with to form a
+//  valid language ID.
+//
+enum
+{
+	SUBLANG_NEUTRAL =                  0x00,    // language neutral
+	SUBLANG_DEFAULT =                  0x01,    // user default
+	SUBLANG_SYS_DEFAULT =              0x02,    // system default
+
+	SUBLANG_ARABIC_SAUDI_ARABIA =      0x01,    // Arabic (Saudi Arabia)
+	SUBLANG_ARABIC_IRAQ =              0x02,    // Arabic (Iraq)
+	SUBLANG_ARABIC_EGYPT =             0x03,    // Arabic (Egypt)
+	SUBLANG_ARABIC_LIBYA =             0x04,    // Arabic (Libya)
+	SUBLANG_ARABIC_ALGERIA =           0x05,    // Arabic (Algeria)
+	SUBLANG_ARABIC_MOROCCO =           0x06,    // Arabic (Morocco)
+	SUBLANG_ARABIC_TUNISIA =           0x07,    // Arabic (Tunisia)
+	SUBLANG_ARABIC_OMAN =              0x08,    // Arabic (Oman)
+	SUBLANG_ARABIC_YEMEN =             0x09,    // Arabic (Yemen)
+	SUBLANG_ARABIC_SYRIA =             0x0a,    // Arabic (Syria)
+	SUBLANG_ARABIC_JORDAN =            0x0b,    // Arabic (Jordan)
+	SUBLANG_ARABIC_LEBANON =           0x0c,    // Arabic (Lebanon)
+	SUBLANG_ARABIC_KUWAIT =            0x0d,    // Arabic (Kuwait)
+	SUBLANG_ARABIC_UAE =               0x0e,    // Arabic (U.A.E)
+	SUBLANG_ARABIC_BAHRAIN =           0x0f,    // Arabic (Bahrain)
+	SUBLANG_ARABIC_QATAR =             0x10,    // Arabic (Qatar)
+	SUBLANG_CHINESE_TRADITIONAL =      0x01,    // Chinese (Taiwan)
+	SUBLANG_CHINESE_SIMPLIFIED =       0x02,    // Chinese (PR China)
+	SUBLANG_CHINESE_HONGKONG =         0x03,    // Chinese (Hong Kong)
+	SUBLANG_CHINESE_SINGAPORE =        0x04,    // Chinese (Singapore)
+	SUBLANG_DUTCH =                    0x01,    // Dutch
+	SUBLANG_DUTCH_BELGIAN =            0x02,    // Dutch (Belgian)
+	SUBLANG_ENGLISH_US =               0x01,    // English (USA)
+	SUBLANG_ENGLISH_UK =               0x02,    // English (UK)
+	SUBLANG_ENGLISH_AUS =              0x03,    // English (Australian)
+	SUBLANG_ENGLISH_CAN =              0x04,    // English (Canadian)
+	SUBLANG_ENGLISH_NZ =               0x05,    // English (New Zealand)
+	SUBLANG_ENGLISH_EIRE =             0x06,    // English (Irish)
+	SUBLANG_ENGLISH_SOUTH_AFRICA =     0x07,    // English (South Africa)
+	SUBLANG_ENGLISH_JAMAICA =          0x08,    // English (Jamaica)
+	SUBLANG_ENGLISH_CARIBBEAN =        0x09,    // English (Caribbean)
+	SUBLANG_ENGLISH_BELIZE =           0x0a,    // English (Belize)
+	SUBLANG_ENGLISH_TRINIDAD =         0x0b,    // English (Trinidad)
+	SUBLANG_FRENCH =                   0x01,    // French
+	SUBLANG_FRENCH_BELGIAN =           0x02,    // French (Belgian)
+	SUBLANG_FRENCH_CANADIAN =          0x03,    // French (Canadian)
+	SUBLANG_FRENCH_SWISS =             0x04,    // French (Swiss)
+	SUBLANG_FRENCH_LUXEMBOURG =        0x05,    // French (Luxembourg)
+	SUBLANG_GERMAN =                   0x01,    // German
+	SUBLANG_GERMAN_SWISS =             0x02,    // German (Swiss)
+	SUBLANG_GERMAN_AUSTRIAN =          0x03,    // German (Austrian)
+	SUBLANG_GERMAN_LUXEMBOURG =        0x04,    // German (Luxembourg)
+	SUBLANG_GERMAN_LIECHTENSTEIN =     0x05,    // German (Liechtenstein)
+	SUBLANG_ITALIAN =                  0x01,    // Italian
+	SUBLANG_ITALIAN_SWISS =            0x02,    // Italian (Swiss)
+	SUBLANG_KOREAN =                   0x01,    // Korean (Extended Wansung)
+	SUBLANG_KOREAN_JOHAB =             0x02,    // Korean (Johab)
+	SUBLANG_NORWEGIAN_BOKMAL =         0x01,    // Norwegian (Bokmal)
+	SUBLANG_NORWEGIAN_NYNORSK =        0x02,    // Norwegian (Nynorsk)
+	SUBLANG_PORTUGUESE =               0x02,    // Portuguese
+	SUBLANG_PORTUGUESE_BRAZILIAN =     0x01,    // Portuguese (Brazilian)
+	SUBLANG_SERBIAN_LATIN =            0x02,    // Serbian (Latin)
+	SUBLANG_SERBIAN_CYRILLIC =         0x03,    // Serbian (Cyrillic)
+	SUBLANG_SPANISH =                  0x01,    // Spanish (Castilian)
+	SUBLANG_SPANISH_MEXICAN =          0x02,    // Spanish (Mexican)
+	SUBLANG_SPANISH_MODERN =           0x03,    // Spanish (Modern)
+	SUBLANG_SPANISH_GUATEMALA =        0x04,    // Spanish (Guatemala)
+	SUBLANG_SPANISH_COSTA_RICA =       0x05,    // Spanish (Costa Rica)
+	SUBLANG_SPANISH_PANAMA =           0x06,    // Spanish (Panama)
+	SUBLANG_SPANISH_DOMINICAN_REPUBLIC = 0x07,  // Spanish (Dominican Republic)
+	SUBLANG_SPANISH_VENEZUELA =        0x08,    // Spanish (Venezuela)
+	SUBLANG_SPANISH_COLOMBIA =         0x09,    // Spanish (Colombia)
+	SUBLANG_SPANISH_PERU =             0x0a,    // Spanish (Peru)
+	SUBLANG_SPANISH_ARGENTINA =        0x0b,    // Spanish (Argentina)
+	SUBLANG_SPANISH_ECUADOR =          0x0c,    // Spanish (Ecuador)
+	SUBLANG_SPANISH_CHILE =            0x0d,    // Spanish (Chile)
+	SUBLANG_SPANISH_URUGUAY =          0x0e,    // Spanish (Uruguay)
+	SUBLANG_SPANISH_PARAGUAY =         0x0f,    // Spanish (Paraguay)
+	SUBLANG_SPANISH_BOLIVIA =          0x10,    // Spanish (Bolivia)
+	SUBLANG_SPANISH_EL_SALVADOR =      0x11,    // Spanish (El Salvador)
+	SUBLANG_SPANISH_HONDURAS =         0x12,    // Spanish (Honduras)
+	SUBLANG_SPANISH_NICARAGUA =        0x13,    // Spanish (Nicaragua)
+	SUBLANG_SPANISH_PUERTO_RICO =      0x14,    // Spanish (Puerto Rico)
+	SUBLANG_SWEDISH =                  0x01,    // Swedish
+	SUBLANG_SWEDISH_FINLAND =          0x02,    // Swedish (Finland)
+}
+//
+//  Sorting IDs.
+//
+
+enum
+{
+	SORT_DEFAULT                   = 0x0,    // sorting default
+
+	SORT_JAPANESE_XJIS             = 0x0,    // Japanese XJIS order
+	SORT_JAPANESE_UNICODE          = 0x1,    // Japanese Unicode order
+
+	SORT_CHINESE_BIG5              = 0x0,    // Chinese BIG5 order
+	SORT_CHINESE_PRCP              = 0x0,    // PRC Chinese Phonetic order
+	SORT_CHINESE_UNICODE           = 0x1,    // Chinese Unicode order
+	SORT_CHINESE_PRC               = 0x2,    // PRC Chinese Stroke Count order
+
+	SORT_KOREAN_KSC                = 0x0,    // Korean KSC order
+	SORT_KOREAN_UNICODE            = 0x1,    // Korean Unicode order
+
+	SORT_GERMAN_PHONE_BOOK         = 0x1,    // German Phone Book order
+}
+
+// end_r_winnt
+
+//
+//  A language ID is a 16 bit value which is the combination of a
+//  primary language ID and a secondary language ID.  The bits are
+//  allocated as follows:
+//
+//       +-----------------------+-------------------------+
+//       |     Sublanguage ID    |   Primary Language ID   |
+//       +-----------------------+-------------------------+
+//        15                   10 9                       0   bit
+//
+//
+//  Language ID creation/extraction macros:
+//
+//    MAKELANGID    - construct language id from a primary language id and
+//                    a sublanguage id.
+//    PRIMARYLANGID - extract primary language id from a language id.
+//    SUBLANGID     - extract sublanguage id from a language id.
+//
+
+int MAKELANGID(int p, int s) { return ((cast(WORD)s) << 10) | cast(WORD)p; }
+WORD PRIMARYLANGID(int lgid) { return cast(WORD)lgid & 0x3ff; }
+WORD SUBLANGID(int lgid)     { return cast(WORD)lgid >> 10; }
+
 
 struct FLOATING_SAVE_AREA {
     DWORD   ControlWord;
@@ -1741,10 +1988,10 @@ alias WNDCLASSA WNDCLASS;
 /*
  * Window Styles
  */
-enum
+enum : uint
 {
 	WS_OVERLAPPED =       0x00000000,
-	WS_POPUP =            cast(int)0x80000000,
+	WS_POPUP =            0x80000000,
 	WS_CHILD =            0x40000000,
 	WS_MINIMIZE =         0x20000000,
 	WS_VISIBLE =          0x10000000,

@@ -1877,6 +1877,8 @@ int parseRange()
 			    case RS.rliteral:
 				r.setbit2(c);
 				break;
+			    default:
+				break;
 			}
 			rs = RS.start;
 			continue;

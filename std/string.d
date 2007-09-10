@@ -595,8 +595,9 @@ int ifind(char[] s, char[] sub)
 		    return -1;
 		i += j;
 		if (icmp(s[i + 1 .. i + sublength], subn) == 0)
-		    break;
+		    return i;
 	    }
+	    i = -1;
 	}
 	else
 	{
@@ -605,8 +606,9 @@ int ifind(char[] s, char[] sub)
 	    for (i = 0; i < imax; i++)
 	    {
 		if (icmp(s[i .. i + sublength], sub) == 0)
-		    break;
+		    return i;
 	    }
+	    i = -1;
 	}
 	return i;
     }
@@ -646,6 +648,11 @@ unittest
     assert(i == 41);
     i = ifind(sPlts, sPlts);
     assert(i == 0);
+
+    // Thanks to Carlos Santander B. and zwang
+    i = ifind("sus mejores cortesanos. Se embarcaron en el puerto de Dubai y",
+	"page-break-before");
+    assert(i == -1);
 }
 
 /*************************************

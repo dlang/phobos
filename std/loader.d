@@ -73,7 +73,6 @@ module std.loader;
 private import std.string;
 private import std.c.stdlib;
 private import std.c.stdio;
-private import std.syserror;
 
 //import synsoft.types;
 /+ + These are borrowed from synsoft.types, until such time as something similar is in Phobos ++
@@ -86,7 +85,8 @@ public alias int                    boolean;
 
 version(Windows)
 {
-    import std.c.windows.windows;
+    private import std.c.windows.windows;
+    private import std.windows.syserror;
 
     extern(Windows)
     {
@@ -105,6 +105,8 @@ else version(linux)
         int         dlclose(HModule_ handle);
         void        *dlsym(HModule_ handle, char *symbolName);
         char        *dlerror();
+
+	char* strerror(int);
     }
 }
 else
@@ -265,7 +267,7 @@ version(Windows)
 
     private char[] ExeModule_Error_()
     {
-	return SysError.msg(s_lastError);
+	return sysErrorString(s_lastError);
     }
 
     private char[] ExeModule_GetPath_(HXModule hModule)
@@ -493,7 +495,7 @@ public:
 
     this(uint errcode)
     {
-	super(SysError.msg(errcode));
+	super(std.string.toString(strerror(errcode)).dup);
     }
 }
 

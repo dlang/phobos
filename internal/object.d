@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2004 by Digital Mars, www.digitalmars.com
+ *  Copyright (C) 2004-2005 by Digital Mars, www.digitalmars.com
  *  Written by Walter Bright
  *
  *  This software is provided 'as-is', without any express or implied
@@ -27,11 +27,12 @@ module object;
 extern (C)
 {   int printf(char *, ...);
     int memcmp(void *, void *, size_t);
+    void* memcpy(void *, void *, size_t);
 }
 
 alias bit bool;
 
-version (AMD64)
+version (X86_64)
 {
     alias ulong size_t;
     alias long ptrdiff_t;
@@ -139,6 +140,7 @@ class TypeInfo
 
 class TypeInfo_Typedef : TypeInfo
 {
+    char[] toString() { return name; }
     uint getHash(void *p) { return base.getHash(p); }
     int equals(void *p1, void *p2) { return base.equals(p1, p2); }
     int compare(void *p1, void *p2) { return base.compare(p1, p2); }
@@ -146,6 +148,228 @@ class TypeInfo_Typedef : TypeInfo
     void swap(void *p1, void *p2) { return base.swap(p1, p2); }
 
     TypeInfo base;
+    char[] name;
+}
+
+class TypeInfo_Enum : TypeInfo_Typedef
+{
+}
+
+class TypeInfo_Pointer : TypeInfo
+{
+    char[] toString() { return next.toString() ~ "*"; }
+
+    uint getHash(void *p)
+    {
+        return cast(uint)*cast(void* *)p;
+    }
+
+    int equals(void *p1, void *p2)
+    {
+        return *cast(void* *)p1 == *cast(void* *)p2;
+    }
+
+    int compare(void *p1, void *p2)
+    {
+        return *cast(void* *)p1 - *cast(void* *)p2;
+    }
+
+    int tsize()
+    {
+	return (void*).sizeof;
+    }
+
+    void swap(void *p1, void *p2)
+    {	void* tmp;
+	tmp = *cast(void**)p1;
+	*cast(void**)p1 = *cast(void**)p2;
+	*cast(void**)p2 = tmp;
+    }
+
+    TypeInfo next;
+}
+
+class TypeInfo_Array : TypeInfo
+{
+    char[] toString() { return next.toString() ~ "[]"; }
+
+    uint getHash(void *p)
+    {	size_t sz = next.tsize();
+	uint hash = 0;
+	void[] a = *cast(void[]*)p;
+	for (size_t i = 0; i < a.length; i++)
+	    hash += next.getHash(a.ptr + i * sz);
+        return hash;
+    }
+
+    int equals(void *p1, void *p2)
+    {
+	void[] a1 = *cast(void[]*)p1;
+	void[] a2 = *cast(void[]*)p2;
+	if (a1.length != a2.length)
+	    return 0;
+	size_t sz = next.tsize();
+	for (size_t i = 0; i < a1.length; i++)
+	{
+	    if (!next.equals(a1.ptr + i * sz, a2.ptr + i * sz))
+		return 0;
+	}
+        return 1;
+    }
+
+    int compare(void *p1, void *p2)
+    {
+	void[] a1 = *cast(void[]*)p1;
+	void[] a2 = *cast(void[]*)p2;
+	size_t sz = next.tsize();
+	size_t len = a1.length;
+
+        if (a2.length < len)
+            len = a2.length;
+        for (size_t u = 0; u < len; u++)
+        {
+            int result = next.compare(a1.ptr + u * sz, a2.ptr + u * sz);
+            if (result)
+                return result;
+        }
+        return cast(int)a1.length - cast(int)a2.length;
+    }
+
+    int tsize()
+    {
+	return (void[]).sizeof;
+    }
+
+    void swap(void *p1, void *p2)
+    {	void[] tmp;
+	tmp = *cast(void[]*)p1;
+	*cast(void[]*)p1 = *cast(void[]*)p2;
+	*cast(void[]*)p2 = tmp;
+    }
+
+    TypeInfo next;
+}
+
+class TypeInfo_StaticArray : TypeInfo
+{
+    char[] toString()
+    {
+	return next.toString() ~ "[" ~ std.string.toString(len) ~ "]";
+    }
+
+    uint getHash(void *p)
+    {	size_t sz = next.tsize();
+	uint hash = 0;
+	for (size_t i = 0; i < len; i++)
+	    hash += next.getHash(p + i * sz);
+        return hash;
+    }
+
+    int equals(void *p1, void *p2)
+    {
+	size_t sz = next.tsize();
+
+        for (size_t u = 0; u < len; u++)
+        {
+	    if (!next.equals(p1 + u * sz, p2 + u * sz))
+		return 0;
+        }
+        return 1;
+    }
+
+    int compare(void *p1, void *p2)
+    {
+	size_t sz = next.tsize();
+
+        for (size_t u = 0; u < len; u++)
+        {
+            int result = next.compare(p1 + u * sz, p2 + u * sz);
+            if (result)
+                return result;
+        }
+        return 0;
+    }
+
+    int tsize()
+    {
+	return len * next.tsize();
+    }
+
+    void swap(void *p1, void *p2)
+    {	ubyte* tmp;
+	size_t sz = next.tsize();
+	ubyte[16] buffer;
+	ubyte* pbuffer;
+
+	if (sz < buffer.sizeof)
+	    tmp = buffer;
+	else
+	    tmp = pbuffer = new ubyte[sz];
+
+	for (size_t u = 0; u < len; u += sz)
+	{   size_t o = u * sz;
+	    memcpy(tmp, p1 + o, sz);
+	    memcpy(p1 + o, p2 + o, sz);
+	    memcpy(p2 + o, tmp, sz);
+	}
+	if (pbuffer)
+	    delete pbuffer;
+    }
+
+    TypeInfo next;
+    size_t len;
+}
+
+class TypeInfo_AssociativeArray : TypeInfo
+{
+    char[] toString()
+    {
+	return next.toString() ~ "[" ~ key.toString() ~ "]";
+    }
+
+    // BUG: need to add the rest of the functions
+
+    int tsize()
+    {
+	return (void[]).sizeof;
+    }
+
+    TypeInfo next;
+    TypeInfo key;
+}
+
+class TypeInfo_Function : TypeInfo
+{
+    char[] toString()
+    {
+	return next.toString() ~ "()";
+    }
+
+    // BUG: need to add the rest of the functions
+
+    int tsize()
+    {
+	return 0;	// no size for functions
+    }
+
+    TypeInfo next;
+}
+
+class TypeInfo_Delegate : TypeInfo
+{
+    char[] toString()
+    {
+	return next.toString() ~ " delegate()";
+    }
+
+    // BUG: need to add the rest of the functions
+
+    int tsize()
+    {	alias int delegate() dg;
+	return dg.sizeof;
+    }
+
+    TypeInfo next;
 }
 
 class TypeInfo_Class : TypeInfo
@@ -283,7 +507,7 @@ class Exception : Object
 
     void print()
     {
-	printf("%.*s\n", msg);
+	printf("%.*s\n", toString());
     }
 
     char[] toString() { return msg; }

@@ -1,16 +1,25 @@
 
 module std.outofmemory;
 
-class OutOfMemory : Object
+class OutOfMemoryException : Exception
 {
-    void print()
+    static char[] s = "Out of memory";
+
+    this()
     {
-	printf("Out of memory\n");
+	super(s);
+    }
+
+    char[] toString()
+    {
+	return s;
     }
 }
 
 extern (C) void _d_OutOfMemory()
 {
-    throw cast(OutOfMemory)cast(void *)OutOfMemory.classinfo.init;
+    throw cast(OutOfMemoryException)
+	  cast(void *)
+	  OutOfMemoryException.classinfo.init;
 }
 
