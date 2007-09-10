@@ -107,17 +107,17 @@ class StdioException : Exception
 {
     uint errno;			// operating system error code
 
-    this(char[] msg)
+    this(const char[] msg)
     {
 	super(msg);
     }
 
     this(uint errno)
-    {	char* s = strerror(errno);
+    {	const(char*) s = strerror(errno);
 	super(std.string.toString(s).dup);
     }
 
-    static void opCall(char[] msg)
+    static void opCall(const char[] msg)
     {
 	throw new StdioException(msg);
     }
@@ -150,7 +150,7 @@ void writefx(FILE* fp, TypeInfo[] arguments, void* argptr, int newline=false)
 	    }
 	    else
 	    {   char[4] buf;
-		char[] b;
+		string b;
 
 		b = std.utf.toUTF8(buf, c);
 		for (size_t i = 0; i < b.length; i++)

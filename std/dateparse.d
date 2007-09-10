@@ -35,7 +35,7 @@ private
 
 class DateParseError : Error
 {
-    this(char[] s)
+    this(string s)
     {
 	super("Invalid date string: " ~ s);
     }
@@ -43,7 +43,7 @@ class DateParseError : Error
 
 struct DateParse
 {
-    void parse(char[] s, out Date date)
+    void parse(string s, out Date date)
     {
 	*this = DateParse.init;
 
@@ -130,7 +130,7 @@ private:
 			// 2: PM
     int tzcorrection = int.min;	// -1200..1200 correction in hours
 
-    char[] s;
+    string s;
     int si;
     int number;
     char[] buffer;
@@ -265,11 +265,11 @@ private:
 	return result;
     }
 
-    DP classify(char[] buf)
+    DP classify(string buf)
     {
 	struct DateID
 	{
-	    char[] name;
+	    string name;
 	    DP tok;
 	    short value;
 	}
@@ -420,7 +420,7 @@ private:
 	return DP.err;
     }
 
-    int parseString(char[] s)
+    int parseString(string s)
     {
 	int n1;
 	int dp;

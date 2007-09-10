@@ -63,7 +63,7 @@ private import std.c.math;
 
 class NotImplemented : Error
 {
-    this(char[] msg)
+    this(string msg)
     {
 	super(msg ~ "not implemented");
     }

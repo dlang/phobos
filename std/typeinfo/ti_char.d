@@ -3,7 +3,7 @@ module std.typeinfo.ti_char;
 
 class TypeInfo_a : TypeInfo
 {
-    char[] toString() { return "char"; }
+    string toString() { return "char"; }
 
     hash_t getHash(void *p)
     {
@@ -40,4 +40,3 @@ class TypeInfo_a : TypeInfo
 	return (cast(char *)&c)[0 .. 1];
     }
 }
-

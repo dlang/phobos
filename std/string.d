@@ -43,8 +43,8 @@ private import std.stdarg;
 extern (C)
 {
 
-    size_t wcslen(wchar *);
-    int wcscmp(wchar *, wchar *);
+    size_t wcslen(in wchar *);
+    int wcscmp(in wchar *, in wchar *);
 }
 
 /* ************* Exceptions *************** */
@@ -52,7 +52,7 @@ extern (C)
 /// Thrown on errors in string functions.
 class StringException : Exception
 {
-    this(char[] msg)	/// Constructor
+    this(string msg)	/// Constructor
     {
 	super(msg);
     }
@@ -60,23 +60,23 @@ class StringException : Exception
 
 /* ************* Constants *************** */
 
-const char[16] hexdigits = "0123456789ABCDEF";			/// 0..9A..F
-const char[10] digits    = "0123456789";			/// 0..9
-const char[8]  octdigits = "01234567";				/// 0..7
-const char[26] lowercase = "abcdefghijklmnopqrstuvwxyz";	/// a..z
-const char[26] uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";	/// A..Z
-const char[52] letters   = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-			   "abcdefghijklmnopqrstuvwxyz";	/// A..Za..z
-const char[6] whitespace = " \t\v\r\n\f";			/// ASCII whitespace
+invariant char[16] hexdigits = "0123456789ABCDEF";		/// 0..9A..F
+invariant char[10] digits    = "0123456789";			/// 0..9
+invariant char[8]  octdigits = "01234567";			/// 0..7
+invariant char[26] lowercase = "abcdefghijklmnopqrstuvwxyz";	/// a..z
+invariant char[26] uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";	/// A..Z
+invariant char[52] letters   = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+			       "abcdefghijklmnopqrstuvwxyz";	/// A..Za..z
+invariant char[6] whitespace = " \t\v\r\n\f";			/// ASCII whitespace
 
 const dchar LS = '\u2028';	/// UTF line separator
 const dchar PS = '\u2029';	/// UTF paragraph separator
 
 /// Newline sequence for this system
 version (Windows)
-    const char[2] newline = "\r\n";
+    invariant char[2] newline = "\r\n";
 else version (linux)
-    const char[1] newline = "\n";
+    invariant char[1] newline = "\n";
 
 /**********************************
  * Returns true if c is whitespace
@@ -93,7 +93,7 @@ bool iswhite(dchar c)
  * Convert string to integer.
  */
 
-long atoi(char[] s)
+long atoi(in string s)
 {
     return std.c.stdlib.atoi(toStringz(s));
 }
@@ -102,7 +102,7 @@ long atoi(char[] s)
  * Convert string to real.
  */
 
-real atof(char[] s)
+real atof(in string s)
 {   char* endptr;
 
     auto result = strtold(toStringz(s), &endptr);
@@ -119,7 +119,7 @@ real atof(char[] s)
  *	</table>
  */
 
-int cmp(char[] s1, char[] s2)
+int cmp(in string s1, in string s2)
 {
     auto len = s1.length;
     int result;
@@ -137,7 +137,7 @@ int cmp(char[] s1, char[] s2)
  * ditto
  */
 
-int icmp(char[] s1, char[] s2)
+int icmp(in string s1, in string s2)
 {
     auto len = s1.length;
     int result;
@@ -198,7 +198,7 @@ unittest
  * Deprecated: replaced with toStringz().
  */
 
-deprecated char* toCharz(char[] s)
+deprecated char* toCharz(in string s)
 {
     return toStringz(s);
 }
@@ -207,7 +207,7 @@ deprecated char* toCharz(char[] s)
  * Convert array of chars s[] to a C-style 0 terminated string.
  */
 
-char* toStringz(char[] s)
+char* toStringz(in string s)
     in
     {
     }
@@ -221,9 +221,6 @@ char* toStringz(char[] s)
     body
     {
 	char[] copy;
-
-	if (s.length == 0)
-	    return "";
 
 	/+ Unfortunately, this isn't reliable.
 	   We could make this work if string literals are put
@@ -253,25 +250,25 @@ unittest
 
     char* p = toStringz("foo");
     assert(strlen(p) == 3);
-    char foo[] = "abbzxyzzy";
+    const(char) foo[] = "abbzxyzzy";
     p = toStringz(foo[3..5]);
     assert(strlen(p) == 2);
 
-    char[] test = "";
+    string test = "";
     p = toStringz(test);
     assert(*p == 0);
 }
 
 /******************************************
- * find, ifind _find first occurrance of c in string s.
- * rfind, irfind _find last occurrance of c in string s.
+ * find, ifind _find first occurrence of c in string s.
+ * rfind, irfind _find last occurrence of c in string s.
  *
  * find, rfind are case sensitive; ifind, irfind are case insensitive.
  * Returns:
  *	Index in s where c is found, -1 if not found.
  */
 
-int find(char[] s, dchar c)
+int find(in string s, dchar c)
 {
     if (c <= 0x7F)
     {	// Plain old ASCII
@@ -312,7 +309,7 @@ unittest
  * ditto
  */
 
-int ifind(char[] s, dchar c)
+int ifind(in string s, dchar c)
 {
     char* p;
 
@@ -322,8 +319,8 @@ int ifind(char[] s, dchar c)
 
 	foreach (int i, char c2; s)
 	{
-	    c2 = cast(char)std.ctype.tolower(c2);
-	    if (c1 == c2)
+	    auto c3 = cast(char)std.ctype.tolower(c2);
+	    if (c1 == c3)
 		return i;
 	}
     }
@@ -333,8 +330,8 @@ int ifind(char[] s, dchar c)
 
 	foreach (int i, dchar c2; s)
 	{
-	    c2 = std.uni.toUniLower(c2);
-	    if (c1 == c2)
+	    auto c3 = std.uni.toUniLower(c2);
+	    if (c1 == c3)
 		return i;
 	}
     }
@@ -356,7 +353,7 @@ unittest
     i = ifind("def", cast(dchar)'F');
     assert(i == 2);
 
-    char[] sPlts = "Mars: the fourth Rock (Planet) from the Sun.";
+    string sPlts = "Mars: the fourth Rock (Planet) from the Sun.";
 
     i = ifind("def", cast(char)'f');
     assert(i == 2);
@@ -372,7 +369,7 @@ unittest
  * ditto
  */
 
-int rfind(char[] s, dchar c)
+int rfind(in string s, dchar c)
 {
     size_t i;
 
@@ -388,7 +385,7 @@ int rfind(char[] s, dchar c)
 
     // c is a universal character
     char[4] buf;
-    char[] t;
+    string t;
     t = std.utf.toUTF8(buf, c);
     return rfind(s, t);
 }
@@ -413,7 +410,7 @@ unittest
  * ditto
  */
 
-int irfind(char[] s, dchar c)
+int irfind(in string s, dchar c)
 {
     size_t i;
 
@@ -466,7 +463,7 @@ unittest
     i = irfind("def", cast(dchar)'F');
     assert(i == 2);
 
-    char[] sPlts = "Mars: the fourth Rock (Planet) from the Sun.";
+    string sPlts = "Mars: the fourth Rock (Planet) from the Sun.";
 
     i = irfind("def", cast(char)'f');
     assert(i == 2);
@@ -479,15 +476,15 @@ unittest
 
 
 /******************************************
- * find, ifind _find first occurrance of sub[] in string s[].
- * rfind, irfind _find last occurrance of sub[] in string s[].
+ * find, ifind _find first occurrence of sub[] in string s[].
+ * rfind, irfind _find last occurrence of sub[] in string s[].
  *
  * find, rfind are case sensitive; ifind, irfind are case insensitive.
  * Returns:
  *	Index in s where c is found, -1 if not found.
  */
 
-int find(char[] s, char[] sub)
+int find(in string s, in string sub)
     out (result)
     {
 	if (result == -1)
@@ -511,7 +508,7 @@ int find(char[] s, char[] sub)
 	    auto c = sub[0];
 	    if (sublength == 1)
 	    {
-		auto p = cast(char*)memchr(s.ptr, c, s.length);
+		auto p = cast(const char*)memchr(s.ptr, c, s.length);
 		if (p)
 		    return p - &s[0];
 	    }
@@ -520,12 +517,12 @@ int find(char[] s, char[] sub)
 		size_t imax = s.length - sublength + 1;
 
 		// Remainder of sub[]
-		char *q = &sub[1];
+		auto q = &sub[1];
 		sublength--;
 
 		for (size_t i = 0; i < imax; i++)
 		{
-		    char *p = cast(char*)memchr(&s[i], c, imax - i);
+		    auto p = cast(const char*)memchr(&s[i], c, imax - i);
 		    if (!p)
 			break;
 		    i = p - &s[0];
@@ -562,7 +559,7 @@ unittest
  * ditto
  */
 
-int ifind(char[] s, char[] sub)
+int ifind(in string s, in string sub)
     out (result)
     {
 	if (result == -1)
@@ -595,7 +592,7 @@ int ifind(char[] s, char[] sub)
 	    size_t imax = s.length - sublength + 1;
 
 	    // Remainder of sub[]
-	    char[] subn = sub[1 .. sublength];
+	    auto subn = sub[1 .. sublength];
 
 	    for (i = 0; i < imax; i++)
 	    {
@@ -642,8 +639,8 @@ unittest
     i = ifind("dfeffgfff", "fff");
     assert(i == 6);
 
-    char[] sPlts = "Mars: the fourth Rock (Planet) from the Sun.";
-    char[] sMars = "Who\'s \'My Favorite Maritian?\'";
+    string sPlts = "Mars: the fourth Rock (Planet) from the Sun.";
+    string sMars = "Who\'s \'My Favorite Maritian?\'";
 
     i = ifind(sMars, "MY fAVe");
     assert(i == -1);
@@ -668,7 +665,7 @@ unittest
  * ditto
  */
 
-int rfind(char[] s, char[] sub)
+int rfind(in string s, in string sub)
     out (result)
     {
 	if (result == -1)
@@ -722,7 +719,7 @@ unittest
  * ditto
  */
 
-int irfind(char[] s, char[] sub)
+int irfind(in string s, in string sub)
     out (result)
     {
 	if (result == -1)
@@ -782,8 +779,8 @@ unittest
     i = irfind("abcdefcdef", "");
     assert(i == 10);
 
-    char[] sPlts = "Mars: the fourth Rock (Planet) from the Sun.";
-    char[] sMars = "Who\'s \'My Favorite Maritian?\'";
+    string sPlts = "Mars: the fourth Rock (Planet) from the Sun.";
+    string sMars = "Who\'s \'My Favorite Maritian?\'";
     
     i = irfind("abcdefcdef", "c");
     assert(i == 6);
@@ -807,10 +804,10 @@ unittest
  * Convert string s[] to lower case.
  */
 
-char[] tolower(char[] s)
+string tolower(string s)
 {
     bool changed;
-    auto r = s;
+    char[] r;
 
     for (size_t i = 0; i < s.length; i++)
     {
@@ -847,15 +844,15 @@ char[] tolower(char[] s)
 	    break;
 	}
     }
-    return r;
+    return changed ? r : s;
 }
 
 unittest
 {
     debug(string) printf("string.tolower.unittest\n");
 
-    char[] s1 = "FoL";
-    char[] s2;
+    string s1 = "FoL";
+    string s2;
 
     s2 = tolower(s1);
     assert(cmp(s2, "fol") == 0);
@@ -876,10 +873,10 @@ unittest
  * Convert string s[] to upper case.
  */
 
-char[] toupper(char[] s)
+string toupper(string s)
 {
     bool changed;
-    auto r = s;
+    char[] r;
 
     for (size_t i = 0; i < s.length; i++)
     {
@@ -916,15 +913,15 @@ char[] toupper(char[] s)
 	    break;
 	}
     }
-    return r;
+    return changed ? r : s;
 }
 
 unittest
 {
     debug(string) printf("string.toupper.unittest\n");
 
-    char[] s1 = "FoL";
-    char[] s2;
+    string s1 = "FoL";
+    string s2;
 
     s2 = toupper(s1);
     assert(cmp(s2, "FOL") == 0);
@@ -947,11 +944,11 @@ unittest
  * to lower case.
  */
 
-char[] capitalize(char[] s)
+string capitalize(string s)
 {
     int changed;
     int i;
-    char[] r = s;
+    char[] r;
 
     changed = 0;
 
@@ -981,7 +978,7 @@ char[] capitalize(char[] s)
 	if (changed)
 	    std.utf.encode(r, c2);
     }
-    return r;
+    return changed ? r : s;
 }
 
 
@@ -989,8 +986,8 @@ unittest
 {
     debug(string) printf("string.toupper.capitalize\n");
 
-    char[] s1 = "FoL";
-    char[] s2;
+    string s1 = "FoL";
+    string s2;
 
     s2 = capitalize(s1);
     assert(cmp(s2, "Fol") == 0);
@@ -1013,7 +1010,7 @@ unittest
  * Replace all sequences of whitespace with a single space.
  */
 
-char[] capwords(char[] s)
+string capwords(string s)
 {
     char[] r;
     bool inword = false;
@@ -1061,8 +1058,8 @@ unittest
 {
     debug(string) printf("string.capwords.unittest\n");
 
-    char[] s1 = "\tfoo abc(aD)*  \t  (q PTT  ";
-    char[] s2;
+    string s1 = "\tfoo abc(aD)*  \t  (q PTT  ";
+    string s2;
 
     s2 = capwords(s1);
     //writefln("s2 = '%s'", s2);
@@ -1073,7 +1070,7 @@ unittest
  * Return a string that consists of s[] repeated n times.
  */
 
-char[] repeat(char[] s, size_t n)
+string repeat(string s, size_t n)
 {
     if (n == 0)
 	return null;
@@ -1098,7 +1095,7 @@ unittest
 {
     debug(string) printf("string.repeat.unittest\n");
 
-    char[] s;
+    string s;
 
     s = repeat("1234", 0);
     assert(s is null);
@@ -1118,7 +1115,7 @@ unittest
  * string; use sep[] as the separator.
  */
 
-char[] join(char[][] words, char[] sep)
+string join(in string[] words, in string sep)
 {
     char[] result;
 
@@ -1158,11 +1155,11 @@ unittest
 {
     debug(string) printf("string.join.unittest\n");
 
-    char[] word1 = "peter";
-    char[] word2 = "paul";
-    char[] word3 = "jerry";
-    char[][3] words;
-    char[] r;
+    string word1 = "peter";
+    string word2 = "paul";
+    string word3 = "jerry";
+    string[3] words;
+    string r;
     int i;
 
     words[0] = word1;
@@ -1179,12 +1176,12 @@ unittest
  * using whitespace as the delimiter.
  */
 
-char[][] split(char[] s)
+string[] split(in string s)
 {
     size_t i;
     size_t istart = 0;
     bool inword = false;
-    char[][] words;
+    string[] words;
 
     for (i = 0; i < s.length; i++)
     {
@@ -1220,8 +1217,8 @@ unittest
 {
     debug(string) printf("string.split1\n");
 
-    char[] s = " peter paul\tjerry ";
-    char[][] words;
+    string s = " peter paul\tjerry ";
+    string[] words;
     int i;
 
     words = split(s);
@@ -1240,7 +1237,7 @@ unittest
  * using delim[] as the delimiter.
  */
 
-char[][] split(char[] s, char[] delim)
+string[] split(in string s, in string delim)
     in
     {
 	assert(delim.length > 0);
@@ -1249,7 +1246,7 @@ char[][] split(char[] s, char[] delim)
     {
 	size_t i;
 	size_t j;
-	char[][] words;
+	string[] words;
 
 	i = 0;
 	if (s.length)
@@ -1257,8 +1254,8 @@ char[][] split(char[] s, char[] delim)
 	    if (delim.length == 1)
 	    {	char c = delim[0];
 		size_t nwords = 0;
-		char* p = &s[0];
-		char* pend = p + s.length;
+		auto p = s.ptr;
+		auto pend = p + s.length;
 
 		while (true)
 		{
@@ -1344,8 +1341,8 @@ unittest
 {
     debug(string) printf("string.split2\n");
 
-    char[] s = ",peter,paul,jerry,";
-    char[][] words;
+    string s = ",peter,paul,jerry,";
+    string[] words;
     int i;
 
     words = split(s, ",");
@@ -1373,7 +1370,7 @@ unittest
     i = cmp(words[0], "peter");
     assert(i == 0);
 
-    char[] s2 = ",,peter,,paul,,jerry,,";
+    string s2 = ",,peter,,paul,,jerry,,";
 
     words = split(s2, ",,");
     //printf("words.length = %d\n", words.length);
@@ -1409,12 +1406,11 @@ unittest
  * The delimiter is not included in the line.
  */
 
-char[][] splitlines(char[] s)
+string[] splitlines(in string s)
 {
     uint i;
     uint istart;
     uint nlines;
-    char[][] lines;
 
     nlines = 0;
     for (i = 0; i < s.length; i++)
@@ -1435,7 +1431,7 @@ char[][] splitlines(char[] s)
     if (istart != i)
 	nlines++;
 
-    lines = new char[][nlines];
+    auto lines = new string[nlines];
     nlines = 0;
     istart = 0;
     for (i = 0; i < s.length; i++)
@@ -1467,8 +1463,8 @@ unittest
 {
     debug(string) printf("string.splitlines\n");
 
-    char[] s = "\rpeter\n\rpaul\r\njerry\n";
-    char[][] lines;
+    string s = "\rpeter\n\rpaul\r\njerry\n";
+    string[] lines;
     int i;
 
     lines = splitlines(s);
@@ -1497,7 +1493,7 @@ unittest
  * Strips leading or trailing whitespace, or both.
  */
 
-char[] stripl(char[] s)
+string stripl(string s)
 {
     uint i;
 
@@ -1509,7 +1505,7 @@ char[] stripl(char[] s)
     return s[i .. s.length];
 }
 
-char[] stripr(char[] s) /// ditto
+string stripr(string s) /// ditto
 {
     uint i;
 
@@ -1521,7 +1517,7 @@ char[] stripr(char[] s) /// ditto
     return s[0 .. i];
 }
 
-char[] strip(char[] s) /// ditto
+string strip(string s) /// ditto
 {
     return stripr(stripl(s));
 }
@@ -1529,7 +1525,7 @@ char[] strip(char[] s) /// ditto
 unittest
 {
     debug(string) printf("string.strip.unittest\n");
-    char[] s;
+    string s;
     int i;
 
     s = strip("  foo\t ");
@@ -1542,7 +1538,7 @@ unittest
  * If delimiter[] is null, removes trailing CR, LF, or CRLF, if any.
  */
 
-char[] chomp(char[] s, char[] delimiter = null)
+string chomp(string s, in string delimiter = null)
 {
     if (delimiter is null)
     {   auto len = s.length;
@@ -1572,7 +1568,7 @@ char[] chomp(char[] s, char[] delimiter = null)
 unittest
 {
     debug(string) printf("string.chomp.unittest\n");
-    char[] s;
+    string s;
 
     s = chomp(null);
     assert(s is null);
@@ -1611,7 +1607,7 @@ unittest
  * If last two characters are CR-LF, then both are removed.
  */
 
-char[] chop(char[] s)
+string chop(string s)
 {   auto len = s.length;
 
     if (len)
@@ -1636,7 +1632,7 @@ char[] chop(char[] s)
 unittest
 {
     debug(string) printf("string.chop.unittest\n");
-    char[] s;
+    string s;
 
     s = chop(null);
     assert(s is null);
@@ -1654,7 +1650,7 @@ unittest
  * in field width chars wide.
  */
 
-char[] ljustify(char[] s, int width)
+string ljustify(string s, int width)
 {
     if (s.length >= width)
 	return s;
@@ -1665,7 +1661,7 @@ char[] ljustify(char[] s, int width)
 }
 
 /// ditto
-char[] rjustify(char[] s, int width)
+string rjustify(string s, int width)
 {
     if (s.length >= width)
 	return s;
@@ -1676,7 +1672,7 @@ char[] rjustify(char[] s, int width)
 }
 
 /// ditto
-char[] center(char[] s, int width)
+string center(string s, int width)
 {
     if (s.length >= width)
 	return s;
@@ -1692,8 +1688,8 @@ unittest
 {
     debug(string) printf("string.justify.unittest\n");
 
-    char[] s = "hello";
-    char[] r;
+    string s = "hello";
+    string r;
     int i;
 
     r = ljustify(s, 8);
@@ -1718,7 +1714,7 @@ unittest
  * Same as rjustify(), but fill with '0's.
  */
 
-char[] zfill(char[] s, int width)
+string zfill(in string s, int width)
 {
     if (s.length >= width)
 	return s;
@@ -1732,7 +1728,7 @@ char[] zfill(char[] s, int width)
  * Replace occurrences of from[] with to[] in s[].
  */
 
-char[] replace(char[] s, char[] from, char[] to)
+string replace(string s, in string from, in string to)
 {
     char[] p;
     int i;
@@ -1761,10 +1757,10 @@ unittest
 {
     debug(string) printf("string.replace.unittest\n");
 
-    char[] s = "This is a foo foo list";
-    char[] from = "foo";
-    char[] to = "silly";
-    char[] r;
+    string s = "This is a foo foo list";
+    string from = "foo";
+    string to = "silly";
+    string r;
     int i;
 
     r = replace(s, from, to);
@@ -1777,28 +1773,28 @@ unittest
 }
 
 /*****************************
- * Return a _string that is string[] with slice[] replaced by replacement[].
+ * Return a _string that is s[] with slice[] replaced by replacement[].
  */
 
-char[] replaceSlice(char[] string, char[] slice, char[] replacement)
+string replaceSlice(string s, in string slice, in string replacement)
 in
 {
-    // Verify that slice[] really is a slice of string[]
-    int so = cast(char*)slice - cast(char*)string;
+    // Verify that slice[] really is a slice of s[]
+    int so = cast(char*)slice - cast(char*)s;
     assert(so >= 0);
-    //printf("string.length = %d, so = %d, slice.length = %d\n", string.length, so, slice.length);
-    assert(string.length >= so + slice.length);
+    //printf("s.length = %d, so = %d, slice.length = %d\n", s.length, so, slice.length);
+    assert(s.length >= so + slice.length);
 }
 body
 {
     char[] result;
-    int so = cast(char*)slice - cast(char*)string;
+    int so = cast(char*)slice - cast(char*)s;
 
-    result.length = string.length - slice.length + replacement.length;
+    result.length = s.length - slice.length + replacement.length;
 
-    result[0 .. so] = string[0 .. so];
+    result[0 .. so] = s[0 .. so];
     result[so .. so + replacement.length] = replacement;
-    result[so + replacement.length .. result.length] = string[so + slice.length .. string.length];
+    result[so + replacement.length .. result.length] = s[so + slice.length .. s.length];
 
     return result;
 }
@@ -1807,10 +1803,10 @@ unittest
 {
     debug(string) printf("string.replaceSlice.unittest\n");
 
-    char[] string = "hello";
-    char[] slice = string[2 .. 4];
+    auto s = "hello";
+    auto slice = s[2 .. 4];
 
-    char[] r = replaceSlice(string, slice, "bar");
+    auto r = replaceSlice(s, slice, "bar");
     int i;
     i = cmp(r, "hebaro");
     assert(i == 0);
@@ -1820,7 +1816,7 @@ unittest
  * Insert sub[] into s[] at location index.
  */
 
-char[] insert(char[] s, size_t index, char[] sub)
+string insert(string s, size_t index, string sub)
 in
 {
     assert(0 <= index && index <= s.length);
@@ -1846,7 +1842,7 @@ unittest
 {
     debug(string) printf("string.insert.unittest\n");
 
-    char[] r;
+    string r;
     int i;
 
     r = insert("abcd", 0, "e");
@@ -1874,7 +1870,7 @@ unittest
  * Count up all instances of sub[] in s[].
  */
 
-size_t count(char[] s, char[] sub)
+size_t count(string s, string sub)
 {
     size_t i;
     int j;
@@ -1894,8 +1890,8 @@ unittest
 {
     debug(string) printf("string.count.unittest\n");
 
-    char[] s = "This is a fofofof list";
-    char[] sub = "fof";
+    string s = "This is a fofofof list";
+    string sub = "fof";
     int i;
 
     i = count(s, sub);
@@ -1908,14 +1904,14 @@ unittest
  * tabsize is the distance between tab stops.
  */
 
-char[] expandtabs(char[] string, int tabsize = 8)
+string expandtabs(string str, int tabsize = 8)
 {
     bool changes = false;
-    char[] result = string;
+    char[] result;
     int column;
     int nspaces;
 
-    foreach (size_t i, dchar c; string)
+    foreach (size_t i, dchar c; str)
     {
 	switch (c)
 	{
@@ -1925,9 +1921,9 @@ char[] expandtabs(char[] string, int tabsize = 8)
 		{
 		    changes = true;
 		    result = null;
-		    result.length = string.length + nspaces - 1;
+		    result.length = str.length + nspaces - 1;
 		    result.length = i + nspaces;
-		    result[0 .. i] = string[0 .. i];
+		    result[0 .. i] = str[0 .. i];
 		    result[i .. i + nspaces] = ' ';
 		}
 		else
@@ -1959,15 +1955,15 @@ char[] expandtabs(char[] string, int tabsize = 8)
 	}
     }
 
-    return result;
+    return changes ? result : str;
 }
 
 unittest
 {
     debug(string) printf("string.expandtabs.unittest\n");
 
-    char[] s = "This \tis\t a fofof\tof list";
-    char[] r;
+    auto s = "This \tis\t a fofof\tof list";
+    string r;
     int i;
 
     r = expandtabs(s, 8);
@@ -1990,32 +1986,32 @@ unittest
 
 
 /*******************************************
- * Replace spaces in string with the optimal number of tabs.
+ * Replace spaces in string s with the optimal number of tabs.
  * Trailing spaces or tabs in a line are removed.
  * Params:
- *	string = String to convert.
+ *	s = String to convert.
  *	tabsize = Tab columns are tabsize spaces apart. tabsize defaults to 8.
  */
 
-char[] entab(char[] string, int tabsize = 8)
+string entab(string s, int tabsize = 8)
 {
     bool changes = false;
-    char[] result = string;
+    char[] result;
 
     int nspaces = 0;
     int nwhite = 0;
     int column = 0;			// column number
 
-    foreach (size_t i, dchar c; string)
+    foreach (size_t i, dchar c; s)
     {   
 
 	void change()
 	{
 	    changes = true;
 	    result = null;
-	    result.length = string.length;
+	    result.length = s.length;
 	    result.length = i;
-	    result[0 .. i] = string[0 .. i];
+	    result[0 .. i] = s[0 .. i];
 	}
 
 	switch (c)
@@ -2085,16 +2081,20 @@ char[] entab(char[] string, int tabsize = 8)
 
     // Truncate any trailing spaces or tabs
     if (nwhite)
-	result = result[0 .. result.length - nwhite];
-
-    return result;
+    {
+	if (changes)
+	    result = result[0 .. result.length - nwhite];
+	else
+	    s = s[0 .. s.length - nwhite];
+    }
+    return changes ? result : s;
 }
 
 unittest
 {
     debug(string) printf("string.entab.unittest\n");
 
-    char[] r;
+    string r;
 
     r = entab(null);
     assert(r == null);
@@ -2140,7 +2140,7 @@ unittest
  * BUG: only works with ASCII
  */
 
-char[] maketrans(char[] from, char[] to)
+string maketrans(in string from, in string to)
     in
     {
 	assert(from.length == to.length);
@@ -2174,7 +2174,7 @@ char[] maketrans(char[] from, char[] to)
  * BUG: only works with ASCII
  */
 
-char[] translate(char[] s, char[] transtab, char[] delchars)
+string translate(string s, in string transtab, in string delchars)
     in
     {
 	assert(transtab.length == 256);
@@ -2217,11 +2217,11 @@ unittest
 {
     debug(string) printf("string.translate.unittest\n");
 
-    char[] from = "abcdef";
-    char[] to   = "ABCDEF";
-    char[] s    = "The quick dog fox";
-    char[] t;
-    char[] r;
+    string from = "abcdef";
+    string to   = "ABCDEF";
+    string s    = "The quick dog fox";
+    string t;
+    string r;
     int i;
 
     t = maketrans(from, to);
@@ -2232,16 +2232,16 @@ unittest
 }
 
 /***********************************************
- * Convert to char[].
+ * Convert to string.
  */
 
-char[] toString(bool b)
+string toString(bool b)
 {
     return b ? "true" : "false";
 }
 
 /// ditto
-char[] toString(char c)
+string toString(char c)
 {
     char[] result = new char[2];
     result[0] = c;
@@ -2253,8 +2253,8 @@ unittest
 {
     debug(string) printf("string.toString(char).unittest\n");
 
-    char[] s = "foo";
-    char[] s2;
+    string s = "foo";
+    string s2;
     foreach (char c; s)
     {
 	s2 ~= std.string.toString(c);
@@ -2263,11 +2263,11 @@ unittest
     assert(s2 == "foo");
 }
 
-char[] toString(ubyte ub)  { return toString(cast(uint) ub); } /// ditto
-char[] toString(ushort us) { return toString(cast(uint) us); } /// ditto
+string toString(ubyte ub)  { return toString(cast(uint) ub); } /// ditto
+string toString(ushort us) { return toString(cast(uint) us); } /// ditto
 
 /// ditto
-char[] toString(uint u)
+string toString(uint u)
 {   char[uint.sizeof * 3] buffer = void;
     int ndigits;
     char[] result;
@@ -2275,7 +2275,7 @@ char[] toString(uint u)
     ndigits = 0;
     if (u < 10)
 	// Avoid storage allocation for simple stuff
-	result = digits[u .. u + 1];
+	return digits[u .. u + 1];
     else
     {
 	while (u)
@@ -2295,7 +2295,7 @@ unittest
 {
     debug(string) printf("string.toString(uint).unittest\n");
 
-    char[] r;
+    string r;
     int i;
 
     r = toString(0u);
@@ -2312,7 +2312,7 @@ unittest
 }
 
 /// ditto
-char[] toString(ulong u)
+string toString(ulong u)
 {   char[ulong.sizeof * 3] buffer;
     int ndigits;
     char[] result;
@@ -2336,7 +2336,7 @@ unittest
 {
     debug(string) printf("string.toString(ulong).unittest\n");
 
-    char[] r;
+    string r;
     int i;
 
     r = toString(0uL);
@@ -2352,11 +2352,11 @@ unittest
     assert(i == 0);
 }
 
-char[] toString(byte b)  { return toString(cast(int) b); } /// ditto
-char[] toString(short s) { return toString(cast(int) s); } /// ditto
+string toString(byte b)  { return toString(cast(int) b); } /// ditto
+string toString(short s) { return toString(cast(int) s); } /// ditto
 
 /// ditto
-char[] toString(int i)
+string toString(int i)
 {   char[1 + int.sizeof * 3] buffer;
     char[] result;
 
@@ -2382,7 +2382,7 @@ unittest
 {
     debug(string) printf("string.toString(int).unittest\n");
 
-    char[] r;
+    string r;
     int i;
 
     r = toString(0);
@@ -2411,7 +2411,7 @@ unittest
 }
 
 /// ditto
-char[] toString(long i)
+string toString(long i)
 {   char[1 + long.sizeof * 3] buffer;
     char[] result;
 
@@ -2439,7 +2439,7 @@ unittest
 {
     debug(string) printf("string.toString(long).unittest\n");
 
-    char[] r;
+    string r;
     int i;
 
     r = toString(0L);
@@ -2468,10 +2468,10 @@ unittest
 }
 
 /// ditto
-char[] toString(float f) { return toString(cast(double) f); }
+string toString(float f) { return toString(cast(double) f); }
 
 /// ditto
-char[] toString(double d)
+string toString(double d)
 {
     char[20] buffer;
 
@@ -2480,7 +2480,7 @@ char[] toString(double d)
 }
 
 /// ditto
-char[] toString(real r)
+string toString(real r)
 {
     char[20] buffer;
 
@@ -2489,10 +2489,10 @@ char[] toString(real r)
 }
 
 /// ditto
-char[] toString(ifloat f) { return toString(cast(idouble) f); }
+string toString(ifloat f) { return toString(cast(idouble) f); }
 
 /// ditto
-char[] toString(idouble d)
+string toString(idouble d)
 {
     char[21] buffer;
 
@@ -2501,7 +2501,7 @@ char[] toString(idouble d)
 }
 
 /// ditto
-char[] toString(ireal r)
+string toString(ireal r)
 {
     char[21] buffer;
 
@@ -2510,10 +2510,10 @@ char[] toString(ireal r)
 }
 
 /// ditto
-char[] toString(cfloat f) { return toString(cast(cdouble) f); }
+string toString(cfloat f) { return toString(cast(cdouble) f); }
 
 /// ditto
-char[] toString(cdouble d)
+string toString(cdouble d)
 {
     char[20 + 1 + 20 + 1] buffer;
 
@@ -2522,7 +2522,7 @@ char[] toString(cdouble d)
 }
 
 /// ditto
-char[] toString(creal r)
+string toString(creal r)
 {
     char[20 + 1 + 20 + 1] buffer;
 
@@ -2538,7 +2538,7 @@ char[] toString(creal r)
  * value is treated as a signed value only if radix is 10.
  * The characters A through Z are used to represent values 10 through 36.
  */
-char[] toString(long value, uint radix)
+string toString(long value, uint radix)
 in
 {
     assert(radix >= 2 && radix <= 36);
@@ -2551,7 +2551,7 @@ body
 }
 
 /// ditto
-char[] toString(ulong value, uint radix)
+string toString(ulong value, uint radix)
 in
 {
     assert(radix >= 2 && radix <= 36);
@@ -2579,7 +2579,7 @@ unittest
 {
     debug(string) printf("string.toString(ulong, uint).unittest\n");
 
-    char[] r;
+    string r;
     int i;
 
     r = toString(-10L, 10u);
@@ -2599,19 +2599,19 @@ unittest
 }
 
 /*************************************************
- * Convert C-style 0 terminated string s to char[] string.
+ * Convert C-style 0 terminated string s to string string.
  */
 
-char[] toString(char *s)
+string toString(const char *s)
 {
-    return s ? s[0 .. strlen(s)] : cast(char[])null;
+    return s ? s[0 .. strlen(s)] : cast(string)null;
 }
 
 unittest
 {
     debug(string) printf("string.toString(char*).unittest\n");
 
-    char[] r;
+    string r;
     int i;
 
     r = toString(null);
@@ -2629,7 +2629,7 @@ unittest
  */
 
 
-char[] format(...)
+string format(...)
 {
     char[] s;
 
@@ -2648,7 +2648,7 @@ char[] format(...)
  * enough to hold the result. Throws ArrayBoundsError if it is not.
  * Returns: s
  */
-char[] sformat(char[] s, ...)
+string sformat(char[] s, ...)
 {   size_t i;
 
     void putc(dchar c)
@@ -2662,7 +2662,7 @@ char[] sformat(char[] s, ...)
 	}
 	else
 	{   char[4] buf;
-	    char[] b;
+	    string b;
 
 	    b = std.utf.toUTF8(buf, c);
 	    if (i + b.length > s.length)
@@ -2681,7 +2681,7 @@ unittest
 {
     debug(string) printf("std.string.format.unittest\n");
 
-    char[] r;
+    string r;
     int i;
 /+
     r = format(null);
@@ -2737,7 +2737,7 @@ unittest
  *	to be more like regular expression character classes.
  */
 
-bool inPattern(dchar c, char[] pattern)
+bool inPattern(dchar c, in string pattern)
 {
     bool result = false;
     int range = 0;
@@ -2779,7 +2779,7 @@ unittest
     assert(i == 1);
     i = inPattern('x', "y");
     assert(i == 0);
-    i = inPattern('x', cast(char[])null);
+    i = inPattern('x', cast(string)null);
     assert(i == 0);
     i = inPattern('x', "^y");
     assert(i == 1);
@@ -2820,10 +2820,10 @@ unittest
  * See if character c is in the intersection of the patterns.
  */
 
-int inPattern(dchar c, char[][] patterns)
+int inPattern(dchar c, string[] patterns)
 {   int result;
 
-    foreach (char[] pattern; patterns)
+    foreach (string pattern; patterns)
     {
 	if (!inPattern(c, pattern))
 	{   result = 0;
@@ -2839,7 +2839,7 @@ int inPattern(dchar c, char[][] patterns)
  * Count characters in s that match pattern.
  */
 
-size_t countchars(char[] s, char[] pattern)
+size_t countchars(string s, string pattern)
 {
     size_t count;
 
@@ -2868,42 +2868,38 @@ unittest
  * Return string that is s with all characters removed that match pattern.
  */
 
-char[] removechars(char[] s, char[] pattern)
+string removechars(string s, in string pattern)
 {
-    char[] r = s;
-    int changed;
-    size_t j;
+    char[] r;
+    bool changed;
 
+    //writefln("removechars(%s, %s)", s, pattern);
     foreach (size_t i, dchar c; s)
     {
 	if (!inPattern(c, pattern))
 	{
+	    if (!changed)
+	    {   changed = true;
+		r = s[0 .. i].dup;
+	    }
 	    if (changed)
 	    {
-		if (r is s)
-		    r = s[0 .. j].dup;
 		std.utf.encode(r, c);
 	    }
 	}
-	else if (!changed)
-	{   changed = 1;
-	    j = i;
-	}
     }
-    if (changed && r is s)
-	r = s[0 .. j].dup;
     return r;
 }
 
 
 unittest
 {
-    debug(string) printf("std.string.remove.unittest\n");
+    debug(string) printf("std.string.removechars.unittest\n");
 
-    char[] r;
+    string r;
 
     r = removechars("abc", "a-c");
-    assert(r is null);
+    assert(r.length == 0);
     r = removechars("hello world", "or");
     assert(r == "hell wld");
     r = removechars("hello world", "d");
@@ -2917,9 +2913,9 @@ unittest
  * If pattern is null, it defaults to all characters.
  */
 
-char[] squeeze(char[] s, char[] pattern = null)
+string squeeze(string s, in string pattern = null)
 {
-    char[] r = s;
+    char[] r;
     dchar lastc;
     size_t lasti;
     int run;
@@ -2935,7 +2931,7 @@ char[] squeeze(char[] s, char[] pattern = null)
 	{
 	    run = 1;
 	    if (changed)
-	    {	if (r is s)
+	    {	if (r is null)
 		    r = s[0 .. lasti].dup;
 		std.utf.encode(r, c);
 	    }
@@ -2947,25 +2943,20 @@ char[] squeeze(char[] s, char[] pattern = null)
 	{
 	    run = 0;
 	    if (changed)
-	    {	if (r is s)
+	    {	if (r is null)
 		    r = s[0 .. lasti].dup;
 		std.utf.encode(r, c);
 	    }
 	}
     }
-    if (changed)
-    {
-	if (r is s)
-	    r = s[0 .. lasti];
-    }
-    return r;
+    return changed ? ((r is null) ? s[0 .. lasti] : r) : s;
 }
 
 
 unittest
 {
     debug(string) printf("std.string.squeeze.unittest\n");
-    char[] s,r;
+    string s,r;
 
     r = squeeze("hello");
     //writefln("r = '%s'", r);
@@ -2988,7 +2979,7 @@ unittest
  * repeated with the one to its immediate left.
  */
 
-char[] succ(char[] s)
+string succ(string s)
 {
     if (s.length && isalnum(s[length - 1]))
     {
@@ -3035,7 +3026,7 @@ unittest
 {
     debug(string) printf("std.string.succ.unittest\n");
 
-    char[] r;
+    string r;
 
     r = succ(null);
     assert(r is null);
@@ -3082,7 +3073,7 @@ unittest
 	the string (use the <b>c</b> modifier for that).
  */
 
-char[] tr(char[] str, char[] from, char[] to, char[] modifiers = null)
+string tr(string str, string from, string to, string modifiers = null)
 {
     int mod_c;
     int mod_d;
@@ -3197,7 +3188,7 @@ unittest
 {
     debug(string) printf("std.string.tr.unittest\n");
 
-    char[] r;
+    string r;
     //writefln("r = '%s'", r);
 
     r = tr("abcdef", "cd", "CD");
@@ -3247,7 +3238,7 @@ unittest
  */
 
 /**
- * [in] char[] s can be formatted in the following ways:
+ * [in] string s can be formatted in the following ways:
  *
  * Integer Whole Number:
  * (for byte, ubyte, short, ushort, int, uint, long, and ulong)
@@ -3282,17 +3273,17 @@ unittest
  * function, or any of the conversion functions.
  */
 
-final bool isNumeric(in char[] s, in bool bAllowSep = false)
+final bool isNumeric(string s, in bool bAllowSep = false)
 {
     int    iLen = s.length;
     bool   bDecimalPoint = false;
     bool   bExponent = false;
     bool   bComplex = false;
-    char[] sx = std.string.tolower(s); 
+    string sx = std.string.tolower(s); 
     int    j  = 0;
     char   c;
 
-    //writefln("isNumeric(char[], bool = false) called!");
+    //writefln("isNumeric(string, bool = false) called!");
     // Empty string, return false
     if (iLen == 0)
         return false;
@@ -3433,9 +3424,9 @@ bool isNumeric(...)
 /// Check only the first parameter, all others will be ignored. 
 bool isNumeric(TypeInfo[] _arguments, va_list _argptr)
 {
-    char[]  s  = "";
-    wchar[] ws = "";
-    dchar[] ds = "";
+    auto  s = ""c;
+    auto ws = ""w;
+    auto ds = ""d;
 
     //writefln("isNumeric(...) called!");
     if (_arguments.length == 0)
@@ -3467,15 +3458,15 @@ bool isNumeric(TypeInfo[] _arguments, va_list _argptr)
         return true;   
     else if (_arguments[0] == typeid(ubyte)) 
     {
-       s.length = 1;
-       s[0]= va_arg!(ubyte)(_argptr);
-       return isNumeric(cast(char[])s);
+	char[1] t;
+	t[0]= va_arg!(ubyte)(_argptr);
+	return isNumeric(cast(string)t);
     }
     else if (_arguments[0] == typeid(byte)) 
     {
-       s.length = 1;
-       s[0] = va_arg!(byte)(_argptr);
-       return isNumeric(cast(char[])s);
+	char[1] t;
+	t[0] = va_arg!(byte)(_argptr);
+	return isNumeric(cast(string)t);
     }
     else if (_arguments[0] == typeid(ireal))
         return true;
@@ -3491,21 +3482,21 @@ bool isNumeric(TypeInfo[] _arguments, va_list _argptr)
         return true;  
     else if (_arguments[0] == typeid(char))
     {
-        s.length = 1;
-        s[0] = va_arg!(char)(_argptr);
-        return isNumeric(s);
+	char[1] t;
+	t[0] = va_arg!(char)(_argptr);
+        return isNumeric(cast(string)t);
     }
     else if (_arguments[0] == typeid(wchar))
     {
-        ws.length = 1;
-        ws[0] = va_arg!(wchar)(_argptr);
-        return isNumeric(std.utf.toUTF8(ws));
+	wchar[1] t;
+	t[0] = va_arg!(wchar)(_argptr);
+        return isNumeric(cast(string)std.utf.toUTF8(t));
     }
     else if (_arguments[0] == typeid(dchar))
     { 
-        ds.length =  1;
-        ds[0] = va_arg!(dchar)(_argptr);
-        return isNumeric(std.utf.toUTF8(ds));
+	dchar[1] t;
+	t[0] = va_arg!(dchar)(_argptr);
+	return isNumeric(cast(string)std.utf.toUTF8(t));
     }
     //else if (_arguments[0] == typeid(cent)) 
     //    return true;   
@@ -3517,10 +3508,10 @@ bool isNumeric(TypeInfo[] _arguments, va_list _argptr)
 
 unittest
 {
-    debug (string) printf("isNumeric(in char[], bool = false).unittest\n");
-    char[] s;
+    debug (string) printf("isNumeric(in string, bool = false).unittest\n");
+    string s;
 
-    // Test the isNumeric(in char[]) function
+    // Test the isNumeric(in string) function
     assert(isNumeric("1") == true );
     assert(isNumeric("1.0") == true );
     assert(isNumeric("1e-1") == true );
@@ -3597,7 +3588,7 @@ unittest
  *	but this one is the standard one.
  */
 
-char[] soundex(char[] string, char[] buffer = null)
+string soundex(string string, char[] buffer = null)
 in
 {
     assert(!buffer || buffer.length >= 4);
@@ -3614,14 +3605,15 @@ out (result)
 }
 body
 {
-    static char[26] dex =
+    static dex =
     // ABCDEFGHIJKLMNOPQRSTUVWXYZ
       "01230120022455012623010202";
 
     int b = 0;
     char lastc;
-    foreach (char c; string)
-    {
+    foreach (char cs; string)
+    {	auto c = cs;		// necessary because cs is final
+
 	if (c >= 'a' && c <= 'z')
 	    c -= 'a' - 'A';
 	else if (c >= 'A' && c <= 'Z')
@@ -3724,7 +3716,7 @@ unittest
  * 
  * void main()
  * {
- *    static char[][] list = [ "food", "foxy" ];
+ *    static string[] list = [ "food", "foxy" ];
  * 
  *    auto abbrevs = std.string.abbrev(list);
  * 
@@ -3743,9 +3735,9 @@ unittest
  * </pre>
  */
 
-char[][char[]] abbrev(char[][] values)
+string[string] abbrev(string[] values)
 {
-    char[][char[]] result;
+    string[string] result;
 
     // Make a copy when sorting so we follow COW principles.
     values = values.dup.sort;
@@ -3754,11 +3746,11 @@ char[][char[]] abbrev(char[][] values)
     size_t lasti = values_length;
     size_t nexti;
 
-    char[] nv;
-    char[] lv;
+    string nv;
+    string lv;
 
     for (size_t i = 0; i < values_length; i = nexti)
-    {	char[] value = values[i];
+    {	string value = values[i];
 
 	// Skip dups
 	for (nexti = i + 1; nexti < values_length; nexti++)
@@ -3768,7 +3760,7 @@ char[][char[]] abbrev(char[][] values)
 	}
 
 	for (size_t j = 0; j < value.length; j += std.utf.stride(value, j))
-	{   char[] v = value[0 .. j];
+	{   string v = value[0 .. j];
 
 	    if ((nexti == values_length || j > nv.length || v != nv[0 .. j]) &&
 		(lasti == values_length || j > lv.length || v != lv[0 .. j]))
@@ -3786,15 +3778,15 @@ unittest
 {
     debug(string) printf("string.abbrev.unittest\n");
 
-    char[][] values;
+    string[] values;
     values ~= "hello";
     values ~= "hello";
     values ~= "he";
 
-    char[][char[]] r;
+    string[string] r;
 
     r = abbrev(values);
-    char[][] keys = r.keys.dup;
+    string[] keys = r.keys.dup;
     keys.sort;
 
     assert(keys.length == 4);
@@ -3815,7 +3807,7 @@ unittest
  * leftmost column, which is numbered starting from 0.
  */
 
-size_t column(char[] string, int tabsize = 8)
+size_t column(string string, int tabsize = 8)
 {
     size_t column;
 
@@ -3871,8 +3863,8 @@ unittest
  *	The resulting paragraph.
  */
 
-char[] wrap(char[] s, int columns = 80, char[] firstindent = null,
-	char[] indent = null, int tabsize = 8)
+string wrap(string s, int columns = 80, string firstindent = null,
+	string indent = null, int tabsize = 8)
 {
     char[] result;
     int col;
@@ -3957,11 +3949,11 @@ unittest
  * Does string s[] start with an email address?
  * Returns:
  *	null	it does not
- *	char[]	it does, and this is the slice of s[] that is that email address
+ *	string	it does, and this is the slice of s[] that is that email address
  * References:
  *	RFC2822
  */
-char[] isEmail(char[] s)
+string isEmail(string s)
 {   size_t i;
 
     if (!isalpha(s[0]))
@@ -4014,10 +4006,10 @@ Lno:
  * Does string s[] start with a URL?
  * Returns:
  *	null	it does not
- *	char[]	it does, and this is the slice of s[] that is that URL
+ *	string	it does, and this is the slice of s[] that is that URL
  */
 
-char[] isURL(char[] s)
+string isURL(string s)
 {
     /* Must start with one of:
      *	http://

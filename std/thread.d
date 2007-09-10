@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2002-2006 by Digital Mars, www.digitalmars.com
+ *  Copyright (C) 2002-2007 by Digital Mars, www.digitalmars.com
  *  Written by Walter Bright
  *
  *  This software is provided 'as-is', without any express or implied
@@ -63,7 +63,7 @@ alias uint thread_id;
  */
 class ThreadError : Error
 {
-    this(char[] s)
+    this(string s)
     {
 	super("Thread error: " ~ s);
     }
@@ -385,7 +385,7 @@ class Thread
 
     int delegate() dg;
 
-    void error(char[] msg)
+    void error(string msg)
     {
 	throw new ThreadError(msg);
     }
@@ -576,7 +576,7 @@ extern (C)
 
 class ThreadError : Error
 {
-    this(char[] s)
+    this(string s)
     {
 	super("Thread error: " ~ s);
     }
@@ -923,7 +923,7 @@ class Thread
 
     int delegate() dg;
 
-    void error(char[] msg)
+    void error(string msg)
     {
 	throw new ThreadError(msg);
     }

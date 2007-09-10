@@ -39,10 +39,10 @@ import std.outofmemory;
 
 extern (C)
 {   /// C's printf function.
-    int printf(char *, ...);
+    int printf(in char *, ...);
 
-    int memcmp(void *, void *, size_t);
-    void* memcpy(void *, void *, size_t);
+    int memcmp(in void *, in void *, size_t);
+    void* memcpy(void *, in void *, size_t);
     void* calloc(size_t, size_t);
     void* realloc(void*, size_t);
     void free(void*);
@@ -80,6 +80,10 @@ else
     alias uint hash_t;
 }
 
+alias const(char)[] string;
+alias const(wchar)[] wstring;
+alias const(dchar)[] dstring;
+
 /* *************************
  * Internal struct pointed to by the hidden .monitor member.
  */
@@ -103,7 +107,7 @@ class Object
     /**
      * Convert Object to a human readable string.
      */
-    char[] toString()
+    string toString()
     {
 	return this.classinfo.name;
     }
@@ -214,7 +218,7 @@ class Object
      * Returns:
      *	null if failed
      */
-    static Object factory(char[] classname)
+    static Object factory(string classname)
     {
 	auto ci = ClassInfo.find(classname);
 	if (ci)
@@ -273,7 +277,7 @@ class ClassInfo : Object
     byte[] init;		/** class static initializer
 				 * (init.length gives size in bytes of class)
 				 */
-    char[] name;		/// class name
+    string name;		/// class name
     void *[] vtbl;		/// virtual function pointer table
     Interface[] interfaces;	/// interfaces this class implements
     ClassInfo base;		/// base class
@@ -292,7 +296,7 @@ class ClassInfo : Object
      * Search all modules for ClassInfo corresponding to classname.
      * Returns: null if not found
      */
-    static ClassInfo find(char[] classname)
+    static ClassInfo find(string classname)
     {
 	foreach (m; ModuleInfo.modules())
 	{
@@ -414,7 +418,7 @@ class TypeInfo
 
 class TypeInfo_Typedef : TypeInfo
 {
-    char[] toString() { return name; }
+    string toString() { return name; }
 
     int opEquals(Object o)
     {   TypeInfo_Typedef c;
@@ -437,7 +441,7 @@ class TypeInfo_Typedef : TypeInfo
     void[] init() { return m_init.length ? m_init : base.init(); }
 
     TypeInfo base;
-    char[] name;
+    string name;
     void[] m_init;
 }
 
@@ -447,7 +451,7 @@ class TypeInfo_Enum : TypeInfo_Typedef
 
 class TypeInfo_Pointer : TypeInfo
 {
-    char[] toString() { return m_next.toString() ~ "*"; }
+    string toString() { return m_next.toString() ~ "*"; }
 
     int opEquals(Object o)
     {   TypeInfo_Pointer c;
@@ -497,7 +501,7 @@ class TypeInfo_Pointer : TypeInfo
 
 class TypeInfo_Array : TypeInfo
 {
-    char[] toString() { return value.toString() ~ "[]"; }
+    string toString() { return value.toString() ~ "[]"; }
 
     int opEquals(Object o)
     {   TypeInfo_Array c;
@@ -574,7 +578,7 @@ class TypeInfo_Array : TypeInfo
 
 class TypeInfo_StaticArray : TypeInfo
 {
-    char[] toString()
+    string toString()
     {
 	return value.toString() ~ "[" ~ std.string.toString(len) ~ "]";
     }
@@ -658,7 +662,7 @@ class TypeInfo_StaticArray : TypeInfo
 
 class TypeInfo_AssociativeArray : TypeInfo
 {
-    char[] toString()
+    string toString()
     {
 	return value.toString() ~ "[" ~ key.toString() ~ "]";
     }
@@ -688,7 +692,7 @@ class TypeInfo_AssociativeArray : TypeInfo
 
 class TypeInfo_Function : TypeInfo
 {
-    char[] toString()
+    string toString()
     {
 	return next.toString() ~ "()";
     }
@@ -713,7 +717,7 @@ class TypeInfo_Function : TypeInfo
 
 class TypeInfo_Delegate : TypeInfo
 {
-    char[] toString()
+    string toString()
     {
 	return next.toString() ~ " delegate()";
     }
@@ -740,7 +744,7 @@ class TypeInfo_Delegate : TypeInfo
 
 class TypeInfo_Class : TypeInfo
 {
-    char[] toString() { return info.name; }
+    string toString() { return info.name; }
 
     int opEquals(Object o)
     {   TypeInfo_Class c;
@@ -803,7 +807,7 @@ class TypeInfo_Class : TypeInfo
 
 class TypeInfo_Interface : TypeInfo
 {
-    char[] toString() { return info.name; }
+    string toString() { return info.name; }
 
     int opEquals(Object o)
     {   TypeInfo_Interface c;
@@ -866,7 +870,7 @@ class TypeInfo_Interface : TypeInfo
 
 class TypeInfo_Struct : TypeInfo
 {
-    char[] toString() { return name; }
+    string toString() { return name; }
 
     int opEquals(Object o)
     {   TypeInfo_Struct s;
@@ -945,13 +949,13 @@ class TypeInfo_Struct : TypeInfo
 
     uint flags() { return m_flags; }
 
-    char[] name;
+    string name;
     void[] m_init;	// initializer; init.ptr == null if 0 initialize
 
     hash_t function(void*) xtoHash;
     int function(void*,void*) xopEquals;
     int function(void*,void*) xopCmp;
-    char[] function(void*) xtoString;
+    string function(void*) xtoString;
 
     uint m_flags;
 }
@@ -960,9 +964,9 @@ class TypeInfo_Tuple : TypeInfo
 {
     TypeInfo[] elements;
 
-    char[] toString()
+    string toString()
     {
-	char[] s;
+	string s;
 	s = "(";
 	foreach (i, element; elements)
 	{
@@ -1020,7 +1024,7 @@ class TypeInfo_Tuple : TypeInfo
 
 class TypeInfo_Const : TypeInfo
 {
-    char[] toString() { return "const " ~ base.toString(); }
+    string toString() { return "const " ~ base.toString(); }
 
     int opEquals(Object o) { return base.opEquals(o); }
     hash_t getHash(void *p) { return base.getHash(p); }
@@ -1038,7 +1042,7 @@ class TypeInfo_Const : TypeInfo
 
 class TypeInfo_Invariant : TypeInfo_Const
 {
-    char[] toString() { return "invariant " ~ base.toString(); }
+    string toString() { return "invariant " ~ base.toString(); }
 }
 
 
@@ -1047,12 +1051,12 @@ class TypeInfo_Invariant : TypeInfo_Const
  */
 class Exception : Object
 {
-    char[] msg;
+    string msg;
 
     /**
      * Constructor; msg is a descriptive message for the exception.
      */
-    this(char[] msg)
+    this(string msg)
     {
 	this.msg = msg;
     }
@@ -1062,7 +1066,7 @@ class Exception : Object
 	printf("%.*s\n", toString());
     }
 
-    char[] toString() { return msg; }
+    string toString() { return msg; }
 }
 
 /**
@@ -1075,12 +1079,12 @@ class Error : Exception
     /**
      * Constructor; msg is a descriptive message for the exception.
      */
-    this(char[] msg)
+    this(string msg)
     {
 	super(msg);
     }
 
-    this(char[] msg, Error next)
+    this(string msg, Error next)
     {
 	super(msg);
 	this.next = next;

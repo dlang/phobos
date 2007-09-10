@@ -49,12 +49,12 @@ struct lldiv_t { long quot,rem; }
     void *realloc(void *, size_t);	/// ditto
     void free(void *);	/// ditto
 
-    void *bsearch(void *,void *,size_t,size_t,
-       int function(void *,void *));	///
+    void *bsearch(in void *,in void *,size_t,size_t,
+       int function(in void *,in void *));	///
     void qsort(void *base, size_t nelems, size_t elemsize,
-	int (*compare)(void *elem1, void *elem2));	/// ditto
+	int (*compare)(in void *elem1, in void *elem2));	/// ditto
 
-    char* getenv(char*);	///
+    char* getenv(const char*);	///
     int   setenv(char*, char*, int); /// extension to ISO C standard, not available on all platforms
     void  unsetenv(char*); /// extension to ISO C standard, not available on all platforms
 
@@ -68,23 +68,23 @@ struct lldiv_t { long quot,rem; }
 
 const int ERANGE = 34;	// on both Windows and linux
 
-double atof(char *);	///
-int    atoi(char *);	/// ditto
-int    atol(char *);	/// ditto
+double atof(in char *);	///
+int    atoi(in char *);	/// ditto
+int    atol(in char *);	/// ditto
 float  strtof(char *,char **);	/// ditto
 double strtod(char *,char **);	/// ditto
 real   strtold(char *,char **);	/// ditto
 long   strtol(char *,char **,int);	/// ditto
 uint   strtoul(char *,char **,int);	/// ditto
-long   atoll(char *);	/// ditto
+long   atoll(in char *);	/// ditto
 long   strtoll(char *,char **,int);	/// ditto
 ulong  strtoull(char *,char **,int);	/// ditto
 
 char* itoa(int, char*, int);	///
 char* ultoa(uint, char*, int);	/// ditto
 
-int mblen(char *s, size_t n);	///
+int mblen(in char *s, size_t n);	///
 int mbtowc(wchar_t *pwc, char *s, size_t n);	/// ditto
 int wctomb(char *s, wchar_t wc);	/// ditto
-size_t mbstowcs(wchar_t *pwcs, char *s, size_t n);	/// ditto
-size_t wcstombs(char *s, wchar_t *pwcs, size_t n);	/// ditto
+size_t mbstowcs(wchar_t *pwcs, in char *s, size_t n);	/// ditto
+size_t wcstombs(in char *s, wchar_t *pwcs, size_t n);	/// ditto

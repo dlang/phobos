@@ -99,7 +99,7 @@ class SocketStream: Stream
 	/**
 	 * Attempts to write the entire block, waiting if necessary.
 	 */
-	override size_t writeBlock(void* _buffer, size_t size)
+	override size_t writeBlock(const(void)* _buffer, size_t size)
 	{
 	  ubyte* buffer = cast(ubyte*)_buffer;
 	  assertWriteable();
@@ -126,7 +126,7 @@ class SocketStream: Stream
 	 * Does not return the entire stream because that would
 	 * require the remote connection to be closed.
 	 */
-	override char[] toString()
+	override string toString()
 	{
 		return sock.toString();
 	}

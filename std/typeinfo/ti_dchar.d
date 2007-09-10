@@ -5,7 +5,7 @@ module std.typeinfo.ti_dchar;
 
 class TypeInfo_w : TypeInfo
 {
-    char[] toString() { return "dchar"; }
+    string toString() { return "dchar"; }
 
     hash_t getHash(void *p)
     {

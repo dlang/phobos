@@ -55,8 +55,8 @@ enum
 	CLSCTX_SERVER = (CLSCTX_INPROC_SERVER|CLSCTX_LOCAL_SERVER),
 }
 
-alias GUID IID;
-alias GUID CLSID;
+alias const(GUID) IID;
+alias const(GUID) CLSID;
 
 extern (C)
 {
@@ -179,8 +179,8 @@ void    CoUninitialize();
 DWORD   CoGetCurrentProcess();
 
 
-HRESULT CoCreateInstance(CLSID *rclsid, IUnknown UnkOuter,
-                    DWORD dwClsContext, IID* riid, void* ppv);
+HRESULT CoCreateInstance(const(CLSID) *rclsid, IUnknown UnkOuter,
+                    DWORD dwClsContext, const(IID)* riid, void* ppv);
 
 //HINSTANCE CoLoadLibrary(LPOLESTR lpszLibName, BOOL bAutoFree);
 void    CoFreeLibrary(HINSTANCE hInst);
@@ -190,7 +190,7 @@ void    CoFreeUnusedLibraries();
 
 interface IUnknown
 {
-    HRESULT QueryInterface(IID* riid, void** pvObject);
+    HRESULT QueryInterface(const(IID)* riid, void** pvObject);
     ULONG AddRef();
     ULONG Release();
 }
@@ -204,7 +204,7 @@ interface IClassFactory : IUnknown
 class ComObject : IUnknown
 {
 extern (Windows):
-    HRESULT QueryInterface(IID* riid, void** ppv)
+    HRESULT QueryInterface(const(IID)* riid, void** ppv)
     {
 	if (*riid == IID_IUnknown)
 	{

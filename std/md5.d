@@ -44,7 +44,7 @@ int main(char[][] args)
 }
 
 /* Digests a file and prints the result. */
-void MDFile(char[] filename)
+void MDFile(const char[] filename)
 {
     FILE* file;
     MD5_CTX context;
@@ -99,7 +99,7 @@ import std.string;
  * Computes MD5 digest of array of data.
  */
 
-void sum(ubyte[16] digest, void[] data)
+void sum(ubyte[16] digest, const void[] data)
 {
     MD5_CTX context;
 
@@ -111,7 +111,7 @@ void sum(ubyte[16] digest, void[] data)
 /******************
  * Prints a message digest in hexadecimal to stdout.
  */
-void printDigest(ubyte digest[16])
+void printDigest(const ubyte digest[16])
 {
     foreach (ubyte u; digest)
 	printf("%02x", u);
@@ -121,7 +121,7 @@ void printDigest(ubyte digest[16])
  * Converts MD5 digest to a string.
  */
 
-char[] digestToString(ubyte[16] digest)
+string digestToString(const ubyte[16] digest)
 {
     char[] result = new char[32];
     int i;
@@ -229,7 +229,7 @@ struct MD5_CTX
       operation, processing another message block, and updating the
       context.
      */
-    void update(void[] input)
+    void update(const void[] input)
     {
       uint i, index, partLen;
       uint inputLen = input.length;
@@ -408,7 +408,7 @@ struct MD5_CTX
     /* Encodes input (uint) into output (ubyte). Assumes len is
       a multiple of 4.
      */
-    private static void Encode (ubyte *output, uint *input, uint len)
+    private static void Encode (ubyte *output, const uint *input, uint len)
     {
 	uint i, j;
 
@@ -425,7 +425,7 @@ struct MD5_CTX
     /* Decodes input (ubyte) into output (uint). Assumes len is
       a multiple of 4.
      */
-    private static void Decode (uint *output, ubyte *input, uint len)
+    private static void Decode (uint *output, const ubyte *input, uint len)
     {
 	uint i, j;
 

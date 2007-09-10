@@ -13,9 +13,9 @@ deprecated class SysError
     private import std.c.string;
     private import std.string;
 
-    static char[] msg(uint errcode)
+    static string msg(uint errcode)
     {
-	char[] result;
+	string result;
 
 	switch (errcode)
 	{
@@ -32,9 +32,9 @@ deprecated class SysError
 	    case 87:	result = "invalid parameter";	break;
 
 	    default:
-		result = new char[uint.sizeof * 3 + 1];
-		auto len = sprintf(result.ptr, "%u", errcode);
-		result = result[0 .. len];
+		auto r = new char[uint.sizeof * 3 + 1];
+		auto len = sprintf(r.ptr, "%u", errcode);
+		result = r[0 .. len];
 		break;
 	}
 

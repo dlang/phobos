@@ -43,7 +43,7 @@ static this()
  *	yaneurao, Walter Bright, Stewart Gordon
  */
 
-char* toMBSz(char[] s, uint codePage = 0)
+const(char*) toMBSz(const char[] s, uint codePage = 0)
 {
     // Only need to do this if any chars have the high bit set
     foreach (char c; s)
@@ -52,7 +52,7 @@ char* toMBSz(char[] s, uint codePage = 0)
 	{
 	    char[] result;
 	    int readLen;
-	    wchar* ws = std.utf.toUTF16z(s);
+	    auto ws = std.utf.toUTF16z(s);
 	    result.length = WideCharToMultiByte(codePage, 0, ws, -1, null, 0,
 		null, null);
 
@@ -88,9 +88,9 @@ char* toMBSz(char[] s, uint codePage = 0)
  * Authors: Stewart Gordon, Walter Bright
  */
 
-char[] fromMBSz(char* s, int codePage = 0)
+const(char[]) fromMBSz(const char* s, int codePage = 0)
 {
-    char* c;
+    const(char*) c;
 
     for (c = s; *c != 0; c++)
     {

@@ -35,7 +35,7 @@ module etc.c.zlib;
 
 extern (C):
 
-char[] ZLIB_VERSION = "1.2.3";
+const char[] ZLIB_VERSION = "1.2.3";
 const ZLIB_VERNUM = 0x1230;
 
 /*
@@ -1327,11 +1327,11 @@ uint crc32_combine (uint crc1, uint crc2, z_off_t len2);
  */
 int deflateInit_(z_streamp strm,
                  int level,
-                 char* versionx,
+                 const char* versionx,
                  int stream_size);
                  
 int inflateInit_(z_streamp strm,
-                 char* versionx,
+                 const char* versionx,
                  int stream_size);
                  
 int deflateInit2_(z_streamp strm,
@@ -1340,18 +1340,18 @@ int deflateInit2_(z_streamp strm,
                   int windowBits,
                   int memLevel,
                   int strategy,
-                  char* versionx,
+                  const char* versionx,
                   int stream_size);
                   
 int inflateBackInit_(z_stream* strm,
                      int windowBits,
                      ubyte* window,
-                     char* z_version,
+                     const char* z_version,
                      int stream_size);
                      
 int inflateInit2_(z_streamp strm,
                   int windowBits,
-                  char* versionx,
+                  const char* versionx,
                   int stream_size);
                   
 char* zError(int err);

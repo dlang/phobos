@@ -74,7 +74,7 @@ class FormatError : Error
 	super("std.format");
     }
 
-    this(char[] msg)
+    this(const char[] msg)
     {
 	super("std.format " ~ msg);
     }
@@ -120,6 +120,9 @@ enum Mangle : char
     Tenum     = 'E',
     Ttypedef  = 'T',
     Tdelegate = 'D',
+
+    Tconst    = 'x',
+    Tinvariant = 'y',
 }
 
 // return the TypeInfo for a primitive type and null otherwise.
@@ -461,6 +464,21 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
 	FLprecision = 0x80,
     }
 
+    static TypeInfo skipCI(TypeInfo valti)
+    {
+      while (1)
+      {
+	if (valti.classinfo.name.length == 18 &&
+	    valti.classinfo.name[9..18] == "Invariant")
+	    valti =	(cast(TypeInfo_Invariant)valti).next;
+	else if (valti.classinfo.name.length == 14 &&
+	    valti.classinfo.name[9..14] == "Const")
+	    valti =	(cast(TypeInfo_Const)valti).next;
+	else
+	    break;
+      }
+      return valti;
+    }
 
     void formatArg(char fc)
     {
@@ -476,10 +494,10 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
 	uint base = 10;
 	int uc;
 	char[ulong.sizeof * 8] tmpbuf;	// long enough to print long in binary
-	char* prefix = "";
-	char[] s;
+	const(char*) prefix = "";
+	string s;
 
-	void putstr(char[] s)
+	void putstr(const char[] s)
 	{
 	    //printf("flags = x%x\n", flags);
 	    int prepad = 0;
@@ -610,6 +628,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
 	{
 	  //printf("\nputArray(len = %u), tsize = %u\n", len, valti.tsize());
 	  putc('[');
+	  valti = skipCI(valti);
 	  size_t tsize = valti.tsize();
 	  auto argptrSave = argptr;
 	  auto tiSave = ti;
@@ -639,6 +658,8 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
 	  auto argptrSave = argptr;
 	  auto tiSave = ti;
 	  auto mSave = m;
+	  valti = skipCI(valti);
+	  keyti = skipCI(keyti);
 	  foreach(inout fakevalue; vaa)
 	  {
 	    if (comma) putc(',');
@@ -811,11 +832,22 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
 		return;
 
 	    case Mangle.Tarray:
+		int mi = 10;
 	        if (ti.classinfo.name.length == 14 &&
 		    ti.classinfo.name[9..14] == "Array") 
 		{ // array of non-primitive types
+		  TypeInfo tn = (cast(TypeInfo_Array)ti).next;
+		  tn = skipCI(tn);
+		  switch (cast(Mangle)tn.classinfo.name[9])
+		  {
+		    case Mangle.Tchar:  goto LarrayChar;
+		    case Mangle.Twchar: goto LarrayWchar;
+		    case Mangle.Tdchar: goto LarrayDchar;
+		    default:
+			break;
+		  }
 		  void[] va = va_arg!(void[])(argptr);
-		  putArray(va.ptr, va.length, (cast(TypeInfo_Array)ti).next);
+		  putArray(va.ptr, va.length, tn);
 		  return;
 		}
 		if (ti.classinfo.name.length == 25 &&
@@ -828,37 +860,48 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
 		  return;
 		}
 
-		m2 = cast(Mangle)ti.classinfo.name[10];
-		switch (m2)
+		while (1)
 		{
-		    case Mangle.Tchar:
-			s = va_arg!(char[])(argptr);
-			goto Lputstr;
+		    m2 = cast(Mangle)ti.classinfo.name[mi];
+		    switch (m2)
+		    {
+			case Mangle.Tchar:
+			LarrayChar:
+			    s = va_arg!(char[])(argptr);
+			    goto Lputstr;
 
-		    case Mangle.Twchar:
-			wchar[] sw = va_arg!(wchar[])(argptr);
-			s = toUTF8(sw);
-			goto Lputstr;
+			case Mangle.Twchar:
+			LarrayWchar:
+			    wchar[] sw = va_arg!(wchar[])(argptr);
+			    s = toUTF8(sw);
+			    goto Lputstr;
 
-		    case Mangle.Tdchar:
-			dchar[] sd = va_arg!(dchar[])(argptr);
-			s = toUTF8(sd);
-		    Lputstr:
-			if (fc != 's')
-			    throw new FormatError("string");
-			if (flags & FLprecision && precision < s.length)
-			    s = s[0 .. precision];
-			putstr(s);
-			break;
+			case Mangle.Tdchar:
+			LarrayDchar:
+			    dchar[] sd = va_arg!(dchar[])(argptr);
+			    s = toUTF8(sd);
+			Lputstr:
+			    if (fc != 's')
+				throw new FormatError("string");
+			    if (flags & FLprecision && precision < s.length)
+				s = s[0 .. precision];
+			    putstr(s);
+			    break;
 
-  		    default:
-		        TypeInfo ti2 = primitiveTypeInfo(m2);
-			if (!ti2)
-			  goto Lerror;
-			void[] va = va_arg!(void[])(argptr);
-			putArray(va.ptr, va.length, ti2);
+			case Mangle.Tconst:
+			case Mangle.Tinvariant:
+			    mi++;
+			    continue;
+
+			default:
+			    TypeInfo ti2 = primitiveTypeInfo(m2);
+			    if (!ti2)
+			      goto Lerror;
+			    void[] va = va_arg!(void[])(argptr);
+			    putArray(va.ptr, va.length, ti2);
+		    }
+		    return;
 		}
-		return;
 
 	    case Mangle.Ttypedef:
 		ti = (cast(TypeInfo_Typedef)ti).base;
@@ -1014,16 +1057,39 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
     {	ti = arguments[j++];
 	//printf("test1: '%.*s' %d\n", ti.classinfo.name, ti.classinfo.name.length);
 	//ti.print();
-	if (ti.classinfo.name.length < 10)
-	    goto Lerror;
-	m = cast(Mangle)ti.classinfo.name[9];
+	ti = skipCI(ti);
+	int mi = 9;
+	do
+	{
+	    if (ti.classinfo.name.length <= mi)
+		goto Lerror;
+	    m = cast(Mangle)ti.classinfo.name[mi++];
+	} while (m == Mangle.Tconst || m == Mangle.Tinvariant);
 
 	if (m == Mangle.Tarray)
 	{
-	    Mangle m2 = cast(Mangle)ti.classinfo.name[10];
-	    char[]  fmt;			// format string
-	    wchar[] wfmt;
-	    dchar[] dfmt;
+	    if (ti.classinfo.name.length == 14 &&
+		ti.classinfo.name[9..14] == "Array") 
+	    {
+	      TypeInfo tn = (cast(TypeInfo_Array)ti).next;
+	      tn = skipCI(tn);
+	      switch (cast(Mangle)tn.classinfo.name[9])
+	      {
+		case Mangle.Tchar:
+		case Mangle.Twchar:
+		case Mangle.Tdchar:
+		    ti = tn;
+		    mi = 9;
+		    break;
+		default:
+		    break;
+	      }
+	    }
+	L1:
+	    Mangle m2 = cast(Mangle)ti.classinfo.name[mi];
+	    string  fmt;			// format string
+	    wstring wfmt;
+	    dstring dfmt;
 
 	    /* For performance reasons, this code takes advantage of the
 	     * fact that most format strings will be ASCII, and that the
@@ -1046,6 +1112,11 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
 		    dfmt = va_arg!(dchar[])(argptr);
 		    fmt = toUTF8(dfmt);
 		    break;
+
+		case Mangle.Tconst:
+		case Mangle.Tinvariant:
+		    mi++;
+		    goto L1;
 
 		default:
 		    formatArg('s');
@@ -1166,7 +1237,12 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
 		if (j == arguments.length)
 		    goto Lerror;
 		ti = arguments[j++];
-		m = cast(Mangle)ti.classinfo.name[9];
+		ti = skipCI(ti);
+		mi = 9;
+		do
+		{
+		    m = cast(Mangle)ti.classinfo.name[mi++];
+		} while (m == Mangle.Tconst || m == Mangle.Tinvariant);
 
 		if (c > 0x7F)		// if UTF sequence
 		    goto Lerror;	// format specifiers can't be UTF
@@ -1192,7 +1268,7 @@ Lerror:
 unittest
 {
     int i;
-    char[] s;
+    string s;
 
     debug(format) printf("std.format.format.unittest\n");
  
@@ -1278,7 +1354,7 @@ unittest
     assert(s == "0.00001000");
 
     s = "helloworld";
-    char[] r;
+    string r;
     r = std.string.format("%.2s", s[0..5]);
     assert(r == "he");
     r = std.string.format("%.20s", s[0..5]);
@@ -1341,7 +1417,7 @@ unittest
     r = std.string.format(arrulong);
     assert(r == "[100,999,0,0]");
 
-    char[][] arr2 = new char[][4];
+    string[] arr2 = new string[4];
     arr2[0] = "hello";
     arr2[1] = "world";
     arr2[3] = "foo";
@@ -1458,10 +1534,20 @@ unittest
     r = std.string.format("%s", TestEnum.Value2);
     assert(r == "1");
 
-    char[5][int] aa = ([3:"hello", 4:"betty"]);
+    invariant(char[5])[int] aa = ([3:"hello", 4:"betty"]);
     r = std.string.format("%s", aa.values);
     assert(r == "[[h,e,l,l,o],[b,e,t,t,y]]");
     r = std.string.format("%s", aa);
     assert(r == "[3:[h,e,l,l,o],4:[b,e,t,t,y]]");
+
+    static const dchar[] ds = ['a','b'];
+    for (int j = 0; j < ds.length; ++j)
+    {
+	r = std.string.format(" %d", ds[j]);
+	if (j == 0)
+	    assert(r == " 97");
+	else
+	    assert(r == " 98");
+    }
 }
 

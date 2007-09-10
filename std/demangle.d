@@ -80,10 +80,10 @@ int main()
 -------------------
  */
 
-char[] demangle(char[] name)
+string demangle(string name)
 {
     size_t ni = 2;
-    char[] delegate() fparseTemplateInstanceName;
+    string delegate() fparseTemplateInstanceName;
 
     static void error()
     {
@@ -117,13 +117,13 @@ char[] demangle(char[] name)
 	return result;
     }
 
-    char[] parseSymbolName()
+    string parseSymbolName()
     {
 	//writefln("parseSymbolName() %d", ni);
 	size_t i = parseNumber();
 	if (ni + i > name.length)
 	    error();
-	char[] result;
+	string result;
 	if (i >= 5 &&
 	    name[ni] == '_' &&
 	    name[ni + 1] == '_' &&
@@ -154,10 +154,10 @@ char[] demangle(char[] name)
 	return result;
     }
 
-    char[] parseQualifiedName()
+    string parseQualifiedName()
     {
 	//writefln("parseQualifiedName() %d", ni);
-	char[] result;
+	string result;
 
 	while (ni < name.length && isdigit(name[ni]))
 	{
@@ -168,14 +168,14 @@ char[] demangle(char[] name)
 	return result;
     }
 
-    char[] parseType(char[] identifier = null)
+    string parseType(string identifier = null)
     {
 	//writefln("parseType() %d", ni);
 	int isdelegate = 0;
       Lagain:
 	if (ni >= name.length)
 	    error();
-	char[] p;
+	string p;
 	switch (name[ni++])
 	{
 	    case 'v':	p = "void";	goto L1;
@@ -233,7 +233,7 @@ char[] demangle(char[] name)
 	    case 'V':				// Pascal function
 	    case 'R':				// C++ function
 	    {	char mc = name[ni - 1];
-		char[] args;
+		string args;
 
 		while (1)
 		{
@@ -322,9 +322,9 @@ char[] demangle(char[] name)
 	assert(0);
     }
 
-    char[] parseTemplateInstanceName()
+    string parseTemplateInstanceName()
     {
-	char[] result = parseSymbolName() ~ "!(";
+	auto result = parseSymbolName() ~ "!(";
 	int nargs;
 
 	while (1)
@@ -459,7 +459,7 @@ char[] demangle(char[] name)
 
     try
     {
-	char[] result = parseQualifiedName();
+	auto result = parseQualifiedName();
 	result = parseType(result);
 	if (ni != name.length)
 	    goto Lnot;
@@ -479,7 +479,7 @@ unittest
 {
     debug(demangle) printf("demangle.demangle.unittest\n");
 
-    static char[][2][] table =
+    static string[2][] table =
     [
 	[ "printf",	"printf" ],
 	[ "_foo",	"_foo" ],
@@ -496,9 +496,9 @@ unittest
 	[ "_D8demangle4testFLAiXi", "int demangle.test(lazy int[] ...)"] 
     ];
 
-    foreach (char[][2] name; table)
+    foreach (string[2] name; table)
     {
-	char[] r = demangle(name[0]);
+	string r = demangle(name[0]);
 	//writefln("[ \"%s\", \"%s\" ],", name[0], r);
 	assert(r == name[1]);
     }

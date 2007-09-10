@@ -1,8 +1,25 @@
-// Copyright (c) 2004 by Digital Mars
-// All Rights Reserved
-// written by Walter Bright and Matthew Wilson (Synesis Software Pty Ltd.)
-// www.digitalmars.com
-// www.synesis.com.au/software
+/* Copyright 2004-2005 by Digital Mars
+ * Written by Walter Bright and Matthew Wilson
+ *
+ * This software is provided 'as-is', without any express or implied
+ * warranty. In no event will the authors be held liable for any damages
+ * arising from the use of this software.
+ *
+ * Permission is granted to anyone to use this software for any purpose,
+ * including commercial applications, and to alter it and redistribute it
+ * freely, in both source and binary form, subject to the following
+ * restrictions:
+ *
+ * -  The origin of this software must not be misrepresented; you must not
+ *    claim that you wrote the original software. If you use this software
+ *    in a product, an acknowledgment in the product documentation would be
+ *    appreciated but is not required.
+ * -  Altered source versions must be plainly marked as such, and must not
+ *    be misrepresented as being the original software.
+ * -  This notice may not be removed or altered from any source
+ *    distribution.
+ *
+ */
 
 /**
  * Read and write memory mapped files.
@@ -62,7 +79,7 @@ class MmFile
      * Throws:
      *	std.file.FileException
      */
-    this(char[] filename)
+    this(string filename)
     {
 		this(filename, Mode.Read, 0, null);
     }
@@ -85,7 +102,7 @@ class MmFile
      * Throws:
      *	std.file.FileException
      */
-    this(char[] filename, Mode mode, ulong size, void* address,
+    this(string filename, Mode mode, ulong size, void* address,
 			size_t window = 0)
     {
 		this.filename = filename;
@@ -153,7 +170,7 @@ class MmFile
 		
 			if (useWfuncs)
 			{
-				wchar* namez = std.utf.toUTF16z(filename);
+				const(wchar)* namez = std.utf.toUTF16z(filename);
 				hFile = CreateFileW(namez,
 						dwDesiredAccess2,
 						dwShareMode,
@@ -164,7 +181,7 @@ class MmFile
 			}
 			else
 			{
-				char* namez = std.file.toMBSz(filename);
+				const(char)* namez = std.file.toMBSz(filename);
 				hFile = CreateFileA(namez,
 						dwDesiredAccess2,
 						dwShareMode,
@@ -499,7 +516,7 @@ class MmFile
 	}
 
 	private:
-	char[] filename;
+	string filename;
 	void[] data;
 	ulong  start;
 	size_t window;
@@ -509,7 +526,7 @@ class MmFile
 
 	version (Win32)
 	{
-		HANDLE hFile = INVALID_HANDLE_VALUE;
+		HANDLE hFile = cast(HANDLE)(-1); //INVALID_HANDLE_VALUE;
 		HANDLE hFileMap = null;
 		uint dwDesiredAccess;
 	}

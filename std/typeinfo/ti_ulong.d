@@ -5,7 +5,7 @@ module std.typeinfo.ti_ulong;
 
 class TypeInfo_m : TypeInfo
 {
-    char[] toString() { return "ulong"; }
+    string toString() { return "ulong"; }
 
     hash_t getHash(void *p)
     {

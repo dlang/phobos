@@ -42,7 +42,7 @@ struct Symbol
 	timer_t totaltime;	// aggregate time
 	timer_t functime;	// time excluding subfunction calls
 	ubyte Sflags;
-	char[] Sident;		// name of symbol
+	string Sident;		// name of symbol
 }
 
 const ubyte SFvisited = 1;	// visited
@@ -69,10 +69,10 @@ static timer_t trace_ohd;
 static Symbol** psymbols;
 static uint nsymbols;		// number of symbols
 
-static char[] trace_logfilename = "trace.log";
+static string trace_logfilename = "trace.log";
 static FILE* fplog;
 
-static char[] trace_deffilename = "trace.def";
+static string trace_deffilename = "trace.def";
 static FILE* fpdef;
 
 
@@ -83,7 +83,7 @@ static FILE* fpdef;
 //	0	success
 //	!=0	failure
 
-int trace_setlogfilename(char[] name)
+int trace_setlogfilename(string name)
 {
     trace_logfilename = name;
     return 0;
@@ -96,7 +96,7 @@ int trace_setlogfilename(char[] name)
 //	0	success
 //	!=0	failure
 
-int trace_setdeffilename(char[] name)
+int trace_setdeffilename(string name)
 {
     trace_deffilename = name;
     return 0;
@@ -143,7 +143,7 @@ static void stack_free(Stack *s)
 //////////////////////////////////////
 // Qsort() comparison routine for array of pointers to SymPair's.
 
-static int sympair_cmp(void* e1, void* e2)
+static int sympair_cmp(in void* e1, in void* e2)
 {   SymPair** psp1;
     SymPair** psp2;
 
@@ -278,7 +278,7 @@ static void trace_array(Symbol *s)
 //////////////////////////////////////
 // Qsort() comparison routine for array of pointers to Symbol's.
 
-static int symbol_cmp(void* e1, void* e2)
+static int symbol_cmp(in void* e1, in void* e2)
 {   Symbol** ps1;
     Symbol** ps2;
     timer_t diff;
@@ -314,7 +314,7 @@ static void trace_times(Symbol* root)
 	timer_t percall;
 	SymPair* sp;
 	uint calls;
-	char[] id;
+	string id;
 
 	version (Win32)
 	{   char* p = toStringz(s.Sident);
@@ -356,7 +356,7 @@ else
 	    calls,tl,tr,fl,fr,pl,pr,id);
 }
 	if (id !is s.Sident)
-	    free(id.ptr);
+	    free(cast(void*)id.ptr);
     }
 }
 
@@ -471,7 +471,7 @@ static void trace_free(void *p)
 //////////////////////////////////////////////
 //
 
-static Symbol* trace_addsym(char[] id)
+static Symbol* trace_addsym(string id)
 {
     Symbol** parent;
     Symbol* rover;
@@ -532,7 +532,7 @@ static void trace_sympair_add(SymPair** psp, Symbol* s, uint count)
 //////////////////////////////////////////////
 //
 
-static void trace_pro(char[] id)
+static void trace_pro(string id)
 {
     Stack* n;
     Symbol* s;

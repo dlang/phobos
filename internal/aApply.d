@@ -131,7 +131,7 @@ extern (C) int _aApplywc1(wchar[] aa, dg_t dg)
 	if (w & ~0x7F)
 	{
 	    char[4] buf;
-	    char[] b;
+	    string b;
 
 	    d = std.utf.decode(aa, i);
 	    b = std.utf.toUTF8(buf, d);
@@ -165,7 +165,7 @@ extern (C) int _aApplydc1(dchar[] aa, dg_t dg)
 	if (d & ~0x7F)
 	{
 	    char[4] buf;
-	    char[] b;
+	    string b;
 
 	    b = std.utf.toUTF8(buf, d);
 	    foreach (char c2; b)
@@ -322,7 +322,7 @@ extern (C) int _aApplywc2(wchar[] aa, dg2_t dg)
 	if (w & ~0x7F)
 	{
 	    char[4] buf;
-	    char[] b;
+	    string b;
 
 	    n = i;
 	    d = std.utf.decode(aa, n);
@@ -361,7 +361,7 @@ extern (C) int _aApplydc2(dchar[] aa, dg2_t dg)
 	if (d & ~0x7F)
 	{
 	    char[4] buf;
-	    char[] b;
+	    string b;
 
 	    b = std.utf.toUTF8(buf, d);
 	    foreach (char c2; b)
@@ -389,18 +389,19 @@ extern (C) int _aApplydw2(dchar[] aa, dg2_t dg)
     foreach (size_t i, dchar d; aa)
     {
 	wchar w;
+	auto j = i;
 
 	if (d <= 0xFFFF)
 	    w = cast(wchar) d;
 	else
 	{
 	    w = cast(wchar) ((((d - 0x10000) >> 10) & 0x3FF) + 0xD800);
-	    result = dg(&i, cast(void *)&w);
+	    result = dg(&j, cast(void *)&w);
 	    if (result)
 		break;
 	    w = cast(wchar) (((d - 0x10000) & 0x3FF) + 0xDC00);
 	}
-	result = dg(&i, cast(void *)&w);
+	result = dg(&j, cast(void *)&w);
 	if (result)
 	    break;
     }

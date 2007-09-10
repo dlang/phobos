@@ -15,7 +15,7 @@ module std.outofmemory;
 
 class OutOfMemoryException : Exception
 {
-    static char[] s = "Out of memory";
+    static s = "Out of memory";
 
     /**
      * Default constructor
@@ -25,7 +25,7 @@ class OutOfMemoryException : Exception
 	super(s);
     }
 
-    char[] toString()
+    string toString()
     {
 	return s;
     }

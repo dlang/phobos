@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2004-2006 by Digital Mars, www.digitalmars.com
+ *  Copyright (C) 2004-2007 by Digital Mars, www.digitalmars.com
  *  Written by Walter Bright
  *
  *  This software is provided 'as-is', without any express or implied
@@ -64,7 +64,7 @@ enum
     URI_Hash = 0x10,		// '#'
 }
 
-char[16] hex2ascii = "0123456789ABCDEF";
+invariant char[16] hex2ascii = "0123456789ABCDEF";
 
 ubyte[128] uri_flags;		// indexed by character
 
@@ -72,7 +72,7 @@ static this()
 {
     // Initialize uri_flags[]
 
-    static void helper(char[] p, uint flags)
+    static void helper(invariant char[] p, uint flags)
     {	int i;
 
 	for (i = 0; i < p.length; i++)
@@ -91,7 +91,7 @@ static this()
 }
 
 
-private char[] URI_Encode(dchar[] string, uint unescapedSet)
+private string URI_Encode(dstring string, uint unescapedSet)
 {   uint len;
     uint j;
     uint k;
@@ -217,9 +217,7 @@ private char[] URI_Encode(dchar[] string, uint unescapedSet)
 	}
     }
 
-    char[] result = new char[Rlen];
-    result[] = R[0..Rlen];
-    return result;
+    return R[0..Rlen].dup;
 
 LthrowURIerror:
     throw new URIerror();
@@ -232,13 +230,12 @@ uint ascii2hex(dchar c)
 			c - 'a' + 10;
 }
 
-private dchar[] URI_Decode(char[] string, uint reservedSet)
+private dstring URI_Decode(string string, uint reservedSet)
 {   uint len;
     uint j;
     uint k;
     uint V;
     dchar C;
-    char* s;
 
     //printf("URI_Decode('%.*s')\n", string);
 
@@ -248,7 +245,7 @@ private dchar[] URI_Decode(char[] string, uint reservedSet)
     uint Rsize;	// alloc'd size
 
     len = string.length;
-    s = string.ptr;
+    auto s = string.ptr;
 
     // Preallocate result buffer R guaranteed to be large enough for result
     Rsize = len;
@@ -336,9 +333,7 @@ private dchar[] URI_Decode(char[] string, uint reservedSet)
     assert(Rlen <= Rsize);	// enforce our preallocation size guarantee
 
     // Copy array on stack to array in memory
-    dchar[] d = new dchar[Rlen];
-    d[] = R[0..Rlen];
-    return d;
+    return R[0..Rlen].dup;
 
 
 LthrowURIerror:
@@ -351,11 +346,9 @@ LthrowURIerror:
  * Escape sequences that resolve to the '#' character are not replaced.
  */
 
-char[] decode(char[] encodedURI)
+string decode(string encodedURI)
 {
-    dchar[] s;
-
-    s = URI_Decode(encodedURI, URI_Reserved | URI_Hash);
+    auto s = URI_Decode(encodedURI, URI_Reserved | URI_Hash);
     return std.utf.toUTF8(s);
 }
 
@@ -364,11 +357,9 @@ char[] decode(char[] encodedURI)
  * escape sequences are decoded.
  */
 
-char[] decodeComponent(char[] encodedURIComponent)
+string decodeComponent(string encodedURIComponent)
 {
-    dchar[] s;
-
-    s = URI_Decode(encodedURIComponent, 0);
+    auto s = URI_Decode(encodedURIComponent, 0);
     return std.utf.toUTF8(s);
 }
 
@@ -377,11 +368,9 @@ char[] decodeComponent(char[] encodedURIComponent)
  * not a valid URI character is escaped. The '#' character is not escaped.
  */
 
-char[] encode(char[] uri)
+string encode(string uri)
 {
-    dchar[] s;
-
-    s = std.utf.toUTF32(uri);
+    auto s = std.utf.toUTF32(uri);
     return URI_Encode(s, URI_Reserved | URI_Hash | URI_Alpha | URI_Digit | URI_Mark);
 }
 
@@ -390,11 +379,9 @@ char[] encode(char[] uri)
  * Any character not a letter, digit, or one of -_.!~*'() is escaped.
  */
 
-char[] encodeComponent(char[] uriComponent)
+string encodeComponent(string uriComponent)
 {
-    dchar[] s;
-
-    s = std.utf.toUTF32(uriComponent);
+    auto s = std.utf.toUTF32(uriComponent);
     return URI_Encode(s, URI_Alpha | URI_Digit | URI_Mark);
 }
 
@@ -402,11 +389,10 @@ unittest
 {
     debug(uri) printf("uri.encodeURI.unittest\n");
 
-    char[] s = "http://www.digitalmars.com/~fred/fred's RX.html#foo";
-    char[] t = "http://www.digitalmars.com/~fred/fred's%20RX.html#foo";
-    char[] r;
+    string s = "http://www.digitalmars.com/~fred/fred's RX.html#foo";
+    string t = "http://www.digitalmars.com/~fred/fred's%20RX.html#foo";
 
-    r = encode(s);
+    auto r = encode(s);
     debug(uri) printf("r = '%.*s'\n", r);
     assert(r == t);
     r = decode(t);
@@ -420,7 +406,7 @@ unittest
     //printf("r = '%.*s'\n", r);
     assert(r == "c%2B%2B");
 
-    char[] str = new char[10_000_000];
+    auto str = new char[10_000_000];
     str[] = 'A';
     r = encodeComponent(str);
     foreach (char c; r)

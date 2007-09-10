@@ -40,7 +40,7 @@ module std.base64;
 
 class Base64Exception: Exception
 {
-	this(char[] msg)
+	this(string msg)
 	{
 		super(msg);
 	}
@@ -52,14 +52,14 @@ class Base64Exception: Exception
 
 class Base64CharException: Base64Exception
 {
-	this(char[] msg)
+	this(string msg)
 	{
 		super(msg);
 	}
 }
 
 
-const char[] array = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+auto array = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
 
 /**
@@ -84,7 +84,7 @@ uint encodeLength(uint slen)
  *	slice into buf[] representing encoded result
  */
 
-char[] encode(char[] str, char[] buf)
+string encode(string str, char[] buf)
 in
 {
 	assert(buf.length >= encodeLength(str.length));
@@ -98,7 +98,8 @@ body
 	uint strmax = str.length / 3;
 	uint strleft = str.length % 3;
 	uint x;
-	char* sp, bp;
+	const(char)* sp;
+	char* bp;
 	
 	bp = &buf[0];
 	sp = &str[0];
@@ -146,7 +147,7 @@ body
  * Encodes str[] and returns the result.
  */
 
-char[] encode(char[] str)
+string encode(string str)
 {
 	return encode(str, new char[encodeLength(str.length)]);
 }
@@ -183,7 +184,7 @@ uint decodeLength(uint elen)
  *	Throws Base64Exception on invalid base64 encoding in estr[].
  *	Throws Base64CharException on invalid base64 character in estr[].
  */
-char[] decode(char[] estr, char[] buf)
+string decode(string estr, char[] buf)
 in
 {
 	assert(buf.length + 2 >= decodeLength(estr.length)); //account for '=' padding
@@ -227,7 +228,8 @@ body
 	uint estri;
 	uint estrmax = estr.length / 4;
 	uint x;
-	char* sp, bp;
+	const(char)* sp;
+	char* bp;
 	char ch;
 	
 	sp = &estr[0];
@@ -271,7 +273,7 @@ body
  *	Throws Base64CharException on invalid base64 character in estr[].
  */
 
-char[] decode(char[] estr)
+string decode(string estr)
 {
 	return decode(estr, new char[decodeLength(estr.length)]);
 }

@@ -29,7 +29,7 @@ private import std.typeinfo.ti_cdouble;
 
 class TypeInfo_Ar : TypeInfo
 {
-    char[] toString() { return "cdouble[]"; }
+    string toString() { return "cdouble[]"; }
 
     hash_t getHash(void *p)
     {	cdouble[] s = *cast(cdouble[]*)p;

@@ -64,17 +64,17 @@ class FileException : Exception
 
     uint errno;			// operating system error code
 
-    this(char[] name)
+    this(string name)
     {
 	this(name, "file I/O");
     }
 
-    this(char[] name, char[] message)
+    this(string name, string message)
     {
 	super(name ~ ": " ~ message);
     }
 
-    this(char[] name, uint errno)
+    this(string name, uint errno)
     {
 	this(name, sysErrorString(errno));
 	this.errno = errno;
@@ -91,20 +91,20 @@ class FileException : Exception
  *	FileException on error.
  */
 
-void[] read(char[] name)
+void[] read(in string name)
 {
     DWORD numread;
     HANDLE h;
 
     if (useWfuncs)
     {
-	wchar* namez = std.utf.toUTF16z(name);
+	const(wchar*) namez = std.utf.toUTF16z(name);
 	h = CreateFileW(namez,GENERIC_READ,FILE_SHARE_READ,null,OPEN_EXISTING,
 	    FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,cast(HANDLE)null);
     }
     else
     {
-	char* namez = toMBSz(name);
+	const(char*) namez = toMBSz(name);
 	h = CreateFileA(namez,GENERIC_READ,FILE_SHARE_READ,null,OPEN_EXISTING,
 	    FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,cast(HANDLE)null);
     }
@@ -144,20 +144,20 @@ err1:
  * Throws: FileException on error.
  */
 
-void write(char[] name, void[] buffer)
+void write(in string name, const void[] buffer)
 {
     HANDLE h;
     DWORD numwritten;
 
     if (useWfuncs)
     {
-	wchar* namez = std.utf.toUTF16z(name);
+	const(wchar*) namez = std.utf.toUTF16z(name);
 	h = CreateFileW(namez,GENERIC_WRITE,0,null,CREATE_ALWAYS,
 	    FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,cast(HANDLE)null);
     }
     else
     {
-	char* namez = toMBSz(name);
+	const(char*) namez = toMBSz(name);
 	h = CreateFileA(namez,GENERIC_WRITE,0,null,CREATE_ALWAYS,
 	    FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,cast(HANDLE)null);
     }
@@ -186,20 +186,20 @@ err:
  * Throws: FileException on error.
  */
 
-void append(char[] name, void[] buffer)
+void append(in string name, in void[] buffer)
 {
     HANDLE h;
     DWORD numwritten;
 
     if (useWfuncs)
     {
-	wchar* namez = std.utf.toUTF16z(name);
+	const(wchar*) namez = std.utf.toUTF16z(name);
 	h = CreateFileW(namez,GENERIC_WRITE,0,null,OPEN_ALWAYS,
 	    FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,cast(HANDLE)null);
     }
     else
     {
-	char* namez = toMBSz(name);
+	const(char*) namez = toMBSz(name);
 	h = CreateFileA(namez,GENERIC_WRITE,0,null,OPEN_ALWAYS,
 	    FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,cast(HANDLE)null);
     }
@@ -230,7 +230,7 @@ err:
  * Throws: FileException on error.
  */
 
-void rename(char[] from, char[] to)
+void rename(in string from, in string to)
 {
     BOOL result;
 
@@ -248,7 +248,7 @@ void rename(char[] from, char[] to)
  * Throws: FileException on error.
  */
 
-void remove(char[] name)
+void remove(in string name)
 {
     BOOL result;
 
@@ -266,7 +266,7 @@ void remove(char[] name)
  * Throws: FileException on error.
  */
 
-ulong getSize(char[] name)
+ulong getSize(in string name)
 {
     HANDLE findhndl;
     uint resulth;
@@ -302,7 +302,7 @@ ulong getSize(char[] name)
  * Throws: FileException on error.
  */
 
-void getTimes(char[] name, out d_time ftc, out d_time fta, out d_time ftm)
+void getTimes(in string name, out d_time ftc, out d_time fta, out d_time ftm)
 {
     HANDLE findhndl;
 
@@ -338,7 +338,7 @@ void getTimes(char[] name, out d_time ftc, out d_time fta, out d_time ftm)
  * Return 1 if it does, 0 if not.
  */
 
-int exists(char[] name)
+int exists(string name)
 {
     uint result;
 
@@ -356,7 +356,7 @@ int exists(char[] name)
  * Throws: FileException on error.
  */
 
-uint getAttributes(char[] name)
+uint getAttributes(string name)
 {
     uint result;
 
@@ -376,7 +376,7 @@ uint getAttributes(char[] name)
  * Throws: FileException if name[] doesn't exist.
  */
 
-int isfile(char[] name)
+int isfile(in string name)
 {
     return (getAttributes(name) & FILE_ATTRIBUTE_DIRECTORY) == 0;
 }
@@ -386,7 +386,7 @@ int isfile(char[] name)
  * Throws: FileException if name[] doesn't exist.
  */
 
-int isdir(char[] name)
+int isdir(in string name)
 {
     return (getAttributes(name) & FILE_ATTRIBUTE_DIRECTORY) != 0;
 }
@@ -396,7 +396,7 @@ int isdir(char[] name)
  * Throws: FileException on error.
  */
 
-void chdir(char[] pathname)
+void chdir(in string pathname)
 {   BOOL result;
 
     if (useWfuncs)
@@ -415,7 +415,7 @@ void chdir(char[] pathname)
  * Throws: FileException on error.
  */
 
-void mkdir(char[] pathname)
+void mkdir(in string pathname)
 {   BOOL result;
 
     if (useWfuncs)
@@ -434,7 +434,7 @@ void mkdir(char[] pathname)
  * Throws: FileException on error.
  */
 
-void rmdir(char[] pathname)
+void rmdir(in string pathname)
 {   BOOL result;
 
     if (useWfuncs)
@@ -453,7 +453,7 @@ void rmdir(char[] pathname)
  * Throws: FileException on error.
  */
 
-char[] getcwd()
+string getcwd()
 {
     if (useWfuncs)
     {
@@ -492,14 +492,14 @@ Lerr:
 
 struct DirEntry
 {
-    char[] name;			/// file or directory name
+    string name;			/// file or directory name
     ulong size = ~0UL;			/// size of file in bytes
     d_time creationTime = d_time_nan;	/// time of file creation
     d_time lastAccessTime = d_time_nan;	/// time file was last accessed
     d_time lastWriteTime = d_time_nan;	/// time file was last written to
     uint attributes;		// Windows file attributes OR'd together
 
-    void init(char[] path, WIN32_FIND_DATA *fd)
+    void init(string path, in WIN32_FIND_DATA *fd)
     {
 	wchar[] wbuf;
 	size_t clength;
@@ -524,7 +524,7 @@ struct DirEntry
 	attributes = fd.dwFileAttributes;
     }
 
-    void init(char[] path, WIN32_FIND_DATAW *fd)
+    void init(string path, in WIN32_FIND_DATAW *fd)
     {
 	size_t clength = std.string.wcslen(fd.cFileName.ptr);
 	name = std.path.join(path, std.utf.toUTF8(fd.cFileName[0 .. clength]));
@@ -564,7 +564,7 @@ struct DirEntry
  * import std.stdio;
  * import std.file;
  *
- * void main(char[][] args)
+ * void main(string[] args)
  * {
  *    auto dirs = std.file.listdir(args[1]);
  *
@@ -574,11 +574,11 @@ struct DirEntry
  * ----
  */
 
-char[][] listdir(char[] pathname)
+string[] listdir(string pathname)
 {
-    char[][] result;
+    string[] result;
     
-    bool listing(char[] filename)
+    bool listing(string filename)
     {
 	result ~= filename;
 	return true; // continue
@@ -605,7 +605,7 @@ char[][] listdir(char[] pathname)
  * import std.stdio;
  * import std.file;
  *
- * void main(char[][] args)
+ * void main(string[] args)
  * {
  *    auto d_source_files = std.file.listdir(args[1], "*.d");
  *
@@ -620,7 +620,7 @@ char[][] listdir(char[] pathname)
  * import std.file;
  * import std.regexp;
  *
- * void main(char[][] args)
+ * void main(string[] args)
  * {
  *    auto d_source_files = std.file.listdir(args[1], RegExp(r"\.(d|obj)$"));
  *
@@ -630,8 +630,8 @@ char[][] listdir(char[] pathname)
  * ----
  */
 
-char[][] listdir(char[] pathname, char[] pattern)
-{   char[][] result;
+string[] listdir(in string pathname, in string pattern)
+{   string[] result;
     
     bool callback(DirEntry* de)
     {
@@ -650,8 +650,8 @@ char[][] listdir(char[] pathname, char[] pattern)
 
 /** Ditto */
 
-char[][] listdir(char[] pathname, RegExp r)
-{   char[][] result;
+string[] listdir(in string pathname, RegExp r)
+{   string[] result;
     
     bool callback(DirEntry* de)
     {
@@ -683,12 +683,12 @@ char[][] listdir(char[] pathname, RegExp r)
  * import std.path;
  * import std.file;
  *
- * void main(char[][] args)
+ * void main(string[] args)
  * {
  *    auto pathname = args[1];
- *    char[][] result;
+ *    string[] result;
  *
- *    bool listing(char[] filename)
+ *    bool listing(string filename)
  *    {
  *      result ~= std.path.join(pathname, filename);
  *      return true; // continue
@@ -702,7 +702,7 @@ char[][] listdir(char[] pathname, RegExp r)
  * ----
  */
 
-void listdir(char[] pathname, bool delegate(char[] filename) callback)
+void listdir(in string pathname, bool delegate(in string filename) callback)
 {
     bool listing(DirEntry* de)
     {
@@ -726,7 +726,7 @@ void listdir(char[] pathname, bool delegate(char[] filename) callback)
  * import std.stdio;
  * import std.file;
  *
- * void main(char[][] args)
+ * void main(string[] args)
  * {
  *    bool callback(DirEntry* de)
  *    {
@@ -742,9 +742,9 @@ void listdir(char[] pathname, bool delegate(char[] filename) callback)
  * ----
  */
 
-void listdir(char[] pathname, bool delegate(DirEntry* de) callback)
+void listdir(in string pathname, bool delegate(DirEntry* de) callback)
 {
-    char[] c;
+    string c;
     HANDLE h;
     DirEntry de;
 
@@ -813,7 +813,7 @@ void listdir(char[] pathname, bool delegate(DirEntry* de) callback)
  * Deprecated: use std.windows.charset.toMBSz instead.
  */
 
-char* toMBSz(char[] s)
+const(char)* toMBSz(in string s)
 {
     return std.windows.charset.toMBSz(s);
 }
@@ -823,7 +823,7 @@ char* toMBSz(char[] s)
  * Copy a file from[] to[].
  */
 
-void copy(char[] from, char[] to)
+void copy(in string from, in string to)
 {
     BOOL result;
 
@@ -856,18 +856,18 @@ class FileException : Exception
 
     uint errno;			// operating system error code
 
-    this(char[] name)
+    this(string name)
     {
 	this(name, "file I/O");
     }
 
-    this(char[] name, char[] message)
+    this(string name, string message)
     {
 	super(name ~ ": " ~ message);
     }
 
-    this(char[] name, uint errno)
-    {	char* s = strerror(errno);
+    this(string name, uint errno)
+    {	const(char*) s = strerror(errno);
 	this(name, std.string.toString(s).dup);
 	this.errno = errno;
     }
@@ -879,7 +879,7 @@ class FileException : Exception
  *	array of bytes read
  */
 
-void[] read(char[] name)
+void[] read(in string name)
 {
     uint numread;
     struct_stat statbuf;
@@ -934,11 +934,11 @@ err1:
  *	0	success
  */
 
-void write(char[] name, void[] buffer)
+void write(in string name, in void[] buffer)
 {
     int fd;
     int numwritten;
-    char *namez;
+    const(char*) namez;
 
     namez = toStringz(name);
     fd = std.c.linux.linux.open(namez, O_CREAT | O_WRONLY | O_TRUNC, 0660);
@@ -965,7 +965,7 @@ err:
  * Append to a file.
  */
 
-void append(char[] name, void[] buffer)
+void append(in string name, in void[] buffer)
 {
     int fd;
     int numwritten;
@@ -996,7 +996,7 @@ err:
  * Rename a file.
  */
 
-void rename(char[] from, char[] to)
+void rename(in string from, in string to)
 {
     char *fromz = toStringz(from);
     char *toz = toStringz(to);
@@ -1010,7 +1010,7 @@ void rename(char[] from, char[] to)
  * Delete a file.
  */
 
-void remove(char[] name)
+void remove(in string name)
 {
     if (std.c.stdio.remove(toStringz(name)) == -1)
 	throw new FileException(name, getErrno());
@@ -1021,12 +1021,12 @@ void remove(char[] name)
  * Get file size.
  */
 
-ulong getSize(char[] name)
+ulong getSize(in string name)
 {
     uint size;
     int fd;
     struct_stat statbuf;
-    char *namez;
+    const(char*) namez;
 
     namez = toStringz(name);
     //printf("file.getSize('%s')\n",namez);
@@ -1065,10 +1065,10 @@ err1:
  * Get file attributes.
  */
 
-uint getAttributes(char[] name)
+uint getAttributes(in string name)
 {
     struct_stat statbuf;
-    char *namez;
+    const(char*) namez;
 
     namez = toStringz(name);
     if (std.c.linux.linux.stat(namez, &statbuf))
@@ -1084,7 +1084,7 @@ uint getAttributes(char[] name)
  * Throws: FileException on error.
  */
 
-void getTimes(char[] name, out d_time ftc, out d_time fta, out d_time ftm)
+void getTimes(in string name, out d_time ftc, out d_time fta, out d_time ftm)
 {
     struct_stat statbuf;
     char *namez;
@@ -1105,7 +1105,7 @@ void getTimes(char[] name, out d_time ftc, out d_time fta, out d_time ftm)
  * Does file/directory exist?
  */
 
-int exists(char[] name)
+int exists(in string name)
 {
     return access(toStringz(name),0) == 0;
 
@@ -1131,7 +1131,7 @@ unittest
  * Is name a file?
  */
 
-int isfile(char[] name)
+int isfile(in string name)
 {
     return (getAttributes(name) & S_IFMT) == S_IFREG;	// regular file
 }
@@ -1140,7 +1140,7 @@ int isfile(char[] name)
  * Is name a directory?
  */
 
-int isdir(char[] name)
+int isdir(in string name)
 {
     return (getAttributes(name) & S_IFMT) == S_IFDIR;
 }
@@ -1149,7 +1149,7 @@ int isdir(char[] name)
  * Change directory.
  */
 
-void chdir(char[] pathname)
+void chdir(in string pathname)
 {
     if (std.c.linux.linux.chdir(toStringz(pathname)))
     {
@@ -1161,7 +1161,7 @@ void chdir(char[] pathname)
  * Make directory.
  */
 
-void mkdir(char[] pathname)
+void mkdir(in string pathname)
 {
     if (std.c.linux.linux.mkdir(toStringz(pathname), 0777))
     {
@@ -1173,7 +1173,7 @@ void mkdir(char[] pathname)
  * Remove directory.
  */
 
-void rmdir(char[] pathname)
+void rmdir(in string pathname)
 {
     if (std.c.linux.linux.rmdir(toStringz(pathname)))
     {
@@ -1185,7 +1185,7 @@ void rmdir(char[] pathname)
  * Get current directory.
  */
 
-char[] getcwd()
+string getcwd()
 {
     auto p = std.c.linux.linux.getcwd(null, 0);
     if (!p)
@@ -1206,7 +1206,7 @@ char[] getcwd()
 
 struct DirEntry
 {
-    char[] name;			/// file or directory name
+    string name;			/// file or directory name
     ulong _size = ~0UL;			// size of file in bytes
     d_time _creationTime = d_time_nan;	// time of file creation
     d_time _lastAccessTime = d_time_nan; // time file was last accessed
@@ -1214,7 +1214,7 @@ struct DirEntry
     ubyte d_type;
     ubyte didstat;			// done lazy evaluation of stat()
 
-    void init(char[] path, dirent *fd)
+    void init(string path, dirent *fd)
     {	size_t len = std.string.strlen(fd.d_name.ptr);
 	name = std.path.join(path, fd.d_name[0 .. len]);
 	d_type = fd.d_type;
@@ -1267,7 +1267,7 @@ struct DirEntry
     {
 	int fd;
 	struct_stat statbuf;
-	char* namez;
+	const(char*) namez;
 
 	namez = toStringz(name);
 	if (std.c.linux.linux.stat(namez, &statbuf))
@@ -1289,11 +1289,11 @@ struct DirEntry
  * Return contents of directory.
  */
 
-char[][] listdir(char[] pathname)
+string[] listdir(string pathname)
 {
-    char[][] result;
+    string[] result;
     
-    bool listing(char[] filename)
+    bool listing(string filename)
     {
 	result ~= filename;
 	return true; // continue
@@ -1303,8 +1303,8 @@ char[][] listdir(char[] pathname)
     return result;
 }
 
-char[][] listdir(char[] pathname, char[] pattern)
-{   char[][] result;
+string[] listdir(string pathname, in string pattern)
+{   string[] result;
     
     bool callback(DirEntry* de)
     {
@@ -1321,8 +1321,8 @@ char[][] listdir(char[] pathname, char[] pattern)
     return result;
 }
 
-char[][] listdir(char[] pathname, RegExp r)
-{   char[][] result;
+string[] listdir(string pathname, RegExp r)
+{   string[] result;
     
     bool callback(DirEntry* de)
     {
@@ -1339,7 +1339,7 @@ char[][] listdir(char[] pathname, RegExp r)
     return result;
 }
 
-void listdir(char[] pathname, bool delegate(char[] filename) callback)
+void listdir(string pathname, bool delegate(string filename) callback)
 {
     bool listing(DirEntry* de)
     {
@@ -1349,7 +1349,7 @@ void listdir(char[] pathname, bool delegate(char[] filename) callback)
     listdir(pathname, &listing);
 }
 
-void listdir(char[] pathname, bool delegate(DirEntry* de) callback)
+void listdir(string pathname, bool delegate(DirEntry* de) callback)
 {
     DIR* h;
     dirent* fdata;
@@ -1388,7 +1388,7 @@ void listdir(char[] pathname, bool delegate(DirEntry* de) callback)
  * Copy a file. File timestamps are preserved.
  */
 
-void copy(char[] from, char[] to)
+void copy(in string from, in string to)
 {
   version (all)
   {

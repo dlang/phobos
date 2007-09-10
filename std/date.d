@@ -12,7 +12,7 @@
  *	WIKI = Phobos/StdDate
  */
 
-// Copyright (c) 1999-2006 by Digital Mars
+// Copyright (c) 1999-2007 by Digital Mars
 // All Rights Reserved
 // written by Walter Bright
 // www.digitalmars.com
@@ -55,7 +55,7 @@ struct Date
     int tzcorrection = int.min;	/// -1200..1200 correction in hours
 
     /// Parse date out of string s[] and store it in this Date instance.
-    void parse(char[] s)
+    void parse(string s)
     {
 	DateParse dp;
 
@@ -478,7 +478,7 @@ d_time TimeClip(d_time time)
  * ------------------------------------
  */
 
-char[] toString(d_time time)
+string toString(d_time time)
 {
     d_time t;
     char sign;
@@ -531,7 +531,7 @@ char[] toString(d_time time)
  * If t is invalid, "Invalid date" is returned.
  */
 
-char[] toUTCString(d_time t)
+string toUTCString(d_time t)
 {
     // Years are supposed to be -285616 .. 285616, or 7 digits
     // "Tue, 02 Apr 1996 02:04:57 GMT"
@@ -559,7 +559,7 @@ char[] toUTCString(d_time t)
  * If time is invalid, "Invalid date" is returned.
  */
 
-char[] toDateString(d_time time)
+string toDateString(d_time time)
 {
     d_time t;
     d_time offset;
@@ -595,7 +595,7 @@ char[] toDateString(d_time time)
  * If t is invalid, "Invalid date" is returned.
  */
 
-char[] toTimeString(d_time time)
+string toTimeString(d_time time)
 {
     d_time t;
     char sign;
@@ -644,7 +644,7 @@ char[] toTimeString(d_time time)
  * If the string is not a valid date, d_time_nan is returned.
  */
 
-d_time parse(char[] s)
+d_time parse(string s)
 {
     Date dp;
     d_time n;
@@ -704,7 +704,7 @@ version (Win32)
 	//return c.time.time(null) * TicksPerSecond;
     }
 
-    static d_time FILETIME2d_time(FILETIME *ft)
+    static d_time FILETIME2d_time(const FILETIME *ft)
     {   SYSTEMTIME st;
 
 	if (!FileTimeToSystemTime(ft, &st))
@@ -712,7 +712,7 @@ version (Win32)
 	return SYSTEMTIME2d_time(&st, 0);
     }
 
-    static d_time SYSTEMTIME2d_time(SYSTEMTIME *st, d_time t)
+    static d_time SYSTEMTIME2d_time(const SYSTEMTIME *st, d_time t)
     {
 	d_time n;
 	d_time day;

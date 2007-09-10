@@ -29,7 +29,7 @@ private import std.typeinfo.ti_double;
 
 class TypeInfo_Ad : TypeInfo
 {
-    char[] toString() { return "double[]"; }
+    string toString() { return "double[]"; }
 
     hash_t getHash(void *p)
     {	double[] s = *cast(double[]*)p;
@@ -103,7 +103,7 @@ class TypeInfo_Ad : TypeInfo
 
 class TypeInfo_Ap : TypeInfo_Ad
 {
-    char[] toString() { return "idouble[]"; }
+    string toString() { return "idouble[]"; }
 
     TypeInfo next()
     {

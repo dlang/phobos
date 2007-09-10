@@ -39,25 +39,25 @@ module std.stream;
 /// A base class for stream exceptions.
 class StreamException: Exception {
   /// Construct a StreamException with given error message.
-  this(char[] msg) { super(msg); }
+  this(string msg) { super(msg); }
 }
 
 /// Thrown when unable to read data from Stream.
 class ReadException: StreamException {
   /// Construct a ReadException with given error message.
-  this(char[] msg) { super(msg); }
+  this(string msg) { super(msg); }
 }
 
 /// Thrown when unable to write data to Stream.
 class WriteException: StreamException {
   /// Construct a WriteException with given error message.
-  this(char[] msg) { super(msg); }
+  this(string msg) { super(msg); }
 }
 
 /// Thrown when unable to move Stream pointer.
 class SeekException: StreamException {
   /// Construct a SeekException with given error message.
-  this(char[] msg) { super(msg); }
+  this(string msg) { super(msg); }
 }
 
 // seek whence...
@@ -127,10 +127,10 @@ interface InputStream {
   void read(out dchar x);	/// ditto
 
   // reads a string, written earlier by write()
-  void read(out char[] s);	/// ditto
+  void read(out string s);	/// ditto
 
   // reads a Unicode string, written earlier by write()
-  void read(out wchar[] s);	/// ditto
+  void read(out wstring s);	/// ditto
 
   /***
    * Read a line that is terminated with some combination of carriage return and
@@ -140,10 +140,10 @@ interface InputStream {
    * is identical. The optional buffer parameter is filled (reallocating
    * it if necessary) and a slice of the result is returned. 
    */
-  char[] readLine();
-  char[] readLine(char[] result);	/// ditto
-  wchar[] readLineW();			/// ditto
-  wchar[] readLineW(wchar[] result);	/// ditto
+  string readLine();
+  string readLine(char[] result);	/// ditto
+  wstring readLineW();			/// ditto
+  wstring readLineW(wchar[] result);	/// ditto
 
   /***
    * Overload foreach statements to read the stream line by line and call the
@@ -156,7 +156,7 @@ interface InputStream {
    * For example, to echo a file line-by-line with line numbers run:
    * ------------------------------------
    * Stream file = new BufferedFile("sample.txt");
-   * foreach(ulong n, char[] line; file) {
+   * foreach(ulong n, string line; file) {
    *   stdout.writefln("line %d: %s",n,line);
    * }
    * file.close();
@@ -164,14 +164,14 @@ interface InputStream {
    */
 
   // iterate through the stream line-by-line
-  int opApply(int delegate(inout char[] line) dg);
-  int opApply(int delegate(inout ulong n, inout char[] line) dg);  /// ditto
-  int opApply(int delegate(inout wchar[] line) dg);		   /// ditto
-  int opApply(int delegate(inout ulong n, inout wchar[] line) dg); /// ditto
+  int opApply(int delegate(inout string line) dg);
+  int opApply(int delegate(inout ulong n, inout string line) dg);  /// ditto
+  int opApply(int delegate(inout wstring line) dg);		   /// ditto
+  int opApply(int delegate(inout ulong n, inout wstring line) dg); /// ditto
 
   /// Read a string of the given length,
   /// throwing ReadException if there was a problem.
-  char[] readString(size_t length);
+  string readString(size_t length);
 
   /***
    * Read a string of the given length, throwing ReadException if there was a
@@ -181,7 +181,7 @@ interface InputStream {
    * except as opposite actions to <b>write</b>.
    */
 
-  wchar[] readStringW(size_t length);
+  wstring readStringW(size_t length);
 
 
   /***
@@ -208,17 +208,17 @@ interface InputStream {
    * Scan a string from the input using a similar form to C's scanf
    * and <a href="std_format.html">std.format</a>.
    *
-   * An argument of type char[] is interpreted as a format string.
+   * An argument of type string is interpreted as a format string.
    * All other arguments must be pointer types.
    * If a format string is not present a default will be supplied computed from
-   * the base type of the pointer type. An argument of type char[]* is filled
+   * the base type of the pointer type. An argument of type string* is filled
    * (possibly with appending characters) and a slice of the result is assigned
    * back into the argument. For example the following readf statements
    * are equivalent:
    * --------------------------
    * int x;
    * double y;
-   * char[] s;
+   * string s;
    * file.readf(&x, " hello ", &y, &s);
    * file.readf("%d hello %f %s", &x, &y, &s);
    * file.readf("%d hello %f", &x, &y, "%s", &s);
@@ -251,13 +251,13 @@ interface OutputStream {
    * Write exactly size bytes from buffer, or throw a WriteException if that
    * could not be done.
    */
-  void writeExact(void* buffer, size_t size);
+  void writeExact(const void* buffer, size_t size);
 
   /***
    * Write as much of the buffer as possible,
    * returning the number of bytes written.
    */
-  size_t write(ubyte[] buffer);
+  size_t write(const(ubyte)[] buffer);
 
   /***
    * Write a basic type.
@@ -294,8 +294,8 @@ interface OutputStream {
    * and should only be used in conjunction with read.
    * Throw WriteException on error.
    */
-  void write(char[] s);
-  void write(wchar[] s);	/// ditto
+  void write(string s);
+  void write(const(wchar)[] s);	/// ditto
 
   /***
    * Write a line of text,
@@ -303,7 +303,7 @@ interface OutputStream {
    *
    * Throws WriteException on error.
    */
-  void writeLine(char[] s);
+  void writeLine(string s);
 
   /***
    * Write a line of text,
@@ -312,14 +312,14 @@ interface OutputStream {
    * The format is implementation-specific.
    * Throws WriteException on error.
    */
-  void writeLineW(wchar[] s);
+  void writeLineW(const(wchar)[] s);
 
   /***
    * Write a string of text.
    *
    * Throws WriteException if it could not be fully written.
    */
-  void writeString(char[] s);
+  void writeString(string s);
 
   /***
    * Write a string of text.
@@ -327,14 +327,14 @@ interface OutputStream {
    * The format is implementation-specific.
    * Throws WriteException if it could not be fully written.
    */
-  void writeStringW(wchar[] s);
+  void writeStringW(const(wchar)[] s);
 
   /***
    * Print a formatted string into the stream using printf-style syntax,
    * returning the number of bytes written.
    */
-  size_t vprintf(char[] format, va_list args);
-  size_t printf(char[] format, ...);	/// ditto
+  size_t vprintf(string format, va_list args);
+  size_t printf(string format, ...);	/// ditto
 
   /***
    * Print a formatted string into the stream using writef-style syntax.
@@ -447,28 +447,28 @@ class Stream : InputStream, OutputStream {
   void read(out dchar x) { readExact(&x, x.sizeof); }
 
   // reads a string, written earlier by write()
-  void read(out char[] s) {
+  void read(out string s) {
     size_t len;
     read(len);
     s = readString(len);
   }
 
   // reads a Unicode string, written earlier by write()
-  void read(out wchar[] s) {
+  void read(out wstring s) {
     size_t len;
     read(len);
     s = readStringW(len);
   }
 
   // reads a line, terminated by either CR, LF, CR/LF, or EOF
-  char[] readLine() {
+  string readLine() {
     return readLine(null);
   }
 
   // reads a line, terminated by either CR, LF, CR/LF, or EOF
   // reusing the memory in buffer if result will fit and otherwise
   // allocates a new string
-  char[] readLine(char[] result) {
+  string readLine(char[] result) {
     size_t strlen = 0;
     char ch = getc();
     while (readable) {
@@ -503,14 +503,14 @@ class Stream : InputStream, OutputStream {
   // reads a Unicode line, terminated by either CR, LF, CR/LF,
   // or EOF; pretty much the same as the above, working with
   // wchars rather than chars
-  wchar[] readLineW() {
+  wstring readLineW() {
     return readLineW(null);
   }
 
   // reads a Unicode line, terminated by either CR, LF, CR/LF,
   // or EOF;
   // fills supplied buffer if line fits and otherwise allocates a new string.
-  wchar[] readLineW(wchar[] result) {
+  wstring readLineW(wchar[] result) {
     size_t strlen = 0;
     wchar c = getcw();
     while (readable) {
@@ -543,24 +543,24 @@ class Stream : InputStream, OutputStream {
   }
 
   // iterate through the stream line-by-line - due to Regan Heath
-  int opApply(int delegate(inout char[] line) dg) {
+  int opApply(int delegate(inout string line) dg) {
     int res = 0;
     char[128] buf;
     while (!eof()) {
-      char[] line = readLine(buf);
+      string line = readLine(buf);
       res = dg(line);
       if (res) break;
     }
     return res;
   }
 
-  // iterate through the stream line-by-line with line count and char[]
-  int opApply(int delegate(inout ulong n, inout char[] line) dg) {
+  // iterate through the stream line-by-line with line count and string
+  int opApply(int delegate(inout ulong n, inout string line) dg) {
     int res = 0;
     ulong n = 1;
     char[128] buf;
     while (!eof()) {
-      char[] line = readLine(buf);
+      string line = readLine(buf);
       res = dg(n,line);
       if (res) break;
       n++;
@@ -568,25 +568,25 @@ class Stream : InputStream, OutputStream {
     return res;
   }
 
-  // iterate through the stream line-by-line with wchar[]
-  int opApply(int delegate(inout wchar[] line) dg) {
+  // iterate through the stream line-by-line with wstring
+  int opApply(int delegate(inout wstring line) dg) {
     int res = 0;
     wchar[128] buf;
     while (!eof()) {
-      wchar[] line = readLineW(buf);
+      wstring line = readLineW(buf);
       res = dg(line);
       if (res) break;
     }
     return res;
   }
 
-  // iterate through the stream line-by-line with line count and wchar[]
-  int opApply(int delegate(inout ulong n, inout wchar[] line) dg) {
+  // iterate through the stream line-by-line with line count and wstring
+  int opApply(int delegate(inout ulong n, inout wstring line) dg) {
     int res = 0;
     ulong n = 1;
     wchar[128] buf;
     while (!eof()) {
-      wchar[] line = readLineW(buf);
+      wstring line = readLineW(buf);
       res = dg(n,line);
       if (res) break;
       n++;
@@ -596,7 +596,7 @@ class Stream : InputStream, OutputStream {
 
   // reads a string of given length, throws
   // ReadException on error
-  char[] readString(size_t length) {
+  string readString(size_t length) {
     char[] result = new char[length];
     readExact(result.ptr, length);
     return result;
@@ -604,7 +604,7 @@ class Stream : InputStream, OutputStream {
 
   // reads a Unicode string of given length, throws
   // ReadException on error
-  wchar[] readStringW(size_t length) {
+  wstring readStringW(size_t length) {
     wchar[] result = new wchar[length];
     readExact(result.ptr, result.length * wchar.sizeof);
     return result;
@@ -680,15 +680,15 @@ class Stream : InputStream, OutputStream {
   }
 
   int vreadf(TypeInfo[] arguments, void* args) {
-    char[] fmt;
+    string fmt;
     int j = 0;
     int count = 0, i = 0;
     char c = getc();
     while ((j < arguments.length || i < fmt.length) && !eof()) {
       if (fmt.length == 0 || i == fmt.length) {
 	i = 0;
-	if (arguments[j] is typeid(char[])) {
-	  fmt = va_arg!(char[])(args);
+	if (arguments[j] is typeid(string)) {
+	  fmt = va_arg!(string)(args);
 	  j++;
 	  continue;
 	} else if (arguments[j] is typeid(int*) ||
@@ -705,9 +705,9 @@ class Stream : InputStream, OutputStream {
 		   arguments[j] is typeid(double*) ||
 		   arguments[j] is typeid(real*)) {
 	  fmt = "%f";
-	} else if (arguments[j] is typeid(char[]*) ||
-		   arguments[j] is typeid(wchar[]*) ||
-		   arguments[j] is typeid(dchar[]*)) {
+	} else if (arguments[j] is typeid(string*) ||
+		   arguments[j] is typeid(wstring*) ||
+		   arguments[j] is typeid(dstring*)) {
 	  fmt = "%s";
 	} else if (arguments[j] is typeid(char*)) {
 	  fmt = "%c";
@@ -958,13 +958,13 @@ class Stream : InputStream, OutputStream {
 	    *p = s;
 	  } else if (arguments[j] is typeid(char*)) {
 	    s ~= 0;
-	    char* q = va_arg!(char*)(args);
+	    auto q = va_arg!(char*)(args);
 	    q[0 .. s.length] = s[];
 	  } else if (arguments[j] is typeid(wchar[]*)) {
-	    wchar[]* q = va_arg!(wchar[]*)(args);
+	    auto q = va_arg!(const(wchar)[]*)(args);
 	    *q = toUTF16(s);
 	  } else if (arguments[j] is typeid(dchar[]*)) {
-	    dchar[]* q = va_arg!(dchar[]*)(args);
+	    auto q = va_arg!(const(dchar)[]*)(args);
 	    *q = toUTF32(s);
 	  }
 	  j++;
@@ -1026,16 +1026,17 @@ class Stream : InputStream, OutputStream {
    * Write up to size bytes from buffer in the stream, returning the actual
    * number of bytes that were written.
    */
-  abstract size_t writeBlock(void* buffer, size_t size);
+  abstract size_t writeBlock(const void* buffer, size_t size);
 
   // writes block of data of specified size,
   // throws WriteException on error
-  void writeExact(void* buffer, size_t size) {
+  void writeExact(const void* buffer, size_t size) {
+    const(void)* p = buffer;
     for(;;) {
       if (!size) return;
-      size_t writesize = writeBlock(buffer, size);
+      size_t writesize = writeBlock(p, size);
       if (writesize == 0) break;
-      buffer += writesize;
+      p += writesize;
       size -= writesize;
     }
     if (size != 0)
@@ -1044,7 +1045,7 @@ class Stream : InputStream, OutputStream {
 
   // writes the given array of bytes, returns
   // actual number of bytes written
-  size_t write(ubyte[] buffer) {
+  size_t write(const(ubyte)[] buffer) {
     return writeBlock(buffer.ptr, buffer.length);
   }
 
@@ -1072,19 +1073,19 @@ class Stream : InputStream, OutputStream {
   void write(dchar x) { writeExact(&x, x.sizeof); }
 
   // writes a string, together with its length
-  void write(char[] s) {
+  void write(string s) {
     write(s.length);
     writeString(s);
   }
 
   // writes a Unicode string, together with its length
-  void write(wchar[] s) {
+  void write(const(wchar)[] s) {
     write(s.length);
     writeStringW(s);
   }
 
   // writes a line, throws WriteException on error
-  void writeLine(char[] s) {
+  void writeLine(string s) {
     writeString(s);
     version (Win32)
       writeString("\r\n");
@@ -1095,7 +1096,7 @@ class Stream : InputStream, OutputStream {
   }
 
   // writes a Unicode line, throws WriteException on error
-  void writeLineW(wchar[] s) {
+  void writeLineW(const(wchar)[] s) {
     writeStringW(s);
     version (Win32)
       writeStringW("\r\n");
@@ -1106,18 +1107,18 @@ class Stream : InputStream, OutputStream {
   }
 
   // writes a string, throws WriteException on error
-  void writeString(char[] s) {
+  void writeString(string s) {
     writeExact(s.ptr, s.length);
   }
 
   // writes a Unicode string, throws WriteException on error
-  void writeStringW(wchar[] s) {
+  void writeStringW(const(wchar)[] s) {
     writeExact(s.ptr, s.length * wchar.sizeof);
   }
 
   // writes data to stream using vprintf() syntax,
   // returns number of bytes written
-  size_t vprintf(char[] format, va_list args) {
+  size_t vprintf(string format, va_list args) {
     // shamelessly stolen from OutBuffer,
     // by Walter's permission
     char[1024] buffer;
@@ -1150,7 +1151,7 @@ class Stream : InputStream, OutputStream {
 
   // writes data to stream using printf() syntax,
   // returns number of bytes written
-  size_t printf(char[] format, ...) {
+  size_t printf(string format, ...) {
     va_list ap;
     ap = cast(va_list) &format;
     ap += format.sizeof;
@@ -1159,7 +1160,7 @@ class Stream : InputStream, OutputStream {
 
   private void doFormatCallback(dchar c) {
     char[4] buf;
-    char[] b;
+    string b;
     b = std.utf.toUTF8(buf, c);
     writeString(b);
   }
@@ -1287,7 +1288,7 @@ class Stream : InputStream, OutputStream {
    * If the stream is not seekable the contents from the current position to eof
    * is read and returned.
    */
-  override char[] toString() {
+  override string toString() {
     if (!readable)
       return super.toString();
     size_t pos;
@@ -1426,7 +1427,7 @@ class FilterStream : Stream {
   }
 
   // write to source
-  size_t writeBlock(void* buffer, size_t size) {
+  size_t writeBlock(const void* buffer, size_t size) {
     return s.writeBlock(buffer,size);
   }
 
@@ -1476,7 +1477,7 @@ class BufferedStream : FilterStream {
    *
    */
 
-  invariant {
+  invariant() {
     assert(bufferSourcePos <= bufferLen);
     assert(bufferCurPos <= bufferLen);
     assert(bufferLen <= buffer.length);
@@ -1552,7 +1553,7 @@ class BufferedStream : FilterStream {
 
   // write block of data of specified size
   // returns actual number of bytes written
-  override size_t writeBlock(void* result, size_t len) {
+  override size_t writeBlock(const void* result, size_t len) {
     assertWriteable();
 
     ubyte* buf = cast(ubyte*)result;
@@ -1673,7 +1674,7 @@ class BufferedStream : FilterStream {
       }
   } // template TreadLine(T)
 
-  override char[] readLine(char[] inBuffer) {
+  override string readLine(char[] inBuffer) {
     if (ungetAvailable())
       return super.readLine(inBuffer);
     else
@@ -1681,7 +1682,7 @@ class BufferedStream : FilterStream {
   }
   alias Stream.readLine readLine;
 
-  override wchar[] readLineW(wchar[] inBuffer) {
+  override wstring readLineW(wchar[] inBuffer) {
     if (ungetAvailable())
       return super.readLineW(inBuffer);
     else
@@ -1750,13 +1751,13 @@ class BufferedStream : FilterStream {
 /// An exception for File errors.
 class StreamFileException: StreamException {
   /// Construct a StreamFileException with given error message.
-  this(char[] msg) { super(msg); }
+  this(string msg) { super(msg); }
 }
 
 /// An exception for errors during File.open.
 class OpenException: StreamFileException {
   /// Construct an OpenFileException with given error message.
-  this(char[] msg) { super(msg); }
+  this(string msg) { super(msg); }
 }
 
 // access modes; may be or'ed
@@ -1827,14 +1828,14 @@ class File: Stream {
    * The FileMode.Append mode will open the file for writing and move the
    * file position to the end of the file.
    */
-  this(char[] filename, FileMode mode = FileMode.In) { this(); open(filename, mode); }
+  this(string filename, FileMode mode = FileMode.In) { this(); open(filename, mode); }
 
 
   /***
    * Open a file for the stream, in an identical manner to the constructors.
    * If an error occurs an OpenException is thrown.
    */
-  void open(char[] filename, FileMode mode = FileMode.In) {
+  void open(string filename, FileMode mode = FileMode.In) {
     close();
     int access, share, createMode;
     parseMode(mode, access, share, createMode);
@@ -1899,12 +1900,12 @@ class File: Stream {
   }
 
   /// Create a file for writing.
-  void create(char[] filename) {
+  void create(string filename) {
     create(filename, FileMode.OutNew);
   }
 
   /// ditto
-  void create(char[] filename, FileMode mode) {
+  void create(string filename, FileMode mode) {
     close();
     open(filename, mode | FileMode.OutNew);
   }
@@ -1951,7 +1952,7 @@ class File: Stream {
     return size;
   }
 
-  override size_t writeBlock(void* buffer, size_t size) {
+  override size_t writeBlock(const void* buffer, size_t size) {
     assertWriteable();
     version (Win32) {
       WriteFile(hFile, buffer, size, &size, null);
@@ -2022,8 +2023,8 @@ class File: Stream {
     // should be ok to read
     assert(file.readable);
     assert(file.available == file.size);
-    char[] line = file.readLine();
-    char[] exp = "Testing stream.d:";
+    string line = file.readLine();
+    string exp = "Testing stream.d:";
     assert(line[0] == 'T');
     assert(line.length == exp.length);
     assert(!std.string.cmp(line, "Testing stream.d:"));
@@ -2050,8 +2051,8 @@ class File: Stream {
     file.writeLine("");
     file.writeLine("That was blank");
     file.position = 0;
-    char[][] lines;
-    foreach(char[] line; file) {
+    string[] lines;
+    foreach(string line; file) {
       lines ~= line.dup;
     }
     assert( lines.length == 4 );
@@ -2060,8 +2061,8 @@ class File: Stream {
     assert( lines[2] == "");
     assert( lines[3] == "That was blank");
     file.position = 0;
-    lines = new char[][4];
-    foreach(ulong n, char[] line; file) {
+    lines = new string[4];
+    foreach(ulong n, string line; file) {
       lines[cast(size_t)(n-1)] = line.dup;
     }
     assert( lines[0] == "Testing stream.d:");
@@ -2086,7 +2087,7 @@ class BufferedFile: BufferedStream {
   this() { super(new File()); }
 
   /// opens file in requested mode and buffer size
-  this(char[] filename, FileMode mode = FileMode.In,
+  this(string filename, FileMode mode = FileMode.In,
        uint bufferSize = DefaultBufferSize) {
     super(new File(filename,mode),bufferSize);
   }
@@ -2102,14 +2103,14 @@ class BufferedFile: BufferedStream {
   }
 
   /// opens file in requested mode
-  void open(char[] filename, FileMode mode = FileMode.In) {
+  void open(string filename, FileMode mode = FileMode.In) {
     File sf = cast(File)s;
     sf.open(filename,mode);
     resetSource();
   }
 
   /// creates file in requested mode
-  void create(char[] filename, FileMode mode = FileMode.Out) {
+  void create(string filename, FileMode mode = FileMode.Out) {
     File sf = cast(File)s;
     sf.create(filename,mode);
     resetSource();
@@ -2272,7 +2273,7 @@ class EndianStream : FilterStream {
    * Correct the byte order of buffer to match native endianness.
    * size must be even.
    */
-  final void fixBO(void* buffer, uint size) {
+  final void fixBO(const(void)* buffer, uint size) {
     if (endian != std.system.endian) {
       ubyte* startb = cast(ubyte*)buffer;
       uint* start = cast(uint*)buffer;
@@ -2358,7 +2359,7 @@ class EndianStream : FilterStream {
     return c;
   }
 
-  wchar[] readStringW(size_t length) {
+  wstring readStringW(size_t length) {
     wchar[] result = new wchar[length];
     readExact(result.ptr, result.length * wchar.sizeof);
     fixBlockBO(&result,2,length);
@@ -2389,7 +2390,7 @@ class EndianStream : FilterStream {
   void write(wchar x) { fixBO(&x,x.sizeof); writeExact(&x, x.sizeof); }
   void write(dchar x) { fixBO(&x,x.sizeof); writeExact(&x, x.sizeof); }
 
-  void writeStringW(wchar[] str) {
+  void writeStringW(const(wchar)[] str) {
     foreach(wchar cw;str) {
       fixBO(&cw,2);
       s.writeExact(&cw, 2);
@@ -2506,7 +2507,7 @@ class TArrayStream(Buffer): Stream {
   }
 
   // ensure subclasses don't violate this
-  invariant {
+  invariant() {
     assert(len <= buf.length);
     assert(cur <= len);
   }
@@ -2522,7 +2523,7 @@ class TArrayStream(Buffer): Stream {
     return size;
   }
 
-  override size_t writeBlock(void* buffer, size_t size) {
+  override size_t writeBlock(const void* buffer, size_t size) {
     assertWriteable();
     ubyte* cbuf = cast(ubyte*) buffer;
     ulong blen = buf.length;
@@ -2564,21 +2565,21 @@ class TArrayStream(Buffer): Stream {
   ubyte[] data() { 
     if (len > size_t.max)
       throw new StreamException("Stream too big");
-    void[] res = buf[0 .. cast(size_t)len];
+    const(void)[] res = buf[0 .. cast(size_t)len];
     return cast(ubyte[])res;
   }
 
-  override char[] toString() {
-    return cast(char[]) data ();
+  override string toString() {
+    return cast(string) data ();
   }
 }
 
 /* Test the TArrayStream */
 unittest {
   char[100] buf;
-  TArrayStream!(char[]) m;
+  TArrayStream!(string) m;
 
-  m = new TArrayStream!(char[]) (buf);
+  m = new TArrayStream!(string) (buf);
   assert (m.isOpen);
   m.writeString ("Hello, world");
   assert (m.position () == 12);
@@ -2612,7 +2613,7 @@ class MemoryStream: TArrayStream!(ubyte[]) {
    */
   this(ubyte[] buf) { super (buf); }
   this(byte[] buf) { this(cast(ubyte[]) buf); }	/// ditto
-  this(char[] buf) { this(cast(ubyte[]) buf); } /// ditto
+  this(string buf) { this(cast(ubyte[]) buf); } /// ditto
 
   /// Ensure the stream can hold count bytes.
   void reserve(size_t count) {
@@ -2620,7 +2621,7 @@ class MemoryStream: TArrayStream!(ubyte[]) {
       buf.length = cast(uint)((cur + count) * 2);
   }
 
-  override size_t writeBlock(void* buffer, size_t size) {
+  override size_t writeBlock(const void* buffer, size_t size) {
     reserve(size);
     return super.writeBlock(buffer,size);
   }
@@ -2641,7 +2642,7 @@ class MemoryStream: TArrayStream!(ubyte[]) {
     assert (m.size () == 12);
     assert (m.readString (4) == "o, w");
     m.writeString ("ie");
-    assert (cast(char[]) m.data () == "Hello, wield");
+    assert (cast(string) m.data () == "Hello, wield");
     m.seekEnd (0);
     m.writeString ("Foo");
     assert (m.position () == 15);
@@ -2651,7 +2652,7 @@ class MemoryStream: TArrayStream!(ubyte[]) {
     m.position = 0;
     assert (m.available == 42);
     m.writef("%d %d %s",100,345,"hello");
-    char[] str = m.toString;
+    string str = m.toString;
     assert (str[0..13] == "100 345 hello");
     assert (m.available == 29);
     assert (m.position == 13);
@@ -2665,7 +2666,7 @@ class MemoryStream: TArrayStream!(ubyte[]) {
     assert (str[0..16] == "before 345 hello");
     m2.position = 3;
     m2.copyFrom(m);
-    char[] str2 = m.toString;
+    string str2 = m.toString;
     str = m2.toString;
     assert (str == ("bef" ~ str2));
   }
@@ -2716,7 +2717,7 @@ unittest {
   assert (m.readString (4) == "o, w");
   m.writeString ("ie");
   ubyte[] dd = m.data();
-  assert ((cast(char[]) dd)[0 .. 12] == "Hello, wield");
+  assert ((cast(string) dd)[0 .. 12] == "Hello, wield");
   m.position = 12;
   m.writeString ("Foo");
   assert (m.position () == 15);
@@ -2726,7 +2727,7 @@ unittest {
   mf = new MmFile("testing.txt");
   m = new MmFileStream (mf);
   assert (!m.writeable);
-  char[] str = m.readString(12);
+  string str = m.readString(12);
   assert (str == "Hello, wield");
   m.close();
   std.file.remove("testing.txt");
@@ -2786,7 +2787,7 @@ class SliceStream : FilterStream {
     this.bounded = true;
   }
 
-  invariant {
+  invariant() {
     if (bounded)
       assert (pos <= high - low);
     else
@@ -2808,7 +2809,7 @@ class SliceStream : FilterStream {
     return ret;
   }
 
-  override size_t writeBlock (void *buffer, size_t size) {
+  override size_t writeBlock (const void *buffer, size_t size) {
     assertWriteable();
     if (bounded && size > high - low - pos)
 	size = cast(size_t)(high - low - pos);
@@ -2873,7 +2874,7 @@ class SliceStream : FilterStream {
     MemoryStream m;
     SliceStream s;
 
-    m = new MemoryStream ((cast(char[])"Hello, world").dup);
+    m = new MemoryStream ((cast(string)"Hello, world").dup);
     s = new SliceStream (m, 4, 8);
     assert (s.size () == 4);
     assert (m.position () == 0);

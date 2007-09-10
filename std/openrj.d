@@ -72,8 +72,8 @@ private import std.string;
 
 private struct Version
 {
-    char[]  name;
-    char[]  description;
+    string  name;
+    string  description;
     uint    major;
     uint    minor;
     uint    revision;
@@ -101,12 +101,12 @@ public static Version   VERSION =
 private struct EnumString
 {
     int     value;
-    char[]  str;
+    string  str;
 };
 
 private template enum_to_string(T)
 {
-    char[] enum_to_string(EnumString[] strings, T t)
+    string enum_to_string(const EnumString[] strings, T t)
     {
         // 'Optimised' search.
         //
@@ -123,7 +123,7 @@ private template enum_to_string(T)
         }
 
         // Otherwise, just do a linear search
-        foreach(EnumString s; strings)
+        foreach(s; strings)
         {
             if(cast(int)(t) == s.value)
             {
@@ -149,7 +149,7 @@ public enum ORJ_FLAG
 /**
  *
  */
-public char[] toString(ORJ_FLAG f)
+public string toString(ORJ_FLAG f)
 {
     const EnumString    strings[] = 
     [
@@ -177,7 +177,7 @@ public enum ORJRC
 /**
  *
  */
-public char[] toString(ORJRC f)
+public string toString(ORJRC f)
 {
     const EnumString    strings[] = 
     [
@@ -208,7 +208,7 @@ public enum ORJ_PARSE_ERROR
 /**
  *
  */
-public char[] toString(ORJ_PARSE_ERROR f)
+public string toString(ORJ_PARSE_ERROR f)
 {
     const EnumString    strings[] = 
     [
@@ -235,7 +235,7 @@ class OpenRJException
 /* \name Construction */
 
 protected:
-    this(char[] message)
+    this(string message)
     {
         super(message);
     }
@@ -250,11 +250,11 @@ class DatabaseException
 {
 /* \name Construction */
 private:
-    this(char[] details, ORJRC rc)
+    this(string details, ORJRC rc)
     {
 //printf("DatabaseException(0: %.*s, %.*s)\n", details, std.openrj.toString(rc));
 
-        char[]  message    =   std.string.format(   "Database creation failed; error: %s, %s"
+        string  message    =   std.string.format(   "Database creation failed; error: %s, %s"
                                                 ,   cast(int)rc
                                                 ,   std.openrj.toString(rc));
 
@@ -269,7 +269,7 @@ private:
     {
 //printf("DatabaseException(1: %.*s, %d)\n", std.openrj.toString(rc), lineNum);
 
-        char[]  message    =   std.string.format(   "Database creation failed, at line %s; error: %s, %s"
+        string  message    =   std.string.format(   "Database creation failed, at line %s; error: %s, %s"
                                                 ,   lineNum
                                                 ,   cast(int)rc
                                                 ,   std.openrj.toString(rc));
@@ -285,7 +285,7 @@ private:
     {
 //printf("DatabaseException(2: %.*s, %d)\n", std.openrj.toString(pe), lineNum);
 
-        char[]  message    =   std.string.format(   "Parsing error in database, at line %s; parse error: %s, %s"
+        string  message    =   std.string.format(   "Parsing error in database, at line %s; parse error: %s, %s"
                                                 ,   lineNum
                                                 ,   cast(int)pe
                                                 ,   std.openrj.toString(pe));
@@ -297,11 +297,11 @@ private:
         super(message);
     }
 
-    this(char[] details, ORJ_PARSE_ERROR pe, int lineNum)
+    this(string details, ORJ_PARSE_ERROR pe, int lineNum)
     {
 //printf("DatabaseException(3: %.*s, %.*s, %d)\n", details, std.openrj.toString(rc), lineNum);
 
-        char[]  message    =   std.string.format(   "Parsing error in database, at line %s; parse error: %s, %s; %s"
+        string  message    =   std.string.format(   "Parsing error in database, at line %s; parse error: %s, %s; %s"
                                                 ,   lineNum
                                                 ,   cast(int)pe
                                                 ,   std.openrj.toString(pe)
@@ -356,7 +356,7 @@ class InvalidKeyException
 {
 /* \name Construction */
 private:
-    this(char[] message)
+    this(string message)
     {
         super(message);
     }
@@ -370,7 +370,7 @@ class InvalidTypeException
 {
 /* \name Construction */
 private:
-    this(char[] message)
+    this(string message)
     {
         super(message);
     }
@@ -386,7 +386,7 @@ class Field
 /* \name Construction */
 
 private:
-    this(char[] name, char[] value/* , Record record */)
+    this(string name, string value/* , Record record */)
     in
     {
         assert(null !is name);
@@ -407,7 +407,7 @@ public:
     /**
      *
      */
-    final char[]  name()
+    final string  name()
     {
         return m_name;
     }
@@ -415,7 +415,7 @@ public:
     /**
      *
      */
-    final char[]  value()
+    final string  value()
     {
         return m_value;
     }
@@ -470,8 +470,8 @@ public:
 
 // Members
 private:
-    char[]  m_name;
-    char[]  m_value;
+    string  m_name;
+    string  m_value;
     Record  m_record;
 }
 
@@ -554,7 +554,7 @@ public:
     /**
      *
      */
-    char[] opIndex(char[] fieldName)
+    string opIndex(string fieldName)
     {
         return getField(fieldName).value;
     }
@@ -562,7 +562,7 @@ public:
     /**
      *
      */
-    Field   getField(char[] fieldName)
+    Field   getField(string fieldName)
     in
     {
         assert(null !is fieldName);
@@ -582,7 +582,7 @@ public:
     /**
      *
      */
-    Field   findField(char[] fieldName)
+    Field   findField(string fieldName)
     in
     {
         assert(null !is fieldName);
@@ -597,7 +597,7 @@ public:
     /**
      *
      */
-    int hasField(char[] fieldName)
+    int hasField(string fieldName)
     {
         return null !is findField(fieldName);
     }
@@ -622,7 +622,7 @@ public:
     {
         int result  =   0;
 
-        foreach(Field field; m_fields)
+        foreach (inout field; m_fields)
         {
             result = dg(field);
 
@@ -638,7 +638,7 @@ public:
     /**
      *
      */
-    int opApply(int delegate(in char[] name, in char[] value) dg)
+    int opApply(int delegate(in string name, in string value) dg)
     {
         int result  =   0;
 
@@ -659,7 +659,7 @@ public:
 // Members
 private:
     Field[]         m_fields;
-    Field[char[]]   m_values;
+    Field[string]   m_values;
     Database        m_database;
 }
 
@@ -680,19 +680,19 @@ public:
 /* \name Construction */
 
 private:
-    void init_(char[][] lines, uint flags)
+    void init_(string[] lines, uint flags)
     {
         // Enumerate
         int         bContinuing =   false;
         Field[]     fields;
-        char[]      nextLine;
+        string      nextLine;
         int         lineNum     =   1;
         int         nextLineNum =   1;
 
-        foreach(char[] line; lines)
+        foreach(string ln; lines)
         {
             // Always strip trailing space
-            line = stripr(line);
+	    auto line = stripr(ln);
 
             // Check that we don't start a continued line with a record separator
             if( bContinuing &&
@@ -762,8 +762,8 @@ private:
 
 //                      printf("%.*s(%d): %.*s (%d)\n", file, nextLineNum, nextLine, colon);
 
-                        char[]  name    =   nextLine[0 .. colon];
-                        char[]  value   =   nextLine[colon + 1 .. nextLine.length];
+                        string  name    =   nextLine[0 .. colon];
+                        string  value   =   nextLine[colon + 1 .. nextLine.length];
 
                         name    =   stripr(name);
                         value   =   stripl(value);
@@ -816,9 +816,9 @@ public:
     /**
      *
      */
-    this(char[] memory, uint flags)
+    this(string memory, uint flags)
     {
-        char[][]    lines = split(memory, "\n");
+        string[]    lines = split(memory, "\n");
 
         init_(lines, flags);
     }
@@ -826,7 +826,7 @@ public:
     /**
      *
      */
-    this(char[][] lines, uint flags)
+    this(string[] lines, uint flags)
     {
         init_(lines, flags);
     }
@@ -918,7 +918,7 @@ public:
     /**
      *
      */
-    Record[]    getRecordsContainingField(char[] fieldName)
+    Record[]    getRecordsContainingField(string fieldName)
     {
         Record[]    records;
 
@@ -936,7 +936,7 @@ public:
     /**
      *
      */
-    Record[]    getRecordsContainingField(char[] fieldName, char[] fieldValue)
+    Record[]    getRecordsContainingField(string fieldName, string fieldValue)
     {
         Record[]    records;
         uint        flags   =   flags;
@@ -1002,7 +1002,7 @@ public:
     {
         int result  =   0;
 
-        foreach(Record record; m_records)
+        foreach(inout Record record; m_records)
         {
             result = dg(record);
 
@@ -1022,7 +1022,7 @@ public:
     {
         int result  =   0;
 
-        foreach(Field field; m_fields)
+        foreach(inout Field field; m_fields)
         {
             result = dg(field);
 
@@ -1049,7 +1049,7 @@ private:
 version(MainTest)
 {
 
-    int main(char[][] args)
+    int main(string[] args)
     {
         int flags   =   0
                     |   ORJ_FLAG.ORDER_FIELDS
@@ -1076,8 +1076,8 @@ version(MainTest)
 
                 counter.start();
 
-                char[]      file        =   args[1];
-                char[]      chars       =   cast(char[])std.file.read(file);
+                string      file        =   args[1];
+                string      chars       =   cast(string)std.file.read(file);
                 Database    database    =   new Database(chars, flags);
 //                Database    database    =   new Database(split(chars, "\n"), flags);
 

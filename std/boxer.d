@@ -114,7 +114,7 @@ private import std.utf;
 /** Return the next type in an array typeinfo, or null if there is none. */
 private bool isArrayTypeInfo(TypeInfo type)
 {
-    char[] name = type.classinfo.name;
+    string name = type.classinfo.name;
     return name.length >= 10 && name[9] == 'A' && name != "TypeInfo_AssociativeArray";
 }
 
@@ -256,22 +256,22 @@ struct Box
      * this will throw if that function cannot handle it. If the box is
      * uninitialized then this returns "".    
      */
-    char[] toString()
+    string toString()
     {
         if (type is null)
             return "<empty box>";
         
         TypeInfo[2] arguments;
-        char[] string;
-        void[] args = new void[(char[]).sizeof + data.length];
-        char[] format = "%s";
+        char[] str;
+        void[] args = new void[(string).sizeof + data.length];
+        string format = "%s";
         
         arguments[0] = typeid(char[]);
         arguments[1] = type;
         
         void putc(dchar ch)
         {
-            std.utf.encode(string, ch);
+            std.utf.encode(str, ch);
         }
         
         args[0..(char[]).sizeof] = (cast(void*) &format)[0..(char[]).sizeof];
@@ -279,7 +279,7 @@ struct Box
         std.format.doFormat(&putc, arguments, args.ptr);
         delete args;
         
-        return string;
+        return str;
     }
     
     private bool opEqualsInternal(Box other, bool inverted)
@@ -297,7 +297,7 @@ struct Box
             
             if (ta <= TypeClass.Integer && tb <= TypeClass.Integer)
             {
-                char[] na = type.toString, nb = other.type.toString;
+                string na = type.toString, nb = other.type.toString;
                 
                 if (na == "ulong" || nb == "ulong")
                     return unbox!(ulong)(*this) == unbox!(ulong)(other);
@@ -707,7 +707,7 @@ template unbox(T : void*)
         if (isArrayTypeInfo(value.type))
             return (*cast(void[]*) value.data).ptr;
         if (typeid(Object) == value.type)
-            return *cast(Object*) value.data;
+            return cast(T)(*cast(Object*) value.data);
         
         throw new UnboxException(value, typeid(T));
     }
@@ -777,7 +777,7 @@ unittest
     assert (b.toString == "32");
     
     /* Assert that unboxable works. */
-    assert (unboxable!(char[])(box("foobar")));
+    assert (unboxable!(string)(box("foobar")));
     
     /* Assert that we can cast from int to byte. */
     assert (unboxTest!(byte)(b) == 32);
@@ -792,7 +792,7 @@ unittest
     assert(fails(delegate void() { unboxTest!(int)(box(1.3)); }));
     
     /* Check that the unspecialized unbox template works. */
-    assert(unboxTest!(char[])(box("foobar")) == "foobar");
+    assert(unboxTest!(string)(box("foobar")) == "foobar");
     
     /* Assert that complex works correctly. */
     assert(unboxTest!(cdouble)(box(1 + 2i)) == 1 + 2i);
@@ -805,7 +805,7 @@ unittest
     
     assert(array.length == 3);
     assert(unboxTest!(int)(array[0]) == 16);
-    assert(unboxTest!(char[])(array[1]) == "foobar");
+    assert(unboxTest!(string)(array[1]) == "foobar");
     assert(unboxTest!(Object)(array[2]) !is null);
     
     /* Convert the box array back into arguments. */
@@ -851,7 +851,7 @@ unittest
     assert (unboxTest!(A)(box(null)) is null);
     
     /* Unboxing null in various contexts. */
-    assert (unboxTest!(char[])(box(null)) is null);
+    assert (unboxTest!(string)(box(null)) is null);
     assert (unboxTest!(int*)(box(null)) is null);
     
     /* Assert that unboxing between pointer types fails. */

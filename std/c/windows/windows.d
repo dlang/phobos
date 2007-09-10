@@ -29,13 +29,14 @@ extern (Windows)
     alias int LONG;
     alias CHAR *LPSTR;
     alias CHAR *PSTR;
-    alias CHAR *LPCSTR;
-    alias CHAR *PCSTR;
+    alias const(CHAR) *LPCSTR;
+    alias const(CHAR) *PCSTR;
     alias LPSTR LPTCH, PTCH;
     alias LPSTR PTSTR, LPTSTR;
     alias LPCSTR LPCTSTR;
 
-    alias WCHAR* LPWSTR, LPCWSTR, PCWSTR;
+    alias WCHAR* LPWSTR;
+    alias const(WCHAR*) LPCWSTR, PCWSTR;
 
     alias uint DWORD;
     alias int BOOL;
@@ -274,7 +275,7 @@ enum
     TRUNCATE_EXISTING   = 5,
 }
 
-const HANDLE INVALID_HANDLE_VALUE = cast(HANDLE)-1;
+final HANDLE INVALID_HANDLE_VALUE = cast(HANDLE)-1;
 const DWORD INVALID_SET_FILE_POINTER = cast(DWORD)-1;
 const DWORD INVALID_FILE_SIZE = cast(DWORD)0xFFFFFFFF;
 
@@ -341,35 +342,35 @@ BOOL RemoveDirectoryW(LPCWSTR lpPathName);
 
 BOOL   CloseHandle(HANDLE hObject);
 
-HANDLE CreateFileA(char *lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode,
+HANDLE CreateFileA(const(char*) lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode,
 	SECURITY_ATTRIBUTES *lpSecurityAttributes, DWORD dwCreationDisposition,
 	DWORD dwFlagsAndAttributes, HANDLE hTemplateFile);
 HANDLE CreateFileW(LPCWSTR lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode,
 	SECURITY_ATTRIBUTES *lpSecurityAttributes, DWORD dwCreationDisposition,
 	DWORD dwFlagsAndAttributes, HANDLE hTemplateFile);
 
-BOOL   DeleteFileA(char *lpFileName);
+BOOL   DeleteFileA(const char *lpFileName);
 BOOL   DeleteFileW(LPCWSTR lpFileName);
 
 BOOL   FindClose(HANDLE hFindFile);
-HANDLE FindFirstFileA(char *lpFileName, WIN32_FIND_DATA* lpFindFileData);
-HANDLE FindFirstFileW(LPCWSTR lpFileName, WIN32_FIND_DATAW* lpFindFileData);
+HANDLE FindFirstFileA(const char *lpFileName, WIN32_FIND_DATA* lpFindFileData);
+HANDLE FindFirstFileW(const LPCWSTR lpFileName, WIN32_FIND_DATAW* lpFindFileData);
 BOOL   FindNextFileA(HANDLE hFindFile, WIN32_FIND_DATA* lpFindFileData);
 BOOL   FindNextFileW(HANDLE hFindFile, WIN32_FIND_DATAW* lpFindFileData);
 BOOL   GetExitCodeThread(HANDLE hThread, DWORD *lpExitCode);
 DWORD  GetLastError();
-DWORD  GetFileAttributesA(char *lpFileName);
-DWORD  GetFileAttributesW(wchar *lpFileName);
+DWORD  GetFileAttributesA(const char *lpFileName);
+DWORD  GetFileAttributesW(const wchar *lpFileName);
 DWORD  GetFileSize(HANDLE hFile, DWORD *lpFileSizeHigh);
 BOOL   CopyFileA(LPCSTR lpExistingFileName, LPCSTR lpNewFileName, BOOL bFailIfExists);
 BOOL   CopyFileW(LPCWSTR lpExistingFileName, LPCWSTR lpNewFileName, BOOL bFailIfExists);
-BOOL   MoveFileA(char *from, char *to);
+BOOL   MoveFileA(const char *from, const char *to);
 BOOL   MoveFileW(LPCWSTR lpExistingFileName, LPCWSTR lpNewFileName);
 BOOL   ReadFile(HANDLE hFile, void *lpBuffer, DWORD nNumberOfBytesToRead,
 	DWORD *lpNumberOfBytesRead, OVERLAPPED *lpOverlapped);
 DWORD  SetFilePointer(HANDLE hFile, LONG lDistanceToMove,
 	LONG *lpDistanceToMoveHigh, DWORD dwMoveMethod);
-BOOL   WriteFile(HANDLE hFile, void *lpBuffer, DWORD nNumberOfBytesToWrite,
+BOOL   WriteFile(HANDLE hFile, const(void) *lpBuffer, DWORD nNumberOfBytesToWrite,
 	DWORD *lpNumberOfBytesWritten, OVERLAPPED *lpOverlapped);
 DWORD  GetModuleFileNameA(HMODULE hModule, LPSTR lpFilename, DWORD nSize);
 }
@@ -522,7 +523,8 @@ const HKEY HKEY_CURRENT_USER =           cast(HKEY)(0x80000001);
 const HKEY HKEY_LOCAL_MACHINE =          cast(HKEY)(0x80000002);
 const HKEY HKEY_USERS =                  cast(HKEY)(0x80000003);
 const HKEY HKEY_PERFORMANCE_DATA =       cast(HKEY)(0x80000004);
-
+const HKEY HKEY_PERFORMANCE_TEXT =       cast(HKEY)(0x80000050);
+const HKEY HKEY_PERFORMANCE_NLSTEXT =    cast(HKEY)(0x80000060);
 const HKEY HKEY_CURRENT_CONFIG =         cast(HKEY)(0x80000005);
 const HKEY HKEY_DYN_DATA =               cast(HKEY)(0x80000006);
 
@@ -746,12 +748,12 @@ export BOOL SystemTimeToTzSpecificLocalTime(TIME_ZONE_INFORMATION* lpTimeZoneInf
 export DWORD GetTimeZoneInformation(TIME_ZONE_INFORMATION* lpTimeZoneInformation);
 export BOOL SetTimeZoneInformation(TIME_ZONE_INFORMATION* lpTimeZoneInformation);
 
-export BOOL SystemTimeToFileTime(SYSTEMTIME *lpSystemTime, FILETIME* lpFileTime);
-export BOOL FileTimeToLocalFileTime(FILETIME *lpFileTime, FILETIME* lpLocalFileTime);
-export BOOL LocalFileTimeToFileTime(FILETIME *lpLocalFileTime, FILETIME* lpFileTime);
-export BOOL FileTimeToSystemTime(FILETIME *lpFileTime, SYSTEMTIME* lpSystemTime);
-export LONG CompareFileTime(FILETIME *lpFileTime1, FILETIME *lpFileTime2);
-export BOOL FileTimeToDosDateTime(FILETIME *lpFileTime, WORD* lpFatDate, WORD* lpFatTime);
+export BOOL SystemTimeToFileTime(const SYSTEMTIME *lpSystemTime, FILETIME* lpFileTime);
+export BOOL FileTimeToLocalFileTime(const FILETIME *lpFileTime, FILETIME* lpLocalFileTime);
+export BOOL LocalFileTimeToFileTime(const FILETIME *lpLocalFileTime, FILETIME* lpFileTime);
+export BOOL FileTimeToSystemTime(const FILETIME *lpFileTime, SYSTEMTIME* lpSystemTime);
+export LONG CompareFileTime(const FILETIME *lpFileTime1, const FILETIME *lpFileTime2);
+export BOOL FileTimeToDosDateTime(const FILETIME *lpFileTime, WORD* lpFatDate, WORD* lpFatTime);
 export BOOL DosDateTimeToFileTime(WORD wFatDate, WORD wFatTime, FILETIME* lpFileTime);
 export DWORD GetTickCount();
 export BOOL SetSystemTimeAdjustment(DWORD dwTimeAdjustment, BOOL bTimeAdjustmentDisabled);

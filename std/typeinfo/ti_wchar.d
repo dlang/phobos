@@ -4,7 +4,7 @@ module std.typeinfo.ti_wchar;
 
 class TypeInfo_u : TypeInfo
 {
-    char[] toString() { return "wchar"; }
+    string toString() { return "wchar"; }
 
     hash_t getHash(void *p)
     {

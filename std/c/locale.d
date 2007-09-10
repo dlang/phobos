@@ -141,7 +141,7 @@ const LC_ALL = 6;
 /** The setlocale function selects the appropriate portion of the program's
  * locale as specified by the category and locale arguments.
  **/
-char* setlocale(int category, char* locale);
+char* setlocale(int category, const char* locale);
 
 /** The localeconv function sets the components of an object with type
  * lconv with values appropriate for the formatting of numeric quantities

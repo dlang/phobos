@@ -8,51 +8,26 @@
  *
  * Author:      Matthew Wilson
  *
- * License:     (Licensed under the Synesis Software Standard Source License)
+ * Copyright 2004-2005 by Matthew Wilson and Synesis Software
+ * Written by Matthew Wilson
  *
- *              Copyright (C) 2002-2004, Synesis Software Pty Ltd.
+ * This software is provided 'as-is', without any express or implied
+ * warranty. In no event will the authors be held liable for any damages
+ * arising from the use of this software.
  *
- *              All rights reserved.
+ * Permission is granted to anyone to use this software for any purpose,
+ * including commercial applications, and to alter it and redistribute it
+ * freely, in both source and binary form, subject to the following
+ * restrictions:
  *
- *              www:        http://www.synesis.com.au/software
- *                          http://www.synsoft.org/
- *
- *              email:      submissions@synsoft.org  for submissions
- *                          admin@synsoft.org        for other enquiries
- *
- *              Redistribution and use in source and binary forms, with or
- *              without modification, are permitted provided that the following
- *              conditions are met:
- *
- *              (i) Redistributions of source code must retain the above
- *              copyright notice and contact information, this list of
- *              conditions and the following disclaimer.
- *
- *              (ii) Any derived versions of this software (howsoever modified)
- *              remain the sole property of Synesis Software.
- *
- *              (iii) Any derived versions of this software (howsoever modified)
- *              remain subject to all these conditions.
- *
- *              (iv) Neither the name of Synesis Software nor the names of any
- *              subdivisions, employees or agents of Synesis Software, nor the
- *              names of any other contributors to this software may be used to
- *              endorse or promote products derived from this software without
- *              specific prior written permission.
- *
- *              This source code is provided by Synesis Software "as is" and any
- *              warranties, whether expressed or implied, including, but not
- *              limited to, the implied warranties of merchantability and
- *              fitness for a particular purpose are disclaimed. In no event
- *              shall the Synesis Software be liable for any direct, indirect,
- *              incidental, special, exemplary, or consequential damages
- *              (including, but not limited to, procurement of substitute goods
- *              or services; loss of use, data, or profits; or business
- *              interruption) however caused and on any theory of liability,
- *              whether in contract, strict liability, or tort (including
- *              negligence or otherwise) arising in any way out of the use of
- *              this software, even if advised of the possibility of such
- *              damage.
+ * -  The origin of this software must not be misrepresented; you must not
+ *    claim that you wrote the original software. If you use this software
+ *    in a product, an acknowledgment in the product documentation would be
+ *    appreciated but is not required.
+ * -  Altered source versions must be plainly marked as such, and must not
+ *    be misrepresented as being the original software.
+ * -  This notice may not be removed or altered from any source
+ *    distribution.
  *
  * ////////////////////////////////////////////////////////////////////////// */
 
@@ -157,12 +132,12 @@ public void ExeModule_Uninit()
  * system, and you <b>must not</b> attempt to use it with any other operating system
  * or other APIs. It is only valid for use with the ExeModule library.
  */
-public HXModule ExeModule_Load(in char[] moduleName)
+public HXModule ExeModule_Load(in string moduleName)
 {
     return ExeModule_Load_(moduleName);
 }
 
-public HXModule ExeModule_AddRef(in HXModule hModule)
+public HXModule ExeModule_AddRef(HXModule hModule)
 {
     return ExeModule_AddRef_(hModule);
 }
@@ -176,12 +151,12 @@ public void ExeModule_Release(inout HXModule hModule)
     ExeModule_Release_(hModule);
 }
 
-public void *ExeModule_GetSymbol(inout HXModule hModule, in char[] symbolName)
+public void *ExeModule_GetSymbol(inout HXModule hModule, in string symbolName)
 {
     return ExeModule_GetSymbol_(hModule, symbolName);
 }
 
-public char[] ExeModule_Error()
+public string ExeModule_Error()
 {
     return ExeModule_Error_();
 }
@@ -208,7 +183,7 @@ version(Windows)
         --s_init;
     }
 
-    private HXModule ExeModule_Load_(in char[] moduleName)
+    private HXModule ExeModule_Load_(in string moduleName)
     in
     {
         assert(null !is moduleName);
@@ -225,7 +200,7 @@ version(Windows)
         return hmod;
     }
 
-    private HXModule ExeModule_AddRef_(in HXModule hModule)
+    private HXModule ExeModule_AddRef_(HXModule hModule)
     in
     {
         assert(null !is hModule);
@@ -249,7 +224,7 @@ version(Windows)
         hModule = null;
     }
 
-    private void *ExeModule_GetSymbol_(inout HXModule hModule, in char[] symbolName)
+    private void *ExeModule_GetSymbol_(inout HXModule hModule, in string symbolName)
     in
     {
         assert(null !is hModule);
@@ -266,12 +241,12 @@ version(Windows)
         return symbol;
     }
 
-    private char[] ExeModule_Error_()
+    private string ExeModule_Error_()
     {
 	return sysErrorString(s_lastError);
     }
 
-    private char[] ExeModule_GetPath_(HXModule hModule)
+    private string ExeModule_GetPath_(HXModule hModule)
     {
         char    szFileName[260]; // Need to use a constant here
 
@@ -292,9 +267,9 @@ else version(linux)
     public:
         int         m_cRefs;
         HModule_    m_hmod;
-        char[]      m_name;
+        string      m_name;
 
-        this(HModule_ hmod, char[] name)
+        this(HModule_ hmod, string name)
         {
             m_cRefs =   1;
             m_hmod  =   hmod;
@@ -303,8 +278,8 @@ else version(linux)
     };
 
     private int                     s_init;
-    private ExeModuleInfo [char[]]  s_modules;
-    private char[]                  s_lastError;    // This is NOT thread-specific
+    private ExeModuleInfo [string]  s_modules;
+    private string                  s_lastError;    // This is NOT thread-specific
 
     private void record_error_()
     {
@@ -330,7 +305,7 @@ else version(linux)
         }
     }
 
-    private HXModule ExeModule_Load_(in char[] moduleName)
+    private HXModule ExeModule_Load_(in string moduleName)
     in
     {
         assert(null !is moduleName);
@@ -364,7 +339,7 @@ else version(linux)
         }
     }
 
-    private HXModule ExeModule_AddRef_(in HXModule hModule)
+    private HXModule ExeModule_AddRef_(HXModule hModule)
     in
     {
         assert(null !is hModule);
@@ -410,7 +385,7 @@ else version(linux)
 
         if(0 == --mi.m_cRefs)
         {
-            char[]      name    =   mi.m_name;
+            string      name    =   mi.m_name;
 
             if (dlclose(mi.m_hmod))
             {
@@ -423,7 +398,7 @@ else version(linux)
         hModule = null;
     }
 
-    private void *ExeModule_GetSymbol_(inout HXModule hModule, in char[] symbolName)
+    private void *ExeModule_GetSymbol_(inout HXModule hModule, in string symbolName)
     in
     {
         assert(null !is hModule);
@@ -449,12 +424,12 @@ else version(linux)
         return symbol;
     }
 
-    private char[] ExeModule_Error_()
+    private string ExeModule_Error_()
     {
         return s_lastError;
     }
 
-    private char[] ExeModule_GetPath_(HXModule hModule)
+    private string ExeModule_GetPath_(HXModule hModule)
     in
     {
         assert(null !is hModule);
@@ -489,7 +464,7 @@ public class ExeModuleException
     : Exception
 {
 public:
-    this(char[] message)
+    this(string message)
     {
         super(message);
     }
@@ -507,7 +482,7 @@ public auto class ExeModule
 /// @{
 public:
     /// Constructs from an existing image handle
-    this(in HXModule hModule, boolean bTakeOwnership)
+    this(HXModule hModule, boolean bTakeOwnership)
     in
     {
         assert(null !is hModule);
@@ -522,7 +497,7 @@ public:
         {
 	    version (Windows)
 	    {
-		char[] path = Path();
+		string path = Path();
 		m_hModule = cast(HXModule)LoadLibraryA(toStringz(path));
 		if (m_hModule == null)
 		    throw new ExeModuleException(GetLastError());
@@ -536,7 +511,7 @@ public:
         }
     }
 
-    this(char[] moduleName)
+    this(string moduleName)
     in
     {
         assert(null !is moduleName);
@@ -600,7 +575,7 @@ public:
      * \return A pointer to the symbol. There is no null return - failure to retrieve the symbol
      * results in an ExeModuleException exception being thrown.
      */
-    void *getSymbol(in char[] symbolName)
+    void *getSymbol(in string symbolName)
     {
 	version (Windows)
 	{
@@ -631,7 +606,7 @@ public:
      *
      * \return A pointer to the symbol, or null if it does not exist
      */
-    void *findSymbol(in char[] symbolName)
+    void *findSymbol(in string symbolName)
     {
         return ExeModule_GetSymbol(m_hModule, symbolName);
     }
@@ -651,7 +626,7 @@ public:
     /// The handle of the module
     ///
     /// \note Will be \c null if the module load in the constructor failed
-    char[] Path()
+    string Path()
     {
         assert(null != m_hModule);
 
@@ -683,7 +658,7 @@ private:
 
 version(TestMain)
 {
-    int main(char[][] args)
+    int main(string[] args)
     {
         if(args.length < 3)
         {
@@ -691,8 +666,8 @@ version(TestMain)
         }
         else
         {
-            char[]  moduleName  =   args[1];
-            char[]  symbolName  =   args[2];
+            string  moduleName  =   args[1];
+            string  symbolName  =   args[2];
 
             try
             {

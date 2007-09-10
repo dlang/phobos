@@ -41,9 +41,9 @@ import std.string;
 version(D_InlineAsm_X86)
 {
     /// Returns everything as a printable string
-    char[] toString()
+    string toString()
     {
-	char[] feats;
+	string feats;
 	if (mmx)			feats ~= "MMX ";
 	if (fxsr)			feats ~= "FXSR ";
 	if (sse)			feats ~= "SSE ";
@@ -67,9 +67,9 @@ version(D_InlineAsm_X86)
     }
 
     /// Returns vendor string
-    char[] vendor()		{return vendorStr;}
+    string vendor()		{return vendorStr;}
     /// Returns processor string
-    char[] processor()		{return processorStr;}
+    string processor()		{return processorStr;}
 
     /// Is MMX supported?
     bool mmx()			{return (flags&MMX_BIT)!=0;}
@@ -208,8 +208,8 @@ private:
     uint flags, misc, exflags, apic, signature;
     uint _stepping, _model, _family;
 
-    char[12] vendorStr = "";
-    char[] processorStr = "";
+    char[12] vendorStr = 0;
+    string processorStr = "";
 
     uint maxThreads=1;
     uint maxCores=1;

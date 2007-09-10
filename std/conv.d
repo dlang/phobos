@@ -2,7 +2,7 @@
 // Written in the D programming language.
 
 /*
- *  Copyright (C) 2002-2006 by Digital Mars, www.digitalmars.com
+ *  Copyright (C) 2002-2007 by Digital Mars, www.digitalmars.com
  *  Written by Walter Bright
  *  Some parts contributed by David L. Davis
  *
@@ -66,13 +66,13 @@ private import std.stdio; // for writefln() and printf()
  */
 class ConvError : Error
 {
-    this(char[] s)
+    this(string s)
     {
 	super("conversion " ~ s);
     }
 }
 
-private void conv_error(char[] s)
+private void conv_error(string s)
 {
     throw new ConvError(s);
 }
@@ -82,13 +82,13 @@ private void conv_error(char[] s)
  */
 class ConvOverflowError : Error
 {
-    this(char[] s)
+    this(string s)
     {
 	super("Error: overflow " ~ s);
     }
 }
 
-private void conv_overflow(char[] s)
+private void conv_overflow(string s)
 {
     throw new ConvOverflowError(s);
 }
@@ -97,7 +97,7 @@ private void conv_overflow(char[] s)
  * Convert character string to the return type.
  */
 
-int toInt(char[] s)
+int toInt(string s)
 {
     int length = s.length;
 
@@ -182,7 +182,7 @@ unittest
     i = toInt("-2147483648");
     assert(i == 0x80000000);
 
-    static char[][] errors =
+    static string[] errors =
     [
 	"",
 	"-",
@@ -222,7 +222,7 @@ unittest
  * ditto
  */
 
-uint toUint(char[] s)
+uint toUint(string s)
 {
     int length = s.length;
 
@@ -278,7 +278,7 @@ unittest
     i = toUint("4294967295");
     assert(i == 0xFFFFFFFF);
 
-    static char[][] errors =
+    static string[] errors =
     [
 	"",
 	"-",
@@ -317,7 +317,7 @@ unittest
  * ditto
  */
 
-long toLong(char[] s)
+long toLong(string s)
 {
     int length = s.length;
 
@@ -408,7 +408,7 @@ unittest
     i = toLong("-9223372036854775808");
     assert(i == 0x8000000000000000);
 
-    static char[][] errors =
+    static string[] errors =
     [
 	"",
 	"-",
@@ -447,7 +447,7 @@ unittest
  * ditto
  */
 
-ulong toUlong(char[] s)
+ulong toUlong(string s)
 {
     int length = s.length;
 
@@ -510,7 +510,7 @@ unittest
     assert(i == 0xFFFFFFFFFFFFFFFF);
 
 
-    static char[][] errors =
+    static string[] errors =
     [
 	"",
 	"-",
@@ -550,7 +550,7 @@ unittest
  * ditto
  */
 
-short toShort(char[] s)
+short toShort(string s)
 {
     int v = toInt(s);
 
@@ -594,7 +594,7 @@ unittest
     i = toShort("-32768");
     assert(i == cast(short)0x8000);
 
-    static char[][] errors =
+    static string[] errors =
     [
 	"",
 	"-",
@@ -633,7 +633,7 @@ unittest
  * ditto
  */
 
-ushort toUshort(char[] s)
+ushort toUshort(string s)
 {
     uint v = toUint(s);
 
@@ -671,7 +671,7 @@ unittest
     i = toUshort("65535");
     assert(i == 0xFFFF);
 
-    static char[][] errors =
+    static string[] errors =
     [
 	"",
 	"-",
@@ -711,7 +711,7 @@ unittest
  * ditto
  */
 
-byte toByte(char[] s)
+byte toByte(string s)
 {
     int v = toInt(s);
 
@@ -755,7 +755,7 @@ unittest
     i = toByte("-128");
     assert(i == cast(byte)0x80);
 
-    static char[][] errors =
+    static string[] errors =
     [
 	"",
 	"-",
@@ -794,7 +794,7 @@ unittest
  * ditto
  */
 
-ubyte toUbyte(char[] s)
+ubyte toUbyte(string s)
 {
     uint v = toUint(s);
 
@@ -832,7 +832,7 @@ unittest
     i = toUbyte("255");
     assert(i == 0xFF);
 
-    static char[][] errors =
+    static string[] errors =
     [
 	"",
 	"-",
@@ -872,7 +872,7 @@ unittest
  * ditto
  */
 
-float toFloat(in char[] s)
+float toFloat(in string s)
 {
     float f;
     char* endptr;
@@ -936,7 +936,7 @@ unittest
  * ditto
  */
 
-double toDouble(in char[] s)
+double toDouble(in string s)
 {
     double f;
     char* endptr;
@@ -1002,7 +1002,7 @@ unittest
 /*******************************************************
  * ditto
  */
-real toReal(in char[] s)
+real toReal(in string s)
 {
     real f;
     char* endptr;
@@ -1082,7 +1082,7 @@ version (none)
  * ditto
  */
 
-ifloat toIfloat(in char[] s)
+ifloat toIfloat(in string s)
 {
     return toFloat(s) * 1.0i;
 }
@@ -1120,7 +1120,7 @@ unittest
  * ditto
  */
 
-idouble toIdouble(in char[] s)
+idouble toIdouble(in string s)
 {
     return toDouble(s) * 1.0i;
 }
@@ -1159,7 +1159,7 @@ unittest
  * ditto
  */
 
-ireal toIreal(in char[] s)
+ireal toIreal(in string s)
 {
     return toReal(s) * 1.0i;
 }
@@ -1199,10 +1199,10 @@ unittest
 /*******************************************************
  * ditto
  */
-cfloat toCfloat(in char[] s)
+cfloat toCfloat(in string s)
 {
-    char[] s1;
-    char[] s2;
+    string s1;
+    string s2;
     real   r1;
     real   r2;
     cfloat cf;
@@ -1278,10 +1278,10 @@ unittest
 /*******************************************************
  * ditto
  */
-cdouble toCdouble(in char[] s)
+cdouble toCdouble(in string s)
 {
-    char[]  s1;
-    char[]  s2;
+    string  s1;
+    string  s2;
     real    r1;
     real    r2;
     cdouble cd;
@@ -1353,10 +1353,10 @@ unittest
 /*******************************************************
  * ditto
  */
-creal toCreal(in char[] s)
+creal toCreal(in string s)
 {
-    char[] s1;
-    char[] s2;
+    string s1;
+    string s2;
     real   r1;
     real   r2;
     creal  cr;
@@ -1447,7 +1447,7 @@ unittest
  * Grammar:
  * ['+'|'-'] string floating-point digit {digit}
  */
-private bool getComplexStrings(in char[] s, out char[] s1, out char[] s2)
+private bool getComplexStrings(in string s, out string s1, out string s2)
 {
     int len = s.length;
 

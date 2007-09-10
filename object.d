@@ -3,21 +3,24 @@
 
 module object;
 
-//alias bit bool;
 alias bool bit;
 
 alias typeof(int.sizeof) size_t;
 alias typeof(cast(void*)0 - cast(void*)0) ptrdiff_t;
 alias size_t hash_t;
 
+alias const(char)[] string;
+alias const(wchar)[] wstring;
+alias const(dchar)[] dstring;
+
 extern (C)
-{   int printf(char *, ...);
+{   int printf(in char *, ...);
 }
 
 class Object
 {
     void print();
-    char[] toString();
+    string toString();
     hash_t toHash();
     int opCmp(Object o);
     int opEquals(Object o);
@@ -25,7 +28,7 @@ class Object
     final void notifyRegister(void delegate(Object) dg);
     final void notifyUnRegister(void delegate(Object) dg);
 
-    static Object factory(char[] classname);
+    static Object factory(string classname);
 }
 
 struct Interface
@@ -38,7 +41,7 @@ struct Interface
 class ClassInfo : Object
 {
     byte[] init;		// class static initializer
-    char[] name;		// class name
+    string name;		// class name
     void *[] vtbl;		// virtual function pointer table
     Interface[] interfaces;
     ClassInfo base;
@@ -53,7 +56,7 @@ class ClassInfo : Object
     OffsetTypeInfo[] offTi;
     void* defaultConstructor;	// default Constructor
 
-    static ClassInfo find(char[] classname);
+    static ClassInfo find(string classname);
     Object create();
 }
 
@@ -80,7 +83,7 @@ class TypeInfo
 class TypeInfo_Typedef : TypeInfo
 {
     TypeInfo base;
-    char[] name;
+    string name;
     void[] m_init;
 }
 
@@ -132,13 +135,13 @@ class TypeInfo_Interface : TypeInfo
 
 class TypeInfo_Struct : TypeInfo
 {
-    char[] name;
+    string name;
     void[] m_init;
 
     uint function(void*) xtoHash;
     int function(void*,void*) xopEquals;
     int function(void*,void*) xopCmp;
-    char[] function(void*) xtoString;
+    string function(void*) xtoString;
 
     uint m_flags;
 }
@@ -161,11 +164,11 @@ class TypeInfo_Invariant : TypeInfo_Const
 
 class Exception : Object
 {
-    char[] msg;
+    string msg;
 
-    this(char[] msg);
+    this(string msg);
     void print();
-    char[] toString();
+    string toString();
 }
 
 // Non-recoverable errors
@@ -174,7 +177,7 @@ class Error : Exception
 {
     Error next;
 
-    this(char[] msg);
-    this(char[] msg, Error next);
+    this(string msg);
+    this(string msg, Error next);
 }
 

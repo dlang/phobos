@@ -5,7 +5,7 @@ module std.typeinfo.ti_cfloat;
 
 class TypeInfo_q : TypeInfo
 {
-    char[] toString() { return "cfloat"; }
+    string toString() { return "cfloat"; }
 
     hash_t getHash(void *p)
     {

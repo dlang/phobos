@@ -21,18 +21,18 @@ void abort();
 void _dodtors();
 int getpid();
 
-int system(char *);
+int system(in char *);
 
 enum { _P_WAIT, _P_NOWAIT, _P_OVERLAY };
 
-int execl(char *, char *,...);
-int execle(char *, char *,...);
-int execlp(char *, char *,...);
-int execlpe(char *, char *,...);
-int execv(char *, char **);
-int execve(char *, char **, char **);
-int execvp(char *, char **);
-int execvpe(char *, char **, char **);
+int execl(in char *, in char *,...);
+int execle(in char *, in char *,...);
+int execlp(in char *, in char *,...);
+int execlpe(in char *, in char *,...);
+int execv(in char *, in char **);
+int execve(in char *, in char **, in char **);
+int execvp(in char *, in char **);
+int execvpe(in char *, in char **, in char **);
 
 
 enum { WAIT_CHILD, WAIT_GRANDCHILD }
@@ -53,34 +53,34 @@ version (Windows)
     void _endthread();
     void _endthreadex(uint);
 
-    int spawnl(int, char *, char *,...);
-    int spawnle(int, char *, char *,...);
-    int spawnlp(int, char *, char *,...);
-    int spawnlpe(int, char *, char *,...);
-    int spawnv(int, char *, char **);
-    int spawnve(int, char *, char **, char **);
-    int spawnvp(int, char *, char **);
-    int spawnvpe(int, char *, char **, char **);
+    int spawnl(int, in char *, in char *,...);
+    int spawnle(int, in char *, in char *,...);
+    int spawnlp(int, in char *, in char *,...);
+    int spawnlpe(int, in char *, in char *,...);
+    int spawnv(int, in char *, in char **);
+    int spawnve(int, in char *, in char **, in char **);
+    int spawnvp(int, in char *, in char **);
+    int spawnvpe(int, in char *, in char **, in char **);
 
 
-    int _wsystem(wchar_t *);
-    int _wspawnl(int, wchar_t *, wchar_t *, ...);
-    int _wspawnle(int, wchar_t *, wchar_t *, ...);
-    int _wspawnlp(int, wchar_t *, wchar_t *, ...);
-    int _wspawnlpe(int, wchar_t *, wchar_t *, ...);
-    int _wspawnv(int, wchar_t *, wchar_t **);
-    int _wspawnve(int, wchar_t *, wchar_t **, wchar_t **);
-    int _wspawnvp(int, wchar_t *, wchar_t **);
-    int _wspawnvpe(int, wchar_t *, wchar_t **, wchar_t **);
+    int _wsystem(in wchar_t *);
+    int _wspawnl(int, in wchar_t *, in wchar_t *, ...);
+    int _wspawnle(int, in wchar_t *, in wchar_t *, ...);
+    int _wspawnlp(int, in wchar_t *, in wchar_t *, ...);
+    int _wspawnlpe(int, in wchar_t *, in wchar_t *, ...);
+    int _wspawnv(int, in wchar_t *, in wchar_t **);
+    int _wspawnve(int, in wchar_t *, in wchar_t **, in wchar_t **);
+    int _wspawnvp(int, in wchar_t *, in wchar_t **);
+    int _wspawnvpe(int, in wchar_t *, in wchar_t **, in wchar_t **);
 
-    int _wexecl(wchar_t *, wchar_t *, ...);
-    int _wexecle(wchar_t *, wchar_t *, ...);
-    int _wexeclp(wchar_t *, wchar_t *, ...);
-    int _wexeclpe(wchar_t *, wchar_t *, ...);
-    int _wexecv(wchar_t *, wchar_t **);
-    int _wexecve(wchar_t *, wchar_t **, wchar_t **);
-    int _wexecvp(wchar_t *, wchar_t **);
-    int _wexecvpe(wchar_t *, wchar_t **, wchar_t **);
+    int _wexecl(in wchar_t *, in wchar_t *, ...);
+    int _wexecle(in wchar_t *, in wchar_t *, ...);
+    int _wexeclp(in wchar_t *, in wchar_t *, ...);
+    int _wexeclpe(in wchar_t *, in wchar_t *, ...);
+    int _wexecv(in wchar_t *, in wchar_t **);
+    int _wexecve(in wchar_t *, in wchar_t **, in wchar_t **);
+    int _wexecvp(in wchar_t *, in wchar_t **);
+    int _wexecvpe(in wchar_t *, in wchar_t **, in wchar_t **);
 }
 
 

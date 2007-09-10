@@ -32,14 +32,14 @@ const
      * The vendor specific version number, as in
      * version_major.version_minor
      */
-    uint version_major = 1;
-    uint version_minor = 15;	/// ditto
+    uint version_major = 2;
+    uint version_minor = 0;	/// ditto
 
 
     /**
      * The version of the D Programming Language Specification
      * supported by the compiler.
      */
-    uint D_major = 1;
+    uint D_major = 2;
     uint D_minor = 0;
 }

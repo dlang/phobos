@@ -41,7 +41,7 @@ import std.utf;
 // dg is D, but _aApplyRcd() is C
 extern (D) typedef int delegate(void *) dg_t;
 
-extern (C) int _aApplyRcd1(char[] aa, dg_t dg)
+extern (C) int _aApplyRcd1(string aa, dg_t dg)
 {   int result;
 
     debug(apply) printf("_aApplyRcd1(), len = %d\n", aa.length);
@@ -77,7 +77,7 @@ unittest
 {
     debug(apply) printf("_aApplyRcd1.unittest\n");
 
-    char[] s = "hello";
+    string s = "hello";
     int i;
 
     foreach_reverse(dchar d; s)
@@ -115,7 +115,7 @@ unittest
 
 /*****************************/
 
-extern (C) int _aApplyRwd1(wchar[] aa, dg_t dg)
+extern (C) int _aApplyRwd1(wstring aa, dg_t dg)
 {   int result;
 
     debug(apply) printf("_aApplyRwd1(), len = %d\n", aa.length);
@@ -141,7 +141,7 @@ unittest
 {
     debug(apply) printf("_aApplyRwd1.unittest\n");
 
-    wchar[] s = "hello";
+    wstring s = "hello";
     int i;
 
     foreach_reverse(dchar d; s)
@@ -179,7 +179,7 @@ unittest
 
 /*****************************/
 
-extern (C) int _aApplyRcw1(char[] aa, dg_t dg)
+extern (C) int _aApplyRcw1(string aa, dg_t dg)
 {   int result;
 
     debug(apply) printf("_aApplyRcw1(), len = %d\n", aa.length);
@@ -227,7 +227,7 @@ unittest
 {
     debug(apply) printf("_aApplyRcw1.unittest\n");
 
-    char[] s = "hello";
+    string s = "hello";
     int i;
 
     foreach_reverse(wchar d; s)
@@ -266,7 +266,7 @@ unittest
 
 /*****************************/
 
-extern (C) int _aApplyRwc1(wchar[] aa, dg_t dg)
+extern (C) int _aApplyRwc1(wstring aa, dg_t dg)
 {   int result;
 
     debug(apply) printf("_aApplyRwc1(), len = %d\n", aa.length);
@@ -286,7 +286,7 @@ extern (C) int _aApplyRwc1(wchar[] aa, dg_t dg)
 	if (d & ~0x7F)
 	{
 	    char[4] buf;
-	    char[] b;
+	    string b;
 
 	    b = std.utf.toUTF8(buf, d);
 	    foreach (char c2; b)
@@ -309,7 +309,7 @@ unittest
 {
     debug(apply) printf("_aApplyRwc1.unittest\n");
 
-    wchar[] s = "hello";
+    wstring s = "hello";
     int i;
 
     foreach_reverse(char d; s)
@@ -352,7 +352,7 @@ unittest
 
 /*****************************/
 
-extern (C) int _aApplyRdc1(dchar[] aa, dg_t dg)
+extern (C) int _aApplyRdc1(dstring aa, dg_t dg)
 {   int result;
 
     debug(apply) printf("_aApplyRdc1(), len = %d\n", aa.length);
@@ -363,7 +363,7 @@ extern (C) int _aApplyRdc1(dchar[] aa, dg_t dg)
 	if (d & ~0x7F)
 	{
 	    char[4] buf;
-	    char[] b;
+	    string b;
 
 	    b = std.utf.toUTF8(buf, d);
 	    foreach (char c2; b)
@@ -389,7 +389,7 @@ unittest
 {
     debug(apply) printf("_aApplyRdc1.unittest\n");
 
-    dchar[] s = "hello";
+    dstring s = "hello";
     int i;
 
     foreach_reverse(char d; s)
@@ -432,7 +432,7 @@ unittest
 
 /*****************************/
 
-extern (C) int _aApplyRdw1(dchar[] aa, dg_t dg)
+extern (C) int _aApplyRdw1(dstring aa, dg_t dg)
 {   int result;
 
     debug(apply) printf("_aApplyRdw1(), len = %d\n", aa.length);
@@ -461,7 +461,7 @@ unittest
 {
     debug(apply) printf("_aApplyRdw1.unittest\n");
 
-    dchar[] s = "hello";
+    dstring s = "hello";
     int i;
 
     foreach_reverse(wchar d; s)
@@ -505,7 +505,7 @@ unittest
 // dg is D, but _aApplyRcd2() is C
 extern (D) typedef int delegate(void *, void *) dg2_t;
 
-extern (C) int _aApplyRcd2(char[] aa, dg2_t dg)
+extern (C) int _aApplyRcd2(string aa, dg2_t dg)
 {   int result;
     size_t i;
     size_t len = aa.length;
@@ -543,7 +543,7 @@ unittest
 {
     debug(apply) printf("_aApplyRcd2.unittest\n");
 
-    char[] s = "hello";
+    string s = "hello";
     int i;
 
     foreach_reverse(k, dchar d; s)
@@ -582,7 +582,7 @@ unittest
 
 /*****************************/
 
-extern (C) int _aApplyRwd2(wchar[] aa, dg2_t dg)
+extern (C) int _aApplyRwd2(wstring aa, dg2_t dg)
 {   int result;
 
     debug(apply) printf("_aApplyRwd2(), len = %d\n", aa.length);
@@ -608,7 +608,7 @@ unittest
 {
     debug(apply) printf("_aApplyRwd2.unittest\n");
 
-    wchar[] s = "hello";
+    wstring s = "hello";
     int i;
 
     foreach_reverse(k, dchar d; s)
@@ -648,7 +648,7 @@ unittest
 
 /*****************************/
 
-extern (C) int _aApplyRcw2(char[] aa, dg2_t dg)
+extern (C) int _aApplyRcw2(string aa, dg2_t dg)
 {   int result;
 
     debug(apply) printf("_aApplyRcw2(), len = %d\n", aa.length);
@@ -696,7 +696,7 @@ unittest
 {
     debug(apply) printf("_aApplyRcw2.unittest\n");
 
-    char[] s = "hello";
+    string s = "hello";
     int i;
 
     foreach_reverse(k, wchar d; s)
@@ -737,7 +737,7 @@ unittest
 
 /*****************************/
 
-extern (C) int _aApplyRwc2(wchar[] aa, dg2_t dg)
+extern (C) int _aApplyRwc2(wstring aa, dg2_t dg)
 {   int result;
 
     debug(apply) printf("_aApplyRwc2(), len = %d\n", aa.length);
@@ -757,7 +757,7 @@ extern (C) int _aApplyRwc2(wchar[] aa, dg2_t dg)
 	if (d & ~0x7F)
 	{
 	    char[4] buf;
-	    char[] b;
+	    string b;
 
 	    b = std.utf.toUTF8(buf, d);
 	    foreach (char c2; b)
@@ -780,7 +780,7 @@ unittest
 {
     debug(apply) printf("_aApplyRwc2.unittest\n");
 
-    wchar[] s = "hello";
+    wstring s = "hello";
     int i;
 
     foreach_reverse(k, char d; s)
@@ -825,7 +825,7 @@ unittest
 
 /*****************************/
 
-extern (C) int _aApplyRdc2(dchar[] aa, dg2_t dg)
+extern (C) int _aApplyRdc2(dstring aa, dg2_t dg)
 {   int result;
 
     debug(apply) printf("_aApplyRdc2(), len = %d\n", aa.length);
@@ -836,7 +836,7 @@ extern (C) int _aApplyRdc2(dchar[] aa, dg2_t dg)
 	if (d & ~0x7F)
 	{
 	    char[4] buf;
-	    char[] b;
+	    string b;
 
 	    b = std.utf.toUTF8(buf, d);
 	    foreach (char c2; b)
@@ -861,7 +861,7 @@ unittest
 {
     debug(apply) printf("_aApplyRdc2.unittest\n");
 
-    dchar[] s = "hello";
+    dstring s = "hello";
     int i;
 
     foreach_reverse(k, char d; s)
@@ -906,7 +906,7 @@ unittest
 
 /*****************************/
 
-extern (C) int _aApplyRdw2(dchar[] aa, dg2_t dg)
+extern (C) int _aApplyRdw2(dstring aa, dg2_t dg)
 {   int result;
 
     debug(apply) printf("_aApplyRdw2(), len = %d\n", aa.length);
@@ -935,7 +935,7 @@ unittest
 {
     debug(apply) printf("_aApplyRdw2.unittest\n");
 
-    dchar[] s = "hello";
+    dstring s = "hello";
     int i;
 
     foreach_reverse(k, wchar d; s)

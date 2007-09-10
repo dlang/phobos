@@ -27,7 +27,7 @@ private import std.intrinsic;
  */
 class ZipException : Exception
 {
-    this(char[] msg)
+    this(string msg)
     {
 	super("ZipException: " ~ msg);
     }
@@ -57,10 +57,10 @@ class ArchiveMember
      * index the archive directory for the member. Each member must have a unique
      * name[]. Do not change without removing member from the directory first.
      */
-    char[] name;
+    string name;
 
     ubyte[] extra;		/// Read/Write: extra data for this member.
-    char[] comment;		/// Read/Write: comment associated with this member.
+    string comment;		/// Read/Write: comment associated with this member.
     ubyte[] compressedData;	/// Read Only: data of member in compressed form.
     ubyte[] expandedData;	/// Read/Write: data of member in uncompressed form.
 
@@ -97,7 +97,7 @@ class ZipArchive
     uint diskStartDir;	/// Read Only: 0 since multi-disk zip archives are not supported.
     uint numEntries;	/// Read Only: number of ArchiveMembers in the directory.
     uint totalEntries;	/// Read Only: same as totalEntries.
-    char[] comment;	/// Read/Write: the archive comment. Must be less than 65536 bytes in length.
+    string comment;	/// Read/Write: the archive comment. Must be less than 65536 bytes in length.
 
     /**
      * Read Only: array indexed by the name of each member of the archive.
@@ -111,7 +111,7 @@ class ZipArchive
      * }
      * --------------------
      */
-    ArchiveMember[char[]] directory;
+    ArchiveMember[string] directory;
 
     debug (print)
     {
@@ -316,7 +316,7 @@ class ZipArchive
 		endcommentlength = getUshort(i + 20);
 		if (i + 22 + endcommentlength > data.length)
 		    continue;
-		comment = cast(char[])data[i + 22 .. i + 22 + endcommentlength];
+		comment = cast(string)data[i + 22 .. i + 22 + endcommentlength];
 		endrecOffset = i;
 		break;
 	    }
@@ -377,11 +377,11 @@ class ZipArchive
 	    if (i + namelen + extralen + commentlen > directoryOffset + directorySize)
 		throw new ZipException("invalid directory entry 2");
 
-	    de.name = cast(char[])data[i .. i + namelen];
+	    de.name = cast(string)data[i .. i + namelen];
 	    i += namelen;
 	    de.extra = data[i .. i + extralen];
 	    i += extralen;
-	    de.comment = cast(char[])data[i .. i + commentlen];
+	    de.comment = cast(string)data[i .. i + commentlen];
 	    i += commentlen;
 
 	    directory[de.name] = de;

@@ -39,11 +39,10 @@ class OutBuffer
     ubyte data[];
     uint offset;
 
-    invariant
+    invariant()
     {
 	//printf("this = %p, offset = %x, data.length = %u\n", this, offset, data.length);
 	assert(offset <= data.length);
-	assert(data.length <= std.gc.capacity(data.ptr));
     }
 
     this()
@@ -74,15 +73,13 @@ class OutBuffer
 	out
 	{
 	    assert(offset + nbytes <= data.length);
-	    assert(data.length <= std.gc.capacity(data.ptr));
 	}
 	body
 	{
+	    //c.stdio.printf("OutBuffer.reserve: length = %d, offset = %d, nbytes = %d\n", data.length, offset, nbytes);
 	    if (data.length < offset + nbytes)
 	    {
-		//std.c.stdio.printf("OutBuffer.reserve: ptr = %p, length = %d, offset = %d, nbytes = %d, capacity = %d\n", data.ptr, data.length, offset, nbytes, std.gc.capacity(data.ptr));
 		data.length = (offset + nbytes) * 2;
-		//std.c.stdio.printf("OutBuffer.reserve: ptr = %p, length = %d, capacity = %d\n", data.ptr, data.length, std.gc.capacity(data.ptr));
 		std.gc.hasPointers(data.ptr);
 	    }
 	}
@@ -91,7 +88,7 @@ class OutBuffer
      * Append data to the internal buffer.
      */
 
-    void write(ubyte[] bytes)
+    void write(const(ubyte)[] bytes)
 	{
 	    reserve(bytes.length);
 	    data[offset .. offset + bytes.length] = bytes;
@@ -163,7 +160,7 @@ class OutBuffer
 	offset += real.sizeof;
     }
 
-    void write(char[] s)		/// ditto
+    void write(string s)		/// ditto
     {
 	write(cast(ubyte[])s);
     }
@@ -241,7 +238,7 @@ class OutBuffer
      * Append output of C's vprintf() to internal buffer.
      */
 
-    void vprintf(char[] format, va_list args)
+    void vprintf(string format, va_list args)
     {
 	char[128] buffer;
 	char* p;
@@ -293,7 +290,7 @@ class OutBuffer
      * Append output of C's printf() to internal buffer.
      */
 
-    void printf(char[] format, ...)
+    void printf(string format, ...)
     {
 	va_list ap;
 	ap = cast(va_list)&format;

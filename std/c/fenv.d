@@ -101,12 +101,12 @@ int fesetround(int round);		///
 int fegetprec();			///
 int fesetprec(int prec);		///
 int fegetenv(fenv_t *envp);		///
-int fesetenv(fenv_t *envp);		///
+int fesetenv(in fenv_t *envp);		///
 //void feprocentry(fenv_t *envp);	///
 //void feprocexit(const fenv_t *envp);	///
 
 int fegetexceptflag(fexcept_t *flagp,int excepts);	///
-int fesetexceptflag(fexcept_t *flagp,int excepts);	///
+int fesetexceptflag(in fexcept_t *flagp,int excepts);	///
 int feholdexcept(fenv_t *envp);		///
-int feupdateenv(fenv_t *envp);		///
+int feupdateenv(in fenv_t *envp);		///
 

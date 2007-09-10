@@ -7,7 +7,7 @@ private import std.math;
 
 class TypeInfo_e : TypeInfo
 {
-    char[] toString() { return "real"; }
+    string toString() { return "real"; }
 
     hash_t getHash(void *p)
     {

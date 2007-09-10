@@ -7,7 +7,7 @@ private import std.c.string;
 
 class TypeInfo_Al : TypeInfo
 {
-    char[] toString() { return "long[]"; }
+    string toString() { return "long[]"; }
 
     hash_t getHash(void *p)
     {	long[] s = *cast(long[]*)p;
@@ -74,7 +74,7 @@ class TypeInfo_Al : TypeInfo
 
 class TypeInfo_Am : TypeInfo_Al
 {
-    char[] toString() { return "ulong[]"; }
+    string toString() { return "ulong[]"; }
 
     int compare(void *p1, void *p2)
     {

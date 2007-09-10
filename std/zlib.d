@@ -34,7 +34,7 @@ enum
 class ZlibException : Exception
 {
     this(int errnum)
-    {	char[] msg;
+    {	string msg;
 
 	switch (errnum)
 	{
@@ -104,7 +104,7 @@ unittest
  * Returns the compressed data.
  */
 
-void[] compress(void[] srcbuf, int level)
+const(void)[] compress(const(void)[] srcbuf, int level)
 in
 {
     assert(-1 <= level && level <= 9);
@@ -132,7 +132,7 @@ body
  * ditto
  */
 
-void[] compress(void[] buf)
+const(void)[] compress(const(void)[] buf)
 {
     return compress(buf, Z_DEFAULT_COMPRESSION);
 }
@@ -145,7 +145,7 @@ void[] compress(void[] buf)
  * Returns: the decompressed data.
  */
 
-void[] uncompress(void[] srcbuf, uint destlen = 0u, int winbits = 15)
+const(void)[] uncompress(const(void)[] srcbuf, uint destlen = 0u, int winbits = 15)
 {
     int err;
     void[] destbuf;
@@ -284,7 +284,7 @@ class Compress
      * The buffers
      * returned from successive calls to this should be concatenated together.
      */
-    void[] compress(void[] buf)
+    const(void)[] compress(const(void)[] buf)
     {	int err;
 	void[] destbuf;
 
@@ -443,7 +443,7 @@ class UnCompress
      * The buffers returned from successive calls to this should be concatenated
      * together.
      */
-    void[] uncompress(void[] buf)
+    const(void)[] uncompress(const(void)[] buf)
     in
     {
 	assert(!done);
@@ -604,12 +604,12 @@ unittest // by Artem Rebrov
     Compress cmp = new Compress;
     UnCompress decmp = new UnCompress;
 
-    void[] input;
+    const(void)[] input;
     input = "tesatdffadf";
 
-    void[] buf = cmp.compress(input);
+    const(void)[] buf = cmp.compress(input);
     buf ~= cmp.flush();
-    void[] output = decmp.uncompress(buf);
+    const(void)[] output = decmp.uncompress(buf);
 
     //writefln("input = '%s'", cast(char[])input);
     //writefln("output = '%s'", cast(char[])output);

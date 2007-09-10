@@ -29,7 +29,7 @@ private import std.typeinfo.ti_real;
 
 class TypeInfo_Ae : TypeInfo
 {
-    char[] toString() { return "real[]"; }
+    string toString() { return "real[]"; }
 
     hash_t getHash(void *p)
     {	real[] s = *cast(real[]*)p;
@@ -104,7 +104,7 @@ class TypeInfo_Ae : TypeInfo
 
 class TypeInfo_Aj : TypeInfo_Ae
 {
-    char[] toString() { return "ireal[]"; }
+    string toString() { return "ireal[]"; }
 
     TypeInfo next()
     {

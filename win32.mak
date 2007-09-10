@@ -20,7 +20,6 @@ CFLAGS=-mn -6 -r
 #CFLAGS=-g -mn -6 -r
 
 DFLAGS=-O -release -nofloat -w
-#DFLAGS=-nofloat -w
 #DFLAGS=-unittest -g -w
 #DFLAGS=-unittest -cov -g
 
@@ -76,6 +75,7 @@ OBJS= asserterror.obj deh.obj switch.obj complex.obj gcstats.obj \
 	errno.obj boxer.obj cstream.obj charset.obj metastrings.obj \
 	gamma.obj demangle.obj cover.obj bitarray.obj aApplyR.obj \
 	signals.obj cpuid.obj typetuple.obj traits.obj bind.obj \
+	c_stdio.obj \
 	ti_Ag.obj ti_C.obj ti_int.obj ti_char.obj \
 	ti_wchar.obj ti_uint.obj ti_short.obj ti_ushort.obj \
 	ti_byte.obj ti_ubyte.obj ti_long.obj ti_ulong.obj ti_ptr.obj \
@@ -502,6 +502,9 @@ syserror.obj : std\windows\syserror.d
 
 stdarg.obj : std\c\stdarg.d
 	$(DMD) -c $(DFLAGS) std\c\stdarg.d
+
+c_stdio.obj : std\c\stdio.d
+	$(DMD) -c $(DFLAGS) std\c\stdio.d -ofc_stdio.obj
 
 ### etc
 

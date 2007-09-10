@@ -156,7 +156,7 @@ const char[] url = r"(([h|H][t|T]|[f|F])[t|T][p|P]([s|S]?)\:\/\/|~/|/)?([\w]+:\w
 
 class RegExpException : Exception
 {
-    this(char[] msg)
+    this(string msg)
     {
 	super(msg);
     }
@@ -175,7 +175,7 @@ private alias char rchar;	// so we can make a wchar version
  * pattern with attributes.
  * Replace each match with string generated from format.
  * Params:
- *	string = String to search.
+ *	s = String to search.
  *	pattern = Regular expression pattern.
  *	format = Replacement string format.
  *	attributes = Regular expression attributes.
@@ -195,10 +195,10 @@ private alias char rchar;	// so we can make a wchar version
  * ---
  */
 
-char[] sub(char[] string, char[] pattern, char[] format, char[] attributes = null)
+string sub(string s, string pattern, string format, string attributes = null)
 {
     auto r = new RegExp(pattern, attributes);
-    auto result = r.replace(string, format);
+    auto result = r.replace(s, format);
     delete r;
     return result;
 }
@@ -207,7 +207,7 @@ unittest
 {
     debug(regexp) printf("regexp.sub.unittest\n");
 
-    char[] r = sub("hello", "ll", "ss");
+    string r = sub("hello", "ll", "ss");
     assert(r == "hesso");
 }
 
@@ -217,7 +217,7 @@ unittest
  * Pass each match to delegate dg.
  * Replace each match with the return value from dg.
  * Params:
- *	string = String to search.
+ *	s = String to search.
  *	pattern = Regular expression pattern.
  *	dg = Delegate
  *	attributes = Regular expression attributes.
@@ -235,25 +235,25 @@ unittest
  * ---
  */
 
-char[] sub(char[] string, char[] pattern, char[] delegate(RegExp) dg, char[] attributes = null)
+string sub(string s, string pattern, string delegate(RegExp) dg, string attributes = null)
 {
     auto r = new RegExp(pattern, attributes);
-    rchar[] result;
+    string result;
     int lastindex;
     int offset;
 
-    result = string;
+    result = s;
     lastindex = 0;
     offset = 0;
-    while (r.test(string, lastindex))
+    while (r.test(s, lastindex))
     {
 	int so = r.pmatch[0].rm_so;
 	int eo = r.pmatch[0].rm_eo;
 
-	rchar[] replacement = dg(r);
+	string replacement = dg(r);
 
 	// Optimize by using std.string.replace if possible - Dave Fladebo
-	rchar[] slice = result[offset + so .. offset + eo];
+	string slice = result[offset + so .. offset + eo];
 	if (r.attributes & RegExp.REA.global &&		// global, so replace all
 	    !(r.attributes & RegExp.REA.ignoreCase) &&	// not ignoring case
 	    !(r.attributes & RegExp.REA.multiline) &&	// not multiline
@@ -288,17 +288,17 @@ unittest
 {
     debug(regexp) printf("regexp.sub.unittest\n");
 
-    char[] foo(RegExp r) { return "ss"; }
+    string foo(RegExp r) { return "ss"; }
 
-    char[] r = sub("hello", "ll", delegate char[](RegExp r) { return "ss"; });
+    auto r = sub("hello", "ll", delegate string(RegExp r) { return "ss"; });
     assert(r == "hesso");
 
-    r = sub("hello", "l", delegate char[](RegExp r) { return "l"; }, "g");
+    r = sub("hello", "l", delegate string(RegExp r) { return "l"; }, "g");
     assert(r == "hello");
 
     auto s = sub("Strap a rocket engine on a chicken.",
 		 "[ar]",
-	         delegate char[] (RegExp m)
+	         delegate string (RegExp m)
 	         {
 		    return std.string.toupper(m.match(0));
 	         },
@@ -308,13 +308,13 @@ unittest
 
 
 /*************************************************
- * Search string[] for first match with pattern[] with attributes[].
+ * Search s[] for first match with pattern[] with attributes[].
  * Params:
- *	string = String to search.
+ *	s = String to search.
  *	pattern = Regular expression pattern.
  *	attributes = Regular expression attributes.
  * Returns:
- *	index into string[] of match if found, -1 if no match.
+ *	index into s[] of match if found, -1 if no match.
  * Example:
  * ---
  * auto s = "abcabcabab";
@@ -323,12 +323,12 @@ unittest
  * ---
  */
 
-int find(rchar[] string, char[] pattern, char[] attributes = null)
+int find(string s, string pattern, string attributes = null)
 {
     int i = -1;
 
     auto r = new RegExp(pattern, attributes);
-    if (r.test(string))
+    if (r.test(s))
     {
 	i = r.pmatch[0].rm_so;
     }
@@ -340,8 +340,7 @@ unittest
 {
     debug(regexp) printf("regexp.find.unittest\n");
 
-    int i;
-    i = find("xabcy", "abc");
+    auto i = find("xabcy", "abc");
     assert(i == 1);
     i = find("cba", "abc");
     assert(i == -1);
@@ -350,13 +349,13 @@ unittest
 
 
 /*************************************************
- * Search string[] for last match with pattern[] with attributes[].
+ * Search s[] for last match with pattern[] with attributes[].
  * Params:
- *	string = String to search.
+ *	s = String to search.
  *	pattern = Regular expression pattern.
  *	attributes = Regular expression attributes.
  * Returns:
- *	index into string[] of match if found, -1 if no match.
+ *	index into s[] of match if found, -1 if no match.
  * Example:
  * ---
  * auto s = "abcabcabab";
@@ -365,13 +364,13 @@ unittest
  * ---
  */
 
-int rfind(rchar[] string, char[] pattern, char[] attributes = null)
+int rfind(string s, string pattern, string attributes = null)
 {
     int i = -1;
     int lastindex = 0;
 
     auto r = new RegExp(pattern, attributes);
-    while (r.test(string, lastindex))
+    while (r.test(s, lastindex))
     {   int eo = r.pmatch[0].rm_eo;
 	i = r.pmatch[0].rm_so;
 	if (lastindex == eo)
@@ -402,14 +401,14 @@ unittest
 
 
 /********************************************
- * Split string[] into an array of strings, using the regular
+ * Split s[] into an array of strings, using the regular
  * expression pattern[] with attributes[] as the separator.
  * Params:
- *	string = String to search.
+ *	s = String to search.
  *	pattern = Regular expression pattern.
  *	attributes = Regular expression attributes.
  * Returns:
- * 	array of slices into string[]
+ * 	array of slices into s[]
  * Example:
  * ---
  * foreach (s; split("abcabcabab", "C.", "i"))
@@ -423,10 +422,10 @@ unittest
  * ---
  */
 
-char[][] split(char[] string, char[] pattern, char[] attributes = null)
+string[] split(string s, string pattern, string attributes = null)
 {
     auto r = new RegExp(pattern, attributes);
-    auto result = r.split(string);
+    auto result = r.split(s);
     delete r;
     return result;
 }
@@ -434,7 +433,7 @@ char[][] split(char[] string, char[] pattern, char[] attributes = null)
 unittest
 {
     debug(regexp) printf("regexp.split.unittest()\n");
-    char[][] result;
+    string[] result;
 
     result = split("ab", "a*");
     assert(result.length == 2);
@@ -452,9 +451,9 @@ unittest
 }
 
 /****************************************************
- * Search string[] for first match with pattern[] with attributes[].
+ * Search s[] for first match with pattern[] with attributes[].
  * Params:
- *	string = String to search.
+ *	s = String to search.
  *	pattern = Regular expression pattern.
  *	attributes = Regular expression attributes.
  * Returns:
@@ -476,11 +475,11 @@ unittest
  * ---
  */
 
-RegExp search(char[] string, char[] pattern, char[] attributes = null)
+RegExp search(string s, string pattern, string attributes = null)
 {
     auto r = new RegExp(pattern, attributes);
 
-    if (r.test(string))
+    if (r.test(s))
     {
     }
     else
@@ -536,7 +535,7 @@ class RegExp
      * auto s = new RegExp(r"p[1-5]\s*");
      * ---
      */
-    public this(rchar[] pattern, rchar[] attributes = null)
+    public this(string pattern, string attributes = null)
     {
 	pmatch = (&gmatch)[0 .. 1];
 	compile(pattern, attributes);
@@ -555,7 +554,7 @@ class RegExp
      * auto s = RegExp(r"p[1-5]\s*");
      * ---
      */
-    public static RegExp opCall(rchar[] pattern, rchar[] attributes = null)
+    public static RegExp opCall(string pattern, string attributes = null)
     {
 	return new RegExp(pattern, attributes);
     }
@@ -564,7 +563,7 @@ class RegExp
     {
 	debug(regexp) printf("regexp.opCall.unittest()\n");
 	auto r1 = RegExp("hello", "m");
-	char[] msg;
+	string msg;
 	try
 	{
 	    auto r2 = RegExp("hello", "q");
@@ -602,7 +601,7 @@ class RegExp
      * ---
      */
 
-    public RegExp search(rchar[] string)
+    public RegExp search(string string)
     {
 	input = string;
 	pmatch[0].rm_eo = 0;
@@ -650,7 +649,7 @@ class RegExp
      * if n is larger than the number of parenthesized subexpressions,
      * null is returned.
      */
-    public char[] match(size_t n)
+    public string match(size_t n)
     {
 	if (n >= pmatch.length)
 	    return null;
@@ -667,7 +666,7 @@ class RegExp
     /*******************
      * Return the slice of the input that precedes the matched substring.
      */
-    public char[] pre()
+    public string pre()
     {
 	return input[0 .. pmatch[0].rm_so];
     }
@@ -675,7 +674,7 @@ class RegExp
     /*******************
      * Return the slice of the input that follows the matched substring.
      */
-    public char[] post()
+    public string post()
     {
 	return input[pmatch[0].rm_eo .. $];
     }
@@ -683,13 +682,13 @@ class RegExp
     uint re_nsub;		// number of parenthesized subexpression matches
     regmatch_t[] pmatch;	// array [re_nsub + 1]
 
-    rchar[] input;		// the string to search
+    string input;		// the string to search
 
     // per instance:
 
-    rchar[] pattern;		// source text of the regular expression
+    string pattern;		// source text of the regular expression
 
-    rchar[] flags;		// source text of the attributes parameter
+    string flags;		// source text of the attributes parameter
 
     int errors;
 
@@ -712,7 +711,7 @@ private:
     regmatch_t gmatch;		// match for the entire regular expression
 				// (serves as storage for pmatch[0])
 
-    ubyte[] program;		// pattern[] compiled into regular expression program
+    const(ubyte)[] program;	// pattern[] compiled into regular expression program
     OutBuffer buf;
 
 
@@ -769,7 +768,7 @@ private uint inf = ~0u;
  * Throws RegExpException on error
  */
 
-public void compile(rchar[] pattern, rchar[] attributes)
+public void compile(string pattern, string attributes)
 {
     //printf("RegExp.compile('%.*s', '%.*s')\n", pattern, attributes);
 
@@ -825,32 +824,32 @@ public void compile(rchar[] pattern, rchar[] attributes)
 }
 
 /********************************************
- * Split string[] into an array of strings, using the regular
+ * Split s[] into an array of strings, using the regular
  * expression as the separator.
  * Returns:
- * 	array of slices into string[]
+ * 	array of slices into s[]
  */
 
-public rchar[][] split(rchar[] string)
+public string[] split(string s)
 {
     debug(regexp) printf("regexp.split()\n");
 
-    rchar[][] result;
+    string[] result;
 
-    if (string.length)
+    if (s.length)
     {
 	int p = 0;
 	int q;
-	for (q = p; q != string.length;)
+	for (q = p; q != s.length;)
 	{
-	    if (test(string, q))
+	    if (test(s, q))
 	    {	int e;
 
 		q = pmatch[0].rm_so;
 		e = pmatch[0].rm_eo;
 		if (e != p)
 		{
-		    result ~= string[p .. q];
+		    result ~= s[p .. q];
 		    for (int i = 1; i < pmatch.length; i++)
 		    {
 			int so = pmatch[i].rm_so;
@@ -859,7 +858,7 @@ public rchar[][] split(rchar[] string)
 			{   so = 0;	// -1 gives array bounds error
 			    eo = 0;
 			}
-			result ~= string[so .. eo];
+			result ~= s[so .. eo];
 		    }
 		    q = p = e;
 		    continue;
@@ -867,10 +866,10 @@ public rchar[][] split(rchar[] string)
 	    }
 	    q++;
 	}
-	result ~= string[p .. string.length];
+	result ~= s[p .. s.length];
     }
-    else if (!test(string))
-	result ~= string;
+    else if (!test(s))
+	result ~= s;
     return result;
 }
 
@@ -879,8 +878,8 @@ unittest
     debug(regexp) printf("regexp.split.unittest()\n");
 
     auto r = new RegExp("a*?", null);
-    rchar[][] result;
-    rchar[] j;
+    string[] result;
+    string j;
     int i;
 
     result = r.split("ab");
@@ -930,7 +929,7 @@ unittest
  *	index of match if successful, -1 if not found
  */
 
-public int find(rchar[] string)
+public int find(string string)
 {
     int i;
 
@@ -958,21 +957,21 @@ unittest
 
 
 /*************************************************
- * Search string[] for match.
+ * Search s[] for match.
  * Returns:
- *	If global attribute, return same value as exec(string).
+ *	If global attribute, return same value as exec(s).
  *	If not global attribute, return array of all matches.
  */
 
-public rchar[][] match(rchar[] string)
+public string[] match(string s)
 {
-    rchar[][] result;
+    string[] result;
 
     if (attributes & REA.global)
     {
 	int lastindex = 0;
 
-	while (test(string, lastindex))
+	while (test(s, lastindex))
 	{   int eo = pmatch[0].rm_eo;
 
 	    result ~= input[pmatch[0].rm_so .. eo];
@@ -984,7 +983,7 @@ public rchar[][] match(rchar[] string)
     }
     else
     {
-	result = exec(string);
+	result = exec(s);
     }
     return result;
 }
@@ -994,8 +993,8 @@ unittest
     debug(regexp) printf("regexp.match.unittest()\n");
 
     int i;
-    rchar[][] result;
-    rchar[] j;
+    string[] result;
+    string j;
     RegExp r;
 
     r = new RegExp("a[bc]", null);
@@ -1013,34 +1012,34 @@ unittest
 
 
 /*************************************************
- * Find regular expression matches in string[]. Replace those matches
- * with a new _string composed of format[] merged with the result of the
+ * Find regular expression matches in s[]. Replace those matches
+ * with a new string composed of format[] merged with the result of the
  * matches.
  * If global, replace all matches. Otherwise, replace first match.
- * Returns: the new _string
+ * Returns: the new string
  */
 
-public rchar[] replace(rchar[] string, rchar[] format)
+public string replace(string s, string format)
 {
-    rchar[] result;
+    string result;
     int lastindex;
     int offset;
 
-    result = string;
+    result = s;
     lastindex = 0;
     offset = 0;
     for (;;)
     {
-	if (!test(string, lastindex))
+	if (!test(s, lastindex))
 	    break;
 
 	int so = pmatch[0].rm_so;
 	int eo = pmatch[0].rm_eo;
 
-	rchar[] replacement = replace(format);
+	string replacement = replace(format);
 
 	// Optimize by using std.string.replace if possible - Dave Fladebo
-	rchar[] slice = result[offset + so .. offset + eo];
+	string slice = result[offset + so .. offset + eo];
 	if (attributes & REA.global &&		// global, so replace all
 	   !(attributes & REA.ignoreCase) &&	// not ignoring case
 	   !(attributes & REA.multiline) &&	// not multiline
@@ -1076,7 +1075,7 @@ unittest
     debug(regexp) printf("regexp.replace.unittest()\n");
 
     int i;
-    rchar[] result;
+    string result;
     RegExp r;
 
     r = new RegExp("a[bc]", "g");
@@ -1097,7 +1096,7 @@ unittest
  *	array of slices into string[] representing matches
  */
 
-public rchar[][] exec(rchar[] string)
+public string[] exec(string string)
 {
     debug(regexp) printf("regexp.exec(string = '%.*s')\n", string);
     input = string;
@@ -1113,12 +1112,12 @@ public rchar[][] exec(rchar[] string)
  *	array of slices into string[] representing matches
  */
 
-public rchar[][] exec()
+public string[] exec()
 {
     if (!test())
 	return null;
 
-    auto result = new rchar[][pmatch.length];
+    auto result = new string[pmatch.length];
     for (int i = 0; i < pmatch.length; i++)
     {
 	if (pmatch[i].rm_so == pmatch[i].rm_eo)
@@ -1131,7 +1130,7 @@ public rchar[][] exec()
 }
 
 /************************************************
- * Search string[] for match.
+ * Search s[] for match.
  * Returns: 0 for no match, !=0 for match
  * Example:
 ---
@@ -1159,9 +1158,9 @@ void main()
  * which prints: 1
  */
 
-public int test(rchar[] string)
+public int test(string s)
 {
-    return test(string, 0 /*pmatch[0].rm_eo*/);
+    return test(s, 0 /*pmatch[0].rm_eo*/);
 }
 
 /************************************************
@@ -1175,16 +1174,16 @@ public int test()
 }
 
 /************************************************
- * Test string[] starting at startindex against regular expression.
+ * Test s[] starting at startindex against regular expression.
  * Returns: 0 for no match, !=0 for match
  */
 
-public int test(char[] string, int startindex)
+public int test(string s, int startindex)
 {
     char firstc;
     uint si;
 
-    input = string;
+    input = s;
     debug (regexp) printf("RegExp.test(input[] = '%.*s', startindex = %d)\n", input, startindex);
     pmatch[0].rm_so = 0;
     pmatch[0].rm_eo = 0;
@@ -1259,7 +1258,7 @@ int chr(inout uint si, rchar c)
 }
 
 
-void printProgram(ubyte[] prog)
+void printProgram(const(ubyte)[] prog)
 {
   //debug(regexp)
   {
@@ -2585,7 +2584,7 @@ Lerr:
     return 0;
 }
 
-void error(char[] msg)
+void error(string msg)
 {
     errors++;
     debug(regexp) printf("error: %.*s\n", msg);
@@ -2794,7 +2793,7 @@ void optimize()
 // Return 1 if success, 0 if we can't build a filter or
 // if there is no point to one.
 
-int starrchars(Range r, ubyte[] prog)
+int starrchars(Range r, const(ubyte)[] prog)
 {   rchar c;
     uint maxc;
     uint maxb;
@@ -2802,7 +2801,7 @@ int starrchars(Range r, ubyte[] prog)
     uint b;
     uint n;
     uint m;
-    ubyte* pop;
+    const(ubyte)* pop;
 
     //printf("RegExp.starrchars(prog = %p, progend = %p)\n", prog, progend);
     for (size_t i = 0; i < prog.length;)
@@ -2978,16 +2977,16 @@ int starrchars(Range r, ubyte[] prog)
  * string, generate and return a new string.
  */
 
-public rchar[] replace(rchar[] format)
+public string replace(string format)
 {
     return replace3(format, input, pmatch[0 .. re_nsub + 1]);
 }
 
 // Static version that doesn't require a RegExp object to be created
 
-public static rchar[] replace3(rchar[] format, rchar[] input, regmatch_t[] pmatch)
+public static string replace3(string format, string input, regmatch_t[] pmatch)
 {
-    rchar[] result;
+    string result;
     uint c2;
     int rm_so;
     int rm_eo;
@@ -3098,9 +3097,9 @@ public static rchar[] replace3(rchar[] format, rchar[] input, regmatch_t[] pmatc
 		</table>
  */
 
-public rchar[] replaceOld(rchar[] format)
+public string replaceOld(string format)
 {
-    rchar[] result;
+    string result;
 
 //printf("replace: this = %p so = %d, eo = %d\n", this, pmatch[0].rm_so, pmatch[0].rm_eo);
 //printf("3input = '%.*s'\n", input);

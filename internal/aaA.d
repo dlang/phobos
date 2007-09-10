@@ -255,7 +255,7 @@ void* _aaGet(AA* aa, TypeInfo keyti, size_t valuesize, ...)
 	//printf("hash = %d\n", key_hash);
 	i = key_hash % aa.a.b.length;
 	auto pe = &aa.a.b[i];
-	while ((e = *pe) != null)
+	while ((e = *pe) !is null)
 	{
 	    if (key_hash == e.hash)
 	    {
@@ -308,7 +308,7 @@ void* _aaGetRvalue(AA aa, TypeInfo keyti, size_t valuesize, ...)
 	    //printf("hash = %d\n", key_hash);
 	    size_t i = key_hash % len;
 	    auto e = aa.a.b[i];
-	    while (e != null)
+	    while (e !is null)
 	    {
 		if (key_hash == e.hash)
 		{
@@ -355,7 +355,7 @@ void* _aaIn(AA aa, TypeInfo keyti, ...)
 		//printf("hash = %d\n", key_hash);
 		size_t i = key_hash % len;
 		auto e = aa.a.b[i];
-		while (e != null)
+		while (e !is null)
 		{
 		    if (key_hash == e.hash)
 		    {
@@ -391,7 +391,7 @@ void _aaDel(AA aa, TypeInfo keyti, ...)
 	    //printf("hash = %d\n", key_hash);
 	    size_t i = key_hash % aa.a.b.length;
 	    auto pe = &aa.a.b[i];
-	    while ((e = *pe) != null)	// null means not found
+	    while ((e = *pe) !is null)	// null means not found
 	    {
 		if (key_hash == e.hash)
 		{
@@ -467,7 +467,7 @@ ArrayRet_t _aaValues(AA aa, size_t keysize, size_t valuesize)
 		    _aaValues_x(e.left);
 		}
 		e = e.right;
-	    } while (e != null);
+	    } while (e !is null);
 	}
 
 	if (aa.a)
@@ -518,7 +518,7 @@ void* _aaRehash(AA* paa, TypeInfo keyti)
 		auto key_hash = olde.hash;
 		size_t i = key_hash % newb.b.length;
 		auto pe = &newb.b[i];
-		while ((e = *pe) != null)
+		while ((e = *pe) !is null)
 		{
 		    //printf("\te = %p, e.left = %p, e.right = %p\n", e, e.left, e.right);
 		    assert(e.left != e);
@@ -602,7 +602,7 @@ ArrayRet_t _aaKeys(AA aa, size_t keysize)
 		    _aaKeys_x(e.left);
 		}
 		e = e.right;
-	    } while (e != null);
+	    } while (e !is null);
 	}
 
 	auto len = _aaLen(aa);
@@ -749,7 +749,7 @@ BB* _d_assocarrayliteralT(TypeInfo_AssociativeArray ti, size_t length, ...)
     BB* result;
 
     //printf("_d_assocarrayliteralT(keysize = %d, valuesize = %d, length = %d)\n", keysize, valuesize, length);
-    //writefln("tivalue = %s", ti.next.classinfo.name);
+    //printf("tivalue = %.*s\n", ti.next.classinfo.name);
     if (length == 0 || valuesize == 0 || keysize == 0)
     {
 	;

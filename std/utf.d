@@ -50,7 +50,7 @@ deprecated class UtfError : Error
 {
     size_t idx;	// index in string of where error occurred
 
-    this(char[] s, size_t i)
+    this(in char[] s, size_t i)
     {
 	idx = i;
 	super(s);
@@ -65,7 +65,7 @@ class UtfException : Exception
 {
     size_t idx;	/// index in string of where error occurred
 
-    this(char[] s, size_t i)
+    this(const char[] s, size_t i)
     {
 	idx = i;
 	super(s);
@@ -102,7 +102,7 @@ unittest
 }
 
 
-ubyte[256] UTF8stride =
+invariant ubyte[256] UTF8stride =
 [
     1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
     1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
@@ -130,7 +130,7 @@ ubyte[256] UTF8stride =
  *	0xFF meaning s[i] is not the start of of UTF-8 sequence.
  */
 
-uint stride(char[] s, size_t i)
+uint stride(in char[] s, size_t i)
 {
     return UTF8stride[s[i]];
 }
@@ -140,7 +140,7 @@ uint stride(char[] s, size_t i)
  * in string s.
  */
 
-uint stride(wchar[] s, size_t i)
+uint stride(in wchar[] s, size_t i)
 {   uint u = s[i];
     return 1 + (u >= 0xD800 && u <= 0xDBFF);
 }
@@ -151,7 +151,7 @@ uint stride(wchar[] s, size_t i)
  * Returns: The return value will always be 1.
  */
 
-uint stride(dchar[] s, size_t i)
+uint stride(in dchar[] s, size_t i)
 {
     return 1;
 }
@@ -162,7 +162,7 @@ uint stride(dchar[] s, size_t i)
  * determine the number of UCS characters up to that index i.
  */
 
-size_t toUCSindex(char[] s, size_t i)
+size_t toUCSindex(in char[] s, size_t i)
 {
     size_t n;
     size_t j;
@@ -185,7 +185,7 @@ size_t toUCSindex(char[] s, size_t i)
 
 /** ditto */
 
-size_t toUCSindex(wchar[] s, size_t i)
+size_t toUCSindex(in wchar[] s, size_t i)
 {
     size_t n;
     size_t j;
@@ -206,7 +206,7 @@ size_t toUCSindex(wchar[] s, size_t i)
 
 /** ditto */
 
-size_t toUCSindex(dchar[] s, size_t i)
+size_t toUCSindex(in dchar[] s, size_t i)
 {
     return i;
 }
@@ -215,7 +215,7 @@ size_t toUCSindex(dchar[] s, size_t i)
  * Given a UCS index n into an array of characters s[], return the UTF index.
  */
 
-size_t toUTFindex(char[] s, size_t n)
+size_t toUTFindex(in char[] s, size_t n)
 {
     size_t i;
 
@@ -231,7 +231,7 @@ size_t toUTFindex(char[] s, size_t n)
 
 /** ditto */
 
-size_t toUTFindex(wchar[] s, size_t n)
+size_t toUTFindex(in wchar[] s, size_t n)
 {
     size_t i;
 
@@ -245,7 +245,7 @@ size_t toUTFindex(wchar[] s, size_t n)
 
 /** ditto */
 
-size_t toUTFindex(dchar[] s, size_t n)
+size_t toUTFindex(in dchar[] s, size_t n)
 {
     return n;
 }
@@ -258,7 +258,7 @@ size_t toUTFindex(dchar[] s, size_t n)
  * thrown and idx remains unchanged.
  */
 
-dchar decode(char[] s, inout size_t idx)
+dchar decode(in char[] s, inout size_t idx)
     in
     {
 	assert(idx >= 0 && idx < s.length);
@@ -351,7 +351,7 @@ unittest
 
     debug(utf) printf("utf.decode.unittest\n");
 
-    static char[] s1 = "abcd";
+    static string s1 = "abcd";
     i = 0;
     c = decode(s1, i);
     assert(c == cast(dchar)'a');
@@ -360,19 +360,19 @@ unittest
     assert(c == cast(dchar)'b');
     assert(i == 2);
 
-    static char[] s2 = "\xC2\xA9";
+    static string s2 = "\xC2\xA9";
     i = 0;
     c = decode(s2, i);
     assert(c == cast(dchar)'\u00A9');
     assert(i == 2);
 
-    static char[] s3 = "\xE2\x89\xA0";
+    static string s3 = "\xE2\x89\xA0";
     i = 0;
     c = decode(s3, i);
     assert(c == cast(dchar)'\u2260');
     assert(i == 3);
 
-    static char[][] s4 =
+    static string[] s4 =
     [	"\xE2\x89",		// too short
 	"\xC0\x8A",
 	"\xE0\x80\x8A",
@@ -400,7 +400,7 @@ unittest
 
 /** ditto */
 
-dchar decode(wchar[] s, inout size_t idx)
+dchar decode(in wstring s, inout size_t idx)
     in
     {
 	assert(idx >= 0 && idx < s.length);
@@ -411,7 +411,7 @@ dchar decode(wchar[] s, inout size_t idx)
     }
     body
     {
-	char[] msg;
+	invariant(string) msg;
 	dchar V;
 	size_t i = idx;
 	uint u = s[i];
@@ -457,7 +457,7 @@ dchar decode(wchar[] s, inout size_t idx)
 
 /** ditto */
 
-dchar decode(dchar[] s, inout size_t idx)
+dchar decode(in dstring s, inout size_t idx)
     in
     {
 	assert(idx >= 0 && idx < s.length);
@@ -535,7 +535,7 @@ unittest
 {
     debug(utf) printf("utf.encode.unittest\n");
 
-    char[] s = "abcd";
+    char[] s = "abcd".dup;
     encode(s, cast(dchar)'a');
     assert(s.length == 5);
     assert(s == "abcda");
@@ -595,7 +595,7 @@ void encode(inout dchar[] s, dchar c)
  * not. Use to check all untrusted input for correctness.
  */
 
-void validate(char[] s)
+void validate(in string s)
 {
     size_t len = s.length;
     size_t i;
@@ -608,7 +608,7 @@ void validate(char[] s)
 
 /** ditto */
 
-void validate(wchar[] s)
+void validate(in wstring s)
 {
     size_t len = s.length;
     size_t i;
@@ -621,7 +621,7 @@ void validate(wchar[] s)
 
 /** ditto */
 
-void validate(dchar[] s)
+void validate(in dstring s)
 {
     size_t len = s.length;
     size_t i;
@@ -634,7 +634,7 @@ void validate(dchar[] s)
 
 /* =================== Conversion to UTF8 ======================= */
 
-char[] toUTF8(char[4] buf, dchar c)
+string toUTF8(char[4] buf, dchar c)
     in
     {
 	assert(isValidDchar(c));
@@ -674,7 +674,7 @@ char[] toUTF8(char[4] buf, dchar c)
  * Encodes string s into UTF-8 and returns the encoded string.
  */
 
-char[] toUTF8(char[] s)
+string toUTF8(string s)
     in
     {
 	validate(s);
@@ -686,7 +686,7 @@ char[] toUTF8(char[] s)
 
 /** ditto */
 
-char[] toUTF8(wchar[] s)
+string toUTF8(wstring s)
 {
     char[] r;
     size_t i;
@@ -714,7 +714,7 @@ char[] toUTF8(wchar[] s)
 
 /** ditto */
 
-char[] toUTF8(dchar[] s)
+string toUTF8(dstring s)
 {
     char[] r;
     size_t i;
@@ -742,7 +742,7 @@ char[] toUTF8(dchar[] s)
 
 /* =================== Conversion to UTF16 ======================= */
 
-wchar[] toUTF16(wchar[2] buf, dchar c)
+wstring toUTF16(wchar[2] buf, dchar c)
     in
     {
 	assert(isValidDchar(c));
@@ -768,7 +768,7 @@ wchar[] toUTF16(wchar[2] buf, dchar c)
  * an LPWSTR or LPCWSTR argument.
  */
 
-wchar[] toUTF16(char[] s)
+wstring toUTF16(string s)
 {
     wchar[] r;
     size_t slen = s.length;
@@ -794,7 +794,7 @@ wchar[] toUTF16(char[] s)
 
 /** ditto */
 
-wchar* toUTF16z(char[] s)
+const(wchar*) toUTF16z(string s)
 {
     wchar[] r;
     size_t slen = s.length;
@@ -821,7 +821,7 @@ wchar* toUTF16z(char[] s)
 
 /** ditto */
 
-wchar[] toUTF16(wchar[] s)
+wstring toUTF16(wstring s)
     in
     {
 	validate(s);
@@ -833,7 +833,7 @@ wchar[] toUTF16(wchar[] s)
 
 /** ditto */
 
-wchar[] toUTF16(dchar[] s)
+wstring toUTF16(dstring s)
 {
     wchar[] r;
     size_t slen = s.length;
@@ -853,7 +853,7 @@ wchar[] toUTF16(dchar[] s)
  * Encodes string s into UTF-32 and returns the encoded string.
  */
 
-dchar[] toUTF32(char[] s)
+dstring toUTF32(string s)
 {
     dchar[] r;
     size_t slen = s.length;
@@ -874,7 +874,7 @@ dchar[] toUTF32(char[] s)
 
 /** ditto */
 
-dchar[] toUTF32(wchar[] s)
+dstring toUTF32(wstring s)
 {
     dchar[] r;
     size_t slen = s.length;
@@ -895,7 +895,7 @@ dchar[] toUTF32(wchar[] s)
 
 /** ditto */
 
-dchar[] toUTF32(dchar[] s)
+dstring toUTF32(dstring s)
     in
     {
 	validate(s);
@@ -911,9 +911,9 @@ unittest
 {
     debug(utf) printf("utf.toUTF.unittest\n");
 
-    char[] c;
-    wchar[] w;
-    dchar[] d;
+    string c;
+    wstring w;
+    dstring d;
 
     c = "hello";
     w = toUTF16(c);
@@ -952,7 +952,7 @@ unittest
     c = "he\U0010AAAAllo";
     w = toUTF16(c);
     //foreach (wchar c; w) printf("c = x%x\n", c);
-    //foreach (wchar c; cast(wchar[])"he\U0010AAAAllo") printf("c = x%x\n", c);
+    //foreach (wchar c; cast(wstring)"he\U0010AAAAllo") printf("c = x%x\n", c);
     assert(w == "he\U0010AAAAllo");
     d = toUTF32(c);
     assert(d == "he\U0010AAAAllo");

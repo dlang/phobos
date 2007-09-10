@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2005-2006 by Digital Mars, www.digitalmars.com
+ *  Copyright (C) 2005-2007 by Digital Mars, www.digitalmars.com
  *  Written by Walter Bright
  *
  *  This software is provided 'as-is', without any express or implied
@@ -42,14 +42,14 @@ private
 {
     struct Cover
     {
-	char[] filename;
+	string filename;
 	BitArray valid;
 	uint[] data;
     }
 
     Cover[] gdata;
-    char[] srcpath;
-    char[] dstpath;
+    string srcpath;
+    string dstpath;
     bool merge;
 }
 
@@ -57,7 +57,7 @@ private
  * Set path to where source files are located.
  */
 
-void setSourceDir(char[] pathname)
+void setSourceDir(string pathname)
 {
     srcpath = pathname;
 }
@@ -66,7 +66,7 @@ void setSourceDir(char[] pathname)
  * Set path to where listing files are to be written.
  */
 
-void setDestDir(char[] pathname)
+void setDestDir(string pathname)
 {
     srcpath = pathname;
 }
@@ -84,7 +84,7 @@ void setMerge(bool flag)
     merge = flag;
 }
 
-extern (C) void _d_cover_register(char[] filename, BitArray valid, uint[] data)
+extern (C) void _d_cover_register(string filename, BitArray valid, uint[] data)
 {
     //printf("_d_cover_register()\n");
     //printf("\tfilename = '%.*s'\n", filename);
@@ -106,18 +106,18 @@ static ~this()
 	//printf("filename = '%.*s'\n", c.filename);
 
 	// Generate source file name
-	char[] srcfilename = std.path.join(srcpath, c.filename);
+	string srcfilename = std.path.join(srcpath, c.filename);
 
-	char[] buf = cast(char[])std.file.read(srcfilename);
-	char[][] lines = std.string.splitlines(buf);
+	string buf = cast(string)std.file.read(srcfilename);
+	string[] lines = std.string.splitlines(buf);
 
 	// Generate listing file name
-	char[] lstfilename = std.path.addExt(std.path.getBaseName(c.filename), "lst");
+	string lstfilename = std.path.addExt(std.path.getBaseName(c.filename), "lst");
 
 	if (merge && exists(lstfilename) && isfile(lstfilename))
 	{
-	    char[] lst = cast(char[])std.file.read(lstfilename);
-	    char[][] lstlines = std.string.splitlines(lst);
+	    string lst = cast(string)std.file.read(lstfilename);
+	    string[] lstlines = std.string.splitlines(lst);
 
 	    for (size_t i = 0; i < lstlines.length; i++)
 	    {
@@ -156,7 +156,7 @@ static ~this()
 	    if (i < lines.length)
 	    {
 		uint n = c.data[i];
-		char[] line = lines[i];
+		string line = lines[i];
 		line = std.string.expandtabs(line);
 		if (n == 0)
 		{

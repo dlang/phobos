@@ -59,6 +59,7 @@ OBJS = asserterror.o deh2.o switch.o complex.o gcstats.o \
 	perf.o openrj.o uni.o trace.o boxer.o \
 	demangle.o cover.o bitarray.o bind.o aApplyR.o \
 	signals.o cpuid.o traits.o typetuple.o \
+	c_stdio.o \
 	ti_wchar.o ti_uint.o ti_short.o ti_ushort.o \
 	ti_byte.o ti_ubyte.o ti_long.o ti_ulong.o ti_ptr.o \
 	ti_float.o ti_double.o ti_real.o ti_delegate.o \
@@ -451,6 +452,9 @@ zip.o : std/zip.d
 
 stdarg.o : std/c/stdarg.d
 	$(DMD) -c $(DFLAGS) std/c/stdarg.d
+
+c_stdio.o : std/c/stdio.d
+	$(DMD) -c $(DFLAGS) std/c/stdio.d -ofc_stdio.o
 
 ### std/c/linux
 

@@ -1,5 +1,5 @@
 
-// Copyright (C) 2001-2002 by Digital Mars
+// Copyright (C) 2001-2007 by Digital Mars
 // All Rights Reserved
 // www.digitalmars.com
 // Written by Walter Bright
@@ -31,7 +31,7 @@ struct GCBits
 	}
     }
 
-    invariant
+    invariant()
     {
 	if (data)
 	{

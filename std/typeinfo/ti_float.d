@@ -7,7 +7,7 @@ private import std.math;
 
 class TypeInfo_f : TypeInfo
 {
-    char[] toString() { return "float"; }
+    string toString() { return "float"; }
 
     hash_t getHash(void *p)
     {

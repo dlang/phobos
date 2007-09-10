@@ -8,7 +8,7 @@ module std.windows.syserror;
 private import std.windows.charset;
 private import std.c.windows.windows;
 
-char[] sysErrorString(uint errcode)
+const(char)[] sysErrorString(uint errcode)
 {
     char[] result;
     char* buffer;
@@ -36,8 +36,8 @@ char[] sysErrorString(uint errcode)
     result[0 .. r] = buffer[0 .. r];
     result[r] = 0;
 
-    result = std.windows.charset.fromMBSz(result.ptr);
+    auto res = std.windows.charset.fromMBSz(result.ptr);
 
     LocalFree(cast(HLOCAL)buffer);
-    return result;
+    return res;
 }

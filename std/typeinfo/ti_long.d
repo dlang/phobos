@@ -5,7 +5,7 @@ module std.typeinfo.ti_long;
 
 class TypeInfo_l : TypeInfo
 {
-    char[] toString() { return "long"; }
+    string toString() { return "long"; }
 
     hash_t getHash(void *p)
     {

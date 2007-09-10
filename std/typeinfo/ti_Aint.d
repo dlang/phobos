@@ -7,7 +7,7 @@ private import std.c.string;
 
 class TypeInfo_Ai : TypeInfo
 {
-    char[] toString() { return "int[]"; }
+    string toString() { return "int[]"; }
 
     hash_t getHash(void *p)
     {	int[] s = *cast(int[]*)p;
@@ -72,7 +72,7 @@ class TypeInfo_Ai : TypeInfo
 
 class TypeInfo_Ak : TypeInfo_Ai
 {
-    char[] toString() { return "uint[]"; }
+    string toString() { return "uint[]"; }
 
     int compare(void *p1, void *p2)
     {
@@ -101,7 +101,7 @@ class TypeInfo_Ak : TypeInfo_Ai
 
 class TypeInfo_Aw : TypeInfo_Ak
 {
-    char[] toString() { return "dchar[]"; }
+    string toString() { return "dchar[]"; }
 
     TypeInfo next()
     {

@@ -5,7 +5,7 @@ module std.typeinfo.ti_int;
 
 class TypeInfo_i : TypeInfo
 {
-    char[] toString() { return "int"; }
+    string toString() { return "int"; }
 
     hash_t getHash(void *p)
     {

@@ -5,7 +5,7 @@ module std.typeinfo.ti_byte;
 
 class TypeInfo_g : TypeInfo
 {
-    char[] toString() { return "byte"; }
+    string toString() { return "byte"; }
 
     hash_t getHash(void *p)
     {

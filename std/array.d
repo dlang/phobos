@@ -8,10 +8,10 @@ class ArrayBoundsError : Error
   private:
 
     uint linnum;
-    char[] filename;
+    string filename;
 
   public:
-    this(char[] filename, uint linnum)
+    this(string filename, uint linnum)
     {
 	this.linnum = linnum;
 	this.filename = filename;
@@ -29,7 +29,7 @@ class ArrayBoundsError : Error
  * Builds an ArrayBoundsError exception and throws it.
  */
 
-extern (C) static void _d_array_bounds(char[] filename, uint line)
+extern (C) static void _d_array_bounds(string filename, uint line)
 {
     //printf("_d_assert(%s, %d)\n", (char *)filename, line);
     ArrayBoundsError a = new ArrayBoundsError(filename, line);

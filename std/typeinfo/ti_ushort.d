@@ -5,7 +5,7 @@ module std.typeinfo.ti_ushort;
 
 class TypeInfo_t : TypeInfo
 {
-    char[] toString() { return "ushort"; }
+    string toString() { return "ushort"; }
 
     hash_t getHash(void *p)
     {

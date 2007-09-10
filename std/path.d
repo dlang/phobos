@@ -110,7 +110,7 @@ version (linux) alias std.string.cmp fcmp;
  * -----
  */
 
-char[] getExt(char[] fullname)
+string getExt(string fullname)
 {
     uint i;
 
@@ -138,7 +138,7 @@ unittest
 {
     debug(path) printf("path.getExt.unittest\n");
     int i;
-    char[] result;
+    string result;
 
     version (Win32)
 	result = getExt("d:\\path\\foo.bat");
@@ -204,7 +204,7 @@ unittest
  * -----
  */
 
-char[] getName(char[] fullname)
+string getName(string fullname)
 {
     uint i;
 
@@ -232,7 +232,7 @@ unittest
 {
     debug(path) printf("path.getName.unittest\n");
     int i;
-    char[] result;
+    string result;
 
     result = getName("foo.bar");
     i = cmp(result, "foo");
@@ -272,7 +272,7 @@ unittest
  * -----
  */
 
-char[] getBaseName(char[] fullname)
+string getBaseName(string fullname)
     out (result)
     {
 	assert(result.length <= fullname.length);
@@ -301,7 +301,7 @@ unittest
 {
     debug(path) printf("path.getBaseName.unittest\n");
     int i;
-    char[] result;
+    string result;
 
     version (Windows)
 	result = getBaseName("d:\\path\\foo.bat");
@@ -351,7 +351,7 @@ unittest
  * -----
  */
 
-char[] getDirName(char[] fullname)
+string getDirName(string fullname)
     out (result)
     {
 	assert(result.length <= fullname.length);
@@ -401,7 +401,7 @@ char[] getDirName(char[] fullname)
  * -----
  */
 
-char[] getDrive(char[] fullname)
+string getDrive(string fullname)
     out (result)
     {
 	assert(result.length <= fullname.length);
@@ -446,9 +446,9 @@ char[] getDrive(char[] fullname)
  * -----
  */
 
-char[] defaultExt(char[] filename, char[] ext)
+string defaultExt(string filename, string ext)
 {
-    char[] existing;
+    string existing;
 
     existing = getExt(filename);
     if (existing.length == 0)
@@ -486,9 +486,9 @@ char[] defaultExt(char[] filename, char[] ext)
  * -----
  */
 
-char[] addExt(char[] filename, char[] ext)
+string addExt(string filename, string ext)
 {
-    char[] existing;
+    string existing;
 
     existing = getExt(filename);
     if (existing.length == 0)
@@ -532,9 +532,9 @@ char[] addExt(char[] filename, char[] ext)
  * -----
  */
 
-int isabs(char[] path)
+int isabs(in string path)
 {
-    char[] d = getDrive(path);
+    string d = getDrive(path);
 
     version (Windows)
     {
@@ -587,15 +587,15 @@ unittest
  * -----
  */
 
-char[] join(char[] p1, char[] p2)
+string join(string p1, string p2)
 {
     if (!p2.length)
 	return p1;
     if (!p1.length)
 	return p2;
 
-    char[] p;
-    char[] d1;
+    string p;
+    string d1;
 
     version(Win32)
     {
@@ -651,7 +651,7 @@ unittest
 {
     debug(path) printf("path.join.unittest\n");
 
-    char[] p;
+    string p;
     int i;
 
     p = join("foo", "bar");
@@ -820,7 +820,7 @@ int fncharmatch(dchar c1, dchar c2)
  * -----
  */
 
-int fnmatch(char[] filename, char[] pattern)
+int fnmatch(string filename, string pattern)
     in
     {
 	// Verify that pattern[] is valid
@@ -986,9 +986,9 @@ unittest
  * -----
  * import std.path;
  *
- * void process_file(char[] filename)
+ * void process_file(string filename)
  * {
- *     char[] path = expandTilde(filename);
+ *     string path = expandTilde(filename);
  *     ...
  * }
  * -----
@@ -996,10 +996,10 @@ unittest
  * -----
  * import std.path;
  *
- * const char[] RESOURCE_DIR_TEMPLATE = "~/.applicationrc";
- * char[] RESOURCE_DIR;    // This gets expanded in main().
+ * string RESOURCE_DIR_TEMPLATE = "~/.applicationrc";
+ * string RESOURCE_DIR;    // This gets expanded in main().
  *
- * int main(char[][] args)
+ * int main(string[] args)
  * {
  *     RESOURCE_DIR = expandTilde(RESOURCE_DIR_TEMPLATE);
  *     ...
@@ -1009,7 +1009,7 @@ unittest
  * Authors: Grzegorz Adam Hankiewicz, Thomas Kühne.
  */
 
-char[] expandTilde(char[] inputPath)
+string expandTilde(string inputPath)
 {
     version(linux)
     {
@@ -1081,7 +1081,7 @@ version (linux)
 /**
  * Replaces the tilde from path with the environment variable HOME.
  */
-private char[] expandFromEnvironment(char[] path)
+private string expandFromEnvironment(string path)
 {
     assert(path.length >= 1);
     assert(path[0] == '~');
@@ -1102,7 +1102,7 @@ private char[] expandFromEnvironment(char[] path)
  * is joined to path[char_pos .. length] if char_pos is smaller
  * than length, otherwise path is not appended to c_path.
  */
-private char[] combineCPathWithDPath(char* c_path, char[] path, int char_pos)
+private string combineCPathWithDPath(char* c_path, string path, int char_pos)
 {
     assert(c_path != null);
     assert(path.length > 0);
@@ -1116,7 +1116,7 @@ private char[] combineCPathWithDPath(char* c_path, char[] path, int char_pos)
 	end--;
 
     // Create our own copy, as lifetime of c_path is undocumented
-    char[] cp = c_path[0 .. end].dup;
+    string cp = c_path[0 .. end].dup;
 
     // Do we append something from path?
     if (char_pos < path.length)
@@ -1129,13 +1129,13 @@ private char[] combineCPathWithDPath(char* c_path, char[] path, int char_pos)
 /**
  * Replaces the tilde from path with the path from the user database.
  */
-private char[] expandFromDatabase(char[] path)
+private string expandFromDatabase(string path)
 {
     assert(path.length > 2 || (path.length == 2 && path[1] != sep[0]));
     assert(path[0] == '~');
 
     // Extract username, searching for path separator.
-    char[] username;
+    string username;
     int last_char = find(path, sep[0]);
 
     if (last_char == -1)

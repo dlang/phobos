@@ -8,7 +8,7 @@ private import std.c.string;
 
 class TypeInfo_Ag : TypeInfo
 {
-    char[] toString() { return "byte[]"; }
+    string toString() { return "byte[]"; }
 
     hash_t getHash(void *p)
     {	byte[] s = *cast(byte[]*)p;
@@ -98,7 +98,7 @@ class TypeInfo_Ag : TypeInfo
 
 class TypeInfo_Ah : TypeInfo_Ag
 {
-    char[] toString() { return "ubyte[]"; }
+    string toString() { return "ubyte[]"; }
 
     int compare(void *p1, void *p2)
     {
@@ -118,7 +118,7 @@ class TypeInfo_Ah : TypeInfo_Ag
 
 class TypeInfo_Av : TypeInfo_Ah
 {
-    char[] toString() { return "void[]"; }
+    string toString() { return "void[]"; }
 
     TypeInfo next()
     {
@@ -130,7 +130,7 @@ class TypeInfo_Av : TypeInfo_Ah
 
 class TypeInfo_Ab : TypeInfo_Ah
 {
-    char[] toString() { return "bool[]"; }
+    string toString() { return "bool[]"; }
 
     TypeInfo next()
     {
@@ -142,7 +142,7 @@ class TypeInfo_Ab : TypeInfo_Ah
 
 class TypeInfo_Aa : TypeInfo_Ag
 {
-    char[] toString() { return "char[]"; }
+    string toString() { return "char[]"; }
 
     hash_t getHash(void *p)
     {	char[] s = *cast(char[]*)p;

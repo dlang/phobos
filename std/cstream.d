@@ -100,7 +100,7 @@ class CFile : Stream {
   /**
    * Ditto
    */
-  override size_t writeBlock(void* buffer, size_t size) {
+  override size_t writeBlock(const void* buffer, size_t size) {
     return fwrite(buffer,1,size,cfile);
   }
 
@@ -117,7 +117,7 @@ class CFile : Stream {
   /**
    * Ditto
    */
-  override void writeLine(char[] s) {
+  override void writeLine(const char[] s) {
     writeString(s);
     writeString("\n");
   }
@@ -125,7 +125,7 @@ class CFile : Stream {
   /**
    * Ditto
    */
-  override void writeLineW(wchar[] s) {
+  override void writeLineW(const wchar[] s) {
     writeStringW(s);
     writeStringW("\n");
   }
@@ -153,8 +153,8 @@ class CFile : Stream {
     file = new CFile(f,FileMode.In,true);
     // should be ok to read
     assert(file.readable);
-    char[] line = file.readLine();
-    char[] exp = "Testing stream.d:";
+    string line = file.readLine();
+    string exp = "Testing stream.d:";
     assert(line[0] == 'T');
     assert(line.length == exp.length);
     assert(!std.string.cmp(line, "Testing stream.d:"));
@@ -181,8 +181,8 @@ class CFile : Stream {
     file.writeLine("");
     file.writeLine("That was blank");
     file.position = 0;
-    char[][] lines;
-    foreach(char[] line; file) {
+    string[] lines;
+    foreach(string line; file) {
       lines ~= line.dup;
     }
     assert( lines.length == 5 );
@@ -191,8 +191,8 @@ class CFile : Stream {
     assert( lines[2] == "");
     assert( lines[3] == "That was blank");
     file.position = 0;
-    lines = new char[][5];
-    foreach(ulong n, char[] line; file) {
+    lines = new string[5];
+    foreach(ulong n, string line; file) {
       lines[cast(size_t)(n-1)] = line.dup;
     }
     assert( lines[0] == "Testing stream.d:");

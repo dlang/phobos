@@ -210,7 +210,7 @@ class GC
 	}
     }
 
-    invariant
+    invariant()
     {
 	if (gcx)
 	    gcx.thread_Invariant();
@@ -989,7 +989,7 @@ struct Gcx
 
     void Invariant() { }
 
-    invariant
+    invariant()
     {
 	if (inited)
 	{
@@ -1143,7 +1143,7 @@ struct Gcx
 
     Pool *findPool(void *p)
     {
-	if (p >= minAddr && p < maxAddr)
+	if (p >= cast(void*)minAddr && p < cast(void*)maxAddr)
 	{
 	    if (npools == 1)
 	    {
@@ -1154,8 +1154,8 @@ struct Gcx
 	    {   Pool *pool;
 
 		pool = pooltable[i];
-		if (p < pool.topAddr)
-		{   if (pool.baseAddr <= p)
+		if (p < cast(void*)pool.topAddr)
+		{   if (cast(void*)pool.baseAddr <= p)
 			return pool;
 		    break;
 		}
@@ -2140,7 +2140,7 @@ struct Pool
 
     void Invariant() { }
 
-    invariant
+    invariant()
     {
 	//mark.Invariant();
 	//scan.Invariant();

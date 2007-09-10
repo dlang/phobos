@@ -78,7 +78,7 @@ import std.stdio;
 
 class Observer
 {   // our slot
-    void watch(char[] msg, int i)
+    void watch(string msg, int i)
     {
 	writefln("Observed msg '%s' and value %s", msg, i);
     }
@@ -99,7 +99,7 @@ class Foo
     }
 
     // Mix in all the code we need to make Foo into a signal
-    mixin Signal!(char[], int);
+    mixin Signal!(string, int);
 
   private :
     int _value;
@@ -267,7 +267,7 @@ unittest
 {
     class Observer
     {
-	void watch(char[] msg, int i)
+	void watch(string msg, int i)
 	{
 	    writefln("Observed msg '%s' and value %s", msg, i);
 	}
@@ -286,7 +286,7 @@ unittest
 	    return v;
 	}
 
-	mixin Signal!(char[], int);
+	mixin Signal!(string, int);
 
       private:
 	int _value;

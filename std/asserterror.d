@@ -30,7 +30,7 @@ class AssertError : Error
 
 	len = 23 + filename.length + uint.sizeof * 3 + msg.length + 1;
 	buffer = cast(char*)std.c.stdlib.malloc(len);
-	if (buffer == null)
+	if (buffer is null)
 	    super("AssertError no memory");
 	else
 	{
@@ -49,7 +49,7 @@ class AssertError : Error
     ~this()
     {
 	if (msg.ptr && msg[12] == 'F')	// if it was allocated with malloc()
-	{   std.c.stdlib.free(msg.ptr);
+	{   std.c.stdlib.free(cast(char*)msg.ptr);
 	    msg = null;
 	}
     }

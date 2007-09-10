@@ -755,7 +755,7 @@ real acosech(real x)
  * Convert string to float
  */
 
-real atof(char[] s)
+real atof(string s)
 {
 	if (!s.length)
 		return real.nan;

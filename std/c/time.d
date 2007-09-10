@@ -72,11 +72,11 @@ struct tm
 clock_t clock();
 time_t time(time_t *);
 time_t mktime(tm *);
-char *asctime(tm *);
-char *ctime(time_t *);
-tm *localtime(time_t *);
-tm *gmtime(time_t *);
-size_t strftime(char *, size_t, char *, tm *);
+char *asctime(in tm *);
+char *ctime(in time_t *);
+tm *localtime(in time_t *);
+tm *gmtime(in time_t *);
+size_t strftime(char *, size_t, in char *, in tm *);
 char *_strdate(char *dstring);
 char *_strtime(char *timestr);
 double difftime(time_t t1, time_t t2);
@@ -87,8 +87,8 @@ void sleep(time_t);
 void usleep(uint);
 void msleep(uint);
 
-wchar_t *_wasctime(tm *);
-wchar_t *_wctime(time_t *);
-size_t wcsftime(wchar_t *, size_t, wchar_t *, tm *);
+wchar_t *_wasctime(in tm *);
+wchar_t *_wctime(in time_t *);
+size_t wcsftime(wchar_t *, size_t, in wchar_t *, in tm *);
 wchar_t *_wstrdate(wchar_t *);
 wchar_t *_wstrtime(wchar_t *);

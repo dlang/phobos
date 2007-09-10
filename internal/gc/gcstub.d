@@ -71,7 +71,7 @@ class GC
 	debug(PRINTF) printf("Dtor()\n");
     }
 
-    invariant
+    invariant()
     {
 	debug(PRINTF) printf("invariant()\n");
     }
