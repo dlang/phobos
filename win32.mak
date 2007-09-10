@@ -74,6 +74,8 @@ OBJS= asserterror.obj deh.obj switch.obj complex.obj gcstats.obj \
 	ti_cdouble.obj ti_idouble.obj \
 	ti_AC.obj ti_Aubyte.obj ti_Aushort.obj ti_Ashort.obj \
 	ti_Aint.obj ti_Auint.obj ti_Along.obj ti_Aulong.obj ti_Awchar.obj \
+	ti_Afloat.obj ti_Adouble.obj ti_Areal.obj \
+	ti_Acfloat.obj ti_Acdouble.obj ti_Acreal.obj \
 	ti_dchar.obj ti_Adchar.obj ti_bit.obj
 
 
@@ -110,6 +112,10 @@ SRC_TI=	\
 	std\typeinfo\ti_int.d std\typeinfo\ti_char.d \
 	std\typeinfo\ti_Aint.d std\typeinfo\ti_Auint.d \
 	std\typeinfo\ti_Along.d std\typeinfo\ti_Aulong.d \
+	std\typeinfo\ti_Afloat.d std\typeinfo\ti_Adouble.d \
+	std\typeinfo\ti_Areal.d \
+	std\typeinfo\ti_Acfloat.d std\typeinfo\ti_Acdouble.d \
+	std\typeinfo\ti_Acreal.d \
 	std\typeinfo\ti_Awchar.d std\typeinfo\ti_dchar.d
 
 SRC_INT=	\
@@ -665,6 +671,24 @@ ti_Aulong.obj : std\typeinfo\ti_Aulong.d
 
 ti_Along.obj : std\typeinfo\ti_Along.d
 	$(DMD) -c $(DFLAGS) std\typeinfo\ti_Along.d
+
+ti_Afloat.obj : std\typeinfo\ti_Afloat.d
+	$(DMD) -c $(DFLAGS) std\typeinfo\ti_Afloat.d
+
+ti_Adouble.obj : std\typeinfo\ti_Adouble.d
+	$(DMD) -c $(DFLAGS) std\typeinfo\ti_Adouble.d
+
+ti_Areal.obj : std\typeinfo\ti_Areal.d
+	$(DMD) -c $(DFLAGS) std\typeinfo\ti_Areal.d
+
+ti_Acfloat.obj : std\typeinfo\ti_Acfloat.d
+	$(DMD) -c $(DFLAGS) std\typeinfo\ti_Acfloat.d
+
+ti_Acdouble.obj : std\typeinfo\ti_Acdouble.d
+	$(DMD) -c $(DFLAGS) std\typeinfo\ti_Acdouble.d
+
+ti_Acreal.obj : std\typeinfo\ti_Acreal.d
+	$(DMD) -c $(DFLAGS) std\typeinfo\ti_Acreal.d
 
 ti_Awchar.obj : std\typeinfo\ti_Awchar.d
 	$(DMD) -c $(DFLAGS) std\typeinfo\ti_Awchar.d

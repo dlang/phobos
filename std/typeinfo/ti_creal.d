@@ -12,16 +12,24 @@ class TypeInfo_c : TypeInfo
 	       (cast(uint *)p)[4];
     }
 
+    static int _equals(creal f1, creal f2)
+    {
+	return f1 == f2;
+    }
+
+    static int _compare(creal f1, creal f2)
+    {
+        return f1 < f2 ? -1 : f1 > f2 ? 1 : 0;
+    }
+
     int equals(void *p1, void *p2)
     {
-	return *cast(creal *)p1 == *cast(creal *)p2;
+	return _equals(*cast(creal *)p1, *cast(creal *)p2);
     }
 
     int compare(void *p1, void *p2)
     {
-        creal a = *cast(creal *) p1;
-        creal b = *cast(creal *) p2;
-        return a < b ? -1 : a > b ? 1 : 0;
+	return _compare(*cast(creal *)p1, *cast(creal *)p2);
     }
 
     int tsize()

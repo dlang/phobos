@@ -48,6 +48,10 @@
 
 	[a-b], where a is greater than b, will produce
 	an error.
+
+	References:
+
+	http://www.unicode.org/unicode/reports/tr18/
  */
 
 module std.regexp;

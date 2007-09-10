@@ -11,16 +11,24 @@ class TypeInfo_r : TypeInfo
 	       (cast(uint *)p)[2] + (cast(uint *)p)[3];
     }
 
+    static int _equals(cdouble f1, cdouble f2)
+    {
+	return f1 == f2;
+    }
+
+    static int _compare(cdouble f1, cdouble f2)
+    {
+        return f1 < f2 ? -1 : f1 > f2 ? 1 : 0;
+    }
+
     int equals(void *p1, void *p2)
     {
-	return *cast(cdouble *)p1 == *cast(cdouble *)p2;
+	return _equals(*cast(cdouble *)p1, *cast(cdouble *)p2);
     }
 
     int compare(void *p1, void *p2)
     {
-        cdouble a = *cast(cdouble *) p1;
-        cdouble b = *cast(cdouble *) p2;
-        return a < b ? -1 : a > b ? 1 : 0;
+	return _compare(*cast(cdouble *)p1, *cast(cdouble *)p2);
     }
 
     int tsize()

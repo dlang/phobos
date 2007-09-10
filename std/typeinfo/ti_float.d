@@ -1,6 +1,8 @@
 
 // float
 
+private import std.math;
+
 class TypeInfo_f : TypeInfo
 {
     char[] toString() { return "float"; }
@@ -10,14 +12,34 @@ class TypeInfo_f : TypeInfo
 	return *cast(uint *)p;
     }
 
+    static int _equals(float f1, float f2)
+    {
+	return f1 == f2 ||
+		(isnan(f1) && isnan(f2));
+    }
+
+    static int _compare(float d1, float d2)
+    {
+	if (d1 !<>= d2)		// if either are NaN
+	{
+	    if (isnan(d1))
+	    {	if (isnan(d2))
+		    return 0;
+		return -1;
+	    }
+	    return 1;
+	}
+	return (d1 < d2) ? -1 : 1;
+    }
+
     int equals(void *p1, void *p2)
     {
-	return *cast(float *)p1 == *cast(float *)p2;
+	return _equals(*cast(float *)p1, *cast(float *)p2);
     }
 
     int compare(void *p1, void *p2)
     {
-	return cast(int)(*cast(float *)p1 - *cast(float *)p2);
+	return _compare(*cast(float *)p1, *cast(float *)p2);
     }
 
     int tsize()

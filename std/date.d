@@ -821,8 +821,8 @@ d_time toDtime(DosFileTime time)
 
     d_time t;
 
-    t = date.MakeDate(date.MakeDay(year, month, dayofmonth),
-	    date.MakeTime(hour, minute, second, 0));
+    t = std.date.MakeDate(std.date.MakeDay(year, month, dayofmonth),
+	    std.date.MakeTime(hour, minute, second, 0));
 
     assert(YearFromTime(t) == year);
     assert(MonthFromTime(t) == month);

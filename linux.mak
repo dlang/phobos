@@ -65,6 +65,8 @@ OBJS= asserterror.o deh2.o switch.o complex.o gcstats.o \
 	ti_Aa.o ti_AC.o ti_Ag.o ti_Aubyte.o ti_Aushort.o ti_Ashort.o \
 	ti_C.o ti_int.o ti_char.o ti_dchar.o ti_Adchar.o ti_bit.o \
 	ti_Aint.o ti_Auint.o ti_Along.o ti_Aulong.o ti_Awchar.o \
+	ti_Afloat.o ti_Adouble.o ti_Areal.o \
+	ti_Acfloat.o ti_Acdouble.o ti_Acreal.o \
 	date.o dateparse.o llmath.o math2.o Czlib.o Dzlib.o zip.o recls.o
 
 ZLIB_OBJS= etc/c/zlib/adler32.o etc/c/zlib/compress.o \
@@ -105,7 +107,7 @@ SRC_TI=	\
 	std/typeinfo/ti_short.d std/typeinfo/ti_ushort.d \
 	std/typeinfo/ti_byte.d std/typeinfo/ti_ubyte.d \
 	std/typeinfo/ti_long.d std/typeinfo/ti_ulong.d \
-	std/typeinfo/ti_ptr.d \
+	std/typeinfo/ti_ptr.d std/typeinfo/ti_bit.d \
 	std/typeinfo/ti_float.d std/typeinfo/ti_double.d \
 	std/typeinfo/ti_real.d std/typeinfo/ti_delegate.d \
 	std/typeinfo/ti_creal.d std/typeinfo/ti_ireal.d \
@@ -118,8 +120,11 @@ SRC_TI=	\
 	std/typeinfo/ti_int.d std/typeinfo/ti_char.d \
 	std/typeinfo/ti_Aint.d std/typeinfo/ti_Auint.d \
 	std/typeinfo/ti_Along.d std/typeinfo/ti_Aulong.d \
-	std/typeinfo/ti_Awchar.d std/typeinfo/ti_dchar.d \
-	std/typeinfo/ti_bit.d
+	std\typeinfo/ti_Afloat.d std\typeinfo/ti_Adouble.d \
+	std\typeinfo/ti_Areal.d \
+	std\typeinfo/ti_Acfloat.d std\typeinfo/ti_Acdouble.d \
+	std\typeinfo/ti_Acreal.d \
+	std/typeinfo/ti_Awchar.d std/typeinfo/ti_dchar.d
 
 SRC_INT=	\
 	internal/switch.d internal/complex.c internal/critical.c \
@@ -683,6 +688,24 @@ ti_Aulong.o : std/typeinfo/ti_Aulong.d
 
 ti_Along.o : std/typeinfo/ti_Along.d
 	$(DMD) -c $(DFLAGS) std/typeinfo/ti_Along.d
+
+ti_Afloat.o : std/typeinfo/ti_Afloat.d
+	$(DMD) -c $(DFLAGS) std/typeinfo/ti_Afloat.d
+
+ti_Adouble.o : std/typeinfo/ti_Adouble.d
+	$(DMD) -c $(DFLAGS) std/typeinfo/ti_Adouble.d
+
+ti_Areal.o : std/typeinfo/ti_Areal.d
+	$(DMD) -c $(DFLAGS) std/typeinfo/ti_Areal.d
+
+ti_Acfloat.o : std/typeinfo/ti_Acfloat.d
+	$(DMD) -c $(DFLAGS) std/typeinfo/ti_Acfloat.d
+
+ti_Acdouble.o : std/typeinfo/ti_Acdouble.d
+	$(DMD) -c $(DFLAGS) std/typeinfo/ti_Acdouble.d
+
+ti_Acreal.o : std/typeinfo/ti_Acreal.d
+	$(DMD) -c $(DFLAGS) std/typeinfo/ti_Acreal.d
 
 ti_Awchar.o : std/typeinfo/ti_Awchar.d
 	$(DMD) -c $(DFLAGS) std/typeinfo/ti_Awchar.d

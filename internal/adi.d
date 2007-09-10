@@ -345,6 +345,61 @@ unittest
 }
 
 
+/**********************************************
+ * Support for array.sort property for bit[].
+ */
+
+extern (C) bit[] _adSortBit(bit[] a)
+    out (result)
+    {
+	assert(result is a);
+    }
+    body
+    {
+	if (a.length >= 2)
+	{
+	    size_t lo, hi;
+
+	    lo = 0;
+	    hi = a.length - 1;
+	    while (1)
+	    {
+		while (1)
+		{
+		    if (lo >= hi)
+			goto Ldone;
+		    if (a[lo] == true)
+			break;
+		    lo++;
+		}
+
+		while (1)
+		{
+		    if (lo >= hi)
+			goto Ldone;
+		    if (a[hi] == false)
+			break;
+		    hi--;
+		}
+
+		a[lo] = false;
+		a[hi] = true;
+
+		lo++;
+		hi--;
+	    }
+	Ldone:
+	    ;
+	}
+	return a;
+    }
+
+unittest
+{
+    debug(adi) printf("array.sort_Bit[].unittest\n");
+}
+
+
 /**********************************
  * Support for array.dup property.
  */

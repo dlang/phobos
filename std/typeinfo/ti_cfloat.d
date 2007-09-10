@@ -10,16 +10,24 @@ class TypeInfo_q : TypeInfo
 	return (cast(uint *)p)[0] + (cast(uint *)p)[1];
     }
 
+    static int _equals(cfloat f1, cfloat f2)
+    {
+	return f1 == f2;
+    }
+
+    static int _compare(cfloat f1, cfloat f2)
+    {
+        return f1 < f2 ? -1 : f1 > f2 ? 1 : 0;
+    }
+
     int equals(void *p1, void *p2)
     {
-	return *cast(cfloat *)p1 == *cast(cfloat *)p2;
+	return _equals(*cast(cfloat *)p1, *cast(cfloat *)p2);
     }
 
     int compare(void *p1, void *p2)
     {
-        cfloat a = *cast(cfloat *) p1;
-        cfloat b = *cast(cfloat *) p2;
-        return a < b ? -1 : a > b ? 1 : 0;
+	return _compare(*cast(cfloat *)p1, *cast(cfloat *)p2);
     }
 
     int tsize()
