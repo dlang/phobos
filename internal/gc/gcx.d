@@ -1321,7 +1321,7 @@ struct Gcx
 	return p;
 
       Lnomemory:
-	assert(0);
+	_d_OutOfMemory();
 	return null;
     }
 

@@ -653,7 +653,9 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
 	    formatArg('s');
 
 	    putc(':');
-	    ubyte* value = key + keyti.tsize;
+	    auto keysize = keyti.tsize;
+	    keysize = (keysize + 3) & ~3;
+	    ubyte* value = key + keysize;
 	    //doFormat(putc, (&valti)[0..1], value);
 	    argptr = value;
 	    ti = valti;

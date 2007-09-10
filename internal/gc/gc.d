@@ -243,12 +243,23 @@ ulong _d_newarrayT(TypeInfo ti, size_t length)
     ulong result;
     auto size = ti.next.tsize();		// array element size
 
-    debug(PRINTF) printf("_d_newT(length = %d, size = %d)\n", length, size);
+    debug(PRINTF) printf("_d_newarrayT(length = x%x, size = %d)\n", length, size);
     if (length == 0 || size == 0)
 	result = 0;
     else
     {
-	size *= length;
+	version (D_InlineAsm_X86)
+	{
+	    asm
+	    {
+		mov	EAX,size	;
+		mul	EAX,length	;
+		mov	size,EAX	;
+		jc	Loverflow	;
+	    }
+	}
+	else
+	    size *= length;
 	p = _gc.malloc(size + 1);
 	debug(PRINTF) printf(" p = %p\n", p);
 	if (!(ti.next.flags() & 1))
@@ -257,6 +268,9 @@ ulong _d_newarrayT(TypeInfo ti, size_t length)
 	result = cast(ulong)length + (cast(ulong)cast(uint)p << 32);
     }
     return result;
+
+Loverflow:
+    _d_OutOfMemory();
 }
 
 /* For when the array has a non-zero initializer.
@@ -266,7 +280,8 @@ ulong _d_newarrayiT(TypeInfo ti, size_t length)
     ulong result;
     auto size = ti.next.tsize();		// array element size
 
-    //debug(PRINTF) printf("_d_newarrayiT(length = %d, size = %d, isize = %d)\n", length, size, isize);
+    debug(PRINTF)
+	 printf("_d_newarrayiT(length = %d, size = %d)\n", length, size);
     if (length == 0 || size == 0)
 	result = 0;
     else
@@ -274,9 +289,21 @@ ulong _d_newarrayiT(TypeInfo ti, size_t length)
 	auto initializer = ti.next.init();
 	auto isize = initializer.length;
 	auto q = initializer.ptr;
-	size *= length;
+	version (D_InlineAsm_X86)
+	{
+	    asm
+	    {
+		mov	EAX,size	;
+		mul	EAX,length	;
+		mov	size,EAX	;
+		jc	Loverflow	;
+	    }
+	}
+	else
+	    size *= length;
 	auto p = _gc.malloc(size + 1);
-	debug(PRINTF) printf(" p = %p\n", p);
+	debug(PRINTF)
+	    printf(" p = %p, isize = %d\n", p, isize);
 	if (!(ti.next.flags() & 1))
 	    _gc.hasNoPointers(p);
 	if (isize == 1)
@@ -301,6 +328,9 @@ ulong _d_newarrayiT(TypeInfo ti, size_t length)
 	result = cast(ulong)length + (cast(ulong)cast(uint)p << 32);
     }
     return result;
+
+Loverflow:
+    _d_OutOfMemory();
 }
 
 ulong _d_newarraymT(TypeInfo ti, int ndims, ...)
