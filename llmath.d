@@ -201,7 +201,7 @@ C1:	ret			;
 
 // Convert ulong to real
 
-private real adjust = cast(real)0x800000000000000 * 0x10;
+private real adjust = cast(real)0x800_0000_0000_0000 * 0x10;
 
 real __U64_LDBL()
 {
@@ -222,3 +222,32 @@ real __U64_LDBL()
 }
 
 
+// Convert double to ulong
+
+ulong __DBLULLNG()
+{
+    // BUG: should handle NAN's and overflows
+    asm
+    {	naked					;
+	push	EDX				;
+	push	EAX				;
+	fld	double ptr [ESP]		;
+	fld	real ptr adjust			;
+	fcompp					;
+	fstsw	AX				;
+	sahf					;
+	jb	L1				;
+	fld	real ptr adjust			;
+	fsubp	ST(1), ST			;
+	fistp	qword ptr [ESP]			;
+	pop	EAX				;
+	pop	EDX				;
+	add	EDX,0x8000_0000			;
+	ret					;
+    L1:						;
+	fistp	qword ptr [ESP]			;
+	pop	EAX				;
+	pop	EDX				;
+	ret					;
+    }
+}

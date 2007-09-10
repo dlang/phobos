@@ -6,6 +6,8 @@
 
 module math;
 
+//debug=math;		// uncomment to turn on debugging printf's
+
 import c.stdio;
 
 /* Intrinsics */
@@ -253,6 +255,7 @@ int signbit(real e)
 
 unittest
 {
+    debug (math) printf("math.signbit.unittest\n");
     assert(!signbit(float.nan));
     assert(signbit(-float.nan));
     assert(!signbit(168.1234));

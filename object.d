@@ -1,5 +1,6 @@
 
-extern (C) static int printf(char *, ...);
+extern (C) int printf(char *, ...);
+extern (C) int wprintf(wchar *, ...);
 
 alias bit bool;
 

@@ -144,7 +144,7 @@ private char[] URI_Encode(dchar[] string, uint unescapedSet)
 	    }
 	 +/
 	    else
-	    {	goto LthrowURIerror;		// undefined UCS code
+	    {	goto LthrowURIerror;		// undefined UTF-32 code
 	    }
 
 	    if (Rlen + L * 3 > Rsize)

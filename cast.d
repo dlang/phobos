@@ -11,17 +11,44 @@ extern (C):
 
 Object _d_dynamic_cast(Object o, ClassInfo c)
 {   ClassInfo oc;
+    uint offset = 0;
 
     //printf("__d_dynamic_cast(o = %p, c = %p)\n", o, c);
 
     if (o)
     {
 	oc = o.classinfo;
-	if (!_d_isbaseof(oc, c))
+	if (_d_isbaseof2(oc, c, offset))
+	    o = cast(Object)(cast(void*)o + offset);
+	else
 	    o = null;
     }
     //printf("\tresult = %p\n", o);
     return o;
+}
+
+int _d_isbaseof2(ClassInfo oc, ClassInfo c, inout uint offset)
+{   int i;
+
+    if (oc === c)
+	return 1;
+    do
+    {
+	if (oc.base === c)
+	    return 1;
+	for (i = 0; i < oc.interfaces.length; i++)
+	{
+	    ClassInfo ic;
+
+	    ic = oc.interfaces[i].classinfo;
+	    if (ic === c || _d_isbaseof2(ic, c, offset))
+	    {	offset += oc.interfaces[i].offset;
+		return 1;
+	    }
+	}
+	oc = oc.base;
+    } while (oc);
+    return 0;
 }
 
 int _d_isbaseof(ClassInfo oc, ClassInfo c)
