@@ -98,6 +98,25 @@ extern (Windows)
     alias DWORD   *LPCOLORREF;
     alias WORD    ATOM;
 
+alias FARPROC DLGPROC;
+alias FARPROC TIMERPROC;
+alias FARPROC GRAYSTRINGPROC;
+alias FARPROC WNDENUMPROC;
+alias FARPROC HOOKPROC;
+alias FARPROC SENDASYNCPROC;
+
+alias FARPROC EDITWORDBREAKPROCA;
+alias FARPROC EDITWORDBREAKPROCW;
+
+alias FARPROC PROPENUMPROCA;
+alias FARPROC PROPENUMPROCW;
+
+alias FARPROC PROPENUMPROCEXA;
+alias FARPROC PROPENUMPROCEXW;
+
+
+alias FARPROC DRAWSTATEPROC;
+
 
 WORD HIWORD(int l) { return (WORD)((l >> 16) & 0xFFFF); }
 WORD LOWORD(int l) { return (WORD)l; }
@@ -339,6 +358,9 @@ export
 HMODULE LoadLibraryA(LPCSTR lpLibFileName);
 FARPROC GetProcAddress(HMODULE hModule, LPCSTR lpProcName);
 DWORD GetVersion();
+BOOL FreeLibrary(HMODULE hLibModule);
+void FreeLibraryAndExitThread(HMODULE hLibModule, DWORD dwExitCode);
+BOOL DisableThreadLibraryCalls(HMODULE hLibModule);
 
 //
 // Registry Specific Access Rights.
@@ -452,17 +474,14 @@ enum
 int MessageBoxA(HWND hWnd, LPCSTR lpText, LPCSTR lpCaption, UINT uType);
 int MessageBoxExA(HWND hWnd, LPCSTR lpText, LPCSTR lpCaption, UINT uType, WORD wLanguageId);
 
-enum : HKEY
-{
-	HKEY_CLASSES_ROOT =           ((HKEY) 0x80000000),
-	HKEY_CURRENT_USER =           ((HKEY) 0x80000001),
-	HKEY_LOCAL_MACHINE =          ((HKEY) 0x80000002),
-	HKEY_USERS =                  ((HKEY) 0x80000003),
-	HKEY_PERFORMANCE_DATA =       ((HKEY) 0x80000004),
+const HKEY HKEY_CLASSES_ROOT =           cast(HKEY)(0x80000000);
+const HKEY HKEY_CURRENT_USER =           cast(HKEY)(0x80000001);
+const HKEY HKEY_LOCAL_MACHINE =          cast(HKEY)(0x80000002);
+const HKEY HKEY_USERS =                  cast(HKEY)(0x80000003);
+const HKEY HKEY_PERFORMANCE_DATA =       cast(HKEY)(0x80000004);
 
-	HKEY_CURRENT_CONFIG =         ((HKEY) 0x80000005),
-	HKEY_DYN_DATA =               ((HKEY) 0x80000006),
-}
+const HKEY HKEY_CURRENT_CONFIG =         cast(HKEY)(0x80000005);
+const HKEY HKEY_DYN_DATA =               cast(HKEY)(0x80000006);
 
 enum
 {
@@ -1536,6 +1555,13 @@ struct PALETTEENTRY {
 }
 alias PALETTEENTRY* PPALETTEENTRY, LPPALETTEENTRY;
 
+struct LOGPALETTE {
+    WORD        palVersion;
+    WORD        palNumEntries;
+    PALETTEENTRY        palPalEntry[1];
+}
+alias LOGPALETTE* PLOGPALETTE, NPLOGPALETTE, LPLOGPALETTE;
+
 /* Pixel format descriptor */
 struct PIXELFORMATDESCRIPTOR
 {
@@ -1754,6 +1780,8 @@ export
 }
 
 const LPSTR IDI_APPLICATION =     cast(LPSTR)(32512);
+
+const LPSTR IDC_ARROW =           cast(LPSTR)(32512);
 const LPSTR IDC_CROSS =           cast(LPSTR)(32515);
 
 /*
@@ -1892,4 +1920,547 @@ export LPVOID MapViewOfFileEx(HANDLE hFileMappingObject, DWORD dwDesiredAccess, 
 export BOOL FlushViewOfFile(LPCVOID lpBaseAddress, DWORD dwNumberOfBytesToFlush);
 export BOOL UnmapViewOfFile(LPCVOID lpBaseAddress);
 
+export  HGDIOBJ   GetStockObject(int);
+export BOOL ShowWindow(HWND hWnd, int nCmdShow);
+
+/* Stock Logical Objects */
+enum
+{	WHITE_BRUSH =         0,
+	LTGRAY_BRUSH =        1,
+	GRAY_BRUSH =          2,
+	DKGRAY_BRUSH =        3,
+	BLACK_BRUSH =         4,
+	NULL_BRUSH =          5,
+	HOLLOW_BRUSH =        NULL_BRUSH,
+	WHITE_PEN =           6,
+	BLACK_PEN =           7,
+	NULL_PEN =            8,
+	OEM_FIXED_FONT =      10,
+	ANSI_FIXED_FONT =     11,
+	ANSI_VAR_FONT =       12,
+	SYSTEM_FONT =         13,
+	DEVICE_DEFAULT_FONT = 14,
+	DEFAULT_PALETTE =     15,
+	SYSTEM_FIXED_FONT =   16,
+	DEFAULT_GUI_FONT =    17,
+	STOCK_LAST =          17,
+}
+
+/*
+ * ShowWindow() Commands
+ */
+enum
+{	SW_HIDE =             0,
+	SW_SHOWNORMAL =       1,
+	SW_NORMAL =           1,
+	SW_SHOWMINIMIZED =    2,
+	SW_SHOWMAXIMIZED =    3,
+	SW_MAXIMIZE =         3,
+	SW_SHOWNOACTIVATE =   4,
+	SW_SHOW =             5,
+	SW_MINIMIZE =         6,
+	SW_SHOWMINNOACTIVE =  7,
+	SW_SHOWNA =           8,
+	SW_RESTORE =          9,
+	SW_SHOWDEFAULT =      10,
+	SW_MAX =              10,
+}
+
+struct TEXTMETRICA
+{
+    LONG        tmHeight;
+    LONG        tmAscent;
+    LONG        tmDescent;
+    LONG        tmInternalLeading;
+    LONG        tmExternalLeading;
+    LONG        tmAveCharWidth;
+    LONG        tmMaxCharWidth;
+    LONG        tmWeight;
+    LONG        tmOverhang;
+    LONG        tmDigitizedAspectX;
+    LONG        tmDigitizedAspectY;
+    BYTE        tmFirstChar;
+    BYTE        tmLastChar;
+    BYTE        tmDefaultChar;
+    BYTE        tmBreakChar;
+    BYTE        tmItalic;
+    BYTE        tmUnderlined;
+    BYTE        tmStruckOut;
+    BYTE        tmPitchAndFamily;
+    BYTE        tmCharSet;
+}
+
+export  BOOL   GetTextMetricsA(HDC, TEXTMETRICA*);
+
+/*
+ * Scroll Bar Constants
+ */
+enum
+{	SB_HORZ =             0,
+	SB_VERT =             1,
+	SB_CTL =              2,
+	SB_BOTH =             3,
+}
+
+/*
+ * Scroll Bar Commands
+ */
+enum
+{	SB_LINEUP =           0,
+	SB_LINELEFT =         0,
+	SB_LINEDOWN =         1,
+	SB_LINERIGHT =        1,
+	SB_PAGEUP =           2,
+	SB_PAGELEFT =         2,
+	SB_PAGEDOWN =         3,
+	SB_PAGERIGHT =        3,
+	SB_THUMBPOSITION =    4,
+	SB_THUMBTRACK =       5,
+	SB_TOP =              6,
+	SB_LEFT =             6,
+	SB_BOTTOM =           7,
+	SB_RIGHT =            7,
+	SB_ENDSCROLL =        8,
+}
+
+export int SetScrollPos(HWND hWnd, int nBar, int nPos, BOOL bRedraw);
+export int GetScrollPos(HWND hWnd, int nBar);
+export BOOL SetScrollRange(HWND hWnd, int nBar, int nMinPos, int nMaxPos, BOOL bRedraw);
+export BOOL GetScrollRange(HWND hWnd, int nBar, LPINT lpMinPos, LPINT lpMaxPos);
+export BOOL ShowScrollBar(HWND hWnd, int wBar, BOOL bShow);
+export BOOL EnableScrollBar(HWND hWnd, UINT wSBflags, UINT wArrows);
+
+/*
+ * LockWindowUpdate API
+ */
+
+export BOOL LockWindowUpdate(HWND hWndLock);
+export BOOL ScrollWindow(HWND hWnd, int XAmount, int YAmount, RECT* lpRect, RECT* lpClipRect);
+export BOOL ScrollDC(HDC hDC, int dx, int dy, RECT* lprcScroll, RECT* lprcClip, HRGN hrgnUpdate, LPRECT lprcUpdate);
+export int ScrollWindowEx(HWND hWnd, int dx, int dy, RECT* prcScroll, RECT* prcClip, HRGN hrgnUpdate, LPRECT prcUpdate, UINT flags);
+
+/*
+ * Virtual Keys, Standard Set
+ */
+enum
+{	VK_LBUTTON =        0x01,
+	VK_RBUTTON =        0x02,
+	VK_CANCEL =         0x03,
+	VK_MBUTTON =        0x04, /* NOT contiguous with L & RBUTTON */
+
+	VK_BACK =           0x08,
+	VK_TAB =            0x09,
+
+	VK_CLEAR =          0x0C,
+	VK_RETURN =         0x0D,
+
+	VK_SHIFT =          0x10,
+	VK_CONTROL =        0x11,
+	VK_MENU =           0x12,
+	VK_PAUSE =          0x13,
+	VK_CAPITAL =        0x14,
+
+
+	VK_ESCAPE =         0x1B,
+
+	VK_SPACE =          0x20,
+	VK_PRIOR =          0x21,
+	VK_NEXT =           0x22,
+	VK_END =            0x23,
+	VK_HOME =           0x24,
+	VK_LEFT =           0x25,
+	VK_UP =             0x26,
+	VK_RIGHT =          0x27,
+	VK_DOWN =           0x28,
+	VK_SELECT =         0x29,
+	VK_PRINT =          0x2A,
+	VK_EXECUTE =        0x2B,
+	VK_SNAPSHOT =       0x2C,
+	VK_INSERT =         0x2D,
+	VK_DELETE =         0x2E,
+	VK_HELP =           0x2F,
+
+/* VK_0 thru VK_9 are the same as ASCII '0' thru '9' (0x30 - 0x39) */
+/* VK_A thru VK_Z are the same as ASCII 'A' thru 'Z' (0x41 - 0x5A) */
+
+	VK_LWIN =           0x5B,
+	VK_RWIN =           0x5C,
+	VK_APPS =           0x5D,
+
+	VK_NUMPAD0 =        0x60,
+	VK_NUMPAD1 =        0x61,
+	VK_NUMPAD2 =        0x62,
+	VK_NUMPAD3 =        0x63,
+	VK_NUMPAD4 =        0x64,
+	VK_NUMPAD5 =        0x65,
+	VK_NUMPAD6 =        0x66,
+	VK_NUMPAD7 =        0x67,
+	VK_NUMPAD8 =        0x68,
+	VK_NUMPAD9 =        0x69,
+	VK_MULTIPLY =       0x6A,
+	VK_ADD =            0x6B,
+	VK_SEPARATOR =      0x6C,
+	VK_SUBTRACT =       0x6D,
+	VK_DECIMAL =        0x6E,
+	VK_DIVIDE =         0x6F,
+	VK_F1 =             0x70,
+	VK_F2 =             0x71,
+	VK_F3 =             0x72,
+	VK_F4 =             0x73,
+	VK_F5 =             0x74,
+	VK_F6 =             0x75,
+	VK_F7 =             0x76,
+	VK_F8 =             0x77,
+	VK_F9 =             0x78,
+	VK_F10 =            0x79,
+	VK_F11 =            0x7A,
+	VK_F12 =            0x7B,
+	VK_F13 =            0x7C,
+	VK_F14 =            0x7D,
+	VK_F15 =            0x7E,
+	VK_F16 =            0x7F,
+	VK_F17 =            0x80,
+	VK_F18 =            0x81,
+	VK_F19 =            0x82,
+	VK_F20 =            0x83,
+	VK_F21 =            0x84,
+	VK_F22 =            0x85,
+	VK_F23 =            0x86,
+	VK_F24 =            0x87,
+
+	VK_NUMLOCK =        0x90,
+	VK_SCROLL =         0x91,
+
+/*
+ * VK_L* & VK_R* - left and right Alt, Ctrl and Shift virtual keys.
+ * Used only as parameters to GetAsyncKeyState() and GetKeyState().
+ * No other API or message will distinguish left and right keys in this way.
+ */
+	VK_LSHIFT =         0xA0,
+	VK_RSHIFT =         0xA1,
+	VK_LCONTROL =       0xA2,
+	VK_RCONTROL =       0xA3,
+	VK_LMENU =          0xA4,
+	VK_RMENU =          0xA5,
+
+
+	VK_PROCESSKEY =     0xE5,
+
+
+	VK_ATTN =           0xF6,
+	VK_CRSEL =          0xF7,
+	VK_EXSEL =          0xF8,
+	VK_EREOF =          0xF9,
+	VK_PLAY =           0xFA,
+	VK_ZOOM =           0xFB,
+	VK_NONAME =         0xFC,
+	VK_PA1 =            0xFD,
+	VK_OEM_CLEAR =      0xFE,
+}
+
+export LRESULT SendMessageA(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam);
+
+alias UINT (*LPOFNHOOKPROC) (HWND, UINT, WPARAM, LPARAM);
+
+struct OPENFILENAMEA {
+   DWORD        lStructSize;
+   HWND         hwndOwner;
+   HINSTANCE    hInstance;
+   LPCSTR       lpstrFilter;
+   LPSTR        lpstrCustomFilter;
+   DWORD        nMaxCustFilter;
+   DWORD        nFilterIndex;
+   LPSTR        lpstrFile;
+   DWORD        nMaxFile;
+   LPSTR        lpstrFileTitle;
+   DWORD        nMaxFileTitle;
+   LPCSTR       lpstrInitialDir;
+   LPCSTR       lpstrTitle;
+   DWORD        Flags;
+   WORD         nFileOffset;
+   WORD         nFileExtension;
+   LPCSTR       lpstrDefExt;
+   LPARAM       lCustData;
+   LPOFNHOOKPROC lpfnHook;
+   LPCSTR       lpTemplateName;
+}
+alias OPENFILENAMEA *LPOPENFILENAMEA;
+
+struct OPENFILENAMEW {
+   DWORD        lStructSize;
+   HWND         hwndOwner;
+   HINSTANCE    hInstance;
+   LPCWSTR      lpstrFilter;
+   LPWSTR       lpstrCustomFilter;
+   DWORD        nMaxCustFilter;
+   DWORD        nFilterIndex;
+   LPWSTR       lpstrFile;
+   DWORD        nMaxFile;
+   LPWSTR       lpstrFileTitle;
+   DWORD        nMaxFileTitle;
+   LPCWSTR      lpstrInitialDir;
+   LPCWSTR      lpstrTitle;
+   DWORD        Flags;
+   WORD         nFileOffset;
+   WORD         nFileExtension;
+   LPCWSTR      lpstrDefExt;
+   LPARAM       lCustData;
+   LPOFNHOOKPROC lpfnHook;
+   LPCWSTR      lpTemplateName;
+}
+alias OPENFILENAMEW *LPOPENFILENAMEW;
+
+BOOL          GetOpenFileNameA(LPOPENFILENAMEA);
+BOOL          GetOpenFileNameW(LPOPENFILENAMEW);
+
+BOOL          GetSaveFileNameA(LPOPENFILENAMEA);
+BOOL          GetSaveFileNameW(LPOPENFILENAMEW);
+
+short         GetFileTitleA(LPCSTR, LPSTR, WORD);
+short         GetFileTitleW(LPCWSTR, LPWSTR, WORD);
+
+enum
+{
+	PM_NOREMOVE =         0x0000,
+	PM_REMOVE =           0x0001,
+	PM_NOYIELD =          0x0002,
+}
+
+/* Bitmap Header Definition */
+struct BITMAP
+{
+    LONG        bmType;
+    LONG        bmWidth;
+    LONG        bmHeight;
+    LONG        bmWidthBytes;
+    WORD        bmPlanes;
+    WORD        bmBitsPixel;
+    LPVOID      bmBits;
+}
+alias BITMAP* PBITMAP, NPBITMAP, LPBITMAP;
+
+
+export  HDC       CreateCompatibleDC(HDC);
+
+export  int     GetObjectA(HGDIOBJ, int, LPVOID);
+export  int     GetObjectW(HGDIOBJ, int, LPVOID);
+export  BOOL   DeleteDC(HDC);
+
+struct LOGFONTA
+{
+    LONG      lfHeight;
+    LONG      lfWidth;
+    LONG      lfEscapement;
+    LONG      lfOrientation;
+    LONG      lfWeight;
+    BYTE      lfItalic;
+    BYTE      lfUnderline;
+    BYTE      lfStrikeOut;
+    BYTE      lfCharSet;
+    BYTE      lfOutPrecision;
+    BYTE      lfClipPrecision;
+    BYTE      lfQuality;
+    BYTE      lfPitchAndFamily;
+    CHAR      lfFaceName[32 ];
+}
+alias LOGFONTA* PLOGFONTA, NPLOGFONTA, LPLOGFONTA;
+
+export HMENU LoadMenuA(HINSTANCE hInstance, LPCSTR lpMenuName);
+export HMENU LoadMenuW(HINSTANCE hInstance, LPCWSTR lpMenuName);
+
+export HMENU GetSubMenu(HMENU hMenu, int nPos);
+
+export HBITMAP LoadBitmapA(HINSTANCE hInstance, LPCSTR lpBitmapName);
+export HBITMAP LoadBitmapW(HINSTANCE hInstance, LPCWSTR lpBitmapName);
+
+LPSTR MAKEINTRESOURCEA(int i) { return (LPSTR)((DWORD)((WORD)(i))); }
+
+export  HFONT     CreateFontIndirectA(LOGFONTA *);
+
+export BOOL MessageBeep(UINT uType);
+export int ShowCursor(BOOL bShow);
+export BOOL SetCursorPos(int X, int Y);
+export HCURSOR SetCursor(HCURSOR hCursor);
+export BOOL GetCursorPos(LPPOINT lpPoint);
+export BOOL ClipCursor( RECT *lpRect);
+export BOOL GetClipCursor(LPRECT lpRect);
+export HCURSOR GetCursor();
+export BOOL CreateCaret(HWND hWnd, HBITMAP hBitmap , int nWidth, int nHeight);
+export UINT GetCaretBlinkTime();
+export BOOL SetCaretBlinkTime(UINT uMSeconds);
+export BOOL DestroyCaret();
+export BOOL HideCaret(HWND hWnd);
+export BOOL ShowCaret(HWND hWnd);
+export BOOL SetCaretPos(int X, int Y);
+export BOOL GetCaretPos(LPPOINT lpPoint);
+export BOOL ClientToScreen(HWND hWnd, LPPOINT lpPoint);
+export BOOL ScreenToClient(HWND hWnd, LPPOINT lpPoint);
+export int MapWindowPoints(HWND hWndFrom, HWND hWndTo, LPPOINT lpPoints, UINT cPoints);
+export HWND WindowFromPoint(POINT Point);
+export HWND ChildWindowFromPoint(HWND hWndParent, POINT Point);
+
+
+export BOOL TrackPopupMenu(HMENU hMenu, UINT uFlags, int x, int y,
+	int nReserved, HWND hWnd, RECT *prcRect);
+
+align (2) struct DLGTEMPLATE {
+    DWORD style;
+    DWORD dwExtendedStyle;
+    WORD cdit;
+    short x;
+    short y;
+    short cx;
+    short cy;
+}
+alias DLGTEMPLATE *LPDLGTEMPLATEA;
+alias DLGTEMPLATE *LPDLGTEMPLATEW;
+
+
+alias LPDLGTEMPLATEA LPDLGTEMPLATE;
+
+alias  DLGTEMPLATE *LPCDLGTEMPLATEA;
+alias  DLGTEMPLATE *LPCDLGTEMPLATEW;
+
+
+alias LPCDLGTEMPLATEA LPCDLGTEMPLATE;
+
+
+export int DialogBoxParamA(HINSTANCE hInstance, LPCSTR lpTemplateName,
+	HWND hWndParent, DLGPROC lpDialogFunc, LPARAM dwInitParam);
+export int DialogBoxIndirectParamA(HINSTANCE hInstance,
+	LPCDLGTEMPLATEA hDialogTemplate, HWND hWndParent, DLGPROC lpDialogFunc,
+	LPARAM dwInitParam);
+
+enum : DWORD
+{
+	SRCCOPY =             (DWORD)0x00CC0020, /* dest = source                   */
+	SRCPAINT =            (DWORD)0x00EE0086, /* dest = source OR dest           */
+	SRCAND =              (DWORD)0x008800C6, /* dest = source AND dest          */
+	SRCINVERT =           (DWORD)0x00660046, /* dest = source XOR dest          */
+	SRCERASE =            (DWORD)0x00440328, /* dest = source AND (NOT dest)   */
+	NOTSRCCOPY =          (DWORD)0x00330008, /* dest = (NOT source)             */
+	NOTSRCERASE =         (DWORD)0x001100A6, /* dest = (NOT src) AND (NOT dest) */
+	MERGECOPY =           (DWORD)0x00C000CA, /* dest = (source AND pattern)     */
+	MERGEPAINT =          (DWORD)0x00BB0226, /* dest = (NOT source) OR dest     */
+	PATCOPY =             (DWORD)0x00F00021, /* dest = pattern                  */
+	PATPAINT =            (DWORD)0x00FB0A09, /* dest = DPSnoo                   */
+	PATINVERT =           (DWORD)0x005A0049, /* dest = pattern XOR dest         */
+	DSTINVERT =           (DWORD)0x00550009, /* dest = (NOT dest)               */
+	BLACKNESS =           (DWORD)0x00000042, /* dest = BLACK                    */
+	WHITENESS =           (DWORD)0x00FF0062, /* dest = WHITE                    */
+}
+
+enum
+{
+	SND_SYNC =            0x0000, /* play synchronously (default) */
+	SND_ASYNC =           0x0001, /* play asynchronously */
+	SND_NODEFAULT =       0x0002, /* silence (!default) if sound not found */
+	SND_MEMORY =          0x0004, /* pszSound points to a memory file */
+	SND_LOOP =            0x0008, /* loop the sound until next sndPlaySound */
+	SND_NOSTOP =          0x0010, /* don't stop any currently playing sound */
+
+	SND_NOWAIT =	0x00002000, /* don't wait if the driver is busy */
+	SND_ALIAS =       0x00010000, /* name is a registry alias */
+	SND_ALIAS_ID =	0x00110000, /* alias is a predefined ID */
+	SND_FILENAME =    0x00020000, /* name is file name */
+	SND_RESOURCE =    0x00040004, /* name is resource name or atom */
+
+	SND_PURGE =           0x0040, /* purge non-static events for task */
+	SND_APPLICATION =     0x0080, /* look for application specific association */
+
+
+	SND_ALIAS_START =	0,     /* alias base */
+}
+
+export  BOOL   PlaySoundA(LPCSTR pszSound, HMODULE hmod, DWORD fdwSound);
+export  BOOL   PlaySoundW(LPCWSTR pszSound, HMODULE hmod, DWORD fdwSound);
+
+export  int     GetClipBox(HDC, LPRECT);
+export  int     GetClipRgn(HDC, HRGN);
+export  int     GetMetaRgn(HDC, HRGN);
+export  HGDIOBJ   GetCurrentObject(HDC, UINT);
+export  BOOL    GetCurrentPositionEx(HDC, LPPOINT);
+export  int     GetDeviceCaps(HDC, int);
+
+struct LOGPEN
+  {
+    UINT        lopnStyle;
+    POINT       lopnWidth;
+    COLORREF    lopnColor;
+}
+alias LOGPEN* PLOGPEN, NPLOGPEN, LPLOGPEN;
+
+enum
+{
+	PS_SOLID =            0,
+	PS_DASH =             1, /* -------  */
+	PS_DOT =              2, /* .......  */
+	PS_DASHDOT =          3, /* _._._._  */
+	PS_DASHDOTDOT =       4, /* _.._.._  */
+	PS_NULL =             5,
+	PS_INSIDEFRAME =      6,
+	PS_USERSTYLE =        7,
+	PS_ALTERNATE =        8,
+	PS_STYLE_MASK =       0x0000000F,
+
+	PS_ENDCAP_ROUND =     0x00000000,
+	PS_ENDCAP_SQUARE =    0x00000100,
+	PS_ENDCAP_FLAT =      0x00000200,
+	PS_ENDCAP_MASK =      0x00000F00,
+
+	PS_JOIN_ROUND =       0x00000000,
+	PS_JOIN_BEVEL =       0x00001000,
+	PS_JOIN_MITER =       0x00002000,
+	PS_JOIN_MASK =        0x0000F000,
+
+	PS_COSMETIC =         0x00000000,
+	PS_GEOMETRIC =        0x00010000,
+	PS_TYPE_MASK =        0x000F0000,
+}
+
+export  HPALETTE   CreatePalette(LOGPALETTE *);
+export  HPEN      CreatePen(int, int, COLORREF);
+export  HPEN      CreatePenIndirect(LOGPEN *);
+export  HRGN      CreatePolyPolygonRgn(POINT *, INT *, int, int);
+export  HBRUSH    CreatePatternBrush(HBITMAP);
+export  HRGN      CreateRectRgn(int, int, int, int);
+export  HRGN      CreateRectRgnIndirect(RECT *);
+export  HRGN      CreateRoundRectRgn(int, int, int, int, int, int);
+export  BOOL      CreateScalableFontResourceA(DWORD, LPCSTR, LPCSTR, LPCSTR);
+export  BOOL      CreateScalableFontResourceW(DWORD, LPCWSTR, LPCWSTR, LPCWSTR);
+
+COLORREF RGB(int r, int g, int b)
+{
+    return cast(COLORREF)
+	((cast(BYTE)r|(cast(WORD)(cast(BYTE)g)<<8))|((cast(DWORD)cast(BYTE)b)<<16));
+}
+
+export  BOOL   LineTo(HDC, int, int);
+export  BOOL   DeleteObject(HGDIOBJ);
+export int FillRect(HDC hDC,  RECT *lprc, HBRUSH hbr);
+
+
+export BOOL EndDialog(HWND hDlg, int nResult);
+export HWND GetDlgItem(HWND hDlg, int nIDDlgItem);
+
+export BOOL SetDlgItemInt(HWND hDlg, int nIDDlgItem, UINT uValue, BOOL bSigned);
+export UINT GetDlgItemInt(HWND hDlg, int nIDDlgItem, BOOL *lpTranslated,
+    BOOL bSigned);
+
+export BOOL SetDlgItemTextA(HWND hDlg, int nIDDlgItem, LPCSTR lpString);
+export BOOL SetDlgItemTextW(HWND hDlg, int nIDDlgItem, LPCWSTR lpString);
+
+export UINT GetDlgItemTextA(HWND hDlg, int nIDDlgItem, LPSTR lpString, int nMaxCount);
+export UINT GetDlgItemTextW(HWND hDlg, int nIDDlgItem, LPWSTR lpString, int nMaxCount);
+
+export BOOL CheckDlgButton(HWND hDlg, int nIDButton, UINT uCheck);
+export BOOL CheckRadioButton(HWND hDlg, int nIDFirstButton, int nIDLastButton,
+    int nIDCheckButton);
+
+export UINT IsDlgButtonChecked(HWND hDlg, int nIDButton);
+
+export HWND SetFocus(HWND hWnd);
+
+export int wsprintfA(LPSTR, LPCSTR, ...);
+export int wsprintfW(LPWSTR, LPCWSTR, ...);
 }

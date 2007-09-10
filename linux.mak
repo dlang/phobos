@@ -55,6 +55,7 @@ OBJS= asserterror.o deh2.o switch.o complex.o gcstats.o \
 	qsort.o thread.o obj.o utf.o uri.o \
 	crc32.o conv.o arraycast.o errno.o alloca.o cmath2.o \
 	process.o syserror.o \
+	socket.o socketstream.o \
 	ti_wchar.o ti_uint.o ti_short.o ti_ushort.o \
 	ti_byte.o ti_ubyte.o ti_long.o ti_ulong.o ti_ptr.o \
 	ti_float.o ti_double.o ti_real.o ti_delegate.o \
@@ -92,7 +93,8 @@ SRC_STD= std/zlib.d std/zip.d std/stdint.d std/conv.d std/utf.d std/uri.d \
 	std/outbuffer.d std/math2.d std/thread.d std/md5.d std/base64.d \
 	std/asserterror.d std/dateparse.d std/outofmemory.d std/mmfile.d \
 	std/intrinsic.d std/array.d std/switcherr.d std/syserror.d \
-	std/regexp.d std/random.d std/stream.d std/process.d std/recls.d
+	std/regexp.d std/random.d std/stream.d std/process.d std/recls.d \
+	std/socket.d std/socketstream.d
 
 SRC_STD_C= std/c/process.d std/c/stdlib.d std/c/time.d std/c/stdio.d std/c/math.d
 
@@ -131,7 +133,9 @@ SRC_STD_C_WIN= std/c/windows/windows.d std/c/windows/com.d
 
 SRC_STD_C_LINUX= std/c/linux/linux.d std/c/linux/linuxextern.d
 
-SRC_ETC= etc/c/zlib.d
+SRC_ETC=
+
+SRC_ETC_C= etc/c/zlib.d
 
 SRC_ZLIB= etc/c/zlib/algorithm.txt \
 	etc/c/zlib/trees.h \
@@ -245,7 +249,8 @@ SRC_RECLS= \
 	etc/c/recls/recls.lib
 
 ALLSRCS = $(SRC) $(SRC_STD) $(SRC_STD_C) $(SRC_TI) $(SRC_INT) $(SRC_STD_WIN) \
-	$(SRC_STD_C_WIN) $(SRC_STD_C_LINUX) $(SRC_ETC) $(SRC_ZLIB) $(SRC_GC) \
+	$(SRC_STD_C_WIN) $(SRC_STD_C_LINUX) $(SRC_ETC) $(SRC_ETC_C) \
+	$(SRC_ZLIB) $(SRC_GC) \
 	$(SRC_RECLS) $(SRC_STLSOFT)
 
 
@@ -398,6 +403,12 @@ recls.o : std/recls.d
 regexp.o : std/regexp.d
 	$(DMD) -c $(DFLAGS) std/regexp.d
 
+socket.o : std/socket.d
+	$(DMD) -c $(DFLAGS) std/socket.d
+
+socketstream.o : std/socketstream.d
+	$(DMD) -c $(DFLAGS) std/socketstream.d
+
 stream.o : std/stream.d
 	$(DMD) -c $(DFLAGS) std/stream.d
 
@@ -432,6 +443,8 @@ zip.o : std/zip.d
 
 linux.o : std/c/linux/linux.d
 	$(DMD) -c $(DFLAGS) std/c/linux/linux.d
+
+### etc
 
 ### etc/c
 

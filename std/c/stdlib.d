@@ -3,6 +3,15 @@ module std.c.stdlib;
 
 extern (C):
 
+enum
+{
+    _MAX_PATH   = 260,
+    _MAX_DRIVE  = 3,
+    _MAX_DIR    = 256,
+    _MAX_FNAME  = 256,
+    _MAX_EXT    = 256,
+}
+
     const int EXIT_SUCCESS = 0;
     const int EXIT_FAILURE = 1;
 

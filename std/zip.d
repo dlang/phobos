@@ -149,6 +149,7 @@ class ZipArchive
 	i = 0;
 	foreach (ArchiveMember de; directory)
 	{
+	    de.offset = i;
 	    data[i .. i + 4] = (ubyte[])"PK\x03\x04";
 	    putUshort(i + 4,  de.extractVersion);
 	    putUshort(i + 6,  de.flags);

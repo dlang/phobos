@@ -61,6 +61,7 @@ OBJS= asserterror.obj deh.obj switch.obj complex.obj gcstats.obj \
 	qsort.obj math2.obj date.obj dateparse.obj thread.obj obj.obj \
 	iunknown.obj crc32.obj conv.obj arraycast.obj utf.obj uri.obj \
 	Czlib.obj Dzlib.obj zip.obj process.obj registry.obj recls.obj \
+	socket.obj socketstream.obj loader.obj \
 	ti_Aa.obj ti_Ag.obj ti_C.obj ti_int.obj ti_char.obj \
 	ti_wchar.obj ti_uint.obj ti_short.obj ti_ushort.obj \
 	ti_byte.obj ti_ubyte.obj ti_long.obj ti_ulong.obj ti_ptr.obj \
@@ -81,7 +82,8 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 	std\outbuffer.d std\math2.d std\thread.d std\md5.d std\base64.d \
 	std\asserterror.d std\dateparse.d std\outofmemory.d std\mmfile.d \
 	std\intrinsic.d std\array.d std\switcherr.d std\syserror.d \
-	std\regexp.d std\random.d std\stream.d std\process.d std\recls.d
+	std\regexp.d std\random.d std\stream.d std\process.d std\recls.d \
+	std\socket.d std\socketstream.d std\loader.d
 
 SRC_STD_C= std\c\process.d std\c\stdlib.d std\c\time.d std\c\stdio.d std\c\math.d
 
@@ -120,7 +122,9 @@ SRC_STD_C_WIN= std\c\windows\windows.d std\c\windows\com.d
 
 SRC_STD_C_LINUX= std\c\linux\linux.d std\c\linux\linuxextern.d
 
-SRC_ETC= etc\c\zlib.d
+SRC_ETC=
+
+SRC_ETC_C= etc\c\zlib.d
 
 SRC_ZLIB= etc\c\zlib\algorithm.txt \
 	etc\c\zlib\trees.h \
@@ -326,6 +330,9 @@ file.obj : std\file.d
 gc.obj : std\gc.d
 	$(DMD) -c $(DFLAGS) std\gc.d
 
+loader.obj : std\loader.d
+	$(DMD) -c $(DFLAGS) std\loader.d
+
 math.obj : std\math.d
 	$(DMD) -c $(DFLAGS) std\math.d
 
@@ -365,6 +372,12 @@ recls.obj : std\recls.d
 regexp.obj : std\regexp.d
 	$(DMD) -c $(DFLAGS) std\regexp.d
 
+socket.obj : std\socket.d
+	$(DMD) -c $(DFLAGS) std\socket.d -ofsocket.obj
+
+socketstream.obj : std\socketstream.d
+	$(DMD) -c $(DFLAGS) std\socketstream.d -ofsocketstream.obj
+
 stream.obj : std\stream.d
 	$(DMD) -c $(DFLAGS) std\stream.d
 
@@ -402,6 +415,8 @@ iunknown.obj : std\windows\iunknown.d
 
 registry.obj : std\windows\registry.d
 	$(DMD) -c $(DFLAGS) std\windows\registry.d
+
+### etc
 
 ### etc\c
 
@@ -528,7 +543,7 @@ ti_int.obj : std\typeinfo\ti_int.d
 
 zip : win32.mak linux.mak $(SRC) \
 	$(SRC_STD) $(SRC_STD_C) $(SRC_TI) $(SRC_INT) $(SRC_STD_WIN) \
-	$(SRC_STDLINUX) $(SRC_ETC) $(SRC_ZLIB) $(SRC_GC)
+	$(SRC_STDLINUX) $(SRC_ETC) $(SRC_ETC_C) $(SRC_ZLIB) $(SRC_GC)
 	del phobos.zip
 	zip32 -u phobos win32.mak linux.mak
 	zip32 -u phobos $(SRC)
@@ -540,6 +555,7 @@ zip : win32.mak linux.mak $(SRC) \
 	zip32 -u phobos $(SRC_STD_C_WIN)
 	zip32 -u phobos $(SRC_STD_C_LINUX)
 	zip32 -u phobos $(SRC_ETC)
+	zip32 -u phobos $(SRC_ETC_C)
 	zip32 -u phobos $(SRC_ZLIB)
 	zip32 -u phobos $(SRC_GC)
 	zip32 -u phobos $(SRC_RECLS)
@@ -559,7 +575,8 @@ install:
 	$(CP) $(SRC_STD_WIN) \dmd\src\phobos\std\windows
 	$(CP) $(SRC_STD_C_WIN) \dmd\src\phobos\std\c\windows
 	$(CP) $(SRC_STD_C_LINUX) \dmd\src\phobos\std\c\linux
-	$(CP) $(SRC_ETC) \dmd\src\phobos\etc\c
+	#$(CP) $(SRC_ETC) \dmd\src\phobos\etc
+	$(CP) $(SRC_ETC_C) \dmd\src\phobos\etc\c
 	$(CP) $(SRC_ZLIB) \dmd\src\phobos\etc\c\zlib
 	$(CP) $(SRC_GC) \dmd\src\phobos\internal\gc
 	$(CP) $(SRC_RECLS) \dmd\src\phobos\etc\c\recls

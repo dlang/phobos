@@ -9,6 +9,19 @@ import std.c.stdio;
 
 extern (C):
 
+Object _d_interface_cast(void* p, ClassInfo c)
+{   Object o;
+
+    if (p)
+    {
+	Interface *pi = **(Interface ***)p;
+
+	o = cast(Object)(p - pi.offset);
+	return _d_dynamic_cast(o, c);
+    }
+    return o;
+}
+
 Object _d_dynamic_cast(Object o, ClassInfo c)
 {   ClassInfo oc;
     uint offset = 0;

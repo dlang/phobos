@@ -169,6 +169,8 @@ d_time toInteger(d_time n)
 
 int Day(d_time t)
 {
+    if (t < 0)
+	t -= msPerDay;		// use this if t is not floating point
     return (int)floor(t / msPerDay);
 }
 

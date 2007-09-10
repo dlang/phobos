@@ -7,7 +7,6 @@ const uint CLOCKS_PER_SEC = 1000;
 const uint CLK_TCK        = 1000;
 const uint TIMEOFFSET     = 315558000;
 
-alias uint size_t;
 alias int clock_t;
 alias int time_t;
 

@@ -90,10 +90,24 @@ Object _d_newclass(ClassInfo ci)
 
 extern (D) alias void (*fp_t)(Object);		// generic function pointer
 
+void _d_delinterface(void** p)
+{
+    if (*p)
+    {
+	Interface *pi = **(Interface ***)*p;
+	Object o;
+
+	o = cast(Object)(*p - pi.offset);
+	_d_delclass(&o);
+	*p = null;
+    }
+}
+
 void _d_delclass(Object *p)
 {
     if (*p)
     {
+	debug (PRINTF) printf("_d_delclass(%p)\n", *p);
 	version(0)
 	{
 	    ClassInfo **pc = (ClassInfo **)*p;
@@ -203,6 +217,15 @@ void _d_delarray(Array *p)
 	    _gc.free(p.data);
 	p.data = null;
 	p.length = 0;
+    }
+}
+
+
+void _d_delmemory(void* p)
+{
+    if (p)
+    {
+	_gc.free(p);
     }
 }
 
