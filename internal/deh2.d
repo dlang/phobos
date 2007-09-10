@@ -77,15 +77,15 @@ DHandlerTable *__eh_finddata(void *address)
 
 //    debug printf("__eh_finddata(address = x%x)\n", address);
 //    debug printf("_deh_beg = x%x, _deh_end = x%x\n", &_deh_beg, &_deh_end);
-    for (ft = (FuncTable *)&_deh_beg;
-	 ft < (FuncTable *)&_deh_end;
+    for (ft = cast(FuncTable *)&_deh_beg;
+	 ft < cast(FuncTable *)&_deh_end;
 	 ft++)
     {
 //	debug printf("\tfptr = x%x, fsize = x%03x, handlertable = x%x\n",
 //		ft.fptr, ft.fsize, ft.handlertable);
 
 	if (ft.fptr <= address &&
-	    address < (void *)((char *)ft.fptr + ft.fsize))
+	    address < cast(void *)(cast(char *)ft.fptr + ft.fsize))
 	{
 //	    debug printf("\tfound handler table\n");
 	    return ft.handlertable;
@@ -109,7 +109,7 @@ DHandlerTable *__eh_finddata(void *address)
 
 uint __eh_find_caller(uint regbp, uint *pretaddr)
 {
-    uint bp = *(uint *)regbp;
+    uint bp = *cast(uint *)regbp;
 
     if (bp)         // if not end of call chain
     {
@@ -119,7 +119,7 @@ uint __eh_find_caller(uint regbp, uint *pretaddr)
 	    // stack should grow to smaller values
 	    terminate();
 
-        *pretaddr = *(uint *)(regbp + int.size);
+        *pretaddr = *cast(uint *)(regbp + int.size);
     }
     return bp;
 }
@@ -135,7 +135,7 @@ extern (Windows) void _d_throw(Object *h)
     debug
     {
 	printf("_d_throw(h = %p, &h = %p)\n", h, &h);
-	printf("\tvptr = %p\n", *(void **)h);
+	printf("\tvptr = %p\n", *cast(void **)h);
     }
 
     asm
@@ -170,19 +170,19 @@ extern (Windows) void _d_throw(Object *h)
 
 	debug printf("found caller, EBP = x%x, retaddr = x%x\n", regebp, retaddr);
 //if (++count == 12) *(char*)0=0;
-        handler_table = __eh_finddata((void *)retaddr);   // find static data associated with function
+        handler_table = __eh_finddata(cast(void *)retaddr);   // find static data associated with function
         if (!handler_table)         // if no static data
         {   
 	    debug printf("no handler table\n");
             continue;
         }
-        funcoffset = (uint)handler_table.fptr;
+        funcoffset = cast(uint)handler_table.fptr;
         spoff = handler_table.espoffset;
         retoffset = handler_table.retoffset;
 
 	debug
 	{
-	    printf("retaddr = x%x\n",(uint)retaddr);
+	    printf("retaddr = x%x\n",cast(uint)retaddr);
 	    printf("regebp=x%04x, funcoffset=x%04x, spoff=x%x, retoffset=x%x\n",
 	    regebp,funcoffset,spoff,retoffset);
 	}
@@ -226,12 +226,12 @@ extern (Windows) void _d_throw(Object *h)
 		int ncatches;
 		int i;
 
-		pci = (DCatchInfo *)((char *)handler_table + phi.cioffset);
+		pci = cast(DCatchInfo *)(cast(char *)handler_table + phi.cioffset);
 		ncatches = pci.ncatches;
 		for (i = 0; i < ncatches; i++)
 		{
 		    DCatchBlock *pcb;
-		    ClassInfo ci = **(ClassInfo **)h;
+		    ClassInfo ci = **cast(ClassInfo **)h;
 
 		    pcb = &pci.catch_block[i];
 
@@ -239,14 +239,14 @@ extern (Windows) void _d_throw(Object *h)
 		    {   // Matched the catch type, so we've found the handler.
 
 			// Initialize catch variable
-			*(void **)(regebp + (pcb.bpoffset)) = h;
+			*cast(void **)(regebp + (pcb.bpoffset)) = h;
 
 			// Jump to catch block. Does not return.
 			{
 			    uint catch_esp;
 			    fp_t catch_addr;
 
-			    catch_addr = (fp_t)(pcb.code);
+			    catch_addr = cast(fp_t)(pcb.code);
 			    catch_esp = regebp - handler_table.espoffset - fp_t.size;
 			    asm
 			    {

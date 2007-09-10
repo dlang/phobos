@@ -118,8 +118,8 @@ alias FARPROC PROPENUMPROCEXW;
 alias FARPROC DRAWSTATEPROC;
 
 
-WORD HIWORD(int l) { return (WORD)((l >> 16) & 0xFFFF); }
-WORD LOWORD(int l) { return (WORD)l; }
+WORD HIWORD(int l) { return cast(WORD)((l >> 16) & 0xFFFF); }
+WORD LOWORD(int l) { return cast(WORD)l; }
 int FAILED(int status) { return status < 0; }
 int SUCCEEDED(int Status) { return Status >= 0; }
 
@@ -222,8 +222,8 @@ enum
     FILE_VOLUME_IS_COMPRESSED       = 0x00008000,  
 }
 
-const DWORD MAILSLOT_NO_MESSAGE = (DWORD)-1;
-const DWORD MAILSLOT_WAIT_FOREVER = (DWORD)-1; 
+const DWORD MAILSLOT_NO_MESSAGE = cast(DWORD)-1;
+const DWORD MAILSLOT_WAIT_FOREVER = cast(DWORD)-1; 
 
 enum : uint
 {
@@ -246,8 +246,8 @@ enum
     TRUNCATE_EXISTING   = 5,
 }
 
-const HANDLE INVALID_HANDLE_VALUE = (HANDLE)-1;
-const DWORD INVALID_FILE_SIZE = (DWORD)0xFFFFFFFF;
+const HANDLE INVALID_HANDLE_VALUE = cast(HANDLE)-1;
+const DWORD INVALID_FILE_SIZE = cast(DWORD)0xFFFFFFFF;
 
 struct OVERLAPPED {
     DWORD   Internal;
@@ -1470,7 +1470,7 @@ enum
 	FS_WANSUNG =              0x00080000L,
 	FS_CHINESETRAD =          0x00100000L,
 	FS_JOHAB =                0x00200000L,
-	FS_SYMBOL =               (int)0x80000000L,
+	FS_SYMBOL =               cast(int)0x80000000L,
 
 
 /* Font Families */
@@ -1714,7 +1714,7 @@ alias WNDCLASSA WNDCLASS;
 enum
 {
 	WS_OVERLAPPED =       0x00000000,
-	WS_POPUP =            (int)0x80000000,
+	WS_POPUP =            cast(int)0x80000000,
 	WS_CHILD =            0x40000000,
 	WS_MINIMIZE =         0x20000000,
 	WS_VISIBLE =          0x10000000,
@@ -1834,11 +1834,11 @@ enum
 	COLOR_BTNHILIGHT =        COLOR_BTNHIGHLIGHT,
 }
 
-const int CW_USEDEFAULT = (int)0x80000000;
+const int CW_USEDEFAULT = cast(int)0x80000000;
 /*
  * Special value for CreateWindow, et al.
  */
-const HWND HWND_DESKTOP = ((HWND)0);
+const HWND HWND_DESKTOP = (cast(HWND)0);
 
 
 export ATOM RegisterClassA(WNDCLASSA *lpWndClass);
@@ -2273,7 +2273,7 @@ export HMENU GetSubMenu(HMENU hMenu, int nPos);
 export HBITMAP LoadBitmapA(HINSTANCE hInstance, LPCSTR lpBitmapName);
 export HBITMAP LoadBitmapW(HINSTANCE hInstance, LPCWSTR lpBitmapName);
 
-LPSTR MAKEINTRESOURCEA(int i) { return (LPSTR)((DWORD)((WORD)(i))); }
+LPSTR MAKEINTRESOURCEA(int i) { return cast(LPSTR)(cast(DWORD)(cast(WORD)(i))); }
 
 export  HFONT     CreateFontIndirectA(LOGFONTA *);
 
@@ -2333,21 +2333,21 @@ export int DialogBoxIndirectParamA(HINSTANCE hInstance,
 
 enum : DWORD
 {
-	SRCCOPY =             (DWORD)0x00CC0020, /* dest = source                   */
-	SRCPAINT =            (DWORD)0x00EE0086, /* dest = source OR dest           */
-	SRCAND =              (DWORD)0x008800C6, /* dest = source AND dest          */
-	SRCINVERT =           (DWORD)0x00660046, /* dest = source XOR dest          */
-	SRCERASE =            (DWORD)0x00440328, /* dest = source AND (NOT dest)   */
-	NOTSRCCOPY =          (DWORD)0x00330008, /* dest = (NOT source)             */
-	NOTSRCERASE =         (DWORD)0x001100A6, /* dest = (NOT src) AND (NOT dest) */
-	MERGECOPY =           (DWORD)0x00C000CA, /* dest = (source AND pattern)     */
-	MERGEPAINT =          (DWORD)0x00BB0226, /* dest = (NOT source) OR dest     */
-	PATCOPY =             (DWORD)0x00F00021, /* dest = pattern                  */
-	PATPAINT =            (DWORD)0x00FB0A09, /* dest = DPSnoo                   */
-	PATINVERT =           (DWORD)0x005A0049, /* dest = pattern XOR dest         */
-	DSTINVERT =           (DWORD)0x00550009, /* dest = (NOT dest)               */
-	BLACKNESS =           (DWORD)0x00000042, /* dest = BLACK                    */
-	WHITENESS =           (DWORD)0x00FF0062, /* dest = WHITE                    */
+	SRCCOPY =             cast(DWORD)0x00CC0020, /* dest = source                   */
+	SRCPAINT =            cast(DWORD)0x00EE0086, /* dest = source OR dest           */
+	SRCAND =              cast(DWORD)0x008800C6, /* dest = source AND dest          */
+	SRCINVERT =           cast(DWORD)0x00660046, /* dest = source XOR dest          */
+	SRCERASE =            cast(DWORD)0x00440328, /* dest = source AND (NOT dest)   */
+	NOTSRCCOPY =          cast(DWORD)0x00330008, /* dest = (NOT source)             */
+	NOTSRCERASE =         cast(DWORD)0x001100A6, /* dest = (NOT src) AND (NOT dest) */
+	MERGECOPY =           cast(DWORD)0x00C000CA, /* dest = (source AND pattern)     */
+	MERGEPAINT =          cast(DWORD)0x00BB0226, /* dest = (NOT source) OR dest     */
+	PATCOPY =             cast(DWORD)0x00F00021, /* dest = pattern                  */
+	PATPAINT =            cast(DWORD)0x00FB0A09, /* dest = DPSnoo                   */
+	PATINVERT =           cast(DWORD)0x005A0049, /* dest = pattern XOR dest         */
+	DSTINVERT =           cast(DWORD)0x00550009, /* dest = (NOT dest)               */
+	BLACKNESS =           cast(DWORD)0x00000042, /* dest = BLACK                    */
+	WHITENESS =           cast(DWORD)0x00FF0062, /* dest = WHITE                    */
 }
 
 enum

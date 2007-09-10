@@ -5,17 +5,17 @@ class TypeInfo_j : TypeInfo
 {
     uint getHash(void *p)
     {
-	return ((uint *)p)[0] + ((uint *)p)[1] + ((ushort *)p)[4];
+	return (cast(uint *)p)[0] + (cast(uint *)p)[1] + (cast(ushort *)p)[4];
     }
 
     int equals(void *p1, void *p2)
     {
-	return *(ireal *)p1 == *(ireal *)p2;
+	return *cast(ireal *)p1 == *cast(ireal *)p2;
     }
 
     int compare(void *p1, void *p2)
     {
-	return cast(int)(*(real *)p1 - *(real *)p2);
+	return cast(int)(*cast(real *)p1 - *cast(real *)p2);
     }
 
     int tsize()
@@ -27,9 +27,9 @@ class TypeInfo_j : TypeInfo
     {
 	ireal t;
 
-	t = *(ireal *)p1;
-	*(ireal *)p1 = *(ireal *)p2;
-	*(ireal *)p2 = t;
+	t = *cast(ireal *)p1;
+	*cast(ireal *)p1 = *cast(ireal *)p2;
+	*cast(ireal *)p2 = t;
     }
 }
 

@@ -6,7 +6,7 @@ private import std.string;
 class TypeInfo_AC : TypeInfo
 {
     uint getHash(void *p)
-    {	Object[] s = *(Object[]*)p;
+    {	Object[] s = *cast(Object[]*)p;
 	uint len = s.length;
 	uint hash = 0;
 
@@ -18,8 +18,8 @@ class TypeInfo_AC : TypeInfo
 
     int equals(void *p1, void *p2)
     {
-	Object[] s1 = *(Object[]*)p1;
-	Object[] s2 = *(Object[]*)p2;
+	Object[] s1 = *cast(Object[]*)p1;
+	Object[] s2 = *cast(Object[]*)p2;
 
 	if (s1.length == s2.length)
 	{
@@ -38,8 +38,8 @@ class TypeInfo_AC : TypeInfo
 
     int compare(void *p1, void *p2)
     {
-	Object[] s1 = *(Object[]*)p1;
-	Object[] s2 = *(Object[]*)p2;
+	Object[] s1 = *cast(Object[]*)p1;
+	Object[] s2 = *cast(Object[]*)p2;
 	int c;
 
 	c = cast(int)s1.length - cast(int)s2.length;

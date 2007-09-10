@@ -212,7 +212,7 @@ version(Windows)
     }
     body
     {
-        HXModule hmod = (HXModule)LoadLibraryA(toStringz(moduleName));
+        HXModule hmod = cast(HXModule)LoadLibraryA(toStringz(moduleName));
 
         if(null === hmod)
         {
@@ -239,7 +239,7 @@ version(Windows)
     }
     body
     {
-        if(!FreeLibrary((HModule_)hModule))
+        if(!FreeLibrary(cast(HModule_)hModule))
         {
             record_error_();
         }
@@ -253,7 +253,7 @@ version(Windows)
     }
     body
     {
-        void    *symbol = GetProcAddress((HModule_)hModule, toStringz(symbolName));
+        void    *symbol = GetProcAddress(cast(HModule_)hModule, toStringz(symbolName));
 
         if(null === symbol)
         {
@@ -273,7 +273,7 @@ version(Windows)
         char    szFileName[260]; // Need to use a constant here
 
 	// http://msdn.microsoft.com/library/default.asp?url=/library/en-us/dllproc/base/getmodulefilename.asp
-        uint    cch = GetModuleFileNameA((HModule_)hModule, szFileName, szFileName.length);
+        uint    cch = GetModuleFileNameA(cast(HModule_)hModule, szFileName, szFileName.length);
 
 	if (cch == 0)
 	{
@@ -338,7 +338,7 @@ else version(Linux)
 
         if(null !== mi)
         {
-            return (++mi.m_cRefs, (HXModule)mi);
+            return (++mi.m_cRefs, cast(HXModule)mi);
         }
         else
         {
@@ -356,7 +356,7 @@ else version(Linux)
 
                 s_modules[moduleName]   =   mi;
 
-                return (HXModule)mi;
+                return cast(HXModule)mi;
             }
         }
     }
@@ -366,7 +366,7 @@ else version(Linux)
     {
         assert(null !== hModule);
 
-        ExeModuleInfo   mi = (ExeModuleInfo)hModule;
+        ExeModuleInfo   mi = cast(ExeModuleInfo)hModule;
 
         assert(0 < mi.m_cRefs);
         assert(null !== mi.m_hmod);
@@ -376,7 +376,7 @@ else version(Linux)
     }
     body
     {
-        ExeModuleInfo   mi = (ExeModuleInfo)hModule;
+        ExeModuleInfo   mi = cast(ExeModuleInfo)hModule;
 
         if(null !== mi)
         {
@@ -393,7 +393,7 @@ else version(Linux)
     {
         assert(null !== hModule);
 
-        ExeModuleInfo   mi = (ExeModuleInfo)hModule;
+        ExeModuleInfo   mi = cast(ExeModuleInfo)hModule;
 
         assert(0 < mi.m_cRefs);
         assert(null !== mi.m_hmod);
@@ -403,7 +403,7 @@ else version(Linux)
     }
     body
     {
-        ExeModuleInfo   mi      =   (ExeModuleInfo)hModule;
+        ExeModuleInfo   mi      =   cast(ExeModuleInfo)hModule;
 
         if(0 == --mi.m_cRefs)
         {
@@ -425,7 +425,7 @@ else version(Linux)
     {
         assert(null !== hModule);
 
-        ExeModuleInfo   mi = (ExeModuleInfo)hModule;
+        ExeModuleInfo   mi = cast(ExeModuleInfo)hModule;
 
         assert(0 < mi.m_cRefs);
         assert(null !== mi.m_hmod);
@@ -435,7 +435,7 @@ else version(Linux)
     }
     body
     {
-        ExeModuleInfo   mi      =   (ExeModuleInfo)hModule;
+        ExeModuleInfo   mi      =   cast(ExeModuleInfo)hModule;
         void *symbol = dlsym(mi.m_hmod, toStringz(symbolName));
 
         if(null == symbol)
@@ -456,7 +456,7 @@ else version(Linux)
     {
         assert(null !== hModule);
 
-        ExeModuleInfo   mi = (ExeModuleInfo)hModule;
+        ExeModuleInfo   mi = cast(ExeModuleInfo)hModule;
 
         assert(0 < mi.m_cRefs);
         assert(null !== mi.m_hmod);
@@ -466,7 +466,7 @@ else version(Linux)
     }
     body
     {
-        ExeModuleInfo   mi = (ExeModuleInfo)hModule;
+        ExeModuleInfo   mi = cast(ExeModuleInfo)hModule;
 
         return mi.m_name;
     }
@@ -601,7 +601,7 @@ public:
     {
 	version (Windows)
 	{
-	    void *symbol = GetProcAddress((HModule_)m_hModule, toStringz(symbolName));
+	    void *symbol = GetProcAddress(cast(HModule_)m_hModule, toStringz(symbolName));
 	    if(null === symbol)
 	    {
 		throw new ExeModuleException(GetLastError());

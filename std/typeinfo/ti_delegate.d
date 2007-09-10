@@ -6,14 +6,14 @@ alias void delegate(int) dg;
 class TypeInfo_D : TypeInfo
 {
     uint getHash(void *p)
-    {	long l = *(long *)p;
+    {	long l = *cast(long *)p;
 
-	return (uint)(l + (l >> 32));
+	return cast(uint)(l + (l >> 32));
     }
 
     int equals(void *p1, void *p2)
     {
-	return *(dg *)p1 == *(dg *)p2;
+	return *cast(dg *)p1 == *cast(dg *)p2;
     }
 
     int tsize()
@@ -25,9 +25,9 @@ class TypeInfo_D : TypeInfo
     {
 	dg t;
 
-	t = *(dg *)p1;
-	*(dg *)p1 = *(dg *)p2;
-	*(dg *)p2 = t;
+	t = *cast(dg *)p1;
+	*cast(dg *)p1 = *cast(dg *)p2;
+	*cast(dg *)p2 = t;
     }
 }
 

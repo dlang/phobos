@@ -65,7 +65,7 @@ int os_mem_unmap(void *base, uint nbytes)
 pthread_t pthread_self()
 {
     //printf("pthread_self() = %x\n", GetCurrentThreadId());
-    return (pthread_t) GetCurrentThreadId();
+    return cast(pthread_t) GetCurrentThreadId();
 }
 
 /**********************************************
@@ -95,8 +95,8 @@ extern (C)
 
 void os_query_staticdataseg(void **base, uint *nbytes)
 {
-    *base = (void *)&_xi_a;
-    *nbytes = (uint)((char *)&_end - (char *)&_xi_a);
+    *base = cast(void *)&_xi_a;
+    *nbytes = cast(uint)(cast(char *)&_end - cast(char *)&_xi_a);
 }
 
 /++++

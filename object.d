@@ -29,12 +29,12 @@ class Object
 
     uint toHash()
     {
-	return (uint)(void *)this;
+	return cast(uint)cast(void *)this;
     }
 
     int opCmp(Object o)
     {
-	return (int)(void *)this - (int)(void *)o;
+	return cast(int)cast(void *)this - cast(int)cast(void *)o;
     }
 
     int opEquals(Object o)
@@ -66,7 +66,7 @@ class ClassInfo : Object
 
 class TypeInfo
 {
-    uint getHash(void *p) { return (uint)p; }
+    uint getHash(void *p) { return cast(uint)p; }
     int equals(void *p1, void *p2) { return p1 == p2; }
     int compare(void *p1, void *p2) { return 0; }
     int tsize() { return 0; }
@@ -77,9 +77,9 @@ class TypeInfo
 	for (i = 0; i < n; i++)
 	{   byte t;
 
-	    t = ((byte *)p1)[i];
-	    ((byte *)p1)[i] = ((byte *)p2)[i];
-	    ((byte *)p2)[i] = t;
+	    t = (cast(byte *)p1)[i];
+	    (cast(byte *)p1)[i] = (cast(byte *)p2)[i];
+	    (cast(byte *)p2)[i] = t;
 	}
     }
 }

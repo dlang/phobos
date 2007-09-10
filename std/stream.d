@@ -1161,7 +1161,7 @@ class MemoryStream: Stream
     uint cur; // current file position
 
     // clear to an empty buffer.
-	this() { this((ubyte[]) null); }
+	this() { this(cast(ubyte[]) null); }
 
     // use this buffer, non-copying.
     this(ubyte[] buf)
@@ -1173,10 +1173,10 @@ class MemoryStream: Stream
     }
 
     // use this buffer, non-copying.
-    this(byte[] buf) { this((ubyte[]) buf); }
+    this(byte[] buf) { this(cast(ubyte[]) buf); }
 
     // use this buffer, non-copying.
-    this(char[] buf) { this((ubyte[]) buf); }
+    this(char[] buf) { this(cast(ubyte[]) buf); }
 
     // ensure the stream can hold this many bytes.
     void reserve(uint count)
@@ -1251,7 +1251,7 @@ class MemoryStream: Stream
 	
 	override char[] toString()
 	{
-		return (char[]) data ();
+		return cast(char[]) data ();
 	}
 
     /* Test the whole class. */
@@ -1268,7 +1268,7 @@ class MemoryStream: Stream
         assert (m.size () == 12);
         assert (m.readString (4) == "o, w");
         m.writeString ("ie");
-        assert ((char[]) m.data () == "Hello, wield");
+        assert (cast(char[]) m.data () == "Hello, wield");
         m.seekEnd (0);
         m.writeString ("Foo");
         assert (m.position () == 15);
@@ -1426,7 +1426,7 @@ class SliceStream : Stream
         m = new MemoryStream ((cast(char[])"Hello, world").dup);
         s = new SliceStream (m, 4, 8);
         assert (s.size () == 4);
-        assert (s.writeBlock ((char *) "Vroom", 5) == 4);
+        assert (s.writeBlock (cast(char *) "Vroom", 5) == 4);
         assert (s.position () == 4);
         assert (s.seekEnd (-2) == 2);
         assert (s.seekEnd (2) == 4);

@@ -32,24 +32,24 @@ uint PERMUTE(uint key)
 void fill(void *p, uint key, uint size)
 {
     uint i;
-    byte *q = (byte *)p;
+    byte *q = cast(byte *)p;
 
     for (i = 0; i < size; i++)
     {
 	key = PERMUTE(key);
-	q[i] = (byte)key;
+	q[i] = cast(byte)key;
     }
 }
 
 void verify(void *p, uint key, uint size)
 {
     uint i;
-    byte *q = (byte *)p;
+    byte *q = cast(byte *)p;
 
     for (i = 0; i < size; i++)
     {
 	key = PERMUTE(key);
-	assert(q[i] == (byte)key);
+	assert(q[i] == cast(byte)key);
     }
 }
 
@@ -77,7 +77,7 @@ printf("smoke.2\n");
 
     gc = newGC();
     gc.initialize();
-    char *p = (char *)gc.malloc(10);
+    char *p = cast(char *)gc.malloc(10);
     assert(p);
     strcpy(p, "Hello!");
 //    char *p2 = gc.strdup(p);
@@ -116,10 +116,10 @@ void smoke2()
 
     for (i = 0; i < SMOKE2_SIZE; i++)
     {
-	p = (int *)gc.calloc(i + 1, 500);
+	p = cast(int *)gc.calloc(i + 1, 500);
 	p[0] = i * 3;
 	foo[i] = p;
-	gc.setFinalizer((void *)p, &finalizer);
+	gc.setFinalizer(cast(void *)p, &finalizer);
     }
 
     for (i = 0; i < SMOKE2_SIZE; i += 2)
@@ -160,11 +160,11 @@ void smoke3()
     for (i = 0; i < 1000; i++)
     {
 	uint size = std.random.rand() % 2048;
-	p = (int *)gc.malloc(size);
+	p = cast(int *)gc.malloc(size);
 	memset(p, i, size);
 
 	size = std.random.rand() % 2048;
-	p = (int *)gc.realloc(p, size);
+	p = cast(int *)gc.realloc(p, size);
 	memset(p, i + 1, size);
     }
 
@@ -192,12 +192,12 @@ void smoke4()
     for (i = 0; i < 80000; i++)
     {
 	uint size = i;
-	p = (int *)gc.malloc(size);
+	p = cast(int *)gc.malloc(size);
 	memset(p, i, size);
 
 	size = std.random.rand() % 2048;
 	gc.check(p);
-	p = (int *)gc.realloc(p, size);
+	p = cast(int *)gc.realloc(p, size);
 	memset(p, i + 1, size);
     }
 
@@ -233,7 +233,7 @@ void smoke5(GC *gc)
 
 	    //printf("index = %d, size = %d\n", index, size);
 	    p = array[index] - offset[index];
-	    p = (byte *)gc.realloc(p, size);
+	    p = cast(byte *)gc.realloc(p, size);
 	    if (array[index])
 	    {	uint s;
 
@@ -301,7 +301,7 @@ printf("gc = %p\n", gc);
 
 GC *newGC()
 {
-    return (GC *)std.c.stdlib.calloc(1, GC.size);
+    return cast(GC *)std.c.stdlib.calloc(1, GC.size);
 }
 
 void deleteGC(GC *gc)

@@ -7,23 +7,23 @@ class TypeInfo_C : TypeInfo
 {
     uint getHash(void *p)
     {
-	Object o = *(Object*)p;
+	Object o = *cast(Object*)p;
 	assert(o);
 	return o.toHash();
     }
 
     int equals(void *p1, void *p2)
     {
-	Object o1 = *(Object*)p1;
-	Object o2 = *(Object*)p2;
+	Object o1 = *cast(Object*)p1;
+	Object o2 = *cast(Object*)p2;
 
 	return o1 == o2 || (o1 && o1.opCmp(o2) == 0);
     }
 
     int compare(void *p1, void *p2)
     {
-	Object o1 = *(Object*)p1;
-	Object o2 = *(Object*)p2;
+	Object o1 = *cast(Object*)p1;
+	Object o2 = *cast(Object*)p2;
 	int c = 0;
 
 	// Regard null references as always being "less than"

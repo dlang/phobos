@@ -90,8 +90,8 @@ const real SQRT1_2 =	0.70710678118654752440;
 
 int isnan(real e)
 {
-    ushort* pe = (ushort *)&e;
-    ulong*  ps = (ulong *)&e;
+    ushort* pe = cast(ushort *)&e;
+    ulong*  ps = cast(ulong *)&e;
 
     return (pe[4] & 0x7FFF) == 0x7FFF &&
 	    *ps & 0x7FFFFFFFFFFFFFFF;
@@ -113,7 +113,7 @@ unittest
 
 int isfinite(real e)
 {
-    ushort* pe = (ushort *)&e;
+    ushort* pe = cast(ushort *)&e;
 
     return (pe[4] & 0x7FFF) != 0x7FFF;
 }
@@ -134,7 +134,7 @@ unittest
 
 int isnormal(float f)
 {
-    uint *p = (uint *)&f;
+    uint *p = cast(uint *)&f;
     uint e;
 
     e = *p & 0x7F800000;
@@ -144,7 +144,7 @@ int isnormal(float f)
 
 int isnormal(double d)
 {
-    uint *p = (uint *)&d;
+    uint *p = cast(uint *)&d;
     uint e;
 
     e = p[1] & 0x7FF00000;
@@ -153,8 +153,8 @@ int isnormal(double d)
 
 int isnormal(real e)
 {
-    ushort* pe = (ushort *)&e;
-    long*   ps = (long *)&e;
+    ushort* pe = cast(ushort *)&e;
+    long*   ps = cast(long *)&e;
 
     return (pe[4] & 0x7FFF) != 0x7FFF && *ps < 0;
 }
@@ -179,7 +179,7 @@ unittest
 
 int issubnormal(float f)
 {
-    uint *p = (uint *)&f;
+    uint *p = cast(uint *)&f;
 
     //printf("*p = x%x\n", *p);
     return (*p & 0x7F800000) == 0 && *p & 0x007FFFFF;
@@ -195,7 +195,7 @@ unittest
 
 int issubnormal(double d)
 {
-    uint *p = (uint *)&d;
+    uint *p = cast(uint *)&d;
 
     return (p[1] & 0x7FF00000) == 0 && (p[0] || p[1] & 0x000FFFFF);
 }
@@ -210,8 +210,8 @@ unittest
 
 int issubnormal(real e)
 {
-    ushort* pe = (ushort *)&e;
-    long*   ps = (long *)&e;
+    ushort* pe = cast(ushort *)&e;
+    long*   ps = cast(long *)&e;
 
     return (pe[4] & 0x7FFF) == 0 && *ps > 0;
 }
@@ -230,8 +230,8 @@ unittest
 
 int isinf(real e)
 {
-    ushort* pe = (ushort *)&e;
-    ulong*  ps = (ulong *)&e;
+    ushort* pe = cast(ushort *)&e;
+    ulong*  ps = cast(ulong *)&e;
 
     return (pe[4] & 0x7FFF) == 0x7FFF &&
 	    *ps == 0x8000000000000000;
@@ -253,7 +253,7 @@ unittest
 
 int signbit(real e)
 {
-    ubyte* pe = (ubyte *)&e;
+    ubyte* pe = cast(ubyte *)&e;
 
 //printf("e = %Lg\n", e);
     return (pe[9] & 0x80) != 0;
@@ -276,8 +276,8 @@ unittest
 
 real copysign(real to, real from)
 {
-    ubyte* pto   = (ubyte *)&to;
-    ubyte* pfrom = (ubyte *)&from;
+    ubyte* pto   = cast(ubyte *)&to;
+    ubyte* pfrom = cast(ubyte *)&from;
 
     pto[9] &= 0x7F;
     pto[9] |= pfrom[9] & 0x80;
@@ -518,8 +518,8 @@ unittest
 
 real frexp(real value, out int eptr)
 {
-    ushort* vu = (ushort*)&value;
-    long* vl = (long*)&value;
+    ushort* vu = cast(ushort*)&value;
+    long* vl = cast(long*)&value;
     uint exp;
 
     // If exponent is non-zero
@@ -597,7 +597,7 @@ unittest
     {
 	real x = vals[i][0];
 	real e = vals[i][1];
-	int exp = (int)vals[i][2];
+	int exp = cast(int)vals[i][2];
 	int eptr;
 	real v = frexp(x, eptr);
 

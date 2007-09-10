@@ -44,7 +44,7 @@ extern (C) Array _adReverse(Array a, int szelem)
 	    if (szelem > 16)
 	    {
 		//version (Win32)
-		    tmp = (byte*) alloca(szelem);
+		    tmp = cast(byte*) alloca(szelem);
 		//else
 		    //tmp = new byte[szelem];
 	    }
@@ -168,7 +168,7 @@ extern (C) Array _adDup(Array a, int szelem)
 	int size;
 
 	size = a.length * szelem;
-	r.ptr = (void *) new byte[size];
+	r.ptr = cast(void *) new byte[size];
 	r.length = a.length;
 	memcpy(r.ptr, a.ptr, size);
 	return r;
@@ -205,7 +205,7 @@ extern (C) Array _adDupBit(Array a)
 	int size;
 
 	size = (a.length + 31) / 32;
-	r.ptr = (void *) new uint[size];
+	r.ptr = cast(void *) new uint[size];
 	r.length = a.length;
 	memcpy(r.ptr, a.ptr, size);
 	return r;
@@ -470,7 +470,7 @@ else
     len = a1.length;
     if (a2.length < len)
 	len = a2.length;
-    c = string.memcmp((char *)a1.ptr, (char *)a2.ptr, len);
+    c = string.memcmp(cast(char *)a1.ptr, cast(char *)a2.ptr, len);
     if (!c)
 	c = cast(int)a1.length - cast(int)a2.length;
     return c;
@@ -518,7 +518,7 @@ extern (C) int _adCmpBit(Array a1, Array a2)
     {	ubyte mask = 1 << j;
 	int c;
 
-	c = (int)(p1[i] & mask) - (int)(p2[i] & mask);
+	c = cast(int)(p1[i] & mask) - cast(int)(p2[i] & mask);
 	if (c)
 	    return c;
     }

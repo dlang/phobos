@@ -1,4 +1,4 @@
-// Copyright (C) 2000-2003 by Digital Mars, www.digitalmars.com
+// Copyright (C) 2000-2004 by Digital Mars, www.digitalmars.com
 // All Rights Reserved
 // Written by Walter Bright
 
@@ -94,6 +94,7 @@ typedef struct D_CRITICAL_SECTION
 
 static D_CRITICAL_SECTION *dcs_list;
 static D_CRITICAL_SECTION critical_section;
+static pthread_mutexattr_t _criticals_attr;
 static volatile int inited;
 
 void _d_criticalenter(D_CRITICAL_SECTION *dcs)
@@ -105,7 +106,7 @@ void _d_criticalenter(D_CRITICAL_SECTION *dcs)
 	{
 	    dcs->next = dcs_list;
 	    dcs_list = dcs;
-	    pthread_mutex_init(&dcs->cs, 0);
+	    pthread_mutex_init(&dcs->cs, &_criticals_attr);
 	}
 	pthread_mutex_unlock(&critical_section.cs);
     }
@@ -120,7 +121,11 @@ void _d_criticalexit(D_CRITICAL_SECTION *dcs)
 void _STI_critical_init()
 {
     if (!inited)
-    {	pthread_mutex_init(&critical_section.cs, 0);
+    {	pthread_mutexattr_init(&_criticals_attr);
+	pthread_mutexattr_settype(&_criticals_attr, PTHREAD_MUTEX_RECURSIVE_NP);
+
+	// The global critical section doesn't need to be recursive
+	pthread_mutex_init(&critical_section.cs, 0);
 	inited = 1;
     }
 }

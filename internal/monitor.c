@@ -1,6 +1,4 @@
-
-
-// Copyright (c) 2000-2003 by Digital Mars
+// Copyright (c) 2000-2004 by Digital Mars
 // All Rights Reserved
 // written by Walter Bright
 // www.digitalmars.com
@@ -91,17 +89,23 @@ void _d_monitorrelease(Object *h)
 
 #if linux
 
+// Includes attribute fixes from David Friedman's GDC port
+
 #include <pthread.h>
 
 #include "mars.h"
 
 static pthread_mutex_t _monitor_critsec;
+static pthread_mutexattr_t _monitors_attr;
 static volatile int inited;
 
 void _STI_monitor_staticctor()
 {
     if (!inited)
-    {	pthread_mutex_init(&_monitor_critsec, 0);
+    {
+	pthread_mutexattr_init(&_monitors_attr);
+	pthread_mutexattr_settype(&_monitors_attr, PTHREAD_MUTEX_RECURSIVE_NP);
+	pthread_mutex_init(&_monitor_critsec, 0);
 	inited = 1;
     }
 }
@@ -111,6 +115,7 @@ void _STD_monitor_staticdtor()
     if (inited)
     {	inited = 0;
 	pthread_mutex_destroy(&_monitor_critsec);
+	pthread_mutexattr_destroy(&_monitors_attr);
     }
 }
 
@@ -126,7 +131,7 @@ void _d_monitorenter(Object *h)
 	if (!h->monitor)	// if, in the meantime, another thread didn't set it
 	{
 	    h->monitor = (unsigned)cs;
-	    pthread_mutex_init(cs, 0);
+	    pthread_mutex_init(cs, & _monitors_attr);
 	    cs = NULL;
 	}
 	pthread_mutex_unlock(&_monitor_critsec);

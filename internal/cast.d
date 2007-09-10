@@ -14,7 +14,7 @@ Object _d_interface_cast(void* p, ClassInfo c)
 
     if (p)
     {
-	Interface *pi = **(Interface ***)p;
+	Interface *pi = **cast(Interface ***)p;
 
 	o = cast(Object)(p - pi.offset);
 	return _d_dynamic_cast(o, c);
@@ -106,7 +106,7 @@ void *_d_interface_vtbl(ClassInfo ic, Object o)
 	oic = oc.interfaces[i].classinfo;
 	if (oic === ic)
 	{
-	    return (void *)oc.interfaces[i].vtbl;
+	    return cast(void *)oc.interfaces[i].vtbl;
 	}
     }
     assert(0);

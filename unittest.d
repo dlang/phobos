@@ -46,7 +46,7 @@ printf("test2\n");
     a.sort;				// qsort
     std.date.getUTCtime();			// date
     StreamError se = new StreamError("");	// stream
-    isValidDchar((dchar)0);			// utf
+    isValidDchar(cast(dchar)0);			// utf
     std.uri.ascii2hex(0);			// uri
     std.zlib.adler32(0,null);			// D.zlib
 
@@ -62,7 +62,7 @@ printf("test2\n");
     printf("hello world\n");
     printf("args.length = %d\n", args.length);
     for (int i = 0; i < args.length; i++)
-	printf("args[%d] = '%s'\n", i, (char *)args[i]);
+	printf("args[%d] = '%s'\n", i, cast(char *)args[i]);
     printf("Success\n!");
     return 0;
 }

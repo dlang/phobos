@@ -20,7 +20,7 @@ void[] _d_arraycast(uint tsize, uint fsize, void[] a)
 	throw new Error("array cast misalignment");
     }
     length = nbytes / tsize;
-    *(uint *)&a = length;	// jam new length
+    *cast(uint *)&a = length;	// jam new length
     return a;
 }
 
@@ -58,7 +58,7 @@ void[] _d_arraycast_frombit(uint tsize, void[] a)
 	throw new Error("bit[] array cast misalignment");
     }
     length /= 8 * tsize;
-    *(uint *)&a = length;	// jam new length
+    *cast(uint *)&a = length;	// jam new length
     return a;
 }
 

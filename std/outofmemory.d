@@ -11,6 +11,6 @@ class OutOfMemory : Object
 
 extern (C) void _d_OutOfMemory()
 {
-    throw (OutOfMemory)(void *)OutOfMemory.classinfo.init;
+    throw cast(OutOfMemory)cast(void *)OutOfMemory.classinfo.init;
 }
 

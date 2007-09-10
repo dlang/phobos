@@ -32,7 +32,7 @@ extern (C) int _aApplycd1(char[] aa, dg_t dg)
 	    d = std.utf.decode(aa, i);
 	else
 	    i++;
-	result = dg((void *)&d);
+	result = dg(cast(void *)&d);
 	if (result)
 	    break;
     }
@@ -53,7 +53,7 @@ extern (C) int _aApplywd1(wchar[] aa, dg_t dg)
 	    d = std.utf.decode(aa, i);
 	else
 	    i++;
-	result = dg((void *)&d);
+	result = dg(cast(void *)&d);
 	if (result)
 	    break;
     }
@@ -78,7 +78,7 @@ extern (C) int _aApplycw1(char[] aa, dg_t dg)
 	    else
 	    {
 		w = (((d - 0x10000) >> 10) & 0x3FF) + 0xD800;
-		result = dg((void *)&w);
+		result = dg(cast(void *)&w);
 		if (result)
 		    break;
 		w = ((d - 0x10000) & 0x3FF) + 0xDC00;
@@ -86,7 +86,7 @@ extern (C) int _aApplycw1(char[] aa, dg_t dg)
 	}
 	else
 	    i++;
-	result = dg((void *)&w);
+	result = dg(cast(void *)&w);
 	if (result)
 	    break;
     }
@@ -114,7 +114,7 @@ extern (C) int _aApplywc1(wchar[] aa, dg_t dg)
 	    b = std.utf.toUTF8(buf, d);
 	    foreach (char c; b)
 	    {
-		result = dg((void *)&c);
+		result = dg(cast(void *)&c);
 		if (result)
 		    return result;
 	    }
@@ -124,7 +124,7 @@ extern (C) int _aApplywc1(wchar[] aa, dg_t dg)
 	{   c = cast(char)w;
 	    i++;
 	}
-	result = dg((void *)&c);
+	result = dg(cast(void *)&c);
 	if (result)
 	    break;
     }
@@ -147,7 +147,7 @@ extern (C) int _aApplydc1(dchar[] aa, dg_t dg)
 	    b = std.utf.toUTF8(buf, d);
 	    foreach (char c; b)
 	    {
-		result = dg((void *)&c);
+		result = dg(cast(void *)&c);
 		if (result)
 		    return result;
 	    }
@@ -157,7 +157,7 @@ extern (C) int _aApplydc1(dchar[] aa, dg_t dg)
 	{
 	    c = cast(char)d;
 	}
-	result = dg((void *)&c);
+	result = dg(cast(void *)&c);
 	if (result)
 	    break;
     }
@@ -177,12 +177,12 @@ extern (C) int _aApplydw1(dchar[] aa, dg_t dg)
 	else
 	{
 	    w = (((d - 0x10000) >> 10) & 0x3FF) + 0xD800;
-	    result = dg((void *)&w);
+	    result = dg(cast(void *)&w);
 	    if (result)
 		break;
 	    w = ((d - 0x10000) & 0x3FF) + 0xDC00;
 	}
-	result = dg((void *)&w);
+	result = dg(cast(void *)&w);
 	if (result)
 	    break;
     }
@@ -214,7 +214,7 @@ extern (C) int _aApplycd2(char[] aa, dg2_t dg)
 	}
 	else
 	    n = 1;
-	result = dg(&i, (void *)&d);
+	result = dg(&i, cast(void *)&d);
 	if (result)
 	    break;
     }
@@ -240,7 +240,7 @@ extern (C) int _aApplywd2(wchar[] aa, dg2_t dg)
 	}
 	else
 	    n = 1;
-	result = dg(&i, (void *)&d);
+	result = dg(&i, cast(void *)&d);
 	if (result)
 	    break;
     }
@@ -268,7 +268,7 @@ extern (C) int _aApplycw2(char[] aa, dg2_t dg)
 	    else
 	    {
 		w = (((d - 0x10000) >> 10) & 0x3FF) + 0xD800;
-		result = dg(&i, (void *)&w);
+		result = dg(&i, cast(void *)&w);
 		if (result)
 		    break;
 		w = ((d - 0x10000) & 0x3FF) + 0xDC00;
@@ -276,7 +276,7 @@ extern (C) int _aApplycw2(char[] aa, dg2_t dg)
 	}
 	else
 	    n = 1;
-	result = dg(&i, (void *)&w);
+	result = dg(&i, cast(void *)&w);
 	if (result)
 	    break;
     }
@@ -307,7 +307,7 @@ extern (C) int _aApplywc2(wchar[] aa, dg2_t dg)
 	    b = std.utf.toUTF8(buf, d);
 	    foreach (char c; b)
 	    {
-		result = dg(&i, (void *)&c);
+		result = dg(&i, cast(void *)&c);
 		if (result)
 		    return result;
 	    }
@@ -317,7 +317,7 @@ extern (C) int _aApplywc2(wchar[] aa, dg2_t dg)
 	{   c = cast(char)w;
 	    n = 1;
 	}
-	result = dg(&i, (void *)&c);
+	result = dg(&i, cast(void *)&c);
 	if (result)
 	    break;
     }
@@ -343,7 +343,7 @@ extern (C) int _aApplydc2(dchar[] aa, dg2_t dg)
 	    b = std.utf.toUTF8(buf, d);
 	    foreach (char c; b)
 	    {
-		result = dg(&i, (void *)&c);
+		result = dg(&i, cast(void *)&c);
 		if (result)
 		    return result;
 	    }
@@ -352,7 +352,7 @@ extern (C) int _aApplydc2(dchar[] aa, dg2_t dg)
 	else
 	{   c = cast(char)d;
 	}
-	result = dg(&i, (void *)&c);
+	result = dg(&i, cast(void *)&c);
 	if (result)
 	    break;
     }
@@ -372,12 +372,12 @@ extern (C) int _aApplydw2(dchar[] aa, dg2_t dg)
 	else
 	{
 	    w = (((d - 0x10000) >> 10) & 0x3FF) + 0xD800;
-	    result = dg(&i, (void *)&w);
+	    result = dg(&i, cast(void *)&w);
 	    if (result)
 		break;
 	    w = ((d - 0x10000) & 0x3FF) + 0xDC00;
 	}
-	result = dg(&i, (void *)&w);
+	result = dg(&i, cast(void *)&w);
 	if (result)
 	    break;
     }

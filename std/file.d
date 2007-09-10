@@ -72,13 +72,13 @@ void[] read(char[] name)
     {
 	wchar* namez = std.utf.toUTF16z(name);
 	h = CreateFileW(namez,GENERIC_READ,FILE_SHARE_READ,null,OPEN_EXISTING,
-	    FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,(HANDLE)null);
+	    FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,cast(HANDLE)null);
     }
     else
     {
 	char* namez = toMBSz(name);
 	h = CreateFileA(namez,GENERIC_READ,FILE_SHARE_READ,null,OPEN_EXISTING,
-	    FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,(HANDLE)null);
+	    FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,cast(HANDLE)null);
     }
 
     if (h == INVALID_HANDLE_VALUE)
@@ -124,13 +124,13 @@ void write(char[] name, void[] buffer)
     {
 	wchar* namez = std.utf.toUTF16z(name);
 	h = CreateFileW(namez,GENERIC_WRITE,0,null,CREATE_ALWAYS,
-	    FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,(HANDLE)null);
+	    FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,cast(HANDLE)null);
     }
     else
     {
 	char* namez = toMBSz(name);
 	h = CreateFileA(namez,GENERIC_WRITE,0,null,CREATE_ALWAYS,
-	    FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,(HANDLE)null);
+	    FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,cast(HANDLE)null);
     }
     if (h == INVALID_HANDLE_VALUE)
 	goto err;
@@ -165,13 +165,13 @@ void append(char[] name, void[] buffer)
     {
 	wchar* namez = std.utf.toUTF16z(name);
 	h = CreateFileW(namez,GENERIC_WRITE,0,null,OPEN_ALWAYS,
-	    FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,(HANDLE)null);
+	    FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,cast(HANDLE)null);
     }
     else
     {
 	char* namez = toMBSz(name);
 	h = CreateFileA(namez,GENERIC_WRITE,0,null,OPEN_ALWAYS,
-	    FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,(HANDLE)null);
+	    FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,cast(HANDLE)null);
     }
     if (h == INVALID_HANDLE_VALUE)
 	goto err;
@@ -256,12 +256,12 @@ ulong getSize(char[] name)
 	resultl = filefindbuf.nFileSizeLow;
     }
 
-    if (findhndl == (HANDLE)-1)
+    if (findhndl == cast(HANDLE)-1)
     {
 	throw new FileException(name, GetLastError());
     }
     FindClose(findhndl);
-    return ((ulong)resulth << 32) + resultl;
+    return (cast(ulong)resulth << 32) + resultl;
 }
 
 
@@ -526,7 +526,7 @@ void[] read(char[] name)
     size = statbuf.st_size;
     buf = new byte[size];
 
-    numread = std.c.linux.linux.read(fd, (char*)buf, size);
+    numread = std.c.linux.linux.read(fd, cast(char*)buf, size);
     if (numread != size)
     {
         //printf("\tread error, errno = %d\n",getErrno());

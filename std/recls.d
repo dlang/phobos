@@ -122,23 +122,23 @@ public typedef recls_sint32_t   recls_rc_t;
 /// Returns non-zero if the given return code represents a failure condition.
 public recls_bool_t RECLS_FAILED(recls_rc_t rc)
 {
-    return (recls_bool_t)(rc < 0);
+    return cast(recls_bool_t)(rc < 0);
 }
 
 /// Returns non-zero if the given return code represents a success condition.
 public recls_bool_t RECLS_SUCCEEDED(recls_rc_t rc)
 {
-    return (recls_bool_t)!RECLS_FAILED(rc);
+    return cast(recls_bool_t)!RECLS_FAILED(rc);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 // Values
 
 /** General success code */
-public const recls_rc_t         RECLS_RC_OK             =   (recls_rc_t)(0);
+public const recls_rc_t         RECLS_RC_OK             =   cast(recls_rc_t)(0);
 
 /** Return code that indicates that there is no more data available from an otherwise valid search. */
-public const recls_rc_t         RECLS_RC_NO_MORE_DATA   =   (recls_rc_t)(-1004);
+public const recls_rc_t         RECLS_RC_NO_MORE_DATA   =   cast(recls_rc_t)(-1004);
 
 /// The flags used to moderate the recls search behaviour
 public enum RECLS_FLAG

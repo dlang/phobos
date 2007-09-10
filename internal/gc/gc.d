@@ -35,9 +35,12 @@ void getStats(out GCStats stats)      { _gc.getStats(stats); }
 extern (C)
 {
 
+void _d_monitorrelease(Object h);
+
+
 void gc_init()
 {
-    _gc = (GC *) std.c.stdlib.calloc(1, GC.size);
+    _gc = cast(GC *) std.c.stdlib.calloc(1, GC.size);
     _gc.initialize();
     //_gc.setStackBottom(_atopsp);
     _gc.scanStaticData();
@@ -55,7 +58,7 @@ Object _d_newclass(ClassInfo ci)
     debug(PRINTF) printf("_d_newclass(ci = %p)\n", ci);
     if (ci.flags & 1)			// if COM object
     {
-	p = (Object)std.c.stdlib.malloc(ci.init.length);
+	p = cast(Object)std.c.stdlib.malloc(ci.init.length);
 	if (!p)
 	    _d_OutOfMemory();
     }
@@ -70,22 +73,22 @@ Object _d_newclass(ClassInfo ci)
     {
 	printf("p = %p\n", p);
 	printf("ci = %p, ci.init = %p, len = %d\n", ci, ci.init, ci.init.length);
-	printf("vptr = %p\n", *(void **)ci.init);
-	printf("vtbl[0] = %p\n", (*(void ***)ci.init)[0]);
-	printf("vtbl[1] = %p\n", (*(void ***)ci.init)[1]);
-	printf("init[0] = %x\n", ((uint *)ci.init)[0]);
-	printf("init[1] = %x\n", ((uint *)ci.init)[1]);
-	printf("init[2] = %x\n", ((uint *)ci.init)[2]);
-	printf("init[3] = %x\n", ((uint *)ci.init)[3]);
-	printf("init[4] = %x\n", ((uint *)ci.init)[4]);
+	printf("vptr = %p\n", *cast(void **)ci.init);
+	printf("vtbl[0] = %p\n", (*cast(void ***)ci.init)[0]);
+	printf("vtbl[1] = %p\n", (*cast(void ***)ci.init)[1]);
+	printf("init[0] = %x\n", (cast(uint *)ci.init)[0]);
+	printf("init[1] = %x\n", (cast(uint *)ci.init)[1]);
+	printf("init[2] = %x\n", (cast(uint *)ci.init)[2]);
+	printf("init[3] = %x\n", (cast(uint *)ci.init)[3]);
+	printf("init[4] = %x\n", (cast(uint *)ci.init)[4]);
     }
 
 
     // Initialize it
-    ((byte*)p)[0 .. ci.init.length] = ci.init[];
+    (cast(byte*)p)[0 .. ci.init.length] = ci.init[];
 
     //printf("initialization done\n");
-    return (Object)p;
+    return cast(Object)p;
 }
 
 extern (D) alias void (*fp_t)(Object);		// generic function pointer
@@ -94,7 +97,7 @@ void _d_delinterface(void** p)
 {
     if (*p)
     {
-	Interface *pi = **(Interface ***)*p;
+	Interface *pi = **cast(Interface ***)*p;
 	Object o;
 
 	o = cast(Object)(*p - pi.offset);
@@ -110,21 +113,16 @@ void _d_delclass(Object *p)
 	debug (PRINTF) printf("_d_delclass(%p)\n", *p);
 	version(0)
 	{
-	    ClassInfo **pc = (ClassInfo **)*p;
+	    ClassInfo **pc = cast(ClassInfo **)*p;
 	    if (*pc)
 	    {
 		ClassInfo c = **pc;
 
 		if (c.deallocator)
 		{
-		    if (c.destructor)
-		    {
-			fp_t fp = (fp_t)c.destructor;
-			(*fp)(*p);		// call destructor
-		    }
-		    fp_t fp = (fp_t)c.deallocator;
+		    _d_callfinalizer(*p);
+		    fp_t fp = cast(fp_t)c.deallocator;
 		    (*fp)(*p);			// call deallocator
-		    *pc = null;			// zero vptr
 		    *p = null;
 		    return;
 		}
@@ -148,7 +146,7 @@ ulong _d_new(uint length, uint size)
 	p = _gc.malloc(length * size);
 	debug(PRINTF) printf(" p = %p\n", p);
 	memset(p, 0, length * size);
-	result = (ulong)length + ((ulong)(uint)p << 32);
+	result = cast(ulong)length + (cast(ulong)cast(uint)p << 32);
     }
     return result;
 }
@@ -174,7 +172,7 @@ ulong _d_newarrayi(uint length, uint size, ...)
 		memcpy(p + u * size, q, size);
 	    }
 	}
-	result = (ulong)length + ((ulong)(uint)p << 32);
+	result = cast(ulong)length + (cast(ulong)cast(uint)p << 32);
     }
     return result;
 }
@@ -194,7 +192,7 @@ ulong _d_newbitarray(uint length, bit value)
 	p = _gc.malloc(size);
 	debug(PRINTF) printf(" p = %p\n", p);
 	memset(p, fill, size);
-	result = (ulong)length + ((ulong)(uint)p << 32);
+	result = cast(ulong)length + (cast(ulong)cast(uint)p << 32);
     }
     return result;
 }
@@ -221,11 +219,12 @@ void _d_delarray(Array *p)
 }
 
 
-void _d_delmemory(void* p)
+void _d_delmemory(void* *p)
 {
-    if (p)
+    if (*p)
     {
-	_gc.free(p);
+	_gc.free(*p);
+	*p = null;
     }
 }
 
@@ -244,7 +243,7 @@ void _d_callfinalizer(void *p)
     //printf("_d_callfinalizer(p = %p)\n", p);
     if (p)	// not necessary if called from gc
     {
-	ClassInfo **pc = (ClassInfo **)p;
+	ClassInfo **pc = cast(ClassInfo **)p;
 	if (*pc)
 	{
 	    ClassInfo c = **pc;
@@ -253,11 +252,13 @@ void _d_callfinalizer(void *p)
 	    {
 		if (c.destructor)
 		{
-		    fp_t fp = (fp_t)c.destructor;
-		    (*fp)((Object)p);		// call destructor
+		    fp_t fp = cast(fp_t)c.destructor;
+		    (*fp)(cast(Object)p);		// call destructor
 		}
 		c = c.base;
 	    } while (c);
+	    if ((cast(void**)p)[1])	// if monitor is not null
+		_d_monitorrelease(cast(Object)p);
 	    *pc = null;			// zero vptr
 	}
     }
@@ -297,7 +298,7 @@ byte[] _d_arraysetlength(uint newlength, uint sizeelem, Array *p)
 		uint cap = _gc.capacity(p.data);
 		if (cap < newsize)
 		{
-		    newdata = (byte *)_gc.malloc(newsize);
+		    newdata = cast(byte *)_gc.malloc(newsize);
 		    newdata[0 .. size] = p.data[0 .. size];
 		}
 		newdata[size .. newsize] = 0;
@@ -305,7 +306,7 @@ byte[] _d_arraysetlength(uint newlength, uint sizeelem, Array *p)
 	}
 	else
 	{
-	    newdata = (byte *)_gc.calloc(newsize, 1);
+	    newdata = cast(byte *)_gc.calloc(newsize, 1);
 	}
     }
     else
@@ -344,7 +345,7 @@ bit[] _d_arraysetlengthb(uint newlength, Array *p)
 		uint cap = _gc.capacity(p.data);
 		if (cap < newsize)
 		{
-		    newdata = (byte *)_gc.malloc(newsize);
+		    newdata = cast(byte *)_gc.malloc(newsize);
 		    newdata[0 .. size] = p.data[0 .. size];
 		}
 		newdata[size .. newsize] = 0;
@@ -352,7 +353,7 @@ bit[] _d_arraysetlengthb(uint newlength, Array *p)
 	}
 	else
 	{
-	    newdata = (byte *)_gc.calloc(newsize, 1);
+	    newdata = cast(byte *)_gc.calloc(newsize, 1);
 	}
     }
     else
@@ -362,7 +363,7 @@ bit[] _d_arraysetlengthb(uint newlength, Array *p)
 
     p.data = newdata;
     p.length = newlength;
-    return ((bit *)newdata)[0 .. newlength];
+    return (cast(bit *)newdata)[0 .. newlength];
 }
 
 /****************************************
@@ -380,7 +381,7 @@ Array _d_arrayappend(Array *px, byte[] y, uint size)
     if (newlength * size > cap)
     {   byte* newdata;
 
-	newdata = (byte *)_gc.malloc(newlength * size);
+	newdata = cast(byte *)_gc.malloc(newlength * size);
 	memcpy(newdata, px.data, length * size);
 	px.data = newdata;
     }
@@ -399,14 +400,14 @@ byte[] _d_arrayappendc(inout byte[] x, in uint size, ...)
     if (newlength * size > cap)
     {   byte* newdata;
 
-	newdata = (byte *)_gc.malloc(newlength * size);
+	newdata = cast(byte *)_gc.malloc(newlength * size);
 	memcpy(newdata, x, length * size);
-	((void **)(&x))[1] = newdata;
+	(cast(void **)(&x))[1] = newdata;
     }
-    byte *argp = (byte *)(&size + 1);
+    byte *argp = cast(byte *)(&size + 1);
 
-    *(int *)&x = newlength;
-    ((byte *)x)[length * size .. newlength * size] = argp[0 .. size];
+    *cast(int *)&x = newlength;
+    (cast(byte *)x)[length * size .. newlength * size] = argp[0 .. size];
     return x;
 
 /+
@@ -419,11 +420,11 @@ byte[] _d_arrayappendc(inout byte[] x, in uint size, ...)
     a = new byte[length * size];
     memcpy(a, x, x.length * size);
     argp = &size + 1;
-    //printf("*argp = %llx\n", *(long *)argp);
+    //printf("*argp = %llx\n", *cast(long *)argp);
     memcpy(&a[x.length * size], argp, size);
-    //printf("a[0] = %llx\n", *(long *)&a[0]);
-    *(int *)&a = length;	// jam length
-    //printf("a[0] = %llx\n", *(long *)&a[0]);
+    //printf("a[0] = %llx\n", *cast(long *)&a[0]);
+    *cast(int *)&a = length;	// jam length
+    //printf("a[0] = %llx\n", *cast(long *)&a[0]);
     x = a;
     return a;
 +/

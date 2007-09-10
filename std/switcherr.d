@@ -23,7 +23,7 @@ class SwitchError : Object
 
     void print()
     {
-	printf("Switch Default %s(%u)\n", (char *)filename, linnum);
+	printf("Switch Default %s(%u)\n", cast(char *)filename, linnum);
     }
 }
 
@@ -34,7 +34,7 @@ class SwitchError : Object
 
 extern (C) static void _d_switch_error(char[] filename, uint line)
 {
-    //printf("_d_switch_error(%s, %d)\n", (char *)filename, line);
+    //printf("_d_switch_error(%s, %d)\n", cast(char *)filename, line);
     SwitchError a = new SwitchError(filename, line);
     //printf("assertion %p created\n", a);
     throw a;

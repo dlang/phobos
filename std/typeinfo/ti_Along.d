@@ -6,7 +6,7 @@ private import std.string;
 class TypeInfo_Al : TypeInfo
 {
     uint getHash(void *p)
-    {	long[] s = *(long[]*)p;
+    {	long[] s = *cast(long[]*)p;
 	uint len = s.length;
 	long *str = s;
 	uint hash = 0;
@@ -24,17 +24,17 @@ class TypeInfo_Al : TypeInfo
 
     int equals(void *p1, void *p2)
     {
-	long[] s1 = *(long[]*)p1;
-	long[] s2 = *(long[]*)p2;
+	long[] s1 = *cast(long[]*)p1;
+	long[] s2 = *cast(long[]*)p2;
 
 	return s1.length == s2.length &&
-	       memcmp((void *)s1, (void *)s2, s1.length * long.size) == 0;
+	       memcmp(cast(void *)s1, cast(void *)s2, s1.length * long.size) == 0;
     }
 
     int compare(void *p1, void *p2)
     {
-	long[] s1 = *(long[]*)p1;
-	long[] s2 = *(long[]*)p2;
+	long[] s1 = *cast(long[]*)p1;
+	long[] s2 = *cast(long[]*)p2;
 	uint len = s1.length;
 
 	if (s2.length < len)

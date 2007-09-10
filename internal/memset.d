@@ -70,7 +70,7 @@ void *_memsetn(void *p, void *value, int count, int sizelem)
     for (i = 0; i < count; i++)
     {
 	memcpy(p, value, sizelem);
-	p = (void *)((char *)p + sizelem);
+	p = cast(void *)(cast(char *)p + sizelem);
     }
     return pstart;
 }

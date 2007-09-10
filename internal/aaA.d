@@ -160,7 +160,7 @@ void *_aaGet(aaA*[] *aa, TypeInfo keyti, int valuesize, ...)
     }
     body
     {
-	void *pkey = (void *)(&valuesize + 1);
+	void *pkey = cast(void *)(&valuesize + 1);
 	uint key_hash;
 	uint i;
 	aaA *e;
@@ -197,12 +197,12 @@ void *_aaGet(aaA*[] *aa, TypeInfo keyti, int valuesize, ...)
 
 	// Not found, create new elem
 	//printf("create new one\n");
-	e = (aaA *) (void*) new byte[aaA.size + keysize + valuesize];
+	e = cast(aaA *) cast(void*) new byte[aaA.size + keysize + valuesize];
 	memcpy(e + 1, pkey, keysize);
 	e.hash = key_hash;
 	*pe = e;
     Lret:
-	return (void *)(e + 1) + keysize;
+	return cast(void *)(e + 1) + keysize;
     }
 
 /*************************************************
@@ -222,7 +222,7 @@ int _aaIn(aaA*[] aa, TypeInfo keyti, ...)
     }
     body
     {
-	void *pkey = (void *)(&keyti + 1);
+	void *pkey = cast(void *)(&keyti + 1);
 	uint key_hash;
 	uint i;
 	aaA *e;
@@ -262,7 +262,7 @@ int _aaIn(aaA*[] aa, TypeInfo keyti, ...)
 
 void _aaDel(aaA*[] aa, TypeInfo keyti, ...)
     {
-	void *pkey = (void *)(&keyti + 1);
+	void *pkey = cast(void *)(&keyti + 1);
 	uint key_hash;
 	uint i;
 	aaA *e;
@@ -347,7 +347,7 @@ void _aaValues_x(aaA *e, void *ptr, inout uint resi, uint k, uint v)
     {
 	do
 	{
-	    memcpy(ptr + resi * v, (byte*)e + aaA.size + k, v);
+	    memcpy(ptr + resi * v, cast(byte*)e + aaA.size + k, v);
 	    resi++;
 	    if (e.left)
 		_aaValues_x(e.left, ptr, resi, k, v);
@@ -510,7 +510,7 @@ int _aaApply(aaA*[] aa, int keysize, dg_t dg)
 	do
 	{
 	    //printf("treewalker(e = %p, dg = x%llx)\n", e, dg);
-	    result = dg((void *)(e + 1) + keysize);
+	    result = dg(cast(void *)(e + 1) + keysize);
 	    if (result)
 		break;
 	    if (e.right)
@@ -550,7 +550,7 @@ int _aaApply2(aaA*[] aa, int keysize, dg2_t dg)
 	do
 	{
 	    //printf("treewalker(e = %p, dg = x%llx)\n", e, dg);
-	    result = dg((void *)(e + 1), (void *)(e + 1) + keysize);
+	    result = dg(cast(void *)(e + 1), cast(void *)(e + 1) + keysize);
 	    if (result)
 		break;
 	    if (e.right)

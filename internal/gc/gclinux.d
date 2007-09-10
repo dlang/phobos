@@ -10,7 +10,7 @@ extern (C)
     // from <sys/mman.h>
     void* mmap(void* addr, uint len, int prot, int flags, int fd, uint offset);
     int munmap(void* addr, uint len);
-    const void* MAP_FAILED = (void*)-1;
+    const void* MAP_FAILED = cast(void*)-1;
 
     // from <bits/mman.h>
     enum { PROT_NONE = 0, PROT_READ = 1, PROT_WRITE = 2, PROT_EXEC = 4 }
@@ -84,6 +84,6 @@ void *os_query_stackBottom()
 
 void os_query_staticdataseg(void **base, uint *nbytes)
 {
-    *base = (void *)&__data_start;
-    *nbytes = (byte *)&_end - (byte *)&__data_start;
+    *base = cast(void *)&__data_start;
+    *nbytes = cast(byte *)&_end - cast(byte *)&__data_start;
 }

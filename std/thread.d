@@ -743,7 +743,7 @@ class Thread
 	allThreads[t.idx] = null;
 	t.idx = -1;
 	nthreads--;
-	return (void*)result;
+	return cast(void*)result;
     }
 
 
@@ -759,7 +759,7 @@ class Thread
 
 	t.state = TS.RUNNING;
 	t.id = pthread_self();
-	t.stackBottom = (void*)__libc_stack_end;
+	t.stackBottom = cast(void*)__libc_stack_end;
 	synchronized (threadLock)
 	{
 	    assert(!allThreads[0]);

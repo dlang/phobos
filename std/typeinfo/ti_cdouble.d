@@ -5,19 +5,19 @@ class TypeInfo_r : TypeInfo
 {
     uint getHash(void *p)
     {
-	return ((uint *)p)[0] + ((uint *)p)[1] +
-	       ((uint *)p)[2] + ((uint *)p)[3];
+	return (cast(uint *)p)[0] + (cast(uint *)p)[1] +
+	       (cast(uint *)p)[2] + (cast(uint *)p)[3];
     }
 
     int equals(void *p1, void *p2)
     {
-	return *(cdouble *)p1 == *(cdouble *)p2;
+	return *cast(cdouble *)p1 == *cast(cdouble *)p2;
     }
 
     int compare(void *p1, void *p2)
     {
-        cdouble a = *(cdouble *) p1;
-        cdouble b = *(cdouble *) p2;
+        cdouble a = *cast(cdouble *) p1;
+        cdouble b = *cast(cdouble *) p2;
         return a < b ? -1 : a > b ? 1 : 0;
     }
 
@@ -30,9 +30,9 @@ class TypeInfo_r : TypeInfo
     {
 	cdouble t;
 
-	t = *(cdouble *)p1;
-	*(cdouble *)p1 = *(cdouble *)p2;
-	*(cdouble *)p2 = t;
+	t = *cast(cdouble *)p1;
+	*cast(cdouble *)p1 = *cast(cdouble *)p2;
+	*cast(cdouble *)p2 = t;
     }
 }
 

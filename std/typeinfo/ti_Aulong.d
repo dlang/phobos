@@ -6,7 +6,7 @@ private import std.string;
 class TypeInfo_Am : TypeInfo
 {
     uint getHash(void *p)
-    {	ulong[] s = *(ulong[]*)p;
+    {	ulong[] s = *cast(ulong[]*)p;
 	uint len = s.length;
 	ulong *str = s;
 	uint hash = 0;
@@ -14,7 +14,7 @@ class TypeInfo_Am : TypeInfo
 	while (len)
 	{
 	    hash *= 9;
-	    hash += *(uint *)str;
+	    hash += *cast(uint *)str;
 	    str += 1;
 	    len -= 1;
 	}
@@ -24,17 +24,17 @@ class TypeInfo_Am : TypeInfo
 
     int equals(void *p1, void *p2)
     {
-	ulong[] s1 = *(ulong[]*)p1;
-	ulong[] s2 = *(ulong[]*)p2;
+	ulong[] s1 = *cast(ulong[]*)p1;
+	ulong[] s2 = *cast(ulong[]*)p2;
 
 	return s1.length == s2.length &&
-	       memcmp((void *)s1, (void *)s2, s1.length * ulong.size) == 0;
+	       memcmp(cast(void *)s1, cast(void *)s2, s1.length * ulong.size) == 0;
     }
 
     int compare(void *p1, void *p2)
     {
-	ulong[] s1 = *(ulong[]*)p1;
-	ulong[] s2 = *(ulong[]*)p2;
+	ulong[] s1 = *cast(ulong[]*)p1;
+	ulong[] s2 = *cast(ulong[]*)p2;
 	uint len = s1.length;
 
 	if (s2.length < len)

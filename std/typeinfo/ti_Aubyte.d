@@ -6,7 +6,7 @@ private import std.string;
 class TypeInfo_Ah : TypeInfo
 {
     uint getHash(void *p)
-    {	ubyte[] s = *(ubyte[]*)p;
+    {	ubyte[] s = *cast(ubyte[]*)p;
 	uint len = s.length;
 	ubyte *str = s;
 	uint hash = 0;
@@ -20,23 +20,23 @@ class TypeInfo_Ah : TypeInfo
 
 		case 1:
 		    hash *= 9;
-		    hash += *(ubyte *)str;
+		    hash += *cast(ubyte *)str;
 		    return hash;
 
 		case 2:
 		    hash *= 9;
-		    hash += *(ushort *)str;
+		    hash += *cast(ushort *)str;
 		    return hash;
 
 		case 3:
 		    hash *= 9;
-		    hash += (*(ushort *)str << 8) +
-			    ((ubyte *)str)[2];
+		    hash += (*cast(ushort *)str << 8) +
+			    (cast(ubyte *)str)[2];
 		    return hash;
 
 		default:
 		    hash *= 9;
-		    hash += *(uint *)str;
+		    hash += *cast(uint *)str;
 		    str += 4;
 		    len -= 4;
 		    break;
@@ -48,17 +48,17 @@ class TypeInfo_Ah : TypeInfo
 
     int equals(void *p1, void *p2)
     {
-	ubyte[] s1 = *(ubyte[]*)p1;
-	ubyte[] s2 = *(ubyte[]*)p2;
+	ubyte[] s1 = *cast(ubyte[]*)p1;
+	ubyte[] s2 = *cast(ubyte[]*)p2;
 
 	return s1.length == s2.length &&
-	       memcmp((ubyte *)s1, (ubyte *)s2, s1.length) == 0;
+	       memcmp(cast(ubyte *)s1, cast(ubyte *)s2, s1.length) == 0;
     }
 
     int compare(void *p1, void *p2)
     {
-	char[] s1 = *(char[]*)p1;
-	char[] s2 = *(char[]*)p2;
+	char[] s1 = *cast(char[]*)p1;
+	char[] s2 = *cast(char[]*)p2;
 
 	return std.string.cmp(s1, s2);
     }

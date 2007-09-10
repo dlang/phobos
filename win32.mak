@@ -61,7 +61,7 @@ OBJS= asserterror.obj deh.obj switch.obj complex.obj gcstats.obj \
 	qsort.obj math2.obj date.obj dateparse.obj thread.obj obj.obj \
 	iunknown.obj crc32.obj conv.obj arraycast.obj utf.obj uri.obj \
 	Czlib.obj Dzlib.obj zip.obj process.obj registry.obj recls.obj \
-	socket.obj socketstream.obj loader.obj \
+	socket.obj socketstream.obj loader.obj stdarg.obj \
 	ti_Aa.obj ti_Ag.obj ti_C.obj ti_int.obj ti_char.obj \
 	ti_wchar.obj ti_uint.obj ti_short.obj ti_ushort.obj \
 	ti_byte.obj ti_ubyte.obj ti_long.obj ti_ulong.obj ti_ptr.obj \
@@ -85,7 +85,8 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 	std\regexp.d std\random.d std\stream.d std\process.d std\recls.d \
 	std\socket.d std\socketstream.d std\loader.d
 
-SRC_STD_C= std\c\process.d std\c\stdlib.d std\c\time.d std\c\stdio.d std\c\math.d
+SRC_STD_C= std\c\process.d std\c\stdlib.d std\c\time.d std\c\stdio.d \
+	std\c\math.d std\c\stdarg.d
 
 SRC_TI=	\
 	std\typeinfo\ti_wchar.d std\typeinfo\ti_uint.d \
@@ -415,6 +416,11 @@ iunknown.obj : std\windows\iunknown.d
 
 registry.obj : std\windows\registry.d
 	$(DMD) -c $(DFLAGS) std\windows\registry.d
+
+### std\c
+
+stdarg.obj : std\c\stdarg.d
+	$(DMD) -c $(DFLAGS) std\c\stdarg.d
 
 ### etc
 

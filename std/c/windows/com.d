@@ -208,7 +208,7 @@ extern (Windows):
     {
 	if (*riid == IID_IUnknown)
 	{
-	    *ppv = (IUnknown)this;
+	    *ppv = cast(IUnknown)this;
 	    AddRef();
 	    return S_OK;
 	}
@@ -237,7 +237,7 @@ extern (Windows):
 
 	    return 0;
 	}
-	return (ULONG)lRef;
+	return cast(ULONG)lRef;
     }
 
     LONG count = 0;		// object reference count

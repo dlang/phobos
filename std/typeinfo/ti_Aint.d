@@ -6,7 +6,7 @@ private import std.string;
 class TypeInfo_Ai : TypeInfo
 {
     uint getHash(void *p)
-    {	int[] s = *(int[]*)p;
+    {	int[] s = *cast(int[]*)p;
 	uint len = s.length;
 	int *str = s;
 	uint hash = 0;
@@ -14,7 +14,7 @@ class TypeInfo_Ai : TypeInfo
 	while (len)
 	{
 	    hash *= 9;
-	    hash += *(uint *)str;
+	    hash += *cast(uint *)str;
 	    str++;
 	    len--;
 	}
@@ -24,17 +24,17 @@ class TypeInfo_Ai : TypeInfo
 
     int equals(void *p1, void *p2)
     {
-	int[] s1 = *(int[]*)p1;
-	int[] s2 = *(int[]*)p2;
+	int[] s1 = *cast(int[]*)p1;
+	int[] s2 = *cast(int[]*)p2;
 
 	return s1.length == s2.length &&
-	       memcmp((void *)s1, (void *)s2, s1.length * int.size) == 0;
+	       memcmp(cast(void *)s1, cast(void *)s2, s1.length * int.size) == 0;
     }
 
     int compare(void *p1, void *p2)
     {
-	int[] s1 = *(int[]*)p1;
-	int[] s2 = *(int[]*)p2;
+	int[] s1 = *cast(int[]*)p1;
+	int[] s2 = *cast(int[]*)p2;
 	uint len = s1.length;
 
 	if (s2.length < len)

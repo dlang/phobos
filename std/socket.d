@@ -1071,7 +1071,7 @@ class Socket
 	bit isAlive()
 	{
 		int type, typesize = type.sizeof;
-		return !getsockopt(sock, SOL_SOCKET, SO_TYPE, (char*)type, &typesize);
+		return !getsockopt(sock, SOL_SOCKET, SO_TYPE, cast(char*)type, &typesize);
 	}
 	
 	

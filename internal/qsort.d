@@ -52,7 +52,7 @@ extern (C) Array _adSort(Array a, TypeInfo ti)
   uint thresh;                  // size of _maxspan elements in bytes
   uint width = ti.tsize();
 
-  base = (byte *)a.ptr;
+  base = cast(byte *)a.ptr;
   thresh = _maxspan * width;             // init threshold
   sp = stack;                            // init stack pointer
   limit = base + a.length * width;	 // pointer past end of array
@@ -61,8 +61,8 @@ extern (C) Array _adSort(Array a, TypeInfo ti)
     while (limit - base > thresh)        // if more than _maxspan elements
     {
       //swap middle, base
-      ti.swap(((uint)(limit - base) >> 1) -
-           ((((uint)(limit - base) >> 1)) % width) + base, base);
+      ti.swap((cast(uint)(limit - base) >> 1) -
+           (((cast(uint)(limit - base) >> 1)) % width) + base, base);
 
       i = base + width;			// i scans from left to right
       j = limit - width;		// j scans from right to left
@@ -100,7 +100,7 @@ extern (C) Array _adSort(Array a, TypeInfo ti)
         limit = j;			// sort the left subarray
       }
       sp += 2;				// increment stack pointer
-      assert(sp < (byte**)stack + stack.length);
+      assert(sp < cast(byte**)stack + stack.length);
     }
 
     // Insertion sort on remaining subarray

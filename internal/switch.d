@@ -113,7 +113,7 @@ int _d_switch_string(char[][] table, char[] ca)
 		c = ca.length - pca.length;
 		if (c == 0)
 		{
-		    c = (byte)c1 - (byte)pca[0];
+		    c = cast(byte)c1 - cast(byte)pca[0];
 		    if (c == 0)
 		    {
 			c = memcmp(ca, pca, ca.length);
@@ -140,7 +140,7 @@ int _d_switch_string(char[][] table, char[] ca)
 
 unittest
 {
-    switch ((char []) "c")
+    switch (cast(char []) "c")
     {
          case "coo":
          default:
@@ -264,7 +264,7 @@ int _d_switch_ustring(wchar[][] table, wchar[] ca)
 
 unittest
 {
-    switch ((wchar []) "c")
+    switch (cast(wchar []) "c")
     {
          case "coo":
          default:

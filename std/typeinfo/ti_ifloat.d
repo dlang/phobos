@@ -5,17 +5,17 @@ class TypeInfo_o : TypeInfo
 {
     uint getHash(void *p)
     {
-	return *(uint *)p;
+	return *cast(uint *)p;
     }
 
     int equals(void *p1, void *p2)
     {
-	return *(ifloat *)p1 == *(ifloat *)p2;
+	return *cast(ifloat *)p1 == *cast(ifloat *)p2;
     }
 
     int compare(void *p1, void *p2)
     {
-	return cast(int)(*(float *)p1 - *(float *)p2);
+	return cast(int)(*cast(float *)p1 - *cast(float *)p2);
     }
 
     int tsize()
@@ -27,9 +27,9 @@ class TypeInfo_o : TypeInfo
     {
 	ifloat t;
 
-	t = *(ifloat *)p1;
-	*(ifloat *)p1 = *(ifloat *)p2;
-	*(ifloat *)p2 = t;
+	t = *cast(ifloat *)p1;
+	*cast(ifloat *)p1 = *cast(ifloat *)p2;
+	*cast(ifloat *)p2 = t;
     }
 }
 

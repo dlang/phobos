@@ -6,7 +6,7 @@ private import std.string;
 class TypeInfo_Au : TypeInfo
 {
     uint getHash(void *p)
-    {	wchar[] s = *(wchar[]*)p;
+    {	wchar[] s = *cast(wchar[]*)p;
 	uint len = s.length;
 	wchar *str = s;
 	uint hash = 0;
@@ -20,12 +20,12 @@ class TypeInfo_Au : TypeInfo
 
 		case 1:
 		    hash *= 9;
-		    hash += *(wchar *)str;
+		    hash += *cast(wchar *)str;
 		    return hash;
 
 		default:
 		    hash *= 9;
-		    hash += *(uint *)str;
+		    hash += *cast(uint *)str;
 		    str += 2;
 		    len -= 2;
 		    break;
@@ -37,17 +37,17 @@ class TypeInfo_Au : TypeInfo
 
     int equals(void *p1, void *p2)
     {
-	wchar[] s1 = *(wchar[]*)p1;
-	wchar[] s2 = *(wchar[]*)p2;
+	wchar[] s1 = *cast(wchar[]*)p1;
+	wchar[] s2 = *cast(wchar[]*)p2;
 
 	return s1.length == s2.length &&
-	       memcmp((void *)s1, (void *)s2, s1.length * wchar.size) == 0;
+	       memcmp(cast(void *)s1, cast(void *)s2, s1.length * wchar.size) == 0;
     }
 
     int compare(void *p1, void *p2)
     {
-	wchar[] s1 = *(wchar[]*)p1;
-	wchar[] s2 = *(wchar[]*)p2;
+	wchar[] s1 = *cast(wchar[]*)p1;
+	wchar[] s2 = *cast(wchar[]*)p2;
 	uint len = s1.length;
 
 	if (s2.length < len)

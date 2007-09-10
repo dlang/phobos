@@ -19,7 +19,7 @@ byte[] _d_arraycat(byte[] x, byte[] y, uint size)
     memcpy(a, x, x.length * size);
     //a[0 .. x.length * size] = x[];
     memcpy(&a[x.length * size], y, y.length * size);
-    *(int *)&a = length;	// jam length
+    *cast(int *)&a = length;	// jam length
     //a.length = length;
     return a;
 }
@@ -55,7 +55,7 @@ byte[] _d_arraycatn(uint size, uint n, ...)
 	}
     }
 
-    *(int *)&a = length;	// jam length
+    *cast(int *)&a = length;	// jam length
     //a.length = length;
     return a;
 }
@@ -68,10 +68,10 @@ byte[] _d_arraycopy(uint size, byte[] from, byte[] to)
     {
 	throw new Error("lengths don't match for array copy");
     }
-    else if ((byte *)to + to.length * size <= (byte *)from ||
-	(byte *)from + from.length * size <= (byte *)to)
+    else if (cast(byte *)to + to.length * size <= cast(byte *)from ||
+	cast(byte *)from + from.length * size <= cast(byte *)to)
     {
-	memcpy((byte *)to, (byte *)from, to.length * size);
+	memcpy(cast(byte *)to, cast(byte *)from, to.length * size);
     }
     else
     {
@@ -92,10 +92,10 @@ bit[] _d_arraycopybit(bit[] from, bit[] to)
     else
     {
 	nbytes = (to.length + 7) / 8;
-	if ((void *)to + nbytes <= (void *)from ||
-	    (void *)from + nbytes <= (void *)to)
+	if (cast(void *)to + nbytes <= cast(void *)from ||
+	    cast(void *)from + nbytes <= cast(void *)to)
 	{
-	    memcpy((void *)to, (void *)from, nbytes);
+	    memcpy(cast(void *)to, cast(void *)from, nbytes);
 	}
 	else
 	{

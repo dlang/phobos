@@ -166,7 +166,7 @@ struct MD5_CTX
       Encode (bits, cnt, 8);
 
       /* Pad out to 56 mod 64. */
-      index = ((uint)count >> 3) & (64 - 1);
+      index = (cast(uint)count >> 3) & (64 - 1);
       padLen = (index < 56) ? (56 - index) : (120 - index);
       update (PADDING[0 .. padLen]);
 
@@ -327,8 +327,8 @@ struct MD5_CTX
 	    }
 	    else
 	    {
-		output[i] = ((uint)input[j]) | (((uint)input[j+1]) << 8) |
-			(((uint)input[j+2]) << 16) | (((uint)input[j+3]) << 24);
+		output[i] = (cast(uint)input[j]) | ((cast(uint)input[j+1]) << 8) |
+			((cast(uint)input[j+2]) << 16) | ((cast(uint)input[j+3]) << 24);
 	    }
 	}
     }

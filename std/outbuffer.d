@@ -81,7 +81,7 @@ class OutBuffer
     void write(ushort w)
     {
 	reserve(ushort.size);
-	*(ushort *)&data[offset] = w;
+	*cast(ushort *)&data[offset] = w;
 	offset += ushort.size;
     }
 
@@ -90,14 +90,14 @@ class OutBuffer
     void write(wchar c)
     {
 	reserve(wchar.size);
-	*(wchar *)&data[offset] = c;
+	*cast(wchar *)&data[offset] = c;
 	offset += wchar.size;
     }
 
     void write(uint w)
     {
 	reserve(uint.size);
-	*(uint *)&data[offset] = w;
+	*cast(uint *)&data[offset] = w;
 	offset += uint.size;
     }
 
@@ -106,7 +106,7 @@ class OutBuffer
     void write(ulong l)
     {
 	reserve(ulong.size);
-	*(ulong *)&data[offset] = l;
+	*cast(ulong *)&data[offset] = l;
 	offset += ulong.size;
     }
 
@@ -115,21 +115,21 @@ class OutBuffer
     void write(float f)
     {
 	reserve(float.size);
-	*(float *)&data[offset] = f;
+	*cast(float *)&data[offset] = f;
 	offset += float.size;
     }
 
     void write(double f)
     {
 	reserve(double.size);
-	*(double *)&data[offset] = f;
+	*cast(double *)&data[offset] = f;
 	offset += double.size;
     }
 
     void write(real f)
     {
 	reserve(real.size);
-	*(real *)&data[offset] = f;
+	*cast(real *)&data[offset] = f;
 	offset += real.size;
     }
 
@@ -196,7 +196,7 @@ class OutBuffer
     char[] toString()
     {
 	//printf("OutBuffer.toString()\n");
-	return (char[])data[0 .. offset];
+	return cast(char[])data[0 .. offset];
     }
 
     /*****************************************
@@ -222,7 +222,7 @@ class OutBuffer
 		if (count != -1)
 		    break;
 		psize *= 2;
-		p = (char *) alloca(psize);	// buffer too small, try again with larger size
+		p = cast(char *) alloca(psize);	// buffer too small, try again with larger size
 	    }
 	    version(linux)
 	    {
@@ -238,7 +238,7 @@ class OutBuffer
 		    c.stdlib.free(p);
 		p = (char *) c.stdlib.malloc(psize);	// buffer too small, try again with larger size
 		+/
-		p = (char *) alloca(psize);	// buffer too small, try again with larger size
+		p = cast(char *) alloca(psize);	// buffer too small, try again with larger size
 	    }
 	}
 	write(p[0 .. count]);

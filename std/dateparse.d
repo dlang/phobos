@@ -30,7 +30,7 @@ struct DateParse
 	*this = DateParse.init;
 
 	//version (Win32)
-	    buffer = ((char *)alloca(s.length))[0 .. s.length];
+	    buffer = (cast(char *)alloca(s.length))[0 .. s.length];
 	//else
 	    //buffer = new char[s.length];
 
@@ -227,7 +227,7 @@ private:
 		    while (c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z')
 		    {
 			if (c < 'a')		// if upper case
-			    c += (uint)'a' - (uint)'A';	// to lower case
+			    c += cast(uint)'a' - cast(uint)'A';	// to lower case
 			buffer[bi] = c;
 			bi++;
 			do

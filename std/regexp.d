@@ -642,12 +642,12 @@ void printProgram(ubyte[] prog)
 		break;
 
 	    case REwchar:
-		printf("\tREwchar '%c'\n", *(wchar *)&prog[pc + 1]);
+		printf("\tREwchar '%c'\n", *cast(wchar *)&prog[pc + 1]);
 		pc += 1 + wchar.size;
 		break;
 
 	    case REiwchar:
-		printf("\tREiwchar '%c'\n", *(wchar *)&prog[pc + 1]);
+		printf("\tREiwchar '%c'\n", *cast(wchar *)&prog[pc + 1]);
 		pc += 1 + wchar.size;
 		break;
 
@@ -657,28 +657,28 @@ void printProgram(ubyte[] prog)
 		break;
 
 	    case REstring:
-		len = *(uint *)&prog[pc + 1];
+		len = *cast(uint *)&prog[pc + 1];
 		printf("\tREstring x%x, '%.*s'\n", len,
 			(&prog[pc + 1 + uint.size])[0 .. len]);
 		pc += 1 + uint.size + len * tchar.size;
 		break;
 
 	    case REistring:
-		len = *(uint *)&prog[pc + 1];
+		len = *cast(uint *)&prog[pc + 1];
 		printf("\tREistring x%x, '%.*s'\n", len,
 			(&prog[pc + 1 + uint.size])[0 .. len]);
 		pc += 1 + uint.size + len * tchar.size;
 		break;
 
 	    case REtestbit:
-		pu = (ushort *)&prog[pc + 1];
+		pu = cast(ushort *)&prog[pc + 1];
 		printf("\tREtestbit %d, %d\n", pu[0], pu[1]);
 		len = pu[1];
 		pc += 1 + 2 * ushort.size + len;
 		break;
 
 	    case REbit:
-		pu = (ushort *)&prog[pc + 1];
+		pu = cast(ushort *)&prog[pc + 1];
 		len = pu[1];
 		printf("\tREbit cmax=%02x, len=%d:", pu[0], len);
 		for (n = 0; n < len; n++)
@@ -688,21 +688,21 @@ void printProgram(ubyte[] prog)
 		break;
 
 	    case REnotbit:
-		pu = (ushort *)&prog[pc + 1];
+		pu = cast(ushort *)&prog[pc + 1];
 		printf("\tREnotbit %d, %d\n", pu[0], pu[1]);
 		len = pu[1];
 		pc += 1 + 2 * ushort.size + len;
 		break;
 
 	    case RErange:
-		len = *(uint *)&prog[pc + 1];
+		len = *cast(uint *)&prog[pc + 1];
 		printf("\tRErange %d\n", len);
 		// BUG: REAignoreCase?
 		pc += 1 + uint.size + len;
 		break;
 
 	    case REnotrange:
-		len = *(uint *)&prog[pc + 1];
+		len = *cast(uint *)&prog[pc + 1];
 		printf("\tREnotrange %d\n", len);
 		// BUG: REAignoreCase?
 		pc += 1 + uint.size + len;
@@ -719,13 +719,13 @@ void printProgram(ubyte[] prog)
 		break;
 
 	    case REor:
-		len = *(uint *)&prog[pc + 1];
+		len = *cast(uint *)&prog[pc + 1];
 		printf("\tREor %d, pc=>%d\n", len, pc + 1 + uint.size + len);
 		pc += 1 + uint.size;
 		break;
 
 	    case REgoto:
-		len = *(uint *)&prog[pc + 1];
+		len = *cast(uint *)&prog[pc + 1];
 		printf("\tREgoto %d, pc=>%d\n", len, pc + 1 + uint.size + len);
 		pc += 1 + uint.size;
 		break;
@@ -738,7 +738,7 @@ void printProgram(ubyte[] prog)
 	    case REnm:
 	    case REnmq:
 		// len, n, m, ()
-		puint = (uint *)&prog[pc + 1];
+		puint = cast(uint *)&prog[pc + 1];
 		len = puint[0];
 		n = puint[1];
 		m = puint[2];
@@ -750,7 +750,7 @@ void printProgram(ubyte[] prog)
 
 	    case REparen:
 		// len, n, ()
-		puint = (uint *)&prog[pc + 1];
+		puint = cast(uint *)&prog[pc + 1];
 		len = puint[0];
 		n = puint[1];
 		printf("\tREparen len=%d n=%d, pc=>%d\n", len, n, pc + 1 + uint.size * 2 + len);
@@ -868,8 +868,8 @@ int trymatch(int pc, int pcend)
 		c2 = input[src];
 		if (c1 != c2)
 		{
-		    if (islower((tchar)c2))
-			c2 = std.ctype.toupper((tchar)c2);
+		    if (islower(cast(tchar)c2))
+			c2 = std.ctype.toupper(cast(tchar)c2);
 		    else
 			goto Lnomatch;
 		    if (c1 != c2)
@@ -880,20 +880,20 @@ int trymatch(int pc, int pcend)
 		break;
 
 	    case REwchar:
-		debug(regexp) printf("\tREwchar '%c', src = '%c'\n", *((wchar *)&program[pc + 1]), input[src]);
+		debug(regexp) printf("\tREwchar '%c', src = '%c'\n", *(cast(wchar *)&program[pc + 1]), input[src]);
 		if (src == input.length)
 		    goto Lnomatch;
-		if (*((wchar *)&program[pc + 1]) != input[src])
+		if (*(cast(wchar *)&program[pc + 1]) != input[src])
 		    goto Lnomatch;
 		src++;
 		pc += 1 + wchar.size;
 		break;
 
 	    case REiwchar:
-		debug(regexp) printf("\tREiwchar '%c', src = '%c'\n", *((wchar *)&program[pc + 1]), input[src]);
+		debug(regexp) printf("\tREiwchar '%c', src = '%c'\n", *(cast(wchar *)&program[pc + 1]), input[src]);
 		if (src == input.length)
 		    goto Lnomatch;
-		c1 = *((wchar *)&program[pc + 1]);
+		c1 = *(cast(wchar *)&program[pc + 1]);
 		c2 = input[src];
 		if (c1 != c2)
 		{
@@ -912,14 +912,14 @@ int trymatch(int pc, int pcend)
 		debug(regexp) printf("\tREanychar\n");
 		if (src == input.length)
 		    goto Lnomatch;
-		if (!(attributes & REA.dotmatchlf) && input[src] == (tchar)'\n')
+		if (!(attributes & REA.dotmatchlf) && input[src] == cast(tchar)'\n')
 		    goto Lnomatch;
 		src++;
 		pc++;
 		break;
 
 	    case REstring:
-		len = *(uint *)&program[pc + 1];
+		len = *cast(uint *)&program[pc + 1];
 		debug(regexp) printf("\tREstring x%x, '%.*s'\n", len,
 			(&program[pc + 1 + uint.size])[0 .. len]);
 		if (src + len > input.length)
@@ -931,7 +931,7 @@ int trymatch(int pc, int pcend)
 		break;
 
 	    case REistring:
-		len = *(uint *)&program[pc + 1];
+		len = *cast(uint *)&program[pc + 1];
 		debug(regexp) printf("\tREistring x%x, '%.*s'\n", len,
 			(&program[pc + 1 + uint.size])[0 .. len]);
 		if (src + len > input.length)
@@ -952,7 +952,7 @@ int trymatch(int pc, int pcend)
 		break;
 
 	    case REtestbit:
-		pu = ((ushort *)&program[pc + 1]);
+		pu = (cast(ushort *)&program[pc + 1]);
 		debug(regexp) printf("\tREtestbit %d, %d, '%c', x%02x\n",
 		    pu[0], pu[1], input[src], input[src]);
 		if (src == input.length)
@@ -967,7 +967,7 @@ int trymatch(int pc, int pcend)
 		break;
 
 	    case REbit:
-		pu = ((ushort *)&program[pc + 1]);
+		pu = (cast(ushort *)&program[pc + 1]);
 		debug(regexp) printf("\tREbit %d, %d, '%c'\n",
 		    pu[0], pu[1], input[src]);
 		if (src == input.length)
@@ -983,7 +983,7 @@ int trymatch(int pc, int pcend)
 		break;
 
 	    case REnotbit:
-		pu = ((ushort *)&program[pc + 1]);
+		pu = (cast(ushort *)&program[pc + 1]);
 		debug(regexp) printf("\tREnotbit %d, %d, '%c'\n",
 		    pu[0], pu[1], input[src]);
 		if (src == input.length)
@@ -998,24 +998,24 @@ int trymatch(int pc, int pcend)
 		break;
 
 	    case RErange:
-		len = *(uint *)&program[pc + 1];
+		len = *cast(uint *)&program[pc + 1];
 		debug(regexp) printf("\tRErange %d\n", len);
 		if (src == input.length)
 		    goto Lnomatch;
 		// BUG: REA.ignoreCase?
-		if (memchr((char*)&program[pc + 1 + uint.size], input[src], len) == null)
+		if (memchr(cast(char*)&program[pc + 1 + uint.size], input[src], len) == null)
 		    goto Lnomatch;
 		src++;
 		pc += 1 + uint.size + len;
 		break;
 
 	    case REnotrange:
-		len = *(uint *)&program[pc + 1];
+		len = *cast(uint *)&program[pc + 1];
 		debug(regexp) printf("\tREnotrange %d\n", len);
 		if (src == input.length)
 		    goto Lnomatch;
 		// BUG: REA.ignoreCase?
-		if (memchr((char*)&program[pc + 1 + uint.size], input[src], len) != null)
+		if (memchr(cast(char*)&program[pc + 1 + uint.size], input[src], len) != null)
 		    goto Lnomatch;
 		src++;
 		pc += 1 + uint.size + len;
@@ -1049,7 +1049,7 @@ int trymatch(int pc, int pcend)
 		break;
 
 	    case REor:
-		len = ((uint *)&program[pc + 1])[0];
+		len = (cast(uint *)&program[pc + 1])[0];
 		debug(regexp) printf("\tREor %d\n", len);
 		pop = pc + 1 + uint.size;
 		ss = src;
@@ -1087,7 +1087,7 @@ int trymatch(int pc, int pcend)
 
 	    case REgoto:
 		debug(regexp) printf("\tREgoto\n");
-		len = ((uint *)&program[pc + 1])[0];
+		len = (cast(uint *)&program[pc + 1])[0];
 		pc += 1 + uint.size + len;
 		break;
 
@@ -1125,11 +1125,11 @@ int trymatch(int pc, int pcend)
 	    case REnm:
 	    case REnmq:
 		// len, n, m, ()
-		puint = (uint *)&program[pc + 1];
+		puint = cast(uint *)&program[pc + 1];
 		len = puint[0];
 		n = puint[1];
 		m = puint[2];
-		debug(regexp) printf("\tREnm%s len=%d, n=%u, m=%u\n", (program[pc] == REnmq) ? (char*)"q" : (char*)"", len, n, m);
+		debug(regexp) printf("\tREnm%s len=%d, n=%u, m=%u\n", (program[pc] == REnmq) ? cast(char*)"q" : cast(char*)"", len, n, m);
 		pop = pc + 1 + uint.size * 3;
 		for (count = 0; count < n; count++)
 		{
@@ -1139,7 +1139,7 @@ int trymatch(int pc, int pcend)
 		if (!psave && count < m)
 		{
 		    //version (Win32)
-			psave = (regmatch_t *)alloca((re_nsub + 1) * regmatch_t.size);
+			psave = cast(regmatch_t *)alloca((re_nsub + 1) * regmatch_t.size);
 		    //else
 			//psave = new regmatch_t[re_nsub + 1];
 		}
@@ -1214,7 +1214,7 @@ int trymatch(int pc, int pcend)
 	    case REparen:
 		// len, ()
 		debug(regexp) printf("\tREparen\n");
-		puint = (uint *)&program[pc + 1];
+		puint = cast(uint *)&program[pc + 1];
 		len = puint[0];
 		n = puint[1];
 		pop = pc + 1 + uint.size * 2;
@@ -1237,8 +1237,8 @@ int trymatch(int pc, int pcend)
 		    c1 = input[src - 1];
 		    c2 = input[src];
 		    if (!(
-			  (isword((tchar)c1) && !isword((tchar)c2)) ||
-			  (!isword((tchar)c1) && isword((tchar)c2))
+			  (isword(cast(tchar)c1) && !isword(cast(tchar)c2)) ||
+			  (!isword(cast(tchar)c1) && isword(cast(tchar)c2))
 			 )
 		       )
 			goto Lnomatch;
@@ -1253,8 +1253,8 @@ int trymatch(int pc, int pcend)
 		c1 = input[src - 1];
 		c2 = input[src];
 		if (
-		    (isword((tchar)c1) && !isword((tchar)c2)) ||
-		    (!isword((tchar)c1) && isword((tchar)c2))
+		    (isword(cast(tchar)c1) && !isword(cast(tchar)c2)) ||
+		    (!isword(cast(tchar)c1) && isword(cast(tchar)c2))
 		   )
 		    goto Lnomatch;
 		pc++;
@@ -1379,15 +1379,15 @@ int parseRegexp()
 		p++;
 		gotooffset = buf.offset;
 		buf.write(REgoto);
-		buf.write((uint)0);
+		buf.write(cast(uint)0);
 		len1 = buf.offset - offset;
 		buf.spread(offset, 1 + uint.size);
 		gotooffset += 1 + uint.size;
 		parseRegexp();
 		len2 = buf.offset - (gotooffset + 1 + uint.size);
 		buf.data[offset] = REor;
-		((uint *)&buf.data[offset + 1])[0] = len1;
-		((uint *)&buf.data[gotooffset + 1])[0] = len2;
+		(cast(uint *)&buf.data[offset + 1])[0] = len1;
+		(cast(uint *)&buf.data[gotooffset + 1])[0] = len2;
 		break;
 
 	    default:
@@ -1489,7 +1489,7 @@ int parsePiece()
 	    len = buf.offset - offset;
 	    buf.spread(offset, 1 + uint.size * 3);
 	    buf.data[offset] = op;
-	    uint* puint = (uint *)&buf.data[offset + 1];
+	    uint* puint = cast(uint *)&buf.data[offset + 1];
 	    puint[0] = len;
 	    puint[1] = n;
 	    puint[2] = m;
@@ -1526,11 +1526,11 @@ int parseAtom()
 		p++;
 		buf.write(REparen);
 		offset = buf.offset;
-		buf.write((uint)0);		// reserve space for length
+		buf.write(cast(uint)0);		// reserve space for length
 		buf.write(re_nsub);
 		re_nsub++;
 		parseRegexp();
-		*(uint *)&buf.data[offset] =
+		*cast(uint *)&buf.data[offset] =
 		    buf.offset - (offset + uint.size * 2);
 		if (p == pattern.length || pattern[p] != ')')
 		{
@@ -1601,7 +1601,7 @@ int parseAtom()
 			c -= '1';
 			if (c < re_nsub)
 			{   buf.write(REbackref);
-			    buf.write((ubyte)c);
+			    buf.write(cast(ubyte)c);
 			}
 			else
 			{   error("no matching back reference");
@@ -1687,7 +1687,7 @@ int parseAtom()
 		 Lchar:
 		    debug(regexp) printf("It's an REchar '%c'\n", c);
 		    buf.write(op);
-		    buf.write((char)c);
+		    buf.write(cast(char)c);
 		}
 		break;
 	}
@@ -1725,7 +1725,7 @@ class Range
 		buf.fill0(b - maxb + 1);
 		base = &buf.data[u];
 		maxb = b + 1;
-		bits = ((bit*)this.base)[0 .. maxc + 1];
+		bits = (cast(bit*)this.base)[0 .. maxc + 1];
 	    }
 	}
     }
@@ -1834,13 +1834,13 @@ int parseRange()
 
 		    case 'w':
 			for (i = 0; i <= cmax; i++)
-			    if (isword((tchar)i))
+			    if (isword(cast(tchar)i))
 				r.bits[i] = 1;
 			goto Lrs;
 
 		    case 'W':
 			for (i = 1; i <= cmax; i++)
-			    if (!isword((tchar)i))
+			    if (!isword(cast(tchar)i))
 				r.bits[i] = 1;
 			goto Lrs;
 
@@ -1904,8 +1904,8 @@ int parseRange()
 	break;
     }
     //printf("maxc = %d, maxb = %d\n",r.maxc,r.maxb);
-    ((ushort *)&buf.data[offset])[0] = (ushort)r.maxc;
-    ((ushort *)&buf.data[offset])[1] = (ushort)r.maxb;
+    (cast(ushort *)&buf.data[offset])[0] = cast(ushort)r.maxc;
+    (cast(ushort *)&buf.data[offset])[1] = cast(ushort)r.maxb;
     if (attributes & REA.ignoreCase)
     {
 	// BUG: what about wchar?
@@ -2115,8 +2115,8 @@ void optimize()
 		    debug(regexp) printf("\tfilter built\n");
 		    buf.spread(offset, 1 + 4 + r.maxb);
 		    buf.data[offset] = REtestbit;
-		    ((ushort *)&buf.data[offset + 1])[0] = (ushort)r.maxc;
-		    ((ushort *)&buf.data[offset + 1])[1] = (ushort)r.maxb;
+		    (cast(ushort *)&buf.data[offset + 1])[0] = cast(ushort)r.maxc;
+		    (cast(ushort *)&buf.data[offset + 1])[1] = cast(ushort)r.maxb;
 		    i = offset + 1 + 4;
 		    buf.data[i .. i + r.maxb] = r.base[0 .. r.maxb];
 		}
@@ -2161,7 +2161,7 @@ int startchars(Range r, ubyte[] prog)
 		c = prog[i + 1];
 		if (c <= 0x7F)
 		{   r.setbit2(c);
-		    r.setbit2(std.ctype.tolower((tchar)c));
+		    r.setbit2(std.ctype.tolower(cast(tchar)c));
 		}
 		return 1;
 
@@ -2173,29 +2173,29 @@ int startchars(Range r, ubyte[] prog)
 		return 0;		// no point
 
 	    case REstring:
-		len = *(uint *)&prog[i + 1];
+		len = *cast(uint *)&prog[i + 1];
 		assert(len);
-		c = *(tchar *)&prog[i + 1 + uint.size];
+		c = *cast(tchar *)&prog[i + 1 + uint.size];
 		debug(regexp) printf("\tREstring %d, '%c'\n", len, c);
 		if (c <= 0x7F)
 		    r.setbit2(c);
 		return 1;
 
 	    case REistring:
-		len = *(uint *)&prog[i + 1];
+		len = *cast(uint *)&prog[i + 1];
 		assert(len);
-		c = *(tchar *)&prog[i + 1 + uint.size];
+		c = *cast(tchar *)&prog[i + 1 + uint.size];
 		debug(regexp) printf("\tREistring %d, '%c'\n", len, c);
 		if (c <= 0x7F)
-		{   r.setbit2(std.ctype.toupper((tchar)c));
-		    r.setbit2(std.ctype.tolower((tchar)c));
+		{   r.setbit2(std.ctype.toupper(cast(tchar)c));
+		    r.setbit2(std.ctype.tolower(cast(tchar)c));
 		}
 		return 1;
 
 	    case REtestbit:
 	    case REbit:
-		maxc = ((ushort *)&prog[i + 1])[0];
-		maxb = ((ushort *)&prog[i + 1])[1];
+		maxc = (cast(ushort *)&prog[i + 1])[0];
+		maxb = (cast(ushort *)&prog[i + 1])[1];
 		if (maxc <= 0x7F)
 		    r.setbitmax(maxc);
 		else
@@ -2205,8 +2205,8 @@ int startchars(Range r, ubyte[] prog)
 		return 1;
 
 	    case REnotbit:
-		maxc = ((ushort *)&prog[i + 1])[0];
-		maxb = ((ushort *)&prog[i + 1])[1];
+		maxc = (cast(ushort *)&prog[i + 1])[0];
+		maxb = (cast(ushort *)&prog[i + 1])[1];
 		if (maxc <= 0x7F)
 		    r.setbitmax(maxc);
 		else
@@ -2220,12 +2220,12 @@ int startchars(Range r, ubyte[] prog)
 		return 0;
 
 	    case REor:
-		len = ((uint *)&prog[i + 1])[0];
+		len = (cast(uint *)&prog[i + 1])[0];
 		return startchars(r, prog[i + 1 + uint.size .. prog.length]) &&
 		       startchars(r, prog[i + 1 + uint.size + len .. prog.length]);
 
 	    case REgoto:
-		len = ((uint *)&prog[i + 1])[0];
+		len = (cast(uint *)&prog[i + 1])[0];
 		i += 1 + uint.size + len;
 		break;
 
@@ -2235,9 +2235,9 @@ int startchars(Range r, ubyte[] prog)
 	    case REnm:
 	    case REnmq:
 		// len, n, m, ()
-		len = ((uint *)&prog[i + 1])[0];
-		n   = ((uint *)&prog[i + 1])[1];
-		m   = ((uint *)&prog[i + 1])[2];
+		len = (cast(uint *)&prog[i + 1])[0];
+		n   = (cast(uint *)&prog[i + 1])[1];
+		m   = (cast(uint *)&prog[i + 1])[2];
 		pop = &prog[i + 1 + uint.size * 3];
 		if (!startchars(r, pop[0 .. len]))
 		    return 0;
@@ -2248,8 +2248,8 @@ int startchars(Range r, ubyte[] prog)
 
 	    case REparen:
 		// len, ()
-		len = ((uint *)&prog[i + 1])[0];
-		n   = ((uint *)&prog[i + 1])[1];
+		len = (cast(uint *)&prog[i + 1])[0];
+		n   = (cast(uint *)&prog[i + 1])[1];
 		pop = &prog[0] + i + 1 + uint.size * 2;
 		return startchars(r, pop[0 .. len]);
 
@@ -2291,14 +2291,14 @@ int startchars(Range r, ubyte[] prog)
 	    case REword:
 		r.setbitmax(0x7F);
 		for (c = 0; c <= r.maxc; c++)
-		    if (isword((tchar)c))
+		    if (isword(cast(tchar)c))
 			r.bits[c] = 1;
 		return 1;
 
 	    case REnotword:
 		r.setbitmax(0x7F);
 		for (c = 0; c <= r.maxc; c++)
-		    if (!isword((tchar)c))
+		    if (!isword(cast(tchar)c))
 			r.bits[c] = 1;
 		return 1;
 
@@ -2478,7 +2478,7 @@ private tchar[] replace3(tchar[] format, tchar[] input, regmatch_t[] pmatch)
 		break;
 	}
     }
-    result = (tchar[])buf.toBytes();
+    result = cast(tchar[])buf.toBytes();
     return result;
 }
 

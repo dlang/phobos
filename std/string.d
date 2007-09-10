@@ -143,10 +143,10 @@ int icmp(char[] s1, char[] s2)
 		char c2 = s2[i];
 
 		if (c1 >= 'A' && c1 <= 'Z')
-		    c1 += (int)'a' - (int)'A';
+		    c1 += cast(int)'a' - cast(int)'A';
 		if (c2 >= 'A' && c2 <= 'Z')
-		    c2 += (int)'a' - (int)'A';
-		result = (int)c1 - (int)c2;
+		    c2 += cast(int)'a' - cast(int)'A';
+		result = cast(int)c1 - cast(int)c2;
 		if (result)
 		    break;
 	    }
@@ -629,7 +629,7 @@ char[] capwords(char[] s)
 	{
 	    if (inword == 0)
 	    {
-		c -= (char)'a' - 'A';
+		c -= cast(char)'a' - 'A';
 		r[i] = c;
 	    }
 	    inword = 1;
@@ -1091,7 +1091,7 @@ char[] ljustify(char[] s, int width)
 	return s;
     char[] r = new char[width];
     r[0..s.length] = s;
-    r[s.length .. width] = (char)' ';
+    r[s.length .. width] = cast(char)' ';
     return r;
 }
 
@@ -1100,7 +1100,7 @@ char[] rjustify(char[] s, int width)
     if (s.length >= width)
 	return s;
     char[] r = new char[width];
-    r[0 .. width - s.length] = (char)' ';
+    r[0 .. width - s.length] = cast(char)' ';
     r[width - s.length .. width] = s;
     return r;
 }
@@ -1111,9 +1111,9 @@ char[] center(char[] s, int width)
 	return s;
     char[] r = new char[width];
     int left = (width - s.length) / 2;
-    r[0 .. left] = (char)' ';
+    r[0 .. left] = cast(char)' ';
     r[left .. left + s.length] = s;
-    r[left + s.length .. width] = (char)' ';
+    r[left + s.length .. width] = cast(char)' ';
     return r;
 }
 
@@ -1152,7 +1152,7 @@ char[] zfill(char[] s, int width)
     if (s.length >= width)
 	return s;
     char[] r = new char[width];
-    r[0 .. width - s.length] = (char)'0';
+    r[0 .. width - s.length] = cast(char)'0';
     r[width - s.length .. width] = s;
     return r;
 }
@@ -1206,7 +1206,7 @@ char[] replaceSlice(char[] string, char[] slice, char[] replacement)
 in
 {
     // Verify that slice[] really is a slice of string[]
-    int so = (char*)slice - (char*)string;
+    int so = cast(char*)slice - cast(char*)string;
     assert(so >= 0);
     //printf("string.length = %d, so = %d, slice.length = %d\n", string.length, so, slice.length);
     assert(string.length >= so + slice.length);
@@ -1214,7 +1214,7 @@ in
 body
 {
     char[] result;
-    int so = (char*)slice - (char*)string;
+    int so = cast(char*)slice - cast(char*)string;
 
     result.length = string.length - slice.length + replacement.length;
 

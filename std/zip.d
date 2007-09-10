@@ -150,7 +150,7 @@ class ZipArchive
 	foreach (ArchiveMember de; directory)
 	{
 	    de.offset = i;
-	    data[i .. i + 4] = (ubyte[])"PK\x03\x04";
+	    data[i .. i + 4] = cast(ubyte[])"PK\x03\x04";
 	    putUshort(i + 4,  de.extractVersion);
 	    putUshort(i + 6,  de.flags);
 	    putUshort(i + 8,  de.compressionMethod);
@@ -175,7 +175,7 @@ class ZipArchive
 	numEntries = 0;
 	foreach (ArchiveMember de; directory)
 	{
-	    data[i .. i + 4] = (ubyte[])"PK\x01\x02";
+	    data[i .. i + 4] = cast(ubyte[])"PK\x01\x02";
 	    putUshort(i + 4,  de.madeVersion);
 	    putUshort(i + 6,  de.extractVersion);
 	    putUshort(i + 8,  de.flags);
@@ -205,7 +205,7 @@ class ZipArchive
 
 	// Write end record
 	endrecOffset = i;
-	data[i .. i + 4] = (ubyte[])"PK\x05\x06";
+	data[i .. i + 4] = cast(ubyte[])"PK\x05\x06";
 	putUshort(i + 4,  diskNumber);
 	putUshort(i + 6,  diskStartDir);
 	putUshort(i + 8,  numEntries);
@@ -245,7 +245,7 @@ class ZipArchive
 	    if (i < iend)
 		throw new ZipException("no end record");
 
-	    if (data[i .. i + 4] == (ubyte[])"PK\x05\x06")
+	    if (data[i .. i + 4] == cast(ubyte[])"PK\x05\x06")
 	    {
 		endcommentlength = getUshort(i + 20);
 		if (i + 22 + endcommentlength > data.length)
@@ -288,7 +288,7 @@ class ZipArchive
 	    uint extralen;
 	    uint commentlen;
 
-	    if (data[i .. i + 4] != (ubyte[])"PK\x01\x02")
+	    if (data[i .. i + 4] != cast(ubyte[])"PK\x01\x02")
 		throw new ZipException("invalid directory entry 1");
 	    ArchiveMember de = new ArchiveMember();
 	    de.madeVersion = getUshort(i + 4);
@@ -328,7 +328,7 @@ class ZipArchive
     {	uint namelen;
 	uint extralen;
 
-	if (data[de.offset .. de.offset + 4] != (ubyte[])"PK\x03\x04")
+	if (data[de.offset .. de.offset + 4] != cast(ubyte[])"PK\x03\x04")
 	    throw new ZipException("invalid directory entry 4");
 
 	// These values should match what is in the main zip archive directory
@@ -385,7 +385,7 @@ class ZipArchive
     {
 	version (LittleEndian)
 	{
-	    return *(ushort *)&data[i];
+	    return *cast(ushort *)&data[i];
 	}
 	else
 	{
@@ -399,11 +399,11 @@ class ZipArchive
     {
 	version (LittleEndian)
 	{
-	    return *(uint *)&data[i];
+	    return *cast(uint *)&data[i];
 	}
 	else
 	{
-	    return bswap(*(uint *)&data[i]);
+	    return bswap(*cast(uint *)&data[i]);
 	}
     }
 
@@ -411,7 +411,7 @@ class ZipArchive
     {
 	version (LittleEndian)
 	{
-	    *(ushort *)&data[i] = us;
+	    *cast(ushort *)&data[i] = us;
 	}
 	else
 	{
@@ -426,7 +426,7 @@ class ZipArchive
 	{
 	    ui = bswap(ui);
 	}
-	*(uint *)&data[i] = ui;
+	*cast(uint *)&data[i] = ui;
     }
 }
 
@@ -434,7 +434,7 @@ debug(print)
 {
     void arrayPrint(ubyte[] array)
     {
-	printf("array %p,%d\n", (void*)array, array.length);
+	printf("array %p,%d\n", cast(void*)array, array.length);
 	for (int i = 0; i < array.length; i++)
 	{
 	    printf("%02x ", array[i]);

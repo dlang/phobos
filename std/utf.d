@@ -1,6 +1,6 @@
 // utf.d
 // Written by Walter Bright
-// Copyright (c) 2003 Digital Mars
+// Copyright (c) 2003-2004 Digital Mars
 // All Rights Reserved
 // www.digitalmars.com
 
@@ -18,7 +18,7 @@ class UtfError : Error
     this(char[] s, uint i)
     {
 	idx = i;
-	super("s");
+	super(s);
     }
 }
 
@@ -34,8 +34,8 @@ bit isValidDchar(dchar c)
 unittest
 {
     debug(utf) printf("utf.isValidDchar.unittest\n");
-    assert(isValidDchar((dchar)'a') == true);
-    assert(isValidDchar((dchar)0x1FFFFF) == false);
+    assert(isValidDchar(cast(dchar)'a') == true);
+    assert(isValidDchar(cast(dchar)0x1FFFFF) == false);
 }
 
 /* =================== Decode ======================= */
@@ -135,22 +135,22 @@ unittest
     static char[] s1 = "abcd";
     i = 0;
     c = decode(s1, i);
-    assert(c == (dchar)'a');
+    assert(c == cast(dchar)'a');
     assert(i == 1);
     c = decode(s1, i);
-    assert(c == (dchar)'b');
+    assert(c == cast(dchar)'b');
     assert(i == 2);
 
     static char[] s2 = "\xC2\xA9";
     i = 0;
     c = decode(s2, i);
-    assert(c == (dchar)'\u00A9');
+    assert(c == cast(dchar)'\u00A9');
     assert(i == 2);
 
     static char[] s3 = "\xE2\x89\xA0";
     i = 0;
     c = decode(s3, i);
-    assert(c == (dchar)'\u2260');
+    assert(c == cast(dchar)'\u2260');
     assert(i == 3);
 
     static char[][] s4 =
@@ -310,16 +310,16 @@ unittest
     debug(utf) printf("utf.encode.unittest\n");
 
     char[] s = "abcd";
-    encode(s, (dchar)'a');
+    encode(s, cast(dchar)'a');
     assert(s.length == 5);
     assert(s == "abcda");
 
-    encode(s, (dchar)'\u00A9');
+    encode(s, cast(dchar)'\u00A9');
     assert(s.length == 7);
     assert(s == "abcda\xC2\xA9");
     //assert(s == "abcda\u00A9");	// BUG: fix compiler
 
-    encode(s, (dchar)'\u2260');
+    encode(s, cast(dchar)'\u2260');
     assert(s.length == 10);
     assert(s == "abcda\xC2\xA9\xE2\x89\xA0");
 }

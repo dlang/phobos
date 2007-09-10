@@ -6,7 +6,7 @@ private import std.string;
 class TypeInfo_At : TypeInfo
 {
     uint getHash(void *p)
-    {	ushort[] s = *(ushort[]*)p;
+    {	ushort[] s = *cast(ushort[]*)p;
 	uint len = s.length;
 	ushort *str = s;
 	uint hash = 0;
@@ -20,12 +20,12 @@ class TypeInfo_At : TypeInfo
 
 		case 1:
 		    hash *= 9;
-		    hash += *(ushort *)str;
+		    hash += *cast(ushort *)str;
 		    return hash;
 
 		default:
 		    hash *= 9;
-		    hash += *(uint *)str;
+		    hash += *cast(uint *)str;
 		    str += 2;
 		    len -= 2;
 		    break;
@@ -37,17 +37,17 @@ class TypeInfo_At : TypeInfo
 
     int equals(void *p1, void *p2)
     {
-	ushort[] s1 = *(ushort[]*)p1;
-	ushort[] s2 = *(ushort[]*)p2;
+	ushort[] s1 = *cast(ushort[]*)p1;
+	ushort[] s2 = *cast(ushort[]*)p2;
 
 	return s1.length == s2.length &&
-	       memcmp((void *)s1, (void *)s2, s1.length * ushort.size) == 0;
+	       memcmp(cast(void *)s1, cast(void *)s2, s1.length * ushort.size) == 0;
     }
 
     int compare(void *p1, void *p2)
     {
-	ushort[] s1 = *(ushort[]*)p1;
-	ushort[] s2 = *(ushort[]*)p2;
+	ushort[] s1 = *cast(ushort[]*)p1;
+	ushort[] s2 = *cast(ushort[]*)p2;
 	uint len = s1.length;
 
 	if (s2.length < len)

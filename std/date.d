@@ -171,7 +171,7 @@ int Day(d_time t)
 {
     if (t < 0)
 	t -= msPerDay;		// use this if t is not floating point
-    return (int)floor(t / msPerDay);
+    return cast(int)floor(t / msPerDay);
 }
 
 int LeapYear(int y)
@@ -187,7 +187,7 @@ int DaysInYear(int y)
 
 int DayFromYear(int y)
 {
-    return (int) (365 * (y - 1970) +
+    return cast(int) (365 * (y - 1970) +
 		floor((y - 1969.0) / 4) -
 		floor((y - 1901.0) / 100) +
 		floor((y - 1601.0) / 400));
@@ -195,14 +195,14 @@ int DayFromYear(int y)
 
 d_time TimeFromYear(int y)
 {
-    return (d_time)msPerDay * DayFromYear(y);
+    return cast(d_time)msPerDay * DayFromYear(y);
 }
 
 int YearFromTime(d_time t)
 {   int y;
 
     // Hazard a guess
-    y = 1970 + (int) (t / (365.2425 * msPerDay));
+    y = 1970 + cast(int) (t / (365.2425 * msPerDay));
 
     if (TimeFromYear(y) <= t)
     {
@@ -318,7 +318,7 @@ int DateFromTime(d_time t)
 int WeekDay(d_time t)
 {   int w;
 
-    w = ((int)Day(t) + 4) % 7;
+    w = (cast(int)Day(t) + 4) % 7;
     if (w < 0)
 	w += 7;
     return w;
@@ -379,11 +379,11 @@ d_time MakeDay(d_time year, d_time month, d_time date)
     month = toInteger(month);
     date = toInteger(date);
 
-    y = (int)(year + floor(month / 12));
-    m = (int)dmod(month, 12);
+    y = cast(int)(year + floor(month / 12));
+    m = cast(int)dmod(month, 12);
 
     leap = LeapYear(y);
-    t = TimeFromYear(y) + (d_time)mdays[m] * msPerDay;
+    t = TimeFromYear(y) + cast(d_time)mdays[m] * msPerDay;
     if (leap && month >= 2)
 	t += msPerDay;
 
@@ -445,7 +445,7 @@ char[] toString(d_time time)
 	offset = -(LocalTZA + dst);
     }
 
-    mn = (int)(offset / msPerMinute);
+    mn = cast(int)(offset / msPerMinute);
     hr = mn / 60;
     mn %= 60;
 
@@ -455,9 +455,9 @@ char[] toString(d_time time)
 	&daystr[WeekDay(t) * 3],
 	&monstr[MonthFromTime(t) * 3],
 	DateFromTime(t),
-	(int)HourFromTime(t), (int)MinFromTime(t), (int)SecFromTime(t),
+	cast(int)HourFromTime(t), cast(int)MinFromTime(t), cast(int)SecFromTime(t),
 	sign, hr, mn,
-	(long)YearFromTime(t));
+	cast(long)YearFromTime(t));
 
     // Ensure no buggy buffer overflows
     //printf("len = %d, buffer.length = %d\n", len, buffer.length);
@@ -490,7 +490,7 @@ char[] toDateString(d_time time)
 	&daystr[WeekDay(t) * 3],
 	&monstr[MonthFromTime(t) * 3],
 	DateFromTime(t),
-	(long)YearFromTime(t));
+	cast(long)YearFromTime(t));
 
     // Ensure no buggy buffer overflows
     assert(len < buffer.length);
@@ -526,14 +526,14 @@ char[] toTimeString(d_time time)
 	offset = -(LocalTZA + dst);
     }
 
-    mn = (int)(offset / msPerMinute);
+    mn = cast(int)(offset / msPerMinute);
     hr = mn / 60;
     mn %= 60;
 
     //printf("hr = %d, offset = %g, LocalTZA = %g, dst = %g, + = %g\n", hr, offset, LocalTZA, dst, LocalTZA + dst);
 
     len = sprintf(buffer, "%02d:%02d:%02d GMT%c%02d%02d",
-	(int)HourFromTime(t), (int)MinFromTime(t), (int)SecFromTime(t),
+	cast(int)HourFromTime(t), cast(int)MinFromTime(t), cast(int)SecFromTime(t),
 	sign, hr, mn);
 
     // Ensure no buggy buffer overflows
@@ -562,7 +562,7 @@ d_time parse(char[] s)
 	if (dp.tzcorrection == Date.tzcorrection.init)
 	    time -= LocalTZA;
 	else
-	    time += (d_time)dp.tzcorrection * msPerHour;
+	    time += cast(d_time)dp.tzcorrection * msPerHour;
 	day = MakeDay(dp.year, dp.month - 1, dp.day);
 	n = MakeDate(day,time);
 	n = TimeClip(n);
@@ -651,7 +651,7 @@ version (Win32)
 		//printf("bias = %d\n", tzi.Bias);
 		//printf("standardbias = %d\n", tzi.StandardBias);
 		//printf("daylightbias = %d\n", tzi.DaylightBias);
-		t = -(tzi.Bias + tzi.StandardBias) * (d_time)(60 * TicksPerSecond);
+		t = -(tzi.Bias + tzi.StandardBias) * cast(d_time)(60 * TicksPerSecond);
 		break;
 
 	    default:
@@ -744,7 +744,7 @@ version (linux)
 	tm *tmp;
 	int t;
 
-	t = (int) (dt / TicksPerSecond);	// BUG: need range check
+	t = cast(int) (dt / TicksPerSecond);	// BUG: need range check
 	tmp = localtime(&t);
 	if (tmp.tm_isdst > 0)
 	    // BUG: Assume daylight savings time is plus one hour.
