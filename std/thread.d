@@ -312,7 +312,7 @@ class Thread
      * Create a Thread for global main().
      */
 
-    static this()
+    static void thread_init()
     {
 	threadLock = new Object();
 
@@ -323,19 +323,19 @@ class Thread
 	t.hdl = Thread.getCurrentThreadHandle();
 	t.stackBottom = os_query_stackBottom();
 
-	synchronized (threadLock)
-	{
-	    assert(!allThreads[0]);
-	    allThreads[0] = t;
-	    allThreadsDim = 1;
-	    t.idx = 0;
-	}
+	assert(!allThreads[0]);
+	allThreads[0] = t;
+	allThreadsDim = 1;
+	t.idx = 0;
     }
 
     static ~this()
     {
-	CloseHandle(allThreads[0].hdl);
-	allThreads[0].hdl = GetCurrentThread();
+	if (allThreadsDim)
+	{
+	    CloseHandle(allThreads[0].hdl);
+	    allThreads[0].hdl = GetCurrentThread();
+	}
     }
           
     /********************************************
@@ -768,7 +768,7 @@ class Thread
      * Create a Thread for global main().
      */
 
-    static this()
+    static void thread_init()
     {
 	threadLock = new Object();
 
@@ -777,13 +777,11 @@ class Thread
 	t.state = TS.RUNNING;
 	t.id = pthread_self();
 	t.stackBottom = cast(void*)__libc_stack_end;
-	synchronized (threadLock)
-	{
-	    assert(!allThreads[0]);
-	    allThreads[0] = t;
-	    allThreadsDim = 1;
-	    t.idx = 0;
-	}
+
+	assert(!allThreads[0]);
+	allThreads[0] = t;
+	allThreadsDim = 1;
+	t.idx = 0;
 
 	/* Install signal handlers so we can suspend/resume threads
 	 */

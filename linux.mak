@@ -56,7 +56,7 @@ OBJS= asserterror.o deh2.o switch.o complex.o gcstats.o \
 	crc32.o conv.o arraycast.o errno.o alloca.o cmath2.o \
 	process.o syserror.o \
 	socket.o socketstream.o stdarg.o stdio.o format.o \
-	perf.o openrj.o uni.o \
+	perf.o openrj.o uni.o trace.o \
 	ti_wchar.o ti_uint.o ti_short.o ti_ushort.o \
 	ti_byte.o ti_ubyte.o ti_long.o ti_ulong.o ti_ptr.o \
 	ti_float.o ti_double.o ti_real.o ti_delegate.o \
@@ -128,7 +128,7 @@ SRC_INT=	\
 	internal/memset.d internal/arraycast.d internal/aaA.d internal/adi.d \
 	internal/dmain2.d internal/cast.d internal/qsort.d internal/deh2.d \
 	internal/cmath2.d internal/obj.d internal/mars.h internal/aApply.d \
-	internal/object.d
+	internal/object.d internal/trace.d
 
 SRC_STD_WIN= std/windows/registry.d \
 	std/windows/iunknown.d
@@ -176,6 +176,7 @@ SRC_ZLIB= etc/c/zlib\trees.h \
 
 SRC_GC= internal/gc/gc.d \
 	internal/gc/gcx.d \
+	internal/gc/gcstub.d \
 	internal/gc/gcbits.d \
 	internal/gc/win32.d \
 	internal/gc/gclinux.d \
@@ -446,6 +447,9 @@ qsort.o : internal/qsort.d
 
 switch.o : internal/switch.d
 	$(DMD) -c $(DFLAGS) internal/switch.d
+
+trace.o : internal/trace.d
+	$(DMD) -c $(DFLAGS) internal/trace.d
 
 ### std
 

@@ -33,9 +33,16 @@ import std.string;
 import gcx;
 import std.outofmemory;
 import gcstats;
-//import std.math;
+import std.thread;
 
-GC* _gc;
+version=GCCLASS;
+
+version (GCCLASS)
+    alias GC gc_t;
+else
+    alias GC* gc_t;
+
+gc_t _gc;
 
 void addRoot(void *p)		      { _gc.addRoot(p); }
 void removeRoot(void *p)	      { _gc.removeRoot(p); }
@@ -49,6 +56,29 @@ void disable()			      { _gc.disable(); }
 void enable()			      { _gc.enable(); }
 void getStats(out GCStats stats)      { _gc.getStats(stats); }
 
+void* getGCHandle()
+{
+    return cast(void*)_gc;
+}
+
+void setGCHandle(void* p)
+{
+    void* oldp = getGCHandle();
+    gc_t g = cast(gc_t)p;
+    if (g.gcversion != gcx.GCVERSION)
+	throw new Error("incompatible gc versions");
+
+    // Add our static data to the new gc
+    GC.scanStaticData(g);
+
+    _gc = g;
+//    return oldp;
+}
+
+void endGCHandle()
+{
+    GC.unscanStaticData(_gc);
+}
 
 extern (C)
 {
@@ -58,10 +88,21 @@ void _d_monitorrelease(Object h);
 
 void gc_init()
 {
-    _gc = cast(GC *) std.c.stdlib.calloc(1, GC.sizeof);
+    version (GCCLASS)
+    {	void* p;
+	ClassInfo ci = GC.classinfo;
+
+	p = std.c.stdlib.malloc(ci.init.length);
+	(cast(byte*)p)[0 .. ci.init.length] = ci.init[];
+	_gc = cast(GC)p;
+    }
+    else
+    {
+	_gc = cast(GC *) std.c.stdlib.calloc(1, GC.sizeof);
+    }
     _gc.initialize();
-    //_gc.setStackBottom(_atopsp);
-    _gc.scanStaticData();
+    GC.scanStaticData(_gc);
+    std.thread.Thread.thread_init();
 }
 
 void gc_term()

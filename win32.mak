@@ -36,7 +36,7 @@ DMD=\dmd\bin\dmd
 .asm.obj:
 	$(CC) -c $*
 
-targets : unittest
+targets : unittest gcstub.obj
 
 unittest : unittest.exe
 	unittest
@@ -119,7 +119,7 @@ SRC_INT=	\
 	internal\memset.d internal\arraycast.d internal\aaA.d internal\adi.d \
 	internal\dmain2.d internal\cast.d internal\qsort.d internal\deh2.d \
 	internal\cmath2.d internal\obj.d internal\mars.h internal\aApply.d \
-	internal\object.d
+	internal\object.d internal\trace.d
 
 SRC_STD_WIN= std\windows\registry.d \
 	std\windows\iunknown.d
@@ -167,6 +167,7 @@ SRC_ZLIB= etc\c\zlib\trees.h \
 
 SRC_GC= internal\gc\gc.d \
 	internal\gc\gcx.d \
+	internal\gc\gcstub.d \
 	internal\gc\gcbits.d \
 	internal\gc\win32.d \
 	internal\gc\gclinux.d \
@@ -384,6 +385,9 @@ deh.obj : internal\mars.h internal\deh.c
 
 dmain2.obj : internal\dmain2.d
 	$(DMD) -c $(DFLAGS) internal\dmain2.d
+
+gcstub.obj : internal\gc\gcstub.d
+	$(DMD) -c $(DFLAGS) -Iinternal\gc internal\gc\gcstub.d
 
 invariant.obj : internal\invariant.d
 	$(DMD) -c $(DFLAGS) internal\invariant.d
@@ -699,7 +703,7 @@ clean:
 	del $(OBJS)
 
 install:
-	$(CP) phobos.lib \dmd\lib
+	$(CP) phobos.lib gcstub.obj \dmd\lib
 	$(CP) win32.mak linux.mak minit.obj \dmd\src\phobos
 	$(CP) $(SRC) \dmd\src\phobos
 	$(CP) $(SRC_STD) \dmd\src\phobos\std

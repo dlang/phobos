@@ -52,6 +52,9 @@ version (MULTI_THREADED)
     import std.thread;
 }
 
+//alias GC* gc_t;
+alias GC gc_t;
+
 /* ======================= Leak Detector =========================== */
 
 debug (LOGGING)
@@ -155,13 +158,18 @@ alias void (*GC_FINALIZER)(void *p, void *dummy);
 
 class GCLock { }		// just a dummy so we can get a global lock
 
-struct GC
+const uint GCVERSION = 1;	// increment every time we change interface
+				// to GC.
+
+class GC
 {
     // For passing to debug code
     static uint line;
     static char *file;
 
-    Gcx *gcx;		// implementation
+    uint gcversion = GCVERSION;
+
+    Gcx *gcx;			// implementation
     static ClassInfo gcLock;	// global lock
 
     void initialize()
@@ -526,7 +534,7 @@ struct GC
 	}
     }
 
-    void scanStaticData()
+    static void scanStaticData(gc_t g)
     {
 	void *pbot;
 	void *ptop;
@@ -535,8 +543,17 @@ struct GC
 	//debug(PRINTF) printf("+GC.scanStaticData()\n");
 	os_query_staticdataseg(&pbot, &nbytes);
 	ptop = pbot + nbytes;
-	addRange(pbot, ptop);
+	g.addRange(pbot, ptop);
 	//debug(PRINTF) printf("-GC.scanStaticData()\n");
+    }
+
+    static void unscanStaticData(gc_t g)
+    {
+	void *pbot;
+	uint nbytes;
+
+	os_query_staticdataseg(&pbot, &nbytes);
+	g.removeRange(pbot);
     }
 
 

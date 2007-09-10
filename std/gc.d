@@ -41,3 +41,23 @@ void disable();
 void enable();
 
 void getStats(out GCStats stats);
+
+/***************************************
+ * Get handle to the collector.
+ */
+
+void* getGCHandle();
+
+/***************************************
+ * Set handle to the collector.
+ */
+
+void setGCHandle(void* p);
+
+void endGCHandle();
+
+extern (C)
+{
+    void gc_init();
+    void gc_term();
+}

@@ -15,7 +15,32 @@ import std.gc;
 import gcx;
 import std.random;
 
-void printStats(GC *gc)
+alias GC gc_t;
+//alias GC* gc_t;
+
+gc_t newGC()
+{
+    version (all)
+    {	void* p;
+	ClassInfo ci = GC.classinfo;
+
+	p = std.c.stdlib.malloc(ci.init.length);
+	(cast(byte*)p)[0 .. ci.init.length] = ci.init[];
+	return cast(GC)p;
+    }
+    else
+    {
+	return cast(gc_t)std.c.stdlib.calloc(1, GC.sizeof);
+    }
+}
+
+void deleteGC(gc_t gc)
+{
+    gc.Dtor();
+    std.c.stdlib.free(cast(void*)gc);
+}
+
+void printStats(gc_t gc)
 {
     GCStats stats;
 
@@ -62,7 +87,7 @@ long desregs()
 
 void smoke()
 {
-    GC *gc;
+    gc_t gc;
 
     printf("--------------------------smoke()\n");
 
@@ -102,7 +127,7 @@ void finalizer(void *p, void *dummy)
 
 void smoke2()
 {
-    GC *gc;
+    gc_t gc;
     int *p;
     int i;
 
@@ -147,7 +172,7 @@ void smoke2()
 
 void smoke3()
 {
-    GC *gc;
+    gc_t gc;
     int *p;
     int i;
 
@@ -180,7 +205,7 @@ void smoke3()
 
 void smoke4()
 {
-    GC *gc;
+    gc_t gc;
     int *p;
     int i;
 
@@ -211,7 +236,7 @@ void smoke4()
 
 /* ---------------------------- */
 
-void smoke5(GC *gc)
+void smoke5(gc_t gc)
 {
     byte *p;
     int i;
@@ -278,7 +303,7 @@ int main(char[][] args)
 {
     test1();
 
-    GC *gc;
+    gc_t gc;
 
     printf("GC test start\n");
 
@@ -297,15 +322,4 @@ printf("gc = %p\n", gc);
 
     printf("GC test success\n");
     return EXIT_SUCCESS;
-}
-
-GC *newGC()
-{
-    return cast(GC *)std.c.stdlib.calloc(1, GC.sizeof);
-}
-
-void deleteGC(GC *gc)
-{
-    gc.Dtor();
-    std.c.stdlib.free(gc);
 }

@@ -97,6 +97,7 @@ enum
 version (Win32)
 {
     FILE _iob[_NFILE];
+    void function() _fcloseallp;
 }
 
 version (Win32)
