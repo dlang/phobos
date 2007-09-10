@@ -227,7 +227,7 @@ void compile(tchar[] pattern, tchar[] attributes)
 
     if (re_nsub > oldre_nsub)
     {
-	if (pmatch === &gmatch)
+	if (pmatch is &gmatch)
 	    pmatch = null;
 	pmatch.length = re_nsub + 1;
     }

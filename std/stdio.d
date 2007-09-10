@@ -6,7 +6,7 @@
 
 module std.stdio;
 
-private import std.c.stdio;
+import std.c.stdio;
 private import std.format;
 private import std.utf;
 

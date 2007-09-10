@@ -1,4 +1,9 @@
 
+/* Written by Walter Bright
+ * www.digitalmars.com
+ * Placed into Public Domain
+ */
+
 module std.stdint;
 
 /* Exact sizes */

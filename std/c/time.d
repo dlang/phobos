@@ -1,4 +1,9 @@
 
+/* Written by Walter Bright
+ * www.digitalmars.com
+ * Placed into public domain.
+ */
+
 module std.c.time;
 
 extern (C):

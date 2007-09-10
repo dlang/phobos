@@ -25,7 +25,7 @@ struct Date
     int ms;		// 0..999
     int weekday;	// 0: not specified
 			// 1..7: Sunday..Saturday
-    int tzcorrection = int.min;	// -12..12 correction in hours
+    int tzcorrection = int.min;	// -1200..1200 correction in hours
 
     void parse(char[] s)
     {
@@ -562,7 +562,10 @@ d_time parse(char[] s)
 	if (dp.tzcorrection == Date.tzcorrection.init)
 	    time -= LocalTZA;
 	else
-	    time += cast(d_time)dp.tzcorrection * msPerHour;
+	{
+	    time += cast(d_time)(dp.tzcorrection / 100) * msPerHour +
+		    cast(d_time)(dp.tzcorrection % 100) * msPerMinute;
+	}
 	day = MakeDay(dp.year, dp.month - 1, dp.day);
 	n = MakeDate(day,time);
 	n = TimeClip(n);

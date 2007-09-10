@@ -28,7 +28,7 @@ struct Array
 extern (C) Array _adReverse(Array a, int szelem)
     out (result)
     {
-	assert(result === a);
+	assert(result is a);
     }
     body
     {
@@ -81,7 +81,7 @@ unittest
     for (i = 0; i < 5; i++)
 	a[i] = i;
     b = a.reverse;
-    assert(b === a);
+    assert(b is a);
     for (i = 0; i < 5; i++)
 	assert(a[i] == 4 - i);
 
@@ -99,7 +99,7 @@ unittest
 	c[i].e = 10;
     }
     d = c.reverse;
-    assert(d === c);
+    assert(d is c);
     for (i = 0; i < 5; i++)
     {
 	assert(c[i].a == 4 - i);
@@ -114,7 +114,7 @@ unittest
 extern (C) bit[] _adReverseBit(bit[] a)
     out (result)
     {
-	assert(result === a);
+	assert(result is a);
     }
     body
     {

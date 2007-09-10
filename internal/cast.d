@@ -48,18 +48,18 @@ Object _d_dynamic_cast(Object o, ClassInfo c)
 int _d_isbaseof2(ClassInfo oc, ClassInfo c, inout uint offset)
 {   int i;
 
-    if (oc === c)
+    if (oc is c)
 	return 1;
     do
     {
-	if (oc.base === c)
+	if (oc.base is c)
 	    return 1;
 	for (i = 0; i < oc.interfaces.length; i++)
 	{
 	    ClassInfo ic;
 
 	    ic = oc.interfaces[i].classinfo;
-	    if (ic === c)
+	    if (ic is c)
 	    {	offset = oc.interfaces[i].offset;
 		return 1;
 	    }
@@ -82,18 +82,18 @@ int _d_isbaseof2(ClassInfo oc, ClassInfo c, inout uint offset)
 int _d_isbaseof(ClassInfo oc, ClassInfo c)
 {   int i;
 
-    if (oc === c)
+    if (oc is c)
 	return 1;
     do
     {
-	if (oc.base === c)
+	if (oc.base is c)
 	    return 1;
 	for (i = 0; i < oc.interfaces.length; i++)
 	{
 	    ClassInfo ic;
 
 	    ic = oc.interfaces[i].classinfo;
-	    if (ic === c || _d_isbaseof(ic, c))
+	    if (ic is c || _d_isbaseof(ic, c))
 		return 1;
 	}
 	oc = oc.base;
@@ -119,7 +119,7 @@ void *_d_interface_vtbl(ClassInfo ic, Object o)
 	ClassInfo oic;
 
 	oic = oc.interfaces[i].classinfo;
-	if (oic === ic)
+	if (oic is ic)
 	{
 	    return cast(void *)oc.interfaces[i].vtbl;
 	}

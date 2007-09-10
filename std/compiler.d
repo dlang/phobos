@@ -1,4 +1,9 @@
 
+/* Written by Walter Bright
+ * www.digitalmars.com
+ * Placed into Public Domain
+ */
+
 // Identify the compiler used and its various features.
 
 module std.compiler;

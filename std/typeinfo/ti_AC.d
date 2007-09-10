@@ -29,8 +29,8 @@ class TypeInfo_AC : TypeInfo
 		Object o2 = s2[u];
 
 		// Do not pass null's to Object.opEquals()
-		if (o1 === o2 ||
-		    (o1 !== null && o2 !== null && o1.opEquals(o2)))
+		if (o1 is o2 ||
+		    (!(o1 is null) && !(o2 is null) && o1.opEquals(o2)))
 		    continue;
 		return 0;
 	    }
@@ -52,7 +52,7 @@ class TypeInfo_AC : TypeInfo
 	    {	Object o1 = s1[u];
 		Object o2 = s2[u];
 
-		if (o1 === o2)
+		if (o1 is o2)
 		    continue;
 
 		// Regard null references as always being "less than"

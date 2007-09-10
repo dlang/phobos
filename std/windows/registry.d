@@ -418,7 +418,7 @@ private uint swap(in uint i)
 private char[] expand_environment_strings(in char[] value)
 in
 {
-    assert(null !== value);
+    assert(!(null is value));
 }
 body
 {
@@ -445,7 +445,7 @@ body
 private LONG Reg_CloseKey_(in HKEY hkey)
 in
 {
-    assert(null !== hkey);
+    assert(!(null is hkey));
 }
 body
 {
@@ -480,7 +480,7 @@ body
 private LONG Reg_FlushKey_(in HKEY hkey)
 in
 {
-    assert(null !== hkey);
+    assert(!(null is hkey));
 }
 body
 {
@@ -493,8 +493,8 @@ private LONG Reg_CreateKeyExA_(     in HKEY hkey, in char[] subKey
                                 ,   out HKEY hkeyResult, out DWORD disposition)
 in
 {
-    assert(null !== hkey);
-    assert(null !== subKey);
+    assert(!(null is hkey));
+    assert(!(null is subKey));
 }
 body
 {
@@ -506,8 +506,8 @@ body
 private LONG Reg_DeleteKeyA_(in HKEY hkey, in char[] subKey)
 in
 {
-    assert(null !== hkey);
-    assert(null !== subKey);
+    assert(!(null is hkey));
+    assert(!(null is subKey));
 }
 body
 {
@@ -517,8 +517,8 @@ body
 private LONG Reg_DeleteValueA_(in HKEY hkey, in char[] valueName)
 in
 {
-    assert(null !== hkey);
-    assert(null !== valueName);
+    assert(!(null is hkey));
+    assert(!(null is valueName));
 }
 body
 {
@@ -528,7 +528,7 @@ body
 private HKEY Reg_Dup_(HKEY hkey)
 in
 {
-    assert(null !== hkey);
+    assert(!(null is hkey));
 }
 body
 {
@@ -573,8 +573,8 @@ private LONG Reg_EnumKeyName_(  in HKEY hkey, in DWORD index, inout char [] name
                             ,   out DWORD cchName)
 in
 {
-    assert(null !== hkey);
-    assert(null !== name);
+    assert(!(null is hkey));
+    assert(!(null is name));
     assert(0 < name.length);
 }
 body
@@ -609,7 +609,7 @@ private LONG Reg_EnumValueName_(in HKEY hkey, in DWORD dwIndex, in LPSTR lpName
                             ,   inout DWORD cchName)
 in
 {
-    assert(null !== hkey);
+    assert(!(null is hkey));
 }
 body
 {
@@ -620,7 +620,7 @@ private LONG Reg_GetNumSubKeys_(in HKEY hkey, out DWORD cSubKeys
                             ,   out DWORD cchSubKeyMaxLen)
 in
 {
-    assert(null !== hkey);
+    assert(!(null is hkey));
 }
 body
 {
@@ -632,7 +632,7 @@ private LONG Reg_GetNumValues_( in HKEY hkey, out DWORD cValues
                             ,   out DWORD cchValueMaxLen)
 in
 {
-    assert(null !== hkey);
+    assert(!(null is hkey));
 }
 body
 {
@@ -644,7 +644,7 @@ private LONG Reg_GetValueType_( in HKEY hkey, in char[] name
                             ,   out REG_VALUE_TYPE type)
 in
 {
-    assert(null !== hkey);
+    assert(!(null is hkey));
 }
 body
 {
@@ -664,8 +664,8 @@ private LONG Reg_OpenKeyExA_(   in HKEY hkey, in char[] subKey
                             ,   in REGSAM samDesired, out HKEY hkeyResult)
 in
 {
-    assert(null !== hkey);
-    assert(null !== subKey);
+    assert(!(null is hkey));
+    assert(!(null is subKey));
 }
 body
 {
@@ -676,7 +676,7 @@ private void Reg_QueryValue_(   in HKEY hkey, in char[] name, out char[] value
                             ,   out REG_VALUE_TYPE type)
 in
 {
-    assert(null !== hkey);
+    assert(!(null is hkey));
 }
 body
 {
@@ -745,7 +745,7 @@ private void Reg_QueryValue_(   in HKEY hkey, in char[] name, out char[][] value
                             ,   out REG_VALUE_TYPE type)
 in
 {
-    assert(null !== hkey);
+    assert(!(null is hkey));
 }
 body
 {
@@ -789,7 +789,7 @@ private void Reg_QueryValue_(   in HKEY hkey, in char[] name, out uint value
                             ,   out REG_VALUE_TYPE type)
 in
 {
-    assert(null !== hkey);
+    assert(!(null is hkey));
 }
 body
 {
@@ -832,7 +832,7 @@ private void Reg_QueryValue_(   in HKEY hkey, in char[] name, out ulong value
                             ,   out REG_VALUE_TYPE type)
 in
 {
-    assert(null !== hkey);
+    assert(!(null is hkey));
 }
 body
 {
@@ -861,7 +861,7 @@ private void Reg_QueryValue_(   in HKEY hkey, in char[] name, out byte[] value
                             ,   out REG_VALUE_TYPE type)
 in
 {
-    assert(null !== hkey);
+    assert(!(null is hkey));
 }
 body
 {
@@ -901,7 +901,7 @@ private void Reg_SetValueExA_(  in HKEY hkey, in char[] subKey
                             ,   in DWORD cbData)
 in
 {
-    assert(null !== hkey);
+    assert(!(null is hkey));
 }
 body
 {
@@ -993,7 +993,7 @@ public class Key
 {
     invariant
     {
-        assert(null !== m_hkey);
+        assert(!(null is m_hkey));
     }
 
 /// \name Construction
@@ -1002,7 +1002,7 @@ private:
     this(HKEY hkey, char[] name, boolean created)
     in
     {
-        assert(null !== hkey);
+        assert(!(null is hkey));
     }
     body
     {
@@ -1102,7 +1102,7 @@ public:
     /// \note If the key cannot be created, a RegistryException is thrown.
     Key createKey(char[] name, REGSAM access)
     {
-        if( null === name ||
+        if( null is name ||
             0 == name.length)
         {
             throw new RegistryException("Key name is invalid");
@@ -1120,7 +1120,7 @@ public:
                 throw new RegistryException("Failed to create requested key: \"" ~ name ~ "\"", lRes);
             }
 
-            assert(null !== hkey);
+            assert(!(null is hkey));
 
             // Potential resource leak here!!
             //
@@ -1164,7 +1164,7 @@ public:
     /// \note This function never returns null. If a key corresponding to the requested name is not found, a RegistryException is thrown
     Key getKey(char[] name, REGSAM access)
     {
-        if( null === name ||
+        if( null is name ||
             0 == name.length)
         {
             return new Key(Reg_Dup_(m_hkey), m_name, false);
@@ -1179,7 +1179,7 @@ public:
                 throw new RegistryException("Failed to open requested key: \"" ~ name ~ "\"", lRes);
             }
 
-            assert(null !== hkey);
+            assert(!(null is hkey));
 
             // Potential resource leak here!!
             //
@@ -1220,7 +1220,7 @@ public:
     /// \param name The name of the key to delete. May not be null
     void deleteKey(char[] name)
     {
-        if( null === name ||
+        if( null is name ||
             0 == name.length)
         {
             throw new RegistryException("Key name is invalid");
@@ -1408,14 +1408,14 @@ public class Value
 {
     invariant
     {
-        assert(null !== m_key);
+        assert(!(null is m_key));
     }
 
 private:
     this(Key key, char[] name, REG_VALUE_TYPE type)
     in
     {
-        assert(key !== null);
+        assert(!(key is null));
     }
     body
     {
@@ -1675,7 +1675,7 @@ public class KeyNameSequence
 {
     invariant
     {
-        assert(null !== m_key);
+        assert(!(null is m_key));
     }
 
 /// Construction
@@ -1808,7 +1808,7 @@ public class KeySequence
 {
     invariant
     {
-        assert(null !== m_key);
+        assert(!(null is m_key));
     }
 
 /// Construction
@@ -1954,7 +1954,7 @@ public class ValueNameSequence
 {
     invariant
     {
-        assert(null !== m_key);
+        assert(!(null is m_key));
     }
 
 /// Construction
@@ -2081,7 +2081,7 @@ public class ValueSequence
 {
     invariant
     {
-        assert(null !== m_key);
+        assert(!(null is m_key));
     }
 
 /// Construction

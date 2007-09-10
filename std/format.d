@@ -399,7 +399,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
 			dchar[] sd = va_arg!(dchar[])(argptr);
 			s = toUTF8(sd);
 		    Lputstr:
-			if (flags & FLprecision && precision > s.length)
+			if (flags & FLprecision && precision < s.length)
 			    s = s[0 .. precision];
 			putstr(s);
 			break;
@@ -788,5 +788,14 @@ unittest
 
     s = std.string.format("%0.0008f", 1e-05);
     assert(s == "0.00001000");
+
+    s = "helloworld";
+    char[] r;
+    r = std.string.format("%.2s", s[0..5]);
+    assert(r == "he");
+    r = std.string.format("%.20s", s[0..5]);
+    assert(r == "hello");
+    r = std.string.format("%8s", s[0..5]);
+    assert(r == "   hello");
 }
 

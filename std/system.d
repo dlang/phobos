@@ -1,4 +1,9 @@
 
+/* Written by Walter Bright
+ * www.digitalmars.com
+ * Placed into Public Domain
+ */
+
 // Information about the target operating system, environment, and CPU
 
 module std.system;

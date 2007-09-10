@@ -13,7 +13,7 @@ extern (C):
 
 int _d_obj_eq(Object o1, Object o2)
 {
-    return o1 === o2 || (o1 && o1.opEquals(o2));
+    return o1 is o2 || (o1 && o1.opEquals(o2));
 }
 
 

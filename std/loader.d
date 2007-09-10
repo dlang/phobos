@@ -214,7 +214,7 @@ version(Windows)
     {
         HXModule hmod = cast(HXModule)LoadLibraryA(toStringz(moduleName));
 
-        if(null === hmod)
+        if(null is hmod)
         {
             record_error_();
         }
@@ -255,7 +255,7 @@ version(Windows)
     {
         void    *symbol = GetProcAddress(cast(HModule_)hModule, toStringz(symbolName));
 
-        if(null === symbol)
+        if(null is symbol)
         {
             record_error_();
         }
@@ -306,7 +306,7 @@ else version(Linux)
     private void record_error_()
     {
         char *err = dlerror();
-        s_lastError = (null === err) ? "" : err[0 .. std.string.strlen(err)];
+        s_lastError = (null is err) ? "" : err[0 .. std.string.strlen(err)];
     }
 
     private int ExeModule_Init_()
@@ -344,7 +344,7 @@ else version(Linux)
         {
             HModule_    hmod = dlopen(toStringz(moduleName), RTLD_NOW);
 
-            if(null === hmod)
+            if(null is hmod)
             {
                 record_error_();
 
@@ -372,7 +372,7 @@ else version(Linux)
         assert(null !== mi.m_hmod);
         assert(null !== mi.m_name);
         assert(null !== s_modules[mi.m_name]);
-        assert(mi === s_modules[mi.m_name]);
+        assert(mi is s_modules[mi.m_name]);
     }
     body
     {
@@ -399,7 +399,7 @@ else version(Linux)
         assert(null !== mi.m_hmod);
         assert(null !== mi.m_name);
         assert(null !== s_modules[mi.m_name]);
-        assert(mi === s_modules[mi.m_name]);
+        assert(mi is s_modules[mi.m_name]);
     }
     body
     {
@@ -431,7 +431,7 @@ else version(Linux)
         assert(null !== mi.m_hmod);
         assert(null !== mi.m_name);
         assert(null !== s_modules[mi.m_name]);
-        assert(mi === s_modules[mi.m_name]);
+        assert(mi is s_modules[mi.m_name]);
     }
     body
     {
@@ -462,7 +462,7 @@ else version(Linux)
         assert(null !== mi.m_hmod);
         assert(null !== mi.m_name);
         assert(null !== s_modules[mi.m_name]);
-        assert(mi === s_modules[mi.m_name]);
+        assert(mi is s_modules[mi.m_name]);
     }
     body
     {
@@ -543,13 +543,13 @@ public:
 	version (Windows)
 	{
 	    m_hModule = cast(HXModule)LoadLibraryA(toStringz(moduleName));
-	    if (null === m_hModule)
+	    if (null is m_hModule)
 		throw new ExeModuleException(GetLastError());
 	}
 	else version (linux)
 	{
 	    m_hModule = ExeModule_Load(moduleName);
-	    if (null === m_hModule)
+	    if (null is m_hModule)
 		throw new ExeModuleException(ExeModule_Error());
 	}
 	else
@@ -602,7 +602,7 @@ public:
 	version (Windows)
 	{
 	    void *symbol = GetProcAddress(cast(HModule_)m_hModule, toStringz(symbolName));
-	    if(null === symbol)
+	    if(null is symbol)
 	    {
 		throw new ExeModuleException(GetLastError());
 	    }
@@ -611,7 +611,7 @@ public:
 	{
 	    void *symbol = ExeModule_GetSymbol(m_hModule, symbolName);
 
-	    if(null === symbol)
+	    if(null is symbol)
 	    {
 		throw new ExeModuleException(ExeModule_Error());
 	    }

@@ -45,7 +45,7 @@ class Object
 
     int opEquals(Object o)
     {
-	return this === o;
+	return this is o;
     }
 }
 
@@ -93,7 +93,7 @@ class TypeInfo
 	 * across DLL's. Therefore, comparing for a name match is
 	 * sufficient.
 	 */
-	return this === o || this.classinfo.name == o.classinfo.name;
+	return this is o || this.classinfo.name == o.classinfo.name;
     }
 
     uint getHash(void *p) { return cast(uint)p; }

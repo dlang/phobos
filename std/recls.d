@@ -74,6 +74,7 @@ import std.string;
 
 version (linux)
 {
+    private import std.c.time;
     private import std.c.linux.linux;
 }
 

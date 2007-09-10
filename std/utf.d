@@ -1,8 +1,26 @@
 // utf.d
-// Written by Walter Bright
-// Copyright (c) 2003-2004 Digital Mars
-// All Rights Reserved
-// www.digitalmars.com
+
+/*
+ *  Copyright (C) 2003-2004 by Digital Mars, www.digitalmars.com
+ *  Written by Walter Bright
+ *
+ *  This software is provided 'as-is', without any express or implied
+ *  warranty. In no event will the authors be held liable for any damages
+ *  arising from the use of this software.
+ *
+ *  Permission is granted to anyone to use this software for any purpose,
+ *  including commercial applications, and to alter it and redistribute it
+ *  freely, subject to the following restrictions:
+ *
+ *  o  The origin of this software must not be misrepresented; you must not
+ *     claim that you wrote the original software. If you use this software
+ *     in a product, an acknowledgment in the product documentation would be
+ *     appreciated but is not required.
+ *  o  Altered source versions must be plainly marked as such, and must not
+ *     be misrepresented as being the original software.
+ *  o  This notice may not be removed or altered from any source
+ *     distribution.
+ */
 
 // Description of UTF-8 at:
 // http://www.cl.cam.ac.uk/~mgk25/unicode.html#utf-8
@@ -25,6 +43,13 @@ class UtfError : Error
 
 bit isValidDchar(dchar c)
 {
+    /* Note: FFFE and FFFF are specifically permitted by the
+     * Unicode standard for application internal use, but are not
+     * allowed for interchange.
+     * (thanks to Arcane Jill)
+     * However, we still mark them as invalid.
+     */
+
     return c < 0xD800 ||
 	(c > 0xDFFF && c <= 0x10FFFF && c != 0xFFFE && c != 0xFFFF);
 }

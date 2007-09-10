@@ -1,8 +1,26 @@
 
-// Copyright (c) 1999-2002 by Digital Mars
-// All Rights Reserved
-// written by Walter Bright
-// www.digitalmars.com
+/*
+ *  Copyright (C) 1999-2004 by Digital Mars, www.digitalmars.com
+ *  Written by Walter Bright
+ *
+ *  This software is provided 'as-is', without any express or implied
+ *  warranty. In no event will the authors be held liable for any damages
+ *  arising from the use of this software.
+ *
+ *  Permission is granted to anyone to use this software for any purpose,
+ *  including commercial applications, and to alter it and redistribute it
+ *  freely, subject to the following restrictions:
+ *
+ *  o  The origin of this software must not be misrepresented; you must not
+ *     claim that you wrote the original software. If you use this software
+ *     in a product, an acknowledgment in the product documentation would be
+ *     appreciated but is not required.
+ *  o  Altered source versions must be plainly marked as such, and must not
+ *     be misrepresented as being the original software.
+ *  o  This notice may not be removed or altered from any source
+ *     distribution.
+ */
+
 
 module std.dateparse;
 
@@ -13,7 +31,7 @@ private
     import std.date;
 }
 
-//debug=log;
+//debug=dateparse;
 
 class DateParseError : Error
 {
@@ -34,7 +52,7 @@ struct DateParse
 	//else
 	    //buffer = new char[s.length];
 
-	debug(log) printf("DateParse.parse('%.*s')\n", s);
+	debug(dateparse) printf("DateParse.parse('%.*s')\n", s);
 	if (!parseString(s))
 	{
 	    goto Lerror;
@@ -45,7 +63,7 @@ struct DateParse
 	    year = 0;
 	else
     +/
-	debug(log)
+	debug(dateparse)
 	    printf("year = %d, month = %d, day = %d\n%02d:%02d:%02d.%03d\nweekday = %d, tzcorrection = %d\n",
 		year, month, day,
 		hours, minutes, seconds, ms,
@@ -59,7 +77,7 @@ struct DateParse
 	    (seconds < 0 || seconds > 59) ||
 	    (tzcorrection != tzcorrection.init &&
 	     ((tzcorrection < -1200 || tzcorrection > 1200) ||
-	      (tzcorrection % 100)))
+	      (tzcorrection % 10)))
 	    )
 	{
 	 Lerror:
@@ -80,8 +98,8 @@ struct DateParse
 	    }
 	}
 
-	if (tzcorrection != tzcorrection.init)
-	    tzcorrection /= 100;
+//	if (tzcorrection != tzcorrection.init)
+//	    tzcorrection /= 100;
 
 	if (year >= 0 && year <= 99)
 	    year += 1900;
@@ -110,7 +128,7 @@ private:
     int ampm;		// 0: not specified
 			// 1: AM
 			// 2: PM
-    int tzcorrection = int.min;	// -12..12 correction in hours
+    int tzcorrection = int.min;	// -1200..1200 correction in hours
 
     char[] s;
     int si;
@@ -518,7 +536,7 @@ private:
 	int n3;
 	int dp;
 
-	debug(log) printf("DateParse.parseCalendarDate(%d)\n", n1);
+	debug(dateparse) printf("DateParse.parseCalendarDate(%d)\n", n1);
 	dp = nextToken();
 	if (dp == DP.month)	// day/month
 	{
@@ -670,7 +688,7 @@ unittest
     assert(d.second       == 0);
     assert(d.ms           == 0);
     assert(d.weekday      == 0);
-    assert(d.tzcorrection == 8);
+    assert(d.tzcorrection == 800);
 
     dp.parse("Tue Apr 02 02:04:57 GMT-0800 1996", d);
     assert(d.year         == 1996);
@@ -681,7 +699,7 @@ unittest
     assert(d.second       == 57);
     assert(d.ms           == 0);
     assert(d.weekday      == 3);
-    assert(d.tzcorrection == 8);
+    assert(d.tzcorrection == 800);
 
     dp.parse("March 14, -1980 21:14:50", d);
     assert(d.year         == 1980);
@@ -749,7 +767,18 @@ unittest
     assert(d.weekday      == 0);
     assert(d.tzcorrection == int.min);
 
-    debug(log) printf("year = %d, month = %d, day = %d\n%02d:%02d:%02d.%03d\nweekday = %d, tzcorrection = %d\n",
+    dp.parse("Tue, 20 May 2003 15:38:58 +0530", d);
+    assert(d.year         == 2003);
+    assert(d.month        == 5);
+    assert(d.day          == 20);
+    assert(d.hour         == 15);
+    assert(d.minute       == 38);
+    assert(d.second       == 58);
+    assert(d.ms           == 0);
+    assert(d.weekday      == 3);
+    assert(d.tzcorrection == -530);
+
+    debug(dateparse) printf("year = %d, month = %d, day = %d\n%02d:%02d:%02d.%03d\nweekday = %d, tzcorrection = %d\n",
 	d.year, d.month, d.day,
 	d.hour, d.minute, d.second, d.ms,
 	d.weekday, d.tzcorrection);

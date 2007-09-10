@@ -285,7 +285,7 @@ struct FILETIME {
     DWORD dwLowDateTime;
     DWORD dwHighDateTime;
 }
-alias FILETIME* PFILETIME;
+alias FILETIME* PFILETIME, LPFILETIME;
 
 struct WIN32_FIND_DATA {
     DWORD dwFileAttributes;
@@ -872,6 +872,7 @@ enum
 }
 
 export HANDLE GetCurrentThread();
+export BOOL GetProcessTimes(HANDLE hProcess, LPFILETIME lpCreationTime, LPFILETIME lpExitTime, LPFILETIME lpKernelTime, LPFILETIME lpUserTime);
 export HANDLE GetCurrentProcess();
 export BOOL DuplicateHandle (HANDLE sourceProcess, HANDLE sourceThread,
         HANDLE targetProcessHandle, HANDLE *targetHandle, DWORD access, 
@@ -880,6 +881,7 @@ export DWORD GetCurrentThreadId();
 export BOOL SetThreadPriority(HANDLE hThread, int nPriority);
 export BOOL SetThreadPriorityBoost(HANDLE hThread, BOOL bDisablePriorityBoost);
 export BOOL GetThreadPriorityBoost(HANDLE hThread, PBOOL pDisablePriorityBoost);
+export BOOL GetThreadTimes(HANDLE hThread, LPFILETIME lpCreationTime, LPFILETIME lpExitTime, LPFILETIME lpKernelTime, LPFILETIME lpUserTime);
 export int GetThreadPriority(HANDLE hThread);
 export BOOL GetThreadContext(HANDLE hThread, CONTEXT* lpContext);
 export BOOL SetThreadContext(HANDLE hThread, CONTEXT* lpContext);
@@ -888,6 +890,9 @@ export DWORD ResumeThread(HANDLE hThread);
 export DWORD WaitForSingleObject(HANDLE hHandle, DWORD dwMilliseconds);
 export DWORD WaitForMultipleObjects(DWORD nCount, HANDLE *lpHandles, BOOL bWaitAll, DWORD dwMilliseconds);
 export void Sleep(DWORD dwMilliseconds);
+
+export BOOL QueryPerformanceCounter(long* lpPerformanceCount);
+export BOOL QueryPerformanceFrequency(long* lpFrequency);
 
 enum
 {
