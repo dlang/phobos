@@ -25,6 +25,10 @@
  *     distribution.
  */
 
+/**
+ * Macros:
+ *	WIKI=Phobos/StdProcess
+ */
 
 module std.process;
 
@@ -32,6 +36,12 @@ private import std.c.stdlib;
 private import std.c.string;
 private import std.string;
 private import std.c.process;
+
+/**
+ * Execute command in a _command shell.
+ *
+ * Returns: exit status of command
+ */
 
 int system(char[] command)
 {
@@ -144,6 +154,13 @@ int  exitstatus(int status) { return (status & 0xff00) >> 8; }
 
 /* ========================================================== */
 
+/**
+ * Execute program specified by pathname, passing it the arguments (argv)
+ * and the environment (envp), returning the exit status.
+ * The 'p' versions of exec search the PATH environment variable
+ * setting for the program.
+ */
+
 int execv(char[] pathname, char[][] argv)
 {
     char** argv_ = cast(char**)alloca((char*).sizeof * (1 + argv.length));
@@ -153,6 +170,7 @@ int execv(char[] pathname, char[][] argv)
     return std.c.process.execv(toStringz(pathname), argv_);
 }
 
+/** ditto */
 int execve(char[] pathname, char[][] argv, char[][] envp)
 {
     char** argv_ = cast(char**)alloca((char*).sizeof * (1 + argv.length));
@@ -164,6 +182,7 @@ int execve(char[] pathname, char[][] argv, char[][] envp)
     return std.c.process.execve(toStringz(pathname), argv_, envp_);
 }
 
+/** ditto */
 int execvp(char[] pathname, char[][] argv)
 {
     char** argv_ = cast(char**)alloca((char*).sizeof * (1 + argv.length));
@@ -173,6 +192,7 @@ int execvp(char[] pathname, char[][] argv)
     return std.c.process.execvp(toStringz(pathname), argv_);
 }
 
+/** ditto */
 int execvpe(char[] pathname, char[][] argv, char[][] envp)
 {
 version(linux)

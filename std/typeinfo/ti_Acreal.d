@@ -32,11 +32,11 @@ class TypeInfo_Ac : TypeInfo
 {
     char[] toString() { return "creal[]"; }
 
-    uint getHash(void *p)
+    hash_t getHash(void *p)
     {	creal[] s = *cast(creal[]*)p;
 	size_t len = s.length;
 	creal *str = s;
-	uint hash = 0;
+	hash_t hash = 0;
 
 	while (len)
 	{

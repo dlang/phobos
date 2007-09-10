@@ -5,7 +5,7 @@ module std.typeinfo.ti_ptr;
 
 class TypeInfo_P : TypeInfo
 {
-    uint getHash(void *p)
+    hash_t getHash(void *p)
     {
 	return cast(uint)*cast(void* *)p;
     }

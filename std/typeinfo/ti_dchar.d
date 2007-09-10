@@ -7,7 +7,7 @@ class TypeInfo_w : TypeInfo
 {
     char[] toString() { return "dchar"; }
 
-    uint getHash(void *p)
+    hash_t getHash(void *p)
     {
 	return *cast(dchar *)p;
     }

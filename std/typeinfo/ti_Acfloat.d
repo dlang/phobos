@@ -32,11 +32,11 @@ class TypeInfo_Aq : TypeInfo
 {
     char[] toString() { return "cfloat[]"; }
 
-    uint getHash(void *p)
+    hash_t getHash(void *p)
     {	cfloat[] s = *cast(cfloat[]*)p;
 	size_t len = s.length;
 	cfloat *str = s;
-	uint hash = 0;
+	hash_t hash = 0;
 
 	while (len)
 	{

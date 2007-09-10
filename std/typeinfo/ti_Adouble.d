@@ -32,11 +32,11 @@ class TypeInfo_Ad : TypeInfo
 {
     char[] toString() { return "double[]"; }
 
-    uint getHash(void *p)
+    hash_t getHash(void *p)
     {	double[] s = *cast(double[]*)p;
 	size_t len = s.length;
 	double *str = s;
-	uint hash = 0;
+	hash_t hash = 0;
 
 	while (len)
 	{

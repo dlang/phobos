@@ -241,7 +241,16 @@ class GC
 	    size += SENTINEL_EXTRA;
 
 	    // Compute size bin
-	    bin = gcx.findBin(size);
+	    static size_t lastsize = -1;
+	    static Bins lastbin;
+	    if (size == lastsize)
+		bin = lastbin;
+	    else
+	    {
+		bin = gcx.findBin(size);
+		lastsize = size;
+		lastbin = bin;
+	    }
 
 	    if (bin < B_PAGE)
 	    {
@@ -279,7 +288,8 @@ class GC
 
 		// Return next item from free list
 		gcx.bucket[bin] = (cast(List *)p).next;
-		memset(p + size, 0, binsize[bin] - size);
+		//memset(p + size, 0, binsize[bin] - size);
+		foreach(inout byte b; cast(byte[])(p + size)[0..binsize[bin] - size]) { b = 0; }
 		//debug(PRINTF) printf("\tmalloc => %x\n", p);
 		debug (MEMSTOMP) memset(p, 0xF0, size);
 	    }

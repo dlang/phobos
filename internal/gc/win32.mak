@@ -5,8 +5,9 @@
 DMD=\dmd\bin\dmd
 
 #DFLAGS=-unittest -g -release
-DFLAGS=-release -O -inline
-#DFLAGS=-release -inline -O
+#DFLAGS=-inline -O
+DFLAGS=-release -inline -O
+#DFLAGS=-g
 
 CC=dmc
 CFLAGS=-g -mn -6 -r -Igc
@@ -39,8 +40,13 @@ dmgc.lib : $(OBJS) win32.mak
 	lib dmgc /c/noi +gc+gcx+gcbits+win32;
 
 gc.obj : gc.d
-gcx.obj : gcx.d
-gcbits.obj : gcbits.d
+	$(DMD) -c -release -inline -O $*
+
+gcx.obj : gcx.d gcbits.d
+	$(DMD) -c -release -inline -O gcx gcbits
+
+#gcbits.obj : gcbits.d
+
 win32.obj : win32.d
 
 zip : $(SRC)

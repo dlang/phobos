@@ -9,11 +9,11 @@ class TypeInfo_Au : TypeInfo
 {
     char[] toString() { return "wchar[]"; }
 
-    uint getHash(void *p)
+    hash_t getHash(void *p)
     {	wchar[] s = *cast(wchar[]*)p;
 	size_t len = s.length;
 	wchar *str = s;
-	uint hash = 0;
+	hash_t hash = 0;
 
 	while (1)
 	{

@@ -7,7 +7,7 @@ alias void delegate(int) dg;
 
 class TypeInfo_D : TypeInfo
 {
-    uint getHash(void *p)
+    hash_t getHash(void *p)
     {	long l = *cast(long *)p;
 
 	return cast(uint)(l + (l >> 32));

@@ -32,11 +32,11 @@ class TypeInfo_Ar : TypeInfo
 {
     char[] toString() { return "cdouble[]"; }
 
-    uint getHash(void *p)
+    hash_t getHash(void *p)
     {	cdouble[] s = *cast(cdouble[]*)p;
 	size_t len = s.length;
 	cdouble *str = s;
-	uint hash = 0;
+	hash_t hash = 0;
 
 	while (len)
 	{

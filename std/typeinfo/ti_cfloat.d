@@ -7,7 +7,7 @@ class TypeInfo_q : TypeInfo
 {
     char[] toString() { return "cfloat"; }
 
-    uint getHash(void *p)
+    hash_t getHash(void *p)
     {
 	return (cast(uint *)p)[0] + (cast(uint *)p)[1];
     }

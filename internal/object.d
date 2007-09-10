@@ -62,12 +62,15 @@ version (X86_64)
      * analogous to C's ptrdiff_t.
      */
     alias long ptrdiff_t;
+    alias ulong hash_t;
 }
 else
 {
     alias uint size_t;
     alias int ptrdiff_t;
+    alias uint hash_t;
 }
+
 
 /******************
  * All D class objects inherit from Object.
@@ -90,7 +93,7 @@ class Object
     /**
      * Compute hash function for Object.
      */
-    uint toHash()
+    hash_t toHash()
     {
 	// BUG: this prevents a compacting GC from working, needs to be fixed
 	return cast(uint)cast(void *)this;
@@ -182,7 +185,7 @@ class TypeInfo
     }
 
     /// Returns a hash of the instance of a type.
-    uint getHash(void *p) { return cast(uint)p; }
+    hash_t getHash(void *p) { return cast(uint)p; }
 
     /// Compares two instances for equality.
     int equals(void *p1, void *p2) { return p1 == p2; }
@@ -210,7 +213,7 @@ class TypeInfo
 class TypeInfo_Typedef : TypeInfo
 {
     char[] toString() { return name; }
-    uint getHash(void *p) { return base.getHash(p); }
+    hash_t getHash(void *p) { return base.getHash(p); }
     int equals(void *p1, void *p2) { return base.equals(p1, p2); }
     int compare(void *p1, void *p2) { return base.compare(p1, p2); }
     size_t tsize() { return base.tsize(); }
@@ -228,7 +231,7 @@ class TypeInfo_Pointer : TypeInfo
 {
     char[] toString() { return next.toString() ~ "*"; }
 
-    uint getHash(void *p)
+    hash_t getHash(void *p)
     {
         return cast(uint)*cast(void* *)p;
     }
@@ -262,9 +265,9 @@ class TypeInfo_Array : TypeInfo
 {
     char[] toString() { return next.toString() ~ "[]"; }
 
-    uint getHash(void *p)
+    hash_t getHash(void *p)
     {	size_t sz = next.tsize();
-	uint hash = 0;
+	hash_t hash = 0;
 	void[] a = *cast(void[]*)p;
 	for (size_t i = 0; i < a.length; i++)
 	    hash += next.getHash(a.ptr + i * sz);
@@ -326,9 +329,9 @@ class TypeInfo_StaticArray : TypeInfo
 	return next.toString() ~ "[" ~ std.string.toString(len) ~ "]";
     }
 
-    uint getHash(void *p)
+    hash_t getHash(void *p)
     {	size_t sz = next.tsize();
-	uint hash = 0;
+	hash_t hash = 0;
 	for (size_t i = 0; i < len; i++)
 	    hash += next.getHash(p + i * sz);
         return hash;
@@ -445,7 +448,7 @@ class TypeInfo_Class : TypeInfo
 {
     char[] toString() { return info.name; }
 
-    uint getHash(void *p)
+    hash_t getHash(void *p)
     {
 	Object o = *cast(Object*)p;
 	assert(o);
@@ -493,8 +496,8 @@ class TypeInfo_Struct : TypeInfo
 {
     char[] toString() { return name; }
 
-    uint getHash(void *p)
-    {	uint h;
+    hash_t getHash(void *p)
+    {	hash_t h;
 
 	assert(p);
 	if (xtoHash)

@@ -299,9 +299,179 @@ void test1()
 
 /* ---------------------------- */
 
+void test2()
+{
+    char[] str;
+
+    for (int i = 0; i < 10_000; i++)
+	str = str ~ "ABCDEFGHIJKLMNOPQRST";
+}
+
+/* ---------------------------- */
+
+/* The Great Computer Language Shootout
+   http://shootout.alioth.debian.org/
+
+   http://www.bagley.org/~doug/shootout/
+
+   converted to D by Dave Fladebo
+   compile: dmd -O -inline -release hash.d
+*/
+
+
+void test3()
+{
+    int n = 1000;
+
+    char[32]    str;
+    int[char[]] X;
+
+    for(int i = 1; i <= n; i++) {
+        int len = sprintf(str,"%x",i);
+        X[str[0..len].dup] = i;
+    }
+
+    int c;
+    for(int i = n; i > 0; i--) {
+        int len = sprintf(str,"%d",i);
+        if(str[0..len] in X) c++;
+    }
+
+    printf("%d\n", c);
+}
+
+/* ---------------------------- */
+
+void test4()
+{
+    const int iters = 1_000_000;
+    C[] c = new C[iters];
+    int i;
+    for(i = 0; i < iters; i++)
+    {
+        c[i] = new C;
+        delete c[i];
+    }
+    printf("%d\n", i);
+}
+
+class C
+{
+    int i, j, k;
+    real l, m, n;
+}
+
+/* ---------------------------- */
+
+/* The Computer Language Shootout Benchmarks
+   http://shootout.alioth.debian.org/
+
+   contributed by Dave Fladebo
+   compile: dmd -O -inline -release binarytrees.d
+*/
+
+
+int test5()
+{
+    TreeNode*   stretchTree, longLivedTree, tempTree;
+    int         depth, minDepth, maxDepth, stretchDepth, N = 1;
+
+    minDepth = 4;
+    maxDepth = (minDepth + 2) > N ? minDepth + 2 : N;
+    stretchDepth = maxDepth + 1;
+
+    stretchTree = TreeNode.BottomUpTree(0, stretchDepth);
+    printf("stretch tree of depth %d\t check: %d\n", stretchDepth, stretchTree.ItemCheck);
+    //TreeNode.DeleteTree(stretchTree);
+
+    longLivedTree = TreeNode.BottomUpTree(0, maxDepth);
+
+    for(depth = minDepth; depth <= maxDepth; depth += 2)
+    {
+        int check, iterations = 1 << (maxDepth - depth + minDepth);
+
+        for(int i = 0; i < iterations; i++)
+        {
+            tempTree = TreeNode.BottomUpTree(i, depth);
+            check += tempTree.ItemCheck;
+            //TreeNode.DeleteTree(tempTree);
+
+            tempTree = TreeNode.BottomUpTree(-i, depth);
+            check += tempTree.ItemCheck;
+            //TreeNode.DeleteTree(tempTree);
+        }
+
+        //printf(iterations * 2,"\t trees of depth ",depth,"\t check: ",check);
+    }
+
+    //writefln("long lived tree of depth ",maxDepth,"\t check: ",longLivedTree.ItemCheck);
+
+    return 0;
+}
+
+struct TreeNode
+{
+public:
+    static TreeNode* BottomUpTree(int item, int depth)
+    {
+        if(depth > 0)
+            return TreeNode(item
+                           ,BottomUpTree(2 * item - 1, depth - 1)
+                           ,BottomUpTree(2 * item, depth - 1));
+        return TreeNode(item);
+    }
+
+    int ItemCheck()
+    {
+        if(left)
+            return item + left.ItemCheck() - right.ItemCheck();
+        return item;
+    }
+
+    static void DeleteTree(TreeNode* tree)
+    {
+        if(tree.left)
+        {
+            DeleteTree(tree.left);
+            DeleteTree(tree.right);
+        }
+
+        delete tree;
+    }
+
+private:
+    TreeNode*           left, right;
+    int                 item;
+
+    static TreeNode* opCall(int item, TreeNode* left = null, TreeNode* right = null)
+    {
+        TreeNode* t = new TreeNode;
+        t.left = left;
+        t.right = right;
+        t.item = item;
+        return t;
+    }
+
+    //new(uint sz)
+    //{
+    //    return std.c.stdlib.malloc(sz);
+    //}
+
+    //delete(void* p)
+    //{
+    //    free(p);
+    //}
+}
+
+/* ---------------------------- */
+
 int main(char[][] args)
 {
     test1();
+    test2();
+    test3();
+    test4();
+    test5();
 
     gc_t gc;
 

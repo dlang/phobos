@@ -32,11 +32,11 @@ class TypeInfo_Ae : TypeInfo
 {
     char[] toString() { return "real[]"; }
 
-    uint getHash(void *p)
+    hash_t getHash(void *p)
     {	real[] s = *cast(real[]*)p;
 	size_t len = s.length;
 	real *str = s;
-	uint hash = 0;
+	hash_t hash = 0;
 
 	while (len)
 	{

@@ -32,11 +32,11 @@ class TypeInfo_Af : TypeInfo
 {
     char[] toString() { return "float[]"; }
 
-    uint getHash(void *p)
+    hash_t getHash(void *p)
     {	float[] s = *cast(float[]*)p;
 	size_t len = s.length;
 	float *str = s;
-	uint hash = 0;
+	hash_t hash = 0;
 
 	while (len)
 	{

@@ -29,7 +29,7 @@
 // This code is derived from the
 // RSA Data Security, Inc. MD5 Message-Digest Algorithm.
 
-module std.md5;
+import std.md5;
 
 private import std.stdio;
 private import std.string;

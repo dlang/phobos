@@ -29,7 +29,7 @@ private import std.string;
 
 class TypeInfo_C : TypeInfo
 {
-    uint getHash(void *p)
+    hash_t getHash(void *p)
     {
 	Object o = *cast(Object*)p;
 	assert(o);

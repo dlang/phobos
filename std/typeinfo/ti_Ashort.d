@@ -10,11 +10,11 @@ class TypeInfo_As : TypeInfo
 {
     char[] toString() { return "short[]"; }
 
-    uint getHash(void *p)
+    hash_t getHash(void *p)
     {	short[] s = *cast(short[]*)p;
 	size_t len = s.length;
 	short *str = s;
-	uint hash = 0;
+	hash_t hash = 0;
 
 	while (1)
 	{

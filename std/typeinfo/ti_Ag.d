@@ -10,11 +10,11 @@ class TypeInfo_Ag : TypeInfo
 {
     char[] toString() { return "byte[]"; }
 
-    uint getHash(void *p)
+    hash_t getHash(void *p)
     {	byte[] s = *cast(byte[]*)p;
 	size_t len = s.length;
 	byte *str = s;
-	uint hash = 0;
+	hash_t hash = 0;
 
 	while (1)
 	{

@@ -10,9 +10,9 @@ class TypeInfo_Aa : TypeInfo
 {
     char[] toString() { return "char[]"; }
 
-    uint getHash(void *p)
+    hash_t getHash(void *p)
     {	char[] s = *cast(char[]*)p;
-	uint hash = 0;
+	hash_t hash = 0;
 
 version (all)
 {

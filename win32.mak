@@ -100,6 +100,8 @@ DOCS=	$(DOC)\std_path.html $(DOC)\std_math.html $(DOC)\std_outbuffer.html \
 	$(DOC)\std_cover.html \
 	$(DOC)\std_regexp.html \
 	$(DOC)\std_bitarray.html \
+	$(DOC)\std_process.html \
+	$(DOC)\std_stdint.html \
 	$(DOC)\std_stdio.html \
 	$(DOC)\std_windows_charset.html \
 	$(DOC)\std_c_fenv.html \
@@ -819,11 +821,17 @@ $(DOC)\std_outbuffer.html : std.ddoc std\outbuffer.d
 $(DOC)\std_path.html : std.ddoc std\path.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_path.html std.ddoc std\path.d
 
+$(DOC)\std_process.html : std.ddoc std\process.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_process.html std.ddoc std\process.d
+
 $(DOC)\std_random.html : std.ddoc std\random.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_random.html std.ddoc std\random.d
 
 $(DOC)\std_regexp.html : std.ddoc std\regexp.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_regexp.html std.ddoc std\regexp.d
+
+$(DOC)\std_stdint.html : std.ddoc std\stdint.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_stdint.html std.ddoc std\stdint.d
 
 $(DOC)\std_stdio.html : std.ddoc std\stdio.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_stdio.html std.ddoc std\stdio.d

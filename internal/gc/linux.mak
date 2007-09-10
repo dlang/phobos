@@ -34,10 +34,10 @@ gc.o : gc.d
 	$(DMD) -c $(DFLAGS) gc.d
 
 gcx.o : gcx.d
-	$(DMD) -c $(DFLAGS) gcx.d
+	$(DMD) -c $(DFLAGS) gcx.d gcbits.d
 
-gcbits.o : gcbits.d
-	$(DMD) -c $(DFLAGS) gcbits.d
+#gcbits.o : gcbits.d
+#	$(DMD) -c $(DFLAGS) gcbits.d
 
 gclinux.o : gclinux.d
 	$(DMD) -c $(DFLAGS) gclinux.d

@@ -7,7 +7,7 @@ class TypeInfo_v : TypeInfo
 {
     char[] toString() { return "void"; }
 
-    uint getHash(void *p)
+    hash_t getHash(void *p)
     {
 	assert(0);
 	return *cast(byte *)p;

@@ -6,9 +6,9 @@ private import std.string;
 
 class TypeInfo_AC : TypeInfo
 {
-    uint getHash(void *p)
+    hash_t getHash(void *p)
     {	Object[] s = *cast(Object[]*)p;
-	uint hash = 0;
+	hash_t hash = 0;
 
 	foreach (Object o; s)
 	{

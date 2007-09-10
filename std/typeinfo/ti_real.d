@@ -9,7 +9,7 @@ class TypeInfo_e : TypeInfo
 {
     char[] toString() { return "real"; }
 
-    uint getHash(void *p)
+    hash_t getHash(void *p)
     {
 	return (cast(uint *)p)[0] + (cast(uint *)p)[1] + (cast(ushort *)p)[4];
     }

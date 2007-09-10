@@ -9,7 +9,7 @@ class TypeInfo_f : TypeInfo
 {
     char[] toString() { return "float"; }
 
-    uint getHash(void *p)
+    hash_t getHash(void *p)
     {
 	return *cast(uint *)p;
     }

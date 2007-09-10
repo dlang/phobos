@@ -8,6 +8,7 @@ alias bool bit;
 
 alias typeof(int.sizeof) size_t;
 alias typeof(cast(void*)0 - cast(void*)0) ptrdiff_t;
+alias uint hash_t;
 
 extern (C)
 {   int printf(char *, ...);
@@ -45,7 +46,7 @@ class ClassInfo : Object
 
 class TypeInfo
 {
-    uint getHash(void *p);
+    hash_t getHash(void *p);
     int equals(void *p1, void *p2);
     int compare(void *p1, void *p2);
     size_t tsize();

@@ -9,11 +9,11 @@ class TypeInfo_Am : TypeInfo
 {
     char[] toString() { return "ulong[]"; }
 
-    uint getHash(void *p)
+    hash_t getHash(void *p)
     {	ulong[] s = *cast(ulong[]*)p;
 	size_t len = s.length;
 	ulong *str = s;
-	uint hash = 0;
+	hash_t hash = 0;
 
 	while (len)
 	{

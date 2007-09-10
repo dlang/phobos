@@ -9,11 +9,11 @@ class TypeInfo_Ai : TypeInfo
 {
     char[] toString() { return "int[]"; }
 
-    uint getHash(void *p)
+    hash_t getHash(void *p)
     {	int[] s = *cast(int[]*)p;
 	size_t len = s.length;
 	int *str = s;
-	uint hash = 0;
+	hash_t hash = 0;
 
 	while (len)
 	{

@@ -387,7 +387,7 @@ $(I FormatChar):
 	The $(B f) format is used if the exponent for an $(B e) format
 	is greater than -5 and less than the $(I Precision).
 	The $(I Precision) specifies the number of significant
-	digits, and defaults to one.
+	digits, and defaults to six.
 	Trailing zeros are elided after the decimal point, if the fractional
 	part is zero then no decimal point is generated.
 
@@ -697,6 +697,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
 
 	    case Mangle.Tpointer:
 		vnumber = cast(ulong)va_arg!(void*)(argptr);
+		uc = 1;
 		flags |= FL0pad;
 		if (!(flags & FLprecision))
 		{   flags |= FLprecision;
@@ -837,7 +838,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
 	if (flags & FLprecision && fc != 'p')
 	    flags &= ~FL0pad;
 
-	if (vnumber < 10)
+	if (vnumber < base)
 	{
 	    if (vnumber == 0 && precision == 0 && flags & FLprecision &&
 		!(fc == 'o' && flags & FLhash))
@@ -845,7 +846,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
 		putstr(null);
 		return;
 	    }
-	    if (vnumber < base)
+	    if (precision == 0 || !(flags & FLprecision))
 	    {	vchar = '0' + vnumber;
 		goto L2;
 	    }
@@ -1113,6 +1114,9 @@ unittest
     s = std.string.format("%7.4g:", 12.678);
     assert(s == "  12.68:");
 
+    s = std.string.format("%7.4g:", 12.678L);
+    assert(s == "  12.68:");
+
     s = std.string.format("%04f|%05d|%#05x|%#5x",-4.,-10,1,1);
     assert(s == "-4.000000|-0010|0x001|  0x1");
 
@@ -1163,14 +1167,60 @@ unittest
     r = std.string.format("%8s", s[0..5]);
     assert(r == "   hello");
 
-    int[] arr = new int[4];
-    arr[0] = 100;
-    arr[1] = -999;
-    arr[3] = 0;
-    r = std.string.format(arr);
+    byte[] arrbyte = new byte[4];
+    arrbyte[0] = 100;
+    arrbyte[1] = -99;
+    arrbyte[3] = 0;
+    r = std.string.format(arrbyte);
+    assert(r == "[100,-99,0,0]");
+
+    ubyte[] arrubyte = new ubyte[4];
+    arrubyte[0] = 100;
+    arrubyte[1] = 200;
+    arrubyte[3] = 0;
+    r = std.string.format(arrubyte);
+    assert(r == "[100,200,0,0]");
+
+    short[] arrshort = new short[4];
+    arrshort[0] = 100;
+    arrshort[1] = -999;
+    arrshort[3] = 0;
+    r = std.string.format(arrshort);
     assert(r == "[100,-999,0,0]");
-    r = std.string.format("%s",arr);
+    r = std.string.format("%s",arrshort);
     assert(r == "[100,-999,0,0]");
+
+    ushort[] arrushort = new ushort[4];
+    arrushort[0] = 100;
+    arrushort[1] = 20_000;
+    arrushort[3] = 0;
+    r = std.string.format(arrushort);
+    assert(r == "[100,20000,0,0]");
+
+    int[] arrint = new int[4];
+    arrint[0] = 100;
+    arrint[1] = -999;
+    arrint[3] = 0;
+    r = std.string.format(arrint);
+    assert(r == "[100,-999,0,0]");
+    r = std.string.format("%s",arrint);
+    assert(r == "[100,-999,0,0]");
+
+    long[] arrlong = new long[4];
+    arrlong[0] = 100;
+    arrlong[1] = -999;
+    arrlong[3] = 0;
+    r = std.string.format(arrlong);
+    assert(r == "[100,-999,0,0]");
+    r = std.string.format("%s",arrlong);
+    assert(r == "[100,-999,0,0]");
+
+    ulong[] arrulong = new ulong[4];
+    arrulong[0] = 100;
+    arrulong[1] = 999;
+    arrulong[3] = 0;
+    r = std.string.format(arrulong);
+    assert(r == "[100,999,0,0]");
 
     char[][] arr2 = new char[][4];
     arr2[0] = "hello";
@@ -1179,5 +1229,70 @@ unittest
     r = std.string.format(arr2);
     assert(r == "[hello,world,,foo]");
 
+    r = std.string.format("%.8d", 7);
+    assert(r == "00000007");
+    r = std.string.format("%.8x", 10);
+    assert(r == "0000000a");
+
+    r = std.string.format("%-3d", 7);
+    assert(r == "7  ");
+
+    r = std.string.format("%*d", -3, 7);
+    assert(r == "7  ");
+
+    r = std.string.format("%.*d", -3, 7);
+    assert(r == "7");
+
+    typedef int myint;
+    myint m = -7;
+    r = std.string.format(m);
+    assert(r == "-7");
+
+    r = std.string.format("abc"c);
+    assert(r == "abc");
+    r = std.string.format("def"w);
+    assert(r == "def");
+    r = std.string.format("ghi"d);
+    assert(r == "ghi");
+
+    void* p = cast(void*)0xDEADBEEF;
+    r = std.string.format(p);
+    assert(r == "DEADBEEF");
+
+    r = std.string.format("%#x", 0xabcd);
+    assert(r == "0xabcd");
+    r = std.string.format("%#X", 0xABCD);
+    assert(r == "0XABCD");
+
+    r = std.string.format("%#o", 012345);
+    assert(r == "012345");
+    r = std.string.format("%o", 9);
+    assert(r == "11");
+
+    r = std.string.format("%+d", 123);
+    assert(r == "+123");
+    r = std.string.format("%+d", -123);
+    assert(r == "-123");
+    r = std.string.format("% d", 123);
+    assert(r == " 123");
+    r = std.string.format("% d", -123);
+    assert(r == "-123");
+
+    r = std.string.format("%%");
+    assert(r == "%");
+
+    r = std.string.format("%d", true);
+    assert(r == "1");
+    r = std.string.format("%d", false);
+    assert(r == "0");
+
+    r = std.string.format("%d", 'a');
+    assert(r == "97");
+    wchar wc = 'a';
+    r = std.string.format("%d", wc);
+    assert(r == "97");
+    dchar dc = 'a';
+    r = std.string.format("%d", dc);
+    assert(r == "97");
 }
 

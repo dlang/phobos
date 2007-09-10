@@ -7,7 +7,7 @@ class TypeInfo_k : TypeInfo
 {
     char[] toString() { return "uint"; }
 
-    uint getHash(void *p)
+    hash_t getHash(void *p)
     {
 	return *cast(uint *)p;
     }
