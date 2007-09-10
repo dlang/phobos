@@ -6,7 +6,7 @@
  */
 
 /*
- *  Copyright (C) 2000-2006 by Digital Mars, www.digitalmars.com
+ *  Copyright (C) 2000-2007 by Digital Mars, www.digitalmars.com
  *  Written by Walter Bright
  *
  *  This software is provided 'as-is', without any express or implied
@@ -276,7 +276,7 @@ void* _aaGet(AA* aa, TypeInfo keyti, size_t valuesize, ...)
 
 	// Not found, create new elem
 	//printf("create new one\n");
-	e = cast(aaA *) cast(void*) new byte[aaA.sizeof + keysize + valuesize];
+	e = cast(aaA *) cast(void*) new void[aaA.sizeof + keysize + valuesize];
 	memcpy(e + 1, pkey, keysize);
 	e.hash = key_hash;
 	*pe = e;
@@ -478,7 +478,7 @@ ArrayRet_t _aaValues(AA aa, size_t keysize, size_t valuesize)
 	if (aa.a)
 	{
 	    a.length = _aaLen(aa);
-	    a.ptr = (new byte[a.length * valuesize]).ptr;
+	    a.ptr = (new void[a.length * valuesize]).ptr;
 	    resi = 0;
 	    foreach (e; aa.a.b)
 	    {
@@ -613,7 +613,7 @@ ArrayRet_t _aaKeys(AA aa, size_t keysize)
 	auto len = _aaLen(aa);
 	if (!len)
 	    return 0;
-	res = new byte[len * keysize];
+	res = cast(byte[])new void[len * keysize];
 	resi = 0;
 	foreach (e; aa.a.b)
 	{

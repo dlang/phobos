@@ -86,6 +86,16 @@ class TypeInfo_Af : TypeInfo
     {
 	return (float[]).sizeof;
     }
+
+    uint flags()
+    {
+	return 1;
+    }
+
+    TypeInfo next()
+    {
+	return typeid(float);
+    }
 }
 
 // ifloat[]
@@ -93,4 +103,9 @@ class TypeInfo_Af : TypeInfo
 class TypeInfo_Ao : TypeInfo_Af
 {
     char[] toString() { return "ifloat[]"; }
+
+    TypeInfo next()
+    {
+	return typeid(ifloat);
+    }
 }

@@ -31,19 +31,22 @@ testgc.exe : testgc.obj dmgc.lib
 
 testgc.obj : testgc.d
 
-OBJS= gc.obj gcx.obj gcbits.obj win32.obj
+OBJS= gc.obj gcold.obj gcx.obj gcbits.obj win32.obj
 
-SRC= gc.d gcx.d gcbits.d win32.d gclinux.d testgc.d win32.mak linux.mak
+SRC= gc.d gcold.d gcx.d gcbits.d win32.d gclinux.d testgc.d win32.mak linux.mak
 
 dmgc.lib : $(OBJS) win32.mak
 	del dmgc.lib
-	lib dmgc /c/noi +gc+gcx+gcbits+win32;
+	lib dmgc /c/noi +gc+gcold+gcx+gcbits+win32;
 
 gc.obj : gc.d
-	$(DMD) -c -release -inline -O $*
+	$(DMD) -c $(DFLAGS) $*
+
+gcold.obj : gcold.d
+	$(DMD) -c $(DFLAGS) $*
 
 gcx.obj : gcx.d gcbits.d
-	$(DMD) -c -release -inline -O gcx gcbits
+	$(DMD) -c $(DFLAGS) gcx gcbits
 
 #gcbits.obj : gcbits.d
 

@@ -59,6 +59,27 @@ void addRange(void *pbot, void *ptop);	// add range to scan for roots
  */
 void removeRange(void *pbot);		// remove range
 
+/**
+ * Mark a gc allocated block of memory as possibly containing pointers.
+ */
+void hasPointers(void* p);
+
+/**
+ * Mark a gc allocated block of memory as definitely NOT containing pointers.
+ */
+void hasNoPointers(void* p);
+
+/**
+ * Mark a gc allocated block of memory pointed to by p as being populated with
+ * an array of TypeInfo ti (as many as will fit).
+ */
+void setTypeInfo(TypeInfo ti, void* p);
+
+/**
+ * Set gc behavior to match that of 1.0.
+ */
+void setV1_0();
+
 /***********************************
  * Run a full garbage collection cycle.
  *

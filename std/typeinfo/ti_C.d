@@ -67,5 +67,10 @@ class TypeInfo_C : TypeInfo
     {
 	return Object.sizeof;
     }
+
+    uint flags()
+    {
+	return 1;
+    }
 }
 

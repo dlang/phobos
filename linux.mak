@@ -64,9 +64,9 @@ OBJS = asserterror.o deh2.o switch.o complex.o gcstats.o \
 	ti_float.o ti_double.o ti_real.o ti_delegate.o \
 	ti_creal.o ti_ireal.o ti_cfloat.o ti_ifloat.o \
 	ti_cdouble.o ti_idouble.o \
-	ti_Aa.o ti_AC.o ti_Ag.o ti_Aubyte.o ti_Aushort.o ti_Ashort.o \
-	ti_C.o ti_int.o ti_char.o ti_dchar.o ti_Adchar.o \
-	ti_Aint.o ti_Auint.o ti_Along.o ti_Aulong.o ti_Awchar.o \
+	ti_AC.o ti_Ag.o ti_Ashort.o \
+	ti_C.o ti_int.o ti_char.o ti_dchar.o \
+	ti_Aint.o ti_Along.o \
 	ti_Afloat.o ti_Adouble.o ti_Areal.o \
 	ti_Acfloat.o ti_Acdouble.o ti_Acreal.o \
 	ti_void.o \
@@ -79,7 +79,7 @@ ZLIB_OBJS = etc/c/zlib/adler32.o etc/c/zlib/compress.o \
 	etc/c/zlib/inflate.o etc/c/zlib/infback.o \
 	etc/c/zlib/inftrees.o etc/c/zlib/inffast.o
 
-GC_OBJS= internal/gc/gc.o internal/gc/gcx.o \
+GC_OBJS= internal/gc/gc.o internal/gc/gcold.o internal/gc/gcx.o \
 	internal/gc/gcbits.o internal/gc/gclinux.o
 
 SRC=	errno.c object.d unittest.d crc32.d gcstats.d
@@ -111,19 +111,18 @@ SRC_TI=	\
 	std/typeinfo/ti_creal.d std/typeinfo/ti_ireal.d \
 	std/typeinfo/ti_cfloat.d std/typeinfo/ti_ifloat.d \
 	std/typeinfo/ti_cdouble.d std/typeinfo/ti_idouble.d \
-	std/typeinfo/ti_Adchar.d std/typeinfo/ti_Aubyte.d \
-	std/typeinfo/ti_Aushort.d std/typeinfo/ti_Ashort.d \
-	std/typeinfo/ti_Aa.d std/typeinfo/ti_Ag.d \
+	std/typeinfo/ti_Adchar.d \
+	std/typeinfo/ti_Ashort.d \
+	std/typeinfo/ti_Ag.d \
 	std/typeinfo/ti_AC.d std/typeinfo/ti_C.d \
 	std/typeinfo/ti_int.d std/typeinfo/ti_char.d \
-	std/typeinfo/ti_Aint.d std/typeinfo/ti_Auint.d \
-	std/typeinfo/ti_Along.d std/typeinfo/ti_Aulong.d \
+	std/typeinfo/ti_Aint.d \
+	std/typeinfo/ti_Along.d \
 	std/typeinfo/ti_Afloat.d std/typeinfo/ti_Adouble.d \
 	std/typeinfo/ti_Areal.d \
 	std/typeinfo/ti_Acfloat.d std/typeinfo/ti_Acdouble.d \
 	std/typeinfo/ti_Acreal.d \
-	std/typeinfo/ti_void.d \
-	std/typeinfo/ti_Awchar.d std/typeinfo/ti_dchar.d
+	std/typeinfo/ti_void.d
 
 SRC_INT=	\
 	internal/switch.d internal/complex.c internal/critical.c \
@@ -180,6 +179,7 @@ SRC_ZLIB= etc/c/zlib\trees.h \
 	etc/c/zlib\linux.mak
 
 SRC_GC= internal/gc/gc.d \
+	internal/gc/gcold.d \
 	internal/gc/gcx.d \
 	internal/gc/gcstub.d \
 	internal/gc/gcbits.d \
@@ -196,6 +196,7 @@ ALLSRCS = $(SRC) $(SRC_STD) $(SRC_STD_C) $(SRC_TI) $(SRC_INT) $(SRC_STD_WIN) \
 
 #libphobos.a : $(OBJS) internal/gc/dmgc.a linux.mak
 libphobos.a : $(OBJS) internal/gc/dmgc.a $(ZLIB_OBJS) linux.mak
+	rm -f libphobos.a
 	ar -r $@ $(OBJS) $(ZLIB_OBJS) $(GC_OBJS)
 
 ###########################################################
@@ -527,9 +528,6 @@ ti_cdouble.o : std/typeinfo/ti_cdouble.d
 ti_idouble.o : std/typeinfo/ti_idouble.d
 	$(DMD) -c $(DFLAGS) std/typeinfo/ti_idouble.d
 
-ti_Aa.o : std/typeinfo/ti_Aa.d
-	$(DMD) -c $(DFLAGS) std/typeinfo/ti_Aa.d
-
 ti_AC.o : std/typeinfo/ti_AC.d
 	$(DMD) -c $(DFLAGS) std/typeinfo/ti_AC.d
 
@@ -539,23 +537,11 @@ ti_Ag.o : std/typeinfo/ti_Ag.d
 ti_Abit.o : std/typeinfo/ti_Abit.d
 	$(DMD) -c $(DFLAGS) std/typeinfo/ti_Abit.d
 
-ti_Aubyte.o : std/typeinfo/ti_Aubyte.d
-	$(DMD) -c $(DFLAGS) std/typeinfo/ti_Aubyte.d
-
-ti_Aushort.o : std/typeinfo/ti_Aushort.d
-	$(DMD) -c $(DFLAGS) std/typeinfo/ti_Aushort.d
-
 ti_Ashort.o : std/typeinfo/ti_Ashort.d
 	$(DMD) -c $(DFLAGS) std/typeinfo/ti_Ashort.d
 
-ti_Auint.o : std/typeinfo/ti_Auint.d
-	$(DMD) -c $(DFLAGS) std/typeinfo/ti_Auint.d
-
 ti_Aint.o : std/typeinfo/ti_Aint.d
 	$(DMD) -c $(DFLAGS) std/typeinfo/ti_Aint.d
-
-ti_Aulong.o : std/typeinfo/ti_Aulong.d
-	$(DMD) -c $(DFLAGS) std/typeinfo/ti_Aulong.d
 
 ti_Along.o : std/typeinfo/ti_Along.d
 	$(DMD) -c $(DFLAGS) std/typeinfo/ti_Along.d
@@ -577,12 +563,6 @@ ti_Acdouble.o : std/typeinfo/ti_Acdouble.d
 
 ti_Acreal.o : std/typeinfo/ti_Acreal.d
 	$(DMD) -c $(DFLAGS) std/typeinfo/ti_Acreal.d
-
-ti_Awchar.o : std/typeinfo/ti_Awchar.d
-	$(DMD) -c $(DFLAGS) std/typeinfo/ti_Awchar.d
-
-ti_Adchar.o : std/typeinfo/ti_Adchar.d
-	$(DMD) -c $(DFLAGS) std/typeinfo/ti_Adchar.d
 
 ti_C.o : std/typeinfo/ti_C.d
 	$(DMD) -c $(DFLAGS) std/typeinfo/ti_C.d

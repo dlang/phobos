@@ -57,5 +57,11 @@ class TypeInfo_e : TypeInfo
 	*cast(real *)p1 = *cast(real *)p2;
 	*cast(real *)p2 = t;
     }
+
+    void[] init()
+    {	static real r;
+
+	return (cast(real *)&r)[0 .. 1];
+    }
 }
 

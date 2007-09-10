@@ -33,5 +33,11 @@ class TypeInfo_a : TypeInfo
 	*cast(char *)p1 = *cast(char *)p2;
 	*cast(char *)p2 = t;
     }
+
+    void[] init()
+    {	static char c;
+
+	return (cast(char *)&c)[0 .. 1];
+    }
 }
 

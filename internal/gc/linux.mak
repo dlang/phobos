@@ -9,9 +9,9 @@ DFLAGS=-release -O -inline -I../..
 #DFLAGS=-release -inline -O
 CC=gcc
 
-OBJS= gc.o gcx.o gcbits.o gclinux.o
+OBJS= gc.o gcx.o gcbits.o gclinux.o gcold.o
 
-SRC= gc.d gcx.d gcbits.d win32.d gclinux.d testgc.d win32.mak linux.mak
+SRC= gc.d gcx.d gcbits.d win32.d gclinux.d gcold.d testgc.d win32.mak linux.mak
 
 .c.o:
 	$(CC) -c $(CFLAGS) $*
@@ -32,6 +32,9 @@ dmgc.a : $(OBJS) linux.mak
 
 gc.o : gc.d
 	$(DMD) -c $(DFLAGS) gc.d
+
+gcold.o : gcold.d
+	$(DMD) -c $(DFLAGS) gcold.d
 
 gcx.o : gcx.d
 	$(DMD) -c $(DFLAGS) gcx.d gcbits.d

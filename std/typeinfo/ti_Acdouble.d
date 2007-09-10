@@ -89,5 +89,15 @@ class TypeInfo_Ar : TypeInfo
     {
 	return (cdouble[]).sizeof;
     }
+
+    uint flags()
+    {
+	return 1;
+    }
+
+    TypeInfo next()
+    {
+	return typeid(cdouble);
+    }
 }
 

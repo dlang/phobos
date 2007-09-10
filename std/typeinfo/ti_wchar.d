@@ -34,5 +34,11 @@ class TypeInfo_u : TypeInfo
 	*cast(wchar *)p1 = *cast(wchar *)p2;
 	*cast(wchar *)p2 = t;
     }
+
+    void[] init()
+    {	static wchar c;
+
+	return (cast(wchar *)&c)[0 .. 1];
+    }
 }
 

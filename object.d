@@ -44,6 +44,7 @@ class ClassInfo : Object
     void (*classInvariant)(Object);
     uint flags;
     //	1:			// IUnknown
+    //	2:			// has no possible pointers into GC memory
     void *deallocator;
 }
 
@@ -54,12 +55,17 @@ class TypeInfo
     int compare(void *p1, void *p2);
     size_t tsize();
     void swap(void *p1, void *p2);
+    TypeInfo next();
+    void[] init();
+    uint flags();
+    // 1:			// has possible pointers into GC memory
 }
 
 class TypeInfo_Typedef : TypeInfo
 {
     TypeInfo base;
     char[] name;
+    void[] m_init;
 }
 
 class TypeInfo_Enum : TypeInfo_Typedef
@@ -68,23 +74,23 @@ class TypeInfo_Enum : TypeInfo_Typedef
 
 class TypeInfo_Pointer : TypeInfo
 {
-    TypeInfo next;
+    TypeInfo m_next;
 }
 
 class TypeInfo_Array : TypeInfo
 {
-    TypeInfo next;
+    TypeInfo value;
 }
 
 class TypeInfo_StaticArray : TypeInfo
 {
-    TypeInfo next;
+    TypeInfo value;
     size_t len;
 }
 
 class TypeInfo_AssociativeArray : TypeInfo
 {
-    TypeInfo next;
+    TypeInfo value;
     TypeInfo key;
 }
 
@@ -111,12 +117,14 @@ class TypeInfo_Interface : TypeInfo
 class TypeInfo_Struct : TypeInfo
 {
     char[] name;
-    byte[] init;
+    void[] m_init;
 
     uint function(void*) xtoHash;
     int function(void*,void*) xopEquals;
     int function(void*,void*) xopCmp;
     char[] function(void*) xtoString;
+
+    uint m_flags;
 }
 
 class TypeInfo_Tuple : TypeInfo

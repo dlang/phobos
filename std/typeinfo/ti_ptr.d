@@ -33,5 +33,10 @@ class TypeInfo_P : TypeInfo
 	*cast(void* *)p1 = *cast(void* *)p2;
 	*cast(void* *)p2 = t;
     }
+
+    uint flags()
+    {
+	return 1;
+    }
 }
 

@@ -35,5 +35,11 @@ class TypeInfo_w : TypeInfo
 	*cast(dchar *)p1 = *cast(dchar *)p2;
 	*cast(dchar *)p2 = t;
     }
+
+    void[] init()
+    {	static dchar c;
+
+	return (cast(dchar *)&c)[0 .. 1];
+    }
 }
 

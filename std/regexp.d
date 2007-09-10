@@ -197,8 +197,8 @@ private alias char rchar;	// so we can make a wchar version
 
 char[] sub(char[] string, char[] pattern, char[] format, char[] attributes = null)
 {
-    RegExp r = new RegExp(pattern, attributes);
-    char[] result = r.replace(string, format);
+    auto r = new RegExp(pattern, attributes);
+    auto result = r.replace(string, format);
     delete r;
     return result;
 }
@@ -237,7 +237,7 @@ unittest
 
 char[] sub(char[] string, char[] pattern, char[] delegate(RegExp) dg, char[] attributes = null)
 {
-    RegExp r = new RegExp(pattern, attributes);
+    auto r = new RegExp(pattern, attributes);
     rchar[] result;
     int lastindex;
     int offset;
@@ -327,7 +327,7 @@ int find(rchar[] string, char[] pattern, char[] attributes = null)
 {
     int i = -1;
 
-    RegExp r = new RegExp(pattern, attributes);
+    auto r = new RegExp(pattern, attributes);
     if (r.test(string))
     {
 	i = r.pmatch[0].rm_so;
@@ -370,7 +370,7 @@ int rfind(rchar[] string, char[] pattern, char[] attributes = null)
     int i = -1;
     int lastindex = 0;
 
-    RegExp r = new RegExp(pattern, attributes);
+    auto r = new RegExp(pattern, attributes);
     while (r.test(string, lastindex))
     {   int eo = r.pmatch[0].rm_eo;
 	i = r.pmatch[0].rm_so;
@@ -425,8 +425,8 @@ unittest
 
 char[][] split(char[] string, char[] pattern, char[] attributes = null)
 {
-    RegExp r = new RegExp(pattern, attributes);
-    char[][] result = r.split(string);
+    auto r = new RegExp(pattern, attributes);
+    auto result = r.split(string);
     delete r;
     return result;
 }
@@ -478,7 +478,7 @@ unittest
 
 RegExp search(char[] string, char[] pattern, char[] attributes = null)
 {
-    RegExp r = new RegExp(pattern, attributes);
+    auto r = new RegExp(pattern, attributes);
 
     if (r.test(string))
     {
@@ -878,7 +878,7 @@ unittest
 {
     debug(regexp) printf("regexp.split.unittest()\n");
 
-    RegExp r = new RegExp("a*?", null);
+    auto r = new RegExp("a*?", null);
     rchar[][] result;
     rchar[] j;
     int i;
@@ -1118,9 +1118,7 @@ public rchar[][] exec()
     if (!test())
 	return null;
 
-    rchar[][] result;
-
-    result = new rchar[][pmatch.length];
+    auto result = new rchar[][pmatch.length];
     for (int i = 0; i < pmatch.length; i++)
     {
 	if (pmatch[i].rm_so == pmatch[i].rm_eo)
@@ -2393,7 +2391,7 @@ int parseRange()
     offset = buf.offset;
     buf.write(cast(uint)0);		// reserve space for length
     buf.reserve(128 / 8);
-    Range r = new Range(buf);
+    auto r = new Range(buf);
     if (op == REnotbit)
 	r.setbit2(0);
     switch (pattern[p])
@@ -2742,8 +2740,8 @@ void optimize()
 	    case REparen:
 	    case REgoto:
 	    {
-		OutBuffer bitbuf = new OutBuffer;
-		Range r = new Range(bitbuf);
+		auto bitbuf = new OutBuffer;
+		auto r = new Range(bitbuf);
 		uint offset;
 
 		offset = i;
@@ -3123,23 +3121,23 @@ public rchar[] replaceOld(rchar[] format)
 unittest
 {   // Created and placed in public domain by Don Clugston
 
-    auto m = regexp.search("aBC r s", `bc\x20r[\40]s`, "i");
+    auto m = search("aBC r s", `bc\x20r[\40]s`, "i");
     assert(m.pre=="a");
     assert(m.match(0)=="BC r s");
-    auto m2 = regexp.search("7xxyxxx", `^\d([a-z]{2})\D\1`);
+    auto m2 = search("7xxyxxx", `^\d([a-z]{2})\D\1`);
     assert(m2.match(0)=="7xxyxx");
     // Just check the parsing.
-    auto m3 = regexp.search("dcbxx", `ca|b[\d\]\D\s\S\w-\W]`);
-    auto m4 = regexp.search("xy", `[^\ca-\xFa\r\n\b\f\t\v\0123]{2,485}$`);
-    auto m5 = regexp.search("xxx", `^^\r\n\b{13,}\f{4}\t\v\u02aF3a\w\W`);
-    auto m6 = regexp.search("xxy", `.*y`);
+    auto m3 = search("dcbxx", `ca|b[\d\]\D\s\S\w-\W]`);
+    auto m4 = search("xy", `[^\ca-\xFa\r\n\b\f\t\v\0123]{2,485}$`);
+    auto m5 = search("xxx", `^^\r\n\b{13,}\f{4}\t\v\u02aF3a\w\W`);
+    auto m6 = search("xxy", `.*y`);
     assert(m6.match(0)=="xxy");
-    auto m7 = regexp.search("QWDEfGH", "(ca|b|defg)+", "i");
+    auto m7 = search("QWDEfGH", "(ca|b|defg)+", "i");
     assert(m7.match(0)=="DEfG");
-    auto m8 = regexp.search("dcbxx", `a?\B\s\S`);
-    auto m9 = regexp.search("dcbxx", `[-w]`);
-    auto m10 = regexp.search("dcbsfd", `aB[c-fW]dB|\d|\D|\u012356|\w|\W|\s|\S`, "i");
-    auto m11 = regexp.search("dcbsfd", `[]a-]`);
+    auto m8 = search("dcbxx", `a?\B\s\S`);
+    auto m9 = search("dcbxx", `[-w]`);
+    auto m10 = search("dcbsfd", `aB[c-fW]dB|\d|\D|\u012356|\w|\W|\s|\S`, "i");
+    auto m11 = search("dcbsfd", `[]a-]`);
     m.replaceOld(`a&b\1c`);
     m.replace(`a$&b$'$1c`);
 }

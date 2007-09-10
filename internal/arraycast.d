@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2004 by Digital Mars, www.digitalmars.com
+ *  Copyright (C) 2004-2007 by Digital Mars, www.digitalmars.com
  *  Written by Walter Bright
  *
  *  This software is provided 'as-is', without any express or implied
@@ -32,18 +32,17 @@
 
 extern (C)
 
-void[] _d_arraycast(uint tsize, uint fsize, void[] a)
+void[] _d_arraycast(size_t tsize, size_t fsize, void[] a)
 {
-    uint length = a.length;
-    uint nbytes;
+    auto length = a.length;
 
-    nbytes = length * fsize;
+    auto nbytes = length * fsize;
     if (nbytes % tsize != 0)
     {
 	throw new Error("array cast misalignment");
     }
     length = nbytes / tsize;
-    *cast(uint *)&a = length;	// jam new length
+    *cast(size_t *)&a = length;	// jam new length
     return a;
 }
 
@@ -70,6 +69,8 @@ unittest
  * Throws exception if new length is not aligned.
  */
 
+version (none)
+{
 extern (C)
 
 void[] _d_arraycast_frombit(uint tsize, void[] a)
@@ -81,7 +82,7 @@ void[] _d_arraycast_frombit(uint tsize, void[] a)
 	throw new Error("bit[] array cast misalignment");
     }
     length /= 8 * tsize;
-    *cast(uint *)&a = length;	// jam new length
+    *cast(size_t *)&a = length;	// jam new length
     return a;
 }
 
@@ -101,4 +102,4 @@ unittest
     }
 }
 
-
+}

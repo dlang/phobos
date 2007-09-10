@@ -35,5 +35,10 @@ class TypeInfo_v : TypeInfo
 	*cast(byte *)p1 = *cast(byte *)p2;
 	*cast(byte *)p2 = t;
     }
+
+    uint flags()
+    {
+	return 1;
+    }
 }
 

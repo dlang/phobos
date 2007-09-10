@@ -56,5 +56,11 @@ class TypeInfo_q : TypeInfo
 	*cast(cfloat *)p1 = *cast(cfloat *)p2;
 	*cast(cfloat *)p2 = t;
     }
+
+    void[] init()
+    {	static cfloat r;
+
+	return (cast(cfloat *)&r)[0 .. 1];
+    }
 }
 

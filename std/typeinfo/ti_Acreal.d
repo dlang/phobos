@@ -90,5 +90,15 @@ class TypeInfo_Ac : TypeInfo
     {
 	return (creal[]).sizeof;
     }
+
+    uint flags()
+    {
+	return 1;
+    }
+
+    TypeInfo next()
+    {
+	return typeid(creal);
+    }
 }
 

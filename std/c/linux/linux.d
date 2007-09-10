@@ -11,6 +11,8 @@ module std.c.linux.linux;
 public import std.c.linux.linuxextern;
 public import std.c.linux.pthread;
 
+private import std.c.stdio;
+
 alias int pid_t;
 alias int off_t;
 alias uint mode_t;
@@ -136,6 +138,27 @@ extern (C)
     int pipe(int[2]);
     pid_t wait(int*);
     int waitpid(pid_t, int*, int);
+
+    uint alarm(uint);
+    char* basename(char*);
+    //wint_t btowc(int);
+    int chown(char*, uid_t, gid_t);
+    int chroot(char*);
+    size_t confstr(int, char*, size_t);
+    int creat(char*, mode_t);
+    char* ctermid(char*);
+    int dirfd(DIR*);
+    char* dirname(char*);
+    int fattach(int, char*);
+    int fchmod(int, mode_t);
+    int fdatasync(int);
+    int ffs(int);
+    int fmtmsg(int, char*, int, char*, char*, char*);
+    int fpathconf(int, int);
+    int fseeko(FILE*, off_t, int);
+    off_t ftello(FILE*);
+
+    extern char** environ;
 }
 
 struct timeval

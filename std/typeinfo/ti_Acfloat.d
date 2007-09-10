@@ -87,5 +87,15 @@ class TypeInfo_Aq : TypeInfo
     {
 	return (cfloat[]).sizeof;
     }
+
+    uint flags()
+    {
+	return 1;
+    }
+
+    TypeInfo next()
+    {
+	return typeid(cfloat);
+    }
 }
 

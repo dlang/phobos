@@ -1,3 +1,5 @@
+// Written in the D programming language.
+
 /**
  * Macros:
  *	WIKI = Phobos/StdFile
@@ -32,6 +34,7 @@ private import std.c.stdlib;
 private import std.path;
 private import std.string;
 private import std.regexp;
+private import std.gc;
 
 /* =========================== Win32 ======================= */
 
@@ -90,10 +93,8 @@ class FileException : Exception
 
 void[] read(char[] name)
 {
-    DWORD size;
     DWORD numread;
     HANDLE h;
-    byte[] buf;
 
     if (useWfuncs)
     {
@@ -111,11 +112,13 @@ void[] read(char[] name)
     if (h == INVALID_HANDLE_VALUE)
 	goto err1;
 
-    size = GetFileSize(h, null);
+    auto size = GetFileSize(h, null);
     if (size == INVALID_FILE_SIZE)
 	goto err2;
 
-    buf = new byte[size];
+    auto buf = new void[size];
+    if (buf.ptr)
+	std.gc.hasNoPointers(buf.ptr);
 
     if (ReadFile(h,buf.ptr,size,&numread,null) != 1)
 	goto err2;
@@ -454,14 +457,12 @@ char[] getcwd()
 {
     if (useWfuncs)
     {
-	wchar[] dir;
-	int len;
 	wchar c;
 
-	len = GetCurrentDirectoryW(0, &c);
+	auto len = GetCurrentDirectoryW(0, &c);
 	if (!len)
 	    goto Lerr;
-	dir = new wchar[len];
+	auto dir = new wchar[len];
 	len = GetCurrentDirectoryW(len, dir.ptr);
 	if (!len)
 	    goto Lerr;
@@ -469,14 +470,12 @@ char[] getcwd()
     }
     else
     {
-	char[] dir;
-	int len;
 	char c;
 
-	len = GetCurrentDirectoryA(0, &c);
+	auto len = GetCurrentDirectoryA(0, &c);
 	if (!len)
 	    goto Lerr;
-	dir = new char[len];
+	auto dir = new char[len];
 	len = GetCurrentDirectoryA(len, dir.ptr);
 	if (!len)
 	    goto Lerr;
@@ -882,16 +881,12 @@ class FileException : Exception
 
 void[] read(char[] name)
 {
-    uint size;
     uint numread;
-    int fd;
     struct_stat statbuf;
-    byte[] buf;
-    char *namez;
 
-    namez = toStringz(name);
+    auto namez = toStringz(name);
     //printf("file.read('%s')\n",namez);
-    fd = std.c.linux.linux.open(namez, O_RDONLY);
+    auto fd = std.c.linux.linux.open(namez, O_RDONLY);
     if (fd == -1)
     {
         //printf("\topen error, errno = %d\n",getErrno());
@@ -904,8 +899,10 @@ void[] read(char[] name)
         //printf("\tfstat error, errno = %d\n",getErrno());
         goto err2;
     }
-    size = statbuf.st_size;
-    buf = new byte[size];
+    auto size = statbuf.st_size;
+    auto buf = new void[size];
+    if (buf.ptr)
+	std.gc.hasNoPointers(buf.ptr);
 
     numread = std.c.linux.linux.read(fd, cast(char*)buf, size);
     if (numread != size)
@@ -1189,16 +1186,15 @@ void rmdir(char[] pathname)
  */
 
 char[] getcwd()
-{   char* p;
-
-    p = std.c.linux.linux.getcwd(null, 0);
+{
+    auto p = std.c.linux.linux.getcwd(null, 0);
     if (!p)
     {
 	throw new FileException("cannot get cwd", getErrno());
     }
 
-    size_t len = std.string.strlen(p);
-    char[] buf = new char[len];
+    auto len = std.string.strlen(p);
+    auto buf = new char[len];
     buf[] = p[0 .. len];
     std.c.stdlib.free(p);
     return buf;

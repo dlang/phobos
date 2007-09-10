@@ -78,5 +78,15 @@ class TypeInfo_AC : TypeInfo
     {
 	return (Object[]).sizeof;
     }
+
+    uint flags()
+    {
+	return 1;
+    }
+
+    TypeInfo next()
+    {
+	return typeid(Object);
+    }
 }
 

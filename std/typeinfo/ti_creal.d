@@ -58,5 +58,11 @@ class TypeInfo_c : TypeInfo
 	*cast(creal *)p1 = *cast(creal *)p2;
 	*cast(creal *)p2 = t;
     }
+
+    void[] init()
+    {	static creal r;
+
+	return (cast(creal *)&r)[0 .. 1];
+    }
 }
 

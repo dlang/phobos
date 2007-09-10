@@ -31,5 +31,10 @@ class TypeInfo_D : TypeInfo
 	*cast(dg *)p1 = *cast(dg *)p2;
 	*cast(dg *)p2 = t;
     }
+
+    uint flags()
+    {
+	return 1;
+    }
 }
 

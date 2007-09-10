@@ -36,6 +36,9 @@ private uint index;		// ith random number
  This means that the $(I n)th random number of the sequence can be directly
  generated
  by passing index + $(I n) to rand_seed().
+
+ Note: This is more random, but slower, than C's rand() function.
+ To use C's rand() instead, import std.c.stdlib.
  */
 
 void rand_seed(uint seed, uint index)

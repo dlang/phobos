@@ -57,5 +57,11 @@ class TypeInfo_d : TypeInfo
 	*cast(double *)p1 = *cast(double *)p2;
 	*cast(double *)p2 = t;
     }
+
+    void[] init()
+    {	static double r;
+
+	return (cast(double *)&r)[0 .. 1];
+    }
 }
 

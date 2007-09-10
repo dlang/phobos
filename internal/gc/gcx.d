@@ -1,10 +1,10 @@
 //
-// Copyright (C) 2001-2006 by Digital Mars
+// Copyright (C) 2001-2007 by Digital Mars
 // All Rights Reserved
 // Written by Walter Bright
 // www.digitalmars.com
 
-// D Garbage Collector implementation
+// D Programming Language Garbage Collector implementation
 
 /************** Debugging ***************************/
 
@@ -397,9 +397,10 @@ class GC
 
 	synchronized (gcLock)
 	{
+	biti = cast(uint)(p - pool.baseAddr) / 16;
+	pool.noptrs.clear(biti);
 	if (pool.finals.nbits && gcx.finalizer)
 	{
-	    biti = cast(uint)(p - pool.baseAddr) / 16;
 	    if (pool.finals.testClear(biti))
 	    {
 		(*gcx.finalizer)(sentinel_add(p), null);
@@ -655,6 +656,29 @@ class GC
 	}
     }
 
+    void hasPointers(void *p)
+    {
+	synchronized (gcLock)
+	{
+	    gcx.HasPointers(p);
+	}
+    }
+
+    void hasNoPointers(void *p)
+    {
+	if (!gcx.conservative)
+	{   synchronized (gcLock)
+	    {
+		gcx.HasNoPointers(p);
+	    }
+	}
+    }
+
+    void setV1_0()
+    {
+	gcx.conservative = 1;
+    }
+
     void enable()
     {
 	synchronized (gcLock)
@@ -802,6 +826,7 @@ struct Gcx
     uint rangedim;
     Range *ranges;
 
+    uint conservative;	// !=0 means conservative behavior
     uint noStack;	// !=0 means don't scan stack
     uint log;		// turn on logging
     uint anychanges;
@@ -1359,8 +1384,10 @@ struct Gcx
 		    {
 			//if (log) debug(PRINTF) printf("\t\tmarking %x\n", p);
 			pool.mark.set(biti);
-			pool.scan.set(biti);
-			changes = 1;
+			if (!pool.noptrs.test(biti))
+			{   pool.scan.set(biti);
+			    changes = 1;
+			}
 			log_parent(sentinel_add(pool.baseAddr + biti * 16), sentinel_add(pbot));
 		    }
 		}
@@ -1622,6 +1649,7 @@ struct Gcx
 			    sentinel_Invariant(sentinel_add(p));
 
 			    pool.freebits.set(biti);
+			    pool.noptrs.clear(biti);
 			    if (finalizer && pool.finals.nbits &&
 				pool.finals.testClear(biti))
 			    {
@@ -1645,6 +1673,7 @@ struct Gcx
 		    {   byte *p = pool.baseAddr + pn * PAGESIZE;
 
 			sentinel_Invariant(sentinel_add(p));
+			pool.noptrs.clear(biti);
 			if (finalizer && pool.finals.nbits &&
 			    pool.finals.testClear(biti))
 			{
@@ -1749,6 +1778,34 @@ struct Gcx
 	pool.finals.set((p - pool.baseAddr) / 16);
     }
 
+
+    /*********************************
+     * Indicate that block pointed to by p has possible pointers
+     * to GC allocated memory in it.
+     */
+
+    void HasPointers(void *p)
+    {
+	Pool *pool = findPool(p);
+	assert(pool);
+
+	pool.noptrs.clear((p - pool.baseAddr) / 16);
+    }
+
+
+    /*********************************
+     * Indicate that block pointed to by p has no possible pointers
+     * to GC allocated memory in it.
+     */
+
+    void HasNoPointers(void *p)
+    {
+	//printf("HasNoPointers(%p)\n", p);
+	Pool *pool = findPool(p);
+	assert(pool);
+
+	pool.noptrs.set((p - pool.baseAddr) / 16);
+    }
 
 
     /***** Leak Detector ******/
@@ -1883,10 +1940,11 @@ struct Pool
 {
     byte* baseAddr;
     byte* topAddr;
-    GCBits mark;
-    GCBits scan;
-    GCBits finals;
-    GCBits freebits;
+    GCBits mark;	// entries already scanned, or should not be scanned
+    GCBits scan;	// entries that need to be scanned
+    GCBits finals;	// entries that need finalizer run on them
+    GCBits freebits;	// entries that are on the free list
+    GCBits noptrs;	// entries that do not contain pointers
 
     uint npages;
     uint ncommitted;	// ncommitted <= npages
@@ -1918,6 +1976,7 @@ struct Pool
 	mark.alloc(poolsize / 16);
 	scan.alloc(poolsize / 16);
 	freebits.alloc(poolsize / 16);
+	noptrs.alloc(poolsize / 16);
 
 	pagetable = cast(ubyte*)std.c.stdlib.malloc(npages);
 	memset(pagetable, B_UNCOMMITTED, npages);

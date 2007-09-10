@@ -88,6 +88,16 @@ class TypeInfo_Ae : TypeInfo
     {
 	return (real[]).sizeof;
     }
+
+    uint flags()
+    {
+	return 1;
+    }
+
+    TypeInfo next()
+    {
+	return typeid(real);
+    }
 }
 
 // ireal[]
@@ -95,4 +105,9 @@ class TypeInfo_Ae : TypeInfo
 class TypeInfo_Aj : TypeInfo_Ae
 {
     char[] toString() { return "ireal[]"; }
+
+    TypeInfo next()
+    {
+	return typeid(ireal);
+    }
 }

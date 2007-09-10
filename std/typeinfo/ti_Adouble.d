@@ -87,6 +87,16 @@ class TypeInfo_Ad : TypeInfo
     {
 	return (double[]).sizeof;
     }
+
+    uint flags()
+    {
+	return 1;
+    }
+
+    TypeInfo next()
+    {
+	return typeid(double);
+    }
 }
 
 // idouble[]
@@ -94,4 +104,9 @@ class TypeInfo_Ad : TypeInfo
 class TypeInfo_Ap : TypeInfo_Ad
 {
     char[] toString() { return "idouble[]"; }
+
+    TypeInfo next()
+    {
+	return typeid(idouble);
+    }
 }

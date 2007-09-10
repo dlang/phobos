@@ -24,7 +24,7 @@ class TypeInfo_As : TypeInfo
 
 		case 1:
 		    hash *= 9;
-		    hash += *cast(short *)str;
+		    hash += *cast(ushort *)str;
 		    return hash;
 
 		default:
@@ -69,5 +69,58 @@ class TypeInfo_As : TypeInfo
     {
 	return (short[]).sizeof;
     }
+
+    uint flags()
+    {
+	return 1;
+    }
+
+    TypeInfo next()
+    {
+	return typeid(short);
+    }
 }
+
+
+// ushort[]
+
+class TypeInfo_At : TypeInfo_As
+{
+    char[] toString() { return "ushort[]"; }
+
+    int compare(void *p1, void *p2)
+    {
+	ushort[] s1 = *cast(ushort[]*)p1;
+	ushort[] s2 = *cast(ushort[]*)p2;
+	size_t len = s1.length;
+
+	if (s2.length < len)
+	    len = s2.length;
+	for (size_t u = 0; u < len; u++)
+	{
+	    int result = s1[u] - s2[u];
+	    if (result)
+		return result;
+	}
+	return cast(int)s1.length - cast(int)s2.length;
+    }
+
+    TypeInfo next()
+    {
+	return typeid(ushort);
+    }
+}
+
+// wchar[]
+
+class TypeInfo_Au : TypeInfo_At
+{
+    char[] toString() { return "wchar[]"; }
+
+    TypeInfo next()
+    {
+	return typeid(wchar);
+    }
+}
+
 
