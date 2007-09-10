@@ -41,7 +41,7 @@ class TypeInfo_At : TypeInfo
 	ushort[] s2 = *cast(ushort[]*)p2;
 
 	return s1.length == s2.length &&
-	       memcmp(cast(void *)s1, cast(void *)s2, s1.length * ushort.size) == 0;
+	       memcmp(cast(void *)s1, cast(void *)s2, s1.length * ushort.sizeof) == 0;
     }
 
     int compare(void *p1, void *p2)
@@ -63,7 +63,7 @@ class TypeInfo_At : TypeInfo
 
     int tsize()
     {
-	return (ushort[]).size;
+	return (ushort[]).sizeof;
     }
 }
 

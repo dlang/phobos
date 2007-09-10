@@ -188,7 +188,7 @@ char* zlibVersion();
 
 int deflateInit(z_streamp strm, int level)
 {
-    return deflateInit_(strm, level, ZLIB_VERSION, z_stream.size);
+    return deflateInit_(strm, level, ZLIB_VERSION, z_stream.sizeof);
 }
 /* 
      Initializes the internal stream state for compression. The fields
@@ -305,7 +305,7 @@ int deflateEnd(z_streamp strm);
 
 int inflateInit(z_streamp strm)
 {
-    return inflateInit_(strm, ZLIB_VERSION, z_stream.size);
+    return inflateInit_(strm, ZLIB_VERSION, z_stream.sizeof);
 }
 /* 
      Initializes the internal stream state for decompression. The fields
@@ -420,7 +420,7 @@ int deflateInit2(z_streamp strm,
                                      int  strategy)
 {
     return deflateInit2_(strm, level, method, windowBits, memLevel,
-                      strategy, ZLIB_VERSION, z_stream.size);
+                      strategy, ZLIB_VERSION, z_stream.sizeof);
 }
 /*
      This is another version of deflateInit with more compression options. The
@@ -546,7 +546,7 @@ int deflateCopy(z_streamp dest, z_streamp source);
 
 int inflateInit2(z_streamp strm, int windowBits)
 {
-    return inflateInit2_(strm, windowBits, ZLIB_VERSION, z_stream.size);
+    return inflateInit2_(strm, windowBits, ZLIB_VERSION, z_stream.sizeof);
 }
 /*   
      This is another version of inflateInit with an extra parameter. The

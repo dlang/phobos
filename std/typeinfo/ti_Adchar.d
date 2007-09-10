@@ -5,6 +5,8 @@ private import std.string;
 
 class TypeInfo_Aw : TypeInfo
 {
+    char[] toString() { return "dchar[]"; }
+
     uint getHash(void *p)
     {	dchar[] s = *cast(dchar[]*)p;
 	uint len = s.length;
@@ -28,7 +30,7 @@ class TypeInfo_Aw : TypeInfo
 	dchar[] s2 = *cast(dchar[]*)p2;
 
 	return s1.length == s2.length &&
-	       memcmp(cast(void *)s1, cast(void *)s2, s1.length * dchar.size) == 0;
+	       memcmp(cast(void *)s1, cast(void *)s2, s1.length * dchar.sizeof) == 0;
     }
 
     int compare(void *p1, void *p2)
@@ -50,7 +52,7 @@ class TypeInfo_Aw : TypeInfo
 
     int tsize()
     {
-	return (dchar[]).size;
+	return (dchar[]).sizeof;
     }
 }
 

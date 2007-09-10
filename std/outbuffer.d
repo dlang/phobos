@@ -70,9 +70,9 @@ class OutBuffer
 
     void write(ubyte b)
 	{
-	    reserve(ubyte.size);
+	    reserve(ubyte.sizeof);
 	    this.data[offset] = b;
-	    offset += ubyte.size;
+	    offset += ubyte.sizeof;
 	}
 
     void write(byte b) { write(cast(ubyte)b); }
@@ -80,57 +80,57 @@ class OutBuffer
 
     void write(ushort w)
     {
-	reserve(ushort.size);
+	reserve(ushort.sizeof);
 	*cast(ushort *)&data[offset] = w;
-	offset += ushort.size;
+	offset += ushort.sizeof;
     }
 
     void write(short s) { write(cast(ushort)s); }
 
     void write(wchar c)
     {
-	reserve(wchar.size);
+	reserve(wchar.sizeof);
 	*cast(wchar *)&data[offset] = c;
-	offset += wchar.size;
+	offset += wchar.sizeof;
     }
 
     void write(uint w)
     {
-	reserve(uint.size);
+	reserve(uint.sizeof);
 	*cast(uint *)&data[offset] = w;
-	offset += uint.size;
+	offset += uint.sizeof;
     }
 
     void write(int i) { write(cast(uint)i); }
 
     void write(ulong l)
     {
-	reserve(ulong.size);
+	reserve(ulong.sizeof);
 	*cast(ulong *)&data[offset] = l;
-	offset += ulong.size;
+	offset += ulong.sizeof;
     }
 
     void write(long l) { write(cast(ulong)l); }
 
     void write(float f)
     {
-	reserve(float.size);
+	reserve(float.sizeof);
 	*cast(float *)&data[offset] = f;
-	offset += float.size;
+	offset += float.sizeof;
     }
 
     void write(double f)
     {
-	reserve(double.size);
+	reserve(double.sizeof);
 	*cast(double *)&data[offset] = f;
-	offset += double.size;
+	offset += double.sizeof;
     }
 
     void write(real f)
     {
-	reserve(real.size);
+	reserve(real.sizeof);
 	*cast(real *)&data[offset] = f;
-	offset += real.size;
+	offset += real.sizeof;
     }
 
     void write(char[] s)
@@ -259,7 +259,7 @@ class OutBuffer
     {
 	va_list ap;
 	ap = cast(va_list)&format;
-	ap += format.size;
+	ap += format.sizeof;
 	vprintf(format, ap);
     }
 

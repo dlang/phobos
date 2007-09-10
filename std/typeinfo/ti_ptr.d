@@ -20,7 +20,7 @@ class TypeInfo_P : TypeInfo
 
     int tsize()
     {
-	return (void*).size;
+	return (void*).sizeof;
     }
 
     void swap(void *p1, void *p2)

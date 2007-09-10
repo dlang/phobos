@@ -687,7 +687,7 @@ body
     };
     U       u;
     void    *data   =   &u.qw;
-    DWORD   cbData  =   U.qw.size;
+    DWORD   cbData  =   U.qw.sizeof;
     LONG    res     =   RegQueryValueExA(   hkey, toStringz(name), RESERVED
                                         ,   type, data, cbData);
 
@@ -750,7 +750,7 @@ in
 body
 {
     char[]  data    =   new char[256];
-    DWORD   cbData  =   data.size;
+    DWORD   cbData  =   data.sizeof;
     LONG    res     =   RegQueryValueExA(   hkey, toStringz(name), RESERVED, type
                                         ,   data, cbData);
 
@@ -793,7 +793,7 @@ in
 }
 body
 {
-    DWORD   cbData  =   value.size;
+    DWORD   cbData  =   value.sizeof;
     LONG    res     =   RegQueryValueExA(   hkey, toStringz(name), RESERVED, type
                                         ,   &value, cbData);
 
@@ -836,7 +836,7 @@ in
 }
 body
 {
-    DWORD   cbData  =   value.size;
+    DWORD   cbData  =   value.sizeof;
     LONG    res     =   RegQueryValueExA(   hkey, toStringz(name), RESERVED, type
                                         ,   &value, cbData);
 
@@ -866,7 +866,7 @@ in
 body
 {
     byte[]  data    =   new byte[100];
-    DWORD   cbData  =   data.size;
+    DWORD   cbData  =   data.sizeof;
     LONG    res     =   RegQueryValueExA(   hkey, toStringz(name), RESERVED, type
                                         ,   data, cbData);
 
@@ -1278,7 +1278,7 @@ public:
         assert( type == REG_VALUE_TYPE.REG_DWORD_BIG_ENDIAN || 
                 type == REG_VALUE_TYPE.REG_DWORD_LITTLE_ENDIAN);
 
-        Reg_SetValueExA_(m_hkey, name, type, &value, value.size);
+        Reg_SetValueExA_(m_hkey, name, type, &value, value.sizeof);
     }
 
     /// Sets the named value with the given 64-bit unsigned integer value
@@ -1288,7 +1288,7 @@ public:
     /// \note If a value corresponding to the requested name is not found, a RegistryException is thrown
     void setValue(char[] name, ulong value)
     {
-        Reg_SetValueExA_(m_hkey, name, REG_VALUE_TYPE.REG_QWORD, &value, value.size);
+        Reg_SetValueExA_(m_hkey, name, REG_VALUE_TYPE.REG_QWORD, &value, value.sizeof);
     }
 
     /// Sets the named value with the given string value

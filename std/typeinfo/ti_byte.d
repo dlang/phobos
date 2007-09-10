@@ -3,6 +3,8 @@
 
 class TypeInfo_g : TypeInfo
 {
+    char[] toString() { return "byte"; }
+
     uint getHash(void *p)
     {
 	return *cast(byte *)p;
@@ -20,7 +22,7 @@ class TypeInfo_g : TypeInfo
 
     int tsize()
     {
-	return byte.size;
+	return byte.sizeof;
     }
 
     void swap(void *p1, void *p2)

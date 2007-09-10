@@ -5,6 +5,8 @@ private import std.string;
 
 class TypeInfo_Aa : TypeInfo
 {
+    char[] toString() { return "char[]"; }
+
     uint getHash(void *p)
     {	char[] s = *cast(char[]*)p;
 	uint len = s.length;
@@ -65,7 +67,7 @@ class TypeInfo_Aa : TypeInfo
 
     int tsize()
     {
-	return (char[]).size;
+	return (char[]).sizeof;
     }
 }
 

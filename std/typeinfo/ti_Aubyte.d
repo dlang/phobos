@@ -65,7 +65,7 @@ class TypeInfo_Ah : TypeInfo
 
     int tsize()
     {
-	return (ubyte[]).size;
+	return (ubyte[]).sizeof;
     }
 }
 

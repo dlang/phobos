@@ -3,6 +3,8 @@
 
 class TypeInfo_t : TypeInfo
 {
+    char[] toString() { return "ushort"; }
+
     uint getHash(void *p)
     {
 	return *cast(ushort *)p;
@@ -20,7 +22,7 @@ class TypeInfo_t : TypeInfo
 
     int tsize()
     {
-	return ushort.size;
+	return ushort.sizeof;
     }
 
     void swap(void *p1, void *p2)

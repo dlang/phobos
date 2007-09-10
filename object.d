@@ -1,4 +1,8 @@
 
+// Implementation is in internal\object.d
+
+module object;
+
 extern (C) int printf(char *, ...);
 extern (C) int wprintf(wchar *, ...);
 
@@ -17,32 +21,11 @@ else
 
 class Object
 {
-    void print()
-    {
-	printf("%.*s %p\n", this.classinfo.name, this);
-    }
-
-    char[] toString()
-    {
-	return this.classinfo.name;
-    }
-
-    uint toHash()
-    {
-	// BUG: this prevents a compacting GC from working, needs to be fixed
-	return cast(uint)cast(void *)this;
-    }
-
-    int opCmp(Object o)
-    {
-	// BUG: this prevents a compacting GC from working, needs to be fixed
-	return cast(int)cast(void *)this - cast(int)cast(void *)o;
-    }
-
-    int opEquals(Object o)
-    {
-	return this === o;
-    }
+    void print();
+    char[] toString();
+    uint toHash();
+    int opCmp(Object o);
+    int opEquals(Object o);
 }
 
 struct Interface
@@ -68,54 +51,41 @@ class ClassInfo : Object
 
 class TypeInfo
 {
-    uint getHash(void *p) { return cast(uint)p; }
-    int equals(void *p1, void *p2) { return p1 == p2; }
-    int compare(void *p1, void *p2) { return 0; }
-    int tsize() { return 0; }
-    void swap(void *p1, void *p2)
-    {
-	int i;
-	int n = tsize();
-	for (i = 0; i < n; i++)
-	{   byte t;
-
-	    t = (cast(byte *)p1)[i];
-	    (cast(byte *)p1)[i] = (cast(byte *)p2)[i];
-	    (cast(byte *)p2)[i] = t;
-	}
-    }
+    uint getHash(void *p);
+    int equals(void *p1, void *p2);
+    int compare(void *p1, void *p2);
+    int tsize();
+    void swap(void *p1, void *p2);
 }
+
+class TypeInfoTypedef : TypeInfo
+{
+    TypeInfo base;
+}
+
+class TypeInfoClass : TypeInfo
+{
+    ClassInfo info;
+}
+
+// Recoverable errors
 
 class Exception : Object
 {
     char[] msg;
 
-    this(char[] msg)
-    {
-	this.msg = msg;
-    }
-
-    void print()
-    {
-	printf("%.*s\n", msg);
-    }
-
-    char[] toString() { return msg; }
+    this(char[] msg);
+    void print();
+    char[] toString();
 }
+
+// Non-recoverable errors
 
 class Error : Exception
 {
     Error next;
 
-    this(char[] msg)
-    {
-	super(msg);
-    }
-
-    this(char[] msg, Error next)
-    {
-	super(msg);
-	this.next = next;
-    }
+    this(char[] msg);
+    this(char[] msg, Error next);
 }
 

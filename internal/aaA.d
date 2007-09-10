@@ -197,7 +197,7 @@ void *_aaGet(aaA*[] *aa, TypeInfo keyti, int valuesize, ...)
 
 	// Not found, create new elem
 	//printf("create new one\n");
-	e = cast(aaA *) cast(void*) new byte[aaA.size + keysize + valuesize];
+	e = cast(aaA *) cast(void*) new byte[aaA.sizeof + keysize + valuesize];
 	memcpy(e + 1, pkey, keysize);
 	e.hash = key_hash;
 	*pe = e;
@@ -347,7 +347,7 @@ void _aaValues_x(aaA *e, void *ptr, inout uint resi, uint k, uint v)
     {
 	do
 	{
-	    memcpy(ptr + resi * v, cast(byte*)e + aaA.size + k, v);
+	    memcpy(ptr + resi * v, cast(byte*)e + aaA.sizeof + k, v);
 	    resi++;
 	    if (e.left)
 		_aaValues_x(e.left, ptr, resi, k, v);

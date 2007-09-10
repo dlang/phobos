@@ -28,7 +28,7 @@ class TypeInfo_Ai : TypeInfo
 	int[] s2 = *cast(int[]*)p2;
 
 	return s1.length == s2.length &&
-	       memcmp(cast(void *)s1, cast(void *)s2, s1.length * int.size) == 0;
+	       memcmp(cast(void *)s1, cast(void *)s2, s1.length * int.sizeof) == 0;
     }
 
     int compare(void *p1, void *p2)
@@ -50,7 +50,7 @@ class TypeInfo_Ai : TypeInfo
 
     int tsize()
     {
-	return (int[]).size;
+	return (int[]).sizeof;
     }
 }
 

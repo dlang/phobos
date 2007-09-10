@@ -40,15 +40,15 @@ extern (C) int main(int argc, char **argv)
 	_STI_monitor_staticctor();
 	_STI_critical_init();
 	gc_init();
-	am = cast(char[] *) malloc(argc * (char[]).size);
+	am = cast(char[] *) malloc(argc * (char[]).sizeof);
 	// BUG: alloca() conflicts with try-catch-finally stack unwinding
-	//am = (char[] *) alloca(argc * (char[]).size);
+	//am = (char[] *) alloca(argc * (char[]).sizeof);
     }
     version (Win32)
     {
 	gc_init();
 	_minit();
-	am = cast(char[] *) alloca(argc * (char[]).size);
+	am = cast(char[] *) alloca(argc * (char[]).sizeof);
     }
 
     try

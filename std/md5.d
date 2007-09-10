@@ -177,7 +177,7 @@ struct MD5_CTX
       Encode (digest, state, 16);
 
       /* Zeroize sensitive information. */
-      memset (this, 0, MD5_CTX.size);
+      memset (this, 0, MD5_CTX.sizeof);
     }
 
     /* MD5 basic transformation. Transforms state based on block.

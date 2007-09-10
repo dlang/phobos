@@ -29,7 +29,7 @@ class SysError
 	    case 87:	result = "invalid parameter";	break;
 
 	    default:
-		result = new char[uint.size * 3 + 1];
+		result = new char[uint.sizeof * 3 + 1];
 		sprintf(result, "%u", errcode);
 		result = result[0 .. strlen(result)];
 		break;

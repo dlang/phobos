@@ -3,6 +3,8 @@
 
 class TypeInfo_c : TypeInfo
 {
+    char[] toString() { return "creal"; }
+
     uint getHash(void *p)
     {
 	return (cast(uint *)p)[0] + (cast(uint *)p)[1] +
@@ -24,7 +26,7 @@ class TypeInfo_c : TypeInfo
 
     int tsize()
     {
-	return creal.size;
+	return creal.sizeof;
     }
 
     void swap(void *p1, void *p2)

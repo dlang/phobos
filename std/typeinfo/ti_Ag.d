@@ -74,7 +74,7 @@ class TypeInfo_Ag : TypeInfo
 
     int tsize()
     {
-	return (byte[]).size;
+	return (byte[]).sizeof;
     }
 }
 

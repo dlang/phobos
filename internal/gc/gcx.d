@@ -1071,6 +1071,9 @@ struct Gcx
 
 	for (state = 0; ; )
 	{
+	    // This code could use some refinement when repeatedly
+	    // allocating very large arrays.
+
 	    for (n = 0; n < npools; n++)
 	    {
 		pool = pooltable[n];

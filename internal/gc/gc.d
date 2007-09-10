@@ -138,7 +138,7 @@ ulong _d_new(uint length, uint size)
     void *p;
     ulong result;
 
-    debug(PRINTF) printf("_d_newarray(length = %d, size = %d)\n", length, size);
+    debug(PRINTF) printf("_d_new(length = %d, size = %d)\n", length, size);
     if (length == 0 || size == 0)
 	result = 0;
     else

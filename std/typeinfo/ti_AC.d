@@ -74,7 +74,7 @@ class TypeInfo_AC : TypeInfo
 
     int tsize()
     {
-	return (Object[]).size;
+	return (Object[]).sizeof;
     }
 }
 

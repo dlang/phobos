@@ -119,7 +119,7 @@ uint __eh_find_caller(uint regbp, uint *pretaddr)
 	    // stack should grow to smaller values
 	    terminate();
 
-        *pretaddr = *cast(uint *)(regbp + int.size);
+        *pretaddr = *cast(uint *)(regbp + int.sizeof);
     }
     return bp;
 }
@@ -247,7 +247,7 @@ extern (Windows) void _d_throw(Object *h)
 			    fp_t catch_addr;
 
 			    catch_addr = cast(fp_t)(pcb.code);
-			    catch_esp = regebp - handler_table.espoffset - fp_t.size;
+			    catch_esp = regebp - handler_table.espoffset - fp_t.sizeof;
 			    asm
 			    {
 				mov	EAX,catch_esp	;

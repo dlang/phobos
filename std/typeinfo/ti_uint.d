@@ -3,6 +3,8 @@
 
 class TypeInfo_k : TypeInfo
 {
+    char[] toString() { return "uint"; }
+
     uint getHash(void *p)
     {
 	return *cast(uint *)p;
@@ -24,7 +26,7 @@ class TypeInfo_k : TypeInfo
 
     int tsize()
     {
-	return uint.size;
+	return uint.sizeof;
     }
 
     void swap(void *p1, void *p2)

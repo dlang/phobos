@@ -378,7 +378,7 @@ extern (C) alias void (*__sighandler_t)(int);
 
 struct sigset_t
 {
-    uint __val[1024 / (8 * uint.size)];
+    uint __val[1024 / (8 * uint.sizeof)];
 }
 
 struct sigaction_t
@@ -404,9 +404,9 @@ struct sem_t
 
 unittest
 {
-    assert(sigset_t.size  == 128);
-    assert(sigaction_t.size == 140);
-    assert(sem_t.size == 16);
+    assert(sigset_t.sizeof  == 128);
+    assert(sigaction_t.sizeof == 140);
+    assert(sem_t.sizeof == 16);
 }
 
 extern (C)

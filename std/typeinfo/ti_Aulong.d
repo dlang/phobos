@@ -28,7 +28,7 @@ class TypeInfo_Am : TypeInfo
 	ulong[] s2 = *cast(ulong[]*)p2;
 
 	return s1.length == s2.length &&
-	       memcmp(cast(void *)s1, cast(void *)s2, s1.length * ulong.size) == 0;
+	       memcmp(cast(void *)s1, cast(void *)s2, s1.length * ulong.sizeof) == 0;
     }
 
     int compare(void *p1, void *p2)
@@ -50,7 +50,7 @@ class TypeInfo_Am : TypeInfo
 
     int tsize()
     {
-	return (ulong[]).size;
+	return (ulong[]).sizeof;
     }
 }
 

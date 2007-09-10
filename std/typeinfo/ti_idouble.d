@@ -3,6 +3,8 @@
 
 class TypeInfo_p : TypeInfo
 {
+    char[] toString() { return "idouble"; }
+
     uint getHash(void *p)
     {
 	return (cast(uint *)p)[0] + (cast(uint *)p)[1];
@@ -20,7 +22,7 @@ class TypeInfo_p : TypeInfo
 
     int tsize()
     {
-	return idouble.size;
+	return idouble.sizeof;
     }
 
     void swap(void *p1, void *p2)

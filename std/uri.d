@@ -83,7 +83,7 @@ private char[] URI_Encode(dchar[] string, uint unescapedSet)
 	    {	char* R2;
 
 		Rsize *= 2;
-		R2 = cast(char *)alloca(Rsize * char.size);
+		R2 = cast(char *)alloca(Rsize * char.sizeof);
 		if (!R2)
 		    goto LthrowURIerror;
 		R2[0..Rlen] = R[0..Rlen];
@@ -154,7 +154,7 @@ private char[] URI_Encode(dchar[] string, uint unescapedSet)
 	    {	char *R2;
 
 		Rsize = 2 * (Rlen + L * 3);
-		R2 = cast(char *)alloca(Rsize * char.size);
+		R2 = cast(char *)alloca(Rsize * char.sizeof);
 		if (!R2)
 		    goto LthrowURIerror;
 		R2[0..Rlen] = R[0..Rlen];
@@ -208,7 +208,7 @@ private dchar[] URI_Decode(char[] string, uint reservedSet)
 
     // Preallocate result buffer R guaranteed to be large enough for result
     Rsize = len;
-    R = cast(dchar *)alloca(Rsize * dchar.size);
+    R = cast(dchar *)alloca(Rsize * dchar.sizeof);
     if (!R)
 	goto LthrowURIerror;
     Rlen = 0;

@@ -83,7 +83,7 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 	std\asserterror.d std\dateparse.d std\outofmemory.d std\mmfile.d \
 	std\intrinsic.d std\array.d std\switcherr.d std\syserror.d \
 	std\regexp.d std\random.d std\stream.d std\process.d std\recls.d \
-	std\socket.d std\socketstream.d std\loader.d
+	std\socket.d std\socketstream.d std\loader.d std\stdarg.d
 
 SRC_STD_C= std\c\process.d std\c\stdlib.d std\c\time.d std\c\stdio.d \
 	std\c\math.d std\c\stdarg.d
@@ -114,7 +114,8 @@ SRC_INT=	\
 	internal\arraycat.d internal\invariant.d internal\monitor.c \
 	internal\memset.d internal\arraycast.d internal\aaA.d internal\adi.d \
 	internal\dmain2.d internal\cast.d internal\qsort.d internal\deh2.d \
-	internal\cmath2.d internal\obj.d internal\mars.h internal\aApply.d
+	internal\cmath2.d internal\obj.d internal\mars.h internal\aApply.d \
+	internal\object.d
 
 SRC_STD_WIN= std\windows\registry.d \
 	std\windows\iunknown.d
@@ -293,6 +294,9 @@ monitor.obj : internal\mars.h internal\monitor.c
 obj.obj : internal\obj.d
 	$(DMD) -c $(DFLAGS) internal\obj.d
 
+object.obj : internal\object.d
+	$(DMD) -c $(DFLAGS) internal\object.d
+
 qsort.obj : internal\qsort.d
 	$(DMD) -c $(DFLAGS) internal\qsort.d
 
@@ -349,8 +353,8 @@ mmfile.obj : std\mmfile.d
 moduleinit.obj : std\moduleinit.d
 	$(DMD) -c $(DFLAGS) std\moduleinit.d
 
-object.obj : object.d
-	$(DMD) -c $(DFLAGS) object.d
+#object.obj : object.d
+#	$(DMD) -c $(DFLAGS) object.d
 
 outbuffer.obj : std\outbuffer.d
 	$(DMD) -c $(DFLAGS) std\outbuffer.d

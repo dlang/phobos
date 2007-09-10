@@ -172,7 +172,7 @@ int _d_switch_ustring(wchar[][] table, wchar[] ca)
 	    {
 		int c;
 
-		c = memcmp(table[j - 1], table[j], len1 * wchar.size);
+		c = memcmp(table[j - 1], table[j], len1 * wchar.sizeof);
 		assert(c < 0);	// c==0 means a duplicate
 	    }
 	}
@@ -189,7 +189,7 @@ int _d_switch_ustring(wchar[][] table, wchar[] ca)
 	    for (i = 0; i < table.length; i++)
 	    {
 		if (table[i].length == ca.length)
-		{   c = memcmp(table[i], ca, ca.length * wchar.size);
+		{   c = memcmp(table[i], ca, ca.length * wchar.sizeof);
 		    assert(c != 0);
 		}
 	    }
@@ -202,7 +202,7 @@ int _d_switch_ustring(wchar[][] table, wchar[] ca)
 		assert(i < table.length);
 		if (table[i].length == ca.length)
 		{
-		    c = memcmp(table[i], ca, ca.length * wchar.size);
+		    c = memcmp(table[i], ca, ca.length * wchar.sizeof);
 		    if (c == 0)
 		    {
 			assert(i == result);
@@ -242,7 +242,7 @@ int _d_switch_ustring(wchar[][] table, wchar[] ca)
 	    c = ca.length - pca.length;
 	    if (c == 0)
 	    {
-		c = memcmp(ca, pca, ca.length * wchar.size);
+		c = memcmp(ca, pca, ca.length * wchar.sizeof);
 		if (c == 0)
 		{   //printf("found %d\n", mid);
 		    return mid;

@@ -1511,7 +1511,7 @@ char[] toString(ubyte ub)  { return toString(cast(uint) ub); }
 char[] toString(ushort us) { return toString(cast(uint) us); }
 
 char[] toString(uint u)
-{   char[uint.size * 3] buffer;
+{   char[uint.sizeof * 3] buffer;
     int ndigits;
     char c;
     char[] result;
@@ -1556,7 +1556,7 @@ unittest
 }
 
 char[] toString(ulong u)
-{   char[ulong.size * 3] buffer;
+{   char[ulong.sizeof * 3] buffer;
     int ndigits;
     char c;
     char[] result;
@@ -1600,7 +1600,7 @@ char[] toString(byte b)  { return toString(cast(int) b); }
 char[] toString(short s) { return toString(cast(int) s); }
 
 char[] toString(int i)
-{   char[1 + int.size * 3] buffer;
+{   char[1 + int.sizeof * 3] buffer;
     char c;
     char[] result;
 
@@ -1655,7 +1655,7 @@ unittest
 }
 
 char[] toString(long i)
-{   char[1 + long.size * 3] buffer;
+{   char[1 + long.sizeof * 3] buffer;
     char c;
     char[] result;
 
@@ -1799,7 +1799,7 @@ char[] format(char[] fmt, ...)
     OutBuffer b = new OutBuffer();
     va_list ap;
     ap = cast(va_list)&fmt;
-    ap += fmt.size;
+    ap += fmt.sizeof;
     b.reserve(fmt.length);
     int fmtlength = fmt.length;
     char[] s;
@@ -1836,7 +1836,7 @@ char[] format(char[] fmt, ...)
 	    {	dchar dc;
 
 		dc = *cast(dchar*)ap;
-		ap += dc.size;
+		ap += dc.sizeof;
 		if (dc <= 0x7F)
 		    b.write(cast(char)dc);
 		else
@@ -1858,14 +1858,14 @@ char[] format(char[] fmt, ...)
 	    {	uint u;
 
 		u = *cast(uint*)ap;
-		ap += u.size;
+		ap += u.sizeof;
 		b.printf(fmt[istart .. i], u);
 		break;
 	    }
 
 	    case 's':
 		s = *cast(char[]*)ap;
-		ap += s.size;
+		ap += s.sizeof;
 		b.write(cast(ubyte[])s);
 		break;
 

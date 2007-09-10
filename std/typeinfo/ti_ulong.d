@@ -3,6 +3,8 @@
 
 class TypeInfo_m : TypeInfo
 {
+    char[] toString() { return "ulong"; }
+
     uint getHash(void *p)
     {
 	return *cast(uint *)p + (cast(uint *)p)[1];
@@ -24,7 +26,7 @@ class TypeInfo_m : TypeInfo
 
     int tsize()
     {
-	return ulong.size;
+	return ulong.sizeof;
     }
 
     void swap(void *p1, void *p2)

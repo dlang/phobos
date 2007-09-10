@@ -18,7 +18,7 @@ class TypeInfo_D : TypeInfo
 
     int tsize()
     {
-	return dg.size;
+	return dg.sizeof;
     }
 
     void swap(void *p1, void *p2)

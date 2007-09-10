@@ -3,6 +3,8 @@
 
 class TypeInfo_l : TypeInfo
 {
+    char[] toString() { return "long"; }
+
     uint getHash(void *p)
     {
 	return *cast(uint *)p + (cast(uint *)p)[1];
@@ -24,7 +26,7 @@ class TypeInfo_l : TypeInfo
 
     int tsize()
     {
-	return long.size;
+	return long.sizeof;
     }
 
     void swap(void *p1, void *p2)

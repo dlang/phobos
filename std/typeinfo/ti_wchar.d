@@ -2,6 +2,8 @@
 
 class TypeInfo_u : TypeInfo
 {
+    char[] toString() { return "wchar"; }
+
     uint getHash(void *p)
     {
 	return *cast(wchar *)p;
@@ -19,7 +21,7 @@ class TypeInfo_u : TypeInfo
 
     int tsize()
     {
-	return wchar.size;
+	return wchar.sizeof;
     }
 
     void swap(void *p1, void *p2)

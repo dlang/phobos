@@ -3,6 +3,8 @@
 
 class TypeInfo_q : TypeInfo
 {
+    char[] toString() { return "cfloat"; }
+
     uint getHash(void *p)
     {
 	return (cast(uint *)p)[0] + (cast(uint *)p)[1];
@@ -22,7 +24,7 @@ class TypeInfo_q : TypeInfo
 
     int tsize()
     {
-	return cfloat.size;
+	return cfloat.sizeof;
     }
 
     void swap(void *p1, void *p2)

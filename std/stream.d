@@ -234,21 +234,21 @@ class Stream : InputStream, OutputStream
 
   // read a single value of desired type,
   // throw ReadError on error
-  void read(out byte x) { readExact(&x, x.size); }
-  void read(out ubyte x) { readExact(&x, x.size); }
-  void read(out short x) { readExact(&x, x.size); }
-  void read(out ushort x) { readExact(&x, x.size); }
-  void read(out int x) { readExact(&x, x.size); }
-  void read(out uint x) { readExact(&x, x.size); }
-  void read(out long x) { readExact(&x, x.size); }
-  void read(out ulong x) { readExact(&x, x.size); }
-  void read(out float x) { readExact(&x, x.size); }
-  void read(out double x) { readExact(&x, x.size); }
-  void read(out real x) { readExact(&x, x.size); }
-  void read(out ireal x) { readExact(&x, x.size); }
-  void read(out creal x) { readExact(&x, x.size); }
-  void read(out char x) { readExact(&x, x.size); }
-  void read(out wchar x) { readExact(&x, x.size); }
+  void read(out byte x) { readExact(&x, x.sizeof); }
+  void read(out ubyte x) { readExact(&x, x.sizeof); }
+  void read(out short x) { readExact(&x, x.sizeof); }
+  void read(out ushort x) { readExact(&x, x.sizeof); }
+  void read(out int x) { readExact(&x, x.sizeof); }
+  void read(out uint x) { readExact(&x, x.sizeof); }
+  void read(out long x) { readExact(&x, x.sizeof); }
+  void read(out ulong x) { readExact(&x, x.sizeof); }
+  void read(out float x) { readExact(&x, x.sizeof); }
+  void read(out double x) { readExact(&x, x.sizeof); }
+  void read(out real x) { readExact(&x, x.sizeof); }
+  void read(out ireal x) { readExact(&x, x.sizeof); }
+  void read(out creal x) { readExact(&x, x.sizeof); }
+  void read(out char x) { readExact(&x, x.sizeof); }
+  void read(out wchar x) { readExact(&x, x.sizeof); }
 	
   // reads a string, written earlier by write()
   void read(out char[] s)
@@ -386,7 +386,7 @@ class Stream : InputStream, OutputStream
   wchar[] readStringW(uint length)
   {
     wchar[] result = new wchar[length];
-    readExact(result, result.length * wchar.size);
+    readExact(result, result.length * wchar.sizeof);
     return result;
   }
 	
@@ -791,7 +791,7 @@ class Stream : InputStream, OutputStream
   {
     va_list ap;
     ap = cast(va_list) &format;
-    ap += format.size;
+    ap += format.sizeof;
     return vscanf(format, ap);
   }
 
@@ -816,21 +816,21 @@ class Stream : InputStream, OutputStream
 	
   // write a single value of desired type,
   // throw WriteError on error
-  void write(byte x) { writeExact(&x, x.size); }
-  void write(ubyte x) { writeExact(&x, x.size); }
-  void write(short x) { writeExact(&x, x.size); }
-  void write(ushort x) { writeExact(&x, x.size); }
-  void write(int x) { writeExact(&x, x.size); }
-  void write(uint x) { writeExact(&x, x.size); }
-  void write(long x) { writeExact(&x, x.size); }
-  void write(ulong x) { writeExact(&x, x.size); }
-  void write(float x) { writeExact(&x, x.size); }
-  void write(double x) { writeExact(&x, x.size); }
-  void write(real x) { writeExact(&x, x.size); }
-  void write(ireal x) { writeExact(&x, x.size); }
-  void write(creal x) { writeExact(&x, x.size); }
-  void write(char x) { writeExact(&x, x.size); }
-  void write(wchar x) { writeExact(&x, x.size); }
+  void write(byte x) { writeExact(&x, x.sizeof); }
+  void write(ubyte x) { writeExact(&x, x.sizeof); }
+  void write(short x) { writeExact(&x, x.sizeof); }
+  void write(ushort x) { writeExact(&x, x.sizeof); }
+  void write(int x) { writeExact(&x, x.sizeof); }
+  void write(uint x) { writeExact(&x, x.sizeof); }
+  void write(long x) { writeExact(&x, x.sizeof); }
+  void write(ulong x) { writeExact(&x, x.sizeof); }
+  void write(float x) { writeExact(&x, x.sizeof); }
+  void write(double x) { writeExact(&x, x.sizeof); }
+  void write(real x) { writeExact(&x, x.sizeof); }
+  void write(ireal x) { writeExact(&x, x.sizeof); }
+  void write(creal x) { writeExact(&x, x.sizeof); }
+  void write(char x) { writeExact(&x, x.sizeof); }
+  void write(wchar x) { writeExact(&x, x.sizeof); }
 	
   // writes a string, together with its length
   void write(char[] s)
@@ -879,7 +879,7 @@ class Stream : InputStream, OutputStream
   // writes a UNICODE string, throws WriteError on error
   void writeStringW(wchar[] s)
   {
-    writeExact(s, s.length * wchar.size);
+    writeExact(s, s.length * wchar.sizeof);
   }
 
   // writes data to stream using vprintf() syntax,
@@ -927,7 +927,7 @@ class Stream : InputStream, OutputStream
   {
     va_list ap;
     ap = cast(va_list) &format;
-    ap += format.size;
+    ap += format.sizeof;
     return vprintf(format, ap);
   }
 

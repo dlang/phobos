@@ -3,6 +3,8 @@
 
 class TypeInfo_j : TypeInfo
 {
+    char[] toString() { return "ireal"; }
+
     uint getHash(void *p)
     {
 	return (cast(uint *)p)[0] + (cast(uint *)p)[1] + (cast(ushort *)p)[4];
@@ -20,7 +22,7 @@ class TypeInfo_j : TypeInfo
 
     int tsize()
     {
-	return ireal.size;
+	return ireal.sizeof;
     }
 
     void swap(void *p1, void *p2)
