@@ -1218,7 +1218,7 @@ char[][] split(char[] s)
 
 unittest
 {
-    debug(string) printf("string.join.split1\n");
+    debug(string) printf("string.split1\n");
 
     char[] s = " peter paul\tjerry ";
     char[][] words;
@@ -1342,7 +1342,7 @@ char[][] split(char[] s, char[] delim)
 
 unittest
 {
-    debug(string) printf("string.join.split2\n");
+    debug(string) printf("string.split2\n");
 
     char[] s = ",peter,paul,jerry,";
     char[][] words;
@@ -1465,7 +1465,7 @@ char[][] splitlines(char[] s)
 
 unittest
 {
-    debug(string) printf("string.join.splitlines\n");
+    debug(string) printf("string.splitlines\n");
 
     char[] s = "\rpeter\n\rpaul\r\njerry\n";
     char[][] lines;

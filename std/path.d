@@ -76,9 +76,9 @@ version(linux)
  *	</table>
  */
 
-version (Windows) alias std.string.cmp fcmp;
+version (Windows) alias std.string.icmp fcmp;
 
-version (linux) alias std.string.icmp fcmp;
+version (linux) alias std.string.cmp fcmp;
 
 /**************************
  * Extracts the extension from a filename or path.
