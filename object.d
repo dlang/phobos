@@ -100,6 +100,11 @@ class TypeInfo_Class : TypeInfo
     ClassInfo info;
 }
 
+class TypeInfo_Interface : TypeInfo
+{
+    ClassInfo info;
+}
+
 class TypeInfo_Struct : TypeInfo
 {
     char[] name;

@@ -33,7 +33,7 @@ import std.c.stdlib;
 import std.c.string;
 import std.string;
 import std.outofmemory;
-
+import std.utf;
 
 struct Array
 {
@@ -52,6 +52,7 @@ extern (C) long _adReverseChar(char[] a)
     if (a.length > 1)
     {
 	char[6] tmp;
+	char[6] tmplo;
 	char* lo = a.ptr;
 	char* hi = &a[length - 1];
 
@@ -96,11 +97,11 @@ extern (C) long _adReverseChar(char[] a)
 
 	    /* Shift the whole array. This is woefully inefficient
 	     */
-	    //writefln("stridelo = %d, stridehi = %d", stridelo, stridehi);
 	    memcpy(tmp, hi, stridehi);
-	    memcpy(hi + stridehi - stridelo, lo, stridelo);
+	    memcpy(tmplo, lo, stridelo);
 	    memmove(lo + stridehi, lo + stridelo , hi - (lo + stridelo));
 	    memcpy(lo, tmp, stridehi);
+	    memcpy(hi + stridehi - stridelo, tmplo, stridelo);
 
 	    lo += stridehi;
 	    hi = hi - 1 + (stridehi - stridelo);
@@ -129,6 +130,10 @@ unittest
     r = a.dup.reverse;
     //writefln(r);
     assert(r == "c\u1234ba");
+
+    a = "\u3026\u2021\u3061\n";
+    r = a.dup.reverse;
+    assert(r == "\n\u3061\u2021\u3026");
 }
 
 
@@ -348,6 +353,50 @@ unittest
     }
 }
 
+
+/**********************************************
+ * Sort array of chars.
+ */
+
+extern (C) long _adSortChar(char[] a)
+{
+    if (a.length > 1)
+    {
+	dchar[] da = toUTF32(a);
+	da.sort;
+	size_t i = 0;
+	foreach (dchar d; da)
+	{   char[4] buf;
+	    char[] t = toUTF8(buf, d);
+	    a[i .. i + t.length] = t[];
+	    i += t.length;
+	}
+	delete da;
+    }
+    return *cast(long*)(&a);
+}
+
+/**********************************************
+ * Sort array of wchars.
+ */
+
+extern (C) long _adSortWchar(wchar[] a)
+{
+    if (a.length > 1)
+    {
+	dchar[] da = toUTF32(a);
+	da.sort;
+	size_t i = 0;
+	foreach (dchar d; da)
+	{   wchar[2] buf;
+	    wchar[] t = toUTF16(buf, d);
+	    a[i .. i + t.length] = t[];
+	    i += t.length;
+	}
+	delete da;
+    }
+    return *cast(long*)(&a);
+}
 
 /**********************************************
  * Support for array.sort property for bit[].

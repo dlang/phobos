@@ -1,6 +1,8 @@
-// Copyright (C) 2000-2004 by Digital Mars, www.digitalmars.com
-// All Rights Reserved
-// Written by Walter Bright
+/*
+ * Placed into the Public Domain
+ * written by Walter Bright, Digital Mars
+ * www.digitalmars.com
+ */
 
 /* ================================= Win32 ============================ */
 

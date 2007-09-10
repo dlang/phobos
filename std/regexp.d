@@ -140,6 +140,7 @@ private
     import std.ctype;
     import std.outbuffer;
     import std.bitarray;
+    import std.utf;
 }
 
 /** Regular expression to extract an _email address */
@@ -1538,7 +1539,8 @@ int trymatch(int pc, int pcend)
 		    goto Lnomatch;
 		if (!(attributes & REA.dotmatchlf) && input[src] == cast(rchar)'\n')
 		    goto Lnomatch;
-		src++;
+		src += std.utf.stride(input, src);
+		//src++;
 		pc++;
 		break;
 
