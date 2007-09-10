@@ -45,5 +45,6 @@ int main(char[][] args)
     printf("args.length = %d\n", args.length);
     for (int i = 0; i < args.length; i++)
 	printf("args[%d] = '%s'\n", i, (char *)args[i]);
+    printf("Success\n!");
     return 0;
 }

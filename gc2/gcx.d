@@ -1,5 +1,5 @@
 //
-// Copyright (C) 2001-2002 by Digital Mars
+// Copyright (C) 2001-2003 by Digital Mars
 // All Rights Reserved
 // Written by Walter Bright
 // www.digitalmars.com
@@ -31,10 +31,20 @@ debug (PRINTF) import c.stdio;
 
 import c.stdlib;
 import gcbits;
-import win32;
 import outofmemory;
 import gc;
 import gcstats;
+
+version (Win32)
+{
+    import win32;
+}
+
+version (linux)
+{
+    import gclinux;
+}
+
 
 version (MULTI_THREADED)
 {
@@ -158,7 +168,14 @@ struct GC
 	gcLock = GCLock.classinfo;
 	gcx = (Gcx *)c.stdlib.calloc(1, Gcx.size);
 	gcx.init();
-	setStackBottom(win32.os_query_stackBottom());
+	version (Win32)
+	{
+	    setStackBottom(win32.os_query_stackBottom());
+	}
+	version (linux)
+	{
+	    setStackBottom(gclinux.os_query_stackBottom());
+	}
     }
 
 
@@ -488,9 +505,11 @@ struct GC
 	void *ptop;
 	uint nbytes;
 
+	//debug(PRINTF) printf("+GC.scanStaticData()\n");
 	os_query_staticdataseg(&pbot, &nbytes);
 	ptop = pbot + nbytes;
 	addRange(pbot, ptop);
+	//debug(PRINTF) printf("-GC.scanStaticData()\n");
     }
 
 
@@ -512,10 +531,12 @@ struct GC
 
     void addRange(void *pbot, void *ptop)	// add range to scan for roots
     {
+	//debug(PRINTF) printf("+GC.addRange(pbot = x%x, ptop = x%x)\n", pbot, ptop);
 	synchronized (gcLock)
 	{
 	    gcx.addRange(pbot, ptop);
 	}
+	//debug(PRINTF) printf("-GC.addRange()\n");
     }
 
     void removeRange(void *pbot)		// remove range
@@ -874,8 +895,8 @@ struct Gcx
 
     void addRange(void *pbot, void *ptop)
     {
-	//debug(PRINTF) printf("Thread %x ", pthread_self());
-	//debug(PRINTF) printf("%x.Gcx::addRange(%x, %x), nranges = %d\n", this, pbot, ptop, nranges);
+	debug(PRINTF) printf("Thread %x ", pthread_self());
+	debug(PRINTF) printf("%x.Gcx::addRange(%x, %x), nranges = %d\n", this, pbot, ptop, nranges);
 	if (nranges == rangedim)
 	{
 	    uint newdim = rangedim * 2 + 16;
@@ -898,8 +919,8 @@ struct Gcx
 
     void removeRange(void *pbot)
     {
-	//debug(PRINTF) printf("Thread %x ", pthread_self());
-	//debug(PRINTF) printf("%x.Gcx.removeRange(%x), nranges = %d\n", this, pbot, nranges);
+	debug(PRINTF) printf("Thread %x ", pthread_self());
+	debug(PRINTF) printf("%x.Gcx.removeRange(%x), nranges = %d\n", this, pbot, nranges);
 	for (uint i = nranges; i--;)
 	{
 	    if (ranges[i].pbot == pbot)
@@ -909,7 +930,7 @@ struct Gcx
 		return;
 	    }
 	}
-	//debug(PRINTF) printf("Wrong thread\n");
+	debug(PRINTF) printf("Wrong thread\n");
 
 	// This is a fatal error, but ignore it.
 	// The problem is that we can get a Close() call on a thread
@@ -1353,19 +1374,34 @@ struct Gcx
 
 		if (t && t.getState() == Thread.TS.RUNNING)
 		{
-		    CONTEXT context;
-
 		    if (noStack && threads.length == 1)
 			break;
 
-		    context.ContextFlags = CONTEXT_INTEGER | CONTEXT_CONTROL;
-		    if (!GetThreadContext(t.hdl, &context))
+		    version (Win32)
 		    {
-			assert(0);
+			CONTEXT context;
+
+			context.ContextFlags = CONTEXT_INTEGER | CONTEXT_CONTROL;
+			if (!GetThreadContext(t.hdl, &context))
+			{
+			    assert(0);
+			}
+			debug (PRINTF) printf("mt scan stack bot = %x, top = %x\n", context.Esp, t.stackBottom);
+			mark((void *)context.Esp, t.stackBottom);
+			mark(&context.Edi, &context.Eip);
 		    }
-		    debug (PRINTF) printf("mt scan stack bot = %x, top = %x\n", context.Esp, t.stackBottom);
-		    mark((void *)context.Esp, t.stackBottom);
-		    mark(&context.Edi, &context.Eip);
+		    version (linux)
+		    {
+			// The registers are already stored in the stack
+//printf("foo x%x, x%x, isSelf = %d\n", Thread.getESP(), t.stackBottom, t.isSelf());
+			if (t.isSelf())
+			    t.stackTop = Thread.getESP();
+
+			version (STACKGROWSDOWN)
+			    mark(t.stackTop, t.stackBottom);
+			else
+			    mark(t.stackBottom, t.stackTop);
+		    }
 		}
 	    }
 	}

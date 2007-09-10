@@ -1319,6 +1319,7 @@ unittest
  
 char[] toString(real x)
 {
+// BUG: this code is broken, returning a pointer into the stack
 	char[1024] buffer;
 	char* p = buffer;
 	uint psize = buffer.length;
@@ -1331,6 +1332,7 @@ char[] toString(real x)
 			if (count != -1)
 				break;
 			psize *= 2;
+			p = cast(char*) alloca(psize);
 		}
 		else version(linux)
 		{
@@ -1341,8 +1343,13 @@ char[] toString(real x)
 				psize = count + 1;
 			else
 				break;
+			/+
+			if (p != buffer)
+			    c.stdlib.free(p);
+			p = cast(char*) c.stdlib.malloc(psize);
+			+/
+			p = cast(char*) alloca(psize);
 		}
-		p = cast(char*) alloca(psize);
 	}
 	return p[0 .. count];
 }

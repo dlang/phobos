@@ -68,19 +68,32 @@ unittest
     int i;
     char[] result;
 
-    result = getExt('d:\path\foo.bat');
+    version (Win32)
+	result = getExt('d:\path\foo.bat');
+    version (linux)
+	result = getExt('/path/foo.bat');
     i = cmp(result, "bat");
     assert(i == 0);
 
-    result = getExt('d:\path\foo.');
+    version (Win32)
+	result = getExt('d:\path\foo.');
+    version (linux)
+	result = getExt('d/path/foo.');
     i = cmp(result, "");
     assert(i == 0);
 
-    result = getExt('d:\path\foo');
+    version (Win32)
+	result = getExt('d:\path\foo');
+    version (linux)
+	result = getExt('d/path/foo');
     i = cmp(result, "");
     assert(i == 0);
 
-    result = getExt('d:\path.bar\foo');
+    version (Win32)
+	result = getExt('d:\path.bar\foo');
+    version (linux)
+	result = getExt('/path.bar/foo');
+
     i = cmp(result, "");
     assert(i == 0);
 
@@ -125,12 +138,18 @@ unittest
     int i;
     char[] result;
 
-    result = getBaseName('d:\path\foo.bat');
+    version (Win32)
+	result = getBaseName('d:\path\foo.bat');
+    version (linux)
+	result = getBaseName('/path/foo.bat');
     //printf("result = '%.*s'\n", result);
     i = cmp(result, "foo.bat");
     assert(i == 0);
 
-    result = getBaseName('a\b');
+    version (Win32)
+	result = getBaseName('a\b');
+    version (linux)
+	result = getBaseName('a/b');
     i = cmp(result, "b");
     assert(i == 0);
 }
@@ -332,19 +351,40 @@ unittest
     int i;
 
     p = join("foo", "bar");
-    i = cmp(p, 'foo\bar');
+    version (Win32)
+	i = cmp(p, 'foo\bar');
+    version (linux)
+	i = cmp(p, 'foo/bar');
     assert(i == 0);
 
-    p = join('foo\', 'bar');
-    i = cmp(p, 'foo\bar');
+    version (Win32)
+    {	p = join('foo\', 'bar');
+	i = cmp(p, 'foo\bar');
+    }
+    version (linux)
+    {	p = join('foo/', 'bar');
+	i = cmp(p, 'foo/bar');
+    }
     assert(i == 0);
 
-    p = join('foo', '\bar');
-    i = cmp(p, '\bar');
+    version (Win32)
+    {	p = join('foo', '\bar');
+	i = cmp(p, '\bar');
+    }
+    version (linux)
+    {	p = join('foo', '/bar');
+	i = cmp(p, '/bar');
+    }
     assert(i == 0);
 
-    p = join('foo\', '\bar');
-    i = cmp(p, '\bar');
+    version (Win32)
+    {	p = join('foo\', '\bar');
+	i = cmp(p, '\bar');
+    }
+    version (linux)
+    {	p = join('foo/', '/bar');
+	i = cmp(p, '/bar');
+    }
     assert(i == 0);
 
     version(Win32)
@@ -391,15 +431,22 @@ unittest
 
 int fncharmatch(char c1, char c2)
 {
-    if (c1 != c2)
+    version (Win32)
     {
-	if ('A' <= c1 && c1 <= 'Z')
-	    c1 += cast(char)'a' - 'A';
-	if ('A' <= c2 && c2 <= 'Z')
-	    c2 += cast(char)'a' - 'A';
+	if (c1 != c2)
+	{
+	    if ('A' <= c1 && c1 <= 'Z')
+		c1 += cast(char)'a' - 'A';
+	    if ('A' <= c2 && c2 <= 'Z')
+		c2 += cast(char)'a' - 'A';
+	    return c1 == c2;
+	}
+	return true;
+    }
+    version (linux)
+    {
 	return c1 == c2;
     }
-    return true;
 }
 
 /************************************
@@ -523,7 +570,10 @@ unittest
 {
     debug(path) printf("path.fnmatch.unittest\n");
 
-    assert(fnmatch("foo", "Foo"));
+    version (Win32)
+	assert(fnmatch("foo", "Foo"));
+    version (linux)
+	assert(!fnmatch("foo", "Foo"));
     assert(fnmatch("foo", "*"));
     assert(fnmatch("foo.bar", "*"));
     assert(fnmatch("foo.bar", "*.*"));

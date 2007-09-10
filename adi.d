@@ -42,13 +42,29 @@ extern (C) Array _adReverse(Array a, int szelem)
 
 	    tmp = buffer;
 	    if (szelem > 16)
-		tmp = (byte*) alloca(szelem);
+	    {
+		//version (Win32)
+		    tmp = (byte*) alloca(szelem);
+		//else
+		    //tmp = new byte[szelem];
+	    }
 
 	    for (; lo < hi; lo += szelem, hi -= szelem)
 	    {
 		memcpy(tmp, lo,  szelem);
 		memcpy(lo,  hi,  szelem);
 		memcpy(hi,  tmp, szelem);
+	    }
+
+	    version (Win32)
+	    {
+	    }
+	    else
+	    {
+		//if (szelem > 16)
+		    // BUG: bad code is generate for delete pointer, tries
+		    // to call delclass.
+		    //delete tmp;
 	    }
 	}
 	return a;

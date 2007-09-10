@@ -635,15 +635,14 @@ version (Win32)
 version (linux)
 {
 
-    import c.time;
-    import c.sys.time;
+    import linux;
 
     d_time getUTCtime()
     {   timeval tv;
 
-	if (gettimeofday(&tv, NULL))
+	if (gettimeofday(&tv, null))
 	{   // Some error happened - try time() instead
-	    return c.time.time(null) * TicksPerSecond;
+	    return time(null) * TicksPerSecond;
 	}
 
 	return tv.tv_sec * TicksPerSecond + (tv.tv_usec / (1000000 / TicksPerSecond));
@@ -651,9 +650,9 @@ version (linux)
 
     d_time getLocalTZA()
     {
-	time_t t;
+	int t;
 
-	c.time.time(&t);
+	time(&t);
 	localtime(&t);	// this will set timezone
 	return -(timezone * TicksPerSecond);
     }
@@ -664,10 +663,10 @@ version (linux)
 
     int DaylightSavingTA(d_time dt)
     {
-	struct tm *tmp;
-	time_t t;
+	tm *tmp;
+	int t;
 
-	t = (time_t) (dt / TicksPerSecond);	// BUG: need range check
+	t = (int) (dt / TicksPerSecond);	// BUG: need range check
 	tmp = localtime(&t);
 	if (tmp.tm_isdst > 0)
 	    // BUG: Assume daylight savings time is plus one hour.

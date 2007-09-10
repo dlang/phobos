@@ -4,10 +4,15 @@ import c.stdio;
 import c.stdlib;
 import string;
 
+extern (C) void _STI_monitor_staticctor();
+extern (C) void _STD_monitor_staticdtor();
+extern (C) void _STI_critical_init();
+extern (C) void _STD_critical_term();
 extern (C) void gc_init();
 extern (C) void gc_term();
 extern (C) void _minit();
 extern (C) void _moduleCtor();
+extern (C) void _moduleDtor();
 extern (C) void _moduleUnitTests();
 
 /***********************************
@@ -16,7 +21,7 @@ extern (C) void _moduleUnitTests();
 int main(char[][] args);
 
 /***********************************
- * Called by the C main() function in main.c.
+ * Substitutes for the C main() function.
  * It's purpose is to wrap the call to the D main()
  * function and catch any unhandled exceptions.
  */
@@ -28,9 +33,20 @@ extern (C) int main(int argc, char **argv)
     int i;
     int result;
 
-    gc_init();
-    _minit();
-    am = (char[] *) alloca(argc * (char[]).size);
+    version (linux)
+    {
+	_STI_monitor_staticctor();
+	_STI_critical_init();
+	gc_init();
+	//am = (char[] *) malloc(argc * (char[]).size);
+	am = (char[] *) alloca(argc * (char[]).size);
+    }
+    version (Win32)
+    {
+	gc_init();
+	_minit();
+	am = (char[] *) alloca(argc * (char[]).size);
+    }
 
     try
     {
@@ -55,7 +71,14 @@ extern (C) int main(int argc, char **argv)
 	result = EXIT_FAILURE;
     }
 
+    _moduleDtor();
     gc_term();
+    version (linux)
+    {
+	//free(am);
+	_STD_critical_term();
+	_STD_monitor_staticdtor();
+    }
     return result;
 }
 

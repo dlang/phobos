@@ -10,7 +10,7 @@ class OutOfMemory : Object
     }
 }
 
-extern (C) static void _d_OutOfMemory()
+extern (C) void _d_OutOfMemory()
 {
     throw (OutOfMemory)(void *)OutOfMemory.classinfo.init;
 }

@@ -1,4 +1,6 @@
 
+# makefile to build D garbage collector under win32
+
 DMD=..\..\dmd
 #DMD=\dmd\bin\dmd
 CFLAGS=-g -mn -6 -r -Igc
@@ -28,7 +30,7 @@ testgc.obj : testgc.d
 
 OBJS= gc.obj gcx.obj gcbits.obj win32.obj
 
-SRC= gc.d gcx.d gcbits.d win32.d testgc.d
+SRC= gc.d gcx.d gcbits.d win32.d gclinux.d testgc.d win32.mak linux.mak
 
 dmgc.lib : $(OBJS) makefile
 	del dmgc.lib
@@ -39,8 +41,9 @@ gcx.obj : gcx.d
 gcbits.obj : gcbits.d
 win32.obj : win32.d
 
-zip : makefile $(SRC)
-	zip32 -u dmgc makefile $(SRC)
+zip : $(SRC)
+	del dmgc.zip
+	zip32 dmgc $(SRC)
 
 clean:
 	del $(OBJS)

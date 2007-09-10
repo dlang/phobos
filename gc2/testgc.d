@@ -1,5 +1,5 @@
 
-// Copyright (C) 2001-2002 by Digital Mars
+// Copyright (C) 2001-2003 by Digital Mars
 // All Rights Reserved
 // Written by Walter Bright
 // www.digitalmars.com
@@ -68,10 +68,12 @@ void smoke()
 
     gc = newGC();
     deleteGC(gc);
+printf("smoke.1\n");
 
     gc = newGC();
     gc.init();
     deleteGC(gc);
+printf("smoke.2\n");
 
     gc = newGC();
     gc.init();
@@ -157,11 +159,11 @@ void smoke3()
 //    for (i = 0; i < 1000000; i++)
     for (i = 0; i < 1000; i++)
     {
-	uint size = rand() % 2048;
+	uint size = random.rand() % 2048;
 	p = (int *)gc.malloc(size);
 	memset(p, i, size);
 
-	size = rand() % 2048;
+	size = random.rand() % 2048;
 	p = (int *)gc.realloc(p, size);
 	memset(p, i + 1, size);
     }
@@ -193,7 +195,7 @@ void smoke4()
 	p = (int *)gc.malloc(size);
 	memset(p, i, size);
 
-	size = rand() % 2048;
+	size = random.rand() % 2048;
 	gc.check(p);
 	p = (int *)gc.realloc(p, size);
 	memset(p, i + 1, size);
@@ -226,8 +228,8 @@ void smoke5(GC *gc)
     {
 	for (i = 0; i < 2000 /*4000*/; i++)
 	{
-	    uint size = (rand() % 2048) + 1;
-	    uint index = rand() % SMOKE5_SIZE;
+	    uint size = (random.rand() % 2048) + 1;
+	    uint index = random.rand() % SMOKE5_SIZE;
 
 	    //printf("index = %d, size = %d\n", index, size);
 	    p = array[index] - offset[index];
@@ -243,7 +245,7 @@ void smoke5(GC *gc)
 	    }
 	    array[index] = p;
 	    fill(p, index, size);
-	    offset[index] = rand() % size;
+	    offset[index] = random.rand() % size;
 	    array[index] += offset[index];
 
 	    //printf("p[0] = %d\n", p[0]);

@@ -24,7 +24,10 @@ struct DateParse
     {
 	*this = DateParse.init;
 
-	buffer = ((char *)alloca(s.length))[0 .. s.length];
+	//version (Win32)
+	    buffer = ((char *)alloca(s.length))[0 .. s.length];
+	//else
+	    //buffer = new char[s.length];
 
 	debug(log) printf("DateParse.parse('%.*s')\n", s);
 	if (!parseString(s))
@@ -132,13 +135,15 @@ private:
 	int bi;
 	DP result = DP.err;
 
-	//message(DTEXT("DateParse::nextToken()\n"));
+	//printf("DateParse::nextToken()\n");
 	for (;;)
 	{
-	    //message(DTEXT("\t*p = '%c'\n"), *p);
 	    assert(si <= s.length);
 	    if (si == s.length)
-		return DP.end;
+	    {	result = DP.end;
+		goto Lret;
+	    }
+	    //printf("\ts[%d] = '%c'\n", si, s[si]);
 	    switch (s[si])
 	    {
 		case ':':	result = DP.colon; goto ret_inc;
@@ -233,6 +238,7 @@ private:
 	    }
 	}
     Lret:
+	//printf("-DateParse::nextToken()\n");
 	return result;
     }
 

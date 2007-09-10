@@ -1,4 +1,4 @@
-# Makefile to build D runtime library phobos.lib.
+# Makefile to build D runtime library phobos.lib for Win32
 # Designed to work with \dm\bin\make.exe
 # Targets:
 #	make
@@ -68,8 +68,8 @@ OBJS= assert.obj deh.obj switch.obj complex.obj gcstats.obj \
 
 HDR=mars.h
 
-SRC= switch.d complex.c critical.c fpu.d \
-	aa.c vaa.c interface.c minit.asm
+SRC= switch.d complex.c critical.c errno.c alloca.d cmath.d \
+	minit.asm linux.d deh2.d date.d linuxextern.d llmath.d
 
 SRC2=deh.c object.d gc.d math.d c\stdio.d c\stdlib.d time.d monitor.c arraycat.d \
 	string.d windows.d path.d
@@ -77,7 +77,7 @@ SRC2=deh.c object.d gc.d math.d c\stdio.d c\stdlib.d time.d monitor.c arraycat.d
 SRC3=invariant.d assert.d RegExp.d dmain2.d dateparse.d \
 	outofmemory.d syserror.d
 
-SRC4=dchar.d ctype.d achar.d aaA.d adi.d file.d compiler.d system.d \
+SRC4= ctype.d achar.d aaA.d adi.d file.d compiler.d system.d \
 	moduleinit.d cast.d math.d qsort.d
 
 SRC5=outbuffer.d unittest.d stream.d ctype.d regexp.d random.d adi.d \
@@ -94,7 +94,7 @@ SRC7=ti_wchar.d ti_uint.d ti_short.d ti_ushort.d \
 
 SRC8=crc32.d stdint.d conv.d gcstats.d
 
-phobos.lib : $(OBJS) minit.obj gc2\dmgc.lib makefile
+phobos.lib : $(OBJS) minit.obj gc2\dmgc.lib win32.mak
 	lib -c phobos.lib $(OBJS) minit.obj gc2\dmgc.lib
 
 aaA.obj : aaA.d
@@ -131,9 +131,9 @@ ti_C.obj : ti_C.d
 ti_char.obj : ti_char.d
 ti_int.obj : ti_int.d
 
-zip : makefile $(HDR) $(SRC) $(SRC2) $(SRC3) $(SRC4) $(SRC5) $(SRC6) $(SRC7) \
+zip : win32.mak linux.mak $(HDR) $(SRC) $(SRC2) $(SRC3) $(SRC4) $(SRC5) $(SRC6) $(SRC7) \
 	$(SRC8)
-	zip32 -u phobos makefile $(HDR)
+	zip32 -u phobos win32.mak linux.mak $(HDR)
 	zip32 -u phobos $(SRC)
 	zip32 -u phobos $(SRC2)
 	zip32 -u phobos $(SRC3)

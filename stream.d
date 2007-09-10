@@ -132,25 +132,25 @@ class Stream
 		char[] result;
 		try
 		{
-			char c = getc();
+			char ch = getc();
 			while (readable)
 			{
-				switch (c)
+				switch (ch)
 				{
 					case "\r":
 					{
-						c = getc();
-						if (c != "\n")
-							ungetc(c);
+						ch = getc();
+						if (ch != "\n")
+							ungetc(ch);
 					}
 					
 					case "\n":
 						return result;
 					
 					default:
-						result ~= c;
+						result ~= ch;
 				}
-				c = getc();
+				ch = getc();
 			}
 		}
 		catch (ReadError e)
@@ -678,7 +678,7 @@ nws:
 		else version (Mac)
 			writeString("\r");
 +/			
-		else	// probably *NIX
+		else
 			writeString("\n");
 	}
 
@@ -723,26 +723,38 @@ nws:
 		{
 			version (Win32)
 			{
-				count = _vsnprintf(p, psize, f, args);
-				if (count != -1)
-					break;
-				psize *= 2;
+			    count = _vsnprintf(p, psize, f, args);
+			    if (count != -1)
+				break;
+			    psize *= 2;
+			    p = cast(char*) alloca(psize);
 			}
 			else version (linux)
 			{
-				count = vsnprintf(p, psize, f, args);
-				if (count == -1)
-					psize *= 2;
-				else if (count >= psize)
-					psize = count + 1;
-				else
-					break;
+			    count = vsnprintf(p, psize, f, args);
+			    if (count == -1)
+				psize *= 2;
+			    else if (count >= psize)
+				psize = count + 1;
+			    else
+				break;
+			    /+if (p != buffer)
+				c.stdlib.free(p);
+			    p = (char *) c.stdlib.malloc(psize);	// buffer too small, try again with larger size
+			    +/
+			    p = cast(char*) alloca(psize);
 			}
 			else
-				throw new Error("unsupported platform");
-			p = cast(char*) alloca(psize);
+			    throw new Error("unsupported platform");
 		}
 		writeString(p[0 .. count]);
+		/+
+		version (linux)
+		{
+		    if (p != buffer)
+			c.stdlib.free(p);
+		}
+		+/
 		return count;	
     }
 
@@ -867,7 +879,17 @@ enum FileMode
 // just a file on disk
 class File: Stream
 {
+    version (Win32)
+    {
 	import windows;
+	private HANDLE hFile;
+    }
+    version (linux)
+    {
+	import linux;
+	alias int HANDLE;
+	private HANDLE hFile = -1;
+    }
 
 	// for compatibility with old versions...
 	deprecated enum: FileMode
@@ -876,9 +898,17 @@ class File: Stream
 		towrite = FileMode.Out
 	}
 
-	private HANDLE hFile;
-
-	this() { hFile = null; }
+	this()
+	{
+	    version (Win32)
+	    {
+		hFile = null;
+	    }
+	    version (linux)
+	    {
+		hFile = -1;
+	    }
+	}
 	
 	// opens existing handle; use with care!
 	this(HANDLE hFile, FileMode mode)
@@ -903,8 +933,10 @@ class File: Stream
 	// opens file in requested mode
 	void open(char[] filename, FileMode mode)
 	{
-		close();
-		int access = 0, share = 0;
+	    close();
+	    int access = 0, share = 0;
+	    version (Win32)
+	    {
 		if (mode & FileMode.In)
 		{
 			readable = true;
@@ -921,6 +953,26 @@ class File: Stream
 			null, OPEN_EXISTING, 0, null);
 		if (hFile == INVALID_HANDLE_VALUE)
 			throw new OpenError("file '" ~ filename ~ "' not found");
+	    }
+	    version (linux)
+	    {
+		if (mode & FileMode.In)
+		{
+			readable = true;
+			access = O_RDONLY;
+			share = 0660;
+		}
+		if (mode & FileMode.Out)
+		{
+			writeable = true;
+			access = O_CREAT | O_WRONLY;
+			share = 0660;
+		}
+		seekable = true;
+		hFile = linux.open(toStringz(filename), access, share);
+		if (hFile == -1)
+			throw new OpenError("file '" ~ filename ~ "' not found");
+	    }
 	}
 
 	// creates file for writing
@@ -929,8 +981,10 @@ class File: Stream
 	// creates file in requested mode
 	void create(char[] filename, FileMode mode)
 	{
-		close();
-		int access = 0, share = 0;
+	    close();
+	    int access = 0, share = 0;
+	    version (Win32)
+	    {
 		if (mode & FileMode.In)
 		{
 			access |= GENERIC_READ;
@@ -947,6 +1001,26 @@ class File: Stream
 		writeable = cast(bit)(mode & FileMode.Out);
 		if (hFile == INVALID_HANDLE_VALUE)
 			throw new CreateError("unable to create file '" ~ filename ~ "'");
+	    }
+	    version (linux)
+	    {
+		if (mode & FileMode.In)
+		{
+			readable = true;
+			access = O_RDONLY;
+			share = 0660;
+		}
+		if (mode & FileMode.Out)
+		{
+			writeable = true;
+			access = O_CREAT | O_WRONLY | O_TRUNC;
+			share = 0660;
+		}
+		seekable = true;
+		hFile = linux.open(toStringz(filename), access, share);
+		if (hFile == -1)
+			throw new OpenError("file '" ~ filename ~ "' not found");
+	    }
 	}
 	
 	// closes file, if it is open; otherwise, does nothing
@@ -954,9 +1028,17 @@ class File: Stream
 	{
 		if (hFile)
 		{
+		    version (Win32)
+		    {
 			CloseHandle(hFile);
 			hFile = null;
-			readable = writeable = seekable = false;
+		    }
+		    version (linux)
+		    {
+			linux.close(hFile);
+			hFile = -1;
+		    }
+		    readable = writeable = seekable = false;
 		}
 	}
 	
@@ -968,8 +1050,15 @@ class File: Stream
 	}
 	body
 	{
+	    version (Win32)
+	    {
 		ReadFile(hFile, buffer, size, &size, null);
-		return size;
+	    }
+	    version (linux)
+	    {
+		size = linux.read(hFile, buffer, size);
+	    }
+	    return size;
 	}
 
 	override uint writeBlock(void* buffer, uint size)
@@ -980,8 +1069,15 @@ class File: Stream
 	}
 	body
 	{
+	    version (Win32)
+	    {
 		WriteFile(hFile, buffer, size, &size, null);
-		return size;
+	    }
+	    version (linux)
+	    {
+		size = linux.write(hFile, buffer, size);
+	    }
+	    return size;
 	}
 	
 	override ulong seek(long offset, SeekPos rel)
@@ -992,10 +1088,19 @@ class File: Stream
 	}
 	body
 	{
+	    version (Win32)
+	    {
 		uint result = SetFilePointer(hFile, offset, null, rel);
 		if (result == 0xFFFFFFFF)
 			throw new SeekError("unable to move file pointer");
-		return result;
+	    }
+	    version (linux)
+	    {
+		uint result = lseek(hFile, offset, rel);
+		if (result == 0xFFFFFFFF)
+			throw new SeekError("unable to move file pointer");
+	    }
+	    return result;
 	}
 	
 	// OS-specific property, just in case somebody wants
@@ -1014,7 +1119,10 @@ class File: Stream
 	    file.writeString("Hello, world!");
 	    file.write(i);
 	    // string#1 + string#2 + int should give exacly that
-	    assert(file.position() == 19 + 13 + 4);
+	    version (Win32)
+		assert(file.position() == 19 + 13 + 4);
+	    version (linux)
+		assert(file.position() == 18 + 13 + 4);
 	    // we must be at the end of file
 	    assert(file.eof());
 	    file.close();
@@ -1026,12 +1134,18 @@ class File: Stream
 	    assert(!string.cmp(file.readLine(), "Testing stream.d:"));
 	    // jump over "Hello, "
 	    file.seek(7, SeekPos.Current);
-	    assert(file.position() == 19 + 7);
+	    version (Win32)
+		assert(file.position() == 19 + 7);
+	    version (linux)
+		assert(file.position() == 18 + 7);
 	    assert(!string.cmp(file.readString(6), "world!"));
 	    i = 0; file.read(i);
 	    assert(i == 666);
         // string#1 + string#2 + int should give exacly that
-	    assert(file.position() == 19 + 13 + 4);
+	    version (Win32)
+		assert(file.position() == 19 + 13 + 4);
+	    version (linux)
+		assert(file.position() == 18 + 13 + 4);
 	    // we must be at the end of file
 	    assert(file.eof());
 	    file.close();
@@ -1105,7 +1219,7 @@ class MemoryStream: Stream
         cur += size;
         if (cur > len)
             len = cur;
-		return size;
+	return size;
 	}
 
 	override ulong seek(long offset, SeekPos rel)
@@ -1309,7 +1423,7 @@ class SliceStream : Stream
         MemoryStream m;
         SliceStream s;
 
-        m = new MemoryStream ("Hello, world");
+        m = new MemoryStream ((cast(char[])"Hello, world").dup);
         s = new SliceStream (m, 4, 8);
         assert (s.size () == 4);
         assert (s.writeBlock ((char *) "Vroom", 5) == 4);
@@ -1348,22 +1462,36 @@ private bit ishexdigit(char c)
 	return isdigit(c) || (c >= "A" && c <= "F") || (c >= "a" && c <= "f");
 }
 
-// API imports
-private extern(Windows)
-{
-	private import windows;
-	HANDLE GetStdHandle(DWORD);
-}
-
 // standard IO devices
 File stdin, stdout, stderr;
 
-static this()
+version (Win32)
 {
-	// open standard I/O devices
-	stdin = new File(GetStdHandle(-10), FileMode.In);
-	stdout = new File(GetStdHandle(-11), FileMode.Out);
-	stderr = new File(GetStdHandle(-12), FileMode.Out);
+    // API imports
+    private extern(Windows)
+    {
+	    private import windows;
+	    HANDLE GetStdHandle(DWORD);
+    }
+
+    static this()
+    {
+	    // open standard I/O devices
+	    stdin = new File(GetStdHandle(-10), FileMode.In);
+	    stdout = new File(GetStdHandle(-11), FileMode.Out);
+	    stderr = new File(GetStdHandle(-12), FileMode.Out);
+    }
+}
+
+version (linux)
+{
+    static this()
+    {
+	    // open standard I/O devices
+	    stdin = new File(0, FileMode.In);
+	    stdout = new File(1, FileMode.Out);
+	    stderr = new File(2, FileMode.Out);
+    }
 }
 
 import string;

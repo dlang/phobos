@@ -217,6 +217,7 @@ class OutBuffer
 		if (count != -1)
 		    break;
 		psize *= 2;
+		p = (char *) alloca(psize);	// buffer too small, try again with larger size
 	    }
 	    version(linux)
 	    {
@@ -227,10 +228,22 @@ class OutBuffer
 		    psize = count + 1;
 		else
 		    break;
+		/+
+		if (p != buffer)
+		    c.stdlib.free(p);
+		p = (char *) c.stdlib.malloc(psize);	// buffer too small, try again with larger size
+		+/
+		p = (char *) alloca(psize);	// buffer too small, try again with larger size
 	    }
-	    p = (char *) alloca(psize);	// buffer too small, try again with larger size
 	}
 	write(p[0 .. count]);
+	/+
+	version (linux)
+	{
+	    if (p != buffer)
+		c.stdlib.free(p);
+	}
+	+/
     }
 
     /*****************************************

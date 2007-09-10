@@ -606,6 +606,7 @@ void printProgram(ubyte[] prog)
     {
 	printf("%3d: ", pc);
 
+	//printf("prog[pc] = %d, REchar = %d, REnmq = %d\n", prog[pc], REchar, REnmq);
 	switch (prog[pc])
 	{
 	    case REchar:
@@ -712,7 +713,9 @@ void printProgram(ubyte[] prog)
 		len = puint[0];
 		n = puint[1];
 		m = puint[2];
-		printf("\tREnm%s len=%d, n=%u, m=%u, pc=>%d\n", (prog[pc] == REnmq) ? "q" : " ", len, n, m, pc + 1 + uint.size * 3 + len);
+		printf("\tREnm%.*s len=%d, n=%u, m=%u, pc=>%d\n",
+		    (prog[pc] == REnmq) ? "q" : " ",
+		    len, n, m, pc + 1 + uint.size * 3 + len);
 		pc += 1 + uint.size * 3;
 		break;
 
@@ -1085,7 +1088,10 @@ int trymatch(int pc, int pcend)
 		}
 		if (!psave && count < m)
 		{
-		    psave = (regmatch_t *)alloca((re_nsub + 1) * regmatch_t.size);
+		    //version (Win32)
+			psave = (regmatch_t *)alloca((re_nsub + 1) * regmatch_t.size);
+		    //else
+			//psave = new regmatch_t[re_nsub + 1];
 		}
 		if (program[pc] == REnmq)	// if minimal munch
 		{
@@ -2007,6 +2013,7 @@ void optimize()
     prog = buf.toBytes();
     for (i = 0; 1;)
     {
+	//printf("\tprog[%d] = %d, %d\n", i, prog[i], REstring);
 	switch (prog[i])
 	{
 	    case REend:

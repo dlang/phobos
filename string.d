@@ -124,7 +124,29 @@ int icmp(char[] s1, char[] s2)
 
     if (s2.length < len)
 	len = s2.length;
-    result = memicmp(s1, s2, len);
+    version (Win32)
+    {
+	result = memicmp(s1, s2, len);
+    }
+    version (linux)
+    {
+	for (int i = 0; i < len; i++)
+	{
+	    if (s1[i] != s2[i])
+	    {
+		char c1 = s1[i];
+		char c2 = s2[i];
+
+		if (c1 >= 'A' && c1 <= 'Z')
+		    c1 += (int)'a' - (int)'A';
+		if (c2 >= 'A' && c2 <= 'Z')
+		    c2 += (int)'a' - (int)'A';
+		result = (int)c1 - (int)c2;
+		if (result)
+		    break;
+	    }
+	}
+    }
     if (result == 0)
 	result = cast(int)s1.length - cast(int)s2.length;
     return result;
@@ -303,33 +325,59 @@ int find(char[] s, char[] sub)
     }
     body
     {
-	int imax;
-	char c;
+	int sublength = sub.length;
 
-	if (sub.length == 0)
+	if (sublength == 0)
 	    return 0;
-	if (sub.length == 1)
+
+	char c = sub[0];
+	if (sublength == 1)
 	{
-	    char *p = memchr(s, sub[0], s.length);
+	    char *p = memchr(s, c, s.length);
 	    if (p)
 		return p - &s[0];
 	}
 	else
 	{
-	    imax = s.length - sub.length + 1;
-	    c = sub[0];
+	    int imax = s.length - sublength + 1;
+
+	    // Remainder of sub[]
+	    char *q = &sub[1];
+	    sublength--;
+
 	    for (int i = 0; i < imax; i++)
 	    {
-		if (s[i] == c)
-		{
-		    if (memcmp(&s[i + 1], &sub[1], sub.length - 1) == 0)
-			return i;
-		}
+		char *p = memchr(&s[i], c, imax - i);
+		if (!p)
+		    break;
+		i = p - &s[0];
+		if (memcmp(p + 1, q, sublength) == 0)
+		    return i;
 	    }
 	}
 	return -1;
     }
 
+
+unittest
+{
+    debug(string) printf("string.find.unittest\n");
+
+    int i;
+
+    i = find(null, cast(char[])'a');
+    assert(i == -1);
+    i = find("def", cast(char[])'a');
+    assert(i == -1);
+    i = find("abba", cast(char[])'a');
+    assert(i == 0);
+    i = find("def", cast(char[])'f');
+    assert(i == 2);
+    i = find("dfefffg", 'fff');
+    assert(i == 3);
+    i = find("dfeffgfff", 'fff');
+    assert(i == 6);
+}
 
 /*************************************
  * Find last occurrance of sub in string s.
@@ -710,21 +758,87 @@ char[][] split(char[] s, char[] delim)
 	i = 0;
 	if (s.length)
 	{
-	    while (true)
-	    {
-		j = find(s[i .. s.length], delim);
-		if (j == -1)
+	    if (delim.length == 1)
+	    {	char c = delim[0];
+		uint nwords = 0;
+		char *p = &s[0];
+		char *pend = p + s.length;
+
+		while (true)
 		{
-		    words ~= s[i .. s.length];
-		    break;
+		    nwords++;
+		    p = memchr(p, c, pend - p);
+		    if (!p)
+			break;
+		    p++;
+		    if (p == pend)
+		    {	nwords++;
+			break;
+		    }
 		}
-		words ~= s[i .. i + j];
-		i += j + delim.length;
-		if (i == s.length)
+		words.length = nwords;
+
+		int wordi = 0;
+		i = 0;
+		while (true)
 		{
-		    words ~= "";
-		    break;
+		    p = memchr(&s[i], c, s.length - i);
+		    if (!p)
+		    {
+			words[wordi] = s[i .. s.length];
+			break;
+		    }
+		    j = p - &s[0];
+		    words[wordi] = s[i .. j];
+		    wordi++;
+		    i = j + 1;
+		    if (i == s.length)
+		    {
+			words[wordi] = "";
+			break;
+		    }
 		}
+		assert(wordi + 1 == nwords);
+	    }
+	    else
+	    {	uint nwords = 0;
+
+		while (true)
+		{
+		    nwords++;
+		    j = find(s[i .. s.length], delim);
+		    if (j == -1)
+			break;
+		    i += j + delim.length;
+		    if (i == s.length)
+		    {	nwords++;
+			break;
+		    }
+		    assert(i < s.length);
+		}
+		words.length = nwords;
+
+		int wordi = 0;
+		i = 0;
+		while (true)
+		{
+		    j = find(s[i .. s.length], delim);
+		    if (j == -1)
+		    {
+			words[wordi] = s[i .. s.length];
+			break;
+		    }
+		    words[wordi] = s[i .. i + j];
+		    wordi++;
+		    i += j + delim.length;
+		    if (i == s.length)
+		    {
+			words[wordi] = "";
+			break;
+		    }
+		    assert(i < s.length);
+		}
+		assert(wordi + 1 == nwords);
 	    }
 	}
 	return words;
@@ -759,6 +873,34 @@ unittest
 
     s = s[1 .. s.length];	// lop off leading ','
     words = split(s, ",");
+    assert(words.length == 3);
+    i = cmp(words[0], "peter");
+    assert(i == 0);
+
+    char[] s2 = ",,peter,,paul,,jerry,,";
+
+    words = split(s2, ",,");
+    //printf("words.length = %d\n", words.length);
+    assert(words.length == 5);
+    i = cmp(words[0], "");
+    assert(i == 0);
+    i = cmp(words[1], "peter");
+    assert(i == 0);
+    i = cmp(words[2], "paul");
+    assert(i == 0);
+    i = cmp(words[3], "jerry");
+    assert(i == 0);
+    i = cmp(words[4], "");
+    assert(i == 0);
+
+    s2 = s2[0 .. s2.length - 2];	// lop off trailing ',,'
+    words = split(s2, ",,");
+    assert(words.length == 4);
+    i = cmp(words[3], "jerry");
+    assert(i == 0);
+
+    s2 = s2[2 .. s2.length];	// lop off leading ',,'
+    words = split(s2, ",,");
     assert(words.length == 3);
     i = cmp(words[0], "peter");
     assert(i == 0);
@@ -1244,13 +1386,16 @@ char[] translate(char[] s, char[] transtab, char[] delchars)
 
 	deltab[] = false;
 	for (i = 0; i < delchars.length; i++)
+	{
 	    deltab[delchars[i]] = true;
+	}
 
 	count = 0;
 	for (i = 0; i < s.length; i++)
 	{
 	    if (!deltab[s[i]])
 		count++;
+	    //printf("s[%d] = '%c', count = %d\n", i, s[i], count);
 	}
 
 	r = new char[count];

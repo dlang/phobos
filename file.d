@@ -36,6 +36,11 @@ class FileError : Error
  * Basic File operations.
  */
 
+/* =========================== Win32 ======================= */
+
+version (Win32)
+{
+
 import windows;
 
 /********************************************
@@ -207,4 +212,216 @@ uint getAttributes(char[] name)
 	throw new FileError(name, GetLastError());
     }
     return result;
+}
+
+}
+
+/* =========================== linux ======================= */
+
+version (linux)
+{
+
+import linux;
+
+/********************************************
+ * Read a file.
+ * Returns:
+ *	array of bytes read
+ */
+
+byte[] read(char[] name)
+{
+    uint size;
+    uint numread;
+    int fd;
+    stat statbuf;
+    byte[] buf;
+    char *namez;
+
+    namez = toStringz(name);
+    //printf("file.read('%s')\n",namez);
+    fd = linux.open(namez, O_RDONLY);
+    if (fd == -1)
+    {
+        //printf("\topen error, errno = %d\n",getErrno());
+        goto err1;
+    }
+
+    //printf("\tfile opened\n");
+    if (linux.fstat(fd, &statbuf))
+    {
+        //printf("\tfstat error, errno = %d\n",getErrno());
+        goto err2;
+    }
+    size = statbuf.st_size;
+    buf = new byte[size];
+
+    numread = linux.read(fd, (char*)buf, size);
+    if (numread != size)
+    {
+        //printf("\tread error, errno = %d\n",getErrno());
+        goto err2;
+    }
+
+    if (linux.close(fd) == -1)
+    {
+	//printf("\tclose error, errno = %d\n",getErrno());
+        goto err;
+    }
+
+    return buf;
+
+err2:
+    linux.close(fd);
+err:
+    delete buf;
+
+err1:
+    throw new FileError(name, getErrno());
+}
+
+/*********************************************
+ * Write a file.
+ * Returns:
+ *	0	success
+ */
+
+void write(char[] name, byte[] buffer)
+{
+    int fd;
+    int numwritten;
+    int len;
+    char *namez;
+
+    namez = toStringz(name);
+    fd = linux.open(namez, O_CREAT | O_WRONLY | O_TRUNC, 0660);
+    if (fd == -1)
+        goto err;
+
+    numwritten = linux.write(fd, buffer, len);
+    if (len != numwritten)
+        goto err2;
+
+    if (linux.close(fd) == -1)
+        goto err;
+
+    return;
+
+err2:
+    linux.close(fd);
+err:
+    throw new FileError(name, getErrno());
+}
+
+
+/*********************************************
+ * Append to a file.
+ */
+
+void append(char[] name, byte[] buffer)
+{
+    int fd;
+    int numwritten;
+    int len;
+    char *namez;
+
+    namez = toStringz(name);
+    fd = linux.open(namez, O_APPEND | O_WRONLY | O_CREAT, 0660);
+    if (fd == -1)
+        goto err;
+
+    numwritten = linux.write(fd, buffer, len);
+    if (len != numwritten)
+        goto err2;
+
+    if (linux.close(fd) == -1)
+        goto err;
+
+    return;
+
+err2:
+    linux.close(fd);
+err:
+    throw new FileError(name, getErrno());
+}
+
+
+/***************************************************
+ * Rename a file.
+ */
+
+void rename(char[] from, char[] to)
+{
+    char *fromz = toStringz(from);
+    char *toz = toStringz(to);
+
+    if (c.stdio.rename(fromz, toz) == -1)
+	throw new FileError(to, getErrno());
+}
+
+
+/***************************************************
+ * Delete a file.
+ */
+
+void remove(char[] name)
+{
+    if (c.stdio.remove(toStringz(name)) == -1)
+	throw new FileError(name, getErrno());
+}
+
+
+/***************************************************
+ * Get file size.
+ */
+
+uint getSize(char[] name)
+{
+    uint size;
+    int fd;
+    stat statbuf;
+    char *namez;
+
+    namez = toStringz(name);
+    //printf("file.getSize('%s')\n",namez);
+    fd = linux.open(namez, O_RDONLY);
+    if (fd == -1)
+    {
+        //printf("\topen error, errno = %d\n",getErrno());
+        goto err1;
+    }
+
+    //printf("\tfile opened\n");
+    if (linux.fstat(fd, &statbuf))
+    {
+        //printf("\tfstat error, errno = %d\n",getErrno());
+        goto err2;
+    }
+    size = statbuf.st_size;
+
+    if (linux.close(fd) == -1)
+    {
+	//printf("\tclose error, errno = %d\n",getErrno());
+        goto err;
+    }
+
+    return size;
+
+err2:
+    linux.close(fd);
+err:
+err1:
+    throw new FileError(name, getErrno());
+}
+
+
+/***************************************************
+ * Get file attributes.
+ */
+
+uint getAttributes(char[] name)
+{
+    return 0;
+}
+
 }

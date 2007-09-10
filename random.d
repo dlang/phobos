@@ -11,6 +11,11 @@ version (Win32)
     extern(Windows) int QueryPerformanceCounter(ulong *count);
 }
 
+version (linux)
+{
+    import linux;
+}
+
 /* ===================== Random ========================= */
 
 // BUG: not multithreaded
@@ -75,7 +80,7 @@ static this()
 	// time.h
 	// sys/time.h
 
-	struct timeval tv;
+	timeval tv;
 
 	if (gettimeofday(&tv, null))
 	{   // Some error happened - try time() instead
