@@ -43,7 +43,7 @@ private import std.stdarg;
 extern (C)
 {
 
-    int wcslen(wchar *);
+    size_t wcslen(wchar *);
     int wcscmp(wchar *, wchar *);
 }
 
@@ -79,10 +79,10 @@ else version (linux)
     const char[1] newline = "\n";
 
 /**********************************
- * Returns !=0 if c is whitespace
+ * Returns true if c is whitespace
  */
 
-int iswhite(dchar c)
+bool iswhite(dchar c)
 {
     return (c <= 0x7F)
 		? find(whitespace, c) != -1
@@ -318,11 +318,11 @@ int ifind(char[] s, dchar c)
 
     if (c <= 0x7F)
     {	// Plain old ASCII
-	char c1 = std.ctype.tolower(c);
+	char c1 = cast(char) std.ctype.tolower(c);
 
 	foreach (int i, char c2; s)
 	{
-	    c2 = std.ctype.tolower(c2);
+	    c2 = cast(char)std.ctype.tolower(c2);
 	    if (c1 == c2)
 		return i;
 	}
@@ -419,12 +419,12 @@ int irfind(char[] s, dchar c)
 
     if (c <= 0x7F)
     {	// Plain old ASCII
-	char c1 = std.ctype.tolower(c);
+	char c1 = cast(char) std.ctype.tolower(c);
 
 	for (i = s.length; i-- != 0;)
 	{   char c2 = s[i];
 
-	    c2 = std.ctype.tolower(c2);
+	    c2 = cast(char) std.ctype.tolower(c2);
 	    if (c1 == c2)
 		break;
 	}
@@ -822,7 +822,7 @@ char[] tolower(char[] s)
 		r = s.dup;
 		changed = true;
 	    }
-	    r[i] = c + (cast(char)'a' - 'A');
+	    r[i] = cast(char) (c + (cast(char)'a' - 'A'));
 	}
 	else if (c >= 0x7F)
 	{
@@ -891,7 +891,7 @@ char[] toupper(char[] s)
 		r = s.dup;
 		changed = true;
 	    }
-	    r[i] = c - (cast(char)'a' - 'A');
+	    r[i] = cast(char) (c - (cast(char)'a' - 'A'));
 	}
 	else if (c >= 0x7F)
 	{
@@ -1951,7 +1951,7 @@ char[] expandtabs(char[] string, int tabsize = 8)
 		if (changes)
 		{
 		    if (c <= 0x7F)
-			result ~= c;
+			result ~= cast(char)c;
 		    else
 			std.utf.encode(result, c);
 		}
@@ -2077,7 +2077,7 @@ char[] entab(char[] string, int tabsize = 8)
 	if (changes)
 	{
 	    if (c <= 0x7F)
-		result ~= c;
+		result ~= cast(char)c;
 	    else
 		std.utf.encode(result, c);
 	}
@@ -2270,7 +2270,6 @@ char[] toString(ushort us) { return toString(cast(uint) us); } /// ditto
 char[] toString(uint u)
 {   char[uint.sizeof * 3] buffer = void;
     int ndigits;
-    char c;
     char[] result;
 
     ndigits = 0;
@@ -2281,10 +2280,10 @@ char[] toString(uint u)
     {
 	while (u)
 	{
-	    c = (u % 10) + '0';
+	    uint c = (u % 10) + '0';
 	    u /= 10;
 	    ndigits++;
-	    buffer[buffer.length - ndigits] = c;
+	    buffer[buffer.length - ndigits] = cast(char)c;
 	}
 	result = new char[ndigits];
 	result[] = buffer[buffer.length - ndigits .. buffer.length];
@@ -2316,7 +2315,6 @@ unittest
 char[] toString(ulong u)
 {   char[ulong.sizeof * 3] buffer;
     int ndigits;
-    char c;
     char[] result;
 
     if (u < 0x1_0000_0000)
@@ -2324,7 +2322,7 @@ char[] toString(ulong u)
     ndigits = 0;
     while (u)
     {
-	c = (u % 10) + '0';
+	char c = cast(char)((u % 10) + '0');
 	u /= 10;
 	ndigits++;
 	buffer[buffer.length - ndigits] = c;
@@ -2360,7 +2358,6 @@ char[] toString(short s) { return toString(cast(int) s); } /// ditto
 /// ditto
 char[] toString(int i)
 {   char[1 + int.sizeof * 3] buffer;
-    char c;
     char[] result;
 
     if (i >= 0)
@@ -2370,7 +2367,7 @@ char[] toString(int i)
     int ndigits = 1;
     while (u)
     {
-	c = (u % 10) + '0';
+	char c = cast(char)((u % 10) + '0');
 	u /= 10;
 	buffer[buffer.length - ndigits] = c;
 	ndigits++;
@@ -2416,7 +2413,6 @@ unittest
 /// ditto
 char[] toString(long i)
 {   char[1 + long.sizeof * 3] buffer;
-    char c;
     char[] result;
 
     if (i >= 0)
@@ -2428,7 +2424,7 @@ char[] toString(long i)
     int ndigits = 1;
     while (u)
     {
-	c = (u % 10) + '0';
+	char c = cast(char)((u % 10) + '0');
 	u /= 10;
 	buffer[buffer.length - ndigits] = c;
 	ndigits++;
@@ -2574,7 +2570,7 @@ body
 	c = cast(ubyte)(value % radix);
 	value = value / radix;
 	i--;
-	buffer[i] = (c < 10) ? c + '0' : c + 'A' - 10;
+	buffer[i] = cast(char)((c < 10) ? c + '0' : c + 'A' - 10);
     } while (value);
     return buffer[i .. length].dup;
 }
@@ -2661,7 +2657,7 @@ char[] sformat(char[] s, ...)
 	{
 	    if (i >= s.length)
 		throw new ArrayBoundsError("std.string.sformat", 0);
-	    s[i] = c;
+	    s[i] = cast(char)c;
 	    ++i;
 	}
 	else
@@ -2741,16 +2737,16 @@ unittest
  *	to be more like regular expression character classes.
  */
 
-int inPattern(dchar c, char[] pattern)
+bool inPattern(dchar c, char[] pattern)
 {
-    int result = 0;
+    bool result = false;
     int range = 0;
     dchar lastc;
 
     foreach (size_t i, dchar p; pattern)
     {
 	if (p == '^' && i == 0)
-	{   result = 1;
+	{   result = true;
 	    if (i + 1 == pattern.length)
 		return (c == p);	// or should this be an error?
 	}
@@ -2758,7 +2754,7 @@ int inPattern(dchar c, char[] pattern)
 	{
 	    range = 0;
 	    if (lastc <= c && c <= p || c == p)
-		return result ^ 1;
+		return !result;
 	}
 	else if (p == '-' && i > result && i + 1 < pattern.length)
 	{
@@ -2766,7 +2762,7 @@ int inPattern(dchar c, char[] pattern)
 	    continue;
 	}
 	else if (c == p)
-	    return result ^ 1;
+	    return !result;
 	lastc = p;
     }
     return result;
@@ -3014,11 +3010,11 @@ char[] succ(char[] s)
 		    c -= 'Z' - 'A';
 		    carry = c;
 		Lcarry:
-		    r[i] = c;
+		    r[i] = cast(char)c;
 		    if (i == 0)
 		    {
 			char[] t = new char[r.length + 1];
-			t[0] = carry;
+			t[0] = cast(char)carry;
 			t[1 .. length] = r[];
 			return t;
 		    }

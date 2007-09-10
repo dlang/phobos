@@ -98,8 +98,8 @@ void writefx(FILE* fp, TypeInfo[] arguments, void* argptr, int newline=false)
 		    else
 		    {   wchar[2] buf;
 
-			buf[0] = (((c - 0x10000) >> 10) & 0x3FF) + 0xD800;
-			buf[1] = ((c - 0x10000) & 0x3FF) + 0xDC00;
+			buf[0] = cast(wchar) ((((c - 0x10000) >> 10) & 0x3FF) + 0xD800);
+			buf[1] = cast(wchar) (((c - 0x10000) & 0x3FF) + 0xDC00);
 			FPUTWC(buf[0], fp);
 			FPUTWC(buf[1], fp);
 		    }

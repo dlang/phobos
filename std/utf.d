@@ -569,8 +569,8 @@ void encode(inout wchar[] s, dchar c)
 	{
 	    wchar[2] buf;
 
-	    buf[0] = (((c - 0x10000) >> 10) & 0x3FF) + 0xD800;
-	    buf[1] = ((c - 0x10000) & 0x3FF) + 0xDC00;
+	    buf[0] = cast(wchar) ((((c - 0x10000) >> 10) & 0x3FF) + 0xD800);
+	    buf[1] = cast(wchar) (((c - 0x10000) & 0x3FF) + 0xDC00);
 	    r ~= buf;
 	}
 	s = r;
@@ -698,7 +698,7 @@ char[] toUTF8(wchar[] s)
     {	wchar c = s[i];
 
 	if (c <= 0x7F)
-	    r[i] = c;		// fast path for ascii
+	    r[i] = cast(char)c;		// fast path for ascii
 	else
 	{
 	    r.length = i;
@@ -726,7 +726,7 @@ char[] toUTF8(dchar[] s)
     {	dchar c = s[i];
 
 	if (c <= 0x7F)
-	    r[i] = c;		// fast path for ascii
+	    r[i] = cast(char)c;		// fast path for ascii
 	else
 	{
 	    r.length = i;
@@ -756,8 +756,8 @@ wchar[] toUTF16(wchar[2] buf, dchar c)
 	}
 	else
 	{
-	    buf[0] = (((c - 0x10000) >> 10) & 0x3FF) + 0xD800;
-	    buf[1] = ((c - 0x10000) & 0x3FF) + 0xDC00;
+	    buf[0] = cast(wchar) ((((c - 0x10000) >> 10) & 0x3FF) + 0xD800);
+	    buf[1] = cast(wchar) (((c - 0x10000) & 0x3FF) + 0xDC00);
 	    return buf[0 .. 2];
 	}
     }
@@ -781,7 +781,7 @@ wchar[] toUTF16(char[] s)
 	if (c <= 0x7F)
 	{
 	    i++;
-	    r ~= c;
+	    r ~= cast(wchar)c;
 	}
 	else
 	{
@@ -807,7 +807,7 @@ wchar* toUTF16z(char[] s)
 	if (c <= 0x7F)
 	{
 	    i++;
-	    r ~= c;
+	    r ~= cast(wchar)c;
 	}
 	else
 	{

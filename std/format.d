@@ -941,11 +941,11 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
 		return;
 	    }
 	    if (precision == 0 || !(flags & FLprecision))
-	    {	vchar = '0' + vnumber;
+	    {	vchar = cast(char)('0' + vnumber);
 		if (vnumber < 10)
-		    vchar = '0' + vnumber;
+		    vchar = cast(char)('0' + vnumber);
 		else
-		    vchar = (uc ? 'A' - 10 : 'a' - 10) + vnumber;
+		    vchar = cast(char)((uc ? 'A' - 10 : 'a' - 10) + vnumber);
 		goto L2;
 	    }
 	}
@@ -956,7 +956,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
 
 	while (vnumber)
 	{
-	    c = (vnumber % base) + '0';
+	    c = cast(char)((vnumber % base) + '0');
 	    if (c > '9')
 		c += hexoffset;
 	    vnumber /= base;

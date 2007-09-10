@@ -74,9 +74,9 @@ extern (C) long _adReverseChar(char[] a)
 		continue;
 	    }
 
-	    int stridelo = std.utf.UTF8stride[clo];
+	    uint stridelo = std.utf.UTF8stride[clo];
 
-	    int stridehi = 1;
+	    uint stridehi = 1;
 	    while ((chi & 0xC0) == 0x80)
 	    {
 		chi = *--hi;
@@ -102,7 +102,7 @@ extern (C) long _adReverseChar(char[] a)
 	     */
 	    memcpy(tmp.ptr, hi, stridehi);
 	    memcpy(tmplo.ptr, lo, stridelo);
-	    memmove(lo + stridehi, lo + stridelo , hi - (lo + stridelo));
+	    memmove(lo + stridehi, lo + stridelo , (hi - lo) - stridelo);
 	    memcpy(lo, tmp.ptr, stridehi);
 	    memcpy(hi + stridehi - stridelo, tmplo.ptr, stridelo);
 
@@ -229,7 +229,7 @@ unittest
  * Support for array.reverse property.
  */
 
-extern (C) long _adReverse(Array a, int szelem)
+extern (C) long _adReverse(Array a, size_t szelem)
     out (result)
     {
 	assert(result is *cast(long*)(&a));
@@ -280,7 +280,7 @@ unittest
 
     int[] a = new int[5];
     int[] b;
-    int i;
+    size_t i;
 
     for (i = 0; i < 5; i++)
 	a[i] = i;

@@ -138,7 +138,7 @@ class Thread
 	}
 
 	state = TS.RUNNING;
-	hdl = _beginthreadex(null, cast(uint)stacksize, &threadstart, this, 0, &id);
+	hdl = _beginthreadex(null, cast(uint)stacksize, &threadstart, cast(void*)this, 0, &id);
 	if (hdl == cast(thread_hdl)0)
 	{   state = TS.TERMINATED;
 	    allThreads[idx] = null;
@@ -257,9 +257,9 @@ class Thread
     }
 
     /**
-     * Returns non-zero if this thread is the current thread.
+     * Returns true if this thread is the current thread.
      */
-    int isSelf()
+    bool isSelf()
     {
 	//printf("id = %d, self = %d\n", id, pthread_self());
 	return (id == GetCurrentThreadId());
@@ -641,7 +641,7 @@ class Thread
 	//printf("creating thread x%x\n", this);
 	//result = pthread_create(&id, null, &threadstart, this);
 	// Create with thread attributes to allow non-default stack size - Dave Fladebo
-	result = pthread_create(&id, &threadAttrs, &threadstart, this);
+	result = pthread_create(&id, &threadAttrs, &threadstart, cast(void*)this);
 	if (result)
 	{   state = TS.TERMINATED;
 	    allThreads[idx] = null;

@@ -148,8 +148,8 @@ else
 
 WORD HIWORD(int l) { return cast(WORD)((l >> 16) & 0xFFFF); }
 WORD LOWORD(int l) { return cast(WORD)l; }
-int FAILED(int status) { return status < 0; }
-int SUCCEEDED(int Status) { return Status >= 0; }
+bool FAILED(int status) { return status < 0; }
+bool SUCCEEDED(int Status) { return Status >= 0; }
 
 enum : int
 {

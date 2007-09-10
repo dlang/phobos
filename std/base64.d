@@ -242,7 +242,7 @@ body
 		{
 			if(*sp++ != '=')
 				badc('=');
-			*bp++ = x >> 16;
+			*bp++ = cast(char) (x >> 16);
 			break;
 		}
 		x |= arrayIndex(ch) << 6;
@@ -250,15 +250,15 @@ body
 		ch = *sp++;
 		if(ch == '=')
 		{
-			*bp++ = x >> 16;
-			*bp++ = (x >> 8) & 0xFF;
+			*bp++ = cast(char) (x >> 16);
+			*bp++ = cast(char) ((x >> 8) & 0xFF);
 			break;
 		}
 		x |= arrayIndex(ch);
 		
-		*bp++ = x >> 16;
-		*bp++ = (x >> 8) & 0xFF;
-		*bp++ = x & 0xFF;
+		*bp++ = cast(char) (x >> 16);
+		*bp++ = cast(char) ((x >> 8) & 0xFF);
+		*bp++ = cast(char) (x & 0xFF);
 	}
 	
 	return buf[0 .. (bp - &buf[0])];

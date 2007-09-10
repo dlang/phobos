@@ -29,7 +29,7 @@ char* strstr(char* s1, char* s2);		///
 char* strtok(char*  s1, char*  s2);		///
 void* memset(void* s, int c, size_t n);		///
 char* strerror(int errnum);			///
-int strlen(char* s);				///
+size_t strlen(char* s);				///
 int strcmp(char* s1, char* s2);			///
 char* strcat(char* s1, char* s2);		///
 int memcmp(void* s1, void* s2, size_t n);	///

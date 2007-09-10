@@ -137,7 +137,7 @@ class Object
      */
     int opEquals(Object o)
     {
-	return this is o;
+	return cast(int)(this is o);
     }
 
     /* **
@@ -314,14 +314,14 @@ class TypeInfo
 	if (this is o)
 	    return 1;
 	TypeInfo ti = cast(TypeInfo)o;
-	return ti && this.toString() == ti.toString();
+	return cast(int)(ti && this.toString() == ti.toString());
     }
 
     /// Returns a hash of the instance of a type.
     hash_t getHash(void *p) { return cast(uint)p; }
 
     /// Compares two instances for equality.
-    int equals(void *p1, void *p2) { return p1 == p2; }
+    int equals(void *p1, void *p2) { return cast(int)(p1 == p2); }
 
     /// Compares two instances for &lt;, ==, or &gt;.
     int compare(void *p1, void *p2) { return 0; }
@@ -363,10 +363,11 @@ class TypeInfo_Typedef : TypeInfo
     int opEquals(Object o)
     {   TypeInfo_Typedef c;
 
-	return this is o ||
+	return cast(int)
+		(this is o ||
 		((c = cast(TypeInfo_Typedef)o) !is null &&
 		 this.name == c.name &&
-		 this.base == c.base);
+		 this.base == c.base));
     }
 
     hash_t getHash(void *p) { return base.getHash(p); }
@@ -407,7 +408,7 @@ class TypeInfo_Pointer : TypeInfo
 
     int equals(void *p1, void *p2)
     {
-        return *cast(void* *)p1 == *cast(void* *)p2;
+        return cast(int)(*cast(void* *)p1 == *cast(void* *)p2);
     }
 
     int compare(void *p1, void *p2)
@@ -440,9 +441,10 @@ class TypeInfo_Array : TypeInfo
     int opEquals(Object o)
     {   TypeInfo_Array c;
 
-	return this is o ||
+	return cast(int)
+	       (this is o ||
 		((c = cast(TypeInfo_Array)o) !is null &&
-		 this.value == c.value);
+		 this.value == c.value));
     }
 
     hash_t getHash(void *p)
@@ -519,10 +521,11 @@ class TypeInfo_StaticArray : TypeInfo
     int opEquals(Object o)
     {   TypeInfo_StaticArray c;
 
-	return this is o ||
+	return cast(int)
+	       (this is o ||
 		((c = cast(TypeInfo_StaticArray)o) !is null &&
 		 this.len == c.len &&
-		 this.value == c.value);
+		 this.value == c.value));
     }
 
     hash_t getHash(void *p)

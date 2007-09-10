@@ -246,7 +246,7 @@ private:
 		    {
 			if (c < 'a')		// if upper case
 			    c += cast(uint)'a' - cast(uint)'A';	// to lower case
-			buffer[bi] = c;
+			buffer[bi] = cast(char)c;
 			bi++;
 			do
 			{

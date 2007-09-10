@@ -132,7 +132,7 @@ Object _d_newclass(ClassInfo ci)
     debug(PRINTF) printf("_d_newclass(ci = %p, %s)\n", ci, cast(char *)ci.name);
     if (ci.flags & 1)			// if COM object
     {
-	p = cast(Object)std.c.stdlib.malloc(ci.init.length);
+	p = std.c.stdlib.malloc(ci.init.length);
 	if (!p)
 	    _d_OutOfMemory();
     }
@@ -196,7 +196,7 @@ void _d_delclass(Object *p)
 
 		if (c.deallocator)
 		{
-		    _d_callfinalizer(*p);
+		    _d_callfinalizer(cast(void *)(*p));
 		    fp_t fp = cast(fp_t)c.deallocator;
 		    (*fp)(*p);			// call deallocator
 		    *p = null;
@@ -204,7 +204,7 @@ void _d_delclass(Object *p)
 		}
 	    }
 	}
-	_gc.free(*p);
+	_gc.free(cast(void*)(*p));
 	*p = null;
     }
 }

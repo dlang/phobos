@@ -2109,7 +2109,7 @@ struct Pool
 	if (baseAddr < p2.baseAddr)
 	    return -1;
 	else
-	    return baseAddr > p2.baseAddr;
+	    return cast(int)(baseAddr > p2.baseAddr);
     }
 }
 

@@ -34,11 +34,10 @@ int main(char[][] args);
  * function and catch any unhandled exceptions.
  */
 
-extern (C) int main(int argc, char **argv)
+extern (C) int main(size_t argc, char **argv)
 {
     char[] *am;
     char[][] args;
-    int i;
     int result;
     int myesp;
     int myebx;
@@ -64,9 +63,9 @@ extern (C) int main(int argc, char **argv)
 	_moduleCtor();
 	_moduleUnitTests();
 
-	for (i = 0; i < argc; i++)
+	for (size_t i = 0; i < argc; i++)
 	{
-	    int len = strlen(argv[i]);
+	    auto len = strlen(argv[i]);
 	    am[i] = argv[i][0 .. len];
 	}
 
@@ -83,9 +82,9 @@ extern (C) int main(int argc, char **argv)
 	    _moduleCtor();
 	    _moduleUnitTests();
 
-	    for (i = 0; i < argc; i++)
+	    for (size_t i = 0; i < argc; i++)
 	    {
-		int len = strlen(argv[i]);
+		auto len = strlen(argv[i]);
 		am[i] = argv[i][0 .. len];
 	    }
 

@@ -538,7 +538,7 @@ struct DirEntry
     /****
      * Return !=0 if DirEntry is a directory.
      */
-    int isdir()
+    uint isdir()
     {
 	return attributes & FILE_ATTRIBUTE_DIRECTORY;
     }
@@ -546,7 +546,7 @@ struct DirEntry
     /****
      * Return !=0 if DirEntry is a file.
      */
-    int isfile()
+    uint isfile()
     {
 	return !(attributes & FILE_ATTRIBUTE_DIRECTORY);
     }

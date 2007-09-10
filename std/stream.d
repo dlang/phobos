@@ -612,7 +612,7 @@ class Stream : InputStream, OutputStream {
 
   // unget buffer
   private wchar[] unget;
-  final int ungetAvailable() { return unget.length > 1; }
+  final bool ungetAvailable() { return unget.length > 1; }
 
   // reads and returns next character from the stream,
   // handles characters pushed back by ungetc()
@@ -626,7 +626,7 @@ class Stream : InputStream, OutputStream {
 	return c;
     }
     if (unget.length > 1) {
-      c = unget[unget.length - 1];
+      c = cast(char)unget[unget.length - 1];
       unget.length = unget.length - 1;
     } else {
       readBlock(&c,1);
@@ -757,7 +757,7 @@ class Stream : InputStream, OutputStream {
 	      c = getc();
 	      count++;
 	    }
-	    char ifmt = fmt[i] | 0x20;
+	    char ifmt = cast(char)(fmt[i] | 0x20);
 	    if (ifmt == 'i')	{ // undetermined base
 	      if (c == '0')	{ // octal or hex
 		c = getc();

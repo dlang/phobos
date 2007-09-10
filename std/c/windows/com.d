@@ -208,7 +208,7 @@ extern (Windows):
     {
 	if (*riid == IID_IUnknown)
 	{
-	    *ppv = cast(IUnknown)this;
+	    *ppv = cast(void*)cast(IUnknown)this;
 	    AddRef();
 	    return S_OK;
 	}
