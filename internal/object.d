@@ -10,7 +10,7 @@
  */
 
 /*
- *  Copyright (C) 2004-2006 by Digital Mars, www.digitalmars.com
+ *  Copyright (C) 2004-2007 by Digital Mars, www.digitalmars.com
  *  Written by Walter Bright
  *
  *  This software is provided 'as-is', without any express or implied
@@ -46,6 +46,8 @@ extern (C)
     void* calloc(size_t, size_t);
     void* realloc(void*, size_t);
     void free(void*);
+
+    Object _d_newclass(ClassInfo ci);
 }
 
 /// Standard boolean type.
@@ -204,6 +206,23 @@ class Object
 	    }
 	}
     }
+
+    /******
+     * Create instance of class specified by classname.
+     * The class must either have no constructors or have
+     * a default constructor.
+     * Returns:
+     *	null if failed
+     */
+    static Object factory(char[] classname)
+    {
+	auto ci = ClassInfo.find(classname);
+	if (ci)
+	{
+	    return ci.create();
+	}
+	return null;
+    }
 }
 
 extern (C) void _d_notify_release(Object o)
@@ -248,6 +267,7 @@ struct Interface
  * or instance by using the .classinfo property.
  * A pointer to this appears as the first entry in the class's vtbl[].
  */
+import std.moduleinit;
 class ClassInfo : Object
 {
     byte[] init;		/** class static initializer
@@ -263,8 +283,44 @@ class ClassInfo : Object
     //	1:			// IUnknown
     //	2:			// has no possible pointers into GC memory
     //	4:			// has offTi[] member
+    //	8:			// has constructors
     void *deallocator;
     OffsetTypeInfo[] offTi;
+    void function(Object) defaultConstructor;	// default Constructor
+
+    /*************
+     * Search all modules for ClassInfo corresponding to classname.
+     * Returns: null if not found
+     */
+    static ClassInfo find(char[] classname)
+    {
+	foreach (m; ModuleInfo.modules())
+	{
+	    //writefln("module %s, %d", m.name, m.localClasses.length);
+	    foreach (c; m.localClasses)
+	    {
+		//writefln("\tclass %s", c.name);
+		if (c.name == classname)
+		    return c;
+	    }
+	}
+	return null;
+    }
+
+    /********************
+     * Create instance of Object represented by 'this'.
+     */
+    Object create()
+    {
+	if (flags & 8 && !defaultConstructor)
+	    return null;
+	Object o = _d_newclass(this);
+	if (flags & 8 && defaultConstructor)
+	{
+	    defaultConstructor(o);
+	}
+	return o;
+    }
 }
 
 private import std.string;

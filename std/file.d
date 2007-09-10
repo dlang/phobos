@@ -116,8 +116,8 @@ void[] read(char[] name)
     if (size == INVALID_FILE_SIZE)
 	goto err2;
 
-    auto buf = new void[size];
-    if (buf.ptr)
+    auto buf = std.gc.malloc(size);
+    if (buf)
 	std.gc.hasNoPointers(buf.ptr);
 
     if (ReadFile(h,buf.ptr,size,&numread,null) != 1)
@@ -129,7 +129,7 @@ void[] read(char[] name)
     if (!CloseHandle(h))
 	goto err;
 
-    return buf;
+    return buf[0 .. size];
 
 err2:
     CloseHandle(h);
@@ -900,11 +900,11 @@ void[] read(char[] name)
         goto err2;
     }
     auto size = statbuf.st_size;
-    auto buf = new void[size];
+    auto buf = std.gc.malloc(size);
     if (buf.ptr)
 	std.gc.hasNoPointers(buf.ptr);
 
-    numread = std.c.linux.linux.read(fd, cast(char*)buf, size);
+    numread = std.c.linux.linux.read(fd, buf.ptr, size);
     if (numread != size)
     {
         //printf("\tread error, errno = %d\n",getErrno());
@@ -917,7 +917,7 @@ void[] read(char[] name)
         goto err;
     }
 
-    return buf;
+    return buf[0 .. size];
 
 err2:
     std.c.linux.linux.close(fd);

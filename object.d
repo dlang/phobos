@@ -24,6 +24,8 @@ class Object
 
     final void notifyRegister(void delegate(Object) dg);
     final void notifyUnRegister(void delegate(Object) dg);
+
+    static Object factory(char[] classname);
 }
 
 struct Interface
@@ -46,8 +48,13 @@ class ClassInfo : Object
     //	1:			// IUnknown
     //	2:			// has no possible pointers into GC memory
     //	4:			// has offTi[] member
+    //	8:			// has constructors
     void *deallocator;
     OffsetTypeInfo[] offTi;
+    void* defaultConstructor;	// default Constructor
+
+    static ClassInfo find(char[] classname);
+    Object create();
 }
 
 struct OffsetTypeInfo

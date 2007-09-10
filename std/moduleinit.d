@@ -6,6 +6,7 @@ module std.moduleinit;
 private
 {
     import object;
+    import std.stdio;
     import std.c.stdio;
     import std.c.stdlib;
     import std.string;
@@ -18,6 +19,9 @@ enum
 			// ctors being done first
 }
 
+/***********************
+ * Information about each module.
+ */
 class ModuleInfo
 {
     char name[];
@@ -29,6 +33,14 @@ class ModuleInfo
     void (*ctor)();
     void (*dtor)();
     void (*unitTest)();
+
+    /******************
+     * Return collection of all modules in the program.
+     */
+    static ModuleInfo[] modules()
+    {
+	return _moduleinfo_array;
+    }
 }
 
 class ModuleCtorError : Exception
@@ -94,6 +106,18 @@ extern (C) void _moduleCtor()
     _moduleinfo_dtors = new ModuleInfo[_moduleinfo_array.length];
     debug printf("_moduleinfo_dtors = x%x\n", cast(void *)_moduleinfo_dtors);
     _moduleCtor2(_moduleinfo_array, 0);
+
+    version (none)
+    {
+	foreach (m; _moduleinfo_array)
+	{
+	    writefln("module %s, %d", m.name, m.localClasses.length);
+	    foreach (c; m.localClasses)
+	    {
+		writefln("\tclass %s", c.name);
+	    }
+	}
+    }
 }
 
 void _moduleCtor2(ModuleInfo[] mi, int skip)

@@ -20,6 +20,11 @@ alias uint mode_t;
 alias uint uid_t;
 alias uint gid_t;
 
+static if (size_t.sizeof == 4)
+    alias int ssize_t;
+else
+    alias long ssize_t;
+
 enum : int
 {
 	SIGHUP = 1,

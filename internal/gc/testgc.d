@@ -466,6 +466,75 @@ private:
 
 /* ---------------------------- */
 
+void test6()
+{
+    printf("test6\n");
+
+    gc_t gc;
+
+    gc = newGC();
+    gc.initialize();
+
+    auto p = gc.malloc(4096);
+    assert(gc.capacity(p) == 4096);
+    memset(p, 3, 4096);
+
+    auto q = gc.realloc(p, 4096*4);
+    assert(q == p);
+    assert(gc.capacity(p) == 4096*4);
+    memset(p, 4, 4096*4);
+
+    q = gc.realloc(p, 4096*2);
+    assert(q == p);
+    assert(gc.capacity(p) == 4096*2);
+    memset(p, 5, 4096*2);
+
+    q = gc.realloc(p, 4096*2 + 1000);
+    assert(q == p);
+    assert(gc.capacity(p) == 4096*3);
+    memset(p, 6, 4096*2 + 1000);
+
+    q = gc.realloc(p, 4096*4);
+    assert(q == p);
+    assert(gc.capacity(p) == 4096*4);
+    memset(p, 7, 4096*4);
+
+    q = gc.realloc(p, 0);
+    assert(q == null);
+    assert(gc.capacity(p) == 0);
+
+    gc.fullCollect();
+    deleteGC(gc);
+}
+
+/* ---------------------------- */
+
+void test7()
+{
+    printf("test7\n");
+
+    gc_t gc;
+
+    gc = newGC();
+    gc.initialize();
+
+    auto p = gc.malloc(4096);
+    assert(gc.capacity(p) == 4096);
+    memset(p, 3, 4096);
+
+    auto q = gc.extend(p, 4096, 4096*2);
+    assert(q == 4096*2 || q == 4096*3);
+
+    auto s = gc.malloc(4096);
+    q = gc.extend(p, 4096, 4096);
+    assert(q == 0);
+
+    gc.fullCollect();
+    deleteGC(gc);
+}
+
+/* ---------------------------- */
+
 int main(char[][] args)
 {
     test1();
@@ -473,6 +542,8 @@ int main(char[][] args)
     test3();
     test4();
     test5();
+    test6();
+    test7();
 
     gc_t gc;
 

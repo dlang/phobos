@@ -293,7 +293,7 @@ class GC
 		gcx.bucket[bin] = (cast(List *)p).next;
 		//memset(p + size, 0, binsize[bin] - size);
 		// 'inline' memset - Dave Fladebo.
-		foreach(inout byte b; cast(byte[])(p + size)[0..binsize[bin] - size]) { b = 0; }
+		//foreach(inout byte b; cast(byte[])(p + size)[0..binsize[bin] - size]) { b = 0; }
 		//debug(PRINTF) printf("\tmalloc => %x\n", p);
 		debug (MEMSTOMP) memset(p, 0xF0, size);
 	    }
@@ -361,6 +361,53 @@ class GC
 	    else
 	    {
 		psize = gcx.findSize(p);	// find allocated size
+		if (psize >= PAGESIZE && size >= PAGESIZE)
+		{
+		    auto psz = psize / PAGESIZE;
+		    auto newsz = (size + PAGESIZE - 1) / PAGESIZE;
+		    if (newsz == psz)
+			return p;
+
+		    auto pool = gcx.findPool(p);
+		    auto pagenum = (p - pool.baseAddr) / PAGESIZE;
+
+		    if (newsz < psz)
+		    {	// Shrink in place
+			synchronized (gcLock)
+			{
+			    debug (MEMSTOMP) memset(p + size, 0xF2, psize - size);
+			    pool.freePages(pagenum + newsz, psz - newsz);
+			}
+			return p;
+		    }
+		    else if (pagenum + newsz <= pool.npages)
+		    {
+			// Attempt to expand in place
+			synchronized (gcLock)
+			{
+			    for (size_t i = pagenum + psz; 1;)
+			    {
+				if (i == pagenum + newsz)
+				{
+				    debug (MEMSTOMP) memset(p + psize, 0xF0, size - psize);
+				    memset(&pool.pagetable[pagenum + psz], B_PAGEPLUS, newsz - psz);
+				    return p;
+				}
+				if (i == pool.ncommitted)
+				{
+				    auto u = pool.extendPages(pagenum + newsz - pool.ncommitted);
+				    if (u == ~0u)
+					break;
+				    i = pagenum + newsz;
+				    continue;
+				}
+				if (pool.pagetable[i] != B_FREE)
+				    break;
+				i++;
+			    }
+			}
+		    }
+		}
 		if (psize < size ||		// if new size is bigger
 		    psize > size * 2)		// or less than half
 		{
@@ -376,6 +423,60 @@ class GC
 	return p;
     }
 
+    /**
+     * Attempt to in-place enlarge the memory block pointed to by p
+     * by at least minbytes beyond its current capacity,
+     * up to a maximum of maxbytes.
+     * This does not attempt to move the memory block (like realloc() does).
+     * Returns:
+     *	0 if could not extend p,
+     *	total size of entire memory block if successful.
+     */
+    size_t extend(void* p, size_t minsize, size_t maxsize)
+    {
+	//debug(PRINTF) printf("GC::extend(p = %x, minsize = %u, maxsize = %u)\n", p, minsize, maxsize);
+	version (SENTINEL)
+	{
+	    return 0;
+	}
+	auto psize = gcx.findSize(p);	// find allocated size
+	if (psize < PAGESIZE)
+	    return 0;			// cannot extend buckets
+
+	auto psz = psize / PAGESIZE;
+	auto minsz = (minsize + PAGESIZE - 1) / PAGESIZE;
+	auto maxsz = (maxsize + PAGESIZE - 1) / PAGESIZE;
+
+	auto pool = gcx.findPool(p);
+	auto pagenum = (p - pool.baseAddr) / PAGESIZE;
+
+	synchronized (gcLock)
+	{
+	    size_t sz;
+	    for (sz = 0; sz < maxsz; sz++)
+	    {
+		auto i = pagenum + psz + sz;
+		if (i == pool.ncommitted)
+		    break;
+		if (pool.pagetable[i] != B_FREE)
+		    break;
+	    }
+	    if (sz >= minsz)
+	    {
+	    }
+	    else if (pagenum + psz + sz == pool.ncommitted)
+	    {
+		auto u = pool.extendPages(minsz - sz);
+		if (u == ~0u)
+		    return 0;
+	    }
+	    else
+		return 0;
+	    debug (MEMSTOMP) memset(p + psize, 0xF0, (psz + sz) * PAGESIZE - psize);
+	    memset(pool.pagetable + pagenum + psz, B_PAGEPLUS, sz);
+	    return (psz + sz) * PAGESIZE;
+	}
+    }
 
     void free(void *p)
     {
@@ -2065,6 +2166,17 @@ struct Pool
 	    else
 		n2 = n;
 	}
+	return extendPages(n);
+    }
+
+    /**************************************
+     * Extend Pool by n pages.
+     * Returns ~0u on failure.
+     */
+
+    uint extendPages(uint n)
+    {
+	//debug(PRINTF) printf("Pool::extendPages(n = %d)\n", n);
 	if (ncommitted + n <= npages)
 	{
 	    uint tocommit;
@@ -2077,7 +2189,7 @@ struct Pool
 	    if (os_mem_commit(baseAddr, ncommitted * PAGESIZE, tocommit * PAGESIZE) == 0)
 	    {
 		memset(pagetable + ncommitted, B_FREE, tocommit);
-		i = ncommitted;
+		auto i = ncommitted;
 		ncommitted += tocommit;
 
 		while (i && pagetable[i - 1] == B_FREE)

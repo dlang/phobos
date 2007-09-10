@@ -66,7 +66,7 @@ OBJS= asserterror.obj deh.obj switch.obj complex.obj gcstats.obj \
 	compiler.obj system.obj moduleinit.obj md5.obj base64.obj \
 	cast.obj syserror.obj path.obj string.obj memset.obj math.obj \
 	outbuffer.obj ctype.obj regexp.obj random.obj windows.obj stat.obj \
-	stream.obj switcherr.obj com.obj array.obj gc.obj mmfile.obj \
+	stream.obj switcherr.obj com.obj array.obj mmfile.obj \
 	qsort.obj math2.obj date.obj dateparse.obj thread.obj obj.obj \
 	iunknown.obj crc32.obj conv.obj arraycast.obj utf.obj uri.obj \
 	Czlib.obj Dzlib.obj zip.obj process.obj registry.obj \

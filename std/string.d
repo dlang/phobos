@@ -3953,3 +3953,119 @@ unittest
 }
 
 
+/***************************
+ * Does string s[] start with an email address?
+ * Returns:
+ *	null	it does not
+ *	char[]	it does, and this is the slice of s[] that is that email address
+ * References:
+ *	RFC2822
+ */
+char[] isEmail(char[] s)
+{   size_t i;
+
+    if (!isalpha(s[0]))
+	goto Lno;
+
+    for (i = 1; 1; i++)
+    {
+	if (i == s.length)
+	    goto Lno;
+	auto c = s[i];
+	if (isalnum(c))
+	    continue;
+	if (c == '-' || c == '_' || c == '.')
+	    continue;
+	if (c != '@')
+	    goto Lno;
+	i++;
+	break;
+    }
+    //writefln("test1 '%s'", s[0 .. i]);
+
+    /* Now do the part past the '@'
+     */
+    size_t lastdot;
+    for (; i < s.length; i++)
+    {
+	auto c = s[i];
+	if (isalnum(c))
+	    continue;
+	if (c == '-' || c == '_')
+	    continue;
+	if (c == '.')
+	{
+	    lastdot = i;
+	    continue;
+	}
+	break;
+    }
+    if (!lastdot || (i - lastdot != 3 && i - lastdot != 4))
+	goto Lno;
+
+    return s[0 .. i];
+
+Lno:
+    return null;
+}
+
+
+/***************************
+ * Does string s[] start with a URL?
+ * Returns:
+ *	null	it does not
+ *	char[]	it does, and this is the slice of s[] that is that URL
+ */
+
+char[] isURL(char[] s)
+{
+    /* Must start with one of:
+     *	http://
+     *	https://
+     *	www.
+     */
+
+    size_t i;
+
+    if (s.length <= 4)
+	goto Lno;
+
+    //writefln("isURL(%s)", s);
+    if (s.length > 7 && std.string.icmp(s[0 .. 7], "http://") == 0)
+	i = 7;
+    else if (s.length > 8 && std.string.icmp(s[0 .. 8], "https://") == 0)
+	i = 8;
+//    if (icmp(s[0 .. 4], "www.") == 0)
+//	i = 4;
+    else
+	goto Lno;
+
+    size_t lastdot;
+    for (; i < s.length; i++)
+    {
+	auto c = s[i];
+	if (isalnum(c))
+	    continue;
+	if (c == '-' || c == '_' || c == '?' ||
+	    c == '=' || c == '%' || c == '&' ||
+	    c == '/' || c == '+' || c == '#' ||
+	    c == '~')
+	    continue;
+	if (c == '.')
+	{
+	    lastdot = i;
+	    continue;
+	}
+	break;
+    }
+    //if (!lastdot || (i - lastdot != 3 && i - lastdot != 4))
+    if (!lastdot)
+	goto Lno;
+
+    return s[0 .. i];
+
+Lno:
+    return null;
+}
+
+

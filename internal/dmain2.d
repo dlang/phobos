@@ -96,8 +96,16 @@ extern (C) int main(size_t argc, char **argv)
 	}
 	catch (Object o)
 	{
-	    printf("Error: ");
-	    o.print();
+	    version (none)
+	    {
+		printf("Error: ");
+		o.print();
+	    }
+	    else
+	    {
+		fprintf(stderr, "Error: ");
+		fprintf(stderr, "%.*s", o.toString());
+	    }
 	    exit(EXIT_FAILURE);
 	}
     }

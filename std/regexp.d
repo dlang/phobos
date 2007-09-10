@@ -1133,6 +1133,30 @@ public rchar[][] exec()
 /************************************************
  * Search string[] for match.
  * Returns: 0 for no match, !=0 for match
+ * Example:
+---
+import std.stdio;
+import std.regexp;
+import std.string;
+
+int grep(int delegate(char[]) pred, char[][] list)
+{
+  int count;
+  foreach (s; list)
+  {  if (pred(s))
+       ++count;
+  }
+  return count;
+}
+
+void main()
+{
+  auto x = grep(&RegExp("[Ff]oo").test,
+                std.string.split("mary had a foo lamb"));
+  writefln(x);
+}
+---
+ * which prints: 1
  */
 
 public int test(rchar[] string)

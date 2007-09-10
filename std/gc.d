@@ -76,6 +76,46 @@ void hasNoPointers(void* p);
 void setTypeInfo(TypeInfo ti, void* p);
 
 /**
+ * Allocate nbytes of uninitialized data.
+ * The allocated memory will be scanned for pointers during
+ * a gc collection cycle, unless
+ * it is followed by a call to hasNoPointers().
+ */
+void[] malloc(size_t nbytes);
+
+/**
+ * Resize allocated memory block pointed to by p to be at least nbytes long.
+ * It will try to resize the memory block in place.
+ * If nbytes is 0, the memory block is free'd.
+ * If p is null, the memory block is allocated using malloc.
+ * The returned array may not be at the same location as the original
+ * memory block.
+ * The allocated memory will be scanned for pointers during
+ * a gc collection cycle, unless
+ * it is followed by a call to hasNoPointers().
+ */
+void[] realloc(void* p, size_t nbytes);
+
+/**
+ * Attempt to enlarge the memory block pointed to by p
+ * by at least minbytes beyond its current capacity,
+ * up to a maximum of maxbytes.
+ * Returns:
+ *	0 if could not extend p,
+ *	total size of entire memory block if successful.
+ */
+size_t extend(void* p, size_t minbytes, size_t maxbytes);
+
+/**
+ * Returns capacity (size of the memory block) that p
+ * points to the beginning of.
+ * If p does not point into the gc memory pool, or does
+ * not point to the beginning of an allocated memory block,
+ * 0 is returned.
+ */
+size_t capacity(void* p);
+
+/**
  * Set gc behavior to match that of 1.0.
  */
 void setV1_0();
