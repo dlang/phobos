@@ -1,11 +1,69 @@
-/* This module is written by Burton Radons and placed into the public domain. */
+/**
+ * This module is a set of types and functions for converting any object (value
+ * or heap) into a generic box type, allowing the user to pass that object
+ * around without knowing what's in the box, and then allowing him to recover
+ * the value afterwards. 
+ *
+ * Example:
+---
+// Convert the integer 45 into a box.
+Box b = box(45);
+
+// Recover the integer and cast it to real.
+real r = unbox!(real)(b);
+---
+ *
+ * That is the basic interface and will usually be all that you need to
+ * understand. If it cannot unbox the object to the given type, it throws
+ * UnboxException. As demonstrated, it uses implicit casts to behave in the exact
+ * same way that static types behave. So for example, you can unbox from int to
+ * real, but you cannot unbox from real to int: that would require an explicit
+ * cast. 
+ *
+ * This therefore means that attempting to unbox an int as a string will throw
+ * an error instead of formatting it. In general, you can call the toString method
+ * on the box and receive a good result, depending upon whether std.string.format
+ * accepts it. 
+ *
+ * Boxes can be compared to one another and they can be used as keys for
+ * associative arrays. 
+ *
+ * There are also functions for converting to and from arrays of boxes.
+ *
+ * Example:
+---
+// Convert arguments into an array of boxes.
+Box[] a = boxArray(1, 45.4, "foobar");
+
+// Convert an array of boxes back into arguments.
+TypeInfo[] arg_types;
+void* arg_data;
+
+boxArrayToArguments(a, arg_types, arg_data);
+
+// Convert the arguments back into boxes using a
+// different form of the function.
+a = boxArray(arg_types, arg_data);
+---
+ * One use of this is to support a variadic function more easily and robustly;
+ * simply call "boxArray(_arguments, _argptr)", then do whatever you need to do
+ * with the array.
+ *
+ * Authors:
+ *	Burton Radons
+ * License:
+ *	Public Domain
+ * Macros:
+ *	WIKI=Phobos/StdBoxer
+ */
+
 module std.boxer;
 
 private import std.format;
 private import std.string;
 private import std.utf;
 
-/** These functions and types allow packing objects into generic containers
+ /* These functions and types allow packing objects into generic containers
   * and recovering them later.  This comes into play in a wide spectrum of
   * utilities, such as with a scripting language, or as additional user data
   * for an object.
@@ -75,11 +133,14 @@ private enum TypeClass
     Other, /**< Any other type, such as delegates, function pointers, struct, void... */
 }
 
-/** A box object contains a value in a generic fashion, allowing it to be
-  * passed from one place to another without having to know its type.  It is
-  * created by calling the box function, and you can recover the value by
-  * instantiating the unbox template.
-  */
+/**
+ * Box is a generic container for objects (both value and heap), allowing the
+ * user to box them in a generic form and recover them later.
+ * A box object contains a value in a generic fashion, allowing it to be
+ * passed from one place to another without having to know its type.  It is
+ * created by calling the box function, and you can recover the value by
+ * instantiating the unbox template.
+ */
 struct Box
 {
     private TypeInfo p_type; /**< The type of the contained object. */
@@ -167,22 +228,33 @@ struct Box
         return false;
     }
     
-    /** Return the type of the contained object. */
+    /**
+     * Property for the type contained by the box.
+     * This is initially null and cannot be assigned directly.
+     * Returns: the type of the contained object.
+     */
     TypeInfo type()
     {
         return p_type;
     }
     
-    /** Return the data array. */
+    /**
+     * Property for the data pointer to the value of the box.
+     * This is initially null and cannot be assigned directly.
+     * Returns: the data array.
+     */
     void[] data()
     {
         size_t size = type.tsize();
         
         return size <= p_shortData.length ? p_shortData[0..size] : p_longData[0..size];
     }
-    
-    /** Attempt to convert the object to a string by doing D formatting on it.
-      */
+
+    /**
+     * Attempt to convert the boxed value into a string using std.string.format;
+     * this will throw if that function cannot handle it. If the box is
+     * uninitialized then this returns "".    
+     */
     char[] toString()
     {
         if (type is null)
@@ -242,8 +314,11 @@ struct Box
         
         return cast(bool)type.equals(data, other.data);
     }
-    
-    /** Implement the equals operator. */
+
+    /**
+     * Compare this box's value with another box. This implicitly casts if the
+     * types are different, identical to the regular type system.    
+     */
     bool opEquals(Box other)
     {
         return opEqualsInternal(other, false);
@@ -294,20 +369,29 @@ struct Box
         
         return type.compare(data, other.data);
     }
-    
-    /** Implement the compare operator. */
+
+    /**
+     * Compare this box's value with another box. This implicitly casts if the
+     * types are different, identical to the regular type system.
+     */
     float opCmp(Box other)
     {
         return opCmpInternal(other, false);
     }
-    
-    uint toHash()
+
+    /**
+     * Return the value's hash.
+     */
+    hash_t toHash()
     {
         return type.getHash(data);
     }
 }
-    
-/** Create a box out of the first argument passed. */
+
+/**
+ * Box the single argument passed to the function. If more or fewer than one
+ * argument is passed, this will assert. 
+ */    
 Box box(...)
 in
 {
@@ -318,7 +402,11 @@ body
     return box(_arguments[0], _argptr);
 }
 
-/** Assign the parameters, copying data as needed. */
+/**
+ * Box the explicitly-defined object. type must not be null; data must not be
+ * null if the type's size is greater than zero.
+ * The data is copied.
+ */    
 Box box(TypeInfo type, void* data)
 in
 {
@@ -344,7 +432,9 @@ private size_t argumentLength(size_t baseLength)
     return (baseLength + int.sizeof - 1) & ~(int.sizeof - 1);
 }
 
-/** Box each argument in the list. */
+/**
+ * Convert a list of arguments into a list of boxes.
+ */    
 Box[] boxArray(TypeInfo[] types, void* data)
 {
     Box[] array = new Box[types.length];
@@ -358,13 +448,17 @@ Box[] boxArray(TypeInfo[] types, void* data)
     return array;
 }
 
-/** Box each argument passed to the function, returning an array of boxes. */
+/**
+ * Box each argument passed to the function, returning an array of boxes.
+ */    
 Box[] boxArray(...)
 {
     return boxArray(_arguments, _argptr);
 }
 
-/** Convert an array of boxes into an array of arguments. */
+/**
+ * Convert an array of boxes into an array of arguments.
+ */    
 void boxArrayToArguments(Box[] arguments, out TypeInfo[] types, out void* data)
 {
     size_t dataLength;
@@ -386,16 +480,20 @@ void boxArrayToArguments(Box[] arguments, out TypeInfo[] types, out void* data)
     }    
 }
 
-/** This is thrown if you try to unbox an incompatible type. */
+/**
+ * This class is thrown if unbox is unable to cast the value into the desired
+ * result.
+ */    
 class UnboxException : Exception
 {
-    /** The boxed object spawning the error. */
-    Box object;
-    
-    /** The type that we tried to unbox as. */
-    TypeInfo outputType;
-    
-    /** Assign parameters and the message. */
+    Box object;	/// This is the box that the user attempted to unbox.
+
+    TypeInfo outputType; /// This is the type that the user attempted to unbox the value as.
+
+    /**
+     * Assign parameters and create the message in the form
+     * <tt>"Could not unbox from type ... to ... ."</tt>
+     */
     this(Box object, TypeInfo outputType)
     {
         this.object = object;
@@ -490,13 +588,28 @@ private template unboxCastImaginary(T)
     }
 }
 
-/** This unbox template takes a template parameter and returns a function that
-  * takes a box object and returns the specified type.  If it cannot cast to
-  * the type, it throws UnboxException.  For example:
-  *
-  * Box y = box(4);
-  * int x = unbox!(int) (y);
-  */
+/**
+ * The unbox template takes a type parameter and returns a function that
+ * takes a box object and returns the specified type.
+ *
+ * To use it, instantiate the template with the desired result type, and then
+ * call the function with the box to convert. 
+ * This will implicitly cast base types as necessary and in a way consistent
+ * with static types - for example, it will cast a boxed byte into int, but it
+ * won't cast a boxed float into short.
+ *
+ * Throws: UnboxException if it cannot cast
+ *
+ * Example:
+ * ---
+ * Box b = box(4.5);
+ * bit u = unboxable!(real)(b); // This is true.
+ * real r = unbox!(real)(b);
+ *
+ * Box y = box(4);
+ * int x = unbox!(int) (y);
+ * ---
+ */    
 template unbox(T)
 {
     T unbox(Box value)
@@ -599,9 +712,10 @@ template unbox(T : void*)
     }
 }
 
-/** Return whether the value can be unboxed to this type without throwing
-  * UnboxException.
-  */
+/**
+ * Return whether the value can be unboxed as the given type; if this returns
+ * false, attempting to do so will throw UnboxException.
+ */    
 template unboxable(T)
 {
     bool unboxable(Box value)

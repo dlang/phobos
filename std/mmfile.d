@@ -1,11 +1,13 @@
 // Copyright (c) 2004 by Digital Mars
 // All Rights Reserved
-// written by Walter Bright and Matthew Wilson (Sysesis Software Pty Ltd.)
+// written by Walter Bright and Matthew Wilson (Synesis Software Pty Ltd.)
 // www.digitalmars.com
 // www.synesis.com.au/software
 
-/*
- * Memory mapped files.
+/**
+ * Read and write memory mapped files.
+ * Macros:
+ *	WIKI=Phobos/StdMmfile
  */
 
 module std.mmfile;
@@ -39,24 +41,49 @@ else
 	static assert(0);
 }
 
-
+/**
+ * MmFile objects control the memory mapped file resource.
+ */
 class MmFile
 {
+    /**
+     * The mode the memory mapped file is opened with.
+     */
     enum Mode
-    {	Read,		// read existing file
-		ReadWriteNew,	// delete existing file, write new file
-		ReadWrite,	// read/write existing file, create if not existing
-		ReadCopyOnWrite, // read/write existing file, copy on write
+    {	Read,		/// read existing file
+	ReadWriteNew,	/// delete existing file, write new file
+	ReadWrite,	/// read/write existing file, create if not existing
+	ReadCopyOnWrite, /// read/write existing file, copy on write
     }
     
-    /* Open for reading
+    /**
+     * Open memory mapped file filename for reading.
+     * File is closed when the object instance is deleted.
+     * Throws:
+     *	std.file.FileException
      */
     this(char[] filename)
     {
 		this(filename, Mode.Read, 0, null);
     }
     
-    /* Open
+    /**
+     * Open memory mapped file filename in mode.
+     * File is closed when the object instance is deleted.
+     * Params:
+     *	filename = name of the file.
+     *		If null, an anonymous file mapping is created.
+     *	mode = access mode defined above.
+     *	size =  the size of the file. If 0, it is taken to be the
+     *		size of the existing file.
+     *	address = the preferred address to map the file to,
+     *		although the system is not required to honor it.
+     *		If null, the system selects the most convenient address.
+     *	window = preferred block size of the amount of data to map at one time
+     *		with 0 meaning map the entire file. The window size must be a
+     *		multiple of the memory allocation page size. 
+     * Throws:
+     *	std.file.FileException
      */
     this(char[] filename, Mode mode, ulong size, void* address,
 			size_t window = 0)
@@ -267,6 +294,9 @@ class MmFile
 		}
 	}
 
+	/**
+	 * Flushes pending output and closes the memory mapped file.
+	 */
 	~this()
 	{
 		debug (MMFILE) printf("MmFile.~this()\n");
@@ -317,24 +347,36 @@ class MmFile
 		}
 	}
 
+	/**
+	 * Gives size in bytes of the memory mapped file.
+	 */
 	ulong length()
 	{
 		debug (MMFILE) printf("MmFile.length()\n");
 		return size;
 	}
 
+	/**
+	 * Read-only property returning the file mode.
+	 */
 	Mode mode()
 	{
 		debug (MMFILE) printf("MmFile.mode()\n");
 		return mMode;
 	}
 
+	/**
+	 * Returns entire file contents as an array.
+	 */
 	void[] opSlice()
 	{
 		debug (MMFILE) printf("MmFile.opSlice()\n");
 		return opSlice(0,size);
 	}
 
+	/**
+	 * Returns slice of file contents as an array.
+	 */
 	void[] opSlice(ulong i1, ulong i2)
 	{
 		debug (MMFILE) printf("MmFile.opSlice(%lld, %lld)\n", i1, i2);
@@ -344,7 +386,9 @@ class MmFile
 		return data[off1 .. off2];
 	}
 
-
+	/**
+	 * Returns byte at index i in file.
+	 */
 	ubyte opIndex(ulong i)
 	{
 		debug (MMFILE) printf("MmFile.opIndex(%lld)\n", i);
@@ -353,6 +397,9 @@ class MmFile
 		return (cast(ubyte[])data)[off];
 	}
 
+	/**
+	 * Sets and returns byte at index i in file to value.
+	 */
 	ubyte opIndexAssign(ubyte value, ulong i)
 	{
 		debug (MMFILE) printf("MmFile.opIndex(%lld, %d)\n", i, value);

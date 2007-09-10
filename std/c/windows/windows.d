@@ -2708,4 +2708,11 @@ export HWND SetFocus(HWND hWnd);
 
 export int wsprintfA(LPSTR, LPCSTR, ...);
 export int wsprintfW(LPWSTR, LPCWSTR, ...);
+
+const uint INFINITE = uint.max;
+const uint WAIT_OBJECT_0 = 0;
+
+export HANDLE CreateSemaphoreA(LPSECURITY_ATTRIBUTES lpSemaphoreAttributes, LONG lInitialCount, LONG lMaximumCount, LPCTSTR lpName);
+export HANDLE OpenSemaphoreA(DWORD dwDesiredAccess, BOOL bInheritHandle, LPCTSTR lpName);
+export BOOL ReleaseSemaphore(HANDLE hSemaphore, LONG lReleaseCount, LPLONG lpPreviousCount);
 }

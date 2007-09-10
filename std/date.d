@@ -3,6 +3,9 @@
  * Dates are represented in several formats. The date implementation revolves
  * around a central type, d_time, from which other formats are converted to and
  * from.
+ * Dates are calculated using the Gregorian calendar.
+ * References:
+ *	$(LINK2 http://en.wikipedia.org/wiki/Gregorian_calendar, Gregorian calendar (Wikipedia))
  * Macros:
  *	WIKI = Phobos/StdDate
  */
@@ -84,6 +87,8 @@ const int[12] mdays = [ 0,31,59,90,120,151,181,212,243,273,304,334 ];
 /********************************
  * Compute year and week [1..53] from t. The ISO 8601 week 1 is the first week
  * of the year that includes January 4. Monday is the first day of the week.
+ * References:
+ *	$(LINK2 http://en.wikipedia.org/wiki/ISO_8601, ISO 8601 (Wikipedia))
  */
 
 void toISO8601YearWeek(d_time t, out int year, out int week)
@@ -220,6 +225,10 @@ d_time TimeFromYear(int y)
     return cast(d_time)msPerDay * DayFromYear(y);
 }
 
+/*****************************
+ * Calculates the year from the d_time t.
+ */
+
 int YearFromTime(d_time t)
 {   int y;
 
@@ -244,10 +253,29 @@ int YearFromTime(d_time t)
     return y;
 }
 
+/*******************************
+ * Determines if d_time t is a leap year.
+ *
+ * A leap year is every 4 years except years ending in 00 that are not
+ * divsible by 400.
+ *
+ * Returns: !=0 if it is a leap year.
+ *
+ * References:
+ *	$(LINK2 http://en.wikipedia.org/wiki/Leap_year, Wikipedia)
+ */
+
 int inLeapYear(d_time t)
 {
     return LeapYear(YearFromTime(t));
 }
+
+/*****************************
+ * Calculates the month from the d_time t.
+ *
+ * Returns: Integer in the range 0..11, where
+ *	0 represents January and 11 represents December.
+ */
 
 int MonthFromTime(d_time t)
 {
@@ -298,14 +326,17 @@ int MonthFromTime(d_time t)
 	    else if (day < 365)
 		month = 11;
 	    else
-	    {	assert(0);
-		month = -1;	// keep /W4 happy
-	    }
+		assert(0);
 	}
     }
     return month;
 }
 
+/*******************************
+ * Compute which day in a month a d_time t is.
+ * Returns:
+ *	Integer in the range 1..31
+ */
 int DateFromTime(d_time t)
 {
     int day;
@@ -334,11 +365,16 @@ int DateFromTime(d_time t)
 	case 11: date = day - 333 - leap;	break;
 	default:
 	    assert(0);
-	    date = -1;	// keep /W4 happy
     }
     return date;
 }
 
+/*******************************
+ * Compute which day of the week a d_time t is.
+ * Returns:
+ *	Integer in the range 0..6, where 0 represents Sunday
+ *	and 6 represents Saturday.
+ */
 int WeekDay(d_time t)
 {   int w;
 

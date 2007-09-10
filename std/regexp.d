@@ -188,6 +188,21 @@ char[] sub(char[] string, char[] pattern, char[] delegate(RegExp) dg, char[] att
 	int eo = r.pmatch[0].rm_eo;
 
 	rchar[] replacement = dg(r);
+
+	// Optimize by using std.string.replace if possible - Dave Fladebo
+	rchar[] slice = result[offset + so .. offset + eo];
+	if (r.attributes & RegExp.REA.global &&		// global, so replace all
+	    !(r.attributes & RegExp.REA.ignoreCase) &&	// not ignoring case
+	    !(r.attributes & RegExp.REA.multiline) &&	// not multiline
+	    pattern == slice &&				// simple pattern (exact match, no special characters) 
+	    format == replacement)			// simple format, not $ formats
+	{
+	    debug(regexp)
+		printf("pattern: %.*s, slice: %.*s, format: %.*s, replacement: %.*s\n",pattern,result[offset + so .. offset + eo],format,replacement);
+	    result = std.string.replace(result,slice,replacement);
+	    break;
+	}
+
 	result = replaceSlice(result, result[offset + so .. offset + eo], replacement);
 
 	if (r.attributes & RegExp.REA.global)
@@ -848,6 +863,21 @@ public rchar[] replace(rchar[] string, rchar[] format)
 	int eo = pmatch[0].rm_eo;
 
 	rchar[] replacement = replace(format);
+
+	// Optimize by using std.string.replace if possible - Dave Fladebo
+	rchar[] slice = result[offset + so .. offset + eo];
+	if (attributes & REA.global &&		// global, so replace all
+	   !(attributes & REA.ignoreCase) &&	// not ignoring case
+	   !(attributes & REA.multiline) &&	// not multiline
+	   pattern == slice &&			// simple pattern (exact match, no special characters) 
+	   format == replacement)		// simple format, not $ formats
+	{
+	    debug(regexp)
+		printf("pattern: %.*s, slice: %.*s, format: %.*s, replacement: %.*s\n",pattern,result[offset + so .. offset + eo],format,replacement);
+	    result = std.string.replace(result,slice,replacement);
+	    break;
+	}
+
 	result = replaceSlice(result, result[offset + so .. offset + eo], replacement);
 
 	if (attributes & REA.global)

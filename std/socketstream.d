@@ -18,18 +18,39 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
+/**************
+ * <b>SocketStream</b> is a stream for a blocking,
+ * connected <b>Socket</b>.
+ *
+ * For Win32 systems, link with <tt>ws2_32.lib</tt>.
+ *
+ * Example:
+ *	See <tt>/dmd/samples/d/htmlget.d</tt>
+ * Authors: Christopher E. Miller
+ * References:
+ *	$(LINK2 std_stream.html, std.stream)
+ * Macros: WIKI=Phobos/StdSocketstream
+ */
 
 module std.socketstream;
 
 private import std.stream;
 private import std.socket;
 
+/**************
+ * <b>SocketStream</b> is a stream for a blocking,
+ * connected <b>Socket</b>.
+ */
 class SocketStream: Stream
 {
-	private:
+    private:
 	Socket sock;
 	
-	public:
+    public:
+
+	/**
+	 * Constructs a SocketStream with the specified Socket and FileMode flags.
+	 */
 	this(Socket sock, FileMode mode)
 	{
 		if(mode & FileMode.In)
@@ -40,17 +61,26 @@ class SocketStream: Stream
 		this.sock = sock;
 	}
 	
+	/**
+	 * Uses mode <b>FileMode.In | FileMode.Out</b>.
+	 */
 	this(Socket sock)
 	{
 		writeable = readable = true;
 		this.sock = sock;
 	}
 	
+	/**
+	 * Property to get the <b>Socket</b> that is being streamed.
+	 */
 	Socket socket()
 	{
 		return sock;
 	}
 	
+	/**
+	 * Attempts to read the entire block, waiting if necessary.
+	 */
 	override uint readBlock(void* _buffer, uint size)
 	{
 	  ubyte* buffer = cast(ubyte*)_buffer;
@@ -68,6 +98,9 @@ class SocketStream: Stream
 	  return len;
 	}
 	
+	/**
+	 * Attempts to write the entire block, waiting if necessary.
+	 */
 	override uint writeBlock(void* _buffer, uint size)
 	{
 	  ubyte* buffer = cast(ubyte*)_buffer;
@@ -84,17 +117,27 @@ class SocketStream: Stream
 	  return len;
 	}
 	
+	/**
+	 *
+	 */
 	override ulong seek(long offset, SeekPos whence)
 	{
 		throw new SeekException("Cannot seek a socket.");
 		return 0;
 	}
 	
+	/**
+	 * Does not return the entire stream because that would
+	 * require the remote connection to be closed.
+	 */
 	override char[] toString()
 	{
 		return sock.toString();
 	}
 	
+	/**
+	 * Close the <b>Socket</b>.
+	 */
 	override void close()
 	{
 		sock.close();

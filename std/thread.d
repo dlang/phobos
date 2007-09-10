@@ -76,26 +76,31 @@ class Thread
 {
     /**
      * Constructor used by classes derived from Thread that override main(). 
+     * The optional stacksize parameter default value of 0 will cause threads
+     * to be created with the default size for the executable - Dave Fladebo
      */
-    this()
+    this(size_t stacksize = 0)
     {
+	this.stacksize = stacksize;
     }
 
     /**
      * Constructor used by classes derived from Thread that override run().
      */
-    this(int (*fp)(void *), void *arg)
+    this(int (*fp)(void *), void *arg, size_t stacksize = 0)
     {
 	this.fp = fp;
 	this.arg = arg;
+	this.stacksize = stacksize;
     }
 
     /**
      * Constructor used by classes derived from Thread that override run().
      */
-    this(int delegate() dg)
+    this(int delegate() dg, size_t stacksize = 0)
     {
 	this.dg = dg;
+	this.stacksize = stacksize;
     }
 
     /**
@@ -104,7 +109,6 @@ class Thread
      */
     thread_hdl hdl;
 
-    thread_id id;
     void* stackBottom;
 
     /**
@@ -134,7 +138,7 @@ class Thread
 	}
 
 	state = TS.RUNNING;
-	hdl = _beginthreadex(null, 0, &threadstart, this, 0, &id);
+	hdl = _beginthreadex(null, cast(uint)stacksize, &threadstart, this, 0, &id);
 	if (hdl == cast(thread_hdl)0)
 	{   state = TS.TERMINATED;
 	    allThreads[idx] = null;
@@ -250,6 +254,15 @@ class Thread
     }
 
     /**
+     * Returns non-zero if this thread is the current thread.
+     */
+    int isSelf()
+    {
+	//printf("id = %d, self = %d\n", id, pthread_self());
+	return (id == GetCurrentThreadId());
+    }
+
+    /**
      * Returns a reference to the Thread for the thread that called the
      * function.
      */
@@ -361,6 +374,8 @@ class Thread
 
     TS state;
     int idx = -1;			// index into allThreads[]
+    thread_id id;
+    size_t stacksize = 0;
 
     int (*fp)(void *);
     void *arg;
@@ -502,17 +517,20 @@ struct sigaction_t
     void (*sa_restorer)();
 }
 
-struct _pthread_fastlock
+struct pthread_attr_t
 {
-    int __status;
-    int __spinlock;
-}
-
-struct sem_t
-{
-    _pthread_fastlock __sem_lock;
-    int __sem_value;
-    void* __sem_waiting;
+    int __detachstate;
+    int __schedpolicy;
+    struct __schedparam
+    {
+	int __sched_priority;
+    }
+    int __inheritsched;
+    int __scope;
+    size_t __guardsize;
+    int __stackaddr_set;
+    void *__stackaddr;
+    size_t __stacksize;
 }
 
 unittest
@@ -529,14 +547,28 @@ extern (C)
     int pthread_kill(pthread_t, int);
     pthread_t pthread_self();
     int pthread_equal(pthread_t, pthread_t);
-    int sem_wait(sem_t*);
-    int sem_init(sem_t*, int, uint);
-    int sem_post(sem_t*);
+    int pthread_attr_init(pthread_attr_t*);
+    int pthread_attr_setstacksize(pthread_attr_t *, size_t);
+    int pthread_cancel(pthread_t);
+    int pthread_setcancelstate(int, int*);
+    int pthread_setcanceltype(int, int*);
     int sched_yield();
     int sigfillset(sigset_t*);
     int sigdelset(sigset_t*, int);
     int sigaction(int, sigaction_t*, sigaction_t*);
     int sigsuspend(sigset_t*);
+
+    enum
+    {
+	PTHREAD_CANCEL_ENABLE,
+	PTHREAD_CANCEL_DISABLE
+    }
+
+    enum
+    {
+	PTHREAD_CANCEL_DEFERRED,
+	PTHREAD_CANCEL_ASYNCHRONOUS
+    }
 }
 
 class ThreadError : Error
@@ -549,19 +581,30 @@ class ThreadError : Error
 
 class Thread
 {
-    this()
+    // The optional stacksize parameter default value of 0 will cause threads
+    //  to be created with the default pthread size - Dave Fladebo
+    this(size_t stacksize = 0)
     {
+	init(stacksize);
     }
 
-    this(int (*fp)(void *), void *arg)
+    this(int (*fp)(void *), void *arg, size_t stacksize = 0)
     {
 	this.fp = fp;
 	this.arg = arg;
+	init(stacksize);
     }
 
-    this(int delegate() dg)
+    this(int delegate() dg, size_t stacksize = 0)
     {
 	this.dg = dg;
+	init(stacksize);
+    }
+
+    ~this()
+    {
+	pthread_cond_destroy(&waitCond);
+	pthread_mutex_destroy(&waitMtx);
     }
 
     pthread_t id;
@@ -593,7 +636,9 @@ class Thread
 	state = TS.RUNNING;
 	int result;
 	//printf("creating thread x%x\n", this);
-	result = pthread_create(&id, null, &threadstart, this);
+	//result = pthread_create(&id, null, &threadstart, this);
+	// Create with thread attributes to allow non-default stack size - Dave Fladebo
+	result = pthread_create(&id, &threadAttrs, &threadstart, this);
 	if (result)
 	{   state = TS.TERMINATED;
 	    allThreads[idx] = null;
@@ -627,16 +672,51 @@ class Thread
 
     void wait(uint milliseconds)
     {
-	wait();
-	/+ not implemented
+	// Implemented for POSIX systems by Dave Fladebo
 	if (this is getThis())
 	    error("wait on self");
 	if (state == TS.RUNNING)
-	{   DWORD dw;
+	{
+	    timespec ts; 
+	    timeval  tv;
 
-	    dw = WaitForSingleObject(hdl, milliseconds);
+	    pthread_mutex_lock(&waitMtx);
+	    gettimeofday(&tv, null);
+	    ts.tv_sec = cast(__time_t)tv.tv_sec + cast(__time_t)(milliseconds / 1_000);
+	    ts.tv_nsec = (tv.tv_usec * 1_000) + ((milliseconds % 1_000) * 1_000_000);
+	    if (ts.tv_nsec > 1_000_000_000)
+	    {
+		ts.tv_sec += 1;
+		ts.tv_nsec -= 1_000_000_000;
+	    }
+	    if (pthread_cond_timedwait(&waitCond, &waitMtx, &ts))
+	    {
+		int oldstate, oldtype;
+		pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
+		pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, &oldtype);
+
+		if (pthread_cancel(id))     // thread was not completed in the timeout period, cancel it
+		{
+		    pthread_mutex_unlock(&waitMtx);
+		    error("cannot terminate thread via timed wait");
+		}
+
+		pthread_setcancelstate(oldstate, null);
+		pthread_setcanceltype(oldtype, null);
+
+		state = TS.TERMINATED;
+		allThreads[idx] = null;
+		idx = -1;
+		nthreads--;
+
+		pthread_mutex_unlock(&waitMtx);
+	    }
+	    else
+	    {
+		pthread_mutex_unlock(&waitMtx);
+		wait();	// condition has been signalled as complete (see threadstart()), terminate normally
+	    }
 	}
-	+/
     }
 
     enum TS
@@ -806,12 +886,21 @@ class Thread
 
     static uint allThreadsDim;
     static Object threadLock;
-    static Thread[/*_POSIX_THREAD_THREADS_MAX*/ 100] allThreads;
+
+    // Set max to Windows equivalent for compatibility.
+    // pthread_create will fail gracefully if stack limit
+    // is reached prior to allThreads max.
+    static Thread[0x400] allThreads;
+
     static sem_t flagSuspend;
 
     TS state;
     int idx = -1;			// index into allThreads[]
     int flags = 0;
+
+    pthread_attr_t threadAttrs;
+    pthread_mutex_t waitMtx;
+    pthread_cond_t waitCond;
 
     int (*fp)(void *);
     void *arg;
@@ -823,6 +912,24 @@ class Thread
 	throw new ThreadError(msg);
     }
 
+    void init(size_t stackSize)
+    {
+	// set to default values regardless
+	// passing this as the 2nd arg. for pthread_create()
+	// w/o setting an attribute is equivalent to passing null.
+	pthread_attr_init(&threadAttrs);
+	if (stackSize > 0)
+	{
+	    if (pthread_attr_setstacksize(&threadAttrs,stackSize))
+		error("cannot set stack size");
+	}
+
+	if (pthread_mutex_init(&waitMtx, null))
+	    error("cannot initialize wait mutex");
+
+	if (pthread_cond_init(&waitCond, null))
+	    error("cannot initialize wait condition");
+    }
 
     /************************************************
      * This is just a wrapper to interface between C rtl and Thread.run().
@@ -842,6 +949,8 @@ class Thread
 	t.stackBottom = getESP();
 	try
 	{
+	    if(t.state == TS.RUNNING)
+		pthread_cond_signal(&t.waitCond);     // signal the wait condition (see the timed wait function)
 	    result = t.run();
 	}
 	catch (Object o)
@@ -937,7 +1046,6 @@ class Thread
 	}
 
 	assert(sig == SIGUSR1);
-	sem_post(&flagSuspend);
 
 	sigset_t sigmask;
 	result = sigfillset(&sigmask);
@@ -948,6 +1056,8 @@ class Thread
 	Thread t = getThis();
 	t.stackTop = getESP();
 	t.flags &= ~1;
+	// Release the semaphore _after_ stackTop is set
+	sem_post(&flagSuspend);
 	while (1)
 	{
 	    sigsuspend(&sigmask);	// suspend until SIGUSR2

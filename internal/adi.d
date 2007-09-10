@@ -1,7 +1,7 @@
 //_ adi.d
 
 /*
- *  Copyright (C) 2000-2005 by Digital Mars, www.digitalmars.com
+ *  Copyright (C) 2000-2006 by Digital Mars, www.digitalmars.com
  *  Written by Walter Bright
  *
  *  This software is provided 'as-is', without any express or implied
@@ -37,8 +37,8 @@ import std.outofmemory;
 
 struct Array
 {
-    int length;
-    void *ptr;
+    size_t length;
+    void* ptr;
 }
 
 /**********************************************
@@ -56,8 +56,8 @@ extern (C) long _adReverseChar(char[] a)
 	char* hi = &a[length - 1];
 
 	while (lo < hi)
-	{   char clo = *lo;
-	    char chi = *hi;
+	{   auto clo = *lo;
+	    auto chi = *hi;
 
 	    //printf("lo = %d, hi = %d\n", lo, hi);
 	    if (clo <= 0x7F && chi <= 0x7F)
@@ -147,8 +147,8 @@ extern (C) long _adReverseWchar(wchar[] a)
 	wchar* hi = &a[length - 1];
 
 	while (lo < hi)
-	{   wchar clo = *lo;
-	    wchar chi = *hi;
+	{   auto clo = *lo;
+	    auto chi = *hi;
 
 	    if ((clo < 0xD800 || clo > 0xDFFF) &&
 		(chi < 0xD800 || chi > 0xDFFF))
@@ -230,7 +230,7 @@ extern (C) long _adReverse(Array a, int szelem)
     {
 	if (a.length >= 2)
 	{
-	    byte *tmp;
+	    byte* tmp;
 	    byte[16] buffer;
 
 	    void* lo = a.ptr;
@@ -416,9 +416,8 @@ extern (C) long _adDup(Array a, int szelem)
     body
     {
 	Array r;
-	int size;
 
-	size = a.length * szelem;
+	auto size = a.length * szelem;
 	r.ptr = cast(void *) new byte[size];
 	r.length = a.length;
 	memcpy(r.ptr, a.ptr, size);
@@ -453,9 +452,8 @@ extern (C) long _adDupBit(Array a)
     body
     {
 	Array r;
-	int size;
 
-	size = (a.length + 31) / 32;
+	auto size = (a.length + 31) / 32;
 	r.ptr = cast(void *) new uint[size];
 	r.length = a.length;
 	memcpy(r.ptr, a.ptr, size * uint.sizeof);
@@ -490,10 +488,10 @@ extern (C) int _adEq(Array a1, Array a2, TypeInfo ti)
     //printf("a1.length = %d, a2.length = %d\n", a1.length, a2.length);
     if (a1.length != a2.length)
 	return 0;		// not equal
-    int sz = ti.tsize();
+    auto sz = ti.tsize();
     //printf("sz = %d\n", sz);
-    void *p1 = a1.ptr;
-    void *p2 = a2.ptr;
+    auto p1 = a1.ptr;
+    auto p2 = a2.ptr;
 
 /+
     for (int i = 0; i < a1.length; i++)
@@ -502,7 +500,11 @@ extern (C) int _adEq(Array a1, Array a2, TypeInfo ti)
     }
 +/
 
-    for (int i = 0; i < a1.length; i++)
+    if (sz == 1)
+	// We should really have a ti.isPOD() check for this
+	return (memcmp(p1, p2, a1.length) == 0);
+
+    for (size_t i = 0; i < a1.length; i++)
     {
 	if (!ti.equals(p1 + i * sz, p2 + i * sz))
 	    return 0;		// not equal
@@ -528,13 +530,13 @@ unittest
  */
 
 extern (C) int _adEqBit(Array a1, Array a2)
-{   int i;
+{   size_t i;
 
     if (a1.length != a2.length)
 	return 0;		// not equal
-    byte *p1 = cast(byte*)a1.ptr;
-    byte *p2 = cast(byte*)a2.ptr;
-    uint n = a1.length / 8;
+    auto p1 = cast(byte*)a1.ptr;
+    auto p2 = cast(byte*)a2.ptr;
+    auto n = a1.length / 8;
     for (i = 0; i < n; i++)
     {
 	if (p1[i] != p2[i])
@@ -571,24 +573,32 @@ unittest
 
 extern (C) int _adCmp(Array a1, Array a2, TypeInfo ti)
 {
-    int len;
-
     //printf("adCmp()\n");
-    len = a1.length;
+    auto len = a1.length;
     if (a2.length < len)
 	len = a2.length;
-    int sz = ti.tsize();
+    auto sz = ti.tsize();
     void *p1 = a1.ptr;
     void *p2 = a2.ptr;
-    for (int i = 0; i < len; i++)
-    {
-	int c;
 
-	c = ti.compare(p1 + i * sz, p2 + i * sz);
+    if (sz == 1)
+    {	// We should really have a ti.isPOD() check for this
+	auto c = memcmp(p1, p2, len);
 	if (c)
 	    return c;
     }
-    return cast(int)a1.length - cast(int)a2.length;
+    else
+    {
+	for (size_t i = 0; i < len; i++)
+	{
+	    auto c = ti.compare(p1 + i * sz, p2 + i * sz);
+	    if (c)
+		return c;
+	}
+    }
+    if (a1.length == a2.length)
+	return 0;
+    return (a1.length > a2.length) ? 1 : -1;
 }
 
 unittest

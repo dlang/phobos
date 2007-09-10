@@ -69,7 +69,7 @@ OBJS= asserterror.o deh2.o switch.o complex.o gcstats.o \
 	ti_Afloat.o ti_Adouble.o ti_Areal.o \
 	ti_Acfloat.o ti_Acdouble.o ti_Acreal.o \
 	ti_void.o \
-	date.o dateparse.o llmath.o math2.o Czlib.o Dzlib.o zip.o recls.o
+	date.o dateparse.o llmath.o math2.o Czlib.o Dzlib.o zip.o
 
 ZLIB_OBJS= etc/c/zlib/adler32.o etc/c/zlib/compress.o \
 	etc/c/zlib/crc32.o etc/c/zlib/gzio.o \
@@ -77,14 +77,6 @@ ZLIB_OBJS= etc/c/zlib/adler32.o etc/c/zlib/compress.o \
 	etc/c/zlib/trees.o etc/c/zlib/zutil.o \
 	etc/c/zlib/inflate.o etc/c/zlib/infback.o \
 	etc/c/zlib/inftrees.o etc/c/zlib/inffast.o
-
-RECLS_OBJS= etc/c/recls/recls_api.o		\
-	etc/c/recls/recls_fileinfo.o		\
-	etc/c/recls/recls_internal.o		\
-	etc/c/recls/recls_util.o		\
-	etc/c/recls/recls_api_unix.o		\
-	etc/c/recls/recls_fileinfo_unix.o	\
-	etc/c/recls/recls_util_unix.o
 
 GC_OBJS= internal/gc/gc.o internal/gc/gcx.o \
 	internal/gc/gcbits.o internal/gc/gclinux.o
@@ -97,7 +89,7 @@ SRC_STD= std/zlib.d std/zip.d std/stdint.d std/conv.d std/utf.d std/uri.d \
 	std/outbuffer.d std/math2.d std/thread.d std/md5.d std/base64.d \
 	std/asserterror.d std/dateparse.d std/outofmemory.d std/mmfile.d \
 	std/intrinsic.d std/array.d std/switcherr.d std/syserror.d \
-	std/regexp.d std/random.d std/stream.d std/process.d std/recls.d \
+	std/regexp.d std/random.d std/stream.d std/process.d \
 	std/socket.d std/socketstream.d std/loader.d std/stdarg.d \
 	std/stdio.d std/format.d std/perf.d std/openrj.d std/uni.d \
 	std/boxer.d std/cstream.d std/demangle.d std/cover.d std/bitarray.d
@@ -195,171 +187,14 @@ SRC_GC= internal/gc/gc.d \
 	internal/gc/win32.mak \
 	internal/gc/linux.mak
 
-SRC_STLSOFT= \
-	etc/c/stlsoft/stlsoft_null_mutex.h \
-	etc/c/stlsoft/unixstl_string_access.h \
-	etc/c/stlsoft/unixstl.h \
-	etc/c/stlsoft/winstl_tls_index.h \
-	etc/c/stlsoft/unixstl_environment_variable.h \
-	etc/c/stlsoft/unixstl_functionals.h \
-	etc/c/stlsoft/unixstl_current_directory.h \
-	etc/c/stlsoft/unixstl_limits.h \
-	etc/c/stlsoft/unixstl_current_directory_scope.h \
-	etc/c/stlsoft/unixstl_filesystem_traits.h \
-	etc/c/stlsoft/unixstl_findfile_sequence.h \
-	etc/c/stlsoft/unixstl_glob_sequence.h \
-	etc/c/stlsoft/winstl.h \
-	etc/c/stlsoft/winstl_atomic_functions.h \
-	etc/c/stlsoft/stlsoft_cccap_gcc.h \
-	etc/c/stlsoft/stlsoft_lock_scope.h \
-	etc/c/stlsoft/unixstl_thread_mutex.h \
-	etc/c/stlsoft/unixstl_spin_mutex.h \
-	etc/c/stlsoft/unixstl_process_mutex.h \
-	etc/c/stlsoft/stlsoft_null.h \
-	etc/c/stlsoft/stlsoft_nulldef.h \
-	etc/c/stlsoft/winstl_thread_mutex.h \
-	etc/c/stlsoft/winstl_spin_mutex.h \
-	etc/c/stlsoft/winstl_system_version.h \
-	etc/c/stlsoft/winstl_findfile_sequence.h \
-	etc/c/stlsoft/unixstl_readdir_sequence.h \
-	etc/c/stlsoft/stlsoft.h \
-	etc/c/stlsoft/stlsoft_static_initialisers.h \
-	etc/c/stlsoft/stlsoft_iterator.h \
-	etc/c/stlsoft/stlsoft_cccap_dmc.h \
-	etc/c/stlsoft/winstl_filesystem_traits.h
-
-SRC_RECLS= \
-	etc/c/recls/recls_compiler.h \
-	etc/c/recls/recls_language.h \
-	etc/c/recls/recls_unix.h \
-	etc/c/recls/recls_retcodes.h \
-	etc/c/recls/recls_assert.h \
-	etc/c/recls/recls_platform.h \
-	etc/c/recls/recls_win32.h \
-	etc/c/recls/recls.h \
-	etc/c/recls/recls_util.h \
-	etc/c/recls/recls_compiler_dmc.h \
-	etc/c/recls/recls_compiler_gcc.h \
-	etc/c/recls/recls_platform_types.h \
-	etc/c/recls/recls_internal.h \
-	etc/c/recls/recls_debug.h \
-	etc/c/recls/recls_fileinfo_win32.cpp \
-	etc/c/recls/recls_api_unix.cpp \
-	etc/c/recls/recls_api.cpp \
-	etc/c/recls/recls_util_win32.cpp \
-	etc/c/recls/recls_util_unix.cpp \
-	etc/c/recls/recls_util.cpp \
-	etc/c/recls/recls_internal.cpp \
-	etc/c/recls/recls_fileinfo.cpp \
-	etc/c/recls/recls_defs.h \
-	etc/c/recls/recls_fileinfo_unix.cpp \
-	etc/c/recls/recls_api_win32.cpp \
-	etc/c/recls/win32.mak \
-	etc/c/recls/linux.mak \
-	etc/c/recls/recls.lib
-
-SRC_STLSOFT_NEW= \
-	etc/c/stlsoft/winstl_file_path_buffer.h \
-	etc/c/stlsoft/inetstl_connection.h \
-	etc/c/stlsoft/inetstl_filesystem_traits.h \
-	etc/c/stlsoft/inetstl_findfile_sequence.h \
-	etc/c/stlsoft/inetstl_searchspec_sequence.h \
-	etc/c/stlsoft/inetstl_session.h \
-	etc/c/stlsoft/stlsoft.h \
-	etc/c/stlsoft/stlsoft_allocator_base.h \
-	etc/c/stlsoft/inetstl.h \
-	etc/c/stlsoft/stlsoft_auto_buffer.h \
-	etc/c/stlsoft/stlsoft_cccap_dmc.h \
-	etc/c/stlsoft/stlsoft_cccap_gcc.h \
-	etc/c/stlsoft/stlsoft_char_traits.h \
-	etc/c/stlsoft/stlsoft_constraints.h \
-	etc/c/stlsoft/stlsoft_exceptions.h \
-	etc/c/stlsoft/stlsoft_iterator.h \
-	etc/c/stlsoft/stlsoft_meta.h \
-	etc/c/stlsoft/stlsoft_new_allocator.h \
-	etc/c/stlsoft/stlsoft_any_caster.h \
-	etc/c/stlsoft/stlsoft_nulldef.h \
-	etc/c/stlsoft/stlsoft_sap_cast.h \
-	etc/c/stlsoft/stlsoft_searchspec_sequence.h \
-	etc/c/stlsoft/stlsoft_sign_traits.h \
-	etc/c/stlsoft/stlsoft_simple_algorithms.h \
-	etc/c/stlsoft/stlsoft_simple_string.h \
-	etc/c/stlsoft/stlsoft_size_traits.h \
-	etc/c/stlsoft/stlsoft_string_access.h \
-	etc/c/stlsoft/stlsoft_string_tokeniser.h \
-	etc/c/stlsoft/stlsoft_type_traits.h \
-	etc/c/stlsoft/unixstl.h \
-	etc/c/stlsoft/unixstl_filesystem_traits.h \
-	etc/c/stlsoft/unixstl_file_path_buffer.h \
-	etc/c/stlsoft/unixstl_glob_sequence.h \
-	etc/c/stlsoft/unixstl_string_access.h \
-	etc/c/stlsoft/unixstl_thread_mutex.h \
-	etc/c/stlsoft/winstl.h \
-	etc/c/stlsoft/winstl_atomic_functions.h \
-	etc/c/stlsoft/winstl_char_conversions.h \
-	etc/c/stlsoft/winstl_filesystem_traits.h \
-	etc/c/stlsoft/winstl_spin_mutex.h \
-	etc/c/stlsoft/winstl_findfile_sequence.h \
-	etc/c/stlsoft/winstl_processheap_allocator.h \
-	etc/c/stlsoft/winstl_system_version.h \
-	etc/c/stlsoft/stlsoft_null.h
-
-SRC_RECLS_NEW= \
-	etc/c/recls/recls_compiler_gcc.h \
-	etc/c/recls/recls_retcodes.h \
-	etc/c/recls/EntryFunctions.h \
-	etc/c/recls/recls_platform_types.h \
-	etc/c/recls/recls.h \
-	etc/c/recls/recls_wininet_dl.h \
-	etc/c/recls/ReclsFileSearch.h \
-	etc/c/recls/ReclsFileSearchDirectoryNode_unix.cpp \
-	etc/c/recls/ReclsFileSearchDirectoryNode_unix.h \
-	etc/c/recls/ReclsFileSearchDirectoryNode_win32.cpp \
-	etc/c/recls/ReclsFileSearchDirectoryNode_win32.h \
-	etc/c/recls/recls_wininet_dl.cpp \
-	etc/c/recls/ReclsFileSearch_unix.cpp \
-	etc/c/recls/ReclsFileSearch_win32.cpp \
-	etc/c/recls/recls_win32.h \
-	etc/c/recls/ReclsFtpSearch.h \
-	etc/c/recls/ReclsFtpSearchDirectoryNode_win32.cpp \
-	etc/c/recls/ReclsFtpSearchDirectoryNode_win32.h \
-	etc/c/recls/recls_util_win32.cpp \
-	etc/c/recls/ReclsFtpSearch_win32.cpp \
-	etc/c/recls/recls_util_unix.cpp \
-	etc/c/recls/recls_api.cpp \
-	etc/c/recls/recls_util.h \
-	etc/c/recls/recls_api_unix.cpp \
-	etc/c/recls/recls_api_win32.cpp \
-	etc/c/recls/recls_util.cpp \
-	etc/c/recls/recls_assert.h \
-	etc/c/recls/recls_compiler.h \
-	etc/c/recls/recls_compiler_dmc.h \
-	etc/c/recls/recls_platform.h \
-	etc/c/recls/recls_debug.h \
-	etc/c/recls/recls_defs.h \
-	etc/c/recls/recls_fileinfo.cpp \
-	etc/c/recls/recls_fileinfo_unix.cpp \
-	etc/c/recls/recls_fileinfo_win32.cpp \
-	etc/c/recls/recls_unix.h \
-	etc/c/recls/recls_ftp.h \
-	etc/c/recls/recls_ftp_api_win32.cpp \
-	etc/c/recls/recls_internal.cpp \
-	etc/c/recls/recls_internal.h \
-	etc/c/recls/recls_roots_win32.cpp \
-	etc/c/recls/recls_language.h \
-	etc/c/recls/recls_roots_unix.cpp \
-	etc/c/recls/win32.mak \
-	etc/c/recls/linux.mak
-
 ALLSRCS = $(SRC) $(SRC_STD) $(SRC_STD_C) $(SRC_TI) $(SRC_INT) $(SRC_STD_WIN) \
 	$(SRC_STD_C_WIN) $(SRC_STD_C_LINUX) $(SRC_ETC) $(SRC_ETC_C) \
-	$(SRC_ZLIB) $(SRC_GC) \
-	$(SRC_RECLS) $(SRC_STLSOFT)
+	$(SRC_ZLIB) $(SRC_GC)
 
 
 #libphobos.a : $(OBJS) internal/gc/dmgc.a linux.mak
-libphobos.a : $(OBJS) internal/gc/dmgc.a $(ZLIB_OBJS) $(RECLS_OBJS) linux.mak
-	ar -r $@ $(OBJS) $(ZLIB_OBJS) $(GC_OBJS) $(RECLS_OBJS)
+libphobos.a : $(OBJS) internal/gc/dmgc.a $(ZLIB_OBJS) linux.mak
+	ar -r $@ $(OBJS) $(ZLIB_OBJS) $(GC_OBJS)
 
 ###########################################################
 
@@ -368,12 +203,6 @@ internal/gc/dmgc.a:
 #	make -f linux.mak dmgc.a
 #	cd ../..
 	make -C ./internal/gc -f linux.mak dmgc.a
-
-$(RECLS_OBJS):
-#	cd etc/c/recls
-#	make -f linux.mak
-#	cd ../../..
-	make -C ./etc/c/recls -f linux.mak
 
 $(ZLIB_OBJS):
 #	cd etc/c/zlib
@@ -547,9 +376,6 @@ process.o : std/process.d
 
 random.o : std/random.d
 	$(DMD) -c $(DFLAGS) std/random.d
-
-recls.o : std/recls.d
-	$(DMD) -c $(DFLAGS) std/recls.d
 
 regexp.o : std/regexp.d
 	$(DMD) -c $(DFLAGS) std/regexp.d

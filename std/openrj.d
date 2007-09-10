@@ -29,11 +29,20 @@
  * -  This notice may not be removed or altered from any source
  *    distribution.
  *
- * ////////////////////////////////////////////////////////////////////////// */
+ * //////////////////////////////////////////////////////////////////////////
+ * Altered by Walter Bright.
+ */
 
 
-/* \file std/openrj.d Open-RJ/D mapping for the D standard library
+/**
+ * Open-RJ mapping for the D standard library.
  *
+ * Authors:
+ *	Matthew Wilson
+ * References:
+ *	$(LINK2 http://www.openrj.org/, Open-RJ)
+ * Macros:
+ *	WIKI=Phobos/StdOpenrj
  */
 
 /* /////////////////////////////////////////////////////////////////////////////
@@ -58,7 +67,7 @@ private import std.string;
  * Version information
  */
 
-/// This'll be moved out to somewhere common soon
+// This'll be moved out to somewhere common soon
 
 private struct Version
 {
@@ -86,7 +95,7 @@ public static Version   VERSION =
  * Structs
  */
 
-/// This'll be moved out to somewhere common soon
+// This'll be moved out to somewhere common soon
 
 private struct EnumString
 {
@@ -132,10 +141,13 @@ private template enum_to_string(T)
 /** Flags that moderate the creation of Databases */
 public enum ORJ_FLAG
 {
-        ORDER_FIELDS                    =   0x0001  /*!< Arranges the fields in alphabetical order                  */
-    ,   ELIDE_BLANK_RECORDS             =   0x0002  /*!< Causes blank records to be ignored                         */
+    ORDER_FIELDS                    =   0x0001,  /// Arranges the fields in alphabetical order
+    ELIDE_BLANK_RECORDS             =   0x0002,  /// Causes blank records to be ignored
 }
 
+/**
+ *
+ */
 public char[] toString(ORJ_FLAG f)
 {
     const EnumString    strings[] = 
@@ -150,17 +162,20 @@ public char[] toString(ORJ_FLAG f)
 /** General error codes */
 public enum ORJRC
 {
-        SUCCESS                      =   0          /*!< Operation was successful                                   */
-    ,   CANNOT_OPEN_JAR_FILE                        /*!< The given file does not exist, or cannot be accessed       */
-    ,   NO_RECORDS                                  /*!< The database file contained no records                     */
-    ,   OUT_OF_MEMORY                               /*!< The API suffered memory exhaustion                         */
-    ,   BAD_FILE_READ                               /*!< A read operation failed                                    */
-    ,   PARSE_ERROR                                 /*!< Parsing of the database file failed due to a syntax error  */
-    ,   INVALID_INDEX                               /*!< An invalid index was specified                             */
-    ,   UNEXPECTED                                  /*!< An unexpected condition was encountered                    */
-    ,   INVALID_CONTENT                             /*!< The database file contained invalid content                */
+    SUCCESS                      =   0,          /// Operation was successful
+    CANNOT_OPEN_JAR_FILE,                        /// The given file does not exist, or cannot be accessed
+    NO_RECORDS,                                  /// The database file contained no records
+    OUT_OF_MEMORY,                               /// The API suffered memory exhaustion
+    BAD_FILE_READ,                               /// A read operation failed
+    PARSE_ERROR,                                 /// Parsing of the database file failed due to a syntax error
+    INVALID_INDEX,                               /// An invalid index was specified
+    UNEXPECTED,                                  /// An unexpected condition was encountered
+    INVALID_CONTENT,                             /// The database file contained invalid content
 }
 
+/**
+ *
+ */
 public char[] toString(ORJRC f)
 {
     const EnumString    strings[] = 
@@ -182,13 +197,16 @@ public char[] toString(ORJRC f)
 /** Parsing error codes */
 public enum ORJ_PARSE_ERROR
 {
-        SUCCESS                         =   0       /*!< Parsing was successful                                                         */
-    ,   RECORD_SEPARATOR_IN_CONTINUATION            /*!< A record separator was encountered during a content line continuation          */
-    ,   UNFINISHED_LINE                             /*!< The last line in the database was not terminated by a line-feed                */
-    ,   UNFINISHED_FIELD                            /*!< The last field in the database file was not terminated by a record separator   */
-    ,   UNFINISHED_RECORD                           /*!< The last record in the database file was not terminated by a record separator  */
+    SUCCESS                         =   0,       /// Parsing was successful
+    RECORD_SEPARATOR_IN_CONTINUATION,            /// A record separator was encountered during a content line continuation
+    UNFINISHED_LINE,                             /// The last line in the database was not terminated by a line-feed
+    UNFINISHED_FIELD,                            /// The last field in the database file was not terminated by a record separator
+    UNFINISHED_RECORD,                           /// The last record in the database file was not terminated by a record separator
 }
 
+/**
+ *
+ */
 public char[] toString(ORJ_PARSE_ERROR f)
 {
     const EnumString    strings[] = 
@@ -207,24 +225,29 @@ public char[] toString(ORJ_PARSE_ERROR f)
  * Classes
  */
 
+/**
+ *
+ */
 class OpenRJException
     : public Exception
 {
-/// \name Construction
-/// @{
+/* \name Construction */
+
 protected:
     this(char[] message)
     {
         super(message);
     }
-/// @}
+
 }
 
+/**
+ *
+ */
 class DatabaseException
     : public OpenRJException
 {
-/// \name Construction
-/// @{
+/* \name Construction */
 private:
     this(char[] details, ORJRC rc)
     {
@@ -289,24 +312,33 @@ private:
 
         super(message);
     }
-/// @}
 
-/// \name Attributes
-/// @{
+/* \name Attributes */
 public:
+
+    /**
+     *
+     */
     ORJRC rc()
     {
         return m_rc;
     }
+
+    /**
+     *
+     */
     ORJ_PARSE_ERROR parseError()
     {
         return m_pe;
     }
+
+    /**
+     *
+     */
     int lineNum()
     {
         return m_lineNum;
     }
-/// @}
 
 // Members
 private:
@@ -315,30 +347,32 @@ private:
     ORJ_PARSE_ERROR m_pe;
 }
 
+/**
+ *
+ */
 class InvalidKeyException
     : public OpenRJException
 {
-/// \name Construction
-/// @{
+/* \name Construction */
 private:
     this(char[] message)
     {
         super(message);
     }
-/// @}
 }
 
+/**
+ *
+ */
 class InvalidTypeException
     : public OpenRJException
 {
-/// \name Construction
-/// @{
+/* \name Construction */
 private:
     this(char[] message)
     {
         super(message);
     }
-/// @}
 }
 
 /* /////////////////////////////////////////////////////////////////////////////
@@ -348,8 +382,8 @@ private:
 /// Represents a field in the database
 class Field
 {
-/// \name Construction
-/// @{
+/* \name Construction */
+
 private:
     this(char[] name, char[] value/* , Record record */)
     in
@@ -363,27 +397,39 @@ private:
         m_value     =   value;
         /* m_record =   record; */
     }
-/// @}
 
-/// \name Attributes
-/// @{
+
+/* \name Attributes */
+
 public:
+
+    /**
+     *
+     */
     final char[]  name()
     {
         return m_name;
     }
+
+    /**
+     *
+     */
     final char[]  value()
     {
         return m_value;
     }
+
+    /**
+     *
+     */
     Record record()
     {
         return m_record;
     }
-/// @}
 
-/// \name Comparison
-/// @{
+
+/* \name Comparison */
+
 /+
 public:
     int opCmp(Object rhs)
@@ -419,7 +465,7 @@ public:
         return res;
     }
 +/
-/// @}
+
 
 // Members
 private:
@@ -431,16 +477,16 @@ private:
 /// Represents a record in the database, consisting of a set of fields
 class Record
 {
-/// \name Types
-/// @{
+/* \name Types */
+
 public:
     alias object.size_t     size_type;
     alias object.size_t     index_type;
     alias object.ptrdiff_t  difference_type;
-/// @}
 
-/// \name Construction
-/// @{
+
+/* \name Construction */
+
 private:
     this(Field[] fields, uint flags, Database database)
     {
@@ -461,26 +507,39 @@ private:
 
         m_database = database;
     }
-/// @}
 
-/// \name Attributes
-/// @{
+
+/* \name Attributes */
+
 public:
+
+    /**
+     *
+     */
     uint numFields()
     {
         return m_fields.length;
     }
 
+    /**
+     *
+     */
     uint length()
     {
         return numFields();
     }
 
+    /**
+     *
+     */
     Field[] fields()
     {
         return m_fields.dup;
     }
 
+    /**
+     *
+     */
     Field opIndex(index_type index)
     in
     {
@@ -491,11 +550,17 @@ public:
         return m_fields[index];
     }
 
+    /**
+     *
+     */
     char[] opIndex(char[] fieldName)
     {
         return getField(fieldName).value;
     }
 
+    /**
+     *
+     */
     Field   getField(char[] fieldName)
     in
     {
@@ -513,6 +578,9 @@ public:
         return field;
     }
 
+    /**
+     *
+     */
     Field   findField(char[] fieldName)
     in
     {
@@ -525,20 +593,30 @@ public:
         return (null is pfield) ? null : *pfield;
     }
 
+    /**
+     *
+     */
     int hasField(char[] fieldName)
     {
         return null !is findField(fieldName);
     }
 
+    /**
+     *
+     */
     Database database()
     {
         return m_database;
     }
-/// @}
 
-/// \name Enumeration
-/// @{
+
+/* \name Enumeration */
+
 public:
+
+    /**
+     *
+     */
     int opApply(int delegate(inout Field field) dg)
     {
         int result  =   0;
@@ -556,6 +634,9 @@ public:
         return result;
     }
 
+    /**
+     *
+     */
     int opApply(int delegate(in char[] name, in char[] value) dg)
     {
         int result  =   0;
@@ -572,7 +653,7 @@ public:
 
         return result;
     }
-/// @}
+
 
 // Members
 private:
@@ -581,18 +662,22 @@ private:
     Database        m_database;
 }
 
+
+/**
+ *
+ */
 class Database
 {
-/// \name Types
-/// @{
+/* \name Types */
+
 public:
     alias object.size_t     size_type;
     alias object.size_t     index_type;
     alias object.ptrdiff_t  difference_type;
-/// @}
 
-/// \name Construction
-/// @{
+
+/* \name Construction */
+
 private:
     void init_(char[][] lines, uint flags)
     {
@@ -726,6 +811,10 @@ private:
         m_numLines  =   lines.length;
     }
 public:
+
+    /**
+     *
+     */
     this(char[] memory, uint flags)
     {
         char[][]    lines = split(memory, "\n");
@@ -733,52 +822,83 @@ public:
         init_(lines, flags);
     }
 
+    /**
+     *
+     */
     this(char[][] lines, uint flags)
     {
         init_(lines, flags);
     }
-/// @}
 
-/// \name Attributes
-/// @{
+
+/* \name Attributes */
+
 public:
+
+    /**
+     *
+     */
     size_type   numRecords()
     {
         return m_records.length;
     }
+
+    /**
+     *
+     */
     size_type   numFields()
     {
         return m_fields.length;
     }
+
+    /**
+     *
+     */
     size_type   numLines()
     {
         return m_numLines;
     }
-/// @}
 
-/// \name Attributes
-/// @{
+
+/* \name Attributes */
+
 public:
+
+    /**
+     *
+     */
     uint flags()
     {
         return m_flags;
     }
 
+    /**
+     *
+     */
     Record[] records()
     {
         return m_records.dup;
     }
 
+    /**
+     *
+     */
     Field[] fields()
     {
         return m_fields.dup;
     }
 
+    /**
+     *
+     */
     uint length()
     {
         return numRecords();
     }
 
+    /**
+     *
+     */
     Record  opIndex(index_type index)
     in
     {
@@ -788,11 +908,15 @@ public:
     {
         return m_records[index];
     }
-/// @}
 
-/// \name Searching
-/// @{
+
+/* \name Searching */
+
 public:
+
+    /**
+     *
+     */
     Record[]    getRecordsContainingField(char[] fieldName)
     {
         Record[]    records;
@@ -808,6 +932,9 @@ public:
         return records;
     }
 
+    /**
+     *
+     */
     Record[]    getRecordsContainingField(char[] fieldName, char[] fieldValue)
     {
         Record[]    records;
@@ -861,11 +988,15 @@ public:
 
         return records;
     }
-/// @}
 
-/// \name Enumeration
-/// @{
+
+/* \name Enumeration */
+
 public:
+
+    /**
+     *
+     */
     int opApply(int delegate(inout Record record) dg)
     {
         int result  =   0;
@@ -882,6 +1013,10 @@ public:
 
         return result;
     }
+
+    /**
+     *
+     */
     int opApply(int delegate(inout Field field) dg)
     {
         int result  =   0;
@@ -898,7 +1033,7 @@ public:
 
         return result;
     }
-/// @}
+
 
 // Members
 private:

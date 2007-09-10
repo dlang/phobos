@@ -68,7 +68,6 @@ DDOC = <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 &nbsp;<a href="std_path.html" title="Manipulate file names, path names, etc.">std.path</a><br>
 &nbsp;<a href="std_process.html" title="Create/destroy threads">std.process</a><br>
 &nbsp;<a href="std_random.html" title="Random number generation">std.random</a><br>
-&nbsp;<a href="std_recls.html" title="ecursively search file system and FTP sites">std.recls</a><br>
 &nbsp;<a href="std_regexp.html" title="regular expressions">std.regexp</a><br>
 &nbsp;<a href="std_socket.html" title="Sockets">std.socket</a><br>
 &nbsp;<a href="std_socketstream.html" title="Stream for a blocking, connected Socket">std.socketstream</a><br>

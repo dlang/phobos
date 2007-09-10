@@ -2075,33 +2075,33 @@ class File: Stream {
  */
 class BufferedFile: BufferedStream {
 
-  // opens file for reading
+  /// opens file for reading
   this() { super(new File()); }
 
-  // opens file in requested mode and buffer size
+  /// opens file in requested mode and buffer size
   this(char[] filename, FileMode mode = FileMode.In,
        uint bufferSize = DefaultBufferSize) {
     super(new File(filename,mode),bufferSize);
   }
 
-  // opens file for reading with requested buffer size
+  /// opens file for reading with requested buffer size
   this(File file, uint bufferSize = DefaultBufferSize) {
     super(file,bufferSize);
   }
 
-  // opens existing handle; use with care!
+  /// opens existing handle; use with care!
   this(HANDLE hFile, FileMode mode, uint buffersize) {
     super(new File(hFile,mode),buffersize);
   }
 
-  // opens file in requested mode
+  /// opens file in requested mode
   void open(char[] filename, FileMode mode = FileMode.In) {
     File sf = cast(File)s;
     sf.open(filename,mode);
     resetSource();
   }
 
-  // creates file in requested mode
+  /// creates file in requested mode
   void create(char[] filename, FileMode mode = FileMode.Out) {
     File sf = cast(File)s;
     sf.create(filename,mode);

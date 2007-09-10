@@ -565,7 +565,14 @@ size_t newCapacity(size_t newlength, size_t size)
 		return i;
 	    }
 
-	    long mult = 100 + (1000L * size) / (6 * log2plus1(newcap));
+	    /* The following setting for mult sets how much bigger
+	     * the new size will be over what is actually needed.
+	     * 100 means the same size, more means proportionally more.
+	     * More means faster but more memory consumption.
+	     */
+	    //long mult = 100 + (1000L * size) / (6 * log2plus1(newcap));
+	    long mult = 100 + (1000L * size) / log2plus1(newcap);
+
 	    // testing shows 1.02 for large arrays is about the point of diminishing return
 	    if (mult < 102)
 		mult = 102;
