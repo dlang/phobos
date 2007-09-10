@@ -17,7 +17,7 @@ class TypeInfo_u : TypeInfo
 	return *(wchar *)p1 - *(wchar *)p2;
     }
 
-    wchar tsize()
+    int tsize()
     {
 	return wchar.size;
     }

@@ -20,3 +20,10 @@ extern (C):
     void qsort(void *base, uint nelems, uint elemsize,
 	int (*compare)(void *elem1, void *elem2));
 
+    char* getenv(char*);
+
+    int    rand();
+    void   srand(uint);
+    int    random(int num);
+    void   randomize();
+

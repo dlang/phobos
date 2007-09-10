@@ -1,7 +1,7 @@
 
-// float
+// ifloat
 
-class TypeInfo_f : TypeInfo
+class TypeInfo_o : TypeInfo
 {
     uint getHash(void *p)
     {
@@ -10,7 +10,7 @@ class TypeInfo_f : TypeInfo
 
     int equals(void *p1, void *p2)
     {
-	return *(float *)p1 == *(float *)p2;
+	return *(ifloat *)p1 == *(ifloat *)p2;
     }
 
     int compare(void *p1, void *p2)
@@ -20,16 +20,16 @@ class TypeInfo_f : TypeInfo
 
     int tsize()
     {
-	return float.size;
+	return ifloat.size;
     }
 
     void swap(void *p1, void *p2)
     {
-	float t;
+	ifloat t;
 
-	t = *(float *)p1;
-	*(float *)p1 = *(float *)p2;
-	*(float *)p2 = t;
+	t = *(ifloat *)p1;
+	*(ifloat *)p1 = *(ifloat *)p2;
+	*(ifloat *)p2 = t;
     }
 }
 

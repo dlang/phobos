@@ -21,12 +21,12 @@ private import math, string, c.stdlib, c.stdio;
  * compare floats with given precision
  */
 
-bit feq(extended a, extended b)
+bit feq(real a, real b)
 {
 	return feq(a, b, 0.000001);
 } 
  
-bit feq(extended a, extended b, extended eps)
+bit feq(real a, real b, real eps)
 {
 	return abs(a - b) <= eps;
 }
@@ -45,7 +45,7 @@ long abs(long n)
 	return n > 0 ? n : -n;
 }
 
-extended abs(extended n)
+real abs(real n)
 {
 	// just let the compiler handle it
 	return intrinsic.fabs(n);
@@ -65,7 +65,7 @@ long sqr(long n)
 	return n * n;
 } 
  
-extended sqr(extended n)
+real sqr(real n)
 {
 	return n * n;
 }
@@ -81,7 +81,7 @@ private ushort fp_cw_chop = 7999;
  * Integer part
  */
  
-extended trunc(extended n)
+real trunc(real n)
 {
 	ushort cw;
 	asm
@@ -104,7 +104,7 @@ unittest
  * Fractional part
  */
  
-extended frac(extended n)
+real frac(real n)
 {
 	return n - trunc(n);
 }
@@ -119,12 +119,12 @@ unittest
  * Polynomial of X
  */
  
-extended poly(extended x, extended[] coefficients)
+real poly(real x, real[] coefficients)
 {
 	debug (math2) printf("poly(), coefficients.length = %d\n", coefficients.length);
 	if (!coefficients.length)
 		return 0;
-	extended result = coefficients[coefficients.length - 1];
+	real result = coefficients[coefficients.length - 1];
 	for (int i = coefficients.length - 2; i >= 0; i--)
 		result = result * x + coefficients[i];
 	return result;
@@ -133,8 +133,8 @@ extended poly(extended x, extended[] coefficients)
 unittest
 {
 	debug (math2) printf("unittest.poly()\n");
-	static extended[4] k = [ 4, 3, 2, 1 ];
-	assert(feq(poly(2, k), cast(extended) 8 * 1 + 4 * 2 + 2 * 3 + 4));
+	static real[4] k = [ 4, 3, 2, 1 ];
+	assert(feq(poly(2, k), cast(real) 8 * 1 + 4 * 2 + 2 * 3 + 4));
 }
 
 /*********************************
@@ -165,7 +165,7 @@ unittest
 	assert(sign(-666L) == -1);
 }
  
-int sign(extended n)
+int sign(real n)
 {
 	return (n > 0 ? +1 : (n < 0 ? -1 : 0));
 }
@@ -181,62 +181,62 @@ unittest
  * Cycles <-> radians <-> grads <-> degrees conversions
  */
  
-extended cycle2deg(extended c)
+real cycle2deg(real c)
 {
 	return c * 360;
 }
 
-extended cycle2rad(extended c)
+real cycle2rad(real c)
 {
 	return c * PI * 2;
 }
 
-extended cycle2grad(extended c)
+real cycle2grad(real c)
 {
 	return c * 400;
 }
 
-extended deg2cycle(extended d)
+real deg2cycle(real d)
 {
 	return d / 360;
 }
 
-extended deg2rad(extended d)
+real deg2rad(real d)
 {
 	return d / 180 * PI;
 }
 
-extended deg2grad(extended d)
+real deg2grad(real d)
 {
 	return d / 90 * 100;
 }
 
-extended rad2deg(extended r)
+real rad2deg(real r)
 {
 	return r / PI * 180;
 }
 
-extended rad2cycle(extended r)
+real rad2cycle(real r)
 {
 	return r / (PI * 2);
 }
 
-extended rad2grad(extended r)
+real rad2grad(real r)
 {
 	return r / PI * 200;
 }
 
-extended grad2deg(extended g)
+real grad2deg(real g)
 {
 	return g / 100 * 90;
 }
 
-extended grad2cycle(extended g)
+real grad2cycle(real g)
 {
 	return g / 400;
 }
 
-extended grad2rad(extended g)
+real grad2rad(real g)
 {
 	return g / 200 * PI;
 }
@@ -261,9 +261,9 @@ unittest
  * Arithmetic average of values
  */
  
-extended avg(extended[] n)
+real avg(real[] n)
 {
-	extended result = 0;
+	real result = 0;
 	for (uint i = 0; i < n.length; i++)
 		result += n[i];
 	return result / n.length;
@@ -271,7 +271,7 @@ extended avg(extended[] n)
 
 unittest
 {
-	static extended[4] n = [ 1, 2, 4, 5 ];
+	static real[4] n = [ 1, 2, 4, 5 ];
 	assert(feq(avg(n), 3));
 }
 
@@ -307,9 +307,9 @@ unittest
 	assert(sum(n) == 6);
 }
  
-extended sum(extended[] n)
+real sum(real[] n)
 {
-	extended result = 0;
+	real result = 0;
 	for (uint i = 0; i < n.length; i++)
 		result += n[i];
 	return result;
@@ -317,7 +317,7 @@ extended sum(extended[] n)
 
 unittest
 {
-	static extended[3] n = [ 1, 2, 3 ];
+	static real[3] n = [ 1, 2, 3 ];
 	assert(feq(sum(n), 6));
 }
 
@@ -355,9 +355,9 @@ unittest
 	assert(min(n) == -1);
 }
 
-extended min(extended[] n)
+real min(real[] n)
 {
-	extended result = extended.max;
+	real result = real.max;
 	for (uint i = 0; i < n.length; i++)
 	{
 		if (n[i] < result)
@@ -368,7 +368,7 @@ extended min(extended[] n)
 
 unittest
 {
-	static extended[3] n = [ 2.0, -1.0, 0.0 ];
+	static real[3] n = [ 2.0, -1.0, 0.0 ];
 	assert(feq(min(n), -1));
 }
 
@@ -392,7 +392,7 @@ unittest
 	assert(min(1L, 2L) == 1);
 }
 
-extended min(extended a, extended b)
+real min(real a, real b)
 {
 	return a < b ? a : b;
 }
@@ -436,9 +436,9 @@ unittest
 	assert(max(n) == 2);
 }
 
-extended max(extended[] n)
+real max(real[] n)
 {
-	extended result = extended.min;
+	real result = real.min;
 	for (uint i = 0; i < n.length; i++)
 		if (n[i] > result)
 			result = n[i];
@@ -447,7 +447,7 @@ extended max(extended[] n)
 
 unittest
 {
-	static extended[3] n = [ 0.0, 2.0, -1.0 ];
+	static real[3] n = [ 0.0, 2.0, -1.0 ];
 	assert(feq(max(n), 2));
 }
 
@@ -471,7 +471,7 @@ unittest
 	assert(max(1L, 2L) == 2);
 }
 
-extended max(extended a, extended b)
+real max(real a, real b)
 {
 	return a > b ? a : b;
 }
@@ -485,7 +485,7 @@ unittest
  * Arccosine
  */
 
-extended acos(extended x) 
+real acos(real x) 
 {
 	return atan2(intrinsic.sqrt(1 - x * x), x);
 }
@@ -500,7 +500,7 @@ unittest
  */
 
 
-extended asin(extended x)
+real asin(real x)
 {
 	return atan2(x, intrinsic.sqrt(1 - x * x));
 }
@@ -515,7 +515,7 @@ unittest
  * Arctangent
  */
 
-extended atan(extended x)
+real atan(real x)
 {
 	asm
 	{
@@ -536,7 +536,7 @@ unittest
  * Arctangent y/x
  */
 
-extended atan2(extended y, extended x)
+real atan2(real y, real x)
 {
 	asm
 	{
@@ -557,7 +557,7 @@ unittest
  * Arccotangent
  */
 
-extended acot(extended x)
+real acot(real x)
 {
 	return tan(1.0 / x);
 }
@@ -571,7 +571,7 @@ unittest
  * Arcsecant
  */
 
-extended asec(extended x)
+real asec(real x)
 {
 	return intrinsic.cos(1.0 / x);
 }
@@ -581,7 +581,7 @@ extended asec(extended x)
  * Arccosecant
  */
 
-extended acosec(extended x)
+real acosec(real x)
 {
 	return intrinsic.sin(1.0 / x);
 }
@@ -590,7 +590,8 @@ extended acosec(extended x)
  * Tangent
  */
 
-extended tan(extended x)
+/+
+real tan(real x)
 {
 	asm
 	{
@@ -605,12 +606,13 @@ unittest
 {
 	assert(feq(tan(PI / 3), intrinsic.sqrt(3)));
 }
++/
 
 /*************************************
  * Cotangent
  */
 
-extended cot(extended x)
+real cot(real x)
 {
 	asm
 	{
@@ -630,7 +632,7 @@ unittest
  * Secant
  */
 
-extended sec(extended x)
+real sec(real x)
 {
 	asm
 	{
@@ -647,7 +649,7 @@ extended sec(extended x)
  * Cosecant
  */
 
-extended cosec(extended x)
+real cosec(real x)
 {
 	asm
 	{
@@ -662,8 +664,8 @@ extended cosec(extended x)
 /*************************************
  * Hypotenuse of right triangle
  */
-
-extended hypot(extended x, extended y)
+/+
+real hypot(real x, real y)
 {
 	asm
 	{
@@ -697,12 +699,13 @@ unittest
 {
 	assert(feq(hypot(3, 4), 5));
 }
++/
 
 /*********************************************
  * Extract mantissa and exponent from float
  */
 
-extended frexp(extended x, out int exponent)
+real frexp(real x, out int exponent)
 {
 	asm
 	{
@@ -731,7 +734,7 @@ done:
 unittest
 {
 	int exponent;
-	extended mantissa = frexp(123.456, exponent);
+	real mantissa = frexp(123.456, exponent);
 	assert(feq(mantissa * pow(2, exponent), 123.456));
 }
 
@@ -739,7 +742,7 @@ unittest
  * Make a float out of mantissa and exponent
  */
 
-extended ldexp(extended x, int exponent)
+real ldexp(real x, int exponent)
 {
 	asm
 	{
@@ -760,7 +763,7 @@ unittest
  * Round to nearest int > x
  */
 
-long ceil(extended x)
+long ceil(real x)
 {
 	return frac(x) > 0 ? trunc(x) + 1 : trunc(x);
 }
@@ -775,7 +778,7 @@ unittest
  * Round to nearest int < x
  */
 
-long floor(extended x)
+long floor(real x)
 {
 	return frac(x) < 0 ? trunc(x) - 1 : trunc(x);
 }
@@ -790,7 +793,7 @@ unittest
  * Base 10 logarithm
  */
 
-extended log10(extended x)
+real log10(real x)
 {
 	asm
 	{
@@ -810,7 +813,7 @@ unittest
  * Base 2 logarithm
  */
 
-extended log2(extended x)
+real log2(real x)
 {
 	asm
 	{
@@ -830,7 +833,7 @@ unittest
  * Natural logarithm
  */
 
-extended log(extended x)
+real log(real x)
 {
 	asm
 	{
@@ -850,7 +853,7 @@ unittest
  * Natural logarithm of (x + 1)
  */
 
-extended log1p(extended x)
+real log1p(real x)
 {
 	asm
 	{
@@ -870,7 +873,7 @@ unittest
  * Logarithm
  */
 
-extended log(extended x, extended base)
+real log(real x, real base)
 {
 	asm
 	{
@@ -894,7 +897,7 @@ unittest
  * (base + 1) logarithm of x
  */
 
-extended log1p(extended x, extended base)
+real log1p(real x, real base)
 {
 	asm
 	{
@@ -918,7 +921,7 @@ unittest
  * Exponent
  */
 
-extended exp(extended x)
+real exp(real x)
 {
 	asm
 	{
@@ -947,7 +950,7 @@ unittest
  * Base to exponent
  */
 
-extended pow(extended base, extended exponent)
+real pow(real base, real exponent)
 {
 	return exp(exponent * log(base));
 }
@@ -961,9 +964,9 @@ unittest
  * Hyperbolic cosine
  */
 
-extended cosh(extended x)
+real cosh(real x)
 {
-	extended z = exp(x) / 2;
+	real z = exp(x) / 2;
 	return z + 0.25 / z;
 }
 
@@ -976,9 +979,9 @@ unittest
  * Hyperbolic sine
  */
 
-extended sinh(extended x)
+real sinh(real x)
 {
-	extended z = exp(x) / 2;
+	real z = exp(x) / 2;
 	return z - 0.25 / z;
 }
 
@@ -991,9 +994,9 @@ unittest
  * Hyperbolic tangent
  */
 
-private extended tanh_domain;
+private real tanh_domain;
 
-extended tanh(extended x)
+real tanh(real x)
 {
 	if (x > tanh_domain)
 		return 1;
@@ -1001,7 +1004,7 @@ extended tanh(extended x)
 		return -1;
 	else
 	{
-		extended z = sqr(exp(x));
+		real z = sqr(exp(x));
 		return (z - 1) / (z + 1);
 	}
 }
@@ -1015,7 +1018,7 @@ unittest
  * Hyperbolic cotangent
  */
 
-extended coth(extended x)
+real coth(real x)
 {
 	return 1 / tanh(x);
 }
@@ -1029,7 +1032,7 @@ unittest
  * Hyperbolic secant
  */
 
-extended sech(extended x)
+real sech(real x)
 {
 	return 1 / cosh(x);
 }
@@ -1038,7 +1041,7 @@ extended sech(extended x)
  * Hyperbolic cosecant
  */
 
-extended cosech(extended x)
+real cosech(real x)
 {
 	return 1 / sinh(x);
 }
@@ -1047,7 +1050,7 @@ extended cosech(extended x)
  * Hyperbolic arccosine
  */
 
-extended acosh(extended x)
+real acosh(real x)
 {
 	if (x <= 1)
 		return 0;
@@ -1067,7 +1070,7 @@ unittest
  * Hyperbolic arcsine
  */
 
-extended asinh(extended x)
+real asinh(real x)
 {
 	if (!x)
 		return 0;
@@ -1077,7 +1080,7 @@ extended asinh(extended x)
 		return -log(2) - log(1.0e10);
 	else
 	{
-		extended z = x * x;
+		real z = x * x;
 		return x > 0 ? 
 			log1p(x + z / (1.0 + intrinsic.sqrt(1.0 + z))) :
 			-log1p(-x + z / (1.0 + intrinsic.sqrt(1.0 + z)));
@@ -1094,16 +1097,16 @@ unittest
  * Hyperbolic arctangent
  */
 
-extended atanh(extended x)
+real atanh(real x)
 {
 	if (!x)
 		return 0;
 	else
 	{
 		if (x >= 1)
-			return extended.max;
+			return real.max;
 		else if (x <= -1)
-			return -extended.max;
+			return -real.max;
 		else
 			return x > 0 ?
 				0.5 * log1p((2.0 * x) / (1.0 - x)) :
@@ -1121,7 +1124,7 @@ unittest
  * Hyperbolic arccotangent
  */
 
-extended acoth(extended x)
+real acoth(real x)
 {
 	return 1 / acot(x);
 }
@@ -1135,7 +1138,7 @@ unittest
  * Hyperbolic arcsecant
  */
 
-extended asech(extended x)
+real asech(real x)
 {
 	return 1 / asec(x);
 }
@@ -1144,7 +1147,7 @@ extended asech(extended x)
  * Hyperbolic arccosecant
  */
 
-extended acosech(extended x)
+real acosech(real x)
 {
 	return 1 / acosec(x);
 }
@@ -1153,15 +1156,15 @@ extended acosech(extended x)
  * Convert string to float
  */
 
-extended atof(char[] s)
+real atof(char[] s)
 {
 	if (!s.length)
-		return extended.nan;
-	extended result = 0;
+		return real.nan;
+	real result = 0;
 	uint i = 0;
 	while (s[i] == "\t" || s[i] == " ")
 		if (++i >= s.length)
-			return extended.nan;
+			return real.nan;
 	bit neg = false;
 	if (s[i] == "-")
 	{
@@ -1171,7 +1174,7 @@ extended atof(char[] s)
 	else if (s[i] == "+")
 		i++;
 	if (i >= s.length)
-		return extended.nan;
+		return real.nan;
 	bit hex;
 	if (s[s.length - 1] == "h")
 	{
@@ -1183,7 +1186,7 @@ extended atof(char[] s)
 		hex = true;
 		i += 2;
 		if (i >= s.length)
-			return extended.nan;
+			return real.nan;
 	}
 	else
 		hex = false;
@@ -1210,10 +1213,10 @@ extended atof(char[] s)
 			else if (s[i] >= "A" && s[i] <= "F")
 				result += s[i] - "A" + 10;
 			else
-				return extended.nan;
+				return real.nan;
 		}
 		else
-			return extended.nan;
+			return real.nan;
 		if (++i >= s.length)
 			goto done;
 	}
@@ -1246,10 +1249,10 @@ extended atof(char[] s)
 				else if (s[i] >= "A" && s[i] <= "F")
 					result += s[i] - "A" + 10;
 				else
-					return extended.nan;
+					return real.nan;
 			}
 			else
-				return extended.nan;
+				return real.nan;
 			if (++i >= s.length)
 			{
 				result /= k;
@@ -1259,7 +1262,7 @@ extended atof(char[] s)
 		result /= k;
 	}
 	if (++i >= s.length)
-		return extended.nan;
+		return real.nan;
 	bit eneg = false;
 	if (s[i] == "-")
 	{
@@ -1269,7 +1272,7 @@ extended atof(char[] s)
 	else if (s[i] == "+")
 		i++;
 	if (i >= s.length)
-		return extended.nan;
+		return real.nan;
 	int e = 0;
 	while (i < s.length)
 	{
@@ -1277,7 +1280,7 @@ extended atof(char[] s)
 		if (s[i] >= "0" && s[i] <= "9")
 			e += s[i] - "0";
 		else
-			return extended.nan;
+			return real.nan;
 		i++;
 	}
 	if (eneg)
@@ -1300,8 +1303,8 @@ unittest
 	assert(feq(atof(".456"), .456));
 	assert(feq(atof("123.456"), 123.456));
 	assert(feq(atof("1.23456E+2"), 123.456));
-	assert(feq(atof("1A2h"), 1A2h));
-	assert(feq(atof("1a2h"), 1a2h));
+	//assert(feq(atof("1A2h"), 1A2h));
+	//assert(feq(atof("1a2h"), 1a2h));
 	assert(feq(atof("0x1A2"), 0x1A2));
 	assert(feq(atof("0x1a2p2"), 0x1a2p2));
 	assert(feq(atof("0x1a2p+2"), 0x1a2p+2));
@@ -1314,7 +1317,7 @@ unittest
  * Convert float to string
  */
  
-char[] toString(extended x)
+char[] toString(real x)
 {
 	char[1024] buffer;
 	char* p = buffer;
@@ -1355,5 +1358,5 @@ unittest
 
 static this()
 {
-	tanh_domain = log(extended.max) / 2;
+	tanh_domain = log(real.max) / 2;
 }

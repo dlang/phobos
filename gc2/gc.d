@@ -92,19 +92,26 @@ void _d_delclass(Object *p)
 {
     if (*p)
     {
-	version(none)
+	version(0)
 	{
 	    ClassInfo **pc = (ClassInfo **)*p;
 	    if (*pc)
 	    {
 		ClassInfo c = **pc;
 
-		if (c.destructor)
+		if (c.deallocator)
 		{
-		    fp_t fp = (fp_t)c.destructor;
-		    (*fp)(*p);		// call destructor
+		    if (c.destructor)
+		    {
+			fp_t fp = (fp_t)c.destructor;
+			(*fp)(*p);		// call destructor
+		    }
+		    fp_t fp = (fp_t)c.deallocator;
+		    (*fp)(*p);			// call deallocator
+		    *pc = null;			// zero vptr
+		    *p = null;
+		    return;
 		}
-		*pc = null;			// zero vptr
 	    }
 	}
 	_gc.free(*p);

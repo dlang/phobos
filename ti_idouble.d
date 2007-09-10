@@ -1,7 +1,7 @@
 
-// double
+// idouble
 
-class TypeInfo_d : TypeInfo
+class TypeInfo_p : TypeInfo
 {
     uint getHash(void *p)
     {
@@ -10,7 +10,7 @@ class TypeInfo_d : TypeInfo
 
     int equals(void *p1, void *p2)
     {
-	return *(double *)p1 == *(double *)p2;
+	return *(idouble *)p1 == *(idouble *)p2;
     }
 
     int compare(void *p1, void *p2)
@@ -20,16 +20,16 @@ class TypeInfo_d : TypeInfo
 
     int tsize()
     {
-	return double.size;
+	return idouble.size;
     }
 
     void swap(void *p1, void *p2)
     {
-	double t;
+	idouble t;
 
-	t = *(double *)p1;
-	*(double *)p1 = *(double *)p2;
-	*(double *)p2 = t;
+	t = *(idouble *)p1;
+	*(idouble *)p1 = *(idouble *)p2;
+	*(idouble *)p2 = t;
     }
 }
 

@@ -34,7 +34,7 @@ int main(char[][] args)
     OutBuffer b = new OutBuffer();	// outbuffer
     ctype.tolower('A');			// ctype
     RegExp r = new RegExp(null, null);	// regexp
-    rand();
+    random.rand();
     int a[];
     a.reverse;				// adi
     a.sort;				// qsort

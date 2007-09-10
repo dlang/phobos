@@ -121,11 +121,11 @@ class OutBuffer
 	offset += double.size;
     }
 
-    void write(extended f)
+    void write(real f)
     {
-	reserve(extended.size);
-	*(extended *)&data[offset] = f;
-	offset += extended.size;
+	reserve(real.size);
+	*(real *)&data[offset] = f;
+	offset += real.size;
     }
 
     void write(char[] s)

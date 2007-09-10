@@ -257,9 +257,8 @@ struct WIN32_FIND_DATA {
     char   cAlternateFileName[ 14 ];
 }
 
-export:
-
-
+export
+{
 BOOL   CloseHandle(HANDLE hObject);
 HANDLE CreateFileA(char *lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode,
 	SECURITY_ATTRIBUTES *lpSecurityAttributes, DWORD dwCreationDisposition,
@@ -280,6 +279,7 @@ DWORD  SetFilePointer(HANDLE hFile, LONG lDistanceToMove,
 BOOL   WriteFile(HANDLE hFile, void *lpBuffer, DWORD nNumberOfBytesToWrite,
 	DWORD *lpNumberOfBytesWritten, OVERLAPPED *lpOverlapped);
 DWORD  GetModuleFileNameA(HMODULE hModule, LPSTR lpFilename, DWORD nSize);
+}
 
 
 export

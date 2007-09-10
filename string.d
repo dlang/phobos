@@ -71,13 +71,13 @@ const char[6] whitespace = " \t\v\r\n\f";
  * Returns !=0 if c is whitespace
  */
 
-private int iswhite(char c)
+int iswhite(char c)
 {
     return find(whitespace, c) != -1;
 }
 
 /*********************************
- * Convert string to integer / extended.
+ * Convert string to integer / real.
  */
 
 long atoi(char[] s)
@@ -85,7 +85,7 @@ long atoi(char[] s)
     return atoi(toStringz(s));
 }
 
-extended atof(char[] s)
+real atof(char[] s)
 {
     // BUG: should implement atold()
     return atof(toStringz(s));
@@ -616,7 +616,7 @@ unittest
     char[] word1 = "peter";
     char[] word2 = "paul";
     char[] word3 = "jerry";
-    char[3][] words;
+    char[][3] words;
     char[] r;
     int i;
 
@@ -796,7 +796,7 @@ char[][] splitlines(char[] s)
     if (istart != i)
 	nlines++;
 
-    lines = new char[nlines][];
+    lines = new char[][nlines];
     nlines = 0;
     istart = 0;
     for (i = 0; i < s.length; i++)

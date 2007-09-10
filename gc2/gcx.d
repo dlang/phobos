@@ -139,7 +139,7 @@ debug (LOGGING)
 /* ============================ GC =============================== */
 
 
-alias int size_t;
+//alias int size_t;
 alias void (*GC_FINALIZER)(void *p, void *dummy);
 
 class GCLock { }		// just a dummy so we can get a global lock

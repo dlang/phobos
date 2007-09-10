@@ -1,5 +1,11 @@
 
-#include <string.h>
+extern (C)
+{
+    // Functions from the C library.
+    void *memcpy(void *, void *, uint);
+}
+
+extern (C):
 
 short *_memset16(short *p, short value, int count)
 {
@@ -13,6 +19,21 @@ short *_memset16(short *p, short value, int count)
 
 int *_memset32(int *p, int value, int count)
 {
+version (X86)
+{
+    asm
+    {
+	mov	EDI,p		;
+	mov	EAX,value	;
+	mov	ECX,count	;
+	mov	EDX,EDI		;
+	rep			;
+	stosd			;
+	mov	EAX,EDX		;
+    }
+}
+else
+{
     int *pstart = p;
     int *ptop;
 
@@ -20,21 +41,22 @@ int *_memset32(int *p, int value, int count)
 	*p = value;
     return pstart;
 }
+}
 
-long long *_memset64(long long *p, long long value, int count)
+long *_memset64(long *p, long value, int count)
 {
-    long long *pstart = p;
-    long long *ptop;
+    long *pstart = p;
+    long *ptop;
 
     for (ptop = &p[count]; p < ptop; p++)
 	*p = value;
     return pstart;
 }
 
-long double *_memset80(long double *p, long double value, int count)
+real *_memset80(real *p, real value, int count)
 {
-    long double *pstart = p;
-    long double *ptop;
+    real *pstart = p;
+    real *ptop;
 
     for (ptop = &p[count]; p < ptop; p++)
 	*p = value;

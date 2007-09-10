@@ -24,6 +24,42 @@ byte[] _d_arraycat(byte[] x, byte[] y, uint size)
     return a;
 }
 
+byte[] _d_arraycatn(uint size, uint n, ...)
+{   byte[] a;
+    uint length;
+    byte[]* p;
+    uint i;
+    byte[] b;
+
+    p = cast(byte[]*)(&n + 1);
+
+    for (i = 0; i < n; i++)
+    {
+	b = *p++;
+	length += b.length;
+    }
+    if (!length)
+	return null;
+
+    a = new byte[length * size];
+    p = cast(byte[]*)(&n + 1);
+
+    uint j = 0;
+    for (i = 0; i < n; i++)
+    {
+	b = *p++;
+	if (b.length)
+	{
+	    memcpy(&a[j], b, b.length * size);
+	    j += b.length * size;
+	}
+    }
+
+    *(int *)&a = length;	// jam length
+    //a.length = length;
+    return a;
+}
+
 byte[] _d_arraycopy(uint size, byte[] from, byte[] to)
 {
     //printf("f = %p,%d, t = %p,%d\n", (void*)from, from.length, (void*)to, to.length);

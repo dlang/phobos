@@ -2,7 +2,9 @@
 DMD=..\..\dmd
 #DMD=\dmd\bin\dmd
 CFLAGS=-g -mn -6 -r -Igc
-DFLAGS=-unittest -g -release
+#DFLAGS=-unittest -g -release
+DFLAGS=-release -O -inline
+#DFLAGS=-release -inline -O
 CC=sc
 
 .c.obj:

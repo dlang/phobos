@@ -23,9 +23,10 @@ ubyte  outp(uint, ubyte);
 ushort outpw(uint, ushort);
 uint   outpl(uint, uint);
 
-extended cos(extended);
-extended fabs(extended);
-extended rint(extended);
-long rndtol(extended);
-extended sin(extended);
-extended sqrt(extended);
+real cos(real);
+real fabs(real);
+real rint(real);
+long rndtol(real);
+real sin(real);
+real sqrt(real);
+real ldexp(real, int);

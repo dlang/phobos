@@ -145,9 +145,9 @@ enum : ubyte
 };
 
 // BUG: should this include '$'?
-static int isword(tchar c) { return isalnum(c) || c == '_'; }
+private int isword(tchar c) { return isalnum(c) || c == '_'; }
 
-static uint inf = ~0u;
+private uint inf = ~0u;
 
 /*********************************
  * Throws RegExpError on error
@@ -467,7 +467,7 @@ public tchar[][] exec()
 
     tchar[][] result;
 
-    result = new tchar[pmatch.length][];
+    result = new tchar[][pmatch.length];
     for (int i = 0; i < pmatch.length; i++)
     {
 	if (pmatch[i].rm_so == pmatch[i].rm_eo)
@@ -2313,7 +2313,7 @@ public tchar[] replace(tchar[] format)
 
 // Static version that doesn't require a RegExp object to be created
 
-static tchar[] replace3(tchar[] format, tchar[] input, regmatch_t[] pmatch)
+private tchar[] replace3(tchar[] format, tchar[] input, regmatch_t[] pmatch)
 {
     OutBuffer buf;
     tchar[] result;

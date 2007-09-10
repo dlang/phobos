@@ -19,7 +19,7 @@ void printStats(GC *gc)
 {
     GCStats stats;
 
-    gc.getStats(stats);
+    //gc.getStats(stats);
     printf("poolsize = x%x, usedsize = x%x, freelistsize = x%x, freeblocks = %d, pageblocks = %d\n",
 	stats.poolsize, stats.usedsize, stats.freelistsize, stats.freeblocks, stats.pageblocks);
 }

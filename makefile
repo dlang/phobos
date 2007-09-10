@@ -13,10 +13,12 @@
 #	This relies on LIB.EXE 8.00 or later, and MAKE.EXE 5.01 or later.
 
 CFLAGS=-g -mn -6 -r
-DFLAGS=-unittest -g
+DFLAGS=-O -release
+#DFLAGS=-unittest -g
+
 CC=sc
-DMD=\dmd\bin\dmd
-#DMD=..\dmd
+#DMD=\dmd\bin\dmd
+DMD=..\dmd
 
 .c.obj:
 	$(CC) -c $(CFLAGS) $*
@@ -56,10 +58,13 @@ OBJS= assert.obj deh.obj switch.obj complex.obj gcstats.obj \
 	stream.obj switcherr.obj com.obj array.obj gc.obj adi.obj \
 	qsort.obj math2.obj date.obj dateparse.obj thread.obj obj.obj \
 	iunknown.obj crc32.obj conv.obj arraycast.obj \
-	ti_Aa.obj ti_C.obj ti_int.obj ti_char.obj \
+	ti_Aa.obj ti_Ag.obj ti_C.obj ti_int.obj ti_char.obj \
 	ti_wchar.obj ti_uint.obj ti_short.obj ti_ushort.obj \
 	ti_byte.obj ti_ubyte.obj ti_long.obj ti_ulong.obj ti_ptr.obj \
-	ti_float.obj ti_double.obj ti_extended.obj ti_delegate.obj
+	ti_float.obj ti_double.obj ti_real.obj ti_delegate.obj \
+	ti_creal.obj ti_ireal.obj \
+	ti_cfloat.obj ti_ifloat.obj \
+	ti_cdouble.obj ti_idouble.obj
 
 HDR=mars.h
 
@@ -76,14 +81,16 @@ SRC4=dchar.d ctype.d achar.d aaA.d adi.d file.d compiler.d system.d \
 	moduleinit.d cast.d math.d qsort.d
 
 SRC5=outbuffer.d unittest.d stream.d ctype.d regexp.d random.d adi.d \
-	ti_Aa.d ti_C.d ti_int.d ti_char.d
+	ti_Aa.d ti_Ag.d ti_C.d ti_int.d ti_char.d
 
-SRC6=math2.d thread.d obj.d iunknown.d intrinsic.d time.d memset.c \
+SRC6=math2.d thread.d obj.d iunknown.d intrinsic.d time.d memset.d \
 	array.d switcherr.d arraycast.d
 
 SRC7=ti_wchar.d ti_uint.d ti_short.d ti_ushort.d \
 	ti_byte.d ti_ubyte.d ti_long.d ti_ulong.d ti_ptr.d \
-	ti_float.d ti_double.d ti_extended.d ti_delegate.d
+	ti_float.d ti_double.d ti_real.d ti_delegate.d \
+	ti_creal.d ti_ireal.d ti_cfloat.d ti_ifloat.d \
+	ti_cdouble.d ti_idouble.d
 
 SRC8=crc32.d stdint.d conv.d gcstats.d
 
@@ -109,6 +116,7 @@ gc.obj : gc.d
 invariant.obj : invariant.d
 math.obj : math.d
 math2.obj : math2.d
+memset.obj : memset.d
 minit.obj : minit.asm
 moduleinit.obj : moduleinit.d
 monitor.obj : mars.h monitor.c
@@ -118,6 +126,7 @@ switch.obj : switch.d
 system.obj : system.d
 thread.obj : thread.d
 ti_Aa.obj : ti_Aa.d
+ti_Ag.obj : ti_Ag.d
 ti_C.obj : ti_C.d
 ti_char.obj : ti_char.d
 ti_int.obj : ti_int.d

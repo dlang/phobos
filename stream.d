@@ -67,6 +67,12 @@ class Stream
 	
 	this() { }
 
+  // close the stream somehow; the default
+  // does nothing
+  void close()
+  {
+  }
+
 	// reads block of data of specified size,
 	// returns actual number of bytes read
 	abstract uint readBlock(void* buffer, uint size);
@@ -98,9 +104,9 @@ class Stream
 	void read(out ulong x) { readExact(&x, x.size); }
 	void read(out float x) { readExact(&x, x.size); }
 	void read(out double x) { readExact(&x, x.size); }
-	void read(out extended x) { readExact(&x, x.size); }
-	void read(out imaginary x) { readExact(&x, x.size); }
-	void read(out complex x) { readExact(&x, x.size); }
+	void read(out real x) { readExact(&x, x.size); }
+	void read(out ireal x) { readExact(&x, x.size); }
+	void read(out creal x) { readExact(&x, x.size); }
 	void read(out char x) { readExact(&x, x.size); }
 	void read(out wchar x) { readExact(&x, x.size); }
 	
@@ -442,7 +448,7 @@ class Stream
 							c = getc();
 							count++;
 						}
-						extended n = 0;
+						real n = 0;
 						while (isdigit(c) && width)
 						{
 							n = n * 10 + (c - "0");
@@ -487,7 +493,7 @@ class Stream
 									c = getc();
 									count++;
 								}
-								extended exp = 0;
+								real exp = 0;
 								while (isdigit(c) && width)
 								{
 									exp = exp * 10 + (c - "0");
@@ -518,9 +524,9 @@ class Stream
 								*cast(double*)*arg = n;
 							} break;
 							
-							case "L":	// extended
+							case "L":	// real
 							{
-								*cast(extended*)*arg = n;
+								*cast(real*)*arg = n;
 							} break;
 
 							default:	// float
@@ -642,9 +648,9 @@ nws:
 	void write(ulong x) { writeExact(&x, x.size); }
 	void write(float x) { writeExact(&x, x.size); }
 	void write(double x) { writeExact(&x, x.size); }
-	void write(extended x) { writeExact(&x, x.size); }
-	void write(imaginary x) { writeExact(&x, x.size); }
-	void write(complex x) { writeExact(&x, x.size); }
+	void write(real x) { writeExact(&x, x.size); }
+	void write(ireal x) { writeExact(&x, x.size); }
+	void write(creal x) { writeExact(&x, x.size); }
 	void write(char x) { writeExact(&x, x.size); }
 	void write(wchar x) { writeExact(&x, x.size); }
 	
@@ -944,7 +950,7 @@ class File: Stream
 	}
 	
 	// closes file, if it is open; otherwise, does nothing
-	void close()
+  override void close()
 	{
 		if (hFile)
 		{
@@ -1165,6 +1171,7 @@ class SliceStream : Stream
     ulong low; // low stream offset.
     ulong high; // high stream offset.
     bit bounded; // upper-bounded by high.
+    bit nestClose; // if set, close base when closing this stream.
 
     // set the base stream and the low offset but leave the high unbounded.
     this (Stream base, ulong low)
@@ -1203,6 +1210,17 @@ class SliceStream : Stream
         readable = base.readable;
         writeable = base.writeable;
         seekable = base.seekable;
+    }
+
+    override void close ()
+    {
+        try
+        {
+            if (base !== null && nestClose)
+                base.close ();
+        }
+        finally
+            base = null;
     }
 
     override uint readBlock (void *buffer, uint size)
@@ -1257,7 +1275,7 @@ class SliceStream : Stream
         switch (rel)
         {
             case SeekPos.Set:
-                output = low;
+                output = low + offset;
                 break;
 
             case SeekPos.Current:
@@ -1310,28 +1328,28 @@ class SliceStream : Stream
 }
 
 // helper functions
-static bit iswhite(char c)
+private bit iswhite(char c)
 {
 	return c == " " || c == "\t" || c == "\r" || c == "\n";
 }
 
-static bit isdigit(char c)
+private bit isdigit(char c)
 {
 	return c >= "0" && c <= "9";
 }
 
-static bit isoctdigit(char c)
+private bit isoctdigit(char c)
 {
 	return c >= "0" && c <= "7";
 }
 
-static bit ishexdigit(char c)
+private bit ishexdigit(char c)
 {
 	return isdigit(c) || (c >= "A" && c <= "F") || (c >= "a" && c <= "f");
 }
 
 // API imports
-private static extern(Windows)
+private extern(Windows)
 {
 	private import windows;
 	HANDLE GetStdHandle(DWORD);
