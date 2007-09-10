@@ -3,6 +3,9 @@ module std.c.linux.linux;
 
 import std.c.linux.linuxextern;
 
+alias int time_t;
+alias int off_t;
+
 enum : int
 {
 	SIGHUP = 1,

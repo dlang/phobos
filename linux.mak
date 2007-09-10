@@ -48,7 +48,7 @@ unittest.o : unittest.d
 OBJS= asserterror.o deh2.o switch.o complex.o gcstats.o \
 	critical.o object.o monitor.o arraycat.o invariant.o \
 	dmain2.o outofmemory.o aaA.o adi.o file.o \
-	compiler.o system.o moduleinit.o \
+	compiler.o system.o moduleinit.o md5.o \
 	cast.o path.o string.o memset.o math.o \
 	outbuffer.o ctype.o regexp.o random.o linux.o \
 	stream.o switcherr.o array.o gc.o \
@@ -63,9 +63,9 @@ OBJS= asserterror.o deh2.o switch.o complex.o gcstats.o \
 	ti_Aa.o ti_AC.o ti_Ag.o ti_Aubyte.o ti_Aushort.o ti_Ashort.o \
 	ti_C.o ti_int.o ti_char.o ti_dchar.o ti_Adchar.o \
 	ti_Aint.o ti_Auint.o ti_Along.o ti_Aulong.o ti_Awchar.o \
-	date.o dateparse.o llmath.o math2.o Czlib.o Dzlib.o zip.o
+	date.o dateparse.o llmath.o math2.o Czlib.o Dzlib.o zip.o recls.o
 
-ZLIBOBJS= etc/c/zlib/adler32.o etc/c/zlib/compress.o \
+ZLIB_OBJS= etc/c/zlib/adler32.o etc/c/zlib/compress.o \
 	etc/c/zlib/crc32.o etc/c/zlib/gzio.o \
 	etc/c/zlib/uncompr.o etc/c/zlib/deflate.o \
 	etc/c/zlib/trees.o etc/c/zlib/zutil.o \
@@ -73,44 +73,24 @@ ZLIBOBJS= etc/c/zlib/adler32.o etc/c/zlib/compress.o \
 	etc/c/zlib/inftrees.o etc/c/zlib/infcodes.o \
 	etc/c/zlib/infutil.o etc/c/zlib/inffast.o
 
-GCOBJS= internal/gc/gc.o internal/gc/gcx.o \
-	internal/gc/gcbits.o internal/gc/gclinux.o
+RECLS_OBJS=
 
-#SRC= mars.h switch.d complex.c critical.c minit.asm \
-#	deh.c object.d gc.d math.d c/stdio.d c/stdlib.d time.d monitor.c \
-#	arraycat.d string.d windows.d path.d linuxextern.d \
-#	invariant.d asserterror.d regexp.d dmain2.d dateparse.d \
-#	outofmemory.d syserror.d utf.d uri.d \
-#	ctype.d aaA.d adi.d file.d compiler.d system.d \
-#	moduleinit.d cast.d math.d qsort.d \
-#	outbuffer.d unittest.d stream.d ctype.d random.d adi.d \
-#	math2.d thread.d obj.d iunknown.d intrinsic.d time.d memset.d \
-#	array.d switcherr.d arraycast.d errno.c alloca.d internal/cmath2.d \
-#	D/win32/d \
-#	ti_wchar.d ti_uint.d ti_short.d ti_ushort.d \
-#	ti_byte.d ti_ubyte.d ti_long.d ti_ulong.d ti_ptr.d \
-#	ti_float.d ti_double.d ti_real.d ti_delegate.d \
-#	ti_creal.d ti_ireal.d ti_cfloat.d ti_ifloat.d \
-#	ti_cdouble.d ti_idouble.d \
-#	ti_Aa.d ti_AC.d ti_Ag.d ti_Aubyte.d ti_Aushort.d ti_Ashort.o \
-#	ti_Aint.d ti_Auint.d ti_Along.d ti_Aulong.d ti_Awchar.d \
-#	ti_C.d ti_int.d ti_char.d ti_dchar.d ti_Adchar.d \
-#	crc32.d stdint.d conv.d gcstats.d linux.d deh2.d date.d llmath.d \
-#	win32.mak linux.mak
+GC_OBJS= internal/gc/gc.o internal/gc/gcx.o \
+	internal/gc/gcbits.o internal/gc/gclinux.o
 
 SRC=	errno.c object.d unittest.d crc32.d gcstats.d
 
-SRCSTD= std/zlib.d std/zip.d std/stdint.d std/conv.d std/utf.d std/uri.d \
+SRC_STD= std/zlib.d std/zip.d std/stdint.d std/conv.d std/utf.d std/uri.d \
 	std/gc.d std/math.d std/string.d std/path.d std/date.d \
 	std/ctype.d std/file.d std/compiler.d std/system.d std/moduleinit.d \
-	std/outbuffer.d std/math2.d std/thread.d \
+	std/outbuffer.d std/math2.d std/thread.d std/md5.d \
 	std/asserterror.d std/dateparse.d std/outofmemory.d \
 	std/intrinsic.d std/array.d std/switcherr.d std/syserror.d \
-	std/regexp.d std/random.d std/stream.d std/process.d
+	std/regexp.d std/random.d std/stream.d std/process.d std/recls.d
 
-SRCSTDC= std/c/process.d std/c/stdlib.d std/c/time.d std/c/stdio.d
+SRC_STD_C= std/c/process.d std/c/stdlib.d std/c/time.d std/c/stdio.d std/c/math.d
 
-SRCTI=	\
+SRC_TI=	\
 	std/typeinfo/ti_wchar.d std/typeinfo/ti_uint.d \
 	std/typeinfo/ti_short.d std/typeinfo/ti_ushort.d \
 	std/typeinfo/ti_byte.d std/typeinfo/ti_ubyte.d \
@@ -130,7 +110,7 @@ SRCTI=	\
 	std/typeinfo/ti_Along.d std/typeinfo/ti_Aulong.d \
 	std/typeinfo/ti_Awchar.d std/typeinfo/ti_dchar.d
 
-SRCINT=	\
+SRC_INT=	\
 	internal/switch.d internal/complex.c internal/critical.c \
 	internal/minit.asm internal/alloca.d internal/llmath.d internal/deh.c \
 	internal/arraycat.d internal/invariant.d internal/monitor.c \
@@ -138,16 +118,16 @@ SRCINT=	\
 	internal/dmain2.d internal/cast.d internal/qsort.d internal/deh2.d \
 	internal/cmath2.d internal/obj.d internal/mars.h
 
-SRCSTDWIN= std/windows/registry.d \
+SRC_STD_WIN= std/windows/registry.d \
 	std/windows/iunknown.d
 
-SRCSTDCWIN= std/c/windows/windows.d std/c/windows/com.d
+SRC_STD_C_WIN= std/c/windows/windows.d std/c/windows/com.d
 
-SRCSTDCLINUX= std/c/linux/linux.d std/c/linux/linuxextern.d
+SRC_STD_C_LINUX= std/c/linux/linux.d std/c/linux/linuxextern.d
 
-SRCETC= etc/c/zlib.d
+SRC_ETC= etc/c/zlib.d
 
-SRCZLIB= etc/c/zlib/algorithm.txt \
+SRC_ZLIB= etc/c/zlib/algorithm.txt \
 	etc/c/zlib/trees.h \
 	etc/c/zlib/inffixed.h \
 	etc/c/zlib/INDEX \
@@ -186,7 +166,7 @@ SRCZLIB= etc/c/zlib/algorithm.txt \
 	etc/c/zlib/zlib.lib \
 	etc/c/zlib/README
 
-SRCGC= internal/gc/gc.d \
+SRC_GC= internal/gc/gc.d \
 	internal/gc/gcx.d \
 	internal/gc/gcbits.d \
 	internal/gc/win32.d \
@@ -195,12 +175,76 @@ SRCGC= internal/gc/gc.d \
 	internal/gc/win32.mak \
 	internal/gc/linux.mak
 
-ALLSRCS = $(SRC) $(SRCSTD) $(SRCSTDC) $(SRCTI) $(SRCINT) $(SRCSTDWIN) \
-	$(SRCSTDCWIN) $(SRCSTDCLINUX) $(SRCETC) $(SRCZLIB) $(SRCGC)
+SRC_STLSOFT= \
+	etc/c/stlsoft/stlsoft_null_mutex.h \
+	etc/c/stlsoft/unixstl_string_access.h \
+	etc/c/stlsoft/unixstl.h \
+	etc/c/stlsoft/winstl_tls_index.h \
+	etc/c/stlsoft/unixstl_environment_variable.h \
+	etc/c/stlsoft/unixstl_functionals.h \
+	etc/c/stlsoft/unixstl_current_directory.h \
+	etc/c/stlsoft/unixstl_limits.h \
+	etc/c/stlsoft/unixstl_current_directory_scope.h \
+	etc/c/stlsoft/unixstl_filesystem_traits.h \
+	etc/c/stlsoft/unixstl_findfile_sequence.h \
+	etc/c/stlsoft/unixstl_glob_sequence.h \
+	etc/c/stlsoft/winstl.h \
+	etc/c/stlsoft/winstl_atomic_functions.h \
+	etc/c/stlsoft/stlsoft_cccap_gcc.h \
+	etc/c/stlsoft/stlsoft_lock_scope.h \
+	etc/c/stlsoft/unixstl_thread_mutex.h \
+	etc/c/stlsoft/unixstl_spin_mutex.h \
+	etc/c/stlsoft/unixstl_process_mutex.h \
+	etc/c/stlsoft/stlsoft_null.h \
+	etc/c/stlsoft/stlsoft_nulldef.h \
+	etc/c/stlsoft/winstl_thread_mutex.h \
+	etc/c/stlsoft/winstl_spin_mutex.h \
+	etc/c/stlsoft/winstl_system_version.h \
+	etc/c/stlsoft/winstl_findfile_sequence.h \
+	etc/c/stlsoft/unixstl_readdir_sequence.h \
+	etc/c/stlsoft/stlsoft.h \
+	etc/c/stlsoft/stlsoft_static_initialisers.h \
+	etc/c/stlsoft/stlsoft_iterator.h \
+	etc/c/stlsoft/stlsoft_cccap_dmc.h \
+	etc/c/stlsoft/winstl_filesystem_traits.h
+
+SRC_RECLS= \
+	etc/c/recls/recls_compiler.h \
+	etc/c/recls/recls_language.h \
+	etc/c/recls/recls_unix.h \
+	etc/c/recls/recls_retcodes.h \
+	etc/c/recls/recls_assert.h \
+	etc/c/recls/recls_platform.h \
+	etc/c/recls/recls_win32.h \
+	etc/c/recls/recls.h \
+	etc/c/recls/recls_util.h \
+	etc/c/recls/recls_compiler_dmc.h \
+	etc/c/recls/recls_compiler_gcc.h \
+	etc/c/recls/recls_platform_types.h \
+	etc/c/recls/recls_internal.h \
+	etc/c/recls/recls_debug.h \
+	etc/c/recls/recls_fileinfo_win32.cpp \
+	etc/c/recls/recls_api_unix.cpp \
+	etc/c/recls/recls_api.cpp \
+	etc/c/recls/recls_util_win32.cpp \
+	etc/c/recls/recls_util_unix.cpp \
+	etc/c/recls/recls_util.cpp \
+	etc/c/recls/recls_internal.cpp \
+	etc/c/recls/recls_fileinfo.cpp \
+	etc/c/recls/recls_defs.h \
+	etc/c/recls/recls_fileinfo_unix.cpp \
+	etc/c/recls/recls_api_win32.cpp \
+	etc/c/recls/win32.mak \
+	etc/c/recls/linux.mak \
+	etc/c/recls/recls.lib
+
+ALLSRCS = $(SRC) $(SRC_STD) $(SRC_STD_C) $(SRC_TI) $(SRC_INT) $(SRC_STD_WIN) \
+	$(SRC_STD_C_WIN) $(SRC_STD_C_LINUX) $(SRC_ETC) $(SRC_ZLIB) $(SRC_GC) \
+	$(SRC_RECLS) $(SRC_STLSOFT)
 
 
 libphobos.a : $(OBJS) internal/gc/dmgc.a linux.mak
-	ar -r $@ $(OBJS) $(ZLIBOBJS) $(GCOBJS)
+	ar -r $@ $(OBJS) $(ZLIB_OBJS) $(GC_OBJS) $(RECLS_OBJS)
 
 ###########################################################
 
@@ -309,6 +353,9 @@ math.o : std/math.d
 math2.o : std/math2.d
 	$(DMD) -c $(DFLAGS) std/math2.d
 
+md5.o : std/md5.d
+	$(DMD) -c $(DFLAGS) std/md5.d
+
 moduleinit.o : std/moduleinit.d
 	$(DMD) -c $(DFLAGS) std/moduleinit.d
 
@@ -329,6 +376,9 @@ process.o : std/process.d
 
 random.o : std/random.d
 	$(DMD) -c $(DFLAGS) std/random.d
+
+recls.o : std/recls.d
+	$(DMD) -c $(DFLAGS) std/recls.d
 
 regexp.o : std/regexp.d
 	$(DMD) -c $(DFLAGS) std/regexp.d

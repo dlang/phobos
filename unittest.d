@@ -23,6 +23,7 @@ import std.stream;
 import std.utf;
 import std.uri;
 import std.zlib;
+import std.md5;
 
 int main(char[][] args)
 {
@@ -30,13 +31,16 @@ int main(char[][] args)
     // Bring in unit test for module by referencing function in it
 
     cmp("foo", "bar");			// string
+printf("test1\n");
     fncharmatch('a', 'b');		// path
     isnan(1.0);				// math
     feq(1.0, 2.0);			// math2
+printf("test1\n");
     OutBuffer b = new OutBuffer();	// outbuffer
     std.ctype.tolower('A');		// ctype
     RegExp r = new RegExp(null, null);	// regexp
     std.random.rand();
+printf("test2\n");
     int a[];
     a.reverse;				// adi
     a.sort;				// qsort
@@ -45,6 +49,9 @@ int main(char[][] args)
     isValidDchar((dchar)0);			// utf
     std.uri.ascii2hex(0);			// uri
     std.zlib.adler32(0,null);			// D.zlib
+
+    ubyte[16] buf;
+    std.md5.sum(buf,"");
 
 {
     creal c = 3.0 + 4.0i;

@@ -274,7 +274,7 @@ void test1()
 
 /* ---------------------------- */
 
-int main(int argc, char *argv[])
+int main(char[][] args)
 {
     test1();
 

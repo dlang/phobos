@@ -54,13 +54,13 @@ unittest.exe : unittest.d phobos.lib
 OBJS= asserterror.obj deh.obj switch.obj complex.obj gcstats.obj \
 	critical.obj object.obj monitor.obj arraycat.obj invariant.obj \
 	dmain2.obj outofmemory.obj aaA.obj adi.obj file.obj \
-	compiler.obj system.obj moduleinit.obj \
+	compiler.obj system.obj moduleinit.obj md5.obj \
 	cast.obj syserror.obj path.obj string.obj memset.obj math.obj \
 	outbuffer.obj ctype.obj regexp.obj random.obj windows.obj \
 	stream.obj switcherr.obj com.obj array.obj gc.obj \
 	qsort.obj math2.obj date.obj dateparse.obj thread.obj obj.obj \
 	iunknown.obj crc32.obj conv.obj arraycast.obj utf.obj uri.obj \
-	Czlib.obj Dzlib.obj zip.obj process.obj registry.obj \
+	Czlib.obj Dzlib.obj zip.obj process.obj registry.obj recls.obj \
 	ti_Aa.obj ti_Ag.obj ti_C.obj ti_int.obj ti_char.obj \
 	ti_wchar.obj ti_uint.obj ti_short.obj ti_ushort.obj \
 	ti_byte.obj ti_ubyte.obj ti_long.obj ti_ulong.obj ti_ptr.obj \
@@ -75,17 +75,17 @@ OBJS= asserterror.obj deh.obj switch.obj complex.obj gcstats.obj \
 
 SRC=	errno.c object.d unittest.d crc32.d gcstats.d
 
-SRCSTD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
+SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 	std\gc.d std\math.d std\string.d std\path.d std\date.d \
 	std\ctype.d std\file.d std\compiler.d std\system.d std\moduleinit.d \
-	std\outbuffer.d std\math2.d std\thread.d \
+	std\outbuffer.d std\math2.d std\thread.d std\md5.d \
 	std\asserterror.d std\dateparse.d std\outofmemory.d \
 	std\intrinsic.d std\array.d std\switcherr.d std\syserror.d \
-	std\regexp.d std\random.d std\stream.d std\process.d
+	std\regexp.d std\random.d std\stream.d std\process.d std\recls.d
 
-SRCSTDC= std\c\process.d std\c\stdlib.d std\c\time.d std\c\stdio.d
+SRC_STD_C= std\c\process.d std\c\stdlib.d std\c\time.d std\c\stdio.d
 
-SRCTI=	\
+SRC_TI=	\
 	std\typeinfo\ti_wchar.d std\typeinfo\ti_uint.d \
 	std\typeinfo\ti_short.d std\typeinfo\ti_ushort.d \
 	std\typeinfo\ti_byte.d std\typeinfo\ti_ubyte.d \
@@ -105,7 +105,7 @@ SRCTI=	\
 	std\typeinfo\ti_Along.d std\typeinfo\ti_Aulong.d \
 	std\typeinfo\ti_Awchar.d std\typeinfo\ti_dchar.d
 
-SRCINT=	\
+SRC_INT=	\
 	internal\switch.d internal\complex.c internal\critical.c \
 	internal\minit.asm internal\alloca.d internal\llmath.d internal\deh.c \
 	internal\arraycat.d internal\invariant.d internal\monitor.c \
@@ -113,16 +113,16 @@ SRCINT=	\
 	internal\dmain2.d internal\cast.d internal\qsort.d internal\deh2.d \
 	internal\cmath2.d internal\obj.d internal\mars.h
 
-SRCSTDWIN= std\windows\registry.d \
+SRC_STD_WIN= std\windows\registry.d \
 	std\windows\iunknown.d
 
-SRCSTDCWIN= std\c\windows\windows.d std\c\windows\com.d
+SRC_STD_C_WIN= std\c\windows\windows.d std\c\windows\com.d
 
-SRCSTDCLINUX= std\c\linux\linux.d std\c\linux\linuxextern.d
+SRC_STD_C_LINUX= std\c\linux\linux.d std\c\linux\linuxextern.d
 
-SRCETC= etc\c\zlib.d
+SRC_ETC= etc\c\zlib.d
 
-SRCZLIB= etc\c\zlib\algorithm.txt \
+SRC_ZLIB= etc\c\zlib\algorithm.txt \
 	etc\c\zlib\trees.h \
 	etc\c\zlib\inffixed.h \
 	etc\c\zlib\INDEX \
@@ -161,7 +161,7 @@ SRCZLIB= etc\c\zlib\algorithm.txt \
 	etc\c\zlib\zlib.lib \
 	etc\c\zlib\README
 
-SRCGC= internal\gc\gc.d \
+SRC_GC= internal\gc\gc.d \
 	internal\gc\gcx.d \
 	internal\gc\gcbits.d \
 	internal\gc\win32.d \
@@ -170,7 +170,72 @@ SRCGC= internal\gc\gc.d \
 	internal\gc\win32.mak \
 	internal\gc\linux.mak
 
-phobos.lib : $(OBJS) minit.obj internal\gc\dmgc.lib etc\c\zlib\zlib.lib win32.mak
+SRC_STLSOFT= \
+	etc\c\stlsoft\stlsoft_null_mutex.h \
+	etc\c\stlsoft\unixstl_string_access.h \
+	etc\c\stlsoft\unixstl.h \
+	etc\c\stlsoft\winstl_tls_index.h \
+	etc\c\stlsoft\unixstl_environment_variable.h \
+	etc\c\stlsoft\unixstl_functionals.h \
+	etc\c\stlsoft\unixstl_current_directory.h \
+	etc\c\stlsoft\unixstl_limits.h \
+	etc\c\stlsoft\unixstl_current_directory_scope.h \
+	etc\c\stlsoft\unixstl_filesystem_traits.h \
+	etc\c\stlsoft\unixstl_findfile_sequence.h \
+	etc\c\stlsoft\unixstl_glob_sequence.h \
+	etc\c\stlsoft\winstl.h \
+	etc\c\stlsoft\winstl_atomic_functions.h \
+	etc\c\stlsoft\stlsoft_cccap_gcc.h \
+	etc\c\stlsoft\stlsoft_lock_scope.h \
+	etc\c\stlsoft\unixstl_thread_mutex.h \
+	etc\c\stlsoft\unixstl_spin_mutex.h \
+	etc\c\stlsoft\unixstl_process_mutex.h \
+	etc\c\stlsoft\stlsoft_null.h \
+	etc\c\stlsoft\stlsoft_nulldef.h \
+	etc\c\stlsoft\winstl_thread_mutex.h \
+	etc\c\stlsoft\winstl_spin_mutex.h \
+	etc\c\stlsoft\winstl_system_version.h \
+	etc\c\stlsoft\winstl_findfile_sequence.h \
+	etc\c\stlsoft\unixstl_readdir_sequence.h \
+	etc\c\stlsoft\stlsoft.h \
+	etc\c\stlsoft\stlsoft_static_initialisers.h \
+	etc\c\stlsoft\stlsoft_iterator.h \
+	etc\c\stlsoft\stlsoft_cccap_dmc.h \
+	etc\c\stlsoft\winstl_filesystem_traits.h
+
+SRC_RECLS= \
+	etc\c\recls\recls_compiler.h \
+	etc\c\recls\recls_language.h \
+	etc\c\recls\recls_unix.h \
+	etc\c\recls\recls_retcodes.h \
+	etc\c\recls\recls_assert.h \
+	etc\c\recls\recls_platform.h \
+	etc\c\recls\recls_win32.h \
+	etc\c\recls\recls.h \
+	etc\c\recls\recls_util.h \
+	etc\c\recls\recls_compiler_dmc.h \
+	etc\c\recls\recls_compiler_gcc.h \
+	etc\c\recls\recls_platform_types.h \
+	etc\c\recls\recls_internal.h \
+	etc\c\recls\recls_debug.h \
+	etc\c\recls\recls_fileinfo_win32.cpp \
+	etc\c\recls\recls_api_unix.cpp \
+	etc\c\recls\recls_api.cpp \
+	etc\c\recls\recls_util_win32.cpp \
+	etc\c\recls\recls_util_unix.cpp \
+	etc\c\recls\recls_util.cpp \
+	etc\c\recls\recls_internal.cpp \
+	etc\c\recls\recls_fileinfo.cpp \
+	etc\c\recls\recls_defs.h \
+	etc\c\recls\recls_fileinfo_unix.cpp \
+	etc\c\recls\recls_api_win32.cpp \
+	etc\c\recls\win32.mak \
+	etc\c\recls\linux.mak \
+	etc\c\recls\recls.lib
+
+
+phobos.lib : $(OBJS) minit.obj internal\gc\dmgc.lib etc\c\zlib\zlib.lib \
+	win32.mak etc\c\recls\recls.lib
 	lib -c phobos.lib $(OBJS) minit.obj internal\gc\dmgc.lib etc\c\zlib\zlib.lib
 
 ######################################################
@@ -260,6 +325,9 @@ math.obj : std\math.d
 math2.obj : std\math2.d
 	$(DMD) -c $(DFLAGS) std\math2.d
 
+md5.obj : std\md5.d
+	$(DMD) -c $(DFLAGS) -inline std\md5.d
+
 moduleinit.obj : std\moduleinit.d
 	$(DMD) -c $(DFLAGS) std\moduleinit.d
 
@@ -280,6 +348,9 @@ process.obj : std\process.d
 
 random.obj : std\random.d
 	$(DMD) -c $(DFLAGS) std\random.d
+
+recls.obj : std\recls.d
+	$(DMD) -c $(DFLAGS) std\recls.d
 
 regexp.obj : std\regexp.d
 	$(DMD) -c $(DFLAGS) std\regexp.d
@@ -446,21 +517,23 @@ ti_int.obj : std\typeinfo\ti_int.d
 ######################################################
 
 zip : win32.mak linux.mak $(SRC) \
-	$(SRCSTD) $(SRCSTDC) $(SRCTI) $(SRCINT) $(SRCSTDWIN) \
-	$(SRCSTDLINUX) $(SRCETC) $(SRCZLIB) $(SRCGC)
+	$(SRC_STD) $(SRC_STD_C) $(SRC_TI) $(SRC_INT) $(SRC_STD_WIN) \
+	$(SRC_STDLINUX) $(SRC_ETC) $(SRC_ZLIB) $(SRC_GC)
 	del phobos.zip
 	zip32 -u phobos win32.mak linux.mak
 	zip32 -u phobos $(SRC)
-	zip32 -u phobos $(SRCTI)
-	zip32 -u phobos $(SRCINT)
-	zip32 -u phobos $(SRCSTD)
-	zip32 -u phobos $(SRCSTDC)
-	zip32 -u phobos $(SRCSTDWIN)
-	zip32 -u phobos $(SRCSTDCWIN)
-	zip32 -u phobos $(SRCSTDCLINUX)
-	zip32 -u phobos $(SRCETC)
-	zip32 -u phobos $(SRCZLIB)
-	zip32 -u phobos $(SRCGC)
+	zip32 -u phobos $(SRC_TI)
+	zip32 -u phobos $(SRC_INT)
+	zip32 -u phobos $(SRC_STD)
+	zip32 -u phobos $(SRC_STD_C)
+	zip32 -u phobos $(SRC_STD_WIN)
+	zip32 -u phobos $(SRC_STD_C_WIN)
+	zip32 -u phobos $(SRC_STD_C_LINUX)
+	zip32 -u phobos $(SRC_ETC)
+	zip32 -u phobos $(SRC_ZLIB)
+	zip32 -u phobos $(SRC_GC)
+	zip32 -u phobos $(SRC_RECLS)
+	zip32 -u phobos $(SRC_STLSOFT)
 
 clean:
 	del $(OBJS)
@@ -469,14 +542,16 @@ install:
 	$(CP) phobos.lib \dmd\lib
 	$(CP) win32.mak linux.mak minit.obj \dmd\src\phobos
 	$(CP) $(SRC) \dmd\src\phobos
-	$(CP) $(SRCSTD) \dmd\src\phobos\std
-	$(CP) $(SRCSTDC) \dmd\src\phobos\std\c
-	$(CP) $(SRCTI) \dmd\src\phobos\std\typeinfo
-	$(CP) $(SRCINT) \dmd\src\phobos\internal
-	$(CP) $(SRCSTDWIN) \dmd\src\phobos\std\windows
-	$(CP) $(SRCSTDCWIN) \dmd\src\phobos\std\c\windows
-	$(CP) $(SRCSTDCLINUX) \dmd\src\phobos\std\c\linux
-	$(CP) $(SRCETC) \dmd\src\phobos\etc\c
-	$(CP) $(SRCZLIB) \dmd\src\phobos\etc\c\zlib
-	$(CP) $(SRCGC) \dmd\src\phobos\internal\gc
+	$(CP) $(SRC_STD) \dmd\src\phobos\std
+	$(CP) $(SRC_STD_C) \dmd\src\phobos\std\c
+	$(CP) $(SRC_TI) \dmd\src\phobos\std\typeinfo
+	$(CP) $(SRC_INT) \dmd\src\phobos\internal
+	$(CP) $(SRC_STD_WIN) \dmd\src\phobos\std\windows
+	$(CP) $(SRC_STD_C_WIN) \dmd\src\phobos\std\c\windows
+	$(CP) $(SRC_STD_C_LINUX) \dmd\src\phobos\std\c\linux
+	$(CP) $(SRC_ETC) \dmd\src\phobos\etc\c
+	$(CP) $(SRC_ZLIB) \dmd\src\phobos\etc\c\zlib
+	$(CP) $(SRC_GC) \dmd\src\phobos\internal\gc
+	$(CP) $(SRC_RECLS) \dmd\src\phobos\etc\c\recls
+	$(CP) $(SRC_STLSOFT) \dmd\src\phobos\etc\c\stlsoft
 

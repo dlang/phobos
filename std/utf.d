@@ -436,11 +436,28 @@ wchar[] toUTF16(char[] s)
 {
     wchar[] r;
 
+    r.length = s.length;
+    r.length = 0;
     for (uint i = 0; i < s.length; )
     {
 	dchar c = decode(s, i);
 	encode(r, c);
     }
+    return r;
+}
+
+wchar* toUTF16z(char[] s)
+{
+    wchar[] r;
+
+    r.length = s.length + 1;
+    r.length = 0;
+    for (uint i = 0; i < s.length; )
+    {
+	dchar c = decode(s, i);
+	encode(r, c);
+    }
+    r ~= "\000";
     return r;
 }
 

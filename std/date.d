@@ -55,6 +55,67 @@ d_time LocalTZA = 0;
 const char[] daystr = "SunMonTueWedThuFriSat";
 const char[] monstr = "JanFebMarAprMayJunJulAugSepOctNovDec";
 
+/********************************
+ * Compute ISO 8601 week based year.
+ * Week 1 is first week with Jan 4 in it.
+ * Monday is start of week.
+ * Weeks are 1..53
+ */
+
+void toISO8601YearWeek(d_time t, out int year, out int week)
+{
+    year = YearFromTime(t);
+
+    int yday = Day(t) - DayFromYear(year);
+    int d;
+    int w;
+    int ydaybeg;
+
+    /* Determine day of week Jan 4 falls on.
+     * Weeks begin on a Monday.
+     */
+
+    d = DayFromYear(year);
+    w = (d + 3/*Jan4*/ + 3) % 7;
+    if (w < 0)
+        w += 7;
+
+    /* Find yday of beginning of ISO 8601 year
+     */
+    ydaybeg = 3/*Jan4*/ - w;
+
+    /* Check if yday is actually the last week of the previous year
+     */
+    if (yday < ydaybeg)
+    {
+	year -= 1;
+	week = 53;
+        return;
+    }
+
+    /* Check if yday is actually the first week of the next year
+     */
+    if (yday >= 362)                            // possible
+    {   int d2;
+        int ydaybeg2;
+
+        d2 = DayFromYear(year + 1);
+        w = (d2 + 3/*Jan4*/ + 3) % 7;
+        if (w < 0)
+            w += 7;
+        //printf("w = %d\n", w);
+        ydaybeg2 = 3/*Jan4*/ - w;
+        if (d + yday >= d2 + ydaybeg2)
+        {
+	    year += 1;
+	    week = 1;
+            return;
+        }
+    }
+
+    week = (yday - ydaybeg) / 7 + 1;
+}
+
 d_time floor(d_time d)
 {
     return d;

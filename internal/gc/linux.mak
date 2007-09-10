@@ -5,7 +5,7 @@ DMD=../../../dmd
 #DMD=/dmd/bin/dmd
 CFLAGS=-g
 #DFLAGS=-unittest -g -release
-DFLAGS=-release -O -inline -I..
+DFLAGS=-release -O -inline -I../..
 #DFLAGS=-release -inline -O
 CC=gcc
 

@@ -273,8 +273,8 @@ struct WIN32_FIND_DATAW {
     DWORD nFileSizeLow;
     DWORD dwReserved0;
     DWORD dwReserved1;
-    WCHAR  cFileName[ 260  ];
-    WCHAR  cAlternateFileName[ 14 ];
+    wchar  cFileName[ 260  ];
+    wchar  cAlternateFileName[ 14 ];
 }
 
 export
@@ -291,18 +291,29 @@ BOOL RemoveDirectoryA(LPCSTR lpPathName);
 BOOL RemoveDirectoryW(LPCWSTR lpPathName);
 
 BOOL   CloseHandle(HANDLE hObject);
+
 HANDLE CreateFileA(char *lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode,
 	SECURITY_ATTRIBUTES *lpSecurityAttributes, DWORD dwCreationDisposition,
 	DWORD dwFlagsAndAttributes, HANDLE hTemplateFile);
+HANDLE CreateFileW(LPCWSTR lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode,
+	SECURITY_ATTRIBUTES *lpSecurityAttributes, DWORD dwCreationDisposition,
+	DWORD dwFlagsAndAttributes, HANDLE hTemplateFile);
+
 BOOL   DeleteFileA(char *lpFileName);
+BOOL   DeleteFileW(LPCWSTR lpFileName);
+
 BOOL   FindClose(HANDLE hFindFile);
-HANDLE FindFirstFileA(char *lpFileName, WIN32_FIND_DATA *lpFindFileData);
-BOOL   FindNextFileA(HANDLE hFindFile, WIN32_FIND_DATA *lpFindFileData);
+HANDLE FindFirstFileA(char *lpFileName, WIN32_FIND_DATA* lpFindFileData);
+HANDLE FindFirstFileW(LPCWSTR lpFileName, WIN32_FIND_DATAW* lpFindFileData);
+BOOL   FindNextFileA(HANDLE hFindFile, WIN32_FIND_DATA* lpFindFileData);
+BOOL   FindNextFileW(HANDLE hFindFile, WIN32_FIND_DATAW* lpFindFileData);
 BOOL   GetExitCodeThread(HANDLE hThread, DWORD *lpExitCode);
 DWORD  GetLastError();
 DWORD  GetFileAttributesA(char *lpFileName);
+DWORD  GetFileAttributesW(wchar *lpFileName);
 DWORD  GetFileSize(HANDLE hFile, DWORD *lpFileSizeHigh);
 BOOL   MoveFileA(char *from, char *to);
+BOOL   MoveFileW(LPCWSTR lpExistingFileName, LPCWSTR lpNewFileName);
 BOOL   ReadFile(HANDLE hFile, void *lpBuffer, DWORD nNumberOfBytesToRead,
 	DWORD *lpNumberOfBytesRead, OVERLAPPED *lpOverlapped);
 DWORD  SetFilePointer(HANDLE hFile, LONG lDistanceToMove,

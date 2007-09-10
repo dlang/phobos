@@ -1,6 +1,6 @@
 
 // Regular Expressions
-// Copyright (c) 2000-2001 by Digital Mars
+// Copyright (c) 2000-2003 by Digital Mars
 // All Rights Reserved
 // Written by Walter Bright
 // www.digitalmars.com
@@ -302,6 +302,17 @@ unittest
     //printf("j = '%.*s'\n", j);
     i = std.string.cmp(j, "a,,b,font,/,b,bar,,TAG,hello,/,TAG,");
     assert(i == 0);
+
+    r = new RegExp("a[bc]", null);
+    result = r.match("123ab");
+    j = join(result, ",");
+    i = std.string.cmp(j, "ab");
+    assert(i == 0);
+    
+    result = r.match("ac");
+    j = join(result, ",");
+    i = std.string.cmp(j, "ac");
+    assert(i == 0);
 }
 
 /*************************************************
@@ -458,7 +469,10 @@ unittest
 
 public tchar[][] exec(tchar[] string)
 {
+    debug(regexp) printf("regexp.exec(string = '%.*s')\n", string);
     input = string;
+    pmatch[0].rm_so = 0;
+    pmatch[0].rm_eo = 0;
     return exec();
 }
 

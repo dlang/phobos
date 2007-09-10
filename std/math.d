@@ -9,14 +9,15 @@ module std.math;
 //debug=math;		// uncomment to turn on debugging printf's
 
 private import std.c.stdio;
+private import std.c.math;
 
 /* Intrinsics */
 
 real cos(real);
+real sin(real);
 real fabs(real);
 real rint(real);
 long rndtol(real);
-real sin(real);
 real ldexp(real, int);
 
 float sqrt(float);
@@ -24,44 +25,49 @@ double sqrt(double);
 real sqrt(real);
 //creal sqrt(creal);
 
+real acos(real x)		{ return std.c.math.acosl(x); }
+real asin(real x)		{ return std.c.math.asinl(x); }
+real atan(real x)		{ return std.c.math.atanl(x); }
+real atan2(real x, real y)	{ return std.c.math.atan2l(x,y); }
+real cosh(real x)		{ return std.c.math.coshl(x); }
+real sinh(real x)		{ return std.c.math.sinhl(x); }
+real tanh(real x)		{ return std.c.math.tanhl(x); }
 
-extern (C)
-{
-    // BUG: these have double arguments, but we need real
-    real acos(double);
-    real asin(double);
-    real atan(double);
-    real atan2(double, double);
-    real cosh(double);
-    real sinh(double);
-    real tanh(double);
-    real exp(double);
-    real log(double);
-    real log10(double);
-    real modf(double, double *);
-    real pow(double, double);
-    real ceil(double);
-    real floor(double);
-    real log1p(double);
-    real expm1(double);
-    real atof(char *);
-}
+//real acosh(real x)		{ return std.c.math.acoshl(x); }
+//real asinh(real x)		{ return std.c.math.asinhl(x); }
+//real atanh(real x)		{ return std.c.math.atanhl(x); }
 
-const real PI = 		3.14159265358979323846;
-const real LOG2 =		0.30102999566398119521;
-const real LN2 =		0.6931471805599453094172321;
-const real LOG2T =		3.32192809488736234787;
-const real LOG2E =		1.4426950408889634074;
-const real E =			2.7182818284590452354;
-const real LOG10E =		0.43429448190325182765;
-const real LN10 =		2.30258509299404568402;
-const real PI_2 =		1.57079632679489661923;
-const real PI_4 =		0.78539816339744830962;
-const real M_1_PI =		0.31830988618379067154;
-const real M_2_PI =		0.63661977236758134308;
-const real M_2_SQRTPI =		1.12837916709551257390;
-const real SQRT2 =		1.41421356237309504880;
-const real SQRT1_2 =		0.70710678118654752440;
+real exp(real x)		{ return std.c.math.expl(x); }
+real exp2(real x)		{ return std.c.math.exp2l(x); }
+real expm1(real x)		{ return std.c.math.expm1l(x); }
+int  ilogb(real x)		{ return std.c.math.ilogbl(x); }
+real log(real x)		{ return std.c.math.logl(x); }
+real log10(real x)		{ return std.c.math.log10l(x); }
+real log1p(real x)		{ return std.c.math.log1pl(x); }
+real log2(real x)		{ return std.c.math.log2l(x); }
+real logb(real x)		{ return std.c.math.logbl(x); }
+real modf(real x, inout real y)	{ return std.c.math.modfl(x,&y); }
+real cbrt(real x)		{ return std.c.math.cbrtl(x); }
+real erf(real x)		{ return std.c.math.erfl(x); }
+real erfc(real x)		{ return std.c.math.erfcl(x); }
+real ceil(real x)		{ return std.c.math.ceill(x); }
+real floor(real x)		{ return std.c.math.floorl(x); }
+
+const real PI =		0x1.921fb54442d1846ap+1;	// 3.14159 fldpi
+const real LOG2T =	0x1.a934f0979a3715fcp+1;	// 3.32193 fldl2t
+const real LOG2E =	0x1.71547652b82fe178p+0;	// 1.4427 fldl2e
+const real LOG2 =	0x1.34413509f79fef32p-2;	// 0.30103 fldlg2
+const real LN2 =	0x1.62e42fefa39ef358p-1;	// 0.693147 fldln2
+const real E =		2.7182818284590452354L;
+const real LOG10E =	0.43429448190325182765;
+const real LN10 =	2.30258509299404568402;
+const real PI_2 =	1.57079632679489661923;
+const real PI_4 =	0.78539816339744830962;
+const real M_1_PI =	0.31830988618379067154;
+const real M_2_PI =	0.63661977236758134308;
+const real M_2_SQRTPI =	1.12837916709551257390;
+const real SQRT2 =	1.41421356237309504880;
+const real SQRT1_2 =	0.70710678118654752440;
 
 /*
 	Octal versions:
@@ -642,9 +648,14 @@ real pow(real x, uint n)
 real pow(real x, int n)
 {
     if (n < 0)
-	return pow((double)x, cast(double)n);
+	return std.c.math.powl(x, n);
     else
 	return pow(x, cast(uint)n);
+}
+
+real pow(real x, real y)
+{
+    return std.c.math.powl(x, y);
 }
 
 unittest

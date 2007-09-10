@@ -46,6 +46,9 @@ extern (C)
     void *memcpy(void *, void *, uint);
     void *memmove(void *, void *, uint);
     void *memset(void *, uint, uint);
+
+    int wcslen(wchar *);
+    int wcscmp(wchar *, wchar *);
 }
 
 /************** Exceptions ****************/
@@ -396,7 +399,7 @@ int rfind(char[] s, char[] sub)
 	else
 	{
 	    assert(0 <= result && result < s.length - sub.length + 1);
-	    assert(memcmp(&s[result], sub, sub.length) == 0);
+	    assert(memcmp(&s[0] + result, sub, sub.length) == 0);
 	}
     }
     body
@@ -406,6 +409,8 @@ int rfind(char[] s, char[] sub)
 	if (sub.length == 0)
 	    return s.length;
 	c = sub[0];
+	if (sub.length == 1)
+	    return rfind(s, c);
 	for (int i = s.length - sub.length; i >= 0; i--)
 	{
 	    if (s[i] == c)
@@ -417,6 +422,21 @@ int rfind(char[] s, char[] sub)
 	return -1;
     }
 
+unittest
+{
+    int i;
+
+    i = rfind("abcdefcdef", "c");
+    assert(i == 6);
+    i = rfind("abcdefcdef", "cd");
+    assert(i == 6);
+    i = rfind("abcdefcdef", "x");
+    assert(i == -1);
+    i = rfind("abcdefcdef", "xy");
+    assert(i == -1);
+    i = rfind("abcdefcdef", "");
+    assert(i == 10);
+}
 
 /************************************
  * Convert string to lower case.
@@ -1520,20 +1540,29 @@ char[] format(char[] fmt, ...)
     b.reserve(fmt.length);
     int fmtlength = fmt.length;
     char[] s;
+    int i;
 
-    for (int i = 0; i < fmtlength; i++)
+    char getchar()
+    {
+	if (i == fmtlength)
+	{
+	    throw new StringException("invalid format");
+	}
+	char c = fmt[i];
+	i++;
+	return c;
+    }
+
+    for (i = 0; i < fmtlength; )
     {
 	char c = fmt[i];
+	i++;
 	if (c != '%')
 	{   b.write(c);
 	    continue;
 	}
-	i++;
-	if (i == fmtlength)
-	{   b.write(c);
-	    continue;
-	}
-	c = fmt[i];
+	int istart = i - 1;
+	c = getchar();
 	switch (c)
 	{
 	    case '%':
@@ -1555,6 +1584,19 @@ char[] format(char[] fmt, ...)
 		    std.utf.encode(s, dc);
 		    b.write(cast(ubyte[])s);
 		}
+		break;
+	    }
+
+	    case 'd':
+	    case 'o':
+	    case 'u':
+	    case 'x':
+	    case 'X':
+	    {	uint u;
+
+		u = *cast(uint*)ap;
+		ap += u.size;
+		b.printf(fmt[istart .. i], u);
 		break;
 	    }
 
@@ -1602,6 +1644,14 @@ unittest
 
     r = format("%s foo %s", "bar", "abc");
     i = cmp(r, "bar foo abc");
+    assert(i == 0);
+
+    r = format("foo %d", -123);
+    i = cmp(r, "foo -123");
+    assert(i == 0);
+
+    r = format("foo %u", 123);
+    i = cmp(r, "foo 123");
     assert(i == 0);
 }
 

@@ -8,7 +8,7 @@
 /* These functions are built-in intrinsics to the compiler.
  */
 
-module std.math;
+module std.intrinsic;
 
 int bsf(uint v);
 int bsr(uint v);

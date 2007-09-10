@@ -45,6 +45,7 @@ version (Win32)
 {
 
 private import std.c.windows.windows;
+private import std.utf;
 
 /********************************************
  * Read a file.
@@ -58,10 +59,10 @@ void[] read(char[] name)
     DWORD numread;
     HANDLE h;
     byte[] buf;
-    char* namez;
+    wchar* namez;
 
-    namez = toStringz(name);
-    h = CreateFileA(namez,GENERIC_READ,FILE_SHARE_READ,null,OPEN_EXISTING,
+    namez = std.utf.toUTF16z(name);
+    h = CreateFileW(namez,GENERIC_READ,FILE_SHARE_READ,null,OPEN_EXISTING,
 	FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,(HANDLE)null);
     if (h == INVALID_HANDLE_VALUE)
 	goto err1;
@@ -98,8 +99,10 @@ void write(char[] name, void[] buffer)
 {
     HANDLE h;
     DWORD numwritten;
+    wchar* namez;
 
-    h = CreateFileA(toStringz(name),GENERIC_WRITE,0,null,CREATE_ALWAYS,
+    namez = std.utf.toUTF16z(name);
+    h = CreateFileW(namez,GENERIC_WRITE,0,null,CREATE_ALWAYS,
 	FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,(HANDLE)null);
     if (h == INVALID_HANDLE_VALUE)
 	goto err;
@@ -129,8 +132,10 @@ void append(char[] name, void[] buffer)
 {
     HANDLE h;
     DWORD numwritten;
+    wchar* namez;
 
-    h = CreateFileA(toStringz(name),GENERIC_WRITE,0,null,OPEN_ALWAYS,
+    namez = std.utf.toUTF16z(name);
+    h = CreateFileW(namez,GENERIC_WRITE,0,null,OPEN_ALWAYS,
 	FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,(HANDLE)null);
     if (h == INVALID_HANDLE_VALUE)
 	goto err;
@@ -162,7 +167,7 @@ void rename(char[] from, char[] to)
 {
     BOOL result;
 
-    result = MoveFileA(toStringz(from), toStringz(to));
+    result = MoveFileW(std.utf.toUTF16z(from), std.utf.toUTF16z(to));
     if (!result)
 	throw new FileException(to, GetLastError());
 }
@@ -176,7 +181,7 @@ void remove(char[] name)
 {
     BOOL result;
 
-    result = DeleteFileA(toStringz(name));
+    result = DeleteFileW(std.utf.toUTF16z(name));
     if (!result)
 	throw new FileException(name, GetLastError());
 }
@@ -188,10 +193,10 @@ void remove(char[] name)
 
 ulong getSize(char[] name)
 {
-    WIN32_FIND_DATA filefindbuf;
+    WIN32_FIND_DATAW filefindbuf;
     HANDLE findhndl;
 
-    findhndl = FindFirstFileA(toStringz(name), &filefindbuf);
+    findhndl = FindFirstFileW(std.utf.toUTF16z(name), &filefindbuf);
     if (findhndl == (HANDLE)-1)
     {
 	throw new FileException(name, GetLastError());
@@ -209,7 +214,7 @@ uint getAttributes(char[] name)
 {
     uint result;
 
-    result = GetFileAttributesA(toStringz(name));
+    result = GetFileAttributesW(std.utf.toUTF16z(name));
     if (result == 0xFFFFFFFF)
     {
 	throw new FileException(name, GetLastError());
@@ -241,7 +246,7 @@ int isdir(char[] name)
 
 void chdir(char[] pathname)
 {
-    if (!SetCurrentDirectoryA(toStringz(pathname)))
+    if (!SetCurrentDirectoryW(std.utf.toUTF16z(pathname)))
     {
 	throw new FileException(pathname, GetLastError());
     }
@@ -253,7 +258,7 @@ void chdir(char[] pathname)
 
 void mkdir(char[] pathname)
 {
-    if (!CreateDirectoryA(toStringz(pathname), null))
+    if (!CreateDirectoryW(std.utf.toUTF16z(pathname), null))
     {
 	throw new FileException(pathname, GetLastError());
     }
@@ -265,7 +270,7 @@ void mkdir(char[] pathname)
 
 void rmdir(char[] pathname)
 {
-    if (!RemoveDirectoryA(toStringz(pathname)))
+    if (!RemoveDirectoryW(std.utf.toUTF16z(pathname)))
     {
 	throw new FileException(pathname, GetLastError());
     }
@@ -277,22 +282,22 @@ void rmdir(char[] pathname)
 
 char[] getcwd()
 {
-    char[] dir;
+    wchar[] dir;
     int length;
-    char c;
+    wchar c;
 
-    length = GetCurrentDirectoryA(0, &c);
+    length = GetCurrentDirectoryW(0, &c);
     if (!length)
     {
 	throw new FileException("getcwd", GetLastError());
     }
-    dir = new char[length];
-    length = GetCurrentDirectoryA(length, dir);
+    dir = new wchar[length];
+    length = GetCurrentDirectoryW(length, dir);
     if (!length)
     {
 	throw new FileException("getcwd", GetLastError());
     }
-    return dir[0 .. length];		// leave off terminating 0
+    return std.utf.toUTF8(dir[0 .. length]);		// leave off terminating 0
 }
 
 /***************************************************
@@ -304,10 +309,10 @@ char[][] listdir(char[] pathname)
     char[][] result;
     char[] c;
     HANDLE h;
-    WIN32_FIND_DATA fileinfo;
+    WIN32_FIND_DATAW fileinfo;
 
     c = std.path.join(pathname, "*.*");
-    h = FindFirstFileA(toStringz(c), &fileinfo);
+    h = FindFirstFileW(std.utf.toUTF16z(c), &fileinfo);
     if (h != INVALID_HANDLE_VALUE)
     {
         do
@@ -315,16 +320,15 @@ char[][] listdir(char[] pathname)
 	    int clength;
 
             // Skip "." and ".."
-            if (std.string.strcmp(fileinfo.cFileName, ".") == 0 ||
-                std.string.strcmp(fileinfo.cFileName, "..") == 0)
+            if (std.string.wcscmp(fileinfo.cFileName, ".") == 0 ||
+                std.string.wcscmp(fileinfo.cFileName, "..") == 0)
                 continue;
 
 	    i = result.length;
 	    result.length = i + 1;
-	    clength = std.string.strlen(fileinfo.cFileName);
-	    result[i] = new char[clength];
-	    result[i][] = fileinfo.cFileName[0 .. clength];
-        } while (FindNextFileA(h,&fileinfo) != FALSE);
+	    clength = std.string.wcslen(fileinfo.cFileName);
+	    result[i] = std.utf.toUTF8(fileinfo.cFileName[0 .. clength]);
+        } while (FindNextFileW(h,&fileinfo) != FALSE);
         FindClose(h);
     }
     return result;
@@ -571,7 +575,7 @@ int isdir(char[] name)
 
 void chdir(char[] pathname)
 {
-    if (std.c.linux.linux.chdir(toStringz(pathname)) == 0)
+    if (std.c.linux.linux.chdir(toStringz(pathname)))
     {
 	throw new FileException(pathname, getErrno());
     }
@@ -583,7 +587,7 @@ void chdir(char[] pathname)
 
 void mkdir(char[] pathname)
 {
-    if (std.c.linux.linux.mkdir(toStringz(pathname), 0777) == 0)
+    if (std.c.linux.linux.mkdir(toStringz(pathname), 0777))
     {
 	throw new FileException(pathname, getErrno());
     }
@@ -595,7 +599,7 @@ void mkdir(char[] pathname)
 
 void rmdir(char[] pathname)
 {
-    if (std.c.linux.linux.rmdir(toStringz(pathname)) == 0)
+    if (std.c.linux.linux.rmdir(toStringz(pathname)))
     {
 	throw new FileException(pathname, getErrno());
     }

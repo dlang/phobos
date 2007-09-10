@@ -23,7 +23,7 @@ class AssertError : Object
 
     void print()
     {
-	printf("AssertErrorion Failure %s(%u)\n", (char *)filename, linnum);
+	printf("AssertError Failure %s(%u)\n", (char *)filename, linnum);
     }
 }
 

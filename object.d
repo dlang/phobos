@@ -4,6 +4,17 @@ extern (C) int wprintf(wchar *, ...);
 
 alias bit bool;
 
+version (AMD64)
+{
+    alias ulong size_t;
+    alias long ptrdiff_t;
+}
+else
+{
+    alias uint size_t;
+    alias int ptrdiff_t;
+}
+
 class Object
 {
     void print()

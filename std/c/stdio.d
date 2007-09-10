@@ -27,8 +27,6 @@ version (linux)
 
 enum { SEEK_SET, SEEK_CUR, SEEK_END }
 
-alias uint size_t;
-
 struct _iobuf
 {
     align (1):
