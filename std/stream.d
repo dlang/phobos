@@ -72,6 +72,7 @@ private {
   import std.system;    // for Endian enumeration
   import std.intrinsic; // for bswap
   import std.utf;
+  import std.stdarg;
 }
 
 version (Windows) {

@@ -14,9 +14,10 @@
 
 module std.stdio;
 
-import std.c.stdio;
-private import std.format;
-private import std.utf;
+public  import std.c.stdio;
+
+import std.format;
+import std.utf;
 
 version (DigitalMars)
 {

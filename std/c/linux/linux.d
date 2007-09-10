@@ -8,7 +8,7 @@
 
 module std.c.linux.linux;
 
-import std.c.linux.linuxextern;
+public import std.c.linux.linuxextern;
 
 alias int pid_t;
 alias int off_t;
