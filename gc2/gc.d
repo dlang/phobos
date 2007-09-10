@@ -1,5 +1,5 @@
 //
-// Copyright (C) 2001-2002 by Digital Mars
+// Copyright (C) 2001-2003 by Digital Mars
 // All Rights Reserved
 // Written by Walter Bright
 // www.digitalmars.com
@@ -124,7 +124,7 @@ ulong _d_new(uint length, uint size)
     void *p;
     ulong result;
 
-    debug(PRINTF) printf("_d_new(length = %d, size = %d)\n", length, size);
+    debug(PRINTF) printf("_d_newarray(length = %d, size = %d)\n", length, size);
     if (length == 0 || size == 0)
 	result = 0;
     else
@@ -132,6 +132,52 @@ ulong _d_new(uint length, uint size)
 	p = _gc.malloc(length * size);
 	debug(PRINTF) printf(" p = %p\n", p);
 	memset(p, 0, length * size);
+	result = (ulong)length + ((ulong)(uint)p << 32);
+    }
+    return result;
+}
+
+ulong _d_newarrayi(uint length, uint size, ...)
+{
+    void *p;
+    ulong result;
+
+    debug(PRINTF) printf("_d_newarrayi(length = %d, size = %d)\n", length, size);
+    if (length == 0 || size == 0)
+	result = 0;
+    else
+    {   void* q = cast(void*)(&size + 1);	// pointer to initializer
+	p = _gc.malloc(length * size);
+	debug(PRINTF) printf(" p = %p\n", p);
+	if (size == 1)
+	    memset(p, *cast(ubyte*)q, length);
+	else
+	{
+	    for (uint u = 0; u < length; u++)
+	    {
+		memcpy(p + u * size, q, size);
+	    }
+	}
+	result = (ulong)length + ((ulong)(uint)p << 32);
+    }
+    return result;
+}
+
+ulong _d_newbitarray(uint length, bit value)
+{
+    void *p;
+    ulong result;
+
+    debug(PRINTF) printf("_d_newbitarray(length = %d, value = %d)\n", length, value);
+    if (length == 0)
+	result = 0;
+    else
+    {	uint size = (length + 7) >> 3;	// number of bytes
+	ubyte fill = value ? 0xFF : 0;
+
+	p = _gc.malloc(size);
+	debug(PRINTF) printf(" p = %p\n", p);
+	memset(p, fill, size);
 	result = (ulong)length + ((ulong)(uint)p << 32);
     }
     return result;

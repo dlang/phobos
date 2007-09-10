@@ -13,8 +13,8 @@
 #	This relies on LIB.EXE 8.00 or later, and MAKE.EXE 5.01 or later.
 
 CFLAGS=-g -mn -6 -r
-#DFLAGS=-O -release
-DFLAGS=-unittest -g
+DFLAGS=-O -release
+#DFLAGS=-unittest -g
 
 CC=sc
 #DMD=\dmd\bin\dmd
@@ -64,7 +64,9 @@ OBJS= assert.obj deh.obj switch.obj complex.obj gcstats.obj \
 	ti_float.obj ti_double.obj ti_real.obj ti_delegate.obj \
 	ti_creal.obj ti_ireal.obj \
 	ti_cfloat.obj ti_ifloat.obj \
-	ti_cdouble.obj ti_idouble.obj
+	ti_cdouble.obj ti_idouble.obj \
+	ti_AC.obj ti_Aubyte.obj ti_Aushort.obj ti_Ashort.obj \
+	ti_Aint.obj ti_Auint.obj ti_Along.obj ti_Aulong.obj ti_Awchar.obj
 
 HDR=mars.h
 
@@ -81,7 +83,7 @@ SRC4= ctype.d achar.d aaA.d adi.d file.d compiler.d system.d \
 	moduleinit.d cast.d math.d qsort.d
 
 SRC5=outbuffer.d unittest.d stream.d ctype.d regexp.d random.d adi.d \
-	ti_Aa.d ti_Ag.d ti_C.d ti_int.d ti_char.d
+	ti_Aa.d ti_Ag.d ti_AC.d ti_C.d ti_int.d ti_char.d
 
 SRC6=math2.d thread.d obj.d iunknown.d intrinsic.d time.d memset.d \
 	array.d switcherr.d arraycast.d
@@ -92,7 +94,10 @@ SRC7=ti_wchar.d ti_uint.d ti_short.d ti_ushort.d \
 	ti_creal.d ti_ireal.d ti_cfloat.d ti_ifloat.d \
 	ti_cdouble.d ti_idouble.d
 
-SRC8=crc32.d stdint.d conv.d gcstats.d utf.d uri.d cmath.d
+SRC8=crc32.d stdint.d conv.d gcstats.d utf.d uri.d cmath.d ti_Aubyte.d \
+	ti_Aushort.d ti_Ashort.d
+
+SRC9=ti_Aint.d ti_Auint.d ti_Along.d ti_Aulong.d ti_Awchar.d
 
 phobos.lib : $(OBJS) minit.obj gc2\dmgc.lib win32.mak
 	lib -c phobos.lib $(OBJS) minit.obj gc2\dmgc.lib
@@ -127,13 +132,23 @@ switch.obj : switch.d
 system.obj : system.d
 thread.obj : thread.d
 ti_Aa.obj : ti_Aa.d
+ti_AC.obj : ti_AC.d
 ti_Ag.obj : ti_Ag.d
+ti_Aubyte.obj : ti_Aubyte.d
+ti_Aushort.obj : ti_Aushort.d
+ti_Ashort.obj : ti_Ashort.d
+ti_Aint.obj : ti_Aint.d
+ti_Auint.obj : ti_Auint.d
+ti_Along.obj : ti_Along.d
+ti_Aulong.obj : ti_Aulong.d
+ti_Awchar.obj : ti_Awchar.d
 ti_C.obj : ti_C.d
 ti_char.obj : ti_char.d
 ti_int.obj : ti_int.d
 
 zip : win32.mak linux.mak $(HDR) $(SRC) $(SRC2) $(SRC3) $(SRC4) $(SRC5) $(SRC6) $(SRC7) \
 	$(SRC8)
+	del phobos.zip
 	zip32 -u phobos win32.mak linux.mak $(HDR)
 	zip32 -u phobos $(SRC)
 	zip32 -u phobos $(SRC2)
@@ -143,6 +158,7 @@ zip : win32.mak linux.mak $(HDR) $(SRC) $(SRC2) $(SRC3) $(SRC4) $(SRC5) $(SRC6) 
 	zip32 -u phobos $(SRC6)
 	zip32 -u phobos $(SRC7)
 	zip32 -u phobos $(SRC8)
+	zip32 -u phobos $(SRC9)
 
 clean:
 	del $(OBJS)

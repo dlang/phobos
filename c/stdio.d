@@ -3,16 +3,27 @@ module c.stdio;
 
 extern (C):
 
-const int _NFILE = 60;
-const int BUFSIZ = 0x4000;
-const int EOF = -1;
-const int FOPEN_MAX = 20;
-const int FILENAME_MAX = 256;  // 255 plus NULL
-const int TMP_MAX = 32767;
-const int _SYS_OPEN = 20;
-const int SYS_OPEN = _SYS_OPEN;
+version (Win32)
+{
+    const int _NFILE = 60;
+    const int BUFSIZ = 0x4000;
+    const int EOF = -1;
+    const int FOPEN_MAX = 20;
+    const int FILENAME_MAX = 256;  // 255 plus NULL
+    const int TMP_MAX = 32767;
+    const int _SYS_OPEN = 20;
+    const int SYS_OPEN = _SYS_OPEN;
+    const wchar WEOF = 0xFFFF;
+}
 
-const wchar WEOF = 0xFFFF;
+version (linux)
+{
+    const int EOF = -1;
+    const int FOPEN_MAX = 16;
+    const int FILENAME_MAX = 4095;
+    const int TMP_MAX = 238328;
+    const int L_tmpnam = 20;
+}
 
 enum { SEEK_SET, SEEK_CUR, SEEK_END }
 
@@ -21,6 +32,8 @@ alias uint size_t;
 struct _iobuf
 {
     align (1):
+    version (Win32)
+    {
 	char	*_ptr;
 	int	_cnt;
 	char	*_base;
@@ -29,6 +42,30 @@ struct _iobuf
 	int	_charbuf;
 	int	_bufsiz;
 	int	__tmpnum;
+    }
+    version (linux)
+    {
+	char*	_read_ptr;
+	char*	_read_end;
+	char*	_read_base;
+	char*	_write_base;
+	char*	_write_ptr;
+	char*	_write_end;
+	char*	_buf_base;
+	char*	_buf_end;
+	char*	_save_base;
+	char*	_backup_base;
+	char*	_save_end;
+	void*	_markers;
+	_iobuf*	_chain;
+	int	_fileno;
+	int	_blksize;
+	int	_old_offset;
+	ushort	_cur_column;
+	byte	_vtable_offset;
+	char[1]	_shortbuf;
+	void*	_lock;
+    }
 }
 
 alias _iobuf FILE;
@@ -48,33 +85,62 @@ enum
     _F_TERM = 0x0200,
 }
 
-FILE _iob[_NFILE];	// BUG: should be extern
-
-enum
+version (Win32)
 {
-    _IOREAD	= 1,
-    _IOWRT	= 2,
-    _IONBF	= 4,
-    _IOMYBUF	= 8,
-    _IOEOF	= 0x10,
-    _IOERR	= 0x20,
-    _IOLBF	= 0x40,
-    _IOSTRG     = 0x40,
-    _IORW	= 0x80,
-    _IOFBF	= 0,
-    _IOAPP	= 0x200,
-    _IOTRAN	= 0x100,
+    FILE _iob[_NFILE];	// BUG: should be extern
 }
 
-const FILE *stdin  = &_iob[0];
-const FILE *stdout = &_iob[1];
-const FILE *stderr = &_iob[2];
-const FILE *stdaux = &_iob[3];
-const FILE *stdprn = &_iob[4];
+version (Win32)
+{
+    enum
+    {
+	    _IOREAD	= 1,
+	    _IOWRT	= 2,
+	    _IONBF	= 4,
+	    _IOMYBUF	= 8,
+	    _IOEOF	= 0x10,
+	    _IOERR	= 0x20,
+	    _IOLBF	= 0x40,
+	    _IOSTRG	= 0x40,
+	    _IORW	= 0x80,
+	    _IOFBF	= 0,
+	    _IOAPP	= 0x200,
+	    _IOTRAN	= 0x100,
+    }
+}
 
-const char[] _P_tmpdir = "\\";
-const wchar[] _wP_tmpdir = "\\";
-const int L_tmpnam = _P_tmpdir.length + 12;
+version (linux)
+{
+    enum
+    {
+	    _IOFBF = 0,
+	    _IOLBF = 1,
+	    _IONBF = 2,
+    }
+}
+
+version (Win32)
+{
+    const FILE *stdin  = &_iob[0];
+    const FILE *stdout = &_iob[1];
+    const FILE *stderr = &_iob[2];
+    const FILE *stdaux = &_iob[3];
+    const FILE *stdprn = &_iob[4];
+}
+
+version (linux)
+{
+    FILE *stdin;
+    FILE *stdout;
+    FILE *stderr;
+}
+
+version (Win32)
+{
+    const char[] _P_tmpdir = "\\";
+    const wchar[] _wP_tmpdir = "\\";
+    const int L_tmpnam = _P_tmpdir.length + 12;
+}
 
 alias int fpos_t;
 
@@ -127,12 +193,30 @@ int  getchar()		{ return getc(stdin);		}
 int  putchar(int c)	{ return putc(c,stdout);	}
 int  getc(FILE *fp)	{ return fgetc(fp);		}
 int  putc(int c,FILE *fp) { return fputc(c,fp);		}
-int  ferror(FILE *fp)	{ return fp._flag&_IOERR;	}
-int  feof(FILE *fp)	{ return fp._flag&_IOEOF;	}
-void clearerr(FILE *fp)	{ fp._flag &= ~(_IOERR|_IOEOF); }
-void rewind(FILE *fp)	{ fseek(fp,0L,SEEK_SET); fp._flag&=~_IOERR; }
-int  _bufsize(FILE *fp)	{ return fp._bufsiz; }
-int  fileno(FILE *fp)	{ return fp._file; }
+
+version (Win32)
+{
+    int  ferror(FILE *fp)	{ return fp._flag&_IOERR;	}
+    int  feof(FILE *fp)	{ return fp._flag&_IOEOF;	}
+    void clearerr(FILE *fp)	{ fp._flag &= ~(_IOERR|_IOEOF); }
+    void rewind(FILE *fp)	{ fseek(fp,0L,SEEK_SET); fp._flag&=~_IOERR; }
+    int  _bufsize(FILE *fp)	{ return fp._bufsiz; }
+    int  fileno(FILE *fp)	{ return fp._file; }
+    int  _snprintf(char *,size_t,char *,...);
+    int  _vsnprintf(char *,size_t,char *,va_list);
+}
+
+version (linux)
+{
+    int  ferror(FILE *fp);
+    int  feof(FILE *fp);
+    void clearerr(FILE *fp);
+    void rewind(FILE *fp);
+    int  _bufsize(FILE *fp);
+    int  fileno(FILE *fp);
+    int  snprintf(char *,size_t,char *,...);
+    int  vsnprintf(char *,size_t,char *,va_list);
+}
 
 int      unlink(char *);
 FILE *	 fdopen(int, char *);
@@ -145,8 +229,6 @@ int	 getch();
 int	 getche();
 int      kbhit();
 char *   tempnam (char *dir, char *pfx);
-int      _snprintf(char *,size_t,char *,...);
-int	 _vsnprintf(char *,size_t,char *,va_list);
 
 wchar *  _wtmpnam(wchar *);
 FILE *  _wfopen(wchar *, wchar *);

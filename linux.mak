@@ -51,14 +51,16 @@ OBJS= assert.o deh2.o switch.o complex.o gcstats.o \
 	cast.o syserror.o path.o string.o memset.o math.o \
 	outbuffer.o ctype.o regexp.o random.o linux.o \
 	stream.o switcherr.o array.o gc.o adi.o \
-	qsort.o thread.o obj.o \
+	qsort.o thread.o obj.o utf.o uri.o \
 	crc32.o conv.o arraycast.o errno.o alloca.o cmath2.o \
 	ti_wchar.o ti_uint.o ti_short.o ti_ushort.o \
 	ti_byte.o ti_ubyte.o ti_long.o ti_ulong.o ti_ptr.o \
 	ti_float.o ti_double.o ti_real.o ti_delegate.o \
 	ti_creal.o ti_ireal.o ti_cfloat.o ti_ifloat.o \
 	ti_cdouble.o ti_idouble.o \
-	ti_Aa.o ti_Ag.o ti_C.o ti_int.o ti_char.o \
+	ti_Aa.o ti_AC.o ti_Ag.o ti_Aubyte.o ti_Aushort.o ti_Ashort.o \
+	ti_C.o ti_int.o ti_char.o \
+	ti_Aint.o ti_Auint.o ti_Along.o ti_Aulong.o ti_Awchar.o \
 	date.o dateparse.o llmath.o math2.o
 
 HDR=mars.h
@@ -67,7 +69,7 @@ SRC= mars.h switch.d complex.c critical.c minit.asm \
 	deh.c object.d gc.d math.d c/stdio.d c/stdlib.d time.d monitor.c \
 	arraycat.d string.d windows.d path.d linuxextern.d \
 	invariant.d assert.d regexp.d dmain2.d dateparse.d \
-	outofmemory.d syserror.d \
+	outofmemory.d syserror.d utf.d uri.d \
 	ctype.d achar.d aaA.d adi.d file.d compiler.d system.d \
 	moduleinit.d cast.d math.d qsort.d \
 	outbuffer.d unittest.d stream.d ctype.d random.d adi.d \
@@ -78,7 +80,9 @@ SRC= mars.h switch.d complex.c critical.c minit.asm \
 	ti_float.d ti_double.d ti_real.d ti_delegate.d \
 	ti_creal.d ti_ireal.d ti_cfloat.d ti_ifloat.d \
 	ti_cdouble.d ti_idouble.d \
-	ti_Aa.d ti_Ag.d ti_C.d ti_int.d ti_char.d \
+	ti_Aa.d ti_AC.d ti_Ag.d ti_Aubyte.d ti_Aushort.d ti_Ashort.o \
+	ti_Aint.d ti_Auint.d ti_Along.d ti_Aulong.d ti_Awchar.d \
+	ti_C.d ti_int.d ti_char.d \
 	crc32.d stdint.d conv.d gcstats.d linux.d deh2.d date.d llmath.d \
 	win32.mak linux.mak
 
@@ -287,8 +291,35 @@ ti_idouble.o : ti_idouble.d
 ti_Aa.o : ti_Aa.d
 	$(DMD) -c $(DFLAGS) ti_Aa.d
 
+ti_AC.o : ti_AC.d
+	$(DMD) -c $(DFLAGS) ti_AC.d
+
 ti_Ag.o : ti_Ag.d
 	$(DMD) -c $(DFLAGS) ti_Ag.d
+
+ti_Aubyte.o : ti_Aubyte.d
+	$(DMD) -c $(DFLAGS) ti_Aubyte.d
+
+ti_Aushort.o : ti_Aushort.d
+	$(DMD) -c $(DFLAGS) ti_Aushort.d
+
+ti_Ashort.o : ti_Ashort.d
+	$(DMD) -c $(DFLAGS) ti_Ashort.d
+
+ti_Auint.o : ti_Auint.d
+	$(DMD) -c $(DFLAGS) ti_Auint.d
+
+ti_Aint.o : ti_Aint.d
+	$(DMD) -c $(DFLAGS) ti_Aint.d
+
+ti_Aulong.o : ti_Aulong.d
+	$(DMD) -c $(DFLAGS) ti_Aulong.d
+
+ti_Along.o : ti_Along.d
+	$(DMD) -c $(DFLAGS) ti_Along.d
+
+ti_Awchar.o : ti_Awchar.d
+	$(DMD) -c $(DFLAGS) ti_Awchar.d
 
 ti_C.o : ti_C.d
 	$(DMD) -c $(DFLAGS) ti_C.d
@@ -298,6 +329,12 @@ ti_char.o : ti_char.d
 
 ti_int.o : ti_int.d
 	$(DMD) -c $(DFLAGS) ti_int.d
+
+uri.o : uri.d
+	$(DMD) -c $(DFLAGS) uri.d
+
+utf.o : utf.d
+	$(DMD) -c $(DFLAGS) utf.d
 
 zip : $(SRC)
 	rm phobos.zip

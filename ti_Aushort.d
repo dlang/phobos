@@ -1,14 +1,14 @@
 
 import string;
 
-// byte[]
+// ushort[]
 
-class TypeInfo_Ag : TypeInfo
+class TypeInfo_At : TypeInfo
 {
     uint getHash(void *p)
-    {	byte[] s = *(byte[]*)p;
+    {	ushort[] s = *(ushort[]*)p;
 	uint len = s.length;
-	byte *str = s;
+	ushort *str = s;
 	uint hash = 0;
 
 	while (1)
@@ -20,25 +20,14 @@ class TypeInfo_Ag : TypeInfo
 
 		case 1:
 		    hash *= 9;
-		    hash += *(ubyte *)str;
-		    return hash;
-
-		case 2:
-		    hash *= 9;
 		    hash += *(ushort *)str;
-		    return hash;
-
-		case 3:
-		    hash *= 9;
-		    hash += (*(ushort *)str << 8) +
-			    ((ubyte *)str)[2];
 		    return hash;
 
 		default:
 		    hash *= 9;
 		    hash += *(uint *)str;
-		    str += 4;
-		    len -= 4;
+		    str += 2;
+		    len -= 2;
 		    break;
 	    }
 	}
@@ -48,17 +37,17 @@ class TypeInfo_Ag : TypeInfo
 
     int equals(void *p1, void *p2)
     {
-	byte[] s1 = *(byte[]*)p1;
-	byte[] s2 = *(byte[]*)p2;
+	ushort[] s1 = *(ushort[]*)p1;
+	ushort[] s2 = *(ushort[]*)p2;
 
 	return s1.length == s2.length &&
-	       memcmp((byte *)s1, (byte *)s2, s1.length) == 0;
+	       memcmp((void *)s1, (void *)s2, s1.length * ushort.size) == 0;
     }
 
     int compare(void *p1, void *p2)
     {
-	byte[] s1 = *(byte[]*)p1;
-	byte[] s2 = *(byte[]*)p2;
+	ushort[] s1 = *(ushort[]*)p1;
+	ushort[] s2 = *(ushort[]*)p2;
 	uint len = s1.length;
 
 	if (s2.length < len)
@@ -74,7 +63,7 @@ class TypeInfo_Ag : TypeInfo
 
     int tsize()
     {
-	return (byte[]).size;
+	return (ushort[]).size;
     }
 }
 

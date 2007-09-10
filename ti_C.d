@@ -26,12 +26,17 @@ class TypeInfo_C : TypeInfo
 	Object o2 = *(Object*)p2;
 	int c = 0;
 
+	// Regard null references as always being "less than"
 	if (o1 != o2)
 	{
 	    if (o1)
-		c = o1.cmp(o2);
+	    {	if (!o2)
+		    c = 1;
+		else
+		    c = o1.cmp(o2);
+	    }
 	    else
-		c = -o2.cmp(o1);
+		c = -1;
 	}
 	return c;
     }
