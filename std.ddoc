@@ -128,6 +128,7 @@ NAVIGATION_PHOBOS=
 	$(LI <a href="std_mmfile.html" title="Memory mapped files">std.mmfile</a>)
 	$(LI <a href="std_openrj.html" title="Basic database">std.openrj</a>)
 	$(LI <a href="std_outbuffer.html" title="Assemble data into an array of bytes">std.outbuffer</a>)
+	$(LI <a href="std_outofmemory.html" title="Out of memory exception">std.outofmemory</a>)
 	$(LI <a href="std_path.html" title="Manipulate file names, path names, etc.">std.path</a>)
 	$(LI <a href="std_process.html" title="Create/destroy threads">std.process</a>)
 	$(LI <a href="std_random.html" title="Random number generation">std.random</a>)

@@ -978,7 +978,8 @@ unittest
  * if it could not be expanded.
  * For Windows, expandTilde() merely returns its argument inputPath.
  *
- * Throws: std.OutOfMemory if there is not enough memory to perform
+ * Throws: std.outofmemory.OutOfMemoryException if there is not enough
+ * memory to perform
  * the database lookup for the <i>~user</i> syntax.
  *
  * Examples:

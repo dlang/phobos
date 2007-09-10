@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2004 by Digital Mars, www.digitalmars.com
+ *  Copyright (C) 2004-2006 by Digital Mars, www.digitalmars.com
  *  Written by Walter Bright
  *
  *  This software is provided 'as-is', without any express or implied
@@ -25,12 +25,43 @@
 import object;
 import std.c.stdio;
 
+extern (C):
+
+/******************************************
+ * Given a pointer:
+ *	If it is an Object, return that Object.
+ *	If it is an interface, return the Object implementing the interface.
+ *	If it is null, return null.
+ *	Else, undefined crash
+ */
+
+Object _d_toObject(void* p)
+{   Object o;
+
+    if (p)
+    {
+	o = cast(Object)p;
+	ClassInfo oc = o.classinfo;
+	Interface *pi = **cast(Interface ***)p;
+
+	/* Interface.offset lines up with ClassInfo.name.ptr,
+	 * so we rely on pointers never being less than 64K,
+	 * and Objects never being greater.
+	 */
+	if (pi.offset < 0x10000)
+	{
+	    //printf("\tpi.offset = %d\n", pi.offset);
+	    o = cast(Object)(p - pi.offset);
+	}
+    }
+    return o;
+}
+
+
 /*************************************
  * Attempts to cast Object o to class c.
  * Returns o if successful, null if not.
  */
-
-extern (C):
 
 Object _d_interface_cast(void* p, ClassInfo c)
 {   Object o;

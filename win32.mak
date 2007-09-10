@@ -73,7 +73,7 @@ OBJS= asserterror.obj deh.obj switch.obj complex.obj gcstats.obj \
 	socket.obj socketstream.obj loader.obj stdarg.obj format.obj stdio.obj \
 	perf.obj openrj.obj uni.obj winsock.obj oldsyserror.obj \
 	errno.obj boxer.obj cstream.obj charset.obj \
-	gamma.obj demangle.obj cover.obj bitarray.obj \
+	gamma.obj demangle.obj cover.obj bitarray.obj aApplyR.obj \
 	ti_Aa.obj ti_Ag.obj ti_C.obj ti_int.obj ti_char.obj \
 	ti_wchar.obj ti_uint.obj ti_short.obj ti_ushort.obj \
 	ti_byte.obj ti_ubyte.obj ti_long.obj ti_ulong.obj ti_ptr.obj \
@@ -105,6 +105,7 @@ DOCS=	$(DOC)\std_path.html $(DOC)\std_math.html $(DOC)\std_outbuffer.html \
 	$(DOC)\std_intrinsic.html \
 	$(DOC)\std_mmfile.html \
 	$(DOC)\std_openrj.html \
+	$(DOC)\std_outofmemory.html \
 	$(DOC)\std_process.html \
 	$(DOC)\std_regexp.html \
 	$(DOC)\std_socket.html \
@@ -179,7 +180,7 @@ SRC_INT=	\
 	internal\memset.d internal\arraycast.d internal\aaA.d internal\adi.d \
 	internal\dmain2.d internal\cast.d internal\qsort.d internal\deh2.d \
 	internal\cmath2.d internal\obj.d internal\mars.h internal\aApply.d \
-	internal\object.d internal\trace.d internal\qsort2.d
+	internal\aApplyR.d internal\object.d internal\trace.d internal\qsort2.d
 
 SRC_STD_WIN= std\windows\registry.d \
 	std\windows\iunknown.d std\windows\syserror.d std\windows\charset.d
@@ -264,6 +265,9 @@ aaA.obj : internal\aaA.d
 
 aApply.obj : internal\aApply.d
 	$(DMD) -c $(DFLAGS) internal\aApply.d
+
+aApplyR.obj : internal\aApplyR.d
+	$(DMD) -c $(DFLAGS) internal\aApplyR.d
 
 adi.obj : internal\adi.d
 	$(DMD) -c $(DFLAGS) internal\adi.d
@@ -692,6 +696,9 @@ $(DOC)\std_openrj.html : std.ddoc std\openrj.d
 
 $(DOC)\std_outbuffer.html : std.ddoc std\outbuffer.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_outbuffer.html std.ddoc std\outbuffer.d
+
+$(DOC)\std_outofmemory.html : std.ddoc std\outofmemory.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_outofmemory.html std.ddoc std\outofmemory.d
 
 $(DOC)\std_path.html : std.ddoc std\path.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_path.html std.ddoc std\path.d

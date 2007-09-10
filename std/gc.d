@@ -93,11 +93,12 @@ void minimize();
  * disable() temporarilly disables garbage collection cycle, enable()
  * then reenables them.
  *
- * This is used for brief time
- critical sections of code, so the amount of time it will take is predictable.
- If the collector runs out of memory while it is disabled, it will throw an
- OutOfMemory exception. The disable() function calls can be nested, but must be
- matched with corresponding enable() calls.
+ * This is used for brief time critical sections of code, so the amount of time
+ * it will take is predictable.
+ * If the collector runs out of memory while it is disabled, it will throw an
+ * std.outofmemory.OutOfMemoryException.
+ * The disable() function calls can be nested, but must be
+ * matched with corresponding enable() calls.
  * By default collections are enabled.
  */
 

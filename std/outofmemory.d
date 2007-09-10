@@ -1,10 +1,25 @@
+/**
+ * Macros:
+ *	WIKI=Phobos/StdOutOfMemory
+ * Copyright:
+ *	Placed into public domain.
+ *	www.digitalmars.com
+ */
+
 
 module std.outofmemory;
+
+/******
+ * This exception is thrown when out of memory errors happen.
+ */
 
 class OutOfMemoryException : Exception
 {
     static char[] s = "Out of memory";
 
+    /**
+     * Default constructor
+     */
     this()
     {
 	super(s);
@@ -23,3 +38,6 @@ extern (C) void _d_OutOfMemory()
 	  OutOfMemoryException.classinfo.init;
 }
 
+static this()
+{
+}

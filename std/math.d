@@ -498,7 +498,7 @@ unittest
     assert(isPosZero(atanh(0.0)));
     assert(isNegZero(atanh(-0.0)));
     assert(isnan(atanh(real.nan)));
-    assert(isNegZero(atanh(-real.infinity))); 
+    assert(isnan(atanh(-real.infinity))); 
 }
 
 /*****************************************

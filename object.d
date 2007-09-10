@@ -21,6 +21,9 @@ class Object
     hash_t toHash();
     int opCmp(Object o);
     int opEquals(Object o);
+
+    final void notifyRegister(void delegate(Object) dg);
+    final void notifyUnRegister(void delegate(Object) dg);
 }
 
 struct Interface

@@ -1,5 +1,6 @@
 
 /**
+ * Part of the D programming language runtime library.
  * Forms the symbols available to all D programs. Includes
  * Object, which is the root of the class object heirarchy.
  *
@@ -34,12 +35,17 @@
 
 module object;
 
+import std.outofmemory;
+
 extern (C)
 {   /// C's printf function.
     int printf(char *, ...);
 
     int memcmp(void *, void *, size_t);
     void* memcpy(void *, void *, size_t);
+    void* calloc(size_t, size_t);
+    void* realloc(void*, size_t);
+    void free(void*);
 }
 
 /// Standard boolean type.
@@ -72,6 +78,15 @@ else
     alias uint hash_t;
 }
 
+/* *************************
+ * Internal struct pointed to by the hidden .monitor member.
+ */
+struct Monitor
+{
+    void delegate(Object)[] delegates;
+
+    /* More stuff goes here defined by internal/monitor.c */
+}
 
 /******************
  * All D class objects inherit from Object.
@@ -124,21 +139,114 @@ class Object
     {
 	return this is o;
     }
+
+    /* **
+     * Call delegate dg, passing this to it, when this object gets destroyed.
+     * Use extreme caution, as the list of delegates is stored in a place
+     * not known to the gc. Thus, if any objects pointed to by one of these
+     * delegates gets freed by the gc, calling the delegate will cause a
+     * crash.
+     * This is only for use by library developers, as it will need to be
+     * redone if weak pointers are added or a moving gc is developed.
+     */
+    final void notifyRegister(void delegate(Object) dg)
+    {
+	printf("notifyRegister(dg = %llx, o = %p)\n", dg, this);
+	synchronized (this)
+	{
+	    Monitor* m = cast(Monitor*)(cast(void**)this)[1];
+	    foreach (inout x; m.delegates)
+	    {
+		if (!x || x == dg)
+		{   x = dg;
+		    return;
+		}
+	    }
+
+	    // Increase size of delegates[]
+	    auto len = m.delegates.length;
+	    auto startlen = len;
+	    if (len == 0)
+	    {
+		len = 4;
+		auto p = calloc((void delegate(Object)).sizeof, len);
+		if (!p)
+		    _d_OutOfMemory();
+		m.delegates = (cast(void delegate(Object)*)p)[0 .. len];
+	    }
+	    else
+	    {
+		len += len + 4;
+		auto p = realloc(m.delegates.ptr, (void delegate(Object)).sizeof * len);
+		if (!p)
+		    _d_OutOfMemory();
+		m.delegates = (cast(void delegate(Object)*)p)[0 .. len];
+		m.delegates[startlen .. len] = null;
+	    }
+	    m.delegates[startlen] = dg;
+	}
+    }
+
+    /* **
+     * Remove delegate dg from the notify list.
+     * This is only for use by library developers, as it will need to be
+     * redone if weak pointers are added or a moving gc is developed.
+     */
+    final void notifyUnRegister(void delegate(Object) dg)
+    {
+	synchronized (this)
+	{
+	    Monitor* m = cast(Monitor*)(cast(void**)this)[1];
+	    foreach (inout x; m.delegates)
+	    {
+		if (x == dg)
+		    x = null;
+	    }
+	}
+    }
 }
+
+extern (C) void _d_notify_release(Object o)
+{
+    printf("_d_notify_release(o = %p)\n", o);
+    Monitor* m = cast(Monitor*)(cast(void**)o)[1];
+    if (m.delegates.length)
+    {
+	auto dgs = m.delegates;
+	synchronized (o)
+	{
+	    dgs = m.delegates;
+	    m.delegates = null;
+	}
+
+	foreach (dg; dgs)
+	{
+	    if (dg)
+	    {	printf("calling dg = %llx (%p)\n", dg, o);
+		dg(o);
+	    }
+	}
+
+	free(dgs.ptr);
+    }
+}
+
 
 /**
  * Information about an interface.
+ * A pointer to this appears as the first entry in the interface's vtbl[].
  */
 struct Interface
 {
-    ClassInfo classinfo;	/// .classinfo for this interface
+    ClassInfo classinfo;	/// .classinfo for this interface (not for containing class)
     void *[] vtbl;
-    int offset;			// offset to Interface 'this' from Object 'this'
+    int offset;			/// offset to Interface 'this' from Object 'this'
 }
 
 /**
  * Runtime type information about a class. Can be retrieved for any class type
  * or instance by using the .classinfo property.
+ * A pointer to this appears as the first entry in the class's vtbl[].
  */
 class ClassInfo : Object
 {

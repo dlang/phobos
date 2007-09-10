@@ -57,7 +57,7 @@ OBJS = asserterror.o deh2.o switch.o complex.o gcstats.o \
 	process.o syserror.o \
 	socket.o socketstream.o stdarg.o stdio.o format.o \
 	perf.o openrj.o uni.o trace.o boxer.o \
-	demangle.o cover.o bitarray.o \
+	demangle.o cover.o bitarray.o aApplyR.o \
 	ti_wchar.o ti_uint.o ti_short.o ti_ushort.o \
 	ti_byte.o ti_ubyte.o ti_long.o ti_ulong.o ti_ptr.o \
 	ti_float.o ti_double.o ti_real.o ti_delegate.o \
@@ -129,7 +129,7 @@ SRC_INT=	\
 	internal/memset.d internal/arraycast.d internal/aaA.d internal/adi.d \
 	internal/dmain2.d internal/cast.d internal/qsort.d internal/deh2.d \
 	internal/cmath2.d internal/obj.d internal/mars.h internal/aApply.d \
-	internal/object.d internal/trace.d internal/qsort2.d
+	internal/aApplyR.d internal/object.d internal/trace.d internal/qsort2.d
 
 SRC_STD_WIN= std/windows/registry.d \
 	std/windows/iunknown.d std/windows/charset.d
@@ -226,6 +226,9 @@ aaA.o : internal/aaA.d
 
 aApply.o : internal/aApply.d
 	$(DMD) -c $(DFLAGS) internal/aApply.d
+
+aApplyR.o : internal/aApplyR.d
+	$(DMD) -c $(DFLAGS) internal/aApplyR.d
 
 adi.o : internal/adi.d
 	$(DMD) -c $(DFLAGS) internal/adi.d

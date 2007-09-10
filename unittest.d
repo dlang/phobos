@@ -114,6 +114,9 @@ printf("test2\n");
 
     std.file.exists("foo");
 
+    foreach_reverse (dchar d; "hello"c) { ; }
+    foreach_reverse (k, dchar d; "hello"c) { ; }
+
     printf("Success\n!");
     return 0;
 }
