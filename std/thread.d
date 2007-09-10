@@ -426,7 +426,7 @@ class Thread
      * Create a Thread for global main().
      */
 
-    static void thread_init()
+    public static void thread_init()
     {
 	threadLock = new Object();
 
@@ -977,7 +977,7 @@ class Thread
      * Create a Thread for global main().
      */
 
-    static void thread_init()
+    public static void thread_init()
     {
 	threadLock = new Object();
 
@@ -1087,7 +1087,7 @@ class Thread
 	t.flags |= 1;
     }
 
-    static void* getESP()
+    public static void* getESP()
     {
 	asm
 	{   naked	;

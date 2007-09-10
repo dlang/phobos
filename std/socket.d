@@ -84,7 +84,6 @@ class SocketException: Exception
 {
 	int errorCode; /// Platform-specific error code.
 	
-	
 	this(char[] msg, int err = 0)
 	{
 		errorCode = err;
@@ -890,7 +889,7 @@ class SocketSet
 	}
 	
 
-	// Return maximum amount of sockets that can be added, like FD_SETSIZE.
+	/// Return maximum amount of sockets that can be added, like FD_SETSIZE.
 	uint max()
 	{
 		version(Win32)
@@ -1053,14 +1052,20 @@ class Socket
 	}
 	
 	
-	// Get underlying socket handle.
-	socket_t handle() // getter
+	/// Get underlying socket handle.
+	socket_t handle()
 	{
 		return sock;
 	}
-	
-	
-	bool blocking() // getter
+
+	/**
+	 * Get/set socket's blocking flag.
+	 *
+	 * When a socket is blocking, calls to receive(), accept(), and send()
+	 * will block and wait for data/action.
+	 * A non-blocking socket will immediately return instead of blocking. 
+	 */
+	bool blocking()
 	{
 		version(Win32)
 		{
@@ -1072,8 +1077,8 @@ class Socket
 		}
 	}
 	
-	
-	void blocking(bool byes) // setter
+	/// ditto
+	void blocking(bool byes)
 	{
 		version(Win32)
 		{
