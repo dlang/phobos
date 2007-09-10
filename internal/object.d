@@ -469,7 +469,12 @@ class TypeInfo_Pointer : TypeInfo
 
     int compare(void *p1, void *p2)
     {
-        return *cast(void* *)p1 - *cast(void* *)p2;
+	if (*cast(void* *)p1 < *cast(void* *)p2)
+	    return -1;
+	else if (*cast(void* *)p1 > *cast(void* *)p2)
+	    return 1;
+	else
+	    return 0;
     }
 
     size_t tsize()
