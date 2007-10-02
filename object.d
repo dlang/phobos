@@ -49,7 +49,7 @@ class ClassInfo : Object
     void *destructor;
     void (*classInvariant)(Object);
     uint flags;
-    //	1:			// IUnknown
+    //	1:			// is IUnknown or is derived from IUnknown
     //	2:			// has no possible pointers into GC memory
     //	4:			// has offTi[] member
     //	8:			// has constructors

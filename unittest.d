@@ -123,6 +123,6 @@ printf("test2\n");
 
     writefln(std.cpuid.toString());
 
-    printf("Success!\n");
+    printf("Success\n!");
     return 0;
 }

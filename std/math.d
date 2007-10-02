@@ -18,6 +18,11 @@
  *	POWER = $1<sup>$2</sup>
  *	BIGSUM = $(BIG &Sigma; <sup>$2</sup><sub>$(SMALL $1)</sub>)
  *	CHOOSE = $(BIG &#40;) <sup>$(SMALL $1)</sup><sub>$(SMALL $2)</sub> $(BIG &#41;)
+ *	PLUSMN = &plusmn;
+ *	INFIN = &infin;
+ *	PI = &pi;
+ *	LT = &lt;
+ *	GT = &gt;
  */
 
 /*
@@ -76,14 +81,14 @@ const real LOG2 =	0x1.34413509f79fef32p-2; /** log<sub>10</sub>2 */ // 0.30103 f
 const real LOG10E =	0.43429448190325182765;  /** log<sub>10</sub>e */
 const real LN2 =	0x1.62e42fefa39ef358p-1; /** ln 2 */	// 0.693147 fldln2
 const real LN10 =	2.30258509299404568402;  /** ln 10 */
-const real PI =		0x1.921fb54442d1846ap+1; /** &pi; */ // 3.14159 fldpi
-const real PI_2 =	1.57079632679489661923;  /** &pi; / 2 */
-const real PI_4 =	0.78539816339744830962;  /** &pi; / 4 */
-const real M_1_PI =	0.31830988618379067154;  /** 1 / &pi; */
-const real M_2_PI =	0.63661977236758134308;  /** 2 / &pi; */
-const real M_2_SQRTPI =	1.12837916709551257390;  /** 2 / &radic;&pi; */
+const real PI =		0x1.921fb54442d1846ap+1; /** $(_PI) */ // 3.14159 fldpi
+const real PI_2 =	1.57079632679489661923;  /** $(PI) / 2 */
+const real PI_4 =	0.78539816339744830962;  /** $(PI) / 4 */
+const real M_1_PI =	0.31830988618379067154;  /** 1 / $(PI) */
+const real M_2_PI =	0.63661977236758134308;  /** 2 / $(PI) */
+const real M_2_SQRTPI =	1.12837916709551257390;  /** 2 / &radic;$(PI) */
 const real SQRT2 =	1.41421356237309504880;  /** &radic;2 */
-const real SQRT1_2 =	0.70710678118654752440;  /** &radic;&frac12 */
+const real SQRT1_2 =	0.70710678118654752440;  /** &radic;&frac12; */
 
 /*
 	Octal versions:
@@ -178,9 +183,9 @@ unittest
  * Returns cosine of x. x is in radians.
  *
  *	$(TABLE_SV
- *	$(TR $(TH x)               $(TH cos(x)) $(TH invalid?)	)
- *	$(TR $(TD $(NAN))          $(TD $(NAN)) $(TD yes)	)
- *	$(TR $(TD &plusmn;&infin;) $(TD $(NAN)) $(TD yes)	)
+ *	$(TR $(TH x)                 $(TH cos(x)) $(TH invalid?))
+ *	$(TR $(TD $(NAN))            $(TD $(NAN)) $(TD yes)	)
+ *	$(TR $(TD $(PLUSMN)$(INFIN)) $(TD $(NAN)) $(TD yes)	)
  *	)
  * Bugs:
  *	Results are undefined if |x| >= $(POWER 2,64).
@@ -192,10 +197,10 @@ real cos(real x);	/* intrinsic */
  * Returns sine of x. x is in radians.
  *
  *	$(TABLE_SV
- *	<tr> <th> x               <th> sin(x)      <th>invalid?
- *	<tr> <td> $(NAN)          <td> $(NAN)      <td> yes
- *	<tr> <td> &plusmn;0.0     <td> &plusmn;0.0 <td> no
- *	<tr> <td> &plusmn;&infin; <td> $(NAN)      <td> yes
+ *	$(TR $(TH x)               $(TH sin(x))      $(TH invalid?))
+ *	$(TR $(TD $(NAN))          $(TD $(NAN))      $(TD yes))
+ *	$(TR $(TD $(PLUSMN)0.0)    $(TD $(PLUSMN)0.0) $(TD no))
+ *	$(TR $(TD $(PLUSMN)$(INFIN)) $(TD $(NAN))      $(TD yes))
  *	)
  * Bugs:
  *	Results are undefined if |x| >= $(POWER 2,64).
@@ -208,10 +213,10 @@ real sin(real x);	/* intrinsic */
  * Returns tangent of x. x is in radians.
  *
  *	$(TABLE_SV
- *	<tr> <th> x               <th> tan(x)      <th> invalid?
- *	<tr> <td> $(NAN)          <td> $(NAN)      <td> yes
- *	<tr> <td> &plusmn;0.0     <td> &plusmn;0.0 <td> no
- *	<tr> <td> &plusmn;&infin; <td> $(NAN)      <td> yes
+ *	$(TR $(TH x)               $(TH tan(x))       $(TH invalid?))
+ *	$(TR $(TD $(NAN))          $(TD $(NAN))       $(TD yes))
+ *	$(TR $(TD $(PLUSMN)0.0)    $(TD $(PLUSMN)0.0) $(TD no))
+ *	$(TR $(TD $(PLUSMN)$(INFIN)) $(TD $(NAN))     $(TD yes))
  *	)
  */
 
@@ -307,61 +312,61 @@ unittest
 
 /***************
  * Calculates the arc cosine of x,
- * returning a value ranging from -&pi;/2 to &pi;/2.
+ * returning a value ranging from -$(PI)/2 to $(PI)/2.
  *
  *	$(TABLE_SV
- *      <tr> <th> x        <th> acos(x) <th> invalid?
- *      <tr> <td> &gt;1.0  <td> $(NAN)  <td> yes
- *      <tr> <td> &lt;-1.0 <td> $(NAN)  <td> yes
- *      <tr> <td> $(NAN)   <td> $(NAN)  <td> yes
+ *      $(TR $(TH x)         $(TH acos(x)) $(TH invalid?))
+ *      $(TR $(TD $(GT)1.0)  $(TD $(NAN))  $(TD yes))
+ *      $(TR $(TD $(LT)-1.0) $(TD $(NAN))  $(TD yes))
+ *      $(TR $(TD $(NAN))    $(TD $(NAN))  $(TD yes))
  *      )
  */
 real acos(real x)		{ return std.c.math.acosl(x); }
 
 /***************
  * Calculates the arc sine of x,
- * returning a value ranging from -&pi;/2 to &pi;/2.
+ * returning a value ranging from -$(PI)/2 to $(PI)/2.
  *
  *	$(TABLE_SV
- *	<tr> <th> x        <th> asin(x)  <th> invalid?
- *	<tr> <td> &plusmn;0.0    <td> &plusmn;0.0    <td> no
- *	<tr> <td> &gt;1.0  <td> $(NAN)   <td> yes
- *	<tr> <td> &lt;-1.0 <td> $(NAN)   <td> yes
+ *	$(TR $(TH x)            $(TH asin(x))      $(TH invalid?))
+ *	$(TR $(TD $(PLUSMN)0.0) $(TD $(PLUSMN)0.0) $(TD no))
+ *	$(TR $(TD $(GT)1.0)     $(TD $(NAN))       $(TD yes))
+ *	$(TR $(TD $(LT)-1.0)    $(TD $(NAN))       $(TD yes))
  *       )
  */
 real asin(real x)		{ return std.c.math.asinl(x); }
 
 /***************
  * Calculates the arc tangent of x,
- * returning a value ranging from -&pi;/2 to &pi;/2.
+ * returning a value ranging from -$(PI)/2 to $(PI)/2.
  *
  *	$(TABLE_SV
- *	<tr> <th> x           <th> atan(x)  <th> invalid?
- *	<tr> <td> &plusmn;0.0       <td> &plusmn;0.0    <td> no
- *	<tr> <td> &plusmn;&infin;  <td> $(NAN)   <td> yes
+ *	$(TR $(TH x)                 $(TH atan(x))      $(TH invalid?))
+ *	$(TR $(TD $(PLUSMN)0.0)      $(TD $(PLUSMN)0.0) $(TD no))
+ *	$(TR $(TD $(PLUSMN)$(INFIN)) $(TD $(NAN))       $(TD yes))
  *       )
  */
 real atan(real x)		{ return std.c.math.atanl(x); }
 
 /***************
  * Calculates the arc tangent of y / x,
- * returning a value ranging from -&pi;/2 to &pi;/2.
+ * returning a value ranging from -$(PI)/2 to $(PI)/2.
  *
  *      $(TABLE_SV
- *      <tr> <th> y           <th> x         <th> atan(y, x)
- *      <tr> <td> $(NAN)      <td> anything  <td> $(NAN) 
- *      <tr> <td> anything    <td> $(NAN)    <td> $(NAN) 
- *      <tr> <td> &plusmn;0.0       <td> &gt; 0.0  <td> &plusmn;0.0 
- *      <tr> <td> &plusmn;0.0       <td> &plusmn;0.0     <td> &plusmn;0.0 
- *      <tr> <td> &plusmn;0.0       <td> &lt; 0.0  <td> &plusmn;&pi; 
- *      <tr> <td> &plusmn;0.0       <td> -0.0      <td> &plusmn;&pi;
- *      <tr> <td> &gt; 0.0    <td> &plusmn;0.0     <td> &pi;/2 
- *      <tr> <td> &lt; 0.0    <td> &plusmn;0.0     <td> &pi;/2 
- *      <tr> <td> &gt; 0.0    <td> &infin;  <td> &plusmn;0.0 
- *      <tr> <td> &plusmn;&infin;  <td> anything  <td> &plusmn;&pi;/2 
- *      <tr> <td> &gt; 0.0    <td> -&infin; <td> &plusmn;&pi; 
- *      <tr> <td> &plusmn;&infin;  <td> &infin;  <td> &plusmn;&pi;/4    
- *      <tr> <td> &plusmn;&infin;  <td> -&infin; <td> &plusmn;3&pi;/4
+ *      $(TR $(TH y)                 $(TH x)            $(TH atan(y, x)))
+ *      $(TR $(TD $(NAN))            $(TD anything)     $(TD $(NAN)) )
+ *      $(TR $(TD anything)          $(TD $(NAN))       $(TD $(NAN)) )
+ *      $(TR $(TD $(PLUSMN)0.0)      $(TD $(GT)0.0)     $(TD $(PLUSMN)0.0) )
+ *      $(TR $(TD $(PLUSMN)0.0)      $(TD $(PLUSMN)0.0) $(TD $(PLUSMN)0.0) )
+ *      $(TR $(TD $(PLUSMN)0.0)      $(TD $(LT)0.0)     $(TD $(PLUSMN)$(PI)))
+ *      $(TR $(TD $(PLUSMN)0.0)      $(TD -0.0)         $(TD $(PLUSMN)$(PI)))
+ *      $(TR $(TD $(GT)0.0)          $(TD $(PLUSMN)0.0) $(TD $(PI)/2) )
+ *      $(TR $(TD $(LT)0.0)          $(TD $(PLUSMN)0.0) $(TD $(PI)/2))
+ *      $(TR $(TD $(GT)0.0)          $(TD $(INFIN))     $(TD $(PLUSMN)0.0) )
+ *      $(TR $(TD $(PLUSMN)$(INFIN)) $(TD anything)     $(TD $(PLUSMN)$(PI)/2))
+ *      $(TR $(TD $(GT)0.0)          $(TD -$(INFIN))    $(TD $(PLUSMN)$(PI)) )
+ *      $(TR $(TD $(PLUSMN)$(INFIN)) $(TD $(INFIN))     $(TD $(PLUSMN)$(PI)/4))
+ *      $(TR $(TD $(PLUSMN)$(INFIN)) $(TD -$(INFIN))    $(TD $(PLUSMN)3$(PI)/4))
  *      )
  */
 real atan2(real y, real x)      { return std.c.math.atan2l(y,x); }
@@ -370,8 +375,8 @@ real atan2(real y, real x)      { return std.c.math.atan2l(y,x); }
  * Calculates the hyperbolic cosine of x.
  *
  *	$(TABLE_SV
- *	<tr> <th> x                <th> cosh(x)     <th> invalid?
- *	<tr> <td> &plusmn;&infin;  <td> &plusmn;0.0 <td> no 
+ *	$(TR $(TH x)                 $(TH cosh(x))      $(TH invalid?))
+ *	$(TR $(TD $(PLUSMN)$(INFIN)) $(TD $(PLUSMN)0.0) $(TD no) )
  *      )
  */
 real cosh(real x)		{ return std.c.math.coshl(x); }
@@ -380,9 +385,9 @@ real cosh(real x)		{ return std.c.math.coshl(x); }
  * Calculates the hyperbolic sine of x.
  *
  *	$(TABLE_SV
- *	<tr> <th> x               <th> sinh(x)         <th> invalid?
- *	<tr> <td> &plusmn;0.0     <td> &plusmn;0.0     <td> no
- *	<tr> <td> &plusmn;&infin; <td> &plusmn;&infin; <td> no
+ *	$(TR $(TH x)                 $(TH sinh(x))           $(TH invalid?))
+ *	$(TR $(TD $(PLUSMN)0.0)      $(TD $(PLUSMN)0.0)      $(TD no))
+ *	$(TR $(TD $(PLUSMN)$(INFIN)) $(TD $(PLUSMN)$(INFIN)) $(TD no))
  *      )
  */
 real sinh(real x)		{ return std.c.math.sinhl(x); }
@@ -391,9 +396,9 @@ real sinh(real x)		{ return std.c.math.sinhl(x); }
  * Calculates the hyperbolic tangent of x.
  *
  *	$(TABLE_SV
- *	<tr> <th> x               <th> tanh(x)      <th> invalid?
- *	<tr> <td> &plusmn;0.0 	  <td> &plusmn;0.0  <td> no 
- *	<tr> <td> &plusmn;&infin; <td> &plusmn;1.0  <td> no
+ *	$(TR $(TH x)                 $(TH tanh(x))      $(TH invalid?))
+ *	$(TR $(TD $(PLUSMN)0.0)	     $(TD $(PLUSMN)0.0) $(TD no) )
+ *	$(TR $(TD $(PLUSMN)$(INFIN)) $(TD $(PLUSMN)1.0) $(TD no))
  *      )
  */
 real tanh(real x)		{ return std.c.math.tanhl(x); }
@@ -408,14 +413,14 @@ real tanh(real x)		{ return std.c.math.tanhl(x); }
  *  Mathematically, acosh(x) = log(x + sqrt( x*x - 1))
  *
  * $(TABLE_DOMRG
- *  $(DOMAIN 1..&infin;)
- *  $(RANGE  1..log(real.max), &infin;) )
+ *  $(DOMAIN 1..$(INFIN))
+ *  $(RANGE  1..log(real.max), $(INFIN)) )
  *	$(TABLE_SV
  *    $(SVH  x,     acosh(x) )
  *    $(SV  $(NAN), $(NAN) )
  *    $(SV  <1,     $(NAN) )
  *    $(SV  1,      0       )
- *    $(SV  +&infin;,+&infin;)
+ *    $(SV  +$(INFIN),+$(INFIN))
  *  )
  */   
 real acosh(real x)
@@ -444,10 +449,10 @@ unittest
  *  -------------
  *
  *	$(TABLE_SV
- *    $(SVH  x,             asinh(x)       )
- *    $(SV  $(NAN),         $(NAN)         )
- *    $(SV  &plusmn;0,      &plusmn;0      )
- *    $(SV  &plusmn;&infin;,&plusmn;&infin;)
+ *    $(SVH x,                asinh(x)       )
+ *    $(SV  $(NAN),           $(NAN)         )
+ *    $(SV  $(PLUSMN)0,       $(PLUSMN)0      )
+ *    $(SV  $(PLUSMN)$(INFIN),$(PLUSMN)$(INFIN))
  *  )
  */
 real asinh(real x)
@@ -478,13 +483,13 @@ unittest
  *  
  *
  * $(TABLE_DOMRG
- *  $(DOMAIN -&infin;..&infin;)
+ *  $(DOMAIN -$(INFIN)..$(INFIN))
  *  $(RANGE  -1..1) )
  *	$(TABLE_SV
  *    $(SVH  x,     acosh(x) )
  *    $(SV  $(NAN), $(NAN) )
- *    $(SV  &plusmn;0, &plusmn;0)
- *    $(SV  -&infin;, -0)
+ *    $(SV  $(PLUSMN)0, $(PLUSMN)0)
+ *    $(SV  -$(INFIN), -0)
  *  )
  */   
 real atanh(real x)
@@ -522,10 +527,10 @@ extern (C) real rndtonl(real x);
  * Compute square root of x.
  *
  *	$(TABLE_SV
- *	<tr> <th> x        <th> sqrt(x)  <th> invalid?
- *	<tr> <td> -0.0     <td> -0.0     <td> no
- *	<tr> <td> &lt;0.0  <td> $(NAN)   <td> yes
- *	<tr> <td> +&infin; <td> +&infin; <td> no
+ *	$(TR $(TH x)         $(TH sqrt(x))   $(TH invalid?))
+ *	$(TR $(TD -0.0)      $(TD -0.0)      $(TD no))
+ *	$(TR $(TD $(LT)0.0)  $(TD $(NAN))    $(TD yes))
+ *	$(TR $(TD +$(INFIN)) $(TD +$(INFIN)) $(TD no))
  *	)
  */
 
@@ -577,9 +582,9 @@ creal sqrt(creal z)
  * Calculates e$(SUP x).
  *
  *	$(TABLE_SV
- *	<tr> <th> x        <th> exp(x)
- *	<tr> <td> +&infin; <td> +&infin; 
- *	<tr> <td> -&infin; <td> +0.0 
+ *	$(TR $(TH x)         $(TH exp(x)))
+ *	$(TR $(TD +$(INFIN)) $(TD +$(INFIN)) )
+ *	$(TR $(TD -$(INFIN)) $(TD +0.0) )
  *	)
  */
 real exp(real x)		{ return std.c.math.expl(x); }
@@ -588,9 +593,9 @@ real exp(real x)		{ return std.c.math.expl(x); }
  * Calculates 2$(SUP x).
  *
  *	$(TABLE_SV
- *	<tr> <th> x <th> exp2(x)
- *	<tr> <td> +&infin; <td> +&infin; 
- *	<tr> <td> -&infin; <td> +0.0 
+ *	$(TR $(TH x)         $(TH exp2(x)))
+ *	$(TR $(TD +$(INFIN)) $(TD +$(INFIN)))
+ *	$(TR $(TD -$(INFIN)) $(TD +0.0))
  *	)
  */
 real exp2(real x)		{ return std.c.math.exp2l(x); }
@@ -603,10 +608,10 @@ real exp2(real x)		{ return std.c.math.exp2l(x); }
  * than exp(x)-1. 
  *
  *	$(TABLE_SV
- *	<tr> <th> x           <th> e$(SUP x)-1
- *	<tr> <td> &plusmn;0.0 <td> &plusmn;0.0
- *	<tr> <td> +&infin;    <td> +&infin;
- *	<tr> <td> -&infin;    <td> -1.0
+ *	$(TR $(TH x)            $(TH e$(SUP x)-1))
+ *	$(TR $(TD $(PLUSMN)0.0) $(TD $(PLUSMN)0.0))
+ *	$(TR $(TD +$(INFIN))    $(TD +$(INFIN)))
+ *	$(TR $(TD -$(INFIN))    $(TD -1.0))
  *	)
  */
 
@@ -619,15 +624,15 @@ real expm1(real x)		{ return std.c.math.expm1l(x); }
  * Returns:
  *	Calculate and return <i>x</i> and exp such that
  *	value =<i>x</i>*2$(SUP exp) and
- *	.5 &lt;= |<i>x</i>| &lt; 1.0<br>
+ *	.5 $(LT)= |<i>x</i>| $(LT) 1.0<br>
  *	<i>x</i> has same sign as value.
  *
  *	$(TABLE_SV
- *	<tr> <th> value          <th> returns        <th> exp
- *	<tr> <td> &plusmn;0.0    <td> &plusmn;0.0    <td> 0
- *	<tr> <td> +&infin;       <td> +&infin;       <td> int.max
- *	<tr> <td> -&infin;       <td> -&infin;       <td> int.min
- *	<tr> <td> &plusmn;$(NAN) <td> &plusmn;$(NAN) <td> int.min
+ *	$(TR $(TH value)           $(TH returns)         $(TH exp))
+ *	$(TR $(TD $(PLUSMN)0.0)    $(TD $(PLUSMN)0.0)    $(TD 0))
+ *	$(TR $(TD +$(INFIN))       $(TD +$(INFIN))       $(TD int.max))
+ *	$(TR $(TD -$(INFIN))       $(TD -$(INFIN))       $(TD int.min))
+ *	$(TR $(TD $(PLUSMN)$(NAN)) $(TD $(PLUSMN)$(NAN)) $(TD int.min))
  *	)
  */
 
@@ -731,10 +736,10 @@ unittest
  * <tt>cast(int)logb(x)</tt>.
  *
  *	$(TABLE_SV
- *	<tr> <th> x               <th>ilogb(x)     <th> Range error?
- *	<tr> <td> 0               <td> FP_ILOGB0   <td> yes
- *	<tr> <td> &plusmn;&infin; <td> int.max     <td> no
- *	<tr> <td> $(NAN)          <td> FP_ILOGBNAN <td> no
+ *	$(TR $(TH x)                $(TH ilogb(x))     $(TH Range error?))
+ *	$(TR $(TD 0)                 $(TD FP_ILOGB0)   $(TD yes))
+ *	$(TR $(TD $(PLUSMN)$(INFIN)) $(TD int.max)     $(TD no))
+ *	$(TR $(TD $(NAN))            $(TD FP_ILOGBNAN) $(TD no))
  *	)
  */
 int ilogb(real x)		{ return std.c.math.ilogbl(x); }
@@ -754,10 +759,10 @@ real ldexp(real n, int exp);	/* intrinsic */
  * Calculate the natural logarithm of x.
  *
  *	$(TABLE_SV
- *	<tr> <th> x           <th> log(x)   <th> divide by 0? <th> invalid?
- *	<tr> <td> &plusmn;0.0 <td> -&infin; <td> yes          <td> no
- *	<tr> <td> &lt; 0.0    <td> $(NAN)   <td> no           <td> yes
- *	<tr> <td> +&infin;    <td> +&infin; <td> no           <td> no
+ *	$(TR $(TH x)            $(TH log(x))    $(TH divide by 0?) $(TH invalid?))
+ *	$(TR $(TD $(PLUSMN)0.0) $(TD -$(INFIN)) $(TD yes)          $(TD no))
+ *	$(TR $(TD $(LT)0.0)     $(TD $(NAN))    $(TD no)           $(TD yes))
+ *	$(TR $(TD +$(INFIN))    $(TD +$(INFIN)) $(TD no)           $(TD no))
  *	)
  */
 
@@ -767,10 +772,10 @@ real log(real x)		{ return std.c.math.logl(x); }
  * Calculate the base-10 logarithm of x.
  *
  *	$(TABLE_SV
- *	<tr> <th> x           <th> log10(x) <th> divide by 0? <th> invalid?
- *	<tr> <td> &plusmn;0.0 <td> -&infin; <td> yes          <td> no
- *	<tr> <td> &lt; 0.0    <td> $(NAN)   <td> no           <td> yes
- *	<tr> <td> +&infin;    <td> +&infin; <td> no           <td> no
+ *	$(TR $(TH x)            $(TH log10(x))  $(TH divide by 0?) $(TH invalid?))
+ *	$(TR $(TD $(PLUSMN)0.0) $(TD -$(INFIN)) $(TD yes)          $(TD no))
+ *	$(TR $(TD $(LT)0.0)     $(TD $(NAN))    $(TD no)           $(TD yes))
+ *	$(TR $(TD +$(INFIN))    $(TD +$(INFIN)) $(TD no)           $(TD no))
  *	)
  */
 
@@ -783,11 +788,11 @@ real log10(real x)		{ return std.c.math.log10l(x); }
  *	log(1 + x). 
  *
  *	$(TABLE_SV
- *	<tr> <th> x           <th> log1p(x)    <th> divide by 0? <th> invalid?
- *	<tr> <td> &plusmn;0.0 <td> &plusmn;0.0 <td> no           <td> no
- *	<tr> <td> -1.0        <td> -&infin;    <td> yes          <td> no
- *	<tr> <td> &lt;-1.0    <td> $(NAN)      <td> no           <td> yes
- *	<tr> <td> +&infin;    <td> -&infin;    <td> no           <td> no
+ *	$(TR $(TH x)            $(TH log1p(x))     $(TH divide by 0?) $(TH invalid?))
+ *	$(TR $(TD $(PLUSMN)0.0) $(TD $(PLUSMN)0.0) $(TD no)           $(TD no))
+ *	$(TR $(TD -1.0)         $(TD -$(INFIN))    $(TD yes)          $(TD no))
+ *	$(TR $(TD $(LT)-1.0)    $(TD $(NAN))       $(TD no)           $(TD yes))
+ *	$(TR $(TD +$(INFIN))    $(TD -$(INFIN))    $(TD no)           $(TD no))
  *	)
  */
 
@@ -798,10 +803,10 @@ real log1p(real x)		{ return std.c.math.log1pl(x); }
  * log<sub>2</sub>x
  *
  *	$(TABLE_SV
- *	<tr> <th> x 	      <th> log2(x)  <th> divide by 0? <th> invalid?
- *	<tr> <td> &plusmn;0.0 <td> -&infin; <td> yes          <td> no 
- *	<tr> <td> &lt; 0.0    <td> $(NAN)   <td> no           <td> yes 
- *	<tr> <td> +&infin;    <td> +&infin; <td> no           <td> no 
+ *	$(TR $(TH x) 	        $(TH log2(x))   $(TH divide by 0?) $(TH invalid?))
+ *	$(TR $(TD $(PLUSMN)0.0) $(TD -$(INFIN)) $(TD yes)          $(TD no) )
+ *	$(TR $(TD $(LT)0.0)     $(TD $(NAN))    $(TD no)           $(TD yes) )
+ *	$(TR $(TD +$(INFIN))    $(TD +$(INFIN)) $(TD no)           $(TD no) )
  *	)
  */
 real log2(real x)		{ return std.c.math.log2l(x); }
@@ -812,14 +817,12 @@ real log2(real x)		{ return std.c.math.log2l(x); }
  * If x is subnormal, it is treated as if it were normalized.
  * For a positive, finite x: 
  *
- * -----
- * 1 <= $(I x) * FLT_RADIX$(SUP -logb(x)) < FLT_RADIX 
- * -----
+ * 1 $(LT)= $(I x) * FLT_RADIX$(SUP -logb(x)) $(LT) FLT_RADIX 
  *
  *	$(TABLE_SV
- *	<tr> <th> x               <th> logb(x)  <th> Divide by 0? 
- *	<tr> <td> &plusmn;&infin; <td> +&infin; <td> no
- *	<tr> <td> &plusmn;0.0     <td> -&infin; <td> yes 
+ *	$(TR $(TH x)                 $(TH logb(x))   $(TH divide by 0?) )
+ *	$(TR $(TD $(PLUSMN)$(INFIN)) $(TD +$(INFIN)) $(TD no))
+ *	$(TR $(TD $(PLUSMN)0.0)      $(TD -$(INFIN)) $(TD yes) )
  *	)
  */
 real logb(real x)		{ return std.c.math.logbl(x); }
@@ -831,11 +834,11 @@ real logb(real x)		{ return std.c.math.logbl(x); }
  * be completely subtracted from x. The result has the same sign as x. 
  *
  *	$(TABLE_SV
- *	<tr> <th> x                 <th> y               <th> modf(x, y) 	<th> invalid?
- *	<tr> <td> &plusmn;0.0       <td> not 0.0         <td> &plusmn;0.0 	<td> no
- *	<tr> <td> &plusmn;&infin;   <td> anything        <td> $(NAN) 		<td> yes
- *	<tr> <td> anything          <td> &plusmn;0.0     <td> $(NAN) 		<td> yes
- *	<tr> <td> !=&plusmn;&infin; <td> &plusmn;&infin; <td> x 		<td> no
+ *	$(TR $(TH x)                   $(TH y)                 $(TH modf(x, y))   $(TH invalid?))
+ *	$(TR $(TD $(PLUSMN)0.0)        $(TD not 0.0)           $(TD $(PLUSMN)0.0) $(TD no))
+ *	$(TR $(TD $(PLUSMN)$(INFIN))   $(TD anything)          $(TD $(NAN))       $(TD yes))
+ *	$(TR $(TD anything)            $(TD $(PLUSMN)0.0)      $(TD $(NAN))       $(TD yes))
+ *	$(TR $(TD !=$(PLUSMN)$(INFIN)) $(TD $(PLUSMN)$(INFIN)) $(TD x)            $(TD no))
  *	)
  */
 real modf(real x, inout real y)	{ return std.c.math.modfl(x,&y); }
@@ -847,9 +850,9 @@ real modf(real x, inout real y)	{ return std.c.math.modfl(x,&y); }
  * the same fashion as the basic arithmetic operators. 
  *
  *	$(TABLE_SV
- *	<tr> <th> x                <th> scalb(x)
- *	<tr> <td> &plusmn;&infin; <td> &plusmn;&infin; 
- *	<tr> <td> &plusmn;0.0      <td> &plusmn;0.0 
+ *	$(TR $(TH x)                 $(TH scalb(x)))
+ *	$(TR $(TD $(PLUSMN)$(INFIN)) $(TD $(PLUSMN)$(INFIN)) )
+ *	$(TR $(TD $(PLUSMN)0.0)      $(TD $(PLUSMN)0.0) )
  *	)
  */
 real scalbn(real x, int n)
@@ -864,10 +867,10 @@ real scalbn(real x, int n)
  * Calculates the cube root x.
  *
  *	$(TABLE_SV
- *	<tr> <th> <i>x</i>	<th> cbrt(x)    <th> invalid?
- *	<tr> <td> &plusmn;0.0	<td> &plusmn;0.0	<td> no 
- *	<tr> <td> $(NAN)	<td> $(NAN) 	<td> yes 
- *	<tr> <td> &plusmn;&infin;	<td> &plusmn;&infin; <td> no 
+ *	$(TR $(TH $(I x))	     $(TH cbrt(x))           $(TH invalid?))
+ *	$(TR $(TD $(PLUSMN)0.0)	     $(TD $(PLUSMN)0.0)      $(TD no) )
+ *	$(TR $(TD $(NAN))	     $(TD $(NAN))            $(TD yes) )
+ *	$(TR $(TD $(PLUSMN)$(INFIN)) $(TD $(PLUSMN)$(INFIN)) $(TD no) )
  *	)
  */
 real cbrt(real x)		{ return std.c.math.cbrtl(x); }
@@ -877,9 +880,9 @@ real cbrt(real x)		{ return std.c.math.cbrtl(x); }
  * Returns |x|
  *
  *	$(TABLE_SV
- *	<tr> <th> x               <th> fabs(x)
- *	<tr> <td> &plusmn;0.0     <td> +0.0 
- *	<tr> <td> &plusmn;&infin; <td> +&infin; 
+ *	$(TR $(TH x)                 $(TH fabs(x)))
+ *	$(TR $(TD $(PLUSMN)0.0)      $(TD +0.0) )
+ *	$(TR $(TD $(PLUSMN)$(INFIN)) $(TD +$(INFIN)) )
  *	)
  */
 real fabs(real x);	/* intrinsic */
@@ -897,10 +900,10 @@ real fabs(real x);	/* intrinsic */
  * hypot(x, -y) are equivalent.
  *
  *	$(TABLE_SV
- *	<tr> <th> x               <th> y           <th> hypot(x, y) <th> invalid?
- *	<tr> <td> x               <td> &plusmn;0.0 <td> |x|         <td> no
- *	<tr> <td> &plusmn;&infin; <td> y           <td> +&infin;    <td> no
- *	<tr> <td> &plusmn;&infin; <td> $(NAN)      <td> +&infin;    <td> no
+ *	$(TR $(TH x)                 $(TH y)            $(TH hypot(x, y)) $(TH invalid?))
+ *	$(TR $(TD x)                 $(TD $(PLUSMN)0.0) $(TD |x|)         $(TD no))
+ *	$(TR $(TD $(PLUSMN)$(INFIN)) $(TD y)            $(TD +$(INFIN))   $(TD no))
+ *	$(TR $(TD $(PLUSMN)$(INFIN)) $(TD $(NAN))       $(TD +$(INFIN))   $(TD no))
  *	)
  */
 
@@ -1028,10 +1031,10 @@ real erfc(real x)		{ return std.c.math.erfcl(x); }
  * For reals, lgamma is equivalent to log(fabs(gamma(x))).
  *
  *	$(TABLE_SV
- *	<tr> <th> x               <th> lgamma(x)     <th>invalid?
- *	<tr> <td> $(NAN)          <td> $(NAN)        <td> yes
- *	<tr> <td> integer <= 0    <td> +&infin;      <td> yes
- *	<tr> <td> &plusmn;&infin; <td> +&infin;      <td> no
+ *	$(TR $(TH x)                 $(TH lgamma(x)) $(TH invalid?))
+ *	$(TR $(TD $(NAN))            $(TD $(NAN))    $(TD yes))
+ *	$(TR $(TD integer <= 0)      $(TD +$(INFIN)) $(TD yes))
+ *	$(TR $(TD $(PLUSMN)$(INFIN)) $(TD +$(INFIN)) $(TD no))
  *	)
  */
 /* Documentation prepared by Don Clugston */
@@ -1050,16 +1053,16 @@ real lgamma(real x)
  *  Like x!, $(GAMMA)(x+1) = x*$(GAMMA)(x).
  *
  *  Mathematically, if z.re > 0 then
- *   $(GAMMA)(z) =<big>$(INTEGRAL)<sub><small>0</small></sub><sup>&infin;</sup></big>t<sup>z-1</sup>e<sup>-t</sup>dt
+ *   $(GAMMA)(z) =<big>$(INTEGRAL)<sub><small>0</small></sub><sup>$(INFIN)</sup></big>t<sup>z-1</sup>e<sup>-t</sup>dt
  *
  *	$(TABLE_SV
- *	<tr> <th> x               <th> $(GAMMA)(x)     <th>invalid?
- *	<tr> <td> $(NAN)          <td> $(NAN)          <td> yes
- *	<tr> <td> &plusmn;0.0     <td> &plusmn;&infin; <td> yes
- *	<tr> <td> integer > 0     <td> (x-1)!          <td> no
- *	<tr> <td> integer < 0     <td> $(NAN)          <td> yes
- *	<tr> <td> +&infin;        <td> +&infin;        <td> no
- *	<tr> <td> -&infin;        <td> $(NAN)          <td> yes
+ *	$(TR $(TH x)              $(TH $(GAMMA)(x))       $(TH invalid?))
+ *	$(TR $(TD $(NAN))         $(TD $(NAN))            $(TD yes))
+ *	$(TR $(TD $(PLUSMN)0.0)   $(TD $(PLUSMN)$(INFIN)) $(TD yes))
+ *	$(TR $(TD integer $(GT)0) $(TD (x-1)!)            $(TD no))
+ *	$(TR $(TD integer $(LT)0) $(TD $(NAN))            $(TD yes))
+ *	$(TR $(TD +$(INFIN))      $(TD +$(INFIN))         $(TD no))
+ *	$(TR $(TD -$(INFIN))      $(TD $(NAN))            $(TD yes))
  *	)
  *
  *  References:
@@ -1153,16 +1156,16 @@ real trunc(real x) { return std.c.math.truncl(x); }
  * If |n - x / y| == 0.5, n is even.
  * If the result is zero, it has the same sign as x.
  * Otherwise, the sign of the result is the sign of x / y.
- * Precision mode has no affect on the remainder functions.
+ * Precision mode has no effect on the remainder functions.
  *
  * remquo returns n in the parameter n.
  *
  *	$(TABLE_SV
- *	<tr> <th> x                  <th> y               <th> remainder(x, y)  <th> n   <th> invalid?
- *	<tr> <td> &plusmn;0.0        <td> not 0.0         <td> &plusmn;0.0 	<td> 0.0 <td> no
- *	<tr> <td> &plusmn;&infin;    <td> anything        <td> $(NAN)		<td> ?   <td> yes
- *	<tr> <td> anything           <td> &plusmn;0.0     <td> $(NAN) 		<td> ?   <td> yes
- *	<tr> <td> != &plusmn;&infin; <td> &plusmn;&infin; <td> x 		<td> ?   <td> no
+ *	$(TR $(TH x)                    $(TH y)                 $(TH remainder(x, y)) $(TH n)   $(TH invalid?))
+ *	$(TR $(TD $(PLUSMN)0.0)         $(TD not 0.0)           $(TD $(PLUSMN)0.0)    $(TD 0.0) $(TD no))
+ *	$(TR $(TD $(PLUSMN)$(INFIN))    $(TD anything)          $(TD $(NAN))          $(TD ?)   $(TD yes))
+ *	$(TR $(TD anything)             $(TD $(PLUSMN)0.0)      $(TD $(NAN))          $(TD ?)   $(TD yes))
+ *	$(TR $(TD != $(PLUSMN)$(INFIN)) $(TD $(PLUSMN)$(INFIN)) $(TD x)               $(TD ?)   $(TD no))
  *	)
  */
 real remainder(real x, real y) { return std.c.math.remainderl(x, y); }
@@ -1328,7 +1331,7 @@ unittest
 }
 
 /*********************************
- * Return !=0 if e is &plusmn;&infin;.
+ * Return !=0 if e is $(PLUSMN)$(INFIN).
  */
 
 int isinf(real e)
@@ -1416,8 +1419,8 @@ real nan(char[] tagp) { return std.c.math.nanl(toStringz(tagp)); }
 /******************************************
  * Calculates the next representable value after x in the direction of y. 
  *
- * If y > x, the result will be the next largest floating-point value;
- * if y < x, the result will be the next smallest value.
+ * If y $(GT) x, the result will be the next largest floating-point value;
+ * if y $(LT) x, the result will be the next smallest value.
  * If x == y, the result is y.
  * The FE_INEXACT and FE_OVERFLOW exceptions will be raised if x is finite and
  * the function result is infinite. The FE_INEXACT and FE_UNDERFLOW 
@@ -1437,11 +1440,11 @@ real nextafter(real x, real y)
 /*******************************************
  * Returns the positive difference between x and y.
  * Returns:
- *	<table border=1 cellpadding=4 cellspacing=0>
- *	<tr> <th> x, y   <th> fdim(x, y)
- *	<tr> <td> x > y  <td> x - y
- *	<tr> <td> x <= y <td> +0.0
- *	</table>
+ *	$(TABLE_SV
+ *	$(TR $(TH x, y)       $(TH fdim(x, y)))
+ *	$(TR $(TD x $(GT) y)  $(TD x - y))
+ *	$(TR $(TD x $(LT)= y) $(TD +0.0))
+ *	)
  */
 real fdim(real x, real y) { return (x > y) ? x - y : +0.0; }
 
@@ -1513,42 +1516,42 @@ real pow(real x, int n)
  * Calculates x$(SUP y).
  *
  * $(TABLE_SV
- * <tr>
- * <th> x <th> y <th> pow(x, y) <th> div 0 <th> invalid?
- * <tr>
- * <td> anything 	<td> &plusmn;0.0 	<td> 1.0 	<td> no 	<td> no 
- * <tr>
- * <td> |x| &gt; 1 	<td> +&infin; 		<td> +&infin; 	<td> no 	<td> no 
- * <tr>
- * <td> |x| &lt; 1 	<td> +&infin; 		<td> +0.0 	<td> no 	<td> no 
- * <tr>
- * <td> |x| &gt; 1 	<td> -&infin; 		<td> +0.0 	<td> no 	<td> no 
- * <tr>
- * <td> |x| &lt; 1 	<td> -&infin; 		<td> +&infin; 	<td> no 	<td> no 
- * <tr>
- * <td> +&infin; 	<td> &gt; 0.0 		<td> +&infin; 	<td> no 	<td> no 
- * <tr>
- * <td> +&infin; 	<td> &lt; 0.0 		<td> +0.0 	<td> no 	<td> no 
- * <tr>
- * <td> -&infin; 	<td> odd integer &gt; 0.0	<td> -&infin; 	<td> no 	<td> no 
- * <tr>
- * <td> -&infin;  	<td> &gt; 0.0, not odd integer	<td> +&infin; 	<td> no 	<td> no
- * <tr>
- * <td> -&infin; 	<td> odd integer &lt; 0.0  	<td> -0.0 	<td> no 	<td> no 
- * <tr>
- * <td> -&infin; 	<td> &lt; 0.0, not odd integer 	<td> +0.0 	<td> no 	<td> no 
- * <tr>
- * <td> &plusmn;1.0 	<td> &plusmn;&infin; 		<td> $(NAN) 	<td> no 	<td> yes 
- * <tr>
- * <td> &lt; 0.0 	<td> finite, nonintegral 	<td> $(NAN) 	<td> no 	<td> yes
- * <tr>
- * <td> &plusmn;0.0 	<td> odd integer &lt; 0.0	<td> &plusmn;&infin; <td> yes 	<td> no 
- * <tr>
- * <td> &plusmn;0.0 	<td> &lt; 0.0, not odd integer 	<td> +&infin; 	<td> yes 	<td> no
- * <tr>
- * <td> &plusmn;0.0 	<td> odd integer &gt; 0.0	<td> &plusmn;0.0 <td> no 	<td> no 
- * <tr>
- * <td> &plusmn;0.0 	<td> &gt; 0.0, not odd integer 	<td> +0.0 	<td> no 	<td> no 
+ * $(TR
+ * $(TH x) $(TH y) $(TH pow(x, y)) $(TH div 0) $(TH invalid?))
+ * $(TR
+ * $(TD anything) 	$(TD $(PLUSMN)0.0) 	$(TD 1.0) 	$(TD no) 	$(TD no) )
+ * $(TR
+ * $(TD |x| $(GT) 1) 	$(TD +$(INFIN)) 	$(TD +$(INFIN)) 	$(TD no) 	$(TD no) )
+ * $(TR
+ * $(TD |x| $(LT) 1) 	$(TD +$(INFIN)) 	$(TD +0.0) 	$(TD no) 	$(TD no) )
+ * $(TR
+ * $(TD |x| $(GT) 1) 	$(TD -$(INFIN)) 	$(TD +0.0) 	$(TD no) 	$(TD no) )
+ * $(TR
+ * $(TD |x| $(LT) 1) 	$(TD -$(INFIN)) 	$(TD +$(INFIN)) 	$(TD no) 	$(TD no) )
+ * $(TR
+ * $(TD +$(INFIN)) 	$(TD $(GT) 0.0) 	$(TD +$(INFIN)) 	$(TD no) 	$(TD no) )
+ * $(TR
+ * $(TD +$(INFIN)) 	$(TD $(LT) 0.0) 	$(TD +0.0) 	$(TD no) 	$(TD no) )
+ * $(TR
+ * $(TD -$(INFIN)) 	$(TD odd integer $(GT) 0.0)	$(TD -$(INFIN)) 	$(TD no) 	$(TD no) )
+ * $(TR
+ * $(TD -$(INFIN))  	$(TD $(GT) 0.0, not odd integer) $(TD +$(INFIN)) 	$(TD no) 	$(TD no))
+ * $(TR
+ * $(TD -$(INFIN)) 	$(TD odd integer $(LT) 0.0)  	$(TD -0.0) 	$(TD no) 	$(TD no) )
+ * $(TR
+ * $(TD -$(INFIN)) 	$(TD $(LT) 0.0, not odd integer) $(TD +0.0) 	$(TD no) 	$(TD no) )
+ * $(TR
+ * $(TD $(PLUSMN)1.0) 	$(TD $(PLUSMN)$(INFIN)) 	$(TD $(NAN)) 	$(TD no) 	$(TD yes) )
+ * $(TR
+ * $(TD $(LT) 0.0) 	$(TD finite, nonintegral) 	$(TD $(NAN)) 	$(TD no) 	$(TD yes))
+ * $(TR
+ * $(TD $(PLUSMN)0.0) 	$(TD odd integer $(LT) 0.0)	$(TD $(PLUSMN)$(INFIN)) $(TD yes) 	$(TD no) )
+ * $(TR
+ * $(TD $(PLUSMN)0.0) 	$(TD $(LT) 0.0, not odd integer) $(TD +$(INFIN)) 	$(TD yes) 	$(TD no))
+ * $(TR
+ * $(TD $(PLUSMN)0.0) 	$(TD odd integer $(GT) 0.0)	$(TD $(PLUSMN)0.0) $(TD no) 	$(TD no) )
+ * $(TR
+ * $(TD $(PLUSMN)0.0) 	$(TD $(GT) 0.0, not odd integer) $(TD +0.0) 	$(TD no) 	$(TD no) )
  * )
  */
 
@@ -1696,12 +1699,12 @@ bool isNegZero(real x)
  * eg, 0x1.F8p+60 and 0x1.F1p+60 are equal to 5 bits of precision.
  *
  *	$(TABLE_SV
- *	<tr> <th> x      <th> y         <th> feqrel(x, y)
- *	<tr> <td> x      <td> x         <td> real.mant_dig
- *	<tr> <td> x      <td> &gt;= 2*x <td> 0
- *	<tr> <td> x      <td> &lt;= x/2 <td> 0
- *	<tr> <td> $(NAN) <td> any       <td> 0
- *	<tr> <td> any    <td> $(NAN)    <td> 0
+ *	$(TR $(TH x)      $(TH y)          $(TH feqrel(x, y)))
+ *	$(TR $(TD x)      $(TD x)          $(TD real.mant_dig))
+ *	$(TR $(TD x)      $(TD $(GT)= 2*x) $(TD 0))
+ *	$(TR $(TD x)      $(TD $(LT)= x/2) $(TD 0))
+ *	$(TR $(TD $(NAN)) $(TD any)        $(TD 0))
+ *	$(TR $(TD any)    $(TD $(NAN))     $(TD 0))
  *	)
  */
 
