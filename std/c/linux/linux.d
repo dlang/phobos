@@ -123,20 +123,20 @@ enum : int
 
 extern (C)
 {
-    int access(char*, int);
-    int open(char*, int, ...);
+    int access(in char*, int);
+    int open(in char*, int, ...);
     int read(int, void*, int);
-    int write(int, void*, int);
+    int write(int, in void*, int);
     int close(int);
     int lseek(int, int, int);
     int fstat(int, struct_stat*);
-    int lstat(char*, struct_stat*);
-    int stat(char*, struct_stat*);
-    int chdir(char*);
-    int mkdir(char*, int);
-    int rmdir(char*);
+    int lstat(in char*, struct_stat*);
+    int stat(in char*, struct_stat*);
+    int chdir(in char*);
+    int mkdir(in char*, int);
+    int rmdir(in char*);
     char* getcwd(char*, int);
-    int chmod(char*, mode_t);
+    int chmod(in char*, mode_t);
     int fork();
     int dup(int);
     int dup2(int, int);
@@ -147,10 +147,10 @@ extern (C)
     uint alarm(uint);
     char* basename(char*);
     //wint_t btowc(int);
-    int chown(char*, uid_t, gid_t);
-    int chroot(char*);
+    int chown(in char*, uid_t, gid_t);
+    int chroot(in char*);
     size_t confstr(int, char*, size_t);
-    int creat(char*, mode_t);
+    int creat(in char*, mode_t);
     char* ctermid(char*);
     int dirfd(DIR*);
     char* dirname(char*);
@@ -196,16 +196,17 @@ struct tm
 extern (C)
 {
     int gettimeofday(timeval*, struct_timezone*);
+    int settimeofday(in timeval*, in struct_timezone*);
     __time_t time(__time_t*);
-    char* asctime(tm*);
-    char* ctime(__time_t*);
-    tm* gmtime(__time_t*);
-    tm* localtime(__time_t*);
+    char* asctime(in tm*);
+    char* ctime(in __time_t*);
+    tm* gmtime(in __time_t*);
+    tm* localtime(in __time_t*);
     __time_t mktime(tm*);
-    char* asctime_r(tm* t, char* buf);
-    char* ctime_r(__time_t* timep, char* buf);
-    tm* gmtime_r(__time_t* timep, tm* result);
-    tm* localtime_r(__time_t* timep, tm* result);
+    char* asctime_r(in tm* t, char* buf);
+    char* ctime_r(in __time_t* timep, char* buf);
+    tm* gmtime_r(in __time_t* timep, tm* result);
+    tm* localtime_r(in __time_t* timep, tm* result);
 }
 
 /**************************************************************/
@@ -287,8 +288,8 @@ int munlockall();
 void* mremap(void*, size_t, size_t, int);
 int mincore(void*, size_t, ubyte*);
 int remap_file_pages(void*, size_t, int, size_t, int);
-int shm_open(char*, int, int);
-int shm_unlink(char*);
+int shm_open(in char*, int, int);
+int shm_unlink(in char*);
 }
 
 extern(C)
@@ -309,19 +310,28 @@ extern(C)
 
     struct dirent
     {
-	int d_ino;
+	uint d_ino;		// this is int on some linuxes
 	off_t d_off;
+	ushort d_reclen;
+	ubyte d_type;		// this field isn't there on some linuxes
+	char[256] d_name;
+    }
+
+    struct dirent64
+    {
+	ulong d_ino;
+	long d_off;
 	ushort d_reclen;
 	ubyte d_type;
 	char[256] d_name;
     }
-    
+
     struct DIR
     {
 	// Managed by OS.
     }
     
-    DIR* opendir(char* name);
+    DIR* opendir(in char* name);
     int closedir(DIR* dir);
     dirent* readdir(DIR* dir);
     void rewinddir(DIR* dir);
@@ -406,7 +416,7 @@ extern (C)
 
     const int RTLD_NOW = 0x00002;	// Correct for Red Hat 8
 
-    void* dlopen(char* file, int mode);
+    void* dlopen(in char* file, int mode);
     int   dlclose(void* handle);
     void* dlsym(void* handle, char* name);
     char* dlerror();
@@ -434,8 +444,8 @@ extern (C)
 	uint[_SIGSET_NWORDS] __val;
     }
 
-    int getpwnam_r(char*, passwd*, void*, size_t, passwd**);
-    passwd* getpwnam(char*);
+    int getpwnam_r(const(char)*, passwd*, void*, size_t, passwd**);
+    passwd* getpwnam(in char*);
     passwd* getpwuid(uid_t);
     int getpwuid_r(uid_t, passwd*, char*, size_t, passwd**);
     int kill(pid_t, int);
