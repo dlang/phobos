@@ -154,7 +154,11 @@ Object _d_newclass(ClassInfo ci)
 
     debug(PRINTF) printf("_d_newclass(ci = %p, %s)\n", ci, cast(char *)ci.name);
     if (ci.flags & 1)			// if COM object
-    {
+    {	/* COM objects are not garbage collected, they are reference
+	 * counted using AddRef() and Release().
+	 * They get free'd by C's free() function called by Release() when
+	 * Release()'s reference count goes to zero.
+	 */
 	p = std.c.stdlib.malloc(ci.init.length);
 	if (!p)
 	    _d_OutOfMemory();
