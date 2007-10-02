@@ -310,13 +310,22 @@ extern(C)
 
     struct dirent
     {
-	int d_ino;
+	uint d_ino;		// this is int on some linuxes
 	off_t d_off;
+	ushort d_reclen;
+	ubyte d_type;		// this field isn't there on some linuxes
+	char[256] d_name;
+    }
+
+    struct dirent64
+    {
+	ulong d_ino;
+	long d_off;
 	ushort d_reclen;
 	ubyte d_type;
 	char[256] d_name;
     }
-    
+
     struct DIR
     {
 	// Managed by OS.
