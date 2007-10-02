@@ -115,8 +115,8 @@ extern (C) long _adReverseChar(char[] a)
 
 unittest
 {
-    char[] a = "abcd";
-    char[] r;
+    string a = "abcd";
+    string r;
 
     r = a.dup.reverse;
     //writefln(r);
@@ -209,8 +209,8 @@ extern (C) long _adReverseWchar(wchar[] a)
 
 unittest
 {
-    wchar[] a = "abcd";
-    wchar[] r;
+    wstring a = "abcd";
+    wstring r;
 
     r = a.dup.reverse;
     assert(r == "dcba");
@@ -367,12 +367,12 @@ extern (C) long _adSortChar(char[] a)
 {
     if (a.length > 1)
     {
-	dchar[] da = toUTF32(a);
+	dstring da = toUTF32(a);
 	da.sort;
 	size_t i = 0;
 	foreach (dchar d; da)
 	{   char[4] buf;
-	    char[] t = toUTF8(buf, d);
+	    string t = toUTF8(buf, d);
 	    a[i .. i + t.length] = t[];
 	    i += t.length;
 	}
@@ -389,12 +389,12 @@ extern (C) long _adSortWchar(wchar[] a)
 {
     if (a.length > 1)
     {
-	dchar[] da = toUTF32(a);
+	dstring da = toUTF32(a);
 	da.sort;
 	size_t i = 0;
 	foreach (dchar d; da)
 	{   wchar[2] buf;
-	    wchar[] t = toUTF16(buf, d);
+	    wstring t = toUTF16(buf, d);
 	    a[i .. i + t.length] = t[];
 	    i += t.length;
 	}
@@ -407,6 +407,8 @@ extern (C) long _adSortWchar(wchar[] a)
  * Support for array.sort property for bit[].
  */
 
+version (none)
+{
 extern (C) bit[] _adSortBit(bit[] a)
     out (result)
     {
@@ -456,7 +458,7 @@ unittest
 {
     debug(adi) printf("array.sort_Bit[].unittest\n");
 }
-
+}
 
 /***************************************
  * Support for array equality test.
@@ -494,7 +496,7 @@ unittest
 {
     debug(adi) printf("array.Eq unittest\n");
 
-    char[] a = "hello";
+    string a = "hello";
 
     assert(a != "hel");
     assert(a != "helloo");
@@ -586,7 +588,7 @@ unittest
 {
     debug(adi) printf("array.Cmp unittest\n");
 
-    char[] a = "hello";
+    string a = "hello";
 
     assert(a >  "hel");
     assert(a >= "hel");
@@ -732,7 +734,7 @@ unittest
 {
     debug(adi) printf("array.CmpChar unittest\n");
 
-    char[] a = "hello";
+    string a = "hello";
 
     assert(a >  "hel");
     assert(a >= "hel");
