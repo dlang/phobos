@@ -407,6 +407,8 @@ extern (C) long _adSortWchar(wchar[] a)
  * Support for array.sort property for bit[].
  */
 
+version (none)
+{
 extern (C) bit[] _adSortBit(bit[] a)
     out (result)
     {
@@ -456,7 +458,7 @@ unittest
 {
     debug(adi) printf("array.sort_Bit[].unittest\n");
 }
-
+}
 
 /***************************************
  * Support for array equality test.
