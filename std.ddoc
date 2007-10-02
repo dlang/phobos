@@ -3,7 +3,7 @@ DDOC = <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 <html>
 
 <!--
-	Copyright (c) 1999-2006 by Digital Mars
+	Copyright (c) 1999-2007 by Digital Mars
 	All Rights Reserved
 	Written by Walter Bright
 	www.digitalmars.com
@@ -17,7 +17,8 @@ DDOC = <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 
 <body>
 <div id="heading">
-	<a href="http://www.digitalmars.com/"><img src="../dmlogo.gif" width="270" height="53" border="0" alt="www.digitalmars.com"></a>
+	<a href="http://www.digitalmars.com/"><img src="../dmlogo.gif" width="270" height="53" border="0" alt="www.digitalmars.com" align="left"></a>
+	<p align="right">D Programming Language 2.0</p>
 
 
 	<div id="headingNav">
