@@ -77,7 +77,7 @@ class FormatError : Error
 	super("std.format");
     }
 
-    this(const char[] msg)
+    this(char[] msg)
     {
 	super("std.format " ~ msg);
     }
@@ -495,10 +495,10 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
 	uint base = 10;
 	int uc;
 	char[ulong.sizeof * 8] tmpbuf;	// long enough to print long in binary
-	const(char*) prefix = "";
+	char* prefix = "";
 	string s;
 
-	void putstr(const char[] s)
+	void putstr(char[] s)
 	{
 	    //printf("flags = x%x\n", flags);
 	    int prepad = 0;
@@ -1538,7 +1538,7 @@ unittest
     r = std.string.format("%s", TestEnum.Value2);
     assert(r == "1");
 
-    invariant(char[5])[int] aa = ([3:"hello", 4:"betty"]);
+    char[5][int] aa = ([3:"hello", 4:"betty"]);
     r = std.string.format("%s", aa.values);
     assert(r == "[[h,e,l,l,o],[b,e,t,t,y]]");
     r = std.string.format("%s", aa);

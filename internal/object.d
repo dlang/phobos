@@ -37,6 +37,24 @@ module object;
 
 import std.outofmemory;
 
+/**
+ * An unsigned integral type large enough to span the memory space. Use for
+ * array indices and pointer offsets for maximal portability to
+ * architectures that have different memory address ranges. This is
+ * analogous to C's size_t.
+ */
+alias typeof(int.sizeof) size_t;
+
+/**
+ * A signed integral type large enough to span the memory space. Use for
+ * pointer differences and for size_t differences for maximal portability to
+ * architectures that have different memory address ranges. This is
+ * analogous to C's ptrdiff_t.
+ */
+alias typeof(cast(void*)0 - cast(void*)0) ptrdiff_t;
+
+alias size_t hash_t;
+
 extern (C)
 {   /// C's printf function.
     int printf(char *, ...);
@@ -53,33 +71,6 @@ extern (C)
 
 /// Standard boolean type.
 alias bool bit;
-
-version (X86_64)
-{
-    /**
-     * An unsigned integral type large enough to span the memory space. Use for
-     * array indices and pointer offsets for maximal portability to
-     * architectures that have different memory address ranges. This is
-     * analogous to C's size_t.
-     */
-    alias ulong size_t;
-
-    /**
-     * A signed integral type large enough to span the memory space. Use for
-     * pointer differences and for size_t differences for maximal portability to
-     * architectures that have different memory address ranges. This is
-     * analogous to C's ptrdiff_t.
-     */
-    alias long ptrdiff_t;
-
-    alias ulong hash_t;
-}
-else
-{
-    alias uint size_t;
-    alias int ptrdiff_t;
-    alias uint hash_t;
-}
 
 alias char[] string;
 alias wchar[] wstring;
