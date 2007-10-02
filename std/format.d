@@ -87,7 +87,7 @@ class FormatError : Error
 enum Mangle : char
 {
     Tvoid     = 'v',
-    Tbit      = 'b',
+    //Tbit      = 'b',	// no longer used
     Tbool     = 'x',
     Tbyte     = 'g',
     Tubyte    = 'h',
@@ -140,8 +140,6 @@ private TypeInfo primitiveTypeInfo(Mangle m)
     {
     case Mangle.Tvoid:
       ti = typeid(void);break;
-    case Mangle.Tbit:
-      ti = typeid(bit);break;
     case Mangle.Tbool:
       ti = typeid(bool);break;
     case Mangle.Tbyte:
@@ -695,7 +693,6 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
 	//printf("formatArg(fc = '%c', m = '%c')\n", fc, m);
 	switch (m)
 	{
-	    case Mangle.Tbit:
 	    case Mangle.Tbool:
 		vbit = va_arg!(bool)(argptr);
 		if (fc != 's')
