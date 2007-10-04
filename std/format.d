@@ -87,8 +87,7 @@ class FormatError : Error
 enum Mangle : char
 {
     Tvoid     = 'v',
-    //Tbit      = 'b',	// no longer used
-    Tbool     = 'x',
+    Tbool     = 'b',
     Tbyte     = 'g',
     Tubyte    = 'h',
     Tshort    = 's',

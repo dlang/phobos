@@ -444,7 +444,7 @@ extern (C)
 	uint[_SIGSET_NWORDS] __val;
     }
 
-    int getpwnam_r(const(char)*, passwd*, void*, size_t, passwd**);
+    int getpwnam_r(char*, passwd*, void*, size_t, passwd**);
     passwd* getpwnam(in char*);
     passwd* getpwuid(uid_t);
     int getpwuid_r(uid_t, passwd*, char*, size_t, passwd**);
