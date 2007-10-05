@@ -281,12 +281,6 @@ string demangle(string name)
 		    }
 		    break;
 		}
-		if (hasthisptr || isdelegate) {
-		    // add implicit 'this'/context pointer
-		    if (args.length)
-			args ~= ", ";
-		    args ~= "void*";
-		}
 		ni++;
 		if (!isdelegate && identifier.length)
 		{
@@ -510,11 +504,12 @@ unittest
 	[ "_D8demangle4testFLAiXi", "int demangle.test(lazy int[] ...)"] 
     ];
 
-    foreach (string[2] name; table)
+    foreach (i, name; table)
     {
 	string r = demangle(name[0]);
-	//writefln("[ \"%s\", \"%s\" ],", name[0], r);
-	assert(r == name[1]);
+        assert(r == name[1],
+            "table entry #" ~ toString(i) ~ ": '" ~ name[0] ~ "' demangles as '" ~ r ~ "' but is expected to be '" ~ name[1] ~ "'");
+
     }
 }
 

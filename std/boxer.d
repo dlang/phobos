@@ -167,8 +167,7 @@ struct Box
                 return TypeClass.Other;
             switch (type.classinfo.name[9])
             {
-                //case 'b': return TypeClass.Bit;
-                case 'x': return TypeClass.Bool;
+                case 'b', 'x': return TypeClass.Bool;
                 case 'g', 'h', 's', 't', 'i', 'k', 'l', 'm': return TypeClass.Integer;
                 case 'f', 'd', 'e': return TypeClass.Float;
                 case 'q', 'r', 'c': return TypeClass.Complex;
@@ -706,8 +705,8 @@ template unbox(T : void*)
             return *cast(void**) value.data;
         if (isArrayTypeInfo(value.type))
             return (*cast(void[]*) value.data).ptr;
-        if (typeid(Object) == value.type)
-            return *cast(Object*) value.data;
+        if (cast(TypeInfo_Class) value.type)
+            return cast(T)(*cast(Object*) value.data);
         
         throw new UnboxException(value, typeid(T));
     }
