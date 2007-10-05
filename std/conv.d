@@ -25,28 +25,8 @@
  */
 
 /***********
- * Conversion building blocks. These differ from the C equivalents
- * <tt>atoi()</tt> and <tt>atol()</tt> by
- * checking for overflow and not allowing whitespace.
+ * A one-stop-shop for converting values from one type to another.
  *
- * For conversion to signed types, the grammar recognized is:
- * <pre>
-$(I Integer):
-    $(I Sign UnsignedInteger)
-    $(I UnsignedInteger)
-
-$(I Sign):
-    $(B +)
-    $(B -)
- * </pre>
- * For conversion to signed types, the grammar recognized is:
- * <pre>
-$(I UnsignedInteger):
-    $(I DecimalDigit)
-    $(I DecimalDigit) $(I UnsignedInteger)
- * </pre>
- * Macros:
- *	WIKI=Phobos/StdConv
  */
 
 module std.conv;
@@ -55,6 +35,8 @@ private import std.string;  // for atof(), toString()
 private import std.c.stdlib;
 private import std.math;  // for fabs(), isnan()
 private import std.stdio; // for writefln() and printf()
+private import std.typetuple; // for unittests
+private import std.utf; // for string-to-string conversions
 
 
 //debug=conv;		// uncomment to turn on debugging printf's
@@ -62,7 +44,7 @@ private import std.stdio; // for writefln() and printf()
 /* ************* Exceptions *************** */
 
 /**
- * Thrown on conversion errors, which happens on deviation from the grammar.
+ * Thrown on conversion errors causing during conversions from string types.
  */
 class ConvError : Error
 {
@@ -93,8 +75,519 @@ private void conv_overflow(string s)
     throw new ConvOverflowError(s);
 }
 
+
 /***************************************************************
- * Convert character string to the return type.
+
+Converts a value from type Source to type Target. The source type is
+deduced and the target type must be specified, for example the
+expression to!(int)(42.0) converts the number 42 from double to
+int. The conversion is "safe", i.e., it checks for overflow;
+to!(int)(4.2e10) would throw the ConvOverflowError exception. Overflow
+checks are only inserted when necessary, e.g. to!(double)(42) does not
+do any checking because any int fits in a double.
+
+Converting a value to its own type (useful mostly for generic code)
+simply returns its argument.
+Example:
+-------------------------
+int a = 42;
+auto b = to!(int)(a); // b is int with value 42
+auto c = to!(double)(3.14); // c is double with value 3.14
+-------------------------
+Converting among numeric types is a safe way to cast them around.
+Conversions from floating-point types to integral types allow loss of
+precision (the fractional part of a floating-point number). The
+conversion is truncating towards zero, the same way a cast would
+truncate. (To round a floating point value when casting to an
+integral, use roundTo.)
+Examples:
+-------------------------
+int a = 420;
+auto b = to!(long)(a); // same as long b = a;
+auto c = to!(byte)(a / 10); // fine, c = 42
+auto d = to!(byte)(a); // throw ConvOverflowError
+double e = 4.2e6;
+auto f = to!(int)(e); // f == 4200000
+e = -3.14;
+auto g = to!(uint)(e); // fails: floating-to-integral underflow
+e = 3.14;
+auto h = to!(uint)(e); // h = 3
+e = 3.99;
+h = to!(uint)(a); // h = 3
+e = -3.99;
+f = to!(int)(a); // f = -3
+-------------------------
+
+Conversions from integral types to floating-point types always
+succeed, but might lose accuracy. The largest integers with a
+predecessor representable in floating-point format are 2^24-1 for
+float, 2^53-1 for double, and 2^64-1 for real (when real is 80-bit,
+e.g. on Intel machines).
+Example:
+-------------------------
+int a = 16_777_215; // 2^24 - 1, largest proper integer representable as float
+assert(to!(int)(to!(float)(a)) == a);
+assert(to!(int)(to!(float)(-a)) == -a);
+a += 2;
+assert(to!(int)(to!(float)(a)) == a); // fails!
+-------------------------
+
+Conversions from string to numeric types differ from the C equivalents
+<tt>atoi()</tt> and <tt>atol()</tt> by * checking for overflow and not
+allowing whitespace.
+
+For conversion of strings to signed types, the grammar recognized is:
+<pre>
+$(I Integer): $(I Sign UnsignedInteger)
+$(I UnsignedInteger)
+$(I Sign):
+    $(B +)
+    $(B -)
+</pre>
+For conversion to unsigned types, the grammar recognized is:
+<pre>
+$(I UnsignedInteger):
+    $(I DecimalDigit)
+    $(I DecimalDigit) $(I UnsignedInteger)
+</pre>
+
+Converting an array to another array type works by converting each
+element in turn. Associative arrays can be converted to associative
+arrays as long as keys and values can in turn be converted.
+Example:
+-------------------------
+int[] a = ([1, 2, 3]).dup;
+auto b = to!(float[])(a);
+assert(b == [1.0f, 2, 3]);
+string str = "1 2 3 4 5 6";
+auto numbers = to!(double[])(split(str));
+assert(numbers == [1.0, 2, 3, 4, 5, 6]);
+int[string] c;
+c["a"] = 1;
+c["b"] = 2;
+auto d = to!(double[wstring])(c);
+assert(d["a"w] == 1 && d["b"w] == 2);
+-------------------------
+Conversions operate transitively, meaning that they work on arrays and
+associative arrays of any complexity:
+-------------------------
+int[string][double[int[]]] a;
+...
+auto b = to!(short[wstring][string[double[]]])(a);
+-------------------------
+
+This conversion works because to!(short) applies to an int,
+to!(wstring) applies to a string, to!(string) applies to a double, and
+to!(double[]) applies to an int[]. The conversion might throw an
+exception because to!(short) might fail the range check.
+
+Macros: WIKI=Phobos/StdConv
+*/
+
+template to(Target) {
+  Target to(Source)(Source value) {
+    // Need to forward because of problems when recursively invoking
+    // a member with the same name as a template
+    return toImpl!(Source, Target)(value);
+  }
+}
+
+private T toSomeString(S, T)(S s) {
+  static const sIsString = is(S : const(char)[]) || is(S : const(wchar)[])
+    || is(S : const(dchar)[]);
+  static if (sIsString) {
+    // string-to-string conversion
+    static if (s[0].sizeof == T[0].sizeof) {
+      // same width, only qualifier conversion
+      static const tIsConst = is(T == const(char)[]) || is(T == const(wchar)[])
+        || is(T == const(dchar)[]);
+      static if (tIsConst) {
+        return s;
+      } else {
+        return cast(T) s.dup;
+      }
+    } else {
+      // width conversion
+      // we can cast because toUTFX always produces a fresh string
+      static if (T[0].sizeof == 1) {
+        return cast(T) toUTF8(s);
+      } else static if (T[0].sizeof == 2) {
+        return cast(T) toUTF16(s);
+      } else {
+        static assert(T[0].sizeof == 4);
+        return cast(T) toUTF32(s);
+      }
+    }
+  } else {
+    static if (isArray!(S)) {
+      // array-to-string conversion
+      T result = "[";
+      foreach (i, e; s) {
+        if (i) result ~= ',';
+        result ~= to!(T)(e);
+      }
+      result ~= ']';
+      return result;
+    } else static if (isHash!(S)) {
+      // hash-to-string conversion
+      T result = "[";
+      bool first = true;
+      foreach (k, v; s) {
+        if (!first) result ~= ',';
+        else first = false;
+        result ~= to!(T)(k);
+        result ~= ':';
+        result ~= to!(T)(v);
+      }
+      result ~= ']';
+      return result;
+    } else {
+      // source is not a string
+      auto result = toString(s);
+      static if (is(typeof(result) == T)) return result;
+      else return to!(T)(result);
+    }
+  }
+}
+
+private T toImpl(S, T)(S value) {
+  static if (is(S == T)) {
+    // Identity conversion
+    return value;
+  } else static if (is(T : const(char)[]) || is(T : const(wchar)[])
+                    || is(T : const(dchar)[])) {
+    return toSomeString!(S, T)(value);
+  } else static if (is(S : const(char)[])) {
+    return parseString!(T)(value);
+  } else static if (is(S : const(wchar)[]) || is(S : const(dchar)[])) {
+    // todo: improve performance
+    return parseString!(T)(toUTF8(value));
+  } else static if (isNumeric!(S) && isNumeric!(T)) {
+    return numberToNumber!(S, T)(value);
+  } else static if (isHash!(S) && isHash!(T)) {
+    return hashToHash!(S, T)(value);
+  } else static if (isArray!(S) && isArray!(S)) {
+    return arrayToArray!(S, T)(value);
+  } else {
+    // Attempt an implicit conversion
+    return value;
+  }
+}
+
+private template isIntegral(T) {
+  static const isIntegral = is(T == byte) || is(T == ubyte) || is(T == short)
+    || is(T == ushort) || is(T == int) || is(T == uint)
+    || is(T == long) || is(T == ulong);
+}
+
+private template isFloating(T) {
+  static const isFloating = is(T == float)
+    || is(T == double) || is(T == real);
+}
+
+private template isNumeric(T) {
+  static const isNumeric = isIntegral!(T) || isFloating!(T);
+}
+
+private template isArray(T) {
+  static const isArray = false;
+}
+
+private template isArray(T : T[]) {
+  static const isArray = true;
+}
+
+private template isHash(T, K = void, V = void) {
+  static const isHash = false;
+}
+
+private template isHash(T : K[V], K, V) {
+  static const isHash = true;
+}
+
+private T numberToNumber(S, T)(S value) {
+  static const sSmallest = isFloating!(S) ? -S.max : S.min,
+    tSmallest = isFloating!(T) ? -T.max : T.min;
+  static if (sSmallest < tSmallest) {
+    // possible underflow
+    if (value < tSmallest) conv_overflow("Conversion underflow");
+  }
+  static if (S.max > T.max) {
+    // possible overflow
+    if (value > T.max) conv_overflow("Conversion overflow");
+  }
+  return cast(T) value;
+}
+
+private T parseString(T)(const(char)[] v) {
+  //auto v = stringToString!(const(char)[])(value);
+  static if (is(T == byte)) return toByte(v);
+  else static if (is(T == ubyte)) return toUbyte(v);
+  else static if (is(T == short)) return toShort(v);
+  else static if (is(T == ushort)) return toUshort(v);
+  else static if (is(T == int)) return toInt(v);
+  else static if (is(T == uint)) return toUint(v);
+  else static if (is(T == long)) return toLong(v);
+  else static if (is(T == ulong)) return toUlong(v);
+  else static if (is(T == float)) return toFloat(v);
+  else static if (is(T == double)) return toDouble(v);
+  else static if (is(T == real)) return toReal(v);
+  else static assert(false, "Don't know how to convert a "
+                     ~ S.stringof ~ " to a " ~ T.stringof);
+}
+
+private T[] arrayToArray(S : S[], T : T[])(S[] src) {
+  T[] result;
+  foreach (e; src) {
+    result ~= to!(T)(e);
+  }
+  return result;
+}
+
+unittest {
+  // array to array conversions
+  uint[] a = ([ 1u, 2, 3 ]).dup;
+  auto b = to!(float[])(a);
+  assert(b == [ 1.0f, 2, 3 ]);
+  auto c = to!(string[])(b);
+  assert(c[0] == "1" && c[1] == "2" && c[2] == "3");
+  invariant(int)[3] d = [ 1, 2, 3 ];
+  b = to!(float[])(d);
+  assert(b == [ 1.0f, 2, 3 ]);
+  uint[][] e = [ a, a ];
+  auto f = to!(float[][])(e);
+  assert(f[0] == b && f[1] == b);
+}
+
+private T hashToHash(S : V1[K1], T : V2[K2], K1, V1, K2, V2)(S src) {
+  T result;
+  foreach (k1, v1; src) {
+    result[to!(K2)(k1)] = to!(V2)(v1);
+  }
+  return result;
+}
+
+unittest {
+  // hash to hash conversions
+  int[string] a;
+  a["0"] = 1;
+  a["1"] = 2;
+  auto b = to!(double[dstring])(a);
+  assert(b["0"d] == 1 && b["1"d] == 2);
+  // hash to string conversion
+  assert(to!(string)(a) == "[0:1,1:2]");
+}
+
+unittest {
+  // string tests
+  alias TypeTuple!(char, wchar, dchar) AllChars;
+  foreach (T; AllChars) {
+    foreach (U; AllChars) {
+      T[] s1 = to!(T[])("Hello, world!");
+      auto s2 = to!(U[])(s1);
+      assert(s1 == to!(T[])(s2));
+      auto s3 = to!(const(U)[])(s1);
+      assert(s1 == to!(T[])(s3));
+      auto s4 = to!(invariant(U)[])(s1);
+      assert(s1 == to!(T[])(s4));
+    }
+  }
+}
+
+private bool convFails(Source, Target, E)(Source src) {
+  try {
+    auto t = to!(Target)(src);
+  } catch (E) {
+    return true;
+  }
+  return false;
+}
+
+private void testIntegralToFloating(Integral, Floating)() {
+  Integral a = 42;
+  auto b = to!(Floating)(a);
+  assert(a == b);
+  assert(a == to!(Integral)(b));
+}
+
+private void testFloatingToIntegral(Floating, Integral)() {
+  // convert some value
+  Floating a = 4.2e1;
+  auto b = to!(Integral)(a);
+  assert(is(typeof(b) == Integral) && b == 42);
+  // convert some negative value (if applicable)
+  a = -4.2e1;
+  static if (Integral.min < 0) {
+    b = to!(Integral)(a);
+    assert(is(typeof(b) == Integral) && b == -42);
+  } else {
+    // no go for unsigned types
+    assert(convFails!(Floating, Integral, ConvOverflowError)(a));
+  }
+  // convert to the smallest integral value
+  a = 0.0 + Integral.min;
+  static if (Integral.min < 0) {
+    a = -a; // -Integral.min not representable as an Integral
+    assert(convFails!(Floating, Integral, ConvOverflowError)(a)
+           || Floating.sizeof <= Integral.sizeof);
+  }
+  a = 0.0 + Integral.min;
+  assert(to!(Integral)(a) == Integral.min);
+  --a; // no more representable as an Integral
+  assert(convFails!(Floating, Integral, ConvOverflowError)(a)
+         || Floating.sizeof <= Integral.sizeof);
+  a = 0.0 + Integral.max;
+//   fwritefln(stderr, "%s a=%g, %s conv=%s", Floating.stringof, a,
+//             Integral.stringof, to!(Integral)(a));
+  assert(to!(Integral)(a) == Integral.max || Floating.sizeof <= Integral.sizeof);
+  ++a; // no more representable as an Integral
+  assert(convFails!(Floating, Integral, ConvOverflowError)(a)
+         || Floating.sizeof <= Integral.sizeof);
+  // convert a value with a fractional part
+  a = 3.14;
+  assert(to!(Integral)(a) == 3);
+  a = 3.99;
+  assert(to!(Integral)(a) == 3);
+  static if (Integral.min < 0) {
+    a = -3.14;
+    assert(to!(Integral)(a) == -3);
+    a = -3.99;
+    assert(to!(Integral)(a) == -3);
+  }
+}
+
+unittest {
+  alias TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong)
+    AllInts;
+  alias TypeTuple!(float, double, real) AllFloats;
+  alias TypeTuple!(AllInts, AllFloats) AllNumerics;
+  // test with same type
+  {
+    foreach (T; AllNumerics) {
+      T a = 42;
+      auto b = to!(T)(a);
+      assert(is(typeof(a) == typeof(b)) && a == b);
+    }
+  }
+  // test that floating-point numbers convert properly to largest ints
+  // see http://oregonstate.edu/~peterseb/mth351/docs/351s2001_fp80x87.html
+  // look for "largest fp integer with a predecessor"
+  {
+    // float
+    int a = 16_777_215; // 2^24 - 1
+    assert(to!(int)(to!(float)(a)) == a);
+    assert(to!(int)(to!(float)(-a)) == -a);
+    // double
+    long b = 9_007_199_254_740_991; // 2^53 - 1
+    assert(to!(long)(to!(double)(b)) == b);
+    assert(to!(long)(to!(double)(-b)) == -b);
+    // real
+    // @@@ BUG IN COMPILER @@@
+//     ulong c = 18_446_744_073_709_551_615UL; // 2^64 - 1
+//     assert(to!(ulong)(to!(real)(c)) == c);
+//     assert(to!(ulong)(-to!(real)(c)) == c);
+  }
+  // test conversions floating => integral
+  {
+    // AllInts[0 .. $ - 1] should be AllInts
+    // @@@ BUG IN COMPILER @@@
+    foreach (Integral; AllInts[0 .. $ - 1]) {
+      foreach (Floating; AllFloats) {
+        testFloatingToIntegral!(Floating, Integral);
+      }
+    }
+  }
+  // test conversion integral => floating
+  {
+    foreach (Integral; AllInts[0 .. $ - 1]) {
+      foreach (Floating; AllFloats) {
+        testIntegralToFloating!(Integral, Floating);
+      }
+    }
+  }
+  // test parsing
+  {
+    foreach (T; AllNumerics) {
+      // from type invariant(char)[2]
+      auto a = to!(T)("42");
+      assert(a == 42);
+      // from type char[]
+      char[] s1 = "42".dup;
+      a = to!(T)(s1);
+      assert(a == 42);
+      // from type char[2]
+      char[2] s2;
+      s2[] = "42";
+      a = to!(T)(s2);
+      assert(a == 42);
+      // from type invariant(wchar)[2]
+      a = to!(T)("42"w);
+      assert(a == 42);
+    }
+  }
+  // test conversions to string
+  {
+    foreach (T; AllNumerics) {
+      T a = 42;
+      assert(to!(string)(a) == "42");
+      //assert(to!(wstring)(a) == "42"w);
+      //assert(to!(dstring)(a) == "42"d);
+      // array test
+//       T[] b = new T[2];
+//       b[0] = 42;
+//       b[1] = 33;
+//       assert(to!(string)(b) == "[42,33]");
+    }
+  }
+  // test array to string conversion
+  foreach (T ; AllNumerics) {
+    auto a = [to!(T)(1), 2, 3];
+    assert(to!(string)(a) == "[1,2,3]");
+  }
+}
+
+/***************************************************************
+ Rounded conversion from floating point to integral.
+Example:
+---------------
+  assert(roundTo!(int)(3.14) == 3);
+  assert(roundTo!(int)(3.49) == 3);
+  assert(roundTo!(int)(3.5) == 4);
+  assert(roundTo!(int)(3.999) == 4);
+  assert(roundTo!(int)(-3.14) == -3);
+  assert(roundTo!(int)(-3.49) == -3);
+  assert(roundTo!(int)(-3.5) == -4);
+  assert(roundTo!(int)(-3.999) == -4);
+---------------
+Rounded conversions do not work with non-integral target types.
+ */
+
+template roundTo(Target) {
+  Target roundTo(Source)(Source value) {
+    static assert(is(Source == float) || is(Source == double)
+                  || is(Source == real));
+    static assert(is(Target == byte) || is(Target == ubyte)
+                  || is(Target == short) || is(Target == ushort)
+                  || is(Target == int) || is(Target == uint)
+                  || is(Target == long) || is(Target == ulong));
+    return to!(Target)(value + (value < 0 ? -0.5 : 0.5));
+  }
+}
+
+unittest {
+  assert(roundTo!(int)(3.14) == 3);
+  assert(roundTo!(int)(3.49) == 3);
+  assert(roundTo!(int)(3.5) == 4);
+  assert(roundTo!(int)(3.999) == 4);
+  assert(roundTo!(int)(-3.14) == -3);
+  assert(roundTo!(int)(-3.49) == -3);
+  assert(roundTo!(int)(-3.5) == -4);
+  assert(roundTo!(int)(-3.999) == -4);
+}
+
+/***************************************************************
+ Convert character string to the return type. These functions will be
+ deprecated because to!(T) supersedes them.
  */
 
 int toInt(string s)
