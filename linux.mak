@@ -18,6 +18,7 @@ DFLAGS=-O -release
 #DFLAGS=-unittest
 
 CC=gcc
+DOC=doc
 #DMD=/dmd/bin/dmd
 DMD=dmd
 
@@ -47,33 +48,23 @@ unittest : unittest.o $(LIB)
 unittest.o : unittest.d
 	$(DMD) -c unittest
 
-OBJS = asserterror.o deh2.o switch.o complex.o gcstats.o \
-	critical.o object.o monitor.o arraycat.o invariant.o \
-	dmain2.o outofmemory.o aaA.o adi.o aApply.o file.o \
-	compiler.o system.o moduleinit.o md5.o base64.o \
-	cast.o path.o string.o memset.o math.o mmfile.o \
-	outbuffer.o ctype.o regexp.o random.o linux.o linuxsocket.o \
-	stream.o cstream.o switcherr.o array.o gc.o \
-	qsort.o thread.o obj.o utf.o uri.o \
-	Dcrc32.o conv.o arraycast.o errno.o alloca.o cmath2.o \
-	process.o syserror.o metastrings.o \
-	socket.o socketstream.o stdarg.o stdio.o format.o \
-	perf.o openrj.o uni.o trace.o boxer.o \
-	demangle.o cover.o bitarray.o bind.o aApplyR.o \
-	signals.o cpuid.o traits.o typetuple.o loader.o \
-	c_stdio.o hiddenfunc.o \
-	ti_wchar.o ti_uint.o ti_short.o ti_ushort.o \
-	ti_byte.o ti_ubyte.o ti_long.o ti_ulong.o ti_ptr.o \
-	ti_float.o ti_double.o ti_real.o ti_delegate.o \
-	ti_creal.o ti_ireal.o ti_cfloat.o ti_ifloat.o \
-	ti_cdouble.o ti_idouble.o \
-	ti_AC.o ti_Ag.o ti_Ashort.o \
-	ti_C.o ti_int.o ti_char.o ti_dchar.o \
-	ti_Aint.o ti_Along.o \
-	ti_Afloat.o ti_Adouble.o ti_Areal.o \
-	ti_Acfloat.o ti_Acdouble.o ti_Acreal.o \
-	ti_void.o \
-	date.o dateparse.o llmath.o math2.o Czlib.o Dzlib.o zip.o
+STD_MODULES = array asserterror base64 bind bitarray boxer compiler \
+	conv cover cpuid cstream ctype date dateparse demangle file format gc \
+	hiddenfunc intrinsic loader math math2 md5 metastrings mmfile \
+	moduleinit openrj outbuffer outofmemory path perf process random \
+	regexp signals socket socketstream stdint stdio stream string \
+	switcherr syserror system thread traits typetuple uni uri utf zip
+
+STD_MODULES_NOTGENERATING_OBJ = stdarg
+
+# zlib.d is an exception because it conflicts with zlib.c
+#    and will be handled separately, although it's an std module
+
+OBJS = Czlib.o Dcrc32.o Dzlib.o c_stdio.o complex.o critical.o errno.o \
+     gcstats.o invariant.o linux.o linuxsocket.o monitor.o trace.o stdarg.o \
+     $(addsuffix .o,$(STD_MODULES)) \
+     $(addsuffix .o,$(INTERNAL_MODULES)) \
+     $(addsuffix .o,$(TYPEINFO_MODULES))
 
 ZLIB_OBJS = etc/c/zlib/adler32.o etc/c/zlib/compress.o \
 	etc/c/zlib/crc32.o etc/c/zlib/gzio.o \
@@ -87,55 +78,52 @@ GC_OBJS= internal/gc/gc.o internal/gc/gcold.o internal/gc/gcx.o \
 
 SRC=	errno.c object.d unittest.d crc32.d gcstats.d
 
-SRC_STD= std/zlib.d std/zip.d std/stdint.d std/conv.d std/utf.d std/uri.d \
-	std/gc.d std/math.d std/string.d std/path.d std/date.d \
-	std/ctype.d std/file.d std/compiler.d std/system.d std/moduleinit.d \
-	std/outbuffer.d std/math2.d std/thread.d std/md5.d std/base64.d \
-	std/asserterror.d std/dateparse.d std/outofmemory.d std/mmfile.d \
-	std/intrinsic.d std/array.d std/switcherr.d std/syserror.d \
-	std/regexp.d std/random.d std/stream.d std/process.d \
-	std/socket.d std/socketstream.d std/loader.d std/stdarg.d \
-	std/stdio.d std/format.d std/perf.d std/openrj.d std/uni.d \
-	std/boxer.d std/cstream.d std/demangle.d std/cover.d std/bitarray.d \
-	std/signals.d std/cpuid.d std/typetuple.d std/traits.d std/bind.d \
-	std/metastrings.d std/hiddenfunc.d
+SRC_STD= $(addprefix std/,$(addsuffix .d,\
+$(STD_MODULES) $(STD_MODULES_NOTGENERATING_OBJ)))
 
-SRC_STD_C= std/c/process.d std/c/stdlib.d std/c/time.d std/c/stdio.d \
-	std/c/math.d std/c/stdarg.d std/c/stddef.d std/c/fenv.d std/c/string.d \
-	std/d/locale.d
+SRC_STD_C= std/c/fenv.d std/c/math.d std/c/process.d std/c/stdarg.d \
+	std/c/stddef.d std/c/stdio.d std/c/stdlib.d std/c/string.d \
+	std/c/time.d \
+	#std/d/locale.d
 
-SRC_TI=	\
-	std/typeinfo/ti_wchar.d std/typeinfo/ti_uint.d \
-	std/typeinfo/ti_short.d std/typeinfo/ti_ushort.d \
-	std/typeinfo/ti_byte.d std/typeinfo/ti_ubyte.d \
-	std/typeinfo/ti_long.d std/typeinfo/ti_ulong.d \
-	std/typeinfo/ti_ptr.d \
-	std/typeinfo/ti_float.d std/typeinfo/ti_double.d \
-	std/typeinfo/ti_real.d std/typeinfo/ti_delegate.d \
-	std/typeinfo/ti_creal.d std/typeinfo/ti_ireal.d \
-	std/typeinfo/ti_cfloat.d std/typeinfo/ti_ifloat.d \
-	std/typeinfo/ti_cdouble.d std/typeinfo/ti_idouble.d \
-	std/typeinfo/ti_Adchar.d \
-	std/typeinfo/ti_Ashort.d \
-	std/typeinfo/ti_Ag.d \
-	std/typeinfo/ti_AC.d std/typeinfo/ti_C.d \
-	std/typeinfo/ti_int.d std/typeinfo/ti_char.d \
-	std/typeinfo/ti_Aint.d \
-	std/typeinfo/ti_Along.d \
-	std/typeinfo/ti_Afloat.d std/typeinfo/ti_Adouble.d \
-	std/typeinfo/ti_Areal.d \
-	std/typeinfo/ti_Acfloat.d std/typeinfo/ti_Acdouble.d \
-	std/typeinfo/ti_Acreal.d \
-	std/typeinfo/ti_void.d
+TYPEINFO_MODULES=\
+	ti_wchar ti_uint \
+	ti_short ti_ushort \
+	ti_byte ti_ubyte \
+	ti_long ti_ulong \
+	ti_ptr \
+	ti_float ti_double \
+	ti_real ti_delegate \
+	ti_creal ti_ireal \
+	ti_cfloat ti_ifloat \
+	ti_cdouble ti_idouble \
+	ti_dchar \
+	ti_Ashort \
+	ti_Ag \
+	ti_AC ti_C \
+	ti_int ti_char \
+	ti_Aint \
+	ti_Along \
+	ti_Afloat ti_Adouble \
+	ti_Areal \
+	ti_Acfloat ti_Acdouble \
+	ti_Acreal \
+	ti_void
 
-SRC_INT=	\
-	internal/switch.d internal/complex.c internal/critical.c \
-	internal/minit.asm internal/alloca.d internal/llmath.d internal/deh.c \
-	internal/arraycat.d internal/invariant.d internal/monitor.c \
-	internal/memset.d internal/arraycast.d internal/aaA.d internal/adi.d \
-	internal/dmain2.d internal/cast.d internal/qsort.d internal/deh2.d \
-	internal/cmath2.d internal/obj.d internal/mars.h internal/aApply.d \
-	internal/aApplyR.d internal/object.d internal/trace.d internal/qsort2.d
+SRC_TI= $(addprefix std/typeinfo/,$(addsuffix .d,$(TYPEINFO_MODULES)))
+
+INTERNAL_MODULES=aApply aApplyR aaA \
+	adi alloca arraycast \
+	arraycat cast cmath2 \
+	deh2 \
+	dmain2 invariant llmath \
+	memset \
+	obj object qsort \
+	switch trace
+
+SRC_INT=internal/complex.c internal/critical.c internal/deh.c internal/mars.h \
+	internal/monitor.c internal/minit.asm \
+	$(addprefix internal/,$(addsuffix .d,$(INTERNAL_MODULES)))
 
 SRC_STD_WIN= std/windows/registry.d \
 	std/windows/iunknown.d std/windows/charset.d
@@ -197,11 +185,31 @@ ALLSRCS = $(SRC) $(SRC_STD) $(SRC_STD_C) $(SRC_TI) $(SRC_INT) $(SRC_STD_WIN) \
 	$(SRC_STD_C_WIN) $(SRC_STD_C_LINUX) $(SRC_ETC) $(SRC_ETC_C) \
 	$(SRC_ZLIB) $(SRC_GC)
 
-
 #$(LIB) : $(OBJS) internal/gc/dmgc.a linux.mak
 $(LIB) : $(OBJS) internal/gc/dmgc.a $(ZLIB_OBJS) linux.mak
 	rm -f $(LIB)
 	ar -r $@ $(OBJS) $(ZLIB_OBJS) $(GC_OBJS)
+
+
+###########################################################
+# Dox
+
+LINUX_DOCUMENTABLES = phobos.d $(SRC_STD) $(SRC_STD_C) $(SRC_STD_C_LINUX)
+
+define d2html
+$(DOC)/$(subst /,_,$(subst .d,.html,$(1)))
+endef
+
+define html_dep
+HTML_FILES += $(call d2html,$(1))
+$(call d2html,$(1)) : $(1) std.ddoc
+	$(DMD) -c -o- $(DFLAGS) -Df$$@ std.ddoc $$<
+
+endef
+
+$(foreach file,$(LINUX_DOCUMENTABLES),$(eval $(call html_dep,$(file))))
+
+html : $(HTML_FILES)
 
 ###########################################################
 
@@ -229,32 +237,14 @@ gcstats.o : gcstats.d
 
 ### internal
 
-aaA.o : internal/aaA.d
-	$(DMD) -c $(DFLAGS) internal/aaA.d
+define module_dep
+$(1).o : $(2)/$(1).d
+	$(DMD) -c $(DFLAGS) $(2)/$(1).d
 
-aApply.o : internal/aApply.d
-	$(DMD) -c $(DFLAGS) internal/aApply.d
+endef
 
-aApplyR.o : internal/aApplyR.d
-	$(DMD) -c $(DFLAGS) internal/aApplyR.d
-
-adi.o : internal/adi.d
-	$(DMD) -c $(DFLAGS) internal/adi.d
-
-alloca.o : internal/alloca.d
-	$(DMD) -c $(DFLAGS) internal/alloca.d
-
-arraycast.o : internal/arraycast.d
-	$(DMD) -c $(DFLAGS) internal/arraycast.d
-
-arraycat.o : internal/arraycat.d
-	$(DMD) -c $(DFLAGS) internal/arraycat.d
-
-cast.o : internal/cast.d
-	$(DMD) -c $(DFLAGS) internal/cast.d
-
-cmath2.o : internal/cmath2.d
-	$(DMD) -c $(DFLAGS) internal/cmath2.d
+$(foreach module,$(INTERNAL_MODULES),\
+          $(eval $(call module_dep,$(module),internal)))
 
 complex.o : internal/complex.c
 	$(CC) -c $(CFLAGS) internal/complex.c
@@ -265,196 +255,20 @@ critical.o : internal/critical.c
 #deh.o : internal/mars.h internal/deh.cA
 #	$(CC) -c $(CFLAGS) internal/deh.c
 
-deh2.o : internal/deh2.d
-	$(DMD) -c $(DFLAGS) -release internal/deh2.d
-
-dmain2.o : internal/dmain2.d
-	$(DMD) -c $(DFLAGS) internal/dmain2.d
-
-invariant.o : internal/invariant.d
-	$(DMD) -c $(DFLAGS) internal/invariant.d
-
-llmath.o : internal/llmath.d
-	$(DMD) -c $(DFLAGS) internal/llmath.d
-
-memset.o : internal/memset.d
-	$(DMD) -c $(DFLAGS) internal/memset.d
-
 #minit.o : internal/minit.asm
 #	$(CC) -c internal/minit.asm
 
 monitor.o : internal/mars.h internal/monitor.c
 	$(CC) -c $(CFLAGS) internal/monitor.c
 
-obj.o : internal/obj.d
-	$(DMD) -c $(DFLAGS) internal/obj.d
-
-object.o : internal/object.d
-	$(DMD) -c $(DFLAGS) internal/object.d
-
-qsort.o : internal/qsort.d
-	$(DMD) -c $(DFLAGS) internal/qsort.d
-
-switch.o : internal/switch.d
-	$(DMD) -c $(DFLAGS) internal/switch.d
-
-trace.o : internal/trace.d
-	$(DMD) -c $(DFLAGS) internal/trace.d
-
 ### std
 
-array.o : std/array.d
-	$(DMD) -c $(DFLAGS) std/array.d
+$(foreach module,$(STD_MODULES),\
+          $(eval $(call module_dep,$(module),std)))
 
-asserterror.o : std/asserterror.d
-	$(DMD) -c $(DFLAGS) std/asserterror.d
-
-base64.o : std/base64.d
-	$(DMD) -c $(DFLAGS) std/base64.d
-
-bind.o : std/bind.d
-	$(DMD) -c $(DFLAGS) std/bind.d
-
-bitarray.o : std/bitarray.d
-	$(DMD) -c $(DFLAGS) std/bitarray.d
-
-boxer.o : std/boxer.d
-	$(DMD) -c $(DFLAGS) std/boxer.d
-
-compiler.o : std/compiler.d
-	$(DMD) -c $(DFLAGS) std/compiler.d
-
-conv.o : std/conv.d
-	$(DMD) -c $(DFLAGS) std/conv.d
-
-cover.o : std/cover.d
-	$(DMD) -c $(DFLAGS) std/cover.d
-
-cpuid.o : std/cpuid.d
-	$(DMD) -c $(DFLAGS) std/cpuid.d
-
-cstream.o : std/cstream.d
-	$(DMD) -c $(DFLAGS) std/cstream.d
-
-ctype.o : std/ctype.d
-	$(DMD) -c $(DFLAGS) std/ctype.d
-
-date.o : std/dateparse.d std/date.d
-	$(DMD) -c $(DFLAGS) std/date.d
-
-dateparse.o : std/dateparse.d std/date.d
-	$(DMD) -c $(DFLAGS) std/dateparse.d
-
-demangle.o : std/demangle.d
-	$(DMD) -c $(DFLAGS) std/demangle.d
-
-file.o : std/file.d
-	$(DMD) -c $(DFLAGS) std/file.d
-
-format.o : std/format.d
-	$(DMD) -c $(DFLAGS) std/format.d
-
-gc.o : std/gc.d
-	$(DMD) -c $(DFLAGS) std/gc.d
-
-hiddenfunc.o : std/hiddenfunc.d
-	$(DMD) -c $(DFLAGS) std/hiddenfunc.d
-
-loader.o : std/loader.d
-	$(DMD) -c $(DFLAGS) std/loader.d
-
-math.o : std/math.d
-	$(DMD) -c $(DFLAGS) std/math.d
-
-math2.o : std/math2.d
-	$(DMD) -c $(DFLAGS) std/math2.d
-
-md5.o : std/md5.d
-	$(DMD) -c $(DFLAGS) std/md5.d
-
-metastrings.o : std/metastrings.d
-	$(DMD) -c $(DFLAGS) std/metastrings.d
-
-mmfile.o : std/mmfile.d
-	$(DMD) -c $(DFLAGS) std/mmfile.d
-
-moduleinit.o : std/moduleinit.d
-	$(DMD) -c $(DFLAGS) std/moduleinit.d
-
-openrj.o : std/openrj.d
-	$(DMD) -c $(DFLAGS) std/openrj.d
-
-outbuffer.o : std/outbuffer.d
-	$(DMD) -c $(DFLAGS) std/outbuffer.d
-
-outofmemory.o : std/outofmemory.d
-	$(DMD) -c $(DFLAGS) std/outofmemory.d
-
-path.o : std/path.d
-	$(DMD) -c $(DFLAGS) std/path.d
-
-perf.o : std/perf.d
-	$(DMD) -c $(DFLAGS) std/perf.d
-
-process.o : std/process.d
-	$(DMD) -c $(DFLAGS) std/process.d
-
-random.o : std/random.d
-	$(DMD) -c $(DFLAGS) std/random.d
-
-regexp.o : std/regexp.d
-	$(DMD) -c $(DFLAGS) std/regexp.d
-
-signals.o : std/signals.d
-	$(DMD) -c $(DFLAGS) std/signals.d
-
-socket.o : std/socket.d
-	$(DMD) -c $(DFLAGS) std/socket.d
-
-socketstream.o : std/socketstream.d
-	$(DMD) -c $(DFLAGS) std/socketstream.d
-
-stdio.o : std/stdio.d
-	$(DMD) -c $(DFLAGS) std/stdio.d
-
-stream.o : std/stream.d
-	$(DMD) -c $(DFLAGS) -d std/stream.d
-
-string.o : std/string.d
-	$(DMD) -c $(DFLAGS) std/string.d
-
-switcherr.o : std/switcherr.d
-	$(DMD) -c $(DFLAGS) std/switcherr.d
-
-system.o : std/system.d
-	$(DMD) -c $(DFLAGS) std/system.d
-
-syserror.o : std/syserror.d
-	$(DMD) -c $(DFLAGS) std/syserror.d
-
-thread.o : std/thread.d
-	$(DMD) -c $(DFLAGS) std/thread.d
-
-traits.o : std/traits.d
-	$(DMD) -c $(DFLAGS) std/traits.d
-
-typetuple.o : std/typetuple.d
-	$(DMD) -c $(DFLAGS) std/typetuple.d
-
-uri.o : std/uri.d
-	$(DMD) -c $(DFLAGS) std/uri.d
-
-uni.o : std/uni.d
-	$(DMD) -c $(DFLAGS) std/uni.d
-
-utf.o : std/utf.d
-	$(DMD) -c $(DFLAGS) std/utf.d
-
+# Exception
 Dzlib.o : std/zlib.d
-	$(DMD) -c $(DFLAGS) std/zlib.d -ofDzlib.o
-
-zip.o : std/zip.d
-	$(DMD) -c $(DFLAGS) std/zip.d
+	$(DMD) -c $(DFLAGS) $< -of$@
 
 ### std/c
 
@@ -481,123 +295,15 @@ Czlib.o : etc/c/zlib.d
 
 ### std/typeinfo
 
-ti_void.o : std/typeinfo/ti_void.d
-	$(DMD) -c $(DFLAGS) std/typeinfo/ti_void.d
+$(foreach module,$(TYPEINFO_MODULES),\
+          $(eval $(call module_dep,$(module),std/typeinfo)))
 
-ti_wchar.o : std/typeinfo/ti_wchar.d
-	$(DMD) -c $(DFLAGS) std/typeinfo/ti_wchar.d
-
-ti_dchar.o : std/typeinfo/ti_dchar.d
-	$(DMD) -c $(DFLAGS) std/typeinfo/ti_dchar.d
-
-ti_uint.o : std/typeinfo/ti_uint.d
-	$(DMD) -c $(DFLAGS) std/typeinfo/ti_uint.d
-
-ti_short.o : std/typeinfo/ti_short.d
-	$(DMD) -c $(DFLAGS) std/typeinfo/ti_short.d
-
-ti_ushort.o : std/typeinfo/ti_ushort.d
-	$(DMD) -c $(DFLAGS) std/typeinfo/ti_ushort.d
-
-ti_byte.o : std/typeinfo/ti_byte.d
-	$(DMD) -c $(DFLAGS) std/typeinfo/ti_byte.d
-
-ti_ubyte.o : std/typeinfo/ti_ubyte.d
-	$(DMD) -c $(DFLAGS) std/typeinfo/ti_ubyte.d
-
-ti_long.o : std/typeinfo/ti_long.d
-	$(DMD) -c $(DFLAGS) std/typeinfo/ti_long.d
-
-ti_ulong.o : std/typeinfo/ti_ulong.d
-	$(DMD) -c $(DFLAGS) std/typeinfo/ti_ulong.d
-
-ti_ptr.o : std/typeinfo/ti_ptr.d
-	$(DMD) -c $(DFLAGS) std/typeinfo/ti_ptr.d
-
-ti_float.o : std/typeinfo/ti_float.d
-	$(DMD) -c $(DFLAGS) std/typeinfo/ti_float.d
-
-ti_double.o : std/typeinfo/ti_double.d
-	$(DMD) -c $(DFLAGS) std/typeinfo/ti_double.d
-
-ti_real.o : std/typeinfo/ti_real.d
-	$(DMD) -c $(DFLAGS) std/typeinfo/ti_real.d
-
-ti_delegate.o : std/typeinfo/ti_delegate.d
-	$(DMD) -c $(DFLAGS) std/typeinfo/ti_delegate.d
-
-ti_creal.o : std/typeinfo/ti_creal.d
-	$(DMD) -c $(DFLAGS) std/typeinfo/ti_creal.d
-
-ti_ireal.o : std/typeinfo/ti_ireal.d
-	$(DMD) -c $(DFLAGS) std/typeinfo/ti_ireal.d
-
-ti_cfloat.o : std/typeinfo/ti_cfloat.d
-	$(DMD) -c $(DFLAGS) std/typeinfo/ti_cfloat.d
-
-ti_ifloat.o : std/typeinfo/ti_ifloat.d
-	$(DMD) -c $(DFLAGS) std/typeinfo/ti_ifloat.d
-
-ti_cdouble.o : std/typeinfo/ti_cdouble.d
-	$(DMD) -c $(DFLAGS) std/typeinfo/ti_cdouble.d
-
-ti_idouble.o : std/typeinfo/ti_idouble.d
-	$(DMD) -c $(DFLAGS) std/typeinfo/ti_idouble.d
-
-ti_AC.o : std/typeinfo/ti_AC.d
-	$(DMD) -c $(DFLAGS) std/typeinfo/ti_AC.d
-
-ti_Ag.o : std/typeinfo/ti_Ag.d
-	$(DMD) -c $(DFLAGS) std/typeinfo/ti_Ag.d
-
-ti_Abit.o : std/typeinfo/ti_Abit.d
-	$(DMD) -c $(DFLAGS) std/typeinfo/ti_Abit.d
-
-ti_Ashort.o : std/typeinfo/ti_Ashort.d
-	$(DMD) -c $(DFLAGS) std/typeinfo/ti_Ashort.d
-
-ti_Aint.o : std/typeinfo/ti_Aint.d
-	$(DMD) -c $(DFLAGS) std/typeinfo/ti_Aint.d
-
-ti_Along.o : std/typeinfo/ti_Along.d
-	$(DMD) -c $(DFLAGS) std/typeinfo/ti_Along.d
-
-ti_Afloat.o : std/typeinfo/ti_Afloat.d
-	$(DMD) -c $(DFLAGS) std/typeinfo/ti_Afloat.d
-
-ti_Adouble.o : std/typeinfo/ti_Adouble.d
-	$(DMD) -c $(DFLAGS) std/typeinfo/ti_Adouble.d
-
-ti_Areal.o : std/typeinfo/ti_Areal.d
-	$(DMD) -c $(DFLAGS) std/typeinfo/ti_Areal.d
-
-ti_Acfloat.o : std/typeinfo/ti_Acfloat.d
-	$(DMD) -c $(DFLAGS) std/typeinfo/ti_Acfloat.d
-
-ti_Acdouble.o : std/typeinfo/ti_Acdouble.d
-	$(DMD) -c $(DFLAGS) std/typeinfo/ti_Acdouble.d
-
-ti_Acreal.o : std/typeinfo/ti_Acreal.d
-	$(DMD) -c $(DFLAGS) std/typeinfo/ti_Acreal.d
-
-ti_C.o : std/typeinfo/ti_C.d
-	$(DMD) -c $(DFLAGS) std/typeinfo/ti_C.d
-
-ti_char.o : std/typeinfo/ti_char.d
-	$(DMD) -c $(DFLAGS) std/typeinfo/ti_char.d
-
-ti_int.o : std/typeinfo/ti_int.d
-	$(DMD) -c $(DFLAGS) std/typeinfo/ti_int.d
-
-ti_bit.o : std/typeinfo/ti_bit.d
-	$(DMD) -c $(DFLAGS) std/typeinfo/ti_bit.d
-
-
-##########################################################333
+##########################################################
 
 zip : $(ALLSRCS) linux.mak win32.mak phoboslicense.txt
 	$(RM) phobos.zip
 	zip phobos $(ALLSRCS) linux.mak win32.mak phoboslicense.txt
 
 clean:
-	$(RM) $(LIB) $(OBJS) unittest unittest.o
+	$(RM) $(LIB) $(OBJS) $(HTML_FILES) unittest unittest.o 
+	$(RM) -r $(DOC)

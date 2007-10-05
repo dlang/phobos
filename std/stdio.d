@@ -25,6 +25,7 @@ import std.gc;
 import std.c.stdlib;
 import std.c.string;
 import std.c.stddef;
+import std.conv;
 
 
 version (DigitalMars)
@@ -69,31 +70,31 @@ version (DIGITAL_MARS_STDIO)
     alias __fp_unlock FUNLOCK;
 }
 else version (GCC_IO)
-{
-    /* **
-     * Gnu under-the-hood C I/O functions; see
-     * http://www.gnu.org/software/libc/manual/html_node/I_002fO-on-Streams.html#I_002fO-on-Streams
-     */
-    extern (C)
-    {
-	int fputc_unlocked(int, FILE*);
-	int fputwc_unlocked(wchar_t, FILE*);
-	int fgetc_unlocked(FILE*);
-	int fgetwc_unlocked(FILE*);
-	void flockfile(FILE*);
-	void funlockfile(FILE*);
-	ssize_t getline(char**, size_t*, FILE*);
-	ssize_t getdelim (char**, size_t*, int, FILE*);
-    }
+     {
+         /* **
+          * Gnu under-the-hood C I/O functions; see
+          * http://www.gnu.org/software/libc/manual/html_node/I_002fO-on-Streams.html#I_002fO-on-Streams
+          */
+         extern (C)
+         {
+             int fputc_unlocked(int, FILE*);
+             int fputwc_unlocked(wchar_t, FILE*);
+             int fgetc_unlocked(FILE*);
+             int fgetwc_unlocked(FILE*);
+             void flockfile(FILE*);
+             void funlockfile(FILE*);
+             ssize_t getline(char**, size_t*, FILE*);
+             ssize_t getdelim (char**, size_t*, int, FILE*);
+         }
 
-    alias fputc_unlocked FPUTC;
-    alias fputwc_unlocked FPUTWC;
-    alias fgetc_unlocked FGETC;
-    alias fgetwc_unlocked FGETWC;
+         alias fputc_unlocked FPUTC;
+         alias fputwc_unlocked FPUTWC;
+         alias fgetc_unlocked FGETC;
+         alias fgetwc_unlocked FGETWC;
 
-    alias flockfile FLOCK;
-    alias funlockfile FUNLOCK;
-}
+         alias flockfile FLOCK;
+         alias funlockfile FUNLOCK;
+     }
 else
 {
     static assert(0, "unsupported C I/O system");
@@ -184,12 +185,12 @@ void writefx(FILE* fp, TypeInfo[] arguments, void* argptr, int newline=false)
 	    }
 	}
 	else version (linux)
-	{
-	    void putcw(dchar c)
-	    {
-		FPUTWC(c, fp);
-	    }
-	}
+             {
+                 void putcw(dchar c)
+                 {
+                     FPUTWC(c, fp);
+                 }
+             }
 	else
 	{
 	    static assert(0);
@@ -265,7 +266,7 @@ int main()
     return 0;
 }
 ---
- */
+*/
 char[] readln(FILE* fp = stdin)
 {
     char[] buf;
@@ -302,7 +303,7 @@ int main()
     return 0;
 }
 ---
- */
+*/
 size_t readln(FILE* fp, inout char[] buf)
 {
     version (DIGITAL_MARS_STDIO)
@@ -352,7 +353,7 @@ size_t readln(FILE* fp, inout char[] buf)
 	     * across buffer boundaries, or for any but the common
 	     * cases.
 	     */
-	 L1:
+        L1:
 	    char *p;
 
 	    if (sz)
@@ -453,87 +454,87 @@ size_t readln(FILE* fp, inout char[] buf)
 	}
     }
     else version (GCC_IO)
-    {
-	if (fwide(fp, 0) > 0)
-	{   /* Stream is in wide characters.
-	     * Read them and convert to chars.
-	     */
-	    FLOCK(fp);
-	    scope(exit) FUNLOCK(fp);
-	    version (Windows)
-	    {
-		buf.length = 0;
-		int c2;
-		for (int c; (c = FGETWC(fp)) != -1; )
-		{
-		    if ((c & ~0x7F) == 0)
-		    {   buf ~= c;
-			if (c == '\n')
-			    break;
-		    }
-		    else
-		    {
-			if (c >= 0xD800 && c <= 0xDBFF)
-			{
-			    if ((c2 = FGETWC(fp)) != -1 ||
-				c2 < 0xDC00 && c2 > 0xDFFF)
-			    {
-				StdioException("unpaired UTF-16 surrogate");
-			    }
-			    c = ((c - 0xD7C0) << 10) + (c2 - 0xDC00);
-			}
-			std.utf.encode(buf, c);
-		    }
-		}
-		if (ferror(fp))
-		    StdioException();
-		return buf.length;
-	    }
-	    else version (linux)
-	    {
-		buf.length = 0;
-		for (int c; (c = FGETWC(fp)) != -1; )
-		{
-		    if ((c & ~0x7F) == 0)
-			buf ~= c;
-		    else
-			std.utf.encode(buf, cast(dchar)c);
-		    if (c == '\n')
-			break;
-		}
-		if (ferror(fp))
-		    StdioException();
-		return buf.length;
-	    }
-	    else
-	    {
-		static assert(0);
-	    }
-	}
+         {
+             if (fwide(fp, 0) > 0)
+             {   /* Stream is in wide characters.
+                  * Read them and convert to chars.
+                  */
+                 FLOCK(fp);
+                 scope(exit) FUNLOCK(fp);
+                 version (Windows)
+                 {
+                     buf.length = 0;
+                     int c2;
+                     for (int c; (c = FGETWC(fp)) != -1; )
+                     {
+                         if ((c & ~0x7F) == 0)
+                         {   buf ~= c;
+                             if (c == '\n')
+                                 break;
+                         }
+                         else
+                         {
+                             if (c >= 0xD800 && c <= 0xDBFF)
+                             {
+                                 if ((c2 = FGETWC(fp)) != -1 ||
+                                     c2 < 0xDC00 && c2 > 0xDFFF)
+                                 {
+                                     StdioException("unpaired UTF-16 surrogate");
+                                 }
+                                 c = ((c - 0xD7C0) << 10) + (c2 - 0xDC00);
+                             }
+                             std.utf.encode(buf, c);
+                         }
+                     }
+                     if (ferror(fp))
+                         StdioException();
+                     return buf.length;
+                 }
+                 else version (linux)
+                      {
+                          buf.length = 0;
+                          for (int c; (c = FGETWC(fp)) != -1; )
+                          {
+                              if ((c & ~0x7F) == 0)
+                                  buf ~= c;
+                              else
+                                  std.utf.encode(buf, cast(dchar)c);
+                              if (c == '\n')
+                                  break;
+                          }
+                          if (ferror(fp))
+                              StdioException();
+                          return buf.length;
+                      }
+                 else
+                 {
+                     static assert(0);
+                 }
+             }
 
-	char *lineptr = null;
-	size_t n = 0;
-	auto s = getdelim(&lineptr, &n, '\n', fp);
-	scope(exit) free(lineptr);
-	if (s < 0)
-	{
-	    if (ferror(fp))
-		StdioException();
-	    buf.length = 0;		// end of file
-	    return 0;
-	}
-	buf = buf.ptr[0 .. std.gc.capacity(buf.ptr)];
-	if (s <= buf.length)
-	{
-	    buf.length = s;
-	    buf[] = lineptr[0 .. s];
-	}
-	else
-	{
-	    buf = lineptr[0 .. s].dup;
-	}
-	return s;
-    }
+             char *lineptr = null;
+             size_t n = 0;
+             auto s = getdelim(&lineptr, &n, '\n', fp);
+             scope(exit) free(lineptr);
+             if (s < 0)
+             {
+                 if (ferror(fp))
+                     StdioException();
+                 buf.length = 0;		// end of file
+                 return 0;
+             }
+             buf = buf.ptr[0 .. std.gc.capacity(buf.ptr)];
+             if (s <= buf.length)
+             {
+                 buf.length = s;
+                 buf[] = lineptr[0 .. s];
+             }
+             else
+             {
+                 buf = lineptr[0 .. s].dup;
+             }
+             return s;
+         }
     else
     {
 	static assert(0);
@@ -544,5 +545,53 @@ size_t readln(FILE* fp, inout char[] buf)
 size_t readln(inout char[] buf)
 {
     return readln(stdin, buf);
+}
+
+// Added by Andrei
+/////////////////////////////////////////////////////////////////////////////////
+void writeln(T...)(T args)
+{
+    return write(args, '\n');
+}
+
+/////////////////////////////////////////////////////////////////////////////////
+void write(T...)(T args) {
+    static if (!is(typeof(args[0]) : FILE*)) {
+        return write(stdout, args);
+    } else {
+        auto target = args[0];
+        FLOCK(target);
+        scope(exit) FUNLOCK(target);
+        fwrite_unlocked(target, args[1 .. $]);
+    }
+}
+
+/////////////////////////////////////////////////////////////////////////////////
+private void fwrite_unlocked(T...)(FILE* f, T args) {
+    alias typeof(args[0]) T0;
+    static const bool isString = is(T0 : string) || is(T0 : wstring)
+        || is(T0 : dstring);
+    static if (is(T0 : T0[]) && !isString) {
+        fwrite_unlocked(f, '[');
+        final n = args[0].length;
+        for (size_t i = 0; ; ) {
+            fwrite_unlocked(f, args[0][i]);
+            if (++i == n) break;
+            fwrite_unlocked(f, ',');
+        }
+        fwrite_unlocked(f, ']');
+    } else {
+        static if (isString) {
+            final s = args[0];
+        } else {
+            final s = to!(string)(args[0]);
+        }
+        if (std.c.stdio.fwrite(s.ptr, s[0].sizeof, s.length, f) != s.length) {
+            StdioException();
+        }
+    }
+    static if (args.length > 1) {
+        fwrite_unlocked(f, args[1 .. $]);
+    }
 }
 
