@@ -61,10 +61,10 @@ STD_MODULES_NOTGENERATING_OBJ = stdarg
 #    and will be handled separately, although it's an std module
 
 OBJS = Czlib.o Dcrc32.o Dzlib.o c_stdio.o complex.o critical.o errno.o \
-     gcstats.o invariant.o linux.o linuxsocket.o monitor.o trace.o stdarg.o \
-     $(addsuffix .o,$(STD_MODULES)) \
-     $(addsuffix .o,$(INTERNAL_MODULES)) \
-     $(addsuffix .o,$(TYPEINFO_MODULES))
+     gcstats.o linux.o linuxsocket.o monitor.o stdarg.o \
+     $(addprefix std_,$(addsuffix .o,$(STD_MODULES))) \
+     $(addprefix internal_,$(addsuffix .o,$(INTERNAL_MODULES))) \
+     $(addprefix typeinfo_,$(addsuffix .o,$(TYPEINFO_MODULES)))
 
 ZLIB_OBJS = etc/c/zlib/adler32.o etc/c/zlib/compress.o \
 	etc/c/zlib/crc32.o etc/c/zlib/gzio.o \
@@ -217,13 +217,13 @@ internal/gc/dmgc.a:
 #	cd internal/gc
 #	make -f linux.mak dmgc.a
 #	cd ../..
-	make -C ./internal/gc -f linux.mak dmgc.a
+	$(MAKE) -C ./internal/gc -f linux.mak dmgc.a
 
 $(ZLIB_OBJS):
 #	cd etc/c/zlib
 #	make -f linux.mak
 #	cd ../../..
-	make -C ./etc/c/zlib -f linux.mak
+	$(MAKE) -C ./etc/c/zlib -f linux.mak
 
 ###
 
@@ -237,14 +237,8 @@ gcstats.o : gcstats.d
 
 ### internal
 
-define module_dep
-$(1).o : $(2)/$(1).d
-	$(DMD) -c $(DFLAGS) $(2)/$(1).d
-
-endef
-
-$(foreach module,$(INTERNAL_MODULES),\
-          $(eval $(call module_dep,$(module),internal)))
+internal_%.o : internal/%.d
+	$(DMD) -c $(DFLAGS) -of$@ $<
 
 complex.o : internal/complex.c
 	$(CC) -c $(CFLAGS) internal/complex.c
@@ -263,8 +257,8 @@ monitor.o : internal/mars.h internal/monitor.c
 
 ### std
 
-$(foreach module,$(STD_MODULES),\
-          $(eval $(call module_dep,$(module),std)))
+std_%.o : std/%.d
+	$(DMD) -c $(DFLAGS) -of$@ $<
 
 # Exception
 Dzlib.o : std/zlib.d
@@ -295,8 +289,8 @@ Czlib.o : etc/c/zlib.d
 
 ### std/typeinfo
 
-$(foreach module,$(TYPEINFO_MODULES),\
-          $(eval $(call module_dep,$(module),std/typeinfo)))
+typeinfo_%.o : std/typeinfo/%.d
+	$(DMD) -c $(DFLAGS) -of$@ $<
 
 ##########################################################
 
