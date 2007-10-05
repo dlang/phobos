@@ -5,6 +5,7 @@
  *  Copyright (C) 2002-2007 by Digital Mars, www.digitalmars.com
  *  Written by Walter Bright
  *  Some parts contributed by David L. Davis
+ *  Major rewrite by Andrei Alexandrescu
  *
  *  This software is provided 'as-is', without any express or implied
  *  warranty. In no event will the authors be held liable for any damages
