@@ -14,8 +14,8 @@ LIB=libphobos.a
 CFLAGS=-O -m32
 #CFLAGS=-g -m32
 
-#DFLAGS=-O -release -w
-DFLAGS=-unittest -w
+DFLAGS=-O -release -w
+#DFLAGS=-unittest -w
 
 CC=gcc
 #DMD=/dmd/bin/dmd
