@@ -1,10 +1,8 @@
 ;_ minit.asm
-; Copyright (C) 2001 by Digital Mars
-; All rights reserved
-; www.digitalmars.com
-
-; Converts array of ModuleInfo pointers to a D dynamic array of them,
-; so they can be accessed via D.
+; Written by Walter Bright
+; Digital Mars
+; http://www.digitalmars.com/d/
+; Placed into the Public Domain
 
 include macros.asm
 
@@ -14,10 +12,29 @@ else
   DATAGRP      EQU     DGROUP
 endif
 
+; Provide a default resolution for weak extern records, no way in C
+; to define an omf symbol with a specific value
 public __nullext
 __nullext	equ 0
 
 	extrn	__moduleinfo_array:near
+
+; This bit of assembler is needed because, from C or D, one cannot
+; specify the names of data segments. Why does this matter?
+; All the ModuleInfo pointers are placed into a segment named 'FM'.
+; The order in which they are placed in 'FM' is arbitrarily up to the linker.
+; In order to walk all the pointers, we need to be able to find the
+; beginning and the end of the 'FM' segment.
+; This is done by bracketing the 'FM' segment with two other, empty,
+; segments named 'FMB' and 'FME'. Since this module is the only one that
+; ever refers to 'FMB' and 'FME', we get to control the order in which
+; these segments appear relative to 'FM' by using a GROUP statement.
+; So, we have in memory:
+;	FMB	empty segment
+;	FM	contains all the pointers
+;	FME	empty segment
+; and finding the limits of FM is as easy as taking the address of FMB
+; and the address of FME.
 
 ; These segments bracket FM, which contains the list of ModuleInfo pointers
 FMB     segment dword use32 public 'DATA'
@@ -39,6 +56,12 @@ XOE     ends
 DGROUP         group   FMB,FM,FME
 
 	begcode minit
+
+; extern (C) void _minit();
+; Converts array of ModuleInfo pointers to a D dynamic array of them,
+; so they can be accessed via D.
+; Result is written to:
+; extern (C) ModuleInfo[] _moduleinfo_array;
 
 	public	__minit
 __minit	proc	near
