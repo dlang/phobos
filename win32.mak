@@ -249,7 +249,7 @@ SRC_GC= internal\gc\gc.d \
 
 phobos.lib : $(OBJS) minit.obj internal\gc\dmgc.lib etc\c\zlib\zlib.lib \
 	win32.mak
-	lib -c -p32 phobos.lib $(OBJS) minit.obj internal\gc\dmgc.lib \
+	lib -c -p64 phobos.lib $(OBJS) minit.obj internal\gc\dmgc.lib \
 		etc\c\zlib\zlib.lib
 
 html : $(DOCS)
