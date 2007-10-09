@@ -147,7 +147,11 @@ private
     import std.utf;
 }
 
-/** Regular expression to extract an _email address */
+/** Regular expression to extract an _email address.
+ * References:
+ *	$(LINK2 http://www.regular-expressions.info/email.html, How to Find or Validate an Email Address)$(BR)
+ *	$(LINK2 http://tools.ietf.org/html/rfc2822#section-3.4.1, RFC 2822 Internet Message Format)
+ */
 const char[] email =
     r"[a-zA-Z]([.]?([[a-zA-Z0-9_]-]+)*)?@([[a-zA-Z0-9_]\-_]+\.)+[a-zA-Z]{2,6}";
 
