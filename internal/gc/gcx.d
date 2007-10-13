@@ -46,16 +46,16 @@ version = MULTI_THREADED;	// produce multithreaded version
 
 /***************************************************/
 
+private import gcbits;
+private import gcstats;
 
-debug (PRINTF) import std.c.stdio;
+private import cstdlib = std.c.stdlib : calloc, free, malloc, realloc;
+private import cstring = std.c.string : memcpy, memmove, memset;
 
-import std.c.stdio;
-import std.c.stdlib;
-import std.c.string;
-import gcbits;
+debug private import std.c.stdio;
+
 import std.outofmemory;
 import std.gc;
-import gcstats;
 
 version (Win32)
 {
@@ -112,7 +112,7 @@ debug (LOGGING)
 	void Dtor()
 	{
 	    if (data)
-		std.c.stdlib.free(data);
+		cstdlib.free(data);
 	    data = null;
 	}
 
@@ -125,18 +125,18 @@ debug (LOGGING)
 		assert(dim + nentries <= allocdim);
 		if (!data)
 		{
-		    data = cast(Log *)std.c.stdlib.malloc(allocdim * Log.sizeof);
+		    data = cast(Log *)cstdlib.malloc(allocdim * Log.sizeof);
 		    if (!data && allocdim)
 			_d_OutOfMemory();
 		}
 		else
 		{   Log *newdata;
 
-		    newdata = cast(Log *)std.c.stdlib.malloc(allocdim * Log.sizeof);
+		    newdata = cast(Log *)cstdlib.malloc(allocdim * Log.sizeof);
 		    if (!newdata && allocdim)
 			_d_OutOfMemory();
-		    memcpy(newdata, data, dim * Log.sizeof);
-		    std.c.stdlib.free(data);
+		    cstring.memcpy(newdata, data, dim * Log.sizeof);
+		    cstdlib.free(data);
 		    data = newdata;
 		}
 	    }
@@ -151,7 +151,7 @@ debug (LOGGING)
 
 	void remove(uint i)
 	{
-	    memmove(data + i, data + i + 1, (dim - i) * Log.sizeof);
+	    cstring.memmove(data + i, data + i + 1, (dim - i) * Log.sizeof);
 	    dim--;
 	}
 
@@ -171,7 +171,7 @@ debug (LOGGING)
 	{
 	    reserve(from.dim - dim);
 	    assert(from.dim <= allocdim);
-	    memcpy(data, from.data, from.dim * Log.sizeof);
+	    cstring.memcpy(data, from.data, from.dim * Log.sizeof);
 	    dim = from.dim;
 	}
     }
@@ -204,7 +204,7 @@ class GC
     void initialize()
     {
 	gcLock = GCLock.classinfo;
-	gcx = cast(Gcx *)std.c.stdlib.calloc(1, Gcx.sizeof);
+	gcx = cast(Gcx *)cstdlib.calloc(1, Gcx.sizeof);
 	if (!gcx)
 	    _d_OutOfMemory();
 	gcx.initialize();
@@ -230,7 +230,7 @@ class GC
 	if (gcx)
 	{
 	    gcx.Dtor();
-	    std.c.stdlib.free(gcx);
+	    cstdlib.free(gcx);
 	    gcx = null;
 	}
     }
@@ -354,11 +354,11 @@ class GC
 
 		// Return next item from free list
 		gcx.bucket[bin] = (cast(List *)p).next;
-		//memset(p + size, 0, binsize[bin] - size);
+		//cstring.memset(p + size, 0, binsize[bin] - size);
 		// 'inline' memset - Dave Fladebo.
 		//foreach(inout byte b; cast(byte[])(p + size)[0..binsize[bin] - size]) { b = 0; }
 		//debug(PRINTF) printf("\tmalloc => %x\n", p);
-		debug (MEMSTOMP) memset(p, 0xF0, size);
+		debug (MEMSTOMP) cstring.memset(p, 0xF0, size);
 	    }
 	    else
 	    {
@@ -387,7 +387,7 @@ class GC
 	p = malloc(len);
 	if (p)
 	{   //debug(PRINTF) printf("calloc: %x len %d\n", p, len);
-	    memset(p, 0, len);
+	    cstring.memset(p, 0, len);
 	}
 	return p;
     }
@@ -423,7 +423,7 @@ class GC
 		    if (psize < size)
 			size = psize;
 		    //debug(PRINTF) printf("\tcopying %d bytes\n",size);
-		    memcpy(p2, p, size);
+		    cstring.memcpy(p2, p, size);
 		    p = p2;
 		}
 	    }
@@ -444,7 +444,7 @@ class GC
 		    {	// Shrink in place
 			synchronized (gcLock)
 			{
-			    debug (MEMSTOMP) memset(p + size, 0xF2, psize - size);
+			    debug (MEMSTOMP) cstring.memset(p + size, 0xF2, psize - size);
 			    pool.freePages(pagenum + newsz, psz - newsz);
 			}
 			return p;
@@ -458,8 +458,8 @@ class GC
 			    {
 				if (i == pagenum + newsz)
 				{
-				    debug (MEMSTOMP) memset(p + psize, 0xF0, size - psize);
-				    memset(&pool.pagetable[pagenum + psz], B_PAGEPLUS, newsz - psz);
+				    debug (MEMSTOMP) cstring.memset(p + psize, 0xF0, size - psize);
+				    cstring.memset(&pool.pagetable[pagenum + psz], B_PAGEPLUS, newsz - psz);
 				    return p;
 				}
 				if (i == pool.ncommitted)
@@ -484,7 +484,7 @@ class GC
 		    if (psize < size)
 			size = psize;
 		    //debug(PRINTF) printf("\tcopying %d bytes\n",size);
-		    memcpy(p2, p, size);
+		    cstring.memcpy(p2, p, size);
 		    p = p2;
 		}
 	    }
@@ -546,8 +546,8 @@ class GC
 	    }
 	    else
 		return 0;
-	    debug (MEMSTOMP) memset(p + psize, 0xF0, (psz + sz) * PAGESIZE - psize);
-	    memset(pool.pagetable + pagenum + psz, B_PAGEPLUS, sz);
+	    debug (MEMSTOMP) cstring.memset(p + psize, 0xF0, (psz + sz) * PAGESIZE - psize);
+	    cstring.memset(pool.pagetable + pagenum + psz, B_PAGEPLUS, sz);
 	    gcx.p_cache = null;
 	    gcx.size_cache = 0;
 	    return (psz + sz) * PAGESIZE;
@@ -598,14 +598,14 @@ class GC
 	    n = pagenum;
 	    while (++n < pool.ncommitted && pool.pagetable[n] == B_PAGEPLUS)
 		npages++;
-	    debug (MEMSTOMP) memset(p, 0xF2, npages * PAGESIZE);
+	    debug (MEMSTOMP) cstring.memset(p, 0xF2, npages * PAGESIZE);
 	    pool.freePages(pagenum, npages);
 	}
 	else
 	{   // Add to free list
 	    List *list = cast(List *)p;
 
-	    debug (MEMSTOMP) memset(p, 0xF2, binsize[bin]);
+	    debug (MEMSTOMP) cstring.memset(p, 0xF2, binsize[bin]);
 
 	    list.next = gcx.bucket[bin];
 	    gcx.bucket[bin] = list;
@@ -906,7 +906,7 @@ class GC
 	uint bsize = 0;
 
 	//debug(PRINTF) printf("getStats()\n");
-	memset(&stats, 0, GCStats.sizeof);
+	cstring.memset(&stats, 0, GCStats.sizeof);
 
 	synchronized (gcLock)
 	{
@@ -1063,16 +1063,16 @@ struct Gcx
 	{   Pool *pool = pooltable[i];
 
 	    pool.Dtor();
-	    std.c.stdlib.free(pool);
+	    cstdlib.free(pool);
 	}
 	if (pooltable)
-	    std.c.stdlib.free(pooltable);
+	    cstdlib.free(pooltable);
 
 	if (roots)
-	    std.c.stdlib.free(roots);
+	    cstdlib.free(roots);
 
 	if (ranges)
-	    std.c.stdlib.free(ranges);
+	    cstdlib.free(ranges);
     }
 
 
@@ -1146,12 +1146,12 @@ struct Gcx
 	    uint newdim = rootdim * 2 + 16;
 	    void **newroots;
 
-	    newroots = cast(void **)std.c.stdlib.malloc(newdim * newroots[0].sizeof);
+	    newroots = cast(void **)cstdlib.malloc(newdim * newroots[0].sizeof);
 	    if (!newroots)
 		_d_OutOfMemory();
 	    if (roots)
-	    {   memcpy(newroots, roots, nroots * newroots[0].sizeof);
-		std.c.stdlib.free(roots);
+	    {   cstring.memcpy(newroots, roots, nroots * newroots[0].sizeof);
+		cstdlib.free(roots);
 	    }
 	    roots = newroots;
 	    rootdim = newdim;
@@ -1172,7 +1172,7 @@ struct Gcx
 	    if (roots[i] == p)
 	    {
 		nroots--;
-		memmove(roots + i, roots + i + 1, (nroots - i) * roots[0].sizeof);
+		cstring.memmove(roots + i, roots + i + 1, (nroots - i) * roots[0].sizeof);
 		return;
 	    }
 	}
@@ -1192,12 +1192,12 @@ struct Gcx
 	    uint newdim = rangedim * 2 + 16;
 	    Range *newranges;
 
-	    newranges = cast(Range *)std.c.stdlib.malloc(newdim * newranges[0].sizeof);
+	    newranges = cast(Range *)cstdlib.malloc(newdim * newranges[0].sizeof);
 	    if (!newranges)
 		_d_OutOfMemory();
 	    if (ranges)
-	    {   memcpy(newranges, ranges, nranges * newranges[0].sizeof);
-		std.c.stdlib.free(ranges);
+	    {   cstring.memcpy(newranges, ranges, nranges * newranges[0].sizeof);
+		cstdlib.free(ranges);
 	    }
 	    ranges = newranges;
 	    rangedim = newdim;
@@ -1220,7 +1220,7 @@ struct Gcx
 	    if (ranges[i].pbot == pbot)
 	    {
 		nranges--;
-		memmove(ranges + i, ranges + i + 1, (nranges - i) * ranges[0].sizeof);
+		cstring.memmove(ranges + i, ranges + i + 1, (nranges - i) * ranges[0].sizeof);
 		return;
 	    }
 	}
@@ -1414,10 +1414,10 @@ struct Gcx
       L1:
 	pool.pagetable[pn] = B_PAGE;
 	if (npages > 1)
-	    memset(&pool.pagetable[pn + 1], B_PAGEPLUS, npages - 1);
+	    cstring.memset(&pool.pagetable[pn + 1], B_PAGEPLUS, npages - 1);
 	p = pool.baseAddr + pn * PAGESIZE;
-	memset(cast(char *)p + size, 0, npages * PAGESIZE - size);
-	debug (MEMSTOMP) memset(p, 0xF1, size);
+	cstring.memset(cast(char *)p + size, 0, npages * PAGESIZE - size);
+	debug (MEMSTOMP) cstring.memset(p, 0xF1, size);
 	//debug(PRINTF) printf("\tp = %x\n", p);
 	return p;
 
@@ -1466,7 +1466,7 @@ struct Gcx
 		npages = n;
 	}
 
-	pool = cast(Pool *)std.c.stdlib.calloc(1, Pool.sizeof);
+	pool = cast(Pool *)cstdlib.calloc(1, Pool.sizeof);
 	if (pool)
 	{
 	    pool.initialize(npages);
@@ -1474,7 +1474,7 @@ struct Gcx
 		goto Lerr;
 
 	    newnpools = npools + 1;
-	    newpooltable = cast(Pool **)std.c.stdlib.realloc(pooltable, newnpools * (Pool *).sizeof);
+	    newpooltable = cast(Pool **)cstdlib.realloc(pooltable, newnpools * (Pool *).sizeof);
 	    if (!newpooltable)
 		goto Lerr;
 
@@ -1484,7 +1484,7 @@ struct Gcx
 		if (pool.opCmp(newpooltable[i]) < 0)
 		     break;
 	    }
-	    memmove(newpooltable + i + 1, newpooltable + i, (npools - i) * (Pool *).sizeof);
+	    cstring.memmove(newpooltable + i + 1, newpooltable + i, (npools - i) * (Pool *).sizeof);
 	    newpooltable[i] = pool;
 
 	    pooltable = newpooltable;
@@ -1497,7 +1497,7 @@ struct Gcx
 
       Lerr:
 	pool.Dtor();
-	std.c.stdlib.free(pool);
+	cstdlib.free(pool);
 	return null;
     }
 
@@ -1608,7 +1608,7 @@ struct Gcx
     }
 
 
-    /*********************************
+    /**
      * Return number of full pages free'd.
      */
     uint fullcollectshell()
@@ -1848,7 +1848,7 @@ struct Gcx
 			    //debug(PRINTF) printf("\tcollecting %x\n", list);
 			    log_free(sentinel_add(list));
 
-			    debug (MEMSTOMP) memset(p, 0xF3, size);
+			    debug (MEMSTOMP) cstring.memset(p, 0xF3, size);
 			}
 			pool.pagetable[pn] = B_FREE;
 			freed += PAGESIZE;
@@ -1874,7 +1874,7 @@ struct Gcx
 			    debug(PRINTF) printf("\tcollecting %x\n", list);
 			    log_free(sentinel_add(list));
 
-			    debug (MEMSTOMP) memset(p, 0xF3, size);
+			    debug (MEMSTOMP) cstring.memset(p, 0xF3, size);
 
 			    freed += size;
 			}
@@ -1898,7 +1898,7 @@ struct Gcx
 			log_free(sentinel_add(p));
 			pool.pagetable[pn] = B_FREE;
 			freedpages++;
-			debug (MEMSTOMP) memset(p, 0xF3, PAGESIZE);
+			debug (MEMSTOMP) cstring.memset(p, 0xF3, PAGESIZE);
 			while (pn + 1 < ncommitted && pool.pagetable[pn + 1] == B_PAGEPLUS)
 			{
 			    pn++;
@@ -1907,7 +1907,7 @@ struct Gcx
 
 			    debug (MEMSTOMP)
 			    {   p += PAGESIZE;
-				memset(p, 0xF3, PAGESIZE);
+				cstring.memset(p, 0xF3, PAGESIZE);
 			    }
 			}
 		    }
@@ -2200,10 +2200,10 @@ struct Pool
 	freebits.alloc(poolsize / 16);
 	noptrs.alloc(poolsize / 16);
 
-	pagetable = cast(ubyte*)std.c.stdlib.malloc(npages);
+	pagetable = cast(ubyte*)cstdlib.malloc(npages);
 	if (!pagetable)
 	    _d_OutOfMemory();
-	memset(pagetable, B_UNCOMMITTED, npages);
+	cstring.memset(pagetable, B_UNCOMMITTED, npages);
 
 	this.npages = npages;
 	ncommitted = 0;
@@ -2234,7 +2234,7 @@ struct Pool
 	    topAddr = null;
 	}
 	if (pagetable)
-	    std.c.stdlib.free(pagetable);
+	    cstdlib.free(pagetable);
 
 	mark.Dtor();
 	scan.Dtor();
@@ -2313,7 +2313,7 @@ struct Pool
 	    //fflush(stdout);
 	    if (os_mem_commit(baseAddr, ncommitted * PAGESIZE, tocommit * PAGESIZE) == 0)
 	    {
-		memset(pagetable + ncommitted, B_FREE, tocommit);
+		cstring.memset(pagetable + ncommitted, B_FREE, tocommit);
 		auto i = ncommitted;
 		ncommitted += tocommit;
 
@@ -2334,7 +2334,7 @@ struct Pool
      */
     void freePages(uint pagenum, uint npages)
     {
-	memset(&pagetable[pagenum], B_FREE, npages);
+	cstring.memset(&pagetable[pagenum], B_FREE, npages);
     }
 
 
