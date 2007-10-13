@@ -1,8 +1,28 @@
-//
-// Copyright (C) 2001-2007 by Digital Mars
-// All Rights Reserved
-// Written by Walter Bright
-// www.digitalmars.com
+/**
+ * This module contains the garbage collector implementation.
+ *
+ * Copyright: Copyright (C) 2001-2007 Digital Mars, www.digitalmars.com.
+ *            All rights reserved.
+ * License:
+ *  This software is provided 'as-is', without any express or implied
+ *  warranty. In no event will the authors be held liable for any damages
+ *  arising from the use of this software.
+ *
+ *  Permission is granted to anyone to use this software for any purpose,
+ *  including commercial applications, and to alter it and redistribute it
+ *  freely, in both source and binary form, subject to the following
+ *  restrictions:
+ *
+ *  o  The origin of this software must not be misrepresented; you must not
+ *     claim that you wrote the original software. If you use this software
+ *     in a product, an acknowledgment in the product documentation would be
+ *     appreciated but is not required.
+ *  o  Altered source versions must be plainly marked as such, and must not
+ *     be misrepresented as being the original software.
+ *  o  This notice may not be removed or altered from any source
+ *     distribution.
+ * Authors:   Walter Bright, David Friedman, Sean Kelly
+ */
 
 // D Programming Language Garbage Collector implementation
 
@@ -55,7 +75,6 @@ version (MULTI_THREADED)
 }
 
 
-//alias GC* gc_t;
 alias GC gc_t;
 
 
@@ -162,7 +181,6 @@ debug (LOGGING)
 /* ============================ GC =============================== */
 
 
-//alias int size_t;
 alias void (*GC_FINALIZER)(void *p, void *dummy);
 
 class GCLock { }		// just a dummy so we can get a global lock
@@ -225,6 +243,9 @@ class GC
     }
 
 
+    /**
+     *
+     */
     void *malloc(size_t size)
     {	void *p;
 
@@ -244,6 +265,10 @@ class GC
 	return p;
     }
 
+
+    //
+    //
+    //
     void *mallocNoSync(size_t size)
     {   void *p = null;
 	Bins bin;
@@ -325,6 +350,9 @@ class GC
     }
 
 
+    /**
+     *
+     */
     void *calloc(size_t size, size_t n)
     {
 	uint len;
@@ -340,6 +368,9 @@ class GC
     }
 
 
+    /**
+     *
+     */
     void *realloc(void *p, size_t size)
     {
 	if (!size)
@@ -438,10 +469,10 @@ class GC
 
 
     /**
-     * Attempt to in-place enlarge the memory block pointed to by p
-     * by at least minbytes beyond its current capacity,
-     * up to a maximum of maxbytes.
-     * This does not attempt to move the memory block (like realloc() does).
+     * Attempt to in-place enlarge the memory block pointed to by p by at least
+     * minbytes beyond its current capacity, up to a maximum of maxsize.  This
+     * does not attempt to move the memory block (like realloc() does).
+     *
      * Returns:
      *	0 if could not extend p,
      *	total size of entire memory block if successful.
@@ -499,6 +530,9 @@ class GC
     }
 
 
+    /**
+     *
+     */
     void free(void *p)
     {
 	Pool *pool;
@@ -556,10 +590,9 @@ class GC
     }
 
 
-    /****************************************
-     * Determine the allocated size of pointer p.
-     * If p is an interior pointer or not a gc allocated pointer,
-     * return 0.
+    /**
+     * Determine the allocated size of pointer p.  If p is an interior pointer
+     * or not a gc allocated pointer, return 0.
      */
     size_t capacity(void *p)
     {
@@ -600,7 +633,7 @@ class GC
     }
 
 
-    /****************************************
+    /**
      * Verify that pointer p:
      *	1) belongs to this memory pool
      *	2) points to the start of an allocated piece of memory
@@ -648,6 +681,9 @@ class GC
     }
 
 
+    //
+    //
+    //
     void setStackBottom(void *p)
     {
 	version (STACKGROWSDOWN)
@@ -694,7 +730,10 @@ class GC
     }
 
 
-    void addRoot(void *p)	// add p to list of roots
+    /**
+     * add p to list of roots
+     */
+    void addRoot(void *p)
     {
 	synchronized (gcLock)
 	{
@@ -703,7 +742,10 @@ class GC
     }
 
 
-    void removeRoot(void *p)	// remove p from list of roots
+    /**
+     * remove p from list of roots
+     */
+    void removeRoot(void *p)
     {
 	synchronized (gcLock)
 	{
@@ -712,7 +754,10 @@ class GC
     }
 
 
-    void addRange(void *pbot, void *ptop)	// add range to scan for roots
+    /**
+     * add range to scan for roots
+     */
+    void addRange(void *pbot, void *ptop)
     {
 	//debug(PRINTF) printf("+GC.addRange(pbot = x%x, ptop = x%x)\n", pbot, ptop);
 	synchronized (gcLock)
@@ -722,7 +767,11 @@ class GC
 	//debug(PRINTF) printf("-GC.addRange()\n");
     }
 
-    void removeRange(void *pbot)		// remove range
+
+    /**
+     * remove range
+     */
+    void removeRange(void *p)
     {
 	synchronized (gcLock)
 	{
@@ -730,7 +779,11 @@ class GC
 	}
     }
 
-    void fullCollect()		// do full garbage collection
+
+    /**
+     * do full garbage collection
+     */
+    void fullCollect()
     {
 	debug(PRINTF) printf("GC.fullCollect()\n");
 	synchronized (gcLock)
@@ -750,7 +803,11 @@ class GC
 	gcx.log_collect();
     }
 
-    void fullCollectNoStack()		// do full garbage collection
+
+    /**
+     * do full garbage collection ignoring roots
+     */
+    void fullCollectNoStack()
     {
 	gcx.noStack++;
 	fullCollect();
@@ -758,7 +815,10 @@ class GC
     }
 
 
-    void genCollect()	// do generational garbage collection
+    /**
+     * do generational garbage collection
+     */
+    void genCollect()
     {
 	synchronized (gcLock)
 	{
@@ -824,7 +884,8 @@ class GC
     }
 
 
-    /*****************************************
+
+    /**
      * Retrieve statistics about garbage collection.
      * Useful for debugging and tuning.
      */
@@ -1068,7 +1129,8 @@ struct Gcx
     }
 
 
-    /***************************************
+    /**
+     *
      */
     void addRoot(void *p)
     {
@@ -1092,6 +1154,9 @@ struct Gcx
     }
 
 
+    /**
+     *
+     */
     void removeRoot(void *p)
     {
 	uint i;
@@ -1107,9 +1172,10 @@ struct Gcx
 	assert(0);
     }
 
-    /***************************************
-     */
 
+    /**
+     *
+     */
     void addRange(void *pbot, void *ptop)
     {
 	debug(PRINTF) printf("Thread %x ", pthread_self());
@@ -1135,6 +1201,9 @@ struct Gcx
     }
 
 
+    /**
+     *
+     */
     void removeRange(void *pbot)
     {
 	debug(PRINTF) printf("Thread %x ", pthread_self());
@@ -1157,7 +1226,7 @@ struct Gcx
     }
 
 
-    /*******************************
+    /**
      * Find Pool that pointer is in.
      * Return null if not in a Pool.
      * Assume pooltable[] is sorted.
@@ -1186,7 +1255,7 @@ struct Gcx
     }
 
 
-    /*******************************
+    /**
      * Find size of pointer p.
      * Returns 0 if not a gc'd pointer
      */
@@ -1222,7 +1291,7 @@ struct Gcx
     }
 
 
-    /*******************************
+    /**
      * Compute bin for size.
      */
     static Bins findBin(uint size)
@@ -1268,7 +1337,7 @@ struct Gcx
     }
 
 
-    /****************************************
+    /**
      * Allocate a chunk of memory that is larger than a page.
      * Return null if out of memory.
      */
@@ -1351,7 +1420,7 @@ struct Gcx
     }
 
 
-    /***********************************
+    /**
      * Allocate a new pool with at least npages in it.
      * Sort it into pooltable[].
      * Return null if failed.
@@ -1426,7 +1495,7 @@ struct Gcx
     }
 
 
-    /*******************************
+    /**
      * Allocate a page of bin's.
      * Returns:
      *	0	failed
@@ -1467,7 +1536,7 @@ struct Gcx
     }
 
 
-    /************************************
+    /**
      * Search a range of memory values and mark any pointers into the GC pool.
      */
     void mark(void *pbot, void *ptop)
@@ -1555,6 +1624,9 @@ struct Gcx
     }
 
 
+    /**
+     *
+     */
     uint fullcollect(void *stackTop)
     {
 	uint n;
@@ -1897,7 +1969,7 @@ struct Gcx
     }
 
 
-    /*********************************
+    /**
      * Run finalizer on p when it is free'd.
      */
     void doFinalize(void *p)
@@ -1913,7 +1985,7 @@ struct Gcx
     }
 
 
-    /*********************************
+    /**
      * Indicate that block pointed to by p has possible pointers
      * to GC allocated memory in it.
      */
@@ -1927,7 +1999,7 @@ struct Gcx
     }
 
 
-    /*********************************
+    /**
      * Indicate that block pointed to by p has no possible pointers
      * to GC allocated memory in it.
      */
@@ -2190,7 +2262,7 @@ struct Pool
     }
 
 
-    /**************************************
+    /**
      * Allocate n pages from Pool.
      * Returns ~0u on failure.
      */
@@ -2216,7 +2288,7 @@ struct Pool
 	return extendPages(n);
     }
 
-    /**************************************
+    /**
      * Extend Pool by n pages.
      * Returns ~0u on failure.
      */
@@ -2250,7 +2322,7 @@ struct Pool
     }
 
 
-    /**********************************
+    /**
      * Free npages pages starting with pagenum.
      */
     void freePages(uint pagenum, uint npages)
@@ -2259,7 +2331,7 @@ struct Pool
     }
 
 
-    /***************************
+    /**
      * Used for sorting pooltable[]
      */
     int opCmp(Pool *p2)
