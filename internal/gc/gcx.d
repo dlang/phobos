@@ -84,7 +84,7 @@ private void* rt_stackBottom()
 {
     version (Win32)
     {
-        return win32.os_query_stackbottom();
+        return win32.os_query_stackBottom();
     }
     version (linux)
     {
