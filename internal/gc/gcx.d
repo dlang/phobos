@@ -381,9 +381,7 @@ class GC
 
             // Return next item from free list
             gcx.bucket[bin] = (cast(List *)p).next;
-            //cstring.memset(p + size, 0, binsize[bin] - size);
-            // 'inline' memset - Dave Fladebo.
-            //foreach(inout byte b; cast(byte[])(p + size)[0..binsize[bin] - size]) { b = 0; }
+            cstring.memset(p + size, 0, binsize[bin] - size);
             //debug(PRINTF) printf("\tmalloc => %x\n", p);
             debug (MEMSTOMP) cstring.memset(p, 0xF0, size);
         }
