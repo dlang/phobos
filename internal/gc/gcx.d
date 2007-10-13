@@ -75,6 +75,29 @@ version (MULTI_THREADED)
 }
 
 
+private void onOutOfMemoryError()
+{
+    _d_OutOfMemory();
+}
+
+private void* rt_stackBottom()
+{
+    version (Win32)
+    {
+        return win32.os_query_stackbottom();
+    }
+    version (linux)
+    {
+        return gclinux.os_query_stackBottom();
+    }
+}
+
+private bool thread_needLock()
+{
+    return std.thread.Thread.nthreads != 1;
+}
+
+
 alias GC gc_t;
 
 
@@ -127,14 +150,14 @@ debug (LOGGING)
 		{
 		    data = cast(Log *)cstdlib.malloc(allocdim * Log.sizeof);
 		    if (!data && allocdim)
-			_d_OutOfMemory();
+			onOutOfMemoryError();
 		}
 		else
 		{   Log *newdata;
 
 		    newdata = cast(Log *)cstdlib.malloc(allocdim * Log.sizeof);
 		    if (!newdata && allocdim)
-			_d_OutOfMemory();
+			onOutOfMemoryError();
 		    cstring.memcpy(newdata, data, dim * Log.sizeof);
 		    cstdlib.free(data);
 		    data = newdata;
@@ -206,16 +229,9 @@ class GC
 	gcLock = GCLock.classinfo;
 	gcx = cast(Gcx *)cstdlib.calloc(1, Gcx.sizeof);
 	if (!gcx)
-	    _d_OutOfMemory();
+	    onOutOfMemoryError();
 	gcx.initialize();
-	version (Win32)
-	{
-	    setStackBottom(win32.os_query_stackBottom());
-	}
-	version (linux)
-	{
-	    setStackBottom(gclinux.os_query_stackBottom());
-	}
+        setStackBottom(rt_stackBottom());
     }
 
 
@@ -274,7 +290,7 @@ class GC
     void *malloc(size_t size)
     {	void *p;
 
-	if (std.thread.Thread.nthreads == 1)
+	if (!thread_needLock())
 	{
 	    /* Single-threaded no-sync - Dave Fladebo.
 	     * The reason this works is because none of the gc code
@@ -325,7 +341,7 @@ class GC
 		{
 		    if (!gcx.allocPage(bin) && !gcx.disabled)	// try to find a new page
 		    {
-			if (std.thread.Thread.nthreads == 1)
+			if (!thread_needLock())
 			{
 			    /* Then we haven't locked it yet. Be sure
 			     * and lock for a collection, since a finalizer
@@ -1148,7 +1164,7 @@ struct Gcx
 
 	    newroots = cast(void **)cstdlib.malloc(newdim * newroots[0].sizeof);
 	    if (!newroots)
-		_d_OutOfMemory();
+		onOutOfMemoryError();
 	    if (roots)
 	    {   cstring.memcpy(newroots, roots, nroots * newroots[0].sizeof);
 		cstdlib.free(roots);
@@ -1194,7 +1210,7 @@ struct Gcx
 
 	    newranges = cast(Range *)cstdlib.malloc(newdim * newranges[0].sizeof);
 	    if (!newranges)
-		_d_OutOfMemory();
+		onOutOfMemoryError();
 	    if (ranges)
 	    {   cstring.memcpy(newranges, ranges, nranges * newranges[0].sizeof);
 		cstdlib.free(ranges);
@@ -1422,7 +1438,7 @@ struct Gcx
 	return p;
 
       Lnomemory:
-	_d_OutOfMemory();
+	onOutOfMemoryError();
 	return null;
     }
 
@@ -2202,7 +2218,7 @@ struct Pool
 
 	pagetable = cast(ubyte*)cstdlib.malloc(npages);
 	if (!pagetable)
-	    _d_OutOfMemory();
+	    onOutOfMemoryError();
 	cstring.memset(pagetable, B_UNCOMMITTED, npages);
 
 	this.npages = npages;
