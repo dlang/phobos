@@ -800,7 +800,7 @@ class GC
     {
 	synchronized (gcLock)
 	{
-	    gcx.removeRange(pbot);
+	    gcx.removeRange(p);
 	}
     }
 
