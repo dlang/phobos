@@ -589,7 +589,7 @@ class GC
 	synchronized (gcLock)
 	{
 	biti = cast(uint)(p - pool.baseAddr) / 16;
-	pool.noptrs.clear(biti);
+	pool.noscan.clear(biti);
 	if (pool.finals.nbits && gcx.finalizer)
 	{
 	    if (pool.finals.testClear(biti))
@@ -1604,7 +1604,7 @@ struct Gcx
 		    {
 			//if (log) debug(PRINTF) printf("\t\tmarking %x\n", p);
 			pool.mark.set(biti);
-			if (!pool.noptrs.test(biti))
+			if (!pool.noscan.test(biti))
 			{
                             pool.scan.set(biti);
 			    changes = 1;
@@ -1873,7 +1873,7 @@ struct Gcx
 			    sentinel_Invariant(sentinel_add(p));
 
 			    pool.freebits.set(biti);
-			    pool.noptrs.clear(biti);
+			    pool.noscan.clear(biti);
 			    if (finalizer && pool.finals.nbits &&
 				pool.finals.testClear(biti))
 			    {
@@ -1897,7 +1897,7 @@ struct Gcx
 		    {   byte *p = pool.baseAddr + pn * PAGESIZE;
 
 			sentinel_Invariant(sentinel_add(p));
-			pool.noptrs.clear(biti);
+			pool.noscan.clear(biti);
 			if (finalizer && pool.finals.nbits &&
 			    pool.finals.testClear(biti))
 			{
@@ -2012,7 +2012,7 @@ struct Gcx
 	Pool *pool = findPool(p);
 	assert(pool);
 
-	pool.noptrs.clear((p - pool.baseAddr) / 16);
+	pool.noscan.clear((p - pool.baseAddr) / 16);
     }
 
 
@@ -2026,7 +2026,7 @@ struct Gcx
 	Pool *pool = findPool(p);
 	assert(pool);
 
-	pool.noptrs.set((p - pool.baseAddr) / 16);
+	pool.noscan.set((p - pool.baseAddr) / 16);
     }
 
 
@@ -2175,7 +2175,7 @@ struct Pool
     GCBits scan;	// entries that need to be scanned
     GCBits finals;	// entries that need finalizer run on them
     GCBits freebits;	// entries that are on the free list
-    GCBits noptrs;	// entries that do not contain pointers
+    GCBits noscan;	// entries that do not contain pointers
 
     uint npages;
     uint ncommitted;	// ncommitted <= npages
@@ -2208,7 +2208,7 @@ struct Pool
 	mark.alloc(poolsize / 16);
 	scan.alloc(poolsize / 16);
 	freebits.alloc(poolsize / 16);
-	noptrs.alloc(poolsize / 16);
+	noscan.alloc(poolsize / 16);
 
 	pagetable = cast(ubyte*)cstdlib.malloc(npages);
 	if (!pagetable)
