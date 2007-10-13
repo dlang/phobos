@@ -255,7 +255,9 @@ class GC
     invariant
     {
 	if (gcx)
+        {
 	    gcx.thread_Invariant();
+        }
     }
 
 
@@ -288,22 +290,16 @@ class GC
      *
      */
     void *malloc(size_t size)
-    {	void *p;
+    {
 
 	if (!thread_needLock())
 	{
-	    /* Single-threaded no-sync - Dave Fladebo.
-	     * The reason this works is because none of the gc code
-	     * can start up a new thread from within mallocNoSync().
-	     * Skip the sync for speed reasons.
-	     */
 	    return mallocNoSync(size);
 	}
 	else synchronized (gcLock)
 	{
-	    p = mallocNoSync(size);
+	    return mallocNoSync(size);
 	}
-	return p;
     }
 
 
@@ -1565,7 +1561,7 @@ struct Gcx
 	void **p2 = cast(void **)ptop;
 	uint changes = 0;
 
-	//if (log) debug(PRINTF) printf("Gcx::mark(%x .. %x)\n", pbot, ptop);
+        //printf("marking range: %p -> %p\n", pbot, ptop);
 	for (; p1 < p2; p1++)
 	{
 	    Pool *pool;
@@ -1609,7 +1605,8 @@ struct Gcx
 			//if (log) debug(PRINTF) printf("\t\tmarking %x\n", p);
 			pool.mark.set(biti);
 			if (!pool.noptrs.test(biti))
-			{   pool.scan.set(biti);
+			{
+                            pool.scan.set(biti);
 			    changes = 1;
 			}
 			log_parent(sentinel_add(pool.baseAddr + biti * 16), sentinel_add(pbot));
@@ -2057,7 +2054,7 @@ struct Gcx
 	    Log log;
 
 	    log.p = p;
-	    log.sizeof = size;
+	    log.size = size;
 	    log.line = GC.line;
 	    log.file = GC.file;
 	    log.parent = null;
