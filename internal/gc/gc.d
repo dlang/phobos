@@ -470,7 +470,7 @@ void _d_delmemory(void* *p)
 
 }
 
-void new_finalizer(void *p, void *dummy)
+void new_finalizer(void *p, bool dummy)
 {
     //printf("new_finalizer(p = %p)\n", p);
     _d_callfinalizer(p);

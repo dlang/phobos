@@ -204,7 +204,7 @@ debug (LOGGING)
 /* ============================ GC =============================== */
 
 
-alias void (*GC_FINALIZER)(void *p, void *dummy);
+alias void (*GC_FINALIZER)(void *p, bool dummy);
 
 class GCLock { }		// just a dummy so we can get a global lock
 
@@ -590,13 +590,8 @@ class GC
 	{
 	biti = cast(uint)(p - pool.baseAddr) / 16;
 	pool.noscan.clear(biti);
-	if (pool.finals.nbits && gcx.finalizer)
-	{
-	    if (pool.finals.testClear(biti))
-	    {
-		(*gcx.finalizer)(sentinel_add(p), null);
-	    }
-	}
+	if (pool.finals.nbits && pool.finals.testClear(biti))
+	    gcx.rt_finalize(sentinel_add(p), false);
 
 	bin = cast(Bins)pool.pagetable[pagenum];
 	if (bin == B_PAGE)		// if large alloc
@@ -1051,6 +1046,13 @@ struct Gcx
     List *bucket[B_MAX];	// free list for each size
 
     GC_FINALIZER finalizer;	// finalizer function (one per GC)
+
+    private void rt_finalize( void* p, bool dummy )
+    {
+        if (finalizer)
+            (*finalizer)(p, dummy);
+    }
+
 
     void initialize()
     {   int dummy;
@@ -1848,11 +1850,8 @@ struct Gcx
 		    {
 			for (; p < ptop; p += size, biti += bitstride)
 			{
-			    if (finalizer && pool.finals.nbits &&
-				pool.finals.testClear(biti))
-			    {
-				(*finalizer)(cast(List *)sentinel_add(p), null);
-			    }
+			    if (pool.finals.nbits && pool.finals.testClear(biti))
+				rt_finalize(cast(List *)sentinel_add(p), false);
 
 			    List *list = cast(List *)p;
 			    //debug(PRINTF) printf("\tcollecting %x\n", list);
@@ -1874,11 +1873,8 @@ struct Gcx
 
 			    pool.freebits.set(biti);
 			    pool.noscan.clear(biti);
-			    if (finalizer && pool.finals.nbits &&
-				pool.finals.testClear(biti))
-			    {
-				(*finalizer)(cast(List *)sentinel_add(p), null);
-			    }
+			    if (pool.finals.nbits && pool.finals.testClear(biti))
+				rt_finalize(cast(List *)sentinel_add(p), false);
 
 			    List *list = cast(List *)p;
 			    debug(PRINTF) printf("\tcollecting %x\n", list);
@@ -1898,11 +1894,8 @@ struct Gcx
 
 			sentinel_Invariant(sentinel_add(p));
 			pool.noscan.clear(biti);
-			if (finalizer && pool.finals.nbits &&
-			    pool.finals.testClear(biti))
-			{
-			    (*finalizer)(sentinel_add(p), null);
-			}
+			if (pool.finals.nbits && pool.finals.testClear(biti))
+			    rt_finalize(sentinel_add(p), false);
 
 			debug(COLLECT_PRINTF) printf("\tcollecting big %x\n", p);
 			log_free(sentinel_add(p));
@@ -2173,9 +2166,9 @@ struct Pool
     byte* topAddr;
     GCBits mark;	// entries already scanned, or should not be scanned
     GCBits scan;	// entries that need to be scanned
-    GCBits finals;	// entries that need finalizer run on them
     GCBits freebits;	// entries that are on the free list
-    GCBits noscan;	// entries that do not contain pointers
+    GCBits finals;	// entries that need finalizer run on them
+    GCBits noscan;	// entries that should not be scanned
 
     uint npages;
     uint ncommitted;	// ncommitted <= npages
@@ -2248,8 +2241,9 @@ struct Pool
 
 	mark.Dtor();
 	scan.Dtor();
-	finals.Dtor();
 	freebits.Dtor();
+	finals.Dtor();
+        noscan.Dtor();
     }
 
 
@@ -2260,8 +2254,9 @@ struct Pool
     {
 	//mark.Invariant();
 	//scan.Invariant();
-	//finals.Invariant();
 	//freebits.Invariant();
+	//finals.Invariant();
+	//noscan.Invariant();
 
 	if (baseAddr)
 	{
