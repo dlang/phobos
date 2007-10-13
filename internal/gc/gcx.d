@@ -54,10 +54,13 @@ version (MULTI_THREADED)
     import std.thread;
 }
 
+
 //alias GC* gc_t;
 alias GC gc_t;
 
+
 /* ======================= Leak Detector =========================== */
+
 
 debug (LOGGING)
 {
@@ -120,6 +123,7 @@ debug (LOGGING)
 	    }
 	}
 
+
 	void push(Log log)
 	{
 	    reserve(1);
@@ -132,6 +136,7 @@ debug (LOGGING)
 	    dim--;
 	}
 
+
 	uint find(void *p)
 	{
 	    for (uint i = 0; i < dim; i++)
@@ -142,6 +147,7 @@ debug (LOGGING)
 	    return ~0u;		// not found
 	}
 
+
 	void copy(LogArray *from)
 	{
 	    reserve(from.dim - dim);
@@ -149,10 +155,9 @@ debug (LOGGING)
 	    memcpy(data, from.data, from.dim * Log.sizeof);
 	    dim = from.dim;
 	}
-
-
     }
 }
+
 
 /* ============================ GC =============================== */
 
@@ -161,6 +166,7 @@ debug (LOGGING)
 alias void (*GC_FINALIZER)(void *p, void *dummy);
 
 class GCLock { }		// just a dummy so we can get a global lock
+
 
 const uint GCVERSION = 1;	// increment every time we change interface
 				// to GC.
@@ -175,6 +181,7 @@ class GC
 
     Gcx *gcx;			// implementation
     static ClassInfo gcLock;	// global lock
+
 
     void initialize()
     {
@@ -210,11 +217,13 @@ class GC
 	}
     }
 
+
     invariant
     {
 	if (gcx)
 	    gcx.thread_Invariant();
     }
+
 
     void *malloc(size_t size)
     {	void *p;
@@ -427,6 +436,7 @@ class GC
 	return p;
     }
 
+
     /**
      * Attempt to in-place enlarge the memory block pointed to by p
      * by at least minbytes beyond its current capacity,
@@ -487,6 +497,7 @@ class GC
 	    return (psz + sz) * PAGESIZE;
 	}
     }
+
 
     void free(void *p)
     {
@@ -550,7 +561,6 @@ class GC
      * If p is an interior pointer or not a gc allocated pointer,
      * return 0.
      */
-
     size_t capacity(void *p)
     {
 	version (SENTINEL)
@@ -596,7 +606,6 @@ class GC
      *	2) points to the start of an allocated piece of memory
      *	3) is not on a free list
      */
-
     void check(void *p)
     {
 	if (p)
@@ -661,6 +670,7 @@ class GC
 	}
     }
 
+
     static void scanStaticData(gc_t g)
     {
 	void *pbot;
@@ -692,6 +702,7 @@ class GC
 	}
     }
 
+
     void removeRoot(void *p)	// remove p from list of roots
     {
 	synchronized (gcLock)
@@ -699,6 +710,7 @@ class GC
 	    gcx.removeRoot(p);
 	}
     }
+
 
     void addRange(void *pbot, void *ptop)	// add range to scan for roots
     {
@@ -745,6 +757,7 @@ class GC
 	gcx.noStack--;
     }
 
+
     void genCollect()	// do generational garbage collection
     {
 	synchronized (gcLock)
@@ -767,6 +780,7 @@ class GC
 	}
     }
 
+
     void hasPointers(void *p)
     {
 	synchronized (gcLock)
@@ -774,6 +788,7 @@ class GC
 	    gcx.HasPointers(p);
 	}
     }
+
 
     void hasNoPointers(void *p)
     {
@@ -784,6 +799,7 @@ class GC
 	    }
 	}
     }
+
 
     void setV1_0()
     {
@@ -807,11 +823,11 @@ class GC
 	}
     }
 
+
     /*****************************************
      * Retrieve statistics about garbage collection.
      * Useful for debugging and tuning.
      */
-
     void getStats(out GCStats stats)
     {
 	uint psize = 0;
@@ -862,8 +878,6 @@ class GC
 }
 
 
-
-
 /* ============================ Gcx =============================== */
 
 enum
@@ -871,6 +885,7 @@ enum
     COMMITSIZE = (4096*16),
     POOLSIZE =   (4096*256),
 }
+
 
 enum
 {
@@ -889,12 +904,15 @@ enum
     B_MAX
 }
 
+
 alias ubyte Bins;
+
 
 struct List
 {
     List *next;
 }
+
 
 struct Range
 {
@@ -902,12 +920,13 @@ struct Range
     void *ptop;
 }
 
+
 const uint binsize[B_MAX] = [ 16,32,64,128,256,512,1024,2048,4096 ];
 const uint notbinsize[B_MAX] = [ ~(16u-1),~(32u-1),~(64u-1),~(128u-1),~(256u-1),
 				~(512u-1),~(1024u-1),~(2048u-1),~(4096u-1) ];
 
-
 /* ============================ Gcx =============================== */
+
 
 struct Gcx
 {
@@ -967,6 +986,7 @@ struct Gcx
 	inited = 1;
     }
 
+
     void Dtor()
     {
 	inited = 0;
@@ -987,7 +1007,9 @@ struct Gcx
 	    std.c.stdlib.free(ranges);
     }
 
+
     void Invariant() { }
+
 
     invariant
     {
@@ -1048,7 +1070,6 @@ struct Gcx
 
     /***************************************
      */
-
     void addRoot(void *p)
     {
 	if (nroots == rootdim)
@@ -1135,12 +1156,12 @@ struct Gcx
 	//assert(zero);
     }
 
+
     /*******************************
      * Find Pool that pointer is in.
      * Return null if not in a Pool.
      * Assume pooltable[] is sorted.
      */
-
     Pool *findPool(void *p)
     {
 	if (p >= minAddr && p < maxAddr)
@@ -1169,7 +1190,6 @@ struct Gcx
      * Find size of pointer p.
      * Returns 0 if not a gc'd pointer
      */
-
     uint findSize(void *p)
     {
 	Pool *pool;
@@ -1205,7 +1225,6 @@ struct Gcx
     /*******************************
      * Compute bin for size.
      */
-
     static Bins findBin(uint size)
     {   Bins bin;
 
@@ -1248,11 +1267,11 @@ struct Gcx
 	return bin;
     }
 
+
     /****************************************
      * Allocate a chunk of memory that is larger than a page.
      * Return null if out of memory.
      */
-
     void *bigAlloc(uint size)
     {
 	Pool *pool;
@@ -1337,7 +1356,6 @@ struct Gcx
      * Sort it into pooltable[].
      * Return null if failed.
      */
-
     Pool *newPool(uint npages)
     {
 	Pool *pool;
@@ -1413,7 +1431,6 @@ struct Gcx
      * Returns:
      *	0	failed
      */
-
     int allocPage(Bins bin)
     {
 	Pool *pool;
@@ -1453,7 +1470,6 @@ struct Gcx
     /************************************
      * Search a range of memory values and mark any pointers into the GC pool.
      */
-
     void mark(void *pbot, void *ptop)
     {
 	void **p1 = cast(void **)pbot;
@@ -1515,13 +1531,12 @@ struct Gcx
 	anychanges |= changes;
     }
 
+
     /*********************************
      * Return number of full pages free'd.
      */
-
     uint fullcollectshell()
     {
-
 	// The purpose of the 'shell' is to ensure all the registers
 	// get put on the stack so they'll be scanned
 	void *sp;
@@ -1538,6 +1553,7 @@ struct Gcx
 	}
 	return result;
     }
+
 
     uint fullcollect(void *stackTop)
     {
@@ -1884,7 +1900,6 @@ struct Gcx
     /*********************************
      * Run finalizer on p when it is free'd.
      */
-
     void doFinalize(void *p)
     {
 	Pool *pool = findPool(p);
@@ -1916,7 +1931,6 @@ struct Gcx
      * Indicate that block pointed to by p has no possible pointers
      * to GC allocated memory in it.
      */
-
     void HasNoPointers(void *p)
     {
 	//printf("HasNoPointers(%p)\n", p);
@@ -1928,10 +1942,13 @@ struct Gcx
 
 
     /***** Leak Detector ******/
+
+
     debug (LOGGING)
     {
 	LogArray current;
 	LogArray prev;
+
 
 	void log_init()
 	{
@@ -1940,6 +1957,7 @@ struct Gcx
 	    prev.reserve(1000);
 	    //debug(PRINTF) printf("-log_init()\n");
 	}
+
 
 	void log_malloc(void *p, uint size)
 	{
@@ -1959,6 +1977,7 @@ struct Gcx
 	    //debug(PRINTF) printf("-log_malloc()\n");
 	}
 
+
 	void log_free(void *p)
 	{
 	    //debug(PRINTF) printf("+log_free(%x)\n", p);
@@ -1973,6 +1992,7 @@ struct Gcx
 		current.remove(i);
 	    //debug(PRINTF) printf("-log_free()\n");
 	}
+
 
 	void log_collect()
 	{
@@ -2016,6 +2036,7 @@ struct Gcx
 	    debug(PRINTF) printf("-log_collect()\n");
 	}
 
+
 	void log_parent(void *p, void *parent)
 	{
 	    //debug(PRINTF) printf("+log_parent()\n");
@@ -2053,7 +2074,9 @@ struct Gcx
     }
 };
 
+
 /* ============================ Pool  =============================== */
+
 
 struct Pool
 {
@@ -2068,6 +2091,7 @@ struct Pool
     uint npages;
     uint ncommitted;	// ncommitted <= npages
     ubyte* pagetable;
+
 
     void initialize(uint npages)
     {
@@ -2106,6 +2130,7 @@ struct Pool
 	ncommitted = 0;
     }
 
+
     void Dtor()
     {
 	if (baseAddr)
@@ -2138,7 +2163,9 @@ struct Pool
 	freebits.Dtor();
     }
 
+
     void Invariant() { }
+
 
     invariant
     {
@@ -2162,11 +2189,11 @@ struct Pool
 	}
     }
 
+
     /**************************************
      * Allocate n pages from Pool.
      * Returns ~0u on failure.
      */
-
     uint allocPages(uint n)
     {
 	uint i;
@@ -2193,7 +2220,6 @@ struct Pool
      * Extend Pool by n pages.
      * Returns ~0u on failure.
      */
-
     uint extendPages(uint n)
     {
 	//debug(PRINTF) printf("Pool::extendPages(n = %d)\n", n);
@@ -2223,19 +2249,19 @@ struct Pool
 	return ~0u;
     }
 
+
     /**********************************
      * Free npages pages starting with pagenum.
      */
-
     void freePages(uint pagenum, uint npages)
     {
 	memset(&pagetable[pagenum], B_FREE, npages);
     }
 
+
     /***************************
      * Used for sorting pooltable[]
      */
-
     int opCmp(Pool *p2)
     {
 	if (baseAddr < p2.baseAddr)
@@ -2255,9 +2281,11 @@ version (SENTINEL)
     const ubyte SENTINEL_POST = 0xF5;		// 8 bits
     const uint SENTINEL_EXTRA = 2 * uint.sizeof + 1;
 
+
     uint* sentinel_size(void *p)  { return &(cast(uint *)p)[-2]; }
     uint* sentinel_pre(void *p)   { return &(cast(uint *)p)[-1]; }
     ubyte* sentinel_post(void *p) { return &(cast(ubyte *)p)[sentinel_size(p)]; }
+
 
     void sentinel_init(void *p, uint size)
     {
@@ -2266,16 +2294,19 @@ version (SENTINEL)
 	*sentinel_post(p) = SENTINEL_POST;
     }
 
+
     void sentinel_Invariant(void *p)
     {
 	assert(*sentinel_pre(p) == SENTINEL_PRE);
 	assert(*sentinel_post(p) == SENTINEL_POST);
     }
 
+
     void *sentinel_add(void *p)
     {
 	return p + 2 * uint.sizeof;
     }
+
 
     void *sentinel_sub(void *p)
     {
@@ -2286,23 +2317,26 @@ else
 {
     const uint SENTINEL_EXTRA = 0;
 
+
     void sentinel_init(void *p, uint size)
     {
     }
 
+
     void sentinel_Invariant(void *p)
     {
     }
+
 
     void *sentinel_add(void *p)
     {
 	return p;
     }
 
+
     void *sentinel_sub(void *p)
     {
 	return p;
     }
 }
-
 
