@@ -246,6 +246,31 @@ class GC
     /**
      *
      */
+    void enable()
+    {
+	synchronized (gcLock)
+	{
+	    assert(gcx.disabled > 0);
+	    gcx.disabled--;
+	}
+    }
+
+
+    /**
+     *
+     */
+    void disable()
+    {
+	synchronized (gcLock)
+	{
+	    gcx.disabled++;
+	}
+    }
+
+
+    /**
+     *
+     */
     void *malloc(size_t size)
     {	void *p;
 
@@ -865,24 +890,6 @@ class GC
     {
 	gcx.conservative = 1;
     }
-
-    void enable()
-    {
-	synchronized (gcLock)
-	{
-	    assert(gcx.disabled > 0);
-	    gcx.disabled--;
-	}
-    }
-
-    void disable()
-    {
-	synchronized (gcLock)
-	{
-	    gcx.disabled++;
-	}
-    }
-
 
 
     /**
