@@ -122,7 +122,7 @@ printf("smoke.2\n");
 
 /* ---------------------------- */
 
-void finalizer(void *p, void *dummy)
+void finalizer(void *p, bool dummy)
 {
 }
 

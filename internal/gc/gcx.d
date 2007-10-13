@@ -1,8 +1,28 @@
-//
-// Copyright (C) 2001-2007 by Digital Mars
-// All Rights Reserved
-// Written by Walter Bright
-// www.digitalmars.com
+/**
+ * This module contains the garbage collector implementation.
+ *
+ * Copyright: Copyright (C) 2001-2007 Digital Mars, www.digitalmars.com.
+ *            All rights reserved.
+ * License:
+ *  This software is provided 'as-is', without any express or implied
+ *  warranty. In no event will the authors be held liable for any damages
+ *  arising from the use of this software.
+ *
+ *  Permission is granted to anyone to use this software for any purpose,
+ *  including commercial applications, and to alter it and redistribute it
+ *  freely, in both source and binary form, subject to the following
+ *  restrictions:
+ *
+ *  o  The origin of this software must not be misrepresented; you must not
+ *     claim that you wrote the original software. If you use this software
+ *     in a product, an acknowledgment in the product documentation would be
+ *     appreciated but is not required.
+ *  o  Altered source versions must be plainly marked as such, and must not
+ *     be misrepresented as being the original software.
+ *  o  This notice may not be removed or altered from any source
+ *     distribution.
+ * Authors:   Walter Bright, David Friedman, Sean Kelly
+ */
 
 // D Programming Language Garbage Collector implementation
 
@@ -26,16 +46,16 @@ version = MULTI_THREADED;	// produce multithreaded version
 
 /***************************************************/
 
+private import gcbits;
+private import gcstats;
 
-debug (PRINTF) import std.c.stdio;
+private import cstdlib = std.c.stdlib : calloc, free, malloc, realloc;
+private import cstring = std.c.string : memcpy, memmove, memset;
 
-import std.c.stdio;
-import std.c.stdlib;
-import std.c.string;
-import gcbits;
+debug private import std.c.stdio;
+
 import std.outofmemory;
 import std.gc;
-import gcstats;
 
 version (Win32)
 {
@@ -54,20 +74,45 @@ version (MULTI_THREADED)
     import std.thread;
 }
 
-//alias GC* gc_t;
+
+private void onOutOfMemoryError()
+{
+    _d_OutOfMemory();
+}
+
+private void* rt_stackBottom()
+{
+    version (Win32)
+    {
+        return win32.os_query_stackbottom();
+    }
+    version (linux)
+    {
+        return gclinux.os_query_stackBottom();
+    }
+}
+
+private bool thread_needLock()
+{
+    return std.thread.Thread.nthreads != 1;
+}
+
+
 alias GC gc_t;
 
+
 /* ======================= Leak Detector =========================== */
+
 
 debug (LOGGING)
 {
     struct Log
     {
-	void *p;
-	uint size;
-	uint line;
-	char *file;
-	void *parent;
+	void*  p;
+	size_t size;
+	uint   line;
+	char*  file;
+	void*  parent;
 
 	void print()
 	{
@@ -83,18 +128,18 @@ debug (LOGGING)
 
     struct LogArray
     {
-	uint dim;
-	uint allocdim;
+	size_t dim;
+	size_t allocdim;
 	Log *data;
 
 	void Dtor()
 	{
 	    if (data)
-		std.c.stdlib.free(data);
+		cstdlib.free(data);
 	    data = null;
 	}
 
-	void reserve(uint nentries)
+	void reserve(size_t nentries)
 	{
 	    assert(dim <= allocdim);
 	    if (allocdim - dim < nentries)
@@ -103,22 +148,23 @@ debug (LOGGING)
 		assert(dim + nentries <= allocdim);
 		if (!data)
 		{
-		    data = cast(Log *)std.c.stdlib.malloc(allocdim * Log.sizeof);
+		    data = cast(Log *)cstdlib.malloc(allocdim * Log.sizeof);
 		    if (!data && allocdim)
-			_d_OutOfMemory();
+			onOutOfMemoryError();
 		}
 		else
 		{   Log *newdata;
 
-		    newdata = cast(Log *)std.c.stdlib.malloc(allocdim * Log.sizeof);
+		    newdata = cast(Log *)cstdlib.malloc(allocdim * Log.sizeof);
 		    if (!newdata && allocdim)
-			_d_OutOfMemory();
-		    memcpy(newdata, data, dim * Log.sizeof);
-		    std.c.stdlib.free(data);
+			onOutOfMemoryError();
+		    cstring.memcpy(newdata, data, dim * Log.sizeof);
+		    cstdlib.free(data);
 		    data = newdata;
 		}
 	    }
 	}
+
 
 	void push(Log log)
 	{
@@ -126,15 +172,16 @@ debug (LOGGING)
 	    data[dim++] = log;
 	}
 
-	void remove(uint i)
+	void remove(size_t i)
 	{
-	    memmove(data + i, data + i + 1, (dim - i) * Log.sizeof);
+	    cstring.memmove(data + i, data + i + 1, (dim - i) * Log.sizeof);
 	    dim--;
 	}
 
-	uint find(void *p)
+
+	size_t find(void *p)
 	{
-	    for (uint i = 0; i < dim; i++)
+	    for (size_t i = 0; i < dim; i++)
 	    {
 		if (data[i].p == p)
 		    return i;
@@ -142,25 +189,25 @@ debug (LOGGING)
 	    return ~0u;		// not found
 	}
 
+
 	void copy(LogArray *from)
 	{
 	    reserve(from.dim - dim);
 	    assert(from.dim <= allocdim);
-	    memcpy(data, from.data, from.dim * Log.sizeof);
+	    cstring.memcpy(data, from.data, from.dim * Log.sizeof);
 	    dim = from.dim;
 	}
-
-
     }
 }
+
 
 /* ============================ GC =============================== */
 
 
-//alias int size_t;
-alias void (*GC_FINALIZER)(void *p, void *dummy);
+alias void (*GC_FINALIZER)(void *p, bool dummy);
 
 class GCLock { }		// just a dummy so we can get a global lock
+
 
 const uint GCVERSION = 1;	// increment every time we change interface
 				// to GC.
@@ -168,29 +215,23 @@ const uint GCVERSION = 1;	// increment every time we change interface
 class GC
 {
     // For passing to debug code
-    static uint line;
-    static char *file;
+    static size_t line;
+    static char*  file;
 
     uint gcversion = GCVERSION;
 
     Gcx *gcx;			// implementation
     static ClassInfo gcLock;	// global lock
 
+
     void initialize()
     {
 	gcLock = GCLock.classinfo;
-	gcx = cast(Gcx *)std.c.stdlib.calloc(1, Gcx.sizeof);
+	gcx = cast(Gcx *)cstdlib.calloc(1, Gcx.sizeof);
 	if (!gcx)
-	    _d_OutOfMemory();
+	    onOutOfMemoryError();
 	gcx.initialize();
-	version (Win32)
-	{
-	    setStackBottom(win32.os_query_stackBottom());
-	}
-	version (linux)
-	{
-	    setStackBottom(gclinux.os_query_stackBottom());
-	}
+        setStackBottom(rt_stackBottom());
     }
 
 
@@ -205,147 +246,232 @@ class GC
 	if (gcx)
 	{
 	    gcx.Dtor();
-	    std.c.stdlib.free(gcx);
+	    cstdlib.free(gcx);
 	    gcx = null;
 	}
     }
 
+
     invariant()
     {
 	if (gcx)
+        {
 	    gcx.thread_Invariant();
+        }
     }
 
-    void *malloc(size_t size)
-    {	void *p;
 
-	if (std.thread.Thread.nthreads == 1)
+    /**
+     *
+     */
+    void enable()
+    {
+        if (!thread_needLock())
+        {
+	    assert(gcx.disabled > 0);
+	    gcx.disabled--;
+        }
+        else synchronized (gcLock)
 	{
-	    /* Single-threaded no-sync - Dave Fladebo.
-	     * The reason this works is because none of the gc code
-	     * can start up a new thread from within mallocNoSync().
-	     * Skip the sync for speed reasons.
-	     */
+	    assert(gcx.disabled > 0);
+	    gcx.disabled--;
+	}
+    }
+
+
+    /**
+     *
+     */
+    void disable()
+    {
+        if (!thread_needLock())
+        {
+	    gcx.disabled++;
+        }
+        else synchronized (gcLock)
+	{
+	    gcx.disabled++;
+	}
+    }
+
+
+    /**
+     *
+     */
+    void *malloc(size_t size)
+    {
+        if (!size)
+        {
+            return null;
+        }
+
+	if (!thread_needLock())
+	{
 	    return mallocNoSync(size);
 	}
 	else synchronized (gcLock)
 	{
-	    p = mallocNoSync(size);
+	    return mallocNoSync(size);
 	}
-	return p;
     }
 
-    void *mallocNoSync(size_t size)
-    {   void *p = null;
+
+    //
+    //
+    //
+    private void *mallocNoSync(size_t size)
+    {
+        assert(size != 0);
+
+        void *p = null;
 	Bins bin;
 
 	//debug(PRINTF) printf("GC::malloc(size = %d, gcx = %p)\n", size, gcx);
 	assert(gcx);
 	//debug(PRINTF) printf("gcx.self = %x, pthread_self() = %x\n", gcx.self, pthread_self());
-	if (size)
-	{
-	    size += SENTINEL_EXTRA;
 
-	    // Compute size bin
-	    // Cache previous binsize lookup - Dave Fladebo.
-	    static size_t lastsize = -1;
-	    static Bins lastbin;
-	    if (size == lastsize)
-		bin = lastbin;
-	    else
-	    {
-		bin = gcx.findBin(size);
-		lastsize = size;
-		lastbin = bin;
-	    }
+        size += SENTINEL_EXTRA;
 
-	    if (bin < B_PAGE)
-	    {
-		p = gcx.bucket[bin];
-		if (p == null)
-		{
-		    if (!gcx.allocPage(bin) && !gcx.disabled)	// try to find a new page
-		    {
-			if (std.thread.Thread.nthreads == 1)
-			{
-			    /* Then we haven't locked it yet. Be sure
-			     * and lock for a collection, since a finalizer
-			     * may start a new thread.
-			     */
-			    synchronized (gcLock)
-			    {
-				gcx.fullcollectshell();
-			    }
-			}
-			else if (!gcx.fullcollectshell())	// collect to find a new page
-			{
-			    //gcx.newPool(1);
-			}
-		    }
-		    if (!gcx.bucket[bin] && !gcx.allocPage(bin))
-		    {   int result;
+        // Compute size bin
+        // Cache previous binsize lookup - Dave Fladebo.
+        static size_t lastsize = -1;
+        static Bins lastbin;
+        if (size == lastsize)
+            bin = lastbin;
+        else
+        {
+            bin = gcx.findBin(size);
+            lastsize = size;
+            lastbin = bin;
+        }
 
-			gcx.newPool(1);		// allocate new pool to find a new page
-			result = gcx.allocPage(bin);
-			if (!result)
-			    return null;
-		    }
-		    p = gcx.bucket[bin];
-		}
+        if (bin < B_PAGE)
+        {
+            p = gcx.bucket[bin];
+            if (p == null)
+            {
+                if (!gcx.allocPage(bin) && !gcx.disabled)	// try to find a new page
+                {
+                    if (!thread_needLock())
+                    {
+                        /* Then we haven't locked it yet. Be sure
+                         * and lock for a collection, since a finalizer
+                         * may start a new thread.
+                         */
+                        synchronized (gcLock)
+                        {
+                            gcx.fullcollectshell();
+                        }
+                    }
+                    else if (!gcx.fullcollectshell())	// collect to find a new page
+                    {
+                        //gcx.newPool(1);
+                    }
+                }
+                if (!gcx.bucket[bin] && !gcx.allocPage(bin))
+                {   int result;
 
-		// Return next item from free list
-		gcx.bucket[bin] = (cast(List *)p).next;
-		//memset(p + size, 0, binsize[bin] - size);
-		// 'inline' memset - Dave Fladebo.
-		//foreach(inout byte b; cast(byte[])(p + size)[0..binsize[bin] - size]) { b = 0; }
-		//debug(PRINTF) printf("\tmalloc => %x\n", p);
-		debug (MEMSTOMP) memset(p, 0xF0, size);
-	    }
-	    else
-	    {
-		p = gcx.bigAlloc(size);
-		if (!p)
-		    return null;
-	    }
-	    size -= SENTINEL_EXTRA;
-	    p = sentinel_add(p);
-	    sentinel_init(p, size);
-	    gcx.log_malloc(p, size);
-	}
+                    gcx.newPool(1);		// allocate new pool to find a new page
+                    result = gcx.allocPage(bin);
+                    if (!result)
+                        return null;
+                }
+                p = gcx.bucket[bin];
+            }
+
+            // Return next item from free list
+            gcx.bucket[bin] = (cast(List *)p).next;
+            cstring.memset(p + size, 0, binsize[bin] - size);
+            //debug(PRINTF) printf("\tmalloc => %x\n", p);
+            debug (MEMSTOMP) cstring.memset(p, 0xF0, size);
+        }
+        else
+        {
+            p = gcx.bigAlloc(size);
+            if (!p)
+                return null;
+        }
+        size -= SENTINEL_EXTRA;
+        p = sentinel_add(p);
+        sentinel_init(p, size);
+        gcx.log_malloc(p, size);
 	return p;
     }
 
 
+    /**
+     *
+     */
     void *calloc(size_t size, size_t n)
     {
-	uint len;
-	void *p;
+        size_t len = size * n;
 
-	len = size * n;
-	p = malloc(len);
+        if (!len)
+        {
+            return null;
+        }
+
+        if (!thread_needLock())
+        {
+            return callocNoSync(len);
+        }
+        else synchronized (gcLock)
+        {
+            return callocNoSync(len);
+        }
+    }
+
+
+    //
+    //
+    //
+    private void *callocNoSync(size_t size)
+    {
+        assert(size != 0);
+
+	void *p = mallocNoSync(size);
 	if (p)
 	{   //debug(PRINTF) printf("calloc: %x len %d\n", p, len);
-	    memset(p, 0, len);
+	    cstring.memset(p, 0, size);
 	}
 	return p;
     }
 
 
+    /**
+     *
+     */
     void *realloc(void *p, size_t size)
+    {
+        if (!thread_needLock())
+        {
+            return reallocNoSync(p, size);
+        }
+        else synchronized (gcLock)
+        {
+            return reallocNoSync(p, size);
+        }
+    }
+
+
+    //
+    //
+    //
+    private void *reallocNoSync(void *p, size_t size)
     {
 	if (!size)
 	{   if (p)
-	    {   free(p);
+	    {   freeNoSync(p);
 		p = null;
 	    }
 	}
 	else if (!p)
 	{
-	    p = malloc(size);
+	    p = mallocNoSync(size);
 	}
 	else
 	{   void *p2;
-	    uint psize;
+	    size_t psize;
 
 	    //debug(PRINTF) printf("GC::realloc(p = %x, size = %u)\n", p, size);
 	    version (SENTINEL)
@@ -354,11 +480,11 @@ class GC
 		psize = *sentinel_size(p);
 		if (psize != size)
 		{
-		    p2 = malloc(size);
+		    p2 = mallocNoSync(size);
 		    if (psize < size)
 			size = psize;
 		    //debug(PRINTF) printf("\tcopying %d bytes\n",size);
-		    memcpy(p2, p, size);
+		    cstring.memcpy(p2, p, size);
 		    p = p2;
 		}
 	    }
@@ -379,7 +505,7 @@ class GC
 		    {	// Shrink in place
 			synchronized (gcLock)
 			{
-			    debug (MEMSTOMP) memset(p + size, 0xF2, psize - size);
+			    debug (MEMSTOMP) cstring.memset(p + size, 0xF2, psize - size);
 			    pool.freePages(pagenum + newsz, psz - newsz);
 			}
 			return p;
@@ -393,8 +519,8 @@ class GC
 			    {
 				if (i == pagenum + newsz)
 				{
-				    debug (MEMSTOMP) memset(p + psize, 0xF0, size - psize);
-				    memset(&pool.pagetable[pagenum + psz], B_PAGEPLUS, newsz - psz);
+				    debug (MEMSTOMP) cstring.memset(p + psize, 0xF0, size - psize);
+				    cstring.memset(&pool.pagetable[pagenum + psz], B_PAGEPLUS, newsz - psz);
 				    return p;
 				}
 				if (i == pool.ncommitted)
@@ -415,11 +541,11 @@ class GC
 		if (psize < size ||		// if new size is bigger
 		    psize > size * 2)		// or less than half
 		{
-		    p2 = malloc(size);
+		    p2 = mallocNoSync(size);
 		    if (psize < size)
 			size = psize;
 		    //debug(PRINTF) printf("\tcopying %d bytes\n",size);
-		    memcpy(p2, p, size);
+		    cstring.memcpy(p2, p, size);
 		    p = p2;
 		}
 	    }
@@ -427,16 +553,38 @@ class GC
 	return p;
     }
 
+
     /**
-     * Attempt to in-place enlarge the memory block pointed to by p
-     * by at least minbytes beyond its current capacity,
-     * up to a maximum of maxbytes.
-     * This does not attempt to move the memory block (like realloc() does).
+     * Attempt to in-place enlarge the memory block pointed to by p by at least
+     * minbytes beyond its current capacity, up to a maximum of maxsize.  This
+     * does not attempt to move the memory block (like realloc() does).
+     *
      * Returns:
      *	0 if could not extend p,
      *	total size of entire memory block if successful.
      */
     size_t extend(void* p, size_t minsize, size_t maxsize)
+    {
+        if (!thread_needLock())
+        {
+            return extendNoSync(p, minsize, maxsize);
+        }
+        else synchronized (gcLock)
+        {
+            return extendNoSync(p, minsize, maxsize);
+        }
+    }
+
+
+    //
+    //
+    //
+    private size_t extendNoSync(void* p, size_t minsize, size_t maxsize)
+    in
+    {
+        assert( minsize <= maxsize );
+    }
+    body
     {
 	//debug(PRINTF) printf("GC::extend(p = %x, minsize = %u, maxsize = %u)\n", p, minsize, maxsize);
 	version (SENTINEL)
@@ -454,49 +602,70 @@ class GC
 	auto pool = gcx.findPool(p);
 	auto pagenum = (p - pool.baseAddr) / PAGESIZE;
 
-	synchronized (gcLock)
-	{
-	    size_t sz;
-	    for (sz = 0; sz < maxsz; sz++)
-	    {
-		auto i = pagenum + psz + sz;
-		if (i == pool.ncommitted)
-		    break;
-		if (pool.pagetable[i] != B_FREE)
-		{   if (sz < minsz)
-			return 0;
-		    break;
-		}
-	    }
-	    if (sz >= minsz)
-	    {
-	    }
-	    else if (pagenum + psz + sz == pool.ncommitted)
-	    {
-		auto u = pool.extendPages(minsz - sz);
-		if (u == ~0u)
-		    return 0;
-		sz = minsz;
-	    }
-	    else
-		return 0;
-	    debug (MEMSTOMP) memset(p + psize, 0xF0, (psz + sz) * PAGESIZE - psize);
-	    memset(pool.pagetable + pagenum + psz, B_PAGEPLUS, sz);
-	    gcx.p_cache = null;
-	    gcx.size_cache = 0;
-	    return (psz + sz) * PAGESIZE;
-	}
+        size_t sz;
+        for (sz = 0; sz < maxsz; sz++)
+        {
+            auto i = pagenum + psz + sz;
+            if (i == pool.ncommitted)
+                break;
+            if (pool.pagetable[i] != B_FREE)
+            {   if (sz < minsz)
+                    return 0;
+                break;
+            }
+        }
+        if (sz >= minsz)
+        {
+        }
+        else if (pagenum + psz + sz == pool.ncommitted)
+        {
+            auto u = pool.extendPages(minsz - sz);
+            if (u == ~0u)
+                return 0;
+            sz = minsz;
+        }
+        else
+            return 0;
+        debug (MEMSTOMP) cstring.memset(p + psize, 0xF0, (psz + sz) * PAGESIZE - psize);
+        cstring.memset(pool.pagetable + pagenum + psz, B_PAGEPLUS, sz);
+        gcx.p_cache = null;
+        gcx.size_cache = 0;
+        return (psz + sz) * PAGESIZE;
     }
 
+
+    /**
+     *
+     */
     void free(void *p)
     {
+	if (!p)
+        {
+	    return;
+        }
+
+        if (!thread_needLock())
+        {
+            return freeNoSync(p);
+        }
+        else synchronized (gcLock)
+        {
+            return freeNoSync(p);
+        }
+    }
+
+
+    //
+    //
+    //
+    private void freeNoSync(void *p)
+    {
+        assert (p);
+
 	Pool *pool;
 	uint pagenum;
 	Bins bin;
 	uint biti;
-
-	if (!p)
-	    return;
 
 	// Find which page it is in
 	pool = gcx.findPool(p);
@@ -505,18 +674,10 @@ class GC
 	sentinel_Invariant(p);
 	p = sentinel_sub(p);
 	pagenum = (p - pool.baseAddr) / PAGESIZE;
-
-	synchronized (gcLock)
-	{
 	biti = cast(uint)(p - pool.baseAddr) / 16;
-	pool.noptrs.clear(biti);
-	if (pool.finals.nbits && gcx.finalizer)
-	{
-	    if (pool.finals.testClear(biti))
-	    {
-		(*gcx.finalizer)(sentinel_add(p), null);
-	    }
-	}
+	pool.noscan.clear(biti);
+	if (pool.finals.nbits && pool.finals.testClear(biti))
+	    gcx.rt_finalize(sentinel_add(p), false);
 
 	bin = cast(Bins)pool.pagetable[pagenum];
 	if (bin == B_PAGE)		// if large alloc
@@ -528,31 +689,51 @@ class GC
 	    n = pagenum;
 	    while (++n < pool.ncommitted && pool.pagetable[n] == B_PAGEPLUS)
 		npages++;
-	    debug (MEMSTOMP) memset(p, 0xF2, npages * PAGESIZE);
+	    debug (MEMSTOMP) cstring.memset(p, 0xF2, npages * PAGESIZE);
 	    pool.freePages(pagenum, npages);
 	}
 	else
 	{   // Add to free list
 	    List *list = cast(List *)p;
 
-	    debug (MEMSTOMP) memset(p, 0xF2, binsize[bin]);
+	    debug (MEMSTOMP) cstring.memset(p, 0xF2, binsize[bin]);
 
 	    list.next = gcx.bucket[bin];
 	    gcx.bucket[bin] = list;
-	}
 	}
 	gcx.log_free(sentinel_add(p));
     }
 
 
-    /****************************************
-     * Determine the allocated size of pointer p.
-     * If p is an interior pointer or not a gc allocated pointer,
-     * return 0.
+    /**
+     * Determine the allocated size of pointer p.  If p is an interior pointer
+     * or not a gc allocated pointer, return 0.
      */
-
     size_t capacity(void *p)
     {
+        if (!p)
+        {
+            return 0;
+        }
+
+        if (!thread_needLock())
+        {
+            return sizeOfNoSync(p);
+        }
+        else synchronized (gcLock)
+        {
+            return sizeOfNoSync(p);
+        }
+    }
+
+
+    //
+    //
+    //
+    private size_t sizeOfNoSync(void *p)
+    {
+        assert (p);
+
 	version (SENTINEL)
 	{
 	    p = sentinel_sub(p);
@@ -562,7 +743,7 @@ class GC
 	    // This depends on:
 	    // 1) size is a power of 2 for less than PAGESIZE values
 	    // 2) base of memory pool is aligned on PAGESIZE boundary
-	    if (cast(uint)p & (size - 1) & (PAGESIZE - 1))
+	    if (cast(size_t)p & (size - 1) & (PAGESIZE - 1))
 		size = 0;
 	    return size ? size - SENTINAL_EXTRA : 0;
 	}
@@ -577,7 +758,7 @@ class GC
 	    // This depends on:
 	    // 1) size is a power of 2 for less than PAGESIZE values
 	    // 2) base of memory pool is aligned on PAGESIZE boundary
-	    if (cast(uint)p & (size - 1) & (PAGESIZE - 1))
+	    if (cast(size_t)p & (size - 1) & (PAGESIZE - 1))
 		size = 0;
 	    else
 	    {
@@ -590,56 +771,75 @@ class GC
     }
 
 
-    /****************************************
+    /**
      * Verify that pointer p:
      *	1) belongs to this memory pool
      *	2) points to the start of an allocated piece of memory
      *	3) is not on a free list
      */
-
     void check(void *p)
     {
-	if (p)
-	{
-	  synchronized (gcLock)
-	  {
-	    sentinel_Invariant(p);
-	    debug (PTRCHECK)
-	    {
-		Pool *pool;
-		uint pagenum;
-		Bins bin;
-		uint size;
+        if (!p)
+        {
+            return;
+        }
 
-		p = sentinel_sub(p);
-		pool = gcx.findPool(p);
-		assert(pool);
-		pagenum = (p - pool.baseAddr) / PAGESIZE;
-		bin = cast(Bins)pool.pagetable[pagenum];
-		assert(bin <= B_PAGE);
-		size = binsize[bin];
-		assert((cast(uint)p & (size - 1)) == 0);
-
-		debug (PTRCHECK2)
-		{
-		    if (bin < B_PAGE)
-		    {
-			// Check that p is not on a free list
-			List *list;
-
-			for (list = gcx.bucket[bin]; list; list = list.next)
-			{
-			    assert(cast(void *)list != p);
-			}
-		    }
-		}
-	    }
-	  }
-	}
+        if (!thread_needLock())
+        {
+            checkNoSync(p);
+        }
+        else synchronized (gcLock)
+        {
+            checkNoSync(p);
+        }
     }
 
 
-    void setStackBottom(void *p)
+    //
+    //
+    //
+    private void checkNoSync(void *p)
+    {
+        assert(p);
+
+        sentinel_Invariant(p);
+        debug (PTRCHECK)
+        {
+            Pool* pool;
+            uint pagenum;
+            Bins bin;
+            size_t size;
+
+            p = sentinel_sub(p);
+            pool = gcx.findPool(p);
+            assert(pool);
+            pagenum = (p - pool.baseAddr) / PAGESIZE;
+            bin = cast(Bins)pool.pagetable[pagenum];
+            assert(bin <= B_PAGE);
+            size = binsize[bin];
+            assert((cast(size_t)p & (size - 1)) == 0);
+
+            debug (PTRCHECK2)
+            {
+                if (bin < B_PAGE)
+                {
+                    // Check that p is not on a free list
+                    List *list;
+
+                    for (list = gcx.bucket[bin]; list; list = list.next)
+                    {
+                        assert(cast(void *)list != p);
+                    }
+                }
+            }
+        }
+    }
+
+
+    //
+    //
+    //
+    private void setStackBottom(void *p)
     {
 	version (STACKGROWSDOWN)
 	{
@@ -660,6 +860,7 @@ class GC
 	    }
 	}
     }
+
 
     static void scanStaticData(gc_t g)
     {
@@ -684,44 +885,104 @@ class GC
     }
 
 
-    void addRoot(void *p)	// add p to list of roots
+    /**
+     * add p to list of roots
+     */
+    void addRoot(void *p)
     {
-	synchronized (gcLock)
+        if (!p)
+        {
+            return;
+        }
+
+        if (!thread_needLock())
+        {
+	    gcx.addRoot(p);
+        }
+        else synchronized (gcLock)
 	{
 	    gcx.addRoot(p);
 	}
     }
 
-    void removeRoot(void *p)	// remove p from list of roots
+
+    /**
+     * remove p from list of roots
+     */
+    void removeRoot(void *p)
     {
-	synchronized (gcLock)
+        if (!p)
+        {
+            return;
+        }
+
+        if (!thread_needLock())
+        {
+	    gcx.removeRoot(p);
+        }
+        else synchronized (gcLock)
 	{
 	    gcx.removeRoot(p);
 	}
     }
 
-    void addRange(void *pbot, void *ptop)	// add range to scan for roots
+
+    /**
+     * add range to scan for roots
+     */
+    void addRange(void *pbot, void *ptop)
     {
+        if (!pbot || !ptop)
+        {
+            return;
+        }
+
 	//debug(PRINTF) printf("+GC.addRange(pbot = x%x, ptop = x%x)\n", pbot, ptop);
-	synchronized (gcLock)
+        if (!thread_needLock())
+        {
+	    gcx.addRange(pbot, ptop);
+        }
+        else synchronized (gcLock)
 	{
 	    gcx.addRange(pbot, ptop);
 	}
 	//debug(PRINTF) printf("-GC.addRange()\n");
     }
 
-    void removeRange(void *pbot)		// remove range
+
+    /**
+     * remove range
+     */
+    void removeRange(void *p)
     {
-	synchronized (gcLock)
+        if (!p)
+        {
+            return;
+        }
+
+        if (!thread_needLock())
+        {
+	    gcx.removeRange(p);
+        }
+        else synchronized (gcLock)
 	{
-	    gcx.removeRange(pbot);
+	    gcx.removeRange(p);
 	}
     }
 
-    void fullCollect()		// do full garbage collection
+
+    /**
+     * do full garbage collection
+     */
+    void fullCollect()
     {
 	debug(PRINTF) printf("GC.fullCollect()\n");
-	synchronized (gcLock)
+
+        if (!thread_needLock())
+        {
+	    gcx.fullcollectshell();
+        }
+        else synchronized (gcLock)
 	{
 	    gcx.fullcollectshell();
 	}
@@ -738,14 +999,31 @@ class GC
 	gcx.log_collect();
     }
 
-    void fullCollectNoStack()		// do full garbage collection
+
+    /**
+     * do full garbage collection ignoring roots
+     */
+    void fullCollectNoStack()
     {
-	gcx.noStack++;
-	fullCollect();
-	gcx.noStack--;
+        if (!thread_needLock())
+        {
+            gcx.noStack++;
+            gcx.fullcollectshell();
+            gcx.noStack--;
+        }
+        else synchronized (gcLock)
+        {
+            gcx.noStack++;
+            gcx.fullcollectshell();
+            gcx.noStack--;
+        }
     }
 
-    void genCollect()	// do generational garbage collection
+
+    /**
+     * do generational garbage collection
+     */
+    void genCollect()
     {
 	synchronized (gcLock)
 	{
@@ -767,6 +1045,7 @@ class GC
 	}
     }
 
+
     void hasPointers(void *p)
     {
 	synchronized (gcLock)
@@ -774,6 +1053,7 @@ class GC
 	    gcx.HasPointers(p);
 	}
     }
+
 
     void hasNoPointers(void *p)
     {
@@ -785,73 +1065,70 @@ class GC
 	}
     }
 
+
     void setV1_0()
     {
 	gcx.conservative = 1;
     }
 
-    void enable()
-    {
-	synchronized (gcLock)
-	{
-	    assert(gcx.disabled > 0);
-	    gcx.disabled--;
-	}
-    }
 
-    void disable()
-    {
-	synchronized (gcLock)
-	{
-	    gcx.disabled++;
-	}
-    }
-
-    /*****************************************
+    /**
      * Retrieve statistics about garbage collection.
      * Useful for debugging and tuning.
      */
-
     void getStats(out GCStats stats)
     {
-	uint psize = 0;
-	uint usize = 0;
-	uint flsize = 0;
+        if (!thread_needLock())
+        {
+            getStatsNoSync(stats);
+        }
+        else synchronized (gcLock)
+        {
+            getStatsNoSync(stats);
+        }
+    }
 
-	uint n;
-	uint bsize = 0;
+
+    //
+    //
+    //
+    private void getStatsNoSync(out GCStats stats)
+    {
+	size_t psize = 0;
+	size_t usize = 0;
+	size_t flsize = 0;
+
+	size_t n;
+	size_t bsize = 0;
 
 	//debug(PRINTF) printf("getStats()\n");
-	memset(&stats, 0, GCStats.sizeof);
+	cstring.memset(&stats, 0, GCStats.sizeof);
 
-	synchronized (gcLock)
-	{
-	    for (n = 0; n < gcx.npools; n++)
-	    {   Pool *pool = gcx.pooltable[n];
+        for (n = 0; n < gcx.npools; n++)
+        {   Pool *pool = gcx.pooltable[n];
 
-		psize += pool.ncommitted * PAGESIZE;
-		for (uint j = 0; j < pool.ncommitted; j++)
-		{
-		    Bins bin = cast(Bins)pool.pagetable[j];
-		    if (bin == B_FREE)
-			stats.freeblocks++;
-		    else if (bin == B_PAGE)
-			stats.pageblocks++;
-		    else if (bin < B_PAGE)
-			bsize += PAGESIZE;
-		}
-	    }
+            psize += pool.ncommitted * PAGESIZE;
+            for (uint j = 0; j < pool.ncommitted; j++)
+            {
+                Bins bin = cast(Bins)pool.pagetable[j];
+                if (bin == B_FREE)
+                    stats.freeblocks++;
+                else if (bin == B_PAGE)
+                    stats.pageblocks++;
+                else if (bin < B_PAGE)
+                    bsize += PAGESIZE;
+            }
+        }
 
-	    for (n = 0; n < B_PAGE; n++)
-	    {
-		//debug(PRINTF) printf("bin %d\n", n);
-		for (List *list = gcx.bucket[n]; list; list = list.next)
-		{
-		    //debug(PRINTF) printf("\tlist %x\n", list);
-		    flsize += binsize[n];
-		}
-	    }
-	}
+        for (n = 0; n < B_PAGE; n++)
+        {
+            //debug(PRINTF) printf("bin %d\n", n);
+            for (List *list = gcx.bucket[n]; list; list = list.next)
+            {
+                //debug(PRINTF) printf("\tlist %x\n", list);
+                flsize += binsize[n];
+            }
+        }
 
 	usize = bsize - flsize;
 
@@ -862,8 +1139,6 @@ class GC
 }
 
 
-
-
 /* ============================ Gcx =============================== */
 
 enum
@@ -871,6 +1146,7 @@ enum
     COMMITSIZE = (4096*16),
     POOLSIZE =   (4096*256),
 }
+
 
 enum
 {
@@ -889,12 +1165,15 @@ enum
     B_MAX
 }
 
+
 alias ubyte Bins;
+
 
 struct List
 {
     List *next;
 }
+
 
 struct Range
 {
@@ -902,12 +1181,13 @@ struct Range
     void *ptop;
 }
 
+
 const uint binsize[B_MAX] = [ 16,32,64,128,256,512,1024,2048,4096 ];
 const uint notbinsize[B_MAX] = [ ~(16u-1),~(32u-1),~(64u-1),~(128u-1),~(256u-1),
 				~(512u-1),~(1024u-1),~(2048u-1),~(4096u-1) ];
 
-
 /* ============================ Gcx =============================== */
+
 
 struct Gcx
 {
@@ -927,14 +1207,14 @@ struct Gcx
     }
 
     void *p_cache;
-    uint size_cache;
+    size_t size_cache;
 
-    uint nroots;
-    uint rootdim;
+    size_t nroots;
+    size_t rootdim;
     void **roots;
 
-    uint nranges;
-    uint rangedim;
+    size_t nranges;
+    size_t rangedim;
     Range *ranges;
 
     uint conservative;	// !=0 means conservative behavior
@@ -955,6 +1235,13 @@ struct Gcx
 
     GC_FINALIZER finalizer;	// finalizer function (one per GC)
 
+    private void rt_finalize( void* p, bool dummy )
+    {
+        if (finalizer)
+            (*finalizer)(p, dummy);
+    }
+
+
     void initialize()
     {   int dummy;
 
@@ -967,6 +1254,7 @@ struct Gcx
 	inited = 1;
     }
 
+
     void Dtor()
     {
 	inited = 0;
@@ -975,19 +1263,21 @@ struct Gcx
 	{   Pool *pool = pooltable[i];
 
 	    pool.Dtor();
-	    std.c.stdlib.free(pool);
+	    cstdlib.free(pool);
 	}
 	if (pooltable)
-	    std.c.stdlib.free(pooltable);
+	    cstdlib.free(pooltable);
 
 	if (roots)
-	    std.c.stdlib.free(roots);
+	    cstdlib.free(roots);
 
 	if (ranges)
-	    std.c.stdlib.free(ranges);
+	    cstdlib.free(ranges);
     }
 
+
     void Invariant() { }
+
 
     invariant()
     {
@@ -1046,22 +1336,22 @@ struct Gcx
     }
 
 
-    /***************************************
+    /**
+     *
      */
-
     void addRoot(void *p)
     {
 	if (nroots == rootdim)
 	{
-	    uint newdim = rootdim * 2 + 16;
-	    void **newroots;
+	    size_t newdim = rootdim * 2 + 16;
+	    void** newroots;
 
-	    newroots = cast(void **)std.c.stdlib.malloc(newdim * newroots[0].sizeof);
+	    newroots = cast(void **)cstdlib.malloc(newdim * newroots[0].sizeof);
 	    if (!newroots)
-		_d_OutOfMemory();
+		onOutOfMemoryError();
 	    if (roots)
-	    {   memcpy(newroots, roots, nroots * newroots[0].sizeof);
-		std.c.stdlib.free(roots);
+	    {   cstring.memcpy(newroots, roots, nroots * newroots[0].sizeof);
+		cstdlib.free(roots);
 	    }
 	    roots = newroots;
 	    rootdim = newdim;
@@ -1071,39 +1361,42 @@ struct Gcx
     }
 
 
+    /**
+     *
+     */
     void removeRoot(void *p)
     {
-	uint i;
-	for (i = nroots; i--;)
+	for (size_t i = nroots; i--;)
 	{
 	    if (roots[i] == p)
 	    {
 		nroots--;
-		memmove(roots + i, roots + i + 1, (nroots - i) * roots[0].sizeof);
+		cstring.memmove(roots + i, roots + i + 1, (nroots - i) * roots[0].sizeof);
 		return;
 	    }
 	}
 	assert(0);
     }
 
-    /***************************************
-     */
 
+    /**
+     *
+     */
     void addRange(void *pbot, void *ptop)
     {
 	debug(PRINTF) printf("Thread %x ", pthread_self());
 	debug(PRINTF) printf("%x.Gcx::addRange(%x, %x), nranges = %d\n", this, pbot, ptop, nranges);
 	if (nranges == rangedim)
 	{
-	    uint newdim = rangedim * 2 + 16;
+	    size_t newdim = rangedim * 2 + 16;
 	    Range *newranges;
 
-	    newranges = cast(Range *)std.c.stdlib.malloc(newdim * newranges[0].sizeof);
+	    newranges = cast(Range *)cstdlib.malloc(newdim * newranges[0].sizeof);
 	    if (!newranges)
-		_d_OutOfMemory();
+		onOutOfMemoryError();
 	    if (ranges)
-	    {   memcpy(newranges, ranges, nranges * newranges[0].sizeof);
-		std.c.stdlib.free(ranges);
+	    {   cstring.memcpy(newranges, ranges, nranges * newranges[0].sizeof);
+		cstdlib.free(ranges);
 	    }
 	    ranges = newranges;
 	    rangedim = newdim;
@@ -1114,16 +1407,19 @@ struct Gcx
     }
 
 
+    /**
+     *
+     */
     void removeRange(void *pbot)
     {
 	debug(PRINTF) printf("Thread %x ", pthread_self());
 	debug(PRINTF) printf("%x.Gcx.removeRange(%x), nranges = %d\n", this, pbot, nranges);
-	for (uint i = nranges; i--;)
+	for (size_t i = nranges; i--;)
 	{
 	    if (ranges[i].pbot == pbot)
 	    {
 		nranges--;
-		memmove(ranges + i, ranges + i + 1, (nranges - i) * ranges[0].sizeof);
+		cstring.memmove(ranges + i, ranges + i + 1, (nranges - i) * ranges[0].sizeof);
 		return;
 	    }
 	}
@@ -1135,12 +1431,12 @@ struct Gcx
 	//assert(zero);
     }
 
-    /*******************************
+
+    /**
      * Find Pool that pointer is in.
      * Return null if not in a Pool.
      * Assume pooltable[] is sorted.
      */
-
     Pool *findPool(void *p)
     {
 	if (p >= cast(void*)minAddr && p < cast(void*)maxAddr)
@@ -1165,15 +1461,14 @@ struct Gcx
     }
 
 
-    /*******************************
+    /**
      * Find size of pointer p.
      * Returns 0 if not a gc'd pointer
      */
-
-    uint findSize(void *p)
+    size_t findSize(void *p)
     {
 	Pool *pool;
-	uint size = 0;
+	size_t size = 0;
 
 	pool = findPool(p);
 	if (pool)
@@ -1202,11 +1497,10 @@ struct Gcx
     }
 
 
-    /*******************************
+    /**
      * Compute bin for size.
      */
-
-    static Bins findBin(uint size)
+    static Bins findBin(size_t size)
     {   Bins bin;
 
 	if (size <= 256)
@@ -1248,12 +1542,12 @@ struct Gcx
 	return bin;
     }
 
-    /****************************************
+
+    /**
      * Allocate a chunk of memory that is larger than a page.
      * Return null if out of memory.
      */
-
-    void *bigAlloc(uint size)
+    void *bigAlloc(size_t size)
     {
 	Pool *pool;
 	uint npages;
@@ -1319,25 +1613,24 @@ struct Gcx
       L1:
 	pool.pagetable[pn] = B_PAGE;
 	if (npages > 1)
-	    memset(&pool.pagetable[pn + 1], B_PAGEPLUS, npages - 1);
+	    cstring.memset(&pool.pagetable[pn + 1], B_PAGEPLUS, npages - 1);
 	p = pool.baseAddr + pn * PAGESIZE;
-	memset(cast(char *)p + size, 0, npages * PAGESIZE - size);
-	debug (MEMSTOMP) memset(p, 0xF1, size);
+	cstring.memset(cast(char *)p + size, 0, npages * PAGESIZE - size);
+	debug (MEMSTOMP) cstring.memset(p, 0xF1, size);
 	//debug(PRINTF) printf("\tp = %x\n", p);
 	return p;
 
       Lnomemory:
-	_d_OutOfMemory();
+	onOutOfMemoryError();
 	return null;
     }
 
 
-    /***********************************
+    /**
      * Allocate a new pool with at least npages in it.
      * Sort it into pooltable[].
      * Return null if failed.
      */
-
     Pool *newPool(uint npages)
     {
 	Pool *pool;
@@ -1372,7 +1665,7 @@ struct Gcx
 		npages = n;
 	}
 
-	pool = cast(Pool *)std.c.stdlib.calloc(1, Pool.sizeof);
+	pool = cast(Pool *)cstdlib.calloc(1, Pool.sizeof);
 	if (pool)
 	{
 	    pool.initialize(npages);
@@ -1380,7 +1673,7 @@ struct Gcx
 		goto Lerr;
 
 	    newnpools = npools + 1;
-	    newpooltable = cast(Pool **)std.c.stdlib.realloc(pooltable, newnpools * (Pool *).sizeof);
+	    newpooltable = cast(Pool **)cstdlib.realloc(pooltable, newnpools * (Pool *).sizeof);
 	    if (!newpooltable)
 		goto Lerr;
 
@@ -1390,7 +1683,7 @@ struct Gcx
 		if (pool.opCmp(newpooltable[i]) < 0)
 		     break;
 	    }
-	    memmove(newpooltable + i + 1, newpooltable + i, (npools - i) * (Pool *).sizeof);
+	    cstring.memmove(newpooltable + i + 1, newpooltable + i, (npools - i) * (Pool *).sizeof);
 	    newpooltable[i] = pool;
 
 	    pooltable = newpooltable;
@@ -1403,17 +1696,16 @@ struct Gcx
 
       Lerr:
 	pool.Dtor();
-	std.c.stdlib.free(pool);
+	cstdlib.free(pool);
 	return null;
     }
 
 
-    /*******************************
+    /**
      * Allocate a page of bin's.
      * Returns:
      *	0	failed
      */
-
     int allocPage(Bins bin)
     {
 	Pool *pool;
@@ -1436,7 +1728,7 @@ struct Gcx
 	pool.pagetable[pn] = cast(ubyte)bin;
 
 	// Convert page to free list
-	uint size = binsize[bin];
+	size_t size = binsize[bin];
 	List **b = &bucket[bin];
 
 	p = pool.baseAddr + pn * PAGESIZE;
@@ -1450,17 +1742,16 @@ struct Gcx
     }
 
 
-    /************************************
+    /**
      * Search a range of memory values and mark any pointers into the GC pool.
      */
-
     void mark(void *pbot, void *ptop)
     {
 	void **p1 = cast(void **)pbot;
 	void **p2 = cast(void **)ptop;
 	uint changes = 0;
 
-	//if (log) debug(PRINTF) printf("Gcx::mark(%x .. %x)\n", pbot, ptop);
+        //printf("marking range: %p -> %p\n", pbot, ptop);
 	for (; p1 < p2; p1++)
 	{
 	    Pool *pool;
@@ -1472,7 +1763,7 @@ struct Gcx
 		pool = findPool(p);
 		if (pool)
 		{
-		    uint offset = cast(uint)(p - pool.baseAddr);
+		    size_t offset = cast(size_t)(p - pool.baseAddr);
 		    uint biti;
 		    uint pn = offset / PAGESIZE;
 		    Bins bin = cast(Bins)pool.pagetable[pn];
@@ -1503,8 +1794,9 @@ struct Gcx
 		    {
 			//if (log) debug(PRINTF) printf("\t\tmarking %x\n", p);
 			pool.mark.set(biti);
-			if (!pool.noptrs.test(biti))
-			{   pool.scan.set(biti);
+			if (!pool.noscan.test(biti))
+			{
+                            pool.scan.set(biti);
 			    changes = 1;
 			}
 			log_parent(sentinel_add(pool.baseAddr + biti * 16), sentinel_add(pbot));
@@ -1515,17 +1807,16 @@ struct Gcx
 	anychanges |= changes;
     }
 
-    /*********************************
+
+    /**
      * Return number of full pages free'd.
      */
-
-    uint fullcollectshell()
+    size_t fullcollectshell()
     {
-
 	// The purpose of the 'shell' is to ensure all the registers
 	// get put on the stack so they'll be scanned
 	void *sp;
-	uint result;
+	size_t result;
 	asm
 	{
 	    pushad		;
@@ -1539,7 +1830,11 @@ struct Gcx
 	return result;
     }
 
-    uint fullcollect(void *stackTop)
+
+    /**
+     *
+     */
+    size_t fullcollect(void *stackTop)
     {
 	uint n;
 	Pool *pool;
@@ -1709,8 +2004,8 @@ struct Gcx
 
 	// Free up everything not marked
 	debug(COLLECT_PRINTF) printf("\tfree'ing\n");
-	uint freedpages = 0;
-	uint freed = 0;
+	size_t freedpages = 0;
+	size_t freed = 0;
 	for (n = 0; n < npools; n++)
 	{   uint pn;
 	    uint ncommitted;
@@ -1743,17 +2038,14 @@ struct Gcx
 		    {
 			for (; p < ptop; p += size, biti += bitstride)
 			{
-			    if (finalizer && pool.finals.nbits &&
-				pool.finals.testClear(biti))
-			    {
-				(*finalizer)(cast(List *)sentinel_add(p), null);
-			    }
+			    if (pool.finals.nbits && pool.finals.testClear(biti))
+				rt_finalize(cast(List *)sentinel_add(p), false);
 
 			    List *list = cast(List *)p;
 			    //debug(PRINTF) printf("\tcollecting %x\n", list);
 			    log_free(sentinel_add(list));
 
-			    debug (MEMSTOMP) memset(p, 0xF3, size);
+			    debug (MEMSTOMP) cstring.memset(p, 0xF3, size);
 			}
 			pool.pagetable[pn] = B_FREE;
 			freed += PAGESIZE;
@@ -1768,18 +2060,15 @@ struct Gcx
 			    sentinel_Invariant(sentinel_add(p));
 
 			    pool.freebits.set(biti);
-			    pool.noptrs.clear(biti);
-			    if (finalizer && pool.finals.nbits &&
-				pool.finals.testClear(biti))
-			    {
-				(*finalizer)(cast(List *)sentinel_add(p), null);
-			    }
+			    pool.noscan.clear(biti);
+			    if (pool.finals.nbits && pool.finals.testClear(biti))
+				rt_finalize(cast(List *)sentinel_add(p), false);
 
 			    List *list = cast(List *)p;
 			    debug(PRINTF) printf("\tcollecting %x\n", list);
 			    log_free(sentinel_add(list));
 
-			    debug (MEMSTOMP) memset(p, 0xF3, size);
+			    debug (MEMSTOMP) cstring.memset(p, 0xF3, size);
 
 			    freed += size;
 			}
@@ -1792,18 +2081,15 @@ struct Gcx
 		    {   byte *p = pool.baseAddr + pn * PAGESIZE;
 
 			sentinel_Invariant(sentinel_add(p));
-			pool.noptrs.clear(biti);
-			if (finalizer && pool.finals.nbits &&
-			    pool.finals.testClear(biti))
-			{
-			    (*finalizer)(sentinel_add(p), null);
-			}
+			pool.noscan.clear(biti);
+			if (pool.finals.nbits && pool.finals.testClear(biti))
+			    rt_finalize(sentinel_add(p), false);
 
 			debug(COLLECT_PRINTF) printf("\tcollecting big %x\n", p);
 			log_free(sentinel_add(p));
 			pool.pagetable[pn] = B_FREE;
 			freedpages++;
-			debug (MEMSTOMP) memset(p, 0xF3, PAGESIZE);
+			debug (MEMSTOMP) cstring.memset(p, 0xF3, PAGESIZE);
 			while (pn + 1 < ncommitted && pool.pagetable[pn + 1] == B_PAGEPLUS)
 			{
 			    pn++;
@@ -1812,7 +2098,7 @@ struct Gcx
 
 			    debug (MEMSTOMP)
 			    {   p += PAGESIZE;
-				memset(p, 0xF3, PAGESIZE);
+				cstring.memset(p, 0xF3, PAGESIZE);
 			    }
 			}
 		    }
@@ -1825,7 +2111,7 @@ struct Gcx
 
 	// Free complete pages, rebuild free list
 	debug(COLLECT_PRINTF) printf("\tfree complete pages\n");
-	uint recoveredpages = 0;
+	size_t recoveredpages = 0;
 	for (n = 0; n < npools; n++)
 	{   uint pn;
 	    uint ncommitted;
@@ -1881,10 +2167,9 @@ struct Gcx
     }
 
 
-    /*********************************
+    /**
      * Run finalizer on p when it is free'd.
      */
-
     void doFinalize(void *p)
     {
 	Pool *pool = findPool(p);
@@ -1898,7 +2183,7 @@ struct Gcx
     }
 
 
-    /*********************************
+    /**
      * Indicate that block pointed to by p has possible pointers
      * to GC allocated memory in it.
      */
@@ -1908,30 +2193,32 @@ struct Gcx
 	Pool *pool = findPool(p);
 	assert(pool);
 
-	pool.noptrs.clear((p - pool.baseAddr) / 16);
+	pool.noscan.clear((p - pool.baseAddr) / 16);
     }
 
 
-    /*********************************
+    /**
      * Indicate that block pointed to by p has no possible pointers
      * to GC allocated memory in it.
      */
-
     void HasNoPointers(void *p)
     {
 	//printf("HasNoPointers(%p)\n", p);
 	Pool *pool = findPool(p);
 	assert(pool);
 
-	pool.noptrs.set((p - pool.baseAddr) / 16);
+	pool.noscan.set((p - pool.baseAddr) / 16);
     }
 
 
     /***** Leak Detector ******/
+
+
     debug (LOGGING)
     {
 	LogArray current;
 	LogArray prev;
+
 
 	void log_init()
 	{
@@ -1941,13 +2228,14 @@ struct Gcx
 	    //debug(PRINTF) printf("-log_init()\n");
 	}
 
-	void log_malloc(void *p, uint size)
+
+	void log_malloc(void *p, size_t size)
 	{
 	    //debug(PRINTF) printf("+log_malloc(p = %x, size = %d)\n", p, size);
 	    Log log;
 
 	    log.p = p;
-	    log.sizeof = size;
+	    log.size = size;
 	    log.line = GC.line;
 	    log.file = GC.file;
 	    log.parent = null;
@@ -1959,10 +2247,11 @@ struct Gcx
 	    //debug(PRINTF) printf("-log_malloc()\n");
 	}
 
+
 	void log_free(void *p)
 	{
 	    //debug(PRINTF) printf("+log_free(%x)\n", p);
-	    uint i;
+	    size_t i;
 
 	    i = current.find(p);
 	    if (i == ~0u)
@@ -1974,16 +2263,17 @@ struct Gcx
 	    //debug(PRINTF) printf("-log_free()\n");
 	}
 
+
 	void log_collect()
 	{
 	    //debug(PRINTF) printf("+log_collect()\n");
 	    // Print everything in current that is not in prev
 
 	    debug(PRINTF) printf("New pointers this cycle: --------------------------------\n");
-	    int used = 0;
-	    for (uint i = 0; i < current.dim; i++)
+	    size_t used = 0;
+	    for (size_t i = 0; i < current.dim; i++)
 	    {
-		uint j;
+		size_t j;
 
 		j = prev.find(current.data[i].p);
 		if (j == ~0u)
@@ -1993,10 +2283,10 @@ struct Gcx
 	    }
 
 	    debug(PRINTF) printf("All roots this cycle: --------------------------------\n");
-	    for (uint i = 0; i < current.dim; i++)
+	    for (size_t i = 0; i < current.dim; i++)
 	    {
 		void *p;
-		uint j;
+		size_t j;
 
 		p = current.data[i].p;
 		if (!findPool(current.data[i].parent))
@@ -2016,10 +2306,11 @@ struct Gcx
 	    debug(PRINTF) printf("-log_collect()\n");
 	}
 
+
 	void log_parent(void *p, void *parent)
 	{
 	    //debug(PRINTF) printf("+log_parent()\n");
-	    uint i;
+	    size_t i;
 
 	    i = current.find(p);
 	    if (i == ~0u)
@@ -2028,7 +2319,7 @@ struct Gcx
 		Pool *pool;
 		pool = findPool(p);
 		assert(pool);
-		uint offset = cast(uint)(p - pool.baseAddr);
+		size_t offset = cast(uint)(p - pool.baseAddr);
 		uint biti;
 		uint pn = offset / PAGESIZE;
 		Bins bin = cast(Bins)pool.pagetable[pn];
@@ -2046,14 +2337,16 @@ struct Gcx
     else
     {
 	void log_init() { }
-	void log_malloc(void *p, uint size) { }
+	void log_malloc(void *p, size_t size) { }
 	void log_free(void *p) { }
 	void log_collect() { }
 	void log_parent(void *p, void *parent) { }
     }
-};
+}
+
 
 /* ============================ Pool  =============================== */
+
 
 struct Pool
 {
@@ -2061,17 +2354,18 @@ struct Pool
     byte* topAddr;
     GCBits mark;	// entries already scanned, or should not be scanned
     GCBits scan;	// entries that need to be scanned
-    GCBits finals;	// entries that need finalizer run on them
     GCBits freebits;	// entries that are on the free list
-    GCBits noptrs;	// entries that do not contain pointers
+    GCBits finals;	// entries that need finalizer run on them
+    GCBits noscan;	// entries that should not be scanned
 
     uint npages;
     uint ncommitted;	// ncommitted <= npages
     ubyte* pagetable;
 
+
     void initialize(uint npages)
     {
-	uint poolsize;
+	size_t poolsize;
 
 	//debug(PRINTF) printf("Pool::Pool(%u)\n", npages);
 	poolsize = npages * PAGESIZE;
@@ -2095,16 +2389,17 @@ struct Pool
 	mark.alloc(poolsize / 16);
 	scan.alloc(poolsize / 16);
 	freebits.alloc(poolsize / 16);
-	noptrs.alloc(poolsize / 16);
+	noscan.alloc(poolsize / 16);
 
-	pagetable = cast(ubyte*)std.c.stdlib.malloc(npages);
+	pagetable = cast(ubyte*)cstdlib.malloc(npages);
 	if (!pagetable)
-	    _d_OutOfMemory();
-	memset(pagetable, B_UNCOMMITTED, npages);
+	    onOutOfMemoryError();
+	cstring.memset(pagetable, B_UNCOMMITTED, npages);
 
 	this.npages = npages;
 	ncommitted = 0;
     }
+
 
     void Dtor()
     {
@@ -2130,22 +2425,26 @@ struct Pool
 	    topAddr = null;
 	}
 	if (pagetable)
-	    std.c.stdlib.free(pagetable);
+	    cstdlib.free(pagetable);
 
 	mark.Dtor();
 	scan.Dtor();
-	finals.Dtor();
 	freebits.Dtor();
+	finals.Dtor();
+        noscan.Dtor();
     }
 
+
     void Invariant() { }
+
 
     invariant()
     {
 	//mark.Invariant();
 	//scan.Invariant();
-	//finals.Invariant();
 	//freebits.Invariant();
+	//finals.Invariant();
+	//noscan.Invariant();
 
 	if (baseAddr)
 	{
@@ -2162,11 +2461,11 @@ struct Pool
 	}
     }
 
-    /**************************************
+
+    /**
      * Allocate n pages from Pool.
      * Returns ~0u on failure.
      */
-
     uint allocPages(uint n)
     {
 	uint i;
@@ -2189,11 +2488,10 @@ struct Pool
 	return extendPages(n);
     }
 
-    /**************************************
+    /**
      * Extend Pool by n pages.
      * Returns ~0u on failure.
      */
-
     uint extendPages(uint n)
     {
 	//debug(PRINTF) printf("Pool::extendPages(n = %d)\n", n);
@@ -2208,7 +2506,7 @@ struct Pool
 	    //fflush(stdout);
 	    if (os_mem_commit(baseAddr, ncommitted * PAGESIZE, tocommit * PAGESIZE) == 0)
 	    {
-		memset(pagetable + ncommitted, B_FREE, tocommit);
+		cstring.memset(pagetable + ncommitted, B_FREE, tocommit);
 		auto i = ncommitted;
 		ncommitted += tocommit;
 
@@ -2223,19 +2521,19 @@ struct Pool
 	return ~0u;
     }
 
-    /**********************************
+
+    /**
      * Free npages pages starting with pagenum.
      */
-
     void freePages(uint pagenum, uint npages)
     {
-	memset(&pagetable[pagenum], B_FREE, npages);
+	cstring.memset(&pagetable[pagenum], B_FREE, npages);
     }
 
-    /***************************
+
+    /**
      * Used for sorting pooltable[]
      */
-
     int opCmp(Pool *p2)
     {
 	if (baseAddr < p2.baseAddr)
@@ -2251,20 +2549,23 @@ struct Pool
 
 version (SENTINEL)
 {
-    const uint SENTINEL_PRE = 0xF4F4F4F4;	// 32 bits
+    const size_t SENTINEL_PRE = cast(size_t) 0xF4F4F4F4F4F4F4F4UL;	// 32 or 64 bits
     const ubyte SENTINEL_POST = 0xF5;		// 8 bits
-    const uint SENTINEL_EXTRA = 2 * uint.sizeof + 1;
+    const uint SENTINEL_EXTRA = 2 * size_t.sizeof + 1;
 
-    uint* sentinel_size(void *p)  { return &(cast(uint *)p)[-2]; }
-    uint* sentinel_pre(void *p)   { return &(cast(uint *)p)[-1]; }
+
+    size_t* sentinel_size(void *p)  { return &(cast(size_t *)p)[-2]; }
+    size_t* sentinel_pre(void *p)   { return &(cast(size_t *)p)[-1]; }
     ubyte* sentinel_post(void *p) { return &(cast(ubyte *)p)[sentinel_size(p)]; }
 
-    void sentinel_init(void *p, uint size)
+
+    void sentinel_init(void *p, size_t size)
     {
 	*sentinel_size(p) = size;
 	*sentinel_pre(p) = SENTINEL_PRE;
 	*sentinel_post(p) = SENTINEL_POST;
     }
+
 
     void sentinel_Invariant(void *p)
     {
@@ -2272,37 +2573,42 @@ version (SENTINEL)
 	assert(*sentinel_post(p) == SENTINEL_POST);
     }
 
+
     void *sentinel_add(void *p)
     {
-	return p + 2 * uint.sizeof;
+	return p + 2 * size_t.sizeof;
     }
+
 
     void *sentinel_sub(void *p)
     {
-	return p - 2 * uint.sizeof;
+	return p - 2 * size_t.sizeof;
     }
 }
 else
 {
     const uint SENTINEL_EXTRA = 0;
 
-    void sentinel_init(void *p, uint size)
+
+    void sentinel_init(void *p, size_t size)
     {
     }
+
 
     void sentinel_Invariant(void *p)
     {
     }
+
 
     void *sentinel_add(void *p)
     {
 	return p;
     }
 
+
     void *sentinel_sub(void *p)
     {
 	return p;
     }
 }
-
 
