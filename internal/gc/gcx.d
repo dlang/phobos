@@ -266,7 +266,12 @@ class GC
      */
     void enable()
     {
-	synchronized (gcLock)
+        if (!thread_needLock())
+        {
+	    assert(gcx.disabled > 0);
+	    gcx.disabled--;
+        }
+        else synchronized (gcLock)
 	{
 	    assert(gcx.disabled > 0);
 	    gcx.disabled--;
@@ -279,7 +284,11 @@ class GC
      */
     void disable()
     {
-	synchronized (gcLock)
+        if (!thread_needLock())
+        {
+	    gcx.disabled++;
+        }
+        else synchronized (gcLock)
 	{
 	    gcx.disabled++;
 	}
@@ -291,6 +300,10 @@ class GC
      */
     void *malloc(size_t size)
     {
+        if (!size)
+        {
+            return null;
+        }
 
 	if (!thread_needLock())
 	{
@@ -306,83 +319,84 @@ class GC
     //
     //
     //
-    void *mallocNoSync(size_t size)
-    {   void *p = null;
+    private void *mallocNoSync(size_t size)
+    {
+        assert(size != 0);
+
+        void *p = null;
 	Bins bin;
 
 	//debug(PRINTF) printf("GC::malloc(size = %d, gcx = %p)\n", size, gcx);
 	assert(gcx);
 	//debug(PRINTF) printf("gcx.self = %x, pthread_self() = %x\n", gcx.self, pthread_self());
-	if (size)
-	{
-	    size += SENTINEL_EXTRA;
 
-	    // Compute size bin
-	    // Cache previous binsize lookup - Dave Fladebo.
-	    static size_t lastsize = -1;
-	    static Bins lastbin;
-	    if (size == lastsize)
-		bin = lastbin;
-	    else
-	    {
-		bin = gcx.findBin(size);
-		lastsize = size;
-		lastbin = bin;
-	    }
+        size += SENTINEL_EXTRA;
 
-	    if (bin < B_PAGE)
-	    {
-		p = gcx.bucket[bin];
-		if (p == null)
-		{
-		    if (!gcx.allocPage(bin) && !gcx.disabled)	// try to find a new page
-		    {
-			if (!thread_needLock())
-			{
-			    /* Then we haven't locked it yet. Be sure
-			     * and lock for a collection, since a finalizer
-			     * may start a new thread.
-			     */
-			    synchronized (gcLock)
-			    {
-				gcx.fullcollectshell();
-			    }
-			}
-			else if (!gcx.fullcollectshell())	// collect to find a new page
-			{
-			    //gcx.newPool(1);
-			}
-		    }
-		    if (!gcx.bucket[bin] && !gcx.allocPage(bin))
-		    {   int result;
+        // Compute size bin
+        // Cache previous binsize lookup - Dave Fladebo.
+        static size_t lastsize = -1;
+        static Bins lastbin;
+        if (size == lastsize)
+            bin = lastbin;
+        else
+        {
+            bin = gcx.findBin(size);
+            lastsize = size;
+            lastbin = bin;
+        }
 
-			gcx.newPool(1);		// allocate new pool to find a new page
-			result = gcx.allocPage(bin);
-			if (!result)
-			    return null;
-		    }
-		    p = gcx.bucket[bin];
-		}
+        if (bin < B_PAGE)
+        {
+            p = gcx.bucket[bin];
+            if (p == null)
+            {
+                if (!gcx.allocPage(bin) && !gcx.disabled)	// try to find a new page
+                {
+                    if (!thread_needLock())
+                    {
+                        /* Then we haven't locked it yet. Be sure
+                         * and lock for a collection, since a finalizer
+                         * may start a new thread.
+                         */
+                        synchronized (gcLock)
+                        {
+                            gcx.fullcollectshell();
+                        }
+                    }
+                    else if (!gcx.fullcollectshell())	// collect to find a new page
+                    {
+                        //gcx.newPool(1);
+                    }
+                }
+                if (!gcx.bucket[bin] && !gcx.allocPage(bin))
+                {   int result;
 
-		// Return next item from free list
-		gcx.bucket[bin] = (cast(List *)p).next;
-		//cstring.memset(p + size, 0, binsize[bin] - size);
-		// 'inline' memset - Dave Fladebo.
-		//foreach(inout byte b; cast(byte[])(p + size)[0..binsize[bin] - size]) { b = 0; }
-		//debug(PRINTF) printf("\tmalloc => %x\n", p);
-		debug (MEMSTOMP) cstring.memset(p, 0xF0, size);
-	    }
-	    else
-	    {
-		p = gcx.bigAlloc(size);
-		if (!p)
-		    return null;
-	    }
-	    size -= SENTINEL_EXTRA;
-	    p = sentinel_add(p);
-	    sentinel_init(p, size);
-	    gcx.log_malloc(p, size);
-	}
+                    gcx.newPool(1);		// allocate new pool to find a new page
+                    result = gcx.allocPage(bin);
+                    if (!result)
+                        return null;
+                }
+                p = gcx.bucket[bin];
+            }
+
+            // Return next item from free list
+            gcx.bucket[bin] = (cast(List *)p).next;
+            //cstring.memset(p + size, 0, binsize[bin] - size);
+            // 'inline' memset - Dave Fladebo.
+            //foreach(inout byte b; cast(byte[])(p + size)[0..binsize[bin] - size]) { b = 0; }
+            //debug(PRINTF) printf("\tmalloc => %x\n", p);
+            debug (MEMSTOMP) cstring.memset(p, 0xF0, size);
+        }
+        else
+        {
+            p = gcx.bigAlloc(size);
+            if (!p)
+                return null;
+        }
+        size -= SENTINEL_EXTRA;
+        p = sentinel_add(p);
+        sentinel_init(p, size);
+        gcx.log_malloc(p, size);
 	return p;
     }
 
@@ -392,12 +406,35 @@ class GC
      */
     void *calloc(size_t size, size_t n)
     {
+        size_t len = size * n;
 
-	size_t len = size * n;
-	void *p = malloc(len);
+        if (!len)
+        {
+            return null;
+        }
+
+        if (!thread_needLock())
+        {
+            return callocNoSync(len);
+        }
+        else synchronized (gcLock)
+        {
+            return callocNoSync(len);
+        }
+    }
+
+
+    //
+    //
+    //
+    private void *callocNoSync(size_t size)
+    {
+        assert(size != 0);
+
+	void *p = mallocNoSync(size);
 	if (p)
 	{   //debug(PRINTF) printf("calloc: %x len %d\n", p, len);
-	    cstring.memset(p, 0, len);
+	    cstring.memset(p, 0, size);
 	}
 	return p;
     }
@@ -408,15 +445,31 @@ class GC
      */
     void *realloc(void *p, size_t size)
     {
+        if (!thread_needLock())
+        {
+            return reallocNoSync(p, size);
+        }
+        else synchronized (gcLock)
+        {
+            return reallocNoSync(p, size);
+        }
+    }
+
+
+    //
+    //
+    //
+    private void *reallocNoSync(void *p, size_t size)
+    {
 	if (!size)
 	{   if (p)
-	    {   free(p);
+	    {   freeNoSync(p);
 		p = null;
 	    }
 	}
 	else if (!p)
 	{
-	    p = malloc(size);
+	    p = mallocNoSync(size);
 	}
 	else
 	{   void *p2;
@@ -429,7 +482,7 @@ class GC
 		psize = *sentinel_size(p);
 		if (psize != size)
 		{
-		    p2 = malloc(size);
+		    p2 = mallocNoSync(size);
 		    if (psize < size)
 			size = psize;
 		    //debug(PRINTF) printf("\tcopying %d bytes\n",size);
@@ -490,7 +543,7 @@ class GC
 		if (psize < size ||		// if new size is bigger
 		    psize > size * 2)		// or less than half
 		{
-		    p2 = malloc(size);
+		    p2 = mallocNoSync(size);
 		    if (psize < size)
 			size = psize;
 		    //debug(PRINTF) printf("\tcopying %d bytes\n",size);
@@ -514,6 +567,27 @@ class GC
      */
     size_t extend(void* p, size_t minsize, size_t maxsize)
     {
+        if (!thread_needLock())
+        {
+            return extendNoSync(p, minsize, maxsize);
+        }
+        else synchronized (gcLock)
+        {
+            return extendNoSync(p, minsize, maxsize);
+        }
+    }
+
+
+    //
+    //
+    //
+    private size_t extendNoSync(void* p, size_t minsize, size_t maxsize)
+    in
+    {
+        assert( minsize <= maxsize );
+    }
+    body
+    {
 	//debug(PRINTF) printf("GC::extend(p = %x, minsize = %u, maxsize = %u)\n", p, minsize, maxsize);
 	version (SENTINEL)
 	{
@@ -530,38 +604,35 @@ class GC
 	auto pool = gcx.findPool(p);
 	auto pagenum = (p - pool.baseAddr) / PAGESIZE;
 
-	synchronized (gcLock)
-	{
-	    size_t sz;
-	    for (sz = 0; sz < maxsz; sz++)
-	    {
-		auto i = pagenum + psz + sz;
-		if (i == pool.ncommitted)
-		    break;
-		if (pool.pagetable[i] != B_FREE)
-		{   if (sz < minsz)
-			return 0;
-		    break;
-		}
-	    }
-	    if (sz >= minsz)
-	    {
-	    }
-	    else if (pagenum + psz + sz == pool.ncommitted)
-	    {
-		auto u = pool.extendPages(minsz - sz);
-		if (u == ~0u)
-		    return 0;
-		sz = minsz;
-	    }
-	    else
-		return 0;
-	    debug (MEMSTOMP) cstring.memset(p + psize, 0xF0, (psz + sz) * PAGESIZE - psize);
-	    cstring.memset(pool.pagetable + pagenum + psz, B_PAGEPLUS, sz);
-	    gcx.p_cache = null;
-	    gcx.size_cache = 0;
-	    return (psz + sz) * PAGESIZE;
-	}
+        size_t sz;
+        for (sz = 0; sz < maxsz; sz++)
+        {
+            auto i = pagenum + psz + sz;
+            if (i == pool.ncommitted)
+                break;
+            if (pool.pagetable[i] != B_FREE)
+            {   if (sz < minsz)
+                    return 0;
+                break;
+            }
+        }
+        if (sz >= minsz)
+        {
+        }
+        else if (pagenum + psz + sz == pool.ncommitted)
+        {
+            auto u = pool.extendPages(minsz - sz);
+            if (u == ~0u)
+                return 0;
+            sz = minsz;
+        }
+        else
+            return 0;
+        debug (MEMSTOMP) cstring.memset(p + psize, 0xF0, (psz + sz) * PAGESIZE - psize);
+        cstring.memset(pool.pagetable + pagenum + psz, B_PAGEPLUS, sz);
+        gcx.p_cache = null;
+        gcx.size_cache = 0;
+        return (psz + sz) * PAGESIZE;
     }
 
 
@@ -570,13 +641,33 @@ class GC
      */
     void free(void *p)
     {
+	if (!p)
+        {
+	    return;
+        }
+
+        if (!thread_needLock())
+        {
+            return freeNoSync(p);
+        }
+        else synchronized (gcLock)
+        {
+            return freeNoSync(p);
+        }
+    }
+
+
+    //
+    //
+    //
+    private void freeNoSync(void *p)
+    {
+        assert (p);
+
 	Pool *pool;
 	uint pagenum;
 	Bins bin;
 	uint biti;
-
-	if (!p)
-	    return;
 
 	// Find which page it is in
 	pool = gcx.findPool(p);
@@ -585,9 +676,6 @@ class GC
 	sentinel_Invariant(p);
 	p = sentinel_sub(p);
 	pagenum = (p - pool.baseAddr) / PAGESIZE;
-
-	synchronized (gcLock)
-	{
 	biti = cast(uint)(p - pool.baseAddr) / 16;
 	pool.noscan.clear(biti);
 	if (pool.finals.nbits && pool.finals.testClear(biti))
@@ -615,7 +703,6 @@ class GC
 	    list.next = gcx.bucket[bin];
 	    gcx.bucket[bin] = list;
 	}
-	}
 	gcx.log_free(sentinel_add(p));
     }
 
@@ -626,6 +713,29 @@ class GC
      */
     size_t capacity(void *p)
     {
+        if (!p)
+        {
+            return 0;
+        }
+
+        if (!thread_needLock())
+        {
+            return sizeOfNoSync(p);
+        }
+        else synchronized (gcLock)
+        {
+            return sizeOfNoSync(p);
+        }
+    }
+
+
+    //
+    //
+    //
+    private size_t sizeOfNoSync(void *p)
+    {
+        assert (p);
+
 	version (SENTINEL)
 	{
 	    p = sentinel_sub(p);
@@ -671,50 +781,67 @@ class GC
      */
     void check(void *p)
     {
-	if (p)
-	{
-	  synchronized (gcLock)
-	  {
-	    sentinel_Invariant(p);
-	    debug (PTRCHECK)
-	    {
-		Pool* pool;
-		uint pagenum;
-		Bins bin;
-		size_t size;
+        if (!p)
+        {
+            return;
+        }
 
-		p = sentinel_sub(p);
-		pool = gcx.findPool(p);
-		assert(pool);
-		pagenum = (p - pool.baseAddr) / PAGESIZE;
-		bin = cast(Bins)pool.pagetable[pagenum];
-		assert(bin <= B_PAGE);
-		size = binsize[bin];
-		assert((cast(size_t)p & (size - 1)) == 0);
-
-		debug (PTRCHECK2)
-		{
-		    if (bin < B_PAGE)
-		    {
-			// Check that p is not on a free list
-			List *list;
-
-			for (list = gcx.bucket[bin]; list; list = list.next)
-			{
-			    assert(cast(void *)list != p);
-			}
-		    }
-		}
-	    }
-	  }
-	}
+        if (!thread_needLock())
+        {
+            checkNoSync(p);
+        }
+        else synchronized (gcLock)
+        {
+            checkNoSync(p);
+        }
     }
 
 
     //
     //
     //
-    void setStackBottom(void *p)
+    private void checkNoSync(void *p)
+    {
+        assert(p);
+
+        sentinel_Invariant(p);
+        debug (PTRCHECK)
+        {
+            Pool* pool;
+            uint pagenum;
+            Bins bin;
+            size_t size;
+
+            p = sentinel_sub(p);
+            pool = gcx.findPool(p);
+            assert(pool);
+            pagenum = (p - pool.baseAddr) / PAGESIZE;
+            bin = cast(Bins)pool.pagetable[pagenum];
+            assert(bin <= B_PAGE);
+            size = binsize[bin];
+            assert((cast(size_t)p & (size - 1)) == 0);
+
+            debug (PTRCHECK2)
+            {
+                if (bin < B_PAGE)
+                {
+                    // Check that p is not on a free list
+                    List *list;
+
+                    for (list = gcx.bucket[bin]; list; list = list.next)
+                    {
+                        assert(cast(void *)list != p);
+                    }
+                }
+            }
+        }
+    }
+
+
+    //
+    //
+    //
+    private void setStackBottom(void *p)
     {
 	version (STACKGROWSDOWN)
 	{
@@ -765,7 +892,16 @@ class GC
      */
     void addRoot(void *p)
     {
-	synchronized (gcLock)
+        if (!p)
+        {
+            return;
+        }
+
+        if (!thread_needLock())
+        {
+	    gcx.addRoot(p);
+        }
+        else synchronized (gcLock)
 	{
 	    gcx.addRoot(p);
 	}
@@ -777,7 +913,16 @@ class GC
      */
     void removeRoot(void *p)
     {
-	synchronized (gcLock)
+        if (!p)
+        {
+            return;
+        }
+
+        if (!thread_needLock())
+        {
+	    gcx.removeRoot(p);
+        }
+        else synchronized (gcLock)
 	{
 	    gcx.removeRoot(p);
 	}
@@ -789,8 +934,17 @@ class GC
      */
     void addRange(void *pbot, void *ptop)
     {
+        if (!pbot || !ptop)
+        {
+            return;
+        }
+
 	//debug(PRINTF) printf("+GC.addRange(pbot = x%x, ptop = x%x)\n", pbot, ptop);
-	synchronized (gcLock)
+        if (!thread_needLock())
+        {
+	    gcx.addRange(pbot, ptop);
+        }
+        else synchronized (gcLock)
 	{
 	    gcx.addRange(pbot, ptop);
 	}
@@ -803,7 +957,16 @@ class GC
      */
     void removeRange(void *p)
     {
-	synchronized (gcLock)
+        if (!p)
+        {
+            return;
+        }
+
+        if (!thread_needLock())
+        {
+	    gcx.removeRange(p);
+        }
+        else synchronized (gcLock)
 	{
 	    gcx.removeRange(p);
 	}
@@ -816,7 +979,12 @@ class GC
     void fullCollect()
     {
 	debug(PRINTF) printf("GC.fullCollect()\n");
-	synchronized (gcLock)
+
+        if (!thread_needLock())
+        {
+	    gcx.fullcollectshell();
+        }
+        else synchronized (gcLock)
 	{
 	    gcx.fullcollectshell();
 	}
@@ -839,9 +1007,18 @@ class GC
      */
     void fullCollectNoStack()
     {
-	gcx.noStack++;
-	fullCollect();
-	gcx.noStack--;
+        if (!thread_needLock())
+        {
+            gcx.noStack++;
+            gcx.fullcollectshell();
+            gcx.noStack--;
+        }
+        else synchronized (gcLock)
+        {
+            gcx.noStack++;
+            gcx.fullcollectshell();
+            gcx.noStack--;
+        }
     }
 
 
@@ -903,6 +1080,22 @@ class GC
      */
     void getStats(out GCStats stats)
     {
+        if (!thread_needLock())
+        {
+            getStatsNoSync(stats);
+        }
+        else synchronized (gcLock)
+        {
+            getStatsNoSync(stats);
+        }
+    }
+
+
+    //
+    //
+    //
+    private void getStatsNoSync(out GCStats stats)
+    {
 	size_t psize = 0;
 	size_t usize = 0;
 	size_t flsize = 0;
@@ -913,34 +1106,31 @@ class GC
 	//debug(PRINTF) printf("getStats()\n");
 	cstring.memset(&stats, 0, GCStats.sizeof);
 
-	synchronized (gcLock)
-	{
-	    for (n = 0; n < gcx.npools; n++)
-	    {   Pool *pool = gcx.pooltable[n];
+        for (n = 0; n < gcx.npools; n++)
+        {   Pool *pool = gcx.pooltable[n];
 
-		psize += pool.ncommitted * PAGESIZE;
-		for (uint j = 0; j < pool.ncommitted; j++)
-		{
-		    Bins bin = cast(Bins)pool.pagetable[j];
-		    if (bin == B_FREE)
-			stats.freeblocks++;
-		    else if (bin == B_PAGE)
-			stats.pageblocks++;
-		    else if (bin < B_PAGE)
-			bsize += PAGESIZE;
-		}
-	    }
+            psize += pool.ncommitted * PAGESIZE;
+            for (uint j = 0; j < pool.ncommitted; j++)
+            {
+                Bins bin = cast(Bins)pool.pagetable[j];
+                if (bin == B_FREE)
+                    stats.freeblocks++;
+                else if (bin == B_PAGE)
+                    stats.pageblocks++;
+                else if (bin < B_PAGE)
+                    bsize += PAGESIZE;
+            }
+        }
 
-	    for (n = 0; n < B_PAGE; n++)
-	    {
-		//debug(PRINTF) printf("bin %d\n", n);
-		for (List *list = gcx.bucket[n]; list; list = list.next)
-		{
-		    //debug(PRINTF) printf("\tlist %x\n", list);
-		    flsize += binsize[n];
-		}
-	    }
-	}
+        for (n = 0; n < B_PAGE; n++)
+        {
+            //debug(PRINTF) printf("bin %d\n", n);
+            for (List *list = gcx.bucket[n]; list; list = list.next)
+            {
+                //debug(PRINTF) printf("\tlist %x\n", list);
+                flsize += binsize[n];
+            }
+        }
 
 	usize = bsize - flsize;
 
