@@ -453,7 +453,8 @@ class InternetHost
 	 */	
 	bool getHostByName(string name)
 	{
-		hostent* he = gethostbyname(toStringz(name));
+		hostent* he;
+                synchronized he = gethostbyname(toStringz(name));
 		if(!he)
 			return false;
 		validHostent(he);
@@ -468,7 +469,8 @@ class InternetHost
 	bool getHostByAddr(uint addr)
 	{
 		uint x = htonl(addr);
-		hostent* he = gethostbyaddr(&x, 4, cast(int)AddressFamily.INET);
+		hostent* he;
+                synchronized he = gethostbyaddr(&x, 4, cast(int)AddressFamily.INET);
 		if(!he)
 			return false;
 		validHostent(he);
@@ -485,7 +487,8 @@ class InternetHost
 	bool getHostByAddr(string addr)
 	{
 		uint x = inet_addr(std.string.toStringz(addr));
-		hostent* he = gethostbyaddr(&x, 4, cast(int)AddressFamily.INET);
+		hostent* he;
+                synchronized he = gethostbyaddr(&x, 4, cast(int)AddressFamily.INET);
 		if(!he)
 			return false;
 		validHostent(he);
@@ -726,11 +729,12 @@ enum SocketShutdown: int
 /// Flags may be OR'ed together:
 enum SocketFlags: int
 {
-	NONE =       0,		/// no flags specified 
+	NONE =       0,             /// no flags specified 
 	
-	OOB =        MSG_OOB,	/// out-of-band stream data
-	PEEK =       MSG_PEEK,	/// peek at incoming data without removing it from the queue, only for receiving
+	OOB =        MSG_OOB,       /// out-of-band stream data
+	PEEK =       MSG_PEEK,      /// peek at incoming data without removing it from the queue, only for receiving
 	DONTROUTE =  MSG_DONTROUTE, /// data should not be subject to routing; this flag may be ignored. Only for sending
+        NOSIGNAL =   MSG_NOSIGNAL,  /// don't send SIGPIPE signal on socket write error and instead return EPIPE
 }
 
 
@@ -1267,6 +1271,7 @@ class Socket
 	//returns number of bytes actually sent, or -1 on error
 	int send(const(void)[] buf, SocketFlags flags)
 	{
+                flags |= SocketFlags.NOSIGNAL;
 		int sent = .send(sock, buf.ptr, buf.length, cast(int)flags);
 		return sent;
 	}
@@ -1274,7 +1279,7 @@ class Socket
 	/// ditto
 	int send(const(void)[] buf)
 	{
-		return send(buf, SocketFlags.NONE);
+		return send(buf, SocketFlags.NOSIGNAL);
 	}
 	
 	/**
@@ -1282,6 +1287,7 @@ class Socket
 	 */
 	int sendTo(const(void)[] buf, SocketFlags flags, Address to)
 	{
+                flags |= SocketFlags.NOSIGNAL;
 		int sent = .sendto(sock, buf.ptr, buf.length, cast(int)flags, to.name(), to.nameLen());
 		return sent;
 	}
@@ -1297,6 +1303,7 @@ class Socket
 	/// ditto
 	int sendTo(const(void)[] buf, SocketFlags flags)
 	{
+                flags |= SocketFlags.NOSIGNAL;
 		int sent = .sendto(sock, buf.ptr, buf.length, cast(int)flags, null, 0);
 		return sent;
 	}

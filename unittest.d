@@ -52,6 +52,7 @@ import std.uni;
 import std.file;
 import std.signals;
 import std.cpuid;
+import std.socket;
 
 int main(char[][] args)
 {
