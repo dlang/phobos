@@ -71,7 +71,7 @@ INTERNAL_GC_EXTRAFILES = \
 	internal/gc/win32.mak \
 	internal/gc/linux.mak
 
-STD_MODULES = array asserterror base64 bind bitarray boxer compiler \
+STD_MODULES = array asserterror base64 bind bitarray boxer compiler contracts \
 	conv cover cpuid cstream ctype date dateparse demangle file format gc \
 	getopt hiddenfunc intrinsic loader math math2 md5 metastrings mmfile \
 	moduleinit openrj outbuffer outofmemory path perf process random \

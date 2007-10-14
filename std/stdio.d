@@ -27,6 +27,7 @@ import std.c.string;
 import std.c.stddef;
 import std.conv;
 import std.traits;
+import std.contracts;
 import std.file, std.typetuple; // for testing only
 
 version (DigitalMars)
@@ -1257,27 +1258,3 @@ unittest
     }
     fclose(f) == 0 || assert(false);
 }
-
-T enforce(T)(T value, lazy string msg = "")
-{
-    if (value) return value;
-    throw new Exception(msg());
-}
-
-template enforceEx(E)
-{
-    T enforceEx(T)(T value, lazy string msg = "")
-    {
-        if (value) return value;
-        throw new E(msg());
-    }
-}
-
-unittest
-{
-    enforce(true);
-    enforce(true, "blah");
-    enforceEx!(StdioException)(true);
-//    enforce!(Exception)(true, "blah");
-}
-

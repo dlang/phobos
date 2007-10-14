@@ -4,7 +4,7 @@ module std.asserterror;
 
 import std.c.stdio;
 import std.c.stdlib;
-import std.conv;
+import std.contracts;
 
 class AssertError : Error
 {

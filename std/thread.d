@@ -580,7 +580,7 @@ class ThreadError : Error
 {
     this(string s)
     {
-	super(cast(string) ("Thread error: " ~ s));
+	super("Thread error: " ~ s);
     }
 }
 

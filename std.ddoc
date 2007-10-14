@@ -116,6 +116,7 @@ NAVIGATION_PHOBOS=
 	$(LI <a href="std_bitarray.html" title="Arrays of bits">std.bitarray</a>)
 	$(LI <a href="std_boxer.html" title="Box/unbox types">std.boxer</a>)
 	$(LI <a href="std_compiler.html" title="Information about the D compiler implementation">std.compiler</a>)
+	$(LI <a href="std_contracts.html" title="Think assert">std.contracts</a>)
 	$(LI <a href="std_conv.html" title="Conversion of strings to integers">std.conv</a>)
 	$(LI <a href="std_cover.html" title="D coverage analyzer">std.cover</a>)
 	$(LI <a href="std_cpuid.html" title="CPU identification">std.cpuid</a>)

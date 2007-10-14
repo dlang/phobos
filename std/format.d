@@ -81,9 +81,9 @@ class FormatError : Error
 	super("std.format");
     }
 
-    this(const char[] msg)
+    this(string msg)
     {
-	super(cast(string) ("std.format " ~ msg));
+	super("std.format " ~ msg);
     }
 }
 
@@ -2057,7 +2057,7 @@ void formattedWrite(Writer, F, A...)(ref Writer w, F[] fmt, A args)
             // leftover spec?
             if (fmt.length)
             {
-                throw new FormatError("Orphan format specifier: %" ~ fmt);
+                throw new FormatError(cast(string) ("Orphan format specifier: %" ~ fmt));
             }
             break;
         }

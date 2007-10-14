@@ -38,7 +38,7 @@ class DateParseError : Error
 {
     this(string s)
     {
-	super(cast(string) ("Invalid date string: " ~ s));
+	super("Invalid date string: " ~ s);
     }
 }
 

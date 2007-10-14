@@ -52,7 +52,7 @@ class ConvError : Error
 {
     this(string s)
     {
-	super(cast(string) ("conversion " ~ s));
+	super("conversion " ~ s);
     }
 }
 
@@ -68,7 +68,7 @@ class ConvOverflowError : Error
 {
     this(string s)
     {
-	super(cast(string) ("Error: overflow " ~ s));
+	super("Error: overflow " ~ s);
     }
 }
 
@@ -697,94 +697,6 @@ private N parseIntegral(S, N)(ref S s)
         conv_error(s.idup);
         return 0;
     }
-}
-
-/**
- * Casts a mutable array to an invariant array in an idiomatic
- * manner. Technically, $(D_PARAM assumeUnique) just inserts a cast,
- * but its name documents assumptions on the part of the
- * caller. $(D_PARAM assumeUnique(arr)) should only be called when
- * there are no more active mutable aliases to elements of $(D_PARAM
- * arr). To strenghten this assumption, $(D_PARAM assumeUnique(arr))
- * also clears $(D_PARAM arr) before returning. Essentially $(D_PARAM
- * assumeUnique(arr)) indicates commitment from the caller that there
- * is no more mutable access to any of $(D_PARAM arr)'s elements
- * (transitively), and that all future accesses will be done through
- * the invariant array returned by $(D_PARAM assumeUnique).
- *
- * Typically, $(D_PARAM assumeUnique) is used to return arrays from
- * functions that have allocated and built them.
- *
- * Example:
- *
- * ----
- * string letters()
- * {
- *   char[] result = new char['z' - 'a' + 1];
- *   foreach (i, ref e; result)
- *   {
- *     e = 'a' + i;
- *   }
- *   return assumeUnique(result);
- * }
- * ----
- *
- * The use in the example above is correct because $(D_PARAM result)
- * was private to $(D_PARAM letters) and is unaccessible in writing
- * after the function returns. The following example shows an
- * incorrect use of $(D_PARAM assumeUnique).
- *
- * Bad:
- *
- * ----
- * private char[] buffer;
- * string letters(char first, char last)
- * {
- *   if (first >= last) return null; // fine
- *   auto sneaky = buffer;
- *   sneaky.length = last - first + 1;
- *   foreach (i, ref e; sneaky)
- *   {
- *     e = 'a' + i;
- *   }
- *   return assumeUnique(sneaky); // BAD
- * }
- * ----
- *
- * The example above wreaks havoc on client code because it is
- * modifying arrays that callers considered immutable. To obtain an
- * invariant array from the writable array $(D_PARAM buffer), replace
- * the last line with:
- * ----
- * return to!(string)(sneaky); // not that sneaky anymore
- * ----
- *
- * The call will duplicate the array appropriately.
- * 
- * Checking for uniqueness during compilation is possible in certain
- * cases (see the $(D_PARAM unique) and $(D_PARAM lent) keywords in the
- * $(LINK2 http://archjava.fluid.cs.cmu.edu/papers/oopsla02.pdf,ArchJava)
- * language), but complicates the language considerably. The downside
- * of $(D_PARAM assumeUnique)'s
- * convention-based usage is that at this time there is no formal
- * checking of the correctness of the assumption; on the upside, the
- * idiomatic use of $(D_PARAM assumeUnique) is simple and rare enough
- * to make it tolerable.
- *
- */
-
-invariant(T)[] assumeUnique(T)(ref T[] array)
-{
-    auto result = cast(invariant(T)[]) array;
-    array = null;
-    return result;
-}
-
-unittest
-{
-    int[] arr = new int[1];
-    auto arr1 = assumeUnique(arr);
-    assert(is(typeof(arr1) == invariant(int)[]) && arr == null);
 }
 
 /***************************************************************
@@ -1422,7 +1334,7 @@ F parseFloating(S : S[], F)(ref S[] s)
     s = s[endptr - sz .. $];
     return f;
   Lerr:
-    conv_error(cast(string) (s ~ " not representable as a " ~ F.stringof));
+    conv_error(to!(string)(s) ~ " not representable as a " ~ F.stringof);
     assert(0);
 }
  
@@ -1978,8 +1890,8 @@ private bool getComplexStrings(string s, out string s1, out string s2)
 
     Lerr:
         // Display the original string in the error message.
-    conv_error(cast(string) ("getComplexStrings() \"" ~ s ~ "\"" ~ " s1=\""
-                             ~ s1 ~ "\"" ~ " s2=\"" ~ s2 ~ "\""));
+    conv_error("getComplexStrings() \"" ~ s ~ "\"" ~ " s1=\""
+                             ~ s1 ~ "\"" ~ " s2=\"" ~ s2 ~ "\"");
         return 0;
 }
 

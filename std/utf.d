@@ -43,7 +43,7 @@
 module std.utf;
 
 private import std.stdio;
-import std.conv;
+import std.contracts;
 
 //debug=utf;		// uncomment to turn on debugging printf's
 

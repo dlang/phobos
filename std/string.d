@@ -39,7 +39,7 @@ private import std.array;
 private import std.format;
 private import std.ctype;
 private import std.stdarg;
-import std.conv;
+import std.contracts;
 
 extern (C)
 {
@@ -2298,7 +2298,7 @@ string toString(uint u)
     ndigits = 0;
     if (u < 10)
 	// Avoid storage allocation for simple stuff
-	return cast(string) digits[u .. u + 1];
+	return digits[u .. u + 1];
     else
     {
 	while (u)
@@ -2585,8 +2585,7 @@ body
     uint i = buffer.length;
 
     if (value < radix && value < hexdigits.length)
-	return cast(string)
-            hexdigits[cast(size_t)value .. cast(size_t)value + 1];
+	return hexdigits[cast(size_t)value .. cast(size_t)value + 1];
 
     do
     {	ubyte c;
@@ -2677,7 +2676,7 @@ string format(...)
  * enough to hold the result. Throws ArrayBoundsError if it is not.
  * Returns: s
  */
-string sformat(char[] s, ...)
+char[] sformat(char[] s, ...)
 {   size_t i;
 
     void putc(dchar c)
@@ -2700,7 +2699,7 @@ string sformat(char[] s, ...)
     }
 
     std.format.doFormat(&putc, _arguments, _argptr);
-    return cast(string) s[0 .. i];
+    return s[0 .. i];
 }
 
 
@@ -3087,7 +3086,7 @@ string succ(string s)
 		default:
 		    if (std.ctype.isalnum(c))
 			r[i]++;
-		    return cast(string) r;
+		    return assumeUnique(r);
 	    }
 	}
     }
@@ -3562,14 +3561,14 @@ bool isNumeric(TypeInfo[] _arguments, va_list _argptr)
     {
 	wchar[1] t;
 	t[0] = va_arg!(wchar)(_argptr);
-        return isNumeric(cast(string)std.utf.toUTF8(t));
+        return isNumeric(std.utf.toUTF8(t));
     }
     else if (_arguments[0] == typeid(dchar))
     { 
 	dchar[1] t;
 	t[0] = va_arg!(dchar)(_argptr);
         dchar[] t1 = t;
-	return isNumeric(cast(string)std.utf.toUTF8(cast(dstring) t1));
+	return isNumeric(std.utf.toUTF8(cast(dstring) t1));
     }
     //else if (_arguments[0] == typeid(cent)) 
     //    return true;   
