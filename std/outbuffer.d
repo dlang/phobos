@@ -228,10 +228,10 @@ class OutBuffer
      * Convert internal buffer to array of chars.
      */
 
-    char[] toString()
+    string toString()
     {
 	//printf("OutBuffer.toString()\n");
-	return cast(char[])data[0 .. offset];
+	return cast(string) data[0 .. offset].idup;
     }
 
     /*****************************************
@@ -276,7 +276,7 @@ class OutBuffer
 		p = cast(char *) alloca(psize);	// buffer too small, try again with larger size
 	    }
 	}
-	write(p[0 .. count]);
+	write(cast(ubyte[]) p[0 .. count]);
 	/+
 	version (linux)
 	{

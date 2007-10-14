@@ -69,7 +69,7 @@ version(D_InlineAsm_X86)
     }
 
     /// Returns vendor string
-    string vendor()		{return vendorStr;}
+    string vendor()		{return vendorStr.idup;} // todo: optimize
     /// Returns processor string
     string processor()		{return processorStr;}
 
@@ -274,7 +274,7 @@ private:
 	    return;
 
 	// seems many intel processors prepend whitespace
-	processorStr = std.string.strip(std.string.toString(dst)).dup;
+	processorStr = std.string.strip(std.string.toString(dst)).idup;
     }
 
     private void getFeatureFlags()

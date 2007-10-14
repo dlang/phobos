@@ -26,7 +26,7 @@
  */
 
 /***********
- * A one-stop-shop for converting values from one type to another.
+ * A one-stop shop for converting values from one type to another.
  *
  */
 
@@ -38,20 +38,21 @@ private import std.math;  // for fabs(), isnan()
 private import std.stdio; // for writefln() and printf()
 private import std.typetuple; // for unittests
 private import std.utf; // for string-to-string conversions
-
+import std.traits;
+import std.ctype;
 
 //debug=conv;		// uncomment to turn on debugging printf's
 
 /* ************* Exceptions *************** */
 
 /**
- * Thrown on conversion errors causing during conversions from string types.
+ * Thrown on conversion errors.
  */
 class ConvError : Error
 {
     this(string s)
     {
-	super("conversion " ~ s);
+	super(cast(string) ("conversion " ~ s));
     }
 }
 
@@ -67,7 +68,7 @@ class ConvOverflowError : Error
 {
     this(string s)
     {
-	super("Error: overflow " ~ s);
+	super(cast(string) ("Error: overflow " ~ s));
     }
 }
 
@@ -76,16 +77,17 @@ private void conv_overflow(string s)
     throw new ConvOverflowError(s);
 }
 
-
 /***************************************************************
 
-Converts a value from type Source to type Target. The source type is
+The $(D_PARAM to) family of functions converts a value from type
+$(D_PARAM Source) to type $(D_PARAM Target). The source type is
 deduced and the target type must be specified, for example the
-expression to!(int)(42.0) converts the number 42 from double to
-int. The conversion is "safe", i.e., it checks for overflow;
-to!(int)(4.2e10) would throw the ConvOverflowError exception. Overflow
-checks are only inserted when necessary, e.g. to!(double)(42) does not
-do any checking because any int fits in a double.
+expression $(D_PARAM to!(int)(42.0)) converts the number 42 from
+$(D_PARAM double) to $(D_PARAM int). The conversion is "safe", i.e.,
+it checks for overflow; $(D_PARAM to!(int)(4.2e10)) would throw the
+$(D_PARAM ConvOverflowError) exception. Overflow checks are only
+inserted when necessary, e.g., $(D_PARAM to!(double)(42)) does not do
+any checking because any int fits in a double.
 
 Converting a value to its own type (useful mostly for generic code)
 simply returns its argument.
@@ -100,7 +102,7 @@ Conversions from floating-point types to integral types allow loss of
 precision (the fractional part of a floating-point number). The
 conversion is truncating towards zero, the same way a cast would
 truncate. (To round a floating point value when casting to an
-integral, use roundTo.)
+integral, use $(D_PARAM roundTo).)
 Examples:
 -------------------------
 int a = 420;
@@ -122,8 +124,9 @@ f = to!(int)(a); // f = -3
 Conversions from integral types to floating-point types always
 succeed, but might lose accuracy. The largest integers with a
 predecessor representable in floating-point format are 2^24-1 for
-float, 2^53-1 for double, and 2^64-1 for real (when real is 80-bit,
-e.g. on Intel machines).
+float, 2^53-1 for double, and 2^64-1 for $(D_PARAM real) (when
+$(D_PARAM real) is 80-bit, e.g. on Intel machines).
+
 Example:
 -------------------------
 int a = 16_777_215; // 2^24 - 1, largest proper integer representable as float
@@ -134,8 +137,8 @@ assert(to!(int)(to!(float)(a)) == a); // fails!
 -------------------------
 
 Conversions from string to numeric types differ from the C equivalents
-<tt>atoi()</tt> and <tt>atol()</tt> by * checking for overflow and not
-allowing whitespace.
+$(D_PARAM atoi()) and $(D_PARAM atol()) by checking for overflow and
+not allowing whitespace.
 
 For conversion of strings to signed types, the grammar recognized is:
 <pre>
@@ -155,6 +158,7 @@ $(I UnsignedInteger):
 Converting an array to another array type works by converting each
 element in turn. Associative arrays can be converted to associative
 arrays as long as keys and values can in turn be converted.
+
 Example:
 -------------------------
 int[] a = ([1, 2, 3]).dup;
@@ -169,31 +173,38 @@ c["b"] = 2;
 auto d = to!(double[wstring])(c);
 assert(d["a"w] == 1 && d["b"w] == 2);
 -------------------------
+
 Conversions operate transitively, meaning that they work on arrays and
 associative arrays of any complexity:
+
 -------------------------
 int[string][double[int[]]] a;
 ...
 auto b = to!(short[wstring][string[double[]]])(a);
 -------------------------
 
-This conversion works because to!(short) applies to an int,
-to!(wstring) applies to a string, to!(string) applies to a double, and
-to!(double[]) applies to an int[]. The conversion might throw an
-exception because to!(short) might fail the range check.
+This conversion works because $(D_PARAM to!(short)) applies to an
+$(D_PARAM int), $(D_PARAM to!(wstring)) applies to a $(D_PARAM
+string), $(D_PARAM to!(string)) applies to a $(D_PARAM double), and
+$(D_PARAM to!(double[])) applies to an $(D_PARAM int[]). The
+conversion might throw an exception because $(D_PARAM to!(short))
+might fail the range check.
 
 Macros: WIKI=Phobos/StdConv
 */
 
-template to(Target) {
-  Target to(Source)(Source value) {
-    // Need to forward because of problems when recursively invoking
-    // a member with the same name as a template
-    return toImpl!(Source, Target)(value);
-  }
+template to(Target)
+{
+    Target to(Source)(Source value)
+    {
+        // Need to forward because of problems when recursively invoking
+        // a member with the same name as a template
+        return toImpl!(Source, Target)(value);
+    }
 }
 
-private T toSomeString(S, T)(S s) {
+private T toSomeString(S, T)(S s)
+{
   static const sIsString = is(S : const(char)[]) || is(S : const(wchar)[])
     || is(S : const(dchar)[]);
   static if (sIsString) {
@@ -202,10 +213,17 @@ private T toSomeString(S, T)(S s) {
       // same width, only qualifier conversion
       static const tIsConst = is(T == const(char)[]) || is(T == const(wchar)[])
         || is(T == const(dchar)[]);
+      static const tIsInvariant = is(T == invariant(char)[])
+          || is(T == invariant(wchar)[]) || is(T == invariant(dchar)[]);
+      static assert(!is(S == T)); // should have been handled earlier
       static if (tIsConst) {
         return s;
+      } else static if (tIsInvariant) {
+         // conversion (mutable|const) -> invariant
+         return s.idup;
       } else {
-        return cast(T) s.dup;
+        // conversion (invariant|const) -> mutable
+        return s.dup;
       }
     } else {
       // width conversion
@@ -222,14 +240,14 @@ private T toSomeString(S, T)(S s) {
   } else {
     static if (isArray!(S)) {
       // array-to-string conversion
-      T result = "[";
-      foreach (i, e; s) {
-        if (i) result ~= ',';
-        result ~= to!(T)(e);
-      }
-      result ~= ']';
-      return result;
-    } else static if (isHash!(S)) {
+        T result = to!(T)("[");
+        foreach (i, e; s) {
+            if (i) result ~= ',';
+            result ~= to!(T)(e);
+        }
+        result ~= ']';
+        return result;
+    } else static if (isAssociativeArray!(S)) {
       // hash-to-string conversion
       T result = "[";
       bool first = true;
@@ -242,6 +260,12 @@ private T toSomeString(S, T)(S s) {
       }
       result ~= ']';
       return result;
+    } else static if (is(S == enum)) {
+       // enumerated type
+       return to!(T)(to!(long)(s));
+    } else static if (is(S : Object)) {
+       // class
+      return s ? "null" : to!(T)(s.toString);
     } else {
       // source is not a string
       auto result = toString(s);
@@ -263,52 +287,24 @@ private T toImpl(S, T)(S value) {
   } else static if (is(S : const(wchar)[]) || is(S : const(dchar)[])) {
     // todo: improve performance
     return parseString!(T)(toUTF8(value));
-  } else static if (isNumeric!(S) && isNumeric!(T)) {
+  } else static if (std.traits.isNumeric!(S) && std.traits.isNumeric!(T)) {
     return numberToNumber!(S, T)(value);
-  } else static if (isHash!(S) && isHash!(T)) {
+  } else static if (isAssociativeArray!(S) && isAssociativeArray!(T)) {
     return hashToHash!(S, T)(value);
   } else static if (isArray!(S) && isArray!(S)) {
     return arrayToArray!(S, T)(value);
+  } else static if (is(S : Object) && is(T : Object)) {
+    return cast(T) value;
   } else {
     // Attempt an implicit conversion
     return value;
   }
 }
 
-private template isIntegral(T) {
-  static const isIntegral = is(T == byte) || is(T == ubyte) || is(T == short)
-    || is(T == ushort) || is(T == int) || is(T == uint)
-    || is(T == long) || is(T == ulong);
-}
-
-private template isFloating(T) {
-  static const isFloating = is(T == float)
-    || is(T == double) || is(T == real);
-}
-
-private template isNumeric(T) {
-  static const isNumeric = isIntegral!(T) || isFloating!(T);
-}
-
-private template isArray(T) {
-  static const isArray = false;
-}
-
-private template isArray(T : T[]) {
-  static const isArray = true;
-}
-
-private template isHash(T, K = void, V = void) {
-  static const isHash = false;
-}
-
-private template isHash(T : K[V], K, V) {
-  static const isHash = true;
-}
-
 private T numberToNumber(S, T)(S value) {
-  static const sSmallest = isFloating!(S) ? -S.max : S.min,
-    tSmallest = isFloating!(T) ? -T.max : T.min;
+  static const
+      sSmallest = isFloatingPoint!(S) ? -S.max : S.min,
+      tSmallest = isFloatingPoint!(T) ? -T.max : T.min;
   static if (sSmallest < tSmallest) {
     // possible underflow
     if (value < tSmallest) conv_overflow("Conversion underflow");
@@ -320,21 +316,10 @@ private T numberToNumber(S, T)(S value) {
   return cast(T) value;
 }
 
-private T parseString(T)(const(char)[] v) {
-  //auto v = stringToString!(const(char)[])(value);
-  static if (is(T == byte)) return toByte(v);
-  else static if (is(T == ubyte)) return toUbyte(v);
-  else static if (is(T == short)) return toShort(v);
-  else static if (is(T == ushort)) return toUshort(v);
-  else static if (is(T == int)) return toInt(v);
-  else static if (is(T == uint)) return toUint(v);
-  else static if (is(T == long)) return toLong(v);
-  else static if (is(T == ulong)) return toUlong(v);
-  else static if (is(T == float)) return toFloat(v);
-  else static if (is(T == double)) return toDouble(v);
-  else static if (is(T == real)) return toReal(v);
-  else static assert(false, "Don't know how to convert a "
-                     ~ S.stringof ~ " to a " ~ T.stringof);
+private T parseString(T)(const(char)[] v)
+{
+    scope(exit) { if (v.length) conv_error(v.idup); }
+    return parse!(T)(v);
 }
 
 private T[] arrayToArray(S : S[], T : T[])(S[] src) {
@@ -545,10 +530,16 @@ unittest {
     auto a = [to!(T)(1), 2, 3];
     assert(to!(string)(a) == "[1,2,3]");
   }
+  // test enum to int conversion
+  enum Testing { Test1, Test2 };
+  Testing t;
+  auto a = to!(string)(t);
+  assert(a == "0");
 }
 
 /***************************************************************
  Rounded conversion from floating point to integral.
+
 Example:
 ---------------
   assert(roundTo!(int)(3.14) == 3);
@@ -587,63 +578,224 @@ unittest {
 }
 
 /***************************************************************
+ * The $(D_PARAM parse) family of functions works quite like the
+ * $(D_PARAM to) family, except that (1) it only works with strings as
+ * input, (2) takes the input string by reference and advances it to
+ * the position following the conversion, and (3) does not throw if it
+ * could not convert the entire string. It still throws if an overflow
+ * occurred during conversion or if no character of the input string
+ * was meaningfully converted.
+ *
+ * Example:
+--------------
+string test = "123 \t  76.14";
+auto a = parse!(uint)(test);
+assert(a == 123);
+assert(test == " \t  76.14"); // parse bumps string
+munch(test, " \t\n\r"); // skip ws
+assert(test == "76.14");
+auto b = parse!(double)(test);
+assert(b == 76.14);
+assert(test == "");
+--------------
+ */
+
+template parse(Target)
+{
+    Target parse(Source)(ref Source s)
+    {
+        //alias const(Char)[] Source;
+        static assert(is(Source : const(char)[]) || is(Source : const(wchar)[])
+                      || is(Source : const(dchar)[]),
+                      "parse requires a string upon input, not a "
+                      ~ Source.stringof);
+        static if (isIntegral!(Target))
+        {
+            return parseIntegral!(Source, Target)(s);
+        }
+        else static if (isFloatingPoint!(Target))
+        {
+            return parseFloating!(Source, Target)(s);
+        }
+        else
+        {
+            static assert(false, "Dunno how to parse a " ~ Target.stringof);
+        }
+    }
+}
+
+// Customizable integral parse
+
+private N parseIntegral(S, N)(ref S s)
+{
+    static if (N.sizeof < int.sizeof)
+    {
+        // smaller types are handled like integers
+        static if (N.min < 0) // signed small integer
+            alias int N1;
+        else
+            alias uint N1;
+        auto v = parseIntegral!(S, N1)(s);
+        auto result = cast(N) v;
+        if (result != v) conv_error(s.idup);
+        return result;
+    }
+    else
+    {
+        auto length = s.length;
+        if (!length)
+            goto Lerr;
+
+        static if (N.min < 0)
+            int sign = 0;
+        else
+            static const int sign = 0;
+        N v = 0;
+        size_t i = 0;
+        static const char maxLastDigit = N.min < 0 ? '7' : '5';
+        for (; i < length; i++)
+        {
+            auto c = s[i];
+            if (c >= '0' && c <= '9')
+            {
+                if (v < N.max/10 || (v == N.max/10 && c + sign <= maxLastDigit))
+                    v = v * 10 + (c - '0');
+                else
+                    goto Loverflow;
+            }
+            else static if (N.min < 0)
+            {
+                if (c == '-' && i == 0)
+                {
+                    sign = -1;
+                    if (length == 1)
+                        goto Lerr;
+                }
+                else if (c == '+' && i == 0)
+                {
+                    if (length == 1)
+                        goto Lerr;
+                } else
+                    break;
+            }
+            else
+                break;
+        }
+        if (i == 0) goto Lerr;
+        s = s[i .. $];
+        static if (N.min < 0)
+        {
+            if (sign == -1)
+            {
+                v = -v;
+            }
+        }
+        return v;
+    Loverflow:
+        conv_overflow(s.idup);
+    Lerr:
+        conv_error(s.idup);
+        return 0;
+    }
+}
+
+/**
+ * Casts a mutable array to an invariant array in an idiomatic
+ * manner. Technically, $(D_PARAM assumeUnique) just inserts a cast,
+ * but its name documents assumptions on the part of the
+ * caller. $(D_PARAM assumeUnique(arr)) should only be called when
+ * there are no more active mutable aliases to elements of $(D_PARAM
+ * arr). To strenghten this assumption, $(D_PARAM assumeUnique(arr))
+ * also clears $(D_PARAM arr) before returning. Essentially $(D_PARAM
+ * assumeUnique(arr)) indicates commitment from the caller that there
+ * is no more mutable access to any of $(D_PARAM arr)'s elements
+ * (transitively), and that all future accesses will be done through
+ * the invariant array returned by $(D_PARAM assumeUnique).
+ *
+ * Typically, $(D_PARAM assumeUnique) is used to return arrays from
+ * functions that have allocated and built them.
+ *
+ * Example:
+ *
+ * ----
+ * string letters()
+ * {
+ *   char[] result = new char['z' - 'a' + 1];
+ *   foreach (i, ref e; result)
+ *   {
+ *     e = 'a' + i;
+ *   }
+ *   return assumeUnique(result);
+ * }
+ * ----
+ *
+ * The use in the example above is correct because $(D_PARAM result)
+ * was private to $(D_PARAM letters) and is unaccessible in writing
+ * after the function returns. The following example shows an
+ * incorrect use of $(D_PARAM assumeUnique).
+ *
+ * Bad:
+ *
+ * ----
+ * private char[] buffer;
+ * string letters(char first, char last)
+ * {
+ *   if (first >= last) return null; // fine
+ *   auto sneaky = buffer;
+ *   sneaky.length = last - first + 1;
+ *   foreach (i, ref e; sneaky)
+ *   {
+ *     e = 'a' + i;
+ *   }
+ *   return assumeUnique(sneaky); // BAD
+ * }
+ * ----
+ *
+ * The example above wreaks havoc on client code because it is
+ * modifying arrays that callers considered immutable. To obtain an
+ * invariant array from the writable array $(D_PARAM buffer), replace
+ * the last line with:
+ * ----
+ * return to!(string)(sneaky); // not that sneaky anymore
+ * ----
+ *
+ * The call will duplicate the array appropriately.
+ * 
+ * Checking for uniqueness during compilation is possible in certain
+ * cases (see the $(D_PARAM unique) and $(D_PARAM lent) keywords in the
+ * $(LINK2 http://archjava.fluid.cs.cmu.edu/papers/oopsla02.pdf,ArchJava)
+ * language), but complicates the language considerably. The downside
+ * of $(D_PARAM assumeUnique)'s
+ * convention-based usage is that at this time there is no formal
+ * checking of the correctness of the assumption; on the upside, the
+ * idiomatic use of $(D_PARAM assumeUnique) is simple and rare enough
+ * to make it tolerable.
+ *
+ */
+
+invariant(T)[] assumeUnique(T)(ref T[] array)
+{
+    auto result = cast(invariant(T)[]) array;
+    array = null;
+    return result;
+}
+
+unittest
+{
+    int[] arr = new int[1];
+    auto arr1 = assumeUnique(arr);
+    assert(is(typeof(arr1) == invariant(int)[]) && arr == null);
+}
+
+/***************************************************************
  Convert character string to the return type. These functions will be
- deprecated because to!(T) supersedes them.
+ deprecated because $(D_PARAM to!(T)) supersedes them.
  */
 
 int toInt(string s)
 {
-    int length = s.length;
-
-    if (!length)
-	goto Lerr;
-
-    int sign = 0;
-    int v = 0;
-
-    for (int i = 0; i < length; i++)
-    {
-	char c = s[i];
-	if (c >= '0' && c <= '9')
-	{
-	    if (v < int.max/10 || (v == int.max/10 && c + sign <= '7'))
-		v = v * 10 + (c - '0');
-	    else
-		goto Loverflow;
-	}
-	else if (c == '-' && i == 0)
-	{
-	    sign = -1;
-	    if (length == 1)
-		goto Lerr;
-	}
-	else if (c == '+' && i == 0)
-	{
-	    if (length == 1)
-		goto Lerr;
-	}
-	else
-	    goto Lerr;
-    }
-    if (sign == -1)
-    {
-	if (cast(uint)v > 0x80000000)
-	    goto Loverflow;
-	v = -v;
-    }
-    else
-    {
-	if (cast(uint)v > 0x7FFFFFFF)
-	    goto Loverflow;
-    }
-    return v;
-
-Loverflow:
-    conv_overflow(s);
-
-Lerr:
-    conv_error(s);
-    return 0;
+    scope(exit) { if (s.length) conv_error(s); }
+    return parseIntegral!(string, int)(s);
 }
 
 unittest
@@ -715,37 +867,10 @@ unittest
 /*******************************************************
  * ditto
  */
-
 uint toUint(string s)
 {
-    int length = s.length;
-
-    if (!length)
-	goto Lerr;
-
-    uint v = 0;
-
-    for (int i = 0; i < length; i++)
-    {
-	char c = s[i];
-	if (c >= '0' && c <= '9')
-	{
-	    if (v < uint.max/10 || (v == uint.max/10 && c <= '5'))
-		v = v * 10 + (c - '0');
-	    else
-		goto Loverflow;
-	}
-	else
-	    goto Lerr;
-    }
-    return v;
-
-Loverflow:
-    conv_overflow(s);
-
-Lerr:
-    conv_error(s);
-    return 0;
+    scope(exit) if (s.length) conv_error(s);
+    return parseIntegral!(string, uint)(s);
 }
 
 unittest
@@ -813,57 +938,8 @@ unittest
 
 long toLong(string s)
 {
-    int length = s.length;
-
-    if (!length)
-	goto Lerr;
-
-    int sign = 0;
-    long v = 0;
-
-    for (int i = 0; i < length; i++)
-    {
-	char c = s[i];
-	if (c >= '0' && c <= '9')
-	{
-	    if (v < long.max/10 || (v == long.max/10 && c + sign <= '7'))
-		v = v * 10 + (c - '0');
-	    else
-		goto Loverflow;
-	}
-	else if (c == '-' && i == 0)
-	{
-	    sign = -1;
-	    if (length == 1)
-		goto Lerr;
-	}
-	else if (c == '+' && i == 0)
-	{
-	    if (length == 1)
-		goto Lerr;
-	}
-	else
-	    goto Lerr;
-    }
-    if (sign == -1)
-    {
-	if (cast(ulong)v > 0x8000000000000000)
-	    goto Loverflow;
-	v = -v;
-    }
-    else
-    {
-	if (cast(ulong)v > 0x7FFFFFFFFFFFFFFF)
-	    goto Loverflow;
-    }
-    return v;
-
-Loverflow:
-    conv_overflow(s);
-
-Lerr:
-    conv_error(s);
-    return 0;
+    scope(exit) if (s.length) conv_error(s);
+    return parseIntegral!(string, long)(s);
 }
 
 unittest
@@ -943,34 +1019,8 @@ unittest
 
 ulong toUlong(string s)
 {
-    int length = s.length;
-
-    if (!length)
-	goto Lerr;
-
-    ulong v = 0;
-
-    for (int i = 0; i < length; i++)
-    {
-	char c = s[i];
-	if (c >= '0' && c <= '9')
-	{
-	    if (v < ulong.max/10 || (v == ulong.max/10 && c <= '5'))
-		v = v * 10 + (c - '0');
-	    else
-		goto Loverflow;
-	}
-	else
-	    goto Lerr;
-    }
-    return v;
-
-Loverflow:
-    conv_overflow(s);
-
-Lerr:
-    conv_error(s);
-    return 0;
+    scope(exit) if (s.length) conv_error(s);
+    return parseIntegral!(string, ulong)(s);
 }
 
 unittest
@@ -1039,23 +1089,14 @@ unittest
     }
 }
 
-
 /*******************************************************
  * ditto
  */
 
 short toShort(string s)
 {
-    int v = toInt(s);
-
-    if (v != cast(short)v)
-	goto Loverflow;
-
-    return cast(short)v;
-
-Loverflow:
-    conv_overflow(s);
-    return 0;
+    scope(exit) if (s.length) conv_error(s);
+    return parseIntegral!(string, short)(s);
 }
 
 unittest
@@ -1129,16 +1170,8 @@ unittest
 
 ushort toUshort(string s)
 {
-    uint v = toUint(s);
-
-    if (v != cast(ushort)v)
-	goto Loverflow;
-
-    return cast(ushort)v;
-
-Loverflow:
-    conv_overflow(s);
-    return 0;
+    scope(exit) if (s.length) conv_error(s);
+    return parseIntegral!(string, ushort)(s);
 }
 
 unittest
@@ -1207,16 +1240,8 @@ unittest
 
 byte toByte(string s)
 {
-    int v = toInt(s);
-
-    if (v != cast(byte)v)
-	goto Loverflow;
-
-    return cast(byte)v;
-
-Loverflow:
-    conv_overflow(s);
-    return 0;
+    scope(exit) if (s.length) conv_error(s);
+    return parseIntegral!(string, byte)(s);
 }
 
 unittest
@@ -1290,16 +1315,8 @@ unittest
 
 ubyte toUbyte(string s)
 {
-    uint v = toUint(s);
-
-    if (v != cast(ubyte)v)
-	goto Loverflow;
-
-    return cast(ubyte)v;
-
-Loverflow:
-    conv_overflow(s);
-    return 0;
+    scope(exit) if (s.length) conv_error(s);
+    return parseIntegral!(string, ubyte)(s);
 }
 
 unittest
@@ -1366,30 +1383,46 @@ unittest
  * ditto
  */
 
-float toFloat(in string s)
+float toFloat(Char)(Char[] s)
 {
-    float f;
-    char* endptr;
-    char* sz;
+    scope(exit) if (s.length) conv_error(s);
+    return parseFloating!(Char[], float)(s);
+}
 
+// @@@ BUG IN COMPILER
+// lvalue of type invariant(T)[] should be implicitly convertible to
+// ref const(T)[].
+F parseFloating(S : S[], F)(ref S[] s)
+{
     //writefln("toFloat('%s')", s);
-    sz = toStringz(s);
+    auto sz = toStringz(s);
     if (std.ctype.isspace(*sz))
 	goto Lerr;
 
     // BUG: should set __locale_decpoint to "." for DMC
 
     setErrno(0);
-    f = strtof(sz, &endptr);
+    char* endptr;
+    static if (is(F == float))
+        auto f = strtof(sz, &endptr);
+    else static if (is(F == double))
+        auto f = strtod(sz, &endptr);
+    else static if (is(F == real))
+        auto f = strtold(sz, &endptr);
+    else
+        static assert(false);
     if (getErrno() == ERANGE)
 	goto Lerr;
-    if (endptr && (endptr == s.ptr || *endptr != 0))
+    assert(endptr);
+    if (endptr == s.ptr)
+    {
+        // no progress
 	goto Lerr;
-
+    }
+    s = s[endptr - sz .. $];
     return f;
-        
   Lerr:
-    conv_error(s ~ " not representable as a float");
+    conv_error(cast(string) (s ~ " not representable as a " ~ F.stringof));
     assert(0);
 }
  
@@ -1430,31 +1463,10 @@ unittest
  * ditto
  */
 
-double toDouble(in string s)
+double toDouble(Char)(Char[] s)
 {
-    double f;
-    char* endptr;
-    char* sz;
-
-    //writefln("toDouble('%s')", s);
-    sz = toStringz(s);
-    if (std.ctype.isspace(*sz))
-	goto Lerr;
-
-    // BUG: should set __locale_decpoint to "." for DMC
-
-    setErrno(0);
-    f = strtod(sz, &endptr);
-    if (getErrno() == ERANGE)
-	goto Lerr;
-    if (endptr && (endptr == s.ptr || *endptr != 0))
-	goto Lerr;
-
-    return f;
-        
-  Lerr:
-    conv_error(s ~ " not representable as a double");
-    assert(0);
+    scope(exit) if (s.length) conv_error(s);
+    return parseFloating!(Char[], double)(s);
 }
 
 unittest
@@ -1496,31 +1508,10 @@ unittest
 /*******************************************************
  * ditto
  */
-real toReal(in string s)
+real toReal(Char)(Char[] s)
 {
-    real f;
-    char* endptr;
-    char* sz;
-
-    //writefln("toReal('%s')", s);
-    sz = toStringz(s);
-    if (std.ctype.isspace(*sz))
-	goto Lerr;
-
-    // BUG: should set __locale_decpoint to "." for DMC
-
-    setErrno(0);
-    f = strtold(sz, &endptr);
-    if (getErrno() == ERANGE)
-	goto Lerr;
-    if (endptr && (endptr == s.ptr || *endptr != 0))
-	goto Lerr;
-
-    return f;
-        
-  Lerr:
-    conv_error(s ~ " not representable as a real");
-    assert(0);
+    scope(exit) if (s.length) conv_error(s);
+    return parseFloating!(Char[], real)(s);
 }
 
 unittest
@@ -1941,7 +1932,9 @@ unittest
  * Grammar:
  * ['+'|'-'] string floating-point digit {digit}
  */
-private bool getComplexStrings(in string s, out string s1, out string s2)
+// @@@ BUG IN COMPILER: writing "in string s" instead of "string s" changes its
+// type from invariant(char)[] to const(char)[] !!!
+private bool getComplexStrings(string s, out string s1, out string s2)
 {
     int len = s.length;
 
@@ -1960,6 +1953,7 @@ private bool getComplexStrings(in string s, out string s1, out string s2)
     for (int i = 1; i < len; i++)
         if ((s[i - 1] != 'e' && s[i - 1] != 'E') && s[i] == '+')
         {
+            //s1 = s[0..i]; should work, doesn't
             s1 = s[0..i];
             if (i + 1 < len - 1)
                 s2 = s[i + 1..len - 1];
@@ -1984,7 +1978,8 @@ private bool getComplexStrings(in string s, out string s1, out string s2)
 
     Lerr:
         // Display the original string in the error message.
-        conv_error("getComplexStrings() \"" ~ s ~ "\"" ~ " s1=\"" ~ s1 ~ "\"" ~ " s2=\"" ~ s2 ~ "\"");
+    conv_error(cast(string) ("getComplexStrings() \"" ~ s ~ "\"" ~ " s1=\""
+                             ~ s1 ~ "\"" ~ " s2=\"" ~ s2 ~ "\""));
         return 0;
 }
 

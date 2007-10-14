@@ -95,7 +95,7 @@ module std.md5;
 
 //debug=md5;		// uncomment to turn on debugging printf's
 
-import std.string;
+import std.string, std.conv;
 
 /***************************************
  * Computes MD5 digest of array of data.
@@ -134,7 +134,7 @@ string digestToString(const ubyte[16] digest)
 	result[i + 1] = std.string.hexdigits[u & 15];
 	i += 2;
     }
-    return result;
+    return assumeUnique(result);
 }
 
 /**

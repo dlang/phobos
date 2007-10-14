@@ -34,7 +34,7 @@ deprecated class SysError
 	    default:
 		auto r = new char[uint.sizeof * 3 + 1];
 		auto len = sprintf(r.ptr, "%u", errcode);
-		result = r[0 .. len];
+		result = cast(string) r[0 .. len];
 		break;
 	}
 

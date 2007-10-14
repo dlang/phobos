@@ -86,7 +86,7 @@ uint encodeLength(uint slen)
  *	slice into buf[] representing encoded result
  */
 
-string encode(string str, char[] buf)
+char[] encode(string str, char[] buf)
 in
 {
 	assert(buf.length >= encodeLength(str.length));
@@ -151,9 +151,8 @@ body
 
 string encode(string str)
 {
-	return encode(str, new char[encodeLength(str.length)]);
+    return cast(string) encode(str, new char[encodeLength(str.length)]);
 }
-
 
 unittest
 {
@@ -186,7 +185,7 @@ uint decodeLength(uint elen)
  *	Throws Base64Exception on invalid base64 encoding in estr[].
  *	Throws Base64CharException on invalid base64 character in estr[].
  */
-string decode(string estr, char[] buf)
+char[] decode(string estr, char[] buf)
 in
 {
 	assert(buf.length + 2 >= decodeLength(estr.length)); //account for '=' padding
@@ -195,7 +194,9 @@ body
 {
 	void badc(char ch)
 	{
-		throw new Base64CharException("Invalid base64 character '" ~ (&ch)[0 .. 1] ~ "'");
+            throw new Base64CharException(
+                cast(string) ("Invalid base64 character '"
+                              ~ (&ch)[0 .. 1] ~ "'"));
 	}
 	
 	
@@ -277,7 +278,7 @@ body
 
 string decode(string estr)
 {
-	return decode(estr, new char[decodeLength(estr.length)]);
+    return cast(string) decode(estr, new char[decodeLength(estr.length)]);
 }
 
 

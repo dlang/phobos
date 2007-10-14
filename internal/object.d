@@ -57,7 +57,7 @@ alias size_t hash_t;
 
 extern (C)
 {   /// C's printf function.
-    int printf(in char *, ...);
+    int printf(const char *, ...);
     void trace_term();
 
     int memcmp(in void *, in void *, size_t);
@@ -72,9 +72,9 @@ extern (C)
 /// Standard boolean type.
 alias bool bit;
 
-alias const(char)[] string;
-alias const(wchar)[] wstring;
-alias const(dchar)[] dstring;
+alias invariant(char)[] string;
+alias invariant(wchar)[] wstring;
+alias invariant(dchar)[] dstring;
 
 /* *************************
  * Internal struct pointed to by the hidden .monitor member.
@@ -127,7 +127,8 @@ class Object
 	// BUG: this prevents a compacting GC from working, needs to be fixed
 	//return cast(int)cast(void *)this - cast(int)cast(void *)o;
 
-	throw new Error("need opCmp for class " ~ this.classinfo.name);
+	throw new Error(cast(string) ("need opCmp for class "
+                                      ~ this.classinfo.name));
     }
 
     /**
@@ -460,7 +461,7 @@ class TypeInfo_Enum : TypeInfo_Typedef
 
 class TypeInfo_Pointer : TypeInfo
 {
-    string toString() { return m_next.toString() ~ "*"; }
+    string toString() { return cast(string) (m_next.toString() ~ "*"); }
 
     int opEquals(Object o)
     {   TypeInfo_Pointer c;
@@ -510,7 +511,7 @@ class TypeInfo_Pointer : TypeInfo
 
 class TypeInfo_Array : TypeInfo
 {
-    string toString() { return value.toString() ~ "[]"; }
+    string toString() { return cast(string) (value.toString() ~ "[]"); }
 
     int opEquals(Object o)
     {   TypeInfo_Array c;
@@ -589,7 +590,8 @@ class TypeInfo_StaticArray : TypeInfo
 {
     string toString()
     {
-	return value.toString() ~ "[" ~ std.string.toString(len) ~ "]";
+	return cast(string)
+            (value.toString() ~ "[" ~ std.string.toString(len) ~ "]");
     }
 
     int opEquals(Object o)
@@ -673,7 +675,7 @@ class TypeInfo_AssociativeArray : TypeInfo
 {
     string toString()
     {
-	return value.toString() ~ "[" ~ key.toString() ~ "]";
+	return cast(string) (value.toString() ~ "[" ~ key.toString() ~ "]");
     }
 
     int opEquals(Object o)
@@ -703,7 +705,7 @@ class TypeInfo_Function : TypeInfo
 {
     string toString()
     {
-	return next.toString() ~ "()";
+	return cast(string) (next.toString() ~ "()");
     }
 
     int opEquals(Object o)
@@ -728,7 +730,7 @@ class TypeInfo_Delegate : TypeInfo
 {
     string toString()
     {
-	return next.toString() ~ " delegate()";
+	return cast(string) (next.toString() ~ " delegate()");
     }
 
     int opEquals(Object o)
@@ -1036,7 +1038,8 @@ class TypeInfo_Tuple : TypeInfo
 
 class TypeInfo_Const : TypeInfo
 {
-    override string toString() { return "const " ~ base.toString(); }
+    override string toString() { return cast(string)
+            ("const " ~ base.toString()); }
 
     override int opEquals(Object o) { return base.opEquals(o); }
     override hash_t getHash(in void *p) { return base.getHash(p); }
@@ -1054,7 +1057,8 @@ class TypeInfo_Const : TypeInfo
 
 class TypeInfo_Invariant : TypeInfo_Const
 {
-    override string toString() { return "invariant " ~ base.toString(); }
+    override string toString() { return cast(string)
+            ("invariant " ~ base.toString()); }
 }
 
 /* ========================================================================== */

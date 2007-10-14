@@ -286,9 +286,7 @@ extern (C) int _aApplyRwc1(wstring aa, dg_t dg)
 	if (d & ~0x7F)
 	{
 	    char[4] buf;
-	    string b;
-
-	    b = std.utf.toUTF8(buf, d);
+	    auto b = std.utf.toUTF8(buf, d);
 	    foreach (char c2; b)
 	    {
 		result = dg(cast(void *)&c2);
@@ -363,9 +361,7 @@ extern (C) int _aApplyRdc1(dstring aa, dg_t dg)
 	if (d & ~0x7F)
 	{
 	    char[4] buf;
-	    string b;
-
-	    b = std.utf.toUTF8(buf, d);
+	    auto b = std.utf.toUTF8(buf, d);
 	    foreach (char c2; b)
 	    {
 		result = dg(cast(void *)&c2);
@@ -757,9 +753,7 @@ extern (C) int _aApplyRwc2(wstring aa, dg2_t dg)
 	if (d & ~0x7F)
 	{
 	    char[4] buf;
-	    string b;
-
-	    b = std.utf.toUTF8(buf, d);
+	    auto b = std.utf.toUTF8(buf, d);
 	    foreach (char c2; b)
 	    {
 		result = dg(&i, cast(void *)&c2);
@@ -836,9 +830,7 @@ extern (C) int _aApplyRdc2(dstring aa, dg2_t dg)
 	if (d & ~0x7F)
 	{
 	    char[4] buf;
-	    string b;
-
-	    b = std.utf.toUTF8(buf, d);
+            auto b = std.utf.toUTF8(buf, d);
 	    foreach (char c2; b)
 	    {
 		result = dg(&i, cast(void *)&c2);

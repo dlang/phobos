@@ -48,6 +48,7 @@ private import std.ctype;
 private import std.c.stdlib;
 private import std.utf;
 private import std.stdio;
+import std.conv;
 
 class URIerror : Error
 {
@@ -219,7 +220,7 @@ private string URI_Encode(dstring string, uint unescapedSet)
 	}
     }
 
-    return R[0..Rlen].dup;
+    return R[0..Rlen].idup;
 
 LthrowURIerror:
     throw new URIerror();
@@ -335,7 +336,7 @@ private dstring URI_Decode(string string, uint reservedSet)
     assert(Rlen <= Rsize);	// enforce our preallocation size guarantee
 
     // Copy array on stack to array in memory
-    return R[0..Rlen].dup;
+    return R[0..Rlen].idup;
 
 
 LthrowURIerror:
@@ -410,7 +411,7 @@ unittest
 
     auto str = new char[10_000_000];
     str[] = 'A';
-    r = encodeComponent(str);
+    r = encodeComponent(assumeUnique(str));
     foreach (char c; r)
 	assert(c == 'A');
 

@@ -121,7 +121,7 @@ private template enum_to_string(T)
             index < strings.length &&
             strings[index].value == index)
         {
-            return strings[index].str;
+            return strings[index].str.idup;
         }
 
         // Otherwise, just do a linear search
@@ -129,7 +129,7 @@ private template enum_to_string(T)
         {
             if(cast(int)(t) == s.value)
             {
-                return s.str;
+                return s.str.idup;
             }
         }
 
@@ -718,7 +718,7 @@ private:
             }
 
             // Always add on to the previous line
-            nextLine = nextLine ~ line;
+            nextLine = cast(string) (nextLine ~ line);
 
             line = null;
 

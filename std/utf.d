@@ -43,6 +43,7 @@
 module std.utf;
 
 private import std.stdio;
+import std.conv;
 
 //debug=utf;		// uncomment to turn on debugging printf's
 
@@ -50,7 +51,7 @@ deprecated class UtfError : Error
 {
     size_t idx;	// index in string of where error occurred
 
-    this(in char[] s, size_t i)
+    this(string s, size_t i)
     {
 	idx = i;
 	super(s);
@@ -65,7 +66,7 @@ class UtfException : Exception
 {
     size_t idx;	/// index in string of where error occurred
 
-    this(const char[] s, size_t i)
+    this(string s, size_t i)
     {
 	idx = i;
 	super(s);
@@ -400,7 +401,7 @@ unittest
 
 /** ditto */
 
-dchar decode(in wstring s, inout size_t idx)
+dchar decode(in wchar[] s, inout size_t idx)
     in
     {
 	assert(idx >= 0 && idx < s.length);
@@ -457,7 +458,7 @@ dchar decode(in wstring s, inout size_t idx)
 
 /** ditto */
 
-dchar decode(in dstring s, inout size_t idx)
+dchar decode(in dchar[] s, inout size_t idx)
     in
     {
 	assert(idx >= 0 && idx < s.length);
@@ -634,7 +635,7 @@ void validate(in dstring s)
 
 /* =================== Conversion to UTF8 ======================= */
 
-string toUTF8(char[4] buf, dchar c)
+char[] toUTF8(char[4] buf, dchar c)
     in
     {
 	assert(isValidDchar(c));
@@ -686,7 +687,7 @@ string toUTF8(string s)
 
 /** ditto */
 
-string toUTF8(wstring s)
+string toUTF8(const(wchar)[] s)
 {
     char[] r;
     size_t i;
@@ -709,12 +710,12 @@ string toUTF8(wstring s)
 	    break;
 	}
     }
-    return r;
+    return assumeUnique(r);
 }
 
 /** ditto */
 
-string toUTF8(dstring s)
+string toUTF8(const(dchar)[] s)
 {
     char[] r;
     size_t i;
@@ -737,12 +738,12 @@ string toUTF8(dstring s)
 	    break;
 	}
     }
-    return r;
+    return assumeUnique(r);
 }
 
 /* =================== Conversion to UTF16 ======================= */
 
-wstring toUTF16(wchar[2] buf, dchar c)
+wchar[] toUTF16(wchar[2] buf, dchar c)
     in
     {
 	assert(isValidDchar(c));
@@ -768,7 +769,7 @@ wstring toUTF16(wchar[2] buf, dchar c)
  * an LPWSTR or LPCWSTR argument.
  */
 
-wstring toUTF16(string s)
+wstring toUTF16(const(char)[] s)
 {
     wchar[] r;
     size_t slen = s.length;
@@ -789,7 +790,7 @@ wstring toUTF16(string s)
 	    encode(r, c);
 	}
     }
-    return r;
+    return cast(wstring) r; // ok because r is unique
 }
 
 /** ditto */
@@ -833,7 +834,7 @@ wstring toUTF16(wstring s)
 
 /** ditto */
 
-wstring toUTF16(dstring s)
+wstring toUTF16(const(dchar)[] s)
 {
     wchar[] r;
     size_t slen = s.length;
@@ -844,7 +845,7 @@ wstring toUTF16(dstring s)
     {
 	encode(r, s[i]);
     }
-    return r;
+    return cast(wstring) r; // ok because r is unique
 }
 
 /* =================== Conversion to UTF32 ======================= */
@@ -853,7 +854,7 @@ wstring toUTF16(dstring s)
  * Encodes string s into UTF-32 and returns the encoded string.
  */
 
-dstring toUTF32(string s)
+dstring toUTF32(const(char)[] s)
 {
     dchar[] r;
     size_t slen = s.length;
@@ -869,12 +870,12 @@ dstring toUTF32(string s)
 	    i++;		// c is ascii, no need for decode
 	r[j++] = c;
     }
-    return r[0 .. j];
+    return cast(dstring) r[0 .. j]; // legit because it's unique
 }
 
 /** ditto */
 
-dstring toUTF32(wstring s)
+dstring toUTF32(const(wchar)[] s)
 {
     dchar[] r;
     size_t slen = s.length;
@@ -890,7 +891,7 @@ dstring toUTF32(wstring s)
 	    i++;		// c is ascii, no need for decode
 	r[j++] = c;
     }
-    return r[0 .. j];
+    return cast(dstring) r[0 .. j]; // legit because it's unique
 }
 
 /** ditto */

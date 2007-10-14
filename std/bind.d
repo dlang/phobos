@@ -213,8 +213,8 @@ struct Tuple(T ...) {
 	}
 	
 	
-	char[] toString() {
-		char[] res = "(" ~ stdFormat(value[0]);
+	string toString() {
+		auto res = "(" ~ stdFormat(value[0]);
 		foreach (x; value[1..$]) {
 			res ~= stdFormat(", ", x);
 		}

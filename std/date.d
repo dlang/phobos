@@ -21,6 +21,7 @@ module std.date;
 
 private import std.stdio;
 private import std.dateparse;
+import std.conv;
 
 /**
  * d_time is a signed arithmetic type giving the time elapsed since January 1,
@@ -522,8 +523,8 @@ string toString(d_time time)
     // Ensure no buggy buffer overflows
     //printf("len = %d, buffer.length = %d\n", len, buffer.length);
     assert(len < buffer.length);
-
-    return buffer[0 .. len];
+    buffer = buffer[0 .. len];
+    return assumeUnique(buffer);
 }
 
 /***********************************
@@ -550,7 +551,7 @@ string toUTCString(d_time t)
     // Ensure no buggy buffer overflows
     assert(len < buffer.length);
 
-    return buffer[0 .. len];
+    return cast(string) buffer[0 .. len];
 }
 
 /************************************
@@ -586,7 +587,7 @@ string toDateString(d_time time)
     // Ensure no buggy buffer overflows
     assert(len < buffer.length);
 
-    return buffer[0 .. len];
+    return cast(string) buffer[0 .. len];
 }
 
 /******************************************
@@ -636,7 +637,7 @@ string toTimeString(d_time time)
     assert(len < buffer.length);
 
     // Lop off terminating 0
-    return buffer[0 .. len];
+    return cast(string) buffer[0 .. len];
 }
 
 

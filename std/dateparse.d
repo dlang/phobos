@@ -38,7 +38,7 @@ class DateParseError : Error
 {
     this(string s)
     {
-	super("Invalid date string: " ~ s);
+	super(cast(string) ("Invalid date string: " ~ s));
     }
 }
 
@@ -257,7 +257,7 @@ private:
 			    c = s[si];
 			} while (c == '.');	// ignore embedded '.'s
 		    }
-		    result = classify(buffer[0 .. bi]);
+		    result = classify(buffer[0 .. bi].idup);
 		    goto Lret;
 	    }
 	}

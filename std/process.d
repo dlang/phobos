@@ -141,7 +141,10 @@ int _spawnvp(int mode, char *pathname, char **argv)
 
 Lerror:
     retval = getErrno;
-    throw new Exception("Cannot spawn " ~ toString(pathname) ~ "; " ~ toString(strerror(retval)) ~ " [errno " ~ toString(retval) ~ "]");
+    throw new Exception(
+        cast(string) ("Cannot spawn " ~ toString(pathname) ~ "; "
+                      ~ toString(strerror(retval))
+                      ~ " [errno " ~ toString(retval) ~ "]"));
 }   // _spawnvp
 private
 {
@@ -216,7 +219,7 @@ version(linux)
 
         foreach(string pathDir; envPaths)
         {
-            string  composite   =   pathDir ~ "/" ~ pathname;
+            string  composite   =  cast(string) (pathDir ~ "/" ~ pathname);
 
             iRet = execve(composite, argv, envp);
         }

@@ -40,7 +40,7 @@ struct lldiv_t { long quot,rem; }
     void   exit(int);	/// ditto
     void   _exit(int);	/// ditto
 
-    int system(char *);
+    int system(const char *);
 
     void *alloca(uint);	///
 

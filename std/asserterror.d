@@ -4,6 +4,7 @@ module std.asserterror;
 
 import std.c.stdio;
 import std.c.stdlib;
+import std.conv;
 
 class AssertError : Error
 {
@@ -43,7 +44,11 @@ class AssertError : Error
 		std.c.stdlib.free(buffer);
 	    }
 	    else
-		super(buffer[0 .. count]);
+            {
+                // casting is fine because buffer is unaliased
+                auto s = buffer[0 .. count];
+		super(assumeUnique(s));
+            }
 	}
     }
 

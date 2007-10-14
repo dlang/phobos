@@ -18,7 +18,7 @@ class SwitchError : Error
 
 	char[] buffer = new char[17 + filename.length + linnum.sizeof * 3 + 1];
 	int len = sprintf(buffer.ptr, "Switch Default %.*s(%u)", filename, linnum);
-	super(buffer[0..len]);
+	super(cast(string) buffer[0..len]);
     }
 
 

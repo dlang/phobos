@@ -50,7 +50,8 @@ class ModuleCtorError : Exception
 {
     this(ModuleInfo m)
     {
-	super("circular initialization dependency with module " ~ m.name);
+	super(cast(string) ("circular initialization dependency with module "
+                            ~ m.name));
     }
 }
 

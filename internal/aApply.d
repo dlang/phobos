@@ -131,10 +131,9 @@ extern (C) int _aApplywc1(wchar[] aa, dg_t dg)
 	if (w & ~0x7F)
 	{
 	    char[4] buf;
-	    string b;
 
 	    d = std.utf.decode(aa, i);
-	    b = std.utf.toUTF8(buf, d);
+	    auto b = std.utf.toUTF8(buf, d);
 	    foreach (char c2; b)
 	    {
 		result = dg(cast(void *)&c2);
@@ -165,9 +164,7 @@ extern (C) int _aApplydc1(dchar[] aa, dg_t dg)
 	if (d & ~0x7F)
 	{
 	    char[4] buf;
-	    string b;
-
-	    b = std.utf.toUTF8(buf, d);
+	    auto b = std.utf.toUTF8(buf, d);
 	    foreach (char c2; b)
 	    {
 		result = dg(cast(void *)&c2);
@@ -322,12 +319,11 @@ extern (C) int _aApplywc2(wchar[] aa, dg2_t dg)
 	if (w & ~0x7F)
 	{
 	    char[4] buf;
-	    string b;
 
 	    n = i;
 	    d = std.utf.decode(aa, n);
 	    n -= i;
-	    b = std.utf.toUTF8(buf, d);
+	    auto b = std.utf.toUTF8(buf, d);
 	    foreach (char c2; b)
 	    {
 		result = dg(&i, cast(void *)&c2);
@@ -361,9 +357,7 @@ extern (C) int _aApplydc2(dchar[] aa, dg2_t dg)
 	if (d & ~0x7F)
 	{
 	    char[4] buf;
-	    string b;
-
-	    b = std.utf.toUTF8(buf, d);
+	    auto b = std.utf.toUTF8(buf, d);
 	    foreach (char c2; b)
 	    {
 		result = dg(&i, cast(void *)&c2);

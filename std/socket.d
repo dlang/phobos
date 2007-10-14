@@ -104,7 +104,7 @@ class SocketException: Exception
 					len--;
 				if(cs[len - 1] == '\r')
 					len--;
-				msg = msg ~ ": " ~ cs[0 .. len];
+				msg = cast(string) (msg ~ ": " ~ cs[0 .. len]);
 			}
 		}
 		
@@ -194,7 +194,7 @@ class Protocol
 	void populate(protoent* proto)
 	{
 		type = cast(ProtocolType)proto.p_proto;
-		name = std.string.toString(proto.p_name).dup;
+		name = std.string.toString(proto.p_name).idup;
 		
 		int i;
 		for(i = 0;; i++)
@@ -208,7 +208,8 @@ class Protocol
 			aliases = new string[i];
 			for(i = 0; i != aliases.length; i++)
 			{
-				aliases[i] = std.string.toString(proto.p_aliases[i]).dup;
+                            aliases[i] =
+                                std.string.toString(proto.p_aliases[i]).idup;
 			}
 		}
 		else
@@ -269,9 +270,9 @@ class Service
 	
 	void populate(servent* serv)
 	{
-		name = std.string.toString(serv.s_name).dup;
+		name = std.string.toString(serv.s_name).idup;
 		port = ntohs(cast(ushort)serv.s_port);
-		protocolName = std.string.toString(serv.s_proto).dup;
+		protocolName = std.string.toString(serv.s_proto).idup;
 		
 		int i;
 		for(i = 0;; i++)
@@ -285,7 +286,8 @@ class Service
 			aliases = new string[i];
 			for(i = 0; i != aliases.length; i++)
 			{
-				aliases[i] = std.string.toString(serv.s_aliases[i]).dup;
+                            aliases[i] =
+                                std.string.toString(serv.s_aliases[i]).idup;
 			}
 		}
 		else
@@ -405,7 +407,7 @@ class InternetHost
 		int i;
 		char* p;
 		
-		name = std.string.toString(he.h_name).dup;
+		name = std.string.toString(he.h_name).idup;
 		
 		for(i = 0;; i++)
 		{
@@ -419,7 +421,8 @@ class InternetHost
 			aliases = new string[i];
 			for(i = 0; i != aliases.length; i++)
 			{
-				aliases[i] = std.string.toString(he.h_aliases[i]).dup;
+                            aliases[i] =
+                                std.string.toString(he.h_aliases[i]).idup;
 			}
 		}
 		else
@@ -645,7 +648,9 @@ class InternetAddress: Address
 			InternetHost ih = new InternetHost;
 			if(!ih.getHostByName(addr))
 				//throw new AddressException("Invalid internet address");
-				throw new AddressException("Unable to resolve host '" ~ addr ~ "'");
+                            throw new AddressException(
+                                cast(string) ("Unable to resolve host '" ~ addr
+                                              ~ "'"));
 			uiaddr = ih.addrList[0];
 		}
 		sin.sin_addr.s_addr = htonl(uiaddr);
@@ -673,7 +678,7 @@ class InternetAddress: Address
 	/// Human readable string representing the IPv4 address in dotted-decimal form.	
 	string toAddrString()
 	{
-		return std.string.toString(inet_ntoa(sin.sin_addr)).dup;
+            return std.string.toString(inet_ntoa(sin.sin_addr)).idup;
 	}
 	
 	/// Human readable string representing the IPv4 port.
@@ -685,7 +690,7 @@ class InternetAddress: Address
 	/// Human readable string representing the IPv4 address and port in the form $(I a.b.c.d:e).
 	string toString()
 	{
-		return toAddrString() ~ ":" ~ toPortString();
+            return cast(string) (toAddrString() ~ ":" ~ toPortString());
 	}
 	
 	/**
@@ -1235,7 +1240,7 @@ class Socket
 		char[256] result; // Host names are limited to 255 chars.
 		if(_SOCKET_ERROR == .gethostname(result.ptr, result.length))
 			throw new SocketException("Unable to obtain host name", _lasterr());
-		return std.string.toString(cast(char*)result).dup;
+		return std.string.toString(cast(char*)result).idup;
 	}
 	
 	/// Remote endpoint Address.

@@ -3,6 +3,7 @@
 module std.array;
 
 private import std.c.stdio;
+import std.conv;
 
 class ArrayBoundsError : Error
 {
@@ -18,9 +19,10 @@ class ArrayBoundsError : Error
 	this.filename = filename;
 
 	char[] buffer = new char[19 + filename.length + linnum.sizeof * 3 + 1];
-	int len;
-	len = sprintf(buffer.ptr, "ArrayBoundsError %.*s(%u)", filename, linnum);
-	super(buffer[0..len]);
+	auto len = sprintf(buffer.ptr,
+                           "ArrayBoundsError %.*s(%u)", filename, linnum);
+        buffer = buffer[0..len];
+	super(assumeUnique(buffer)); // fine because buffer is unaliased
     }
 }
 

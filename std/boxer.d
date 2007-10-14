@@ -6,6 +6,11 @@
  * around without knowing what's in the box, and then allowing him to recover
  * the value afterwards. 
  *
+ * WARNING:
+ *
+ * This module is being phased out. You may want to use $(LINK2
+ * std_variant.html,std.variant) for new code.
+ * 
  * Example:
 ---
 // Convert the integer 45 into a box.
@@ -64,6 +69,7 @@ module std.boxer;
 private import std.format;
 private import std.string;
 private import std.utf;
+import std.conv;
 
  /* These functions and types allow packing objects into generic containers
   * and recovering them later.  This comes into play in a wide spectrum of
@@ -280,7 +286,7 @@ struct Box
         std.format.doFormat(&putc, arguments, args.ptr);
         delete args;
         
-        return str;
+        return assumeUnique(str);
     }
     
     private bool opEqualsInternal(Box other, bool inverted)
@@ -738,13 +744,20 @@ private template unboxTest(T)
         catch (UnboxException error)
         {
             if (unboxable)
-                throw new Error ("Could not unbox " ~ value.type.toString ~ " as " ~ typeid(T).toString ~ "; however, unboxable says it would work.");
+                throw new Error(cast(string)
+                                ("Could not unbox "
+                                ~ value.type.toString ~ " as "
+                                ~ typeid(T).toString
+                                 ~ "; however, unboxable says it would work."));
             assert (!unboxable);
             throw error;
         }
         
         if (!unboxable)
-            throw new Error ("Unboxed " ~ value.type.toString ~ " as " ~ typeid(T).toString ~ "; however, unboxable says it should fail.");
+            throw new Error(cast(string)
+                            ("Unboxed " ~ value.type.toString ~ " as "
+                             ~ typeid(T).toString
+                             ~ "; however, unboxable says it should fail."));
         return result;
     }
 }
