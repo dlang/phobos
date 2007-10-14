@@ -453,7 +453,8 @@ class InternetHost
 	 */	
 	bool getHostByName(string name)
 	{
-		hostent* he = gethostbyname(toStringz(name));
+		hostent* he;
+                synchronized he = gethostbyname(toStringz(name));
 		if(!he)
 			return false;
 		validHostent(he);
@@ -468,7 +469,8 @@ class InternetHost
 	bool getHostByAddr(uint addr)
 	{
 		uint x = htonl(addr);
-		hostent* he = gethostbyaddr(&x, 4, cast(int)AddressFamily.INET);
+		hostent* he;
+                synchronized he = gethostbyaddr(&x, 4, cast(int)AddressFamily.INET);
 		if(!he)
 			return false;
 		validHostent(he);
@@ -485,7 +487,8 @@ class InternetHost
 	bool getHostByAddr(string addr)
 	{
 		uint x = inet_addr(std.string.toStringz(addr));
-		hostent* he = gethostbyaddr(&x, 4, cast(int)AddressFamily.INET);
+		hostent* he;
+                synchronized he = gethostbyaddr(&x, 4, cast(int)AddressFamily.INET);
 		if(!he)
 			return false;
 		validHostent(he);
