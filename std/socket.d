@@ -649,8 +649,7 @@ class InternetAddress: Address
 			if(!ih.getHostByName(addr))
 				//throw new AddressException("Invalid internet address");
                             throw new AddressException(
-                                cast(string) ("Unable to resolve host '" ~ addr
-                                              ~ "'"));
+                                 "Unable to resolve host '" ~ addr ~ "'");
 			uiaddr = ih.addrList[0];
 		}
 		sin.sin_addr.s_addr = htonl(uiaddr);
@@ -690,7 +689,7 @@ class InternetAddress: Address
 	/// Human readable string representing the IPv4 address and port in the form $(I a.b.c.d:e).
 	string toString()
 	{
-            return cast(string) (toAddrString() ~ ":" ~ toPortString());
+            return toAddrString() ~ ":" ~ toPortString();
 	}
 	
 	/**

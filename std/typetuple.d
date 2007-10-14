@@ -63,23 +63,26 @@ template TypeTuple(TList...)
  * void foo()
  * {
  *    writefln("The index of long is ",
- *          IndexOf!(long, TypeTuple!(int, long, double)));
+ *          indexOf!(long, TypeTuple!(int, long, double)));
  *    // prints: The index of long is 1
  * }
  * ---
  */
-template IndexOf(T, TList...)
+template indexOf(T, TList...)
 {
     static if (TList.length == 0)
-	const int IndexOf = -1;
+	const int indexOf = -1;
     else static if (is(T == TList[0]))
-	const int IndexOf = 0;
+	const int indexOf = 0;
     else
-	const int IndexOf =
-		(IndexOf!(T, TList[1 .. length]) == -1)
+	const int indexOf =
+		(indexOf!(T, TList[1 .. length]) == -1)
 			? -1
-			: 1 + IndexOf!(T, TList[1 .. length]);
+			: 1 + indexOf!(T, TList[1 .. length]);
 }
+
+/// Kept for backwards compatibility
+alias indexOf IndexOf;
 
 /**
  * Returns a typetuple created from TList with the first occurrence,

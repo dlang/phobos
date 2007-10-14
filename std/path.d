@@ -475,7 +475,7 @@ string defaultExt(string filename, string ext)
 	if (filename.length && filename[filename.length - 1] == '.')
 	    filename ~= ext;
 	else
-	    filename = cast(string) (filename ~ "." ~ ext);
+	    filename = filename ~ "." ~ ext;
     }
     return filename;
 }
@@ -515,11 +515,11 @@ string addExt(string filename, string ext)
 	if (filename.length && filename[filename.length - 1] == '.')
 	    filename ~= ext;
 	else
-	    filename = cast(string) (filename ~ "." ~ ext);
+	    filename = filename ~ "." ~ ext;
     }
     else
     {
-	filename = cast(string) (filename[0 .. $ - existing.length] ~ ext);
+	filename = filename[0 .. $ - existing.length] ~ ext;
     }
     return filename;
 }
@@ -655,7 +655,7 @@ string join(string p1, string p2)
 	}
 	else if (p1[p1.length - 1] == sep[0])
 	{
-	    p = cast(string) (p1 ~ p2);
+	    p = p1 ~ p2;
 	}
 	else
 	{

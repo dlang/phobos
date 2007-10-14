@@ -3,7 +3,7 @@
 module std.array;
 
 private import std.c.stdio;
-import std.conv;
+import std.contracts;
 
 class ArrayBoundsError : Error
 {

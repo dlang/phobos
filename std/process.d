@@ -142,9 +142,9 @@ int _spawnvp(int mode, char *pathname, char **argv)
 Lerror:
     retval = getErrno;
     throw new Exception(
-        cast(string) ("Cannot spawn " ~ toString(pathname) ~ "; "
+        "Cannot spawn " ~ toString(pathname) ~ "; "
                       ~ toString(strerror(retval))
-                      ~ " [errno " ~ toString(retval) ~ "]"));
+                      ~ " [errno " ~ toString(retval) ~ "]");
 }   // _spawnvp
 private
 {

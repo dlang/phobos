@@ -879,7 +879,7 @@ class FileException : Exception
 
     this(string name, string message)
     {
-	super(cast(string) (name ~ ": " ~ message));
+	super(name ~ ": " ~ message);
     }
 
     this(string name, uint errno)

@@ -48,7 +48,7 @@ private import std.ctype;
 private import std.c.stdlib;
 private import std.utf;
 private import std.stdio;
-import std.conv;
+import std.contracts;
 
 class URIerror : Error
 {

@@ -95,7 +95,8 @@ module std.md5;
 
 //debug=md5;		// uncomment to turn on debugging printf's
 
-import std.string, std.conv;
+import std.string;
+import std.contracts;
 
 /***************************************
  * Computes MD5 digest of array of data.

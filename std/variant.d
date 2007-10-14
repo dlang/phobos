@@ -13,31 +13,48 @@
  * Macros:
  *	WIKI = Phobos/StdFormat
  *
- * Credits:
- *
- * Improvements to $(D_PARAM std.variant)'s code are due to Brad
- * Roberts.
- *	
  * Synopsis:
  *
  * ----
- * Variant a; // must assign before use, otherwise exception ensues
- * Variant b = 42; // initialize with an integer; now the type is int
+ * Variant a; // Must assign before use, otherwise exception ensues
+ * // Initialize with an integer; make the type int
+ * Variant b = 42; 
  * assert(b.type == typeid(int));
- * assert(b.peek!(int) !is null && *b.peek!(int) == 42); // peek at the value
- * auto x = b.get!(real); // automatically convert to real
- * a = b; // assign Variants to one another
- * a = 3.14; // a is assigned a new value and also a new type (double)
+ * // Peek at the value
+ * assert(b.peek!(int) !is null && *b.peek!(int) == 42);
+ * // Automatically convert per language rules
+ * auto x = b.get!(real);
+ * // Assign any other type, including other variants
+ * a = b; 
+ * a = 3.14; 
  * assert(a.type == typeid(double));
- * assert(a > b); // implicit conversions work just as with built-in types
+ * // Implicit conversions work just as with built-in types
+ * assert(a > b);
+ * // Check for convertibility
+ * assert(!a.convertsTo!(int)); // double not convertible to int
+ * // Strings and all other arrays are supported
  * a = "now I'm a string";
  * assert(a == "now I'm a string");
- * assert(!a.convertsTo!(int)); // check for convertibility
+ * a = new int[42]; // can also assign arrays
+ * assert(a.length == 42);
+ * a[5] = 7;
+ * assert(a[5] == 7);
+ * // Can also assign class values
  * class Foo {}
  * auto foo = new Foo;
- * a = foo; // can also assign class values
+ * a = foo; 
  * assert(*a.peek!(Foo) == foo); // and full type information is preserved
  * ----
+ * 
+ * Author:
+ * Andrei Alexandrescu
+ * 
+ * Credits:
+ * 
+ * Reviewed by Brad Roberts. Daniel Keep provided a detailed code
+ * review prompting the following improvements: (1) better support for
+ * arrays; (2) support for associative arrays; (3) friendlier behavior
+ * towards the garbage collector.
  */
 
 /*
@@ -81,24 +98,28 @@ private template maxSize(T...)
 }
 
 /**
+ * $(D_PARAM VariantN) is a back-end type seldom used directly by user
+ * code. Two commonly-used types using $(D_PARAM VariantN) as
+ * back-end are:
+ *
+ * $(OL $(LI $(B Algebraic): A closed discriminated union with a
+ * limited type universe (e.g., $(D_PARAM Algebraic!(int, double,
+ * string)) only accepts these three types and rejects anything
+ * else).) $(LI $(B Variant): An open discriminated union allowing an
+ * unbounded set of types. The restriction is that the size of the
+ * stored type cannot be larger than the largest built-in type. This
+ * means that $(D_PARAM Variant) can accommodate all primitive types
+ * and all user-defined types except for large $(D_PARAM struct)s.) )
+ *
+ * Both $(D_PARAM Algebraic) and $(D_PARAM Variant) share $(D_PARAM
+ * VariantN)'s interface. (See their respective documentations below.)
+ * 
  * $(D_PARAM VariantN) is a discriminated union type parameterized
- * with the maximum size of the types stored $(D_PARAM maxDataSize),
- * and with the list of allowed types $(D_PARAM AllowedTypes). If the
- * list is empty, then any type up of size up to $(D_PARAM
+ * with the largest size of the types stored ($(D_PARAM maxDataSize))
+ * and with the list of allowed types ($(D_PARAM AllowedTypes)). If
+ * the list is empty, then any type up of size up to $(D_PARAM
  * maxDataSize) (rounded up for alignment) can be stored in a
  * $(D_PARAM VariantN) object.
- *
- * $(D_PARAM VariantN) is a back-end type seldom used directly by user
- * code. Two commonly-used types using $(D_PARAM VariantN) as backend are:
- *
- * $(OL $(LI $(B Variant): A $(D_PARAM VariantN) allowing all types up
- * to the size of the largest built-in type. This means that they can
- * accommodate all primitive types and all user-defined types except
- * for large $(D_PARAM struct)s.) $(LI $(B Algebraic): A $(D_PARAM
- * VariantN) with a limited type universe, with
- * automatically-computed size (e.g., $(D_PARAM Algebraic!(int,
- * double, string)) only accepts these types and rejects anything
- * else).) )
  *
  */
 
@@ -113,42 +134,23 @@ private:
     }
     const size_t size = SizeChecker.sizeof - (int function()).sizeof;
 
-    // Tells whether a type T is allowed
-    template allowed(T)
+    /** Tells whether a type $(D_PARAM T) is statically allowed for
+     * storage inside a $(D_PARAM VariantN) object by looking
+     * $(D_PARAM T) up in $(D_PARAM AllowedTypes). If $(D_PARAM
+     * AllowedTypes) is empty, all types of size up to $(D_PARAM
+     * maxSize) are allowed.
+     */
+    public template allowed(T)
     {
-        static const bool allowed = !AllowedTypes.length
-            || IndexOf!(T, AllowedTypes) >= 0;
+        static const bool allowed =
+            (T.sizeof <= size || is(T == VariantN))
+            && (!AllowedTypes.length || indexOf!(T, AllowedTypes) >= 0);
     }
 
-    template StoredType(T, Candidates...)
-    {
-        static if (!AllowedTypes.length)
-        {
-            alias T Type; // anything allowed
-        }
-        else static if (!Candidates.length)
-        {
-            alias void Type; // not allowed
-        }
-        else
-        {
-            alias ImplicitConversionTargets!(T) Possible;
-            static const IndexOf!(Candidates[0], Possible) cand;
-            static if (cand >= 0)
-            {
-                alias Candidates[0] Type;
-            }
-            else
-            {
-                alias StoredType!(T, Candidates[1 .. $]) Type;
-            }
-        }
-    }
-    
     // Each internal operation is encoded with an identifier. See
     // the "handler" function below.
     enum OpID { getTypeInfo, get, compare, testConversion, toString,
-                index, indexAssign, catAssign, copyOut }
+                index, indexAssign, catAssign, copyOut, length }
 
     // state
     int function(OpID selector, ubyte[size]* store, void* data) fptr
@@ -177,13 +179,9 @@ private:
             break;
         case OpID.compare:
             auto rhs = cast(VariantN *) parm;
-            auto rhspA = rhs.peek!(A);
-            if (!rhspA)
-            {
-                // types are different
-                return int.min; // uninitialized variant is different from any
-            }
-            return 0; // all uninitialized are equal
+            return rhs.peek!(A)
+                ? 0 // all uninitialized are equal
+                : int.min; // uninitialized variant is not comparable otherwise
             break;
         case OpID.toString:
             string * target = cast(string*) parm;
@@ -194,6 +192,7 @@ private:
         case OpID.index:
         case OpID.indexAssign:
         case OpID.catAssign:
+        case OpID.length:
             throw new VariantException(
                 "Attempt to use an uninitialized VariantN");
             break;
@@ -205,19 +204,26 @@ private:
     // Handler for all of a type's operations
     static int handler(A)(OpID selector, ubyte[size]* pStore, void* parm)
     {
-        // Input: store points to a TypeInfo object
-        // Output: store points to a copy of *me, if me was not null
+        // Input: TypeInfo object
+        // Output: target points to a copy of *me, if me was not null
         // Returns: true iff the A can be converted to the type represented
         // by the incoming TypeInfo 
-        static bool tryPutting(A* me, void* target)
+        static bool tryPutting(A* me, TypeInfo targetType, void* target)
         {
             alias TypeTuple!(A, ImplicitConversionTargets!(A)) AllTypes;
             foreach (T ; AllTypes)
             {
-                if (*cast(TypeInfo*) target != typeid(T)) continue;
+                if (targetType != typeid(T)) continue;
                 // found!!!
                 static if (is(typeof(*cast(T*) target = *me)))
+                {
                     if (me) *cast(T*) target = *me;
+                }
+                else
+                {
+                    // type is not assignable
+                    if (me) assert(false, typeof(A).stringof);
+                }
                 return true;
             }
             return false;
@@ -230,46 +236,73 @@ private:
             break;
         case OpID.copyOut:
             auto target = cast(VariantN *) parm;
-            memcpy(&target.store, pStore, target.store.sizeof);
+            memcpy(&target.store, pStore, A.sizeof);
             target.fptr = &handler!(A);
             break;
         case OpID.get:
-            return !tryPutting(cast(A*) pStore, parm);
+            return !tryPutting(cast(A*) pStore, *cast(TypeInfo*) parm, parm);
             break; // for conformity
         case OpID.testConversion:
-            return !tryPutting(null, parm);
+            return !tryPutting(null, *cast(TypeInfo*) parm, null);
             break;
         case OpID.compare:
-            auto rhs = cast(VariantN *) parm;
-            A* rhspA = rhs.peek!(A);
-            if (!rhspA)
-            {
-                // types are different
-                // handling comparisons via conversions
-                if (!rhs.convertsTo!(A))
-                {
-                    return int.min; // dunno
-                }
-                auto rhsA = rhs.get!(A);
-                rhspA = cast(typeof(rhspA)) &rhsA;
-            }
             auto me = cast(A*) pStore;
-            if (*rhspA == *me)
+            auto rhsP = cast(VariantN *) parm;
+            auto rhsType = rhsP.type;
+            // Are we the same?
+            if (rhsType == typeid(A))
             {
-                return 0;
+                // cool! Same type!
+                auto rhsPA = cast(A*) &rhsP.store;
+                if (*rhsPA == *me)
+                {
+                    return 0;
+                }
+                static if (is(typeof(A.init < A.init)))
+                {
+                    return *me < *rhsPA ? -1 : 1;
+                }
+                else
+                {
+                    // type doesn't support ordering comparisons
+                    return int.min;
+                }
             }
-            static if (is(typeof(A.init < A.init)))
+            VariantN temp;
+            // Do I convert to rhs?
+            if (tryPutting(me, rhsType, &temp.store))
             {
-                return *me < *rhspA ? -1 : 1;
+                // cool, I do; temp's store contains my data in rhs's type!
+                // also fix up its fptr
+                temp.fptr = rhsP.fptr;
+                // now lhsWithRhsType is a full-blown VariantN of rhs's type
+                return temp.opCmp(*rhsP);
             }
-            else
+            // Does rhs convert to me?
+            *cast(TypeInfo*) &temp.store = typeid(A);
+            if (rhsP.fptr(OpID.get, &rhsP.store, &temp.store) == 0)
             {
-                return int.min;
+                // cool! Now temp has rhs in my type!
+                auto rhsPA = cast(A*) temp.store;
+                if (*rhsPA == *me)
+                {
+                    return 0;
+                }
+                static if (is(typeof(A.init < A.init)))
+                {
+                    return *me < *rhsPA ? -1 : 1;
+                }
+                else
+                {
+                    // type doesn't support ordering comparisons
+                    return int.min;
+                }
             }
+            return int.min; // dunno
             break;
         case OpID.toString:
-            string * target = cast(string*) parm;
-            A * me = cast(A*) pStore;
+            auto target = cast(string*) parm;
+            auto me = cast(A*) pStore;
             static if (is(typeof(to!(string)(*me))))
             {
                 *target = to!(string)(*me);
@@ -322,7 +355,7 @@ private:
             break;
         case OpID.catAssign:
             auto me = cast(A*) pStore;
-            static if (is(typeof((*me)[0])))
+            static if (is(typeof((*me)[0])) && !is(typeof(me.keys)))
             {
                 // array type; parm is the element to append
                 auto arg = cast(VariantN*) parm;
@@ -337,6 +370,17 @@ private:
                     // append a whole array to the array
                     (*me) ~= arg[0].get!(A);
                 }
+            }
+            else
+            {
+                throw new VariantException(typeid(A), typeid(void[]));
+            }
+            break;
+        case OpID.length:
+            auto me = cast(A*) pStore;
+            static if (is(typeof(me.length)))
+            {
+                return me.length;
             }
             else
             {
@@ -362,10 +406,8 @@ public:
         return result;
     }
 
-    /**
-     * Assigns a $(D_PARAM VariantN) from a generic
-     * argument. Statically rejects disallowed types.
-     */
+    /** Assigns a $(D_PARAM VariantN) from a generic
+     * argument. Statically rejects disallowed types. */
 
     VariantN opAssign(T)(T rhs)
     {
@@ -396,8 +438,7 @@ public:
         }
     }
 
-    /**
-     * Returns true if and only if the $(D_PARAM VariantN) object
+    /** Returns true if and only if the $(D_PARAM VariantN) object
      * holds a valid value (has been initialized with, or assigned
      * from, a valid value).
      * Example:
@@ -416,11 +457,14 @@ public:
     {
         return fptr != &handler!(void);
     }
-    
+
     /**
-     * If the $(D_PARAM VariantN) object holds a value of the $(I
-     * exact) type $(D_PARAM T), returns a pointer to that
-     * value. Otherwise, returns $(D_PARAM null).
+     * If the $(D_PARAM VariantN) object holds a value of the
+     * $(I exact) type $(D_PARAM T), returns a pointer to that
+     * value. Otherwise, returns $(D_PARAM null). In cases
+     * where $(D_PARAM T) is statically disallowed, $(D_PARAM
+     * peek) will not compile.
+     * 
      * Example:
      * ----
      * Variant a = 5;
@@ -430,7 +474,6 @@ public:
      * assert(a == 6);
      * ----
      */
-    
     T * peek(T)()
     {
         static assert(allowed!(T), "Cannot store a " ~ T.stringof
@@ -439,7 +482,7 @@ public:
     }
 
     /**
-     * Returns the $(D_PARAM typeid) of the currently held object.
+     * Returns the $(D_PARAM typeid) of the currently held value.
      */
     
     TypeInfo type()
@@ -462,7 +505,7 @@ public:
         return fptr(OpID.testConversion, null, &info) == 0;
     }
 
-    T[] testing123(T)(T*);
+    private T[] testing123(T)(T*);
 
     /**
      * A workaround for the fact that functions cannot return
@@ -557,23 +600,10 @@ public:
     int opEquals(T)(T rhs)
     {
         static if (is(T == VariantN))
-        {
-            return fptr(OpID.compare, &store, &rhs) == 0
-                     || rhs.fptr(OpID.compare, &rhs.store, this) == 0;
-        }
+            alias rhs temp;
         else
-        {
-            if (convertsTo!(T))
-            {
-                return get!(T) == rhs;
-            }
-            else
-            {
-                // try to convert rhs to my type instead
-                auto temp = Variant(rhs);
-                return fptr(OpID.compare, &store, &temp) == 0;
-            }
-        }
+            auto temp = Variant(rhs);
+        return fptr(OpID.compare, &store, &temp) == 0;
     }
 
     /**
@@ -585,24 +615,15 @@ public:
     int opCmp(T)(T rhs)
     {
         static if (is(T == VariantN))
-        {
-            auto result = fptr(OpID.compare, &store, &rhs);
-            if (result == int.min)
-            {
-                result = -rhs.fptr(OpID.compare, &rhs.store, this);
-                // hacky (shrewd?!) usage of the fact that -int.min == int.min
-                if (result == int.min)
-                {
-                    throw new VariantException(type, rhs.type);
-                }
-            }
-            return result;
-        }
+            alias rhs temp;
         else
+            auto temp = Variant(rhs);
+        auto result = fptr(OpID.compare, &store, &temp);
+        if (result == int.min)
         {
-            auto lhs = get!(T);
-            return lhs < rhs ? -1 : lhs == rhs ? 0 : 1;
+            throw new VariantException(type, rhs.type);
         }
+        return result;
     }
 
     /**
@@ -614,106 +635,196 @@ public:
         return type.getHash(&store);
     }
 
-    /**
-     * Arithmetic between $(D_PARAM VariantN) objects and numeric values.
-     */
-
-    // arithmetic
-    typeof(T+T)   opAdd(T)( T rhs )      { return get!(T) + rhs; }
-    ///ditto
-    typeof(T+T)   opAdd_r(T)( T lhs )    { return lhs + get!(T); }
-    ///ditto
-    typeof(T-T)   opSub(T)( T rhs )      { return get!(T) - rhs; }
-    ///ditto
-    typeof(T-T)   opSub_r(T)( T lhs )    { return lhs - get!(T); }
-    ///ditto
-    typeof(T*T)   opMul(T)( T rhs )      { return get!(T) * rhs; }
-    ///ditto
-    typeof(T*T)   opMul_r(T)( T lhs )    { return lhs * get!(T); }
-    ///ditto
-    typeof(T/T)   opDiv(T)( T rhs )      { return get!(T) / rhs; }
-    ///ditto
-    typeof(T/T)   opDiv_r(T)( T lhs )    { return lhs / get!(T); }
-    ///ditto
-    typeof(T%T)   opMod(T)( T rhs )      { return get!(T) % rhs; }
-    ///ditto
-    typeof(T%T)   opMod_r(T)( T lhs )    { return lhs % get!(T); }
-    ///ditto
-    typeof(T&T)   opAnd(T)( T rhs )      { return get!(T) & rhs; }
-    ///ditto
-    typeof(T&T)   opAnd_r(T)( T lhs )    { return lhs & get!(T); }
-    ///ditto
-    typeof(T|T)   opOr(T)( T rhs )       { return get!(T) | rhs; }
-    ///ditto
-    typeof(T|T)   opOr_r(T)( T lhs )     { return lhs | get!(T); }
-    ///ditto
-    typeof(T^T)   opXor(T)( T rhs )      { return get!(T) ^ rhs; }
-    ///ditto
-    typeof(T^T)   opXor_r(T)( T lhs )    { return lhs ^ get!(T); }
-    ///ditto
-    typeof(T<<T)  opShl(T)( T rhs )      { return get!(T) << rhs; }
-    ///ditto
-    typeof(T<<T)  opShl_r(T)( T lhs )    { return lhs << get!(T); }
-    ///ditto
-    typeof(T>>T)  opShr(T)( T rhs )      { return get!(T) >> rhs; }
-    ///ditto
-    typeof(T>>T)  opShr_r(T)( T lhs )    { return lhs >> get!(T); }
-    ///ditto
-    typeof(T>>>T) opUShr(T)( T rhs )     { return get!(T) >>> rhs; }
-    ///ditto
-    typeof(T>>>T) opUShr_r(T)( T lhs )   { return lhs >>> get!(T); }
-    ///ditto
-    typeof(T~T)   opCat(T)( T rhs )      { return get!(typeof(T~T)) ~ rhs; }
-    ///ditto
-    typeof(T~T)   opCat_r(T)( T lhs )    { return lhs ~ get!(typeof(T~T)); }
- 	
-    ///ditto
-    VariantN opAddAssign(T)( T value )  { return *this = get!(T) + value; }
-    ///ditto
-    VariantN opSubAssign(T)( T value )  { return *this = get!(T) - value; }
-    ///ditto
-    VariantN opMulAssign(T)( T value )  { return *this = get!(T) * value; }
-    ///ditto
-    VariantN opDivAssign(T)( T value )  { return *this = get!(T) / value; }
-    ///ditto
-    VariantN opModAssign(T)( T value )  { return *this = get!(T) % value; }
-    ///ditto
-    VariantN opAndAssign(T)( T value )  { return *this = get!(T) & value; }
-    ///ditto
-    VariantN opOrAssign(T)( T value )   { return *this = get!(T) | value; }
-    ///ditto
-    VariantN opXorAssign(T)( T value )  { return *this = get!(T) ^ value; }
-    ///ditto
-    VariantN opShlAssign(T)( T value )  { return *this = get!(T) << value; }
-    ///ditto
-    VariantN opShrAssign(T)( T value )  { return *this = get!(T) >> value; }
-    ///ditto
-    VariantN opUShrAssign(T)( T value ) { return *this = get!(T) >>> value; }
-    ///ditto
-    VariantN opCatAssign(T)( T value )
+    private VariantN opArithmetic(T, string op)(T other)
     {
-        auto toAppend = Variant(value);
-        fptr(OpID.catAssign, &store, &toAppend) == 0 || assert(false);
-        return *this;
-        //return *this = get!(typeof(T~T)) ~ value;
+        VariantN result;
+        static if (is(T == VariantN))
+        {
+            if (convertsTo!(uint) && other.convertsTo!(uint))
+                result = mixin("get!(uint) " ~ op ~ " other.get!(uint)");
+            else if (convertsTo!(int) && other.convertsTo!(int))
+                result = mixin("get!(int) " ~ op ~ " other.get!(int)");
+            if (convertsTo!(ulong) && other.convertsTo!(ulong))
+                result = mixin("get!(ulong) " ~ op ~ " other.get!(ulong)");
+            else if (convertsTo!(long) && other.convertsTo!(long))
+                result = mixin("get!(long) " ~ op ~ " other.get!(long)");
+            else if (convertsTo!(double) && other.convertsTo!(double))
+                result = mixin("get!(double) " ~ op ~ " other.get!(double)");
+            else
+                result = mixin("get!(real) " ~ op ~ " other.get!(real)");
+        }
+        else
+        {
+            if (is(typeof(T.max) : uint) && T.min == 0 && convertsTo!(uint))
+                result = mixin("get!(uint) " ~ op ~ " other");
+            else if (is(typeof(T.max) : int) && T.min < 0 && convertsTo!(int))
+                result = mixin("get!(int) " ~ op ~ " other");
+            if (is(typeof(T.max) : ulong) && T.min == 0 && convertsTo!(ulong))
+                result = mixin("get!(ulong) " ~ op ~ " other");
+            else if (is(typeof(T.max) : long) && T.min < 0 && convertsTo!(long))
+                result = mixin("get!(long) " ~ op ~ " other");
+            else if (is(T : double) && convertsTo!(double))
+                result = mixin("get!(double) " ~ op ~ " other");
+            else
+                result = mixin("get!(real) " ~ op ~ " other");
+        }
+        return result;
+    }
+
+    private VariantN opLogic(T, string op)(T other)
+    {
+        VariantN result;
+        static if (is(T == VariantN))
+        {
+            if (convertsTo!(uint) && other.convertsTo!(uint))
+                result = mixin("get!(uint) " ~ op ~ " other.get!(uint)");
+            else if (convertsTo!(int) && other.convertsTo!(int))
+                result = mixin("get!(int) " ~ op ~ " other.get!(int)");
+            if (convertsTo!(ulong) && other.convertsTo!(ulong))
+                result = mixin("get!(ulong) " ~ op ~ " other.get!(ulong)");
+            else
+                result = mixin("get!(long) " ~ op ~ " other.get!(long)");
+        }
+        else
+        {
+            if (is(typeof(T.max) : uint) && T.min == 0 && convertsTo!(uint))
+                result = mixin("get!(uint) " ~ op ~ " other");
+            else if (is(typeof(T.max) : int) && T.min < 0 && convertsTo!(int))
+                result = mixin("get!(int) " ~ op ~ " other");
+            if (is(typeof(T.max) : ulong) && T.min == 0 && convertsTo!(ulong))
+                result = mixin("get!(ulong) " ~ op ~ " other");
+            else
+                result = mixin("get!(long) " ~ op ~ " other");
+        }
+        return result;
     }
 
     /**
-     * Array operations. If a $(D_PARAM VariantN) contains an array,
-     * that array can be indexed into.
+     * Arithmetic between $(D_PARAM VariantN) objects and numeric
+     * values. All arithmetic operations return a $(D_PARAM VariantN)
+     * object typed depending on the types of both values
+     * involved. The conversion rules mimic D's built-in rules for
+     * arithmetic conversions.
+     */
+
+    // Adapted from http://www.prowiki.org/wiki4d/wiki.cgi?DanielKeep/Variant
+    // arithmetic
+    VariantN opAdd(T)(T rhs) { return opArithmetic!(T, "+")(rhs); }
+    ///ditto
+    VariantN opSub(T)(T rhs) { return opArithmetic!(T, "-")(rhs); }
+    ///ditto
+    VariantN opSub_r(T)(T lhs)
+    {
+        return VariantN(lhs).opArithmetic!(VariantN, "-")(*this);
+    }
+    ///ditto
+    VariantN opMul(T)(T rhs) { return opArithmetic!(T, "*")(rhs); }
+    ///ditto
+    VariantN opDiv(T)(T rhs) { return opArithmetic!(T, "/")(rhs); }
+    ///ditto
+    VariantN opDiv_r(T)(T lhs)
+    {
+        return VariantN(lhs).opArithmetic!(VariantN, "/")(*this);
+    }
+    ///ditto
+    VariantN opMod(T)(T rhs) { return opArithmetic!(T, "%")(rhs); }
+    ///ditto
+    VariantN opMod_r(T)(T lhs)
+    {
+        return VariantN(lhs).opArithmetic!(VariantN, "%")(*this);
+    }
+    ///ditto
+    VariantN opAnd(T)(T rhs) { return opLogic!(T, "&")(rhs); }
+    ///ditto
+    VariantN opOr(T)(T rhs) { return opLogic!(T, "|")(rhs); }
+    ///ditto
+    VariantN opXor(T)(T rhs) { return opLogic!(T, "^")(rhs); }
+    ///ditto
+    VariantN opShl(T)(T rhs) { return opLogic!(T, "<<")(rhs); }
+    ///ditto
+    VariantN opShl_r(T)(T lhs)
+    {
+        return VariantN(lhs).opLogic!(VariantN, "<<")(*this);
+    }
+    ///ditto
+    VariantN opShr(T)(T rhs) { return opLogic!(T, ">>")(rhs); }
+    ///ditto
+    VariantN opShr_r(T)(T lhs)
+    {
+        return VariantN(lhs).opLogic!(VariantN, ">>")(*this);
+    }
+    ///ditto
+    VariantN opUShr(T)(T rhs) { return opLogic!(T, ">>>")(rhs); }
+    ///ditto
+    VariantN opUShr_r(T)(T lhs)
+    {
+        return VariantN(lhs).opLogic!(VariantN, ">>>")(*this);
+    }
+    ///ditto
+    VariantN opCat(T)(T rhs)
+    {
+        auto temp = *this;
+        temp ~= rhs;
+        return temp;
+    }
+    ///ditto
+    VariantN opCat_r(T)(T rhs)
+    {
+        VariantN temp = rhs;
+        temp ~= *this;
+        return temp;
+    }
+ 	
+    ///ditto
+    VariantN opAddAssign(T)(T rhs)  { return *this = *this + rhs; }
+    ///ditto
+    VariantN opSubAssign(T)(T rhs)  { return *this = *this - rhs; }
+    ///ditto
+    VariantN opMulAssign(T)(T rhs)  { return *this = *this * rhs; }
+    ///ditto
+    VariantN opDivAssign(T)(T rhs)  { return *this = *this / rhs; }
+    ///ditto
+    VariantN opModAssign(T)(T rhs)  { return *this = *this % rhs; }
+    ///ditto
+    VariantN opAndAssign(T)(T rhs)  { return *this = *this & rhs; }
+    ///ditto
+    VariantN opOrAssign(T)(T rhs)   { return *this = *this | rhs; }
+    ///ditto
+    VariantN opXorAssign(T)(T rhs)  { return *this = *this ^ rhs; }
+    ///ditto
+    VariantN opShlAssign(T)(T rhs)  { return *this = *this << rhs; }
+    ///ditto
+    VariantN opShrAssign(T)(T rhs)  { return *this = *this >> rhs; }
+    ///ditto
+    VariantN opUShrAssign(T)(T rhs) { return *this = *this >>> rhs; }
+    ///ditto
+    VariantN opCatAssign(T)(T rhs)
+    {
+        auto toAppend = VariantN(rhs);
+        fptr(OpID.catAssign, &store, &toAppend) == 0 || assert(false);
+        return *this;
+    }
+
+    /**
+     * Array and associative array operations. If a $(D_PARAM
+     * VariantN) contains an (associative) array, it can be indexed
+     * into. Otherwise, an exception is thrown.
      *
      * Example:
      * ----
      * auto a = Variant(new int[10]);
      * a[5] = 42;
      * assert(a[5] == 42);
+     * int[int] hash = [ 42:24 ];
+     * a = hash;
+     * assert(a[42] == 24);
      * ----
      *
      * Caveat:
      *
      * Due to limitations in current language, read-modify-write
-     * operations will not work properly:
-     * 
+     * operations $(D_PARAM op=) will not work properly:
+     *
      * ----
      * Variant a = new int[10];
      * a[5] = 42;
@@ -728,6 +839,15 @@ public:
         return result;
     }
 
+    unittest
+    {
+        int[int] hash = [ 42:24 ];
+        Variant v = hash;
+        assert(v[42] == 24);
+        v[42] = 5;
+        assert(v[42] == 5);
+    }
+
     /// ditto
     VariantN opIndexAssign(T, N)(T value, N i)
     {
@@ -735,6 +855,49 @@ public:
         fptr(OpID.indexAssign, &store, &args) == 0 || assert(false);
         return args[0];
     }
+
+    /** If the $(D_PARAM VariantN) contains an (associative) array,
+     * returns the length of that array. Otherwise, throws an
+     * exception.
+     */
+    size_t length()
+    {
+        return cast(size_t) fptr(OpID.length, &store, null);
+    }
+}
+
+/**
+ * Algebraic data type restricted to a closed set of possible
+ * types. It's an alias for a $(D_PARAM VariantN) with an
+ * appropriately-constructed maximum size. $(D_PARAM Algebraic) is
+ * useful when it is desirable to restrict what a discriminated type
+ * could hold to the end of defining simpler and more efficient
+ * manipulation.
+ *
+ * Future additions to $(D_PARAM Algebraic) will allow compile-time
+ * checking that all possible types are handled by user code,
+ * eliminating a large class of errors.
+ *
+ * Bugs:
+ *
+ * Currently, $(D_PARAM Algebraic) does not allow recursive data
+ * types. They will be allowed in a future iteration of the
+ * implementation.
+ * 
+ * Example:
+ * ----
+ * auto v = Algebraic!(int, double, string)(5);
+ * assert(v.peek!(int));
+ * v = 3.14;
+ * assert(v.peek!(double));
+ * // auto x = v.peek!(long); // won't compile, type long not allowed
+ * // v = '1'; // won't compile, type char not allowed
+ * ----
+ */
+
+template Algebraic(T...)
+{
+    alias VariantN!(maxSize!(T), T) Algebraic;
 }
 
 /**
@@ -748,6 +911,27 @@ public:
  */
 
 alias VariantN!(maxSize!(creal, char[], void delegate())) Variant;
+
+/**
+ * Returns an array of variants constructed from $(D_PARAM args).
+ * Example:
+ * ----
+ * auto a = variantArray(1, 3.14, "Hi!");
+ * assert(a[1] == 3.14);
+ * auto b = Variant(a); // variant array as variant
+ * assert(b[1] == 3.14);
+ * ----
+ */
+
+Variant[] variantArray(T...)(T args)
+{
+    Variant[] result;
+    foreach (arg; args)
+    {
+        result ~= Variant(arg);
+    }
+    return result;
+}
 
 /**
  * Thrown in three cases:
@@ -773,33 +957,12 @@ static class VariantException : Exception
     }
     this(TypeInfo source, TypeInfo target)
     {
-        super(cast(string) ("Variant: attempting to use incompatible types "
+        super("Variant: attempting to use incompatible types "
                             ~ source.toString
-                            ~ " and " ~ target.toString));
+                            ~ " and " ~ target.toString);
         this.source = source;
         this.target = target;
     }
-}
-
-/**
- * Returns an array of variants constructed from $(D_PARAM args).
- * Example:
- * ----
- * auto a = variantArray(1, 3.14, "Hi!");
- * assert(a[1] == 3.14);
- * auto b = Variant(a); // variant array as variant
- * assert(b[1] == 3.14);
- * ----
- */
-
-Variant[] variantArray(T...)(T args)
-{
-    Variant[] result;
-    foreach (arg; args)
-    {
-        result ~= Variant(arg);
-    }
-    return result;
 }
 
 unittest
@@ -810,8 +973,10 @@ unittest
 
     // variantArray tests
     auto heterogeneous = variantArray(1, 4.5, "hi");
+    assert(heterogeneous.length == 3);
     auto variantArrayAsVariant = Variant(heterogeneous);
     assert(variantArrayAsVariant[0] == 1);
+    assert(variantArrayAsVariant.length == 3);
     
     // array tests
     auto arr = Variant([1.2].dup);
@@ -829,7 +994,7 @@ unittest
     // assign
     a = *b.peek!(int);
     // comparison
-    assert(a == b);
+    assert(a == b, a.type.toString ~ " " ~ b.type.toString);
     auto c = Variant("this is a string");
     assert(a != c);
     // comparison via implicit conversions
@@ -889,12 +1054,12 @@ unittest
  	
     // should be string... @@@BUG IN COMPILER
     v = "Hello, World!"c;
-    assert( v.peek!(char[]) );
+    assert( v.peek!(string) );
 
-    assert( v.get!(char[]) == "Hello, World!" );
+    assert( v.get!(string) == "Hello, World!" );
     assert(!is(char[] : wchar[]));
     assert( !v.convertsTo!(wchar[]) );
-    assert( v.get!(char[]) == "Hello, World!" ); 	
+    assert( v.get!(string) == "Hello, World!" ); 	
 
     v = [1,2,3,4,5];
     assert( v.peek!(int[]) );
@@ -986,25 +1151,4 @@ unittest
         assert( vhash.get!(int[char[]])["b"] == 2 );
         assert( vhash.get!(int[char[]])["c"] == 3 );
     }
-}
-
-/**
- * Algebraic data type restricted to a closed set of possible
- * types. It's an alias for a $(D_PARAM VariantN) with an
- * appropriately-constructed maximum size.
- * 
- * Example:
- * ----
- * auto v = Algebraic!(int, double, string)(5);
- * assert(v.peek!(int));
- * v = 3.14;
- * assert(v.peek!(double));
- * // auto x = peek!(long); // won't compile, type long not allowed
- * // v = '1'; // won't compile, type char not allowed
- * ----
- */
-
-template Algebraic(T...)
-{
-    alias VariantN!(maxSize!(T), T) Algebraic;
 }

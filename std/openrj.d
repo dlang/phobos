@@ -718,7 +718,7 @@ private:
             }
 
             // Always add on to the previous line
-            nextLine = cast(string) (nextLine ~ line);
+            nextLine = nextLine ~ line;
 
             line = null;
 

@@ -69,7 +69,7 @@ module std.boxer;
 private import std.format;
 private import std.string;
 private import std.utf;
-import std.conv;
+import std.contracts;
 
  /* These functions and types allow packing objects into generic containers
   * and recovering them later.  This comes into play in a wide spectrum of

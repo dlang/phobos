@@ -21,7 +21,7 @@ module std.date;
 
 private import std.stdio;
 private import std.dateparse;
-import std.conv;
+import std.contracts;
 
 /**
  * d_time is a signed arithmetic type giving the time elapsed since January 1,
