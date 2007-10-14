@@ -23,6 +23,7 @@ module std.demangle;
 private import std.ctype;
 private import std.string;
 private import std.utf;
+import std.conv;
 
 private import std.stdio;
 
@@ -203,24 +204,24 @@ string demangle(string name)
 	    case 'w':	p = "dchar";	goto L1;
 
 	    case 'A':				// dynamic array
-		p = parseType() ~ "[]";
+		p = cast(string) (parseType() ~ "[]");
 		goto L1;
 
 	    case 'P':				// pointer
-		p = parseType() ~ "*";
+		p = cast(string) (parseType() ~ "*");
 		goto L1;
 
 	    case 'G':				// static array
 	    {	size_t ns = ni;
 		parseNumber();
 		size_t ne = ni;
-		p = parseType() ~ "[" ~ name[ns .. ne] ~ "]";
+		p = cast(string) (parseType() ~ "[" ~ name[ns .. ne] ~ "]");
 		goto L1;
 	    }
 
 	    case 'H':				// associative array
 		p = parseType();
-		p = parseType() ~ "[" ~ p ~ "]";
+		p = cast(string) (parseType() ~ "[" ~ p ~ "]");
 		goto L1;
 
 	    case 'D':				// delegate
@@ -295,10 +296,10 @@ string demangle(string name)
 		    p ~= parseType() ~ " " ~ identifier ~ "(" ~ args ~ ")";
 		    return p;
 		}
-		p = parseType() ~
+		p = cast(string) (parseType() ~
 		    (isdelegate ? " delegate(" : " function(") ~
 		    args ~
-		    ")";
+                                  ")");
 		isdelegate = 0;
 		goto L1;
 	    }
@@ -448,7 +449,7 @@ string demangle(string name)
 	    break;
 	}
 	result ~= ")";
-	return result;
+	return assumeUnique(result);
     }
 
     if (name.length < 3 ||

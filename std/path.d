@@ -248,15 +248,19 @@ unittest
 }
 
 /**************************
- * Extracts the base name of a path.
+ * Extracts the base name of a path and optionally chops off a
+ * specifit suffix.
  *
- * This function will search fullname from the end until the
- * first path separator or first character of fullname is
- * reached. Under Windows, the drive letter separator (<i>colon</i>)
- * also terminates the search.
+ * This function will search $(D_PARAM fullname) from the end until
+ * the first path separator or first character of $(D_PARAM fullname)
+ * is reached. Under Windows, the drive letter separator ($(I colon))
+ * also terminates the search. After the search has ended, keep the
+ * portion to the right of the separator if found, or the entire
+ * $(D_PARAM fullname) otherwise. If the kept portion has suffix
+ * $(D_PARAM extension), remove that suffix. Return the remaining string.
  *
- * Returns: If a path separator was found, all the characters to its
- * right are returned. Otherwise, fullname is returned.
+ * Returns: The portion of $(D_PARAM fullname) left after the path
+ * part and the extension part, if any, have been removed.
  *
  * Throws: Nothing.
  *
@@ -264,24 +268,25 @@ unittest
  * -----
  * version(Win32)
  * {
- *     getBaseName(r"d:\path\foo.bat") => "foo.bat"
+ *     basename(r"d:\path\foo.bat") => "foo.bat"
+ *     basename(r"d:\path\foo", ".bat") => "foo"
  * }
  * version(linux)
  * {
- *     getBaseName("/home/user.name/bar.")  => "bar."
+ *     basename("/home/user.name/bar.")  => "bar."
+ *     basename("/home/user.name/bar.", ".")  => "bar"
  * }
  * -----
  */
 
-string getBaseName(string fullname)
+string basename(string fullname, string extension = null)
     out (result)
     {
 	assert(result.length <= fullname.length);
     }
     body
     {
-	uint i;
-
+	uint i = void;
 	for (i = fullname.length; i > 0; i--)
 	{
 	    version(Win32)
@@ -295,31 +300,40 @@ string getBaseName(string fullname)
 		    break;
 	    }
 	}
-	return fullname[i .. fullname.length];
+	return chomp(fullname[i .. fullname.length],
+                     extension ? extension : "");
     }
+
+/** Alias for $(D_PARAM basename), kept for backward
+ * compatibility. New code should use $(D_PARAM basename). */
+alias basename getBaseName;
 
 unittest
 {
-    debug(path) printf("path.getBaseName.unittest\n");
+    debug(path) printf("path.basename.unittest\n");
     int i;
     string result;
 
     version (Windows)
-	result = getBaseName("d:\\path\\foo.bat");
+	result = basename("d:\\path\\foo.bat");
     version (linux)
-	result = getBaseName("/path/foo.bat");
+	result = basename("/path/foo.bat");
     //printf("result = '%.*s'\n", result);
-    i = cmp(result, "foo.bat");
-    assert(i == 0);
+    assert(result == "foo.bat");
 
     version (Windows)
-	result = getBaseName("a\\b");
+	result = basename("a\\b");
     version (linux)
-	result = getBaseName("a/b");
-    i = cmp(result, "b");
-    assert(i == 0);
-}
+	result = basename("a/b");
+    assert(result == "b");
 
+    version (Windows)
+	result = basename("a\\b.cde", ".cde");
+    version (linux)
+	result = basename("a/b.cde", ".cde");
+    assert(result == "b");
+
+}
 
 /**************************
  * Extracts the directory part of a path.
@@ -341,18 +355,18 @@ unittest
  * -----
  * version(Win32)
  * {
- *     getDirName(r"d:\path\foo.bat") => "d:\path"
- *     getDirName(getDirName(r"d:\path\foo.bat")) => "d:\"
+ *     dirname(r"d:\path\foo.bat") => "d:\path"
+ *     dirname(dirname(r"d:\path\foo.bat")) => "d:\"
  * }
  * version(linux)
  * {
- *     getDirName("/home/user")  => "/home"
- *     getDirName(getDirName("/home/user"))  => ""
+ *     dirname("/home/user")  => "/home"
+ *     dirname(dirname("/home/user"))  => ""
  * }
  * -----
  */
 
-string getDirName(string fullname)
+string dirname(string fullname)
     out (result)
     {
 	assert(result.length <= fullname.length);
@@ -383,6 +397,9 @@ string getDirName(string fullname)
 	return fullname[0 .. i];
     }
 
+/** Alias for $(D_PARAM dirname), kept for backward
+ * compatibility. New code should use $(D_PARAM dirname). */
+alias dirname getDirName;
 
 /********************************
  * Extracts the drive letter of a path.
@@ -458,7 +475,7 @@ string defaultExt(string filename, string ext)
 	if (filename.length && filename[filename.length - 1] == '.')
 	    filename ~= ext;
 	else
-	    filename = filename ~ "." ~ ext;
+	    filename = cast(string) (filename ~ "." ~ ext);
     }
     return filename;
 }
@@ -498,11 +515,11 @@ string addExt(string filename, string ext)
 	if (filename.length && filename[filename.length - 1] == '.')
 	    filename ~= ext;
 	else
-	    filename = filename ~ "." ~ ext;
+	    filename = cast(string) (filename ~ "." ~ ext);
     }
     else
     {
-	filename = filename[0 .. filename.length - existing.length] ~ ext;
+	filename = cast(string) (filename[0 .. $ - existing.length] ~ ext);
     }
     return filename;
 }
@@ -533,7 +550,7 @@ string addExt(string filename, string ext)
  * -----
  */
 
-int isabs(in string path)
+int isabs(string path)
 {
     string d = getDrive(path);
 
@@ -638,11 +655,11 @@ string join(string p1, string p2)
 	}
 	else if (p1[p1.length - 1] == sep[0])
 	{
-	    p = p1 ~ p2;
+	    p = cast(string) (p1 ~ p2);
 	}
 	else
 	{
-	    p = p1 ~ sep ~ p2;
+	    p = cast(string) (p1 ~ sep ~ p2);
 	}
     }
     return p;
@@ -1117,7 +1134,7 @@ private string combineCPathWithDPath(char* c_path, string path, int char_pos)
 	end--;
 
     // Create our own copy, as lifetime of c_path is undocumented
-    string cp = c_path[0 .. end].dup;
+    string cp = c_path[0 .. end].idup;
 
     // Do we append something from path?
     if (char_pos < path.length)

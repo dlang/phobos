@@ -35,6 +35,10 @@ private import std.path;
 private import std.string;
 private import std.regexp;
 private import std.gc;
+private import std.c.string;
+private import std.traits;
+import std.conv;
+private import std.stdio; // for testing only
 
 /* =========================== Win32 ======================= */
 
@@ -671,6 +675,12 @@ string[] listdir(in string pathname, RegExp r)
 /******************************************************
  * For each file and directory name in pathname[],
  * pass it to the callback delegate.
+ *
+ * Note:
+ *
+ * This function is being phased off. New code should use $(D_PARAM
+ * dirEntries) (see below).
+ * 
  * Params:
  *	callback =	Delegate that processes each
  *			filename in turn. Returns true to
@@ -715,6 +725,12 @@ void listdir(in string pathname, bool delegate(in string filename) callback)
 /******************************************************
  * For each file and directory DirEntry in pathname[],
  * pass it to the callback delegate.
+ *
+ * Note:
+ *
+ * This function is being phased off. New code should use $(D_PARAM
+ * dirEntries) (see below).
+ * 
  * Params:
  *	callback =	Delegate that processes each
  *			DirEntry in turn. Returns true to
@@ -863,12 +879,12 @@ class FileException : Exception
 
     this(string name, string message)
     {
-	super(name ~ ": " ~ message);
+	super(cast(string) (name ~ ": " ~ message));
     }
 
     this(string name, uint errno)
     {	const(char*) s = strerror(errno);
-	this(name, std.string.toString(s).dup);
+	this(name, std.string.toString(s).idup);
 	this.errno = errno;
     }
 }
@@ -925,7 +941,7 @@ err:
     delete buf;
 
 err1:
-    throw new FileException(name, getErrno());
+    throw new FileException(name.idup, getErrno());
 }
 
 /*********************************************
@@ -957,7 +973,7 @@ void write(in string name, in void[] buffer)
 err2:
     std.c.linux.linux.close(fd);
 err:
-    throw new FileException(name, getErrno());
+    throw new FileException(name.idup, getErrno());
 }
 
 
@@ -988,7 +1004,7 @@ void append(in string name, in void[] buffer)
 err2:
     std.c.linux.linux.close(fd);
 err:
-    throw new FileException(name, getErrno());
+    throw new FileException(name.idup, getErrno());
 }
 
 
@@ -1002,7 +1018,7 @@ void rename(in string from, in string to)
     char *toz = toStringz(to);
 
     if (std.c.stdio.rename(fromz, toz) == -1)
-	throw new FileException(to, getErrno());
+	throw new FileException(to.idup, getErrno());
 }
 
 
@@ -1013,7 +1029,7 @@ void rename(in string from, in string to)
 void remove(in string name)
 {
     if (std.c.stdio.remove(toStringz(name)) == -1)
-	throw new FileException(name, getErrno());
+	throw new FileException(name.idup, getErrno());
 }
 
 
@@ -1057,7 +1073,7 @@ err2:
     std.c.linux.linux.close(fd);
 err:
 err1:
-    throw new FileException(name, getErrno());
+    throw new FileException(name.idup, getErrno());
 }
 
 
@@ -1073,7 +1089,7 @@ uint getAttributes(in string name)
     namez = toStringz(name);
     if (std.c.linux.linux.stat(namez, &statbuf))
     {
-	throw new FileException(name, getErrno());
+	throw new FileException(name.idup, getErrno());
     }
 
     return statbuf.st_mode;
@@ -1092,7 +1108,7 @@ void getTimes(in string name, out d_time ftc, out d_time fta, out d_time ftm)
     namez = toStringz(name);
     if (std.c.linux.linux.stat(namez, &statbuf))
     {
-	throw new FileException(name, getErrno());
+	throw new FileException(name.idup, getErrno());
     }
 
     ftc = cast(d_time)statbuf.st_ctime * std.date.TicksPerSecond;
@@ -1140,7 +1156,7 @@ int isfile(in string name)
  * Is name a directory?
  */
 
-int isdir(in string name)
+int isdir(string name)
 {
     return (getAttributes(name) & S_IFMT) == S_IFDIR;
 }
@@ -1149,7 +1165,7 @@ int isdir(in string name)
  * Change directory.
  */
 
-void chdir(in string pathname)
+void chdir(string pathname)
 {
     if (std.c.linux.linux.chdir(toStringz(pathname)))
     {
@@ -1161,7 +1177,7 @@ void chdir(in string pathname)
  * Make directory.
  */
 
-void mkdir(in string pathname)
+void mkdir(string pathname)
 {
     if (std.c.linux.linux.mkdir(toStringz(pathname), 0777))
     {
@@ -1173,7 +1189,7 @@ void mkdir(in string pathname)
  * Remove directory.
  */
 
-void rmdir(in string pathname)
+void rmdir(string pathname)
 {
     if (std.c.linux.linux.rmdir(toStringz(pathname)))
     {
@@ -1192,12 +1208,9 @@ string getcwd()
     {
 	throw new FileException("cannot get cwd", getErrno());
     }
-
+    scope(exit) std.c.stdlib.free(p);
     auto len = std.string.strlen(p);
-    auto buf = new char[len];
-    buf[] = p[0 .. len];
-    std.c.stdlib.free(p);
-    return buf;
+    return p[0 .. len].idup;
 }
 
 /***************************************************
@@ -1216,7 +1229,7 @@ struct DirEntry
 
     void init(string path, dirent *fd)
     {	size_t len = std.string.strlen(fd.d_name.ptr);
-	name = std.path.join(path, fd.d_name[0 .. len]);
+	name = std.path.join(path, fd.d_name[0 .. len].idup);
 	d_type = fd.d_type;
 	didstat = 0;
     }
@@ -1303,7 +1316,7 @@ string[] listdir(string pathname)
     return result;
 }
 
-string[] listdir(string pathname, in string pattern)
+string[] listdir(string pathname, string pattern)
 {   string[] result;
     
     bool callback(DirEntry* de)
@@ -1483,7 +1496,7 @@ err3:
 err2:
     std.c.linux.linux.close(fd);
 err1:
-    throw new FileException(from, getErrno());
+    throw new FileException(from.idup, getErrno());
   }
   else
   {
@@ -1535,4 +1548,138 @@ unittest
     );
 }
 
+/**
+ * Dictates directory spanning policy for $(D_PARAM dirEntries) (see below). 
+ */
 
+enum SpanMode
+{
+    /** Only spans one directory. */
+    shallow,
+    /** Spans the directory depth-first, i.e. the content of any
+     subdirectory is spanned before that subdirectory itself. Useful
+     e.g. when recursively deleting files.  */
+    depth,
+    /** Spans the directory breadth-first, i.e. the content of any
+     subdirectory is spanned right after that subdirectory itself. */
+    breadth,
+}
+
+struct DirIterator
+{
+    string pathname;
+    SpanMode mode;
+
+    private int doIt(D)(D dg, DirEntry * de)
+    {
+        alias ParameterTypeTuple!(D) Parms;
+        static if (is(Parms[0] : string))
+        {
+            return dg(de.name);
+        }
+        else static if (is(Parms[0] : DirEntry))
+        {
+            return dg(*de);
+        }
+        else
+        {
+            static assert(false, "Dunno how to enumerate directory entries"
+                          " against type " ~ Parms[0].stringof);
+        }
+    }
+    
+    int opApply(D)(D dg)
+    {
+        int result = 0;
+        bool callback(DirEntry* de)
+        {
+            switch (mode)
+            {
+            case SpanMode.shallow:
+                result = doIt(dg, de);
+                break;
+            case SpanMode.breadth:
+                result = doIt(dg, de);
+                if (!result && de.isdir)
+                {
+                    listdir(de.name, &callback);
+                }
+                break;
+            default:
+                assert(mode == SpanMode.depth);
+                if (de.isdir)
+                {
+                    listdir(de.name, &callback);
+                }
+                if (!result)
+                {
+                    result = doIt(dg, de);
+                }
+                break;
+            }
+            return result == 0; 
+        }    
+        listdir(pathname, &callback);
+        return result;
+    }
+}
+
+/**
+ * Iterates a directory using foreach. The iteration variable can be
+ * of type $(D_PARAM string) if only the name is needed, or $(D_PARAM
+ * DirEntry) if additional details are needed. The span mode dictates
+ * the how the directory is traversed. The name of the directory entry
+ * includes the $(D_PARAM path) prefix.
+ *
+ * Example:
+ *
+ * ----
+ // Iterate a directory in depth
+ foreach (string name; dirEntries("destroy/me", SpanMode.depth))
+ {
+     remove(name);
+ }
+ // Iterate a directory in breadth
+ foreach (string name; dirEntries(".", SpanMode.breadth))
+ {
+     writeln(name);
+ }
+ // Iterate a directory and get detailed info about it
+ foreach (DirEntry e; dirEntries("dmd-testing", SpanMode.breadth))
+ {
+     writeln(e.name, "\t", e.size);
+ }
+ * ----
+ */
+
+DirIterator dirEntries(string path, SpanMode mode)
+{
+    DirIterator result;
+    result.pathname = path;
+    result.mode = mode;
+    return result;
+}
+
+unittest
+{
+    assert(system("mkdir --parents dmd-testing") == 0);
+    scope(exit) system("rm -rf dmd-testing");
+    assert(system("mkdir --parents dmd-testing/somedir") == 0);
+    assert(system("touch dmd-testing/somefile") == 0);
+    assert(system("touch dmd-testing/somedir/somedeepfile") == 0);
+    foreach (string name; dirEntries("dmd-testing", SpanMode.shallow))
+    {
+    }
+    foreach (string name; dirEntries("dmd-testing", SpanMode.depth))
+    {
+        //writeln(name);
+    }
+    foreach (string name; dirEntries("dmd-testing", SpanMode.breadth))
+    {
+        //writeln(name);
+    }
+    foreach (DirEntry e; dirEntries("dmd-testing", SpanMode.breadth))
+    {
+        //writeln(e.name);
+    }
+}

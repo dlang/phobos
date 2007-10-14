@@ -30,7 +30,7 @@ class ZipException : Exception
 {
     this(string msg)
     {
-	super("ZipException: " ~ msg);
+	super(cast(string) ("ZipException: " ~ msg));
     }
 }
 

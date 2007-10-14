@@ -9,9 +9,9 @@ alias typeof(int.sizeof) size_t;
 alias typeof(cast(void*)0 - cast(void*)0) ptrdiff_t;
 alias size_t hash_t;
 
-alias const(char)[] string;
-alias const(wchar)[] wstring;
-alias const(dchar)[] dstring;
+alias invariant(char)[] string;
+alias invariant(wchar)[] wstring;
+alias invariant(dchar)[] dstring;
 
 extern (C)
 {   int printf(in char *, ...);

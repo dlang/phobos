@@ -51,7 +51,7 @@ template Format(A...)
 	const char[] Format = ToString!(A[0]) ~ Format!(A[1..$]);
 }
 
-template FormatString(string F, A...)
+template FormatString(const(char)[] F, A...)
 {
     static if (F.length == 0)
 	const char[] FormatString = Format!(A);
@@ -146,7 +146,7 @@ template ToString(char C)
 
 unittest
 {
-    string s = Format!("hel%slo", "world", -138, 'c', true);
+    auto s = Format!("hel%slo", "world", -138, 'c', true);
     assert(s == "helworldlo-138ctrue");
 }
 
@@ -161,7 +161,7 @@ unittest
  *	.rest = s
  */
 
-template ParseUinteger(string s)
+template ParseUinteger(const(char)[] s)
 {
     static if (s.length == 0)
     {	const char[] value = "";
@@ -188,7 +188,7 @@ template ParseUinteger(string s)
  *	.rest = s
  */
 
-template ParseInteger(string s)
+template ParseInteger(const(char)[] s)
 {
     static if (s.length == 0)
     {	const char[] value = "";

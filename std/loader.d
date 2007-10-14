@@ -280,7 +280,7 @@ else version(linux)
     private void record_error_()
     {
         char *err = dlerror();
-        s_lastError = (null is err) ? "" : err[0 .. std.string.strlen(err)];
+        s_lastError = (null is err) ? "" : err[0 .. std.string.strlen(err)].idup;
     }
 
     private int ExeModule_Init_()
@@ -327,7 +327,7 @@ else version(linux)
             }
             else
             {
-                ExeModuleInfo   mi2  =   new ExeModuleInfo(hmod, moduleName);
+                ExeModuleInfo   mi2  =   new ExeModuleInfo(hmod, moduleName.idup);
 
                 s_modules[moduleName]   =   mi2;
 
@@ -468,7 +468,7 @@ public:
 
     this(uint errcode)
     {
-	super(std.string.toString(strerror(errcode)).dup);
+	super(std.string.toString(strerror(errcode)).idup);
     }
 }
 

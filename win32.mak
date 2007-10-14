@@ -28,6 +28,7 @@ CC=dmc
 
 DMD=$(DIR)\bin\dmd
 #DMD=..\dmd
+#DMD=dmd
 
 DOC=..\..\html\d\phobos
 #DOC=..\doc\phobos
@@ -843,8 +844,16 @@ zip : win32.mak linux.mak phoboslicense.txt std.ddoc $(SRC) \
 	zip32 -u phobos $(SRC_GC)
 
 clean:
+	cd internal\gc
+	make -f win32.mak clean
+	cd ..\..
+	cd etc\c\zlib
+	make -f win32.mak clean
+	cd ..\..\..
 	del $(OBJS)
 	del $(DOCS)
+	del unittest.obj unittest.map unittest.exe
+	del phobos.lib gcstub.obj minit.obj
 
 cleanhtml:
 	del $(DOCS)

@@ -14,6 +14,7 @@ import std.ctype;
 import std.string;
 import std.c.string;
 import std.c.stdlib;
+import cstdio = std.c.stdio;
 
 extern (C):
 
@@ -428,7 +429,7 @@ extern (C) void trace_term()
 	trace_merge();
 
 	// Report results
-	fplog = fopen(trace_logfilename.ptr, "w");
+	fplog = fopen(trace_logfilename, "w");
 	//fplog = std.c.stdio.stdout;
 	if (fplog)
 	{   nsymbols = 0;
@@ -439,7 +440,7 @@ extern (C) void trace_term()
 	}
 
 	// Output function link order
-	fpdef = fopen(trace_deffilename.ptr, "w");
+	fpdef = fopen(trace_deffilename, "w");
 	if (fpdef)
 	{   fprintf(fpdef,"\nFUNCTIONS\n");
 	    trace_order(root);
@@ -471,7 +472,7 @@ static void trace_free(void *p)
 //////////////////////////////////////////////
 //
 
-static Symbol* trace_addsym(string id)
+static Symbol* trace_addsym(const(char)[] id)
 {
     Symbol** parent;
     Symbol* rover;
@@ -497,7 +498,7 @@ static Symbol* trace_addsym(string id)
     /* not in table, so insert into table	*/
     s = cast(Symbol *)trace_malloc(Symbol.sizeof);
     memset(s,0,Symbol.sizeof);
-    s.Sident = id;
+    s.Sident = id.idup;
     *parent = s;			// link new symbol into tree
     return s;
 }
@@ -685,7 +686,7 @@ static void trace_merge()
     SymPair *sfanin;
     SymPair **psp;
 
-    if (trace_logfilename && (fp = fopen(trace_logfilename.ptr, "r")) != null)
+    if (trace_logfilename && (fp = fopen(trace_logfilename, "r")) != null)
     {
 	buf = null;
 	sfanin = null;

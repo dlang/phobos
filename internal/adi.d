@@ -116,9 +116,9 @@ extern (C) long _adReverseChar(char[] a)
 unittest
 {
     string a = "abcd";
-    string r;
+    //string r;
 
-    r = a.dup.reverse;
+    auto r = a.dup.reverse;
     //writefln(r);
     assert(r == "dcba");
 
@@ -212,15 +212,15 @@ unittest
     wstring a = "abcd";
     wstring r;
 
-    r = a.dup.reverse;
+    r = a.dup.reverse.idup;
     assert(r == "dcba");
 
     a = "a\U00012356\U00012346c";
-    r = a.dup.reverse;
+    r = a.dup.reverse.idup;
     assert(r == "c\U00012346\U00012356a");
 
     a = "ab\U00012345c";
-    r = a.dup.reverse;
+    r = a.dup.reverse.idup;
     assert(r == "c\U00012345ba");
 }
 
@@ -372,7 +372,7 @@ extern (C) long _adSortChar(char[] a)
 	size_t i = 0;
 	foreach (dchar d; da)
 	{   char[4] buf;
-	    string t = toUTF8(buf, d);
+	    auto t = toUTF8(buf, d);
 	    a[i .. i + t.length] = t[];
 	    i += t.length;
 	}
@@ -394,7 +394,7 @@ extern (C) long _adSortWchar(wchar[] a)
 	size_t i = 0;
 	foreach (dchar d; da)
 	{   wchar[2] buf;
-	    wstring t = toUTF16(buf, d);
+	    auto t = toUTF16(buf, d);
 	    a[i .. i + t.length] = t[];
 	    i += t.length;
 	}

@@ -10,7 +10,7 @@ class HiddenFuncError : Error
 
     this(ClassInfo ci)
     {
-	super("hidden method called for " ~ ci.name);
+	super(cast(string) ("hidden method called for " ~ ci.name));
     }
 }
 

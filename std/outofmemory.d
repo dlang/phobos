@@ -17,7 +17,7 @@ module std.outofmemory;
 
 class OutOfMemoryException : Exception
 {
-    static s = "Out of memory";
+    static string s = "Out of memory";
 
     /**
      * Default constructor
