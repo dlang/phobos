@@ -1973,8 +1973,8 @@ private void formatGeneric(Writer, D)(ref Writer w, const(void)* arg,
         ulong fake = cast(ulong) obj;
         formatGeneric!(Writer, ulong)(w, &fake, f);
     } else static if (is(D : Object)) {
-        if (obj) w.write(obj.toString);
-        else w.write("null");
+        if (obj is null) w.write("null");
+        else w.write(obj.toString);
     } else {
         static assert(false, "Cannot format type " ~ D.stringof);
     }

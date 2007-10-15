@@ -268,9 +268,11 @@ unittest
     scope(exit) stdout = saveStdout;
     stdout = fopen(file, "w");
     assert(stdout);
-    write("Hello, ",  "world number ", 42, "!");
+    Object obj;
+    write("Hello, ",  "world number ", 42, "! ", obj);
     fclose(stdout) == 0 || assert(false);
-    assert(cast(char[]) std.file.read(file) == "Hello, world number 42!");
+    auto result = cast(char[]) std.file.read(file);
+    assert(result == "Hello, world number 42! null", result);
 }
 
 /***********************************
@@ -334,8 +336,13 @@ the largest positional parameter already used. */
 void writef(T...)(T args)
 {
     FileWriter!(char) w;
+    static const errorMessage =
+        "You must pass a formatting string as the first"
+        " argument to writef. If no formatting is needed,"
+        " you may want to use write.";
     static if (!is(typeof(args[0]) : FILE*))
     {
+        static assert(isSomeString!(T[0]), errorMessage);
         w.backend = stdout;
         FLOCK(w.backend);
         scope(exit) FUNLOCK(w.backend);
@@ -343,6 +350,7 @@ void writef(T...)(T args)
     }
     else
     {
+        static assert(isSomeString!(T[1]), errorMessage);
         w.backend = args[0];
         FLOCK(w.backend);
         scope(exit) FUNLOCK(w.backend);
@@ -377,8 +385,13 @@ void writefln(T...)(T args)
     //writef(args, '\n');
     // Duplicate code so we don't duplicate the stack; replace with macro l8r
     FileWriter!(char) w;
+    static const errorMessage =
+        "You must pass a formatting string as the first"
+        " argument to writefln. If no formatting is needed,"
+        " you may want to use writeln.";
     static if (!is(typeof(args[0]) : FILE*))
     {
+        static assert(isSomeString!(T[0]), errorMessage);
         w.backend = stdout;
         FLOCK(w.backend);
         scope(exit) FUNLOCK(w.backend);
@@ -386,6 +399,7 @@ void writefln(T...)(T args)
     }
     else
     {
+        static assert(isSomeString!(T[1]), errorMessage);
         w.backend = args[0];
         FLOCK(w.backend);
         scope(exit) FUNLOCK(w.backend);
