@@ -408,7 +408,7 @@ void writefln(T...)(T args)
         static if (!isSomeString!(T[0]))
         {
             // compatibility hack
-            return writef(stdio, "", args, '\n');
+            return writef(stdout, "", args, '\n');
         }
         else
         {
