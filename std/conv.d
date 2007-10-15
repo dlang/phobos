@@ -266,6 +266,9 @@ private T toSomeString(S, T)(S s)
     } else static if (is(S : Object)) {
        // class
       return s is null ? "null" : to!(T)(s.toString);
+    } else static if (is(S Original == typedef)) {
+       // typedef
+      return to!(T)(to!(Original)(s));
     } else {
       // source is not a string
       auto result = toString(s);

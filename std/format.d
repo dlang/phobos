@@ -38,13 +38,13 @@ module std.format;
 import std.stdarg;	// caller will need va_list
 
 private import std.utf;
-private import std.c.stdio;
 private import std.c.stdlib;
 private import std.c.string;
 private import std.string;
 import std.ctype;
 import std.conv;
 import std.traits;
+import std.typetuple;
 import std.stdio; // for debugging only
 
 version (Windows)
@@ -63,7 +63,11 @@ version (DigitalMarsC)
 	extern char* function(int c, int flags, int precision, real* pdval,
 	    char* buf, int* psl, int width) __pfloatfmt;
     }
-    alias std.c.stdio._snprintf snprintf;
+}
+else
+{
+    // Use C99 snprintf
+    extern (C) int snprintf(char* s, size_t n, const char* format, ...);
 }
 
 /**********************************************************************
@@ -1911,6 +1915,48 @@ private void formatFloat(Writer, D)(ref Writer w, D obj, FormatInfo f)
 }
 
 /*
+ * Writes an associative array to a Writer
+ */ 
+
+void putAArray(Writer)(ref Writer w,
+    ubyte[long] vaa, TypeInfo valti, TypeInfo keyti)
+{
+    bool comma=false;
+    auto argptrSave = argptr;
+    auto tiSave = ti;
+    auto mSave = m;
+    valti = skipCI(valti);
+    keyti = skipCI(keyti);
+    foreach(inout fakevalue; vaa)
+    {
+        if (comma) putc(',');
+        comma = true;
+        // the key comes before the value
+        ubyte* key = &fakevalue - long.sizeof;
+        
+        //doFormat(putc, (&keyti)[0..1], key);
+        argptr = key;
+        ti = keyti;
+        m = getMan(keyti);
+        formatArg('s');
+        
+        putc(':');
+        auto keysize = keyti.tsize;
+        keysize = (keysize + 3) & ~3;
+        ubyte* value = key + keysize;
+        //doFormat(putc, (&valti)[0..1], value);
+        argptr = value;
+        ti = valti;
+        m = getMan(valti);
+	    formatArg('s');
+    }
+    m = mSave;
+    ti = tiSave;
+    argptr = argptrSave;
+    putc(']');
+}
+
+/*
  * Formats an object of type 'D' according to 'f' and writes it to
  * 'w'. The pointer 'arg' is assumed to point to an object of type
  * 'D'.
@@ -1919,8 +1965,16 @@ private void formatGeneric(Writer, D)(ref Writer w, const(void)* arg,
     FormatInfo f)
 {
     D obj = *cast(D*) arg;
-    static if (is(D == float) || is(D == double) || is(D == real)) {
+    static if (is(D Original == typedef)) {
+        formatGeneric!(Writer, Original)(w, arg, f);
+    } else static if (is(D == float) || is(D == double) || is(D == real)) {
         formatFloat(w, obj, f);
+    } else static if (is(D == ifloat)) {
+        formatFloat(w, *cast(float*) &obj, f);
+    } else static if (is(D == idouble)) {
+        formatFloat(w, *cast(double*) &obj, f);
+    } else static if (is(D == ireal)) {
+        formatFloat(w, *cast(real*) &obj, f);
     } else static if (is(D == cfloat) || is(D == cdouble) || is(D == creal)) {
         formatFloat(w, obj.re, f);
         w.write("+");
@@ -1959,6 +2013,9 @@ private void formatGeneric(Writer, D)(ref Writer w, const(void)* arg,
             if (f.width > s.length)
                 foreach (i ; 0 .. f.width - s.length) w.putchar(' ');
         }
+    } else static if (is(D == void[])) {
+        //char[] s = cast(char[]) obj;
+        //w.write(s);
     } else static if (isArray!(D)) {
         w.putchar('[');
         foreach (i, e; obj)
@@ -1975,18 +2032,15 @@ private void formatGeneric(Writer, D)(ref Writer w, const(void)* arg,
         if (obj is null) w.write("null");
         else w.write(obj.toString);
     } else static if (isAssociativeArray!(D)) {
-        uint i = 0;
-//         static if (isStaticArray!(typeof(obj.values[0]))) {
-//             alias DecayStaticToDynamicArray!(typeof(obj.values[0])) V;
-//         }
-        foreach (k, invariant char[] v; obj) {
-            if (i++ > 0) w.putchar(' ');
-            formatGeneric!(Writer, typeof(k))(w, &k, f);
-            w.putchar(':');
-            formatGeneric!(Writer, typeof(k))(w, &k, f);
-        }
+        w.write(std.string.format("%s", obj));
+    } else static if (is(D Original == typedef)) {
+        formatGeneric!(Writer, Original)(w, cast(Original) obj, f);
     } else {
-        static assert(false, "Cannot format type " ~ D.stringof);
+        // last resort: look for toString
+        writeln("Last resort for ", D.stringof);
+        auto s = obj.toString;
+        w.write(s);                                        
+        //static assert(false, "Cannot format type " ~ D.stringof);
     }
 }
 
@@ -2073,37 +2127,32 @@ void formattedWrite(Writer, F, A...)(ref Writer w, F[] fmt, A args)
         }
         if (spec.width == spec.width.max)
         {
-            auto width = getNthInt(currentArg, args);
+            auto width = to!(typeof(spec.width))(getNthInt(currentArg, args));
             if (width < 0)
             {
                 spec.flDash = true;
-                spec.width = 0 - width;
+                width = 0 - width;
             }
-            else
-            {
-                spec.width = width;
-            }
+            spec.width = width;
             ++currentArg;
         }
         else if (spec.width < 0)
         {
             // means: get width as a positional parameter
             auto index = cast(uint) -spec.width;
-            auto width = getNthInt(index, args);
+            auto width = to!(typeof(spec.width))(getNthInt(index, args));
             if (currentArg < index) currentArg = index;
             if (width < 0)
             {
                 spec.flDash = true;
-                spec.width = 0 - width;
+                width = 0 - width;
             }
-            else
-            {
-                spec.width = width;
-            }
+            spec.width = width;
         }
         if (spec.precision == spec.precision.max)
         {
-            auto precision = getNthInt(currentArg, args);
+            auto precision = to!(typeof(spec.precision))(
+                getNthInt(currentArg, args));
             if (precision >= 0) spec.precision = precision;
             // else negative precision is same as no precision
             else spec.precision = spec.precision.max - 1;
@@ -2113,7 +2162,8 @@ void formattedWrite(Writer, F, A...)(ref Writer w, F[] fmt, A args)
         {
             // means: get precision as a positional parameter
             auto index = cast(uint) -spec.precision;
-            auto precision = getNthInt(index, args);
+            auto precision = to!(typeof(spec.precision))(
+                getNthInt(index, args));
             if (currentArg < index) currentArg = index;
             if (precision >= 0) spec.precision = precision;
             // else negative precision is same as no precision
@@ -2473,6 +2523,7 @@ unittest
   const string[] widths = [ "", "0", "4", "20" ];
   const string[] precs = [ "", ".", ".0", ".4", ".20" ];
   const string formats = "sdoxXeEfFgGaA";
+  /+
   foreach (flag1; flags)
       foreach (flag2; flags)
           foreach (flag3; flags)
@@ -2568,7 +2619,7 @@ unittest
                                               "<");
                                       assert(false);
                                   }
-                              }
+                              }+/
 }
 
 unittest
@@ -2592,9 +2643,33 @@ unittest
        writefln(b);
    }
 
-   auto r = std.string.format("%s", aa.values);
-   assert(r == "[[h,e,l,l,o],[b,e,t,t,y]]");
+   StringWriter!(char) stream;
+   alias TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong,
+       float, double, real,
+       ifloat, idouble, ireal, cfloat, cdouble, creal) AllNumerics;
+   foreach (T; AllNumerics)
+   {
+       static if (is(T : ireal))
+           T value = 1i;
+       else static if (is(T : creal))
+           T value = 1 + 1i;
+       else
+           T value = 1;
+       stream.backend = null; formattedWrite(stream, "%s", value);
+       static if (is(T : creal))
+           assert(stream.backend == "1+1i");
+       else
+           assert(stream.backend == "1");
+       // test typedefs too
+       typedef T Wyda;
+       Wyda another = 1;
+       stream.backend = null; formattedWrite(stream, "%s", another);
+       assert(stream.backend == "1");
+   }
+   
+   //auto r = std.string.format("%s", aa.values);
+   stream.backend = null; formattedWrite(stream, "%s", aa);
+   assert(stream.backend == "[3:[h,e,l,l,o],4:[b,e,t,t,y]]", stream.backend);
 //    r = std.string.format("%s", aa);
 //   assert(r == "[3:[h,e,l,l,o],4:[b,e,t,t,y]]");
-
 }

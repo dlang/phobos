@@ -345,7 +345,7 @@ void writef(T...)(T args)
         static if (!isSomeString!(T[0]))
         {
             // compatibility hack
-            return writef(stdout, "", args);
+            return writef(stdio, "", args);
         }
         else
         {
@@ -450,8 +450,15 @@ unittest
     stdout = fopen(file, "w");
     assert(stdout);
     writefln("Hello, %s world number %s!", "nice", 42);
+    foreach (F ; TypeTuple!(ifloat, idouble, ireal))
+    {
+        F a = 5i;
+        F b = a % 2;
+        writefln(b);
+    }
     fclose(stdout) == 0 || assert(false);
-    assert(cast(char[]) std.file.read(file) == "Hello, nice world number 42!\n");
+    auto read = cast(char[]) std.file.read(file);
+    assert(read == "Hello, nice world number 42!\n1\n1\n1\n", read);
 }
 
 /***********************************
