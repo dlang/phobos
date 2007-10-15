@@ -1831,14 +1831,18 @@ class File: Stream {
    * The FileMode.Append mode will open the file for writing and move the
    * file position to the end of the file.
    */
-  this(char[] filename, FileMode mode = FileMode.In) { this(); open(filename, mode); }
+  this(string filename, FileMode mode = FileMode.In)
+  {
+	this();
+	open(filename, mode);
+  }
 
 
   /***
    * Open a file for the stream, in an identical manner to the constructors.
    * If an error occurs an OpenException is thrown.
    */
-  void open(const(char)[] filename, FileMode mode = FileMode.In) {
+  void open(string filename, FileMode mode = FileMode.In) {
     close();
     int access, share, createMode;
     parseMode(mode, access, share, createMode);
@@ -1904,12 +1908,12 @@ class File: Stream {
   }
 
   /// Create a file for writing.
-  void create(const(char)[] filename) {
+  void create(string filename) {
     create(filename, FileMode.OutNew);
   }
 
   /// ditto
-  void create(const(char)[] filename, FileMode mode) {
+  void create(string filename, FileMode mode) {
     close();
     open(filename, mode | FileMode.OutNew);
   }
@@ -2091,7 +2095,7 @@ class BufferedFile: BufferedStream {
   this() { super(new File()); }
 
   /// opens file in requested mode and buffer size
-  this(char[] filename, FileMode mode = FileMode.In,
+  this(string filename, FileMode mode = FileMode.In,
        uint bufferSize = DefaultBufferSize) {
     super(new File(filename,mode),bufferSize);
   }
@@ -2107,14 +2111,14 @@ class BufferedFile: BufferedStream {
   }
 
   /// opens file in requested mode
-  void open(const(char)[] filename, FileMode mode = FileMode.In) {
+  void open(string filename, FileMode mode = FileMode.In) {
     File sf = cast(File)s;
     sf.open(filename,mode);
     resetSource();
   }
 
   /// creates file in requested mode
-  void create(const(char)[] filename, FileMode mode = FileMode.Out) {
+  void create(string filename, FileMode mode = FileMode.Out) {
     File sf = cast(File)s;
     sf.create(filename,mode);
     resetSource();
