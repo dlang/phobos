@@ -1653,7 +1653,7 @@ FormatInfo parseFormatSpec(S)(ref S fmt)
             {
                 // a '*' followed by digits and '$' is a positional format
                 fmt = fmt[1 .. $];
-                result.width = -parse!(int)(fmt);
+                result.width = -parse!(typeof(result.width))(fmt);
                 i = 0;
                 if (fmt[i++] != '$') throw new FormatError("$ expected");
             }
