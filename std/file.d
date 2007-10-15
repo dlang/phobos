@@ -483,7 +483,7 @@ string getcwd()
 	len = GetCurrentDirectoryA(len, dir.ptr);
 	if (!len)
 	    goto Lerr;
-	return dir[0 .. len];		// leave off terminating 0
+	return cast(string)dir[0 .. len];	// leave off terminating 0
     }
 
 Lerr:

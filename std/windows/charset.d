@@ -43,7 +43,7 @@ static this()
  *	yaneurao, Walter Bright, Stewart Gordon
  */
 
-const(char*) toMBSz(const char[] s, uint codePage = 0)
+const(char)* toMBSz(string s, uint codePage = 0)
 {
     // Only need to do this if any chars have the high bit set
     foreach (char c; s)
@@ -88,9 +88,9 @@ const(char*) toMBSz(const char[] s, uint codePage = 0)
  * Authors: Stewart Gordon, Walter Bright
  */
 
-const(char[]) fromMBSz(const char* s, int codePage = 0)
+string fromMBSz(invariant(char)* s, int codePage = 0)
 {
-    const(char*) c;
+    const(char)* c;
 
     for (c = s; *c != 0; c++)
     {

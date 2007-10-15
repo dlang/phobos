@@ -643,7 +643,7 @@ string join(string p1, string p2)
 	    }
 	    else
 	    {
-		p = p1 ~ sep ~ p2;
+		p = cast(string)(p1 ~ sep ~ p2);
 	    }
 	}
     }

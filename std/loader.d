@@ -253,7 +253,7 @@ version(Windows)
 	{
             record_error_();
 	}
-        return szFileName[0 .. cch].dup;
+        return szFileName[0 .. cch].idup;
     }
 }
 else version(linux)
@@ -636,7 +636,7 @@ public:
 	    if (cch == 0)
 		throw new ExeModuleException(GetLastError());
 
-	    return szFileName[0 .. cch].dup;
+	    return szFileName[0 .. cch].idup;
 	}
 	else version (linux)
 	{
