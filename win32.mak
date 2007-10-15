@@ -77,7 +77,7 @@ OBJS= asserterror.obj deh.obj switch.obj complex.obj gcstats.obj \
 	errno.obj boxer.obj cstream.obj charset.obj metastrings.obj \
 	gamma.obj demangle.obj cover.obj bitarray.obj aApplyR.obj \
 	signals.obj cpuid.obj typetuple.obj traits.obj bind.obj \
-	c_stdio.obj hiddenfunc.obj \
+	c_stdio.obj hiddenfunc.obj contracts.obj getopt.obj variant.obj \
 	ti_Ag.obj ti_C.obj ti_int.obj ti_char.obj \
 	ti_wchar.obj ti_uint.obj ti_short.obj ti_ushort.obj \
 	ti_byte.obj ti_ubyte.obj ti_long.obj ti_ulong.obj ti_ptr.obj \
@@ -100,14 +100,16 @@ DOCS=	$(DOC)\std_path.html $(DOC)\std_math.html $(DOC)\std_outbuffer.html \
 	$(DOC)\std_md5.html $(DOC)\std_zip.html $(DOC)\std_zlib.html \
 	$(DOC)\std_bind.html \
 	$(DOC)\std_bitarray.html \
-	$(DOC)\std_conv.html \
 	$(DOC)\std_boxer.html \
+	$(DOC)\std_contracts.html \
+	$(DOC)\std_conv.html \
 	$(DOC)\std_cover.html \
 	$(DOC)\std_cpuid.html \
 	$(DOC)\std_cstream.html \
 	$(DOC)\std_ctype.html \
 	$(DOC)\std_demangle.html \
 	$(DOC)\std_gc.html \
+	$(DOC)\std_getopt.html \
 	$(DOC)\std_intrinsic.html \
 	$(DOC)\std_metastrings.html \
 	$(DOC)\std_mmfile.html \
@@ -127,6 +129,7 @@ DOCS=	$(DOC)\std_path.html $(DOC)\std_math.html $(DOC)\std_outbuffer.html \
 	$(DOC)\std_uni.html \
 	$(DOC)\std_uri.html \
 	$(DOC)\std_utf.html \
+	$(DOC)\std_variant.html \
 	$(DOC)\std_windows_charset.html \
 	$(DOC)\std_c_fenv.html \
 	$(DOC)\std_c_locale.html \
@@ -154,7 +157,8 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 	std\stdio.d std\perf.d std\openrj.d std\uni.d std\boxer.d \
 	std\cstream.d std\demangle.d std\cover.d std\bitarray.d \
 	std\signals.d std\cpuid.d std\typetuple.d std\traits.d std\bind.d \
-	std\metastrings.d std\hiddenfunc.d
+	std\metastrings.d std\hiddenfunc.d std\contracts.d std\getopt.d \
+	std\variant.d
 
 SRC_STD_C= std\c\process.d std\c\stdlib.d std\c\time.d std\c\stdio.d \
 	std\c\math.d std\c\stdarg.d std\c\stddef.d std\c\fenv.d std\c\string.d \
@@ -354,6 +358,9 @@ boxer.obj : std\boxer.d
 compiler.obj : std\compiler.d
 	$(DMD) -c $(DFLAGS) std\compiler.d
 
+contracts.obj : std\contracts.d
+	$(DMD) -c $(DFLAGS) std\contracts.d
+
 conv.obj : std\conv.d
 	$(DMD) -c $(DFLAGS) std\conv.d
 
@@ -386,6 +393,9 @@ format.obj : std\format.d
 
 gc.obj : std\gc.d
 	$(DMD) -c $(DFLAGS) std\gc.d
+
+getopt.obj : std\getopt.d
+	$(DMD) -c $(DFLAGS) std\getopt.d
 
 hiddenfunc.obj : std\hiddenfunc.d
 	$(DMD) -c $(DFLAGS) std\hiddenfunc.d
@@ -482,6 +492,9 @@ uri.obj : std\uri.d
 
 utf.obj : std\utf.d
 	$(DMD) -c $(DFLAGS) std\utf.d
+
+variant.obj : std\variant.d
+	$(DMD) -c $(DFLAGS) std\variant.d
 
 Dzlib.obj : std\zlib.d
 	$(DMD) -c $(DFLAGS) std\zlib.d -ofDzlib.obj
@@ -669,6 +682,9 @@ $(DOC)\std_boxer.html : std.ddoc std\boxer.d
 $(DOC)\std_compiler.html : std.ddoc std\compiler.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_compiler.html std.ddoc std\compiler.d
 
+$(DOC)\std_contracts.html : std.ddoc std\contracts.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_contracts.html std.ddoc std\contracts.d
+
 $(DOC)\std_conv.html : std.ddoc std\conv.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_conv.html std.ddoc std\conv.d
 
@@ -698,6 +714,9 @@ $(DOC)\std_format.html : std.ddoc std\format.d
 
 $(DOC)\std_gc.html : std.ddoc std\gc.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_gc.html std.ddoc std\gc.d
+
+$(DOC)\std_getopt.html : std.ddoc std\getopt.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_getopt.html std.ddoc std\getopt.d
 
 $(DOC)\std_intrinsic.html : std.ddoc std\intrinsic.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_intrinsic.html std.ddoc std\intrinsic.d
@@ -776,6 +795,9 @@ $(DOC)\std_uri.html : std.ddoc std\uri.d
 
 $(DOC)\std_utf.html : std.ddoc std\utf.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_utf.html std.ddoc std\utf.d
+
+$(DOC)\std_variant.html : std.ddoc std\variant.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_variant.html std.ddoc std\variant.d
 
 $(DOC)\std_zip.html : std.ddoc std\zip.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_zip.html std.ddoc std\zip.d
