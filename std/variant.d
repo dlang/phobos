@@ -182,7 +182,6 @@ private:
             return rhs.peek!(A)
                 ? 0 // all uninitialized are equal
                 : int.min; // uninitialized variant is not comparable otherwise
-            break;
         case OpID.toString:
             string * target = cast(string*) parm;
             *target = "<Uninitialized VariantN>";
@@ -195,7 +194,6 @@ private:
         case OpID.length:
             throw new VariantException(
                 "Attempt to use an uninitialized VariantN");
-            break;
         default: assert(false);
         }
         return 0;
