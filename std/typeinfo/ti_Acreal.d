@@ -29,9 +29,9 @@ private import std.typeinfo.ti_creal;
 
 class TypeInfo_Ac : TypeInfo
 {
-    string toString() { return "creal[]"; }
+    override string toString() { return "creal[]"; }
 
-    hash_t getHash(in void *p)
+    override hash_t getHash(in void *p)
     {	creal[] s = *cast(creal[]*)p;
 	size_t len = s.length;
 	creal *str = s.ptr;
@@ -52,7 +52,7 @@ class TypeInfo_Ac : TypeInfo
 	return hash;
     }
 
-    int equals(in void *p1, in void *p2)
+    override int equals(in void *p1, in void *p2)
     {
 	creal[] s1 = *cast(creal[]*)p1;
 	creal[] s2 = *cast(creal[]*)p2;
@@ -69,7 +69,7 @@ class TypeInfo_Ac : TypeInfo
 	return 1;
     }
 
-    int compare(in void *p1, in void *p2)
+    override int compare(in void *p1, in void *p2)
     {
 	creal[] s1 = *cast(creal[]*)p1;
 	creal[] s2 = *cast(creal[]*)p2;
@@ -86,17 +86,17 @@ class TypeInfo_Ac : TypeInfo
 	return cast(int)s1.length - cast(int)s2.length;
     }
 
-    size_t tsize()
+    override size_t tsize()
     {
 	return (creal[]).sizeof;
     }
 
-    uint flags()
+    override uint flags()
     {
 	return 1;
     }
 
-    TypeInfo next()
+    override TypeInfo next()
     {
 	return typeid(creal);
     }

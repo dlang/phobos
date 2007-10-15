@@ -5,29 +5,29 @@ module std.typeinfo.ti_byte;
 
 class TypeInfo_g : TypeInfo
 {
-    string toString() { return "byte"; }
+    override string toString() { return "byte"; }
 
-    hash_t getHash(in void *p)
+    override hash_t getHash(in void *p)
     {
 	return *cast(byte *)p;
     }
 
-    int equals(in void *p1, in void *p2)
+    override int equals(in void *p1, in void *p2)
     {
 	return *cast(byte *)p1 == *cast(byte *)p2;
     }
 
-    int compare(in void *p1, in void *p2)
+    override int compare(in void *p1, in void *p2)
     {
 	return *cast(byte *)p1 - *cast(byte *)p2;
     }
 
-    size_t tsize()
+    override size_t tsize()
     {
 	return byte.sizeof;
     }
 
-    void swap(void *p1, void *p2)
+    override void swap(void *p1, void *p2)
     {
 	byte t;
 
