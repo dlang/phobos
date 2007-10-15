@@ -1607,6 +1607,9 @@ struct Gcx
 
 		case 2:
 		    goto Lnomemory;
+
+                default:
+                    assert(false, "impossible state");
 	    }
 	}
 
