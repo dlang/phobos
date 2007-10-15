@@ -265,7 +265,7 @@ private T toSomeString(S, T)(S s)
        return to!(T)(to!(long)(s));
     } else static if (is(S : Object)) {
        // class
-      return s ? "null" : to!(T)(s.toString);
+      return s is null ? "null" : to!(T)(s.toString);
     } else {
       // source is not a string
       auto result = toString(s);
