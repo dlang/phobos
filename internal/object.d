@@ -357,7 +357,7 @@ struct OffsetTypeInfo
  */
 class TypeInfo
 {
-    hash_t toHash()
+    override hash_t toHash()
     {	hash_t hash;
 
 	foreach (char c; this.toString())
@@ -365,7 +365,7 @@ class TypeInfo
 	return hash;
     }
 
-    int opCmp(Object o)
+    override int opCmp(Object o)
     {
 	if (this is o)
 	    return 0;
@@ -375,7 +375,7 @@ class TypeInfo
 	return std.string.cmp(this.toString(), ti.toString());
     }
 
-    int opEquals(Object o)
+    override int opEquals(Object o)
     {
 	/* TypeInfo instances are singletons, but duplicates can exist
 	 * across DLL's. Therefore, comparing for a name match is
@@ -428,9 +428,9 @@ class TypeInfo
 
 class TypeInfo_Typedef : TypeInfo
 {
-    string toString() { return name; }
+    override string toString() { return name; }
 
-    int opEquals(Object o)
+    override int opEquals(Object o)
     {   TypeInfo_Typedef c;
 
 	return cast(int)
@@ -440,15 +440,15 @@ class TypeInfo_Typedef : TypeInfo
 		 this.base == c.base));
     }
 
-    hash_t getHash(in void *p) { return base.getHash(p); }
-    int equals(in void *p1, in void *p2) { return base.equals(p1, p2); }
-    int compare(in void *p1, in void *p2) { return base.compare(p1, p2); }
-    size_t tsize() { return base.tsize(); }
-    void swap(void *p1, void *p2) { return base.swap(p1, p2); }
+    override hash_t getHash(in void *p) { return base.getHash(p); }
+    override int equals(in void *p1, in void *p2) { return base.equals(p1, p2); }
+    override int compare(in void *p1, in void *p2) { return base.compare(p1, p2); }
+    override size_t tsize() { return base.tsize(); }
+    override void swap(void *p1, void *p2) { return base.swap(p1, p2); }
 
-    TypeInfo next() { return base.next(); }
-    uint flags() { return base.flags(); }
-    void[] init() { return m_init.length ? m_init : base.init(); }
+    override TypeInfo next() { return base.next(); }
+    override uint flags() { return base.flags(); }
+    override void[] init() { return m_init.length ? m_init : base.init(); }
 
     TypeInfo base;
     string name;
@@ -461,9 +461,9 @@ class TypeInfo_Enum : TypeInfo_Typedef
 
 class TypeInfo_Pointer : TypeInfo
 {
-    string toString() { return cast(string) (m_next.toString() ~ "*"); }
+    override string toString() { return cast(string) (m_next.toString() ~ "*"); }
 
-    int opEquals(Object o)
+    override int opEquals(Object o)
     {   TypeInfo_Pointer c;
 
 	return this is o ||
@@ -471,17 +471,17 @@ class TypeInfo_Pointer : TypeInfo
 		 this.m_next == c.m_next);
     }
 
-    hash_t getHash(in void *p)
+    override hash_t getHash(in void *p)
     {
         return cast(uint)*cast(void* *)p;
     }
 
-    int equals(in void *p1, in void *p2)
+    override int equals(in void *p1, in void *p2)
     {
         return cast(int)(*cast(void* *)p1 == *cast(void* *)p2);
     }
 
-    int compare(in void *p1, in void *p2)
+    override int compare(in void *p1, in void *p2)
     {
 	if (*cast(void* *)p1 < *cast(void* *)p2)
 	    return -1;
@@ -491,29 +491,29 @@ class TypeInfo_Pointer : TypeInfo
 	    return 0;
     }
 
-    size_t tsize()
+    override size_t tsize()
     {
 	return (void*).sizeof;
     }
 
-    void swap(void *p1, void *p2)
+    override void swap(void *p1, void *p2)
     {	void* tmp;
 	tmp = *cast(void**)p1;
 	*cast(void**)p1 = *cast(void**)p2;
 	*cast(void**)p2 = tmp;
     }
 
-    TypeInfo next() { return m_next; }
-    uint flags() { return 1; }
+    override TypeInfo next() { return m_next; }
+    override uint flags() { return 1; }
 
     TypeInfo m_next;
 }
 
 class TypeInfo_Array : TypeInfo
 {
-    string toString() { return cast(string) (value.toString() ~ "[]"); }
+    override string toString() { return cast(string) (value.toString() ~ "[]"); }
 
-    int opEquals(Object o)
+    override int opEquals(Object o)
     {   TypeInfo_Array c;
 
 	return cast(int)
@@ -522,7 +522,7 @@ class TypeInfo_Array : TypeInfo
 		 this.value == c.value));
     }
 
-    hash_t getHash(in void *p)
+    override hash_t getHash(in void *p)
     {	size_t sz = value.tsize();
 	hash_t hash = 0;
 	void[] a = *cast(void[]*)p;
@@ -531,7 +531,7 @@ class TypeInfo_Array : TypeInfo
         return hash;
     }
 
-    int equals(in void *p1, in void *p2)
+    override int equals(in void *p1, in void *p2)
     {
 	void[] a1 = *cast(void[]*)p1;
 	void[] a2 = *cast(void[]*)p2;
@@ -546,7 +546,7 @@ class TypeInfo_Array : TypeInfo
         return 1;
     }
 
-    int compare(in void *p1, in void *p2)
+    override int compare(in void *p1, in void *p2)
     {
 	void[] a1 = *cast(void[]*)p1;
 	void[] a2 = *cast(void[]*)p2;
@@ -564,12 +564,12 @@ class TypeInfo_Array : TypeInfo
         return cast(int)a1.length - cast(int)a2.length;
     }
 
-    size_t tsize()
+    override size_t tsize()
     {
 	return (void[]).sizeof;
     }
 
-    void swap(void *p1, void *p2)
+    override void swap(void *p1, void *p2)
     {	void[] tmp;
 	tmp = *cast(void[]*)p1;
 	*cast(void[]*)p1 = *cast(void[]*)p2;
@@ -578,23 +578,23 @@ class TypeInfo_Array : TypeInfo
 
     TypeInfo value;
 
-    TypeInfo next()
+    override TypeInfo next()
     {
 	return value;
     }
 
-    uint flags() { return 1; }
+    override uint flags() { return 1; }
 }
 
 class TypeInfo_StaticArray : TypeInfo
 {
-    string toString()
+    override string toString()
     {
 	return cast(string)
             (value.toString() ~ "[" ~ std.string.toString(len) ~ "]");
     }
 
-    int opEquals(Object o)
+    override int opEquals(Object o)
     {   TypeInfo_StaticArray c;
 
 	return cast(int)
@@ -604,7 +604,7 @@ class TypeInfo_StaticArray : TypeInfo
 		 this.value == c.value));
     }
 
-    hash_t getHash(in void *p)
+    override hash_t getHash(in void *p)
     {	size_t sz = value.tsize();
 	hash_t hash = 0;
 	for (size_t i = 0; i < len; i++)
@@ -612,7 +612,7 @@ class TypeInfo_StaticArray : TypeInfo
         return hash;
     }
 
-    int equals(in void *p1, in void *p2)
+    override int equals(in void *p1, in void *p2)
     {
 	size_t sz = value.tsize();
 
@@ -624,7 +624,7 @@ class TypeInfo_StaticArray : TypeInfo
         return 1;
     }
 
-    int compare(in void *p1, in void *p2)
+    override int compare(in void *p1, in void *p2)
     {
 	size_t sz = value.tsize();
 
@@ -637,12 +637,12 @@ class TypeInfo_StaticArray : TypeInfo
         return 0;
     }
 
-    size_t tsize()
+    override size_t tsize()
     {
 	return len * value.tsize();
     }
 
-    void swap(void *p1, void *p2)
+    override void swap(void *p1, void *p2)
     {	void* tmp;
 	size_t sz = value.tsize();
 	ubyte[16] buffer;
@@ -663,9 +663,9 @@ class TypeInfo_StaticArray : TypeInfo
 	    delete pbuffer;
     }
 
-    void[] init() { return value.init(); }
-    TypeInfo next() { return value; }
-    uint flags() { return value.flags(); }
+    override void[] init() { return value.init(); }
+    override TypeInfo next() { return value; }
+    override uint flags() { return value.flags(); }
 
     TypeInfo value;
     size_t len;
@@ -673,12 +673,12 @@ class TypeInfo_StaticArray : TypeInfo
 
 class TypeInfo_AssociativeArray : TypeInfo
 {
-    string toString()
+    override string toString()
     {
 	return cast(string) (value.toString() ~ "[" ~ key.toString() ~ "]");
     }
 
-    int opEquals(Object o)
+    override int opEquals(Object o)
     {   TypeInfo_AssociativeArray c;
 
 	return this is o ||
@@ -689,13 +689,13 @@ class TypeInfo_AssociativeArray : TypeInfo
 
     // BUG: need to add the rest of the functions
 
-    size_t tsize()
+    override size_t tsize()
     {
 	return (char[int]).sizeof;
     }
 
-    TypeInfo next() { return value; }
-    uint flags() { return 1; }
+    override TypeInfo next() { return value; }
+    override uint flags() { return 1; }
 
     TypeInfo value;
     TypeInfo key;
@@ -703,12 +703,12 @@ class TypeInfo_AssociativeArray : TypeInfo
 
 class TypeInfo_Function : TypeInfo
 {
-    string toString()
+    override string toString()
     {
 	return cast(string) (next.toString() ~ "()");
     }
 
-    int opEquals(Object o)
+    override int opEquals(Object o)
     {   TypeInfo_Function c;
 
 	return this is o ||
@@ -718,7 +718,7 @@ class TypeInfo_Function : TypeInfo
 
     // BUG: need to add the rest of the functions
 
-    size_t tsize()
+    override size_t tsize()
     {
 	return 0;	// no size for functions
     }
@@ -728,12 +728,12 @@ class TypeInfo_Function : TypeInfo
 
 class TypeInfo_Delegate : TypeInfo
 {
-    string toString()
+    override string toString()
     {
 	return cast(string) (next.toString() ~ " delegate()");
     }
 
-    int opEquals(Object o)
+    override int opEquals(Object o)
     {   TypeInfo_Delegate c;
 
 	return this is o ||
@@ -743,21 +743,21 @@ class TypeInfo_Delegate : TypeInfo
 
     // BUG: need to add the rest of the functions
 
-    size_t tsize()
+    override size_t tsize()
     {	alias int delegate() dg;
 	return dg.sizeof;
     }
 
-    uint flags() { return 1; }
+    override uint flags() { return 1; }
 
     TypeInfo next;	// delegate return type
 }
 
 class TypeInfo_Class : TypeInfo
 {
-    string toString() { return info.name; }
+    override string toString() { return info.name; }
 
-    int opEquals(Object o)
+    override int opEquals(Object o)
     {   TypeInfo_Class c;
 
 	return this is o ||
@@ -765,14 +765,14 @@ class TypeInfo_Class : TypeInfo
 		 this.info.name == c.classinfo.name);
     }
 
-    hash_t getHash(in void *p)
+    override hash_t getHash(in void *p)
     {
 	Object o = *cast(Object*)p;
 	assert(o);
 	return o.toHash();
     }
 
-    int equals(in void *p1, in void *p2)
+    override int equals(in void *p1, in void *p2)
     {
 	Object o1 = *cast(Object*)p1;
 	Object o2 = *cast(Object*)p2;
@@ -780,7 +780,7 @@ class TypeInfo_Class : TypeInfo
 	return (o1 is o2) || (o1 && o1.opEquals(o2));
     }
 
-    int compare(in void *p1, in void *p2)
+    override int compare(in void *p1, in void *p2)
     {
 	Object o1 = *cast(Object*)p1;
 	Object o2 = *cast(Object*)p2;
@@ -801,14 +801,14 @@ class TypeInfo_Class : TypeInfo
 	return c;
     }
 
-    size_t tsize()
+    override size_t tsize()
     {
 	return Object.sizeof;
     }
 
-    uint flags() { return 1; }
+    override uint flags() { return 1; }
 
-    OffsetTypeInfo[] offTi()
+    override OffsetTypeInfo[] offTi()
     {
 	return (info.flags & 4) ? info.offTi : null;
     }
@@ -818,9 +818,9 @@ class TypeInfo_Class : TypeInfo
 
 class TypeInfo_Interface : TypeInfo
 {
-    string toString() { return info.name; }
+    override string toString() { return info.name; }
 
-    int opEquals(Object o)
+    override int opEquals(Object o)
     {   TypeInfo_Interface c;
 
 	return this is o ||
@@ -828,7 +828,7 @@ class TypeInfo_Interface : TypeInfo
 		 this.info.name == c.classinfo.name);
     }
 
-    hash_t getHash(in void *p)
+    override hash_t getHash(in void *p)
     {
 	Interface* pi = **cast(Interface ***)*cast(void**)p;
 	Object o = cast(Object)(*cast(void**)p - pi.offset);
@@ -836,7 +836,7 @@ class TypeInfo_Interface : TypeInfo
 	return o.toHash();
     }
 
-    int equals(in void *p1, in void *p2)
+    override int equals(in void *p1, in void *p2)
     {
 	Interface* pi = **cast(Interface ***)*cast(void**)p1;
 	Object o1 = cast(Object)(*cast(void**)p1 - pi.offset);
@@ -846,7 +846,7 @@ class TypeInfo_Interface : TypeInfo
 	return o1 == o2 || (o1 && o1.opCmp(o2) == 0);
     }
 
-    int compare(in void *p1, in void *p2)
+    override int compare(in void *p1, in void *p2)
     {
 	Interface* pi = **cast(Interface ***)*cast(void**)p1;
 	Object o1 = cast(Object)(*cast(void**)p1 - pi.offset);
@@ -869,21 +869,21 @@ class TypeInfo_Interface : TypeInfo
 	return c;
     }
 
-    size_t tsize()
+    override size_t tsize()
     {
 	return Object.sizeof;
     }
 
-    uint flags() { return 1; }
+    override uint flags() { return 1; }
 
     ClassInfo info;
 }
 
 class TypeInfo_Struct : TypeInfo
 {
-    string toString() { return name; }
+    override string toString() { return name; }
 
-    int opEquals(Object o)
+    override int opEquals(Object o)
     {   TypeInfo_Struct s;
 
 	return this is o ||
@@ -892,7 +892,7 @@ class TypeInfo_Struct : TypeInfo
 		 this.init.length == s.init.length);
     }
 
-    hash_t getHash(in void *p)
+    override hash_t getHash(in void *p)
     {	hash_t h;
 
 	assert(p);
@@ -915,7 +915,7 @@ class TypeInfo_Struct : TypeInfo
 	return h;
     }
 
-    int equals(in void *p2, in void *p1)
+    override int equals(in void *p2, in void *p1)
     {	int c;
 
 	if (p1 == p2)
@@ -930,7 +930,7 @@ class TypeInfo_Struct : TypeInfo
 	return c;
     }
 
-    int compare(in void *p2, in void *p1)
+    override int compare(in void *p2, in void *p1)
     {
 	int c = 0;
 
@@ -952,14 +952,14 @@ class TypeInfo_Struct : TypeInfo
 	return c;
     }
 
-    size_t tsize()
+    override size_t tsize()
     {
 	return init.length;
     }
 
-    void[] init() { return m_init; }
+    override void[] init() { return m_init; }
 
-    uint flags() { return m_flags; }
+    override uint flags() { return m_flags; }
 
     string name;
     void[] m_init;	// initializer; init.ptr == null if 0 initialize
@@ -978,7 +978,7 @@ class TypeInfo_Tuple : TypeInfo
 {
     TypeInfo[] elements;
 
-    string toString()
+    override string toString()
     {
 	string s;
 	s = "(";
@@ -992,7 +992,7 @@ class TypeInfo_Tuple : TypeInfo
         return s;
     }
 
-    int opEquals(Object o)
+    override int opEquals(Object o)
     {
 	if (this is o)
 	    return 1;
@@ -1010,27 +1010,27 @@ class TypeInfo_Tuple : TypeInfo
 	return 0;
     }
 
-    hash_t getHash(in void *p)
+    override hash_t getHash(in void *p)
     {
         assert(0);
     }
 
-    int equals(in void *p1, in void *p2)
+    override int equals(in void *p1, in void *p2)
     {
         assert(0);
     }
 
-    int compare(in void *p1, in void *p2)
+    override int compare(in void *p1, in void *p2)
     {
         assert(0);
     }
 
-    size_t tsize()
+    override size_t tsize()
     {
         assert(0);
     }
 
-    void swap(void *p1, void *p2)
+    override void swap(void *p1, void *p2)
     {
         assert(0);
     }
@@ -1077,7 +1077,7 @@ class MemberInfo_field : MemberInfo
 	m_offset = offset;
     }
 
-    string name() { return m_name; }
+    override string name() { return m_name; }
     TypeInfo typeInfo() { return m_typeinfo; }
     size_t offset() { return m_offset; }
 
@@ -1096,7 +1096,7 @@ class MemberInfo_function : MemberInfo
 	m_flags = flags;
     }
 
-    string name() { return m_name; }
+    override string name() { return m_name; }
     TypeInfo typeInfo() { return m_typeinfo; }
     void* fp() { return m_fp; }
     uint flags() { return m_flags; }
