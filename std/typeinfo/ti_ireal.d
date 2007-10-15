@@ -7,6 +7,6 @@ private import std.typeinfo.ti_real;
 
 class TypeInfo_j : TypeInfo_e
 {
-    string toString() { return "ireal"; }
+    override string toString() { return "ireal"; }
 }
 

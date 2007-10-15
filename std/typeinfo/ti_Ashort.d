@@ -7,9 +7,9 @@ private import std.c.string;
 
 class TypeInfo_As : TypeInfo
 {
-    string toString() { return "short[]"; }
+    override string toString() { return "short[]"; }
 
-    hash_t getHash(in void *p)
+    override hash_t getHash(in void *p)
     {	short[] s = *cast(short[]*)p;
 	size_t len = s.length;
 	short *str = s.ptr;
@@ -39,7 +39,7 @@ class TypeInfo_As : TypeInfo
 	return hash;
     }
 
-    int equals(in void *p1, in void *p2)
+    override int equals(in void *p1, in void *p2)
     {
 	short[] s1 = *cast(short[]*)p1;
 	short[] s2 = *cast(short[]*)p2;
@@ -48,7 +48,7 @@ class TypeInfo_As : TypeInfo
 	       memcmp(cast(void *)s1, cast(void *)s2, s1.length * short.sizeof) == 0;
     }
 
-    int compare(in void *p1, in void *p2)
+    override int compare(in void *p1, in void *p2)
     {
 	short[] s1 = *cast(short[]*)p1;
 	short[] s2 = *cast(short[]*)p2;
@@ -65,17 +65,17 @@ class TypeInfo_As : TypeInfo
 	return cast(int)s1.length - cast(int)s2.length;
     }
 
-    size_t tsize()
+    override size_t tsize()
     {
 	return (short[]).sizeof;
     }
 
-    uint flags()
+    override uint flags()
     {
 	return 1;
     }
 
-    TypeInfo next()
+    override TypeInfo next()
     {
 	return typeid(short);
     }
@@ -86,9 +86,9 @@ class TypeInfo_As : TypeInfo
 
 class TypeInfo_At : TypeInfo_As
 {
-    string toString() { return "ushort[]"; }
+    override string toString() { return "ushort[]"; }
 
-    int compare(in void *p1, in void *p2)
+    override int compare(in void *p1, in void *p2)
     {
 	ushort[] s1 = *cast(ushort[]*)p1;
 	ushort[] s2 = *cast(ushort[]*)p2;
@@ -105,7 +105,7 @@ class TypeInfo_At : TypeInfo_As
 	return cast(int)s1.length - cast(int)s2.length;
     }
 
-    TypeInfo next()
+    override TypeInfo next()
     {
 	return typeid(ushort);
     }
@@ -115,9 +115,9 @@ class TypeInfo_At : TypeInfo_As
 
 class TypeInfo_Au : TypeInfo_At
 {
-    string toString() { return "wchar[]"; }
+    override string toString() { return "wchar[]"; }
 
-    TypeInfo next()
+    override TypeInfo next()
     {
 	return typeid(wchar);
     }

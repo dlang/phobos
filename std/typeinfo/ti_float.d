@@ -7,9 +7,9 @@ private import std.math;
 
 class TypeInfo_f : TypeInfo
 {
-    string toString() { return "float"; }
+    override string toString() { return "float"; }
 
-    hash_t getHash(in void *p)
+    override hash_t getHash(in void *p)
     {
 	return *cast(uint *)p;
     }
@@ -34,22 +34,22 @@ class TypeInfo_f : TypeInfo
 	return (d1 == d2) ? 0 : ((d1 < d2) ? -1 : 1);
     }
 
-    int equals(in void *p1, in void *p2)
+    override int equals(in void *p1, in void *p2)
     {
 	return _equals(*cast(float *)p1, *cast(float *)p2);
     }
 
-    int compare(in void *p1, in void *p2)
+    override int compare(in void *p1, in void *p2)
     {
 	return _compare(*cast(float *)p1, *cast(float *)p2);
     }
 
-    size_t tsize()
+    override size_t tsize()
     {
 	return float.sizeof;
     }
 
-    void swap(void *p1, void *p2)
+    override void swap(void *p1, void *p2)
     {
 	float t;
 
@@ -58,7 +58,7 @@ class TypeInfo_f : TypeInfo
 	*cast(float *)p2 = t;
     }
 
-    void[] init()
+    override void[] init()
     {	static float r;
 
 	return (cast(float *)&r)[0 .. 1];

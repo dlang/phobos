@@ -29,9 +29,9 @@ private import std.typeinfo.ti_double;
 
 class TypeInfo_Ad : TypeInfo
 {
-    string toString() { return "double[]"; }
+    override string toString() { return "double[]"; }
 
-    hash_t getHash(in void *p)
+    override hash_t getHash(in void *p)
     {	double[] s = *cast(double[]*)p;
 	size_t len = s.length;
 	auto str = s.ptr;
@@ -49,7 +49,7 @@ class TypeInfo_Ad : TypeInfo
 	return hash;
     }
 
-    int equals(in void *p1, in void *p2)
+    override int equals(in void *p1, in void *p2)
     {
 	double[] s1 = *cast(double[]*)p1;
 	double[] s2 = *cast(double[]*)p2;
@@ -66,7 +66,7 @@ class TypeInfo_Ad : TypeInfo
 	return 1;
     }
 
-    int compare(in void *p1, in void *p2)
+    override int compare(in void *p1, in void *p2)
     {
 	double[] s1 = *cast(double[]*)p1;
 	double[] s2 = *cast(double[]*)p2;
@@ -83,17 +83,17 @@ class TypeInfo_Ad : TypeInfo
 	return cast(int)s1.length - cast(int)s2.length;
     }
 
-    size_t tsize()
+    override size_t tsize()
     {
 	return (double[]).sizeof;
     }
 
-    uint flags()
+    override uint flags()
     {
 	return 1;
     }
 
-    TypeInfo next()
+    override TypeInfo next()
     {
 	return typeid(double);
     }
@@ -103,9 +103,9 @@ class TypeInfo_Ad : TypeInfo
 
 class TypeInfo_Ap : TypeInfo_Ad
 {
-    string toString() { return "idouble[]"; }
+    override string toString() { return "idouble[]"; }
 
-    TypeInfo next()
+    override TypeInfo next()
     {
 	return typeid(idouble);
     }

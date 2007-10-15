@@ -27,14 +27,14 @@ module std.typeinfo.ti_C;
 
 class TypeInfo_C : TypeInfo
 {
-    hash_t getHash(in void *p)
+    override hash_t getHash(in void *p)
     {
 	Object o = *cast(Object*)p;
 	assert(o);
 	return o.toHash();
     }
 
-    int equals(in void *p1, in void *p2)
+    override int equals(in void *p1, in void *p2)
     {
 	Object o1 = *cast(Object*)p1;
 	Object o2 = *cast(Object*)p2;
@@ -42,7 +42,7 @@ class TypeInfo_C : TypeInfo
 	return o1 == o2;
     }
 
-    int compare(in void *p1, in void *p2)
+    override int compare(in void *p1, in void *p2)
     {
 	Object o1 = *cast(Object*)p1;
 	Object o2 = *cast(Object*)p2;
@@ -63,12 +63,12 @@ class TypeInfo_C : TypeInfo
 	return c;
     }
 
-    size_t tsize()
+    override size_t tsize()
     {
 	return Object.sizeof;
     }
 
-    uint flags()
+    override uint flags()
     {
 	return 1;
     }
