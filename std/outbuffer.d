@@ -228,7 +228,7 @@ class OutBuffer
      * Convert internal buffer to array of chars.
      */
 
-    string toString()
+    override string toString()
     {
 	//printf("OutBuffer.toString()\n");
 	return cast(string) data[0 .. offset].idup;
