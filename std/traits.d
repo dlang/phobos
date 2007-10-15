@@ -458,6 +458,8 @@ template isArray(T)
 static assert(isArray!(int[]));
 static assert(isArray!(int[5]));
 static assert(!isArray!(uint));
+static assert(!isArray!(uint[uint]));
+static assert(isArray!(void[]));
 
 
 /**

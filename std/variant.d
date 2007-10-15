@@ -11,7 +11,7 @@
  * languages, and comfortable exploratory programming. 
  *
  * Macros:
- *	WIKI = Phobos/StdVariant
+ *	WIKI = Phobos/StdFormat
  *
  * Synopsis:
  *
