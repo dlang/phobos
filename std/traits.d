@@ -369,12 +369,15 @@ static assert(isSomeString!(char[4]));
 template isAssociativeArray(T)
 {
     static const bool isAssociativeArray
-      = is(typeof(T.init.values[0])[typeof(T.init.keys[0])] == T);
+    = is(typeof(T.keys)) && is(typeof(T.values));
+    //      = is(typeof(T.init.values[0])[typeof(T.init.keys[0])] == T);
 }
 
 static assert(!isAssociativeArray!(int));
+static assert(!isAssociativeArray!(int[]));
 static assert(isAssociativeArray!(int[int]));
 static assert(isAssociativeArray!(int[string]));
+static assert(isAssociativeArray!(invariant(char[5])[int]));
 
 /* *******************************************
  */
