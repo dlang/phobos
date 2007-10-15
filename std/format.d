@@ -1851,7 +1851,9 @@ private void formatIntegral(Writer, D)(ref Writer w, D arg, FormatInfo f)
         if (leftPad == '0')
         {
             // pad with zeros
-            f.precision = spacesToPrint + digits.length;
+            f.precision =
+                cast(typeof(f.precision)) (spacesToPrint + digits.length);
+                //to!(typeof(f.precision))(spacesToPrint + digits.length);
         }
         else if (leftPad) foreach (i ; 0 .. spacesToPrint) w.putchar(' ');
     }
@@ -1964,7 +1966,7 @@ private void formatGeneric(Writer, D)(ref Writer w, const(void)* arg,
         w.putchar('[');
         foreach (i, e; obj)
         {
-            if (i > 0) w.putchar(',');
+            if (i > 0) w.putchar(' ');
             formatGeneric!(Writer, typeof(e))(w, &e, f);
         }
         w.putchar(']');
@@ -1975,6 +1977,17 @@ private void formatGeneric(Writer, D)(ref Writer w, const(void)* arg,
     } else static if (is(D : Object)) {
         if (obj is null) w.write("null");
         else w.write(obj.toString);
+    } else static if (isAssociativeArray!(D)) {
+        uint i = 0;
+//         static if (isStaticArray!(typeof(obj.values[0]))) {
+//             alias DecayStaticToDynamicArray!(typeof(obj.values[0])) V;
+//         }
+        foreach (k, invariant char[] v; obj) {
+            if (i++ > 0) w.putchar(' ');
+            formatGeneric!(Writer, typeof(k))(w, &k, f);
+            w.putchar(':');
+            formatGeneric!(Writer, typeof(k))(w, &k, f);
+        }
     } else {
         static assert(false, "Cannot format type " ~ D.stringof);
     }
@@ -2266,62 +2279,62 @@ unittest
   arrbyte[1] = -99;
   arrbyte[3] = 0;
   stream.backend = null; formattedWrite(stream, "", arrbyte);
-  assert(stream.backend == "[100,-99,0,0]");
+  assert(stream.backend == "[100 -99 0 0]");
 
   ubyte[] arrubyte = new ubyte[4];
   arrubyte[0] = 100;
   arrubyte[1] = 200;
   arrubyte[3] = 0;
   stream.backend = null; formattedWrite(stream, "", arrubyte);
-  assert(stream.backend == "[100,200,0,0]");
+  assert(stream.backend == "[100 200 0 0]");
 
   short[] arrshort = new short[4];
   arrshort[0] = 100;
   arrshort[1] = -999;
   arrshort[3] = 0;
   stream.backend = null; formattedWrite(stream, "", arrshort);
-  assert(stream.backend == "[100,-999,0,0]");
+  assert(stream.backend == "[100 -999 0 0]");
   stream.backend = null; formattedWrite(stream, "%s",arrshort);
-  assert(stream.backend == "[100,-999,0,0]");
+  assert(stream.backend == "[100 -999 0 0]");
 
   ushort[] arrushort = new ushort[4];
   arrushort[0] = 100;
   arrushort[1] = 20_000;
   arrushort[3] = 0;
   stream.backend = null; formattedWrite(stream, "", arrushort);
-  assert(stream.backend == "[100,20000,0,0]");
+  assert(stream.backend == "[100 20000 0 0]");
 
   int[] arrint = new int[4];
   arrint[0] = 100;
   arrint[1] = -999;
   arrint[3] = 0;
   stream.backend = null; formattedWrite(stream, "", arrint);
-  assert(stream.backend == "[100,-999,0,0]");
+  assert(stream.backend == "[100 -999 0 0]");
   stream.backend = null; formattedWrite(stream, "%s",arrint);
-  assert(stream.backend == "[100,-999,0,0]");
+  assert(stream.backend == "[100 -999 0 0]");
 
   long[] arrlong = new long[4];
   arrlong[0] = 100;
   arrlong[1] = -999;
   arrlong[3] = 0;
   stream.backend = null; formattedWrite(stream, "", arrlong);
-  assert(stream.backend == "[100,-999,0,0]");
+  assert(stream.backend == "[100 -999 0 0]");
   stream.backend = null; formattedWrite(stream, "%s",arrlong);
-  assert(stream.backend == "[100,-999,0,0]");
+  assert(stream.backend == "[100 -999 0 0]");
     
   ulong[] arrulong = new ulong[4];
   arrulong[0] = 100;
   arrulong[1] = 999;
   arrulong[3] = 0;
   stream.backend = null; formattedWrite(stream, "", arrulong);
-  assert(stream.backend == "[100,999,0,0]");
+  assert(stream.backend == "[100 999 0 0]");
   
   string[] arr2 = new string[4];
   arr2[0] = "hello";
   arr2[1] = "world";
   arr2[3] = "foo";
   stream.backend = null; formattedWrite(stream, "", arr2);
-  assert(stream.backend == "[hello,world,,foo]");
+  assert(stream.backend == "[hello world  foo]");
 
   stream.backend = null; formattedWrite(stream, "%.8d", 7);
   assert(stream.backend == "00000007");
@@ -2561,3 +2574,30 @@ unittest
                               }
 }
 
+unittest
+{
+   invariant(char[5])[int] aa = ([3:"hello", 4:"betty"]);
+   if (false) writeln(aa.keys);
+   assert(aa[3] == "hello");
+   assert(aa[4] == "betty");
+   if (false)
+   {
+       writeln(aa.values[0]);
+       writeln(aa.values[1]);
+       writefln("%s", typeid(typeof(aa.values)));
+       writefln("%s", aa[3]);
+       writefln("%s", aa[4]);
+       writefln("%s", aa.values);
+       //writefln("%s", aa);
+       wstring a = "abcd";
+       writefln(a);
+       dstring b = "abcd";
+       writefln(b);
+   }
+
+   auto r = std.string.format("%s", aa.values);
+   assert(r == "[[h,e,l,l,o],[b,e,t,t,y]]");
+//    r = std.string.format("%s", aa);
+//   assert(r == "[3:[h,e,l,l,o],4:[b,e,t,t,y]]");
+
+}

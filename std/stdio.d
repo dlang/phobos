@@ -342,19 +342,33 @@ void writef(T...)(T args)
         " you may want to use write.";
     static if (!is(typeof(args[0]) : FILE*))
     {
-        static assert(isSomeString!(T[0]), errorMessage);
-        w.backend = stdout;
-        FLOCK(w.backend);
-        scope(exit) FUNLOCK(w.backend);
-        std.format.formattedWrite(w, args);
+        static if (!isSomeString!(T[0]))
+        {
+            // compatibility hack
+            return writef(stdio, "", args);
+        }
+        else
+        {
+            w.backend = stdout;
+            FLOCK(w.backend);
+            scope(exit) FUNLOCK(w.backend);
+            std.format.formattedWrite(w, args);
+        }
     }
     else
     {
-        static assert(isSomeString!(T[1]), errorMessage);
-        w.backend = args[0];
-        FLOCK(w.backend);
-        scope(exit) FUNLOCK(w.backend);
-        std.format.formattedWrite(w, args[1 .. $]);
+        static if (!isSomeString!(T[1]))
+        {
+            // compatibility hack
+            return writef(args[0], "", args[1 .. $]);
+        }
+        else
+        {
+            w.backend = args[0];
+            FLOCK(w.backend);
+            scope(exit) FUNLOCK(w.backend);
+            std.format.formattedWrite(w, args[1 .. $]);
+        }
     }
 }
 
@@ -391,19 +405,33 @@ void writefln(T...)(T args)
         " you may want to use writeln.";
     static if (!is(typeof(args[0]) : FILE*))
     {
-        static assert(isSomeString!(T[0]), errorMessage);
-        w.backend = stdout;
-        FLOCK(w.backend);
-        scope(exit) FUNLOCK(w.backend);
-        std.format.formattedWrite(w, args, '\n');
+        static if (!isSomeString!(T[0]))
+        {
+            // compatibility hack
+            return writef(stdio, "", args, '\n');
+        }
+        else
+        {
+            w.backend = stdout;
+            FLOCK(w.backend);
+            scope(exit) FUNLOCK(w.backend);
+            std.format.formattedWrite(w, args, '\n');
+        }
     }
     else
     {
-        static assert(isSomeString!(T[1]), errorMessage);
-        w.backend = args[0];
-        FLOCK(w.backend);
-        scope(exit) FUNLOCK(w.backend);
-        std.format.formattedWrite(w, args[1 .. $], '\n');
+        static if (!isSomeString!(T[1]))
+        {
+            // compatibility hack
+            return writef(args[0], "", args[1 .. $], '\n');
+        }
+        else
+        {
+            w.backend = args[0];
+            FLOCK(w.backend);
+            scope(exit) FUNLOCK(w.backend);
+            std.format.formattedWrite(w, args[1 .. $], '\n');
+        }
     }
 }
 
@@ -824,7 +852,7 @@ private struct FileWriter(Char)
                 }
                 else
                 {
-                    char[2] buf;
+                    char[4] buf;
                     auto b = std.utf.toUTF8(buf, c);
                     foreach (i ; 0 .. b.length)
                         FPUTC(b[i], backend);

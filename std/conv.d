@@ -637,7 +637,7 @@ private N parseIntegral(S, N)(ref S s)
             alias uint N1;
         auto v = parseIntegral!(S, N1)(s);
         auto result = cast(N) v;
-        if (result != v) conv_error(s.idup);
+        if (result != v) conv_error(to!(string)(s));
         return result;
     }
     else
@@ -692,9 +692,9 @@ private N parseIntegral(S, N)(ref S s)
         }
         return v;
     Loverflow:
-        conv_overflow(s.idup);
+        conv_overflow(to!(string)(s));
     Lerr:
-        conv_error(s.idup);
+        conv_error(to!(string)(s));
         return 0;
     }
 }
