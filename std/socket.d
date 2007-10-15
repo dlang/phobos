@@ -545,7 +545,7 @@ abstract class Address
 	protected sockaddr* name();
 	protected int nameLen();
 	AddressFamily addressFamily();	/// Family of this address.
-	string toString();		/// Human readable string representing this address.
+	override string toString();		/// Human readable string representing this address.
 }
 
 /**
@@ -557,26 +557,26 @@ class UnknownAddress: Address
 	sockaddr sa;
 	
 	
-	sockaddr* name()
+	override sockaddr* name()
 	{
 		return &sa;
 	}
 	
 	
-	int nameLen()
+	override int nameLen()
 	{
 		return sa.sizeof;
 	}
 	
 	
 	public:
-	AddressFamily addressFamily()
+	override AddressFamily addressFamily()
 	{
 		return cast(AddressFamily)sa.sa_family;
 	}
 	
 	
-	string toString()
+	override string toString()
 	{
 		return "Unknown";
 	}
@@ -593,13 +593,13 @@ class InternetAddress: Address
 	sockaddr_in sin;
 
 
-	sockaddr* name()
+	override sockaddr* name()
 	{
 		return cast(sockaddr*)&sin;
 	}
 	
 	
-	int nameLen()
+	override int nameLen()
 	{
 		return sin.sizeof;
 	}
@@ -616,7 +616,7 @@ class InternetAddress: Address
 	const ushort PORT_ANY = 0;		/// Any IPv4 port number.
 	
 	/// Overridden to return AddressFamily.INET.
-	AddressFamily addressFamily()
+	override AddressFamily addressFamily()
 	{
 		return cast(AddressFamily)AddressFamily.INET;
 	}
@@ -687,7 +687,7 @@ class InternetAddress: Address
 	}
 	
 	/// Human readable string representing the IPv4 address and port in the form $(I a.b.c.d:e).
-	string toString()
+	override string toString()
 	{
             return toAddrString() ~ ":" ~ toPortString();
 	}

@@ -1423,14 +1423,14 @@ class FilterStream : Stream {
   }
 
   // read from source
-  size_t readBlock(void* buffer, size_t size) {
+  override size_t readBlock(void* buffer, size_t size) {
     size_t res = s.readBlock(buffer,size);
     readEOF = res == 0;
     return res;
   }
 
   // write to source
-  size_t writeBlock(const void* buffer, size_t size) {
+  override size_t writeBlock(const void* buffer, size_t size) {
     return s.writeBlock(buffer,size);
   }
 
@@ -1498,7 +1498,7 @@ class BufferedStream : FilterStream {
       buffer = new ubyte[bufferSize];
   }
 
-  protected void resetSource() {
+  override protected void resetSource() {
     super.resetSource();
     streamPos = 0;
     bufferLen = bufferSourcePos = bufferCurPos = 0;
@@ -1740,13 +1740,13 @@ class BufferedStream : FilterStream {
   }
 
   // returns size of stream
-  ulong size() {
+  override ulong size() {
     if (bufferDirty) flush();
     return s.size();
   }
 
   // returns estimated number of bytes available for immediate reading
-  size_t available() {
+  override size_t available() {
     return bufferLen - bufferCurPos;
   }
 }
@@ -2328,25 +2328,25 @@ class EndianStream : FilterStream {
     }
   }
 
-  void read(out short x) { readExact(&x, x.sizeof); fixBO(&x,x.sizeof); }
-  void read(out ushort x) { readExact(&x, x.sizeof); fixBO(&x,x.sizeof); }
-  void read(out int x) { readExact(&x, x.sizeof); fixBO(&x,x.sizeof); }
-  void read(out uint x) { readExact(&x, x.sizeof); fixBO(&x,x.sizeof); }
-  void read(out long x) { readExact(&x, x.sizeof); fixBO(&x,x.sizeof); }
-  void read(out ulong x) { readExact(&x, x.sizeof); fixBO(&x,x.sizeof); }
-  void read(out float x) { readExact(&x, x.sizeof); fixBO(&x,x.sizeof); }
-  void read(out double x) { readExact(&x, x.sizeof); fixBO(&x,x.sizeof); }
-  void read(out real x) { readExact(&x, x.sizeof); fixBO(&x,x.sizeof); }
-  void read(out ifloat x) { readExact(&x, x.sizeof); fixBO(&x,x.sizeof); }
-  void read(out idouble x) { readExact(&x, x.sizeof); fixBO(&x,x.sizeof); }
-  void read(out ireal x) { readExact(&x, x.sizeof); fixBO(&x,x.sizeof); }
-  void read(out cfloat x) { readExact(&x, x.sizeof); fixBlockBO(&x,float.sizeof,2); }
-  void read(out cdouble x) { readExact(&x, x.sizeof); fixBlockBO(&x,double.sizeof,2); }
-  void read(out creal x) { readExact(&x, x.sizeof); fixBlockBO(&x,real.sizeof,2); }
-  void read(out wchar x) { readExact(&x, x.sizeof); fixBO(&x,x.sizeof); }
-  void read(out dchar x) { readExact(&x, x.sizeof); fixBO(&x,x.sizeof); }
+  override void read(out short x) { readExact(&x, x.sizeof); fixBO(&x,x.sizeof); }
+  override void read(out ushort x) { readExact(&x, x.sizeof); fixBO(&x,x.sizeof); }
+  override void read(out int x) { readExact(&x, x.sizeof); fixBO(&x,x.sizeof); }
+  override void read(out uint x) { readExact(&x, x.sizeof); fixBO(&x,x.sizeof); }
+  override void read(out long x) { readExact(&x, x.sizeof); fixBO(&x,x.sizeof); }
+  override void read(out ulong x) { readExact(&x, x.sizeof); fixBO(&x,x.sizeof); }
+  override void read(out float x) { readExact(&x, x.sizeof); fixBO(&x,x.sizeof); }
+  override void read(out double x) { readExact(&x, x.sizeof); fixBO(&x,x.sizeof); }
+  override void read(out real x) { readExact(&x, x.sizeof); fixBO(&x,x.sizeof); }
+  override void read(out ifloat x) { readExact(&x, x.sizeof); fixBO(&x,x.sizeof); }
+  override void read(out idouble x) { readExact(&x, x.sizeof); fixBO(&x,x.sizeof); }
+  override void read(out ireal x) { readExact(&x, x.sizeof); fixBO(&x,x.sizeof); }
+  override void read(out cfloat x) { readExact(&x, x.sizeof); fixBlockBO(&x,float.sizeof,2); }
+  override void read(out cdouble x) { readExact(&x, x.sizeof); fixBlockBO(&x,double.sizeof,2); }
+  override void read(out creal x) { readExact(&x, x.sizeof); fixBlockBO(&x,real.sizeof,2); }
+  override void read(out wchar x) { readExact(&x, x.sizeof); fixBO(&x,x.sizeof); }
+  override void read(out dchar x) { readExact(&x, x.sizeof); fixBO(&x,x.sizeof); }
 
-  wchar getcw() {
+  override wchar getcw() {
     wchar c;
     if (prevCr) {
       prevCr = false;
@@ -2367,7 +2367,7 @@ class EndianStream : FilterStream {
     return c;
   }
 
-  wchar[] readStringW(size_t length) {
+  override wchar[] readStringW(size_t length) {
     wchar[] result = new wchar[length];
     readExact(result.ptr, result.length * wchar.sizeof);
     fixBlockBO(&result,2,length);
@@ -2380,23 +2380,23 @@ class EndianStream : FilterStream {
     writeBlock(bom.ptr, bom.length);
   }
 
-  void write(short x) { fixBO(&x,x.sizeof); writeExact(&x, x.sizeof); }
-  void write(ushort x) { fixBO(&x,x.sizeof); writeExact(&x, x.sizeof); }
-  void write(int x) { fixBO(&x,x.sizeof); writeExact(&x, x.sizeof); }
-  void write(uint x) { fixBO(&x,x.sizeof); writeExact(&x, x.sizeof); }
-  void write(long x) { fixBO(&x,x.sizeof); writeExact(&x, x.sizeof); }
-  void write(ulong x) { fixBO(&x,x.sizeof); writeExact(&x, x.sizeof); }
-  void write(float x) { fixBO(&x,x.sizeof); writeExact(&x, x.sizeof); }
-  void write(double x) { fixBO(&x,x.sizeof); writeExact(&x, x.sizeof); }
-  void write(real x) { fixBO(&x,x.sizeof); writeExact(&x, x.sizeof); }
-  void write(ifloat x) { fixBO(&x,x.sizeof); writeExact(&x, x.sizeof); }
-  void write(idouble x) { fixBO(&x,x.sizeof); writeExact(&x, x.sizeof); }
-  void write(ireal x) { fixBO(&x,x.sizeof); writeExact(&x, x.sizeof); }
-  void write(cfloat x) { fixBlockBO(&x,float.sizeof,2); writeExact(&x, x.sizeof); }
-  void write(cdouble x) { fixBlockBO(&x,double.sizeof,2); writeExact(&x, x.sizeof); }
-  void write(creal x) { fixBlockBO(&x,real.sizeof,2); writeExact(&x, x.sizeof);  }
-  void write(wchar x) { fixBO(&x,x.sizeof); writeExact(&x, x.sizeof); }
-  void write(dchar x) { fixBO(&x,x.sizeof); writeExact(&x, x.sizeof); }
+  override void write(short x) { fixBO(&x,x.sizeof); writeExact(&x, x.sizeof); }
+  override void write(ushort x) { fixBO(&x,x.sizeof); writeExact(&x, x.sizeof); }
+  override void write(int x) { fixBO(&x,x.sizeof); writeExact(&x, x.sizeof); }
+  override void write(uint x) { fixBO(&x,x.sizeof); writeExact(&x, x.sizeof); }
+  override void write(long x) { fixBO(&x,x.sizeof); writeExact(&x, x.sizeof); }
+  override void write(ulong x) { fixBO(&x,x.sizeof); writeExact(&x, x.sizeof); }
+  override void write(float x) { fixBO(&x,x.sizeof); writeExact(&x, x.sizeof); }
+  override void write(double x) { fixBO(&x,x.sizeof); writeExact(&x, x.sizeof); }
+  override void write(real x) { fixBO(&x,x.sizeof); writeExact(&x, x.sizeof); }
+  override void write(ifloat x) { fixBO(&x,x.sizeof); writeExact(&x, x.sizeof); }
+  override void write(idouble x) { fixBO(&x,x.sizeof); writeExact(&x, x.sizeof); }
+  override void write(ireal x) { fixBO(&x,x.sizeof); writeExact(&x, x.sizeof); }
+  override void write(cfloat x) { fixBlockBO(&x,float.sizeof,2); writeExact(&x, x.sizeof); }
+  override void write(cdouble x) { fixBlockBO(&x,double.sizeof,2); writeExact(&x, x.sizeof); }
+  override void write(creal x) { fixBlockBO(&x,real.sizeof,2); writeExact(&x, x.sizeof);  }
+  override void write(wchar x) { fixBO(&x,x.sizeof); writeExact(&x, x.sizeof); }
+  override void write(dchar x) { fixBO(&x,x.sizeof); writeExact(&x, x.sizeof); }
 
   override void writeStringW(const(wchar)[] str) {
     foreach(wchar cw;str) {

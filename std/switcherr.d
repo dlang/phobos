@@ -29,7 +29,7 @@ class SwitchError : Error
      * getting called by the startup code.
      */
 
-    void print()
+    override void print()
     {
 	printf("Switch Default %s(%u)\n", cast(char *)filename, linnum);
     }
