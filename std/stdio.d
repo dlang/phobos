@@ -345,7 +345,7 @@ void writef(T...)(T args)
         static if (!isSomeString!(T[0]))
         {
             // compatibility hack
-            return writef(stdio, "", args);
+            return writef(stdout, "", args);
         }
         else
         {
