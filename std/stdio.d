@@ -785,6 +785,34 @@ size_t readln(inout char[] buf, dchar terminator = '\n')
     return readln(stdin, buf, terminator);
 }
 
+/** ditto */
+// TODO: optimize this
+size_t readln(FILE* f, inout wchar[] buf, dchar terminator = '\n')
+{
+    string s = readln(f, terminator);
+    if (!s.length) return 0;
+    buf.length = 0;
+    foreach (wchar c; s)
+    {
+        buf ~= c;
+    }
+    return buf.length;
+}
+
+/** ditto */
+// TODO: fold this together with wchar
+size_t readln(FILE* f, inout dchar[] buf, dchar terminator = '\n')
+{
+    string s = readln(f, terminator);
+    if (!s.length) return 0;
+    buf.length = 0;
+    foreach (dchar c; s)
+    {
+        buf ~= c;
+    }
+    return buf.length;
+}
+
 /***********************************
  * Convenience function that forwards to $(D_PARAM std.c.stdio.fopen)
  * with appropriately-constructed C-style strings.
@@ -916,146 +944,6 @@ private struct FileWriter(Char)
     }
 }
 
-struct LinesIterator
-{
-    FILE * f;
-    dchar terminator;
-    // new S allocated every time
-    private int opApplyString(S, D)(D dg)
-    {
-        alias ParameterTypeTuple!(dg) Parms;
-        int result = 1;
-        string line;
-        ulong i;
-        while ((line = readln(f, terminator)).length)
-        {
-            auto copy = to!(Parms[$ - 1])(line);
-            static if (Parms.length == 2)
-                result = dg(i, copy);
-            else
-                result = dg(copy);
-            if (result != 0) break;
-            static if (Parms.length == 2) ++line;
-        }
-        return result;
-    }
-    // new string allocated every time
-    int opApply(int delegate(ref string) dg)
-    {
-        return opApplyString!(string, typeof(dg))(dg);
-    }
-    // new wstring allocated every time
-    int opApply(int delegate(ref wstring) dg)
-    {
-        return opApplyString!(wstring, typeof(dg))(dg);
-    }
-    // new dstring allocated every time
-    int opApply(int delegate(ref dstring) dg)
-    {
-        return opApplyString!(dstring, typeof(dg))(dg);
-    }
-
-    // string is reused between calls
-    int opApply(int delegate(ref char[]) dg)
-    {
-        int result = 1;
-        char[] line;
-        while (readln(f, line, terminator))
-        {
-            if ((result = dg(line)) != 0) break;
-        }
-        return result;
-    }
-    // w/dstring is reused between calls
-    // TODO: optimize this
-    private int opApplyReuseWideString(Char)(int delegate(ref Char[]) dg)
-    {
-        int result = 1;
-        char[] line;
-        Char[] copy;
-        while (readln(f, line, terminator))
-        {
-            foreach (size_t i, Char c; line)
-            {
-                if (i >= copy.length) copy ~= c;
-                else copy[i] = c;
-            }
-            if ((result = dg(copy)) != 0) break;
-        }
-        return result;
-    }
-    int opApply(int delegate(ref wchar[]) dg)
-    {
-        return opApplyReuseWideString(dg);
-    }
-    int opApply(int delegate(ref dchar[]) dg)
-    {
-        return opApplyReuseWideString(dg);
-    }
-    // no UTF checking, new allocation every line
-    int opApply(int delegate(ref invariant(ubyte)[]) dg)
-    {
-        int result = 1;
-        int c = void;
-        FLOCK(f);
-	scope(exit) FUNLOCK(f);
-        ubyte[] buffer;
-        while ((c = FGETC(f)) != -1)
-        {
-            buffer ~= to!(ubyte)(c);
-            if (c == terminator)
-            {
-                auto fake = assumeUnique(buffer);
-                // unlock the file while calling the delegate
-                FUNLOCK(f);
-                scope(exit) FLOCK(f);
-                if ((result = dg(fake)) != 0) break;
-            }
-        }
-        return result;
-    }
-    // no UTF checking, reuse buffer
-    int opApply(int delegate(ref ubyte[]) dg)
-    {
-        return opApplyGeneric(dg);
-    }
-    int opApply(int delegate(ref ulong i, ref ubyte[]) dg)
-    {
-        return opApplyGeneric(dg);
-    }
-    
-    int opApplyGeneric(D)(D dg)
-    {
-        alias ParameterTypeTuple!(dg) Parms;
-        int result = 1;
-        int c = void;
-        FLOCK(f);
-	scope(exit) FUNLOCK(f);
-        Parms[$ - 1] buffer;
-        static if (Parms.length == 2) Parms[0] i;
-        while ((c = FGETC(f)) != -1)
-        {
-            buffer ~= to!(typeof(buffer[0]))(c);
-            if (c == terminator)
-            {
-                // unlock the file while calling the delegate
-                FUNLOCK(f);
-                scope(exit) FLOCK(f);
-                static if (Parms.length == 2)
-                    result = dg(i, buffer);
-                else
-                    result = dg(buffer);
-                if (result != 0) return result;
-                buffer.length = 0;
-                static if (Parms.length == 2) ++i;
-            }
-        }
-        // can only reach when FGETC returned -1
-        if (!feof(f)) throw new StdioException(ferror(f)); // error occured
-        return result;
-    }
-}
-
 /**
  * Iterates through the lines of a file by using $(D_PARAM foreach).
  *
@@ -1087,8 +975,8 @@ similar to case (2), except that no UTF checking is attempted upon
 input.))
 
 In all cases, a two-symbols versions is also accepted, in which case
-the first symbol (of type $(D_PARAM ulong)) tracks the zero-based
-number of the current line.
+the first symbol (of integral type, e.g. $(D_PARAM ulong) or $(D_PARAM
+uint)) tracks the zero-based number of the current line.
 
 Example:
 ----
@@ -1101,19 +989,93 @@ Example:
  In case of an I/O error, an $(D_PARAM StdioException) is thrown. 
  */
 
-LinesIterator lines(FILE* f, dchar terminator = '\n')
+struct lines
 {
-    LinesIterator result;
-    result.f = f;
-    result.terminator = terminator;
-    return result;
+    FILE * f;
+    dchar terminator = '\n';
+    int opApply(D)(D dg)
+    {
+        alias ParameterTypeTuple!(dg) Parms;
+        static if (isSomeString!(Parms[$ - 1]))
+        {
+            static const bool duplicate = is(Parms[$ - 1] == string)
+                || is(Parms[$ - 1] == wstring) || is(Parms[$ - 1] == dstring);
+            int result = 0;
+            static if (is(Parms[$ - 1] : const(char)[]))
+                alias char C;
+            else static if (is(Parms[$ - 1] : const(wchar)[]))
+                alias wchar C;
+            else static if (is(Parms[$ - 1] : const(dchar)[]))
+                alias dchar C;
+            C[] line;
+            static if (Parms.length == 2)
+                Parms[0] i = 0;
+            for (;;)
+            {
+                if (!readln(f, line, terminator)) break;
+                auto copy = to!(Parms[$ - 1])(line);
+                static if (Parms.length == 2)
+                {
+                    result = dg(i, copy);
+                    ++i;
+                }
+                else
+                {
+                    result = dg(copy);
+                }
+                if (result != 0) break;
+            }
+            return result;
+        }
+        else
+        {
+            // raw read
+            return opApplyRaw(dg);
+        }
+    }
+    // no UTF checking
+    int opApplyRaw(D)(D dg)
+    {
+        alias ParameterTypeTuple!(dg) Parms;
+        static const duplicate = is(typeof(Parms[$ - 1]) : invariant(ubyte)[]);
+        int result = 1;
+        int c = void;
+        FLOCK(f);
+	scope(exit) FUNLOCK(f);
+        ubyte[] buffer;
+        static if (Parms.length == 2)
+            Parms[0] line = 0;
+        while ((c = FGETC(f)) != -1)
+        {
+            buffer ~= to!(ubyte)(c);
+            if (c == terminator)
+            {
+                static if (duplicate)
+                    auto arg = assumeUnique(buffer);
+                else
+                    alias buffer arg;
+                // unlock the file while calling the delegate
+                FUNLOCK(f);
+                scope(exit) FLOCK(f);
+                static if (Parms.length == 1)
+                {
+                    result = dg(arg);
+                }
+                else
+                {
+                    result = dg(line, arg);
+                    ++line;
+                }
+                if (result) break;
+                static if (!duplicate)
+                    buffer.length = 0;
+            }
+        }
+        // can only reach when FGETC returned -1
+        if (!feof(f)) throw new StdioException(ferror(f)); // error occured
+        return result;
+    }
 }
-
-// / ditto
-// LinesIterator lines(dchar terminator = '\n')
-// {
-//     return lines(stdin, terminator);
-// }
 
 unittest
 {
@@ -1180,7 +1142,8 @@ unittest
         foreach (T line; lines(f))
         {
             if (i == 0) assert(cast(char[]) line == "Line one\n");
-            else if (i == 1) assert(cast(char[]) line == "line two\n");
+            else if (i == 1) assert(cast(char[]) line == "line two\n",
+                T.stringof ~ " " ~ cast(char[]) line);
             else if (i == 2) assert(cast(char[]) line == "line three\n");
             else assert(false);
             ++i;
@@ -1222,7 +1185,31 @@ unittest
     }
 }
 
-struct ChunkIterator
+/**
+Iterates through a file a chunk at a time by using $(D_PARAM
+foreach).
+
+Example:
+
+---------
+void main()
+{
+  foreach (ubyte[] buffer; chunks(stdin, 4096))
+  {
+    ... use buffer ...
+  }
+}
+---------
+
+The content of $(D_PARAM buffer) is reused across calls. In the
+ example above, $(D_PARAM buffer.length) is 4096 for all iterations,
+ except for the last one, in which case $(D_PARAM buffer.length) may
+ be less than 4096 (but always greater than zero).
+
+ In case of an I/O error, an $(D_PARAM StdioException) is thrown. 
+*/
+
+struct chunks
 {
     private FILE* f;
     private size_t size;
@@ -1252,35 +1239,6 @@ struct ChunkIterator
     }
 }
 
-/**
-Iterates through a file a chunk at a time by using $(D_PARAM
-foreach).
-
-Example:
-
----------
-void main()
-{
-  foreach (ubyte[] buffer; chunks(stdin, 4096))
-  {
-    ... use buffer ...
-  }
-}
----------
-
-The content of $(D_PARAM buffer) is reused across calls. In the
- example above, $(D_PARAM buffer.length) is 4096 for all iterations,
- except for the last one, in which case $(D_PARAM buffer.length) may
- be less than 4096 (but always greater than zero).
-
- In case of an I/O error, an $(D_PARAM StdioException) is thrown. 
-*/
-
-ChunkIterator chunks(FILE* f, size_t size)
-{
-    return ChunkIterator(f, size);
-}
-
 unittest
 {
     string file = "dmd-build-test.deleteme.txt";
@@ -1297,7 +1255,7 @@ unittest
     std.file.write(file, "Line one\nline two\nline three\n");
     f = fopen(file, "r");
     uint i = 0;
-    foreach (ubyte[] line; ChunkIterator(f, 3))
+    foreach (ubyte[] line; chunks(f, 3))
     {
         if (i == 0) assert(cast(char[]) line == "Lin");
         else if (i == 1) assert(cast(char[]) line == "e o");

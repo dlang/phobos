@@ -2032,12 +2032,12 @@ private void formatGeneric(Writer, D)(ref Writer w, const(void)* arg,
         if (obj is null) w.write("null");
         else w.write(obj.toString);
     } else static if (isAssociativeArray!(D)) {
+        // somebody rid me of this hack
         w.write(std.string.format("%s", obj));
     } else static if (is(D Original == typedef)) {
         formatGeneric!(Writer, Original)(w, cast(Original) obj, f);
     } else {
         // last resort: look for toString
-        writeln("Last resort for ", D.stringof);
         auto s = obj.toString;
         w.write(s);                                        
         //static assert(false, "Cannot format type " ~ D.stringof);
