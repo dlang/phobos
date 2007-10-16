@@ -256,6 +256,8 @@ void write(T...)(T args)
 
 unittest
 {
+    void[] buf;
+    write(buf);
     // test write
     string file = "dmd-build-test.deleteme.txt";
     FILE* f = fopen(file, "w");
