@@ -63,6 +63,7 @@ version (DigitalMarsC)
 	extern char* function(int c, int flags, int precision, real* pdval,
 	    char* buf, int* psl, int width) __pfloatfmt;
     }
+    alias stc.c.stdio._snprintf snprintf;
 }
 else
 {
@@ -1915,48 +1916,6 @@ private void formatFloat(Writer, D)(ref Writer w, D obj, FormatInfo f)
 }
 
 /*
- * Writes an associative array to a Writer
- */ 
-
-void putAArray(Writer)(ref Writer w,
-    ubyte[long] vaa, TypeInfo valti, TypeInfo keyti)
-{
-    bool comma=false;
-    auto argptrSave = argptr;
-    auto tiSave = ti;
-    auto mSave = m;
-    valti = skipCI(valti);
-    keyti = skipCI(keyti);
-    foreach(inout fakevalue; vaa)
-    {
-        if (comma) putc(',');
-        comma = true;
-        // the key comes before the value
-        ubyte* key = &fakevalue - long.sizeof;
-        
-        //doFormat(putc, (&keyti)[0..1], key);
-        argptr = key;
-        ti = keyti;
-        m = getMan(keyti);
-        formatArg('s');
-        
-        putc(':');
-        auto keysize = keyti.tsize;
-        keysize = (keysize + 3) & ~3;
-        ubyte* value = key + keysize;
-        //doFormat(putc, (&valti)[0..1], value);
-        argptr = value;
-        ti = valti;
-        m = getMan(valti);
-	    formatArg('s');
-    }
-    m = mSave;
-    ti = tiSave;
-    argptr = argptrSave;
-    putc(']');
-}
-
-/*
  * Formats an object of type 'D' according to 'f' and writes it to
  * 'w'. The pointer 'arg' is assumed to point to an object of type
  * 'D'.
@@ -1965,7 +1924,10 @@ private void formatGeneric(Writer, D)(ref Writer w, const(void)* arg,
     FormatInfo f)
 {
     D obj = *cast(D*) arg;
-    static if (is(D Original == typedef)) {
+    static if (is(D == void[])) {
+        char[] s = cast(char[]) obj;
+        w.write(s);
+    } else static if (is(D Original == typedef)) {
         formatGeneric!(Writer, Original)(w, arg, f);
     } else static if (is(D == float) || is(D == double) || is(D == real)) {
         formatFloat(w, obj, f);
@@ -2013,9 +1975,6 @@ private void formatGeneric(Writer, D)(ref Writer w, const(void)* arg,
             if (f.width > s.length)
                 foreach (i ; 0 .. f.width - s.length) w.putchar(' ');
         }
-    } else static if (is(D == void[])) {
-        //char[] s = cast(char[]) obj;
-        //w.write(s);
     } else static if (isArray!(D)) {
         w.putchar('[');
         foreach (i, e; obj)
@@ -2034,8 +1993,6 @@ private void formatGeneric(Writer, D)(ref Writer w, const(void)* arg,
     } else static if (isAssociativeArray!(D)) {
         // somebody rid me of this hack
         w.write(std.string.format("%s", obj));
-    } else static if (is(D Original == typedef)) {
-        formatGeneric!(Writer, Original)(w, cast(Original) obj, f);
     } else {
         // last resort: look for toString
         auto s = obj.toString;

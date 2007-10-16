@@ -240,12 +240,21 @@ private T toSomeString(S, T)(S s)
   } else {
     static if (isArray!(S)) {
       // array-to-string conversion
-        T result = to!(T)("[");
-        foreach (i, e; s) {
-            if (i) result ~= ',';
-            result ~= to!(T)(e);
+        static if (is(S == void[])
+                   || is(S == const(void)[]) || is(S == invariant(void)[])) {
+            auto fake = cast(const(ubyte)[]) s;
+            T result;
+            foreach (i, e; fake) {
+                result ~= e;
+            }
+        } else {
+            T result = to!(T)("[");
+            foreach (i, e; s) {
+                if (i) result ~= ',';
+                result ~= to!(T)(e);
+            }
+            result ~= ']';
         }
-        result ~= ']';
         return result;
     } else static if (isAssociativeArray!(S)) {
       // hash-to-string conversion
