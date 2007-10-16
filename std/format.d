@@ -1680,7 +1680,7 @@ FormatInfo parseFormatSpec(S)(ref S fmt)
             else
             {
                 // width
-                result.width = widthOrArgIndex;
+                result.width = cast(short)widthOrArgIndex;
             }
             break;
         case '.':
@@ -1691,7 +1691,7 @@ FormatInfo parseFormatSpec(S)(ref S fmt)
                     // a '.*' followed by digits and '$' is a positional format
                     fmt = fmt[i .. $];
                     i = 0;
-                    result.precision = -parse!(int)(fmt);
+                    result.precision = cast(short)(-parse!(int)(fmt));
                     if (fmt[i++] != '$') throw new FormatError("$ expected");
                 }
                 else
@@ -1712,7 +1712,7 @@ FormatInfo parseFormatSpec(S)(ref S fmt)
             {
                 fmt = fmt[i .. $];
                 i = 0;
-                result.precision = isdigit(fmt[0]) ? parse!(int)(fmt) : 0;
+                result.precision = cast(short)(isdigit(fmt[0]) ? parse!(int)(fmt) : 0);
             }
             break;
         default:
@@ -1722,7 +1722,6 @@ FormatInfo parseFormatSpec(S)(ref S fmt)
             return result;
         }
     assert(false);
-    return result;
 }
 
 //-------------------------------------------------------------------------------
@@ -2089,7 +2088,7 @@ void formattedWrite(Writer, F, A...)(ref Writer w, F[] fmt, A args)
             if (width < 0)
             {
                 spec.flDash = true;
-                width = 0 - width;
+                width = cast(short)(0 - width);
             }
             spec.width = width;
             ++currentArg;
@@ -2103,7 +2102,7 @@ void formattedWrite(Writer, F, A...)(ref Writer w, F[] fmt, A args)
             if (width < 0)
             {
                 spec.flDash = true;
-                width = 0 - width;
+                width = cast(short)(0 - width);
             }
             spec.width = width;
         }
