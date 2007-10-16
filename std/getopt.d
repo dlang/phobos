@@ -18,6 +18,9 @@
  * syntax of D's $(D_PARAM getopt) is simplified because $(D_PARAM
  * getopt) infers the expected parameter types from the static types
  * of the passed-in pointers.
+ *
+ * Macros:
+ *	WIKI = Phobos/StdGetopt
  */
 
 /* Author:
