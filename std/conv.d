@@ -40,6 +40,7 @@ private import std.typetuple; // for unittests
 private import std.utf; // for string-to-string conversions
 import std.traits;
 import std.ctype;
+import std.c.string; // memcpy
 
 //debug=conv;		// uncomment to turn on debugging printf's
 
@@ -243,10 +244,18 @@ private T toSomeString(S, T)(S s)
         static if (is(S == void[])
                    || is(S == const(void)[]) || is(S == invariant(void)[])) {
             auto fake = cast(const(ubyte)[]) s;
-            T result;
-            foreach (i, e; fake) {
-                result ~= e;
-            }
+            static if (T[0].sizeof == 1)
+                alias ubyte FakeT;
+            else static if (T[0].sizeof == 2)
+                alias ushort FakeT;
+            else static if (T[0].sizeof == 4)
+                alias uint FakeT;
+            else static assert(false, T.stringof);
+            FakeT[] result =
+                new FakeT[(s.length + FakeT.sizeof - 1) / FakeT.sizeof];
+            assert(result.length * FakeT.sizeof >= s.length);
+            memcpy(result.ptr, s.ptr, s.length);
+            return cast(T) result;
         } else {
             T result = to!(T)("[");
             foreach (i, e; s) {
@@ -254,8 +263,8 @@ private T toSomeString(S, T)(S s)
                 result ~= to!(T)(e);
             }
             result ~= ']';
+            return result;
         }
-        return result;
     } else static if (isAssociativeArray!(S)) {
       // hash-to-string conversion
       T result = "[";
@@ -285,6 +294,15 @@ private T toSomeString(S, T)(S s)
       else return to!(T)(result);
     }
   }
+}
+
+unittest
+{
+    auto a = "abcx"w;
+    const(void)[] b = a;
+    assert(b.length == 8);
+    auto c = to!(wchar[])(b);
+    assert(c == "abcx");
 }
 
 private T toImpl(S, T)(S value) {
