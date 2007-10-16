@@ -25,14 +25,14 @@
 
 release unittest debug unittest-debug :
 	@mkdir --parents objdir-$@
-	@$(MAKE) --no-print-directory -C objdir-$@ -f ../linux-2.mak $@
+	@$(MAKE) --no-print-directory -C objdir-$@ -f ../linux-2.mak DMD=$(DMD) $@
 
 all : release unittest debug unittest-debug html
 
 %-ln : %
 	ln -sf objdir-$*/libphobos2.a .
 html :
-	@$(MAKE) -f linux-2.mak html
+	@$(MAKE) -f linux-2.mak DMD=$(DMD) html
 
 clean :
 	$(RM) -r objdir*
