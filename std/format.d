@@ -38,6 +38,7 @@ module std.format;
 import std.stdarg;	// caller will need va_list
 
 private import std.utf;
+private import std.c.stdio;
 private import std.c.stdlib;
 private import std.c.string;
 private import std.string;
@@ -63,7 +64,7 @@ version (DigitalMarsC)
 	extern char* function(int c, int flags, int precision, real* pdval,
 	    char* buf, int* psl, int width) __pfloatfmt;
     }
-    alias stc.c.stdio._snprintf snprintf;
+    alias std.c.stdio._snprintf snprintf;
 }
 else
 {
