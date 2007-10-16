@@ -204,7 +204,6 @@ void writefx(FILE* fp, TypeInfo[] arguments, void* argptr, int newline=false)
     }
 }
 
-
 /***********************************
  * If the first argument $(D_PARAM args[0]) is a $(D_PARAM FILE*), for
  * each argument $(D_PARAM arg) in $(D_PARAM args[1..$]), format the
@@ -222,36 +221,17 @@ void writefx(FILE* fp, TypeInfo[] arguments, void* argptr, int newline=false)
  */
 void write(T...)(T args)
 {
-    // duplicate code for speed; no passing data around
-    static if (!is(typeof(args[0]) : FILE*))
+    static if (is(typeof(args[0]) : FILE*))
     {
-        write(stdout, args);
+        alias args[0] target;
+        static const first = 1;
     }
     else
     {
-        FLOCK(args[0]);
-        scope(exit) FUNLOCK(args[0]);
-        foreach (arg; args[1 .. $])
-        {
-            final s = to!(string)(arg);
-            size_t written = void;
-            version(linux)
-            {
-                written = fwrite_unlocked(s.ptr,
-                    s[0].sizeof, s.length, args[0]);
-            }
-            else
-            {
-                // TODO: figure out unlocked bulk writes on Windows
-                written = std.c.stdio.fwrite(s.ptr,
-                    s[0].sizeof, s.length, args[0]);
-            }
-            if (written != s.length)
-            {
-                StdioException();
-            }
-        }
+        alias stdout target;
+        static const first = 0;
     }
+    writef(target, "", args[first .. $]);
 }
 
 unittest
@@ -342,35 +322,27 @@ void writef(T...)(T args)
         "You must pass a formatting string as the first"
         " argument to writef. If no formatting is needed,"
         " you may want to use write.";
-    static if (!is(typeof(args[0]) : FILE*))
+    static if (is(typeof(args[0]) : FILE*))
     {
-        static if (!isSomeString!(T[0]))
-        {
-            // compatibility hack
-            return writef(stdout, "", args);
-        }
-        else
-        {
-            w.backend = stdout;
-            FLOCK(w.backend);
-            scope(exit) FUNLOCK(w.backend);
-            std.format.formattedWrite(w, args);
-        }
+        alias args[0] target;
+        static const first = 1;
     }
     else
     {
-        static if (!isSomeString!(T[1]))
-        {
-            // compatibility hack
-            return writef(args[0], "", args[1 .. $]);
-        }
-        else
-        {
-            w.backend = args[0];
-            FLOCK(w.backend);
-            scope(exit) FUNLOCK(w.backend);
-            std.format.formattedWrite(w, args[1 .. $]);
-        }
+        alias stdout target;
+        static const first = 0;
+    }
+    w.backend = target;
+    FLOCK(w.backend);
+    scope(exit) FUNLOCK(w.backend);
+    static if (!isSomeString!(T[first]))
+    {
+        // compatibility hack
+        std.format.formattedWrite(w, "", args[first .. $]);
+    }
+    else
+    {
+        std.format.formattedWrite(w, args[first .. $]);
     }
 }
 
@@ -398,43 +370,7 @@ unittest
  */
 void writefln(T...)(T args)
 {
-    //writef(args, '\n');
-    // Duplicate code so we don't duplicate the stack; replace with macro l8r
-    FileWriter!(char) w;
-    static const errorMessage =
-        "You must pass a formatting string as the first"
-        " argument to writefln. If no formatting is needed,"
-        " you may want to use writeln.";
-    static if (!is(typeof(args[0]) : FILE*))
-    {
-        static if (!isSomeString!(T[0]))
-        {
-            // compatibility hack
-            return writef(stdout, "", args, '\n');
-        }
-        else
-        {
-            w.backend = stdout;
-            FLOCK(w.backend);
-            scope(exit) FUNLOCK(w.backend);
-            std.format.formattedWrite(w, args, '\n');
-        }
-    }
-    else
-    {
-        static if (!isSomeString!(T[1]))
-        {
-            // compatibility hack
-            return writef(args[0], "", args[1 .. $], '\n');
-        }
-        else
-        {
-            w.backend = args[0];
-            FLOCK(w.backend);
-            scope(exit) FUNLOCK(w.backend);
-            std.format.formattedWrite(w, args[1 .. $], '\n');
-        }
-    }
+    writef(args, '\n');
 }
 
 unittest
