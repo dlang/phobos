@@ -36,4 +36,5 @@ html :
 
 clean :
 	$(RM) -r objdir*
+	$(RM) doc
 

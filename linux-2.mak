@@ -12,14 +12,15 @@
 #	clean
 #		Delete all files created by build process
 
-VPATH=..
+vpath %.c ..
+vpath %.d ..
 
 LIB=libphobos2.a
 
 DOC_OUTPUT_DIR=doc
 
-CFLAGS=-m32
-DFLAGS=-I..
+CFLAGS=-m32 -Wall
+DFLAGS=-I.. -w
 ifneq (,$(findstring debug,$(MAKECMDGOALS)))
 CFLAGS:=$(CFLAGS) -g
 DFLAGS:=$(DFLAGS) -g
@@ -55,7 +56,7 @@ unittest : unittest.o $(LIB)
 	$(CC) -o $@ $^ -lpthread -lm -g
 
 unittest.o : unittest.d
-	$(DMD) -c $(DFLAGS) $<
+	$(DMD) -c -I.. $<
 
 INTERNAL_MODULES = aApply aApplyR aaA adi alloca arraycast arraycat cast cmath2 \
 	deh2 dmain2 invariant llmath memset obj object qsort switch trace
@@ -193,7 +194,7 @@ OBJS = crc32.o errno.o gcstats.o \
 	$(addprefix etc/c/,$(addsuffix .o,$(ETC_C_MODULES))) \
 	$(addprefix etc/c/zlib/,$(addsuffix .o,$(ZLIB_CMODULES)))
 
-$(LIB) : $(OBJS) linux.mak
+$(LIB) : $(OBJS) ../linux.mak ../linux-2.mak
 	rm -f $(LIB)
 	ar -r $@ $(OBJS)
 
