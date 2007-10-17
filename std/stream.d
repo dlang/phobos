@@ -1939,7 +1939,7 @@ class File: Stream {
 
   version (Win32) {
     // returns size of stream
-    ulong size() {
+    override ulong size() {
       assertSeekable();
       uint sizehi;
       uint sizelow = GetFileSize(hFile,&sizehi);
