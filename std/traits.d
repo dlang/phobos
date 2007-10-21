@@ -14,7 +14,7 @@
 /*
  * Authors:
  *	Walter Bright, Digital Mars, www.digitalmars.com
- *	Tomasz Stachowiak (isStaticArray, isExpressionTuple)
+ *	Tomasz Stachowiak (isExpressionTuple)
  *      Andrei Alexandrescu, www.erdani.org
  */
 
@@ -379,48 +379,14 @@ static assert(isAssociativeArray!(int[int]));
 static assert(isAssociativeArray!(int[string]));
 static assert(isAssociativeArray!(invariant(char[5])[int]));
 
-/* *******************************************
- */
-template isStaticArray_impl(T)
-{
-    const T inst = void;
-    
-    static if (is(typeof(T.length)))
-    {
-	static if (!is(typeof(T) == typeof(T.init)))
-	{			// abuses the fact that int[5].init == int
-	    static if (is(T == typeof(T[0])[inst.length]))
-	    {	// sanity check. this check alone isn't enough because dmd complains about dynamic arrays
-		const bool res = true;
-	    }
-	    else
-		const bool res = false;
-	}
-	else
-	    const bool res = false;
-    }
-    else
-    {
-        const bool res = false;
-    }
-}
-
-/**
- * Detect whether type T is a static array.
- */
-// template isStaticArray(T)
-// {
-//     const bool isStaticArray = isStaticArray_impl!(T).res;
-// }
-
-template isStaticArray(T : U[], U)
-{
-    const bool isStaticArray = is(typeof(U) == typeof(T.init));
-}
-
-template isStaticArray(T, U = void)
+template isStaticArray(T)
 {
     const bool isStaticArray = false;
+}
+
+template isStaticArray(T : T[N], size_t N)
+{
+    const bool isStaticArray = true;
 }
 
 static assert (isStaticArray!(int[51]));
@@ -430,6 +396,9 @@ static assert (!isStaticArray!(int[]));
 static assert (!isStaticArray!(int[char]));
 static assert (!isStaticArray!(int[1][]));
 static assert(isStaticArray!(invariant char[13u]));
+static assert(isStaticArray!(void[0]));
+static assert(!isStaticArray!(int[int]));
+static assert(!isStaticArray!(int));
 
 /**
  * Detect whether type T is a dynamic array.
