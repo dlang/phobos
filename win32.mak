@@ -847,11 +847,11 @@ $(DOC)\std_c_wcharh.html : std.ddoc std\c\wcharh.d
 
 ######################################################
 
-zip : win32.mak linux.mak linux-2.mak phoboslicense.txt std.ddoc $(SRC) \
+zip : win32.mak linux.mak phoboslicense.txt std.ddoc $(SRC) \
 	$(SRC_STD) $(SRC_STD_C) $(SRC_TI) $(SRC_INT) $(SRC_STD_WIN) \
 	$(SRC_STDLINUX) $(SRC_ETC) $(SRC_ETC_C) $(SRC_ZLIB) $(SRC_GC)
 	del phobos.zip
-	zip32 -u phobos win32.mak linux.mak linux-2.mak phoboslicense.txt std.ddoc
+	zip32 -u phobos win32.mak linux.mak phoboslicense.txt std.ddoc
 	zip32 -u phobos $(SRC)
 	zip32 -u phobos $(SRC_TI)
 	zip32 -u phobos $(SRC_INT)
