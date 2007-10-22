@@ -60,17 +60,14 @@ int main(char[][] args)
     // Bring in unit test for module by referencing function in it
 
     cmp("foo", "bar");			// string
-printf("test1\n");
     fncharmatch('a', 'b');		// path
     isnan(1.0);				// math
     std.math2.feq(1.0, 2.0);		// math2
     std.conv.toDouble("1.0");		// std.conv
-printf("test1\n");
     OutBuffer b = new OutBuffer();	// outbuffer
     std.ctype.tolower('A');		// ctype
     RegExp r = new RegExp(null, null);	// regexp
     std.random.rand();
-printf("test2\n");
     int a[];
     a.reverse;				// adi
     a.sort;				// qsort
@@ -84,16 +81,13 @@ printf("test2\n");
     ubyte[16] buf;
     std.md5.sum(buf,"");
 
-    writefln("hello world!");			// std.format
-
     Box abox;
-{
+
     creal c = 3.0 + 4.0i;
     c = sqrt(c);
-    printf("re = %Lg, im = %Lg\n", c.re, c.im);
-}
+    assert(c.re == 2);
+    assert(c.im == 1);
 
-    printf("hello world\n");
     printf("args.length = %d\n", args.length);
     for (int i = 0; i < args.length; i++)
 	printf("args[%d] = '%s'\n", i, cast(char *)args[i]);
@@ -103,6 +97,9 @@ printf("test2\n");
     x[1] = 45;
     x[2] = -1;
     x.sort;
+    assert(x[0] == -1);
+    assert(x[1] == 3);
+    assert(x[2] == 45);
 
     std.math.tgamma(3);
     std.math.lgamma(3);
