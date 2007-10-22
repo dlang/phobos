@@ -1975,13 +1975,16 @@ private void formatGeneric(Writer, D)(ref Writer w, const(void)* arg,
             if (f.width > s.length)
                 foreach (i ; 0 .. f.width - s.length) w.putchar(' ');
         }
+    } else static if (is(D == void[0])) {
+        w.putchar('[');
+        w.putchar(']');
     } else static if (isArray!(D)) {
         w.putchar('[');
-        foreach (i, e; obj)
-        {
-            if (i > 0) w.putchar(' ');
-            formatGeneric!(Writer, typeof(e))(w, &e, f);
-        }
+	foreach (i, e; obj)
+	{
+	    if (i > 0) w.putchar(' ');
+	    formatGeneric!(Writer, typeof(e))(w, &e, f);
+	}
         w.putchar(']');
     } else static if (is(D : void*)) {
         f.spec = 'X';
