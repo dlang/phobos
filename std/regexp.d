@@ -450,7 +450,7 @@ unittest
 
     foreach (i, s; split("abcabcabab", "C.", "i"))
     {
-	writefln("s[%d] = '%s'", i, s);
+	//writefln("s[%d] = '%s'", i, s);
 	if (i == 0) assert(s == "ab");
 	else if (i == 1) assert(s == "b");
 	else if (i == 2) assert(s == "bab");
