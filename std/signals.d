@@ -270,8 +270,20 @@ unittest
     {
 	void watch(string msg, int i)
 	{
-	    writefln("Observed msg '%s' and value %s", msg, i);
+	    //writefln("Observed msg '%s' and value %s", msg, i);
+            captured_value = i;
+            captured_msg   = msg;
 	}
+
+        void clear()
+        {
+            captured_value = 0;
+            captured_msg   = "";
+        }
+
+        public:
+            int    captured_value;
+            string captured_msg;
     }
 
     class Foo
@@ -296,13 +308,35 @@ unittest
     Foo a = new Foo;
     Observer o = new Observer;
 
+    // check initial condition
+    assert(o.captured_value == 0);
+    assert(o.captured_msg == "");
+
+    // set a value while no observation is in place
     a.value = 3;
+    assert(o.captured_value == 0);
+    assert(o.captured_msg == "");
+
+    // connect the watcher and trigger it
     a.connect(&o.watch);
     a.value = 4;
+    assert(o.captured_value == 4);
+    assert(o.captured_msg == "setting new value");
+
+    // disconnect the watcher and make sure it doesn't trigger
     a.disconnect(&o.watch);
     a.value = 5;
+    assert(o.captured_value == 4);
+    assert(o.captured_msg == "setting new value");
+
+    // reconnect the watcher and make sure it triggers
     a.connect(&o.watch);
     a.value = 6;
+    assert(o.captured_value == 6);
+    assert(o.captured_msg == "setting new value");
+
+    // delete the underlying object and make sure it doesn't cause
+    // a crash or other problems
     delete o;
     a.value = 7;
 }
