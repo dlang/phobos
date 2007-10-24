@@ -23,7 +23,9 @@ import std.typetuple;
 
 /***
  * Get the type of the return value from a function,
- * a pointer to function, or a delegate.
+ * a pointer to function, a delegate, a struct
+ * with an opCall, a pointer to a struct with an opCall,
+ * or a class with an opCall.
  * Example:
  * ---
  * import std.traits;
@@ -33,16 +35,49 @@ import std.typetuple;
  */
 template ReturnType(alias dg)
 {
-    alias ReturnType!(typeof(dg)) ReturnType;
+    alias ReturnType!(typeof(dg), void) ReturnType;
 }
 
-/** ditto */
-template ReturnType(dg)
+template ReturnType(dg, dummy = void)
 {
     static if (is(dg R == return))
 	alias R ReturnType;
+    else static if (is(dg T : T*))
+	alias ReturnType!(T, void) ReturnType;
+    else static if (is(dg S == struct))
+	alias ReturnType!(typeof(&dg.opCall), void) ReturnType;
+    else static if (is(dg C == class))
+	alias ReturnType!(typeof(&dg.opCall), void) ReturnType;
     else
 	static assert(0, "argument has no return type");
+}
+
+unittest
+{
+    struct G
+    {
+	int opCall (int i) { return 1;}
+    }
+
+    alias ReturnType!(G) ShouldBeInt;
+    static assert(is(ShouldBeInt == int));
+
+    G g;
+    static assert(is(ReturnType!(g) == int));
+
+    G* p;
+    alias ReturnType!(p) pg;
+    static assert(is(pg == int));
+
+    class C
+    {
+	int opCall (int i) { return 1;}
+    }
+
+    static assert(is(ReturnType!(C) == int));
+
+    C c;
+    static assert(is(ReturnType!(c) == int));
 }
 
 /***
