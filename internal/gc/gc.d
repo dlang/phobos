@@ -446,6 +446,11 @@ struct Array
     byte *data;
 };
 
+void* _d_allocmemory(size_t nbytes)
+{
+    return _gc.malloc(nbytes);
+}
+
 // Perhaps we should get a a size argument like _d_new(), so we
 // can zero out the array?
 
