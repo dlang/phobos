@@ -1,5 +1,7 @@
+// Written in the D programming language
+
 /*
- *  Copyright (C) 2002-2006 by Digital Mars, www.digitalmars.com
+ *  Copyright (C) 2002-2007 by Digital Mars, www.digitalmars.com
  *  Written by Walter Bright
  *
  *  This software is provided 'as-is', without any express or implied
@@ -104,6 +106,17 @@ class Thread
     }
 
     /**
+     * Destructor
+     *
+     * If the thread hasn't been joined yet, detach it.
+     */
+    ~this()
+    {
+        if (state != TS.FINISHED)
+            CloseHandle(hdl);
+    }
+
+    /**
      * The handle to this thread assigned by the operating system. This is set
      * to thread_id.init if the thread hasn't been started yet.
      */
@@ -120,7 +133,7 @@ class Thread
 	if (state != TS.INITIAL)
 	    error("already started");
 
-	synchronized (threadLock)
+	synchronized (Thread.classinfo)
 	{
 	    for (int i = 0; 1; i++)
 	    {
@@ -140,8 +153,8 @@ class Thread
 	state = TS.RUNNING;
 	hdl = _beginthreadex(null, cast(uint)stacksize, &threadstart, cast(void*)this, 0, &id);
 	if (hdl == cast(thread_hdl)0)
-	{   state = TS.TERMINATED;
-	    allThreads[idx] = null;
+	{   state = TS.FINISHED;
+	    synchronized (Thread.classinfo) allThreads[idx] = null;
 	    idx = -1;
 	    error("failed to start");
 	}
@@ -170,12 +183,15 @@ class Thread
      */
     void wait()
     {
-	if (this is getThis())
+	if (isSelf)
 	    error("wait on self");
-	if (state == TS.RUNNING)
+	if (state != TS.FINISHED)
 	{   DWORD dw;
 
 	    dw = WaitForSingleObject(hdl, 0xFFFFFFFF);
+            state = TS.FINISHED;
+            CloseHandle(hdl);
+            hdl = null;
 	}
     }
 
@@ -188,12 +204,15 @@ class Thread
      */
     void wait(uint milliseconds)
     {
-	if (this is getThis())
+	if (isSelf)
 	    error("wait on self");
-	if (state == TS.RUNNING)
+	if (state != TS.FINISHED)
 	{   DWORD dw;
 
 	    dw = WaitForSingleObject(hdl, milliseconds);
+            state = TS.FINISHED;
+            CloseHandle(hdl);
+            hdl = null;
 	}
     }
 
@@ -204,7 +223,8 @@ class Thread
     {
 	INITIAL,	/// The thread hasn't been started yet.
 	RUNNING,	/// The thread is running or paused.
-	TERMINATED	/// The thread has ended.
+	TERMINATED,	/// The thread has ended.
+        FINISHED        /// The thread has been cleaned up
     }
 
     /**
@@ -271,25 +291,19 @@ class Thread
      */
     static Thread getThis()
     {
-	thread_id id;
-	Thread result;
-
 	//printf("getThis(), allThreadsDim = %d\n", allThreadsDim);
-	synchronized (threadLock)
-	{
-	    id = GetCurrentThreadId();
-	    for (int i = 0; i < allThreadsDim; i++)
-	    {
-		Thread t = allThreads[i];
-		if (t && id == t.id)
-		{
-		    return t;
-		}
-	    }
-	}
+        thread_id id = GetCurrentThreadId();
+        for (int i = 0; i < allThreadsDim; i++)
+        {
+            Thread t = allThreads[i];
+            if (t && id == t.id)
+            {
+                return t;
+            }
+        }
 	printf("didn't find it\n");
-	assert(result);
-	return result;
+	assert(null);
+	return null;
     }
 
     /**
@@ -297,7 +311,7 @@ class Thread
      */
     static Thread[] getAll()
     {
-	return allThreads[0 .. allThreadsDim];
+	synchronized (Thread.classinfo) return allThreads[0 .. allThreadsDim];
     }
 
     /**
@@ -323,18 +337,20 @@ class Thread
      */
     static void pauseAll()
     {
-	if (nthreads > 1)
-	{
-	    Thread tthis = getThis();
+        synchronized (Thread.classinfo)
+        {
+            if (nthreads > 1)
+            {
+                    thread_id thisid = GetCurrentThreadId();
 
-	    for (int i = 0; i < allThreadsDim; i++)
-	    {   Thread t;
-
-		t = allThreads[i];
-		if (t && t !is tthis && t.state == TS.RUNNING)
-		    t.pause();
-	    }
-	}
+                for (int i = 0; i < allThreadsDim; i++)
+                    {
+                        Thread t = allThreads[i];
+                        if (t && t.id != thisid && t.state == TS.RUNNING)
+                        t.pause();
+                }
+            }
+        }
     }
 
     /**
@@ -342,18 +358,20 @@ class Thread
      */
     static void resumeAll()
     {
-	if (nthreads > 1)
-	{
-	    Thread tthis = getThis();
+        synchronized (Thread.classinfo)
+        {
+            if (nthreads > 1)
+            {
+                thread_id thisid = GetCurrentThreadId();
 
-	    for (int i = 0; i < allThreadsDim; i++)
-	    {   Thread t;
-
-		t = allThreads[i];
-		if (t && t !is tthis && t.state == TS.RUNNING)
-		    t.resume();
-	    }
-	}
+                for (int i = 0; i < allThreadsDim; i++)
+                {
+                    Thread t = allThreads[i];
+                    if (t && t.id != thisid && t.state == TS.RUNNING)
+                        t.resume();
+                }
+            }
+        }
     }
 
     /**
@@ -372,7 +390,6 @@ class Thread
   private:
 
     static uint allThreadsDim;
-    static Object threadLock;
     static Thread[0x400] allThreads;	// length matches value in C runtime
 
     TS state;
@@ -415,9 +432,12 @@ class Thread
 
 	debug (thread) printf("Ending thread %d\n", t.idx);
 	t.state = TS.TERMINATED;
-	allThreads[t.idx] = null;
-	t.idx = -1;
-	nthreads--;
+        synchronized (Thread.classinfo)
+        {
+            allThreads[t.idx] = null;
+            t.idx = -1;
+            nthreads--;
+        }
 	return result;
     }
 
@@ -428,8 +448,6 @@ class Thread
 
     public static void thread_init()
     {
-	threadLock = new Object();
-
 	Thread t = new Thread();
 
 	t.state = TS.RUNNING;
@@ -608,6 +626,8 @@ class Thread
     {
 	pthread_cond_destroy(&waitCond);
 	pthread_mutex_destroy(&waitMtx);
+        if (state != TS.FINISHED)
+            pthread_detach(id);
     }
 
     pthread_t id;
@@ -619,7 +639,7 @@ class Thread
 	if (state != TS.INITIAL)
 	    error("already started");
 
-	synchronized (threadLock)
+	synchronized (Thread.classinfo)
 	{
 	    for (int i = 0; 1; i++)
 	    {
@@ -637,14 +657,13 @@ class Thread
 	}
 
 	state = TS.RUNNING;
-	int result;
 	//printf("creating thread x%x\n", this);
 	//result = pthread_create(&id, null, &threadstart, this);
 	// Create with thread attributes to allow non-default stack size - Dave Fladebo
-	result = pthread_create(&id, &threadAttrs, &threadstart, cast(void*)this);
+	int result = pthread_create(&id, &threadAttrs, &threadstart, cast(void*)this);
 	if (result)
-	{   state = TS.TERMINATED;
-	    allThreads[idx] = null;
+	{   state = TS.FINISHED;
+	    synchronized (Thread.classinfo) allThreads[idx] = null;
 	    idx = -1;
 	    error("failed to start");	// BUG: should report errno
 	}
@@ -662,25 +681,15 @@ class Thread
 
     void wait()
     {
-	if (this is getThis())
+	if (isSelf)
 	    error("wait on self");
 
-	/* Sean Kelly writes:
-	 * Change to:
-	 *   if (state != TS.INITIAL)
-	 * Because it is not only legal to call pthread_join on a thread that
-	 * has run and finished, but calling pthread_join or pthread_detach is
-	 * required for the thread resources to be released.  However, it is
-	 * illegal to call pthread_join more than once, and I believe it is also
-	 * illegal to detach a thread that has already been joined, so 'id'
-	 * should probably be cleared after join/detach is called, and this
-	 * value tested along with 'state' before performing thread ops.
-	 */
-	if (state == TS.RUNNING)
-	{   int result;
+	if (state != TS.FINISHED)
+	{
 	    void *value;
 
-	    result = pthread_join(id, &value);
+	    int result = pthread_join(id, &value);
+            state = TS.FINISHED;
 	    if (result)
 		error("failed to wait");
 	}
@@ -689,9 +698,9 @@ class Thread
     void wait(uint milliseconds)
     {
 	// Implemented for POSIX systems by Dave Fladebo
-	if (this is getThis())
+	if (isSelf)
 	    error("wait on self");
-	if (state == TS.RUNNING)
+	if (state != TS.FINISHED)
 	{
 	    timespec ts; 
 	    timeval  tv;
@@ -721,9 +730,12 @@ class Thread
 		pthread_setcanceltype(oldtype, null);
 
 		state = TS.TERMINATED;
-		allThreads[idx] = null;
-		idx = -1;
-		nthreads--;
+                synchronized (Thread.classinfo)
+                {
+                    allThreads[idx] = null;
+                    idx = -1;
+                    nthreads--;
+                }
 
 		pthread_mutex_unlock(&waitMtx);
 	    }
@@ -737,9 +749,10 @@ class Thread
 
     enum TS
     {
-	INITIAL,
-	RUNNING,
-	TERMINATED
+	INITIAL,        // created
+	RUNNING,        // running
+	TERMINATED,     // execution finished
+        FINISHED        // pthread_join()'ed
     }
 
     TS getState()
@@ -789,41 +802,32 @@ class Thread
 
     static Thread getThis()
     {
-	pthread_t id;
-	Thread result;
-
 	//printf("getThis(), allThreadsDim = %d\n", allThreadsDim);
-	synchronized (threadLock)
-	{
-	    id = pthread_self();
-	    //printf("id = %d\n", id);
-	    for (int i = 0; i < allThreadsDim; i++)
-	    {
-		Thread t = allThreads[i];
-		//printf("allThreads[%d] = x%x, id = %d\n", i, t, (t ? t.id : 0));
-		if (t && pthread_equal(id, t.id))
-		{
-		    return t;
-		}
-	    }
-	}
+        pthread_t id = pthread_self();
+        //printf("id = %d\n", id);
+        for (int i = 0; i < allThreadsDim; i++)
+        {
+            Thread t = allThreads[i];
+            //printf("allThreads[%d] = x%x, id = %d\n", i, t, (t ? t.id : 0));
+            if (t && pthread_equal(id, t.id))
+            {
+                return t;
+            }
+        }
 	printf("didn't find it\n");
-	assert(result);
-	return result;
+	assert(null);
     }
 
     static Thread[] getAll()
     {
-	return allThreads[0 .. allThreadsDim];
+	synchronized (Thread.classinfo) return allThreads[0 .. allThreadsDim];
     }
 
     void pause()
     {
 	if (state == TS.RUNNING)
-	{   int result;
-
-	    result = pthread_kill(id, SIGUSR1);
-	    if (result)
+	{
+	    if (pthread_kill(id, SIGUSR1))
 		error("cannot pause");
 	    else
 		sem_wait(&flagSuspend);	// wait for acknowledgement
@@ -835,10 +839,8 @@ class Thread
     void resume()
     {
 	if (state == TS.RUNNING)
-	{   int result;
-
-	    result = pthread_kill(id, SIGUSR2);
-	    if (result)
+	{
+	    if (pthread_kill(id, SIGUSR2))
 		error("cannot resume");
 	}
 	else
@@ -847,48 +849,50 @@ class Thread
 
     static void pauseAll()
     {
-	if (nthreads > 1)
-	{
-	    Thread tthis = getThis();
-	    int npause = 0;
+        synchronized (Thread.classinfo)
+        {
+            if (nthreads > 1)
+            {
+                pthread_t thisid = pthread_self();
+                int npause = 0;
 
-	    for (int i = 0; i < allThreadsDim; i++)
-	    {   Thread t;
+                for (int i = 0; i < allThreadsDim; i++)
+                {
+                    Thread t = allThreads[i];
+                    if (t && !pthread_equal(thisid, t.id) && t.state == TS.RUNNING)
+                    {
+                        if (pthread_kill(t.id, SIGUSR1))
+                            t.error("cannot pause");
+                        else
+                            npause++;	// count of paused threads
+                    }
+                }
 
-		t = allThreads[i];
-		if (t && t !is tthis && t.state == TS.RUNNING)
-		{   int result;
-
-		    result = pthread_kill(t.id, SIGUSR1);
-		    if (result)
-			getThis().error("cannot pause");
-		    else
-			npause++;	// count of paused threads
-		}
-	    }
-
-	    // Wait for each paused thread to acknowledge
-	    while (npause--)
-	    {
-		sem_wait(&flagSuspend);
-	    }
-	}
+                // Wait for each paused thread to acknowledge
+                while (npause--)
+                {
+                    sem_wait(&flagSuspend);
+                }
+            }
+        }
     }
 
     static void resumeAll()
     {
-	if (nthreads > 1)
-	{
-	    Thread tthis = getThis();
+        synchronized (Thread.classinfo)
+        {
+            if (nthreads > 1)
+            {
+                pthread_t thisid = pthread_self();
 
-	    for (int i = 0; i < allThreadsDim; i++)
-	    {   Thread t;
-
-		t = allThreads[i];
-		if (t && t !is tthis && t.state == TS.RUNNING)
-		    t.resume();
-	    }
-	}
+                for (int i = 0; i < allThreadsDim; i++)
+                {
+                    Thread t = allThreads[i];
+                    if (t && t.id != thisid && t.state == TS.RUNNING)
+                        t.resume();
+                }
+            }
+        }
     }
 
     static void yield()
@@ -901,7 +905,6 @@ class Thread
   private:
 
     static uint allThreadsDim;
-    static Object threadLock;
 
     // Set max to Windows equivalent for compatibility.
     // pthread_create will fail gracefully if stack limit
@@ -978,9 +981,12 @@ class Thread
 
 	debug (thread) printf("Ending thread %d\n", t.idx);
 	t.state = TS.TERMINATED;
-	allThreads[t.idx] = null;
-	t.idx = -1;
-	nthreads--;
+        synchronized (Thread.classinfo)
+        {
+            allThreads[t.idx] = null;
+            t.idx = -1;
+            nthreads--;
+        }
 	return cast(void*)result;
     }
 
@@ -991,8 +997,6 @@ class Thread
 
     public static void thread_init()
     {
-	threadLock = new Object();
-
 	Thread t = new Thread();
 
 	t.state = TS.RUNNING;
@@ -1045,7 +1049,7 @@ class Thread
 	return;
 
       Lfail:
-	getThis().error("cannot initialize threads");
+	t.error("cannot initialize threads");
     }
 
     /**********************************
