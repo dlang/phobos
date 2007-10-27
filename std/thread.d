@@ -36,6 +36,8 @@
 
 module std.thread;
 
+import std.c.stdio;
+
 //debug=thread;
 
 /* ================================ Win32 ================================= */
@@ -425,8 +427,7 @@ class Thread
 	}
 	catch (Object o)
 	{
-	    printf("Error: ");
-	    o.print();
+	    fprintf(stderr, "Error: %.*s\n", o.toString());
 	    result = 1;
 	}
 
@@ -974,8 +975,7 @@ class Thread
 	}
 	catch (Object o)
 	{
-	    printf("Error: ");
-	    o.print();
+	    fprintf(stderr, "Error: %.*s\n", o.toString());
 	    result = 1;
 	}
 
