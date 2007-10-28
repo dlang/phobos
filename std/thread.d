@@ -304,8 +304,7 @@ class Thread
             }
         }
 	printf("didn't find it\n");
-	assert(null);
-	return null;
+	assert(0);
     }
 
     /**
