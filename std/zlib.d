@@ -17,7 +17,7 @@ module std.zlib;
 
 //debug=zlib;		// uncomment to turn on debugging printf's
 
-private import etc.c.zlib, std.gc;
+private import etc.c.zlib;
 
 // Values for 'mode'
 
@@ -114,13 +114,12 @@ in
 body
 {
     int err;
-    void[] destbuf;
+    ubyte[] destbuf;
     uint destlen;
 
     destlen = srcbuf.length + ((srcbuf.length + 1023) / 1024) + 12;
-    destbuf = new void[destlen];
-    std.gc.hasNoPointers(destbuf.ptr);
-    err = etc.c.zlib.compress2(cast(ubyte *)destbuf, &destlen, cast(ubyte *)srcbuf, srcbuf.length, level);
+    destbuf = new ubyte[destlen];
+    err = etc.c.zlib.compress2(destbuf.ptr, &destlen, cast(ubyte *)srcbuf, srcbuf.length, level);
     if (err)
     {	delete destbuf;
 	throw new ZlibException(err);
@@ -150,7 +149,7 @@ const(void)[] compress(const(void)[] buf)
 const(void)[] uncompress(const(void)[] srcbuf, uint destlen = 0u, int winbits = 15)
 {
     int err;
-    void[] destbuf;
+    ubyte[] destbuf;
 
     if (!destlen)
 	destlen = srcbuf.length * 2 + 1;
@@ -159,13 +158,12 @@ const(void)[] uncompress(const(void)[] srcbuf, uint destlen = 0u, int winbits = 
     {
 	etc.c.zlib.z_stream zs;
 
-	destbuf = new void[destlen];
-	std.gc.hasNoPointers(destbuf.ptr);
-
+	destbuf = new ubyte[destlen];
+	
 	zs.next_in = cast(ubyte*) srcbuf;
 	zs.avail_in = srcbuf.length;
 
-	zs.next_out = cast(ubyte*)destbuf;
+	zs.next_out = destbuf.ptr;
 	zs.avail_out = destlen;
 
 	err = etc.c.zlib.inflateInit2(&zs, winbits);
@@ -288,7 +286,7 @@ class Compress
      */
     const(void)[] compress(const(void)[] buf)
     {	int err;
-	void[] destbuf;
+	ubyte[] destbuf;
 
 	if (buf.length == 0)
 	    return null;
@@ -301,9 +299,8 @@ class Compress
 	    inited = 1;
 	}
 
-	destbuf = new void[zs.avail_in + buf.length];
-	std.gc.hasNoPointers(destbuf.ptr);
-	zs.next_out = cast(ubyte*) destbuf.ptr;
+	destbuf = new ubyte[zs.avail_in + buf.length];
+	zs.next_out = destbuf.ptr;
 	zs.avail_out = destbuf.length;
 
 	if (zs.avail_in)
@@ -452,7 +449,7 @@ class UnCompress
     }
     body
     {	int err;
-	void[] destbuf;
+	ubyte[] destbuf;
 
 	if (buf.length == 0)
 	    return null;
@@ -467,9 +464,8 @@ class UnCompress
 
 	if (!destbufsize)
 	    destbufsize = buf.length * 2;
-	destbuf = new void[zs.avail_in * 2 + destbufsize];
-	std.gc.hasNoPointers(destbuf.ptr);
-	zs.next_out = cast(ubyte*) destbuf;
+	destbuf = new ubyte[zs.avail_in * 2 + destbufsize];
+	zs.next_out = destbuf.ptr;
 	zs.avail_out = destbuf.length;
 
 	if (zs.avail_in)
@@ -503,8 +499,8 @@ class UnCompress
     }
     body
     {
-	void[] extra;
-	void[] destbuf;
+	ubyte[] extra;
+	ubyte[] destbuf;
 	int err;
 
 	done = 1;
@@ -512,9 +508,8 @@ class UnCompress
 	    return null;
 
       L1:
-	destbuf = new void[zs.avail_in * 2 + 100];
-	std.gc.hasNoPointers(destbuf.ptr);
-	zs.next_out = cast(ubyte*) destbuf;
+	destbuf = new ubyte[zs.avail_in * 2 + 100];
+	zs.next_out = destbuf.ptr;
 	zs.avail_out = destbuf.length;
 
 	err = etc.c.zlib.inflate(&zs, Z_NO_FLUSH);
@@ -530,7 +525,7 @@ class UnCompress
 		err = Z_BUF_ERROR;
 	    error(err);
 	}
-	destbuf = cast(void[])((cast(ubyte*)destbuf)[0 .. zs.next_out - cast(ubyte*)destbuf]);
+	destbuf = destbuf.ptr[0 .. zs.next_out - destbuf.ptr];
 	err = etc.c.zlib.inflateEnd(&zs);
 	inited = 0;
 	if (err)
