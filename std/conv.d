@@ -889,7 +889,7 @@ float toFloat(in char[] s)
     f = strtof(sz, &endptr);
     if (getErrno() == ERANGE)
 	goto Lerr;
-    if (endptr && (endptr == s.ptr || *endptr != 0))
+    if (endptr && (endptr == sz || *endptr != 0))
 	goto Lerr;
 
     return f;
@@ -930,6 +930,17 @@ unittest
     // nan
     f = toFloat("nan");
     assert(toString(f) == toString(float.nan));
+
+    bool ok = false;
+    try
+    {
+	toFloat("\x00");
+    }
+    catch (ConvError e)
+    {
+	ok = true;
+    }
+    assert(ok);
 }
 
 /*******************************************************
@@ -953,7 +964,7 @@ double toDouble(in char[] s)
     f = strtod(sz, &endptr);
     if (getErrno() == ERANGE)
 	goto Lerr;
-    if (endptr && (endptr == s.ptr || *endptr != 0))
+    if (endptr && (endptr == sz || *endptr != 0))
 	goto Lerr;
 
     return f;
@@ -997,6 +1008,17 @@ unittest
     d = toDouble("nan");
     assert(toString(d) == toString(double.nan));
     //assert(cast(real)d == cast(real)double.nan);
+
+    bool ok = false;
+    try
+    {
+	toDouble("\x00");
+    }
+    catch (ConvError e)
+    {
+	ok = true;
+    }
+    assert(ok);
 }
 
 /*******************************************************
@@ -1019,7 +1041,7 @@ real toReal(in char[] s)
     f = strtold(sz, &endptr);
     if (getErrno() == ERANGE)
 	goto Lerr;
-    if (endptr && (endptr == s.ptr || *endptr != 0))
+    if (endptr && (endptr == sz || *endptr != 0))
 	goto Lerr;
 
     return f;
@@ -1068,6 +1090,17 @@ unittest
     r = toReal(toString(real.nan));
     assert(toString(r) == toString(real.nan));
     //assert(r == real.nan);
+
+    bool ok = false;
+    try
+    {
+	toReal("\x00");
+    }
+    catch (ConvError e)
+    {
+	ok = true;
+    }
+    assert(ok);
 }
 
 version (none)
