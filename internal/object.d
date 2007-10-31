@@ -446,7 +446,7 @@ class TypeInfo_Typedef : TypeInfo
     override size_t tsize() { return base.tsize(); }
     override void swap(void *p1, void *p2) { return base.swap(p1, p2); }
 
-    override TypeInfo next() { return base; }
+    override TypeInfo next() { return base.next(); }
     override uint flags() { return base.flags(); }
     override void[] init() { return m_init.length ? m_init : base.init(); }
 
