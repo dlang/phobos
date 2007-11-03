@@ -806,7 +806,7 @@ unittest
     assert(fails(delegate void() { unboxTest!(int)(box(1.3)); }));
     
     /* Check that the unspecialized unbox template works. */
-    // bug 1545: assert(unboxTest!(string)(box("foobar")) == "foobar");
+    assert(unboxTest!(string)(box("foobar")) == "foobar");
     
     /* Assert that complex works correctly. */
     assert(unboxTest!(cdouble)(box(1 + 2i)) == 1 + 2i);
@@ -819,7 +819,7 @@ unittest
     
     assert(array.length == 3);
     assert(unboxTest!(int)(array[0]) == 16);
-    // bug 1545: assert(unboxTest!(string)(array[1]) == "foobar");
+    assert(unboxTest!(string)(array[1]) == "foobar");
     assert(unboxTest!(Object)(array[2]) !is null);
     
     /* Convert the box array back into arguments. */
