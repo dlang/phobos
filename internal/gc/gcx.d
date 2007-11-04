@@ -381,8 +381,11 @@ class GC
 
             // Return next item from free list
             gcx.bucket[bin] = (cast(List *)p).next;
-	    // Set to 0, see bugzilla 1258
+
+            // Set unused region between end of allocated block to end of
+            // bucket to 0, see bugzilla 1258
             cstring.memset(p + size, 0, binsize[bin] - size);
+
             //debug(PRINTF) printf("\tmalloc => %x\n", p);
             debug (MEMSTOMP) cstring.memset(p, 0xF0, size);
         }
