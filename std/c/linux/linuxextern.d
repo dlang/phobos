@@ -14,12 +14,12 @@ module std.c.linux.linuxextern;
 
 extern (C)
 {
-    void* __libc_stack_end;
-    int __data_start;
-    int _end;
-    int timezone;
+    extern void* __libc_stack_end;
+    extern int __data_start;
+    extern int _end;
+    extern int timezone;
 
-    void *_deh_beg;
-    void *_deh_end;
+    extern void *_deh_beg;
+    extern void *_deh_end;
 }
 
