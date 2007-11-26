@@ -153,7 +153,7 @@ public enum ORJ_FLAG
  */
 public string toString(ORJ_FLAG f)
 {
-    const EnumString    strings[] = 
+    static const EnumString    strings[] = 
     [
             {   ORJ_FLAG.ORDER_FIELDS,           "Arranges the fields in alphabetical order" }
         ,   {   ORJ_FLAG.ELIDE_BLANK_RECORDS,    "Causes blank records to be ignored"        }
@@ -181,7 +181,7 @@ public enum ORJRC
  */
 public string toString(ORJRC f)
 {
-    const EnumString    strings[] = 
+    static const EnumString    strings[] = 
     [
             {   ORJRC.SUCCESS,              "Operation was successful"                                      }
         ,   {   ORJRC.CANNOT_OPEN_JAR_FILE, "The given file does not exist, or cannot be accessed"          }
@@ -212,7 +212,7 @@ public enum ORJ_PARSE_ERROR
  */
 public string toString(ORJ_PARSE_ERROR f)
 {
-    const EnumString    strings[] = 
+    static const EnumString    strings[] = 
     [
             {   ORJ_PARSE_ERROR.SUCCESS,                            "Parsing was successful"                                                        }
         ,   {   ORJ_PARSE_ERROR.RECORD_SEPARATOR_IN_CONTINUATION,   "A record separator was encountered during a content line continuation"         }

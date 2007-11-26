@@ -2061,7 +2061,7 @@ Warning:
 This is the function internally used by writef* but it's still
 undergoing active development. Do not rely on it.
  */ 
-void formattedWrite(Writer, F, A...)(ref Writer w, F[] fmt, A args)
+void formattedWrite(Writer, F, A...)(ref Writer w, const(F)[] fmt, A args)
 {
     const len = args.length;
     void function(ref Writer, const void*, FormatInfo) funs[len] = void;
