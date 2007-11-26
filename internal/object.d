@@ -1039,7 +1039,7 @@ class TypeInfo_Tuple : TypeInfo
 class TypeInfo_Const : TypeInfo
 {
     override string toString() { return cast(string)
-            ("const " ~ base.toString()); }
+            ("const(" ~ base.toString() ~ ")"); }
 
     override int opEquals(Object o) { return base.opEquals(o); }
     override hash_t getHash(in void *p) { return base.getHash(p); }
@@ -1058,7 +1058,7 @@ class TypeInfo_Const : TypeInfo
 class TypeInfo_Invariant : TypeInfo_Const
 {
     override string toString() { return cast(string)
-            ("invariant " ~ base.toString()); }
+            ("invariant(" ~ base.toString() ~ ")"); }
 }
 
 /* ========================================================================== */

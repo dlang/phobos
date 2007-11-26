@@ -18,6 +18,7 @@ enum
     MIctordone = 2,	// finished construction
     MIstandalone = 4,	// module ctor does not depend on other module
 			// ctors being done first
+    MIhasictor = 8,	// has ictor member
 }
 
 /***********************
@@ -31,11 +32,13 @@ class ModuleInfo
 
     uint flags;		// initialization state
 
-    void (*ctor)();	// module static constructor
+    void (*ctor)();	// module static constructor (order dependent)
     void (*dtor)();	// module static destructor
     void (*unitTest)();	// module unit tests
 
     const(MemberInfo[]) function(string) xgetMembers;	// module getMembers() function
+
+    void (*ictor)();	// module static constructor (order independent)
 
     /******************
      * Return collection of all modules in the program.
@@ -109,6 +112,7 @@ extern (C) void _moduleCtor()
 
     _moduleinfo_dtors = new ModuleInfo[_moduleinfo_array.length];
     debug printf("_moduleinfo_dtors = x%x\n", cast(void *)_moduleinfo_dtors);
+    _moduleIndependentCtors();
     _moduleCtor2(_moduleinfo_array, 0);
 
     version (none)
@@ -212,4 +216,21 @@ extern (C) void _moduleUnitTests()
 	}
     }
 }
+
+/**********************************
+ * Run unit tests.
+ */
+
+extern (C) void _moduleIndependentCtors()
+{
+    debug printf("_moduleIndependentCtors()\n");
+    foreach (m; _moduleinfo_array)
+    {
+	if (m && m.flags & MIhasictor && m.ictor)
+	{
+	    (*m.ictor)();
+	}
+    }
+}
+
 
