@@ -1103,6 +1103,7 @@ enum
 export HANDLE GetCurrentThread();
 export BOOL GetProcessTimes(HANDLE hProcess, LPFILETIME lpCreationTime, LPFILETIME lpExitTime, LPFILETIME lpKernelTime, LPFILETIME lpUserTime);
 export HANDLE GetCurrentProcess();
+export DWORD GetCurrentProcessId();
 export BOOL DuplicateHandle (HANDLE sourceProcess, HANDLE sourceThread,
         HANDLE targetProcessHandle, HANDLE *targetHandle, DWORD access, 
         BOOL inheritHandle, DWORD options);

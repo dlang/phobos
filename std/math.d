@@ -65,6 +65,7 @@ private import std.stdio;
 private import std.c.stdio;
 private import std.string;
 private import std.c.math;
+private import std.traits;
 
 class NotImplemented : Error
 {
@@ -1429,10 +1430,32 @@ real nan(char[] tagp) { return std.c.math.nanl(toStringz(tagp)); }
  */
 real nextafter(real x, real y)
 {
-    version (linux)
-	return std.c.math.nextafterl(x, y);
-    else
-	throw new NotImplemented("nextafter");
+    return std.c.math.nextafterl(x, y);
+}
+
+/// ditto
+float nextafter(float x, float y)
+{
+    return std.c.math.nextafterf(x, y);
+}
+
+/// ditto
+double nextafter(double x, double y)
+{
+    return std.c.math.nextafter(x, y);
+}
+
+unittest
+{
+    float a = 1;
+    double b = 2;
+    real c = 3;
+    assert(is(typeof(nextafter(a, a)) == float));
+    assert(is(typeof(nextafter(b, b)) == double));
+    assert(is(typeof(nextafter(c, c)) == real));
+    assert(nextafter(a, a.infinity) > a);
+    assert(nextafter(b, b.infinity) > b);
+    assert(nextafter(c, c.infinity) > c);
 }
 
 //real nexttoward(real x, real y) { return std.c.math.nexttowardl(x, y); }
@@ -1887,4 +1910,58 @@ unittest
     assert( poly(x, pp) == (56.1L + (32.7L + 6L * x) * x) );
 }
 
+/**
+   Computes whether $(D lhs) is approximately equal to $(D rhs)
+   admitting a maximum relative difference $(D maxRelDiff) and a
+   maximum absolute difference $(D maxAbsDiff).
+ */
+bool approxEqual(T, U, V)(T lhs, U rhs, V maxRelDiff, V maxAbsDiff = 0)
+{
+    static if (isArray!(T)) {
+        final n = lhs.length;
+        static if (isArray!(U)) {
+            // Two arrays
+            assert(n == rhs.length);
+            for (uint i = 0; i != n; ++i) {
+                if (!approxEqual(lhs[i], rhs[i], maxRelDiff, maxAbsDiff))
+                    return false;
+            }
+        } else {
+            // lhs is array, rhs is number
+            for (uint i = 0; i != n; ++i) {
+                if (!approxEqual(lhs[i], rhs, maxRelDiff, maxAbsDiff))
+                    return false;
+            }
+        }
+        return true;
+    } else {
+        static if (isArray!(U)) {
+            // lhs is number, rhs is array
+            return approxEqual(rhs, lhs, maxRelDiff);
+        } else {
+            // two numbers
+            //static assert(is(T : real) && is(U : real));
+            if (rhs == 0) {
+                return (lhs == 0 ? 0 : 1) <= maxRelDiff;
+            }
+            return fabs((lhs - rhs) / rhs) <= maxRelDiff
+                || maxAbsDiff != 0 && fabs(lhs - rhs) < maxAbsDiff;
+        }
+    }
+}
 
+/**
+   Returns $(D approxEqual(lhs, rhs, 0.01)).
+ */
+bool approxEqual(T, U)(T lhs, U rhs) {
+    return approxEqual(lhs, rhs, 0.01);
+}
+
+unittest
+{
+    assert(approxEqual(1.0, 1.0099));
+    assert(!approxEqual(1.0, 1.011));
+    float[] arr1 = [ 1.0, 2.0, 3.0 ];
+    double[] arr2 = [ 1.001, 1.999, 3 ];
+    assert(approxEqual(arr1, arr2));
+}

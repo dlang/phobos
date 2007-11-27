@@ -28,6 +28,7 @@
  * ----
  * 
  * Author:
+ *
  * Andrei Alexandrescu
  * 
  * Credits:
@@ -36,6 +37,7 @@
  */
 
 module std.contracts;
+private import std.conv;
 
 /*
  *  Copyright (C) 2004-2006 by Digital Mars, www.digitalmars.com
@@ -70,10 +72,40 @@ module std.contracts;
  * ----
  */
 
-T enforce(T)(T value, lazy string msg = "")
+T enforce(T)(T value, lazy string msg = "Enforcement error ")
 {
     if (value) return value;
     throw new Exception(msg);
+}
+
+/**
+ * If $(D_PARAM value) is nonzero, returns it. Otherwise, throws
+ * $(D_PARAM ex).
+ * Example:
+ * ----
+ * auto f = enforce(fopen("data.txt"));
+ * auto line = readln(f);
+ * enforce(line.length, new IOException); // expect a non-empty line
+ * ----
+ */
+
+T enforce(T)(T value, lazy Exception ex)
+{
+    if (value) return value;
+    throw ex();
+}
+
+unittest
+{
+    enforce(true, new Exception("this should not be thrown"));
+    try
+    {
+        enforce(false, new Exception("this should be thrown"));
+        assert(false);
+    }
+    catch (Exception e)
+    {
+    }
 }
 
 /**

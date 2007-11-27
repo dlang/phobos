@@ -38,7 +38,7 @@ module std.cover;
 
 private import std.stdio;
 private import std.file;
-private import std.bitarray;
+private import std.bitmanip;
 
 private
 {

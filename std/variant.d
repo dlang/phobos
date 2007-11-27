@@ -577,6 +577,11 @@ public:
         {
             return to!(T)(toString);
         }
+        else
+        {
+            // Fix for bug 1649
+            static assert(false);
+        }
     }
 
     /**
@@ -919,6 +924,28 @@ alias VariantN!(maxSize!(creal, char[], void delegate())) Variant;
  * auto b = Variant(a); // variant array as variant
  * assert(b[1] == 3.14);
  * ----
+ *
+ * Code that needs functionality similar to the $(D_PARAM boxArray)
+ * function in the $(D_PARAM std.boxer) module can achieve it like this:
+ *
+ * ----
+ * // old
+ * Box[] fun(...)
+ * {
+ *     ...
+ *     return boxArray(_arguments, _argptr);
+ * }
+ * // new
+ * Variant[] fun(T...)(T args)
+ * {
+ *     ...
+ *     return variantArray(args);
+ * }
+ * ----
+ *
+ * This is by design. During construction the $(D_PARAM Variant) needs
+ * static type information about the type being held, so as to store a
+ * pointer to function for fast retrieval.
  */
 
 Variant[] variantArray(T...)(T args)

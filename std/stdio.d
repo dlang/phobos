@@ -28,7 +28,8 @@ import std.c.stddef;
 import std.conv;
 import std.traits;
 import std.contracts;
-import std.file, std.typetuple; // for testing only
+import std.file;
+import std.typetuple;
 
 version (DigitalMars)
 {
@@ -241,7 +242,7 @@ unittest
     // test write
     string file = "dmd-build-test.deleteme.txt";
     FILE* f = fopen(file, "w");
-    assert(f);
+    assert(f, getcwd());
     write(f, "Hello, ",  "world number ", 42, "!");
     fclose(f) == 0 || assert(false);
     assert(cast(char[]) std.file.read(file) == "Hello, world number 42!");
@@ -295,14 +296,19 @@ unittest
  * equivalent to $(D_PARAM writef(stdout, args)).
  *
 
- Warning:
+IMPORTANT:
 
- New behavior starting with D 2.006: unlike previous versions,
- $(D_PARAM writef) (and also $(D_PARAM writefln)) only scans its first
- string argument for format specifiers, but not subsequent string
- arguments. Also new in 2.006 is support for positional parameters
- with $(LINK2 http://www.opengroup.org/onlinepubs/009695399/functions/printf.html,POSIX)
- syntax.
+New behavior starting with D 2.006: unlike previous versions,
+$(D_PARAM writef) (and also $(D_PARAM writefln)) only scans its first
+string argument for format specifiers, but not subsequent string
+arguments. This decision was made because the old behavior made it
+unduly hard to simply print string variables that occasionally
+embedded percent signs.
+
+Also new starting with 2.006 is support for positional
+parameters with
+$(LINK2 http://opengroup.org/onlinepubs/009695399/functions/printf.html,
+POSIX) syntax.
 
 Example:
 
@@ -313,11 +319,19 @@ writef("Date: %2$s %1$s", "October", 5); // "Date: 5 October"
 The positional and non-positional styles can be mixed in the same
 format string. (POSIX leaves this behavior undefined.) The internal
 counter for non-positional parameters tracks the next parameter after
-the largest positional parameter already used. */
+the largest positional parameter already used.
+
+New starting with 2.008: raw format specifiers. Using the "%r"
+specifier makes $(D_PARAM writef) simply write the binary
+representation of the argument. Use "%-r" to write numbers in little
+endian format, "%+r" to write numbers in big endian format, and "%r"
+to write numbers in platform-native format.
+ 
+*/
 
 void writef(T...)(T args)
 {
-    FileWriter!(char) w;
+    PrivateFileWriter!(char) w;
     static const errorMessage =
         "You must pass a formatting string as the first"
         " argument to writef. If no formatting is needed,"
@@ -773,14 +787,14 @@ FILE* popen(string name, string mode)
 
 /*
  * Implements the static Writer interface for a FILE*. Instantiate it
- * with the character type, e.g. FileWriter!(char),
- * FileWriter!(wchar), or FileWriter!(dchar). Regardless of
- * instantiation, FileWriter supports all character widths; it only is
+ * with the character type, e.g. PrivateFileWriter!(char),
+ * PrivateFileWriter!(wchar), or PrivateFileWriter!(dchar). Regardless of
+ * instantiation, PrivateFileWriter supports all character widths; it only is
  * the most efficient at accepting the character type it was
  * instantiated with.
  *
  * */
-private struct FileWriter(Char)
+private struct PrivateFileWriter(Char)
 {
     alias Char NativeChar;
     FILE* backend;
@@ -929,10 +943,36 @@ Example:
 
 struct lines
 {
-    FILE * f;
-    dchar terminator = '\n';
+    private FILE * f;
+    private dchar terminator = '\n';
+    private string fileName;
+
+    static lines opCall(FILE* f, dchar terminator = '\n')
+    {
+        lines result;
+        result.f = f;
+        result.terminator = terminator;
+        return result;
+    }
+
+    // Keep these commented lines for later, when Walter fixes the
+    // exception model.
+    
+//     static lines opCall(string fName, dchar terminator = '\n')
+//     {
+//         auto f = enforce(fopen(fName), 
+//             new StdioException("Cannot open file `"~fName~"' for reading"));
+//         auto result = lines(f, terminator);
+//         result.fileName = fName;
+//         return result;
+//     }
+
     int opApply(D)(D dg)
     {
+//         scope(exit) {
+//             if (fileName.length && fclose(f))
+//                 StdioException("Could not close file `"~fileName~"'");
+//         }
         alias ParameterTypeTuple!(dg) Parms;
         static if (isSomeString!(Parms[$ - 1]))
         {
@@ -1151,8 +1191,32 @@ struct chunks
 {
     private FILE* f;
     private size_t size;
+    private string fileName;
+
+    static chunks opCall(FILE* f, size_t size)
+    {
+        assert(f && size);
+        chunks result;
+        result.f = f;
+        result.size = size;
+        return result;
+    }
+
+//     static chunks opCall(string fName, size_t size)
+//     {
+//         auto f = enforce(fopen(fName), 
+//             new StdioException("Cannot open file `"~fName~"' for reading"));
+//         auto result = chunks(f, size);
+//         result.fileName  = fName;
+//         return result;
+//     }
+
     int opApply(int delegate(ref ubyte[]) dg)
     {
+//         scope(exit) {
+//             if (fileName.length && fclose(f))
+//                 StdioException("Could not close file `"~fileName~"'");
+//         }
         const maxStackSize = 500 * 1024;
         ubyte[] buffer = void;
         if (size < maxStackSize)

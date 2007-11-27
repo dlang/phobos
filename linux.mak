@@ -102,13 +102,14 @@ INTERNAL_GC_EXTRAFILES = \
 	internal/gc/win32.mak \
 	internal/gc/linux.mak
 
-STD_MODULES = array asserterror base64 bind bitarray boxer compiler contracts \
-	conv cover cpuid cstream ctype date dateparse demangle file format gc \
-	getopt hiddenfunc intrinsic loader math math2 md5 metastrings mmfile \
-	moduleinit openrj outbuffer outofmemory path perf process random \
-	regexp signals slist socket socketstream stdint stdio stream string \
-	switcherr syserror system thread traits typetuple uni uri utf variant \
-	zip zlib
+STD_MODULES = algorithm array asserterror base64 bind bitarray		\
+        bitmanip boxer compiler contracts conv cover cpuid cstream	\
+        ctype date dateparse demangle file format functional gc getopt	\
+        hiddenfunc intrinsic loader math math2 md5 metastrings mmfile	\
+        moduleinit numeric openrj outbuffer outofmemory path perf	\
+        process random regexp signals socket socketstream stdint stdio	\
+        stream string switcherr syserror system thread traits typecons	\
+        typetuple uni uri utf variant zip zlib
 STD_MODULES_NOTBUILT = stdarg
 
 STD_C_MODULES = stdarg stdio

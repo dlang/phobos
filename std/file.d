@@ -1591,6 +1591,8 @@ struct DirIterator
     int opApply(D)(D dg)
     {
         int result = 0;
+        string[] worklist = [ pathname ]; // used only in breadth-first traversal
+
         bool callback(DirEntry* de)
         {
             switch (mode)
@@ -1602,7 +1604,7 @@ struct DirIterator
                 result = doIt(dg, de);
                 if (!result && de.isdir)
                 {
-                    listdir(de.name, &callback);
+                    worklist ~= de.name;
                 }
                 break;
             default:
@@ -1618,8 +1620,15 @@ struct DirIterator
                 break;
             }
             return result == 0; 
-        }    
-        listdir(pathname, &callback);
+        }
+        
+        // consume the worklist
+        while (worklist.length)
+        {
+            auto listThis = worklist[$ - 1];
+            worklist.length = worklist.length - 1;
+            listdir(listThis, &callback);
+        }
         return result;
     }
 }

@@ -143,7 +143,7 @@ private
     import std.string;
     import std.ctype;
     import std.outbuffer;
-    import std.bitarray;
+    import std.bitmanip;
     import std.utf;
 }
 
@@ -152,11 +152,11 @@ private
  *	$(LINK2 http://www.regular-expressions.info/email.html, How to Find or Validate an Email Address)$(BR)
  *	$(LINK2 http://tools.ietf.org/html/rfc2822#section-3.4.1, RFC 2822 Internet Message Format)
  */
-const char[] email =
+string email =
     r"[a-zA-Z]([.]?([[a-zA-Z0-9_]-]+)*)?@([[a-zA-Z0-9_]\-_]+\.)+[a-zA-Z]{2,6}";
 
 /** Regular expression to extract a _url */
-const char[] url = r"(([h|H][t|T]|[f|F])[t|T][p|P]([s|S]?)\:\/\/|~/|/)?([\w]+:\w+@)?(([a-zA-Z]{1}([\w\-]+\.)+([\w]{2,5}))(:[\d]{1,5})?)?((/?\w+/)+|/?)(\w+\.[\w]{3,4})?([,]\w+)*((\?\w+=\w+)?(&\w+=\w+)*([,]\w*)*)?";
+string url = r"(([h|H][t|T]|[f|F])[t|T][p|P]([s|S]?)\:\/\/|~/|/)?([\w]+:\w+@)?(([a-zA-Z]{1}([\w\-]+\.)+([\w]{2,5}))(:[\d]{1,5})?)?((/?\w+/)+|/?)(\w+\.[\w]{3,4})?([,]\w+)*((\?\w+=\w+)?(&\w+=\w+)*([,]\w*)*)?";
 
 /************************************
  * One of these gets thrown on compilation errors
@@ -237,7 +237,7 @@ unittest
  * sub(s, "[ar]",
  *    delegate char[] (RegExp m)
  *    {
- *         return toupper(m.match(0));
+ *         return toupper(m[0]);
  *    },
  *    "g");    // result: StRAp A Rocket engine on A chicken.
  * ---
@@ -308,7 +308,7 @@ unittest
 		 "[ar]",
 	         delegate string (RegExp m)
 	         {
-		    return std.string.toupper(m.match(0));
+		    return std.string.toupper(m[0]);
 	         },
 	         "g");
     assert(s == "StRAp A Rocket engine on A chicken.");
@@ -316,20 +316,49 @@ unittest
 
 
 /*************************************************
- * Search s[] for first match with pattern[] with attributes[].
+ * Search $(D_PARAM s[]) for first match with $(D_PARAM pattern).
  * Params:
  *	s = String to search.
  *	pattern = Regular expression pattern.
- *	attributes = Regular expression attributes.
  * Returns:
  *	index into s[] of match if found, -1 if no match.
  * Example:
  * ---
  * auto s = "abcabcabab";
- * std.regexp.find(s, "b");    // match, returns 1
- * std.regexp.find(s, "f");    // no match, returns -1
+ * find(s, RegExp("b"));    // match, returns 1
+ * find(s, RegExp("f"));    // no match, returns -1
  * ---
  */
+
+int find(string s, RegExp pattern)
+{
+    return pattern.test(s)
+        ? pattern.pmatch[0].rm_so
+        : -1;
+}
+
+unittest
+{
+    debug(regexp) printf("regexp.find.unittest\n");
+
+    auto i = find("xabcy", RegExp("abc"));
+    assert(i == 1);
+    i = find("cba", RegExp("abc"));
+    assert(i == -1);
+}
+
+/**
+Returns:
+
+  Same as $(D_PARAM find(s, RegExp(pattern, attributes))). 
+
+WARNING:
+
+This function is scheduled for deprecation due to unnecessary
+ambiguity with the homonym function in std.string. Instead of
+$(D_PARAM std.regexp.find(s, p, a)), you may want to use $(D_PARAM
+find(s, RegExp(p, a))).
+*/
 
 int find(string s, string pattern, string attributes = null)
 {
@@ -354,23 +383,66 @@ unittest
     assert(i == -1);
 }
 
-
-
 /*************************************************
- * Search s[] for last match with pattern[] with attributes[].
+ * Search $(D_PARAM s[]) for last match with $(D_PARAM pattern).
  * Params:
  *	s = String to search.
  *	pattern = Regular expression pattern.
- *	attributes = Regular expression attributes.
  * Returns:
  *	index into s[] of match if found, -1 if no match.
  * Example:
  * ---
  * auto s = "abcabcabab";
- * std.regexp.find(s, "b");    // match, returns 9
- * std.regexp.find(s, "f");    // no match, returns -1
+ * rfind(s, RegExp("b"));    // match, returns 9
+ * rfind(s, RegExp("f"));    // no match, returns -1
  * ---
  */
+
+int rfind(string s, RegExp pattern)
+{
+    int i = -1;
+    int lastindex = 0;
+
+    while (pattern.test(s, lastindex))
+    {   int eo = pattern.pmatch[0].rm_eo;
+	i = pattern.pmatch[0].rm_so;
+	if (lastindex == eo)
+	    lastindex++;		// always consume some source
+	else
+	    lastindex = eo;
+    }
+    return i;
+}
+
+unittest
+{
+    int i;
+
+    debug(regexp) printf("regexp.rfind.unittest\n");
+    i = rfind("abcdefcdef", RegExp("c"));
+    assert(i == 6);
+    i = rfind("abcdefcdef", RegExp("cd"));
+    assert(i == 6);
+    i = rfind("abcdefcdef", RegExp("x"));
+    assert(i == -1);
+    i = rfind("abcdefcdef", RegExp("xy"));
+    assert(i == -1);
+    i = rfind("abcdefcdef", RegExp(""));
+    assert(i == 10);
+}
+
+/*************************************************
+Returns:
+
+  Same as $(D_PARAM rfind(s, RegExp(pattern, attributes))). 
+
+WARNING:
+
+This function is scheduled for deprecation due to unnecessary
+ambiguity with the homonym function in std.string. Instead of
+$(D_PARAM std.regexp.rfind(s, p, a)), you may want to use $(D_PARAM
+rfind(s, RegExp(p, a))).
+*/
 
 int rfind(string s, string pattern, string attributes = null)
 {
@@ -410,16 +482,15 @@ unittest
 
 /********************************************
  * Split s[] into an array of strings, using the regular
- * expression pattern[] with attributes[] as the separator.
+ * expression $(D_PARAM pattern) as the separator.
  * Params:
  *	s = String to search.
  *	pattern = Regular expression pattern.
- *	attributes = Regular expression attributes.
  * Returns:
  * 	array of slices into s[]
  * Example:
  * ---
- * foreach (s; split("abcabcabab", "C.", "i"))
+ * foreach (s; split("abcabcabab", RegExp("C.", "i")))
  * {
  *     writefln("s = '%s'", s);
  * }
@@ -428,6 +499,43 @@ unittest
  * // s = 'b'
  * // s = 'bab'
  * ---
+ */
+
+string[] split(string s, RegExp pattern)
+{
+    return pattern.split(s);
+}
+
+unittest
+{
+    debug(regexp) printf("regexp.split.unittest()\n");
+    string[] result;
+
+    result = split("ab", RegExp("a*"));
+    assert(result.length == 2);
+    assert(result[0] == "");
+    assert(result[1] == "b");
+
+    foreach (i, s; split("abcabcabab", RegExp("C.", "i")))
+    {
+	//writefln("s[%d] = '%s'", i, s);
+	if (i == 0) assert(s == "ab");
+	else if (i == 1) assert(s == "b");
+	else if (i == 2) assert(s == "bab");
+	else assert(0);
+    }
+}
+
+/********************************************
+  Returns:
+  	Same as $(D_PARAM split(s, RegExp(pattern, attributes))).
+
+WARNING:
+
+This function is scheduled for deprecation due to unnecessary
+ambiguity with the homonym function in std.string. Instead of
+$(D_PARAM std.regexp.split(s, p, a)), you may want to use $(D_PARAM
+split(s, RegExp(p, a))).
  */
 
 string[] split(string s, string pattern, string attributes = null)
@@ -475,7 +583,7 @@ unittest
  * {
  *     if (auto m = std.regexp.search("abcdef", "c"))
  *     {
- *         writefln("%s[%s]%s", m.pre, m.match(0), m.post);
+ *         writefln("%s[%s]%s", m.pre, m[0], m.post);
  *     }
  * }
  * // Prints:
@@ -486,13 +594,9 @@ unittest
 RegExp search(string s, string pattern, string attributes = null)
 {
     auto r = new RegExp(pattern, attributes);
-
-    if (r.test(s))
-    {
-    }
-    else
+    if (!r.test(s))
     {	delete r;
-	r = null;
+	assert(r is null);
     }
     return r;
 }
@@ -503,10 +607,10 @@ unittest
 
     if (auto m = std.regexp.search("abcdef", "c()"))
     {
-	auto result = std.string.format("%s[%s]%s", m.pre, m.match(0), m.post);
+	auto result = std.string.format("%s[%s]%s", m.pre, m[0], m.post);
 	assert(result == "ab[c]def");
-	assert(m.match(1) == null);
-	assert(m.match(2) == null);
+	assert(m[1] == null);
+	assert(m[2] == null);
     }
     else
 	assert(0);
@@ -598,7 +702,7 @@ class RegExp
      * {
      *     foreach(m; RegExp("ab").search("abcabcabab"))
      *     {
-     *         writefln("%s[%s]%s", m.pre, m.match(0), m.post);
+     *         writefln("%s[%s]%s", m.pre, m[0], m.post);
      *     }
      * }
      * // Prints:
@@ -639,7 +743,7 @@ class RegExp
 	int i;
 	foreach(m; RegExp("ab").search("abcabcabab"))
 	{
-	    auto s = std.string.format("%s[%s]%s", m.pre, m.match(0), m.post);
+	    auto s = std.string.format("%s[%s]%s", m.pre, m[0], m.post);
 	    if (i == 0) assert(s == "[ab]cabcabab");
 	    else if (i == 1) assert(s == "abc[ab]cabab");
 	    else if (i == 2) assert(s == "abcabc[ab]ab");
@@ -657,7 +761,7 @@ class RegExp
      * if n is larger than the number of parenthesized subexpressions,
      * null is returned.
      */
-    public string match(size_t n)
+    public string opIndex(size_t n)
     {
 	if (n >= pmatch.length)
 	    return null;
@@ -669,6 +773,20 @@ class RegExp
 		return null;
 	    return input[rm_so .. rm_eo];
 	}
+    }
+
+    /**
+       Same as $(D_PARAM opIndex(n)).
+
+       WARNING:
+
+       Scheduled for deprecation due to confusion with overloaded
+       $(D_PARAM match(string)). Instead of $(D_PARAM regex.match(n))
+       you may want to use $(D_PARAM regex[n]). 
+    */
+    public string match(size_t n)
+    {
+        return this[n];
     }
 
     /*******************
@@ -1253,6 +1371,21 @@ public int test(string s, int startindex)
 	//debug(regexp) printf("Starting new try: '%.*s'\n", input[si + 1 .. input.length]);
     }
     return 0;		// no match
+}
+
+    /**
+       Returns whether string $(D_PARAM s) matches $(D_PARAM this).
+    */
+alias test opEquals;
+//     int opEquals(string s)
+//     {
+//         return test(s);
+//     }
+
+unittest
+{
+    assert("abc" == RegExp(".b."));
+    assert("abc" != RegExp(".b.."));
 }
 
 int chr(inout uint si, rchar c)
@@ -3154,17 +3287,17 @@ unittest
 
     auto m = search("aBC r s", `bc\x20r[\40]s`, "i");
     assert(m.pre=="a");
-    assert(m.match(0)=="BC r s");
+    assert(m[0]=="BC r s");
     auto m2 = search("7xxyxxx", `^\d([a-z]{2})\D\1`);
-    assert(m2.match(0)=="7xxyxx");
+    assert(m2[0]=="7xxyxx");
     // Just check the parsing.
     auto m3 = search("dcbxx", `ca|b[\d\]\D\s\S\w-\W]`);
     auto m4 = search("xy", `[^\ca-\xFa\r\n\b\f\t\v\0123]{2,485}$`);
     auto m5 = search("xxx", `^^\r\n\b{13,}\f{4}\t\v\u02aF3a\w\W`);
     auto m6 = search("xxy", `.*y`);
-    assert(m6.match(0)=="xxy");
+    assert(m6[0]=="xxy");
     auto m7 = search("QWDEfGH", "(ca|b|defg)+", "i");
-    assert(m7.match(0)=="DEfG");
+    assert(m7[0]=="DEfG");
     auto m8 = search("dcbxx", `a?\B\s\S`);
     auto m9 = search("dcbxx", `[-w]`);
     auto m10 = search("dcbsfd", `aB[c-fW]dB|\d|\D|\u012356|\w|\W|\s|\S`, "i");

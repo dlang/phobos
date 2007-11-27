@@ -272,6 +272,41 @@ unittest
 }
 
 /**
+Get the type that all types can be implicitly converted to. Useful
+e.g. in figuring out an array type from a bunch of initializing
+values. Returns $(D_PARAM void) if passed an empty list, or if the
+types have no common type.
+
+Example:
+
+----
+alias CommonType!(int, long, short) X;
+assert(is(X == long));
+alias CommonType!(int, char[], short) Y;
+assert(is(Y == void));
+----
+*/
+template CommonType(T...)
+{
+    static if (!T.length)
+        alias void CommonType;
+    else static if (T.length == 1)
+        alias T[0] CommonType;
+    else static if (is(typeof(true ? T[0] : T[1]) U))
+        alias CommonType!(U, T[2 .. $]) CommonType;
+    else
+        alias void CommonType;
+}
+
+unittest
+{
+    alias CommonType!(int, long, short) X;
+    assert(is(X == long));
+    alias CommonType!(char[], int, long, short) Y;
+    assert(is(Y == void), Y.stringof);
+}
+
+/**
  * Returns a tuple with all possible target types of an implicit
  * conversion of a value of type $(D_PARAM T).
  *
@@ -322,9 +357,6 @@ template ImplicitConversionTargets(T)
     else static if (is(T == double))
         alias TypeTuple!(real)
             ImplicitConversionTargets;
-//     else static if (is(T == real))
-//         alias TypeTuple!()
-//             ImplicitConversionTargets;
     else static if (is(T == char))
         alias TypeTuple!(wchar, dchar, byte, ubyte, short, ushort,
             int, uint, long, ulong, float, double, real)
@@ -356,33 +388,36 @@ unittest
 
 template isIntegral(T)
 {
-  static const isIntegral = is(T == byte) || is(T == ubyte) || is(T == short)
-    || is(T == ushort) || is(T == int) || is(T == uint)
-    || is(T == long) || is(T == ulong);
+    static const isIntegral = is(T == byte) || is(T == ubyte) || is(T == short)
+        || is(T == ushort) || is(T == int) || is(T == uint)
+        || is(T == long) || is(T == ulong);
 }
 
 /**
  * Detect whether T is a built-in floating point type
  */
 
-template isFloatingPoint(T) {
-  static const isFloatingPoint = is(T == float)
-    || is(T == double) || is(T == real);
+template isFloatingPoint(T)
+{
+    static const isFloatingPoint = is(T == float)
+        || is(T == double) || is(T == real);
 }
 
 /**
  * Detect whether T is a built-in numeric type
  */
 
-template isNumeric(T) {
-  static const isNumeric = isIntegral!(T) || isFloatingPoint!(T);
+template isNumeric(T)
+{
+    static const isNumeric = isIntegral!(T) || isFloatingPoint!(T);
 }
 
 /**
  * Detect whether T is one of the built-in string types
  */
 
-template isSomeString(T) {
+template isSomeString(T)
+{
     static const isSomeString = is(T : const(char[]))
         || is(T : const(wchar[])) || is(T : const(dchar[]));
 }
@@ -403,9 +438,8 @@ static assert(isSomeString!(char[4]));
 
 template isAssociativeArray(T)
 {
-    static const bool isAssociativeArray
-    = is(typeof(T.keys)) && is(typeof(T.values));
-    //      = is(typeof(T.init.values[0])[typeof(T.init.keys[0])] == T);
+    static const bool isAssociativeArray =
+        is(typeof(T.keys)) && is(typeof(T.values));
 }
 
 static assert(!isAssociativeArray!(int));
@@ -414,19 +448,25 @@ static assert(isAssociativeArray!(int[int]));
 static assert(isAssociativeArray!(int[string]));
 static assert(isAssociativeArray!(invariant(char[5])[int]));
 
+/**
+ * Detect whether type T is a static array.
+ */
+template isStaticArray(T : U[N], U, size_t N)
+{
+    const bool isStaticArray = true;
+}
+
 template isStaticArray(T)
 {
     const bool isStaticArray = false;
 }
 
-template isStaticArray(T : T[N], size_t N)
-{
-    const bool isStaticArray = true;
-}
-
 static assert (isStaticArray!(int[51]));
 static assert (isStaticArray!(int[][2]));
 static assert (isStaticArray!(char[][int][11]));
+static assert (!isStaticArray!(const(int)[]));
+static assert (!isStaticArray!(invariant(int)[]));
+static assert (!isStaticArray!(const(int)[4][]));
 static assert (!isStaticArray!(int[]));
 static assert (!isStaticArray!(int[char]));
 static assert (!isStaticArray!(int[1][]));
@@ -434,6 +474,9 @@ static assert(isStaticArray!(invariant char[13u]));
 static assert(isStaticArray!(void[0]));
 static assert(!isStaticArray!(int[int]));
 static assert(!isStaticArray!(int));
+static assert(isStaticArray!(const(real)[1]));
+static assert(isStaticArray!(const(real)[1][1]));
+static assert(isStaticArray!(typeof("string literal")));
 
 /**
  * Detect whether type T is a dynamic array.

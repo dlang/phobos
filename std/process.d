@@ -37,6 +37,10 @@ private import std.c.stdlib;
 private import std.c.string;
 private import std.string;
 private import std.c.process;
+version (Windows)
+{
+    private import std.c.windows.windows:GetCurrentProcessId;
+}
 
 /**
  * Execute command in a _command shell.
@@ -247,6 +251,15 @@ else
 } // version
 }
 
+version(linux)
+{
+    alias std.c.process.getpid getpid;
+}
+else version (Windows)
+{
+    alias std.c.windows.windows.GetCurrentProcessId getpid;
+}
+
 /* ////////////////////////////////////////////////////////////////////////// */
 
 version(MainTest)
@@ -285,3 +298,4 @@ version(MainTest)
 }
 
 /* ////////////////////////////////////////////////////////////////////////// */
+

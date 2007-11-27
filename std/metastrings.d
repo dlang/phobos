@@ -74,18 +74,20 @@ template FormatString(const(char)[] F, A...)
 template ToString(ulong U)
 {
     static if (U < 10)
-	const char[] ToString = "" ~ cast(char)(U + '0');
+	invariant char[] ToString = "" ~ cast(char)(U + '0');
     else
-	const char[] ToString = ToString!(U / 10) ~ ToString!(U % 10);
+	invariant char[] ToString = ToString!(U / 10) ~ ToString!(U % 10);
 }
+
+static assert(ToString!(1uL << 62) == "4611686018427387904");
 
 /// ditto
 template ToString(long I)
 {
     static if (I < 0)
-	const char[] ToString = "-" ~ ToString!(cast(ulong)(-I));
+	invariant char[] ToString = "-" ~ ToString!(cast(ulong)(-I));
     else
-	const char[] ToString = ToString!(cast(ulong)I);
+	invariant char[] ToString = ToString!(cast(ulong)I);
 }
 
 static assert(ToString!(0x100000000) == "4294967296");
@@ -93,55 +95,55 @@ static assert(ToString!(0x100000000) == "4294967296");
 /// ditto
 template ToString(uint U)
 {
-    const char[] ToString = ToString!(cast(ulong)U);
+    invariant char[] ToString = ToString!(cast(ulong)U);
 }
 
 /// ditto
 template ToString(int I)
 {
-    const char[] ToString = ToString!(cast(long)I);
+    invariant char[] ToString = ToString!(cast(long)I);
 }
 
 /// ditto
 template ToString(ushort U)
 {
-    const char[] ToString = ToString!(cast(ulong)U);
+    invariant char[] ToString = ToString!(cast(ulong)U);
 }
 
 /// ditto
 template ToString(short I)
 {
-    const char[] ToString = ToString!(cast(long)I);
+    invariant char[] ToString = ToString!(cast(long)I);
 }
 
 /// ditto
 template ToString(ubyte U)
 {
-    const char[] ToString = ToString!(cast(ulong)U);
+    invariant char[] ToString = ToString!(cast(ulong)U);
 }
 
 /// ditto
 template ToString(byte I)
 {
-    const char[] ToString = ToString!(cast(long)I);
+    invariant char[] ToString = ToString!(cast(long)I);
 }
 
 /// ditto
 template ToString(bool B)
 {
-    const char[] ToString = B ? "true" : "false";
+    invariant char[] ToString = B ? "true" : "false";
 }
 
 /// ditto
 template ToString(string S)
 {
-    const char[] ToString = S;
+    invariant char[] ToString = S;
 }
 
 /// ditto
 template ToString(char C)
 {
-    const char[] ToString = "" ~ C;
+    invariant char[] ToString = "" ~ C;
 }
 
 unittest

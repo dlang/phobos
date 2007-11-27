@@ -23,6 +23,7 @@ module std.path;
 //private import std.stdio;
 
 private import std.string;
+private import std.file;
 
 version(linux)
 {
@@ -36,35 +37,35 @@ version(Windows)
 
     /** String used to separate directory names in a path. Under
      *  Windows this is a backslash, under Linux a slash. */
-    const char[1] sep = "\\";
+    invariant char[1] sep = "\\";
     /** Alternate version of sep[] used in Windows (a slash). Under
      *  Linux this is empty. */
-    const char[1] altsep = "/";
+    invariant char[1] altsep = "/";
     /** Path separator string. A semi colon under Windows, a colon
      *  under Linux. */
-    const char[1] pathsep = ";";
+    invariant char[1] pathsep = ";";
     /** String used to separate lines, \r\n under Windows and \n
      * under Linux. */
-    const char[2] linesep = "\r\n"; /// String used to separate lines.
-    const char[1] curdir = ".";	 /// String representing the current directory.
-    const char[2] pardir = ".."; /// String representing the parent directory.
+    invariant char[2] linesep = "\r\n"; /// String used to separate lines.
+    invariant char[1] curdir = ".";	 /// String representing the current directory.
+    invariant char[2] pardir = ".."; /// String representing the parent directory.
 }
 version(linux)
 {
     /** String used to separate directory names in a path. Under
      *  Windows this is a backslash, under Linux a slash. */
-    const char[1] sep = "/";
+    invariant char[1] sep = "/";
     /** Alternate version of sep[] used in Windows (a slash). Under
      *  Linux this is empty. */
-    const char[0] altsep;
+    invariant char[0] altsep;
     /** Path separator string. A semi colon under Windows, a colon
      *  under Linux. */
-    const char[1] pathsep = ":";
+    invariant char[1] pathsep = ":";
     /** String used to separate lines, \r\n under Windows and \n
      * under Linux. */
-    const char[1] linesep = "\n";
-    const char[1] curdir = ".";	 /// String representing the current directory.
-    const char[2] pardir = ".."; /// String representing the parent directory.
+    invariant char[1] linesep = "\n";
+    invariant char[1] curdir = ".";	 /// String representing the current directory.
+    invariant char[2] pardir = ".."; /// String representing the parent directory.
 }
 
 /*****************************
@@ -576,6 +577,52 @@ unittest
     {
 	assert(isabs("/home/user") == 1);
 	assert(isabs("foo") == 0);
+    }
+}
+
+/**
+ * Converts a relative path into an absolute path. Currently only
+ * implemented on Linux.
+ */
+string rel2abs(string path)
+{
+    version(windows)
+    {
+        static assert(false, "rel2abs not yet implemented on Windows");
+    }
+    if (!path.length) return null;
+    if (startsWith(path, sep) || altsep.length && startsWith(path, altsep))
+    {
+        return path;
+    }
+    auto myDir = getcwd();
+    if (path.startsWith(curdir))
+    {
+        auto p = path[curdir.length .. $];
+        if (p.startsWith(sep))
+            path = p[sep.length .. $];
+        else if (altsep.length && p.startsWith(altsep))
+            path = p[altsep.length .. $];
+        else if (!p.length)
+            path = null;
+    }
+    return myDir.endsWith(sep)
+        ? myDir ~ path
+        : path.length ? myDir ~ sep ~ path : myDir;
+}
+
+unittest
+{
+    version (linux)
+    {
+        auto myDir = getcwd();
+        scope(exit) std.file.chdir(myDir);
+        std.file.chdir("/");
+        assert(rel2abs(".") == "/", rel2abs("."));
+        assert(rel2abs("bin") == "/bin", rel2abs("bin"));
+        assert(rel2abs("./bin") == "/bin", rel2abs("./bin"));
+        std.file.chdir("bin");
+        assert(rel2abs(".") == "/bin", rel2abs("."));
     }
 }
 
