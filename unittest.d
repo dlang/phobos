@@ -1,4 +1,3 @@
-
 /*
  *  Copyright (C) 1999-2006 by Digital Mars, www.digitalmars.com
  *  Written by Walter Bright
@@ -26,33 +25,7 @@
 // to run the unit tests on them.
 // Then, it prints out the arguments passed to main().
 
-import std.c.stdio;
-import std.string;
-import std.path;
-import std.math;
-import std.math2;
-import std.outbuffer;
-import std.ctype;
-import std.regexp;
-import std.random;
-import std.date;
-import std.dateparse;
-import std.demangle;
-import std.cstream;
-import std.stream;
-import std.utf;
-import std.uri;
-import std.zlib;
-import std.md5;
-import std.stdio;
-import std.conv;
-import std.boxer;
-import std.bitarray;
-import std.uni;
-import std.file;
-import std.signals;
-import std.cpuid;
-import std.socket;
+import all_std_modules_generated;
 
 int main(char[][] args)
 {

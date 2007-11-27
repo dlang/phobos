@@ -243,6 +243,7 @@ unittest
     string file = "dmd-build-test.deleteme.txt";
     FILE* f = fopen(file, "w");
     assert(f, getcwd());
+    scope(exit) { std.file.remove(file); }
     write(f, "Hello, ",  "world number ", 42, "!");
     fclose(f) == 0 || assert(false);
     assert(cast(char[]) std.file.read(file) == "Hello, world number 42!");
@@ -274,6 +275,7 @@ unittest
     string file = "dmd-build-test.deleteme.txt";
     FILE* f = fopen(file, "w");
     assert(f);
+    scope(exit) { std.file.remove(file); }
     writeln(f, "Hello, ",  "world number ", 42, "!");
     fclose(f) == 0 || assert(false);
     assert(cast(char[]) std.file.read(file) == "Hello, world number 42!\n");
@@ -366,6 +368,7 @@ unittest
     string file = "dmd-build-test.deleteme.txt";
     auto f = fopen(file, "w");
     assert(f);
+    scope(exit) { std.file.remove(file); }
     writef(f, "Hello, %s world number %s!", "nice", 42);
     fclose(f) == 0 || assert(false);
     assert(cast(char[]) std.file.read(file) ==  "Hello, nice world number 42!");
@@ -393,6 +396,7 @@ unittest
     string file = "dmd-build-test.deleteme.txt";
     FILE* f = fopen(file, "w");
     assert(f);
+    scope(exit) { std.file.remove(file); }
     writefln(f, "Hello, %s world number %s!", "nice", 42);
     fclose(f) == 0 || assert(false);
     assert(cast(char[]) std.file.read(file) == "Hello, nice world number 42!\n");
@@ -1058,6 +1062,7 @@ struct lines
 unittest
 {
     string file = "dmd-build-test.deleteme.txt";
+    scope(exit) { std.file.remove(file); }
     alias TypeTuple!(string, wstring, dstring,
                      char[], wchar[], dchar[])
         TestedWith;
@@ -1244,6 +1249,7 @@ struct chunks
 unittest
 {
     string file = "dmd-build-test.deleteme.txt";
+    scope(exit) { std.file.remove(file); }
     // test looping with an empty file
     std.file.write(file, "");
     auto f = fopen(file, "r");
