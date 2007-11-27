@@ -39,7 +39,10 @@ private import std.array;
 private import std.format;
 private import std.ctype;
 private import std.stdarg;
-import std.contracts;
+private import std.contracts;
+private import std.typetuple;
+private import std.conv;
+private import std.traits;
 
 extern (C)
 {
@@ -1539,6 +1542,194 @@ unittest
     assert(i == 0);
 }
 
+/**
+ * Returns $(D_PARAM true) if and only if the array $(D_PARAM longer)
+ * starts with array $(D_PARAM shorter).
+ */
+bool startsWith(A1, A2)(A1 longer, A2 shorter)
+{
+    static if (is(typeof(longer[0 .. shorter.length] == shorter)))
+    {
+        // the easy way: arrays, directly comparable
+        return longer.length >= shorter.length &&
+            longer[0 .. shorter.length] == shorter;
+    }
+    else
+    {
+        // different element types, etc.
+        static if (isSomeString!(A1) && isSomeString!(A2))
+        {
+            // UTF-informed comparison
+            // find the largest character of the two
+            static if (longer[0].sizeof > shorter[0].sizeof)
+            {
+                alias typeof(longer[0]) Char;
+                if (shorter.length / Char.sizeof > longer.length) return false;
+                size_t i = 0;
+                foreach (Char c; shorter)
+                {
+                    if (i == longer.length || longer[i] != c) return false;
+                    ++i;
+                }
+            }
+            else
+            {
+                static assert(longer[0].sizeof < shorter[0].sizeof,
+                    "Looks like there's a bug in the compiler");
+                alias typeof(shorter[0]) Char;
+                if (shorter.length > longer.length) return false;
+                size_t i = 0;
+                foreach (Char c; longer)
+                {
+                    if (i == shorter.length) return true;
+                    if (shorter[i] != c) return false;
+                    ++i;
+                }
+            }
+        }
+        else
+        {
+            // raw element-by-element comparison
+            if (longer.length < shorter.length) return false;
+            foreach (i, e; shorter)
+            {
+                if (longer[i] != e) return false;
+            }
+        }
+    }
+    return true;
+}
+
+unittest
+{
+    alias TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[])
+        StringTypes;
+    alias TypeTuple!(ubyte[], int[], double[]) OtherTypes;
+    foreach (T1 ; StringTypes)
+    {
+        foreach (T2 ; StringTypes)
+        {
+            foreach (T3 ; OtherTypes)
+            {
+                auto a = to!(T1)("abcde"), b = to!(T2)("abcdefgh"),
+                    c = to!(T2)("");
+                auto d = to!(T3)([2, 3]);
+                assert(startsWith(b, a));
+                assert(!startsWith(a, b));
+                assert(startsWith(b, c));
+                assert(startsWith(a, c));
+                assert(!startsWith(c, b));
+                assert(!startsWith(c, a));
+                assert(!startsWith(a, d));
+                assert(!startsWith(d, a));
+                assert(!startsWith(b, d));
+                assert(!startsWith(d, b));
+                assert(!startsWith(c, d));
+                assert(startsWith(d, c));
+            }
+        }
+    }
+}
+
+/**
+ * Returns $(D_PARAM true) if and only if the array $(D_PARAM longer)
+ * ends with array $(D_PARAM shorter).
+ */
+bool endsWith(A1, A2)(A1 longer, A2 shorter)
+{
+    static if (is(typeof(longer[$ - shorter.length .. $] == shorter)))
+    {
+        // the easy way: arrays, directly comparable
+        return longer.length >= shorter.length &&
+            longer[$ - shorter.length .. $] == shorter;
+    }
+    else
+    {
+        // different element types, etc.
+        static if (isSomeString!(A1) && isSomeString!(A2))
+        {
+            // UTF-informed comparison
+            // find the largest character of the two
+            static if (longer[0].sizeof > shorter[0].sizeof)
+            {
+                alias typeof(longer[0]) Char;
+                if (shorter.length > longer.length * Char.sizeof) return false;
+                size_t i = longer.length - 1;
+                foreach_reverse (Char c; shorter)
+                {
+                    if (i == 0 || longer[i] != c) return false;
+                    --i;
+                }
+            }
+            else
+            {
+                static assert(longer[0].sizeof < shorter[0].sizeof,
+                    "Looks like there's a bug in the compiler");
+                alias typeof(shorter[0]) Char;
+                if (shorter.length > longer.length) return false;
+                if (!shorter.length) return true;
+                size_t i = shorter.length - 1;
+                foreach_reverse (Char c; longer)
+                {
+                    if (i == 0) return true;
+                    if (shorter[i] != c) return false;
+                    --i;
+                }
+            }
+        }
+        else
+        {
+            // raw element-by-element comparison
+            if (longer.length < shorter.length) return false;
+            foreach (i, e; longer[$ - shorter.length .. $])
+            {
+                if (shorter[i] != e) return false;
+            }
+        }
+    }
+    return true;
+}
+
+unittest
+{
+    alias TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[])
+        TestTypes;
+    alias TypeTuple!(ubyte[], int[], double[]) OtherTypes;
+    foreach (T1 ; TestTypes)
+    {
+        foreach (T2 ; TestTypes)
+        {
+            foreach (T3 ; OtherTypes)
+            {
+                auto a = to!(T1)("efgh"), b = to!(T2)("abcdefgh"),
+                    c = to!(T2)(""), d = to!(T3)([1, 2]);
+                assert(endsWith(b, a));
+                assert(!endsWith(a, b));
+                assert(endsWith(b, c));
+                assert(endsWith(a, c));
+                assert(!endsWith(c, b));
+                assert(!endsWith(c, a));
+                assert(!endsWith(a, d));
+                assert(!endsWith(d, a));
+                assert(!endsWith(b, d));
+                assert(!endsWith(d, b));
+                assert(!endsWith(c, d));
+                assert(endsWith(d, c));
+            }
+        }
+    }
+    foreach (T1; OtherTypes)
+    {
+        foreach (T2; OtherTypes)
+        {
+            auto a = to!(T1)([1, 2]);
+            auto b = to!(T2)([0, 1, 2]);
+            assert(!endsWith(a, b));
+            assert(endsWith(b, a));
+        }
+    }
+}
+
 /*******************************************
  * Returns s[] sans trailing delimiter[], if any.
  * If delimiter[] is null, removes trailing CR, LF, or CRLF, if any.
@@ -1608,6 +1799,23 @@ unittest
     assert(s == "he");
 }
 
+/**
+ * If $(D_PARAM longer.startsWith(shorter)), returns $(D_PARAM
+ * longer[shorter.length .. $]). Otherwise, returns $(D_PARAM longer).
+ */
+
+C1[] chompPrefix(C1, C2)(C1[] longer, C2[] shorter)
+{
+    return startsWith(longer, shorter) ? longer[shorter.length .. $]
+        : longer;
+}
+
+unittest
+{
+    auto a = "abcde", b = "abcdefgh";
+    assert(chompPrefix(b, a) == "fgh");
+    assert(chompPrefix(a, b) == "abcde");
+}
 
 /***********************************************
  * Returns s[] sans trailing character, if there is one.
@@ -3018,7 +3226,7 @@ certain category of characters (e.g. whitespace) when parsing
 strings. (In such cases, the return value is not used.)
  */
 
-S munch(S)(ref S s, S pattern)
+S1 munch(S1, S2)(ref S1 s, S2 pattern)
 {
     size_t j = s.length;
     foreach (i, c; s)

@@ -47,6 +47,8 @@ import std.conv;
 import std.traits;
 import std.typetuple;
 import std.stdio; // for debugging only
+import std.contracts;
+import std.system;
 
 version (Windows)
 {
@@ -77,8 +79,6 @@ else
  */
 class FormatError : Error
 {
-  private:
-
     this()
     {
 	super("std.format");
@@ -1773,6 +1773,24 @@ unittest
  */ 
 private void formatIntegral(Writer, D)(ref Writer w, D arg, FormatInfo f)
 {
+    if (f.spec == 'r')
+    {
+        // raw write, skip all else and write the thing
+        auto begin = cast(const char*) &arg;
+        if (std.system.endian == Endian.LittleEndian && f.flPlus
+            || std.system.endian == Endian.BigEndian && f.flDash)
+        {
+            // must swap bytes
+            foreach_reverse (i; 0 .. arg.sizeof)
+                w.putchar(begin[i]);
+        }
+        else
+        {
+            foreach (i; 0 .. arg.sizeof)
+                w.putchar(begin[i]);
+        }
+        return;
+    }
     if (f.precision == f.precision.max - 1)
     {
         // default precision for integrals is 1
@@ -1885,34 +1903,52 @@ private void formatIntegral(Writer, D)(ref Writer w, D arg, FormatInfo f)
  */ 
 private void formatFloat(Writer, D)(ref Writer w, D obj, FormatInfo f)
 {
-  if (std.string.find("fgFGaAeEs", f.spec) < 0) {
-    throw new FormatError("floating");
-  }
-  if (f.spec == 's') f.spec = 'g';
-  char sprintfSpec[1 /*%*/ + 5 /*flags*/ + 3 /*width.prec*/ + 2 /*format*/
-      + 1 /*\0*/] = void;
-  sprintfSpec[0] = '%';
-  uint i = 1;
-  if (f.flDash) sprintfSpec[i++] = '-';
-  if (f.flPlus) sprintfSpec[i++] = '+';
-  if (f.flZero) sprintfSpec[i++] = '0';
-  if (f.flSpace) sprintfSpec[i++] = ' ';
-  if (f.flHash) sprintfSpec[i++] = '#';
-  sprintfSpec[i .. i + 3] = "*.*";
-  i += 3;
-  if (is(D == real)) sprintfSpec[i++] = 'L';
-  sprintfSpec[i++] = f.spec;
-  sprintfSpec[i] = 0;
-  //writeln(sprintfSpec);
-  char[512] buf;
-  final n = snprintf(buf.ptr, buf.length,
-      sprintfSpec.ptr,
-      f.width,
-      // negative precision is same as no precision specified
-      f.precision == f.precision.max - 1 ? -1 : f.precision,
-      obj);
-  if (n < 0) throw new FormatError("floating point formatting failure");
-  w.write(buf[0 .. strlen(buf.ptr)]);
+    if (f.spec == 'r')
+    {
+        // raw write, skip all else and write the thing
+        auto begin = cast(const char*) &obj;
+        if (std.system.endian == Endian.LittleEndian && f.flPlus
+            || std.system.endian == Endian.BigEndian && f.flDash)
+        {
+            // must swap bytes
+            foreach_reverse (i; 0 .. obj.sizeof)
+                w.putchar(begin[i]);
+        }
+        else
+        {
+            foreach (i; 0 .. obj.sizeof)
+                w.putchar(begin[i]);
+        }
+        return;
+    }
+    if (std.string.find("fgFGaAeEs", f.spec) < 0) {
+        throw new FormatError("floating");
+    }
+    if (f.spec == 's') f.spec = 'g';
+    char sprintfSpec[1 /*%*/ + 5 /*flags*/ + 3 /*width.prec*/ + 2 /*format*/
+                     + 1 /*\0*/] = void;
+    sprintfSpec[0] = '%';
+    uint i = 1;
+    if (f.flDash) sprintfSpec[i++] = '-';
+    if (f.flPlus) sprintfSpec[i++] = '+';
+    if (f.flZero) sprintfSpec[i++] = '0';
+    if (f.flSpace) sprintfSpec[i++] = ' ';
+    if (f.flHash) sprintfSpec[i++] = '#';
+    sprintfSpec[i .. i + 3] = "*.*";
+    i += 3;
+    if (is(D == real)) sprintfSpec[i++] = 'L';
+    sprintfSpec[i++] = f.spec;
+    sprintfSpec[i] = 0;
+    //writeln(sprintfSpec);
+    char[512] buf;
+    final n = snprintf(buf.ptr, buf.length,
+                       sprintfSpec.ptr,
+                       f.width,
+                       // negative precision is same as no precision specified
+                       f.precision == f.precision.max - 1 ? -1 : f.precision,
+                       obj);
+    if (n < 0) throw new FormatError("floating point formatting failure");
+    w.write(buf[0 .. strlen(buf.ptr)]);
 }
 
 /*
@@ -2005,21 +2041,28 @@ private void formatGeneric(Writer, D)(ref Writer w, const(void)* arg,
 }
 
 //-------------------------------------------------------------------------------
+// Fix for issue 1591
 private int getNthInt(A...)(uint index, A args)
 {
-    foreach (i, arg; args)
+    static if (A.length)
     {
-        static if (is(typeof(arg) : long) || is(typeof(arg) : ulong))
+        if (index)
         {
-            if (i != index) continue;
-            return to!(int)(arg);
+            return getNthInt(index - 1, args[1 .. $]); 
+        }
+        static if (is(typeof(args[0]) : long) || is(typeof(arg) : ulong))
+        {
+            return to!(int)(args[0]);
         }
         else
         {
-            if (i == index) break;
+            throw new FormatError("int expected");
         }
     }
-    throw new FormatError("int expected");
+    else
+    {
+        throw new FormatError("int expected");
+    }
 }
 
 /* (Not public yet.)
@@ -2145,6 +2188,21 @@ void formattedWrite(Writer, F, A...)(ref Writer w, const(F)[] fmt, A args)
 }
 
 /* ======================== Unit Tests ====================================== */
+
+unittest
+{
+    // testing raw writes
+    StringWriter!(char) w;
+    w.backend = null;
+    uint a = 0x02030405;
+    formattedWrite(w, "%+r", a);
+    assert(w.backend.length == 4 && w.backend[0] == 2 && w.backend[1] == 3
+        && w.backend[2] == 4 && w.backend[3] == 5);
+    w.backend = null;
+    formattedWrite(w, "%-r", a);
+    assert(w.backend.length == 4 && w.backend[0] == 5 && w.backend[1] == 4
+        && w.backend[2] == 3 && w.backend[3] == 2);
+}
 
 unittest
 {

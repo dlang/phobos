@@ -57,9 +57,11 @@ class ConvError : Error
     }
 }
 
-private void conv_error(string s)
+private void conv_error(S, T)(S source)
 {
-    throw new ConvError(s);
+    throw new ConvError(cast(string)
+                        ("Can't convert value `"~to!(string)(source)~"' of type "
+                         ~S.stringof~" to type "~T.stringof));
 }
 
 /**
@@ -348,7 +350,13 @@ private T numberToNumber(S, T)(S value) {
 
 private T parseString(T)(const(char)[] v)
 {
-    scope(exit) { if (v.length) conv_error(v.idup); }
+    scope(exit) 
+    {
+        if (v.length) 
+        {
+            conv_error!(const(char)[], T)(v); 
+        }
+    }
     return parse!(T)(v);
 }
 
@@ -667,7 +675,10 @@ private N parseIntegral(S, N)(ref S s)
             alias uint N1;
         auto v = parseIntegral!(S, N1)(s);
         auto result = cast(N) v;
-        if (result != v) conv_error(to!(string)(s));
+        if (result != v) 
+        {
+            conv_error!(S, N)(s); 
+        }
         return result;
     }
     else
@@ -724,7 +735,7 @@ private N parseIntegral(S, N)(ref S s)
     Loverflow:
         conv_overflow(to!(string)(s));
     Lerr:
-        conv_error(to!(string)(s));
+        conv_error!(S, N)(s);
         return 0;
     }
 }
@@ -736,7 +747,7 @@ private N parseIntegral(S, N)(ref S s)
 
 int toInt(string s)
 {
-    scope(exit) { if (s.length) conv_error(s); }
+    scope(exit) { if (s.length) conv_error!(string, int)(s); }
     return parseIntegral!(string, int)(s);
 }
 
@@ -811,7 +822,7 @@ unittest
  */
 uint toUint(string s)
 {
-    scope(exit) if (s.length) conv_error(s);
+    scope(exit) if (s.length) conv_error!(string, uint)(s);
     return parseIntegral!(string, uint)(s);
 }
 
@@ -880,7 +891,7 @@ unittest
 
 long toLong(string s)
 {
-    scope(exit) if (s.length) conv_error(s);
+    scope(exit) if (s.length) conv_error!(string, long)(s);
     return parseIntegral!(string, long)(s);
 }
 
@@ -961,7 +972,7 @@ unittest
 
 ulong toUlong(string s)
 {
-    scope(exit) if (s.length) conv_error(s);
+    scope(exit) if (s.length) conv_error!(string, ulong)(s);
     return parseIntegral!(string, ulong)(s);
 }
 
@@ -1037,7 +1048,7 @@ unittest
 
 short toShort(string s)
 {
-    scope(exit) if (s.length) conv_error(s);
+    scope(exit) if (s.length) conv_error!(string, short)(s);
     return parseIntegral!(string, short)(s);
 }
 
@@ -1112,7 +1123,7 @@ unittest
 
 ushort toUshort(string s)
 {
-    scope(exit) if (s.length) conv_error(s);
+    scope(exit) if (s.length) conv_error!(string, ushort)(s);
     return parseIntegral!(string, ushort)(s);
 }
 
@@ -1182,7 +1193,7 @@ unittest
 
 byte toByte(string s)
 {
-    scope(exit) if (s.length) conv_error(s);
+    scope(exit) if (s.length) conv_error!(string, byte)(s);
     return parseIntegral!(string, byte)(s);
 }
 
@@ -1257,7 +1268,7 @@ unittest
 
 ubyte toUbyte(string s)
 {
-    scope(exit) if (s.length) conv_error(s);
+    scope(exit) if (s.length) conv_error!(string, ubyte)(s);
     return parseIntegral!(string, ubyte)(s);
 }
 
@@ -1327,7 +1338,7 @@ unittest
 
 float toFloat(Char)(Char[] s)
 {
-    scope(exit) if (s.length) conv_error(s);
+    scope(exit) if (s.length) conv_error!(Char[], float)(s);
     return parseFloating!(Char[], float)(s);
 }
 
@@ -1340,6 +1351,12 @@ F parseFloating(S : S[], F)(ref S[] s)
     auto sz = toStringz(s);
     if (std.ctype.isspace(*sz))
 	goto Lerr;
+
+    // issue 1589
+    version (Windows)
+    {
+        if (icmp(s, "nan") == 0) return F.nan;
+    }
 
     // BUG: should set __locale_decpoint to "." for DMC
 
@@ -1364,7 +1381,7 @@ F parseFloating(S : S[], F)(ref S[] s)
     s = s[endptr - sz .. $];
     return f;
   Lerr:
-    conv_error(to!(string)(s) ~ " not representable as a " ~ F.stringof);
+    conv_error!(S[], F)(s);
     assert(0);
 }
  
@@ -1373,6 +1390,8 @@ unittest
     debug( conv ) writefln( "conv.toFloat.unittest" );
     float f;
     
+    f = toFloat( "nAn" );
+    assert(isnan(f));
     f = toFloat( "123" );
     assert( f == 123f );
     f = toFloat( "+123" );
@@ -1418,7 +1437,7 @@ unittest
 
 double toDouble(Char)(Char[] s)
 {
-    scope(exit) if (s.length) conv_error(s);
+    scope(exit) if (s.length) conv_error!(Char[], double)(s);
     return parseFloating!(Char[], double)(s);
 }
 
@@ -1474,7 +1493,7 @@ unittest
  */
 real toReal(Char)(Char[] s)
 {
-    scope(exit) if (s.length) conv_error(s);
+    scope(exit) if (s.length) conv_error!(Char[], real)(s);
     return parseFloating!(Char[], real)(s);
 }
 
@@ -1907,9 +1926,7 @@ unittest
  * Grammar:
  * ['+'|'-'] string floating-point digit {digit}
  */
-// @@@ BUG IN COMPILER: writing "in string s" instead of "string s" changes its
-// type from invariant(char)[] to const(char)[] !!!
-private bool getComplexStrings(string s, out string s1, out string s2)
+private bool getComplexStrings(in string s, out string s1, out string s2)
 {
     int len = s.length;
 
@@ -1953,7 +1970,7 @@ private bool getComplexStrings(string s, out string s1, out string s2)
 
     Lerr:
         // Display the original string in the error message.
-    conv_error("getComplexStrings() \"" ~ s ~ "\"" ~ " s1=\""
+    throw new ConvError("getComplexStrings() \"" ~ s ~ "\"" ~ " s1=\""
                              ~ s1 ~ "\"" ~ " s2=\"" ~ s2 ~ "\"");
         return 0;
 }
