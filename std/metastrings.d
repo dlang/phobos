@@ -149,7 +149,7 @@ template ToString(char C)
 unittest
 {
     auto s = Format!("hel%slo", "world", -138, 'c', true);
-    // BUG 1616 filed: assert(s == "helworldlo-138ctrue");
+    // BUG 1616 filed: assert(s == "helworldlo-138ctrue", "[" ~ s ~ "]");
 }
 
 

@@ -247,7 +247,7 @@ getopt(args,
     "bar", &bar);
 ---------
 
-In the example above, "--foo", "--bar", "--FOo", "--bAr" etc. are recognized. The directive is active til the end of $(D_PARAM getopt), or until the converse directive $(D_PARAM caseSensitive) is encountered:
+In the example above, "--foo", "--bar", "--FOo", "--bAr" etc. are recognized. The directive is active til the end of $(D_PARAM getopt), or until the converse directive $(D_PARAM caseInsensitive) is encountered:
 
 ---------
 bool foo, bar;
