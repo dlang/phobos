@@ -78,6 +78,7 @@ OBJS= asserterror.obj deh.obj switch.obj complex.obj gcstats.obj \
 	gamma.obj demangle.obj cover.obj bitarray.obj aApplyR.obj \
 	signals.obj cpuid.obj typetuple.obj traits.obj bind.obj \
 	c_stdio.obj hiddenfunc.obj contracts.obj getopt.obj variant.obj \
+	numeric.obj bitmanip.obj functional.obj algorithm.obj typecons.obj \
 	ti_Ag.obj ti_C.obj ti_int.obj ti_char.obj \
 	ti_wchar.obj ti_uint.obj ti_short.obj ti_ushort.obj \
 	ti_byte.obj ti_ubyte.obj ti_long.obj ti_ulong.obj ti_ptr.obj \
@@ -98,8 +99,10 @@ DOCS=	$(DOC)\std_path.html $(DOC)\std_math.html $(DOC)\std_outbuffer.html \
 	$(DOC)\object.html $(DOC)\std_compiler.html $(DOC)\std_format.html \
 	$(DOC)\std_random.html $(DOC)\std_file.html $(DOC)\std_date.html \
 	$(DOC)\std_md5.html $(DOC)\std_zip.html $(DOC)\std_zlib.html \
+	$(DOC)\std_algorithm.html \
 	$(DOC)\std_bind.html \
 	$(DOC)\std_bitarray.html \
+	$(DOC)\std_bitmanip.html \
 	$(DOC)\std_boxer.html \
 	$(DOC)\std_contracts.html \
 	$(DOC)\std_conv.html \
@@ -108,11 +111,13 @@ DOCS=	$(DOC)\std_path.html $(DOC)\std_math.html $(DOC)\std_outbuffer.html \
 	$(DOC)\std_cstream.html \
 	$(DOC)\std_ctype.html \
 	$(DOC)\std_demangle.html \
+	$(DOC)\std_functional.html \
 	$(DOC)\std_gc.html \
 	$(DOC)\std_getopt.html \
 	$(DOC)\std_intrinsic.html \
 	$(DOC)\std_metastrings.html \
 	$(DOC)\std_mmfile.html \
+	$(DOC)\std_numeric.html \
 	$(DOC)\std_openrj.html \
 	$(DOC)\std_outofmemory.html \
 	$(DOC)\std_process.html \
@@ -125,6 +130,7 @@ DOCS=	$(DOC)\std_path.html $(DOC)\std_math.html $(DOC)\std_outbuffer.html \
 	$(DOC)\std_system.html \
 	$(DOC)\std_thread.html \
 	$(DOC)\std_traits.html \
+	$(DOC)\std_typecons.html \
 	$(DOC)\std_typetuple.html \
 	$(DOC)\std_uni.html \
 	$(DOC)\std_uri.html \
@@ -158,7 +164,8 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 	std\cstream.d std\demangle.d std\cover.d std\bitarray.d \
 	std\signals.d std\cpuid.d std\typetuple.d std\traits.d std\bind.d \
 	std\metastrings.d std\hiddenfunc.d std\contracts.d std\getopt.d \
-	std\variant.d
+	std\variant.d std\slist.d std\numeric.d std\bitmanip.d \
+	std\functional.d std\algorithm.d std\typecons.d
 
 SRC_STD_C= std\c\process.d std\c\stdlib.d std\c\time.d std\c\stdio.d \
 	std\c\math.d std\c\stdarg.d std\c\stddef.d std\c\fenv.d std\c\string.d \
@@ -337,6 +344,9 @@ switch.obj : internal\switch.d
 
 ### std
 
+algorithm.obj : std\algorithm.d
+	$(DMD) -c $(DFLAGS) std\algorithm.d
+
 array.obj : std\array.d
 	$(DMD) -c $(DFLAGS) std\array.d
 
@@ -351,6 +361,9 @@ bind.obj : std\bind.d
 
 bitarray.obj : std\bitarray.d
 	$(DMD) -c $(DFLAGS) -inline std\bitarray.d
+
+bitmanip.obj : std\bitmanip.d
+	$(DMD) -c $(DFLAGS) std\bitmanip.d
 
 boxer.obj : std\boxer.d
 	$(DMD) -c $(DFLAGS) std\boxer.d
@@ -391,6 +404,9 @@ file.obj : std\file.d
 format.obj : std\format.d
 	$(DMD) -c $(DFLAGS) std\format.d
 
+functional.obj : std\functional.d
+	$(DMD) -c $(DFLAGS) std\functional.d
+
 gc.obj : std\gc.d
 	$(DMD) -c $(DFLAGS) std\gc.d
 
@@ -420,6 +436,9 @@ mmfile.obj : std\mmfile.d
 
 moduleinit.obj : std\moduleinit.d
 	$(DMD) -c $(DFLAGS) std\moduleinit.d
+
+numeric.obj : std\numeric.d
+	$(DMD) -c $(DFLAGS) std\numeric.d
 
 #object.obj : object.d
 #	$(DMD) -c $(DFLAGS) object.d
@@ -480,6 +499,9 @@ thread.obj : std\thread.d
 
 traits.obj : std\traits.d
 	$(DMD) -c $(DFLAGS) std\traits.d -oftraits.obj
+
+typecons.obj : std\typecons.d
+	$(DMD) -c $(DFLAGS) std\typecons.d -oftypecons.obj
 
 typetuple.obj : std\typetuple.d
 	$(DMD) -c $(DFLAGS) std\typetuple.d -oftypetuple.obj
@@ -667,6 +689,9 @@ ti_int.obj : std\typeinfo\ti_int.d
 $(DOC)\phobos.html : std.ddoc phobos.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\phobos.html std.ddoc phobos.d
 
+$(DOC)\std_algorithm.html : std.ddoc std\algorithm.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_algorithm.html std.ddoc std\algorithm.d
+
 $(DOC)\std_base64.html : std.ddoc std\base64.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_base64.html std.ddoc std\base64.d
 
@@ -675,6 +700,9 @@ $(DOC)\std_bind.html : std.ddoc std\bind.d
 
 $(DOC)\std_bitarray.html : std.ddoc std\bitarray.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_bitarray.html std.ddoc std\bitarray.d
+
+$(DOC)\std_bitmanip.html : std.ddoc std\bitmanip.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_bitmanip.html std.ddoc std\bitmanip.d
 
 $(DOC)\std_boxer.html : std.ddoc std\boxer.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_boxer.html std.ddoc std\boxer.d
@@ -712,6 +740,9 @@ $(DOC)\std_file.html : std.ddoc std\file.d
 $(DOC)\std_format.html : std.ddoc std\format.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_format.html std.ddoc std\format.d
 
+$(DOC)\std_functional.html : std.ddoc std\functional.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_functional.html std.ddoc std\functional.d
+
 $(DOC)\std_gc.html : std.ddoc std\gc.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_gc.html std.ddoc std\gc.d
 
@@ -732,6 +763,9 @@ $(DOC)\std_metastrings.html : std.ddoc std\metastrings.d
 
 $(DOC)\std_mmfile.html : std.ddoc std\mmfile.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_mmfile.html std.ddoc std\mmfile.d
+
+$(DOC)\std_numeric.html : std.ddoc std\numeric.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_numeric.html std.ddoc std\numeric.d
 
 $(DOC)\std_openrj.html : std.ddoc std\openrj.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_openrj.html std.ddoc std\openrj.d
@@ -783,6 +817,9 @@ $(DOC)\std_thread.html : std.ddoc std\thread.d
 
 $(DOC)\std_traits.html : std.ddoc std\traits.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_traits.html std.ddoc std\traits.d
+
+$(DOC)\std_typecons.html : std.ddoc std\typecons.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_typecons.html std.ddoc std\typecons.d
 
 $(DOC)\std_typetuple.html : std.ddoc std\typetuple.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_typetuple.html std.ddoc std\typetuple.d
