@@ -25,7 +25,63 @@
 // to run the unit tests on them.
 // Then, it prints out the arguments passed to main().
 
-import all_std_modules_generated;
+public import std.array;
+public import std.asserterror;
+public import std.base64;
+public import std.bind;
+public import std.bitarray;
+public import std.boxer;
+public import std.compiler;
+public import std.contracts;
+public import std.conv;
+public import std.cover;
+public import std.cpuid;
+public import std.cstream;
+public import std.ctype;
+public import std.date;
+public import std.dateparse;
+public import std.demangle;
+public import std.file;
+public import std.format;
+public import std.gc;
+public import std.getopt;
+public import std.hiddenfunc;
+public import std.intrinsic;
+public import std.loader;
+public import std.math;
+public import std.math2;
+public import std.md5;
+public import std.metastrings;
+public import std.mmfile;
+public import std.moduleinit;
+public import std.openrj;
+public import std.outbuffer;
+public import std.outofmemory;
+public import std.path;
+public import std.perf;
+public import std.process;
+public import std.random;
+public import std.regexp;
+public import std.signals;
+//public import std.slist;
+public import std.socket;
+public import std.socketstream;
+public import std.stdint;
+public import std.stdio;
+public import std.stream;
+public import std.string;
+public import std.switcherr;
+public import std.syserror;
+public import std.system;
+public import std.thread;
+public import std.traits;
+public import std.typetuple;
+public import std.uni;
+public import std.uri;
+public import std.utf;
+public import std.variant;
+public import std.zip;
+public import std.zlib;
 
 int main(char[][] args)
 {

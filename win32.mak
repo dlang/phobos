@@ -123,6 +123,7 @@ DOCS=	$(DOC)\std_path.html $(DOC)\std_math.html $(DOC)\std_outbuffer.html \
 	$(DOC)\std_process.html \
 	$(DOC)\std_regexp.html \
 	$(DOC)\std_signals.html \
+	$(DOC)\std_slist.html \
 	$(DOC)\std_socket.html \
 	$(DOC)\std_socketstream.html \
 	$(DOC)\std_stdint.html \
@@ -790,6 +791,9 @@ $(DOC)\std_regexp.html : std.ddoc std\regexp.d
 
 $(DOC)\std_signals.html : std.ddoc std\signals.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_signals.html std.ddoc std\signals.d
+
+$(DOC)\std_slist.html : std.ddoc std\slist.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_slist.html std.ddoc std\slist.d
 
 $(DOC)\std_socket.html : std.ddoc std\socket.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_socket.html std.ddoc std\socket.d
