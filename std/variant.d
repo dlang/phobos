@@ -413,7 +413,8 @@ public:
             ~ " in a " ~ VariantN.stringof);
         static if (isStaticArray!(T))
         {
-            DecayStaticToDynamicArray!(T) temp = rhs;
+            // Fix for Brad's bug
+            auto temp = to!(DecayStaticToDynamicArray!(T))(rhs);
             return opAssign(temp);
         }
         else
@@ -647,7 +648,7 @@ public:
                 result = mixin("get!(uint) " ~ op ~ " other.get!(uint)");
             else if (convertsTo!(int) && other.convertsTo!(int))
                 result = mixin("get!(int) " ~ op ~ " other.get!(int)");
-            if (convertsTo!(ulong) && other.convertsTo!(ulong))
+            else if (convertsTo!(ulong) && other.convertsTo!(ulong))
                 result = mixin("get!(ulong) " ~ op ~ " other.get!(ulong)");
             else if (convertsTo!(long) && other.convertsTo!(long))
                 result = mixin("get!(long) " ~ op ~ " other.get!(long)");
@@ -662,7 +663,8 @@ public:
                 result = mixin("get!(uint) " ~ op ~ " other");
             else if (is(typeof(T.max) : int) && T.min < 0 && convertsTo!(int))
                 result = mixin("get!(int) " ~ op ~ " other");
-            if (is(typeof(T.max) : ulong) && T.min == 0 && convertsTo!(ulong))
+            else if (is(typeof(T.max) : ulong) && T.min == 0
+                     && convertsTo!(ulong))
                 result = mixin("get!(ulong) " ~ op ~ " other");
             else if (is(typeof(T.max) : long) && T.min < 0 && convertsTo!(long))
                 result = mixin("get!(long) " ~ op ~ " other");
@@ -683,7 +685,7 @@ public:
                 result = mixin("get!(uint) " ~ op ~ " other.get!(uint)");
             else if (convertsTo!(int) && other.convertsTo!(int))
                 result = mixin("get!(int) " ~ op ~ " other.get!(int)");
-            if (convertsTo!(ulong) && other.convertsTo!(ulong))
+            else if (convertsTo!(ulong) && other.convertsTo!(ulong))
                 result = mixin("get!(ulong) " ~ op ~ " other.get!(ulong)");
             else
                 result = mixin("get!(long) " ~ op ~ " other.get!(long)");
@@ -694,7 +696,8 @@ public:
                 result = mixin("get!(uint) " ~ op ~ " other");
             else if (is(typeof(T.max) : int) && T.min < 0 && convertsTo!(int))
                 result = mixin("get!(int) " ~ op ~ " other");
-            if (is(typeof(T.max) : ulong) && T.min == 0 && convertsTo!(ulong))
+            else if (is(typeof(T.max) : ulong) && T.min == 0
+                     && convertsTo!(ulong))
                 result = mixin("get!(ulong) " ~ op ~ " other");
             else
                 result = mixin("get!(long) " ~ op ~ " other");
@@ -1176,4 +1179,23 @@ unittest
         assert( vhash.get!(int[char[]])["b"] == 2 );
         assert( vhash.get!(int[char[]])["c"] == 3 );
     }
+}
+
+unittest
+{
+    // bug 1558
+    Variant va=1;
+    Variant vb=-2;
+    assert((va+vb).get!(int) == -1);
+}
+
+unittest
+{
+    Variant a;
+    a=5;
+    Variant b;
+    b=a;
+    Variant[] c;
+    c = variantArray(1, 2, 3.0, "hello", 4);
+    assert(c[3] == "hello");
 }
