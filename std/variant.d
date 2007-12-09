@@ -239,10 +239,8 @@ private:
             break;
         case OpID.get:
             return !tryPutting(cast(A*) pStore, *cast(TypeInfo*) parm, parm);
-            break; // for conformity
         case OpID.testConversion:
             return !tryPutting(null, *cast(TypeInfo*) parm, null);
-            break;
         case OpID.compare:
             auto me = cast(A*) pStore;
             auto rhsP = cast(VariantN *) parm;
@@ -297,7 +295,6 @@ private:
                 }
             }
             return int.min; // dunno
-            break;
         case OpID.toString:
             auto target = cast(string*) parm;
             auto me = cast(A*) pStore;
