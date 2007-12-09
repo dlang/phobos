@@ -71,7 +71,7 @@ class NotImplemented : Error
 {
     this(string msg)
     {
-	super(msg ~ "not implemented");
+	super(msg ~ " not implemented");
     }
 }
 
