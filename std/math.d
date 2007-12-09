@@ -1430,7 +1430,10 @@ real nan(char[] tagp) { return std.c.math.nanl(toStringz(tagp)); }
  */
 real nextafter(real x, real y)
 {
-    return std.c.math.nextafterl(x, y);
+    version (Windows)
+        throw new NotImplemented("nextafter");
+    else
+        return std.c.math.nextafterl(x, y);
 }
 
 /// ditto
@@ -1448,14 +1451,29 @@ double nextafter(double x, double y)
 unittest
 {
     float a = 1;
-    double b = 2;
-    real c = 3;
     assert(is(typeof(nextafter(a, a)) == float));
-    assert(is(typeof(nextafter(b, b)) == double));
-    assert(is(typeof(nextafter(c, c)) == real));
     assert(nextafter(a, a.infinity) > a);
+
+    double b = 2;
+    assert(is(typeof(nextafter(b, b)) == double));
     assert(nextafter(b, b.infinity) > b);
-    assert(nextafter(c, c.infinity) > c);
+
+    // BUG 1772: temporarily disable real tests for nextafter
+    // with reals on windows until dmc's runtime supports them.
+    real c = 3;
+    assert(is(typeof(nextafter(c, c)) == real));
+    version(Windows) {
+        bool threw = false;
+        try {
+            nextafter(c, c.infinity);
+            assert(false, "shouldn't be reachable");
+        } catch (NotImplemented e) {
+            threw = true;
+        }
+        if (!threw) assert(false, "failed to throw");
+    } else {
+        assert(nextafter(c, c.infinity) > c);
+    }
 }
 
 //real nexttoward(real x, real y) { return std.c.math.nexttowardl(x, y); }
