@@ -1972,7 +1972,6 @@ private bool getComplexStrings(in string s, out string s1, out string s2)
         // Display the original string in the error message.
     throw new ConvError("getComplexStrings() \"" ~ s ~ "\"" ~ " s1=\""
                              ~ s1 ~ "\"" ~ " s2=\"" ~ s2 ~ "\"");
-        return 0;
 }
 
 // feq() functions now used only in unittesting
