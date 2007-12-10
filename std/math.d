@@ -856,6 +856,8 @@ real modf(real x, inout real y)	{ return std.c.math.modfl(x,&y); }
  *	$(TR $(TD $(PLUSMN)$(INFIN)) $(TD $(PLUSMN)$(INFIN)) )
  *	$(TR $(TD $(PLUSMN)0.0)      $(TD $(PLUSMN)0.0) )
  *	)
+ *
+ * Note: Not supported on windows
  */
 real scalbn(real x, int n)
 {
@@ -1113,6 +1115,8 @@ real rint(real x);	/* intrinsic */
 /***************************************
  * Rounds x to the nearest integer value, using the current rounding
  * mode.
+ *
+ * Note: Not supported on windows
  */
 long lrint(real x)
 {
@@ -1134,6 +1138,8 @@ real round(real x) { return std.c.math.roundl(x); }
  *
  * If the fractional part of x is exactly 0.5, the return value is rounded
  * away from zero.
+ *
+ * Note: Not supported on windows
  */
 long lround(real x)
 {
@@ -1169,6 +1175,8 @@ real trunc(real x) { return std.c.math.truncl(x); }
  *	$(TR $(TD anything)             $(TD $(PLUSMN)0.0)      $(TD $(NAN))          $(TD ?)   $(TD yes))
  *	$(TR $(TD != $(PLUSMN)$(INFIN)) $(TD $(PLUSMN)$(INFIN)) $(TD x)               $(TD ?)   $(TD no))
  *	)
+ *
+ * Note: remquo not supported on windows
  */
 real remainder(real x, real y) { return std.c.math.remainderl(x, y); }
 
@@ -1428,6 +1436,8 @@ real nan(char[] tagp) { return std.c.math.nanl(toStringz(tagp)); }
  * the function result is infinite. The FE_INEXACT and FE_UNDERFLOW 
  * exceptions will be raised if the function value is subnormal, and x is 
  * not equal to y. 
+ *
+ * Note: real nextafter(real, real) not supported on windows
  */
 real nextafter(real x, real y)
 {
