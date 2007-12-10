@@ -216,7 +216,7 @@ private string enumPrinterImpl(string name, bool first, T...)()
             return "if (v == "~name~"."~T[0]~") return `"~T[0]~"`;\n"
                 ~enumPrinterImpl!(name, false, T[1 .. $]);
         else
-            return "";
+            return "return null;";
     }
 }
 
