@@ -123,7 +123,6 @@ DOCS=	$(DOC)\std_path.html $(DOC)\std_math.html $(DOC)\std_outbuffer.html \
 	$(DOC)\std_process.html \
 	$(DOC)\std_regexp.html \
 	$(DOC)\std_signals.html \
-	$(DOC)\std_slist.html \
 	$(DOC)\std_socket.html \
 	$(DOC)\std_socketstream.html \
 	$(DOC)\std_stdint.html \
@@ -165,7 +164,7 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 	std\cstream.d std\demangle.d std\cover.d std\bitarray.d \
 	std\signals.d std\cpuid.d std\typetuple.d std\traits.d std\bind.d \
 	std\metastrings.d std\hiddenfunc.d std\contracts.d std\getopt.d \
-	std\variant.d std\slist.d std\numeric.d std\bitmanip.d \
+	std\variant.d std\numeric.d std\bitmanip.d \
 	std\functional.d std\algorithm.d std\typecons.d
 
 SRC_STD_C= std\c\process.d std\c\stdlib.d std\c\time.d std\c\stdio.d \
@@ -791,9 +790,6 @@ $(DOC)\std_regexp.html : std.ddoc std\regexp.d
 
 $(DOC)\std_signals.html : std.ddoc std\signals.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_signals.html std.ddoc std\signals.d
-
-$(DOC)\std_slist.html : std.ddoc std\slist.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_slist.html std.ddoc std\slist.d
 
 $(DOC)\std_socket.html : std.ddoc std\socket.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_socket.html std.ddoc std\socket.d
