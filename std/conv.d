@@ -1355,7 +1355,11 @@ F parseFloating(S : S[], F)(ref S[] s)
     // issue 1589
     version (Windows)
     {
-        if (icmp(s, "nan") == 0) return F.nan;
+        if (icmp(s, "nan") == 0)
+        {
+            s = s[3 .. $];
+            return F.nan;
+        }
     }
 
     // BUG: should set __locale_decpoint to "." for DMC
