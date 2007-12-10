@@ -74,4 +74,5 @@ test: example minigzip
 	echo hello world | minigzip | minigzip -d 
 
 clean:
-	$(RM) $(OBJS) zlib.a example minigzip minigzip.o test foo.gz
+	$(RM) $(OBJS) zlib.a example.o example minigzip minigzip.o test foo.gz
+

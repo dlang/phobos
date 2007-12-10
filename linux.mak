@@ -198,17 +198,17 @@ ALLSRCS = $(SRC) $(SRC_STD) $(SRC_STD_C) $(SRC_TI) $(SRC_INT) $(SRC_STD_WIN) \
 
 
 #$(LIB) : $(OBJS) internal/gc/dmgc.a linux.mak
-$(LIB) : $(OBJS) internal/gc/dmgc.a $(ZLIB_OBJS) linux.mak
+$(LIB) : $(OBJS) $(GC_OBJS) $(ZLIB_OBJS) linux.mak
 	rm -f $(LIB)
 	ar -r $@ $(OBJS) $(ZLIB_OBJS) $(GC_OBJS)
 
 ###########################################################
 
-internal/gc/dmgc.a:
+$(GC_OBJS):
 #	cd internal/gc
 #	make -f linux.mak dmgc.a
 #	cd ../..
-	make -C ./internal/gc -f linux.mak dmgc.a
+	make -C ./internal/gc -f linux.mak
 
 $(ZLIB_OBJS):
 #	cd etc/c/zlib
@@ -594,3 +594,6 @@ zip : $(ALLSRCS) linux.mak win32.mak phoboslicense.txt
 
 clean:
 	$(RM) $(LIB) $(OBJS) unittest unittest.o
+	make -C ./internal/gc -f linux.mak clean
+	make -C ./etc/c/zlib -f linux.mak clean
+
