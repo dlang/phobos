@@ -906,9 +906,9 @@ class TypeInfo_Struct : TypeInfo
 	    // A sorry hash algorithm.
 	    // Should use the one for strings.
 	    // BUG: relies on the GC not moving objects
-	    auto q = p;
+	    auto q = cast(const(ubyte)*)p;
 	    for (size_t i = 0; i < init.length; i++)
-	    {	h = h * 9 + *cast(ubyte*)q;
+	    {	h = h * 9 + *q;
 		q++;
 	    }
 	}

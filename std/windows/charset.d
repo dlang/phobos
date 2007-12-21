@@ -13,20 +13,6 @@ private import std.windows.syserror;
 private import std.utf;
 private import std.string;
 
-/**
- * If non-zero, the application should use the W versions of Windows API
- * functions and std.utf.toUTF16z and toUTF8, rather than toMBSz and
- * fromMBSz.
- */
-int useWfuncs = 1;
-
-static this()
-{
-    // Win 95, 98, ME do not implement the W functions
-    // TODO: detect MSLU?
-    useWfuncs = (GetVersion() < 0x80000000);
-}
-
 
 /******************************************
  * Converts the UTF-8 string s into a null-terminated string in a Windows

@@ -534,6 +534,9 @@ template unsigned(T) {
   else static if (is(T == ushort)) alias ushort unsigned;
   else static if (is(T == uint)) alias uint unsigned;
   else static if (is(T == ulong)) alias ulong unsigned;
+  else static if (is(T == char)) alias char unsigned;
+  else static if (is(T == wchar)) alias wchar unsigned;
+  else static if (is(T == dchar)) alias dchar unsigned;
   else static if(is(T == enum)) 
        static if (T.sizeof == 1) alias ubyte unsigned;
        else static if (T.sizeof == 2) alias ushort unsigned;
@@ -549,3 +552,16 @@ unittest
     assert(is(U == uint));
 }
 
+/******
+ * Returns the mutable version of the type T.
+ */
+
+template Mutable(T)
+{
+    static if (is(T U == const(U)))
+	alias U Mutable;
+    else static if (is(T U == invariant(U)))
+	alias U Mutable;
+    else
+	alias T Mutable;
+}
