@@ -101,7 +101,7 @@ class SocketStream: Stream
 	/**
 	 * Attempts to write the entire block, waiting if necessary.
 	 */
-	override size_t writeBlock(const(void)* _buffer, size_t size)
+	override size_t writeBlock(const void* _buffer, size_t size)
 	{
 	  ubyte* buffer = cast(ubyte*)_buffer;
 	  assertWriteable();

@@ -439,9 +439,9 @@ private bool optMatch(string arg, string optPattern, ref string value,
 {
     if (!arg.length || arg[0] != optChar) return false;
     arg = arg[1 .. $];
-    final isLong = arg.length > 1 && arg[0] == optChar;
+    const isLong = arg.length > 1 && arg[0] == optChar;
     if (isLong) arg = arg[1 .. $];
-    final eqPos = find(arg, assignChar);
+    const eqPos = find(arg, assignChar);
     if (eqPos >= 0) {
         value = arg[eqPos + 1 .. $];
         arg = arg[0 .. eqPos];
@@ -450,7 +450,7 @@ private bool optMatch(string arg, string optPattern, ref string value,
     }
     //writeln("Arg: ", arg, " pattern: ", optPattern, " value: ", value);
     // Split the option
-    final variants = split(optPattern, "|");
+    const variants = split(optPattern, "|");
     foreach (v ; variants) {
         if (arg == v || !cfg.caseSensitive && toupper(arg) == toupper(v))
             return true;

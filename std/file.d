@@ -634,7 +634,7 @@ string[] listdir(string pathname)
  * ----
  */
 
-string[] listdir(in string pathname, in string pattern)
+string[] listdir(string pathname, string pattern)
 {   string[] result;
     
     bool callback(DirEntry* de)
@@ -654,7 +654,7 @@ string[] listdir(in string pathname, in string pattern)
 
 /** Ditto */
 
-string[] listdir(in string pathname, RegExp r)
+string[] listdir(string pathname, RegExp r)
 {   string[] result;
     
     bool callback(DirEntry* de)
@@ -712,7 +712,7 @@ string[] listdir(in string pathname, RegExp r)
  * ----
  */
 
-void listdir(in string pathname, bool delegate(in string filename) callback)
+void listdir(in string pathname, bool delegate(string filename) callback)
 {
     bool listing(DirEntry* de)
     {
@@ -954,9 +954,8 @@ void write(in string name, in void[] buffer)
 {
     int fd;
     int numwritten;
-    const(char*) namez;
 
-    namez = toStringz(name);
+    auto namez = toStringz(name);
     fd = std.c.linux.linux.open(namez, O_CREAT | O_WRONLY | O_TRUNC, 0660);
     if (fd == -1)
         goto err;
@@ -1042,9 +1041,8 @@ ulong getSize(in string name)
     uint size;
     int fd;
     struct_stat statbuf;
-    const(char*) namez;
 
-    namez = toStringz(name);
+    auto namez = toStringz(name);
     //printf("file.getSize('%s')\n",namez);
     fd = std.c.linux.linux.open(namez, O_RDONLY);
     if (fd == -1)
@@ -1084,9 +1082,8 @@ err1:
 uint getAttributes(in string name)
 {
     struct_stat statbuf;
-    const(char*) namez;
 
-    namez = toStringz(name);
+    auto namez = toStringz(name);
     if (std.c.linux.linux.stat(namez, &statbuf))
     {
 	throw new FileException(name.idup, getErrno());
@@ -1280,9 +1277,8 @@ struct DirEntry
     {
 	int fd;
 	struct_stat statbuf;
-	const(char*) namez;
 
-	namez = toStringz(name);
+	auto namez = toStringz(name);
 	if (std.c.linux.linux.stat(namez, &statbuf))
 	{
 	    //printf("\tstat error, errno = %d\n",getErrno());

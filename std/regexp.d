@@ -3138,7 +3138,7 @@ public static string replace3(string format, string input, regmatch_t[] pmatch)
     result.length = 0;
     for (size_t f = 0; f < format.length; f++)
     {
-	auto c = format[f];
+	char c = format[f];
       L1:
 	if (c != '$')
 	{
@@ -3248,7 +3248,7 @@ public string replaceOld(string format)
     result.length = 0;
     for (size_t i; i < format.length; i++)
     {
-	auto c = format[i];
+	char c = format[i];
 	switch (c)
 	{
 	    case '&':

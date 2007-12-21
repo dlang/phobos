@@ -412,7 +412,7 @@ dchar decode(in wchar[] s, inout size_t idx)
     }
     body
     {
-	invariant(string) msg;
+	string msg;
 	dchar V;
 	size_t i = idx;
 	uint u = s[i];

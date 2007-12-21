@@ -501,7 +501,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
 	uint base = 10;
 	int uc;
 	char[ulong.sizeof * 8] tmpbuf;	// long enough to print long in binary
-	const(char*) prefix = "";
+	const(char)* prefix = "";
 	string s;
 
 	void putstr(const char[] s)
@@ -1771,8 +1771,9 @@ unittest
  * Formats an integral number 'arg' according to 'f' and writes it to
  * 'w'.
  */ 
-private void formatIntegral(Writer, D)(ref Writer w, D arg, FormatInfo f)
+private void formatIntegral(Writer, D)(ref Writer w, D argx, FormatInfo f)
 {
+    Mutable!(D) arg = argx;
     if (f.spec == 'r')
     {
         // raw write, skip all else and write the thing
@@ -1837,7 +1838,7 @@ private void formatIntegral(Writer, D)(ref Writer w, D arg, FormatInfo f)
     {
         char buffer[64]; // 64 bits in base 2 at most
         uint i = buffer.length;
-        auto n = cast(unsigned!(D)) arg;
+        auto n = cast(unsigned!(Mutable!(D))) arg;
         do
         {
             --i;
@@ -1941,7 +1942,7 @@ private void formatFloat(Writer, D)(ref Writer w, D obj, FormatInfo f)
     sprintfSpec[i] = 0;
     //writeln(sprintfSpec);
     char[512] buf;
-    final n = snprintf(buf.ptr, buf.length,
+    auto n = snprintf(buf.ptr, buf.length,
                        sprintfSpec.ptr,
                        f.width,
                        // negative precision is same as no precision specified
@@ -2107,7 +2108,7 @@ undergoing active development. Do not rely on it.
 void formattedWrite(Writer, F, A...)(ref Writer w, const(F)[] fmt, A args)
 {
     const len = args.length;
-    void function(ref Writer, const void*, FormatInfo) funs[len] = void;
+    void function(ref Writer, const(void)*, FormatInfo) funs[len] = void;
     const(void)* argsAddresses[len] = void;
     foreach (i, arg; args)
     {

@@ -18,24 +18,30 @@ extern (C):
 
 version (Win32)
 {
-    const int _NFILE = 60;	///
-    const int BUFSIZ = 0x4000;	///
-    const int EOF = -1;		///
-    const int FOPEN_MAX = 20;	///
-    const int FILENAME_MAX = 256;  /// 255 plus NULL
-    const int TMP_MAX = 32767;	///
-    const int _SYS_OPEN = 20;	///
-    const int SYS_OPEN = _SYS_OPEN;	///
-    const wchar WEOF = 0xFFFF;		///
+    manifest
+    {
+	int _NFILE = 60;	///
+	int BUFSIZ = 0x4000;	///
+	int EOF = -1;		///
+	int FOPEN_MAX = 20;	///
+	int FILENAME_MAX = 256;  /// 255 plus NULL
+	int TMP_MAX = 32767;	///
+	int _SYS_OPEN = 20;	///
+	int SYS_OPEN = _SYS_OPEN;	///
+	wchar WEOF = 0xFFFF;		///
+    }
 }
 
 version (linux)
 {
-    const int EOF = -1;
-    const int FOPEN_MAX = 16;
-    const int FILENAME_MAX = 4095;
-    const int TMP_MAX = 238328;
-    const int L_tmpnam = 20;
+    manifest
+    {
+	int EOF = -1;
+	int FOPEN_MAX = 16;
+	int FILENAME_MAX = 4095;
+	int TMP_MAX = 238328;
+	int L_tmpnam = 20;
+    }
 }
 
 enum { SEEK_SET, SEEK_CUR, SEEK_END }
@@ -143,11 +149,11 @@ version (linux)
 
 version (Win32)
 {
-    final FILE *stdin  = &_iob[0];	///
-    final FILE *stdout = &_iob[1];	///
-    final FILE *stderr = &_iob[2];	///
-    final FILE *stdaux = &_iob[3];	///
-    final FILE *stdprn = &_iob[4];	///
+    FILE *stdin  = &_iob[0];	///
+    FILE *stdout = &_iob[1];	///
+    FILE *stderr = &_iob[2];	///
+    FILE *stdaux = &_iob[3];	///
+    FILE *stdprn = &_iob[4];	///
 }
 
 version (linux)
