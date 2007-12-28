@@ -862,8 +862,6 @@ version (linux)
 private import std.date;
 private import std.c.linux.linux;
 
-extern (C) char* strerror(int);
-
 /***********************************
  */
 
@@ -883,7 +881,8 @@ class FileException : Exception
     }
 
     this(string name, uint errno)
-    {	const(char*) s = strerror(errno);
+    {	char[80] buf = void;
+	auto s = strerror_r(errno, buf.ptr, buf.length);
 	this(name, std.string.toString(s).idup);
 	this.errno = errno;
     }
