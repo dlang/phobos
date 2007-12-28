@@ -67,8 +67,8 @@ invariant char[52] letters   = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 			       "abcdefghijklmnopqrstuvwxyz";	/// A..Za..z
 invariant char[6] whitespace = " \t\v\r\n\f";			/// ASCII whitespace
 
-manifest dchar LS = '\u2028';	/// UTF line separator
-manifest dchar PS = '\u2029';	/// UTF paragraph separator
+enum dchar LS = '\u2028';	/// UTF line separator
+enum dchar PS = '\u2029';	/// UTF paragraph separator
 
 /// Newline sequence for this system
 version (Windows)

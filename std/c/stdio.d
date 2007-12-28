@@ -18,29 +18,29 @@ extern (C):
 
 version (Win32)
 {
-    manifest
+    enum
     {
-	int _NFILE = 60;	///
-	int BUFSIZ = 0x4000;	///
-	int EOF = -1;		///
-	int FOPEN_MAX = 20;	///
-	int FILENAME_MAX = 256;  /// 255 plus NULL
-	int TMP_MAX = 32767;	///
-	int _SYS_OPEN = 20;	///
-	int SYS_OPEN = _SYS_OPEN;	///
-	wchar WEOF = 0xFFFF;		///
+	int _NFILE = 60,	///
+	int BUFSIZ = 0x4000,	///
+	int EOF = -1,		///
+	int FOPEN_MAX = 20,	///
+	int FILENAME_MAX = 256,  /// 255 plus NULL
+	int TMP_MAX = 32767,	///
+	int _SYS_OPEN = 20,	///
+	int SYS_OPEN = _SYS_OPEN,	///
+	wchar WEOF = 0xFFFF,		///
     }
 }
 
 version (linux)
 {
-    manifest
+    enum
     {
-	int EOF = -1;
-	int FOPEN_MAX = 16;
-	int FILENAME_MAX = 4095;
-	int TMP_MAX = 238328;
-	int L_tmpnam = 20;
+	int EOF = -1,
+	int FOPEN_MAX = 16,
+	int FILENAME_MAX = 4095,
+	int TMP_MAX = 238328,
+	int L_tmpnam = 20,
     }
 }
 
