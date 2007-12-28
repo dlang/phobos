@@ -120,7 +120,15 @@ class StdioException : Exception
     }
 
     this(uint errno)
-    {	const(char*) s = std.string.strerror(errno);
+    {
+	version (linux)
+	{   char[80] buf = void;
+	    auto s = std.string.strerror_r(errno, buf.ptr, buf.length);
+	}
+	else
+	{
+	    auto s = std.string.strerror(errno);
+	}
 	super(std.string.toString(s).idup);
     }
 
