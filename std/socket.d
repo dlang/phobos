@@ -94,11 +94,9 @@ class SocketException: Exception
 		{
 			if(errorCode > 0)
 			{
-				char* cs;
-				size_t len;
-				
-				cs = strerror(errorCode);
-				len = strlen(cs);
+				char[80] buf;
+				auto cs = strerror_r(errorCode, buf.ptr, buf.length);
+				auto len = strlen(cs);
 				
 				if(cs[len - 1] == '\n')
 					len--;

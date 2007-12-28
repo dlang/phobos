@@ -38,3 +38,9 @@ version (Windows)
 {
     int memicmp(char* s1, char* s2, size_t n);	///
 }
+
+version (linux)
+{
+    char* strerror_r(int errnum, char* buf, size_t buflen);	///
+}
+

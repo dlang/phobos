@@ -468,7 +468,15 @@ public:
 
     this(uint errcode)
     {
+      version (linux)
+      {
+	char[80] buf = void;
+	super(std.string.toString(strerror_r(errcode, buf.ptr, buf.length)).dup);
+      }
+      else
+      {
 	super(std.string.toString(strerror(errcode)).dup);
+      }
     }
 }
 
