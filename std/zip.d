@@ -21,7 +21,6 @@ module std.zip;
 private import std.zlib;
 private import std.date;
 private import std.intrinsic;
-import std.conv;
 
 //debug=print;
 
@@ -318,7 +317,7 @@ class ZipArchive
 		endcommentlength = getUshort(i + 20);
 		if (i + 22 + endcommentlength > data.length)
 		    continue;
-		comment = to!(string)(data[i + 22 .. i + 22 + endcommentlength]);
+		comment = cast(string)(data[i + 22 .. i + 22 + endcommentlength]);
 		endrecOffset = i;
 		break;
 	    }
@@ -379,11 +378,11 @@ class ZipArchive
 	    if (i + namelen + extralen + commentlen > directoryOffset + directorySize)
 		throw new ZipException("invalid directory entry 2");
 
-	    de.name = to!(string)(data[i .. i + namelen]);
+	    de.name = cast(string)(data[i .. i + namelen]);
 	    i += namelen;
 	    de.extra = data[i .. i + extralen];
 	    i += extralen;
-	    de.comment = to!(string)(data[i .. i + commentlen]);
+	    de.comment = cast(string)(data[i .. i + commentlen]);
 	    i += commentlen;
 
 	    directory[de.name] = de;
