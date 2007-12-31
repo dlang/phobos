@@ -845,6 +845,7 @@ version (linux)
 
 private import std.date;
 private import std.c.linux.linux;
+private import std.c.string;
 
 /***********************************
  */
