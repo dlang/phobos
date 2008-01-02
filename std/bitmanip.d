@@ -41,7 +41,7 @@ private string createAccessors(
             alias uint MasksType;
         else
             alias ulong MasksType;
-        static const MasksType
+        enum MasksType
             maskAllElse = ((1uL << len) - 1u) << offset,
             maskMyself = ~maskAllElse,
             signBitCheck = 1uL << (len - 1),
@@ -164,9 +164,11 @@ bool), followed by unsigned types, followed by signed types.
 
 template bitfields(T...)
 {
-    static const string bitfields = createFields!(createStoreName!(T)(), 0, T)();
+    enum string bitfields = createFields!(createStoreName!(T)(), 0, T)();
 }
 
+version(none)
+{
 /**
    Allows manipulating the fraction, exponent, and sign parts of a
    $(D_PARAM float) separately. The definition is:
@@ -255,6 +257,7 @@ unittest
                   bool, "y", 1,
                   ubyte, "z", 5));
     }
+}
 }
 
 /**
