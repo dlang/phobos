@@ -36,7 +36,7 @@ extern (Windows)
     alias LPCSTR LPCTSTR;
 
     alias WCHAR* LPWSTR;
-    alias const(WCHAR*) LPCWSTR, PCWSTR;
+    alias const(WCHAR)* LPCWSTR, PCWSTR;
 
     alias uint DWORD;
     alias int BOOL;
