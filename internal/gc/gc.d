@@ -3,7 +3,7 @@
  */
 
 /*
- *  Copyright (C) 2004-2007 by Digital Mars, www.digitalmars.com
+ *  Copyright (C) 2004-2008 by Digital Mars, www.digitalmars.com
  *  Written by Walter Bright
  *
  *  This software is provided 'as-is', without any express or implied
@@ -474,6 +474,18 @@ void new_finalizer(void *p, bool dummy)
 {
     //printf("new_finalizer(p = %p)\n", p);
     _d_callfinalizer(p);
+}
+
+extern (C)
+void _d_callinterfacefinalizer(void *p)
+{
+    //printf("_d_callinterfacefinalizer(p = %p)\n", p);
+    if (p)
+    {
+	Interface *pi = **cast(Interface ***)p;
+	Object o = cast(Object)(p - pi.offset);
+	_d_callfinalizer(cast(void*)o);
+    }
 }
 
 extern (C)
