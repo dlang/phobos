@@ -250,7 +250,7 @@ unittest
 
 /**************************
  * Extracts the base name of a path and optionally chops off a
- * specifit suffix.
+ * specific suffix.
  *
  * This function will search $(D_PARAM fullname) from the end until
  * the first path separator or first character of $(D_PARAM fullname)
