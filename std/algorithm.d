@@ -118,7 +118,7 @@ unittest
 */
 void swap(T)(ref T lhs, ref T rhs)
 {
-    final t = lhs;
+    auto t = lhs;
     lhs = rhs;
     rhs = t;
 }
@@ -269,11 +269,11 @@ unittest
 void reverse(T)(T range)
 {
     auto len = range.length;
-    final limit = len / 2;
+    const limit = len / 2;
     --len;
     for (uint i = 0; i != limit; ++i)
     {
-        final t = range[i];
+        auto t = range[i];
         range[i] = range[len - i];
         range[len - i] = t;
     }
@@ -390,7 +390,7 @@ unittest
 {
     Iter getPivot(Iter)(Iter b, Iter e)
     {
-        final r = b + (e - b) / 2;
+        auto r = b + (e - b) / 2;
         return r;
     }
 }

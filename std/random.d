@@ -654,7 +654,7 @@ void randomShuffle(T, SomeRandomGen)(T[] array, ref SomeRandomGen r)
     foreach (i; 0 .. array.length)
     {
         // generate a random number i .. n
-        final which = i + uniform!(size_t)(r, 0u, array.length - i);
+	auto which = i + uniform!(size_t)(r, 0u, array.length - i);
         swap(array[i], array[which]);
     }
 }
