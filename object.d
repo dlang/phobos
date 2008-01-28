@@ -150,6 +150,7 @@ class TypeInfo_Struct : TypeInfo
     uint m_flags;
 
     const(MemberInfo[]) function(string) xgetMembers;
+    void function(void*) xdtor;
 }
 
 class TypeInfo_Tuple : TypeInfo
