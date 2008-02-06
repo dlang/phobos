@@ -424,6 +424,12 @@ class TypeInfo
 
     /// Get type information on the contents of the type; null if not available
     OffsetTypeInfo[] offTi() { return null; }
+
+    /// Run the destructor on the object and all its sub-objects
+    void destroy(void *p) { }
+
+    /// Run the postblit on the object and all its sub-objects
+    void postblit(void *p) { }
 }
 
 class TypeInfo_Typedef : TypeInfo
@@ -449,6 +455,9 @@ class TypeInfo_Typedef : TypeInfo
     override TypeInfo next() { return base.next(); }
     override uint flags() { return base.flags(); }
     override void[] init() { return m_init.length ? m_init : base.init(); }
+
+    override void destroy(void *p) { base.destroy(p); }
+    override void postblit(void *p) { base.postblit(p); }
 
     TypeInfo base;
     string name;
@@ -666,6 +675,27 @@ class TypeInfo_StaticArray : TypeInfo
     override void[] init() { return value.init(); }
     override TypeInfo next() { return value; }
     override uint flags() { return value.flags(); }
+
+    override void destroy(void *p)
+    {
+	auto sz = value.tsize();
+	p += sz * len;
+	foreach (i; 0 .. len)
+	{
+	    p -= sz;
+	    value.destroy(p);
+	}
+    }
+
+    override void postblit(void *p)
+    {
+	auto sz = value.tsize();
+	foreach (i; 0 .. len)
+	{
+	    value.postblit(p);
+	    p += sz;
+	}
+    }
 
     TypeInfo value;
     size_t len;
@@ -961,6 +991,18 @@ class TypeInfo_Struct : TypeInfo
 
     override uint flags() { return m_flags; }
 
+    void destroy(void *p)
+    {
+	if (xdtor)
+	    (*xdtor)(p);
+    }
+
+    void postblit(void *p)
+    {
+	if (xpostblit)
+	    (*xpostblit)(p);
+    }
+
     string name;
     void[] m_init;	// initializer; init.ptr == null if 0 initialize
 
@@ -973,6 +1015,7 @@ class TypeInfo_Struct : TypeInfo
 
     const(MemberInfo[]) function(string) xgetMembers;
     void function(void*) xdtor;
+    void function(void*) xpostblit;
 }
 
 class TypeInfo_Tuple : TypeInfo
@@ -1034,6 +1077,16 @@ class TypeInfo_Tuple : TypeInfo
     override void swap(void *p1, void *p2)
     {
         assert(0);
+    }
+
+    override void destroy(void *p)
+    {
+	assert(0);
+    }
+
+    override void postblit(void *p)
+    {
+	assert(0);
     }
 }
 

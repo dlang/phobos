@@ -451,9 +451,8 @@ void* _d_allocmemory(size_t nbytes)
     return _gc.malloc(nbytes);
 }
 
-// Perhaps we should get a a size argument like _d_new(), so we
-// can zero out the array?
-
+/* This function is obsoleted; replaced by _d_delarray_t()
+ */
 void _d_delarray(Array *p)
 {
     if (p)
@@ -461,6 +460,33 @@ void _d_delarray(Array *p)
 	assert(!p.length || p.data);
 	if (p.data)
 	    _gc.free(p.data);
+	p.data = null;
+	p.length = 0;
+    }
+}
+
+/* Delete an array; ti is the element type.
+ * Should we zero out the array when done?
+ */
+
+void _d_delarray_t(Array *p, TypeInfo ti)
+{
+    if (p)
+    {
+	assert(!p.length || p.data);
+	if (p.data)
+	{   if (ti)
+	    {	// Call destructors on all the sub-objects
+		auto sz = ti.tsize();
+		auto pe = p.data;
+		auto pend = pe + p.length * sz;
+		while (pe != pend)
+		{   pend -= sz;
+		    ti.destroy(pend);
+		}
+	    }
+	    _gc.free(p.data);
+	}
 	p.data = null;
 	p.length = 0;
     }

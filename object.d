@@ -82,6 +82,8 @@ class TypeInfo
     uint flags();
     // 1:			// has possible pointers into GC memory
     OffsetTypeInfo[] offTi();
+    void destroy(void *p);
+    void postblit(void *p);
 }
 
 class TypeInfo_Typedef : TypeInfo
@@ -151,6 +153,7 @@ class TypeInfo_Struct : TypeInfo
 
     const(MemberInfo[]) function(string) xgetMembers;
     void function(void*) xdtor;
+    void function(void*) xpostblit;
 }
 
 class TypeInfo_Tuple : TypeInfo
