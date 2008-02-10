@@ -79,7 +79,7 @@ unittest
     float f(float x) {
         return cos(x) - x*x*x;
     }
-    final x = secantMethod!(f)(0f, 1f);
+    auto x = secantMethod!(f)(0f, 1f);
     assert(approxEqual(x, 0.865474));
 }
 
