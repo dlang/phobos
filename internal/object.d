@@ -991,13 +991,13 @@ class TypeInfo_Struct : TypeInfo
 
     override uint flags() { return m_flags; }
 
-    void destroy(void *p)
+    override void destroy(void *p)
     {
 	if (xdtor)
 	    (*xdtor)(p);
     }
 
-    void postblit(void *p)
+    override void postblit(void *p)
     {
 	if (xpostblit)
 	    (*xpostblit)(p);
