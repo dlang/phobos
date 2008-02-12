@@ -15,7 +15,7 @@
 #	This relies on LIB.EXE 8.00 or later, and MAKE.EXE 5.01 or later.
 
 CP=cp
-DIR=\dmd2
+DIR=\dmd
 
 CFLAGS=-mn -6 -r
 #CFLAGS=-g -mn -6 -r
@@ -210,7 +210,7 @@ SRC_STD_C_WIN= std\c\windows\windows.d std\c\windows\com.d \
 	std\c\windows\winsock.d std\c\windows\stat.d
 
 SRC_STD_C_LINUX= std\c\linux\linux.d std\c\linux\linuxextern.d \
-	std\c\linux\socket.d std\c\linux\pthread.d
+	std\c\linux\socket.d std\c\linux\pthread.d std\c\linux\termios.d
 
 SRC_ETC= etc\gamma.d
 
