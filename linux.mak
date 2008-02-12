@@ -116,7 +116,7 @@ STD_C_MODULES = stdarg stdio
 STD_C_MODULES_NOTBUILT = fenv math process stddef stdlib string time locale
 
 STD_C_LINUX_MODULES = linux socket
-STD_C_LINUX_MODULES_NOTBUILT = linuxextern pthread
+STD_C_LINUX_MODULES_NOTBUILT = linuxextern pthread termios
 
 STD_C_WINDOWS_MODULES_NOTBUILT = windows com winsock stat
 
