@@ -26,7 +26,7 @@ int tcgetattr(int fd, termios* p);
 enum { TCSANOW, TCSADRAIN, TCSAFLUSH }
 int tcsetattr(int fd, int tcsa, const termios* p);
 
-void cvmakeraw(termios* p);
+void cfmakeraw(termios* p);
 
 enum { TCIFLUSH, TCOFLUSH, TCIOFLUSH }
 int tcflush(int fd, int tc_flush);
