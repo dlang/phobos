@@ -2,7 +2,7 @@
 // Written in the D programming language.
 
 /* Written by Walter Bright and Andrei Alexandrescu
- * www.digitalmars.com
+ * http://www.digitalmars.com/d
  * Placed in the Public Domain.
  */
 
@@ -628,6 +628,7 @@ size_t readln(FILE* fp, inout char[] buf, dchar terminator = '\n')
 		if (i - 1)
 		    memcpy(buf.ptr, p, i - 1);
 		buf[i - 1] = terminator;
+		buf = buf[0 .. i];
 		if (terminator == '\n' && c == '\r')
 		    i++;
 	    }
@@ -648,10 +649,10 @@ size_t readln(FILE* fp, inout char[] buf, dchar terminator = '\n')
 		    std.gc.hasNoPointers(buf.ptr);
 		}
 		memcpy(buf.ptr, p, i);
+		buf = buf[0 .. i];
 	    }
 	    fp._cnt -= i;
 	    fp._ptr += i;
-	    buf = buf[0 .. i];
 	    return i;
 	}
     }
