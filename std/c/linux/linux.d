@@ -489,3 +489,26 @@ extern (C)
 
     int utime(char* filename, utimbuf* buf);
 }
+
+extern (C)
+{
+    /* from unistd.h
+     */
+
+    gid_t getgid();
+    uid_t getuid();
+    int setpgid(pid_t pid, pid_t pgid);
+    pid_t getpgid(pid_t pid);
+    int setpgrp();
+    pid_t getpgrp();
+
+}
+
+extern (C)
+{
+    /* from signal.h
+     */
+
+    int killpg(pid_t, int);
+}
+
