@@ -1,3 +1,4 @@
+
 DDOC = <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
    "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -13,10 +14,33 @@ DDOC = <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 <meta http-equiv="content-type" content="text/html; charset=utf-8" >
 <title>$(TITLE) - D Programming Language - Digital Mars</title>
 <link rel="stylesheet" type="text/css" href="../style.css">
+
+<script>
+function listanchors()
+{
+    var a = document.getElementById("quickindex");
+    if (!a) return;
+    var newText = "";
+    var hash = new Array;
+    // List all anchors.
+    for (var i = 0; i < document.anchors.length; i++)
+    {
+        var a = document.anchors[i];
+        var text = a.name;
+        if (hash[text] > 0) continue;
+        hash[text] = 1;
+        newText += '<a href="#' + a.name + '"><span class=d_psymbol>'
+                + a.name + '</span></a> ';
+    }
+    if (newText != "") newText = "<p><b>Jump to:</b> " + newText + '</p>';
+    var a = document.getElementById("quickindex");
+    a.innerHTML = newText;
+}
+</script>
+
 </head>
 
-<body>
-<div id="heading">
+<body onload="listanchors()">
 	<a href="http://www.digitalmars.com/"><img src="../dmlogo.gif" width="270" height="53" border="0" alt="www.digitalmars.com" align="left"></a>
 	<p align="right">D Programming Language 2.0</p>
 
@@ -55,6 +79,7 @@ $(COMMENT
 </div>
 <div id="content">
     <h1>$(TITLE)</h1>
+    <div id=quickindex class=quickindex></div>
     $(BODY)
     $(GOOGLE_FOOTER)
 </div>
@@ -96,10 +121,10 @@ TOP=
 </form>
 <div id="toctop">
     $(UL
-	$(LI <a href="../index.html" title="D Programming Language">D ...</a>)
-	$(LI <a href="../lex.html" title="D Language Specification">Language ...</a>)
-	$(LI <a href="phobos.html" title="D Runtime Library">Phobos ...</a>)
-	$(LI <a href="../comparison.html" title="Language Comparisons">Comparisons ...</a>)
+	$(LI <a href="../index.html" title="D Programming Language">D</a>)
+	$(LI <a href="../lex.html" title="D Language Specification">Language</a>)
+	$(LI <a href="phobos.html" title="D Runtime Library">Phobos</a>)
+	$(LI <a href="../comparison.html" title="Language Comparisons">Comparisons</a>)
     )
 </div>
 </div>
@@ -118,6 +143,7 @@ NAVIGATION_PHOBOS=
 	$(LI <a href="std_bitmanip.html" title="Bit-level manipulation">std.bitmanip</a>)
 	$(LI <a href="std_boxer.html" title="Box/unbox types">std.boxer</a>)
 	$(LI <a href="std_compiler.html" title="Information about the D compiler implementation">std.compiler</a>)
+	$(LI <a href="std_complex.html" title="Complex numbers">std.complex</a>)
 	$(LI <a href="std_contracts.html" title="Think assert">std.contracts</a>)
 	$(LI <a href="std_conv.html" title="Conversion of strings to integers">std.conv</a>)
 	$(LI <a href="std_cover.html" title="D coverage analyzer">std.cover</a>)
@@ -131,6 +157,7 @@ NAVIGATION_PHOBOS=
 	$(LI <a href="std_gc.html" title="Control the garbage collector">std.gc</a>)
 	$(LI <a href="std_getopt.html" title="Command line options">std.getopt</a>)
 	$(LI <a href="std_intrinsic.html" title="Compiler built in intrinsic functions">std.intrinsic</a>)
+	$(LI <a href="std_iterator.html" title="Defines iterators and ranges">std.iterator</a>)
 	$(LI <a href="std_math.html" title="the usual math functions">std.math</a>)
 	$(LI <a href="std_md5.html" title="Compute MD5 digests">std.md5</a>)
 	$(LI <a href="std_metastrings.html" title="Metaprogramming with strings">std.metastrings</a>)
@@ -144,7 +171,6 @@ NAVIGATION_PHOBOS=
 	$(LI <a href="std_random.html" title="Random number generation">std.random</a>)
 	$(LI <a href="std_regexp.html" title="regular expressions">std.regexp</a>)
 	$(LI <a href="std_signals.html" title="Signals">std.signals</a>)
-	$(LI <a href="std_slist.html" title="Singly linked list">std.slist</a>)
 	$(LI <a href="std_socket.html" title="Sockets">std.socket</a>)
 	$(LI <a href="std_socketstream.html" title="Stream for a blocking, connected Socket">std.socketstream</a>)
 	$(LI <a href="std_stdint.html" title="Integral types for various purposes">std.stdint</a>)
@@ -196,7 +222,15 @@ D_PSYMBOL = <span class="d_psymbol">$0</span>
 D_PARAM   = <span class="d_param">$0</span>
 RPAREN = )
 LPAREN = (
-FOO=$0
+WEB = $(LINK2 http://$1,$2)
+D = <font face=Courier><b>$0</b></font>
+D = <span class="d_psymbol"><i>$0</i></span>
+BIGOH = <i><b>&Omicron;</i>(</i></b>$(D $0)<b></i>)</i></b>
+GLOSSARY = $(LINK2 ../2.0/glossary.html#$0, $0)
+
+DDOC_PSYMBOL = <a name="$0"></a>$(U $0)
+DDOC_DECL  = $(DT <div class="d_decl">$0</div>)
+
 
 COPYRIGHT= Copyright &copy; 1999-$(YEAR) by Digital Mars, All Rights Reserved
 
