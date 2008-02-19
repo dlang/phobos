@@ -79,6 +79,7 @@ OBJS= asserterror.obj deh.obj switch.obj complex.obj gcstats.obj \
 	signals.obj cpuid.obj typetuple.obj traits.obj bind.obj \
 	c_stdio.obj hiddenfunc.obj contracts.obj getopt.obj variant.obj \
 	numeric.obj bitmanip.obj functional.obj algorithm.obj typecons.obj \
+	iterator.obj complex.obj \
 	ti_Ag.obj ti_C.obj ti_int.obj ti_char.obj \
 	ti_wchar.obj ti_uint.obj ti_short.obj ti_ushort.obj \
 	ti_byte.obj ti_ubyte.obj ti_long.obj ti_ulong.obj ti_ptr.obj \
@@ -104,6 +105,7 @@ DOCS=	$(DOC)\std_path.html $(DOC)\std_math.html $(DOC)\std_outbuffer.html \
 	$(DOC)\std_bitarray.html \
 	$(DOC)\std_bitmanip.html \
 	$(DOC)\std_boxer.html \
+	$(DOC)\std_complex.html \
 	$(DOC)\std_contracts.html \
 	$(DOC)\std_conv.html \
 	$(DOC)\std_cover.html \
@@ -115,6 +117,7 @@ DOCS=	$(DOC)\std_path.html $(DOC)\std_math.html $(DOC)\std_outbuffer.html \
 	$(DOC)\std_gc.html \
 	$(DOC)\std_getopt.html \
 	$(DOC)\std_intrinsic.html \
+	$(DOC)\std_iterator.html \
 	$(DOC)\std_metastrings.html \
 	$(DOC)\std_mmfile.html \
 	$(DOC)\std_numeric.html \
@@ -164,8 +167,8 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 	std\cstream.d std\demangle.d std\cover.d std\bitarray.d \
 	std\signals.d std\cpuid.d std\typetuple.d std\traits.d std\bind.d \
 	std\metastrings.d std\hiddenfunc.d std\contracts.d std\getopt.d \
-	std\variant.d std\numeric.d std\bitmanip.d \
-	std\functional.d std\algorithm.d std\typecons.d
+	std\variant.d std\numeric.d std\bitmanip.d std\complex.d \
+	std\functional.d std\algorithm.d std\typecons.d std\iterator.d
 
 SRC_STD_C= std\c\process.d std\c\stdlib.d std\c\time.d std\c\stdio.d \
 	std\c\math.d std\c\stdarg.d std\c\stddef.d std\c\fenv.d std\c\string.d \
@@ -210,7 +213,8 @@ SRC_STD_C_WIN= std\c\windows\windows.d std\c\windows\com.d \
 	std\c\windows\winsock.d std\c\windows\stat.d
 
 SRC_STD_C_LINUX= std\c\linux\linux.d std\c\linux\linuxextern.d \
-	std\c\linux\socket.d std\c\linux\pthread.d std\c\linux\termios.d
+	std\c\linux\socket.d std\c\linux\pthread.d std\c\linux\termios.d \
+	std\c\linux\tipc.d
 
 SRC_ETC= etc\gamma.d
 
@@ -371,6 +375,9 @@ boxer.obj : std\boxer.d
 compiler.obj : std\compiler.d
 	$(DMD) -c $(DFLAGS) std\compiler.d
 
+complex.obj : std\complex.d
+	$(DMD) -c $(DFLAGS) std\complex.d
+
 contracts.obj : std\contracts.d
 	$(DMD) -c $(DFLAGS) std\contracts.d
 
@@ -415,6 +422,9 @@ getopt.obj : std\getopt.d
 
 hiddenfunc.obj : std\hiddenfunc.d
 	$(DMD) -c $(DFLAGS) std\hiddenfunc.d
+
+iterator.obj : std\iterator.d
+	$(DMD) -c $(DFLAGS) std\iterator.d
 
 loader.obj : std\loader.d
 	$(DMD) -c $(DFLAGS) std\loader.d
@@ -710,6 +720,9 @@ $(DOC)\std_boxer.html : std.ddoc std\boxer.d
 $(DOC)\std_compiler.html : std.ddoc std\compiler.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_compiler.html std.ddoc std\compiler.d
 
+$(DOC)\std_complex.html : std.ddoc std\complex.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_complex.html std.ddoc std\complex.d
+
 $(DOC)\std_contracts.html : std.ddoc std\contracts.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_contracts.html std.ddoc std\contracts.d
 
@@ -748,6 +761,9 @@ $(DOC)\std_gc.html : std.ddoc std\gc.d
 
 $(DOC)\std_getopt.html : std.ddoc std\getopt.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_getopt.html std.ddoc std\getopt.d
+
+$(DOC)\std_iterator.html : std.ddoc std\iterator.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_iterator.html std.ddoc std\iterator.d
 
 $(DOC)\std_intrinsic.html : std.ddoc std\intrinsic.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_intrinsic.html std.ddoc std\intrinsic.d
