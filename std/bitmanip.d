@@ -1,10 +1,15 @@
 // Written in the D programming language
 
 /**
-   Bit-level manipulation facilities.
+Bit-level manipulation facilities.
+
+Authors:
+
+$(WEB digitalmars.com, Walter Bright), $(WEB erdani.org, Andrei
+Alexandrescu)
    
-   Macros:
-   WIKI = StdBitarray
+Macros:
+WIKI = StdBitarray
 */
 
 module std.bitmanip;
@@ -12,28 +17,23 @@ module std.bitmanip;
 //debug = bitarray;                // uncomment to turn on debugging printf's
 
 private import std.intrinsic;
-private import std.metastrings;
-private import std.stdio;
 
-private string myToString(ulong n)
+private template myToString(ulong n, string suffix = n > uint.max ? "UL" : "U")
 {
-    return n < 10
-        ? "" ~ cast(char) (n + '0')
-        : myToString(n / 10) ~ myToString(n % 10);
+    static if (n < 10)
+        enum myToString = cast(char) (n + '0') ~ suffix;
+    else
+        enum myToString = .myToString!(n / 10, "")
+            ~ .myToString!(n % 10, "") ~ suffix;
 }
 
-private string toStringSfx(ulong n)
-{
-    return myToString(n) ~ (n > uint.max ? "UL" : "U");
-}
-
-private string createAccessors(
-    string store, T, string name, size_t len, size_t offset)()
+private template createAccessors(
+    string store, T, string name, size_t len, size_t offset)
 {
     static if (!name.length)
     {
         // No need to create any accessor
-        return "";
+        enum result = "";
     }
     else
     {
@@ -47,52 +47,49 @@ private string createAccessors(
             signBitCheck = 1uL << (len - 1),
             extendSign = ~((cast(MasksType)1u << len) - 1);
 
-        string result;
         static if (is(T == bool))
         {
             static assert(len == 1);
+            enum result = 
             // getter
-            result ~= "bool " ~ name ~ "(){ return "
-                "("~store~" & "~toStringSfx(maskAllElse)~") != 0;}\n";
+                "bool " ~ name ~ "(){ return "
+                ~"("~store~" & "~myToString!(maskAllElse)~") != 0;}\n"
             // setter
-            result ~= "void " ~ name ~ "(bool v){"
-                "if (v) "~store~" |= "~toStringSfx(maskAllElse)~";"
-                "else "~store~" &= "~toStringSfx(maskMyself)~";}\n";
+                ~"void " ~ name ~ "(bool v){"
+                ~"if (v) "~store~" |= "~myToString!(maskAllElse)~";"
+                ~"else "~store~" &= "~myToString!(maskMyself)~";}\n";
         }
         else
         {
             // getter
-            result ~= T.stringof ~ " " ~ name ~ "(){ auto result = "
+            enum result = T.stringof ~ " " ~ name ~ "(){ auto result = "
                 "("~store~" & "
-                ~ toStringSfx(maskAllElse) ~ ") >>"
-                ~ toStringSfx(offset) ~ ";";
-            static if (T.min < 0)
-            {
-                result ~= "if (result >= " ~ toStringSfx(signBitCheck) 
-                    ~ ") result |= " ~ toStringSfx(extendSign) ~ ";";
-            }
-            result ~= " return cast("~T.stringof~") result;}\n";
+                ~ myToString!(maskAllElse) ~ ") >>"
+                ~ myToString!(offset) ~ ";"
+                ~ (T.min < 0
+                   ? "if (result >= " ~ myToString!(signBitCheck) 
+                   ~ ") result |= " ~ myToString!(extendSign) ~ ";"
+                   : "")
+                ~ " return cast("~T.stringof~") result;}\n"
             // setter
-            result ~= "void " ~ name ~ "(" ~ T.stringof
-                ~ " v){ "~store~" = ("~store~" & "
-                ~ toStringSfx(maskMyself) ~ ") | "
-                ~ "((cast(typeof("~store~")) v << " ~ toStringSfx(offset)
-                ~ ") & " ~ toStringSfx(maskAllElse)
-                ~ ");}\n";
+                ~"void "~name~"("~T.stringof~" v){ "
+                ~store~" = cast(typeof("~store~"))"
+                " (("~store~" & "~myToString!(maskMyself)~")"
+                " | ((cast(typeof("~store~")) v << "~myToString!(offset)~")"
+                " & "~myToString!(maskAllElse)~"));}\n";
         }
-        return result;
     }
 }
 
-private string createStoreName(Ts...)()
+private template createStoreName(Ts...)
 {
-    static if (Ts.length == 0)
-        return "";
+    static if (Ts.length < 2)
+        enum createStoreName = "";
     else
-        return Ts[1] ~ createStoreName!(Ts[3 .. $])();
+        enum createStoreName = Ts[1] ~ createStoreName!(Ts[3 .. $]);
 }
 
-private string createFields(string store, size_t offset, Ts...)()
+private template createFields(string store, size_t offset, Ts...)
 {
     static if (!Ts.length)
     {
@@ -106,12 +103,13 @@ private string createFields(string store, size_t offset, Ts...)()
             alias ulong StoreType;
         else
             static assert(false, myToString(offset));
-        return "private " ~ StoreType.stringof ~ " " ~ store ~ ";";
+        enum result = "private " ~ StoreType.stringof ~ " " ~ store ~ ";";
     }
     else
     {
-        return createAccessors!(store, Ts[0], Ts[1], Ts[2], offset)()
-            ~ createFields!(store, offset + Ts[2], Ts[3 .. $])();
+        enum result
+            = createAccessors!(store, Ts[0], Ts[1], Ts[2], offset).result
+            ~ createFields!(store, offset + Ts[2], Ts[3 .. $]).result;
     }
 }
 
@@ -164,11 +162,9 @@ bool), followed by unsigned types, followed by signed types.
 
 template bitfields(T...)
 {
-    enum string bitfields = createFields!(createStoreName!(T)(), 0, T)();
+    enum { bitfields = createFields!(createStoreName!(T), 0, T).result }
 }
 
-version(none)
-{
 /**
    Allows manipulating the fraction, exponent, and sign parts of a
    $(D_PARAM float) separately. The definition is:
@@ -258,7 +254,6 @@ unittest
                   ubyte, "z", 5));
     }
 }
-}
 
 /**
  * An array of bits.
@@ -305,7 +300,7 @@ struct BitArray
     /**********************************************
      * Support for [$(I index)] operation for BitArray.
      */
-    bool opIndex(size_t i)
+    bool opIndex(size_t i) const
     in
     {
         assert(i < len);
@@ -313,6 +308,19 @@ struct BitArray
     body
     {
         return cast(bool)bt(ptr, i);
+    }
+
+    unittest
+    {
+        void Fun(const BitArray arr)
+        {
+            auto x = arr[0];
+            assert(x == 1);
+        }
+        BitArray a;
+        a.length = 3;
+        a[0] = 1;
+        Fun(a);
     }
 
     /** ditto */

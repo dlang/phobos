@@ -1960,33 +1960,39 @@ private void formatFloat(Writer, D)(ref Writer w, D obj, FormatInfo f)
 private void formatGeneric(Writer, D)(ref Writer w, const(void)* arg,
     FormatInfo f)
 {
-    D obj = *cast(D*) arg;
-    static if (is(D == void[])) {
-        char[] s = cast(char[]) obj;
+    auto obj = *cast(D*) arg;
+    static if (is(const(D) == const(void[]))) {
+        auto s = cast(const char[]) obj;
         w.write(s);
     } else static if (is(D Original == typedef)) {
         formatGeneric!(Writer, Original)(w, arg, f);
-    } else static if (is(D == float) || is(D == double) || is(D == real)) {
+    } else static if (is(const D == const(float))
+                      || is(const(D) == const(double))
+                      || is(const(D) == const(real))) {
         formatFloat(w, obj, f);
-    } else static if (is(D == ifloat)) {
+    } else static if (is(const(D) == const ifloat)) {
         formatFloat(w, *cast(float*) &obj, f);
-    } else static if (is(D == idouble)) {
+    } else static if (is(const(D) == const idouble)) {
         formatFloat(w, *cast(double*) &obj, f);
-    } else static if (is(D == ireal)) {
+    } else static if (is(const(D) == const ireal)) {
         formatFloat(w, *cast(real*) &obj, f);
-    } else static if (is(D == cfloat) || is(D == cdouble) || is(D == creal)) {
+    } else static if (is(const(D) == const cfloat)
+                      || is(const(D) == const cdouble)
+                      || is(const(D) == const creal)) {
         formatFloat(w, obj.re, f);
         w.write("+");
         formatFloat(w, obj.im, f);
         w.write("i");
-    } else static if (is(D : long) || is(D : ulong)) {
-        static if (is(D == bool)) {
+    } else static if (is(const(D) : const long) || is(const(D) : const ulong)) {
+        static if (is(const(D) == const bool)) {
             if (f.spec == 's') {
                 w.write(obj ? "true" : "false");
             } else {
                 formatIntegral(w, cast(int) obj, f);
             }
-        } else static if (is(D == char) || is(D == wchar) || is(D == dchar)) {
+        } else static if (is(const(D) == const char)
+                          || is(const(D) == const wchar)
+                          || is(const(D) == const dchar)) {
             if (f.spec == 's') {
                 w.putchar(obj);
             } else {
@@ -2023,11 +2029,11 @@ private void formatGeneric(Writer, D)(ref Writer w, const(void)* arg,
 	    formatGeneric!(Writer, typeof(e))(w, &e, f);
 	}
         w.putchar(']');
-    } else static if (is(D : void*)) {
+    } else static if (is(const(D) : const void*)) {
         f.spec = 'X';
         ulong fake = cast(ulong) obj;
         formatGeneric!(Writer, ulong)(w, &fake, f);
-    } else static if (is(D : Object)) {
+    } else static if (is(const(D) : const Object)) {
         if (obj is null) w.write("null");
         else w.write(obj.toString);
     } else static if (isAssociativeArray!(D)) {

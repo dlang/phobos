@@ -10,6 +10,12 @@
  * Standard I/O functions that extend $(B std.c.stdio).
  * $(B std.c.stdio) is $(D_PARAM public)ally imported when importing
  * $(B std.stdio).
+ *
+ * Authors:
+ *
+ * $(WEB digitalmars.com, Walter Bright), $(WEB erdani.org, Andrei
+Alexandrescu)
+ * 
  * Macros:
  *	WIKI=Phobos/StdStdio
  */
@@ -241,6 +247,9 @@ void write(T...)(T args)
         static const first = 0;
     }
     writef(target, "", args[first .. $]);
+    static if (args.length && is(typeof(args[$ - 1]) : dchar)) {
+        if (args[$ - 1] == '\n') fflush(target);
+    }
 }
 
 unittest
@@ -1231,7 +1240,7 @@ struct chunks
 //             if (fileName.length && fclose(f))
 //                 StdioException("Could not close file `"~fileName~"'");
 //         }
-        const maxStackSize = 500 * 1024;
+        const maxStackSize = 1024 * 16;
         ubyte[] buffer = void;
         if (size < maxStackSize)
             buffer = (cast(ubyte*) alloca(size))[0 .. size];
@@ -1247,7 +1256,7 @@ struct chunks
             {
                 // error occured
                 if (!feof(f)) throw new StdioException(ferror(f));
-                if (!r) break; // done reading
+                buffer.length = r;
             }
             if ((result = dg(buffer)) != 0) break;
         }

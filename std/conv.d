@@ -1,4 +1,3 @@
-
 // Written in the D programming language.
 
 /*
@@ -26,9 +25,13 @@
  */
 
 /***********
- * A one-stop shop for converting values from one type to another.
- *
- */
+A one-stop shop for converting values from one type to another.
+
+Authors: 
+
+$(WEB digitalmars.com, Walter Bright), $(WEB erdani.org, Andrei
+Alexandrescu)
+*/
 
 module std.conv;
 
@@ -196,14 +199,9 @@ might fail the range check.
 Macros: WIKI=Phobos/StdConv
 */
 
-template to(Target)
+Target to(Target, Source)(Source value)
 {
-    Target to(Source)(Source value)
-    {
-        // Need to forward because of problems when recursively invoking
-        // a member with the same name as a template
-        return toImpl!(Source, Target)(value);
-    }
+    return toImpl!(Source, Target)(value);
 }
 
 private T toSomeString(S, T)(S s)
@@ -2059,4 +2057,3 @@ private bool feq(in creal r1, in creal r2)
 
     return feq(r1a, r2b, 0.000001L);
 }
-
