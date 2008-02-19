@@ -56,7 +56,7 @@ ifneq (none,$(OBJDIR))
 endif
 
 LIB=$(OBJDIR)/libphobos2.a
-DOC_OUTPUT_DIR=doc
+DOC_OUTPUT_DIR=web/phobos
 CC=gcc
 #DMD=/dmd/bin/dmd
 DMD=dmd
@@ -103,13 +103,14 @@ INTERNAL_GC_EXTRAFILES = \
 	internal/gc/linux.mak
 
 STD_MODULES = algorithm array asserterror base64 bind bitarray		\
-        bitmanip boxer compiler contracts conv cover cpuid cstream	\
-        ctype date dateparse demangle file format functional gc getopt	\
-        hiddenfunc intrinsic loader math math2 md5 metastrings mmfile	\
-        moduleinit numeric openrj outbuffer outofmemory path perf	\
-        process random regexp signals socket socketstream stdint stdio	\
-        stream string switcherr syserror system thread traits typecons	\
-        typetuple uni uri utf variant zip zlib
+        bitmanip boxer compiler complex contracts conv cover cpuid	\
+        cstream ctype date dateparse demangle file format functional	\
+        gc getopt hiddenfunc intrinsic iterator loader math math2 md5	\
+        metastrings mmfile moduleinit numeric openrj outbuffer		\
+        outofmemory path perf process random regexp signals socket	\
+        socketstream stdint stdio stream string switcherr syserror	\
+        system thread traits typecons typetuple uni uri utf variant	\
+        zip zlib
 STD_MODULES_NOTBUILT = stdarg
 
 STD_C_MODULES = stdarg stdio
@@ -204,24 +205,32 @@ OBJS := $(addprefix $(OBJDIR)/,$(OBJS))
 
 $(LIB) : $(OBJS) $(MAKEFILE_LIST)
 	rm -f $(LIB)
-	ar -r $@ $(OBJS)
+	@echo ar -r $@ "<...tonz of filez...>"
+	@ar -r $@ $(OBJS) 2>/tmp/deleteme || cat /tmp/deleteme >&2
+	@rm /tmp/deleteme
 
 ###########################################################
 # Dox
 
-$(DOC_OUTPUT_DIR)/%.html : %.d std.ddoc
-	$(DMD) -c -o- $(DFLAGS) -Df$@ std.ddoc $<
+STDDOC = docsrc/std.ddoc
+DOCDOC = docsrc/doc.ddoc
 
-$(DOC_OUTPUT_DIR)/std_%.html : std/%.d std.ddoc
-	$(DMD) -c -o- $(DFLAGS) -Df$@ std.ddoc $<
+$(DOC_OUTPUT_DIR)/%.html : %.d $(STDDOC)
+	$(DMD) -c -o- $(DFLAGS) -Df$@ $(STDDOC) $<
 
-$(DOC_OUTPUT_DIR)/std_c_%.html : std/c/%.d std.ddoc
-	$(DMD) -c -o- $(DFLAGS) -Df$@ std.ddoc $<
+$(DOC_OUTPUT_DIR)/std_%.html : std/%.d $(STDDOC)
+	$(DMD) -c -o- $(DFLAGS) -Df$@ $(STDDOC) $<
 
-$(DOC_OUTPUT_DIR)/std_c_linux_%.html : std/c/linux/%.d std.ddoc
-	$(DMD) -c -o- $(DFLAGS) -Df$@ std.ddoc $<
+$(DOC_OUTPUT_DIR)/std_c_%.html : std/c/%.d $(STDDOC)
+	$(DMD) -c -o- $(DFLAGS) -Df$@ $(STDDOC) $<
 
-html : $(addprefix $(DOC_OUTPUT_DIR)/,$(subst /,_,$(subst .d,.html,$(SRC_DOCUMENTABLES))))
+$(DOC_OUTPUT_DIR)/std_c_linux_%.html : std/c/linux/%.d $(STDDOC)
+	$(DMD) -c -o- $(DFLAGS) -Df$@ $(STDDOC) $<
+
+$(DOC_OUTPUT_DIR)/../web/glossary.html : docsrc/glossary.d $(DOCDOC)
+	$(DMD) -c -o- $(DFLAGS) -Df$@ $(DOCDOC) $<
+
+html : $(addprefix $(DOC_OUTPUT_DIR)/,$(subst /,_,$(subst .d,.html,$(SRC_DOCUMENTABLES)))) $(DOC_OUTPUT_DIR)/../web/glossary.html
 
 ##########################################################
 
