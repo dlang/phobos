@@ -3,7 +3,7 @@
 /**
 This module implements a variety of type constructors, i.e., templates
 that allow construction of new, useful general-purpose types.
-   
+
 Macros:
 
 WIKI = Phobos/StdVariant
@@ -33,7 +33,7 @@ void foo()
 
 Author:
 
-Andrei Alexandrescu
+$(WEB erdani.org, Andrei Alexandrescu)
 
 */
 
@@ -64,28 +64,29 @@ module std.typecons;
 private import std.metastrings;
 private import std.contracts;
 private import std.typetuple;
+private import std.conv;
+private import std.traits;
 
-private string tupleImpl(uint index, T...)()
+private template tupleImpl(uint index, T...)
 {
     static if (!T.length)
     {
-        return "";
+        enum result = "";
     }
     else
     {
-        auto indexStr = ToString!(index);
-        string decl = T[0].stringof~" _"~indexStr~";"
+        enum indexStr = ToString!(index);
+        enum decl = T[0].stringof~" _"~indexStr~";"
             ~"\ntemplate field(int i : "~indexStr~") { alias _"~indexStr
             ~" field; }\n";
         static if (is(typeof(T[1]) : string))
         {
-            //return T[0].stringof ~ " " ~ T[1] ~ ";" ~ tupleImpl!(T[2 .. $])();
-            decl ~= "alias _" ~ ToString!(index) ~ " " ~ T[1] ~ ";\n";
-            return decl ~ tupleImpl!(index + 1, T[2 .. $]);
+            enum result = decl ~ "alias _" ~ ToString!(index) ~ " "
+                ~ T[1] ~ ";\n" ~ tupleImpl!(index + 1, T[2 .. $]).result;
         }
         else
         {
-            return decl ~ tupleImpl!(index + 1, T[1 .. $]);
+            enum result = decl ~ tupleImpl!(index + 1, T[1 .. $]).result;
         }
     }
 }
@@ -146,7 +147,24 @@ assert(!is(typeof(point1) == typeof(point2))); // passes
 */
 struct Tuple(T...)
 {
-    mixin(tupleImpl!(0, T));
+    mixin(tupleImpl!(0, T).result);
+    string toString()
+    {
+        string result;
+        foreach (i, Type; FieldTypeTuple!(Tuple))
+        {
+            static if (i > 0) result ~= " ";
+            static if (is(typeof(to!(string)(*new Type))))
+            {
+                result ~= mixin("to!(string)(field!("~ToString!(i)~"))");
+            }
+            else
+            {
+                result ~= "unprintable("~Type.stringof~")";
+            }
+        }
+        return result;
+    }
 }
 
 unittest
@@ -157,6 +175,31 @@ unittest
     assert(nosh.field!(0) == 5);
     Tuple!(int, int, "b") nosh1;
     assert(!is(typeof(nosh) == typeof(nosh1)));
+}
+
+/**
+Returns a $(D Tuple) object instantiated and initialized according to
+the arguments.
+
+Example:
+----
+auto value = tuple(5, 6.7, "hello");
+assert(value._0 == 5);
+assert(value._1 == 6.7);
+assert(value._2 == "hello");
+----
+*/
+
+Tuple!(T) tuple(T...)(T args)
+{
+    typeof(return) result;
+    foreach (i, U; T)
+    {
+        // @@@BUG@@@ in the compiler
+        // This should work: result.field!(i) = args[i];
+        mixin("result.field!("~ToString!(i)~") = args[i];");
+    }
+    return result;
 }
 
 private string enumValuesImpl(string name, BaseType, long index, T...)()
@@ -171,7 +214,7 @@ private string enumValuesImpl(string name, BaseType, long index, T...)()
         static if (!T.length) return "";
         else
         {
-            static if (T.length == 1 || is(typeof(T[1]) : string))
+            static if (T.length == 1 || T.length > 1 && is(typeof(T[1]) : string))
             {
                 return T[0]~" = "~ToString!(index)~", "
                     ~enumValuesImpl!("", BaseType, index + 1, T[1 .. $])();
@@ -208,7 +251,7 @@ private string enumPrinterImpl(string name, bool first, T...)()
     static if (first)
     {
         return "string toString("~name~" v) {\n"
-            ~enumPrinterImpl!(name, false, T)~"}\n";
+            ~enumPrinterImpl!(name, false, T)~"\n}\n";
     }
     else
     {
@@ -231,7 +274,7 @@ private template StringsOnly(T...)
         static if (is(typeof(T[0]) : string))
             alias ValueTuple!(T[0]) StringsOnly;
         else
-            alias ValueType!() StringsOnly;
+            alias ValueTuple!() StringsOnly;
     else
         static if (is(typeof(T[0]) : string))
             alias ValueTuple!(T[0], StringsOnly!(T[1 .. $])) StringsOnly;
@@ -285,15 +328,16 @@ template defineEnum(string name, T...)
 
 private
 {
-    mixin(defineEnum!("Abc", "A", 1, "B", "C"));
-    mixin(defineEnum!("Def", byte, "D", 1, "E", "F"));
+    mixin(defineEnum!("_24b455e148a38a847d65006bca25f7fe", "A1", 1, "B1", "C1"));
+    mixin(defineEnum!("_2b9f150b8f94689141af888e86d8efb9", byte,
+                      "D", 1, "E", "F"));
 }
 
 unittest
 {
-    Abc a = Abc.A;
-    assert(toString(a) == "A");
-    Abc b;
-    assert(fromString("B", b) && b == Abc.B);
+    auto a = _24b455e148a38a847d65006bca25f7fe.A1;
+    assert(toString(a) == "A1");
+    _24b455e148a38a847d65006bca25f7fe b;
+    assert(fromString("B1", b) && b == _24b455e148a38a847d65006bca25f7fe.B1);
 }
 
