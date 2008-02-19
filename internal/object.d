@@ -305,6 +305,9 @@ class ClassInfo : Object
 
     /********************
      * Create instance of Object represented by 'this'.
+     * Returns:
+     *	the object created, or null if the Object does
+     *	does not have a default constructor
      */
     Object create()
     {
