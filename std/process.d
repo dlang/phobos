@@ -27,9 +27,15 @@
  */
 
 /**
- * Macros:
- *	WIKI=Phobos/StdProcess
- */
+Authors:
+
+$(WEB digitalmars.com, Walter Bright), $(WEB erdani.org, Andrei
+Alexandrescu)
+
+Macros:
+
+WIKI=Phobos/StdProcess
+*/
 
 module std.process;
 
@@ -37,6 +43,8 @@ private import std.c.stdlib;
 private import std.c.string;
 private import std.string;
 private import std.c.process;
+private import std.contracts;
+private import std.stdio : popen, readln, fclose;
 version (Windows)
 {
     private import std.c.windows.windows:GetCurrentProcessId;
@@ -259,6 +267,45 @@ version(linux)
 else version (Windows)
 {
     alias std.c.windows.windows.GetCurrentProcessId getpid;
+}
+
+/**
+   Runs $(D_PARAM cmd) in a shell and returns its standard output. If
+   the process could not be started or exits with an error code,
+   throws an exception.
+
+   Example:
+
+   ----
+   auto tempFilename = chomp(shell("mcookie"));
+   auto f = enforce(fopen(tempFilename), "w");
+   scope(exit)
+   {
+       fclose(f) == 0 || assert(false);
+       system("rm " ~ tempFilename);
+   }
+   ... use f ...
+   ----
+*/
+string shell(string cmd) {
+    auto f = enforce(popen(cmd, "r"), "Could not execute: "~cmd);
+    scope(failure) f is null || fclose(f);
+    char[] line;
+    string result;
+    while (readln(f, line))
+    {
+        result ~= line;
+    }
+    auto error = fclose(f) != 0;
+    f = null;
+    enforce(!error, "Process \""~cmd~"\" finished in error.");
+    return result;
+}
+
+unittest
+{
+    auto x = shell("echo wyda");
+    assert(x == "wyda\n");
 }
 
 /* ////////////////////////////////////////////////////////////////////////// */
