@@ -326,18 +326,18 @@ template defineEnum(string name, T...)
         alias defineEnum!(name, int, T) defineEnum;
 }
 
-private
-{
-    mixin(defineEnum!("_24b455e148a38a847d65006bca25f7fe", "A1", 1, "B1", "C1"));
-    mixin(defineEnum!("_2b9f150b8f94689141af888e86d8efb9", byte,
-                      "D", 1, "E", "F"));
-}
+// private
+// {
+//     mixin(defineEnum!("_24b455e148a38a847d65006bca25f7fe", "A1", 1, "B1", "C1"));
+//     mixin(defineEnum!("_2b9f150b8f94689141af888e86d8efb9", byte,
+//                       "D", 1, "E", "F"));
+// }
 
-unittest
-{
-    auto a = _24b455e148a38a847d65006bca25f7fe.A1;
-    assert(toString(a) == "A1");
-    _24b455e148a38a847d65006bca25f7fe b;
-    assert(fromString("B1", b) && b == _24b455e148a38a847d65006bca25f7fe.B1);
-}
+// unittest
+// {
+//     auto a = _24b455e148a38a847d65006bca25f7fe.A1;
+//     assert(toString(a) == "A1");
+//     _24b455e148a38a847d65006bca25f7fe b;
+//     assert(fromString("B1", b) && b == _24b455e148a38a847d65006bca25f7fe.B1);
+// }
 
