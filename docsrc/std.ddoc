@@ -188,6 +188,7 @@ NAVIGATION_PHOBOS=
 	$(LI <a href="std_uri.html" title="Encode and decode Uniform Resource Identifiers (URIs)">std.uri</a>)
 	$(LI <a href="std_utf.html" title="Encode and decode utf character encodings">std.utf</a>)
 	$(LI <a href="std_variant.html" title="Stores all types in a uniform, dynamically-checked representation">std.variant</a>)
+	$(LI <a href="std_xml.html" title="XML file processing">std.xml</a>)
 	$(LI <a href="std_zip.html" title="Read/write zip archives">std.zip</a>)
 	$(LI <a href="std_zlib.html" title="Compression / Decompression of data">std.zlib</a>)
 	$(LI <a href="std_c_fenv.html" title="Floating point environment">std.c.fenv</a>)

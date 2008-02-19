@@ -110,7 +110,7 @@ STD_MODULES = algorithm array asserterror base64 bind bitarray		\
         outofmemory path perf process random regexp signals socket	\
         socketstream stdint stdio stream string switcherr syserror	\
         system thread traits typecons typetuple uni uri utf variant	\
-        zip zlib
+        xml zip zlib
 STD_MODULES_NOTBUILT = stdarg
 
 STD_C_MODULES = stdarg stdio
