@@ -71,22 +71,22 @@ private template tupleImpl(uint index, T...)
 {
     static if (!T.length)
     {
-        enum result = "";
+        enum string result = "";
     }
     else
     {
-        enum indexStr = ToString!(index);
-        enum decl = T[0].stringof~" _"~indexStr~";"
+        enum string indexStr = ToString!(index);
+        enum string decl = T[0].stringof~" _"~indexStr~";"
             ~"\ntemplate field(int i : "~indexStr~") { alias _"~indexStr
             ~" field; }\n";
         static if (is(typeof(T[1]) : string))
         {
-            enum result = decl ~ "alias _" ~ ToString!(index) ~ " "
+            enum string result = decl ~ "alias _" ~ ToString!(index) ~ " "
                 ~ T[1] ~ ";\n" ~ tupleImpl!(index + 1, T[2 .. $]).result;
         }
         else
         {
-            enum result = decl ~ tupleImpl!(index + 1, T[1 .. $]).result;
+            enum string result = decl ~ tupleImpl!(index + 1, T[1 .. $]).result;
         }
     }
 }
@@ -202,64 +202,70 @@ Tuple!(T) tuple(T...)(T args)
     return result;
 }
 
-private string enumValuesImpl(string name, BaseType, long index, T...)()
+private template enumValuesImpl(string name, BaseType, long index, T...)
 {
     static if (name.length)
     {
-        return "enum "~name~" : "~BaseType.stringof
-            ~" { "~enumValuesImpl!("", BaseType, index, T)()~"}\n";
+        enum string enumValuesImpl = "enum "~name~" : "~BaseType.stringof
+            ~" { "~enumValuesImpl!("", BaseType, index, T)~"}\n";
     }
     else
     {
-        static if (!T.length) return "";
+        static if (!T.length)
+        {
+            enum string enumValuesImpl = "";
+        }
         else
         {
-            static if (T.length == 1 || T.length > 1 && is(typeof(T[1]) : string))
+            static if (T.length == 1
+                       || T.length > 1 && is(typeof(T[1]) : string))
             {
-                return T[0]~" = "~ToString!(index)~", "
-                    ~enumValuesImpl!("", BaseType, index + 1, T[1 .. $])();
+                enum string enumValuesImpl =  T[0]~" = "~ToString!(index)~", "
+                    ~enumValuesImpl!("", BaseType, index + 1, T[1 .. $]);
             }
             else
             {
-                return T[0]~" = "~ToString!(T[1])~", "
-                    ~enumValuesImpl!("", BaseType, T[1] + 1, T[2 .. $])();
+                enum string enumValuesImpl = T[0]~" = "~ToString!(T[1])~", "
+                    ~enumValuesImpl!("", BaseType, T[1] + 1, T[2 .. $]);
             }
         }
     }
 }
 
-private string enumParserImpl(string name, bool first, T...)()
+private template enumParserImpl(string name, bool first, T...)
 {
     static if (first)
     {
-        return "bool fromString(string s, ref "~name~" v) {\n"
+        enum string enumParserImpl = "bool fromString(string s, ref "~name~" v) {\n"
             ~enumParserImpl!(name, false, T)
             ~"return false;\n}\n";
     }
     else
     {
         static if (T.length)
-            return "if (s == `"~T[0]~"`) return (v = "~name~"."~T[0]~"), true;\n"
+            enum string enumParserImpl =
+                "if (s == `"~T[0]~"`) return (v = "~name~"."~T[0]~"), true;\n"
                 ~enumParserImpl!(name, false, T[1 .. $]);
         else
-            return "";
+            enum string enumParserImpl = "";
     }
 }
 
-private string enumPrinterImpl(string name, bool first, T...)()
+private template enumPrinterImpl(string name, bool first, T...)
 {
     static if (first)
     {
-        return "string toString("~name~" v) {\n"
+        enum string enumPrinterImpl = "string toString("~name~" v) {\n"
             ~enumPrinterImpl!(name, false, T)~"\n}\n";
     }
     else
     {
         static if (T.length)
-            return "if (v == "~name~"."~T[0]~") return `"~T[0]~"`;\n"
+            enum string enumPrinterImpl =
+                "if (v == "~name~"."~T[0]~") return `"~T[0]~"`;\n"
                 ~enumPrinterImpl!(name, false, T[1 .. $]);
         else
-            return "return null;";
+            enum string enumPrinterImpl = "return null;";
     }
 }
 
@@ -318,26 +324,22 @@ ubyte) representation.
 template defineEnum(string name, T...)
 {
     static if (is(typeof(cast(T[0]) T[0].init)))
-        static const string defineEnum =
-            enumValuesImpl!(name, T[0], 0, T[1 .. $])()
-            ~ enumParserImpl!(name, true, StringsOnly!(T[1 .. $]))()
-            ~ enumPrinterImpl!(name, true, StringsOnly!(T[1 .. $]))();
+        enum string defineEnum =
+            enumValuesImpl!(name, T[0], 0, T[1 .. $])
+            ~ enumParserImpl!(name, true, StringsOnly!(T[1 .. $]))
+            ~ enumPrinterImpl!(name, true, StringsOnly!(T[1 .. $]));
     else
         alias defineEnum!(name, int, T) defineEnum;
 }
 
-// private
-// {
-//     mixin(defineEnum!("_24b455e148a38a847d65006bca25f7fe", "A1", 1, "B1", "C1"));
-//     mixin(defineEnum!("_2b9f150b8f94689141af888e86d8efb9", byte,
-//                       "D", 1, "E", "F"));
-// }
-
-// unittest
-// {
-//     auto a = _24b455e148a38a847d65006bca25f7fe.A1;
-//     assert(toString(a) == "A1");
-//     _24b455e148a38a847d65006bca25f7fe b;
-//     assert(fromString("B1", b) && b == _24b455e148a38a847d65006bca25f7fe.B1);
-// }
+unittest
+{
+    mixin(defineEnum!("_24b455e148a38a847d65006bca25f7fe",
+                      "A1", 1, "B1", "C1"));
+    auto a = _24b455e148a38a847d65006bca25f7fe.A1;
+    assert(toString(a) == "A1");
+    _24b455e148a38a847d65006bca25f7fe b;
+    assert(fromString("B1", b)
+           && b == _24b455e148a38a847d65006bca25f7fe.B1);
+}
 
