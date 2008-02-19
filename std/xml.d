@@ -1,3 +1,6 @@
+
+// Written in the D programming language.
+
 /**
 Classes and functions for creating and parsing XML
 
@@ -11,6 +14,8 @@ whatever you want.
 Authors: Janice Caron
 
 Date: 2006.02.12
+
+License: Public Domain
 
 Examples:
 --------------------------------------------------------------------------------------------------
