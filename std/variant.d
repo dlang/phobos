@@ -47,7 +47,9 @@
  * ----
  * 
  * Author:
- * Andrei Alexandrescu
+ *
+ * $(WEB erdani.org, Andrei Alexandrescu)
+
  * 
  * Credits:
  * 
