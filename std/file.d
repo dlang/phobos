@@ -1,9 +1,17 @@
 // Written in the D programming language.
 
 /**
- * Macros:
- *	WIKI = Phobos/StdFile
- */
+Utilities for manipulating files and scanning directories.
+
+Authors:
+
+$(WEB digitalmars.com, Walter Bright), $(WEB erdani.org, Andrei
+Alexandrescu)
+
+Macros:
+
+WIKI = Phobos/StdFile
+*/
 
 /*
  *  Copyright (C) 2001-2004 by Digital Mars, www.digitalmars.com
@@ -1037,42 +1045,24 @@ void remove(in string name)
 
 ulong getSize(in string name)
 {
-    uint size;
-    int fd;
     struct_stat statbuf;
-
-    auto namez = toStringz(name);
-    //printf("file.getSize('%s')\n",namez);
-    fd = std.c.linux.linux.open(namez, O_RDONLY);
-    if (fd == -1)
+    if (std.c.linux.linux.stat(toStringz(name), &statbuf))
     {
-        //printf("\topen error, errno = %d\n",getErrno());
-        goto err1;
+        throw new FileException(name, getErrno());
     }
-
-    //printf("\tfile opened\n");
-    if (std.c.linux.linux.fstat(fd, &statbuf))
-    {
-        //printf("\tfstat error, errno = %d\n",getErrno());
-        goto err2;
-    }
-    size = statbuf.st_size;
-
-    if (std.c.linux.linux.close(fd) == -1)
-    {
-	//printf("\tclose error, errno = %d\n",getErrno());
-        goto err;
-    }
-
-    return size;
-
-err2:
-    std.c.linux.linux.close(fd);
-err:
-err1:
-    throw new FileException(name.idup, getErrno());
+    return statbuf.st_size;
 }
 
+unittest
+{
+    scope(exit) system("rm -f /tmp/deleteme");
+    // create a file of size 1
+    assert(system("echo > /tmp/deleteme") == 0);
+    assert(getSize("/tmp/deleteme") == 1);
+    // create a file of size 3
+    assert(system("echo ab > /tmp/deleteme") == 0);
+    assert(getSize("/tmp/deleteme") == 3);
+}
 
 /***************************************************
  * Get file attributes.

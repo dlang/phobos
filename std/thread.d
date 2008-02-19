@@ -821,6 +821,8 @@ class Thread
     static Thread[] getAll()
     {
 	synchronized (Thread.classinfo) return allThreads[0 .. allThreadsDim];
+        // @@@BUG1819@@@
+        return null;
     }
 
     void pause()

@@ -1,20 +1,24 @@
 // Written in the D programming language.
 
 /**
+ * This module is used to parse file names. All the operations work
+ * only on strings; they don't perform any input/output
+ * operations. This means that if a path contains a directory name
+ * with a dot, functions like $(D getExt()) will work with it just as
+ * if it was a file. To differentiate these cases, use the std.file
+ * module first (i.e. $(D std.file.isDir())).
+ *
+ * Authors:
+ *
+ * $(WEB digitalmars.com, Walter Bright), Grzegorz Adam Hankiewicz,
+Thomas K&uuml;hne, $(WEB erdani.org, Andrei Alexandrescu)
+ * 
  * Macros:
  *	WIKI = Phobos/StdPath
  * Copyright:
  *	Placed into public domain.
  *	www.digitalmars.com
  *
- * Grzegorz Adam Hankiewicz added some documentation.
- *
- * This module is used to parse file names. All the operations
- * work only on strings; they don't perform any input/output
- * operations. This means that if a path contains a directory name
- * with a dot, functions like getExt() will work with it just as
- * if it was a file. To differentiate these cases,
- * use the std.file module first (i.e. std.file.isDir()).
  */
 
 module std.path;

@@ -29,7 +29,7 @@
  * 
  * Author:
  *
- * Andrei Alexandrescu
+ * $(WEB erdani.org, Andrei Alexandrescu)
  * 
  * Credits:
  * 
@@ -38,6 +38,8 @@
 
 module std.contracts;
 private import std.conv;
+private import std.algorithm;
+private import std.iterator;
 
 /*
  *  Copyright (C) 2004-2006 by Digital Mars, www.digitalmars.com
@@ -263,14 +265,13 @@ unittest
  * The call will duplicate the array appropriately.
  * 
  * Checking for uniqueness during compilation is possible in certain
- * cases (see the $(D_PARAM unique) and $(D_PARAM lent) keywords in the
- * $(LINK2 http://archjava.fluid.cs.cmu.edu/papers/oopsla02.pdf,ArchJava)
+ * cases (see the $(D_PARAM unique) and $(D_PARAM lent) keywords in
+ * the $(WEB archjava.fluid.cs.cmu.edu/papers/oopsla02.pdf, ArchJava)
  * language), but complicates the language considerably. The downside
- * of $(D_PARAM assumeUnique)'s
- * convention-based usage is that at this time there is no formal
- * checking of the correctness of the assumption; on the upside, the
- * idiomatic use of $(D_PARAM assumeUnique) is simple and rare enough
- * to make it tolerable.
+ * of $(D_PARAM assumeUnique)'s convention-based usage is that at this
+ * time there is no formal checking of the correctness of the
+ * assumption; on the upside, the idiomatic use of $(D_PARAM
+ * assumeUnique) is simple and rare enough to be tolerable.
  *
  */
 
@@ -286,4 +287,77 @@ unittest
     int[] arr = new int[1];
     auto arr1 = assumeUnique(arr);
     assert(is(typeof(arr1) == invariant(int)[]) && arr == null);
+}
+
+invariant(T[U]) assumeUnique(T, U)(ref T[U] array)
+{
+    auto result = cast(invariant(T[U])) array;
+    array = null;
+    return result;
+}
+
+unittest
+{
+    int[string] arr = ["a":1];
+    auto arr1 = assumeUnique(arr);
+    assert(is(typeof(arr1) == invariant(int[string])) && arr == null);
+}
+
+/**
+Returns $(D true) if $(D source)'s representation embeds a pointer
+that points to $(D target)'s representation or somewhere inside
+it. Note that evaluating $(D pointsTo(x, x)) checks whether $(D x) has
+internal pointers.
+*/
+bool pointsTo(S, T)(ref S source, ref T target)
+{
+    static if (is(S P : U*, U))
+    {
+        const void * m = source, b = &target, e = b + target.sizeof;
+        return b <= m && m < e;
+    }
+    else static if (is(S == struct))
+    {
+        foreach (i, subobj; source.tupleof)
+        {
+            if (pointsTo(subobj, target)) return true;
+        }
+        return false;
+    }
+    else static if (is(S A : U[], U))
+    {
+        const void* p1 = source.ptr, p2 = p1 + source.length,
+            b = &target, e = b + target.sizeof;
+        return overlap(range(p1, p2), range(b, e)).length != 0;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+unittest
+{
+    struct S1 { int a; S1 * b; }
+    S1 a1;
+    S1 * p = &a1;
+    assert(pointsTo(p, a1));
+
+    S1 a2;
+    a2.b = &a1;
+    assert(pointsTo(a2, a1));
+
+    struct S3 { int[10] a; }
+    S3 a3;
+    auto a4 = a3.a[2 .. 3];
+    assert(pointsTo(a4, a3));
+
+    auto a5 = new double[4];
+    auto a6 = a5[1 .. 2];
+    assert(!pointsTo(a5, a6));
+
+    auto a7 = new double[3];
+    auto a8 = new double[][1];
+    a8[0] = a7;
+    assert(!pointsTo(a8[0], a8[0]));
 }

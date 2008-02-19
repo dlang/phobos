@@ -11,7 +11,11 @@
  * as was the case with the more traditional single-letter approach,
  * is provided but not enabled by default.
  *
- * Credits:
+ Author:
+
+ $(WEB erdani.org, Andrei Alexandrescu)
+*
+* Credits:
  * 
  * This module and its documentation are inspired by Perl's
  * $(LINK2 http://perldoc.perl.org/Getopt/Long.html,Getopt::Long) module. The
@@ -55,13 +59,13 @@ import std.stdio; // for testing only
 ---------
 import std.getopt;
 
-string data   = "file.dat";
+string data = "file.dat";
 int length = 24;
 bool verbose;
 
 void main(string[] args)
 {
-  bool result = getopt(
+  getopt(
     args,
     "length",  &length,    // numeric
     "file",    &data,      // string
@@ -77,16 +81,15 @@ void main(string[] args)
  right (the "bound" pointer). The option string in the call to
  $(D_PARAM getopt) should not start with a dash.
 
- In all cases, the command-line options that were parsed and
- used by $(D_PARAM getopt) are removed from $(D_PARAM args). Whatever
- in the arguments did not look like an option is left in $(D_PARAM
- args) for further processing by the program. Values that were
- unaffected by the options are not touched, so a common idiom is to
- initialize options to their defaults and then invoke $(D_PARAM
- getopt). If a command-line argument is recognized as an option with a
- parameter and the parameter cannot be parsed properly (e.g. a number
- is expected but not present), a $(D_PARAM ConvError) exception is
- thrown.
+ In all cases, the command-line options that were parsed and used by
+ $(D_PARAM getopt) are removed from $(D_PARAM args). Whatever in the
+ arguments did not look like an option is left in $(D_PARAM args) for
+ further processing by the program. Values that were unaffected by the
+ options are not touched, so a common idiom is to initialize options
+ to their defaults and then invoke $(D_PARAM getopt). If a
+ command-line argument is recognized as an option with a parameter and
+ the parameter cannot be parsed properly (e.g. a number is expected
+ but not present), a $(D_PARAM ConvError) exception is thrown.
 
  Depending on the type of the pointer being bound, $(D_PARAM getopt)
  recognizes the following kinds of options:
@@ -96,7 +99,7 @@ void main(string[] args)
 
 ---------
   bool verbose, debugging;
-  bool result = getopt(args, "verbose", &verbose, "debug", &debugging);
+  getopt(args, "verbose", &verbose, "debug", &debugging);
 ---------
 
  $(LI $(I Numeric options.) If an option is bound to a numeric type, a
@@ -105,7 +108,7 @@ void main(string[] args)
  
 ---------
   uint timeout;
-  bool result = getopt(args, "timeout", &timeout);
+  getopt(args, "timeout", &timeout);
 ---------
 
  Invoking the program with "--timeout=5" or "--timeout 5" will set
@@ -117,7 +120,7 @@ void main(string[] args)
 
 ---------
   uint paranoid;
-  bool result = getopt(args, "paranoid+", &paranoid);
+  getopt(args, "paranoid+", &paranoid);
 ---------
 
  Invoking the program with "--paranoid --paranoid --paranoid" will set
@@ -133,7 +136,7 @@ void main(string[] args)
  
 ---------
   string outputFile;
-  bool result = getopt(args, "output", &outputFile);
+  getopt(args, "output", &outputFile);
 ---------
 
  Invoking the program with "--output=myfile.txt" or "--output
@@ -146,7 +149,7 @@ void main(string[] args)
  
 ---------
   string[] outputFiles;
-  bool result = getopt(args, "output", &outputFiles);
+  getopt(args, "output", &outputFiles);
 ---------
 
  Invoking the program with "--output=myfile.txt --output=yourfile.txt"
@@ -159,7 +162,7 @@ void main(string[] args)
  
 ---------
   double[string] tuningParms;
-  bool result = getopt(args, "tune", &tuningParms);
+  getopt(args, "tune", &tuningParms);
 ---------
 
  Invoking the program with e.g. "--tune=alpha=0.5 --tune beta=0.6"
@@ -191,7 +194,7 @@ void main(string[] args)
       verbosityLevel = 2;
     }
   }
-  bool result = getopt(args, "verbose", &myHandler, "quiet", &myHandler);
+  getopt(args, "verbose", &myHandler, "quiet", &myHandler);
 }
 ---------
 
@@ -218,7 +221,7 @@ void main(string[] args)
         exit(1);
     }
   }
-  bool result = getopt(args, "verbosity", &myHandler);
+  getopt(args, "verbosity", &myHandler);
 }
 ---------
 ))))
@@ -237,7 +240,9 @@ getopt(args, "verbose|loquacious|garrulous", &verbose);
 
 $(B Case)
 
-By default options are case-insensitive. You can change that behavior by passing $(D_PARAM getopt) the $(D_PARAM caseSensitive) directive like this:
+By default options are case-insensitive. You can change that behavior
+by passing $(D_PARAM getopt) the $(D_PARAM caseSensitive) directive
+like this:
 
 ---------
 bool foo, bar;
@@ -297,7 +302,7 @@ $(B Options Terminator)
 A lonesome double-dash terminates $(D_PARAM getopt) gathering. It is used to separate program options from other parameters (e.g. options to be passed to another program). Invoking the example above with "--foo -- --bar" parses foo but leaves "--bar" in $(D_PARAM args). The double-dash itself is removed from the argument array.
 */
 
-bool getopt(T...)(ref string[] args, T opts) {
+void getopt(T...)(ref string[] args, T opts) {
     configuration cfg;
     return getoptImpl(args, cfg, opts);
 }
@@ -323,7 +328,7 @@ enum config {
     noPassThrough,
 };
 
-private bool getoptImpl(T...)(ref string[] args,
+private void getoptImpl(T...)(ref string[] args,
     ref configuration cfg, T opts)
 {
     static if (opts.length) {
@@ -337,6 +342,7 @@ private bool getoptImpl(T...)(ref string[] args,
             case config.noBundling: cfg.bundling = false; break;
             case config.passThrough: cfg.passThrough = true; break;
             case config.noPassThrough: cfg.passThrough = false; break;
+            default: assert(false); break;
             }
             return getoptImpl(args, cfg, opts[1 .. $]);
         }
@@ -414,12 +420,10 @@ private bool getoptImpl(T...)(ref string[] args,
             if (a == "--") break; // end of options
             if (!cfg.passThrough)
             {
-                writeln(stderr, "Unrecognized option ", a);
-                return false;
+                throw new Exception("Unrecognized option "~a);
             }
         }
     }
-    return true;
 }
 
 const
@@ -465,19 +469,19 @@ unittest
     uint paranoid = 2;
     string[] args = (["program.name",
                       "--paranoid", "--paranoid", "--paranoid"]).dup;
-    assert(getopt(args, "paranoid+", &paranoid));
+    getopt(args, "paranoid+", &paranoid);
     assert(paranoid == 5, to!(string)(paranoid));
     
-    string data   = "file.dat";
+    string data = "file.dat";
     int length = 24;
     bool verbose = true;
     args = (["program.name", "--length=5",
                       "--file", "dat.file", "--verbose"]).dup;
-    assert(getopt(
+    getopt(
         args,
         "length",  &length,
         "file",    &data,     
-        "verbose", &verbose));
+        "verbose", &verbose);
     assert(args.length == 1);
     assert(data == "dat.file");
     assert(length == 5);
@@ -487,14 +491,14 @@ unittest
     string[] outputFiles;
     args = (["program.name", "--output=myfile.txt",
              "--output", "yourfile.txt"]).dup;
-    assert(getopt(args, "output", &outputFiles));
+    getopt(args, "output", &outputFiles);
     assert(outputFiles.length == 2
            && outputFiles[0] == "myfile.txt" && outputFiles[0] == "myfile.txt");
 
     args = (["program.name", "--tune=alpha=0.5",
              "--tune", "beta=0.6"]).dup;
     double[string] tuningParms;
-    assert(getopt(args, "tune", &tuningParms));
+    getopt(args, "tune", &tuningParms);
     assert(args.length == 1);
     assert(tuningParms.length == 2);
     assert(tuningParms["alpha"] == 0.5);
@@ -514,10 +518,10 @@ unittest
         }
     }
     args = (["program.name", "--quiet"]).dup;
-    assert(getopt(args, "verbose", &myHandler, "quiet", &myHandler));
+    getopt(args, "verbose", &myHandler, "quiet", &myHandler);
     assert(verbosityLevel == 0);
     args = (["program.name", "--verbose"]).dup;
-    assert(getopt(args, "verbose", &myHandler, "quiet", &myHandler));
+    getopt(args, "verbose", &myHandler, "quiet", &myHandler);
     assert(verbosityLevel == 2);
 
     verbosityLevel = 1;
@@ -527,15 +531,15 @@ unittest
         verbosityLevel = 2;
     }
     args = (["program.name", "--verbose", "2"]).dup;
-    assert(getopt(args, "verbose", &myHandler2));
+    getopt(args, "verbose", &myHandler2);
     assert(verbosityLevel == 2);
 
     bool foo, bar;
     args = (["program.name", "--foo", "--bAr"]).dup;
-    assert(getopt(args,
+    getopt(args,
         std.getopt.config.caseSensitive,
         std.getopt.config.passThrough,
         "foo", &foo,
-        "bar", &bar));
+        "bar", &bar);
     assert(args[1] == "--bAr");
 }

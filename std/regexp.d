@@ -25,11 +25,13 @@
  */
 
 /**********************************************
- * $(LINK2 http://www.digitalmars.com/ctg/regular.html, Regular expressions)
- * are a powerful method of string pattern matching.
- * The regular expression
- * language used is the same as that commonly used, however, some of the very
- * advanced forms may behave slightly differently.
+ * $(LINK2 http://www.digitalmars.com/ctg/regular.html, Regular
+ * expressions) are a powerful method of string pattern matching.  The
+ * regular expression language used in this library is the same as
+ * that commonly used, however, some of the very advanced forms may
+ * behave slightly differently. The standard observed is the $(WEB
+ * www.ecma-international.org/publications/standards/Ecma-262.htm,
+ * ECMA standard) for regular expressions.
  *
  * std.regexp is designed to work only with valid UTF strings as input.
  * To validate untrusted input, use std.utf.validate().

@@ -11,7 +11,7 @@ WIKI = Phobos/StdNumeric
 
 Author:
 
-Andrei Alexandrescu  
+$(WEB erdani.org, Andrei Alexandrescu)
 */
 
 /*
@@ -52,7 +52,7 @@ Example:
 float f(float x) {
     return cos(x) - x*x*x;
 }
-final x = secantMethod(&f, 0f, 1f);
+auto x = secantMethod(&f, 0f, 1f);
 assert(approxEqual(x, 0.865474));
 ----
 */
@@ -79,7 +79,7 @@ unittest
     float f(float x) {
         return cos(x) - x*x*x;
     }
-    auto x = secantMethod!(f)(0f, 1f);
+    invariant x = secantMethod!(f)(0f, 1f);
     assert(approxEqual(x, 0.865474));
 }
 

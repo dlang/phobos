@@ -1,21 +1,18 @@
-
 // Written in the D programming language.
 
 /**
  * Templates with which to extract information about
  * types at compile time.
  *
+ * Authors:
+ *
+ * $(WEB digitalmars.com, Walter Bright), Tomasz Stachowiak ($(D
+ *	isExpressionTuple)), $(WEB erdani.org, Andrei Alexandrescu)
+ *
  * Macros:
  *	WIKI = Phobos/StdTraits
  * Copyright:
  *	Public Domain
- */
-
-/*
- * Authors:
- *	Walter Bright, Digital Mars, www.digitalmars.com
- *	Tomasz Stachowiak (isExpressionTuple)
- *      Andrei Alexandrescu, www.erdani.org
  */
 
 module std.traits;
@@ -119,12 +116,348 @@ template ParameterTypeTuple(dg)
 
 template FieldTypeTuple(S)
 {
-    static if (is(S == struct) || is(S == class))
+    static if (is(S == struct) || is(S == class) || is(S == union))
 	alias typeof(S.tupleof) FieldTypeTuple;
     else
-	static assert(0, "argument is not struct or class");
+        alias S FieldTypeTuple;
+	//static assert(0, "argument is not struct or class");
 }
 
+// // FieldOffsetsTuple
+// private template FieldOffsetsTupleImpl(size_t n, T...)
+// {
+//     static if (T.length == 0)
+//     {
+//         alias TypeTuple!() Result;
+//     }
+//     else
+//     {
+//         //private alias FieldTypeTuple!(T[0]) Types;
+//         private enum size_t myOffset =
+//             ((n + T[0].alignof - 1) / T[0].alignof) * T[0].alignof;
+//         static if (is(T[0] == struct))
+//         {
+//             alias FieldTypeTuple!(T[0]) MyRep;
+//             alias FieldOffsetsTupleImpl!(myOffset, MyRep, T[1 .. $]).Result
+//                 Result;
+//         }
+//         else
+//         {
+//             private enum size_t mySize = T[0].sizeof;
+//             alias TypeTuple!(myOffset) Head;
+//             static if (is(T == union))
+//             {
+//                 alias FieldOffsetsTupleImpl!(myOffset, T[1 .. $]).Result
+//                     Tail;
+//             }
+//             else
+//             {
+//                 alias FieldOffsetsTupleImpl!(myOffset + mySize,
+//                                              T[1 .. $]).Result
+//                     Tail;
+//             }
+//             alias TypeTuple!(Head, Tail) Result;
+//         }
+//     }
+// }
+
+// template FieldOffsetsTuple(T...)
+// {
+//     alias FieldOffsetsTupleImpl!(0, T).Result FieldOffsetsTuple;
+// }
+
+// unittest
+// {
+//     alias FieldOffsetsTuple!(int) T1;
+//     assert(T1.length == 1 && T1[0] == 0);
+//     //
+//     struct S2 { char a; int b; char c; double d; char e, f; }
+//     alias FieldOffsetsTuple!(S2) T2;
+//     //pragma(msg, T2);
+//     static assert(T2.length == 6
+//            && T2[0] == 0 && T2[1] == 4 && T2[2] == 8 && T2[3] == 16
+//                   && T2[4] == 24&& T2[5] == 25);
+//     //
+//     class C { int a, b, c, d; }
+//     struct S3 { char a; C b; char c; }
+//     alias FieldOffsetsTuple!(S3) T3;
+//     //pragma(msg, T2);
+//     static assert(T3.length == 3
+//            && T3[0] == 0 && T3[1] == 4 && T3[2] == 8);
+//     //
+//     struct S4 { char a; union { int b; char c; } int d; }
+//     alias FieldOffsetsTuple!(S4) T4;
+//     //pragma(msg, FieldTypeTuple!(S4));
+//     static assert(T4.length == 4
+//            && T4[0] == 0 && T4[1] == 4 && T4[2] == 8);
+// }
+
+// /***
+// Get the offsets of the fields of a struct or class.
+// */
+
+// template FieldOffsetsTuple(S)
+// {
+//     static if (is(S == struct) || is(S == class))
+// 	alias typeof(S.tupleof) FieldTypeTuple;
+//     else
+// 	static assert(0, "argument is not struct or class");
+// }
+
+/***
+Get the primitive types of the fields of a struct or class, in
+topological order.
+
+Example:
+----
+struct S1 { int a; float b; }
+struct S2 { char[] a; union { S1 b; S1 * c; } }
+alias RepresentationTypeTuple!(S2) R;
+assert(R.length == 4
+    && is(R[0] == char[]) && is(R[1] == int)
+    && is(R[2] == float) && is(R[3] == S1*));
+----
+*/
+
+template RepresentationTypeTuple(T...)
+{
+    static if (T.length == 0)
+    {
+        alias TypeTuple!() RepresentationTypeTuple;
+    }
+    else
+    {
+        static if (is(T[0] == struct) || is(T[0] == union))
+// @@@BUG@@@ this should work
+//             alias .RepresentationTypes!(T[0].tupleof)
+//                 RepresentationTypes;
+            alias .RepresentationTypeTuple!(FieldTypeTuple!(T[0]),
+                                            T[1 .. $])
+                RepresentationTypeTuple;
+        else static if (is(T[0] U == typedef))
+        {
+            alias .RepresentationTypeTuple!(FieldTypeTuple!(U),
+                                            T[1 .. $])
+                RepresentationTypeTuple;
+        }
+        else
+        {
+            alias TypeTuple!(T[0], RepresentationTypeTuple!(T[1 .. $]))
+                RepresentationTypeTuple;
+        }
+    }
+}
+
+unittest
+{
+    alias RepresentationTypeTuple!(int) S1;
+    static assert(is(S1 == TypeTuple!(int)));
+    struct S2 { int a; }
+    static assert(is(RepresentationTypeTuple!(S2) == TypeTuple!(int)));
+    struct S3 { int a; char b; }
+    static assert(is(RepresentationTypeTuple!(S3) == TypeTuple!(int, char)));
+    struct S4 { S1 a; int b; S3 c; }
+    static assert(is(RepresentationTypeTuple!(S4) ==
+                     TypeTuple!(int, int, int, char)));
+
+    struct S11 { int a; float b; }
+    struct S21 { char[] a; union { S11 b; S11 * c; } }
+    alias RepresentationTypeTuple!(S21) R;
+    assert(R.length == 4
+           && is(R[0] == char[]) && is(R[1] == int)
+           && is(R[2] == float) && is(R[3] == S11*));
+}
+
+/*
+RepresentationOffsets
+*/
+
+// private template Repeat(size_t n, T...)
+// {
+//     static if (n == 0) alias TypeTuple!() Repeat;
+//     else alias TypeTuple!(T, Repeat!(n - 1, T)) Repeat;
+// }
+
+// template RepresentationOffsetsImpl(size_t n, T...)
+// {
+//     static if (T.length == 0)
+//     {
+//         alias TypeTuple!() Result;
+//     }
+//     else
+//     {
+//         private enum size_t myOffset =
+//             ((n + T[0].alignof - 1) / T[0].alignof) * T[0].alignof;
+//         static if (!is(T[0] == union))
+//         {
+//             alias Repeat!(n, FieldTypeTuple!(T[0])).Result
+//                 Head;
+//         }
+//         static if (is(T[0] == struct))
+//         {
+//             alias .RepresentationOffsetsImpl!(n, FieldTypeTuple!(T[0])).Result
+//                 Head;
+//         }
+//         else
+//         {
+//             alias TypeTuple!(myOffset) Head;
+//         }
+//         alias TypeTuple!(Head,
+//                          RepresentationOffsetsImpl!(
+//                              myOffset + T[0].sizeof, T[1 .. $]).Result)
+//             Result;
+//     }
+// }
+
+// template RepresentationOffsets(T)
+// {
+//     alias RepresentationOffsetsImpl!(0, T).Result
+//         RepresentationOffsets;
+// }
+
+// unittest
+// {
+//     struct S1 { char c; int i; }
+//     alias RepresentationOffsets!(S1) Offsets;
+//     static assert(Offsets[0] == 0);
+//     //pragma(msg, Offsets[1]);
+//     static assert(Offsets[1] == 4);
+// }
+
+// hasRawAliasing
+
+private template HasRawPointerImpl(T...)
+{
+    static if (T.length == 0)
+    {
+        enum result = false;
+    }
+    else
+    {
+        static if (is(T[0] foo : U*, U))
+            enum hasRawAliasing = !is(U == invariant);
+        else static if (is(T[0] foo : U[], U))
+            enum hasRawAliasing = !is(U == invariant);
+        else
+            enum hasRawAliasing = false;
+        enum result = hasRawAliasing || HasRawPointerImpl!(T[1 .. $]).result;
+    }
+}
+
+/*
+Statically evaluates to $(D true) if and only if $(D T)'s
+representation contains at least one field of pointer or array type.
+Members of class types are not considered raw pointers. Pointers to
+invariant objects are not considered raw aliasing.
+
+Example:
+---
+// simple types
+static assert(!hasRawAliasing!(int));
+static assert(hasRawAliasing!(char*));
+// references aren't raw pointers
+static assert(!hasRawAliasing!(Object));
+// built-in arrays do contain raw pointers
+static assert(hasRawAliasing!(int[]));
+// aggregate of simple types
+struct S1 { int a; double b; }
+static assert(!hasRawAliasing!(S1));
+// indirect aggregation
+struct S2 { S1 a; double b; }
+static assert(!hasRawAliasing!(S2));
+// struct with a pointer member
+struct S3 { int a; double * b; }
+static assert(hasRawAliasing!(S3));
+// struct with an indirect pointer member
+struct S4 { S3 a; double b; }
+static assert(hasRawAliasing!(S4));
+----
+*/
+private template hasRawAliasing(T...)
+{
+    enum hasRawAliasing
+        = HasRawPointerImpl!(RepresentationTypeTuple!(T)).result;
+}
+
+unittest
+{
+// simple types
+    static assert(!hasRawAliasing!(int));
+    static assert(hasRawAliasing!(char*));
+// references aren't raw pointers
+    static assert(!hasRawAliasing!(Object));
+    static assert(!hasRawAliasing!(int));
+    struct S1 { int z; }
+    static assert(!hasRawAliasing!(S1));
+    struct S2 { int* z; }
+    static assert(hasRawAliasing!(S2));
+    struct S3 { int a; int* z; int c; }
+    static assert(hasRawAliasing!(S3));
+    struct S4 { int a; int z; int c; }
+    static assert(!hasRawAliasing!(S4));
+    struct S5 { int a; Object z; int c; }
+    static assert(!hasRawAliasing!(S5));
+    union S6 { int a; int b; }
+    static assert(!hasRawAliasing!(S6));
+    union S7 { int a; int * b; }
+    static assert(hasRawAliasing!(S7));
+    typedef int* S8;
+    static assert(hasRawAliasing!(S8));
+    enum S9 { a };
+    static assert(!hasRawAliasing!(S9));
+    // indirect members
+    struct S10 { S7 a; int b; }
+    static assert(hasRawAliasing!(S10));
+    struct S11 { S6 a; int b; }
+    static assert(!hasRawAliasing!(S11));
+}
+
+/*
+Statically evaluates to $(D true) if and only if $(D T)'s
+representation includes at least one non-invariant object reference.
+*/
+
+private template hasObjects(T...)
+{
+    static if (T.length == 0)
+    {
+        enum hasObjects = false;
+    }
+    else static if (is(T[0] U == typedef))
+    {
+        enum hasObjects = hasObjects!(U, T[1 .. $]);
+    }
+    else static if (is(T[0] == struct))
+    {
+        enum hasObjects = hasObjects!(
+            RepresentationTypeTuple!(T[0]), T[1 .. $]);
+    }
+    else
+    {
+        enum hasObjects = is(T[0] == class) || hasObjects!(T[1 .. $]);
+    }
+}
+
+/**
+Returns $(D true) if and only if $(D T)'s representation includes at
+least one of the following: $(OL $(LI a raw pointer $(D U*) and $(D U)
+is not invariant;) $(LI an array $(D U[]) and $(D U) is not
+invariant;) $(LI a reference to a class type $(D C) and $(D C) is not
+invariant.))
+*/
+
+template hasAliasing(T...)
+{
+    enum hasAliasing = hasRawAliasing!(T) || hasObjects!(T);
+}
+
+unittest
+{
+    struct S1 { int a; Object b; }
+    static assert(hasAliasing!(S1));
+    struct S2 { string a; }
+    static assert(!hasAliasing!(S2));
+}
 
 /***
  * Get a $(D_PARAM TypeTuple) of the base class and base interfaces of
@@ -209,18 +542,68 @@ template BaseClassesTuple(T)
     }
 }
 
+/**
+ * Get a $(D_PARAM TypeTuple) of $(I all) interfaces directly or
+ * indirectly inherited by this class or interface. Interfaces do not
+ * repeat if multiply implemented. $(D_PARAM InterfacesTuple!(Object))
+ * yields the empty type tuple.
+ *
+ * Example:
+ * ---
+ * import std.traits, std.typetuple, std.stdio;
+ * interface I1 { }
+ * interface I2 { }
+ * class A : I1, I2 { }
+ * class B : A, I1 { }
+ * class C : B { }
+ *
+ * void main()
+ * {
+ *     alias InterfacesTuple!(C) TL;
+ *     writeln(typeid(TL));	// prints: (I1, I2)
+ * }
+ * ---
+ */
+
+template InterfacesTuple(T)
+{
+    static if (is(T == Object))
+    {
+        alias TypeTuple!() InterfacesTuple;
+    }
+    static if (is(BaseTypeTuple!(T)[0] == Object))
+    {
+        alias TypeTuple!(BaseTypeTuple!(T)[1 .. $]) InterfacesTuple;
+    }
+    else
+    {
+        alias NoDuplicates!(
+            TypeTuple!(BaseTypeTuple!(T)[1 .. $], // direct interfaces
+                       InterfacesTuple!(BaseTypeTuple!(T)[0])))
+            InterfacesTuple;
+    }
+}
+
 unittest
 {
     interface I1 {}
     interface I2 {}
-    class B1 {}
+    {
+        // doc example
+        class A : I1, I2 { }
+        class B : A, I1 { }
+        class C : B { }
+        alias InterfacesTuple!(C) TL;
+        assert(is(TL[0] == I1) && is(TL[1] == I2));
+    }
+    class B1 : I1, I2 {}
     class B2 : B1, I1 {}
     class B3 : B2, I2 {}
-    alias BaseClassesTuple!(B3) TL;
-    assert(TL.length == 3);
-    assert(is (TL[0] == B2));
-    assert(is (TL[1] == B1));
-    assert(is (TL[2] == Object));
+    alias InterfacesTuple!(B3) TL;
+    //
+    assert(TL.length == 2);
+    assert(is (TL[0] == I2));
+    assert(is (TL[1] == I1));
 }
 
 /**
@@ -251,23 +634,25 @@ template TransitiveBaseTypeTuple(T)
         alias TypeTuple!() TransitiveBaseTypeTuple;
     else
         alias TypeTuple!(BaseClassesTuple!(T),
-            BaseTypeTuple!(T)[1 .. $])
+            InterfacesTuple!(T))
             TransitiveBaseTypeTuple;
 }
 
 unittest
 {
     interface I1 {}
+    interface I2 {}
     class B1 {}
-    class B2 : B1 {}
+    class B2 : B1, I1, I2 {}
     class B3 : B2, I1 {}
     alias TransitiveBaseTypeTuple!(B3) TL;
-    assert(TL.length == 4);
+    assert(TL.length == 5);
     assert(is (TL[0] == B2));
     assert(is (TL[1] == B1));
     assert(is (TL[2] == Object));
     assert(is (TL[3] == I1));
-
+    assert(is (TL[4] == I2));
+    
     assert(TransitiveBaseTypeTuple!(Object).length == 0);
 }
 

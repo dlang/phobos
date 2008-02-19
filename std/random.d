@@ -37,7 +37,7 @@ integers and real numbers have been implemented.
 
 Author:
 
-Andrei Alexandrescu
+$(WEB erdani.org, Andrei Alexandrescu)
 
 Credits:
 
@@ -181,7 +181,7 @@ struct LinearCongruentialEngine(UIntType, UIntType a, UIntType c, UIntType m)
     UIntType next()
     {
         static if (m) 
-            _x = (cast(ulong) a * _x + c) % m;
+            _x = cast(UIntType) ((cast(ulong) a * _x + c) % m);
         else
             _x = a * _x + c;
         return _x;
@@ -334,6 +334,7 @@ struct MersenneTwisterEngine(
         }
         for (mti = 1; mti < n; ++mti) {
             mt[mti] = 
+                cast(UIntType)
                 (1812433253UL * (mt[mti-1] ^ (mt[mti-1] >> (w - 2))) + mti); 
             /* See Knuth TAOCP Vol2. 3rd Ed. P.106 for multiplier. */
             /* In the previous versions, MSBs of the seed affect   */
@@ -367,15 +368,18 @@ struct MersenneTwisterEngine(
             for (; kk < n - m; ++kk)
             {
                 y = (mt[kk] & upperMask)|(mt[kk + 1] & lowerMask);
-                mt[kk] = mt[kk + m] ^ (y >> 1) ^ mag01[y & 0x1UL];
+                mt[kk] = cast(UIntType) (mt[kk + m] ^ (y >> 1)
+                                         ^ mag01[cast(UIntType) y & 0x1U]);
             }
             for (; kk < n - 1; ++kk)
             {
                 y = (mt[kk] & upperMask)|(mt[kk + 1] & lowerMask);
-                mt[kk] = mt[kk + (m -n)] ^ (y >> 1) ^ mag01[y & 0x1UL];
+                mt[kk] = cast(UIntType) (mt[kk + (m -n)] ^ (y >> 1)
+                                         ^ mag01[cast(UIntType) y & 0x1U]);
             }
             y = (mt[n -1] & upperMask)|(mt[0] & lowerMask);
-            mt[n - 1] = mt[m - 1] ^ (y >> 1) ^ mag01[y & 0x1UL];
+            mt[n - 1] = cast(UIntType) (mt[m - 1] ^ (y >> 1)
+                                        ^ mag01[cast(UIntType) y & 0x1U]);
             
             mti = 0;
         }
@@ -388,7 +392,7 @@ struct MersenneTwisterEngine(
         y ^= (y << temperingT) & temperingC;
         y ^= (y >> temperingL);
         
-        return y;
+        return cast(UIntType) y;
     }
 
 /**
@@ -442,7 +446,7 @@ unittest
    for the minutiae of the method being used.
  */
 
-typedef Mt19937 Random;
+alias Mt19937 Random;
 
 /**
    A "good" seed for initializing random number engines. Initializing
@@ -458,9 +462,9 @@ auto n = rnd.next;
 ----   
 */
 
-ulong unpredictableSeed()
+uint unpredictableSeed()
 {
-    return cast(ulong) (getpid ^ getUTCtime);
+    return cast(uint) (getpid ^ getUTCtime);
 }
 
 /**
@@ -619,28 +623,27 @@ unittest
 ----
 Random gen(unpredictableSeed);
 // Generate an integer in [0, 1024]
-auto a = uniform!(int)(gen, 0, 1024);
+auto a = uniform(gen, 0, 1024);
 // Generate a float in [0, 1$(RPAREN)
-auto a = uniform!(float)(gen, 0.0f, 1.0f);
+auto a = uniform(gen, 0.0f, 1.0f);
 ----
 */
 
-template uniform(T, char leftLim = '[', char rightLim = ')')
+T1 uniform(T1, char leftLim = '[', char rightLim = ')',
+        UniformRandomNumberGenerator, T2)
+(ref UniformRandomNumberGenerator gen, T1 a, T2 b)
 {
-    T uniform(UniformRandomNumberGenerator)
-        (ref UniformRandomNumberGenerator gen, T a, T b)
-    {
-        auto dist = UniformDistribution!(T, leftLim, rightLim)(a, b);
-        return dist.next(gen);
-    }
+    alias typeof(return) Result;
+    auto dist = UniformDistribution!(Result, leftLim, rightLim)(a, b);
+    return dist.next(gen);
 }
 
 unittest
 {
     auto gen = Mt19937(unpredictableSeed);
-    auto a = uniform!(int)(gen, 0, 1024);
+    auto a = uniform(gen, 0, 1024);
     assert(0 <= a && a <= 1024);
-    auto b = uniform!(float)(gen, 0.0f, 1.0f);
+    auto b = uniform(gen, 0.0f, 1.0f);
     assert(0 <= b && b < 1, to!(string)(b));
 }
 
@@ -654,7 +657,7 @@ void randomShuffle(T, SomeRandomGen)(T[] array, ref SomeRandomGen r)
     foreach (i; 0 .. array.length)
     {
         // generate a random number i .. n
-	auto which = i + uniform!(size_t)(r, 0u, array.length - i);
+        invariant which = i + uniform!(size_t)(r, 0u, array.length - i);
         swap(array[i], array[which]);
     }
 }

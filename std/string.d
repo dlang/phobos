@@ -2,15 +2,17 @@
 // Written in the D programming language.
 
 /**
- * String handling functions.
+ * String handling functions. Objects of types $(D string), $(D
+ * wstring), and $(D dstring) are value types and cannot be mutated
+ * element-by-element. For using mutation during building strings, use
+ * $(D char[]), $(D wchar[]), or $(D dchar[]). The $(D *string) types
+ * are preferable because they don't exhibit undesired aliasing, thus
+ * making code more robust.
  *
- * To copy or not to copy?
- * When a function takes a string as a parameter, and returns a string,
- * is that string the same as the input string, modified in place, or
- * is it a modified copy of the input string? The D array convention is
- * "copy-on-write". This means that if no modifications are done, the
- * original string (or slices of it) can be returned. If any modifications
- * are done, the returned string is a copy.
+ * Authors:
+ *
+ * $(WEB digitalmars.com, Walter Bright), $(WEB erdani.org, Andrei
+Alexandrescu)
  *
  * Macros:
  *	WIKI = Phobos/StdString
@@ -1607,8 +1609,8 @@ bool startsWith(A1, A2)(A1 longer, A2 shorter)
                 if (longer[i] != e) return false;
             }
         }
+        return true;
     }
-    return true;
 }
 
 unittest
@@ -1697,8 +1699,8 @@ bool endsWith(A1, A2)(A1 longer, A2 shorter)
                 if (shorter[i] != e) return false;
             }
         }
+        return true;
     }
-    return true;
 }
 
 unittest
