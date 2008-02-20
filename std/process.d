@@ -310,6 +310,7 @@ version (linux)
 }
 else
 {
+    enforce(false, "shell() function not yet implemented on Windows");
     return null;
 }
 }
