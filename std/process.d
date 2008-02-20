@@ -44,10 +44,14 @@ private import std.c.string;
 private import std.string;
 private import std.c.process;
 private import std.contracts;
-private import std.stdio : popen, readln, fclose;
 version (Windows)
 {
+    private import std.stdio : readln, fclose;
     private import std.c.windows.windows:GetCurrentProcessId;
+}
+version (linux)
+{
+    private import std.stdio : popen, readln, fclose;
 }
 
 /**
@@ -287,7 +291,10 @@ else version (Windows)
    ... use f ...
    ----
 */
-string shell(string cmd) {
+string shell(string cmd)
+{
+version (linux)
+{
     auto f = enforce(popen(cmd, "r"), "Could not execute: "~cmd);
     scope(failure) f is null || fclose(f);
     char[] line;
@@ -300,6 +307,11 @@ string shell(string cmd) {
     f = null;
     enforce(!error, "Process \""~cmd~"\" finished in error.");
     return result;
+}
+else
+{
+    return null;
+}
 }
 
 unittest

@@ -796,6 +796,8 @@ FILE* fopen(string name, string mode = "r")
     return std.c.stdio.fopen(toStringz(name), toStringz(mode));
 }
 
+version (linux)
+{
 extern(C) FILE* popen(const char*, const char*);
 
 /***********************************
@@ -805,6 +807,7 @@ extern(C) FILE* popen(const char*, const char*);
 FILE* popen(string name, string mode)
 {
     return popen(toStringz(name), toStringz(mode));
+}
 }
 
 /*
