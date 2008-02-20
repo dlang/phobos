@@ -67,6 +67,23 @@ private import std.string;
 private import std.c.math;
 private import std.traits;
 
+/* Most of the functions depend on the format of the largest IEEE floating-point type.
+ * These code will differ depending on whether 'real' is 64, 80, or 128 bits,
+ * and whether it is a big-endian or little-endian architecture.
+ * Only three 'real' ABIs are currently supported:
+ * 64 bit Big-endian    (eg PowerPC)
+ * 64 bit Little-endian
+ * 80 bit Little-endian, with implied bit (eg x87, Itanium).
+ */
+version(LittleEndian) {
+    static assert(real.mant_dig == 53 || real.mant_dig==64,
+        "Only 64-bit and 80-bit reals are supported for LittleEndian CPUs");
+} else {
+    static assert(real.mant_dig == 53,
+     "Only 64-bit reals are supported for BigEndian CPUs.");
+}
+
+
 class NotImplemented : Error
 {
     this(string msg)
@@ -144,7 +161,7 @@ real abs(ireal y)
 
 unittest
 {
-    assert(isPosZero(abs(-0.0L)));
+    assert(isIdentical(abs(-0.0L), 0.0L));
     assert(isnan(abs(real.nan)));
     assert(abs(-real.infinity) == real.infinity);
     assert(abs(-3.2Li) == 3.2L);
@@ -469,8 +486,8 @@ real asinh(real x)
 
 unittest
 {
-    assert(isPosZero(asinh(0.0)));
-    assert(isNegZero(asinh(-0.0)));
+    assert(isIdentical(asinh(0.0), 0.0));
+    assert(isIdentical(asinh(-0.0), -0.0));
     assert(asinh(real.infinity) == real.infinity);
     assert(asinh(-real.infinity) == -real.infinity);
     assert(isnan(asinh(real.nan)));
@@ -501,8 +518,8 @@ real atanh(real x)
 
 unittest
 {
-    assert(isPosZero(atanh(0.0)));
-    assert(isNegZero(atanh(-0.0)));
+    assert(isIdentical(atanh(0.0), 0.0));
+    assert(isIdentical(atanh(-0.0),-0.0));
     assert(isnan(atanh(real.nan)));
     assert(isnan(atanh(-real.infinity))); 
 }
@@ -618,6 +635,35 @@ real exp2(real x)		{ return std.c.math.exp2l(x); }
 
 real expm1(real x)		{ return std.c.math.expm1l(x); }
 
+/**
+ * Calculate cos(y) + i sin(y).
+ *
+ * On many CPUs (such as x86), this is a very efficient operation;
+ * almost twice as fast as calculating sin(y) and cos(y)
+ * seperately, and is the preferred method when both are required.
+ */
+creal expi(real y)
+{
+    version(D_InlineAsm_X86)
+    {
+        asm
+        {
+            fld y;
+            fsincos;
+            fxch st(1), st(0);
+        }
+    }
+    else
+    {
+        return cos(y) + sin(y)*1i;
+    }
+}
+
+unittest
+{
+    assert(expi(1.3e5L) == cos(1.3e5L) + sin(1.3e5L) * 1i);
+    assert(expi(0.0L) == 1L + 0.0Li);
+}
 
 /*********************************************************************
  * Separate floating point value into significand and exponent.
@@ -637,54 +683,89 @@ real expm1(real x)		{ return std.c.math.expm1l(x); }
  *	)
  */
 
-
 real frexp(real value, out int exp)
 {
     ushort* vu = cast(ushort*)&value;
     long* vl = cast(long*)&value;
     uint ex;
 
-    // If exponent is non-zero
-    ex = vu[4] & 0x7FFF;
-    if (ex)
-    {
-	if (ex == 0x7FFF)
-	{   // infinity or NaN
-	    if (*vl &  0x7FFFFFFFFFFFFFFF)	// if NaN
-	    {	*vl |= 0xC000000000000000;	// convert $(NAN)S to $(NAN)Q
+    static if (real.mant_dig==64) const ushort EXPMASK = 0x7FFF;
+                             else const ushort EXPMASK = 0x7FF0;
+
+    version(LittleEndian) {
+    static if (real.mant_dig==64) const int EXPONENTPOS = 4;
+                             else const int EXPONENTPOS = 3;
+    } else { // BigEndian
+        const int EXPONENTPOS = 0;
+    }
+
+    ex = vu[EXPONENTPOS] & EXPMASK;
+  static if (real.mant_dig == 64) {
+    // 80-bit reals
+    if (ex) { // If exponent is non-zero
+        if (ex == EXPMASK) {   // infinity or NaN
+            // 80-bit reals
+            if (*vl &  0x7FFFFFFFFFFFFFFF) {  // NaN
+                *vl |= 0xC000000000000000;  // convert $(NAN)S to $(NAN)Q
 		exp = int.min;
-	    }
-	    else if (vu[4] & 0x8000)
-	    {	// negative infinity
+            } else if (vu[EXPONENTPOS] & 0x8000) {   // negative infinity
 		exp = int.min;
-	    }
-	    else
-	    {	// positive infinity
+            } else {   // positive infinity
 		exp = int.max;
 	    }
-	}
-	else
-	{
+        } else {
 	    exp = ex - 0x3FFE;
-	    vu[4] = cast(ushort)((0x8000 & vu[4]) | 0x3FFE);
-	}
+            vu[EXPONENTPOS] = cast(ushort)((0x8000 & vu[EXPONENTPOS]) | 0x3FFE);
     }
-    else if (!*vl)
-    {
+    } else if (!*vl) {
 	// value is +-0.0
 	exp = 0;
-    }
-    else
-    {	// denormal
+    } else {
+        // denormal
 	int i = -0x3FFD;
+        do {
+            i--;
+            *vl <<= 1;
+        } while (*vl > 0);
+        exp = i;
+        vu[EXPONENTPOS] = cast(ushort)((0x8000 & vu[EXPONENTPOS]) | 0x3FFE);
+    }
+  } else static if(real.mant_dig==106) {
+    // 128-bit reals
+    throw new NotImplemented("frexp");
+  } else {
+    // 64-bit reals
+    if (ex) { // If exponent is non-zero
+        if (ex == EXPMASK) {   // infinity or NaN
+            if (*vl==0x7FF0_0000_0000_0000) {  // positive infinity
+                exp = int.max;
+            } else if (*vl==0xFFF0_0000_0000_0000) { // negative infinity
+                exp = int.min;
+            } else { // NaN
+                *vl |= 0x0008_0000_0000_0000;  // convert $(NAN)S to $(NAN)Q
+                exp = int.min;
+            }
+        } else {
+            exp = (ex - 0x3FE0) >>> 4;
+            ve[EXPONENTPOS] = (0x8000 & ve[EXPONENTPOS]) | 0x3FE0;
+        }
+    } else if (!(*vl & 0x7FFF_FFFF_FFFF_FFFF)) {
+        // value is +-0.0
+        exp = 0;
+    } else {
+        // denormal
+        ushort sgn;
+        sgn = (0x8000 & ve[EXPONENTPOS])| 0x3FE0;
+        *vl &= 0x7FFF_FFFF_FFFF_FFFF;
 
-	do
-	{
+        int i = -0x3FD+11;
+        do {
 	    i--;
 	    *vl <<= 1;
 	} while (*vl > 0);
 	exp = i;
-        vu[4] = cast(ushort)((0x8000 & vu[4]) | 0x3FFE);
+        ve[EXPONENTPOS] = sgn;
+    }
     }
     return value;
 }
@@ -699,36 +780,46 @@ unittest
 	[1.0,	.5,	1],
 	[-1.0,	-.5,	1],
 	[2.0,	.5,	2],
-	[155.67e20,	0x1.A5F1C2EB3FE4Fp-1,	74],	// normal
-	[1.0e-320,	0.98829225,		-1063],
-	[real.min,	.5,		-16381],
-	[real.min/2.0L,	.5,		-16382],	// denormal
-
+        [double.min/2.0, .5, -1022],
 	[real.infinity,real.infinity,int.max],
 	[-real.infinity,-real.infinity,int.min],
 	[real.nan,real.nan,int.min],
 	[-real.nan,-real.nan,int.min],
-
-	// Don't really support signalling nan's in D
-	//[real.nans,real.nan,int.min],
-	//[-real.nans,-real.nan,int.min],
     ];
+
     int i;
 
-    for (i = 0; i < vals.length; i++)
-    {
+    for (i = 0; i < vals.length; i++) {
 	real x = vals[i][0];
 	real e = vals[i][1];
 	int exp = cast(int)vals[i][2];
 	int eptr;
 	real v = frexp(x, eptr);
+//        printf("frexp(%La) = %La, should be %La, eptr = %d, should be %d\n", x, v, e, eptr, exp);
+        assert(isIdentical(e, v));
+        assert(exp == eptr);
 
-	//printf("frexp(%Lg) = %.8Lg, should be %.8Lg, eptr = %d, should be %d\n", x, v, e, eptr, exp);
-	assert(mfeq(e, v, .0000001));
+    }
+   static if (real.mant_dig == 64) {
+     static real extendedvals[][3] = [ // x,frexp,exp
+        [0x1.a5f1c2eb3fe4efp+73, 0x1.A5F1C2EB3FE4EFp-1,   74],    // normal
+        [0x1.fa01712e8f0471ap-1064,  0x1.fa01712e8f0471ap-1,     -1063],
+        [real.min,  .5,     -16381],
+        [real.min/2.0L, .5,     -16382]    // denormal
+     ];
+
+    for (i = 0; i < extendedvals.length; i++) {
+        real x = extendedvals[i][0];
+        real e = extendedvals[i][1];
+        int exp = cast(int)extendedvals[i][2];
+        int eptr;
+        real v = frexp(x, eptr);
+        assert(isIdentical(e, v));
 	assert(exp == eptr);
+
+    }
     }
 }
-
 
 /******************************************
  * Extracts the exponent of x as a signed integral value.
@@ -862,8 +953,19 @@ real scalbn(real x, int n)
 {
     version (linux)
 	return std.c.math.scalbnl(x, n);
-    else
+    else version(D_InlineAsm_X86) {
+        asm {
+            fild n;
+            fld x;
+            fscale;
+            fstp st(1), st;
+        }
+    } else
 	throw new NotImplemented("scalbn");
+}
+
+unittest {
+    assert(scalbn(-real.infinity, 5) == -real.infinity);
 }
 
 /***************
@@ -1115,12 +1217,26 @@ real rint(real x);	/* intrinsic */
  * Rounds x to the nearest integer value, using the current rounding
  * mode.
  *
- * Note: Not supported on windows
+ * This is generally the fastest method to convert a floating-point number
+ * to an integer. Note that the results from this function
+ * depend on the rounding mode, if the fractional part of x is exactly 0.5.
+ * If using the default rounding mode (ties round to even integers)
+ * lrint(4.5) == 4, lrint(5.5)==6.
  */
 long lrint(real x)
 {
     version (linux)
 	return std.c.math.llrintl(x);
+    else version(D_InlineAsm_X86)
+    {
+        long n;
+        asm
+        {
+            fld x;
+            fistp n;
+        }
+        return n;
+    }
     else
 	throw new NotImplemented("lrint");
 }
@@ -1191,13 +1307,20 @@ real remquo(real x, real y, out int n)	/// ditto
  * Returns !=0 if e is a NaN.
  */
 
-int isnan(real e)
+int isnan(real x)
 {
-    ushort* pe = cast(ushort *)&e;
-    ulong*  ps = cast(ulong *)&e;
+  static if (real.mant_dig==double.mant_dig) {
+        // 64-bit real
+        ulong*  p = cast(ulong *)&x;
+        return (*p & 0x7FF0_0000 == 0x7FF0_0000) && *p & 0x000F_FFFF;
+  } else {
+        // 80-bit real
+        ushort* pe = cast(ushort *)&x;
+        ulong*  ps = cast(ulong *)&x;
 
     return (pe[4] & 0x7FFF) == 0x7FFF &&
 	    *ps & 0x7FFFFFFFFFFFFFFF;
+}
 }
 
 unittest
@@ -1216,9 +1339,13 @@ unittest
 
 int isfinite(real e)
 {
+    static if (real.mant_dig == double.mant_dig) {
+        return isfinite(cast(double)e);
+    } else {
     ushort* pe = cast(ushort *)&e;
 
     return (pe[4] & 0x7FFF) != 0x7FFF;
+}
 }
 
 unittest
@@ -1260,12 +1387,16 @@ int isnormal(double d)
 
 /// ditto
 
-int isnormal(real e)
+int isnormal(real x)
 {
-    ushort* pe = cast(ushort *)&e;
-    long*   ps = cast(long *)&e;
+    static if (real.mant_dig == double.mant_dig) {
+        return isNormal(cast(double)x);
+    } else {
+        ushort* pe = cast(ushort *)&x;
+        long*   ps = cast(long *)&x;
 
     return (pe[4] & 0x7FFF) != 0x7FFF && *ps < 0;
+}
 }
 
 unittest
@@ -1325,10 +1456,14 @@ unittest
 
 int issubnormal(real e)
 {
+    static if (real.mant_dig == double.mant_dig) {
+        return isSubnormal(cast(double)e);
+    } else {
     ushort* pe = cast(ushort *)&e;
     long*   ps = cast(long *)&e;
 
     return (pe[4] & 0x7FFF) == 0 && *ps > 0;
+}
 }
 
 unittest
@@ -1345,11 +1480,15 @@ unittest
 
 int isinf(real e)
 {
+    static if (real.mant_dig == double.mant_dig) {
+        return ((*cast(ulong *)&x)&0x7FFF_FFFF_FFFF_FFFF) == 0x7FF8_0000_0000_0000;
+    } else {
     ushort* pe = cast(ushort *)&e;
     ulong*  ps = cast(ulong *)&e;
 
     return (pe[4] & 0x7FFF) == 0x7FFF &&
-	    *ps == 0x8000000000000000;
+            *ps == 0x8000_0000_0000_0000;
+   }
 }
 
 unittest
@@ -1363,15 +1502,37 @@ unittest
 }
 
 /*********************************
+ * Is the binary representation of x identical to y?
+ *
+ * Same as ==, except that positive and negative zero are not identical,
+ * and two $(NAN)s are identical if they have the same 'payload'.
+ */
+
+bool isIdentical(real x, real y)
+{
+    long*   pxs = cast(long *)&x;
+    long*   pys = cast(long *)&y;
+  static if (real.mant_dig == double.mant_dig){
+    return pxs[0] == pys[0];
+  } else {
+    ushort* pxe = cast(ushort *)&x;
+    ushort* pye = cast(ushort *)&y;
+    return pxe[4] == pye[4] && pxs[0] == pys[0];
+  }
+}
+
+/*********************************
  * Return 1 if sign bit of e is set, 0 if not.
  */
 
-int signbit(real e)
+int signbit(real x)
 {
-    ubyte* pe = cast(ubyte *)&e;
-
-//printf("e = %Lg\n", e);
+    static if (real.mant_dig == double.mant_dig) {
+        return ((*cast(ulong *)&x) & 0x8000_0000_0000_0000) != 0;
+    } else {
+        ubyte* pe = cast(ubyte *)&x;
     return (pe[9] & 0x80) != 0;
+}
 }
 
 unittest
@@ -1422,6 +1583,8 @@ unittest
 
 /******************************************
  * Creates a quiet NAN with the information from tagp[] embedded in it.
+ *
+ * BUGS: DMD always returns real.nan, ignoring the payload.
  */
 real nan(char[] tagp) { return std.c.math.nanl(toStringz(tagp)); }
 
@@ -1512,6 +1675,8 @@ real fmin(real x, real y) { return x < y ? x : y; }
 /**************************************
  * Returns (x * y) + z, rounding only once according to the
  * current rounding mode.
+ *
+ * BUGS: Not currently implemented - rounds twice.
  */
 real fma(real x, real y, real z) { return (x * y) + z; }
 
@@ -1731,18 +1896,6 @@ private int mfeq(real x, real y, real precision)
     return fabs(x - y) <= precision;
 }
 
-// Returns true if x is +0.0 (This function is used in unit tests)
-bool isPosZero(real x)
-{
-    return (x == 0) && (signbit(x) == 0);
-}
-
-// Returns true if x is -0.0 (This function is used in unit tests)
-bool isNegZero(real x)
-{
-    return (x == 0) && signbit(x);
-}
-
 /**************************************
  * To what precision is x equal to y?
  *
@@ -1763,7 +1916,6 @@ int feqrel(real x, real y)
 {
     /* Public Domain. Author: Don Clugston, 18 Aug 2005.
      */
-
     if (x == y)
 	return real.mant_dig; // ensure diff!=0, cope with INF.
 
@@ -1782,22 +1934,39 @@ int feqrel(real x, real y)
     // if the exponents were different. This means 'bitsdiff' is
     // always 1 lower than we want, except that if bitsdiff==0,
     // they could have 0 or 1 bits in common.
-    int bitsdiff = ( ((pa[4]&0x7FFF) + (pb[4]&0x7FFF)-1)>>1) - pd[4];
-
-    if (pd[4] == 0)
+ static if (real.mant_dig==64) { // 80-bit reals
+    const real POW2MANTDIG = 0x1p+63; // pow(2, real.mant_dig)
+    const int EXPONENTPOS = 4;
+    int bitsdiff = ( ((pa[EXPONENTPOS]&0x7FFF) + (pb[EXPONENTPOS]&0x7FFF)-1)>>1) 
+                 - pd[EXPONENTPOS];
+ } else {  // 64-bit reals
+    const real POW2MANTDIG = 0x1p+53;
+      version(LittleEndian)
+        const int EXPONENTPOS = 3;
+    else const int EXPONENTPOS = 0;
+    int bitsdiff = (( ((pa[EXPONENTPOS]&0x7FF0) + (pb[EXPONENTPOS]&0x7FF0)-0x10)>>1) 
+                 - (pd[EXPONENTPOS]&0x7FF0))>>4;
+ }
+    if (pd[EXPONENTPOS] == 0)
     {	// Difference is denormal
 	// For denormals, we need to add the number of zeros that
-	// lie at the start of diff's mantissa.
+        // lie at the start of diff's significand.
 	// We do this by multiplying by 2^real.mant_dig
-	diff *= 0x1p+63;
-	return bitsdiff + real.mant_dig - pd[4];
+        diff *= POW2MANTDIG;
+        return bitsdiff + real.mant_dig - pd[EXPONENTPOS];
     }
 
     if (bitsdiff > 0)
 	return bitsdiff + 1; // add the 1 we subtracted before
 
     // Avoid out-by-1 errors when factor is almost 2.
-    return (bitsdiff == 0) ? (pa[4] == pb[4]) : 0;
+ static if (real.mant_dig==64)
+ {
+    return (bitsdiff == 0) ? (pa[EXPONENTPOS] == pb[EXPONENTPOS]) : 0;
+ } else {
+    if (bitsdiff == 0 && !((pa[EXPONENTPOS] ^ pb[EXPONENTPOS])&0x7FF0)) return 1;
+    else return 0;
+ }
 }
 
 unittest
@@ -1861,6 +2030,7 @@ body
     {
 	version (Windows)
 	{
+        // BUG: This code assumes a frame pointer in EBP.
 	    asm	// assembler by W. Bright
 	    {
 		// EDX = (A.length - 1) * real.sizeof
@@ -1946,7 +2116,7 @@ unittest
 bool approxEqual(T, U, V)(T lhs, U rhs, V maxRelDiff, V maxAbsDiff = 0)
 {
     static if (isArray!(T)) {
-        invariant n = lhs.length;
+        final n = lhs.length;
         static if (isArray!(U)) {
             // Two arrays
             assert(n == rhs.length);
