@@ -2116,7 +2116,7 @@ unittest
 bool approxEqual(T, U, V)(T lhs, U rhs, V maxRelDiff, V maxAbsDiff = 0)
 {
     static if (isArray!(T)) {
-        final n = lhs.length;
+        invariant n = lhs.length;
         static if (isArray!(U)) {
             // Two arrays
             assert(n == rhs.length);
