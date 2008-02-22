@@ -83,7 +83,7 @@ void main()
         doc ~= element;
     }
 
-    // Now let's see pretty-print it to see what it looks like
+    // Now let's pretty-print it to see what it looks like
     writefln(join(doc.pretty(3),"\n"));
 }
 --------------------------------------------------------------------------------------------------
@@ -92,7 +92,6 @@ void main()
 module std.xml;
 import std.string;
 import std.utf;
-import std.stdio; //TEMP
 
 /**
  * Returns true if the character is a character according to the XML standard
@@ -600,6 +599,7 @@ class Element : Item
 			if (i == element.items.length) return 1;
 			if (items[i] != element.items[i]) return items[i].opCmp(element.items[i]);
 		}
+		assert(false);
 	}
 
 	/**
@@ -647,7 +647,7 @@ class Element : Item
 		 * Params:
 		 *		indent = (optional) number of spaces by which to indent this element. Defaults to 2.
 		 */
-		string[] pretty(uint indent=2)
+		override string[] pretty(uint indent=2)
 		{
 
 			if (isEmptyXML) return [ tag.toEmptyString ];
@@ -1355,6 +1355,8 @@ abstract class Item
  */
 class DocumentParser : ElementParser
 {
+	string xmlText;
+
 	/**
 	 * Constructs a DocumentParser
 	 *
@@ -1362,9 +1364,11 @@ class DocumentParser : ElementParser
 	 *		xmltext = the entire XML document as text
 	 *
 	 */
-	this(string xmltext)
+	this(string xmlText_)
 	{
-		super(xmltext);	// Initialize everything
+		xmlText = xmlText_;
+		s = &xmlText;
+		super();	// Initialize everything
 		parse();		// Parse through the root tag (but not beyond)
 	}
 }
@@ -1389,7 +1393,7 @@ class ElementParser
 	{
 		Tag tag_;
 		string elementStart;
-		string s;
+		string* s;
 
 		Handler commentHandler;
 		Handler cdataHandler;
@@ -1399,7 +1403,8 @@ class ElementParser
 
 		this(ElementParser parent)
 		{
-			this(parent.s);
+			s = parent.s;
+			this();
 			tag_ = parent.tag_;
 		}
 	}
@@ -1470,7 +1475,7 @@ class ElementParser
 	 */
 	ElementHandler[string] onEndTag;
 
-	protected this(string s_)
+	protected this()
 	{
 		commentHandler		= &defaultHandler;
 		cdataHandler		= &defaultHandler;
@@ -1480,7 +1485,7 @@ class ElementParser
 		onStartTag[null]	= &defaultParserHandler;
 		onEndTag[null]		= &defaultElementHandler;
 
-		elementStart = s = s_;
+		elementStart = *s;
 	}
 
 	void defaultHandler(string) {}
@@ -1600,33 +1605,33 @@ class ElementParser
 
 		while(s.length != 0)
 		{
-			if (startsWith(s,"<!--"))
+			if (startsWith(*s,"<!--"))
 			{
-				chop(s,4);
-				commentHandler(chop(s,find(s,"-->")));
-				chop(s,3);
+				chop(*s,4);
+				commentHandler(chop(*s,find(*s,"-->")));
+				chop(*s,3);
 			}
-			else if (startsWith(s,"<![CDATA["))
+			else if (startsWith(*s,"<![CDATA["))
 			{
-				chop(s,9);
-				cdataHandler(chop(s,find(s,"]]>")));
-				chop(s,3);
+				chop(*s,9);
+				cdataHandler(chop(*s,find(*s,"]]>")));
+				chop(*s,3);
 			}
-			else if (startsWith(s,"<!"))
+			else if (startsWith(*s,"<!"))
 			{
-				chop(s,2);
-				xiHandler(chop(s,find(s,">")));
-				chop(s,1);
+				chop(*s,2);
+				xiHandler(chop(*s,find(*s,">")));
+				chop(*s,1);
 			}
-			else if (startsWith(s,"<?"))
+			else if (startsWith(*s,"<?"))
 			{
-				chop(s,2);
-				piHandler(chop(s,find(s,"?>")));
-				chop(s,2);
+				chop(*s,2);
+				piHandler(chop(*s,find(*s,"?>")));
+				chop(*s,2);
 			}
-			else if (startsWith(s,"<"))
+			else if (startsWith(*s,"<"))
 			{
-				tag_ = new Tag(s,true);
+				tag_ = new Tag(*s,true);
 				if (root is null) return; // Return to constructor of derived class
 				if (tag_.isStart || tag_.isEmpty)
 				{
@@ -1661,7 +1666,7 @@ class ElementParser
 			}
 			else
 			{
-				textHandler(chop(s,find(s,"<")));
+				textHandler(decode(chop(*s,find(*s,"<"))));
 			}
 		}
 	}
@@ -2228,55 +2233,48 @@ void check(string s)
 
 unittest
 {
-// 	try
-// 	{
-// 		check(q"[<?xml version="1.0"?>
-// <catalog>
-//    <book id="bk101">
-//       <author>Gambardella, Matthew</author>
-//       <title>XML Developer's Guide</title>
-//       <genre>Computer</genre>
-//       <price>44.95</price>
-//       <publish_date>2000-10-01</publish_date>
-//       <description>An in-depth look at creating applications
-//       with XML.</description>
-//    </book>
-//    <book id="bk102">
-//       <author>Ralls, Kim</author>
-//       <title>Midnight Rain</title>
-//       <genre>Fantasy</genres>
-//       <price>5.95</price>
-//       <publish_date>2000-12-16</publish_date>
-//       <description>A former architect battles corporate zombies,
-//       an evil sorceress, and her own childhood to become queen
-//       of the world.</description>
-//    </book>
-//    <book id="bk103">
-//       <author>Corets, Eva</author>
-//       <title>Maeve Ascendant</title>
-//       <genre>Fantasy</genre>
-//       <price>5.95</price>
-//       <publish_date>2000-11-17</publish_date>
-//       <description>After the collapse of a nanotechnology
-//       society in England, the young survivors lay the
-//       foundation for a new society.</description>
-//    </book>
-// </catalog>
-// ]");
-//     assert(false);
-// 	}
-// 	catch(CheckException e)
-// 	{
-// 		assert(e.toString ==
-// q"[Line 15, column 21: end tag name "genres" differs from start tag name "genre"
-// Line 15, column 7: Element
-// Line 15, column 7: Content
-// Line 12, column 4: Element
-// Line 12, column 4: Content
-// Line 2, column 1: Element
-// Line 1, column 1: Document
-// ]");
-// 	}
+ 	try
+ 	{
+ 		check(q"[<?xml version="1.0"?>
+		<catalog>
+		   <book id="bk101">
+			  <author>Gambardella, Matthew</author>
+			  <title>XML Developer's Guide</title>
+			  <genre>Computer</genre>
+			  <price>44.95</price>
+			  <publish_date>2000-10-01</publish_date>
+			  <description>An in-depth look at creating applications
+			  with XML.</description>
+		   </book>
+		   <book id="bk102">
+			  <author>Ralls, Kim</author>
+			  <title>Midnight Rain</title>
+			  <genre>Fantasy</genres>
+			  <price>5.95</price>
+			  <publish_date>2000-12-16</publish_date>
+			  <description>A former architect battles corporate zombies,
+			  an evil sorceress, and her own childhood to become queen
+			  of the world.</description>
+		   </book>
+		   <book id="bk103">
+			  <author>Corets, Eva</author>
+			  <title>Maeve Ascendant</title>
+			  <genre>Fantasy</genre>
+			  <price>5.95</price>
+			  <publish_date>2000-11-17</publish_date>
+			  <description>After the collapse of a nanotechnology
+			  society in England, the young survivors lay the
+			  foundation for a new society.</description>
+		   </book>
+		</catalog>
+		]");
+    assert(false);
+	}
+	catch(CheckException e)
+	{
+		int n = e.toString().find("end tag name \"genres\" differs from start tag name \"genre\"");
+		assert(n != -1);
+	}
 }
 
 /** The base class for exceptions thrown by this module */
@@ -2403,7 +2401,13 @@ private
 
 	string startOf(string s)
 	{
-		return s.length < 20 ? s : s[0..20]~"...";
+		string r;
+		foreach(char c;s)
+		{
+			r ~= (c < 0x20 || c > 0x7F) ? '.' : c;
+			if (r.length >= 20) { r ~= "..."; break; }
+		}
+		return r;
 	}
 }
 
