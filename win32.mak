@@ -79,7 +79,7 @@ OBJS= asserterror.obj deh.obj switch.obj complex.obj gcstats.obj \
 	signals.obj cpuid.obj typetuple.obj traits.obj bind.obj \
 	c_stdio.obj hiddenfunc.obj contracts.obj getopt.obj variant.obj \
 	numeric.obj bitmanip.obj functional.obj algorithm.obj typecons.obj \
-	iterator.obj complex.obj xml.obj arrayassign.obj \
+	iterator.obj complex.obj xml.obj encoding.obj arrayassign.obj \
 	ti_Ag.obj ti_C.obj ti_int.obj ti_char.obj \
 	ti_wchar.obj ti_uint.obj ti_short.obj ti_ushort.obj \
 	ti_byte.obj ti_ubyte.obj ti_long.obj ti_ulong.obj ti_ptr.obj \
@@ -140,6 +140,7 @@ DOCS=	$(DOC)\std_path.html $(DOC)\std_math.html $(DOC)\std_outbuffer.html \
 	$(DOC)\std_utf.html \
 	$(DOC)\std_variant.html \
 	$(DOC)\std_xml.html \
+	$(DOC)\std_encoding.html \
 	$(DOC)\std_windows_charset.html \
 	$(DOC)\std_c_fenv.html \
 	$(DOC)\std_c_locale.html \
@@ -170,7 +171,7 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 	std\metastrings.d std\hiddenfunc.d std\contracts.d std\getopt.d \
 	std\variant.d std\numeric.d std\bitmanip.d std\complex.d \
 	std\functional.d std\algorithm.d std\typecons.d std\iterator.d \
-	std\xml.d
+	std\xml.d std\encoding.d
 
 SRC_STD_C= std\c\process.d std\c\stdlib.d std\c\time.d std\c\stdio.d \
 	std\c\math.d std\c\stdarg.d std\c\stddef.d std\c\fenv.d std\c\string.d \
@@ -538,6 +539,9 @@ variant.obj : std\variant.d
 xml.obj : std\xml.d
 	$(DMD) -c $(DFLAGS) std\xml.d
 
+encoding.obj : std\encoding.d
+	$(DMD) -c $(DFLAGS) std\encoding.d
+
 Dzlib.obj : std\zlib.d
 	$(DMD) -c $(DFLAGS) std\zlib.d -ofDzlib.obj
 
@@ -864,6 +868,9 @@ $(DOC)\std_variant.html : std.ddoc std\variant.d
 
 $(DOC)\std_xml.html : std.ddoc std\xml.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_xml.html std.ddoc std\xml.d
+
+$(DOC)\std_encoding.html : std.ddoc std\encoding.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_encoding.html std.ddoc std\encoding.d
 
 $(DOC)\std_zip.html : std.ddoc std\zip.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_zip.html std.ddoc std\zip.d
