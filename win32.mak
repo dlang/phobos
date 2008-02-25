@@ -79,7 +79,7 @@ OBJS= asserterror.obj deh.obj switch.obj complex.obj gcstats.obj \
 	signals.obj cpuid.obj typetuple.obj traits.obj bind.obj \
 	c_stdio.obj hiddenfunc.obj contracts.obj getopt.obj variant.obj \
 	numeric.obj bitmanip.obj functional.obj algorithm.obj typecons.obj \
-	iterator.obj complex.obj xml.obj \
+	iterator.obj complex.obj xml.obj arrayassign.obj \
 	ti_Ag.obj ti_C.obj ti_int.obj ti_char.obj \
 	ti_wchar.obj ti_uint.obj ti_short.obj ti_ushort.obj \
 	ti_byte.obj ti_ubyte.obj ti_long.obj ti_ulong.obj ti_ptr.obj \
@@ -206,7 +206,9 @@ SRC_INT=	\
 	internal\memset.d internal\arraycast.d internal\aaA.d internal\adi.d \
 	internal\dmain2.d internal\cast.d internal\qsort.d internal\deh2.d \
 	internal\cmath2.d internal\obj.d internal\mars.h internal\aApply.d \
-	internal\aApplyR.d internal\object.d internal\trace.d internal\qsort2.d
+	internal\aApplyR.d internal\object.d internal\trace.d \
+	internal\qsort2.d internal\arrayassign.d
+
 
 SRC_STD_WIN= std\windows\registry.d \
 	std\windows\iunknown.d std\windows\syserror.d std\windows\charset.d
@@ -299,6 +301,9 @@ aApplyR.obj : internal\aApplyR.d
 
 adi.obj : internal\adi.d
 	$(DMD) -c $(DFLAGS) internal\adi.d
+
+arrayassign.obj : internal\arrayassign.d
+	$(DMD) -c $(DFLAGS) internal\arrayassign.d
 
 arraycast.obj : internal\arraycast.d
 	$(DMD) -c $(DFLAGS) internal\arraycast.d
