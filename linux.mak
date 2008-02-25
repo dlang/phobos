@@ -89,7 +89,8 @@ all_std_modules_generated.d : $(MAKEFILE_LIST)
 	for m in $(STD_MODULES); do echo public import std.$$m\;; done > $@
 
 INTERNAL_MODULES = aApply aApplyR aaA adi alloca arraycast arraycat cast cmath2 \
-	deh2 dmain2 invariant llmath memset obj object qsort switch trace
+	deh2 dmain2 invariant llmath memset obj object qsort switch trace \
+	arrayassign
 INTERNAL_CMODULES = complex critical monitor
 INTERNAL_CMODULES_NOTBUILT = deh
 INTERNAL_EXTRAFILES = internal/mars.h internal/minit.asm

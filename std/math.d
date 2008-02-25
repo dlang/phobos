@@ -650,7 +650,7 @@ creal expi(real y)
         {
             fld y;
             fsincos;
-            fxch st(1), st(0);
+            fxch ST(1), ST(0);
         }
     }
     else
@@ -958,7 +958,7 @@ real scalbn(real x, int n)
             fild n;
             fld x;
             fscale;
-            fstp st(1), st;
+            fstp ST(1), ST;
         }
     } else
 	throw new NotImplemented("scalbn");
