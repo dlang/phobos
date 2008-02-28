@@ -1,3 +1,15 @@
+/*
+
+TO DO
+
+All the in contracts
+the Encoder class
+	(could mean more putting things in templates and reorganising)
+toDName()
+The six built-in subclasses of Encoder
+
+*/
+
 // Written in the D programming language.
 
 /**
@@ -19,7 +31,7 @@ encodings.
 
 Authors: Janice Caron
 
-Date: 2006.02.21
+Date: 2006.02.27
 
 License: Public Domain
 
@@ -130,6 +142,7 @@ unittest
 		[ 0xBF ],
 		[ 0x20, 0x80, 0x20 ],
 		[ 0x20, 0xBF, 0x20 ],
+		[ 0x80, 0x9F, 0xA0 ],
 
 		// Lonely start bytes
 		[ 0xC0 ],
@@ -155,6 +168,7 @@ unittest
 
 		[ 0xEF, 0xBF ],				// Three byte sequence with third byte missing
 		[ 0xF7, 0xBF, 0xBF ],		// Four byte sequence with fourth byte missing
+		[ 0xEF, 0xBF, 0xF7, 0xBF, 0xBF ],	// Concatenation of the above
 
 		// Impossible bytes
 		[ 0xF8 ],
@@ -219,6 +233,21 @@ unittest
 		[ 0xED, 0xBF, 0xBF ],		// U+DFFF
 	];
 
+	string[] sanitizedStrings =
+	[
+		"\uFFFD","\uFFFD",
+		"\uFFFD","\uFFFD","\uFFFD","\uFFFD","\uFFFD","\uFFFD"," \uFFFD ",
+		" \uFFFD ","\uFFFD\uFFFD\uFFFD","\uFFFD","\uFFFD"," \uFFFD "," \uFFFD ",
+		"\uFFFD","\uFFFD"," \uFFFD "," \uFFFD ","\uFFFD","\uFFFD"," \uFFFD ",
+		" \uFFFD ","\uFFFD","\uFFFD","\uFFFD","\uFFFD","\uFFFD","\uFFFD",
+		"\uFFFD","\uFFFD","\uFFFD","\uFFFD","\uFFFD\uFFFD","\uFFFD","\uFFFD",
+		"\uFFFD","\uFFFD","\uFFFD","\uFFFD","\uFFFD","\uFFFD"," \uFFFD ",
+		" \uFFFD "," \uFFFD "," \uFFFD "," \uFFFD "," \uFFFD "," \uFFFD ",
+		" \uFFFD ","\uFFFD","\uFFFD","\uFFFD","\uFFFD","\uFFFD","\uFFFD",
+		"\uFFFD","\uFFFD","\uFFFD","\uFFFD","\uFFFD","\uFFFD","\uFFFD","\uFFFD",
+		"\uFFFD","\uFFFD","\uFFFD","\uFFFD","\uFFFD","\uFFFD","\uFFFD","\uFFFD",
+	];
+
 	// Make sure everything that should be valid, is
 	foreach(a;validStrings)
 	{
@@ -234,11 +263,13 @@ unittest
 	}
 
 	// Make sure we can sanitize everything bad
-	foreach(a;invalidStrings)
+	assert(invalidStrings.length == sanitizedStrings.length);
+	for(int i=0; i<invalidStrings.length; ++i)
 	{
-		string s = cast(string)a;
+		string s = cast(string)invalidStrings[i];
 		string t = sanitize(s);
 		assert(isValid(t));
+		assert(t == sanitizedStrings[i]);
 		ubyte[] u = cast(ubyte[])t;
 		validStrings ~= u;
 	}
@@ -327,989 +358,313 @@ unittest
 	}
 }
 
-// Unit tests over. Now for the code...
+//=============================================================================
 
-template Encoding(T)
+template Mutable(E)
 {
-	static if (is(T==char))
+	static if(!is(E X == const(U),U) && !is(E X == invariant(U),U))
 	{
-		enum MAX_SEQUENCE_LENGTH = 4;
-
-		invariant(char)[] encodingName = "UTF-8";
-
-		byte[256] tailTable =
-		[
-			-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
-			-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
-			-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
-			-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
-			-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
-			-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
-			-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
-			-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
-			0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-			0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-			0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-			0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-			-1,-1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-			1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-			2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,
-			3,3,3,3,3,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
-		];
-
-		bool isValidCodeUnit(T c)
-		{
-			return c < 0x80 || tails(c) >= 0;
-		}
-
-		int tails(T c)
-		{
-			return tailTable[c];
-		}
-
-		bool isSingle(T c)
-		{
-			return c < 0x80;
-		}
-
-		bool isHead(T c)
-		{
-			return tails(c) > 0;
-		}
-
-		bool isTail(T c)
-		{
-			return tails(c) == 0;
-		}
-
-		bool badTail(const(T)[] s, uint n)
-		{
-			if (n > s.length) return true;
-			for (uint i=0; i<n; ++i)
-			{
-				if (!isTail(s[i])) return true;
-			}
-			return false;
-		}
-
-		bool isInvalidHeadTail(T c, T d)
-		{
-			switch(c)								// Deal with special cases
-			{
-			case 0xE0: return (d & 0xE0) == 0x80;	// fail overlong 3-byte sequences
-			case 0xED: return (d & 0xE0) == 0xA0;	// fail surrogates
-			case 0xF0: return (d & 0xF0) == 0x80;	// fail overlong 4-byte sequences
-			case 0xF4: return (d & 0xF0) >= 0x90;	// fail code points > 0x10FFFF
-			default:   return false;
-			}
-		}
-
-		uint encode(dchar c,T[] buffer)
-		in
-		{
-			assert(isValidCodePoint(c));
-			assert(buffer.length >= MAX_SEQUENCE_LENGTH);
-		}
-		body
-		{
-			if (c < 0x80)
-			{
-				buffer[0] = c;
-				return 1;
-			}
-			else if (c < 0x800)
-			{
-				buffer[0] = (c >> 6) + 0xC0;
-				buffer[1] = (c & 0x3F) + 0x80;
-				return 2;
-			}
-			else if (c < 0x10000)
-			{
-				buffer[0] = (c >> 12) + 0xE0;
-				buffer[1] = ((c >> 6) & 0x3F) + 0x80;
-				buffer[2] = (c & 0x3F) + 0x80;
-				return 3;
-			}
-			else
-			{
-				buffer[0] = (c >> 18) + 0xF0;
-				buffer[1] = ((c >> 12) & 0x3F) + 0x80;
-				buffer[2] = ((c >> 6) & 0x3F) + 0x80;
-				buffer[3] = (c & 0x3F) + 0x80;
-				return 4;
-			}
-		}
-
-		dchar decodeSingleSequence(ref string s)
-		in
-		{
-			assert(s.length != 0);
-			assert(!isSingle(s[0]));
-			assert(isValid(firstSequence(s)));
-		}
-		body
-		{
-			uint c = s[0];
-			int n = tails(c);
-			assert(n > 0);
-			c &= (1 << (6 - n)) - 1;
-			foreach(T d;s[1..n+1])
-			{
-				c = (c << 6) + (d & 0x3F);
-			}
-			s = s[n+1..$];
-			return c;
-		}
-
-		dchar decodeSingleSequenceReverse(ref string s)
-		in
-		{
-			assert(s.length != 0);
-			assert(!isSingle(s[$-1]));
-			assert(isValid(lastSequence(s)));
-		}
-		body
-		{
-			uint c = s[$-1];
-			uint i;
-			uint shift = 0;
-			c &= 0x3F;
-			for (i=s.length-2; i>=0; --i)
-			{
-				shift += 6;
-				assert(shift < 24);
-				uint d = s[i];
-				uint n = tails(d);
-				uint mask = n == 0 ? 0x3F : (1 << (6 - n)) - 1;
-				c = c + ((d & mask) << shift);
-				if (n != 0) break;
-			}
-			s = s[0..i];
-			return c;
-		}
-
-		void appendReplacementChar(ref string s)
-		{
-			s ~= "\xEF\xBF\xBD";
-		}
+		alias E Mutable;
 	}
-	else static if (is(T==wchar))
+	else
 	{
-		alias wstring string;
-
-		invariant(char)[] encodingName = "UTF-16";
-
-		bool isValidCodeUnit(T c)
-		{
-			return true;
-		}
-
-		enum MAX_SEQUENCE_LENGTH = 2;
-
-		bool isSingle(T c)
-		{
-			return c < 0xD800 || c >= 0xE000;
-		}
-
-		int tails(T c)
-		{
-			return 1;
-		}
-
-		bool isHead(T c)
-		{
-			return c >= 0xD800 && c < 0xDC00;
-		}
-
-		bool isTail(T c)
-		{
-			return c >= 0xDC00 && c < 0xE000;
-		}
-
-		bool badTail(const(T)[] s, uint n)
-		{
-			return (!isTail(s[0]));
-		}
-
-		bool isInvalidHeadTail(T c, T d)
-		{
-			return false;
-		}
-
-		uint encode(dchar c,T[] buffer)
-		in
-		{
-			assert(isValidCodePoint(c));
-			assert(buffer.length >= MAX_SEQUENCE_LENGTH);
-		}
-		body
-		{
-			if (c < 0x10000)
-			{
-				buffer[0] = c;
-				return 1;
-			}
-			else
-			{
-				c -= 0x10000;
-				buffer[0] = (c >> 10) + 0xD800;
-				buffer[1] = (c & 0x3FF) + 0xDC00;
-				return 2;
-			}
-		}
-
-		dchar decodeSingleSequence(ref string s)
-		in
-		{
-			assert(s.length != 0);
-			assert(!isSingle(s[0]));
-			assert(isValid(firstSequence(s)));
-		}
-		body
-		{
-			uint c = s[0];
-			uint d = s[1];
-			s = s[2..$];
-			return ((c & 0x3FF) << 10) + (d & 0x3FF) + 0x10000;
-		}
-
-		dchar decodeSingleSequenceReverse(ref string s)
-		in
-		{
-			assert(s.length != 0);
-			assert(!isSingle(s[$-1]));
-			assert(isValid(lastSequence(s)));
-		}
-		body
-		{
-			uint c = s[$-1];
-			uint d = s[$-2];
-			s = s[0..$-2];
-			return ((d & 0x3FF) << 10) + (c & 0x3FF) + 0x10000;
-		}
-
-		void appendReplacementChar(ref string s)
-		{
-			s ~= cast(T)0xFFFD;
-		}
+		alias U Mutable;
 	}
-	else static if (is(T==dchar))
+}
+
+/** A simple growable buffer for fast appending */
+struct Buffer(E)
+{
+	alias Mutable!(E) T;
+
+	private
 	{
-		alias dstring string;
+		T[] buffer;
+		uint index;
 
-		enum MAX_SEQUENCE_LENGTH = 1;
-
-		invariant(char)[] encodingName = "UTF-32";
-
-		alias isValidCodePoint isValidCodeUnit;
-
-		alias isValidCodePoint isSingle;
-
-		int tails(T c)
+		void reserve(uint spaceNeeded)
 		{
-			return -1;
-		}
-
-		bool isHead(T c)
-		{
-			return false;
-		}
-
-		alias isHead isTail;
-
-		bool badTail(const(T)[] s, uint n)
-		{
-			return false;
-		}
-
-		bool isInvalidHeadTail(T c, T d)
-		{
-			return false;
-		}
-
-		uint encode(dchar c,T[] buffer)
-		in
-		{
-			assert(isValidCodePoint(c));
-			assert(buffer.length >= MAX_SEQUENCE_LENGTH);
-		}
-		body
-		{
-			buffer[0] = c;
-			return 1;
-		}
-
-		dchar decodeSingleSequence(ref string s)
-		in
-		{
-			assert(false);
-		}
-		body
-		{
-			return 0;
-		}
-
-		dchar decodeSingleSequenceReverse(ref string s)
-		in
-		{
-			assert(false);
-		}
-		body
-		{
-			return 0;
-		}
-
-		void appendReplacementChar(ref string s)
-		{
-			s ~= cast(T)0xFFFD;
-		}
-	}
-	else static if (is(T:Ascii))
-	{
-		alias invariant(Ascii)[] string;
-
-		enum MAX_SEQUENCE_LENGTH = 1;
-
-		invariant(char)[] encodingName = "ASCII";
-
-		bool isValidCodeUnit(T c)
-		{
-			return c < 0x80;
-		}
-
-		alias isValidCodeUnit isSingle;
-
-		int tails(T c)
-		{
-			return -1;
-		}
-
-		bool isHead(T c)
-		{
-			return false;
-		}
-
-		alias isHead isTail;
-
-		bool badTail(const(T)[] s, uint n)
-		{
-			return false;
-		}
-
-		bool isInvalidHeadTail(T c, T d)
-		{
-			return false;
-		}
-
-		uint encode(dchar c,T[] buffer)
-		in
-		{
-			assert(isValidCodePoint(c));
-			assert(buffer.length >= MAX_SEQUENCE_LENGTH);
-		}
-		body
-		{
-			buffer[0] = cast(T)(c < 0x80 ? c : '?');
-			return 1;
-		}
-
-		dchar decodeSingleSequence(ref string s)
-		in
-		{
-			assert(false);
-		}
-		body
-		{
-			return 0;
-		}
-
-		dchar decodeSingleSequenceReverse(ref string s)
-		in
-		{
-			assert(false);
-		}
-		body
-		{
-			return 0;
-		}
-
-		void appendReplacementChar(ref string s)
-		{
-			s ~= cast(T)'?';
-		}
-	}
-	else static if (is(T:Latin1))
-	{
-		alias invariant(Latin1)[] string;
-
-		enum MAX_SEQUENCE_LENGTH = 1;
-
-		invariant(char)[] encodingName = "ISO-8859-1";
-
-		bool isValidCodeUnit(T c)
-		{
-			return true;
-		}
-
-		alias isValidCodeUnit isSingle;
-
-		int tails(T c)
-		{
-			return -1;
-		}
-
-		bool isHead(T c)
-		{
-			return false;
-		}
-
-		alias isHead isTail;
-
-		bool badTail(const(T)[] s, uint n)
-		{
-			return false;
-		}
-
-		bool isInvalidHeadTail(T c, T d)
-		{
-			return false;
-		}
-
-		uint encode(dchar c,T[] buffer)
-		in
-		{
-			assert(isValidCodePoint(c));
-			assert(buffer.length >= MAX_SEQUENCE_LENGTH);
-		}
-		body
-		{
-			buffer[0] = cast(T)(c < 0x100 ? c : '?');
-			return 1;
-		}
-
-		dchar decodeSingleSequence(ref string s)
-		in
-		{
-			assert(false);
-		}
-		body
-		{
-			return 0;
-		}
-
-		dchar decodeSingleSequenceReverse(ref string s)
-		in
-		{
-			assert(false);
-		}
-		body
-		{
-			return 0;
-		}
-
-		void appendReplacementChar(ref string s)
-		{
-			s ~= cast(T)'?';
-		}
-	}
-	else static if (is(T:Windows1252))
-	{
-		alias invariant(Windows1252)[] string;
-
-		enum MAX_SEQUENCE_LENGTH = 1;
-
-		invariant(char)[] encodingName = "WINDOWS-1252";
-
-		wstring charMap =
-			"\u20AC\uFFFD\u201A\u0192\u201E\u2026\u2020\u2021"
-			"\u02C6\u2030\u0160\u2039\u0152\uFFFD\u017D\uFFFD"
-			"\uFFFD\u2018\u2019\u201C\u201D\u2022\u2103\u2014"
-			"\u02DC\u2122\u0161\u203A\u0153\uFFFD\u017E\u0178"
-		;
-
-		dchar win2uni(T c)
-		{
-			return isSingle(c) ? c : charMap[c-0x80];
-		}
-
-		T uni2win(dchar c)
-		{
-			if (c < 0x80 || (c >= 0xA0 && c < 0x100)) return cast(T)c;
-			if (c != 0xFFFD)
+			uint bufferLength = buffer.length;
+			if (bufferLength < index + spaceNeeded)
 			{
-				foreach(n,d;charMap)
-				{
-					if (c == d) return cast(T)(n + 0x80);
-				}
-			}
-			return '?';
-		}
-
-		bool isValidCodeUnit(T c)
-		{
-			return(win2uni(c) != 0xFFFD);
-		}
-
-		bool isSingle(T c)
-		{
-			return c < 0x80 || c >= 0xA0;
-		}
-
-		int tails(T c)
-		{
-			return isSingle(c) ? -1 : 0;
-		}
-
-		bool isHead(T c)
-		{
-			return isSingle(c) ? false : isValidCodeUnit(c);
-		}
-
-		bool isTail(T c)
-		{
-			return false;
-		}
-
-		bool badTail(const(T)[] s, uint n)
-		{
-			return false;
-		}
-
-		bool isInvalidHeadTail(T c, T d)
-		{
-			return false;
-		}
-
-		uint encode(dchar c,T[] buffer)
-		in
-		{
-			assert(isValidCodePoint(c));
-			assert(buffer.length >= MAX_SEQUENCE_LENGTH);
-		}
-		body
-		{
-			buffer[0] = uni2win(c);
-			return 1;
-		}
-
-		dchar decodeSingleSequence(ref string s)
-		in
-		{
-			assert(s.length != 0);
-		}
-		body
-		{
-			dchar c = win2uni(s[0]);
-			s = s[1..$];
-			return c;
-		}
-
-		dchar decodeSingleSequenceReverse(ref string s)
-		in
-		{
-			assert(s.length != 0);
-		}
-		body
-		{
-			dchar c = win2uni(s[$-1]);
-			s = s[0..$-1];
-			return c;
-		}
-
-		void appendReplacementChar(ref string s)
-		{
-			s ~= cast(T)'?';
-		}
-	}
-	// NOTE: The "else" case is commented out because it doesn't work (yet?)
-	// because of some template issues which have yet to be resolved. Expect
-	// this to work in some future release.
-/+
-	else // The generic case. All other encodings.
-	{
-		alias invariant(T)[] string;
-
-		static if(is(T.MAX_SEQUENCE_LENGTH))
-		{
-			enum MAX_SEQUENCE_LENGTH = T.MAX_SEQUENCE_LENGTH;
-		}
-		else
-		{
-			enum MAX_SEQUENCE_LENGTH = 1;
-		}
-
-		invariant(char)[] encodingName()
-		{
-			return T.encodingName;
-		}
-
-		bool isValidCodeUnit(T c)
-		{
-			return c.isValidCodeUnit;
-		}
-
-		bool isSingle(T c)
-		{
-			static if (is(T.isSingle == function))
-			{
-				return c.isSingle;
-			}
-			else
-			{
-				return c.isValidCodeUnit;
-			}
-		}
-
-		int tails(T c)
-		{
-			static if (is(T.tails == function))
-			{
-				return c.tails();
-			}
-			else
-			{
-				return -1;
-			}
-		}
-
-		bool isHead(T c)
-		{
-			static if(is(T.isHead == function))
-			{
-				return c.isHead;
-			}
-			else
-			{
-				return false;
-			}
-		}
-
-		bool isTail(T c)
-		{
-			static if(is(T.isTail == function))
-			{
-				return c.isTail;
-			}
-			else
-			{
-				return false;
-			}
-		}
-
-		bool badTail(const(T)[] s, uint n)
-		{
-			static if(is(T.badTail == function))
-			{
-				return T.badTail(s,n);
-			}
-			else
-			{
-				return false;
-			}
-		}
-
-		bool isInvalidHeadTail(T c, T d)
-		{
-			static if(is(T.isInvalidHeadTail == function))
-			{
-				return c.isInvalidHeadTail(d);
-			}
-			else
-			{
-				return false;
-			}
-		}
-
-		uint encode(dchar c,T[] buffer)
-		in
-		{
-			assert(isValidCodePoint(c));
-			assert(buffer.length >= MAX_SEQUENCE_LENGTH);
-		}
-		body
-		{
-			return encode(c,buffer);
-		}
-
-		dchar decodeSingleSequence(ref string s)
-		{
-			static if(is(T.decodeSingleSequence == function))
-			{
-				return T.decodeSingleSequence(s);
-			}
-			else
-			{
-				assert(false);
-				return 0;
-			}
-		}
-
-		dchar decodeSingleSequenceReverse(ref string s)
-		{
-			static if(is(T.decodeSingleSequenceReverse == function))
-			{
-				return T.decodeSingleSequenceReverse(s);
-			}
-			else
-			{
-				assert(false);
-				return 0;
-			}
-		}
-
-		void appendReplacementChar(ref string s)
-		{
-			if (is(T.replacementChar == function))
-			{
-				s ~= T.replacementChar();
-			}
-			else
-			{
-				s ~= cast(T)'?';
+				if (bufferLength == 0) bufferLength = 16;
+				while (bufferLength < index + spaceNeeded) bufferLength <<= 2;
+				buffer.length = bufferLength;
 			}
 		}
 	}
-+/
 
-	uint pseudoSequenceLength(string s)
+	void opCatAssign(E c) /// Append a single character
 	{
-		assert(s.length != 0);
-		if (!isValidCodeUnit(s[0])) return 1;
-		int i = isHead(s[0]) ? 1 : 0;
-		for (; i < s.length; ++i)
-		{
-			if (!isTail(s[i])) break;
-		}
-		assert(i != 0);
-		return i;
+		reserve(1);
+		buffer[index++] = c;
 	}
 
-	string firstSequence(string s)
+	void opCatAssign(const(E)[] a) /// Append an array of characters
 	{
-		foreach(i,T c;s[1..$])
-		{
-			if (!isTail(c)) return s[0..i+1];
-		}
-		return s;
+		reserve(a.length);
+		buffer[index..index+a.length] = a[0..$];
+		index += a.length;
 	}
 
-	string lastSequence(string s)
+	T[] toArray() /// Return the buffer, and reset it
 	{
-		foreach_reverse(i,T c;s)
-		{
-			if (!isTail(c)) return s[i..$];
-		}
-		return s;
+		auto t = buffer[0..index];
+		buffer = null;
+		return t;
 	}
 
-	// find the first invalid code unit
-	uint validatePartial(const(T)[] s)
+	invariant(T)[] toIArray() /// Return the buffer as an invariant array, and reset it
 	{
-		uint i;
-		for (i=0; i<s.length; ++i)
-		{
-			T c = s[i];
-			if (isSingle(c)) continue;
-			uint n = tails(c);
-			if (n <= 0) return i;						// fail with illegal code units
-			if (i + n >= s.length) return i;			// fail if we exceed the length of the string
-			if (isInvalidHeadTail(c,s[i+1])) return i;	// fail with invalid head/tail combinations
-			if (badTail(s[i+1..$],n)) return i;			// fail incomplete sequences
-			i += n;										// step over whole sequence
-		}
-		return i;
+		auto t = cast(invariant(T)[])(buffer[0..index]);
+		buffer = null;
+		return t;
+	}
+}
+
+//=============================================================================
+
+/** Special value returned by safeDecode */
+enum dchar INVALID_SEQUENCE = cast(dchar)0xFFFFFFFF;
+
+template EncoderFunctions()
+{
+	// Various forms of read
+
+	template ReadFromString()
+	{
+		bool canRead() { return s.length != 0; }
+		E peek() { return s[0]; }
+		E read() { E t = s[0]; s = s[1..$]; return t; }
 	}
 
-	bool isValid(const(T)[] s)
+	template ReverseReadFromString()
 	{
-		return validatePartial(s) == s.length;
+		bool canRead() { return s.length != 0; }
+		E peek() { return s[$-1]; }
+		E read() { E t = s[$-1]; s = s[0..$-1]; return t; }
 	}
 
-	string sanitize(string s)
-	out(r)
-	{
-		assert(isValid(r));
-	}
-	body
-	{
-		uint i = validatePartial(s);
-		if (i == s.length) return s;	// If string is valid, return the original
+	// Various forms of Write
 
-		string r = s[0..i].idup;
-		while (i < s.length)
-		{
-			appendReplacementChar(r);
-			i += pseudoSequenceLength(s[i..$]);
-			uint n = validatePartial(s[i..$]);
-			r ~= s[i..i+n];
-			i += n;
-		}
-		return r;
+	template WriteToString()
+	{
+		EString s;
+		void write(E c) { s ~= c; }
 	}
 
-	uint count(string s)
+	template WriteToBuffer()
+	{
+		void write(E c) { buffer ~= c; }
+	}
+
+	template WriteToDelegate()
+	{
+		void write(E c) { dg(c); }
+	}
+
+	// Functions we will export
+
+	template EncodeViaWrite()
+	{
+		mixin encodeViaWrite;
+		void encode(dchar c) { encodeViaWrite(c); }
+	}
+
+	template SkipViaRead()
+	{
+		mixin skipViaRead;
+		void skip() { skipViaRead(); }
+	}
+
+	template DecodeViaRead()
+	{
+		mixin decodeViaRead;
+		dchar decode() { return decodeViaRead(); }
+	}
+
+	template SafeDecodeViaRead()
+	{
+		mixin safeDecodeViaRead;
+		dchar safeDecode() { return safeDecodeViaRead(); }
+	}
+
+	template DecodeReverseViaRead()
+	{
+		mixin decodeReverseViaRead;
+		dchar decodeReverse() { return decodeReverseViaRead(); }
+	}
+
+	// Encoding to different destinations
+
+	template EncodeToString()
+	{
+		mixin WriteToString;
+		mixin EncodeViaWrite;
+	}
+
+	template EncodeToBuffer()
+	{
+		mixin WriteToBuffer;
+		mixin EncodeViaWrite;
+	}
+
+	template EncodeToDelegate()
+	{
+		mixin WriteToDelegate;
+		mixin EncodeViaWrite;
+	}
+
+	// Decoding functions
+
+	template SkipFromString()
+	{
+		mixin ReadFromString;
+		mixin SkipViaRead;
+	}
+
+	template DecodeFromString()
+	{
+		mixin ReadFromString;
+		mixin DecodeViaRead;
+	}
+
+	template SafeDecodeFromString()
+	{
+		mixin ReadFromString;
+		mixin SafeDecodeViaRead;
+	}
+
+	template DecodeReverseFromString()
+	{
+		mixin ReverseReadFromString;
+		mixin DecodeReverseViaRead;
+	}
+
+	//=========================================================================
+
+	// Below are the functions we will ultimately expose to the user
+	EString encode(dchar c)
+	{
+		mixin EncodeToString e;
+		e.encode(c);
+		return e.s;
+	}
+
+	void encode(dchar c, ref EBuffer buffer)
+	{
+		mixin EncodeToBuffer e;
+		e.encode(c);
+	}
+
+	void encode(dchar c, void delegate(E) dg)
+	{
+		mixin EncodeToDelegate e;
+		e.encode(c);
+	}
+
+	void skip(ref EString s)
+	{
+		mixin SkipFromString e;
+		e.skip();
+	}
+
+	dchar decode(ref EString s)
+	{
+		mixin DecodeFromString e;
+		return e.decode();
+	}
+
+	dchar safeDecode(ref EString s)
+	{
+		mixin SafeDecodeFromString e;
+		return e.safeDecode();
+	}
+
+	dchar decodeReverse(ref EString s)
+	{
+		mixin DecodeReverseFromString e;
+		return e.decodeReverse();
+	}
+}
+
+//=========================================================================
+
+struct CodePoints(E)
+{
+	invariant(E)[] s;
+
+	static CodePoints opCall(invariant(E)[] s)
 	in
 	{
 		assert(isValid(s));
 	}
 	body
 	{
+		CodePoints codePoints;
+		codePoints.s = s;
+		return codePoints;
+	}
+
+	int opApply(int delegate(ref dchar) dg)
+	{
+		int result = 0;
+		while (s.length != 0)
+		{
+			dchar c = decode(s);
+			result = dg(c);
+			if (result != 0) break;
+		}
+		return result;
+	}
+
+	int opApply(int delegate(ref uint, ref dchar) dg)
+	{
 		uint i = 0;
-		foreach(T c;s)
+		int result = 0;
+		while (s.length != 0)
 		{
-			if (!isTail(c)) ++i;
+			uint len = s.length;
+			dchar c = decode(s);
+			uint j = i; // We don't want the delegate corrupting i
+			result = dg(j,c);
+			if (result != 0) break;
+			i += len - s.length;
 		}
-		return i;
+		return result;
 	}
 
-	int index(string s, int n)
-	in
+	int opApplyReverse(int delegate(ref dchar) dg)
 	{
-		assert(isValid(s));
-		assert(n >= 0);
+		int result = 0;
+		while (s.length != 0)
+		{
+			dchar c = decodeReverse(s);
+			result = dg(c);
+			if (result != 0) break;
+		}
+		return result;
 	}
-	body
+
+	int opApplyReverse(int delegate(ref uint, ref dchar) dg)
 	{
-		uint i = 0;
-		foreach(j,T c;s)
+		int result = 0;
+		while (s.length != 0)
 		{
-			if (!isTail(c))
-			{
-				if (i == n) return j;
-				++i;
-			}
+			dchar c = decodeReverse(s);
+			uint i = s.length;
+			result = dg(i,c);
+			if (result != 0) break;
 		}
-		return i == n ? s.length : -1;
+		return result;
 	}
+}
 
-	dchar decode(ref string s)
-	in
-	{
-		assert(s.length != 0);
-		assert(isValid(firstSequence(s)));
-	}
-	body
-	{
-		T c = s[0];
-		if (isSingle(c))
-		{
-			s = s[1..$];
-			return c;
-		}
-		return decodeSingleSequence(s);
-	}
+struct CodeUnits(E)
+{
+	invariant(E)[] s;
 
-	dchar decodeSingleReverse(ref string s)
-	in
-	{
-		assert(s.length != 0);
-		assert(isValid(lastSequence(s)));
-	}
-	body
-	{
-		T c = s[$-1];
-		if (isSingle(c))
-		{
-			s = s[0..$-1];
-			return c;
-		}
-		return decodeSingleSequenceReverse(s);
-	}
-
-	struct CodePoints
-	{
-		string s;
-
-		int opApply(int delegate(ref dchar) dg)
-		{
-			int result = 0;
-			while (s.length != 0)
-			{
-				dchar c = decode(s);
-				result = dg(c);
-				if (result != 0) break;
-			}
-			return result;
-		}
-
-		int opApply(int delegate(ref uint, ref dchar) dg)
-		{
-			uint i = 0;
-			int result = 0;
-			while (s.length != 0)
-			{
-				uint len = s.length;
-				dchar c = decode(s);
-				uint j = i; // We don't want the delegate corrupting i
-				result = dg(j,c);
-				if (result != 0) break;
-				i += len - s.length;
-			}
-			return result;
-		}
-
-		int opApplyReverse(int delegate(ref dchar) dg)
-		{
-			int result = 0;
-			while (s.length != 0)
-			{
-				dchar c = decodeSingleReverse(s);
-				result = dg(c);
-				if (result != 0) break;
-			}
-			return result;
-		}
-
-		int opApplyReverse(int delegate(ref uint, ref dchar) dg)
-		{
-			int result = 0;
-			while (s.length != 0)
-			{
-				dchar c = decodeSingleReverse(s);
-				uint i = s.length;
-				result = dg(i,c);
-				if (result != 0) break;
-			}
-			return result;
-		}
-	}
-
-	CodePoints codePoints(string s)
-	{
-		CodePoints ci;
-		ci.s = s;
-		return ci;
-	}
-
-	struct CodeUnits
-	{
-		T[MAX_SEQUENCE_LENGTH] buffer;
-		uint len;
-
-		int opApply(int delegate(ref T) dg)
-		{
-			int result = 0;
-			foreach(T c;buffer[0..len])
-			{
-				result = dg(c);
-				if (result != 0) break;
-			}
-			return result;
-		}
-
-		int opApplyReverse(int delegate(ref T) dg)
-		{
-			int result = 0;
-			foreach_reverse(T c;buffer[0..len])
-			{
-				result = dg(c);
-				if (result != 0) break;
-			}
-			return result;
-		}
-	}
-
-	CodeUnits codeUnits(dchar d)
+	static CodeUnits opCall(dchar d)
 	in
 	{
 		assert(isValidCodePoint(d));
@@ -1317,53 +672,562 @@ template Encoding(T)
 	body
 	{
 		CodeUnits codeUnits;
-		codeUnits.len = encode(d,codeUnits.buffer);
+		codeUnits.s = encode!(E)(d);
 		return codeUnits;
+	}
+
+	int opApply(int delegate(ref E) dg)
+	{
+		int result = 0;
+		foreach(E c;s)
+		{
+			result = dg(c);
+			if (result != 0) break;
+		}
+		return result;
+	}
+
+	int opApplyReverse(int delegate(ref E) dg)
+	{
+		int result = 0;
+		foreach_reverse(E c;s)
+		{
+			result = dg(c);
+			if (result != 0) break;
+		}
+		return result;
 	}
 }
 
-alias char Utf8;			/// A type representing the UTF-8 encoding (an alias of char)
-alias wchar Utf16;			/// A type representing the UTF-16 encoding	(an alias of wchar)
-alias dchar Utf32;			/// A type representing the UTF-32 encoding	(an alias of dchar)
-typedef char Ascii;			/// A type representing the ASCII encoding (a typedef of char)
-typedef ubyte Latin1;		/// A type representing the ISO-8859-1 (aka Latin-1) encoding (a typedef of ubyte)
-typedef ubyte Windows1252;	/// A type representing the WINDOWS-1252 encoding (a typedef of ubyte)
+//=============================================================================
 
-/**
- * A type representing a string of some specified encoding. The encoding is specified by the template parameter.
- */
-template EString(T)
+template EncoderInstance(E)
 {
-	alias invariant(T)[] EString;
+	static assert(false);
 }
 
-/**
- * Returns the name of an encoding.
- *
- * The type of the output cannot be deduced. Therefore, it is necessary to
- * explicitly specify the encoding type.
- *
- * Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
- *
- * Examples:
- * -----------------------------------
- * writefln(encodingName!(Latin1));
- *     // writes ISO-8859-1
- * -----------------------------------
- */
-string encodingName(T)()
+//=============================================================================
+// 			ASCII
+//=============================================================================
+
+typedef char Ascii;
+
+template EncoderInstance(E:Ascii)
 {
-	return Encoding!(T).encodingName;
+	alias invariant(Ascii)[] EString;
+	alias Buffer!(Ascii) EBuffer;
+
+	string encodingName()
+	{
+		return "ASCII";
+	}
+
+	bool canEncode(dchar c)
+	{
+		return c < 0x80;
+	}
+
+	bool isValidCodeUnit(Ascii c)
+	{
+		return c < 0x80;
+	}
+
+	void encodeViaWrite()(dchar c)
+	{
+		if (!canEncode(c)) c = '?';
+		write(cast(Ascii)c);
+	}
+
+	void skipViaRead()()
+	{
+		read();
+	}
+
+	dchar decodeViaRead()()
+	{
+		return read;
+	}
+
+	dchar safeDecodeViaRead()()
+	{
+		if (!canRead) return INVALID_SEQUENCE;
+		dchar c = read;
+		return canEncode(c) ? c : INVALID_SEQUENCE;
+	}
+
+	dchar decodeReverseViaRead()()
+	{
+		return read;
+	}
+
+	EString replacementSequence()
+	{
+		return cast(EString)("?");
+	}
+
+	mixin EncoderFunctions;
 }
 
-unittest
+//=============================================================================
+// 			ISO-8859-1
+//=============================================================================
+
+typedef ubyte Latin1;
+
+template EncoderInstance(E:Latin1)
 {
-	assert(encodingName!(Utf8) == "UTF-8");
-	assert(encodingName!(Utf16) == "UTF-16");
-	assert(encodingName!(Utf32) == "UTF-32");
-	assert(encodingName!(Ascii) == "ASCII");
-	assert(encodingName!(Latin1) == "ISO-8859-1");
+	alias invariant(Latin1)[] EString;
+	alias Buffer!(Latin1) EBuffer;
+
+	string encodingName()
+	{
+		return "ISO-8859-1";
+	}
+
+	bool canEncode(dchar c)
+	{
+		return c < 0x100;
+	}
+
+	bool isValidCodeUnit(Latin1 c)
+	{
+		return true;
+	}
+
+	void encodeViaWrite()(dchar c)
+	{
+		if (!canEncode(c)) c = '?';
+		write(cast(Latin1)c);
+	}
+
+	void skipViaRead()()
+	{
+		read();
+	}
+
+	dchar decodeViaRead()()
+	{
+		return read;
+	}
+
+	dchar safeDecodeViaRead()()
+	{
+		if (!canRead) return INVALID_SEQUENCE;
+		return read;
+	}
+
+	dchar decodeReverseViaRead()()
+	{
+		return read;
+	}
+
+	EString replacementSequence()
+	{
+		return cast(EString)("?");
+	}
+
+	mixin EncoderFunctions;
 }
+
+//=============================================================================
+// 			WINDOWS-1252
+//=============================================================================
+
+typedef ubyte Windows1252;
+
+template EncoderInstance(E:Windows1252)
+{
+	alias invariant(Windows1252)[] EString;
+	alias Buffer!(Windows1252) EBuffer;
+
+	string encodingName()
+	{
+		return "windows-1252";
+	}
+
+	wstring charMap =
+		"\u20AC\uFFFD\u201A\u0192\u201E\u2026\u2020\u2021"
+		"\u02C6\u2030\u0160\u2039\u0152\uFFFD\u017D\uFFFD"
+		"\uFFFD\u2018\u2019\u201C\u201D\u2022\u2103\u2014"
+		"\u02DC\u2122\u0161\u203A\u0153\uFFFD\u017E\u0178"
+	;
+
+	bool canEncode(dchar c)
+	{
+		if (c < 0x80 || (c >= 0xA0 && c <0x100)) return true;
+		if (c >= 0xFFFD) return false;
+		foreach(wchar d;charMap) { if (c == d) return true; }
+		return false;
+	}
+
+	bool isValidCodeUnit(Windows1252 c)
+	{
+		if (c < 0x80 || c >= 0xA0) return true;
+		return (charMap[c-0x80] != 0xFFFD);
+	}
+
+	void encodeViaWrite()(dchar c)
+	{
+		if (c < 0x80 || (c >= 0xA0 && c <0x100)) {}
+		else if (c >= 0xFFFD) { c = '?'; }
+		else
+		{
+			int n = -1;
+			foreach(i,wchar d;charMap)
+			{
+				if (c == d)
+				{
+					n = i;
+					break;
+				}
+			}
+			c = n == -1 ? '?' : 0x80 + n;
+		}
+		write(cast(Windows1252)c);
+	}
+
+	void skipViaRead()()
+	{
+		read();
+	}
+
+	dchar decodeViaRead()()
+	{
+		Windows1252 c = read;
+		return (c >= 0x80 && c < 0xA0) ? charMap[c-0x80] : c;
+	}
+
+	dchar safeDecodeViaRead()()
+	{
+		if (!canRead) return INVALID_SEQUENCE;
+		Windows1252 c = read;
+		dchar d = (c >= 0x80 && c < 0xA0) ? charMap[c-0x80] : c;
+		return d == 0xFFFD ? INVALID_SEQUENCE : d;
+	}
+
+	dchar decodeReverseViaRead()()
+	{
+		Windows1252 c = read;
+		return (c >= 0x80 && c < 0xA0) ? charMap[c-0x80] : c;
+	}
+
+	EString replacementSequence()
+	{
+		return cast(EString)("?");
+	}
+
+	mixin EncoderFunctions;
+}
+
+//=============================================================================
+// 			UTF-8
+//=============================================================================
+
+alias char Utf8;
+
+template EncoderInstance(E:Utf8)
+{
+	alias invariant(Utf8)[] EString;
+	alias Buffer!(Utf8) EBuffer;
+
+	string encodingName()
+	{
+		return "UTF-8";
+	}
+
+	bool canEncode(dchar c)
+	{
+		return isValidCodePoint(c);
+	}
+
+	bool isValidCodeUnit(Utf8 c)
+	{
+		return (c < 0xC0 || (c >= 0xC2 && c < 0xF5));
+	}
+
+	byte[128] tailTable =
+	[
+		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+		1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+		1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+		2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,
+		3,3,3,3,3,3,3,3,4,4,4,4,5,5,6,0,
+	];
+
+	private int tails(Utf8 c)
+	in
+	{
+		assert(c >= 0x80);
+	}
+	body
+	{
+		return tailTable[c-0x80];
+	}
+
+	void encodeViaWrite()(dchar c)
+	{
+		if (c < 0x80)
+		{
+			write(cast(Utf8)c);
+		}
+		else if (c < 0x800)
+		{
+			write(cast(Utf8)((c >> 6) + 0xC0));
+			write(cast(Utf8)((c & 0x3F) + 0x80));
+		}
+		else if (c < 0x10000)
+		{
+			write(cast(Utf8)((c >> 12) + 0xE0));
+			write(cast(Utf8)(((c >> 6) & 0x3F) + 0x80));
+			write(cast(Utf8)((c & 0x3F) + 0x80));
+		}
+		else
+		{
+			write(cast(Utf8)((c >> 18) + 0xF0));
+			write(cast(Utf8)(((c >> 12) & 0x3F) + 0x80));
+			write(cast(Utf8)(((c >> 6) & 0x3F) + 0x80));
+			write(cast(Utf8)((c & 0x3F) + 0x80));
+		}
+	}
+
+	void skipViaRead()()
+	{
+		uint c = read;
+		if (c < 0xC0) return;
+		int n = tails(c);
+		for (uint i=0; i<n; ++i)
+		{
+			read();
+		}
+	}
+
+	dchar decodeViaRead()()
+	{
+		uint c = read;
+		if (c < 0xC0) return c;
+		int n = tails(c);
+		c &= (1 << (6 - n)) - 1;
+		for (uint i=0; i<n; ++i)
+		{
+			c = (c << 6) + (read & 0x3F);
+		}
+		return c;
+	}
+
+	dchar safeDecodeViaRead()()
+	{
+		if (!canRead) return INVALID_SEQUENCE;
+		dchar c = read;
+		if (c < 0x80) return c;
+		int n = tails(c);
+		if (n == 0) return INVALID_SEQUENCE;
+
+		if (!canRead) return INVALID_SEQUENCE;
+		uint d = peek;
+		bool err =
+		(
+			(c < 0xC2)								// fail overlong 2-byte sequences
+		||	(c > 0xF4)								// fail overlong 4-6-byte sequences
+		||	(c == 0xE0 && ((d & 0xE0) == 0x80))		// fail overlong 3-byte sequences
+		||	(c == 0xED && ((d & 0xE0) == 0xA0))		// fail surrogates
+		||	(c == 0xF0 && ((d & 0xF0) == 0x80))		// fail overlong 4-byte sequences
+		||	(c == 0xF4 && ((d & 0xF0) >= 0x90))		// fail code points > 0x10FFFF
+		);
+
+		c &= (1 << (6 - n)) - 1;
+		for (uint i=0; i<n; ++i)
+		{
+			if (!canRead) return INVALID_SEQUENCE;
+			d = peek;
+			if ((d & 0xC0) != 0x80) return INVALID_SEQUENCE;
+			c = (c << 6) + (read & 0x3F);
+		}
+
+		return err ? INVALID_SEQUENCE : c;
+	}
+
+	dchar decodeReverseViaRead()()
+	{
+		uint c = read;
+		if (c < 0x80) return c;
+		uint shift = 0;
+		c &= 0x3F;
+		for (uint i=0; i<4; ++i)
+		{
+			shift += 6;
+			uint d = read;
+			uint n = tails(d);
+			uint mask = n == 0 ? 0x3F : (1 << (6 - n)) - 1;
+			c = c + ((d & mask) << shift);
+			if (n != 0) break;
+		}
+		return c;
+	}
+
+	EString replacementSequence()
+	{
+		return "\uFFFD";
+	}
+
+	mixin EncoderFunctions;
+}
+
+//=============================================================================
+// 			UTF-16
+//=============================================================================
+
+alias wchar Utf16;
+
+template EncoderInstance(E:Utf16)
+{
+	alias invariant(Utf16)[] EString;
+	alias Buffer!(Utf16) EBuffer;
+
+	string encodingName()
+	{
+		return "UTF-16";
+	}
+
+	bool canEncode(dchar c)
+	{
+		return isValidCodePoint(c);
+	}
+
+	bool isValidCodeUnit(Utf16 c)
+	{
+		return true;
+	}
+
+	void encodeViaWrite()(dchar c)
+	{
+		if (c < 0x10000)
+		{
+			write(cast(Utf16)c);
+		}
+		else
+		{
+			uint n = c - 0x10000;
+			write(cast(Utf16)(0xD800 + (n >> 10)));
+			write(cast(Utf16)(0xDC00 + (n & 0x3FF)));
+		}
+	}
+
+	void skipViaRead()()
+	{
+		Utf16 c = read;
+		if (c < 0xD800 || c >= 0xE000) return;
+		read();
+	}
+
+	dchar decodeViaRead()()
+	{
+		Utf16 c = read;
+		if (c < 0xD800 || c >= 0xE000) return cast(dchar)c;
+		Utf16 d = read;
+		c &= 0x3FF;
+		d &= 0x3FF;
+		return 0x10000 + (c << 10) + d;
+	}
+
+	dchar safeDecodeViaRead()()
+	{
+		if (!canRead) return INVALID_SEQUENCE;
+		Utf16 c = read;
+		if (c < 0xD800 || c >= 0xE000) return cast(dchar)c;
+		if (c >= 0xDC00) return INVALID_SEQUENCE;
+		if (!canRead) return INVALID_SEQUENCE;
+		Utf16 d = peek;
+		if (d < 0xDC00 || d >= 0xE000) return INVALID_SEQUENCE;
+		d = read;
+		c &= 0x3FF;
+		d &= 0x3FF;
+		return 0x10000 + (c << 10) + d;
+	}
+
+	dchar decodeReverseViaRead()()
+	{
+		Utf16 c = read;
+		if (c < 0xD800 || c >= 0xE000) return cast(dchar)c;
+		Utf16 d = read;
+		c &= 0x3FF;
+		d &= 0x3FF;
+		return 0x10000 + (d << 10) + c;
+	}
+
+	EString replacementSequence()
+	{
+		return "\uFFFD"w;
+	}
+
+	mixin EncoderFunctions;
+}
+
+//=============================================================================
+// 			UTF-32
+//=============================================================================
+
+alias dchar Utf32;
+
+template EncoderInstance(E:Utf32)
+{
+	alias invariant(Utf32)[] EString;
+	alias Buffer!(Utf32) EBuffer;
+
+	string encodingName()
+	{
+		return "UTF-32";
+	}
+
+	bool canEncode(dchar c)
+	{
+		return isValidCodePoint(c);
+	}
+
+	bool isValidCodeUnit(Utf16 c)
+	{
+		return isValidCodePoint(c);
+	}
+
+	void encodeViaWrite()(dchar c)
+	{
+		write(cast(Utf32)c);
+	}
+
+	void skipViaRead()()
+	{
+		read();
+	}
+
+	dchar decodeViaRead()()
+	{
+		return cast(dchar)read;
+	}
+
+	dchar safeDecodeViaRead()()
+	{
+		if (!canRead) return INVALID_SEQUENCE;
+		dchar c = read;
+		return isValidCodePoint(c) ? c : INVALID_SEQUENCE;
+	}
+
+	dchar decodeReverseViaRead()()
+	{
+		return cast(dchar)read;
+	}
+
+	EString replacementSequence()
+	{
+		return "\uFFFD"d;
+	}
+
+	mixin EncoderFunctions;
+}
+
+//=============================================================================
+// Below are forwarding functions which expose the function to the user
 
 /**
  * Returns true if c is a valid code point
@@ -1373,7 +1237,7 @@ unittest
  * characters).
  *
  * Supercedes:
- * This function supercedes std.utf.isValidDchar().
+ * This function supercedes std.utf.startsValidDchar().
  *
  * Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
  *
@@ -1386,6 +1250,65 @@ bool isValidCodePoint(dchar c)
 }
 
 /**
+ * Returns the name of an encoding.
+ *
+ * The type of encoding cannot be deduced. Therefore, it is necessary to
+ * explicitly specify the encoding type.
+ *
+ * Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
+ *
+ * Examples:
+ * -----------------------------------
+ * writefln(encodingName!(Latin1));
+ *     // writes ISO-8859-1
+ * -----------------------------------
+ */
+string encodingName(T)()
+{
+	return EncoderInstance!(T).encodingName;
+}
+
+unittest
+{
+	assert(encodingName!(Utf8) == "UTF-8");
+	assert(encodingName!(Utf16) == "UTF-16");
+	assert(encodingName!(Utf32) == "UTF-32");
+	assert(encodingName!(Ascii) == "ASCII");
+	assert(encodingName!(Latin1) == "ISO-8859-1");
+	assert(encodingName!(Windows1252) == "windows-1252");
+}
+
+/**
+ * Returns true iff it is possible to represent the specifed codepoint
+ * in the encoding.
+ *
+ * The type of encoding cannot be deduced. Therefore, it is necessary to
+ * explicitly specify the encoding type.
+ *
+ * Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
+ *
+ * Examples:
+ * -----------------------------------
+ * writefln(canEncode!(Latin1)('A'));
+ *     // writes true
+ * -----------------------------------
+ */
+bool canEncode(E)(dchar c)
+{
+	return EncoderInstance!(E).canEncode(c);
+}
+
+unittest
+{
+	assert(!canEncode!(Ascii)('\u00A0'));
+	assert(canEncode!(Latin1)('\u00A0'));
+	assert(canEncode!(Windows1252)('\u20AC'));
+	assert(!canEncode!(Windows1252)('\u20AD'));
+	assert(!canEncode!(Windows1252)('\uFFFD'));
+	assert(!canEncode!(Utf8)(cast(dchar)0x110000));
+}
+
+/**
  * Returns true if the code unit is legal. For example, the byte 0x80 would
  * not be legal in ASCII, because ASCII code units must always be in the range
  * 0x00 to 0x7F.
@@ -1395,9 +1318,20 @@ bool isValidCodePoint(dchar c)
  * Params:
  *    c = the code unit to be tested
  */
-bool isValidCodeUnit(T)(T c)
+bool isValidCodeUnit(E)(E c)
 {
-	return Encoding!(T).isValidCodeUnit(c);
+	return EncoderInstance!(E).isValidCodeUnit(c);
+}
+
+unittest
+{
+	assert(!isValidCodeUnit(cast(Ascii)0xA0));
+	assert( isValidCodeUnit(cast(Windows1252)0x80));
+	assert(!isValidCodeUnit(cast(Windows1252)0x81));
+	assert(!isValidCodeUnit(cast(Utf8)0xC0));
+	assert(!isValidCodeUnit(cast(Utf8)0xFF));
+	assert( isValidCodeUnit(cast(Utf16)0xD800));
+	assert(!isValidCodeUnit(cast(Utf32)0xD800));
 }
 
 /**
@@ -1413,9 +1347,42 @@ bool isValidCodeUnit(T)(T c)
  * Params:
  *    s = the string to be tested
  */
-bool isValid(T)(const(T)[] s)
+bool isValid(E)(invariant(E)[] s)
 {
-	return Encoding!(T).isValid(s);
+	while (s.length != 0)
+	{
+		dchar d = EncoderInstance!(E).safeDecode(s);
+		if (d == INVALID_SEQUENCE)
+			return false;
+	}
+	return true;
+}
+
+unittest
+{
+	assert(isValid("\u20AC100"));
+}
+
+/**
+ * Returns the length of the longest possible substring, starting from
+ * the first code unit, which is validly encoded.
+ *
+ * Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
+ *
+ * Params:
+ *    s = the string to be tested
+ */
+uint validLength(E)(invariant(E)[] s)
+{
+	invariant(E)[] r = s;
+	invariant(E)[] t = s;
+	while (s.length != 0)
+	{
+		if (!EncoderInstance!(E).safeDecode(s) != INVALID_SEQUENCE)
+			break;
+		t = s;
+	}
+	return r.length - t.length;
 }
 
 /**
@@ -1434,9 +1401,31 @@ bool isValid(T)(const(T)[] s)
  * Params:
  *    s = the string to be sanitized
  */
-invariant(T)[] sanitize(T)(invariant(T)[] s)
+invariant(E)[] sanitize(E)(invariant(E)[] s)
 {
-	return Encoding!(T).sanitize(s);
+	uint n = validLength(s);
+	if (n == s.length) return s;
+
+	Buffer!(E) r;
+	r ~= s[0..n];
+	s = s[n..$];
+	while (s.length != 0)
+	{
+		invariant(E)[] t = s;
+		dchar c = EncoderInstance!(E).safeDecode(s);
+		if (c == INVALID_SEQUENCE)
+		{
+			r ~= EncoderInstance!(E).replacementSequence;
+		}
+		else
+		{
+			r ~= t[0..$-s.length];
+		}
+		n = validLength(s);
+		r ~= s[0..n];
+		s = s[n..$];
+	}
+	return r.toIArray;
 }
 
 unittest
@@ -1458,9 +1447,23 @@ unittest
  * Params:
  *    s = the string to be sliced
  */
-invariant(T)[] firstSequence(T)(invariant(T)[] s)
+invariant(E)[] firstSequence(E)(invariant(E)[] s)
+in
 {
-	return Encoding!(T).firstSequence(s);
+	assert(s.length != 0);
+	invariant(E)[] u = s;
+	assert(safeDecode(u) != INVALID_SEQUENCE);
+}
+body
+{
+	invariant(E)[] t = s;
+	EncoderInstance!(E).skip(s);
+	return t[0..$-s.length];
+}
+
+unittest
+{
+	assert(firstSequence("\u20AC100") == "\u20AC");
 }
 
 /**
@@ -1477,9 +1480,22 @@ invariant(T)[] firstSequence(T)(invariant(T)[] s)
  * Params:
  *    s = the string to be sliced
  */
-invariant(T)[] lastSequence(T)(invariant(T)[] s)
+invariant(E)[] lastSequence(E)(invariant(E)[] s)
+in
 {
-	return Encoding!(T).lastSequence(s);
+	assert(s.length != 0);
+	assert(isValid(s));
+}
+body
+{
+	invariant(E)[] t = s;
+	EncoderInstance!(E).decodeReverse(s);
+	return t[$-s.length..$];
+}
+
+unittest
+{
+	assert(lastSequence("100\u20AC") == "\u20AC");
 }
 
 /**
@@ -1496,9 +1512,25 @@ invariant(T)[] lastSequence(T)(invariant(T)[] s)
  * Params:
  *    s = the string to be counted
  */
-uint count(T)(invariant(T)[] s)
+uint count(E)(invariant(E)[] s)
+in
 {
-	return Encoding!(T).count(s);
+	assert(isValid(s));
+}
+body
+{
+	uint n = 0;
+	while (s.length != 0)
+	{
+		EncoderInstance!(E).skip(s);
+		++n;
+	}
+	return n;
+}
+
+unittest
+{
+	assert(count("\u20AC100") == 4);
 }
 
 /**
@@ -1515,9 +1547,22 @@ uint count(T)(invariant(T)[] s)
  * Params:
  *    s = the string to be counted
  */
-int index(T)(invariant(T)[] s,int n)
+int index(E)(invariant(E)[] s,int n)
+in
 {
-	return Encoding!(T).index(s,n);
+	assert(isValid(s));
+	assert(n >= 0);
+}
+body
+{
+	invariant(E)[] t = s;
+	for (uint i=0; i<n; ++i) EncoderInstance!(E).skip(s);
+	return t.length - s.length;
+}
+
+unittest
+{
+	assert(index("\u20AC100",1) == 3);
 }
 
 /**
@@ -1538,9 +1583,61 @@ int index(T)(invariant(T)[] s,int n)
  * Params:
  *    s = the string whose first code point is to be decoded
  */
-dchar decode(T)(ref invariant(T)[] s)
+dchar decode(E)(ref invariant(E)[] s)
+in
 {
-	return Encoding!(T).decode(s);
+	assert(s.length != 0);
+	invariant(E)[] u = s;
+	assert(safeDecode(u) != INVALID_SEQUENCE);
+}
+body
+{
+	return EncoderInstance!(E).decode(s);
+}
+
+/**
+ * Decodes a single code point from the end of a string.
+ *
+ * This function removes one or more code units from the end of a string,
+ * and returns the decoded code point which those code units represent.
+ *
+ * The input to this function MUST be validly encoded.
+ * This is enforced by the function's in-contract.
+ *
+ * Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
+ *
+ * Params:
+ *    s = the string whose first code point is to be decoded
+ */
+dchar decodeReverse(E)(ref invariant(E)[] s)
+in
+{
+	assert(s.length != 0);
+	assert(isValid(s));
+}
+body
+{
+	return EncoderInstance!(E).decodeReverse(s);
+}
+
+/**
+ * Decodes a single code point. The input does not have to be valid.
+ *
+ * This function removes one or more code units from the start of a string,
+ * and returns the decoded code point which those code units represent.
+ *
+ * This function will accept an invalidly encoded string as input.
+ * If an invalid sequence is found at the start of the string, this
+ * function will remove it, and return the value INVALID_SEQUENCE.
+ *
+ * Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
+ *
+ * Params:
+ *    s = the string whose first code point is to be decoded
+ */
+dchar safeDecode(E)(ref invariant(E)[] s)
+{
+	return EncoderInstance!(E).safeDecode(s);
 }
 
 /**
@@ -1550,6 +1647,7 @@ dchar decode(T)(ref invariant(T)[] s)
  * It returns a string containing those code units.
  *
  * The input to this function MUST be a valid code point.
+ * This is enforced by the function's in-contract.
  *
  * The type of the output cannot be deduced. Therefore, it is necessary to
  * explicitly specify the encoding as a template parameter.
@@ -1563,22 +1661,27 @@ dchar decode(T)(ref invariant(T)[] s)
  * Params:
  *    c = the code point to be encoded
  */
-invariant(T)[] encode(T)(dchar c)
+invariant(E)[] encode(E)(dchar c)
+in
 {
-	T[] buffer = new T[4];
-	uint len = encode(c,buffer);
-	return cast(invariant(T)[])(buffer[0..len]);
+	assert(isValidCodePoint(c));
+}
+body
+{
+	return EncoderInstance!(E).encode(c);
 }
 
 /**
- * Encodes a single code point into a user-supplied buffer.
+ * Encodes a single code point into a Buffer.
+ *
+ * This function encodes a single code point into one or more code units
+ * The code units are stored in a growable buffer.
  *
  * The input to this function MUST be a valid code point.
+ * This is enforced by the function's in-contract.
  *
- * The user-supplied buffer needs to be of type T[], where T is the encoding
- * type (currently one of Utf8, Utf16, Utf32, Ascii, Latin1 or Windows1252).
- * Note that Utf8, Utf16 and Utf32 are aliases for char, wchar and dchar
- * respectively.
+ * The type of the output cannot be deduced. Therefore, it is necessary to
+ * explicitly specify the encoding as a template parameter.
  *
  * Supercedes:
  * This function supercedes std.utf.encode(), however, note that the
@@ -1588,26 +1691,46 @@ invariant(T)[] encode(T)(dchar c)
  *
  * Params:
  *    c = the code point to be encoded
- *    buffer = where to store the output
  */
-uint encode(T)(dchar c,T[] buffer)
+void encode(E)(dchar c, ref Buffer!(E) buffer)
 in
 {
-	assert(buffer.length >= 4);
+	assert(isValidCodePoint(c));
 }
 body
 {
-	return Encoding!(T).encode(cast(uint)c,buffer);
+	EncoderInstance!(E).encode(c,buffer);
 }
 
-template CodePoints(T)
+/**
+ * Encodes a single code point to a delegate.
+ *
+ * This function encodes a single code point into one or more code units.
+ * The code units are passed one at a time to the supplied delegate.
+ *
+ * The input to this function MUST be a valid code point.
+ * This is enforced by the function's in-contract.
+ *
+ * The type of the output cannot be deduced. Therefore, it is necessary to
+ * explicitly specify the encoding as a template parameter.
+ *
+ * Supercedes:
+ * This function supercedes std.utf.encode(), however, note that the
+ * function codeUnits() supercedes it more conveniently.
+ *
+ * Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
+ *
+ * Params:
+ *    c = the code point to be encoded
+ */
+void encode(E)(dchar c, void delegate(E) dg)
+in
 {
-	alias Encoding!(T).CodePoints CodePoints;
+	assert(isValidCodePoint(c));
 }
-
-template CodeUnits(T)
+body
 {
-	alias Encoding!(T).CodeUnits CodeUnits;
+	EncoderInstance!(E).encode(c,dg);
 }
 
 /**
@@ -1642,9 +1765,25 @@ template CodeUnits(T)
  * Note that, currently, foreach(c:codePoints(s)) is superior to foreach(c;s)
  * in that the latter will fall over on encountering U+FFFF.
  */
-CodePoints!(T) codePoints(T)(invariant(T)[] s)
+CodePoints!(E) codePoints(E)(invariant(E)[] s)
+in
 {
-	return Encoding!(T).codePoints(s);
+	assert(isValid(s));
+}
+body
+{
+	return CodePoints!(E)(s);
+}
+
+unittest
+{
+	string s = "hello";
+	string t;
+	foreach(c;codePoints(s))
+	{
+		t ~= cast(char)c;
+	}
+	assert(s == t);
 }
 
 /**
@@ -1652,6 +1791,7 @@ CodePoints!(T) codePoints(T)(invariant(T)[] s)
  * code units in a code point.
  *
  * The input to this function MUST be a valid code point.
+ * This is enforced by the function's in-contract.
  *
  * The type of the output cannot be deduced. Therefore, it is necessary to
  * explicitly specify the encoding type in the template parameter.
@@ -1677,9 +1817,27 @@ CodePoints!(T) codePoints(T)(invariant(T)[] s)
  * // AC
  * --------------------------------------------------------
  */
-CodeUnits!(T) codeUnits(T)(dchar d)
+CodeUnits!(E) codeUnits(E)(dchar c)
+in
 {
-	return Encoding!(T).codeUnits(d);
+	assert(isValidCodePoint(c));
+}
+body
+{
+	return CodeUnits!(E)(c);
+}
+
+unittest
+{
+	Utf8[] a;
+	foreach(c;codeUnits!(Utf8)(cast(dchar)'\u20AC'))
+	{
+		a ~= c;
+	}
+	assert(a.length == 3);
+	assert(a[0] == 0xE2);
+	assert(a[1] == 0x82);
+	assert(a[2] == 0xAC);
 }
 
 /**
@@ -1710,24 +1868,26 @@ CodeUnits!(T) codeUnits(T)(dchar d)
  *     // transcode from UTF-16 to ISO-8859-1
  * --------------------------------------------------------
  */
-void transcode(T,U)(invariant(T)[] s,out invariant(U)[] r)
+void transcode(Src,Dst)(invariant(Src)[] s,out invariant(Dst)[] r)
+in
 {
-	static if(is(T==U))
+	assert(isValid(s));
+}
+body
+{
+	static if(is(Src==Dst))
 	{
 		r = s;
 	}
-	else static if(is(T==Ascii))
+	else static if(is(Src==Ascii))
 	{
-		transcode!(char,U)(cast(string)s,r);
+		transcode!(char,Dst)(cast(string)s,r);
 	}
 	else
 	{
-		foreach(d;codePoints(s))
+		while (s.length != 0)
 		{
-			foreach(c;codeUnits!(U)(d))
-			{
-				r ~= c;
-			}
+			r ~= encode!(Dst)(decode(s));
 		}
 	}
 }
@@ -1745,7 +1905,7 @@ void transcode(T,U)(invariant(T)[] s,out invariant(U)[] r)
  * Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
  *
  * Params:
- *    U = the destination encoding type
+ *    Dst = the destination encoding type
  *    s = the source string
  *
  * Examples:
@@ -1754,9 +1914,14 @@ void transcode(T,U)(invariant(T)[] s,out invariant(U)[] r)
  * auto ls = to!(Latin1)(ws);            // transcode from UTF-16 to ISO-8859-1
  * -----------------------------------------------------------------------------
  */
-invariant(U)[] to(U,T)(invariant(T)[] s)
+invariant(Dst)[] to(Dst,Src)(invariant(Src)[] s)
+in
 {
-	invariant(U)[] r;
+	assert(isValid(s));
+}
+body
+{
+	invariant(Dst)[] r;
 	transcode(s,r);
 	return r;
 }
@@ -1764,21 +1929,21 @@ invariant(U)[] to(U,T)(invariant(T)[] s)
 // Helper functions
 debug
 {
-	void transcodeReverse(T,U)(invariant(T)[] s, out invariant(U)[] r)
+	void transcodeReverse(Src,Dst)(invariant(Src)[] s, out invariant(Dst)[] r)
 	{
-		static if(is(T==U))
+		static if(is(Src==Dst))
 		{
 			return s;
 		}
-		else static if(is(T==Ascii))
+		else static if(is(Src==Ascii))
 		{
-			transcodeReverse!(char,U)(cast(string)s,r);
+			transcodeReverse!(char,Dst)(cast(string)s,r);
 		}
 		else
 		{
 			foreach_reverse(d;codePoints(s))
 			{
-				foreach_reverse(c;codeUnits!(U)(d))
+				foreach_reverse(c;codeUnits!(Dst)(d))
 				{
 					r = c ~ r;
 				}
@@ -1865,3 +2030,4 @@ debug
 		return "0123456789ABCDEF"[n & 0xF];
 	}
 }
+
