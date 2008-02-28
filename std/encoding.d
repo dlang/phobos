@@ -1,15 +1,3 @@
-/*
-
-TO DO
-
-All the in contracts
-the Encoder class
-	(could mean more putting things in templates and reorganising)
-toDName()
-The six built-in subclasses of Encoder
-
-*/
-
 // Written in the D programming language.
 
 /**
@@ -750,7 +738,6 @@ template EncoderInstance(E:Ascii)
 
 	dchar safeDecodeViaRead()()
 	{
-		if (!canRead) return INVALID_SEQUENCE;
 		dchar c = read;
 		return canEncode(c) ? c : INVALID_SEQUENCE;
 	}
@@ -812,7 +799,6 @@ template EncoderInstance(E:Latin1)
 
 	dchar safeDecodeViaRead()()
 	{
-		if (!canRead) return INVALID_SEQUENCE;
 		return read;
 	}
 
@@ -899,7 +885,6 @@ template EncoderInstance(E:Windows1252)
 
 	dchar safeDecodeViaRead()()
 	{
-		if (!canRead) return INVALID_SEQUENCE;
 		Windows1252 c = read;
 		dchar d = (c >= 0x80 && c < 0xA0) ? charMap[c-0x80] : c;
 		return d == 0xFFFD ? INVALID_SEQUENCE : d;
@@ -1019,7 +1004,6 @@ template EncoderInstance(E:Utf8)
 
 	dchar safeDecodeViaRead()()
 	{
-		if (!canRead) return INVALID_SEQUENCE;
 		dchar c = read;
 		if (c < 0x80) return c;
 		int n = tails(c);
@@ -1134,7 +1118,6 @@ template EncoderInstance(E:Utf16)
 
 	dchar safeDecodeViaRead()()
 	{
-		if (!canRead) return INVALID_SEQUENCE;
 		Utf16 c = read;
 		if (c < 0xD800 || c >= 0xE000) return cast(dchar)c;
 		if (c >= 0xDC00) return INVALID_SEQUENCE;
@@ -1208,7 +1191,6 @@ template EncoderInstance(E:Utf32)
 
 	dchar safeDecodeViaRead()()
 	{
-		if (!canRead) return INVALID_SEQUENCE;
 		dchar c = read;
 		return isValidCodePoint(c) ? c : INVALID_SEQUENCE;
 	}
@@ -1636,6 +1618,11 @@ body
  *    s = the string whose first code point is to be decoded
  */
 dchar safeDecode(E)(ref invariant(E)[] s)
+in
+{
+	assert(s.length != 0);
+}
+body
 {
 	return EncoderInstance!(E).safeDecode(s);
 }
