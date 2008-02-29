@@ -26,8 +26,8 @@
  */
 
 /*
- * Author:
- *	Walter Bright
+ * Authors:
+ *	Walter Bright, Don Clugston
  * Copyright:
  *	Copyright (c) 2001-2005 by Digital Mars,
  *	All Rights Reserved,
@@ -67,22 +67,104 @@ private import std.string;
 private import std.c.math;
 private import std.traits;
 
-/* Most of the functions depend on the format of the largest IEEE floating-point type.
- * These code will differ depending on whether 'real' is 64, 80, or 128 bits,
- * and whether it is a big-endian or little-endian architecture.
- * Only three 'real' ABIs are currently supported:
- * 64 bit Big-endian    (eg PowerPC)
- * 64 bit Little-endian
- * 80 bit Little-endian, with implied bit (eg x87, Itanium).
+
+private:
+/*
+ * The following IEEE 'real' formats are currently supported:
+ * 64 bit Big-endian  'double' (eg PowerPC)
+ * 128 bit Big-endian 'quadruple' (eg SPARC)
+ * 64 bit Little-endian 'double' (eg x86-SSE2)
+ * 80 bit Little-endian, with implied bit 'real80' (eg x87, Itanium).
+ * 128 bit Little-endian 'quadruple' (not implemented on any known processor!)
+ *
+ * Non-IEEE 128 bit Big-endian 'doubledouble' (eg PowerPC) has partial support
  */
 version(LittleEndian) {
-    static assert(real.mant_dig == 53 || real.mant_dig==64,
-        "Only 64-bit and 80-bit reals are supported for LittleEndian CPUs");
+    static assert(real.mant_dig == 53 || real.mant_dig==64 
+               || real.mant_dig == 113,
+    "Only 64-bit, 80-bit, and 128-bit reals are supported for LittleEndian CPUs");
 } else {
-    static assert(real.mant_dig == 53,
-     "Only 64-bit reals are supported for BigEndian CPUs.");
+    static assert(real.mant_dig == 53 || real.mant_dig==106
+               || real.mant_dig == 113,
+    "Only 64-bit and 128-bit reals are supported for BigEndian CPUs. double-double reals have partial support");
 }
 
+// Constants used for extracting the components of the representation.
+// They supplement the built-in floating point properties.
+template floatTraits(T) {
+ // EXPMASK is a ushort mask to select the exponent portion (without sign)
+ // POW2MANTDIG = pow(2, real.mant_dig) is the value such that
+ //  (smallest_denormal)*POW2MANTDIG == real.min
+ // EXPPOS_SHORT is the index of the exponent when represented as a ushort array.
+ // SIGNPOS_BYTE is the index of the sign when represented as a ubyte array.
+ static if (T.mant_dig == 24) { // float
+    const ushort EXPMASK = 0x7F80;
+    const ushort EXPBIAS = 0x3F00;
+    const uint EXPMASK_INT = 0x7F80_0000;
+    const uint MANTISSAMASK_INT = 0x007F_FFFF;
+    const real POW2MANTDIG = 0x1p+24;
+    version(LittleEndian) {        
+      const EXPPOS_SHORT = 1;
+    } else {
+      const EXPPOS_SHORT = 0;
+    }
+ } else static if (T.mant_dig==53) { // double, or real==double
+    const ushort EXPMASK = 0x7FF0;
+    const ushort EXPBIAS = 0x3FE0;
+    const uint EXPMASK_INT = 0x7FF0_0000;
+    const uint MANTISSAMASK_INT = 0x000F_FFFF; // for the MSB only
+    const real POW2MANTDIG = 0x1p+53;
+    version(LittleEndian) {
+      const EXPPOS_SHORT = 3;
+      const SIGNPOS_BYTE = 7;
+    } else {
+      const EXPPOS_SHORT = 0;
+      const SIGNPOS_BYTE = 0;
+    }
+ } else static if (T.mant_dig==64) { // real80
+    const ushort EXPMASK = 0x7FFF;
+    const ushort EXPBIAS = 0x3FFE;
+    const real POW2MANTDIG = 0x1p+63;    
+    version(LittleEndian) {
+      const EXPPOS_SHORT = 4;
+      const SIGNPOS_BYTE = 9;
+    } else {
+      const EXPPOS_SHORT = 0;
+      const SIGNPOS_BYTE = 0;
+    }
+ } else static if (real.mant_dig==113){ // quadruple
+    const ushort EXPMASK = 0x7FFF;
+    const real POW2MANTDIG = 0x1p+113;
+    version(LittleEndian) {
+      const EXPPOS_SHORT = 7;
+      const SIGNPOS_BYTE = 15;
+    } else {
+      const EXPPOS_SHORT = 0;
+      const SIGNPOS_BYTE = 0;
+    }
+ } else static if (real.mant_dig==106) { // doubledouble
+    const ushort EXPMASK = 0x7FF0;
+    const real POW2MANTDIG = 0x1p+53;  // doubledouble denormals are strange
+    // and the exponent byte is not unique
+    version(LittleEndian) {
+      const EXPPOS_SHORT = 7; // [3] is also an exp short
+      const SIGNPOS_BYTE = 15;
+    } else {
+      const EXPPOS_SHORT = 0; // [4] is also an exp short
+      const SIGNPOS_BYTE = 0;
+    }
+ }
+}
+
+// These apply to all floating-point types
+version(LittleEndian) {
+    const MANTISSA_LSB = 0;
+    const MANTISSA_MSB = 1;    
+} else {
+    const MANTISSA_LSB = 1;
+    const MANTISSA_MSB = 0;
+}
+public:
 
 class NotImplemented : Error
 {
@@ -337,7 +419,7 @@ unittest
  *      $(TR $(TD $(GT)1.0)  $(TD $(NAN))  $(TD yes))
  *      $(TR $(TD $(LT)-1.0) $(TD $(NAN))  $(TD yes))
  *      $(TR $(TD $(NAN))    $(TD $(NAN))  $(TD yes))
- *      )
+ *  )
  */
 real acos(real x)		{ return std.c.math.acosl(x); }
 
@@ -350,7 +432,7 @@ real acos(real x)		{ return std.c.math.acosl(x); }
  *	$(TR $(TD $(PLUSMN)0.0) $(TD $(PLUSMN)0.0) $(TD no))
  *	$(TR $(TD $(GT)1.0)     $(TD $(NAN))       $(TD yes))
  *	$(TR $(TD $(LT)-1.0)    $(TD $(NAN))       $(TD yes))
- *       )
+ *  )
  */
 real asin(real x)		{ return std.c.math.asinl(x); }
 
@@ -360,26 +442,26 @@ real asin(real x)		{ return std.c.math.asinl(x); }
  *
  *	$(TABLE_SV
  *	$(TR $(TH x)                 $(TH atan(x))      $(TH invalid?))
- *	$(TR $(TD $(PLUSMN)0.0)      $(TD $(PLUSMN)0.0) $(TD no))
+ *  $(TR $(TD $(PLUSMN)0.0)      $(TD $(PLUSMN)0.0) $(TD no))
  *	$(TR $(TD $(PLUSMN)$(INFIN)) $(TD $(NAN))       $(TD yes))
- *       )
+ *  )
  */
 real atan(real x)		{ return std.c.math.atanl(x); }
 
 /***************
  * Calculates the arc tangent of y / x,
- * returning a value ranging from -$(PI)/2 to $(PI)/2.
+ * returning a value ranging from -$(PI) to $(PI).
  *
  *      $(TABLE_SV
  *      $(TR $(TH y)                 $(TH x)            $(TH atan(y, x)))
  *      $(TR $(TD $(NAN))            $(TD anything)     $(TD $(NAN)) )
  *      $(TR $(TD anything)          $(TD $(NAN))       $(TD $(NAN)) )
  *      $(TR $(TD $(PLUSMN)0.0)      $(TD $(GT)0.0)     $(TD $(PLUSMN)0.0) )
- *      $(TR $(TD $(PLUSMN)0.0)      $(TD $(PLUSMN)0.0) $(TD $(PLUSMN)0.0) )
+ *      $(TR $(TD $(PLUSMN)0.0)      $(TD +0.0)         $(TD $(PLUSMN)0.0) )
  *      $(TR $(TD $(PLUSMN)0.0)      $(TD $(LT)0.0)     $(TD $(PLUSMN)$(PI)))
  *      $(TR $(TD $(PLUSMN)0.0)      $(TD -0.0)         $(TD $(PLUSMN)$(PI)))
  *      $(TR $(TD $(GT)0.0)          $(TD $(PLUSMN)0.0) $(TD $(PI)/2) )
- *      $(TR $(TD $(LT)0.0)          $(TD $(PLUSMN)0.0) $(TD $(PI)/2))
+ *      $(TR $(TD $(LT)0.0)          $(TD $(PLUSMN)0.0) $(TD -$(PI)/2) )
  *      $(TR $(TD $(GT)0.0)          $(TD $(INFIN))     $(TD $(PLUSMN)0.0) )
  *      $(TR $(TD $(PLUSMN)$(INFIN)) $(TD anything)     $(TD $(PLUSMN)$(PI)/2))
  *      $(TR $(TD $(GT)0.0)          $(TD -$(INFIN))    $(TD $(PLUSMN)$(PI)) )
@@ -475,12 +557,11 @@ unittest
  */
 real asinh(real x)
 {   
-    if (fabs(x) > 1 / real.epsilon)   // beyond this point, x*x + 1 == x*x
-	return copysign(LN2 + log(fabs(x)), x);
-    else
-    {
-	// sqrt(x*x + 1) ==  1 + x * x / ( 1 + sqrt(x*x + 1) )
-	return copysign(log1p(fabs(x) + x*x / (1 + sqrt(x*x + 1)) ), x);
+    if (fabs(x) > 1 / real.epsilon) {   // beyond this point, x*x + 1 == x*x
+	    return copysign(LN2 + log(fabs(x)), x);
+    } else {
+	    // sqrt(x*x + 1) ==  1 + x * x / ( 1 + sqrt(x*x + 1) )
+	    return copysign(log1p(fabs(x) + x*x / (1 + sqrt(x*x + 1)) ), x);
     }
 }
 
@@ -688,66 +769,77 @@ real frexp(real value, out int exp)
     ushort* vu = cast(ushort*)&value;
     long* vl = cast(long*)&value;
     uint ex;
+    alias floatTraits!(real) F;
 
-    static if (real.mant_dig==64) const ushort EXPMASK = 0x7FFF;
-                             else const ushort EXPMASK = 0x7FF0;
-
-    version(LittleEndian) {
-    static if (real.mant_dig==64) const int EXPONENTPOS = 4;
-                             else const int EXPONENTPOS = 3;
-    } else { // BigEndian
-        const int EXPONENTPOS = 0;
-    }
-
-    ex = vu[EXPONENTPOS] & EXPMASK;
-  static if (real.mant_dig == 64) {
-    // 80-bit reals
+    ex = vu[F.EXPPOS_SHORT] & F.EXPMASK;
+  static if (real.mant_dig == 64) { // real80
     if (ex) { // If exponent is non-zero
-        if (ex == EXPMASK) {   // infinity or NaN
-            // 80-bit reals
-            if (*vl &  0x7FFFFFFFFFFFFFFF) {  // NaN
-                *vl |= 0xC000000000000000;  // convert $(NAN)S to $(NAN)Q
-		exp = int.min;
-            } else if (vu[EXPONENTPOS] & 0x8000) {   // negative infinity
-		exp = int.min;
+        if (ex == F.EXPMASK) {   // infinity or NaN
+            if (*vl &  0x7FFF_FFFF_FFFF_FFFF) {  // NaN
+                *vl |= 0xC000_0000_0000_0000;  // convert NaNS to NaNQ
+                exp = int.min;
+            } else if (vu[F.EXPPOS_SHORT] & 0x8000) {   // negative infinity
+                exp = int.min;
             } else {   // positive infinity
-		exp = int.max;
-	    }
+                exp = int.max;
+            }
         } else {
-	    exp = ex - 0x3FFE;
-            vu[EXPONENTPOS] = cast(ushort)((0x8000 & vu[EXPONENTPOS]) | 0x3FFE);
-    }
+            exp = ex - F.EXPBIAS;
+            vu[F.EXPPOS_SHORT] = cast(ushort)((0x8000 & vu[F.EXPPOS_SHORT]) | 0x3FFE);
+        }
     } else if (!*vl) {
-	// value is +-0.0
-	exp = 0;
+        // value is +-0.0
+        exp = 0;
     } else {
         // denormal
-	int i = -0x3FFD;
+    	int i = -0x3FFD;
         do {
             i--;
             *vl <<= 1;
         } while (*vl > 0);
         exp = i;
-        vu[EXPONENTPOS] = cast(ushort)((0x8000 & vu[EXPONENTPOS]) | 0x3FFE);
+        vu[F.EXPPOS_SHORT] = cast(ushort)((0x8000 & vu[F.EXPPOS_SHORT]) | 0x3FFE);
     }
-  } else static if(real.mant_dig==106) {
-    // 128-bit reals
-    throw new NotImplemented("frexp");
-  } else {
-    // 64-bit reals
+  } else static if (real.mant_dig == 113) { // quadruple      
+        if (ex) { // If exponent is non-zero
+            if (ex == F.EXPMASK) {   // infinity or NaN
+                if (vl[MANTISSA_LSB] |( vl[MANTISSA_MSB]&0x0000_FFFF_FFFF_FFFF)) {  // NaN
+                    // convert NaNS to NaNQ
+                    vl[MANTISSA_MSB] |= 0x0000_8000_0000_0000;
+                    exp = int.min;
+                } else if (vu[F.EXPPOS_SHORT] & 0x8000) {   // negative infinity
+                    exp = int.min;
+                } else {   // positive infinity
+                    exp = int.max;
+                }
+            } else {
+                exp = ex - F.EXPBIAS;
+                vu[F.EXPPOS_SHORT] = cast(ushort)((0x8000 & vu[F.EXPPOS_SHORT]) | 0x3FFE);
+            }
+        } else if ((vl[MANTISSA_LSB] |(vl[MANTISSA_MSB]&0x0000_FFFF_FFFF_FFFF))==0) {
+            // value is +-0.0
+            exp = 0;
+    } else {
+        // denormal
+        value *= F.POW2MANTDIG;
+        ex = vu[F.EXPPOS_SHORT] & F.EXPMASK;
+        exp = ex - F.EXPBIAS - 113;
+        vu[F.EXPPOS_SHORT] = cast(ushort)((0x8000 & vu[F.EXPPOS_SHORT]) | 0x3FFE);
+    }
+  } else static if (real.mant_dig==53) { // real is double
     if (ex) { // If exponent is non-zero
-        if (ex == EXPMASK) {   // infinity or NaN
+        if (ex == F.EXPMASK) {   // infinity or NaN
             if (*vl==0x7FF0_0000_0000_0000) {  // positive infinity
                 exp = int.max;
             } else if (*vl==0xFFF0_0000_0000_0000) { // negative infinity
                 exp = int.min;
             } else { // NaN
-                *vl |= 0x0008_0000_0000_0000;  // convert $(NAN)S to $(NAN)Q
+                *vl |= 0x0008_0000_0000_0000;  // convert NaNS to NaNQ
                 exp = int.min;
             }
         } else {
-            exp = (ex - 0x3FE0) >>> 4;
-            ve[EXPONENTPOS] = (0x8000 & ve[EXPONENTPOS]) | 0x3FE0;
+            exp = (ex - F.EXPBIAS) >>> 4;
+            ve[F.EXPPOS_SHORT] = (0x8000 & ve[F.EXPPOS_SHORT]) | 0x3FE0;
         }
     } else if (!(*vl & 0x7FFF_FFFF_FFFF_FFFF)) {
         // value is +-0.0
@@ -755,19 +847,21 @@ real frexp(real value, out int exp)
     } else {
         // denormal
         ushort sgn;
-        sgn = (0x8000 & ve[EXPONENTPOS])| 0x3FE0;
+        sgn = (0x8000 & ve[F.EXPPOS_SHORT])| 0x3FE0;
         *vl &= 0x7FFF_FFFF_FFFF_FFFF;
 
         int i = -0x3FD+11;
         do {
-	    i--;
-	    *vl <<= 1;
-	} while (*vl > 0);
-	exp = i;
-        ve[EXPONENTPOS] = sgn;
+            i--;
+            *vl <<= 1;
+        } while (*vl > 0);
+        exp = i;
+        ve[F.EXPPOS_SHORT] = sgn;
     }
-    }
-    return value;
+  } else { //static if(real.mant_dig==106) // doubledouble
+    throw new NotImplemented("frexp");
+  }
+  return value;
 }
 
 
@@ -780,7 +874,7 @@ unittest
 	[1.0,	.5,	1],
 	[-1.0,	-.5,	1],
 	[2.0,	.5,	2],
-        [double.min/2.0, .5, -1022],
+    [double.min/2.0, .5, -1022],
 	[real.infinity,real.infinity,int.max],
 	[-real.infinity,-real.infinity,int.min],
 	[real.nan,real.nan,int.min],
@@ -946,22 +1040,20 @@ real modf(real x, inout real y)	{ return std.c.math.modfl(x,&y); }
  *	$(TR $(TD $(PLUSMN)$(INFIN)) $(TD $(PLUSMN)$(INFIN)) )
  *	$(TR $(TD $(PLUSMN)0.0)      $(TD $(PLUSMN)0.0) )
  *	)
- *
- * Note: Not supported on windows
  */
 real scalbn(real x, int n)
 {
-    version (linux)
-	return std.c.math.scalbnl(x, n);
-    else version(D_InlineAsm_X86) {
+    version(D_InlineAsm_X86) {
+        // scalbnl is not supported on DMD-Windows, so use asm.
         asm {
             fild n;
             fld x;
             fscale;
             fstp ST(1), ST;
         }
-    } else
-	throw new NotImplemented("scalbn");
+    } else {
+        return std.c.math.scalbnl(x, n);
+    }
 }
 
 unittest {
@@ -999,7 +1091,7 @@ real fabs(real x);	/* intrinsic */
  * The hypotenuse is the value of the square root of 
  * the sums of the squares of x and y:
  *
- *	sqrt(x&sup2; + y&sup2;)
+ *	sqrt($(POW x, 2) + $(POW y, 2))
  *
  * Note that hypot(x, y), hypot(y, x) and
  * hypot(x, -y) are equivalent.
@@ -1097,19 +1189,15 @@ unittest
 	[	real.infinity, real.nan, real.infinity],
 	[	real.nan, real.nan, real.nan],
     ];
-    int i;
 
-    for (i = 0; i < vals.length; i++)
+    for (int i = 0; i < vals.length; i++)
     {
-	real x = vals[i][0];
-	real y = vals[i][1];
-	real z = vals[i][2];
-	real h = hypot(x, y);
-
-	//printf("hypot(%Lg, %Lg) = %Lg, should be %Lg\n", x, y, h, z);
-	//if (!mfeq(z, h, .0000001))
-	    //printf("%La\n", h);
-	assert(mfeq(z, h, .0000001));
+    	real x = vals[i][0];
+    	real y = vals[i][1];
+    	real z = vals[i][2];
+    	real h = hypot(x, y);
+    
+    	assert(mfeq(z, h, .0000001));
     }
 }
 
@@ -1174,7 +1262,6 @@ real lgamma(real x)
  *	$(LINK http://en.wikipedia.org/wiki/Gamma_function),
  *	$(LINK http://www.netlib.org/cephes/ldoubdoc.html#gamma)
  */
-/* Documentation prepared by Don Clugston */
 real tgamma(real x)
 {
     return std.c.math.tgammal(x);
@@ -1309,18 +1396,25 @@ real remquo(real x, real y, out int n)	/// ditto
 
 int isnan(real x)
 {
-  static if (real.mant_dig==double.mant_dig) {
-        // 64-bit real
+  alias floatTraits!(real) F;
+  static if (real.mant_dig==53) { // double
         ulong*  p = cast(ulong *)&x;
-        return (*p & 0x7FF0_0000 == 0x7FF0_0000) && *p & 0x000F_FFFF;
-  } else {
-        // 80-bit real
-        ushort* pe = cast(ushort *)&x;
+        return (*p & 0x7FF0_0000_0000_0000 == 0x7FF0_0000_0000_0000) 
+             && *p & 0x000F_FFFF_FFFF_FFFF;
+  } else static if (real.mant_dig==64) {     // real80
+        // Prevent a ridiculous warning (why does (ushort | ushort) get promoted to int???)
+        ushort e = cast(ushort)(F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT]);
         ulong*  ps = cast(ulong *)&x;
-
-    return (pe[4] & 0x7FFF) == 0x7FFF &&
-	    *ps & 0x7FFFFFFFFFFFFFFF;
-}
+        return e == F.EXPMASK &&
+            *ps & 0x7FFF_FFFF_FFFF_FFFF; // not infinity
+  } else static if (real.mant_dig==113) {  // quadruple
+        ushort e = cast(ushort)(F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT]);
+        ulong*  ps = cast(ulong *)&x;
+        return e == F.EXPMASK &&
+           (ps[MANTISSA_LSB] | (ps[MANTISSA_MSB]& 0x0000_FFFF_FFFF_FFFF))!=0;
+  } else {
+      return x!=x;
+  }
 }
 
 unittest
@@ -1334,18 +1428,14 @@ unittest
 }
 
 /*********************************
- * Returns !=0 if e is finite.
+ * Returns !=0 if e is finite (not infinite or $(NAN)).
  */
 
 int isfinite(real e)
 {
-    static if (real.mant_dig == double.mant_dig) {
-        return isfinite(cast(double)e);
-    } else {
+    alias floatTraits!(real) F;
     ushort* pe = cast(ushort *)&e;
-
-    return (pe[4] & 0x7FFF) != 0x7FFF;
-}
+    return (pe[F.EXPPOS_SHORT] & F.EXPMASK) != F.EXPMASK;
 }
 
 unittest
@@ -1357,47 +1447,27 @@ unittest
 
 
 /*********************************
- * Returns !=0 if x is normalized.
+ * Returns !=0 if x is normalized (not zero, subnormal, infinite, or $(NAN)).
  */
 
 /* Need one for each format because subnormal floats might
  * be converted to normal reals.
  */
 
-int isnormal(float x)
+int isnormal(X)(X x)
 {
-    uint *p = cast(uint *)&x;
-    uint e;
-
-    e = *p & 0x7F800000;
-    //printf("e = x%x, *p = x%x\n", e, *p);
-    return e && e != 0x7F800000;
-}
-
-/// ditto
-
-int isnormal(double d)
-{
-    uint *p = cast(uint *)&d;
-    uint e;
-
-    e = p[1] & 0x7FF00000;
-    return e && e != 0x7FF00000;
-}
-
-/// ditto
-
-int isnormal(real x)
-{
-    static if (real.mant_dig == double.mant_dig) {
-        return isNormal(cast(double)x);
+    alias floatTraits!(X) F;
+    
+    static if(real.mant_dig==106) { // doubledouble
+        // doubledouble is normal if the least significant part is normal.
+        return isnormal((cast(double*)&x)[MANTISSA_LSB]);
     } else {
-        ushort* pe = cast(ushort *)&x;
-        long*   ps = cast(long *)&x;
+        // ridiculous DMD warning
+        ushort e = cast(ushort)(F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT]);
+        return (e != F.EXPMASK && e!=0);
+    }
+}
 
-    return (pe[4] & 0x7FFF) != 0x7FFF && *ps < 0;
-}
-}
 
 unittest
 {
@@ -1408,6 +1478,14 @@ unittest
     assert(isnormal(f));
     assert(isnormal(d));
     assert(isnormal(e));
+    f = d = e = 0;
+    assert(!isnormal(f));
+    assert(!isnormal(d));
+    assert(!isnormal(e));
+    assert(!isnormal(real.infinity));
+    assert(isnormal(-real.max));
+    assert(!isnormal(real.min/4));
+
 }
 
 /*********************************
@@ -1422,9 +1500,7 @@ unittest
 int issubnormal(float f)
 {
     uint *p = cast(uint *)&f;
-
-    //printf("*p = x%x\n", *p);
-    return (*p & 0x7F800000) == 0 && *p & 0x007FFFFF;
+    return (*p & 0x7F80_0000) == 0 && *p & 0x007F_FFFF;
 }
 
 unittest
@@ -1440,8 +1516,7 @@ unittest
 int issubnormal(double d)
 {
     uint *p = cast(uint *)&d;
-
-    return (p[1] & 0x7FF00000) == 0 && (p[0] || p[1] & 0x000FFFFF);
+    return (p[MANTISSA_MSB] & 0x7FF0_0000) == 0 && (p[MANTISSA_LSB] || p[MANTISSA_MSB] & 0x000F_FFFF);
 }
 
 unittest
@@ -1454,16 +1529,23 @@ unittest
 
 /// ditto
 
-int issubnormal(real e)
+int issubnormal(real x)
 {
-    static if (real.mant_dig == double.mant_dig) {
-        return isSubnormal(cast(double)e);
-    } else {
-    ushort* pe = cast(ushort *)&e;
-    long*   ps = cast(long *)&e;
+    alias floatTraits!(real) F;
+    static if (real.mant_dig == 53) { // double
+        return isSubnormal(cast(double)x);
+    } else static if (real.mant_dig == 113) { // quadruple        
+        ushort e = F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT];
+        long*   ps = cast(long *)&x;
+        return (e == 0 && (((ps[MANTISSA_LSB]|(ps[MANTISSA_MSB]& 0x0000_FFFF_FFFF_FFFF))) !=0));
+    } else static if (real.mant_dig==64) { // real80
+        ushort* pe = cast(ushort *)&x;
+        long*   ps = cast(long *)&x;
 
-    return (pe[4] & 0x7FFF) == 0 && *ps > 0;
-}
+        return (pe[F.EXPPOS_SHORT] & F.EXPMASK) == 0 && *ps > 0;
+    } else { // double double
+        return isSubnormal(cast(double*)(&x)[MANTISSA_MSB]);
+    }
 }
 
 unittest
@@ -1478,16 +1560,23 @@ unittest
  * Return !=0 if e is $(PLUSMN)$(INFIN).
  */
 
-int isinf(real e)
+int isinf(real x)
 {
-    static if (real.mant_dig == double.mant_dig) {
-        return ((*cast(ulong *)&x)&0x7FFF_FFFF_FFFF_FFFF) == 0x7FF8_0000_0000_0000;
-    } else {
-    ushort* pe = cast(ushort *)&e;
-    ulong*  ps = cast(ulong *)&e;
+    alias floatTraits!(real) F;
+    static if (real.mant_dig == 53) { // double
+        return ((*cast(ulong *)&x) & 0x7FFF_FFFF_FFFF_FFFF) == 0x7FF8_0000_0000_0000;
+    } else static if(real.mant_dig == 106) { //doubledouble
+        return (((cast(ulong *)&x)[MANTISSA_MSB]) & 0x7FFF_FFFF_FFFF_FFFF)
+                    == 0x7FF8_0000_0000_0000;   
+    } else static if (real.mant_dig == 113) { // quadruple   
+        long*   ps = cast(long *)&x;
+        return (ps[MANTISSA_LSB] == 0) 
+         && (ps[MANTISSA_MSB] & 0x7FFF_FFFF_FFFF_FFFF) == 0x7FFF_0000_0000_0000;
+    } else { // real80
+        ushort e = cast(ushort)(F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT]);
+        ulong*  ps = cast(ulong *)&x;
 
-    return (pe[4] & 0x7FFF) == 0x7FFF &&
-            *ps == 0x8000_0000_0000_0000;
+        return e == F.EXPMASK && *ps == 0x8000_0000_0000_0000;
    }
 }
 
@@ -1510,15 +1599,19 @@ unittest
 
 bool isIdentical(real x, real y)
 {
+    // We're doing a bitwise comparison so the endianness is irrelevant.
     long*   pxs = cast(long *)&x;
     long*   pys = cast(long *)&y;
-  static if (real.mant_dig == double.mant_dig){
+ static if (real.mant_dig == 53){ //double
     return pxs[0] == pys[0];
-  } else {
+ } else static if (real.mant_dig == 113 || real.mant_dig==106) {
+      // quadruple or doubledouble
+    return pxs[0] == pys[0] && pxs[1] == pys[1];
+ } else { // real80
     ushort* pxe = cast(ushort *)&x;
     ushort* pye = cast(ushort *)&y;
     return pxe[4] == pye[4] && pxs[0] == pys[0];
-  }
+ }
 }
 
 /*********************************
@@ -1527,12 +1620,7 @@ bool isIdentical(real x, real y)
 
 int signbit(real x)
 {
-    static if (real.mant_dig == double.mant_dig) {
-        return ((*cast(ulong *)&x) & 0x8000_0000_0000_0000) != 0;
-    } else {
-        ubyte* pe = cast(ubyte *)&x;
-    return (pe[9] & 0x80) != 0;
-}
+    return ((cast(ubyte *)&x)[floatTraits!(real).SIGNPOS_BYTE] & 0x80) != 0;
 }
 
 unittest
@@ -1554,10 +1642,10 @@ real copysign(real to, real from)
 {
     ubyte* pto   = cast(ubyte *)&to;
     ubyte* pfrom = cast(ubyte *)&from;
-
-    pto[9] &= 0x7F;
-    pto[9] |= pfrom[9] & 0x80;
-
+    
+    alias floatTraits!(real) F;
+    pto[F.SIGNPOS_BYTE] &= 0x7F;
+    pto[F.SIGNPOS_BYTE] |= pfrom[F.SIGNPOS_BYTE] & 0x80;
     return to;
 }
 
@@ -1581,6 +1669,8 @@ unittest
     assert(isnan(e) && signbit(e));
 }
 
+
+
 /******************************************
  * Creates a quiet NAN with the information from tagp[] embedded in it.
  *
@@ -1588,37 +1678,224 @@ unittest
  */
 real nan(char[] tagp) { return std.c.math.nanl(toStringz(tagp)); }
 
+/**
+ * Calculate the next largest floating point value after x.
+ *
+ * Return the least number greater than x that is representable as a real;
+ * thus, it gives the next point on the IEEE number line.
+ *
+ *  $(TABLE_SV
+ *    $(SVH x,            nextUp(x)   )
+ *    $(SV  -$(INFIN),    -real.max   )
+ *    $(SV  $(PLUSMN)0.0, real.min*real.epsilon )
+ *    $(SV  real.max,     $(INFIN) )
+ *    $(SV  $(INFIN),     $(INFIN) )
+ *    $(SV  $(NAN),       $(NAN)   )
+ * )
+ *
+ * Remarks:
+ * This function is included in the forthcoming IEEE 754R standard.
+ */
+real nextUp(real x)
+{
+    alias floatTraits!(real) F;
+    static if (real.mant_dig == 53) { // double
+        return nextUp(cast(double)x);
+    } else static if(real.mant_dig==113) {  // quadruple
+        ushort e = F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT];
+        if (e == F.EXPMASK) { // NaN or Infinity
+             if (x == -real.infinity) return -real.max;
+             return x; // +Inf and NaN are unchanged.
+        }     
+        ulong*   ps = cast(ulong *)&e;
+        if (ps[MANTISSA_LSB] & 0x8000_0000_0000_0000)  { // Negative number
+            if (ps[MANTISSA_LSB]==0 && ps[MANTISSA_MSB] == 0x8000_0000_0000_0000) { // it was negative zero
+                ps[MANTISSA_LSB] = 0x0000_0000_0000_0001; // change to smallest subnormal
+                ps[MANTISSA_MSB] = 0;
+                return x;
+            }
+            --*ps;
+            if (ps[MANTISSA_LSB]==0) --ps[MANTISSA_MSB];
+        } else { // Positive number
+            ++ps[MANTISSA_LSB];
+            if (ps[MANTISSA_LSB]==0) ++ps[MANTISSA_MSB];
+        }
+        return x;
+          
+    } else static if(real.mant_dig==64){ // real80
+        // For 80-bit reals, the "implied bit" is a nuisance...
+        ushort *pe = cast(ushort *)&x;
+        ulong  *ps = cast(ulong  *)&x;
+
+        if ((pe[F.EXPPOS_SHORT] & F.EXPMASK) == F.EXPMASK) {
+            // First, deal with NANs and infinity
+            if (x == -real.infinity) return -real.max;
+            return x; // +Inf and NaN are unchanged.
+        }
+        if (pe[F.EXPPOS_SHORT] & 0x8000)  { // Negative number -- need to decrease the significand
+            --*ps;
+            // Need to mask with 0x7FFF... so subnormals are treated correctly.
+            if ((*ps & 0x7FFF_FFFF_FFFF_FFFF) == 0x7FFF_FFFF_FFFF_FFFF) {
+                if (pe[F.EXPPOS_SHORT] == 0x8000) { // it was negative zero
+                    *ps = 1;
+                    pe[F.EXPPOS_SHORT] = 0; // smallest subnormal.
+                    return x;
+                }
+                --pe[F.EXPPOS_SHORT];
+                if (pe[F.EXPPOS_SHORT] == 0x8000) {
+                    return x; // it's become a subnormal, implied bit stays low.
+                }
+                *ps = 0xFFFF_FFFF_FFFF_FFFF; // set the implied bit
+                return x;
+            }
+            return x;
+        } else {
+            // Positive number -- need to increase the significand.
+            // Works automatically for positive zero.
+            ++*ps;
+            if ((*ps & 0x7FFF_FFFF_FFFF_FFFF) == 0) {
+                // change in exponent
+                ++pe[F.EXPPOS_SHORT];
+                *ps = 0x8000_0000_0000_0000; // set the high bit
+            }
+        }
+        return x;
+    } else { // doubledouble
+        assert(0, "Not implemented");
+    }
+}
+
+/** ditto */
+double nextUp(double x)
+{
+    ulong *ps = cast(ulong *)&x;
+
+    if ((*ps & 0x7FF0_0000_0000_0000) == 0x7FF0_0000_0000_0000) {
+        // First, deal with NANs and infinity
+        if (x == -x.infinity) return -x.max;
+        return x; // +INF and NAN are unchanged.
+    }
+    if (*ps & 0x8000_0000_0000_0000)  { // Negative number
+        if (*ps == 0x8000_0000_0000_0000) { // it was negative zero
+            *ps = 0x0000_0000_0000_0001; // change to smallest subnormal
+            return x;
+        }
+        --*ps;
+    } else { // Positive number
+        ++*ps;
+    }
+    return x;
+}
+
+/** ditto */
+float nextUp(float x)
+{
+    uint *ps = cast(uint *)&x;
+
+    if ((*ps & 0x7F80_0000) == 0x7F80_0000) {
+        // First, deal with NANs and infinity
+        if (x == -x.infinity) return -x.max;
+        return x; // +INF and NAN are unchanged.
+    }
+    if (*ps & 0x8000_0000)  { // Negative number
+        if (*ps == 0x8000_0000) { // it was negative zero
+            *ps = 0x0000_0001; // change to smallest subnormal
+            return x;
+        }
+        --*ps;
+    } else { // Positive number
+        ++*ps;
+    }
+    return x;
+}
+
+/**
+ * Calculate the next smallest floating point value before x.
+ *
+ * Return the greatest number less than x that is representable as a real;
+ * thus, it gives the previous point on the IEEE number line.
+ *
+ *  $(TABLE_SV
+ *    $(SVH x,            nextDown(x)   )
+ *    $(SV  $(INFIN),     real.max  )
+ *    $(SV  $(PLUSMN)0.0, -real.min*real.epsilon )
+ *    $(SV  -real.max,    -$(INFIN) )
+ *    $(SV  -$(INFIN),    -$(INFIN) )
+ *    $(SV  $(NAN),       $(NAN)    )
+ * )
+ *
+ * Remarks:
+ * This function is included in the forthcoming IEEE 754R standard.
+ */
+real nextDown(real x)
+{
+    return -nextUp(-x);
+}
+
+/** ditto */
+double nextDown(double x)
+{
+    return -nextUp(-x);
+}
+
+/** ditto */
+float nextDown(float x)
+{
+    return -nextUp(-x);
+}
+
+unittest {
+    assert( nextDown(1.0 + real.epsilon) == 1.0);
+}
+
+
 /******************************************
- * Calculates the next representable value after x in the direction of y. 
+ * Calculates the next representable value after x in the direction of y.
  *
- * If y $(GT) x, the result will be the next largest floating-point value;
- * if y $(LT) x, the result will be the next smallest value.
+ * If y > x, the result will be the next largest floating-point value;
+ * if y < x, the result will be the next smallest value.
  * If x == y, the result is y.
- * The FE_INEXACT and FE_OVERFLOW exceptions will be raised if x is finite and
- * the function result is infinite. The FE_INEXACT and FE_UNDERFLOW 
- * exceptions will be raised if the function value is subnormal, and x is 
- * not equal to y. 
  *
- * Note: real nextafter(real, real) not supported on windows
+ * Remarks:
+ * This function is not generally very useful; it's almost always better to use
+ * the faster functions nextUp() or nextDown() instead.
+ *
+ * IEEE 754 requirements not implemented on Windows:
+ * The FE_INEXACT and FE_OVERFLOW exceptions will be raised if x is finite and
+ * the function result is infinite. The FE_INEXACT and FE_UNDERFLOW
+ * exceptions will be raised if the function value is subnormal, and x is
+ * not equal to y.
  */
 real nextafter(real x, real y)
 {
-    version (Windows)
-        throw new NotImplemented("nextafter");
-    else
+    version (Windows) {
+        if (x==y) return y;
+        return (y>x) ? nextUp(x) : nextDown(x);
+    } else {
         return std.c.math.nextafterl(x, y);
+    }
 }
 
 /// ditto
 float nextafter(float x, float y)
 {
-    return std.c.math.nextafterf(x, y);
+    version (Windows) {
+        if (x==y) return y;
+        return (y>x) ? nextUp(x) : nextDown(x);
+    } else {
+        return std.c.math.nextafterf(x, y);
+    }
 }
 
 /// ditto
 double nextafter(double x, double y)
 {
-    return std.c.math.nextafter(x, y);
+    version (Windows) {
+        if (x==y) return y;
+        return (y>x) ? nextUp(x) : nextDown(x);
+    } else {
+        return std.c.math.nextafter(x, y);
+    }
 }
 
 unittest
@@ -1631,22 +1908,9 @@ unittest
     assert(is(typeof(nextafter(b, b)) == double));
     assert(nextafter(b, b.infinity) > b);
 
-    // BUG 1772: temporarily disable real tests for nextafter
-    // with reals on windows until dmc's runtime supports them.
     real c = 3;
     assert(is(typeof(nextafter(c, c)) == real));
-    version(Windows) {
-        bool threw = false;
-        try {
-            nextafter(c, c.infinity);
-            assert(false, "shouldn't be reachable");
-        } catch (NotImplemented e) {
-            threw = true;
-        }
-        if (!threw) assert(false, "failed to throw");
-    } else {
-        assert(nextafter(c, c.infinity) > c);
-    }
+    assert(nextafter(c, c.infinity) > c);
 }
 
 //real nexttoward(real x, real y) { return std.c.math.nexttowardl(x, y); }
@@ -1911,22 +2175,33 @@ private int mfeq(real x, real y, real precision)
  *	$(TR $(TD any)    $(TD $(NAN))     $(TD 0))
  *	)
  */
-
-int feqrel(real x, real y)
+int feqrel(X)(X x, X y)
 {
     /* Public Domain. Author: Don Clugston, 18 Aug 2005.
      */
-    if (x == y)
-	return real.mant_dig; // ensure diff!=0, cope with INF.
+  static assert(is(X==real) || is(X==double) || is(X==float), "Only float, double, and real are supported by feqrel");
+  
+  static if (X.mant_dig == 106) { // doubledouble.
+     if (cast(double*)(&x)[MANTISSA_MSB] == cast(double*)(&y)[MANTISSA_MSB]) {
+         return double.mant_dig
+         + feqrel(cast(double*)(&x)[MANTISSA_LSB], cast(double*)(&y)[MANTISSA_LSB]);
+     } else {
+         return feqrel(cast(double*)(&x)[MANTISSA_MSB], cast(double*)(&y)[MANTISSA_MSB]);
+     }
+  } else static if (X.mant_dig==64 || X.mant_dig==113 || X.mant_dig==53) {
+      
+    if (x == y) return X.mant_dig; // ensure diff!=0, cope with INF.
 
-    real diff = fabs(x - y);
+    X diff = fabs(x - y);
 
     ushort *pa = cast(ushort *)(&x);
     ushort *pb = cast(ushort *)(&y);
     ushort *pd = cast(ushort *)(&diff);
 
+    alias floatTraits!(X) F;
+
     // The difference in abs(exponent) between x or y and abs(x-y)
-    // is equal to the number of mantissa bits of x which are
+    // is equal to the number of significand bits of x which are
     // equal to y. If negative, x and y have different exponents.
     // If positive, x and y are equal to 'bitsdiff' bits.
     // AND with 0x7FFF to form the absolute value.
@@ -1934,38 +2209,35 @@ int feqrel(real x, real y)
     // if the exponents were different. This means 'bitsdiff' is
     // always 1 lower than we want, except that if bitsdiff==0,
     // they could have 0 or 1 bits in common.
- static if (real.mant_dig==64) { // 80-bit reals
-    const real POW2MANTDIG = 0x1p+63; // pow(2, real.mant_dig)
-    const int EXPONENTPOS = 4;
-    int bitsdiff = ( ((pa[EXPONENTPOS]&0x7FFF) + (pb[EXPONENTPOS]&0x7FFF)-1)>>1) 
-                 - pd[EXPONENTPOS];
- } else {  // 64-bit reals
-    const real POW2MANTDIG = 0x1p+53;
-      version(LittleEndian)
-        const int EXPONENTPOS = 3;
-    else const int EXPONENTPOS = 0;
-    int bitsdiff = (( ((pa[EXPONENTPOS]&0x7FF0) + (pb[EXPONENTPOS]&0x7FF0)-0x10)>>1) 
-                 - (pd[EXPONENTPOS]&0x7FF0))>>4;
+
+ static if (X.mant_dig==64 || X.mant_dig==113) { // real80 or quadruple
+    int bitsdiff = ( ((pa[F.EXPPOS_SHORT]&0x7FFF) + (pb[F.EXPPOS_SHORT]&0x7FFF)-1)>>1) 
+                - pd[F.EXPPOS_SHORT];
+ } else static if (X.mant_dig==53) { // double
+    int bitsdiff = (( ((pa[F.EXPPOS_SHORT]&0x7FF0) + (pb[F.EXPPOS_SHORT]&0x7FF0)-0x10)>>1) 
+                 - (pd[F.EXPPOS_SHORT]&0x7FF0))>>4;
  }
-    if (pd[EXPONENTPOS] == 0)
-    {	// Difference is denormal
-	// For denormals, we need to add the number of zeros that
+    if (pd[F.EXPPOS_SHORT] == 0)
+    {   // Difference is denormal
+        // For denormals, we need to add the number of zeros that
         // lie at the start of diff's significand.
-	// We do this by multiplying by 2^real.mant_dig
-        diff *= POW2MANTDIG;
-        return bitsdiff + real.mant_dig - pd[EXPONENTPOS];
+        // We do this by multiplying by 2^real.mant_dig
+        diff *= F.POW2MANTDIG;
+        return bitsdiff + X.mant_dig - pd[F.EXPPOS_SHORT];
     }
 
     if (bitsdiff > 0)
-	return bitsdiff + 1; // add the 1 we subtracted before
-
-    // Avoid out-by-1 errors when factor is almost 2.
- static if (real.mant_dig==64)
- {
-    return (bitsdiff == 0) ? (pa[EXPONENTPOS] == pb[EXPONENTPOS]) : 0;
+        return bitsdiff + 1; // add the 1 we subtracted before
+        
+    // Avoid out-by-1 errors when factor is almost 2.    
+     static if (X.mant_dig==64 || X.mant_dig==113) { // real80 or quadruple    
+        return (bitsdiff == 0) ? (pa[F.EXPPOS_SHORT] == pb[F.EXPPOS_SHORT]) : 0;
+     } else static if (X.mant_dig==53) { // double
+        if (bitsdiff == 0 && !((pa[F.EXPPOS_SHORT] ^ pb[F.EXPPOS_SHORT])& F.EXPMASK)) return 1;
+        else return 0;
+     }  
  } else {
-    if (bitsdiff == 0 && !((pa[EXPONENTPOS] ^ pb[EXPONENTPOS])&0x7FF0)) return 1;
-    else return 0;
+    throw new NotImplemented("feqrel");
  }
 }
 
@@ -1973,38 +2245,40 @@ unittest
 {
    // Exact equality
    assert(feqrel(real.max,real.max)==real.mant_dig);
-   assert(feqrel(0,0)==real.mant_dig);
-   assert(feqrel(7.1824,7.1824)==real.mant_dig);
+   assert(feqrel(0.0L,0.0L)==real.mant_dig);
+   assert(feqrel(7.1824L,7.1824L)==real.mant_dig);
    assert(feqrel(real.infinity,real.infinity)==real.mant_dig);
 
    // a few bits away from exact equality
    real w=1;
    for (int i=1; i<real.mant_dig-1; ++i) {
-      assert(feqrel(1+w*real.epsilon,1)==real.mant_dig-i);
-      assert(feqrel(1-w*real.epsilon,1)==real.mant_dig-i);
-      assert(feqrel(1,1+(w-1)*real.epsilon)==real.mant_dig-i+1);
+      assert(feqrel(1+w*real.epsilon,1.0L)==real.mant_dig-i);
+      assert(feqrel(1-w*real.epsilon,1.0L)==real.mant_dig-i);
+      assert(feqrel(1.0L,1+(w-1)*real.epsilon)==real.mant_dig-i+1);
       w*=2;
    }
-   assert(feqrel(1.5+real.epsilon,1.5)==real.mant_dig-1);
-   assert(feqrel(1.5-real.epsilon,1.5)==real.mant_dig-1);
+   assert(feqrel(1.5+real.epsilon,1.5L)==real.mant_dig-1);
+   assert(feqrel(1.5-real.epsilon,1.5L)==real.mant_dig-1);
    assert(feqrel(1.5-real.epsilon,1.5+real.epsilon)==real.mant_dig-2);
-
+   
+   assert(feqrel(real.min/8,real.min/17)==3);;
+   
    // Numbers that are close
    assert(feqrel(0x1.Bp+84, 0x1.B8p+84)==5);
    assert(feqrel(0x1.8p+10, 0x1.Cp+10)==2);
-   assert(feqrel(1.5*(1-real.epsilon), 1)==2);
-   assert(feqrel(1.5, 1)==1);
-   assert(feqrel(2*(1-real.epsilon), 1)==1);
+   assert(feqrel(1.5*(1-real.epsilon), 1.0L)==2);
+   assert(feqrel(1.5, 1.0)==1);
+   assert(feqrel(2*(1-real.epsilon), 1.0L)==1);
 
    // Factors of 2
    assert(feqrel(real.max,real.infinity)==0);
-   assert(feqrel(2*(1-real.epsilon), 1)==1);
-   assert(feqrel(1, 2)==0);
-   assert(feqrel(4, 1)==0);
+   assert(feqrel(2*(1-real.epsilon), 1.0L)==1);
+   assert(feqrel(1.0, 2.0)==0);
+   assert(feqrel(4.0, 1.0)==0);
 
    // Extreme inequality
    assert(feqrel(real.nan,real.nan)==0);
-   assert(feqrel(0,-real.nan)==0);
+   assert(feqrel(0.0L,-real.nan)==0);
    assert(feqrel(real.nan,real.infinity)==0);
    assert(feqrel(real.infinity,-real.infinity)==0);
    assert(feqrel(-real.max,real.infinity)==0);
