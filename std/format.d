@@ -1937,7 +1937,7 @@ private void formatFloat(Writer, D)(ref Writer w, D obj, FormatInfo f)
     if (f.flHash) sprintfSpec[i++] = '#';
     sprintfSpec[i .. i + 3] = "*.*";
     i += 3;
-    if (is(D == real)) sprintfSpec[i++] = 'L';
+    if (is(D : real)) sprintfSpec[i++] = 'L';
     sprintfSpec[i++] = f.spec;
     sprintfSpec[i] = 0;
     //writeln(sprintfSpec);
@@ -2272,6 +2272,11 @@ unittest
 
   formattedWrite(stream, "%#0*.*f",6,2,12.345);
   assert(stream.backend == "012.35");
+  stream.backend = null;
+
+  const real constreal = 1;
+  formattedWrite(stream, "%g",constreal);
+  assert(stream.backend == "1");
   stream.backend = null;
 
   formattedWrite(stream, "%7.4g:", 12.678);

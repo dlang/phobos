@@ -5,7 +5,7 @@
  *  Placed in the Public Domain
  */
 
-module arraycat;
+module arrayassign;
 
 import object;
 import std.string;
