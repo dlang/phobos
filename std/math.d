@@ -350,18 +350,18 @@ real atan(real x)		{ return std.c.math.atanl(x); }
 
 /***************
  * Calculates the arc tangent of y / x,
- * returning a value ranging from -$(PI)/2 to $(PI)/2.
+ * returning a value ranging from -$(PI) to $(PI).
  *
  *      $(TABLE_SV
  *      $(TR $(TH y)                 $(TH x)            $(TH atan(y, x)))
  *      $(TR $(TD $(NAN))            $(TD anything)     $(TD $(NAN)) )
  *      $(TR $(TD anything)          $(TD $(NAN))       $(TD $(NAN)) )
  *      $(TR $(TD $(PLUSMN)0.0)      $(TD $(GT)0.0)     $(TD $(PLUSMN)0.0) )
- *      $(TR $(TD $(PLUSMN)0.0)      $(TD $(PLUSMN)0.0) $(TD $(PLUSMN)0.0) )
+ *      $(TR $(TD $(PLUSMN)0.0)      $(TD +0.0)         $(TD $(PLUSMN)0.0) )
  *      $(TR $(TD $(PLUSMN)0.0)      $(TD $(LT)0.0)     $(TD $(PLUSMN)$(PI)))
  *      $(TR $(TD $(PLUSMN)0.0)      $(TD -0.0)         $(TD $(PLUSMN)$(PI)))
  *      $(TR $(TD $(GT)0.0)          $(TD $(PLUSMN)0.0) $(TD $(PI)/2) )
- *      $(TR $(TD $(LT)0.0)          $(TD $(PLUSMN)0.0) $(TD $(PI)/2))
+ *      $(TR $(TD $(LT)0.0)          $(TD $(PLUSMN)0.0) $(TD -$(PI)/2) )
  *      $(TR $(TD $(GT)0.0)          $(TD $(INFIN))     $(TD $(PLUSMN)0.0) )
  *      $(TR $(TD $(PLUSMN)$(INFIN)) $(TD anything)     $(TD $(PLUSMN)$(PI)/2))
  *      $(TR $(TD $(GT)0.0)          $(TD -$(INFIN))    $(TD $(PLUSMN)$(PI)) )
