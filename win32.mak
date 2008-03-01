@@ -69,7 +69,7 @@ OBJS= asserterror.obj deh.obj switch.obj complex.obj gcstats.obj \
 	cast.obj syserror.obj path.obj string.obj memset.obj math.obj \
 	outbuffer.obj ctype.obj regexp.obj random.obj windows.obj stat.obj \
 	stream.obj switcherr.obj com.obj array.obj mmfile.obj \
-	qsort.obj math2.obj date.obj dateparse.obj thread.obj obj.obj \
+	qsort.obj date.obj dateparse.obj thread.obj obj.obj \
 	iunknown.obj crc32.obj conv.obj arraycast.obj utf.obj uri.obj \
 	Czlib.obj Dzlib.obj zip.obj process.obj registry.obj \
 	socket.obj socketstream.obj loader.obj stdarg.obj format.obj stdio.obj \
@@ -160,7 +160,7 @@ SRC=	errno.c object.d unittest.d crc32.d gcstats.d phobos.d
 SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 	std\gc.d std\math.d std\string.d std\path.d std\date.d \
 	std\ctype.d std\file.d std\compiler.d std\system.d std\moduleinit.d \
-	std\outbuffer.d std\math2.d std\thread.d std\md5.d std\base64.d \
+	std\outbuffer.d std\thread.d std\md5.d std\base64.d \
 	std\asserterror.d std\dateparse.d std\outofmemory.d std\mmfile.d \
 	std\intrinsic.d std\array.d std\switcherr.d std\syserror.d \
 	std\regexp.d std\random.d std\stream.d std\process.d \
@@ -439,9 +439,6 @@ loader.obj : std\loader.d
 
 math.obj : std\math.d
 	$(DMD) -c $(DFLAGS) std\math.d
-
-math2.obj : std\math2.d
-	$(DMD) -c $(DFLAGS) std\math2.d
 
 md5.obj : std\md5.d
 	$(DMD) -c $(DFLAGS) -inline std\md5.d
