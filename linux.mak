@@ -106,7 +106,7 @@ INTERNAL_GC_EXTRAFILES = \
 STD_MODULES = algorithm array asserterror base64 bind bitarray		\
         bitmanip boxer compiler complex contracts conv cover cpuid	\
         cstream ctype date dateparse demangle file format functional	\
-        gc getopt hiddenfunc intrinsic iterator loader math math2 md5	\
+        gc getopt hiddenfunc intrinsic iterator loader math md5	\
         metastrings mmfile moduleinit numeric openrj outbuffer		\
         outofmemory path perf process random regexp signals socket	\
         socketstream stdint stdio stream string switcherr syserror	\
