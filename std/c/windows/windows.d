@@ -147,10 +147,13 @@ else
     alias FARPROC DRAWSTATEPROC;
 }
 
+extern (D)
+{
 WORD HIWORD(int l) { return cast(WORD)((l >> 16) & 0xFFFF); }
 WORD LOWORD(int l) { return cast(WORD)l; }
 bool FAILED(int status) { return status < 0; }
 bool SUCCEEDED(int Status) { return Status >= 0; }
+}
 
 enum : int
 {
@@ -444,9 +447,11 @@ enum
 // Key creation/open disposition
 //
 
-const int REG_CREATED_NEW_KEY =         0x00000001;   // New Registry Key created
-const int REG_OPENED_EXISTING_KEY =     0x00000002;   // Existing Key opened
-
+enum : int
+{
+	REG_CREATED_NEW_KEY =         0x00000001,   // New Registry Key created
+	REG_OPENED_EXISTING_KEY =     0x00000002,   // Existing Key opened
+}
 
 //
 //
@@ -533,15 +538,18 @@ enum
 int MessageBoxA(HWND hWnd, LPCSTR lpText, LPCSTR lpCaption, UINT uType);
 int MessageBoxExA(HWND hWnd, LPCSTR lpText, LPCSTR lpCaption, UINT uType, WORD wLanguageId);
 
-const HKEY HKEY_CLASSES_ROOT =           cast(HKEY)(0x80000000);
-const HKEY HKEY_CURRENT_USER =           cast(HKEY)(0x80000001);
-const HKEY HKEY_LOCAL_MACHINE =          cast(HKEY)(0x80000002);
-const HKEY HKEY_USERS =                  cast(HKEY)(0x80000003);
-const HKEY HKEY_PERFORMANCE_DATA =       cast(HKEY)(0x80000004);
-const HKEY HKEY_PERFORMANCE_TEXT =       cast(HKEY)(0x80000050);
-const HKEY HKEY_PERFORMANCE_NLSTEXT =    cast(HKEY)(0x80000060);
-const HKEY HKEY_CURRENT_CONFIG =         cast(HKEY)(0x80000005);
-const HKEY HKEY_DYN_DATA =               cast(HKEY)(0x80000006);
+enum : HKEY
+{
+	HKEY_CLASSES_ROOT =           cast(HKEY)(0x80000000),
+	HKEY_CURRENT_USER =           cast(HKEY)(0x80000001),
+	HKEY_LOCAL_MACHINE =          cast(HKEY)(0x80000002),
+	HKEY_USERS =                  cast(HKEY)(0x80000003),
+	HKEY_PERFORMANCE_DATA =       cast(HKEY)(0x80000004),
+	HKEY_PERFORMANCE_TEXT =       cast(HKEY)(0x80000050),
+	HKEY_PERFORMANCE_NLSTEXT =    cast(HKEY)(0x80000060),
+	HKEY_CURRENT_CONFIG =         cast(HKEY)(0x80000005),
+	HKEY_DYN_DATA =               cast(HKEY)(0x80000006),
+}
 
 enum
 {
@@ -2045,10 +2053,13 @@ export
  HCURSOR LoadCursorW(HINSTANCE hInstance, LPCWSTR lpCursorName);
 }
 
-const LPSTR IDI_APPLICATION =     cast(LPSTR)(32512);
+enum : LPSTR
+{
+	IDI_APPLICATION =     cast(LPSTR)(32512),
 
-const LPSTR IDC_ARROW =           cast(LPSTR)(32512);
-const LPSTR IDC_CROSS =           cast(LPSTR)(32515);
+	IDC_ARROW =           cast(LPSTR)(32512),
+	IDC_CROSS =           cast(LPSTR)(32515),
+}
 
 /*
  * Color Types
@@ -2100,12 +2111,18 @@ enum
 	COLOR_BTNHILIGHT =        COLOR_BTNHIGHLIGHT,
 }
 
-const int CW_USEDEFAULT = cast(int)0x80000000;
+enum : int
+{
+	CW_USEDEFAULT = cast(int)0x80000000
+}
+
 /*
  * Special value for CreateWindow, et al.
  */
-const HWND HWND_DESKTOP = (cast(HWND)0);
-
+enum : HWND
+{
+    HWND_DESKTOP = cast(HWND)0,
+}
 
 export ATOM RegisterClassA(WNDCLASSA *lpWndClass);
 
@@ -2730,8 +2747,11 @@ export HWND SetFocus(HWND hWnd);
 export int wsprintfA(LPSTR, LPCSTR, ...);
 export int wsprintfW(LPWSTR, LPCWSTR, ...);
 
-const uint INFINITE = uint.max;
-const uint WAIT_OBJECT_0 = 0;
+enum : uint
+{
+	INFINITE = uint.max,
+	WAIT_OBJECT_0 = 0,
+}
 
 export HANDLE CreateSemaphoreA(LPSECURITY_ATTRIBUTES lpSemaphoreAttributes, LONG lInitialCount, LONG lMaximumCount, LPCTSTR lpName);
 export HANDLE OpenSemaphoreA(DWORD dwDesiredAccess, BOOL bInheritHandle, LPCTSTR lpName);

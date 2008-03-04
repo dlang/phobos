@@ -49,7 +49,6 @@ public import std.hiddenfunc;
 public import std.intrinsic;
 public import std.loader;
 public import std.math;
-public import std.math2;
 public import std.md5;
 public import std.metastrings;
 public import std.mmfile;
@@ -91,7 +90,6 @@ int main(char[][] args)
     cmp("foo", "bar");			// string
     fncharmatch('a', 'b');		// path
     isnan(1.0);				// math
-    std.math2.feq(1.0, 2.0);		// math2
     std.conv.toDouble("1.0");		// std.conv
     OutBuffer b = new OutBuffer();	// outbuffer
     std.ctype.tolower('A');		// ctype
