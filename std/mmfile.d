@@ -1,4 +1,6 @@
-/* Copyright 2004-2005 by Digital Mars
+// Written in the D programming language
+
+/* Copyright 2004-2008 by Digital Mars
  * Written by Walter Bright and Matthew Wilson
  *
  * This software is provided 'as-is', without any express or implied
@@ -79,7 +81,7 @@ class MmFile
      * Throws:
      *	std.file.FileException
      */
-    this(char[] filename)
+    this(string filename)
     {
 		this(filename, Mode.Read, 0, null);
     }
@@ -102,7 +104,7 @@ class MmFile
      * Throws:
      *	std.file.FileException
      */
-    this(char[] filename, Mode mode, ulong size, void* address,
+    this(string filename, Mode mode, ulong size, void* address,
 			size_t window = 0)
     {
 		this.filename = filename;
@@ -168,30 +170,35 @@ class MmFile
 				assert(0);
 			}
 		
-			if (useWfuncs)
+			if (filename)
 			{
-				wchar* namez = std.utf.toUTF16z(filename);
-				hFile = CreateFileW(namez,
-						dwDesiredAccess2,
-						dwShareMode,
-						null,
-						dwCreationDisposition,
-						FILE_ATTRIBUTE_NORMAL,
-						cast(HANDLE)null);
+				if (useWfuncs)
+				{
+					auto namez = std.utf.toUTF16z(filename);
+					hFile = CreateFileW(namez,
+							dwDesiredAccess2,
+							dwShareMode,
+							null,
+							dwCreationDisposition,
+							FILE_ATTRIBUTE_NORMAL,
+							cast(HANDLE)null);
+				}
+				else
+				{
+					auto namez = std.file.toMBSz(filename);
+					hFile = CreateFileA(namez,
+							dwDesiredAccess2,
+							dwShareMode,
+							null,
+							dwCreationDisposition,
+							FILE_ATTRIBUTE_NORMAL,
+							cast(HANDLE)null);
+				}
+				if (hFile == INVALID_HANDLE_VALUE)
+					goto err1;
 			}
 			else
-			{
-				char* namez = std.file.toMBSz(filename);
-				hFile = CreateFileA(namez,
-						dwDesiredAccess2,
-						dwShareMode,
-						null,
-						dwCreationDisposition,
-						FILE_ATTRIBUTE_NORMAL,
-						cast(HANDLE)null);
-			}
-			if (hFile == INVALID_HANDLE_VALUE)
-				goto err1;
+				hFile = null;
 		
 			int hi = cast(int)(size>>32);
 			hFileMap = CreateFileMappingA(hFile, null, flProtect, hi, cast(uint)size, null);
@@ -330,7 +337,7 @@ class MmFile
 				errNo();
 			hFileMap = null;
 
-			if (hFile != INVALID_HANDLE_VALUE && CloseHandle(hFile) != TRUE)
+			if (hFile && hFile != INVALID_HANDLE_VALUE && CloseHandle(hFile) != TRUE)
 				errNo();
 			hFile = INVALID_HANDLE_VALUE;
 		}
@@ -516,7 +523,7 @@ class MmFile
 	}
 
 	private:
-	char[] filename;
+	string filename;
 	void[] data;
 	ulong  start;
 	size_t window;
@@ -589,4 +596,7 @@ unittest {
 	assert( data2[length-1] == 'b' );
 	delete mf;
 	std.file.remove("testing.txt");
+
+	// Create anonymous mapping
+	auto test = new MmFile(null, MmFile.Mode.ReadWriteNew, 1024*1024, null);
 }

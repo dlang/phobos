@@ -250,8 +250,11 @@ enum
     FILE_VOLUME_IS_COMPRESSED       = 0x00008000,  
 }
 
-const DWORD MAILSLOT_NO_MESSAGE = cast(DWORD)-1;
-const DWORD MAILSLOT_WAIT_FOREVER = cast(DWORD)-1; 
+enum
+{
+    MAILSLOT_NO_MESSAGE = cast(DWORD)-1,
+    MAILSLOT_WAIT_FOREVER = cast(DWORD)-1, 
+}
 
 enum : uint
 {
@@ -275,8 +278,12 @@ enum
 }
 
 const HANDLE INVALID_HANDLE_VALUE = cast(HANDLE)-1;
-const DWORD INVALID_SET_FILE_POINTER = cast(DWORD)-1;
-const DWORD INVALID_FILE_SIZE = cast(DWORD)0xFFFFFFFF;
+
+enum : DWORD
+{
+    INVALID_SET_FILE_POINTER = cast(DWORD)-1,
+    INVALID_FILE_SIZE = cast(DWORD)0xFFFFFFFF,
+}
 
 struct OVERLAPPED {
     DWORD   Internal;
@@ -324,6 +331,13 @@ struct WIN32_FIND_DATAW {
     DWORD dwReserved1;
     wchar  cFileName[ 260  ];
     wchar  cAlternateFileName[ 14 ];
+}
+
+enum
+{
+	STD_INPUT_HANDLE =    cast(DWORD)-10,
+	STD_OUTPUT_HANDLE =   cast(DWORD)-11,
+	STD_ERROR_HANDLE =    cast(DWORD)-12,
 }
 
 export
@@ -428,8 +442,11 @@ enum
 // Key creation/open disposition
 //
 
-const int REG_CREATED_NEW_KEY =         0x00000001;   // New Registry Key created
-const int REG_OPENED_EXISTING_KEY =     0x00000002;   // Existing Key opened
+enum : int
+{
+	REG_CREATED_NEW_KEY =         0x00000001,   // New Registry Key created
+	REG_OPENED_EXISTING_KEY =     0x00000002,   // Existing Key opened
+}
 
 
 //
@@ -1102,6 +1119,7 @@ enum
 export HANDLE GetCurrentThread();
 export BOOL GetProcessTimes(HANDLE hProcess, LPFILETIME lpCreationTime, LPFILETIME lpExitTime, LPFILETIME lpKernelTime, LPFILETIME lpUserTime);
 export HANDLE GetCurrentProcess();
+export DWORD GetCurrentProcessId();
 export BOOL DuplicateHandle (HANDLE sourceProcess, HANDLE sourceThread,
         HANDLE targetProcessHandle, HANDLE *targetHandle, DWORD access, 
         BOOL inheritHandle, DWORD options);
@@ -2083,11 +2101,15 @@ enum
 	COLOR_BTNHILIGHT =        COLOR_BTNHIGHLIGHT,
 }
 
-const int CW_USEDEFAULT = cast(int)0x80000000;
+enum : int
+{
+	CW_USEDEFAULT = cast(int)0x80000000
+}
+
 /*
  * Special value for CreateWindow, et al.
  */
-const HWND HWND_DESKTOP = (cast(HWND)0);
+const HWND HWND_DESKTOP = cast(HWND)0;
 
 
 export ATOM RegisterClassA(WNDCLASSA *lpWndClass);
@@ -2713,10 +2735,328 @@ export HWND SetFocus(HWND hWnd);
 export int wsprintfA(LPSTR, LPCSTR, ...);
 export int wsprintfW(LPWSTR, LPCWSTR, ...);
 
-const uint INFINITE = uint.max;
-const uint WAIT_OBJECT_0 = 0;
+enum : uint
+{
+	INFINITE = uint.max,
+	WAIT_OBJECT_0 = 0,
+}
 
 export HANDLE CreateSemaphoreA(LPSECURITY_ATTRIBUTES lpSemaphoreAttributes, LONG lInitialCount, LONG lMaximumCount, LPCTSTR lpName);
 export HANDLE OpenSemaphoreA(DWORD dwDesiredAccess, BOOL bInheritHandle, LPCTSTR lpName);
 export BOOL ReleaseSemaphore(HANDLE hSemaphore, LONG lReleaseCount, LPLONG lpPreviousCount);
+
+struct COORD {
+    SHORT X;
+    SHORT Y;
+}
+alias COORD *PCOORD;
+
+struct SMALL_RECT {
+    SHORT Left;
+    SHORT Top;
+    SHORT Right;
+    SHORT Bottom;
+}
+alias SMALL_RECT *PSMALL_RECT;
+
+struct KEY_EVENT_RECORD {
+    BOOL bKeyDown;
+    WORD wRepeatCount;
+    WORD wVirtualKeyCode;
+    WORD wVirtualScanCode;
+    union {
+        WCHAR UnicodeChar;
+        CHAR   AsciiChar;
+    }
+    DWORD dwControlKeyState;
+}
+alias KEY_EVENT_RECORD *PKEY_EVENT_RECORD;
+
+//
+// ControlKeyState flags
+//
+
+enum
+{
+	RIGHT_ALT_PRESSED =     0x0001, // the right alt key is pressed.
+	LEFT_ALT_PRESSED =      0x0002, // the left alt key is pressed.
+	RIGHT_CTRL_PRESSED =    0x0004, // the right ctrl key is pressed.
+	LEFT_CTRL_PRESSED =     0x0008, // the left ctrl key is pressed.
+	SHIFT_PRESSED =         0x0010, // the shift key is pressed.
+	NUMLOCK_ON =            0x0020, // the numlock light is on.
+	SCROLLLOCK_ON =         0x0040, // the scrolllock light is on.
+	CAPSLOCK_ON =           0x0080, // the capslock light is on.
+	ENHANCED_KEY =          0x0100, // the key is enhanced.
+}
+
+struct MOUSE_EVENT_RECORD {
+    COORD dwMousePosition;
+    DWORD dwButtonState;
+    DWORD dwControlKeyState;
+    DWORD dwEventFlags;
+}
+alias MOUSE_EVENT_RECORD *PMOUSE_EVENT_RECORD;
+
+//
+// ButtonState flags
+//
+enum
+{
+	FROM_LEFT_1ST_BUTTON_PRESSED =    0x0001,
+	RIGHTMOST_BUTTON_PRESSED =        0x0002,
+	FROM_LEFT_2ND_BUTTON_PRESSED =    0x0004,
+	FROM_LEFT_3RD_BUTTON_PRESSED =    0x0008,
+	FROM_LEFT_4TH_BUTTON_PRESSED =    0x0010,
+}
+
+//
+// EventFlags
+//
+
+enum
+{
+	MOUSE_MOVED =   0x0001,
+	DOUBLE_CLICK =  0x0002,
+}
+
+struct WINDOW_BUFFER_SIZE_RECORD {
+    COORD dwSize;
+}
+alias WINDOW_BUFFER_SIZE_RECORD *PWINDOW_BUFFER_SIZE_RECORD;
+
+struct MENU_EVENT_RECORD {
+    UINT dwCommandId;
+}
+alias MENU_EVENT_RECORD *PMENU_EVENT_RECORD;
+
+struct FOCUS_EVENT_RECORD {
+    BOOL bSetFocus;
+}
+alias FOCUS_EVENT_RECORD *PFOCUS_EVENT_RECORD;
+
+struct INPUT_RECORD {
+    WORD EventType;
+    union {
+        KEY_EVENT_RECORD KeyEvent;
+        MOUSE_EVENT_RECORD MouseEvent;
+        WINDOW_BUFFER_SIZE_RECORD WindowBufferSizeEvent;
+        MENU_EVENT_RECORD MenuEvent;
+        FOCUS_EVENT_RECORD FocusEvent;
+    }
+}
+alias INPUT_RECORD *PINPUT_RECORD;
+
+//
+//  EventType flags:
+//
+
+enum
+{
+	KEY_EVENT =         0x0001, // Event contains key event record
+	MOUSE_EVENT =       0x0002, // Event contains mouse event record
+	WINDOW_BUFFER_SIZE_EVENT = 0x0004, // Event contains window change event record
+	MENU_EVENT = 0x0008, // Event contains menu event record
+	FOCUS_EVENT = 0x0010, // event contains focus change
+}
+
+struct CHAR_INFO {
+    union {
+        WCHAR UnicodeChar;
+        CHAR   AsciiChar;
+    }
+    WORD Attributes;
+}
+alias CHAR_INFO *PCHAR_INFO;
+
+//
+// Attributes flags:
+//
+
+enum
+{
+	FOREGROUND_BLUE =      0x0001, // text color contains blue.
+	FOREGROUND_GREEN =     0x0002, // text color contains green.
+	FOREGROUND_RED =       0x0004, // text color contains red.
+	FOREGROUND_INTENSITY = 0x0008, // text color is intensified.
+	BACKGROUND_BLUE =      0x0010, // background color contains blue.
+	BACKGROUND_GREEN =     0x0020, // background color contains green.
+	BACKGROUND_RED =       0x0040, // background color contains red.
+	BACKGROUND_INTENSITY = 0x0080, // background color is intensified.
+}
+
+struct CONSOLE_SCREEN_BUFFER_INFO {
+    COORD dwSize;
+    COORD dwCursorPosition;
+    WORD  wAttributes;
+    SMALL_RECT srWindow;
+    COORD dwMaximumWindowSize;
+}
+alias CONSOLE_SCREEN_BUFFER_INFO *PCONSOLE_SCREEN_BUFFER_INFO;
+
+struct CONSOLE_CURSOR_INFO {
+    DWORD  dwSize;
+    BOOL   bVisible;
+}
+alias CONSOLE_CURSOR_INFO *PCONSOLE_CURSOR_INFO;
+
+enum
+{
+	ENABLE_PROCESSED_INPUT = 0x0001,
+	ENABLE_LINE_INPUT =      0x0002,
+	ENABLE_ECHO_INPUT =      0x0004,
+	ENABLE_WINDOW_INPUT =    0x0008,
+	ENABLE_MOUSE_INPUT =     0x0010,
+}
+
+enum
+{
+	ENABLE_PROCESSED_OUTPUT =    0x0001,
+	ENABLE_WRAP_AT_EOL_OUTPUT =  0x0002,
+}
+
+BOOL PeekConsoleInputA(HANDLE hConsoleInput, PINPUT_RECORD lpBuffer, DWORD nLength, LPDWORD lpNumberOfEventsRead);
+BOOL PeekConsoleInputW(HANDLE hConsoleInput, PINPUT_RECORD lpBuffer, DWORD nLength, LPDWORD lpNumberOfEventsRead);
+BOOL ReadConsoleInputA(HANDLE hConsoleInput, PINPUT_RECORD lpBuffer, DWORD nLength, LPDWORD lpNumberOfEventsRead);
+BOOL ReadConsoleInputW(HANDLE hConsoleInput, PINPUT_RECORD lpBuffer, DWORD nLength, LPDWORD lpNumberOfEventsRead);
+BOOL WriteConsoleInputA(HANDLE hConsoleInput, INPUT_RECORD *lpBuffer, DWORD nLength, LPDWORD lpNumberOfEventsWritten);
+BOOL WriteConsoleInputW(HANDLE hConsoleInput, INPUT_RECORD *lpBuffer, DWORD nLength, LPDWORD lpNumberOfEventsWritten);
+BOOL ReadConsoleOutputA(HANDLE hConsoleOutput, PCHAR_INFO lpBuffer, COORD dwBufferSize, COORD dwBufferCoord, PSMALL_RECT lpReadRegion);
+BOOL ReadConsoleOutputW(HANDLE hConsoleOutput, PCHAR_INFO lpBuffer, COORD dwBufferSize, COORD dwBufferCoord, PSMALL_RECT lpReadRegion);
+BOOL WriteConsoleOutputA(HANDLE hConsoleOutput, CHAR_INFO *lpBuffer, COORD dwBufferSize, COORD dwBufferCoord, PSMALL_RECT lpWriteRegion);
+BOOL WriteConsoleOutputW(HANDLE hConsoleOutput, CHAR_INFO *lpBuffer, COORD dwBufferSize, COORD dwBufferCoord, PSMALL_RECT lpWriteRegion);
+BOOL ReadConsoleOutputCharacterA(HANDLE hConsoleOutput, LPSTR lpCharacter, DWORD nLength, COORD dwReadCoord, LPDWORD lpNumberOfCharsRead);
+BOOL ReadConsoleOutputCharacterW(HANDLE hConsoleOutput, LPWSTR lpCharacter, DWORD nLength, COORD dwReadCoord, LPDWORD lpNumberOfCharsRead);
+BOOL ReadConsoleOutputAttribute(HANDLE hConsoleOutput, LPWORD lpAttribute, DWORD nLength, COORD dwReadCoord, LPDWORD lpNumberOfAttrsRead);
+BOOL WriteConsoleOutputCharacterA(HANDLE hConsoleOutput, LPCSTR lpCharacter, DWORD nLength, COORD dwWriteCoord, LPDWORD lpNumberOfCharsWritten);
+BOOL WriteConsoleOutputCharacterW(HANDLE hConsoleOutput, LPCWSTR lpCharacter, DWORD nLength, COORD dwWriteCoord, LPDWORD lpNumberOfCharsWritten);
+BOOL WriteConsoleOutputAttribute(HANDLE hConsoleOutput, WORD *lpAttribute, DWORD nLength, COORD dwWriteCoord, LPDWORD lpNumberOfAttrsWritten);
+BOOL FillConsoleOutputCharacterA(HANDLE hConsoleOutput, CHAR cCharacter, DWORD  nLength, COORD  dwWriteCoord, LPDWORD lpNumberOfCharsWritten);
+BOOL FillConsoleOutputCharacterW(HANDLE hConsoleOutput, WCHAR cCharacter, DWORD  nLength, COORD  dwWriteCoord, LPDWORD lpNumberOfCharsWritten);
+BOOL FillConsoleOutputAttribute(HANDLE hConsoleOutput, WORD   wAttribute, DWORD  nLength, COORD  dwWriteCoord, LPDWORD lpNumberOfAttrsWritten);
+BOOL GetConsoleMode(HANDLE hConsoleHandle, LPDWORD lpMode);
+BOOL GetNumberOfConsoleInputEvents(HANDLE hConsoleInput, LPDWORD lpNumberOfEvents);
+BOOL GetConsoleScreenBufferInfo(HANDLE hConsoleOutput, PCONSOLE_SCREEN_BUFFER_INFO lpConsoleScreenBufferInfo);
+COORD GetLargestConsoleWindowSize( HANDLE hConsoleOutput);
+BOOL GetConsoleCursorInfo(HANDLE hConsoleOutput, PCONSOLE_CURSOR_INFO lpConsoleCursorInfo);
+BOOL GetNumberOfConsoleMouseButtons( LPDWORD lpNumberOfMouseButtons);
+BOOL SetConsoleMode(HANDLE hConsoleHandle, DWORD dwMode);
+BOOL SetConsoleActiveScreenBuffer(HANDLE hConsoleOutput);
+BOOL FlushConsoleInputBuffer(HANDLE hConsoleInput);
+BOOL SetConsoleScreenBufferSize(HANDLE hConsoleOutput, COORD dwSize);
+BOOL SetConsoleCursorPosition(HANDLE hConsoleOutput, COORD dwCursorPosition);
+BOOL SetConsoleCursorInfo(HANDLE hConsoleOutput, CONSOLE_CURSOR_INFO *lpConsoleCursorInfo);
+BOOL ScrollConsoleScreenBufferA(HANDLE hConsoleOutput, SMALL_RECT *lpScrollRectangle, SMALL_RECT *lpClipRectangle, COORD dwDestinationOrigin, CHAR_INFO *lpFill);
+BOOL ScrollConsoleScreenBufferW(HANDLE hConsoleOutput, SMALL_RECT *lpScrollRectangle, SMALL_RECT *lpClipRectangle, COORD dwDestinationOrigin, CHAR_INFO *lpFill);
+BOOL SetConsoleWindowInfo(HANDLE hConsoleOutput, BOOL bAbsolute, SMALL_RECT *lpConsoleWindow);
+BOOL SetConsoleTextAttribute(HANDLE hConsoleOutput, WORD wAttributes);
+alias BOOL(*PHANDLER_ROUTINE)(DWORD CtrlType);
+BOOL SetConsoleCtrlHandler(PHANDLER_ROUTINE HandlerRoutine, BOOL Add);
+BOOL GenerateConsoleCtrlEvent( DWORD dwCtrlEvent, DWORD dwProcessGroupId);
+BOOL AllocConsole();
+BOOL FreeConsole();
+DWORD GetConsoleTitleA(LPSTR lpConsoleTitle, DWORD nSize);
+DWORD GetConsoleTitleW(LPWSTR lpConsoleTitle, DWORD nSize);
+BOOL SetConsoleTitleA(LPCSTR lpConsoleTitle);
+BOOL SetConsoleTitleW(LPCWSTR lpConsoleTitle);
+BOOL ReadConsoleA(HANDLE hConsoleInput, LPVOID lpBuffer, DWORD nNumberOfCharsToRead, LPDWORD lpNumberOfCharsRead, LPVOID lpReserved);
+BOOL ReadConsoleW(HANDLE hConsoleInput, LPVOID lpBuffer, DWORD nNumberOfCharsToRead, LPDWORD lpNumberOfCharsRead, LPVOID lpReserved);
+BOOL WriteConsoleA(HANDLE hConsoleOutput,  void *lpBuffer, DWORD nNumberOfCharsToWrite, LPDWORD lpNumberOfCharsWritten, LPVOID lpReserved);
+BOOL WriteConsoleW(HANDLE hConsoleOutput,  void *lpBuffer, DWORD nNumberOfCharsToWrite, LPDWORD lpNumberOfCharsWritten, LPVOID lpReserved);
+HANDLE CreateConsoleScreenBuffer(DWORD dwDesiredAccess, DWORD dwShareMode, SECURITY_ATTRIBUTES *lpSecurityAttributes, DWORD dwFlags, LPVOID lpScreenBufferData);
+UINT GetConsoleCP();
+BOOL SetConsoleCP( UINT wCodePageID);
+UINT GetConsoleOutputCP();
+BOOL SetConsoleOutputCP(UINT wCodePageID);
+
+enum : int
+{
+	CONSOLE_TEXTMODE_BUFFER = 1,
+}
+
+enum
+{
+	SM_CXSCREEN =             0,
+	SM_CYSCREEN =             1,
+	SM_CXVSCROLL =            2,
+	SM_CYHSCROLL =            3,
+	SM_CYCAPTION =            4,
+	SM_CXBORDER =             5,
+	SM_CYBORDER =             6,
+	SM_CXDLGFRAME =           7,
+	SM_CYDLGFRAME =           8,
+	SM_CYVTHUMB =             9,
+	SM_CXHTHUMB =             10,
+	SM_CXICON =               11,
+	SM_CYICON =               12,
+	SM_CXCURSOR =             13,
+	SM_CYCURSOR =             14,
+	SM_CYMENU =               15,
+	SM_CXFULLSCREEN =         16,
+	SM_CYFULLSCREEN =         17,
+	SM_CYKANJIWINDOW =        18,
+	SM_MOUSEPRESENT =         19,
+	SM_CYVSCROLL =            20,
+	SM_CXHSCROLL =            21,
+	SM_DEBUG =                22,
+	SM_SWAPBUTTON =           23,
+	SM_RESERVED1 =            24,
+	SM_RESERVED2 =            25,
+	SM_RESERVED3 =            26,
+	SM_RESERVED4 =            27,
+	SM_CXMIN =                28,
+	SM_CYMIN =                29,
+	SM_CXSIZE =               30,
+	SM_CYSIZE =               31,
+	SM_CXFRAME =              32,
+	SM_CYFRAME =              33,
+	SM_CXMINTRACK =           34,
+	SM_CYMINTRACK =           35,
+	SM_CXDOUBLECLK =          36,
+	SM_CYDOUBLECLK =          37,
+	SM_CXICONSPACING =        38,
+	SM_CYICONSPACING =        39,
+	SM_MENUDROPALIGNMENT =    40,
+	SM_PENWINDOWS =           41,
+	SM_DBCSENABLED =          42,
+	SM_CMOUSEBUTTONS =        43,
+
+
+	SM_CXFIXEDFRAME =         SM_CXDLGFRAME,
+	SM_CYFIXEDFRAME =         SM_CYDLGFRAME,
+	SM_CXSIZEFRAME =          SM_CXFRAME,
+	SM_CYSIZEFRAME =          SM_CYFRAME,
+
+	SM_SECURE =               44,
+	SM_CXEDGE =               45,
+	SM_CYEDGE =               46,
+	SM_CXMINSPACING =         47,
+	SM_CYMINSPACING =         48,
+	SM_CXSMICON =             49,
+	SM_CYSMICON =             50,
+	SM_CYSMCAPTION =          51,
+	SM_CXSMSIZE =             52,
+	SM_CYSMSIZE =             53,
+	SM_CXMENUSIZE =           54,
+	SM_CYMENUSIZE =           55,
+	SM_ARRANGE =              56,
+	SM_CXMINIMIZED =          57,
+	SM_CYMINIMIZED =          58,
+	SM_CXMAXTRACK =           59,
+	SM_CYMAXTRACK =           60,
+	SM_CXMAXIMIZED =          61,
+	SM_CYMAXIMIZED =          62,
+	SM_NETWORK =              63,
+	SM_CLEANBOOT =            67,
+	SM_CXDRAG =               68,
+	SM_CYDRAG =               69,
+	SM_SHOWSOUNDS =           70,
+	SM_CXMENUCHECK =          71,
+	SM_CYMENUCHECK =          72,
+	SM_SLOWMACHINE =          73,
+	SM_MIDEASTENABLED =       74,
+	SM_CMETRICS =             75,
+}
+
+int GetSystemMetrics(int nIndex);
+
 }

@@ -1,6 +1,7 @@
 /**
  * C's &lt;stdlib.h&gt;
- * Authors: Walter Bright, Digital Mars, www.digitalmars.com
+ * D Programming Language runtime library
+ * Authors: Walter Bright, Digital Mars, http://www.digitalmars.com
  * License: Public Domain
  * Macros:
  *	WIKI=Phobos/StdCStdlib
