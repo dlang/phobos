@@ -911,24 +911,27 @@ template isExpressionTuple(T ...)
  */
 
 template unsigned(T) {
-  static if (is(T == byte)) alias ubyte unsigned;
-  else static if (is(T == short)) alias ushort unsigned;
-  else static if (is(T == int)) alias uint unsigned;
-  else static if (is(T == long)) alias ulong unsigned;
-  else static if (is(T == ubyte)) alias ubyte unsigned;
-  else static if (is(T == ushort)) alias ushort unsigned;
-  else static if (is(T == uint)) alias uint unsigned;
-  else static if (is(T == ulong)) alias ulong unsigned;
-  else static if (is(T == char)) alias char unsigned;
-  else static if (is(T == wchar)) alias wchar unsigned;
-  else static if (is(T == dchar)) alias dchar unsigned;
-  else static if(is(T == enum)) 
-       static if (T.sizeof == 1) alias ubyte unsigned;
-       else static if (T.sizeof == 2) alias ushort unsigned;
-       else static if (T.sizeof == 4) alias uint unsigned;
-       else static if (T.sizeof == 8) alias ulong unsigned;
-  else static assert(false, "Type " ~ T.stringof
-                     ~ " does not have an unsigned counterpart");
+    static if (is(T == byte)) alias ubyte unsigned;
+    else static if (is(T == short)) alias ushort unsigned;
+    else static if (is(T == int)) alias uint unsigned;
+    else static if (is(T == long)) alias ulong unsigned;
+    else static if (is(T == ubyte)) alias ubyte unsigned;
+    else static if (is(T == ushort)) alias ushort unsigned;
+    else static if (is(T == uint)) alias uint unsigned;
+    else static if (is(T == ulong)) alias ulong unsigned;
+    else static if (is(T == char)) alias char unsigned;
+    else static if (is(T == wchar)) alias wchar unsigned;
+    else static if (is(T == dchar)) alias dchar unsigned;
+    else static if(is(T == enum)) {
+        static if (T.sizeof == 1) alias ubyte unsigned;
+        else static if (T.sizeof == 2) alias ushort unsigned;
+        else static if (T.sizeof == 4) alias uint unsigned;
+        else static if (T.sizeof == 8) alias ulong unsigned;
+        else static assert(false, "Type " ~ T.stringof
+                           ~ " does not have an unsigned counterpart");
+    }
+    else static assert(false, "Type " ~ T.stringof
+                       ~ " does not have an unsigned counterpart");
 }
 
 unittest
@@ -949,4 +952,22 @@ template Mutable(T)
 	alias U Mutable;
     else
 	alias T Mutable;
+}
+
+/**
+Returns the most negative value of the numeric type T.
+*/
+
+template mostNegative(T)
+{
+    static if (T.min == 0) enum byte mostNegative = 0;
+    else static if (T.min > 0) enum mostNegative = -T.max;
+    else enum mostNegative = T.min;
+}
+
+unittest
+{
+    static assert(mostNegative!(float) == -float.max);
+    static assert(mostNegative!(uint) == 0);
+    static assert(mostNegative!(long) == long.min);
 }
