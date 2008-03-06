@@ -1935,15 +1935,15 @@ private void formatFloat(Writer, D)(ref Writer w, D obj, FormatInfo f)
     if (f.flPlus) sprintfSpec[i++] = '+';
     if (f.flZero) sprintfSpec[i++] = '0';
     if (f.flSpace) sprintfSpec[i++] = ' ';
-    if (f.flHash()) sprintfSpec[i++] = '#';
+    if (f.flHash) sprintfSpec[i++] = '#';
     sprintfSpec[i .. i + 3] = "*.*";
     i += 3;
-    if (is(D : real)) sprintfSpec[i++] = 'L';
+    if (is(const(D) == const(real))) sprintfSpec[i++] = 'L';
     sprintfSpec[i++] = f.spec;
     sprintfSpec[i] = 0;
-    //writeln(sprintfSpec);
+    //printf("format: '%s'; geeba: %g\n", sprintfSpec.ptr, obj);
     char[512] buf;
-    auto n = snprintf(buf.ptr, buf.length,
+    invariant n = snprintf(buf.ptr, buf.length,
                        sprintfSpec.ptr,
                        f.width,
                        // negative precision is same as no precision specified
@@ -2073,11 +2073,13 @@ private int getNthInt(A...)(uint index, A args)
     }
 }
 
-/* (Not public yet.)
- * Formats arguments 'args' according to the format string 'fmt' and
- * writes the result to 'w'. 'F' must be char, wchar, or dchar.
- * Example:
+/*
+  (Not public yet.)  Formats arguments 'args' according to the format
+  string 'fmt' and writes the result to 'w'. 'F' must be char, wchar,
+  or dchar.
 
+  Example:
+  
 -------------------------
 import std.c.stdio;
 import std.format;
@@ -2094,27 +2096,31 @@ string myFormat(A...)(A args)
 int x = 42;
 assert(myFormat(x, 0) == "42 et 0 numeris romanis non sunt");
 ------------------------
- * 
- * formattedWrite supports positional parameter syntax in $(LINK2 http://www.opengroup.org/onlinepubs/009695399/functions/printf.html,POSIX) style.
- * Example:
+ 
+formattedWrite supports positional parameter syntax in $(WEB
+opengroup.org/onlinepubs/009695399/functions/printf.html, POSIX)
+style.  Example:
 
 -------------------------
 StringWriter!(char) writer;
 std.format.formattedWrite(writer, "Date: %2$s %1$s", "October", 5);
 assert(writer.backend == "Date: 5 October");
 ------------------------
-The positional and non-positional styles can be mixed in the same format string. (POSIX leaves this behavior undefined.) The internal counter for non-positional parameters
-tracks the next parameter after the largest positional parameter
-already used.
+
+The positional and non-positional styles can be mixed in the same
+format string. (POSIX leaves this behavior undefined.) The internal
+counter for non-positional parameters tracks the next parameter after
+the largest positional parameter already used.
 
 Warning:
 
 This is the function internally used by writef* but it's still
 undergoing active development. Do not rely on it.
- */ 
+*/
+
 void formattedWrite(Writer, F, A...)(ref Writer w, const(F)[] fmt, A args)
 {
-    const len = args.length;
+    invariant len = args.length;
     void function(ref Writer, const(void)*, FormatInfo) funs[len] = void;
     const(void)* argsAddresses[len] = void;
     foreach (i, arg; args)
@@ -2200,6 +2206,13 @@ void formattedWrite(Writer, F, A...)(ref Writer w, const(F)[] fmt, A args)
 
 unittest
 {
+    StringWriter!(char) stream;
+    formattedWrite(stream, "%s", 1.1);
+    assert(stream.backend == "1.1", stream.backend);
+}
+
+unittest
+{
     // testing raw writes
     StringWriter!(char) w;
     w.backend = null;
@@ -2242,9 +2255,9 @@ unittest
    * is for %A.
    */
   version (linux)
-    assert(stream.backend == "1.67 -0X1.47AE147AE147BP+0 nan", stream.backend);
+      assert(stream.backend == "1.67 -0X1.47AE147AE147BP+0 nan", stream.backend);
   else
-    assert(stream.backend == "1.67 -0X1.47AE147AE147BP+0 nan");
+      assert(stream.backend == "1.67 -0X1.47AE147AE147BP+0 nan");
   stream.backend = null;
 
   formattedWrite(stream, "%x %X", 0x1234AF, 0xAFAFAFAF);
