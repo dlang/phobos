@@ -43,7 +43,6 @@ private template createAccessors(
             alias ulong MasksType;
         enum MasksType
             maskAllElse = ((1uL << len) - 1u) << offset,
-            maskMyself = ~maskAllElse,
             signBitCheck = 1uL << (len - 1),
             extendSign = ~((cast(MasksType)1u << len) - 1);
 
@@ -57,7 +56,7 @@ private template createAccessors(
             // setter
                 ~"void " ~ name ~ "(bool v){"
                 ~"if (v) "~store~" |= "~myToString!(maskAllElse)~";"
-                ~"else "~store~" &= "~myToString!(maskMyself)~";}\n";
+                ~"else "~store~" &= ~"~myToString!(maskAllElse)~";}\n";
         }
         else
         {
@@ -74,7 +73,7 @@ private template createAccessors(
             // setter
                 ~"void "~name~"("~T.stringof~" v){ "
                 ~store~" = cast(typeof("~store~"))"
-                " (("~store~" & "~myToString!(maskMyself)~")"
+                " (("~store~" & ~"~myToString!(maskAllElse)~")"
                 " | ((cast(typeof("~store~")) v << "~myToString!(offset)~")"
                 " & "~myToString!(maskAllElse)~"));}\n";
         }
@@ -102,7 +101,10 @@ private template createFields(string store, size_t offset, Ts...)
         else static if (offset == ulong.sizeof * 8)
             alias ulong StoreType;
         else
-            static assert(false, myToString(offset));
+        {
+            static assert(false, "Field widths must sum to 8, 16, 32, or 64");
+            alias ulong StoreType; // just to avoid another error msg
+        }
         enum result = "private " ~ StoreType.stringof ~ " " ~ store ~ ";";
     }
     else
