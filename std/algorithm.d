@@ -84,7 +84,7 @@ private import std.contracts;
 private import std.traits;
 private import std.c.string;
 
-version(Unittest)
+version(unittest)
 {
     private import std.stdio;
     private import std.random;
@@ -3554,7 +3554,7 @@ unittest
 
 // Internal random array generators
 
-version(Unittest)
+version(unittest)
 {
     private enum size_t maxArraySize = 50;
     private enum size_t minArraySize = maxArraySize - 1;
