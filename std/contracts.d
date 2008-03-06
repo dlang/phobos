@@ -40,6 +40,7 @@ module std.contracts;
 private import std.conv;
 private import std.algorithm;
 private import std.iterator;
+private import std.traits;
 
 /*
  *  Copyright (C) 2004-2006 by Digital Mars, www.digitalmars.com
@@ -320,11 +321,12 @@ bool pointsTo(S, T)(ref S source, ref T target)
     {
         foreach (i, subobj; source.tupleof)
         {
-            if (pointsTo(subobj, target)) return true;
+            static if (!isStaticArray!(typeof(subobj)))
+                if (pointsTo(subobj, target)) return true;            
         }
         return false;
     }
-    else static if (is(S A : U[], U))
+    else static if (isDynamicArray!(S))
     {
         const void* p1 = source.ptr, p2 = p1 + source.length,
             b = &target, e = b + target.sizeof;
