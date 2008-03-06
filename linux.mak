@@ -20,17 +20,17 @@ ifeq (,$(MAKECMDGOALS))
 endif
 ifeq (unittest/release,$(MAKECMDGOALS))
     CFLAGS:=$(CFLAGS) -O
-    DFLAGS:=$(DFLAGS) -release -unittest -version=Unittest
+    DFLAGS:=$(DFLAGS) -release -unittest
     OBJDIR=obj/unittest/release
 endif
 ifeq (unittest/debug,$(MAKECMDGOALS))
     CFLAGS:=$(CFLAGS) -g
-    DFLAGS:=$(DFLAGS) -g -unittest -version=Unittest
+    DFLAGS:=$(DFLAGS) -g -unittest -debug
     OBJDIR=obj/unittest/debug
 endif
 ifeq (debug,$(MAKECMDGOALS))
     CFLAGS:=$(CFLAGS) -g
-    DFLAGS:=$(DFLAGS) -g
+    DFLAGS:=$(DFLAGS) -g -debug
     OBJDIR=obj/debug
 endif
 ifeq (release,$(MAKECMDGOALS))
