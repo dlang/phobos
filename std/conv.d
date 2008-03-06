@@ -331,19 +331,31 @@ private T toImpl(S, T)(S value) {
   }
 }
 
-private T numberToNumber(S, T)(S value) {
-  static const
-      sSmallest = isFloatingPoint!(S) ? -S.max : S.min,
-      tSmallest = isFloatingPoint!(T) ? -T.max : T.min;
-  static if (sSmallest < tSmallest) {
-    // possible underflow
-    if (value < tSmallest) conv_overflow("Conversion underflow");
-  }
-  static if (S.max > T.max) {
-    // possible overflow
-    if (value > T.max) conv_overflow("Conversion overflow");
-  }
-  return cast(T) value;
+private T numberToNumber(S, T)(S value)
+{
+    static if (isFloatingPoint!(S))
+        enum sSmallest = -S.max;
+    else
+        enum sSmallest = S.min;
+    static if (isFloatingPoint!(T))
+        enum tSmallest = -T.max;
+    else
+        enum tSmallest = T.min;
+    static if (sSmallest < 0) {
+        // possible underflow converting from a signed
+        static if (tSmallest == 0) {
+            invariant good = value >= 0;
+        } else {
+            static assert(tSmallest < 0);
+            invariant good = value >= tSmallest;
+        }
+        if (!good) conv_overflow("Conversion underflow");
+    }
+    static if (S.max > T.max) {
+        // possible overflow
+        if (value > T.max) conv_overflow("Conversion overflow");
+    }
+    return cast(T) value;
 }
 
 private T parseString(T)(const(char)[] v)
@@ -779,7 +791,7 @@ unittest
     i = toInt("-2147483648");
     assert(i == 0x80000000);
 
-    static string[] errors =
+    invariant string[] errors =
     [
 	"",
 	"-",
