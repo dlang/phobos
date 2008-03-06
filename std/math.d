@@ -720,8 +720,8 @@ real expm1(real x)		{ return std.c.math.expm1l(x); }
  * Calculate cos(y) + i sin(y).
  *
  * On many CPUs (such as x86), this is a very efficient operation;
- * almost twice as fast as calculating sin(y) and cos(y)
- * seperately, and is the preferred method when both are required.
+ * almost twice as fast as calculating sin(y) and cos(y) separately,
+ * and is the preferred method when both are required.
  */
 creal expi(real y)
 {
