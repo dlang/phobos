@@ -343,3 +343,55 @@ unittest
            && b == _24b455e148a38a847d65006bca25f7fe.B1);
 }
 
+/**
+ */
+template Rebindable(T : Object)
+{
+    static if (!is(T X == const(U), U) && !is(T X == invariant(U), U))
+    {
+        alias T Rebindable;
+    }
+    else
+    {
+        struct Rebindable
+        {
+            private union
+            {
+                T original;
+                U stripped;
+            }
+            void opAssign(T another)
+            {
+                stripped = cast(U) another;
+            }
+            static Rebindable opCall(T initializer)
+            {
+                Rebindable result;
+                result = initializer;
+                return result;
+            }
+            alias original get;
+        }
+    }
+}
+
+unittest
+{
+    class C {};
+    Rebindable!(C) obj0;
+    static assert(is(typeof(obj0) == C));
+
+    Rebindable!(const(C)) obj1;
+    static assert(is(typeof(obj1.get) == const(C)), typeof(obj1.get).stringof);
+    static assert(is(typeof(obj1.stripped) == C));
+    obj1 = new C;
+    assert(obj1.get !is null);
+    obj1 = new const(C);
+    assert(obj1.get !is null);
+
+    Rebindable!(invariant(C)) obj2;
+    static assert(is(typeof(obj2.get) == invariant(C)));
+    static assert(is(typeof(obj2.stripped) == C));
+    obj2 = new invariant(C);
+    assert(obj1.get !is null);
+}
