@@ -464,14 +464,25 @@ auto n = rnd.next;
 
 uint unpredictableSeed()
 {
-    return cast(uint) (getpid ^ getUTCtime);
+    static uint moseghint = 87324921;
+    return cast(uint) (getpid ^ getUTCtime ^ ++moseghint);
+}
+
+unittest
+{
+    // not much to test here
+    auto a = unpredictableSeed;
+    static assert(is(typeof(a) == uint));
+    auto b = unpredictableSeed;
+    assert(a != b);
 }
 
 /**
    Generates uniformly-distributed numbers within a range using an
-   external generator. The $(D_PARAM leftLim) and $(D_PARAM rightLim)
-   parameters control the shape of the interval (open vs. closed on
-   either side). The default interval is [a, b$(RPAREN).
+   external generator. The $(D_PARAM boundaries) parameter controls
+   the shape of the interval (open vs. closed on either side). Valid
+   values for $(D boundaries) are "[]", "(]", "[)", and "()". The
+   default interval is [a, b$(RPAREN).
 
    Example:
 
@@ -486,16 +497,17 @@ auto i = rndIndex.next(gen);
 auto p = rndValue.next(gen);
 // Assign that value to that array element
 a[i] = p;
-auto digits = UniformDistribution!(char, '[', ']')('0', '9');
-auto percentages = UniformDistribution!(double, '$(LPAREN)', ']')(0.0, 100.0);
+auto digits = UniformDistribution!(char, "[]")('0', '9');
+auto percentages = UniformDistribution!(double, "$(LPAREN)]")(0.0, 100.0);
 // Get a digit in ['0', '9']
 auto digit = digits.next(gen); 
 // Get a number in $(LPAREN)0.0, 100.0]
 auto p = percentages.next(gen);
 ----
- */
-struct UniformDistribution(NumberType, char leftLim = '[', char rightLim = ')')
+*/
+struct UniformDistribution(NumberType, string boundaries = "[)")
 {
+    enum char leftLim = boundaries[0], rightLim = boundaries[1];
     static assert((leftLim == '[' || leftLim == '(')
                   && (rightLim == ']' || rightLim == ')'));
 
@@ -622,19 +634,18 @@ unittest
 
 ----
 Random gen(unpredictableSeed);
-// Generate an integer in [0, 1024]
+// Generate an integer in [0, 1024$(RPAREN)
 auto a = uniform(gen, 0, 1024);
 // Generate a float in [0, 1$(RPAREN)
 auto a = uniform(gen, 0.0f, 1.0f);
 ----
 */
 
-T1 uniform(T1, char leftLim = '[', char rightLim = ')',
-        UniformRandomNumberGenerator, T2)
-(ref UniformRandomNumberGenerator gen, T1 a, T2 b)
+T1 uniform(T1, string boundaries = "[)", UniformRandomNumberGenerator, T2)
+    (ref UniformRandomNumberGenerator gen, T1 a, T2 b)
 {
     alias typeof(return) Result;
-    auto dist = UniformDistribution!(Result, leftLim, rightLim)(a, b);
+    auto dist = UniformDistribution!(Result, boundaries)(a, b);
     return dist.next(gen);
 }
 
