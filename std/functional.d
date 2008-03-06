@@ -89,9 +89,14 @@ assert(!greater("1", "2") && greater("2", "1"));
 ----
 */
 
-template binaryFun(string comp) {
+template binaryFun(string comp)
+{
     // @@@BUG1816@@@: typeof(mixin(comp)) should work
-    typeof({ ElementType1 a; ElementType2 b; return mixin(comp);}())
+    typeof({
+            static ElementType1 a;
+            static ElementType2 b;
+            return mixin(comp);
+        }())
     binaryFun(ElementType1, ElementType2)(ElementType1 a, ElementType2 b)
     {
         return mixin(comp);
@@ -104,7 +109,6 @@ unittest
     assert(less(1, 2) && !less(2, 1));
     assert(less("1", "2") && !less("2", "1"));
 }
-
 
 /*
    Predicate that returns $(D_PARAM a < b).
@@ -247,3 +251,39 @@ unittest
 //     alias naryFun!("a + b") test;
 //     test(1, 2);
 // }
+
+/**
+Composes two functions $(D F1) and $(D F2), returning a function $(D
+F(x)) that in turn returns $(D F1(F2(x))).
+
+Example:
+----
+auto x = 5;
+auto y = compose!("!a", "a > 0")(x);
+assert(!y);
+----
+*/
+
+template compose(alias F1, alias F2)
+{
+    typeof({ E a; return F1(F2(a)); }()) compose(E)(E a)
+    {
+        return F1(F2(a));
+    }
+}
+/// Ditto
+template compose(alias F1, string F2)
+{
+    alias .compose!(F1, unaryFun!(F2)) compose;
+}
+/// Ditto
+template compose(string F1, alias F2)
+{
+    alias .compose!(unaryFun!(F1), F2) compose;
+}
+/// Ditto
+template compose(string F1, string F2)
+{
+    alias .compose!(unaryFun!(F1), unaryFun!(F2)) compose;
+}
+
