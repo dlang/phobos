@@ -1602,6 +1602,8 @@ struct StringWriter(Char)
     }
 }
 
+import std.bitmanip;
+
 /*
  * A compiled version of an individual writef format
  * specifier. FormatInfo only focuses on representation, without
@@ -1620,17 +1622,15 @@ struct FormatInfo
     char spec = 's';
     /** Index of the argument, 1 .. ubyte.max. (0 means not used)*/
     ubyte index;
-    /** Flags: flDash for '-', flZero for '0', flSpace for ' ', flPlus
+    /* Flags: flDash for '-', flZero for '0', flSpace for ' ', flPlus
      *  for '+', flHash for '#'. */
-    bool flDash;
-    ///ditto 
-    bool flZero;
-    ///ditto 
-    bool flSpace;
-    ///ditto 
-    bool flPlus;
-    ///ditto 
-    bool flHash;
+    mixin(bitfields!(
+              bool, "flDash", 1,
+              bool, "flZero", 1,
+              bool, "flSpace", 1,
+              bool, "flPlus", 1,
+              bool, "flHash", 1,
+              ubyte, "", 3));
 }
 
 /*
@@ -1712,7 +1712,8 @@ FormatInfo parseFormatSpec(S)(ref S fmt)
             {
                 fmt = fmt[i .. $];
                 i = 0;
-                result.precision = cast(short)(isdigit(fmt[0]) ? parse!(int)(fmt) : 0);
+                result.precision =
+                    cast(short)(isdigit(fmt[0]) ? parse!(int)(fmt) : 0);
             }
             break;
         default:
@@ -1850,7 +1851,7 @@ private void formatIntegral(Writer, D)(ref Writer w, D argx, FormatInfo f)
         digits = buffer[i .. $]; // got the digits without the sign
     }
     // adjust precision to print a '0' for octal if alternate format is on
-    if (base == 8 && f.flHash
+    if (base == 8 && f.flHash()
         && (f.precision <= digits.length)) // too low precision
     {
         //f.precision = digits.length + (arg != 0);
@@ -1863,7 +1864,7 @@ private void formatIntegral(Writer, D)(ref Writer w, D argx, FormatInfo f)
         f.width // start with the minimum width
         - digits.length  // take away digits to print
         - (forcedPrefix != 0) // take away the sign if any
-        - (base == 16 && f.flHash && arg ? 2 : 0); // 0x or 0X
+        - (base == 16 && f.flHash() && arg ? 2 : 0); // 0x or 0X
     int delta = f.precision - digits.length;
     if (delta > 0) spacesToPrint -= delta;
     //writeln(spacesToPrint);
@@ -1881,7 +1882,7 @@ private void formatIntegral(Writer, D)(ref Writer w, D argx, FormatInfo f)
     // write sign
     if (forcedPrefix) w.putchar(forcedPrefix);
     // write 0x or 0X
-    if (base == 16 && f.flHash && arg) {
+    if (base == 16 && f.flHash() && arg) {
         // @@@ overcome bug in dmd;
         //w.write(f.spec == 'x' ? "0x" : "0X"); //crashes the compiler
         w.putchar('0');
@@ -1934,7 +1935,7 @@ private void formatFloat(Writer, D)(ref Writer w, D obj, FormatInfo f)
     if (f.flPlus) sprintfSpec[i++] = '+';
     if (f.flZero) sprintfSpec[i++] = '0';
     if (f.flSpace) sprintfSpec[i++] = ' ';
-    if (f.flHash) sprintfSpec[i++] = '#';
+    if (f.flHash()) sprintfSpec[i++] = '#';
     sprintfSpec[i .. i + 3] = "*.*";
     i += 3;
     if (is(D : real)) sprintfSpec[i++] = 'L';
@@ -2131,7 +2132,8 @@ void formattedWrite(Writer, F, A...)(ref Writer w, const(F)[] fmt, A args)
             // leftover spec?
             if (fmt.length)
             {
-                throw new FormatError(cast(string) ("Orphan format specifier: %" ~ fmt));
+                throw new FormatError(
+                    cast(string) ("Orphan format specifier: %" ~ fmt));
             }
             break;
         }
@@ -2288,7 +2290,8 @@ unittest
   stream.backend = null;
   
   formattedWrite(stream, "%04f|%05d|%#05x|%#5x",-4.,-10,1,1);
-  assert(stream.backend == "-4.000000|-0010|0x001|  0x1");
+  assert(stream.backend == "-4.000000|-0010|0x001|  0x1",
+      stream.backend);
   stream.backend = null;
   
   int i;
