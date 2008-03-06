@@ -72,9 +72,7 @@ WIKI = Phobos/StdAlgorithm
  */
 
 module std.algorithm;
-private import std.stdio;
 private import std.math;
-private import std.random;
 private import std.date;
 private import std.functional;
 private import std.iterator;
@@ -85,6 +83,12 @@ private import std.metastrings;
 private import std.contracts;
 private import std.traits;
 private import std.c.string;
+
+version(Unittest)
+{
+    private import std.stdio;
+    private import std.random;
+}
 
 /**
 Implements the homonym function (also known as $(D transform)) present
@@ -344,7 +348,7 @@ unittest
 Implements the homonym function present in various programming
 languages of functional flavor. The call $(D filter!(fun)(range))
 returns a new range only containing elements $(D x) in $(D r) for
-which $(pred(x)) is $(D true).
+which $(D pred(x)) is $(D true).
 
 Example:
 ----
@@ -1254,16 +1258,47 @@ unittest
     assert(overlap(a, b) == [ 100, 12 ]);
 }
 
+// MinType
+template MinType(T...)
+{
+    static assert(T.length >= 2);
+    static if (T.length == 2)
+    {
+        static if (!is(typeof(T[0].min)))
+            alias CommonType!(T[0 .. 2]) MinType;
+        else static if (mostNegative!(T[1]) < mostNegative!(T[0]))
+            alias T[1] MinType;
+        else static if (mostNegative!(T[1]) > mostNegative!(T[0]))
+            alias T[0] MinType;
+        else static if (T[1].max < T[0].max)
+            alias T[1] MinType;
+        else
+            alias T[0] MinType;
+    }
+    else
+    {
+        alias MinType!(MinType!(T[0 .. 2]), T[2 .. $]) MinType;
+    }
+}
+
 // min
 /**
 Returns the minimum of the passed-in values. The type of the result is
 computed by using $(XREF traits, CommonType).
 */
-CommonType!(T1, T2, T) min(T1, T2, T...)(T1 a, T2 b, T xs)
+MinType!(T1, T2, T) min(T1, T2, T...)(T1 a, T2 b, T xs)
 {
     static if (T.length == 0)
     {
-        return b < a ? b : a;
+        static if (isIntegral!(T1) && isIntegral!(T2)
+                   && (mostNegative!(T1) < 0) != (mostNegative!(T2) < 0))
+            static if (mostNegative!(T1) < 0)
+                invariant chooseB = b < a && a > 0;
+            else
+                invariant chooseB = b < a || b < 0;
+        else
+                invariant chooseB = b < a;
+        return cast(typeof(return)) (chooseB ? b : a);
     }
     else
     {
@@ -1282,6 +1317,30 @@ unittest
     auto e = min(a, b, c);
     assert(is(typeof(e) == double));
     assert(e == 2);
+    // mixed signedness test
+    a = -10;
+    uint f = 10;
+    static assert(is(typeof(min(a, f)) == int));
+    assert(min(a, f) == -10);
+}
+
+// MaxType
+template MaxType(T...)
+{
+    static assert(T.length >= 2);
+    static if (T.length == 2)
+    {
+        static if (!is(typeof(T[0].min)))
+            alias CommonType!(T[0 .. 2]) MaxType;
+        else static if (T[1].max > T[0].max)
+            alias T[1] MaxType;
+        else 
+            alias T[0] MaxType;
+    }
+    else
+    {
+        alias MaxType!(MaxType!(T[0], T[1]), T[2 .. $]) MaxType;
+    }
 }
 
 // max
@@ -1302,11 +1361,19 @@ assert(is(typeof(e) == double));
 assert(e == 2);
 ----
 */
-CommonType!(T1, T2, T) max(T1, T2, T...)(T1 a, T2 b, T xs)
+MaxType!(T1, T2, T) max(T1, T2, T...)(T1 a, T2 b, T xs)
 {
     static if (T.length == 0)
     {
-        return b > a ? b : a;
+        static if (isIntegral!(T1) && isIntegral!(T2)
+                   && (mostNegative!(T1) < 0) != (mostNegative!(T2) < 0))
+            static if (mostNegative!(T1) < 0)
+                invariant chooseB = b > a || a < 0;
+            else
+                invariant chooseB = b > a && b > 0;
+        else
+            invariant chooseB = b > a;
+        return cast(typeof(return)) (chooseB ? b : a);
     }
     else
     {
@@ -1325,6 +1392,11 @@ unittest
     auto e = max(a, b, c);
     assert(is(typeof(e) == double));
     assert(e == 6);
+    // mixed sign
+    a = -5;
+    uint f = 5;
+    static assert(is(typeof(max(a, f)) == uint));
+    assert(max(a, f) == 5);
 }
 
 // mismatch
@@ -1515,7 +1587,7 @@ private:
         }
     }
 
-    uint min_index(CostType i0, CostType i1, CostType i2)
+    static uint min_index(CostType i0, CostType i1, CostType i2)
     {
         if (i0 <= i1)
         {
@@ -1909,12 +1981,12 @@ being stable only on a well-defined subrange of the range. There is no
 established terminology for such behavior; this library calls it $(B
 semistable).
 
-Generally, the $(D Stable) ordering strategy may be more costly in
+Generally, the $(D stable) ordering strategy may be more costly in
 time and/or space than the other two because it imposes additional
-constraints. Similarly, $(D Semistable) may be costlier than $(D
-Unstable). As (semi-)stability is not needed very often, the ordering
+constraints. Similarly, $(D semistable) may be costlier than $(D
+unstable). As (semi-)stability is not needed very often, the ordering
 algorithms in this module parameterized by $(D SwapStrategy) all
-choose $(D SwapStrategy.Unstable) as the default.
+choose $(D SwapStrategy.unstable) as the default.
 */
 
 enum SwapStrategy
@@ -1923,17 +1995,17 @@ enum SwapStrategy
        Allows freely swapping of elements as long as the output
        satisfies the algorithm's requirements.
     */
-    Unstable,
+    unstable,
     /**
        In algorithms partitioning ranges in two, preserve relative
        ordering of elements only to the left of the partition point.
     */
-    Semistable,
+    semistable,
     /**
        Preserve the relative ordering of elements to the largest
        extent allowed by the algorithm's requirements.
     */
-    Stable,     
+    stable,     
 }
 
 // eliminate
@@ -1951,20 +2023,20 @@ assert(arr == [ 1, 3, 5, 4, 5 ]);
 ----
 */
 Range eliminate(alias pred,
-                SwapStrategy os = SwapStrategy.Unstable,
+                SwapStrategy ss = SwapStrategy.unstable,
                 alias move = .move,
                 Range)(Range r)
 {
     alias Iterator!(Range) It;
     static void assignIter(It a, It b) { move(*b, *a); }
-    return range(begin(r), partition!(not!(pred), os, assignIter, Range)(r));
+    return range(begin(r), partition!(not!(pred), ss, assignIter, Range)(r));
 }
 
 /// Ditto
-Range eliminate(string fun, SwapStrategy os = SwapStrategy.Unstable,
+Range eliminate(string fun, SwapStrategy ss = SwapStrategy.unstable,
                   alias move = .move, Range)(Range r)
 {
-    return .eliminate!(unaryFun!(fun), os, move, Range)(r);
+    return .eliminate!(unaryFun!(fun), ss, move, Range)(r);
 }
 
 unittest
@@ -1989,7 +2061,7 @@ assert(arr == [ 1, 3, 4, 5, 4, 5, 2  ]);
 ----
 */
 Range eliminate(alias pred,
-                SwapStrategy os = SwapStrategy.Semistable,
+                SwapStrategy ss = SwapStrategy.semistable,
                 Range, Value)(Range r, Value v)
 {
     alias Iterator!(Range) It;
@@ -1997,15 +2069,15 @@ Range eliminate(alias pred,
     static void assignIterB(It a, It b) { *a = *b; }
     return range(begin(r), 
                  partition!(comp,
-                            os, assignIterB, Range)(r));
+                            ss, assignIterB, Range)(r));
 }
 
 /// Ditto
 Range eliminate(string pred = "a == b",
-                SwapStrategy os = SwapStrategy.Semistable,
+                SwapStrategy ss = SwapStrategy.semistable,
                 Range, Value)(Range r, Value v)
 {
-    return .eliminate!(binaryFun!(pred), os, Range, Value)(r, v);
+    return .eliminate!(binaryFun!(pred), ss, Range, Value)(r, v);
 }
 
 unittest
@@ -2051,9 +2123,9 @@ $(LI $(D pred(*p1)) for all $(D p1) in [$(D left),
 $(D p)$(RPAREN), if any)
 $(LI $(D !pred(*p2)) for all $(D p2) in [$(D p),
 $(D right)$(RPAREN), if any))
-If $(D os == SwapStrategy.Stable), $(D partition) preserves the
+If $(D ss == SwapStrategy.stable), $(D partition) preserves the
 relative ordering of all elements $(D a), $(D b) in $(D r) for which
-$(D pred(a) == pred(b)). If $(D os == SwapStrategy.Semistable), $(D
+$(D pred(a) == pred(b)). If $(D ss == SwapStrategy.semistable), $(D
 partition) preserves the relative ordering of all elements $(D a), $(D
 b) in $(D begin(r) .. p) for which $(D pred(a) == pred(b)).
 
@@ -2079,7 +2151,7 @@ assert(p == arr.ptr + 5);
 
 // Now for a stable partition:
 arr[] = Arr[];
-p = partition!(q{(a & 1) == 0}, SwapStrategy.Stable)(arr);
+p = partition!(q{(a & 1) == 0}, SwapStrategy.stable)(arr);
 // Now arr is [2 4 6 8 10 1 3 5 7 9], and p points to 1
 assert(arr == [2, 4, 6, 8, 10, 1, 3, 5, 7, 9] && p == arr.ptr + 5);
 
@@ -2088,19 +2160,19 @@ arr[] = Arr[];
 int x = 3;
 // Put stuff greater than 3 on the left
 bool fun(int a) { return a > x; }
-p = partition!(fun, SwapStrategy.Semistable)(arr);
+p = partition!(fun, SwapStrategy.semistable)(arr);
 // Now arr is [4 5 6 7 8 9 10 2 3 1] and p points to 2
 assert(arr == [4, 5, 6, 7, 8, 9, 10, 2, 3, 1] && p == arr.ptr + 7);
 ----
 */
 Iterator!(Range) partition(alias pred,
-                           SwapStrategy os = SwapStrategy.Unstable,
+                           SwapStrategy ss = SwapStrategy.unstable,
                            alias iterSwap = .iterSwap, Range)(Range r)
 {
     typeof(return) result = void;
     auto left = begin(r), right = end(r);
     if (left == right) return left;
-    static if (os == SwapStrategy.Stable)
+    static if (ss == SwapStrategy.stable)
     {
         if (right - left == 1)
         {
@@ -2108,13 +2180,13 @@ Iterator!(Range) partition(alias pred,
             return result;
         }
         auto middle = left + (right - left) / 2;
-        alias .partition!(pred, os, iterSwap, Range) recurse;
+        alias .partition!(pred, ss, iterSwap, Range) recurse;
         auto lower = recurse(range(left, middle));
         auto upper = recurse(range(middle, right));
         result = rotate!(iterSwap, Range, Iterator!(Range))(
             range(lower, upper), middle);
     }
-    else static if (os == SwapStrategy.Semistable)
+    else static if (ss == SwapStrategy.semistable)
     {
         result = right;
         auto i = left;
@@ -2133,7 +2205,7 @@ Iterator!(Range) partition(alias pred,
             break;
         }
     }
-    else // os == SwapStrategy.Unstable
+    else // ss == SwapStrategy.unstable
     {
         // Inspired from www.stepanovpapers.com/PAM3-partition_notes.pdf,
         // section "Bidirectional Partition Algorithm (Hoare)"
@@ -2165,11 +2237,11 @@ Iterator!(Range) partition(alias pred,
 /// Ditto
 Iterator!(Range) partition(
     string pred,
-    SwapStrategy os = SwapStrategy.Unstable,
+    SwapStrategy ss = SwapStrategy.unstable,
     alias iterSwap = .iterSwap,
     Range)(Range r)
 {
-    return .partition!(unaryFun!(pred), os, iterSwap, Range)(r);
+    return .partition!(unaryFun!(pred), ss, iterSwap, Range)(r);
 }
 
 unittest // partition
@@ -2191,7 +2263,7 @@ unittest // partition
     assert(p == arr.ptr + 5);
 // Same result as above. Now for a stable partition:
     arr[] = Arr[];
-    p = partition!(q{(a & 1) == 0}, SwapStrategy.Stable)(arr);
+    p = partition!(q{(a & 1) == 0}, SwapStrategy.stable)(arr);
 // Now arr is [2 4 6 8 10 1 3 5 7 9], and p points to 1
     assert(arr == [2, 4, 6, 8, 10, 1, 3, 5, 7, 9] && p == arr.ptr + 5);
 // In case the predicate needs to hold its own state, use a delegate:
@@ -2199,7 +2271,7 @@ unittest // partition
     int x = 3;
 // Put stuff greater than 3 on the left
     bool fun(int a) { return a > x; }
-    p = partition!(fun, SwapStrategy.Semistable)(arr);
+    p = partition!(fun, SwapStrategy.semistable)(arr);
 // Now arr is [4 5 6 7 8 9 10 2 3 1] and p points to 2
     assert(arr == [4, 5, 6, 7, 8, 9, 10, 2, 3, 1] && p == arr.ptr + 7);
 
@@ -2239,14 +2311,14 @@ unittest // partition
 // also holds: $(D *mid == pivotVal).
 // */
 // It partitionPivot(alias less,
-//                  SwapStrategy os = SwapStrategy.Unstable,
+//                  SwapStrategy ss = SwapStrategy.unstable,
 //                  alias iterSwap = .iterSwap, Range, It)(Range r, It m)
 // {
 //     auto b = begin(r), e = end(r);
 //     if (b == e) return b;
 //     assert(b <= m && m < e);
 //     alias typeof(*b) E;
-//     static if (os == SwapStrategy.Unstable)
+//     static if (ss == SwapStrategy.unstable)
 //     {
 //         --e;
 //         // swap the pivot to end
@@ -2254,7 +2326,7 @@ unittest // partition
 //         // partition on predicate
 //         auto pivotCached = *e;
 //         bool pred(E a) { return less(a, pivotCached); }
-//         auto result = partition!(pred, os, iterSwap)(range(b, e));
+//         auto result = partition!(pred, ss, iterSwap)(range(b, e));
 //         // swap back
 //         iterSwap(result, e);
 //     }
@@ -2263,17 +2335,17 @@ unittest // partition
 //         // copy the pivot so it's not messed up
 //         auto pivot = *m;
 //         bool pred(E a) { return less(a, pivot); }
-//         auto result = partition!(pred, os, iterSwap)(r);
+//         auto result = partition!(pred, ss, iterSwap)(r);
 //     }
 //     return result;
 // }
 
 // /// Ditto
 // It partitionPivot(string less = q{a < b},
-//                  SwapStrategy os = SwapStrategy.Unstable,
+//                  SwapStrategy ss = SwapStrategy.unstable,
 //                  alias iterSwap = .iterSwap, Range, It)(Range r, It m)
 // {
-//     return .partitionPivot!(binaryFun!(less), os, iterSwap, Range, It)(r, m);
+//     return .partitionPivot!(binaryFun!(less), ss, iterSwap, Range, It)(r, m);
 // }
 
 // unittest
@@ -2323,7 +2395,7 @@ template isPartitioned(string pred)
     alias .isPartitioned!(unaryFun!(pred)) isPartitioned;
 }
 
-// nthElement
+// topN
 /**
 Reorders the range $(D r = [first, last$(RPAREN)) using $(D iterSwap)
 as a swapping primitive such that $(D nth) points to the element that
@@ -2342,23 +2414,23 @@ Example:
 ----
 int[] v = [ 25, 7, 9, 2, 0, 5, 21 ];
 auto n = 4;
-nthElement!(less)(v, begin(v) + n);
+topN!(less)(v, begin(v) + n);
 assert(v[n] == 9);
 // Equivalent form:
-nthElement!("a < b")(v, begin(v) + n);
+topN!("a < b")(v, begin(v) + n);
 assert(v[n] == 9);
 ----
 
 BUGS:
 
-Stable nthElement has not been implemented yet.
+stable topN has not been implemented yet.
 */
-void nthElement(alias less,
-                SwapStrategy os = SwapStrategy.Unstable,
+void topN(alias less,
+                SwapStrategy ss = SwapStrategy.unstable,
                 alias iterSwap = .iterSwap, Range, It)(Range r, It nth)
 {
-    static assert(os == SwapStrategy.Unstable,
-                  "Stable nthElement not yet implemented");
+    static assert(ss == SwapStrategy.unstable,
+                  "stable topN not yet implemented");
     auto b = begin(r), e = end(r);
     assert(b < e);
     assert(b <= nth && nth < e);
@@ -2368,7 +2440,7 @@ void nthElement(alias less,
         auto pivotVal = *pivot;
         bool pred(ElementType!(Range) a) { return a < pivotVal; }
         iterSwap(pivot, e - 1);
-        pivot = partition!(pred, os, iterSwap)(range(b, e));
+        pivot = partition!(pred, ss, iterSwap)(range(b, e));
         iterSwap(pivot, e - 1);
         if (pivot == nth) return;
         if (pivot < nth) b = pivot + 1;
@@ -2377,11 +2449,11 @@ void nthElement(alias less,
 }
 
 /// Ditto
-void nthElement(string less = q{a < b},
-                SwapStrategy os = SwapStrategy.Unstable,
+void topN(string less = q{a < b},
+                SwapStrategy ss = SwapStrategy.unstable,
                 alias iterSwap = .iterSwap, Range, It)(Range r, It nth)
 {
-    return .nthElement!(binaryFun!(less), os, iterSwap, Range, It)(r, nth);
+    return .topN!(binaryFun!(less), ss, iterSwap, Range, It)(r, nth);
 }
 
 unittest
@@ -2390,27 +2462,27 @@ unittest
     //auto v = ([ 25, 7, 9, 2, 0, 5, 21 ]).dup;
     int[] v = [ 7, 6, 5, 4, 3, 2, 1, 0 ];
     auto n = 3;
-    nthElement!("a < b")(v, v.ptr + n);
+    topN!("a < b")(v, v.ptr + n);
     assert(v[n] == n);
     //
     v = ([3, 4, 5, 6, 7, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5]).dup;
     n = 3;
-    nthElement(v, v.ptr + n);
+    topN(v, v.ptr + n);
     assert(v[n] == 3);
     //
     v = ([3, 4, 5, 6, 7, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5]).dup;
     n = 1;
-    nthElement(v, v.ptr + n);
+    topN(v, v.ptr + n);
     assert(v[n] == 2);
     //
     v = ([3, 4, 5, 6, 7, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5]).dup;
     n = v.length - 1;
-    nthElement(v, v.ptr + n);
+    topN(v, v.ptr + n);
     assert(v[n] == 7);
     //
     v = ([3, 4, 5, 6, 7, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5]).dup;
     n = 0;
-    nthElement(v, v.ptr + n);
+    topN(v, v.ptr + n);
     assert(v[n] == 1);
 }
 
@@ -2438,24 +2510,18 @@ sort!(myComp)(array);
 assert(array == [ 4, 3, 2, 1 ]);
 // Showcase stable sorting
 string[] words = [ "aBc", "a", "abc", "b", "ABC", "c" ];
-sort!("toupper(a) < toupper(b)", SwapStrategy.Stable)(words);
+sort!("toupper(a) < toupper(b)", SwapStrategy.stable)(words);
 assert(words == [ "a", "aBc", "abc", "ABC", "b", "c" ]);
 ----
 */
 
-void sort(alias less, SwapStrategy os = SwapStrategy.Unstable,
+void sort(alias less, SwapStrategy ss = SwapStrategy.unstable,
           alias iterSwap = .iterSwap, Range)(Range r)
 {
     static if (is(typeof(less(*begin(r), *end(r))) == bool))
     {
-        sortImpl!(less, os, iterSwap)(r);
-        //assert(isSorted!(less)(r));
-        if (!isSorted!(less)(r))
-        {
-            writeln(os);
-            writeln(r);
-            assert(false);
-        }
+        sortImpl!(less, ss, iterSwap)(r);
+        assert(isSorted!(less)(r));
     }
     else
     {
@@ -2464,10 +2530,10 @@ void sort(alias less, SwapStrategy os = SwapStrategy.Unstable,
 }
 
 /// Ditto
-void sort(string less = q{a < b}, SwapStrategy os = SwapStrategy.Unstable,
+void sort(string less = q{a < b}, SwapStrategy ss = SwapStrategy.unstable,
           alias iterSwap = .iterSwap, Range)(Range r)
 {
-    return .sort!(binaryFun!(less), os, iterSwap, Range)(r);
+    return .sort!(binaryFun!(less), ss, iterSwap, Range)(r);
 }
 
 import std.string;
@@ -2501,7 +2567,7 @@ unittest
 
     string[] words = [ "aBc", "a", "abc", "b", "ABC", "c" ];
     bool lessi(string a, string b) { return toupper(a) < toupper(b); }
-    sort!(lessi, SwapStrategy.Stable)(words);
+    sort!(lessi, SwapStrategy.stable)(words);
     assert(words == [ "a", "aBc", "abc", "ABC", "b", "c" ]);
 
     // sort using ternary predicate
@@ -2519,10 +2585,7 @@ unittest
 /*private*/
 Iter getPivot(alias less, Iter)(Iter b, Iter e)
 {
-    //static Random rnd;
-    //auto r = b + uniform(rnd, 0, e - b);
     auto r = b + (e - b) / 2;
-    //auto r = b;
     return r;
 }
 
@@ -2555,7 +2618,7 @@ void optimisticInsertionSort(alias less, alias iterSwap, Range)(Range r)
 }
 
 /*private*/
-void sortImpl(alias less, SwapStrategy os, alias iterSwap, Range)(Range r)
+void sortImpl(alias less, SwapStrategy ss, alias iterSwap, Range)(Range r)
 {
     alias ElementType!(Range) Elem;
     enum uint optimisticInsertionSortGetsBetter = 1;
@@ -2566,12 +2629,12 @@ void sortImpl(alias less, SwapStrategy os, alias iterSwap, Range)(Range r)
         auto pivotPtr = getPivot!(less)(b, e);
         auto pivot = *pivotPtr;
         // partition
-        static if (os == SwapStrategy.Unstable)
+        static if (ss == SwapStrategy.unstable)
         {
             // partition
             iterSwap(pivotPtr, e - 1);
             bool pred(Elem a) { return less(a, pivot); }
-            auto mid = partition!(pred, os, iterSwap)(range(b, e));
+            auto mid = partition!(pred, ss, iterSwap)(range(b, e));
             iterSwap(mid, e - 1);
             // done with partitioning
             assert(!less(pivot, *mid) && !less(*mid, pivot));
@@ -2583,15 +2646,15 @@ void sortImpl(alias less, SwapStrategy os, alias iterSwap, Range)(Range r)
             }
             else
             {
-                .sortImpl!(less, os, iterSwap, Range)(range(b, mid));
+                .sortImpl!(less, ss, iterSwap, Range)(range(b, mid));
                 b = mid + 1;
             }
         }
         else // handle semistable and stable the same
         {
-            static assert(os != SwapStrategy.Semistable);
+            static assert(ss != SwapStrategy.semistable);
             bool pred(Elem a) { return less(a, pivot); }
-            auto mid = partition!(pred, os, iterSwap)(range(b, e));
+            auto mid = partition!(pred, ss, iterSwap)(range(b, e));
             if (b == mid)
             {
                 // bad, bad pivot. pivot <= everything
@@ -2609,7 +2672,7 @@ void sortImpl(alias less, SwapStrategy os, alias iterSwap, Range)(Range r)
             }
             else
             {
-                .sortImpl!(less, os, iterSwap, Range)(range(b, mid));
+                .sortImpl!(less, ss, iterSwap, Range)(range(b, mid));
                 b = mid;
             }
         }
@@ -2651,7 +2714,7 @@ and only minimal extra data (one array of transformed elements) is
 created.
 */
 void schwartzSort(alias transform, alias less,
-                  SwapStrategy os = SwapStrategy.Unstable, Range)(Range r)
+                  SwapStrategy ss = SwapStrategy.unstable, Range)(Range r)
 {
     alias typeof(transform(*begin(r))) XformType;
     auto xform = new XformType[r.length];
@@ -2668,14 +2731,14 @@ void schwartzSort(alias transform, alias less,
         assert(i >= 0 && i < xform.length && j >= 0 && j < xform.length);
         swap(r[i], r[j]);
     }
-    sort!(less, os, mySwap)(xform);
+    sort!(less, ss, mySwap)(xform);
 }
 
 /// Ditto
 void schwartzSort(alias transform, string less = q{a < b},
-                  SwapStrategy os = SwapStrategy.Unstable, Range)(Range r)
+                  SwapStrategy ss = SwapStrategy.unstable, Range)(Range r)
 {
-    return .schwartzSort!(transform, binaryFun!(less), os, Range)(r);
+    return .schwartzSort!(transform, binaryFun!(less), ss, Range)(r);
 }
 
 unittest
@@ -2727,19 +2790,19 @@ partialSort(a, begin(a) + 5);
 assert(a[0 .. 5] == [ 0, 1, 2, 3, 4 ]);
 ----
 */
-void partialSort(alias less, SwapStrategy os = SwapStrategy.Unstable,
+void partialSort(alias less, SwapStrategy ss = SwapStrategy.unstable,
     alias iterSwap = .iterSwap, Range, It)(Range r, It mid)
 {
-    nthElement!(less, os, iterSwap)(r, mid);
-    sort!(less, os, iterSwap, Range)(range(begin(r), mid));
+    topN!(less, ss, iterSwap)(r, mid);
+    sort!(less, ss, iterSwap, Range)(range(begin(r), mid));
 }
 
 /// Ditto
 void partialSort(string less = "a < b",
-    SwapStrategy os = SwapStrategy.Unstable,
+    SwapStrategy ss = SwapStrategy.unstable,
     alias iterSwap = .iterSwap, Range, It)(Range r, It mid)
 {
-    return .partialSort!(binaryFun!(less), os, iterSwap, Range, It)(r, mid);
+    return .partialSort!(binaryFun!(less), ss, iterSwap, Range, It)(r, mid);
 }
 
 unittest
@@ -2779,154 +2842,375 @@ bool isSorted(string less = "a < b", Range)(Range r)
     return .isSorted!(binaryFun!(less), Range)(r);
 }
 
-// makeIndex
+// // makeIndex
+// /**
+// Computes an index for $(D r) based on the comparison $(D less). The
+// returned index is a sorted array of iterators into the original
+// range. This technique is similar to sorting, but it is more flexible
+// because (1) it allows "sorting" of invariant collections, (2) allows
+// binary search even if the original collection does not offer random
+// access, (3) allows multiple indexes, each on a different predicate,
+// and (4) may be faster when dealing with large objects. However, using
+// an index may also be slower under certain circumstances due to the
+// extra indirection, and is always larger than a sorting-based solution
+// because it needs space for the index in addition to the original
+// collection. The complexity is the same as $(D sort)'s.
+
+// Example:
+
+// ----
+// invariant arr = [ 2, 3, 1 ];
+// auto index = makeIndex!(less)(arr);
+// assert(*index[0] == 1 && *index[1] == 2 && *index[2] == 3);
+// assert(isSorted!("*a < *b")(index));
+// ----
+// */
+// Iterator!(Range)[] makeIndex(
+//     alias less,
+//     SwapStrategy ss = SwapStrategy.unstable,
+//     alias iterSwap = .iterSwap,
+//     Range)(Range r)
+// {
+//     alias Iterator!(Range) Iter;
+//     auto result = new Iter[r.length];
+//     // assume collection already ordered
+//     size_t i = 0;
+//     foreach (it; begin(r) .. end(r))
+//     {
+//         result[i++] = it;
+//     }
+//     // sort the index
+//     static bool indirectLess(Iter a, Iter b)
+//     {
+//         return less(*a, *b);
+//     }
+//     sort!(indirectLess, ss, iterSwap)(result);
+//     return result;
+// }
+
+
+// /// Ditto
+// Iterator!(Range)[] makeIndex(
+//     string less = q{a < b},
+//     SwapStrategy ss = SwapStrategy.unstable,
+//     alias iterSwap = .iterSwap,
+//     Range)(Range r)
+// {
+//     return .makeIndex!(binaryFun!(less), ss, iterSwap, Range)(r);
+// }
+
+// topNIndexImpl
+private void topNIndexImpl(
+    alias less,
+    bool sortAfter,
+    SwapStrategy ss,
+    alias iterSwap,
+    SRange, TRange)(SRange source, TRange target)
+{
+    static assert(ss == SwapStrategy.unstable,
+                  "Stable indexing not yet implemented");
+    alias Iterator!(SRange) SIter;
+    alias ElementType!(TRange) TElem;
+    enum usingInt = isIntegral!(TElem);
+
+    static if (usingInt)
+    {
+        enforce(source.length <= TElem.max,
+                "Numeric overflow at risk in computing topNIndexImpl");
+    }
+
+    // types and functions used within
+    SIter index2iter(TElem a)
+    {
+        static if (!usingInt)
+            return a;
+        else
+            return begin(source) + a;
+    }
+    bool indirectLess(TElem a, TElem b)
+    {
+        return less(*index2iter(a), *index2iter(b));
+    }
+    void indirectCopy(SIter from, ref TElem to)
+    {
+        static if (!usingInt)
+            to = from;
+        else
+            to = cast(TElem)(from - begin(source));
+    }
+
+    // copy beginning of collection into the target
+    auto sb = begin(source), se = end(source),
+        tb = begin(target), te = end(target);
+    for (; sb != se; ++sb, ++tb)
+    {
+        if (tb == te) break;
+        indirectCopy(sb, *tb);
+    }
+
+    // if the index's size is same as the source size, just quicksort it
+    // otherwise, heap-insert stuff in it.
+    if (sb == se)
+    {
+        // everything in source is now in target... just sort the thing
+        static if (sortAfter) sort!(indirectLess, ss, iterSwap)(target);
+    }
+    else
+    {
+        // heap-insert
+        te = tb;
+        tb = begin(target);
+        target = range(tb, te);
+        makeHeap!(indirectLess, iterSwap)(target);
+        // add stuff to heap
+        for (; sb != se; ++sb)
+        {
+            if (!less(*sb, *index2iter(*tb))) continue;
+            // copy the source over the smallest
+            indirectCopy(sb, *tb);
+            heapify!(indirectLess, iterSwap)(target, tb);
+        }
+        static if (sortAfter) sortHeap!(indirectLess, iterSwap)(target);
+    }
+}
+
 /**
-Computes an index for $(D r) based on the comparison $(D less). The
-returned index is a sorted array of iterators into the original
-range. This technique is similar to sorting, but it is more flexible
-because (1) it allows "sorting" of invariant collections, (2) allows
-binary search even if the original collection does not offer random
-access, (3) allows multiple indexes, each on a different predicate,
-and (4) may be faster when dealing with large objects. However, using
-an index may also be slower under certain circumstances due to the
-extra indirection, and is always larger than a sorting-based solution
+topNIndex
+*/
+void topNIndex(
+    alias less,
+    SwapStrategy ss = SwapStrategy.unstable,
+    alias iterSwap = .iterSwap,
+    SRange, TRange)(SRange source, TRange target)
+{
+    return .topNIndexImpl!(less, false, ss, iterSwap)(source, target);
+}
+
+/// Ditto
+void topNIndex(
+    string less,
+    SwapStrategy ss = SwapStrategy.unstable,
+    alias iterSwap = .iterSwap,
+    SRange, TRange)(SRange source, TRange target)
+{
+    return .topNIndexImpl!(binaryFun!(less), false, ss, iterSwap)(source, target);
+}
+
+// partialIndex
+/**
+Computes an index for $(D source) based on the comparison $(D less)
+and deposits the result in $(D target). It is acceptable that $(D
+target.length < source.length), in which case only the smallest $(D
+target.length) elements in $(D source) get indexed. The target
+provides a sorted "view" into $(D source). This technique is similar
+to sorting and partial sorting, but it is more flexible because (1) it
+allows "sorting" of invariant collections, (2) allows binary search
+even if the original collection does not offer random access, (3)
+allows multiple indexes, each on a different comparison criterion, (4)
+may be faster when dealing with large objects. However, using an index
+may also be slower under certain circumstances due to the extra
+indirection, and is always larger than a sorting-based solution
 because it needs space for the index in addition to the original
-collection. The complexity is the same as $(D sort)'s.
+collection. The complexity is $(BIGOH source.length *
+log(target.length)).
+
+Two types of indexes are accepted. They are selected by simply passing
+the appropriate $(D target) argument: $(OL $(LI Indexes of type $(D
+Iterator!(Source)), in which case the index will be sorted with the
+predicate $(D less(*a, *b));) $(LI Indexes of an integral type
+(e.g. $(D size_t)), in which case the index will be sorted with the
+predicate $(D less(source[a], source[b])).))
 
 Example:
 
 ----
 invariant arr = [ 2, 3, 1 ];
-auto index = makeIndex!(less)(arr);
+int* index[3];
+partialIndex(arr, index);
 assert(*index[0] == 1 && *index[1] == 2 && *index[2] == 3);
 assert(isSorted!("*a < *b")(index));
 ----
 */
-Iterator!(Range)[] makeIndex(
+void partialIndex(
     alias less,
-    SwapStrategy os = SwapStrategy.Unstable,
+    SwapStrategy ss = SwapStrategy.unstable,
     alias iterSwap = .iterSwap,
-    Range)(Range r)
+    SRange, TRange)(SRange source, TRange target)
 {
-    alias Iterator!(Range) Iter;
-    auto result = new Iter[r.length];
-    // assume collection already ordered
-    size_t i = 0;
-    foreach (it; begin(r) .. end(r))
-    {
-        result[i++] = it;
-    }
-    // sort the index
-    static bool indirectLess(Iter a, Iter b)
-    {
-        return less(*a, *b);
-    }
-    sort!(indirectLess, os, iterSwap)(result);
-    return result;
+    return .topNIndexImpl!(less, true, ss, iterSwap)(source, target);
 }
 
-
 /// Ditto
-Iterator!(Range)[] makeIndex(
-    string less = q{a < b},
-    SwapStrategy os = SwapStrategy.Unstable,
+void partialIndex(
+    string less,
+    SwapStrategy ss = SwapStrategy.unstable,
     alias iterSwap = .iterSwap,
-    Range)(Range r)
+    SRange, TRange)(SRange source, TRange target)
 {
-    return .makeIndex!(binaryFun!(less), os, iterSwap, Range)(r);
+    return .topNIndexImpl!(binaryFun!(less), true, ss, iterSwap)(source, target);
+}
+
+unittest
+{
+    invariant arr = [ 2, 3, 1 ];
+    auto index = new invariant(int)*[3];
+    partialIndex!(binaryFun!("a < b"))(arr, index);
+    assert(*index[0] == 1 && *index[1] == 2 && *index[2] == 3);
+    assert(isSorted!("*a < *b")(index));
 }
 
 unittest
 {
     static bool less(int a, int b) { return a < b; }
     {
-        invariant arr = [ 2, 3, 1 ];
-        auto index = makeIndex!(less)(arr);
-        assert(*index[0] == 1 && *index[1] == 2 && *index[2] == 3);
-        assert(isSorted!(q{*a < *b})(index));
-    }
-    {
         string[] x = ([ "c", "a", "b", "d" ]).dup;
-        auto index = makeIndex!(q{a < b})(x);
+        // test with integrals
+        auto index1 = new size_t[x.length];
+        partialIndex!(q{a < b})(x, index1);
+        assert(index1[0] == 1 && index1[1] == 2 && index1[2] == 0
+               && index1[3] == 3);
+        // half-sized
+        index1 = new size_t[x.length / 2];
+        partialIndex!(q{a < b})(x, index1);
+        assert(index1[0] == 1 && index1[1] == 2);
+
+        // and with iterators
+        auto index = new string*[x.length];
+        partialIndex!(q{a < b})(x, index);
         assert(isSorted!(q{*a < *b})(index));
         assert(*index[0] == "a" && *index[1] == "b" && *index[2] == "c"
                && *index[3] == "d");
     }
 
+    {
+        invariant arr = [ 2, 3, 1 ];
+        auto index = new invariant(int)*[arr.length];
+        partialIndex!(less)(arr, index);
+        assert(*index[0] == 1 && *index[1] == 2 && *index[2] == 3);
+        assert(isSorted!(q{*a < *b})(index));
+    }
+
     // random data
     auto b = rndstuff!(string);
-    auto index = makeIndex!("toupper(a) < toupper(b)")(b);
+    auto index = new string*[b.length];
+    partialIndex!("toupper(a) < toupper(b)")(b, index);
     assert(isSorted!("toupper(*a) < toupper(*b)")(index));
+
+    // random data with indexes
+    auto index1 = new size_t[b.length];
+    bool cmp(string x, string y) { return toupper(x) < toupper(y); }
+    partialIndex!(cmp)(b, index1);
+    bool check(size_t x, size_t y) { return toupper(b[x]) < toupper(b[y]); }
+    assert(isSorted!(check)(index1));
 }
 
-// schwartzMakeIndex
-/**
-Similar to $(D makeIndex) but using $(D schwartzSort) to sort the
-index.
+// Commented out for now, needs reimplementation
+ 
+// // schwartzMakeIndex
+// /**
+// Similar to $(D makeIndex) but using $(D schwartzSort) to sort the
+// index.
 
-Example:
+// Example:
+
+// ----
+// string[] arr = [ "ab", "c", "Ab", "C" ];
+// auto index = schwartzMakeIndex!(toupper, less, SwapStrategy.stable)(arr);
+// assert(*index[0] == "ab" && *index[1] == "Ab"
+//     && *index[2] == "c" && *index[2] == "C");
+// assert(isSorted!("toupper(*a) < toupper(*b)")(index));
+// ----
+// */
+// Iterator!(Range)[] schwartzMakeIndex(
+//     alias transform,
+//     alias less,
+//     SwapStrategy ss = SwapStrategy.unstable,
+//     alias iterSwap = .iterSwap,
+//     Range)(Range r)
+// {
+//     alias Iterator!(Range) Iter;
+//     auto result = new Iter[r.length];
+//     // assume collection already ordered
+//     size_t i = 0;
+//     foreach (it; begin(r) .. end(r))
+//     {
+//         result[i++] = it;
+//     }
+//     // sort the index
+//     alias typeof(transform(*result[0])) Transformed;
+//     static bool indirectLess(Transformed a, Transformed b)
+//     {
+//         return less(a, b);
+//     }
+//     static Transformed indirectTransform(Iter a)
+//     {
+//         return transform(*a);
+//     }
+//     schwartzSort!(indirectTransform, less, ss)(result);
+//     return result;
+// }
+
+// /// Ditto
+// Iterator!(Range)[] schwartzMakeIndex(
+//     alias transform,
+//     string less = q{a < b},
+//     SwapStrategy ss = SwapStrategy.unstable,
+//     alias iterSwap = .iterSwap,
+//     Range)(Range r)
+// {
+//     return .schwartzMakeIndex!(
+//         transform, binaryFun!(less), ss, iterSwap, Range)(r);
+// }
+
+// unittest
+// {
+//     string[] arr = [ "D", "ab", "c", "Ab", "C" ];
+//     auto index = schwartzMakeIndex!(toupper, "a < b",
+//                                     SwapStrategy.stable)(arr);
+//     assert(isSorted!(q{toupper(*a) < toupper(*b)})(index));
+//     assert(*index[0] == "ab" && *index[1] == "Ab"
+//            && *index[2] == "c" && *index[3] == "C");
+
+//     // random data
+//     auto b = rndstuff!(string);
+//     auto index1 = schwartzMakeIndex!(toupper)(b);
+//     assert(isSorted!("toupper(*a) < toupper(*b)")(index1));
+// }
+
+// schwartzIsSorted
+/**
+Checks whether a random-access range is sorted according to the
+comparison operation $(D less(transform(a), transform(b))). Performs
+$(BIGOH r.length) evaluations of $(D less) and $(D transform). The
+advantage over $(D isSorted) is that it evaluates $(D transform) only
+half as many times.
+
+   Example:
 
 ----
-string[] arr = [ "ab", "c", "Ab", "C" ];
-auto index = schwartzMakeIndex!(toupper, less, SwapStrategy.Stable)(arr);
-assert(*index[0] == "ab" && *index[1] == "Ab"
-    && *index[2] == "c" && *index[2] == "C");
-assert(isSorted!("toupper(*a) < toupper(*b)")(index));
+int[] arr = [ "ab", "Ab", "aB", "bc", "Bc" ];
+assert(!schwartzIsSorted!(toupper, "a < b")(arr));
 ----
 */
-Iterator!(Range)[] schwartzMakeIndex(
-    alias transform,
-    alias less,
-    SwapStrategy os = SwapStrategy.Unstable,
-    alias iterSwap = .iterSwap,
-    Range)(Range r)
+
+bool schwartzIsSorted(alias transform, alias less, Range)(Range r)
 {
-    alias Iterator!(Range) Iter;
-    auto result = new Iter[r.length];
-    // assume collection already ordered
-    size_t i = 0;
-    foreach (it; begin(r) .. end(r))
+    if (isEmpty(r)) return true;
+    auto i = begin(r), e = end(r);
+    auto last = transform(*i);
+    for (++i; i != e; ++i)
     {
-        result[i++] = it;
+        auto next = transform(*i);
+        if (less(next, last)) return false;
+        move(next, last);
     }
-    // sort the index
-    static bool indirectLess(Iter a, Iter b)
-    {
-        return less(*a, *b);
-    }
-    static typeof(transform(*result[0])) indirectTransform(Iter a)
-    {
-        return transform(*a);
-    }
-    schwartzSort!(indirectTransform, less, os)(result);
-    return result;
+    return true;
 }
 
 /// Ditto
-Iterator!(Range)[] schwartzMakeIndex(
-    alias transform,
-    string less = q{a < b},
-    SwapStrategy os = SwapStrategy.Unstable,
-    alias iterSwap = .iterSwap,
-    Range)(Range r)
+bool schwartzIsSorted(alias transform, string less = "a < b", Range)(Range r)
 {
-    return .schwartzMakeIndex!(
-        transform, binaryFun!(less), os, iterSwap, Range)(r);
-}
-
-unittest
-{
-    string[] arr = [ "D", "ab", "c", "Ab", "C" ];
-    auto index = schwartzMakeIndex!(toupper, "a < b",
-                                    SwapStrategy.Stable)(arr);
-    assert(isSorted!(q{toupper(*a) < toupper(*b)})(index));
-    assert(*index[0] == "ab" && *index[1] == "Ab"
-           && *index[2] == "c" && *index[3] == "C");
-
-    // random data
-    auto b = rndstuff!(string);
-    auto index1 = schwartzMakeIndex!(toupper)(b);
-    assert(isSorted!("toupper(*a) < toupper(*b)")(index1));
+    return .schwartzIsSorted!(transform, binaryFun!(less), Range)(r);
 }
       
 // lowerBound
@@ -2955,9 +3239,9 @@ assert(*p == 4);
 */
 Iterator!(Range) lowerBound(alias less, Range, V)(Range r, V value)
 {
-    assert(isSorted!(less)(r));
-    auto first = begin(r), last = end(r);
-    auto count = last - first;
+    //assert(isSorted!(less)(r));
+    auto first = begin(r);
+    auto count = end(r) - first;
     while (count > 0)
     {
         invariant step = count / 2;
@@ -3015,13 +3299,8 @@ assert(p == begin(a) + 5);
 Iterator!(Range) upperBound(alias less, Range, V)(Range r, V value)
 {
     //assert(isSorted!(less)(r));
-    if (!isSorted!(less)(r))
-    {
-        writeln(r);
-        assert(false);
-    }
-    auto first = begin(r), last = end(r);
-    size_t count = last - first;
+    auto first = begin(r);
+    size_t count = end(r) - first;
     while (count > 0)
     {
         auto step = count / 2;
@@ -3074,7 +3353,7 @@ assert(r == [ 3, 3, 3 ]);
 */
 Range equalRange(alias less, Range, V)(Range r, V value)
 {
-    assert(isSorted!(less)(r));
+    //assert(isSorted!(less)(r));
     auto first = begin(r), last = end(r);
     for (size_t count = last - first; count > 0; )
     {
@@ -3148,65 +3427,185 @@ unittest
     }
 }
 
-// Internal random array generators
+/**
+Converts the range $(D r) into a heap. Performs $(BIGOH r.length)
+evaluations of $(D less).
+*/
 
-enum size_t maxArraySize = 50;
-enum size_t minArraySize = maxArraySize - 1;
-
-private string[] rndstuff(T : string)()
+void makeHeap(alias less, alias iterSwap = .iterSwap, Range)(Range r)
 {
-    static Random rnd;
-    static bool first = true;
-    if (first)
+    if (r.length < 2) return;
+    auto i = begin(r) + (r.length - 2) / 2;
+    for (;; --i)
     {
-        rnd = Random(unpredictableSeed);
-        first = false;
+        heapify!(less, iterSwap)(r, i);
+        if (i == begin(r)) return;
     }
-    string[] result = new string[uniform(rnd, minArraySize, maxArraySize)];
-    string alpha = "abcdefghijABCDEFGHIJ";
-    foreach (ref s; result)
-    {
-        foreach (i; 0 .. uniform!(uint)(rnd, 0u, 20u))
-        {
-            auto j = uniform(rnd, 0, alpha.length - 1);
-            s ~= alpha[j];
-        }
-    }
-    return result;
 }
 
-private int[] rndstuff(T : int)()
-{
-    static Random rnd;
-    static bool first = true;
-    if (first)
-    {
-        rnd = Random(unpredictableSeed);
-        first = false;
-    }
-    int[] result = new int[uniform(rnd, minArraySize, maxArraySize)];
-    foreach (ref i; result)
-    {
-        i = uniform(rnd, -100, 100);
-    }
-    return result;
-}
-
-private double[] rndstuff(T : double)()
-{
-    double[] result;
-    foreach (i; rndstuff!(int)())
-    {
-        result ~= i / 50.;
-    }
-    return result;
-}
-
-import std.c.process;
 unittest
 {
-//    exit(0);
-//     writeln(randomStrings);
-//     writeln(randomInts);
-//     writeln(randomFloats);
+    // example from "Introduction to Algorithms" Cormen et al., p 146
+    int[] a = [ 4, 1, 3, 2, 16, 9, 10, 14, 8, 7 ];
+    makeHeap!(binaryFun!("a < b"))(a);
+    assert(a == [ 16, 14, 10, 8, 7, 9, 3, 2, 4, 1 ]);
+}
+
+private void heapify(alias less, alias iterSwap, Range, It)(Range r, It i)
+{
+    auto b = begin(r);
+    for (;;)
+    {
+        auto left = b + (i - b) * 2 + 1, right = left + 1;
+        if (right == end(r))
+        {
+            if (less(*i, *left)) iterSwap(i, left);
+            return;
+        }
+        if (right > end(r)) return;
+        assert(left < end(r) && right < end(r));
+        auto largest = less(*i, *left)
+            ? (less(*left, *right) ? right : left)
+            : (less(*i, *right) ? right : i);
+        if (largest == i) return;
+        iterSwap(i, largest);
+        i = largest;
+    }
+}
+
+unittest
+{
+    // example from "Introduction to Algorithms" Cormen et al., p 143
+    int[] a = [ 16, 4, 10, 14, 7, 9, 3, 2, 8, 1 ];
+    heapify!(binaryFun!("a < b"), iterSwap)(a, begin(a) + 1);
+    assert(a == [ 16, 14, 10, 8, 7, 9, 3, 2, 4, 1 ]);
+}
+
+/**
+popHeap 
+*/
+void popHeap(alias less, alias iterSwap = .iterSwap, Range)(Range r)
+{
+    if (r.length <= 1) return;
+    auto newEnd = end(r) - 1;
+    iterSwap(begin(r), newEnd);
+    heapify!(less, iterSwap)(range(begin(r), newEnd), begin(r));
+}
+
+/**
+sortHeap
+*/
+void sortHeap(alias less, alias iterSwap = .iterSwap, Range)(Range r)
+{
+    auto b = begin(r), e = end(r);
+    for (; e - b > 1; --e)
+    {
+        popHeap!(less, iterSwap)(range(b, e));
+    }
+}
+
+/**
+topNCopy 
+*/
+void topNCopy(alias less, alias iterSwap = .iterSwap, SRange, TRange)(
+    SRange source, TRange target)
+{
+    // make an initial heap in the target
+    auto tb = begin(target), te = tb;
+    auto sb = begin(source), se = end(source);
+    for (; sb != se; ++sb)
+    {
+        if (te == end(target)) break;
+        *te = *sb;
+        ++te;
+    }
+    if (te < end(target)) target = range(tb, te);
+    makeHeap!(less, iterSwap)(target);
+
+    // now copy stuff into the target if it's smaller
+    for (; sb != se; ++sb)
+    {
+        if (!less(*sb, *tb)) continue;
+        *tb = *sb;
+        heapify!(less, iterSwap)(target, tb);
+    }
+}
+
+/**
+partialSortCopy
+*/
+void partialSortCopy(alias less, alias iterSwap = .iterSwap, SRange, TRange)(
+    SRange source, TRange target)
+{
+    topNCopy!(less, iterSwap)(source, target);
+    sortHeap!(less, iterSwap)(target);
+}
+
+unittest
+{
+    auto r = Random(unpredictableSeed);
+    int[] a = new int[uniform(r, 0, 1000)];
+    foreach (i, ref e; a) e = i;
+    randomShuffle(a, r);
+    int[] b = new int[uniform(r, 0, a.length)];
+    partialSortCopy!(binaryFun!("a < b"))(a, b);
+    assert(isSorted!(binaryFun!("a < b"))(b));
+}
+
+// Internal random array generators
+
+version(Unittest)
+{
+    private enum size_t maxArraySize = 50;
+    private enum size_t minArraySize = maxArraySize - 1;
+
+    private string[] rndstuff(T : string)()
+    {
+        static Random rnd;
+        static bool first = true;
+        if (first)
+        {
+            rnd = Random(unpredictableSeed);
+            first = false;
+        }
+        string[] result =
+            new string[uniform(rnd, minArraySize, maxArraySize)];
+        string alpha = "abcdefghijABCDEFGHIJ";
+        foreach (ref s; result)
+        {
+            foreach (i; 0 .. uniform!(uint)(rnd, 0u, 20u))
+            {
+                auto j = uniform(rnd, 0, alpha.length - 1);
+                s ~= alpha[j];
+            }
+        }
+        return result;
+    }
+
+    private int[] rndstuff(T : int)()
+    {
+        static Random rnd;
+        static bool first = true;
+        if (first)
+        {
+            rnd = Random(unpredictableSeed);
+            first = false;
+        }
+        int[] result = new int[uniform(rnd, minArraySize, maxArraySize)];
+        foreach (ref i; result)
+        {
+            i = uniform(rnd, -100, 100);
+        }
+        return result;
+    }
+
+    private double[] rndstuff(T : double)()
+    {
+        double[] result;
+        foreach (i; rndstuff!(int)())
+        {
+            result ~= i / 50.;
+        }
+        return result;
+    }
 }
