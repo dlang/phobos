@@ -4353,4 +4353,14 @@ Lno:
     return null;
 }
 
+// Undocummented yet
 
+string stringize(T...)(T args)
+{
+    string result;
+    foreach (arg; args)
+    {
+        result ~= to!(string)(arg);
+    }
+    return result;
+}
