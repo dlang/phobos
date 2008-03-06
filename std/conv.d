@@ -333,14 +333,8 @@ private T toImpl(S, T)(S value) {
 
 private T numberToNumber(S, T)(S value)
 {
-    static if (isFloatingPoint!(S))
-        enum sSmallest = -S.max;
-    else
-        enum sSmallest = S.min;
-    static if (isFloatingPoint!(T))
-        enum tSmallest = -T.max;
-    else
-        enum tSmallest = T.min;
+    enum sSmallest = mostNegative!(S);
+    enum tSmallest = mostNegative!(T);
     static if (sSmallest < 0) {
         // possible underflow converting from a signed
         static if (tSmallest == 0) {
