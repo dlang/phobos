@@ -17,7 +17,7 @@ module std.outofmemory;
 
 class OutOfMemoryException : Exception
 {
-    static string s = "Out of memory";
+    enum string s = "Out of memory";
 
     /**
      * Default constructor

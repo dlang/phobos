@@ -55,7 +55,7 @@ version (linux)
 }
 
 /**
- * Execute command in a _command shell.
+ * Execute $(D command) in a _command shell.
  *
  * Returns: exit status of command
  */

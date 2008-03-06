@@ -239,12 +239,12 @@ void write(T...)(T args)
     static if (is(typeof(args[0]) : FILE*))
     {
         alias args[0] target;
-        static const first = 1;
+        enum first = 1;
     }
     else
     {
         alias stdout target;
-        static const first = 0;
+        enum first = 0;
     }
     writef(target, "", args[first .. $]);
     static if (args.length && is(typeof(args[$ - 1]) : dchar)) {
@@ -351,26 +351,26 @@ to write numbers in platform-native format.
 void writef(T...)(T args)
 {
     PrivateFileWriter!(char) w;
-    static const errorMessage =
+    enum errorMessage =
         "You must pass a formatting string as the first"
         " argument to writef. If no formatting is needed,"
         " you may want to use write.";
     static if (is(typeof(args[0]) : FILE*))
     {
         alias args[0] target;
-        static const first = 1;
+        enum first = 1;
     }
     else
     {
         alias stdout target;
-        static const first = 0;
+        enum first = 0;
     }
     w.backend = target;
     FLOCK(w.backend);
     scope(exit) FUNLOCK(w.backend);
     static if (!isSomeString!(T[first]))
     {
-        // compatibility hack
+        // bacward compatibility hack
         std.format.formattedWrite(w, "", args[first .. $]);
     }
     else
@@ -811,6 +811,16 @@ FILE* popen(string name, string mode)
 }
 
 /*
+ * Convenience function that forwards to $(D_PARAM std.c.stdio.fwrite)
+ * and throws an exception upon error
+ */
+private void binaryWrite(T)(FILE* f, T obj)
+{
+    invariant result = fwrite(obj.ptr, obj[0].sizeof, obj.length, f);
+    if (result != obj.length) StdioException();
+}
+
+/*
  * Implements the static Writer interface for a FILE*. Instantiate it
  * with the character type, e.g. PrivateFileWriter!(char),
  * PrivateFileWriter!(wchar), or PrivateFileWriter!(dchar). Regardless of
@@ -824,6 +834,7 @@ private struct PrivateFileWriter(Char)
     alias Char NativeChar;
     FILE* backend;
     int orientation;
+
     void write(C)(in C[] s)
     {
         if (!orientation) orientation = fwide(backend, 0);
@@ -845,6 +856,7 @@ private struct PrivateFileWriter(Char)
             }
         }
     }
+
     void putchar(C)(in C c)
     {
         if (!orientation) orientation = fwide(backend, 0);
@@ -1001,7 +1013,7 @@ struct lines
         alias ParameterTypeTuple!(dg) Parms;
         static if (isSomeString!(Parms[$ - 1]))
         {
-            static const bool duplicate = is(Parms[$ - 1] == string)
+            enum bool duplicate = is(Parms[$ - 1] == string)
                 || is(Parms[$ - 1] == wstring) || is(Parms[$ - 1] == dstring);
             int result = 0;
             static if (is(Parms[$ - 1] : const(char)[]))
@@ -1040,7 +1052,7 @@ struct lines
     int opApplyRaw(D)(D dg)
     {
         alias ParameterTypeTuple!(dg) Parms;
-        static const duplicate = is(typeof(Parms[$ - 1]) : invariant(ubyte)[]);
+        enum duplicate = is(typeof(Parms[$ - 1]) : invariant(ubyte)[]);
         int result = 1;
         int c = void;
         FLOCK(f);
