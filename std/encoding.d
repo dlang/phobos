@@ -1914,7 +1914,7 @@ body
 }
 
 // Helper functions
-debug
+version(unittest)
 {
 	void transcodeReverse(Src,Dst)(invariant(Src)[] s, out invariant(Dst)[] r)
 	{
