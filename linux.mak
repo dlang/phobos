@@ -1,14 +1,24 @@
 # Makefile to build linux D runtime library libphobos2.a and its unit test
 # Targets:
-#	<default> | release
-#		-release -O
-# The release build also puts a link to libphobos2.a in the current directory.
+#	all
+#		Generate each build targets below except clean
+#
+#	release (default taret)
+#		-O -release
+#               Symlink libphobos2.a in the top level directory
+#
 #	unittest/release
-#		-unittest -release -O
+#		-O -release -unittest
+#
 #	debug
 #		-g
+#
 #	unittest/debug
-#		-unittest -g
+#		-g -unittest
+#
+#	html
+#		Generate the ddocs for phobos
+#
 #	clean
 #		Delete all files created by build process
 
@@ -20,7 +30,7 @@ ifeq (,$(MAKECMDGOALS))
 endif
 ifeq (unittest/release,$(MAKECMDGOALS))
     CFLAGS:=$(CFLAGS) -O
-    DFLAGS:=$(DFLAGS) -release -unittest
+    DFLAGS:=$(DFLAGS) -O -release -unittest
     OBJDIR=obj/unittest/release
 endif
 ifeq (unittest/debug,$(MAKECMDGOALS))
@@ -44,10 +54,13 @@ endif
 ifeq (html,$(MAKECMDGOALS))
     OBJDIR=none
 endif
+ifeq (all,$(MAKECMDGOALS))
+    OBJDIR=none
+endif
 
 ifndef OBJDIR
     $(error Cannot make $(MAKECMDGOALS). Please make either \
-debug, release, unittest/debug, unittest/release, clear, or html)
+all, debug, release, unittest/debug, unittest/release, clean, or html)
 endif
 
 ifneq (none,$(OBJDIR))
@@ -75,6 +88,13 @@ $(OBJDIR)/%.o : %.asm
 	$(CC) -c -o $@ $<
 
 debug release unittest/debug unittest/release : $(OBJDIR)/unittest
+
+all :
+	$(MAKE) -f linux.mak release
+	$(MAKE) -f linux.mak unittest/release
+	$(MAKE) -f linux.mak debug
+	$(MAKE) -f linux.mak unittest/debug
+	$(MAKE) -f linux.mak html
 
 $(OBJDIR)/unittest : $(OBJDIR)/unittest.o \
                    $(OBJDIR)/all_std_modules_generated.o $(LIB)
@@ -206,9 +226,9 @@ OBJS := $(addprefix $(OBJDIR)/,$(OBJS))
 
 $(LIB) : $(OBJS) $(MAKEFILE_LIST)
 	rm -f $(LIB)
-	@echo ar -r $@ "<...tonz of filez...>"
-	@ar -r $@ $(OBJS) 2>/tmp/deleteme || cat /tmp/deleteme >&2
-	@rm /tmp/deleteme
+	@echo ar -r $@ "<...tons of files...>"
+	@ar -r $@ $(OBJS) 2>$(OBJDIR)/ar-files || cat $(OBJDIR)/ar-files >&2
+	@rm $(OBJDIR)/ar-files
 
 ###########################################################
 # Dox
