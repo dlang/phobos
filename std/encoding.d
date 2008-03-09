@@ -930,7 +930,7 @@ template EncoderInstance(E:Utf8)
 		return (c < 0xC0 || (c >= 0xC2 && c < 0xF5));
 	}
 
-	byte[128] tailTable =
+	invariant byte[128] tailTable =
 	[
 		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,

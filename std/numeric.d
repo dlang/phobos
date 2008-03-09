@@ -38,7 +38,10 @@ $(WEB erdani.org, Andrei Alexandrescu)
 
 module std.numeric;
 import std.math;
-import std.stdio;
+version(unittest)
+{
+    import std.stdio;
+}
 
 /**
    Implements the $(LINK2 http://tinyurl.com/2zb9yr,secant method) for
