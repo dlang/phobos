@@ -2,412 +2,373 @@
 
 /**
 Classes and functions for handling and transcoding between various encodings.
+
+For cases where the encoding is known at compile-time, functions are provided
+for arbitrary encoding and decoding of characters, arbitrary transcoding
+between strings of different type, as well as validation and sanitization.
+
 Encodings currently supported are UTF-8, UTF-16, UTF-32, ASCII, ISO-8859-1
-(also known as LATIN-1), and WINDOWS-1252
+(also known as LATIN-1), and WINDOWS-1252. The type EString!(Ascii) represents
+an ASCII string; the type EString!(Latin1) represents an ISO-8859-1 string,
+and so on. In general, EString!(E) is the string type for encoding E, and
+EString(Utf8), EString(Utf16) and EString(Utf32) are aliases for string,
+wstring and dstring respectively.
 
-Functions are provided for arbitrary encoding and decoding of single
-characters, arbitrary transcoding between strings of different type, as well as
-validation and sanitization.
+For cases where the encoding is not known at compile-time, but is known at
+run-time, we provide the abstract class EncodingScheme and its subclasses.
+To construct a run-time encoder/decoder, one does e.g.
 
-The type EString!(Ascii) represents an ASCII string; the type EString!(Latin1)
-represents an ISO-8859-1 string, and so on. In general, EString!(E) is the
-string type for encoding E, and EString(Utf8), EString(Utf16) and
-EString(Utf32) are aliases for string, wstring and dstring respectively.
+----------------------------------------------------
+    auto e = EncodingScheme.create("utf-8");
+----------------------------------------------------
 
-Future directions for this module include the ability to handle arbitrary
-encodings.
+This library supplies EncodingScheme subclasses for ASCII, ISO-8859-1
+(also known as LATIN-1), WINDOWS-1252, UTF-8, and (on little-endian
+architectures) UTF-16LE and UTF-32LE; or (on big-endian architectures)
+UTF-16BE and UTF-32BE.
+
+This library provides a mechanism whereby other modules may add EncodingScheme
+subclasses for any other encoding.
 
 Authors: Janice Caron
 
-Date: 2006.02.27
+Date: 2008.02.27 - 2008.03.23
 
 License: Public Domain
-
-$(BIG $(B A Brief Tutorial))
-
-There are many character sets (or more properly, character repertoires) on the
-planet. Unicode is the superset of all other legacy character sets. Therefore,
-$(I every) character which exists in any character repertoire, also exists in
-Unicode. Every character in Unicode has an integer associated with it. That
-integer is the called the character's code point. For example, the code point
-of the letter 'A' is 65, or in hex, 0x41. It is important to know that a
-character's code point is unchangeable. It is a permanent property of the
-character, and it does not depend on how you encode it. The code point of 'A'
-is 65, period.
-
-Most character repertoires consist of 256 characters or fewer. This is because
-it is convenient to use single-byte encoding schemes. In such repertoires,
-every character will have an integer in the range 0 to 255 associated with it,
-denoting its position within that repertoire. That number is called a code
-unit. Note that, in general, code unit != code point.
-
-For example, the Euro currency symbol has code point 0x20AC. This is a
-permanent property of the character. That character does not exist in the
-ASCII repertoire, and so cannot be encoded in ASCII. It also does not exist in
-the Latin-1 character repertoire, and likewise cannot be encoded in Latin-1.It
-$(I does) exist in the Windows-1252 character repertoire though. In that
-encoding, it is represented by the byte 0x80. So in that encoding, its code
-UNIT is 0x80, but its code POINT is still 0x20AC. Code points are always
-measured in Unicode.
-
-Some character repertoires contain more than 256 characters. Yet it is still
-desirable to be able to store those characters as a byte sequence, so
-multi-byte encodings got invented to allow that. In such encodings a single
-character may require more than one byte to represent it.
-
-The process of converting a single code point into one or more code units is
-called ENCODING. The reverse process, that of converting multiple code units
-into a single code point is called DECODING.
-
-Almost all encodings use 8-bit bytes as the storage type for a single code
-unit - but there are exceptions. UTF-16, for example, uses 16-bit wide code
-units. (The character repertoire which it represents contains more than 2^16
-characters, so some of those characters need to expressed as multiple code
-units, even in UTF-16). UTF-32 uses a 32-bit wide code unit, which means, just
-like in the good old days of ASCII, one code unit == one code point. UTF-32,
-however, is the $(I only) encoding for which this is true.
 
 */
 
 module std.encoding;
+import std.string;
+import std.traits;
 
 unittest
 {
-	ubyte[][] validStrings =
-	[
-		// Plain ASCII
-		cast(ubyte[])"hello",
+    ubyte[][] validStrings =
+    [
+        // Plain ASCII
+        cast(ubyte[])"hello",
 
-		// The Greek word 'kosme'
-		cast(ubyte[])"Îºá½¹ÏƒÎ¼Îµ",
+        // The Greek word 'kosme'
+        cast(ubyte[])"Îºá½¹ÏƒÎ¼Îµ",
 
-		// First possible sequence of a certain length
-		[ 0x00 ],						// U+00000000	one byte
-		[ 0xC2, 0x80 ],					// U+00000080	two bytes
-		[ 0xE0, 0xA0, 0x80 ],			// U+00000800	three bytes
-		[ 0xF0, 0x90, 0x80, 0x80 ],		// U+00010000	three bytes
+        // First possible sequence of a certain length
+        [ 0x00 ],                       // U+00000000   one byte
+        [ 0xC2, 0x80 ],                 // U+00000080   two bytes
+        [ 0xE0, 0xA0, 0x80 ],           // U+00000800   three bytes
+        [ 0xF0, 0x90, 0x80, 0x80 ],     // U+00010000   three bytes
 
-		// Last possible sequence of a certain length
-		[ 0x7F ],						// U+0000007F	one byte
-		[ 0xDF, 0xBF ],					// U+000007FF	two bytes
-		[ 0xEF,	0xBF, 0xBF ],			// U+0000FFFF	three bytes
+        // Last possible sequence of a certain length
+        [ 0x7F ],                       // U+0000007F   one byte
+        [ 0xDF, 0xBF ],                 // U+000007FF   two bytes
+        [ 0xEF, 0xBF, 0xBF ],           // U+0000FFFF   three bytes
 
-		// Other boundary conditions
-		[ 0xED, 0x9F, 0xBF ],			// U+0000D7FF	Last character before surrogates
-		[ 0xEE, 0x80, 0x80 ],			// U+0000E000	First character after surrogates
-		[ 0xEF, 0xBF, 0xBD ],			// U+0000FFFD	Unicode replacement character
-		[ 0xF4, 0x8F, 0xBF, 0xBF ],		// U+0010FFFF	Very last character
+        // Other boundary conditions
+        [ 0xED, 0x9F, 0xBF ],           // U+0000D7FF   Last character before surrogates
+        [ 0xEE, 0x80, 0x80 ],           // U+0000E000   First character after surrogates
+        [ 0xEF, 0xBF, 0xBD ],           // U+0000FFFD   Unicode replacement character
+        [ 0xF4, 0x8F, 0xBF, 0xBF ],     // U+0010FFFF   Very last character
 
-		// Non-character code points
-		/*	NOTE: These are legal in UTF, and may be converted from one UTF to
-			another, however they do not represent Unicode characters. These
-			code points have been reserved by Unicode as non-character code
-			points. They are permissible for data exchange within an
-			application, but they are are not permitted to be used as
-			characters. Since this module deals with UTF, and not with Unicode
-			per se, we choose to accept them here. */
-		[ 0xDF, 0xBE ],					// U+0000FFFE
-		[ 0xDF, 0xBF ],					// U+0000FFFF
-	];
+        // Non-character code points
+        /*  NOTE: These are legal in UTF, and may be converted from one UTF to
+            another, however they do not represent Unicode characters. These
+            code points have been reserved by Unicode as non-character code
+            points. They are permissible for data exchange within an
+            application, but they are are not permitted to be used as
+            characters. Since this module deals with UTF, and not with Unicode
+            per se, we choose to accept them here. */
+        [ 0xDF, 0xBE ],                 // U+0000FFFE
+        [ 0xDF, 0xBF ],                 // U+0000FFFF
+    ];
 
-	ubyte[][] invalidStrings =
-	[
-		// First possible sequence of a certain length, but greater than U+10FFFF
-		[ 0xF8, 0x88, 0x80, 0x80, 0x80 ],			// U+00200000	five bytes
-		[ 0xFC, 0x84, 0x80, 0x80, 0x80, 0x80 ],		// U+04000000	six bytes
+    ubyte[][] invalidStrings =
+    [
+        // First possible sequence of a certain length, but greater than U+10FFFF
+        [ 0xF8, 0x88, 0x80, 0x80, 0x80 ],           // U+00200000   five bytes
+        [ 0xFC, 0x84, 0x80, 0x80, 0x80, 0x80 ],     // U+04000000   six bytes
 
-		// Last possible sequence of a certain length, but greater than U+10FFFF
-		[ 0xF7, 0xBF, 0xBF, 0xBF ],					// U+001FFFFF	four bytes
-		[ 0xFB, 0xBF, 0xBF, 0xBF, 0xBF ],			// U+03FFFFFF	five bytes
-		[ 0xFD, 0xBF, 0xBF, 0xBF, 0xBF, 0xBF ],		// U+7FFFFFFF	six bytes
+        // Last possible sequence of a certain length, but greater than U+10FFFF
+        [ 0xF7, 0xBF, 0xBF, 0xBF ],                 // U+001FFFFF   four bytes
+        [ 0xFB, 0xBF, 0xBF, 0xBF, 0xBF ],           // U+03FFFFFF   five bytes
+        [ 0xFD, 0xBF, 0xBF, 0xBF, 0xBF, 0xBF ],     // U+7FFFFFFF   six bytes
 
-		// Other boundary conditions
-		[ 0xF4, 0x90, 0x80, 0x80 ],					// U+00110000	First code
-													// point after last character
+        // Other boundary conditions
+        [ 0xF4, 0x90, 0x80, 0x80 ],                 // U+00110000   First code
+                                                    // point after last character
 
-		// Unexpected continuation bytes
-		[ 0x80 ],
-		[ 0xBF ],
-		[ 0x20, 0x80, 0x20 ],
-		[ 0x20, 0xBF, 0x20 ],
-		[ 0x80, 0x9F, 0xA0 ],
+        // Unexpected continuation bytes
+        [ 0x80 ],
+        [ 0xBF ],
+        [ 0x20, 0x80, 0x20 ],
+        [ 0x20, 0xBF, 0x20 ],
+        [ 0x80, 0x9F, 0xA0 ],
 
-		// Lonely start bytes
-		[ 0xC0 ],
-		[ 0xCF ],
-		[ 0x20, 0xC0, 0x20 ],
-		[ 0x20, 0xCF, 0x20 ],
-		[ 0xD0 ],
-		[ 0xDF ],
-		[ 0x20, 0xD0, 0x20 ],
-		[ 0x20, 0xDF, 0x20 ],
-		[ 0xE0 ],
-		[ 0xEF ],
-		[ 0x20, 0xE0, 0x20 ],
-		[ 0x20, 0xEF, 0x20 ],
-		[ 0xF0 ],
-		[ 0xF1 ],
-		[ 0xF2 ],
-		[ 0xF3 ],
-		[ 0xF4 ],
-		[ 0xF5 ],	// If this were legal it would start a character > U+10FFFF
-		[ 0xF6 ],	// If this were legal it would start a character > U+10FFFF
-		[ 0xF7 ],	// If this were legal it would start a character > U+10FFFF
+        // Lonely start bytes
+        [ 0xC0 ],
+        [ 0xCF ],
+        [ 0x20, 0xC0, 0x20 ],
+        [ 0x20, 0xCF, 0x20 ],
+        [ 0xD0 ],
+        [ 0xDF ],
+        [ 0x20, 0xD0, 0x20 ],
+        [ 0x20, 0xDF, 0x20 ],
+        [ 0xE0 ],
+        [ 0xEF ],
+        [ 0x20, 0xE0, 0x20 ],
+        [ 0x20, 0xEF, 0x20 ],
+        [ 0xF0 ],
+        [ 0xF1 ],
+        [ 0xF2 ],
+        [ 0xF3 ],
+        [ 0xF4 ],
+        [ 0xF5 ],   // If this were legal it would start a character > U+10FFFF
+        [ 0xF6 ],   // If this were legal it would start a character > U+10FFFF
+        [ 0xF7 ],   // If this were legal it would start a character > U+10FFFF
 
-		[ 0xEF, 0xBF ],				// Three byte sequence with third byte missing
-		[ 0xF7, 0xBF, 0xBF ],		// Four byte sequence with fourth byte missing
-		[ 0xEF, 0xBF, 0xF7, 0xBF, 0xBF ],	// Concatenation of the above
+        [ 0xEF, 0xBF ],             // Three byte sequence with third byte missing
+        [ 0xF7, 0xBF, 0xBF ],       // Four byte sequence with fourth byte missing
+        [ 0xEF, 0xBF, 0xF7, 0xBF, 0xBF ],   // Concatenation of the above
 
-		// Impossible bytes
-		[ 0xF8 ],
-		[ 0xF9 ],
-		[ 0xFA ],
-		[ 0xFB ],
-		[ 0xFC ],
-		[ 0xFD ],
-		[ 0xFE ],
-		[ 0xFF ],
-		[ 0x20, 0xF8, 0x20 ],
-		[ 0x20, 0xF9, 0x20 ],
-		[ 0x20, 0xFA, 0x20 ],
-		[ 0x20, 0xFB, 0x20 ],
-		[ 0x20, 0xFC, 0x20 ],
-		[ 0x20, 0xFD, 0x20 ],
-		[ 0x20, 0xFE, 0x20 ],
-		[ 0x20, 0xFF, 0x20 ],
+        // Impossible bytes
+        [ 0xF8 ],
+        [ 0xF9 ],
+        [ 0xFA ],
+        [ 0xFB ],
+        [ 0xFC ],
+        [ 0xFD ],
+        [ 0xFE ],
+        [ 0xFF ],
+        [ 0x20, 0xF8, 0x20 ],
+        [ 0x20, 0xF9, 0x20 ],
+        [ 0x20, 0xFA, 0x20 ],
+        [ 0x20, 0xFB, 0x20 ],
+        [ 0x20, 0xFC, 0x20 ],
+        [ 0x20, 0xFD, 0x20 ],
+        [ 0x20, 0xFE, 0x20 ],
+        [ 0x20, 0xFF, 0x20 ],
 
-		// Overlong sequences, all representing U+002F
-		/*	With a safe UTF-8 decoder, all of the following five overlong
-			representations of the ASCII character slash ("/") should be
-			rejected like a malformed UTF-8 sequence */
-		[ 0xC0, 0xAF ],
-		[ 0xE0, 0x80, 0xAF ],
-		[ 0xF0, 0x80, 0x80, 0xAF ],
-		[ 0xF8, 0x80, 0x80, 0x80, 0xAF ],
-		[ 0xFC, 0x80, 0x80, 0x80, 0x80, 0xAF ],
+        // Overlong sequences, all representing U+002F
+        /*  With a safe UTF-8 decoder, all of the following five overlong
+            representations of the ASCII character slash ("/") should be
+            rejected like a malformed UTF-8 sequence */
+        [ 0xC0, 0xAF ],
+        [ 0xE0, 0x80, 0xAF ],
+        [ 0xF0, 0x80, 0x80, 0xAF ],
+        [ 0xF8, 0x80, 0x80, 0x80, 0xAF ],
+        [ 0xFC, 0x80, 0x80, 0x80, 0x80, 0xAF ],
 
-		// Maximum overlong sequences
-		/*	Below you see the highest Unicode value that is still resulting in
-			an overlong sequence if represented with the given number of bytes.
-			This is a boundary test for safe UTF-8 decoders. All five
-			characters should be rejected like malformed UTF-8 sequences. */
-		[ 0xC1, 0xBF ],								// U+0000007F
-		[ 0xE0, 0x9F, 0xBF ],						// U+000007FF
-		[ 0xF0, 0x8F, 0xBF, 0xBF ],					// U+0000FFFF
-		[ 0xF8, 0x87, 0xBF, 0xBF, 0xBF ],			// U+001FFFFF
-		[ 0xFC, 0x83, 0xBF, 0xBF, 0xBF, 0xBF ],		// U+03FFFFFF
+        // Maximum overlong sequences
+        /*  Below you see the highest Unicode value that is still resulting in
+            an overlong sequence if represented with the given number of bytes.
+            This is a boundary test for safe UTF-8 decoders. All five
+            characters should be rejected like malformed UTF-8 sequences. */
+        [ 0xC1, 0xBF ],                             // U+0000007F
+        [ 0xE0, 0x9F, 0xBF ],                       // U+000007FF
+        [ 0xF0, 0x8F, 0xBF, 0xBF ],                 // U+0000FFFF
+        [ 0xF8, 0x87, 0xBF, 0xBF, 0xBF ],           // U+001FFFFF
+        [ 0xFC, 0x83, 0xBF, 0xBF, 0xBF, 0xBF ],     // U+03FFFFFF
 
-		// Overlong representation of the NUL character
-		/*	The following five sequences should also be rejected like malformed
-			UTF-8 sequences and should not be treated like the ASCII NUL
-			character. */
-		[ 0xC0, 0x80 ],
-		[ 0xE0, 0x80, 0x80 ],
-		[ 0xF0, 0x80, 0x80, 0x80 ],
-		[ 0xF8, 0x80, 0x80, 0x80, 0x80 ],
-		[ 0xFC, 0x80, 0x80, 0x80, 0x80, 0x80 ],
+        // Overlong representation of the NUL character
+        /*  The following five sequences should also be rejected like malformed
+            UTF-8 sequences and should not be treated like the ASCII NUL
+            character. */
+        [ 0xC0, 0x80 ],
+        [ 0xE0, 0x80, 0x80 ],
+        [ 0xF0, 0x80, 0x80, 0x80 ],
+        [ 0xF8, 0x80, 0x80, 0x80, 0x80 ],
+        [ 0xFC, 0x80, 0x80, 0x80, 0x80, 0x80 ],
 
-		// Illegal code positions
-		/*	The following UTF-8 sequences should be rejected like malformed
-			sequences, because they never represent valid ISO 10646 characters
-			and a UTF-8 decoder that accepts them might introduce security
-			problems comparable to overlong UTF-8 sequences. */
-		[ 0xED, 0xA0, 0x80 ],		// U+D800
-		[ 0xED, 0xAD, 0xBF ],		// U+DB7F
-		[ 0xED, 0xAE, 0x80 ],		// U+DB80
-		[ 0xED, 0xAF, 0xBF ],		// U+DBFF
-		[ 0xED, 0xB0, 0x80 ],		// U+DC00
-		[ 0xED, 0xBE, 0x80 ],		// U+DF80
-		[ 0xED, 0xBF, 0xBF ],		// U+DFFF
-	];
+        // Illegal code positions
+        /*  The following UTF-8 sequences should be rejected like malformed
+            sequences, because they never represent valid ISO 10646 characters
+            and a UTF-8 decoder that accepts them might introduce security
+            problems comparable to overlong UTF-8 sequences. */
+        [ 0xED, 0xA0, 0x80 ],       // U+D800
+        [ 0xED, 0xAD, 0xBF ],       // U+DB7F
+        [ 0xED, 0xAE, 0x80 ],       // U+DB80
+        [ 0xED, 0xAF, 0xBF ],       // U+DBFF
+        [ 0xED, 0xB0, 0x80 ],       // U+DC00
+        [ 0xED, 0xBE, 0x80 ],       // U+DF80
+        [ 0xED, 0xBF, 0xBF ],       // U+DFFF
+    ];
 
-	string[] sanitizedStrings =
-	[
-		"\uFFFD","\uFFFD",
-		"\uFFFD","\uFFFD","\uFFFD","\uFFFD","\uFFFD","\uFFFD"," \uFFFD ",
-		" \uFFFD ","\uFFFD\uFFFD\uFFFD","\uFFFD","\uFFFD"," \uFFFD "," \uFFFD ",
-		"\uFFFD","\uFFFD"," \uFFFD "," \uFFFD ","\uFFFD","\uFFFD"," \uFFFD ",
-		" \uFFFD ","\uFFFD","\uFFFD","\uFFFD","\uFFFD","\uFFFD","\uFFFD",
-		"\uFFFD","\uFFFD","\uFFFD","\uFFFD","\uFFFD\uFFFD","\uFFFD","\uFFFD",
-		"\uFFFD","\uFFFD","\uFFFD","\uFFFD","\uFFFD","\uFFFD"," \uFFFD ",
-		" \uFFFD "," \uFFFD "," \uFFFD "," \uFFFD "," \uFFFD "," \uFFFD ",
-		" \uFFFD ","\uFFFD","\uFFFD","\uFFFD","\uFFFD","\uFFFD","\uFFFD",
-		"\uFFFD","\uFFFD","\uFFFD","\uFFFD","\uFFFD","\uFFFD","\uFFFD","\uFFFD",
-		"\uFFFD","\uFFFD","\uFFFD","\uFFFD","\uFFFD","\uFFFD","\uFFFD","\uFFFD",
-	];
+    string[] sanitizedStrings =
+    [
+        "\uFFFD","\uFFFD",
+        "\uFFFD","\uFFFD","\uFFFD","\uFFFD","\uFFFD","\uFFFD"," \uFFFD ",
+        " \uFFFD ","\uFFFD\uFFFD\uFFFD","\uFFFD","\uFFFD"," \uFFFD "," \uFFFD ",
+        "\uFFFD","\uFFFD"," \uFFFD "," \uFFFD ","\uFFFD","\uFFFD"," \uFFFD ",
+        " \uFFFD ","\uFFFD","\uFFFD","\uFFFD","\uFFFD","\uFFFD","\uFFFD",
+        "\uFFFD","\uFFFD","\uFFFD","\uFFFD","\uFFFD\uFFFD","\uFFFD","\uFFFD",
+        "\uFFFD","\uFFFD","\uFFFD","\uFFFD","\uFFFD","\uFFFD"," \uFFFD ",
+        " \uFFFD "," \uFFFD "," \uFFFD "," \uFFFD "," \uFFFD "," \uFFFD ",
+        " \uFFFD ","\uFFFD","\uFFFD","\uFFFD","\uFFFD","\uFFFD","\uFFFD",
+        "\uFFFD","\uFFFD","\uFFFD","\uFFFD","\uFFFD","\uFFFD","\uFFFD","\uFFFD",
+        "\uFFFD","\uFFFD","\uFFFD","\uFFFD","\uFFFD","\uFFFD","\uFFFD","\uFFFD",
+    ];
 
-	// Make sure everything that should be valid, is
-	foreach(a;validStrings)
-	{
-		string s = cast(string)a;
-		assert(isValid(s),"Failed to validate: "~makeReadable(s));
-	}
+    // Make sure everything that should be valid, is
+    foreach(a;validStrings)
+    {
+        string s = cast(string)a;
+        assert(isValid(s),"Failed to validate: "~makeReadable(s));
+    }
 
-	// Make sure everything that shouldn't be valid, isn't
-	foreach(a;invalidStrings)
-	{
-		string s = cast(string)a;
-		assert(!isValid(s),"Incorrectly validated: "~makeReadable(s));
-	}
+    // Make sure everything that shouldn't be valid, isn't
+    foreach(a;invalidStrings)
+    {
+        string s = cast(string)a;
+        assert(!isValid(s),"Incorrectly validated: "~makeReadable(s));
+    }
 
-	// Make sure we can sanitize everything bad
-	assert(invalidStrings.length == sanitizedStrings.length);
-	for(int i=0; i<invalidStrings.length; ++i)
-	{
-		string s = cast(string)invalidStrings[i];
-		string t = sanitize(s);
-		assert(isValid(t));
-		assert(t == sanitizedStrings[i]);
-		ubyte[] u = cast(ubyte[])t;
-		validStrings ~= u;
-	}
+    // Make sure we can sanitize everything bad
+    assert(invalidStrings.length == sanitizedStrings.length);
+    for(int i=0; i<invalidStrings.length; ++i)
+    {
+        string s = cast(string)invalidStrings[i];
+        string t = sanitize(s);
+        assert(isValid(t));
+        assert(t == sanitizedStrings[i]);
+        ubyte[] u = cast(ubyte[])t;
+        validStrings ~= u;
+    }
 
-	// Make sure all transcodings work in both directions, using both forward
-	// and reverse iteration
-	foreach(a;validStrings)
-	{
-		string s = cast(string)a;
-		string s2;
-		wstring ws, ws2;
-		dstring ds, ds2;
+    // Make sure all transcodings work in both directions, using both forward
+    // and reverse iteration
+    foreach(a;validStrings)
+    {
+        string s = cast(string)a;
+        string s2;
+        wstring ws, ws2;
+        dstring ds, ds2;
 
-		transcode(s,ws);
-		assert(isValid(ws));
-		transcode(ws,s2);
-		assert(s == s2);
+        transcode(s,ws);
+        assert(isValid(ws));
+        transcode(ws,s2);
+        assert(s == s2);
 
-		transcode(s,ds);
-		assert(isValid(ds));
-		transcode(ds,s2);
-		assert(s == s2);
+        transcode(s,ds);
+        assert(isValid(ds));
+        transcode(ds,s2);
+        assert(s == s2);
 
-		transcode(ws,s);
-		assert(isValid(s));
-		transcode(s,ws2);
-		assert(ws == ws2);
+        transcode(ws,s);
+        assert(isValid(s));
+        transcode(s,ws2);
+        assert(ws == ws2);
 
-		transcode(ws,ds);
-		assert(isValid(ds));
-		transcode(ds,ws2);
-		assert(ws == ws2);
+        transcode(ws,ds);
+        assert(isValid(ds));
+        transcode(ds,ws2);
+        assert(ws == ws2);
 
-		transcode(ds,s);
-		assert(isValid(s));
-		transcode(s,ds2);
-		assert(ds == ds2);
+        transcode(ds,s);
+        assert(isValid(s));
+        transcode(s,ds2);
+        assert(ds == ds2);
 
-		transcode(ds,ws);
-		assert(isValid(ws));
-		transcode(ws,ds2);
-		assert(ds == ds2);
+        transcode(ds,ws);
+        assert(isValid(ws));
+        transcode(ws,ds2);
+        assert(ds == ds2);
 
-		transcodeReverse(s,ws);
-		assert(isValid(ws));
-		transcodeReverse(ws,s2);
-		assert(s == s2);
+        transcodeReverse(s,ws);
+        assert(isValid(ws));
+        transcodeReverse(ws,s2);
+        assert(s == s2);
 
-		transcodeReverse(s,ds);
-		assert(isValid(ds));
-		transcodeReverse(ds,s2);
-		assert(s == s2);
+        transcodeReverse(s,ds);
+        assert(isValid(ds));
+        transcodeReverse(ds,s2);
+        assert(s == s2);
 
-		transcodeReverse(ws,s);
-		assert(isValid(s));
-		transcodeReverse(s,ws2);
-		assert(ws == ws2);
+        transcodeReverse(ws,s);
+        assert(isValid(s));
+        transcodeReverse(s,ws2);
+        assert(ws == ws2);
 
-		transcodeReverse(ws,ds);
-		assert(isValid(ds));
-		transcodeReverse(ds,ws2);
-		assert(ws == ws2);
+        transcodeReverse(ws,ds);
+        assert(isValid(ds));
+        transcodeReverse(ds,ws2);
+        assert(ws == ws2);
 
-		transcodeReverse(ds,s);
-		assert(isValid(s));
-		transcodeReverse(s,ds2);
-		assert(ds == ds2);
+        transcodeReverse(ds,s);
+        assert(isValid(s));
+        transcodeReverse(s,ds2);
+        assert(ds == ds2);
 
-		transcodeReverse(ds,ws);
-		assert(isValid(ws));
-		transcodeReverse(ws,ds2);
-		assert(ds == ds2);
-	}
+        transcodeReverse(ds,ws);
+        assert(isValid(ws));
+        transcodeReverse(ws,ds2);
+        assert(ds == ds2);
+    }
 
-	// Make sure the non-UTF encodings work too
-	{
-		auto s = "\u20AC100";
-		auto t = to!(Windows1252)(s);
-		assert(t == [cast(Windows1252)0x80, '1', '0', '0']);
-		auto u = to!(Utf8)(s);
-		assert(s == u);
-		auto v = to!(Latin1)(s);
-		assert(cast(string)v == "?100");
-		auto w = to!(Ascii)(v);
-		assert(cast(string)w == "?100");
-	}
+    // Make sure the non-UTF encodings work too
+    {
+        auto s = "\u20AC100";
+        auto t = to!(Windows1252)(s);
+        assert(t == [cast(Windows1252)0x80, '1', '0', '0']);
+        auto u = to!(Utf8)(s);
+        assert(s == u);
+        auto v = to!(Latin1)(s);
+        assert(cast(string)v == "?100");
+        auto w = to!(Ascii)(v);
+        assert(cast(string)w == "?100");
+    }
 }
 
 //=============================================================================
 
-template Mutable(E)
-{
-	static if(!is(E X == const(U),U) && !is(E X == invariant(U),U))
-	{
-		alias E Mutable;
-	}
-	else
-	{
-		alias U Mutable;
-	}
-}
-
 /** A simple growable buffer for fast appending */
 struct Buffer(E)
 {
-	alias Mutable!(E) T;
+    alias Mutable!(E) T;
 
-	private
-	{
-		T[] buffer;
-		uint index;
+    private
+    {
+        T[] buffer;
+        uint index;
 
-		void reserve(uint spaceNeeded)
-		{
-			uint bufferLength = buffer.length;
-			if (bufferLength < index + spaceNeeded)
-			{
-				if (bufferLength == 0) bufferLength = 16;
-				while (bufferLength < index + spaceNeeded) bufferLength <<= 2;
-				buffer.length = bufferLength;
-			}
-		}
-	}
+        void reserve(uint spaceNeeded)
+        {
+            uint bufferLength = buffer.length;
+            if (bufferLength < index + spaceNeeded)
+            {
+                if (bufferLength == 0) bufferLength = 16;
+                while (bufferLength < index + spaceNeeded) bufferLength <<= 2;
+                buffer.length = bufferLength;
+            }
+        }
+    }
 
-	void opCatAssign(E c) /// Append a single character
-	{
-		reserve(1);
-		buffer[index++] = c;
-	}
+    void opCatAssign(E c) /// Append a single character
+    {
+        reserve(1);
+        buffer[index++] = c;
+    }
 
-	void opCatAssign(const(E)[] a) /// Append an array of characters
-	{
-		reserve(a.length);
-		buffer[index..index+a.length] = a[0..$];
-		index += a.length;
-	}
+    void opCatAssign(const(E)[] a) /// Append an array of characters
+    {
+        reserve(a.length);
+        buffer[index..index+a.length] = a[0..$];
+        index += a.length;
+    }
 
-	T[] toArray() /// Return the buffer, and reset it
-	{
-		auto t = buffer[0..index];
-		buffer = null;
-		return t;
-	}
+    T[] toArray() /// Return the buffer, and reset it
+    {
+        auto t = buffer[0..index];
+        buffer = null;
+        index = 0;
+        return t;
+    }
 
-	invariant(T)[] toIArray() /// Return the buffer as an invariant array, and reset it
-	{
-		auto t = cast(invariant(T)[])(buffer[0..index]);
-		buffer = null;
-		return t;
-	}
+    invariant(T)[] toIArray() /// Return the buffer as an invariant array, and reset it
+    {
+        auto t = cast(invariant(T)[])(buffer[0..index]);
+        buffer = null;
+        index = 0;
+        return t;
+    }
 }
 
 //=============================================================================
@@ -417,795 +378,796 @@ enum dchar INVALID_SEQUENCE = cast(dchar)0xFFFFFFFF;
 
 template EncoderFunctions()
 {
-	// Various forms of read
+    // Various forms of read
 
-	template ReadFromString()
-	{
-		bool canRead() { return s.length != 0; }
-		E peek() { return s[0]; }
-		E read() { E t = s[0]; s = s[1..$]; return t; }
-	}
+    template ReadFromString()
+    {
+        bool canRead() { return s.length != 0; }
+        E peek() { return s[0]; }
+        E read() { E t = s[0]; s = s[1..$]; return t; }
+    }
 
-	template ReverseReadFromString()
-	{
-		bool canRead() { return s.length != 0; }
-		E peek() { return s[$-1]; }
-		E read() { E t = s[$-1]; s = s[0..$-1]; return t; }
-	}
+    template ReverseReadFromString()
+    {
+        bool canRead() { return s.length != 0; }
+        E peek() { return s[$-1]; }
+        E read() { E t = s[$-1]; s = s[0..$-1]; return t; }
+    }
 
-	// Various forms of Write
+    // Various forms of Write
 
-	template WriteToString()
-	{
-		EString s;
-		void write(E c) { s ~= c; }
-	}
+    template WriteToString()
+    {
+        E[] s;
+        void write(E c) { s ~= c; }
+    }
 
-	template WriteToBuffer()
-	{
-		void write(E c) { buffer ~= c; }
-	}
+    template WriteToBuffer()
+    {
+        void write(E c) { buffer ~= c; }
+    }
 
-	template WriteToDelegate()
-	{
-		void write(E c) { dg(c); }
-	}
+    template WriteToDelegate()
+    {
+        void write(E c) { dg(c); }
+    }
 
-	// Functions we will export
+    // Functions we will export
 
-	template EncodeViaWrite()
-	{
-		mixin encodeViaWrite;
-		void encode(dchar c) { encodeViaWrite(c); }
-	}
+    template EncodeViaWrite()
+    {
+        mixin encodeViaWrite;
+        void encode(dchar c) { encodeViaWrite(c); }
+    }
 
-	template SkipViaRead()
-	{
-		mixin skipViaRead;
-		void skip() { skipViaRead(); }
-	}
+    template SkipViaRead()
+    {
+        mixin skipViaRead;
+        void skip() { skipViaRead(); }
+    }
 
-	template DecodeViaRead()
-	{
-		mixin decodeViaRead;
-		dchar decode() { return decodeViaRead(); }
-	}
+    template DecodeViaRead()
+    {
+        mixin decodeViaRead;
+        dchar decode() { return decodeViaRead(); }
+    }
 
-	template SafeDecodeViaRead()
-	{
-		mixin safeDecodeViaRead;
-		dchar safeDecode() { return safeDecodeViaRead(); }
-	}
+    template SafeDecodeViaRead()
+    {
+        mixin safeDecodeViaRead;
+        dchar safeDecode() { return safeDecodeViaRead(); }
+    }
 
-	template DecodeReverseViaRead()
-	{
-		mixin decodeReverseViaRead;
-		dchar decodeReverse() { return decodeReverseViaRead(); }
-	}
+    template DecodeReverseViaRead()
+    {
+        mixin decodeReverseViaRead;
+        dchar decodeReverse() { return decodeReverseViaRead(); }
+    }
 
-	// Encoding to different destinations
+    // Encoding to different destinations
 
-	template EncodeToString()
-	{
-		mixin WriteToString;
-		mixin EncodeViaWrite;
-	}
+    template EncodeToString()
+    {
+        mixin WriteToString;
+        mixin EncodeViaWrite;
+    }
 
-	template EncodeToBuffer()
-	{
-		mixin WriteToBuffer;
-		mixin EncodeViaWrite;
-	}
+    template EncodeToBuffer()
+    {
+        mixin WriteToBuffer;
+        mixin EncodeViaWrite;
+    }
 
-	template EncodeToDelegate()
-	{
-		mixin WriteToDelegate;
-		mixin EncodeViaWrite;
-	}
+    template EncodeToDelegate()
+    {
+        mixin WriteToDelegate;
+        mixin EncodeViaWrite;
+    }
 
-	// Decoding functions
+    // Decoding functions
 
-	template SkipFromString()
-	{
-		mixin ReadFromString;
-		mixin SkipViaRead;
-	}
+    template SkipFromString()
+    {
+        mixin ReadFromString;
+        mixin SkipViaRead;
+    }
 
-	template DecodeFromString()
-	{
-		mixin ReadFromString;
-		mixin DecodeViaRead;
-	}
+    template DecodeFromString()
+    {
+        mixin ReadFromString;
+        mixin DecodeViaRead;
+    }
 
-	template SafeDecodeFromString()
-	{
-		mixin ReadFromString;
-		mixin SafeDecodeViaRead;
-	}
+    template SafeDecodeFromString()
+    {
+        mixin ReadFromString;
+        mixin SafeDecodeViaRead;
+    }
 
-	template DecodeReverseFromString()
-	{
-		mixin ReverseReadFromString;
-		mixin DecodeReverseViaRead;
-	}
+    template DecodeReverseFromString()
+    {
+        mixin ReverseReadFromString;
+        mixin DecodeReverseViaRead;
+    }
 
-	//=========================================================================
+    //=========================================================================
 
-	// Below are the functions we will ultimately expose to the user
-	EString encode(dchar c)
-	{
-		mixin EncodeToString e;
-		e.encode(c);
-		return e.s;
-	}
+    // Below are the functions we will ultimately expose to the user
+    E[] encode(dchar c)
+    {
+        mixin EncodeToString e;
+        e.encode(c);
+        return e.s;
+    }
 
-	void encode(dchar c, ref EBuffer buffer)
-	{
-		mixin EncodeToBuffer e;
-		e.encode(c);
-	}
+    void encode(dchar c, ref EBuffer buffer)
+    {
+        mixin EncodeToBuffer e;
+        e.encode(c);
+    }
 
-	void encode(dchar c, void delegate(E) dg)
-	{
-		mixin EncodeToDelegate e;
-		e.encode(c);
-	}
+    void encode(dchar c, void delegate(E) dg)
+    {
+        mixin EncodeToDelegate e;
+        e.encode(c);
+    }
 
-	void skip(ref EString s)
-	{
-		mixin SkipFromString e;
-		e.skip();
-	}
+    void skip(ref const(E)[] s)
+    {
+        mixin SkipFromString e;
+        e.skip();
+    }
 
-	dchar decode(ref EString s)
-	{
-		mixin DecodeFromString e;
-		return e.decode();
-	}
+    dchar decode(ref const(E)[] s)
+    {
+        mixin DecodeFromString e;
+        return e.decode();
+    }
 
-	dchar safeDecode(ref EString s)
-	{
-		mixin SafeDecodeFromString e;
-		return e.safeDecode();
-	}
+    dchar safeDecode(ref const(E)[] s)
+    {
+        mixin SafeDecodeFromString e;
+        return e.safeDecode();
+    }
 
-	dchar decodeReverse(ref EString s)
-	{
-		mixin DecodeReverseFromString e;
-		return e.decodeReverse();
-	}
+    dchar decodeReverse(ref const(E)[] s)
+    {
+        mixin DecodeReverseFromString e;
+        return e.decodeReverse();
+    }
 }
 
 //=========================================================================
 
 struct CodePoints(E)
 {
-	invariant(E)[] s;
+    const(E)[] s;
 
-	static CodePoints opCall(invariant(E)[] s)
-	in
-	{
-		assert(isValid(s));
-	}
-	body
-	{
-		CodePoints codePoints;
-		codePoints.s = s;
-		return codePoints;
-	}
+    static CodePoints opCall(const(E)[] s)
+    in
+    {
+        assert(isValid(s));
+    }
+    body
+    {
+        CodePoints codePoints;
+        codePoints.s = s;
+        return codePoints;
+    }
 
-	int opApply(int delegate(ref dchar) dg)
-	{
-		int result = 0;
-		while (s.length != 0)
-		{
-			dchar c = decode(s);
-			result = dg(c);
-			if (result != 0) break;
-		}
-		return result;
-	}
+    int opApply(int delegate(ref dchar) dg)
+    {
+        int result = 0;
+        while (s.length != 0)
+        {
+            dchar c = decode(s);
+            result = dg(c);
+            if (result != 0) break;
+        }
+        return result;
+    }
 
-	int opApply(int delegate(ref uint, ref dchar) dg)
-	{
-		uint i = 0;
-		int result = 0;
-		while (s.length != 0)
-		{
-			uint len = s.length;
-			dchar c = decode(s);
-			uint j = i; // We don't want the delegate corrupting i
-			result = dg(j,c);
-			if (result != 0) break;
-			i += len - s.length;
-		}
-		return result;
-	}
+    int opApply(int delegate(ref uint, ref dchar) dg)
+    {
+        uint i = 0;
+        int result = 0;
+        while (s.length != 0)
+        {
+            uint len = s.length;
+            dchar c = decode(s);
+            uint j = i; // We don't want the delegate corrupting i
+            result = dg(j,c);
+            if (result != 0) break;
+            i += len - s.length;
+        }
+        return result;
+    }
 
-	int opApplyReverse(int delegate(ref dchar) dg)
-	{
-		int result = 0;
-		while (s.length != 0)
-		{
-			dchar c = decodeReverse(s);
-			result = dg(c);
-			if (result != 0) break;
-		}
-		return result;
-	}
+    int opApplyReverse(int delegate(ref dchar) dg)
+    {
+        int result = 0;
+        while (s.length != 0)
+        {
+            dchar c = decodeReverse(s);
+            result = dg(c);
+            if (result != 0) break;
+        }
+        return result;
+    }
 
-	int opApplyReverse(int delegate(ref uint, ref dchar) dg)
-	{
-		int result = 0;
-		while (s.length != 0)
-		{
-			dchar c = decodeReverse(s);
-			uint i = s.length;
-			result = dg(i,c);
-			if (result != 0) break;
-		}
-		return result;
-	}
+    int opApplyReverse(int delegate(ref uint, ref dchar) dg)
+    {
+        int result = 0;
+        while (s.length != 0)
+        {
+            dchar c = decodeReverse(s);
+            uint i = s.length;
+            result = dg(i,c);
+            if (result != 0) break;
+        }
+        return result;
+    }
 }
 
 struct CodeUnits(E)
 {
-	invariant(E)[] s;
+    E[] s;
 
-	static CodeUnits opCall(dchar d)
-	in
-	{
-		assert(isValidCodePoint(d));
-	}
-	body
-	{
-		CodeUnits codeUnits;
-		codeUnits.s = encode!(E)(d);
-		return codeUnits;
-	}
+    static CodeUnits opCall(dchar d)
+    in
+    {
+        assert(isValidCodePoint(d));
+    }
+    body
+    {
+        CodeUnits codeUnits;
+        codeUnits.s = encode!(E)(d);
+        return codeUnits;
+    }
 
-	int opApply(int delegate(ref E) dg)
-	{
-		int result = 0;
-		foreach(E c;s)
-		{
-			result = dg(c);
-			if (result != 0) break;
-		}
-		return result;
-	}
+    int opApply(int delegate(ref E) dg)
+    {
+        int result = 0;
+        foreach(E c;s)
+        {
+            result = dg(c);
+            if (result != 0) break;
+        }
+        return result;
+    }
 
-	int opApplyReverse(int delegate(ref E) dg)
-	{
-		int result = 0;
-		foreach_reverse(E c;s)
-		{
-			result = dg(c);
-			if (result != 0) break;
-		}
-		return result;
-	}
+    int opApplyReverse(int delegate(ref E) dg)
+    {
+        int result = 0;
+        foreach_reverse(E c;s)
+        {
+            result = dg(c);
+            if (result != 0) break;
+        }
+        return result;
+    }
 }
 
 //=============================================================================
 
 template EncoderInstance(E)
 {
-	static assert(false);
+    static assert(false,"Cannot instantiate EncoderInstance for type "
+        ~ E.stringof);
 }
 
 //=============================================================================
-// 			ASCII
+//          ASCII
 //=============================================================================
 
 typedef char Ascii;
 
 template EncoderInstance(E:Ascii)
 {
-	alias invariant(Ascii)[] EString;
-	alias Buffer!(Ascii) EBuffer;
+    alias invariant(Ascii)[] EString;
+    alias Buffer!(Ascii) EBuffer;
 
-	string encodingName()
-	{
-		return "ASCII";
-	}
+    string encodingName()
+    {
+        return "ASCII";
+    }
 
-	bool canEncode(dchar c)
-	{
-		return c < 0x80;
-	}
+    bool canEncode(dchar c)
+    {
+        return c < 0x80;
+    }
 
-	bool isValidCodeUnit(Ascii c)
-	{
-		return c < 0x80;
-	}
+    bool isValidCodeUnit(Ascii c)
+    {
+        return c < 0x80;
+    }
 
-	void encodeViaWrite()(dchar c)
-	{
-		if (!canEncode(c)) c = '?';
-		write(cast(Ascii)c);
-	}
+    void encodeViaWrite()(dchar c)
+    {
+        if (!canEncode(c)) c = '?';
+        write(cast(Ascii)c);
+    }
 
-	void skipViaRead()()
-	{
-		read();
-	}
+    void skipViaRead()()
+    {
+        read();
+    }
 
-	dchar decodeViaRead()()
-	{
-		return read;
-	}
+    dchar decodeViaRead()()
+    {
+        return read;
+    }
 
-	dchar safeDecodeViaRead()()
-	{
-		dchar c = read;
-		return canEncode(c) ? c : INVALID_SEQUENCE;
-	}
+    dchar safeDecodeViaRead()()
+    {
+        dchar c = read;
+        return canEncode(c) ? c : INVALID_SEQUENCE;
+    }
 
-	dchar decodeReverseViaRead()()
-	{
-		return read;
-	}
+    dchar decodeReverseViaRead()()
+    {
+        return read;
+    }
 
-	EString replacementSequence()
-	{
-		return cast(EString)("?");
-	}
+    EString replacementSequence()
+    {
+        return cast(EString)("?");
+    }
 
-	mixin EncoderFunctions;
+    mixin EncoderFunctions;
 }
 
 //=============================================================================
-// 			ISO-8859-1
+//          ISO-8859-1
 //=============================================================================
 
 typedef ubyte Latin1;
 
 template EncoderInstance(E:Latin1)
 {
-	alias invariant(Latin1)[] EString;
-	alias Buffer!(Latin1) EBuffer;
+    alias invariant(Latin1)[] EString;
+    alias Buffer!(Latin1) EBuffer;
 
-	string encodingName()
-	{
-		return "ISO-8859-1";
-	}
+    string encodingName()
+    {
+        return "ISO-8859-1";
+    }
 
-	bool canEncode(dchar c)
-	{
-		return c < 0x100;
-	}
+    bool canEncode(dchar c)
+    {
+        return c < 0x100;
+    }
 
-	bool isValidCodeUnit(Latin1 c)
-	{
-		return true;
-	}
+    bool isValidCodeUnit(Latin1 c)
+    {
+        return true;
+    }
 
-	void encodeViaWrite()(dchar c)
-	{
-		if (!canEncode(c)) c = '?';
-		write(cast(Latin1)c);
-	}
+    void encodeViaWrite()(dchar c)
+    {
+        if (!canEncode(c)) c = '?';
+        write(cast(Latin1)c);
+    }
 
-	void skipViaRead()()
-	{
-		read();
-	}
+    void skipViaRead()()
+    {
+        read();
+    }
 
-	dchar decodeViaRead()()
-	{
-		return read;
-	}
+    dchar decodeViaRead()()
+    {
+        return read;
+    }
 
-	dchar safeDecodeViaRead()()
-	{
-		return read;
-	}
+    dchar safeDecodeViaRead()()
+    {
+        return read;
+    }
 
-	dchar decodeReverseViaRead()()
-	{
-		return read;
-	}
+    dchar decodeReverseViaRead()()
+    {
+        return read;
+    }
 
-	EString replacementSequence()
-	{
-		return cast(EString)("?");
-	}
+    EString replacementSequence()
+    {
+        return cast(EString)("?");
+    }
 
-	mixin EncoderFunctions;
+    mixin EncoderFunctions;
 }
 
 //=============================================================================
-// 			WINDOWS-1252
+//          WINDOWS-1252
 //=============================================================================
 
 typedef ubyte Windows1252;
 
 template EncoderInstance(E:Windows1252)
 {
-	alias invariant(Windows1252)[] EString;
-	alias Buffer!(Windows1252) EBuffer;
+    alias invariant(Windows1252)[] EString;
+    alias Buffer!(Windows1252) EBuffer;
 
-	string encodingName()
-	{
-		return "windows-1252";
-	}
+    string encodingName()
+    {
+        return "windows-1252";
+    }
 
-	wstring charMap =
-		"\u20AC\uFFFD\u201A\u0192\u201E\u2026\u2020\u2021"
-		"\u02C6\u2030\u0160\u2039\u0152\uFFFD\u017D\uFFFD"
-		"\uFFFD\u2018\u2019\u201C\u201D\u2022\u2103\u2014"
-		"\u02DC\u2122\u0161\u203A\u0153\uFFFD\u017E\u0178"
-	;
+    wstring charMap =
+        "\u20AC\uFFFD\u201A\u0192\u201E\u2026\u2020\u2021"
+        "\u02C6\u2030\u0160\u2039\u0152\uFFFD\u017D\uFFFD"
+        "\uFFFD\u2018\u2019\u201C\u201D\u2022\u2103\u2014"
+        "\u02DC\u2122\u0161\u203A\u0153\uFFFD\u017E\u0178"
+    ;
 
-	bool canEncode(dchar c)
-	{
-		if (c < 0x80 || (c >= 0xA0 && c <0x100)) return true;
-		if (c >= 0xFFFD) return false;
-		foreach(wchar d;charMap) { if (c == d) return true; }
-		return false;
-	}
+    bool canEncode(dchar c)
+    {
+        if (c < 0x80 || (c >= 0xA0 && c <0x100)) return true;
+        if (c >= 0xFFFD) return false;
+        foreach(wchar d;charMap) { if (c == d) return true; }
+        return false;
+    }
 
-	bool isValidCodeUnit(Windows1252 c)
-	{
-		if (c < 0x80 || c >= 0xA0) return true;
-		return (charMap[c-0x80] != 0xFFFD);
-	}
+    bool isValidCodeUnit(Windows1252 c)
+    {
+        if (c < 0x80 || c >= 0xA0) return true;
+        return (charMap[c-0x80] != 0xFFFD);
+    }
 
-	void encodeViaWrite()(dchar c)
-	{
-		if (c < 0x80 || (c >= 0xA0 && c <0x100)) {}
-		else if (c >= 0xFFFD) { c = '?'; }
-		else
-		{
-			int n = -1;
-			foreach(i,wchar d;charMap)
-			{
-				if (c == d)
-				{
-					n = i;
-					break;
-				}
-			}
-			c = n == -1 ? '?' : 0x80 + n;
-		}
-		write(cast(Windows1252)c);
-	}
+    void encodeViaWrite()(dchar c)
+    {
+        if (c < 0x80 || (c >= 0xA0 && c <0x100)) {}
+        else if (c >= 0xFFFD) { c = '?'; }
+        else
+        {
+            int n = -1;
+            foreach(i,wchar d;charMap)
+            {
+                if (c == d)
+                {
+                    n = i;
+                    break;
+                }
+            }
+            c = n == -1 ? '?' : 0x80 + n;
+        }
+        write(cast(Windows1252)c);
+    }
 
-	void skipViaRead()()
-	{
-		read();
-	}
+    void skipViaRead()()
+    {
+        read();
+    }
 
-	dchar decodeViaRead()()
-	{
-		Windows1252 c = read;
-		return (c >= 0x80 && c < 0xA0) ? charMap[c-0x80] : c;
-	}
+    dchar decodeViaRead()()
+    {
+        Windows1252 c = read;
+        return (c >= 0x80 && c < 0xA0) ? charMap[c-0x80] : c;
+    }
 
-	dchar safeDecodeViaRead()()
-	{
-		Windows1252 c = read;
-		dchar d = (c >= 0x80 && c < 0xA0) ? charMap[c-0x80] : c;
-		return d == 0xFFFD ? INVALID_SEQUENCE : d;
-	}
+    dchar safeDecodeViaRead()()
+    {
+        Windows1252 c = read;
+        dchar d = (c >= 0x80 && c < 0xA0) ? charMap[c-0x80] : c;
+        return d == 0xFFFD ? INVALID_SEQUENCE : d;
+    }
 
-	dchar decodeReverseViaRead()()
-	{
-		Windows1252 c = read;
-		return (c >= 0x80 && c < 0xA0) ? charMap[c-0x80] : c;
-	}
+    dchar decodeReverseViaRead()()
+    {
+        Windows1252 c = read;
+        return (c >= 0x80 && c < 0xA0) ? charMap[c-0x80] : c;
+    }
 
-	EString replacementSequence()
-	{
-		return cast(EString)("?");
-	}
+    EString replacementSequence()
+    {
+        return cast(EString)("?");
+    }
 
-	mixin EncoderFunctions;
+    mixin EncoderFunctions;
 }
 
 //=============================================================================
-// 			UTF-8
+//          UTF-8
 //=============================================================================
 
 alias char Utf8;
 
 template EncoderInstance(E:Utf8)
 {
-	alias invariant(Utf8)[] EString;
-	alias Buffer!(Utf8) EBuffer;
+    alias invariant(Utf8)[] EString;
+    alias Buffer!(Utf8) EBuffer;
 
-	string encodingName()
-	{
-		return "UTF-8";
-	}
+    string encodingName()
+    {
+        return "UTF-8";
+    }
 
-	bool canEncode(dchar c)
-	{
-		return isValidCodePoint(c);
-	}
+    bool canEncode(dchar c)
+    {
+        return isValidCodePoint(c);
+    }
 
-	bool isValidCodeUnit(Utf8 c)
-	{
-		return (c < 0xC0 || (c >= 0xC2 && c < 0xF5));
-	}
+    bool isValidCodeUnit(Utf8 c)
+    {
+        return (c < 0xC0 || (c >= 0xC2 && c < 0xF5));
+    }
 
-	invariant byte[128] tailTable =
-	[
-		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-		1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-		1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-		2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,
-		3,3,3,3,3,3,3,3,4,4,4,4,5,5,6,0,
-	];
+    byte[128] tailTable =
+    [
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+        1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+        1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+        2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,
+        3,3,3,3,3,3,3,3,4,4,4,4,5,5,6,0,
+    ];
 
-	private int tails(Utf8 c)
-	in
-	{
-		assert(c >= 0x80);
-	}
-	body
-	{
-		return tailTable[c-0x80];
-	}
+    private int tails(Utf8 c)
+    in
+    {
+        assert(c >= 0x80);
+    }
+    body
+    {
+        return tailTable[c-0x80];
+    }
 
-	void encodeViaWrite()(dchar c)
-	{
-		if (c < 0x80)
-		{
-			write(cast(Utf8)c);
-		}
-		else if (c < 0x800)
-		{
-			write(cast(Utf8)((c >> 6) + 0xC0));
-			write(cast(Utf8)((c & 0x3F) + 0x80));
-		}
-		else if (c < 0x10000)
-		{
-			write(cast(Utf8)((c >> 12) + 0xE0));
-			write(cast(Utf8)(((c >> 6) & 0x3F) + 0x80));
-			write(cast(Utf8)((c & 0x3F) + 0x80));
-		}
-		else
-		{
-			write(cast(Utf8)((c >> 18) + 0xF0));
-			write(cast(Utf8)(((c >> 12) & 0x3F) + 0x80));
-			write(cast(Utf8)(((c >> 6) & 0x3F) + 0x80));
-			write(cast(Utf8)((c & 0x3F) + 0x80));
-		}
-	}
+    void encodeViaWrite()(dchar c)
+    {
+        if (c < 0x80)
+        {
+            write(cast(Utf8)c);
+        }
+        else if (c < 0x800)
+        {
+            write(cast(Utf8)((c >> 6) + 0xC0));
+            write(cast(Utf8)((c & 0x3F) + 0x80));
+        }
+        else if (c < 0x10000)
+        {
+            write(cast(Utf8)((c >> 12) + 0xE0));
+            write(cast(Utf8)(((c >> 6) & 0x3F) + 0x80));
+            write(cast(Utf8)((c & 0x3F) + 0x80));
+        }
+        else
+        {
+            write(cast(Utf8)((c >> 18) + 0xF0));
+            write(cast(Utf8)(((c >> 12) & 0x3F) + 0x80));
+            write(cast(Utf8)(((c >> 6) & 0x3F) + 0x80));
+            write(cast(Utf8)((c & 0x3F) + 0x80));
+        }
+    }
 
-	void skipViaRead()()
-	{
-		uint c = read;
-		if (c < 0xC0) return;
-		int n = tails(c);
-		for (uint i=0; i<n; ++i)
-		{
-			read();
-		}
-	}
+    void skipViaRead()()
+    {
+        uint c = read;
+        if (c < 0xC0) return;
+        int n = tails(c);
+        for (uint i=0; i<n; ++i)
+        {
+            read();
+        }
+    }
 
-	dchar decodeViaRead()()
-	{
-		uint c = read;
-		if (c < 0xC0) return c;
-		int n = tails(c);
-		c &= (1 << (6 - n)) - 1;
-		for (uint i=0; i<n; ++i)
-		{
-			c = (c << 6) + (read & 0x3F);
-		}
-		return c;
-	}
+    dchar decodeViaRead()()
+    {
+        uint c = read;
+        if (c < 0xC0) return c;
+        int n = tails(c);
+        c &= (1 << (6 - n)) - 1;
+        for (uint i=0; i<n; ++i)
+        {
+            c = (c << 6) + (read & 0x3F);
+        }
+        return c;
+    }
 
-	dchar safeDecodeViaRead()()
-	{
-		dchar c = read;
-		if (c < 0x80) return c;
-		int n = tails(c);
-		if (n == 0) return INVALID_SEQUENCE;
+    dchar safeDecodeViaRead()()
+    {
+        dchar c = read;
+        if (c < 0x80) return c;
+        int n = tails(c);
+        if (n == 0) return INVALID_SEQUENCE;
 
-		if (!canRead) return INVALID_SEQUENCE;
-		uint d = peek;
-		bool err =
-		(
-			(c < 0xC2)								// fail overlong 2-byte sequences
-		||	(c > 0xF4)								// fail overlong 4-6-byte sequences
-		||	(c == 0xE0 && ((d & 0xE0) == 0x80))		// fail overlong 3-byte sequences
-		||	(c == 0xED && ((d & 0xE0) == 0xA0))		// fail surrogates
-		||	(c == 0xF0 && ((d & 0xF0) == 0x80))		// fail overlong 4-byte sequences
-		||	(c == 0xF4 && ((d & 0xF0) >= 0x90))		// fail code points > 0x10FFFF
-		);
+        if (!canRead) return INVALID_SEQUENCE;
+        uint d = peek;
+        bool err =
+        (
+            (c < 0xC2)                              // fail overlong 2-byte sequences
+        ||  (c > 0xF4)                              // fail overlong 4-6-byte sequences
+        ||  (c == 0xE0 && ((d & 0xE0) == 0x80))     // fail overlong 3-byte sequences
+        ||  (c == 0xED && ((d & 0xE0) == 0xA0))     // fail surrogates
+        ||  (c == 0xF0 && ((d & 0xF0) == 0x80))     // fail overlong 4-byte sequences
+        ||  (c == 0xF4 && ((d & 0xF0) >= 0x90))     // fail code points > 0x10FFFF
+        );
 
-		c &= (1 << (6 - n)) - 1;
-		for (uint i=0; i<n; ++i)
-		{
-			if (!canRead) return INVALID_SEQUENCE;
-			d = peek;
-			if ((d & 0xC0) != 0x80) return INVALID_SEQUENCE;
-			c = (c << 6) + (read & 0x3F);
-		}
+        c &= (1 << (6 - n)) - 1;
+        for (uint i=0; i<n; ++i)
+        {
+            if (!canRead) return INVALID_SEQUENCE;
+            d = peek;
+            if ((d & 0xC0) != 0x80) return INVALID_SEQUENCE;
+            c = (c << 6) + (read & 0x3F);
+        }
 
-		return err ? INVALID_SEQUENCE : c;
-	}
+        return err ? INVALID_SEQUENCE : c;
+    }
 
-	dchar decodeReverseViaRead()()
-	{
-		uint c = read;
-		if (c < 0x80) return c;
-		uint shift = 0;
-		c &= 0x3F;
-		for (uint i=0; i<4; ++i)
-		{
-			shift += 6;
-			uint d = read;
-			uint n = tails(d);
-			uint mask = n == 0 ? 0x3F : (1 << (6 - n)) - 1;
-			c = c + ((d & mask) << shift);
-			if (n != 0) break;
-		}
-		return c;
-	}
+    dchar decodeReverseViaRead()()
+    {
+        uint c = read;
+        if (c < 0x80) return c;
+        uint shift = 0;
+        c &= 0x3F;
+        for (uint i=0; i<4; ++i)
+        {
+            shift += 6;
+            uint d = read;
+            uint n = tails(d);
+            uint mask = n == 0 ? 0x3F : (1 << (6 - n)) - 1;
+            c = c + ((d & mask) << shift);
+            if (n != 0) break;
+        }
+        return c;
+    }
 
-	EString replacementSequence()
-	{
-		return "\uFFFD";
-	}
+    EString replacementSequence()
+    {
+        return "\uFFFD";
+    }
 
-	mixin EncoderFunctions;
+    mixin EncoderFunctions;
 }
 
 //=============================================================================
-// 			UTF-16
+//          UTF-16
 //=============================================================================
 
 alias wchar Utf16;
 
 template EncoderInstance(E:Utf16)
 {
-	alias invariant(Utf16)[] EString;
-	alias Buffer!(Utf16) EBuffer;
+    alias invariant(Utf16)[] EString;
+    alias Buffer!(Utf16) EBuffer;
 
-	string encodingName()
-	{
-		return "UTF-16";
-	}
+    string encodingName()
+    {
+        return "UTF-16";
+    }
 
-	bool canEncode(dchar c)
-	{
-		return isValidCodePoint(c);
-	}
+    bool canEncode(dchar c)
+    {
+        return isValidCodePoint(c);
+    }
 
-	bool isValidCodeUnit(Utf16 c)
-	{
-		return true;
-	}
+    bool isValidCodeUnit(Utf16 c)
+    {
+        return true;
+    }
 
-	void encodeViaWrite()(dchar c)
-	{
-		if (c < 0x10000)
-		{
-			write(cast(Utf16)c);
-		}
-		else
-		{
-			uint n = c - 0x10000;
-			write(cast(Utf16)(0xD800 + (n >> 10)));
-			write(cast(Utf16)(0xDC00 + (n & 0x3FF)));
-		}
-	}
+    void encodeViaWrite()(dchar c)
+    {
+        if (c < 0x10000)
+        {
+            write(cast(Utf16)c);
+        }
+        else
+        {
+            uint n = c - 0x10000;
+            write(cast(Utf16)(0xD800 + (n >> 10)));
+            write(cast(Utf16)(0xDC00 + (n & 0x3FF)));
+        }
+    }
 
-	void skipViaRead()()
-	{
-		Utf16 c = read;
-		if (c < 0xD800 || c >= 0xE000) return;
-		read();
-	}
+    void skipViaRead()()
+    {
+        Utf16 c = read;
+        if (c < 0xD800 || c >= 0xE000) return;
+        read();
+    }
 
-	dchar decodeViaRead()()
-	{
-		Utf16 c = read;
-		if (c < 0xD800 || c >= 0xE000) return cast(dchar)c;
-		Utf16 d = read;
-		c &= 0x3FF;
-		d &= 0x3FF;
-		return 0x10000 + (c << 10) + d;
-	}
+    dchar decodeViaRead()()
+    {
+        Utf16 c = read;
+        if (c < 0xD800 || c >= 0xE000) return cast(dchar)c;
+        Utf16 d = read;
+        c &= 0x3FF;
+        d &= 0x3FF;
+        return 0x10000 + (c << 10) + d;
+    }
 
-	dchar safeDecodeViaRead()()
-	{
-		Utf16 c = read;
-		if (c < 0xD800 || c >= 0xE000) return cast(dchar)c;
-		if (c >= 0xDC00) return INVALID_SEQUENCE;
-		if (!canRead) return INVALID_SEQUENCE;
-		Utf16 d = peek;
-		if (d < 0xDC00 || d >= 0xE000) return INVALID_SEQUENCE;
-		d = read;
-		c &= 0x3FF;
-		d &= 0x3FF;
-		return 0x10000 + (c << 10) + d;
-	}
+    dchar safeDecodeViaRead()()
+    {
+        Utf16 c = read;
+        if (c < 0xD800 || c >= 0xE000) return cast(dchar)c;
+        if (c >= 0xDC00) return INVALID_SEQUENCE;
+        if (!canRead) return INVALID_SEQUENCE;
+        Utf16 d = peek;
+        if (d < 0xDC00 || d >= 0xE000) return INVALID_SEQUENCE;
+        d = read;
+        c &= 0x3FF;
+        d &= 0x3FF;
+        return 0x10000 + (c << 10) + d;
+    }
 
-	dchar decodeReverseViaRead()()
-	{
-		Utf16 c = read;
-		if (c < 0xD800 || c >= 0xE000) return cast(dchar)c;
-		Utf16 d = read;
-		c &= 0x3FF;
-		d &= 0x3FF;
-		return 0x10000 + (d << 10) + c;
-	}
+    dchar decodeReverseViaRead()()
+    {
+        Utf16 c = read;
+        if (c < 0xD800 || c >= 0xE000) return cast(dchar)c;
+        Utf16 d = read;
+        c &= 0x3FF;
+        d &= 0x3FF;
+        return 0x10000 + (d << 10) + c;
+    }
 
-	EString replacementSequence()
-	{
-		return "\uFFFD"w;
-	}
+    EString replacementSequence()
+    {
+        return "\uFFFD"w;
+    }
 
-	mixin EncoderFunctions;
+    mixin EncoderFunctions;
 }
 
 //=============================================================================
-// 			UTF-32
+//          UTF-32
 //=============================================================================
 
 alias dchar Utf32;
 
 template EncoderInstance(E:Utf32)
 {
-	alias invariant(Utf32)[] EString;
-	alias Buffer!(Utf32) EBuffer;
+    alias invariant(Utf32)[] EString;
+    alias Buffer!(Utf32) EBuffer;
 
-	string encodingName()
-	{
-		return "UTF-32";
-	}
+    string encodingName()
+    {
+        return "UTF-32";
+    }
 
-	bool canEncode(dchar c)
-	{
-		return isValidCodePoint(c);
-	}
+    bool canEncode(dchar c)
+    {
+        return isValidCodePoint(c);
+    }
 
-	bool isValidCodeUnit(Utf16 c)
-	{
-		return isValidCodePoint(c);
-	}
+    bool isValidCodeUnit(Utf16 c)
+    {
+        return isValidCodePoint(c);
+    }
 
-	void encodeViaWrite()(dchar c)
-	{
-		write(cast(Utf32)c);
-	}
+    void encodeViaWrite()(dchar c)
+    {
+        write(cast(Utf32)c);
+    }
 
-	void skipViaRead()()
-	{
-		read();
-	}
+    void skipViaRead()()
+    {
+        read();
+    }
 
-	dchar decodeViaRead()()
-	{
-		return cast(dchar)read;
-	}
+    dchar decodeViaRead()()
+    {
+        return cast(dchar)read;
+    }
 
-	dchar safeDecodeViaRead()()
-	{
-		dchar c = read;
-		return isValidCodePoint(c) ? c : INVALID_SEQUENCE;
-	}
+    dchar safeDecodeViaRead()()
+    {
+        dchar c = read;
+        return isValidCodePoint(c) ? c : INVALID_SEQUENCE;
+    }
 
-	dchar decodeReverseViaRead()()
-	{
-		return cast(dchar)read;
-	}
+    dchar decodeReverseViaRead()()
+    {
+        return cast(dchar)read;
+    }
 
-	EString replacementSequence()
-	{
-		return "\uFFFD"d;
-	}
+    EString replacementSequence()
+    {
+        return "\uFFFD"d;
+    }
 
-	mixin EncoderFunctions;
+    mixin EncoderFunctions;
 }
 
 //=============================================================================
@@ -1228,7 +1190,7 @@ template EncoderInstance(E:Utf32)
  */
 bool isValidCodePoint(dchar c)
 {
-	return c < 0xD800 || (c >= 0xE000 && c < 0x110000);
+    return c < 0xD800 || (c >= 0xE000 && c < 0x110000);
 }
 
 /**
@@ -1247,17 +1209,17 @@ bool isValidCodePoint(dchar c)
  */
 string encodingName(T)()
 {
-	return EncoderInstance!(T).encodingName;
+    return EncoderInstance!(T).encodingName;
 }
 
 unittest
 {
-	assert(encodingName!(Utf8) == "UTF-8");
-	assert(encodingName!(Utf16) == "UTF-16");
-	assert(encodingName!(Utf32) == "UTF-32");
-	assert(encodingName!(Ascii) == "ASCII");
-	assert(encodingName!(Latin1) == "ISO-8859-1");
-	assert(encodingName!(Windows1252) == "windows-1252");
+    assert(encodingName!(Utf8) == "UTF-8");
+    assert(encodingName!(Utf16) == "UTF-16");
+    assert(encodingName!(Utf32) == "UTF-32");
+    assert(encodingName!(Ascii) == "ASCII");
+    assert(encodingName!(Latin1) == "ISO-8859-1");
+    assert(encodingName!(Windows1252) == "windows-1252");
 }
 
 /**
@@ -1277,17 +1239,17 @@ unittest
  */
 bool canEncode(E)(dchar c)
 {
-	return EncoderInstance!(E).canEncode(c);
+    return EncoderInstance!(E).canEncode(c);
 }
 
 unittest
 {
-	assert(!canEncode!(Ascii)('\u00A0'));
-	assert(canEncode!(Latin1)('\u00A0'));
-	assert(canEncode!(Windows1252)('\u20AC'));
-	assert(!canEncode!(Windows1252)('\u20AD'));
-	assert(!canEncode!(Windows1252)('\uFFFD'));
-	assert(!canEncode!(Utf8)(cast(dchar)0x110000));
+    assert(!canEncode!(Ascii)('\u00A0'));
+    assert(canEncode!(Latin1)('\u00A0'));
+    assert(canEncode!(Windows1252)('\u20AC'));
+    assert(!canEncode!(Windows1252)('\u20AD'));
+    assert(!canEncode!(Windows1252)('\uFFFD'));
+    assert(!canEncode!(Utf8)(cast(dchar)0x110000));
 }
 
 /**
@@ -1302,18 +1264,18 @@ unittest
  */
 bool isValidCodeUnit(E)(E c)
 {
-	return EncoderInstance!(E).isValidCodeUnit(c);
+    return EncoderInstance!(E).isValidCodeUnit(c);
 }
 
 unittest
 {
-	assert(!isValidCodeUnit(cast(Ascii)0xA0));
-	assert( isValidCodeUnit(cast(Windows1252)0x80));
-	assert(!isValidCodeUnit(cast(Windows1252)0x81));
-	assert(!isValidCodeUnit(cast(Utf8)0xC0));
-	assert(!isValidCodeUnit(cast(Utf8)0xFF));
-	assert( isValidCodeUnit(cast(Utf16)0xD800));
-	assert(!isValidCodeUnit(cast(Utf32)0xD800));
+    assert(!isValidCodeUnit(cast(Ascii)0xA0));
+    assert( isValidCodeUnit(cast(Windows1252)0x80));
+    assert(!isValidCodeUnit(cast(Windows1252)0x81));
+    assert(!isValidCodeUnit(cast(Utf8)0xC0));
+    assert(!isValidCodeUnit(cast(Utf8)0xFF));
+    assert( isValidCodeUnit(cast(Utf16)0xD800));
+    assert(!isValidCodeUnit(cast(Utf32)0xD800));
 }
 
 /**
@@ -1329,20 +1291,20 @@ unittest
  * Params:
  *    s = the string to be tested
  */
-bool isValid(E)(invariant(E)[] s)
+bool isValid(E)(const(E)[] s)
 {
-	while (s.length != 0)
-	{
-		dchar d = EncoderInstance!(E).safeDecode(s);
-		if (d == INVALID_SEQUENCE)
-			return false;
-	}
-	return true;
+    while (s.length != 0)
+    {
+        dchar d = EncoderInstance!(E).safeDecode(s);
+        if (d == INVALID_SEQUENCE)
+            return false;
+    }
+    return true;
 }
 
 unittest
 {
-	assert(isValid("\u20AC100"));
+    assert(isValid("\u20AC100"));
 }
 
 /**
@@ -1354,17 +1316,17 @@ unittest
  * Params:
  *    s = the string to be tested
  */
-uint validLength(E)(invariant(E)[] s)
+uint validLength(E)(const(E)[] s)
 {
-	invariant(E)[] r = s;
-	invariant(E)[] t = s;
-	while (s.length != 0)
-	{
-		if (!EncoderInstance!(E).safeDecode(s) != INVALID_SEQUENCE)
-			break;
-		t = s;
-	}
-	return r.length - t.length;
+    const(E)[] r = s;
+    const(E)[] t = s;
+    while (s.length != 0)
+    {
+        if (EncoderInstance!(E).safeDecode(s) == INVALID_SEQUENCE)
+            break;
+        t = s;
+    }
+    return r.length - t.length;
 }
 
 /**
@@ -1385,41 +1347,38 @@ uint validLength(E)(invariant(E)[] s)
  */
 invariant(E)[] sanitize(E)(invariant(E)[] s)
 {
-	uint n = validLength(s);
-	if (n == s.length) return s;
+    uint n = validLength(s);
+    if (n == s.length) return s;
 
-	Buffer!(E) r;
-	r ~= s[0..n];
-	s = s[n..$];
-	while (s.length != 0)
-	{
-		invariant(E)[] t = s;
-		dchar c = EncoderInstance!(E).safeDecode(s);
-		if (c == INVALID_SEQUENCE)
-		{
-			r ~= EncoderInstance!(E).replacementSequence;
-		}
-		else
-		{
-			r ~= t[0..$-s.length];
-		}
-		n = validLength(s);
-		r ~= s[0..n];
-		s = s[n..$];
-	}
-	return r.toIArray;
+    Buffer!(E) r;
+    r ~= s[0..n];
+    const(E)[] t = s[n..$];
+    while (t.length != 0)
+    {
+        const(E)[] tt = t;
+        dchar c = EncoderInstance!(E).safeDecode(t);
+        if (c == INVALID_SEQUENCE)
+        {
+            r ~= EncoderInstance!(E).replacementSequence;
+        }
+        else
+        {
+            r ~= tt[0..$-t.length];
+        }
+        n = validLength(t);
+        r ~= t[0..n];
+        t = t[n..$];
+    }
+    return r.toIArray;
 }
 
 unittest
 {
-	assert(sanitize("hello \xF0\x80world") == "hello \xEF\xBF\xBDworld");
+    assert(sanitize("hello \xF0\x80world") == "hello \xEF\xBF\xBDworld");
 }
 
 /**
- * Returns the slice of the input string from the first character to the end
- * of the first encoded sequence. The resulting string may consist of multiple
- * code units, but it will always represent at most one character. If the input
- * is the empty string, the return value will be the empty string
+ * Returns the length of the first encoded sequence.
  *
  * The input to this function MUST be validly encoded.
  * This is enforced by the function's in-contract.
@@ -1429,30 +1388,27 @@ unittest
  * Params:
  *    s = the string to be sliced
  */
-invariant(E)[] firstSequence(E)(invariant(E)[] s)
+uint firstSequence(E)(const(E)[] s) /// ditto
 in
 {
-	assert(s.length != 0);
-	invariant(E)[] u = s;
-	assert(safeDecode(u) != INVALID_SEQUENCE);
+    assert(s.length != 0);
+    const(E)[] u = s;
+    assert(safeDecode(u) != INVALID_SEQUENCE);
 }
 body
 {
-	invariant(E)[] t = s;
-	EncoderInstance!(E).skip(s);
-	return t[0..$-s.length];
+    const(E)[] t = s;
+    EncoderInstance!(E).skip(s);
+    return t.length - s.length;
 }
 
 unittest
 {
-	assert(firstSequence("\u20AC100") == "\u20AC");
+    assert(firstSequence("\u20AC1000") == "\u20AC".length);
 }
 
 /**
- * Returns the slice of the input string from the start of the last encoded
- * sequence to the end of the string. The resulting string may consist of
- * multiple code units, but it will always represent at most one character.
- * If the input is the empty string, the return value will be the empty string.
+ * Returns the length the last encoded sequence.
  *
  * The input to this function MUST be validly encoded.
  * This is enforced by the function's in-contract.
@@ -1462,22 +1418,22 @@ unittest
  * Params:
  *    s = the string to be sliced
  */
-invariant(E)[] lastSequence(E)(invariant(E)[] s)
+uint lastSequence(E)(const(E)[] s) /// ditto
 in
 {
-	assert(s.length != 0);
-	assert(isValid(s));
+    assert(s.length != 0);
+    assert(isValid(s));
 }
 body
 {
-	invariant(E)[] t = s;
-	EncoderInstance!(E).decodeReverse(s);
-	return t[$-s.length..$];
+    const(E)[] t = s;
+    EncoderInstance!(E).decodeReverse(s);
+    return t.length - s.length;
 }
 
 unittest
 {
-	assert(lastSequence("100\u20AC") == "\u20AC");
+    assert(lastSequence("1000\u20AC") == "\u20AC".length);
 }
 
 /**
@@ -1494,25 +1450,25 @@ unittest
  * Params:
  *    s = the string to be counted
  */
-uint count(E)(invariant(E)[] s)
+uint count(E)(const(E)[] s)
 in
 {
-	assert(isValid(s));
+    assert(isValid(s));
 }
 body
 {
-	uint n = 0;
-	while (s.length != 0)
-	{
-		EncoderInstance!(E).skip(s);
-		++n;
-	}
-	return n;
+    uint n = 0;
+    while (s.length != 0)
+    {
+        EncoderInstance!(E).skip(s);
+        ++n;
+    }
+    return n;
 }
 
 unittest
 {
-	assert(count("\u20AC100") == 4);
+    assert(count("\u20AC100") == 4);
 }
 
 /**
@@ -1529,22 +1485,22 @@ unittest
  * Params:
  *    s = the string to be counted
  */
-int index(E)(invariant(E)[] s,int n)
+int index(E)(const(E)[] s,int n)
 in
 {
-	assert(isValid(s));
-	assert(n >= 0);
+    assert(isValid(s));
+    assert(n >= 0);
 }
 body
 {
-	invariant(E)[] t = s;
-	for (uint i=0; i<n; ++i) EncoderInstance!(E).skip(s);
-	return t.length - s.length;
+    const(E)[] t = s;
+    for (uint i=0; i<n; ++i) EncoderInstance!(E).skip(s);
+    return t.length - s.length;
 }
 
 unittest
 {
-	assert(index("\u20AC100",1) == 3);
+    assert(index("\u20AC100",1) == 3);
 }
 
 /**
@@ -1565,16 +1521,16 @@ unittest
  * Params:
  *    s = the string whose first code point is to be decoded
  */
-dchar decode(E)(ref invariant(E)[] s)
+dchar decode(E)(ref const(E)[] s)
 in
 {
-	assert(s.length != 0);
-	invariant(E)[] u = s;
-	assert(safeDecode(u) != INVALID_SEQUENCE);
+    assert(s.length != 0);
+    const(E)[] u = s;
+    assert(safeDecode(u) != INVALID_SEQUENCE);
 }
 body
 {
-	return EncoderInstance!(E).decode(s);
+    return EncoderInstance!(E).decode(s);
 }
 
 /**
@@ -1591,15 +1547,15 @@ body
  * Params:
  *    s = the string whose first code point is to be decoded
  */
-dchar decodeReverse(E)(ref invariant(E)[] s)
+dchar decodeReverse(E)(ref const(E)[] s)
 in
 {
-	assert(s.length != 0);
-	assert(isValid(s));
+    assert(s.length != 0);
+    assert(isValid(s));
 }
 body
 {
-	return EncoderInstance!(E).decodeReverse(s);
+    return EncoderInstance!(E).decodeReverse(s);
 }
 
 /**
@@ -1617,14 +1573,14 @@ body
  * Params:
  *    s = the string whose first code point is to be decoded
  */
-dchar safeDecode(E)(ref invariant(E)[] s)
+dchar safeDecode(E)(ref const(E)[] s)
 in
 {
-	assert(s.length != 0);
+    assert(s.length != 0);
 }
 body
 {
-	return EncoderInstance!(E).safeDecode(s);
+    return EncoderInstance!(E).safeDecode(s);
 }
 
 /**
@@ -1648,14 +1604,14 @@ body
  * Params:
  *    c = the code point to be encoded
  */
-invariant(E)[] encode(E)(dchar c)
+E[] encode(E)(dchar c)
 in
 {
-	assert(isValidCodePoint(c));
+    assert(isValidCodePoint(c));
 }
 body
 {
-	return EncoderInstance!(E).encode(c);
+    return EncoderInstance!(E).encode(c);
 }
 
 /**
@@ -1682,11 +1638,11 @@ body
 void encode(E)(dchar c, ref Buffer!(E) buffer)
 in
 {
-	assert(isValidCodePoint(c));
+    assert(isValidCodePoint(c));
 }
 body
 {
-	EncoderInstance!(E).encode(c,buffer);
+    EncoderInstance!(E).encode(c,buffer);
 }
 
 /**
@@ -1713,11 +1669,11 @@ body
 void encode(E)(dchar c, void delegate(E) dg)
 in
 {
-	assert(isValidCodePoint(c));
+    assert(isValidCodePoint(c));
 }
 body
 {
-	EncoderInstance!(E).encode(c,dg);
+    EncoderInstance!(E).encode(c,dg);
 }
 
 /**
@@ -1755,22 +1711,22 @@ body
 CodePoints!(E) codePoints(E)(invariant(E)[] s)
 in
 {
-	assert(isValid(s));
+    assert(isValid(s));
 }
 body
 {
-	return CodePoints!(E)(s);
+    return CodePoints!(E)(s);
 }
 
 unittest
 {
-	string s = "hello";
-	string t;
-	foreach(c;codePoints(s))
-	{
-		t ~= cast(char)c;
-	}
-	assert(s == t);
+    string s = "hello";
+    string t;
+    foreach(c;codePoints(s))
+    {
+        t ~= cast(char)c;
+    }
+    assert(s == t);
 }
 
 /**
@@ -1807,24 +1763,24 @@ unittest
 CodeUnits!(E) codeUnits(E)(dchar c)
 in
 {
-	assert(isValidCodePoint(c));
+    assert(isValidCodePoint(c));
 }
 body
 {
-	return CodeUnits!(E)(c);
+    return CodeUnits!(E)(c);
 }
 
 unittest
 {
-	Utf8[] a;
-	foreach(c;codeUnits!(Utf8)(cast(dchar)'\u20AC'))
-	{
-		a ~= c;
-	}
-	assert(a.length == 3);
-	assert(a[0] == 0xE2);
-	assert(a[1] == 0x82);
-	assert(a[2] == 0xAC);
+    Utf8[] a;
+    foreach(c;codeUnits!(Utf8)(cast(dchar)'\u20AC'))
+    {
+        a ~= c;
+    }
+    assert(a.length == 3);
+    assert(a[0] == 0xE2);
+    assert(a[1] == 0x82);
+    assert(a[2] == 0xAC);
 }
 
 /**
@@ -1858,25 +1814,26 @@ unittest
 void transcode(Src,Dst)(invariant(Src)[] s,out invariant(Dst)[] r)
 in
 {
-	assert(isValid(s));
+    assert(isValid(s));
 }
 body
 {
-	static if(is(Src==Dst))
-	{
-		r = s;
-	}
-	else static if(is(Src==Ascii))
-	{
-		transcode!(char,Dst)(cast(string)s,r);
-	}
-	else
-	{
-		while (s.length != 0)
-		{
-			r ~= encode!(Dst)(decode(s));
-		}
-	}
+    static if(is(Src==Dst))
+    {
+        r = s;
+    }
+    else static if(is(Src==Ascii))
+    {
+        transcode!(char,Dst)(cast(string)s,r);
+    }
+    else
+    {
+        const(Src)[] t = s;
+        while (t.length != 0)
+        {
+            r ~= encode!(Dst)(decode(t));
+        }
+    }
 }
 
 /**
@@ -1904,117 +1861,829 @@ body
 invariant(Dst)[] to(Dst,Src)(invariant(Src)[] s)
 in
 {
-	assert(isValid(s));
+    assert(isValid(s));
 }
 body
 {
-	invariant(Dst)[] r;
-	transcode(s,r);
-	return r;
+    invariant(Dst)[] r;
+    transcode(s,r);
+    return r;
 }
+
+//=============================================================================
+
+/** The base class for exceptions thrown by this module */
+class Exception : object.Exception { this(string msg) { super(msg); } }
+
+class UnrecognizedEncodingException : Exception
+{
+    private this(string msg) { super(msg); }
+}
+
+/** Abstract base class of all encoding schemes */
+abstract class EncodingScheme
+{
+    /**
+     * Registers a subclass of EncodingScheme.
+     *
+     * This function allows user-defined subclasses of EncodingScheme to
+     * be declared in other modules.
+     *
+     * Examples:
+     * ----------------------------------------------
+     * class Amiga1251 : EncodingScheme
+     * {
+     *     static this()
+     *     {
+     *         EncodingScheme.register("path.to.Amiga1251");
+     *     }
+     * }
+     * ----------------------------------------------
+     */
+    static void register(string className)
+    {
+        auto scheme = cast(EncodingScheme)Object.factory(className);
+        if (scheme is null)
+            throw new Exception("Unable to create class "~className);
+        foreach(encodingName;scheme.names())
+        {
+            supported[tolower(encodingName)] = className;
+        }
+    }
+
+    /**
+     * Obtains a subclass of EncodingScheme which is capable of encoding
+     * and decoding the named encoding scheme.
+     *
+     * This function is only aware of EncodingSchemes which have been
+     * registered with the register() function.
+     *
+     * Examples:
+     * ---------------------------------------------------
+     * auto scheme = EncodingScheme.create("Amiga-1251");
+     * ---------------------------------------------------
+     */
+    static EncodingScheme create(string encodingName)
+    {
+        auto p = std.string.tolower(encodingName) in supported;
+        if (p is null)
+            throw new Exception("Unrecognized Encoding: "~encodingName);
+        string className = *p;
+        auto scheme = cast(EncodingScheme)Object.factory(className);
+        if (scheme is null) throw new Exception("Unable to create class "~className);
+        return scheme;
+    }
+
+    const
+    {
+        /**
+         * Returns the standard name of the encoding scheme
+         */
+        abstract override string toString();
+
+        /**
+         * Returns an array of all known names for this encoding scheme
+         */
+        abstract string[] names();
+
+        /**
+         * Returns true if the character c can be represented
+         * in this encoding scheme.
+         */
+        abstract bool canEncode(dchar c);
+
+        /**
+         * Encodes a single code point.
+         *
+         * This function encodes a single code point into one or more ubytes.
+         * It returns an array containing those ubytes.
+         *
+         * The input to this function MUST be a valid code point.
+         *
+         * Params:
+         *    c = the code point to be encoded
+         */
+        abstract ubyte[] encode(dchar c);
+
+        /**
+         * Decodes a single code point.
+         *
+         * This function removes one or more ubytes from the start of an array,
+         * and returns the decoded code point which those ubytes represent.
+         *
+         * The input to this function MUST be validly encoded.
+         *
+         * Params:
+         *    s = the array whose first code point is to be decoded
+         */
+        abstract dchar decode(ref const(ubyte)[] s);
+
+        /**
+         * Decodes a single code point. The input does not have to be valid.
+         *
+         * This function removes one or more ubytes from the start of an array,
+         * and returns the decoded code point which those ubytes represent.
+         *
+         * This function will accept an invalidly encoded array as input.
+         * If an invalid sequence is found at the start of the string, this
+         * function will remove it, and return the value INVALID_SEQUENCE.
+         *
+         * Params:
+         *    s = the array whose first code point is to be decoded
+         */
+        abstract dchar safeDecode(ref const(ubyte)[] s);
+
+        /**
+         * Returns the sequence of ubytes to be used to represent
+         * any character which cannot be represented in the encoding scheme.
+         *
+         * Normally this will be a representation of some substitution
+         * character, such as U+FFFD or '?'.
+         */
+        abstract invariant(ubyte)[] replacementSequence();
+    }
+
+    /**
+     * Returns true if the array is encoded correctly
+     *
+     * Params:
+     *    s = the array to be tested
+     */
+    bool isValid(const(ubyte)[] s)
+    {
+        while (s.length != 0)
+        {
+            dchar d = safeDecode(s);
+            if (d == INVALID_SEQUENCE)
+                return false;
+        }
+        return true;
+    }
+
+    /**
+     * Returns the length of the longest possible substring, starting from
+     * the first element, which is validly encoded.
+     *
+     * Params:
+     *    s = the array to be tested
+     */
+    uint validLength(const(ubyte)[] s)
+    {
+        const(ubyte)[] r = s;
+        const(ubyte)[] t = s;
+        while (s.length != 0)
+        {
+            if (safeDecode(s) == INVALID_SEQUENCE) break;
+            t = s;
+        }
+        return r.length - t.length;
+    }
+
+    /**
+     * Sanitizes an array by replacing malformed ubyte sequences with valid
+     * ubyte sequences. The result is guaranteed to be valid for this
+     * encoding scheme.
+     *
+     * If the input array is already valid, this function returns the
+     * original, otherwise it constructs a new array by replacing all illegal
+     * sequences with the encoding scheme's replacement sequence.
+     *
+     * Params:
+     *    s = the string to be sanitized
+     */
+    invariant(ubyte)[] sanitize(invariant(ubyte)[] s)
+    {
+        uint n = validLength(s);
+        if (n == s.length) return s;
+
+        Buffer!(ubyte) r;
+        r ~= s[0..n];
+        const(ubyte)[] t = s[n..$];
+        while (t.length != 0)
+        {
+            const(ubyte)[] tt = t;
+            dchar c = safeDecode(t);
+            if (c == INVALID_SEQUENCE)
+            {
+                r ~= replacementSequence();
+            }
+            else
+            {
+                r ~= tt[0..$-t.length];
+            }
+            n = validLength(t);
+            r ~= t[0..n];
+            t = t[n..$];
+        }
+        return r.toIArray;
+    }
+
+    /**
+     * Returns the length of the first encoded sequence.
+     *
+     * The input to this function MUST be validly encoded.
+     * This is enforced by the function's in-contract.
+     *
+     * Params:
+     *    s = the array to be sliced
+     */
+    uint firstSequence(const(ubyte)[] s)
+    in
+    {
+        assert(s.length != 0);
+        const(ubyte)[] u = s;
+        assert(safeDecode(u) != INVALID_SEQUENCE);
+    }
+    body
+    {
+        const(ubyte)[] t = s;
+        decode(s);
+        return t.length - s.length;
+    }
+
+    /**
+     * Returns the total number of code points encoded in a ubyte array.
+     *
+     * The input to this function MUST be validly encoded.
+     * This is enforced by the function's in-contract.
+     *
+     * Params:
+     *    s = the string to be counted
+     */
+    uint count(const(ubyte)[] s)
+    in
+    {
+        assert(isValid(s));
+    }
+    body
+    {
+        uint n = 0;
+        while (s.length != 0)
+        {
+            decode(s);
+            ++n;
+        }
+        return n;
+    }
+
+    /**
+     * Returns the array index at which the (n+1)th code point begins.
+     *
+     * The input to this function MUST be validly encoded.
+     * This is enforced by the function's in-contract.
+     *
+     * Params:
+     *    s = the string to be counted
+     */
+    int index(const(ubyte)[] s,int n)
+    in
+    {
+        assert(isValid(s));
+        assert(n >= 0);
+    }
+    body
+    {
+        const(ubyte)[] t = s;
+        for (uint i=0; i<n; ++i) decode(s);
+        return t.length - s.length;
+    }
+
+    static string[string] supported;
+}
+
+/**
+ * EncodingScheme to handle ASCII
+ *
+ * This scheme recognises the following names:
+ *                 "ANSI_X3.4-1968",
+ *                 "ANSI_X3.4-1986",
+ *                 "ASCII",
+ *                 "IBM367",
+ *                 "ISO646-US",
+ *                 "ISO_646.irv:1991",
+ *                 "US-ASCII",
+ *                 "cp367",
+ *                 "csASCII"
+ *                 "iso-ir-6",
+ *                 "us"
+ */
+class EncodingSchemeASCII : EncodingScheme
+{
+    static this()
+    {
+        EncodingScheme.register("std.encoding.EncodingSchemeASCII");
+    }
+
+    const
+    {
+        override string[] names()
+        {
+            return
+            [
+                cast(string)
+                "ANSI_X3.4-1968",
+                "ANSI_X3.4-1986",
+                "ASCII",
+                "IBM367",
+                "ISO646-US",
+                "ISO_646.irv:1991",
+                "US-ASCII",
+                "cp367",
+                "csASCII"
+                "iso-ir-6",
+                "us"
+            ];
+        }
+
+        override string toString()
+        {
+            return "ASCII";
+        }
+
+        override bool canEncode(dchar c)
+        {
+            return std.encoding.canEncode!(Ascii)(c);
+        }
+
+        override ubyte[] encode(dchar c)
+        {
+            return cast(ubyte[])std.encoding.encode!(Ascii)(c);
+        }
+
+        override dchar decode(ref const(ubyte)[] s)
+        {
+            auto t = cast(const(Ascii)[]) s;
+            dchar c = std.encoding.decode(t);
+            s = s[$-t.length..$];
+            return c;
+        }
+
+        override dchar safeDecode(ref const(ubyte)[] s)
+        {
+            auto t = cast(const(Ascii)[]) s;
+            dchar c = std.encoding.safeDecode(t);
+            s = s[$-t.length..$];
+            return c;
+        }
+
+        override invariant(ubyte)[] replacementSequence()
+        {
+            return cast(invariant(ubyte)[])"?";
+        }
+    }
+}
+
+/**
+ * EncodingScheme to handle Latin-1
+ *
+ * This scheme recognises the following names:
+ *                 "CP819",
+ *                 "IBM819",
+ *                 "ISO-8859-1",
+ *                 "ISO_8859-1",
+ *                 "ISO_8859-1:1987",
+ *                 "csISOLatin1",
+ *                 "iso-ir-100",
+ *                 "l1",
+ *                 "latin1"
+ */
+class EncodingSchemeLatin1 : EncodingScheme
+{
+    static this()
+    {
+        EncodingScheme.register("std.encoding.EncodingSchemeLatin1");
+    }
+
+    const
+    {
+        override string[] names()
+        {
+            return
+            [
+                cast(string)
+                "CP819",
+                "IBM819",
+                "ISO-8859-1",
+                "ISO_8859-1",
+                "ISO_8859-1:1987",
+                "csISOLatin1",
+                "iso-ir-100",
+                "l1",
+                "latin1"
+            ];
+        }
+
+        override string toString()
+        {
+            return "ISO-8859-1";
+        }
+
+        override bool canEncode(dchar c)
+        {
+            return std.encoding.canEncode!(Latin1)(c);
+        }
+
+        override ubyte[] encode(dchar c)
+        {
+            return cast(ubyte[])std.encoding.encode!(Latin1)(c);
+        }
+
+        override dchar decode(ref const(ubyte)[] s)
+        {
+            auto t = cast(const(Latin1)[]) s;
+            dchar c = std.encoding.decode(t);
+            s = s[$-t.length..$];
+            return c;
+        }
+
+        override dchar safeDecode(ref const(ubyte)[] s)
+        {
+            auto t = cast(const(Latin1)[]) s;
+            dchar c = std.encoding.safeDecode(t);
+            s = s[$-t.length..$];
+            return c;
+        }
+
+        override invariant(ubyte)[] replacementSequence()
+        {
+            return cast(invariant(ubyte)[])"?";
+        }
+    }
+}
+
+/**
+ * EncodingScheme to handle Windows-1252
+ *
+ * This scheme recognises the following names:
+ *                 "windows-1252"
+ */
+class EncodingSchemeWindows1252 : EncodingScheme
+{
+    static this()
+    {
+        EncodingScheme.register("std.encoding.EncodingSchemeWindows1252");
+    }
+
+    const
+    {
+        override string[] names()
+        {
+            return
+            [
+                cast(string)
+                "windows-1252"
+            ];
+        }
+
+        override string toString()
+        {
+            return "windows-1252";
+        }
+
+        override bool canEncode(dchar c)
+        {
+            return std.encoding.canEncode!(Windows1252)(c);
+        }
+
+        override ubyte[] encode(dchar c)
+        {
+            return cast(ubyte[])std.encoding.encode!(Windows1252)(c);
+        }
+
+        override dchar decode(ref const(ubyte)[] s)
+        {
+            auto t = cast(const(Windows1252)[]) s;
+            dchar c = std.encoding.decode(t);
+            s = s[$-t.length..$];
+            return c;
+        }
+
+        override dchar safeDecode(ref const(ubyte)[] s)
+        {
+            auto t = cast(const(Windows1252)[]) s;
+            dchar c = std.encoding.safeDecode(t);
+            s = s[$-t.length..$];
+            return c;
+        }
+
+        override invariant(ubyte)[] replacementSequence()
+        {
+            return cast(invariant(ubyte)[])"?";
+        }
+    }
+}
+
+/**
+ * EncodingScheme to handle UTF-8
+ *
+ * This scheme recognises the following names:
+ *                 "UTF-8"
+ */
+class EncodingSchemeUtf8 : EncodingScheme
+{
+    static this()
+    {
+        EncodingScheme.register("std.encoding.EncodingSchemeUtf8");
+    }
+
+    const
+    {
+        override string[] names()
+        {
+            return
+            [
+                cast(string)
+                "UTF-8"
+            ];
+        }
+
+        override string toString()
+        {
+            return "UTF-8";
+        }
+
+        override bool canEncode(dchar c)
+        {
+            return std.encoding.canEncode!(Utf8)(c);
+        }
+
+        override ubyte[] encode(dchar c)
+        {
+            return cast(ubyte[])std.encoding.encode!(Utf8)(c);
+        }
+
+        override dchar decode(ref const(ubyte)[] s)
+        {
+            auto t = cast(const(Utf8)[]) s;
+            dchar c = std.encoding.decode(t);
+            s = s[$-t.length..$];
+            return c;
+        }
+
+        override dchar safeDecode(ref const(ubyte)[] s)
+        {
+            auto t = cast(const(Utf8)[]) s;
+            dchar c = std.encoding.safeDecode(t);
+            s = s[$-t.length..$];
+            return c;
+        }
+
+        override invariant(ubyte)[] replacementSequence()
+        {
+            return cast(invariant(ubyte)[])"\uFFFD";
+        }
+    }
+}
+
+/**
+ * EncodingScheme to handle UTF-16 in native byte order
+ *
+ * This scheme recognises the following names:
+ *                 "UTF-16LE" (little-endian architecture only)
+ *                 "UTF-16BE" (big-endian architecture only)
+ */
+class EncodingSchemeUtf16Native : EncodingScheme
+{
+    static this()
+    {
+        EncodingScheme.register("std.encoding.EncodingSchemeUtf16Native");
+    }
+
+    const
+    {
+        version(LittleEndian) { string NAME = "UTF-16LE"; }
+        version(BigEndian)    { string NAME = "UTF-16BE"; }
+
+        override string[] names()
+        {
+            return [ NAME ];
+        }
+
+        override string toString()
+        {
+            return NAME;
+        }
+
+        override bool canEncode(dchar c)
+        {
+            return std.encoding.canEncode!(Utf16)(c);
+        }
+
+        override ubyte[] encode(dchar c)
+        {
+            return cast(ubyte[])std.encoding.encode!(Utf16)(c);
+        }
+
+        override dchar decode(ref const(ubyte)[] s)
+        in
+        {
+            assert((s.length & 1) == 0);
+        }
+        body
+        {
+            auto t = cast(const(Utf16)[]) s;
+            dchar c = std.encoding.decode(t);
+            s = s[$-t.length..$];
+            return c;
+        }
+
+        override dchar safeDecode(ref const(ubyte)[] s)
+        in
+        {
+            assert((s.length & 1) == 0);
+        }
+        body
+        {
+            auto t = cast(const(Utf16)[]) s;
+            dchar c = std.encoding.safeDecode(t);
+            s = s[$-t.length..$];
+            return c;
+        }
+
+        override invariant(ubyte)[] replacementSequence()
+        {
+            return cast(invariant(ubyte)[])"\uFFFD"w;
+        }
+    }
+}
+
+/**
+ * EncodingScheme to handle UTF-32 in native byte order
+ *
+ * This scheme recognises the following names:
+ *                 "UTF-32LE" (little-endian architecture only)
+ *                 "UTF-32BE" (big-endian architecture only)
+ */
+class EncodingSchemeUtf32Native : EncodingScheme
+{
+    static this()
+    {
+        EncodingScheme.register("std.encoding.EncodingSchemeUtf32Native");
+    }
+
+    const
+    {
+        version(LittleEndian) { string NAME = "UTF-32LE"; }
+        version(BigEndian)    { string NAME = "UTF-32BE"; }
+
+        override string[] names()
+        {
+            return [ NAME ];
+        }
+
+        override string toString()
+        {
+            return NAME;
+        }
+
+        override bool canEncode(dchar c)
+        {
+            return std.encoding.canEncode!(Utf32)(c);
+        }
+
+        override ubyte[] encode(dchar c)
+        {
+            return cast(ubyte[])std.encoding.encode!(Utf32)(c);
+        }
+
+        override dchar decode(ref const(ubyte)[] s)
+        in
+        {
+            assert((s.length & 3) == 0);
+        }
+        body
+        {
+            auto t = cast(const(Utf32)[]) s;
+            dchar c = std.encoding.decode(t);
+            s = s[$-t.length..$];
+            return c;
+        }
+
+        override dchar safeDecode(ref const(ubyte)[] s)
+        in
+        {
+            assert((s.length & 3) == 0);
+        }
+        body
+        {
+            auto t = cast(const(Utf32)[]) s;
+            dchar c = std.encoding.safeDecode(t);
+            s = s[$-t.length..$];
+            return c;
+        }
+
+        override invariant(ubyte)[] replacementSequence()
+        {
+            return cast(invariant(ubyte)[])"\uFFFD"d;
+        }
+    }
+}
+
+//=============================================================================
+
 
 // Helper functions
 version(unittest)
 {
-	void transcodeReverse(Src,Dst)(invariant(Src)[] s, out invariant(Dst)[] r)
-	{
-		static if(is(Src==Dst))
-		{
-			return s;
-		}
-		else static if(is(Src==Ascii))
-		{
-			transcodeReverse!(char,Dst)(cast(string)s,r);
-		}
-		else
-		{
-			foreach_reverse(d;codePoints(s))
-			{
-				foreach_reverse(c;codeUnits!(Dst)(d))
-				{
-					r = c ~ r;
-				}
-			}
-		}
-	}
+    void transcodeReverse(Src,Dst)(invariant(Src)[] s, out invariant(Dst)[] r)
+    {
+        static if(is(Src==Dst))
+        {
+            return s;
+        }
+        else static if(is(Src==Ascii))
+        {
+            transcodeReverse!(char,Dst)(cast(string)s,r);
+        }
+        else
+        {
+            foreach_reverse(d;codePoints(s))
+            {
+                foreach_reverse(c;codeUnits!(Dst)(d))
+                {
+                    r = c ~ r;
+                }
+            }
+        }
+    }
 
-	string makeReadable(string s)
-	{
-		string r = "\"";
-		foreach(char c;s)
-		{
-			if (c >= 0x20 && c < 0x80)
-			{
-				r ~= c;
-			}
-			else
-			{
-				r ~= "\\x";
-				r ~= toHexDigit(c >> 4);
-				r ~= toHexDigit(c);
-			}
-		}
-		r ~= "\"";
-		return r;
-	}
+    string makeReadable(string s)
+    {
+        string r = "\"";
+        foreach(char c;s)
+        {
+            if (c >= 0x20 && c < 0x80)
+            {
+                r ~= c;
+            }
+            else
+            {
+                r ~= "\\x";
+                r ~= toHexDigit(c >> 4);
+                r ~= toHexDigit(c);
+            }
+        }
+        r ~= "\"";
+        return r;
+    }
 
-	string makeReadable(wstring s)
-	{
-		string r = "\"";
-		foreach(wchar c;s)
-		{
-			if (c >= 0x20 && c < 0x80)
-			{
-				r ~= c;
-			}
-			else
-			{
-				r ~= "\\u";
-				r ~= toHexDigit(c >> 12);
-				r ~= toHexDigit(c >> 8);
-				r ~= toHexDigit(c >> 4);
-				r ~= toHexDigit(c);
-			}
-		}
-		r ~= "\"w";
-		return r;
-	}
+    string makeReadable(wstring s)
+    {
+        string r = "\"";
+        foreach(wchar c;s)
+        {
+            if (c >= 0x20 && c < 0x80)
+            {
+                r ~= c;
+            }
+            else
+            {
+                r ~= "\\u";
+                r ~= toHexDigit(c >> 12);
+                r ~= toHexDigit(c >> 8);
+                r ~= toHexDigit(c >> 4);
+                r ~= toHexDigit(c);
+            }
+        }
+        r ~= "\"w";
+        return r;
+    }
 
-	string makeReadable(dstring s)
-	{
-		string r = "\"";
-		foreach(dchar c;s)
-		{
-			if (c >= 0x20 && c < 0x80)
-			{
-				r ~= c;
-			}
-			else if (c < 0x10000)
-			{
-				r ~= "\\u";
-				r ~= toHexDigit(c >> 12);
-				r ~= toHexDigit(c >> 8);
-				r ~= toHexDigit(c >> 4);
-				r ~= toHexDigit(c);
-			}
-			else
-			{
-				r ~= "\\U00";
-				r ~= toHexDigit(c >> 20);
-				r ~= toHexDigit(c >> 16);
-				r ~= toHexDigit(c >> 12);
-				r ~= toHexDigit(c >> 8);
-				r ~= toHexDigit(c >> 4);
-				r ~= toHexDigit(c);
-			}
-		}
-		r ~= "\"d";
-		return r;
-	}
+    string makeReadable(dstring s)
+    {
+        string r = "\"";
+        foreach(dchar c;s)
+        {
+            if (c >= 0x20 && c < 0x80)
+            {
+                r ~= c;
+            }
+            else if (c < 0x10000)
+            {
+                r ~= "\\u";
+                r ~= toHexDigit(c >> 12);
+                r ~= toHexDigit(c >> 8);
+                r ~= toHexDigit(c >> 4);
+                r ~= toHexDigit(c);
+            }
+            else
+            {
+                r ~= "\\U00";
+                r ~= toHexDigit(c >> 20);
+                r ~= toHexDigit(c >> 16);
+                r ~= toHexDigit(c >> 12);
+                r ~= toHexDigit(c >> 8);
+                r ~= toHexDigit(c >> 4);
+                r ~= toHexDigit(c);
+            }
+        }
+        r ~= "\"d";
+        return r;
+    }
 
-	char toHexDigit(int n)
-	{
-		return "0123456789ABCDEF"[n & 0xF];
-	}
+    char toHexDigit(int n)
+    {
+        return "0123456789ABCDEF"[n & 0xF];
+    }
 }
 
