@@ -250,7 +250,8 @@ extern (C) void _d_notify_release(Object o)
 
 /**
  * Information about an interface.
- * A pointer to this appears as the first entry in the interface's vtbl[].
+ * When an object is accessed via an interface, an Interface* appears as the
+ * first entry in its vtbl.
  */
 struct Interface
 {
@@ -801,8 +802,7 @@ class TypeInfo_Class : TypeInfo
     override hash_t getHash(in void *p)
     {
 	Object o = *cast(Object*)p;
-	assert(o);
-	return o.toHash();
+	return o ? o.toHash() : 0;
     }
 
     override int equals(in void *p1, in void *p2)
