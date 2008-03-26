@@ -235,10 +235,12 @@ void* _aaGet(AA* aa, TypeInfo keyti, size_t valuesize, ...)
     }
     body
     {
+	//printf("aaGet()\n");
 	auto pkey = cast(void *)(&valuesize + 1);
 	size_t i;
 	aaA* e;
 	auto keysize = aligntsize(keyti.tsize());
+	//printf("keysize = %d\n", keysize);
 
 	if (!aa.a)
 	    aa.a = new BB();
