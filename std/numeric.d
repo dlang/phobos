@@ -101,7 +101,7 @@ bool oppositeSigns(T)(T a, T b)
 
 public:
 
-/**  Find a real root of the real function f(x) via bracketing.
+/**  Find a real root of a real function f(x) via bracketing.
  *
  * Given a range [a..b] such that f(a) and f(b) have opposite sign,
  * returns the value of x in the range which is closest to a root of f(x).
@@ -126,29 +126,58 @@ public:
 T findRoot(T, R)(R delegate(T) f, T ax, T bx)
 {
     auto r = findRoot(f, ax, bx, f(ax), f(bx), (Tuple!(T, T, R, R) r){ 
-         return r._1==nextUp(r._0); });
+         return r._1 == nextUp(r._0); });
     return fabs(r._2)<=fabs(r._3) ? r._0 : r._1;
 }
 
-/** Find root by bracketing, allowing termination condition to be specified
+/** Find root of a real function f(x) by bracketing, allowing the termination
+ * condition to be specified
  *
  * Params:
- * tolerance   Defines the termination condition. Return true when acceptable
- *             bounds have been obtained.
+ * tolerance   Defines the termination condition. Receives a tuple (same type as
+ *             the return value) giving progress towards finding the root.
+ *             The delegate must return true when the bounds on the root are
+ *             acceptable.
+ *
+ * Returns:
+ * A tuple consisting of two ranges. The first two elements are the range (in x)
+ * of the root, while the second pair of elements are the corresponding function
+ * values at those points.
+ *
+ * Example tolerance delegates: 
+ * ---
+ *  // For a function real f(double x)
+ *  // Terminate when the range is two adjacent points on the IEEE number line.
+ *  // (this gives full machine precision).
+ *  Tuple!(double, double, real, real) r){ return r._1 == nextUp(r._0); }
+ *  // Terminate as soon as we are withing 1e-10 of the root.
+ *  // (Note that this won't necessarily happen, so we need a fallback).
+ *  Tuple!(double, double, real, real) r){ return r._1 == nextUp(r._0)
+ *     || fabs(r._2)<=1e-10 || fabs(r._3)<=1e-10; }
+ *  // Terminate as soon as we know the position of the root to within 1e-5.
+ *  Tuple!(double, double, real, real) r){ return r._1  - r._0 <= 1e-5; }
+ *
+ * ---
  */
 Tuple!(T, T, R, R) findRoot(T,R)(R delegate(T) f, T ax, T bx, R fax, R fbx,
     bool delegate(Tuple!(T, T, R, R)  r) tolerance)
 in {
-    assert(ax<=bx, "Parameters ax and bx out of order.");
     assert(ax<>=0 && bx<>=0, "Limits must not be NaN");
-    assert(oppositeSigns(fax,fbx), "Parameters must bracket the root.");
+    assert(oppositeSigns(fax, fbx), "Parameters must bracket the root.");
 }
 body {   
 // This code is (heavily) modified from TOMS748 (www.netlib.org). Some ideas
 // were borrowed from the Boost Mathematics Library.
 
-    T a = ax, b = bx, d;  // [a..b] is our current bracket.
-    R fa = fax, fb = fbx, fd; // d is the third best guess.       
+    T a, b, d;  // [a..b] is our current bracket.
+    R fa, fb, fd; // d is the third best guess.
+    if (ax<=bx) {
+        a = ax; fa = fax; 
+        b = bx; fb = fbx;
+    } else {
+        a = bx; fa = fbx; 
+        b = ax; fb = fax;
+    }
 
     // Test the function at point c; update brackets accordingly
     void bracket(T c)
@@ -274,11 +303,12 @@ whileloop:
                 }
             }
             if (!ok) {
-               c = newtonQuadratic(distinct ? 3 : 2);
-               if(c!<>=0 || (c <= a) || (c >= b)) {
-                  // Failure, try a secant step:
-                  c = secant_interpolate(a, b, fa, fb);
-               }
+                
+                c = newtonQuadratic(distinct ? 3 : 2);
+                if(c!<>=0 || (c <= a) || (c >= b)) {
+                    // Failure, try a secant step:
+                    c = secant_interpolate(a, b, fa, fb);
+                }
             }
             ++itnum;                
             e = d;
@@ -293,11 +323,11 @@ whileloop:
         T u;
         R fu;
         if(fabs(fa) < fabs(fb)) {
-             u = a;
-             fu = fa;
+            u = a;
+            fu = fa;
         } else {
-             u = b;
-             fu = fb;
+            u = b;
+            fu = fb;
         }
         c = u - 2 * (fu / (fb - fa)) * (b - a);
         // DAC: If the secant predicts a value equal to an endpoint, it's
@@ -306,9 +336,9 @@ whileloop:
             if ((a-b) == a || (b-a) == b) {
                 if ( (a>0 && b<0) || (a<0 && b>0) ) c = 0;
                 else {
-                   if (a==0) c = ieeeMean(copysign(0.0L, b), b);
-                   else if (b==0) c = ieeeMean(copysign(0.0L, a), a);
-                   else c = ieeeMean(a, b);
+                    if (a==0) c = ieeeMean(copysign(0.0L, b), b);
+                    else if (b==0) c = ieeeMean(copysign(0.0L, a), a);
+                    else c = ieeeMean(a, b);
                 }
             } else {
                 c = a + (b - a) / 2;
