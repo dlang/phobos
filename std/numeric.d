@@ -103,8 +103,8 @@ public:
 
 /**  Find a real root of a real function f(x) via bracketing.
  *
- * Given a range [a..b] such that f(a) and f(b) have opposite sign,
- * returns the value of x in the range which is closest to a root of f(x).
+ * Given a function f and a range [a..b] such that f(a) and f(b) have opposite
+ * sign, returns the value of x in the range which is closest to a root of f(x).
  * If f(x) has more than one root in the range, one will be chosen arbitrarily.
  * If f(x) returns $(NAN), $(NAN) will be returned; otherwise, this algorithm
  * is guaranteed to succeed. 
@@ -123,44 +123,33 @@ public:
  *   Fortran code available from www.netlib.org as algorithm TOMS478.
  *
  */
-T findRoot(T, R)(R delegate(T) f, T ax, T bx)
+T findRoot(T, R)(R delegate(T) f, T a, T b)
 {
-    auto r = findRoot(f, ax, bx, f(ax), f(bx), (Tuple!(T, T, R, R) r){ 
-         return r._1 == nextUp(r._0); });
-    return fabs(r._2)<=fabs(r._3) ? r._0 : r._1;
+    auto r = findRoot(f, a, b, f(a), f(b), (T lo, T hi){ return false; });
+    // Return the first value if it is smaller or NaN
+    return fabs(r._2) !> fabs(r._3) ? r._0 : r._1;
 }
 
 /** Find root of a real function f(x) by bracketing, allowing the termination
- * condition to be specified
+ * condition to be specified.
  *
  * Params:
- * tolerance   Defines the termination condition. Receives a tuple (same type as
- *             the return value) giving progress towards finding the root.
- *             The delegate must return true when the bounds on the root are
- *             acceptable.
+ * f           Function to be analyzed
+ * ax, bx      Initial range of f known to contain the root.  
+ * fax, fbx    Values of f(ax) and f(bx). They are commonly known in advance.
+ * tolerance   Defines an early termination condition. Receives the current
+ *             upper  and lower bounds on the root. The delegate must return
+ *             true when these bounds are acceptable. If this function always
+ *             returns false, full machine precision will be achieved.
  *
  * Returns:
  * A tuple consisting of two ranges. The first two elements are the range (in x)
  * of the root, while the second pair of elements are the corresponding function
- * values at those points.
- *
- * Example tolerance delegates: 
- * ---
- *  // For a function real f(double x)
- *  // Terminate when the range is two adjacent points on the IEEE number line.
- *  // (this gives full machine precision).
- *  Tuple!(double, double, real, real) r){ return r._1 == nextUp(r._0); }
- *  // Terminate as soon as we are withing 1e-10 of the root.
- *  // (Note that this won't necessarily happen, so we need a fallback).
- *  Tuple!(double, double, real, real) r){ return r._1 == nextUp(r._0)
- *     || fabs(r._2)<=1e-10 || fabs(r._3)<=1e-10; }
- *  // Terminate as soon as we know the position of the root to within 1e-5.
- *  Tuple!(double, double, real, real) r){ return r._1  - r._0 <= 1e-5; }
- *
- * ---
+ * values at those points. If an exact root was found, both of the first two
+ * elements will contain the root, and the second pair of elements will be 0.
  */
 Tuple!(T, T, R, R) findRoot(T,R)(R delegate(T) f, T ax, T bx, R fax, R fbx,
-    bool delegate(Tuple!(T, T, R, R)  r) tolerance)
+    bool delegate(T lo, T hi) tolerance)
 in {
     assert(ax<>=0 && bx<>=0, "Limits must not be NaN");
     assert(oppositeSigns(fax, fbx), "Parameters must bracket the root.");
@@ -169,9 +158,12 @@ body {
 // This code is (heavily) modified from TOMS748 (www.netlib.org). Some ideas
 // were borrowed from the Boost Mathematics Library.
 
-    T a, b, d;  // [a..b] is our current bracket.
-    R fa, fb, fd; // d is the third best guess.
-    if (ax<=bx) {
+    T a, b, d;  // [a..b] is our current bracket. d is the third best guess.
+    R fa, fb, fd; // Values of f at a, b, d.
+    bool done = false; // Has a root been found?
+    
+    // Allow ax and bx to be provided in reverse order
+    if (ax <= bx) {
         a = ax; fa = fax; 
         b = bx; fb = fbx;
     } else {
@@ -183,11 +175,12 @@ body {
     void bracket(T c)
     {
         T fc = f(c);        
-        if (fc == 0) { // Exact solution
+        if (fc !<> 0) { // Exact solution, or NaN
             a = c;
             fa = fc;
             d = c;
             fd = fc;
+            done = true;
             return;
         }
         // Determine new enclosing interval
@@ -252,7 +245,15 @@ body {
     }
     
     // On the first iteration we take a secant step:
-    if(fa != 0) {
+    if (fa !<> 0) {
+        done = true;
+        b = a;
+        fb = fa;
+    } else if (fb !<> 0) {
+        done = true;
+        a = b;
+        fa = fb;
+    } else {
         bracket(secant_interpolate(a, b, fa, fb));
     }
     // Starting with the second iteration, higher-order interpolation can
@@ -262,7 +263,7 @@ body {
     T c, e;  // e is our fourth best guess
     R fe;   
 whileloop:
-    while((fa != 0) && !tolerance(Tuple!(T, T, R, R)(a, b, fa, fb))) {        
+    while(!done && (b != nextUp(a)) && !tolerance(a, b)) {        
         T a0 = a, b0 = b; // record the brackets
       
         // Do two higher-order (cubic or parabolic) interpolation steps.
@@ -303,7 +304,8 @@ whileloop:
                 }
             }
             if (!ok) {
-                
+                // DAC: Alefeld doesn't explain why the number of newton steps
+                // should vary.
                 c = newtonQuadratic(distinct ? 3 : 2);
                 if(c!<>=0 || (c <= a) || (c >= b)) {
                     // Failure, try a secant step:
@@ -314,7 +316,7 @@ whileloop:
             e = d;
             fe = fd;
             bracket(c);
-            if((fa == 0) || tolerance(Tuple!(T, T, R, R)(a, b, fa, fb)))
+            if( done || ( b == nextUp(a)) || tolerance(a, b))
                 break whileloop;
             if (itnum == 2)
                 continue whileloop;
@@ -347,12 +349,13 @@ whileloop:
         e = d;
         fe = fd;
         bracket(c);
-        if((fa == 0) || tolerance(Tuple!(T, T, R, R)(a, b, fa, fb)))
+        if(done || (b == nextUp(a)) || tolerance(a, b))
             break;
-            
+
+        // IMPROVE THE WORST-CASE PERFORMANCE       
         // We must ensure that the bounds reduce by a factor of 2 
-        // (DAC: in binary space!) every iteration. If we haven't achieved this
-        // yet (DAC: or if we don't yet know what the exponent is),
+        // in binary space! every iteration. If we haven't achieved this
+        // yet, or if we don't yet know what the exponent is,
         // perform a binary chop.
 
         if( (a==0 || b==0 || 
@@ -365,7 +368,7 @@ whileloop:
         // pathological function. Perform a number of bisections equal to the
         // total number of consecutive bad iterations.
         
-        if ((b - a) < 0.25 * (b0 - a0)) baditer=1;
+        if ((b - a) < 0.25 * (b0 - a0)) baditer = 1;
         for (int QQ = 0; QQ < baditer ;++QQ) {
             e = d;
             fe = fd;
@@ -383,9 +386,6 @@ whileloop:
         }
         ++baditer;
     }
-
-    if (fa == 0) { b = a; fb = fa; }
-    else if (fb == 0) { a = b; fa = fb; }
     return Tuple!(T, T, R, R)(a, b, fa, fb);
 }
 
@@ -399,7 +399,7 @@ unittest{
         ++numProblems;
         assert(x1<>=0 && x2<>=0);
         auto result = findRoot(f, x1, x2, f(x1), f(x2),
-            (Tuple!(real, real, real, real) r){ return r._1==nextUp(r._0); });
+          (real lo, real hi) { return false; });
         
         auto flo = f(result._0);
         auto fhi = f(result._1);
