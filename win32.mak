@@ -116,6 +116,7 @@ DOCS=	$(DOC)\std_path.html $(DOC)\std_math.html $(DOC)\std_outbuffer.html \
 	$(DOC)\std_functional.html \
 	$(DOC)\std_gc.html \
 	$(DOC)\std_getopt.html \
+	$(DOC)\std_hiddenfunc.html \
 	$(DOC)\std_intrinsic.html \
 	$(DOC)\std_iterator.html \
 	$(DOC)\std_metastrings.html \
@@ -772,6 +773,9 @@ $(DOC)\std_gc.html : std.ddoc std\gc.d
 
 $(DOC)\std_getopt.html : std.ddoc std\getopt.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_getopt.html std.ddoc std\getopt.d
+
+$(DOC)\std_hiddenfunc.html : std.ddoc std\hiddenfunc.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_hiddenfunc.html std.ddoc std\hiddenfunc.d
 
 $(DOC)\std_iterator.html : std.ddoc std\iterator.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_iterator.html std.ddoc std\iterator.d
