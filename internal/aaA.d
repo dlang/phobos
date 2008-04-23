@@ -47,7 +47,7 @@ static size_t[] prime_list = [
         6_291_469UL,     25_165_843UL,
       100_663_319UL,    402_653_189UL,
     1_610_612_741UL,  4_294_967_291UL,
-    8_589_934_513UL, 17_179_869_143UL
+//    8_589_934_513UL, 17_179_869_143UL
 ];
 
 /* This is the type of the return value for dynamic arrays.
