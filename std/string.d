@@ -205,11 +205,13 @@ deprecated char* toCharz(char[] s)
 
 /*********************************
  * Convert array of chars s[] to a C-style 0 terminated string.
+ * s[] must not contain embedded 0's.
  */
 
 char* toStringz(char[] s)
     in
     {
+	assert(memchr(s.ptr, 0, s.length) == null);
     }
     out (result)
     {
