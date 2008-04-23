@@ -124,6 +124,7 @@ DOCS=	$(DOC)\std_path.html $(DOC)\std_math.html $(DOC)\std_outbuffer.html \
 	$(DOC)\std_numeric.html \
 	$(DOC)\std_openrj.html \
 	$(DOC)\std_outofmemory.html \
+	$(DOC)\std_perf.html \
 	$(DOC)\std_process.html \
 	$(DOC)\std_regexp.html \
 	$(DOC)\std_signals.html \
@@ -809,6 +810,9 @@ $(DOC)\std_outofmemory.html : std.ddoc std\outofmemory.d
 
 $(DOC)\std_path.html : std.ddoc std\path.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_path.html std.ddoc std\path.d
+
+$(DOC)\std_perf.html : std.ddoc std\perf.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_perf.html std.ddoc std\perf.d
 
 $(DOC)\std_process.html : std.ddoc std\process.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_process.html std.ddoc std\process.d

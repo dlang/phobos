@@ -1,7 +1,7 @@
 
 /**
- * C's &lt;stdio.h&gt;
- * Authors: Walter Bright, Digital Mars, www.digitalmars.com
+ * C's &lt;stdio.h&gt; for the D programming language
+ * Authors: Walter Bright, Digital Mars, http://www.digitalmars.com
  * License: Public Domain
  * Macros:
  *	WIKI=Phobos/StdCStdio
