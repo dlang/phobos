@@ -386,7 +386,7 @@ string dirname(string fullname)
 	    {
 		if (fullname[i - 1] == ':')
 		    break;
-		if (fullname[i - 1] == '\\')
+		if (fullname[i - 1] == '\\' || fullname[i - 1] == '/')
 		{   i--;
 		    break;
 		}
@@ -405,6 +405,13 @@ string dirname(string fullname)
 /** Alias for $(D_PARAM dirname), kept for backward
  * compatibility. New code should use $(D_PARAM dirname). */
 alias dirname getDirName;
+
+unittest
+{
+    string filename = "foo/bar";
+    auto d = getDirName(filename);
+    assert(d == "foo");
+}
 
 /********************************
  * Extracts the drive letter of a path.
