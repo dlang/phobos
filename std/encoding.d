@@ -36,6 +36,9 @@ Date: 2008.02.27 - 2008.03.23
 
 License: Public Domain
 
+
+Macros:
+    WIKI=Phobos/StdEncoding
 */
 
 module std.encoding;
