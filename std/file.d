@@ -45,8 +45,12 @@ private import std.regexp;
 private import std.gc;
 private import std.c.string;
 private import std.traits;
-import std.conv;
-private import std.stdio; // for testing only
+private import std.conv;
+private import std.contracts;
+private import std.utf;
+version (unittest) {
+    private import std.stdio; // for testing only
+}
 
 /* =========================== Win32 ======================= */
 
@@ -59,7 +63,7 @@ private import std.windows.syserror;
 private import std.windows.charset;
 private import std.date;
 
-int useWfuncs = 1;
+enum useWfuncs = true;
 
 static this()
 {
@@ -73,7 +77,6 @@ static this()
 
 class FileException : Exception
 {
-
     uint errno;			// operating system error code
 
     this(string name)
@@ -98,9 +101,9 @@ class FileException : Exception
  */
 
 /********************************************
- * Read file name[], return array of bytes read.
- * Throws:
- *	FileException on error.
+ * Read file $(D name), return array of bytes read.
+ *
+ * Throws: $(D FileException) on error.
  */
 
 void[] read(in string name)
@@ -153,7 +156,7 @@ err1:
 
 /*********************************************
  * Write buffer[] to file name[].
- * Throws: FileException on error.
+ * Throws: $(D FileException) on error.
  */
 
 void write(in string name, const void[] buffer)
@@ -195,7 +198,7 @@ err:
 
 /*********************************************
  * Append buffer[] to file name[].
- * Throws: FileException on error.
+ * Throws: $(D FileException) on error.
  */
 
 void append(in string name, in void[] buffer)
@@ -239,12 +242,12 @@ err:
 
 /***************************************************
  * Rename file from[] to to[].
- * Throws: FileException on error.
+ * Throws: $(D FileException) on error.
  */
 
 void rename(in string from, in string to)
 {
-    BOOL result;
+    BOOL result = void;
 
     if (useWfuncs)
 	result = MoveFileW(std.utf.toUTF16z(from), std.utf.toUTF16z(to));
@@ -257,12 +260,12 @@ void rename(in string from, in string to)
 
 /***************************************************
  * Delete file name[].
- * Throws: FileException on error.
+ * Throws: $(D FileException) on error.
  */
 
 void remove(in string name)
 {
-    BOOL result;
+    BOOL result = void;
 
     if (useWfuncs)
 	result = DeleteFileW(std.utf.toUTF16z(name));
@@ -275,7 +278,7 @@ void remove(in string name)
 
 /***************************************************
  * Get size of file name[].
- * Throws: FileException on error.
+ * Throws: $(D FileException) on error.
  */
 
 ulong getSize(in string name)
@@ -310,8 +313,8 @@ ulong getSize(in string name)
 }
 
 /*************************
- * Get creation/access/modified times of file name[].
- * Throws: FileException on error.
+ * Get creation/access/modified times of file $(D name).
+ * Throws: $(D FileException) on error.
  */
 
 void getTimes(in string name, out d_time ftc, out d_time fta, out d_time ftm)
@@ -350,7 +353,7 @@ void getTimes(in string name, out d_time ftc, out d_time fta, out d_time ftm)
  * Return 1 if it does, 0 if not.
  */
 
-int exists(string name)
+bool exists(in string name)
 {
     uint result;
 
@@ -360,12 +363,12 @@ int exists(string name)
     else
 	result = GetFileAttributesA(toMBSz(name));
 
-    return (result == 0xFFFFFFFF) ? 0 : 1;
+    return result == 0xFFFFFFFF;
 }
 
 /***************************************************
  * Get file name[] attributes.
- * Throws: FileException on error.
+ * Throws: $(D FileException) on error.
  */
 
 uint getAttributes(string name)
@@ -385,27 +388,27 @@ uint getAttributes(string name)
 
 /****************************************************
  * Is name[] a file?
- * Throws: FileException if name[] doesn't exist.
+ * Throws: $(D FileException) if name[] doesn't exist.
  */
 
-int isfile(in string name)
+bool isfile(in string name)
 {
     return (getAttributes(name) & FILE_ATTRIBUTE_DIRECTORY) == 0;
 }
 
 /****************************************************
  * Is name[] a directory?
- * Throws: FileException if name[] doesn't exist.
+ * Throws: $(D FileException) if name[] doesn't exist.
  */
 
-int isdir(in string name)
+bool isdir(in string name)
 {
     return (getAttributes(name) & FILE_ATTRIBUTE_DIRECTORY) != 0;
 }
 
 /****************************************************
  * Change directory to pathname[].
- * Throws: FileException on error.
+ * Throws: $(D FileException) on error.
  */
 
 void chdir(in string pathname)
@@ -424,11 +427,11 @@ void chdir(in string pathname)
 
 /****************************************************
  * Make directory pathname[].
- * Throws: FileException on error.
+ * Throws: $(D FileException) on error.
  */
 
 void mkdir(in string pathname)
-{   BOOL result;
+{   BOOL result = void;
 
     if (useWfuncs)
 	result = CreateDirectoryW(std.utf.toUTF16z(pathname), null);
@@ -443,11 +446,11 @@ void mkdir(in string pathname)
 
 /****************************************************
  * Remove directory pathname[].
- * Throws: FileException on error.
+ * Throws: $(D FileException) on error.
  */
 
 void rmdir(in string pathname)
-{   BOOL result;
+{   BOOL result = void;
 
     if (useWfuncs)
 	result = RemoveDirectoryW(std.utf.toUTF16z(pathname));
@@ -462,7 +465,7 @@ void rmdir(in string pathname)
 
 /****************************************************
  * Get current directory.
- * Throws: FileException on error.
+ * Throws: $(D FileException) on error.
  */
 
 string getcwd()
@@ -568,7 +571,7 @@ struct DirEntry
 /***************************************************
  * Return contents of directory pathname[].
  * The names in the contents do not include the pathname.
- * Throws: FileException on error
+ * Throws: $(D FileException) on error
  * Example:
  *	This program lists all the files and subdirectories in its
  *	path argument.
@@ -849,14 +852,11 @@ const(char)* toMBSz(in string s)
 
 void copy(in string from, in string to)
 {
-    BOOL result;
-
-    if (useWfuncs)
-	result = CopyFileW(std.utf.toUTF16z(from), std.utf.toUTF16z(to), false);
-    else
-	result = CopyFileA(toMBSz(from), toMBSz(to), false);
+    invariant result = useWfuncs
+	? CopyFileW(std.utf.toUTF16z(from), std.utf.toUTF16z(to), false)
+        : CopyFileA(toMBSz(from), toMBSz(to), false);
     if (!result)
-         throw new FileException(to, GetLastError());
+         throw new FileException(to, GetLastError);
 }
 
 
@@ -875,7 +875,6 @@ private import std.c.linux.linux;
 
 class FileException : Exception
 {
-
     uint errno;			// operating system error code
 
     this(string name)
@@ -889,12 +888,20 @@ class FileException : Exception
     }
 
     this(string name, uint errno)
-    {	char[80] buf = void;
+    {
+        char[1024] buf = void;
 	auto s = strerror_r(errno, buf.ptr, buf.length);
-	this(name, std.string.toString(s).idup);
+	this(name, std.string.toString(s));
 	this.errno = errno;
     }
 }
+
+private T cenforce(T)(T condition, lazy string name)
+{
+    if (!condition) throw new FileException(name, getErrno);
+    return condition;
+}
+
 
 /********************************************
  * Read a file.
@@ -902,86 +909,68 @@ class FileException : Exception
  *	array of bytes read
  */
 
-void[] read(in string name)
+void[] read(string name)
 {
-    uint numread;
-    struct_stat statbuf;
+    invariant fd = std.c.linux.linux.open(toStringz(name), O_RDONLY);
+    cenforce(fd != -1, name);
+    scope(exit) std.c.linux.linux.close(fd);
 
-    auto namez = toStringz(name);
-    //printf("file.read('%s')\n",namez);
-    auto fd = std.c.linux.linux.open(namez, O_RDONLY);
-    if (fd == -1)
-    {
-        //printf("\topen error, errno = %d\n",getErrno());
-        goto err1;
-    }
-
-    //printf("\tfile opened\n");
-    if (std.c.linux.linux.fstat(fd, &statbuf))
-    {
-        //printf("\tfstat error, errno = %d\n",getErrno());
-        goto err2;
-    }
-    auto size = statbuf.st_size;
+    struct_stat statbuf = void;
+    cenforce(std.c.linux.linux.fstat(fd, &statbuf) == 0, name);
+    invariant size = statbuf.st_size;
+    if (!size) return null;
     auto buf = std.gc.malloc(size);
-    if (buf.ptr)
-	std.gc.hasNoPointers(buf.ptr);
+    enforce(buf, "Out of memory");
+    scope(failure) delete buf;
+    std.gc.hasNoPointers(buf.ptr);
 
-    numread = std.c.linux.linux.read(fd, buf.ptr, size);
-    if (numread != size)
-    {
-        //printf("\tread error, errno = %d\n",getErrno());
-        goto err2;
-    }
-
-    if (std.c.linux.linux.close(fd) == -1)
-    {
-	//printf("\tclose error, errno = %d\n",getErrno());
-        goto err;
-    }
+    cenforce(std.c.linux.linux.read(fd, buf.ptr, size) == size, name);
 
     return buf[0 .. size];
-
-err2:
-    std.c.linux.linux.close(fd);
-err:
-    delete buf;
-
-err1:
-    throw new FileException(name.idup, getErrno());
 }
+
+/********************************************
+ * Read and validates (using $(XREF utf, validate)) a text file. $(D
+ * S) can be a type of array of characters of any width and constancy.
+ *
+ * Returns: array of characters read
+ *
+ * Throws: $(D FileException) on file error, $(D UtfException) on UTF
+ * decoding error.
+ *      
+ */
+
+S readText(S)(in string name)
+{
+    auto result = cast(S) read(name);
+    std.utf.validate(result);
+    return result;
+}
+
+// Implementation helper for write and append
+
+private void writeImpl(in string name, in void[] buffer, in uint mode)
+{
+    invariant fd = std.c.linux.linux.open(toStringz(name),
+            mode, 0660);
+    cenforce(fd != -1, name);
+    {
+        scope(failure) std.c.linux.linux.close(fd);
+        invariant size = buffer.length;
+        cenforce(std.c.linux.linux.write(fd, buffer.ptr, size) == size, name);
+    }
+    cenforce(std.c.linux.linux.close(fd) == 0, name);
+}
+
 
 /*********************************************
  * Write a file.
- * Returns:
- *	0	success
  */
 
 void write(in string name, in void[] buffer)
 {
-    int fd;
-    int numwritten;
-
-    auto namez = toStringz(name);
-    fd = std.c.linux.linux.open(namez, O_CREAT | O_WRONLY | O_TRUNC, 0660);
-    if (fd == -1)
-        goto err;
-
-    numwritten = std.c.linux.linux.write(fd, buffer.ptr, buffer.length);
-    if (buffer.length != numwritten)
-        goto err2;
-
-    if (std.c.linux.linux.close(fd) == -1)
-        goto err;
-
-    return;
-
-err2:
-    std.c.linux.linux.close(fd);
-err:
-    throw new FileException(name.idup, getErrno());
+    return writeImpl(name, buffer, O_CREAT | O_WRONLY | O_TRUNC);
 }
-
 
 /*********************************************
  * Append to a file.
@@ -989,30 +978,8 @@ err:
 
 void append(in string name, in void[] buffer)
 {
-    int fd;
-    int numwritten;
-    char *namez;
-
-    namez = toStringz(name);
-    fd = std.c.linux.linux.open(namez, O_APPEND | O_WRONLY | O_CREAT, 0660);
-    if (fd == -1)
-        goto err;
-
-    numwritten = std.c.linux.linux.write(fd, buffer.ptr, buffer.length);
-    if (buffer.length != numwritten)
-        goto err2;
-
-    if (std.c.linux.linux.close(fd) == -1)
-        goto err;
-
-    return;
-
-err2:
-    std.c.linux.linux.close(fd);
-err:
-    throw new FileException(name.idup, getErrno());
+    return writeImpl(name, buffer, O_APPEND | O_WRONLY | O_CREAT);
 }
-
 
 /***************************************************
  * Rename a file.
@@ -1020,13 +987,8 @@ err:
 
 void rename(in string from, in string to)
 {
-    char *fromz = toStringz(from);
-    char *toz = toStringz(to);
-
-    if (std.c.stdio.rename(fromz, toz) == -1)
-	throw new FileException(to.idup, getErrno());
+    cenforce(std.c.stdio.rename(toStringz(from), toStringz(to)) == -1, to);
 }
-
 
 /***************************************************
  * Delete a file.
@@ -1034,8 +996,7 @@ void rename(in string from, in string to)
 
 void remove(in string name)
 {
-    if (std.c.stdio.remove(toStringz(name)) == -1)
-	throw new FileException(name.idup, getErrno());
+    cenforce(std.c.stdio.remove(toStringz(name)) != -1, name);
 }
 
 
@@ -1045,11 +1006,8 @@ void remove(in string name)
 
 ulong getSize(in string name)
 {
-    struct_stat statbuf;
-    if (std.c.linux.linux.stat(toStringz(name), &statbuf))
-    {
-        throw new FileException(name, getErrno());
-    }
+    struct_stat statbuf = void;
+    cenforce(std.c.linux.linux.stat(toStringz(name), &statbuf) == 0, name);
     return statbuf.st_size;
 }
 
@@ -1070,70 +1028,146 @@ unittest
 
 uint getAttributes(in string name)
 {
-    struct_stat statbuf;
-
-    auto namez = toStringz(name);
-    if (std.c.linux.linux.stat(namez, &statbuf))
-    {
-	throw new FileException(name.idup, getErrno());
-    }
-
+    struct_stat statbuf = void;
+    cenforce(std.c.linux.linux.stat(toStringz(name), &statbuf) == 0, name);
     return statbuf.st_mode;
 }
 
 /*************************
- * Get creation/access/modified times of file name[].
- * Throws: FileException on error.
+ * Get creation/access/modified times of file $(D name).
+ * Throws: $(D FileException) on error.
  */
 
 void getTimes(in string name, out d_time ftc, out d_time fta, out d_time ftm)
 {
-    struct_stat statbuf;
-    char *namez;
-
-    namez = toStringz(name);
-    if (std.c.linux.linux.stat(namez, &statbuf))
-    {
-	throw new FileException(name.idup, getErrno());
-    }
-
-    ftc = cast(d_time)statbuf.st_ctime * std.date.TicksPerSecond;
-    fta = cast(d_time)statbuf.st_atime * std.date.TicksPerSecond;
-    ftm = cast(d_time)statbuf.st_mtime * std.date.TicksPerSecond;
+    struct_stat statbuf = void;
+    cenforce(std.c.linux.linux.stat(toStringz(name), &statbuf) == 0, name);
+    ftc = cast(d_time) statbuf.st_ctime * std.date.TicksPerSecond;
+    fta = cast(d_time) statbuf.st_atime * std.date.TicksPerSecond;
+    ftm = cast(d_time) statbuf.st_mtime * std.date.TicksPerSecond;
 }
 
+/*************************
+ * Set access/modified times of file $(D name).
+ * Throws: $(D FileException) on error.
+ */
+
+void setTimes(in string name, d_time fta, d_time ftm)
+{
+    version (linux)
+    {
+        // utimbuf times = {
+        //     cast(__time_t) (fta / std.date.TicksPerSecond),
+        //     cast(__time_t) (ftm / std.date.TicksPerSecond) };
+        // enforce(utime(toStringz(name), &times) == 0);
+        timeval[2] t = void;
+        t[0].tv_sec = fta / std.date.TicksPerSecond;
+        t[0].tv_usec = cast(long) ((cast(double) fta / std.date.TicksPerSecond)
+                * 1_000_000) % 1_000_000;
+        t[1].tv_sec = ftm / std.date.TicksPerSecond;
+        t[1].tv_usec = cast(long) ((cast(double) ftm / std.date.TicksPerSecond)
+                * 1_000_000) % 1_000_000;
+        enforce(utimes(toStringz(name), t.ptr) == 0);
+    }
+    else
+    {
+        if (true) enforce(false, "Not implemented");
+    }
+}
+
+unittest
+{
+    system("touch deleteme") == 0 || assert(false);
+    scope(exit) remove("deleteme");
+    d_time ftc1, fta1, ftm1;
+    getTimes("deleteme", ftc1, fta1, ftm1);
+    setTimes("deleteme", fta1 + 1000, ftm1 + 1000);
+    d_time ftc2, fta2, ftm2;
+    getTimes("deleteme", ftc2, fta2, ftm2);
+    assert(fta1 + 1000 == fta2);
+    assert(ftm1 + 1000 == ftm2);
+}
+
+/**
+   Returns the time of the last modification of file $(D name). If the
+   file does not exist, throws a $(D FileException).
+*/
+
+d_time lastModified(in string name)
+{
+    struct_stat statbuf = void;
+    cenforce(std.c.linux.linux.stat(toStringz(name), &statbuf) == 0, name);
+    return cast(d_time) statbuf.st_mtime * std.date.TicksPerSecond;
+}
+
+/**
+Returns the time of the last modification of file $(D name). If the
+file does not exist, returns $(D returnIfMissing).
+
+A frequent usage pattern occurs in build automation tools such as
+$(WEB www.gnu.org/software/make, make) or $(WEB
+en.wikipedia.org/wiki/Apache_Ant, ant). To check whether file $(D
+target) must be rebuilt from file $(D source) (i.e., $(D target) is
+older than $(D source) or does not exist), use the comparison below.
+
+----------------------------
+if (lastModified(source) >= lastModified(target, d_time.min))
+{
+    ... must (re)build ...
+}
+else
+{
+    ... target's up-to-date ...
+}
+----------------------------
+
+The code above throws a $(D FileException) if $(D source) does not
+exist (as it should). On the other hand, the $(D d_time.min) default
+makes a non-existing $(D target) seem infinitely old so the test
+correctly prompts building it.
+
+*/
+
+d_time lastModified(string name, d_time returnIfMissing)
+{
+    struct_stat statbuf = void;
+    return std.c.linux.linux.stat(toStringz(name), &statbuf) != 0
+        ? returnIfMissing
+        : cast(d_time) statbuf.st_mtime * std.date.TicksPerSecond;
+}
+
+unittest
+{
+    system("touch deleteme") == 0 || assert(false);
+    scope(exit) remove("deleteme");
+    assert(lastModified("deleteme") > 
+        lastModified("this file does not exist", d_time.min));
+    assert(lastModified("deleteme") > lastModified(__FILE__));
+}
 
 /****************************************************
  * Does file/directory exist?
  */
 
-int exists(in string name)
+bool exists(in string name)
 {
-    return access(toStringz(name),0) == 0;
-
-/+
-    struct_stat statbuf;
-    char *namez;
-
-    namez = toStringz(name);
-    if (std.c.linux.linux.stat(namez, &statbuf))
-    {
-	return 0;
-    }
-    return 1;
-+/
+    return access(toStringz(name), 0) == 0;
 }
 
 unittest
 {
     assert(exists("."));
+    assert(!exists("this file does not exist"));
+    system("touch deleteme") == 0 || assert(false);
+    scope(exit) remove("deleteme");
+    assert(exists("deleteme"));
 }
 
 /****************************************************
  * Is name a file?
  */
 
-int isfile(in string name)
+bool isfile(in string name)
 {
     return (getAttributes(name) & S_IFMT) == S_IFREG;	// regular file
 }
@@ -1142,7 +1176,7 @@ int isfile(in string name)
  * Is name a directory?
  */
 
-int isdir(string name)
+bool isdir(in string name)
 {
     return (getAttributes(name) & S_IFMT) == S_IFDIR;
 }
@@ -1153,10 +1187,7 @@ int isdir(string name)
 
 void chdir(string pathname)
 {
-    if (std.c.linux.linux.chdir(toStringz(pathname)))
-    {
-	throw new FileException(pathname, getErrno());
-    }
+    cenforce(std.c.linux.linux.chdir(toStringz(pathname)) == 0, pathname);
 }
 
 /****************************************************
@@ -1165,10 +1196,7 @@ void chdir(string pathname)
 
 void mkdir(string pathname)
 {
-    if (std.c.linux.linux.mkdir(toStringz(pathname), 0777))
-    {
-	throw new FileException(pathname, getErrno());
-    }
+    cenforce(std.c.linux.linux.mkdir(toStringz(pathname), 0777) == 0, pathname);
 }
 
 /****************************************************
@@ -1177,10 +1205,7 @@ void mkdir(string pathname)
 
 void rmdir(string pathname)
 {
-    if (std.c.linux.linux.rmdir(toStringz(pathname)))
-    {
-	throw new FileException(pathname, getErrno());
-    }
+    cenforce(std.c.linux.linux.rmdir(toStringz(pathname)) == 0, pathname);
 }
 
 /****************************************************
@@ -1189,14 +1214,10 @@ void rmdir(string pathname)
 
 string getcwd()
 {
-    auto p = std.c.linux.linux.getcwd(null, 0);
-    if (!p)
-    {
-	throw new FileException("cannot get cwd", getErrno());
-    }
+    auto p = cenforce(std.c.linux.linux.getcwd(null, 0),
+            "cannot get cwd");
     scope(exit) std.c.stdlib.free(p);
-    auto len = std.string.strlen(p);
-    return p[0 .. len].idup;
+    return p[0 .. std.string.strlen(p)].idup;
 }
 
 /***************************************************
@@ -1211,50 +1232,48 @@ struct DirEntry
     d_time _lastAccessTime = d_time_nan; // time file was last accessed
     d_time _lastWriteTime = d_time_nan;	// time file was last written to
     ubyte d_type;
-    ubyte didstat;			// done lazy evaluation of stat()
+    struct_stat statbuf;
+    bool didstat;			// done lazy evaluation of stat()
 
     void init(string path, dirent *fd)
-    {	size_t len = std.string.strlen(fd.d_name.ptr);
+    {
+        invariant len = std.string.strlen(fd.d_name.ptr);
 	name = std.path.join(path, fd.d_name[0 .. len].idup);
 	d_type = fd.d_type;
-	didstat = 0;
+	didstat = false;
     }
 
-    int isdir()
+    bool isdir()
     {
-	return d_type & DT_DIR;
+	return (d_type & DT_DIR) != 0;
     }
 
-    int isfile()
+    bool isfile()
     {
-	return d_type & DT_REG;
+	return (d_type & DT_REG) != 0;
     }
 
     ulong size()
     {
-	if (!didstat)
-	    doStat();
+	ensureStatDone;
 	return _size;
     }
 
     d_time creationTime()
     {
-	if (!didstat)
-	    doStat();
+	ensureStatDone;
 	return _creationTime;
     }
 
     d_time lastAccessTime()
     {
-	if (!didstat)
-	    doStat();
+	ensureStatDone;
 	return _lastAccessTime;
     }
 
     d_time lastWriteTime()
     {
-	if (!didstat)
-	    doStat();
+	ensureStatDone;
 	return _lastWriteTime;
     }
 
@@ -1262,23 +1281,16 @@ struct DirEntry
      * expensive and not always needed.
      */
 
-    void doStat()
+    void ensureStatDone()
     {
-	int fd;
-	struct_stat statbuf;
-
-	auto namez = toStringz(name);
-	if (std.c.linux.linux.stat(namez, &statbuf))
-	{
-	    //printf("\tstat error, errno = %d\n",getErrno());
-	    return;
-	}
+        if (didstat) return;
+	enforce(std.c.linux.linux.stat(toStringz(name), &statbuf) == 0,
+                "Failed to stat file `"~name~"'");
 	_size = statbuf.st_size;
 	_creationTime = cast(d_time)statbuf.st_ctime * std.date.TicksPerSecond;
 	_lastAccessTime = cast(d_time)statbuf.st_atime * std.date.TicksPerSecond;
 	_lastWriteTime = cast(d_time)statbuf.st_mtime * std.date.TicksPerSecond;
-
-	didstat = 1;
+	didstat = true;
     }
 }
 
@@ -1349,38 +1361,20 @@ void listdir(string pathname, bool delegate(string filename) callback)
 
 void listdir(string pathname, bool delegate(DirEntry* de) callback)
 {
-    DIR* h;
-    dirent* fdata;
+    auto h = cenforce(opendir(toStringz(pathname)), pathname);
+    scope(exit) closedir(h);
     DirEntry de;
-
-    h = opendir(toStringz(pathname));
-    if (h)
+    for (dirent* fdata; (fdata = readdir(h)) != null; )
     {
-	try
-	{
-	    while((fdata = readdir(h)) != null)
-	    {
-		// Skip "." and ".."
-		if (!std.string.strcmp(fdata.d_name.ptr, ".") ||
-		    !std.string.strcmp(fdata.d_name.ptr, ".."))
-			continue;
-
-		de.init(pathname, fdata);
-		if (!callback(&de))	    
-		    break;
-	    }
-	}
-	finally
-	{
-	    closedir(h);
-	}
-    }
-    else
-    {
-        throw new FileException(pathname, getErrno());
+        // Skip "." and ".."
+        if (!std.string.strcmp(fdata.d_name.ptr, ".") ||
+                !std.string.strcmp(fdata.d_name.ptr, ".."))
+            continue;
+        de.init(pathname, fdata);
+        if (!callback(&de))	    
+            break;
     }
 }
-
 
 /***************************************************
  * Copy a file. File timestamps are preserved.
@@ -1388,109 +1382,57 @@ void listdir(string pathname, bool delegate(DirEntry* de) callback)
 
 void copy(in string from, in string to)
 {
-  version (all)
-  {
-    struct_stat statbuf;
-
-    char* fromz = toStringz(from);
-    char* toz = toStringz(to);
-    //printf("file.copy(from='%s', to='%s')\n", fromz, toz);
-
-    int fd = std.c.linux.linux.open(fromz, O_RDONLY);
-    if (fd == -1)
+    version (all)
     {
-        //printf("\topen error, errno = %d\n",getErrno());
-        goto err1;
-    }
+        invariant fd = std.c.linux.linux.open(toStringz(from), O_RDONLY);
+        cenforce(fd != -1, from);
+        scope(exit) std.c.linux.linux.close(fd);
 
-    //printf("\tfile opened\n");
-    if (std.c.linux.linux.fstat(fd, &statbuf))
+        struct_stat statbuf = void;
+        cenforce(std.c.linux.linux.fstat(fd, &statbuf) == 0, from);
+
+        auto toz = toStringz(to);
+        invariant fdw = std.c.linux.linux.open(toz,
+                O_CREAT | O_WRONLY | O_TRUNC, 0660);
+        cenforce(fdw != -1, from);
+        scope(failure) std.c.stdio.remove(toz);
+        {
+            scope(failure) std.c.linux.linux.close(fdw);
+            auto BUFSIZ = 4096u * 16;
+            auto buf = std.c.stdlib.malloc(BUFSIZ);
+            if (!buf)
+            {
+                BUFSIZ = 4096;
+                buf = enforce(std.c.stdlib.malloc(BUFSIZ), "Out of memory");
+            }
+            scope(exit) std.c.stdlib.free(buf);
+            
+            for (size_t size = statbuf.st_size; size; )
+            {
+                invariant toxfer = (size > BUFSIZ) ? BUFSIZ : size;
+                cenforce(std.c.linux.linux.read(fd, buf, toxfer) == toxfer
+                        && std.c.linux.linux.write(fdw, buf, toxfer) == toxfer,
+                        from);
+                assert(size >= toxfer);
+                size -= toxfer;
+            }
+        }
+        
+        cenforce(std.c.linux.linux.close(fdw) != -1, from);
+        
+        utimbuf utim = void;
+        utim.actime = cast(__time_t) statbuf.st_atime;
+        utim.modtime = cast(__time_t) statbuf.st_mtime;
+        cenforce(utime(toz, &utim) != -1, from);
+    }
+    else
     {
-        //printf("\tfstat error, errno = %d\n",getErrno());
-        goto err2;
+        void[] buffer;
+        
+        buffer = read(from);
+        write(to, buffer);
+        delete buffer;
     }
-
-    int fdw = std.c.linux.linux.open(toz, O_CREAT | O_WRONLY | O_TRUNC, 0660);
-    if (fdw == -1)
-    {
-        //printf("\topen error, errno = %d\n",getErrno());
-        goto err2;
-    }
-
-    size_t BUFSIZ = 4096 * 16;
-    void* buf = std.c.stdlib.malloc(BUFSIZ);
-    if (!buf)
-    {	BUFSIZ = 4096;
-	buf = std.c.stdlib.malloc(BUFSIZ);
-    }
-    if (!buf)
-    {
-        //printf("\topen error, errno = %d\n",getErrno());
-        goto err4;
-    }
-
-    for (size_t size = statbuf.st_size; size; )
-    {	size_t toread = (size > BUFSIZ) ? BUFSIZ : size;
-
-	auto n = std.c.linux.linux.read(fd, buf, toread);
-	if (n != toread)
-	{
-	    //printf("\tread error, errno = %d\n",getErrno());
-	    goto err5;
-	}
-	n = std.c.linux.linux.write(fdw, buf, toread);
-	if (n != toread)
-	{
-	    //printf("\twrite error, errno = %d\n",getErrno());
-	    goto err5;
-	}
-	size -= toread;
-    }
-
-    std.c.stdlib.free(buf);
-
-    if (std.c.linux.linux.close(fdw) == -1)
-    {
-	//printf("\tclose error, errno = %d\n",getErrno());
-        goto err2;
-    }
-
-    utimbuf utim;
-    utim.actime = cast(__time_t)statbuf.st_atime;
-    utim.modtime = cast(__time_t)statbuf.st_mtime;
-    if (utime(toz, &utim) == -1)
-    {
-	//printf("\tutime error, errno = %d\n",getErrno());
-	goto err3;
-    }
-
-    if (std.c.linux.linux.close(fd) == -1)
-    {
-	//printf("\tclose error, errno = %d\n",getErrno());
-        goto err1;
-    }
-
-    return;
-
-err5:
-    std.c.stdlib.free(buf);
-err4:
-    std.c.linux.linux.close(fdw);
-err3:
-    std.c.stdio.remove(toz);
-err2:
-    std.c.linux.linux.close(fd);
-err1:
-    throw new FileException(from.idup, getErrno());
-  }
-  else
-  {
-    void[] buffer;
-
-    buffer = read(from);
-    write(to, buffer);
-    delete buffer;
-  }
 }
 
 
