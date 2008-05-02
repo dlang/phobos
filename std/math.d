@@ -1598,8 +1598,8 @@ int issubnormal(real x)
 {
     alias floatTraits!(real) F;
     static if (real.mant_dig == 53) { // double
-        return isSubnormal(cast(double)x);
-    } else static if (real.mant_dig == 113) { // quadruple        
+        return issubnormal(cast(double)x);
+    } else static if (real.mant_dig == 113) { // quadruple
         ushort e = F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT];
         long*   ps = cast(long *)&x;
         return (e == 0 &&
@@ -1610,10 +1610,9 @@ int issubnormal(real x)
 
         return (pe[F.EXPPOS_SHORT] & F.EXPMASK) == 0 && *ps > 0;
     } else { // double double
-        return isSubnormal(cast(double*)(&x)[MANTISSA_MSB]);
+        return issubnormal((cast(double*)&x)[MANTISSA_MSB]);
     }
 }
-
 unittest
 {
     real f;
