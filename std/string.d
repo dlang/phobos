@@ -31,11 +31,13 @@ module std.string;
 
 //debug=string;		// uncomment to turn on debugging printf's
 
+private import std.algorithm;
 private import std.stdio;
 private import std.c.stdio;
 private import std.c.stdlib;
 private import std.c.string;
 private import std.utf;
+private import std.encoding;
 private import std.uni;
 private import std.array;
 private import std.format;
@@ -90,23 +92,38 @@ bool iswhite(dchar c)
 }
 
 /*********************************
- * Convert string to integer.
+Convert string $(D s) to integer. $(RED Scheduled for deprecation. Use
+the $(D to!(int)(s)) or $(D parse!(int)(s)) routines in $(WEB
+std_conv, std.conv)).
  */
 
-long atoi(in string s)
+long atoi(C)(in C[] s)
 {
-    return std.c.stdlib.atoi(toStringz(s));
+    return to!(long)(s);//std.c.stdlib.atoi(toStringz(s));
 }
 
 /*************************************
- * Convert string to real.
+Convert string to real. $(RED Scheduled for deprecation. Use the $(D
+to!(int)(s)) or $(D parse!(int)(s)) routines in $(WEB std_conv,
+std.conv)).
  */
 
-real atof(in string s)
-{   char* endptr;
+real atof(C)(in C[] s)
+{
+    return parse!(real)(s);
+}
 
-    auto result = strtold(toStringz(s), &endptr);
-    return result;
+unittest
+{
+    alias TypeTuple!(char, wchar, dchar,
+            const char, const wchar, const dchar,
+            invariant char, invariant wchar, invariant dchar)
+        AllChars;
+    foreach (Char; AllChars)
+    {
+        auto s = to!(Char[])("123");
+        assert(atoi(s) == 123);
+    }
 }
 
 /**********************************
@@ -119,18 +136,26 @@ real atof(in string s)
  *	</table>
  */
 
-int cmp(in char[] s1, in char[] s2)
+int cmp(C1, C2)(in C1[] s1, in C2[] s2)
 {
-    auto len = s1.length;
-    int result;
-
-    //printf("cmp('%.*s', '%.*s')\n", s1, s2);
-    if (s2.length < len)
-	len = s2.length;
-    result = memcmp(s1.ptr, s2.ptr, len);
-    if (result == 0)
-	result = cast(int)s1.length - cast(int)s2.length;
-    return result;
+    static if (C1.sizeof == C2.sizeof)
+    {
+        invariant len = min(s1.length, s2.length);
+        invariant result = std.c.string.memcmp(s1.ptr, s2.ptr, len);
+        return result ? result : cast(int)s1.length - cast(int)s2.length;
+    }
+    else
+    {
+        size_t i1, i2;
+        for (;;)
+        {
+            if (i1 == s1.length) return s2.length - i2;
+            if (i2 == s2.length) return s1.length - i1;
+            invariant c1 = std.utf.decode(s1, i1), 
+                c2 = std.utf.decode(s2, i2);
+            if (c1 != c2) return cast(int) c1 - cast(int) c2;
+        }        
+    }
 }
 
 /*********************************
@@ -139,37 +164,19 @@ int cmp(in char[] s1, in char[] s2)
 
 int icmp(in char[] s1, in char[] s2)
 {
-    auto len = s1.length;
-    int result;
-
-    if (s2.length < len)
-	len = s2.length;
-    version (Win32)
+    size_t i1, i2;
+    for (;;)
     {
-	result = memicmp(s1.ptr, s2.ptr, len);
+        if (i1 == s1.length) return i2 - s2.length;
+        if (i2 == s2.length) return s1.length - i1;
+        auto c1 = std.utf.decode(s1, i1), 
+            c2 = std.utf.decode(s2, i2);
+        if (c1 >= 'A' && c1 <= 'Z')
+            c1 += cast(int)'a' - cast(int)'A';
+        if (c2 >= 'A' && c2 <= 'Z')
+            c2 += cast(int)'a' - cast(int)'A';
+        if (c1 != c2) return cast(int) c1 - cast(int) c2;
     }
-    version (linux)
-    {
-	for (size_t i = 0; i < len; i++)
-	{
-	    if (s1[i] != s2[i])
-	    {
-		char c1 = s1[i];
-		char c2 = s2[i];
-
-		if (c1 >= 'A' && c1 <= 'Z')
-		    c1 += cast(int)'a' - cast(int)'A';
-		if (c2 >= 'A' && c2 <= 'Z')
-		    c2 += cast(int)'a' - cast(int)'A';
-		result = cast(int)c1 - cast(int)c2;
-		if (result)
-		    break;
-	    }
-	}
-    }
-    if (result == 0)
-	result = cast(int)s1.length - cast(int)s2.length;
-    return result;
 }
 
 unittest
@@ -198,7 +205,7 @@ unittest
  * Deprecated: replaced with toStringz().
  */
 
-deprecated char* toCharz(in string s)
+deprecated const(char)* toCharz(string s)
 {
     return toStringz(s);
 }
@@ -208,7 +215,7 @@ deprecated char* toCharz(in string s)
  * s[] must not contain embedded 0's.
  */
 
-char* toStringz(const(char)[] s)
+const(char)* toStringz(const(char)[] s)
     in
     {
 	assert(memchr(s.ptr, 0, s.length) == null);
@@ -249,11 +256,25 @@ char* toStringz(const(char)[] s)
 	return copy.ptr;
     }
 
+// /// Ditto
+// const(char)* toStringz(invariant(char)[] s)
+// {
+//     /* Peek past end of s[], if it's 0, no conversion necessary.
+//      * Note that the compiler will put a 0 past the end of static
+//      * strings, and the storage allocator will put a 0 past the end
+//      * of newly allocated char[]'s.
+//      */
+//     invariant p = &s[0] + s.length;
+//     if (*p == 0)
+//         return s.ptr;
+//     return toStringz(cast(const char[]) s);
+// }
+
 unittest
 {
     debug(string) printf("string.toStringz.unittest\n");
 
-    char* p = toStringz("foo");
+    auto p = toStringz("foo");
     assert(strlen(p) == 3);
     const(char) foo[] = "abbzxyzzy";
     p = toStringz(foo[3..5]);
@@ -324,8 +345,6 @@ unittest
 
 int ifind(in char[] s, dchar c)
 {
-    char* p;
-
     if (c <= 0x7F)
     {	// Plain old ASCII
 	char c1 = cast(char) std.ctype.tolower(c);
@@ -864,6 +883,41 @@ string tolower(string s)
     return changed ? assumeUnique(r) : s;
 }
 
+/**
+   Converts $(D s) to lowercase in place.
+ */
+
+void tolowerInPlace(C)(ref C[] s)
+{
+    for (size_t i = 0; i < s.length; )
+    {
+	invariant c = s[i];
+	if ('A' <= c && c <= 'Z')
+	{
+            s[i++] = cast(C) (c + (cast(C)'a' - 'A'));
+	}
+	else if (c > 0x7F)
+	{
+            // wide character
+            size_t j = i;
+            dchar dc = decode(s, j);
+            assert(j > i);
+            if (!std.uni.isUniUpper(dc))
+            {
+                i = j;
+                continue;
+            }
+            auto toAdd = to!(C[])(std.uni.toUniLower(dc));
+            s = s[0 .. i] ~ toAdd  ~ s[j .. $];
+            i += toAdd.length;
+	}
+        else
+        {
+            ++i;
+        }
+    }
+}
+
 unittest
 {
     debug(string) printf("string.tolower.unittest\n");
@@ -875,20 +929,33 @@ unittest
     assert(cmp(s2, "fol") == 0);
     assert(s2 != s1);
 
+    char[] s3 = s1.dup;
+    tolowerInPlace(s3);
+    assert(s3 == s2, s3);
+
     s1 = "A\u0100B\u0101d";
     s2 = tolower(s1);
+    s3 = s1.dup;
     assert(cmp(s2, "a\u0101b\u0101d") == 0);
     assert(s2 !is s1);
+    tolowerInPlace(s3);
+    assert(s3 == s2, s3);
 
     s1 = "A\u0460B\u0461d";
     s2 = tolower(s1);
+    s3 = s1.dup;
     assert(cmp(s2, "a\u0461b\u0461d") == 0);
     assert(s2 !is s1);
+    tolowerInPlace(s3);
+    assert(s3 == s2, s3);
 
     s1 = "\u0130";
     s2 = tolower(s1);
+    s3 = s1.dup;
     assert(s2 == "i");
     assert(s2 !is s1);
+    tolowerInPlace(s3);
+    assert(s3 == s2, s3);
 }
 
 /************************************
@@ -940,24 +1007,66 @@ string toupper(string s)
     return changed ? assumeUnique(r) : s;
 }
 
+/**
+   Converts $(D s) to uppercase in place.
+ */
+
+void toupperInPlace(C)(ref C[] s)
+{
+    for (size_t i = 0; i < s.length; )
+    {
+	invariant c = s[i];
+	if ('a' <= c && c <= 'z')
+	{
+            s[i++] = cast(C) (c - (cast(C)'a' - 'A'));
+	}
+	else if (c > 0x7F)
+	{
+            // wide character
+            size_t j = i;
+            dchar dc = decode(s, j);
+            assert(j > i);
+            if (!std.uni.isUniLower(dc))
+            {
+                i = j;
+                continue;
+            }
+            auto toAdd = to!(C[])(std.uni.toUniUpper(dc));
+            s = s[0 .. i] ~ toAdd  ~ s[j .. $];
+            i += toAdd.length;
+	}
+        else
+        {
+            ++i;
+        }
+    }
+}
+
 unittest
 {
     debug(string) printf("string.toupper.unittest\n");
 
     string s1 = "FoL";
     string s2;
+    char[] s3;
 
     s2 = toupper(s1);
+    s3 = s1.dup; toupperInPlace(s3);
+    assert(s3 == s2, s3);
     assert(cmp(s2, "FOL") == 0);
     assert(s2 !is s1);
 
     s1 = "a\u0100B\u0101d";
     s2 = toupper(s1);
+    s3 = s1.dup; toupperInPlace(s3);
+    assert(s3 == s2);
     assert(cmp(s2, "A\u0100B\u0100D") == 0);
     assert(s2 !is s1);
 
     s1 = "a\u0460B\u0461d";
     s2 = toupper(s1);
+    s3 = s1.dup; toupperInPlace(s3);
+    assert(s3 == s2);
     assert(cmp(s2, "A\u0460B\u0460D") == 0);
     assert(s2 !is s1);
 }
@@ -1139,7 +1248,7 @@ unittest
  * string; use sep[] as the separator.
  */
 
-string join(string[] words, string sep)
+string join(in string[] words, string sep)
 {
     char[] result;
 
@@ -4334,9 +4443,9 @@ string isURL(string s)
 	if (isalnum(c))
 	    continue;
 	if (c == '-' || c == '_' || c == '?' ||
-	    c == '=' || c == '%' || c == '&' ||
-	    c == '/' || c == '+' || c == '#' ||
-	    c == '~')
+                c == '=' || c == '%' || c == '&' ||
+                c == '/' || c == '+' || c == '#' ||
+                c == '~')
 	    continue;
 	if (c == '.')
 	{
@@ -4355,14 +4464,25 @@ Lno:
     return null;
 }
 
-// Undocummented yet
+// Undocumented yet
 
-string stringize(T...)(T args)
+private S textImpl(S, T...)(T args)
 {
-    string result;
+    S result;
     foreach (arg; args)
     {
-        result ~= to!(string)(arg);
+        result ~= to!(S)(arg);
     }
     return result;
+}
+
+string text(T...)(T args) { return textImpl!(string, T)(args); }
+wstring wtext(T...)(T args) { return textImpl!(wstring, T)(args); }
+dstring dtext(T...)(T args) { return textImpl!(dstring, T)(args); }
+
+unittest
+{
+    assert(text(42, ' ', 1.5, ": xyz") == "42 1.5: xyz");
+    assert(wtext(42, ' ', 1.5, ": xyz") == "42 1.5: xyz"w);
+    assert(dtext(42, ' ', 1.5, ": xyz") == "42 1.5: xyz"d);
 }
