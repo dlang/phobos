@@ -21,14 +21,17 @@ SRC= gc.d gcx.d gcbits.d win32.d gclinux.d gcold.d testgc.d win32.mak linux.mak
 
 targets : testgc dmgc.a
 
-testgc : testgc.o $(OBJS) linux.mak
-	$(DMD) -of$@ testgc.o gc.o gcx.o gcbits.o gclinux.o -g
+testgc : testgc.o dmgc.a linux.mak
+	$(DMD) -of$@ testgc.o dmgc.a -g
 
 testgc.o : testgc.d
 	$(DMD) -c $(DFLAGS) testgc.d
 
-dmgc.a : $(OBJS) linux.mak
-	ar -r $@ $(OBJS)
+#dmgc.a : $(OBJS) linux.mak
+#	ar -r $@ $(OBJS)
+
+dmgc.a : gc.d gcx.d gcbits.d gclinux.d gcold.o
+	$(DMD) -lib -of$@ $(DFLAGS) gc.d gcx.d gcbits.d gclinux.d gcold.o
 
 gc.o : gc.d
 	$(DMD) -c $(DFLAGS) gc.d
