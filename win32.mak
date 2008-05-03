@@ -47,9 +47,6 @@ DOC=..\..\html\d\phobos
 
 targets : unittest gcstub.obj
 
-unittest : unittest.exe
-	unittest
-
 test : test.exe
 
 test.obj : test.d
@@ -58,21 +55,17 @@ test.obj : test.d
 test.exe : test.obj phobos.lib
 	$(DMD) test.obj -g -L/map
 
-unittest.exe : unittest.d phobos.lib
-	$(DMD) unittest -g
-	dmc unittest.obj -g
-
-OBJS= asserterror.obj deh.obj switch.obj complex.obj gcstats.obj \
+OBJS= asserterror.obj deh.obj switch.obj icomplex.obj gcstats.obj \
 	critical.obj object.obj monitor.obj arraycat.obj invariant.obj \
 	dmain2.obj outofmemory.obj aaA.obj adi.obj aApply.obj file.obj \
 	compiler.obj system.obj moduleinit.obj md5.obj base64.obj \
-	cast.obj syserror.obj path.obj string.obj memset.obj math.obj \
+	cast.obj syserror.obj path.obj string.obj memset.obj \
 	outbuffer.obj ctype.obj regexp.obj random.obj windows.obj stat.obj \
 	stream.obj switcherr.obj com.obj array.obj mmfile.obj \
 	qsort.obj date.obj dateparse.obj thread.obj obj.obj \
 	iunknown.obj crc32.obj conv.obj arraycast.obj utf.obj uri.obj \
 	Czlib.obj Dzlib.obj zip.obj process.obj registry.obj \
-	socket.obj socketstream.obj loader.obj stdarg.obj format.obj stdio.obj \
+	socket.obj socketstream.obj loader.obj stdarg.obj format.obj \
 	perf.obj openrj.obj uni.obj winsock.obj oldsyserror.obj \
 	errno.obj boxer.obj cstream.obj charset.obj metastrings.obj \
 	gamma.obj demangle.obj cover.obj bitarray.obj aApplyR.obj \
@@ -94,6 +87,8 @@ OBJS= asserterror.obj deh.obj switch.obj complex.obj gcstats.obj \
 	ti_dchar.obj ti_void.obj
 
 #	ti_bit.obj ti_Abit.obj
+
+SRCS= std\math.d std\stdio.d
 
 DOCS=	$(DOC)\std_path.html $(DOC)\std_math.html $(DOC)\std_outbuffer.html \
 	$(DOC)\std_stream.html $(DOC)\std_string.html $(DOC)\std_base64.html \
@@ -270,10 +265,23 @@ SRC_GC= internal\gc\gc.d \
 	internal\gc\win32.mak \
 	internal\gc\linux.mak
 
-phobos.lib : $(OBJS) minit.obj internal\gc\dmgc.lib etc\c\zlib\zlib.lib \
-	win32.mak
-	lib -c -p64 phobos.lib $(OBJS) minit.obj internal\gc\dmgc.lib \
-		etc\c\zlib\zlib.lib
+phobos.lib : $(OBJS) $(SRCS) minit.obj internal\gc\dmgc.lib \
+	etc\c\zlib\zlib.lib win32.mak
+#	lib -c -p64 phobos.lib $(OBJS) minit.obj internal\gc\dmgc.lib \
+#		etc\c\zlib\zlib.lib
+	$(DMD) -lib -ofphobos.lib $(DFLAGS) $(SRCS) $(OBJS) minit.obj \
+		internal\gc\dmgc.lib etc\c\zlib\zlib.lib
+
+unittest : $(SRCS) phobos.lib
+	$(DMD) $(DFLAGS) -unittest unittest.d $(SRCS) phobos.lib
+	unittest
+
+#unittest : unittest.exe
+#	unittest
+#
+#unittest.exe : unittest.d phobos.lib
+#	$(DMD) unittest -g
+#	dmc unittest.obj -g
 
 html : $(DOCS)
 
@@ -317,8 +325,8 @@ arraycat.obj : internal\arraycat.d
 cast.obj : internal\cast.d
 	$(DMD) -c $(DFLAGS) internal\cast.d
 
-complex.obj : internal\complex.c
-	$(CC) -c $(CFLAGS) internal\complex.c
+icomplex.obj : internal\complex.c
+	$(CC) -c $(CFLAGS) internal\complex.c -oicomplex.obj
 
 critical.obj : internal\critical.c
 	$(CC) -c $(CFLAGS) internal\critical.c

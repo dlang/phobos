@@ -295,6 +295,9 @@ unittest
     scope(exit) { std.file.remove(file); }
     writeln(f, "Hello, ",  "world number ", 42, "!");
     fclose(f) == 0 || assert(false);
+  version (Windows)
+    assert(cast(char[]) std.file.read(file) == "Hello, world number 42!\r\n");
+  else
     assert(cast(char[]) std.file.read(file) == "Hello, world number 42!\n");
     // test writeln on stdout
     auto saveStdout = stdout;
@@ -303,6 +306,9 @@ unittest
     assert(stdout);
     writeln("Hello, ",  "world number ", 42, "!");
     fclose(stdout) == 0 || assert(false);
+  version (Windows)
+    assert(cast(char[]) std.file.read(file) == "Hello, world number 42!\r\n");
+  else
     assert(cast(char[]) std.file.read(file) == "Hello, world number 42!\n");
 }
 
@@ -416,6 +422,9 @@ unittest
     scope(exit) { std.file.remove(file); }
     writefln(f, "Hello, %s world number %s!", "nice", 42);
     fclose(f) == 0 || assert(false);
+  version (Windows)
+    assert(cast(char[]) std.file.read(file) == "Hello, nice world number 42!\r\n");
+  else
     assert(cast(char[]) std.file.read(file) == "Hello, nice world number 42!\n");
     // test write on stdout
     auto saveStdout = stdout;
@@ -431,6 +440,9 @@ unittest
     }
     fclose(stdout) == 0 || assert(false);
     auto read = cast(char[]) std.file.read(file);
+  version (Windows)
+    assert(read == "Hello, nice world number 42!\r\n1\r\n1\r\n1\r\n", read);
+  else
     assert(read == "Hello, nice world number 42!\n1\n1\n1\n", read);
 }
 
