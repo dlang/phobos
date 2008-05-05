@@ -57,26 +57,26 @@ test.exe : test.obj phobos.lib
 
 OBJS= asserterror.obj deh.obj switch.obj icomplex.obj gcstats.obj \
 	critical.obj object.obj monitor.obj arraycat.obj invariant.obj \
-	dmain2.obj outofmemory.obj aaA.obj adi.obj aApply.obj file.obj \
-	compiler.obj system.obj moduleinit.obj md5.obj base64.obj \
-	cast.obj syserror.obj path.obj string.obj memset.obj \
+	dmain2.obj outofmemory.obj adi.obj aApply.obj file.obj \
+	compiler.obj system.obj moduleinit.obj \
+	cast.obj syserror.obj path.obj memset.obj \
 	outbuffer.obj ctype.obj regexp.obj random.obj windows.obj stat.obj \
 	stream.obj switcherr.obj com.obj array.obj mmfile.obj \
-	qsort.obj date.obj dateparse.obj thread.obj obj.obj \
+	qsort.obj thread.obj obj.obj \
 	iunknown.obj crc32.obj conv.obj arraycast.obj utf.obj uri.obj \
 	Czlib.obj Dzlib.obj zip.obj process.obj registry.obj \
 	socket.obj socketstream.obj loader.obj stdarg.obj format.obj \
-	perf.obj openrj.obj uni.obj winsock.obj oldsyserror.obj \
+	perf.obj openrj.obj winsock.obj oldsyserror.obj \
 	errno.obj boxer.obj cstream.obj charset.obj metastrings.obj \
 	gamma.obj demangle.obj cover.obj bitarray.obj aApplyR.obj \
 	signals.obj cpuid.obj typetuple.obj traits.obj bind.obj \
 	c_stdio.obj hiddenfunc.obj contracts.obj getopt.obj variant.obj \
 	numeric.obj bitmanip.obj functional.obj algorithm.obj typecons.obj \
-	iterator.obj complex.obj xml.obj encoding.obj arrayassign.obj \
+	iterator.obj complex.obj encoding.obj arrayassign.obj \
 	ti_Ag.obj ti_C.obj ti_int.obj ti_char.obj \
 	ti_wchar.obj ti_uint.obj ti_short.obj ti_ushort.obj \
 	ti_byte.obj ti_ubyte.obj ti_long.obj ti_ulong.obj ti_ptr.obj \
-	ti_float.obj ti_double.obj ti_real.obj ti_delegate.obj \
+	ti_float.obj ti_real.obj ti_delegate.obj \
 	ti_creal.obj ti_ireal.obj \
 	ti_cfloat.obj ti_ifloat.obj \
 	ti_cdouble.obj ti_idouble.obj \
@@ -88,7 +88,10 @@ OBJS= asserterror.obj deh.obj switch.obj icomplex.obj gcstats.obj \
 
 #	ti_bit.obj ti_Abit.obj
 
-SRCS= std\math.d std\stdio.d
+SRCS= std\math.d std\stdio.d std\dateparse.d std\date.d std\uni.d std\string.d \
+	std\base64.d std\md5.d std\xml.d \
+	internal\aaA.d \
+	std\typeinfo\ti_double.d
 
 DOCS=	$(DOC)\std_path.html $(DOC)\std_math.html $(DOC)\std_outbuffer.html \
 	$(DOC)\std_stream.html $(DOC)\std_string.html $(DOC)\std_base64.html \
@@ -282,6 +285,10 @@ unittest : $(SRCS) phobos.lib
 #unittest.exe : unittest.d phobos.lib
 #	$(DMD) unittest -g
 #	dmc unittest.obj -g
+
+cov : $(SRCS) phobos.lib
+	$(DMD) -cov -unittest -ofcov.exe unittest.d $(SRCS) phobos.lib
+	cov
 
 html : $(DOCS)
 

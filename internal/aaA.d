@@ -564,6 +564,7 @@ void* _aaRehash(AA* paa, TypeInfo keyti)
 		    if (len <= prime_list[i])
 			break;
 		}
+		//printf("rehash %d x%x\n", len, len);
 		len = prime_list[i];
 		newb.b = new aaA*[len];
 

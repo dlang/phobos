@@ -72,14 +72,14 @@ const int ERANGE = 34;	// on both Windows and linux
 double atof(in char *);	///
 int    atoi(in char *);	/// ditto
 int    atol(in char *);	/// ditto
-float  strtof(char *,char **);	/// ditto
-double strtod(char *,char **);	/// ditto
-real   strtold(char *,char **);	/// ditto
-long   strtol(char *,char **,int);	/// ditto
-uint   strtoul(char *,char **,int);	/// ditto
+float  strtof(const char *,char **);	/// ditto
+double strtod(const char *,char **);	/// ditto
+real   strtold(const char *,char **);	/// ditto
+long   strtol(const char *,char **,int);	/// ditto
+uint   strtoul(const char *,char **,int);	/// ditto
 long   atoll(in char *);	/// ditto
-long   strtoll(char *,char **,int);	/// ditto
-ulong  strtoull(char *,char **,int);	/// ditto
+long   strtoll(const char *,char **,int);	/// ditto
+ulong  strtoull(const char *,char **,int);	/// ditto
 
 char* itoa(int, char*, int);	///
 char* ultoa(uint, char*, int);	/// ditto
