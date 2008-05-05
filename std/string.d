@@ -58,7 +58,7 @@ extern (C)
 /* ************* Exceptions *************** */
 
 /// Thrown on errors in string functions.
-typedef Exception StringException;
+typedef object.Exception StringException;
 
 /* ************* Constants *************** */
 
@@ -218,7 +218,7 @@ deprecated const(char)* toCharz(string s)
 const(char)* toStringz(const(char)[] s)
     in
     {
-	assert(memchr(s.ptr, 0, s.length) == null);
+//	assert(memchr(s.ptr, 0, s.length) == null);
     }
     out (result)
     {
@@ -4443,9 +4443,9 @@ string isURL(string s)
 	if (isalnum(c))
 	    continue;
 	if (c == '-' || c == '_' || c == '?' ||
-                c == '=' || c == '%' || c == '&' ||
-                c == '/' || c == '+' || c == '#' ||
-                c == '~')
+	    c == '=' || c == '%' || c == '&' ||
+	    c == '/' || c == '+' || c == '#' ||
+	    c == '~' || c == '$')
 	    continue;
 	if (c == '.')
 	{
