@@ -63,7 +63,7 @@ private import std.windows.syserror;
 private import std.windows.charset;
 private import std.date;
 
-enum useWfuncs = true;
+bool useWfuncs = true;
 
 static this()
 {

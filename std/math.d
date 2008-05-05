@@ -1742,7 +1742,7 @@ unittest
  *
  * BUGS: DMD always returns real.nan, ignoring the payload.
  */
-real nan(char[] tagp) { return std.c.math.nanl(toStringz(tagp)); }
+real nan(const char[] tagp) { return std.c.math.nanl(toStringz(tagp)); }
 
 /**
  * Calculate the next largest floating point value after x.
