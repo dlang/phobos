@@ -306,19 +306,19 @@ unittest
         assert(ds == ds2);
     }
 
-	// Make sure the non-UTF encodings work too
-	{
+    // Make sure the non-UTF encodings work too
+    {
             // TODO: commented out for now
-		auto s = "\u20AC100";
-		// auto t = to!(Windows1252)(s);
-		// assert(t == [cast(Windows1252)0x80, '1', '0', '0']);
-		// auto u = to!(Utf8)(s);
-		// assert(s == u);
-		// auto v = to!(Latin1)(s);
-		// assert(cast(string)v == "?100");
-		// auto w = to!(Ascii)(v);
-		// assert(cast(string)w == "?100");
-	}
+        auto s = "\u20AC100";
+        // auto t = to!(Windows1252)(s);
+        // assert(t == [cast(Windows1252)0x80, '1', '0', '0']);
+        // auto u = to!(Utf8)(s);
+        // assert(s == u);
+        // auto v = to!(Latin1)(s);
+        // assert(cast(string)v == "?100");
+        // auto w = to!(Ascii)(v);
+        // assert(cast(string)w == "?100");
+    }
 }
 
 //=============================================================================
@@ -1840,7 +1840,7 @@ body
     }
 }
 
-/**
+/*
  * Convert a string from one encoding to another. (See also transcode() above).
  *
  * The input to this function MUST be validly encoded.
@@ -1866,21 +1866,21 @@ body
 // Dst to(Dst,Src)(invariant(Src)[] s)
 // in
 // {
-// 	assert(isValid(s));
+//  assert(isValid(s));
 // }
 // body
 // {
-// 	Dst r;
-// 	transcode(s,r);
-// 	return r;
+//  Dst r;
+//  transcode(s,r);
+//  return r;
 // }
 
 //=============================================================================
 
 /** The base class for exceptions thrown by this module */
-class Exception : object.Exception { this(string msg) { super(msg); } }
+class EncodingException : Exception { this(string msg) { super(msg); } }
 
-class UnrecognizedEncodingException : Exception
+class UnrecognizedEncodingException : EncodingException
 {
     private this(string msg) { super(msg); }
 }
@@ -1909,7 +1909,7 @@ abstract class EncodingScheme
     {
         auto scheme = cast(EncodingScheme)Object.factory(className);
         if (scheme is null)
-            throw new Exception("Unable to create class "~className);
+            throw new EncodingException("Unable to create class "~className);
         foreach(encodingName;scheme.names())
         {
             supported[tolower(encodingName)] = className;
@@ -1932,10 +1932,10 @@ abstract class EncodingScheme
     {
         auto p = std.string.tolower(encodingName) in supported;
         if (p is null)
-            throw new Exception("Unrecognized Encoding: "~encodingName);
+            throw new EncodingException("Unrecognized Encoding: "~encodingName);
         string className = *p;
         auto scheme = cast(EncodingScheme)Object.factory(className);
-        if (scheme is null) throw new Exception("Unable to create class "~className);
+        if (scheme is null) throw new EncodingException("Unable to create class "~className);
         return scheme;
     }
 
