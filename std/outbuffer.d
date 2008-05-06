@@ -242,7 +242,7 @@ class OutBuffer
     {
 	char[128] buffer;
 	char* p;
-	char* f;
+	const(char)* f;
 	uint psize;
 	int count;
 
