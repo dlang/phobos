@@ -141,7 +141,7 @@ int cmp(C1, C2)(in C1[] s1, in C2[] s2)
     static if (C1.sizeof == C2.sizeof)
     {
         invariant len = min(s1.length, s2.length);
-        invariant result = std.c.string.memcmp(s1.ptr, s2.ptr, len);
+        invariant result = std.c.string.memcmp(s1.ptr, s2.ptr, len * C1.sizeof);
         return result ? result : cast(int)s1.length - cast(int)s2.length;
     }
     else
