@@ -105,10 +105,12 @@ static ~this()
 
     foreach (Cover c; gdata)
     {
-	//printf("filename = '%.*s'\n", c.filename);
+	printf("filename = '%.*s'\n", c.filename);
 
 	// Generate source file name
 	string srcfilename = std.path.join(srcpath, c.filename);
+printf("srcpath = '%.*s'\n", srcpath);
+srcfilename = c.filename;
 
 	string buf = cast(string)std.file.read(srcfilename);
 	string[] lines = std.string.splitlines(buf);
