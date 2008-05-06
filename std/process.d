@@ -269,8 +269,8 @@ version(linux)
 }
 else version(Windows)
 {
-    char** argv_ = cast(char**)alloca((char*).sizeof * (1 + argv.length));
-    char** envp_ = cast(char**)alloca((char*).sizeof * (1 + envp.length));
+    auto argv_ = cast(const(char)**)alloca((char*).sizeof * (1 + argv.length));
+    auto envp_ = cast(const(char)**)alloca((char*).sizeof * (1 + envp.length));
 
     toAStringz(argv, argv_);
     toAStringz(envp, envp_);
