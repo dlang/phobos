@@ -306,18 +306,19 @@ unittest
         assert(ds == ds2);
     }
 
-    // Make sure the non-UTF encodings work too
-    {
-        auto s = "\u20AC100";
-        auto t = to!(Windows1252)(s);
-        assert(t == [cast(Windows1252)0x80, '1', '0', '0']);
-        auto u = to!(Utf8)(s);
-        assert(s == u);
-        auto v = to!(Latin1)(s);
-        assert(cast(string)v == "?100");
-        auto w = to!(Ascii)(v);
-        assert(cast(string)w == "?100");
-    }
+	// Make sure the non-UTF encodings work too
+	{
+            // TODO: commented out for now
+		auto s = "\u20AC100";
+		// auto t = to!(Windows1252)(s);
+		// assert(t == [cast(Windows1252)0x80, '1', '0', '0']);
+		// auto u = to!(Utf8)(s);
+		// assert(s == u);
+		// auto v = to!(Latin1)(s);
+		// assert(cast(string)v == "?100");
+		// auto w = to!(Ascii)(v);
+		// assert(cast(string)w == "?100");
+	}
 }
 
 //=============================================================================
@@ -1861,17 +1862,18 @@ body
  * auto ls = to!(Latin1)(ws);            // transcode from UTF-16 to ISO-8859-1
  * -----------------------------------------------------------------------------
  */
-invariant(Dst)[] to(Dst,Src)(invariant(Src)[] s)
-in
-{
-    assert(isValid(s));
-}
-body
-{
-    invariant(Dst)[] r;
-    transcode(s,r);
-    return r;
-}
+// TODO: Commented out for no - to be moved to std.conv
+// Dst to(Dst,Src)(invariant(Src)[] s)
+// in
+// {
+// 	assert(isValid(s));
+// }
+// body
+// {
+// 	Dst r;
+// 	transcode(s,r);
+// 	return r;
+// }
 
 //=============================================================================
 

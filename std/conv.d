@@ -1352,7 +1352,7 @@ float toFloat(Char)(Char[] s)
 F parseFloating(S : S[], F)(ref S[] s)
 {
     //writefln("toFloat('%s')", s);
-    auto sz = toStringz(s);
+    auto sz = toStringz(to!(const char[])(s));
     if (std.ctype.isspace(*sz))
 	goto Lerr;
 
@@ -1381,7 +1381,7 @@ F parseFloating(S : S[], F)(ref S[] s)
     if (getErrno() == ERANGE)
 	goto Lerr;
     assert(endptr);
-    if (endptr == s.ptr)
+    if (endptr == sz)
     {
         // no progress
 	goto Lerr;

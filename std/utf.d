@@ -142,7 +142,8 @@ uint stride(in char[] s, size_t i)
  */
 
 uint stride(in wchar[] s, size_t i)
-{   uint u = s[i];
+{
+    invariant uint u = s[i];
     return 1 + (u >= 0xD800 && u <= 0xDBFF);
 }
 
@@ -167,18 +168,14 @@ size_t toUCSindex(in char[] s, size_t i)
 {
     size_t n;
     size_t j;
-    size_t stride;
 
-    for (j = 0; j < i; j += stride)
+    for (j = 0; j < i; )
     {
-	stride = UTF8stride[s[j]];
-	if (stride == 0xFF)
-	    goto Lerr;
+	j += stride(s, j);
 	n++;
     }
     if (j > i)
     {
-      Lerr:
 	throw new UtfException("1invalid UTF-8 sequence", j);
     }
     return n;
@@ -192,14 +189,12 @@ size_t toUCSindex(in wchar[] s, size_t i)
     size_t j;
 
     for (j = 0; j < i; )
-    {	uint u = s[j];
-
-	j += 1 + (u >= 0xD800 && u <= 0xDBFF);
+    {
+	j += stride(s, j);
 	n++;
     }
     if (j > i)
     {
-      Lerr:
 	throw new UtfException("2invalid UTF-16 sequence", j);
     }
     return n;
@@ -589,45 +584,45 @@ void encode(inout dchar[] s, dchar c)
 	s ~= c;
     }
 
+/**
+Returns the code length of $(D c) in the encoding using $(D C) as a
+code point. The code is returned in character count, not in bytes.
+ */
+
+ubyte codeLength(C)(dchar c)
+{
+    static if (C.sizeof == 1)
+    {
+        return
+            c <= 0x7F ? 1
+            : c <= 0x7FF ? 2
+            : c <= 0xFFFF ? 3
+            : c <= 0x10FFFF ? 4
+            : (assert(false), 6);
+    }
+    else static if (C.sizeof == 2)
+    {
+	return c <= 0xFFFF ? 1 : 2;
+    }
+    else
+    {
+        static assert(C.sizeof == 4);
+        return 1;
+    }
+}
+    
 /* =================== Validation ======================= */
 
 /***********************************
- * Checks to see if string is well formed or not. Throws a UtfException if it is
- * not. Use to check all untrusted input for correctness.
+Checks to see if string is well formed or not. $(D S) can be an array
+ of $(D char), $(D wchar), or $(D dchar). Throws a $(D UtfException)
+ if it is not. Use to check all untrusted input for correctness.
  */
 
-void validate(in string s)
+void validate(S)(in S s)
 {
-    size_t len = s.length;
-    size_t i;
-
-    for (i = 0; i < len; )
-    {
-	decode(s, i);
-    }
-}
-
-/** ditto */
-
-void validate(in wstring s)
-{
-    size_t len = s.length;
-    size_t i;
-
-    for (i = 0; i < len; )
-    {
-	decode(s, i);
-    }
-}
-
-/** ditto */
-
-void validate(in dstring s)
-{
-    size_t len = s.length;
-    size_t i;
-
-    for (i = 0; i < len; )
+    invariant len = s.length;
+    for (size_t i = 0; i < len; )
     {
 	decode(s, i);
     }

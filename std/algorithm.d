@@ -117,13 +117,13 @@ auto squares = map!("a * a")(cast(int[]) null, arr);
 assert(is(typeof(squares) == int[]));
 ----
 */
-Ranges[0] map(string fun, Ranges...)(Ranges rs)
+typeof(unaryFun!(fun)(*begin(Ranges[0])))[] map(string fun, Ranges...)(Ranges rs)
 {
     return .map!(unaryFun!(fun), Ranges)(rs);
 }
 
 /// Ditto
-Ranges[0] map(alias fun, Ranges...)(Ranges rs)
+typeof(fun(*begin(Ranges[0])))[] map(alias fun, Ranges...)(Ranges rs)
 {
     typeof(return) result;
     foreach (r, R; Ranges)
@@ -289,7 +289,7 @@ template reduce(F...)
         // Prime the result
         static if (F.length > 1)
         {
-            foreach (j, f; F) // for all functions
+            foreach (j, unused; args[0 .. F.length]) // for all functions
             {
                 // @@@BUG@@@
                 auto p = mixin("&result.field!("~ToString!(j)~")");
@@ -1064,42 +1064,42 @@ bool canFind(alias pred, Range, E)(Range haystack, E needle)
 /// Ditto
 bool canFind(string pred = q{a == b}, Range, E)(Range haystack, E needle)
 {
-    return find!(pred)(haystack, needle) != end(haystack);
+    return find!(binaryFun!(pred), Range, E)(haystack, needle) != end(haystack);
 }
 
 /// Ditto
-bool canFind(alias pred, Range, E)(Range haystack)
+bool canFind(alias pred, Range)(Range haystack)
 {
     return find!(pred)(haystack) != end(haystack);
 }
 
 /// Ditto
-bool canFind(string pred, Range, E)(Range haystack)
+bool canFind(string pred, Range)(Range haystack)
 {
-    return find!(pred)(haystack) != end(haystack);
+    return find!(unaryFun!(pred))(haystack) != end(haystack);
 }
 
 /// Ditto
-bool canFindAmong(alias pred, Range1, Range2)(Range seq, Range2 choices)
-{
-    return findAmong!(pred)(seq, choices) != end(seq);
-}
-
-/// Ditto
-bool canFindAmong(string pred, Range1, Range2)(Range seq, Range2 choices)
+bool canFindAmong(alias pred, Range1, Range2)(Range1 seq, Range2 choices)
 {
     return findAmong!(pred)(seq, choices) != end(seq);
 }
 
 /// Ditto
-bool canFindAmongSorted(alias pred, Range1, Range2)(Range seq, Range2 choices)
+bool canFindAmong(string pred, Range1, Range2)(Range1 seq, Range2 choices)
+{
+    return findAmong!(binaryFun!(pred))(seq, choices) != end(seq);
+}
+
+/// Ditto
+bool canFindAmongSorted(alias pred, Range1, Range2)(Range1 seq, Range2 choices)
 {
     return canFindAmongSorted!(pred)(seq, choices) != end(seq);
 }
 
 /// Ditto
 bool canFindAmongSorted(string pred, Range1, Range2)(
-    Range seq, Range2 choices)
+    Range1 seq, Range2 choices)
 {
     return canFindAmongSorted!(pred)(seq, choices) != end(seq);
 }
@@ -2536,7 +2536,7 @@ void sort(string less = q{a < b}, SwapStrategy ss = SwapStrategy.unstable,
     return .sort!(binaryFun!(less), ss, iterSwap, Range)(r);
 }
 
-import std.string;
+version(unittest) import std.string;
 
 unittest
 {
@@ -2582,6 +2582,7 @@ unittest
     assert(isSorted!("toupper(a) < toupper(b)")(b));
 }
 
+// @@@BUG1904
 /*private*/
 Iter getPivot(alias less, Iter)(Iter b, Iter e)
 {
@@ -2589,6 +2590,7 @@ Iter getPivot(alias less, Iter)(Iter b, Iter e)
     return r;
 }
 
+// @@@BUG1904
 /*private*/
 void optimisticInsertionSort(alias less, alias iterSwap, Range)(Range r)
 {
@@ -2617,6 +2619,7 @@ void optimisticInsertionSort(alias less, alias iterSwap, Range)(Range r)
     }
 }
 
+// @@@BUG1904
 /*private*/
 void sortImpl(alias less, SwapStrategy ss, alias iterSwap, Range)(Range r)
 {
@@ -2900,7 +2903,8 @@ bool isSorted(string less = "a < b", Range)(Range r)
 // }
 
 // topNIndexImpl
-private void topNIndexImpl(
+// @@@BUG1904
+/*private*/ void topNIndexImpl(
     alias less,
     bool sortAfter,
     SwapStrategy ss,
@@ -3451,7 +3455,8 @@ unittest
     assert(a == [ 16, 14, 10, 8, 7, 9, 3, 2, 4, 1 ]);
 }
 
-private void heapify(alias less, alias iterSwap, Range, It)(Range r, It i)
+/*private*/
+void heapify(alias less, alias iterSwap, Range, It)(Range r, It i)
 {
     auto b = begin(r);
     for (;;)

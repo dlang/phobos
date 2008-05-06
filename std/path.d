@@ -28,6 +28,7 @@ module std.path;
 
 private import std.string;
 private import std.file;
+private import std.contracts;
 
 version(linux)
 {
@@ -118,9 +119,7 @@ version (linux) alias std.string.cmp fcmp;
 
 string getExt(string fullname)
 {
-    uint i;
-
-    i = fullname.length;
+    auto i = fullname.length;
     while (i > 0)
     {
 	if (fullname[i - 1] == '.')
@@ -143,14 +142,13 @@ string getExt(string fullname)
 unittest
 {
     debug(path) printf("path.getExt.unittest\n");
-    int i;
     string result;
 
     version (Win32)
 	result = getExt("d:\\path\\foo.bat");
     version (linux)
 	result = getExt("/path/foo.bat");
-    i = cmp(result, "bat");
+    auto i = cmp(result, "bat");
     assert(i == 0);
 
     version (Win32)
@@ -212,9 +210,7 @@ unittest
 
 string getName(string fullname)
 {
-    uint i;
-
-    i = fullname.length;
+    auto i = fullname.length;
     while (i > 0)
     {
 	if (fullname[i - 1] == '.')
@@ -237,11 +233,10 @@ string getName(string fullname)
 unittest
 {
     debug(path) printf("path.getName.unittest\n");
-    int i;
     string result;
 
     result = getName("foo.bar");
-    i = cmp(result, "foo");
+    auto i = cmp(result, "foo");
     assert(i == 0);
 
     result = getName("d:\\path.two\\bar");
@@ -291,8 +286,8 @@ string basename(string fullname, string extension = null)
     }
     body
     {
-	uint i = void;
-	for (i = fullname.length; i > 0; i--)
+	auto i = fullname.length;
+	for (; i > 0; i--)
 	{
 	    version(Win32)
 	    {
@@ -316,7 +311,6 @@ alias basename getBaseName;
 unittest
 {
     debug(path) printf("path.basename.unittest\n");
-    int i;
     string result;
 
     version (Windows)
@@ -343,13 +337,13 @@ unittest
 /**************************
  * Extracts the directory part of a path.
  *
- * This function will search fullname from the end until the
- * first path separator or first character of fullname is
- * reached. Under Windows, the drive letter separator (<i>colon</i>)
+ * This function will search $(D fullname) from the end until the
+ * first path separator or first character of $(D fullname) is
+ * reached. Under Windows, the drive letter separator ($(I colon))
  * also terminates the search.
  *
  * Returns: If a path separator was found, all the characters to its
- * left are returned. Otherwise, fullname is returned.
+ * left are returned. Otherwise, $(D ".") is returned.
  *
  * Under Windows, the found path separator will be included in the
  * returned string if it is preceeded by a colon.
@@ -372,35 +366,47 @@ unittest
  */
 
 string dirname(string fullname)
-    out (result)
+{
+    auto i = fullname.length;
+    for (; i > 0; i--)
     {
-	assert(result.length <= fullname.length);
+        version(Win32)
+        {
+            if (fullname[i - 1] == ':')
+                break;
+            if (fullname[i - 1] == sep[0])
+            {
+                i--;
+                break;
+            }
+        }
+        version(linux)
+        {
+            if (fullname[i - 1] == sep[0])
+            {   i--;
+                break;
+            }
+        }
     }
-    body
-    {
-	uint i;
+    return i == 0 ? "." : fullname[0 .. i];
+}
 
-	for (i = fullname.length; i > 0; i--)
-	{
-	    version(Win32)
-	    {
-		if (fullname[i - 1] == ':')
-		    break;
-		if (fullname[i - 1] == '\\' || fullname[i - 1] == '/')
-		{   i--;
-		    break;
-		}
-	    }
-	    version(linux)
-	    {
-		if (fullname[i - 1] == '/')
-		{   i--;
-		    break;
-		}
-	    }
-	}
-	return fullname[0 .. i];
+unittest
+{
+    assert(dirname("") == ".");
+    assert(dirname("fileonly") == ".");
+    version (linux)
+    {
+        assert(dirname("/path/to/file") == "/path/to");
     }
+    else
+    {
+        version (Win32)
+        {
+            assert(dirname(r"\path\to\file") == r"\path\to");
+        }
+    }
+}
 
 /** Alias for $(D_PARAM dirname), kept for backward
  * compatibility. New code should use $(D_PARAM dirname). */
@@ -440,9 +446,7 @@ string getDrive(string fullname)
     {
 	version(Win32)
 	{
-	    int i;
-
-	    for (i = 0; i < fullname.length; i++)
+	    for (uint i = 0; i < fullname.length; i++)
 	    {
 		if (fullname[i] == ':')
 		    return fullname[0 .. i + 1];
@@ -562,10 +566,9 @@ string addExt(string filename, string ext)
  * -----
  */
 
-int isabs(string path)
+bool isabs(string path)
 {
-    string d = getDrive(path);
-
+    auto d = getDrive(path);
     version (Windows)
     {
 	return d.length && d.length < path.length && path[d.length] == sep[0];
@@ -580,33 +583,27 @@ unittest
 
     version (Windows)
     {
-	assert(isabs(r"relative\path") == 0);
-	assert(isabs(r"\relative\path") == 0);
-	assert(isabs(r"d:\absolute") == 1);
+	assert(!isabs(r"relative\path"));
+	assert(!isabs(r"\relative\path"));
+	assert(isabs(r"d:\absolute"));
     }
     version (linux)
     {
-	assert(isabs("/home/user") == 1);
-	assert(isabs("foo") == 0);
+	assert(isabs("/home/user"));
+	assert(!isabs("foo"));
     }
 }
 
 /**
- * Converts a relative path into an absolute path. Currently only
- * implemented on Linux.
+ * Converts a relative path into an absolute path.
  */
 string rel2abs(string path)
 {
-    version(windows)
-    {
-        static assert(false, "rel2abs not yet implemented on Windows");
-    }
-    if (!path.length) return null;
-    if (startsWith(path, sep) || altsep.length && startsWith(path, altsep))
+    if (!path.length || isabs(path))
     {
         return path;
     }
-    auto myDir = getcwd();
+    auto myDir = getcwd;
     if (path.startsWith(curdir))
     {
         auto p = path[curdir.length .. $];
@@ -617,9 +614,9 @@ string rel2abs(string path)
         else if (!p.length)
             path = null;
     }
-    return myDir.endsWith(sep)
-        ? myDir ~ path
-        : path.length ? myDir ~ sep ~ path : myDir;
+    return myDir.endsWith(sep) || path.length
+        ? join(myDir, path)
+        : myDir;
 }
 
 unittest
@@ -638,10 +635,10 @@ unittest
 }
 
 /*************************************
- * Joins two path components.
+ * Joins two or more path components.
  *
  * If p1 doesn't have a trailing path separator, one will be appended
- * to it before concatting p2.
+ * to it before concatenating p2.
  *
  * Returns: p1 ~ p2. However, if p2 is an absolute path, only p2
  * will be returned.
@@ -652,8 +649,8 @@ unittest
  * -----
  * version(Win32)
  * {
- *     join(r"c:\foo", "bar") => "c:\foo\bar"
- *     join("foo", r"d:\bar") => "d:\bar"
+ *     join(r"c:\foo", "bar") => r"c:\foo\bar"
+ *     join("foo", r"d:\bar") => r"d:\bar"
  * }
  * version(linux)
  * {
@@ -663,64 +660,76 @@ unittest
  * -----
  */
 
-string join(string p1, string p2)
+string join(string p1, string p2, string[] more...)
 {
-    if (!p2.length)
-	return p1;
-    if (!p1.length)
-	return p2;
-
-    string p;
-    string d1;
-
-    version(Win32)
+    if (!more.length)
     {
-	if (getDrive(p2))
-	{
-	    p = p2;
-	}
-	else
-	{
-	    d1 = getDrive(p1);
-	    if (p1.length == d1.length)
-	    {
-		p = p1 ~ p2;
-	    }
-	    else if (p2[0] == '\\')
-	    {
-		if (d1.length == 0)
-		    p = p2;
-		else if (p1[p1.length - 1] == '\\')
-		    p = p1 ~ p2[1 .. p2.length];
-		else
-		    p = p1 ~ p2;
-	    }
-	    else if (p1[p1.length - 1] == '\\')
-	    {
-		p = p1 ~ p2;
-	    }
-	    else
-	    {
-		p = cast(string)(p1 ~ sep ~ p2);
-	    }
-	}
+        if (isabs(p2)) return p2;
+        if (p1.endsWith(sep) || altsep.length && p1.endsWith(altsep))
+        {
+            return p1 ~ p2;
+        }
+        return p1 ~ sep ~ p2;
     }
-    version(linux)
-    {
-	if (p2[0] == sep[0])
-	{
-	    p = p2;
-	}
-	else if (p1[p1.length - 1] == sep[0])
-	{
-	    p = p1 ~ p2;
-	}
-	else
-	{
-	    p = cast(string) (p1 ~ sep ~ p2);
-	}
-    }
-    return p;
+    // more components present
+    return join(join(p1, p2), more[0], more[1 .. $]);
+    
+    // if (!p2.length)
+    //     return p1;
+    // if (!p1.length)
+    //     return p2;
+
+    // string p;
+    // string d1;
+
+    // version(Win32)
+    // {
+    //     if (getDrive(p2))
+    //     {
+    //         p = p2;
+    //     }
+    //     else
+    //     {
+    //         d1 = getDrive(p1);
+    //         if (p1.length == d1.length)
+    //         {
+    //     	p = p1 ~ p2;
+    //         }
+    //         else if (p2[0] == '\\')
+    //         {
+    //     	if (d1.length == 0)
+    //     	    p = p2;
+    //     	else if (p1[p1.length - 1] == '\\')
+    //     	    p = p1 ~ p2[1 .. p2.length];
+    //     	else
+    //     	    p = p1 ~ p2;
+    //         }
+    //         else if (p1[p1.length - 1] == '\\')
+    //         {
+    //     	p = p1 ~ p2;
+    //         }
+    //         else
+    //         {
+    //     	p = cast(string)(p1 ~ sep ~ p2);
+    //         }
+    //     }
+    // }
+    // version(linux)
+    // {
+    //     if (p2[0] == sep[0])
+    //     {
+    //         p = p2;
+    //     }
+    //     else if (p1[p1.length - 1] == sep[0])
+    //     {
+    //         p = p1 ~ p2;
+    //     }
+    //     else
+    //     {
+    //         p = cast(string) (p1 ~ sep ~ p2);
+    //     }
+    // }
+    // return p;
 }
 
 unittest
@@ -829,7 +838,7 @@ unittest
  * -----
  */
 
-int fncharmatch(dchar c1, dchar c2)
+bool fncharmatch(dchar c1, dchar c2)
 {
     version (Win32)
     {
@@ -896,14 +905,12 @@ int fncharmatch(dchar c1, dchar c2)
  * -----
  */
 
-int fnmatch(string filename, string pattern)
+bool fnmatch(string filename, string pattern)
     in
     {
 	// Verify that pattern[] is valid
-	int i;
-	int inbracket = false;
-
-	for (i = 0; i < pattern.length; i++)
+	bool inbracket = false;
+	foreach (i;  0 .. pattern.length)
 	{
 	    switch (pattern[i])
 	    {
@@ -924,39 +931,35 @@ int fnmatch(string filename, string pattern)
     }
     body
     {
-	int pi;
-	int ni;
-	char pc;
 	char nc;
-	int j;
-	int not;
+        int not;
 	int anymatch;
-
-	ni = 0;
-	for (pi = 0; pi < pattern.length; pi++)
+	int ni;       // ni == name index
+	foreach (pi; 0 .. pattern.length) // pi == pattern index
 	{
-	    pc = pattern[pi];
+	    char pc = pattern[pi]; // pc == pattern character
 	    switch (pc)
 	    {
 		case '*':
 		    if (pi + 1 == pattern.length)
-			goto match;
-		    for (j = ni; j < filename.length; j++)
+			return true;
+		    foreach (j; ni .. filename.length)
 		    {
-			if (fnmatch(filename[j .. filename.length], pattern[pi + 1 .. pattern.length]))
-			    goto match;
+			if (fnmatch(filename[j .. filename.length],
+                                        pattern[pi + 1 .. pattern.length]))
+			    return true;
 		    }
-		    goto nomatch;
+		    return false;
 
 		case '?':
 		    if (ni == filename.length)
-			goto nomatch;
+                        return false;
 		    ni++;
 		    break;
 
 		case '[':
 		    if (ni == filename.length)
-			goto nomatch;
+			return false;
 		    nc = filename[ni];
 		    ni++;
 		    not = 0;
@@ -976,27 +979,20 @@ int fnmatch(string filename, string pattern)
 			pi++;
 		    }
 		    if (!(anymatch ^ not))
-			goto nomatch;
+			return false;
 		    break;
 
 		default:
 		    if (ni == filename.length)
-			goto nomatch;
+			return false;
 		    nc = filename[ni];
 		    if (!fncharmatch(pc, nc))
-			goto nomatch;
+			return false;
 		    ni++;
 		    break;
 	    }
 	}
-	if (ni < filename.length)
-	    goto nomatch;
-
-    match:
-	return true;
-
-    nomatch:
-	return false;
+	return ni >= filename.length;
     }
 
 unittest

@@ -66,23 +66,22 @@ struct Date
 
 enum
 {
-	HoursPerDay    = 24,
-	MinutesPerHour = 60,
-	msPerMinute    = 60 * 1000,
-	msPerHour      = 60 * msPerMinute,
-	msPerDay       = 86400000,
-	TicksPerMs     = 1,
-	TicksPerSecond = 1000,			/// Will be at least 1000
-	TicksPerMinute = TicksPerSecond * 60,
-	TicksPerHour   = TicksPerMinute * 60,
-	TicksPerDay    = TicksPerHour   * 24,
+    HoursPerDay    = 24,
+    MinutesPerHour = 60,
+    msPerMinute    = 60 * 1000,
+    msPerHour      = 60 * msPerMinute,
+    msPerDay       = 86_400_000,
+    TicksPerMs     = 1,
+    TicksPerSecond = 1000,			/// Will be at least 1000
+    TicksPerMinute = TicksPerSecond * 60,
+    TicksPerHour   = TicksPerMinute * 60,
+    TicksPerDay    = TicksPerHour   * 24,
 }
 
 d_time LocalTZA = 0;
 
-
-const char[] daystr = "SunMonTueWedThuFriSat";
-const char[] monstr = "JanFebMarAprMayJunJulAugSepOctNovDec";
+invariant char[] daystr = "SunMonTueWedThuFriSat";
+invariant char[] monstr = "JanFebMarAprMayJunJulAugSepOctNovDec";
 
 const int[12] mdays = [ 0,31,59,90,120,151,181,212,243,273,304,334 ];
 

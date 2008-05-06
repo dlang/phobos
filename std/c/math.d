@@ -248,9 +248,9 @@ double copysign(double x, double y);	///
 float  copysignf(float x, float y);	/// ditto
 real   copysignl(real x, real y);	/// ditto
 
-double nan(const char *tagp);		///
-float  nanf(const char *tagp);	/// ditto
-real   nanl(const char *tagp);	/// ditto
+double nan(in char *tagp);		///
+float  nanf(in char *tagp);	/// ditto
+real   nanl(in char *tagp);	/// ditto
 
 double nextafter(double x, double y);	///
 float  nextafterf(float x, float y);	/// ditto

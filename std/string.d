@@ -218,7 +218,9 @@ deprecated const(char)* toCharz(string s)
 const(char)* toStringz(const(char)[] s)
     in
     {
-//	assert(memchr(s.ptr, 0, s.length) == null);
+        // The assert below contradicts the unittests!
+	//assert(memchr(s.ptr, 0, s.length) == null,
+	//text(s.length, ": `", s, "'"));
     }
     out (result)
     {

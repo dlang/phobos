@@ -41,6 +41,12 @@ private import std.conv;
 private import std.algorithm;
 private import std.iterator;
 private import std.traits;
+private import std.string;
+private import std.c.stdlib;
+version(unittest)
+{
+    private import std.stdio;
+}
 
 /*
  *  Copyright (C) 2004-2006 by Digital Mars, www.digitalmars.com
@@ -75,10 +81,11 @@ private import std.traits;
  * ----
  */
 
-T enforce(T)(T value, lazy string msg = "Enforcement error ")
+T enforce(T)(T value, lazy string msg = "Enforcement error ",
+        string file = __FILE__, int line = __LINE__)
 {
-    if (value) return value;
-    throw new Exception(msg);
+    if (!value) throw new Exception(text(file, '(', line, "): ", msg));
+    return value;
 }
 
 /**
@@ -94,8 +101,8 @@ T enforce(T)(T value, lazy string msg = "Enforcement error ")
 
 T enforce(T)(T value, lazy Exception ex)
 {
-    if (value) return value;
-    throw ex();
+    if (!value) throw ex();
+    return value;
 }
 
 unittest
@@ -109,6 +116,27 @@ unittest
     catch (Exception e)
     {
     }
+}
+
+/**
+If $(D value) is nonzero, returns it. Otherwise, throws $(D new
+ErrnoException(msg)). The $(D ErrnoException) class assumes that the
+last operation has set $(D errno) to an error code.
+ *
+ * Example:
+ *
+ * ----
+ * auto f = errnoEnforce(fopen("data.txt"));
+ * auto line = readln(f);
+ * enforce(line.length); // expect a non-empty line
+ * ----
+ */
+
+T errnoEnforce(T)(T value, lazy string msg = "Enforcement error ",
+        string file = __FILE__, int line = __LINE__)
+{
+    if (!value) throw new ErrnoException(msg);
+    return value;
 }
 
 /**
@@ -126,8 +154,8 @@ template enforceEx(E)
 {
     T enforceEx(T)(T value, lazy string msg = "")
     {
-        if (value) return value;
-        throw new E(msg);
+        if (!value) throw new E(msg);
+        return value;
     }
 }
 
@@ -363,3 +391,41 @@ unittest
     a8[0] = a7;
     assert(!pointsTo(a8[0], a8[0]));
 }
+
+/*********************
+ * Thrown if errors that set $(D errno) happen.
+ */
+class ErrnoException : Exception
+{
+    uint errno;			// operating system error code
+
+    this(string msg)
+    {
+	super(msg);
+    }
+
+    this(uint errno)
+    {
+	version (linux)
+	{
+            char[80] buf = void;
+	    auto s = std.string.strerror_r(errno, buf.ptr, buf.length);
+	}
+	else
+	{
+	    auto s = std.string.strerror(errno);
+	}
+	super(std.string.toString(s).idup);
+    }
+
+    static void opCall(string msg)
+    {
+	throw new ErrnoException(msg);
+    }
+
+    static void opCall()
+    {
+	throw new ErrnoException(getErrno());
+    }
+}
+
