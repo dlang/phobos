@@ -195,6 +195,8 @@ struct tm
 
 extern (C)
 {
+    int utimes(const char *path, timeval* times);
+    
     int gettimeofday(timeval*, struct_timezone*);
     int settimeofday(in timeval*, in struct_timezone*);
     __time_t time(__time_t*);
@@ -418,7 +420,7 @@ extern (C)
 
     void* dlopen(in char* file, int mode);
     int   dlclose(void* handle);
-    void* dlsym(void* handle, char* name);
+    void* dlsym(void* handle, in char* name);
     char* dlerror();
 }
 
@@ -487,7 +489,7 @@ extern (C)
 	__time_t modtime;
     }
 
-    int utime(char* filename, utimbuf* buf);
+    int utime(const char* filename, utimbuf* buf);
 }
 
 extern (C)

@@ -242,11 +242,10 @@ class OutBuffer
     {
 	char[128] buffer;
 	char* p;
-	const(char)* f;
 	uint psize;
 	int count;
 
-	f = toStringz(format);
+	auto f = toStringz(format);
 	p = buffer.ptr;
 	psize = buffer.length;
 	for (;;)

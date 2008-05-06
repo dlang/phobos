@@ -2,30 +2,30 @@
 // Written in the D programming language.
 
 /**
- * Processing of command line options.
- *
- * The getopt module implements a $(D_PARAM getopt) function, which
- * adheres to the POSIX syntax for command line options. GNU
- * extensions are supported in the form of long options introduced by
- * a double dash ("--"). Support for bundling of command line options,
- * as was the case with the more traditional single-letter approach,
- * is provided but not enabled by default.
- *
- Author:
+Processing of command line options.
+   
+The getopt module implements a $(D getopt) function, which adheres to
+the POSIX syntax for command line options. GNU extensions are
+supported in the form of long options introduced by a double dash
+("--"). Support for bundling of command line options, as was the case
+with the more traditional single-letter approach, is provided but not
+enabled by default.
 
- $(WEB erdani.org, Andrei Alexandrescu)
-*
-* Credits:
- * 
- * This module and its documentation are inspired by Perl's
- * $(LINK2 http://perldoc.perl.org/Getopt/Long.html,Getopt::Long) module. The
- * syntax of D's $(D_PARAM getopt) is simplified because $(D_PARAM
- * getopt) infers the expected parameter types from the static types
- * of the passed-in pointers.
- *
- * Macros:
- *	WIKI = Phobos/StdGetopt
- */
+Author:
+
+$(WEB erdani.org, Andrei Alexandrescu)
+
+Credits:
+
+This module and its documentation are inspired by Perl's $(WEB
+perldoc.perl.org/Getopt/Long.html, Getopt::Long) module. The syntax of
+D's $(D getopt) is simpler than its Perl counterpart because $(D
+getopt) infers the expected parameter types from the static types of
+the passed-in pointers.
+   
+   Macros:
+   WIKI = Phobos/StdGetopt
+*/
 
 /* Author:
  *	Andrei Alexandrescu, www.erdani.org
@@ -49,9 +49,12 @@
  */
 
 module std.getopt;
-import std.string, std.conv, std.traits;
-
-import std.stdio; // for testing only
+private import std.string, std.conv, std.traits, std.contracts, std.bitmanip,
+    std.algorithm, std.ctype;
+//version (unittest)
+//{
+    import std.stdio; // for testing only
+//}
 
 /**
  Synopsis:
@@ -74,28 +77,28 @@ void main(string[] args)
 }
 ---------
 
- The $(D_PARAM getopt) function takes a reference to the command line
- (as received by $(D_PARAM main)) as its first argument, and an
+ The $(D getopt) function takes a reference to the command line
+ (as received by $(D main)) as its first argument, and an
  unbounded number of pairs of strings and pointers. Each string is an
  option meant to "fill" the value pointed-to by the pointer to its
  right (the "bound" pointer). The option string in the call to
- $(D_PARAM getopt) should not start with a dash.
+ $(D getopt) should not start with a dash.
 
  In all cases, the command-line options that were parsed and used by
- $(D_PARAM getopt) are removed from $(D_PARAM args). Whatever in the
- arguments did not look like an option is left in $(D_PARAM args) for
+ $(D getopt) are removed from $(D args). Whatever in the
+ arguments did not look like an option is left in $(D args) for
  further processing by the program. Values that were unaffected by the
  options are not touched, so a common idiom is to initialize options
- to their defaults and then invoke $(D_PARAM getopt). If a
+ to their defaults and then invoke $(D getopt). If a
  command-line argument is recognized as an option with a parameter and
  the parameter cannot be parsed properly (e.g. a number is expected
- but not present), a $(D_PARAM ConvError) exception is thrown.
+ but not present), a $(D ConvError) exception is thrown.
 
- Depending on the type of the pointer being bound, $(D_PARAM getopt)
+ Depending on the type of the pointer being bound, $(D getopt)
  recognizes the following kinds of options:
 
  $(OL $(LI $(I Boolean options). These are the simplest options; all
- they do is set a Boolean to $(D_PARAM true):
+ they do is set a Boolean to $(D true):
 
 ---------
   bool verbose, debugging;
@@ -112,7 +115,7 @@ void main(string[] args)
 ---------
 
  Invoking the program with "--timeout=5" or "--timeout 5" will set
- $(D_PARAM timeout) to 5.)
+ $(D timeout) to 5.)
  
  $(UL $(LI $(I Incremental options.) If an option name has a "+" suffix and
  is bound to a numeric type, then the option's value tracks the number
@@ -124,10 +127,10 @@ void main(string[] args)
 ---------
 
  Invoking the program with "--paranoid --paranoid --paranoid" will set
- $(D_PARAM paranoid) to 3. Note that an incremental option never
+ $(D paranoid) to 3. Note that an incremental option never
  expects a parameter, e.g. in the command line "--paranoid 42
- --paranoid", the "42" does not set $(D_PARAM paranoid) to 42;
- instead, $(D_PARAM paranoid) is set to 2 and "42" is not considered
+ --paranoid", the "42" does not set $(D paranoid) to 42;
+ instead, $(D paranoid) is set to 2 and "42" is not considered
  as part of the program options.))
  
  $(LI $(I String options.) If an option is bound to a string, a string
@@ -135,25 +138,25 @@ void main(string[] args)
  with an "=" sign:
  
 ---------
-  string outputFile;
-  getopt(args, "output", &outputFile);
+string outputFile;
+getopt(args, "output", &outputFile);
 ---------
 
  Invoking the program with "--output=myfile.txt" or "--output
- myfile.txt" will set $(D_PARAM outputFile) to "myfile.txt".) If you
- want to pass a string containing spaces, you need to use the quoting
- that is appropriate to your shell, e.g. --output='my file.txt'. 
+ myfile.txt" will set $(D outputFile) to "myfile.txt".) If you want to
+ pass a string containing spaces, you need to use the quoting that is
+ appropriate to your shell, e.g. --output='my file.txt'. 
  
  $(LI $(I Array options.) If an option is bound to an array, a new
  element is appended to the array each time the option occurs:
  
 ---------
-  string[] outputFiles;
-  getopt(args, "output", &outputFiles);
+string[] outputFiles;
+getopt(args, "output", &outputFiles);
 ---------
 
  Invoking the program with "--output=myfile.txt --output=yourfile.txt"
- or "--output myfile.txt --output yourfile.txt" will set $(D_PARAM
+ or "--output myfile.txt --output yourfile.txt" will set $(D
  outputFiles) to [ "myfile.txt", "yourfile.txt" ] .)
  
  $(LI $(I Hash options.) If an option is bound to an associative
@@ -161,22 +164,22 @@ void main(string[] args)
  option, or right within the option separated with an "=" sign:
  
 ---------
-  double[string] tuningParms;
-  getopt(args, "tune", &tuningParms);
+double[string] tuningParms;
+getopt(args, "tune", &tuningParms);
 ---------
 
- Invoking the program with e.g. "--tune=alpha=0.5 --tune beta=0.6"
- will set $(D_PARAM tuningParms) to [ "alpha" : 0.5, "beta" : 0.6 ].)
- In general, keys and values can be of any parsable types.
+Invoking the program with e.g. "--tune=alpha=0.5 --tune beta=0.6" will
+set $(D tuningParms) to [ "alpha" : 0.5, "beta" : 0.6 ].)  In general,
+keys and values can be of any parsable types.
  
- $(LI $(I Delegate options.) An option can be bound to a delegate with
- the signature $(D_PARAM void delegate(string option)) or $(D_PARAM
- void delegate(string option, string value)).
+$(LI $(I Delegate options.) An option can be bound to a delegate with
+the signature $(D void delegate(string option)) or $(D void
+delegate(string option, string value)).
 
- $(UL $(LI In the $(D_PARAM void delegate(string option)) case, the
- option string (without the leading dash(es)) is passed to the
- delegate. After that, the option string is considered handled and
- removed from the options array.)
+$(UL $(LI In the $(D void delegate(string option)) case, the option
+string (without the leading dash(es)) is passed to the delegate. After
+that, the option string is considered handled and removed from the
+options array.)
  
 ---------
 void main(string[] args)
@@ -198,11 +201,11 @@ void main(string[] args)
 }
 ---------
 
- $(LI In the $(D_PARAM void delegate(string option, string value))
- case, the option string is handled as an option with one argument,
- and parsed accordingly. The option and its value are passed to the
- delegate. After that, whatever was passed to the delegate is
- considered handled and removed from the list.)
+$(LI In the $(D void delegate(string option, string value)) case, the
+option string is handled as an option with one argument, and parsed
+accordingly. The option and its value are passed to the
+delegate. After that, whatever was passed to the delegate is
+considered handled and removed from the list.)
  
 ---------
 void main(string[] args)
@@ -241,8 +244,7 @@ getopt(args, "verbose|loquacious|garrulous", &verbose);
 $(B Case)
 
 By default options are case-insensitive. You can change that behavior
-by passing $(D_PARAM getopt) the $(D_PARAM caseSensitive) directive
-like this:
+by passing $(D getopt) the $(D caseSensitive) directive like this:
 
 ---------
 bool foo, bar;
@@ -252,7 +254,9 @@ getopt(args,
     "bar", &bar);
 ---------
 
-In the example above, "--foo", "--bar", "--FOo", "--bAr" etc. are recognized. The directive is active til the end of $(D_PARAM getopt), or until the converse directive $(D_PARAM caseInsensitive) is encountered:
+In the example above, "--foo", "--bar", "--FOo", "--bAr" etc. are recognized.
+The directive is active til the end of $(D getopt), or until the
+converse directive $(D caseInsensitive) is encountered:
 
 ---------
 bool foo, bar;
@@ -263,15 +267,15 @@ getopt(args,
     "bar", &bar);
 ---------
 
-The option "--Foo", is rejected due to $(D_PARAM
+The option "--Foo" is rejected due to $(D
 std.getopt.config.caseSensitive), but not "--Bar", "--bAr"
-etc. because the directive $(D_PARAM
+etc. because the directive $(D
 std.getopt.config.caseInsensitive) turned sensitivity off before
 option "bar" was parsed.
 
 $(B Bundling)
 
-Single-letter options can be bundled together, i.e. "-abc" is the same as "-a -b -c". By default, this confusing option is turned off. You can turn it on with the $(D_PARAM std.getopt.config.bundling) directive:
+Single-letter options can be bundled together, i.e. "-abc" is the same as "-a -b -c". By default, this confusing option is turned off. You can turn it on with the $(D std.getopt.config.bundling) directive:
 
 ---------
 bool foo, bar;
@@ -281,11 +285,11 @@ getopt(args,
     "bar|b", &bar);
 ---------
 
-In case you want to only enable bundling for some of the parameters, bundling can be turned off with $(D_PARAM std.getopt.config.noBundling).
+In case you want to only enable bundling for some of the parameters, bundling can be turned off with $(D std.getopt.config.noBundling).
 
 $(B Passing unrecognized options through)
 
-If an application needs to do its own processing of whichever arguments $(D_PARAM getopt) did not understand, it can pass the $(D_PARAM std.getopt.config.passThrough) directive to $(D_PARAM getopt):
+If an application needs to do its own processing of whichever arguments $(D getopt) did not understand, it can pass the $(D std.getopt.config.passThrough) directive to $(D getopt):
 
 ---------
 bool foo, bar;
@@ -295,22 +299,42 @@ getopt(args,
     "bar", &bar);
 ---------
 
-An unrecognized option such as "--baz" will be found untouched in $(D_PARAM args) after $(D_PARAM getopt) returns.
+An unrecognized option such as "--baz" will be found untouched in $(D args) after $(D getopt) returns.
 
 $(B Options Terminator)
 
-A lonesome double-dash terminates $(D_PARAM getopt) gathering. It is used to separate program options from other parameters (e.g. options to be passed to another program). Invoking the example above with "--foo -- --bar" parses foo but leaves "--bar" in $(D_PARAM args). The double-dash itself is removed from the argument array.
+A lonesome double-dash terminates $(D getopt) gathering. It is used to separate program options from other parameters (e.g. options to be passed to another program). Invoking the example above with "--foo -- --bar" parses foo but leaves "--bar" in $(D args). The double-dash itself is removed from the argument array.
 */
 
 void getopt(T...)(ref string[] args, T opts) {
+    enforce(args.length,
+            "Invalid arguments string passed: program name missing");
+
+    // break space-separated options
+    for (size_t i; i < args.length; )
+    {
+        auto a = args[i];
+        if (a.length && a[0] == optChar && std.algorithm.canFind!(isspace)(a))
+        {
+            // multiple options wrapped in one
+            auto more = split(a);
+            args = args[0 .. i] ~ more ~ args[i + 1 .. $];
+            i += more.length;
+        }
+        else
+        {
+            ++i;
+        }
+    }
+    
     configuration cfg;
     return getoptImpl(args, cfg, opts);
 }
 
 /**
- * Configuration options for $(D_PARAM getopt). You can pass them to
- * $(D_PARAM getopt) in any position, except in between an option
- * string and its bound pointer.
+ * Configuration options for $(D getopt). You can pass them to $(D
+ * getopt) in any position, except in between an option string and its
+ * bound pointer.
  */
 
 enum config {
@@ -326,6 +350,8 @@ enum config {
     passThrough,
     /// Signal unrecognized arguments as errors
     noPassThrough,
+    /// Stop at first argument that does not look like an option
+    stopOnFirstNonOption,
 };
 
 private void getoptImpl(T...)(ref string[] args,
@@ -334,90 +360,34 @@ private void getoptImpl(T...)(ref string[] args,
     static if (opts.length) {
         static if (is(typeof(opts[0]) : config))
         {
-            switch (opts[0])
-            {
-            case config.caseSensitive: cfg.caseSensitive = true; break;
-            case config.caseInsensitive: cfg.caseSensitive = false; break;
-            case config.bundling: cfg.bundling = true; break;
-            case config.noBundling: cfg.bundling = false; break;
-            case config.passThrough: cfg.passThrough = true; break;
-            case config.noPassThrough: cfg.passThrough = false; break;
-            default: assert(false); break;
-            }
+            // it's a configuration flag, act on it
+            setConfig(cfg, opts[0]);
             return getoptImpl(args, cfg, opts[1 .. $]);
         }
         else
         {
-            string option = to!(string)(opts[0]);
+            auto option = to!(string)(opts[0]);
             auto receiver = opts[1];
             bool incremental;
-            if (option.length && option[$ - 1] == '+')
+            // Handle options of the form --blah+
+            if (option.length && option[$ - 1] == autoIncrementChar)
             {
                 option = option[0 .. $ - 1];
                 incremental = true;
             }
-            for (size_t i = 1; i != args.length; ) {
-                auto a = args[i];
-                if (a == endOfOptions) break; // end of options
-                string val;
-                if (!optMatch(a, option, val, cfg))
-                {
-                    ++i;
-                    continue;
-                }
-                // found it
-                
-                static if (is(typeof(receiver) : bool*)) {
-                    *receiver = true;
-                    args = args[0 .. i] ~ args[i + 1 .. $];
-                    break;
-                } else {
-                    static const isDelegateWithOneParameter =
-                        is(typeof(receiver("")) : void);
-                    // non-boolean option, which might include an argument
-                    if (val || incremental || isDelegateWithOneParameter) {
-                        args = args[0 .. i] ~ args[i + 1 .. $];
-                    } else {
-                        val = args[i + 1];
-                        args = args[0 .. i] ~ args[i + 2 .. $];
-                    }
-                    static if (is(typeof(*receiver) : real)) {
-                        if (incremental) ++*receiver;
-                        else *receiver = to!(typeof(*receiver))(val);
-                    } else static if (is(typeof(receiver) : string*)) {
-                        *receiver = to!(string)(val);
-                    } else static if (is(typeof(receiver) == delegate)) {
-                        static if (is(typeof(receiver("", "")) : void)) 
-                        {
-                            // option with argument
-                            receiver(option, val);
-                        }
-                        else
-                        {
-                            static assert(is(typeof(receiver("")) : void));
-                            // boolean-style receiver
-                            receiver(option);
-                        }
-	            } else static if (isArray!(typeof(*receiver))) {
-                        *receiver ~= [ to!(typeof(*receiver[0]))(val) ];
-                    } else static if (isAssociativeArray!(typeof(*receiver))) {
-                        alias typeof(receiver.keys[0]) K;
-                        alias typeof(receiver.values[0]) V;
-                        auto j = find(val, '=');
-                        auto key = val[0 .. j], value = val[j + 1 .. $];
-                        (*receiver)[to!(K)(key)] = to!(V)(value);
-                    } else {
-                        static assert(false, "Dunno how to deal with type " ~
-                            typeof(receiver).stringof);
-                    }
-                }
-            }
+            handleOption(option, receiver, args, cfg, incremental);
             return getoptImpl(args, cfg, opts[2 .. $]);
         }
     } else {
+        // no more options to look for, potentially some arguments left
         foreach (a ; args[1 .. $]) {
-            if (!a.length || a[0] != '-') continue; // not an option
-            if (a == "--") break; // end of options
+            if (!a.length || a[0] != '-')
+            {
+                // not an option
+                if (cfg.stopOnFirstNonOption) break;
+                continue; 
+            }
+            if (a == endOfOptions) break; // end of options
             if (!cfg.passThrough)
             {
                 throw new Exception("Unrecognized option "~a);
@@ -426,16 +396,101 @@ private void getoptImpl(T...)(ref string[] args,
     }
 }
 
-const
-  optChar = '-',
-  assignChar = '=',
-  endOfOptions = "--";
+void handleOption(R)(string option, R receiver, ref string[] args,
+        ref configuration cfg, bool incremental)
+{
+    // Scan arguments looking for a match for this option
+    for (size_t i = 1; i < args.length; ) {
+        auto a = args[i];
+        if (a == endOfOptions) break; // end of options, i.e. "--"
+        if (cfg.stopOnFirstNonOption && (!a.length || a[0] != optChar))
+        {
+            // first non-option is end of options
+            break;
+        }
+        string val;
+        if (!optMatch(a, option, val, cfg))
+        {
+            ++i;
+            continue;
+        }
+        // found it; from here on, commit to eat args[i]
+        // (and potentially args[i + 1] too)
+        args = args[0 .. i] ~ args[i + 1 .. $];
+                
+        static if (is(typeof(*receiver) == bool)) {
+            *receiver = true;
+            break;
+        } else {
+            // non-boolean option, which might include an argument
+            enum isDelegateWithOneParameter = is(typeof(receiver("")) : void);
+            if (!val && !incremental && !isDelegateWithOneParameter) {
+                // eat the next argument too
+                val = args[i];
+                args = args[0 .. i] ~ args[i + 1 .. $];
+            }
+            static if (is(typeof(*receiver) : real))
+            {
+                // numeric receiver
+                if (incremental) ++*receiver;
+                else *receiver = to!(typeof(*receiver))(val);
+            }
+            else static if (is(typeof(*receiver) == string))
+            {
+                // string receiver
+                *receiver = to!(typeof(*receiver))(val);
+            }
+            else static if (is(typeof(receiver) == delegate))
+            {
+                static if (is(typeof(receiver("", "")) : void)) 
+                {
+                    // option with argument
+                    receiver(option, val);
+                }
+                else
+                {
+                    static assert(is(typeof(receiver("")) : void));
+                    // boolean-style receiver
+                    receiver(option);
+                }
+            }
+            else static if (isArray!(typeof(*receiver)))
+            {
+                // array receiver
+                *receiver ~= [ to!(typeof(*receiver[0]))(val) ];
+            }
+            else static if (isAssociativeArray!(typeof(*receiver)))
+            {
+                // hash receiver
+                alias typeof(receiver.keys[0]) K;
+                alias typeof(receiver.values[0]) V;
+                auto j = std.string.find(val, '=');
+                auto key = val[0 .. j], value = val[j + 1 .. $];
+                (*receiver)[to!(K)(key)] = to!(V)(value);
+            }
+            else
+            {
+                static assert(false, "Dunno how to deal with type " ~
+                        typeof(receiver).stringof);
+            }
+        }
+    }
+}
+
+enum
+    optChar = '-',
+    assignChar = '=',
+    autoIncrementChar = '+',
+    endOfOptions = "--";
 
 private struct configuration
 {
-    bool caseSensitive = false;
-    bool bundling = false;
-    bool passThrough = false;
+    mixin(bitfields!(
+                bool, "caseSensitive",  1,
+                bool, "bundling", 1,
+                bool, "passThrough", 1,
+                bool, "stopOnFirstNonOption", 1,
+                ubyte, "", 4));
 }
 
 private bool optMatch(string arg, string optPattern, ref string value,
@@ -445,7 +500,7 @@ private bool optMatch(string arg, string optPattern, ref string value,
     arg = arg[1 .. $];
     const isLong = arg.length > 1 && arg[0] == optChar;
     if (isLong) arg = arg[1 .. $];
-    const eqPos = find(arg, assignChar);
+    const eqPos = std.string.find(arg, assignChar);
     if (eqPos >= 0) {
         value = arg[eqPos + 1 .. $];
         arg = arg[0 .. eqPos];
@@ -458,10 +513,27 @@ private bool optMatch(string arg, string optPattern, ref string value,
     foreach (v ; variants) {
         if (arg == v || !cfg.caseSensitive && toupper(arg) == toupper(v))
             return true;
-        if (cfg.bundling && !isLong && v.length == 1 && find(arg, v) >= 0)
+        if (cfg.bundling && !isLong && v.length == 1
+                && std.string.find(arg, v) >= 0)
             return true;
     }
     return false;
+}
+
+private void setConfig(ref configuration cfg, config option)
+{
+    switch (option)
+    {
+    case config.caseSensitive: cfg.caseSensitive = true; break;
+    case config.caseInsensitive: cfg.caseSensitive = false; break;
+    case config.bundling: cfg.bundling = true; break;
+    case config.noBundling: cfg.bundling = false; break;
+    case config.passThrough: cfg.passThrough = true; break;
+    case config.noPassThrough: cfg.passThrough = false; break;
+    case config.stopOnFirstNonOption:
+        cfg.stopOnFirstNonOption = true; break;
+    default: assert(false); break;
+    }
 }
 
 unittest
@@ -542,4 +614,23 @@ unittest
         "foo", &foo,
         "bar", &bar);
     assert(args[1] == "--bAr");
+
+    // test stopOnFirstNonOption
+
+    args = (["program.name", "--foo", "nonoption", "--bar"]).dup;
+    foo = bar = false;
+    getopt(args, 
+        std.getopt.config.stopOnFirstNonOption,
+        "foo", &foo,
+        "bar", &bar);
+    assert(foo && !bar && args[1] == "nonoption" && args[2] == "--bar");
+
+    args = (["program.name", "--foo", "nonoption", "--zab"]).dup;
+    foo = bar = false;
+    getopt(args, 
+        std.getopt.config.stopOnFirstNonOption,
+        "foo", &foo,
+        "bar", &bar);
+    assert(foo && !bar && args[1] == "nonoption" && args[2] == "--zab");
 }
+

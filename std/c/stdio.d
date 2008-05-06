@@ -174,6 +174,10 @@ alias int fpos_t;	///
 
 char *	 tmpnam(char *);	///
 FILE *	 fopen(in char *,in char *);	///
+version(linux)
+{
+    FILE * fopen64(in char *,in char *);	///
+}
 FILE *	 _fsopen(in char *,in char *,int );	///
 FILE *	 freopen(in char *,in char *,FILE *);	///
 int	 fseek(FILE *,int,int);	///

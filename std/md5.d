@@ -38,34 +38,25 @@ private import std.string;
 private import std.c.stdio;
 private import std.c.string;
 
-int main(char[][] args)
+void main(string[] args)
 {
     foreach (char[] arg; args)
 	 MDFile(arg);
-    return 0;
 }
 
 /* Digests a file and prints the result. */
-void MDFile(const char[] filename)
+void MDFile(string filename)
 {
-    FILE* file;
-    MD5_CTX context;
-    int len;
-    ubyte[4 * 1024] buffer;
+    FILE* file = enforce(fopen(filename), "Could not open file `"~filename~"'");
+    scope(exit) fclose(file);
     ubyte digest[16];
 
-    if ((file = fopen(std.string.toStringz(filename), "rb")) == null)
-	writefln("%s can't be opened", filename);
-    else
-    {
-	context.start();
-	while ((len = fread(buffer, 1, buffer.sizeof, file)) != 0)
-	    context.update(buffer[0 .. len]);
-	context.finish(digest);
-	fclose(file);
-
-	writefln("MD5 (%s) = %s", filename, digestToString(digest));
-    }
+    MD5_CTX context;
+    context.start();
+    foreach (ubyte buffer; chunks(file, 4096 * 1024))
+        context.update(buffer);
+    context.finish(digest);
+    writefln("MD5 (%s) = %s", filename, digestToString(digest));
 }
 --------------------
  +/
@@ -99,15 +90,17 @@ import std.string;
 import std.contracts;
 
 /***************************************
- * Computes MD5 digest of array of data.
+ * Computes MD5 digest of several arrays of data.
  */
 
-void sum(ubyte[16] digest, const void[] data)
+void sum(ubyte[16] digest, in void[][] data...)
 {
     MD5_CTX context;
-
     context.start();
-    context.update(data);
+    foreach (datum; data)
+    {
+        context.update(datum);
+    }
     context.finish(digest);
 }
 
@@ -136,6 +129,38 @@ string digestToString(const ubyte[16] digest)
 	i += 2;
     }
     return assumeUnique(result);
+}
+
+/**
+   Gets the digest of all $(D data) items passed in.
+
+Example:
+
+----
+string a = "Mary has ", b = "a little lamb";
+int[] c = [ 1, 2, 3, 4, 5 ];
+string d = getDigestString(a, b, c);
+----   
+*/
+string getDigestString(in void[][] data...)
+{
+    MD5_CTX ctx;
+    ctx.start;
+    foreach (datum; data) {
+        ctx.update(datum);
+    }
+    ubyte[16] digest;
+    ctx.finish(digest);
+    return digestToString(digest);
+}
+
+version(unittest) import std.stdio;
+unittest
+{
+    string a = "Mary has ", b = "a little lamb";
+    int[] c = [ 1, 2, 3, 4, 5 ];
+    string d = getDigestString(a, b, c);
+    assert(d == "F36625A66B2A8D9F47270C00C8BEFD2F", d);
 }
 
 /**

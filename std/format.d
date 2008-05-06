@@ -2023,13 +2023,13 @@ private void formatGeneric(Writer, D)(ref Writer w, const(void)* arg,
         w.putchar('[');
         w.putchar(']');
     } else static if (isArray!(D)) {
-        w.putchar('[');
+        if (f.spec != 'r') w.putchar('['); // only write the brackets if not raw
 	foreach (i, e; obj)
 	{
-	    if (i > 0) w.putchar(' ');
+	    if (f.spec != 'r' && i > 0) w.putchar(' ');
 	    formatGeneric!(Writer, typeof(e))(w, &e, f);
 	}
-        w.putchar(']');
+        if (f.spec != 'r') w.putchar(']'); // only write the brackets if not raw
     } else static if (is(const(D) : const void*)) {
         f.spec = 'X';
         ulong fake = cast(ulong) obj;

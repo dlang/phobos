@@ -309,7 +309,7 @@ struct BitArray
     }
     body
     {
-        return cast(bool)bt(ptr, i);
+        return cast(bool) bt(ptr, i);
     }
 
     unittest

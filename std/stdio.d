@@ -541,7 +541,7 @@ size_t readln(FILE* fp, inout char[] buf, dchar terminator = '\n')
 	    static assert(wchar_t.sizeof == 2);
 	    buf.length = 0;
 	    int c2;
-	    for (int c; (c = FGETWC(fp)) != -1; )
+	    for (int c = void; (c = FGETWC(fp)) != -1; )
 	    {
 		if ((c & ~0x7F) == 0)
 		{   buf ~= c;
@@ -689,7 +689,7 @@ size_t readln(FILE* fp, inout char[] buf, dchar terminator = '\n')
                  {
                      buf.length = 0;
                      int c2;
-                     for (int c; (c = FGETWC(fp)) != -1; )
+                     for (int c = void; (c = FGETWC(fp)) != -1; )
                      {
                          if ((c & ~0x7F) == 0)
                          {   buf ~= c;
@@ -803,23 +803,35 @@ size_t readln(FILE* f, inout dchar[] buf, dchar terminator = '\n')
  * Convenience function that forwards to $(D_PARAM std.c.stdio.fopen)
  * with appropriately-constructed C-style strings.
  */
-FILE* fopen(string name, string mode = "r")
+FILE* fopen(in char[] name, in char[] mode = "r")
 {
-    return std.c.stdio.fopen(toStringz(name), toStringz(mode));
+    const namez = toStringz(name), modez = toStringz(mode);
+    auto result = std.c.stdio.fopen(namez, modez);
+    version(linux)
+    {
+        enum int EOVERFLOW = 75; // taken from my Ubuntu's
+                                 // /usr/include/asm-generic/errno.h
+        if (!result && getErrno == EOVERFLOW)
+        {
+            // attempt fopen64, maybe the file was very large
+            result = std.c.stdio.fopen64(namez, modez);
+        }
+    }
+    return result;
 }
 
 version (linux)
 {
-extern(C) FILE* popen(const char*, const char*);
+    extern(C) FILE* popen(const char*, const char*);
 
 /***********************************
  * Convenience function that forwards to $(D_PARAM std.c.stdio.popen)
  * with appropriately-constructed C-style strings.
  */
-FILE* popen(string name, string mode)
-{
-    return popen(toStringz(name), toStringz(mode));
-}
+    FILE* popen(in char[] name, in char[] mode = "r")
+    {
+        return popen(toStringz(name), toStringz(mode));
+    }
 }
 
 /*

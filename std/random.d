@@ -1,26 +1,26 @@
 // Written in the D programming language
 
 /**
-   Facilities for random number generation. The old-style functions
-   $(D_PARAM rand_seed) and $(D_PARAM rand) will soon be deprecated as
-   they rely on global state and as such are subjected to various
-   thread-related issues.
+Facilities for random number generation. The old-style functions
+$(D_PARAM rand_seed) and $(D_PARAM rand) will soon be deprecated as
+they rely on global state and as such are subjected to various
+thread-related issues.
 
-   The new-style generator objects hold their own state so they are
-   immune of threading issues. The generators feature a number of
-   well-known and well-documented methods of generating random
-   numbers. An overall fast and reliable means to generate random
-   numbers is the $(D_PARAM Mt19937) generator, which derives its name
-   from "$(LINK2 http://math.sci.hiroshima-u.ac.jp/~m-mat/MT/emt.html,
-   Mersenne Twister) with a period of 2 to the power of 19937". In
-   memory-constrained situations,
-   $(LINK2 http://en.wikipedia.org/wiki/Linear_congruential_generator,
-   linear congruential) generators such as MinstdRand0 and MinstdRand
-   might be useful. The standard library provides an alias $(D_PARAM
-   Random) for whichever generator it finds the most fit for the
-   target environment.
+The new-style generator objects hold their own state so they are
+immune of threading issues. The generators feature a number of
+well-known and well-documented methods of generating random
+numbers. An overall fast and reliable means to generate random numbers
+is the $(D_PARAM Mt19937) generator, which derives its name from
+"$(WEB math.sci.hiroshima-u.ac.jp/~m-mat/MT/emt.html, Mersenne
+Twister) with a period of 2 to the power of 19937". In
+memory-constrained situations, $(WEB
+en.wikipedia.org/wiki/Linear_congruential_generator, linear
+congruential) generators such as $(D MinstdRand0) and $(D MinstdRand)
+might be useful. The standard library provides an alias $(D_PARAM
+Random) for whichever generator it finds the most fit for the target
+environment.
    
-   Example:
+Example:
 
 ----
 Random gen;
@@ -42,10 +42,10 @@ $(WEB erdani.org, Andrei Alexandrescu)
 Credits:
 
 The entire random number library architecture is derived from the
-excellent
-$(LINK2 http://open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2461.pdf,
-C++0X) random number facility proposed by Jens Maurer and contrinuted
-to by researchers at the Fermi laboratory.
+excellent $(WEB
+open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2461.pdf, C++0X) random
+number facility proposed by Jens Maurer and contributed to by
+researchers at the Fermi laboratory.
 
 Macros:
 
@@ -408,24 +408,23 @@ struct MersenneTwisterEngine(
 }
 
 /**
-   A $(D_PARAM MersenneTwisterEngine) instantiated with the parameters
-   of the original engine
-   $(LINK2 http://math.sci.hiroshima-u.ac.jp/~m-mat/MT/emt.html,MT19937),
-   generating uniformly-distributed 32-bit numbers with a period of 2
-   to the power of 19937. Recommended for random number generation
-   unless memory is severely restricted, in which case a $(D_PARAM
-   LinearCongruentialEngine) would be the generator of choice.
+A $(D MersenneTwisterEngine) instantiated with the parameters of the
+original engine $(WEB math.sci.hiroshima-u.ac.jp/~m-mat/MT/emt.html,
+MT19937), generating uniformly-distributed 32-bit numbers with a
+period of 2 to the power of 19937. Recommended for random number
+generation unless memory is severely restricted, in which case a $(D
+LinearCongruentialEngine) would be the generator of choice.
 
-   Example:
+Example:
 
-   ----
-   // seed with a constant
-   Mt19937 gen;
-   auto n = gen.next; // same for each run
-   // Seed with an unpredictable value
-   gen.seed(unpredictableSeed);
-   n = gen.next; // different across runs
-   ----
+----
+// seed with a constant
+Mt19937 gen;
+auto n = gen.next; // same for each run
+// Seed with an unpredictable value
+gen.seed(unpredictableSeed);
+n = gen.next; // different across runs
+----
  */
 alias MersenneTwisterEngine!(uint, 32, 624, 397, 31, 0x9908b0df, 11, 7,
                              0x9d2c5680, 15, 0xefc60000, 18)
@@ -439,21 +438,21 @@ unittest
 }
 
 /**
-   The "default", "favorite", "suggested" random number generator on
-   the current platform. It is a typedef for one of the
-   previously-defined generators. You may want to use it if (1) you
-   need to generate some nice random numbers, and (2) you don't care
-   for the minutiae of the method being used.
+The "default", "favorite", "suggested" random number generator on the
+current platform. It is a typedef for one of the previously-defined
+generators. You may want to use it if (1) you need to generate some
+nice random numbers, and (2) you don't care for the minutiae of the
+method being used.
  */
 
 alias Mt19937 Random;
 
 /**
-   A "good" seed for initializing random number engines. Initializing
-   with $(D_PARAM unpredictableSeed) makes engines generate different
-   random number sequences every run.
+A "good" seed for initializing random number engines. Initializing
+with $(D_PARAM unpredictableSeed) makes engines generate different
+random number sequences every run.
 
-   Example:
+Example:
 
 ----
 auto rnd = Random(unpredictableSeed);
@@ -478,13 +477,13 @@ unittest
 }
 
 /**
-   Generates uniformly-distributed numbers within a range using an
-   external generator. The $(D_PARAM boundaries) parameter controls
-   the shape of the interval (open vs. closed on either side). Valid
-   values for $(D boundaries) are "[]", "(]", "[)", and "()". The
-   default interval is [a, b$(RPAREN).
+Generates uniformly-distributed numbers within a range using an
+external generator. The $(D boundaries) parameter controls the shape
+of the interval (open vs. closed on either side). Valid values for $(D
+boundaries) are "[]", "$(LPAREN)]", "[$(RPAREN)", and "()". The
+default interval is [a, b$(RPAREN).
 
-   Example:
+Example:
 
 ----
 auto a = new double[20];
@@ -514,9 +513,10 @@ struct UniformDistribution(NumberType, string boundaries = "[)")
     alias NumberType InputType;
     alias NumberType ResultType;
 /**
-   Constructs a $(D_PARAM UniformDistribution) able to generate
-   numbers in the interval [$(D_PARAM min), $(D_PARAM max)) if
-   $(D_PARAM closedRight) is $(D_PARAM false).
+Constructs a $(D UniformDistribution) able to generate numbers between
+$(D a) and $(D b). The bounds of the interval are controlled by the
+template argument, e.g. $(D UniformDistribution!(double, "[]")(0, 1))
+generates numbers in the interval [0.0, 1.0].
 */
     static UniformDistribution opCall(NumberType a, NumberType b)
     {
@@ -535,25 +535,25 @@ struct UniformDistribution(NumberType, string boundaries = "[)")
         return result;
     }
 /**
-   Returns the smallest random value generated.
+Returns the left bound of the random value generated.
 */
     ResultType a() { return leftLim == '[' ? _a : nextSmaller(_a); }
 
 /**
-   Returns the largest random value generated.
+Returns the the right bound of the random value generated.
 */ 
     ResultType b() { return rightLim == ']' ? _b : nextLarger(_b); }
 
 /**
-   Does nothing (provided for conformity with other distributions).
+Does nothing (provided for conformity with other distributions).
 */
     void reset()
     {
     }
 
 /**
-   Returns a random number using $(D_PARAM
-   UniformRandomNumberGenerator) as back-end.
+Returns a random number using $(D UniformRandomNumberGenerator) as
+back-end.
 */
     ResultType next(UniformRandomNumberGenerator)
         (ref UniformRandomNumberGenerator urng)
@@ -626,11 +626,10 @@ unittest
 }
 
 /**
-   Convenience function that generates a number in an interval by
-   forwarding to $(D_PARAM UniformDistribution!(T, leftLim,
-   rightLim)(a, b).next).
-   
-   Example:
+Convenience function that generates a number in an interval by
+forwarding to $(D UniformDistribution!(T, boundaries)(a, b).next).
+
+Example:
 
 ----
 Random gen(unpredictableSeed);
@@ -659,8 +658,7 @@ unittest
 }
 
 /**
-   Shuffles elements of $(D_PARAM array) using $(D_PARAM r) as a
-   shuffler.
+Shuffles elements of $(D array) using $(D r) as a shuffler.
 */
 
 void randomShuffle(T, SomeRandomGen)(T[] array, ref SomeRandomGen r)
@@ -683,6 +681,42 @@ unittest
     assert(a.sort == b.sort);
 }
 
+/**
+Throws a dice with relative probabilities stored in $(D
+proportions). Returns the index in $(D proportions) that was chosen.
+
+Example:
+
+----
+auto x = dice(0.5, 0.5);   // x is 0 or 1 in equal proportions
+auto y = dice(50, 50);     // y is 0 or 1 in equal proportions
+auto z = dice(70, 20, 10); // z is 0 70% of the time, 1 30% of the time,
+                           // and 2 10% of the time
+----
+*/
+
+size_t dice(R)(ref R rnd, double[] proportions...) {
+    invariant sum = reduce!("(assert(b >= 0), a + b)")(0.0, proportions);
+    enforce(sum > 0, "Proportions in a dice cannot sum to zero");
+    invariant point = uniform(rnd, 0.0, sum);
+    assert(point < sum);
+    auto mass = 0.0;
+    foreach (i, e; proportions) {
+        mass += e;
+        if (point < mass) return i;
+    }
+    // this point should not be reached
+    assert(false);
+}
+
+unittest {
+    auto rnd = Random(unpredictableSeed);
+    auto i = dice(rnd, 0, 100);
+    assert(i == 1);
+    i = dice(rnd, 100, 0);
+    assert(i == 0);
+}
+
 /* ===================== Random ========================= */
 
 // BUG: not multithreaded
@@ -691,32 +725,33 @@ private uint seed;		// starting seed
 private uint index;		// ith random number
 
 /**
- * The random number generator is seeded at program startup with a random value.
- This ensures that each program generates a different sequence of random
- numbers. To generate a repeatable sequence, use rand_seed() to start the
- sequence. seed and index start it, and each successive value increments index.
- This means that the $(I n)th random number of the sequence can be directly
- generated
- by passing index + $(I n) to rand_seed().
+The random number generator is seeded at program startup with a random
+value.  This ensures that each program generates a different sequence
+of random numbers. To generate a repeatable sequence, use $(D
+rand_seed()) to start the sequence. seed and index start it, and each
+successive value increments index.  This means that the $(I n)th
+random number of the sequence can be directly generated by passing
+index + $(I n) to $(D rand_seed()).
 
- Note: This is more random, but slower, than C's rand() function.
- To use C's rand() instead, import std.c.stdlib.
+Note: This is more random, but slower, than C's $(D rand()) function.
+To use C's $(D rand()) instead, import $(D std.c.stdlib).
  
- BUGS: Shares a global single state, not multithreaded.
- SCHEDULED FOR DEPRECATION.
+BUGS: Shares a global single state, not multithreaded.  SCHEDULED FOR
+DEPRECATION.
+
 */
 
 void rand_seed(uint seed, uint index)
 {
-     .seed = seed;
-     .index = index;
+    .seed = seed;
+    .index = index;
 }
 
 /**
- * Get the next random number in sequence.
- * BUGS: Shares a global single state, not multithreaded.
- * SCHEDULED FOR DEPRECATION.
- */
+Get the next random number in sequence.
+BUGS: Shares a global single state, not multithreaded.
+SCHEDULED FOR DEPRECATION.
+*/
 
 uint rand()
 {

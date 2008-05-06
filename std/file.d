@@ -363,7 +363,7 @@ bool exists(in string name)
     else
 	result = GetFileAttributesA(toMBSz(name));
 
-    return result == 0xFFFFFFFF;
+    return result != 0xFFFFFFFF;
 }
 
 /***************************************************

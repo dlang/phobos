@@ -61,7 +61,7 @@ int bsr(uint v);
 /**
  * Tests the bit.
  */
-int bt(const uint *p, uint bitnum);
+int bt(in uint *p, uint bitnum);
 
 /**
  * Tests and complements the bit.

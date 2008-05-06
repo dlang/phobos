@@ -57,7 +57,7 @@ struct lldiv_t { long quot,rem; }
 
     char* getenv(const char*);	///
     int   setenv(const char*, const char*, int); /// extension to ISO C standard, not available on all platforms
-    void  unsetenv(const char*); /// extension to ISO C standard, not available on all platforms
+    int unsetenv(const char*); /// extension to ISO C standard, not available on all platforms
 
     int    rand();	///
     void   srand(uint);	/// ditto
@@ -67,19 +67,19 @@ struct lldiv_t { long quot,rem; }
     int getErrno();	/// ditto
     int setErrno(int);	/// ditto
 
-const int ERANGE = 34;	// on both Windows and linux
+enum int ERANGE = 34;	// on both Windows and linux
 
 double atof(in char *);	///
 int    atoi(in char *);	/// ditto
 int    atol(in char *);	/// ditto
-float  strtof(const char *,char **);	/// ditto
-double strtod(const char *,char **);	/// ditto
-real   strtold(const char *,char **);	/// ditto
-long   strtol(const char *,char **,int);	/// ditto
-uint   strtoul(const char *,char **,int);	/// ditto
+float  strtof(in char *,char **);	/// ditto
+double strtod(in char *,char **);	/// ditto
+real   strtold(in char *,char **);	/// ditto
+long   strtol(in char *,char **,int);	/// ditto
+uint   strtoul(in char *,char **,int);	/// ditto
 long   atoll(in char *);	/// ditto
-long   strtoll(const char *,char **,int);	/// ditto
-ulong  strtoull(const char *,char **,int);	/// ditto
+long   strtoll(in char *,char **,int);	/// ditto
+ulong  strtoull(in char *,char **,int);	/// ditto
 
 char* itoa(int, char*, int);	///
 char* ultoa(uint, char*, int);	/// ditto

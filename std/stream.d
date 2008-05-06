@@ -1127,7 +1127,7 @@ class Stream : InputStream, OutputStream {
     // by Walter's permission
     char[1024] buffer;
     char* p = buffer.ptr;
-    char* f = toStringz(format);
+    auto f = toStringz(format);
     size_t psize = buffer.length;
     size_t count;
     while (true) {
