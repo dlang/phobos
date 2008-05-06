@@ -158,6 +158,27 @@ int cmp(C1, C2)(in C1[] s1, in C2[] s2)
     }
 }
 
+unittest
+{
+    int result;
+
+    debug(string) printf("string.cmp.unittest\n");
+    result = cmp("abc", "abc");
+    assert(result == 0);
+//    result = cmp(null, null);
+//    assert(result == 0);
+    result = cmp("", "");
+    assert(result == 0);
+    result = cmp("abc", "abcd");
+    assert(result < 0);
+    result = cmp("abcd", "abc");
+    assert(result > 0);
+    result = cmp("abc"d, "abd");
+    assert(result < 0);
+    result = cmp("bbc", "abc"w);
+    assert(result > 0);
+}
+
 /*********************************
  * ditto
  */
@@ -183,8 +204,10 @@ unittest
 {
     int result;
 
-    debug(string) printf("string.cmp.unittest\n");
+    debug(string) printf("string.icmp.unittest\n");
     result = icmp("abc", "abc");
+    assert(result == 0);
+    result = icmp("ABC", "abc");
     assert(result == 0);
     result = icmp(null, null);
     assert(result == 0);
