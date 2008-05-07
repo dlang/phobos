@@ -3,18 +3,20 @@
 /**
 Classes and functions for handling and transcoding between various encodings.
 
-For cases where the encoding is known at compile-time, functions are provided
-for arbitrary encoding and decoding of characters, arbitrary transcoding
+For cases where the _encoding is known at compile-time, functions are provided
+for arbitrary _encoding and decoding of characters, arbitrary transcoding
 between strings of different type, as well as validation and sanitization.
 
 Encodings currently supported are UTF-8, UTF-16, UTF-32, ASCII, ISO-8859-1
-(also known as LATIN-1), and WINDOWS-1252. The type EString!(Ascii) represents
-an ASCII string; the type EString!(Latin1) represents an ISO-8859-1 string,
-and so on. In general, EString!(E) is the string type for encoding E, and
-EString(Utf8), EString(Utf16) and EString(Utf32) are aliases for string,
-wstring and dstring respectively.
+(also known as LATIN-1), and WINDOWS-1252.
+The type AsciiChar represents an ASCII character.
+The type AsciiString represents an ASCII character.
+The type Latin1Char represents an ISO-8859-1 character.
+The type Latin1String represents an ISO-8859-1 character.
+The type Windows1252Char represents a Windows-1252 character.
+The type Windows1252String represents a Windows-1252 character.
 
-For cases where the encoding is not known at compile-time, but is known at
+For cases where the _encoding is not known at compile-time, but is known at
 run-time, we provide the abstract class EncodingScheme and its subclasses.
 To construct a run-time encoder/decoder, one does e.g.
 
@@ -32,7 +34,7 @@ subclasses for any other encoding.
 
 Authors: Janice Caron
 
-Date: 2008.02.27 - 2008.03.23
+Date: 2008.02.27 - 2008.05.07
 
 License: Public Domain
 
@@ -51,9 +53,6 @@ unittest
     [
         // Plain ASCII
         cast(ubyte[])"hello",
-
-        // The Greek word 'kosme'
-        cast(ubyte[])"Îºá½¹ÏƒÎ¼Îµ",
 
         // First possible sequence of a certain length
         [ 0x00 ],                       // U+00000000   one byte
@@ -308,23 +307,45 @@ unittest
 
     // Make sure the non-UTF encodings work too
     {
-            // TODO: commented out for now
         auto s = "\u20AC100";
-        // auto t = to!(Windows1252)(s);
-        // assert(t == [cast(Windows1252)0x80, '1', '0', '0']);
-        // auto u = to!(Utf8)(s);
-        // assert(s == u);
-        // auto v = to!(Latin1)(s);
-        // assert(cast(string)v == "?100");
-        // auto w = to!(Ascii)(v);
-        // assert(cast(string)w == "?100");
+        Windows1252String t;
+        transcode(s,t);
+        assert(t == [cast(Windows1252Char)0x80, '1', '0', '0']);
+        string u;
+        transcode(s,u);
+        assert(s == u);
+        Latin1String v;
+        transcode(s,v);
+        assert(cast(string)v == "?100");
+        AsciiString w;
+        transcode(v,w);
+        assert(cast(string)w == "?100");
+    }
+    
+    // Make sure we can count properly
+    {
+    	assert(encodedLength!(char)('A') == 1);
+    	assert(encodedLength!(char)('\u00E3') == 2);
+    	assert(encodedLength!(char)('\u2028') == 3);
+    	assert(encodedLength!(char)('\U0010FFF0') == 4);
+    	assert(encodedLength!(wchar)('A') == 1);
+    	assert(encodedLength!(wchar)('\U0010FFF0') == 2);
+    }
+    
+    // Make sure we can write into mutable arrays
+    {
+        char[4] buffer;
+        uint n = encode(cast(dchar)'\u00E3',buffer);
+        assert(n == 2);
+        assert(buffer[0] == 0xC3);
+        assert(buffer[1] == 0xA3);
     }
 }
 
 //=============================================================================
 
-/** A simple growable buffer for fast appending */
-struct Buffer(E)
+/* A simple growable buffer for fast appending */
+deprecated struct Buffer(E)
 {
     alias Mutable!(E) T;
 
@@ -345,20 +366,20 @@ struct Buffer(E)
         }
     }
 
-    void opCatAssign(E c) /// Append a single character
+    void opCatAssign(E c) // Append a single character
     {
         reserve(1);
         buffer[index++] = c;
     }
 
-    void opCatAssign(const(E)[] a) /// Append an array of characters
+    void opCatAssign(const(E)[] a) // Append an array of characters
     {
         reserve(a.length);
         buffer[index..index+a.length] = a[0..$];
         index += a.length;
     }
 
-    T[] toArray() /// Return the buffer, and reset it
+    T[] toArray() // Return the buffer, and reset it
     {
         auto t = buffer[0..index];
         buffer = null;
@@ -366,7 +387,7 @@ struct Buffer(E)
         return t;
     }
 
-    invariant(T)[] toIArray() /// Return the buffer as an invariant array, and reset it
+    invariant(T)[] toIArray() // Return the buffer as an invariant array, and reset it
     {
         auto t = cast(invariant(T)[])(buffer[0..index]);
         buffer = null;
@@ -405,8 +426,13 @@ template EncoderFunctions()
         E[] s;
         void write(E c) { s ~= c; }
     }
+    
+    template WriteToArray()
+    {
+    	void write(E c) { array[0] = c; array = array[1..$]; }
+    }
 
-    template WriteToBuffer()
+    deprecated template WriteToBuffer()
     {
         void write(E c) { buffer ~= c; }
     }
@@ -455,8 +481,14 @@ template EncoderFunctions()
         mixin WriteToString;
         mixin EncodeViaWrite;
     }
+    
+    template EncodeToArray()
+    {
+    	mixin WriteToArray;
+    	mixin EncodeViaWrite;
+    }
 
-    template EncodeToBuffer()
+    deprecated template EncodeToBuffer()
     {
         mixin WriteToBuffer;
         mixin EncodeViaWrite;
@@ -497,6 +529,7 @@ template EncoderFunctions()
     //=========================================================================
 
     // Below are the functions we will ultimately expose to the user
+    
     E[] encode(dchar c)
     {
         mixin EncodeToString e;
@@ -504,12 +537,18 @@ template EncoderFunctions()
         return e.s;
     }
 
-    void encode(dchar c, ref EBuffer buffer)
+    void encode(dchar c, ref E[] array)
+    {
+    	mixin EncodeToArray e;
+    	e.encode(c);
+    }
+
+    deprecated void encode(dchar c, ref Buffer!(E) buffer)
     {
         mixin EncodeToBuffer e;
         e.encode(c);
     }
-
+    
     void encode(dchar c, void delegate(E) dg)
     {
         mixin EncodeToDelegate e;
@@ -664,12 +703,12 @@ template EncoderInstance(E)
 //          ASCII
 //=============================================================================
 
-typedef char Ascii;
+typedef char AsciiChar; ///
+alias invariant(AsciiChar)[] AsciiString; ///
 
-template EncoderInstance(E:Ascii)
+template EncoderInstance(E:AsciiChar)
 {
-    alias invariant(Ascii)[] EString;
-    alias Buffer!(Ascii) EBuffer;
+    alias AsciiString EString;
 
     string encodingName()
     {
@@ -681,15 +720,25 @@ template EncoderInstance(E:Ascii)
         return c < 0x80;
     }
 
-    bool isValidCodeUnit(Ascii c)
+    bool isValidCodeUnit(AsciiChar c)
     {
         return c < 0x80;
+    }
+    
+    uint encodedLength(dchar c)
+    in
+    {
+    	assert(canEncode(c));
+    }
+    body
+    {
+		return 1;
     }
 
     void encodeViaWrite()(dchar c)
     {
         if (!canEncode(c)) c = '?';
-        write(cast(Ascii)c);
+        write(cast(AsciiChar)c);
     }
 
     void skipViaRead()()
@@ -725,12 +774,12 @@ template EncoderInstance(E:Ascii)
 //          ISO-8859-1
 //=============================================================================
 
-typedef ubyte Latin1;
+typedef ubyte Latin1Char; ///
+alias invariant(Latin1Char)[] Latin1String; ///
 
-template EncoderInstance(E:Latin1)
+template EncoderInstance(E:Latin1Char)
 {
-    alias invariant(Latin1)[] EString;
-    alias Buffer!(Latin1) EBuffer;
+    alias Latin1String EString;
 
     string encodingName()
     {
@@ -742,15 +791,25 @@ template EncoderInstance(E:Latin1)
         return c < 0x100;
     }
 
-    bool isValidCodeUnit(Latin1 c)
+    bool isValidCodeUnit(Latin1Char c)
     {
         return true;
+    }
+
+    uint encodedLength(dchar c)
+    in
+    {
+    	assert(canEncode(c));
+    }
+    body
+    {
+		return 1;
     }
 
     void encodeViaWrite()(dchar c)
     {
         if (!canEncode(c)) c = '?';
-        write(cast(Latin1)c);
+        write(cast(Latin1Char)c);
     }
 
     void skipViaRead()()
@@ -785,12 +844,12 @@ template EncoderInstance(E:Latin1)
 //          WINDOWS-1252
 //=============================================================================
 
-typedef ubyte Windows1252;
+typedef ubyte Windows1252Char; ///
+alias invariant(Windows1252Char)[] Windows1252String; ///
 
-template EncoderInstance(E:Windows1252)
+template EncoderInstance(E:Windows1252Char)
 {
-    alias invariant(Windows1252)[] EString;
-    alias Buffer!(Windows1252) EBuffer;
+    alias Windows1252String EString;
 
     string encodingName()
     {
@@ -812,10 +871,20 @@ template EncoderInstance(E:Windows1252)
         return false;
     }
 
-    bool isValidCodeUnit(Windows1252 c)
+    bool isValidCodeUnit(Windows1252Char c)
     {
         if (c < 0x80 || c >= 0xA0) return true;
         return (charMap[c-0x80] != 0xFFFD);
+    }
+
+    uint encodedLength(dchar c)
+    in
+    {
+    	assert(canEncode(c));
+    }
+    body
+    {
+		return 1;
     }
 
     void encodeViaWrite()(dchar c)
@@ -835,7 +904,7 @@ template EncoderInstance(E:Windows1252)
             }
             c = n == -1 ? '?' : 0x80 + n;
         }
-        write(cast(Windows1252)c);
+        write(cast(Windows1252Char)c);
     }
 
     void skipViaRead()()
@@ -845,20 +914,20 @@ template EncoderInstance(E:Windows1252)
 
     dchar decodeViaRead()()
     {
-        Windows1252 c = read;
+        Windows1252Char c = read;
         return (c >= 0x80 && c < 0xA0) ? charMap[c-0x80] : c;
     }
 
     dchar safeDecodeViaRead()()
     {
-        Windows1252 c = read;
+        Windows1252Char c = read;
         dchar d = (c >= 0x80 && c < 0xA0) ? charMap[c-0x80] : c;
         return d == 0xFFFD ? INVALID_SEQUENCE : d;
     }
 
     dchar decodeReverseViaRead()()
     {
-        Windows1252 c = read;
+        Windows1252Char c = read;
         return (c >= 0x80 && c < 0xA0) ? charMap[c-0x80] : c;
     }
 
@@ -874,12 +943,9 @@ template EncoderInstance(E:Windows1252)
 //          UTF-8
 //=============================================================================
 
-alias char Utf8;
-
-template EncoderInstance(E:Utf8)
+template EncoderInstance(E:char)
 {
-    alias invariant(Utf8)[] EString;
-    alias Buffer!(Utf8) EBuffer;
+    alias invariant(char)[] EString;
 
     string encodingName()
     {
@@ -891,7 +957,7 @@ template EncoderInstance(E:Utf8)
         return isValidCodePoint(c);
     }
 
-    bool isValidCodeUnit(Utf8 c)
+    bool isValidCodeUnit(char c)
     {
         return (c < 0xC0 || (c >= 0xC2 && c < 0xF5));
     }
@@ -908,7 +974,7 @@ template EncoderInstance(E:Utf8)
         3,3,3,3,3,3,3,3,4,4,4,4,5,5,6,0,
     ];
 
-    private int tails(Utf8 c)
+    private int tails(char c)
     in
     {
         assert(c >= 0x80);
@@ -918,29 +984,42 @@ template EncoderInstance(E:Utf8)
         return tailTable[c-0x80];
     }
 
+    uint encodedLength(dchar c)
+    in
+    {
+    	assert(canEncode(c));
+    }
+    body
+    {
+		if (c < 0x80) return 1;
+		if (c < 0x800) return 2;
+		if (c < 0x10000) return 3;
+		return 4;
+    }
+
     void encodeViaWrite()(dchar c)
     {
         if (c < 0x80)
         {
-            write(cast(Utf8)c);
+            write(cast(char)c);
         }
         else if (c < 0x800)
         {
-            write(cast(Utf8)((c >> 6) + 0xC0));
-            write(cast(Utf8)((c & 0x3F) + 0x80));
+            write(cast(char)((c >> 6) + 0xC0));
+            write(cast(char)((c & 0x3F) + 0x80));
         }
         else if (c < 0x10000)
         {
-            write(cast(Utf8)((c >> 12) + 0xE0));
-            write(cast(Utf8)(((c >> 6) & 0x3F) + 0x80));
-            write(cast(Utf8)((c & 0x3F) + 0x80));
+            write(cast(char)((c >> 12) + 0xE0));
+            write(cast(char)(((c >> 6) & 0x3F) + 0x80));
+            write(cast(char)((c & 0x3F) + 0x80));
         }
         else
         {
-            write(cast(Utf8)((c >> 18) + 0xF0));
-            write(cast(Utf8)(((c >> 12) & 0x3F) + 0x80));
-            write(cast(Utf8)(((c >> 6) & 0x3F) + 0x80));
-            write(cast(Utf8)((c & 0x3F) + 0x80));
+            write(cast(char)((c >> 18) + 0xF0));
+            write(cast(char)(((c >> 12) & 0x3F) + 0x80));
+            write(cast(char)(((c >> 6) & 0x3F) + 0x80));
+            write(cast(char)((c & 0x3F) + 0x80));
         }
     }
 
@@ -1029,12 +1108,9 @@ template EncoderInstance(E:Utf8)
 //          UTF-16
 //=============================================================================
 
-alias wchar Utf16;
-
-template EncoderInstance(E:Utf16)
+template EncoderInstance(E:wchar)
 {
-    alias invariant(Utf16)[] EString;
-    alias Buffer!(Utf16) EBuffer;
+    alias invariant(wchar)[] EString;
 
     string encodingName()
     {
@@ -1046,37 +1122,47 @@ template EncoderInstance(E:Utf16)
         return isValidCodePoint(c);
     }
 
-    bool isValidCodeUnit(Utf16 c)
+    bool isValidCodeUnit(wchar c)
     {
         return true;
+    }
+
+    uint encodedLength(dchar c)
+    in
+    {
+    	assert(canEncode(c));
+    }
+    body
+    {
+		return (c < 0x10000) ? 1 : 2;
     }
 
     void encodeViaWrite()(dchar c)
     {
         if (c < 0x10000)
         {
-            write(cast(Utf16)c);
+            write(cast(wchar)c);
         }
         else
         {
             uint n = c - 0x10000;
-            write(cast(Utf16)(0xD800 + (n >> 10)));
-            write(cast(Utf16)(0xDC00 + (n & 0x3FF)));
+            write(cast(wchar)(0xD800 + (n >> 10)));
+            write(cast(wchar)(0xDC00 + (n & 0x3FF)));
         }
     }
 
     void skipViaRead()()
     {
-        Utf16 c = read;
+        wchar c = read;
         if (c < 0xD800 || c >= 0xE000) return;
         read();
     }
 
     dchar decodeViaRead()()
     {
-        Utf16 c = read;
+        wchar c = read;
         if (c < 0xD800 || c >= 0xE000) return cast(dchar)c;
-        Utf16 d = read;
+        wchar d = read;
         c &= 0x3FF;
         d &= 0x3FF;
         return 0x10000 + (c << 10) + d;
@@ -1084,11 +1170,11 @@ template EncoderInstance(E:Utf16)
 
     dchar safeDecodeViaRead()()
     {
-        Utf16 c = read;
+        wchar c = read;
         if (c < 0xD800 || c >= 0xE000) return cast(dchar)c;
         if (c >= 0xDC00) return INVALID_SEQUENCE;
         if (!canRead) return INVALID_SEQUENCE;
-        Utf16 d = peek;
+        wchar d = peek;
         if (d < 0xDC00 || d >= 0xE000) return INVALID_SEQUENCE;
         d = read;
         c &= 0x3FF;
@@ -1098,9 +1184,9 @@ template EncoderInstance(E:Utf16)
 
     dchar decodeReverseViaRead()()
     {
-        Utf16 c = read;
+        wchar c = read;
         if (c < 0xD800 || c >= 0xE000) return cast(dchar)c;
-        Utf16 d = read;
+        wchar d = read;
         c &= 0x3FF;
         d &= 0x3FF;
         return 0x10000 + (d << 10) + c;
@@ -1118,12 +1204,9 @@ template EncoderInstance(E:Utf16)
 //          UTF-32
 //=============================================================================
 
-alias dchar Utf32;
-
-template EncoderInstance(E:Utf32)
+template EncoderInstance(E:dchar)
 {
-    alias invariant(Utf32)[] EString;
-    alias Buffer!(Utf32) EBuffer;
+    alias invariant(dchar)[] EString;
 
     string encodingName()
     {
@@ -1135,14 +1218,24 @@ template EncoderInstance(E:Utf32)
         return isValidCodePoint(c);
     }
 
-    bool isValidCodeUnit(Utf16 c)
+    bool isValidCodeUnit(wchar c)
     {
         return isValidCodePoint(c);
     }
 
+    uint encodedLength(dchar c)
+    in
+    {
+    	assert(canEncode(c));
+    }
+    body
+    {
+		return 1;
+    }
+
     void encodeViaWrite()(dchar c)
     {
-        write(cast(Utf32)c);
+        write(cast(dchar)c);
     }
 
     void skipViaRead()()
@@ -1207,7 +1300,7 @@ bool isValidCodePoint(dchar c)
  *
  * Examples:
  * -----------------------------------
- * writefln(encodingName!(Latin1));
+ * writefln(encodingName!(Latin1Char));
  *     // writes ISO-8859-1
  * -----------------------------------
  */
@@ -1218,12 +1311,12 @@ string encodingName(T)()
 
 unittest
 {
-    assert(encodingName!(Utf8) == "UTF-8");
-    assert(encodingName!(Utf16) == "UTF-16");
-    assert(encodingName!(Utf32) == "UTF-32");
-    assert(encodingName!(Ascii) == "ASCII");
-    assert(encodingName!(Latin1) == "ISO-8859-1");
-    assert(encodingName!(Windows1252) == "windows-1252");
+    assert(encodingName!(char) == "UTF-8");
+    assert(encodingName!(wchar) == "UTF-16");
+    assert(encodingName!(dchar) == "UTF-32");
+    assert(encodingName!(AsciiChar) == "ASCII");
+    assert(encodingName!(Latin1Char) == "ISO-8859-1");
+    assert(encodingName!(Windows1252Char) == "windows-1252");
 }
 
 /**
@@ -1237,7 +1330,7 @@ unittest
  *
  * Examples:
  * -----------------------------------
- * writefln(canEncode!(Latin1)('A'));
+ * writefln(canEncode!(Latin1Char)('A'));
  *     // writes true
  * -----------------------------------
  */
@@ -1248,12 +1341,12 @@ bool canEncode(E)(dchar c)
 
 unittest
 {
-    assert(!canEncode!(Ascii)('\u00A0'));
-    assert(canEncode!(Latin1)('\u00A0'));
-    assert(canEncode!(Windows1252)('\u20AC'));
-    assert(!canEncode!(Windows1252)('\u20AD'));
-    assert(!canEncode!(Windows1252)('\uFFFD'));
-    assert(!canEncode!(Utf8)(cast(dchar)0x110000));
+    assert(!canEncode!(AsciiChar)('\u00A0'));
+    assert(canEncode!(Latin1Char)('\u00A0'));
+    assert(canEncode!(Windows1252Char)('\u20AC'));
+    assert(!canEncode!(Windows1252Char)('\u20AD'));
+    assert(!canEncode!(Windows1252Char)('\uFFFD'));
+    assert(!canEncode!(char)(cast(dchar)0x110000));
 }
 
 /**
@@ -1273,13 +1366,13 @@ bool isValidCodeUnit(E)(E c)
 
 unittest
 {
-    assert(!isValidCodeUnit(cast(Ascii)0xA0));
-    assert( isValidCodeUnit(cast(Windows1252)0x80));
-    assert(!isValidCodeUnit(cast(Windows1252)0x81));
-    assert(!isValidCodeUnit(cast(Utf8)0xC0));
-    assert(!isValidCodeUnit(cast(Utf8)0xFF));
-    assert( isValidCodeUnit(cast(Utf16)0xD800));
-    assert(!isValidCodeUnit(cast(Utf32)0xD800));
+    assert(!isValidCodeUnit(cast(AsciiChar)0xA0));
+    assert( isValidCodeUnit(cast(Windows1252Char)0x80));
+    assert(!isValidCodeUnit(cast(Windows1252Char)0x81));
+    assert(!isValidCodeUnit(cast(char)0xC0));
+    assert(!isValidCodeUnit(cast(char)0xFF));
+    assert( isValidCodeUnit(cast(wchar)0xD800));
+    assert(!isValidCodeUnit(cast(dchar)0xD800));
 }
 
 /**
@@ -1354,26 +1447,38 @@ invariant(E)[] sanitize(E)(invariant(E)[] s)
     uint n = validLength(s);
     if (n == s.length) return s;
 
-    Buffer!(E) r;
-    r ~= s[0..n];
+    auto repSeq = EncoderInstance!(E).replacementSequence;
+
+	// Count how long the string needs to be.
+	// Overestimating is not a problem
+	uint len = s.length;
     const(E)[] t = s[n..$];
     while (t.length != 0)
     {
-        const(E)[] tt = t;
         dchar c = EncoderInstance!(E).safeDecode(t);
-        if (c == INVALID_SEQUENCE)
-        {
-            r ~= EncoderInstance!(E).replacementSequence;
-        }
-        else
-        {
-            r ~= tt[0..$-t.length];
-        }
+        assert(c == INVALID_SEQUENCE);
+        len += repSeq.length;
+        t = t[validLength(t)..$];
+    }
+
+    // Now do the write
+    E[] array = new E[len];
+    array[0..n] = s[0..n];
+    uint offset = n;
+
+    t = s[n..$];
+    while (t.length != 0)
+    {
+        dchar c = EncoderInstance!(E).safeDecode(t);
+        assert(c == INVALID_SEQUENCE);
+        array[offset..offset+repSeq.length] = repSeq[];
+        offset += repSeq.length;
         n = validLength(t);
-        r ~= t[0..n];
+        array[offset..offset+n] = t[0..n];
+        offset += n;
         t = t[n..$];
     }
-    return r.toIArray;
+    return cast(invariant(E)[])array[0..offset];
 }
 
 unittest
@@ -1588,6 +1693,30 @@ body
 }
 
 /**
+ * Returns the number of code units required to encode a single code point.
+ *
+ * The input to this function MUST be a valid code point.
+ * This is enforced by the function's in-contract.
+ *
+ * The type of the output cannot be deduced. Therefore, it is necessary to
+ * explicitly specify the encoding as a template parameter.
+ *
+ * Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
+ *
+ * Params:
+ *    c = the code point to be encoded
+ */
+uint encodedLength(E)(dchar c)
+in
+{
+    assert(isValidCodePoint(c));
+}
+body
+{
+    return EncoderInstance!(E).encodedLength(c);
+}
+
+/**
  * Encodes a single code point.
  *
  * This function encodes a single code point into one or more code units.
@@ -1619,6 +1748,43 @@ body
 }
 
 /**
+ * Encodes a single code point into an array.
+ *
+ * This function encodes a single code point into one or more code units
+ * The code units are stored in a user-supplied fixed-size array,
+ * which must be passed by reference.
+ *
+ * The input to this function MUST be a valid code point.
+ * This is enforced by the function's in-contract.
+ *
+ * The type of the output cannot be deduced. Therefore, it is necessary to
+ * explicitly specify the encoding as a template parameter.
+ *
+ * Supercedes:
+ * This function supercedes std.utf.encode(), however, note that the
+ * function codeUnits() supercedes it more conveniently.
+ *
+ * Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
+ *
+ * Params:
+ *    c = the code point to be encoded
+ *
+ * Returns:
+ *	  the number of code units written to the array
+ */
+uint encode(E)(dchar c, E[] array)
+in
+{
+    assert(isValidCodePoint(c));
+}
+body
+{
+	E[] t = array;
+    EncoderInstance!(E).encode(c,t);
+    return array.length - t.length;
+}
+
+/**
  * Encodes a single code point into a Buffer.
  *
  * This function encodes a single code point into one or more code units
@@ -1639,7 +1805,7 @@ body
  * Params:
  *    c = the code point to be encoded
  */
-void encode(E)(dchar c, ref Buffer!(E) buffer)
+deprecated void encode(E)(dchar c, ref Buffer!(E) buffer)
 in
 {
     assert(isValidCodePoint(c));
@@ -1754,7 +1920,7 @@ unittest
  * Examples:
  * --------------------------------------------------------
  * dchar d = '\u20AC';
- * foreach(c;codeUnits!(Utf8)(d))
+ * foreach(c;codeUnits!(char)(d))
  * {
  *     writefln("%X",c)
  * }
@@ -1776,8 +1942,8 @@ body
 
 unittest
 {
-    Utf8[] a;
-    foreach(c;codeUnits!(Utf8)(cast(dchar)'\u20AC'))
+    char[] a;
+    foreach(c;codeUnits!(char)(cast(dchar)'\u20AC'))
     {
         a ~= c;
     }
@@ -1810,7 +1976,7 @@ unittest
  * transcode("hello world",ws);
  *     // transcode from UTF-8 to UTF-16
  *
- * EString!(Latin1) ls;
+ * Latin1String ls;
  * transcode(ws, ls);
  *     // transcode from UTF-16 to ISO-8859-1
  * --------------------------------------------------------
@@ -1826,7 +1992,7 @@ body
     {
         r = s;
     }
-    else static if(is(Src==Ascii))
+    else static if(is(Src==AsciiChar))
     {
         transcode!(char,Dst)(cast(string)s,r);
     }
@@ -1858,8 +2024,8 @@ body
  *
  * Examples:
  * -----------------------------------------------------------------------------
- * auto ws = to!(Utf16)("hello world");  // transcode from UTF-8 to UTF-16
- * auto ls = to!(Latin1)(ws);            // transcode from UTF-16 to ISO-8859-1
+ * auto ws = to!(wchar)("hello world");  // transcode from UTF-8 to UTF-16
+ * auto ls = to!(Latin1Char)(ws);            // transcode from UTF-16 to ISO-8859-1
  * -----------------------------------------------------------------------------
  */
 // TODO: Commented out for no - to be moved to std.conv
@@ -1958,17 +2124,35 @@ abstract class EncodingScheme
         abstract bool canEncode(dchar c);
 
         /**
-         * Encodes a single code point.
-         *
-         * This function encodes a single code point into one or more ubytes.
-         * It returns an array containing those ubytes.
+         * Returns the number of ubytes required to encode this code point.
          *
          * The input to this function MUST be a valid code point.
          *
          * Params:
          *    c = the code point to be encoded
+         *
+         * Returns:
+         *    the number of ubytes required.
          */
-        abstract ubyte[] encode(dchar c);
+        abstract uint encodedLength(dchar c);
+
+        /**
+         * Encodes a single code point into a user-supplied, fixed-size buffer.
+         *
+         * This function encodes a single code point into one or more ubytes.
+         * The supplied buffer must be code unit aligned.
+         * (For example, UTF-16LE or UTF-16BE must be wchar-aligned,
+         * UTF-32LE or UTF-32BE must be dchar-aligned, etc.)
+         *
+         * The input to this function MUST be a valid code point.
+         *
+         * Params:
+         *    c = the code point to be encoded
+         *
+         * Returns:
+         *    the number of ubytes written.
+         */
+        abstract uint encode(dchar c, ubyte[] buffer);
 
         /**
          * Decodes a single code point.
@@ -2058,29 +2242,41 @@ abstract class EncodingScheme
      */
     invariant(ubyte)[] sanitize(invariant(ubyte)[] s)
     {
-        uint n = validLength(s);
-        if (n == s.length) return s;
+		uint n = validLength(s);
+		if (n == s.length) return s;
 
-        Buffer!(ubyte) r;
-        r ~= s[0..n];
-        const(ubyte)[] t = s[n..$];
-        while (t.length != 0)
-        {
-            const(ubyte)[] tt = t;
-            dchar c = safeDecode(t);
-            if (c == INVALID_SEQUENCE)
-            {
-                r ~= replacementSequence();
-            }
-            else
-            {
-                r ~= tt[0..$-t.length];
-            }
-            n = validLength(t);
-            r ~= t[0..n];
-            t = t[n..$];
-        }
-        return r.toIArray;
+		auto repSeq = replacementSequence;
+
+		// Count how long the string needs to be.
+		// Overestimating is not a problem
+		uint len = s.length;
+		const(ubyte)[] t = s[n..$];
+		while (t.length != 0)
+		{
+			dchar c = safeDecode(t);
+			assert(c == INVALID_SEQUENCE);
+			len += repSeq.length;
+			t = t[validLength(t)..$];
+		}
+
+		// Now do the write
+		ubyte[] array = new ubyte[len];
+		array[0..n] = s[0..n];
+		uint offset = n;
+
+		t = s[n..$];
+		while (t.length != 0)
+		{
+			dchar c = safeDecode(t);
+			assert(c == INVALID_SEQUENCE);
+			array[offset..offset+repSeq.length] = repSeq[];
+			offset += repSeq.length;
+			n = validLength(t);
+			array[offset..offset+n] = t[0..n];
+			offset += n;
+			t = t[n..$];
+		}
+		return cast(invariant(ubyte)[])array[0..offset];
     }
 
     /**
@@ -2207,17 +2403,23 @@ class EncodingSchemeASCII : EncodingScheme
 
         override bool canEncode(dchar c)
         {
-            return std.encoding.canEncode!(Ascii)(c);
+            return std.encoding.canEncode!(AsciiChar)(c);
+        }
+        
+        override uint encodedLength(dchar c)
+        {
+        	return std.encoding.encodedLength!(AsciiChar)(c);
         }
 
-        override ubyte[] encode(dchar c)
+        override uint encode(dchar c, ubyte[] buffer)
         {
-            return cast(ubyte[])std.encoding.encode!(Ascii)(c);
+        	auto r = cast(AsciiChar[])buffer;
+            return std.encoding.encode(c,r);
         }
 
         override dchar decode(ref const(ubyte)[] s)
         {
-            auto t = cast(const(Ascii)[]) s;
+            auto t = cast(const(AsciiChar)[]) s;
             dchar c = std.encoding.decode(t);
             s = s[$-t.length..$];
             return c;
@@ -2225,7 +2427,7 @@ class EncodingSchemeASCII : EncodingScheme
 
         override dchar safeDecode(ref const(ubyte)[] s)
         {
-            auto t = cast(const(Ascii)[]) s;
+            auto t = cast(const(AsciiChar)[]) s;
             dchar c = std.encoding.safeDecode(t);
             s = s[$-t.length..$];
             return c;
@@ -2285,17 +2487,23 @@ class EncodingSchemeLatin1 : EncodingScheme
 
         override bool canEncode(dchar c)
         {
-            return std.encoding.canEncode!(Latin1)(c);
+            return std.encoding.canEncode!(Latin1Char)(c);
         }
 
-        override ubyte[] encode(dchar c)
+        override uint encodedLength(dchar c)
         {
-            return cast(ubyte[])std.encoding.encode!(Latin1)(c);
+        	return std.encoding.encodedLength!(Latin1Char)(c);
+        }
+
+        override uint encode(dchar c, ubyte[] buffer)
+        {
+        	auto r = cast(Latin1Char[])buffer;
+            return std.encoding.encode(c,r);
         }
 
         override dchar decode(ref const(ubyte)[] s)
         {
-            auto t = cast(const(Latin1)[]) s;
+            auto t = cast(const(Latin1Char)[]) s;
             dchar c = std.encoding.decode(t);
             s = s[$-t.length..$];
             return c;
@@ -2303,7 +2511,7 @@ class EncodingSchemeLatin1 : EncodingScheme
 
         override dchar safeDecode(ref const(ubyte)[] s)
         {
-            auto t = cast(const(Latin1)[]) s;
+            auto t = cast(const(Latin1Char)[]) s;
             dchar c = std.encoding.safeDecode(t);
             s = s[$-t.length..$];
             return c;
@@ -2347,17 +2555,23 @@ class EncodingSchemeWindows1252 : EncodingScheme
 
         override bool canEncode(dchar c)
         {
-            return std.encoding.canEncode!(Windows1252)(c);
+            return std.encoding.canEncode!(Windows1252Char)(c);
         }
 
-        override ubyte[] encode(dchar c)
+        override uint encodedLength(dchar c)
         {
-            return cast(ubyte[])std.encoding.encode!(Windows1252)(c);
+        	return std.encoding.encodedLength!(Windows1252Char)(c);
+        }
+
+        override uint encode(dchar c, ubyte[] buffer)
+        {
+        	auto r = cast(Windows1252Char[])buffer;
+            return std.encoding.encode(c,r);
         }
 
         override dchar decode(ref const(ubyte)[] s)
         {
-            auto t = cast(const(Windows1252)[]) s;
+            auto t = cast(const(Windows1252Char)[]) s;
             dchar c = std.encoding.decode(t);
             s = s[$-t.length..$];
             return c;
@@ -2365,7 +2579,7 @@ class EncodingSchemeWindows1252 : EncodingScheme
 
         override dchar safeDecode(ref const(ubyte)[] s)
         {
-            auto t = cast(const(Windows1252)[]) s;
+            auto t = cast(const(Windows1252Char)[]) s;
             dchar c = std.encoding.safeDecode(t);
             s = s[$-t.length..$];
             return c;
@@ -2409,17 +2623,23 @@ class EncodingSchemeUtf8 : EncodingScheme
 
         override bool canEncode(dchar c)
         {
-            return std.encoding.canEncode!(Utf8)(c);
+            return std.encoding.canEncode!(char)(c);
         }
 
-        override ubyte[] encode(dchar c)
+        override uint encodedLength(dchar c)
         {
-            return cast(ubyte[])std.encoding.encode!(Utf8)(c);
+        	return std.encoding.encodedLength!(char)(c);
+        }
+
+        override uint encode(dchar c, ubyte[] buffer)
+        {
+        	auto r = cast(char[])buffer;
+            return std.encoding.encode(c,r);
         }
 
         override dchar decode(ref const(ubyte)[] s)
         {
-            auto t = cast(const(Utf8)[]) s;
+            auto t = cast(const(char)[]) s;
             dchar c = std.encoding.decode(t);
             s = s[$-t.length..$];
             return c;
@@ -2427,7 +2647,7 @@ class EncodingSchemeUtf8 : EncodingScheme
 
         override dchar safeDecode(ref const(ubyte)[] s)
         {
-            auto t = cast(const(Utf8)[]) s;
+            auto t = cast(const(char)[]) s;
             dchar c = std.encoding.safeDecode(t);
             s = s[$-t.length..$];
             return c;
@@ -2471,12 +2691,18 @@ class EncodingSchemeUtf16Native : EncodingScheme
 
         override bool canEncode(dchar c)
         {
-            return std.encoding.canEncode!(Utf16)(c);
+            return std.encoding.canEncode!(wchar)(c);
         }
 
-        override ubyte[] encode(dchar c)
+        override uint encodedLength(dchar c)
         {
-            return cast(ubyte[])std.encoding.encode!(Utf16)(c);
+        	return std.encoding.encodedLength!(wchar)(c);
+        }
+
+        override uint encode(dchar c, ubyte[] buffer)
+        {
+        	auto r = cast(wchar[])buffer;
+            return wchar.sizeof * std.encoding.encode(c,r);
         }
 
         override dchar decode(ref const(ubyte)[] s)
@@ -2486,7 +2712,7 @@ class EncodingSchemeUtf16Native : EncodingScheme
         }
         body
         {
-            auto t = cast(const(Utf16)[]) s;
+            auto t = cast(const(wchar)[]) s;
             dchar c = std.encoding.decode(t);
             s = s[$-t.length..$];
             return c;
@@ -2499,7 +2725,7 @@ class EncodingSchemeUtf16Native : EncodingScheme
         }
         body
         {
-            auto t = cast(const(Utf16)[]) s;
+            auto t = cast(const(wchar)[]) s;
             dchar c = std.encoding.safeDecode(t);
             s = s[$-t.length..$];
             return c;
@@ -2543,12 +2769,18 @@ class EncodingSchemeUtf32Native : EncodingScheme
 
         override bool canEncode(dchar c)
         {
-            return std.encoding.canEncode!(Utf32)(c);
+            return std.encoding.canEncode!(dchar)(c);
         }
 
-        override ubyte[] encode(dchar c)
+        override uint encodedLength(dchar c)
         {
-            return cast(ubyte[])std.encoding.encode!(Utf32)(c);
+        	return std.encoding.encodedLength!(dchar)(c);
+        }
+
+        override uint encode(dchar c, ubyte[] buffer)
+        {
+        	auto r = cast(dchar[])buffer;
+            return dchar.sizeof * std.encoding.encode(c,r);
         }
 
         override dchar decode(ref const(ubyte)[] s)
@@ -2558,7 +2790,7 @@ class EncodingSchemeUtf32Native : EncodingScheme
         }
         body
         {
-            auto t = cast(const(Utf32)[]) s;
+            auto t = cast(const(dchar)[]) s;
             dchar c = std.encoding.decode(t);
             s = s[$-t.length..$];
             return c;
@@ -2571,7 +2803,7 @@ class EncodingSchemeUtf32Native : EncodingScheme
         }
         body
         {
-            auto t = cast(const(Utf32)[]) s;
+            auto t = cast(const(dchar)[]) s;
             dchar c = std.encoding.safeDecode(t);
             s = s[$-t.length..$];
             return c;
@@ -2596,7 +2828,7 @@ version(unittest)
         {
             return s;
         }
-        else static if(is(Src==Ascii))
+        else static if(is(Src==AsciiChar))
         {
             transcodeReverse!(char,Dst)(cast(string)s,r);
         }
