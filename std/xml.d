@@ -13,7 +13,7 @@ make them do pretty much whatever you want.
 
 Authors: Janice Caron
 
-Date: 2008.02.12 - 2008.03.22
+Date: 2008.02.12 - 2008.05.07
 
 License: Public Domain
 
@@ -330,10 +330,9 @@ enum DecodeMode
  *
  * If the string does not contain an ampersand, the original will be returned.
  *
- * Note that if the "strict" parameter is false, then illegal ampersands will
- * be ignored (that is, "cat &amp; dog" will decode to "cat &amp; dog"),
- * whereas, if the strict parameter is true, then illegal sequences will cause
- * decoding to fail.
+ * Note that the "mode" parameter can be one of DecodeMode.NONE (do not
+ * decode), DecodeMode.LOOSE (decode, but ignore errors), or DecodeMode.STRICT
+ * (decode, and throw a DecodeException in the event of an error).
  *
  * Standards: $(LINK2 http://www.w3.org/TR/1998/REC-xml-19980210, XML 1.0)
  *
@@ -341,7 +340,7 @@ enum DecodeMode
  *      s = The string to be decoded
  *      mode = (optional) Mode to use for decoding. (Defaults to LOOSE).
  *
- * Throws: DecodeException if strict is true and decode fails
+ * Throws: DecodeException if mode == DecodeMode.STRICT and decode fails
  *
  * Returns: The decoded string
  *
@@ -461,6 +460,9 @@ class Document : Element
      *
      * This function creates a complete DOM (Document Object Model) tree.
      *
+     * The input to this function MUST be valid XML.
+     * This is enforced by DocumentParser's in contract.
+     *
      * Params:
      *      s = the complete XML text.
      */
@@ -468,7 +470,6 @@ class Document : Element
     in
     {
         assert(s.length != 0);
-        assert(!isLetter(s[0]));
     }
     body
     {
@@ -1558,18 +1559,36 @@ class DocumentParser : ElementParser
     string xmlText;
 
     /**
-     * Constructs a DocumentParser
+     * Constructs a DocumentParser.
+     *
+     * The input to this function MUST be valid XML.
+     * This is enforced by the function's in contract.
      *
      * Params:
      *      xmltext = the entire XML document as text
      *
      */
     this(string xmlText_)
+    in
+    {
+        assert(xmlText_.length != 0);
+        try
+        {
+            // Confirm that the input is valid XML
+            check(xmlText_);
+        }
+        catch (CheckException e)
+        {
+            // And if it's not, tell the user why not
+            assert(false, "\n" ~ e.toString());
+        }
+    }
+    body
     {
         xmlText = xmlText_;
         s = &xmlText;
         super();    // Initialize everything
-        parse();        // Parse through the root tag (but not beyond)
+        parse();    // Parse through the root tag (but not beyond)
     }
 }
 
@@ -1873,12 +1892,16 @@ class ElementParser
                 if (root is null)
                     return; // Return to constructor of derived class
 
-                if (tag_.isStart || tag_.isEmpty)
+                if (tag_.isEmpty)
+                {
+                    startTags[tag_.name] = tag_;
+                }
+
+                if (tag_.isStart)
                 {
                     startTags[tag_.name] = tag_;
 
                     auto parser = new ElementParser(this);
-                    if (tag_.isEmpty) parser.elementStart = null;
 
                     auto handler = tag_.name in onStartTag;
                     if (handler !is null) (*handler)(parser);
@@ -1888,6 +1911,7 @@ class ElementParser
                         if (handler !is null) (*handler)(parser);
                     }
                 }
+
                 if (tag_.isEnd || tag_.isEmpty)
                 {
                     auto startTag = startTags[tag_.name];
@@ -1939,7 +1963,6 @@ private
 {
     template Check(string msg)
     {
-
         string old = s;
 
         void fail()
@@ -2060,7 +2083,7 @@ private
     {
         mixin Check!("CharData");
 
-        for(;;)
+        while (s.length != 0)
         {
             if (s.startsWith("&")) break;
             if (s.startsWith("<")) break;
@@ -2286,7 +2309,7 @@ private
 
         try
         {
-            for(;;)
+            while (s.length != 0)
             {
                 old = s;
                      if (s.startsWith("&"))        { checkReference(s); }
@@ -2435,7 +2458,7 @@ private
 
     void star(alias f)(ref string s)
     {
-        for (;;)
+        while (s.length != 0)
         {
             try { f(s); }
             catch(Err e) { return; }
@@ -2494,42 +2517,42 @@ void check(string s)
 
 unittest
 {
-    return;
- 	try
- 	{
- 		check(q"[<?xml version="1.0"?>
-		<catalog>
-		   <book id="bk101">
-			  <author>Gambardella, Matthew</author>
-			  <title>XML Developer's Guide</title>
-			  <genre>Computer</genre>
-			  <price>44.95</price>
-			  <publish_date>2000-10-01</publish_date>
-			  <description>An in-depth look at creating applications
-			  with XML.</description>
-		   </book>
-		   <book id="bk102">
-			  <author>Ralls, Kim</author>
-			  <title>Midnight Rain</title>
-			  <genre>Fantasy</genres>
-			  <price>5.95</price>
-			  <publish_date>2000-12-16</publish_date>
-			  <description>A former architect battles corporate zombies,
-			  an evil sorceress, and her own childhood to become queen
-			  of the world.</description>
-		   </book>
-		   <book id="bk103">
-			  <author>Corets, Eva</author>
-			  <title>Maeve Ascendant</title>
-			  <genre>Fantasy</genre>
-			  <price>5.95</price>
-			  <publish_date>2000-11-17</publish_date>
-			  <description>After the collapse of a nanotechnology
-			  society in England, the young survivors lay the
-			  foundation for a new society.</description>
-		   </book>
-		</catalog>
-		]");
+    return; // WHY ARE WE NOT RUNNING THIS UNIT TEST?
+    try
+    {
+        check(q"[<?xml version="1.0"?>
+        <catalog>
+           <book id="bk101">
+              <author>Gambardella, Matthew</author>
+              <title>XML Developer's Guide</title>
+              <genre>Computer</genre>
+              <price>44.95</price>
+              <publish_date>2000-10-01</publish_date>
+              <description>An in-depth look at creating applications
+              with XML.</description>
+           </book>
+           <book id="bk102">
+              <author>Ralls, Kim</author>
+              <title>Midnight Rain</title>
+              <genre>Fantasy</genres>
+              <price>5.95</price>
+              <publish_date>2000-12-16</publish_date>
+              <description>A former architect battles corporate zombies,
+              an evil sorceress, and her own childhood to become queen
+              of the world.</description>
+           </book>
+           <book id="bk103">
+              <author>Corets, Eva</author>
+              <title>Maeve Ascendant</title>
+              <genre>Fantasy</genre>
+              <price>5.95</price>
+              <publish_date>2000-11-17</publish_date>
+              <description>After the collapse of a nanotechnology
+              society in England, the young survivors lay the
+              foundation for a new society.</description>
+           </book>
+        </catalog>
+        ]");
     assert(false);
     }
     catch(CheckException e)
@@ -2606,7 +2629,7 @@ class CheckException : Exception
         int n = head.rfind('\n') + 1;
         line = head.count("\n") + 1;
         dstring t;
-        transcode(head[n .. $], t);
+        transcode(head[n..$],t);
         column = t.length + 1;
         if (err !is null) err.complete(entire);
     }
