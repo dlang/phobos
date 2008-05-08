@@ -982,7 +982,7 @@ class Tag
             reqc(s,'>');
             tagString.length = (s.ptr - tagString.ptr);
         }
-        catch(Exception e)
+        catch(XMLException e)
         {
             tagString.length = (s.ptr - tagString.ptr);
             throw new TagException(tagString);
@@ -1622,11 +1622,20 @@ class ElementParser
         Handler rawTextHandler = null;
         Handler textHandler = null;
 
+        // Private constructor for start tags
         this(ElementParser parent)
         {
             s = parent.s;
             this();
             tag_ = parent.tag_;
+        }
+        
+        // Private constructor for empty tags
+        this(Tag tag, string* t)
+        {
+        	s = t;
+        	this();
+        	tag_ = tag;
         }
     }
 
@@ -1847,7 +1856,7 @@ class ElementParser
      * encountered for which a handler has been registered will invoke that
      * handler.
      *
-     * Throws: various kinds of Exception
+     * Throws: various kinds of XMLException
      */
     void parse()
     {
@@ -1892,11 +1901,6 @@ class ElementParser
                 if (root is null)
                     return; // Return to constructor of derived class
 
-                if (tag_.isEmpty)
-                {
-                    startTags[tag_.name] = tag_;
-                }
-
                 if (tag_.isStart)
                 {
                     startTags[tag_.name] = tag_;
@@ -1911,18 +1915,16 @@ class ElementParser
                         if (handler !is null) (*handler)(parser);
                     }
                 }
-
-                if (tag_.isEnd || tag_.isEmpty)
+                else if (tag_.isEnd)
                 {
                     auto startTag = startTags[tag_.name];
                     string text;
-                    if (!tag_.isEmpty)
-                    {
-                        invariant(char)* p = startTag.tagString.ptr
-                            + startTag.tagString.length;
-                        invariant(char)* q = tag_.tagString.ptr;
-                        text = p[0..(q-p)];
-                    }
+
+					invariant(char)* p = startTag.tagString.ptr
+						+ startTag.tagString.length;
+					invariant(char)* q = tag_.tagString.ptr;
+					text = p[0..(q-p)];
+
                     auto element = new Element(startTag);
                     if (text.length != 0) element ~= new Text(text);
 
@@ -1935,6 +1937,31 @@ class ElementParser
                     }
 
                     if (tag_.name == root.name) return;
+                }
+                else if (tag_.isEmpty)
+                {
+                	Tag startTag = new Tag(tag_.name);
+
+					// Handle the pretend start tag
+					string s2;
+					auto parser = new ElementParser(startTag,&s2);
+					auto handler1 = startTag.name in onStartTag;
+					if (handler1 !is null) (*handler1)(parser);
+					else
+					{
+						handler1 = null in onStartTag;
+						if (handler1 !is null) (*handler1)(parser);
+					}
+					
+					// Handle the pretend end tag
+					auto element = new Element(startTag);
+					auto handler2 = tag_.name in onEndTag;
+					if (handler2 !is null) (*handler2)(element);
+					else
+					{
+						handler2 = null in onEndTag;
+						if (handler2 !is null) (*handler2)(element);
+					}
                 }
             }
             else
@@ -2564,46 +2591,46 @@ unittest
 }
 
 /** The base class for exceptions thrown by this module */
-class Exception : object.Exception { this(string msg) { super(msg); } }
+class XMLException : Exception { this(string msg) { super(msg); } }
 
 // Other exceptions
 
 /// Thrown during Comment constructor
-class CommentException : Exception
+class CommentException : XMLException
 { private this(string msg) { super(msg); } }
 
 /// Thrown during CData constructor
-class CDataException : Exception
+class CDataException : XMLException
 { private this(string msg) { super(msg); } }
 
 /// Thrown during XMLInstruction constructor
-class XIException : Exception
+class XIException : XMLException
 { private this(string msg) { super(msg); } }
 
 /// Thrown during ProcessingInstruction constructor
-class PIException : Exception
+class PIException : XMLException
 { private this(string msg) { super(msg); } }
 
 /// Thrown during Text constructor
-class TextException : Exception
+class TextException : XMLException
 { private this(string msg) { super(msg); } }
 
 /// Thrown during decode()
-class DecodeException : Exception
+class DecodeException : XMLException
 { private this(string msg) { super(msg); } }
 
 /// Thrown if comparing with wrong type
-class InvalidTypeException : Exception
+class InvalidTypeException : XMLException
 { private this(string msg) { super(msg); } }
 
 /// Thrown when parsing for Tags
-class TagException : Exception
+class TagException : XMLException
 { private this(string msg) { super(msg); } }
 
 /**
  * Thrown during check()
  */
-class CheckException : Exception
+class CheckException : XMLException
 {
     CheckException err; /// Parent in heirarchy
     private string tail;
@@ -2793,7 +2820,7 @@ private
 
     void exit(string s=null)
     {
-        throw new Exception(s);
+        throw new XMLException(s);
     }
 }
 
