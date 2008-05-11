@@ -68,7 +68,7 @@ OBJS= asserterror.obj deh.obj switch.obj icomplex.obj gcstats.obj \
 	socket.obj socketstream.obj loader.obj stdarg.obj format.obj \
 	perf.obj openrj.obj winsock.obj oldsyserror.obj \
 	errno.obj boxer.obj cstream.obj charset.obj metastrings.obj \
-	gamma.obj demangle.obj cover.obj bitarray.obj aApplyR.obj \
+	demangle.obj cover.obj bitarray.obj aApplyR.obj \
 	signals.obj cpuid.obj typetuple.obj traits.obj bind.obj \
 	c_stdio.obj hiddenfunc.obj contracts.obj getopt.obj variant.obj \
 	numeric.obj bitmanip.obj functional.obj algorithm.obj typecons.obj \
@@ -91,7 +91,8 @@ OBJS= asserterror.obj deh.obj switch.obj icomplex.obj gcstats.obj \
 SRCS= std\math.d std\stdio.d std\dateparse.d std\date.d std\uni.d std\string.d \
 	std\base64.d std\md5.d std\xml.d \
 	internal\aaA.d \
-	std\typeinfo\ti_double.d
+	std\typeinfo\ti_double.d \
+	etc\gamma.d
 
 DOCS=	$(DOC)\std_path.html $(DOC)\std_math.html $(DOC)\std_outbuffer.html \
 	$(DOC)\std_stream.html $(DOC)\std_string.html $(DOC)\std_base64.html \
