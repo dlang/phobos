@@ -15,13 +15,13 @@
 Alexandrescu)
  *
  * Macros:
- *	WIKI = Phobos/StdString
+ *  WIKI = Phobos/StdString
  * Copyright:
- *	Public Domain
+ *  Public Domain
  */
 
 /* Author:
- *	Walter Bright, Digital Mars, www.digitalmars.com
+ *  Walter Bright, Digital Mars, www.digitalmars.com
  */
 
 // The code is not optimized for speed, that will have to wait
@@ -29,7 +29,7 @@ Alexandrescu)
 
 module std.string;
 
-//debug=string;		// uncomment to turn on debugging printf's
+//debug=string;     // uncomment to turn on debugging printf's
 
 private import std.algorithm;
 private import std.stdio;
@@ -62,23 +62,193 @@ typedef object.Exception StringException;
 
 /* ************* Constants *************** */
 
-invariant char[16] hexdigits = "0123456789ABCDEF";		/// 0..9A..F
-invariant char[10] digits    = "0123456789";			/// 0..9
-invariant char[8]  octdigits = "01234567";			/// 0..7
-invariant char[26] lowercase = "abcdefghijklmnopqrstuvwxyz";	/// a..z
-invariant char[26] uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";	/// A..Z
+invariant char[16] hexdigits = "0123456789ABCDEF";      /// 0..9A..F
+invariant char[10] digits    = "0123456789";            /// 0..9
+invariant char[8]  octdigits = "01234567";          /// 0..7
+invariant char[26] lowercase = "abcdefghijklmnopqrstuvwxyz";    /// a..z
+invariant char[26] uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";    /// A..Z
 invariant char[52] letters   = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-			       "abcdefghijklmnopqrstuvwxyz";	/// A..Za..z
-invariant char[6] whitespace = " \t\v\r\n\f";			/// ASCII whitespace
+                   "abcdefghijklmnopqrstuvwxyz";    /// A..Za..z
+invariant char[6] whitespace = " \t\v\r\n\f";           /// ASCII whitespace
 
-enum dchar LS = '\u2028';	/// UTF line separator
-enum dchar PS = '\u2029';	/// UTF paragraph separator
+enum dchar LS = '\u2028';   /// UTF line separator
+enum dchar PS = '\u2029';   /// UTF paragraph separator
 
 /// Newline sequence for this system
 version (Windows)
     invariant char[2] newline = "\r\n";
 else version (linux)
     invariant char[1] newline = "\n";
+
+// Array primitives.
+
+// These functions all take a mutable buffer by reference
+
+private void arrayInsertElements(C)(ref C[] buffer, int offset, int toInsert)
+{
+    if (toInsert == 0) return;
+    int oldLength = buffer.length;
+    int toMove = oldLength - offset;
+    buffer.length = buffer.length + toInsert;
+    C* dst = buffer.ptr + buffer.length;
+    C* src = buffer.ptr + oldLength;
+    for (int i=0; i<toMove; ++i)
+    {
+        *--dst = *--src;
+    }
+}
+
+unittest
+{
+    int[] a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ];
+    a.arrayInsertElements(3,4);
+    assert(a == [ 0, 1, 2, 3, 4, 5, 6, 3, 4, 5, 6, 7, 8, 9 ]);
+}
+
+private void arrayInsertSubstring(C)(ref C[] buffer, int offset, const(C)[] sub)
+{
+    arrayInsertElements(buffer,offset,sub.length);
+    buffer[offset..offset+sub.length] = sub[];
+}
+
+unittest
+{
+    int[] a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ];
+    a.arrayInsertSubstring(3,[ 11, 12, 13, 14 ]);
+    assert(a == [ 0, 1, 2, 3, 11, 12, 13, 14, 4, 5, 6, 7, 8, 9 ]);
+}
+
+/**********************************
+ * Inserts elements into an array, growing it if necessary.
+ *
+ * Inputs:
+ *      buffer = the array into which to insert
+ *      offset = the index at which to insert
+ *      other = what to insert.
+ *
+ * If other is an array, then the other array is inserted at the specified
+ * position. If other is an int, then this is the number of elements to
+ * insert, and the value of the inserted elements is undefined (i.e. you
+ * would be expected to assign the new elements after insertion).
+ *
+ * The buffer is passed by reference and may be modified. It is also returned.
+ */
+C[] arrayInsert(C,Other)(ref C[] buffer, int offset, Other other)
+{
+    static if(is(Other : int))
+    {
+        arrayInsertElements(buffer,offset,other);
+    }
+    else
+    {
+        arrayInsertSubstring(buffer,offset,other);
+    }
+    return buffer;
+}
+
+/**********************************
+ * Deletes elements from an array.
+ *
+ * Inputs:
+ *      buffer = the array into which to insert
+ *      startIndex = the index of the start of the range to delete
+ *      endIndex = the index of the end of the range to delete
+ *
+ * (So if you call arrayDelete(array,i,j), then the slice array[i..j]
+ * will be deleted).
+ *
+ * The buffer is passed by reference and may be modified. It is also returned.
+ */
+C[] arrayDelete(C)(ref C[] buffer, int startIndex, int endIndex)
+in
+{
+    assert(startIndex <= endIndex);
+    assert(endIndex <= buffer.length);
+}
+body
+{
+    int toErase = endIndex - startIndex;
+    if (toErase != 0)
+    {
+        int toMove = buffer.length - endIndex;
+        C* dst = buffer.ptr + startIndex;
+        C* src = buffer.ptr + endIndex;
+        for (int i=0; i<toMove; ++i)
+        {
+            *dst++ = *src++;
+        }
+        buffer = buffer[0..$-(endIndex-startIndex)];
+    }
+    return buffer;
+}
+
+unittest
+{
+    int[] a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ];
+    int* p = a.ptr;
+    a.arrayDelete(3,4);
+    assert(a == [ 0, 1, 2, 3, 8, 9 ]);
+    assert(a.ptr == p);
+}
+
+/**********************************
+ * Replaces an array slice.
+ *
+ * Inputs:
+ *      buffer = the array into which to insert
+ *      startIndex = the index of the start of the range to delete
+ *      endIndex = the index of the end of the range to delete
+ *      sub = what to insert in its place
+ *
+ * (So if you call arrayDelete(array,i,j,sub), then the slice array[i..j]
+ * will be replaced by the entirety of sub[]).
+ *
+ * The buffer is passed by reference and may be modified. It is also returned.
+ */
+C[] arrayReplace(C)
+    (ref C[] buffer, int startIndex, int endIndex, const(C)[] sub)
+in
+{
+    assert(startIndex <= endIndex);
+    assert(endIndex <= buffer.length);
+}
+body
+{
+    int toInsert = sub.length + startIndex - endIndex;
+    if (toInsert > 0)
+    {
+        arrayInsert(buffer,startIndex,toInsert);
+    }
+    else if (toInsert < 0)
+    {
+        arrayDelete(buffer,startIndex,startIndex-toInsert);
+    }
+    buffer[startIndex..startIndex+sub.length] = sub[];
+    return buffer;
+}
+
+unittest
+{
+    {
+        int[] a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ];
+        int* p = a.ptr;
+        a.arrayReplace(3,4,[11,12]);
+        assert(a == [ 0, 1, 2, 3, 11, 12, 8, 9 ]);
+        assert(a.ptr == p);
+    }
+    {
+        int[] a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ];
+        int* p = a.ptr;
+        a.arrayReplace(3,4,[11,12,13,14]);
+        assert(a == [ 0, 1, 2, 3, 11, 12, 13, 14, 8, 9 ]);
+        assert(a.ptr == p);
+    }
+    {
+        int[] a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ];
+        a.arrayReplace(3,4,[11,12,13,14,15,16]);
+        assert(a == [ 0, 1, 2, 3, 11, 12, 13, 14, 15, 16, 8, 9 ]);
+    }
+}
 
 /**********************************
  * Returns true if c is whitespace
@@ -87,8 +257,8 @@ else version (linux)
 bool iswhite(dchar c)
 {
     return (c <= 0x7F)
-		? find(whitespace, c) != -1
-		: (c == PS || c == LS);
+        ? find(whitespace, c) != -1
+        : (c == PS || c == LS);
 }
 
 /*********************************
@@ -129,11 +299,11 @@ unittest
 /**********************************
  * Compare two strings. cmp is case sensitive, icmp is case insensitive.
  * Returns:
- *	<table border=1 cellpadding=4 cellspacing=0>
- *	$(TR $(TD < 0)	$(TD s1 < s2))
- *	$(TR $(TD = 0)	$(TD s1 == s2))
- *	$(TR $(TD > 0)	$(TD s1 > s2))
- *	</table>
+ *  <table border=1 cellpadding=4 cellspacing=0>
+ *  $(TR $(TD < 0)  $(TD s1 < s2))
+ *  $(TR $(TD = 0)  $(TD s1 == s2))
+ *  $(TR $(TD > 0)  $(TD s1 > s2))
+ *  </table>
  */
 
 int cmp(C1, C2)(in C1[] s1, in C2[] s2)
@@ -151,10 +321,10 @@ int cmp(C1, C2)(in C1[] s1, in C2[] s2)
         {
             if (i1 == s1.length) return s2.length - i2;
             if (i2 == s2.length) return s1.length - i1;
-            invariant c1 = std.utf.decode(s1, i1), 
+            invariant c1 = std.utf.decode(s1, i1),
                 c2 = std.utf.decode(s2, i2);
             if (c1 != c2) return cast(int) c1 - cast(int) c2;
-        }        
+        }
     }
 }
 
@@ -190,7 +360,7 @@ int icmp(in char[] s1, in char[] s2)
     {
         if (i1 == s1.length) return i2 - s2.length;
         if (i2 == s2.length) return s1.length - i1;
-        auto c1 = std.utf.decode(s1, i1), 
+        auto c1 = std.utf.decode(s1, i1),
             c2 = std.utf.decode(s2, i2);
         if (c1 >= 'A' && c1 <= 'Z')
             c1 += cast(int)'a' - cast(int)'A';
@@ -242,43 +412,43 @@ const(char)* toStringz(const(char)[] s)
     in
     {
         // The assert below contradicts the unittests!
-	//assert(memchr(s.ptr, 0, s.length) == null,
-	//text(s.length, ": `", s, "'"));
+    //assert(memchr(s.ptr, 0, s.length) == null,
+    //text(s.length, ": `", s, "'"));
     }
     out (result)
     {
-	if (result)
-	{
-	    auto slen = s.length;
-	    while (slen > 0 && s[slen-1] == 0) --slen;
-	    assert(strlen(result) == slen);
-	    assert(memcmp(result, s.ptr, slen) == 0);
-	}
+    if (result)
+    {
+        auto slen = s.length;
+        while (slen > 0 && s[slen-1] == 0) --slen;
+        assert(strlen(result) == slen);
+        assert(memcmp(result, s.ptr, slen) == 0);
+    }
     }
     body
     {
-	char[] copy;
+    char[] copy;
 
-	/+ Unfortunately, this isn't reliable.
-	   We could make this work if string literals are put
-	   in read-only memory and we test if s[] is pointing into
-	   that.
+    /+ Unfortunately, this isn't reliable.
+       We could make this work if string literals are put
+       in read-only memory and we test if s[] is pointing into
+       that.
 
-	    /* Peek past end of s[], if it's 0, no conversion necessary.
-	     * Note that the compiler will put a 0 past the end of static
-	     * strings, and the storage allocator will put a 0 past the end
-	     * of newly allocated char[]'s.
-	     */
-	    char* p = &s[0] + s.length;
-	    if (*p == 0)
-		return s;
-	+/
+        /* Peek past end of s[], if it's 0, no conversion necessary.
+         * Note that the compiler will put a 0 past the end of static
+         * strings, and the storage allocator will put a 0 past the end
+         * of newly allocated char[]'s.
+         */
+        char* p = &s[0] + s.length;
+        if (*p == 0)
+        return s;
+    +/
 
-	// Need to make a copy
-	copy = new char[s.length + 1];
-	copy[0..s.length] = s;
-	copy[s.length] = 0;
-	return copy.ptr;
+    // Need to make a copy
+    copy = new char[s.length + 1];
+    copy[0..s.length] = s;
+    copy[s.length] = 0;
+    return copy.ptr;
     }
 
 // /// Ditto
@@ -324,25 +494,25 @@ unittest
  *
  * find, rfind are case sensitive; ifind, irfind are case insensitive.
  * Returns:
- *	Index in s where c is found, -1 if not found.
+ *  Index in s where c is found, -1 if not found.
  */
 
 int find(in char[] s, dchar c)
 {
     if (c <= 0x7F)
-    {	// Plain old ASCII
-	auto p = cast(char*)memchr(s.ptr, c, s.length);
-	if (p)
-	    return p - cast(char *)s;
-	else
-	    return -1;
+    {   // Plain old ASCII
+    auto p = cast(char*)memchr(s.ptr, c, s.length);
+    if (p)
+        return p - cast(char *)s;
+    else
+        return -1;
     }
 
     // c is a universal character
     foreach (int i, dchar c2; s)
     {
-	if (c == c2)
-	    return i;
+    if (c == c2)
+        return i;
     }
     return -1;
 }
@@ -371,26 +541,26 @@ unittest
 int ifind(in char[] s, dchar c)
 {
     if (c <= 0x7F)
-    {	// Plain old ASCII
-	char c1 = cast(char) std.ctype.tolower(c);
+    {   // Plain old ASCII
+    char c1 = cast(char) std.ctype.tolower(c);
 
-	foreach (int i, char c2; s)
-	{
-	    auto c3 = cast(char)std.ctype.tolower(c2);
-	    if (c1 == c3)
-		return i;
-	}
+    foreach (int i, char c2; s)
+    {
+        auto c3 = cast(char)std.ctype.tolower(c2);
+        if (c1 == c3)
+        return i;
+    }
     }
     else
-    {	// c is a universal character
-	dchar c1 = std.uni.toUniLower(c);
+    {   // c is a universal character
+    dchar c1 = std.uni.toUniLower(c);
 
-	foreach (int i, dchar c2; s)
-	{
-	    auto c3 = std.uni.toUniLower(c2);
-	    if (c1 == c3)
-		return i;
-	}
+    foreach (int i, dchar c2; s)
+    {
+        auto c3 = std.uni.toUniLower(c2);
+        if (c1 == c3)
+        return i;
+    }
     }
     return -1;
 }
@@ -431,13 +601,13 @@ int rfind(in char[] s, dchar c)
     size_t i;
 
     if (c <= 0x7F)
-    {	// Plain old ASCII
-	for (i = s.length; i-- != 0;)
-	{
-	    if (s[i] == c)
-		break;
-	}
-	return i;
+    {   // Plain old ASCII
+    for (i = s.length; i-- != 0;)
+    {
+        if (s[i] == c)
+        break;
+    }
+    return i;
     }
 
     // c is a universal character
@@ -471,35 +641,35 @@ int irfind(in char[] s, dchar c)
     size_t i;
 
     if (c <= 0x7F)
-    {	// Plain old ASCII
-	char c1 = cast(char) std.ctype.tolower(c);
+    {   // Plain old ASCII
+    char c1 = cast(char) std.ctype.tolower(c);
 
-	for (i = s.length; i-- != 0;)
-	{   char c2 = s[i];
+    for (i = s.length; i-- != 0;)
+    {   char c2 = s[i];
 
-	    c2 = cast(char) std.ctype.tolower(c2);
-	    if (c1 == c2)
-		break;
-	}
+        c2 = cast(char) std.ctype.tolower(c2);
+        if (c1 == c2)
+        break;
+    }
     }
     else
-    {	// c is a universal character
-	dchar c1 = std.uni.toUniLower(c);
+    {   // c is a universal character
+    dchar c1 = std.uni.toUniLower(c);
 
-	for (i = s.length; i-- != 0;)
-	{   char cx = s[i];
+    for (i = s.length; i-- != 0;)
+    {   char cx = s[i];
 
-	    if (cx <= 0x7F)
-		continue;		// skip, since c is not ASCII
-	    if ((cx & 0xC0) == 0x80)
-		continue;		// skip non-starting UTF-8 chars
+        if (cx <= 0x7F)
+        continue;       // skip, since c is not ASCII
+        if ((cx & 0xC0) == 0x80)
+        continue;       // skip non-starting UTF-8 chars
 
-	    size_t j = i;
-	    dchar c2 = std.utf.decode(s, j);
-	    c2 = std.uni.toUniLower(c2);
-	    if (c1 == c2)
-		break;
-	}
+        size_t j = i;
+        dchar c2 = std.utf.decode(s, j);
+        c2 = std.uni.toUniLower(c2);
+        if (c1 == c2)
+        break;
+    }
     }
     return i;
 }
@@ -537,57 +707,57 @@ unittest
  *
  * find, rfind are case sensitive; ifind, irfind are case insensitive.
  * Returns:
- *	Index in s where c is found, -1 if not found.
+ *  Index in s where c is found, -1 if not found.
  */
 
 int find(in char[] s, in char[] sub)
     out (result)
     {
-	if (result == -1)
-	{
-	}
-	else
-	{
-	    assert(0 <= result && result < s.length - sub.length + 1);
-	    assert(memcmp(&s[result], sub.ptr, sub.length) == 0);
-	}
+    if (result == -1)
+    {
+    }
+    else
+    {
+        assert(0 <= result && result < s.length - sub.length + 1);
+        assert(memcmp(&s[result], sub.ptr, sub.length) == 0);
+    }
     }
     body
     {
-	auto sublength = sub.length;
+    auto sublength = sub.length;
 
-	if (sublength == 0)
-	    return 0;
+    if (sublength == 0)
+        return 0;
 
-	if (s.length >= sublength)
-	{
-	    auto c = sub[0];
-	    if (sublength == 1)
-	    {
-		auto p = cast(const char*)memchr(s.ptr, c, s.length);
-		if (p)
-		    return p - &s[0];
-	    }
-	    else
-	    {
-		size_t imax = s.length - sublength + 1;
+    if (s.length >= sublength)
+    {
+        auto c = sub[0];
+        if (sublength == 1)
+        {
+        auto p = cast(const char*)memchr(s.ptr, c, s.length);
+        if (p)
+            return p - &s[0];
+        }
+        else
+        {
+        size_t imax = s.length - sublength + 1;
 
-		// Remainder of sub[]
-		auto q = &sub[1];
-		sublength--;
+        // Remainder of sub[]
+        auto q = &sub[1];
+        sublength--;
 
-		for (size_t i = 0; i < imax; i++)
-		{
-		    auto p = cast(const char*)memchr(&s[i], c, imax - i);
-		    if (!p)
-			break;
-		    i = p - &s[0];
-		    if (memcmp(p + 1, q, sublength) == 0)
-			return i;
-		}
-	    }
-	}
-	return -1;
+        for (size_t i = 0; i < imax; i++)
+        {
+            auto p = cast(const char*)memchr(&s[i], c, imax - i);
+            if (!p)
+            break;
+            i = p - &s[0];
+            if (memcmp(p + 1, q, sublength) == 0)
+            return i;
+        }
+        }
+    }
+    return -1;
     }
 
 
@@ -618,61 +788,61 @@ unittest
 int ifind(in char[] s, in char[] sub)
     out (result)
     {
-	if (result == -1)
-	{
-	}
-	else
-	{
-	    assert(0 <= result && result < s.length - sub.length + 1);
-	    assert(icmp(s[result .. result + sub.length], sub) == 0);
-	}
+    if (result == -1)
+    {
+    }
+    else
+    {
+        assert(0 <= result && result < s.length - sub.length + 1);
+        assert(icmp(s[result .. result + sub.length], sub) == 0);
+    }
     }
     body
     {
-	auto sublength = sub.length;
-	int i;
+    auto sublength = sub.length;
+    int i;
 
-	if (sublength == 0)
-	    return 0;
+    if (sublength == 0)
+        return 0;
 
-	if (s.length < sublength)
-	    return -1;
+    if (s.length < sublength)
+        return -1;
 
-	auto c = sub[0];
-	if (sublength == 1)
-	{
-	    i = ifind(s, c);
-	}
-	else if (c <= 0x7F)
-	{
-	    size_t imax = s.length - sublength + 1;
+    auto c = sub[0];
+    if (sublength == 1)
+    {
+        i = ifind(s, c);
+    }
+    else if (c <= 0x7F)
+    {
+        size_t imax = s.length - sublength + 1;
 
-	    // Remainder of sub[]
-	    auto subn = sub[1 .. sublength];
+        // Remainder of sub[]
+        auto subn = sub[1 .. sublength];
 
-	    for (i = 0; i < imax; i++)
-	    {
-		auto j = ifind(s[i .. imax], c);
-		if (j == -1)
-		    return -1;
-		i += j;
-		if (icmp(s[i + 1 .. i + sublength], subn) == 0)
-		    return i;
-	    }
-	    i = -1;
-	}
-	else
-	{
-	    size_t imax = s.length - sublength;
+        for (i = 0; i < imax; i++)
+        {
+        auto j = ifind(s[i .. imax], c);
+        if (j == -1)
+            return -1;
+        i += j;
+        if (icmp(s[i + 1 .. i + sublength], subn) == 0)
+            return i;
+        }
+        i = -1;
+    }
+    else
+    {
+        size_t imax = s.length - sublength;
 
-	    for (i = 0; i <= imax; i++)
-	    {
-		if (icmp(s[i .. i + sublength], sub) == 0)
-		    return i;
-	    }
-	    i = -1;
-	}
-	return i;
+        for (i = 0; i <= imax; i++)
+        {
+        if (icmp(s[i .. i + sublength], sub) == 0)
+            return i;
+        }
+        i = -1;
+    }
+    return i;
     }
 
 
@@ -716,7 +886,7 @@ unittest
 
     // Thanks to Carlos Santander B. and zwang
     i = ifind("sus mejores cortesanos. Se embarcaron en el puerto de Dubai y",
-	"page-break-before");
+    "page-break-before");
     assert(i == -1);
 }
 
@@ -727,33 +897,33 @@ unittest
 int rfind(in char[] s, in char[] sub)
     out (result)
     {
-	if (result == -1)
-	{
-	}
-	else
-	{
-	    assert(0 <= result && result < s.length - sub.length + 1);
-	    assert(memcmp(&s[0] + result, sub.ptr, sub.length) == 0);
-	}
+    if (result == -1)
+    {
+    }
+    else
+    {
+        assert(0 <= result && result < s.length - sub.length + 1);
+        assert(memcmp(&s[0] + result, sub.ptr, sub.length) == 0);
+    }
     }
     body
     {
-	char c;
+    char c;
 
-	if (sub.length == 0)
-	    return s.length;
-	c = sub[0];
-	if (sub.length == 1)
-	    return rfind(s, c);
-	for (int i = s.length - sub.length; i >= 0; i--)
-	{
-	    if (s[i] == c)
-	    {
-		if (memcmp(&s[i + 1], &sub[1], sub.length - 1) == 0)
-		    return i;
-	    }
-	}
-	return -1;
+    if (sub.length == 0)
+        return s.length;
+    c = sub[0];
+    if (sub.length == 1)
+        return rfind(s, c);
+    for (int i = s.length - sub.length; i >= 0; i--)
+    {
+        if (s[i] == c)
+        {
+        if (memcmp(&s[i + 1], &sub[1], sub.length - 1) == 0)
+            return i;
+        }
+    }
+    return -1;
     }
 
 unittest
@@ -781,45 +951,45 @@ unittest
 int irfind(in char[] s, in char[] sub)
     out (result)
     {
-	if (result == -1)
-	{
-	}
-	else
-	{
-	    assert(0 <= result && result < s.length - sub.length + 1);
-	    assert(icmp(s[result .. result + sub.length], sub) == 0);
-	}
+    if (result == -1)
+    {
+    }
+    else
+    {
+        assert(0 <= result && result < s.length - sub.length + 1);
+        assert(icmp(s[result .. result + sub.length], sub) == 0);
+    }
     }
     body
     {
-	dchar c;
+    dchar c;
 
-	if (sub.length == 0)
-	    return s.length;
-	c = sub[0];
-	if (sub.length == 1)
-	    return irfind(s, c);
-	if (c <= 0x7F)
-	{
-	    c = std.ctype.tolower(c);
-	    for (int i = s.length - sub.length; i >= 0; i--)
-	    {
-		if (std.ctype.tolower(s[i]) == c)
-		{
-		    if (icmp(s[i + 1 .. i + sub.length], sub[1 .. sub.length]) == 0)
-			return i;
-		}
-	    }
-	}
-	else
-	{
-	    for (int i = s.length - sub.length; i >= 0; i--)
-	    {
-		if (icmp(s[i .. i + sub.length], sub) == 0)
-		    return i;
-	    }
-	}
-	return -1;
+    if (sub.length == 0)
+        return s.length;
+    c = sub[0];
+    if (sub.length == 1)
+        return irfind(s, c);
+    if (c <= 0x7F)
+    {
+        c = std.ctype.tolower(c);
+        for (int i = s.length - sub.length; i >= 0; i--)
+        {
+        if (std.ctype.tolower(s[i]) == c)
+        {
+            if (icmp(s[i + 1 .. i + sub.length], sub[1 .. sub.length]) == 0)
+            return i;
+        }
+        }
+    }
+    else
+    {
+        for (int i = s.length - sub.length; i >= 0; i--)
+        {
+        if (icmp(s[i .. i + sub.length], sub) == 0)
+            return i;
+        }
+    }
+    return -1;
     }
 
 unittest
@@ -840,14 +1010,14 @@ unittest
 
     string sPlts = "Mars: the fourth Rock (Planet) from the Sun.";
     string sMars = "Who\'s \'My Favorite Maritian?\'";
-    
+
     i = irfind("abcdefcdef", "c");
     assert(i == 6);
     i = irfind("abcdefcdef", "cd");
     assert(i == 6);
     i = irfind( "abcdefcdef", "def" );
     assert(i == 7);
-    
+
     i = irfind(sMars, "RiTE maR");
     assert(i == 14);
     i = irfind(sPlts, "FOuRTh");
@@ -870,40 +1040,40 @@ string tolower(string s)
 
     for (size_t i = 0; i < s.length; i++)
     {
-	auto c = s[i];
-	if ('A' <= c && c <= 'Z')
-	{
-	    if (!changed)
-	    {
-		r = s.dup;
-		changed = 1;
-	    }
-	    r[i] = cast(char) (c + (cast(char)'a' - 'A'));
-	}
-	else if (c > 0x7F)
-	{
-	    foreach (size_t j, dchar dc; s[i .. length])
-	    {
-		if (std.uni.isUniUpper(dc))
-		{
-		    dc = std.uni.toUniLower(dc);
-		    if (!changed)
-		    {
-			r = s[0 .. i + j].dup;
-			changed = 2;
-		    }
-		}
-		if (changed)
-		{
-		    if (changed == 1)
-		    {	r = r[0 .. i + j];
-			changed = 2;
-		    }
-		    std.utf.encode(r, dc);
-		}
-	    }
-	    break;
-	}
+    auto c = s[i];
+    if ('A' <= c && c <= 'Z')
+    {
+        if (!changed)
+        {
+        r = s.dup;
+        changed = 1;
+        }
+        r[i] = cast(char) (c + (cast(char)'a' - 'A'));
+    }
+    else if (c > 0x7F)
+    {
+        foreach (size_t j, dchar dc; s[i .. length])
+        {
+        if (std.uni.isUniUpper(dc))
+        {
+            dc = std.uni.toUniLower(dc);
+            if (!changed)
+            {
+            r = s[0 .. i + j].dup;
+            changed = 2;
+            }
+        }
+        if (changed)
+        {
+            if (changed == 1)
+            {   r = r[0 .. i + j];
+            changed = 2;
+            }
+            std.utf.encode(r, dc);
+        }
+        }
+        break;
+    }
     }
     return changed ? assumeUnique(r) : s;
 }
@@ -916,13 +1086,13 @@ void tolowerInPlace(C)(ref C[] s)
 {
     for (size_t i = 0; i < s.length; )
     {
-	invariant c = s[i];
-	if ('A' <= c && c <= 'Z')
-	{
+    invariant c = s[i];
+    if ('A' <= c && c <= 'Z')
+    {
             s[i++] = cast(C) (c + (cast(C)'a' - 'A'));
-	}
-	else if (c > 0x7F)
-	{
+    }
+    else if (c > 0x7F)
+    {
             // wide character
             size_t j = i;
             dchar dc = decode(s, j);
@@ -935,7 +1105,7 @@ void tolowerInPlace(C)(ref C[] s)
             auto toAdd = to!(C[])(std.uni.toUniLower(dc));
             s = s[0 .. i] ~ toAdd  ~ s[j .. $];
             i += toAdd.length;
-	}
+    }
         else
         {
             ++i;
@@ -994,40 +1164,40 @@ string toupper(string s)
 
     for (size_t i = 0; i < s.length; i++)
     {
-	auto c = s[i];
-	if ('a' <= c && c <= 'z')
-	{
-	    if (!changed)
-	    {
-		r = s.dup;
-		changed = 1;
-	    }
-	    r[i] = cast(char) (c - (cast(char)'a' - 'A'));
-	}
-	else if (c > 0x7F)
-	{
-	    foreach (size_t j, dchar dc; s[i .. length])
-	    {
-		if (std.uni.isUniLower(dc))
-		{
-		    dc = std.uni.toUniUpper(dc);
-		    if (!changed)
-		    {
-			r = s[0 .. i + j].dup;
-			changed = 2;
-		    }
-		}
-		if (changed)
-		{
-		    if (changed == 1)
-		    {	r = r[0 .. i + j];
-			changed = 2;
-		    }
-		    std.utf.encode(r, dc);
-		}
-	    }
-	    break;
-	}
+    auto c = s[i];
+    if ('a' <= c && c <= 'z')
+    {
+        if (!changed)
+        {
+        r = s.dup;
+        changed = 1;
+        }
+        r[i] = cast(char) (c - (cast(char)'a' - 'A'));
+    }
+    else if (c > 0x7F)
+    {
+        foreach (size_t j, dchar dc; s[i .. length])
+        {
+        if (std.uni.isUniLower(dc))
+        {
+            dc = std.uni.toUniUpper(dc);
+            if (!changed)
+            {
+            r = s[0 .. i + j].dup;
+            changed = 2;
+            }
+        }
+        if (changed)
+        {
+            if (changed == 1)
+            {   r = r[0 .. i + j];
+            changed = 2;
+            }
+            std.utf.encode(r, dc);
+        }
+        }
+        break;
+    }
     }
     return changed ? assumeUnique(r) : s;
 }
@@ -1040,13 +1210,13 @@ void toupperInPlace(C)(ref C[] s)
 {
     for (size_t i = 0; i < s.length; )
     {
-	invariant c = s[i];
-	if ('a' <= c && c <= 'z')
-	{
+    invariant c = s[i];
+    if ('a' <= c && c <= 'z')
+    {
             s[i++] = cast(C) (c - (cast(C)'a' - 'A'));
-	}
-	else if (c > 0x7F)
-	{
+    }
+    else if (c > 0x7F)
+    {
             // wide character
             size_t j = i;
             dchar dc = decode(s, j);
@@ -1059,7 +1229,7 @@ void toupperInPlace(C)(ref C[] s)
             auto toAdd = to!(C[])(std.uni.toUniUpper(dc));
             s = s[0 .. i] ~ toAdd  ~ s[j .. $];
             i += toAdd.length;
-	}
+    }
         else
         {
             ++i;
@@ -1111,30 +1281,30 @@ string capitalize(string s)
     changed = 0;
 
     foreach (size_t i, dchar c; s)
-    {	dchar c2;
+    {   dchar c2;
 
-	if (i == 0)
-	{
-	    c2 = std.uni.toUniUpper(c);
-	    if (c != c2)
-	    {
-		changed = 1;
-		r = null;
-	    }
-	}
-	else
-	{
-	    c2 = std.uni.toUniLower(c);
-	    if (c != c2)
-	    {
-		if (!changed)
-		{   changed = 1;
-		    r = s[0 .. i].dup;
-		}
-	    }
-	}
-	if (changed)
-	    std.utf.encode(r, c2);
+    if (i == 0)
+    {
+        c2 = std.uni.toUniUpper(c);
+        if (c != c2)
+        {
+        changed = 1;
+        r = null;
+        }
+    }
+    else
+    {
+        c2 = std.uni.toUniLower(c);
+        if (c != c2)
+        {
+        if (!changed)
+        {   changed = 1;
+            r = s[0 .. i].dup;
+        }
+        }
+    }
+    if (changed)
+        std.utf.encode(r, c2);
     }
     return changed ? assumeUnique(r) : s;
 }
@@ -1177,35 +1347,35 @@ string capwords(string s)
 
     for (i = 0; i < s.length; i++)
     {
-	switch (s[i])
-	{
-	    case ' ':
-	    case '\t':
-	    case '\f':
-	    case '\r':
-	    case '\n':
-	    case '\v':
-		if (inword)
-		{
-		    r ~= capitalize(s[istart .. i]);
-		    inword = false;
-		}
-		break;
+    switch (s[i])
+    {
+        case ' ':
+        case '\t':
+        case '\f':
+        case '\r':
+        case '\n':
+        case '\v':
+        if (inword)
+        {
+            r ~= capitalize(s[istart .. i]);
+            inword = false;
+        }
+        break;
 
-	    default:
-		if (!inword)
-		{
-		    if (r.length)
-			r ~= ' ';
-		    istart = i;
-		    inword = true;
-		}
-		break;
-	}
+        default:
+        if (!inword)
+        {
+            if (r.length)
+            r ~= ' ';
+            istart = i;
+            inword = true;
+        }
+        break;
+    }
     }
     if (inword)
     {
-	r ~= capitalize(s[istart .. i]);
+    r ~= capitalize(s[istart .. i]);
     }
 
     return assumeUnique(r);
@@ -1231,19 +1401,19 @@ unittest
 string repeat(string s, size_t n)
 {
     if (n == 0)
-	return null;
+    return null;
     if (n == 1)
-	return s;
+    return s;
     char[] r = new char[n * s.length];
     if (s.length == 1)
-	r[] = s[0];
+    r[] = s[0];
     else
-    {	auto len = s.length;
+    {   auto len = s.length;
 
-	for (size_t i = 0; i < n * len; i += len)
-	{
-	    r[i .. i + len] = s[];
-	}
+    for (size_t i = 0; i < n * len; i += len)
+    {
+        r[i .. i + len] = s[];
+    }
     }
     return assumeUnique(r);
 }
@@ -1279,32 +1449,32 @@ string join(in string[] words, string sep)
 
     if (words.length)
     {
-	size_t len = 0;
-	size_t i;
+    size_t len = 0;
+    size_t i;
 
-	for (i = 0; i < words.length; i++)
-	    len += words[i].length;
+    for (i = 0; i < words.length; i++)
+        len += words[i].length;
 
-	auto seplen = sep.length;
-	len += (words.length - 1) * seplen;
+    auto seplen = sep.length;
+    len += (words.length - 1) * seplen;
 
-	result = new char[len];
+    result = new char[len];
 
-	size_t j;
-	i = 0;
-	while (true)
-	{
-	    uint wlen = words[i].length;
+    size_t j;
+    i = 0;
+    while (true)
+    {
+        uint wlen = words[i].length;
 
-	    result[j .. j + wlen] = words[i];
-	    j += wlen;
-	    i++;
-	    if (i >= words.length)
-		break;
-	    result[j .. j + seplen] = sep;
-	    j += seplen;
-	}
-	assert(j == len);
+        result[j .. j + wlen] = words[i];
+        j += wlen;
+        i++;
+        if (i >= words.length)
+        break;
+        result[j .. j + seplen] = sep;
+        j += seplen;
+    }
+    assert(j == len);
     }
     return assumeUnique(result);
 }
@@ -1343,31 +1513,31 @@ string[] split(string s)
 
     for (i = 0; i < s.length; i++)
     {
-	switch (s[i])
-	{
-	    case ' ':
-	    case '\t':
-	    case '\f':
-	    case '\r':
-	    case '\n':
-	    case '\v':
-		if (inword)
-		{
-		    words ~= s[istart .. i];
-		    inword = false;
-		}
-		break;
+    switch (s[i])
+    {
+        case ' ':
+        case '\t':
+        case '\f':
+        case '\r':
+        case '\n':
+        case '\v':
+        if (inword)
+        {
+            words ~= s[istart .. i];
+            inword = false;
+        }
+        break;
 
-	    default:
-		if (!inword)
-		{   istart = i;
-		    inword = true;
-		}
-		break;
-	}
+        default:
+        if (!inword)
+        {   istart = i;
+            inword = true;
+        }
+        break;
+    }
     }
     if (inword)
-	words ~= s[istart .. i];
+    words ~= s[istart .. i];
     return words;
 }
 
@@ -1398,101 +1568,101 @@ unittest
 string[] split(string s, string delim)
     in
     {
-	assert(delim.length > 0);
+    assert(delim.length > 0);
     }
     body
     {
-	size_t i;
-	size_t j;
-	string[] words;
+    size_t i;
+    size_t j;
+    string[] words;
 
-	i = 0;
-	if (s.length)
-	{
-	    if (delim.length == 1)
-	    {	char c = delim[0];
-		size_t nwords = 0;
-		auto p = s.ptr;
-		auto pend = p + s.length;
+    i = 0;
+    if (s.length)
+    {
+        if (delim.length == 1)
+        {   char c = delim[0];
+        size_t nwords = 0;
+        auto p = s.ptr;
+        auto pend = p + s.length;
 
-		while (true)
-		{
-		    nwords++;
-		    p = cast(typeof(p))memchr(p, c, pend - p);
-		    if (!p)
-			break;
-		    p++;
-		    if (p == pend)
-		    {	nwords++;
-			break;
-		    }
-		}
-		words.length = nwords;
+        while (true)
+        {
+            nwords++;
+            p = cast(typeof(p))memchr(p, c, pend - p);
+            if (!p)
+            break;
+            p++;
+            if (p == pend)
+            {   nwords++;
+            break;
+            }
+        }
+        words.length = nwords;
 
-		int wordi = 0;
-		i = 0;
-		while (true)
-		{
-		    p = cast(typeof(p))memchr(&s[i], c, s.length - i);
-		    if (!p)
-		    {
-			words[wordi] = s[i .. s.length];
-			break;
-		    }
-		    j = p - &s[0];
-		    words[wordi] = s[i .. j];
-		    wordi++;
-		    i = j + 1;
-		    if (i == s.length)
-		    {
-			words[wordi] = "";
-			break;
-		    }
-		}
-		assert(wordi + 1 == nwords);
-	    }
-	    else
-	    {	size_t nwords = 0;
+        int wordi = 0;
+        i = 0;
+        while (true)
+        {
+            p = cast(typeof(p))memchr(&s[i], c, s.length - i);
+            if (!p)
+            {
+            words[wordi] = s[i .. s.length];
+            break;
+            }
+            j = p - &s[0];
+            words[wordi] = s[i .. j];
+            wordi++;
+            i = j + 1;
+            if (i == s.length)
+            {
+            words[wordi] = "";
+            break;
+            }
+        }
+        assert(wordi + 1 == nwords);
+        }
+        else
+        {   size_t nwords = 0;
 
-		while (true)
-		{
-		    nwords++;
-		    j = find(s[i .. s.length], delim);
-		    if (j == -1)
-			break;
-		    i += j + delim.length;
-		    if (i == s.length)
-		    {	nwords++;
-			break;
-		    }
-		    assert(i < s.length);
-		}
-		words.length = nwords;
+        while (true)
+        {
+            nwords++;
+            j = find(s[i .. s.length], delim);
+            if (j == -1)
+            break;
+            i += j + delim.length;
+            if (i == s.length)
+            {   nwords++;
+            break;
+            }
+            assert(i < s.length);
+        }
+        words.length = nwords;
 
-		int wordi = 0;
-		i = 0;
-		while (true)
-		{
-		    j = find(s[i .. s.length], delim);
-		    if (j == -1)
-		    {
-			words[wordi] = s[i .. s.length];
-			break;
-		    }
-		    words[wordi] = s[i .. i + j];
-		    wordi++;
-		    i += j + delim.length;
-		    if (i == s.length)
-		    {
-			words[wordi] = "";
-			break;
-		    }
-		    assert(i < s.length);
-		}
-		assert(wordi + 1 == nwords);
-	    }
-	}
-	return words;
+        int wordi = 0;
+        i = 0;
+        while (true)
+        {
+            j = find(s[i .. s.length], delim);
+            if (j == -1)
+            {
+            words[wordi] = s[i .. s.length];
+            break;
+            }
+            words[wordi] = s[i .. i + j];
+            wordi++;
+            i += j + delim.length;
+            if (i == s.length)
+            {
+            words[wordi] = "";
+            break;
+            }
+            assert(i < s.length);
+        }
+        assert(wordi + 1 == nwords);
+        }
+    }
+    return words;
     }
 
 unittest
@@ -1516,13 +1686,13 @@ unittest
     i = cmp(words[4], "");
     assert(i == 0);
 
-    s = s[0 .. s.length - 1];	// lop off trailing ','
+    s = s[0 .. s.length - 1];   // lop off trailing ','
     words = split(s, ",");
     assert(words.length == 4);
     i = cmp(words[3], "jerry");
     assert(i == 0);
 
-    s = s[1 .. s.length];	// lop off leading ','
+    s = s[1 .. s.length];   // lop off leading ','
     words = split(s, ",");
     assert(words.length == 3);
     i = cmp(words[0], "peter");
@@ -1544,13 +1714,13 @@ unittest
     i = cmp(words[4], "");
     assert(i == 0);
 
-    s2 = s2[0 .. s2.length - 2];	// lop off trailing ',,'
+    s2 = s2[0 .. s2.length - 2];    // lop off trailing ',,'
     words = split(s2, ",,");
     assert(words.length == 4);
     i = cmp(words[3], "jerry");
     assert(i == 0);
 
-    s2 = s2[2 .. s2.length];	// lop off leading ',,'
+    s2 = s2[2 .. s2.length];    // lop off leading ',,'
     words = split(s2, ",,");
     assert(words.length == 3);
     i = cmp(words[0], "peter");
@@ -1572,45 +1742,45 @@ string[] splitlines(string s)
 
     nlines = 0;
     for (i = 0; i < s.length; i++)
-    {	char c;
+    {   char c;
 
-	c = s[i];
-	if (c == '\r' || c == '\n')
-	{
-	    nlines++;
-	    istart = i + 1;
-	    if (c == '\r' && i + 1 < s.length && s[i + 1] == '\n')
-	    {
-		i++;
-		istart++;
-	    }
-	}
+    c = s[i];
+    if (c == '\r' || c == '\n')
+    {
+        nlines++;
+        istart = i + 1;
+        if (c == '\r' && i + 1 < s.length && s[i + 1] == '\n')
+        {
+        i++;
+        istart++;
+        }
+    }
     }
     if (istart != i)
-	nlines++;
+    nlines++;
 
     auto lines = new string[nlines];
     nlines = 0;
     istart = 0;
     for (i = 0; i < s.length; i++)
-    {	char c;
+    {   char c;
 
-	c = s[i];
-	if (c == '\r' || c == '\n')
-	{
-	    lines[nlines] = s[istart .. i];
-	    nlines++;
-	    istart = i + 1;
-	    if (c == '\r' && i + 1 < s.length && s[i + 1] == '\n')
-	    {
-		i++;
-		istart++;
-	    }
-	}
+    c = s[i];
+    if (c == '\r' || c == '\n')
+    {
+        lines[nlines] = s[istart .. i];
+        nlines++;
+        istart = i + 1;
+        if (c == '\r' && i + 1 < s.length && s[i + 1] == '\n')
+        {
+        i++;
+        istart++;
+        }
+    }
     }
     if (istart != i)
-    {	lines[nlines] = s[istart .. i];
-	nlines++;
+    {   lines[nlines] = s[istart .. i];
+    nlines++;
     }
 
     assert(nlines == lines.length);
@@ -1638,7 +1808,7 @@ unittest
     i = cmp(lines[4], "jerry");
     assert(i == 0);
 
-    s = s[0 .. s.length - 1];	// lop off trailing \n
+    s = s[0 .. s.length - 1];   // lop off trailing \n
     lines = splitlines(s);
     //printf("lines.length = %d\n", lines.length);
     assert(lines.length == 5);
@@ -1657,8 +1827,8 @@ string stripl(string s)
 
     for (i = 0; i < s.length; i++)
     {
-	if (!std.ctype.isspace(s[i]))
-	    break;
+    if (!std.ctype.isspace(s[i]))
+        break;
     }
     return s[i .. s.length];
 }
@@ -1669,8 +1839,8 @@ string stripr(string s) /// ditto
 
     for (i = s.length; i > 0; i--)
     {
-	if (!std.ctype.isspace(s[i - 1]))
-	    break;
+    if (!std.ctype.isspace(s[i - 1]))
+        break;
     }
     return s[0 .. i];
 }
@@ -1889,24 +2059,24 @@ C[] chomp(C)(C[] s, in C[] delimiter = null)
     if (delimiter is null)
     {   auto len = s.length;
 
-	if (len)
-	{   auto c = s[len - 1];
+    if (len)
+    {   auto c = s[len - 1];
 
-	    if (c == '\r')			// if ends in CR
-		len--;
-	    else if (c == '\n')			// if ends in LF
-	    {
-		len--;
-		if (len && s[len - 1] == '\r')
-		    len--;			// remove CR-LF
-	    }
-	}
-	return s[0 .. len];
+        if (c == '\r')          // if ends in CR
+        len--;
+        else if (c == '\n')         // if ends in LF
+        {
+        len--;
+        if (len && s[len - 1] == '\r')
+            len--;          // remove CR-LF
+        }
+    }
+    return s[0 .. len];
     }
     else if (s.length >= delimiter.length)
     {
-	if (s[length - delimiter.length .. length] == delimiter)
-	    return s[0 .. length - delimiter.length];
+    if (s[length - delimiter.length .. length] == delimiter)
+        return s[0 .. length - delimiter.length];
     }
     return s;
 }
@@ -1976,18 +2146,18 @@ string chop(string s)
 
     if (len)
     {
-	if (len >= 2 && s[len - 1] == '\n' && s[len - 2] == '\r')
-	    return s[0 .. len - 2];
+    if (len >= 2 && s[len - 1] == '\n' && s[len - 2] == '\r')
+        return s[0 .. len - 2];
 
-	// If we're in a tail of a UTF-8 sequence, back up
-	while ((s[len - 1] & 0xC0) == 0x80)
-	{
-	    len--;
-	    if (len == 0)
-		throw new std.utf.UtfException("invalid UTF sequence", 0);
-	}
+    // If we're in a tail of a UTF-8 sequence, back up
+    while ((s[len - 1] & 0xC0) == 0x80)
+    {
+        len--;
+        if (len == 0)
+        throw new std.utf.UtfException("invalid UTF sequence", 0);
+    }
 
-	return s[0 .. len - 1];
+    return s[0 .. len - 1];
     }
     return s;
 }
@@ -2017,7 +2187,7 @@ unittest
 string ljustify(string s, int width)
 {
     if (s.length >= width)
-	return s;
+    return s;
     char[] r = new char[width];
     r[0..s.length] = s;
     r[s.length .. width] = cast(char)' ';
@@ -2028,7 +2198,7 @@ string ljustify(string s, int width)
 string rjustify(string s, int width)
 {
     if (s.length >= width)
-	return s;
+    return s;
     char[] r = new char[width];
     r[0 .. width - s.length] = cast(char)' ';
     r[width - s.length .. width] = s;
@@ -2039,7 +2209,7 @@ string rjustify(string s, int width)
 string center(string s, int width)
 {
     if (s.length >= width)
-	return s;
+    return s;
     char[] r = new char[width];
     int left = (width - s.length) / 2;
     r[0 .. left] = cast(char)' ';
@@ -2081,7 +2251,7 @@ unittest
 string zfill(string s, int width)
 {
     if (s.length >= width)
-	return s;
+    return s;
     char[] r = new char[width];
     r[0 .. width - s.length] = cast(char)'0';
     r[width - s.length .. width] = s;
@@ -2100,19 +2270,19 @@ string replace(string s, string from, string to)
 
     //printf("replace('%.*s','%.*s','%.*s')\n", s, from, to);
     if (from.length == 0)
-	return s;
+    return s;
     istart = 0;
     while (istart < s.length)
     {
-	i = find(s[istart .. s.length], from);
-	if (i == -1)
-	{
-	    p ~= s[istart .. s.length];
-	    break;
-	}
-	p ~= s[istart .. istart + i];
-	p ~= to;
-	istart += i + from.length;
+    i = find(s[istart .. s.length], from);
+    if (i == -1)
+    {
+        p ~= s[istart .. s.length];
+        break;
+    }
+    p ~= s[istart .. istart + i];
+    p ~= to;
+    istart += i + from.length;
     }
     return assumeUnique(p);
 }
@@ -2188,10 +2358,10 @@ in
 body
 {
     if (sub.length == 0)
-	return s;
+    return s;
 
     if (s.length == 0)
-	return sub;
+    return sub;
 
     int newlength = s.length + sub.length;
     char[] result = new char[newlength];
@@ -2242,10 +2412,10 @@ size_t count(string s, string sub)
 
     for (i = 0; i < s.length; i += j + sub.length)
     {
-	j = find(s[i .. s.length], sub);
-	if (j == -1)
-	    break;
-	count++;
+    j = find(s[i .. s.length], sub);
+    if (j == -1)
+        break;
+    count++;
     }
     return count;
 }
@@ -2277,46 +2447,46 @@ string expandtabs(string str, int tabsize = 8)
 
     foreach (size_t i, dchar c; str)
     {
-	switch (c)
-	{
-	    case '\t':
-		nspaces = tabsize - (column % tabsize);
-		if (!changes)
-		{
-		    changes = true;
-		    result = null;
-		    result.length = str.length + nspaces - 1;
-		    result.length = i + nspaces;
-		    result[0 .. i] = str[0 .. i];
-		    result[i .. i + nspaces] = ' ';
-		}
-		else
-		{   int j = result.length;
-		    result.length = j + nspaces;
-		    result[j .. j + nspaces] = ' ';
-		}
-		column += nspaces;
-		break;
+    switch (c)
+    {
+        case '\t':
+        nspaces = tabsize - (column % tabsize);
+        if (!changes)
+        {
+            changes = true;
+            result = null;
+            result.length = str.length + nspaces - 1;
+            result.length = i + nspaces;
+            result[0 .. i] = str[0 .. i];
+            result[i .. i + nspaces] = ' ';
+        }
+        else
+        {   int j = result.length;
+            result.length = j + nspaces;
+            result[j .. j + nspaces] = ' ';
+        }
+        column += nspaces;
+        break;
 
-	    case '\r':
-	    case '\n':
-	    case PS:
-	    case LS:
-		column = 0;
-		goto L1;
+        case '\r':
+        case '\n':
+        case PS:
+        case LS:
+        column = 0;
+        goto L1;
 
-	    default:
-		column++;
-	    L1:
-		if (changes)
-		{
-		    if (c <= 0x7F)
-			result ~= cast(char)c;
-		    else
-			std.utf.encode(result, c);
-		}
-		break;
-	}
+        default:
+        column++;
+        L1:
+        if (changes)
+        {
+            if (c <= 0x7F)
+            result ~= cast(char)c;
+            else
+            std.utf.encode(result, c);
+        }
+        break;
+    }
     }
 
     return changes ? assumeUnique(result) : str;
@@ -2353,8 +2523,8 @@ unittest
  * Replace spaces in string s with the optimal number of tabs.
  * Trailing spaces or tabs in a line are removed.
  * Params:
- *	s = String to convert.
- *	tabsize = Tab columns are tabsize spaces apart. tabsize defaults to 8.
+ *  s = String to convert.
+ *  tabsize = Tab columns are tabsize spaces apart. tabsize defaults to 8.
  */
 
 string entab(string s, int tabsize = 8)
@@ -2364,92 +2534,92 @@ string entab(string s, int tabsize = 8)
 
     int nspaces = 0;
     int nwhite = 0;
-    int column = 0;			// column number
+    int column = 0;         // column number
 
     foreach (size_t i, dchar c; s)
-    {   
+    {
 
-	void change()
-	{
-	    changes = true;
-	    result = null;
-	    result.length = s.length;
-	    result.length = i;
-	    result[0 .. i] = s[0 .. i];
-	}
+    void change()
+    {
+        changes = true;
+        result = null;
+        result.length = s.length;
+        result.length = i;
+        result[0 .. i] = s[0 .. i];
+    }
 
-	switch (c)
-	{   
-	    case '\t':
-		nwhite++;
-		if (nspaces)
-		{
-		    if (!changes)
-			change();
+    switch (c)
+    {
+        case '\t':
+        nwhite++;
+        if (nspaces)
+        {
+            if (!changes)
+            change();
 
-		    int j = result.length - nspaces;
-		    int ntabs = (((column - nspaces) % tabsize) + nspaces) / tabsize;
-		    result.length = j + ntabs;
-		    result[j .. j + ntabs] = '\t';
-		    nwhite += ntabs - nspaces;
-		    nspaces = 0;
-		}
-		column = (column + tabsize) / tabsize * tabsize;
-		break;
+            int j = result.length - nspaces;
+            int ntabs = (((column - nspaces) % tabsize) + nspaces) / tabsize;
+            result.length = j + ntabs;
+            result[j .. j + ntabs] = '\t';
+            nwhite += ntabs - nspaces;
+            nspaces = 0;
+        }
+        column = (column + tabsize) / tabsize * tabsize;
+        break;
 
-	    case '\r':
-	    case '\n':
-	    case PS:
-	    case LS:
-		// Truncate any trailing spaces or tabs
-		if (nwhite)
-		{
-		    if (!changes)
-			change();
-		    result = result[0 .. result.length - nwhite];
-		}
-		break;
+        case '\r':
+        case '\n':
+        case PS:
+        case LS:
+        // Truncate any trailing spaces or tabs
+        if (nwhite)
+        {
+            if (!changes)
+            change();
+            result = result[0 .. result.length - nwhite];
+        }
+        break;
 
-	    default:
-		if (nspaces >= 2 && (column % tabsize) == 0)
-		{
-		    if (!changes)
-			change();
+        default:
+        if (nspaces >= 2 && (column % tabsize) == 0)
+        {
+            if (!changes)
+            change();
 
-		    int j = result.length - nspaces;
-		    int ntabs = (nspaces + tabsize - 1) / tabsize;
-		    result.length = j + ntabs;
-		    result[j .. j + ntabs] = '\t';
-		    nwhite += ntabs - nspaces;
-		    nspaces = 0;
-		}
-		if (c == ' ')
-		{   nwhite++;
-		    nspaces++;
-		}
-		else
-		{   nwhite = 0;
-		    nspaces = 0;
-		}
-		column++;
-		break;
-	}
-	if (changes)
-	{
-	    if (c <= 0x7F)
-		result ~= cast(char)c;
-	    else
-		std.utf.encode(result, c);
-	}
+            int j = result.length - nspaces;
+            int ntabs = (nspaces + tabsize - 1) / tabsize;
+            result.length = j + ntabs;
+            result[j .. j + ntabs] = '\t';
+            nwhite += ntabs - nspaces;
+            nspaces = 0;
+        }
+        if (c == ' ')
+        {   nwhite++;
+            nspaces++;
+        }
+        else
+        {   nwhite = 0;
+            nspaces = 0;
+        }
+        column++;
+        break;
+    }
+    if (changes)
+    {
+        if (c <= 0x7F)
+        result ~= cast(char)c;
+        else
+        std.utf.encode(result, c);
+    }
     }
 
     // Truncate any trailing spaces or tabs
     if (nwhite)
     {
-	if (changes)
-	    result = result[0 .. result.length - nwhite];
-	else
-	    s = s[0 .. s.length - nwhite];
+    if (changes)
+        result = result[0 .. result.length - nwhite];
+    else
+        s = s[0 .. s.length - nwhite];
     }
     return changes ? assumeUnique(result) : s;
 }
@@ -2507,29 +2677,29 @@ unittest
 string maketrans(in string from, in string to)
     in
     {
-	assert(from.length == to.length);
-	assert(from.length <= 128);
-	foreach (char c; from)
-	{
-	    assert(c <= 0x7F);
-	}
-	foreach (char c; to)
-	{
-	    assert(c <= 0x7F);
-	}
+    assert(from.length == to.length);
+    assert(from.length <= 128);
+    foreach (char c; from)
+    {
+        assert(c <= 0x7F);
+    }
+    foreach (char c; to)
+    {
+        assert(c <= 0x7F);
+    }
     }
     body
     {
-	char[] t = new char[256];
-	int i;
+    char[] t = new char[256];
+    int i;
 
-	for (i = 0; i < t.length; i++)
-	    t[i] = cast(char)i;
+    for (i = 0; i < t.length; i++)
+        t[i] = cast(char)i;
 
-	for (i = 0; i < from.length; i++)
-	    t[from[i]] = to[i];
+    for (i = 0; i < from.length; i++)
+        t[from[i]] = to[i];
 
-	return assumeUnique(t);
+    return assumeUnique(t);
     }
 
 /******************************************
@@ -2541,40 +2711,40 @@ string maketrans(in string from, in string to)
 string translate(string s, in string transtab, in string delchars)
     in
     {
-	assert(transtab.length == 256);
+    assert(transtab.length == 256);
     }
     body
     {
-	char[] r;
-	int count;
-	bool[256] deltab;
+    char[] r;
+    int count;
+    bool[256] deltab;
 
-	deltab[] = false;
-	foreach (char c; delchars)
-	{
-	    deltab[c] = true;
-	}
+    deltab[] = false;
+    foreach (char c; delchars)
+    {
+        deltab[c] = true;
+    }
 
-	count = 0;
-	foreach (char c; s)
-	{
-	    if (!deltab[c])
-		count++;
-	    //printf("s[%d] = '%c', count = %d\n", i, s[i], count);
-	}
+    count = 0;
+    foreach (char c; s)
+    {
+        if (!deltab[c])
+        count++;
+        //printf("s[%d] = '%c', count = %d\n", i, s[i], count);
+    }
 
-	r = new char[count];
-	count = 0;
-	foreach (char c; s)
-	{
-	    if (!deltab[c])
-	    {
-		r[count] = transtab[c];
-		count++;
-	    }
-	}
+    r = new char[count];
+    count = 0;
+    foreach (char c; s)
+    {
+        if (!deltab[c])
+        {
+        r[count] = transtab[c];
+        count++;
+        }
+    }
 
-	return assumeUnique(r);
+    return assumeUnique(r);
     }
 
 unittest
@@ -2637,7 +2807,7 @@ unittest
     string s2;
     foreach (char c; s)
     {
-	s2 ~= std.string.toString(c);
+    s2 ~= std.string.toString(c);
     }
     //printf("%.*s", s2);
     assert(s2 == "foo");
@@ -2654,19 +2824,19 @@ string toString(uint u)
 
     ndigits = 0;
     if (u < 10)
-	// Avoid storage allocation for simple stuff
-	return digits[u .. u + 1];
+    // Avoid storage allocation for simple stuff
+    return digits[u .. u + 1];
     else
     {
-	while (u)
-	{
-	    uint c = (u % 10) + '0';
-	    u /= 10;
-	    ndigits++;
-	    buffer[buffer.length - ndigits] = cast(char)c;
-	}
-	result = new char[ndigits];
-	result[] = buffer[buffer.length - ndigits .. buffer.length];
+    while (u)
+    {
+        uint c = (u % 10) + '0';
+        u /= 10;
+        ndigits++;
+        buffer[buffer.length - ndigits] = cast(char)c;
+    }
+    result = new char[ndigits];
+    result[] = buffer[buffer.length - ndigits .. buffer.length];
     }
     return assumeUnique(result);
 }
@@ -2698,14 +2868,14 @@ string toString(ulong u)
     char[] result;
 
     if (u < 0x1_0000_0000)
-	return toString(cast(uint)u);
+    return toString(cast(uint)u);
     ndigits = 0;
     while (u)
     {
-	char c = cast(char)((u % 10) + '0');
-	u /= 10;
-	ndigits++;
-	buffer[buffer.length - ndigits] = c;
+    char c = cast(char)((u % 10) + '0');
+    u /= 10;
+    ndigits++;
+    buffer[buffer.length - ndigits] = c;
     }
     result = new char[ndigits];
     result[] = buffer[buffer.length - ndigits .. buffer.length];
@@ -2741,16 +2911,16 @@ string toString(int i)
     char[] result;
 
     if (i >= 0)
-	return toString(cast(uint)i);
+    return toString(cast(uint)i);
 
     uint u = -i;
     int ndigits = 1;
     while (u)
     {
-	char c = cast(char)((u % 10) + '0');
-	u /= 10;
-	buffer[buffer.length - ndigits] = c;
-	ndigits++;
+    char c = cast(char)((u % 10) + '0');
+    u /= 10;
+    buffer[buffer.length - ndigits] = c;
+    ndigits++;
     }
     buffer[buffer.length - ndigits] = '-';
     result = new char[ndigits];
@@ -2796,18 +2966,18 @@ string toString(long i)
     char[] result;
 
     if (i >= 0)
-	return toString(cast(ulong)i);
+    return toString(cast(ulong)i);
     if (cast(int)i == i)
-	return toString(cast(int)i);
+    return toString(cast(int)i);
 
     ulong u = cast(ulong)(-i);
     int ndigits = 1;
     while (u)
     {
-	char c = cast(char)((u % 10) + '0');
-	u /= 10;
-	buffer[buffer.length - ndigits] = c;
-	ndigits++;
+    char c = cast(char)((u % 10) + '0');
+    u /= 10;
+    buffer[buffer.length - ndigits] = c;
+    ndigits++;
     }
     buffer[buffer.length - ndigits] = '-';
     result = new char[ndigits];
@@ -2926,7 +3096,7 @@ in
 body
 {
     if (radix == 10)
-	return toString(value);		// handle signed cases only for radix 10
+    return toString(value);     // handle signed cases only for radix 10
     return toString(cast(ulong)value, radix);
 }
 
@@ -2942,15 +3112,15 @@ body
     uint i = buffer.length;
 
     if (value < radix && value < hexdigits.length)
-	return hexdigits[cast(size_t)value .. cast(size_t)value + 1];
+    return hexdigits[cast(size_t)value .. cast(size_t)value + 1];
 
     do
-    {	ubyte c;
+    {   ubyte c;
 
-	c = cast(ubyte)(value % radix);
-	value = value / radix;
-	i--;
-	buffer[i] = cast(char)((c < 10) ? c + '0' : c + 'A' - 10);
+    c = cast(ubyte)(value % radix);
+    value = value / radix;
+    i--;
+    buffer[i] = cast(char)((c < 10) ? c + '0' : c + 'A' - 10);
     } while (value);
     return buffer[i .. length].idup;
 }
@@ -3020,7 +3190,7 @@ string format(...)
 
     void putc(dchar c)
     {
-	std.utf.encode(s, c);
+    std.utf.encode(s, c);
     }
 
     std.format.doFormat(&putc, _arguments, _argptr);
@@ -3038,21 +3208,21 @@ char[] sformat(char[] s, ...)
 
     void putc(dchar c)
     {
-	if (c <= 0x7F)
-	{
-	    if (i >= s.length)
-		throw new ArrayBoundsError("std.string.sformat", 0);
-	    s[i] = cast(char)c;
-	    ++i;
-	}
-	else
-	{   char[4] buf;
-	    auto b = std.utf.toUTF8(buf, c);
-	    if (i + b.length > s.length)
-		throw new ArrayBoundsError("std.string.sformat", 0);
-	    s[i..i+b.length] = b[];
-	    i += b.length;
-	}
+    if (c <= 0x7F)
+    {
+        if (i >= s.length)
+        throw new ArrayBoundsError("std.string.sformat", 0);
+        s[i] = cast(char)c;
+        ++i;
+    }
+    else
+    {   char[4] buf;
+        auto b = std.utf.toUTF8(buf, c);
+        if (i + b.length > s.length)
+        throw new ArrayBoundsError("std.string.sformat", 0);
+        s[i..i+b.length] = b[];
+        i += b.length;
+    }
     }
 
     std.format.doFormat(&putc, _arguments, _argptr);
@@ -3105,19 +3275,19 @@ unittest
  * See if character c is in the pattern.
  * Patterns:
  *
- *	A <i>pattern</i> is an array of characters much like a <i>character
- *	class</i> in regular expressions. A sequence of characters
- *	can be given, such as "abcde". The '-' can represent a range
- *	of characters, as "a-e" represents the same pattern as "abcde".
- *	"a-fA-F0-9" represents all the hex characters.
- *	If the first character of a pattern is '^', then the pattern
- *	is negated, i.e. "^0-9" means any character except a digit.
- *	The functions inPattern, <b>countchars</b>, <b>removeschars</b>,
- *	and <b>squeeze</b>
- *	use patterns.
+ *  A <i>pattern</i> is an array of characters much like a <i>character
+ *  class</i> in regular expressions. A sequence of characters
+ *  can be given, such as "abcde". The '-' can represent a range
+ *  of characters, as "a-e" represents the same pattern as "abcde".
+ *  "a-fA-F0-9" represents all the hex characters.
+ *  If the first character of a pattern is '^', then the pattern
+ *  is negated, i.e. "^0-9" means any character except a digit.
+ *  The functions inPattern, <b>countchars</b>, <b>removeschars</b>,
+ *  and <b>squeeze</b>
+ *  use patterns.
  *
  * Note: In the future, the pattern syntax may be improved
- *	to be more like regular expression character classes.
+ *  to be more like regular expression character classes.
  */
 
 bool inPattern(dchar c, in string pattern)
@@ -3128,25 +3298,25 @@ bool inPattern(dchar c, in string pattern)
 
     foreach (size_t i, dchar p; pattern)
     {
-	if (p == '^' && i == 0)
-	{   result = true;
-	    if (i + 1 == pattern.length)
-		return (c == p);	// or should this be an error?
-	}
-	else if (range)
-	{
-	    range = 0;
-	    if (lastc <= c && c <= p || c == p)
-		return !result;
-	}
-	else if (p == '-' && i > result && i + 1 < pattern.length)
-	{
-	    range = 1;
-	    continue;
-	}
-	else if (c == p)
-	    return !result;
-	lastc = p;
+    if (p == '^' && i == 0)
+    {   result = true;
+        if (i + 1 == pattern.length)
+        return (c == p);    // or should this be an error?
+    }
+    else if (range)
+    {
+        range = 0;
+        if (lastc <= c && c <= p || c == p)
+        return !result;
+    }
+    else if (p == '-' && i > result && i + 1 < pattern.length)
+    {
+        range = 1;
+        continue;
+    }
+    else if (c == p)
+        return !result;
+    lastc = p;
     }
     return result;
 }
@@ -3208,11 +3378,11 @@ int inPattern(dchar c, string[] patterns)
 
     foreach (string pattern; patterns)
     {
-	if (!inPattern(c, pattern))
-	{   result = 0;
-	    break;
-	}
-	result = 1;
+    if (!inPattern(c, pattern))
+    {   result = 0;
+        break;
+    }
+    result = 1;
     }
     return result;
 }
@@ -3228,7 +3398,7 @@ size_t countchars(string s, string pattern)
 
     foreach (dchar c; s)
     {
-	count += inPattern(c, pattern);
+    count += inPattern(c, pattern);
     }
     return count;
 }
@@ -3259,17 +3429,17 @@ string removechars(string s, in string pattern)
     //writefln("removechars(%s, %s)", s, pattern);
     foreach (size_t i, dchar c; s)
     {
-	if (!inPattern(c, pattern))
-	{
-	    if (!changed)
-	    {   changed = true;
-		r = s[0 .. i].dup;
-	    }
-	    if (changed)
-	    {
-		std.utf.encode(r, c);
-	    }
-	}
+    if (!inPattern(c, pattern))
+    {
+        if (!changed)
+        {   changed = true;
+        r = s[0 .. i].dup;
+        }
+        if (changed)
+        {
+        std.utf.encode(r, c);
+        }
+    }
     }
     return assumeUnique(r);
 }
@@ -3306,31 +3476,31 @@ string squeeze(string s, string pattern = null)
 
     foreach (size_t i, dchar c; s)
     {
-	if (run && lastc == c)
-	{
-	    changed = true;
-	}
-	else if (pattern is null || inPattern(c, pattern))
-	{
-	    run = 1;
-	    if (changed)
-	    {	if (r is null)
-		    r = s[0 .. lasti].dup;
-		std.utf.encode(r, c);
-	    }
-	    else
-		lasti = i + std.utf.stride(s, i);
-	    lastc = c;
-	}
-	else
-	{
-	    run = 0;
-	    if (changed)
-	    {	if (r is null)
-		    r = s[0 .. lasti].dup;
-		std.utf.encode(r, c);
-	    }
-	}
+    if (run && lastc == c)
+    {
+        changed = true;
+    }
+    else if (pattern is null || inPattern(c, pattern))
+    {
+        run = 1;
+        if (changed)
+        {   if (r is null)
+            r = s[0 .. lasti].dup;
+        std.utf.encode(r, c);
+        }
+        else
+        lasti = i + std.utf.stride(s, i);
+        lastc = c;
+    }
+    else
+    {
+        run = 0;
+        if (changed)
+        {   if (r is null)
+            r = s[0 .. lasti].dup;
+        std.utf.encode(r, c);
+        }
+    }
     }
     return changed ? ((r is null) ? s[0 .. lasti] : assumeUnique(r)) : s;
 }
@@ -3349,7 +3519,7 @@ unittest
     assert(r is s);
     s = "xyzz";
     r = squeeze(s);
-    assert(r.ptr == s.ptr);	// should just be a slice
+    assert(r.ptr == s.ptr); // should just be a slice
     r = squeeze("hello goodbyee", "oe");
     assert(r == "hello godbye");
 }
@@ -3411,41 +3581,41 @@ string succ(string s)
 {
     if (s.length && isalnum(s[length - 1]))
     {
-	char[] r = s.dup;
-	size_t i = r.length - 1;
+    char[] r = s.dup;
+    size_t i = r.length - 1;
 
-	while (1)
-	{   dchar c = s[i];
-	    dchar carry;
+    while (1)
+    {   dchar c = s[i];
+        dchar carry;
 
-	    switch (c)
-	    {
-		case '9':
-		    c = '0';
-		    carry = '1';
-		    goto Lcarry;
-		case 'z':
-		case 'Z':
-		    c -= 'Z' - 'A';
-		    carry = c;
-		Lcarry:
-		    r[i] = cast(char)c;
-		    if (i == 0)
-		    {
-			char[] t = new char[r.length + 1];
-			t[0] = cast(char)carry;
-			t[1 .. length] = r[];
-			return assumeUnique(t);
-		    }
-		    i--;
-		    break;
+        switch (c)
+        {
+        case '9':
+            c = '0';
+            carry = '1';
+            goto Lcarry;
+        case 'z':
+        case 'Z':
+            c -= 'Z' - 'A';
+            carry = c;
+        Lcarry:
+            r[i] = cast(char)c;
+            if (i == 0)
+            {
+            char[] t = new char[r.length + 1];
+            t[0] = cast(char)carry;
+            t[1 .. length] = r[];
+            return assumeUnique(t);
+            }
+            i--;
+            break;
 
-		default:
-		    if (std.ctype.isalnum(c))
-			r[i]++;
-		    return assumeUnique(r);
-	    }
-	}
+        default:
+            if (std.ctype.isalnum(c))
+            r[i]++;
+            return assumeUnique(r);
+        }
+    }
     }
     return s;
 }
@@ -3476,29 +3646,29 @@ unittest
  * with corresponding characters in to[] and returns the resulting
  * string.
  * Params:
- *	modifiers = a string of modifier characters
+ *  modifiers = a string of modifier characters
  * Modifiers:
-		<table border=1 cellspacing=0 cellpadding=5>
-		<tr> <th>Modifier <th>Description
-		<tr> <td><b>c</b> <td>Complement the list of characters in from[]
-		<tr> <td><b>d</b> <td>Removes matching characters with no corresponding replacement in to[]
-		<tr> <td><b>s</b> <td>Removes adjacent duplicates in the replaced characters
-		</table>
+        <table border=1 cellspacing=0 cellpadding=5>
+        <tr> <th>Modifier <th>Description
+        <tr> <td><b>c</b> <td>Complement the list of characters in from[]
+        <tr> <td><b>d</b> <td>Removes matching characters with no corresponding replacement in to[]
+        <tr> <td><b>s</b> <td>Removes adjacent duplicates in the replaced characters
+        </table>
 
-	If modifier <b>d</b> is present, then the number of characters
-	in to[] may be only 0 or 1.
+    If modifier <b>d</b> is present, then the number of characters
+    in to[] may be only 0 or 1.
 
-	If modifier <b>d</b> is not present and to[] is null,
-	then to[] is taken _to be the same as from[].
+    If modifier <b>d</b> is not present and to[] is null,
+    then to[] is taken _to be the same as from[].
 
-	If modifier <b>d</b> is not present and to[] is shorter
-	than from[], then to[] is extended by replicating the
-	last character in to[].
+    If modifier <b>d</b> is not present and to[] is shorter
+    than from[], then to[] is extended by replicating the
+    last character in to[].
 
-	Both from[] and to[] may contain ranges using the <b>-</b>
-	character, for example <b>a-d</b> is synonymous with <b>abcd</b>.
-	Neither accept a leading <b>^</b> as meaning the complement of
-	the string (use the <b>c</b> modifier for that).
+    Both from[] and to[] may contain ranges using the <b>-</b>
+    character, for example <b>a-d</b> is synonymous with <b>abcd</b>.
+    Neither accept a leading <b>^</b> as meaning the complement of
+    the string (use the <b>c</b> modifier for that).
  */
 
 string tr(string str, string from, string to, string modifiers = null)
@@ -3509,17 +3679,17 @@ string tr(string str, string from, string to, string modifiers = null)
 
     foreach (char c; modifiers)
     {
-	switch (c)
-	{
-	    case 'c':	mod_c = 1; break;	// complement
-	    case 'd':	mod_d = 1; break;	// delete unreplaced chars
-	    case 's':	mod_s = 1; break;	// squeeze duplicated replaced chars
-	    default:	assert(0);
-	}
+    switch (c)
+    {
+        case 'c':   mod_c = 1; break;   // complement
+        case 'd':   mod_d = 1; break;   // delete unreplaced chars
+        case 's':   mod_s = 1; break;   // squeeze duplicated replaced chars
+        default:    assert(0);
+    }
     }
 
     if (to is null && !mod_d)
-	to = from;
+    to = from;
 
     char[] result = new char[str.length];
     result.length = 0;
@@ -3527,87 +3697,87 @@ string tr(string str, string from, string to, string modifiers = null)
     dchar lastc;
 
     foreach (dchar c; str)
-    {	dchar lastf;
-	dchar lastt;
-	dchar newc;
-	int n = 0;
+    {   dchar lastf;
+    dchar lastt;
+    dchar newc;
+    int n = 0;
 
-	for (size_t i = 0; i < from.length; )
-	{
-	    dchar f = std.utf.decode(from, i);
-	    //writefln("\tf = '%s', c = '%s', lastf = '%x', '%x', i = %d, %d", f, c, lastf, dchar.init, i, from.length);
-	    if (f == '-' && lastf != dchar.init && i < from.length)
-	    {
-		dchar nextf = std.utf.decode(from, i);
-		//writefln("\tlastf = '%s', c = '%s', nextf = '%s'", lastf, c, nextf);
-		if (lastf <= c && c <= nextf)
-		{
-		    n += c - lastf - 1;
-		    if (mod_c)
-			goto Lnotfound;
-		    goto Lfound;
-		}
-		n += nextf - lastf;
-		lastf = lastf.init;
-		continue;
-	    }
+    for (size_t i = 0; i < from.length; )
+    {
+        dchar f = std.utf.decode(from, i);
+        //writefln("\tf = '%s', c = '%s', lastf = '%x', '%x', i = %d, %d", f, c, lastf, dchar.init, i, from.length);
+        if (f == '-' && lastf != dchar.init && i < from.length)
+        {
+        dchar nextf = std.utf.decode(from, i);
+        //writefln("\tlastf = '%s', c = '%s', nextf = '%s'", lastf, c, nextf);
+        if (lastf <= c && c <= nextf)
+        {
+            n += c - lastf - 1;
+            if (mod_c)
+            goto Lnotfound;
+            goto Lfound;
+        }
+        n += nextf - lastf;
+        lastf = lastf.init;
+        continue;
+        }
 
-	    if (c == f)
-	    {	if (mod_c)
-		    goto Lnotfound;
-		goto Lfound;
-	    }
-	    lastf = f;
-	    n++;
-	}
-	if (!mod_c)
-	    goto Lnotfound;
-	n = 0;			// consider it 'found' at position 0
+        if (c == f)
+        {   if (mod_c)
+            goto Lnotfound;
+        goto Lfound;
+        }
+        lastf = f;
+        n++;
+    }
+    if (!mod_c)
+        goto Lnotfound;
+    n = 0;          // consider it 'found' at position 0
 
     Lfound:
 
-	// Find the nth character in to[]
-	//writefln("\tc = '%s', n = %d", c, n);
-	dchar nextt;
-	for (size_t i = 0; i < to.length; )
-	{   dchar t = std.utf.decode(to, i);
-	    if (t == '-' && lastt != dchar.init && i < to.length)
-	    {
-		nextt = std.utf.decode(to, i);
-		//writefln("\tlastt = '%s', c = '%s', nextt = '%s', n = %d", lastt, c, nextt, n);
-		n -= nextt - lastt;
-		if (n < 0)
-		{
-		    newc = nextt + n + 1;
-		    goto Lnewc;
-		}
-		lastt = dchar.init;
-		continue;
-	    }
-	    if (n == 0)
-	    {	newc = t;
-		goto Lnewc;
-	    }
-	    lastt = t;
-	    nextt = t;
-	    n--;
-	}
-	if (mod_d)
-	    continue;
-	newc = nextt;
+    // Find the nth character in to[]
+    //writefln("\tc = '%s', n = %d", c, n);
+    dchar nextt;
+    for (size_t i = 0; i < to.length; )
+    {   dchar t = std.utf.decode(to, i);
+        if (t == '-' && lastt != dchar.init && i < to.length)
+        {
+        nextt = std.utf.decode(to, i);
+        //writefln("\tlastt = '%s', c = '%s', nextt = '%s', n = %d", lastt, c, nextt, n);
+        n -= nextt - lastt;
+        if (n < 0)
+        {
+            newc = nextt + n + 1;
+            goto Lnewc;
+        }
+        lastt = dchar.init;
+        continue;
+        }
+        if (n == 0)
+        {   newc = t;
+        goto Lnewc;
+        }
+        lastt = t;
+        nextt = t;
+        n--;
+    }
+    if (mod_d)
+        continue;
+    newc = nextt;
 
       Lnewc:
-	if (mod_s && m && newc == lastc)
-	    continue;
-	std.utf.encode(result, newc);
-	m = 1;
-	lastc = newc;
-	continue;
+    if (mod_s && m && newc == lastc)
+        continue;
+    std.utf.encode(result, newc);
+    m = 1;
+    lastc = newc;
+    continue;
 
       Lnotfound:
-	std.utf.encode(result, c);
-	lastc = c;
-	m = 0;
+    std.utf.encode(result, c);
+    lastc = c;
+    m = 0;
     }
     return assumeUnique(result);
 }
@@ -3659,7 +3829,7 @@ unittest
  * Author        : David L. 'SpottedTiger' Davis
  * Date Created  : 31.May.05 Compiled and Tested with dmd v0.125
  * Date Modified : 01.Jun.05 Modified the function to handle the
- *               :           imaginary and complex float-point 
+ *               :           imaginary and complex float-point
  *               :           datatypes.
  *               :
  * Licence       : Public Domain / Contributed to Digital Mars
@@ -3680,7 +3850,7 @@ unittest
  *      or [nan|nani|inf|-inf]
  *
  * examples: +123., -123.01, 123.3e-10f, 123.3e-10fi, 123.3e-10L
- * 
+ *
  * (for cfloat, cdouble, and creal)
  * ['+'|'-']digit(s)[.][digit(s)][[e-|e+]digit(s)][+]
  *         [digit(s)[.][digit(s)][[e-|e+]digit(s)][i|f|L|Li|fi]]
@@ -3688,15 +3858,15 @@ unittest
  *
  * examples: nan, -123e-1+456.9e-10Li, +123e+10+456i, 123+456
  *
- * [in] bool bAllowSep 
- * False by default, but when set to true it will accept the 
- * separator characters "," and "_" within the string, but these  
- * characters should be stripped from the string before using any 
- * of the conversion functions like toInt(), toFloat(), and etc 
+ * [in] bool bAllowSep
+ * False by default, but when set to true it will accept the
+ * separator characters "," and "_" within the string, but these
+ * characters should be stripped from the string before using any
+ * of the conversion functions like toInt(), toFloat(), and etc
  * else an error will occur.
  *
- * Also please note, that no spaces are allowed within the string  
- * anywhere whether it's a leading, trailing, or embedded space(s), 
+ * Also please note, that no spaces are allowed within the string
+ * anywhere whether it's a leading, trailing, or embedded space(s),
  * thus they too must be stripped from the string before using this
  * function, or any of the conversion functions.
  */
@@ -3707,7 +3877,7 @@ final bool isNumeric(string s, in bool bAllowSep = false)
     bool   bDecimalPoint = false;
     bool   bExponent = false;
     bool   bComplex = false;
-    string sx = std.string.tolower(s); 
+    string sx = std.string.tolower(s);
     int    j  = 0;
     char   c;
 
@@ -3715,32 +3885,32 @@ final bool isNumeric(string s, in bool bAllowSep = false)
     // Empty string, return false
     if (iLen == 0)
         return false;
-    
+
     // Check for NaN (Not a Number)
     if (sx == "nan" || sx == "nani" || sx == "nan+nani")
         return true;
-        
+
     // Check for Infinity
     if (sx == "inf" || sx == "-inf")
         return true;
-     
-    // A sign is allowed only in the 1st character   
+
+    // A sign is allowed only in the 1st character
     if (sx[0] == '-' || sx[0] == '+')
         j++;
-            
+
     for (int i = j; i < iLen; i++)
     {
         c = sx[i];
-    
-        // Digits are good, continue checking 
+
+        // Digits are good, continue checking
         // with the next character... ;)
-        if (c >= '0' && c <= '9') 
+        if (c >= '0' && c <= '9')
             continue;
 
-        // Check for the complex type, and if found 
-        // reset the flags for checking the 2nd number.  
+        // Check for the complex type, and if found
+        // reset the flags for checking the 2nd number.
         else if (c == '+')
-            if (i > 0) 
+            if (i > 0)
             {
                 bDecimalPoint = false;
                 bExponent = false;
@@ -3749,97 +3919,97 @@ final bool isNumeric(string s, in bool bAllowSep = false)
             }
             else
                 return false;
-                
-        // Allow only one exponent per number   
-        else if (c == 'e')  
+
+        // Allow only one exponent per number
+        else if (c == 'e')
         {
             // A 2nd exponent found, return not a number
             if (bExponent)
                 return false;
-                
+
             if (i + 1 < iLen)
             {
-                // Look forward for the sign, and if 
+                // Look forward for the sign, and if
                 // missing then this is not a number.
                 if (sx[i + 1] != '-' && sx[i + 1] != '+')
                     return false;
                 else
                 {
                     bExponent = true;
-                    i++;    
-                }    
-            }        
+                    i++;
+                }
+            }
             else
                 // Ending in "E", return not a number
-                return false;        
-        }  
+                return false;
+        }
         // Allow only one decimal point per number to be used
         else if (c == '.' )
         {
             // A 2nd decimal point found, return not a number
             if (bDecimalPoint)
                 return false;
-            
+
             bDecimalPoint = true;
             continue;
-        }   
+        }
         // Check for ending literal characters: "f,u,l,i,ul,fi,li",
         // and wheater they're being used with the correct datatype.
         else if (i == iLen - 2)
         {
             // Integer Whole Number
-            if (sx[i..iLen] == "ul" && 
+            if (sx[i..iLen] == "ul" &&
                (!bDecimalPoint && !bExponent && !bComplex))
                 return true;
             // Floating-Point Number
             else if ((sx[i..iLen] == "fi" || sx[i..iLen] == "li") &&
                      (bDecimalPoint || bExponent || bComplex))
                 return true;
-            else if (sx[i..iLen] == "ul" && 
+            else if (sx[i..iLen] == "ul" &&
                     (bDecimalPoint || bExponent || bComplex))
-                return false;    
+                return false;
             // Could be a Integer or a Float, thus
-            // all these suffixes are valid for both  
-            else if (sx[i..iLen] == "ul" || 
-                     sx[i..iLen] == "fi" || 
+            // all these suffixes are valid for both
+            else if (sx[i..iLen] == "ul" ||
+                     sx[i..iLen] == "fi" ||
                      sx[i..iLen] == "li")
                 return true;
-            else    
+            else
                 return false;
         }
         else if (i == iLen - 1)
         {
             // Integer Whole Number
-            if ((c == 'u' || c == 'l') && 
+            if ((c == 'u' || c == 'l') &&
                 (!bDecimalPoint && !bExponent && !bComplex))
                 return true;
-            // Check to see if the last character in the string 
+            // Check to see if the last character in the string
             // is the required 'i' character
             else if (bComplex)
                 if (c == 'i')
                     return true;
-                else 
-                    return false;        
+                else
+                    return false;
             // Floating-Point Number
             else if ((c == 'l' || c == 'f' || c == 'i') &&
                      (bDecimalPoint || bExponent))
                 return true;
-            // Could be a Integer or a Float, thus  
-            // all these suffixes are valid for both 
+            // Could be a Integer or a Float, thus
+            // all these suffixes are valid for both
             else if (c == 'l' || c == 'f' || c == 'i')
                 return true;
             else
                 return false;
         }
         else
-            // Check if separators are allow  
+            // Check if separators are allow
             // to be in the numeric string
             if (bAllowSep == true && (c == '_' || c == ','))
                 continue;
-            else    
-                return false;       
-    }     
-    
+            else
+                return false;
+    }
+
     return true;
 }
 
@@ -3849,7 +4019,7 @@ bool isNumeric(...)
     return isNumeric(_arguments, _argptr);
 }
 
-/// Check only the first parameter, all others will be ignored. 
+/// Check only the first parameter, all others will be ignored.
 bool isNumeric(TypeInfo[] _arguments, va_list _argptr)
 {
     auto  s = ""c;
@@ -3868,71 +4038,71 @@ bool isNumeric(TypeInfo[] _arguments, va_list _argptr)
         return isNumeric(std.utf.toUTF8(va_arg!(dstring)(_argptr)));
     else if (_arguments[0] == typeid(real))
         return true;
-    else if (_arguments[0] == typeid(double)) 
-        return true;   
-    else if (_arguments[0] == typeid(float)) 
-        return true;  
-    else if (_arguments[0] == typeid(ulong)) 
-        return true; 
-    else if (_arguments[0] == typeid(long)) 
-        return true;   
-    else if (_arguments[0] == typeid(uint)) 
-        return true;  
-    else if (_arguments[0] == typeid(int)) 
-        return true;   
-    else if (_arguments[0] == typeid(ushort)) 
-        return true;   
-    else if (_arguments[0] == typeid(short)) 
-        return true;   
-    else if (_arguments[0] == typeid(ubyte)) 
+    else if (_arguments[0] == typeid(double))
+        return true;
+    else if (_arguments[0] == typeid(float))
+        return true;
+    else if (_arguments[0] == typeid(ulong))
+        return true;
+    else if (_arguments[0] == typeid(long))
+        return true;
+    else if (_arguments[0] == typeid(uint))
+        return true;
+    else if (_arguments[0] == typeid(int))
+        return true;
+    else if (_arguments[0] == typeid(ushort))
+        return true;
+    else if (_arguments[0] == typeid(short))
+        return true;
+    else if (_arguments[0] == typeid(ubyte))
     {
-	char[1] t;
-	t[0]= va_arg!(ubyte)(_argptr);
-	return isNumeric(cast(string)t);
+    char[1] t;
+    t[0]= va_arg!(ubyte)(_argptr);
+    return isNumeric(cast(string)t);
     }
-    else if (_arguments[0] == typeid(byte)) 
+    else if (_arguments[0] == typeid(byte))
     {
-	char[1] t;
-	t[0] = va_arg!(byte)(_argptr);
-	return isNumeric(cast(string)t);
+    char[1] t;
+    t[0] = va_arg!(byte)(_argptr);
+    return isNumeric(cast(string)t);
     }
     else if (_arguments[0] == typeid(ireal))
         return true;
-    else if (_arguments[0] == typeid(idouble)) 
-        return true;   
-    else if (_arguments[0] == typeid(ifloat)) 
-        return true;  
+    else if (_arguments[0] == typeid(idouble))
+        return true;
+    else if (_arguments[0] == typeid(ifloat))
+        return true;
     else if (_arguments[0] == typeid(creal))
         return true;
-    else if (_arguments[0] == typeid(cdouble)) 
-        return true;   
-    else if (_arguments[0] == typeid(cfloat)) 
-        return true;  
+    else if (_arguments[0] == typeid(cdouble))
+        return true;
+    else if (_arguments[0] == typeid(cfloat))
+        return true;
     else if (_arguments[0] == typeid(char))
     {
-	char[1] t;
-	t[0] = va_arg!(char)(_argptr);
+    char[1] t;
+    t[0] = va_arg!(char)(_argptr);
         return isNumeric(cast(string)t);
     }
     else if (_arguments[0] == typeid(wchar))
     {
-	wchar[1] t;
-	t[0] = va_arg!(wchar)(_argptr);
+    wchar[1] t;
+    t[0] = va_arg!(wchar)(_argptr);
         return isNumeric(std.utf.toUTF8(t));
     }
     else if (_arguments[0] == typeid(dchar))
-    { 
-	dchar[1] t;
-	t[0] = va_arg!(dchar)(_argptr);
+    {
+    dchar[1] t;
+    t[0] = va_arg!(dchar)(_argptr);
         dchar[] t1 = t;
-	return isNumeric(std.utf.toUTF8(cast(dstring) t1));
+    return isNumeric(std.utf.toUTF8(cast(dstring) t1));
     }
-    //else if (_arguments[0] == typeid(cent)) 
-    //    return true;   
-    //else if (_arguments[0] == typeid(ucent)) 
-    //    return true;  
-    else       
-       return false; 
+    //else if (_arguments[0] == typeid(cent))
+    //    return true;
+    //else if (_arguments[0] == typeid(ucent))
+    //    return true;
+    else
+       return false;
 }
 
 unittest
@@ -3952,12 +4122,12 @@ unittest
     assert(isNumeric(" 12.356") == false );
     assert(isNumeric("123 5.6") == false );
     assert(isNumeric("1233E-1+1.0e-1i") == true );
- 
+
     assert(isNumeric("123.00E-5+1234.45E-12Li") == true);
     assert(isNumeric("123.00e-5+1234.45E-12iL") == false);
     assert(isNumeric("123.00e-5+1234.45e-12uL") == false);
     assert(isNumeric("123.00E-5+1234.45e-12lu") == false);
-  
+
     assert(isNumeric("123fi") == true);
     assert(isNumeric("123li") == true);
     assert(isNumeric("--123L") == false);
@@ -3999,22 +4169,22 @@ unittest
  * of names.
  *
  * Params:
- *	string = String to convert to Soundex representation.
- *	buffer = Optional 4 char array to put the resulting Soundex
- *		characters into. If null, the return value
- *		buffer will be allocated on the heap.
+ *  string = String to convert to Soundex representation.
+ *  buffer = Optional 4 char array to put the resulting Soundex
+ *      characters into. If null, the return value
+ *      buffer will be allocated on the heap.
  * Returns:
- *	The four character array with the Soundex result in it.
- *	Returns null if there is no Soundex representation for the string.
+ *  The four character array with the Soundex result in it.
+ *  Returns null if there is no Soundex representation for the string.
  *
  * See_Also:
- *	$(LINK2 http://en.wikipedia.org/wiki/Soundex, Wikipedia),
- *	$(LINK2 http://www.archives.gov/publications/general-info-leaflets/55.html, The Soundex Indexing System)
+ *  $(LINK2 http://en.wikipedia.org/wiki/Soundex, Wikipedia),
+ *  $(LINK2 http://www.archives.gov/publications/general-info-leaflets/55.html, The Soundex Indexing System)
  *
  * Bugs:
- *	Only works well with English names.
- *	There are other arguably better Soundex algorithms,
- *	but this one is the standard one.
+ *  Only works well with English names.
+ *  There are other arguably better Soundex algorithms,
+ *  but this one is the standard one.
  */
 
 char[] soundex(string string, char[] buffer = null)
@@ -4026,10 +4196,10 @@ out (result)
 {
     if (result)
     {
-	assert(result.length == 4);
-	assert(result[0] >= 'A' && result[0] <= 'Z');
-	foreach (char c; result[1 .. 4])
-	    assert(c >= '0' && c <= '6');
+    assert(result.length == 4);
+    assert(result[0] >= 'A' && result[0] <= 'Z');
+    foreach (char c; result[1 .. 4])
+        assert(c >= '0' && c <= '6');
     }
 }
 body
@@ -4041,47 +4211,47 @@ body
     int b = 0;
     char lastc;
     foreach (char cs; string)
-    {	auto c = cs;		// necessary because cs is final
+    {   auto c = cs;        // necessary because cs is final
 
-	if (c >= 'a' && c <= 'z')
-	    c -= 'a' - 'A';
-	else if (c >= 'A' && c <= 'Z')
-	{
-	    ;
-	}
-	else
-	{   lastc = lastc.init;
-	    continue;
-	}
-	if (b == 0)
-	{
-	    if (!buffer)
-		buffer = new char[4];
-	    buffer[0] = c;
-	    b++;
-	    lastc = dex[c - 'A'];
-	}
-	else
-	{
-	    if (c == 'H' || c == 'W')
-		continue;
-	    if (c == 'A' || c == 'E' || c == 'I' || c == 'O' || c == 'U')
-		lastc = lastc.init;
-	    c = dex[c - 'A'];
-	    if (c != '0' && c != lastc)
-	    {
-		buffer[b] = c;
-		b++;
-		lastc = c;
-	    }
-	}
-	if (b == 4)
-	    goto Lret;
+    if (c >= 'a' && c <= 'z')
+        c -= 'a' - 'A';
+    else if (c >= 'A' && c <= 'Z')
+    {
+        ;
+    }
+    else
+    {   lastc = lastc.init;
+        continue;
     }
     if (b == 0)
-	buffer = null;
+    {
+        if (!buffer)
+        buffer = new char[4];
+        buffer[0] = c;
+        b++;
+        lastc = dex[c - 'A'];
+    }
     else
-	buffer[b .. 4] = '0';
+    {
+        if (c == 'H' || c == 'W')
+        continue;
+        if (c == 'A' || c == 'E' || c == 'I' || c == 'O' || c == 'U')
+        lastc = lastc.init;
+        c = dex[c - 'A'];
+        if (c != '0' && c != lastc)
+        {
+        buffer[b] = c;
+        b++;
+        lastc = c;
+        }
+    }
+    if (b == 4)
+        goto Lret;
+    }
+    if (b == 0)
+    buffer = null;
+    else
+    buffer[b .. 4] = '0';
 Lret:
     return buffer;
 }
@@ -4142,13 +4312,13 @@ unittest
  * ---
  * import std.stdio;
  * import std.string;
- * 
+ *
  * void main()
  * {
  *    static string[] list = [ "food", "foxy" ];
- * 
+ *
  *    auto abbrevs = std.string.abbrev(list);
- * 
+ *
  *    foreach (key, value; abbrevs)
  *    {
  *       writefln("%s => %s", key, value);
@@ -4179,25 +4349,25 @@ string[string] abbrev(string[] values)
     string lv;
 
     for (size_t i = 0; i < values_length; i = nexti)
-    {	string value = values[i];
+    {   string value = values[i];
 
-	// Skip dups
-	for (nexti = i + 1; nexti < values_length; nexti++)
-	{   nv = values[nexti];
-	    if (value != values[nexti])
-		break;
-	}
+    // Skip dups
+    for (nexti = i + 1; nexti < values_length; nexti++)
+    {   nv = values[nexti];
+        if (value != values[nexti])
+        break;
+    }
 
-	for (size_t j = 0; j < value.length; j += std.utf.stride(value, j))
-	{   string v = value[0 .. j];
+    for (size_t j = 0; j < value.length; j += std.utf.stride(value, j))
+    {   string v = value[0 .. j];
 
-	    if ((nexti == values_length || j > nv.length || v != nv[0 .. j]) &&
-		(lasti == values_length || j > lv.length || v != lv[0 .. j]))
-		result[v] = value;
-	}
-	result[value] = value;
-	lasti = i;
-	lv = value;
+        if ((nexti == values_length || j > nv.length || v != nv[0 .. j]) &&
+        (lasti == values_length || j > lv.length || v != lv[0 .. j]))
+        result[v] = value;
+    }
+    result[value] = value;
+    lasti = i;
+    lv = value;
     }
 
     return result;
@@ -4242,23 +4412,23 @@ size_t column(string str, int tabsize = 8)
 
     foreach (dchar c; str)
     {
-	switch (c)
-	{
-	    case '\t':
-		column = (column + tabsize) / tabsize * tabsize;
-		break;
+    switch (c)
+    {
+        case '\t':
+        column = (column + tabsize) / tabsize * tabsize;
+        break;
 
-	    case '\r':
-	    case '\n':
-	    case PS:
-	    case LS:
-		column = 0;
-		break;
+        case '\r':
+        case '\n':
+        case PS:
+        case LS:
+        column = 0;
+        break;
 
-	    default:
-		column++;
-		break;
-	}
+        default:
+        column++;
+        break;
+    }
     }
     return column;
 }
@@ -4283,17 +4453,17 @@ unittest
  * on each line.
  * The last line is terminated with a \n.
  * Params:
- *	s = text string to be wrapped
- *	columns = maximum number of _columns in the paragraph
- *	firstindent = string used to _indent first line of the paragraph
- *	indent = string to use to _indent following lines of the paragraph
- *	tabsize = column spacing of tabs
+ *  s = text string to be wrapped
+ *  columns = maximum number of _columns in the paragraph
+ *  firstindent = string used to _indent first line of the paragraph
+ *  indent = string to use to _indent following lines of the paragraph
+ *  tabsize = column spacing of tabs
  * Returns:
- *	The resulting paragraph.
+ *  The resulting paragraph.
  */
 
 string wrap(string s, int columns = 80, string firstindent = null,
-	string indent = null, int tabsize = 8)
+    string indent = null, int tabsize = 8)
 {
     char[] result;
     int col;
@@ -4308,50 +4478,50 @@ string wrap(string s, int columns = 80, string firstindent = null,
     col = column(result.idup, tabsize);
     foreach (size_t i, dchar c; s)
     {
-	if (iswhite(c))
-	{
-	    if (inword)
-	    {
-		if (first)
-		{
-		    ;
-		}
-		else if (col + 1 + (i - wordstart) > columns)
-		{
-		    result ~= '\n';
-		    result ~= indent;
-		    col = column(indent, tabsize);
-		}
-		else
-		{   result ~= ' ';
-		    col += 1;
-		}
-		result ~= s[wordstart .. i];
-		col += i - wordstart;
-		inword = false;
-		first = false;
-	    }
-	}
-	else
-	{
-	    if (!inword)
-	    {
-		wordstart = i;
-		inword = true;
-	    }
-	}
+    if (iswhite(c))
+    {
+        if (inword)
+        {
+        if (first)
+        {
+            ;
+        }
+        else if (col + 1 + (i - wordstart) > columns)
+        {
+            result ~= '\n';
+            result ~= indent;
+            col = column(indent, tabsize);
+        }
+        else
+        {   result ~= ' ';
+            col += 1;
+        }
+        result ~= s[wordstart .. i];
+        col += i - wordstart;
+        inword = false;
+        first = false;
+        }
+    }
+    else
+    {
+        if (!inword)
+        {
+        wordstart = i;
+        inword = true;
+        }
+    }
     }
 
     if (inword)
     {
-	if (col + 1 + (s.length - wordstart) >= columns)
-	{
-	    result ~= '\n';
-	    result ~= indent;
-	}
-	else if (result.length != firstindent.length)
-	    result ~= ' ';
-	result ~= s[wordstart .. s.length];
+    if (col + 1 + (s.length - wordstart) >= columns)
+    {
+        result ~= '\n';
+        result ~= indent;
+    }
+    else if (result.length != firstindent.length)
+        result ~= ' ';
+    result ~= s[wordstart .. s.length];
     }
     result ~= '\n';
 
@@ -4377,30 +4547,30 @@ unittest
 /***************************
  * Does string s[] start with an email address?
  * Returns:
- *	null	it does not
- *	string	it does, and this is the slice of s[] that is that email address
+ *  null    it does not
+ *  string  it does, and this is the slice of s[] that is that email address
  * References:
- *	RFC2822
+ *  RFC2822
  */
 string isEmail(string s)
 {   size_t i;
 
     if (!isalpha(s[0]))
-	goto Lno;
+    goto Lno;
 
     for (i = 1; 1; i++)
     {
-	if (i == s.length)
-	    goto Lno;
-	auto c = s[i];
-	if (isalnum(c))
-	    continue;
-	if (c == '-' || c == '_' || c == '.')
-	    continue;
-	if (c != '@')
-	    goto Lno;
-	i++;
-	break;
+    if (i == s.length)
+        goto Lno;
+    auto c = s[i];
+    if (isalnum(c))
+        continue;
+    if (c == '-' || c == '_' || c == '.')
+        continue;
+    if (c != '@')
+        goto Lno;
+    i++;
+    break;
     }
     //writefln("test1 '%s'", s[0 .. i]);
 
@@ -4409,20 +4579,20 @@ string isEmail(string s)
     size_t lastdot;
     for (; i < s.length; i++)
     {
-	auto c = s[i];
-	if (isalnum(c))
-	    continue;
-	if (c == '-' || c == '_')
-	    continue;
-	if (c == '.')
-	{
-	    lastdot = i;
-	    continue;
-	}
-	break;
+    auto c = s[i];
+    if (isalnum(c))
+        continue;
+    if (c == '-' || c == '_')
+        continue;
+    if (c == '.')
+    {
+        lastdot = i;
+        continue;
+    }
+    break;
     }
     if (!lastdot || (i - lastdot != 3 && i - lastdot != 4))
-	goto Lno;
+    goto Lno;
 
     return s[0 .. i];
 
@@ -4434,54 +4604,54 @@ Lno:
 /***************************
  * Does string s[] start with a URL?
  * Returns:
- *	null	it does not
- *	string	it does, and this is the slice of s[] that is that URL
+ *  null    it does not
+ *  string  it does, and this is the slice of s[] that is that URL
  */
 
 string isURL(string s)
 {
     /* Must start with one of:
-     *	http://
-     *	https://
-     *	www.
+     *  http://
+     *  https://
+     *  www.
      */
 
     size_t i;
 
     if (s.length <= 4)
-	goto Lno;
+    goto Lno;
 
     //writefln("isURL(%s)", s);
     if (s.length > 7 && std.string.icmp(s[0 .. 7], "http://") == 0)
-	i = 7;
+    i = 7;
     else if (s.length > 8 && std.string.icmp(s[0 .. 8], "https://") == 0)
-	i = 8;
+    i = 8;
 //    if (icmp(s[0 .. 4], "www.") == 0)
-//	i = 4;
+//  i = 4;
     else
-	goto Lno;
+    goto Lno;
 
     size_t lastdot;
     for (; i < s.length; i++)
     {
-	auto c = s[i];
-	if (isalnum(c))
-	    continue;
-	if (c == '-' || c == '_' || c == '?' ||
-	    c == '=' || c == '%' || c == '&' ||
-	    c == '/' || c == '+' || c == '#' ||
-	    c == '~' || c == '$')
-	    continue;
-	if (c == '.')
-	{
-	    lastdot = i;
-	    continue;
-	}
-	break;
+    auto c = s[i];
+    if (isalnum(c))
+        continue;
+    if (c == '-' || c == '_' || c == '?' ||
+        c == '=' || c == '%' || c == '&' ||
+        c == '/' || c == '+' || c == '#' ||
+        c == '~' || c == '$')
+        continue;
+    if (c == '.')
+    {
+        lastdot = i;
+        continue;
+    }
+    break;
     }
     //if (!lastdot || (i - lastdot != 3 && i - lastdot != 4))
     if (!lastdot)
-	goto Lno;
+    goto Lno;
 
     return s[0 .. i];
 
