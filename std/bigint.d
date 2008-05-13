@@ -465,63 +465,45 @@ struct BigInt
     }
 
     ///
-    BigInt opShl(T)(T n)
-    {
-        return opShl(BigInt(n));
-    }
-
-    ///
-    BigInt opShl(T:const(BigInt))(T n)
+    BigInt opShl(uint n)
     {
         BigInt r;
-        r.data = shl(data,n.data);
+        r.data = shl(data,n);
         return r;
     }
 
     ///
-    void opShlAssign(T)(T n)
+    void opShlAssign(uint n)
     {
         auto r = opShl(n);
         data = r.data;
     }
 
     ///
-    BigInt opShr(T)(T n)
-    {
-        return opShr(BigInt(n));
-    }
-
-    ///
-    BigInt opShr(T:const(BigInt))(T n)
+    BigInt opShr(uint n)
     {
         BigInt r;
-        r.data = shr(data,n.data);
+        r.data = shr(data,n);
         return r;
     }
 
     ///
-    void opShrAssign(T)(T n)
+    void opShrAssign(uint n)
     {
         auto r = opShr(n);
         data = r.data;
     }
 
     ///
-    BigInt opUShr(T)(T n)
-    {
-        return opUShr(BigInt(n));
-    }
-
-    ///
-    BigInt opUShr(T:const(BigInt))(T n)
+    BigInt opUShr(uint n)
     {
         BigInt r;
-        r.data = ushr(data,n.data);
+        r.data = ushr(data,n);
         return r;
     }
 
     ///
-    void opUShrAssign(T)(T n)
+    void opUShrAssign(uint n)
     {
         auto r = opUShr(n);
         data = r.data;
