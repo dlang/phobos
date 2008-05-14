@@ -1,5 +1,8 @@
 # Makefile to build D runtime library phobos.lib for Win32
-# Designed to work with \dm\bin\make.exe
+# Prerequisites:
+#	Digital Mars dmc, lib, and make that are unzipped from Digital Mars C:
+#	    http://ftp.digitalmars.com/Digital_Mars_C++/Patch/dm850c.zip
+#	and are in the \dm\bin directory.
 # Targets:
 #	make
 #		Same as make unittest
@@ -9,26 +12,44 @@
 #		Delete unneeded files created by build process
 #	make unittest
 #		Build phobos.lib, build and run unit tests
+#	make cov
+#		Build for coverage tests, run coverage tests
 #	make html
 #		Build documentation
 # Notes:
-#	This relies on LIB.EXE 8.00 or later, and MAKE.EXE 5.01 or later.
+#	minit.obj requires Microsoft MASM386.EXE to build from minit.asm,
+#`	or just use the supplied minit.obj
+
+## Copy command
 
 CP=cp
+
+## Directory where dmd has been installed
+
 DIR=\dmd
+
+## Flags for dmc C compiler
 
 CFLAGS=-mn -6 -r
 #CFLAGS=-g -mn -6 -r
+
+## Flags for dmd D compiler
 
 DFLAGS=-O -release -nofloat
 #DFLAGS=-unittest -g
 #DFLAGS=-unittest -cov -g
 
+## C compiler
+
 CC=dmc
+
+## D compiler
 
 DMD=$(DIR)\bin\dmd
 #DMD=..\dmd
 #DMD=dmd
+
+## Location of where to write the html documentation files
 
 DOC=..\..\html\d\phobos
 #DOC=..\doc\phobos
