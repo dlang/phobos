@@ -89,7 +89,7 @@ OBJS= asserterror.obj deh.obj switch.obj icomplex.obj gcstats.obj \
 #	ti_bit.obj ti_Abit.obj
 
 SRCS= std\math.d std\stdio.d std\dateparse.d std\date.d std\uni.d std\string.d \
-	std\base64.d std\md5.d std\xml.d \
+	std\base64.d std\md5.d std\xml.d std\bigint.d \
 	internal\aaA.d \
 	std\typeinfo\ti_double.d \
 	etc\gamma.d
@@ -100,6 +100,7 @@ DOCS=	$(DOC)\std_path.html $(DOC)\std_math.html $(DOC)\std_outbuffer.html \
 	$(DOC)\std_random.html $(DOC)\std_file.html $(DOC)\std_date.html \
 	$(DOC)\std_md5.html $(DOC)\std_zip.html $(DOC)\std_zlib.html \
 	$(DOC)\std_algorithm.html \
+	$(DOC)\std_bigint.html \
 	$(DOC)\std_bind.html \
 	$(DOC)\std_bitarray.html \
 	$(DOC)\std_bitmanip.html \
@@ -172,7 +173,7 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 	std\metastrings.d std\hiddenfunc.d std\contracts.d std\getopt.d \
 	std\variant.d std\numeric.d std\bitmanip.d std\complex.d \
 	std\functional.d std\algorithm.d std\typecons.d std\iterator.d \
-	std\xml.d std\encoding.d
+	std\xml.d std\encoding.d std\bigint.d
 
 SRC_STD_C= std\c\process.d std\c\stdlib.d std\c\time.d std\c\stdio.d \
 	std\c\math.d std\c\stdarg.d std\c\stddef.d std\c\fenv.d std\c\string.d \
@@ -733,6 +734,9 @@ $(DOC)\std_algorithm.html : std.ddoc std\algorithm.d
 
 $(DOC)\std_base64.html : std.ddoc std\base64.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_base64.html std.ddoc std\base64.d
+
+$(DOC)\std_bigint.html : std.ddoc std\bigint.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_bigint.html std.ddoc std\bigint.d
 
 $(DOC)\std_bind.html : std.ddoc std\bind.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_bind.html std.ddoc std\bind.d
