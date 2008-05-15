@@ -241,7 +241,7 @@ unittest
 
     result = getName("d:\\path.two\\bar");
     version (Win32)
-	i = cmp(result, null);
+	i = cmp(result, "");
     version (linux)
 	i = cmp(result, "d:\\path");
     assert(i == 0);
@@ -374,7 +374,7 @@ string dirname(string fullname)
         {
             if (fullname[i - 1] == ':')
                 break;
-            if (fullname[i - 1] == sep[0])
+            if (fullname[i - 1] == sep[0] || fullname[i - 1] == altsep[0])
             {
                 i--;
                 break;
@@ -571,7 +571,8 @@ bool isabs(string path)
     auto d = getDrive(path);
     version (Windows)
     {
-	return d.length && d.length < path.length && path[d.length] == sep[0];
+	return d.length < path.length &&
+	    (path[d.length] == sep[0] || path[d.length] == altsep[0]);
     }
     else
 	return d.length < path.length && path[d.length] == sep[0];
@@ -584,7 +585,7 @@ unittest
     version (Windows)
     {
 	assert(!isabs(r"relative\path"));
-	assert(!isabs(r"\relative\path"));
+	assert(isabs(r"\relative\path"));
 	assert(isabs(r"d:\absolute"));
     }
     version (linux)
@@ -662,6 +663,8 @@ unittest
 
 string join(string p1, string p2, string[] more...)
 {
+  version (linux)
+  {
     if (!more.length)
     {
         if (isabs(p2)) return p2;
@@ -673,63 +676,48 @@ string join(string p1, string p2, string[] more...)
     }
     // more components present
     return join(join(p1, p2), more[0], more[1 .. $]);
-    
-    // if (!p2.length)
-    //     return p1;
-    // if (!p1.length)
-    //     return p2;
+  }
+  version (Windows)
+  { // The other version fails unit testing when under windows
+    if (!p2.length)
+        return p1;
+    if (!p1.length)
+        return p2;
 
-    // string p;
-    // string d1;
+    string p;
+    string d1;
 
-    // version(Win32)
-    // {
-    //     if (getDrive(p2))
-    //     {
-    //         p = p2;
-    //     }
-    //     else
-    //     {
-    //         d1 = getDrive(p1);
-    //         if (p1.length == d1.length)
-    //         {
-    //     	p = p1 ~ p2;
-    //         }
-    //         else if (p2[0] == '\\')
-    //         {
-    //     	if (d1.length == 0)
-    //     	    p = p2;
-    //     	else if (p1[p1.length - 1] == '\\')
-    //     	    p = p1 ~ p2[1 .. p2.length];
-    //     	else
-    //     	    p = p1 ~ p2;
-    //         }
-    //         else if (p1[p1.length - 1] == '\\')
-    //         {
-    //     	p = p1 ~ p2;
-    //         }
-    //         else
-    //         {
-    //     	p = cast(string)(p1 ~ sep ~ p2);
-    //         }
-    //     }
-    // }
-    // version(linux)
-    // {
-    //     if (p2[0] == sep[0])
-    //     {
-    //         p = p2;
-    //     }
-    //     else if (p1[p1.length - 1] == sep[0])
-    //     {
-    //         p = p1 ~ p2;
-    //     }
-    //     else
-    //     {
-    //         p = cast(string) (p1 ~ sep ~ p2);
-    //     }
-    // }
-    // return p;
+    if (getDrive(p2))
+    {
+	p = p2;
+    }
+    else
+    {
+	d1 = getDrive(p1);
+	if (p1.length == d1.length)
+	{
+	    p = p1 ~ p2;
+	}
+	else if (p2[0] == '\\')
+	{
+	    if (d1.length == 0)
+		p = p2;
+	    else if (p1[p1.length - 1] == '\\')
+		p = p1 ~ p2[1 .. p2.length];
+	    else
+		p = p1 ~ p2;
+	}
+	else if (p1[p1.length - 1] == '\\')
+	{
+	    p = p1 ~ p2;
+	}
+	else
+	{
+	    p = cast(string)(p1 ~ sep ~ p2);
+	}
+    }
+    return p;
+  }
 }
 
 unittest

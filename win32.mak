@@ -78,9 +78,9 @@ test.exe : test.obj phobos.lib
 
 OBJS= asserterror.obj deh.obj switch.obj icomplex.obj gcstats.obj \
 	critical.obj object.obj monitor.obj arraycat.obj invariant.obj \
-	dmain2.obj outofmemory.obj adi.obj aApply.obj file.obj \
+	dmain2.obj outofmemory.obj adi.obj aApply.obj \
 	system.obj moduleinit.obj \
-	cast.obj syserror.obj path.obj memset.obj \
+	cast.obj syserror.obj memset.obj \
 	outbuffer.obj ctype.obj random.obj windows.obj stat.obj \
 	stream.obj switcherr.obj com.obj array.obj mmfile.obj \
 	qsort.obj thread.obj obj.obj \
@@ -100,6 +100,7 @@ OBJS= asserterror.obj deh.obj switch.obj icomplex.obj gcstats.obj \
 SRCS= std\math.d std\stdio.d std\dateparse.d std\date.d std\uni.d std\string.d \
 	std\base64.d std\md5.d std\xml.d std\bigint.d std\regexp.d \
 	std\compiler.d std\cpuid.d std\format.d std\demangle.d \
+	std\path.d std\file.d \
 	internal\aaA.d \
 	etc\gamma.d \
 	std\typeinfo\ti_ptr.d \
