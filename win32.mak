@@ -79,41 +79,66 @@ test.exe : test.obj phobos.lib
 OBJS= asserterror.obj deh.obj switch.obj icomplex.obj gcstats.obj \
 	critical.obj object.obj monitor.obj arraycat.obj invariant.obj \
 	dmain2.obj outofmemory.obj adi.obj aApply.obj file.obj \
-	compiler.obj system.obj moduleinit.obj \
+	system.obj moduleinit.obj \
 	cast.obj syserror.obj path.obj memset.obj \
-	outbuffer.obj ctype.obj regexp.obj random.obj windows.obj stat.obj \
+	outbuffer.obj ctype.obj random.obj windows.obj stat.obj \
 	stream.obj switcherr.obj com.obj array.obj mmfile.obj \
 	qsort.obj thread.obj obj.obj \
 	iunknown.obj crc32.obj conv.obj arraycast.obj utf.obj uri.obj \
 	Czlib.obj Dzlib.obj zip.obj process.obj registry.obj \
-	socket.obj socketstream.obj loader.obj stdarg.obj format.obj \
+	socket.obj socketstream.obj loader.obj stdarg.obj \
 	perf.obj openrj.obj winsock.obj oldsyserror.obj \
 	errno.obj boxer.obj cstream.obj charset.obj metastrings.obj \
-	demangle.obj cover.obj bitarray.obj aApplyR.obj \
-	signals.obj cpuid.obj typetuple.obj traits.obj bind.obj \
+	cover.obj bitarray.obj aApplyR.obj \
+	signals.obj typetuple.obj traits.obj bind.obj \
 	c_stdio.obj hiddenfunc.obj contracts.obj getopt.obj variant.obj \
 	numeric.obj bitmanip.obj functional.obj algorithm.obj typecons.obj \
-	iterator.obj complex.obj encoding.obj arrayassign.obj \
-	ti_Ag.obj ti_C.obj ti_int.obj ti_char.obj \
-	ti_wchar.obj ti_uint.obj ti_short.obj ti_ushort.obj \
-	ti_byte.obj ti_ubyte.obj ti_long.obj ti_ulong.obj ti_ptr.obj \
-	ti_float.obj ti_real.obj ti_delegate.obj \
-	ti_creal.obj ti_ireal.obj \
-	ti_cfloat.obj ti_ifloat.obj \
-	ti_cdouble.obj ti_idouble.obj \
-	ti_AC.obj ti_Ashort.obj \
-	ti_Aint.obj ti_Along.obj \
-	ti_Afloat.obj ti_Adouble.obj ti_Areal.obj \
-	ti_Acfloat.obj ti_Acdouble.obj ti_Acreal.obj \
-	ti_dchar.obj ti_void.obj
+	iterator.obj complex.obj encoding.obj arrayassign.obj
 
 #	ti_bit.obj ti_Abit.obj
 
 SRCS= std\math.d std\stdio.d std\dateparse.d std\date.d std\uni.d std\string.d \
-	std\base64.d std\md5.d std\xml.d std\bigint.d \
+	std\base64.d std\md5.d std\xml.d std\bigint.d std\regexp.d \
+	std\compiler.d std\cpuid.d std\format.d std\demangle.d \
 	internal\aaA.d \
+	etc\gamma.d \
+	std\typeinfo\ti_ptr.d \
+	std\typeinfo\ti_delegate.d \
+	std\typeinfo\ti_void.d \
+	std\typeinfo\ti_C.d \
+	std\typeinfo\ti_byte.d \
+	std\typeinfo\ti_ubyte.d \
+	std\typeinfo\ti_short.d \
+	std\typeinfo\ti_ushort.d \
+	std\typeinfo\ti_int.d \
+	std\typeinfo\ti_uint.d \
+	std\typeinfo\ti_long.d \
+	std\typeinfo\ti_ulong.d \
+	std\typeinfo\ti_char.d \
+	std\typeinfo\ti_wchar.d \
+	std\typeinfo\ti_dchar.d \
+	std\typeinfo\ti_cdouble.d \
 	std\typeinfo\ti_double.d \
-	etc\gamma.d
+	std\typeinfo\ti_idouble.d \
+	std\typeinfo\ti_cfloat.d \
+	std\typeinfo\ti_float.d \
+	std\typeinfo\ti_ifloat.d \
+	std\typeinfo\ti_creal.d \
+	std\typeinfo\ti_real.d \
+	std\typeinfo\ti_ireal.d \
+	std\typeinfo\ti_AC.d \
+	std\typeinfo\ti_Ag.d \
+	std\typeinfo\ti_Ashort.d \
+	std\typeinfo\ti_Aint.d \
+	std\typeinfo\ti_Along.d \
+	std\typeinfo\ti_Afloat.d \
+	std\typeinfo\ti_Adouble.d \
+	std\typeinfo\ti_Areal.d \
+	std\typeinfo\ti_Acfloat.d \
+	std\typeinfo\ti_Acdouble.d \
+	std\typeinfo\ti_Acreal.d
+
+
 
 DOCS=	$(DOC)\std_path.html $(DOC)\std_math.html $(DOC)\std_outbuffer.html \
 	$(DOC)\std_stream.html $(DOC)\std_string.html $(DOC)\std_base64.html \
@@ -994,7 +1019,7 @@ clean:
 	del $(OBJS)
 	del $(DOCS)
 	del unittest.obj unittest.map unittest.exe
-	del phobos.lib gcstub.obj minit.obj
+	del phobos.lib gcstub.obj
 
 cleanhtml:
 	del $(DOCS)
