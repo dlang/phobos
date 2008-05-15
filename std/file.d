@@ -1598,6 +1598,8 @@ DirIterator dirEntries(string path, SpanMode mode)
 
 unittest
 {
+  version (linux)
+  {
     assert(system("mkdir --parents dmd-testing") == 0);
     scope(exit) system("rm -rf dmd-testing");
     assert(system("mkdir --parents dmd-testing/somedir") == 0);
@@ -1618,4 +1620,5 @@ unittest
     {
         //writeln(e.name);
     }
+  }
 }
