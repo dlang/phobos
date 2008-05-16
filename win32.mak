@@ -66,7 +66,7 @@ DOC=..\..\html\d\phobos
 .asm.obj:
 	$(CC) -c $*
 
-targets : unittest gcstub.obj
+targets : phobos.lib gcstub.obj
 
 test : test.exe
 
@@ -81,11 +81,11 @@ OBJS= asserterror.obj deh.obj switch.obj icomplex.obj gcstats.obj \
 	dmain2.obj outofmemory.obj adi.obj aApply.obj \
 	system.obj moduleinit.obj \
 	cast.obj syserror.obj memset.obj \
-	outbuffer.obj ctype.obj random.obj windows.obj stat.obj \
-	stream.obj switcherr.obj com.obj array.obj mmfile.obj \
+	windows.obj stat.obj \
+	stream.obj switcherr.obj com.obj \
 	qsort.obj thread.obj obj.obj \
-	iunknown.obj crc32.obj conv.obj arraycast.obj utf.obj uri.obj \
-	Czlib.obj Dzlib.obj zip.obj process.obj registry.obj \
+	iunknown.obj crc32.obj conv.obj arraycast.obj \
+	Czlib.obj Dzlib.obj zip.obj process.obj \
 	socket.obj socketstream.obj loader.obj stdarg.obj \
 	perf.obj openrj.obj winsock.obj oldsyserror.obj \
 	errno.obj boxer.obj cstream.obj charset.obj metastrings.obj \
@@ -100,9 +100,11 @@ OBJS= asserterror.obj deh.obj switch.obj icomplex.obj gcstats.obj \
 SRCS= std\math.d std\stdio.d std\dateparse.d std\date.d std\uni.d std\string.d \
 	std\base64.d std\md5.d std\xml.d std\bigint.d std\regexp.d \
 	std\compiler.d std\cpuid.d std\format.d std\demangle.d \
-	std\path.d std\file.d \
+	std\path.d std\file.d std\outbuffer.d std\utf.d std\uri.d \
+	std\ctype.d std\random.d std\array.d std\mmfile.d \
 	internal\aaA.d \
 	etc\gamma.d \
+	std\windows\registry.d \
 	std\typeinfo\ti_ptr.d \
 	std\typeinfo\ti_delegate.d \
 	std\typeinfo\ti_void.d \
