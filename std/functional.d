@@ -253,37 +253,84 @@ unittest
 // }
 
 /**
-Composes two functions $(D F1) and $(D F2), returning a function $(D
-F(x)) that in turn returns $(D F1(F2(x))).
+   Composes passed-in functions $(D fun[0], fun[1], ...) returning a
+   function $(D f(x)) that in turn returns $(D
+   fun[0](fun[1](...(x)))...). Each function can be a regular
+   functions, a delegate, or a string.
 
-Example:
+   Example:
+
 ----
-auto x = 5;
-auto y = compose!("!a", "a > 0")(x);
-assert(!y);
+// First split a string in whitespace-separated tokens and then
+// convert each token into an integer
+assert(compose!(map!(to!(int)), split)("1 2 3") == [1, 2, 3]);
 ----
 */
 
-template compose(alias F1, alias F2)
+template compose(fun...) { alias composeImpl!(fun).doIt compose; }
+
+// Implementation of compose
+template composeImpl(fun...)
 {
-    typeof({ E a; return F1(F2(a)); }()) compose(E)(E a)
+    static if (fun.length == 2)
     {
-        return F1(F2(a));
+        // starch
+        static if (is(typeof(fun[0]) : string))
+            alias unaryFun!(fun[0]) fun0;
+        else
+            alias fun[0] fun0;
+        static if (is(typeof(fun[1]) : string))
+            alias unaryFun!(fun[1]) fun1;
+        else
+            alias fun[1] fun1;
+        // protein: the core composition operation
+        typeof({ E a; return fun0(fun1(a)); }()) doIt(E)(E a)
+        {
+            return fun0(fun1(a));
+        }
+    }
+    else
+    {
+        // protein: assembling operations
+        alias composeImpl!(fun[0], composeImpl!(fun[1 .. $]).doIt).doIt doIt;
     }
 }
-/// Ditto
-template compose(alias F1, string F2)
+
+/**
+   Pipes functions in sequence. Offers the same functionality as $(D
+   compose), but with functions specified in reverse order. This may
+   lead to more readable code in some situation because the order of
+   execution is the same as lexical order.
+
+   Example:
+   
+----
+// Read an entire text file, split the resulting string in
+// whitespace-separated tokens, and then convert each token into an
+// integer
+int[] a = pipe!(readText, split, map!(to!(int)))("file.txt");
+----
+ */
+
+template pipe(fun...)
 {
-    alias .compose!(F1, unaryFun!(F2)) compose;
-}
-/// Ditto
-template compose(string F1, alias F2)
-{
-    alias .compose!(unaryFun!(F1), F2) compose;
-}
-/// Ditto
-template compose(string F1, string F2)
-{
-    alias .compose!(unaryFun!(F1), unaryFun!(F2)) compose;
+    alias compose!(Reverse!(fun)) pipe;
 }
 
+unittest
+{
+    string foo(int a) { return to!(string)(a); }
+    int bar(string a) { return to!(int)(a) + 1; }
+    double baz(int a) { return a + 0.5; }
+    assert(compose!(baz, bar, foo)(1) == 2.5);
+    assert(pipe!(foo, bar, baz)(1) == 2.5);
+    
+    assert(compose!(baz, `to!(int)(a) + 1`, foo)(1) == 2.5);
+    assert(compose!(baz, bar)("1"[]) == 2.5);
+    
+    // @@@BUG@@@
+    //assert(compose!(baz, bar)("1") == 2.5);
+
+    // @@@BUG@@@
+    //assert(compose!(`a + 0.5`, `to!(int)(a) + 1`, foo)(1) == 2.5);
+}
