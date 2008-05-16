@@ -84,7 +84,6 @@ public import std.zlib;
 
 int main(char[][] args)
 {
-
     // Bring in unit test for module by referencing function in it
 
     cmp("foo", "bar");			// string
