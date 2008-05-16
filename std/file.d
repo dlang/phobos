@@ -940,7 +940,7 @@ void[] read(string name)
  *      
  */
 
-S readText(S)(in string name)
+S readText(S = string)(in string name)
 {
     auto result = cast(S) read(name);
     std.utf.validate(result);
@@ -1200,12 +1200,48 @@ void mkdir(string pathname)
 }
 
 /****************************************************
+ * Make directory and all parent directories as needed.
+ */
+
+void mkdirRecurse(string pathname)
+{
+    invariant left = dirname(pathname);
+    exists(left) || mkdirRecurse(left);
+    mkdir(pathname);
+}
+
+/****************************************************
  * Remove directory.
  */
 
 void rmdir(string pathname)
 {
     cenforce(std.c.linux.linux.rmdir(toStringz(pathname)) == 0, pathname);
+}
+
+/****************************************************
+Remove directory and all of its content and subdirectories,
+recursively.
+ */
+
+void rmdirRecurse(string pathname)
+{
+    // all children, recursively depth-first
+    foreach (DirEntry e; dirEntries(pathname, SpanMode.depth))
+    {
+        e.isdir ? rmdir(e.name) : remove(e.name);
+    }
+    // the dir itself
+    rmdir(pathname);
+}
+
+unittest
+{
+    auto d = "/tmp/deleteme/a/b/c/d/e/f/g";
+    enforce(collectException(mkdir(d)));
+    mkdirRecurse(d);
+    rmdirRecurse("/tmp/deleteme");
+    enforce(!exists("/tmp/deleteme"));
 }
 
 /****************************************************
