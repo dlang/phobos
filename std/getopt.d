@@ -357,7 +357,8 @@ enum config {
 private void getoptImpl(T...)(ref string[] args,
     ref configuration cfg, T opts)
 {
-    static if (opts.length) {
+    static if (opts.length)
+    {
         static if (is(typeof(opts[0]) : config))
         {
             // it's a configuration flag, act on it
@@ -366,6 +367,7 @@ private void getoptImpl(T...)(ref string[] args,
         }
         else
         {
+            // it's an option string
             auto option = to!(string)(opts[0]);
             auto receiver = opts[1];
             bool incremental;
@@ -378,7 +380,9 @@ private void getoptImpl(T...)(ref string[] args,
             handleOption(option, receiver, args, cfg, incremental);
             return getoptImpl(args, cfg, opts[2 .. $]);
         }
-    } else {
+    }
+    else
+    {
         // no more options to look for, potentially some arguments left
         foreach (a ; args[1 .. $]) {
             if (!a.length || a[0] != '-')
@@ -497,15 +501,31 @@ private bool optMatch(string arg, string optPattern, ref string value,
     configuration cfg)
 {
     if (!arg.length || arg[0] != optChar) return false;
+    // yank the leading '-'
     arg = arg[1 .. $];
-    const isLong = arg.length > 1 && arg[0] == optChar;
+    invariant isLong = arg.length > 1 && arg[0] == optChar;
+    // yank the second '-' if present
     if (isLong) arg = arg[1 .. $];
-    const eqPos = std.string.find(arg, assignChar);
-    if (eqPos >= 0) {
+    invariant eqPos = std.string.find(arg, assignChar);
+    if (eqPos >= 0)
+    {
+        // argument looks like --opt=value
         value = arg[eqPos + 1 .. $];
         arg = arg[0 .. eqPos];
-    } else {
-        value = null;
+    }
+    else
+    {
+        if (!isLong && !cfg.bundling)
+        {
+            // argument looks like -ovalue and there's no bundling
+            value = arg[1 .. $];
+            arg = arg[0 .. 1];
+        }
+        else
+        {
+            // argument looks like --opt, or -oxyz with bundling
+            value = null;
+        }
     }
     //writeln("Arg: ", arg, " pattern: ", optPattern, " value: ", value);
     // Split the option
