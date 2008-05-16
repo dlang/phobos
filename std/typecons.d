@@ -29,6 +29,19 @@ void foo()
     Openmode m1;
     assert(fromString(s, m1) && m1 == m);
 }
+
+// Rebindable references to const and invariant objects
+void bar()
+{
+    const w1 = new Widget, w2 = new Widget;
+    w1.foo(); 
+    // w1 = w2 would not work; can't rebind const object
+    auto r = Rebindable!(const Widget)(w1);
+    // invoke method as if r were a Widget object
+    r.foo(); 
+    // rebind r to refer to another object
+    r = w2;
+}
 ----
 
 Author:
@@ -236,7 +249,7 @@ private template enumParserImpl(string name, bool first, T...)
 {
     static if (first)
     {
-        enum string enumParserImpl = "bool fromString(string s, ref "~name~" v) {\n"
+        enum string enumParserImpl = "bool enumFromString(string s, ref "~name~" v) {\n"
             ~enumParserImpl!(name, false, T)
             ~"return false;\n}\n";
     }
@@ -255,7 +268,7 @@ private template enumPrinterImpl(string name, bool first, T...)
 {
     static if (first)
     {
-        enum string enumPrinterImpl = "string toString("~name~" v) {\n"
+        enum string enumPrinterImpl = "string enumToString("~name~" v) {\n"
             ~enumPrinterImpl!(name, false, T)~"\n}\n";
     }
     else
@@ -337,13 +350,45 @@ unittest
     mixin(defineEnum!("_24b455e148a38a847d65006bca25f7fe",
                       "A1", 1, "B1", "C1"));
     auto a = _24b455e148a38a847d65006bca25f7fe.A1;
-    assert(toString(a) == "A1");
+    assert(enumToString(a) == "A1");
     _24b455e148a38a847d65006bca25f7fe b;
-    assert(fromString("B1", b)
+    assert(enumFromString("B1", b)
            && b == _24b455e148a38a847d65006bca25f7fe.B1);
 }
 
 /**
+$(D Rebindable!(T)) is a simple, efficient wrapper that behaves just
+like an object of type $(D T), except that you can reassign it to
+refer to another object. For completeness, $(D Rebindable!(T)) aliases
+itself away to $(D T) if $(D T) is a non-const object type. However,
+$(D Rebindable!(T)) does not compile if $(D T) is a non-class type.
+
+Regular $(D const) object references cannot be reassigned:
+
+----
+class Widget { int x; int y() const { return a; } }
+const a = new Widget;
+a.y();          // fine
+a.x = 5;        // error! can't modify const a
+a = new Widget; // error! can't modify const a
+----
+
+However, $(D Rebindable!(Widget)) does allow reassignment, while
+otherwise behaving exactly like a $(D const Widget):
+
+----
+auto a = Rebindable!(const Widget)(new Widget);
+a.y();          // fine
+a.x = 5;        // error! can't modify const a
+a = new Widget; // fine
+----
+
+You may want to use $(D Rebindable) when you want to have mutable
+storage referring to $(D const) objects, for example an array of
+references that must be sorted in place. $(D Rebindable) does not
+break the soundness of D's type system and does not incur any of the
+risks usually associated with $(D cast).
+
  */
 template Rebindable(T : Object)
 {
@@ -371,13 +416,16 @@ template Rebindable(T : Object)
                 return result;
             }
             alias original get;
+            T opDot() {
+                return original;
+            }
         }
     }
 }
 
 unittest
 {
-    class C {};
+    class C { int foo() const { return 42; } }
     Rebindable!(C) obj0;
     static assert(is(typeof(obj0) == C));
 
@@ -394,4 +442,7 @@ unittest
     static assert(is(typeof(obj2.stripped) == C));
     obj2 = new invariant(C);
     assert(obj1.get !is null);
+
+    // test opDot
+    assert(obj2.foo == 42);
 }
