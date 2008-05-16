@@ -199,9 +199,12 @@ might fail the range check.
 Macros: WIKI=Phobos/StdConv
 */
 
-Target to(Target, Source)(Source value)
+template to(Target)
 {
-    return toImpl!(Source, Target)(value);
+    Target to(Source)(Source value)
+    {
+        return toImpl!(Source, Target)(value);
+    }
 }
 
 private T toSomeString(S, T)(S s)
@@ -324,11 +327,37 @@ private T toImpl(S, T)(S value) {
   } else static if (isArray!(S) && isArray!(S)) {
     return arrayToArray!(S, T)(value);
   } else static if (is(S : Object) && is(T : Object)) {
-    return cast(T) value;
+    // Object-to-Object conversion fails if source is null
+    auto result = cast(T) value;
+    if (!result && value)
+    {
+        throw new ConvError("Cannot convert object of static type "
+                ~S.classinfo.name~" and dynamic type "~value.classinfo.name
+                ~" to type "~T.classinfo.name);
+    }
+    return result;
   } else {
     // Attempt an implicit conversion
     return value;
   }
+}
+
+unittest
+{
+    // Testing object conversions
+    class A {} class B : A {} class C : A {}
+    A a1 = new A, a2 = new B, a3 = new C;
+    assert(to!(B)(a2) is a2);
+    assert(to!(C)(a3) is a3);
+    try
+    {
+        to!(B)(a3);
+        assert(false);
+    }
+    catch (ConvError e)
+    {
+        //writeln(e);
+    }
 }
 
 private T numberToNumber(S, T)(S value)
@@ -809,7 +838,7 @@ unittest
 	try
 	{
 	    i = toInt(errors[j]);
-	    printf("i = %d\n", i);
+	    //printf("i = %d\n", i);
 	}
 	catch (Error e)
 	{
@@ -878,7 +907,7 @@ unittest
 	try
 	{
 	    i = toUint(errors[j]);
-	    printf("i = %d\n", i);
+	    //printf("i = %d\n", i);
 	}
 	catch (Error e)
 	{
@@ -958,7 +987,7 @@ unittest
 	try
 	{
 	    i = toLong(errors[j]);
-	    printf("l = %d\n", i);
+	    //printf("l = %d\n", i);
 	}
 	catch (Error e)
 	{
@@ -1035,7 +1064,7 @@ unittest
 	try
 	{
 	    i = toUlong(errors[j]);
-	    printf("i = %d\n", i);
+	    //printf("i = %d\n", i);
 	}
 	catch (Error e)
 	{
