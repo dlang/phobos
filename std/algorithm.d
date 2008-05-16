@@ -117,25 +117,29 @@ auto squares = map!("a * a")(cast(int[]) null, arr);
 assert(is(typeof(squares) == int[]));
 ----
 */
-typeof(unaryFun!(fun)(*begin(Ranges[0])))[] map(string fun, Ranges...)(Ranges rs)
+template map(string fun)
 {
-    return .map!(unaryFun!(fun), Ranges)(rs);
+    alias map!(unaryFun!(fun)) map;
 }
 
 /// Ditto
-typeof(fun(*begin(Ranges[0])))[] map(alias fun, Ranges...)(Ranges rs)
+template map(fun...)
 {
-    typeof(return) result;
-    foreach (r, R; Ranges)
+    typeof(fun[0](*begin(Ranges[0])))[] map(Ranges...)(Ranges rs)
     {
-        foreach (i; begin(rs[r]) .. end(rs[r]))
+        static assert(fun.length == 1, "Multiple funs not yet supported");
+        typeof(return) result;
+        foreach (r, R; Ranges)
         {
-            result ~= fun(*i);
+            foreach (i; begin(rs[r]) .. end(rs[r]))
+            {
+                result ~= fun[0](*i);
+            }
         }
+        return result;
     }
-    return result;
 }
-
+    
 unittest
 {
     int[] arr1 = [ 1, 2, 3, 4 ];
