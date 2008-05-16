@@ -85,6 +85,7 @@ module std.variant;
 
 import std.traits, std.conv, std.c.string, std.typetuple, std.gc;
 import std.stdio; // for testing only
+import std.contracts; // for testing only
 
 private template maxSize(T...)
 {
@@ -717,27 +718,31 @@ public:
     VariantN opAdd(T)(T rhs) { return opArithmetic!(T, "+")(rhs); }
     ///ditto
     VariantN opSub(T)(T rhs) { return opArithmetic!(T, "-")(rhs); }
-    ///ditto
-    VariantN opSub_r(T)(T lhs)
-    {
-        return VariantN(lhs).opArithmetic!(VariantN, "-")(*this);
-    }
+
+    // Commenteed all _r versions for now because of ambiguities
+    // arising when two Variants are used
+    
+    /////ditto
+    // VariantN opSub_r(T)(T lhs)
+    // {
+    //     return VariantN(lhs).opArithmetic!(VariantN, "-")(*this);
+    // }
     ///ditto
     VariantN opMul(T)(T rhs) { return opArithmetic!(T, "*")(rhs); }
     ///ditto
     VariantN opDiv(T)(T rhs) { return opArithmetic!(T, "/")(rhs); }
-    ///ditto
-    VariantN opDiv_r(T)(T lhs)
-    {
-        return VariantN(lhs).opArithmetic!(VariantN, "/")(*this);
-    }
+    // ///ditto
+    // VariantN opDiv_r(T)(T lhs)
+    // {
+    //     return VariantN(lhs).opArithmetic!(VariantN, "/")(*this);
+    // }
     ///ditto
     VariantN opMod(T)(T rhs) { return opArithmetic!(T, "%")(rhs); }
-    ///ditto
-    VariantN opMod_r(T)(T lhs)
-    {
-        return VariantN(lhs).opArithmetic!(VariantN, "%")(*this);
-    }
+    // ///ditto
+    // VariantN opMod_r(T)(T lhs)
+    // {
+    //     return VariantN(lhs).opArithmetic!(VariantN, "%")(*this);
+    // }
     ///ditto
     VariantN opAnd(T)(T rhs) { return opLogic!(T, "&")(rhs); }
     ///ditto
@@ -746,25 +751,25 @@ public:
     VariantN opXor(T)(T rhs) { return opLogic!(T, "^")(rhs); }
     ///ditto
     VariantN opShl(T)(T rhs) { return opLogic!(T, "<<")(rhs); }
-    ///ditto
-    VariantN opShl_r(T)(T lhs)
-    {
-        return VariantN(lhs).opLogic!(VariantN, "<<")(*this);
-    }
+    // ///ditto
+    // VariantN opShl_r(T)(T lhs)
+    // {
+    //     return VariantN(lhs).opLogic!(VariantN, "<<")(*this);
+    // }
     ///ditto
     VariantN opShr(T)(T rhs) { return opLogic!(T, ">>")(rhs); }
-    ///ditto
-    VariantN opShr_r(T)(T lhs)
-    {
-        return VariantN(lhs).opLogic!(VariantN, ">>")(*this);
-    }
+    // ///ditto
+    // VariantN opShr_r(T)(T lhs)
+    // {
+    //     return VariantN(lhs).opLogic!(VariantN, ">>")(*this);
+    // }
     ///ditto
     VariantN opUShr(T)(T rhs) { return opLogic!(T, ">>>")(rhs); }
-    ///ditto
-    VariantN opUShr_r(T)(T lhs)
-    {
-        return VariantN(lhs).opLogic!(VariantN, ">>>")(*this);
-    }
+    // ///ditto
+    // VariantN opUShr_r(T)(T lhs)
+    // {
+    //     return VariantN(lhs).opLogic!(VariantN, ">>>")(*this);
+    // }
     ///ditto
     VariantN opCat(T)(T rhs)
     {
@@ -772,13 +777,13 @@ public:
         temp ~= rhs;
         return temp;
     }
-    ///ditto
-    VariantN opCat_r(T)(T rhs)
-    {
-        VariantN temp = rhs;
-        temp ~= *this;
-        return temp;
-    }
+    // ///ditto
+    // VariantN opCat_r(T)(T rhs)
+    // {
+    //     VariantN temp = rhs;
+    //     temp ~= *this;
+    //     return temp;
+    // }
  	
     ///ditto
     VariantN opAddAssign(T)(T rhs)  { return *this = *this + rhs; }
@@ -1054,7 +1059,7 @@ unittest
     a = new B2;
     assert(a.coerce!(B1) !is null);
     a = new B1;
-    assert(a.coerce!(B2) is null);
+    assert(collectException(a.coerce!(B2) is null));
     a = cast(Object) new B2; // lose static type info; should still work
     assert(a.coerce!(B2) !is null);
 
@@ -1108,13 +1113,13 @@ unittest
     assert( v + 4 == 42 );
     assert( 4 + v == 42 );
     assert( v - 4 == 34 );
-    assert( 4 - v == -34 );
+    assert( Variant(4) - v == -34 );
     assert( v * 2 == 76 );
     assert( 2 * v == 76 );
     assert( v / 2 == 19 );
-    assert( 2 / v == 0 );
+    assert( Variant(2) / v == 0 );
     assert( v % 2 == 0 );
-    assert( 2 % v == 2 );
+    assert( Variant(2) % v == 2 );
     assert( (v & 6) == 6 );
     assert( (6 & v) == 6 );
     assert( (v | 9) == 47 );
@@ -1122,11 +1127,11 @@ unittest
     assert( (v ^ 5) == 35 );
     assert( (5 ^ v) == 35 );
     assert( v << 1 == 76 );
-    assert( 1 << Variant(2) == 4 );
+    assert( Variant(1) << Variant(2) == 4 );
     assert( v >> 1 == 19 );
-    assert( 4 >> Variant(2) == 1 );
+    assert( Variant(4) >> Variant(2) == 1 );
     assert( Variant("abc") ~ "def" == "abcdef" );
-    assert( "abc" ~ Variant("def") == "abcdef" );
+    assert( Variant("abc") ~ Variant("def") == "abcdef" );
  	
     v = 38;
     v += 4;
@@ -1186,6 +1191,7 @@ unittest
     Variant va=1;
     Variant vb=-2;
     assert((va+vb).get!(int) == -1);
+    assert((va-vb).get!(int) == 3);
 }
 
 unittest
