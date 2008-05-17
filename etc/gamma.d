@@ -283,7 +283,7 @@ unittest
 	// Require exact equality for small factorials
 	if (i < 14)
 	    assert(tgamma(i * 1.0L)==fact);
-	assert(feqrel(tgamma(i * 1.0L), fact) > real.mant_dig - 15);
+	assert(feqrel(tgamma(i * 1.0L), cast(real)fact) > real.mant_dig - 15);
 	//writefln(i, " %a ---> %a   %a ", i*1.0L, tgamma(i * 1.0L), fact, feqrel(tgamma(i*1.0L), fact));
 	fact *= (i * 1.0L);
     }
@@ -413,12 +413,18 @@ real lgamma(real x)
 
 unittest
 {
+    // return true if x is +0.0
+    bit isPosZero(real x)
+    {
+       return (x==0) && (signbit(x)==0);
+    }
+
     assert(isnan(lgamma(real.nan)));
     assert(lgamma(real.infinity) == real.infinity);
     assert(lgamma(-1.0) == real.infinity);
     assert(lgamma(0.0) == real.infinity);
-    assert(std.math.isPosZero(lgamma(1.0L)));
-    assert(std.math.isPosZero(lgamma(2.0L)));
+    assert(isPosZero(lgamma(1.0L)));
+    assert(isPosZero(lgamma(2.0L)));
  
     // x, correct loggamma(x), correct d/dx loggamma(x).
     static real[] testpoints =
