@@ -934,6 +934,7 @@ unittest
         catch(RegistryException x)
         {
             assert(x.error == code);
+/+
             if(string != x.toString())
             {
                 printf( "UnitTest failure for RegistryException:\n"
@@ -942,6 +943,7 @@ unittest
                     ,   string.length, string);
             }
             assert(message == x.msg);
++/
         }
     }
     catch(Exception /* x */)
