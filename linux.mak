@@ -213,8 +213,8 @@ $(addprefix etc/c/, $(ETC_C_MODULES))
 SRC2LIB := $(addsuffix .d,$(SRC2LIB))
 
 $(LIB) : $(SRC2LIB) $(OBJS) $(MAKEFILE_LIST)
-	@echo dmd $(DFLAGS) -lib -of$@ "[...tons of files...]"
-	@dmd $(DFLAGS) -lib -of$@ $(SRC2LIB) $(OBJS)
+	@echo $(DMD) $(DFLAGS) -lib -of$@ "[...tons of files...]"
+	@$(DMD) $(DFLAGS) -lib -of$@ $(SRC2LIB) $(OBJS)
 
 ###########################################################
 # Dox
