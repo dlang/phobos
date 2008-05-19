@@ -29,6 +29,7 @@ ifdef WIN32
       OBJDIR = obj/win32
       OBJEXT = obj
       LIBEXT = lib
+      EXEEXT = .exe
       CC = wine dmc
       DMD = wine dmd
       CFLAGS = -mn -6 -r
@@ -37,6 +38,7 @@ else
       OBJDIR = obj/linux
       OBJEXT = o
       LIBEXT = a
+      EXEEXT = 
       CC = gcc
       DMD = dmd
       CFLAGS = -m32
@@ -106,7 +108,7 @@ $(OBJDIR)/%.$(OBJEXT) : %.d
 $(OBJDIR)/%.$(OBJEXT) : %.asm
 	$(CC) -c -o$@ $<
 
-debug release unittest/debug unittest/release : $(OBJDIR)/unittest
+debug release unittest/debug unittest/release : $(OBJDIR)/unittest$(EXEEXT)
 
 all :
 	$(MAKE) -f linux.mak release
@@ -115,9 +117,16 @@ all :
 	$(MAKE) -f linux.mak unittest/debug
 	$(MAKE) -f linux.mak html
 
-$(OBJDIR)/unittest : $(OBJDIR)/unittest.$(OBJEXT) \
+$(OBJDIR)/unittest$(EXEEXT) : $(OBJDIR)/unittest.$(OBJEXT) \
                    $(OBJDIR)/all_std_modules_generated.$(OBJEXT) $(LIB)
-	$(CC) -o $@ $^ -lpthread -lm -g -ldl
+ifdef WIN32
+	cp $(LIB) ../../lib/phobos.lib
+	$(DMD) $(DFLAGS) unittest.d minit.obj
+	mv unittest.exe $@
+	wine $@
+else
+	$(CC) -o$@ $^ -lpthread -lm -g -ldl
+endif
 ifeq (release,$(MAKECMDGOALS))
 	ln -sf `pwd`/$(OBJDIR)/libphobos2.$(LIBEXT) ../../lib
 endif
@@ -145,7 +154,7 @@ INTERNAL_GC_EXTRAFILES = \
 STD_MODULES = algorithm array asserterror base64 bigint bind bitarray	\
         bitmanip boxer compiler complex contracts conv cover cpuid	\
         cstream ctype date dateparse demangle encoding file format	\
-        functional gc getopt hiddenfunc intrinsic iterator loader math	\
+        functional  getopt hiddenfunc intrinsic iterator loader math	\
         md5 metastrings mmfile moduleinit numeric openrj outbuffer	\
         outofmemory path perf process random regexp signals socket	\
         socketstream stdint stdio stream string switcherr syserror	\
