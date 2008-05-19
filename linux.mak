@@ -5,7 +5,7 @@
 #
 #	release (default target)
 #		-O -release
-#               Symlink libphobos2.a in the top level directory
+#               Symlink libphobos2.$(LIBEXT) in the top level directory
 #
 #	unittest/release
 #		-O -release -unittest
@@ -25,73 +25,86 @@
 #	clean
 #		Delete all files created by build process
 
-CFLAGS=-m32
-DFLAGS=
+ifdef WIN32
+      OBJDIR = obj/win32
+      OBJEXT = obj
+      LIBEXT = lib
+      CC = wine dmc
+      DMD = wine dmd
+      CFLAGS = -mn -6 -r
+      DFLAGS =
+else
+      OBJDIR = obj/linux
+      OBJEXT = o
+      LIBEXT = a
+      CC = gcc
+      DMD = dmd
+      CFLAGS = -m32
+      DFLAGS =
+endif
 
 ifeq (,$(MAKECMDGOALS))
     MAKECMDGOALS := release
 endif
 ifeq (unittest/release,$(MAKECMDGOALS))
-    CFLAGS:=$(CFLAGS) -O
-    DFLAGS:=$(DFLAGS) -O -release -unittest
-    OBJDIR=obj/unittest/release
+    CFLAGS := $(CFLAGS) -O
+    DFLAGS := $(DFLAGS) -O -release -unittest
+    OBJDIR := $(OBJDIR)/unittest/release
 endif
 ifeq (unittest/debug,$(MAKECMDGOALS))
-    CFLAGS:=$(CFLAGS) -g
-    DFLAGS:=$(DFLAGS) -g -unittest
-    OBJDIR=obj/unittest/debug
+    CFLAGS := $(CFLAGS) -g
+    DFLAGS := $(DFLAGS) -g -unittest
+    OBJDIR : = $(OBJDIR)/unittest/debug
 endif
 ifeq (debug,$(MAKECMDGOALS))
-    CFLAGS:=$(CFLAGS) -g
-    DFLAGS:=$(DFLAGS) -g
-    OBJDIR=obj/debug
+    CFLAGS := $(CFLAGS) -g
+    DFLAGS := $(DFLAGS) -g
+    OBJDIR := $(OBJDIR)/debug
 endif
 ifeq (release,$(MAKECMDGOALS))
-    CFLAGS:=$(CFLAGS) -O
-    DFLAGS:=$(DFLAGS) -O -release
-    OBJDIR=obj/release
+    CFLAGS := $(CFLAGS) -O
+    DFLAGS := $(DFLAGS) -O -release
+    OBJDIR := $(OBJDIR)/release
 endif
 ifeq (clean,$(MAKECMDGOALS))
-    OBJDIR=none
+    OBJDIR = none
 endif
 ifeq (html,$(MAKECMDGOALS))
-    OBJDIR=none
+    OBJDIR = none
 endif
 ifeq (all,$(MAKECMDGOALS))
-    OBJDIR=none
+    OBJDIR = none
 endif
 ifeq (headers,$(MAKECMDGOALS))
-    DFLAGS:=$(DFLAGS) -O -release
-    OBJDIR=none
+    DFLAGS := $(DFLAGS) -O -release
+    OBJDIR = none
 endif
 
 ifndef OBJDIR
-    $(error Cannot make $(MAKECMDGOALS). Please make either \
-all, debug, release, unittest/debug, unittest/release, clean, or html)
+    $(error Cannot make $(MAKECMDGOALS). Please make either all,	\
+debug, release, unittest/debug, unittest/release, clean, or html)
 endif
 
 ifneq (none,$(OBJDIR))
-DUMMY := $(shell mkdir --parents $(OBJDIR) $(OBJDIR)/etc/c/zlib $(OBJDIR)/internal)
+      DUMMY := $(shell mkdir --parents $(OBJDIR) $(OBJDIR)/etc/c/zlib	\
+            $(OBJDIR)/internal $(OBJDIR)/internal/gc)
 endif
 
-LIB=$(OBJDIR)/libphobos2.a
+LIB=$(OBJDIR)/libphobos2.$(LIBEXT)
 DOC_OUTPUT_DIR=../web/phobos
-CC=gcc
-#DMD=/dmd/bin/dmd
-DMD=dmd
 
 .SUFFIXES: .d
-$(OBJDIR)/%.o : %.c
-	$(CC) -c $(CFLAGS) -o $@ $<
+$(OBJDIR)/%.$(OBJEXT) : %.c
+	$(CC) -c $(CFLAGS) -o$@ $<
 
-$(OBJDIR)/%.o : %.cpp
-	g++ -c $(CFLAGS) -o $@ $<
+$(OBJDIR)/%.$(OBJEXT) : %.cpp
+	g++ -c $(CFLAGS) -o$@ $<
 
-$(OBJDIR)/%.o : %.d
+$(OBJDIR)/%.$(OBJEXT) : %.d
 	$(DMD) -I$(dir $<) -c $(DFLAGS) -of$@ $<
 
-$(OBJDIR)/%.o : %.asm
-	$(CC) -c -o $@ $<
+$(OBJDIR)/%.$(OBJEXT) : %.asm
+	$(CC) -c -o$@ $<
 
 debug release unittest/debug unittest/release : $(OBJDIR)/unittest
 
@@ -102,14 +115,14 @@ all :
 	$(MAKE) -f linux.mak unittest/debug
 	$(MAKE) -f linux.mak html
 
-$(OBJDIR)/unittest : $(OBJDIR)/unittest.o \
-                   $(OBJDIR)/all_std_modules_generated.o $(LIB)
+$(OBJDIR)/unittest : $(OBJDIR)/unittest.$(OBJEXT) \
+                   $(OBJDIR)/all_std_modules_generated.$(OBJEXT) $(LIB)
 	$(CC) -o $@ $^ -lpthread -lm -g -ldl
 ifeq (release,$(MAKECMDGOALS))
-	ln -sf `pwd`/$(OBJDIR)/libphobos2.a ../../lib
+	ln -sf `pwd`/$(OBJDIR)/libphobos2.$(LIBEXT) ../../lib
 endif
 
-$(OBJDIR)/unittest.o : unittest.d all_std_modules_generated.d
+$(OBJDIR)/unittest.$(OBJEXT) : unittest.d all_std_modules_generated.d
 
 all_std_modules_generated.d : $(MAKEFILE_LIST)
 	for m in $(STD_MODULES); do echo public import std.$$m\;; done > $@
@@ -203,7 +216,7 @@ OBJS = errno $(addprefix internal/, $(INTERNAL_MODULES)		\
 	$(INTERNAL_GC_MODULES)) $(addprefix etc/c/zlib/,	\
 	$(ZLIB_CMODULES))
 
-OBJS := $(addsuffix .o,$(addprefix $(OBJDIR)/,$(OBJS)))
+OBJS := $(addsuffix .$(OBJEXT),$(addprefix $(OBJDIR)/,$(OBJS)))
 
 SRC2LIB = crc32 gcstats $(addprefix std/, $(STD_MODULES)) $(addprefix	\
 std/typeinfo/, $(TYPEINFO_MODULES)) $(addprefix std/c/,			\
@@ -220,7 +233,6 @@ $(LIB) : $(SRC2LIB) $(OBJS) $(MAKEFILE_LIST)
 # Dox
 
 STDDOC = ../docsrc/std.ddoc
-DOCDOC = ../docsrc/doc.ddoc
 
 $(DOC_OUTPUT_DIR)/%.html : %.d $(STDDOC)
 	$(DMD) -c -o- $(DFLAGS) -Df$@ $(STDDOC) $<
@@ -243,7 +255,7 @@ zip : $(SRC_RELEASEZIP)
 	zip phobos $(SRC_RELEASEZIP)
 
 clean:
-	$(RM) libphobos2.a all_std_modules_generated.d
+	$(RM) libphobos2.$(LIBEXT) all_std_modules_generated.d
 	$(RM) -r $(DOC_OUTPUT_DIR) obj
 
 
