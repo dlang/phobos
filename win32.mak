@@ -47,7 +47,7 @@ CC=dmc
 
 DMD=$(DIR)\bin\dmd
 #DMD=..\dmd
-#DMD=dmd
+DMD=dmd
 
 ## Location of where to write the html documentation files
 
