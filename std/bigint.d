@@ -58,12 +58,10 @@ alias uint Digit; /// alias for uint
  */
 struct BigInt
 {
-    Digits digits;
+    Digits digits = [ cast(Digit)0 ];
 
-    static const BigInt ZERO = { [ 0 ] };
-    static const BigInt ONE = { [ 0 ] };
-
-    static BigInt init() { return ZERO; }
+    static const BigInt ZERO = { [ cast(Digit)0 ] };
+    static const BigInt ONE = { [ cast(Digit)1 ] };
 
     ///
     void opAssign(const BigInt n)
@@ -513,6 +511,20 @@ struct BigInt
         auto r = opShr(n);
         digits = r.digits;
     }
+    
+    ///
+    BigInt opUShr(T)(T n) const
+    {
+        if (sgn >= 0) return opShr(n);
+        else throw new Exception(">>> cannot be applied to negative numbers");
+    }
+    
+    ///
+    void opUShrAssign(T)(T n)
+    {
+        if (sgn >= 0) opShrAssign(n);
+        else throw new Exception(">>>= cannot be applied to negative numbers");
+    }
 
     ///
     int opEquals(T)(T n) const
@@ -566,17 +578,13 @@ struct BigInt
         return h;
     }
 
-    // Some extra, possibly useful, member functions
-
-    /// Returns -1, 0, or 1, as the number is <0, ==0, or >0
-    int sgn() const
+    private int sgn() const
     {
         int t = cmp(*this,0);
         return t == 0 ? 0 : (t > 0 ? 1 : -1);
     }
 
-    /// Returns the absolute value of the number
-    BigInt abs() const
+    private BigInt abs() const
     {
         return sgn >= 0 ? opPos : opNeg;
     }
