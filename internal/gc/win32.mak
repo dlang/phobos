@@ -2,7 +2,7 @@
 # makefile to build D garbage collector under win32
 
 #DMD=..\..\..\dmd
-DMD=\dmd\bin\dmd
+DMD=dmd
 
 #DFLAGS=-unittest -g -release
 #DFLAGS=-inline -O
