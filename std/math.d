@@ -858,7 +858,7 @@ real frexp(real value, out int exp)
         vu[F.EXPPOS_SHORT] =
             cast(ushort)((0x8000 & vu[F.EXPPOS_SHORT]) | 0x3FFE);
     }
-  } else static if (real.mant_dig == 113) { // quadruple
+  } else static if (real.mant_dig == 113) { // quadruple      
         if (ex) { // If exponent is non-zero
             if (ex == F.EXPMASK) {   // infinity or NaN
                 if (vl[MANTISSA_LSB] |
@@ -876,7 +876,7 @@ real frexp(real value, out int exp)
                 vu[F.EXPPOS_SHORT] =
                    cast(ushort)((0x8000 & vu[F.EXPPOS_SHORT]) | 0x3FFE);
             }
-        } else if ((vl[MANTISSA_LSB]
+        } else if ((vl[MANTISSA_LSB] 
                   |(vl[MANTISSA_MSB] & 0x0000_FFFF_FFFF_FFFF)) == 0) {
             // value is +-0.0
             exp = 0;
@@ -885,7 +885,7 @@ real frexp(real value, out int exp)
         value *= F.POW2MANTDIG;
         ex = vu[F.EXPPOS_SHORT] & F.EXPMASK;
         exp = ex - F.EXPBIAS - 113;
-        vu[F.EXPPOS_SHORT] =
+        vu[F.EXPPOS_SHORT] = 
                   cast(ushort)((0x8000 & vu[F.EXPPOS_SHORT]) | 0x3FFE);
     }
   } else static if (real.mant_dig==53) { // real is double
@@ -901,7 +901,7 @@ real frexp(real value, out int exp)
             }
         } else {
             exp = (ex - F.EXPBIAS) >>> 4;
-            ve[F.EXPPOS_SHORT] = (0x8000 & ve[F.EXPPOS_SHORT]) | 0x3FE0;
+            vu[F.EXPPOS_SHORT] = cast(ushort)((0x8000 & vu[F.EXPPOS_SHORT]) | 0x3FE0);
         }
     } else if (!(*vl & 0x7FFF_FFFF_FFFF_FFFF)) {
         // value is +-0.0
@@ -909,7 +909,7 @@ real frexp(real value, out int exp)
     } else {
         // denormal
         ushort sgn;
-        sgn = (0x8000 & ve[F.EXPPOS_SHORT])| 0x3FE0;
+        sgn = cast(ushort)((0x8000 & vu[F.EXPPOS_SHORT])| 0x3FE0);
         *vl &= 0x7FFF_FFFF_FFFF_FFFF;
 
         int i = -0x3FD+11;
@@ -918,7 +918,7 @@ real frexp(real value, out int exp)
             *vl <<= 1;
         } while (*vl > 0);
         exp = i;
-        ve[F.EXPPOS_SHORT] = sgn;
+        vu[F.EXPPOS_SHORT] = sgn;
     }
   } else { //static if(real.mant_dig==106) // doubledouble
     throw new NotImplemented("frexp");
