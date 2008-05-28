@@ -902,7 +902,7 @@ real frexp(real value, out int exp)
             }
         } else {
             exp = (ex - F.EXPBIAS) >>> 4;
-            ve[F.EXPPOS_SHORT] = (0x8000 & ve[F.EXPPOS_SHORT]) | 0x3FE0;
+            vu[F.EXPPOS_SHORT] = cast(ushort)((0x8000 & vu[F.EXPPOS_SHORT]) | 0x3FE0);
         }
     } else if (!(*vl & 0x7FFF_FFFF_FFFF_FFFF)) {
         // value is +-0.0
@@ -910,7 +910,7 @@ real frexp(real value, out int exp)
     } else {
         // denormal
         ushort sgn;
-        sgn = (0x8000 & ve[F.EXPPOS_SHORT])| 0x3FE0;
+        sgn = cast(ushort)((0x8000 & vu[F.EXPPOS_SHORT])| 0x3FE0);
         *vl &= 0x7FFF_FFFF_FFFF_FFFF;
 
         int i = -0x3FD+11;
@@ -919,7 +919,7 @@ real frexp(real value, out int exp)
             *vl <<= 1;
         } while (*vl > 0);
         exp = i;
-        ve[F.EXPPOS_SHORT] = sgn;
+        vu[F.EXPPOS_SHORT] = sgn;
     }
   } else { //static if(real.mant_dig==106) // doubledouble
     throw new NotImplemented("frexp");
