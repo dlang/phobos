@@ -2024,7 +2024,7 @@ real pow(real x, uint n)
     {
         assert(n >> 1 <= int.max);
         // must reduce n so we can call the pow(real, int) overload
-        invariant result = pow(x, cast(int) (n >> 1));
+        invariant result = pow(x*x, cast(int) (n >> 1));
         return (n & 1)
             ? result * x // odd power
             : result;
