@@ -2265,3 +2265,378 @@ unittest
         assert(i == e);
     }
 }
+
+
+/* Optimised asm multibyte arithmetic routines for X86 processors.
+ * All operate on arrays of unsigned ints, stored lsb first.
+ * Author: Don Clugston
+ * Date: May 2008.
+ *
+ * License: Public Domain
+ *
+ * In simple terms, there are 3 modern x86 microarchitectures:
+ * (a) the P6 family (Pentium Pro, PII, PIII, PM, Core), produced by Intel;
+ * (b) the K6, Athlon, and AMD64 families, produced by AMD; and
+ * (c) the Pentium 4, produced by Marketing.
+ *
+ * This code has been optimised for the Intel P6 family, except that it only
+ * uses the basic instruction set (doesn't use MMX, SSE, SSE2)
+ * Generally the code remains near-optimal for Core2, after translating
+ * EAX-> RAX, etc, since all these CPUs use essentially the same pipeline.
+ * Uses techniques described in Agner Fog's superb manuals available at
+ * www.agner.org.
+ * Not optimal for AMD64, which can do two memory loads per cycle (Intel
+ * CPUs can only do one).
+ */
+private:
+version(D_InlineAsm_X86) {
+/* Duplicate string s, with n times, substituting index for '@'.
+ *
+ * Each instance of '@' in s is replaced by 0,1,...n-1. This is a helper
+ * function for some of the asm routines.
+ */
+char [] indexedLoopUnroll(int n, invariant char [] s)
+{
+    char [] u;
+    for (int i = 0; i<n; ++i) {
+        char [] nstr= ((i>9 ? ""~ cast(char)('0'+i/10) : "") ~ cast(char)('0' + i%10)).dup;
+        
+        int last = 0;
+        for (int j = 0; j<s.length; ++j) {
+            if (s[j]=='@') {
+                u ~= s[last..j] ~ nstr;
+                last = j+1;
+            }
+        }
+        if (last<s.length) u = u ~ s[last..$];
+        
+    }
+    return u;    
+}
+unittest
+{
+assert(indexedLoopUnroll(3, "@*23;")=="0*23;1*23;2*23;");
+}
+
+// Multi-byte addition or subtraction
+// Dest[0..$] = src1[0..dest.length] + src2[0..dest.length] + carry (0 or 1).
+// Returns carry (0 or 1).
+// Set op == '+' for addition, '-' for subtraction.
+uint multibyteAddSub(char op)(uint[] dest, const (uint) *src1, const (uint) *src2, int carry)
+{
+    // Timing:
+    // Pentium M: 2.25 (18 cycles/iteration when unrolled by 8).
+    // * P6 family have a partial flags stall when reading the carry flag in
+    // an ADC, SBB operation after an operation such as INC or DEC which
+    // modifies some, but not all, flags. We avoid this by storing carry into
+    // a resister (AL), and restoring it after the branch.
+    // * Count UP to zero (from -len) to minimize loop overhead.
+
+    enum { UNROLLFACTOR = 8 };
+    enum { LASTPARAM = 4*4 } // 3* pushes + return address.
+    asm {
+        naked;
+        push EDI;
+        push EBX;
+        push ESI;
+        align 16; // This aligns L1 on a 16-byte boundary.
+        mov ECX, [ESP + LASTPARAM + 2*4]; // dest.length;
+        mov EDX, [ESP + LASTPARAM + 1*4]; // src1
+        mov EDI, [ESP + LASTPARAM + 3*4]; // dest.ptr
+             // Carry is automatically in EAX
+        mov ESI, [ESP + LASTPARAM]; // src2;
+        lea EDX, [EDX + 4*ECX]; // EDX = end of src1.
+        lea EDI, [EDI + 4*ECX]; // EDI = end of dest.
+        lea ESI, [ESI + 4*ECX]; // EBP = end of src2.        
+        neg ECX;
+        and ECX, 0xFFFF_FFF8;
+        jz L2; // length <8
+    L1:
+        shr AL, 1; // get carry from the lsb of AL
+    }
+    mixin(" asm {"
+    ~ indexedLoopUnroll( UNROLLFACTOR, "
+        mov EAX, [@*4+EDX+ECX*4];
+        "~ (op=='+'?"adc" : "sbb") ~ " EAX, [@*4+ESI+ECX*4];
+        mov [@*4+EDI+ECX*4], EAX;
+        ") ~ "}");
+    asm {
+        setc AL; // Save carry into the lsb of AL
+        add ECX, UNROLLFACTOR;        
+        jnz L1;
+L2:
+        mov ECX, [ESP + LASTPARAM + 2*4]; // dest.length;
+        and ECX, 7;
+        jz done; // divisible by 8 -- no residue
+        neg ECX;
+L3: // Do the residual 1..7 ints.
+        shr AL, 1; // get carry from EAX
+        mov EAX, [EDX+ECX*4];
+    }
+    static if (op=='+') {
+        asm { adc EAX, [ESI+ECX*4]; }
+    } else {
+        asm { sbb EAX, [ESI+ECX*4]; }
+    }
+    asm {
+        mov [EDI+ECX*4], EAX;       
+        setc AL; // save carry
+        add ECX, 1;
+        jnz L3;                
+done:
+        and EAX, 1; // make it O or 1.
+        pop ESI;
+        pop EBX;
+        pop EDI;
+        ret 4*4;
+    } 
+}
+
+unittest
+{
+    uint [] a = new uint[20];
+    uint [] b = new uint[20];
+    uint [] c = new uint[20];
+    for (int i=0; i<a.length; ++i) {
+        if (i&1) a[i]=0x8000_0000 + i;
+        else a[i]=i;
+        b[i]= 0x8000_0003;
+    }
+    c[19]=0x3333_3333;
+    uint carry = multibyteAddSub!('+')(c[0..18], a.ptr, b.ptr, 0);
+    assert(carry==1);
+    assert(c[0]==0x8000_0003);
+    assert(c[1]==4);
+    assert(c[19]==0x3333_3333); // check for overrun
+}
+
+// Dest[0..len] = src1[0..len] op src2[0..len]
+// where op == '&' or '|' or '^'
+uint multibyteLogical(char op)(uint [] dest, const (uint) *src1, const (uint) *src2)
+{
+    // PM: 2 cycles/operation. Limited by execution unit p2.
+    // (AMD64 could reach 1.5 cycles/operation since it has TWO read ports.
+    // On Core2, we could use SSE2 with 128-bit reads).
+    enum { LASTPARAM = 3*4 } // 2* pushes + return address.
+    asm {
+        naked;
+        push EDI;
+        push ESI;
+        mov EDI, [ESP + LASTPARAM + 4*2]; // dest
+        mov ECX, [ESP + LASTPARAM + 4*1]; // dest.length;
+        mov EDX, [ESP + LASTPARAM + 4*0]; // src1;
+        mov ESI, EAX;                     // src2;
+        lea EDI, [EDI + 4*ECX]; // EDI = end of dest.
+        lea EDX, [EDX + 4*ECX]; // EDX = end of src1.
+        lea ESI, [ESI + 4*ECX]; // ESI = end of src2.
+        neg ECX;
+L1:
+        mov EAX, [EDX+ECX*4];
+    }
+    static if (op=='&') asm {        and EAX, [ESI+ECX*4]; }
+    else   if (op=='|') asm {        or  EAX, [ESI+ECX*4]; }
+    else   if (op=='^') asm {        xor EAX, [ESI+ECX*4]; }
+    asm {
+        mov [EDI + ECX *4], EAX;
+        add ECX, 1;
+        jl L1;
+        pop ESI;
+        pop EDI;
+        ret 4*3;
+    } 
+}
+
+unittest
+{
+    uint [] bb = [0x0F0F_0F0F, 0xF0F0_F0F0, 0x0F0F_0F0F, 0xF0F0_F0F0];
+    for (int qqq=0; qqq<3; ++qqq) {
+        uint [] aa = [0xF0FF_FFFF, 0x1222_2223, 0x4555_5556, 0x8999_999A, 0xBCCC_CCCD, 0xEEEE_EEEE];    
+        switch(qqq) {
+        case 0:
+            multibyteLogical!('&')(aa[1..3], aa.ptr+1, bb.ptr);
+            assert(aa[1]==0x0202_0203 && aa[2]==0x4050_5050 && aa[3]== 0x8999_999A);
+            break;
+        case 1:
+            multibyteLogical!('|')(aa[1..2], aa.ptr+1, bb.ptr);
+            assert(aa[1]==0x1F2F_2F2F && aa[2]==0x4555_5556 && aa[3]== 0x8999_999A);
+            break;
+        case 2:
+            multibyteLogical!('^')(aa[1..2], aa.ptr+1, bb.ptr);
+            assert(aa[1]==0x1D2D_2D2C && aa[2]==0x4555_5556 && aa[3]== 0x8999_999A);
+            break;
+        }
+        assert(aa[0]==0xF0FF_FFFF);
+    }
+}
+    
+    // dest[0..$] = src[0..dest.length] << numbits
+void multibyteShl(uint [] dest, const (uint) *src, uint numbits)
+{
+    // Timing: Optimal for P6 family.
+    // 2.0 cycles/int on PPro..PM (limited by execution port p0)
+    // Terrible performance on AMD64, which has 7 cycles for SHLD!!
+    enum { LASTPARAM = 4*4 } // 3* pushes + return address.
+    asm {
+        naked;
+        push ESI;
+        push EDI;
+        push EBX;
+        mov EDI, [ESP + LASTPARAM + 4*2]; //dest.ptr;
+        mov EBX, [ESP + LASTPARAM + 4*1]; //dest.length;
+        mov ESI, [ESP + LASTPARAM + 4*0]; //src;
+        mov ECX, EAX; // numbits;
+
+        mov EAX, [-4+ESI + 4*EBX];
+        cmp EBX, 1;
+        jz L_last;
+        mov EDX, [-4+ESI + 4*EBX];
+        test EBX, 1;
+        jz L_odd;
+        sub EBX, 1;        
+L_even:
+        mov EDX, [-4+ ESI + 4*EBX];
+        shld EAX, EDX, CL;
+        mov [EDI+4*EBX], EAX;
+L_odd:
+        mov EAX, [-8+ESI + 4*EBX];
+        shld EDX, EAX, CL;
+        mov [-4+EDI + 4*EBX], EDX;        
+        sub EBX, 2;
+        jg L_even;
+L_last:
+        shl EAX, CL;
+        mov [EDI], EAX;
+
+        pop EBX;
+        pop EDI;
+        pop ESI;
+        ret 3*4;
+     }
+}
+
+// dest[0..len] = src[0..len] >> numbits
+void multibyteShr(uint [] dest, const (uint) *src, uint numbits)
+{
+    // Timing: Optimal for P6 family.
+    // 2.0 cycles/int on PPro..PM (limited by execution port p0)
+    // Terrible performance on AMD64, which has 7 cycles for SHRD!!
+    enum { LASTPARAM = 4*4 } // 3* pushes + return address.
+    asm {
+        naked;
+        push ESI;
+        push EDI;
+        push EBX;
+        mov EDI, [ESP + LASTPARAM + 4*2]; //dest.ptr;
+        mov EBX, [ESP + LASTPARAM + 4*1]; //dest.length;
+        mov ESI, [ESP + LASTPARAM + 4*0]; //src;
+        mov ECX, EAX; // numbits;
+
+        lea EDI, [EDI + 4*EBX]; // EDI = end of dest
+        lea ESI, [ESI + 4*EBX]; // ESI = end of src
+        neg EBX;                // count UP to zero.
+        mov EAX, [ESI + 4*EBX];
+        cmp EBX, -1;
+        jz L_last;
+        mov EDX, [ESI + 4*EBX];
+        test EBX, 1;
+        jz L_odd;
+        add EBX, 1;        
+L_even:
+        mov EDX, [ ESI + 4*EBX];
+        shrd EAX, EDX, CL;
+        mov [-4 + EDI+4*EBX], EAX;
+L_odd:
+        mov EAX, [4 + ESI + 4*EBX];
+        shrd EDX, EAX, CL;
+        mov [EDI + 4*EBX], EDX;        
+        add EBX, 2;
+        jl L_even;
+L_last:
+        shr EAX, CL;
+        mov [-4 + EDI], EAX;
+        
+        pop EBX;
+        pop EDI;
+        pop ESI;
+        ret 3*4;
+     }
+}
+
+unittest
+{
+    uint [] aa = [0x1222_2223, 0x4555_5556, 0x8999_999A, 0xBCCC_CCCD, 0xEEEE_EEEE];
+    multibyteShr(aa[0..$-2], aa.ptr, 4);
+	assert(aa[0]==0x6122_2222 && aa[1]==0xA455_5555 && aa[2]==0x0899_9999);
+	assert(aa[3]==0xBCCC_CCCD);
+
+    aa = [0x1222_2223, 0x4555_5556, 0x8999_999A, 0xBCCC_CCCD, 0xEEEE_EEEE];
+    multibyteShr(aa[0..$-1], aa.ptr, 4);
+	assert(aa[0] == 0x6122_2222 && aa[1]==0xA455_5555 
+	    && aa[2]==0xD899_9999 && aa[3]==0x0BCC_CCCC);
+
+    aa = [0xF0FF_FFFF, 0x1222_2223, 0x4555_5556, 0x8999_999A, 0xBCCC_CCCD, 0xEEEE_EEEE];
+    multibyteShl(aa[1..4], aa.ptr+1, 4);
+	assert(aa[0] == 0xF0FF_FFFF && aa[1] == 0x2222_2230 
+	    && aa[2]==0x5555_5561 && aa[3]==0x9999_99A4 && aa[4]==0x0BCCC_CCCD);
+}
+
+// dest[0..$] = src[0..len] * multiplier + carry.
+// Returns carry.
+uint bignum_mul(uint[] dest, const (uint)* src, uint multiplier, uint carry)
+{
+    // Timing: definitely not optimal.
+    // Pentium M: 5.1 cycles/operation, has 3 resource stalls/iteration
+
+    enum { LASTPARAM = 4*4 } // 4* pushes + return address.
+    asm {
+        naked;      
+        push ESI;
+        push EDI;
+        push EBX;
+        
+        mov EDI, [ESP + LASTPARAM + 4*3]; // dest
+        mov EBX, [ESP + LASTPARAM + 4*2]; // len
+        mov ESI, [ESP + LASTPARAM + 4*1];  // src
+align 16;
+        lea EDI, [EDI + 4*EBX]; // EDI = end of dest
+        lea ESI, [ESI + 4*EBX]; // ESI = end of src
+        nop;
+        mov ECX, EAX; // [carry]; -- last param is in EAX.
+        neg EBX;                // count UP to zero.
+        test EBX, 1;
+        jnz L_odd;
+        add EBX, 1;
+ L1:
+        mov EAX, [-4 + ESI + 4*EBX];
+        mul int ptr [ESP+LASTPARAM]; //[multiplier];
+        add EAX, ECX;
+        mov ECX, 0;
+        mov [-4+EDI + 4*EBX], EAX;
+        adc ECX, EDX;
+L_odd:        
+        mov EAX, [ESI + 4*EBX];  // p2
+        mul int ptr [ESP+LASTPARAM]; //[multiplier]; // p0*3, 
+        add EAX, ECX;
+        mov ECX, 0;
+        adc ECX, EDX;
+        mov [EDI + 4*EBX], EAX;
+        add EBX, 2;
+        jl L1;
+        
+        mov EAX, ECX; // get final carry
+
+        pop EBX;
+        pop EDI;
+        pop ESI;
+        ret 4*4;
+     }
+}
+
+unittest
+{
+    uint [] aa = [0xF0FF_FFFF, 0x1222_2223, 0x4555_5556, 0x8999_999A, 0xBCCC_CCCD, 0xEEEE_EEEE];
+    bignum_mul(aa.ptr[1..4], aa.ptr+1, 16, 0);
+	assert(aa[0] == 0xF0FF_FFFF && aa[1] == 0x2222_2230 && aa[2]==0x5555_5561 && aa[3]==0x9999_99A4 && aa[4]==0x0BCCC_CCCD);
+}
+
+} // version(D_InlineAsm_X86)
