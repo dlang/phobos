@@ -2319,7 +2319,8 @@ assert(indexedLoopUnroll(3, "@*23;")=="0*23;1*23;2*23;");
 }
 
 // Multi-byte addition or subtraction
-// Dest[0..$] = src1[0..dest.length] + src2[0..dest.length] + carry (0 or 1).
+//    Dest[0..$] = src1[0..dest.length] + src2[0..dest.length] + carry (0 or 1).
+// or Dest[0..$] = src1[0..dest.length] - src2[0..dest.length] - carry (0 or 1).
 // Returns carry (0 or 1).
 // Set op == '+' for addition, '-' for subtraction.
 uint multibyteAddSub(char op)(uint[] dest, const (uint) *src1, const (uint) *src2, int carry)
@@ -2582,12 +2583,20 @@ unittest
 
 // dest[0..$] = src[0..len] * multiplier + carry.
 // Returns carry.
-uint bignum_mul(uint[] dest, const (uint)* src, uint multiplier, uint carry)
+uint multibyteMul(uint[] dest, const (uint)* src, uint multiplier, uint carry)
 {
     // Timing: definitely not optimal.
-    // Pentium M: 5.1 cycles/operation, has 3 resource stalls/iteration
+    // Pentium M: 5.0 cycles/operation, has 3 resource stalls/iteration
+    // Fastest implementation found was 4.6 cycles/op, but not worth the complexity.
 
     enum { LASTPARAM = 4*4 } // 4* pushes + return address.
+    // We'll use p2 (load unit) instead of the overworked p0 or p1 (ALU units)
+    // when initializing variables to zero.
+    static if (0) { // PIC (position independent code)
+        enum zero = 0; 
+    } else {
+        static invariant int zero = 0;
+    }
     asm {
         naked;      
         push ESI;
@@ -2600,7 +2609,6 @@ uint bignum_mul(uint[] dest, const (uint)* src, uint multiplier, uint carry)
 align 16;
         lea EDI, [EDI + 4*EBX]; // EDI = end of dest
         lea ESI, [ESI + 4*EBX]; // ESI = end of src
-        nop;
         mov ECX, EAX; // [carry]; -- last param is in EAX.
         neg EBX;                // count UP to zero.
         test EBX, 1;
@@ -2610,14 +2618,14 @@ align 16;
         mov EAX, [-4 + ESI + 4*EBX];
         mul int ptr [ESP+LASTPARAM]; //[multiplier];
         add EAX, ECX;
-        mov ECX, 0;
+        mov ECX, zero;
         mov [-4+EDI + 4*EBX], EAX;
         adc ECX, EDX;
 L_odd:        
         mov EAX, [ESI + 4*EBX];  // p2
         mul int ptr [ESP+LASTPARAM]; //[multiplier]; // p0*3, 
         add EAX, ECX;
-        mov ECX, 0;
+        mov ECX, zero;
         adc ECX, EDX;
         mov [EDI + 4*EBX], EAX;
         add EBX, 2;
@@ -2635,7 +2643,7 @@ L_odd:
 unittest
 {
     uint [] aa = [0xF0FF_FFFF, 0x1222_2223, 0x4555_5556, 0x8999_999A, 0xBCCC_CCCD, 0xEEEE_EEEE];
-    bignum_mul(aa.ptr[1..4], aa.ptr+1, 16, 0);
+    multibyteMul(aa.ptr[1..4], aa.ptr+1, 16, 0);
 	assert(aa[0] == 0xF0FF_FFFF && aa[1] == 0x2222_2230 && aa[2]==0x5555_5561 && aa[3]==0x9999_99A4 && aa[4]==0x0BCCC_CCCD);
 }
 
