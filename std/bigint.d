@@ -2592,7 +2592,7 @@ uint multibyteMul(uint[] dest, const (uint)* src, uint multiplier, uint carry)
     enum { LASTPARAM = 4*4 } // 4* pushes + return address.
     // We'll use p2 (load unit) instead of the overworked p0 or p1 (ALU units)
     // when initializing variables to zero.
-    static if (0) { // PIC (position independent code)
+    version(none) { // PIC (position independent code)
         enum zero = 0; 
     } else {
         static invariant int zero = 0;
@@ -2645,6 +2645,131 @@ unittest
     uint [] aa = [0xF0FF_FFFF, 0x1222_2223, 0x4555_5556, 0x8999_999A, 0xBCCC_CCCD, 0xEEEE_EEEE];
     multibyteMul(aa.ptr[1..4], aa.ptr+1, 16, 0);
 	assert(aa[0] == 0xF0FF_FFFF && aa[1] == 0x2222_2230 && aa[2]==0x5555_5561 && aa[3]==0x9999_99A4 && aa[4]==0x0BCCC_CCCD);
+}
+
+// dest[0..$] += src[0..dest.length] * multiplier + carry(0..FFFF_FFFF).
+// Returns carry out of MSB (0..FFFF_FFFF).
+uint multibyteMulAdd(uint [] dest, const uint* src, uint multiplier, uint carry)
+{
+    // Timing: This is the most time-critical bignum function.
+    // Pentium M: 5.5 cycles/operation, still has 2 resource stalls + 1 load block/iteration
+    
+    // The bottlenecks in this code are extremely complicated. The MUL, ADD, and ADC
+    // need 4 cycles on each of the ALUs units p0 and p1. So we use memory load 
+    // (unit p2) for initializing registers to zero.
+    // There are also dependencies between the instructions, and we run up against the
+    // ROB-read limit (can only read 2 registers per cycle), so instructions must be
+    // scheduled very carefully; we need to introduce stalls at the right time.
+    // The only available execution unit for this is p3 (memory write)
+    
+    // The main loop is pipelined and unrolled by 2, so entry to the loop is also complicated.
+    
+    version(none) { // PIC (position independent code)
+        enum zero = 0; 
+    } else {
+        // use p2 (load unit) instead of the overworked p0 or p1 (ALU units)
+        // when initializing registers to zero.
+        static invariant int zero = 0;
+        // use p3/p4 units 
+        static int storagenop; // write-only
+    }
+    
+    enum { LASTPARAM = 5*4 } // 4* pushes + return address.
+    asm {
+        naked;
+        
+        push ESI;
+        push EDI;
+        push EBX;
+        push EBP;
+        mov EDI, [ESP + LASTPARAM + 4*3]; // dest
+        mov EBX, [ESP + LASTPARAM + 4*2]; // len
+        align 16;
+        nop;
+        mov ESI, [ESP + LASTPARAM + 4*1];  // src
+        lea EDI, [EDI + 4*EBX]; // EDI = end of dest
+        lea ESI, [ESI + 4*EBX]; // ESI = end of src
+        mov EBP, 0;
+        mov ECX, EAX; // ECX = input carry.
+        neg EBX;                // count UP to zero.
+        mov EAX, [ESI+4*EBX];
+        test EBX, 1;
+        jnz L_enter_odd;
+        // Entry point for even length
+        add EBX, 1;
+        mov EBP, ECX; // carry
+        
+        mul int ptr [ESP+LASTPARAM];
+        mov ECX, 0;
+ 
+        add EBP, EAX;
+        mov EAX, [ESI+4*EBX];
+        adc ECX, EDX;
+
+        mul int ptr [ESP+LASTPARAM];
+
+        add [-4+EDI+4*EBX], EBP;
+        mov EBP, zero;
+    
+        adc ECX, EAX;
+        mov EAX, [4+ESI+4*EBX];
+    
+        adc EBP, EDX;    
+        add EBX, 2;
+        jnl L_done;
+        // Main loop
+L1:
+        mul int ptr [ESP+LASTPARAM];
+        add [-8+EDI+4*EBX], ECX;
+        mov ECX, zero;
+ 
+        adc EBP, EAX;
+        mov EAX, [ESI+4*EBX];
+        
+        adc ECX, EDX;                
+        mov storagenop, EDX; // this helps, don't know why!
+        
+        mul int ptr [ESP+LASTPARAM];
+        add [-4+EDI+4*EBX], EBP;
+        mov EBP, zero;
+    
+        adc ECX, EAX;
+        mov EAX, [4+ESI+4*EBX];
+    
+        adc EBP, EDX;    
+        add EBX, 2;
+        jl L1;
+L_done:
+        add [-8+EDI+4*EBX], ECX;
+        mov EAX, EBP; // get final carry        
+        pop EBP;
+        pop EBX;
+        pop EDI;
+        pop ESI;
+        ret 0x10;
+        
+L_enter_odd:
+        mul int ptr [ESP+LASTPARAM];
+        mov EBP, zero;   
+        add ECX, EAX;
+        mov EAX, [4+ESI+4*EBX];
+    
+        adc EBP, EDX;    
+        add EBX, 2;
+        jl L1;
+        jmp L_done;
+
+     }
+}
+
+unittest {
+    
+    uint [] aa = [0xF0FF_FFFF, 0x1222_2223, 0x4555_5556, 0x8999_999A, 0xBCCC_CCCD, 0xEEEE_EEEE];
+    uint [] bb = [0x1234_1234, 0xF0F0_F0F0, 0x00C0_C0C0, 0xF0F0_F0F0, 0xC0C0_C0C0];
+    multibyteMulAdd(bb[1..$-1], &aa[1], 16, 5);
+	assert(bb[0] == 0x1234_1234 && bb[4] == 0xC0C0_C0C0);
+    assert(bb[1] == 0x2222_2230 + 0xF0F0_F0F0+5 && bb[2] == 0x5555_5561+0x00C0_C0C0+1
+	    && bb[3] == 0x9999_99A4+0xF0F0_F0F0 );
 }
 
 } // version(D_InlineAsm_X86)
