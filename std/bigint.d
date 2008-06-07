@@ -2658,8 +2658,8 @@ uint multibyteMulAdd(uint [] dest, const uint* src, uint multiplier, uint carry)
     // need 4 cycles on each of the ALUs units p0 and p1. So we use memory load 
     // (unit p2) for initializing registers to zero.
     // There are also dependencies between the instructions, and we run up against the
-    // ROB-read limit (can only read 2 registers per cycle), so instructions must be
-    // scheduled very carefully; we need to introduce stalls at the right time.
+    // ROB-read limit (can only read 2 registers per cycle).
+    // We also need the number of uops in the loop to be a multiple of 3.
     // The only available execution unit for this is p3 (memory write)
     
     // The main loop is pipelined and unrolled by 2, so entry to the loop is also complicated.
@@ -2727,7 +2727,7 @@ L1:
         mov EAX, [ESI+4*EBX];
         
         adc ECX, EDX;                
-        mov storagenop, EDX; // this helps, don't know why!
+        mov storagenop, EDX; // make #uops in loop a multiple of 3
         
         mul int ptr [ESP+LASTPARAM];
         add [-4+EDI+4*EBX], EBP;
