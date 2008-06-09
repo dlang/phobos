@@ -2374,9 +2374,12 @@ L3: // Do the residual 1..7 ints.
         shr AL, 1; // get carry from EAX
         mov EAX, [EDX+ECX*4];
     }
-    static if (op=='+') {
+    static if (op=='+')
+    {
         asm { adc EAX, [ESI+ECX*4]; }
-    } else {
+    }
+    else 
+    {
         asm { sbb EAX, [ESI+ECX*4]; }
     }
     asm {
@@ -2398,7 +2401,8 @@ unittest
     uint [] a = new uint[20];
     uint [] b = new uint[20];
     uint [] c = new uint[20];
-    for (int i=0; i<a.length; ++i) {
+    for (int i=0; i<a.length; ++i)
+    {
         if (i&1) a[i]=0x8000_0000 + i;
         else a[i]=i;
         b[i]= 0x8000_0003;
@@ -2592,9 +2596,12 @@ uint multibyteMul(uint[] dest, const (uint)* src, uint multiplier, uint carry)
     enum { LASTPARAM = 4*4 } // 4* pushes + return address.
     // We'll use p2 (load unit) instead of the overworked p0 or p1 (ALU units)
     // when initializing variables to zero.
-    version(none) { // PIC (position independent code)
+    version(D_PIC)
+    {
         enum zero = 0; 
-    } else {
+    }
+    else
+    {
         static invariant int zero = 0;
     }
     asm {
@@ -2606,7 +2613,7 @@ uint multibyteMul(uint[] dest, const (uint)* src, uint multiplier, uint carry)
         mov EDI, [ESP + LASTPARAM + 4*3]; // dest
         mov EBX, [ESP + LASTPARAM + 4*2]; // len
         mov ESI, [ESP + LASTPARAM + 4*1];  // src
-align 16;
+        align 16;
         lea EDI, [EDI + 4*EBX]; // EDI = end of dest
         lea ESI, [ESI + 4*EBX]; // ESI = end of src
         mov ECX, EAX; // [carry]; -- last param is in EAX.
@@ -2652,7 +2659,7 @@ unittest
 uint multibyteMulAdd(uint [] dest, const uint* src, uint multiplier, uint carry)
 {
     // Timing: This is the most time-critical bignum function.
-    // Pentium M: 5.5 cycles/operation, still has 2 resource stalls + 1 load block/iteration
+    // Pentium M: 5.4 cycles/operation, still has 2 resource stalls + 1 load block/iteration
     
     // The bottlenecks in this code are extremely complicated. The MUL, ADD, and ADC
     // need 4 cycles on each of the ALUs units p0 and p1. So we use memory load 
@@ -2664,7 +2671,7 @@ uint multibyteMulAdd(uint [] dest, const uint* src, uint multiplier, uint carry)
     
     // The main loop is pipelined and unrolled by 2, so entry to the loop is also complicated.
     
-    version(none) { // PIC (position independent code)
+    version(D_PIC) {
         enum zero = 0; 
     } else {
         // use p2 (load unit) instead of the overworked p0 or p1 (ALU units)
@@ -2726,9 +2733,14 @@ L1:
         adc EBP, EAX;
         mov EAX, [ESI+4*EBX];
         
-        adc ECX, EDX;                
+        adc ECX, EDX;
+    }
+    version(D_PIC) {} else {
+    asm {
         mov storagenop, EDX; // make #uops in loop a multiple of 3
-        
+    }
+    }
+    asm {        
         mul int ptr [ESP+LASTPARAM];
         add [-4+EDI+4*EBX], EBP;
         mov EBP, zero;
