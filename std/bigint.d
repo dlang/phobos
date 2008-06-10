@@ -2784,4 +2784,133 @@ unittest {
 	    && bb[3] == 0x9999_99A4+0xF0F0_F0F0 );
 }
 
+/*  dest[] /= divisor.
+ * overflow is the initial remainder, and must be in the range 0..divisor-1.
+ * divisor must not be a power of 2 (use right shift for that case;
+ * A division by zero will occur if divisor is a power of 2).
+ *
+ * Based on public domain code by Eric Bainville. 
+ * (http://www.bealto.com/) Used with permission.
+ */
+uint multibyteDiv(uint [] dest, uint divisor, uint overflow)
+{
+    // Timing: limited by a horrible dependency chain.
+    // Pentium M: 18 cycles/op, 8 resource stalls/op.
+    // EAX, EDX = scratch, used by MUL
+    // EDI = dest
+    // CL = shift
+    // ESI = quotient
+    // EBX = remainderhi
+    // EBP = remainderlo
+    // [ESP-4] = mask
+    // [ESP] = kinv (2^64 /divisor)
+    enum { LASTPARAM = 5*4 } // 4* pushes + return address.
+    enum { LOCALS = 2*4} // MASK, KINV
+    asm {
+        naked;
+        
+        push ESI;
+        push EDI;
+        push EBX;
+        push EBP;
+        
+        mov EDI, [ESP + LASTPARAM + 4*2]; // dest.ptr
+        mov EBX, [ESP + LASTPARAM + 4*1]; // dest.length
+
+        // Loop from msb to lsb
+        lea     EDI, [EDI + 4*EBX];        
+        mov EBP, EAX; // rem is the input remainder, in 0..divisor-1
+        // Build the pseudo-inverse of divisor k: 2^64/k
+        // First determine the shift in ecx to get the max number of bits in kinv
+        xor     ECX, ECX;
+        mov     EAX, [ESP + LASTPARAM]; //divisor;
+        mov     EDX, 1;
+kinv1:
+        inc     ECX;
+        ror     EDX, 1;
+        shl     EAX, 1;
+        jnc     kinv1;
+        dec     ECX;
+        // Here, ecx is a left shift moving the msb of k to bit 32
+        
+        mov     EAX, 1;
+        shl     EAX, CL;
+        dec     EAX;
+        ror     EAX, CL ; //ecx bits at msb
+        push    EAX;
+        
+        
+        // Then divide 2^(32+cx) by divisor (edx already ok)
+        xor     EAX, EAX;
+        div     int ptr [ESP + LASTPARAM +  LOCALS-4*1]; //divisor;
+        push    EAX; // kinv        
+        // Here kinv has 64 bits
+
+        align   16;
+L2:
+        // Get 32 bits of quotient approx, multiplying
+        // most significant word of (rem*2^32+input)
+        mov     EAX, [ESP+4]; //MASK;
+        and     EAX, [EDI - 4];
+        or      EAX, EBP;
+        rol     EAX, CL;
+        mov     EBX, EBP;
+        mov     EBP, [EDI - 4];
+        mul     int ptr [ESP]; //KINV;
+                
+        shl     EAX, 1;
+        rcl     EDX, 1;
+        
+        // Multiply by k and subtract to get remainder
+        // Subtraction must be done on two words
+        mov     EAX, EDX;
+        mov     ESI, EDX; // quot = high word
+        mul     int ptr [ESP + LASTPARAM+LOCALS]; //divisor;
+        sub     EBP, EAX;
+        sbb     EBX, EDX;   
+        jz      Lb;  // high word is 0, goto adjust on single word
+
+        // Adjust quotient and remainder on two words
+Ld:     inc     ESI;
+        sub     EBP, [ESP + LASTPARAM+LOCALS]; //divisor;
+        sbb     EBX, 0;
+        jnz     Ld;
+        
+        // Adjust quotient and remainder on single word
+Lb:     cmp     EBP, [ESP + LASTPARAM+LOCALS]; //divisor;
+        jc      Lc; // rem in 0..divisor-1, OK        
+        sub     EBP, [ESP + LASTPARAM+LOCALS]; //divisor;
+        inc     ESI;
+        jmp     Lb;
+        
+        // Store result
+Lc:
+        mov     [EDI - 4], ESI;
+        lea     EDI, [EDI - 4];
+        dec     int ptr [ESP + LASTPARAM + 4*1+LOCALS]; // len
+        jnz	L2;
+        
+        pop EAX; // discard kinv
+        pop EAX; // discard mask
+        
+        mov     EAX, EBP; // return final remainder
+        pop     EBP;
+        pop     EBX;
+        pop     EDI;
+        pop     ESI;        
+        ret     3*4;
+    }
+}
+
+unittest {
+    uint [] aa = new uint[101];
+    for (int i=0; i<aa.length; ++i) aa[i] = 0x8765_4321 * (i+3);
+    uint overflow = multibyteMul(aa, aa.ptr, 0x8EFD_FCFB, 0x33FF_7461);
+    uint r = multibyteDiv(aa, 0x8EFD_FCFB, overflow);
+    for (int i=0; i<aa.length-1; ++i) assert(aa[i] == 0x8765_4321 * (i+3));
+    assert(r==0x33FF_7461);
+
+}
+
+
 } // version(D_InlineAsm_X86)
