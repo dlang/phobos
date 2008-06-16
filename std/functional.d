@@ -55,23 +55,42 @@ assert(isEven(2) && !isEven(1));
 ----
 */
 
-template unaryFun(string comp, bool byRef = false) {
-    static if (byRef)
+template unaryFun(alias comp, bool byRef = false)
+{
+    alias unaryFunImpl!(comp, byRef).unaryFunUipla unaryFun;
+}
+
+template unaryFunImpl(alias comp, bool byRef) {
+    static if (is(typeof(comp) : string))
     {
-        void unaryFun(ElementType)(ref ElementType a)
+        static if (byRef)
         {
-            mixin(comp ~ ";");
+            void unaryFunUipla(ElementType)(ref ElementType a)
+            {
+                mixin(comp ~ ";");
+            }
+        }
+        else
+        {
+            // @@@BUG1816@@@: typeof(mixin(comp)) should work
+            typeof({ static ElementType a; return mixin(comp);}())
+                unaryFunUipla(ElementType)(ElementType a)
+            {
+                return mixin(comp);
+            }
         }
     }
     else
     {
-        // @@@BUG1816@@@: typeof(mixin(comp)) should work
-        typeof({ ElementType a; return mixin(comp);}())
-            unaryFun(ElementType)(ElementType a)
-        {
-            return mixin(comp);
-        }
+        //pragma(msg, comp.stringof);
+        alias comp unaryFunUipla;
     }
+}
+
+unittest
+{
+    static int f1(int a) { return a; }
+    static assert(is(typeof(unaryFun!(f1)(1)) == int));
 }
 
 /**
@@ -153,7 +172,7 @@ unittest
 
 template not(alias pred)
 {
-    bool not(T...)(T args) { return !pred(args); }
+    bool not(T...)(T args) { return !unaryFun!(pred)(args); }
 }
 
 /*private*/ template Adjoin(F...)
