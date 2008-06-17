@@ -2753,7 +2753,8 @@ L1:
         jl L1;
 L_done:
         add [-8+EDI+4*EBX], ECX;
-        mov EAX, EBP; // get final carry        
+        mov EAX, EBP; // get final carry
+        adc EAX, 0;
         pop EBP;
         pop EBX;
         pop EDI;
