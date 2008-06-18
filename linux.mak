@@ -241,7 +241,7 @@ $(LIB) : $(SRC2LIB) $(OBJS) $(MAKEFILE_LIST)
 ###########################################################
 # Dox
 
-STDDOC = ../docsrc/std.ddoc
+STDDOC = std.ddoc
 
 $(DOC_OUTPUT_DIR)/%.html : %.d $(STDDOC)
 	$(DMD) -c -o- $(DFLAGS) -Df$@ $(STDDOC) $<
