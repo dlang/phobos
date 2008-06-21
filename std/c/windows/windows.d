@@ -62,6 +62,30 @@ extern (Windows)
     alias uint UINT;
     alias uint *PUINT;
 
+// ULONG_PTR must be able to store a pointer as an integral type
+version(Win64)
+{
+	alias  long INT_PTR;
+	alias ulong UINT_PTR;
+	alias  long LONG_PTR;
+	alias ulong ULONG_PTR;
+	alias  long * PINT_PTR;
+	alias ulong * PUINT_PTR;
+	alias  long * PLONG_PTR;
+	alias ulong * PULONG_PTR;
+}
+version(Win32)
+{
+    alias  int INT_PTR;
+    alias uint UINT_PTR;
+    alias  int LONG_PTR;
+    alias uint ULONG_PTR;
+    alias  int * PINT_PTR;
+    alias uint * PUINT_PTR;
+    alias  int * PLONG_PTR;
+    alias uint * PULONG_PTR;
+}
+
     typedef void *HANDLE;
     alias void *PVOID;
     alias HANDLE HGLOBAL;
@@ -336,6 +360,45 @@ struct WIN32_FIND_DATAW {
     wchar  cAlternateFileName[ 14 ];
 }
 
+// Critical Section
+
+struct _LIST_ENTRY
+{
+	_LIST_ENTRY *Flink;
+	_LIST_ENTRY *Blink;
+}
+alias _LIST_ENTRY LIST_ENTRY;
+
+struct _RTL_CRITICAL_SECTION_DEBUG 
+{
+	WORD   Type;
+	WORD   CreatorBackTraceIndex;
+	_RTL_CRITICAL_SECTION *CriticalSection;
+	LIST_ENTRY ProcessLocksList;
+	DWORD EntryCount;
+	DWORD ContentionCount;
+	DWORD Spare[ 2 ];
+}
+alias _RTL_CRITICAL_SECTION_DEBUG RTL_CRITICAL_SECTION_DEBUG;
+
+struct _RTL_CRITICAL_SECTION 
+{
+	RTL_CRITICAL_SECTION_DEBUG * DebugInfo;
+	
+	//
+	//  The following three fields control entering and exiting the critical
+	//  section for the resource
+	//
+	
+	LONG LockCount;
+	LONG RecursionCount;
+	HANDLE OwningThread;        // from the thread's ClientId->UniqueThread
+	HANDLE LockSemaphore;
+	ULONG_PTR SpinCount;        // force size on 64-bit systems when packed
+}
+alias _RTL_CRITICAL_SECTION CRITICAL_SECTION;
+
+
 enum
 {
 	STD_INPUT_HANDLE =    cast(DWORD)-10,
@@ -404,18 +467,6 @@ struct MEMORYSTATUS {
     DWORD dwAvailVirtual;
 };
 alias MEMORYSTATUS *LPMEMORYSTATUS;
-
-
-export
-{
- LONG  InterlockedIncrement(LPLONG lpAddend);
- LONG  InterlockedDecrement(LPLONG lpAddend);
- LONG  InterlockedExchange(LPLONG Target, LONG Value);
- LONG  InterlockedExchangeAdd(LPLONG Addend, LONG Value);
- PVOID InterlockedCompareExchange(PVOID *Destination, PVOID Exchange, PVOID Comperand);
- BOOL  FreeResource(HGLOBAL hResData);
- LPVOID LockResource(HGLOBAL hResData);
-}
 
 HMODULE LoadLibraryA(LPCSTR lpLibFileName);
 FARPROC GetProcAddress(HMODULE hModule, LPCSTR lpProcName);
@@ -704,6 +755,8 @@ enum
 
 export
 {
+ BOOL  FreeResource(HGLOBAL hResData);
+ LPVOID LockResource(HGLOBAL hResData);
  BOOL GlobalUnlock(HGLOBAL hMem);
  HGLOBAL GlobalFree(HGLOBAL hMem);
  UINT GlobalCompact(DWORD dwMinFree);
@@ -1143,6 +1196,25 @@ export DWORD ResumeThread(HANDLE hThread);
 export DWORD WaitForSingleObject(HANDLE hHandle, DWORD dwMilliseconds);
 export DWORD WaitForMultipleObjects(DWORD nCount, HANDLE *lpHandles, BOOL bWaitAll, DWORD dwMilliseconds);
 export void Sleep(DWORD dwMilliseconds);
+
+// Synchronization
+
+export
+{
+LONG  InterlockedIncrement(LPLONG lpAddend);
+LONG  InterlockedDecrement(LPLONG lpAddend);
+LONG  InterlockedExchange(LPLONG Target, LONG Value);
+LONG  InterlockedExchangeAdd(LPLONG Addend, LONG Value);
+PVOID InterlockedCompareExchange(PVOID *Destination, PVOID Exchange, PVOID Comperand);
+
+void InitializeCriticalSection(CRITICAL_SECTION * lpCriticalSection);
+void EnterCriticalSection(CRITICAL_SECTION * lpCriticalSection);
+void LeaveCriticalSection(CRITICAL_SECTION * lpCriticalSection);
+void DeleteCriticalSection(CRITICAL_SECTION * lpCriticalSection);
+
+}
+
+
 
 export BOOL QueryPerformanceCounter(long* lpPerformanceCount);
 export BOOL QueryPerformanceFrequency(long* lpFrequency);
