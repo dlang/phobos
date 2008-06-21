@@ -398,6 +398,7 @@ class Thread
      *
      */
     static uint nthreads = 1;
+    static __thread uint myCompactThreadId; // 11-bit ((idx << 1) | 1)
 
   private:
 
@@ -419,6 +420,10 @@ class Thread
         throw new ThreadError(msg);
     }
 
+    void SetMyCompactThreadId()
+    {
+        myCompactThreadId = ((idx << 1) | 1);
+    }
 
     /* ***********************************************
      * This is just a wrapper to interface between C rtl and Thread.run().
@@ -427,6 +432,7 @@ class Thread
     extern (Windows) static uint threadstart(void *p)
     {
         Thread t = cast(Thread)p;
+        t.SetMyCompactThreadId();
         int result;
 
         debug (thread) printf("Starting thread %d\n", t.idx);
@@ -470,6 +476,7 @@ class Thread
         allThreads[0] = t;
         allThreadsDim = 1;
         t.idx = 0;
+        t.SetMyCompactThreadId();
    }
 
     static ~this()
@@ -912,6 +919,7 @@ class Thread
     }
 
     static uint nthreads = 1;
+    static __thread uint myCompactThreadId; // 11-bit ((idx << 1) | 1)
 
   private:
 
@@ -942,6 +950,11 @@ class Thread
         throw new ThreadError(msg);
     }
 
+    void SetMyCompactThreadId()
+    {
+        myCompactThreadId = ((idx << 1) | 1);
+    }
+
     void init(size_t stackSize)
     {
         // set to default values regardless
@@ -968,6 +981,7 @@ class Thread
     extern (C) static void *threadstart(void *p)
     {
         Thread t = cast(Thread)p;
+        t.SetMyCompactThreadId();
         int result;
 
         debug (thread) printf("Starting thread x%x (%d)\n", t, t.idx);
@@ -1034,6 +1048,7 @@ class Thread
         allThreads[0] = t;
         allThreadsDim = 1;
         t.idx = 0;
+        t.SetMyCompactThreadId();
 
         /* Install signal handlers so we can suspend/resume threads
          */
