@@ -3,6 +3,8 @@ module std.windows.iunknown;
 
 private import std.c.windows.windows;
 
+pragma(lib, "uuid.lib");
+
 alias int HRESULT;
 
 enum : int
