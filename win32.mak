@@ -76,24 +76,14 @@ test.obj : test.d
 test.exe : test.obj phobos.lib
 	$(DMD) test.obj -g -L/map
 
-OBJS= asserterror.obj deh.obj switch.obj icomplex.obj gcstats.obj \
-	critical.obj object.obj monitor.obj arraycat.obj invariant.obj \
-	dmain2.obj outofmemory.obj aApply.obj \
-	system.obj moduleinit.obj \
-	cast.obj syserror.obj memset.obj \
-	windows.obj stat.obj \
-	stream.obj switcherr.obj com.obj \
-	qsort.obj thread.obj obj.obj \
-	iunknown.obj crc32.obj conv.obj arraycast.obj \
-	Czlib.obj Dzlib.obj zip.obj process.obj \
-	socket.obj socketstream.obj loader.obj stdarg.obj \
-	perf.obj openrj.obj winsock.obj oldsyserror.obj \
-	errno.obj boxer.obj cstream.obj charset.obj metastrings.obj \
-	cover.obj bitarray.obj aApplyR.obj \
-	signals.obj typetuple.obj traits.obj bind.obj \
-	c_stdio.obj hiddenfunc.obj contracts.obj getopt.obj variant.obj \
-	numeric.obj bitmanip.obj functional.obj algorithm.obj typecons.obj \
-	iterator.obj complex.obj encoding.obj arrayassign.obj
+OBJS= deh.obj icomplex.obj \
+	object.obj monitor.obj \
+	critical.obj process.obj \
+	Czlib.obj Dzlib.obj \
+	oldsyserror.obj \
+	errno.obj \
+	c_stdio.obj \
+	complex.obj
 
 #	ti_bit.obj ti_Abit.obj
 
@@ -102,9 +92,32 @@ SRCS= std\math.d std\stdio.d std\dateparse.d std\date.d std\uni.d std\string.d \
 	std\compiler.d std\cpuid.d std\format.d std\demangle.d \
 	std\path.d std\file.d std\outbuffer.d std\utf.d std\uri.d \
 	std\ctype.d std\random.d std\array.d std\mmfile.d \
-	internal\aaA.d internal\adi.d \
+	std\bitarray.d std\algorithm.d std\numeric.d std\functional.d \
+	std\metastrings.d std\hiddenfunc.d std\contracts.d std\getopt.d \
+	std\signals.d std\typetuple.d std\traits.d std\bind.d \
+	std\bitmanip.d std\typecons.d std\switcherr.d \
+	std\thread.d std\moduleinit.d std\boxer.d \
+	std\asserterror.d std\outofmemory.d std\system.d \
+	std\iterator.d std\encoding.d std\variant.d \
+	std\stream.d std\socket.d std\socketstream.d \
+	std\perf.d std\openrj.d std\conv.d std\cover.d \
+	std\zip.d std\cstream.d std\loader.d \
+	crc32.d gcstats.d \
+	internal\aaA.d internal\adi.d internal\arrayassign.d \
+	internal\aApply.d internal\aApplyR.d internal\memset.d \
+	internal\arraycast.d internal\arraycat.d \
+	internal\switch.d internal\qsort.d internal\invariant.d \
+	internal\dmain2.d internal\cast.d internal\obj.d \
 	etc\gamma.d \
+	std\c\stdarg.d \
+	std\c\windows\com.d \
+	std\c\windows\stat.d \
+	std\c\windows\windows.d \
+	std\c\windows\winsock.d \
+	std\windows\charset.d \
+	std\windows\iunknown.d \
 	std\windows\registry.d \
+	std\windows\syserror.d \
 	std\typeinfo\ti_ptr.d \
 	std\typeinfo\ti_delegate.d \
 	std\typeinfo\ti_void.d \
