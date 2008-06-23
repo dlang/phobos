@@ -113,7 +113,9 @@ void main()
     writefln(join(doc.pretty(3),"\n"));
 }
 -------------------------------------------------------------------------------
-*/
+ * Macros:
+ *	WIKI=Phobos/StdXml
+ */
 
 module std.xml;
 import std.string;
