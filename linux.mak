@@ -158,8 +158,8 @@ STD_MODULES = algorithm array asserterror base64 bigint bind bitarray	\
         md5 metastrings mmfile moduleinit numeric openrj outbuffer	\
         outofmemory path perf process random regexp signals socket	\
         socketstream stdint stdio stream string switcherr syserror	\
-        system thread traits typecons typetuple uni uri utf variant	\
-        xml zip zlib
+        synchro system thread traits typecons typetuple uni uri utf     \
+        variant xml zip zlib
 STD_MODULES_NOTBUILT = stdarg
 
 STD_C_MODULES = stdarg stdio
