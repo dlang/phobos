@@ -96,7 +96,7 @@ SRCS= std\math.d std\stdio.d std\dateparse.d std\date.d std\uni.d std\string.d \
 	std\metastrings.d std\hiddenfunc.d std\contracts.d std\getopt.d \
 	std\signals.d std\typetuple.d std\traits.d std\bind.d \
 	std\bitmanip.d std\typecons.d std\switcherr.d \
-	std\thread.d std\moduleinit.d std\boxer.d \
+	std\thread.d std\synchro.d std\moduleinit.d std\boxer.d \
 	std\asserterror.d std\outofmemory.d std\system.d \
 	std\iterator.d std\encoding.d std\variant.d \
 	std\stream.d std\socket.d std\socketstream.d \
@@ -194,6 +194,7 @@ DOCS=	$(DOC)\std_path.html $(DOC)\std_math.html $(DOC)\std_outbuffer.html \
 	$(DOC)\std_socketstream.html \
 	$(DOC)\std_stdint.html \
 	$(DOC)\std_stdio.html \
+	$(DOC)\std_synchro.html \
 	$(DOC)\std_system.html \
 	$(DOC)\std_thread.html \
 	$(DOC)\std_traits.html \
@@ -216,7 +217,6 @@ DOCS=	$(DOC)\std_path.html $(DOC)\std_math.html $(DOC)\std_outbuffer.html \
 	$(DOC)\std_c_stdlib.html \
 	$(DOC)\std_c_string.html \
 	$(DOC)\std_c_time.html \
-	$(DOC)\std_c_wcharh.html \
 	$(DOC)\phobos.html
 
 SRC=	errno.c object.d unittest.d crc32.d gcstats.d phobos.d
@@ -224,7 +224,7 @@ SRC=	errno.c object.d unittest.d crc32.d gcstats.d phobos.d
 SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 	std\gc.d std\math.d std\string.d std\path.d std\date.d \
 	std\ctype.d std\file.d std\compiler.d std\system.d std\moduleinit.d \
-	std\outbuffer.d std\thread.d std\md5.d std\base64.d \
+	std\outbuffer.d std\thread.d std\synchro.d std\md5.d std\base64.d \
 	std\asserterror.d std\dateparse.d std\outofmemory.d std\mmfile.d \
 	std\intrinsic.d std\array.d std\switcherr.d std\syserror.d \
 	std\regexp.d std\random.d std\stream.d std\process.d \
@@ -593,6 +593,9 @@ system.obj : std\system.d
 thread.obj : std\thread.d
 	$(DMD) -c $(DFLAGS) std\thread.d
 
+synchro.obj : std\synchro.d
+	$(DMD) -c $(DFLAGS) std\synchro.d
+
 traits.obj : std\traits.d
 	$(DMD) -c $(DFLAGS) std\traits.d -oftraits.obj
 
@@ -932,6 +935,9 @@ $(DOC)\std_system.html : std.ddoc std\system.d
 $(DOC)\std_thread.html : std.ddoc std\thread.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_thread.html std.ddoc std\thread.d
 
+$(DOC)\std_synchro.html : std.ddoc std\synchro.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_synchro.html std.ddoc std\synchro.d
+
 $(DOC)\std_traits.html : std.ddoc std\traits.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_traits.html std.ddoc std\traits.d
 
@@ -1000,10 +1006,6 @@ $(DOC)\std_c_string.html : std.ddoc std\c\string.d
 
 $(DOC)\std_c_time.html : std.ddoc std\c\time.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_c_time.html std.ddoc std\c\time.d
-
-$(DOC)\std_c_wcharh.html : std.ddoc std\c\wcharh.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_c_wcharh.html std.ddoc std\c\wcharh.d
-
 
 ######################################################
 

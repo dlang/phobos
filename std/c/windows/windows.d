@@ -1209,6 +1209,7 @@ PVOID InterlockedCompareExchange(PVOID *Destination, PVOID Exchange, PVOID Compe
 
 void InitializeCriticalSection(CRITICAL_SECTION * lpCriticalSection);
 void EnterCriticalSection(CRITICAL_SECTION * lpCriticalSection);
+BOOL TryEnterCriticalSection(CRITICAL_SECTION * lpCriticalSection);
 void LeaveCriticalSection(CRITICAL_SECTION * lpCriticalSection);
 void DeleteCriticalSection(CRITICAL_SECTION * lpCriticalSection);
 
