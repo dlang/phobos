@@ -509,7 +509,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
 	    //printf("flags = x%x\n", flags);
 	    int prepad = 0;
 	    int postpad = 0;
-	    int padding = field_width - (strlen(prefix) + s.length);
+	    int padding = field_width - (strlen(prefix) + toUCSindex(s, s.length));
 	    if (padding > 0)
 	    {
 		if (flags & FLdash)
@@ -1562,6 +1562,9 @@ unittest
 
     r = std.string.format(">%14d<, ", 15, [1,2,3]);
     assert(r == ">            15<, [1,2,3]");
+
+    assert(std.string.format("%8s", "bar") == "     bar");
+    assert(std.string.format("%8s", "b\u00e9ll\u00f4") == "   b\u00e9ll\u00f4");
 }
 
 // Andrei
