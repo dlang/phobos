@@ -1,40 +1,80 @@
 // Written in the D programming language
+// Put in the public domain by Bartosz Milewski
 
-/*
- *  Copyright (C) 2002-2008 by Digital Mars, www.digitalmars.com
- *  Written by Bartosz Milewski
- *
- *  This software is provided 'as-is', without any express or implied
- *  warranty. In no event will the authors be held liable for any damages
- *  arising from the use of this software.
- *
- *  Permission is granted to anyone to use this software for any purpose,
- *  including commercial applications, and to alter it and redistribute it
- *  freely, subject to the following restrictions:
- *
- *  o  The origin of this software must not be misrepresented; you must not
- *     claim that you wrote the original software. If you use this software
- *     in a product, an acknowledgment in the product documentation would be
- *     appreciated but is not required.
- *  o  Altered source versions must be plainly marked as such, and must not
- *     be misrepresented as being the original software.
- *  o  This notice may not be removed or altered from any source
- *     distribution.
- */
+/**
+Defines thread synchronization primitives.
 
-/**************************
- * The synchro module defines synchronization primitives.
- *
- * $(B CriticalSection) is an interprocess mutex
- * Macros:
- *      WIKI=Phobos/StdSynchro
- */
+Note:
+
+A lot of synchronization can be done using built-in monitors
+by defining $(D synchronized) methods. 
+(every object is a potential monitor--behavior inherited from $(D Object).)
+Use std.synchro for those cases
+where simple monitors are not sufficient.
+
+Author: Bartosz Milewski
+Macros:
+      WIKI=Phobos/StdSynchro
+*/
 
 module std.synchro;
 
 import std.c.stdio;
 
 //debug=thread;
+
+/**
+Defines a common interface for lockable objects (e.g., mutexes).
+*/
+interface Lockable
+{
+    void lock();
+    void unlock();
+}
+
+/**
+Scoped object that locks a $(D Lockable) for the duration of a scope.
+
+Note:
+
+If the mutex is associated with an object, and the lock is taken for the 
+whole scope of a method, it's probably better to declare the method sd $(D synchronized) 
+and use the mutex that's built into every $(D Object).
+
+Example:
+----
+import std.synchro;
+
+Mutex mtx;
+
+static this()
+{
+    mtx = new Mutex;
+}
+
+void f()
+{
+    scope lock = new Lock(mtx);
+    // access shared data
+    // end of scope: mutex released
+}
+----
+*/
+scope class Lock
+{
+public:
+    this (Lockable mtx)
+    {
+        _mtx = mtx;
+        _mtx.lock ();
+    }
+    ~this ()
+    {
+        _mtx.unlock ();
+    }
+private:
+    Lockable _mtx;
+}
 
 /* ================================ Windows ================================= */
 
@@ -43,52 +83,113 @@ version (Windows)
 
 private import std.c.windows.windows;
 
-class CriticalSection
-{
-public:
-	this ()
-	{
-		InitializeCriticalSection (&_critSection);
-	}
-	~this ()
-	{
-		DeleteCriticalSection (&_critSection);
-	}
-private:
-	void lock () 
-	{
-		EnterCriticalSection (&_critSection);
-	}
-	void unlock () 
-	{ 
-		LeaveCriticalSection (&_critSection);
-	}
-private:
-	CRITICAL_SECTION	_critSection;
-}
+/**
+Implements mutual exclusion.
 
-scope class Lock
+Note: On Windows, it's implemented as $(D CriticalSection); on Linux, using pthreads.
+
+Example: See the $(D Lock) example
+*/
+class Mutex: Lockable
 {
 public:
-	this (CriticalSection critSect)
-	{
-		_critSect = critSect;
-		_critSect.lock ();
-	}
-	~this ()
-	{
-		_critSect.unlock ();
-	}
+    this()
+    {
+        InitializeCriticalSection (&_critSection);
+    }
+    ~this()
+    {
+        DeleteCriticalSection (&_critSection);
+    }
+    override void lock() 
+    {
+        EnterCriticalSection (&_critSection);
+    }
+    override void unlock() 
+    { 
+        LeaveCriticalSection (&_critSection);
+    }
+    bool trylock()
+    {
+        return TryEnterCriticalSection(&_critSection) != 0; // lock taken
+    }
 private:
-	CriticalSection _critSect;
+    CRITICAL_SECTION    _critSection;
 }
 
 } // Windows
 
 /* ================================ linux ================================= */
-
 version (linux)
 {
 
+private import std.c.linux.linux;
+private import std.c.linux.linuxextern;
+
+class Mutex: Lockable
+{
+public:
+    this()
+    {
+        pthread_mutex_init(&_mtx, null);
+    }
+    ~this()
+    {
+        pthread_mutex_destroy(&_mtx);
+    }
+    override void lock()
+    {
+        pthread_mutex_lock(&_mtx);
+    }
+    override void unlock()
+    {
+        pthread_mutex_unlock(&_mtx);
+    }
+    override bool trylock()
+    {
+        return pthread_mutex_trylock(&_mtx) == 0; // lock taken
+    }
+private:
+    pthread_mutex_t _mtx;
+}
+
+} // linux
+
+version(unittest)
+{
+    import std.synchro;
+    import std.thread;
+    
+    Mutex mtx;
+    int glob;
+    
+}
+
+unittest
+{
+    void inc_glob_twice()
+    {
+        scope lock = new Lock(mtx);
+    
+        assert(glob % 2 == 0);
+        glob++;
+        glob++;
+    }
+    
+    mtx = new Mutex;
+
+    int f()
+    {
+        for (int i = 0; i < 1000; ++i)
+            inc_glob_twice();
+        return 0;
+    }
+    
+    auto thr1 = new Thread(&f);
+    auto thr2 = new Thread(&f);
+    thr1.start;
+    thr2.start;
+    thr1.wait;
+    thr2.wait;
 }
 
