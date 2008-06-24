@@ -145,7 +145,7 @@ public:
     {
         pthread_mutex_unlock(&_mtx);
     }
-    override bool trylock()
+    bool trylock()
     {
         return pthread_mutex_trylock(&_mtx) == 0; // lock taken
     }
