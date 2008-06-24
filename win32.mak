@@ -217,6 +217,7 @@ DOCS=	$(DOC)\std_path.html $(DOC)\std_math.html $(DOC)\std_outbuffer.html \
 	$(DOC)\std_c_stdlib.html \
 	$(DOC)\std_c_string.html \
 	$(DOC)\std_c_time.html \
+	$(DOC)\std_c_wcharh.html \
 	$(DOC)\phobos.html
 
 SRC=	errno.c object.d unittest.d crc32.d gcstats.d phobos.d
@@ -239,7 +240,7 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 
 SRC_STD_C= std\c\process.d std\c\stdlib.d std\c\time.d std\c\stdio.d \
 	std\c\math.d std\c\stdarg.d std\c\stddef.d std\c\fenv.d std\c\string.d \
-	std\c\locale.d
+	std\c\locale.d stc\c\wcharh.d
 
 SRC_TI=	\
 	std\typeinfo\ti_wchar.d std\typeinfo\ti_uint.d \
@@ -1006,6 +1007,10 @@ $(DOC)\std_c_string.html : std.ddoc std\c\string.d
 
 $(DOC)\std_c_time.html : std.ddoc std\c\time.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_c_time.html std.ddoc std\c\time.d
+
+$(DOC)\std_c_wcharh.html : std.ddoc std\c\wcharh.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_c_wcharh.html std.ddoc std\c\wcharh.d
+
 
 ######################################################
 
