@@ -84,7 +84,9 @@ version (Windows)
 private import std.c.windows.windows;
 
 /**
-Implements mutual exclusion.
+Implements mutual exclusion. $(D Mutex) is re-entrant, i.e., 
+the same thread may lock it multiple times. 
+It must unlock it the same number of times.
 
 Note: On Windows, it's implemented as $(D CriticalSection); on Linux, using pthreads.
 
@@ -109,6 +111,9 @@ public:
     { 
         LeaveCriticalSection (&_critSection);
     }
+/**
+    Returns $(D true) if lock taken. 
+*/
     bool trylock()
     {
         return TryEnterCriticalSection(&_critSection) != 0; // lock taken
@@ -126,12 +131,27 @@ version (linux)
 private import std.c.linux.linux;
 private import std.c.linux.linuxextern;
 
+private pthread_mutexattr_t monitors_attr;
+
+// Revisit: This should be called before static constructors, in case they start a thread
+static this()
+{
+    // Warning: this is non-portable
+    pthread_mutexattr_init(&_monitors_attr);
+    pthread_mutexattr_settype(&_monitors_attr, PTHREAD_MUTEX_RECURSIVE_NP);
+}
+
+static ~this()
+{
+    pthread_mutexattr_destroy(&_monitors_attr);
+}
+
 class Mutex: Lockable
 {
 public:
     this()
     {
-        pthread_mutex_init(&_mtx, null);
+        pthread_mutex_init(&_mtx, &monitors_attr);
     }
     ~this()
     {
