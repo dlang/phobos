@@ -131,19 +131,8 @@ version (linux)
 private import std.c.linux.linux;
 private import std.c.linux.linuxextern;
 
-private pthread_mutexattr_t monitors_attr;
-
-// Revisit: This should be called before static constructors, in case they start a thread
-static this()
-{
-    // Warning: this is non-portable
-    pthread_mutexattr_init(&monitors_attr);
-    pthread_mutexattr_settype(&monitors_attr, PTHREAD_MUTEX_RECURSIVE_NP);
-}
-
-static ~this()
-{
-    pthread_mutexattr_destroy(&monitors_attr);
+extern(C) {
+    pthread_mutexattr_t * _get_mutexattr();
 }
 
 class Mutex: Lockable
@@ -151,7 +140,7 @@ class Mutex: Lockable
 public:
     this()
     {
-        pthread_mutex_init(&_mtx, &monitors_attr);
+        pthread_mutex_init(&_mtx, _get_mutexattr());
     }
     ~this()
     {
@@ -179,25 +168,27 @@ version(unittest)
 {
     import std.synchro;
     import std.thread;
+    import std.stdio;
     
-    Mutex mtx;
-    int glob;
-    
-}
+    int glob;}
 
 unittest
 {
+    Mutex mtx = new Mutex;
+
     void inc_glob_twice()
     {
         scope lock = new Lock(mtx);
     
         assert(glob % 2 == 0);
         glob++;
-        glob++;
+        {
+            // Test lock re-entrancy
+            scope lock2 = new Lock(mtx);
+            glob++;
+        }
     }
     
-    mtx = new Mutex;
-
     int f()
     {
         for (int i = 0; i < 1000; ++i)
