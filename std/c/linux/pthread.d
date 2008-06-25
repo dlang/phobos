@@ -5,6 +5,14 @@
 
 module std.c.linux.pthread;
 
+enum
+{
+  PTHREAD_MUTEX_TIMED_NP,
+  PTHREAD_MUTEX_RECURSIVE_NP,
+  PTHREAD_MUTEX_ERRORCHECK_NP,
+  PTHREAD_MUTEX_ADAPTIVE_NP
+};
+
 extern (C)
 {
     /*  pthread declarations taken from pthread headers and
