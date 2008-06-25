@@ -12,7 +12,7 @@ class TypeInfo_m : TypeInfo
 	return *cast(uint *)p + (cast(uint *)p)[1];
     }
 
-    override int equals(in void *p1, in void *p2)
+    override bool equals(in void *p1, in void *p2)
     {
 	return *cast(ulong *)p1 == *cast(ulong *)p2;
     }

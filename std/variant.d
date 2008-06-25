@@ -601,7 +601,7 @@ public:
      */
 
     // returns 1 if the two are equal
-    int opEquals(T)(T rhs)
+    bool opEquals(T)(T rhs)
     {
         static if (is(T == VariantN))
             alias rhs temp;

@@ -11,7 +11,7 @@ class TypeInfo_u : TypeInfo
 	return *cast(wchar *)p;
     }
 
-    override int equals(in void *p1, in void *p2)
+    override bool equals(in void *p1, in void *p2)
     {
 	return *cast(wchar *)p1 == *cast(wchar *)p2;
     }

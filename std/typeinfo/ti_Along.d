@@ -26,7 +26,7 @@ class TypeInfo_Al : TypeInfo
 	return hash;
     }
 
-    override int equals(in void *p1, in void *p2)
+    override bool equals(in void *p1, in void *p2)
     {
 	long[] s1 = *cast(long[]*)p1;
 	long[] s2 = *cast(long[]*)p2;

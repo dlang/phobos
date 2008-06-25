@@ -12,7 +12,7 @@ class TypeInfo_w : TypeInfo
 	return *cast(dchar *)p;
     }
 
-    override int equals(in void *p1, in void *p2)
+    override bool equals(in void *p1, in void *p2)
     {
 	return *cast(dchar *)p1 == *cast(dchar *)p2;
     }

@@ -547,7 +547,7 @@ struct BitArray
      * Support for operators == and != for bit arrays.
      */
 
-    int opEquals(BitArray a2)
+    bool opEquals(BitArray a2)
     {   int i;
 
         if (this.length != a2.length)

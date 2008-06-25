@@ -39,7 +39,7 @@ class TypeInfo_As : TypeInfo
 	return hash;
     }
 
-    override int equals(in void *p1, in void *p2)
+    override bool equals(in void *p1, in void *p2)
     {
 	short[] s1 = *cast(short[]*)p1;
 	short[] s2 = *cast(short[]*)p2;

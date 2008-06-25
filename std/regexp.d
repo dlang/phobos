@@ -1379,7 +1379,7 @@ public int test(string s, int startindex)
        Returns whether string $(D_PARAM s) matches $(D_PARAM this).
     */
 alias test opEquals;
-//     int opEquals(string s)
+//     bool opEquals(string s)
 //     {
 //         return test(s);
 //     }

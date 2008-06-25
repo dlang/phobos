@@ -51,7 +51,7 @@ class TypeInfo_Ar : TypeInfo
 	return hash;
     }
 
-    override int equals(in void *p1, in void *p2)
+    override bool equals(in void *p1, in void *p2)
     {
 	cdouble[] s1 = *cast(cdouble[]*)p1;
 	cdouble[] s2 = *cast(cdouble[]*)p2;
@@ -61,8 +61,8 @@ class TypeInfo_Ar : TypeInfo
 	    return 0;
 	for (size_t u = 0; u < len; u++)
 	{
-	    int c = TypeInfo_r._equals(s1[u], s2[u]);
-	    if (c == 0)
+	    auto c = TypeInfo_r._equals(s1[u], s2[u]);
+	    if (!c)
 		return 0;
 	}
 	return 1;

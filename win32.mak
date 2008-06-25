@@ -240,7 +240,7 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 
 SRC_STD_C= std\c\process.d std\c\stdlib.d std\c\time.d std\c\stdio.d \
 	std\c\math.d std\c\stdarg.d std\c\stddef.d std\c\fenv.d std\c\string.d \
-	std\c\locale.d stc\c\wcharh.d
+	std\c\locale.d std\c\wcharh.d
 
 SRC_TI=	\
 	std\typeinfo\ti_wchar.d std\typeinfo\ti_uint.d \

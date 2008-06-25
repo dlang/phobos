@@ -12,7 +12,7 @@ class TypeInfo_q : TypeInfo
 	return (cast(uint *)p)[0] + (cast(uint *)p)[1];
     }
 
-    static int _equals(cfloat f1, cfloat f2)
+    static bool _equals(cfloat f1, cfloat f2)
     {
 	return f1 == f2;
     }
@@ -33,7 +33,7 @@ class TypeInfo_q : TypeInfo
         return result;
     }
 
-    override int equals(in void *p1, in void *p2)
+    override bool equals(in void *p1, in void *p2)
     {
 	return _equals(*cast(cfloat *)p1, *cast(cfloat *)p2);
     }

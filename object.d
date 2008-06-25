@@ -24,7 +24,7 @@ class Object
     string toString();
     hash_t toHash();
     int opCmp(Object o);
-    int opEquals(Object o);
+    bool opEquals(Object o);
 
     final void notifyRegister(void delegate(Object) dg);
     final void notifyUnRegister(void delegate(Object) dg);
@@ -145,7 +145,7 @@ class TypeInfo_Struct : TypeInfo
     void[] m_init;
 
     uint function(in void*) xtoHash;
-    int function(in void*, in void*) xopEquals;
+    bool function(in void*, in void*) xopEquals;
     int function(in void*, in void*) xopCmp;
     string function(const(void)*) xtoString;
 

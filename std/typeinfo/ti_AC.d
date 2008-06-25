@@ -16,7 +16,7 @@ class TypeInfo_AC : TypeInfo
 	return hash;
     }
 
-    override int equals(in void *p1, in void *p2)
+    override bool equals(in void *p1, in void *p2)
     {
 	Object[] s1 = *cast(Object[]*)p1;
 	Object[] s2 = *cast(Object[]*)p2;

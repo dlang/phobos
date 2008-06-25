@@ -26,7 +26,7 @@ class TypeInfo_Ai : TypeInfo
 	return hash;
     }
 
-    override int equals(in void *p1, in void *p2)
+    override bool equals(in void *p1, in void *p2)
     {
 	int[] s1 = *cast(int[]*)p1;
 	int[] s2 = *cast(int[]*)p2;

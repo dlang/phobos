@@ -49,7 +49,7 @@ class TypeInfo_Aq : TypeInfo
 	return hash;
     }
 
-    override int equals(in void *p1, in void *p2)
+    override bool equals(in void *p1, in void *p2)
     {
 	cfloat[] s1 = *cast(cfloat[]*)p1;
 	cfloat[] s2 = *cast(cfloat[]*)p2;
@@ -59,7 +59,7 @@ class TypeInfo_Aq : TypeInfo
 	    return 0;
 	for (size_t u = 0; u < len; u++)
 	{
-	    int c = TypeInfo_q._equals(s1[u], s2[u]);
+	    auto c = TypeInfo_q._equals(s1[u], s2[u]);
 	    if (c == 0)
 		return 0;
 	}
