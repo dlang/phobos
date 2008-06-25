@@ -130,6 +130,8 @@ void _d_monitorrelease(Object *h)
 static pthread_mutex_t _monitor_critsec;
 static pthread_mutexattr_t _monitors_attr;
 
+pthread_mutexattr_t * _get_mutexattr() { return &_monitors_attr; }
+
 void _STI_monitor_staticctor()
 {
     if (!inited)
