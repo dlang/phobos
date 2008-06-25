@@ -30,6 +30,9 @@
  * has a unique instance of class $(B Thread) associated with it.
  * It is important to use the $(B Thread) class to create and manage
  * threads as the garbage collector needs to know about all the threads.
+ *
+ * Authors: Walter Bright, Bartosz Milewski
+ *
  * Macros:
  *      WIKI=Phobos/StdThread
  */
@@ -399,11 +402,14 @@ class Thread
      */
     static uint nthreads = 1;
     static __thread uint myCompactThreadId; // 11-bit ((idx << 1) | 1)
+    enum uint TID_BITS = 11;
 
   private:
 
     static uint allThreadsDim;
-    static Thread[0x400] allThreads;    // length matches value in C runtime
+    enum uint MAX_THREADS = (1 << (TID_BITS - 1)); // 0x400
+    static Thread[MAX_THREADS] allThreads;  // length matches value in C runtime
+    static assert(MAX_THREADS == 0x400);
 
     TS state;
     int idx = -1;                       // index into allThreads[]
@@ -920,6 +926,7 @@ class Thread
 
     static uint nthreads = 1;
     static __thread uint myCompactThreadId; // 11-bit ((idx << 1) | 1)
+    enum uint TID_BITS = 11;
 
   private:
 
@@ -928,7 +935,9 @@ class Thread
     // Set max to Windows equivalent for compatibility.
     // pthread_create will fail gracefully if stack limit
     // is reached prior to allThreads max.
-    static Thread[0x400] allThreads;
+    enum uint MAX_THREADS = (1 << (TID_BITS - 1)); // 0x400
+    static Thread[MAX_THREADS] allThreads;
+    static assert(MAX_THREADS == 0x400);
 
     static sem_t flagSuspend;
 
