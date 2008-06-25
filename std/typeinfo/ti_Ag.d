@@ -51,7 +51,7 @@ class TypeInfo_Ag : TypeInfo
 	return hash;
     }
 
-    override int equals(in void *p1, in void *p2)
+    override bool equals(in void *p1, in void *p2)
     {
 	byte[] s1 = *cast(byte[]*)p1;
 	byte[] s2 = *cast(byte[]*)p2;

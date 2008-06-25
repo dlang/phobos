@@ -13,7 +13,7 @@ class TypeInfo_D : TypeInfo
 	return cast(uint)(l + (l >> 32));
     }
 
-    override int equals(in void *p1, in void *p2)
+    override bool equals(in void *p1, in void *p2)
     {
 	return *cast(dg *)p1 == *cast(dg *)p2;
     }

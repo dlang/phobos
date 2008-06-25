@@ -33,7 +33,7 @@ class TypeInfo_C : TypeInfo
 	return o ? o.toHash() : 0;
     }
 
-    override int equals(in void *p1, in void *p2)
+    override bool equals(in void *p1, in void *p2)
     {
 	Object o1 = *cast(Object*)p1;
 	Object o2 = *cast(Object*)p2;

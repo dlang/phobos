@@ -50,7 +50,7 @@ class TypeInfo_Ae : TypeInfo
 	return hash;
     }
 
-    override int equals(in void *p1, in void *p2)
+    override bool equals(in void *p1, in void *p2)
     {
 	real[] s1 = *cast(real[]*)p1;
 	real[] s2 = *cast(real[]*)p2;
@@ -60,9 +60,9 @@ class TypeInfo_Ae : TypeInfo
 	    return 0;
 	for (size_t u = 0; u < len; u++)
 	{
-	    int c = TypeInfo_e._equals(s1[u], s2[u]);
-	    if (c == 0)
-		return 0;
+	    bool c = TypeInfo_e._equals(s1[u], s2[u]);
+	    if (c == false)
+		return false;
 	}
 	return 1;
     }

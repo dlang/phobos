@@ -14,7 +14,7 @@ class TypeInfo_d : TypeInfo
 	return (cast(uint *)p)[0] + (cast(uint *)p)[1];
     }
 
-    static int _equals(double f1, double f2)
+    static bool _equals(double f1, double f2)
     {
 	return f1 == f2 ||
 		(isnan(f1) && isnan(f2));
@@ -34,7 +34,7 @@ class TypeInfo_d : TypeInfo
 	return (d1 == d2) ? 0 : ((d1 < d2) ? -1 : 1);
     }
 
-    override int equals(in void *p1, in void *p2)
+    override bool equals(in void *p1, in void *p2)
     {
 	return _equals(*cast(double *)p1, *cast(double *)p2);
     }

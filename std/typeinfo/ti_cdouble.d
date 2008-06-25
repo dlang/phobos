@@ -13,7 +13,7 @@ class TypeInfo_r : TypeInfo
 	       (cast(uint *)p)[2] + (cast(uint *)p)[3];
     }
 
-    static int _equals(cdouble f1, cdouble f2)
+    static bool _equals(cdouble f1, cdouble f2)
     {
 	return f1 == f2;
     }
@@ -34,7 +34,7 @@ class TypeInfo_r : TypeInfo
         return result;
     }
 
-    override int equals(in void *p1, in void *p2)
+    override bool equals(in void *p1, in void *p2)
     {
 	return _equals(*cast(cdouble *)p1, *cast(cdouble *)p2);
     }
