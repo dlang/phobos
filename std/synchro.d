@@ -137,13 +137,13 @@ private pthread_mutexattr_t monitors_attr;
 static this()
 {
     // Warning: this is non-portable
-    pthread_mutexattr_init(&_monitors_attr);
-    pthread_mutexattr_settype(&_monitors_attr, PTHREAD_MUTEX_RECURSIVE_NP);
+    pthread_mutexattr_init(&monitors_attr);
+    pthread_mutexattr_settype(&monitors_attr, PTHREAD_MUTEX_RECURSIVE_NP);
 }
 
 static ~this()
 {
-    pthread_mutexattr_destroy(&_monitors_attr);
+    pthread_mutexattr_destroy(&monitors_attr);
 }
 
 class Mutex: Lockable
