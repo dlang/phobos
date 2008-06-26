@@ -40,7 +40,7 @@ SRC= gc.d gcold.d gcx.d gcbits.d win32.d gclinux.d testgc.d win32.mak linux.mak
 #	lib dmgc /c/noi +gc+gcold+gcx+gcbits+win32;
 
 dmgc.lib : gc.d gcold.obj gcx.d gcbits.d win32.d
-	$(DMD) $(DFLAGS) -lib -ofdmgc.lib gc.d gcold.obj gcx.d gcbits.d win32.d
+	$(DMD) $(DFLAGS) -I..\.. -lib -ofdmgc.lib gc.d gcold.obj gcx.d gcbits.d win32.d
 
 gc.obj : gc.d
 	$(DMD) -c $(DFLAGS) $*
