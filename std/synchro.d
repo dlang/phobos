@@ -132,7 +132,7 @@ private import std.c.linux.linux;
 private import std.c.linux.linuxextern;
 
 extern(C) {
-    pthread_mutexattr_t * _get_mutexattr();
+    pthread_mutexattr_t _monitors_attr;
 }
 
 class Mutex: Lockable
@@ -140,7 +140,7 @@ class Mutex: Lockable
 public:
     this()
     {
-        pthread_mutex_init(&_mtx, _get_mutexattr());
+        pthread_mutex_init(&_mtx, &_monitors_attr);
     }
     ~this()
     {
@@ -179,7 +179,6 @@ unittest
     void inc_glob_twice()
     {
         scope lock = new Lock(mtx);
-    
         assert(glob % 2 == 0);
         glob++;
         {

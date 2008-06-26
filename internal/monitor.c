@@ -128,9 +128,7 @@ void _d_monitorrelease(Object *h)
 // Includes attribute fixes from David Friedman's GDC port
 
 static pthread_mutex_t _monitor_critsec;
-static pthread_mutexattr_t _monitors_attr;
-
-pthread_mutexattr_t * _get_mutexattr() { return &_monitors_attr; }
+pthread_mutexattr_t _monitors_attr;
 
 void _STI_monitor_staticctor()
 {
