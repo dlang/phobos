@@ -46,6 +46,7 @@ Macros:
 */
 
 module bigint;
+
 import std.string       : format;
 import std.stdio        : writef, writefln;
 import std.algorithm    : min, max, swap;
@@ -1439,6 +1440,7 @@ void diag(int line = __LINE__, string file = __FILE__)
 
 unittest
 {
+
     // This block of unittests demonstrates that we can shrink arrays correctly
     {
         auto a = makeBig( 0x00000000 );
@@ -1896,7 +1898,7 @@ unittest
         Big r;
         r.opAssign(z);
         assert(z.digits == r.digits, hex(r));
-            //
+/+            //
         r.opAssign( cast(int)100 );
         assert(z.digits == r.digits, hex(r));
             //
@@ -1921,8 +1923,9 @@ unittest
         r.opAssign( cast(ulong)0xFEDCBA9876543210 );
         Big z = makeBig( 0x00000000, 0xFEDCBA98, 0x76543210 );
         assert(z.digits == r.digits, hex(r));
++/        
     }
-
+/+
     // This block of unittests demonstrates that static opCall works
     {
         Big z = makeBig( 0x00000064 );
@@ -1952,6 +1955,7 @@ unittest
         Big z = makeBig( 0x00000000, 0xFEDCBA98, 0x76543210 );
         assert(z.digits == r.digits, hex(r));
     }
++/
 
     // This block of unittests demonstrates that castTo works
     {
@@ -1980,7 +1984,7 @@ unittest
         z.castTo(s);
         assert(s == "9920249032904265199");
     }
-
+    
     // This block of unittests demonstrates that opEquals and opCmp work
     {
         BigInt x = makeBig( 0x00000000, 0x89ABCDEF, 0x89ABCDEF );
@@ -2159,7 +2163,7 @@ unittest
         int i = 0x80000000;
         a %= i;
     }
-
+/+
     // This block of unittests demonstrates that opAnd works
     {
         BigInt x = "0xCCCCCCCC";
@@ -2193,7 +2197,7 @@ unittest
         x ^= 0xAAAAAAAA;
         assert(x == 0x66666666);
     }
-
++/
 
     // This block of unittests demonstrates that opShl works
     {
@@ -2266,8 +2270,8 @@ unittest
         assert(h == a);
         assert(i == e);
     }
-}
 
+}
 
 /** Optimised asm arbitrary precision arithmetic ('bignum') 
  * routines for X86 processors.
@@ -2978,3 +2982,4 @@ unittest {
 }
 
 } // version(D_InlineAsm_X86)
+
