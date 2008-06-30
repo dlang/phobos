@@ -501,7 +501,7 @@ class InternetHost
 	}
 }
 
-/+
+
 unittest
 {
 	InternetHost ih = new InternetHost;
@@ -524,7 +524,7 @@ unittest
 		printf("aliases[%d] = %.*s\n", i, s);
 	}
 }
-+/
+
 
 /**
  * Base exception thrown from an Address.
