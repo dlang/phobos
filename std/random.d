@@ -711,9 +711,9 @@ size_t dice(R)(ref R rnd, double[] proportions...) {
 
 unittest {
     auto rnd = Random(unpredictableSeed);
-    auto i = dice(rnd, 0, 100);
+    auto i = dice(rnd, 0.0, 100.0);
     assert(i == 1);
-    i = dice(rnd, 100, 0);
+    i = dice(rnd, 100.0, 0.0);
     assert(i == 0);
 }
 
