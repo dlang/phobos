@@ -79,8 +79,8 @@ struct BigInt
     ///
     void opAssign(uint n)
     {
-        static if(BIG_ENDIAN) { auto a = [ cast(Digit)0, n ]; }
-        else                  { auto a = [ cast(Digit)n, 0 ]; }
+        static if(BIG_ENDIAN) { Digits a = [ cast(Digit)0, n ]; }
+        else                  { Digits a = [ cast(Digit)n, 0 ]; }
         Big b = bigInt(a);
         digits = b.digits;
     }
@@ -88,8 +88,8 @@ struct BigInt
     ///
     void opAssign(long n)
     {
-        static if(BIG_ENDIAN) { auto a = [ cast(Digit)(n>>32), cast(Digit)n ]; }
-        else                  { auto a = [ cast(Digit)n, cast(Digit)(n>>32) ]; }
+        static if(BIG_ENDIAN) { Digits a = [ cast(Digit)(n>>32), cast(Digit)n ]; }
+        else                  { Digits a = [ cast(Digit)n, cast(Digit)(n>>32) ]; }
         Big b = bigInt(a);
         digits = b.digits;
     }
@@ -97,8 +97,8 @@ struct BigInt
     ///
     void opAssign(ulong n)
     {
-        static if(BIG_ENDIAN) { auto a = [ cast(Digit)0, cast(Digit)(n>>32), cast(Digit)n ]; }
-        else                  { auto a = [ cast(Digit)n, cast(Digit)(n>>32), cast(Digit)0 ]; }
+        static if(BIG_ENDIAN) { Digits a = [ cast(Digit)0, cast(Digit)(n>>32), cast(Digit)n ]; }
+        else                  { Digits a = [ cast(Digit)n, cast(Digit)(n>>32), cast(Digit)0 ]; }
         Big b = bigInt(a);
         digits = b.digits;
     }
@@ -622,7 +622,7 @@ struct Big_Big{ Big q; Big r; }
 // Setting BIG_ENDIAN opposite to platform endianness allows unittests
 // to run in reverse endianness. (And they still pass).
 
-version(BigEndian) { enum bool BIG_ENDIAN = true;  }
+version(BigEndian) { enum bool BIG_ENDIAN = true; }
 else               { enum bool BIG_ENDIAN = false; }
 
 // String conversion
@@ -685,7 +685,7 @@ Big fromHex(string s)
             break;
 
         case 'a','b','c','d','e','f':
-            r = (r << 4) + (c - 'A' + 10);
+            r = (r << 4) + (c - 'a' + 10);
             invalid = false;
             break;
 
@@ -1898,7 +1898,7 @@ unittest
         Big r;
         r.opAssign(z);
         assert(z.digits == r.digits, hex(r));
-/+            //
+            //
         r.opAssign( cast(int)100 );
         assert(z.digits == r.digits, hex(r));
             //
@@ -1923,9 +1923,9 @@ unittest
         r.opAssign( cast(ulong)0xFEDCBA9876543210 );
         Big z = makeBig( 0x00000000, 0xFEDCBA98, 0x76543210 );
         assert(z.digits == r.digits, hex(r));
-+/        
+        
     }
-/+
+
     // This block of unittests demonstrates that static opCall works
     {
         Big z = makeBig( 0x00000064 );
@@ -1955,7 +1955,6 @@ unittest
         Big z = makeBig( 0x00000000, 0xFEDCBA98, 0x76543210 );
         assert(z.digits == r.digits, hex(r));
     }
-+/
 
     // This block of unittests demonstrates that castTo works
     {
@@ -2163,7 +2162,7 @@ unittest
         int i = 0x80000000;
         a %= i;
     }
-/+
+
     // This block of unittests demonstrates that opAnd works
     {
         BigInt x = "0xCCCCCCCC";
@@ -2197,7 +2196,6 @@ unittest
         x ^= 0xAAAAAAAA;
         assert(x == 0x66666666);
     }
-+/
 
     // This block of unittests demonstrates that opShl works
     {
