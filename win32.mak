@@ -108,6 +108,7 @@ SRCS= std\math.d std\stdio.d std\dateparse.d std\date.d std\uni.d std\string.d \
 	internal\arraycast.d internal\arraycat.d \
 	internal\switch.d internal\qsort.d internal\invariant.d \
 	internal\dmain2.d internal\cast.d internal\obj.d \
+	internal\arrayfloat.d internal\arraydouble.d internal\arrayreal.d \
 	etc\gamma.d \
 	std\c\stdarg.d \
 	std\c\windows\com.d \
@@ -273,7 +274,8 @@ SRC_INT=	\
 	internal\dmain2.d internal\cast.d internal\qsort.d internal\deh2.d \
 	internal\cmath2.d internal\obj.d internal\mars.h internal\aApply.d \
 	internal\aApplyR.d internal\object.d internal\trace.d \
-	internal\qsort2.d internal\arrayassign.d
+	internal\qsort2.d internal\arrayassign.d \
+	internal\arrayfloat.d internal\arraydouble.d
 
 
 SRC_STD_WIN= std\windows\registry.d \

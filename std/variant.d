@@ -223,7 +223,7 @@ private:
                 else
                 {
                     // type is not assignable
-                    if (me) assert(false, typeof(A).stringof);
+                    if (me) assert(false, A.stringof);
                 }
                 return true;
             }
