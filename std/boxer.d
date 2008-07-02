@@ -53,6 +53,11 @@ a = boxArray(arg_types, arg_data);
  *	Burton Radons
  * License:
  *	Public Domain
+ * Bugs:
+ *	$(UL
+ *	$(LI $(BUGZILLA 309))
+ *	$(LI $(BUGZILLA 1968))
+ *	)
  * Macros:
  *	WIKI=Phobos/StdBoxer
  */

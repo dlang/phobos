@@ -135,7 +135,7 @@ template isStaticArray_impl(T)
     
     static if (is(typeof(T.length)))
     {
-	static if (!is(typeof(T) == typeof(T.init)))
+	static if (!is(T == typeof(T.init)))
 	{			// abuses the fact that int[5].init == int
 	    static if (is(T == typeof(T[0])[inst.length]))
 	    {	// sanity check. this check alone isn't enough because dmd complains about dynamic arrays

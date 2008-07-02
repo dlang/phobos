@@ -187,6 +187,7 @@ D_PSYMBOL = <span class="d_psymbol">$0</span>
 D_PARAM   = <span class="d_param">$0</span>
 RPAREN = )
 LPAREN = (
+BUGZILLA = $(LINK2 http://d.puremagic.com/issues/show_bug.cgi?id=$0, Bugzilla $0)
 FOO=$0
 
 COPYRIGHT= Copyright &copy; 1999-$(YEAR) by Digital Mars, All Rights Reserved

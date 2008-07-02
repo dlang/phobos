@@ -2416,7 +2416,7 @@ class EndianStream : FilterStream {
     assert( m.data[1] == 0x66 );
     em.position(0);
     static ubyte[12] x3 = [1,2,3,4,5,6,7,8,9,10,11,12];
-    em.fixBO(x3,12);
+    em.fixBO(x3.ptr,12);
     if (std.system.endian == Endian.LittleEndian) {
       assert( x3[0] == 12 );
       assert( x3[1] == 11 );
@@ -2440,7 +2440,7 @@ class EndianStream : FilterStream {
     assert( m.data[0] == 0x66 );
     assert( m.data[1] == 0x55 );
     em.position(0);
-    em.fixBO(x3,12);
+    em.fixBO(x3.ptr,12);
     if (std.system.endian == Endian.BigEndian) {
       assert( x3[0] == 12 );
       assert( x3[1] == 11 );

@@ -77,7 +77,7 @@ class FormatError : Error
 	super("std.format");
     }
 
-    this(char[] msg)
+    this(string msg)
     {
 	super("std.format " ~ msg);
     }
@@ -502,7 +502,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
 	    //printf("flags = x%x\n", flags);
 	    int prepad = 0;
 	    int postpad = 0;
-	    int padding = field_width - (strlen(prefix) + s.length);
+	    int padding = field_width - (strlen(prefix) + toUCSindex(s, s.length));
 	    if (padding > 0)
 	    {
 		if (flags & FLdash)
@@ -866,18 +866,18 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
 		    {
 			case Mangle.Tchar:
 			LarrayChar:
-			    s = va_arg!(char[])(argptr);
+			    s = va_arg!(string)(argptr);
 			    goto Lputstr;
 
 			case Mangle.Twchar:
 			LarrayWchar:
-			    wchar[] sw = va_arg!(wchar[])(argptr);
+			    wchar[] sw = va_arg!(wstring)(argptr);
 			    s = toUTF8(sw);
 			    goto Lputstr;
 
 			case Mangle.Tdchar:
 			LarrayDchar:
-			    dchar[] sd = va_arg!(dchar[])(argptr);
+			    dchar[] sd = va_arg!(dstring)(argptr);
 			    s = toUTF8(sd);
 			Lputstr:
 			    if (fc != 's')
@@ -1106,16 +1106,16 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
 	    switch (m2)
 	    {
 		case Mangle.Tchar:
-		    fmt = va_arg!(char[])(argptr);
+		    fmt = va_arg!(string)(argptr);
 		    break;
 
 		case Mangle.Twchar:
-		    wfmt = va_arg!(wchar[])(argptr);
+		    wfmt = va_arg!(wstring)(argptr);
 		    fmt = toUTF8(wfmt);
 		    break;
 
 		case Mangle.Tdchar:
-		    dfmt = va_arg!(dchar[])(argptr);
+		    dfmt = va_arg!(dstring)(argptr);
 		    fmt = toUTF8(dfmt);
 		    break;
 
@@ -1555,5 +1555,8 @@ unittest
 
     r = std.string.format(">%14d<, ", 15, [1,2,3]);
     assert(r == ">            15<, [1,2,3]");
+
+    assert(std.string.format("%8s", "bar") == "     bar");
+    assert(std.string.format("%8s", "b\u00e9ll\u00f4") == "   b\u00e9ll\u00f4");
 }
 
