@@ -1076,7 +1076,7 @@ struct lines
     int opApplyRaw(D)(D dg)
     {
         alias ParameterTypeTuple!(dg) Parms;
-        enum duplicate = is(typeof(Parms[$ - 1]) : invariant(ubyte)[]);
+        enum duplicate = is(Parms[$ - 1] : invariant(ubyte)[]);
         int result = 1;
         int c = void;
         FLOCK(f);
