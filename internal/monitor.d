@@ -223,7 +223,7 @@ struct OsMutex
 public:
     void setup()
     {
-        pthread_mutex_init(&_mtx, _monitors_attr);
+        pthread_mutex_init(&_mtx, &_monitors_attr);
     }
     void teardown()
     {
