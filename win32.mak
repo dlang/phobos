@@ -269,7 +269,7 @@ SRC_TI=	\
 SRC_INT=	\
 	internal\switch.d internal\complex.c internal\critical.c \
 	internal\minit.asm internal\alloca.d internal\llmath.d internal\deh.c \
-	internal\arraycat.d internal\invariant.d internal\monitor.c \
+	internal\arraycat.d internal\invariant.d internal\monitor.d \
 	internal\memset.d internal\arraycast.d internal\aaA.d internal\adi.d \
 	internal\dmain2.d internal\cast.d internal\qsort.d internal\deh2.d \
 	internal\cmath2.d internal\obj.d internal\mars.h internal\aApply.d \
@@ -423,8 +423,8 @@ memset.obj : internal\memset.d
 minit.obj : internal\minit.asm
 	$(CC) -c internal\minit.asm
 
-monitor.obj : internal\mars.h internal\monitor.c
-	$(CC) -c $(CFLAGS) internal\monitor.c
+monitor.obj : internal\mars.h internal\monitor.d
+	$(DMD) -c $(DFLAGS) internal\monitor.d
 
 obj.obj : internal\obj.d
 	$(DMD) -c $(DFLAGS) internal\obj.d
