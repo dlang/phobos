@@ -11,6 +11,7 @@ Macros:
 */
 
 module internal.monitor;
+import std.outofmemory;
 
 extern (C)
 {   /// C's printf function.
@@ -18,6 +19,8 @@ extern (C)
 
     void* memcpy(void *, in void *, size_t);
     void* malloc(size_t);
+    void* calloc(size_t, size_t);
+    void* realloc(void*, size_t);
     void free(void*);
 }
 
@@ -93,17 +96,83 @@ final void SetFatLock(Object o, FatLock * other)
     ToLayout(o)._fatLock = other;
 }
 
-/** Contains the object monitor and the array of delegates
+/** Contains the object's monitor and the array of delegates
 that are used by signals and slots */
 struct FatLock
 {
-    public  void delegate(Object) [] delegates;
-    private OsMutex * mon;
-    void setup() { mon = conStruct!(OsMutex)(); }
-    void teardown() { deStruct(mon); }
+private:
+    alias void delegate(Object) delegate_t;
+    delegate_t [] _delegates;
+    OsMutex * _mutex;
+
+    void setup() { _mutex = conStruct!(OsMutex)(); }
+    void teardown() { deStruct(_mutex); }
 public:
-    void lock() { mon.lock; }
-    void unlock() { mon.unlock; }
+    void lock() { _mutex.lock; }
+    void unlock() { _mutex.unlock; }
+    bool HasDelegates() { return _delegates.length != 0; }
+    void SetDelegate(delegate_t dg)
+    {
+        foreach (inout x; _delegates)
+        {
+            if (!x || x == dg)
+            {   x = dg;
+                return;
+            }
+        }
+
+        // Increase size of _delegates[]
+        auto len = _delegates.length;
+        auto startlen = len;
+        if (len == 0)
+        {
+            len = 4;
+            auto p = calloc(delegate_t.sizeof, len);
+            if (!p)
+                _d_OutOfMemory();
+            _delegates = (cast(delegate_t*)p)[0 .. len];
+        }
+        else
+        {
+            len += len + 4;
+            auto p = realloc(_delegates.ptr, delegate_t.sizeof * len);
+            if (!p)
+                _d_OutOfMemory();
+            _delegates = (cast(delegate_t*)p)[0 .. len];
+            _delegates[startlen .. len] = null;
+        }
+        _delegates[startlen] = dg;
+    }
+
+    void RemoveDelegate(delegate_t dg)
+    {
+        foreach (inout x; _delegates)
+        {
+            if (x == dg)
+                x = null;
+        }
+    }
+
+    void FinalizeDelegates(Object parent)
+    {
+        delegate_t[] dgs;
+        synchronized (parent)
+        {
+            dgs = _delegates;
+            _delegates = null;
+        }
+
+        foreach (dg; dgs)
+        {
+            if (dg)
+            {
+	        //printf("calling dg = %llx (%p)\n", dg, parent);
+                dg(parent);
+            }
+        }
+
+        free(dgs.ptr);
+    }
 }
 
 /** Called only once by a single thread during startup */

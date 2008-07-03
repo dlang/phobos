@@ -37,7 +37,6 @@
 
 module object;
 
-import std.outofmemory;
 import internal.monitor;
 
 /**
@@ -65,9 +64,6 @@ extern (C)
 
     int memcmp(in void *, in void *, size_t);
     void* memcpy(void *, in void *, size_t);
-    void* calloc(size_t, size_t);
-    void* realloc(void*, size_t);
-    void free(void*);
 
     Object _d_newclass(ClassInfo ci);
 }
@@ -150,35 +146,7 @@ class Object
             // as the side-effect of the synchronized clause above
             FatLock * fatLock = GetFatLock(this);
             assert(fatLock);
-            foreach (inout x; fatLock.delegates)
-            {
-                if (!x || x == dg)
-                {   x = dg;
-                    return;
-                }
-            }
-
-            // Increase size of delegates[]
-            auto len = fatLock.delegates.length;
-            auto startlen = len;
-            if (len == 0)
-            {
-                len = 4;
-                auto p = calloc((void delegate(Object)).sizeof, len);
-                if (!p)
-                    _d_OutOfMemory();
-                fatLock.delegates = (cast(void delegate(Object)*)p)[0 .. len];
-            }
-            else
-            {
-                len += len + 4;
-                auto p = realloc(fatLock.delegates.ptr, (void delegate(Object)).sizeof * len);
-                if (!p)
-                    _d_OutOfMemory();
-                fatLock.delegates = (cast(void delegate(Object)*)p)[0 .. len];
-                fatLock.delegates[startlen .. len] = null;
-            }
-            fatLock.delegates[startlen] = dg;
+            fatLock.SetDelegate(dg);
         }
     }
 
@@ -193,11 +161,7 @@ class Object
         {
             FatLock * fatLock = GetFatLock(this);
             assert(fatLock);
-            foreach (inout x; fatLock.delegates)
-            {
-                if (x == dg)
-                    x = null;
-            }
+            fatLock.RemoveDelegate(dg);
         }
     }
 
@@ -224,26 +188,8 @@ extern (C) void _d_notify_release(Object o)
     //printf("_d_notify_release(o = %p)\n", o);
     FatLock * fatLock = GetFatLock(o);
     assert(fatLock);
-    if (fatLock.delegates.length)
-    {
-        auto dgs = fatLock.delegates;
-        synchronized (o)
-        {
-            dgs = fatLock.delegates;
-            fatLock.delegates = null;
-        }
-
-        foreach (dg; dgs)
-        {
-            if (dg)
-            {
-	        //printf("calling dg = %llx (%p)\n", dg, o);
-                dg(o);
-            }
-        }
-
-        free(dgs.ptr);
-    }
+    if (fatLock.HasDelegates)
+        fatLock.FinalizeDelegates(o);
 }
 
 
