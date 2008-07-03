@@ -4,6 +4,8 @@
  * Forms the symbols available to all D programs. Includes
  * Object, which is the root of the class object hierarchy.
  *
+ * Authors: Walter Bright, Bartosz Milewski
+ *
  * This module is implicitly imported.
  * Macros:
  *      WIKI = Phobos/Object
@@ -36,6 +38,7 @@
 module object;
 
 import std.outofmemory;
+import internal.monitor;
 
 /**
  * An unsigned integral type large enough to span the memory space. Use for
@@ -76,27 +79,11 @@ alias invariant(char)[] string;
 alias invariant(wchar)[] wstring;
 alias invariant(dchar)[] dstring;
 
-/* *************************
- * Internal struct pointed to by the hidden .monitor member.
- */
-struct Monitor
-{
-    void delegate(Object)[] delegates;
-
-    /* More stuff goes here defined by internal/monitor.c */
-}
-
 /******************
  * All D class objects inherit from Object.
  */
 class Object
 {
-    final Monitor * getMonitorPtr()
-    {
-        Monitor * mon = cast(Monitor*)(cast(void**)this)[1];
-        return mon;
-    }
-
     void print()
     {
         printf("%.*s\n", toString());
@@ -161,9 +148,9 @@ class Object
         {
             // Important: Monitor is guaranteed to be initialized
             // as the side-effect of the synchronized clause above
-            Monitor * m = getMonitorPtr();
-            assert(m != null);
-            foreach (inout x; m.delegates)
+            FatLock * fatLock = GetFatLock(this);
+            assert(fatLock);
+            foreach (inout x; fatLock.delegates)
             {
                 if (!x || x == dg)
                 {   x = dg;
@@ -172,7 +159,7 @@ class Object
             }
 
             // Increase size of delegates[]
-            auto len = m.delegates.length;
+            auto len = fatLock.delegates.length;
             auto startlen = len;
             if (len == 0)
             {
@@ -180,18 +167,18 @@ class Object
                 auto p = calloc((void delegate(Object)).sizeof, len);
                 if (!p)
                     _d_OutOfMemory();
-                m.delegates = (cast(void delegate(Object)*)p)[0 .. len];
+                fatLock.delegates = (cast(void delegate(Object)*)p)[0 .. len];
             }
             else
             {
                 len += len + 4;
-                auto p = realloc(m.delegates.ptr, (void delegate(Object)).sizeof * len);
+                auto p = realloc(fatLock.delegates.ptr, (void delegate(Object)).sizeof * len);
                 if (!p)
                     _d_OutOfMemory();
-                m.delegates = (cast(void delegate(Object)*)p)[0 .. len];
-                m.delegates[startlen .. len] = null;
+                fatLock.delegates = (cast(void delegate(Object)*)p)[0 .. len];
+                fatLock.delegates[startlen .. len] = null;
             }
-            m.delegates[startlen] = dg;
+            fatLock.delegates[startlen] = dg;
         }
     }
 
@@ -204,9 +191,9 @@ class Object
     {
         synchronized (this)
         {
-            Monitor* m = getMonitorPtr();
-            assert(m != null);
-            foreach (inout x; m.delegates)
+            FatLock * fatLock = GetFatLock(this);
+            assert(fatLock);
+            foreach (inout x; fatLock.delegates)
             {
                 if (x == dg)
                     x = null;
@@ -235,15 +222,15 @@ class Object
 extern (C) void _d_notify_release(Object o)
 {
     //printf("_d_notify_release(o = %p)\n", o);
-    Monitor* m = o.getMonitorPtr();
-    assert(m != null);
-    if (m.delegates.length)
+    FatLock * fatLock = GetFatLock(o);
+    assert(fatLock);
+    if (fatLock.delegates.length)
     {
-        auto dgs = m.delegates;
+        auto dgs = fatLock.delegates;
         synchronized (o)
         {
-            dgs = m.delegates;
-            m.delegates = null;
+            dgs = fatLock.delegates;
+            fatLock.delegates = null;
         }
 
         foreach (dg; dgs)
@@ -949,7 +936,8 @@ class TypeInfo_Struct : TypeInfo
 
         assert(p);
         if (xtoHash)
-        {   //printf("getHash() using xtoHash\n");
+        {
+            //printf("getHash() using xtoHash\n");
             h = (*xtoHash)(p);
         }
         else
