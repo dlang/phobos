@@ -175,6 +175,14 @@ public:
     }
 }
 
+void escalateLock(Object obj)
+{
+    __monitor_mutex.lock;
+    if (GetFatLock(obj) is null)
+         SetFatLock(obj, conStruct!(FatLock));
+    __monitor_mutex.unlock;
+}
+
 /** Called only once by a single thread during startup */
 extern(C) void _STI_monitor_staticctor()
 {
@@ -197,14 +205,8 @@ void _d_monitorenter(Object obj)
     //printf("_d_monitorenter(%p), %p\n", obj, obj.__monitor);
     // Warning: data race
     if (GetFatLock(obj) is null)
-    {
-	__monitor_mutex.lock;
-        if (GetFatLock(obj) is null) // if, in the meantime, another thread didn't set it
-        {
-	    SetFatLock(obj, conStruct!(FatLock));
-        }
-	__monitor_mutex.unlock;
-    }
+        escalateLock(obj);
+
     GetFatLock(obj).lock;
 }
 

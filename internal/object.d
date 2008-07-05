@@ -140,10 +140,10 @@ class Object
     final void notifyRegister(void delegate(Object) dg)
     {
         //printf("notifyRegister(dg = %llx, o = %p)\n", dg, this);
+        if (!GetFatLock(this))
+            escalateLock(this); // Fat lock stores delegates
         synchronized (this)
         {
-            // Important: Monitor is guaranteed to be initialized
-            // as the side-effect of the synchronized clause above
             FatLock * fatLock = GetFatLock(this);
             assert(fatLock);
             fatLock.SetDelegate(dg);
