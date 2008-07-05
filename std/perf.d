@@ -29,6 +29,7 @@
  *
  * Synopsis:
  ----
+alias PerformanceCounter.interval_t interval_t;
 auto timer = new PerformanceCounter;
 timer.start();
 // do computation
