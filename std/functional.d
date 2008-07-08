@@ -108,17 +108,30 @@ assert(!greater("1", "2") && greater("2", "1"));
 ----
 */
 
-template binaryFun(string comp)
+template binaryFun(alias comp)
 {
-    // @@@BUG1816@@@: typeof(mixin(comp)) should work
-    typeof({
-            static ElementType1 a;
-            static ElementType2 b;
-            return mixin(comp);
-        }())
-    binaryFun(ElementType1, ElementType2)(ElementType1 a, ElementType2 b)
+    alias binaryFunImpl!(comp).binaryFun binaryFun;
+}
+
+template binaryFunImpl(alias comp)
+{
+    static if (is(typeof(comp) : string))
     {
-        return mixin(comp);
+        // @@@BUG1816@@@: typeof(mixin(comp)) should work
+        typeof({
+                    static ElementType1 a;
+                    static ElementType2 b;
+                    return mixin(comp);
+                }())
+            binaryFun(ElementType1, ElementType2)
+            (ElementType1 a, ElementType2 b)
+        {
+            return mixin(comp);
+        }
+    }
+    else
+    {
+        alias comp binaryFun;
     }
 }
 
