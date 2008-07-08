@@ -18,7 +18,7 @@ import cstdio = std.c.stdio;
 
 extern (C):
 
-char* unmangle_ident(char*);	// from DMC++ runtime library
+invariant(char)* unmangle_ident(invariant(char)*);	// from DMC++ runtime library
 
 alias long timer_t;
 
@@ -318,7 +318,8 @@ static void trace_times(Symbol* root)
 	string id;
 
 	version (Win32)
-	{   char* p = toStringz(s.Sident);
+	{
+            auto p = cast(invariant(char)*) toStringz(s.Sident);
 	    p = unmangle_ident(p);
 	    if (p)
 		id = p[0 .. strlen(p)];
