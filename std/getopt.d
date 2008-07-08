@@ -314,7 +314,7 @@ void getopt(T...)(ref string[] args, T opts) {
     for (size_t i; i < args.length; )
     {
         auto a = args[i];
-        if (a.length && a[0] == optChar && std.algorithm.canFind!(isspace)(a))
+        if (a.length && a[0] == optionChar && std.algorithm.canFind!(isspace)(a))
         {
             // multiple options wrapped in one
             auto more = split(a);
@@ -385,7 +385,7 @@ private void getoptImpl(T...)(ref string[] args,
     {
         // no more options to look for, potentially some arguments left
         foreach (a ; args[1 .. $]) {
-            if (!a.length || a[0] != optChar)
+            if (!a.length || a[0] != optionChar)
             {
                 // not an option
                 if (cfg.stopOnFirstNonOption) break;
@@ -407,7 +407,7 @@ void handleOption(R)(string option, R receiver, ref string[] args,
     for (size_t i = 1; i < args.length; ) {
         auto a = args[i];
         if (endOfOptions.length && a == endOfOptions) break;
-        if (cfg.stopOnFirstNonOption && (!a.length || a[0] != optChar))
+        if (cfg.stopOnFirstNonOption && (!a.length || a[0] != optionChar))
         {
             // first non-option is end of options
             break;
@@ -485,7 +485,7 @@ void handleOption(R)(string option, R receiver, ref string[] args,
    The option character. Defaults to '-' but it can be assigned to
    prior to calling $(D getopt).
  */
-dchar optChar = '-';
+dchar optionChar = '-';
 
 /**
    The string that conventionally marks the end of all
@@ -516,10 +516,10 @@ private struct configuration
 private bool optMatch(string arg, string optPattern, ref string value,
     configuration cfg)
 {
-    if (!arg.length || arg[0] != optChar) return false;
+    if (!arg.length || arg[0] != optionChar) return false;
     // yank the leading '-'
     arg = arg[1 .. $];
-    invariant isLong = arg.length > 1 && arg[0] == optChar;
+    invariant isLong = arg.length > 1 && arg[0] == optionChar;
     // yank the second '-' if present
     if (isLong) arg = arg[1 .. $];
     invariant eqPos = std.string.find(arg, assignChar);
