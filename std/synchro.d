@@ -132,7 +132,7 @@ private import std.c.linux.linux;
 private import std.c.linux.linuxextern;
 
 extern(C) {
-    pthread_mutexattr_t _monitors_attr;
+    extern pthread_mutexattr_t _monitors_attr;
 }
 
 class Mutex: Lockable
@@ -174,6 +174,7 @@ version(unittest)
 
 unittest
 {
+    //writeln("_monitors_attr = ", _monitors_attr.__mutexkind);
     Mutex mtx = new Mutex;
 
     void inc_glob_twice()
@@ -201,5 +202,6 @@ unittest
     thr2.start;
     thr1.wait;
     thr2.wait;
+    //writeln("end synchro");
 }
 

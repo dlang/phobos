@@ -186,6 +186,7 @@ void escalateLock(Object obj)
 /** Called only once by a single thread during startup */
 extern(C) void _STI_monitor_staticctor()
 {
+    initLocks();
     __monitor_mutex = conStruct!(OsMutex)();
 }
 
@@ -193,6 +194,7 @@ extern(C) void _STI_monitor_staticctor()
 extern(C) void _STD_monitor_staticdtor()
 {
     deStruct(__monitor_mutex);
+    uninitLocks();
 }
 
 // De-register observers from signalers
@@ -243,6 +245,9 @@ version (Windows)
 
 private import std.c.windows.windows;
 
+void initLocks() {}
+void uninitLocks() {}
+
 /**
 Encapsulates mutual exclusion provided by the underlying operating system. 
 $(D OsMutex) is re-entrant, i.e., 
@@ -286,7 +291,17 @@ private import std.c.linux.linux;
 private import std.c.linux.linuxextern;
 extern(C) 
 {
-    extern pthread_mutexattr_t _monitors_attr;
+    pthread_mutexattr_t _monitors_attr;
+}
+
+void initLocks()
+{
+    pthread_mutexattr_init(&_monitors_attr);
+    pthread_mutexattr_settype(&_monitors_attr, PTHREAD_MUTEX_RECURSIVE_NP);
+}
+void uninitLocks()
+{
+    pthread_mutexattr_destroy(&_monitors_attr);
 }
 
 // replace setup/teardown with constructor/destructor for structs
