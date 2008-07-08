@@ -102,71 +102,71 @@ template floatTraits(T) {
  // EXPPOS_SHORT is the index of the exponent when represented as a ushort array.
  // SIGNPOS_BYTE is the index of the sign when represented as a ubyte array.
  static if (T.mant_dig == 24) { // float
-    const ushort EXPMASK = 0x7F80;
-    const ushort EXPBIAS = 0x3F00;
-    const uint EXPMASK_INT = 0x7F80_0000;
-    const uint MANTISSAMASK_INT = 0x007F_FFFF;
-    const real POW2MANTDIG = 0x1p+24;
+    enum ushort EXPMASK = 0x7F80;
+    enum ushort EXPBIAS = 0x3F00;
+    enum uint EXPMASK_INT = 0x7F80_0000;
+    enum uint MANTISSAMASK_INT = 0x007F_FFFF;
+    enum real POW2MANTDIG = 0x1p+24;
     version(LittleEndian) {        
-      const EXPPOS_SHORT = 1;
+      enum EXPPOS_SHORT = 1;
     } else {
-      const EXPPOS_SHORT = 0;
+      enum EXPPOS_SHORT = 0;
     }
  } else static if (T.mant_dig == 53) { // double, or real==double
-    const ushort EXPMASK = 0x7FF0;
-    const ushort EXPBIAS = 0x3FE0;
-    const uint EXPMASK_INT = 0x7FF0_0000;
-    const uint MANTISSAMASK_INT = 0x000F_FFFF; // for the MSB only
-    const real POW2MANTDIG = 0x1p+53;
+    enum ushort EXPMASK = 0x7FF0;
+    enum ushort EXPBIAS = 0x3FE0;
+    enum uint EXPMASK_INT = 0x7FF0_0000;
+    enum uint MANTISSAMASK_INT = 0x000F_FFFF; // for the MSB only
+    enum real POW2MANTDIG = 0x1p+53;
     version(LittleEndian) {
-      const EXPPOS_SHORT = 3;
-      const SIGNPOS_BYTE = 7;
+      enum EXPPOS_SHORT = 3;
+      enum SIGNPOS_BYTE = 7;
     } else {
-      const EXPPOS_SHORT = 0;
-      const SIGNPOS_BYTE = 0;
+      enum EXPPOS_SHORT = 0;
+      enum SIGNPOS_BYTE = 0;
     }
  } else static if (T.mant_dig == 64) { // real80
-    const ushort EXPMASK = 0x7FFF;
-    const ushort EXPBIAS = 0x3FFE;
-    const real POW2MANTDIG = 0x1p+63;    
+    enum ushort EXPMASK = 0x7FFF;
+    enum ushort EXPBIAS = 0x3FFE;
+    enum real POW2MANTDIG = 0x1p+63;    
     version(LittleEndian) {
-      const EXPPOS_SHORT = 4;
-      const SIGNPOS_BYTE = 9;
+      enum EXPPOS_SHORT = 4;
+      enum SIGNPOS_BYTE = 9;
     } else {
-      const EXPPOS_SHORT = 0;
-      const SIGNPOS_BYTE = 0;
+      enum EXPPOS_SHORT = 0;
+      enum SIGNPOS_BYTE = 0;
     }
  } else static if (real.mant_dig == 113){ // quadruple
-    const ushort EXPMASK = 0x7FFF;
-    const real POW2MANTDIG = 0x1p+113;
+    enum ushort EXPMASK = 0x7FFF;
+    enum real POW2MANTDIG = 0x1p+113;
     version(LittleEndian) {
-      const EXPPOS_SHORT = 7;
-      const SIGNPOS_BYTE = 15;
+      enum EXPPOS_SHORT = 7;
+      enum SIGNPOS_BYTE = 15;
     } else {
-      const EXPPOS_SHORT = 0;
-      const SIGNPOS_BYTE = 0;
+      enum EXPPOS_SHORT = 0;
+      enum SIGNPOS_BYTE = 0;
     }
  } else static if (real.mant_dig == 106) { // doubledouble
-    const ushort EXPMASK = 0x7FF0;
-    const real POW2MANTDIG = 0x1p+53;  // doubledouble denormals are strange
+    enum ushort EXPMASK = 0x7FF0;
+    enum real POW2MANTDIG = 0x1p+53;  // doubledouble denormals are strange
     // and the exponent byte is not unique
     version(LittleEndian) {
-      const EXPPOS_SHORT = 7; // [3] is also an exp short
-      const SIGNPOS_BYTE = 15;
+      enum EXPPOS_SHORT = 7; // [3] is also an exp short
+      enum SIGNPOS_BYTE = 15;
     } else {
-      const EXPPOS_SHORT = 0; // [4] is also an exp short
-      const SIGNPOS_BYTE = 0;
+      enum EXPPOS_SHORT = 0; // [4] is also an exp short
+      enum SIGNPOS_BYTE = 0;
     }
  }
 }
 
 // These apply to all floating-point types
 version(LittleEndian) {
-    const MANTISSA_LSB = 0;
-    const MANTISSA_MSB = 1;    
+    enum MANTISSA_LSB = 0;
+    enum MANTISSA_MSB = 1;    
 } else {
-    const MANTISSA_LSB = 1;
-    const MANTISSA_MSB = 0;
+    enum MANTISSA_LSB = 1;
+    enum MANTISSA_MSB = 0;
 }
 public:
 
@@ -178,24 +178,24 @@ class NotImplemented : Error
     }
 }
 
-const real E =          2.7182818284590452354L;  /** e */
+enum real E =          2.7182818284590452354L;  /** e */
  // 3.32193 fldl2t
-const real LOG2T =      0x1.a934f0979a3715fcp+1; /** log<sub>2</sub>10 */
+enum real LOG2T =      0x1.a934f0979a3715fcp+1; /** log<sub>2</sub>10 */
  // 1.4427 fldl2e
-const real LOG2E =      0x1.71547652b82fe178p+0; /** log<sub>2</sub>e */
+enum real LOG2E =      0x1.71547652b82fe178p+0; /** log<sub>2</sub>e */
  // 0.30103 fldlg2
-const real LOG2 =       0x1.34413509f79fef32p-2; /** log<sub>10</sub>2 */
-const real LOG10E =     0.43429448190325182765;  /** log<sub>10</sub>e */
-const real LN2 =        0x1.62e42fefa39ef358p-1; /** ln 2 */  // 0.693147 fldln2
-const real LN10 =       2.30258509299404568402;  /** ln 10 */
-const real PI =         0x1.921fb54442d1846ap+1; /** $(_PI) */ // 3.14159 fldpi
-const real PI_2 =       1.57079632679489661923;  /** $(PI) / 2 */
-const real PI_4 =       0.78539816339744830962;  /** $(PI) / 4 */
-const real M_1_PI =     0.31830988618379067154;  /** 1 / $(PI) */
-const real M_2_PI =     0.63661977236758134308;  /** 2 / $(PI) */
-const real M_2_SQRTPI = 1.12837916709551257390;  /** 2 / &radic;$(PI) */
-const real SQRT2 =      1.41421356237309504880;  /** &radic;2 */
-const real SQRT1_2 =    0.70710678118654752440;  /** &radic;&frac12; */
+enum real LOG2 =       0x1.34413509f79fef32p-2; /** log<sub>10</sub>2 */
+enum real LOG10E =     0.43429448190325182765;  /** log<sub>10</sub>e */
+enum real LN2 =        0x1.62e42fefa39ef358p-1; /** ln 2 */  // 0.693147 fldln2
+enum real LN10 =       2.30258509299404568402;  /** ln 10 */
+enum real PI =         0x1.921fb54442d1846ap+1; /** $(_PI) */ // 3.14159 fldpi
+enum real PI_2 =       1.57079632679489661923;  /** $(PI) / 2 */
+enum real PI_4 =       0.78539816339744830962;  /** $(PI) / 4 */
+enum real M_1_PI =     0.31830988618379067154;  /** 1 / $(PI) */
+enum real M_2_PI =     0.63661977236758134308;  /** 2 / $(PI) */
+enum real M_2_SQRTPI = 1.12837916709551257390;  /** 2 / &radic;$(PI) */
+enum real SQRT2 =      1.41421356237309504880;  /** &radic;2 */
+enum real SQRT1_2 =    0.70710678118654752440;  /** &radic;&frac12; */
 
 /*
         Octal versions:
@@ -1177,9 +1177,9 @@ real hypot(real x, real y)
      * Direct inquiries to 30 Frost Street, Cambridge, MA 02140
      */
 
-    const int PRECL = 32;
-    const int MAXEXPL = real.max_exp; //16384;
-    const int MINEXPL = real.min_exp; //-16384;
+    enum int PRECL = 32;
+    enum int MAXEXPL = real.max_exp; //16384;
+    enum int MINEXPL = real.min_exp; //-16384;
 
     real xx, yy, b, re, im;
     int ex, ey, e;
@@ -1708,7 +1708,7 @@ unittest
 real copysign(real to, real from)
 {
     ubyte* pto   = cast(ubyte *)&to;
-    ubyte* pfrom = cast(ubyte *)&from;
+    const ubyte* pfrom = cast(ubyte *)&from;
     
     alias floatTraits!(real) F;
     pto[F.SIGNPOS_BYTE] &= 0x7F;
