@@ -385,13 +385,13 @@ private void getoptImpl(T...)(ref string[] args,
     {
         // no more options to look for, potentially some arguments left
         foreach (a ; args[1 .. $]) {
-            if (!a.length || a[0] != '-')
+            if (!a.length || a[0] != optChar)
             {
                 // not an option
                 if (cfg.stopOnFirstNonOption) break;
                 continue; 
             }
-            if (a == endOfOptions) break; // end of options
+            if (endOfOptions.length && a == endOfOptions) break;
             if (!cfg.passThrough)
             {
                 throw new Exception("Unrecognized option "~a);
@@ -406,7 +406,7 @@ void handleOption(R)(string option, R receiver, ref string[] args,
     // Scan arguments looking for a match for this option
     for (size_t i = 1; i < args.length; ) {
         auto a = args[i];
-        if (a == endOfOptions) break; // end of options, i.e. "--"
+        if (endOfOptions.length && a == endOfOptions) break;
         if (cfg.stopOnFirstNonOption && (!a.length || a[0] != optChar))
         {
             // first non-option is end of options
@@ -468,7 +468,7 @@ void handleOption(R)(string option, R receiver, ref string[] args,
                 // hash receiver
                 alias typeof(receiver.keys[0]) K;
                 alias typeof(receiver.values[0]) V;
-                auto j = std.string.find(val, '=');
+                auto j = std.string.find(val, assignChar);
                 auto key = val[0 .. j], value = val[j + 1 .. $];
                 (*receiver)[to!(K)(key)] = to!(V)(value);
             }
@@ -481,11 +481,27 @@ void handleOption(R)(string option, R receiver, ref string[] args,
     }
 }
 
-enum
-    optChar = '-',
-    assignChar = '=',
-    autoIncrementChar = '+',
-    endOfOptions = "--";
+/**
+   The option character. Defaults to '-' but it can be assigned to
+   prior to calling $(D getopt).
+ */
+dchar optChar = '-';
+
+/**
+   The string that conventionally marks the end of all
+   options. Defaults to "--" but can be assigned to prior to calling
+   $(D getopt). Assigning an empty string to $(D endOfOptions)
+   effectively disables it.
+ */
+string endOfOptions = "--";
+
+/**
+   The assignment character used in options with parameters. Defaults
+   to '=' but can be assigned to prior to calling $(D getopt).
+ */
+dchar assignChar = '=';
+
+enum autoIncrementChar = '+';
 
 private struct configuration
 {
