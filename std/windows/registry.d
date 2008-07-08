@@ -43,6 +43,8 @@
 
 module std.windows.registry;
 
+pragma(lib, "advapi32.lib");
+
 /* /////////////////////////////////////////////////////////////////////////////
  * Imports
  */
@@ -354,7 +356,6 @@ private REG_VALUE_TYPE _RVT_from_Endian(Endian endian)
         default:
             throw new RegistryException("Invalid Endian specified");
     }
-    assert(0);
 }
 
 private uint swap(in uint i)
@@ -1736,8 +1737,6 @@ public:
             else
             {
                 throw new RegistryException("Key name enumeration incomplete", res);
-
-                break;
             }
         }
 
@@ -1883,8 +1882,6 @@ public:
             else
             {
                 throw new RegistryException("Key enumeration incomplete", res);
-
-                break;
             }
         }
 
@@ -2010,8 +2007,6 @@ public:
             else
             {
                 throw new RegistryException("Value name enumeration incomplete", res);
-
-                break;
             }
         }
 
@@ -2137,8 +2132,6 @@ public:
             else
             {
                 throw new RegistryException("Value enumeration incomplete", res);
-
-                break;
             }
         }
 

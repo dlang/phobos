@@ -45,10 +45,7 @@ DOC=..\..\html\d\phobos
 .asm.obj:
 	$(CC) -c $*
 
-targets : unittest gcstub.obj
-
-unittest : unittest.exe
-	unittest
+targets : phobos.lib gcstub.obj
 
 test : test.exe
 
@@ -58,39 +55,80 @@ test.obj : test.d
 test.exe : test.obj phobos.lib
 	$(DMD) test.obj -g -L/map
 
-unittest.exe : unittest.d phobos.lib
-	$(DMD) unittest -g
-	dmc unittest.obj -g
-
-OBJS= asserterror.obj deh.obj switch.obj complex.obj gcstats.obj \
-	critical.obj object.obj monitor.obj arraycat.obj invariant.obj \
-	dmain2.obj outofmemory.obj aaA.obj adi.obj aApply.obj file.obj \
-	compiler.obj system.obj moduleinit.obj md5.obj base64.obj \
-	cast.obj syserror.obj path.obj string.obj memset.obj math.obj \
-	outbuffer.obj ctype.obj regexp.obj random.obj windows.obj stat.obj \
-	stream.obj switcherr.obj com.obj array.obj mmfile.obj \
-	qsort.obj math2.obj date.obj dateparse.obj thread.obj obj.obj \
-	iunknown.obj crc32.obj conv.obj arraycast.obj utf.obj uri.obj \
-	Czlib.obj Dzlib.obj zip.obj process.obj registry.obj \
-	socket.obj socketstream.obj loader.obj stdarg.obj format.obj stdio.obj \
-	perf.obj openrj.obj uni.obj winsock.obj oldsyserror.obj \
-	errno.obj boxer.obj cstream.obj charset.obj metastrings.obj \
-	gamma.obj demangle.obj cover.obj bitarray.obj aApplyR.obj \
-	signals.obj cpuid.obj typetuple.obj traits.obj bind.obj \
-	ti_Ag.obj ti_C.obj ti_int.obj ti_char.obj \
-	ti_wchar.obj ti_uint.obj ti_short.obj ti_ushort.obj \
-	ti_byte.obj ti_ubyte.obj ti_long.obj ti_ulong.obj ti_ptr.obj \
-	ti_float.obj ti_double.obj ti_real.obj ti_delegate.obj \
-	ti_creal.obj ti_ireal.obj \
-	ti_cfloat.obj ti_ifloat.obj \
-	ti_cdouble.obj ti_idouble.obj \
-	ti_AC.obj ti_Ashort.obj \
-	ti_Aint.obj ti_Along.obj \
-	ti_Afloat.obj ti_Adouble.obj ti_Areal.obj \
-	ti_Acfloat.obj ti_Acdouble.obj ti_Acreal.obj \
-	ti_dchar.obj ti_void.obj
+OBJS= deh.obj complex.obj gcstats.obj \
+	critical.obj object.obj monitor.obj \
+	math2.obj \
+	crc32.obj \
+	Czlib.obj Dzlib.obj process.obj \
+	oldsyserror.obj \
+	errno.obj metastrings.obj
 
 #	ti_bit.obj ti_Abit.obj
+
+SRCS= std\math.d std\stdio.d std\dateparse.d std\date.d std\uni.d std\string.d \
+        std\base64.d std\md5.d std\regexp.d \
+        std\compiler.d std\cpuid.d std\format.d std\demangle.d \
+        std\path.d std\file.d std\outbuffer.d std\utf.d std\uri.d \
+        std\ctype.d std\random.d std\array.d std\mmfile.d \
+        std\bitarray.d \
+        std\signals.d std\typetuple.d std\traits.d std\bind.d \
+        std\switcherr.d \
+        std\thread.d std\moduleinit.d std\boxer.d \
+        std\asserterror.d std\outofmemory.d std\system.d \
+        std\stream.d std\socket.d std\socketstream.d \
+        std\perf.d std\openrj.d std\conv.d std\cover.d \
+        std\zip.d std\cstream.d std\loader.d \
+        internal\aaA.d internal\adi.d \
+        internal\aApply.d internal\aApplyR.d internal\memset.d \
+        internal\arraycast.d internal\arraycat.d \
+        internal\switch.d internal\qsort.d internal\invariant.d \
+        internal\dmain2.d internal\cast.d internal\obj.d \
+        internal\arrayfloat.d internal\arraydouble.d internal\arrayreal.d \
+	etc\gamma.d \
+        std\c\stdarg.d \
+        std\c\windows\com.d \
+        std\c\windows\stat.d \
+        std\c\windows\windows.d \
+        std\c\windows\winsock.d \
+        std\windows\charset.d \
+        std\windows\iunknown.d \
+        std\windows\registry.d \
+        std\windows\syserror.d \
+        std\typeinfo\ti_ptr.d \
+        std\typeinfo\ti_delegate.d \
+        std\typeinfo\ti_void.d \
+        std\typeinfo\ti_C.d \
+        std\typeinfo\ti_byte.d \
+        std\typeinfo\ti_ubyte.d \
+        std\typeinfo\ti_short.d \
+        std\typeinfo\ti_ushort.d \
+        std\typeinfo\ti_int.d \
+        std\typeinfo\ti_uint.d \
+        std\typeinfo\ti_long.d \
+        std\typeinfo\ti_ulong.d \
+        std\typeinfo\ti_char.d \
+        std\typeinfo\ti_wchar.d \
+        std\typeinfo\ti_dchar.d \
+        std\typeinfo\ti_cdouble.d \
+        std\typeinfo\ti_double.d \
+        std\typeinfo\ti_idouble.d \
+        std\typeinfo\ti_cfloat.d \
+        std\typeinfo\ti_float.d \
+        std\typeinfo\ti_ifloat.d \
+        std\typeinfo\ti_creal.d \
+        std\typeinfo\ti_real.d \
+        std\typeinfo\ti_ireal.d \
+        std\typeinfo\ti_AC.d \
+        std\typeinfo\ti_Ag.d \
+        std\typeinfo\ti_Ashort.d \
+        std\typeinfo\ti_Aint.d \
+        std\typeinfo\ti_Along.d \
+        std\typeinfo\ti_Afloat.d \
+        std\typeinfo\ti_Adouble.d \
+        std\typeinfo\ti_Areal.d \
+        std\typeinfo\ti_Acfloat.d \
+        std\typeinfo\ti_Acdouble.d \
+        std\typeinfo\ti_Acreal.d
 
 DOCS=	$(DOC)\std_path.html $(DOC)\std_math.html $(DOC)\std_outbuffer.html \
 	$(DOC)\std_stream.html $(DOC)\std_string.html $(DOC)\std_base64.html \
@@ -247,10 +285,27 @@ SRC_GC= internal\gc\gc.d \
 	internal\gc\win32.mak \
 	internal\gc\linux.mak
 
-phobos.lib : $(OBJS) minit.obj internal\gc\dmgc.lib etc\c\zlib\zlib.lib \
-	win32.mak
-	lib -c -p32 phobos.lib $(OBJS) minit.obj internal\gc\dmgc.lib \
-		etc\c\zlib\zlib.lib
+phobos.lib : $(OBJS) $(SRCS) minit.obj internal\gc\dmgc.lib \
+	etc\c\zlib\zlib.lib win32.mak
+#	lib -c -p32 phobos.lib $(OBJS) minit.obj internal\gc\dmgc.lib \
+#		etc\c\zlib\zlib.lib
+        $(DMD) -lib -ofphobos.lib $(DFLAGS) $(SRCS) $(OBJS) minit.obj \
+                internal\gc\dmgc.lib etc\c\zlib\zlib.lib
+
+unittest : $(SRCS) phobos.lib
+        $(DMD) $(DFLAGS) -unittest unittest.d $(SRCS) phobos.lib
+        unittest
+
+#unittest : unittest.exe
+#       unittest
+#
+#unittest.exe : unittest.d phobos.lib
+#       $(DMD) unittest -g
+#       dmc unittest.obj -g
+
+cov : $(SRCS) phobos.lib
+        $(DMD) -cov -unittest -ofcov.exe unittest.d $(SRCS) phobos.lib
+        cov
 
 html : $(DOCS)
 
