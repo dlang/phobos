@@ -284,8 +284,9 @@ version (linux)
 
 private import std.c.linux.linux;
 private import std.c.linux.linuxextern;
-extern(C) {
-    pthread_mutexattr_t _monitors_attr;
+extern(C) 
+{
+    extern pthread_mutexattr_t _monitors_attr;
 }
 
 // replace setup/teardown with constructor/destructor for structs
