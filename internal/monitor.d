@@ -47,6 +47,8 @@ void destroy(T:Object)(T obj)
 }
 +/
 
+//import std.stdio;
+
 /** construct a struct using malloc 
 Because struct destructors don't work yet, I use artificial setup/teardown
 */
@@ -54,6 +56,7 @@ T * conStruct(T, A...)(A args)
 {
     static assert(is(T == struct));
     T * p =cast(T*) malloc(T.sizeof);
+    //writeln("> conStruct: ", *p, " ", cast(void *) p);
     *p = T.init;
     static if (is(typeof(T.setup) == function))
         p.setup(args);
@@ -63,6 +66,7 @@ T * conStruct(T, A...)(A args)
 /** Destruct a struct allocated using malloc */
 void deStruct(T)(T * p)
 {
+    //writeln("< deStruct: ", *p, " ", cast(void*) p);
     static if (is(typeof(p.teardown) == function))
         p.teardown();
     free(p);
@@ -100,6 +104,7 @@ final void SetFatLock(Object o, FatLock * other)
 that are used by signals and slots */
 struct FatLock
 {
+    string toString() { return "OsMutex"; }
 private:
     alias void delegate(Object) delegate_t;
     delegate_t [] _delegates;
@@ -166,7 +171,7 @@ public:
         {
             if (dg)
             {
-	        //printf("calling dg = %llx (%p)\n", dg, parent);
+	            //printf("calling dg = %llx (%p)\n", dg, parent);
                 dg(parent);
             }
         }
@@ -190,10 +195,12 @@ extern(C) void _STI_monitor_staticctor()
     __monitor_mutex = conStruct!(OsMutex)();
 }
 
+
 /** Called only once by a single thread during teardown */
 extern(C) void _STD_monitor_staticdtor()
 {
-    deStruct(__monitor_mutex);
+    printf("_STD_monitor_staticdtor\n");
+    //deStruct(__monitor_mutex);
     uninitLocks();
 }
 
@@ -260,6 +267,7 @@ Note: On Windows, it's implemented as $(D CriticalSection); on Linux, using pthr
 // replace setup/teardown with constructor/destructor for structs
 struct OsMutex
 {
+    string toString() { return "OsMutex"; }
 public:
     void setup()
     {
@@ -307,6 +315,7 @@ void uninitLocks()
 // replace setup/teardown with constructor/destructor for structs
 struct OsMutex
 {
+    string toString() { return "OsMutex"; }
 public:
     void setup()
     {
