@@ -81,11 +81,17 @@ version(unittest)
  * ----
  */
 
-T enforce(T)(T value, lazy string msg = "Enforcement error ",
-        string file = __FILE__, int line = __LINE__)
+T enforce(T, string file = __FILE__, int line = __LINE__)
+    (T value, lazy string msg = null)
 {
-    if (!value) throw new Exception(text(file, '(', line, "): ", msg));
+    if (!value) bailOut(file, line, msg);
     return value;
+}
+
+private void bailOut(string file, int line, string msg)
+{
+    throw new Exception(text(file, '(', line, "): ",
+                    msg ? msg : "Enforcement failed"));
 }
 
 /**
@@ -132,10 +138,10 @@ last operation has set $(D errno) to an error code.
  * ----
  */
 
-T errnoEnforce(T)(T value, lazy string msg = "Enforcement error ",
-        string file = __FILE__, int line = __LINE__)
+T errnoEnforce(T, string file = __FILE__, int line = __LINE__)
+    (T value, lazy string msg = null)
 {
-    if (!value) throw new ErrnoException(msg);
+    if (!value) throw new ErrnoException(msg, file, line);
     return value;
 }
 
@@ -398,34 +404,20 @@ unittest
 class ErrnoException : Exception
 {
     uint errno;			// operating system error code
-
-    this(string msg)
+    this(string msg, string file = null, uint line = 0)
     {
-	super(msg);
-    }
-
-    this(uint errno)
-    {
+        errno = getErrno;
 	version (linux)
 	{
-            char[80] buf = void;
+            char[1024] buf = void;
 	    auto s = std.string.strerror_r(errno, buf.ptr, buf.length);
 	}
 	else
 	{
 	    auto s = std.string.strerror(errno);
 	}
-	super(std.string.toString(s).idup);
-    }
-
-    static void opCall(string msg)
-    {
-	throw new ErrnoException(msg);
-    }
-
-    static void opCall()
-    {
-	throw new ErrnoException(getErrno());
+	super((file ? file~'('~to!(string)(line)~"): " : "")
+                ~msg~" ("~std.string.toString(s)~")");
     }
 }
 
