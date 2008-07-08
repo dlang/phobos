@@ -987,7 +987,7 @@ void append(in string name, in void[] buffer)
 
 void rename(in string from, in string to)
 {
-    cenforce(std.c.stdio.rename(toStringz(from), toStringz(to)) == -1, to);
+    cenforce(std.c.stdio.rename(toStringz(from), toStringz(to)) == 0, to);
 }
 
 /***************************************************
@@ -996,7 +996,7 @@ void rename(in string from, in string to)
 
 void remove(in string name)
 {
-    cenforce(std.c.stdio.remove(toStringz(name)) != -1, name);
+    cenforce(std.c.stdio.remove(toStringz(name)) == 0, name);
 }
 
 
