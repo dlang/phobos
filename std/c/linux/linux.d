@@ -440,7 +440,7 @@ extern (C)
 	char *pw_shell;
     }
 
-    const size_t _SIGSET_NWORDS = 1024 / (8 * uint.sizeof);
+    enum _SIGSET_NWORDS = 1024 / (8 * uint.sizeof);
     struct sigset_t
     {
 	uint[_SIGSET_NWORDS] __val;
