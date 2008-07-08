@@ -24,10 +24,10 @@ mixin(defineEnum!("Openmode", "READ", "WRITE", "READWRITE", "APPEND"));
 void foo()
 {
     Openmode m = Openmode.READ;
-    string s = toString(m);
+    string s = enumToString(m);
     assert(s == "READ");
     Openmode m1;
-    assert(fromString(s, m1) && m1 == m);
+    assert(enumFromString(s, m1) && m1 == m);
 }
 
 // Rebindable references to const and invariant objects
@@ -249,7 +249,8 @@ private template enumParserImpl(string name, bool first, T...)
 {
     static if (first)
     {
-        enum string enumParserImpl = "bool enumFromString(string s, ref "~name~" v) {\n"
+        enum string enumParserImpl = "bool enumFromString(string s, ref "
+            ~name~" v) {\n"
             ~enumParserImpl!(name, false, T)
             ~"return false;\n}\n";
     }
@@ -315,14 +316,14 @@ is equivalent to the following code:
 
 ----
 enum Abc { A, B = 5, C }
-string toString(Abc v) { ... }
-Abc fromString(string s) { ... }
+string enumToString(Abc v) { ... }
+Abc enumFromString(string s) { ... }
 ----
 
-The $(D_PARAM toString) function generates the unqualified names of the
-enumerated values, i.e. "A", "B", and "C". The $(D_PARAM fromString)
-function expects one of "A", "B", and "C", and throws an exception in
-any other case.
+The $(D_PARAM enumToString) function generates the unqualified names
+of the enumerated values, i.e. "A", "B", and "C". The $(D_PARAM
+enumFromString) function expects one of "A", "B", and "C", and throws
+an exception in any other case.
 
 A base type can be specified for the enumeration like this:
 
