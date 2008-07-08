@@ -11,7 +11,7 @@ WIKI = Phobos/StdNumeric
 
 Author:
 
-$(WEB erdani.org, Andrei Alexandrescu)
+$(WEB erdani.org, Andrei Alexandrescu), Don Clugston
 */
 
 /*
@@ -39,6 +39,10 @@ $(WEB erdani.org, Andrei Alexandrescu)
 module std.numeric;
 import std.typecons;
 import std.math;
+import std.traits;
+import std.contracts;
+import std.random;
+import std.string;
 version(unittest)
 {
     import std.stdio;
@@ -103,24 +107,26 @@ public:
 
 /**  Find a real root of a real function f(x) via bracketing.
  *
- * Given a function f and a range [a..b] such that f(a) and f(b) have opposite
- * sign, returns the value of x in the range which is closest to a root of f(x).
- * If f(x) has more than one root in the range, one will be chosen arbitrarily.
- * If f(x) returns $(NAN), $(NAN) will be returned; otherwise, this algorithm
- * is guaranteed to succeed. 
+ * Given a function $(D f) and a range $(D [a..b]) such that $(D f(a))
+ * and $(D f(b)) have opposite signs, returns the value of $(D x) in
+ * the range which is closest to a root of $(D f(x)).  If $(D f(x))
+ * has more than one root in the range, one will be chosen
+ * arbitrarily.  If $(D f(x)) returns NaN, NaN will be returned;
+ * otherwise, this algorithm is guaranteed to succeed.
  *  
- * Uses an algorithm based on TOMS748, which uses inverse cubic interpolation 
- * whenever possible, otherwise reverting to parabolic or secant
- * interpolation. Compared to TOMS748, this implementation improves worst-case
- * performance by a factor of more than 100, and typical performance by a factor
- * of 2. For 80-bit reals, most problems require 8 - 15 calls to f(x) to achieve
- * full machine precision. The worst-case performance (pathological cases) is 
- * approximately twice the number of bits. 
+ * Uses an algorithm based on TOMS748, which uses inverse cubic
+ * interpolation whenever possible, otherwise reverting to parabolic
+ * or secant interpolation. Compared to TOMS748, this implementation
+ * improves worst-case performance by a factor of more than 100, and
+ * typical performance by a factor of 2. For 80-bit reals, most
+ * problems require 8 to 15 calls to $(D f(x)) to achieve full machine
+ * precision. The worst-case performance (pathological cases) is
+ * approximately twice the number of bits.
  *
- * References: 
- * "On Enclosing Simple Roots of Nonlinear Equations", G. Alefeld, F.A. Potra, 
- *   Yixun Shi, Mathematics of Computation 61, pp733-744 (1993).
- *   Fortran code available from www.netlib.org as algorithm TOMS478.
+ * References: "On Enclosing Simple Roots of Nonlinear Equations",
+ * G. Alefeld, F.A. Potra, Yixun Shi, Mathematics of Computation 61,
+ * pp733-744 (1993).  Fortran code available from $(WEB
+ * www.netlib.org,www.netlib.org) as algorithm TOMS478.
  *
  */
 T findRoot(T, R)(R delegate(T) f, T a, T b)
@@ -130,23 +136,38 @@ T findRoot(T, R)(R delegate(T) f, T a, T b)
     return fabs(r._2) !> fabs(r._3) ? r._0 : r._1;
 }
 
-/** Find root of a real function f(x) by bracketing, allowing the termination
- * condition to be specified.
+/** Find root of a real function f(x) by bracketing, allowing the
+ * termination condition to be specified.
  *
  * Params:
- * f           Function to be analyzed
- * ax, bx      Initial range of f known to contain the root.  
- * fax, fbx    Values of f(ax) and f(bx). They are commonly known in advance.
- * tolerance   Defines an early termination condition. Receives the current
- *             upper  and lower bounds on the root. The delegate must return
- *             true when these bounds are acceptable. If this function always
- *             returns false, full machine precision will be achieved.
+ * 
+ * f = Function to be analyzed
+ *
+ * ax = Left bound of initial range of $(D f) known to contain the
+ * root.
+ *
+ * bx = Right bound of initial range of $(D f) known to contain the
+ * root.
+ *
+ * fax = Value of $(D f(ax)).
+ *
+ * fax = Value of $(D f(ax)) and $(D f(bx)). ($(D f(ax)) and $(D
+ * f(bx)) are commonly known in advance.)
+ *
+ * 
+ * tolerance = Defines an early termination condition. Receives the
+ *             current upper and lower bounds on the root. The
+ *             delegate must return $(D true) when these bounds are
+ *             acceptable. If this function always returns $(D false),
+ *             full machine precision will be achieved.
  *
  * Returns:
- * A tuple consisting of two ranges. The first two elements are the range (in x)
- * of the root, while the second pair of elements are the corresponding function
- * values at those points. If an exact root was found, both of the first two
- * elements will contain the root, and the second pair of elements will be 0.
+ *
+ * A tuple consisting of two ranges. The first two elements are the
+ * range (in $(D x)) of the root, while the second pair of elements
+ * are the corresponding function values at those points. If an exact
+ * root was found, both of the first two elements will contain the
+ * root, and the second pair of elements will be 0.
  */
 Tuple!(T, T, R, R) findRoot(T,R)(R delegate(T) f, T ax, T bx, R fax, R fbx,
     bool delegate(T lo, T hi) tolerance)
@@ -568,3 +589,48 @@ unittest{
 */        
 }
 
+template tabulateFixed(alias fun, uint n,
+        real maxError, real left, real right)
+{
+    ReturnType!(fun) tabulateFixed(ParameterTypeTuple!(fun) arg)
+    {
+        alias ParameterTypeTuple!(fun)[0] num;
+        static num[n] table;
+        alias arg[0] x;
+        enforce(left <= x && x < right);
+        invariant i = cast(uint) (table.length
+                * ((x - left) / (right - left)));
+        assert(i < n);
+        if (isnan(table[i])) {
+            // initialize it
+            auto x1 = left + i * (right - left) / n;
+            auto x2 = left + (i + 1) * (right - left) / n;
+            invariant y1 = fun(x1), y2 = fun(x2);
+            invariant y = 2 * y1 * y2 / (y1 + y2);
+            num wyda(num xx) { return fun(xx) - y; }
+            auto bestX = findRoot(&wyda, x1, x2);
+            table[i] = fun(bestX);
+            invariant leftError = abs((table[i] - y1) / y1);
+            enforce(leftError <= maxError, text(leftError, " > ", maxError));
+            invariant rightError = abs((table[i] - y2) / y2);
+            enforce(rightError <= maxError, text(rightError, " > ", maxError));
+        }
+        return table[i];
+    }
+}
+
+unittest
+{
+    enum epsilon = 0.01;
+    alias tabulateFixed!(tanh, 700, epsilon, 0.2, 3) fasttanh;
+    uint testSize = 100000;
+    auto rnd = Random(unpredictableSeed);
+    foreach (i; 0 .. testSize) {
+        invariant x = uniform(rnd, 0.2F, 3.0F);
+        invariant float y = fasttanh(x), w = tanh(x);
+        invariant e = abs(y - w) / w;
+        //writefln("%.20f", e);
+        enforce(e <= epsilon, text("x = ", x, ", fasttanh(x) = ", y,
+                        ", tanh(x) = ", w, ", relerr = ", e));
+    }
+}
