@@ -30,10 +30,11 @@ ifdef WIN32
       OBJEXT = obj
       LIBEXT = lib
       EXEEXT = .exe
-      CC = wine dmc
-      DMD = wine dmd
-      CFLAGS = -mn -6 -r
+      CC = gcc
+      DMD = dmd
+      CFLAGS =
       DFLAGS =
+      LDFLAGS = 
 else
       OBJDIR = obj/linux
       OBJEXT = o
@@ -41,8 +42,9 @@ else
       EXEEXT = 
       CC = gcc
       DMD = dmd
-      CFLAGS = -m32
+      CFLAGS := -m32 $(CFLAGS)
       DFLAGS =
+      LDFLAGS := $(LDFLAGS)
 endif
 
 ifeq (,$(MAKECMDGOALS))
@@ -125,7 +127,7 @@ ifdef WIN32
 	mv unittest.exe $@
 	wine $@
 else
-	$(CC) -o$@ $^ -lpthread -lm -g -ldl
+	$(CC) $(CFLAGS) $(LDFLAGS) -o$@ $^ -lpthread -lm -g -ldl
 endif
 ifeq (release,$(MAKECMDGOALS))
 	ln -sf `pwd`/$(OBJDIR)/libphobos2.$(LIBEXT) ../../lib
@@ -160,7 +162,7 @@ STD_MODULES = algorithm array asserterror base64 bigint bind bitarray	\
         socketstream stdint stdio stream string switcherr syserror	\
         synchro system thread traits typecons typetuple uni uri utf     \
         variant xml zip zlib
-STD_MODULES_NOTBUILT = stdarg
+STD_MODULES_NOTBUILT = stdarg gc
 
 STD_C_MODULES = stdarg stdio
 STD_C_MODULES_NOTBUILT = fenv math process stddef stdlib string time locale \
@@ -242,7 +244,7 @@ $(LIB) : $(SRC2LIB) $(OBJS) $(MAKEFILE_LIST)
 ###########################################################
 # Dox
 
-STDDOC = std.ddoc
+STDDOC = ../docsrc/std.ddoc
 
 $(DOC_OUTPUT_DIR)/%.html : %.d $(STDDOC)
 	$(DMD) -c -o- $(DFLAGS) -Df$@ $(STDDOC) $<
