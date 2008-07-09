@@ -197,10 +197,10 @@ extern(C) void _STI_monitor_staticctor()
 
 
 /** Called only once by a single thread during teardown */
-extern(C) void _STD_monitor_staticdtor()
+extern(C) void __monitor_staticdtor()
 {
     printf("_STD_monitor_staticdtor\n");
-    //deStruct(__monitor_mutex);
+    deStruct(__monitor_mutex);
     uninitLocks();
 }
 
@@ -211,7 +211,7 @@ extern(C) void _d_notify_release(Object);
 extern(C) 
 void _d_monitorenter(Object obj)
 {
-    //printf("_d_monitorenter(%p), %p\n", obj, obj.__monitor);
+    //printf("_d_monitorenter(%p), %p\n", obj, GetFatLock(obj));
     // Warning: data race
     if (GetFatLock(obj) is null)
         escalateLock(obj);
@@ -223,7 +223,7 @@ void _d_monitorenter(Object obj)
 extern(C) 
 void _d_monitorexit(Object obj)
 {
-    //printf("monitor exit (%p), %p\n", obj, obj.__monitor);
+    //printf("monitor exit (%p), %p\n", obj, GetFatLock(obj));
     assert(GetFatLock(obj));
     GetFatLock(obj).unlock;
 }
@@ -235,7 +235,7 @@ void _d_monitorexit(Object obj)
 extern(C) 
 void _d_monitorrelease(Object obj)
 {
-    //printf("monitor release (%p), %p\n", obj, obj.__monitor);
+    //printf("monitor release (%p), %p\n", obj, GetFatLock(obj));
     if (GetFatLock(obj))
     {
 	_d_notify_release(obj);
