@@ -199,7 +199,7 @@ extern(C) void _STI_monitor_staticctor()
 /** Called only once by a single thread during teardown */
 extern(C) void __monitor_staticdtor()
 {
-    printf("_STD_monitor_staticdtor\n");
+    //printf("__monitor_staticdtor\n");
     deStruct(__monitor_mutex);
     uninitLocks();
 }
