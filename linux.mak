@@ -33,7 +33,7 @@ DMD=dmd
 .asm.o:
 	$(CC) -c $*.asm
 
-targets : unittest
+targets : $(LIB)
 
 test.o : test.d
 	$(DMD) -c test -g
@@ -41,25 +41,19 @@ test.o : test.d
 test : test.o $(LIB)
 	$(CC) -o $@ test.o $(LIB) -lpthread -lm -g
 
-unittest : unittest.o $(LIB)
-	$(CC) -o $@ unittest.o $(LIB) -lpthread -lm -g
-
-unittest.o : unittest.d
-	$(DMD) -c unittest
-
-OBJS = asserterror.o deh2.o switch.o complex.o gcstats.o \
-	critical.o object.o monitor.o arraycat.o invariant.o \
-	dmain2.o outofmemory.o aaA.o adi.o aApply.o file.o \
+OBJS = asserterror.o deh2.o complex.o gcstats.o \
+	critical.o object.o monitor.o \
+	outofmemory.o file.o \
 	compiler.o system.o moduleinit.o md5.o base64.o \
-	cast.o path.o string.o memset.o math.o mmfile.o \
+	path.o string.o math.o mmfile.o \
 	outbuffer.o ctype.o regexp.o random.o linux.o linuxsocket.o \
 	stream.o cstream.o switcherr.o array.o gc.o \
-	qsort.o thread.o obj.o utf.o uri.o \
-	Dcrc32.o conv.o arraycast.o errno.o alloca.o cmath2.o \
+	thread.o utf.o uri.o \
+	Dcrc32.o conv.o errno.o alloca.o cmath2.o \
 	process.o syserror.o metastrings.o \
 	socket.o socketstream.o stdarg.o stdio.o format.o \
 	perf.o openrj.o uni.o trace.o boxer.o \
-	demangle.o cover.o bitarray.o bind.o aApplyR.o \
+	demangle.o cover.o bitarray.o bind.o \
 	signals.o cpuid.o traits.o typetuple.o loader.o \
 	ti_wchar.o ti_uint.o ti_short.o ti_ushort.o \
 	ti_byte.o ti_ubyte.o ti_long.o ti_ulong.o ti_ptr.o \
@@ -73,6 +67,15 @@ OBJS = asserterror.o deh2.o switch.o complex.o gcstats.o \
 	ti_Acfloat.o ti_Acdouble.o ti_Acreal.o \
 	ti_void.o \
 	date.o dateparse.o llmath.o math2.o Czlib.o Dzlib.o zip.o
+
+SRCS= \
+        internal/aaA.d internal/adi.d \
+        internal/aApply.d internal/aApplyR.d internal/memset.d \
+        internal/arraycast.d internal/arraycat.d \
+        internal/switch.d internal/qsort.d internal/invariant.d \
+        internal/dmain2.d internal/cast.d internal/obj.d \
+        internal/arrayfloat.d internal/arraydouble.d internal/arrayreal.d \
+
 
 ZLIB_OBJS = etc/c/zlib/adler32.o etc/c/zlib/compress.o \
 	etc/c/zlib/crc32.o etc/c/zlib/gzio.o \
@@ -197,10 +200,19 @@ ALLSRCS = $(SRC) $(SRC_STD) $(SRC_STD_C) $(SRC_TI) $(SRC_INT) $(SRC_STD_WIN) \
 	$(SRC_ZLIB) $(SRC_GC)
 
 
-#$(LIB) : $(OBJS) internal/gc/dmgc.a linux.mak
 $(LIB) : $(OBJS) $(GC_OBJS) $(ZLIB_OBJS) linux.mak
-	rm -f $(LIB)
-	ar -r $@ $(OBJS) $(ZLIB_OBJS) $(GC_OBJS)
+#	rm -f $(LIB)
+#	ar -r $@ $(OBJS) $(ZLIB_OBJS) $(GC_OBJS)
+	$(DMD) -lib -of$(LIB) $(DFLAGS) $(SRCS) $(OBJS) $(ZLIB_OBJS) $(GC_OBJS)
+
+unittest :
+	$(DMD) $(DFLAGS) -unittest unittest.d $(SRCS) $(LIB)
+	./unittest
+
+cov : $(SRCS) $(LIB)
+	$(DMD) -cov -unittest -ofcov unittest.d $(SRCS) $(LIB)
+	./cov
+
 
 ###########################################################
 
