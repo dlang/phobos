@@ -2328,6 +2328,8 @@ class EndianStream : FilterStream {
     }
   }
 
+  override void read(out byte x) { readExact(&x, x.sizeof); }
+  override void read(out ubyte x) { readExact(&x, x.sizeof); }
   override void read(out short x) { readExact(&x, x.sizeof); fixBO(&x,x.sizeof); }
   override void read(out ushort x) { readExact(&x, x.sizeof); fixBO(&x,x.sizeof); }
   override void read(out int x) { readExact(&x, x.sizeof); fixBO(&x,x.sizeof); }
@@ -2343,6 +2345,7 @@ class EndianStream : FilterStream {
   override void read(out cfloat x) { readExact(&x, x.sizeof); fixBlockBO(&x,float.sizeof,2); }
   override void read(out cdouble x) { readExact(&x, x.sizeof); fixBlockBO(&x,double.sizeof,2); }
   override void read(out creal x) { readExact(&x, x.sizeof); fixBlockBO(&x,real.sizeof,2); }
+  override void read(out char x) { readExact(&x, x.sizeof); }
   override void read(out wchar x) { readExact(&x, x.sizeof); fixBO(&x,x.sizeof); }
   override void read(out dchar x) { readExact(&x, x.sizeof); fixBO(&x,x.sizeof); }
 
@@ -2380,6 +2383,8 @@ class EndianStream : FilterStream {
     writeBlock(bom.ptr, bom.length);
   }
 
+  override void write(byte x) { writeExact(&x, x.sizeof); }
+  override void write(ubyte x) { writeExact(&x, x.sizeof); }
   override void write(short x) { fixBO(&x,x.sizeof); writeExact(&x, x.sizeof); }
   override void write(ushort x) { fixBO(&x,x.sizeof); writeExact(&x, x.sizeof); }
   override void write(int x) { fixBO(&x,x.sizeof); writeExact(&x, x.sizeof); }
@@ -2395,6 +2400,7 @@ class EndianStream : FilterStream {
   override void write(cfloat x) { fixBlockBO(&x,float.sizeof,2); writeExact(&x, x.sizeof); }
   override void write(cdouble x) { fixBlockBO(&x,double.sizeof,2); writeExact(&x, x.sizeof); }
   override void write(creal x) { fixBlockBO(&x,real.sizeof,2); writeExact(&x, x.sizeof);  }
+  override void write(char x) { writeExact(&x, x.sizeof); }
   override void write(wchar x) { fixBO(&x,x.sizeof); writeExact(&x, x.sizeof); }
   override void write(dchar x) { fixBO(&x,x.sizeof); writeExact(&x, x.sizeof); }
 

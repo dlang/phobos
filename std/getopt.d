@@ -568,7 +568,7 @@ private void setConfig(ref configuration cfg, config option)
     case config.noPassThrough: cfg.passThrough = false; break;
     case config.stopOnFirstNonOption:
         cfg.stopOnFirstNonOption = true; break;
-    default: assert(false); break;
+    default: assert(false);
     }
 }
 

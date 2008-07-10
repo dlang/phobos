@@ -324,7 +324,6 @@ string demangle(string name)
 		p = name[i .. length];
 		goto L1;
 	}
-	assert(0);
     }
 
     string parseTemplateInstanceName()

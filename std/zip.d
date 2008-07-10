@@ -455,7 +455,6 @@ class ZipArchive
 	    default:
 		throw new ZipException("unsupported compression method");
 	}
-	assert(0);
     }
 
     /* ============ Utility =================== */
