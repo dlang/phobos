@@ -137,8 +137,8 @@ NAVIGATION_PHOBOS=
     <h2><a href="phobos.html#std" title="D standard modules">std</a></h2>
     $(UL
 	$(LI <a href="std_algorithm.html" title="General-purpose algorithms">std.algorithm</a>)
+	$(LI <a href="std_array.html" title="Array functions">std.array</a>)
 	$(LI <a href="std_base64.html" title="Encode/decode base64 format">std.base64</a>)
-	$(LI <a href="std_bigint.html" title="Arbitrary precision integers">std.bigint</a>)
 	$(LI <a href="std_bind.html" title="Function argument binding">std.bind</a>)
 	$(LI <a href="std_bitarray.html" title="Arrays of bits">std.bitarray</a>)
 	$(LI <a href="std_bitmanip.html" title="Bit-level manipulation">std.bitmanip</a>)
@@ -152,7 +152,7 @@ NAVIGATION_PHOBOS=
 	$(LI <a href="std_ctype.html" title="Simple character classification">std.ctype</a>)
 	$(LI <a href="std_date.html" title="Date and time functions">std.date</a>)
 	$(LI <a href="std_demangle.html" title="Demangle D names">std.demangle</a>)
-	$(LI <a href="std_encoding.html" title="transcoding between various character encodings">std.encoding</a>)
+	$(LI <a href="std_encoding.html" title="Character and string encoding">std.encoding</a>)
 	$(LI <a href="std_file.html" title="Basic file operations">std.file</a>)
 	$(LI <a href="std_format.html" title="Formatted conversions of values to strings">std.format</a>)
 	$(LI <a href="std_functional.html" title="functional">std.functional</a>)
@@ -169,7 +169,6 @@ NAVIGATION_PHOBOS=
 	$(LI <a href="std_outbuffer.html" title="Assemble data into an array of bytes">std.outbuffer</a>)
 	$(LI <a href="std_outofmemory.html" title="Out of memory exception">std.outofmemory</a>)
 	$(LI <a href="std_path.html" title="Manipulate file names, path names, etc.">std.path</a>)
-	$(LI <a href="std_perf.html" title="Performance counters">std.perf</a>)
 	$(LI <a href="std_process.html" title="Create/destroy threads">std.process</a>)
 	$(LI <a href="std_random.html" title="Random number generation">std.random</a>)
 	$(LI <a href="std_regexp.html" title="regular expressions">std.regexp</a>)
@@ -230,12 +229,12 @@ WEB = $(LINK2 http://$1,$2)
 D = <font face=Courier><b>$0</b></font>
 D = <span class="d_psymbol"><i>$0</i></span>
 BIGOH = <i><b>&Omicron;</i>(</i></b>$(D $0)<b></i>)</i></b>
-BUGZILLA = $(LINK2 http://d.puremagic.com/issues/show_bug.cgi?id=$0, Bugzilla $0)
 GLOSSARY = $(LINK2 ../2.0/glossary.html#$0, $0)
 
 DDOC_PSYMBOL = <a name="$0"></a>$(U $0)
 DDOC_DECL  = $(DT <div class="d_decl">$0</div>)
 XREF = <a href=std_$1.html#$2>std.$1.$2</a>
+BUGZILLA = $(LINK2 http://d.puremagic.com/issues/show_bug.cgi?id=$0, Bugzilla $0)
 
 
 COPYRIGHT= Copyright &copy; 1999-$(YEAR) by Digital Mars, All Rights Reserved

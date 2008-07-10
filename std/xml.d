@@ -2546,7 +2546,8 @@ void check(string s)
 
 unittest
 {
-    return; // WHY ARE WE NOT RUNNING THIS UNIT TEST?
+  version (none) // WHY ARE WE NOT RUNNING THIS UNIT TEST?
+  {
     try
     {
         check(q"[<?xml version="1.0"?>
@@ -2590,6 +2591,7 @@ unittest
             " from start tag name \"genre\"");
         assert(n != -1);
     }
+  }
 }
 
 /** The base class for exceptions thrown by this module */

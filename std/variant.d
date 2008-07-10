@@ -304,12 +304,13 @@ private:
             static if (is(typeof(to!(string)(*me))))
             {
                 *target = to!(string)(*me);
+                break;
             }
             else
             {
                 throw new VariantException(typeid(A), typeid(string));
             }
-            break;
+
         case OpID.index:
             auto me = cast(A*) pStore;
             static if (isArray!(A))
@@ -319,17 +320,19 @@ private:
                 size_t index = result.convertsTo!(int)
                     ? result.get!(int) : result.get!(size_t);
                 *result = (*me)[index];
+		break;
             }
             else static if (isAssociativeArray!(A))
             {
                 auto result = cast(VariantN*) parm;
                 *result = (*me)[result.get!(typeof(A.keys[0]))];
+		break;
             }
             else
             {
                 throw new VariantException(typeid(A), typeid(void[]));
             }
-            break;
+
         case OpID.indexAssign:
             auto me = cast(A*) pStore;
             static if (isArray!(A) && is(typeof((*me)[0] = (*me)[0])))
@@ -339,18 +342,20 @@ private:
                 size_t index = args[1].convertsTo!(int)
                     ? args[1].get!(int) : args[1].get!(size_t);
                 (*me)[index] = args[0].get!(typeof((*me)[0]));
+		break;
             }
             else static if (isAssociativeArray!(A))
             {
                 auto args = cast(VariantN*) parm;
                 (*me)[args[1].get!(typeof(A.keys[0]))]
                     = args[0].get!(typeof(A.values[0]));
+		break;
             }
             else
             {
                 throw new VariantException(typeid(A), typeid(void[]));
             }
-            break;
+
         case OpID.catAssign:
             auto me = cast(A*) pStore;
             static if (is(typeof((*me)[0])) && !is(typeof(me.keys)))
@@ -368,12 +373,13 @@ private:
                     // append a whole array to the array
                     (*me) ~= arg[0].get!(A);
                 }
+		break;
             }
             else
             {
                 throw new VariantException(typeid(A), typeid(void[]));
             }
-            break;
+
         case OpID.length:
             auto me = cast(A*) pStore;
             static if (is(typeof(me.length)))
@@ -384,7 +390,7 @@ private:
             {
                 throw new VariantException(typeid(A), typeid(void[]));
             }
-            break;
+
         default: assert(false);
         }
         return 0;
