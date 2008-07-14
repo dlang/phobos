@@ -2355,62 +2355,55 @@ uint multibyteAddSub(char op)(uint[] dest, uint [] src1, uint [] src2, uint carr
     // an ADC, SBB operation after an operation such as INC or DEC which
     // modifies some, but not all, flags. We avoid this by storing carry into
     // a resister (AL), and restoring it after the branch.
-    // * Count UP to zero (from -len) to minimize loop overhead.
-
-    enum { UNROLLFACTOR = 8 };
+    
     enum { LASTPARAM = 4*4 } // 3* pushes + return address.
     asm {
         naked;
         push EDI;
         push EBX;
         push ESI;
-        align 16; // This aligns L1 on a 16-byte boundary.
         mov ECX, [ESP + LASTPARAM + 4*4]; // dest.length;
         mov EDX, [ESP + LASTPARAM + 3*4]; // src1.ptr
-        mov EDI, [ESP + LASTPARAM + 5*4]; // dest.ptr
-             // Carry is automatically in EAX
         mov ESI, [ESP + LASTPARAM + 1*4]; // src2.ptr
+        mov EDI, [ESP + LASTPARAM + 5*4]; // dest.ptr
+             // Carry is in EAX
+        // Count UP to zero (from -len) to minimize loop overhead.
         lea EDX, [EDX + 4*ECX]; // EDX = end of src1.
-        lea EDI, [EDI + 4*ECX]; // EDI = end of dest.
         lea ESI, [ESI + 4*ECX]; // EBP = end of src2.        
+        lea EDI, [EDI + 4*ECX]; // EDI = end of dest.
+
         neg ECX;
-        and ECX, 0xFFFF_FFF8;
-        jz L2; // length <8
-    L1:
-        shr AL, 1; // get carry from the lsb of AL
-    }
-    mixin(" asm {"
-    ~ indexedLoopUnroll( UNROLLFACTOR, "
-        mov EAX, [@*4+EDX+ECX*4];
-        "~ (op=='+'?"adc" : "sbb") ~ " EAX, [@*4+ESI+ECX*4];
-        mov [@*4+EDI+ECX*4], EAX;
-        ") ~ "}");
-    asm {
-        setc AL; // Save carry into the lsb of AL
-        add ECX, UNROLLFACTOR;        
-        jnz L1;
-L2:
-        mov ECX, [ESP + LASTPARAM + 2*4]; // dest.length;
-        and ECX, 7;
-        jz done; // divisible by 8 -- no residue
-        neg ECX;
-L3: // Do the residual 1..7 ints.
+        add ECX, 8;
+        jb L2;  // if length < 8 , bypass the unrolled loop.
+L_unrolled:
         shr AL, 1; // get carry from EAX
-        mov EAX, [EDX+ECX*4];
     }
-    static if (op=='+')
-    {
-        asm { adc EAX, [ESI+ECX*4]; }
+        mixin(" asm {"
+        ~ indexedLoopUnroll( 8, 
+        "mov EAX, [@*4-8*4+EDX+ECX*4];"
+        ~ ( op == '+' ? "adc" : "sbb" ) ~ " EAX, [@*4-8*4+ESI+ECX*4];"
+        "mov [@*4-8*4+EDI+ECX*4], EAX;")
+        ~ "}");
+asm {        
+        setc AL; // save carry
+        add ECX, 8;
+        ja L_unrolled;
+L2:     // Do the residual 1..7 ints.
+   
+        sub ECX, 8; 
+        jz done;
+L_residual: 
+        shr AL, 1; // get carry from EAX
     }
-    else 
-    {
-        asm { sbb EAX, [ESI+ECX*4]; }
-    }
-    asm {
-        mov [EDI+ECX*4], EAX;       
+        mixin(" asm {"
+        ~ indexedLoopUnroll( 1, 
+        "mov EAX, [@*4+EDX+ECX*4];"
+        ~ ( op == '+' ? "adc" : "sbb" ) ~ " EAX, [@*4+ESI+ECX*4];"
+        "mov [@*4+EDI+ECX*4], EAX;") ~ "}");
+asm {        
         setc AL; // save carry
         add ECX, 1;
-        jnz L3;                
+        jnz L_residual;
 done:
         and EAX, 1; // make it O or 1.
         pop ESI;
@@ -2422,9 +2415,9 @@ done:
 
 unittest
 {
-    uint [] a = new uint[20];
-    uint [] b = new uint[20];
-    uint [] c = new uint[20];
+    uint [] a = new uint[40];
+    uint [] b = new uint[40];
+    uint [] c = new uint[40];
     for (int i=0; i<a.length; ++i)
     {
         if (i&1) a[i]=0x8000_0000 + i;
@@ -2437,6 +2430,29 @@ unittest
     assert(c[0]==0x8000_0003);
     assert(c[1]==4);
     assert(c[19]==0x3333_3333); // check for overrun
+    for (int i=0; i<a.length; ++i)
+    {
+        a[i]=b[i]=c[i]=0;
+    }
+    a[8]=0x048D159E;
+    b[8]=0x048D159E;
+    a[10]=0x1D950C84;
+    b[10]=0x1D950C84;
+    a[5] =0x44444444;
+    carry = multibyteAddSub!('-')(a[0..12], a[0..12], b[0..12], 0);
+    assert(a[11]==0);
+    for (int i=0; i<10; ++i) if (i!=5) assert(a[i]==0); 
+    
+    for (int q=3; q<36;++q) {
+        for (int i=0; i<a.length; ++i)
+        {
+            a[i]=b[i]=c[i]=0;
+        }    
+        a[q-2]=0x040000;
+        b[q-2]=0x040000;
+       carry = multibyteAddSub!('-')(a[0..q], a[0..q], b[0..q], 0);
+       assert(a[q-2]==0);
+    }
 }
 
 /** dest[] += carry, or dest[] -= carry.
