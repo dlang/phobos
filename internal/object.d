@@ -139,9 +139,9 @@ class Object
      */
     final void notifyRegister(void delegate(Object) dg)
     {
-        //printf("notifyRegister(dg = %llx, o = %p)\n", dg, this);
-        if (!GetFatLock(this))
-            escalateLock(this); // Fat lock stores delegates
+        // printf("notifyRegister(dg = %llx, o = %p)\n", dg, this);
+        if (!HasFatLock(this))
+            inflateLock(this); // Fat lock stores delegates
         synchronized (this)
         {
             FatLock * fatLock = GetFatLock(this);

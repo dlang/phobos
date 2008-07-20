@@ -72,15 +72,22 @@ void deStruct(T)(T * p)
     free(p);
 }
 
-// Global mutex used when lazily initializing Object._fatLock
+// Global mutex used when lazily initializing Object's fat lock
 OsMutex * __monitor_mutex;
 
+union MonitorWord
+{
+    enum uint SHAPE_BIT = 0x1; // set when thin lock taken
+    bool HasFatLock() const { return thinLock != 0 && (thinLock & SHAPE_BIT) == 0; }
+    FatLock * fatLock;
+    uint      thinLock;
+}
 /** The layout of every object header */
 struct ObjectLayout
 {
 private:
     void * _vtable;
-    FatLock * _fatLock;
+    MonitorWord _mon;
 }
 
 /** For eny object return the layout of its header */
@@ -89,15 +96,21 @@ ObjectLayout * ToLayout(Object o)
     return cast(ObjectLayout *) cast(void *) o;
 }
 
-/** Access to the object's _fatLock */
+/** Access to the object's _mon.fatLock */
+
+bool HasFatLock(Object o)
+{
+    return ToLayout(o)._mon.HasFatLock;
+}
+
 FatLock * GetFatLock(Object o) 
 {
-    return ToLayout(o)._fatLock;
+    return ToLayout(o)._mon.fatLock;
 }
 
 final void SetFatLock(Object o, FatLock * other)
 {
-    ToLayout(o)._fatLock = other;
+    ToLayout(o)._mon.fatLock = other;
 }
 
 /** Contains the object's monitor and the array of delegates
@@ -180,10 +193,10 @@ public:
     }
 }
 
-void escalateLock(Object obj)
+void inflateLock(Object obj)
 {
     __monitor_mutex.lock;
-    if (GetFatLock(obj) is null)
+    if (!HasFatLock(obj))
          SetFatLock(obj, conStruct!(FatLock));
     __monitor_mutex.unlock;
 }
@@ -213,8 +226,8 @@ void _d_monitorenter(Object obj)
 {
     //printf("_d_monitorenter(%p), %p\n", obj, GetFatLock(obj));
     // Warning: data race
-    if (GetFatLock(obj) is null)
-        escalateLock(obj);
+    if (!HasFatLock(obj))
+        inflateLock(obj);
 
     GetFatLock(obj).lock;
 }
@@ -224,7 +237,6 @@ extern(C)
 void _d_monitorexit(Object obj)
 {
     //printf("monitor exit (%p), %p\n", obj, GetFatLock(obj));
-    assert(GetFatLock(obj));
     GetFatLock(obj).unlock;
 }
 
@@ -236,7 +248,7 @@ extern(C)
 void _d_monitorrelease(Object obj)
 {
     //printf("monitor release (%p), %p\n", obj, GetFatLock(obj));
-    if (GetFatLock(obj))
+    if (HasFatLock(obj))
     {
 	_d_notify_release(obj);
 
