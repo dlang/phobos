@@ -275,7 +275,7 @@ SRC_INT=	\
 	internal\cmath2.d internal\obj.d internal\mars.h internal\aApply.d \
 	internal\aApplyR.d internal\object.d internal\trace.d \
 	internal\qsort2.d internal\arrayassign.d \
-	internal\arrayfloat.d internal\arraydouble.d
+	internal\arrayfloat.d internal\arraydouble.d internal\arrayreal.d
 
 
 SRC_STD_WIN= std\windows\registry.d \

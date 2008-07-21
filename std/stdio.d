@@ -598,7 +598,8 @@ size_t readln(FILE* fp, inout char[] buf, dchar terminator = '\n')
 		    i++;
 		    if (i < sz)
 			continue;
-		    buf = p[0 .. i] ~ readln(fp);
+		    buf = p[0 .. i];
+		    buf ~= readln(fp);
 		    return buf.length;
 		}
 		else

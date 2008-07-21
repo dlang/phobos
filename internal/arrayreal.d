@@ -23,7 +23,7 @@ extern (C):
  *	a[] = b[] + c[]
  */
 
-T[] _adAssAddReal(T[] a, T[] c, T[] b)
+T[] _arraySliceSliceAddSliceAssign_r(T[] a, T[] c, T[] b)
 in
 {
 	assert(a.length == b.length && b.length == c.length);
@@ -33,7 +33,7 @@ in
 }
 body
 {
-    foreach (i; 0 .. a.length)
+    for (int i = 0; i < a.length; i++)
 	a[i] = b[i] + c[i];
     return a;
 }
@@ -75,7 +75,7 @@ unittest
     T[dim] b;
     T[dim] c;
 
-    foreach (i; 0 .. dim)
+    for (int i = 0; i < dim; i++)
     {	a[i] = i;
 	b[i] = i + 7;
 	c[i] = i * 2;
@@ -83,7 +83,7 @@ unittest
 
     c[] = a[] + b[];
 
-    foreach (i; 0 .. dim)
+    for (int i = 0; i < dim; i++)
     {
 	assert(c[i] == a[i] + b[i]);
     }
@@ -97,7 +97,7 @@ unittest
  *	a[] = b[] - c[]
  */
 
-T[] _adAssMinReal(T[] a, T[] c, T[] b)
+T[] _arraySliceSliceMinSliceAssign_r(T[] a, T[] c, T[] b)
 in
 {
 	assert(a.length == b.length && b.length == c.length);
@@ -107,7 +107,7 @@ in
 }
 body
 {
-    foreach (i; 0 .. a.length)
+    for (int i = 0; i < a.length; i++)
 	a[i] = b[i] - c[i];
     return a;
 }
@@ -124,7 +124,7 @@ unittest
 
     c[] = a[] - b[];
 
-    foreach (i; 0 .. c.length)
+    for (int i = 0; i < c.length; i++)
     {
 	assert(c[i] == a[i] - b[i]);
     }
@@ -136,7 +136,7 @@ unittest
 
     c[] = a[] - b[];
 
-    foreach (i; 0 .. c.length)
+    for (int i = 0; i < c.length; i++)
     {
 	assert(c[i] == a[i] - b[i]);
     }
@@ -147,7 +147,7 @@ unittest
     T[dim] b;
     T[dim] c;
 
-    foreach (i; 0 .. dim)
+    for (int i = 0; i < dim; i++)
     {	a[i] = i;
 	b[i] = i + 7;
 	c[i] = i * 2;
@@ -155,7 +155,7 @@ unittest
 
     c[] = a[] - b[];
 
-    foreach (i; 0 .. dim)
+    for (int i = 0; i < dim; i++)
     {
 	assert(c[i] == a[i] - b[i]);
     }

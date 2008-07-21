@@ -140,7 +140,7 @@ all_std_modules_generated.d : $(MAKEFILE_LIST)
 
 INTERNAL_MODULES = aApply aApplyR aaA adi alloca arraycast arraycat	\
 	cast cmath2 deh2 dmain2 invariant llmath memset monitor obj     \
-	object qsort switch trace arrayassign
+	object qsort switch trace arrayassign arrayfloat arraydouble
 INTERNAL_CMODULES = complex critical
 INTERNAL_CMODULES_NOTBUILT = deh
 INTERNAL_EXTRAFILES = internal/mars.h internal/minit.asm
