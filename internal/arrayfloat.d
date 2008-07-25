@@ -8,6 +8,28 @@
 
 import std.cpuid;
 
+version (unittest)
+{
+    /* This is so unit tests will test every CPU variant
+     */
+    int cpuid;
+    const int CPUID_MAX = 5;
+    bool mmx()  { return cpuid == 1; }
+    bool sse()  { return cpuid == 2; }
+    bool sse2() { return cpuid == 3; }
+    bool amd3dnow() { return cpuid == 4 && std.cpuid.amd3dnow(); }
+}
+else
+{
+    import std.cpuid;
+    alias std.cpuid.mmx mmx;
+    alias std.cpuid.sse sse;
+    alias std.cpuid.sse2 sse2;
+    alias std.cpuid.amd3dnow amd3dnow;
+}
+
+//version = log;
+
 bool disjoint(T)(T[] a, T[] b)
 {
     return (a.ptr + a.length <= b.ptr || b.ptr + b.length <= a.ptr);
@@ -34,18 +56,19 @@ in
 }
 body
 {
+    //printf("_arraySliceSliceAddSliceAssign_f()\n");
+    auto aptr = a.ptr;
+    auto aend = aptr + a.length;
+    auto bptr = b.ptr;
+    auto cptr = c.ptr;
+
     version (D_InlineAsm_X86)
     {
-        auto aptr = a.ptr;
-	auto aend = aptr + a.length;
-	auto bptr = b.ptr;
-	auto cptr = c.ptr;
-	T* n;
-
 	// SSE version is 834% faster 
-	if (std.cpuid.sse() && b.length >= 16)
+	if (sse() && b.length >= 16)
 	{
-	    n = aptr + (b.length & ~15);
+	    version (log) printf("\tsse unaligned\n");
+	    auto n = aptr + (b.length & ~15);
 
 	    // Unaligned case
 	    asm 
@@ -86,9 +109,10 @@ body
 	}
 	else
 	// 3DNow! version is only 13% faster 
-	if (std.cpuid.amd3dnow() && b.length >= 8)
+	if (amd3dnow() && b.length >= 8)
 	{
-	    n = aptr + (b.length & ~7);
+	    version (log) printf("\tamd3dnow\n");
+	    auto n = aptr + (b.length & ~7);
 
 	    asm
 	    {
@@ -123,16 +147,13 @@ body
 		mov cptr, ECX;
 	    }
 	}
+    }
 
-	// Handle remainder
-        while (aptr < aend)
-            *aptr++ = *bptr++ + *cptr++;
-    }
-    else
-    {
-	for (int i = 0; i < a.length; i++)
-	    a[i] = b[i] + c[i];
-    }
+    // Handle remainder
+    version (log) if (aptr < aend) printf("\tbase\n");
+    while (aptr < aend)
+	*aptr++ = *bptr++ + *cptr++;
+
     return a;
 }
 
@@ -140,52 +161,36 @@ body
 unittest
 {
     printf("_arraySliceSliceAddSliceAssign_f unittest\n");
-
-  {
-    T[] a = [1, 2, 3];
-    T[] b = [4, 5, 6];
-    T[3] c;
-
-    c[] = a[] + b[];
-    assert(c[0] == 5);
-    assert(c[1] == 7);
-    assert(c[2] == 9);
-  }
-  {
-    T[] a = [1, 2, 3, 4, 5, 6, 7, 8, 9];
-    T[] b = [4, 5, 6, 7, 8, 9, 10, 11, 12];
-    T[9] c;
-
-    c[] = a[] + b[];
-    assert(c[0] == 5);
-    assert(c[1] == 7);
-    assert(c[2] == 9);
-    assert(c[3] == 11);
-    assert(c[4] == 13);
-    assert(c[5] == 15);
-    assert(c[6] == 17);
-    assert(c[7] == 19);
-    assert(c[8] == 21);
-  }
-  {
-    const int dim = 35;
-    T[dim] a;
-    T[dim] b;
-    T[dim] c;
-
-    for (int i = 0; i < dim; i++)
-    {	a[i] = i;
-	b[i] = i + 7;
-	c[i] = i * 2;
-    }
-
-    c[] = a[] + b[];
-
-    for (int i = 0; i < dim; i++)
+    for (cpuid = 0; cpuid < CPUID_MAX; cpuid++)
     {
-	assert(c[i] == a[i] + b[i]);
+	version (log) printf("    cpuid %d\n", cpuid);
+
+	for (int j = 0; j < 2; j++)
+	{
+	    const int dim = 67;
+	    T[] a = new T[dim + j];	// aligned on 16 byte boundary
+	    a = a[j .. dim + j];	// misalign for second iteration
+	    T[] b = new T[dim];
+	    T[] c = new T[dim];
+
+	    for (int i = 0; i < dim; i++)
+	    {   a[i] = cast(T)i;
+		b[i] = cast(T)(i + 7);
+		c[i] = cast(T)(i * 2);
+	    }
+
+	    c[] = a[] + b[];
+
+	    for (int i = 0; i < dim; i++)
+	    {
+		if (c[i] != cast(T)(a[i] + b[i]))
+		{
+		    printf("[%d]: %g != %g + %g\n", i, c[i], a[i], b[i]);
+		    assert(0);
+		}
+	    }
+	}
     }
-  }
 }
 
 /* ======================================================================== */
@@ -205,18 +210,17 @@ in
 }
 body
 {
+    auto aptr = a.ptr;
+    auto aend = aptr + a.length;
+    auto bptr = b.ptr;
+    auto cptr = c.ptr;
+
     version (D_InlineAsm_X86)
     {
-        auto aptr = a.ptr;
-	auto aend = aptr + a.length;
-	auto bptr = b.ptr;
-	auto cptr = c.ptr;
-	T* n;
-
 	// SSE version is 834% faster 
-	if (std.cpuid.sse() && b.length >= 16)
+	if (sse() && b.length >= 16)
 	{
-	    n = aptr + (b.length & ~15);
+	    auto n = aptr + (b.length & ~15);
 
 	    // Unaligned case
 	    asm 
@@ -257,9 +261,9 @@ body
 	}
 	else
 	// 3DNow! version is only 13% faster 
-	if (std.cpuid.amd3dnow() && b.length >= 8)
+	if (amd3dnow() && b.length >= 8)
 	{
-	    n = aptr + (b.length & ~7);
+	    auto n = aptr + (b.length & ~7);
 
 	    asm
 	    {
@@ -294,16 +298,12 @@ body
 		mov cptr, ECX;
 	    }
 	}
+    }
 
-	// Handle remainder
-        while (aptr < aend)
-            *aptr++ = *bptr++ - *cptr++;
-    }
-    else
-    {
-	for (int i = 0; i < a.length; i++)
-	    a[i] = b[i] - c[i];
-    }
+    // Handle remainder
+    while (aptr < aend)
+	*aptr++ = *bptr++ - *cptr++;
+
     return a;
 }
 
@@ -311,50 +311,36 @@ body
 unittest
 {
     printf("_arraySliceSliceMinSliceAssign_f unittest\n");
-
-  {
-    T[] a = [1, 2, 3];
-    T[] b = [4, 5, 6];
-    T[3] c;
-
-    c[] = a[] - b[];
-
-    for (int i = 0; i < c.length; i++)
+    for (cpuid = 0; cpuid < CPUID_MAX; cpuid++)
     {
-	assert(c[i] == a[i] - b[i]);
+	version (log) printf("    cpuid %d\n", cpuid);
+
+	for (int j = 0; j < 2; j++)
+	{
+	    const int dim = 67;
+	    T[] a = new T[dim + j];	// aligned on 16 byte boundary
+	    a = a[j .. dim + j];	// misalign for second iteration
+	    T[] b = new T[dim];
+	    T[] c = new T[dim];
+
+	    for (int i = 0; i < dim; i++)
+	    {   a[i] = cast(T)i;
+		b[i] = cast(T)(i + 7);
+		c[i] = cast(T)(i * 2);
+	    }
+
+	    c[] = a[] - b[];
+
+	    for (int i = 0; i < dim; i++)
+	    {
+		if (c[i] != cast(T)(a[i] - b[i]))
+		{
+		    printf("[%d]: %g != %gd - %g\n", i, c[i], a[i], b[i]);
+		    assert(0);
+		}
+	    }
+	}
     }
-  }
-  {
-    T[] a = [1, 2, 3, 4, 5, 6, 7, 8, 9];
-    T[] b = [4, 5, 6, 7, 8, 9, 10, 11, 12];
-    T[9] c;
-
-    c[] = a[] - b[];
-
-    for (int i = 0; i < c.length; i++)
-    {
-	assert(c[i] == a[i] - b[i]);
-    }
-  }
-  {
-    const int dim = 35;
-    T[dim] a;
-    T[dim] b;
-    T[dim] c;
-
-    for (int i = 0; i < dim; i++)
-    {	a[i] = i;
-	b[i] = i + 7;
-	c[i] = i * 2;
-    }
-
-    c[] = a[] - b[];
-
-    for (int i = 0; i < dim; i++)
-    {
-	assert(c[i] == a[i] - b[i]);
-    }
-  }
 }
 
 /* ======================================================================== */
@@ -380,7 +366,7 @@ body
     version (D_InlineAsm_X86)
     {
 	// SSE version is 665% faster 
-	if (std.cpuid.sse() && a.length >= 16)
+	if (sse() && a.length >= 16)
 	{
 	    auto n = aptr + (a.length & ~15);
 
@@ -418,7 +404,7 @@ body
 	}
 	else            
 	// 3DNow! version is 69% faster 
-	if (std.cpuid.amd3dnow() && a.length >= 8)
+	if (amd3dnow() && a.length >= 8)
 	{
 	    auto n = aptr + (a.length & ~7);
 
@@ -464,6 +450,41 @@ body
     return a;
 }
 
+unittest
+{
+    printf("_arraySliceExpAddSliceAssign_f unittest\n");
+    for (cpuid = 0; cpuid < CPUID_MAX; cpuid++)
+    {
+	version (log) printf("    cpuid %d\n", cpuid);
+
+	for (int j = 0; j < 2; j++)
+	{
+	    const int dim = 67;
+	    T[] a = new T[dim + j];	// aligned on 16 byte boundary
+	    a = a[j .. dim + j];	// misalign for second iteration
+	    T[] b = new T[dim];
+	    T[] c = new T[dim];
+
+	    for (int i = 0; i < dim; i++)
+	    {   a[i] = cast(T)i;
+		b[i] = cast(T)(i + 7);
+		c[i] = cast(T)(i * 2);
+	    }
+
+	    c[] = a[] + 6;
+
+	    for (int i = 0; i < dim; i++)
+	    {
+		if (c[i] != cast(T)(a[i] + 6))
+		{
+		    printf("[%d]: %g != %g + 6\n", i, c[i], a[i]);
+		    assert(0);
+		}
+	    }
+	}
+    }
+}
+
 /* ======================================================================== */
 
 /***********************
@@ -480,7 +501,7 @@ T[] _arrayExpSliceAddass_f(T[] a, T value)
     version (D_InlineAsm_X86)
     {
 	// SSE version is 302% faster 
-	if (std.cpuid.sse() && a.length >= 16)
+	if (sse() && a.length >= 16)
 	{
 	    // align pointer
 	    auto n = cast(T*)((cast(uint)aptr + 15) & ~15);
@@ -520,7 +541,7 @@ T[] _arrayExpSliceAddass_f(T[] a, T value)
 	}
 	else
 	// 3DNow! version is 63% faster 
-	if (std.cpuid.amd3dnow() && a.length >= 8)
+	if (amd3dnow() && a.length >= 8)
 	{
 	    auto n = aptr + (a.length & ~7);
 
@@ -563,6 +584,42 @@ T[] _arrayExpSliceAddass_f(T[] a, T value)
     return a;
 }
 
+unittest
+{
+    printf("_arrayExpSliceAddass_f unittest\n");
+    for (cpuid = 0; cpuid < CPUID_MAX; cpuid++)
+    {
+	version (log) printf("    cpuid %d\n", cpuid);
+
+	for (int j = 0; j < 2; j++)
+	{
+	    const int dim = 67;
+	    T[] a = new T[dim + j];	// aligned on 16 byte boundary
+	    a = a[j .. dim + j];	// misalign for second iteration
+	    T[] b = new T[dim];
+	    T[] c = new T[dim];
+
+	    for (int i = 0; i < dim; i++)
+	    {   a[i] = cast(T)i;
+		b[i] = cast(T)(i + 7);
+		c[i] = cast(T)(i * 2);
+	    }
+
+	    a[] = c[];
+	    c[] += 6;
+
+	    for (int i = 0; i < dim; i++)
+	    {
+		if (c[i] != cast(T)(a[i] + 6))
+		{
+		    printf("[%d]: %g != %g + 6\n", i, c[i], a[i]);
+		    assert(0);
+		}
+	    }
+	}
+    }
+}
+
 /* ======================================================================== */
 
 /***********************
@@ -586,7 +643,7 @@ body
     version (D_InlineAsm_X86)
     {
 	// SSE version is 468% faster 
-	if (std.cpuid.sse() && a.length >= 16)
+	if (sse() && a.length >= 16)
 	{
 	    auto n = aptr + (a.length & ~15);
 
@@ -626,7 +683,7 @@ body
 	}
 	else
 	// 3DNow! version is 57% faster 
-	if (std.cpuid.amd3dnow() && a.length >= 8)
+	if (amd3dnow() && a.length >= 8)
 	{
 	    auto n = aptr + (a.length & ~7);
 
@@ -668,6 +725,42 @@ body
     return a;
 }
 
+unittest
+{
+    printf("_arraySliceSliceAddass_f unittest\n");
+    for (cpuid = 0; cpuid < CPUID_MAX; cpuid++)
+    {
+	version (log) printf("    cpuid %d\n", cpuid);
+
+	for (int j = 0; j < 2; j++)
+	{
+	    const int dim = 67;
+	    T[] a = new T[dim + j];	// aligned on 16 byte boundary
+	    a = a[j .. dim + j];	// misalign for second iteration
+	    T[] b = new T[dim];
+	    T[] c = new T[dim];
+
+	    for (int i = 0; i < dim; i++)
+	    {   a[i] = cast(T)i;
+		b[i] = cast(T)(i + 7);
+		c[i] = cast(T)(i * 2);
+	    }
+
+	    a[] = c[];
+	    c[] += b[];
+
+	    for (int i = 0; i < dim; i++)
+	    {
+		if (c[i] != cast(T)(a[i] + b[i]))
+		{
+		    printf("[%d]: %g != %g + %g\n", i, c[i], a[i], b[i]);
+		    assert(0);
+		}
+	    }
+	}
+    }
+}
+
 /* ======================================================================== */
 
 /***********************
@@ -691,7 +784,7 @@ body
     version (D_InlineAsm_X86)
     {
 	// SSE version is 622% faster 
-	if (std.cpuid.sse() && a.length >= 16)
+	if (sse() && a.length >= 16)
 	{
 	    auto n = aptr + (a.length & ~15);
 
@@ -729,7 +822,7 @@ body
 	}
 	else
 	// 3DNow! version is 67% faster 
-	if (std.cpuid.amd3dnow() && a.length >= 8)
+	if (amd3dnow() && a.length >= 8)
 	{
 	    auto n = aptr + (a.length & ~7);
 
@@ -776,6 +869,41 @@ body
     return a;
 }
 
+unittest
+{
+    printf("_arraySliceExpMinSliceAssign_f unittest\n");
+    for (cpuid = 0; cpuid < CPUID_MAX; cpuid++)
+    {
+	version (log) printf("    cpuid %d\n", cpuid);
+
+	for (int j = 0; j < 2; j++)
+	{
+	    const int dim = 67;
+	    T[] a = new T[dim + j];	// aligned on 16 byte boundary
+	    a = a[j .. dim + j];	// misalign for second iteration
+	    T[] b = new T[dim];
+	    T[] c = new T[dim];
+
+	    for (int i = 0; i < dim; i++)
+	    {   a[i] = cast(T)i;
+		b[i] = cast(T)(i + 7);
+		c[i] = cast(T)(i * 2);
+	    }
+
+	    c[] = a[] - 6;
+
+	    for (int i = 0; i < dim; i++)
+	    {
+		if (c[i] != cast(T)(a[i] - 6))
+		{
+		    printf("[%d]: %g != %g - 6\n", i, c[i], a[i]);
+		    assert(0);
+		}
+	    }
+	}
+    }
+}
+
 /* ======================================================================== */
 
 /***********************
@@ -799,7 +927,7 @@ body
     version (D_InlineAsm_X86)
     {
 	// SSE version is 690% faster 
-	if (std.cpuid.sse() && a.length >= 16)
+	if (sse() && a.length >= 16)
 	{
 	    auto n = aptr + (a.length & ~15);
 
@@ -841,7 +969,7 @@ body
 	}
 	else
 	// 3DNow! version is 67% faster 
-	if (std.cpuid.amd3dnow() && a.length >= 8)
+	if (amd3dnow() && a.length >= 8)
 	{
 	    auto n = aptr + (a.length & ~7);
 
@@ -887,6 +1015,41 @@ body
     return a;
 }
 
+unittest
+{
+    printf("_arrayExpSliceMinSliceAssign_f unittest\n");
+    for (cpuid = 0; cpuid < CPUID_MAX; cpuid++)
+    {
+	version (log) printf("    cpuid %d\n", cpuid);
+
+	for (int j = 0; j < 2; j++)
+	{
+	    const int dim = 67;
+	    T[] a = new T[dim + j];	// aligned on 16 byte boundary
+	    a = a[j .. dim + j];	// misalign for second iteration
+	    T[] b = new T[dim];
+	    T[] c = new T[dim];
+
+	    for (int i = 0; i < dim; i++)
+	    {   a[i] = cast(T)i;
+		b[i] = cast(T)(i + 7);
+		c[i] = cast(T)(i * 2);
+	    }
+
+	    c[] = 6 - a[];
+
+	    for (int i = 0; i < dim; i++)
+	    {
+		if (c[i] != cast(T)(6 - a[i]))
+		{
+		    printf("[%d]: %g != 6 - %g\n", i, c[i], a[i]);
+		    assert(0);
+		}
+	    }
+	}
+    }
+}
+
 /* ======================================================================== */
 
 /***********************
@@ -903,7 +1066,7 @@ T[] _arrayExpSliceMinass_f(T[] a, T value)
     version (D_InlineAsm_X86)
     {
 	// SSE version is 304% faster 
-	if (std.cpuid.sse() && a.length >= 16)
+	if (sse() && a.length >= 16)
 	{
 	    // align pointer
 	    auto n = cast(T*)((cast(uint)aptr + 15) & ~15);
@@ -943,7 +1106,7 @@ T[] _arrayExpSliceMinass_f(T[] a, T value)
 	}
 	else
 	// 3DNow! version is 63% faster 
-	if (std.cpuid.amd3dnow() && a.length >= 8)
+	if (amd3dnow() && a.length >= 8)
 	{
 	    auto n = aptr + (a.length & ~7);
 
@@ -986,6 +1149,42 @@ T[] _arrayExpSliceMinass_f(T[] a, T value)
     return a;
 }
 
+unittest
+{
+    printf("_arrayExpSliceminass_f unittest\n");
+    for (cpuid = 0; cpuid < CPUID_MAX; cpuid++)
+    {
+	version (log) printf("    cpuid %d\n", cpuid);
+
+	for (int j = 0; j < 2; j++)
+	{
+	    const int dim = 67;
+	    T[] a = new T[dim + j];	// aligned on 16 byte boundary
+	    a = a[j .. dim + j];	// misalign for second iteration
+	    T[] b = new T[dim];
+	    T[] c = new T[dim];
+
+	    for (int i = 0; i < dim; i++)
+	    {   a[i] = cast(T)i;
+		b[i] = cast(T)(i + 7);
+		c[i] = cast(T)(i * 2);
+	    }
+
+	    a[] = c[];
+	    c[] -= 6;
+
+	    for (int i = 0; i < dim; i++)
+	    {
+		if (c[i] != cast(T)(a[i] - 6))
+		{
+		    printf("[%d]: %g != %g - 6\n", i, c[i], a[i]);
+		    assert(0);
+		}
+	    }
+	}
+    }
+}
+
 /* ======================================================================== */
 
 /***********************
@@ -1009,7 +1208,7 @@ body
     version (D_InlineAsm_X86)
     {
 	// SSE version is 468% faster 
-	if (std.cpuid.sse() && a.length >= 16)
+	if (sse() && a.length >= 16)
 	{
 	    auto n = aptr + (a.length & ~15);
 
@@ -1049,7 +1248,7 @@ body
 	}
 	else
 	// 3DNow! version is 57% faster 
-	if (std.cpuid.amd3dnow() && a.length >= 8)
+	if (amd3dnow() && a.length >= 8)
 	{
 	    auto n = aptr + (a.length & ~7);
 
@@ -1091,6 +1290,42 @@ body
     return a;
 }
 
+unittest
+{
+    printf("_arrayExpSliceMinass_f unittest\n");
+    for (cpuid = 0; cpuid < CPUID_MAX; cpuid++)
+    {
+	version (log) printf("    cpuid %d\n", cpuid);
+
+	for (int j = 0; j < 2; j++)
+	{
+	    const int dim = 67;
+	    T[] a = new T[dim + j];	// aligned on 16 byte boundary
+	    a = a[j .. dim + j];	// misalign for second iteration
+	    T[] b = new T[dim];
+	    T[] c = new T[dim];
+
+	    for (int i = 0; i < dim; i++)
+	    {   a[i] = cast(T)i;
+		b[i] = cast(T)(i + 7);
+		c[i] = cast(T)(i * 2);
+	    }
+
+	    a[] = c[];
+	    c[] -= 6;
+
+	    for (int i = 0; i < dim; i++)
+	    {
+		if (c[i] != cast(T)(a[i] - 6))
+		{
+		    printf("[%d]: %g != %g - 6\n", i, c[i], a[i]);
+		    assert(0);
+		}
+	    }
+	}
+    }
+}
+
 /* ======================================================================== */
 
 /***********************
@@ -1114,7 +1349,7 @@ body
     version (D_InlineAsm_X86)
     {
 	// SSE version is 607% faster 
-	if (std.cpuid.sse() && a.length >= 16)
+	if (sse() && a.length >= 16)
 	{
 	    auto n = aptr + (a.length & ~15);
 
@@ -1152,7 +1387,7 @@ body
 	}
 	else
 	// 3DNow! version is 69% faster 
-	if (std.cpuid.amd3dnow() && a.length >= 8)
+	if (amd3dnow() && a.length >= 8)
 	{
 	    auto n = aptr + (a.length & ~7);
 
@@ -1198,11 +1433,46 @@ body
     return a;
 }
 
+unittest
+{
+    printf("_arraySliceExpMulSliceAssign_f unittest\n");
+    for (cpuid = 0; cpuid < CPUID_MAX; cpuid++)
+    {
+	version (log) printf("    cpuid %d\n", cpuid);
+
+	for (int j = 0; j < 2; j++)
+	{
+	    const int dim = 67;
+	    T[] a = new T[dim + j];	// aligned on 16 byte boundary
+	    a = a[j .. dim + j];	// misalign for second iteration
+	    T[] b = new T[dim];
+	    T[] c = new T[dim];
+
+	    for (int i = 0; i < dim; i++)
+	    {   a[i] = cast(T)i;
+		b[i] = cast(T)(i + 7);
+		c[i] = cast(T)(i * 2);
+	    }
+
+	    c[] = a[] * 6;
+
+	    for (int i = 0; i < dim; i++)
+	    {
+		if (c[i] != cast(T)(a[i] * 6))
+		{
+		    printf("[%d]: %g != %g * 6\n", i, c[i], a[i]);
+		    assert(0);
+		}
+	    }
+	}
+    }
+}
+
 /* ======================================================================== */
 
 /***********************
  * Computes:
- *	a[] = b[] * other[]
+ *	a[] = b[] * c[]
  */
 
 T[] _arraySliceSliceMulSliceAssign_f(T[] a, T[] c, T[] b)
@@ -1224,7 +1494,7 @@ body
     version (D_InlineAsm_X86)
     {
 	// SSE version is 833% faster 
-	if (std.cpuid.sse() && a.length >= 16)
+	if (sse() && a.length >= 16)
 	{
 	    auto n = aptr + (a.length & ~15);
 
@@ -1267,7 +1537,7 @@ body
 	}
 	else
 	// 3DNow! version is only 13% faster 
-	if (std.cpuid.amd3dnow() && a.length >= 8)
+	if (amd3dnow() && a.length >= 8)
 	{
 	    auto n = aptr + (a.length & ~7);
 
@@ -1312,6 +1582,41 @@ body
     return a;
 }
 
+unittest
+{
+    printf("_arraySliceSliceMulSliceAssign_f unittest\n");
+    for (cpuid = 0; cpuid < CPUID_MAX; cpuid++)
+    {
+	version (log) printf("    cpuid %d\n", cpuid);
+
+	for (int j = 0; j < 2; j++)
+	{
+	    const int dim = 67;
+	    T[] a = new T[dim + j];	// aligned on 16 byte boundary
+	    a = a[j .. dim + j];	// misalign for second iteration
+	    T[] b = new T[dim];
+	    T[] c = new T[dim];
+
+	    for (int i = 0; i < dim; i++)
+	    {   a[i] = cast(T)i;
+		b[i] = cast(T)(i + 7);
+		c[i] = cast(T)(i * 2);
+	    }
+
+	    c[] = a[] * b[];
+
+	    for (int i = 0; i < dim; i++)
+	    {
+		if (c[i] != cast(T)(a[i] * b[i]))
+		{
+		    printf("[%d]: %g != %g * %g\n", i, c[i], a[i], b[i]);
+		    assert(0);
+		}
+	    }
+	}
+    }
+}
+
 /* ======================================================================== */
 
 /***********************
@@ -1328,7 +1633,7 @@ T[] _arrayExpSliceMulass_f(T[] a, T value)
     version (D_InlineAsm_X86)
     {
 	// SSE version is 303% faster 
-	if (std.cpuid.sse() && a.length >= 16)
+	if (sse() && a.length >= 16)
 	{
 	    // align pointer
 	    auto n = cast(T*)((cast(uint)aptr + 15) & ~15);
@@ -1368,7 +1673,7 @@ T[] _arrayExpSliceMulass_f(T[] a, T value)
 	}
 	else
 	// 3DNow! version is 63% faster 
-	if (std.cpuid.amd3dnow() && a.length >= 8)
+	if (amd3dnow() && a.length >= 8)
 	{
 	    auto n = aptr + (a.length & ~7);
 
@@ -1411,6 +1716,42 @@ T[] _arrayExpSliceMulass_f(T[] a, T value)
     return a;
 }
 
+unittest
+{
+    printf("_arrayExpSliceMulass_f unittest\n");
+    for (cpuid = 0; cpuid < CPUID_MAX; cpuid++)
+    {
+	version (log) printf("    cpuid %d\n", cpuid);
+
+	for (int j = 0; j < 2; j++)
+	{
+	    const int dim = 67;
+	    T[] a = new T[dim + j];	// aligned on 16 byte boundary
+	    a = a[j .. dim + j];	// misalign for second iteration
+	    T[] b = new T[dim];
+	    T[] c = new T[dim];
+
+	    for (int i = 0; i < dim; i++)
+	    {   a[i] = cast(T)i;
+		b[i] = cast(T)(i + 7);
+		c[i] = cast(T)(i * 2);
+	    }
+
+	    a[] = c[];
+	    c[] *= 6;
+
+	    for (int i = 0; i < dim; i++)
+	    {
+		if (c[i] != cast(T)(a[i] * 6))
+		{
+		    printf("[%d]: %g != %g * 6\n", i, c[i], a[i]);
+		    assert(0);
+		}
+	    }
+	}
+    }
+}
+
 /* ======================================================================== */
 
 /***********************
@@ -1434,7 +1775,7 @@ body
     version (D_InlineAsm_X86)
     {
 	// SSE version is 525% faster 
-	if (std.cpuid.sse() && a.length >= 16)
+	if (sse() && a.length >= 16)
 	{
 	    auto n = aptr + (a.length & ~15);
 
@@ -1474,7 +1815,7 @@ body
 	}
 	else
 	// 3DNow! version is 57% faster 
-	if (std.cpuid.amd3dnow() && a.length >= 8)
+	if (amd3dnow() && a.length >= 8)
 	{
 	    auto n = aptr + (a.length & ~7);
 
@@ -1516,6 +1857,42 @@ body
     return a;
 }
 
+unittest
+{
+    printf("_arrayExpSliceMulass_f unittest\n");
+    for (cpuid = 0; cpuid < CPUID_MAX; cpuid++)
+    {
+	version (log) printf("    cpuid %d\n", cpuid);
+
+	for (int j = 0; j < 2; j++)
+	{
+	    const int dim = 67;
+	    T[] a = new T[dim + j];	// aligned on 16 byte boundary
+	    a = a[j .. dim + j];	// misalign for second iteration
+	    T[] b = new T[dim];
+	    T[] c = new T[dim];
+
+	    for (int i = 0; i < dim; i++)
+	    {   a[i] = cast(T)i;
+		b[i] = cast(T)(i + 7);
+		c[i] = cast(T)(i * 2);
+	    }
+
+	    a[] = c[];
+	    c[] *= 6;
+
+	    for (int i = 0; i < dim; i++)
+	    {
+		if (c[i] != cast(T)(a[i] * 6))
+		{
+		    printf("[%d]: %g != %g * 6\n", i, c[i], a[i]);
+		    assert(0);
+		}
+	    }
+	}
+    }
+}
+
 /* ======================================================================== */
 
 /***********************
@@ -1544,7 +1921,7 @@ body
     version (D_InlineAsm_X86)
     {
 	// SSE version is 587% faster 
-	if (std.cpuid.sse() && a.length >= 16)
+	if (sse() && a.length >= 16)
 	{
 	    auto n = aptr + (a.length & ~15);
 
@@ -1588,7 +1965,7 @@ body
 	}
 	else
 	// 3DNow! version is 72% faster 
-	if (std.cpuid.amd3dnow() && a.length >= 8)
+	if (amd3dnow() && a.length >= 8)
 	{
 	    auto n = aptr + (a.length & ~7);
 
@@ -1636,6 +2013,41 @@ body
     return a;
 }
 
+unittest
+{
+    printf("_arraySliceExpDivSliceAssign_f unittest\n");
+    for (cpuid = 0; cpuid < CPUID_MAX; cpuid++)
+    {
+	version (log) printf("    cpuid %d\n", cpuid);
+
+	for (int j = 0; j < 2; j++)
+	{
+	    const int dim = 67;
+	    T[] a = new T[dim + j];	// aligned on 16 byte boundary
+	    a = a[j .. dim + j];	// misalign for second iteration
+	    T[] b = new T[dim];
+	    T[] c = new T[dim];
+
+	    for (int i = 0; i < dim; i++)
+	    {   a[i] = cast(T)i;
+		b[i] = cast(T)(i + 7);
+		c[i] = cast(T)(i * 2);
+	    }
+
+	    c[] = a[] / 8;
+
+	    for (int i = 0; i < dim; i++)
+	    {
+		if (c[i] != cast(T)(a[i] / 8))
+		{
+		    printf("[%d]: %g != %g / 8\n", i, c[i], a[i]);
+		    assert(0);
+		}
+	    }
+	}
+    }
+}
+
 /* ======================================================================== */
 
 /***********************
@@ -1657,7 +2069,7 @@ T[] _arrayExpSliceDivass_f(T[] a, T value)
     version (D_InlineAsm_X86)
     {
 	// SSE version is 245% faster 
-	if (std.cpuid.sse() && a.length >= 16)
+	if (sse() && a.length >= 16)
 	{
 	    // align pointer
 	    auto n = cast(T*)((cast(uint)aptr + 15) & ~15);
@@ -1703,7 +2115,7 @@ T[] _arrayExpSliceDivass_f(T[] a, T value)
 	}
 	else
 	// 3DNow! version is 57% faster 
-	if (std.cpuid.amd3dnow() && a.length >= 8)
+	if (amd3dnow() && a.length >= 8)
 	{
 	    auto n = aptr + (a.length & ~7);
 
@@ -1746,4 +2158,41 @@ T[] _arrayExpSliceDivass_f(T[] a, T value)
 
     return a;
 }
+
+unittest
+{
+    printf("_arrayExpSliceDivass_f unittest\n");
+    for (cpuid = 0; cpuid < CPUID_MAX; cpuid++)
+    {
+	version (log) printf("    cpuid %d\n", cpuid);
+
+	for (int j = 0; j < 2; j++)
+	{
+	    const int dim = 67;
+	    T[] a = new T[dim + j];	// aligned on 16 byte boundary
+	    a = a[j .. dim + j];	// misalign for second iteration
+	    T[] b = new T[dim];
+	    T[] c = new T[dim];
+
+	    for (int i = 0; i < dim; i++)
+	    {   a[i] = cast(T)i;
+		b[i] = cast(T)(i + 7);
+		c[i] = cast(T)(i * 2);
+	    }
+
+	    a[] = c[];
+	    c[] /= 8;
+
+	    for (int i = 0; i < dim; i++)
+	    {
+		if (c[i] != cast(T)(a[i] / 8))
+		{
+		    printf("[%d]: %g != %g / 8\n", i, c[i], a[i]);
+		    assert(0);
+		}
+	    }
+	}
+    }
+}
+
 
