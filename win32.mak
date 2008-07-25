@@ -109,6 +109,7 @@ SRCS= std\math.d std\stdio.d std\dateparse.d std\date.d std\uni.d std\string.d \
 	internal\switch.d internal\qsort.d internal\invariant.d \
 	internal\dmain2.d internal\cast.d internal\obj.d \
 	internal\arrayfloat.d internal\arraydouble.d internal\arrayreal.d \
+	internal\arraybyte.d internal\arrayshort.d internal\arrayint.d \
 	etc\gamma.d \
 	std\c\stdarg.d \
 	std\c\windows\com.d \
@@ -275,7 +276,8 @@ SRC_INT=	\
 	internal\cmath2.d internal\obj.d internal\mars.h internal\aApply.d \
 	internal\aApplyR.d internal\object.d internal\trace.d \
 	internal\qsort2.d internal\arrayassign.d \
-	internal\arrayfloat.d internal\arraydouble.d internal\arrayreal.d
+	internal\arrayfloat.d internal\arraydouble.d internal\arrayreal.d \
+	internal\arraybyte.d internal\arrayshort.d internal\arrayint.d
 
 
 SRC_STD_WIN= std\windows\registry.d \
@@ -343,7 +345,7 @@ phobos.lib : $(OBJS) $(SRCS) minit.obj internal\gc\dmgc.lib \
 		internal\gc\dmgc.lib etc\c\zlib\zlib.lib
 
 unittest : $(SRCS) phobos.lib
-	$(DMD) $(DFLAGS) -unittest unittest.d $(SRCS) phobos.lib
+	$(DMD) $(DFLAGS) -L/co -unittest unittest.d $(SRCS) phobos.lib
 	unittest
 
 #unittest : unittest.exe
