@@ -815,10 +815,12 @@ size_t lengthOf(Big a) { return a.digits.length; }
 size_t lengthOf(DownArray a) { return a.length; }
 size_t lengthOf(UpArray a) { return a.length; }
 
+Digit next(ulong d) { return cast(Digit)d; }
 Digit next(Digit d) { return d; }
 FwdPtr next(FwdPtr p) { return p + 1; }
 BwdPtr next(BwdPtr p) { return p - 1; }
 
+Digit peek(ulong d) { return cast(Digit)d; }
 Digit peek(Digit d) { return d; }
 Digit peek(Digit* p) { return *p; }
 
@@ -872,7 +874,7 @@ Digit xorCore(Digit x,Digit y,Digit c) { return x ^ y; }
 
 Digit updateDigit(Digit c) { return c; }
 
-WideDigit updateShr(WideDigit c) { return cast(SignedWideDigit)c >> 32; }
+WideDigit updateShr(WideDigit c) { return cast(WideDigit)(cast(SignedWideDigit)c >> 32); }
 
 WideDigit updateUShr(WideDigit c) { return c >> 32; }
 
@@ -2542,6 +2544,8 @@ unittest
             multibyteLogical!('^')(aa[1..2], aa[1..2], bb[0..3]);
             assert(aa[1]==0x1D2D_2D2C && aa[2]==0x4555_5556 && aa[3]== 0x8999_999A);
             break;
+	default:
+	    assert(0);
         }
         
         assert(aa[0]==0xF0FF_FFFF);
