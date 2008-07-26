@@ -13,9 +13,9 @@ version (unittest)
      */
     int cpuid;
     const int CPUID_MAX = 1;
-    bool mmx()  { return cpuid == 1; }
-    bool sse()  { return cpuid == 2; }
-    bool sse2() { return cpuid == 3; }
+    bool mmx()      { return cpuid == 1 && std.cpuid.mmx(); }
+    bool sse()      { return cpuid == 2 && std.cpuid.sse(); }
+    bool sse2()     { return cpuid == 3 && std.cpuid.sse2(); }
     bool amd3dnow() { return cpuid == 4 && std.cpuid.amd3dnow(); }
 }
 else
@@ -72,8 +72,10 @@ unittest
 	    const int dim = 67;
 	    T[] a = new T[dim + j];	// aligned on 16 byte boundary
 	    a = a[j .. dim + j];	// misalign for second iteration
-	    T[] b = new T[dim];
-	    T[] c = new T[dim];
+	    T[] b = new T[dim + j];
+	    b = b[j .. dim + j];
+	    T[] c = new T[dim + j];
+	    c = c[j .. dim + j];
 
 	    for (int i = 0; i < dim; i++)
 	    {   a[i] = cast(T)i;
@@ -130,8 +132,10 @@ unittest
 	    const int dim = 67;
 	    T[] a = new T[dim + j];	// aligned on 16 byte boundary
 	    a = a[j .. dim + j];	// misalign for second iteration
-	    T[] b = new T[dim];
-	    T[] c = new T[dim];
+	    T[] b = new T[dim + j];
+	    b = b[j .. dim + j];
+	    T[] c = new T[dim + j];
+	    c = c[j .. dim + j];
 
 	    for (int i = 0; i < dim; i++)
 	    {   a[i] = cast(T)i;
@@ -152,4 +156,81 @@ unittest
 	}
     }
 }
+
+/* ======================================================================== */
+
+/***********************
+ * Computes:
+ *	a[] -= b[] * value
+ */
+
+T[] _arraySliceExpMulSliceMinass_r(T[] a, T value, T[] b)
+{
+    return _arraySliceExpMulSliceAddass_r(a, -value, b);
+}
+
+/***********************
+ * Computes:
+ *	a[] += b[] * value
+ */
+
+T[] _arraySliceExpMulSliceAddass_r(T[] a, T value, T[] b)
+in
+{
+	assert(a.length == b.length);
+	assert(disjoint(a, b));
+}
+body
+{
+    auto aptr = a.ptr;
+    auto aend = aptr + a.length;
+    auto bptr = b.ptr;
+
+    // Handle remainder
+    while (aptr < aend)
+	*aptr++ += *bptr++ * value;
+
+    return a;
+}
+
+unittest
+{
+    printf("_arraySliceExpMulSliceAddass_r unittest\n");
+
+    cpuid = 1;
+    {
+	version (log) printf("    cpuid %d\n", cpuid);
+
+	for (int j = 0; j < 1; j++)
+	{
+	    const int dim = 67;
+	    T[] a = new T[dim + j];	// aligned on 16 byte boundary
+	    a = a[j .. dim + j];	// misalign for second iteration
+	    T[] b = new T[dim + j];
+	    b = b[j .. dim + j];
+	    T[] c = new T[dim + j];
+	    c = c[j .. dim + j];
+
+	    for (int i = 0; i < dim; i++)
+	    {   a[i] = cast(T)i;
+		b[i] = cast(T)(i + 7);
+		c[i] = cast(T)(i * 2);
+	    }
+
+	    b[] = c[];
+	    c[] += a[] * 6;
+
+	    for (int i = 0; i < dim; i++)
+	    {
+		//printf("[%d]: %Lg ?= %Lg + %Lg * 6\n", i, c[i], b[i], a[i]);
+		if (c[i] != cast(T)(b[i] + a[i] * 6))
+		{
+		    printf("[%d]: %Lg ?= %Lg + %Lg * 6\n", i, c[i], b[i], a[i]);
+		    assert(0);
+		}
+	    }
+	}
+    }
+}
+
 
