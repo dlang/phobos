@@ -84,6 +84,7 @@ SRCS= std\math.d std\stdio.d std\dateparse.d std\date.d std\uni.d std\string.d \
         internal\switch.d internal\qsort.d internal\invariant.d \
         internal\dmain2.d internal\cast.d internal\obj.d \
         internal\arrayfloat.d internal\arraydouble.d internal\arrayreal.d \
+        internal\arraybyte.d internal\arrayshort.d internal\arrayint.d \
 	etc\gamma.d \
         std\c\stdarg.d \
         std\c\windows\com.d \
@@ -294,7 +295,7 @@ phobos.lib : $(OBJS) $(SRCS) minit.obj internal\gc\dmgc.lib \
                 internal\gc\dmgc.lib etc\c\zlib\zlib.lib
 
 unittest : $(SRCS) phobos.lib
-        $(DMD) $(DFLAGS) -unittest unittest.d $(SRCS) phobos.lib
+        $(DMD) $(DFLAGS) -unittest -version=Unittest unittest.d $(SRCS) phobos.lib
         unittest
 
 #unittest : unittest.exe

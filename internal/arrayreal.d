@@ -7,6 +7,28 @@
 
 import std.cpuid;
 
+version (Unittest)
+{
+    /* This is so unit tests will test every CPU variant
+     */
+    int cpuid;
+    const int CPUID_MAX = 1;
+    bool mmx()      { return cpuid == 1 && std.cpuid.mmx(); }
+    bool sse()      { return cpuid == 2 && std.cpuid.sse(); }
+    bool sse2()     { return cpuid == 3 && std.cpuid.sse2(); }
+    bool amd3dnow() { return cpuid == 4 && std.cpuid.amd3dnow(); }
+}
+else
+{
+    import std.cpuid;
+    alias std.cpuid.mmx mmx;
+    alias std.cpuid.sse sse;
+    alias std.cpuid.sse2 sse2;
+    alias std.cpuid.amd3dnow amd3dnow;
+}
+
+//version = log;
+
 bool disjoint(T)(T[] a, T[] b)
 {
     return (a.ptr + a.length <= b.ptr || b.ptr + b.length <= a.ptr);
@@ -23,7 +45,7 @@ extern (C):
  *	a[] = b[] + c[]
  */
 
-T[] _adAssAddReal(T[] a, T[] c, T[] b)
+T[] _arraySliceSliceAddSliceAssign_r(T[] a, T[] c, T[] b)
 in
 {
 	assert(a.length == b.length && b.length == c.length);
@@ -38,56 +60,39 @@ body
     return a;
 }
 
-
 unittest
 {
-    printf("_adAssAddReal unittest\n");
-
-  {
-    T[] a = [1, 2, 3];
-    T[] b = [4, 5, 6];
-    T[3] c;
-
-    c[] = a[] + b[];
-    assert(c[0] == 5);
-    assert(c[1] == 7);
-    assert(c[2] == 9);
-  }
-  {
-    T[] a = [1, 2, 3, 4, 5, 6, 7, 8, 9];
-    T[] b = [4, 5, 6, 7, 8, 9, 10, 11, 12];
-    T[9] c;
-
-    c[] = a[] + b[];
-    assert(c[0] == 5);
-    assert(c[1] == 7);
-    assert(c[2] == 9);
-    assert(c[3] == 11);
-    assert(c[4] == 13);
-    assert(c[5] == 15);
-    assert(c[6] == 17);
-    assert(c[7] == 19);
-    assert(c[8] == 21);
-  }
-  {
-    const int dim = 35;
-    T[dim] a;
-    T[dim] b;
-    T[dim] c;
-
-    for (int i = 0; i < dim; i++)
-    {	a[i] = i;
-	b[i] = i + 7;
-	c[i] = i * 2;
-    }
-
-    c[] = a[] + b[];
-
-    for (int i = 0; i < dim; i++)
+    printf("_arraySliceSliceAddSliceAssign_r unittest\n");
+    for (cpuid = 0; cpuid < CPUID_MAX; cpuid++)
     {
-	assert(c[i] == a[i] + b[i]);
+	version (log) printf("    cpuid %d\n", cpuid);
+
+	for (int j = 0; j < 2; j++)
+	{
+	    const int dim = 67;
+	    T[] a = new T[dim + j];	// aligned on 16 byte boundary
+	    a = a[j .. dim + j];	// misalign for second iteration
+	    T[] b = new T[dim];
+	    T[] c = new T[dim];
+
+	    for (int i = 0; i < dim; i++)
+	    {   a[i] = cast(T)i;
+		b[i] = cast(T)(i + 7);
+		c[i] = cast(T)(i * 2);
+	    }
+
+	    c[] = a[] + b[];
+
+	    for (int i = 0; i < dim; i++)
+	    {
+		if (c[i] != cast(T)(a[i] + b[i]))
+		{
+		    printf("[%d]: %Lg != %Lg + %Lg\n", i, c[i], a[i], b[i]);
+		    assert(0);
+		}
+	    }
+	}
     }
-  }
 }
 
 /* ======================================================================== */
@@ -97,7 +102,7 @@ unittest
  *	a[] = b[] - c[]
  */
 
-T[] _adAssMinReal(T[] a, T[] c, T[] b)
+T[] _arraySliceSliceMinSliceAssign_r(T[] a, T[] c, T[] b)
 in
 {
 	assert(a.length == b.length && b.length == c.length);
@@ -115,51 +120,36 @@ body
 
 unittest
 {
-    printf("_adAssMinReal unittest\n");
-
-  {
-    T[] a = [1, 2, 3];
-    T[] b = [4, 5, 6];
-    T[3] c;
-
-    c[] = a[] - b[];
-
-    for (int i = 0; i < c.length; i++)
+    printf("_arraySliceSliceMinSliceAssign_r unittest\n");
+    for (cpuid = 0; cpuid < CPUID_MAX; cpuid++)
     {
-	assert(c[i] == a[i] - b[i]);
+	version (log) printf("    cpuid %d\n", cpuid);
+
+	for (int j = 0; j < 2; j++)
+	{
+	    const int dim = 67;
+	    T[] a = new T[dim + j];	// aligned on 16 byte boundary
+	    a = a[j .. dim + j];	// misalign for second iteration
+	    T[] b = new T[dim];
+	    T[] c = new T[dim];
+
+	    for (int i = 0; i < dim; i++)
+	    {   a[i] = cast(T)i;
+		b[i] = cast(T)(i + 7);
+		c[i] = cast(T)(i * 2);
+	    }
+
+	    c[] = a[] - b[];
+
+	    for (int i = 0; i < dim; i++)
+	    {
+		if (c[i] != cast(T)(a[i] - b[i]))
+		{
+		    printf("[%d]: %Lg != %Lg - %Lg\n", i, c[i], a[i], b[i]);
+		    assert(0);
+		}
+	    }
+	}
     }
-  }
-  {
-    T[] a = [1, 2, 3, 4, 5, 6, 7, 8, 9];
-    T[] b = [4, 5, 6, 7, 8, 9, 10, 11, 12];
-    T[9] c;
-
-    c[] = a[] - b[];
-
-    for (int i = 0; i < c.length; i++)
-    {
-	assert(c[i] == a[i] - b[i]);
-    }
-  }
-  {
-    const int dim = 35;
-    T[dim] a;
-    T[dim] b;
-    T[dim] c;
-
-    for (int i = 0; i < dim; i++)
-    {	a[i] = i;
-	b[i] = i + 7;
-	c[i] = i * 2;
-    }
-
-    c[] = a[] - b[];
-
-    for (int i = 0; i < dim; i++)
-    {
-	assert(c[i] == a[i] - b[i]);
-    }
-  }
 }
-
 

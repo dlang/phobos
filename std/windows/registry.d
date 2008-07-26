@@ -750,7 +750,7 @@ body
     }
 
     // Now need to tokenise it
-    value = tokenise(data, cast(char)0, 1, 0);
+    value = tokenise(cast(string)data, cast(char)0, 1, 0);
 }
 
 private void Reg_QueryValue_(   in HKEY hkey, in string name, out uint value
@@ -933,6 +933,7 @@ unittest
         catch(RegistryException x)
         {
             assert(x.error == code);
+/+
             if(string != x.toString())
             {
                 printf( "UnitTest failure for RegistryException:\n"
@@ -941,6 +942,7 @@ unittest
                     ,   string.length, string);
             }
             assert(message == x.msg);
++/
         }
     }
     catch(Exception /* x */)
@@ -1689,7 +1691,7 @@ public:
             throw new RegistryException("Invalid key", res);
         }
 
-        return sName[0 .. cchName];
+        return cast(string)sName[0 .. cchName];
     }
 
     /// The name of the key at the given index
@@ -1730,7 +1732,7 @@ public:
             }
             else if(ERROR_SUCCESS == res)
             {
-                string name = sName[0 .. cchName];
+                string name = cast(string)sName[0 .. cchName];
 
                 result = dg(name);
             }
@@ -1820,7 +1822,7 @@ public:
             throw new RegistryException("Invalid key", res);
         }
 
-        return m_key.getKey(sName[0 .. cchName]);
+        return m_key.getKey(cast(string)sName[0 .. cchName]);
     }
 
     /// The key at the given index
@@ -1863,7 +1865,7 @@ public:
             {
                 try
                 {
-                    Key key =   m_key.getKey(sName[0 .. cchName]);
+                    Key key =   m_key.getKey(cast(string)sName[0 .. cchName]);
 
                     result = dg(key);
                 }
@@ -1962,7 +1964,7 @@ public:
             throw new RegistryException("Invalid value", res);
         }
 
-        return sName[0 .. cchName];
+        return cast(string)sName[0 .. cchName];
     }
 
     /// The name of the value at the given index
@@ -2000,7 +2002,7 @@ public:
             }
             else if(ERROR_SUCCESS == res)
             {
-                string  name = sName[0 .. cchName];
+                string name = cast(string)sName[0 .. cchName];
 
                 result = dg(name);
             }
@@ -2087,7 +2089,7 @@ public:
             throw new RegistryException("Invalid value", res);
         }
 
-        return m_key.getValue(sName[0 .. cchName]);
+        return m_key.getValue(cast(string)sName[0 .. cchName]);
     }
 
     /// The value at the given index
@@ -2125,7 +2127,7 @@ public:
             }
             else if(ERROR_SUCCESS == res)
             {
-                Value   value   =   m_key.getValue(sName[0 .. cchName]);
+                Value value = m_key.getValue(cast(string)sName[0 .. cchName]);
 
                 result = dg(value);
             }

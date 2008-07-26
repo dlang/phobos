@@ -75,6 +75,7 @@ SRCS= \
         internal/switch.d internal/qsort.d internal/invariant.d \
         internal/dmain2.d internal/cast.d internal/obj.d \
         internal/arrayfloat.d internal/arraydouble.d internal/arrayreal.d \
+        internal/arraybyte.d internal/arrayshort.d internal/arrayint.d \
 
 
 ZLIB_OBJS = etc/c/zlib/adler32.o etc/c/zlib/compress.o \
@@ -206,7 +207,7 @@ $(LIB) : $(OBJS) $(GC_OBJS) $(ZLIB_OBJS) linux.mak
 	$(DMD) -lib -of$(LIB) $(DFLAGS) $(SRCS) $(OBJS) $(ZLIB_OBJS) $(GC_OBJS)
 
 unittest :
-	$(DMD) $(DFLAGS) -unittest unittest.d $(SRCS) $(LIB)
+	$(DMD) $(DFLAGS) -unittest -version=Unittest unittest.d $(SRCS) $(LIB)
 	./unittest
 
 cov : $(SRCS) $(LIB)
