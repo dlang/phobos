@@ -88,7 +88,7 @@ OBJS= deh.obj icomplex.obj \
 #	ti_bit.obj ti_Abit.obj
 
 SRCS= std\math.d std\stdio.d std\dateparse.d std\date.d std\uni.d std\string.d \
-	std\base64.d std\md5.d std\xml.d std\bigint.d std\regexp.d \
+	std\atomics.d std\base64.d std\md5.d std\xml.d std\bigint.d std\regexp.d \
 	std\compiler.d std\cpuid.d std\format.d std\demangle.d \
 	std\path.d std\file.d std\outbuffer.d std\utf.d std\uri.d \
 	std\ctype.d std\random.d std\array.d std\mmfile.d \
@@ -227,7 +227,7 @@ SRC=	errno.c object.d unittest.d crc32.d gcstats.d phobos.d
 SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 	std\gc.d std\math.d std\string.d std\path.d std\date.d \
 	std\ctype.d std\file.d std\compiler.d std\system.d std\moduleinit.d \
-	std\outbuffer.d std\thread.d std\synchro.d std\md5.d std\base64.d \
+	std\outbuffer.d std\thread.d std\synchro.d std\md5.d std\atomics.d std\base64.d \
 	std\asserterror.d std\dateparse.d std\outofmemory.d std\mmfile.d \
 	std\intrinsic.d std\array.d std\switcherr.d std\syserror.d \
 	std\regexp.d std\random.d std\stream.d std\process.d \
@@ -450,6 +450,9 @@ array.obj : std\array.d
 
 asserterror.obj : std\asserterror.d
 	$(DMD) -c $(DFLAGS) std\asserterror.d
+
+atomics.obj : std\atomics.d
+	$(DMD) -c $(DFLAGS) -inline std\atomics.d
 
 base64.obj : std\base64.d
 	$(DMD) -c $(DFLAGS) -inline std\base64.d
@@ -801,6 +804,9 @@ $(DOC)\phobos.html : std.ddoc phobos.d
 
 $(DOC)\std_algorithm.html : std.ddoc std\algorithm.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_algorithm.html std.ddoc std\algorithm.d
+
+$(DOC)\std_atomics.html : std.ddoc std\atomics.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_atomics.html std.ddoc std\atomics.d
 
 $(DOC)\std_base64.html : std.ddoc std\base64.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_base64.html std.ddoc std\base64.d
