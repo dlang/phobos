@@ -104,7 +104,7 @@ long atoi(C)(in C[] s)
 
 /*************************************
 Convert string to real. $(RED Scheduled for deprecation. Use the $(D
-to!(int)(s)) or $(D parse!(int)(s)) routines in $(WEB std_conv,
+to!(real)(s)) or $(D parse!(real)(s)) routines in $(WEB std_conv,
 std.conv)).
  */
 
