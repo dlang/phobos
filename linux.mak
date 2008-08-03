@@ -155,7 +155,7 @@ INTERNAL_GC_EXTRAFILES = \
 	internal/gc/win32.mak \
 	internal/gc/linux.mak
 
-STD_MODULES = algorithm array asserterror base64 bigint bind bitarray	\
+STD_MODULES = algorithm array asserterror atomics base64 bigint bind bitarray	\
         bitmanip boxer compiler complex contracts conv cover cpuid	\
         cstream ctype date dateparse demangle encoding file format	\
         functional  getopt hiddenfunc intrinsic iterator loader math	\
