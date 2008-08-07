@@ -344,12 +344,12 @@ unittest {
 /***********************************
  *  cosine, complex and imaginary
  *
- *  cos(z) = cos(z.re)*cosh(z.im) + sin(z.re)*sinh(z.im)i
+ *  cos(z) = cos(z.re)*cosh(z.im) - sin(z.re)*sinh(z.im)i
  */
 creal cos(creal z)
 {
   creal cs = expi(z.re);
-  return cs.re * cosh(z.im) + cs.im * sinh(z.im) * 1i;
+  return cs.re * cosh(z.im) - cs.im * sinh(z.im) * 1i;
 }
 
 /** ditto */
