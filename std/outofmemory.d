@@ -40,6 +40,4 @@ extern (C) void _d_OutOfMemory()
 	  OutOfMemoryException.classinfo.init;
 }
 
-static this()
-{
-}
+static this() { }
