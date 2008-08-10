@@ -541,6 +541,8 @@ struct sigset_t
     uint __val[1024 / (8 * uint.sizeof)];
 }
 
+const SA_RESTART = 0x10000000u;
+
 struct sigaction_t
 {
     __sighandler_t sa_handler;
@@ -1044,6 +1046,7 @@ class Thread
 	if (result)
 	    goto Lfail;
 	sigact.sa_handler = &pauseHandler;
+	sigact.sa_flags = SA_RESTART;
 	result = sigaction(SIGUSR1, &sigact, null);
 	if (result)
 	    goto Lfail;

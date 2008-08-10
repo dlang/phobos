@@ -229,7 +229,8 @@ SRC_INT=	\
 	internal\dmain2.d internal\cast.d internal\qsort.d internal\deh2.d \
 	internal\cmath2.d internal\obj.d internal\mars.h internal\aApply.d \
 	internal\aApplyR.d internal\object.d internal\trace.d internal\qsort2.d \
-	internal\arrayfloat.d internal\arraydouble.d internal\arrayreal.d
+	internal\arrayfloat.d internal\arraydouble.d internal\arrayreal.d \
+	internal\arraybyte.d internal\arrayshort.d internal\arrayint.d
 
 SRC_STD_WIN= std\windows\registry.d \
 	std\windows\iunknown.d std\windows\syserror.d std\windows\charset.d

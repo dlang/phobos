@@ -130,8 +130,10 @@ unittest
 	    const int dim = 67;
 	    T[] a = new T[dim + j];	// aligned on 16 byte boundary
 	    a = a[j .. dim + j];	// misalign for second iteration
-	    T[] b = new T[dim];
-	    T[] c = new T[dim];
+	    T[] b = new T[dim + j];
+	    b = b[j .. dim + j];
+	    T[] c = new T[dim + j];
+	    c = c[j .. dim + j];
 
 	    for (int i = 0; i < dim; i++)
 	    {   a[i] = cast(T)i;
@@ -241,8 +243,10 @@ unittest
 	    const int dim = 67;
 	    T[] a = new T[dim + j];	// aligned on 16 byte boundary
 	    a = a[j .. dim + j];	// misalign for second iteration
-	    T[] b = new T[dim];
-	    T[] c = new T[dim];
+	    T[] b = new T[dim + j];
+	    b = b[j .. dim + j];
+	    T[] c = new T[dim + j];
+	    c = c[j .. dim + j];
 
 	    for (int i = 0; i < dim; i++)
 	    {   a[i] = cast(T)i;
@@ -344,8 +348,10 @@ unittest
 	    const int dim = 67;
 	    T[] a = new T[dim + j];	// aligned on 16 byte boundary
 	    a = a[j .. dim + j];	// misalign for second iteration
-	    T[] b = new T[dim];
-	    T[] c = new T[dim];
+	    T[] b = new T[dim + j];
+	    b = b[j .. dim + j];
+	    T[] c = new T[dim + j];
+	    c = c[j .. dim + j];
 
 	    for (int i = 0; i < dim; i++)
 	    {   a[i] = cast(T)i;
@@ -385,14 +391,10 @@ T[] _arrayExpSliceAddass_d(T[] a, T value)
 	// SSE2 version is 114% faster 
 	if (sse2() && a.length >= 8)
 	{
-	    // align pointer
-	    auto n = cast(T*)((cast(uint)aptr + 7) & ~7);
-	    while (aptr < n)
-		*aptr++ += value;
-	    n = cast(T*)((cast(uint)aend) & ~7);
+	    auto n = cast(T*)((cast(uint)aend) & ~7);
 	    if (aptr < n)
 
-	    // Aligned case
+	    // Unaligned case
 	    asm 
 	    {
 		mov ESI, aptr;
@@ -402,19 +404,19 @@ T[] _arrayExpSliceAddass_d(T[] a, T value)
 
 		align 8;
 	    startsseloopa:
-		movapd XMM0, [ESI]; 
-		movapd XMM1, [ESI+16];
-		movapd XMM2, [ESI+32];
-		movapd XMM3, [ESI+48];
+		movupd XMM0, [ESI]; 
+		movupd XMM1, [ESI+16];
+		movupd XMM2, [ESI+32];
+		movupd XMM3, [ESI+48];
 		add ESI, 64;
 		addpd XMM0, XMM4;
 		addpd XMM1, XMM4;
 		addpd XMM2, XMM4;
 		addpd XMM3, XMM4;
-		movapd [ESI+ 0-64], XMM0;
-		movapd [ESI+16-64], XMM1;
-		movapd [ESI+32-64], XMM2;
-		movapd [ESI+48-64], XMM3;
+		movupd [ESI+ 0-64], XMM0;
+		movupd [ESI+16-64], XMM1;
+		movupd [ESI+32-64], XMM2;
+		movupd [ESI+48-64], XMM3;
 		cmp ESI, EDI; 
 		jb startsseloopa;
 
@@ -441,8 +443,10 @@ unittest
 	    const int dim = 67;
 	    T[] a = new T[dim + j];	// aligned on 16 byte boundary
 	    a = a[j .. dim + j];	// misalign for second iteration
-	    T[] b = new T[dim];
-	    T[] c = new T[dim];
+	    T[] b = new T[dim + j];
+	    b = b[j .. dim + j];
+	    T[] c = new T[dim + j];
+	    c = c[j .. dim + j];
 
 	    for (int i = 0; i < dim; i++)
 	    {   a[i] = cast(T)i;
@@ -546,8 +550,10 @@ unittest
 	    const int dim = 67;
 	    T[] a = new T[dim + j];	// aligned on 16 byte boundary
 	    a = a[j .. dim + j];	// misalign for second iteration
-	    T[] b = new T[dim];
-	    T[] c = new T[dim];
+	    T[] b = new T[dim + j];
+	    b = b[j .. dim + j];
+	    T[] c = new T[dim + j];
+	    c = c[j .. dim + j];
 
 	    for (int i = 0; i < dim; i++)
 	    {   a[i] = cast(T)i;
@@ -649,8 +655,10 @@ unittest
 	    const int dim = 67;
 	    T[] a = new T[dim + j];	// aligned on 16 byte boundary
 	    a = a[j .. dim + j];	// misalign for second iteration
-	    T[] b = new T[dim];
-	    T[] c = new T[dim];
+	    T[] b = new T[dim + j];
+	    b = b[j .. dim + j];
+	    T[] c = new T[dim + j];
+	    c = c[j .. dim + j];
 
 	    for (int i = 0; i < dim; i++)
 	    {   a[i] = cast(T)i;
@@ -755,8 +763,10 @@ unittest
 	    const int dim = 67;
 	    T[] a = new T[dim + j];	// aligned on 16 byte boundary
 	    a = a[j .. dim + j];	// misalign for second iteration
-	    T[] b = new T[dim];
-	    T[] c = new T[dim];
+	    T[] b = new T[dim + j];
+	    b = b[j .. dim + j];
+	    T[] c = new T[dim + j];
+	    c = c[j .. dim + j];
 
 	    for (int i = 0; i < dim; i++)
 	    {   a[i] = cast(T)i;
@@ -796,14 +806,10 @@ T[] _arrayExpSliceMinass_d(T[] a, T value)
 	// SSE2 version is 115% faster 
 	if (sse2() && a.length >= 8)
 	{
-	    // align pointer
-	    auto n = cast(T*)((cast(uint)aptr + 7) & ~7);
-	    while (aptr < n)
-		*aptr++ -= value;
-	    n = cast(T*)((cast(uint)aend) & ~7);
+	    auto n = cast(T*)((cast(uint)aend) & ~7);
 	    if (aptr < n)
 
-	    // Aligned case
+	    // Unaligned case
 	    asm 
 	    {
 		mov ESI, aptr;
@@ -813,19 +819,19 @@ T[] _arrayExpSliceMinass_d(T[] a, T value)
 
 		align 8;
 	    startsseloopa:
-		movapd XMM0, [ESI]; 
-		movapd XMM1, [ESI+16];
-		movapd XMM2, [ESI+32];
-		movapd XMM3, [ESI+48];
+		movupd XMM0, [ESI]; 
+		movupd XMM1, [ESI+16];
+		movupd XMM2, [ESI+32];
+		movupd XMM3, [ESI+48];
 		add ESI, 64;
 		subpd XMM0, XMM4;
 		subpd XMM1, XMM4;
 		subpd XMM2, XMM4;
 		subpd XMM3, XMM4;
-		movapd [ESI+ 0-64], XMM0;
-		movapd [ESI+16-64], XMM1;
-		movapd [ESI+32-64], XMM2;
-		movapd [ESI+48-64], XMM3;
+		movupd [ESI+ 0-64], XMM0;
+		movupd [ESI+16-64], XMM1;
+		movupd [ESI+32-64], XMM2;
+		movupd [ESI+48-64], XMM3;
 		cmp ESI, EDI; 
 		jb startsseloopa;
 
@@ -842,7 +848,7 @@ T[] _arrayExpSliceMinass_d(T[] a, T value)
 
 unittest
 {
-    printf("_arrayExpSliceminass_d unittest\n");
+    printf("_arrayExpSliceMinass_d unittest\n");
     for (cpuid = 0; cpuid < CPUID_MAX; cpuid++)
     {
 	version (log) printf("    cpuid %d\n", cpuid);
@@ -852,8 +858,10 @@ unittest
 	    const int dim = 67;
 	    T[] a = new T[dim + j];	// aligned on 16 byte boundary
 	    a = a[j .. dim + j];	// misalign for second iteration
-	    T[] b = new T[dim];
-	    T[] c = new T[dim];
+	    T[] b = new T[dim + j];
+	    b = b[j .. dim + j];
+	    T[] c = new T[dim + j];
+	    c = c[j .. dim + j];
 
 	    for (int i = 0; i < dim; i++)
 	    {   a[i] = cast(T)i;
@@ -957,8 +965,10 @@ unittest
 	    const int dim = 67;
 	    T[] a = new T[dim + j];	// aligned on 16 byte boundary
 	    a = a[j .. dim + j];	// misalign for second iteration
-	    T[] b = new T[dim];
-	    T[] c = new T[dim];
+	    T[] b = new T[dim + j];
+	    b = b[j .. dim + j];
+	    T[] c = new T[dim + j];
+	    c = c[j .. dim + j];
 
 	    for (int i = 0; i < dim; i++)
 	    {   a[i] = cast(T)i;
@@ -1060,8 +1070,10 @@ unittest
 	    const int dim = 67;
 	    T[] a = new T[dim + j];	// aligned on 16 byte boundary
 	    a = a[j .. dim + j];	// misalign for second iteration
-	    T[] b = new T[dim];
-	    T[] c = new T[dim];
+	    T[] b = new T[dim + j];
+	    b = b[j .. dim + j];
+	    T[] c = new T[dim + j];
+	    c = c[j .. dim + j];
 
 	    for (int i = 0; i < dim; i++)
 	    {   a[i] = cast(T)i;
@@ -1170,8 +1182,10 @@ unittest
 	    const int dim = 67;
 	    T[] a = new T[dim + j];	// aligned on 16 byte boundary
 	    a = a[j .. dim + j];	// misalign for second iteration
-	    T[] b = new T[dim];
-	    T[] c = new T[dim];
+	    T[] b = new T[dim + j];
+	    b = b[j .. dim + j];
+	    T[] c = new T[dim + j];
+	    c = c[j .. dim + j];
 
 	    for (int i = 0; i < dim; i++)
 	    {   a[i] = cast(T)i;
@@ -1211,14 +1225,10 @@ T[] _arrayExpSliceMulass_d(T[] a, T value)
 	// SSE2 version is 109% faster 
 	if (sse2() && a.length >= 8)
 	{
-	    // align pointer
-	    auto n = cast(T*)((cast(uint)aptr + 7) & ~7);
-	    while (aptr < n)
-		*aptr++ *= value;
-	    n = cast(T*)((cast(uint)aend) & ~7);
+	    auto n = cast(T*)((cast(uint)aend) & ~7);
 	    if (aptr < n)
 
-	    // Aligned case
+	    // Unaligned case
 	    asm 
 	    {
 		mov ESI, aptr;
@@ -1228,19 +1238,19 @@ T[] _arrayExpSliceMulass_d(T[] a, T value)
 
 		align 8;
 	    startsseloopa:
-		movapd XMM0, [ESI]; 
-		movapd XMM1, [ESI+16];
-		movapd XMM2, [ESI+32];
-		movapd XMM3, [ESI+48];
+		movupd XMM0, [ESI]; 
+		movupd XMM1, [ESI+16];
+		movupd XMM2, [ESI+32];
+		movupd XMM3, [ESI+48];
 		add ESI, 64;
 		mulpd XMM0, XMM4;
 		mulpd XMM1, XMM4;
 		mulpd XMM2, XMM4;
 		mulpd XMM3, XMM4;
-		movapd [ESI+ 0-64], XMM0;
-		movapd [ESI+16-64], XMM1;
-		movapd [ESI+32-64], XMM2;
-		movapd [ESI+48-64], XMM3;
+		movupd [ESI+ 0-64], XMM0;
+		movupd [ESI+16-64], XMM1;
+		movupd [ESI+32-64], XMM2;
+		movupd [ESI+48-64], XMM3;
 		cmp ESI, EDI; 
 		jb startsseloopa;
 
@@ -1267,8 +1277,10 @@ unittest
 	    const int dim = 67;
 	    T[] a = new T[dim + j];	// aligned on 16 byte boundary
 	    a = a[j .. dim + j];	// misalign for second iteration
-	    T[] b = new T[dim];
-	    T[] c = new T[dim];
+	    T[] b = new T[dim + j];
+	    b = b[j .. dim + j];
+	    T[] c = new T[dim + j];
+	    c = c[j .. dim + j];
 
 	    for (int i = 0; i < dim; i++)
 	    {   a[i] = cast(T)i;
@@ -1372,8 +1384,10 @@ unittest
 	    const int dim = 67;
 	    T[] a = new T[dim + j];	// aligned on 16 byte boundary
 	    a = a[j .. dim + j];	// misalign for second iteration
-	    T[] b = new T[dim];
-	    T[] c = new T[dim];
+	    T[] b = new T[dim + j];
+	    b = b[j .. dim + j];
+	    T[] c = new T[dim + j];
+	    c = c[j .. dim + j];
 
 	    for (int i = 0; i < dim; i++)
 	    {   a[i] = cast(T)i;
@@ -1489,8 +1503,10 @@ unittest
 	    const int dim = 67;
 	    T[] a = new T[dim + j];	// aligned on 16 byte boundary
 	    a = a[j .. dim + j];	// misalign for second iteration
-	    T[] b = new T[dim];
-	    T[] c = new T[dim];
+	    T[] b = new T[dim + j];
+	    b = b[j .. dim + j];
+	    T[] c = new T[dim + j];
+	    c = c[j .. dim + j];
 
 	    for (int i = 0; i < dim; i++)
 	    {   a[i] = cast(T)i;
@@ -1594,8 +1610,10 @@ unittest
 	    const int dim = 67;
 	    T[] a = new T[dim + j];	// aligned on 16 byte boundary
 	    a = a[j .. dim + j];	// misalign for second iteration
-	    T[] b = new T[dim];
-	    T[] c = new T[dim];
+	    T[] b = new T[dim + j];
+	    b = b[j .. dim + j];
+	    T[] c = new T[dim + j];
+	    c = c[j .. dim + j];
 
 	    for (int i = 0; i < dim; i++)
 	    {   a[i] = cast(T)i;
@@ -1618,4 +1636,80 @@ unittest
     }
 }
 
+
+/* ======================================================================== */
+
+/***********************
+ * Computes:
+ *	a[] -= b[] * value
+ */
+
+T[] _arraySliceExpMulSliceMinass_d(T[] a, T value, T[] b)
+{
+    return _arraySliceExpMulSliceAddass_d(a, -value, b);
+}
+
+/***********************
+ * Computes:
+ *	a[] += b[] * value
+ */
+
+T[] _arraySliceExpMulSliceAddass_d(T[] a, T value, T[] b)
+in
+{
+	assert(a.length == b.length);
+	assert(disjoint(a, b));
+}
+body
+{
+    auto aptr = a.ptr;
+    auto aend = aptr + a.length;
+    auto bptr = b.ptr;
+
+    // Handle remainder
+    while (aptr < aend)
+	*aptr++ += *bptr++ * value;
+
+    return a;
+}
+
+unittest
+{
+    printf("_arraySliceExpMulSliceAddass_d unittest\n");
+
+    cpuid = 1;
+    {
+	version (log) printf("    cpuid %d\n", cpuid);
+
+	for (int j = 0; j < 1; j++)
+	{
+	    const int dim = 67;
+	    T[] a = new T[dim + j];	// aligned on 16 byte boundary
+	    a = a[j .. dim + j];	// misalign for second iteration
+	    T[] b = new T[dim + j];
+	    b = b[j .. dim + j];
+	    T[] c = new T[dim + j];
+	    c = c[j .. dim + j];
+
+	    for (int i = 0; i < dim; i++)
+	    {   a[i] = cast(T)i;
+		b[i] = cast(T)(i + 7);
+		c[i] = cast(T)(i * 2);
+	    }
+
+	    b[] = c[];
+	    c[] += a[] * 6;
+
+	    for (int i = 0; i < dim; i++)
+	    {
+		//printf("[%d]: %g ?= %g + %g * 6\n", i, c[i], b[i], a[i]);
+		if (c[i] != cast(T)(b[i] + a[i] * 6))
+		{
+		    printf("[%d]: %g ?= %g + %g * 6\n", i, c[i], b[i], a[i]);
+		    assert(0);
+		}
+	    }
+	}
+    }
+}
 

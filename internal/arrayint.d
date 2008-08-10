@@ -75,7 +75,7 @@ body
     version (D_InlineAsm_X86)
     {
 	// SSE2 aligned version is 380% faster 
-	if (std.cpuid.sse2() && a.length >= 8)
+	if (sse2() && a.length >= 8)
 	{
 	    auto n = aptr + (a.length & ~7);
 
@@ -138,7 +138,7 @@ body
 	}
 	else
 	// MMX version is 298% faster 
-	if (std.cpuid.mmx() && a.length >= 4)
+	if (mmx() && a.length >= 4)
 	{
 	    auto n = aptr + (a.length & ~3);
 
@@ -206,6 +206,45 @@ body
     return a;
 }
 
+unittest
+{
+    printf("_arraySliceExpAddSliceAssign_i unittest\n");
+
+    for (cpuid = 0; cpuid < CPUID_MAX; cpuid++)
+    {
+	version (log) printf("    cpuid %d\n", cpuid);
+
+	for (int j = 0; j < 2; j++)
+	{
+	    const int dim = 67;
+	    T[] a = new T[dim + j];	// aligned on 16 byte boundary
+	    a = a[j .. dim + j];	// misalign for second iteration
+	    T[] b = new T[dim + j];
+	    b = b[j .. dim + j];
+	    T[] c = new T[dim + j];
+	    c = c[j .. dim + j];
+
+	    for (int i = 0; i < dim; i++)
+	    {   a[i] = cast(T)i;
+		b[i] = cast(T)(i + 7);
+		c[i] = cast(T)(i * 2);
+	    }
+
+	    c[] = a[] + 6;
+
+	    for (int i = 0; i < dim; i++)
+	    {
+		if (c[i] != cast(T)(a[i] + 6))
+		{
+		    printf("[%d]: %d != %d + 6\n", i, c[i], a[i]);
+		    assert(0);
+		}
+	    }
+	}
+    }
+}
+
+
 /* ======================================================================== */
 
 /***********************
@@ -242,7 +281,7 @@ body
     version (D_InlineAsm_X86)
     {
 	// SSE2 aligned version is 1710% faster 
-	if (std.cpuid.sse2() && a.length >= 8)
+	if (sse2() && a.length >= 8)
 	{
 	    auto n = aptr + (a.length & ~7);
 
@@ -309,7 +348,7 @@ body
 	}
 	else
 	// MMX version is 995% faster 
-	if (std.cpuid.mmx() && a.length >= 4)
+	if (mmx() && a.length >= 4)
 	{
 	    auto n = aptr + (a.length & ~3);
 
@@ -351,6 +390,45 @@ normal:
     return a;
 }
 
+unittest
+{
+    printf("_arraySliceSliceAddSliceAssign_i unittest\n");
+
+    for (cpuid = 0; cpuid < CPUID_MAX; cpuid++)
+    {
+	version (log) printf("    cpuid %d\n", cpuid);
+
+	for (int j = 0; j < 2; j++)
+	{
+	    const int dim = 67;
+	    T[] a = new T[dim + j];	// aligned on 16 byte boundary
+	    a = a[j .. dim + j];	// misalign for second iteration
+	    T[] b = new T[dim + j];
+	    b = b[j .. dim + j];
+	    T[] c = new T[dim + j];
+	    c = c[j .. dim + j];
+
+	    for (int i = 0; i < dim; i++)
+	    {   a[i] = cast(T)i;
+		b[i] = cast(T)(i + 7);
+		c[i] = cast(T)(i * 2);
+	    }
+
+	    c[] = a[] + b[];
+
+	    for (int i = 0; i < dim; i++)
+	    {
+		if (c[i] != cast(T)(a[i] + b[i]))
+		{
+		    printf("[%d]: %d != %d + %d\n", i, c[i], a[i], b[i]);
+		    assert(0);
+		}
+	    }
+	}
+    }
+}
+
+
 /* ======================================================================== */
 
 /***********************
@@ -377,7 +455,7 @@ T[] _arrayExpSliceAddass_i(T[] a, T value)
     version (D_InlineAsm_X86)
     {
 	// SSE2 aligned version is 83% faster 
-	if (std.cpuid.sse2() && a.length >= 8)
+	if (sse2() && a.length >= 8)
 	{
 	    auto n = aptr + (a.length & ~7);
 
@@ -434,7 +512,7 @@ T[] _arrayExpSliceAddass_i(T[] a, T value)
 	}
 	else
 	// MMX version is 81% faster 
-	if (std.cpuid.mmx() && a.length >= 4)
+	if (mmx() && a.length >= 4)
 	{
 	    auto n = aptr + (a.length & ~3);
 
@@ -496,6 +574,46 @@ T[] _arrayExpSliceAddass_i(T[] a, T value)
     return a;
 }
 
+unittest
+{
+    printf("_arrayExpSliceAddass_i unittest\n");
+
+    for (cpuid = 0; cpuid < CPUID_MAX; cpuid++)
+    {
+	version (log) printf("    cpuid %d\n", cpuid);
+
+	for (int j = 0; j < 2; j++)
+	{
+	    const int dim = 67;
+	    T[] a = new T[dim + j];	// aligned on 16 byte boundary
+	    a = a[j .. dim + j];	// misalign for second iteration
+	    T[] b = new T[dim + j];
+	    b = b[j .. dim + j];
+	    T[] c = new T[dim + j];
+	    c = c[j .. dim + j];
+
+	    for (int i = 0; i < dim; i++)
+	    {   a[i] = cast(T)i;
+		b[i] = cast(T)(i + 7);
+		c[i] = cast(T)(i * 2);
+	    }
+
+	    a[] = c[];
+	    a[] += 6;
+
+	    for (int i = 0; i < dim; i++)
+	    {
+		if (a[i] != cast(T)(c[i] + 6))
+		{
+		    printf("[%d]: %d != %d + 6\n", i, a[i], c[i]);
+		    assert(0);
+		}
+	    }
+	}
+    }
+}
+
+
 /* ======================================================================== */
 
 /***********************
@@ -529,7 +647,7 @@ body
     version (D_InlineAsm_X86)
     {
 	// SSE2 aligned version is 695% faster 
-	if (std.cpuid.sse2() && a.length >= 8)
+	if (sse2() && a.length >= 8)
 	{
 	    auto n = aptr + (a.length & ~7);
 
@@ -590,7 +708,7 @@ body
 	}
 	else
 	// MMX version is 471% faster 
-	if (std.cpuid.mmx() && a.length >= 4)
+	if (mmx() && a.length >= 4)
 	{
 	    auto n = aptr + (a.length & ~3);
 
@@ -629,6 +747,46 @@ normal:
     return a;
 }
 
+unittest
+{
+    printf("_arraySliceSliceAddass_i unittest\n");
+
+    for (cpuid = 0; cpuid < CPUID_MAX; cpuid++)
+    {
+	version (log) printf("    cpuid %d\n", cpuid);
+
+	for (int j = 0; j < 2; j++)
+	{
+	    const int dim = 67;
+	    T[] a = new T[dim + j];	// aligned on 16 byte boundary
+	    a = a[j .. dim + j];	// misalign for second iteration
+	    T[] b = new T[dim + j];
+	    b = b[j .. dim + j];
+	    T[] c = new T[dim + j];
+	    c = c[j .. dim + j];
+
+	    for (int i = 0; i < dim; i++)
+	    {   a[i] = cast(T)i;
+		b[i] = cast(T)(i + 7);
+		c[i] = cast(T)(i * 2);
+	    }
+
+	    b[] = c[];
+	    c[] += a[];
+
+	    for (int i = 0; i < dim; i++)
+	    {
+		if (c[i] != cast(T)(b[i] + a[i]))
+		{
+		    printf("[%d]: %d != %d + %d\n", i, c[i], b[i], a[i]);
+		    assert(0);
+		}
+	    }
+	}
+    }
+}
+
+
 /* ======================================================================== */
 
 /***********************
@@ -662,7 +820,7 @@ body
     version (D_InlineAsm_X86)
     {
 	// SSE2 aligned version is 400% faster 
-	if (std.cpuid.sse2() && a.length >= 8)
+	if (sse2() && a.length >= 8)
 	{
 	    auto n = aptr + (a.length & ~7);
 
@@ -725,7 +883,7 @@ body
 	}
 	else
 	// MMX version is 315% faster 
-	if (std.cpuid.mmx() && a.length >= 4)
+	if (mmx() && a.length >= 4)
 	{
 	    auto n = aptr + (a.length & ~3);
 
@@ -793,6 +951,45 @@ body
     return a;
 }
 
+unittest
+{
+    printf("_arraySliceExpMinSliceAssign_i unittest\n");
+
+    for (cpuid = 0; cpuid < CPUID_MAX; cpuid++)
+    {
+	version (log) printf("    cpuid %d\n", cpuid);
+
+	for (int j = 0; j < 2; j++)
+	{
+	    const int dim = 67;
+	    T[] a = new T[dim + j];	// aligned on 16 byte boundary
+	    a = a[j .. dim + j];	// misalign for second iteration
+	    T[] b = new T[dim + j];
+	    b = b[j .. dim + j];
+	    T[] c = new T[dim + j];
+	    c = c[j .. dim + j];
+
+	    for (int i = 0; i < dim; i++)
+	    {   a[i] = cast(T)i;
+		b[i] = cast(T)(i + 7);
+		c[i] = cast(T)(i * 2);
+	    }
+
+	    c[] = a[] - 6;
+
+	    for (int i = 0; i < dim; i++)
+	    {
+		if (c[i] != cast(T)(a[i] - 6))
+		{
+		    printf("[%d]: %d != %d - 6\n", i, c[i], a[i]);
+		    assert(0);
+		}
+	    }
+	}
+    }
+}
+
+
 /* ======================================================================== */
 
 /***********************
@@ -826,7 +1023,7 @@ body
     version (D_InlineAsm_X86)
     {
 	// SSE2 aligned version is 1812% faster 
-	if (std.cpuid.sse2() && a.length >= 8)
+	if (sse2() && a.length >= 8)
 	{
 	    auto n = aptr + (a.length & ~7);
 
@@ -893,7 +1090,7 @@ body
 	}
 	else
 	// MMX version is 1077% faster 
-	if (std.cpuid.mmx() && a.length >= 4)
+	if (mmx() && a.length >= 4)
 	{
 	    auto n = aptr + (a.length & ~3);
 
@@ -934,6 +1131,45 @@ body
     return a;
 }
 
+unittest
+{
+    printf("_arrayExpSliceMinSliceAssign_i unittest\n");
+
+    for (cpuid = 0; cpuid < CPUID_MAX; cpuid++)
+    {
+	version (log) printf("    cpuid %d\n", cpuid);
+
+	for (int j = 0; j < 2; j++)
+	{
+	    const int dim = 67;
+	    T[] a = new T[dim + j];	// aligned on 16 byte boundary
+	    a = a[j .. dim + j];	// misalign for second iteration
+	    T[] b = new T[dim + j];
+	    b = b[j .. dim + j];
+	    T[] c = new T[dim + j];
+	    c = c[j .. dim + j];
+
+	    for (int i = 0; i < dim; i++)
+	    {   a[i] = cast(T)i;
+		b[i] = cast(T)(i + 7);
+		c[i] = cast(T)(i * 2);
+	    }
+
+	    c[] = 6 - a[];
+
+	    for (int i = 0; i < dim; i++)
+	    {
+		if (c[i] != cast(T)(6 - a[i]))
+		{
+		    printf("[%d]: %d != 6 - %d\n", i, c[i], a[i]);
+		    assert(0);
+		}
+	    }
+	}
+    }
+}
+
+
 /* ======================================================================== */
 
 /***********************
@@ -969,7 +1205,7 @@ body
     version (D_InlineAsm_X86)
     {
 	// SSE2 aligned version is 1721% faster 
-	if (std.cpuid.sse2() && a.length >= 8)
+	if (sse2() && a.length >= 8)
 	{
 	    auto n = aptr + (a.length & ~7);
 
@@ -1036,7 +1272,7 @@ body
 	}
 	else
 	// MMX version is 1002% faster 
-	if (std.cpuid.mmx() && a.length >= 4)
+	if (mmx() && a.length >= 4)
 	{
 	    auto n = aptr + (a.length & ~3);
 
@@ -1077,6 +1313,45 @@ body
     return a;
 }
 
+unittest
+{
+    printf("_arraySliceSliceMinSliceAssign_i unittest\n");
+
+    for (cpuid = 0; cpuid < CPUID_MAX; cpuid++)
+    {
+	version (log) printf("    cpuid %d\n", cpuid);
+
+	for (int j = 0; j < 2; j++)
+	{
+	    const int dim = 67;
+	    T[] a = new T[dim + j];	// aligned on 16 byte boundary
+	    a = a[j .. dim + j];	// misalign for second iteration
+	    T[] b = new T[dim + j];
+	    b = b[j .. dim + j];
+	    T[] c = new T[dim + j];
+	    c = c[j .. dim + j];
+
+	    for (int i = 0; i < dim; i++)
+	    {   a[i] = cast(T)i;
+		b[i] = cast(T)(i + 7);
+		c[i] = cast(T)(i * 2);
+	    }
+
+	    c[] = a[] - b[];
+
+	    for (int i = 0; i < dim; i++)
+	    {
+		if (c[i] != cast(T)(a[i] - b[i]))
+		{
+		    printf("[%d]: %d != %d - %d\n", i, c[i], a[i], b[i]);
+		    assert(0);
+		}
+	    }
+	}
+    }
+}
+
+
 /* ======================================================================== */
 
 /***********************
@@ -1103,7 +1378,7 @@ T[] _arrayExpSliceMinass_i(T[] a, T value)
     version (D_InlineAsm_X86)
     {
 	// SSE2 aligned version is 81% faster 
-	if (std.cpuid.sse2() && a.length >= 8)
+	if (sse2() && a.length >= 8)
 	{
 	    auto n = aptr + (a.length & ~7);
 
@@ -1160,7 +1435,7 @@ T[] _arrayExpSliceMinass_i(T[] a, T value)
 	}
 	else
 	// MMX version is 81% faster 
-	if (std.cpuid.mmx() && a.length >= 4)
+	if (mmx() && a.length >= 4)
 	{
 	    auto n = aptr + (a.length & ~3);
 
@@ -1222,6 +1497,46 @@ T[] _arrayExpSliceMinass_i(T[] a, T value)
     return a;
 }
 
+unittest
+{
+    printf("_arrayExpSliceMinass_i unittest\n");
+
+    for (cpuid = 0; cpuid < CPUID_MAX; cpuid++)
+    {
+	version (log) printf("    cpuid %d\n", cpuid);
+
+	for (int j = 0; j < 2; j++)
+	{
+	    const int dim = 67;
+	    T[] a = new T[dim + j];	// aligned on 16 byte boundary
+	    a = a[j .. dim + j];	// misalign for second iteration
+	    T[] b = new T[dim + j];
+	    b = b[j .. dim + j];
+	    T[] c = new T[dim + j];
+	    c = c[j .. dim + j];
+
+	    for (int i = 0; i < dim; i++)
+	    {   a[i] = cast(T)i;
+		b[i] = cast(T)(i + 7);
+		c[i] = cast(T)(i * 2);
+	    }
+
+	    a[] = c[];
+	    a[] -= 6;
+
+	    for (int i = 0; i < dim; i++)
+	    {
+		if (a[i] != cast(T)(c[i] - 6))
+		{
+		    printf("[%d]: %d != %d - 6\n", i, a[i], c[i]);
+		    assert(0);
+		}
+	    }
+	}
+    }
+}
+
+
 /* ======================================================================== */
 
 /***********************
@@ -1255,7 +1570,7 @@ body
     version (D_InlineAsm_X86)
     {
 	// SSE2 aligned version is 731% faster 
-	if (std.cpuid.sse2() && a.length >= 8)
+	if (sse2() && a.length >= 8)
 	{
 	    auto n = aptr + (a.length & ~7);
 
@@ -1316,7 +1631,7 @@ body
 	}
 	else
 	// MMX version is 441% faster 
-	if (std.cpuid.mmx() && a.length >= 4)
+	if (mmx() && a.length >= 4)
 	{
 	    auto n = aptr + (a.length & ~3);
 
@@ -1354,6 +1669,46 @@ body
     return a;
 }
 
+unittest
+{
+    printf("_arraySliceSliceMinass_i unittest\n");
+
+    for (cpuid = 0; cpuid < CPUID_MAX; cpuid++)
+    {
+	version (log) printf("    cpuid %d\n", cpuid);
+
+	for (int j = 0; j < 2; j++)
+	{
+	    const int dim = 67;
+	    T[] a = new T[dim + j];	// aligned on 16 byte boundary
+	    a = a[j .. dim + j];	// misalign for second iteration
+	    T[] b = new T[dim + j];
+	    b = b[j .. dim + j];
+	    T[] c = new T[dim + j];
+	    c = c[j .. dim + j];
+
+	    for (int i = 0; i < dim; i++)
+	    {   a[i] = cast(T)i;
+		b[i] = cast(T)(i + 7);
+		c[i] = cast(T)(i * 2);
+	    }
+
+	    b[] = c[];
+	    c[] -= a[];
+
+	    for (int i = 0; i < dim; i++)
+	    {
+		if (c[i] != cast(T)(b[i] - a[i]))
+		{
+		    printf("[%d]: %d != %d - %d\n", i, c[i], b[i], a[i]);
+		    assert(0);
+		}
+	    }
+	}
+    }
+}
+
+
 /* ======================================================================== */
 
 /***********************
@@ -1384,10 +1739,12 @@ body
     auto aend = aptr + a.length;
     auto bptr = b.ptr;
 
+  version (none)	// multiplying a pair is not supported by MMX
+  {
     version (D_InlineAsm_X86)
     {
 	// SSE2 aligned version is 1380% faster 
-	if (std.cpuid.sse2() && a.length >= 8)
+	if (sse2() && a.length >= 8)
 	{
 	    auto n = aptr + (a.length & ~7);
 
@@ -1417,6 +1774,7 @@ body
 		    jb startsse2u;
 
 		    mov aptr, ESI;
+		    mov bptr, EAX;
 		}
 	    }
 	    else
@@ -1443,12 +1801,14 @@ body
 		    jb startsse2a;
 
 		    mov aptr, ESI;
+		    mov bptr, EAX;
 		}
 	    }
 	}
 	else
+	{
 	// MMX version is 1380% faster 
-	if (std.cpuid.mmx() && a.length >= 4)
+	if (mmx() && a.length >= 4)
 	{
 	    auto n = aptr + (a.length & ~3);
 
@@ -1467,7 +1827,7 @@ body
 		movq MM0, [EAX];
 		movq MM1, [EAX+8];
 		add EAX, 16;
-		pmuludq MM0, MM2;
+		pmuludq MM0, MM2;	// only multiplies low 32 bits
 		pmuludq MM1, MM2;
 		movq [ESI  -16], MM0;
 		movq [ESI+8-16], MM1;
@@ -1476,15 +1836,58 @@ body
 
 		emms;
 		mov aptr, ESI;
+		mov bptr, EAX;
 	    }
 	}
     }
+	}
+  }
 
     while (aptr < aend)
 	*aptr++ = *bptr++ * value;
 
     return a;
 }
+
+unittest
+{
+    printf("_arraySliceExpMulSliceAssign_s unittest\n");
+
+    for (cpuid = 0; cpuid < CPUID_MAX; cpuid++)
+    {
+	version (log) printf("    cpuid %d\n", cpuid);
+
+	for (int j = 0; j < 2; j++)
+	{
+	    const int dim = 67;
+	    T[] a = new T[dim + j];	// aligned on 16 byte boundary
+	    a = a[j .. dim + j];	// misalign for second iteration
+	    T[] b = new T[dim + j];
+	    b = b[j .. dim + j];
+	    T[] c = new T[dim + j];
+	    c = c[j .. dim + j];
+
+	    for (int i = 0; i < dim; i++)
+	    {   a[i] = cast(T)i;
+		b[i] = cast(T)(i + 7);
+		c[i] = cast(T)(i * 2);
+	    }
+
+	    c[] = a[] * 6;
+
+	    for (int i = 0; i < dim; i++)
+	    {
+		//printf("[%d]: %d ?= %d * 6\n", i, c[i], a[i]);
+		if (c[i] != cast(T)(a[i] * 6))
+		{
+		    printf("[%d]: %d != %d * 6\n", i, c[i], a[i]);
+		    assert(0);
+		}
+	    }
+	}
+    }
+}
+
 
 /* ======================================================================== */
 
@@ -1519,10 +1922,12 @@ body
     auto bptr = b.ptr;
     auto cptr = c.ptr;
 
+  version (none)
+  {
     version (D_InlineAsm_X86)
     {
 	// SSE2 aligned version is 1407% faster 
-	if (std.cpuid.sse2() && a.length >= 8)
+	if (sse2() && a.length >= 8)
 	{
 	    auto n = aptr + (a.length & ~7);
 
@@ -1589,7 +1994,7 @@ body
 	}
 	else
 	// MMX version is 1029% faster 
-	if (std.cpuid.mmx() && a.length >= 4)
+	if (mmx() && a.length >= 4)
 	{
 	    auto n = aptr + (a.length & ~3);
 
@@ -1623,12 +2028,52 @@ body
 	    }
 	}
     }
+  }
 
     while (aptr < aend)
 	*aptr++ = *bptr++ * *cptr++;
 
     return a;
 }
+
+unittest
+{
+    printf("_arraySliceSliceMulSliceAssign_i unittest\n");
+
+    for (cpuid = 0; cpuid < CPUID_MAX; cpuid++)
+    {
+	version (log) printf("    cpuid %d\n", cpuid);
+
+	for (int j = 0; j < 2; j++)
+	{
+	    const int dim = 67;
+	    T[] a = new T[dim + j];	// aligned on 16 byte boundary
+	    a = a[j .. dim + j];	// misalign for second iteration
+	    T[] b = new T[dim + j];
+	    b = b[j .. dim + j];
+	    T[] c = new T[dim + j];
+	    c = c[j .. dim + j];
+
+	    for (int i = 0; i < dim; i++)
+	    {   a[i] = cast(T)i;
+		b[i] = cast(T)(i + 7);
+		c[i] = cast(T)(i * 2);
+	    }
+
+	    c[] = a[] * b[];
+
+	    for (int i = 0; i < dim; i++)
+	    {
+		if (c[i] != cast(T)(a[i] * b[i]))
+		{
+		    printf("[%d]: %d != %d * %d\n", i, c[i], a[i], b[i]);
+		    assert(0);
+		}
+	    }
+	}
+    }
+}
+
 
 /* ======================================================================== */
 
@@ -1653,10 +2098,12 @@ T[] _arrayExpSliceMulass_i(T[] a, T value)
     auto aptr = a.ptr;
     auto aend = aptr + a.length;
 
+  version (none)
+  {
     version (D_InlineAsm_X86)
     {
 	// SSE2 aligned version is 400% faster 
-	if (std.cpuid.sse2() && a.length >= 8)
+	if (sse2() && a.length >= 8)
 	{
 	    auto n = aptr + (a.length & ~7);
 
@@ -1713,7 +2160,7 @@ T[] _arrayExpSliceMulass_i(T[] a, T value)
 	}
 	else
 	// MMX version is 402% faster 
-	if (std.cpuid.mmx() && a.length >= 4)
+	if (mmx() && a.length >= 4)
 	{
 	    auto n = aptr + (a.length & ~3);
 
@@ -1742,12 +2189,53 @@ T[] _arrayExpSliceMulass_i(T[] a, T value)
 	    }
 	}
     }
+  }
 
     while (aptr < aend)
 	*aptr++ *= value;
 
     return a;
 }
+
+unittest
+{
+    printf("_arrayExpSliceMulass_i unittest\n");
+
+    for (cpuid = 0; cpuid < CPUID_MAX; cpuid++)
+    {
+	version (log) printf("    cpuid %d\n", cpuid);
+
+	for (int j = 0; j < 2; j++)
+	{
+	    const int dim = 67;
+	    T[] a = new T[dim + j];	// aligned on 16 byte boundary
+	    a = a[j .. dim + j];	// misalign for second iteration
+	    T[] b = new T[dim + j];
+	    b = b[j .. dim + j];
+	    T[] c = new T[dim + j];
+	    c = c[j .. dim + j];
+
+	    for (int i = 0; i < dim; i++)
+	    {   a[i] = cast(T)i;
+		b[i] = cast(T)(i + 7);
+		c[i] = cast(T)(i * 2);
+	    }
+
+	    b[] = a[];
+	    a[] *= 6;
+
+	    for (int i = 0; i < dim; i++)
+	    {
+		if (a[i] != cast(T)(b[i] * 6))
+		{
+		    printf("[%d]: %d != %d * 6\n", i, a[i], b[i]);
+		    assert(0);
+		}
+	    }
+	}
+    }
+}
+
 
 /* ======================================================================== */
 
@@ -1779,10 +2267,12 @@ body
     auto aend = aptr + a.length;
     auto bptr = b.ptr;
 
+  version (none)
+  {
     version (D_InlineAsm_X86)
     {
 	// SSE2 aligned version is 873% faster 
-	if (std.cpuid.sse2() && a.length >= 8)
+	if (sse2() && a.length >= 8)
 	{
 	    auto n = aptr + (a.length & ~7);
 
@@ -1846,7 +2336,7 @@ body
 
 	else
 	// MMX version is 573% faster 
-	if (std.cpuid.mmx() && a.length >= 4)
+	if (mmx() && a.length >= 4)
 	{
 	    auto n = aptr + (a.length & ~3);
 
@@ -1888,11 +2378,51 @@ body
 	}
 +/
     }
+  }
 
     while (aptr < aend)
 	*aptr++ *= *bptr++;
 
     return a;
+}
+
+unittest
+{
+    printf("_arraySliceSliceMulass_i unittest\n");
+
+    for (cpuid = 0; cpuid < CPUID_MAX; cpuid++)
+    {
+	version (log) printf("    cpuid %d\n", cpuid);
+
+	for (int j = 0; j < 2; j++)
+	{
+	    const int dim = 67;
+	    T[] a = new T[dim + j];	// aligned on 16 byte boundary
+	    a = a[j .. dim + j];	// misalign for second iteration
+	    T[] b = new T[dim + j];
+	    b = b[j .. dim + j];
+	    T[] c = new T[dim + j];
+	    c = c[j .. dim + j];
+
+	    for (int i = 0; i < dim; i++)
+	    {   a[i] = cast(T)i;
+		b[i] = cast(T)(i + 7);
+		c[i] = cast(T)(i * 2);
+	    }
+
+	    b[] = a[];
+	    a[] *= c[];
+
+	    for (int i = 0; i < dim; i++)
+	    {
+		if (a[i] != cast(T)(b[i] * c[i]))
+		{
+		    printf("[%d]: %d != %d * %d\n", i, a[i], b[i], c[i]);
+		    assert(0);
+		}
+	    }
+	}
+    }
 }
 
 

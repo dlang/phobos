@@ -31,7 +31,7 @@ else
     alias std.cpuid.amd3dnow amd3dnow;
 }
 
-version = log;
+//version = log;
 
 bool disjoint(T)(T[] a, T[] b)
 {
@@ -249,8 +249,10 @@ unittest
 	    const int dim = 67;
 	    T[] a = new T[dim + j];	// aligned on 16 byte boundary
 	    a = a[j .. dim + j];	// misalign for second iteration
-	    T[] b = new T[dim];
-	    T[] c = new T[dim];
+	    T[] b = new T[dim + j];
+	    b = b[j .. dim + j];
+	    T[] c = new T[dim + j];
+	    c = c[j .. dim + j];
 
 	    for (int i = 0; i < dim; i++)
 	    {   a[i] = cast(T)i;
@@ -458,8 +460,10 @@ unittest
 	    const int dim = 67;
 	    T[] a = new T[dim + j];	// aligned on 16 byte boundary
 	    a = a[j .. dim + j];	// misalign for second iteration
-	    T[] b = new T[dim];
-	    T[] c = new T[dim];
+	    T[] b = new T[dim + j];
+	    b = b[j .. dim + j];
+	    T[] c = new T[dim + j];
+	    c = c[j .. dim + j];
 
 	    for (int i = 0; i < dim; i++)
 	    {   a[i] = cast(T)i;
@@ -626,7 +630,7 @@ T[] _arrayExpSliceAddass_g(T[] a, T value)
 
 unittest
 {
-    printf("_arrayExpSliceAddassSliceAssign_g unittest\n");
+    printf("_arrayExpSliceAddass_g unittest\n");
 
     for (cpuid = 0; cpuid < CPUID_MAX; cpuid++)
     {
@@ -637,8 +641,10 @@ unittest
 	    const int dim = 67;
 	    T[] a = new T[dim + j];	// aligned on 16 byte boundary
 	    a = a[j .. dim + j];	// misalign for second iteration
-	    T[] b = new T[dim];
-	    T[] c = new T[dim];
+	    T[] b = new T[dim + j];
+	    b = b[j .. dim + j];
+	    T[] c = new T[dim + j];
+	    c = c[j .. dim + j];
 
 	    for (int i = 0; i < dim; i++)
 	    {   a[i] = cast(T)i;
@@ -821,7 +827,7 @@ body
 
 unittest
 {
-    printf("_arraySliceSliceAddassSliceAssign_g unittest\n");
+    printf("_arraySliceSliceAddass_g unittest\n");
 
     for (cpuid = 0; cpuid < CPUID_MAX; cpuid++)
     {
@@ -832,8 +838,10 @@ unittest
 	    const int dim = 67;
 	    T[] a = new T[dim + j];	// aligned on 16 byte boundary
 	    a = a[j .. dim + j];	// misalign for second iteration
-	    T[] b = new T[dim];
-	    T[] c = new T[dim];
+	    T[] b = new T[dim + j];
+	    b = b[j .. dim + j];
+	    T[] c = new T[dim + j];
+	    c = c[j .. dim + j];
 
 	    for (int i = 0; i < dim; i++)
 	    {   a[i] = cast(T)i;
@@ -1059,8 +1067,10 @@ unittest
 	    const int dim = 67;
 	    T[] a = new T[dim + j];	// aligned on 16 byte boundary
 	    a = a[j .. dim + j];	// misalign for second iteration
-	    T[] b = new T[dim];
-	    T[] c = new T[dim];
+	    T[] b = new T[dim + j];
+	    b = b[j .. dim + j];
+	    T[] c = new T[dim + j];
+	    c = c[j .. dim + j];
 
 	    for (int i = 0; i < dim; i++)
 	    {   a[i] = cast(T)i;
@@ -1267,8 +1277,10 @@ unittest
 	    const int dim = 67;
 	    T[] a = new T[dim + j];	// aligned on 16 byte boundary
 	    a = a[j .. dim + j];	// misalign for second iteration
-	    T[] b = new T[dim];
-	    T[] c = new T[dim];
+	    T[] b = new T[dim + j];
+	    b = b[j .. dim + j];
+	    T[] c = new T[dim + j];
+	    c = c[j .. dim + j];
 
 	    for (int i = 0; i < dim; i++)
 	    {   a[i] = cast(T)i;
@@ -1472,8 +1484,10 @@ unittest
 	    const int dim = 67;
 	    T[] a = new T[dim + j];	// aligned on 16 byte boundary
 	    a = a[j .. dim + j];	// misalign for second iteration
-	    T[] b = new T[dim];
-	    T[] c = new T[dim];
+	    T[] b = new T[dim + j];
+	    b = b[j .. dim + j];
+	    T[] c = new T[dim + j];
+	    c = c[j .. dim + j];
 
 	    for (int i = 0; i < dim; i++)
 	    {   a[i] = cast(T)i;
@@ -1640,7 +1654,7 @@ T[] _arrayExpSliceMinass_g(T[] a, T value)
 
 unittest
 {
-    printf("_arrayExpSliceMinassSliceAssign_g unittest\n");
+    printf("_arrayExpSliceMinass_g unittest\n");
 
     for (cpuid = 0; cpuid < CPUID_MAX; cpuid++)
     {
@@ -1651,8 +1665,10 @@ unittest
 	    const int dim = 67;
 	    T[] a = new T[dim + j];	// aligned on 16 byte boundary
 	    a = a[j .. dim + j];	// misalign for second iteration
-	    T[] b = new T[dim];
-	    T[] c = new T[dim];
+	    T[] b = new T[dim + j];
+	    b = b[j .. dim + j];
+	    T[] c = new T[dim + j];
+	    c = c[j .. dim + j];
 
 	    for (int i = 0; i < dim; i++)
 	    {   a[i] = cast(T)i;
@@ -1835,7 +1851,7 @@ body
 
 unittest
 {
-    printf("_arraySliceSliceMinassSliceAssign_g unittest\n");
+    printf("_arraySliceSliceMinass_g unittest\n");
 
     for (cpuid = 0; cpuid < CPUID_MAX; cpuid++)
     {
@@ -1846,8 +1862,10 @@ unittest
 	    const int dim = 67;
 	    T[] a = new T[dim + j];	// aligned on 16 byte boundary
 	    a = a[j .. dim + j];	// misalign for second iteration
-	    T[] b = new T[dim];
-	    T[] c = new T[dim];
+	    T[] b = new T[dim + j];
+	    b = b[j .. dim + j];
+	    T[] c = new T[dim + j];
+	    c = c[j .. dim + j];
 
 	    for (int i = 0; i < dim; i++)
 	    {   a[i] = cast(T)i;
