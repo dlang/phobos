@@ -209,94 +209,97 @@ template to(Target)
 
 private T toSomeString(S, T)(S s)
 {
-  static const sIsString = is(S : const(char)[]) || is(S : const(wchar)[])
-    || is(S : const(dchar)[]);
-  static if (sIsString) {
-    // string-to-string conversion
-    static if (s[0].sizeof == T[0].sizeof) {
-      // same width, only qualifier conversion
-      static const tIsConst = is(T == const(char)[]) || is(T == const(wchar)[])
-        || is(T == const(dchar)[]);
-      static const tIsInvariant = is(T == invariant(char)[])
-          || is(T == invariant(wchar)[]) || is(T == invariant(dchar)[]);
-      static assert(!is(S == T)); // should have been handled earlier
-      static if (tIsConst) {
-        return s;
-      } else static if (tIsInvariant) {
-         // conversion (mutable|const) -> invariant
-         return s.idup;
-      } else {
-        // conversion (invariant|const) -> mutable
-        return s.dup;
-      }
-    } else {
-      // width conversion
-      // we can cast because toUTFX always produces a fresh string
-      static if (T[0].sizeof == 1) {
-        return cast(T) toUTF8(s);
-      } else static if (T[0].sizeof == 2) {
-        return cast(T) toUTF16(s);
-      } else {
-        static assert(T[0].sizeof == 4);
-        return cast(T) toUTF32(s);
-      }
-    }
-  } else {
-    static if (isArray!(S)) {
-      // array-to-string conversion
-        static if (is(S == void[])
-                   || is(S == const(void)[]) || is(S == invariant(void)[])) {
-            auto fake = cast(const(ubyte)[]) s;
-            static if (T[0].sizeof == 1)
-                alias ubyte FakeT;
-            else static if (T[0].sizeof == 2)
-                alias ushort FakeT;
-            else static if (T[0].sizeof == 4)
-                alias uint FakeT;
-            else static assert(false, T.stringof);
-            FakeT[] result =
-                new FakeT[(s.length + FakeT.sizeof - 1) / FakeT.sizeof];
-            assert(result.length * FakeT.sizeof >= s.length);
-            memcpy(result.ptr, s.ptr, s.length);
-            return cast(T) result;
+    static const sIsString = is(S : const(char)[]) || is(S : const(wchar)[])
+        || is(S : const(dchar)[]);
+    static if (sIsString) {
+        // string-to-string conversion
+        static if (s[0].sizeof == T[0].sizeof) {
+            // same width, only qualifier conversion
+            enum tIsConst = is(T == const(char)[]) || is(T == const(wchar)[])
+                || is(T == const(dchar)[]);
+            enum tIsInvariant = is(T == invariant(char)[])
+                || is(T == invariant(wchar)[]) || is(T == invariant(dchar)[]);
+            static assert(!is(S == T)); // should have been handled earlier
+            static if (tIsConst) {
+                return s;
+            } else static if (tIsInvariant) {
+                // conversion (mutable|const) -> invariant
+                return s.idup;
+            } else {
+                // conversion (invariant|const) -> mutable
+                return s.dup;
+            }
         } else {
-            T result = to!(T)("[");
-            foreach (i, e; s) {
-                if (i) result ~= ',';
-                result ~= to!(T)(e);
+            // width conversion
+            // we can cast because toUTFX always produces a fresh string
+            static if (T[0].sizeof == 1) {
+                return cast(T) toUTF8(s);
+            } else static if (T[0].sizeof == 2) {
+                return cast(T) toUTF16(s);
+            } else {
+                static assert(T[0].sizeof == 4);
+                return cast(T) toUTF32(s);
+            }
+        }
+    } else {
+        static if (isArray!(S)) {
+            // array-to-string conversion
+            static if (is(S == void[])
+                    || is(S == const(void)[]) || is(S == invariant(void)[])) {
+                auto fake = cast(const(ubyte)[]) s;
+                static if (T[0].sizeof == 1)
+                    alias ubyte FakeT;
+                else static if (T[0].sizeof == 2)
+                         alias ushort FakeT;
+                    else static if (T[0].sizeof == 4)
+                         alias uint FakeT;
+                    else static assert(false, T.stringof);
+                auto result =
+                    new FakeT[(s.length + FakeT.sizeof - 1) / FakeT.sizeof];
+                assert(result.length * FakeT.sizeof >= s.length);
+                memcpy(result.ptr, s.ptr, s.length);
+                return cast(T) result;
+            } else {
+                T result = to!(T)("[");
+                foreach (i, e; s) {
+                    if (i) result ~= ',';
+                    result ~= to!(T)(e);
+                }
+                result ~= ']';
+                return result;
+            }
+        } else static if (isAssociativeArray!(S)) {
+            // hash-to-string conversion
+            T result = "[";
+            bool first = true;
+            foreach (k, v; s) {
+                if (!first) result ~= ',';
+                else first = false;
+                result ~= to!(T)(k);
+                result ~= ':';
+                result ~= to!(T)(v);
             }
             result ~= ']';
             return result;
+        } else static if (is(S == enum)) {
+            // enumerated type
+            return to!(T)(to!(long)(s));
+        } else static if (is(S : Object)) {
+            // class
+            return s is null ? "null" : to!(T)(s.toString);
+        } else static if (is(typeof(s.toString))) {
+            // struct defining toString member
+            return to!(T)(s.toString);
+        } else static if (is(S Original == typedef)) {
+            // typedef
+            return to!(T)(to!(Original)(s));
+        } else {
+            // source is not a string
+            auto result = toString(s);
+            static if (is(typeof(result) == T)) return result;
+            else return to!(T)(result);
         }
-    } else static if (isAssociativeArray!(S)) {
-      // hash-to-string conversion
-      T result = "[";
-      bool first = true;
-      foreach (k, v; s) {
-        if (!first) result ~= ',';
-        else first = false;
-        result ~= to!(T)(k);
-        result ~= ':';
-        result ~= to!(T)(v);
-      }
-      result ~= ']';
-      return result;
-    } else static if (is(S == enum)) {
-       // enumerated type
-       return to!(T)(to!(long)(s));
-    } else static if (is(S : Object)) {
-       // class
-      return s is null ? "null" : to!(T)(s.toString);
-    } else static if (is(S Original == typedef)) {
-       // typedef
-      return to!(T)(to!(Original)(s));
-    } else {
-      // source is not a string
-      auto result = toString(s);
-      static if (is(typeof(result) == T)) return result;
-      else return to!(T)(result);
     }
-  }
 }
 
 unittest
