@@ -704,10 +704,10 @@ string decimal(Big b)
     if (b < 0) return "-" ~ decimal(-b);
     
     char[] result;
-    while (b != 0) {
+    while (b != Big.ZERO) {
         auto t = div(b, 10);
         b = t.q;
-        result ~= t.r;
+        result ~= t.r + '0';
     }
     reverse(result);
     return assumeUnique(result);
