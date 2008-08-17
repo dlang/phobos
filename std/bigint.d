@@ -49,8 +49,9 @@ module bigint;
 
 import std.string       : format;
 import std.stdio        : writef, writefln;
-import std.algorithm    : min, max, swap;
+import std.algorithm    : min, max, swap, reverse;
 import std.traits       : isIntegral;
+import std.contracts    : assumeUnique;
 
 alias uint Digit; /// alias for uint
 
@@ -699,19 +700,17 @@ Big fromHex(string s)
 
 string decimal(Big b)
 {
+    if (b == 0) return "0";
     if (b < 0) return "-" ~ decimal(-b);
-
-    if (b < 10)
-    {
-        int n;
-        b.castTo(n);
-        char c = cast(char)(n + '0');
-        return [ c ];
+    
+    char[] result;
+    while (b != 0) {
+        auto t = div(b, 10);
+        b = t.q;
+        result ~= t.r;
     }
-
-    auto t = div(b,10);
-    auto r = cast(string)(decimal(t.q) ~ [ cast(char)(t.r + '0') ]);
-    return r;
+    reverse(result);
+    return assumeUnique(result);
 }
 
 // Shrinking
