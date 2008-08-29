@@ -12,6 +12,10 @@
 	integrated in with intrinsic functions, bringing to bear
 	their full power on them.
 	This can result in some surprising speedups.
+ *
+ * Copyright: Public Domain
+ * License:   Public Domain
+ * Authors:   Walter Bright
  * Macros:
  *	WIKI=Phobos/StdIntrinsic
  */

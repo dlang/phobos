@@ -331,6 +331,8 @@ body
 		    movdqa XMM2, [ECX];
 		    movdqa XMM1, [EAX+16];
 		    movdqa XMM3, [ECX+16];
+//prefetchnta [EAX+512];
+//prefetchnta [ECX+512];
 		    add EAX, 32;
 		    add ECX, 32;
 		    paddd XMM0, XMM2;

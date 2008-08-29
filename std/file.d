@@ -445,6 +445,17 @@ void mkdir(in string pathname)
 }
 
 /****************************************************
+ * Make directory and all parent directories as needed.
+ */
+
+void mkdirRecurse(string pathname)
+{
+    invariant left = dirname(pathname);
+    exists(left) || mkdirRecurse(left);
+    mkdir(pathname);
+}
+
+/****************************************************
  * Remove directory pathname[].
  * Throws: $(D FileException) on error.
  */
@@ -461,6 +472,30 @@ void rmdir(in string pathname)
     {
 	throw new FileException(pathname, GetLastError());
     }
+}
+
+/****************************************************
+ * Remove directory and all of its content and subdirectories,
+ * recursively.
+ */
+
+void rmdirRecurse(string pathname)
+{
+    // all children, recursively depth-first
+    foreach (DirEntry e; dirEntries(pathname, SpanMode.depth))
+    {
+        e.isdir ? rmdir(e.name) : remove(e.name);
+    }
+    // the dir itself
+    rmdir(pathname);
+}
+
+unittest
+{
+    auto d = r"c:\deleteme\a\b\c\d\e\f\g";
+    mkdirRecurse(d);
+    rmdirRecurse(r"c:\deleteme");
+    enforce(!exists(r"c:\deleteme"));
 }
 
 /****************************************************
