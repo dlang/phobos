@@ -39,6 +39,10 @@ DFLAGS=-O -release -nofloat -w
 #DFLAGS=-unittest -g
 #DFLAGS=-unittest -cov -g
 
+## Flags for compiling unittests
+
+UDFLAGS=-O -release -nofloat -w
+
 ## C compiler
 
 CC=dmc
@@ -345,7 +349,7 @@ phobos.lib : $(OBJS) $(SRCS) minit.obj internal\gc\dmgc.lib \
 		internal\gc\dmgc.lib etc\c\zlib\zlib.lib
 
 unittest : $(SRCS) phobos.lib
-	$(DMD) $(DFLAGS) -L/co -unittest unittest.d $(SRCS) phobos.lib
+	$(DMD) $(UDFLAGS) -L/co -unittest unittest.d $(SRCS) phobos.lib
 	unittest
 
 #unittest : unittest.exe
