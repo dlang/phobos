@@ -57,7 +57,6 @@ test.exe : test.obj phobos.lib
 
 OBJS= deh.obj complex.obj gcstats.obj \
 	critical.obj object.obj monitor.obj \
-	math2.obj \
 	crc32.obj \
 	Czlib.obj Dzlib.obj process.obj \
 	oldsyserror.obj \
@@ -68,16 +67,20 @@ OBJS= deh.obj complex.obj gcstats.obj \
 SRCS= std\math.d std\stdio.d std\dateparse.d std\date.d std\uni.d std\string.d \
         std\base64.d std\md5.d std\regexp.d \
         std\compiler.d std\cpuid.d std\format.d std\demangle.d \
-        std\path.d std\file.d std\outbuffer.d std\utf.d std\uri.d \
+        std\path.d std\outbuffer.d std\utf.d std\uri.d \
         std\ctype.d std\random.d std\array.d std\mmfile.d \
+        std\asserterror.d std\system.d \
         std\bitarray.d \
         std\signals.d std\typetuple.d std\traits.d std\bind.d \
         std\switcherr.d \
         std\thread.d std\moduleinit.d std\boxer.d \
-        std\asserterror.d std\outofmemory.d std\system.d \
         std\stream.d std\socket.d std\socketstream.d \
-        std\perf.d std\openrj.d std\conv.d std\cover.d \
+        std\perf.d std\openrj.d std\conv.d \
         std\zip.d std\cstream.d std\loader.d \
+	std\outofmemory.d \
+	std\cover.d \
+	std\file.d \
+	std\math2.d \
         internal\aaA.d internal\adi.d \
         internal\aApply.d internal\aApplyR.d internal\memset.d \
         internal\arraycast.d internal\arraycat.d \

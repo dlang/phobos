@@ -613,7 +613,8 @@ Lis:
 	}
 	assert(0);		// should have been in table
     }
-    return 1;
+    else
+	return 1;
 }
 
 unittest
