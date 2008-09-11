@@ -467,6 +467,7 @@ uint unpredictableSeed()
     static MinstdRand0 rand;
     if (!seeded) {
         rand.seed(getpid ^ getUTCtime);
+        seeded = true;
     }
     return cast(uint) (getUTCtime ^ rand.next);
 }
