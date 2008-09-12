@@ -46,7 +46,7 @@ void bar()
 
 Author:
 
-$(WEB erdani.org, Andrei Alexandrescu)
+$(WEB erdani.org, Andrei Alexandrescu), Bartosz Milewski
 
 */
 
@@ -73,12 +73,179 @@ $(WEB erdani.org, Andrei Alexandrescu)
  */
 
 module std.typecons;
-//private import std.stdio;
+private import std.stdio;
 private import std.metastrings;
 private import std.contracts;
 private import std.typetuple;
 private import std.conv;
 private import std.traits;
+
+/**
+Encapsulates unique ownership of a resource. 
+Resource of type T is deleted at the end of the scope, unless it is transferred.
+The transfer can be explicit, by calling $(D release), or implicit, when returning
+Unique from a function. The resource can be a polymorphic class object, in which case
+Unique behaves polymorphically too.
+
+Example:
+*/
+
+struct Unique(T)
+{
+static if (is(T:Object))
+    alias T RefT;
+else
+    alias T * RefT;
+public:
+/+ Doesn't work yet
+	/** 
+	The safe constructor. It creates the resource and 
+	guarantees unique ownership of it (unless the constructor
+	of $(D T) publishes aliases of $(D this)), 
+	*/
+	this(A...)(A args)
+	{
+		_p = new T(args);
+	}
++/
+
+	/**
+	Constructor that takes an rvalue.
+	It will ensure uniqueness, as long as the rvalue
+	isn't just a view on an lvalue (e.g., a cast)
+	Typical usage:
+	----
+	Unique!(Foo) f = new Foo;
+	----
+	*/
+    this(RefT p)
+    {
+        writeln("Unique constructor with rvalue");
+        _p = p;
+    }
+	/**
+	Constructor that takes an lvalue. It nulls its source.
+	The nulling will ensure uniqueness as long as there
+	are no previous aliases to the source.
+	*/
+    this(ref RefT p)
+    {
+        _p = p;
+        writeln("Unique constructor nulling source");
+        p = null;
+        assert(p is null);
+    }
+/+ Doesn't work yet
+	/** 
+	Constructor that takes a Unique of a type that is convertible to our type:
+	Disallow construction from lvalue (force the use of release on the source Unique)
+	If the source is an rvalue, null its content, so the destrutctor doesn't delete it
+
+	Typically used by the compiler to return $(D Unique) of derived type as $(D Unique) 
+	of base type.
+
+	Example:
+	----
+	Unique!(Base) create()
+	{
+	    Unique!(Derived) d = new Derived;
+		return d; // Implicit Derived->Base conversion
+	}
+	----
+	*/
+	this(U)(ref Unique!(U) u) = null;
+	this(U)(Unique!(U) u)
+	{
+		_p = u._p;
+		u._p = null;
+	}
++/
+
+    ~this()
+    {
+        writeln("Unique destructor of ", (_p is null)? null: _p);
+        delete _p;
+        _p = null;
+    }
+    bool isEmpty() const
+    {
+        return _p is null;
+    }
+	/** Returns a unique rvalue. Nullifies the current contents */
+    Unique release()
+    {
+        writeln("Release");
+        auto u = Unique(_p);
+        assert(_p is null);
+        writeln("return from Release");
+        return u;
+    }
+	/** Forwards member access to contents */
+    RefT opDot() { return _p; }
+
+/+ doesn't work yet!
+	/**
+	Postblit operator is undefined to prevent the cloning of $(D Unique) objects
+	*/
+    this(this) = null;
+ +/
+
+private:
+    RefT _p;
+}
+
+/+ doesn't work yet
+unittest
+{
+    writeln("Unique class");
+    class Bar
+    {
+        ~this() { writefln("    Bar destructor"); }
+        int val() const { return 4; }
+    }
+    alias Unique!(Bar) UBar;
+    UBar g(UBar u)
+    {
+        return u;
+    }
+    auto ub = UBar(new Bar);
+    assert(!ub.isEmpty);
+    assert(ub.val == 4);
+    // should not compile
+    // auto ub3 = g(ub);
+    writeln("Calling g");
+    auto ub2 = g(ub.release);
+    assert(ub.isEmpty);
+    assert(!ub2.isEmpty);
+}
+
+unittest
+{
+    writeln("Unique struct");
+    struct Foo
+    {
+        ~this() { writefln("    Bar destructor"); }
+        int val() const { return 3; }
+    }
+    alias Unique!(Foo) UFoo;
+    
+    UFoo f(UFoo u)
+    {
+        writeln("inside f");
+        return u;
+    }
+    
+    auto uf = UFoo(new Foo);
+    assert(!uf.isEmpty);
+    assert(uf.val == 3);
+    // should not compile
+    // auto uf3 = f(uf);
+    writeln("Unique struct: calling f");
+    auto uf2 = f(uf.release);
+    assert(uf.isEmpty);
+    assert(!uf2.isEmpty);
+}
++/
 
 private template tupleImpl(uint index, T...)
 {
