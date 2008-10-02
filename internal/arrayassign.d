@@ -22,7 +22,7 @@ import std.c.stdlib;
 extern (C)
 void[] _d_arrayassign(TypeInfo ti, void[] from, void[] to)
 {
-    printf("_d_arrayassign(from = %p,%d, to = %p,%d) size = %d\n", from.ptr, from.length, to.ptr, to.length, ti.tsize());
+    //printf("_d_arrayassign(from = %p,%d, to = %p,%d) size = %d\n", from.ptr, from.length, to.ptr, to.length, ti.tsize());
 
     if (to.length != from.length)
     {
@@ -81,7 +81,7 @@ void[] _d_arrayassign(TypeInfo ti, void[] from, void[] to)
 extern (C)
 void[] _d_arrayctor(TypeInfo ti, void[] from, void[] to)
 {
-    printf("_d_arrayctor(from = %p,%d, to = %p,%d) size = %d\n", from.ptr, from.length, to.ptr, to.length, ti.tsize());
+    //printf("_d_arrayctor(from = %p,%d, to = %p,%d) size = %d\n", from.ptr, from.length, to.ptr, to.length, ti.tsize());
 
     if (to.length != from.length)
     {
