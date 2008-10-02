@@ -168,6 +168,7 @@ DOCS=	$(DOC)\std_path.html $(DOC)\std_math.html $(DOC)\std_outbuffer.html \
 	$(DOC)\std_random.html $(DOC)\std_file.html $(DOC)\std_date.html \
 	$(DOC)\std_md5.html $(DOC)\std_zip.html $(DOC)\std_zlib.html \
 	$(DOC)\std_algorithm.html \
+	$(DOC)\std_array.html \
 	$(DOC)\std_bigint.html \
 	$(DOC)\std_bind.html \
 	$(DOC)\std_bitarray.html \
@@ -808,6 +809,9 @@ $(DOC)\phobos.html : std.ddoc phobos.d
 
 $(DOC)\std_algorithm.html : std.ddoc std\algorithm.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_algorithm.html std.ddoc std\algorithm.d
+
+$(DOC)\std_array.html : std.ddoc std\array.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_array.html std.ddoc std\array.d
 
 $(DOC)\std_atomics.html : std.ddoc std\atomics.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_atomics.html std.ddoc std\atomics.d
