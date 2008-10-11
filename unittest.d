@@ -25,8 +25,6 @@
 // to run the unit tests on them.
 // Then, it prints out the arguments passed to main().
 
-public import std.array;
-public import std.asserterror;
 public import std.base64;
 public import std.bind;
 public import std.bitarray;
@@ -43,19 +41,15 @@ public import std.dateparse;
 public import std.demangle;
 public import std.file;
 public import std.format;
-public import std.gc;
 public import std.getopt;
-public import std.hiddenfunc;
 public import std.intrinsic;
 public import std.loader;
 public import std.math;
 public import std.md5;
 public import std.metastrings;
 public import std.mmfile;
-public import std.moduleinit;
 public import std.openrj;
 public import std.outbuffer;
-public import std.outofmemory;
 public import std.path;
 public import std.perf;
 public import std.process;
@@ -69,10 +63,8 @@ public import std.stdint;
 public import std.stdio;
 public import std.stream;
 public import std.string;
-public import std.switcherr;
 public import std.syserror;
 public import std.system;
-public import std.thread;
 public import std.traits;
 public import std.typetuple;
 public import std.uni;

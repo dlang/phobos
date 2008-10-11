@@ -88,6 +88,7 @@ module std.md5;
 
 import std.string;
 import std.contracts;
+import std.c.stdio : printf;
 
 /***************************************
  * Computes MD5 digest of several arrays of data.

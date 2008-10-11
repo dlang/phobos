@@ -83,7 +83,7 @@
 
 module std.variant;
 
-import std.traits, std.conv, std.c.string, std.typetuple, std.gc;
+import std.traits, std.conv, std.c.string, std.typetuple;
 import std.stdio; // for testing only
 import std.contracts; // for testing only
 

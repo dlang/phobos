@@ -2,15 +2,15 @@
 
 /*
 	Copyright (C) 2004-2005 Christopher E. Miller
-	
+
 	This software is provided 'as-is', without any express or implied
 	warranty.  In no event will the authors be held liable for any damages
 	arising from the use of this software.
-	
+
 	Permission is granted to anyone to use this software for any purpose,
 	including commercial applications, and to alter it and redistribute it
 	freely, subject to the following restrictions:
-	
+
 	1. The origin of this software must not be misrepresented; you must not
 	   claim that you wrote the original software. If you use this software
 	   in a product, an acknowledgment in the product documentation would be
@@ -19,17 +19,17 @@
 	   be misrepresented as being the original software.
 	3. This notice may not be removed or altered from any source
 	   distribution.
-	
+
 	socket.d 1.3
 	Jan 2005
-	
+
 	Thanks to Benjamin Herr for his assistance.
 */
 
 /**
- * Notes: For Win32 systems, link with ws2_32.lib. 
+ * Notes: For Win32 systems, link with ws2_32.lib.
  * Example: See /dmd/samples/d/listener.d.
- * Authors: Christopher E. Miller 
+ * Authors: Christopher E. Miller
  * Macros:
  *	WIKI=Phobos/StdSocket
  */
@@ -37,6 +37,11 @@
 module std.socket;
 
 private import std.string, std.stdint, std.c.string, std.c.stdlib;
+
+version(unittest)
+{
+    private import std.c.stdio : printf;
+}
 
 
 version(linux)
@@ -52,11 +57,11 @@ version(Win32)
 
 	private import std.c.windows.windows, std.c.windows.winsock;
 	private alias std.c.windows.winsock.timeval _ctimeval;
-	
+
 	typedef SOCKET socket_t = INVALID_SOCKET;
 	private const int _SOCKET_ERROR = SOCKET_ERROR;
-	
-	
+
+
 	private int _lasterr()
 	{
 		return WSAGetLastError();
@@ -69,11 +74,11 @@ else version(BsdSockets)
 		private import std.c.linux.linux, std.c.linux.socket;
 		private alias std.c.linux.linux.timeval _ctimeval;
 	}
-	
+
 	typedef int32_t socket_t = -1;
 	private const int _SOCKET_ERROR = -1;
-	
-	
+
+
 	private int _lasterr()
 	{
 		return getErrno();
@@ -89,11 +94,11 @@ else
 class SocketException: Exception
 {
 	int errorCode; /// Platform-specific error code.
-	
+
 	this(string msg, int err = 0)
 	{
 		errorCode = err;
-		
+
 		version(linux)
 		{
 			if(errorCode > 0)
@@ -101,7 +106,7 @@ class SocketException: Exception
 				char[80] buf;
 				auto cs = strerror_r(errorCode, buf.ptr, buf.length);
 				auto len = strlen(cs);
-				
+
 				if(cs[len - 1] == '\n')
 					len--;
 				if(cs[len - 1] == '\r')
@@ -109,7 +114,7 @@ class SocketException: Exception
 				msg = cast(string) (msg ~ ": " ~ cs[0 .. len]);
 			}
 		}
-		
+
 		super(msg);
 	}
 }
@@ -120,7 +125,7 @@ static this()
 	version(Win32)
 	{
 		WSADATA wd;
-		
+
 		// Winsock will still load if an older version is present.
 		// The version is just a request.
 		int val;
@@ -191,20 +196,20 @@ class Protocol
 	ProtocolType type;	/// These members are populated when one of the following functions are called without failure:
 	string name;		/// ditto
 	string[] aliases;	/// ditto
-	
-	
+
+
 	void populate(protoent* proto)
 	{
 		type = cast(ProtocolType)proto.p_proto;
 		name = std.string.toString(proto.p_name).idup;
-		
+
 		int i;
 		for(i = 0;; i++)
 		{
 			if(!proto.p_aliases[i])
 				break;
 		}
-		
+
 		if(i)
 		{
 			aliases = new string[i];
@@ -219,7 +224,7 @@ class Protocol
 			aliases = null;
 		}
 	}
-	
+
 	/** Returns false on failure */
 	bool getProtocolByName(string name)
 	{
@@ -230,8 +235,8 @@ class Protocol
 		populate(proto);
 		return true;
 	}
-	
-	
+
+
 	/** Returns false on failure */
 	// Same as getprotobynumber().
 	bool getProtocolByType(ProtocolType type)
@@ -268,21 +273,21 @@ class Service
 	string[] aliases;	/// ditto
 	ushort port;		/// ditto
 	string protocolName;	/// ditto
-	
-	
+
+
 	void populate(servent* serv)
 	{
 		name = std.string.toString(serv.s_name).idup;
 		port = ntohs(cast(ushort)serv.s_port);
 		protocolName = std.string.toString(serv.s_proto).idup;
-		
+
 		int i;
 		for(i = 0;; i++)
 		{
 			if(!serv.s_aliases[i])
 				break;
 		}
-		
+
 		if(i)
 		{
 			aliases = new string[i];
@@ -297,7 +302,7 @@ class Service
 			aliases = null;
 		}
 	}
-	
+
 	/**
 	 * If a protocol name is omitted, any protocol will be matched.
 	 * Returns: false on failure.
@@ -311,8 +316,8 @@ class Service
 		populate(serv);
 		return true;
 	}
-	
-	
+
+
 	// Any protocol name will be matched.
 	/// ditto
 	bool getServiceByName(string name)
@@ -324,8 +329,8 @@ class Service
 		populate(serv);
 		return true;
 	}
-	
-	
+
+
 	/// ditto
 	bool getServiceByPort(ushort port, string protocolName)
 	{
@@ -336,8 +341,8 @@ class Service
 		populate(serv);
 		return true;
 	}
-	
-	
+
+
 	// Any protocol name will be matched.
 	/// ditto
 	bool getServiceByPort(ushort port)
@@ -377,8 +382,8 @@ unittest
 class HostException: Exception
 {
 	int errorCode;	/// Platform-specific error code.
-	
-	
+
+
 	this(string msg, int err = 0)
 	{
 		errorCode = err;
@@ -395,29 +400,29 @@ class InternetHost
 	string name;
 	string[] aliases;	/// ditto
 	uint32_t[] addrList;	/// ditto
-	
-	
+
+
 	void validHostent(hostent* he)
 	{
 		if(he.h_addrtype != cast(int)AddressFamily.INET || he.h_length != 4)
 			throw new HostException("Address family mismatch", _lasterr());
 	}
-	
-	
+
+
 	void populate(hostent* he)
 	{
 		int i;
 		char* p;
-		
+
 		name = std.string.toString(he.h_name).idup;
-		
+
 		for(i = 0;; i++)
 		{
 			p = he.h_aliases[i];
 			if(!p)
 				break;
 		}
-		
+
 		if(i)
 		{
 			aliases = new string[i];
@@ -431,14 +436,14 @@ class InternetHost
 		{
 			aliases = null;
 		}
-		
+
 		for(i = 0;; i++)
 		{
 			p = he.h_addr_list[i];
 			if(!p)
 				break;
 		}
-		
+
 		if(i)
 		{
 			addrList = new uint32_t[i];
@@ -452,10 +457,10 @@ class InternetHost
 			addrList = null;
 		}
 	}
-	
+
 	/**
 	 * Resolve host name. Returns false if unable to resolve.
-	 */	
+	 */
 	bool getHostByName(string name)
 	{
 		hostent* he;
@@ -466,11 +471,11 @@ class InternetHost
 		populate(he);
 		return true;
 	}
-	
-	
+
+
 	/**
 	 * Resolve IPv4 address number. Returns false if unable to resolve.
-	 */	
+	 */
 	bool getHostByAddr(uint addr)
 	{
 		uint x = htonl(addr);
@@ -482,13 +487,13 @@ class InternetHost
 		populate(he);
 		return true;
 	}
-	
-	
+
+
 	/**
 	 * Same as previous, but addr is an IPv4 address string in the
 	 * dotted-decimal form $(I a.b.c.d).
 	 * Returns false if unable to resolve.
-	 */	
+	 */
 	bool getHostByAddr(string addr)
 	{
 		uint x = inet_addr(std.string.toStringz(addr));
@@ -516,9 +521,9 @@ unittest
 	{
 		printf("aliases[%d] = %.*s\n", i, s);
 	}
-	
+
 	printf("---\n");
-	
+
 	assert(ih.getHostByAddr(ih.addrList[0]));
 	printf("name = %.*s\n", ih.name);
 	foreach(int i, string s; ih.aliases)
@@ -558,27 +563,27 @@ class UnknownAddress: Address
 {
 	protected:
 	sockaddr sa;
-	
-	
+
+
 	override sockaddr* name()
 	{
 		return &sa;
 	}
-	
-	
+
+
 	override int nameLen()
 	{
 		return sa.sizeof;
 	}
-	
-	
+
+
 	public:
 	override AddressFamily addressFamily()
 	{
 		return cast(AddressFamily)sa.sa_family;
 	}
-	
-	
+
+
 	override string toString()
 	{
 		return "Unknown";
@@ -600,42 +605,42 @@ class InternetAddress: Address
 	{
 		return cast(sockaddr*)&sin;
 	}
-	
-	
+
+
 	override int nameLen()
 	{
 		return sin.sizeof;
 	}
-	
-	
+
+
 	this()
 	{
 	}
-	
-	
+
+
 	public:
 	const uint ADDR_ANY = INADDR_ANY;	/// Any IPv4 address number.
 	const uint ADDR_NONE = INADDR_NONE;	/// An invalid IPv4 address number.
 	const ushort PORT_ANY = 0;		/// Any IPv4 port number.
-	
+
 	/// Overridden to return AddressFamily.INET.
 	override AddressFamily addressFamily()
 	{
 		return cast(AddressFamily)AddressFamily.INET;
 	}
-	
+
 	/// Returns the IPv4 port number.
 	ushort port()
 	{
 		return ntohs(sin.sin_port);
 	}
-	
+
 	/// Returns the IPv4 address number.
 	uint addr()
 	{
 		return ntohl(sin.sin_addr.s_addr);
 	}
-	
+
 	/**
 	 * Params:
 	 *   addr = an IPv4 address string in the dotted-decimal form a.b.c.d,
@@ -658,7 +663,7 @@ class InternetAddress: Address
 		sin.sin_addr.s_addr = htonl(uiaddr);
 		sin.sin_port = htons(port);
 	}
-	
+
 	/**
 	 * Construct a new Address. addr may be ADDR_ANY (default) and port may
 	 * be PORT_ANY, and the actual numbers may not be known until a connection
@@ -669,32 +674,32 @@ class InternetAddress: Address
 		sin.sin_addr.s_addr = htonl(addr);
 		sin.sin_port = htons(port);
 	}
-	
-	/// ditto	
+
+	/// ditto
 	this(ushort port)
 	{
 		sin.sin_addr.s_addr = 0; //any, "0.0.0.0"
 		sin.sin_port = htons(port);
 	}
-	
-	/// Human readable string representing the IPv4 address in dotted-decimal form.	
+
+	/// Human readable string representing the IPv4 address in dotted-decimal form.
 	string toAddrString()
 	{
             return std.string.toString(inet_ntoa(sin.sin_addr)).idup;
 	}
-	
+
 	/// Human readable string representing the IPv4 port.
 	string toPortString()
 	{
 		return std.string.toString(port());
 	}
-	
+
 	/// Human readable string representing the IPv4 address and port in the form $(I a.b.c.d:e).
 	override string toString()
 	{
             return toAddrString() ~ ":" ~ toPortString();
 	}
-	
+
 	/**
 	 * Parse an IPv4 address string in the dotted-decimal form $(I a.b.c.d)
 	 * and return the number.
@@ -736,8 +741,8 @@ enum SocketShutdown: int
 /// Flags may be OR'ed together:
 enum SocketFlags: int
 {
-	NONE =       0,             /// no flags specified 
-	
+	NONE =       0,             /// no flags specified
+
 	OOB =        MSG_OOB,       /// out-of-band stream data
 	PEEK =       MSG_PEEK,      /// peek at incoming data without removing it from the queue, only for receiving
 	DONTROUTE =  MSG_DONTROUTE, /// data should not be subject to routing; this flag may be ignored. Only for sending
@@ -751,7 +756,7 @@ extern(C) struct timeval
 	// D interface
 	int seconds;		/// Number of seconds.
 	int microseconds;	/// Number of additional microseconds.
-	
+
 	// C interface
 	deprecated
 	{
@@ -767,8 +772,8 @@ class SocketSet
 	private:
 	uint maxsockets; /// max desired sockets, the fd_set might be capable of holding more
 	fd_set set;
-	
-	
+
+
 	version(Win32)
 	{
 		uint count()
@@ -781,8 +786,8 @@ class SocketSet
 		int maxfd;
 		uint count;
 	}
-	
-	
+
+
 	public:
 
 	/// Set the maximum amount of sockets that may be added.
@@ -791,26 +796,26 @@ class SocketSet
 		maxsockets = max;
 		reset();
 	}
-	
+
 	/// Uses the default maximum for the system.
 	this()
 	{
 		this(FD_SETSIZE);
 	}
-	
-	/// Reset the SocketSet so that there are 0 Sockets in the collection.	
+
+	/// Reset the SocketSet so that there are 0 Sockets in the collection.
 	void reset()
 	{
 		FD_ZERO(&set);
-		
+
 		version(BsdSockets)
 		{
 			maxfd = -1;
 			count = 0;
 		}
 	}
-	
-	
+
+
 	void add(socket_t s)
 	in
 	{
@@ -824,7 +829,7 @@ class SocketSet
 	body
 	{
 		FD_SET(s, &set);
-		
+
 		version(BsdSockets)
 		{
 			++count;
@@ -832,13 +837,13 @@ class SocketSet
 				maxfd = s;
 		}
 	}
-	
+
 	/// Add a Socket to the collection. Adding more than the maximum has dangerous side affects.
 	void add(Socket s)
 	{
 		add(s.sock);
 	}
-	
+
 	void remove(socket_t s)
 	{
 		FD_CLR(s, &set);
@@ -848,40 +853,40 @@ class SocketSet
 			// note: adjusting maxfd would require scanning the set, not worth it
 		}
 	}
-	
-	
+
+
 	/// Remove this Socket from the collection.
 	void remove(Socket s)
 	{
 		remove(s.sock);
 	}
-	
+
 	int isSet(socket_t s)
 	{
 		return FD_ISSET(s, &set);
 	}
-	
-	
+
+
 	/// Returns nonzero if this Socket is in the collection.
 	int isSet(Socket s)
 	{
 		return isSet(s.sock);
 	}
-	
+
 
 	/// Return maximum amount of sockets that can be added, like FD_SETSIZE.
 	uint max()
 	{
 		return maxsockets;
 	}
-	
-	
+
+
 	fd_set* toFd_set()
 	{
 		return &set;
 	}
-	
-	
+
+
 	int selectn()
 	{
 		version(Win32)
@@ -925,7 +930,7 @@ extern(C) struct linger
 		int32_t on;
 		int32_t time;
 	}
-	
+
 	// C interface
 	deprecated
 	{
@@ -946,10 +951,10 @@ enum SocketOption: int
 	SNDBUF =               SO_SNDBUF,	/// send buffer size
 	RCVBUF =               SO_RCVBUF,	/// receive buffer size
 	DONTROUTE =            SO_DONTROUTE,	/// do not route
-	
+
 	// SocketOptionLevel.TCP:
 	TCP_NODELAY =          .TCP_NODELAY,	/// disable the Nagle algorithm for send coalescing
-	
+
 	// SocketOptionLevel.IPV6:
 	IPV6_UNICAST_HOPS =    .IPV6_UNICAST_HOPS,	///
 	IPV6_MULTICAST_IF =    .IPV6_MULTICAST_IF,	///
@@ -968,17 +973,17 @@ class Socket
 	private:
 	socket_t sock;
 	AddressFamily _family;
-	
+
 	version(Win32)
 	    bool _blocking = false;	/// Property to get or set whether the socket is blocking or nonblocking.
-	
-	
+
+
 	// For use with accepting().
 	protected this()
 	{
 	}
-	
-	
+
+
 	public:
 
 	/**
@@ -993,8 +998,8 @@ class Socket
 			throw new SocketException("Unable to create socket", _lasterr());
 		_family = af;
 	}
-	
-	
+
+
 	// A single protocol exists to support this socket type within the
 	// protocol family, so the ProtocolType is assumed.
 	/// ditto
@@ -1002,8 +1007,8 @@ class Socket
 	{
 		this(af, type, cast(ProtocolType)0); // Pseudo protocol number.
 	}
-	
-	
+
+
 	/// ditto
 	this(AddressFamily af, SocketType type, string protocolName)
 	{
@@ -1013,14 +1018,14 @@ class Socket
 			throw new SocketException("Unable to find the protocol", _lasterr());
 		this(af, type, cast(ProtocolType)proto.p_proto);
 	}
-	
-	
+
+
 	~this()
 	{
 		close();
 	}
-	
-	
+
+
 	/// Get underlying socket handle.
 	socket_t handle()
 	{
@@ -1032,7 +1037,7 @@ class Socket
 	 *
 	 * When a socket is blocking, calls to receive(), accept(), and send()
 	 * will block and wait for data/action.
-	 * A non-blocking socket will immediately return instead of blocking. 
+	 * A non-blocking socket will immediately return instead of blocking.
 	 */
 	bool blocking()
 	{
@@ -1045,7 +1050,7 @@ class Socket
 			return !(fcntl(handle, F_GETFL, 0) & O_NONBLOCK);
 		}
 	}
-	
+
 	/// ditto
 	void blocking(bool byes)
 	{
@@ -1069,32 +1074,32 @@ class Socket
 				goto err;
 		}
 		return; // Success.
-		
+
 		err:
 		throw new SocketException("Unable to set socket blocking", _lasterr());
 	}
-	
 
-	/// Get the socket's address family.	
+
+	/// Get the socket's address family.
 	AddressFamily addressFamily() // getter
 	{
 		return _family;
 	}
-	
+
 	/// Property that indicates if this is a valid, alive socket.
 	bool isAlive() // getter
 	{
 		int type, typesize = type.sizeof;
 		return !getsockopt(sock, SOL_SOCKET, SO_TYPE, cast(char*)&type, &typesize);
 	}
-	
+
 	/// Associate a local address with this socket.
 	void bind(Address addr)
 	{
 		if(_SOCKET_ERROR == .bind(sock, addr.name(), addr.nameLen()))
 			throw new SocketException("Unable to bind socket", _lasterr());
 	}
-	
+
 	/**
 	 * Establish a connection. If the socket is blocking, connect waits for
 	 * the connection to be made. If the socket is nonblocking, connect
@@ -1106,7 +1111,7 @@ class Socket
 		{
 			int err;
 			err = _lasterr();
-			
+
 			if(!blocking)
 			{
 				version(Win32)
@@ -1127,7 +1132,7 @@ class Socket
 			throw new SocketException("Unable to connect socket", err);
 		}
 	}
-	
+
 	/**
 	 * Listen for an incoming connection. bind must be called before you can
 	 * listen. The backlog is a request of how many pending incoming
@@ -1138,7 +1143,7 @@ class Socket
 		if(_SOCKET_ERROR == .listen(sock, backlog))
 			throw new SocketException("Unable to listen on socket", _lasterr());
 	}
-	
+
 	/**
 	 * Called by accept when a new Socket must be created for a new
 	 * connection. To use a derived class, override this method and return an
@@ -1151,7 +1156,7 @@ class Socket
 	{
 		return new Socket;
 	}
-	
+
 	/**
 	 * Accept an incoming connection. If the socket is blocking, accept
 	 * waits for a connection request. Throws SocketAcceptException if unable
@@ -1165,13 +1170,13 @@ class Socket
 		newsock = cast(socket_t)topaccept(sock, null, null);
 		if(socket_t.init == newsock)
 			throw new SocketAcceptException("Unable to accept socket connection", _lasterr());
-		
+
 		Socket newSocket;
 		try
 		{
 			newSocket = accepting();
 			assert(newSocket.sock == socket_t.init);
-			
+
 			newSocket.sock = newsock;
 			version(Win32)
 				newSocket._blocking = _blocking; //inherits blocking mode
@@ -1182,17 +1187,17 @@ class Socket
 			_close(newsock);
 			throw o;
 		}
-		
+
 		return newSocket;
 	}
-	
+
 	/// Disables sends and/or receives.
 	void shutdown(SocketShutdown how)
 	{
 		.shutdown(sock, cast(int)how);
 	}
-	
-	
+
+
 	private static void _close(socket_t sock)
 	{
 		version(Win32)
@@ -1204,7 +1209,7 @@ class Socket
 			.close(sock);
 		}
 	}
-	
+
 
 	/**
 	 * Immediately drop any connections and release socket resources.
@@ -1218,8 +1223,8 @@ class Socket
 		_close(sock);
 		sock = socket_t.init;
 	}
-	
-	
+
+
 	private Address newFamilyObject()
 	{
 		Address result;
@@ -1228,14 +1233,14 @@ class Socket
 			case cast(AddressFamily)AddressFamily.INET:
 				result = new InternetAddress;
 				break;
-			
+
 			default:
 				result = new UnknownAddress;
 		}
 		return result;
 	}
-	
-	
+
+
 	/// Returns the local machine's host name. Idea from mango.
 	static string hostName() // getter
 	{
@@ -1244,7 +1249,7 @@ class Socket
 			throw new SocketException("Unable to obtain host name", _lasterr());
 		return std.string.toString(cast(char*)result).idup;
 	}
-	
+
 	/// Remote endpoint Address.
 	Address remoteAddress()
 	{
@@ -1255,7 +1260,7 @@ class Socket
 		assert(addr.addressFamily() == _family);
 		return addr;
 	}
-	
+
 	/// Local endpoint Address.
 	Address localAddress()
 	{
@@ -1266,10 +1271,10 @@ class Socket
 		assert(addr.addressFamily() == _family);
 		return addr;
 	}
-	
+
 	/// Send or receive error code.
 	const int ERROR = _SOCKET_ERROR;
-	
+
 	/**
 	 * Send data on the connection. Returns the number of bytes actually
 	 * sent, or ERROR on failure. If the socket is blocking and there is no
@@ -1282,13 +1287,13 @@ class Socket
 		int sent = .send(sock, buf.ptr, buf.length, cast(int)flags);
 		return sent;
 	}
-	
+
 	/// ditto
 	int send(const(void)[] buf)
 	{
 		return send(buf, SocketFlags.NOSIGNAL);
 	}
-	
+
 	/**
 	 * Send data to a specific destination Address. If the destination address is not specified, a connection must have been made and that address is used. If the socket is blocking and there is no buffer space left, sendTo waits.
 	 */
@@ -1298,14 +1303,14 @@ class Socket
 		int sent = .sendto(sock, buf.ptr, buf.length, cast(int)flags, to.name(), to.nameLen());
 		return sent;
 	}
-	
+
 	/// ditto
 	int sendTo(const(void)[] buf, Address to)
 	{
 		return sendTo(buf, SocketFlags.NONE, to);
 	}
-	
-	
+
+
 	//assumes you connect()ed
 	/// ditto
 	int sendTo(const(void)[] buf, SocketFlags flags)
@@ -1314,15 +1319,15 @@ class Socket
 		int sent = .sendto(sock, buf.ptr, buf.length, cast(int)flags, null, 0);
 		return sent;
 	}
-	
-	
+
+
 	//assumes you connect()ed
 	/// ditto
 	int sendTo(const(void)[] buf)
 	{
 		return sendTo(buf, SocketFlags.NONE);
 	}
-	
+
 
 	/**
 	 * Receive data on the connection. Returns the number of bytes actually
@@ -1339,13 +1344,13 @@ class Socket
 		// if(!read) //connection closed
 		return read;
 	}
-	
+
 	/// ditto
 	int receive(void[] buf)
 	{
 		return receive(buf, SocketFlags.NONE);
 	}
-	
+
 	/**
 	 * Receive data and get the remote endpoint Address.
 	 * If the socket is blocking, receiveFrom waits until there is data to
@@ -1364,15 +1369,15 @@ class Socket
 		// if(!read) //connection closed
 		return read;
 	}
-	
-	
+
+
 	/// ditto
 	int receiveFrom(void[] buf, out Address from)
 	{
 		return receiveFrom(buf, SocketFlags.NONE, from);
 	}
-	
-	
+
+
 	//assumes you connect()ed
 	/// ditto
 	int receiveFrom(void[] buf, SocketFlags flags)
@@ -1383,17 +1388,17 @@ class Socket
 		// if(!read) //connection closed
 		return read;
 	}
-	
-	
+
+
 	//assumes you connect()ed
 	/// ditto
 	int receiveFrom(void[] buf)
 	{
 		return receiveFrom(buf, SocketFlags.NONE);
 	}
-	
 
-	/// Get a socket option. Returns the number of bytes written to result.	
+
+	/// Get a socket option. Returns the number of bytes written to result.
 	//returns the length, in bytes, of the actual result - very different from getsockopt()
 	int getOption(SocketOptionLevel level, SocketOption option, void[] result)
 	{
@@ -1402,30 +1407,30 @@ class Socket
 			throw new SocketException("Unable to get socket option", _lasterr());
 		return len;
 	}
-	
 
-	/// Common case of getting integer and boolean options.	
+
+	/// Common case of getting integer and boolean options.
 	int getOption(SocketOptionLevel level, SocketOption option, out int32_t result)
 	{
 		return getOption(level, option, (&result)[0 .. 1]);
 	}
 
 
-	/// Get the linger option.	
+	/// Get the linger option.
 	int getOption(SocketOptionLevel level, SocketOption option, out linger result)
 	{
 		//return getOption(cast(SocketOptionLevel)SocketOptionLevel.SOCKET, SocketOption.LINGER, (&result)[0 .. 1]);
-		return getOption(level, option, (&result)[0 .. 1]); 
+		return getOption(level, option, (&result)[0 .. 1]);
 	}
-	
+
 	// Set a socket option.
 	void setOption(SocketOptionLevel level, SocketOption option, void[] value)
 	{
 		if(_SOCKET_ERROR == .setsockopt(sock, cast(int)level, cast(int)option, value.ptr, value.length))
 			throw new SocketException("Unable to set socket option", _lasterr());
 	}
-	
-	
+
+
 	/// Common case for setting integer and boolean options.
 	void setOption(SocketOptionLevel level, SocketOption option, int32_t value)
 	{
@@ -1439,7 +1444,7 @@ class Socket
 		//setOption(cast(SocketOptionLevel)SocketOptionLevel.SOCKET, SocketOption.LINGER, (&value)[0 .. 1]);
 		setOption(level, option, (&value)[0 .. 1]);
 	}
-	
+
 
 	/**
 	 * Wait for a socket to change status. A wait timeout timeval or int microseconds may be specified; if a timeout is not specified or the timeval is null, the maximum timeout is used. The timeval timeout has an unspecified value when select returns. Returns the number of sockets with status changes, 0 on timeout, or -1 on interruption. If the return value is greater than 0, the SocketSets are updated to only contain the sockets having status changes. For a connecting socket, a write status change means the connection is established and it's able to send. For a listening socket, a read status change means there is an incoming connection request and it's able to accept.
@@ -1467,7 +1472,7 @@ class Socket
 	{
 		fd_set* fr, fw, fe;
 		int n = 0;
-		
+
 		version(Win32)
 		{
 			// Windows has a problem with empty fd_set`s that aren't null.
@@ -1486,7 +1491,7 @@ class Socket
 			{
 				fr = null;
 			}
-			
+
 			if(checkWrite)
 			{
 				fw = checkWrite.toFd_set();
@@ -1499,7 +1504,7 @@ class Socket
 			{
 				fw = null;
 			}
-			
+
 			if(checkError)
 			{
 				fe = checkError.toFd_set();
@@ -1513,9 +1518,9 @@ class Socket
 				fe = null;
 			}
 		}
-		
+
 		int result = .select(n, fr, fw, fe, cast(_ctimeval*)tv);
-		
+
 		version(Win32)
 		{
 			if(_SOCKET_ERROR == result && WSAGetLastError() == WSAEINTR)
@@ -1530,10 +1535,10 @@ class Socket
 		{
 			static assert(0);
 		}
-		
+
 		if(_SOCKET_ERROR == result)
 			throw new SocketException("Socket select error", _lasterr());
-		
+
 		return result;
 	}
 
@@ -1546,16 +1551,16 @@ class Socket
 	    tv.microseconds = microseconds % 1_000_000;
 	    return select(checkRead, checkWrite, checkError, &tv);
 	}
-	
-	
+
+
 	/// ditto
 	//maximum timeout
 	static int select(SocketSet checkRead, SocketSet checkWrite, SocketSet checkError)
 	{
 		return select(checkRead, checkWrite, checkError, null);
 	}
-	
-	
+
+
 	/+
 	bool poll(events)
 	{
@@ -1574,14 +1579,14 @@ class TcpSocket: Socket
 	{
 		super(family, SocketType.STREAM, ProtocolType.TCP);
 	}
-	
+
 	/// Constructs a blocking TCP Socket.
 	this()
 	{
 		this(cast(AddressFamily)AddressFamily.INET);
 	}
-	
-	
+
+
 	//shortcut
 	/// Constructs a blocking TCP Socket and connects to an InternetAddress.
 	this(Address connectTo)
@@ -1600,8 +1605,8 @@ class UdpSocket: Socket
 	{
 		super(family, SocketType.DGRAM, ProtocolType.UDP);
 	}
-	
-	
+
+
 	/// Constructs a blocking UDP Socket.
 	this()
 	{

@@ -24,10 +24,10 @@ module std.stdio;
 
 public import std.c.stdio;
 
+import memory;
 import std.format;
 import std.utf;
 import std.string;
-import std.gc;
 import std.c.stdlib;
 import std.c.string;
 import std.c.stddef;
@@ -567,7 +567,7 @@ size_t readln(FILE* fp, inout char[] buf, dchar terminator = '\n')
 	    return buf.length;
 	}
 
-	auto sz = std.gc.capacity(buf.ptr);
+	auto sz = GC.sizeOf(buf.ptr);
 	//auto sz = buf.length;
 	buf = buf.ptr[0 .. sz];
 	if (fp._flag & _IONBF)
@@ -586,8 +586,7 @@ size_t readln(FILE* fp, inout char[] buf, dchar terminator = '\n')
 	    else
 	    {
 		sz = 64;
-		p = cast(char*) std.gc.malloc(sz);
-		std.gc.hasNoPointers(p);
+		p = cast(char*) GC.malloc(sz, GC.BlkAttr.NO_SCAN);
 		buf = p[0 .. sz];
 	    }
 	    size_t i = 0;
@@ -644,8 +643,7 @@ size_t readln(FILE* fp, inout char[] buf, dchar terminator = '\n')
 		}
 		if (i > sz)
 		{
-		    buf = cast(char[])std.gc.malloc(i);
-		    std.gc.hasNoPointers(buf.ptr);
+		    buf = cast(char[])GC.malloc(i, GC.BlkAttr.NO_SCAN)[0 .. i];
 		}
 		if (i - 1)
 		    memcpy(buf.ptr, p, i - 1);
@@ -667,8 +665,7 @@ size_t readln(FILE* fp, inout char[] buf, dchar terminator = '\n')
 		}
 		if (i > sz)
 		{
-		    buf = cast(char[])std.gc.malloc(i);
-		    std.gc.hasNoPointers(buf.ptr);
+		    buf = cast(char[])GC.malloc(i, GC.BlkAttr.NO_SCAN)[0 .. i];
 		}
 		memcpy(buf.ptr, p, i);
 		buf = buf[0 .. i];
@@ -748,7 +745,7 @@ size_t readln(FILE* fp, inout char[] buf, dchar terminator = '\n')
                  buf.length = 0;		// end of file
                  return 0;
              }
-             buf = buf.ptr[0 .. std.gc.capacity(buf.ptr)];
+             buf = buf.ptr[0 .. GC.sizeOf(buf.ptr)];
              if (s <= buf.length)
              {
                  buf.length = s;

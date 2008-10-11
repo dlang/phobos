@@ -34,12 +34,12 @@ ifdef WIN32
       DMD = dmd
       CFLAGS =
       DFLAGS =
-      LDFLAGS = 
+      LDFLAGS =
 else
       OBJDIR = obj/linux
       OBJEXT = o
       LIBEXT = a
-      EXEEXT = 
+      EXEEXT =
       CC = gcc
       DMD = dmd
       CFLAGS := -m32 $(CFLAGS)
@@ -90,8 +90,7 @@ debug, release, unittest/debug, unittest/release, clean, or html)
 endif
 
 ifneq (none,$(OBJDIR))
-      DUMMY := $(shell mkdir --parents $(OBJDIR) $(OBJDIR)/etc/c/zlib	\
-            $(OBJDIR)/internal $(OBJDIR)/internal/gc)
+      DUMMY := $(shell mkdir --parents $(OBJDIR) $(OBJDIR)/etc/c/zlib)
 endif
 
 LIB=$(OBJDIR)/libphobos2.$(LIBEXT)
@@ -138,33 +137,16 @@ $(OBJDIR)/unittest.$(OBJEXT) : unittest.d all_std_modules_generated.d
 all_std_modules_generated.d : $(MAKEFILE_LIST)
 	for m in $(STD_MODULES); do echo public import std.$$m\;; done > $@
 
-INTERNAL_MODULES = aApply aApplyR aaA adi alloca arraycast arraycat	\
-	cast cmath2 deh2 dmain2 invariant llmath memset monitor obj     \
-	object qsort switch trace arrayassign \
-	arrayfloat arraydouble arrayreal \
-	arraybyte arrayshort arrayint
-INTERNAL_CMODULES = complex critical
-INTERNAL_CMODULES_NOTBUILT = deh
-INTERNAL_EXTRAFILES = internal/mars.h internal/minit.asm
-
-INTERNAL_GC_MODULES = gc gcold gcx gcbits gclinux
-INTERNAL_GC_EXTRAFILES = \
-	internal/gc/gcstub.d \
-	internal/gc/win32.d \
-	internal/gc/testgc.d \
-	internal/gc/win32.mak \
-	internal/gc/linux.mak
-
-STD_MODULES = algorithm array asserterror atomics base64 bigint bind bitarray	\
+STD_MODULES = algorithm atomics base64 bigint bind bitarray	        \
         bitmanip boxer compiler complex contracts conv cover cpuid	\
         cstream ctype date dateparse demangle encoding file format	\
-        functional  getopt hiddenfunc intrinsic iterator loader math	\
-        md5 metastrings mmfile moduleinit numeric openrj outbuffer	\
-        outofmemory path perf process random regexp signals socket	\
-        socketstream stdint stdio stream string switcherr syserror	\
-        synchro system thread traits typecons typetuple uni uri utf     \
+        functional  getopt intrinsic iterator loader math	        \
+        md5 metastrings mmfile numeric openrj outbuffer	                \
+        path perf process random regexp signals socket	                \
+        socketstream stdint stdio stream string syserror	        \
+        system traits typecons typetuple uni uri utf                    \
         variant xml zip zlib
-STD_MODULES_NOTBUILT = stdarg gc
+STD_MODULES_NOTBUILT = stdarg
 
 STD_C_MODULES = stdarg stdio
 STD_C_MODULES_NOTBUILT = fenv math process stddef stdlib string time locale \
@@ -191,7 +173,7 @@ ETC_MODULES_NOTBUILT = gamma
 
 ETC_C_MODULES = zlib
 
-SRC = errno.c object.d unittest.d crc32.d 
+SRC = errno.c object.d unittest.d crc32.d
 
 SRC_ZLIB = ChangeLog README adler32.c algorithm.txt compress.c crc32.c	\
 	crc32.h deflate.c deflate.h example.c gzio.c infback.c		\
@@ -207,33 +189,22 @@ SRC_DOCUMENTABLES = phobos.d $(addprefix std/, $(addsuffix .d,		\
 	$(STD_C_LINUX_MODULES) $(STD_C_LINUX_MODULES_NOTBUILT)))
 
 SRC_RELEASEZIP = linux.mak win32.mak phoboslicense.txt $(SRC)		\
-	$(SRC_ZLIB) $(INTERNAL_EXTRAFILES) $(INTERNAL_GC_EXTRAFILES)	\
-	$(addprefix internal/,$(addsuffix .c,				\
-	$(INTERNAL_CMODULES_NOTBUILT))) $(addprefix internal/,		\
-	$(addsuffix .c, $(INTERNAL_CMODULES))) $(addprefix internal/,	\
-	$(addsuffix .d, $(INTERNAL_MODULES))) $(addprefix		\
-	internal/gc/, $(addsuffix .d, $(INTERNAL_GC_MODULES)))		\
-	$(addprefix std/, $(addsuffix .d, $(STD_MODULES)		\
+	$(SRC_ZLIB) $(addprefix std/, $(addsuffix .d, $(STD_MODULES)    \
 	$(STD_MODULES_NOTBUILT))) $(addprefix std/c/, $(addsuffix .d,	\
 	$(STD_C_MODULES) $(STD_C_MODULES_NOTBUILT))) $(addprefix	\
 	std/c/linux/, $(addsuffix .d, $(STD_C_LINUX_MODULES)		\
 	$(STD_C_LINUX_MODULES_NOTBUILT))) $(addprefix std/c/windows/,	\
 	$(addsuffix .d, $(STD_C_WINDOWS_MODULES_NOTBUILT)))		\
-	$(addprefix std/typeinfo/, $(addsuffix .d,			\
-	$(TYPEINFO_MODULES))) $(addprefix std/windows/, $(addsuffix	\
+	$(addprefix std/windows/, $(addsuffix	                        \
 	.d, $(STD_WINDOWS_MODULES_NOTBUILT))) $(addprefix etc/,		\
 	$(addsuffix .d, $(ETC_MODULES_NOTBUILT))) $(addprefix etc/c/,	\
 	$(addsuffix .d, $(ETC_C_MODULES)))
 
-OBJS = errno $(addprefix internal/, $(INTERNAL_MODULES)		\
-	$(INTERNAL_CMODULES)) $(addprefix internal/gc/,		\
-	$(INTERNAL_GC_MODULES)) $(addprefix etc/c/zlib/,	\
-	$(ZLIB_CMODULES))
+OBJS = errno
 
 OBJS := $(addsuffix .$(OBJEXT),$(addprefix $(OBJDIR)/,$(OBJS)))
 
-SRC2LIB = crc32 gcstats $(addprefix std/, $(STD_MODULES)) $(addprefix	\
-std/typeinfo/, $(TYPEINFO_MODULES)) $(addprefix std/c/,			\
+SRC2LIB = crc32 $(addprefix std/, $(STD_MODULES)) $(addprefix std/c/,   \
 $(STD_C_MODULES)) $(addprefix std/c/linux/, $(STD_C_LINUX_MODULES))	\
 $(addprefix etc/c/, $(ETC_C_MODULES))
 
@@ -274,13 +245,12 @@ clean:
 
 
 HEADERDIR = include
-HEADERS = object.d \
-	$(addprefix std/,$(addsuffix .d,$(STD_MODULES))) \
+HEADERS = $(addprefix std/,$(addsuffix .d,$(STD_MODULES))) \
 	$(addprefix std/,$(addsuffix .d,$(STD_MODULES_NOTBUILT))) \
 	$(addprefix std/c/,$(addsuffix .d,$(STD_C_MODULES))) \
 	$(addprefix std/c/,$(addsuffix .d,$(STD_C_MODULES_NOTBUILT))) \
 	$(addprefix std/c/linux/,$(addsuffix .d,$(STD_C_LINUX_MODULES))) \
-	$(addprefix std/c/linux/,$(addsuffix .d,$(STD_C_LINUX_MODULES_NOTBUILT))) 
+	$(addprefix std/c/linux/,$(addsuffix .d,$(STD_C_LINUX_MODULES_NOTBUILT)))
 
 HEADERS := $(addprefix $(HEADERDIR)/,$(HEADERS))
 
