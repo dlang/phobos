@@ -19,7 +19,7 @@ congruential) generators such as $(D MinstdRand0) and $(D MinstdRand)
 might be useful. The standard library provides an alias $(D_PARAM
 Random) for whichever generator it finds the most fit for the target
 environment.
-   
+
 Example:
 
 ----
@@ -65,15 +65,15 @@ import std.stdio, std.math, std.c.time, std.traits, std.contracts, std.conv,
 
 // Work derived from:
 
-/* 
+/*
    A C-program for MT19937, with initialization improved 2002/1/26.
    Coded by Takuji Nishimura and Makoto Matsumoto.
 
-   Before using, initialize the state by using init_genrand(seed)  
+   Before using, initialize the state by using init_genrand(seed)
    or init_by_array(init_key, key_length).
 
    Copyright (C) 1997 - 2002, Makoto Matsumoto and Takuji Nishimura,
-   All rights reserved.                          
+   All rights reserved.
 
    Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions
@@ -86,8 +86,8 @@ import std.stdio, std.math, std.c.time, std.traits, std.contracts, std.conv,
         notice, this list of conditions and the following disclaimer in the
         documentation and/or other materials provided with the distribution.
 
-     3. The names of its contributors may not be used to endorse or promote 
-        products derived from this software without specific prior written 
+     3. The names of its contributors may not be used to endorse or promote
+        products derived from this software without specific prior written
         permission.
 
    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
@@ -145,7 +145,7 @@ struct LinearCongruentialEngine(UIntType, UIntType a, UIntType c, UIntType m)
             ///ditto
             modulus = m;
     }
-    
+
     static assert(isIntegral!(UIntType));
     static assert(m == 0 || a < m);
     static assert(m == 0 || c < m);
@@ -180,7 +180,7 @@ struct LinearCongruentialEngine(UIntType, UIntType a, UIntType c, UIntType m)
 */
     UIntType next()
     {
-        static if (m) 
+        static if (m)
             _x = cast(UIntType) ((cast(ulong) a * _x + c) % m);
         else
             _x = a * _x + c;
@@ -202,7 +202,7 @@ struct LinearCongruentialEngine(UIntType, UIntType a, UIntType c, UIntType m)
     {
         return _x == rhs._x;
     }
-    
+
     private UIntType _x = 1;
 };
 
@@ -317,7 +317,7 @@ struct MersenneTwisterEngine(
         result.seed(value);
         return result;
     }
-    
+
 /**
    Constructs a MersenneTwisterEngine object
 */
@@ -333,9 +333,9 @@ struct MersenneTwisterEngine(
             mt[0] = value % (max + 1);
         }
         for (mti = 1; mti < n; ++mti) {
-            mt[mti] = 
+            mt[mti] =
                 cast(UIntType)
-                (1812433253UL * (mt[mti-1] ^ (mt[mti-1] >> (w - 2))) + mti); 
+                (1812433253UL * (mt[mti-1] ^ (mt[mti-1] >> (w - 2))) + mti);
             /* See Knuth TAOCP Vol2. 3rd Ed. P.106 for multiplier. */
             /* In the previous versions, MSBs of the seed affect   */
             /* only MSBs of the array mt[].                        */
@@ -363,8 +363,8 @@ struct MersenneTwisterEngine(
             /* generate N words at one time */
             if (mti == n + 1)   /* if init_genrand() has not been called, */
                 seed(5489UL); /* a default initial seed is used */
-            
-            int kk = 0;            
+
+            int kk = 0;
             for (; kk < n - m; ++kk)
             {
                 y = (mt[kk] & upperMask)|(mt[kk + 1] & lowerMask);
@@ -380,18 +380,18 @@ struct MersenneTwisterEngine(
             y = (mt[n -1] & upperMask)|(mt[0] & lowerMask);
             mt[n - 1] = cast(UIntType) (mt[m - 1] ^ (y >> 1)
                                         ^ mag01[cast(UIntType) y & 0x1U]);
-            
+
             mti = 0;
         }
-        
+
         y = mt[mti++];
-        
+
         /* Tempering */
         y ^= (y >> temperingU);
         y ^= (y << temperingS) & temperingB;
         y ^= (y << temperingT) & temperingC;
         y ^= (y >> temperingL);
-        
+
         return cast(UIntType) y;
     }
 
@@ -458,7 +458,7 @@ Example:
 auto rnd = Random(unpredictableSeed);
 auto n = rnd.next;
 ...
-----   
+----
 */
 
 uint unpredictableSeed()
@@ -466,7 +466,7 @@ uint unpredictableSeed()
     static bool seeded;
     static MinstdRand0 rand;
     if (!seeded) {
-        rand.seed(getpid ^ getUTCtime);
+        rand.seed(getpid ^ cast(uint)getUTCtime);
         seeded = true;
     }
     return cast(uint) (getUTCtime ^ rand.next);
@@ -502,7 +502,7 @@ a[i] = p;
 auto digits = UniformDistribution!(char, "[]")('0', '9');
 auto percentages = UniformDistribution!(double, "$(LPAREN)]")(0.0, 100.0);
 // Get a digit in ['0', '9']
-auto digit = digits.next(gen); 
+auto digit = digits.next(gen);
 // Get a number in $(LPAREN)0.0, 100.0]
 auto p = percentages.next(gen);
 ----
@@ -544,7 +544,7 @@ Returns the left bound of the random value generated.
 
 /**
 Returns the the right bound of the random value generated.
-*/ 
+*/
     ResultType b() { return rightLim == ']' ? _b : nextLarger(_b); }
 
 /**
@@ -584,8 +584,8 @@ back-end.
                 / (urng.max - urng.min);
         }
     }
-    
-private:    
+
+private:
     NumberType _a = 0, _b = NumberType.max;
 
     static NumberType nextLarger(NumberType x)
@@ -738,7 +738,7 @@ index + $(I n) to $(D rand_seed()).
 
 Note: This is more random, but slower, than C's $(D rand()) function.
 To use C's $(D rand()) instead, import $(D std.c.stdlib).
- 
+
 BUGS: Shares a global single state, not multithreaded.  SCHEDULED FOR
 DEPRECATION.
 

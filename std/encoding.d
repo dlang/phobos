@@ -2073,7 +2073,7 @@ abstract class EncodingScheme
      */
     static void register(string className)
     {
-        auto scheme = cast(EncodingScheme)Object.factory(className);
+        auto scheme = cast(EncodingScheme)ClassInfo.find(className).create();
         if (scheme is null)
             throw new EncodingException("Unable to create class "~className);
         foreach(encodingName;scheme.names())
@@ -2100,7 +2100,7 @@ abstract class EncodingScheme
         if (p is null)
             throw new EncodingException("Unrecognized Encoding: "~encodingName);
         string className = *p;
-        auto scheme = cast(EncodingScheme)Object.factory(className);
+        auto scheme = cast(EncodingScheme)ClassInfo.find(className).create();
         if (scheme is null) throw new EncodingException("Unable to create class "~className);
         return scheme;
     }

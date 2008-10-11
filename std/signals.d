@@ -58,13 +58,17 @@ module std.signals;
 
 import std.stdio;
 import std.c.stdlib : calloc, realloc, free;
-import std.outofmemory : _d_OutOfMemory;
+import exception : onOutOfMemoryError;
 
 // Special function for internal use only.
 // Use of this is where the slot had better be a delegate
 // to an object or an interface that is part of an object.
 extern (C) Object _d_toObject(void* p);
 
+// Used in place of Object.notifyRegister and Object.notifyUnRegister.
+alias void delegate(Object) DisposeEvt;
+extern (C) void  rt_attachDisposeEvent( Object obj, DisposeEvt evt );
+extern (C) void  rt_detachDisposeEvent( Object obj, DisposeEvt evt );
 //debug=signal;
 
 /************************
@@ -170,7 +174,7 @@ template Signal(T1...)
 		len = 4;
 		auto p = std.signals.calloc(slot_t.sizeof, len);
 		if (!p)
-		    std.signals._d_OutOfMemory();
+		    onOutOfMemoryError();
 		slots = (cast(slot_t*)p)[0 .. len];
 	    }
 	    else
@@ -178,7 +182,7 @@ template Signal(T1...)
 		len = len * 2 + 4;
 		auto p = std.signals.realloc(slots.ptr, slot_t.sizeof * len);
 		if (!p)
-		    std.signals._d_OutOfMemory();
+		    onOutOfMemoryError();
 		slots = (cast(slot_t*)p)[0 .. len];
 		slots[slots_idx + 1 .. length] = null;
 	    }
@@ -187,7 +191,7 @@ template Signal(T1...)
 
      L1:
 	Object o = _d_toObject(slot.ptr);
-	o.notifyRegister(&unhook);
+	rt_attachDisposeEvent(o, &unhook);
     }
 
     /***
@@ -204,7 +208,7 @@ template Signal(T1...)
 		slots[slots_idx] = null;	// not strictly necessary
 
 		Object o = _d_toObject(slot.ptr);
-		o.notifyUnRegister(&unhook);
+		rt_detachDisposeEvent(o, &unhook);
 	    }
 	    else
 		i++;
@@ -247,7 +251,7 @@ template Signal(T1...)
 	    {
 		if (slot)
 		{   Object o = _d_toObject(slot.ptr);
-		    o.notifyUnRegister(&unhook);
+		    rt_detachDisposeEvent(o, &unhook);
 		}
 	    }
 	    std.signals.free(slots.ptr);

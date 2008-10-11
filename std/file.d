@@ -37,12 +37,12 @@ WIKI = Phobos/StdFile
 
 module std.file;
 
+private import memory;
 private import std.c.stdio;
 private import std.c.stdlib;
 private import std.path;
 private import std.string;
 private import std.regexp;
-private import std.gc;
 private import std.c.string;
 private import std.traits;
 private import std.conv;
@@ -131,9 +131,7 @@ void[] read(in string name)
     if (size == INVALID_FILE_SIZE)
 	goto err2;
 
-    auto buf = std.gc.malloc(size);
-    if (buf)
-	std.gc.hasNoPointers(buf.ptr);
+    auto buf = GC.malloc(size, GC.BlkAttr.NO_SCAN)[0 .. size];
 
     if (ReadFile(h,buf.ptr,size,&numread,null) != 1)
 	goto err2;
@@ -954,10 +952,9 @@ void[] read(string name)
     cenforce(std.c.linux.linux.fstat(fd, &statbuf) == 0, name);
     invariant size = statbuf.st_size;
     if (!size) return null;
-    auto buf = std.gc.malloc(size);
+    auto buf = GC.malloc(size, GC.BlkAttr.NO_SCAN);
     enforce(buf, "Out of memory");
     scope(failure) delete buf;
-    std.gc.hasNoPointers(buf.ptr);
 
     cenforce(std.c.linux.linux.read(fd, buf.ptr, size) == size, name);
 

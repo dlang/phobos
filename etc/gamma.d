@@ -183,8 +183,8 @@ real tgamma(real x)
      * approximated by a rational function of degree 7/8 in the
      * interval (2,3).  Large arguments are handled by Stirling's
      * formula. Large negative arguments are made positive using
-     * a reflection formula. 
-     */ 
+     * a reflection formula.
+     */
 
     real q, z;
 
@@ -196,14 +196,14 @@ real tgamma(real x)
 	return real.infinity;
     if (x == 0)
 	return 1.0 / x; // +- infinity depending on sign of x, create an exception.
-    
+
     q = fabs(x);
-	    
+
     if ( q > 13.0L )
     {
 	// Large arguments are handled by Stirling's
 	// formula. Large negative arguments are made positive using
-	// the reflection formula.  
+	// the reflection formula.
 
 	if ( x < 0.0L )
 	{
@@ -229,7 +229,7 @@ real tgamma(real x)
 	else
 	    return gammaStirling(x);
     }
-    
+
     // Arguments |x| <= 13 are reduced by recurrence and the function
     // approximated by a rational function of degree 7/8 in the
     // interval (2,3).
@@ -240,13 +240,13 @@ real tgamma(real x)
 	x -= 1.0L;
 	z *= x;
     }
-    
+
     while ( x < -0.03125L )
     {
 	z /= x;
 	x += 1.0L;
     }
-    
+
     if ( x <= 0.03125L )
     {
 	if ( x == 0.0L )
@@ -261,7 +261,7 @@ real tgamma(real x)
 	    return z / (x * poly( x, GammaSmallCoeffs ));
 	}
     }
-    
+
     while ( x < 2.0L )
     {
 	z /= x;
@@ -269,7 +269,7 @@ real tgamma(real x)
     }
     if ( x == 2.0L )
 	return z;
-    
+
     x -= 2.0L;
     return z * poly( x, GammaNumeratorCoeffs ) / poly( x, GammaDenominatorCoeffs );
 }
@@ -314,7 +314,7 @@ unittest
  *	<tr> <td> 1, 2            <td> +0.0          <td> no
  *	<tr> <td> &plusmn;&infin;  <td> +&infin;      <td> no
  *	</table>
- * 
+ *
  */
 real lgamma(real x)
 {
@@ -329,12 +329,12 @@ real lgamma(real x)
      * less than -33.
      */
     real q, w, z, f, nx;
-    
+
     if (isnan(x))
 	return x;
     if (fabs(x) == x.infinity)
 	return x.infinity;
-    
+
     if ( x < -34.0L )
     {
 	q = -x;
@@ -385,7 +385,7 @@ real lgamma(real x)
 		else
 		    q = z / (x * poly( x, GammaSmallCoeffs));
 		return log( fabs(q) );
-	    }			
+	    }
 	    z /= nx +  f;
 	    nx += 1.0L;
 	    x = nx + f;
@@ -397,13 +397,13 @@ real lgamma(real x)
 	real p = x * poly( x, logGammaNumerator ) / poly( x, logGammaDenominator);
 	return ( log(z) + p );
     }
-    
+
     //const real MAXLGM = 1.04848146839019521116e+4928L;
     //if ( x > MAXLGM ) return sgngaml * real.infinity;
 
     /* log( sqrt( 2*pi ) ) */
     const real LOGSQRT2PI  =  0.91893853320467274178L;
-    
+
     q = ( x - 0.5L ) * log(x) - x + LOGSQRT2PI;
     if (x > 1.0e10L) return q;
     real p = 1.0L/(x*x);
@@ -414,7 +414,7 @@ real lgamma(real x)
 unittest
 {
     // return true if x is +0.0
-    bit isPosZero(real x)
+    bool isPosZero(real x)
     {
        return (x==0) && (signbit(x)==0);
     }
@@ -425,10 +425,10 @@ unittest
     assert(lgamma(0.0) == real.infinity);
     assert(isPosZero(lgamma(1.0L)));
     assert(isPosZero(lgamma(2.0L)));
- 
+
     // x, correct loggamma(x), correct d/dx loggamma(x).
     static real[] testpoints =
-    [ 
+    [
 	 8.0L,                    8.525146484375L      + 1.48766904143001655310E-5,   2.01564147795560999654E0L,
 	 8.99993896484375e-1L,    6.6375732421875e-2L  + 5.11505711292524166220E-6L, -7.54938684259372234258E-1,
 	 7.31597900390625e-1L,    2.2369384765625e-1   + 5.21506341809849792422E-6L, -1.13355566660398608343E0L,
@@ -480,4 +480,4 @@ unittest
     //assert(consistencyTwoFuncs(&exploggamma, &absgamma, -2000, real.infinity) > real.mant_dig-16);
 }
 
-  
+

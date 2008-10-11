@@ -195,7 +195,7 @@ int	 puts(in char *);	///
 int	 ungetc(int,FILE *);	///
 size_t	 fread(void *,size_t,size_t,FILE *);	///
 size_t	 fwrite(in void *,size_t,size_t,FILE *);	///
-//int	 printf(in char *,...);	///
+int	 printf(in char *,...);	///
 int	 fprintf(FILE *,in char *,...);	///
 int	 vfprintf(FILE *,in char *,va_list);	///
 int	 vprintf(in char *,va_list);	///

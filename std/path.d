@@ -34,7 +34,7 @@ version(linux)
 {
     private import std.c.stdlib;
     private import std.c.linux.linux;
-    private import std.outofmemory;
+    private import exception : onOutOfMemoryError;
 }
 
 version(Windows)
@@ -1257,7 +1257,7 @@ Lerror:
     // Errors are going to be caused by running out of memory
     if (extra_memory)
 	std.c.stdlib.free(extra_memory);
-    _d_OutOfMemory();
+    onOutOfMemoryError();
     return null;
 }
 
