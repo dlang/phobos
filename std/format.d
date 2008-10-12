@@ -1846,7 +1846,7 @@ private void formatIntegral(Writer, D)(ref Writer w, D argx, FormatInfo f)
         do
         {
             --i;
-            buffer[i] = n % base;
+            buffer[i] = cast(char)(n % base);
             n /= base;
             if (buffer[i] < 10) buffer[i] += '0';
             else buffer[i] += (f.spec == 'x' ? 'a' : 'A') - 10;
