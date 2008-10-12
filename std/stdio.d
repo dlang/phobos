@@ -592,7 +592,7 @@ size_t readln(FILE* fp, inout char[] buf, dchar terminator = '\n')
 	    size_t i = 0;
 	    for (int c; (c = FGETC(fp)) != -1; )
 	    {
-		if ((p[i] = c) != terminator)
+		if ((p[i] = cast(char)c) != terminator)
 		{
 		    i++;
 		    if (i < sz)

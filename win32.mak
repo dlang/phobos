@@ -35,13 +35,13 @@ CFLAGS=-mn -6 -r
 
 ## Flags for dmd D compiler
 
-DFLAGS=-O -release -nofloat -w
+DFLAGS=-O -release -nofloat
 #DFLAGS=-unittest -g
 #DFLAGS=-unittest -cov -g
 
 ## Flags for compiling unittests
 
-UDFLAGS=-O -release -nofloat -w
+UDFLAGS=-O -release -nofloat
 
 ## C compiler
 
@@ -248,10 +248,10 @@ SRC_ZLIB= etc\c\zlib\trees.h \
 	etc\c\zlib\win32.mak \
 	etc\c\zlib\linux.mak
 
-phobos.lib : $(OBJS) $(SRCS) minit.obj \
+phobos.lib : $(OBJS) $(SRCS) \
 	etc\c\zlib\zlib.lib win32.mak
-	$(DMD) -lib -ofphobos.lib $(DFLAGS) $(SRCS) $(OBJS) minit.obj \
-		etc\c\zlib\zlib.lib
+	$(DMD) -lib -ofphobos.lib $(DFLAGS) $(SRCS) $(OBJS) \
+		etc\c\zlib\zlib.lib ..\druntime\lib\druntime.lib
 
 unittest : $(SRCS) phobos.lib
 	$(DMD) $(UDFLAGS) -L/co -unittest unittest.d $(SRCS) phobos.lib
@@ -751,7 +751,7 @@ cleanhtml:
 
 install:
 	$(CP) phobos.lib gcstub.obj $(DIR)\lib
-	$(CP) win32.mak linux.mak phoboslicense.txt minit.obj std.ddoc $(DIR)\src\phobos
+	$(CP) win32.mak linux.mak phoboslicense.txt std.ddoc $(DIR)\src\phobos
 	$(CP) $(SRC) $(DIR)\src\phobos
 	$(CP) $(SRC_STD) $(DIR)\src\phobos\std
 	$(CP) $(SRC_STD_C) $(DIR)\src\phobos\std\c
