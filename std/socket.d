@@ -1535,10 +1535,10 @@ class Socket
 	/// ditto
 	static int select(SocketSet checkRead, SocketSet checkWrite, SocketSet checkError, int microseconds)
 	{
-		timeval tv;
-		tv.seconds = 0;
-		tv.microseconds = microseconds;
-		return select(checkRead, checkWrite, checkError, &tv);
+	    timeval tv;
+	    tv.seconds = microseconds / 1_000_000;
+	    tv.microseconds = microseconds % 1_000_000;
+	    return select(checkRead, checkWrite, checkError, &tv);
 	}
 	
 	
