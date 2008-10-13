@@ -182,7 +182,7 @@ void write(in string name, const void[] buffer)
 
     if (buffer.length != numwritten)
 	goto err2;
-    
+
     if (!CloseHandle(h))
 	goto err;
     return;
@@ -226,7 +226,7 @@ void append(in string name, in void[] buffer)
 
     if (buffer.length != numwritten)
 	goto err2;
-    
+
     if (!CloseHandle(h))
 	goto err;
     return;
@@ -625,13 +625,13 @@ struct DirEntry
 string[] listdir(string pathname)
 {
     string[] result;
-    
+
     bool listing(string filename)
     {
 	result ~= filename;
 	return true; // continue
     }
-    
+
     listdir(pathname, &listing);
     return result;
 }
@@ -680,7 +680,7 @@ string[] listdir(string pathname)
 
 string[] listdir(string pathname, string pattern)
 {   string[] result;
-    
+
     bool callback(DirEntry* de)
     {
 	if (de.isdir)
@@ -691,7 +691,7 @@ string[] listdir(string pathname, string pattern)
 	}
 	return true; // continue
     }
-    
+
     listdir(pathname, &callback);
     return result;
 }
@@ -700,7 +700,7 @@ string[] listdir(string pathname, string pattern)
 
 string[] listdir(string pathname, RegExp r)
 {   string[] result;
-    
+
     bool callback(DirEntry* de)
     {
 	if (de.isdir)
@@ -711,7 +711,7 @@ string[] listdir(string pathname, RegExp r)
 	}
 	return true; // continue
     }
-    
+
     listdir(pathname, &callback);
     return result;
 }
@@ -724,7 +724,7 @@ string[] listdir(string pathname, RegExp r)
  *
  * This function is being phased off. New code should use $(D_PARAM
  * dirEntries) (see below).
- * 
+ *
  * Params:
  *	callback =	Delegate that processes each
  *			filename in turn. Returns true to
@@ -774,7 +774,7 @@ void listdir(in string pathname, bool delegate(string filename) callback)
  *
  * This function is being phased off. New code should use $(D_PARAM
  * dirEntries) (see below).
- * 
+ *
  * Params:
  *	callback =	Delegate that processes each
  *			DirEntry in turn. Returns true to
@@ -952,7 +952,7 @@ void[] read(string name)
     cenforce(std.c.linux.linux.fstat(fd, &statbuf) == 0, name);
     invariant size = statbuf.st_size;
     if (!size) return null;
-    auto buf = GC.malloc(size, GC.BlkAttr.NO_SCAN);
+    auto buf = GC.malloc(size, GC.BlkAttr.NO_SCAN)[0 .. size];
     enforce(buf, "Out of memory");
     scope(failure) delete buf;
 
@@ -969,7 +969,7 @@ void[] read(string name)
  *
  * Throws: $(D FileException) on file error, $(D UtfException) on UTF
  * decoding error.
- *      
+ *
  */
 
 S readText(S = string)(in string name)
@@ -1172,7 +1172,7 @@ unittest
 {
     system("touch deleteme") == 0 || assert(false);
     scope(exit) remove("deleteme");
-    assert(lastModified("deleteme") > 
+    assert(lastModified("deleteme") >
         lastModified("this file does not exist", d_time.min));
     assert(lastModified("deleteme") > lastModified(__FILE__));
 }
@@ -1370,20 +1370,20 @@ struct DirEntry
 string[] listdir(string pathname)
 {
     string[] result;
-    
+
     bool listing(string filename)
     {
 	result ~= filename;
 	return true; // continue
     }
-    
+
     listdir(pathname, &listing);
     return result;
 }
 
 string[] listdir(string pathname, string pattern)
 {   string[] result;
-    
+
     bool callback(DirEntry* de)
     {
 	if (de.isdir)
@@ -1394,14 +1394,14 @@ string[] listdir(string pathname, string pattern)
 	}
 	return true; // continue
     }
-    
+
     listdir(pathname, &callback);
     return result;
 }
 
 string[] listdir(string pathname, RegExp r)
 {   string[] result;
-    
+
     bool callback(DirEntry* de)
     {
 	if (de.isdir)
@@ -1412,7 +1412,7 @@ string[] listdir(string pathname, RegExp r)
 	}
 	return true; // continue
     }
-    
+
     listdir(pathname, &callback);
     return result;
 }
@@ -1439,7 +1439,7 @@ void listdir(string pathname, bool delegate(DirEntry* de) callback)
                 !std.string.strcmp(fdata.d_name.ptr, ".."))
             continue;
         de.init(pathname, fdata);
-        if (!callback(&de))	    
+        if (!callback(&de))
             break;
     }
 }
@@ -1474,7 +1474,7 @@ void copy(in string from, in string to)
                 buf = enforce(std.c.stdlib.malloc(BUFSIZ), "Out of memory");
             }
             scope(exit) std.c.stdlib.free(buf);
-            
+
             for (size_t size = statbuf.st_size; size; )
             {
                 invariant toxfer = (size > BUFSIZ) ? BUFSIZ : size;
@@ -1485,9 +1485,9 @@ void copy(in string from, in string to)
                 size -= toxfer;
             }
         }
-        
+
         cenforce(std.c.linux.linux.close(fdw) != -1, from);
-        
+
         utimbuf utim = void;
         utim.actime = cast(__time_t) statbuf.st_atime;
         utim.modtime = cast(__time_t) statbuf.st_mtime;
@@ -1496,7 +1496,7 @@ void copy(in string from, in string to)
     else
     {
         void[] buffer;
-        
+
         buffer = read(from);
         write(to, buffer);
         delete buffer;
@@ -1544,7 +1544,7 @@ unittest
 }
 
 /**
- * Dictates directory spanning policy for $(D_PARAM dirEntries) (see below). 
+ * Dictates directory spanning policy for $(D_PARAM dirEntries) (see below).
  */
 
 enum SpanMode
@@ -1582,7 +1582,7 @@ struct DirIterator
                           " against type " ~ Parms[0].stringof);
         }
     }
-    
+
     int opApply(D)(D dg)
     {
         int result = 0;
@@ -1614,9 +1614,9 @@ struct DirIterator
                 }
                 break;
             }
-            return result == 0; 
+            return result == 0;
         }
-        
+
         // consume the worklist
         while (worklist.length)
         {
