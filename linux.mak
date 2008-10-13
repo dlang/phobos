@@ -200,7 +200,7 @@ SRC_RELEASEZIP = linux.mak win32.mak phoboslicense.txt $(SRC)		\
 	$(addsuffix .d, $(ETC_MODULES_NOTBUILT))) $(addprefix etc/c/,	\
 	$(addsuffix .d, $(ETC_C_MODULES)))
 
-OBJS = errno
+OBJS = errno $(addprefix etc/c/zlib/, $(ZLIB_CMODULES))
 
 OBJS := $(addsuffix .$(OBJEXT),$(addprefix $(OBJDIR)/,$(OBJS)))
 
