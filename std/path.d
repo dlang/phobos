@@ -34,7 +34,7 @@ version(linux)
 {
     private import std.c.stdlib;
     private import std.c.linux.linux;
-    private import exception : onOutOfMemoryError;
+    private import core.exception : onOutOfMemoryError;
 }
 
 version(Windows)

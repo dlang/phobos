@@ -46,7 +46,7 @@ private import std.contracts;
 private import std.typetuple;
 private import std.conv;
 private import std.traits;
-private import exception : onArrayBoundsError;
+private import core.exception : onArrayBoundsError;
 
 extern (C)
 {

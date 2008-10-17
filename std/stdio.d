@@ -24,7 +24,7 @@ module std.stdio;
 
 public import std.c.stdio;
 
-import memory;
+import core.memory;
 import std.format;
 import std.utf;
 import std.string;
