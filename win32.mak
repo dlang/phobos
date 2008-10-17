@@ -82,7 +82,6 @@ test.exe : test.obj phobos.lib
 
 OBJS= Czlib.obj Dzlib.obj \
 	oldsyserror.obj \
-	errno.obj \
 	c_stdio.obj
 
 #	ti_bit.obj ti_Abit.obj
@@ -180,7 +179,7 @@ DOCS=	$(DOC)\std_path.html $(DOC)\std_math.html $(DOC)\std_outbuffer.html \
 	$(DOC)\std_c_wcharh.html \
 	$(DOC)\phobos.html
 
-SRC=	errno.c unittest.d crc32.d phobos.d
+SRC=	unittest.d crc32.d phobos.d
 
 SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 	std\math.d std\string.d std\path.d std\date.d \
@@ -276,8 +275,6 @@ etc\c\zlib\zlib.lib:
 	cd etc\c\zlib
 	make -f win32.mak zlib.lib
 	cd ..\..\..
-
-errno.obj : errno.c
 
 ### std
 

@@ -173,7 +173,7 @@ ETC_MODULES_NOTBUILT = gamma
 
 ETC_C_MODULES = zlib
 
-SRC = errno.c object.d unittest.d crc32.d
+SRC = object.d unittest.d crc32.d
 
 SRC_ZLIB = ChangeLog README adler32.c algorithm.txt compress.c crc32.c	\
 	crc32.h deflate.c deflate.h example.c gzio.c infback.c		\
@@ -200,7 +200,7 @@ SRC_RELEASEZIP = linux.mak win32.mak phoboslicense.txt $(SRC)		\
 	$(addsuffix .d, $(ETC_MODULES_NOTBUILT))) $(addprefix etc/c/,	\
 	$(addsuffix .d, $(ETC_C_MODULES)))
 
-OBJS = errno $(addprefix etc/c/zlib/, $(ZLIB_CMODULES))
+OBJS = $(addprefix etc/c/zlib/, $(ZLIB_CMODULES))
 
 OBJS := $(addsuffix .$(OBJEXT),$(addprefix $(OBJDIR)/,$(OBJS)))
 
