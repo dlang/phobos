@@ -126,7 +126,7 @@ ifdef WIN32
 	mv unittest.exe $@
 	wine $@
 else
-	$(CC) $(CFLAGS) $(LDFLAGS) -o$@ $^ -lpthread -lm -g -ldl
+	$(CC) $(CFLAGS) $(LDFLAGS) -o$@ $^ -lpthread -lm -g -ldl -ldruntime
 endif
 ifeq (release,$(MAKECMDGOALS))
 	ln -sf `pwd`/$(OBJDIR)/libphobos2.$(LIBEXT) ../../lib
