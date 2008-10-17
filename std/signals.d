@@ -58,7 +58,7 @@ module std.signals;
 
 import std.stdio;
 import std.c.stdlib : calloc, realloc, free;
-import exception : onOutOfMemoryError;
+import core.exception : onOutOfMemoryError;
 
 // Special function for internal use only.
 // Use of this is where the slot had better be a delegate

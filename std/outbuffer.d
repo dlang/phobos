@@ -18,7 +18,7 @@ module std.outbuffer;
 
 private
 {
-    import memory;
+    import core.memory;
     import std.string;
     import std.c.stdio;
     import std.c.stdlib;

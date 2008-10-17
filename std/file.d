@@ -37,7 +37,7 @@ WIKI = Phobos/StdFile
 
 module std.file;
 
-private import memory;
+private import core.memory;
 private import std.c.stdio;
 private import std.c.stdlib;
 private import std.path;
