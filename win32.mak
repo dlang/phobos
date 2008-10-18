@@ -115,17 +115,15 @@ SRCS= std\math.d std\stdio.d std\dateparse.d std\date.d std\uni.d std\string.d \
 
 
 
-DOCS=	$(DOC)\std_path.html $(DOC)\std_math.html $(DOC)\std_outbuffer.html \
-	$(DOC)\std_stream.html $(DOC)\std_string.html $(DOC)\std_base64.html \
-	$(DOC)\object.html $(DOC)\std_compiler.html $(DOC)\std_format.html \
-	$(DOC)\std_random.html $(DOC)\std_file.html $(DOC)\std_date.html \
-	$(DOC)\std_md5.html $(DOC)\std_zip.html $(DOC)\std_zlib.html \
+DOCS=	$(DOC)\object.html \
 	$(DOC)\std_algorithm.html \
+	$(DOC)\std_base64.html \
 	$(DOC)\std_bigint.html \
 	$(DOC)\std_bind.html \
 	$(DOC)\std_bitarray.html \
 	$(DOC)\std_bitmanip.html \
 	$(DOC)\std_boxer.html \
+	$(DOC)\std_compiler.html \
 	$(DOC)\std_complex.html \
 	$(DOC)\std_contracts.html \
 	$(DOC)\std_conv.html \
@@ -133,27 +131,35 @@ DOCS=	$(DOC)\std_path.html $(DOC)\std_math.html $(DOC)\std_outbuffer.html \
 	$(DOC)\std_cpuid.html \
 	$(DOC)\std_cstream.html \
 	$(DOC)\std_ctype.html \
+	$(DOC)\std_date.html \
 	$(DOC)\std_demangle.html \
+	$(DOC)\std_encoding.html \
+	$(DOC)\std_file.html \
+	$(DOC)\std_format.html \
 	$(DOC)\std_functional.html \
 	$(DOC)\std_gc.html \
 	$(DOC)\std_getopt.html \
-	$(DOC)\std_hiddenfunc.html \
 	$(DOC)\std_intrinsic.html \
 	$(DOC)\std_iterator.html \
+	$(DOC)\std_math.html \
+	$(DOC)\std_md5.html \
 	$(DOC)\std_metastrings.html \
 	$(DOC)\std_mmfile.html \
 	$(DOC)\std_numeric.html \
 	$(DOC)\std_openrj.html \
-	$(DOC)\std_outofmemory.html \
+	$(DOC)\std_outbuffer.html \
+	$(DOC)\std_path.html \
 	$(DOC)\std_perf.html \
 	$(DOC)\std_process.html \
+	$(DOC)\std_random.html \
 	$(DOC)\std_regexp.html \
 	$(DOC)\std_signals.html \
 	$(DOC)\std_socket.html \
 	$(DOC)\std_socketstream.html \
 	$(DOC)\std_stdint.html \
 	$(DOC)\std_stdio.html \
-	$(DOC)\std_synchro.html \
+	$(DOC)\std_stream.html \
+	$(DOC)\std_string.html \
 	$(DOC)\std_system.html \
 	$(DOC)\std_thread.html \
 	$(DOC)\std_traits.html \
@@ -164,7 +170,8 @@ DOCS=	$(DOC)\std_path.html $(DOC)\std_math.html $(DOC)\std_outbuffer.html \
 	$(DOC)\std_utf.html \
 	$(DOC)\std_variant.html \
 	$(DOC)\std_xml.html \
-	$(DOC)\std_encoding.html \
+	$(DOC)\std_zip.html \
+	$(DOC)\std_zlib.html \
 	$(DOC)\std_windows_charset.html \
 	$(DOC)\std_c_fenv.html \
 	$(DOC)\std_c_locale.html \
@@ -183,10 +190,10 @@ SRC=	unittest.d crc32.d phobos.d
 
 SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 	std\math.d std\string.d std\path.d std\date.d \
-	std\ctype.d std\file.d std\compiler.d std\system.d std\moduleinit.d \
-	std\outbuffer.d std\thread.d std\md5.d std\atomics.d std\base64.d \
-	std\dateparse.d std\outofmemory.d std\mmfile.d \
-	std\intrinsic.d std\switcherr.d std\syserror.d \
+	std\ctype.d std\file.d std\compiler.d std\system.d \
+	std\outbuffer.d std\md5.d std\atomics.d std\base64.d \
+	std\dateparse.d std\mmfile.d \
+	std\intrinsic.d std\syserror.d \
 	std\regexp.d std\random.d std\stream.d std\process.d \
 	std\socket.d std\socketstream.d std\loader.d std\stdarg.d std\format.d \
 	std\stdio.d std\perf.d std\openrj.d std\uni.d std\boxer.d \
@@ -248,7 +255,7 @@ SRC_ZLIB= etc\c\zlib\trees.h \
 	etc\c\zlib\linux.mak
 
 phobos.lib : $(OBJS) $(SRCS) \
-	etc\c\zlib\zlib.lib win32.mak
+	etc\c\zlib\zlib.lib ..\druntime\lib\druntime.lib win32.mak
 	$(DMD) -lib -ofphobos.lib $(DFLAGS) $(SRCS) $(OBJS) \
 		etc\c\zlib\zlib.lib ..\druntime\lib\druntime.lib
 
@@ -362,9 +369,6 @@ metastrings.obj : std\metastrings.d
 mmfile.obj : std\mmfile.d
 	$(DMD) -c $(DFLAGS) std\mmfile.d
 
-moduleinit.obj : std\moduleinit.d
-	$(DMD) -c $(DFLAGS) std\moduleinit.d
-
 numeric.obj : std\numeric.d
 	$(DMD) -c $(DFLAGS) std\numeric.d
 
@@ -373,9 +377,6 @@ openrj.obj : std\openrj.d
 
 outbuffer.obj : std\outbuffer.d
 	$(DMD) -c $(DFLAGS) std\outbuffer.d
-
-outofmemory.obj : std\outofmemory.d
-	$(DMD) -c $(DFLAGS) std\outofmemory.d
 
 path.obj : std\path.d
 	$(DMD) -c $(DFLAGS) std\path.d
@@ -410,17 +411,11 @@ stream.obj : std\stream.d
 string.obj : std\string.d
 	$(DMD) -c $(DFLAGS) std\string.d
 
-switcherr.obj : std\switcherr.d
-	$(DMD) -c $(DFLAGS) std\switcherr.d
-
 oldsyserror.obj : std\syserror.d
 	$(DMD) -c $(DFLAGS) std\syserror.d -ofoldsyserror.obj
 
 system.obj : std\system.d
 	$(DMD) -c $(DFLAGS) std\system.d
-
-thread.obj : std\thread.d
-	$(DMD) -c $(DFLAGS) std\thread.d
 
 traits.obj : std\traits.d
 	$(DMD) -c $(DFLAGS) std\traits.d -oftraits.obj
@@ -503,6 +498,9 @@ windows.obj : std\c\windows\windows.d
 
 ################## DOCS ####################################
 
+$(DOC)\object.html : std.ddoc $(DRUNTIME)\src\compiler\dmd\object_.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\object.html std.ddoc $(DRUNTIME)\src\compiler\dmd\object_.d -I$(DRUNTIME)\src\compiler\dmd
+
 $(DOC)\phobos.html : std.ddoc phobos.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\phobos.html std.ddoc phobos.d
 
@@ -569,6 +567,9 @@ $(DOC)\std_format.html : std.ddoc std\format.d
 $(DOC)\std_functional.html : std.ddoc std\functional.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_functional.html std.ddoc std\functional.d
 
+$(DOC)\std_gc.html : std.ddoc $(DRUNTIME)\src\common\core\memory.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_gc.html std.ddoc $(DRUNTIME)\src\common\core\memory.d
+
 $(DOC)\std_getopt.html : std.ddoc std\getopt.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_getopt.html std.ddoc std\getopt.d
 
@@ -598,9 +599,6 @@ $(DOC)\std_openrj.html : std.ddoc std\openrj.d
 
 $(DOC)\std_outbuffer.html : std.ddoc std\outbuffer.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_outbuffer.html std.ddoc std\outbuffer.d
-
-$(DOC)\std_outofmemory.html : std.ddoc std\outofmemory.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_outofmemory.html std.ddoc std\outofmemory.d
 
 $(DOC)\std_path.html : std.ddoc std\path.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_path.html std.ddoc std\path.d
@@ -641,8 +639,8 @@ $(DOC)\std_string.html : std.ddoc std\string.d
 $(DOC)\std_system.html : std.ddoc std\system.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_system.html std.ddoc std\system.d
 
-$(DOC)\std_thread.html : std.ddoc std\thread.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_thread.html std.ddoc std\thread.d
+$(DOC)\std_thread.html : std.ddoc $(DRUNTIME)\src\common\core\thread.d
+	$(DMD) -c -o- -d $(DFLAGS) -Df$(DOC)\std_traits.html std.ddoc $(DRUNTIME)\src\common\core\thread.d
 
 $(DOC)\std_traits.html : std.ddoc std\traits.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_traits.html std.ddoc std\traits.d
