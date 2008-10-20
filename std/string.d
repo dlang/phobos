@@ -3499,7 +3499,7 @@ bool isNumeric(TypeInfo[] _arguments, va_list _argptr)
     else if (_arguments[0] == typeid(byte)) 
     {
        s.length = 1;
-       s[0] = va_arg!(byte)(_argptr);
+       s[0] = va_arg!(char)(_argptr);
        return isNumeric(cast(char[])s);
     }
     else if (_arguments[0] == typeid(ireal))

@@ -418,8 +418,8 @@ string demangle(string name)
 			    for (i = 0; i < n; i++)
 			    {	char c;
 
-				c = (ascii2hex(name[ni + i * 2]) << 4) +
-				     ascii2hex(name[ni + i * 2 + 1]);
+				c = cast(char)((ascii2hex(name[ni + i * 2]) << 4) +
+				     ascii2hex(name[ni + i * 2 + 1]));
 				result ~= c;
 			    }
 			    ni += n * 2;

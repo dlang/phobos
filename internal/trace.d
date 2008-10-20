@@ -654,7 +654,7 @@ static char* trace_readline(FILE* fp)
 	    default:
 		break;
 	}
-	buf[i] = c;
+	buf[i] = cast(char)c;
 	i++;
     }
 L1:
