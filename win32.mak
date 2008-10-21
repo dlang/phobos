@@ -58,6 +58,10 @@ DMD=dmd
 DOC=..\..\html\d\phobos
 #DOC=..\doc\phobos
 
+## Location of druntime tree
+
+DRUNTIME=..\druntime
+
 .c.obj:
 	$(CC) -c $(CFLAGS) $*
 
@@ -255,9 +259,9 @@ SRC_ZLIB= etc\c\zlib\trees.h \
 	etc\c\zlib\linux.mak
 
 phobos.lib : $(OBJS) $(SRCS) \
-	etc\c\zlib\zlib.lib ..\druntime\lib\druntime.lib win32.mak
+	etc\c\zlib\zlib.lib $(DRUNTIME)\lib\druntime.lib win32.mak
 	$(DMD) -lib -ofphobos.lib $(DFLAGS) $(SRCS) $(OBJS) \
-		etc\c\zlib\zlib.lib ..\druntime\lib\druntime.lib
+		etc\c\zlib\zlib.lib $(DRUNTIME)\lib\druntime.lib
 
 unittest : $(SRCS) phobos.lib
 	$(DMD) $(UDFLAGS) -L/co -unittest unittest.d $(SRCS) phobos.lib
@@ -640,7 +644,7 @@ $(DOC)\std_system.html : std.ddoc std\system.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_system.html std.ddoc std\system.d
 
 $(DOC)\std_thread.html : std.ddoc $(DRUNTIME)\src\common\core\thread.d
-	$(DMD) -c -o- -d $(DFLAGS) -Df$(DOC)\std_traits.html std.ddoc $(DRUNTIME)\src\common\core\thread.d
+	$(DMD) -c -o- -d $(DFLAGS) -Df$(DOC)\std_thread.html std.ddoc $(DRUNTIME)\src\common\core\thread.d
 
 $(DOC)\std_traits.html : std.ddoc std\traits.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_traits.html std.ddoc std\traits.d
@@ -745,7 +749,8 @@ cleanhtml:
 	del $(DOCS)
 
 install:
-	$(CP) phobos.lib gcstub.obj $(DIR)\lib
+	$(CP) phobos.lib $(DIR)\lib
+	$(CP) $(DRUNTIME)\lib\gcstub.obj $(DIR)\lib
 	$(CP) win32.mak linux.mak phoboslicense.txt std.ddoc $(DIR)\src\phobos
 	$(CP) $(SRC) $(DIR)\src\phobos
 	$(CP) $(SRC_STD) $(DIR)\src\phobos\std
