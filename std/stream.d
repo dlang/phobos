@@ -1882,6 +1882,7 @@ class File: Stream {
       }
       if (mode & FileMode.Out) {
 	access |= GENERIC_WRITE;
+	share |= FILE_SHARE_READ | FILE_SHARE_WRITE;
 	createMode = OPEN_ALWAYS; // will create if not present
       }
       if ((mode & FileMode.OutNew) == FileMode.OutNew) {
