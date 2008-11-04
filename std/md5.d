@@ -251,7 +251,7 @@ struct MD5_CTX
      */
     void start()
     {
-	*this = MD5_CTX.init;
+	this = MD5_CTX.init;
     }
 
     /** MD5 block update operation. Continues an MD5 message-digest
@@ -316,7 +316,7 @@ struct MD5_CTX
       Encode (digest.ptr, state.ptr, 16);
 
       /* Zeroize sensitive information. */
-      std.c.string.memset (this, 0, MD5_CTX.sizeof);
+      std.c.string.memset (&this, 0, MD5_CTX.sizeof);
     }
 
     /* MD5 basic transformation. Transforms state based on block.

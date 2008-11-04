@@ -150,7 +150,7 @@ struct BigInt
     ///
     void castTo(out ulong r) const
     {
-        mixin(setUp("x","*this"));
+        mixin(setUp("x","this"));
         r = peek(xp);
         xp = next(xp);
         if (xp != xe) r += cast(ulong)(peek(xp)) << 32;
@@ -159,7 +159,7 @@ struct BigInt
     ///
     void castTo(out string r) const
     {
-        r = decimal(*this);
+        r = decimal(this);
     }
 
     // Unary operator overloads
@@ -175,19 +175,19 @@ struct BigInt
     ///
     BigInt opNeg() const
     {
-        return neg(*this);
+        return neg(this);
     }
 
     ///
     BigInt opCom() const
     {
-        return com(*this);
+        return com(this);
     }
 
     ///
     BigInt opPostInc()
     {
-        BigInt n = *this;
+        BigInt n = this;
         opAddAssign(1);
         return n;
     }
@@ -195,7 +195,7 @@ struct BigInt
     ///
     BigInt opPostDec()
     {
-        BigInt n = *this;
+        BigInt n = this;
         opSubAssign(1);
         return n;
     }
@@ -211,13 +211,13 @@ struct BigInt
     ///
     BigInt opAdd(T:int)(T n) const
     {
-        return add(*this,cast(Digit)n);
+        return add(this,cast(Digit)n);
     }
 
     ///
     BigInt opAdd(T:const(BigInt))(T n) const
     {
-        return add(*this,n);
+        return add(this,n);
     }
 
     ///
@@ -236,13 +236,13 @@ struct BigInt
     ///
     BigInt opSub(T:int)(T n) const
     {
-        return sub(*this,cast(Digit)n);
+        return sub(this,cast(Digit)n);
     }
 
     ///
     BigInt opSub(T:const(BigInt))(T n) const
     {
-        return sub(*this,n);
+        return sub(this,n);
     }
 
     ///
@@ -397,7 +397,7 @@ struct BigInt
     ///
     BigInt opAnd(T:int)(T n) const
     {
-        return and(*this,cast(Digit)n);
+        return and(this,cast(Digit)n);
     }
 
     ///
@@ -411,7 +411,7 @@ struct BigInt
     ///
     BigInt opAnd(T:const(BigInt))(T n) const
     {
-        return and(*this,n);
+        return and(this,n);
     }
 
     ///
@@ -437,13 +437,13 @@ struct BigInt
     ///
     BigInt opOr(T:int)(T n) const
     {
-        return or(*this,cast(Digit)n);
+        return or(this,cast(Digit)n);
     }
 
     ///
     BigInt opOr(T:const(BigInt))(T n) const
     {
-        return or(*this,n);
+        return or(this,n);
     }
 
     ///
@@ -462,13 +462,13 @@ struct BigInt
     ///
     BigInt opXor(T:int)(T n) const
     {
-        return xor(*this,cast(Digit)n);
+        return xor(this,cast(Digit)n);
     }
 
     ///
     BigInt opXor(T:const(BigInt))(T n) const
     {
-        return xor(*this,n);
+        return xor(this,n);
     }
 
     ///
@@ -483,7 +483,7 @@ struct BigInt
     {
         uint hi = n >> 5;
         uint lo = n & 0x1F;
-        Big r = *this;
+        Big r = this;
         if (lo != 0) r = shl(r,lo);
         if (hi != 0) r = shlDigits(r,hi);
         return r;
@@ -501,7 +501,7 @@ struct BigInt
     {
         uint hi = n >> 5;
         uint lo = n & 0x1F;
-        Big r = *this;
+        Big r = this;
         if (lo != 0) r = shr(r,lo).q;
         if (hi != 0) r = shrDigits(r,hi);
         return r;
@@ -555,21 +555,21 @@ struct BigInt
     ///
     int opCmp(T:int)(T n) const
     {
-        int t = cmp(*this,n);
+        int t = cmp(this,n);
         return t == 0 ? 0 : (t > 0 ? 1 : -1);
     }
 
     ///
     int opCmp(T:const(BigInt))(T n) const
     {
-        int t = cmp(*this,n);
+        int t = cmp(this,n);
         return t == 0 ? 0 : (t > 0 ? 1 : -1);
     }
 
     ///
     string toString() const
     {
-        return decimal(*this);
+        return decimal(this);
     }
 
     ///
@@ -582,7 +582,7 @@ struct BigInt
 
     private int sgn() const
     {
-        int t = cmp(*this,0);
+        int t = cmp(this,0);
         return t == 0 ? 0 : (t > 0 ? 1 : -1);
     }
 
