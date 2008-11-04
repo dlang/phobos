@@ -381,7 +381,7 @@ struct BitArray
         for (size_t i = 0; i < len; i++)
         {   bool b = opIndex(i);
             result = dg(b);
-            (*this)[i] = b;
+            this[i] = b;
             if (result)
                 break;
         }
@@ -396,7 +396,7 @@ struct BitArray
         for (size_t i = 0; i < len; i++)
         {   bool b = opIndex(i);
             result = dg(i, b);
-            (*this)[i] = b;
+            this[i] = b;
             if (result)
                 break;
         }
@@ -442,7 +442,7 @@ struct BitArray
     BitArray reverse()
         out (result)
         {
-            assert(result == *this);
+            assert(result == this);
         }
         body
         {
@@ -455,12 +455,12 @@ struct BitArray
                 hi = len - 1;
                 for (; lo < hi; lo++, hi--)
                 {
-                    t = (*this)[lo];
-                    (*this)[lo] = (*this)[hi];
-                    (*this)[hi] = t;
+                    t = this[lo];
+                    this[lo] = this[hi];
+                    this[hi] = t;
                 }
             }
-            return *this;
+            return this;
         }
 
     unittest
@@ -487,7 +487,7 @@ struct BitArray
     BitArray sort()
         out (result)
         {
-            assert(result == *this);
+            assert(result == this);
         }
         body
         {
@@ -503,7 +503,7 @@ struct BitArray
                     {
                         if (lo >= hi)
                             goto Ldone;
-                        if ((*this)[lo] == true)
+                        if (this[lo] == true)
                             break;
                         lo++;
                     }
@@ -512,13 +512,13 @@ struct BitArray
                     {
                         if (lo >= hi)
                             goto Ldone;
-                        if ((*this)[hi] == false)
+                        if (this[hi] == false)
                             break;
                         hi--;
                     }
 
-                    (*this)[lo] = false;
-                    (*this)[hi] = true;
+                    this[lo] = false;
+                    this[hi] = true;
 
                     lo++;
                     hi--;
@@ -526,7 +526,7 @@ struct BitArray
             Ldone:
                 ;
             }
-            return *this;
+            return this;
         }
 
     unittest
@@ -658,7 +658,7 @@ struct BitArray
         length = ba.length;
         foreach (i, b; ba)
         {
-            (*this)[i] = b;
+            this[i] = b;
         }
     }
 
@@ -936,7 +936,7 @@ struct BitArray
 
         for (size_t i = 0; i < dim; i++)
             ptr[i] &= e2.ptr[i];
-        return *this;
+        return this;
     }
 
     unittest
@@ -972,7 +972,7 @@ struct BitArray
 
         for (size_t i = 0; i < dim; i++)
             ptr[i] |= e2.ptr[i];
-        return *this;
+        return this;
     }
 
     unittest
@@ -1007,7 +1007,7 @@ struct BitArray
 
         for (size_t i = 0; i < dim; i++)
             ptr[i] ^= e2.ptr[i];
-        return *this;
+        return this;
     }
 
     unittest
@@ -1044,7 +1044,7 @@ struct BitArray
 
         for (size_t i = 0; i < dim; i++)
             ptr[i] &= ~e2.ptr[i];
-        return *this;
+        return this;
     }
 
     unittest
@@ -1072,8 +1072,8 @@ struct BitArray
     BitArray opCatAssign(bool b)
     {
         length = len + 1;
-        (*this)[len - 1] = b;
-        return *this;
+        this[len - 1] = b;
+        return this;
     }
 
     unittest
@@ -1105,8 +1105,8 @@ struct BitArray
         auto istart = len;
         length = len + b.length;
         for (auto i = istart; i < len; i++)
-            (*this)[i] = b[i - istart];
-        return *this;
+            this[i] = b[i - istart];
+        return this;
     }
 
     unittest
@@ -1152,7 +1152,7 @@ struct BitArray
         r.length = len + 1;
         r[0] = b;
         for (size_t i = 0; i < len; i++)
-            r[1 + i] = (*this)[i];
+            r[1 + i] = this[i];
         return r;
     }
 

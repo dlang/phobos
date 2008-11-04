@@ -301,7 +301,7 @@ struct Box
             {
                 if (inverted)
                     return false;
-                return other.opEqualsInternal(*this, true);
+                return other.opEqualsInternal(this, true);
             }
             
             TypeClass ta = findTypeClass(type), tb = findTypeClass(other.type);
@@ -311,15 +311,15 @@ struct Box
                 string na = type.toString, nb = other.type.toString;
                 
                 if (na == "ulong" || nb == "ulong")
-                    return unbox!(ulong)(*this) == unbox!(ulong)(other);
-                return unbox!(long)(*this) == unbox!(long)(other);
+                    return unbox!(ulong)(this) == unbox!(ulong)(other);
+                return unbox!(long)(this) == unbox!(long)(other);
             }
             else if (tb == TypeClass.Float)
-                return unbox!(real)(*this) == unbox!(real)(other);
+                return unbox!(real)(this) == unbox!(real)(other);
             else if (tb == TypeClass.Complex)
-                return unbox!(creal)(*this) == unbox!(creal)(other);
+                return unbox!(creal)(this) == unbox!(creal)(other);
             else if (tb == TypeClass.Imaginary)
-                return unbox!(ireal)(*this) == unbox!(ireal)(other);
+                return unbox!(ireal)(this) == unbox!(ireal)(other);
             
             assert (0);
         }
@@ -344,7 +344,7 @@ struct Box
             {
                 if (inverted)
                     return 0;
-                return other.opCmpInternal(*this, true);
+                return other.opCmpInternal(this, true);
             }
             
             TypeClass ta = findTypeClass(type), tb = findTypeClass(other.type);
@@ -353,26 +353,26 @@ struct Box
             {
                 if (type == typeid(ulong) || other.type == typeid(ulong))
                 {
-                    ulong va = unbox!(ulong)(*this), vb = unbox!(ulong)(other);
+                    ulong va = unbox!(ulong)(this), vb = unbox!(ulong)(other);
                     return va > vb ? 1 : va < vb ? -1 : 0;
                 }
                 
-                long va = unbox!(long)(*this), vb = unbox!(long)(other);
+                long va = unbox!(long)(this), vb = unbox!(long)(other);
                 return va > vb ? 1 : va < vb ? -1 : 0;
             }
             else if (tb == TypeClass.Float)
             {
-                real va = unbox!(real)(*this), vb = unbox!(real)(other);
+                real va = unbox!(real)(this), vb = unbox!(real)(other);
                 return va > vb ? 1 : va < vb ? -1 : va == vb ? 0 : float.nan;
             }
             else if (tb == TypeClass.Complex)
             {
-                creal va = unbox!(creal)(*this), vb = unbox!(creal)(other);
+                creal va = unbox!(creal)(this), vb = unbox!(creal)(other);
                 return va == vb ? 0 : float.nan;
             }
             else if (tb == TypeClass.Imaginary)
             {
-                ireal va = unbox!(ireal)(*this), vb = unbox!(ireal)(other);
+                ireal va = unbox!(ireal)(this), vb = unbox!(ireal)(other);
                 return va > vb ? 1 : va < vb ? -1 : va == vb ? 0 : float.nan;
             }
             

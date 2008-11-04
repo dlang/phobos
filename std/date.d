@@ -60,7 +60,7 @@ struct Date
     {
 	DateParse dp;
 
-	dp.parse(s, *this);
+	dp.parse(s, this);
     }
 }
 
