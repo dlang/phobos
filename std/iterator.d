@@ -161,7 +161,7 @@ struct Iterator(R : Retro!(T), T)
     }
     Iterator opAdd(int i)
     {
-        auto result = *this;
+        auto result = this;
         result += i;
         return result;
     }
