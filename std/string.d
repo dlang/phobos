@@ -46,7 +46,7 @@ private import std.contracts;
 private import std.typetuple;
 private import std.conv;
 private import std.traits;
-private import core.exception : onArrayBoundsError;
+private import core.exception : onRangeError;
 
 extern (C)
 {
@@ -3032,7 +3032,7 @@ string format(...)
 
 /*****************************************************
  * Format arguments into string <i>s</i> which must be large
- * enough to hold the result. Throws ArrayBoundsError if it is not.
+ * enough to hold the result. Throws RangeError if it is not.
  * Returns: s
  */
 char[] sformat(char[] s, ...)
@@ -3043,7 +3043,7 @@ char[] sformat(char[] s, ...)
     if (c <= 0x7F)
     {
         if (i >= s.length)
-            onArrayBoundsError("std.string.sformat", 0);
+            onRangeError("std.string.sformat", 0);
         s[i] = cast(char)c;
         ++i;
     }
@@ -3051,7 +3051,7 @@ char[] sformat(char[] s, ...)
     {   char[4] buf;
         auto b = std.utf.toUTF8(buf, c);
         if (i + b.length > s.length)
-            onArrayBoundsError("std.string.sformat", 0);
+            onRangeError("std.string.sformat", 0);
         s[i..i+b.length] = b[];
         i += b.length;
     }
