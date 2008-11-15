@@ -43,6 +43,7 @@ private import std.iterator;
 private import std.traits;
 private import std.string;
 private import std.c.stdlib;
+private import std.c.string;
 version(unittest)
 {
     private import std.stdio;
@@ -410,11 +411,11 @@ class ErrnoException : Exception
 	version (linux)
 	{
             char[1024] buf = void;
-	    auto s = std.string.strerror_r(errno, buf.ptr, buf.length);
+	    auto s = std.c.string.strerror_r(errno, buf.ptr, buf.length);
 	}
 	else
 	{
-	    auto s = std.string.strerror(errno);
+	    auto s = std.c.string.strerror(errno);
 	}
 	super((file ? file~'('~to!(string)(line)~"): " : "")
                 ~msg~" ("~std.string.toString(s)~")");

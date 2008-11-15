@@ -554,7 +554,7 @@ struct DirEntry
 	size_t wlength;
 	size_t n;
 
-	clength = std.string.strlen(fd.cFileName.ptr);
+	clength = std.c.string.strlen(fd.cFileName.ptr);
 
 	// Convert cFileName[] to unicode
 	wlength = MultiByteToWideChar(0,0,fd.cFileName.ptr,clength,null,0);
@@ -848,8 +848,8 @@ void listdir(in string pathname, bool delegate(DirEntry* de) callback)
 		do
 		{
 		    // Skip "." and ".."
-		    if (std.string.strcmp(fileinfo.cFileName.ptr, ".") == 0 ||
-			std.string.strcmp(fileinfo.cFileName.ptr, "..") == 0)
+		    if (std.c.string.strcmp(fileinfo.cFileName.ptr, ".") == 0 ||
+			std.c.string.strcmp(fileinfo.cFileName.ptr, "..") == 0)
 			continue;
 
 		    de.init(pathname, &fileinfo);
