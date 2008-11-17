@@ -95,7 +95,7 @@ SRCS= std\math.d std\stdio.d std\dateparse.d std\date.d std\uni.d std\string.d \
 	std\compiler.d std\cpuid.d std\format.d std\demangle.d \
 	std\path.d std\file.d std\outbuffer.d std\utf.d std\uri.d \
 	std\ctype.d std\random.d std\mmfile.d \
-	std\bitarray.d std\algorithm.d std\numeric.d std\functional.d \
+	std\bitarray.d std\algorithm.d std\array.d std\numeric.d std\functional.d \
 	std\metastrings.d std\contracts.d std\getopt.d \
 	std\signals.d std\typetuple.d std\traits.d std\bind.d \
 	std\bitmanip.d std\typecons.d \
@@ -121,6 +121,7 @@ SRCS= std\math.d std\stdio.d std\dateparse.d std\date.d std\uni.d std\string.d \
 
 DOCS=	$(DOC)\object.html \
 	$(DOC)\std_algorithm.html \
+	$(DOC)\std_array.html \
 	$(DOC)\std_base64.html \
 	$(DOC)\std_bigint.html \
 	$(DOC)\std_bind.html \
@@ -205,7 +206,7 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 	std\signals.d std\cpuid.d std\typetuple.d std\traits.d std\bind.d \
 	std\metastrings.d std\contracts.d std\getopt.d \
 	std\variant.d std\numeric.d std\bitmanip.d std\complex.d \
-	std\functional.d std\algorithm.d std\typecons.d std\iterator.d \
+	std\functional.d std\algorithm.d std\array.d std\typecons.d std\iterator.d \
 	std\xml.d std\encoding.d std\bigint.d
 
 SRC_STD_C= std\c\process.d std\c\stdlib.d std\c\time.d std\c\stdio.d \
@@ -291,6 +292,9 @@ etc\c\zlib\zlib.lib:
 
 algorithm.obj : std\algorithm.d
 	$(DMD) -c $(DFLAGS) std\algorithm.d
+
+array.obj : std\array.d
+	$(DMD) -c $(DFLAGS) std\array.d
 
 atomics.obj : std\atomics.d
 	$(DMD) -c $(DFLAGS) -inline std\atomics.d
@@ -510,6 +514,9 @@ $(DOC)\phobos.html : std.ddoc phobos.d
 
 $(DOC)\std_algorithm.html : std.ddoc std\algorithm.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_algorithm.html std.ddoc std\algorithm.d
+
+$(DOC)\std_array.html : std.ddoc std\array.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_array.html std.ddoc std\array.d
 
 $(DOC)\std_atomics.html : std.ddoc std\atomics.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_atomics.html std.ddoc std\atomics.d

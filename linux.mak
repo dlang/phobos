@@ -137,7 +137,7 @@ $(OBJDIR)/unittest.$(OBJEXT) : unittest.d all_std_modules_generated.d
 all_std_modules_generated.d : $(MAKEFILE_LIST)
 	for m in $(STD_MODULES); do echo public import std.$$m\;; done > $@
 
-STD_MODULES = algorithm atomics base64 bigint bind bitarray	        \
+STD_MODULES = algorithm array atomics base64 bigint bind bitarray       \
         bitmanip boxer compiler complex contracts conv cover cpuid	\
         cstream ctype date dateparse demangle encoding file format	\
         functional  getopt intrinsic iterator loader math	        \
