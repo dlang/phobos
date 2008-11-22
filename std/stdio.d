@@ -116,11 +116,11 @@ class StdioException : Exception
     {
 	version (linux)
 	{   char[80] buf = void;
-	    auto s = std.string.strerror_r(errno, buf.ptr, buf.length);
+	    auto s = std.c.string.strerror_r(errno, buf.ptr, buf.length);
 	}
 	else
 	{
-	    auto s = std.string.strerror(errno);
+	    auto s = std.c.string.strerror(errno);
 	}
 	super(std.string.toString(s).dup);
     }

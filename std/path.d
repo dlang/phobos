@@ -1115,7 +1115,7 @@ private string combineCPathWithDPath(char* c_path, string path, int char_pos)
     assert(char_pos >= 0);
 
     // Search end of C string
-    size_t end = std.string.strlen(c_path);
+    size_t end = std.c.string.strlen(c_path);
 
     // Remove trailing path separator, if any
     if (end && c_path[end - 1] == sep[0])
