@@ -3,6 +3,7 @@
 module std.array;
 
 private import std.c.stdio;
+private import core.memory;
 private import std.contracts;
 private import std.traits;
 private import std.string;
@@ -129,7 +130,7 @@ void insert(T, Range)(ref T[] array, size_t pos, Range stuff)
         newLength = oldLength + delta;
 
     // Reallocate the array to make space for new content
-    array = cast(T[]) realloc(array.ptr, newLength * array[0].sizeof);
+    array = (cast(T*) core.memory.GC.realloc(array.ptr, newLength * array[0].sizeof))[0 .. newLength];
     assert(array.length == newLength);
 
     // Move data in pos .. pos + stuff.length to the end of the array
