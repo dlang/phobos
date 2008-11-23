@@ -1285,7 +1285,7 @@ string getcwd()
     auto p = cenforce(std.c.linux.linux.getcwd(null, 0),
             "cannot get cwd");
     scope(exit) std.c.stdlib.free(p);
-    return p[0 .. std.string.strlen(p)].idup;
+    return p[0 .. std.c.string.strlen(p)].idup;
 }
 
 /***************************************************
@@ -1305,7 +1305,7 @@ struct DirEntry
 
     void init(string path, dirent *fd)
     {
-        invariant len = std.string.strlen(fd.d_name.ptr);
+        invariant len = std.c.string.strlen(fd.d_name.ptr);
 	name = std.path.join(path, fd.d_name[0 .. len].idup);
 	d_type = fd.d_type;
 	didstat = false;
@@ -1435,8 +1435,8 @@ void listdir(string pathname, bool delegate(DirEntry* de) callback)
     for (dirent* fdata; (fdata = readdir(h)) != null; )
     {
         // Skip "." and ".."
-        if (!std.string.strcmp(fdata.d_name.ptr, ".") ||
-                !std.string.strcmp(fdata.d_name.ptr, ".."))
+        if (!std.c.string.strcmp(fdata.d_name.ptr, ".") ||
+                !std.c.string.strcmp(fdata.d_name.ptr, ".."))
             continue;
         de.init(pathname, fdata);
         if (!callback(&de))
