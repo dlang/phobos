@@ -32,7 +32,6 @@ public import std.boxer;
 public import std.compiler;
 public import std.contracts;
 public import std.conv;
-public import std.cover;
 public import std.cpuid;
 public import std.cstream;
 public import std.ctype;

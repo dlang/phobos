@@ -138,7 +138,7 @@ all_std_modules_generated.d : $(MAKEFILE_LIST)
 	for m in $(STD_MODULES); do echo public import std.$$m\;; done > $@
 
 STD_MODULES = algorithm array atomics base64 bigint bind bitarray       \
-        bitmanip boxer compiler complex contracts conv cover cpuid	\
+        bitmanip boxer compiler complex contracts conv cpuid		\
         cstream ctype date dateparse demangle encoding file format	\
         functional  getopt intrinsic iterator loader math	        \
         md5 metastrings mmfile numeric openrj outbuffer	                \
