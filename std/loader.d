@@ -280,7 +280,7 @@ else version(linux)
     private void record_error_()
     {
         char *err = dlerror();
-        s_lastError = (null is err) ? "" : err[0 .. std.string.strlen(err)].idup;
+        s_lastError = (null is err) ? "" : err[0 .. std.c.string.strlen(err)].idup;
     }
 
     private int ExeModule_Init_()
