@@ -132,7 +132,6 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_complex.html \
 	$(DOC)\std_contracts.html \
 	$(DOC)\std_conv.html \
-	$(DOC)\std_cover.html \
 	$(DOC)\std_cpuid.html \
 	$(DOC)\std_cstream.html \
 	$(DOC)\std_ctype.html \
@@ -202,7 +201,7 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 	std\regexp.d std\random.d std\stream.d std\process.d \
 	std\socket.d std\socketstream.d std\loader.d std\stdarg.d std\format.d \
 	std\stdio.d std\perf.d std\openrj.d std\uni.d std\boxer.d \
-	std\cstream.d std\demangle.d std\cover.d std\bitarray.d \
+	std\cstream.d std\demangle.d std\bitarray.d \
 	std\signals.d std\cpuid.d std\typetuple.d std\traits.d std\bind.d \
 	std\metastrings.d std\contracts.d std\getopt.d \
 	std\variant.d std\numeric.d std\bitmanip.d std\complex.d \
@@ -325,9 +324,6 @@ contracts.obj : std\contracts.d
 
 conv.obj : std\conv.d
 	$(DMD) -c $(DFLAGS) std\conv.d
-
-cover.obj : std\cover.d
-	$(DMD) -c $(DFLAGS) std\cover.d
 
 cpuid.obj : std\cpuid.d
 	$(DMD) -c $(DFLAGS) std\cpuid.d -ofcpuid.obj
@@ -550,9 +546,6 @@ $(DOC)\std_contracts.html : std.ddoc std\contracts.d
 
 $(DOC)\std_conv.html : std.ddoc std\conv.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_conv.html std.ddoc std\conv.d
-
-$(DOC)\std_cover.html : std.ddoc std\cover.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_cover.html std.ddoc std\cover.d
 
 $(DOC)\std_cpuid.html : std.ddoc std\cpuid.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_cpuid.html std.ddoc std\cpuid.d

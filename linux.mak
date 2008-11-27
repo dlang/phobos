@@ -95,6 +95,7 @@ endif
 
 LIB=$(OBJDIR)/libphobos2.$(LIBEXT)
 DOC_OUTPUT_DIR=../web/phobos
+DRUNTIME=../druntime/lib/libdruntime.a
 
 .SUFFIXES: .d
 $(OBJDIR)/%.$(OBJEXT) : %.c
@@ -126,7 +127,7 @@ ifdef WIN32
 	mv unittest.exe $@
 	wine $@
 else
-	$(CC) $(CFLAGS) $(LDFLAGS) -o$@ $^ -lpthread -lm -g -ldl -ldruntime
+	$(CC) $(CFLAGS) $(LDFLAGS) -o$@ $^ -lpthread -lm -g -ldl
 endif
 ifeq (release,$(MAKECMDGOALS))
 	ln -sf `pwd`/$(OBJDIR)/libphobos2.$(LIBEXT) ../../lib
@@ -210,9 +211,9 @@ $(addprefix etc/c/, $(ETC_C_MODULES))
 
 SRC2LIB := $(addsuffix .d,$(SRC2LIB))
 
-$(LIB) : $(SRC2LIB) $(OBJS) $(MAKEFILE_LIST)
+$(LIB) : $(SRC2LIB) $(OBJS) $(DRUNTIME) $(MAKEFILE_LIST)
 	@echo $(DMD) $(DFLAGS) -lib -of$@ "[...tons of files...]"
-	@$(DMD) $(DFLAGS) -lib -of$@ $(SRC2LIB) $(OBJS)
+	@$(DMD) $(DFLAGS) -lib -of$@ $(SRC2LIB) $(OBJS) $(DRUNTIME)
 
 ###########################################################
 # Dox
