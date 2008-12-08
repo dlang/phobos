@@ -1466,14 +1466,12 @@ int isnan(real x)
         return (*p & 0x7FF0_0000_0000_0000 == 0x7FF0_0000_0000_0000) 
              && *p & 0x000F_FFFF_FFFF_FFFF;
   } else static if (real.mant_dig==64) {     // real80
-        // Prevent a ridiculous warning
-        // (why does (ushort | ushort) get promoted to int???)
-        ushort e = cast(ushort)(F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT]);
+        ushort e = F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT];
         ulong*  ps = cast(ulong *)&x;
         return e == F.EXPMASK &&
             *ps & 0x7FFF_FFFF_FFFF_FFFF; // not infinity
   } else static if (real.mant_dig==113) {  // quadruple
-        ushort e = cast(ushort)(F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT]);
+        ushort e = F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT];
         ulong*  ps = cast(ulong *)&x;
         return e == F.EXPMASK &&
            (ps[MANTISSA_LSB] | (ps[MANTISSA_MSB]& 0x0000_FFFF_FFFF_FFFF))!=0;
@@ -1527,8 +1525,7 @@ int isnormal(X)(X x)
         // doubledouble is normal if the least significant part is normal.
         return isnormal((cast(double*)&x)[MANTISSA_LSB]);
     } else {
-        // ridiculous DMD warning
-        ushort e = cast(ushort)(F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT]);
+        ushort e = F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT];
         return (e != F.EXPMASK && e!=0);
     }
 }
@@ -2307,8 +2304,8 @@ int feqrel(X)(X x, X y)
     // they could have 0 or 1 bits in common.
 
  static if (X.mant_dig==64 || X.mant_dig==113) { // real80 or quadruple
-    int bitsdiff = ( ((pa[F.EXPPOS_SHORT]&0x7FFF) 
-                    + (pb[F.EXPPOS_SHORT]&0x7FFF)-1)>>1) 
+    int bitsdiff = ( ((pa[F.EXPPOS_SHORT] & F.EXPMASK) 
+                    + (pb[F.EXPPOS_SHORT] & F.EXPMASK) - 1) >> 1) 
                     - pd[F.EXPPOS_SHORT];
  } else static if (X.mant_dig==53) { // double
     int bitsdiff = (( ((pa[F.EXPPOS_SHORT]&0x7FF0) 
@@ -2429,9 +2426,8 @@ body {
         // Ignore the useless implicit bit. (Bonus: this prevents overflows)
         ulong m = ((*xl) & 0x7FFF_FFFF_FFFF_FFFFL) + ((*yl) & 0x7FFF_FFFF_FFFF_FFFFL);
 
-        // Avoid ridiculous warning
-        ushort e = cast(ushort)((xe[F.EXPPOS_SHORT] & 0x7FFF)
-                              + (ye[F.EXPPOS_SHORT] & 0x7FFF));
+        ushort e = (xe[F.EXPPOS_SHORT] & F.EXPMASK)
+                              + (ye[F.EXPPOS_SHORT] & F.EXPMASK);
         if (m & 0x8000_0000_0000_0000L) {
             ++e;
             m &= 0x7FFF_FFFF_FFFF_FFFFL;
@@ -2443,7 +2439,6 @@ body {
         if (c) m |= 0x4000_0000_0000_0000L; // shift carry into significand
         if (e) *ul = m | 0x8000_0000_0000_0000L; // set implicit bit...
         else *ul = m; // ... unless exponent is 0 (denormal or zero).
-        // Avoid ridiculous warning
         ue[4]= cast(ushort)( e | (xe[F.EXPPOS_SHORT]& 0x8000)); // restore sign bit
     } else static if(T.mant_dig == 113) { //quadruple
         // This would be trivial if 'ucent' were implemented...
