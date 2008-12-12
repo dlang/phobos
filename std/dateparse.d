@@ -1,7 +1,7 @@
 // Written in the D programming language
 
 /*
- *  Copyright (C) 1999-2004 by Digital Mars, www.digitalmars.com
+ *  Copyright (C) 1999-2004 by Digital Mars, http://www.digitalmars.com
  *  Written by Walter Bright
  *
  *  This software is provided 'as-is', without any express or implied

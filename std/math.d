@@ -2512,7 +2512,7 @@ public:
  * Params:
  *      A =     array of coefficients $(SUB a, 0), $(SUB a, 1), etc.
  */ 
-real poly(real x, real[] A)
+real poly(real x, const real[] A)
 in
 {
     assert(A.length > 0);
