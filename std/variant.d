@@ -587,7 +587,7 @@ public:
         else
         {
             // Fix for bug 1649
-            static assert(false);
+            static assert(false, "unsupported type for coercion");
         }
     }
 
@@ -1211,3 +1211,11 @@ unittest
     c = variantArray(1, 2, 3.0, "hello", 4);
     assert(c[3] == "hello");
 }
+
+unittest
+{
+    Variant v = 5;
+    assert (!__traits(compiles, v.coerce!(bool delegate())));
+}
+
+

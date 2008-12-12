@@ -1,7 +1,7 @@
 // Written in the D programming language
 
 /*
- *  Copyright (C) 2003-2004 by Digital Mars, www.digitalmars.com
+ *  Copyright (C) 2003-2008 by Digital Mars, http://www.digitalmars.com
  *  Written by Matthew Wilson and Walter Bright
  *
  *  Incorporating idea (for execvpe() on Linux) from Russ Lewis
@@ -336,8 +336,11 @@ else
 
 unittest
 {
+version (linux)
+{
     auto x = shell("echo wyda");
     assert(x == "wyda\n");
+}
 }
 
 /**
@@ -376,10 +379,13 @@ void unsetenv(in char[] name)
 
 unittest
 {
+  version (linux)
+  {
     setenv("wyda", "geeba", true);
     assert(getenv("wyda") == "geeba");
     unsetenv("wyda");
     assert(getenv("wyda") is null);
+  }
 }
 
 /* ////////////////////////////////////////////////////////////////////////// */
