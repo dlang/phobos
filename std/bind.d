@@ -1,3 +1,5 @@
+// Written in the D programming language
+
 /**
  * Bind function arguments to functions.
  *
@@ -211,8 +213,8 @@ struct Tuple(T ...) {
 	}
 	
 	
-	char[] toString() {
-		char[] res = "(" ~ stdFormat(value[0]);
+	string toString() {
+		auto res = "(" ~ stdFormat(value[0]);
 		foreach (x; value[1..$]) {
 			res ~= stdFormat(", ", x);
 		}
@@ -835,7 +837,7 @@ template numDynArgs(BoundArgs) {
 	E.g. when using bind(&f, bind(&g, _1), _0), then the inner bound function will use an EmptySlot for its 0-th parameter
 */
 struct EmptySlot {
-	char[] toString( ) {
+	string toString( ) {
 		return "_";
 	}
 }

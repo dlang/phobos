@@ -12,10 +12,10 @@
  *	WIKI = Phobos/StdDate
  */
 
-// Copyright (c) 1999-2007 by Digital Mars
+// Copyright (c) 1999-2008 by Digital Mars
 // All Rights Reserved
 // written by Walter Bright
-// www.digitalmars.com
+// http://www.digitalmars.com
 
 module std.date;
 
@@ -407,6 +407,9 @@ d_time LocalTimetoUTC(d_time t)
 {
     return (t == d_time_nan)
 	? d_time_nan
+/* BUGZILLA 1752 says this line should be:
+ *	: t - LocalTZA - DaylightSavingTA(t);
+ */
 	: t - LocalTZA - DaylightSavingTA(t - LocalTZA);
 }
 
@@ -419,6 +422,13 @@ d_time MakeTime(d_time hour, d_time min, d_time sec, d_time ms)
 	   ms * TicksPerMs;
 }
 
+/* *****************************
+ * Params:
+ *	month = 0..11
+ *	date = day of month, 1..31
+ * Returns:
+ *	number of days since start of epoch
+ */
 
 d_time MakeDay(d_time year, d_time month, d_time date)
 {   d_time t;
@@ -457,6 +467,96 @@ d_time TimeClip(d_time time)
     //printf("TimeClip(%g) = %g\n", time, toInteger(time));
 
     return toInteger(time);
+}
+
+/***************************************
+ * Determine the date in the month, 1..31, of the nth
+ * weekday.
+ * Params:
+ *	year = year
+ *	month = month, 1..12
+ *	weekday = day of week 0..6 representing Sunday..Saturday
+ *	n = nth occurrence of that weekday in the month, 1..5, where
+ *	    5 also means "the last occurrence in the month"
+ * Returns:
+ *	the date in the month, 1..31, of the nth weekday
+ */
+
+int DateFromNthWeekdayOfMonth(int year, int month, int weekday, int n)
+in
+{
+    assert(1 <= month && month <= 12);
+    assert(0 <= weekday && weekday <= 6);
+    assert(1 <= n && n <= 5);
+}
+body
+{
+    // Get day of the first of the month
+    auto x = MakeDay(year, month - 1, 1);
+
+    // Get the week day 0..6 of the first of this month
+    auto wd = WeekDay(MakeDate(x, 0));
+
+    // Get monthday of first occurrence of weekday in this month
+    auto mday = weekday - wd + 1;
+    if (mday < 1)
+	mday += 7;
+
+    // Add in number of weeks
+    mday += (n - 1) * 7;
+
+    // If monthday is more than the number of days in the month,
+    // back up to 'last' occurrence
+    if (mday > 28 && mday > DaysInMonth(year, month))
+    {	assert(n == 5);
+	mday -= 7;
+    }
+
+    return mday;
+}
+
+unittest
+{
+    assert(DateFromNthWeekdayOfMonth(2003,  3, 0, 5) == 30);
+    assert(DateFromNthWeekdayOfMonth(2003, 10, 0, 5) == 26);
+    assert(DateFromNthWeekdayOfMonth(2004,  3, 0, 5) == 28);
+    assert(DateFromNthWeekdayOfMonth(2004, 10, 0, 5) == 31);
+}
+
+/**************************************
+ * Determine the number of days in a month, 1..31.
+ * Params:
+ *	month = 1..12
+ */
+
+int DaysInMonth(int year, int month)
+{
+    switch (month)
+    {
+	case 1:
+	case 3:
+	case 5:
+	case 7:
+	case 8:
+	case 10:
+	case 12:
+	    return 31;
+	case 2:
+	    return 28 + LeapYear(year);
+	case 4:
+	case 6:
+	case 9:
+	case 11:
+	    return 30;
+	default:
+	    assert(0);
+    }
+}
+
+unittest
+{
+    assert(DaysInMonth(2003, 2) == 28);
+    assert(DaysInMonth(2004, 2) == 29);
 }
 
 /*************************************
@@ -715,6 +815,8 @@ version (Win32)
 
     static d_time SYSTEMTIME2d_time(SYSTEMTIME *st, d_time t)
     {
+	/* More info: http://delphicikk.atw.hu/listaz.php?id=2667&oldal=52
+	 */
 	d_time n;
 	d_time day;
 	d_time time;
@@ -725,26 +827,16 @@ version (Win32)
 	    day = MakeDay(st.wYear, st.wMonth - 1, st.wDay);
 	}
 	else
-	{   // wDayOfWeek is weekday, wDay is which week in the month
-	    int year;
-	    int wd;
-	    int mday;
-	    int month;
-	    d_time x;
+	{   /* wYear being 0 is a flag to indicate relative time:
+	     * wMonth is the month 1..12
+	     * wDayOfWeek is weekday 0..6 corresponding to Sunday..Saturday
+	     * wDay is the nth time, 1..5, that wDayOfWeek occurs
+	     */
 
-	    year = YearFromTime(t);
-	    month = st.wMonth - 1;
-	    x = MakeDay(year, month, 1);
-	    wd = WeekDay(MakeDate(x, 0));
-
-	    mday = (7 - wd + st.wDayOfWeek);
-	    if (mday >= 7)
-		mday -= 7;
-	    mday += (st.wDay - 1) * 7 + 1;
-	    //printf("month = %d, wDayOfWeek = %d, wDay = %d, mday = %d\n", st.wMonth, st.wDayOfWeek, st.wDay, mday);
-
-	    day = MakeDay(year, month, mday);
-	    time = 0;
+	    auto year = YearFromTime(t);
+	    auto mday = DateFromNthWeekdayOfMonth(year, st.wMonth, st.wDay, st.wDayOfWeek);
+	    day = MakeDay(year, st.wMonth - 1, mday);
+	    time = MakeTime(st.wHour, st.wMinute, 0, 0);
 	}
 	n = MakeDate(day,time);
 	n = TimeClip(n);
@@ -811,7 +903,7 @@ version (Win32)
 		ts = SYSTEMTIME2d_time(&tzi.StandardDate, dt);
 		td = SYSTEMTIME2d_time(&tzi.DaylightDate, dt);
 
-		if (td <= dt && dt <= ts)
+		if (td <= dt && dt < ts)
 		{
 		    t = -tzi.DaylightBias * (60 * TicksPerSecond);
 		    //printf("DST is in effect, %d\n", t);
@@ -880,32 +972,43 @@ version (linux)
 		if (tmp.tm_isdst > 0)
 		    dst = TicksPerHour;	// BUG: Assume daylight savings time is plus one hour.
 	    }
-	    else	// out of range for system time, use our own calculation
-	    {	// Daylight savings time goes from 2 AM the first Sunday
-		// in April through 2 AM the last Sunday in October
+	    else // out of range for system time, use our own calculation
+	    {
+		/* BUG: this works for the US, but not other timezones.
+		 */
 
 		dt -= LocalTZA;
 
 		int year = YearFromTime(dt);
-		int leap = LeapYear(cast(int)dt);
-		//writefln("year = %s, leap = %s, month = %s", year, leap, MonthFromTime(dt));
 
-		d_time start = TimeFromYear(year);		// Jan 1
-		d_time end = start;
-		// Move fwd to Apr 1
-		start += cast(d_time)(mdays[3] + leap) * TicksPerDay;
-		// Advance a day at a time until we find Sunday (0)
-		while (WeekDay(start) != 0)
-		    start += TicksPerDay;
+		/* Compute time given year, month 1..12,
+		 * week in month, weekday, hour
+		 */
+		d_time dstt(int year, int month, int week, int weekday, int hour)
+		{
+		    auto mday = DateFromNthWeekdayOfMonth(year,  month, weekday, week);
+		    return TimeClip(MakeDate(
+			MakeDay(year, month - 1, mday),
+			MakeTime(hour, 0, 0, 0)));
+		}
 
-		// Move fwd to Oct 30
-		end += cast(d_time)(mdays[9] + leap + 30) * TicksPerDay;
-		// Back up a day at a time until we find Sunday (0)
-		while (WeekDay(end) != 0)		// 0 is Sunday
-		    end -= TicksPerDay;
+		d_time start;
+		d_time end;
+		if (year < 2007)
+		{   // Daylight savings time goes from 2 AM the first Sunday
+		    // in April through 2 AM the last Sunday in October
+		    start = dstt(year,  4, 1, 0, 2);
+		    end   = dstt(year, 10, 5, 0, 2);
+		}
+		else
+		{
+		    // the second Sunday of March to
+		    // the first Sunday in November
+		    start = dstt(year,  3, 2, 0, 2);
+		    end   = dstt(year, 11, 1, 0, 2);
+		}
 
-		dt -= 2 * TicksPerHour;			// 2 AM
-		if (dt >= start && dt <= end)
+		if (start <= dt && dt < end)
 		    dst = TicksPerHour;
 		//writefln("start = %s, dt = %s, end = %s, dst = %s", start, dt, end, dst);
 	    }

@@ -163,7 +163,7 @@ extern (C)
     extern IID IID_IEnumOLEVERB;
 }
 
-extern (Windows)
+extern (System)
 {
 
 export
@@ -203,7 +203,7 @@ interface IClassFactory : IUnknown
 
 class ComObject : IUnknown
 {
-extern (Windows):
+extern (System):
     HRESULT QueryInterface(IID* riid, void** ppv)
     {
 	if (*riid == IID_IUnknown)
