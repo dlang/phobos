@@ -1,5 +1,5 @@
 // llmath.d
-// Copyright (C) 1993-2003 by Digital Mars, www.digitalmars.com
+// Copyright (C) 1993-2008 by Digital Mars, http://www.digitalmars.com
 // All Rights Reserved
 // Written by Walter Bright
 
@@ -15,7 +15,6 @@ extern (C):
  * Output:
  *	[EDX,EAX] = [EDX,EAX] / [ECX,EBX]
  *	[ECX,EBX] = [EDX,EAX] % [ECX,EBX]
- *	ESI,EDI	destroyed
  */
 
 void __ULDIV__()
@@ -26,56 +25,106 @@ void __ULDIV__()
 	test	ECX,ECX		;
 	jz	uldiv		;
 
-	push	EBP		;
+	// if ECX > EDX, then quotient is 0 and remainder is [EDX,EAX]
+	cmp	ECX,EDX		;
+	ja	quo0		;
 
-	// left justify [ECX,EBX] and leave count of shifts + 1 in EBP
-
-	mov	EBP,1		;	// at least 1 shift
-	test	ECX,ECX		;	// left justified?
-	js	L1		;	// yes
-	jnz	L2		;
-	add	EBP,8		;
-	mov	CH,CL		;
-	mov	CL,BH		;
-	mov	BH,BL		;
-	xor	BL,BL		;	// [ECX,EBX] <<= 8
 	test	ECX,ECX		;
-	js	L1		;
-	even			;
-L2:	inc	EBP		;	// another shift
-	shl	EBX,1		;
-	rcl	ECX,1		;	// [ECX,EBX] <<= 1
-	jno	L2		;	// not left justified yet
+	js	Lleft		;
 
-L1:	mov	ESI,ECX		;
-	mov	EDI,EBX		;	// [ESI,EDI] = divisor
+	/* We have n>d, and know that n/d will fit in 32 bits.
+         * d will be left justified if we shift it left s bits.
+	 * [d1,d0] <<= s
+	 * [n2,n1,n0] = [n1,n0] << s
+	 *
+	 * Use one divide, by this reasoning:
+	 * ([n2,n1]<<32 + n0)/(d1<<32 + d0)
+	 * becomes:
+	 * ([n2,n1]<<32)/(d1<<32 + d0) + n0/(d1<<32 + d0)
+	 * The second divide is always 0.
+	 * Ignore the d0 in the first divide, which will yield a quotient
+	 * that might be too high by 1 (because d1 is left justified).
+	 * We can tell if it's too big if:
+	 *  q*[d1,d0] > [n2,n1,n0]
+	 * which is:
+	 *  q*[d1,d0] > [[q*[d1,0]+q%[d1,0],n1,n0]
+	 * If we subtract q*[d1,0] from both sides, we get:
+	 *  q*d0 > [[n2,n1]%d1,n0]
+	 * So if it is too big by one, reduce q by one to q'=q-one.
+	 * Compute remainder as:
+	 *  r = ([n1,n0] - q'*[d1,d0]) >> s
+	 * Again, we can subtract q*[d1,0]:
+	 *  r = ([n1,n0] - q*[d1,0] - (q'*[d1,d0] - q*[d1,0])) >> s
+	 *  r = ([[n2,n1]%d1,n0] + (q*[d1,0] - (q - one)*[d1,d0])) >> s
+	 *  r = ([[n2,n1]%d1,n0] + (q*[d1,0] - [d1 *(q-one),d0*(1-q)])) >> s
+	 *  r = ([[n2,n1]%d1,n0] + [d1 *one,d0*(one-q)])) >> s
+	 */
 
-	mov	ECX,EDX		;
-	mov	EBX,EAX		;	// [ECX,EBX] = [EDX,EAX]
-	xor	EAX,EAX		;
-	cdq			;	// [EDX,EAX] = 0
-	even			;
-L4:	cmp	ESI,ECX		;	// is [ECX,EBX] > [ESI,EDI]?
-	ja	L3		;	// yes
-	jb	L5		;	// definitely less than
-	cmp	EDI,EBX		;	// check low order word
-	ja	L3		;
-L5:	sub	EBX,EDI		;
-	sbb	ECX,ESI		;	// [ECX,EBX] -= [ESI,EDI]
-	stc			;	// rotate in a 1
-L3:	rcl	EAX,1		;
-	rcl	EDX,1		;	// [EDX,EAX] = ([EDX,EAX] << 1) + C
-	shr	ESI,1		;
-	rcr	EDI,1		;	// [ESI,EDI] >>= 1
-	dec	EBP		;	// control count
-	jne	L4		;
-	pop	EBP		;
-	ret			;
+	push	EBP		;
+	push	ESI		;
+	push	EDI		;
 
-div0:	mov	EAX,-1		;
-	cwd			;	// quotient is -1
-//	xor	ECX,ECX		;
-//	mov	EBX,ECX		;	// remainder is 0 (ECX and EBX already 0)
+	mov	ESI,EDX		;
+	mov	EDI,EAX		;
+	mov	EBP,ECX		;
+
+	bsr	EAX,ECX		;	// EAX is now 30..0
+	xor	EAX,0x1F	;	// EAX is now 1..31
+	mov	CH,AL		;
+	neg	EAX		;
+	add	EAX,32		;
+	mov	CL,AL		;
+
+	mov	EAX,EBX		;
+	shr	EAX,CL		;
+	xchg	CH,CL		;
+	shl	EBP,CL		;
+	or	EBP,EAX		;
+	shl	EBX,CL		;
+
+	mov	EDX,ESI		;
+	xchg	CH,CL		;
+	shr	EDX,CL		;
+
+	mov	EAX,EDI		;
+	shr	EAX,CL		;
+	xchg	CH,CL		;
+	shl	EDI,CL		;
+	shl	ESI,CL		;
+	or	EAX,ESI		;
+
+	div	EBP		;
+	push	EBP		;
+	mov	EBP,EAX		;
+	mov	ESI,EDX		;
+
+	mul	EBX		;
+	cmp	EDX,ESI		;
+	ja	L1		;
+	jb	L2		;
+	cmp	EAX,EDI		;
+	jbe	L2		;
+L1:	dec	EBP		;
+	sub	EAX,EBX		;
+	sbb	EDX,0[ESP]	;
+L2:
+	add	ESP,4		;
+	sub	EDI,EAX		;
+	sbb	ESI,EDX		;
+	mov	EAX,ESI		;
+	xchg	CH,CL		;
+	shl	EAX,CL		;
+	xchg	CH,CL		;
+	shr	EDI,CL		;
+	or	EDI,EAX		;
+	shr	ESI,CL		;
+	mov	EBX,EDI		;
+	mov	ECX,ESI		;
+	mov	EAX,EBP		;
+	xor	EDX,EDX		;
+
+	pop	EDI		;
+	pop	ESI		;
 	pop	EBP		;
 	ret			;
 
@@ -100,6 +149,31 @@ D3:	// Divide [EDX,EAX] by EBX
 	mov	EBX,EDX		;
 	mov	EDX,ECX		;
 	xor	ECX,ECX		;
+	ret			;
+
+quo0:	// Quotient is 0
+	// Remainder is [EDX,EAX]
+	mov	EBX,EAX		;
+	mov	ECX,EDX		;
+	xor	EAX,EAX		;
+	xor	EDX,EDX		;
+	ret			;
+
+Lleft:	// The quotient is 0 or 1 and EDX >= ECX
+	cmp	EDX,ECX		;
+	ja	quo1		;	// [EDX,EAX] > [ECX,EBX]
+	// EDX == ECX
+	cmp	EAX,EBX		;
+	jb	quo0		;
+
+quo1:	// Quotient is 1
+	// Remainder is [EDX,EAX] - [ECX,EBX]
+	sub	EAX,EBX		;
+	sbb	EDX,ECX		;
+	mov	EBX,EAX		;
+	mov	ECX,EDX		;
+	mov	EAX,1		;
+	xor	EDX,EDX		;
 	ret			;
     }
 }
