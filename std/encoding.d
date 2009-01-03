@@ -2701,7 +2701,7 @@ class EncodingSchemeUtf16Native : EncodingScheme
 
         override uint encode(dchar c, ubyte[] buffer)
         {
-        	auto r = cast(wchar[])buffer;
+	    auto r = cast(wchar[])cast(void[])buffer;
             return wchar.sizeof * std.encoding.encode(c,r);
         }
 
@@ -2712,7 +2712,7 @@ class EncodingSchemeUtf16Native : EncodingScheme
         }
         body
         {
-            auto t = cast(const(wchar)[]) s;
+            auto t = cast(const(wchar)[]) cast(const(void)[]) s;
             dchar c = std.encoding.decode(t);
             s = s[$-t.length..$];
             return c;
@@ -2725,7 +2725,7 @@ class EncodingSchemeUtf16Native : EncodingScheme
         }
         body
         {
-            auto t = cast(const(wchar)[]) s;
+            auto t = cast(const(wchar)[]) cast(const(void)[]) s;
             dchar c = std.encoding.safeDecode(t);
             s = s[$-t.length..$];
             return c;

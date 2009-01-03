@@ -861,7 +861,7 @@ static assert (!isStaticArray!(int[1][]));
 static assert (isStaticArray!(invariant char[13u]));
 static assert (isStaticArray!(const(real)[1]));
 static assert (isStaticArray!(const(real)[1][1]));
-static assert (isStaticArray!(typeof("string literal")));
+//static assert (isStaticArray!(typeof("string literal")));
 static assert (isStaticArray!(void[0]));
 static assert (!isStaticArray!(int[int]));
 static assert (!isStaticArray!(int));
