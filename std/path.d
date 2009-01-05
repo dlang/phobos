@@ -341,7 +341,7 @@ unittest
  * version(Win32)
  * {
  *     getDirName(r"d:\path\foo.bat") => "d:\path"
- *     getDirName(getDirName(r"d:\path\foo.bat")) => "d:\"
+ *     getDirName(getDirName(r"d:\path\foo.bat")) => r"d:\"
  * }
  * version(linux)
  * {
