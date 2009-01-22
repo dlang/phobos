@@ -46,7 +46,7 @@ void bar()
 
 Author:
 
-$(WEB erdani.org, Andrei Alexandrescu), Bartosz Milewski
+$(WEB erdani.org, Andrei Alexandrescu), Bartosz Milewski, Don Clugston
 
 */
 
@@ -613,4 +613,55 @@ unittest
 
     // test opDot
     assert(obj2.foo == 42);
+}
+
+
+/**
+  Order the provided members to minimize size while preserving alignment.
+  Returns a declaration to be mixed in.
+
+Example:
+---
+struct Banner {
+  mixin(alignForSize!(byte[6], double)(["name", "height"]));
+}
+---
+
+  Alignment is not always optimal for 80-bit reals, nor for structs declared
+  as align(1).
+  BUG: bugzilla 2029 prevents the signature from being (string[] names...),
+  so we need to use an ugly array literal instead.
+*/
+char [] alignForSize(E...)(string[E.length] names)
+{
+    // Sort all of the members by .alignof.
+    // BUG: Alignment is not always optimal for align(1) structs
+    // or 80-bit reals. 
+    // TRICK: Use the fact that .alignof is always a power of 2,
+    // and maximum 16 on extant systems. Thus, we can perform
+    // a very limited radix sort.
+    // Contains the members with .alignof = 64,32,16,8,4,2,1
+    int [][] alignlist; // workaround for bugzilla 2569
+    alignlist = [ [],[],[],[],[],[],[]]; // workaround for bugzilla 2562
+    char[][] declaration;
+    foreach(int i_bug,T; E) {
+        int i = i_bug; // workaround for bugzilla 2564 (D2 only)
+        declaration ~= T.stringof ~ " " ~ names[i].dup ~ ";\n";
+        int a = T.alignof;
+        int k = a>=64? 0 : a>=32? 1 : a>=16? 2 : a>=8? 3 : a>=4? 4 : a>=2? 5 : 6;
+        alignlist[k]~=i;
+    }
+    char [] s;
+    foreach(q; alignlist) {
+      foreach(int i; q) {
+        s~=  declaration[i];
+      }
+    }
+    return s;
+}
+
+unittest {
+    assert(alignForSize!(int[], char[3], short, double[5])(["x", "y","z", "w"]) =="double[5u] w;\nint[] x;\nshort z;\nchar[3u] y;\n");
+    struct Foo{ int x; }
+    assert(alignForSize!(ubyte, Foo, cdouble)(["x", "y","z"]) =="cdouble z;\nFoo y;\nubyte x;\n");    
 }
