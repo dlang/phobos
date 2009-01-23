@@ -56,15 +56,14 @@ class ConvError : Error
 {
     this(string s)
     {
-	super("conversion " ~ s);
+	super(s);
     }
-}
-
-private void conv_error(S, T)(S source)
-{
-    throw new ConvError(cast(string)
-                        ("Can't convert value `"~to!(string)(source)~"' of type "
-                         ~S.stringof~" to type "~T.stringof));
+    static void raise(S, T)(S source)
+    {
+        throw new ConvError(cast(string)
+                ("Can't convert value `"~to!(string)(source)~"' of type "
+                        ~S.stringof~" to type "~T.stringof));
+    }
 }
 
 /**
@@ -76,11 +75,10 @@ class ConvOverflowError : Error
     {
 	super("Error: overflow " ~ s);
     }
-}
-
-private void conv_overflow(string s)
-{
-    throw new ConvOverflowError(s);
+    static void raise(string s)
+    {
+        throw new ConvOverflowError(s);
+    }
 }
 
 /***************************************************************
@@ -375,11 +373,11 @@ private T numberToNumber(S, T)(S value)
             static assert(tSmallest < 0);
             invariant good = value >= tSmallest;
         }
-        if (!good) conv_overflow("Conversion underflow");
+        if (!good) ConvOverflowError.raise("Conversion underflow");
     }
     static if (S.max > T.max) {
         // possible overflow
-        if (value > T.max) conv_overflow("Conversion overflow");
+        if (value > T.max) ConvOverflowError.raise("Conversion overflow");
     }
     return cast(T) value;
 }
@@ -390,7 +388,7 @@ private T parseString(T)(const(char)[] v)
     {
         if (v.length) 
         {
-            conv_error!(const(char)[], T)(v); 
+            ConvError.raise!(const(char)[], T)(v); 
         }
     }
     return parse!(T)(v);
@@ -691,6 +689,15 @@ template parse(Target)
         {
             return parseFloating!(Source, Target)(s);
         }
+        else static if (isSomeString!(Target))
+        {
+            Target result;
+            foreach (e; s)
+            {
+                result ~= e;
+            }
+            return result;
+        }
         else
         {
             static assert(false, "Dunno how to parse a " ~ Target.stringof);
@@ -713,30 +720,31 @@ private N parseIntegral(S, N)(ref S s)
         auto result = cast(N) v;
         if (result != v) 
         {
-            conv_error!(S, N)(s); 
+            ConvError.raise!(S, N)(s); 
         }
         return result;
     }
     else
     {
-        auto length = s.length;
+        // Larger than int types
+        invariant length = s.length;
         if (!length)
             goto Lerr;
 
         static if (N.min < 0)
             int sign = 0;
         else
-            static const int sign = 0;
+            enum sign = 0;
         N v = 0;
         size_t i = 0;
-        static const char maxLastDigit = N.min < 0 ? '7' : '5';
+        enum char maxLastDigit = N.min < 0 ? '7' : '5';
         for (; i < length; i++)
         {
             auto c = s[i];
             if (c >= '0' && c <= '9')
             {
                 if (v < N.max/10 || (v == N.max/10 && c + sign <= maxLastDigit))
-                    v = v * 10 + (c - '0');
+                    v = cast(N) (v * 10 + (c - '0'));
                 else
                     goto Loverflow;
             }
@@ -769,9 +777,9 @@ private N parseIntegral(S, N)(ref S s)
         }
         return v;
     Loverflow:
-        conv_overflow(to!(string)(s));
+        ConvOverflowError.raise(to!(string)(s));
     Lerr:
-        conv_error!(S, N)(s);
+        ConvError.raise!(S, N)(s);
         return 0;
     }
 }
@@ -783,7 +791,7 @@ private N parseIntegral(S, N)(ref S s)
 
 int toInt(string s)
 {
-    scope(exit) { if (s.length) conv_error!(string, int)(s); }
+    scope(exit) { if (s.length) ConvError.raise!(string, int)(s); }
     return parseIntegral!(string, int)(s);
 }
 
@@ -858,7 +866,7 @@ unittest
  */
 uint toUint(string s)
 {
-    scope(exit) if (s.length) conv_error!(string, uint)(s);
+    scope(exit) if (s.length) ConvError.raise!(string, uint)(s);
     return parseIntegral!(string, uint)(s);
 }
 
@@ -927,7 +935,7 @@ unittest
 
 long toLong(string s)
 {
-    scope(exit) if (s.length) conv_error!(string, long)(s);
+    scope(exit) if (s.length) ConvError.raise!(string, long)(s);
     return parseIntegral!(string, long)(s);
 }
 
@@ -1008,7 +1016,7 @@ unittest
 
 ulong toUlong(string s)
 {
-    scope(exit) if (s.length) conv_error!(string, ulong)(s);
+    scope(exit) if (s.length) ConvError.raise!(string, ulong)(s);
     return parseIntegral!(string, ulong)(s);
 }
 
@@ -1084,7 +1092,7 @@ unittest
 
 short toShort(string s)
 {
-    scope(exit) if (s.length) conv_error!(string, short)(s);
+    scope(exit) if (s.length) ConvError.raise!(string, short)(s);
     return parseIntegral!(string, short)(s);
 }
 
@@ -1159,7 +1167,7 @@ unittest
 
 ushort toUshort(string s)
 {
-    scope(exit) if (s.length) conv_error!(string, ushort)(s);
+    scope(exit) if (s.length) ConvError.raise!(string, ushort)(s);
     return parseIntegral!(string, ushort)(s);
 }
 
@@ -1229,7 +1237,7 @@ unittest
 
 byte toByte(string s)
 {
-    scope(exit) if (s.length) conv_error!(string, byte)(s);
+    scope(exit) if (s.length) ConvError.raise!(string, byte)(s);
     return parseIntegral!(string, byte)(s);
 }
 
@@ -1304,7 +1312,7 @@ unittest
 
 ubyte toUbyte(string s)
 {
-    scope(exit) if (s.length) conv_error!(string, ubyte)(s);
+    scope(exit) if (s.length) ConvError.raise!(string, ubyte)(s);
     return parseIntegral!(string, ubyte)(s);
 }
 
@@ -1374,7 +1382,7 @@ unittest
 
 float toFloat(Char)(Char[] s)
 {
-    scope(exit) if (s.length) conv_error!(Char[], float)(s);
+    scope(exit) if (s.length) ConvError.raise!(Char[], float)(s);
     return parseFloating!(Char[], float)(s);
 }
 
@@ -1421,7 +1429,7 @@ F parseFloating(S : S[], F)(ref S[] s)
     s = s[endptr - sz .. $];
     return f;
   Lerr:
-    conv_error!(S[], F)(s);
+    ConvError.raise!(S[], F)(s);
     assert(0);
 }
  
@@ -1477,7 +1485,7 @@ unittest
 
 double toDouble(Char)(Char[] s)
 {
-    scope(exit) if (s.length) conv_error!(Char[], double)(s);
+    scope(exit) if (s.length) ConvError.raise!(Char[], double)(s);
     return parseFloating!(Char[], double)(s);
 }
 
@@ -1533,7 +1541,7 @@ unittest
  */
 real toReal(Char)(Char[] s)
 {
-    scope(exit) if (s.length) conv_error!(Char[], real)(s);
+    scope(exit) if (s.length) ConvError.raise!(Char[], real)(s);
     return parseFloating!(Char[], real)(s);
 }
 
@@ -1757,10 +1765,10 @@ cfloat toCfloat(in string s)
     return cf;
 
     Loverflow:
-        conv_overflow(s);
+        ConvOverflowError.raise(s);
         
     Lerr:
-        conv_error(s);
+        ConvError.raise(s);
         return cast(cfloat)0.0e-0+0i;   
 }
 
@@ -1832,10 +1840,10 @@ cdouble toCdouble(in string s)
     return cd;
 
     Loverflow:
-        conv_overflow(s);
+        ConvOverflowError.raise(s);
         
     Lerr:
-        conv_error(s);
+        ConvError.raise(s);
         return cast(cdouble)0.0e-0+0i; 
 }
 
@@ -1911,7 +1919,7 @@ creal toCreal(in string s)
     return cr;
 
     Lerr:
-        conv_error(s);
+        ConvError.raise(s);
         return cast(creal)0.0e-0+0i;    
 }
 
