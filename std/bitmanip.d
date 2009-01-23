@@ -45,6 +45,16 @@ private template createAccessors(
             maskAllElse = ((1uL << len) - 1u) << offset,
             signBitCheck = 1uL << (len - 1),
             extendSign = ~((cast(MasksType)1u << len) - 1);
+        static if (T.min < 0)
+        {
+            enum long minVal = -(1uL << (len - 1));
+            enum ulong maxVal = (1uL << (len - 1)) - 1;
+        }
+        else
+        {
+            enum ulong minVal = 0;
+            enum ulong maxVal = (1uL << len) - 1;
+        }
 
         static if (is(T == bool))
         {
@@ -61,7 +71,7 @@ private template createAccessors(
         else
         {
             // getter
-            enum result = T.stringof ~ " " ~ name ~ "(){ auto result = "
+            enum result = T.stringof~" "~name~"()const{ auto result = "
                 "("~store~" & "
                 ~ myToString!(maskAllElse) ~ ") >>"
                 ~ myToString!(offset) ~ ";"
@@ -72,10 +82,17 @@ private template createAccessors(
                 ~ " return cast("~T.stringof~") result;}\n"
             // setter
                 ~"void "~name~"("~T.stringof~" v){ "
+                ~"assert(v >= "~name~"_min); "
+                ~"assert(v <= "~name~"_max); "
                 ~store~" = cast(typeof("~store~"))"
                 " (("~store~" & ~"~myToString!(maskAllElse)~")"
                 " | ((cast(typeof("~store~")) v << "~myToString!(offset)~")"
-                " & "~myToString!(maskAllElse)~"));}\n";
+                " & "~myToString!(maskAllElse)~"));}\n"
+            // constants
+                ~"enum "~T.stringof~" "~name~"_min = cast("~T.stringof~")"
+                ~myToString!(minVal)~"; "
+                ~" enum "~T.stringof~" "~name~"_max = cast("~T.stringof~")"
+                ~myToString!(maxVal)~"; ";
         }
     }
 }
@@ -250,6 +267,10 @@ unittest
     enum ABC { A, B, C };
     struct EnumTest
     {
+        pragma(msg, bitfields!(
+                  ABC, "x", 2,
+                  bool, "y", 1,
+                  ubyte, "z", 5));
         mixin(bitfields!(
                   ABC, "x", 2,
                   bool, "y", 1,
