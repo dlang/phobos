@@ -219,7 +219,7 @@ void main(string[] args)
       case "verbose": verbosityLevel = 2; break;
       case "shouting": verbosityLevel = verbosityLevel.max; break;
       default :
-        writeln(stderr, "Dunno how verbose you want me to be by saying ",
+        stderr.writeln("Dunno how verbose you want me to be by saying ",
           value);
         exit(1);
     }
