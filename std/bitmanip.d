@@ -267,10 +267,6 @@ unittest
     enum ABC { A, B, C };
     struct EnumTest
     {
-        pragma(msg, bitfields!(
-                  ABC, "x", 2,
-                  bool, "y", 1,
-                  ubyte, "z", 5));
         mixin(bitfields!(
                   ABC, "x", 2,
                   bool, "y", 1,
