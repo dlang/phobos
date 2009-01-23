@@ -351,7 +351,7 @@ void getTimes(in string name, out d_time ftc, out d_time fta, out d_time ftm)
  * Return 1 if it does, 0 if not.
  */
 
-bool exists(in string name)
+bool exists(in char[] name)
 {
     uint result;
 
@@ -929,9 +929,9 @@ class FileException : Exception
     }
 }
 
-private T cenforce(T)(T condition, lazy string name)
+private T cenforce(T)(T condition, lazy const(char)[] name)
 {
-    if (!condition) throw new FileException(name, getErrno);
+    if (!condition) throw new FileException(name.idup, errno);
     return condition;
 }
 
@@ -1181,7 +1181,7 @@ unittest
  * Does file/directory exist?
  */
 
-bool exists(in string name)
+bool exists(in char[] name)
 {
     return access(toStringz(name), 0) == 0;
 }
@@ -1226,7 +1226,7 @@ void chdir(string pathname)
  * Make directory.
  */
 
-void mkdir(string pathname)
+void mkdir(in char[] pathname)
 {
     cenforce(std.c.linux.linux.mkdir(toStringz(pathname), 0777) == 0, pathname);
 }
@@ -1235,7 +1235,7 @@ void mkdir(string pathname)
  * Make directory and all parent directories as needed.
  */
 
-void mkdirRecurse(string pathname)
+void mkdirRecurse(in char[] pathname)
 {
     invariant left = dirname(pathname);
     exists(left) || mkdirRecurse(left);
@@ -1370,20 +1370,17 @@ struct DirEntry
 string[] listdir(string pathname)
 {
     string[] result;
-
     bool listing(string filename)
     {
 	result ~= filename;
 	return true; // continue
     }
-
     listdir(pathname, &listing);
     return result;
 }
 
 string[] listdir(string pathname, string pattern)
 {   string[] result;
-
     bool callback(DirEntry* de)
     {
 	if (de.isdir)
@@ -1394,7 +1391,6 @@ string[] listdir(string pathname, string pattern)
 	}
 	return true; // continue
     }
-
     listdir(pathname, &callback);
     return result;
 }
@@ -1496,7 +1492,6 @@ void copy(in string from, in string to)
     else
     {
         void[] buffer;
-
         buffer = read(from);
         write(to, buffer);
         delete buffer;
@@ -1616,7 +1611,6 @@ struct DirIterator
             }
             return result == 0;
         }
-
         // consume the worklist
         while (worklist.length)
         {
