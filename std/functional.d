@@ -57,7 +57,7 @@ assert(isEven(2) && !isEven(1));
 
 template unaryFun(alias comp, bool byRef = false)
 {
-    alias unaryFunImpl!(comp, byRef).unaryFunUipla unaryFun;
+    alias unaryFunImpl!(comp, byRef).result unaryFun;
 }
 
 template unaryFunImpl(alias comp, bool byRef) {
@@ -65,7 +65,7 @@ template unaryFunImpl(alias comp, bool byRef) {
     {
         static if (byRef)
         {
-            void unaryFunUipla(ElementType)(ref ElementType a)
+            void result(ElementType)(ref ElementType a)
             {
                 mixin(comp ~ ";");
             }
@@ -74,7 +74,7 @@ template unaryFunImpl(alias comp, bool byRef) {
         {
             // @@@BUG1816@@@: typeof(mixin(comp)) should work
             typeof({ static ElementType a; return mixin(comp);}())
-                unaryFunUipla(ElementType)(ElementType a)
+                result(ElementType)(ElementType a)
             {
                 return mixin(comp);
             }
@@ -83,7 +83,7 @@ template unaryFunImpl(alias comp, bool byRef) {
     else
     {
         //pragma(msg, comp.stringof);
-        alias comp unaryFunUipla;
+        alias comp result;
     }
 }
 
