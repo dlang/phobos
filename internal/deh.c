@@ -417,7 +417,7 @@ void _d_monitor_epilog(void *x, void *y, Object *h)
 
 /* ======================== linux =============================== */
 
-#if linux
+#if linux || __APPLE__
 
 #include	"mars.h"
 

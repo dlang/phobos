@@ -1,7 +1,7 @@
 
 /**
  * C's &lt;string.h&gt;
- * Authors: Walter Bright, Digital Mars, www.digitalmars.com
+ * Authors: Walter Bright, Digital Mars, http://www.digitalmars.com
  * License: Public Domain
  * Macros:
  *	WIKI=Phobos/StdCString
@@ -39,7 +39,7 @@ version (Windows)
     int memicmp(char* s1, char* s2, size_t n);	///
 }
 
-version (linux)
+version (Posix)
 {
     char* strerror_r(int errnum, char* buf, size_t buflen);	///
 }

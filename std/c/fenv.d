@@ -1,7 +1,7 @@
 
 /**
  * C's &lt;fenv.h&gt;
- * Authors: Walter Bright, Digital Mars, www.digitalmars.com
+ * Authors: Walter Bright, Digital Mars, http://www.digitalmars.com
  * License: Public Domain
  * Macros:
  *	WIKI=Phobos/StdCFenv
@@ -37,6 +37,13 @@ struct fenv_t
 	ushort __data_selector;
 	ushort __unused5;
     }
+    else version (OSX)
+    {
+	ushort __control;
+	ushort __status;
+	uint __mxcsr;
+	char[8] __reserved;
+    }
     else
     {
 	static assert(0);
@@ -67,6 +74,13 @@ enum
 }
 
 version (Windows)
+{
+    extern fenv_t _FE_DFL_ENV;
+
+    /// Default floating point environment
+    fenv_t* FE_DFL_ENV = &_FE_DFL_ENV;
+}
+else version (OSX)
 {
     extern fenv_t _FE_DFL_ENV;
 

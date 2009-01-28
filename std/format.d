@@ -1283,7 +1283,7 @@ unittest
      * C99 doesn't specify what the hex digit before the decimal point
      * is for %A.
      */
-    version (linux)
+    version (Posix)
 	assert(s == "1.67 -0XA.3D70A3D70A3D8P-3 nan");
     else
 	assert(s == "1.67 -0X1.47AE147AE147BP+0 nan");

@@ -527,7 +527,7 @@ void *os_query_stackBottom()
 
 /* ================================ linux ================================= */
 
-version (linux)
+version (Posix)
 {
 
 private import std.c.linux.linux;

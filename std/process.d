@@ -1,6 +1,6 @@
 
 /*
- *  Copyright (C) 2003-2004 by Digital Mars, www.digitalmars.com
+ *  Copyright (C) 2003-2009 by Digital Mars, http://www.digitalmars.com
  *  Written by Matthew Wilson and Walter Bright
  *
  *  Incorporating idea (for execvpe() on Linux) from Russ Lewis
@@ -83,7 +83,7 @@ int spawnvp(int mode, char[] pathname, char[][] argv)
 
     toAStringz(argv, argv_);
 
-    version(linux)
+    version (Posix)
     {
         return _spawnvp(mode, toStringz(pathname), argv_);
     }
@@ -93,7 +93,7 @@ int spawnvp(int mode, char[] pathname, char[][] argv)
     }
 }
 
-version(linux)
+version (Posix)
 {
 private import std.c.linux.linux;
 int _spawnvp(int mode, char *pathname, char **argv)
@@ -154,7 +154,7 @@ int  termsig(int status)    { return status & 0x7f; }
 bool exited(int status)     { return cast(bool)((status & 0x7f) == 0); }
 int  exitstatus(int status) { return (status & 0xff00) >> 8; }
 }   // private
-}   // version(linux)
+}   // version (Posix)
 
 /* ========================================================== */
 
@@ -199,7 +199,7 @@ int execvp(char[] pathname, char[][] argv)
 /** ditto */
 int execvpe(char[] pathname, char[][] argv, char[][] envp)
 {
-version(linux)
+version (Posix)
 {
     // Is pathname rooted?
     if(pathname[0] == '/')

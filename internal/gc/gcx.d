@@ -63,7 +63,7 @@ version (Win32)
     import std.c.windows.windows;
 }
 
-version (linux)
+version (Posix)
 {
     import gclinux;
 }
@@ -86,7 +86,7 @@ private void* rt_stackBottom()
     {
         return win32.os_query_stackBottom();
     }
-    version (linux)
+    version (Posix)
     {
         return gclinux.os_query_stackBottom();
     }
@@ -237,7 +237,7 @@ class GC
 
     void Dtor()
     {
-	version (linux)
+	version (Posix)
 	{
 	    //debug(PRINTF) printf("Thread %x ", pthread_self());
 	    //debug(PRINTF) printf("GC.Dtor()\n");
@@ -1898,7 +1898,7 @@ struct Gcx
 			mark(cast(void *)context.Esp, t.stackBottom);
 			mark(&context.Edi, &context.Eip);
 		    }
-		    version (linux)
+		    version (Posix)
 		    {
 			// The registers are already stored in the stack
 			//printf("Thread: ESP = x%x, stackBottom = x%x, isSelf = %d\n", Thread.getESP(), t.stackBottom, t.isSelf());

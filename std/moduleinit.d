@@ -63,7 +63,7 @@ class ModuleCtorError : Exception
 // linux: this gets initialized in _moduleCtor()
 extern (C) ModuleInfo[] _moduleinfo_array;
 
-version (linux)
+version (Posix)
 {
     // This linked list is created by a compiler generated function inserted
     // into the .ctor list by the compiler.
@@ -89,7 +89,7 @@ extern (C) int _fatexit(void *);
 extern (C) void _moduleCtor()
 {
     debug printf("_moduleCtor()\n");
-    version (linux)
+    version (Posix)
     {
 	int len = 0;
 	ModuleReference *mr;

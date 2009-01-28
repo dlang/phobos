@@ -262,7 +262,7 @@ class OutBuffer
 		psize *= 2;
 		p = cast(char *) alloca(psize);	// buffer too small, try again with larger size
 	    }
-	    version(linux)
+	    version(Posix)
 	    {
 		count = vsnprintf(p,psize,f,args);
 		if (count == -1)
@@ -281,7 +281,7 @@ class OutBuffer
 	}
 	write(p[0 .. count]);
 	/+
-	version (linux)
+	version (Posix)
 	{
 	    if (p != buffer)
 		c.stdlib.free(p);

@@ -840,7 +840,7 @@ void copy(char[] from, char[] to)
 
 /* =========================== linux ======================= */
 
-version (linux)
+version (Posix)
 {
 
 private import std.date;

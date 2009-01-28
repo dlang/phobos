@@ -67,7 +67,7 @@ struct lldiv_t { long quot,rem; }
     int getErrno();	/// ditto
     int setErrno(int);	/// ditto
 
-const int ERANGE = 34;	// on both Windows and linux
+const int ERANGE = 34;	// on Windows, linux and OSX
 
 double atof(char *);	///
 int    atoi(char *);	/// ditto

@@ -42,7 +42,7 @@ extern (C) int main(size_t argc, char **argv)
     int myesp;
     int myebx;
 
-    version (linux)
+    version (Posix)
     {
 	_STI_monitor_staticctor();
 	_STI_critical_init();
@@ -109,7 +109,7 @@ extern (C) int main(size_t argc, char **argv)
 	}
     }
 
-    version (linux)
+    version (Posix)
     {
 	free(am);
 	_STD_critical_term();

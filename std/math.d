@@ -1375,7 +1375,7 @@ real rint(real x);      /* intrinsic */
  */
 long lrint(real x)
 {
-    version (linux)
+    version (Posix)
         return std.c.math.llrintl(x);
     else version(D_InlineAsm_X86)
     {
@@ -1408,7 +1408,7 @@ real round(real x) { return std.c.math.roundl(x); }
  */
 long lround(real x)
 {
-    version (linux)
+    version (Posix)
         return std.c.math.llroundl(x);
     else
         throw new NotImplemented("lround");
@@ -1447,7 +1447,7 @@ real remainder(real x, real y) { return std.c.math.remainderl(x, y); }
 
 real remquo(real x, real y, out int n)  /// ditto
 {
-    version (linux)
+    version (Posix)
         return std.c.math.remquol(x, y, &n);
     else
         throw new NotImplemented("remquo");
@@ -2107,7 +2107,7 @@ real pow(real x, int n)
 
 real pow(real x, real y)
 {
-    version (linux) // C pow() often does not handle special values correctly
+    version (Posix) // C pow() often does not handle special values correctly
     {
         if (isnan(y))
             return y;

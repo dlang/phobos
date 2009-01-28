@@ -75,7 +75,7 @@ const dchar PS = '\u2029';	/// UTF paragraph separator
 /// Newline sequence for this system
 version (Windows)
     const char[2] newline = "\r\n";
-else version (linux)
+else version (Posix)
     const char[1] newline = "\n";
 
 /**********************************
@@ -148,7 +148,7 @@ int icmp(char[] s1, char[] s2)
     {
 	result = memicmp(s1.ptr, s2.ptr, len);
     }
-    version (linux)
+    version (Posix)
     {
 	for (size_t i = 0; i < len; i++)
 	{

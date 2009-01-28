@@ -1,7 +1,7 @@
 
 /**
  * C's &lt;stdio.h&gt;
- * Authors: Walter Bright, Digital Mars, www.digitalmars.com
+ * Authors: Walter Bright, Digital Mars, http://www.digitalmars.com
  * License: Public Domain
  * Macros:
  *	WIKI=Phobos/StdCStdio
@@ -36,6 +36,22 @@ version (linux)
     const int FILENAME_MAX = 4095;
     const int TMP_MAX = 238328;
     const int L_tmpnam = 20;
+}
+
+version (OSX)
+{
+    const int EOF = -1;
+    const int BUFSIZ = 1024;
+    const int FOPEN_MAX = 20;
+    const int FILENAME_MAX = 1024;
+    const int TMP_MAX = 308915776;
+    const int L_tmpnam = 1024;
+
+    struct __sbuf
+    {
+	char* _base;
+	int _size;
+    }
 }
 
 enum { SEEK_SET, SEEK_CUR, SEEK_END }
@@ -76,6 +92,29 @@ struct _iobuf
 	byte	_vtable_offset;
 	char[1]	_shortbuf;
 	void*	_lock;
+    }
+    version (OSX)
+    {
+	char* _p;
+	int _r;
+	int _w;
+	short _flags;
+	short _file;
+	__sbuf _bf;
+	int _lbfsize;
+	void* _cookie;
+	int function(void*) _close;
+	int function(void*, char*, int) _read;
+	fpos_t function(void*, fpos_t, int) _seek;
+	int function(void*, char*, int) _write;
+	__sbuf _ub;
+	void* _extra;
+	int _ur;
+	char[3] _ubuf;
+	char[1] _nbuf;
+	__sbuf _lb;
+	int _blksize;
+	fpos_t _offset;
     }
 }
 
@@ -131,7 +170,7 @@ version (Win32)
     }
 }
 
-version (linux)
+version (Posix)
 {
     enum
     {
@@ -152,6 +191,7 @@ version (Win32)
 
 version (linux)
 {
+    alias int fpos_t;
     extern FILE *stdin;
     extern FILE *stdout;
     extern FILE *stderr;
@@ -159,12 +199,21 @@ version (linux)
 
 version (Win32)
 {
+    alias int fpos_t;	///
     const char[] _P_tmpdir = "\\";
     const wchar[] _wP_tmpdir = "\\";
     const int L_tmpnam = _P_tmpdir.length + 12;
 }
 
-alias int fpos_t;	///
+version (OSX)
+{
+    alias long fpos_t;
+    extern FILE __sF[64];		// undocumented; I made up the 64
+    const FILE *stdin  = &__sF[0];
+    const FILE *stdout = &__sF[1];
+    const FILE *stderr = &__sF[2];
+}
+
 
 char *	 tmpnam(char *);	///
 FILE *	 fopen(char *,char *);	///
@@ -235,7 +284,7 @@ version (Win32)
     int  _vsnprintf(char *,size_t,char *,va_list);
 }
 
-version (linux)
+version (Posix)
 {
     int  ferror(FILE *fp);
     int  feof(FILE *fp);

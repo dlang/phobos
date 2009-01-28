@@ -84,7 +84,7 @@ auto class PerformanceCounterScope(T)
 	this(PerformanceCounterScope rhs);
 }
 
-version(linux)
+version(Posix)
 {
 
     extern (C)

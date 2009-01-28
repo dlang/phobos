@@ -34,7 +34,7 @@ version (Win32)
     import win32;
 }
 
-version (linux)
+version (Posix)
 {
     import gclinux;
 }

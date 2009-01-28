@@ -12,7 +12,7 @@
 #include <assert.h>
 
 #if _WIN32
-#elif linux
+#elif linux || __APPLE__
 #define USE_PTHREADS	1
 #else
 #endif
@@ -135,7 +135,13 @@ void _STI_monitor_staticctor()
     if (!inited)
     {
 	pthread_mutexattr_init(&_monitors_attr);
+#if linux
 	pthread_mutexattr_settype(&_monitors_attr, PTHREAD_MUTEX_RECURSIVE_NP);
+#elif __APPLE__
+	// BUG: PTHREAD_MUTEX_RECURSIVE_NP is undefined, don't know what to do
+#else
+	assert(0);
+#endif
 	pthread_mutex_init(&_monitor_critsec, 0);
 	inited = 1;
     }

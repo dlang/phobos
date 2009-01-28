@@ -114,7 +114,7 @@ class StdioException : Exception
 
     this(uint errno)
     {
-	version (linux)
+	version (Posix)
 	{   char[80] buf = void;
 	    auto s = std.c.string.strerror_r(errno, buf.ptr, buf.length);
 	}
@@ -191,7 +191,7 @@ void writefx(FILE* fp, TypeInfo[] arguments, void* argptr, int newline=false)
 		}
 	    }
 	}
-	else version (linux)
+	else version (Posix)
 	{
 	    void putcw(dchar c)
 	    {
@@ -497,7 +497,7 @@ size_t readln(FILE* fp, inout char[] buf)
 		    StdioException();
 		return buf.length;
 	    }
-	    else version (linux)
+	    else version (Posix)
 	    {
 		buf.length = 0;
 		for (int c; (c = FGETWC(fp)) != -1; )

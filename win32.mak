@@ -278,7 +278,8 @@ SRC_ZLIB= etc\c\zlib\trees.h \
 	etc\c\zlib\ChangeLog \
 	etc\c\zlib\README \
 	etc\c\zlib\win32.mak \
-	etc\c\zlib\linux.mak
+	etc\c\zlib\linux.mak \
+	etc\c\zlib\osx.mak
 
 SRC_GC= internal\gc\gc.d \
 	internal\gc\gcold.d \
@@ -289,7 +290,8 @@ SRC_GC= internal\gc\gc.d \
 	internal\gc\gclinux.d \
 	internal\gc\testgc.d \
 	internal\gc\win32.mak \
-	internal\gc\linux.mak
+	internal\gc\linux.mak \
+	internal\gc\osx.mak
 
 phobos.lib : $(OBJS) $(SRCS) minit.obj internal\gc\dmgc.lib \
 	etc\c\zlib\zlib.lib win32.mak
@@ -879,11 +881,11 @@ $(DOC)\std_c_wcharh.html : std.ddoc std\c\wcharh.d
 
 ######################################################
 
-zip : win32.mak linux.mak phoboslicense.txt std.ddoc $(SRC) \
+zip : win32.mak linux.mak osx.mak phoboslicense.txt std.ddoc $(SRC) \
 	$(SRC_STD) $(SRC_STD_C) $(SRC_TI) $(SRC_INT) $(SRC_STD_WIN) \
 	$(SRC_STDLINUX) $(SRC_ETC) $(SRC_ETC_C) $(SRC_ZLIB) $(SRC_GC)
 	del phobos.zip
-	zip32 -u phobos win32.mak linux.mak std.ddoc
+	zip32 -u phobos win32.mak linux.mak osx.mak std.ddoc
 	zip32 -u phobos $(SRC)
 	zip32 -u phobos $(SRC_TI)
 	zip32 -u phobos $(SRC_INT)
@@ -906,7 +908,7 @@ cleanhtml:
 
 install:
 	$(CP) phobos.lib gcstub.obj $(DIR)\lib
-	$(CP) win32.mak linux.mak phoboslicense.txt minit.obj std.ddoc $(DIR)\src\phobos
+	$(CP) win32.mak linux.mak osx.mak phoboslicense.txt minit.obj std.ddoc $(DIR)\src\phobos
 	$(CP) $(SRC) $(DIR)\src\phobos
 	$(CP) $(SRC_STD) $(DIR)\src\phobos\std
 	$(CP) $(SRC_STD_C) $(DIR)\src\phobos\std\c

@@ -39,7 +39,7 @@ module std.socket;
 private import std.string, std.stdint, std.c.string, std.c.stdlib;
 
 
-version(linux)
+version(Posix)
 {
 	version = BsdSockets;
 }
@@ -63,7 +63,7 @@ version(Win32)
 }
 else version(BsdSockets)
 {
-	version(linux)
+	version(Posix)
 	{
 		private import std.c.linux.linux, std.c.linux.socket;
 		private alias std.c.linux.linux.timeval _ctimeval;
@@ -93,7 +93,7 @@ class SocketException: Exception
 	{
 		errorCode = err;
 		
-		version(linux)
+		version(Posix)
 		{
 			if(errorCode > 0)
 			{
@@ -1108,7 +1108,7 @@ class Socket
 					if(WSAEWOULDBLOCK == err)
 						return;
 				}
-				else version(linux)
+				else version(Posix)
 				{
 					if(EINPROGRESS == err)
 						return;
@@ -1515,7 +1515,7 @@ class Socket
 			if(_SOCKET_ERROR == result && WSAGetLastError() == WSAEINTR)
 				return -1;
 		}
-		else version(linux)
+		else version(Posix)
 		{
 			if(_SOCKET_ERROR == result && getErrno() == EINTR)
 				return -1;
