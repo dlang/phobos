@@ -218,35 +218,30 @@ enum real SQRT1_2 =    0.70710678118654752440;  /** &radic;&frac12; */
  * For complex numbers, abs(z) = sqrt( $(POWER z.re, 2) + $(POWER z.im, 2) )
  * = hypot(z.re, z.im).
  */
-real abs(real x)
+Num abs(Num)(Num x) if (is(typeof(Num >= 0)) && is(typeof(-Num)) &&
+        !(is(Num* : const(ifloat*)) || is(Num* : const(idouble*))
+                || is(Num* : const(ireal*))))
 {
-    return fabs(x);
+    static if (isFloatingPoint!(Num))
+        return fabs(x);
+    else
+        return x>=0 ? x : -x;
 }
 
-/** ditto */
-long abs(long x)
-{
-    return x>=0 ? x : -x;
-}
-
-/** ditto */
-int abs(int x)
-{
-    return x>=0 ? x : -x;
-}
-
-/** ditto */
-real abs(creal z)
+auto abs(Num)(Num z)
+    if (is(Num* : const(cfloat*)) || is(Num* : const(cdouble*))
+            || is(Num* : const(creal*)))
 {
     return hypot(z.re, z.im);
 }
 
 /** ditto */
-real abs(ireal y)
+real abs(Num)(Num y)
+    if (is(Num* : const(ifloat*)) || is(Num* : const(idouble*))
+            || is(Num* : const(ireal*)))
 {
     return fabs(y.im);
 }
-
 
 unittest
 {
@@ -336,7 +331,8 @@ ireal sin(ireal y)
   return cosh(y.im)*1i;
 }
 
-unittest {
+unittest
+{
   assert(sin(0.0+0.0i) == 0.0);
   assert(sin(2.0+0.0i) == sin(2.0L) );
 }
@@ -477,6 +473,10 @@ unittest
  *      $(TR $(TD $(NAN))    $(TD $(NAN))  $(TD yes))
  *  )
  */
+float acos(float x)               { return std.c.math.acosf(x); }
+/// ditto
+double acos(double x)               { return std.c.math.acos(x); }
+/// ditto
 real acos(real x)               { return std.c.math.acosl(x); }
 
 /***************
@@ -490,6 +490,10 @@ real acos(real x)               { return std.c.math.acosl(x); }
  *      $(TR $(TD $(LT)-1.0)    $(TD $(NAN))       $(TD yes))
  *  )
  */
+float asin(float x)               { return std.c.math.asinf(x); }
+/// ditto
+double asin(double x)               { return std.c.math.asin(x); }
+/// ditto
 real asin(real x)               { return std.c.math.asinl(x); }
 
 /***************
@@ -502,6 +506,10 @@ real asin(real x)               { return std.c.math.asinl(x); }
  *      $(TR $(TD $(PLUSMN)$(INFIN)) $(TD $(NAN))       $(TD yes))
  *  )
  */
+float atan(float x)               { return std.c.math.atanf(x); }
+/// ditto
+double atan(double x)               { return std.c.math.atan(x); }
+/// ditto
 real atan(real x)               { return std.c.math.atanl(x); }
 
 /***************
@@ -525,6 +533,10 @@ real atan(real x)               { return std.c.math.atanl(x); }
  *      $(TR $(TD $(PLUSMN)$(INFIN)) $(TD -$(INFIN))    $(TD $(PLUSMN)3$(PI)/4))
  *      )
  */
+float atan2(float y, float x)      { return std.c.math.atan2f(y,x); }
+/// ditto
+double atan2(double y, double x)      { return std.c.math.atan2(y,x); }
+/// ditto
 real atan2(real y, real x)      { return std.c.math.atan2l(y,x); }
 
 /***********************************
@@ -535,6 +547,10 @@ real atan2(real y, real x)      { return std.c.math.atan2l(y,x); }
  *      $(TR $(TD $(PLUSMN)$(INFIN)) $(TD $(PLUSMN)0.0) $(TD no) )
  *      )
  */
+float cosh(float x)               { return std.c.math.coshf(x); }
+/// ditto
+double cosh(double x)               { return std.c.math.cosh(x); }
+/// ditto
 real cosh(real x)               { return std.c.math.coshl(x); }
 
 /***********************************
@@ -546,6 +562,10 @@ real cosh(real x)               { return std.c.math.coshl(x); }
  *      $(TR $(TD $(PLUSMN)$(INFIN)) $(TD $(PLUSMN)$(INFIN)) $(TD no))
  *      )
  */
+float sinh(float x)               { return std.c.math.sinhf(x); }
+/// ditto
+double sinh(double x)               { return std.c.math.sinh(x); }
+/// ditto
 real sinh(real x)               { return std.c.math.sinhl(x); }
 
 /***********************************
@@ -557,6 +577,10 @@ real sinh(real x)               { return std.c.math.sinhl(x); }
  *      $(TR $(TD $(PLUSMN)$(INFIN)) $(TD $(PLUSMN)1.0) $(TD no))
  *      )
  */
+float tanh(float x)               { return std.c.math.tanhf(x); }
+/// ditto
+double tanh(double x)               { return std.c.math.tanh(x); }
+/// ditto
 real tanh(real x)               { return std.c.math.tanhl(x); }
 
 //real acosh(real x)            { return std.c.math.acoshl(x); }
@@ -743,6 +767,10 @@ creal sqrt(creal z)
  *      $(TR $(TD -$(INFIN)) $(TD +0.0) )
  *      )
  */
+float exp(float x)                { return std.c.math.expf(x); }
+/// ditto
+double exp(double x)                { return std.c.math.exp(x); }
+/// ditto
 real exp(real x)                { return std.c.math.expl(x); }
 
 /**********************
@@ -754,6 +782,10 @@ real exp(real x)                { return std.c.math.expl(x); }
  *      $(TR $(TD -$(INFIN)) $(TD +0.0))
  *      )
  */
+float exp2(float x)               { return std.c.math.exp2f(x); }
+/// ditto
+double exp2(double x)               { return std.c.math.exp2(x); }
+/// ditto
 real exp2(real x)               { return std.c.math.exp2l(x); }
 
 /******************************************
@@ -1525,7 +1557,8 @@ int isnormal(X)(X x)
         // doubledouble is normal if the least significant part is normal.
         return isnormal((cast(double*)&x)[MANTISSA_LSB]);
     } else {
-        ushort e = F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT];
+        // ridiculous DMD warning
+        ushort e = cast(ushort)(F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT]);
         return (e != F.EXPMASK && e!=0);
     }
 }
@@ -1733,7 +1766,25 @@ unittest
     assert(isnan(e) && signbit(e));
 }
 
+/*********************************
+Returns $(D -1) if $(D x < 0), $(D 0) if $(D x == 0), and $(D 1) if
+$(D x > 0).
+ */
 
+int sgn(F)(F x)
+{
+    // @@@TODO@@@: make this faster
+    return x > 0 ? 1 : x < 0 ? -1 : 0;
+}
+
+unittest
+{
+    debug (math) printf("math.sgn.unittest\n");
+    assert(sgn(168.1234) == 1);
+    assert(sgn(-168.1234) == -1);
+    assert(sgn(0.0) == 0);
+    assert(sgn(-0.0) == 0);
+}
 
 /******************************************
  * Creates a quiet NAN with the information from tagp[] embedded in it.
@@ -2015,7 +2066,7 @@ real fma(real x, real y, real z) { return (x * y) + z; }
  * Fast integral powers.
  */
 
-real pow(real x, uint n)
+F pow(F)(F x, uint n) if (isFloatingPoint!(F))
 {
     if (n > int.max)
     {
@@ -2031,7 +2082,7 @@ real pow(real x, uint n)
 
 /// Ditto
 
-real pow(real x, int n)
+F pow(F)(F x, int n) if (isFloatingPoint!(F))
 {
     real p = 1.0, v = void;
 
@@ -2120,7 +2171,7 @@ real pow(real x, int n)
  * )
  */
 
-real pow(real x, real y)
+F pow(F)(F x, F y) if (isFloatingPoint!(F))
 {
     version (linux) // C pow() often does not handle special values correctly
     {
@@ -2138,16 +2189,16 @@ real pow(real x, real y)
                 if (signbit(y))
                     return +0.0;
                 else
-                    return real.infinity;
+                    return F.infinity;
             }
             else if (fabs(x) == 1)
             {
-                return real.nan;
+                return F.nan;
             }
             else // < 1
             {
                 if (signbit(y))
-                    return real.infinity;
+                    return F.infinity;
                 else
                     return +0.0;
             }
@@ -2161,9 +2212,9 @@ real pow(real x, real y)
                 if (y > 0)
                 {
                     if (i == y && i & 1)
-                        return -real.infinity;
+                        return -F.infinity;
                     else
-                        return real.infinity;
+                        return F.infinity;
                 }
                 else if (y < 0)
                 {
@@ -2176,7 +2227,7 @@ real pow(real x, real y)
             else
             {
                 if (y > 0)
-                    return real.infinity;
+                    return F.infinity;
                 else if (y < 0)
                     return +0.0;
             }
@@ -2198,9 +2249,9 @@ real pow(real x, real y)
                 else if (y < 0)
                 {
                     if (i == y && i & 1)
-                        return -real.infinity;
+                        return -F.infinity;
                     else
-                        return real.infinity;
+                        return F.infinity;
                 }
             }
             else
@@ -2208,7 +2259,7 @@ real pow(real x, real y)
                 if (y > 0)
                     return +0.0;
                 else if (y < 0)
-                    return real.infinity;
+                    return F.infinity;
             }
         }
     }
@@ -2439,6 +2490,7 @@ body {
         if (c) m |= 0x4000_0000_0000_0000L; // shift carry into significand
         if (e) *ul = m | 0x8000_0000_0000_0000L; // set implicit bit...
         else *ul = m; // ... unless exponent is 0 (denormal or zero).
+        // Avoid ridiculous warning
         ue[4]= cast(ushort)( e | (xe[F.EXPPOS_SHORT]& 0x8000)); // restore sign bit
     } else static if(T.mant_dig == 113) { //quadruple
         // This would be trivial if 'ucent' were implemented...
