@@ -1557,8 +1557,7 @@ int isnormal(X)(X x)
         // doubledouble is normal if the least significant part is normal.
         return isnormal((cast(double*)&x)[MANTISSA_LSB]);
     } else {
-        // ridiculous DMD warning
-        ushort e = cast(ushort)(F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT]);
+	ushort e = F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT]
         return (e != F.EXPMASK && e!=0);
     }
 }
@@ -1767,14 +1766,14 @@ unittest
 }
 
 /*********************************
-Returns $(D -1) if $(D x < 0), $(D 0) if $(D x == 0), and $(D 1) if
-$(D x > 0).
+Returns $(D -1) if $(D x < 0), $(D x) if $(D x == 0), $(D 1) if
+$(D x > 0), and $(NAN) if x==$(NAN).
  */
 
 int sgn(F)(F x)
 {
     // @@@TODO@@@: make this faster
-    return x > 0 ? 1 : x < 0 ? -1 : 0;
+    return x > 0 ? 1 : x < 0 ? -1 : x;
 }
 
 unittest
@@ -2490,8 +2489,7 @@ body {
         if (c) m |= 0x4000_0000_0000_0000L; // shift carry into significand
         if (e) *ul = m | 0x8000_0000_0000_0000L; // set implicit bit...
         else *ul = m; // ... unless exponent is 0 (denormal or zero).
-        // Avoid ridiculous warning
-        ue[4]= cast(ushort)( e | (xe[F.EXPPOS_SHORT]& 0x8000)); // restore sign bit
+        ue[4]= e | (xe[F.EXPPOS_SHORT]& 0x8000); // restore sign bit
     } else static if(T.mant_dig == 113) { //quadruple
         // This would be trivial if 'ucent' were implemented...
         ulong *ul = cast(ulong *)&u;
