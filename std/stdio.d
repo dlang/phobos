@@ -36,14 +36,16 @@ version (DigitalMars)
     }
 }
 
-version (DIGITAL_MARS_STDIO)
-{
-}
-else
+version (linux)
 {
     // Specific to the way Gnu C does stdio
     version = GCC_IO;
     import std.c.linux.linux;
+}
+
+version (OSX)
+{
+    version = GENERIC_IO;
 }
 
 version (DIGITAL_MARS_STDIO)
@@ -90,6 +92,22 @@ else version (GCC_IO)
     alias fputwc_unlocked FPUTWC;
     alias fgetc_unlocked FGETC;
     alias fgetwc_unlocked FGETWC;
+
+    alias flockfile FLOCK;
+    alias funlockfile FUNLOCK;
+}
+else version (GENERIC_IO)
+{
+    extern (C)
+    {
+	void flockfile(FILE*);
+	void funlockfile(FILE*);
+    }
+
+    alias fputc FPUTC;
+    alias fputwc FPUTWC;
+    alias fgetc FGETC;
+    alias fgetwc FGETWC;
 
     alias flockfile FLOCK;
     alias funlockfile FUNLOCK;
@@ -541,6 +559,76 @@ size_t readln(FILE* fp, inout char[] buf)
 	    buf = lineptr[0 .. s].dup;
 	}
 	return s;
+    }
+    else version (GENERIC_IO)
+    {
+	FLOCK(fp);
+	scope(exit) FUNLOCK(fp);
+	if (fwide(fp, 0) > 0)
+	{   /* Stream is in wide characters.
+	     * Read them and convert to chars.
+	     */
+	    version (Windows)
+	    {
+		buf.length = 0;
+		int c2;
+		for (int c; (c = FGETWC(fp)) != -1; )
+		{
+		    if ((c & ~0x7F) == 0)
+		    {   buf ~= c;
+			if (c == '\n')
+			    break;
+		    }
+		    else
+		    {
+			if (c >= 0xD800 && c <= 0xDBFF)
+			{
+			    if ((c2 = FGETWC(fp)) != -1 ||
+				c2 < 0xDC00 && c2 > 0xDFFF)
+			    {
+				StdioException("unpaired UTF-16 surrogate");
+			    }
+			    c = ((c - 0xD7C0) << 10) + (c2 - 0xDC00);
+			}
+			std.utf.encode(buf, c);
+		    }
+		}
+		if (ferror(fp))
+		    StdioException();
+		return buf.length;
+	    }
+	    else version (Posix)
+	    {
+		buf.length = 0;
+		for (int c; (c = FGETWC(fp)) != -1; )
+		{
+		    if ((c & ~0x7F) == 0)
+			buf ~= c;
+		    else
+			std.utf.encode(buf, cast(dchar)c);
+		    if (c == '\n')
+			break;
+		}
+		if (ferror(fp))
+		    StdioException();
+		return buf.length;
+	    }
+	    else
+	    {
+		static assert(0);
+	    }
+	}
+
+	buf.length = 0;
+	for (int c; (c = FGETC(fp)) != -1; )
+	{
+	    buf ~= c;
+	    if (c == '\n')
+		break;
+	}
+	if (ferror(fp))
+	    StdioException();
+	return buf.length;
     }
     else
     {

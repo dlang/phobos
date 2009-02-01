@@ -6,6 +6,16 @@
 import std.c.linux.linuxextern;
 import std.c.linux.linux;
 
+version (OSX)
+{
+    extern (C)
+    {
+	unsigned get_end();
+	unsigned get_etext();
+	unsigned get_edata();
+    }
+}
+
 /+
 extern (C)
 {
@@ -102,6 +112,15 @@ void *os_query_stackBottom()
 
 void os_query_staticdataseg(void **base, uint *nbytes)
 {
-    *base = cast(void *)&__data_start;
-    *nbytes = cast(byte *)&_end - cast(byte *)&__data_start;
+    version (OSX)
+    {	// These are probably wrong.
+	// See http://www.manpagez.com/man/3/get_etext/
+	*base = cast(void *)get_etext();
+	*nbytes = cast(byte *)get_end() - cast(byte *)get_etext();
+    }
+    else
+    {
+	*base = cast(void *)&__data_start;
+	*nbytes = cast(byte *)&_end - cast(byte *)&__data_start;
+    }
 }
