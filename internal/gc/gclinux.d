@@ -131,6 +131,8 @@ void os_query_staticdataseg(void **base, uint *nbytes)
 	 */
 	//*base = cast(void *)get_etext();
 	//*nbytes = cast(byte *)get_end() - cast(byte *)get_etext();
+	*base = null;
+	*nbytes = 0;
     }
     else
     {
