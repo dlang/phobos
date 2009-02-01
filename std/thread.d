@@ -533,6 +533,11 @@ version (Posix)
 private import std.c.linux.linux;
 private import std.c.linux.linuxextern;
 
+version (OSX)
+{
+    extern (C) extern void* __osx_stack_end;
+}
+
 alias uint pthread_t;
 extern (C) alias void (*__sighandler_t)(int);
 
@@ -1026,6 +1031,10 @@ class Thread
 		dlclose(handle);
 	    }
 	    t.stackBottom = *libc_stack_end;
+	}
+	else version (OSX)
+	{
+	    t.stackBottom = __osx_stack_end;
 	}
 	else
 	{
