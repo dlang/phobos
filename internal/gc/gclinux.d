@@ -126,9 +126,11 @@ void os_query_staticdataseg(void **base, uint *nbytes)
     {	/* These are probably wrong.
 	 * See http://www.manpagez.com/man/3/get_etext/
 	 * Should use dylib(3) instead.
+	 *
+	 * EDIT: should be handled by _d_osx_image_init() now. - SK
 	 */
-	*base = cast(void *)get_etext();
-	*nbytes = cast(byte *)get_end() - cast(byte *)get_etext();
+	//*base = cast(void *)get_etext();
+	//*nbytes = cast(byte *)get_end() - cast(byte *)get_etext();
     }
     else
     {

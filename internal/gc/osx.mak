@@ -9,9 +9,9 @@ DFLAGS=-release -O -inline -I../..
 #DFLAGS=-release -inline -O
 CC=gcc
 
-OBJS= gc.o gcx.o gcbits.o gclinux.o gcold.o
+OBJS= gc.o gcx.o gcbits.o gclinux.o gcosxc.o gcold.o
 
-SRC= gc.d gcx.d gcbits.d win32.d gclinux.d gcold.d testgc.d \
+SRC= gc.d gcx.d gcbits.d win32.d gclinux.d gcosxc.c gcold.d testgc.d \
 	win32.mak linux.mak osx.mak
 
 .c.o:
@@ -23,7 +23,7 @@ SRC= gc.d gcx.d gcbits.d win32.d gclinux.d gcold.d testgc.d \
 targets : testgc dmgc.a
 
 testgc : testgc.o $(OBJS) linux.mak
-	$(DMD) -of$@ testgc.o gc.o gcx.o gcbits.o gclinux.o -g
+	$(DMD) -of$@ testgc.o gc.o gcx.o gcbits.o gclinux.o gcosxc.o -g
 
 testgc.o : testgc.d
 	$(DMD) -c $(DFLAGS) testgc.d
@@ -45,6 +45,9 @@ gcx.o : gcx.d
 
 gclinux.o : gclinux.d
 	$(DMD) -c $(DFLAGS) gclinux.d
+
+gcosxc.o : gcosxc.c
+	$(CC) -c $(CFLAGS) gcosxc.c
 
 zip : $(SRC)
 	$(RM) dmgc.zip

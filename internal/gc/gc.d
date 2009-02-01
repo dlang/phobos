@@ -63,6 +63,18 @@ void hasPointers(void* p)	      { _gc.hasPointers(p); }
 void hasNoPointers(void* p)	      { _gc.hasNoPointers(p); }
 void setV1_0()			      { _gc.setV1_0(); }
 
+// for gcosxc.c
+extern (C) void _d_gc_addrange(void *pbot, void *ptop)
+{
+    _gc.addRange(pbot, ptop);
+}
+
+//for gcosxc.c
+extern (C) void _d_gc_removerange(void *pbot)
+{
+    _gc.removeRange(pbot);
+}
+
 void[] malloc(size_t nbytes)
 {
     void* p = _gc.malloc(nbytes);
@@ -122,6 +134,10 @@ extern (C)
 
 void _d_monitorrelease(Object h);
 
+version(OSX)
+{
+    void _d_osx_image_init();
+}
 
 void gc_init()
 {
@@ -138,6 +154,10 @@ void gc_init()
 	_gc = cast(GC *) std.c.stdlib.calloc(1, GC.sizeof);
     }
     _gc.initialize();
+    version(OSX)
+    {
+        _d_osx_image_init();
+    }
     GC.scanStaticData(_gc);
     std.thread.Thread.thread_init();
 }
