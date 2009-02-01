@@ -10,8 +10,8 @@
 #include <mach-o/dyld.h>
 #include <mach-o/getsect.h>
 
-void gc_addRange( void* p, size_t sz );
-void gc_removeRange( void* p );
+void _d_gc_addrange( void* pbot, void* ptop );
+void _d_gc_removerange( void* p );
 
 typedef struct
 {
