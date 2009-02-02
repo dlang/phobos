@@ -208,10 +208,14 @@ version (Win32)
 version (OSX)
 {
     alias long fpos_t;
-    extern FILE __sF[64];		// undocumented; I made up the 64
-    const FILE *stdin  = &__sF[0];
-    const FILE *stdout = &__sF[1];
-    const FILE *stderr = &__sF[2];
+
+    extern FILE *__stdinp;
+    extern FILE *__stdoutp;
+    extern FILE *__stderrp;
+
+    alias __stdinp stdin;
+    alias __stdoutp stdout;
+    alias __stderrp stderr;
 }
 
 
