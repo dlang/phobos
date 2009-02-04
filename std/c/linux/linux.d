@@ -222,8 +222,10 @@ enum
 
 // Memory mapping sharing types
 
-enum
-{	MAP_SHARED	= 1,
+version (linux)
+{
+    enum
+    {	MAP_SHARED	= 1,
 	MAP_PRIVATE	= 2,
 	MAP_TYPE	= 0x0F,
 	MAP_FIXED	= 0x10,
@@ -237,14 +239,41 @@ enum
 	MAP_NORESERVE	= 0x4000,
 	MAP_POPULATE	= 0x8000,
 	MAP_NONBLOCK	= 0x10000,
-}
+    }
 
-// Values for msync()
+    // Values for msync()
 
-enum
-{	MS_ASYNC	= 1,
+    enum
+    {	MS_ASYNC	= 1,
 	MS_INVALIDATE	= 2,
 	MS_SYNC		= 4,
+    }
+}
+
+version (OSX)
+{
+    enum
+    {	MAP_SHARED	= 1,
+	MAP_PRIVATE	= 2,
+	MAP_FIXED	= 0x10,
+	MAP_FILE	= 0,
+	MAP_ANON	= 0x1000,
+	MAP_NORESERVE	= 0x40,
+
+	MAP_RENAME	= 0x20,
+	MAP_RESERVED0080 = 0x80,
+	MAP_NOEXTEND	= 0x100,
+	MAP_HASSEMAPHORE = 0x200,
+	MAP_NOCACHE	= 0x400,
+    }
+
+    // Values for msync()
+
+    enum
+    {	MS_ASYNC	= 1,
+	MS_INVALIDATE	= 2,
+	MS_SYNC		= 0x10,
+    }
 }
 
 // Values for mlockall()

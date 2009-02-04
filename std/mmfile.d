@@ -305,7 +305,8 @@ class MmFile
 			else
 			{
 				fd = -1;
-				flags |= MAP_ANONYMOUS;
+version (linux)			flags |= MAP_ANONYMOUS;
+version (OSX)			flags |= MAP_ANON;
 			}
 			this.size = size;
 			size_t initial_map = (window && 2*window<size)? 2*window : cast(size_t)size;

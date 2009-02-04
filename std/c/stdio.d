@@ -54,6 +54,22 @@ version (OSX)
     }
 }
 
+version (FreeBSD)
+{
+    const int EOF = -1;
+    const int BUFSIZ = 1024;
+    const int FOPEN_MAX = 20;
+    const int FILENAME_MAX = 1024;
+    const int TMP_MAX = 308915776;
+    const int L_tmpnam = 1024;
+
+    struct __sbuf
+    {
+	char* _base;
+	int _size;
+    }
+}
+
 enum { SEEK_SET, SEEK_CUR, SEEK_END }
 
 struct _iobuf
@@ -94,6 +110,29 @@ struct _iobuf
 	void*	_lock;
     }
     version (OSX)
+    {
+	char* _p;
+	int _r;
+	int _w;
+	short _flags;
+	short _file;
+	__sbuf _bf;
+	int _lbfsize;
+	void* _cookie;
+	int function(void*) _close;
+	int function(void*, char*, int) _read;
+	fpos_t function(void*, fpos_t, int) _seek;
+	int function(void*, char*, int) _write;
+	__sbuf _ub;
+	void* _extra;
+	int _ur;
+	char[3] _ubuf;
+	char[1] _nbuf;
+	__sbuf _lb;
+	int _blksize;
+	fpos_t _offset;
+    }
+    version (FreeBSD)
     {
 	char* _p;
 	int _r;
@@ -206,6 +245,19 @@ version (Win32)
 }
 
 version (OSX)
+{
+    alias long fpos_t;
+
+    extern FILE *__stdinp;
+    extern FILE *__stdoutp;
+    extern FILE *__stderrp;
+
+    alias __stdinp stdin;
+    alias __stdoutp stdout;
+    alias __stderrp stderr;
+}
+
+version (FreeBSD)
 {
     alias long fpos_t;
 

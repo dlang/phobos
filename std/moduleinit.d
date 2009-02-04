@@ -61,9 +61,10 @@ class ModuleCtorError : Exception
 
 // Win32: this gets initialized by minit.asm
 // linux: this gets initialized in _moduleCtor()
+// OSX: this gets initialized in _moduleCtor()
 extern (C) ModuleInfo[] _moduleinfo_array;
 
-version (Posix)
+version (linux)
 {
     // This linked list is created by a compiler generated function inserted
     // into the .ctor list by the compiler.
@@ -74,6 +75,15 @@ version (Posix)
     }
 
     extern (C) ModuleReference *_Dmodule_ref;	// start of linked list
+}
+
+version (OSX)
+{
+    extern (C)
+    {
+	extern void* _minfo_beg;
+	extern void* _minfo_end;
+    }
 }
 
 ModuleInfo[] _moduleinfo_dtors;
@@ -89,7 +99,8 @@ extern (C) int _fatexit(void *);
 extern (C) void _moduleCtor()
 {
     debug printf("_moduleCtor()\n");
-    version (Posix)
+
+    version (linux)
     {
 	int len = 0;
 	ModuleReference *mr;
@@ -101,6 +112,24 @@ extern (C) void _moduleCtor()
 	for (mr = _Dmodule_ref; mr; mr = mr.next)
 	{   _moduleinfo_array[len] = mr.mod;
 	    len++;
+	}
+    }
+
+    version (OSX)
+    {	/* The ModuleInfo references are stored in the special segment
+	 * __minfodata, which is bracketed by the segments __minfo_beg
+	 * and __minfo_end. The variables _minfo_beg and _minfo_end
+	 * are of zero size and are in the two bracketing segments,
+	 * respectively.
+	 */
+	size_t length = cast(ModuleInfo*)&_minfo_end - cast(ModuleInfo*)&_minfo_beg;
+	_moduleinfo_array = (cast(ModuleInfo*)&_minfo_beg)[0 .. length];
+	debug printf("moduleinfo: ptr = %p, length = %d\n", _moduleinfo_array.ptr, _moduleinfo_array.length);
+
+	debug foreach (m; _moduleinfo_array)
+	{
+	    //printf("\t%p\n", m);
+	    printf("\t%.*s\n", m.name);
 	}
     }
 

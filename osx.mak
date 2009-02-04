@@ -203,10 +203,11 @@ ALLSRCS = $(SRC) $(SRC_STD) $(SRC_STD_C) $(SRC_TI) $(SRC_INT) $(SRC_STD_WIN) \
 	$(SRC_ZLIB) $(SRC_GC)
 
 
-$(LIB) : $(OBJS) $(GC_OBJS) $(ZLIB_OBJS) osx.mak
-	rm -f $(LIB)
-	ar -r $@ $(OBJS) $(ZLIB_OBJS) $(GC_OBJS)
-#	$(DMD) -lib -of$(LIB) $(DFLAGS) $(SRCS) $(OBJS) $(ZLIB_OBJS) $(GC_OBJS)
+$(LIB) : $(OBJS) $(GC_OBJS) $(ZLIB_OBJS) $(SRCS) osx.mak
+#	rm -f $(LIB)
+#	ar -r $@ $(OBJS) $(ZLIB_OBJS) $(GC_OBJS)
+	$(DMD) -lib -of$(LIB) $(DFLAGS) $(SRCS) $(OBJS) $(ZLIB_OBJS) $(GC_OBJS)
+#	$(DMD) -lib -of$(LIB) $(OBJS) $(ZLIB_OBJS) $(GC_OBJS)
 
 unittest :
 	$(DMD) $(DFLAGS) -unittest -version=Unittest unittest.d $(SRCS) $(LIB)
@@ -223,13 +224,13 @@ $(GC_OBJS):
 #	cd internal/gc
 #	make -f linux.mak dmgc.a
 #	cd ../..
-	make -C ./internal/gc -f linux.mak
+	make DMD=$(DMD) -C ./internal/gc -f osx.mak
 
 $(ZLIB_OBJS):
 #	cd etc/c/zlib
 #	make -f linux.mak
 #	cd ../../..
-	make -C ./etc/c/zlib -f linux.mak
+	make -C ./etc/c/zlib -f osx.mak
 
 ###
 
