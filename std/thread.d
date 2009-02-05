@@ -81,7 +81,7 @@ class ThreadError : Error
 class Thread
 {
     /**
-     * Constructor used by classes derived from Thread that override main(). 
+     * Constructor used by classes derived from Thread that override main().
      * The optional stacksize parameter default value of 0 will cause threads
      * to be created with the default size for the executable - Dave Fladebo
      */
@@ -480,7 +480,7 @@ class Thread
 	    allThreads[0].hdl = GetCurrentThread();
 	}
     }
-          
+
     /********************************************
      * Returns the handle of the current thread.
      * This is needed because GetCurrentThread() always returns -2 which
@@ -538,7 +538,7 @@ version (OSX)
     extern (C) extern void* __osx_stack_end;
 }
 
-alias uint pthread_t;
+//alias uint pthread_t;
 extern (C) alias void (*__sighandler_t)(int);
 
 struct sigset_t
@@ -553,9 +553,12 @@ struct sigaction_t
     __sighandler_t sa_handler;
     sigset_t sa_mask;
     int sa_flags;
+    version( OSX ) {} else {
     void (*sa_restorer)();
+    }
 }
 
+/+
 struct pthread_attr_t
 {
     int __detachstate;
@@ -571,13 +574,16 @@ struct pthread_attr_t
     void *__stackaddr;
     size_t __stacksize;
 }
++/
 
+/+
 unittest
 {
     assert(sigset_t.sizeof  == 128);
     assert(sigaction_t.sizeof == 140);
     assert(sem_t.sizeof == 16);
 }
++/
 
 extern (C)
 {
@@ -720,7 +726,7 @@ class Thread
 	    error("wait on self");
 	if (state != TS.FINISHED)
 	{
-	    timespec ts; 
+	    timespec ts;
 	    timeval  tv;
 
 	    pthread_mutex_lock(&waitMtx);

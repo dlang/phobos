@@ -25,42 +25,72 @@ static if (size_t.sizeof == 4)
 else
     alias long ssize_t;
 
-enum : int
+version(linux)
 {
-	SIGHUP = 1,
-	SIGINT = 2,
-	SIGQUIT = 3,
-	SIGILL = 4,
-	SIGTRAP = 5,
-	SIGABRT = 6,
-	SIGIOT = 6,
-	SIGBUS = 7,
-	SIGFPE = 8,
-	SIGKILL = 9,
-	SIGUSR1 = 10,
-	SIGSEGV = 11,
-	SIGUSR2 = 12,
-	SIGPIPE = 13,
-	SIGALRM = 14,
-	SIGTERM = 15,
-	SIGSTKFLT = 16,
-	SIGCHLD = 17,
-	SIGCONT = 18,
-	SIGSTOP = 19,
-	SIGTSTP = 20,
-	SIGTTIN = 21,
-	SIGTTOU = 22,
-	SIGURG = 23,
-	SIGXCPU = 24,
-	SIGXFSZ = 25,
-	SIGVTALRM = 26,
-	SIGPROF = 27,
-	SIGWINCH = 28,
-	SIGPOLL = 29,
-	SIGIO = 29,
-	SIGPWR = 30,
-	SIGSYS = 31,
-	SIGUNUSED = 31,
+    enum : int
+    {
+    	SIGHUP = 1,
+    	SIGINT = 2,
+    	SIGQUIT = 3,
+    	SIGILL = 4,
+    	SIGTRAP = 5,
+    	SIGABRT = 6,
+    	SIGIOT = 6,
+    	SIGBUS = 7,
+    	SIGFPE = 8,
+    	SIGKILL = 9,
+    	SIGUSR1 = 10,
+    	SIGSEGV = 11,
+    	SIGUSR2 = 12,
+    	SIGPIPE = 13,
+    	SIGALRM = 14,
+    	SIGTERM = 15,
+    	SIGSTKFLT = 16,
+    	SIGCHLD = 17,
+    	SIGCONT = 18,
+    	SIGSTOP = 19,
+    	SIGTSTP = 20,
+    	SIGTTIN = 21,
+    	SIGTTOU = 22,
+    	SIGURG = 23,
+    	SIGXCPU = 24,
+    	SIGXFSZ = 25,
+    	SIGVTALRM = 26,
+    	SIGPROF = 27,
+    	SIGWINCH = 28,
+    	SIGPOLL = 29,
+    	SIGIO = 29,
+    	SIGPWR = 30,
+    	SIGSYS = 31,
+    	SIGUNUSED = 31,
+    }
+}
+
+version(OSX)
+{
+    enum : int
+    {
+        SIGABRT   = 6,
+        SIGALRM   = 14,
+        SIGBUS    = 10,
+        SIGCHLD   = 20,
+        SIGCONT   = 19,
+        SIGFPE    = 8,
+        SIGHUP    = 1,
+        SIGILL    = 4,
+        SIGINT    = 2,
+        SIGKILL   = 9,
+        SIGPIPE   = 13,
+        SIGQUIT   = 3,
+        SIGSEGV   = 11,
+        SIGSTOP   = 17,
+        SIGTERM   = 15,
+        SIGTSTP   = 18,
+        SIGTTIN   = 21,
+        SIGTTOU   = 22,
+        SIGUSR1   = 30,
+        SIGUSR2   = 31,
+        SIGURG    = 16,
 }
 
 enum
@@ -359,7 +389,7 @@ extern(C)
     {
 	// Managed by OS.
     }
-    
+
     DIR* opendir(in char* name);
     int closedir(DIR* dir);
     dirent* readdir(DIR* dir);
@@ -372,64 +402,64 @@ extern(C)
 extern(C)
 {
 	private import std.intrinsic;
-	
-	
+
+
 	int select(int nfds, fd_set* readfds, fd_set* writefds, fd_set* errorfds, timeval* timeout);
 	int fcntl(int s, int f, ...);
-	
-	
+
+
 	enum
 	{
 		EINTR = 4,
 		EINPROGRESS = 115,
 	}
-	
-	
+
+
 	const uint FD_SETSIZE = 1024;
 	//const uint NFDBITS = 8 * int.sizeof; // DMD 0.110: 8 * (int).sizeof is not an expression
 	const int NFDBITS = 32;
-	
-	
+
+
 	struct fd_set
 	{
 		int[FD_SETSIZE / NFDBITS] fds_bits;
 		alias fds_bits __fds_bits;
 	}
-	
-	
+
+
 	int FDELT(int d)
 	{
 		return d / NFDBITS;
 	}
-	
-	
+
+
 	int FDMASK(int d)
 	{
 		return 1 << (d % NFDBITS);
 	}
-	
-	
+
+
 	// Removes.
 	void FD_CLR(int fd, fd_set* set)
 	{
 		btr(cast(uint*)&set.fds_bits.ptr[FDELT(fd)], cast(uint)(fd % NFDBITS));
 	}
-	
-	
+
+
 	// Tests.
 	int FD_ISSET(int fd, fd_set* set)
 	{
 		return bt(cast(uint*)&set.fds_bits.ptr[FDELT(fd)], cast(uint)(fd % NFDBITS));
 	}
-	
-	
+
+
 	// Adds.
 	void FD_SET(int fd, fd_set* set)
 	{
 		bts(cast(uint*)&set.fds_bits.ptr[FDELT(fd)], cast(uint)(fd % NFDBITS));
 	}
-	
-	
+
+
 	// Resets to zero.
 	void FD_ZERO(fd_set* set)
 	{
