@@ -614,13 +614,23 @@ extern (C)
     /* from semaphore.h
      */
 
+  version (OSX)
+  {
+    alias int sem_t;
+  }
+  else version (linux)
+  {
     struct sem_t
     {
         _pthread_fastlock __sem_lock;
         int __sem_value;
         void* __sem_waiting;
     }
-
+  }
+  else
+  {
+    static assert(0);
+  }
     int sem_init(sem_t*, int, uint);
     int sem_wait(sem_t*);
     int sem_trywait(sem_t*);

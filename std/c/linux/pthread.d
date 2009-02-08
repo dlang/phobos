@@ -5,15 +5,11 @@
 
 module std.c.linux.pthread;
 
-<<<<<<< .mine
 import std.c.linux.linux;
 
-extern (C)
-=======
 extern (C):
 
 version(linux)
->>>>>>> .r909
 {
     /*  pthread declarations taken from pthread headers and
         http://svn.dsource.org/projects/bindings/trunk/pthreads.d
@@ -207,11 +203,6 @@ version(OSX)
         void function(void*)     __routine;
         void*                    __arg;
         _pthread_cleanup_buffer* __next;
-    }
-
-    struct __sched_param		// bits/sched.h
-    {
-	int __sched_priority;
     }
 
     struct __sched_param
