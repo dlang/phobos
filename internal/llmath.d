@@ -1,5 +1,5 @@
 // llmath.d
-// Copyright (C) 1993-2008 by Digital Mars, http://www.digitalmars.com
+// Copyright (C) 1993-2009 by Digital Mars, http://www.digitalmars.com
 // All Rights Reserved
 // Written by Walter Bright
 
@@ -279,19 +279,43 @@ private real adjust = cast(real)0x800_0000_0000_0000 * 0x10;
 
 real __U64_LDBL()
 {
-    asm
-    {	naked					;
-	push	EDX				;
-	push	EAX				;
-	and	dword ptr 4[ESP], 0x7FFFFFFF	;
-	fild	qword ptr [ESP]			;
-	test	EDX,EDX				;
-	jns	L1				;
-	fld	real ptr adjust			;
-	faddp	ST(1), ST			;
-    L1:						;
-	add	ESP, 8				;
-	ret					;
+    version (OSX)
+    {
+	asm
+	{   naked				;
+	    push	EDX			;
+	    push	EAX			;
+	    and		dword ptr 4[ESP], 0x7FFFFFFF	;
+	    fild	qword ptr [ESP]		;
+	    test	EDX,EDX			;
+	    jns		L1			;
+	    push	0x0000403e		;
+	    push	0x80000000		;
+	    push	0			;
+	    fld		real ptr [ESP]		; // adjust
+	    add		ESP,12			;
+	    faddp	ST(1), ST		;
+	L1:					;
+	    add		ESP, 8			;
+	    ret					;
+	}
+    }
+    else
+    {
+	asm
+	{   naked				;
+	    push	EDX			;
+	    push	EAX			;
+	    and		dword ptr 4[ESP], 0x7FFFFFFF	;
+	    fild	qword ptr [ESP]		;
+	    test	EDX,EDX			;
+	    jns		L1			;
+	    fld		real ptr adjust		;
+	    faddp	ST(1), ST		;
+	L1:					;
+	    add		ESP, 8			;
+	    ret					;
+	}
     }
 }
 
@@ -316,35 +340,75 @@ private short roundTo0 = 0xFBF;
 ulong __DBLULLNG()
 {
     // BUG: should handle NAN's and overflows
-    asm
-    {	naked					;
-	push	EDX				;
-	push	EAX				;
-	fld	double ptr [ESP]		;
-	sub	ESP,8				;
-	fld	real ptr adjust			;
-	fcomp					;
-	fstsw	AX				;
-	fstcw	8[ESP]				;
-	fldcw	roundTo0			;
-	sahf					;
-	jae	L1				;
-	fld	real ptr adjust			;
-	fsubp	ST(1), ST			;
-	fistp	qword ptr [ESP]			;
-	pop	EAX				;
-	pop	EDX				;
-	fldcw	[ESP]				;
-	add	ESP,8				;
-	add	EDX,0x8000_0000			;
-	ret					;
-    L1:						;
-	fistp	qword ptr [ESP]			;
-	pop	EAX				;
-	pop	EDX				;
-	fldcw	[ESP]				;
-	add	ESP,8				;
-	ret					;
+    version (OSX)
+    {
+	asm
+	{   naked				;
+	    push	0xFBF			; // roundTo0
+	    push	0x0000403e		;
+	    push	0x80000000		;
+	    push	0			; // adjust
+	    push	EDX			;
+	    push	EAX			;
+	    fld		double ptr [ESP]	;
+	    sub		ESP,8			;
+	    fld		real ptr 16[ESP]	; // adjust
+	    fcomp				;
+	    fstsw	AX			;
+	    fstcw	8[ESP]			;
+	    fldcw	28[ESP]			; // roundTo0
+	    sahf				;
+	    jae		L1			;
+	    fld		real ptr 16[ESP]	; // adjust
+	    fsubp	ST(1), ST		;
+	    fistp	qword ptr [ESP]		;
+	    pop		EAX			;
+	    pop		EDX			;
+	    fldcw	[ESP]			;
+	    add		ESP,24			;
+	    add		EDX,0x8000_0000		;
+	    ret					;
+	L1:					;
+	    fistp	qword ptr [ESP]		;
+	    pop		EAX			;
+	    pop		EDX			;
+	    fldcw	[ESP]			;
+	    add		ESP,24			;
+	    ret					;
+	}
+    }
+    else
+    {
+	asm
+	{   naked				;
+	    push	EDX			;
+	    push	EAX			;
+	    fld		double ptr [ESP]	;
+	    sub		ESP,8			;
+	    fld		real ptr adjust		;
+	    fcomp				;
+	    fstsw	AX			;
+	    fstcw	8[ESP]			;
+	    fldcw	roundTo0		;
+	    sahf				;
+	    jae		L1			;
+	    fld		real ptr adjust		;
+	    fsubp	ST(1), ST		;
+	    fistp	qword ptr [ESP]		;
+	    pop		EAX			;
+	    pop		EDX			;
+	    fldcw	[ESP]			;
+	    add		ESP,8			;
+	    add		EDX,0x8000_0000		;
+	    ret					;
+	L1:					;
+	    fistp	qword ptr [ESP]		;
+	    pop		EAX			;
+	    pop		EDX			;
+	    fldcw	[ESP]			;
+	    add		ESP,8			;
+	    ret					;
+	}
     }
 }
 
@@ -353,15 +417,33 @@ ulong __DBLULLNG()
 uint __DBLULNG()
 {
     // BUG: should handle NAN's and overflows
-    asm
-    {	naked					;
-	sub	ESP,16				;
-	fstcw	8[ESP]				;
-	fldcw	roundTo0			;
-	fistp	qword ptr [ESP]			;
-	fldcw	8[ESP]				;
-	pop	EAX				;
-	add	ESP,12				;
-	ret					;
+    version (OSX)
+    {
+	asm
+	{   naked				;
+	    push	0xFBF			; // roundTo0
+	    sub		ESP,12			;
+	    fstcw	8[ESP]			;
+	    fldcw	12[ESP]			; // roundTo0
+	    fistp	qword ptr [ESP]		;
+	    fldcw	8[ESP]			;
+	    pop		EAX			;
+	    add		ESP,12			;
+	    ret					;
+	}
+    }
+    else
+    {
+	asm
+	{   naked				;
+	    sub		ESP,16			;
+	    fstcw	8[ESP]			;
+	    fldcw	roundTo0		;
+	    fistp	qword ptr [ESP]		;
+	    fldcw	8[ESP]			;
+	    pop		EAX			;
+	    add		ESP,12			;
+	    ret					;
+	}
     }
 }

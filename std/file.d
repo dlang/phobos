@@ -900,11 +900,14 @@ void[] read(char[] name)
         goto err2;
     }
     auto size = statbuf.st_size;
-    auto buf = std.gc.malloc(size);
+    if (size > int.max)
+	goto err2;
+
+    auto buf = std.gc.malloc(cast(int)size);
     if (buf.ptr)
 	std.gc.hasNoPointers(buf.ptr);
 
-    numread = std.c.linux.linux.read(fd, buf.ptr, size);
+    numread = std.c.linux.linux.read(fd, buf.ptr, cast(int)size);
     if (numread != size)
     {
         //printf("\tread error, errno = %d\n",getErrno());
@@ -917,7 +920,7 @@ void[] read(char[] name)
         goto err;
     }
 
-    return buf[0 .. size];
+    return buf[0 .. cast(size_t)size];
 
 err2:
     std.c.linux.linux.close(fd);
@@ -1023,7 +1026,6 @@ void remove(char[] name)
 
 ulong getSize(char[] name)
 {
-    uint size;
     int fd;
     struct_stat statbuf;
     char *namez;
@@ -1043,7 +1045,7 @@ ulong getSize(char[] name)
         //printf("\tfstat error, errno = %d\n",getErrno());
         goto err2;
     }
-    size = statbuf.st_size;
+    auto size = statbuf.st_size;
 
     if (std.c.linux.linux.close(fd) == -1)
     {
@@ -1051,7 +1053,7 @@ ulong getSize(char[] name)
         goto err;
     }
 
-    return size;
+    return cast(ulong)size;
 
 err2:
     std.c.linux.linux.close(fd);
@@ -1095,9 +1097,22 @@ void getTimes(char[] name, out d_time ftc, out d_time fta, out d_time ftm)
 	throw new FileException(name, getErrno());
     }
 
-    ftc = cast(d_time)statbuf.st_ctime * std.date.TicksPerSecond;
-    fta = cast(d_time)statbuf.st_atime * std.date.TicksPerSecond;
-    ftm = cast(d_time)statbuf.st_mtime * std.date.TicksPerSecond;
+    version (linux)
+    {
+	ftc = cast(d_time)statbuf.st_ctime * std.date.TicksPerSecond;
+	fta = cast(d_time)statbuf.st_atime * std.date.TicksPerSecond;
+	ftm = cast(d_time)statbuf.st_mtime * std.date.TicksPerSecond;
+    }
+    else version (OSX)
+    {	// BUG: should add in tv_nsec field
+	ftc = cast(d_time)statbuf.st_ctimespec.tv_sec * std.date.TicksPerSecond;
+	fta = cast(d_time)statbuf.st_atimespec.tv_sec * std.date.TicksPerSecond;
+	ftm = cast(d_time)statbuf.st_mtimespec.tv_sec * std.date.TicksPerSecond;
+    }
+    else
+    {
+	static assert(0);
+    }
 }
 
 
@@ -1275,10 +1290,23 @@ struct DirEntry
 	    //printf("\tstat error, errno = %d\n",getErrno());
 	    return;
 	}
-	_size = statbuf.st_size;
-	_creationTime = cast(d_time)statbuf.st_ctime * std.date.TicksPerSecond;
-	_lastAccessTime = cast(d_time)statbuf.st_atime * std.date.TicksPerSecond;
-	_lastWriteTime = cast(d_time)statbuf.st_mtime * std.date.TicksPerSecond;
+	_size = cast(ulong)statbuf.st_size;
+	version (linux)
+	{
+	    _creationTime = cast(d_time)statbuf.st_ctime * std.date.TicksPerSecond;
+	    _lastAccessTime = cast(d_time)statbuf.st_atime * std.date.TicksPerSecond;
+	    _lastWriteTime = cast(d_time)statbuf.st_mtime * std.date.TicksPerSecond;
+	}
+	else version (OSX)
+	{
+	    _creationTime =   cast(d_time)statbuf.st_ctimespec.tv_sec * std.date.TicksPerSecond;
+	    _lastAccessTime = cast(d_time)statbuf.st_atimespec.tv_sec * std.date.TicksPerSecond;
+	    _lastWriteTime =  cast(d_time)statbuf.st_mtimespec.tv_sec * std.date.TicksPerSecond;
+	}
+	else
+	{
+	    static assert(0);
+	}
 
 	didstat = 1;
     }
@@ -1431,8 +1459,8 @@ void copy(char[] from, char[] to)
         goto err4;
     }
 
-    for (size_t size = statbuf.st_size; size; )
-    {	size_t toread = (size > BUFSIZ) ? BUFSIZ : size;
+    for (auto size = statbuf.st_size; size; )
+    {	size_t toread = (size > BUFSIZ) ? BUFSIZ : cast(size_t)size;
 
 	auto n = std.c.linux.linux.read(fd, buf, toread);
 	if (n != toread)
@@ -1458,8 +1486,20 @@ void copy(char[] from, char[] to)
     }
 
     utimbuf utim;
-    utim.actime = cast(__time_t)statbuf.st_atime;
-    utim.modtime = cast(__time_t)statbuf.st_mtime;
+    version (linux)
+    {
+	utim.actime = cast(__time_t)statbuf.st_atime;
+	utim.modtime = cast(__time_t)statbuf.st_mtime;
+    }
+    else version (OSX)
+    {
+	utim.actime = cast(__time_t)statbuf.st_atimespec.tv_sec;
+	utim.modtime = cast(__time_t)statbuf.st_mtimespec.tv_sec;
+    }
+    else
+    {
+	static assert(0);
+    }
     if (utime(toz, &utim) == -1)
     {
 	//printf("\tutime error, errno = %d\n",getErrno());

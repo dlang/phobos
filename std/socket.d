@@ -91,25 +91,43 @@ class SocketException: Exception
 	
 	this(string msg, int err = 0)
 	{
-		errorCode = err;
-		
-		version(Posix)
+	    errorCode = err;
+
+	    version(Posix)
+	    {
+		if(errorCode > 0)
 		{
-			if(errorCode > 0)
+		    char[80] buf;
+		    char* cs;
+		    version (linux)
+		    {
+			cs = strerror_r(errorCode, buf.ptr, buf.length);
+		    }
+		    else version (OSX)
+		    {
+			auto errs = strerror_r(errorCode, buf.ptr, buf.length);
+			if (errs == 0)
+			    cs = buf.ptr;
+			else
 			{
-				char[80] buf;
-				auto cs = strerror_r(errorCode, buf.ptr, buf.length);
-				auto len = strlen(cs);
-				
-				if(cs[len - 1] == '\n')
-					len--;
-				if(cs[len - 1] == '\r')
-					len--;
-				msg = msg ~ ": " ~ cs[0 .. len];
+			    cs = "Unknown error";
 			}
+		    }
+		    else
+		    {
+			static assert(0);
+		    }
+		    auto len = strlen(cs);
+		    
+		    if(cs[len - 1] == '\n')
+			    len--;
+		    if(cs[len - 1] == '\r')
+			    len--;
+		    msg = msg ~ ": " ~ cs[0 .. len];
 		}
-		
-		super(msg);
+	    }
+
+	    super(msg);
 	}
 }
 

@@ -1,6 +1,6 @@
 
 /* Written by Walter Bright, Christopher E. Miller, and many others.
- * www.digitalmars.com
+ * http://www.digitalmars.com/d/
  * Placed into public domain.
  * Linux(R) is the registered trademark of Linus Torvalds in the U.S. and other
  * countries.
@@ -13,12 +13,48 @@ public import std.c.linux.pthread;
 
 private import std.c.stdio;
 
-alias int pid_t;
-alias int off_t;
-alias uint mode_t;
+version (OSX)
+{
+    alias int time_t;
+    alias int __time_t;
+    alias int pid_t;
+    alias long off_t;
+    alias long blkcnt_t;
+    alias int blksize_t;
+    alias int dev_t;
+    alias uint gid_t;
+    alias uint id_t;
+    alias ulong ino64_t;
+    alias uint ino_t;
+    alias ushort mode_t;
+    alias ushort nlink_t;
+    alias uint uid_t;
+    alias uint fsblkcnt_t;
+    alias uint fsfilcnt_t;
 
-alias uint uid_t;
-alias uint gid_t;
+    struct timespec
+    {
+	time_t tv_sec;
+	int tv_nsec;
+    }
+}
+
+version (linux)
+{
+    alias int __time_t;
+    alias int pid_t;
+    alias int off_t;
+    alias uint mode_t;
+
+    alias uint uid_t;
+    alias uint gid_t;
+
+    struct timespec
+    {
+        __time_t tv_sec;    /* seconds   */
+        int tv_nsec;        /* nanosecs. */
+    }
+}
 
 static if (size_t.sizeof == 4)
     alias int ssize_t;
@@ -91,8 +127,12 @@ version(OSX)
         SIGUSR1   = 30,
         SIGUSR2   = 31,
         SIGURG    = 16,
+    }
 }
 
+
+version (linux)
+{
 enum
 {
     O_RDONLY = 0,
@@ -102,36 +142,90 @@ enum
     O_EXCL = 0200,
     O_TRUNC = 01000,
     O_APPEND = 02000,
+    O_NONBLOCK = 0x800,
+}
 }
 
-struct struct_stat	// distinguish it from the stat() function
+version (OSX)
 {
-    ulong st_dev;	/// device
-    ushort __pad1;
-    uint st_ino;	/// file serial number
-    uint st_mode;	/// file mode
-    uint st_nlink;	/// link count
-    uint st_uid;	/// user ID of file's owner
-    uint st_gid;	/// user ID of group's owner
-    ulong st_rdev;	/// if device then device number
-    ushort __pad2;
-    int st_size;	/// file size in bytes
-    int st_blksize;	/// optimal I/O block size
-    int st_blocks;	/// number of allocated 512 byte blocks
-    int st_atime;
-    uint st_atimensec;
-    int st_mtime;
-    uint st_mtimensec;
-    int st_ctime;
-    uint st_ctimensec;
+enum
+{
+    O_RDONLY = 0,
+    O_WRONLY = 1,
+    O_RDWR = 2,
 
-    uint __unused4;
-    uint __unused5;
+    O_CREAT = 0x200,
+    O_EXCL  = 0x800,
+    O_TRUNC = 0x400,
+    O_APPEND = 8,
+    O_NONBLOCK = 4,
+    O_SYNC = 0x80,
+    O_SHLOCK = 0x10,
+    O_EXLOCK = 0x20,
+    O_ASYNC = 0x40,
+    O_NOFOLLOW = 0x100,
+    O_EVTONLY = 0x8000,
+    O_NOCTTY = 0x20000,
+    O_DIRECTORY = 0x100000,
+    O_SYMLINK   = 0x200000,
+}
+}
+
+version (linux)
+{
+    struct struct_stat	// distinguish it from the stat() function
+    {
+	ulong st_dev;	/// device
+	ushort __pad1;
+	uint st_ino;	/// file serial number
+	uint st_mode;	/// file mode
+	uint st_nlink;	/// link count
+	uint st_uid;	/// user ID of file's owner
+	uint st_gid;	/// user ID of group's owner
+	ulong st_rdev;	/// if device then device number
+	ushort __pad2;
+	int st_size;	/// file size in bytes
+	int st_blksize;	/// optimal I/O block size
+	int st_blocks;	/// number of allocated 512 byte blocks
+	int st_atime;
+	uint st_atimensec;
+	int st_mtime;
+	uint st_mtimensec;
+	int st_ctime;
+	uint st_ctimensec;
+
+	uint __unused4;
+	uint __unused5;
+    }
+}
+version (OSX)
+{
+    struct struct_stat
+    {
+	dev_t st_dev;
+	ino_t st_ino;
+	mode_t st_mode;
+	nlink_t st_nlink;
+	uid_t st_uid;
+	gid_t st_gid;
+	dev_t st_rdev;
+	timespec st_atimespec;
+	timespec st_mtimespec;
+	timespec st_ctimespec;
+	off_t st_size;
+	blkcnt_t st_blocks;
+	blksize_t st_blksize;
+	uint st_flags;
+	uint st_gen;
+	int st_lspare;
+	long st_qspare[2];
+    }
 }
 
 unittest
 {
-    assert(struct_stat.sizeof == 88);
+    version (linux) assert(struct_stat.sizeof == 88);
+    version (OSX)   assert(struct_stat.sizeof == 96);
 }
 
 enum : int
@@ -389,7 +483,7 @@ extern(C)
     {
 	// Managed by OS.
     }
-
+    
     DIR* opendir(in char* name);
     int closedir(DIR* dir);
     dirent* readdir(DIR* dir);
@@ -402,64 +496,64 @@ extern(C)
 extern(C)
 {
 	private import std.intrinsic;
-
-
+	
+	
 	int select(int nfds, fd_set* readfds, fd_set* writefds, fd_set* errorfds, timeval* timeout);
 	int fcntl(int s, int f, ...);
-
-
+	
+	
 	enum
 	{
 		EINTR = 4,
 		EINPROGRESS = 115,
 	}
-
-
+	
+	
 	const uint FD_SETSIZE = 1024;
 	//const uint NFDBITS = 8 * int.sizeof; // DMD 0.110: 8 * (int).sizeof is not an expression
 	const int NFDBITS = 32;
-
-
+	
+	
 	struct fd_set
 	{
 		int[FD_SETSIZE / NFDBITS] fds_bits;
 		alias fds_bits __fds_bits;
 	}
-
-
+	
+	
 	int FDELT(int d)
 	{
 		return d / NFDBITS;
 	}
-
-
+	
+	
 	int FDMASK(int d)
 	{
 		return 1 << (d % NFDBITS);
 	}
-
-
+	
+	
 	// Removes.
 	void FD_CLR(int fd, fd_set* set)
 	{
 		btr(cast(uint*)&set.fds_bits.ptr[FDELT(fd)], cast(uint)(fd % NFDBITS));
 	}
-
-
+	
+	
 	// Tests.
 	int FD_ISSET(int fd, fd_set* set)
 	{
 		return bt(cast(uint*)&set.fds_bits.ptr[FDELT(fd)], cast(uint)(fd % NFDBITS));
 	}
-
-
+	
+	
 	// Adds.
 	void FD_SET(int fd, fd_set* set)
 	{
 		bts(cast(uint*)&set.fds_bits.ptr[FDELT(fd)], cast(uint)(fd % NFDBITS));
 	}
-
-
+	
+	
 	// Resets to zero.
 	void FD_ZERO(fd_set* set)
 	{

@@ -5,27 +5,19 @@
 
 module std.c.linux.pthread;
 
+<<<<<<< .mine
+import std.c.linux.linux;
+
+extern (C)
+=======
 extern (C):
 
 version(linux)
+>>>>>>> .r909
 {
     /*  pthread declarations taken from pthread headers and
         http://svn.dsource.org/projects/bindings/trunk/pthreads.d
     */
-
-    /* from bits/types.h
-    */
-
-    typedef int __time_t;
-
-    /* from time.h
-    */
-
-    struct timespec
-    {
-        __time_t tv_sec;    /* seconds   */
-        int tv_nsec;        /* nanosecs. */
-    }
 
     /* from bits/pthreadtypes.h
     */

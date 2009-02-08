@@ -300,13 +300,14 @@ class MmFile
 					std.c.linux.linux.write(fd, &c, 1);
 				}
 				else if (prot & PROT_READ && size == 0)
-					size = statbuf.st_size;
+					size = cast(ulong)statbuf.st_size;
 			}
 			else
 			{
 				fd = -1;
 version (linux)			flags |= MAP_ANONYMOUS;
-version (OSX)			flags |= MAP_ANON;
+else version (OSX)		flags |= MAP_ANON;
+else				static assert(0);
 			}
 			this.size = size;
 			size_t initial_map = (window && 2*window<size)? 2*window : cast(size_t)size;

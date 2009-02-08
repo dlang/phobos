@@ -14,6 +14,7 @@ import std.ctype;
 import std.string;
 import std.c.string;
 import std.c.stdlib;
+import std.c.stdio;
 
 extern (C):
 
@@ -779,6 +780,36 @@ void _trace_pro_n()
      *	ascii	string
      */
 
+  version (OSX)
+  { // 16 byte align stack
+    asm
+    {	naked				;
+	pushad				;
+	mov	ECX,8*4[ESP]		;
+	xor	EAX,EAX			;
+	mov	AL,[ECX]		;
+	cmp	AL,0xFF			;
+	jne	L1			;
+	cmp	byte ptr 1[ECX],0	;
+	jne	L1			;
+	mov	AX,2[ECX]		;
+	add	8*4[ESP],3		;
+	add	ECX,3			;
+    L1:	inc	EAX			;
+	inc	ECX			;
+	add	8*4[ESP],EAX		;
+	dec	EAX			;
+	sub	ESP,4			;
+	push	ECX			;
+	push	EAX			;
+	call	trace_pro		;
+	add	ESP,12			;
+	popad				;
+	ret				;
+    }
+  }
+  else
+  {
     asm
     {	naked				;
 	pushad				;
@@ -803,6 +834,7 @@ void _trace_pro_n()
 	popad				;
 	ret				;
     }
+  }
 }
 
 /////////////////////////////////////////////
@@ -811,6 +843,23 @@ void _trace_pro_n()
 
 void _trace_epi_n()
 {
+  version (OSX)
+  { // 16 byte align stack
+    asm
+    {	naked	;
+	pushad	;
+	sub	ESP,12	;
+    }
+    trace_epi();
+    asm
+    {
+	add	ESP,12	;
+	popad	;
+	ret	;
+    }
+  }
+  else
+  {
     asm
     {	naked	;
 	pushad	;
@@ -821,6 +870,7 @@ void _trace_epi_n()
 	popad	;
 	ret	;
     }
+  }
 }
 
 
