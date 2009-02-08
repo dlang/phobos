@@ -143,12 +143,6 @@ version(OSX)
     /* from time.h
     */
 
-    struct timespec
-    {
-        __time_t tv_sec;    /* seconds   */
-        int tv_nsec;        /* nanosecs. */
-    }
-
     /* from bits/pthreadtypes.h
     */
     private struct _opaque_pthread_t
