@@ -131,6 +131,18 @@ version(linux)
 	int __rw_kind;
 	int __rw_pshared;
     }
+    
+    enum
+    {
+	PTHREAD_CANCEL_ENABLE,
+	PTHREAD_CANCEL_DISABLE
+    }
+
+    enum
+    {
+	PTHREAD_CANCEL_DEFERRED,
+	PTHREAD_CANCEL_ASYNCHRONOUS
+    }    
 }
 
 version(OSX)
@@ -138,7 +150,8 @@ version(OSX)
     /* from bits/types.h
     */
 
-    typedef int __time_t;
+    // in std.c.linux.linux
+    //typedef int __time_t;
 
     /* from time.h
     */
@@ -237,6 +250,18 @@ version(OSX)
         int       __sig;
         byte[124] __opaque;
     }
+    
+    enum
+    {
+	PTHREAD_CANCEL_ENABLE = 1,
+	PTHREAD_CANCEL_DISABLE = 0
+    }
+
+    enum
+    {
+	PTHREAD_CANCEL_DEFERRED = 2,
+	PTHREAD_CANCEL_ASYNCHRONOUS = 0
+    }    
 }
 
     int pthread_mutex_init(pthread_mutex_t*, pthread_mutexattr_t*);
@@ -344,6 +369,7 @@ version(linux)
     pthread_t pthread_self();
     int pthread_equal(pthread_t, pthread_t);
     int pthread_atfork(void function(), void function(), void function());
+    int pthread_kill(pthread_t, int);
     void pthread_kill_other_threads_np();
     int pthread_setschedparam(pthread_t, int, __sched_param*);
     int pthread_getschedparam(pthread_t, int*, __sched_param*);

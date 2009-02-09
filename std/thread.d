@@ -532,12 +532,14 @@ version (Posix)
 
 private import std.c.linux.linux;
 private import std.c.linux.linuxextern;
+private import std.c.linux.pthread;
 
 version (OSX)
 {
+    private import std.c.osx.osx;
     extern (C) extern void* __osx_stack_end;
 }
-
+/+
 extern (C) alias void (*__sighandler_t)(int);
 
 struct sigset_t
@@ -608,7 +610,7 @@ extern (C)
 	PTHREAD_CANCEL_ASYNCHRONOUS
     }
 }
-
++/
 class ThreadError : Error
 {
     this(string s)
@@ -650,6 +652,10 @@ class Thread
     pthread_t id;
     void* stackBottom;
     void* stackTop;
+    version (OSX)
+    {
+        mach_port_t machid;
+    }
 
     void start()
     {
@@ -685,6 +691,12 @@ class Thread
 	    error("failed to start");	// BUG: should report errno
 	}
 	//printf("t = x%x, id = %d\n", this, id);
+	version (OSX)
+        {
+            machid = pthread_mach_thread_np( id );
+            if( machid == machid.init )
+                error("failed to obtain machid");
+        }	
     }
 
     int run()
@@ -842,26 +854,42 @@ class Thread
 
     void pause()
     {
-	if (state == TS.RUNNING)
-	{
-	    if (pthread_kill(id, SIGUSR1))
-		error("cannot pause");
-	    else
-		sem_wait(&flagSuspend);	// wait for acknowledgement
-	}
-	else
-	    error("cannot pause");
+        version (OSX)
+        {
+            if (state != TS.RUNNING || thread_suspend(machid) != KERN_SUCCESS)
+                error("cannot pause");        
+        }
+        else
+        {
+	    if (state == TS.RUNNING)
+	    {
+	        if (pthread_kill(id, SIGUSR1))
+		    error("cannot pause");
+                else
+                    sem_wait(&flagSuspend);	// wait for acknowledgement
+                }
+            else
+                error("cannot pause");
+        }
     }
 
     void resume()
     {
-	if (state == TS.RUNNING)
-	{
-	    if (pthread_kill(id, SIGUSR2))
-		error("cannot resume");
+        version (OSX)
+        {
+            if (state != TS.RUNNING || thread_resume(machid) != KERN_SUCCESS)
+                error("cannot pause");        
+        }
+        else
+        { 
+	    if (state == TS.RUNNING)
+	    {
+	        if (pthread_kill(id, SIGUSR2))
+		    error("cannot resume");
+            }
+	    else
+	        error("cannot resume");
 	}
-	else
-	    error("cannot resume");
     }
 
     static void pauseAll()
@@ -1045,83 +1073,90 @@ class Thread
 	allThreadsDim = 1;
 	t.idx = 0;
 
-	/* Install signal handlers so we can suspend/resume threads
-	 */
+        version (OSX) {}
+        else
+        {
+            /* Install signal handlers so we can suspend/resume threads
+	     */
 
-	int result;
-	sigaction_t sigact;
-	result = sigfillset(&sigact.sa_mask);
-	if (result)
-	    goto Lfail;
-	sigact.sa_handler = &pauseHandler;
-	sigact.sa_flags = SA_RESTART;
-	result = sigaction(SIGUSR1, &sigact, null);
-	if (result)
-	    goto Lfail;
-	sigact.sa_handler = &resumeHandler;
-	result = sigaction(SIGUSR2, &sigact, null);
-	if (result)
-	    goto Lfail;
+	    int result;
+	    sigaction_t sigact;
+	    result = sigfillset(&sigact.sa_mask);
+	    if (result)
+	        goto Lfail;
+	    sigact.sa_handler = &pauseHandler;
+	    sigact.sa_flags = SA_RESTART;
+	    result = sigaction(SIGUSR1, &sigact, null);
+	    if (result)
+	        goto Lfail;
+	    sigact.sa_handler = &resumeHandler;
+	    result = sigaction(SIGUSR2, &sigact, null);
+	    if (result)
+	        goto Lfail;
 
-	result = sem_init(&flagSuspend, 0, 0);
-	if (result)
-	    goto Lfail;
-
+	    result = sem_init(&flagSuspend, 0, 0);
+	    if (result)
+	        goto Lfail;
+        }
 	return;
 
       Lfail:
 	t.error("cannot initialize threads");
     }
 
-    /**********************************
-     * This gets called when a thread gets SIGUSR1.
-     */
-
-    extern (C) static void pauseHandler(int sig)
-    {	int result;
-
-	// Save all registers on the stack so they'll be scanned by the GC
-	asm
-	{
-	    pusha	;
-	}
-
-	assert(sig == SIGUSR1);
-
-	sigset_t sigmask;
-	result = sigfillset(&sigmask);
-	assert(result == 0);
-	result = sigdelset(&sigmask, SIGUSR2);
-	assert(result == 0);
-
-	Thread t = getThis();
-	t.stackTop = getESP();
-	t.flags &= ~1;
-	// Release the semaphore _after_ stackTop is set
-	sem_post(&flagSuspend);
-	while (1)
-	{
-	    sigsuspend(&sigmask);	// suspend until SIGUSR2
-	    if (t.flags & 1)		// ensure it was resumeHandler()
-		break;
-	}
-
-	// Restore all registers
-	asm
-	{
-	    popa	;
-	}
-    }
-
-    /**********************************
-     * This gets called when a thread gets SIGUSR2.
-     */
-
-    extern (C) static void resumeHandler(int sig)
+    version (OSX) {}
+    else
     {
-	Thread t = getThis();
+        /**********************************
+         * This gets called when a thread gets SIGUSR1.
+         */
 
-	t.flags |= 1;
+        extern (C) static void pauseHandler(int sig)
+        {	int result;
+
+    	// Save all registers on the stack so they'll be scanned by the GC
+    	asm
+    	{
+    	    pusha	;
+    	}
+
+    	assert(sig == SIGUSR1);
+
+    	sigset_t sigmask;
+    	result = sigfillset(&sigmask);
+    	assert(result == 0);
+    	result = sigdelset(&sigmask, SIGUSR2);
+    	assert(result == 0);
+
+    	Thread t = getThis();
+    	t.stackTop = getESP();
+    	t.flags &= ~1;
+    	// Release the semaphore _after_ stackTop is set
+    	sem_post(&flagSuspend);
+    	while (1)
+    	{
+    	    sigsuspend(&sigmask);	// suspend until SIGUSR2
+    	    if (t.flags & 1)		// ensure it was resumeHandler()
+    		break;
+    	}
+
+    	// Restore all registers
+    	asm
+    	{
+    	    popa	;
+    	}
+        }
+
+        /**********************************
+         * This gets called when a thread gets SIGUSR2.
+         */
+
+        extern (C) static void resumeHandler(int sig)
+        {
+    	Thread t = getThis();
+
+    	t.flags |= 1;
+        }
     }
 
     public static void* getESP()

@@ -63,6 +63,11 @@ version (Win32)
     import std.c.windows.windows;
 }
 
+version (OSX)
+{
+    import std.c.osx.osx;
+}
+
 version (Posix)
 {
     import gclinux;
@@ -1897,6 +1902,23 @@ struct Gcx
 			debug (PRINTF) printf("mt scan stack bot = %x, top = %x\n", context.Esp, t.stackBottom);
 			mark(cast(void *)context.Esp, t.stackBottom);
 			mark(&context.Edi, &context.Eip);
+		    }
+		    version (OSX)
+		    {
+		        x86_thread_state32_t   state;
+		        mach_msg_type_number_t count = x86_THREAD_STATE32_COUNT;
+		        
+		        if (thread_get_state(t.machid,
+		                             x86_THREAD_STATE32,
+		                             &state,
+		                             &count) != KERN_SUCCESS)
+		        {
+		            assert(0);
+		        }
+		        debug (PRINTF) printf("mt scan stack bot = %x, top = %x\n", state.esp, t.stackBottom);
+		        
+			mark(cast(void *)state.esp, t.stackBottom);
+			mark(&state.eax, &state.esp);
 		    }
 		    version (Posix)
 		    {

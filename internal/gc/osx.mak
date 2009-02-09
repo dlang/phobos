@@ -20,7 +20,8 @@ SRC= gc.d gcx.d gcbits.d win32.d gclinux.d gcosxc.c gcold.d testgc.d \
 .d.o:
 	$(DMD) -c $(DFLAGS) $*
 
-targets : testgc dmgc.a
+#targets : testgc dmgc.a
+targets : dmgc.a
 
 testgc : testgc.o $(OBJS) linux.mak
 	$(DMD) -of$@ testgc.o gc.o gcx.o gcbits.o gclinux.o gcosxc.o -g

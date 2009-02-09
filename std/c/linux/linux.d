@@ -611,6 +611,13 @@ extern (C)
 
 extern (C)
 {
+    /* from sched.h
+     */
+    int sched_yield();
+}
+
+extern (C)
+{
     /* from semaphore.h
      */
 

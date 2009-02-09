@@ -6,6 +6,8 @@
 
 module std.c.osx.osx;
 
+public import std.c.linux.linux : pthread_t;
+
 extern (C):
 
 alias int kern_return_t;
@@ -73,24 +75,25 @@ version( i386 )
     alias uint        natural_t;
     alias natural_t   mach_port_t;
     alias mach_port_t thread_act_t;
+    alias void        thread_state_t;
     alias int         thread_state_flavor_t;
     alias natural_t   mach_msg_type_number_t;
 
     enum
     {
-        x86_THREAD_STATE32      1,
-        x86_FLOAT_STATE32       2,
-        x86_EXCEPTION_STATE32   3,
-        x86_THREAD_STATE64      4,
-        x86_FLOAT_STATE64       5,
-        x86_EXCEPTION_STATE64   6,
-        x86_THREAD_STATE        7,
-        x86_FLOAT_STATE         8,
-        x86_EXCEPTION_STATE     9,
-        x86_DEBUG_STATE32       10,
-        x86_DEBUG_STATE64       11,
-        x86_DEBUG_STATE         12,
-        THREAD_STATE_NONE       13,
+        x86_THREAD_STATE32      = 1,
+        x86_FLOAT_STATE32       = 2,
+        x86_EXCEPTION_STATE32   = 3,
+        x86_THREAD_STATE64      = 4,
+        x86_FLOAT_STATE64       = 5,
+        x86_EXCEPTION_STATE64   = 6,
+        x86_THREAD_STATE        = 7,
+        x86_FLOAT_STATE         = 8,
+        x86_EXCEPTION_STATE     = 9,
+        x86_DEBUG_STATE32       = 10,
+        x86_DEBUG_STATE64       = 11,
+        x86_DEBUG_STATE         = 12,
+        THREAD_STATE_NONE       = 13,
     }
 
     struct x86_thread_state32_t
@@ -147,11 +150,12 @@ version( i386 )
     struct x86_thread_state_t
     {
         x86_state_hdr_t             tsh;
-        union
+        union _uts
         {
             x86_thread_state32_t    ts32;
             x86_thread_state64_t    ts64;
-        } uts;
+        }
+        _uts                        uts;
     }
 
     enum : mach_msg_type_number_t
@@ -165,6 +169,7 @@ version( i386 )
     alias x86_THREAD_STATE_COUNT    MACHINE_THREAD_STATE_COUNT;
 
     mach_port_t   mach_thread_self();
+    mach_port_t   pthread_mach_thread_np(pthread_t);
     kern_return_t thread_suspend(thread_act_t);
     kern_return_t thread_resume(thread_act_t);
     kern_return_t thread_get_state(thread_act_t, thread_state_flavor_t, thread_state_t*, mach_msg_type_number_t*);
