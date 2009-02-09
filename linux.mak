@@ -11,6 +11,8 @@
 
 LIB=libphobos.a
 
+MAKEFILE=linux.mak
+
 CFLAGS=-O -m32
 #CFLAGS=-g -m32
 
@@ -66,7 +68,8 @@ OBJS = asserterror.o deh2.o complex.o gcstats.o \
 	ti_Afloat.o ti_Adouble.o ti_Areal.o \
 	ti_Acfloat.o ti_Acdouble.o ti_Acreal.o \
 	ti_void.o \
-	date.o dateparse.o llmath.o math2.o Czlib.o Dzlib.o zip.o
+	date.o dateparse.o llmath.o math2.o Czlib.o Dzlib.o zip.o \
+	pthread.o
 
 SRCS= \
         internal/aaA.d internal/adi.d \
@@ -153,37 +156,38 @@ SRC_ETC=  etc/gamma.d
 
 SRC_ETC_C= etc/c/zlib.d
 
-SRC_ZLIB= etc/c/zlib\trees.h \
-	etc/c/zlib\inffixed.h \
-	etc/c/zlib\inffast.h \
-	etc/c/zlib\crc32.h \
-	etc/c/zlib\algorithm.txt \
-	etc/c/zlib\uncompr.c \
-	etc/c/zlib\compress.c \
-	etc/c/zlib\deflate.h \
-	etc/c/zlib\inftrees.h \
-	etc/c/zlib\infback.c \
-	etc/c/zlib\zutil.c \
-	etc/c/zlib\crc32.c \
-	etc/c/zlib\inflate.h \
-	etc/c/zlib\example.c \
-	etc/c/zlib\inffast.c \
-	etc/c/zlib\trees.c \
-	etc/c/zlib\inflate.c \
-	etc/c/zlib\gzio.c \
-	etc/c/zlib\zconf.h \
-	etc/c/zlib\zconf.in.h \
-	etc/c/zlib\minigzip.c \
-	etc/c/zlib\deflate.c \
-	etc/c/zlib\inftrees.c \
-	etc/c/zlib\zutil.h \
-	etc/c/zlib\zlib.3 \
-	etc/c/zlib\zlib.h \
-	etc/c/zlib\adler32.c \
-	etc/c/zlib\ChangeLog \
-	etc/c/zlib\README \
-	etc/c/zlib\win32.mak \
-	etc/c/zlib\linux.mak
+SRC_ZLIB= etc/c/zlib/trees.h \
+	etc/c/zlib/inffixed.h \
+	etc/c/zlib/inffast.h \
+	etc/c/zlib/crc32.h \
+	etc/c/zlib/algorithm.txt \
+	etc/c/zlib/uncompr.c \
+	etc/c/zlib/compress.c \
+	etc/c/zlib/deflate.h \
+	etc/c/zlib/inftrees.h \
+	etc/c/zlib/infback.c \
+	etc/c/zlib/zutil.c \
+	etc/c/zlib/crc32.c \
+	etc/c/zlib/inflate.h \
+	etc/c/zlib/example.c \
+	etc/c/zlib/inffast.c \
+	etc/c/zlib/trees.c \
+	etc/c/zlib/inflate.c \
+	etc/c/zlib/gzio.c \
+	etc/c/zlib/zconf.h \
+	etc/c/zlib/zconf.in.h \
+	etc/c/zlib/minigzip.c \
+	etc/c/zlib/deflate.c \
+	etc/c/zlib/inftrees.c \
+	etc/c/zlib/zutil.h \
+	etc/c/zlib/zlib.3 \
+	etc/c/zlib/zlib.h \
+	etc/c/zlib/adler32.c \
+	etc/c/zlib/ChangeLog \
+	etc/c/zlib/README \
+	etc/c/zlib/win32.mak \
+	etc/c/zlib/linux.mak \
+	etc/c/zlib/osx.mak
 
 SRC_GC= internal/gc/gc.d \
 	internal/gc/gcold.d \
@@ -194,14 +198,15 @@ SRC_GC= internal/gc/gc.d \
 	internal/gc/gclinux.d \
 	internal/gc/testgc.d \
 	internal/gc/win32.mak \
-	internal/gc/linux.mak
+	internal/gc/linux.mak \
+	internal/gc/osx.mak
 
 ALLSRCS = $(SRC) $(SRC_STD) $(SRC_STD_C) $(SRC_TI) $(SRC_INT) $(SRC_STD_WIN) \
 	$(SRC_STD_C_WIN) $(SRC_STD_C_LINUX) $(SRC_ETC) $(SRC_ETC_C) \
 	$(SRC_ZLIB) $(SRC_GC)
 
 
-$(LIB) : $(OBJS) $(GC_OBJS) $(ZLIB_OBJS) linux.mak
+$(LIB) : $(OBJS) $(GC_OBJS) $(ZLIB_OBJS) $(SRCS) $(MAKEFILE)
 #	rm -f $(LIB)
 #	ar -r $@ $(OBJS) $(ZLIB_OBJS) $(GC_OBJS)
 	$(DMD) -lib -of$(LIB) $(DFLAGS) $(SRCS) $(OBJS) $(ZLIB_OBJS) $(GC_OBJS)
@@ -219,15 +224,15 @@ cov : $(SRCS) $(LIB)
 
 $(GC_OBJS):
 #	cd internal/gc
-#	make -f linux.mak dmgc.a
+#	make -f $(MAKEFILE) dmgc.a
 #	cd ../..
-	make -C ./internal/gc -f linux.mak
+	make DMD=$(DMD) -C ./internal/gc -f $(MAKEFILE)
 
 $(ZLIB_OBJS):
 #	cd etc/c/zlib
-#	make -f linux.mak
+#	make -f $(MAKEFILE)
 #	cd ../../..
-	make -C ./etc/c/zlib -f linux.mak
+	make -C ./etc/c/zlib -f $(MAKEFILE)
 
 ###
 
@@ -478,6 +483,9 @@ linux.o : std/c/linux/linux.d
 linuxsocket.o : std/c/linux/socket.d
 	$(DMD) -c $(DFLAGS) std/c/linux/socket.d -oflinuxsocket.o
 
+pthread.o : std/c/linux/pthread.d
+	$(DMD) -c $(DFLAGS) std/c/linux/pthread.d
+
 ### etc
 
 ### etc/c
@@ -599,14 +607,14 @@ ti_bit.o : std/typeinfo/ti_bit.d
 	$(DMD) -c $(DFLAGS) std/typeinfo/ti_bit.d
 
 
-##########################################################333
+##########################################################
 
-zip : $(ALLSRCS) linux.mak win32.mak phoboslicense.txt
+zip : $(ALLSRCS) osx.mak linux.mak win32.mak phoboslicense.txt
 	$(RM) phobos.zip
-	zip phobos $(ALLSRCS) linux.mak win32.mak phoboslicense.txt
+	zip phobos $(ALLSRCS) osx.mak linux.mak win32.mak phoboslicense.txt
 
 clean:
 	$(RM) $(LIB) $(OBJS) unittest unittest.o
-	make -C ./internal/gc -f linux.mak clean
-	make -C ./etc/c/zlib -f linux.mak clean
+	make -C ./internal/gc -f $(MAKEFILE) clean
+	make -C ./etc/c/zlib -f $(MAKEFILE) clean
 
