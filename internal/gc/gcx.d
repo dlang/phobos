@@ -1905,7 +1905,7 @@ struct Gcx
 		    }
 		    version (OSX)
 		    {
-		        x86_thread_state32_t   state;
+		        x86_thread_state32_t   state = void;
 		        mach_msg_type_number_t count = x86_THREAD_STATE32_COUNT;
 		        
 		        if (thread_get_state(t.machid,

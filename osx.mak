@@ -48,7 +48,7 @@ OBJS = asserterror.o deh2.o complex.o gcstats.o \
 	outofmemory.o file.o \
 	compiler.o system.o moduleinit.o md5.o base64.o \
 	path.o string.o math.o mmfile.o \
-	outbuffer.o ctype.o regexp.o random.o linux.o linuxsocket.o \
+	outbuffer.o ctype.o regexp.o random.o linux.o osx.o linuxsocket.o \
 	stream.o cstream.o switcherr.o array.o gc.o \
 	thread.o utf.o uri.o \
 	Dcrc32.o conv.o errno.o alloca.o cmath2.o \
@@ -68,7 +68,8 @@ OBJS = asserterror.o deh2.o complex.o gcstats.o \
 	ti_Afloat.o ti_Adouble.o ti_Areal.o \
 	ti_Acfloat.o ti_Acdouble.o ti_Acreal.o \
 	ti_void.o \
-	date.o dateparse.o llmath.o math2.o Czlib.o Dzlib.o zip.o
+	date.o dateparse.o llmath.o math2.o Czlib.o Dzlib.o zip.o \
+	pthread.o
 
 SRCS= \
         internal/aaA.d internal/adi.d \
@@ -481,6 +482,14 @@ linux.o : std/c/linux/linux.d
 
 linuxsocket.o : std/c/linux/socket.d
 	$(DMD) -c $(DFLAGS) std/c/linux/socket.d -oflinuxsocket.o
+	
+pthread.o : std/c/linux/pthread.d
+	$(DMD) -c $(DFLAGS) std/c/linux/pthread.d	
+	
+### std/c/osx
+
+osx.o : std/c/osx/osx.d
+	$(DMD) -c $(DFLAGS) std/c/osx/osx.d	
 
 ### etc
 
