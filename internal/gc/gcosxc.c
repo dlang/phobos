@@ -28,8 +28,9 @@ const static int NUM_DATA_SEGS   = sizeof(data_segs) / sizeof(seg_ref);
 static void on_add_image( const struct mach_header* h, intptr_t slide )
 {
     const struct section* sect;
+	int i;
 
-    for( int i = 0; i < NUM_DATA_SEGS; ++i )
+    for( i = 0; i < NUM_DATA_SEGS; ++i )
     {
         sect = getsectbynamefromheader( h,
                                         data_segs[i].seg,
@@ -45,8 +46,9 @@ static void on_add_image( const struct mach_header* h, intptr_t slide )
 static void on_remove_image( const struct mach_header* h, intptr_t slide )
 {
     const struct section* sect;
+	int i;
 
-    for( int i = 0; i < NUM_DATA_SEGS; ++i )
+    for( i = 0; i < NUM_DATA_SEGS; ++i )
     {
         sect = getsectbynamefromheader( h,
                                         data_segs[i].seg,
