@@ -539,78 +539,7 @@ version (OSX)
     private import std.c.osx.osx;
     extern (C) extern void* __osx_stack_end;
 }
-/+
-extern (C) alias void (*__sighandler_t)(int);
 
-struct sigset_t
-{
-    uint __val[1024 / (8 * uint.sizeof)];
-}
-
-const SA_RESTART = 0x10000000u;
-
-struct sigaction_t
-{
-    __sighandler_t sa_handler;
-    sigset_t sa_mask;
-    int sa_flags;
-    void (*sa_restorer)();
-}
-
-struct pthread_attr_t
-{
-    int __detachstate;
-    int __schedpolicy;
-    struct __schedparam
-    {
-	int __sched_priority;
-    }
-    int __inheritsched;
-    int __scope;
-    size_t __guardsize;
-    int __stackaddr_set;
-    void *__stackaddr;
-    size_t __stacksize;
-}
-
-unittest
-{
-    assert(sigset_t.sizeof  == 128);
-    assert(sigaction_t.sizeof == 140);
-    assert(sem_t.sizeof == 16);
-}
-
-extern (C)
-{
-    int pthread_create(pthread_t*, void*, void* (*)(void*), void*);
-    int pthread_join(pthread_t, void**);
-    int pthread_kill(pthread_t, int);
-    pthread_t pthread_self();
-    int pthread_equal(pthread_t, pthread_t);
-    int pthread_attr_init(pthread_attr_t*);
-    int pthread_attr_setstacksize(pthread_attr_t *, size_t);
-    int pthread_cancel(pthread_t);
-    int pthread_setcancelstate(int, int*);
-    int pthread_setcanceltype(int, int*);
-    int sched_yield();
-    int sigfillset(sigset_t*);
-    int sigdelset(sigset_t*, int);
-    int sigaction(int, sigaction_t*, sigaction_t*);
-    int sigsuspend(sigset_t*);
-
-    enum
-    {
-	PTHREAD_CANCEL_ENABLE,
-	PTHREAD_CANCEL_DISABLE
-    }
-
-    enum
-    {
-	PTHREAD_CANCEL_DEFERRED,
-	PTHREAD_CANCEL_ASYNCHRONOUS
-    }
-}
-+/
 class ThreadError : Error
 {
     this(string s)
