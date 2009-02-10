@@ -196,6 +196,7 @@ SRC_GC= internal/gc/gc.d \
 	internal/gc/gcbits.d \
 	internal/gc/win32.d \
 	internal/gc/gclinux.d \
+	internal/gc/gcosxc.c \
 	internal/gc/testgc.d \
 	internal/gc/win32.mak \
 	internal/gc/linux.mak \
