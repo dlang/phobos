@@ -777,7 +777,7 @@ version(Windows)
 
     /* ////////////////////////////////////////////////////////////////////////// */
 }
-else version(linux)
+else version(Posix)
 {
     extern (C)
     {

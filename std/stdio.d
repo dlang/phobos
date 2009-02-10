@@ -46,14 +46,16 @@ version (DigitalMars)
     }
 }
 
-version (DIGITAL_MARS_STDIO)
-{
-}
-else
+version (linux)
 {
     // Specific to the way Gnu C does stdio
     version = GCC_IO;
     import std.c.linux.linux;
+}
+
+version (OSX)
+{
+    version = GENERIC_IO;
 }
 
 version (DIGITAL_MARS_STDIO)
@@ -79,34 +81,50 @@ version (DIGITAL_MARS_STDIO)
     alias __fp_unlock FUNLOCK;
 }
 else version (GCC_IO)
-     {
-         /* **
-          * Gnu under-the-hood C I/O functions; see
-          * http://www.gnu.org/software/libc/manual/html_node/I_002fO-on-Streams.html#I_002fO-on-Streams
-          */
-         extern (C)
-         {
-             int fputc_unlocked(int, FILE*);
-             int fputwc_unlocked(wchar_t, FILE*);
-             int fgetc_unlocked(FILE*);
-             int fgetwc_unlocked(FILE*);
-             void flockfile(FILE*);
-             void funlockfile(FILE*);
-             ssize_t getline(char**, size_t*, FILE*);
-             ssize_t getdelim (char**, size_t*, int, FILE*);
+{
+    /* **
+     * Gnu under-the-hood C I/O functions; see
+     * http://www.gnu.org/software/libc/manual/html_node/I_002fO-on-Streams.html#I_002fO-on-Streams
+     */
+    extern (C)
+    {
+	int fputc_unlocked(int, FILE*);
+	int fputwc_unlocked(wchar_t, FILE*);
+	int fgetc_unlocked(FILE*);
+	int fgetwc_unlocked(FILE*);
+	void flockfile(FILE*);
+	void funlockfile(FILE*);
+	ssize_t getline(char**, size_t*, FILE*);
+	ssize_t getdelim (char**, size_t*, int, FILE*);
 
-             private size_t fwrite_unlocked(const(void)* ptr,
+	private size_t fwrite_unlocked(const(void)* ptr,
                  size_t size, size_t n, FILE *stream);
-         }
+    }
 
-         alias fputc_unlocked FPUTC;
-         alias fputwc_unlocked FPUTWC;
-         alias fgetc_unlocked FGETC;
-         alias fgetwc_unlocked FGETWC;
+    alias fputc_unlocked FPUTC;
+    alias fputwc_unlocked FPUTWC;
+    alias fgetc_unlocked FGETC;
+    alias fgetwc_unlocked FGETWC;
 
-         alias flockfile FLOCK;
-         alias funlockfile FUNLOCK;
-     }
+    alias flockfile FLOCK;
+    alias funlockfile FUNLOCK;
+}
+else version (GENERIC_IO)
+{
+    extern (C)
+    {
+	void flockfile(FILE*);
+	void funlockfile(FILE*);
+    }
+
+    alias fputc FPUTC;
+    alias fputwc FPUTWC;
+    alias fgetc FGETC;
+    alias fgetwc FGETWC;
+
+    alias flockfile FLOCK;
+    alias funlockfile FUNLOCK;
+}
 else
 {
     static assert(0, "unsupported C I/O system");
@@ -127,7 +145,7 @@ class StdioException : Exception
 
     this(uint errno)
     {
-	version (linux)
+	version (Posix)
 	{   char[80] buf = void;
 	    auto s = std.c.string.strerror_r(errno, buf.ptr, buf.length);
 	}
@@ -201,13 +219,13 @@ void writefx(FILE* fp, TypeInfo[] arguments, void* argptr, int newline=false)
 		}
 	    }
 	}
-	else version (linux)
-             {
-                 void putcw(dchar c)
-                 {
-                     FPUTWC(c, fp);
-                 }
-             }
+	else version (Posix)
+	{
+	    void putcw(dchar c)
+	    {
+		FPUTWC(c, fp);
+	    }
+	}
 	else
 	{
 	    static assert(0);
@@ -218,6 +236,7 @@ void writefx(FILE* fp, TypeInfo[] arguments, void* argptr, int newline=false)
 	    FPUTWC('\n', fp);
     }
 }
+
 
 /***********************************
  * If the first argument $(D_PARAM args[0]) is a $(D_PARAM FILE*), for
@@ -676,7 +695,7 @@ size_t readln(FILE* fp, inout char[] buf, dchar terminator = '\n')
 	}
     }
     else version (GCC_IO)
-         {
+    {
              if (fwide(fp, 0) > 0)
              {   /* Stream is in wide characters.
                   * Read them and convert to chars.
@@ -712,7 +731,7 @@ size_t readln(FILE* fp, inout char[] buf, dchar terminator = '\n')
                          StdioException();
                      return buf.length;
                  }
-                 else version (linux)
+                 else version (Posix)
                       {
                           buf.length = 0;
                           for (int c; (c = FGETWC(fp)) != -1; )
@@ -756,7 +775,77 @@ size_t readln(FILE* fp, inout char[] buf, dchar terminator = '\n')
                  buf = lineptr[0 .. s].dup;
              }
              return s;
-         }
+    }
+    else version (GENERIC_IO)
+    {
+	FLOCK(fp);
+	scope(exit) FUNLOCK(fp);
+	if (fwide(fp, 0) > 0)
+	{   /* Stream is in wide characters.
+	     * Read them and convert to chars.
+	     */
+	    version (Windows)
+	    {
+		buf.length = 0;
+		int c2;
+		for (int c; (c = FGETWC(fp)) != -1; )
+		{
+		    if ((c & ~0x7F) == 0)
+		    {   buf ~= c;
+			if (c == terminator)
+			    break;
+		    }
+		    else
+		    {
+			if (c >= 0xD800 && c <= 0xDBFF)
+			{
+			    if ((c2 = FGETWC(fp)) != -1 ||
+				c2 < 0xDC00 && c2 > 0xDFFF)
+			    {
+				StdioException("unpaired UTF-16 surrogate");
+			    }
+			    c = ((c - 0xD7C0) << 10) + (c2 - 0xDC00);
+			}
+			std.utf.encode(buf, c);
+		    }
+		}
+		if (ferror(fp))
+		    StdioException();
+		return buf.length;
+	    }
+	    else version (Posix)
+	    {
+		buf.length = 0;
+		for (int c; (c = FGETWC(fp)) != -1; )
+		{
+		    if ((c & ~0x7F) == 0)
+			buf ~= c;
+		    else
+			std.utf.encode(buf, cast(dchar)c);
+		    if (c == terminator)
+			break;
+		}
+		if (ferror(fp))
+		    StdioException();
+		return buf.length;
+	    }
+	    else
+	    {
+		static assert(0);
+	    }
+	}
+
+	buf.length = 0;
+	for (int c; (c = FGETC(fp)) != -1; )
+	{
+	    buf ~= c;
+	    if (c == terminator)
+		break;
+	}
+	if (ferror(fp))
+	    StdioException();
+	return buf.length;
+    }
     else
     {
 	static assert(0);

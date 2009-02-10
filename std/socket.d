@@ -44,7 +44,7 @@ version(unittest)
 }
 
 
-version(linux)
+version(Posix)
 {
 	version = BsdSockets;
 }
@@ -69,7 +69,7 @@ version(Win32)
 }
 else version(BsdSockets)
 {
-	version(linux)
+	version(Posix)
 	{
 		private import std.c.linux.linux, std.c.linux.socket;
 		private alias std.c.linux.linux.timeval _ctimeval;
@@ -97,25 +97,44 @@ class SocketException: Exception
 
 	this(string msg, int err = 0)
 	{
-		errorCode = err;
+	    errorCode = err;
 
-		version(linux)
+	    version(Posix)
+	    {
+		if(errorCode > 0)
 		{
-			if(errorCode > 0)
+		    char[80] buf;
+		    char* cs;
+		    version (linux)
+		    {
+			cs = strerror_r(errorCode, buf.ptr, buf.length);
+		    }
+		    else version (OSX)
+		    {
+			auto errs = strerror_r(errorCode, buf.ptr, buf.length);
+			if (errs == 0)
+			    cs = buf.ptr;
+			else
 			{
-				char[80] buf;
-				auto cs = strerror_r(errorCode, buf.ptr, buf.length);
-				auto len = strlen(cs);
-
-				if(cs[len - 1] == '\n')
-					len--;
-				if(cs[len - 1] == '\r')
-					len--;
-				msg = cast(string) (msg ~ ": " ~ cs[0 .. len]);
+			    cs = "Unknown error";
 			}
-		}
+		    }
+		    else
+		    {
+			static assert(0);
+		    }
 
-		super(msg);
+		    auto len = strlen(cs);
+
+		    if(cs[len - 1] == '\n')
+			    len--;
+		    if(cs[len - 1] == '\r')
+			    len--;
+		    msg = cast(string) (msg ~ ": " ~ cs[0 .. len]);
+		}
+	    }
+
+	    super(msg);
 	}
 }
 
@@ -215,8 +234,8 @@ class Protocol
 			aliases = new string[i];
 			for(i = 0; i != aliases.length; i++)
 			{
-                            aliases[i] =
-                                std.string.toString(proto.p_aliases[i]).idup;
+			    aliases[i] =
+				std.string.toString(proto.p_aliases[i]).idup;
 			}
 		}
 		else
@@ -1119,7 +1138,7 @@ class Socket
 					if(WSAEWOULDBLOCK == err)
 						return;
 				}
-				else version(linux)
+				else version(Posix)
 				{
 					if(EINPROGRESS == err)
 						return;
@@ -1526,7 +1545,7 @@ class Socket
 			if(_SOCKET_ERROR == result && WSAGetLastError() == WSAEINTR)
 				return -1;
 		}
-		else version(linux)
+		else version(Posix)
 		{
 			if(_SOCKET_ERROR == result && getErrno() == EINTR)
 				return -1;

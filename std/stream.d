@@ -1137,7 +1137,7 @@ class Stream : InputStream, OutputStream {
 	  break;
 	psize *= 2;
 	p = cast(char*) alloca(psize);
-      } else version (linux) {
+      } else version (Posix) {
 	count = vsnprintf(p, psize, f, args);
 	if (count == -1)
 	  psize *= 2;
@@ -1778,7 +1778,7 @@ version (Win32) {
     DWORD  GetFileType(HANDLE hFile);
   }
 }
-version (linux) {
+version (Posix) {
   private import std.c.linux.linux;
   alias int HANDLE;
 }
@@ -1789,7 +1789,7 @@ class File: Stream {
   version (Win32) {
     private HANDLE hFile;
   }
-  version (linux) {
+  version (Posix) {
     private HANDLE hFile = -1;
   }
 
@@ -1798,7 +1798,7 @@ class File: Stream {
     version (Win32) {
       hFile = null;
     }
-    version (linux) {
+    version (Posix) {
       hFile = -1;
     }
     isopen = false;
@@ -1859,7 +1859,7 @@ class File: Stream {
       }
       isopen = hFile != INVALID_HANDLE_VALUE;
     }
-    version (linux) {
+    version (Posix) {
       hFile = std.c.linux.linux.open(toStringz(filename), access | createMode, share);
       isopen = hFile != -1;
     }
@@ -1889,7 +1889,7 @@ class File: Stream {
 	createMode = CREATE_ALWAYS; // resets file
       }
     }
-    version (linux) {
+    version (Posix) {
       if (mode & FileMode.In) {
 	access = O_RDONLY;
 	share = 0660;
@@ -1927,7 +1927,7 @@ class File: Stream {
 	version (Win32) {
 	  CloseHandle(hFile);
 	  hFile = null;
-	} else version (linux) {
+	} else version (Posix) {
 	  std.c.linux.linux.close(hFile);
 	  hFile = -1;
 	}
@@ -1952,7 +1952,7 @@ class File: Stream {
     assertReadable();
     version (Win32) {
       ReadFile(hFile, buffer, size, &size, null);
-    } else version (linux) {
+    } else version (Posix) {
       size = std.c.linux.linux.read(hFile, buffer, size);
       if (size == -1)
 	size = 0;
@@ -1965,7 +1965,7 @@ class File: Stream {
     assertWriteable();
     version (Win32) {
       WriteFile(hFile, buffer, size, &size, null);
-    } else version (linux) {
+    } else version (Posix) {
       size = std.c.linux.linux.write(hFile, buffer, size);
       if (size == -1)
 	size = 0;
@@ -1981,7 +1981,7 @@ class File: Stream {
       if ((low == INVALID_SET_FILE_POINTER) && (GetLastError() != 0))
 	throw new SeekException("unable to move file pointer");
       ulong result = (cast(ulong)hi << 32) + low;
-    } else version (linux) {
+    } else version (Posix) {
       ulong result = lseek(hFile, cast(int)offset, rel);
       if (result == 0xFFFFFFFF)
 	throw new SeekException("unable to move file pointer");
@@ -2021,7 +2021,7 @@ class File: Stream {
     // string#1 + string#2 + int should give exacly that
     version (Win32)
       assert(file.position() == 19 + 13 + 4);
-    version (linux)
+    version (Posix)
       assert(file.position() == 18 + 13 + 4);
     // we must be at the end of file
     assert(file.eof());
@@ -2041,7 +2041,7 @@ class File: Stream {
     file.seek(7, SeekPos.Current);
     version (Win32)
       assert(file.position() == 19 + 7);
-    version (linux)
+    version (Posix)
       assert(file.position() == 18 + 7);
     assert(!std.string.cmp(file.readString(6), "world!"));
     i = 0; file.read(i);
@@ -2049,7 +2049,7 @@ class File: Stream {
     // string#1 + string#2 + int should give exacly that
     version (Win32)
       assert(file.position() == 19 + 13 + 4);
-    version (linux)
+    version (Posix)
       assert(file.position() == 18 + 13 + 4);
     // we must be at the end of file
     assert(file.eof());
@@ -2138,7 +2138,7 @@ class BufferedFile: BufferedStream {
     // string#1 + string#2 + int should give exacly that
     version (Win32)
       assert(file.position() == 19 + 13 + 4);
-    version (linux)
+    version (Posix)
       assert(file.position() == 18 + 13 + 4);
     // we must be at the end of file
     assert(file.eof());
@@ -2158,7 +2158,7 @@ class BufferedFile: BufferedStream {
     file.seek(7, SeekPos.Current);
     version (Win32)
       assert(file.position() == 19 + 7);
-    version (linux)
+    version (Posix)
       assert(file.position() == 18 + 7);
     assert(!std.string.cmp(file.readString(6), "world!"));
     i = 0; file.read(i);
@@ -2166,7 +2166,7 @@ class BufferedFile: BufferedStream {
     // string#1 + string#2 + int should give exacly that
     version (Win32)
       assert(file.position() == 19 + 13 + 4);
-    version (linux)
+    version (Posix)
       assert(file.position() == 18 + 13 + 4);
     // we must be at the end of file
     assert(file.eof());

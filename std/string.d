@@ -77,7 +77,7 @@ enum dchar PS = '\u2029';   /// UTF paragraph separator
 /// Newline sequence for this system
 version (Windows)
     invariant char[2] newline = "\r\n";
-else version (linux)
+else version (Posix)
     invariant char[1] newline = "\n";
 
 /**********************************

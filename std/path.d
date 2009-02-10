@@ -30,7 +30,7 @@ private import std.string;
 private import std.file;
 private import std.contracts;
 
-version(linux)
+version(Posix)
 {
     private import std.c.stdlib;
     private import std.c.linux.linux;
@@ -55,7 +55,7 @@ version(Windows)
     invariant char[1] curdir = ".";	 /// String representing the current directory.
     invariant char[2] pardir = ".."; /// String representing the parent directory.
 }
-version(linux)
+version(Posix)
 {
     /** String used to separate directory names in a path. Under
      *  Windows this is a backslash, under Linux a slash. */
@@ -85,7 +85,7 @@ version(linux)
 
 version (Windows) alias std.string.icmp fcmp;
 
-version (linux) alias std.string.cmp fcmp;
+version (Posix) alias std.string.cmp fcmp;
 
 /**************************
  * Extracts the extension from a filename or path.
@@ -108,7 +108,7 @@ version (linux) alias std.string.cmp fcmp;
  *     getExt(r"d:\path\foo.bat") // "bat"
  *     getExt(r"d:\path.two\bar") // null
  * }
- * version(linux)
+ * version(Posix)
  * {
  *     getExt(r"/home/user.name/bar.")  // ""
  *     getExt(r"d:\\path.two\\bar")     // "two\\bar"
@@ -130,7 +130,7 @@ string getExt(string fullname)
 	    if (fullname[i] == ':' || fullname[i] == '\\')
 		break;
 	}
-	version(linux)
+	version(Posix)
 	{
 	    if (fullname[i] == '/')
 		break;
@@ -146,28 +146,28 @@ unittest
 
     version (Win32)
 	result = getExt("d:\\path\\foo.bat");
-    version (linux)
+    version (Posix)
 	result = getExt("/path/foo.bat");
     auto i = cmp(result, "bat");
     assert(i == 0);
 
     version (Win32)
 	result = getExt("d:\\path\\foo.");
-    version (linux)
+    version (Posix)
 	result = getExt("d/path/foo.");
     i = cmp(result, "");
     assert(i == 0);
 
     version (Win32)
 	result = getExt("d:\\path\\foo");
-    version (linux)
+    version (Posix)
 	result = getExt("d/path/foo");
     i = cmp(result, "");
     assert(i == 0);
 
     version (Win32)
 	result = getExt("d:\\path.bar\\foo");
-    version (linux)
+    version (Posix)
 	result = getExt("/path.bar/foo");
 
     i = cmp(result, "");
@@ -199,7 +199,7 @@ unittest
  *     getName(r"d:\path\foo.bat") => "d:\path\foo"
  *     getName(r"d:\path.two\bar") => null
  * }
- * version(linux)
+ * version(Posix)
  * {
  *     getName("/home/user.name/bar.")  => "/home/user.name/bar"
  *     getName(r"d:\path.two\bar") => "d:\path"
@@ -221,7 +221,7 @@ string getName(string fullname)
 	    if (fullname[i] == ':' || fullname[i] == '\\')
 		break;
 	}
-	version(linux)
+	version(Posix)
 	{
 	    if (fullname[i] == '/')
 		break;
@@ -242,7 +242,7 @@ unittest
     result = getName("d:\\path.two\\bar");
     version (Win32)
 	i = cmp(result, "");
-    version (linux)
+    version (Posix)
 	i = cmp(result, "d:\\path");
     assert(i == 0);
 }
@@ -271,7 +271,7 @@ unittest
  *     basename(r"d:\path\foo.bat") => "foo.bat"
  *     basename(r"d:\path\foo", ".bat") => "foo"
  * }
- * version(linux)
+ * version(Posix)
  * {
  *     basename("/home/user.name/bar.")  => "bar."
  *     basename("/home/user.name/bar.", ".")  => "bar"
@@ -294,7 +294,7 @@ string basename(string fullname, string extension = null)
 		if (fullname[i - 1] == ':' || fullname[i - 1] == '\\')
 		    break;
 	    }
-	    version(linux)
+	    version(Posix)
 	    {
 		if (fullname[i - 1] == '/')
 		    break;
@@ -315,20 +315,20 @@ unittest
 
     version (Windows)
 	result = basename("d:\\path\\foo.bat");
-    version (linux)
+    version (Posix)
 	result = basename("/path/foo.bat");
     //printf("result = '%.*s'\n", result);
     assert(result == "foo.bat");
 
     version (Windows)
 	result = basename("a\\b");
-    version (linux)
+    version (Posix)
 	result = basename("a/b");
     assert(result == "b");
 
     version (Windows)
 	result = basename("a\\b.cde", ".cde");
-    version (linux)
+    version (Posix)
 	result = basename("a/b.cde", ".cde");
     assert(result == "b");
 
@@ -357,7 +357,7 @@ unittest
  *     assert(dirname(r"d:\path\foo.bat") == r"d:\path");
  *     assert(dirname(dirname(r"d:\path\foo.bat")) == r"d:\");
  * }
- * version(linux)
+ * version(Posix)
  * {
  *     assert(dirname("/home/user") == "/home");
  *     assert(dirname(dirname("/home/user")) == "");
@@ -384,7 +384,7 @@ Char[] dirname(Char)(Char[] fullname)
                 break;
             }
         }
-        version(linux)
+        version(Posix)
         {
             if (fullname[i - 1] == sep[0])
             {   i--;
@@ -399,7 +399,7 @@ unittest
 {
     assert(dirname("") == ".");
     assert(dirname("fileonly") == ".");
-    version (linux)
+    version (Posix)
     {
         assert(dirname("/path/to/file") == "/path/to");
     }
@@ -459,7 +459,7 @@ string getDrive(string fullname)
 	    }
 	    return null;
 	}
-	version(linux)
+	version(Posix)
 	{
 	    return null;
 	}
@@ -564,7 +564,7 @@ string addExt(string filename, string ext)
  *     isabs(r"\relative\path") => 0
  *     isabs(r"d:\absolute") => 1
  * }
- * version(linux)
+ * version(Posix)
  * {
  *     isabs("/home/user") => 1
  *     isabs("foo") => 0
@@ -594,7 +594,7 @@ unittest
 	assert(isabs(r"\relative\path"));
 	assert(isabs(r"d:\absolute"));
     }
-    version (linux)
+    version (Posix)
     {
 	assert(isabs("/home/user"));
 	assert(!isabs("foo"));
@@ -628,7 +628,7 @@ string rel2abs(string path)
 
 unittest
 {
-    version (linux)
+    version (Posix)
     {
         auto myDir = getcwd();
         scope(exit) std.file.chdir(myDir);
@@ -659,7 +659,7 @@ unittest
  *     join(r"c:\foo", "bar") => r"c:\foo\bar"
  *     join("foo", r"d:\bar") => r"d:\bar"
  * }
- * version(linux)
+ * version(Posix)
  * {
  *     join("/foo/", "bar") => "/foo/bar"
  *     join("/foo", "/bar") => "/bar"
@@ -669,7 +669,7 @@ unittest
 
 string join(string p1, string p2, string[] more...)
 {
-  version (linux)
+  version (Posix)
   {
     if (!more.length)
     {
@@ -736,7 +736,7 @@ unittest
     p = join("foo", "bar");
     version (Win32)
 	i = cmp(p, "foo\\bar");
-    version (linux)
+    version (Posix)
 	i = cmp(p, "foo/bar");
     assert(i == 0);
 
@@ -744,7 +744,7 @@ unittest
     {	p = join("foo\\", "bar");
 	i = cmp(p, "foo\\bar");
     }
-    version (linux)
+    version (Posix)
     {	p = join("foo/", "bar");
 	i = cmp(p, "foo/bar");
     }
@@ -754,7 +754,7 @@ unittest
     {	p = join("foo", "\\bar");
 	i = cmp(p, "\\bar");
     }
-    version (linux)
+    version (Posix)
     {	p = join("foo", "/bar");
 	i = cmp(p, "/bar");
     }
@@ -764,7 +764,7 @@ unittest
     {	p = join("foo\\", "\\bar");
 	i = cmp(p, "\\bar");
     }
-    version (linux)
+    version (Posix)
     {	p = join("foo/", "/bar");
 	i = cmp(p, "/bar");
     }
@@ -824,7 +824,7 @@ unittest
  *     fncharmatch('a', 'b') => 0
  *     fncharmatch('A', 'a') => 1
  * }
- * version(linux)
+ * version(Posix)
  * {
  *     fncharmatch('a', 'b') => 0
  *     fncharmatch('A', 'a') => 0
@@ -846,7 +846,7 @@ bool fncharmatch(dchar c1, dchar c2)
 	}
 	return true;
     }
-    version (linux)
+    version (Posix)
     {
 	return c1 == c2;
     }
@@ -890,7 +890,7 @@ bool fncharmatch(dchar c1, dchar c2)
  *     fnmatch("Goo.bar", "[fg]???bar") => 1
  *     fnmatch(r"d:\foo\bar", "d*foo?bar") => 1
  * }
- * version(linux)
+ * version(Posix)
  * {
  *     fnmatch("Go*.bar", "[fg]???bar") => 0
  *     fnmatch("/foo*home/bar", "?foo*bar") => 1
@@ -995,7 +995,7 @@ unittest
 
     version (Win32)
 	assert(fnmatch("foo", "Foo"));
-    version (linux)
+    version (Posix)
 	assert(!fnmatch("foo", "Foo"));
     assert(fnmatch("foo", "*"));
     assert(fnmatch("foo.bar", "*"));
@@ -1077,7 +1077,7 @@ unittest
 
 string expandTilde(string inputPath)
 {
-    version(linux)
+    version(Posix)
     {
 	static assert(sep.length == 1);
 
@@ -1106,7 +1106,7 @@ unittest
 {
     debug(path) printf("path.expandTilde.unittest\n");
 
-    version (linux)
+    version (Posix)
     {
 	// Retrieve the current home variable.
 	char* c_home = getenv("HOME");
@@ -1141,7 +1141,7 @@ unittest
     }
 }
 
-version (linux)
+version (Posix)
 {
 
 /**

@@ -82,7 +82,7 @@ private:
  * Non-IEEE 128 bit Big-endian 'doubledouble' (eg PowerPC) has partial support
  */
 version(LittleEndian) {
-    static assert(real.mant_dig == 53 || real.mant_dig==64 
+    static assert(real.mant_dig == 53 || real.mant_dig==64
                || real.mant_dig == 113,
       "Only 64-bit, 80-bit, and 128-bit reals"
       " are supported for LittleEndian CPUs");
@@ -107,7 +107,7 @@ template floatTraits(T) {
     enum uint EXPMASK_INT = 0x7F80_0000;
     enum uint MANTISSAMASK_INT = 0x007F_FFFF;
     enum real POW2MANTDIG = 0x1p+24;
-    version(LittleEndian) {        
+    version(LittleEndian) {
       enum EXPPOS_SHORT = 1;
     } else {
       enum EXPPOS_SHORT = 0;
@@ -128,7 +128,7 @@ template floatTraits(T) {
  } else static if (T.mant_dig == 64) { // real80
     enum ushort EXPMASK = 0x7FFF;
     enum ushort EXPBIAS = 0x3FFE;
-    enum real POW2MANTDIG = 0x1p+63;    
+    enum real POW2MANTDIG = 0x1p+63;
     version(LittleEndian) {
       enum EXPPOS_SHORT = 4;
       enum SIGNPOS_BYTE = 9;
@@ -163,7 +163,7 @@ template floatTraits(T) {
 // These apply to all floating-point types
 version(LittleEndian) {
     enum MANTISSA_LSB = 0;
-    enum MANTISSA_MSB = 1;    
+    enum MANTISSA_MSB = 1;
 } else {
     enum MANTISSA_LSB = 1;
     enum MANTISSA_MSB = 0;
@@ -602,7 +602,7 @@ real tanh(real x)               { return std.c.math.tanhl(x); }
  *    $(SV  1,      0       )
  *    $(SV  +$(INFIN),+$(INFIN))
  *  )
- */   
+ */
 real acosh(real x)
 {
     if (x > 1/real.epsilon)
@@ -636,7 +636,7 @@ unittest
  *    )
  */
 real asinh(real x)
-{   
+{
     if (fabs(x) > 1 / real.epsilon) {   // beyond this point, x*x + 1 == x*x
             return copysign(LN2 + log(fabs(x)), x);
     } else {
@@ -657,9 +657,9 @@ unittest
 /***********************************
  * Calculates the inverse hyperbolic tangent of x,
  * returning a value from ranging from -1 to 1.
- *  
+ *
  * Mathematically, atanh(x) = log( (1+x)/(1-x) ) / 2
- *  
+ *
  *
  * $(TABLE_DOMRG
  *  $(DOMAIN -$(INFIN)..$(INFIN))
@@ -670,7 +670,7 @@ unittest
  *    $(SV  $(PLUSMN)0, $(PLUSMN)0)
  *    $(SV  -$(INFIN), -0)
  * )
- */   
+ */
 real atanh(real x)
 {
     // log( (1+x)/(1-x) ) == log ( 1 + (2*x)/(1-x) )
@@ -682,7 +682,7 @@ unittest
     assert(isIdentical(atanh(0.0), 0.0));
     assert(isIdentical(atanh(-0.0),-0.0));
     assert(isnan(atanh(real.nan)));
-    assert(isnan(atanh(-real.infinity))); 
+    assert(isnan(atanh(-real.infinity)));
 }
 
 /*****************************************
@@ -792,8 +792,8 @@ real exp2(real x)               { return std.c.math.exp2l(x); }
  * Calculates the value of the natural logarithm base (e)
  * raised to the power of x, minus 1.
  *
- * For very small x, expm1(x) is more accurate 
- * than exp(x)-1. 
+ * For very small x, expm1(x) is more accurate
+ * than exp(x)-1.
  *
  *      $(TABLE_SV
  *      $(TR $(TH x)            $(TH e$(SUP x)-1))
@@ -984,7 +984,7 @@ unittest
         int exp = cast(int)vals[i][2];
         int eptr;
         real v = frexp(x, eptr);
-//        printf("frexp(%La) = %La, should be %La, eptr = %d, should be %d\n", 
+//        printf("frexp(%La) = %La, should be %La, eptr = %d, should be %d\n",
 //                x, v, e, eptr, exp);
         assert(isIdentical(e, v));
         assert(exp == eptr);
@@ -1066,8 +1066,8 @@ real log10(real x)              { return std.c.math.log10l(x); }
 /******************************************
  *      Calculates the natural logarithm of 1 + x.
  *
- *      For very small x, log1p(x) will be more accurate than 
- *      log(1 + x). 
+ *      For very small x, log1p(x) will be more accurate than
+ *      log(1 + x).
  *
  *  $(TABLE_SV
  *  $(TR $(TH x)            $(TH log1p(x))     $(TH divide by 0?) $(TH invalid?))
@@ -1097,9 +1097,9 @@ real log2(real x)               { return std.c.math.log2l(x); }
  * Extracts the exponent of x as a signed integral value.
  *
  * If x is subnormal, it is treated as if it were normalized.
- * For a positive, finite x: 
+ * For a positive, finite x:
  *
- * 1 $(LT)= $(I x) * FLT_RADIX$(SUP -logb(x)) $(LT) FLT_RADIX 
+ * 1 $(LT)= $(I x) * FLT_RADIX$(SUP -logb(x)) $(LT) FLT_RADIX
  *
  *      $(TABLE_SV
  *      $(TR $(TH x)                 $(TH logb(x))   $(TH divide by 0?) )
@@ -1112,8 +1112,8 @@ real logb(real x)               { return std.c.math.logbl(x); }
 /************************************
  * Calculates the remainder from the calculation x/y.
  * Returns:
- * The value of x - i * y, where i is the number of times that y can 
- * be completely subtracted from x. The result has the same sign as x. 
+ * The value of x - i * y, where i is the number of times that y can
+ * be completely subtracted from x. The result has the same sign as x.
  *
  * $(TABLE_SV
  *  $(TR $(TH x)              $(TH y)             $(TH modf(x, y))   $(TH invalid?))
@@ -1128,8 +1128,8 @@ real modf(real x, inout real y) { return std.c.math.modfl(x,&y); }
 /*************************************
  * Efficiently calculates x * 2$(SUP n).
  *
- * scalbn handles underflow and overflow in 
- * the same fashion as the basic arithmetic operators. 
+ * scalbn handles underflow and overflow in
+ * the same fashion as the basic arithmetic operators.
  *
  *      $(TABLE_SV
  *      $(TR $(TH x)                 $(TH scalb(x)))
@@ -1182,9 +1182,9 @@ real fabs(real x);      /* intrinsic */
 
 
 /***********************************************************************
- * Calculates the length of the 
- * hypotenuse of a right-angled triangle with sides of length x and y. 
- * The hypotenuse is the value of the square root of 
+ * Calculates the length of the
+ * hypotenuse of a right-angled triangle with sides of length x and y.
+ * The hypotenuse is the value of the square root of
  * the sums of the squares of x and y:
  *
  *      sqrt($(POW x, 2) + $(POW y, 2))
@@ -1292,7 +1292,6 @@ unittest
         real y = vals[i][1];
         real z = vals[i][2];
         real h = hypot(x, y);
-    
         assert(mfeq(z, h, .0000001));
     }
 }
@@ -1378,11 +1377,11 @@ real ceil(real x)               { return std.c.math.ceill(x); }
 real floor(real x)              { return std.c.math.floorl(x); }
 
 /******************************************
- * Rounds x to the nearest integer value, using the current rounding 
+ * Rounds x to the nearest integer value, using the current rounding
  * mode.
  *
- * Unlike the rint functions, nearbyint does not raise the 
- * FE_INEXACT exception. 
+ * Unlike the rint functions, nearbyint does not raise the
+ * FE_INEXACT exception.
  */
 real nearbyint(real x) { return std.c.math.nearbyintl(x); }
 
@@ -1408,7 +1407,7 @@ real rint(real x);      /* intrinsic */
  */
 long lrint(real x)
 {
-    version (linux)
+    version (Posix)
         return std.c.math.llrintl(x);
     else version(D_InlineAsm_X86)
     {
@@ -1427,7 +1426,7 @@ long lrint(real x)
 /*******************************************
  * Return the value of x rounded to the nearest integer.
  * If the fractional part of x is exactly 0.5, the return value is rounded to
- * the even integer. 
+ * the even integer.
  */
 real round(real x) { return std.c.math.roundl(x); }
 
@@ -1441,23 +1440,23 @@ real round(real x) { return std.c.math.roundl(x); }
  */
 long lround(real x)
 {
-    version (linux)
+    version (Posix)
         return std.c.math.llroundl(x);
     else
         throw new NotImplemented("lround");
 }
 
 /****************************************************
- * Returns the integer portion of x, dropping the fractional portion. 
+ * Returns the integer portion of x, dropping the fractional portion.
  *
- * This is also known as "chop" rounding. 
+ * This is also known as "chop" rounding.
  */
 real trunc(real x) { return std.c.math.truncl(x); }
 
 /****************************************************
  * Calculate the remainder x REM y, following IEC 60559.
  *
- * REM is the value of x - y * n, where n is the integer nearest the exact 
+ * REM is the value of x - y * n, where n is the integer nearest the exact
  * value of x / y.
  * If |n - x / y| == 0.5, n is even.
  * If the result is zero, it has the same sign as x.
@@ -1480,7 +1479,7 @@ real remainder(real x, real y) { return std.c.math.remainderl(x, y); }
 
 real remquo(real x, real y, out int n)  /// ditto
 {
-    version (linux)
+    version (Posix)
         return std.c.math.remquol(x, y, &n);
     else
         throw new NotImplemented("remquo");
@@ -1495,7 +1494,7 @@ int isnan(real x)
   alias floatTraits!(real) F;
   static if (real.mant_dig==53) { // double
         ulong*  p = cast(ulong *)&x;
-        return (*p & 0x7FF0_0000_0000_0000 == 0x7FF0_0000_0000_0000) 
+        return (*p & 0x7FF0_0000_0000_0000 == 0x7FF0_0000_0000_0000)
              && *p & 0x000F_FFFF_FFFF_FFFF;
   } else static if (real.mant_dig==64) {     // real80
         ushort e = F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT];
@@ -1552,7 +1551,7 @@ unittest
 int isnormal(X)(X x)
 {
     alias floatTraits!(X) F;
-    
+
     static if(real.mant_dig==106) { // doubledouble
         // doubledouble is normal if the least significant part is normal.
         return isnormal((cast(double*)&x)[MANTISSA_LSB]);
@@ -1643,6 +1642,7 @@ int issubnormal(real x)
         return issubnormal((cast(double*)&x)[MANTISSA_MSB]);
     }
 }
+
 unittest
 {
     real f;
@@ -1663,10 +1663,10 @@ int isinf(real x)
                 == 0x7FF8_0000_0000_0000;
     } else static if(real.mant_dig == 106) { //doubledouble
         return (((cast(ulong *)&x)[MANTISSA_MSB]) & 0x7FFF_FFFF_FFFF_FFFF)
-                    == 0x7FF8_0000_0000_0000;   
-    } else static if (real.mant_dig == 113) { // quadruple   
+                    == 0x7FF8_0000_0000_0000;
+    } else static if (real.mant_dig == 113) { // quadruple
         long*   ps = cast(long *)&x;
-        return (ps[MANTISSA_LSB] == 0) 
+        return (ps[MANTISSA_LSB] == 0)
          && (ps[MANTISSA_MSB] & 0x7FFF_FFFF_FFFF_FFFF) == 0x7FFF_0000_0000_0000;
     } else { // real80
         ushort e = cast(ushort)(F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT]);
@@ -1738,7 +1738,7 @@ real copysign(real to, real from)
 {
     ubyte* pto   = cast(ubyte *)&to;
     const ubyte* pfrom = cast(ubyte *)&from;
-    
+
     alias floatTraits!(real) F;
     pto[F.SIGNPOS_BYTE] &= 0x7F;
     pto[F.SIGNPOS_BYTE] |= pfrom[F.SIGNPOS_BYTE] & 0x80;
@@ -1820,7 +1820,7 @@ real nextUp(real x)
         if (e == F.EXPMASK) { // NaN or Infinity
              if (x == -real.infinity) return -real.max;
              return x; // +Inf and NaN are unchanged.
-        }     
+        }
         ulong*   ps = cast(ulong *)&e;
         if (ps[MANTISSA_LSB] & 0x8000_0000_0000_0000)  { // Negative number
             if (ps[MANTISSA_LSB] == 0
@@ -1837,7 +1837,7 @@ real nextUp(real x)
             if (ps[MANTISSA_LSB]==0) ++ps[MANTISSA_MSB];
         }
         return x;
-          
+
     } else static if(real.mant_dig==64){ // real80
         // For 80-bit reals, the "implied bit" is a nuisance...
         ushort *pe = cast(ushort *)&x;
@@ -2319,9 +2319,9 @@ int feqrel(X)(X x, X y)
 {
     /* Public Domain. Author: Don Clugston, 18 Aug 2005.
      */
-  static assert(is(X==real) || is(X==double) || is(X==float), 
+  static assert(is(X==real) || is(X==double) || is(X==float),
         "Only float, double, and real are supported by feqrel");
-  
+
   static if (X.mant_dig == 106) { // doubledouble.
      if (cast(double*)(&x)[MANTISSA_MSB] == cast(double*)(&y)[MANTISSA_MSB]) {
          return double.mant_dig
@@ -2332,7 +2332,7 @@ int feqrel(X)(X x, X y)
                        cast(double*)(&y)[MANTISSA_MSB]);
      }
   } else static if (X.mant_dig==64 || X.mant_dig==113 || X.mant_dig==53) {
-      
+
     if (x == y) return X.mant_dig; // ensure diff!=0, cope with INF.
 
     X diff = fabs(x - y);
@@ -2354,12 +2354,12 @@ int feqrel(X)(X x, X y)
     // they could have 0 or 1 bits in common.
 
  static if (X.mant_dig==64 || X.mant_dig==113) { // real80 or quadruple
-    int bitsdiff = ( ((pa[F.EXPPOS_SHORT] & F.EXPMASK) 
-                    + (pb[F.EXPPOS_SHORT] & F.EXPMASK) - 1) >> 1) 
+    int bitsdiff = ( ((pa[F.EXPPOS_SHORT] & F.EXPMASK)
+                    + (pb[F.EXPPOS_SHORT] & F.EXPMASK) - 1) >> 1)
                     - pd[F.EXPPOS_SHORT];
  } else static if (X.mant_dig==53) { // double
-    int bitsdiff = (( ((pa[F.EXPPOS_SHORT]&0x7FF0) 
-                     + (pb[F.EXPPOS_SHORT]&0x7FF0)-0x10)>>1) 
+    int bitsdiff = (( ((pa[F.EXPPOS_SHORT]&0x7FF0)
+                     + (pb[F.EXPPOS_SHORT]&0x7FF0)-0x10)>>1)
                      - (pd[F.EXPPOS_SHORT]&0x7FF0))>>4;
  }
     if (pd[F.EXPPOS_SHORT] == 0)
@@ -2373,16 +2373,16 @@ int feqrel(X)(X x, X y)
 
     if (bitsdiff > 0)
         return bitsdiff + 1; // add the 1 we subtracted before
-        
-    // Avoid out-by-1 errors when factor is almost 2.    
-     static if (X.mant_dig==64 || X.mant_dig==113) { // real80 or quadruple    
+
+    // Avoid out-by-1 errors when factor is almost 2.
+     static if (X.mant_dig==64 || X.mant_dig==113) { // real80 or quadruple
         return (bitsdiff == 0) ? (pa[F.EXPPOS_SHORT] == pb[F.EXPPOS_SHORT]) : 0;
      } else static if (X.mant_dig==53) { // double
-        if (bitsdiff == 0 
+        if (bitsdiff == 0
           && !((pa[F.EXPPOS_SHORT] ^ pb[F.EXPPOS_SHORT])& F.EXPMASK)) {
               return 1;
         } else return 0;
-     }  
+     }
  } else {
     throw new NotImplemented("feqrel");
  }
@@ -2407,9 +2407,9 @@ unittest
    assert(feqrel(1.5+real.epsilon,1.5L)==real.mant_dig-1);
    assert(feqrel(1.5-real.epsilon,1.5L)==real.mant_dig-1);
    assert(feqrel(1.5-real.epsilon,1.5+real.epsilon)==real.mant_dig-2);
-   
+
    assert(feqrel(real.min/8,real.min/17)==3);;
-   
+
    // Numbers that are close
    assert(feqrel(0x1.Bp+84, 0x1.B8p+84)==5);
    assert(feqrel(0x1.8p+10, 0x1.Cp+10)==2);
@@ -2451,7 +2451,7 @@ package: // Not public yet
 T ieeeMean(T)(T x, T y)
 in {
     // both x and y must have the same sign, and must not be NaN.
-    assert(signbit(x) == signbit(y)); 
+    assert(signbit(x) == signbit(y));
     assert(x<>=0 && y<>=0);
 }
 body {
@@ -2495,8 +2495,8 @@ body {
         ulong *ul = cast(ulong *)&u;
         ulong *xl = cast(ulong *)&x;
         ulong *yl = cast(ulong *)&y;
-        // Multi-byte add, then multi-byte right shift.        
-        ulong mh = ((xl[MANTISSA_MSB] & 0x7FFF_FFFF_FFFF_FFFFL) 
+        // Multi-byte add, then multi-byte right shift.
+        ulong mh = ((xl[MANTISSA_MSB] & 0x7FFF_FFFF_FFFF_FFFFL)
                   + (yl[MANTISSA_MSB] & 0x7FFF_FFFF_FFFF_FFFFL));
         // Discard the lowest bit (to avoid overflow)
         ulong ml = (xl[MANTISSA_LSB]>>>1) + (yl[MANTISSA_LSB]>>>1);
@@ -2561,7 +2561,7 @@ public:
  *                         + x($(SUB a, 3) + ...)))
  * Params:
  *      A =     array of coefficients $(SUB a, 0), $(SUB a, 1), etc.
- */ 
+ */
 real poly(real x, const real[] A)
 in
 {
@@ -2600,7 +2600,7 @@ body
                 ;
             }
         }
-        else
+        else version (linux)
         {
             asm // assembler by W. Bright
             {
@@ -2628,6 +2628,38 @@ body
                 ;
             }
         }
+        else version (OSX)
+        {
+            asm // assembler by W. Bright
+            {
+                // EDX = (A.length - 1) * real.sizeof
+                mov     ECX,A[EBP]              ; // ECX = A.length
+                dec     ECX                     ;
+                lea     EDX,[ECX*8]             ;
+                add     EDX,EDX                 ;
+                add     EDX,A+4[EBP]            ;
+                fld     real ptr [EDX]          ; // ST0 = coeff[ECX]
+                jecxz   return_ST               ;
+                fld     x[EBP]                  ; // ST0 = x
+                fxch    ST(1)                   ; // ST1 = x, ST0 = r
+                align   4                       ;
+        L2:     fmul    ST,ST(1)                ; // r *= x
+                fld     real ptr -16[EDX]       ;
+                sub     EDX,16                  ; // deg--
+                faddp   ST(1),ST                ;
+                dec     ECX                     ;
+                jne     L2                      ;
+                fxch    ST(1)                   ; // ST1 = r, ST0 = x
+                fstp    ST(0)                   ; // dump x
+                align   4                       ;
+        return_ST:                              ;
+                ;
+            }
+        }
+	else
+	{
+	    static assert(0);
+	}
     }
     else
     {

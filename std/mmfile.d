@@ -51,7 +51,7 @@ version (Win32)
 		dwVersion = GetVersion();
 	}
 }
-else version (linux)
+else version (Posix)
 {
 	private import std.c.linux.linux;
 }
@@ -232,9 +232,9 @@ class MmFile
 		
 			errNo();
 		}
-		else version (linux)
+		else version (Posix)
 		{
-                        auto namez = toStringz(filename);
+			auto namez = toStringz(filename);
 			void* p;
 			int oflag;
 			int fmode;
@@ -300,12 +300,14 @@ class MmFile
 					std.c.linux.linux.write(fd, &c, 1);
 				}
 				else if (prot & PROT_READ && size == 0)
-					size = statbuf.st_size;
+					size = cast(ulong)statbuf.st_size;
 			}
 			else
 			{
 				fd = -1;
-				flags |= MAP_ANONYMOUS;
+version (linux)			flags |= MAP_ANONYMOUS;
+else version (OSX)		flags |= MAP_ANON;
+else				static assert(0);
 			}
 			this.size = size;
 			size_t initial_map = (window && 2*window<size)? 2*window : cast(size_t)size;
@@ -341,7 +343,7 @@ class MmFile
 				errNo();
 			hFile = INVALID_HANDLE_VALUE;
 		}
-		else version (linux)
+		else version (Posix)
 		{
 			if (fd != -1 && std.c.linux.linux.close(fd) == -1)
 				errNo();
@@ -363,7 +365,7 @@ class MmFile
 		{
 			FlushViewOfFile(data.ptr, data.length);
 		}
-		else version (linux)
+		else version (Posix)
 		{
 			int i;
 
@@ -537,7 +539,7 @@ class MmFile
 		HANDLE hFileMap = null;
 		uint dwDesiredAccess;
 	}
-	else version (linux)
+	else version (Posix)
 	{
 		int fd;
 		int prot;
@@ -556,7 +558,7 @@ class MmFile
 		{
 			throw new FileException(filename, GetLastError());
 		}
-		else version (linux)
+		else version (Posix)
 		{
 			throw new FileException(filename, getErrno());
 		}
@@ -576,7 +578,7 @@ unittest {
          GetSystemInfo(&sysinfo);
          win = sysinfo.dwAllocationGranularity;
 		+/
-	} else version (linux) {
+	} else version (Posix) {
 		// getpagesize() is not defined in the unix D headers so use the guess
 	}
 	MmFile mf = new MmFile("testing.txt",MmFile.Mode.ReadWriteNew,100*K,null,win);

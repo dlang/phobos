@@ -923,7 +923,7 @@ version (Win32)
     }
 }
 
-version (linux)
+version (Posix)
 {
 
     private import std.c.linux.linux;

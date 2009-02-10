@@ -72,7 +72,7 @@ version(Windows)
         alias HMODULE HModule_;
     }
 }
-else version(linux)
+else version(Posix)
 {
     private import std.c.linux.linux;
 
@@ -256,7 +256,7 @@ version(Windows)
         return szFileName[0 .. cch].idup;
     }
 }
-else version(linux)
+else version(Posix)
 {
     private class ExeModuleInfo
     {
@@ -468,7 +468,7 @@ public:
 
     this(uint errcode)
     {
-      version (linux)
+      version (Posix)
       {
 	char[80] buf = void;
 	super(std.string.toString(strerror_r(errcode, buf.ptr, buf.length)).idup);
@@ -507,7 +507,7 @@ public:
 		if (m_hModule == null)
 		    throw new ExeModuleException(GetLastError());
 	    }
-	    else version (linux)
+	    else version (Posix)
 	    {
 		m_hModule = ExeModule_AddRef(hModule);
 	    }
@@ -529,7 +529,7 @@ public:
 	    if (null is m_hModule)
 		throw new ExeModuleException(GetLastError());
 	}
-	else version (linux)
+	else version (Posix)
 	{
 	    m_hModule = ExeModule_Load(moduleName);
 	    if (null is m_hModule)
@@ -562,7 +562,7 @@ public:
 		if(!FreeLibrary(cast(HModule_)m_hModule))
 		    throw new ExeModuleException(GetLastError());
 	    }
-	    else version (linux)
+	    else version (Posix)
 	    {
 		ExeModule_Release(m_hModule);
 	    }
@@ -590,7 +590,7 @@ public:
 		throw new ExeModuleException(GetLastError());
 	    }
 	}
-	else version (linux)
+	else version (Posix)
 	{
 	    void *symbol = ExeModule_GetSymbol(m_hModule, symbolName);
 
@@ -646,7 +646,7 @@ public:
 
 	    return szFileName[0 .. cch].idup;
 	}
-	else version (linux)
+	else version (Posix)
 	{
 	    return ExeModule_GetPath_(m_hModule);
 	}
