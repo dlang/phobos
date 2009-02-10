@@ -257,7 +257,8 @@ SRC_ZLIB= etc\c\zlib\trees.h \
 	etc\c\zlib\ChangeLog \
 	etc\c\zlib\README \
 	etc\c\zlib\win32.mak \
-	etc\c\zlib\linux.mak
+	etc\c\zlib\linux.mak \
+	etc\c\zlib\osx.mak
 
 phobos.lib : $(OBJS) $(SRCS) \
 	etc\c\zlib\zlib.lib $(DRUNTIME)\lib\druntime.lib win32.mak
@@ -719,11 +720,11 @@ $(DOC)\std_c_wcharh.html : std.ddoc std\c\wcharh.d
 
 ######################################################
 
-zip : win32.mak linux.mak phoboslicense.txt std.ddoc $(SRC) \
+zip : win32.mak linux.mak osx.mak phoboslicense.txt std.ddoc $(SRC) \
 	$(SRC_STD) $(SRC_STD_C) $(SRC_TI) $(SRC_INT) $(SRC_STD_WIN) \
 	$(SRC_STDLINUX) $(SRC_ETC) $(SRC_ETC_C) $(SRC_ZLIB) $(SRC_GC)
 	del phobos.zip
-	zip32 -u phobos win32.mak linux.mak phoboslicense.txt std.ddoc
+	zip32 -u phobos win32.mak linux.mak osx.mak phoboslicense.txt std.ddoc
 	zip32 -u phobos $(SRC)
 	zip32 -u phobos $(SRC_TI)
 	zip32 -u phobos $(SRC_INT)
@@ -752,7 +753,7 @@ cleanhtml:
 install:
 	$(CP) phobos.lib $(DIR)\lib
 	$(CP) $(DRUNTIME)\lib\gcstub.obj $(DIR)\lib
-	$(CP) win32.mak linux.mak phoboslicense.txt std.ddoc $(DIR)\src\phobos
+	$(CP) win32.mak linux.mak osx.mak phoboslicense.txt std.ddoc $(DIR)\src\phobos
 	$(CP) $(SRC) $(DIR)\src\phobos
 	$(CP) $(SRC_STD) $(DIR)\src\phobos\std
 	$(CP) $(SRC_STD_C) $(DIR)\src\phobos\std\c

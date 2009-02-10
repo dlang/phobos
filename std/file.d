@@ -722,7 +722,7 @@ string[] listdir(string pathname, RegExp r)
  *
  * Note:
  *
- * This function is being phased off. New code should use $(D_PARAM
+ * This function is being phased out. New code should use $(D_PARAM
  * dirEntries) (see below).
  *
  * Params:
@@ -772,7 +772,7 @@ void listdir(in string pathname, bool delegate(string filename) callback)
  *
  * Note:
  *
- * This function is being phased off. New code should use $(D_PARAM
+ * This function is being phased out. New code should use $(D_PARAM
  * dirEntries) (see below).
  *
  * Params:
@@ -895,9 +895,9 @@ void copy(in string from, in string to)
 
 }
 
-/* =========================== linux ======================= */
+/* =========================== Posix ======================= */
 
-version (linux)
+version (Posix)
 {
 
 private import std.date;
@@ -1074,9 +1074,21 @@ void getTimes(in string name, out d_time ftc, out d_time fta, out d_time ftm)
 {
     struct_stat statbuf = void;
     cenforce(std.c.linux.linux.stat(toStringz(name), &statbuf) == 0, name);
-    ftc = cast(d_time) statbuf.st_ctime * std.date.TicksPerSecond;
-    fta = cast(d_time) statbuf.st_atime * std.date.TicksPerSecond;
-    ftm = cast(d_time) statbuf.st_mtime * std.date.TicksPerSecond;
+    version (linux)
+    {
+	ftc = cast(d_time) statbuf.st_ctime * std.date.TicksPerSecond;
+	fta = cast(d_time) statbuf.st_atime * std.date.TicksPerSecond;
+	ftm = cast(d_time) statbuf.st_mtime * std.date.TicksPerSecond;
+    else version (OSX)
+    {	// BUG: should add in tv_nsec field
+	ftc = cast(d_time)statbuf.st_ctimespec.tv_sec * std.date.TicksPerSecond;
+	fta = cast(d_time)statbuf.st_atimespec.tv_sec * std.date.TicksPerSecond;
+	ftm = cast(d_time)statbuf.st_mtimespec.tv_sec * std.date.TicksPerSecond;
+    }
+    else
+    {
+	static assert(0);
+    }
 }
 
 /*************************
@@ -1354,10 +1366,24 @@ struct DirEntry
         if (didstat) return;
 	enforce(std.c.linux.linux.stat(toStringz(name), &statbuf) == 0,
                 "Failed to stat file `"~name~"'");
-	_size = statbuf.st_size;
-	_creationTime = cast(d_time)statbuf.st_ctime * std.date.TicksPerSecond;
-	_lastAccessTime = cast(d_time)statbuf.st_atime * std.date.TicksPerSecond;
-	_lastWriteTime = cast(d_time)statbuf.st_mtime * std.date.TicksPerSecond;
+	_size = cast(ulong)statbuf.st_size;
+	version (linux)
+	{
+	    _creationTime = cast(d_time)statbuf.st_ctime * std.date.TicksPerSecond;
+	    _lastAccessTime = cast(d_time)statbuf.st_atime * std.date.TicksPerSecond;
+	    _lastWriteTime = cast(d_time)statbuf.st_mtime * std.date.TicksPerSecond;
+	}
+	else version (OSX)
+	{
+	    _creationTime =   cast(d_time)statbuf.st_ctimespec.tv_sec * std.date.TicksPerSecond;
+	    _lastAccessTime = cast(d_time)statbuf.st_atimespec.tv_sec * std.date.TicksPerSecond;
+	    _lastWriteTime =  cast(d_time)statbuf.st_mtimespec.tv_sec * std.date.TicksPerSecond;
+	}
+	else
+	{
+	    static assert(0);
+	}
+
 	didstat = true;
     }
 }
@@ -1375,6 +1401,7 @@ string[] listdir(string pathname)
 	result ~= filename;
 	return true; // continue
     }
+
     listdir(pathname, &listing);
     return result;
 }
@@ -1391,6 +1418,7 @@ string[] listdir(string pathname, string pattern)
 	}
 	return true; // continue
     }
+    
     listdir(pathname, &callback);
     return result;
 }
@@ -1440,6 +1468,7 @@ void listdir(string pathname, bool delegate(DirEntry* de) callback)
     }
 }
 
+
 /***************************************************
  * Copy a file. File timestamps are preserved.
  */
@@ -1484,9 +1513,23 @@ void copy(in string from, in string to)
 
         cenforce(std.c.linux.linux.close(fdw) != -1, from);
 
-        utimbuf utim = void;
-        utim.actime = cast(__time_t) statbuf.st_atime;
-        utim.modtime = cast(__time_t) statbuf.st_mtime;
+    utimbuf utim = void;
+    version (linux)
+    {
+	utim.actime = cast(__time_t)statbuf.st_atime;
+	utim.modtime = cast(__time_t)statbuf.st_mtime;
+    }
+    else version (OSX)
+    {
+	utim.actime = cast(__time_t)statbuf.st_atimespec.tv_sec;
+	utim.modtime = cast(__time_t)statbuf.st_mtimespec.tv_sec;
+    }
+    else
+    {
+	static assert(0);
+    }
+
+
         cenforce(utime(toz, &utim) != -1, from);
     }
     else

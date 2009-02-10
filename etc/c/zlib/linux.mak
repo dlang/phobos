@@ -64,10 +64,10 @@ zlib.a: $(OBJS)
 	ar -r $@ $(OBJS)
 
 example: example.o zlib.a
-	$(CC) -o $@ example.o zlib.a -g
+	$(CC) $(CFLAGS) -o $@ example.o zlib.a -g
 
 minigzip: minigzip.o zlib.a
-	$(CC) -o $@ minigzip.o zlib.a -g
+	$(CC) $(CFLAGS) -o $@ minigzip.o zlib.a -g
 
 test: example minigzip
 	./example
@@ -75,3 +75,4 @@ test: example minigzip
 
 clean:
 	$(RM) $(OBJS) zlib.a example.o example minigzip minigzip.o test foo.gz
+
