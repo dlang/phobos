@@ -89,7 +89,7 @@ ZLIB_OBJS = etc/c/zlib/adler32.o etc/c/zlib/compress.o \
 	etc/c/zlib/inftrees.o etc/c/zlib/inffast.o
 
 GC_OBJS= internal/gc/gc.o internal/gc/gcold.o internal/gc/gcx.o \
-	internal/gc/gcbits.o internal/gc/gclinux.o
+	internal/gc/gcbits.o internal/gc/gclinux.o internal/gc/gcosxc.o
 
 SRC=	errno.c object.d unittest.d crc32.d gcstats.d
 
