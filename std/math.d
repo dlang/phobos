@@ -1557,7 +1557,7 @@ int isnormal(X)(X x)
         // doubledouble is normal if the least significant part is normal.
         return isnormal((cast(double*)&x)[MANTISSA_LSB]);
     } else {
-	ushort e = F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT]
+	ushort e = F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT];
         return (e != F.EXPMASK && e!=0);
     }
 }
