@@ -1,3 +1,5 @@
+// Written in the D programming language
+
 /**
  * The std.cstream module bridges std.c.stdio (or std.stdio) and std.stream.
  * Both std.c.stdio and std.stream are publicly imported by std.cstream.
@@ -153,8 +155,8 @@ class CFile : Stream {
     file = new CFile(f,FileMode.In,true);
     // should be ok to read
     assert(file.readable);
-    char[] line = file.readLine();
-    char[] exp = "Testing stream.d:";
+    auto line = file.readLine();
+    auto exp = "Testing stream.d:";
     assert(line[0] == 'T');
     assert(line.length == exp.length);
     assert(!std.string.cmp(line, "Testing stream.d:"));

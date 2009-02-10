@@ -1,3 +1,4 @@
+// Written in the D programming language
 
 /*
  *  Copyright (C) 2003-2009 by Digital Mars, http://www.digitalmars.com
@@ -43,7 +44,7 @@ private import std.c.process;
  * Returns: exit status of command
  */
 
-int system(char[] command)
+int system(string command)
 {
     return std.c.process.system(toStringz(command));
 }
@@ -62,7 +63,7 @@ private void toAStringz(char[][] a, char**az)
 
 //version (Windows)
 //{
-//    int spawnvp(int mode, char[] pathname, char[][] argv)
+//    int spawnvp(int mode, string pathname, string[] argv)
 //    {
 //	char** argv_ = cast(char**)alloca((char*).sizeof * (1 + argv.length));
 //
@@ -77,9 +78,9 @@ private void toAStringz(char[][] a, char**az)
 alias std.c.process._P_WAIT P_WAIT;
 alias std.c.process._P_NOWAIT P_NOWAIT;
 
-int spawnvp(int mode, char[] pathname, char[][] argv)
+int spawnvp(int mode, string pathname, string[] argv)
 {
-    char** argv_ = cast(char**)alloca((char*).sizeof * (1 + argv.length));
+    auto argv_ = cast(char**)alloca((char*).sizeof * (1 + argv.length));
 
     toAStringz(argv, argv_);
 
@@ -165,9 +166,9 @@ int  exitstatus(int status) { return (status & 0xff00) >> 8; }
  * setting for the program.
  */
 
-int execv(char[] pathname, char[][] argv)
+int execv(string pathname, string[] argv)
 {
-    char** argv_ = cast(char**)alloca((char*).sizeof * (1 + argv.length));
+    auto argv_ = cast(char**)alloca((char*).sizeof * (1 + argv.length));
 
     toAStringz(argv, argv_);
 
@@ -175,10 +176,10 @@ int execv(char[] pathname, char[][] argv)
 }
 
 /** ditto */
-int execve(char[] pathname, char[][] argv, char[][] envp)
+int execve(string pathname, string[] argv, string[] envp)
 {
-    char** argv_ = cast(char**)alloca((char*).sizeof * (1 + argv.length));
-    char** envp_ = cast(char**)alloca((char*).sizeof * (1 + envp.length));
+    auto argv_ = cast(char**)alloca((char*).sizeof * (1 + argv.length));
+    auto envp_ = cast(char**)alloca((char*).sizeof * (1 + envp.length));
 
     toAStringz(argv, argv_);
     toAStringz(envp, envp_);
@@ -187,9 +188,9 @@ int execve(char[] pathname, char[][] argv, char[][] envp)
 }
 
 /** ditto */
-int execvp(char[] pathname, char[][] argv)
+int execvp(string pathname, string[] argv)
 {
-    char** argv_ = cast(char**)alloca((char*).sizeof * (1 + argv.length));
+    auto argv_ = cast(char**)alloca((char*).sizeof * (1 + argv.length));
 
     toAStringz(argv, argv_);
 
@@ -197,7 +198,7 @@ int execvp(char[] pathname, char[][] argv)
 }
 
 /** ditto */
-int execvpe(char[] pathname, char[][] argv, char[][] envp)
+int execvpe(string pathname, string[] argv, string[] envp)
 {
 version (Posix)
 {
@@ -210,16 +211,16 @@ version (Posix)
     else
     {
         // No, so must traverse PATHs, looking for first match
-        char[][]    envPaths    =   std.string.split(std.string.toString(std.c.stdlib.getenv("PATH")), ":");
+	string[]    envPaths    =   std.string.split(std.string.toString(std.c.stdlib.getenv("PATH")), ":");
         int         iRet        =   0;
 
         // Note: if any call to execve() succeeds, this process will cease 
         // execution, so there's no need to check the execve() result through
         // the loop.
 
-        foreach(char[] pathDir; envPaths)
+        foreach(string pathDir; envPaths)
         {
-            char[]  composite   =   pathDir ~ "/" ~ pathname;
+            string  composite   =  pathDir ~ "/" ~ pathname;
 
             iRet = execve(composite, argv, envp);
         }
@@ -233,8 +234,8 @@ version (Posix)
 }
 else version(Windows)
 {
-    char** argv_ = cast(char**)alloca((char*).sizeof * (1 + argv.length));
-    char** envp_ = cast(char**)alloca((char*).sizeof * (1 + envp.length));
+    auto argv_ = cast(char**)alloca((char*).sizeof * (1 + argv.length));
+    auto envp_ = cast(char**)alloca((char*).sizeof * (1 + envp.length));
 
     toAStringz(argv, argv_);
     toAStringz(envp, envp_);
@@ -251,7 +252,7 @@ else
 
 version(MainTest)
 {
-    int main(char[][] args)
+    int main(string[] args)
     {
         if(args.length < 2)
         {
@@ -261,13 +262,13 @@ version(MainTest)
         }
         else
         {
-            char[][]    dummy_env;
+            string[]    dummy_env;
             
             dummy_env ~= "VAL0=value";
             dummy_env ~= "VAL1=value";
 
 /+
-            foreach(char[] arg; args)
+            foreach(string arg; args)
             {
                 printf("%.*s\n", arg);
             }

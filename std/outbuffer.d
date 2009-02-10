@@ -1,4 +1,4 @@
-// outbuffer.d
+// Written in the D programming language
 
 /**
  * Boilerplate:
@@ -163,7 +163,7 @@ class OutBuffer
 	offset += real.sizeof;
     }
 
-    void write(char[] s)		/// ditto
+    void write(string s)		/// ditto
     {
 	write(cast(ubyte[])s);
     }
@@ -241,15 +241,14 @@ class OutBuffer
      * Append output of C's vprintf() to internal buffer.
      */
 
-    void vprintf(char[] format, va_list args)
+    void vprintf(string format, va_list args)
     {
 	char[128] buffer;
 	char* p;
-	char* f;
 	uint psize;
 	int count;
 
-	f = toStringz(format);
+	auto f = toStringz(format);
 	p = buffer.ptr;
 	psize = buffer.length;
 	for (;;)
@@ -293,7 +292,7 @@ class OutBuffer
      * Append output of C's printf() to internal buffer.
      */
 
-    void printf(char[] format, ...)
+    void printf(string format, ...)
     {
 	va_list ap;
 	ap = cast(va_list)&format;

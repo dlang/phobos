@@ -2,15 +2,15 @@
 // Written in the D programming language.
 
 /**
- * This module implements the workhorse functionality for string and I/O formatting.
- * It's comparable to C99's vsprintf().
+ * This module implements the workhorse functionality for string and
+ * I/O formatting.  It's comparable to C99's vsprintf().
  *
  * Macros:
  *	WIKI = Phobos/StdFormat
  */
 
 /*
- *  Copyright (C) 2004-2006 by Digital Mars, www.digitalmars.com
+ *  Copyright (C) 2004-2009 by Digital Mars, www.digitalmars.com
  *  Written by Walter Bright
  *
  *  This software is provided 'as-is', without any express or implied

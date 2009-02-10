@@ -1,3 +1,4 @@
+// Written in the D programming language.
 
 /**
  * Macros:
@@ -112,9 +113,7 @@ version (Posix) alias std.string.cmp fcmp;
 
 string getExt(string fullname)
 {
-    uint i;
-
-    i = fullname.length;
+    auto i = fullname.length;
     while (i > 0)
     {
 	if (fullname[i - 1] == '.')
@@ -137,14 +136,13 @@ string getExt(string fullname)
 unittest
 {
     debug(path) printf("path.getExt.unittest\n");
-    int i;
     string result;
 
     version (Win32)
 	result = getExt("d:\\path\\foo.bat");
     version (Posix)
 	result = getExt("/path/foo.bat");
-    i = cmp(result, "bat");
+    auto i = cmp(result, "bat");
     assert(i == 0);
 
     version (Win32)
@@ -206,9 +204,7 @@ unittest
 
 string getName(string fullname)
 {
-    uint i;
-
-    i = fullname.length;
+    auto i = fullname.length;
     while (i > 0)
     {
 	if (fullname[i - 1] == '.')
@@ -231,11 +227,10 @@ string getName(string fullname)
 unittest
 {
     debug(path) printf("path.getName.unittest\n");
-    int i;
     string result;
 
     result = getName("foo.bar");
-    i = cmp(result, "foo");
+    auto i = cmp(result, "foo");
     assert(i == 0);
 
     result = getName("d:\\path.two\\bar");
@@ -279,9 +274,8 @@ string getBaseName(string fullname)
     }
     body
     {
-	uint i;
-
-	for (i = fullname.length; i > 0; i--)
+	auto i = fullname.length;
+	for (; i > 0; i--)
 	{
 	    version(Win32)
 	    {
@@ -416,9 +410,7 @@ string getDrive(string fullname)
     {
 	version(Win32)
 	{
-	    int i;
-
-	    for (i = 0; i < fullname.length; i++)
+	    for (uint i = 0; i < fullname.length; i++)
 	    {
 		if (fullname[i] == ':')
 		    return fullname[0 .. i + 1];

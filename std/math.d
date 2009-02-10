@@ -247,7 +247,6 @@ real abs(ireal y)
     return fabs(y.im);
 }
 
-
 unittest
 {
     assert(isIdentical(abs(-0.0L), 0.0L));
@@ -336,7 +335,8 @@ ireal sin(ireal y)
   return cosh(y.im)*1i;
 }
 
-unittest {
+unittest
+{
   assert(sin(0.0+0.0i) == 0.0);
   assert(sin(2.0+0.0i) == sin(2.0L) );
 }
@@ -1259,7 +1259,6 @@ unittest
         real y = vals[i][1];
         real z = vals[i][2];
         real h = hypot(x, y);
-
         assert(mfeq(z, h, .0000001));
     }
 }

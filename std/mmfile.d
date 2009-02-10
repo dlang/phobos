@@ -234,7 +234,7 @@ class MmFile
 		}
 		else version (Posix)
 		{
-			char* namez = toStringz(filename);
+			auto namez = toStringz(filename);
 			void* p;
 			int oflag;
 			int fmode;
