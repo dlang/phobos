@@ -786,7 +786,7 @@ class Thread
         version (OSX)
         {
             if (state != TS.RUNNING || thread_suspend(machid) != KERN_SUCCESS)
-                error("cannot pause");        
+                error("cannot pause");
         }
         else
         {
@@ -796,7 +796,7 @@ class Thread
 		    error("cannot pause");
                 else
                     sem_wait(&flagSuspend);	// wait for acknowledgement
-                }
+            }
             else
                 error("cannot pause");
         }
@@ -807,10 +807,10 @@ class Thread
         version (OSX)
         {
             if (state != TS.RUNNING || thread_resume(machid) != KERN_SUCCESS)
-                error("cannot pause");        
+                error("cannot resume");
         }
         else
-        { 
+        {
 	    if (state == TS.RUNNING)
 	    {
 	        if (pthread_kill(id, SIGUSR2))
@@ -835,18 +835,30 @@ class Thread
                     Thread t = allThreads[i];
                     if (t && !pthread_equal(thisid, t.id) && t.state == TS.RUNNING)
                     {
-                        if (pthread_kill(t.id, SIGUSR1))
-                            t.error("cannot pause");
-                        else
-                            npause++;	// count of paused threads
+			version (OSX)
+			{
+			    if (state != TS.RUNNING || thread_suspend(machid) != KERN_SUCCESS)
+				error("cannot pause");
+			}
+        		else
+			{
+                            if (pthread_kill(t.id, SIGUSR1))
+                        	t.error("cannot pause");
+                            else
+                            	npause++;	// count of paused threads
+			}
                     }
                 }
 
-                // Wait for each paused thread to acknowledge
-                while (npause--)
-                {
-                    sem_wait(&flagSuspend);
-                }
+		version (OSX) {}
+		else
+		{
+                    // Wait for each paused thread to acknowledge
+                    while (npause--)
+                    {
+                    	sem_wait(&flagSuspend);
+                    }
+		}
             }
         }
     }
