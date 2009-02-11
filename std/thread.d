@@ -837,8 +837,8 @@ class Thread
                     {
 			version (OSX)
 			{
-			    if (state != TS.RUNNING || thread_suspend(machid) != KERN_SUCCESS)
-				error("cannot pause");
+			    if (t.state != TS.RUNNING || thread_suspend(t.machid) != KERN_SUCCESS)
+				t.error("cannot pause");
 			}
         		else
 			{

@@ -244,6 +244,8 @@ SRC_STD_C_WIN= std\c\windows\windows.d std\c\windows\com.d \
 SRC_STD_C_LINUX= std\c\linux\linux.d std\c\linux\linuxextern.d \
 	std\c\linux\socket.d std\c\linux\pthread.d
 
+SRC_STD_C_OSX= std\c\osx\osx.d
+
 SRC_ETC= etc\gamma.d
 
 SRC_ETC_C= etc\c\zlib.d
@@ -288,6 +290,7 @@ SRC_GC= internal\gc\gc.d \
 	internal\gc\gcbits.d \
 	internal\gc\win32.d \
 	internal\gc\gclinux.d \
+	internal\gc\gcosxc.c \
 	internal\gc\testgc.d \
 	internal\gc\win32.mak \
 	internal\gc\linux.mak \
@@ -894,6 +897,7 @@ zip : win32.mak linux.mak osx.mak phoboslicense.txt std.ddoc $(SRC) \
 	zip32 -u phobos $(SRC_STD_WIN)
 	zip32 -u phobos $(SRC_STD_C_WIN)
 	zip32 -u phobos $(SRC_STD_C_LINUX)
+	zip32 -u phobos $(SRC_STD_C_OSX)
 	zip32 -u phobos $(SRC_ETC)
 	zip32 -u phobos $(SRC_ETC_C)
 	zip32 -u phobos $(SRC_ZLIB)
@@ -917,6 +921,7 @@ install:
 	$(CP) $(SRC_STD_WIN) $(DIR)\src\phobos\std\windows
 	$(CP) $(SRC_STD_C_WIN) $(DIR)\src\phobos\std\c\windows
 	$(CP) $(SRC_STD_C_LINUX) $(DIR)\src\phobos\std\c\linux
+	$(CP) $(SRC_STD_C_OSX) $(DIR)\src\phobos\std\c\osx
 	$(CP) $(SRC_ETC) $(DIR)\src\phobos\etc
 	$(CP) $(SRC_ETC_C) $(DIR)\src\phobos\etc\c
 	$(CP) $(SRC_ZLIB) $(DIR)\src\phobos\etc\c\zlib

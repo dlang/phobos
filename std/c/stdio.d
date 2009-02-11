@@ -1,6 +1,6 @@
 
 /**
- * C's &lt;stdio.h&gt;
+ * C's &lt;stdio.h&gt; for the D programming language
  * Authors: Walter Bright, Digital Mars, http://www.digitalmars.com
  * License: Public Domain
  * Macros:
@@ -272,9 +272,13 @@ version (FreeBSD)
 
 
 char *	 tmpnam(char *);	///
-FILE *	 fopen(char *,char *);	///
-FILE *	 _fsopen(char *,char *,int );	///
-FILE *	 freopen(char *,char *,FILE *);	///
+FILE *	 fopen(in char *,in char *);	///
+version(linux)
+{
+    FILE * fopen64(in char *,in char *);	///
+}
+FILE *	 _fsopen(in char *,in char *,int );	///
+FILE *	 freopen(in char *,in char *,FILE *);	///
 int	 fseek(FILE *,int,int);	///
 int	 ftell(FILE *);	///
 char *	 fgets(char *,int,FILE *);	///
