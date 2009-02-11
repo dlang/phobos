@@ -1002,6 +1002,10 @@ class Thread
 	}
 	else version (OSX)
 	{
+            t.machid = pthread_mach_thread_np( t.id );
+            if( t.machid == machid.init )
+                t.error("failed to obtain machid");
+
 	    t.stackBottom = __osx_stack_end;
 	}
 	else
