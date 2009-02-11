@@ -950,6 +950,11 @@ class Thread
 	// Need to set t.id here, because thread is off and running
 	// before pthread_create() sets it.
 	t.id = pthread_self();
+	
+	version (OSX)
+        {
+            t.machid = pthread_mach_thread_np( t.id );
+        }	
 
 	t.stackBottom = getESP();
 	try
