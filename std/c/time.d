@@ -17,31 +17,21 @@ alias int clock_t;
 
 version (Windows)
 {   const clock_t CLOCKS_PER_SEC = 1000;
-}
-else version (linux)
-{   const clock_t CLOCKS_PER_SEC = 1000000;
-}
-else version (darwin)
-{
-    const clock_t CLOCKS_PER_SEC = 100;
-}
-else
-{
-    static assert(0);
-}
-
-version (Windows)
-{
     const clock_t CLK_TCK        = 1000;
 }
 else version (linux)
-{
+{   const clock_t CLOCKS_PER_SEC = 1000000;
     extern (C) int sysconf(int);
     extern clock_t CLK_TCK;
     /*static this()
     {
 	CLK_TCK = cast(clock_t) sysconf(2);
     }*/
+}
+else version (OSX)
+{
+    const clock_t CLOCKS_PER_SEC = 100;
+    const clock_t CLK_TCK        = 100;
 }
 else
 {
