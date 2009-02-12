@@ -324,7 +324,7 @@ html : $(DOCS)
 
 internal\gc\dmgc.lib:
 	cd internal\gc
-	make -f win32.mak dmgc.lib
+	make DMD=$(DMD) -f win32.mak dmgc.lib
 	cd ..\..
 
 etc\c\zlib\zlib.lib:
@@ -911,7 +911,7 @@ cleanhtml:
 	del $(DOCS)
 
 install:
-	$(CP) phobos.lib gcstub.obj $(DIR)\lib
+	$(CP) phobos.lib gcstub.obj $(DIR)\windows\lib
 	$(CP) win32.mak linux.mak osx.mak phoboslicense.txt minit.obj std.ddoc $(DIR)\src\phobos
 	$(CP) $(SRC) $(DIR)\src\phobos
 	$(CP) $(SRC_STD) $(DIR)\src\phobos\std
