@@ -1,7 +1,7 @@
 
 /**
  * C's &lt;string.h&gt;
- * Authors: Walter Bright, Digital Mars, www.digitalmars.com
+ * Authors: Walter Bright, Digital Mars, http://www.digitalmars.com
  * License: Public Domain
  * Macros:
  *	WIKI=Phobos/StdCString
@@ -43,3 +43,9 @@ version (linux)
 {
     const(char)* strerror_r(int errnum, char* buf, size_t buflen);	///
 }
+
+version (OSX)
+{
+    int strerror_r(int errnum, char* buf, size_t buflen);	///
+}
+
