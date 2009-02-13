@@ -36,7 +36,7 @@ ifdef WIN32
       DFLAGS =
       LDFLAGS =
 else
-      OBJDIR = obj/linux
+      OBJDIR = obj/osx
       OBJEXT = o
       LIBEXT = a
       EXEEXT =
@@ -90,7 +90,7 @@ debug, release, unittest/debug, unittest/release, clean, or html)
 endif
 
 ifneq (none,$(OBJDIR))
-      DUMMY := $(shell mkdir --parents $(OBJDIR) $(OBJDIR)/etc/c/zlib)
+      DUMMY := $(shell mkdir -p $(OBJDIR) $(OBJDIR)/etc/c/zlib)
 endif
 
 LIB=$(OBJDIR)/libphobos2.$(LIBEXT)
@@ -99,25 +99,25 @@ DRUNTIME=../druntime/lib/libdruntime.a
 
 .SUFFIXES: .d
 $(OBJDIR)/%.$(OBJEXT) : %.c
-	$(CC) -c $(CFLAGS) -o$@ $<
+	$(CC) -c $(CFLAGS) -o $@ $<
 
 $(OBJDIR)/%.$(OBJEXT) : %.cpp
-	g++ -c $(CFLAGS) -o$@ $<
+	g++ -c $(CFLAGS) -o $@ $<
 
 $(OBJDIR)/%.$(OBJEXT) : %.d
 	$(DMD) -I$(dir $<) -c $(DFLAGS) -of$@ $<
 
 $(OBJDIR)/%.$(OBJEXT) : %.asm
-	$(CC) -c -o$@ $<
+	$(CC) -c -o $@ $<
 
 debug release unittest/debug unittest/release : $(OBJDIR)/unittest$(EXEEXT)
 
 all :
-	$(MAKE) -f linux.mak release
-	$(MAKE) -f linux.mak unittest/release
-	$(MAKE) -f linux.mak debug
-	$(MAKE) -f linux.mak unittest/debug
-	$(MAKE) -f linux.mak html
+	$(MAKE) -f osx.mak release
+	$(MAKE) -f osx.mak unittest/release
+	$(MAKE) -f osx.mak debug
+	$(MAKE) -f osx.mak unittest/debug
+	$(MAKE) -f osx.mak html
 
 $(OBJDIR)/unittest$(EXEEXT) : $(OBJDIR)/unittest.$(OBJEXT) \
                    $(OBJDIR)/all_std_modules_generated.$(OBJEXT) $(LIB)
@@ -127,7 +127,7 @@ ifdef WIN32
 	mv unittest.exe $@
 	wine $@
 else
-	$(CC) $(CFLAGS) $(LDFLAGS) -o$@ $^ -lpthread -lm -g -ldl
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^ -lpthread -lm -g -ldl
 endif
 ifeq (release,$(MAKECMDGOALS))
 	ln -sf `pwd`/$(OBJDIR)/libphobos2.$(LIBEXT) ../../lib
@@ -153,8 +153,8 @@ STD_C_MODULES = stdarg stdio
 STD_C_MODULES_NOTBUILT = fenv math process stddef stdlib string time locale \
 	wcharh
 
-STD_C_LINUX_MODULES = linux socket
-STD_C_LINUX_MODULES_NOTBUILT = linuxextern pthread termios
+STD_C_LINUX_MODULES = linux socket pthread
+STD_C_LINUX_MODULES_NOTBUILT = linuxextern termios
 
 STD_C_WINDOWS_MODULES_NOTBUILT = windows com winsock stat
 
@@ -179,7 +179,7 @@ SRC = object.d unittest.d crc32.d
 SRC_ZLIB = ChangeLog README adler32.c algorithm.txt compress.c crc32.c	\
 	crc32.h deflate.c deflate.h example.c gzio.c infback.c		\
 	inffast.c inffast.h inffixed.h inflate.c inflate.h inftrees.c	\
-	inftrees.h linux.mak minigzip.c trees.c trees.h uncompr.c	\
+	inftrees.h osx.mak minigzip.c trees.c trees.h uncompr.c	\
 	win32.mak zconf.h zconf.in.h zlib.3 zlib.h zutil.c zutil.h
 SRC_ZLIB := $(addprefix etc/c/zlib/,$(SRC_ZLIB))
 
@@ -189,7 +189,7 @@ SRC_DOCUMENTABLES = phobos.d $(addprefix std/, $(addsuffix .d,		\
 	$(addprefix std/c/linux/,$(addsuffix .d,			\
 	$(STD_C_LINUX_MODULES) $(STD_C_LINUX_MODULES_NOTBUILT)))
 
-SRC_RELEASEZIP = linux.mak win32.mak phoboslicense.txt $(SRC)		\
+SRC_RELEASEZIP = linux.mak win32.mak osx.mak phoboslicense.txt $(SRC)		\
 	$(SRC_ZLIB) $(addprefix std/, $(addsuffix .d, $(STD_MODULES)    \
 	$(STD_MODULES_NOTBUILT))) $(addprefix std/c/, $(addsuffix .d,	\
 	$(STD_C_MODULES) $(STD_C_MODULES_NOTBUILT))) $(addprefix	\
@@ -213,7 +213,7 @@ SRC2LIB := $(addsuffix .d,$(SRC2LIB))
 
 $(LIB) : $(SRC2LIB) $(OBJS) $(DRUNTIME) $(MAKEFILE_LIST)
 	@echo $(DMD) $(DFLAGS) -lib -of$@ "[...tons of files...]"
-	@$(DMD) $(DFLAGS) -lib -of$@ $(SRC2LIB) $(OBJS) $(DRUNTIME)
+	$(DMD) $(DFLAGS) -lib -of$@ $(SRC2LIB) $(OBJS) $(DRUNTIME)
 
 ###########################################################
 # Dox

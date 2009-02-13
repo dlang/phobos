@@ -1,6 +1,6 @@
 
 /* Written by Walter Bright, Christopher E. Miller, and many others.
- * www.digitalmars.com
+ * http://www.digitalmars.com/d/
  * Placed into public domain.
  * Linux(R) is the registered trademark of Linus Torvalds in the U.S. and other
  * countries.
@@ -13,56 +13,126 @@ public import std.c.linux.pthread;
 
 private import std.c.stdio;
 
-alias int pid_t;
-alias int off_t;
-alias uint mode_t;
+version (OSX)
+{
+    alias int time_t;
+    alias int __time_t;
+    alias int pid_t;
+    alias long off_t;
+    alias long blkcnt_t;
+    alias int blksize_t;
+    alias int dev_t;
+    alias uint gid_t;
+    alias uint id_t;
+    alias ulong ino64_t;
+    alias uint ino_t;
+    alias ushort mode_t;
+    alias ushort nlink_t;
+    alias uint uid_t;
+    alias uint fsblkcnt_t;
+    alias uint fsfilcnt_t;
 
-alias uint uid_t;
-alias uint gid_t;
+    struct timespec
+    {
+	time_t tv_sec;
+	int tv_nsec;
+    }
+}
+
+version (linux)
+{
+    alias int __time_t;
+    alias int pid_t;
+    alias int off_t;
+    alias uint mode_t;
+
+    alias uint uid_t;
+    alias uint gid_t;
+
+    struct timespec
+    {
+        __time_t tv_sec;    /* seconds   */
+        int tv_nsec;        /* nanosecs. */
+    }
+}
 
 static if (size_t.sizeof == 4)
     alias int ssize_t;
 else
     alias long ssize_t;
 
-enum : int
+version(linux)
 {
-	SIGHUP = 1,
-	SIGINT = 2,
-	SIGQUIT = 3,
-	SIGILL = 4,
-	SIGTRAP = 5,
-	SIGABRT = 6,
-	SIGIOT = 6,
-	SIGBUS = 7,
-	SIGFPE = 8,
-	SIGKILL = 9,
-	SIGUSR1 = 10,
-	SIGSEGV = 11,
-	SIGUSR2 = 12,
-	SIGPIPE = 13,
-	SIGALRM = 14,
-	SIGTERM = 15,
-	SIGSTKFLT = 16,
-	SIGCHLD = 17,
-	SIGCONT = 18,
-	SIGSTOP = 19,
-	SIGTSTP = 20,
-	SIGTTIN = 21,
-	SIGTTOU = 22,
-	SIGURG = 23,
-	SIGXCPU = 24,
-	SIGXFSZ = 25,
-	SIGVTALRM = 26,
-	SIGPROF = 27,
-	SIGWINCH = 28,
-	SIGPOLL = 29,
-	SIGIO = 29,
-	SIGPWR = 30,
-	SIGSYS = 31,
-	SIGUNUSED = 31,
+    enum : int
+    {
+    	SIGHUP = 1,
+    	SIGINT = 2,
+    	SIGQUIT = 3,
+    	SIGILL = 4,
+    	SIGTRAP = 5,
+    	SIGABRT = 6,
+    	SIGIOT = 6,
+    	SIGBUS = 7,
+    	SIGFPE = 8,
+    	SIGKILL = 9,
+    	SIGUSR1 = 10,
+    	SIGSEGV = 11,
+    	SIGUSR2 = 12,
+    	SIGPIPE = 13,
+    	SIGALRM = 14,
+    	SIGTERM = 15,
+    	SIGSTKFLT = 16,
+    	SIGCHLD = 17,
+    	SIGCONT = 18,
+    	SIGSTOP = 19,
+    	SIGTSTP = 20,
+    	SIGTTIN = 21,
+    	SIGTTOU = 22,
+    	SIGURG = 23,
+    	SIGXCPU = 24,
+    	SIGXFSZ = 25,
+    	SIGVTALRM = 26,
+    	SIGPROF = 27,
+    	SIGWINCH = 28,
+    	SIGPOLL = 29,
+    	SIGIO = 29,
+    	SIGPWR = 30,
+    	SIGSYS = 31,
+    	SIGUNUSED = 31,
+    }
 }
 
+version(OSX)
+{
+    enum : int
+    {
+        SIGABRT   = 6,
+        SIGALRM   = 14,
+        SIGBUS    = 10,
+        SIGCHLD   = 20,
+        SIGCONT   = 19,
+        SIGFPE    = 8,
+        SIGHUP    = 1,
+        SIGILL    = 4,
+        SIGINT    = 2,
+        SIGKILL   = 9,
+        SIGPIPE   = 13,
+        SIGQUIT   = 3,
+        SIGSEGV   = 11,
+        SIGSTOP   = 17,
+        SIGTERM   = 15,
+        SIGTSTP   = 18,
+        SIGTTIN   = 21,
+        SIGTTOU   = 22,
+        SIGUSR1   = 30,
+        SIGUSR2   = 31,
+        SIGURG    = 16,
+    }
+}
+
+
+version (linux)
+{
 enum
 {
     O_RDONLY = 0,
@@ -72,36 +142,90 @@ enum
     O_EXCL = 0200,
     O_TRUNC = 01000,
     O_APPEND = 02000,
+    O_NONBLOCK = 0x800,
+}
 }
 
-struct struct_stat	// distinguish it from the stat() function
+version (OSX)
 {
-    ulong st_dev;	/// device
-    ushort __pad1;
-    uint st_ino;	/// file serial number
-    uint st_mode;	/// file mode
-    uint st_nlink;	/// link count
-    uint st_uid;	/// user ID of file's owner
-    uint st_gid;	/// user ID of group's owner
-    ulong st_rdev;	/// if device then device number
-    ushort __pad2;
-    int st_size;	/// file size in bytes
-    int st_blksize;	/// optimal I/O block size
-    int st_blocks;	/// number of allocated 512 byte blocks
-    int st_atime;
-    uint st_atimensec;
-    int st_mtime;
-    uint st_mtimensec;
-    int st_ctime;
-    uint st_ctimensec;
+enum
+{
+    O_RDONLY = 0,
+    O_WRONLY = 1,
+    O_RDWR = 2,
 
-    uint __unused4;
-    uint __unused5;
+    O_CREAT = 0x200,
+    O_EXCL  = 0x800,
+    O_TRUNC = 0x400,
+    O_APPEND = 8,
+    O_NONBLOCK = 4,
+    O_SYNC = 0x80,
+    O_SHLOCK = 0x10,
+    O_EXLOCK = 0x20,
+    O_ASYNC = 0x40,
+    O_NOFOLLOW = 0x100,
+    O_EVTONLY = 0x8000,
+    O_NOCTTY = 0x20000,
+    O_DIRECTORY = 0x100000,
+    O_SYMLINK   = 0x200000,
+}
+}
+
+version (linux)
+{
+    struct struct_stat	// distinguish it from the stat() function
+    {
+	ulong st_dev;	/// device
+	ushort __pad1;
+	uint st_ino;	/// file serial number
+	uint st_mode;	/// file mode
+	uint st_nlink;	/// link count
+	uint st_uid;	/// user ID of file's owner
+	uint st_gid;	/// user ID of group's owner
+	ulong st_rdev;	/// if device then device number
+	ushort __pad2;
+	int st_size;	/// file size in bytes
+	int st_blksize;	/// optimal I/O block size
+	int st_blocks;	/// number of allocated 512 byte blocks
+	int st_atime;
+	uint st_atimensec;
+	int st_mtime;
+	uint st_mtimensec;
+	int st_ctime;
+	uint st_ctimensec;
+
+	uint __unused4;
+	uint __unused5;
+    }
+}
+version (OSX)
+{
+    struct struct_stat
+    {
+	dev_t st_dev;
+	ino_t st_ino;
+	mode_t st_mode;
+	nlink_t st_nlink;
+	uid_t st_uid;
+	gid_t st_gid;
+	dev_t st_rdev;
+	timespec st_atimespec;
+	timespec st_mtimespec;
+	timespec st_ctimespec;
+	off_t st_size;
+	blkcnt_t st_blocks;
+	blksize_t st_blksize;
+	uint st_flags;
+	uint st_gen;
+	int st_lspare;
+	long st_qspare[2];
+    }
 }
 
 unittest
 {
-    assert(struct_stat.sizeof == 88);
+    version (linux) assert(struct_stat.sizeof == 88);
+    version (OSX)   assert(struct_stat.sizeof == 96);
 }
 
 enum : int
@@ -195,8 +319,6 @@ struct tm
 
 extern (C)
 {
-    int utimes(const char *path, timeval* times);
-    
     int gettimeofday(timeval*, struct_timezone*);
     int settimeofday(in timeval*, in struct_timezone*);
     __time_t time(__time_t*);
@@ -224,8 +346,10 @@ enum
 
 // Memory mapping sharing types
 
-enum
-{	MAP_SHARED	= 1,
+version (linux)
+{
+    enum
+    {	MAP_SHARED	= 1,
 	MAP_PRIVATE	= 2,
 	MAP_TYPE	= 0x0F,
 	MAP_FIXED	= 0x10,
@@ -239,14 +363,41 @@ enum
 	MAP_NORESERVE	= 0x4000,
 	MAP_POPULATE	= 0x8000,
 	MAP_NONBLOCK	= 0x10000,
-}
+    }
 
-// Values for msync()
+    // Values for msync()
 
-enum
-{	MS_ASYNC	= 1,
+    enum
+    {	MS_ASYNC	= 1,
 	MS_INVALIDATE	= 2,
 	MS_SYNC		= 4,
+    }
+}
+
+version (OSX)
+{
+    enum
+    {	MAP_SHARED	= 1,
+	MAP_PRIVATE	= 2,
+	MAP_FIXED	= 0x10,
+	MAP_FILE	= 0,
+	MAP_ANON	= 0x1000,
+	MAP_NORESERVE	= 0x40,
+
+	MAP_RENAME	= 0x20,
+	MAP_RESERVED0080 = 0x80,
+	MAP_NOEXTEND	= 0x100,
+	MAP_HASSEMAPHORE = 0x200,
+	MAP_NOCACHE	= 0x400,
+    }
+
+    // Values for msync()
+
+    enum
+    {	MS_ASYNC	= 1,
+	MS_INVALIDATE	= 2,
+	MS_SYNC		= 0x10,
+    }
 }
 
 // Values for mlockall()
@@ -420,7 +571,7 @@ extern (C)
 
     void* dlopen(in char* file, int mode);
     int   dlclose(void* handle);
-    void* dlsym(void* handle, in char* name);
+    void* dlsym(void* handle, const(char)* name);
     char* dlerror();
 }
 
@@ -440,22 +591,52 @@ extern (C)
 	char *pw_shell;
     }
 
-    enum _SIGSET_NWORDS = 1024 / (8 * uint.sizeof);
-    struct sigset_t
-    {
-	uint[_SIGSET_NWORDS] __val;
-    }
-
     int getpwnam_r(const(char)*, passwd*, void*, size_t, passwd**);
     passwd* getpwnam(in char*);
     passwd* getpwuid(uid_t);
     int getpwuid_r(uid_t, passwd*, char*, size_t, passwd**);
     int kill(pid_t, int);
     int sem_close(sem_t*);
-    int sigemptyset(sigset_t*);
-    int sigfillset(sigset_t*);
-    int sigismember(sigset_t*, int);
-    int sigsuspend(sigset_t*);
+}
+
+extern (C)
+{
+    /* from sched.h
+     */
+    int sched_yield();
+}
+
+extern (C)
+{
+    /* from signal.h
+     */
+    version (linux)
+    {
+	extern (C) alias void (*__sighandler_t)(int);
+
+	const SA_RESTART = 0x10000000u;
+
+	enum _SIGSET_NWORDS = 1024 / (8 * uint.sizeof);
+
+	struct sigset_t
+	{
+	    uint[_SIGSET_NWORDS] __val;
+	}
+
+	struct sigaction_t
+	{
+	    __sighandler_t sa_handler;
+	    sigset_t sa_mask;
+	    int sa_flags;
+	    void (*sa_restorer)();
+	}
+
+        int sigfillset(sigset_t*);
+        int sigdelset(sigset_t*, int);
+        int sigismember(sigset_t*, int);
+        int sigaction(int, sigaction_t*, sigaction_t*);
+        int sigsuspend(sigset_t*);
+    }
 }
 
 extern (C)
@@ -463,13 +644,23 @@ extern (C)
     /* from semaphore.h
      */
 
+  version (OSX)
+  {
+    alias int sem_t;
+  }
+  else version (linux)
+  {
     struct sem_t
     {
         _pthread_fastlock __sem_lock;
         int __sem_value;
         void* __sem_waiting;
     }
-
+  }
+  else
+  {
+    static assert(0);
+  }
     int sem_init(sem_t*, int, uint);
     int sem_wait(sem_t*);
     int sem_trywait(sem_t*);
@@ -491,26 +682,3 @@ extern (C)
 
     int utime(const char* filename, utimbuf* buf);
 }
-
-extern (C)
-{
-    /* from unistd.h
-     */
-
-    gid_t getgid();
-    uid_t getuid();
-    int setpgid(pid_t pid, pid_t pgid);
-    pid_t getpgid(pid_t pid);
-    int setpgrp();
-    pid_t getpgrp();
-
-}
-
-extern (C)
-{
-    /* from signal.h
-     */
-
-    int killpg(pid_t, int);
-}
-

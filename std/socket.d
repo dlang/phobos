@@ -104,7 +104,7 @@ class SocketException: Exception
 		if(errorCode > 0)
 		{
 		    char[80] buf;
-		    char* cs;
+		    const(char)* cs;
 		    version (linux)
 		    {
 			cs = strerror_r(errorCode, buf.ptr, buf.length);

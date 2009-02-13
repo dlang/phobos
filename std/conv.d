@@ -1512,8 +1512,8 @@ unittest
     assert( d == 1.23456E+2 );
 
     // min and max
-    d = toDouble("2.22507e-308");
-    assert(feq(cast(real)d, cast(real)2.22507e-308));
+    d = toDouble("2.22508e-308");
+    assert(feq(cast(real)d, cast(real)2.22508e-308));
     assert(feq(cast(real)d, cast(real)double.min));
     d = toDouble("1.79769e+308");
     assert(toString(d) == toString(1.79769e+308));
