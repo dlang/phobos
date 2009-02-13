@@ -907,7 +907,7 @@ FILE* fopen(in char[] name, in char[] mode = "r")
     return result;
 }
 
-version (linux)
+version (Posix)
 {
     extern(C) FILE* popen(const char*, const char*);
 

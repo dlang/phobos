@@ -5,33 +5,15 @@
 
 module std.c.linux.pthread;
 
-enum
-{
-  PTHREAD_MUTEX_TIMED_NP,
-  PTHREAD_MUTEX_RECURSIVE_NP,
-  PTHREAD_MUTEX_ERRORCHECK_NP,
-  PTHREAD_MUTEX_ADAPTIVE_NP
-};
+import std.c.linux.linux;
 
-extern (C)
+extern (C):
+
+version(linux)
 {
     /*  pthread declarations taken from pthread headers and
         http://svn.dsource.org/projects/bindings/trunk/pthreads.d
     */
-
-    /* from bits/types.h
-    */
-
-    typedef int __time_t;
-
-    /* from time.h
-    */
-
-    struct timespec
-    {
-        __time_t tv_sec;    /* seconds   */
-        int tv_nsec;        /* nanosecs. */
-    }
 
     /* from bits/pthreadtypes.h
     */
@@ -60,7 +42,7 @@ extern (C)
 
     typedef long __pthread_cond_align_t;
 
-    struct pthread_cond_t 
+    struct pthread_cond_t
     {
         _pthread_fastlock __c_lock;
         _pthread_descr    __c_waiting;
@@ -149,6 +131,138 @@ extern (C)
 	int __rw_kind;
 	int __rw_pshared;
     }
+    
+    enum
+    {
+	PTHREAD_CANCEL_ENABLE,
+	PTHREAD_CANCEL_DISABLE
+    }
+
+    enum
+    {
+	PTHREAD_CANCEL_DEFERRED,
+	PTHREAD_CANCEL_ASYNCHRONOUS
+    }    
+}
+
+version(OSX)
+{
+    /* from bits/types.h
+    */
+
+    // in std.c.linux.linux
+    //typedef int __time_t;
+
+    /* from time.h
+    */
+
+    /* from bits/pthreadtypes.h
+    */
+    private struct _opaque_pthread_t
+    {
+        int       __sig;
+        void*     __cleanup_stack;
+        byte[596] __opaque;
+    }
+
+    alias _opaque_pthread_t* pthread_t;
+
+    alias uint pthread_key_t;
+
+    struct pthread_once_t
+    {
+        int     __sig;
+        byte[4] __opaque;
+    }
+
+    //alias int clockid_t;
+    //alias int pthread_spinlock_t;	// volatile
+
+    struct pthread_cond_t
+    {
+        int      __sig;
+        byte[24] __opaque;
+    }
+
+    struct pthread_condattr_t
+    {
+        int     __sig;
+        byte[4] __opaque;
+    }
+
+    struct pthread_mutex_t
+    {
+        int      __sig;
+        byte[40] __opaque;
+    }
+
+    struct pthread_mutexattr_t
+    {
+        int     __sig;
+        byte[8] __opaque;
+    }
+
+    /* from pthread.h
+    */
+
+    struct _pthread_cleanup_buffer
+    {
+        void function(void*)     __routine;
+        void*                    __arg;
+        _pthread_cleanup_buffer* __next;
+    }
+
+    struct __sched_param
+    {
+        int     sched_priority;
+        byte[4] opaque;
+    }
+
+    struct pthread_attr_t
+    {
+        int      __sig;
+        byte[36] __opaque;
+    }
+
+    /+
+    struct pthread_barrier_t
+    {
+	_pthread_fastlock __ba_lock;
+	int __ba_required;
+	int __ba_present;
+	_pthread_descr __ba_waiting;
+    }
+
+    struct pthread_barrierattr_t
+    {
+	int __pshared;
+    }
+    +/
+
+    struct pthread_rwlockattr_t
+    {
+        int      __sig;
+        byte[12] __opaque;
+    }
+
+    struct pthread_rwlock_t
+    {
+        int       __sig;
+        byte[124] __opaque;
+    }
+    
+    enum
+    {
+	PTHREAD_CANCEL_ENABLE = 1,
+	PTHREAD_CANCEL_DISABLE = 0
+    }
+
+    enum
+    {
+	PTHREAD_CANCEL_DEFERRED = 2,
+	PTHREAD_CANCEL_ASYNCHRONOUS = 0
+    }    
+}
 
     int pthread_mutex_init(pthread_mutex_t*, pthread_mutexattr_t*);
     int pthread_mutex_destroy(pthread_mutex_t*);
@@ -186,6 +300,8 @@ extern (C)
     int pthread_attr_setstacksize(pthread_attr_t*, size_t);
     int pthread_attr_getstacksize(pthread_attr_t*, size_t*);
 
+version(linux)
+{
     int pthread_barrierattr_init(pthread_barrierattr_t*);
     int pthread_barrierattr_getpshared(pthread_barrierattr_t*, int*);
     int pthread_barrierattr_destroy(pthread_barrierattr_t*);
@@ -194,6 +310,7 @@ extern (C)
     int pthread_barrier_init(pthread_barrier_t*, pthread_barrierattr_t*, uint);
     int pthread_barrier_destroy(pthread_barrier_t*);
     int pthread_barrier_wait(pthread_barrier_t*);
+}
 
     int pthread_condattr_init(pthread_condattr_t*);
     int pthread_condattr_destroy(pthread_condattr_t*);
@@ -204,7 +321,11 @@ extern (C)
     void pthread_exit(void*);
     int pthread_getattr_np(pthread_t, pthread_attr_t*);
     int pthread_getconcurrency();
+
+version(linux)
+{
     int pthread_getcpuclockid(pthread_t, clockid_t*);
+}
 
     int pthread_mutexattr_getpshared(pthread_mutexattr_t*, int*);
     int pthread_mutexattr_setpshared(pthread_mutexattr_t*, int);
@@ -230,11 +351,14 @@ extern (C)
     int pthread_rwlockattr_getkind_np(pthread_rwlockattr_t*, int*);
     int pthread_rwlockattr_setkind_np(pthread_rwlockattr_t*, int);
 
+version(linux)
+{
     int pthread_spin_init(pthread_spinlock_t*, int);
     int pthread_spin_destroy(pthread_spinlock_t*);
     int pthread_spin_lock(pthread_spinlock_t*);
     int pthread_spin_trylock(pthread_spinlock_t*);
     int pthread_spin_unlock(pthread_spinlock_t*);
+}
 
     int pthread_cancel(pthread_t);
     void pthread_testcancel();
@@ -245,6 +369,7 @@ extern (C)
     pthread_t pthread_self();
     int pthread_equal(pthread_t, pthread_t);
     int pthread_atfork(void function(), void function(), void function());
+    int pthread_kill(pthread_t, int);
     void pthread_kill_other_threads_np();
     int pthread_setschedparam(pthread_t, int, __sched_param*);
     int pthread_getschedparam(pthread_t, int*, __sched_param*);
@@ -261,5 +386,3 @@ extern (C)
     void _pthread_cleanup_push_defer(_pthread_cleanup_buffer*, void function(void*), void*);
     void _pthread_cleanup_pop(_pthread_cleanup_buffer*, int);
     void _pthread_cleanup_pop_restore(_pthread_cleanup_buffer*, int);
-}
-

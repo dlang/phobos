@@ -931,7 +931,7 @@ class FileException : Exception
 
 private T cenforce(T)(T condition, lazy const(char)[] name)
 {
-    if (!condition) throw new FileException(name.idup, errno);
+    if (!condition) throw new FileException(name.idup, getErrno());
     return condition;
 }
 
@@ -1142,7 +1142,12 @@ d_time lastModified(in string name)
 {
     struct_stat statbuf = void;
     cenforce(std.c.linux.linux.stat(toStringz(name), &statbuf) == 0, name);
+  version (linux)
     return cast(d_time) statbuf.st_mtime * std.date.TicksPerSecond;
+  else version (OSX)
+    return cast(d_time)statbuf.st_mtimespec.tv_sec * std.date.TicksPerSecond;
+  else
+    static assert(0);
 }
 
 /**
@@ -1176,9 +1181,22 @@ correctly prompts building it.
 d_time lastModified(string name, d_time returnIfMissing)
 {
     struct_stat statbuf = void;
+  version (linux)
+  {
     return std.c.linux.linux.stat(toStringz(name), &statbuf) != 0
         ? returnIfMissing
         : cast(d_time) statbuf.st_mtime * std.date.TicksPerSecond;
+  }
+  else version (OSX)
+  {
+    return std.c.linux.linux.stat(toStringz(name), &statbuf) != 0
+        ? returnIfMissing
+	: cast(d_time)statbuf.st_mtimespec.tv_sec * std.date.TicksPerSecond;
+  }
+  else
+  {
+    assert(0);
+  }
 }
 
 unittest
@@ -1250,7 +1268,7 @@ void mkdir(in char[] pathname)
 
 void mkdirRecurse(in char[] pathname)
 {
-    invariant left = dirname(pathname);
+    auto left = dirname(pathname);
     exists(left) || mkdirRecurse(left);
     mkdir(pathname);
 }
