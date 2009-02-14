@@ -14,13 +14,16 @@ private import std.c.stddef;
 
 extern (C):
 
-enum
+version (Windows)
 {
-    _MAX_PATH   = 260,
-    _MAX_DRIVE  = 3,
-    _MAX_DIR    = 256,
-    _MAX_FNAME  = 256,
-    _MAX_EXT    = 256,
+    enum
+    {
+	_MAX_PATH   = 260,
+	_MAX_DRIVE  = 3,
+	_MAX_DIR    = 256,
+	_MAX_FNAME  = 256,
+	_MAX_EXT    = 256,
+    }
 }
 
 ///

@@ -213,7 +213,7 @@ $(LIB) : $(OBJS) $(GC_OBJS) $(ZLIB_OBJS) $(SRCS) $(MAKEFILE)
 	$(DMD) -lib -of$(LIB) $(DFLAGS) $(SRCS) $(OBJS) $(ZLIB_OBJS) $(GC_OBJS)
 
 unittest :
-	$(DMD) $(DFLAGS) -unittest -version=Unittest unittest.d $(SRCS) $(LIB)
+	$(DMD) $(DFLAGS) -unittest -version=Unittest unittest.d $(SRCS)
 	./unittest
 
 cov : $(SRCS) $(LIB)

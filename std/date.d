@@ -948,8 +948,16 @@ version (Posix)
 	__time_t t;
 
 	time(&t);
+      version (OSX)
+      { tm result;
+	localtime_r(&t, &result);
+	return result.tm_gmtoff * TicksPerSecond;
+      }
+      else
+      {
 	localtime(&t);	// this will set timezone
 	return -(timezone * TicksPerSecond);
+      }
     }
 
     /*

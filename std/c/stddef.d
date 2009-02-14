@@ -21,6 +21,10 @@ else version (OSX)
 {
     alias dchar wchar_t;
 }
+else version (FreeBSD)
+{
+    alias dchar wchar_t;
+}
 else
 {
     static assert(0);

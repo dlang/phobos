@@ -11,18 +11,50 @@ module std.c.fenv;
 
 extern (C):
 
-/// Entire floating point environment
-
-struct fenv_t
+version (Windows)
 {
-    version (Windows)
+    /// Entire floating point environment
+
+    struct fenv_t
     {
 	ushort status;
 	ushort control;
 	ushort round;
 	ushort reserved[2];
     }
-    else version (linux)
+
+    extern fenv_t _FE_DFL_ENV;
+
+    /// Default floating point environment
+    fenv_t* FE_DFL_ENV = &_FE_DFL_ENV;
+
+    alias int fexcept_t;	/// Floating point status flags
+
+    int fetestexcept(int excepts);		///
+    int feraiseexcept(int excepts);		///
+    int feclearexcept(int excepts);		///
+    //int fegetexcept(fexcept_t *flagp,int excepts);	///
+    //int fesetexcept(fexcept_t *flagp,int excepts);	///
+    int fegetround();			///
+    int fesetround(int round);		///
+    int fegetprec();			///
+    int fesetprec(int prec);		///
+    int fegetenv(fenv_t *envp);		///
+    int fesetenv(fenv_t *envp);		///
+    //void feprocentry(fenv_t *envp);	///
+    //void feprocexit(const fenv_t *envp);	///
+
+    int fegetexceptflag(fexcept_t *flagp,int excepts);	///
+    int fesetexceptflag(fexcept_t *flagp,int excepts);	///
+    int feholdexcept(fenv_t *envp);		///
+    int feupdateenv(fenv_t *envp);		///
+
+}
+else version (linux)
+{
+    /// Entire floating point environment
+
+    struct fenv_t
     {
 	ushort __control_word;
 	ushort __unused1;
@@ -37,20 +69,100 @@ struct fenv_t
 	ushort __data_selector;
 	ushort __unused5;
     }
-    else version (OSX)
+
+    /// Default floating point environment
+    fenv_t* FE_DFL_ENV = cast(fenv_t*)(-1);
+
+    alias int fexcept_t;	/// Floating point status flags
+
+    int fetestexcept(int excepts);		///
+    int feraiseexcept(int excepts);		///
+    int feclearexcept(int excepts);		///
+    //int fegetexcept(fexcept_t *flagp,int excepts);	///
+    //int fesetexcept(fexcept_t *flagp,int excepts);	///
+    int fegetround();			///
+    int fesetround(int round);		///
+    int fegetprec();			///
+    int fesetprec(int prec);		///
+    int fegetenv(fenv_t *envp);		///
+    int fesetenv(fenv_t *envp);		///
+    //void feprocentry(fenv_t *envp);	///
+    //void feprocexit(const fenv_t *envp);	///
+
+    int fegetexceptflag(fexcept_t *flagp,int excepts);	///
+    int fesetexceptflag(fexcept_t *flagp,int excepts);	///
+    int feholdexcept(fenv_t *envp);		///
+    int feupdateenv(fenv_t *envp);		///
+}
+else version (OSX)
+{
+    /// Entire floating point environment
+
+    struct fenv_t
     {
 	ushort __control;
 	ushort __status;
 	uint __mxcsr;
 	char[8] __reserved;
     }
-    else
+
+    extern fenv_t _FE_DFL_ENV;
+
+    /// Default floating point environment
+    fenv_t* FE_DFL_ENV = &_FE_DFL_ENV;
+
+    alias int fexcept_t;	/// Floating point status flags
+
+    int fetestexcept(int excepts);		///
+    int feraiseexcept(int excepts);		///
+    int feclearexcept(int excepts);		///
+    //int fegetexcept(fexcept_t *flagp,int excepts);	///
+    //int fesetexcept(fexcept_t *flagp,int excepts);	///
+    int fegetround();			///
+    int fesetround(int round);		///
+    int fegetprec();			///
+    int fesetprec(int prec);		///
+    int fegetenv(fenv_t *envp);		///
+    int fesetenv(fenv_t *envp);		///
+    //void feprocentry(fenv_t *envp);	///
+    //void feprocexit(const fenv_t *envp);	///
+
+    int fegetexceptflag(fexcept_t *flagp,int excepts);	///
+    int fesetexceptflag(fexcept_t *flagp,int excepts);	///
+    int feholdexcept(fenv_t *envp);		///
+    int feupdateenv(fenv_t *envp);		///
+}
+else version (FreeBSD)
+{
+    /// Entire floating point environment
+
+    struct fenv_t
     {
-	static assert(0);
+	struct X87
+	{
+	    uint __control;
+	    uint __status;
+	    uint __tag;
+	    char[16] other;
+	}
+
+	X87 __x87;
+	uint __mxcsr;
     }
+
+    extern fenv_t __fe_defl_env;
+
+    /// Default floating point environment
+    fenv_t* FE_DFL_ENV = &__fe_defl_env;
+
+    alias ushort fexcept_t;	/// Floating point status flags
+}
+else
+{
+    static assert(0);
 }
 
-alias int fexcept_t;	/// Floating point status flags
+
 
 /// The various floating point exceptions
 enum
@@ -73,30 +185,6 @@ enum
     FE_TOWARDZERO	= 0xC00,	///
 }
 
-version (Windows)
-{
-    extern fenv_t _FE_DFL_ENV;
-
-    /// Default floating point environment
-    fenv_t* FE_DFL_ENV = &_FE_DFL_ENV;
-}
-else version (OSX)
-{
-    extern fenv_t _FE_DFL_ENV;
-
-    /// Default floating point environment
-    fenv_t* FE_DFL_ENV = &_FE_DFL_ENV;
-}
-else version (linux)
-{
-    /// Default floating point environment
-    fenv_t* FE_DFL_ENV = cast(fenv_t*)(-1);
-}
-else
-{
-    static assert(0);
-}
-
 /// Floating point precision
 enum
 {
@@ -104,23 +192,4 @@ enum
     FE_DBLPREC	= 0x200,		///
     FE_LDBLPREC	= 0x300,		///
 }
-
-int fetestexcept(int excepts);		///
-int feraiseexcept(int excepts);		///
-int feclearexcept(int excepts);		///
-//int fegetexcept(fexcept_t *flagp,int excepts);	///
-//int fesetexcept(fexcept_t *flagp,int excepts);	///
-int fegetround();			///
-int fesetround(int round);		///
-int fegetprec();			///
-int fesetprec(int prec);		///
-int fegetenv(fenv_t *envp);		///
-int fesetenv(fenv_t *envp);		///
-//void feprocentry(fenv_t *envp);	///
-//void feprocexit(const fenv_t *envp);	///
-
-int fegetexceptflag(fexcept_t *flagp,int excepts);	///
-int fesetexceptflag(fexcept_t *flagp,int excepts);	///
-int feholdexcept(fenv_t *envp);		///
-int feupdateenv(fenv_t *envp);		///
 

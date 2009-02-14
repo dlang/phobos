@@ -49,3 +49,9 @@ version (OSX)
     int strerror_r(int errnum, char* buf, size_t buflen);	///
 }
 
+version (FreeBSD)
+{
+    int strerror_r(int errnum, char* buf, size_t buflen);	///
+}
+
+
