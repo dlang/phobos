@@ -1101,6 +1101,8 @@ void setTimes(in string name, d_time fta, d_time ftm)
 {
     version (linux)
     {
+version (none) // does not compile
+{
         // utimbuf times = {
         //     cast(__time_t) (fta / std.date.TicksPerSecond),
         //     cast(__time_t) (ftm / std.date.TicksPerSecond) };
@@ -1112,7 +1114,12 @@ void setTimes(in string name, d_time fta, d_time ftm)
         t[1].tv_sec = ftm / std.date.TicksPerSecond;
         t[1].tv_usec = cast(long) ((cast(double) ftm / std.date.TicksPerSecond)
                 * 1_000_000) % 1_000_000;
-        enforce(utimes(toStringz(name), t.ptr) == 0);
+        enforce(utime(toStringz(name), t.ptr) == 0);
+}
+else
+{
+	assert(0);
+}
     }
     else
     {
