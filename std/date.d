@@ -80,8 +80,8 @@ enum
 
 d_time LocalTZA = 0;
 
-invariant char[] daystr = "SunMonTueWedThuFriSat";
-invariant char[] monstr = "JanFebMarAprMayJunJulAugSepOctNovDec";
+immutable char[] daystr = "SunMonTueWedThuFriSat";
+immutable char[] monstr = "JanFebMarAprMayJunJulAugSepOctNovDec";
 
 const int[12] mdays = [ 0,31,59,90,120,151,181,212,243,273,304,334 ];
 
@@ -946,8 +946,16 @@ version (Posix)
 	__time_t t;
 
 	time(&t);
+      version (OSX)
+      { tm result;
+	localtime_r(&t, &result);
+	return result.tm_gmtoff * TicksPerSecond;
+      }
+      else
+      {
 	localtime(&t);	// this will set timezone
 	return -(timezone * TicksPerSecond);
+      }
     }
 
     /*

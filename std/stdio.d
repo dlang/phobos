@@ -1031,7 +1031,7 @@ private struct PrivateFileWriter(Char)
                                backend);
                     }
                 }
-                else version (linux)
+                else version (Posix)
                 {
                     FPUTWC(c, backend);
                 }
