@@ -153,8 +153,8 @@ STD_C_MODULES = stdarg stdio
 STD_C_MODULES_NOTBUILT = fenv math process stddef stdlib string time locale \
 	wcharh
 
-STD_C_LINUX_MODULES = linux socket
-STD_C_LINUX_MODULES_NOTBUILT = linuxextern pthread termios
+STD_C_LINUX_MODULES = linux socket pthread
+STD_C_LINUX_MODULES_NOTBUILT = linuxextern termios
 
 STD_C_WINDOWS_MODULES_NOTBUILT = windows com winsock stat
 
@@ -179,7 +179,7 @@ SRC = object.d unittest.d crc32.d
 SRC_ZLIB = ChangeLog README adler32.c algorithm.txt compress.c crc32.c	\
 	crc32.h deflate.c deflate.h example.c gzio.c infback.c		\
 	inffast.c inffast.h inffixed.h inflate.c inflate.h inftrees.c	\
-	inftrees.h linux.mak minigzip.c trees.c trees.h uncompr.c	\
+	inftrees.h linux.mak osx.mak minigzip.c trees.c trees.h uncompr.c \
 	win32.mak zconf.h zconf.in.h zlib.3 zlib.h zutil.c zutil.h
 SRC_ZLIB := $(addprefix etc/c/zlib/,$(SRC_ZLIB))
 
@@ -189,7 +189,7 @@ SRC_DOCUMENTABLES = phobos.d $(addprefix std/, $(addsuffix .d,		\
 	$(addprefix std/c/linux/,$(addsuffix .d,			\
 	$(STD_C_LINUX_MODULES) $(STD_C_LINUX_MODULES_NOTBUILT)))
 
-SRC_RELEASEZIP = linux.mak win32.mak phoboslicense.txt $(SRC)		\
+SRC_RELEASEZIP = linux.mak win32.mak osx.mak phoboslicense.txt $(SRC)	\
 	$(SRC_ZLIB) $(addprefix std/, $(addsuffix .d, $(STD_MODULES)    \
 	$(STD_MODULES_NOTBUILT))) $(addprefix std/c/, $(addsuffix .d,	\
 	$(STD_C_MODULES) $(STD_C_MODULES_NOTBUILT))) $(addprefix	\
