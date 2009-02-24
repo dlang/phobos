@@ -782,13 +782,15 @@ creal sqrt(creal z)
     }
     return c;
 }
+
 /**
  * Calculates e$(SUP x).
  *
  *  $(TABLE_SV
- *  <tr> <th> x        <th> exp(x)
- *  <tr> <td> +&infin; <td> +&infin;
- *  <tr> <td> -&infin; <td> +0.0
+ *    $(TR $(TH x)             $(TH e$(SUP x)) )
+ *    $(TD +$(INFIN))          $(TD +$(INFIN)) )
+ *    $(TD -$(INFIN))          $(TD +0.0)      )
+ *    $(TR $(TD $(NAN))        $(TD $(NAN))    )
  *  )
  */
 real exp(real x) {
@@ -810,10 +812,11 @@ real exp(real x) {
  * than exp(x)-1.
  *
  *  $(TABLE_SV
- *  <tr> <th> x           <th> e$(SUP x)-1
- *  <tr> <td> &plusmn;0.0 <td> &plusmn;0.0
- *  <tr> <td> +&infin;    <td> +&infin;
- *  <tr> <td> -&infin;    <td> -1.0
+ *    $(TR $(TH x)             $(TH e$(SUP x)-1)  )
+ *    $(TR $(TD $(PLUSMN)0.0)  $(TD $(PLUSMN)0.0) )
+ *    $(TD +$(INFIN))          $(TD +$(INFIN))    )
+ *    $(TD -$(INFIN))          $(TD -1.0)         )
+ *    $(TR $(TD $(NAN))        $(TD $(NAN))       )
  *  )
  */
 real expm1(real x) 
@@ -896,9 +899,10 @@ L_largenegative:
  * Calculates 2$(SUP x).
  *
  *  $(TABLE_SV
- *  <tr> <th> x <th> exp2(x)
- *  <tr> <td> +&infin; <td> +&infin;
- *  <tr> <td> -&infin; <td> +0.0
+ *    $(TR $(TH x)             $(TH exp2(x)    )
+ *    $(TD +$(INFIN))          $(TD +$(INFIN)) )
+ *    $(TD -$(INFIN))          $(TD +0.0)      )
+ *    $(TR $(TD $(NAN))        $(TD $(NAN))    )
  *  )
  */
 real exp2(real x) 
