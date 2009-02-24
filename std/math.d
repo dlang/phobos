@@ -12,7 +12,8 @@
  *
  *      NAN = $(RED NAN)
  *      SUP = <span style="vertical-align:super;font-size:smaller">$0</span>
- *      GAMMA =  &#915;
+ *      GAMMA = &#915;
+ *      THETA = &theta;
  *      INTEGRAL = &#8747;
  *      INTEGRATE = $(BIG &#8747;<sub>$(SMALL $1)</sub><sup>$2</sup>)
  *      POWER = $1<sup>$2</sup>
@@ -25,6 +26,8 @@
  *      PI = &pi;
  *      LT = &lt;
  *      GT = &gt;
+ *      SQRT = &radix;
+ *      HALF = &frac12;
  */
 
 /*
@@ -191,14 +194,11 @@ class NotImplemented : Error
     }
 }
 
-enum real E =          2.7182818284590452354L;  /** e */
- // 3.32193 fldl2t
-enum real LOG2T =      0x1.a934f0979a3715fcp+1; /** log<sub>2</sub>10 */
- // 1.4427 fldl2e
-enum real LOG2E =      0x1.71547652b82fe178p+0; /** log<sub>2</sub>e */
- // 0.30103 fldlg2
-enum real LOG2 =       0x1.34413509f79fef32p-2; /** log<sub>10</sub>2 */
-enum real LOG10E =     0.43429448190325182765;  /** log<sub>10</sub>e */
+enum real E =          2.7182818284590452354L;  /** e */ // 3.32193 fldl2t
+enum real LOG2T =      0x1.a934f0979a3715fcp+1; /** $(SUB log, 2)10 */ // 1.4427 fldl2e
+enum real LOG2E =      0x1.71547652b82fe178p+0; /** $(SUB log, 2)e */ // 0.30103 fldlg2
+enum real LOG2 =       0x1.34413509f79fef32p-2; /** $(SUB log, 10)2 */
+enum real LOG10E =     0.43429448190325182765;  /** $(SUB log, 10)e */
 enum real LN2 =        0x1.62e42fefa39ef358p-1; /** ln 2 */  // 0.693147 fldln2
 enum real LN10 =       2.30258509299404568402;  /** ln 10 */
 enum real PI =         0x1.921fb54442d1846ap+1; /** $(_PI) */ // 3.14159 fldpi
@@ -206,9 +206,9 @@ enum real PI_2 =       1.57079632679489661923;  /** $(PI) / 2 */
 enum real PI_4 =       0.78539816339744830962;  /** $(PI) / 4 */
 enum real M_1_PI =     0.31830988618379067154;  /** 1 / $(PI) */
 enum real M_2_PI =     0.63661977236758134308;  /** 2 / $(PI) */
-enum real M_2_SQRTPI = 1.12837916709551257390;  /** 2 / &radic;$(PI) */
-enum real SQRT2 =      1.41421356237309504880;  /** &radic;2 */
-enum real SQRT1_2 =    0.70710678118654752440;  /** &radic;&frac12; */
+enum real M_2_SQRTPI = 1.12837916709551257390;  /** 2 / $(SQRT)$(PI) */
+enum real SQRT2 =      1.41421356237309504880;  /** $(SQRT)2 */
+enum real SQRT1_2 =    0.70710678118654752440;  /** $(SQRT)$(HALF) */
 
 /*
         Octal versions:
@@ -329,8 +329,8 @@ real sin(real x);       /* intrinsic */
  *
  *  sin(z) = sin(z.re)*cosh(z.im) + cos(z.re)*sinh(z.im)i
  *
- * If both sin(&theta;) and cos(&theta;) are required,
- * it is most efficient to use expi(&theta).
+ * If both sin($(THETA)) and cos($(THETA)) are required,
+ * it is most efficient to use expi($(THETA)).
  */
 creal sin(creal z)
 {
@@ -1028,10 +1028,11 @@ unittest
  * Separate floating point value into significand and exponent.
  *
  * Returns:
- *      Calculate and return <i>x</i> and exp such that
- *      value =<i>x</i>*2$(SUP exp) and
- *      .5 $(LT)= |<i>x</i>| $(LT) 1.0<br>
- *      <i>x</i> has same sign as value.
+ *      Calculate and return $(I x) and $(I exp) such that
+ *      value =$(I x)*2$(SUP exp) and
+ *      .5 $(LT)= |$(I x)| $(LT) 1.0
+ *      
+ *      $(I x) has same sign as value.
  *
  *      $(TABLE_SV
  *      $(TR $(TH value)           $(TH returns)         $(TH exp))
@@ -1041,7 +1042,6 @@ unittest
  *      $(TR $(TD $(PLUSMN)$(NAN)) $(TD $(PLUSMN)$(NAN)) $(TD int.min))
  *      )
  */
-
 real frexp(real value, out int exp)
 {
     ushort* vu = cast(ushort*)&value;
@@ -1204,7 +1204,7 @@ unittest
  * Extracts the exponent of x as a signed integral value.
  *
  * If x is not a special value, the result is the same as
- * <tt>cast(int)logb(x)</tt>.
+ * $(D cast(int)logb(x)).
  *
  *      $(TABLE_SV
  *      $(TR $(TH x)                $(TH ilogb(x))     $(TH Range error?))
@@ -1271,7 +1271,7 @@ real log1p(real x)              { return std.c.math.log1pl(x); }
 
 /***************************************
  * Calculates the base-2 logarithm of x:
- * log<sub>2</sub>x
+ * $(SUB log, 2)x
  *
  *  $(TABLE_SV
  *  $(TR $(TH x)            $(TH log2(x))   $(TH divide by 0?) $(TH invalid?))
@@ -1530,7 +1530,7 @@ real lgamma(real x)
  *  Like x!, $(GAMMA)(x+1) = x*$(GAMMA)(x).
  *
  *  Mathematically, if z.re > 0 then
- *   $(GAMMA)(z) = $(INTEGRATE 0, &infin;) $(POWER t, z-1)$(POWER e, -t) dt
+ *   $(GAMMA)(z) = $(INTEGRATE 0, $(INFIN)) $(POWER t, z-1)$(POWER e, -t) dt
  *
  *    $(TABLE_SV
  *      $(TR $(TH x)              $(TH $(GAMMA)(x))       $(TH invalid?))
@@ -1579,7 +1579,7 @@ real nearbyint(real x) { return std.c.math.nearbyintl(x); }
  * mode.
  * If the return value is not equal to x, the FE_INEXACT
  * exception is raised.
- * <b>nearbyint</b> performs
+ * $(B nearbyint) performs
  * the same operation, but does not set the FE_INEXACT exception.
  */
 real rint(real x);      /* intrinsic */
@@ -2743,8 +2743,8 @@ public:
 
 
 /***********************************
- * Evaluate polynomial A(x) = $(SUB a, 0) + $(SUB a, 1)x + $(SUB a, 2)&sup2;
- *                          + $(SUB a,3)x&sup3; ...
+ * Evaluate polynomial A(x) = $(SUB a, 0) + $(SUB a, 1)x + $(SUB a, 2)$(POWER x,2)
+ *                          + $(SUB a,3)$(POWER x,3); ...
  *
  * Uses Horner's rule A(x) = $(SUB a, 0) + x($(SUB a, 1) + x($(SUB a, 2) 
  *                         + x($(SUB a, 3) + ...)))
