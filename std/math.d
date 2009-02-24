@@ -306,7 +306,7 @@ unittest
  *      Results are undefined if |x| >= $(POWER 2,64).
  */
 
-real cos(real x);       /* intrinsic */
+pure nothrow real cos(real x);       /* intrinsic */
 
 /***********************************
  * Returns sine of x. x is in radians.
@@ -321,7 +321,7 @@ real cos(real x);       /* intrinsic */
  *      Results are undefined if |x| >= $(POWER 2,64).
  */
 
-real sin(real x);       /* intrinsic */
+pure nothrow real sin(real x);       /* intrinsic */
 
 
 /***********************************
@@ -385,7 +385,7 @@ unittest{
  *      )
  */
 
-real tan(real x)
+pure nothrow real tan(real x)
 {
     version(Naked_D_InlineAsm_X86) {
     asm
@@ -716,7 +716,7 @@ unittest
  * greater than long.max, the result is
  * indeterminate.
  */
-long rndtol(real x);    /* intrinsic */
+pure nothrow long rndtol(real x);    /* intrinsic */
 
 
 /*****************************************
@@ -738,9 +738,12 @@ extern (C) real rndtonl(real x);
  *      )
  */
 
-float sqrt(float x);    /* intrinsic */
-double sqrt(double x);  /* intrinsic */ /// ditto
-real sqrt(real x);      /* intrinsic */ /// ditto
+pure nothrow
+{
+    float sqrt(float x);    /* intrinsic */
+    double sqrt(double x);  /* intrinsic */ /// ditto
+    real sqrt(real x);      /* intrinsic */ /// ditto
+}
 
 creal sqrt(creal z)
 {
@@ -1224,7 +1227,7 @@ alias std.c.math.FP_ILOGBNAN FP_ILOGBNAN;
  * References: frexp
  */
 
-real ldexp(real n, int exp);    /* intrinsic */
+pure nothrow real ldexp(real n, int exp);    /* intrinsic */
 
 /**************************************
  * Calculate the natural logarithm of x.
@@ -1367,7 +1370,7 @@ real cbrt(real x)               { return std.c.math.cbrtl(x); }
  *      $(TR $(TD $(PLUSMN)$(INFIN)) $(TD +$(INFIN)) )
  *      )
  */
-real fabs(real x);      /* intrinsic */
+pure nothrow real fabs(real x);      /* intrinsic */
 
 
 /***********************************************************************
@@ -1582,7 +1585,7 @@ real nearbyint(real x) { return std.c.math.nearbyintl(x); }
  * $(B nearbyint) performs
  * the same operation, but does not set the FE_INEXACT exception.
  */
-real rint(real x);      /* intrinsic */
+pure nothrow real rint(real x);      /* intrinsic */
 
 /***************************************
  * Rounds x to the nearest integer value, using the current rounding

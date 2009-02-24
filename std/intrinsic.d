@@ -22,6 +22,8 @@
 
 module std.intrinsic;
 
+nothrow:
+
 /**
  * Scans the bits in v starting with bit 0, looking
  * for the first set bit.
@@ -29,7 +31,7 @@ module std.intrinsic;
  *	The bit number of the first bit set.
  *	The return value is undefined if v is zero.
  */
-int bsf(uint v);
+pure nothrow int bsf(uint v);
 
 /**
  * Scans the bits in v from the most significant bit
@@ -60,12 +62,12 @@ int bsf(uint v);
  *  bsf(x21) = 0<br>
  *  bsr(x21) = 5
  */
-int bsr(uint v);
+pure nothrow int bsr(uint v);
 
 /**
  * Tests the bit.
  */
-int bt(in uint *p, uint bitnum);
+pure nothrow int bt(in uint *p, uint bitnum);
 
 /**
  * Tests and complements the bit.
@@ -142,7 +144,7 @@ int bts(uint *p, uint bitnum);
 	byte 3, byte 1 becomes byte 2, byte 2 becomes byte 1, byte 3
 	becomes byte 0.
  */
-uint bswap(uint v);
+pure uint bswap(uint v);
 
 
 /**
