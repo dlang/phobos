@@ -950,15 +950,55 @@ void[] read(string name)
 
     struct_stat statbuf = void;
     cenforce(std.c.linux.linux.fstat(fd, &statbuf) == 0, name);
-    invariant size = statbuf.st_size;
-    if (!size) return null;
-    auto buf = GC.malloc(size, GC.BlkAttr.NO_SCAN)[0 .. size];
-    enforce(buf, "Out of memory");
-    scope(failure) delete buf;
 
-    cenforce(std.c.linux.linux.read(fd, buf.ptr, size) == size, name);
+    void[] buf;
+    auto size = statbuf.st_size;
+    if (size == 0)
+    {	/* The size could be 0 if the file is a device or a procFS file,
+	 * so we just have to try reading it.
+	 */
+	int readsize = 1024;
+	while (1)
+	{
+	    buf = GC.realloc(buf.ptr, size + readsize, GC.BlkAttr.NO_SCAN)[0 .. cast(int)size + readsize];
+	    enforce(buf, "Out of memory");
+	    scope(failure) delete buf;
 
-    return buf[0 .. size];
+	    auto toread = readsize;
+	    while (toread)
+	    {
+		auto numread = std.c.linux.linux.read(fd, buf.ptr + size, toread);
+		cenforce(numread != -1, name);
+		size += numread;
+		if (numread == 0)
+		{   if (size == 0)			// it really was 0 size
+			delete buf;			// don't need the buffer
+		    return buf[0 .. size];		// end of file
+		}
+		toread -= numread;
+	    }
+	}
+    }
+    else
+    {
+	buf = GC.malloc(size, GC.BlkAttr.NO_SCAN)[0 .. size];
+	enforce(buf, "Out of memory");
+	scope(failure) delete buf;
+
+	cenforce(std.c.linux.linux.read(fd, buf.ptr, size) == size, name);
+
+	return buf[0 .. size];
+    }
+}
+
+unittest
+{
+    version (linux)
+    {	// A file with "zero" length that doesn't have 0 length at all
+	char[] s = cast(char[])std.file.read("/proc/sys/kernel/osrelease");
+	assert(s.length > 0);
+	//writefln("'%s'", s);
+    }
 }
 
 /********************************************
