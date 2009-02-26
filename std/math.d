@@ -61,8 +61,7 @@
  *  </ul>
  */
 
-
-module std.math;
+module(system) std.math;
 
 //debug=math;           // uncomment to turn on debugging printf's
 
@@ -335,7 +334,8 @@ pure nothrow real sin(real x);       /* intrinsic */
 creal sin(creal z)
 {
   creal cs = expi(z.re);
-  return cs.im * cosh(z.im) + cs.re * sinh(z.im) * 1i;
+  creal csh = coshisinh(z.im);
+  return cs.im * csh.re + cs.re * csh.im * 1i;
 }
 
 /** ditto */
@@ -358,7 +358,8 @@ unittest
 creal cos(creal z)
 {
   creal cs = expi(z.re);
-  return cs.re * cosh(z.im) - cs.im * sinh(z.im) * 1i;
+  creal csh = coshisinh(z.im);
+  return cs.re * csh.re - cs.im * csh.im * 1i;
 }
 
 /** ditto */
@@ -611,6 +612,31 @@ real tanh(real x)
     real y = expm1(2*x);
     return y / (y + 2);
 }
+
+
+private:
+/* Returns cosh(x) + I * sinh(x)
+ * Only one call to exp() is performed.
+ */
+creal coshisinh(real x)
+{
+    // See comments for cosh, sinh.
+    if (fabs(x) > real.mant_dig * LN2) {
+        real y = exp(fabs(x));
+        return y*0.5 + 0.5i * copysign(y, x);
+    } else {
+        real y = expm1(x);
+        return (y + 1.0 + 1.0/(y+1.0)) * 0.5 + 0.5i * y / (y+1) * (y+2);
+    }
+}
+
+unittest {
+    creal c = coshisinh(3.0);
+    assert(c.re == cosh(3.0));
+    assert(c.im == sinh(3.0));
+}
+
+public:
 
 /***********************************
  * Calculates the inverse hyperbolic cosine of x.
@@ -997,6 +1023,14 @@ L_was_nan:
     }    
 }
 
+unittest{
+    assert(exp2(0.5L)== SQRT2);
+    assert(exp2(8L) == 256.0);
+    assert(exp2(-9L)== 1.0L/512.0);
+    assert(exp(3) == E*E*E);
+
+}
+
 /**
  * Calculate cos(y) + i sin(y).
  *
@@ -1026,7 +1060,7 @@ unittest
     assert(expi(1.3e5L) == cos(1.3e5L) + sin(1.3e5L) * 1i);
     assert(expi(0.0L) == 1L + 0.0Li);
 }
-
+    
 /*********************************************************************
  * Separate floating point value into significand and exponent.
  *
@@ -1472,7 +1506,7 @@ unittest
         [ 0,      -0,     0],
         [ 3,      4,      5],
         [ -300,   -400,   500],
-        [ real.min, real.min, 4.75473e-4932L],
+        [ real.min, real.min, 0x1.6a09e667f3bcc908p-16382L],
         [ real.max/2, real.max/2, 0x1.6a09e667f3bcc908p+16383L],
         [ real.infinity, real.nan, real.infinity],
         [ real.nan, real.nan, real.nan],
@@ -1484,7 +1518,7 @@ unittest
         real y = vals[i][1];
         real z = vals[i][2];
         real h = hypot(x, y);
-        assert(mfeq(z, h, .0000001));
+        assert(isIdentical(z, h));
     }
 }
 
