@@ -2011,12 +2011,127 @@ unittest
     assert(sgn(-0.0) == 0);
 }
 
-/******************************************
- * Creates a quiet NAN with the information from tagp[] embedded in it.
+// Functions for NaN payloads
+/*
+ * A 'payload' can be stored in the significand of a $(NAN). One bit is required
+ * to distinguish between a quiet and a signalling $(NAN). This leaves 22 bits
+ * of payload for a float; 51 bits for a double; 62 bits for an 80-bit real;
+ * and 111 bits for a 128-bit quad.
+*/
+/**
+ * Create a quiet $(NAN), storing an integer inside the payload.
  *
- * BUGS: DMD always returns real.nan, ignoring the payload.
+ * For 80-bit or 128-bit reals, the largest possible payload is 0x3FFF_FFFF_FFFF_FFFF.
+ * For doubles, it is 0x3_FFFF_FFFF_FFFF.
+ * For floats, it is 0x3F_FFFF.
  */
-real nan(in char[] tagp) { return std.c.math.nanl(toStringz(tagp)); }
+pure nothrow real NaN(ulong payload)
+{
+    static if (real.mant_dig == 64) { //real80
+      ulong v = 3; // implied bit = 1, quiet bit = 1
+    } else {
+      ulong v = 2; // no implied bit. quiet bit = 1
+    }
+
+    ulong a = payload;
+
+    // 22 Float bits
+    ulong w = a & 0x3F_FFFF;
+    a -= w;
+
+    v <<=22;
+    v |= w;
+    a >>=22;
+
+    // 29 Double bits
+    v <<=29;
+    w = a & 0xFFF_FFFF;
+    v |= w;
+    a -= w;
+    a >>=29;
+
+    static if (real.mant_dig == 53) { // double
+        v |=0x7FF0_0000_0000_0000;
+        real x;
+        * cast(ulong *)(&x) = v;
+        return x;
+    } else {
+        v <<=11;
+        a &= 0x7FF;
+        v |= a;
+        real x = real.nan;
+        // Extended real bits
+        static if (real.mant_dig==113) { //quadruple
+          v<<=1; // there's no implicit bit
+          version(LittleEndian) {
+            *cast(ulong*)(6+cast(ubyte*)(&x)) = v;
+          } else {
+            *cast(ulong*)(2+cast(ubyte*)(&x)) = v;
+          }        
+        } else { // real80
+            * cast(ulong *)(&x) = v;
+        }
+        return x;
+    }
+}
+
+/**
+ * Extract an integral payload from a $(NAN).
+ *
+ * Returns:
+ * the integer payload as a ulong.
+ *
+ * For 80-bit or 128-bit reals, the largest possible payload is 0x3FFF_FFFF_FFFF_FFFF.
+ * For doubles, it is 0x3_FFFF_FFFF_FFFF.
+ * For floats, it is 0x3F_FFFF.
+ */
+pure nothrow ulong getNaNPayload(real x)
+{
+    //  assert(isNaN(x));
+    static if (real.mant_dig == 53) {
+        ulong m = *cast(ulong *)(&x);
+        // Make it look like an 80-bit significand.
+        // Skip exponent, and quiet bit
+        m &= 0x0007_FFFF_FFFF_FFFF;
+        m <<= 10;
+    } else static if (real.mant_dig==113) { // quadruple
+        version(LittleEndian) {
+            ulong m = *cast(ulong*)(6+cast(ubyte*)(&x));
+        } else {
+            ulong m = *cast(ulong*)(2+cast(ubyte*)(&x));
+        }
+        m>>=1; // there's no implicit bit
+    } else {
+        ulong m = *cast(ulong *)(&x);
+    }
+    // ignore implicit bit and quiet bit
+    ulong f = m & 0x3FFF_FF00_0000_0000L;
+    ulong w = f >>> 40;
+    w |= (m & 0x00FF_FFFF_F800L) << (22 - 11);
+    w |= (m & 0x7FF) << 51;
+    return w;
+}
+
+debug(UnitTest) {
+unittest {
+  real nan4 = NaN(0x789_ABCD_EF12_3456);
+  static if (real.mant_dig == 64 || real.mant_dig==113) {
+      assert (getNaNPayload(nan4) == 0x789_ABCD_EF12_3456);
+  } else {
+      assert (getNaNPayload(nan4) == 0x1_ABCD_EF12_3456);
+  }
+  double nan5 = nan4;
+  assert (getNaNPayload(nan5) == 0x1_ABCD_EF12_3456);
+  float nan6 = nan4;
+  assert (getNaNPayload(nan6) == 0x12_3456);
+  nan4 = NaN(0xFABCD);
+  assert (getNaNPayload(nan4) == 0xFABCD);
+  nan6 = nan4;
+  assert (getNaNPayload(nan6) == 0xFABCD);
+  nan5 = NaN(0x100_0000_0000_3456);
+  assert(getNaNPayload(nan5) == 0x0000_0000_3456);
+}
+}
 
 /**
  * Calculate the next largest floating point value after x.
