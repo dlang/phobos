@@ -1,6 +1,16 @@
 // Written in the D programming language
 
 /**
+ * Elementary mathematical functions.
+ *
+ * The functionality closely follows the IEEE754-2008 standard for
+ * floating-point arithmetic, including the use of camelCase names rather
+ * than C99-style lower case names. All of these functions behave correctly
+ * when presented with an infinity or NaN.
+ *  
+ * Authors:
+ *      Walter Bright, Don Clugston
+ *      
  * Macros:
  *      WIKI = Phobos/StdMath
  *
@@ -29,10 +39,7 @@
  *      SQRT = &radix;
  *      HALF = &frac12;
  */
-
 /*
- * Authors:
- *      Walter Bright, Don Clugston
  * Copyright:
  *      Copyright (c) 2001-2005 by Digital Mars,
  *      All Rights Reserved,
@@ -193,10 +200,10 @@ class NotImplemented : Error
     }
 }
 
-enum real E =          2.7182818284590452354L;  /** e */ // 3.32193 fldl2t
-enum real LOG2T =      0x1.a934f0979a3715fcp+1; /** $(SUB log, 2)10 */ // 1.4427 fldl2e
-enum real LOG2E =      0x1.71547652b82fe178p+0; /** $(SUB log, 2)e */ // 0.30103 fldlg2
-enum real LOG2 =       0x1.34413509f79fef32p-2; /** $(SUB log, 10)2 */
+enum real E =          2.7182818284590452354L;  /** e */ // 0x1.5BF0A8B1_45769535_5FF5p+1L
+enum real LOG2T =      0x1.a934f0979a3715fcp+1; /** $(SUB log, 2)10 */ // 3.32193 fldl2t  
+enum real LOG2E =      0x1.71547652b82fe178p+0; /** $(SUB log, 2)e */ // 1.4427 fldl2e
+enum real LOG2 =       0x1.34413509f79fef32p-2; /** $(SUB log, 10)2 */ // 0.30103 fldlg2
 enum real LOG10E =     0.43429448190325182765;  /** $(SUB log, 10)e */
 enum real LN2 =        0x1.62e42fefa39ef358p-1; /** ln 2 */  // 0.693147 fldln2
 enum real LN10 =       2.30258509299404568402;  /** ln 10 */
@@ -638,7 +645,7 @@ creal coshisinh(real x)
         return y*0.5 + 0.5i * copysign(y, x);
     } else {
         real y = expm1(x);
-        return (y + 1.0 + 1.0/(y+1.0)) * 0.5 + 0.5i * y / (y+1) * (y+2);
+        return (y + 1.0 + 1.0/(y + 1.0)) * 0.5 + 0.5i * y / (y+1) * (y+2);
     }
 }
 
@@ -1060,10 +1067,9 @@ float exp2(float x)               { return exp2(cast(real)x); }
 
 unittest{
     assert(exp2(0.5L)== SQRT2);
-    assert(exp2(8L) == 256.0);
-    assert(exp2(-9L)== 1.0L/512.0);
-    assert(exp(3) == E*E*E);
-
+    assert(exp2(8.0L) == 256.0);
+    assert(exp2(-9.0L)== 1.0L/512.0);
+    assert(exp(3.0L) == E*E*E);
 }
 
 /**
@@ -1135,22 +1141,17 @@ real frexp(real value, out int exp)
             }
         } else {
             exp = ex - F.EXPBIAS;
-            vu[F.EXPPOS_SHORT] =
-                cast(ushort)((0x8000 & vu[F.EXPPOS_SHORT]) | 0x3FFE);
+            vu[F.EXPPOS_SHORT] = (0x8000 & vu[F.EXPPOS_SHORT]) | 0x3FFE;
         }
     } else if (!*vl) {
         // value is +-0.0
         exp = 0;
     } else {
         // denormal
-        int i = -0x3FFD;
-        do {
-            i--;
-            *vl <<= 1;
-        } while (*vl > 0);
-        exp = i;
-        vu[F.EXPPOS_SHORT] =
-            cast(ushort)((0x8000 & vu[F.EXPPOS_SHORT]) | 0x3FFE);
+        value *= F.POW2MANTDIG;
+        ex = vu[F.EXPPOS_SHORT] & F.EXPMASK;
+        exp = ex - F.EXPBIAS - 63;
+        vu[F.EXPPOS_SHORT] = (0x8000 & vu[F.EXPPOS_SHORT]) | 0x3FFE;
     }
   } else static if (real.mant_dig == 113) { // quadruple      
         if (ex) { // If exponent is non-zero
@@ -1206,7 +1207,7 @@ real frexp(real value, out int exp)
         sgn = cast(ushort)((0x8000 & vu[F.EXPPOS_SHORT])| 0x3FE0);
         *vl &= 0x7FFF_FFFF_FFFF_FFFF;
 
-        int i = -0x3FD+11;
+        int i = -0x3FD + 11;
         do {
             i--;
             *vl <<= 1;
