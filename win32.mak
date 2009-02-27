@@ -109,6 +109,7 @@ SRCS= std\math.d std\stdio.d std\dateparse.d std\date.d std\uni.d std\string.d \
 	crc32.d \
 	etc\gamma.d \
 	std\c\stdarg.d \
+	std\c\math.d \
 	std\c\windows\com.d \
 	std\c\windows\stat.d \
 	std\c\windows\windows.d \

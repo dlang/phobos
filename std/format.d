@@ -1725,7 +1725,7 @@ FormatInfo parseFormatSpec(S)(ref S fmt)
             fmt = fmt[i + 1 .. $];
             return result;
         }
-    assert(false);
+    //assert(false);
 }
 
 //-------------------------------------------------------------------------------
