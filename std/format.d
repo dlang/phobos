@@ -1970,6 +1970,8 @@ private void formatGeneric(Writer, D)(ref Writer w, const(void)* arg,
         w.write(s);
     } else static if (is(D Original == typedef)) {
         formatGeneric!(Writer, Original)(w, arg, f);
+    } else static if (is(D Original == enum)) {
+        formatGeneric!(Writer, Original)(w, arg, f);
     } else static if (is(const D == const(float))
                       || is(const(D) == const(double))
                       || is(const(D) == const(real))) {
