@@ -880,7 +880,6 @@ class FileException : Exception
 
 void[] read(string name)
 {
-    uint numread;
     struct_stat statbuf;
 
     auto namez = toStringz(name);
@@ -902,17 +901,49 @@ void[] read(string name)
     if (size > int.max)
 	goto err2;
 
-    auto buf = std.gc.malloc(cast(int)size);
-    if (buf.ptr)
-	std.gc.hasNoPointers(buf.ptr);
+    void[] buf;
+    if (size == 0)
+    {	/* The size could be 0 if the file is a device or a procFS file,
+	 * so we just have to try reading it.
+	 */
+	int readsize = 1024;
+	while (1)
+	{
+	    buf = std.gc.realloc(buf.ptr, cast(int)size + readsize);
 
-    numread = std.c.linux.linux.read(fd, buf.ptr, cast(int)size);
-    if (numread != size)
+	    auto toread = readsize;
+	    while (toread)
+	    {
+		auto numread = std.c.linux.linux.read(fd, buf.ptr + size, toread);
+		if (numread == -1)
+		    goto err2;
+		size += numread;
+		if (numread == 0)
+		{   if (size == 0)			// it really was 0 size
+			delete buf;			// don't need the buffer
+		    else
+			std.gc.hasNoPointers(buf.ptr);
+		    goto Leof;				// end of file
+		}
+		toread -= numread;
+	    }
+	}
+    }
+    else
     {
-        //printf("\tread error, errno = %d\n",getErrno());
-        goto err2;
+	buf = std.gc.malloc(cast(int)size);
+	if (buf.ptr)
+	    std.gc.hasNoPointers(buf.ptr);
+
+	auto numread = std.c.linux.linux.read(fd, buf.ptr, cast(int)size);
+	if (numread != size)
+	{
+	    //printf("\tread error, errno = %d\n",getErrno());
+	    goto err2;
+	}
     }
 
+  Leof:
     if (std.c.linux.linux.close(fd) == -1)
     {
 	//printf("\tclose error, errno = %d\n",getErrno());
@@ -928,6 +959,16 @@ err:
 
 err1:
     throw new FileException(name, getErrno());
+}
+
+unittest
+{
+    version (linux)
+    {	// A file with "zero" length that doesn't have 0 length at all
+	char[] s = cast(char[])std.file.read("/proc/sys/kernel/osrelease");
+	assert(s.length > 0);
+	//writefln("'%s'", s);
+    }
 }
 
 /*********************************************
