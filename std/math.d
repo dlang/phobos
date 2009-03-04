@@ -690,7 +690,7 @@ unittest
 {
     assert(isNaN(acosh(0.9)));
     assert(isNaN(acosh(real.nan)));
-    assert(acosh(1)==0.0);
+    assert(acosh(1.0)==0.0);
     assert(acosh(real.infinity) == real.infinity);
 }
 
