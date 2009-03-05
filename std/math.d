@@ -90,8 +90,6 @@ version(GNU){
     }
 }
 
-
-
 private:
 /*
  * The following IEEE 'real' formats are currently supported:
@@ -455,17 +453,13 @@ unittest
 
             // special angles
             [   PI_4,   1],
-            [   PI_2,   real.infinity],
+            //[   PI_2,   real.infinity], // PI_2 is not _exactly_ pi/2.
             [   3*PI_4, -1],
             [   PI,     0],
             [   5*PI_4, 1],
-            [   3*PI_2, -real.infinity],
+            //[   3*PI_2, -real.infinity],
             [   7*PI_4, -1],
             [   2*PI,   0],
-
-            // overflow
-            [   real.infinity,  real.nan],
-            [   real.nan,       real.nan],
     ];
     int i;
 
@@ -475,16 +469,20 @@ unittest
         real r = vals[i][1];
         real t = tan(x);
 
-//        printf("tan(%Lg) = %Lg, should be %Lg\n", x, t, r);
-	// fails
-        //if (!isIdentical(r, t)) assert(fabs(r-t) <= .0000001);
+        //printf("tan(%Lg) = %Lg, should be %Lg\n", x, t, r);
+        if (!isIdentical(r, t)) assert(fabs(r-t) <= .0000001);
 
         x = -x;
         r = -r;
         t = tan(x);
         //printf("tan(%Lg) = %Lg, should be %Lg\n", x, t, r);
-//        if (!isIdentical(r, t)) assert(fabs(r-t) <= .0000001);
+        if (!isIdentical(r, t) && !(r!<>=0 && t!<>=0)) assert(fabs(r-t) <= .0000001);
     }
+    // overflow
+    assert(isNaN(tan(real.infinity)));
+    assert(isNaN(tan(-real.infinity)));
+    // NaN propagation
+    assert(isIdentical( tan(NaN(0x0123L)), NaN(0x0123L) ));
 }
 
 /***************
@@ -757,9 +755,9 @@ real atanh(real x)
     return  0.5 * log1p( 2 * x / (1 - x) );
 }
 /// ditto
-double atanh(double x)             { return atanh(cast(double)x); }
+double atanh(double x)             { return atanh(cast(real)x); }
 /// ditto
-float atanh(float x)               { return atanh(cast(float)x); }
+float atanh(float x)               { return atanh(cast(real)x); }
 
 
 unittest
