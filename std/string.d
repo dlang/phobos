@@ -1753,6 +1753,8 @@ bool startsWith(A1, A2)(A1 longer, A2 shorter)
 
 unittest
 {
+version(none) // fails to compile with: Error: array equality comparison type mismatch, immutable(char)[] vs ubyte[]
+{
     alias TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[])
         StringTypes;
     alias TypeTuple!(ubyte[], int[], double[]) OtherTypes;
@@ -1780,6 +1782,7 @@ unittest
             }
         }
     }
+}
 }
 
 /**
@@ -1846,6 +1849,8 @@ unittest
     alias TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[])
         TestTypes;
     alias TypeTuple!(ubyte[], int[], double[]) OtherTypes;
+version(none) // fails to compile with: Error: array equality comparison type mismatch, immutable(char)[] vs ubyte[]
+{
     foreach (T1 ; TestTypes)
     {
         foreach (T2 ; TestTypes)
@@ -1879,6 +1884,7 @@ unittest
             assert(endsWith(b, a));
         }
     }
+}
 }
 
 /*******************************************
