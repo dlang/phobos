@@ -7,6 +7,9 @@
  * floating-point arithmetic, including the use of camelCase names rather
  * than C99-style lower case names. All of these functions behave correctly
  * when presented with an infinity or NaN.
+ * 
+ * Unlike C, there is no global errno variable. Consequently, almost all of
+ * these functions are pure nothrow.
  *  
  * Authors:
  *      Walter Bright, Don Clugston
@@ -117,16 +120,15 @@ version(LittleEndian) {
 // They supplement the built-in floating point properties.
 template floatTraits(T) {
  // EXPMASK is a ushort mask to select the exponent portion (without sign)
- // POW2MANTDIG = pow(2, real.mant_dig) is the value such that
- //  (smallest_denormal)*POW2MANTDIG == real.min
  // EXPPOS_SHORT is the index of the exponent when represented as a ushort array.
  // SIGNPOS_BYTE is the index of the sign when represented as a ubyte array.
+ // RECIP_EPSILON is the value such that (smallest_denormal) * RECIP_EPSILON == T.min
+    enum T RECIP_EPSILON = (1/T.epsilon);
  static if (T.mant_dig == 24) { // float
     enum ushort EXPMASK = 0x7F80;
     enum ushort EXPBIAS = 0x3F00;
     enum uint EXPMASK_INT = 0x7F80_0000;
     enum uint MANTISSAMASK_INT = 0x007F_FFFF;
-    enum real POW2MANTDIG = 0x1p+24;
     version(LittleEndian) {
       enum EXPPOS_SHORT = 1;
     } else {
@@ -137,7 +139,6 @@ template floatTraits(T) {
     enum ushort EXPBIAS = 0x3FE0;
     enum uint EXPMASK_INT = 0x7FF0_0000;
     enum uint MANTISSAMASK_INT = 0x000F_FFFF; // for the MSB only
-    enum real POW2MANTDIG = 0x1p+53;
     version(LittleEndian) {
       enum EXPPOS_SHORT = 3;
       enum SIGNPOS_BYTE = 7;
@@ -148,7 +149,6 @@ template floatTraits(T) {
  } else static if (T.mant_dig == 64) { // real80
     enum ushort EXPMASK = 0x7FFF;
     enum ushort EXPBIAS = 0x3FFE;
-    enum real POW2MANTDIG = 0x1p+63;
     version(LittleEndian) {
       enum EXPPOS_SHORT = 4;
       enum SIGNPOS_BYTE = 9;
@@ -156,9 +156,8 @@ template floatTraits(T) {
       enum EXPPOS_SHORT = 0;
       enum SIGNPOS_BYTE = 0;
     }
- } else static if (real.mant_dig == 113){ // quadruple
+ } else static if (T.mant_dig == 113){ // quadruple
     enum ushort EXPMASK = 0x7FFF;
-    enum real POW2MANTDIG = 0x1p+113;
     version(LittleEndian) {
       enum EXPPOS_SHORT = 7;
       enum SIGNPOS_BYTE = 15;
@@ -166,10 +165,9 @@ template floatTraits(T) {
       enum EXPPOS_SHORT = 0;
       enum SIGNPOS_BYTE = 0;
     }
- } else static if (real.mant_dig == 106) { // doubledouble
+ } else static if (T.mant_dig == 106) { // doubledouble
     enum ushort EXPMASK = 0x7FF0;
-    enum real POW2MANTDIG = 0x1p+53;  // doubledouble denormals are strange
-    // and the exponent byte is not unique
+    // the exponent byte is not unique
     version(LittleEndian) {
       enum EXPPOS_SHORT = 7; // [3] is also an exp short
       enum SIGNPOS_BYTE = 15;
@@ -376,8 +374,7 @@ real cos(ireal y)
 unittest{
   assert(cos(0.0+0.0i)==1.0);
   assert(cos(1.3L+0.0i)==cos(1.3L));
-  // @@@FAILS 
-  //assert(cos(5.2Li)== cosh(5.2L));
+  assert(cos(5.2Li)== cosh(5.2L));
 }
 
 /****************************************************************************
@@ -641,7 +638,7 @@ creal coshisinh(real x)
     // See comments for cosh, sinh.
     if (fabs(x) > real.mant_dig * LN2) {
         real y = exp(fabs(x));
-        return y*0.5 + 0.5i * copysign(y, x);
+        return y * 0.5 + 0.5i * copysign(y, x);
     } else {
         real y = expm1(x);
         return (y + 1.0 + 1.0/(y + 1.0)) * 0.5 + 0.5i * y / (y+1) * (y+2);
@@ -1147,7 +1144,7 @@ real frexp(real value, out int exp)
         exp = 0;
     } else {
         // denormal
-        value *= F.POW2MANTDIG;
+        value *= F.RECIP_EPSILON;
         ex = vu[F.EXPPOS_SHORT] & F.EXPMASK;
         exp = ex - F.EXPBIAS - 63;
         vu[F.EXPPOS_SHORT] = (0x8000 & vu[F.EXPPOS_SHORT]) | 0x3FFE;
@@ -1176,7 +1173,7 @@ real frexp(real value, out int exp)
             exp = 0;
     } else {
         // denormal
-        value *= F.POW2MANTDIG;
+        value *= F.RECIP_EPSILON;
         ex = vu[F.EXPPOS_SHORT] & F.EXPMASK;
         exp = ex - F.EXPBIAS - 113;
         vu[F.EXPPOS_SHORT] = 
@@ -2725,7 +2722,7 @@ int feqrel(X)(X x, X y)
         // For denormals, we need to add the number of zeros that
         // lie at the start of diff's significand.
         // We do this by multiplying by 2^real.mant_dig
-        diff *= F.POW2MANTDIG;
+        diff *= F.RECIP_EPSILON;
         return bitsdiff + X.mant_dig - pd[F.EXPPOS_SHORT];
     }
 
