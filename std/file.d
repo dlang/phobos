@@ -62,14 +62,9 @@ private import std.utf;
 private import std.windows.syserror;
 private import std.windows.charset;
 private import std.date;
+private import std.__fileinit;
 
-bool useWfuncs = true;
-
-static this()
-{
-    // Win 95, 98, ME do not implement the W functions
-    useWfuncs = (GetVersion() < 0x80000000);
-}
+bool useWfuncs = true;	// initialized in std.__fileinit
 
 /***********************************
  * Exception thrown for file I/O errors.
