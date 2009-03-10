@@ -147,7 +147,7 @@ STD_MODULES = algorithm array atomics base64 bigint bind bitarray       \
         socketstream stdint stdio stream string syserror	        \
         system traits typecons typetuple uni uri utf                    \
         variant xml zip zlib
-STD_MODULES_NOTBUILT = stdarg
+STD_MODULES_NOTBUILT = stdarg __fileinit
 
 STD_C_MODULES = stdarg stdio
 STD_C_MODULES_NOTBUILT = fenv math process stddef stdlib string time locale \

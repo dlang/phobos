@@ -106,6 +106,7 @@ SRCS= std\math.d std\stdio.d std\dateparse.d std\date.d std\uni.d std\string.d \
 	std\stream.d std\socket.d std\socketstream.d \
 	std\perf.d std\openrj.d std\conv.d \
 	std\zip.d std\cstream.d std\loader.d \
+	std\__fileinit.d \
 	crc32.d \
 	etc\gamma.d \
 	std\c\stdarg.d \
@@ -208,7 +209,8 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 	std\metastrings.d std\contracts.d std\getopt.d \
 	std\variant.d std\numeric.d std\bitmanip.d std\complex.d \
 	std\functional.d std\algorithm.d std\array.d std\typecons.d std\iterator.d \
-	std\xml.d std\encoding.d std\bigint.d
+	std\xml.d std\encoding.d std\bigint.d \
+	std\__fileinit.d
 
 SRC_STD_C= std\c\process.d std\c\stdlib.d std\c\time.d std\c\stdio.d \
 	std\c\math.d std\c\stdarg.d std\c\stddef.d std\c\fenv.d std\c\string.d \
@@ -348,6 +350,9 @@ demangle.obj : std\demangle.d
 
 file.obj : std\file.d
 	$(DMD) -c $(DFLAGS) std\file.d
+
+__fileinit.obj : std\__fileinit.d
+	$(DMD) -c $(DFLAGS) std\__fileinit.d
 
 format.obj : std\format.d
 	$(DMD) -c $(DFLAGS) std\format.d
