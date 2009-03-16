@@ -27,7 +27,7 @@ DFLAGS=-O -release -nofloat -w
 
 CC=dmc
 
-DMD=$(DIR)\bin\dmd
+DMD=$(DIR)\windows\bin\dmd
 #DMD=..\dmd
 
 DOC=..\..\html\d\phobos
