@@ -25,6 +25,8 @@
  *      PI = &pi;
  *      LT = &lt;
  *      GT = &gt;
+ *      SQRT = &radix;
+ *      HALF = &frac12;
  */
 
 /*
@@ -190,14 +192,11 @@ class NotImplemented : Error
     }
 }
 
-const real E =          2.7182818284590452354L;  /** e */
- // 3.32193 fldl2t
-const real LOG2T =      0x1.a934f0979a3715fcp+1; /** log<sub>2</sub>10 */
- // 1.4427 fldl2e
-const real LOG2E =      0x1.71547652b82fe178p+0; /** log<sub>2</sub>e */
- // 0.30103 fldlg2
-const real LOG2 =       0x1.34413509f79fef32p-2; /** log<sub>10</sub>2 */
-const real LOG10E =     0.43429448190325182765;  /** log<sub>10</sub>e */
+const real E =          2.7182818284590452354L;  /** e */ // 3.32193 fldl2t 0x1.5BF0A8B1_45769535_5FF5p+1L
+const real LOG2T =      0x1.a934f0979a3715fcp+1; /** $(SUB log, 2)10 */ // 1.4427 fldl2e
+const real LOG2E =      0x1.71547652b82fe178p+0; /** $(SUB log, 2)e */ // 0.30103 fldlg2
+const real LOG2 =       0x1.34413509f79fef32p-2; /** $(SUB log, 10)2 */
+const real LOG10E =     0.43429448190325182765;  /** $(SUB log, 10)e */
 const real LN2 =        0x1.62e42fefa39ef358p-1; /** ln 2 */  // 0.693147 fldln2
 const real LN10 =       2.30258509299404568402;  /** ln 10 */
 const real PI =         0x1.921fb54442d1846ap+1; /** $(_PI) */ // 3.14159 fldpi
@@ -205,9 +204,9 @@ const real PI_2 =       1.57079632679489661923;  /** $(PI) / 2 */
 const real PI_4 =       0.78539816339744830962;  /** $(PI) / 4 */
 const real M_1_PI =     0.31830988618379067154;  /** 1 / $(PI) */
 const real M_2_PI =     0.63661977236758134308;  /** 2 / $(PI) */
-const real M_2_SQRTPI = 1.12837916709551257390;  /** 2 / &radic;$(PI) */
-const real SQRT2 =      1.41421356237309504880;  /** &radic;2 */
-const real SQRT1_2 =    0.70710678118654752440;  /** &radic;&frac12; */
+const real M_2_SQRTPI = 1.12837916709551257390;  /** 2 / $(SQRT)$(PI) */
+const real SQRT2 =      1.41421356237309504880;  /** $(SQRT)2 */
+const real SQRT1_2 =    0.70710678118654752440;  /** $(SQRT)$(HALF) */
 
 /*
         Octal versions:
@@ -773,9 +772,10 @@ creal sqrt(creal z)
  * Calculates e$(SUP x).
  *
  *  $(TABLE_SV
- *  <tr> <th> x        <th> exp(x)
- *  <tr> <td> +&infin; <td> +&infin;
- *  <tr> <td> -&infin; <td> +0.0
+ *    $(TR $(TH x)             $(TH e$(SUP x)) )
+ *    $(TD +$(INFIN))          $(TD +$(INFIN)) )
+ *    $(TD -$(INFIN))          $(TD +0.0)      )
+ *    $(TR $(TD $(NAN))        $(TD $(NAN))    )
  *  )
  */
 real exp(real x) {
@@ -797,10 +797,11 @@ real exp(real x) {
  * than exp(x)-1.
  *
  *  $(TABLE_SV
- *  <tr> <th> x           <th> e$(SUP x)-1
- *  <tr> <td> &plusmn;0.0 <td> &plusmn;0.0
- *  <tr> <td> +&infin;    <td> +&infin;
- *  <tr> <td> -&infin;    <td> -1.0
+ *    $(TR $(TH x)             $(TH e$(SUP x)-1)  )
+ *    $(TR $(TD $(PLUSMN)0.0)  $(TD $(PLUSMN)0.0) )
+ *    $(TD +$(INFIN))          $(TD +$(INFIN))    )
+ *    $(TD -$(INFIN))          $(TD -1.0)         )
+ *    $(TR $(TD $(NAN))        $(TD $(NAN))       )
  *  )
  */
 real expm1(real x) 
@@ -883,9 +884,10 @@ L_largenegative:
  * Calculates 2$(SUP x).
  *
  *  $(TABLE_SV
- *  <tr> <th> x <th> exp2(x)
- *  <tr> <td> +&infin; <td> +&infin;
- *  <tr> <td> -&infin; <td> +0.0
+ *    $(TR $(TH x)             $(TH exp2(x)    )
+ *    $(TD +$(INFIN))          $(TD +$(INFIN)) )
+ *    $(TD -$(INFIN))          $(TD +0.0)      )
+ *    $(TR $(TD $(NAN))        $(TD $(NAN))    )
  *  )
  */
 real exp2(real x) 
@@ -1011,10 +1013,11 @@ unittest
  * Separate floating point value into significand and exponent.
  *
  * Returns:
- *      Calculate and return <i>x</i> and exp such that
- *      value =<i>x</i>*2$(SUP exp) and
- *      .5 $(LT)= |<i>x</i>| $(LT) 1.0<br>
- *      <i>x</i> has same sign as value.
+ *      Calculate and return $(I x) and $(I exp) such that
+ *      value =$(I x)*2$(SUP exp) and
+ *      .5 $(LT)= |$(I x)| $(LT) 1.0
+ *      
+ *      $(I x) has same sign as value.
  *
  *      $(TABLE_SV
  *      $(TR $(TH value)           $(TH returns)         $(TH exp))
@@ -1187,7 +1190,7 @@ unittest
  * Extracts the exponent of x as a signed integral value.
  *
  * If x is not a special value, the result is the same as
- * <tt>cast(int)logb(x)</tt>.
+ * $(D cast(int)logb(x)).
  *
  *      $(TABLE_SV
  *      $(TR $(TH x)                $(TH ilogb(x))     $(TH Range error?))
@@ -1232,7 +1235,6 @@ real log(real x)                { return std.c.math.logl(x); }
  *      $(TR $(TD +$(INFIN))    $(TD +$(INFIN)) $(TD no)           $(TD no))
  *      )
  */
-
 real log10(real x)              { return std.c.math.log10l(x); }
 
 /******************************************
@@ -1254,7 +1256,7 @@ real log1p(real x)              { return std.c.math.log1pl(x); }
 
 /***************************************
  * Calculates the base-2 logarithm of x:
- * log<sub>2</sub>x
+ * $(SUB log, 2)x
  *
  *  $(TABLE_SV
  *  $(TR $(TH x)            $(TH log2(x))   $(TH divide by 0?) $(TH invalid?))
@@ -1562,11 +1564,10 @@ real nearbyint(real x) { return std.c.math.nearbyintl(x); }
  * mode.
  * If the return value is not equal to x, the FE_INEXACT
  * exception is raised.
- * <b>nearbyint</b> performs
+ * $(B nearbyint ) performs
  * the same operation, but does not set the FE_INEXACT exception.
  */
 real rint(real x);      /* intrinsic */
-
 /***************************************
  * Rounds x to the nearest integer value, using the current rounding
  * mode.
