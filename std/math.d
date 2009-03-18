@@ -226,14 +226,13 @@ enum real SQRT1_2 =    0.70710678118654752440;  /** $(SQRT)$(HALF) */
         LOG2            0.23210 11520 47674 77674 61076 11263 26013 37111
  */
 
-
 /***********************************
  * Calculates the absolute value
  *
  * For complex numbers, abs(z) = sqrt( $(POWER z.re, 2) + $(POWER z.im, 2) )
  * = hypot(z.re, z.im).
  */
-Num abs(Num)(Num x) if (is(typeof(Num >= 0)) && is(typeof(-Num)) &&
+pure nothrow Num abs(Num)(Num x) if (is(typeof(Num >= 0)) && is(typeof(-Num)) &&
         !(is(Num* : const(ifloat*)) || is(Num* : const(idouble*))
                 || is(Num* : const(ireal*))))
 {
@@ -243,7 +242,7 @@ Num abs(Num)(Num x) if (is(typeof(Num >= 0)) && is(typeof(-Num)) &&
         return x>=0 ? x : -x;
 }
 
-auto abs(Num)(Num z)
+pure nothrow auto abs(Num)(Num z)
     if (is(Num* : const(cfloat*)) || is(Num* : const(cdouble*))
             || is(Num* : const(creal*)))
 {
@@ -251,12 +250,13 @@ auto abs(Num)(Num z)
 }
 
 /** ditto */
-real abs(Num)(Num y)
+pure nothrow real abs(Num)(Num y)
     if (is(Num* : const(ifloat*)) || is(Num* : const(idouble*))
             || is(Num* : const(ireal*)))
 {
     return fabs(y.im);
 }
+
 
 unittest
 {
@@ -278,16 +278,17 @@ unittest
  * Note that z * conj(z) = $(POWER z.re, 2) - $(POWER z.im, 2)
  * is always a real number
  */
-creal conj(creal z)
+pure nothrow creal conj(creal z)
 {
     return z.re - z.im*1i;
 }
 
 /** ditto */
-ireal conj(ireal y)
+pure nothrow ireal conj(ireal y)
 {
     return -y;
 }
+
 
 unittest
 {
@@ -334,7 +335,7 @@ pure nothrow real sin(real x);       /* intrinsic */
  * If both sin($(THETA)) and cos($(THETA)) are required,
  * it is most efficient to use expi($(THETA)).
  */
-creal sin(creal z)
+pure nothrow creal sin(creal z)
 {
   creal cs = expi(z.re);
   creal csh = coshisinh(z.im);
@@ -342,7 +343,7 @@ creal sin(creal z)
 }
 
 /** ditto */
-ireal sin(ireal y)
+pure nothrow ireal sin(ireal y)
 {
   return cosh(y.im)*1i;
 }
@@ -358,7 +359,7 @@ unittest
  *
  *  cos(z) = cos(z.re)*cosh(z.im) - sin(z.re)*sinh(z.im)i
  */
-creal cos(creal z)
+pure nothrow creal cos(creal z)
 {
   creal cs = expi(z.re);
   creal csh = coshisinh(z.im);
@@ -366,7 +367,7 @@ creal cos(creal z)
 }
 
 /** ditto */
-real cos(ireal y)
+pure nothrow real cos(ireal y)
 {
   return cosh(y.im);
 }
@@ -567,16 +568,16 @@ real atan2(real y, real x)      { return std.c.math.atan2l(y,x); }
  *      $(TR $(TD $(PLUSMN)$(INFIN)) $(TD $(PLUSMN)0.0) $(TD no) )
  *      )
  */
-real cosh(real x)               {
+pure nothrow real cosh(real x)               {
     //  cosh = (exp(x)+exp(-x))/2.
     // The naive implementation works correctly. 
     real y = exp(x);
     return (y + 1.0/y) * 0.5;
 }
 /// ditto
-double cosh(double x)               { return cosh(cast(real)x); }
+pure nothrow double cosh(double x)               { return cosh(cast(real)x); }
 /// ditto
-float cosh(float x)               { return cosh(cast(real)x); }
+pure nothrow float cosh(float x)               { return cosh(cast(real)x); }
 
 
 /***********************************
@@ -588,7 +589,7 @@ float cosh(float x)               { return cosh(cast(real)x); }
  *      $(TR $(TD $(PLUSMN)$(INFIN)) $(TD $(PLUSMN)$(INFIN)) $(TD no))
  *      )
  */
-real sinh(real x)
+pure nothrow real sinh(real x)
 {
     //  sinh(x) =  (exp(x)-exp(-x))/2;    
     // Very large arguments could cause an overflow, but
@@ -601,9 +602,9 @@ real sinh(real x)
     return 0.5 * y / (y+1) * (y+2);
 }
 /// ditto
-double sinh(double x)               { return sinh(cast(real)x); }
+pure nothrow double sinh(double x)               { return sinh(cast(real)x); }
 /// ditto
-float sinh(float x)               { return sinh(cast(real)x); }
+pure nothrow float sinh(float x)               { return sinh(cast(real)x); }
 
 
 /***********************************
@@ -615,7 +616,7 @@ float sinh(float x)               { return sinh(cast(real)x); }
  *      $(TR $(TD $(PLUSMN)$(INFIN)) $(TD $(PLUSMN)1.0) $(TD no))
  *      )
  */
-real tanh(real x)
+pure nothrow real tanh(real x)
 {
     //  tanh(x) = (exp(x) - exp(-x))/(exp(x)+exp(-x))
     if (fabs(x) > real.mant_dig * LN2) {
@@ -625,15 +626,15 @@ real tanh(real x)
     return y / (y + 2);
 }
 /// ditto
-double tanh(double x)             { return tanh(cast(real)x); }
+pure nothrow double tanh(double x)             { return tanh(cast(real)x); }
 /// ditto
-float tanh(float x)               { return tanh(cast(real)x); }
+pure nothrow float tanh(float x)               { return tanh(cast(real)x); }
 
 private:
 /* Returns cosh(x) + I * sinh(x)
  * Only one call to exp() is performed.
  */
-creal coshisinh(real x)
+pure nothrow creal coshisinh(real x)
 {
     // See comments for cosh, sinh.
     if (fabs(x) > real.mant_dig * LN2) {
@@ -646,9 +647,9 @@ creal coshisinh(real x)
 }
 
 unittest {
-    creal c = coshisinh(3.0);
-    assert(c.re == cosh(3.0));
-    assert(c.im == sinh(3.0));
+    creal c = coshisinh(3.0L);
+    assert(c.re == cosh(3.0L));
+    assert(c.im == sinh(3.0L));
 }
 
 public:
@@ -800,7 +801,7 @@ pure nothrow
     real sqrt(real x);      /* intrinsic */ /// ditto
 }
 
-creal sqrt(creal z)
+pure nothrow creal sqrt(creal z)
 {
     creal c;
     real x,y,w,r;
@@ -851,7 +852,7 @@ creal sqrt(creal z)
  *    $(TR $(TD $(NAN))        $(TD $(NAN))    )
  *  )
  */
-real exp(real x) {
+pure nothrow real exp(real x) {
     version(Naked_D_InlineAsm_X86) {
    //  e^x = 2^(LOG2E*x)
    // (This is valid because the overflow & underflow limits for exp
@@ -862,9 +863,9 @@ real exp(real x) {
     }    
 }
 /// ditto
-double exp(double x)             { return exp(cast(real)x); }
+pure nothrow double exp(double x)             { return exp(cast(real)x); }
 /// ditto
-float exp(float x)               { return exp(cast(real)x); }
+pure nothrow float exp(float x)               { return exp(cast(real)x); }
 
 
 /**
@@ -882,7 +883,7 @@ float exp(float x)               { return exp(cast(real)x); }
  *    $(TR $(TD $(NAN))        $(TD $(NAN))       )
  *  )
  */
-real expm1(real x) 
+pure nothrow real expm1(real x) 
 {
     version(Naked_D_InlineAsm_X86) {
       enum { PARAMSIZE = (real.sizeof+3)&(0xFFFF_FFFC) } // always a multiple of 4
@@ -968,7 +969,7 @@ L_largenegative:
  *    $(TR $(TD $(NAN))        $(TD $(NAN))    )
  *  )
  */
-real exp2(real x) 
+pure nothrow real exp2(real x) 
 {
     version(Naked_D_InlineAsm_X86) {
       enum { PARAMSIZE = (real.sizeof+3)&(0xFFFF_FFFC) } // always a multiple of 4
@@ -981,7 +982,7 @@ real exp2(real x)
          * frndint(19 cycles), leaving f2xm1(19 cycles) as the only slow instruction.
          * 
          * We can do frndint by using fist. BUT we can't use it for huge numbers,
-         * because it will set the Invalid Operation flag is overflow or NaN occurs.
+         * because it will set the Invalid Operation flag if overflow or NaN occurs.
          * Fortunately, whenever this happens the result would be zero or infinity.
          * 
          * We can perform fscale by directly poking into the exponent. BUT this doesn't
@@ -1057,9 +1058,9 @@ L_was_nan:
     }    
 }
 /// ditto
-double exp2(double x)             { return exp2(cast(real)x); }
+pure nothrow double exp2(double x)             { return exp2(cast(real)x); }
 /// ditto
-float exp2(float x)               { return exp2(cast(real)x); }
+pure nothrow float exp2(float x)               { return exp2(cast(real)x); }
 
 unittest{
     assert(exp2(0.5L)== SQRT2);
@@ -1075,7 +1076,7 @@ unittest{
  * almost twice as fast as calculating sin(y) and cos(y) separately,
  * and is the preferred method when both are required.
  */
-creal expi(real y)
+pure nothrow creal expi(real y)
 {
     version(D_InlineAsm_X86)
     {
@@ -1146,7 +1147,7 @@ real frexp(real value, out int exp)
         // denormal
         value *= F.RECIP_EPSILON;
         ex = vu[F.EXPPOS_SHORT] & F.EXPMASK;
-        exp = ex - F.EXPBIAS - 63;
+        exp = ex - F.EXPBIAS - real.mant_dig + 1;
         vu[F.EXPPOS_SHORT] = (0x8000 & vu[F.EXPPOS_SHORT]) | 0x3FFE;
     }
   } else static if (real.mant_dig == 113) { // quadruple      
@@ -1175,7 +1176,7 @@ real frexp(real value, out int exp)
         // denormal
         value *= F.RECIP_EPSILON;
         ex = vu[F.EXPPOS_SHORT] & F.EXPMASK;
-        exp = ex - F.EXPBIAS - 113;
+        exp = ex - F.EXPBIAS - real.mant_dig + 1;
         vu[F.EXPPOS_SHORT] = 
                   cast(ushort)((0x8000 & vu[F.EXPPOS_SHORT]) | 0x3FFE);
     }
@@ -1199,17 +1200,11 @@ real frexp(real value, out int exp)
         exp = 0;
     } else {
         // denormal
-        ushort sgn;
-        sgn = cast(ushort)((0x8000 & vu[F.EXPPOS_SHORT])| 0x3FE0);
-        *vl &= 0x7FFF_FFFF_FFFF_FFFF;
-
-        int i = -0x3FD + 11;
-        do {
-            i--;
-            *vl <<= 1;
-        } while (*vl > 0);
-        exp = i;
-        vu[F.EXPPOS_SHORT] = sgn;
+        value *= F.RECIP_EPSILON;
+        ex = vu[F.EXPPOS_SHORT] & F.EXPMASK;
+        exp = (ex - F.EXPBIAS)>>> 4 - real.mant_dig + 1;
+        vu[F.EXPPOS_SHORT] = 
+                  cast(ushort)((0x8000 & vu[F.EXPPOS_SHORT]) | 0x3FE0);
     }
   } else { //static if(real.mant_dig==106) // doubledouble
     throw new NotImplemented("frexp");
@@ -1294,6 +1289,17 @@ alias std.c.math.FP_ILOGBNAN FP_ILOGBNAN;
  */
 
 pure nothrow real ldexp(real n, int exp);    /* intrinsic */
+
+unittest {
+    assert(ldexp(1, -16384) == 0x1p-16384L);
+    assert(ldexp(1, -16382) == 0x1p-16382L);
+    int x;
+    real n = frexp(0x1p-16384L, x);
+    assert(n==0.5L);
+    assert(x==-16383);
+    assert(ldexp(n, x)==0x1p-16384L);
+    
+}
 
 /**************************************
  * Calculate the natural logarithm of x.
@@ -1458,100 +1464,68 @@ pure nothrow real fabs(real x);      /* intrinsic */
  *  )
  */
 
-real hypot(real x, real y)
+pure nothrow real hypot(real x, real y)
 {
-    /*
-     * This is based on code from:
-     * Cephes Math Library Release 2.1:  January, 1989
-     * Copyright 1984, 1987, 1989 by Stephen L. Moshier
-     * Direct inquiries to 30 Frost Street, Cambridge, MA 02140
-     */
+    // Scale x and y to avoid underflow and overflow.
+    // If one is huge and the other tiny, return the larger. 
+    // If both are huge, avoid overflow by scaling by 1/sqrt(real.max/2).
+    // If both are tiny, avoid underflow by scaling by sqrt(real.min*real.epsilon).         
 
-    enum int PRECL = 32;
-    enum int MAXEXPL = real.max_exp; //16384;
-    enum int MINEXPL = real.min_exp; //-16384;
-
-    real xx, yy, b, re, im;
-    int ex, ey, e;
-
-    // Note, hypot(INFINITY, NAN) = INFINITY.
-    if (isInfinity(x) || isInfinity(y))
-        return real.infinity;
-
-    if (isNaN(x))
-        return x;
-    if (isNaN(y))
-        return y;
-
-    re = fabs(x);
-    im = fabs(y);
-
-    if (re == 0.0)
-        return im;
-    if (im == 0.0)
-        return re;
-
-    // Get the exponents of the numbers
-    xx = frexp(re, ex);
-    yy = frexp(im, ey);
-
-    // Check if one number is tiny compared to the other
-    e = ex - ey;
-    if (e > PRECL)
-        return re;
-    if (e < -PRECL)
-        return im;
-
-    // Find approximate exponent e of the geometric mean.
-    e = (ex + ey) >> 1;
-
-    // Rescale so mean is about 1
-    xx = ldexp(re, -e);
-    yy = ldexp(im, -e);
-
-    // Hypotenuse of the right triangle
-    b = sqrt(xx * xx  +  yy * yy);
-
-    // Compute the exponent of the answer.
-    yy = frexp(b, ey);
-    ey = e + ey;
-
-    // Check it for overflow and underflow.
-    if (ey > MAXEXPL + 2)
-    {
-        //return __matherr(_OVERFLOW, INFINITY, x, y, "hypotl");
-        return real.infinity;
+    enum real SQRTMIN = 0.5*sqrt(real.min); // This is a power of 2.
+    enum real SQRTMAX = 1.0L/SQRTMIN; // 2^((max_exp)/2) = nextUp(sqrt(real.max))
+    
+    static assert(2*(SQRTMAX/2)*(SQRTMAX/2) <= real.max);
+    static assert(real.min*real.max>2 && real.min*real.max<=4); // Proves that sqrt(real.max) ~~  0.5/sqrt(real.min)
+        
+    real u = fabs(x);
+    real v = fabs(y);    
+    if (u >= SQRTMAX*0.5) {
+        if (v < SQRTMAX*real.epsilon)   return u; // hypot(huge, tiny) == huge
+        if (u == real.infinity && v!=v) return u; // hypot(inf, nan) == inf
+    } else if (v >= SQRTMAX*0.5) { 
+        if (u < SQRTMAX*real.epsilon)   return v; // hypot(tiny, huge) == huge        
+        if (v == real.infinity && u!=u) return v; // hypot(nan, inf) == inf
+    } else if (u<=SQRTMIN || v<=SQRTMIN){
+        // both are tiny, avoid underflow
+        u *= SQRTMAX / real.epsilon; v *= SQRTMAX/real.epsilon;
+        return sqrt(u*u + v*v) * SQRTMIN * real.epsilon;
+    } else {
+        // both are in the normal range
+        return sqrt(u*u + v*v);
     }
-    if (ey < MINEXPL - 2)
-        return 0.0;
-
-    // Undo the scaling
-    b = ldexp(b, e);
-    return b;
+    // hypot(huge, huge) -- avoid overflow
+    u *= SQRTMIN*0.5; v *= SQRTMIN*0.5;    
+    return sqrt(u*u + v*v) * SQRTMAX * 2.0;
 }
 
 unittest
 {
     static real vals[][3] =     // x,y,hypot
-    [
-        [ 0,      0,      0],
-        [ 0,      -0,     0],
-        [ 3,      4,      5],
-        [ -300,   -400,   500],
-        [ real.min, real.min, 0x1.6a09e667f3bcc908p-16382L],
-        [ real.max/2, real.max/2, 0x1.6a09e667f3bcc908p+16383L],
-        [ real.infinity, real.nan, real.infinity],
-        [ real.nan, real.nan, real.nan],
-    ];
-
-    for (int i = 0; i < vals.length; i++)
-    {
-        real x = vals[i][0];
-        real y = vals[i][1];
-        real z = vals[i][2];
-        real h = hypot(x, y);
-        assert(isIdentical(z, h));
-    }
+        [
+            [ 0.0,     0.0,   0.0],
+            [ 0.0,    -0.0,   0.0],
+            [ -0.0,   -0.0,   0.0],
+            [ 3.0,     4.0,   5.0],
+            [ -300,   -400,   500],
+            [88/(64*sqrt(real.min)), 105/(64*sqrt(real.min)), 137/(64*sqrt(real.min))],
+            [88/(128*sqrt(real.min)), 105/(128*sqrt(real.min)), 137/(128*sqrt(real.min))],
+            [3*real.min*real.epsilon, 4*real.min*real.epsilon, 5*real.min*real.epsilon],
+            [ real.min, real.min, sqrt(2.0L)*real.min],
+            [ real.max/sqrt(2.0L), real.max/sqrt(2.0L), real.max],
+            [ real.infinity, real.nan, real.infinity],
+            [ real.nan, real.infinity, real.infinity],
+            [ real.nan, real.nan, real.nan],
+            [ real.nan, real.max, real.nan],
+            [ real.max, real.nan, real.nan],
+        ];
+        for (int i = 0; i < vals.length; i++)
+        {
+            real x = vals[i][0];
+            real y = vals[i][1];
+            real z = vals[i][2];
+            real h = hypot(x, y);
+            assert(isIdentical(z, h));
+        }
 }
 
 /**********************************
@@ -1583,7 +1557,6 @@ real erfc(real x)               { return std.c.math.erfcl(x); }
  *      $(TR $(TD $(PLUSMN)$(INFIN)) $(TD +$(INFIN)) $(TD no))
  *      )
  */
-/* Documentation prepared by Don Clugston */
 real lgamma(real x)
 {
     return std.c.math.lgammal(x);
@@ -1747,7 +1720,7 @@ real remquo(real x, real y, out int n)  /// ditto
  * Returns !=0 if e is a NaN.
  */
 
-int isNaN(real x)
+pure nothrow int isNaN(real x)
 {
   alias floatTraits!(real) F;
   static if (real.mant_dig==53) { // double
@@ -1784,7 +1757,7 @@ unittest
  * Returns !=0 if e is finite (not infinite or $(NAN)).
  */
 
-int isFinite(real e)
+pure nothrow int isFinite(real e)
 {
     alias floatTraits!(real) F;
     ushort* pe = cast(ushort *)&e;
@@ -1807,7 +1780,7 @@ unittest
  * be converted to normal reals.
  */
 
-int isNormal(X)(X x)
+pure nothrow int isNormal(X)(X x)
 {
     alias floatTraits!(X) F;
 
@@ -1849,7 +1822,7 @@ unittest
  * be converted to normal reals.
  */
 
-int isSubnormal(float f)
+pure nothrow int isSubnormal(float f)
 {
     uint *p = cast(uint *)&f;
     return (*p & 0x7F80_0000) == 0 && *p & 0x007F_FFFF;
@@ -1865,7 +1838,7 @@ unittest
 
 /// ditto
 
-int isSubnormal(double d)
+pure nothrow int isSubnormal(double d)
 {
     uint *p = cast(uint *)&d;
     return (p[MANTISSA_MSB] & 0x7FF0_0000) == 0
@@ -1882,7 +1855,7 @@ unittest
 
 /// ditto
 
-int isSubnormal(real x)
+pure nothrow int isSubnormal(real x)
 {
     alias floatTraits!(real) F;
     static if (real.mant_dig == 53) { // double
@@ -1914,7 +1887,7 @@ unittest
  * Return !=0 if e is $(PLUSMN)$(INFIN).
  */
 
-int isInfinity(real x)
+pure nothrow int isInfinity(real x)
 {
     alias floatTraits!(real) F;
     static if (real.mant_dig == 53) { // double
@@ -1952,7 +1925,7 @@ unittest
  * and two $(NAN)s are identical if they have the same 'payload'.
  */
 
-bool isIdentical(real x, real y)
+pure nothrow bool isIdentical(real x, real y)
 {
     // We're doing a bitwise comparison so the endianness is irrelevant.
     long*   pxs = cast(long *)&x;
@@ -1973,7 +1946,7 @@ bool isIdentical(real x, real y)
  * Return 1 if sign bit of e is set, 0 if not.
  */
 
-int signbit(real x)
+pure nothrow int signbit(real x)
 {
     return ((cast(ubyte *)&x)[floatTraits!(real).SIGNPOS_BYTE] & 0x80) != 0;
 }
@@ -1993,7 +1966,7 @@ unittest
  * Return a value composed of to with from's sign bit.
  */
 
-real copysign(real to, real from)
+pure nothrow real copysign(real to, real from)
 {
     ubyte* pto   = cast(ubyte *)&to;
     const ubyte* pfrom = cast(ubyte *)&from;
@@ -2029,7 +2002,7 @@ Returns $(D -1) if $(D x < 0), $(D x) if $(D x == 0), $(D 1) if
 $(D x > 0), and $(NAN) if x==$(NAN).
  */
 
-F sgn(F)(F x)
+pure nothrow F sgn(F)(F x)
 {
     // @@@TODO@@@: make this faster
     return x > 0 ? 1 : x < 0 ? -1 : x;
@@ -2184,7 +2157,7 @@ unittest {
  * Remarks:
  * This function is included in the forthcoming IEEE 754R standard.
  */
-real nextUp(real x)
+pure nothrow real nextUp(real x)
 {
     alias floatTraits!(real) F;
     static if (real.mant_dig == 53) { // double
@@ -2257,7 +2230,7 @@ real nextUp(real x)
 }
 
 /** ditto */
-double nextUp(double x)
+pure nothrow double nextUp(double x)
 {
     ulong *ps = cast(ulong *)&x;
 
@@ -2279,7 +2252,7 @@ double nextUp(double x)
 }
 
 /** ditto */
-float nextUp(float x)
+pure nothrow float nextUp(float x)
 {
     uint *ps = cast(uint *)&x;
 
@@ -2318,19 +2291,19 @@ float nextUp(float x)
  * Remarks:
  * This function is included in the forthcoming IEEE 754R standard.
  */
-real nextDown(real x)
+pure nothrow real nextDown(real x)
 {
     return -nextUp(-x);
 }
 
 /** ditto */
-double nextDown(double x)
+pure nothrow double nextDown(double x)
 {
     return -nextUp(-x);
 }
 
 /** ditto */
-float nextDown(float x)
+pure nothrow float nextDown(float x)
 {
     return -nextUp(-x);
 }
@@ -2351,42 +2324,15 @@ unittest {
  * This function is not generally very useful; it's almost always better to use
  * the faster functions nextUp() or nextDown() instead.
  *
- * IEEE 754 requirements not implemented on Windows:
  * The FE_INEXACT and FE_OVERFLOW exceptions will be raised if x is finite and
  * the function result is infinite. The FE_INEXACT and FE_UNDERFLOW
  * exceptions will be raised if the function value is subnormal, and x is
  * not equal to y.
  */
-real nextafter(real x, real y)
+pure nothrow T nextafter(T)(T x, T y)
 {
-    version (Windows) {
-        if (x==y) return y;
-        return (y>x) ? nextUp(x) : nextDown(x);
-    } else {
-        return std.c.math.nextafterl(x, y);
-    }
-}
-
-/// ditto
-float nextafter(float x, float y)
-{
-    version (Windows) {
-        if (x==y) return y;
-        return (y>x) ? nextUp(x) : nextDown(x);
-    } else {
-        return std.c.math.nextafterf(x, y);
-    }
-}
-
-/// ditto
-double nextafter(double x, double y)
-{
-    version (Windows) {
-        if (x==y) return y;
-        return (y>x) ? nextUp(x) : nextDown(x);
-    } else {
-        return std.c.math.nextafter(x, y);
-    }
+    if (x==y) return y;
+    return ((y>x) ? nextUp(x) :  nextDown(x)) * 1.0; // multiply by 1 to set the overflow & underflow flags.     
 }
 
 unittest
@@ -2415,17 +2361,17 @@ unittest
  *      $(TR $(TD x $(LT)= y) $(TD +0.0))
  *      )
  */
-real fdim(real x, real y) { return (x > y) ? x - y : +0.0; }
+pure nothrow real fdim(real x, real y) { return (x > y) ? x - y : +0.0; }
 
 /****************************************
  * Returns the larger of x and y.
  */
-real fmax(real x, real y) { return x > y ? x : y; }
+pure nothrow real fmax(real x, real y) { return x > y ? x : y; }
 
 /****************************************
  * Returns the smaller of x and y.
  */
-real fmin(real x, real y) { return x < y ? x : y; }
+pure nothrow real fmin(real x, real y) { return x < y ? x : y; }
 
 /**************************************
  * Returns (x * y) + z, rounding only once according to the
@@ -2433,7 +2379,7 @@ real fmin(real x, real y) { return x < y ? x : y; }
  *
  * BUGS: Not currently implemented - rounds twice.
  */
-real fma(real x, real y, real z) { return (x * y) + z; }
+pure nothrow real fma(real x, real y, real z) { return (x * y) + z; }
 
 /*******************************************************************
  * Fast integral powers.
@@ -2445,7 +2391,7 @@ F pow(F)(F x, uint n) if (isFloatingPoint!(F))
     {
         assert(n >> 1 <= int.max);
         // must reduce n so we can call the pow(real, int) overload
-        invariant result = pow(x*x, cast(int) (n >> 1));
+        immutable result = pow(x*x, cast(int) (n >> 1));
         return (n & 1)
             ? result * x // odd power
             : result;
@@ -2670,7 +2616,7 @@ unittest
  *      $(TR $(TD any)    $(TD $(NAN))     $(TD 0))
  *      )
  */
-int feqrel(X)(X x, X y)
+pure nothrow int feqrel(X)(X x, X y)
 {
     /* Public Domain. Author: Don Clugston, 18 Aug 2005.
      */
@@ -2738,8 +2684,6 @@ int feqrel(X)(X x, X y)
               return 1;
         } else return 0;
      }
- } else {
-    throw new NotImplemented("feqrel");
  }
 }
 
@@ -2803,7 +2747,7 @@ package: // Not public yet
  *   ieeeMean(x, y) = sqrt(x * y).
  *
  */
-T ieeeMean(T)(T x, T y)
+pure nothrow T ieeeMean(T)(T x, T y)
 in {
     // both x and y must have the same sign, and must not be NaN.
     assert(signbit(x) == signbit(y));
@@ -2917,7 +2861,7 @@ public:
  * Params:
  *      A =     array of coefficients $(SUB a, 0), $(SUB a, 1), etc.
  */
-real poly(real x, const real[] A)
+pure nothrow real poly(real x, const real[] A)
 in
 {
     assert(A.length > 0);
@@ -3043,10 +2987,11 @@ unittest
    admitting a maximum relative difference $(D maxRelDiff) and a
    maximum absolute difference $(D maxAbsDiff).
  */
-bool approxEqual(T, U, V)(T lhs, U rhs, V maxRelDiff, V maxAbsDiff = 0)
+// BUG: Not nothrow, because of the assert in the array case. 
+pure bool approxEqual(T, U, V)(T lhs, U rhs, V maxRelDiff, V maxAbsDiff = 0)
 {
     static if (isArray!(T)) {
-        invariant n = lhs.length;
+        immutable n = lhs.length;
         static if (isArray!(U)) {
             // Two arrays
             assert(n == rhs.length);
@@ -3081,7 +3026,7 @@ bool approxEqual(T, U, V)(T lhs, U rhs, V maxRelDiff, V maxAbsDiff = 0)
 /**
    Returns $(D approxEqual(lhs, rhs, 0.01)).
  */
-bool approxEqual(T, U)(T lhs, U rhs) {
+pure bool approxEqual(T, U)(T lhs, U rhs) {
     return approxEqual(lhs, rhs, 0.01);
 }
 
