@@ -776,7 +776,7 @@ unittest
 
 template isIntegral(T)
 {
-    static const isIntegral = is(T == byte) || is(T == ubyte) || is(T == short)
+    enum bool isIntegral = is(T == byte) || is(T == ubyte) || is(T == short)
         || is(T == ushort) || is(T == int) || is(T == uint)
         || is(T == long) || is(T == ulong);
 }
@@ -787,7 +787,7 @@ template isIntegral(T)
 
 template isFloatingPoint(T)
 {
-    static const isFloatingPoint = is(T == float)
+    enum bool isFloatingPoint = is(T == float)
         || is(T == double) || is(T == real);
 }
 
@@ -797,7 +797,7 @@ template isFloatingPoint(T)
 
 template isNumeric(T)
 {
-    static const isNumeric = isIntegral!(T) || isFloatingPoint!(T);
+    enum bool isNumeric = isIntegral!(T) || isFloatingPoint!(T);
 }
 
 /**
@@ -806,7 +806,7 @@ template isNumeric(T)
 
 template isSomeString(T)
 {
-    static const isSomeString = is(T : const(char[]))
+    enum bool isSomeString = is(T : const(char[]))
         || is(T : const(wchar[])) || is(T : const(dchar[]));
 }
 
@@ -826,7 +826,7 @@ static assert(isSomeString!(char[4]));
 
 template isAssociativeArray(T)
 {
-    static const bool isAssociativeArray =
+    enum bool isAssociativeArray =
         is(typeof(T.keys)) && is(typeof(T.values));
 }
 
@@ -841,12 +841,12 @@ static assert(isAssociativeArray!(invariant(char[5])[int]));
  */
 template isStaticArray(T : U[N], U, size_t N)
 {
-    const bool isStaticArray = true;
+    enum bool isStaticArray = true;
 }
 
 template isStaticArray(T)
 {
-    const bool isStaticArray = false;
+    enum bool isStaticArray = false;
 }
 
 static assert (isStaticArray!(int[51]));
@@ -871,12 +871,12 @@ static assert (!isStaticArray!(int));
  */
 template isDynamicArray(T, U = void)
 {
-    static const isDynamicArray = false;
+    enum bool isDynamicArray = false;
 }
 
 template isDynamicArray(T : U[], U)
 {
-  static const isDynamicArray = !isStaticArray!(T);
+  enum bool isDynamicArray = !isStaticArray!(T);
 }
 
 static assert(isDynamicArray!(int[]));
@@ -887,7 +887,7 @@ static assert(!isDynamicArray!(int[5]));
  */
 template isArray(T)
 {
-    static const isArray = isStaticArray!(T) || isDynamicArray!(T);
+    enum bool isArray = isStaticArray!(T) || isDynamicArray!(T);
 }
 
 static assert(isArray!(int[]));
@@ -903,9 +903,9 @@ static assert(isArray!(void[]));
 template isExpressionTuple(T ...)
 {
     static if (is(void function(T)))
-	const bool isExpressionTuple = false;
+	enum bool isExpressionTuple = false;
     else
-	const bool isExpressionTuple = true;
+	enum bool isExpressionTuple = true;
 }
 
 /**
