@@ -1385,7 +1385,6 @@ real hypot(real x, real y)
 
     const int PRECL = 32;
     const int MAXEXPL = real.max_exp; //16384;
-    const int MINEXPL = real.min_exp; //-16384;
 
     real xx, yy, b, re, im;
     int ex, ey, e;
@@ -1432,14 +1431,12 @@ real hypot(real x, real y)
     yy = frexp(b, ey);
     ey = e + ey;
 
-    // Check it for overflow and underflow.
+    // Check it for overflow. (Underflow is impossible).
     if (ey > MAXEXPL + 2)
     {
         //return __matherr(_OVERFLOW, INFINITY, x, y, "hypotl");
         return real.infinity;
     }
-    if (ey < MINEXPL - 2)
-        return 0.0;
 
     // Undo the scaling
     b = ldexp(b, e);
@@ -1456,6 +1453,7 @@ unittest
         [ -300,   -400,   500],
         [ real.min, real.min, 4.75473e-4932L],
         [ real.max/2, real.max/2, 0x1.6a09e667f3bcc908p+16383L],
+        [ 3*real.min*real.epsilon, 4*real.min*real.epsilon, 5*real.min*real.epsilon],
         [ real.infinity, real.nan, real.infinity],
         [ real.nan, real.nan, real.nan],
     ];
