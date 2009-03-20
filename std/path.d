@@ -12,7 +12,7 @@
  *
  * $(WEB digitalmars.com, Walter Bright), Grzegorz Adam Hankiewicz,
 Thomas K&uuml;hne, $(WEB erdani.org, Andrei Alexandrescu)
- * 
+ *
  * Macros:
  *	WIKI = Phobos/StdPath
  * Copyright:
@@ -29,6 +29,7 @@ module std.path;
 private import std.string;
 private import std.file;
 private import std.contracts;
+private import core.stdc.errno;
 
 version(Posix)
 {
@@ -1151,7 +1152,7 @@ private string expandFromEnvironment(string path)
 {
     assert(path.length >= 1);
     assert(path[0] == '~');
-    
+
     // Get HOME and use that to replace the tilde.
     char* home = getenv("HOME");
     if (home == null)
@@ -1214,7 +1215,7 @@ private string expandFromDatabase(string path)
         username = path[1 .. last_char] ~ '\0';
     }
     assert(last_char > 1);
-    
+
     // Reserve C memory for the getpwnam_r() function.
     passwd result;
     int extra_memory_size = 5 * 1024;
@@ -1239,7 +1240,7 @@ private string expandFromDatabase(string path)
 	    break;
 	}
 
-	if (std.c.stdlib.getErrno() != ERANGE)
+	if (errno != ERANGE)
 	    goto Lerror;
 
 	// extra_memory isn't large enough

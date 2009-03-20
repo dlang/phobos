@@ -40,6 +40,7 @@ module std.file;
 private import core.memory;
 private import std.c.stdio;
 private import std.c.stdlib;
+private import core.stdc.errno;
 private import std.path;
 private import std.string;
 private import std.regexp;
@@ -926,7 +927,7 @@ class FileException : Exception
 
 private T cenforce(T)(T condition, lazy const(char)[] name)
 {
-    if (!condition) throw new FileException(name.idup, getErrno());
+    if (!condition) throw new FileException(name.idup, errno);
     return condition;
 }
 
@@ -1479,7 +1480,7 @@ string[] listdir(string pathname, string pattern)
 	}
 	return true; // continue
     }
-    
+
     listdir(pathname, &callback);
     return result;
 }

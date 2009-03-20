@@ -43,6 +43,7 @@ private import std.c.stdlib;
 private import std.c.string;
 private import std.string;
 private import std.c.process;
+private import core.stdc.errno;
 private import std.contracts;
 version (Windows)
 {
@@ -61,7 +62,7 @@ version (Posix)
    interpreter is found, and zero otherwise. If $(D command) is not
    null, returns -1 on error, or the exit status of command (which may
    in turn signal an error in command's execution).
- 
+
    Note: On Unix systems, the homonym C function (which is accessible
    to D programs as $(LINK2 std_c_process.html, std.c._system))
    returns a code in the same format as
@@ -175,7 +176,7 @@ int _spawnvp(int mode, in char *pathname, in char **argv)
     }
 
 Lerror:
-    retval = getErrno;
+    retval = errno;
     char[80] buf = void;
     throw new Exception(
         "Cannot spawn " ~ toString(pathname) ~ "; "
@@ -249,7 +250,7 @@ version(Posix)
 	string[]    envPaths    =   std.string.split(std.string.toString(std.c.stdlib.getenv("PATH")), ":");
         int         iRet        =   0;
 
-        // Note: if any call to execve() succeeds, this process will cease 
+        // Note: if any call to execve() succeeds, this process will cease
         // execution, so there's no need to check the execve() result through
         // the loop.
 
@@ -403,7 +404,7 @@ version(MainTest)
         else
         {
             string[]    dummy_env;
-            
+
             dummy_env ~= "VAL0=value";
             dummy_env ~= "VAL1=value";
 
@@ -418,7 +419,7 @@ version(MainTest)
 //          int i = execvp(args[1], args[1 .. args.length]);
             int i = execvpe(args[1], args[1 .. args.length], dummy_env);
 
-            printf("exec??() has returned! Error code: %d; errno: %d\n", i, /* std.c.stdlib.getErrno() */-1);
+            printf("exec??() has returned! Error code: %d; errno: %d\n", i, /* errno */-1);
 
             return 0;
         }
