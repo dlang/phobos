@@ -15,7 +15,7 @@
  *
  * $(WEB digitalmars.com, Walter Bright), $(WEB erdani.org, Andrei
 Alexandrescu)
- * 
+ *
  * Macros:
  *	WIKI=Phobos/StdStdio
  */
@@ -28,14 +28,17 @@ import core.memory;
 import std.format;
 import std.utf;
 import std.string;
+import core.stdc.errno;
 import std.c.stdlib;
 import std.c.string;
 import std.c.stddef;
+import std.c.wcharh;
 import std.conv;
 import std.traits;
 import std.contracts;
 import std.file;
 import std.typetuple;
+
 
 version (DigitalMars)
 {
@@ -163,7 +166,7 @@ class StdioException : Exception
 
     static void opCall()
     {
-	throw new StdioException(getErrno());
+	throw new StdioException(getErrno);
     }
 }
 
@@ -370,7 +373,7 @@ specifier makes $(D_PARAM writef) simply write the binary
 representation of the argument. Use "%-r" to write numbers in little
 endian format, "%+r" to write numbers in big endian format, and "%r"
 to write numbers in platform-native format.
- 
+
 */
 
 void writef(T...)(T args)
@@ -478,7 +481,7 @@ void fwritef(FILE* fp, ...)
  */
 void fwritefln(FILE* fp, ...)
 {
-    writefx(fp, _arguments, _argptr, 1);    
+    writefx(fp, _arguments, _argptr, 1);
 }
 
 /**********************************
@@ -896,8 +899,6 @@ FILE* fopen(in char[] name, in char[] mode = "r")
     auto result = std.c.stdio.fopen(namez, modez);
     version(linux)
     {
-        enum int EOVERFLOW = 75; // taken from my Ubuntu's
-                                 // /usr/include/asm-generic/errno.h
         if (!result && getErrno == EOVERFLOW)
         {
             // attempt fopen64, maybe the file was very large
@@ -1086,7 +1087,7 @@ Example:
   }
 ----
 
- In case of an I/O error, an $(D_PARAM StdioException) is thrown. 
+ In case of an I/O error, an $(D_PARAM StdioException) is thrown.
  */
 
 struct lines
@@ -1105,10 +1106,10 @@ struct lines
 
     // Keep these commented lines for later, when Walter fixes the
     // exception model.
-    
+
 //     static lines opCall(string fName, dchar terminator = '\n')
 //     {
-//         auto f = enforce(fopen(fName), 
+//         auto f = enforce(fopen(fName),
 //             new StdioException("Cannot open file `"~fName~"' for reading"));
 //         auto result = lines(f, terminator);
 //         result.fileName = fName;
@@ -1233,7 +1234,7 @@ unittest
             ++i;
         }
         fclose(f) == 0 || assert(false);
-    
+
         // test looping with a file with three lines, last without a newline
         std.file.write(file, "Line one\nline two\nline three");
         f = fopen(file, "r");
@@ -1276,7 +1277,7 @@ unittest
             ++i;
         }
         fclose(f) == 0 || assert(false);
-    
+
         // test looping with a file with three lines, last without a newline
         std.file.write(file, "Line one\nline two\nline three");
         f = fopen(file, "r");
@@ -1333,7 +1334,7 @@ The content of $(D_PARAM buffer) is reused across calls. In the
  except for the last one, in which case $(D_PARAM buffer.length) may
  be less than 4096 (but always greater than zero).
 
- In case of an I/O error, an $(D_PARAM StdioException) is thrown. 
+ In case of an I/O error, an $(D_PARAM StdioException) is thrown.
 */
 
 struct chunks
@@ -1353,7 +1354,7 @@ struct chunks
 
 //     static chunks opCall(string fName, size_t size)
 //     {
-//         auto f = enforce(fopen(fName), 
+//         auto f = enforce(fopen(fName),
 //             new StdioException("Cannot open file `"~fName~"' for reading"));
 //         auto result = chunks(f, size);
 //         result.fileName  = fName;
@@ -1404,7 +1405,7 @@ unittest
         assert(false);
     }
     fclose(f) == 0 || assert(false);
-    
+
     // test looping with a file with three lines
     std.file.write(file, "Line one\nline two\nline three\n");
     f = fopen(file, "r");

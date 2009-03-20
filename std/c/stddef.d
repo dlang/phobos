@@ -9,19 +9,4 @@
 
 module std.c.stddef;
 
-version (Win32)
-{
-    alias wchar wchar_t;
-}
-else version (linux)
-{
-    alias dchar wchar_t;
-}
-else version (OSX)
-{
-    alias dchar wchar_t;
-}
-else
-{
-    static assert(0);
-}
+public import core.stdc.stddef;

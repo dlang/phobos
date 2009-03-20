@@ -27,7 +27,7 @@
 /***********
 A one-stop shop for converting values from one type to another.
 
-Authors: 
+Authors:
 
 $(WEB digitalmars.com, Walter Bright), $(WEB erdani.org, Andrei
 Alexandrescu)
@@ -37,6 +37,7 @@ module std.conv;
 
 private import std.string;  // for atof(), toString()
 private import std.c.stdlib;
+private import core.stdc.errno;
 private import std.math;  // for fabs(), isnan()
 private import std.stdio; // for writefln() and printf()
 private import std.typetuple; // for unittests
@@ -386,11 +387,11 @@ private T numberToNumber(S, T)(S value)
 
 private T parseString(T)(const(char)[] v)
 {
-    scope(exit) 
+    scope(exit)
     {
-        if (v.length) 
+        if (v.length)
         {
-            conv_error!(const(char)[], T)(v); 
+            conv_error!(const(char)[], T)(v);
         }
     }
     return parse!(T)(v);
@@ -711,9 +712,9 @@ private N parseIntegral(S, N)(ref S s)
             alias uint N1;
         auto v = parseIntegral!(S, N1)(s);
         auto result = cast(N) v;
-        if (result != v) 
+        if (result != v)
         {
-            conv_error!(S, N)(s); 
+            conv_error!(S, N)(s);
         }
         return result;
     }
@@ -1400,7 +1401,7 @@ F parseFloating(S : S[], F)(ref S[] s)
 
     // BUG: should set __locale_decpoint to "." for DMC
 
-    setErrno(0);
+    errno = 0;
     char* endptr;
     static if (is(F == float))
         auto f = strtof(sz, &endptr);
@@ -1410,7 +1411,7 @@ F parseFloating(S : S[], F)(ref S[] s)
         auto f = strtold(sz, &endptr);
     else
         static assert(false);
-    if (getErrno() == ERANGE)
+    if (errno == ERANGE)
 	goto Lerr;
     assert(endptr);
     if (endptr == sz)
@@ -1424,12 +1425,12 @@ F parseFloating(S : S[], F)(ref S[] s)
     conv_error!(S[], F)(s);
     assert(0);
 }
- 
+
 unittest
 {
     debug( conv ) writefln( "conv.toFloat.unittest" );
     float f;
-    
+
     f = toFloat( "nAn" );
     assert(isnan(f));
     f = toFloat( "123" );
@@ -1447,7 +1448,7 @@ unittest
     assert( f == 123.f );
     f = toFloat( ".456" );
     assert( f == .456f );
-    
+
     // min and max
     f = toFloat("1.17549e-38");
     assert(feq(cast(real)f, cast(real)1.17549e-38));
@@ -1610,7 +1611,7 @@ unittest
 {
     debug(conv) writefln("conv.toIfloat.unittest");
     ifloat ift;
-    
+
     ift = toIfloat(toString(123.45));
     assert(toString(ift) == toString(123.45i));
 
@@ -1625,7 +1626,7 @@ unittest
     ift = toIfloat(toString(ifloat.max));
     assert(toString(ift) == toString(ifloat.max));
     assert(feq(cast(ireal)ift, cast(ireal)ifloat.max));
-   
+
     // nan
     ift = toIfloat("nani");
     assert(cast(real)ift == cast(real)ifloat.nan);
@@ -1660,12 +1661,12 @@ unittest
     assert(toString( id ) == toString(idouble.min));
     assert(feq(cast(ireal)id.re, cast(ireal)idouble.min.re));
     assert(feq(cast(ireal)id.im, cast(ireal)idouble.min.im));
-    
+
     id = toIdouble(toString(idouble.max));
     assert(toString(id) == toString(idouble.max));
     assert(feq(cast(ireal)id.re, cast(ireal)idouble.max.re));
     assert(feq(cast(ireal)id.im, cast(ireal)idouble.max.im));
-    
+
     // nan
     id = toIdouble("nani");
     assert(cast(real)id == cast(real)idouble.nan);
@@ -1689,7 +1690,7 @@ unittest
     ireal ir;
 
     ir = toIreal(toString("123.45"));
-    assert(feq(cast(real)ir.re, cast(real)123.45i)); 
+    assert(feq(cast(real)ir.re, cast(real)123.45i));
 
     ir = toIreal(toString("123.45e+82i"));
     assert(toString(ir) == toString(123.45e+82i));
@@ -1730,26 +1731,26 @@ cfloat toCfloat(in string s)
 
     if (!s.length)
         goto Lerr;
-    
+
     b = getComplexStrings(s, s1, s2);
 
     if (!b)
         goto Lerr;
-    
+
     // atof(s1);
     endptr = &s1[s1.length - 1];
-    r1 = strtold(s1, &endptr); 
+    r1 = strtold(s1, &endptr);
 
     // atof(s2);
     endptr = &s2[s2.length - 1];
-    r2 = strtold(s2, &endptr); 
+    r2 = strtold(s2, &endptr);
 
     cf = cast(cfloat)(r1 + (r2 * 1.0i));
 
-    //writefln( "toCfloat() r1=%g, r2=%g, cf=%g, max=%g", 
+    //writefln( "toCfloat() r1=%g, r2=%g, cf=%g, max=%g",
     //           r1, r2, cf, cfloat.max);
-    // Currently disabled due to a posted bug where a 
-    // complex float greater-than compare to .max compares 
+    // Currently disabled due to a posted bug where a
+    // complex float greater-than compare to .max compares
     // incorrectly.
     //if (cf > cfloat.max)
     //    goto Loverflow;
@@ -1758,10 +1759,10 @@ cfloat toCfloat(in string s)
 
     Loverflow:
         conv_overflow(s);
-        
+
     Lerr:
         conv_error(s);
-        return cast(cfloat)0.0e-0+0i;   
+        return cast(cfloat)0.0e-0+0i;
 }
 
 unittest
@@ -1779,10 +1780,10 @@ unittest
 
     cf = toCfloat(toString(cfloat.max));
     assert(toString(cf) == toString(cfloat.max));
-   
+
     // nan ( nan+nani )
     cf = toCfloat("nani");
-    //writefln("toCfloat() cf=%g, cf=\"%s\", nan=%s", 
+    //writefln("toCfloat() cf=%g, cf=\"%s\", nan=%s",
     //         cf, toString(cf), toString(cfloat.nan));
     assert(toString(cf) == toString(cfloat.nan));
 
@@ -1809,7 +1810,7 @@ cdouble toCdouble(in string s)
 
     if (!s.length)
         goto Lerr;
-    
+
     b = getComplexStrings(s, s1, s2);
 
     if (!b)
@@ -1817,14 +1818,14 @@ cdouble toCdouble(in string s)
 
     // atof(s1);
     endptr = &s1[s1.length - 1];
-    r1 = strtold(s1, &endptr); 
+    r1 = strtold(s1, &endptr);
 
     // atof(s2);
     endptr = &s2[s2.length - 1];
     r2 = strtold(s2, &endptr); //atof(s2);
 
     cd = cast(cdouble)(r1 + (r2 * 1.0i));
- 
+
     //Disabled, waiting on a bug fix.
     //if (cd > cdouble.max)  //same problem the toCfloat() having
     //    goto Loverflow;
@@ -1833,10 +1834,10 @@ cdouble toCdouble(in string s)
 
     Loverflow:
         conv_overflow(s);
-        
+
     Lerr:
         conv_error(s);
-        return cast(cdouble)0.0e-0+0i; 
+        return cast(cdouble)0.0e-0+0i;
 }
 
 unittest
@@ -1889,30 +1890,30 @@ creal toCreal(in string s)
 
     if (!b)
         goto Lerr;
- 
+
     // atof(s1);
     endptr = &s1[s1.length - 1];
-    r1 = strtold(s1, &endptr); 
+    r1 = strtold(s1, &endptr);
 
     // atof(s2);
     endptr = &s2[s2.length - 1];
     r2 = strtold(s2, &endptr); //atof(s2);
 
-    //writefln("toCreal() r1=%g, r2=%g, s1=\"%s\", s2=\"%s\", nan=%g", 
+    //writefln("toCreal() r1=%g, r2=%g, s1=\"%s\", s2=\"%s\", nan=%g",
     //          r1, r2, s1, s2, creal.nan);
-   
+
     if (s1 =="nan" && s2 == "nani")
         cr = creal.nan;
     else if (r2 != 0.0)
         cr = cast(creal)(r1 + (r2 * 1.0i));
     else
-        cr = cast(creal)(r1 + 0.0i);    
-    
+        cr = cast(creal)(r1 + 0.0i);
+
     return cr;
 
     Lerr:
         conv_error(s);
-        return cast(creal)0.0e-0+0i;    
+        return cast(creal)0.0e-0+0i;
 }
 
 unittest
@@ -1928,13 +1929,13 @@ unittest
     assert(toString(cr) == toString(0.0e-0+0i));
     assert(cr == 0.0e-0+0i);
     assert(feq(cr, 0.0e-0+0i));
-    
+
     cr = toCreal("123");
     assert(cr == 123);
 
     cr = toCreal("+5");
     assert(cr == 5);
- 
+
     cr = toCreal("-78");
     assert(cr == -78);
 
@@ -1942,7 +1943,7 @@ unittest
     cr = toCreal(toString(creal.min));
     assert(toString(cr) == toString(creal.min));
     assert(feq(cr, creal.min));
-    
+
     cr = toCreal(toString(creal.max));
     assert(toString(cr) == toString(creal.max));
     assert(feq(cr, creal.max));
@@ -1970,7 +1971,7 @@ private bool getComplexStrings(in string s, out string s1, out string s2)
 {
     int len = s.length;
 
-    if (!len) 
+    if (!len)
         goto Lerr;
 
     // When "nan" or "nani" just return them.
@@ -1980,7 +1981,7 @@ private bool getComplexStrings(in string s, out string s1, out string s2)
         s2 = "nani";
         return 1;
     }
-    
+
     // Split the original string out into two strings.
     for (int i = 1; i < len; i++)
         if ((s[i - 1] != 'e' && s[i - 1] != 'E') && s[i] == '+')
@@ -1989,23 +1990,23 @@ private bool getComplexStrings(in string s, out string s1, out string s2)
             s1 = s[0..i];
             if (i + 1 < len - 1)
                 s2 = s[i + 1..len - 1];
-            else 
+            else
                 s2 = "0e+0i";
-            
-            break;
-        }   
 
-    // Handle the case when there's only a single value 
+            break;
+        }
+
+    // Handle the case when there's only a single value
     // to work with, and set the other string to zero.
     if (!s1.length)
     {
         s1 = s;
         s2 = "0e+0i";
     }
- 
-    //writefln( "getComplexStrings() s=\"%s\", s1=\"%s\", s2=\"%s\", len=%d", 
+
+    //writefln( "getComplexStrings() s=\"%s\", s1=\"%s\", s2=\"%s\", len=%d",
     //           s, s1, s2, len );
-   
+
     return 1;
 
     Lerr:
@@ -2023,13 +2024,13 @@ private bool feq(in real rx, in real ry, in real precision)
 {
     if (rx == ry)
         return 1;
-    
+
     if (isnan(rx))
         return cast(bool)isnan(ry);
 
     if (isnan(ry))
         return 0;
-       
+
     return cast(bool)(fabs(rx - ry) <= precision);
 }
 
@@ -2045,16 +2046,16 @@ private bool feq(in real r1, in real r2)
 {
     if (r1 == r2)
         return 1;
-    
+
     if (isnan(r1))
         return cast(bool)isnan(r2);
 
     if (isnan(r2))
         return 0;
-        
+
     return cast(bool)(feq(r1, r2, 0.000001L));
-} 
- 
+}
+
 /* ***************************************
  * compare ireals with given precision
  */
@@ -2065,15 +2066,15 @@ private bool feq(in ireal r1, in ireal r2)
 
     if (rx == ry)
         return 1;
-    
-    if (isnan(rx)) 
+
+    if (isnan(rx))
         return cast(bool)isnan(ry);
 
     if (isnan(ry))
         return 0;
-    
+
     return feq(rx, ry, 0.000001L);
-} 
+}
 
 /* ***************************************
  * compare creals with given precision
@@ -2086,7 +2087,7 @@ private bool feq(in creal r1, in creal r2)
     if ((cast(real)r1.re == cast(real)r2.re) &&
         (cast(real)r1.im == cast(real)r2.im))
         return 1;
-    
+
     if (isnan(r1a))
         return cast(bool)isnan(r2b);
 

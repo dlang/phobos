@@ -26,13 +26,13 @@
  *     return assumeUnique(line);
  * }
  * ----
- * 
+ *
  * Author:
  *
  * $(WEB erdani.org, Andrei Alexandrescu)
- * 
+ *
  * Credits:
- * 
+ *
  * Brad Roberts came up with the name $(D_PARAM contracts).
  */
 
@@ -44,6 +44,7 @@ private import std.traits;
 private import std.string;
 private import std.c.stdlib;
 private import std.c.string;
+private import core.stdc.errno;
 version(unittest)
 {
     private import std.stdio;
@@ -299,7 +300,7 @@ unittest
  * ----
  *
  * The call will duplicate the array appropriately.
- * 
+ *
  * Checking for uniqueness during compilation is possible in certain
  * cases (see the $(D_PARAM unique) and $(D_PARAM lent) keywords in
  * the $(WEB archjava.fluid.cs.cmu.edu/papers/oopsla02.pdf, ArchJava)
@@ -357,7 +358,7 @@ bool pointsTo(S, T)(ref S source, ref T target)
         foreach (i, subobj; source.tupleof)
         {
             static if (!isStaticArray!(typeof(subobj)))
-                if (pointsTo(subobj, target)) return true;            
+                if (pointsTo(subobj, target)) return true;
         }
         return false;
     }

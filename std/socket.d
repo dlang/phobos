@@ -36,7 +36,7 @@
 
 module std.socket;
 
-private import std.string, std.stdint, std.c.string, std.c.stdlib;
+private import std.string, std.stdint, std.c.string, std.c.stdlib, core.stdc.errno;
 
 version(unittest)
 {
@@ -81,7 +81,7 @@ else version(BsdSockets)
 
 	private int _lasterr()
 	{
-		return getErrno();
+		return errno;
 	}
 }
 else
@@ -1547,7 +1547,7 @@ class Socket
 		}
 		else version(Posix)
 		{
-			if(_SOCKET_ERROR == result && getErrno() == EINTR)
+			if(_SOCKET_ERROR == result && errno == EINTR)
 				return -1;
 		}
 		else
