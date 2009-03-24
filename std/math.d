@@ -1,5 +1,4 @@
 // Written in the D programming language
-
 /**
  * Elementary mathematical functions.
  *
@@ -8,7 +7,7 @@
  * than C99-style lower case names. All of these functions behave correctly
  * when presented with an infinity or NaN.
  * 
- * Unlike C, there is no global errno variable. Consequently, almost all of
+ * Unlike C, there is no global 'errno' variable. Consequently, almost all of
  * these functions are pure nothrow.
  *  
  * Authors:
@@ -42,35 +41,6 @@
  *      SQRT = &radix;
  *      HALF = &frac12;
  */
-/*
- * Copyright:
- *      Copyright (c) 2001-2005 by Digital Mars,
- *      All Rights Reserved,
- *      www.digitalmars.com
- * License:
- *  This software is provided 'as-is', without any express or implied
- *  warranty. In no event will the authors be held liable for any damages
- *  arising from the use of this software.
- *
- *  Permission is granted to anyone to use this software for any purpose,
- *  including commercial applications, and to alter it and redistribute it
- *  freely, subject to the following restrictions:
- *
- *  <ul>
- *  <li> The origin of this software must not be misrepresented; you must not
- *       claim that you wrote the original software. If you use this software
- *       in a product, an acknowledgment in the product documentation would be
- *       appreciated but is not required.
- *  </li>
- *  <li> Altered source versions must be plainly marked as such, and must not
- *       be misrepresented as being the original software.
- *  </li>
- *  <li> This notice may not be removed or altered from any source
- *       distribution.
- *  </li>
- *  </ul>
- */
-
 module(system) std.math;
 
 //debug=math;           // uncomment to turn on debugging printf's
@@ -85,12 +55,9 @@ version(GNU){
     // GDC can't actually do inline asm.
 } else version(D_InlineAsm_X86) {
     version = Naked_D_InlineAsm_X86;
-} else version(LDC) {    
+}
+version(LDC) {    
     import ldc.intrinsics;
-    version(X86)
-    {
-        version = LDC_X86;
-    }
 }
 
 private:
@@ -186,6 +153,7 @@ version(LittleEndian) {
     enum MANTISSA_LSB = 1;
     enum MANTISSA_MSB = 0;
 }
+
 public:
 
 class NotImplemented : Error
@@ -575,9 +543,9 @@ pure nothrow real cosh(real x)               {
     return (y + 1.0/y) * 0.5;
 }
 /// ditto
-pure nothrow double cosh(double x)               { return cosh(cast(real)x); }
+double cosh(double x)               { return cosh(cast(real)x); }
 /// ditto
-pure nothrow float cosh(float x)               { return cosh(cast(real)x); }
+float cosh(float x)               { return cosh(cast(real)x); }
 
 
 /***********************************
@@ -602,9 +570,9 @@ pure nothrow real sinh(real x)
     return 0.5 * y / (y+1) * (y+2);
 }
 /// ditto
-pure nothrow double sinh(double x)               { return sinh(cast(real)x); }
+double sinh(double x)               { return sinh(cast(real)x); }
 /// ditto
-pure nothrow float sinh(float x)               { return sinh(cast(real)x); }
+float sinh(float x)               { return sinh(cast(real)x); }
 
 
 /***********************************
@@ -626,9 +594,9 @@ pure nothrow real tanh(real x)
     return y / (y + 2);
 }
 /// ditto
-pure nothrow double tanh(double x)             { return tanh(cast(real)x); }
+double tanh(double x)             { return tanh(cast(real)x); }
 /// ditto
-pure nothrow float tanh(float x)               { return tanh(cast(real)x); }
+float tanh(float x)               { return tanh(cast(real)x); }
 
 private:
 /* Returns cosh(x) + I * sinh(x)
@@ -863,9 +831,9 @@ pure nothrow real exp(real x) {
     }    
 }
 /// ditto
-pure nothrow double exp(double x)             { return exp(cast(real)x); }
+double exp(double x)             { return exp(cast(real)x); }
 /// ditto
-pure nothrow float exp(float x)               { return exp(cast(real)x); }
+float exp(float x)               { return exp(cast(real)x); }
 
 
 /**
@@ -1058,9 +1026,9 @@ L_was_nan:
     }    
 }
 /// ditto
-pure nothrow double exp2(double x)             { return exp2(cast(real)x); }
+double exp2(double x)             { return exp2(cast(real)x); }
 /// ditto
-pure nothrow float exp2(float x)               { return exp2(cast(real)x); }
+float exp2(float x)               { return exp2(cast(real)x); }
 
 unittest{
     assert(exp2(0.5L)== SQRT2);
@@ -1237,8 +1205,6 @@ unittest
         int exp = cast(int)vals[i][2];
         int eptr;
         real v = frexp(x, eptr);
-//        printf("frexp(%La) = %La, should be %La, eptr = %d, should be %d\n",
-//                x, v, e, eptr, exp);
         assert(isIdentical(e, v));
         assert(exp == eptr);
 
@@ -1486,7 +1452,7 @@ pure nothrow real hypot(real x, real y)
         if (u < SQRTMAX*real.epsilon)   return v; // hypot(tiny, huge) == huge        
         if (v == real.infinity && u!=u) return v; // hypot(nan, inf) == inf
     } else if (u<=SQRTMIN || v<=SQRTMIN){
-        // both are tiny, avoid underflow
+        // at least one is tiny, avoid underflow
         u *= SQRTMAX / real.epsilon; v *= SQRTMAX/real.epsilon;
         return sqrt(u*u + v*v) * SQRTMIN * real.epsilon;
     } else {
@@ -1666,16 +1632,11 @@ real round(real x) { return std.c.math.roundl(x); }
  *
  * If the fractional part of x is exactly 0.5, the return value is rounded
  * away from zero.
- *
- * Note: Not supported on windows
  */
 long lround(real x)
 {
     version (Posix)
-        return std.c.math.llroundl(x);
-    else
-        throw new NotImplemented("lround");
-}
+        return std.c.math.llroundl(x);    else        throw new NotImplemented("lround");}
 
 /****************************************************
  * Returns the integer portion of x, dropping the fractional portion.
@@ -1879,7 +1840,7 @@ unittest
 {
     real f;
 
-    for (f = 1; !issubnormal(f); f /= 2)
+    for (f = 1; !isSubnormal(f); f /= 2)
         assert(f != 0);
 }
 
@@ -1903,8 +1864,8 @@ pure nothrow int isInfinity(real x)
     } else { // real80
         ushort e = cast(ushort)(F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT]);
         ulong*  ps = cast(ulong *)&x;
-
-        return e == F.EXPMASK && *ps == 0x8000_0000_0000_0000;
+        // On Motorola 68K, infinity can have hidden bit=1 or 0. On x86, it is always 1.
+        return e == F.EXPMASK && (*ps & 0x7FFF_FFFF_FFFF_FFFF) == 0;
    }
 }
 
@@ -2001,7 +1962,6 @@ unittest
 Returns $(D -1) if $(D x < 0), $(D x) if $(D x == 0), $(D 1) if
 $(D x > 0), and $(NAN) if x==$(NAN).
  */
-
 pure nothrow F sgn(F)(F x)
 {
     // @@@TODO@@@: make this faster
@@ -2153,9 +2113,6 @@ unittest {
  *    $(SV  $(INFIN),     $(INFIN) )
  *    $(SV  $(NAN),       $(NAN)   )
  * )
- *
- * Remarks:
- * This function is included in the forthcoming IEEE 754R standard.
  */
 pure nothrow real nextUp(real x)
 {
@@ -2224,13 +2181,11 @@ pure nothrow real nextUp(real x)
             }
         }
         return x;
-    } else { // doubledouble
-        assert(0, "Not implemented");
-    }
+    } // doubledouble is not supported
 }
 
 /** ditto */
-pure nothrow double nextUp(double x)
+double nextUp(double x)
 {
     ulong *ps = cast(ulong *)&x;
 
@@ -2252,7 +2207,7 @@ pure nothrow double nextUp(double x)
 }
 
 /** ditto */
-pure nothrow float nextUp(float x)
+float nextUp(float x)
 {
     uint *ps = cast(uint *)&x;
 
@@ -2287,9 +2242,6 @@ pure nothrow float nextUp(float x)
  *    $(SV  -$(INFIN),    -$(INFIN) )
  *    $(SV  $(NAN),       $(NAN)    )
  * )
- *
- * Remarks:
- * This function is included in the forthcoming IEEE 754R standard.
  */
 pure nothrow real nextDown(real x)
 {
@@ -2297,13 +2249,13 @@ pure nothrow real nextDown(real x)
 }
 
 /** ditto */
-pure nothrow double nextDown(double x)
+double nextDown(double x)
 {
     return -nextUp(-x);
 }
 
 /** ditto */
-pure nothrow float nextDown(float x)
+float nextDown(float x)
 {
     return -nextUp(-x);
 }
@@ -2311,6 +2263,70 @@ pure nothrow float nextDown(float x)
 unittest {
     assert( nextDown(1.0 + real.epsilon) == 1.0);
 }
+
+unittest {
+    static if (real.mant_dig == 64) {
+        
+     // Tests for 80-bit reals
+       assert(isIdentical(nextUp(NaN(0xABC)), NaN(0xABC)));
+       // negative numbers
+       assert( nextUp(-real.infinity) == -real.max );
+       assert( nextUp(-1.0L-real.epsilon) == -1.0 );
+       assert( nextUp(-2.0L) == -2.0 + real.epsilon);
+       // denormals and zero
+       assert( nextUp(-real.min) == -real.min*(1-real.epsilon) );
+       assert( nextUp(-real.min*(1-real.epsilon)) == -real.min*(1-2*real.epsilon) );
+       assert( isIdentical(-0.0L, nextUp(-real.min*real.epsilon)) );
+       assert( nextUp(-0.0L) == real.min*real.epsilon );
+       assert( nextUp(0.0L) == real.min*real.epsilon );
+       assert( nextUp(real.min*(1-real.epsilon)) == real.min );
+       assert( nextUp(real.min) == real.min*(1+real.epsilon) );
+       // positive numbers
+       assert( nextUp(1.0L) == 1.0 + real.epsilon );
+       assert( nextUp(2.0L-real.epsilon) == 2.0 );
+       assert( nextUp(real.max) == real.infinity );
+       assert( nextUp(real.infinity)==real.infinity );
+    }
+
+       double n = NaN(0xABC);
+       assert(isIdentical(nextUp(n), n));
+       // negative numbers
+       assert( nextUp(-double.infinity) == -double.max );
+       assert( nextUp(-1-double.epsilon) == -1.0 );
+       assert( nextUp(-2.0) == -2.0 + double.epsilon);
+       // denormals and zero
+
+       assert( nextUp(-double.min) == -double.min*(1-double.epsilon) );
+       assert( nextUp(-double.min*(1-double.epsilon)) == -double.min*(1-2*double.epsilon) );
+       assert( isIdentical(-0.0, nextUp(-double.min*double.epsilon)) );
+       assert( nextUp(0.0) == double.min*double.epsilon );
+       assert( nextUp(-0.0) == double.min*double.epsilon );
+       assert( nextUp(double.min*(1-double.epsilon)) == double.min );
+       assert( nextUp(double.min) == double.min*(1+double.epsilon) );
+       // positive numbers
+       assert( nextUp(1.0) == 1.0 + double.epsilon );
+       assert( nextUp(2.0-double.epsilon) == 2.0 );
+       assert( nextUp(double.max) == double.infinity );
+
+       float fn = NaN(0xABC);
+       assert(isIdentical(nextUp(fn), fn));
+       float f = -float.min*(1-float.epsilon);
+       float f1 = -float.min;
+       assert( nextUp(f1) ==  f);
+       f = 1.0f+float.epsilon;
+       f1 = 1.0f;
+       assert( nextUp(f1) == f );
+       f1 = -0.0f;
+       assert( nextUp(f1) == float.min*float.epsilon);
+       assert( nextUp(float.infinity)==float.infinity );
+
+       assert(nextDown(1.0L+real.epsilon)==1.0);
+       assert(nextDown(1.0+double.epsilon)==1.0);
+       f = 1.0f+float.epsilon;
+       assert(nextDown(f)==1.0);
+       assert(nextafter(1.0+real.epsilon, -real.infinity)==1.0);
+}
+
 
 
 /******************************************
@@ -2329,10 +2345,10 @@ unittest {
  * exceptions will be raised if the function value is subnormal, and x is
  * not equal to y.
  */
-pure nothrow T nextafter(T)(T x, T y)
+T nextafter(T)(T x, T y)
 {
     if (x==y) return y;
-    return ((y>x) ? nextUp(x) :  nextDown(x)) * 1.0; // multiply by 1 to set the overflow & underflow flags.     
+    return ((y>x) ? nextUp(x) :  nextDown(x));     
 }
 
 unittest
@@ -2385,7 +2401,7 @@ pure nothrow real fma(real x, real y, real z) { return (x * y) + z; }
  * Fast integral powers.
  */
 
-F pow(F)(F x, uint n) if (isFloatingPoint!(F))
+pure nothrow F pow(F)(F x, uint n) if (isFloatingPoint!(F))
 {
     if (n > int.max)
     {
@@ -2401,10 +2417,10 @@ F pow(F)(F x, uint n) if (isFloatingPoint!(F))
 
 /// Ditto
 
-F pow(F)(F x, int n) if (isFloatingPoint!(F))
+pure nothrow F pow(F)(F x, int n) if (isFloatingPoint!(F))
 {
     real p = 1.0, v = void;
-
+    int m = n;
     if (n < 0)
     {
         switch (n)
@@ -2416,7 +2432,7 @@ F pow(F)(F x, int n) if (isFloatingPoint!(F))
         default:
         }
 
-        n = -n;
+        m = -n;
         v = p / x;
     }
     else
@@ -2437,10 +2453,10 @@ F pow(F)(F x, int n) if (isFloatingPoint!(F))
 
     while (1)
     {
-        if (n & 1)
+        if (m & 1)
             p *= v;
-        n >>= 1;
-        if (!n)
+        m >>= 1;
+        if (!m)
             break;
         v *= v;
     }
@@ -2616,13 +2632,10 @@ unittest
  *      $(TR $(TD any)    $(TD $(NAN))     $(TD 0))
  *      )
  */
-pure nothrow int feqrel(X)(X x, X y)
+pure nothrow int feqrel(X)(X x, X y)  if (isFloatingPoint!(X))
 {
     /* Public Domain. Author: Don Clugston, 18 Aug 2005.
      */
-  static assert(is(X==real) || is(X==double) || is(X==float),
-        "Only float, double, and real are supported by feqrel");
-
   static if (X.mant_dig == 106) { // doubledouble.
      if (cast(double*)(&x)[MANTISSA_MSB] == cast(double*)(&y)[MANTISSA_MSB]) {
          return double.mant_dig
@@ -3045,3 +3058,32 @@ alias isFinite isfinite;
 alias isNormal isnormal;
 alias isSubnormal issubnormal;
 alias isInfinity isinf;
+
+/*
+ * Copyright:
+ *      Copyright (c) 2001-2005 by Digital Mars,
+ *      All Rights Reserved,
+ *      www.digitalmars.com
+ * License:
+ *  This software is provided 'as-is', without any express or implied
+ *  warranty. In no event will the authors be held liable for any damages
+ *  arising from the use of this software.
+ *
+ *  Permission is granted to anyone to use this software for any purpose,
+ *  including commercial applications, and to alter it and redistribute it
+ *  freely, subject to the following restrictions:
+ *
+ *  <ul>
+ *  <li> The origin of this software must not be misrepresented; you must not
+ *       claim that you wrote the original software. If you use this software
+ *       in a product, an acknowledgment in the product documentation would be
+ *       appreciated but is not required.
+ *  </li>
+ *  <li> Altered source versions must be plainly marked as such, and must not
+ *       be misrepresented as being the original software.
+ *  </li>
+ *  <li> This notice may not be removed or altered from any source
+ *       distribution.
+ *  </li>
+ *  </ul>
+ */

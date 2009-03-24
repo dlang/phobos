@@ -79,7 +79,7 @@ int main(char[][] args)
 
     cmp("foo", "bar");			// string
     fncharmatch('a', 'b');		// path
-    isnan(1.0);				// math
+    isNaN(1.0);				// math
     std.conv.toDouble("1.0");		// std.conv
     OutBuffer b = new OutBuffer();	// outbuffer
     std.ctype.tolower('A');		// ctype

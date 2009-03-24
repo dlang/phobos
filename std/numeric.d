@@ -70,7 +70,7 @@ template secantMethod(alias F)
         auto fxn = F(xn_1), d = xn_1 - xn;
         typeof(fxn) fxn_1;
         xn = xn_1;
-        while (!approxEqual(d, 0) && isfinite(d)) {
+        while (!approxEqual(d, 0) && isFinite(d)) {
             xn_1 = xn;
             xn -= d;
             fxn_1 = fxn;

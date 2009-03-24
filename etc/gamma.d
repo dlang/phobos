@@ -188,7 +188,7 @@ real tgamma(real x)
 
     real q, z;
 
-    if (isnan(x))
+    if (isNaN(x))
 	return x;
     if (x == -x.infinity)
 	return real.nan;
@@ -289,10 +289,10 @@ unittest
     }
     assert(tgamma(0.0) == real.infinity);
     assert(tgamma(-0.0) == -real.infinity);
-    assert(isnan(tgamma(-1.0)));
-    assert(isnan(tgamma(real.nan)));
+    assert(isNaN(tgamma(-1.0)));
+    assert(isNaN(tgamma(real.nan)));
     assert(tgamma(real.infinity) == real.infinity);
-    assert(isnan(tgamma(-real.infinity)));
+    assert(isNaN(tgamma(-real.infinity)));
     assert(tgamma(real.min * real.epsilon) == real.infinity);
 
     assert(feqrel(tgamma(0.5), sqrt(PI)) > real.mant_dig - 3);
@@ -330,7 +330,7 @@ real lgamma(real x)
      */
     real q, w, z, f, nx;
 
-    if (isnan(x))
+    if (isNaN(x))
 	return x;
     if (fabs(x) == x.infinity)
 	return x.infinity;
@@ -419,7 +419,7 @@ unittest
        return (x==0) && (signbit(x)==0);
     }
 
-    assert(isnan(lgamma(real.nan)));
+    assert(isNaN(lgamma(real.nan)));
     assert(lgamma(real.infinity) == real.infinity);
     assert(lgamma(-1.0) == real.infinity);
     assert(lgamma(0.0) == real.infinity);

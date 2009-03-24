@@ -38,7 +38,7 @@ module std.conv;
 private import std.string;  // for atof(), toString()
 private import std.c.stdlib;
 private import core.stdc.errno;
-private import std.math;  // for fabs(), isnan()
+private import std.math;  // for fabs(), isNaN()
 private import std.stdio; // for writefln() and printf()
 private import std.typetuple; // for unittests
 private import std.utf; // for string-to-string conversions
@@ -1432,7 +1432,7 @@ unittest
     float f;
 
     f = toFloat( "nAn" );
-    assert(isnan(f));
+    assert(isNaN(f));
     f = toFloat( "123" );
     assert( f == 123f );
     f = toFloat( "+123" );
@@ -2025,10 +2025,10 @@ private bool feq(in real rx, in real ry, in real precision)
     if (rx == ry)
         return 1;
 
-    if (isnan(rx))
-        return cast(bool)isnan(ry);
+    if (isNaN(rx))
+        return cast(bool)isNaN(ry);
 
-    if (isnan(ry))
+    if (isNaN(ry))
         return 0;
 
     return cast(bool)(fabs(rx - ry) <= precision);
@@ -2047,10 +2047,10 @@ private bool feq(in real r1, in real r2)
     if (r1 == r2)
         return 1;
 
-    if (isnan(r1))
-        return cast(bool)isnan(r2);
+    if (isNaN(r1))
+        return cast(bool)isNaN(r2);
 
-    if (isnan(r2))
+    if (isNaN(r2))
         return 0;
 
     return cast(bool)(feq(r1, r2, 0.000001L));
@@ -2067,10 +2067,10 @@ private bool feq(in ireal r1, in ireal r2)
     if (rx == ry)
         return 1;
 
-    if (isnan(rx))
-        return cast(bool)isnan(ry);
+    if (isNaN(rx))
+        return cast(bool)isNaN(ry);
 
-    if (isnan(ry))
+    if (isNaN(ry))
         return 0;
 
     return feq(rx, ry, 0.000001L);
@@ -2088,10 +2088,10 @@ private bool feq(in creal r1, in creal r2)
         (cast(real)r1.im == cast(real)r2.im))
         return 1;
 
-    if (isnan(r1a))
-        return cast(bool)isnan(r2b);
+    if (isNaN(r1a))
+        return cast(bool)isNaN(r2b);
 
-    if (isnan(r2b))
+    if (isNaN(r2b))
         return 0;
 
     return feq(r1a, r2b, 0.000001L);
