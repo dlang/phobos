@@ -500,14 +500,7 @@ extern(C)
 	
 	int select(int nfds, fd_set* readfds, fd_set* writefds, fd_set* errorfds, timeval* timeout);
 	int fcntl(int s, int f, ...);
-	
-	
-	enum
-	{
-		EINTR = 4,
-		EINPROGRESS = 115,
-	}
-	
+
 	
 	const uint FD_SETSIZE = 1024;
 	//const uint NFDBITS = 8 * int.sizeof; // DMD 0.110: 8 * (int).sizeof is not an expression

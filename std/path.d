@@ -1229,7 +1229,7 @@ private string expandFromDatabase(string path)
 
 	// Obtain info from database.
 	passwd *verify;
-	std.c.stdlib.setErrno(0);
+	setErrno(0);
 	if (getpwnam_r(username.ptr, &result, extra_memory, extra_memory_size,
 		&verify) == 0)
 	{
