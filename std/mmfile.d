@@ -34,6 +34,7 @@ module std.mmfile;
 private import std.file;
 private import std.c.stdio;
 private import std.c.stdlib;
+private import core.stdc.errno;
 private import std.path;
 private import std.string;
 
