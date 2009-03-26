@@ -31,7 +31,7 @@ import std.contracts;
  *
  * The usual arithmetic operations can be performed on d_time, such as adding,
  * subtracting, etc. Elapsed time in Ticks can be computed by subtracting a
- * starting d_time from an ending d_time. 
+ * starting d_time from an ending d_time.
  */
 alias long d_time;
 
@@ -847,7 +847,7 @@ version (Win32)
     {
 	d_time t;
 	DWORD r;
-	TIME_ZONE_INFORMATION tzi;
+	TIME_ZONE_INFORMATION tzi = void;
 
 	/* http://msdn.microsoft.com/library/en-us/sysinfo/base/gettimezoneinformation.asp
 	 * http://msdn2.microsoft.com/en-us/library/ms725481.aspx
@@ -884,7 +884,7 @@ version (Win32)
     {
 	int t;
 	DWORD r;
-	TIME_ZONE_INFORMATION tzi;
+	TIME_ZONE_INFORMATION tzi = void;
 	d_time ts;
 	d_time td;
 
