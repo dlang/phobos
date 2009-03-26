@@ -115,7 +115,7 @@ version (Win32)
 
 version (Posix)
 {
-    private import std.c.linux.linux;
+    private import core.sys.posix.sys.time;
 }
 
 /**
@@ -811,7 +811,7 @@ static this()
 
 	if (gettimeofday(&tv, null))
 	{   // Some error happened - try time() instead
-	    s = std.c.linux.linux.time(null);
+	    s = core.sys.posix.sys.time.time(null);
 	}
 	else
 	{

@@ -53,7 +53,6 @@ version (linux)
 {
     // Specific to the way Gnu C does stdio
     version = GCC_IO;
-    import std.c.linux.linux;
 }
 
 version (OSX)

@@ -897,7 +897,11 @@ version (Posix)
 {
 
 private import std.date;
-private import std.c.linux.linux;
+private import core.sys.posix.dirent;
+private import core.sys.posix.fcntl;
+private import core.sys.posix.unistd;
+private import core.sys.posix.utime;
+private import core.sys.posix.sys.stat;
 
 /***********************************
  */
@@ -940,12 +944,12 @@ private T cenforce(T)(T condition, lazy const(char)[] name)
 
 void[] read(string name)
 {
-    invariant fd = std.c.linux.linux.open(toStringz(name), O_RDONLY);
+    invariant fd = core.sys.posix.fcntl.open(toStringz(name), O_RDONLY);
     cenforce(fd != -1, name);
-    scope(exit) std.c.linux.linux.close(fd);
+    scope(exit) core.sys.posix.unistd.close(fd);
 
-    struct_stat statbuf = void;
-    cenforce(std.c.linux.linux.fstat(fd, &statbuf) == 0, name);
+    stat_t statbuf = void;
+    cenforce(core.sys.posix.sys.stat.fstat(fd, &statbuf) == 0, name);
 
     void[] buf;
     auto size = statbuf.st_size;
@@ -963,7 +967,7 @@ void[] read(string name)
 	    auto toread = readsize;
 	    while (toread)
 	    {
-		auto numread = std.c.linux.linux.read(fd, buf.ptr + size, toread);
+		auto numread = core.sys.posix.unistd.read(fd, buf.ptr + size, toread);
 		cenforce(numread != -1, name);
 		size += numread;
 		if (numread == 0)
@@ -981,7 +985,7 @@ void[] read(string name)
 	enforce(buf, "Out of memory");
 	scope(failure) delete buf;
 
-	cenforce(std.c.linux.linux.read(fd, buf.ptr, size) == size, name);
+	cenforce(core.sys.posix.unistd.read(fd, buf.ptr, size) == size, name);
 
 	return buf[0 .. size];
     }
@@ -1019,15 +1023,15 @@ S readText(S = string)(in string name)
 
 private void writeImpl(in string name, in void[] buffer, in uint mode)
 {
-    invariant fd = std.c.linux.linux.open(toStringz(name),
+    invariant fd = core.sys.posix.fcntl.open(toStringz(name),
             mode, 0660);
     cenforce(fd != -1, name);
     {
-        scope(failure) std.c.linux.linux.close(fd);
+        scope(failure) core.sys.posix.unistd.close(fd);
         invariant size = buffer.length;
-        cenforce(std.c.linux.linux.write(fd, buffer.ptr, size) == size, name);
+        cenforce(core.sys.posix.unistd.write(fd, buffer.ptr, size) == size, name);
     }
-    cenforce(std.c.linux.linux.close(fd) == 0, name);
+    cenforce(core.sys.posix.unistd.close(fd) == 0, name);
 }
 
 
@@ -1074,8 +1078,8 @@ void remove(in string name)
 
 ulong getSize(in string name)
 {
-    struct_stat statbuf = void;
-    cenforce(std.c.linux.linux.stat(toStringz(name), &statbuf) == 0, name);
+    stat_t statbuf = void;
+    cenforce(core.sys.posix.sys.stat.stat(toStringz(name), &statbuf) == 0, name);
     return statbuf.st_size;
 }
 
@@ -1096,8 +1100,8 @@ unittest
 
 uint getAttributes(in string name)
 {
-    struct_stat statbuf = void;
-    cenforce(std.c.linux.linux.stat(toStringz(name), &statbuf) == 0, name);
+    stat_t statbuf = void;
+    cenforce(core.sys.posix.sys.stat.stat(toStringz(name), &statbuf) == 0, name);
     return statbuf.st_mode;
 }
 
@@ -1108,24 +1112,11 @@ uint getAttributes(in string name)
 
 void getTimes(in string name, out d_time ftc, out d_time fta, out d_time ftm)
 {
-    struct_stat statbuf = void;
-    cenforce(std.c.linux.linux.stat(toStringz(name), &statbuf) == 0, name);
-    version (linux)
-    {
+    stat_t statbuf = void;
+    cenforce(core.sys.posix.sys.stat.stat(toStringz(name), &statbuf) == 0, name);
 	ftc = cast(d_time) statbuf.st_ctime * std.date.TicksPerSecond;
 	fta = cast(d_time) statbuf.st_atime * std.date.TicksPerSecond;
 	ftm = cast(d_time) statbuf.st_mtime * std.date.TicksPerSecond;
-    }
-    else version (OSX)
-    {	// BUG: should add in tv_nsec field
-	ftc = cast(d_time)statbuf.st_ctimespec.tv_sec * std.date.TicksPerSecond;
-	fta = cast(d_time)statbuf.st_atimespec.tv_sec * std.date.TicksPerSecond;
-	ftm = cast(d_time)statbuf.st_mtimespec.tv_sec * std.date.TicksPerSecond;
-    }
-    else
-    {
-	static assert(0);
-    }
 }
 
 /*************************
@@ -1183,14 +1174,9 @@ unittest
 
 d_time lastModified(in string name)
 {
-    struct_stat statbuf = void;
-    cenforce(std.c.linux.linux.stat(toStringz(name), &statbuf) == 0, name);
-  version (linux)
+    stat_t statbuf = void;
+    cenforce(core.sys.posix.sys.stat.stat(toStringz(name), &statbuf) == 0, name);
     return cast(d_time) statbuf.st_mtime * std.date.TicksPerSecond;
-  else version (OSX)
-    return cast(d_time)statbuf.st_mtimespec.tv_sec * std.date.TicksPerSecond;
-  else
-    static assert(0);
 }
 
 /**
@@ -1223,23 +1209,10 @@ correctly prompts building it.
 
 d_time lastModified(string name, d_time returnIfMissing)
 {
-    struct_stat statbuf = void;
-  version (linux)
-  {
-    return std.c.linux.linux.stat(toStringz(name), &statbuf) != 0
+    stat_t statbuf = void;
+    return core.sys.posix.sys.stat.stat(toStringz(name), &statbuf) != 0
         ? returnIfMissing
         : cast(d_time) statbuf.st_mtime * std.date.TicksPerSecond;
-  }
-  else version (OSX)
-  {
-    return std.c.linux.linux.stat(toStringz(name), &statbuf) != 0
-        ? returnIfMissing
-	: cast(d_time)statbuf.st_mtimespec.tv_sec * std.date.TicksPerSecond;
-  }
-  else
-  {
-    assert(0);
-  }
 }
 
 unittest
@@ -1293,7 +1266,7 @@ bool isdir(in string name)
 
 void chdir(string pathname)
 {
-    cenforce(std.c.linux.linux.chdir(toStringz(pathname)) == 0, pathname);
+    cenforce(core.sys.posix.unistd.chdir(toStringz(pathname)) == 0, pathname);
 }
 
 /****************************************************
@@ -1302,7 +1275,7 @@ void chdir(string pathname)
 
 void mkdir(in char[] pathname)
 {
-    cenforce(std.c.linux.linux.mkdir(toStringz(pathname), 0777) == 0, pathname);
+    cenforce(core.sys.posix.sys.stat.mkdir(toStringz(pathname), 0777) == 0, pathname);
 }
 
 /****************************************************
@@ -1322,7 +1295,7 @@ void mkdirRecurse(in char[] pathname)
 
 void rmdir(string pathname)
 {
-    cenforce(std.c.linux.linux.rmdir(toStringz(pathname)) == 0, pathname);
+    cenforce(core.sys.posix.unistd.rmdir(toStringz(pathname)) == 0, pathname);
 }
 
 /****************************************************
@@ -1356,7 +1329,7 @@ unittest
 
 string getcwd()
 {
-    auto p = cenforce(std.c.linux.linux.getcwd(null, 0),
+    auto p = cenforce(core.sys.posix.unistd.getcwd(null, 0),
             "cannot get cwd");
     scope(exit) std.c.stdlib.free(p);
     return p[0 .. std.c.string.strlen(p)].idup;
@@ -1374,7 +1347,7 @@ struct DirEntry
     d_time _lastAccessTime = d_time_nan; // time file was last accessed
     d_time _lastWriteTime = d_time_nan;	// time file was last written to
     ubyte d_type;
-    struct_stat statbuf;
+    stat_t statbuf;
     bool didstat;			// done lazy evaluation of stat()
 
     void init(string path, dirent *fd)
@@ -1426,25 +1399,12 @@ struct DirEntry
     void ensureStatDone()
     {
         if (didstat) return;
-	enforce(std.c.linux.linux.stat(toStringz(name), &statbuf) == 0,
+	enforce(core.sys.posix.sys.stat.stat(toStringz(name), &statbuf) == 0,
                 "Failed to stat file `"~name~"'");
 	_size = cast(ulong)statbuf.st_size;
-	version (linux)
-	{
-	    _creationTime = cast(d_time)statbuf.st_ctime * std.date.TicksPerSecond;
-	    _lastAccessTime = cast(d_time)statbuf.st_atime * std.date.TicksPerSecond;
-	    _lastWriteTime = cast(d_time)statbuf.st_mtime * std.date.TicksPerSecond;
-	}
-	else version (OSX)
-	{
-	    _creationTime =   cast(d_time)statbuf.st_ctimespec.tv_sec * std.date.TicksPerSecond;
-	    _lastAccessTime = cast(d_time)statbuf.st_atimespec.tv_sec * std.date.TicksPerSecond;
-	    _lastWriteTime =  cast(d_time)statbuf.st_mtimespec.tv_sec * std.date.TicksPerSecond;
-	}
-	else
-	{
-	    static assert(0);
-	}
+    _creationTime = cast(d_time)statbuf.st_ctime * std.date.TicksPerSecond;
+    _lastAccessTime = cast(d_time)statbuf.st_atime * std.date.TicksPerSecond;
+    _lastWriteTime = cast(d_time)statbuf.st_mtime * std.date.TicksPerSecond;
 
 	didstat = true;
     }
@@ -1539,20 +1499,20 @@ void copy(in string from, in string to)
 {
     version (all)
     {
-        invariant fd = std.c.linux.linux.open(toStringz(from), O_RDONLY);
+        invariant fd = core.sys.posix.fcntl.open(toStringz(from), O_RDONLY);
         cenforce(fd != -1, from);
-        scope(exit) std.c.linux.linux.close(fd);
+        scope(exit) core.sys.posix.unistd.close(fd);
 
-        struct_stat statbuf = void;
-        cenforce(std.c.linux.linux.fstat(fd, &statbuf) == 0, from);
+        stat_t statbuf = void;
+        cenforce(core.sys.posix.sys.stat.fstat(fd, &statbuf) == 0, from);
 
         auto toz = toStringz(to);
-        invariant fdw = std.c.linux.linux.open(toz,
+        invariant fdw = core.sys.posix.fcntl.open(toz,
                 O_CREAT | O_WRONLY | O_TRUNC, 0660);
         cenforce(fdw != -1, from);
         scope(failure) std.c.stdio.remove(toz);
         {
-            scope(failure) std.c.linux.linux.close(fdw);
+            scope(failure) core.sys.posix.unistd.close(fdw);
             auto BUFSIZ = 4096u * 16;
             auto buf = std.c.stdlib.malloc(BUFSIZ);
             if (!buf)
@@ -1565,33 +1525,20 @@ void copy(in string from, in string to)
             for (size_t size = statbuf.st_size; size; )
             {
                 invariant toxfer = (size > BUFSIZ) ? BUFSIZ : size;
-                cenforce(std.c.linux.linux.read(fd, buf, toxfer) == toxfer
-                        && std.c.linux.linux.write(fdw, buf, toxfer) == toxfer,
+                cenforce(core.sys.posix.unistd.read(fd, buf, toxfer) == toxfer
+                        && core.sys.posix.unistd.write(fdw, buf, toxfer) == toxfer,
                         from);
                 assert(size >= toxfer);
                 size -= toxfer;
             }
         }
 
-        cenforce(std.c.linux.linux.close(fdw) != -1, from);
+        cenforce(core.sys.posix.unistd.close(fdw) != -1, from);
 
-    utimbuf utim = void;
-    version (linux)
-    {
-	utim.actime = cast(__time_t)statbuf.st_atime;
-	utim.modtime = cast(__time_t)statbuf.st_mtime;
-    }
-    else version (OSX)
-    {
-	utim.actime = cast(__time_t)statbuf.st_atimespec.tv_sec;
-	utim.modtime = cast(__time_t)statbuf.st_mtimespec.tv_sec;
-    }
-    else
-    {
-	static assert(0);
-    }
-
-
+        utimbuf utim = void;
+	    utim.actime = cast(time_t)statbuf.st_atime;
+	    utim.modtime = cast(time_t)statbuf.st_mtime;
+	    
         cenforce(utime(toz, &utim) != -1, from);
     }
     else

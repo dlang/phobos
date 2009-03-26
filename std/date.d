@@ -927,8 +927,8 @@ version (Win32)
 
 version (Posix)
 {
-
-    private import std.c.linux.linux;
+    private import core.sys.posix.time;
+    private import core.sys.posix.sys.time;
 
     d_time getUTCtime()
     {   timeval tv;
@@ -945,7 +945,7 @@ version (Posix)
 
     d_time getLocalTZA()
     {
-	__time_t t;
+	time_t t;
 
 	time(&t);
       version (OSX)
@@ -967,13 +967,13 @@ version (Posix)
     int DaylightSavingTA(d_time dt)
     {
 	tm *tmp;
-	std.c.linux.linux.__time_t t;
+	time_t t;
 	int dst = 0;
 
 	if (dt != d_time_nan)
 	{
 	    d_time seconds = dt / TicksPerSecond;
-	    t = cast(__time_t) seconds;
+	    t = cast(time_t) seconds;
 	    if (t == seconds)	// if in range
 	    {
 		tmp = localtime(&t);

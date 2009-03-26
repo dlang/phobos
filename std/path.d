@@ -34,7 +34,7 @@ private import core.stdc.errno;
 version(Posix)
 {
     private import std.c.stdlib;
-    private import std.c.linux.linux;
+    private import core.sys.posix.pwd;
     private import core.exception : onOutOfMemoryError;
 }
 
@@ -1230,7 +1230,7 @@ private string expandFromDatabase(string path)
 	// Obtain info from database.
 	passwd *verify;
 	setErrno(0);
-	if (getpwnam_r(username.ptr, &result, extra_memory, extra_memory_size,
+	if (getpwnam_r(cast(char*) username.ptr, &result, cast(char*) extra_memory, extra_memory_size,
 		&verify) == 0)
 	{
 	    // Failure if verify doesn't point at result.
