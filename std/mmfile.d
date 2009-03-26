@@ -54,7 +54,10 @@ version (Win32)
 }
 else version (Posix)
 {
-	private import std.c.linux.linux;
+    private import core.sys.posix.fcntl;
+    private import core.sys.posix.unistd;
+	private import core.sys.posix.sys.mman;
+    private import core.sys.posix.sys.stat;
 }
 else
 {
@@ -277,28 +280,28 @@ class MmFile
 
 			if (filename.length)
 			{
-				struct_stat statbuf;
+				stat_t statbuf;
 
-				fd = std.c.linux.linux.open(namez, oflag, fmode);
+				fd = core.sys.posix.fcntl.open(namez, oflag, fmode);
 				if (fd == -1)
 				{
 					// printf("\topen error, errno = %d\n",errno);
 					errNo();
 				}
 
-				if (std.c.linux.linux.fstat(fd, &statbuf))
+				if (core.sys.posix.sys.stat.fstat(fd, &statbuf))
 				{
 					//printf("\tfstat error, errno = %d\n",errno);
-					std.c.linux.linux.close(fd);
+					core.sys.posix.unistd.close(fd);
 					errNo();
 				}
 
 				if (prot & PROT_WRITE && size > statbuf.st_size)
 				{
 					// Need to make the file size bytes big
-					std.c.linux.linux.lseek(fd, cast(int)(size - 1), SEEK_SET);
+					core.sys.posix.unistd.lseek(fd, cast(int)(size - 1), SEEK_SET);
 					char c = 0;
-					std.c.linux.linux.write(fd, &c, 1);
+					core.sys.posix.unistd.write(fd, &c, 1);
 				}
 				else if (prot & PROT_READ && size == 0)
 					size = cast(ulong)statbuf.st_size;
@@ -306,16 +309,14 @@ class MmFile
 			else
 			{
 				fd = -1;
-version (linux)			flags |= MAP_ANONYMOUS;
-else version (OSX)		flags |= MAP_ANON;
-else				static assert(0);
+			    flags |= MAP_ANON;
 			}
 			this.size = size;
 			size_t initial_map = (window && 2*window<size)? 2*window : cast(size_t)size;
 			p = mmap(address, initial_map, prot, flags, fd, 0);
 			if (p == MAP_FAILED) {
 			  if (fd != -1)
-			    std.c.linux.linux.close(fd);
+			    core.sys.posix.unistd.close(fd);
 			  errNo();
 			}
 
@@ -346,7 +347,7 @@ else				static assert(0);
 		}
 		else version (Posix)
 		{
-			if (fd != -1 && std.c.linux.linux.close(fd) == -1)
+			if (fd != -1 && core.sys.posix.unistd.close(fd) == -1)
 				errNo();
 			fd = -1;
 		}

@@ -71,9 +71,23 @@ else version(BsdSockets)
 {
 	version(Posix)
 	{
-		private import std.c.linux.linux, std.c.linux.socket;
-		private alias std.c.linux.linux.timeval _ctimeval;
+	    version(linux)
+            private import std.c.linux.socket;
+        else version(OSX)
+            private import std.c.osx.socket;
+        else
+            static assert(false);
+        private import core.sys.posix.fcntl;
+        private import core.sys.posix.unistd;
+        private import core.sys.posix.arpa.inet;
+        private import core.sys.posix.netinet.tcp;
+        private import core.sys.posix.netinet.in_;
+        private import core.sys.posix.sys.time;
+        //private import core.sys.posix.sys.select;
+        private import core.sys.posix.sys.socket;
+		private alias core.sys.posix.sys.time.timeval _ctimeval;
 	}
+    private import core.stdc.errno;
 
 	typedef int32_t socket_t = -1;
 	private const int _SOCKET_ERROR = -1;
@@ -840,10 +854,6 @@ class SocketSet
 	{
 		// Make sure too many sockets don't get added.
 		assert(count < maxsockets);
-		version(BsdSockets)
-		{
-			assert(FDELT(s) < (FD_SETSIZE / NFDBITS));
-		}
 	}
 	body
 	{
@@ -1109,7 +1119,7 @@ class Socket
 	bool isAlive() // getter
 	{
 		int type, typesize = type.sizeof;
-		return !getsockopt(sock, SOL_SOCKET, SO_TYPE, cast(char*)&type, &typesize);
+		return !getsockopt(cast(int)sock, SOL_SOCKET, SO_TYPE, cast(char*)&type, cast(uint*)&typesize);
 	}
 
 	/// Associate a local address with this socket.
@@ -1225,7 +1235,7 @@ class Socket
 		}
 		else version(BsdSockets)
 		{
-			.close(sock);
+			.close(cast(int)sock);
 		}
 	}
 
@@ -1274,7 +1284,7 @@ class Socket
 	{
 		Address addr = newFamilyObject();
 		int nameLen = addr.nameLen();
-		if(_SOCKET_ERROR == .getpeername(sock, addr.name(), &nameLen))
+		if(_SOCKET_ERROR == .getpeername(cast(int)sock, addr.name(), cast(uint*)&nameLen))
 			throw new SocketException("Unable to obtain remote socket address", _lasterr());
 		assert(addr.addressFamily() == _family);
 		return addr;
@@ -1285,7 +1295,7 @@ class Socket
 	{
 		Address addr = newFamilyObject();
 		int nameLen = addr.nameLen();
-		if(_SOCKET_ERROR == .getsockname(sock, addr.name(), &nameLen))
+		if(_SOCKET_ERROR == .getsockname(cast(int)sock, addr.name(), cast(uint*)&nameLen))
 			throw new SocketException("Unable to obtain local socket address", _lasterr());
 		assert(addr.addressFamily() == _family);
 		return addr;
@@ -1383,7 +1393,7 @@ class Socket
 			return 0;
 		from = newFamilyObject();
 		int nameLen = from.nameLen();
-		int read = .recvfrom(sock, buf.ptr, buf.length, cast(int)flags, from.name(), &nameLen);
+		int read = .recvfrom(cast(int)sock, buf.ptr, buf.length, cast(int)flags, from.name(), cast(uint*)&nameLen);
 		assert(from.addressFamily() == _family);
 		// if(!read) //connection closed
 		return read;
@@ -1422,7 +1432,7 @@ class Socket
 	int getOption(SocketOptionLevel level, SocketOption option, void[] result)
 	{
 		int len = result.length;
-		if(_SOCKET_ERROR == .getsockopt(sock, cast(int)level, cast(int)option, result.ptr, &len))
+		if(_SOCKET_ERROR == .getsockopt(cast(int)sock, cast(int)level, cast(int)option, result.ptr, cast(uint*)&len))
 			throw new SocketException("Unable to get socket option", _lasterr());
 		return len;
 	}

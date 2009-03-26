@@ -155,6 +155,7 @@ STD_C_MODULES_NOTBUILT = fenv math process stddef stdlib string time locale \
 
 STD_C_LINUX_MODULES = linux socket pthread
 STD_C_LINUX_MODULES_NOTBUILT = linuxextern termios
+STD_C_OSX_MODULES = socket
 
 STD_C_WINDOWS_MODULES_NOTBUILT = windows com winsock stat
 
@@ -179,7 +180,7 @@ SRC = object.d unittest.d crc32.d
 SRC_ZLIB = ChangeLog README adler32.c algorithm.txt compress.c crc32.c	\
 	crc32.h deflate.c deflate.h example.c gzio.c infback.c		\
 	inffast.c inffast.h inffixed.h inflate.c inflate.h inftrees.c	\
-	inftrees.h osx.mak minigzip.c trees.c trees.h uncompr.c	\
+	inftrees.h linux.mak osx.mak minigzip.c trees.c trees.h uncompr.c	\
 	win32.mak zconf.h zconf.in.h zlib.3 zlib.h zutil.c zutil.h
 SRC_ZLIB := $(addprefix etc/c/zlib/,$(SRC_ZLIB))
 
@@ -187,26 +188,28 @@ SRC_DOCUMENTABLES = phobos.d $(addprefix std/, $(addsuffix .d,		\
 	$(STD_MODULES) $(STD_MODULES_NOTBUILT))) $(addprefix std/c/,	\
 	$(addsuffix .d, $(STD_C_MODULES) $(STD_C_MODULES_NOTBUILT)))	\
 	$(addprefix std/c/linux/,$(addsuffix .d,			\
-	$(STD_C_LINUX_MODULES) $(STD_C_LINUX_MODULES_NOTBUILT)))
+	$(STD_C_LINUX_MODULES) $(STD_C_LINUX_MODULES_NOTBUILT)))        \
+	$(STD_C_OSX_MODULES)
 
-SRC_RELEASEZIP = linux.mak win32.mak osx.mak phoboslicense.txt $(SRC)		\
+SRC_RELEASEZIP = linux.mak win32.mak osx.mak phoboslicense.txt $(SRC)	\
 	$(SRC_ZLIB) $(addprefix std/, $(addsuffix .d, $(STD_MODULES)    \
 	$(STD_MODULES_NOTBUILT))) $(addprefix std/c/, $(addsuffix .d,	\
 	$(STD_C_MODULES) $(STD_C_MODULES_NOTBUILT))) $(addprefix	\
 	std/c/linux/, $(addsuffix .d, $(STD_C_LINUX_MODULES)		\
-	$(STD_C_LINUX_MODULES_NOTBUILT))) $(addprefix std/c/windows/,	\
-	$(addsuffix .d, $(STD_C_WINDOWS_MODULES_NOTBUILT)))		\
-	$(addprefix std/windows/, $(addsuffix	                        \
-	.d, $(STD_WINDOWS_MODULES_NOTBUILT))) $(addprefix etc/,		\
-	$(addsuffix .d, $(ETC_MODULES_NOTBUILT))) $(addprefix etc/c/,	\
-	$(addsuffix .d, $(ETC_C_MODULES)))
+	$(STD_C_LINUX_MODULES_NOTBUILT))) $(addprefix	                \
+	std/c/osx/, $(addsuffix .d, $(STD_C_OSX_MODULES)))		\
+	$(addprefix std/c/windows/, $(addsuffix .d,                     \
+	$(STD_C_WINDOWS_MODULES_NOTBUILT))) $(addprefix std/windows/,   \
+	$(addsuffix .d, $(STD_WINDOWS_MODULES_NOTBUILT)))               \
+	$(addprefix etc/, $(addsuffix .d, $(ETC_MODULES_NOTBUILT)))     \
+	$(addprefix etc/c/, $(addsuffix .d, $(ETC_C_MODULES)))
 
 OBJS = $(addprefix etc/c/zlib/, $(ZLIB_CMODULES))
 
 OBJS := $(addsuffix .$(OBJEXT),$(addprefix $(OBJDIR)/,$(OBJS)))
 
 SRC2LIB = crc32 $(addprefix std/, $(STD_MODULES)) $(addprefix std/c/,   \
-$(STD_C_MODULES)) $(addprefix std/c/linux/, $(STD_C_LINUX_MODULES))	\
+$(STD_C_MODULES)) $(addprefix std/c/osx/, $(STD_C_OSX_MODULES))	\
 $(addprefix etc/c/, $(ETC_C_MODULES))
 
 SRC2LIB := $(addsuffix .d,$(SRC2LIB))
@@ -251,7 +254,8 @@ HEADERS = $(addprefix std/,$(addsuffix .d,$(STD_MODULES))) \
 	$(addprefix std/c/,$(addsuffix .d,$(STD_C_MODULES))) \
 	$(addprefix std/c/,$(addsuffix .d,$(STD_C_MODULES_NOTBUILT))) \
 	$(addprefix std/c/linux/,$(addsuffix .d,$(STD_C_LINUX_MODULES))) \
-	$(addprefix std/c/linux/,$(addsuffix .d,$(STD_C_LINUX_MODULES_NOTBUILT)))
+	$(addprefix std/c/linux/,$(addsuffix .d,$(STD_C_LINUX_MODULES_NOTBUILT))) \
+	$(addprefix std/c/osx/,$(addsuffix .d,$(STD_C_OSX_MODULES)))
 
 HEADERS := $(addprefix $(HEADERDIR)/,$(HEADERS))
 

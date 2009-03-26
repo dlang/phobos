@@ -155,6 +155,7 @@ STD_C_MODULES_NOTBUILT = fenv math process stddef stdlib string time locale \
 
 STD_C_LINUX_MODULES = linux socket pthread
 STD_C_LINUX_MODULES_NOTBUILT = linuxextern termios
+STD_C_OSX_MODULES = socket
 
 STD_C_WINDOWS_MODULES_NOTBUILT = windows com winsock stat
 
@@ -187,19 +188,21 @@ SRC_DOCUMENTABLES = phobos.d $(addprefix std/, $(addsuffix .d,		\
 	$(STD_MODULES) $(STD_MODULES_NOTBUILT))) $(addprefix std/c/,	\
 	$(addsuffix .d, $(STD_C_MODULES) $(STD_C_MODULES_NOTBUILT)))	\
 	$(addprefix std/c/linux/,$(addsuffix .d,			\
-	$(STD_C_LINUX_MODULES) $(STD_C_LINUX_MODULES_NOTBUILT)))
+	$(STD_C_LINUX_MODULES) $(STD_C_LINUX_MODULES_NOTBUILT)))        \
+	$(STD_C_OSX_MODULES)
 
 SRC_RELEASEZIP = linux.mak win32.mak osx.mak phoboslicense.txt $(SRC)	\
 	$(SRC_ZLIB) $(addprefix std/, $(addsuffix .d, $(STD_MODULES)    \
 	$(STD_MODULES_NOTBUILT))) $(addprefix std/c/, $(addsuffix .d,	\
 	$(STD_C_MODULES) $(STD_C_MODULES_NOTBUILT))) $(addprefix	\
 	std/c/linux/, $(addsuffix .d, $(STD_C_LINUX_MODULES)		\
-	$(STD_C_LINUX_MODULES_NOTBUILT))) $(addprefix std/c/windows/,	\
-	$(addsuffix .d, $(STD_C_WINDOWS_MODULES_NOTBUILT)))		\
-	$(addprefix std/windows/, $(addsuffix	                        \
-	.d, $(STD_WINDOWS_MODULES_NOTBUILT))) $(addprefix etc/,		\
-	$(addsuffix .d, $(ETC_MODULES_NOTBUILT))) $(addprefix etc/c/,	\
-	$(addsuffix .d, $(ETC_C_MODULES)))
+	$(STD_C_LINUX_MODULES_NOTBUILT))) $(addprefix	                \
+	std/c/osx/, $(addsuffix .d, $(STD_C_OSX_MODULES)))		\
+	$(addprefix std/c/windows/, $(addsuffix .d,                     \
+	$(STD_C_WINDOWS_MODULES_NOTBUILT))) $(addprefix std/windows/,   \
+	$(addsuffix .d, $(STD_WINDOWS_MODULES_NOTBUILT)))               \
+	$(addprefix etc/, $(addsuffix .d, $(ETC_MODULES_NOTBUILT)))     \
+	$(addprefix etc/c/, $(addsuffix .d, $(ETC_C_MODULES)))
 
 OBJS = $(addprefix etc/c/zlib/, $(ZLIB_CMODULES))
 
@@ -251,7 +254,8 @@ HEADERS = $(addprefix std/,$(addsuffix .d,$(STD_MODULES))) \
 	$(addprefix std/c/,$(addsuffix .d,$(STD_C_MODULES))) \
 	$(addprefix std/c/,$(addsuffix .d,$(STD_C_MODULES_NOTBUILT))) \
 	$(addprefix std/c/linux/,$(addsuffix .d,$(STD_C_LINUX_MODULES))) \
-	$(addprefix std/c/linux/,$(addsuffix .d,$(STD_C_LINUX_MODULES_NOTBUILT)))
+	$(addprefix std/c/linux/,$(addsuffix .d,$(STD_C_LINUX_MODULES_NOTBUILT))) \
+	$(addprefix std/c/osx/,$(addsuffix .d,$(STD_C_OSX_MODULES)))
 
 HEADERS := $(addprefix $(HEADERDIR)/,$(HEADERS))
 

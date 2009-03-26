@@ -225,6 +225,8 @@ SRC_STD_C_WIN= std\c\windows\windows.d std\c\windows\com.d \
 SRC_STD_C_LINUX= std\c\linux\linux.d std\c\linux\linuxextern.d \
 	std\c\linux\socket.d std\c\linux\pthread.d std\c\linux\termios.d \
 	std\c\linux\tipc.d
+	
+SRC_STD_C_OSX= std\c\osx\socket.d
 
 SRC_ETC= etc\gamma.d
 
@@ -728,7 +730,7 @@ $(DOC)\std_c_wcharh.html : std.ddoc std\c\wcharh.d
 
 zip : win32.mak linux.mak osx.mak phoboslicense.txt std.ddoc $(SRC) \
 	$(SRC_STD) $(SRC_STD_C) $(SRC_TI) $(SRC_INT) $(SRC_STD_WIN) \
-	$(SRC_STDLINUX) $(SRC_ETC) $(SRC_ETC_C) $(SRC_ZLIB) $(SRC_GC)
+	$(SRC_STD_C_LINUX) $(SRC_STD_C_OSX) $(SRC_ETC) $(SRC_ETC_C) $(SRC_ZLIB) $(SRC_GC)
 	del phobos.zip
 	zip32 -u phobos win32.mak linux.mak osx.mak phoboslicense.txt std.ddoc
 	zip32 -u phobos $(SRC)
@@ -739,6 +741,7 @@ zip : win32.mak linux.mak osx.mak phoboslicense.txt std.ddoc $(SRC) \
 	zip32 -u phobos $(SRC_STD_WIN)
 	zip32 -u phobos $(SRC_STD_C_WIN)
 	zip32 -u phobos $(SRC_STD_C_LINUX)
+	zip32 -u phobos $(SRC_STD_C_OSX)
 	zip32 -u phobos $(SRC_ETC)
 	zip32 -u phobos $(SRC_ETC_C)
 	zip32 -u phobos $(SRC_ZLIB)
@@ -766,6 +769,7 @@ install:
 	$(CP) $(SRC_STD_WIN) $(DIR)\src\phobos\std\windows
 	$(CP) $(SRC_STD_C_WIN) $(DIR)\src\phobos\std\c\windows
 	$(CP) $(SRC_STD_C_LINUX) $(DIR)\src\phobos\std\c\linux
+	$(CP) $(SRC_STD_C_OSX) $(DIR)\src\phobos\std\c\osx
 	$(CP) $(SRC_ETC) $(DIR)\src\phobos\etc
 	$(CP) $(SRC_ETC_C) $(DIR)\src\phobos\etc\c
 	$(CP) $(SRC_ZLIB) $(DIR)\src\phobos\etc\c\zlib

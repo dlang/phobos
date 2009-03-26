@@ -74,7 +74,7 @@ version(Windows)
 }
 else version(Posix)
 {
-    private import std.c.linux.linux;
+    private import core.sys.posix.dlfcn;
 
     extern(C)
     {
