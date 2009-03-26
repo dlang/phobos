@@ -1119,7 +1119,7 @@ class Socket
 	bool isAlive() // getter
 	{
 		int type, typesize = type.sizeof;
-		return !getsockopt(cast(int)sock, SOL_SOCKET, SO_TYPE, cast(char*)&type, cast(uint*)&typesize);
+		return !getsockopt(sock, SOL_SOCKET, SO_TYPE, cast(char*)&type, &typesize);
 	}
 
 	/// Associate a local address with this socket.
@@ -1284,7 +1284,7 @@ class Socket
 	{
 		Address addr = newFamilyObject();
 		int nameLen = addr.nameLen();
-		if(_SOCKET_ERROR == .getpeername(cast(int)sock, addr.name(), cast(uint*)&nameLen))
+		if(_SOCKET_ERROR == .getpeername(sock, addr.name(), &nameLen))
 			throw new SocketException("Unable to obtain remote socket address", _lasterr());
 		assert(addr.addressFamily() == _family);
 		return addr;
@@ -1295,7 +1295,7 @@ class Socket
 	{
 		Address addr = newFamilyObject();
 		int nameLen = addr.nameLen();
-		if(_SOCKET_ERROR == .getsockname(cast(int)sock, addr.name(), cast(uint*)&nameLen))
+		if(_SOCKET_ERROR == .getsockname(sock, addr.name(), &nameLen))
 			throw new SocketException("Unable to obtain local socket address", _lasterr());
 		assert(addr.addressFamily() == _family);
 		return addr;
@@ -1393,7 +1393,7 @@ class Socket
 			return 0;
 		from = newFamilyObject();
 		int nameLen = from.nameLen();
-		int read = .recvfrom(cast(int)sock, buf.ptr, buf.length, cast(int)flags, from.name(), cast(uint*)&nameLen);
+		int read = .recvfrom(sock, buf.ptr, buf.length, cast(int)flags, from.name(), &nameLen);
 		assert(from.addressFamily() == _family);
 		// if(!read) //connection closed
 		return read;
@@ -1432,7 +1432,7 @@ class Socket
 	int getOption(SocketOptionLevel level, SocketOption option, void[] result)
 	{
 		int len = result.length;
-		if(_SOCKET_ERROR == .getsockopt(cast(int)sock, cast(int)level, cast(int)option, result.ptr, cast(uint*)&len))
+		if(_SOCKET_ERROR == .getsockopt(sock, cast(int)level, cast(int)option, result.ptr, &len))
 			throw new SocketException("Unable to get socket option", _lasterr());
 		return len;
 	}

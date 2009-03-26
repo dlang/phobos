@@ -291,7 +291,7 @@ ulong getSize(in string name)
     }
     else
     {
-	WIN32_FIND_DATA filefindbuf;
+	WIN32_FIND_DATA filefindbuf = void;
 
 	findhndl = FindFirstFileA(toMBSz(name), &filefindbuf);
 	resulth = filefindbuf.nFileSizeHigh;
@@ -326,7 +326,7 @@ void getTimes(in string name, out d_time ftc, out d_time fta, out d_time ftm)
     }
     else
     {
-	WIN32_FIND_DATA filefindbuf;
+	WIN32_FIND_DATA filefindbuf = void;
 
 	findhndl = FindFirstFileA(toMBSz(name), &filefindbuf);
 	ftc = std.date.FILETIME2d_time(&filefindbuf.ftCreationTime);
@@ -834,7 +834,7 @@ void listdir(in string pathname, bool delegate(DirEntry* de) callback)
     }
     else
     {
-	WIN32_FIND_DATA fileinfo;
+	WIN32_FIND_DATA fileinfo = void;
 
 	h = FindFirstFileA(toMBSz(c), &fileinfo);
 	if (h != INVALID_HANDLE_VALUE)	// should we throw exception if invalid?
@@ -1538,7 +1538,7 @@ void copy(in string from, in string to)
         utimbuf utim = void;
 	    utim.actime = cast(time_t)statbuf.st_atime;
 	    utim.modtime = cast(time_t)statbuf.st_mtime;
-	    
+
         cenforce(utime(toz, &utim) != -1, from);
     }
     else
