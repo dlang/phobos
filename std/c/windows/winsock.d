@@ -12,8 +12,8 @@ private import std.c.windows.windows;
 
 extern(Windows):
 
-alias UINT SOCKET;
-alias int socklen_t;
+alias int  SOCKET;
+alias uint socklen_t;
 
 const SOCKET INVALID_SOCKET = cast(SOCKET)~0;
 const int SOCKET_ERROR = -1;
@@ -43,20 +43,20 @@ int WSAStartup(WORD wVersionRequested, LPWSADATA lpWSAData);
 int WSACleanup();
 SOCKET socket(int af, int type, int protocol);
 int ioctlsocket(SOCKET s, int cmd, uint* argp);
-int bind(SOCKET s, sockaddr* name, int namelen);
-int connect(SOCKET s, sockaddr* name, int namelen);
+int bind(SOCKET s, sockaddr* name, socklen_t namelen);
+int connect(SOCKET s, sockaddr* name, socklen_t namelen);
 int listen(SOCKET s, int backlog);
-SOCKET accept(SOCKET s, sockaddr* addr, int* addrlen);
+SOCKET accept(SOCKET s, sockaddr* addr, socklen_t* addrlen);
 int closesocket(SOCKET s);
 int shutdown(SOCKET s, int how);
-int getpeername(SOCKET s, sockaddr* name, int* namelen);
-int getsockname(SOCKET s, sockaddr* name, int* namelen);
+int getpeername(SOCKET s, sockaddr* name, socklen_t* namelen);
+int getsockname(SOCKET s, sockaddr* name, socklen_t* namelen);
 int send(SOCKET s, const(void)* buf, int len, int flags);
-int sendto(SOCKET s, const(void)* buf, int len, int flags, sockaddr* to, int tolen);
+int sendto(SOCKET s, const(void)* buf, int len, int flags, sockaddr* to, socklen_t tolen);
 int recv(SOCKET s, void* buf, int len, int flags);
-int recvfrom(SOCKET s, void* buf, int len, int flags, sockaddr* from, int* fromlen);
-int getsockopt(SOCKET s, int level, int optname, void* optval, int* optlen);
-int setsockopt(SOCKET s, int level, int optname, void* optval, int optlen);
+int recvfrom(SOCKET s, void* buf, int len, int flags, sockaddr* from, socklen_t* fromlen);
+int getsockopt(SOCKET s, int level, int optname, void* optval, socklen_t* optlen);
+int setsockopt(SOCKET s, int level, int optname, void* optval, socklen_t optlen);
 uint inet_addr(const char* cp);
 int select(int nfds, fd_set* readfds, fd_set* writefds, fd_set* errorfds, timeval* timeout);
 char* inet_ntoa(in_addr ina);

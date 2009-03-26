@@ -1118,7 +1118,8 @@ class Socket
 	/// Property that indicates if this is a valid, alive socket.
 	bool isAlive() // getter
 	{
-		int type, typesize = type.sizeof;
+        int type;
+        socklen_t typesize = cast(socklen_t) type.sizeof;
 		return !getsockopt(sock, SOL_SOCKET, SO_TYPE, cast(char*)&type, &typesize);
 	}
 
@@ -1235,7 +1236,7 @@ class Socket
 		}
 		else version(BsdSockets)
 		{
-			.close(cast(int)sock);
+			.close(sock);
 		}
 	}
 
@@ -1283,7 +1284,7 @@ class Socket
 	Address remoteAddress()
 	{
 		Address addr = newFamilyObject();
-		int nameLen = addr.nameLen();
+		socklen_t nameLen = cast(socklen_t) addr.nameLen();
 		if(_SOCKET_ERROR == .getpeername(sock, addr.name(), &nameLen))
 			throw new SocketException("Unable to obtain remote socket address", _lasterr());
 		assert(addr.addressFamily() == _family);
@@ -1294,7 +1295,7 @@ class Socket
 	Address localAddress()
 	{
 		Address addr = newFamilyObject();
-		int nameLen = addr.nameLen();
+		socklen_t nameLen = cast(socklen_t) addr.nameLen();
 		if(_SOCKET_ERROR == .getsockname(sock, addr.name(), &nameLen))
 			throw new SocketException("Unable to obtain local socket address", _lasterr());
 		assert(addr.addressFamily() == _family);
@@ -1392,7 +1393,7 @@ class Socket
 		if(!buf.length) //return 0 and don't think the connection closed
 			return 0;
 		from = newFamilyObject();
-		int nameLen = from.nameLen();
+		socklen_t nameLen = cast(socklen_t) from.nameLen();
 		int read = .recvfrom(sock, buf.ptr, buf.length, cast(int)flags, from.name(), &nameLen);
 		assert(from.addressFamily() == _family);
 		// if(!read) //connection closed
@@ -1431,7 +1432,7 @@ class Socket
 	//returns the length, in bytes, of the actual result - very different from getsockopt()
 	int getOption(SocketOptionLevel level, SocketOption option, void[] result)
 	{
-		int len = result.length;
+		socklen_t len = cast(socklen_t) result.length;
 		if(_SOCKET_ERROR == .getsockopt(sock, cast(int)level, cast(int)option, result.ptr, &len))
 			throw new SocketException("Unable to get socket option", _lasterr());
 		return len;
