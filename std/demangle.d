@@ -232,6 +232,18 @@ string demangle(string name)
 		hasthisptr = true;
 		goto Lagain;
 
+	    case 'y':
+		p = "immutable(" ~ parseType() ~ ")";
+		goto L1;
+
+	    case 'x':
+		p = "const(" ~ parseType() ~ ")";
+		goto L1;
+
+	    case 'O':
+		p = "shared(" ~ parseType() ~ ")";
+		goto L1;
+
 	    case 'F':				// D function
 	    case 'U':				// C function
 	    case 'W':				// Windows function
@@ -500,7 +512,10 @@ unittest
 	[ "_D4test34__T3barVG3uw3_616263VG3wd3_646566Z1xi", "int test.bar!(wchar[3] \"abc\"w, dchar[3] \"def\"d).x" ],
 	[ "_D8demangle4testFLC6ObjectLDFLiZiZi", "int demangle.test(lazy class Object, lazy int delegate(lazy int))"],
 	[ "_D8demangle4testFAiXi", "int demangle.test(int[] ...)"],
-	[ "_D8demangle4testFLAiXi", "int demangle.test(lazy int[] ...)"] 
+	[ "_D8demangle4testFLAiXi", "int demangle.test(lazy int[] ...)"] ,
+	[ "_D6plugin8generateFiiZAya", "immutable(char)[] plugin.generate(int, int)"]
+	[ "_D6plugin8generateFiiZAxa", "const(char)[] plugin.generate(int, int)"]
+	[ "_D6plugin8generateFiiZAOa", "shared(char)[] plugin.generate(int, int)"]
     ];
 
     foreach (i, name; table)
