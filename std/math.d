@@ -633,7 +633,7 @@ public:
  *      $(TABLE_SV
  *    $(SVH  x,     acosh(x) )
  *    $(SV  $(NAN), $(NAN) )
- *    $(SV  <1,     $(NAN) )
+ *    $(SV  $(LT)1,     $(NAN) )
  *    $(SV  1,      0       )
  *    $(SV  +$(INFIN),+$(INFIN))
  *  )
@@ -1519,7 +1519,7 @@ real erfc(real x)               { return std.c.math.erfcl(x); }
  *      $(TABLE_SV
  *      $(TR $(TH x)                 $(TH lgamma(x)) $(TH invalid?))
  *      $(TR $(TD $(NAN))            $(TD $(NAN))    $(TD yes))
- *      $(TR $(TD integer <= 0)      $(TD +$(INFIN)) $(TD yes))
+ *      $(TR $(TD integer $(LT)= 0)      $(TD +$(INFIN)) $(TD yes))
  *      $(TR $(TD $(PLUSMN)$(INFIN)) $(TD +$(INFIN)) $(TD no))
  *      )
  */

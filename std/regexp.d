@@ -70,7 +70,7 @@
 	$(TD $(B $$))	$(TD $)
 	)
 	$(TR
-	$(TD $(B $&))	$(TD The matched substring.)
+	$(TD $(B $&amp;))	$(TD The matched substring.)
 	)
 	$(TR
 	$(TD $(B $`))	$(TD The portion of string that precedes the matched substring.)
