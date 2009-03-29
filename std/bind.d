@@ -552,7 +552,7 @@ template MBoundFunc() {
 	}
 	
 	/**
-		Get a delegate. Equivalent to getting it thru &foo.call
+		Get a delegate. Equivalent to getting it thru &amp;foo.call
 	*/
 	PtrType!() ptr() {
 		return &this.func;

@@ -156,7 +156,7 @@ private real gammaStirling(real x)
  *  Like x!, $(GAMMA)(x+1) = x*$(GAMMA)(x).
  *
  *  Mathematically, if z.re > 0 then
- *   $(GAMMA)(z) =<big>$(INTEGRAL)<sub>0</sub><sup>&infin</sup></big>t<sup>z-1</sup>e<sup>-t</sup>dt
+ *   $(GAMMA)(z) =<big>$(INTEGRAL)<sub>0</sub><sup>&infin;</sup></big>t<sup>z-1</sup>e<sup>-t</sup>dt
  *
  *  This function is equivalent to tgamma() in the C programming language.
  *

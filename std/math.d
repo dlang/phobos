@@ -332,7 +332,7 @@ real sin(real x);       /* intrinsic */
  *  sin(z) = sin(z.re)*cosh(z.im) + cos(z.re)*sinh(z.im)i
  *
  * If both sin(&theta;) and cos(&theta;) are required,
- * it is most efficient to use expi(&theta).
+ * it is most efficient to use expi(&theta;).
  */
 creal sin(creal z)
 {
@@ -1493,7 +1493,7 @@ real erfc(real x)               { return std.c.math.erfcl(x); }
  *      $(TABLE_SV
  *      $(TR $(TH x)                 $(TH lgamma(x)) $(TH invalid?))
  *      $(TR $(TD $(NAN))            $(TD $(NAN))    $(TD yes))
- *      $(TR $(TD integer <= 0)      $(TD +$(INFIN)) $(TD yes))
+ *      $(TR $(TD integer $(LT)= 0)      $(TD +$(INFIN)) $(TD yes))
  *      $(TR $(TD $(PLUSMN)$(INFIN)) $(TD +$(INFIN)) $(TD no))
  *      )
  */

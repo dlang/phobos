@@ -113,9 +113,9 @@ real atof(char[] s)
  * Compare two strings. cmp is case sensitive, icmp is case insensitive.
  * Returns:
  *	<table border=1 cellpadding=4 cellspacing=0>
- *	$(TR $(TD < 0)	$(TD s1 < s2))
+ *	$(TR $(TD &lt; 0)	$(TD s1 &lt; s2))
  *	$(TR $(TD = 0)	$(TD s1 == s2))
- *	$(TR $(TD > 0)	$(TD s1 > s2))
+ *	$(TR $(TD &gt; 0)	$(TD s1 &gt; s2))
  *	</table>
  */
 
