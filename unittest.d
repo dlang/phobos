@@ -75,6 +75,8 @@ public import std.zlib;
 
 int main(char[][] args)
 {
+version (all)
+{
     // Bring in unit test for module by referencing function in it
 
     cmp("foo", "bar");			// string
@@ -137,7 +139,7 @@ int main(char[][] args)
     std.signals.linkin();
 
     writefln(std.cpuid.toString());
-
+}
     printf("Success!\n");
     return 0;
 }
