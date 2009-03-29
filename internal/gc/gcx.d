@@ -1755,6 +1755,7 @@ struct Gcx
 	void **p1 = cast(void **)pbot;
 	void **p2 = cast(void **)ptop;
 	uint changes = 0;
+	size_t pageCache;
 
         //printf("marking range: %p -> %p\n", pbot, ptop);
 	for (; p1 < p2; p1++)
@@ -1763,8 +1764,13 @@ struct Gcx
 	    byte *p = cast(byte *)(*p1);
 
 	    //if (log) debug(PRINTF) printf("\tmark %x\n", p);
-	    if (p >= minAddr)
+	    if (p >= minAddr && p < maxAddr)
 	    {
+		/* Skip page if we've already scanned it
+		 */
+		if ((cast(size_t)p & ~(PAGESIZE-1)) == pageCache)
+		    continue;
+
 		pool = findPool(p);
 		if (pool)
 		{
@@ -1793,6 +1799,9 @@ struct Gcx
 			// Don't mark bits in B_FREE or B_UNCOMMITTED pages
 			continue;
 		    }
+
+		    if (bin >= B_PAGE)  // cache B_PAGE and B_PAGEPLUS lookups
+			pageCache = cast(size_t)p & ~(PAGESIZE-1);
 
 		    //debug(PRINTF) printf("\t\tmark(x%x) = %d\n", biti, pool.mark.test(biti));
 		    if (!pool.mark.test(biti))
