@@ -266,9 +266,9 @@ SRC_ZLIB= etc\c\zlib\trees.h \
 	etc\c\zlib\osx.mak
 
 phobos.lib : $(OBJS) $(SRCS) \
-	etc\c\zlib\zlib.lib $(DRUNTIME)\lib\druntime.lib win32.mak
+	etc\c\zlib\zlib.lib $(DRUNTIME)\lib\release\druntime.lib win32.mak
 	$(DMD) -lib -ofphobos.lib $(DFLAGS) $(SRCS) $(OBJS) \
-		etc\c\zlib\zlib.lib $(DRUNTIME)\lib\druntime.lib
+		etc\c\zlib\zlib.lib $(DRUNTIME)\lib\release\druntime.lib
 
 unittest : $(SRCS) phobos.lib
 	$(DMD) $(UDFLAGS) -L/co -unittest unittest.d $(SRCS) phobos.lib
