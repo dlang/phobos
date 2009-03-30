@@ -776,9 +776,68 @@ unittest
 
 template isIntegral(T)
 {
-    enum bool isIntegral = is(T == byte) || is(T == ubyte) || is(T == short)
-        || is(T == ushort) || is(T == int) || is(T == uint)
-        || is(T == long) || is(T == ulong);
+    enum bool isIntegral =
+	is(immutable(T) == immutable(byte)) ||
+	is(immutable(T) == immutable(ubyte)) ||
+	is(immutable(T) == immutable(short)) ||
+	is(immutable(T) == immutable(ushort)) ||
+	is(immutable(T) == immutable(int)) ||
+	is(immutable(T) == immutable(uint)) ||
+	is(immutable(T) == immutable(long)) ||
+	is(immutable(T) == immutable(ulong));
+}
+
+unittest
+{
+    assert(isIntegral!(byte));
+    assert(isIntegral!(const(byte)));
+    assert(isIntegral!(immutable(byte)));
+    assert(isIntegral!(shared(byte)));
+    assert(isIntegral!(shared(const(byte))));
+
+    assert(isIntegral!(ubyte));
+    assert(isIntegral!(const(ubyte)));
+    assert(isIntegral!(immutable(ubyte)));
+    assert(isIntegral!(shared(ubyte)));
+    assert(isIntegral!(shared(const(ubyte))));
+
+    assert(isIntegral!(short));
+    assert(isIntegral!(const(short)));
+    assert(isIntegral!(immutable(short)));
+    assert(isIntegral!(shared(short)));
+    assert(isIntegral!(shared(const(short))));
+
+    assert(isIntegral!(ushort));
+    assert(isIntegral!(const(ushort)));
+    assert(isIntegral!(immutable(ushort)));
+    assert(isIntegral!(shared(ushort)));
+    assert(isIntegral!(shared(const(ushort))));
+
+    assert(isIntegral!(int));
+    assert(isIntegral!(const(int)));
+    assert(isIntegral!(immutable(int)));
+    assert(isIntegral!(shared(int)));
+    assert(isIntegral!(shared(const(int))));
+
+    assert(isIntegral!(uint));
+    assert(isIntegral!(const(uint)));
+    assert(isIntegral!(immutable(uint)));
+    assert(isIntegral!(shared(uint)));
+    assert(isIntegral!(shared(const(uint))));
+
+    assert(isIntegral!(long));
+    assert(isIntegral!(const(long)));
+    assert(isIntegral!(immutable(long)));
+    assert(isIntegral!(shared(long)));
+    assert(isIntegral!(shared(const(long))));
+
+    assert(isIntegral!(ulong));
+    assert(isIntegral!(const(ulong)));
+    assert(isIntegral!(immutable(ulong)));
+    assert(isIntegral!(shared(ulong)));
+    assert(isIntegral!(shared(const(ulong))));
+
+    assert(!isIntegral!(float));
 }
 
 /**
@@ -787,8 +846,33 @@ template isIntegral(T)
 
 template isFloatingPoint(T)
 {
-    enum bool isFloatingPoint = is(T == float)
-        || is(T == double) || is(T == real);
+    enum bool isFloatingPoint =
+	is(immutable(T) == immutable(float)) ||
+	is(immutable(T) == immutable(double)) ||
+	is(immutable(T) == immutable(real));
+}
+
+unittest
+{
+    assert(isFloatingPoint!(float));
+    assert(isFloatingPoint!(const(float)));
+    assert(isFloatingPoint!(immutable(float)));
+    assert(isFloatingPoint!(shared(float)));
+    assert(isFloatingPoint!(shared(const(float))));
+
+    assert(isFloatingPoint!(double));
+    assert(isFloatingPoint!(const(double)));
+    assert(isFloatingPoint!(immutable(double)));
+    assert(isFloatingPoint!(shared(double)));
+    assert(isFloatingPoint!(shared(const(double))));
+
+    assert(isFloatingPoint!(real));
+    assert(isFloatingPoint!(const(real)));
+    assert(isFloatingPoint!(immutable(real)));
+    assert(isFloatingPoint!(shared(real)));
+    assert(isFloatingPoint!(shared(const(real))));
+
+    assert(!isFloatingPoint!(int));
 }
 
 /**
