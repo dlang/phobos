@@ -543,9 +543,9 @@ pure nothrow real cosh(real x)               {
     return (y + 1.0/y) * 0.5;
 }
 /// ditto
-double cosh(double x)               { return cosh(cast(real)x); }
+pure nothrow double cosh(double x)               { return cosh(cast(real)x); }
 /// ditto
-float cosh(float x)               { return cosh(cast(real)x); }
+pure nothrow float cosh(float x)               { return cosh(cast(real)x); }
 
 
 /***********************************
@@ -570,9 +570,9 @@ pure nothrow real sinh(real x)
     return 0.5 * y / (y+1) * (y+2);
 }
 /// ditto
-double sinh(double x)               { return sinh(cast(real)x); }
+pure nothrow double sinh(double x)               { return sinh(cast(real)x); }
 /// ditto
-float sinh(float x)               { return sinh(cast(real)x); }
+pure nothrow float sinh(float x)               { return sinh(cast(real)x); }
 
 
 /***********************************
@@ -594,9 +594,9 @@ pure nothrow real tanh(real x)
     return y / (y + 2);
 }
 /// ditto
-double tanh(double x)             { return tanh(cast(real)x); }
+pure nothrow double tanh(double x)             { return tanh(cast(real)x); }
 /// ditto
-float tanh(float x)               { return tanh(cast(real)x); }
+pure nothrow float tanh(float x)               { return tanh(cast(real)x); }
 
 private:
 /* Returns cosh(x) + I * sinh(x)
@@ -831,9 +831,9 @@ pure nothrow real exp(real x) {
     }    
 }
 /// ditto
-double exp(double x)             { return exp(cast(real)x); }
+pure nothrow double exp(double x)             { return exp(cast(real)x); }
 /// ditto
-float exp(float x)               { return exp(cast(real)x); }
+pure nothrow float exp(float x)               { return exp(cast(real)x); }
 
 
 /**
@@ -1025,10 +1025,6 @@ L_was_nan:
         return std.c.math.exp2(x);
     }    
 }
-/// ditto
-double exp2(double x)             { return exp2(cast(real)x); }
-/// ditto
-float exp2(float x)               { return exp2(cast(real)x); }
 
 unittest{
     assert(exp2(0.5L)== SQRT2);
@@ -1848,7 +1844,7 @@ unittest
  * Return !=0 if e is $(PLUSMN)$(INFIN).
  */
 
-pure nothrow int isInfinity(real x)
+pure nothrow bool isInfinity(real x)
 {
     alias floatTraits!(real) F;
     static if (real.mant_dig == 53) { // double
