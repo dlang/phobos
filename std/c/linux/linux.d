@@ -252,7 +252,7 @@ extern (C)
     int read(int, void*, int);
     int write(int, in void*, int);
     int close(int);
-    int lseek(int, int, int);
+    int lseek(int, off_t, int);
     int fstat(int, struct_stat*);
     int lstat(in char*, struct_stat*);
     int stat(in char*, struct_stat*);
