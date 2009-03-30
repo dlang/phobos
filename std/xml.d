@@ -774,7 +774,6 @@ class Element : Item
             if (items[i] != element.items[i])
                 return items[i].opCmp(element.items[i]);
         }
-        assert(false);
     }
 
     /**

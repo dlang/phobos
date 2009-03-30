@@ -171,7 +171,7 @@ TYPEINFO_MODULES = ti_wchar ti_uint ti_short ti_ushort ti_byte		\
 	ti_Aint ti_Along ti_Afloat ti_Adouble ti_Areal ti_Acfloat	\
 	ti_Acdouble ti_Acreal ti_void
 
-ETC_MODULES_NOTBUILT = gamma
+ETC_MODULES_NOTBUILT =
 
 ETC_C_MODULES = zlib
 
