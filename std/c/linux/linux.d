@@ -20,4 +20,5 @@ public import core.sys.posix.utime;
 public import core.sys.posix.sys.mman;
 public import core.sys.posix.sys.stat;
 public import core.sys.posix.sys.time;
+public import core.sys.posix.sys.types;
 public import core.sys.posix.sys.wait;
