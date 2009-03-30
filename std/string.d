@@ -199,7 +199,6 @@ int icmp(in char[] s1, in char[] s2)
             c2 += cast(int)'a' - cast(int)'A';
         if (c1 != c2) return cast(int) c1 - cast(int) c2;
     }
-    assert(0);
 }
 
 unittest

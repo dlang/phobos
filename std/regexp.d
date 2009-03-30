@@ -2185,7 +2185,6 @@ int parseRegexp()
 		break;
 	}
     }
-    assert(0);
 }
 
 int parsePiece()
