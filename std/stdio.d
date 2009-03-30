@@ -88,6 +88,8 @@ else version (GCC_IO)
      * Gnu under-the-hood C I/O functions; see
      * http://www.gnu.org/software/libc/manual/html_node/I_002fO-on-Streams.html#I_002fO-on-Streams
      */
+    private import std.c.linux.linux;
+    private import core.sys.posix.stdio;
     extern (C)
     {
 	int fputc_unlocked(int, FILE*);
@@ -901,7 +903,7 @@ FILE* fopen(in char[] name, in char[] mode = "r")
         if (!result && getErrno == EOVERFLOW)
         {
             // attempt fopen64, maybe the file was very large
-            result = std.c.stdio.fopen64(namez, modez);
+            result = fopen64(namez, modez);
         }
     }
     return result;

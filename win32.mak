@@ -35,7 +35,7 @@ CFLAGS=-mn -6 -r
 
 ## Flags for dmd D compiler
 
-DFLAGS=-O -release -nofloat
+DFLAGS=-O -release -nofloat -w
 #DFLAGS=-unittest -g
 #DFLAGS=-unittest -cov -g
 
@@ -108,8 +108,8 @@ SRCS= std\math.d std\stdio.d std\dateparse.d std\date.d std\uni.d std\string.d \
 	std\zip.d std\cstream.d std\loader.d \
 	std\__fileinit.d \
 	crc32.d \
-	etc\gamma.d \
 	std\c\stdarg.d \
+	std\c\string.d \
 	std\c\math.d \
 	std\c\windows\com.d \
 	std\c\windows\stat.d \
@@ -228,7 +228,7 @@ SRC_STD_C_LINUX= std\c\linux\linux.d std\c\linux\linuxextern.d \
 	
 SRC_STD_C_OSX= std\c\osx\socket.d
 
-SRC_ETC= etc\gamma.d
+SRC_ETC=
 
 SRC_ETC_C= etc\c\zlib.d
 
@@ -487,9 +487,6 @@ c_stdio.obj : std\c\stdio.d
 	$(DMD) -c $(DFLAGS) std\c\stdio.d -ofc_stdio.obj
 
 ### etc
-
-gamma.obj : etc\gamma.d
-	$(DMD) -c $(DFLAGS) etc\gamma.d
 
 ### etc\c
 
