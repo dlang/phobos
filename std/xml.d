@@ -121,6 +121,8 @@ module std.xml;
 import std.string;
 import std.encoding;
 
+immutable cdata = "<![CDATA[";
+
 /**
  * Returns true if the character is a character according to the XML standard
  *
@@ -1266,7 +1268,7 @@ class CData : Item
     /**
      * Returns a string representation of this CData section
      */
-    override const string toString() { return "<[CDATA[" ~ content ~ "]]>"; }
+    override const string toString() { return cdata ~ content ~ "]]>"; }
 
     override const bool isEmptyXML() { return false; } /// Returns false always
 }
@@ -2150,7 +2152,7 @@ private
 
         try
         {
-            checkLiteral("<[CDATA[",s);
+            checkLiteral(cdata,s);
             checkEnd("]]>",s);
         }
         catch(Err e) { fail(e); }
@@ -2344,7 +2346,7 @@ private
                      if (s.startsWith("&"))        { checkReference(s); }
                 else if (s.startsWith("<!--"))     { checkComment(s); }
                 else if (s.startsWith("<?"))       { checkPI(s); }
-                else if (s.startsWith("<[CDATA[")) { checkCDSect(s); }
+                else if (s.startsWith(cdata)) { checkCDSect(s); }
                 else if (s.startsWith("</"))       { break; }
                 else if (s.startsWith("<"))        { checkElement(s); }
                 else                               { checkCharData(s); }
