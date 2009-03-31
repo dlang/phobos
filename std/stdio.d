@@ -105,6 +105,13 @@ else version (GCC_IO)
                  size_t size, size_t n, FILE *stream);
     }
 
+    version (linux)
+    {
+        // declare fopen64 if not already
+        static if (!is(typeof(fopen64)))
+            extern (C) FILE* fopen64(in char*, in char*);
+    }
+
     alias fputc_unlocked FPUTC;
     alias fputwc_unlocked FPUTWC;
     alias fgetc_unlocked FGETC;
