@@ -15,37 +15,41 @@
  *
  * $(WEB digitalmars.com, Walter Bright), $(WEB erdani.org, Andrei
 Alexandrescu)
- *
- * Macros:
- *	WIKI=Phobos/StdStdio
+  
+Macros:
+WIKI=Phobos/StdStdio
  */
 
 module std.stdio;
 
-public import std.c.stdio;
-
+public import core.stdc.stdio;
+import std.stdiobase;
 import core.memory;
 import std.format;
 import std.utf;
 import std.string;
 import core.stdc.errno;
-import std.c.stdlib;
-import std.c.string;
-import std.c.stddef;
-import std.c.wcharh;
+import core.stdc.stdlib;
+import core.stdc.string;
+import core.stdc.stddef;
+import core.stdc.wchar_;
 import std.conv;
 import std.traits;
 import std.contracts;
 import std.file;
+import std.metastrings;
 import std.typetuple;
+import std.typecons;
+import std.algorithm;
+import std.array;
 
 
 version (DigitalMars)
 {
     version (Windows)
     {
-	// Specific to the way Digital Mars C does stdio
-	version = DIGITAL_MARS_STDIO;
+        // Specific to the way Digital Mars C does stdio
+        version = DIGITAL_MARS_STDIO;
     }
 }
 
@@ -64,21 +68,21 @@ version (DIGITAL_MARS_STDIO)
 {
     extern (C)
     {
-	/* **
-	 * Digital Mars under-the-hood C I/O functions
-	 */
-	int _fputc_nlock(int, FILE*);
-	int _fputwc_nlock(int, FILE*);
-	int _fgetc_nlock(FILE*);
-	int _fgetwc_nlock(FILE*);
-	int __fp_lock(FILE*);
-	void __fp_unlock(FILE*);
+        /* **
+         * Digital Mars under-the-hood C I/O functions
+         */
+        int _fputc_nlock(int, FILE*);
+        int _fputwc_nlock(int, FILE*);
+        int _fgetc_nlock(FILE*);
+        int _fgetwc_nlock(FILE*);
+        int __fp_lock(FILE*);
+        void __fp_unlock(FILE*);
     }
     alias _fputc_nlock FPUTC;
     alias _fputwc_nlock FPUTWC;
     alias _fgetc_nlock FGETC;
     alias _fgetwc_nlock FGETWC;
-
+    
     alias __fp_lock FLOCK;
     alias __fp_unlock FUNLOCK;
 }
@@ -88,21 +92,21 @@ else version (GCC_IO)
      * Gnu under-the-hood C I/O functions; see
      * http://www.gnu.org/software/libc/manual/html_node/I_002fO-on-Streams.html#I_002fO-on-Streams
      */
-    private import std.c.linux.linux;
+    //private import std.c.linux.linux;
     private import core.sys.posix.stdio;
     extern (C)
     {
-	int fputc_unlocked(int, FILE*);
-	int fputwc_unlocked(wchar_t, FILE*);
-	int fgetc_unlocked(FILE*);
-	int fgetwc_unlocked(FILE*);
-	void flockfile(FILE*);
-	void funlockfile(FILE*);
-	ssize_t getline(char**, size_t*, FILE*);
-	ssize_t getdelim (char**, size_t*, int, FILE*);
-
-	private size_t fwrite_unlocked(const(void)* ptr,
-                 size_t size, size_t n, FILE *stream);
+        int fputc_unlocked(int, FILE*);
+        int fputwc_unlocked(wchar_t, FILE*);
+        int fgetc_unlocked(FILE*);
+        int fgetwc_unlocked(FILE*);
+        void flockfile(FILE*);
+        void funlockfile(FILE*);
+        ssize_t getline(char**, size_t*, FILE*);
+        ssize_t getdelim (char**, size_t*, int, FILE*);
+        
+        private size_t fwrite_unlocked(const(void)* ptr,
+                size_t size, size_t n, FILE *stream);
     }
 
     version (linux)
@@ -141,40 +145,774 @@ else
     static assert(0, "unsupported C I/O system");
 }
 
+/**
+Encapsulates a $(D FILE*). Generally D does not attempt to provide
+thin wrappers over equivalent functions in the C standard library, but
+manipulating $(D FILE*) values directly is unsafe and error-prone in
+many ways. The $(D File) type ensures safe manipulation, automatic
+file closing, and a lot of convenience.
 
-/*********************
- * Thrown if I/O errors happen.
- */
-class StdioException : Exception
+The underlying $(D FILE*) handle is maintained in a reference-counted
+manner, such that as soon as the last $(D File) variable bound to a
+given $(D FILE*) goes out of scope, the underlying $(D FILE*) is
+automatically closed.
+
+Example:
+----
+// test.d
+void main(string args[])
 {
-    uint errno;			// operating system error code
-
-    this(string msg)
+    auto f = File("test.txt", "w"); // open for writing
+    f.write("Hello");
+    if (args.length > 1)
     {
-	super(msg);
+        auto g = f; // now g and f write to the same file
+                    // internal reference count is 2
+        g.write(", ", args[1]);
+        // g exits scope, reference count decreases to 1
+    }
+    f.writeln("!");
+    // f exits scope, reference count falls to zero,
+    // underlying $(D FILE*) is closed.
+}
+----
+<pre class=console>
+% rdmd test.d Jimmy
+% cat test.txt
+Hello, Jimmy!
+% __
+</pre>
+*/
+struct File
+{
+    /*private*/ struct Impl
+    {
+        FILE * handle;
+        uint refs;
+        string name;
+        this(FILE* h, uint r, string n)
+        {
+            handle = h;
+            refs = r;
+            name = n;
+        }
+    }
+    /*private*/ Impl * p;
+
+/**
+Constructor taking the name of the file to open and the open mode
+(with the same semantics as in the C standard library $(WEB
+cplusplus.com/reference/clibrary/cstdio/fopen.html, fopen)
+function). Throws an exception if the file could not be opened.
+
+Copying one $(D File) object to another results in the two $(D File)
+objects referring to the same underlying file. 
+
+The destructor automatically closes the file as soon as no $(D File)
+object refers to it anymore.
+ */
+
+    this(string name, in char[] stdioOpenmode = "rb")
+    {
+        p = new Impl(errnoEnforce(.fopen(name, stdioOpenmode),
+                        "Cannot open file `"~name
+                        ~"' in mode `"~stdioOpenmode.idup~"'"),
+                1, name);
     }
 
-    this(uint errno)
+    // ~this()
+    // {
+    //     if (!p) return;
+    //     // @@@BUG@@@ These lines prematurely close the file
+    //     if (p.refs == 1) close;
+    //     else --p.refs;
+    // }
+
+    // this(this)
+    // {
+    //     //printf("Copying file with %d refs\n", _refs ? *_refs : 9999);
+    //     if (!p) return;
+    //     enforce(p.refs);
+    //     ++p.refs;
+    // }
+
+/**
+Assigns a file to another. The target of the assignment gets detached
+from whatever file it was attached to, and attaches itself to the new
+file.
+ */
+    void opAssign(File rhs)
     {
-	version (Posix)
-	{   char[80] buf = void;
-	    auto s = std.c.string.strerror_r(errno, buf.ptr, buf.length);
-	}
-	else
-	{
-	    auto s = std.c.string.strerror(errno);
-	}
-	super(std.string.toString(s).idup);
+        // @@@BUG@@@
+        //swap(p, rhs.p);
+        p = rhs.p;
+    }
+    
+/**
+First calls $(D detach) (throwing on failure), and then attempts to
+_open file $(D name) with mode $(D stdioOpenmode). The mode has the
+same semantics as in the C standard library $(WEB
+cplusplus.com/reference/clibrary/cstdio/fopen.html, fopen) function.
+Throws exception in case of error.
+ */
+    void open(string name, string stdioOpenmode = "rb")
+    {
+        detach;
+        auto another = File(name, stdioOpenmode);
+        swap(this, another);
     }
 
-    static void opCall(string msg)
+/**
+First calls $(D detach) (throwing on failure), and then runs a command
+by calling the C standard library function $(WEB
+opengroup.org/onlinepubs/007908799/xsh/_popen.html, _popen).
+ */
+    version(linux) void popen(string command, string stdioOpenmode = "r")
     {
-	throw new StdioException(msg);
+        detach;
+        p = new Impl(errnoEnforce(.popen(command, stdioOpenmode),
+                        "Cannot run command `"~command~"'"),
+                1, command);
     }
 
-    static void opCall()
+/** Returns $(D true) if the file is opened. */
+    bool isOpen() const
     {
-	throw new StdioException(getErrno);
+        return p !is null && p.handle;
+    }
+
+/**
+Returns $(D true) if the file is at end (see $(WEB
+cplusplus.com/reference/clibrary/cstdio/feof.html, feof)). The file
+must be opened, otherwise an exception is thrown.
+ */
+    bool eof() const
+    {
+        enforce(p && p.handle, "Calling eof() against an unopened file.");
+        return .feof(cast(FILE*) p.handle) != 0;
+    }
+
+/** Returns the name of the file, if any. */
+    string name() const
+    {
+        return p.name;
+    }
+
+/**
+If the file is not opened, returns $(D false). Otherwise, returns
+$(WEB cplusplus.com/reference/clibrary/cstdio/ferror.html, ferror) for
+the file handle.
+ */
+    bool error() const
+    {
+        return !p.handle || .ferror(cast(FILE*) p.handle);
+    }
+    
+/**
+Detaches from the underlying file. If the sole owner, calls $(D close)
+and throws if that fails.
+  */
+    void detach()
+    {
+        if (!p) return;
+        // @@@BUG
+        //if (p.refs == 1) close;
+        p = null;
+    }
+    
+/**
+If the file was unopened, succeeds vacuously. Otherwise closes the
+file (by calling $(WEB
+cplusplus.com/reference/clibrary/cstdio/fclose.html, fclose)),
+throwing on error. Even if an exception is thrown, afterwards the $(D
+File) object is empty. This is different from $(D detach) in that it
+always closes the file; consequently, all other $(D File) objects
+referring to the same handle will see a closed file henceforth.
+ */
+    void close()
+    {
+        if (!p) return; // succeed vacuously
+        if (!p.handle)
+        {
+            p = null; // start a new life
+            return;
+        }
+        scope(exit)
+        {
+            p.handle = null; // nullify the handle anyway
+            p.name = null;
+            --p.refs;
+            p = null;
+        }
+        //fprintf(std.c.stdio.stderr, ("Closing file `"~name~"`.\n\0").ptr);
+        errnoEnforce(.fclose(p.handle) == 0,
+                    "Could not close file `"~p.name~"'");
+    }
+
+/**
+If the file is not opened, succeeds vacuously. Otherwise, returns
+$(WEB cplusplus.com/reference/clibrary/cstdio/_clearerr.html,
+_clearerr) for the file handle.
+ */
+    void clearerr()
+    {
+        p is null || p.handle is null ||
+        .clearerr(p.handle);
+    }
+
+/**
+If the file is not opened, throws an exception. Otherwise, calls $(WEB
+cplusplus.com/reference/clibrary/cstdio/_fflush.html, _fflush) for the
+file handle and throws on error.
+ */
+    void flush()
+    {
+        errnoEnforce
+        (.fflush(enforce(p.handle, "Calling fflush() on an unopened file"))
+                == 0);
+    }
+
+/**
+If the file is not opened, throws an exception. Otherwise, calls $(WEB
+cplusplus.com/reference/clibrary/cstdio/fread.html, fread) for the
+file handle and throws on error.
+ */
+    T[] rawRead(T)(T[] buffer)
+    {
+        enforce(buffer.length);
+        invariant result =
+            .fread(buffer.ptr, T.sizeof, buffer.length, p.handle);
+        errnoEnforce(!error);
+        return result ? buffer[0 .. result] : null;
+    }
+
+/**
+If the file is not opened, throws an exception. Otherwise, calls $(WEB
+cplusplus.com/reference/clibrary/cstdio/fwrite.html, fwrite) for the
+file handle and throws on error.
+ */
+    void rawWrite(T)(in T[] buffer)
+    {
+        auto result =
+            .fwrite(buffer.ptr, T.sizeof, buffer.length, p.handle);
+        if (result == result.max) result = 0;
+        errnoEnforce(result == buffer.length,
+                text("Wrote ", result, " instead of ", buffer.length,
+                        " objects of type ", T.stringof, " to file `",
+                        p.name, "'"));
+    }
+
+/**
+If the file is not opened, throws an exception. Otherwise, calls $(WEB
+cplusplus.com/reference/clibrary/cstdio/fseek.html, fseek) for the
+file handle. Throws on error.
+ */
+    void seek(long offset, int origin = SEEK_SET)
+    {
+        enforce(p && p.handle,
+                "Attempting to seek() in an unopened file");
+        // @@@ Dubious: why is fseek in std.c.stdio taking an int???
+        errnoEnforce(core.stdc.stdio.fseek(
+                    p.handle, to!int(offset), origin) == 0,
+                "Could not seek in file `"~p.name~"'");
+    }
+
+/**
+If the file is not opened, throws an exception. Otherwise, calls $(WEB
+cplusplus.com/reference/clibrary/cstdio/ftell.html, ftell) for the
+managed file handle. Throws on error.
+ */
+    ulong tell() const
+    {
+        enforce(p && p.handle,
+                "Attempting to tell() in an unopened file");
+        immutable result = .ftell(cast(FILE*) p.handle);
+        errnoEnforce(result != -1,
+                "Query ftell() failed for file `"~p.name~"'");
+        return result;
+    }
+
+/**
+If the file is not opened, throws an exception. Otherwise, calls $(WEB
+cplusplus.com/reference/clibrary/cstdio/_rewind.html, _rewind) for the
+file handle. Throws on error.
+ */
+    void rewind()
+    {
+        enforce(p && p.handle,
+                "Attempting to rewind() an unopened file");
+        .rewind(p.handle);
+    }
+
+/**
+If the file is not opened, throws an exception. Otherwise, calls $(WEB
+cplusplus.com/reference/clibrary/cstdio/_setvbuf.html, _setvbuf) for
+the file handle.
+ */
+    void setvbuf(size_t size, int mode = _IOFBF)
+    {
+        errnoEnforce(
+            .setvbuf(enforce(p.handle,
+                            "Attempting to call setvbuf() on an unopened file"),
+                    null, mode, size) == 0,
+            "Could not set buffering for file `"~p.name~"'");
+    }
+
+/**
+If the file is not opened, throws an exception. Otherwise, calls
+$(WEB cplusplus.com/reference/clibrary/cstdio/_setvbuf.html,
+_setvbuf) for the file handle. */
+    void setvbuf(void[] buf, int mode = _IOFBF)
+    {
+        errnoEnforce(
+            .setvbuf(enforce(p.handle,
+                            "Attempting to call setvbuf() on an unopened file"),
+                    cast(char*) buf.ptr, mode, buf.length) == 0,
+            "Could not set buffering for file `"~p.name~"'");
+    }
+
+/**
+If the file is not opened, throws an exception. Otherwise, writes its
+arguments in text format to the file. */
+    void write(S...)(S args)
+    {
+        //writef("", args[0 .. $]);
+        auto w = lockingTextWriter;
+        foreach(arg; args)
+        {
+            static if (isSomeString!(typeof(arg)))
+            {
+                w.put(arg);
+            }
+            else
+            {
+                std.format.formattedWrite(w, "%s", arg);
+            }
+        }
+    }
+        
+/**
+If the file is not opened, throws an exception. Otherwise, writes its
+arguments in text format to the file, followed by a newline. */
+    void writeln(S...)(S args)
+    {
+        write(args, '\n');
+        .fflush(p.handle);
+    }
+
+/**
+If the file is not opened, throws an exception. Otherwise, writes its
+arguments in text format to the file, according to the format in the
+first argument. */
+    void writef(S...)(S args) if (isSomeString!(S[0]))
+    {
+        assert(p);
+        assert(p.handle);
+        enum errorMessage =
+        "You must pass a formatting string as the first"
+        " argument to writef. If no formatting is needed,"
+        " you may want to use write.";
+        static assert(isSomeString!(S[0]), errorMessage);
+        auto w = lockingTextWriter;
+        std.format.formattedWrite(w, args);
+    }
+
+/**
+Same as writef, plus adds a newline. */
+    void writefln(S...)(S args)
+    {
+        auto w = lockingTextWriter;
+        std.format.formattedWrite(w, args);
+        w.put('\n');
+        .fflush(p.handle);
+    }
+
+/**********************************
+Read line from stream $(D fp) and write it to $(D buf[]), including
+terminating character.
+
+This is often faster than $(D File.readln(dchar)) because the buffer
+is reused each call. Note that reusing the buffer means that the
+previous contents of it has to be copied if needed.
+
+Params:
+fp = input stream
+buf = buffer used to store the resulting line data. buf is
+resized as necessary.
+
+Returns:
+0 for end of file, otherwise number of characters read
+
+Throws: $(D StdioException) on error
+
+Example:
+---
+// Reads $(D stdin) and writes it to $(D stdout).
+import std.stdio;
+
+int main()
+{
+    char[] buf;
+    while (readln(stdin, buf))
+	write(buf);
+    return 0;
+}
+---
+    This method is more efficient than the one in the previous example
+because $(D readln(stdin, buf)) reuses (if possible) memory
+allocated by $(D buf), whereas $(D buf = readln()) makes a
+new memory allocation with every line.
+*/
+    size_t readln(ref char[] buf, dchar terminator = '\n')
+    {
+        enforce(p && p.handle, "Attempt to read from an unopened file.");
+        return readlnImpl(p.handle, buf, terminator);
+    }
+    
+/** ditto */
+    string readln(dchar terminator = '\n')
+    {
+        char[] buf;
+        readln(buf, terminator);
+        return assumeUnique(buf);
+    }
+    
+/** ditto */
+    // TODO: optimize this
+    size_t readln(inout wchar[] buf, dchar terminator = '\n')
+    {
+        string s = readln(terminator);
+        if (!s.length) return 0;
+        buf.length = 0;
+        foreach (wchar c; s)
+        {
+            buf ~= c;
+        }
+        return buf.length;
+    }
+
+/** ditto */
+// TODO: fold this together with wchar
+    size_t readln(inout dchar[] buf, dchar terminator = '\n')
+    {
+        string s = readln(terminator);
+        if (!s.length) return 0;
+        buf.length = 0;
+        foreach (dchar c; s)
+        {
+            buf ~= c;
+        }
+        return buf.length;
+    }
+
+/**
+ Returns a temporary file by calling $(WEB
+ cplusplus.com/reference/clibrary/cstdio/_tmpfile.html, _tmpfile). */
+    static File tmpfile()
+    {
+        auto h = errnoEnforce(core.stdc.stdio.tmpfile,
+                "Could not create temporary file with tmpfile()");
+        File result = void;
+        result.p = new Impl(h, 1, null);
+        return result;
+    }
+
+/**
+Unsafe function that wraps an existing $(D FILE*). The resulting $(D
+File) never takes the initiative in closing the file. */
+    /*private*/ static File wrapFile(FILE* f)
+    {
+        File result = void;
+        //result.p = new Impl(f, uint.max / 2, null);
+        result.p = new Impl(f, 9999, null);
+        return result;
+    }
+    
+/**
+Returns the file number corresponding to this object.
+ */
+    int fileno() const
+    {
+        enforce(p && p.handle,
+                "Attempting to call fileno() on an unopened file");
+        return core.stdc.stdio.fileno(cast(FILE*) p.handle);
+    }
+    
+/**
+Range that reads one line at a time. */ 
+    enum KeepTerminator : bool { no, yes }
+    /// ditto
+    struct ByLine(Char, Terminator)
+    {
+        File file;
+        Char[] line;
+        Terminator terminator;
+        KeepTerminator keepTerminator;
+        
+        this(File f, KeepTerminator kt = KeepTerminator.no,
+                Terminator terminator = '\n')
+        {
+            file = f;
+            this.terminator = terminator;
+            keepTerminator = kt;
+            next; // prime the range
+            // @@@BUG@@@ line below should not exist
+            //if (file.p) ++file.p.refs;
+        }
+
+        /// Range primitive implementations.
+        bool empty() const
+        {
+            return !file.isOpen;
+        }
+
+        /// Ditto
+        Char[] head()
+        {
+            return line;
+        }
+
+        /// Ditto
+        void next()
+        {
+            enforce(file.isOpen);
+            file.readln(line, terminator);
+            if (!line.length)
+                file.detach;
+            else if (keepTerminator == KeepTerminator.no
+                    && std.algorithm.endsWith(line, terminator))
+                line.length = line.length - 1;
+        }
+    }
+
+/**
+Convenience function that returns the $(D LinesReader) corresponding
+to this file. */ 
+    ByLine!(Char, Terminator) byLine(Terminator = char, Char = char)
+    (KeepTerminator keepTerminator = KeepTerminator.no,
+            Terminator terminator = '\n')
+    {
+        return typeof(return)(this, keepTerminator, terminator);
+    }
+
+    unittest
+    {
+        //printf("Entering test at line %d\n", __LINE__);
+        scope(failure) printf("Failed test at line %d\n", __LINE__);
+        std.file.write("testingByLine", "asd\ndef\nasdf");
+        auto witness = [ "asd", "def", "asdf" ];
+        uint i;
+        auto f = File("testingByLine");
+        scope(exit)
+        {
+            f.close;
+            assert(!f.isOpen);
+            //std.file.remove("testingByLine");
+        }
+        foreach (line; f.byLine())
+        {
+            assert(line == witness[i++]);
+        }
+        assert(i == witness.length);
+        i = 0;
+        f.rewind;
+        foreach (line; f.byLine(KeepTerminator.yes))
+        {
+            assert(line == witness[i++] ~ '\n' || i == witness.length);
+        }
+        assert(i == witness.length);
+    }
+
+    template byRecord(Fields...)
+    {
+        ByRecord!(Fields) byRecord(string format)
+        {
+            return typeof(return)(this, format);
+        }
+    }
+
+    unittest
+    {
+        scope(failure) printf("Failed test at line %d\n", __LINE__);
+        std.file.write("deleteme", "1 2\n4 1\n5 100");
+        scope(exit) std.file.remove("deleteme");
+        File f = File("deleteme");
+        scope(exit) f.close;
+        auto t = [ tuple(1, 2), tuple(4, 1), tuple(5, 100) ];
+        uint i;
+        foreach (e; f.byRecord!(int, int)("%s %s"))
+        {
+            //.writeln(e);
+            assert(e == t[i++]);
+        }
+    }
+
+/**
+$(D Range that locks the file and allows fast writing to it. */ 
+    struct LockingTextWriter {
+        //@@@ Hacky implementation due to bugs, see the correct
+        //implementation at the end of this struct
+        FILE * handle;
+        int orientation;
+
+        this(ref File f)
+        {
+            enforce(f.p && f.p.handle);
+            handle = f.p.handle;
+            orientation = fwide(handle, 0);
+            FLOCK(handle);
+        }
+
+        ~this()
+        {
+            FUNLOCK(handle);
+            handle = null;
+        }
+        
+        /// Range primitive implementations.
+        void put(C)(const(C)[] writeme) if (is(C : dchar))
+        {
+            //return;
+            if (writeme[0].sizeof == 1 && orientation <= 0)
+            {
+                //file.write(writeme); causes infinite recursion!!!
+                //file.rawWrite(writeme);
+                auto result =
+                .fwrite(writeme.ptr, C.sizeof, writeme.length, handle);
+                //if (result == result.max) result = 0;
+                if (result != writeme.length) errnoEnforce(0);
+            }
+            else
+            {
+                // put each character in turn
+                foreach (dchar c; writeme)
+                {
+                    put(c);
+                }
+            }
+        }
+        
+        // @@@BUG@@@ 2340
+        //void front(C)(C c) if (is(C : dchar)) {
+        /// ditto
+        void put(C)(C c) if (is(C : dchar))
+        {
+            static if (c.sizeof == 1)
+            {
+                // simple char
+                if (orientation <= 0) FPUTC(c, handle);
+                else FPUTWC(c, handle);
+            }
+            else static if (c.sizeof == 2)
+            {
+                if (orientation <= 0)
+                {
+                    if (c <= 0x7F)
+                    {
+                        FPUTC(c, backend);
+                    }
+                    else
+                    {
+                        char[4] buf;
+                        auto b = std.utf.toUTF8(buf, c);
+                        foreach (i ; 0 .. b.length)
+                            FPUTC(b[i], backend);
+                    }
+                }
+                else
+                {
+                    FPUTWC(c, backend);
+                }
+            }
+            else // 32-bit characters
+            {
+                if (orientation <= 0)
+                {
+                    if (c <= 0x7F)
+                    {
+                        FPUTC(c, handle);
+                    }
+                    else
+                        {
+                            char[4] buf;
+                            auto b = std.utf.toUTF8(buf, c);
+                            foreach (i ; 0 .. b.length)
+                                FPUTC(b[i], handle);
+                        }
+                }
+                else
+                {
+                    version (Windows)
+                    {
+                        assert(isValidDchar(c));
+                        if (c <= 0xFFFF)
+                        {
+                                FPUTWC(c, handle);
+                        }
+                        else
+                        {
+                            FPUTWC(cast(wchar)
+                                    ((((c - 0x10000) >> 10) & 0x3FF)
+                                            + 0xD800), handle);
+                            FPUTWC(cast(wchar)
+                                    (((c - 0x10000) & 0x3FF) + 0xDC00),
+                                    handle);
+                        }
+                    }
+                    else version (linux)
+                    {
+                                 FPUTWC(c, handle);
+                    }
+                    else
+                    {
+                        static assert(0);
+                    }
+                }
+            }
+        }
+        
+        //@@@BUG correct implementation is below:
+        
+        // File file;
+        // int orientation;
+
+        // this(File f)
+        // {
+        //     enforce(f.isOpen);
+        //     swap(file, f);
+        //     // @@@BUG@@@ This line should NOT be there!
+        //     file.p.refs++;
+        //     orientation = fwide(file.p.handle, 0);
+        //     //FLOCK(file.p.handle);
+        // }
+
+        // // @@@BUG@@@ uncomment and you get a linker error
+        // // this(this)
+        // // {
+        // //     //FLOCK(file.p.handle);
+        // // }
+        
+        // ~this()
+        // {
+        //     if (!file.p.handle) return;
+        //     //FUNLOCK(file.p.handle);
+        // }
+
+        // void opAssign(LockingTextWriter rhs)
+        // {
+        //     swap(this, rhs);
+        // }
+    }
+
+/// Convenience function.
+    LockingTextWriter lockingTextWriter()
+    {
+        // @@@BUG2341@@@
+        //return LockingTextWriter(this);
+        // The code below avoids bug 2341
+        //printf("Entering fn with %d refs\n", *_refs);
+        auto result = LockingTextWriter(this);
+        return result;
     }
 }
 
@@ -198,10 +936,10 @@ void writefx(FILE* fp, TypeInfo[] arguments, void* argptr, int newline=false)
 		FPUTC(c, fp);
 	    }
 	    else
-	    {   char[4] buf;
-		auto b = std.utf.toUTF8(buf, c);
-		for (size_t i = 0; i < b.length; i++)
-		    FPUTC(b[i], fp);
+	    {
+                char[4] buf = void;
+                foreach (i; 0 .. std.utf.toUTF8(buf, c).length)
+		    FPUTC(buf[i], fp);
 	    }
 	}
 
@@ -221,12 +959,10 @@ void writefx(FILE* fp, TypeInfo[] arguments, void* argptr, int newline=false)
 		    FPUTWC(c, fp);
 		}
 		else
-		{   wchar[2] buf;
-
-		    buf[0] = cast(wchar) ((((c - 0x10000) >> 10) & 0x3FF) + 0xD800);
-		    buf[1] = cast(wchar) (((c - 0x10000) & 0x3FF) + 0xDC00);
-		    FPUTWC(buf[0], fp);
-		    FPUTWC(buf[1], fp);
+		{
+		    FPUTWC(cast(wchar) ((((c - 0x10000) >> 10) & 0x3FF) +
+                                    0xD800), fp);
+		    FPUTWC(cast(wchar) (((c - 0x10000) & 0x3FF) + 0xDC00), fp);
 		}
 	    }
 	}
@@ -248,113 +984,109 @@ void writefx(FILE* fp, TypeInfo[] arguments, void* argptr, int newline=false)
     }
 }
 
+template isStreamingDevice(T)
+{
+    enum isStreamingDevice = is(T : FILE*) ||
+        is(T : File);
+}
 
 /***********************************
- * If the first argument $(D_PARAM args[0]) is a $(D_PARAM FILE*), for
- * each argument $(D_PARAM arg) in $(D_PARAM args[1..$]), format the
+ * If the first argument $(D args[0]) is a $(D FILE*), for
+ * each argument $(D arg) in $(D args[1..$]), format the
  * argument (as per $(LINK2 std_conv.html, to!(string)(arg))) and
- * write the resulting string to $(D_PARAM args[0]). If $(D_PARAM
- * args[0]) is not a $(D_PARAM FILE*), the call is equivalent to
- * $(D_PARAM write(stdout, args)).
+ * write the resulting string to $(D args[0]). If $(D
+ * args[0]) is not a $(D FILE*), the call is equivalent to
+ * $(D write(stdout, args)).
  *
  * A call without any arguments will fail to compile. In the
- * exceedingly rare case you'd want to print a $(D_PARAM FILE*) to
- * $(D_PARAM stdout) as a hex pointer, $(D_PARAM write("", myFilePtr))
+ * exceedingly rare case you'd want to print a $(D FILE*) to
+ * $(D stdout) as a hex pointer, $(D write("", myFilePtr))
  * will do the trick.
  *
  * In case of an I/O error, throws an StdioException.
  */
-void write(T...)(T args)
+void write(T...)(T args) if (!is(T[0] : File))
 {
-    static if (is(typeof(args[0]) : FILE*))
-    {
-        alias args[0] target;
-        enum first = 1;
-    }
-    else
-    {
-        alias stdout target;
-        enum first = 0;
-    }
-    writef(target, "", args[first .. $]);
-    static if (args.length && is(typeof(args[$ - 1]) : dchar)) {
-        if (args[$ - 1] == '\n') fflush(target);
-    }
+    stdout.write(args);
 }
 
 unittest
 {
+    //printf("Entering test at line %d\n", __LINE__);
+    scope(failure) printf("Failed test at line %d\n", __LINE__);
     void[] buf;
     write(buf);
-    // test write
+    // // test write
     string file = "dmd-build-test.deleteme.txt";
-    FILE* f = fopen(file, "w");
-    assert(f, getcwd());
+    auto f = File(file, "w");
     scope(exit) { std.file.remove(file); }
-    write(f, "Hello, ",  "world number ", 42, "!");
-    fclose(f) == 0 || assert(false);
+    f.write("Hello, ",  "world number ", 42, "!");
+    f.close;
     assert(cast(char[]) std.file.read(file) == "Hello, world number 42!");
-    // test write on stdout
+    // // test write on stdout
     auto saveStdout = stdout;
     scope(exit) stdout = saveStdout;
-    stdout = fopen(file, "w");
-    assert(stdout);
+    //stdout.open(file, "w");
     Object obj;
-    write("Hello, ",  "world number ", 42, "! ", obj);
-    fclose(stdout) == 0 || assert(false);
-    auto result = cast(char[]) std.file.read(file);
-    assert(result == "Hello, world number 42! null", result);
+    //write("Hello, ",  "world number ", 42, "! ", obj);
+    //stdout.close;
+    // auto result = cast(char[]) std.file.read(file);
+    // assert(result == "Hello, world number 42! null", result);
 }
 
 /***********************************
- * Equivalent to $(D_PARAM write(args, '\n')).  Calling $(D_PARAM
+ * Equivalent to $(D write(args, '\n')).  Calling $(D
  * writeln) without arguments is valid and just prints a newline to
  * the standard output.
  */
 void writeln(T...)(T args)
 {
-    write(args, '\n');
+    stdout.write(args, '\n');
 }
 
 unittest
 {
+        //printf("Entering test at line %d\n", __LINE__);
+    scope(failure) printf("Failed test at line %d\n", __LINE__);
     // test writeln
     string file = "dmd-build-test.deleteme.txt";
-    FILE* f = fopen(file, "w");
-    assert(f);
+    auto f = File(file, "w");
     scope(exit) { std.file.remove(file); }
-    writeln(f, "Hello, ",  "world number ", 42, "!");
-    fclose(f) == 0 || assert(false);
-  version (Windows)
-    assert(cast(char[]) std.file.read(file) == "Hello, world number 42!\r\n");
-  else
-    assert(cast(char[]) std.file.read(file) == "Hello, world number 42!\n");
+    f.writeln("Hello, ",  "world number ", 42, "!");
+    f.close;
+    version (Windows)
+        assert(cast(char[]) std.file.read(file) ==
+                "Hello, world number 42!\r\n");
+    else
+        assert(cast(char[]) std.file.read(file) ==
+                "Hello, world number 42!\n");
     // test writeln on stdout
     auto saveStdout = stdout;
     scope(exit) stdout = saveStdout;
-    stdout = fopen(file, "w");
-    assert(stdout);
+    stdout.open(file, "w");
     writeln("Hello, ",  "world number ", 42, "!");
-    fclose(stdout) == 0 || assert(false);
-  version (Windows)
-    assert(cast(char[]) std.file.read(file) == "Hello, world number 42!\r\n");
-  else
-    assert(cast(char[]) std.file.read(file) == "Hello, world number 42!\n");
+    stdout.close;
+    version (Windows)
+        assert(cast(char[]) std.file.read(file) ==
+                "Hello, world number 42!\r\n");
+    else
+        assert(cast(char[]) std.file.read(file) ==
+                "Hello, world number 42!\n");
 }
 
 /***********************************
- * If the first argument $(D_PARAM args[0]) is a $(D_PARAM FILE*), use
+ * If the first argument $(D args[0]) is a $(D FILE*), use
  * $(LINK2 std_format.html#format-string, the format specifier) in
- * $(D_PARAM args[1]) to control the formatting of $(D_PARAM
- * args[2..$]), and write the resulting string to $(D_PARAM args[0]).
- * If $(D_PARAM arg[0]) is not a $(D_PARAM FILE*), the call is
- * equivalent to $(D_PARAM writef(stdout, args)).
+ * $(D args[1]) to control the formatting of $(D
+ * args[2..$]), and write the resulting string to $(D args[0]).
+ * If $(D arg[0]) is not a $(D FILE*), the call is
+ * equivalent to $(D writef(stdout, args)).
  *
 
 IMPORTANT:
 
 New behavior starting with D 2.006: unlike previous versions,
-$(D_PARAM writef) (and also $(D_PARAM writefln)) only scans its first
+$(D writef) (and also $(D writefln)) only scans its first
 string argument for format specifiers, but not subsequent string
 arguments. This decision was made because the old behavior made it
 unduly hard to simply print string variables that occasionally
@@ -377,7 +1109,7 @@ counter for non-positional parameters tracks the next parameter after
 the largest positional parameter already used.
 
 New starting with 2.008: raw format specifiers. Using the "%r"
-specifier makes $(D_PARAM writef) simply write the binary
+specifier makes $(D writef) simply write the binary
 representation of the argument. Use "%-r" to write numbers in little
 endian format, "%+r" to write numbers in big endian format, and "%r"
 to write numbers in platform-native format.
@@ -386,124 +1118,86 @@ to write numbers in platform-native format.
 
 void writef(T...)(T args)
 {
-    PrivateFileWriter!(char) w;
-    enum errorMessage =
-        "You must pass a formatting string as the first"
-        " argument to writef. If no formatting is needed,"
-        " you may want to use write.";
-    static if (is(typeof(args[0]) : FILE*))
-    {
-        alias args[0] target;
-        enum first = 1;
-    }
-    else
-    {
-        alias stdout target;
-        enum first = 0;
-    }
-    w.backend = target;
-    FLOCK(w.backend);
-    scope(exit) FUNLOCK(w.backend);
-    static if (!isSomeString!(T[first]))
-    {
-        // bacward compatibility hack
-        std.format.formattedWrite(w, "", args[first .. $]);
-    }
-    else
-    {
-        std.format.formattedWrite(w, args[first .. $]);
-    }
+    stdout.writef(args);
 }
 
 unittest
 {
+        //printf("Entering test at line %d\n", __LINE__);
+    scope(failure) printf("Failed test at line %d\n", __LINE__);
     // test writef
     string file = "dmd-build-test.deleteme.txt";
-    auto f = fopen(file, "w");
-    assert(f);
+    auto f = File(file, "w");
     scope(exit) { std.file.remove(file); }
-    writef(f, "Hello, %s world number %s!", "nice", 42);
-    fclose(f) == 0 || assert(false);
+    f.writef("Hello, %s world number %s!", "nice", 42);
+    f.close;
     assert(cast(char[]) std.file.read(file) ==  "Hello, nice world number 42!");
     // test write on stdout
     auto saveStdout = stdout;
     scope(exit) stdout = saveStdout;
-    stdout = fopen(file, "w");
-    assert(stdout);
+    stdout.open(file, "w");
     writef("Hello, %s world number %s!", "nice", 42);
-    fclose(stdout) == 0 || assert(false);
+    stdout.close;
     assert(cast(char[]) std.file.read(file) == "Hello, nice world number 42!");
 }
 
 /***********************************
- * Equivalent to $(D_PARAM writef(args, '\n')).
+ * Equivalent to $(D writef(args, '\n')).
  */
 void writefln(T...)(T args)
 {
-    writef(args, '\n');
+    stdout.writefln(args);
 }
 
 unittest
 {
+        //printf("Entering test at line %d\n", __LINE__);
+    scope(failure) printf("Failed test at line %d\n", __LINE__);
     // test writefln
     string file = "dmd-build-test.deleteme.txt";
-    FILE* f = fopen(file, "w");
-    assert(f);
+    auto f = File(file, "w");
     scope(exit) { std.file.remove(file); }
-    writefln(f, "Hello, %s world number %s!", "nice", 42);
-    fclose(f) == 0 || assert(false);
-  version (Windows)
-    assert(cast(char[]) std.file.read(file) == "Hello, nice world number 42!\r\n");
-  else
-    assert(cast(char[]) std.file.read(file) == "Hello, nice world number 42!\n");
+    f.writefln("Hello, %s world number %s!", "nice", 42);
+    f.close;
+    version (Windows)
+        assert(cast(char[]) std.file.read(file) ==
+                "Hello, nice world number 42!\r\n");
+    else
+        assert(cast(char[]) std.file.read(file) ==
+                "Hello, nice world number 42!\n",
+                cast(char[]) std.file.read(file));
     // test write on stdout
     auto saveStdout = stdout;
     scope(exit) stdout = saveStdout;
-    stdout = fopen(file, "w");
-    assert(stdout);
+    stdout.open(file, "w");
+    assert(stdout.isOpen);
     writefln("Hello, %s world number %s!", "nice", 42);
     foreach (F ; TypeTuple!(ifloat, idouble, ireal))
     {
         F a = 5i;
         F b = a % 2;
-        writefln(b);
+        writeln(b);
     }
-    fclose(stdout) == 0 || assert(false);
+    stdout.close;
     auto read = cast(char[]) std.file.read(file);
-  version (Windows)
-    assert(read == "Hello, nice world number 42!\r\n1\r\n1\r\n1\r\n", read);
-  else
-    assert(read == "Hello, nice world number 42!\n1\n1\n1\n", read);
-}
-
-/***********************************
- * Kept for backward compatibility. Use $(D_PARAM writef) instead.
- */
-void fwritef(FILE* fp, ...)
-{
-    writefx(fp, _arguments, _argptr, 0);
-}
-
-/***********************************
- * Kept for backward compatibility. Use $(D_PARAM writefln) instead.
- */
-void fwritefln(FILE* fp, ...)
-{
-    writefx(fp, _arguments, _argptr, 1);
+    version (Windows)
+        assert(read == "Hello, nice world number 42!\r\n1\r\n1\r\n1\r\n", read);
+    else
+        assert(read == "Hello, nice world number 42!\n1\n1\n1\n", "["~read~"]");
 }
 
 /**********************************
- * Read line from stream $(D_PARAM fp).
+ * Read line from stream $(D fp).
  * Returns:
- *	$(D_PARAM null) for end of file,
- *	$(D_PARAM char[]) for line read from $(D_PARAM fp), including terminating character
+ *	$(D null) for end of file,
+ *	$(D char[]) for line read from $(D fp), including terminating character
  * Params:
- *	$(D_PARAM fp) = input stream
- *	$(D_PARAM terminator) = line terminator, '\n' by default
+ *	$(D fp) = input stream
+ *	$(D terminator) = line terminator, '\n' by default
  * Throws:
- *	$(D_PARAM StdioException) on error
+ *	$(D StdioException) on error
  * Example:
- *	Reads $(D_PARAM stdin) and writes it to $(D_PARAM stdout).
+ *	Reads $(D stdin) and writes it to $(D stdout).
 ---
 import std.stdio;
 
@@ -516,412 +1210,34 @@ int main()
 }
 ---
 */
-string readln(FILE* fp = stdin, dchar terminator = '\n')
+string readln(dchar terminator = '\n')
 {
-    char[] buf;
-    readln(fp, buf, terminator);
-    return assumeUnique(buf);
-}
-
-/**********************************
- * Read line from stream $(D_PARAM fp) and write it to $(D_PARAM
- * buf[]), including terminating character.
- *
- * This is often faster than $(D_PARAM readln(FILE*)) because the buffer
- * is reused each call. Note that reusing the buffer means that
- * the previous contents of it need to be copied if needed.
- * Params:
- *	$(D_PARAM fp) = input stream
- *	$(D_PARAM buf) = buffer used to store the resulting line data. buf
- *		is resized as necessary.
- * Returns:
- *	0 for end of file, otherwise
- *	number of characters read
- * Throws:
- *	$(D_PARAM StdioException) on error
- * Example:
- *	Reads $(D_PARAM stdin) and writes it to $(D_PARAM stdout).
----
-import std.stdio;
-
-int main()
-{
-    char[] buf;
-    while (readln(stdin, buf))
-	write(buf);
-    return 0;
-}
----
-This method is more efficient than the one in the previous example
-because $(D_PARAM readln(stdin, buf)) reuses (if possible) memory
-allocated by $(D_PARAM buf), whereas $(D_PARAM buf = readln()) makes a
-new memory allocation with every line.
-*/
-size_t readln(FILE* fp, inout char[] buf, dchar terminator = '\n')
-{
-    version (DIGITAL_MARS_STDIO)
-    {
-	FLOCK(fp);
-	scope(exit) FUNLOCK(fp);
-
-	if (__fhnd_info[fp._file] & FHND_WCHAR)
-	{   /* Stream is in wide characters.
-	     * Read them and convert to chars.
-	     */
-	    static assert(wchar_t.sizeof == 2);
-	    buf.length = 0;
-	    int c2;
-	    for (int c = void; (c = FGETWC(fp)) != -1; )
-	    {
-		if ((c & ~0x7F) == 0)
-		{   buf ~= c;
-		    if (c == terminator)
-			break;
-		}
-		else
-		{
-		    if (c >= 0xD800 && c <= 0xDBFF)
-		    {
-			if ((c2 = FGETWC(fp)) != -1 ||
-			    c2 < 0xDC00 && c2 > 0xDFFF)
-			{
-			    StdioException("unpaired UTF-16 surrogate");
-			}
-			c = ((c - 0xD7C0) << 10) + (c2 - 0xDC00);
-		    }
-		    std.utf.encode(buf, c);
-		}
-	    }
-	    if (ferror(fp))
-		StdioException();
-	    return buf.length;
-	}
-
-	auto sz = GC.sizeOf(buf.ptr);
-	//auto sz = buf.length;
-	buf = buf.ptr[0 .. sz];
-	if (fp._flag & _IONBF)
-	{
-	    /* Use this for unbuffered I/O, when running
-	     * across buffer boundaries, or for any but the common
-	     * cases.
-	     */
-        L1:
-	    char *p;
-
-	    if (sz)
-	    {
-		p = buf.ptr;
-	    }
-	    else
-	    {
-		sz = 64;
-		p = cast(char*) GC.malloc(sz, GC.BlkAttr.NO_SCAN);
-		buf = p[0 .. sz];
-	    }
-	    size_t i = 0;
-	    for (int c; (c = FGETC(fp)) != -1; )
-	    {
-		if ((p[i] = cast(char)c) != terminator)
-		{
-		    i++;
-		    if (i < sz)
-			continue;
-		    buf = p[0 .. i];
-		    buf ~= readln(fp);
-		    return buf.length;
-		}
-		else
-		{
-		    buf = p[0 .. i + 1];
-		    return i + 1;
-		}
-	    }
-	    if (ferror(fp))
-		StdioException();
-	    buf = p[0 .. i];
-	    return i;
-	}
-	else
-	{
-	    int u = fp._cnt;
-	    char* p = fp._ptr;
-	    int i;
-	    if (fp._flag & _IOTRAN)
-	    {   /* Translated mode ignores \r and treats ^Z as end-of-file
-		 */
-		char c;
-		while (1)
-		{
-		    if (i == u)		// if end of buffer
-			goto L1;	// give up
-		    c = p[i];
-		    i++;
-		    if (c != '\r')
-		    {
-			if (c == terminator)
-			    break;
-			if (c != 0x1A)
-			    continue;
-			goto L1;
-		    }
-		    else
-		    {   if (i != u && p[i] == terminator)
-			    break;
-			goto L1;
-		    }
-		}
-		if (i > sz)
-		{
-		    buf = cast(char[])GC.malloc(i, GC.BlkAttr.NO_SCAN)[0 .. i];
-		}
-		if (i - 1)
-		    memcpy(buf.ptr, p, i - 1);
-		buf[i - 1] = terminator;
-		buf = buf[0 .. i];
-		if (terminator == '\n' && c == '\r')
-		    i++;
-	    }
-	    else
-	    {
-		while (1)
-		{
-		    if (i == u)		// if end of buffer
-			goto L1;	// give up
-		    auto c = p[i];
-		    i++;
-		    if (c == terminator)
-			break;
-		}
-		if (i > sz)
-		{
-		    buf = cast(char[])GC.malloc(i, GC.BlkAttr.NO_SCAN)[0 .. i];
-		}
-		memcpy(buf.ptr, p, i);
-		buf = buf[0 .. i];
-	    }
-	    fp._cnt -= i;
-	    fp._ptr += i;
-	    return i;
-	}
-    }
-    else version (GCC_IO)
-    {
-             if (fwide(fp, 0) > 0)
-             {   /* Stream is in wide characters.
-                  * Read them and convert to chars.
-                  */
-                 FLOCK(fp);
-                 scope(exit) FUNLOCK(fp);
-                 version (Windows)
-                 {
-                     buf.length = 0;
-                     int c2;
-                     for (int c = void; (c = FGETWC(fp)) != -1; )
-                     {
-                         if ((c & ~0x7F) == 0)
-                         {   buf ~= c;
-                             if (c == terminator)
-                                 break;
-                         }
-                         else
-                         {
-                             if (c >= 0xD800 && c <= 0xDBFF)
-                             {
-                                 if ((c2 = FGETWC(fp)) != -1 ||
-                                     c2 < 0xDC00 && c2 > 0xDFFF)
-                                 {
-                                     StdioException("unpaired UTF-16 surrogate");
-                                 }
-                                 c = ((c - 0xD7C0) << 10) + (c2 - 0xDC00);
-                             }
-                             std.utf.encode(buf, c);
-                         }
-                     }
-                     if (ferror(fp))
-                         StdioException();
-                     return buf.length;
-                 }
-                 else version (Posix)
-                      {
-                          buf.length = 0;
-                          for (int c; (c = FGETWC(fp)) != -1; )
-                          {
-                              if ((c & ~0x7F) == 0)
-                                  buf ~= c;
-                              else
-                                  std.utf.encode(buf, cast(dchar)c);
-                              if (c == terminator)
-                                  break;
-                          }
-                          if (ferror(fp))
-                              StdioException();
-                          return buf.length;
-                      }
-                 else
-                 {
-                     static assert(0);
-                 }
-             }
-
-             char *lineptr = null;
-             size_t n = 0;
-             auto s = getdelim(&lineptr, &n, terminator, fp);
-             scope(exit) free(lineptr);
-             if (s < 0)
-             {
-                 if (ferror(fp))
-                     StdioException();
-                 buf.length = 0;		// end of file
-                 return 0;
-             }
-             buf = buf.ptr[0 .. GC.sizeOf(buf.ptr)];
-             if (s <= buf.length)
-             {
-                 buf.length = s;
-                 buf[] = lineptr[0 .. s];
-             }
-             else
-             {
-                 buf = lineptr[0 .. s].dup;
-             }
-             return s;
-    }
-    else version (GENERIC_IO)
-    {
-	FLOCK(fp);
-	scope(exit) FUNLOCK(fp);
-	if (fwide(fp, 0) > 0)
-	{   /* Stream is in wide characters.
-	     * Read them and convert to chars.
-	     */
-	    version (Windows)
-	    {
-		buf.length = 0;
-		int c2;
-		for (int c; (c = FGETWC(fp)) != -1; )
-		{
-		    if ((c & ~0x7F) == 0)
-		    {   buf ~= c;
-			if (c == terminator)
-			    break;
-		    }
-		    else
-		    {
-			if (c >= 0xD800 && c <= 0xDBFF)
-			{
-			    if ((c2 = FGETWC(fp)) != -1 ||
-				c2 < 0xDC00 && c2 > 0xDFFF)
-			    {
-				StdioException("unpaired UTF-16 surrogate");
-			    }
-			    c = ((c - 0xD7C0) << 10) + (c2 - 0xDC00);
-			}
-			std.utf.encode(buf, c);
-		    }
-		}
-		if (ferror(fp))
-		    StdioException();
-		return buf.length;
-	    }
-	    else version (Posix)
-	    {
-		buf.length = 0;
-		for (int c; (c = FGETWC(fp)) != -1; )
-		{
-		    if ((c & ~0x7F) == 0)
-			buf ~= c;
-		    else
-			std.utf.encode(buf, cast(dchar)c);
-		    if (c == terminator)
-			break;
-		}
-		if (ferror(fp))
-		    StdioException();
-		return buf.length;
-	    }
-	    else
-	    {
-		static assert(0);
-	    }
-	}
-
-	buf.length = 0;
-	for (int c; (c = FGETC(fp)) != -1; )
-	{
-	    buf ~= c;
-	    if (c == terminator)
-		break;
-	}
-	if (ferror(fp))
-	    StdioException();
-	return buf.length;
-    }
-    else
-    {
-	static assert(0);
-    }
+    return stdin.readln(terminator);
 }
 
 /** ditto */
 size_t readln(inout char[] buf, dchar terminator = '\n')
 {
-    return readln(stdin, buf, terminator);
+    return stdin.readln(buf, terminator);
 }
 
-/** ditto */
-// TODO: optimize this
-size_t readln(FILE* f, inout wchar[] buf, dchar terminator = '\n')
-{
-    string s = readln(f, terminator);
-    if (!s.length) return 0;
-    buf.length = 0;
-    foreach (wchar c; s)
-    {
-        buf ~= c;
-    }
-    return buf.length;
-}
-
-/** ditto */
-// TODO: fold this together with wchar
-size_t readln(FILE* f, inout dchar[] buf, dchar terminator = '\n')
-{
-    string s = readln(f, terminator);
-    if (!s.length) return 0;
-    buf.length = 0;
-    foreach (dchar c; s)
-    {
-        buf ~= c;
-    }
-    return buf.length;
-}
-
-/***********************************
- * Convenience function that forwards to $(D_PARAM std.c.stdio.fopen)
+/*
+ * Convenience function that forwards to $(D std.c.stdio.fopen)
  * with appropriately-constructed C-style strings.
  */
-FILE* fopen(in char[] name, in char[] mode = "r")
+private FILE* fopen(in char[] name, in char[] mode = "r")
 {
     const namez = toStringz(name), modez = toStringz(mode);
-    auto result = std.c.stdio.fopen(namez, modez);
-    version(linux)
-    {
-        if (!result && getErrno == EOVERFLOW)
-        {
-            // attempt fopen64, maybe the file was very large
-            result = fopen64(namez, modez);
-        }
-    }
-    return result;
+    return fopen64(namez, modez);
 }
 
 version (Posix)
 {
+    extern(C) FILE* fopen64(const char*, const char*);
     extern(C) FILE* popen(const char*, const char*);
 
 /***********************************
- * Convenience function that forwards to $(D_PARAM std.c.stdio.popen)
+ * Convenience function that forwards to $(D std.c.stdio.popen)
  * with appropriately-constructed C-style strings.
  */
     FILE* popen(in char[] name, in char[] mode = "r")
@@ -931,130 +1247,17 @@ version (Posix)
 }
 
 /*
- * Convenience function that forwards to $(D_PARAM std.c.stdio.fwrite)
+ * Convenience function that forwards to $(D std.c.stdio.fwrite)
  * and throws an exception upon error
  */
 private void binaryWrite(T)(FILE* f, T obj)
 {
-    invariant result = fwrite(obj.ptr, obj[0].sizeof, obj.length, f);
+    immutable result = fwrite(obj.ptr, obj[0].sizeof, obj.length, f);
     if (result != obj.length) StdioException();
 }
 
-/*
- * Implements the static Writer interface for a FILE*. Instantiate it
- * with the character type, e.g. PrivateFileWriter!(char),
- * PrivateFileWriter!(wchar), or PrivateFileWriter!(dchar). Regardless of
- * instantiation, PrivateFileWriter supports all character widths; it only is
- * the most efficient at accepting the character type it was
- * instantiated with.
- *
- * */
-private struct PrivateFileWriter(Char)
-{
-    alias Char NativeChar;
-    FILE* backend;
-    int orientation;
-
-    void write(C)(in C[] s)
-    {
-        if (!orientation) orientation = fwide(backend, 0);
-        if (orientation <= 0 && C.sizeof == 1)
-        {
-            // lucky case: narrow chars on narrow stream
-            if (std.c.stdio.fwrite(s.ptr, C.sizeof, s.length, backend)
-                != s.length)
-            {
-                StdioException();
-            }
-        }
-        else
-        {
-            // put each character in turn
-            foreach (C c; s)
-            {
-                putchar(c);
-            }
-        }
-    }
-
-    void putchar(C)(in C c)
-    {
-        if (!orientation) orientation = fwide(backend, 0);
-        static if (c.sizeof == 1)
-        {
-            // simple char
-            if (orientation <= 0) FPUTC(c, backend);
-            else FPUTWC(c, backend);
-        }
-        else static if (c.sizeof == 2)
-        {
-            if (orientation <= 0)
-            {
-                if (c <= 0x7F)
-                {
-                    FPUTC(c, backend);
-                }
-                else
-                {
-                    char[4] buf;
-                    auto b = std.utf.toUTF8(buf, c);
-                    foreach (i ; 0 .. b.length)
-                        FPUTC(b[i], backend);
-                }
-            }
-            else
-            {
-                FPUTWC(c, backend);
-            }
-        }
-        else // 32-bit characters
-        {
-            if (orientation <= 0)
-            {
-                if (c <= 0x7F)
-                {
-                    FPUTC(c, backend);
-                }
-                else
-                {
-                    char[4] buf;
-                    auto b = std.utf.toUTF8(buf, c);
-                    foreach (i ; 0 .. b.length)
-                        FPUTC(b[i], backend);
-                }
-            }
-            else
-            {
-                version (Windows)
-                {
-                    assert(isValidDchar(c));
-                    if (c <= 0xFFFF)
-                    {
-                        FPUTWC(c, backend);
-                    }
-                    else
-                    {
-                        FPUTWC(cast(wchar) ((((c - 0x10000) >> 10) & 0x3FF)
-                                            + 0xD800), backend);
-                        FPUTWC(cast(wchar) (((c - 0x10000) & 0x3FF) + 0xDC00),
-                               backend);
-                    }
-                }
-                else version (Posix)
-                {
-                    FPUTWC(c, backend);
-                }
-                else
-                {
-                    static assert(0);
-                }
-            }
-        }
-    }
-}
-
 /**
- * Iterates through the lines of a file by using $(D_PARAM foreach).
+ * Iterates through the lines of a file by using $(D foreach).
  *
  * Example:
  *
@@ -1069,22 +1272,22 @@ void main()
 ---------
  The line terminator ('\n' by default) is part of the string read (it
 could be missing in the last line of the file). Several types are
-supported for $(D_PARAM line), and the behavior of $(D_PARAM lines)
+supported for $(D line), and the behavior of $(D lines)
 changes accordingly:
 
-$(OL $(LI If $(D_PARAM line) has type $(D_PARAM string), $(D_PARAM
-wstring), or $(D_PARAM dstring), a new string of the respective type
-is allocated every read.) $(LI If $(D_PARAM line) has type $(D_PARAM
-char[]), $(D_PARAM wchar[]), $(D_PARAM dchar[]), the line's content
-will be reused (overwritten) across reads.) $(LI If $(D_PARAM line)
-has type $(D_PARAM invariant(ubyte)[]), the behavior is similar to
+$(OL $(LI If $(D line) has type $(D string), $(D
+wstring), or $(D dstring), a new string of the respective type
+is allocated every read.) $(LI If $(D line) has type $(D
+char[]), $(D wchar[]), $(D dchar[]), the line's content
+will be reused (overwritten) across reads.) $(LI If $(D line)
+has type $(D immutable(ubyte)[]), the behavior is similar to
 case (1), except that no UTF checking is attempted upon input.) $(LI
-If $(D_PARAM line) has type $(D_PARAM ubyte[]), the behavior is
+If $(D line) has type $(D ubyte[]), the behavior is
 similar to case (2), except that no UTF checking is attempted upon
 input.))
 
 In all cases, a two-symbols versions is also accepted, in which case
-the first symbol (of integral type, e.g. $(D_PARAM ulong) or $(D_PARAM
+the first symbol (of integral type, e.g. $(D ulong) or $(D
 uint)) tracks the zero-based number of the current line.
 
 Example:
@@ -1095,16 +1298,16 @@ Example:
   }
 ----
 
- In case of an I/O error, an $(D_PARAM StdioException) is thrown.
+ In case of an I/O error, an $(D StdioException) is thrown. 
  */
 
 struct lines
 {
-    private FILE * f;
+    private File f;
     private dchar terminator = '\n';
     private string fileName;
 
-    static lines opCall(FILE* f, dchar terminator = '\n')
+    static lines opCall(File f, dchar terminator = '\n')
     {
         lines result;
         result.f = f;
@@ -1147,7 +1350,7 @@ struct lines
                 Parms[0] i = 0;
             for (;;)
             {
-                if (!readln(f, line, terminator)) break;
+                if (!f.readln(line, terminator)) break;
                 auto copy = to!(Parms[$ - 1])(line);
                 static if (Parms.length == 2)
                 {
@@ -1172,15 +1375,15 @@ struct lines
     int opApplyRaw(D)(D dg)
     {
         alias ParameterTypeTuple!(dg) Parms;
-        enum duplicate = is(Parms[$ - 1] : invariant(ubyte)[]);
+        enum duplicate = is(Parms[$ - 1] : immutable(ubyte)[]);
         int result = 1;
         int c = void;
-        FLOCK(f);
-	scope(exit) FUNLOCK(f);
+        FLOCK(f.p.handle);
+	scope(exit) FUNLOCK(f.p.handle);
         ubyte[] buffer;
         static if (Parms.length == 2)
             Parms[0] line = 0;
-        while ((c = FGETC(f)) != -1)
+        while ((c = FGETC(f.p.handle)) != -1)
         {
             buffer ~= to!(ubyte)(c);
             if (c == terminator)
@@ -1190,8 +1393,8 @@ struct lines
                 else
                     alias buffer arg;
                 // unlock the file while calling the delegate
-                FUNLOCK(f);
-                scope(exit) FLOCK(f);
+                FUNLOCK(f.p.handle);
+                scope(exit) FLOCK(f.p.handle);
                 static if (Parms.length == 1)
                 {
                     result = dg(arg);
@@ -1207,13 +1410,15 @@ struct lines
             }
         }
         // can only reach when FGETC returned -1
-        if (!feof(f)) throw new StdioException(ferror(f)); // error occured
+        if (!f.eof) throw new StdioException("Error in reading file"); // error occured
         return result;
     }
 }
 
 unittest
 {
+        //printf("Entering test at line %d\n", __LINE__);
+    scope(failure) printf("Failed test at line %d\n", __LINE__);
     string file = "dmd-build-test.deleteme.txt";
     scope(exit) { std.file.remove(file); }
     alias TypeTuple!(string, wstring, dstring,
@@ -1222,16 +1427,16 @@ unittest
     foreach (T; TestedWith) {
         // test looping with an empty file
         std.file.write(file, "");
-        auto f = fopen(file, "r");
+        auto f = File(file, "r");
         foreach (T line; lines(f))
         {
             assert(false);
         }
-        fclose(f) == 0 || assert(false);
+        f.close;
 
         // test looping with a file with three lines
         std.file.write(file, "Line one\nline two\nline three\n");
-        f = fopen(file, "r");
+        f.open(file, "r");
         uint i = 0;
         foreach (T line; lines(f))
         {
@@ -1241,11 +1446,11 @@ unittest
             else assert(false);
             ++i;
         }
-        fclose(f) == 0 || assert(false);
+        f.close;
 
         // test looping with a file with three lines, last without a newline
         std.file.write(file, "Line one\nline two\nline three");
-        f = fopen(file, "r");
+        f.open(file, "r");
         i = 0;
         foreach (T line; lines(f))
         {
@@ -1255,25 +1460,26 @@ unittest
             else assert(false);
             ++i;
         }
-        fclose(f) == 0 || assert(false);
+        f.close;
     }
 
     // test with ubyte[] inputs
-    alias TypeTuple!(invariant(ubyte)[], ubyte[])
-        TestedWith2;
+    //@@@BUG 2612@@@
+    //alias TypeTuple!(immutable(ubyte)[], ubyte[]) TestedWith2;
+    alias TypeTuple!(invariant(ubyte)[], ubyte[]) TestedWith2;
     foreach (T; TestedWith2) {
         // test looping with an empty file
         std.file.write(file, "");
-        auto f = fopen(file, "r");
+        auto f = File(file, "r");
         foreach (T line; lines(f))
         {
             assert(false);
         }
-        fclose(f) == 0 || assert(false);
+        f.close;
 
         // test looping with a file with three lines
         std.file.write(file, "Line one\nline two\nline three\n");
-        f = fopen(file, "r");
+        f.open(file, "r");
         uint i = 0;
         foreach (T line; lines(f))
         {
@@ -1284,11 +1490,11 @@ unittest
             else assert(false);
             ++i;
         }
-        fclose(f) == 0 || assert(false);
+        f.close;
 
         // test looping with a file with three lines, last without a newline
         std.file.write(file, "Line one\nline two\nline three");
-        f = fopen(file, "r");
+        f.open(file, "r");
         i = 0;
         foreach (T line; lines(f))
         {
@@ -1298,7 +1504,7 @@ unittest
             else assert(false);
             ++i;
         }
-        fclose(f) == 0 || assert(false);
+        f.close;
 
     }
 
@@ -1307,7 +1513,7 @@ unittest
         // test looping with a file with three lines, last without a newline
         // using a counter too this time
         std.file.write(file, "Line one\nline two\nline three");
-        auto f = fopen(file, "r");
+        auto f = File(file, "r");
         uint i = 0;
         foreach (ulong j, T line; lines(f))
         {
@@ -1317,12 +1523,12 @@ unittest
             else assert(false);
             ++i;
         }
-        fclose(f) == 0 || assert(false);
+        f.close;
     }
 }
 
 /**
-Iterates through a file a chunk at a time by using $(D_PARAM
+Iterates through a file a chunk at a time by using $(D
 foreach).
 
 Example:
@@ -1337,23 +1543,23 @@ void main()
 }
 ---------
 
-The content of $(D_PARAM buffer) is reused across calls. In the
- example above, $(D_PARAM buffer.length) is 4096 for all iterations,
- except for the last one, in which case $(D_PARAM buffer.length) may
+The content of $(D buffer) is reused across calls. In the
+ example above, $(D buffer.length) is 4096 for all iterations,
+ except for the last one, in which case $(D buffer.length) may
  be less than 4096 (but always greater than zero).
 
- In case of an I/O error, an $(D_PARAM StdioException) is thrown.
+ In case of an I/O error, an $(D StdioException) is thrown. 
 */
 
 struct chunks
 {
-    private FILE* f;
+    private File f;
     private size_t size;
     private string fileName;
 
-    static chunks opCall(FILE* f, size_t size)
+    static chunks opCall(File f, size_t size)
     {
-        assert(f && size);
+        assert(size);
         chunks result;
         result.f = f;
         result.size = size;
@@ -1380,14 +1586,14 @@ struct chunks
         size_t r = void;
         int result = 1;
         uint tally = 0;
-        while ((r = std.c.stdio.fread(buffer.ptr,
-                                      buffer[0].sizeof, size, f)) > 0)
+        while ((r = core.stdc.stdio.fread(buffer.ptr,
+                                buffer[0].sizeof, size, f.p.handle)) > 0)
         {
             assert(r <= size);
             if (r != size)
             {
                 // error occured
-                if (!feof(f)) throw new StdioException(ferror(f));
+                if (!f.eof) throw new StdioException(null);
                 buffer.length = r;
             }
             static if (is(typeof(dg(tally, buffer)))) {
@@ -1403,20 +1609,22 @@ struct chunks
 
 unittest
 {
+        //printf("Entering test at line %d\n", __LINE__);
+    scope(failure) printf("Failed test at line %d\n", __LINE__);
     string file = "dmd-build-test.deleteme.txt";
     scope(exit) { std.file.remove(file); }
     // test looping with an empty file
     std.file.write(file, "");
-    auto f = fopen(file, "r");
+    auto f = File(file, "r");
     foreach (ubyte[] line; chunks(f, 4))
     {
         assert(false);
     }
-    fclose(f) == 0 || assert(false);
+    f.close;
 
     // test looping with a file with three lines
     std.file.write(file, "Line one\nline two\nline three\n");
-    f = fopen(file, "r");
+    f = File(file, "r");
     uint i = 0;
     foreach (ubyte[] line; chunks(f, 3))
     {
@@ -1426,5 +1634,464 @@ unittest
         else break;
         ++i;
     }
-    fclose(f) == 0 || assert(false);
+    f.close;
 }
+
+/*********************
+ * Thrown if I/O errors happen.
+ */
+class StdioException : Exception
+{
+    /// Operating system error code.
+    uint errno;
+
+/**
+Initialize with a message and an error code. */
+    this(string message, uint e = .getErrno)
+    {
+        errno = e;
+        version (linux)
+        {
+            char[256] buf = void;
+            assert(false);
+            auto s = std.c.string.strerror_r(errno, buf.ptr, buf.length);
+        }
+        else
+        {
+            auto s = std.c.string.strerror(errno);
+        }
+        auto sysmsg = to!string(s);
+        super(message ? message ~ "(" ~ sysmsg ~ ")" : sysmsg);
+    }
+
+/** Convenience functions that throw an $(D StdioException). */
+    static void opCall(string msg)
+    {
+	throw new StdioException(msg);
+    }
+    
+/// ditto
+    static void opCall()
+    {
+        throw new StdioException(null, .getErrno);
+    }
+}
+
+extern(C) void std_stdio_static_this()
+{
+    //Bind stdin, stdout, stderr
+    static File.Impl stdinImpl = { null, uint.max / 2, null };
+    stdinImpl.handle = core.stdc.stdio.stdin;
+    .stdin.p = &stdinImpl;
+    // stdout
+    static File.Impl stdoutImpl = { null, uint.max / 2, null };
+    stdoutImpl.handle = core.stdc.stdio.stdout;
+    .stdout.p = &stdoutImpl;
+    // stderr
+    static File.Impl stderrImpl = { null, uint.max / 2, null };
+    stderrImpl.handle = core.stdc.stdio.stderr;
+    .stderr.p = &stderrImpl;
+}
+
+//---------
+File stdin;
+File stdout;
+File stderr;
+
+//------------------------------------------------------------------------------
+struct ByRecord(Fields...)
+{
+    File file;
+    char[] line;
+    Tuple!(Fields) current;
+    string format;
+        
+    this(File f, string format)
+    {
+        assert(f.isOpen);
+        file = f;
+        this.format = format;
+        next; // prime the range
+    }
+
+    /// Range primitive implementations.
+    bool empty() const
+    {
+        return !file.isOpen;
+    }
+
+    /// Ditto
+    ref Tuple!(Fields) head()
+    {
+        return current;
+    }
+
+    /// Ditto
+    void next()
+    {
+        enforce(file.isOpen);
+        file.readln(line);
+        if (!line.length)
+        {
+            file.detach;
+        }
+        else
+        {
+            auto slack = formattedRead(chomp(line), format, &current);
+            enforce(slack.empty, text("Leftover characters in record: `",
+                            slack, "'"));
+        }
+    }
+}
+
+template byRecord(Fields...)
+{
+    ByRecord!(Fields) byRecord(File f, string format)
+    {
+        return typeof(return)(f, format);
+    }
+}
+
+unittest
+{
+    scope(failure) printf("Failed test at line %d\n", __LINE__);
+    std.file.write("deleteme", "1 2\n4 1\n5 100");
+    scope(exit) std.file.remove("deleteme");
+    {
+        File f = File("deleteme");
+        scope(exit) f.close;
+        auto t = [ tuple(1, 2), tuple(4, 1), tuple(5, 100) ];
+        uint i;
+        foreach (e; f.byRecord!(int, int)("%s %s"))
+        {
+            //writeln(e);
+            assert(e == t[i++]);
+        }
+        assert(i == 3);
+    }
+    {
+        std.file.write("deleteme", "1:2 3\n4:1 5\n5:100");
+        File f = File("deleteme");
+        scope(exit) f.close;
+        auto t = [ tuple(1, [2,3][]), tuple(4, [1,5][]), tuple(5, [100][]) ];
+        uint i;
+        foreach (e; f.byRecord!(int, int[])("%s:%(s )"))
+        {
+            //writeln(e);
+            assert(e == t[i++]);
+        }
+        assert(i == 3);
+    }
+}
+
+// Private implementation of readln
+private size_t readlnImpl(FILE* fp, ref char[] buf, dchar terminator = '\n')
+{
+    version (DIGITAL_MARS_STDIO)
+    {
+        FLOCK(fp);
+        scope(exit) FUNLOCK(fp);
+
+        if (__fhnd_info[fp._file] & FHND_WCHAR)
+        {   /* Stream is in wide characters.
+             * Read them and convert to chars.
+             */
+            static assert(wchar_t.sizeof == 2);
+            buf.length = 0;
+            int c2;
+            for (int c = void; (c = FGETWC(fp)) != -1; )
+            {
+                if ((c & ~0x7F) == 0)
+                {   buf ~= c;
+                    if (c == terminator)
+                        break;
+                }
+                else
+                {
+                    if (c >= 0xD800 && c <= 0xDBFF)
+                    {
+                        if ((c2 = FGETWC(fp)) != -1 ||
+                                c2 < 0xDC00 && c2 > 0xDFFF)
+                        {
+                            StdioException("unpaired UTF-16 surrogate");
+                        }
+                        c = ((c - 0xD7C0) << 10) + (c2 - 0xDC00);
+                    }
+                    std.utf.encode(buf, c);
+                }
+            }
+            if (ferror(fp))
+                StdioException();
+            return buf.length;
+        }
+
+        auto sz = GC.sizeOf(buf.ptr);
+        //auto sz = buf.length;
+        buf = buf.ptr[0 .. sz];
+        if (fp._flag & _IONBF)
+        {
+            /* Use this for unbuffered I/O, when running
+             * across buffer boundaries, or for any but the common
+             * cases.
+             */
+          L1:
+            char *p;
+
+            if (sz)
+            {
+                p = buf.ptr;
+            }
+            else
+            {
+                sz = 64;
+                p = cast(char*) GC.malloc(sz, GC.BlkAttr.NO_SCAN);
+                buf = p[0 .. sz];
+            }
+            size_t i = 0;
+            for (int c = void; (c = FGETC(fp)) != -1; )
+            {
+                if ((p[i] = cast(char)c) != terminator)
+                {
+                    i++;
+                    if (i < sz)
+                        continue;
+                    buf = p[0 .. i];
+                    {
+                        char[] buf2;
+                        readlnImpl(fp, buf2, terminator);
+                        buf ~= buf2;
+                    }
+                    return buf.length;
+                }
+                else
+                {
+                    buf = p[0 .. i + 1];
+                    return i + 1;
+                }
+            }
+            if (ferror(fp))
+                StdioException();
+            buf = p[0 .. i];
+            return i;
+        }
+        else
+        {
+            int u = fp._cnt;
+            char* p = fp._ptr;
+            int i;
+            if (fp._flag & _IOTRAN)
+            {   /* Translated mode ignores \r and treats ^Z as end-of-file
+                 */
+                char c;
+                while (1)
+                {
+                    if (i == u)		// if end of buffer
+                        goto L1;	// give up
+                    c = p[i];
+                    i++;
+                    if (c != '\r')
+                    {
+                        if (c == terminator)
+                            break;
+                        if (c != 0x1A)
+                            continue;
+                        goto L1;
+                    }
+                    else
+                    {   if (i != u && p[i] == terminator)
+                            break;
+                        goto L1;
+                    }
+                }
+                if (i > sz)
+                {
+                    buf = cast(char[])GC.malloc(i, GC.BlkAttr.NO_SCAN)[0 .. i];
+                }
+                if (i - 1)
+                    memcpy(buf.ptr, p, i - 1);
+                buf[i - 1] = terminator;
+                buf = buf[0 .. i];
+                if (terminator == '\n' && c == '\r')
+                    i++;
+            }
+            else
+            {
+                while (1)
+                {
+                    if (i == u)		// if end of buffer
+                        goto L1;	// give up
+                    auto c = p[i];
+                    i++;
+                    if (c == terminator)
+                        break;
+                }
+                if (i > sz)
+                {
+                    buf = cast(char[])GC.malloc(i, GC.BlkAttr.NO_SCAN)[0 .. i];
+                }
+                memcpy(buf.ptr, p, i);
+                buf = buf[0 .. i];
+            }
+            fp._cnt -= i;
+            fp._ptr += i;
+            return i;
+        }
+    }
+    else version (GCC_IO)
+    {
+        if (fwide(fp, 0) > 0)
+        {   /* Stream is in wide characters.
+             * Read them and convert to chars.
+             */
+            FLOCK(fp);
+            scope(exit) FUNLOCK(fp);
+            version (Windows)
+            {
+                buf.length = 0;
+                int c2;
+                for (int c = void; (c = FGETWC(fp)) != -1; )
+                {
+                    if ((c & ~0x7F) == 0)
+                    {   buf ~= c;
+                        if (c == terminator)
+                            break;
+                    }
+                    else
+                    {
+                        if (c >= 0xD800 && c <= 0xDBFF)
+                        {
+                            if ((c2 = FGETWC(fp)) != -1 ||
+                                    c2 < 0xDC00 && c2 > 0xDFFF)
+                            {
+                                StdioException("unpaired UTF-16 surrogate");
+                            }
+                            c = ((c - 0xD7C0) << 10) + (c2 - 0xDC00);
+                        }
+                        std.utf.encode(buf, c);
+                    }
+                }
+                if (ferror(fp))
+                    StdioException();
+                return buf.length;
+            }
+            else version (Posix)
+            {
+                buf.length = 0;
+                for (int c; (c = FGETWC(fp)) != -1; )
+                {
+                    if ((c & ~0x7F) == 0)
+                        buf ~= c;
+                    else
+                        std.utf.encode(buf, cast(dchar)c);
+                    if (c == terminator)
+                        break;
+                }
+                if (ferror(fp))
+                    StdioException();
+                return buf.length;
+            }
+            else
+            {
+                static assert(0);
+            }
+        }
+
+        char *lineptr = null;
+        size_t n = 0;
+        auto s = getdelim(&lineptr, &n, terminator, fp);
+        scope(exit) free(lineptr);
+        if (s < 0)
+        {
+            if (ferror(fp))
+                StdioException();
+            buf.length = 0;		// end of file
+            return 0;
+        }
+        buf = buf.ptr[0 .. GC.sizeOf(buf.ptr)];
+        if (s <= buf.length)
+        {
+            buf.length = s;
+            buf[] = lineptr[0 .. s];
+        }
+        else
+        {
+            buf = lineptr[0 .. s].dup;
+        }
+        return s;
+    }
+    else version (GENERIC_IO)
+    {
+        FLOCK(fp);
+        scope(exit) FUNLOCK(fp);
+        if (fwide(fp, 0) > 0)
+        {   /* Stream is in wide characters.
+             * Read them and convert to chars.
+             */
+            version (Windows)
+            {
+                buf.length = 0;
+                int c2;
+                for (int c; (c = FGETWC(fp)) != -1; )
+                {
+                    if ((c & ~0x7F) == 0)
+                    {   buf ~= c;
+                        if (c == terminator)
+                            break;
+                    }
+                    else
+                    {
+                        if (c >= 0xD800 && c <= 0xDBFF)
+                        {
+                            if ((c2 = FGETWC(fp)) != -1 ||
+                                    c2 < 0xDC00 && c2 > 0xDFFF)
+                            {
+                                StdioException("unpaired UTF-16 surrogate");
+                            }
+                            c = ((c - 0xD7C0) << 10) + (c2 - 0xDC00);
+                        }
+                        std.utf.encode(buf, c);
+                    }
+                }
+                if (ferror(fp))
+                    StdioException();
+                return buf.length;
+            }
+            else version (Posix)
+            {
+                buf.length = 0;
+                for (int c; (c = FGETWC(fp)) != -1; )
+                {
+                    if ((c & ~0x7F) == 0)
+                        buf ~= c;
+                    else
+                        std.utf.encode(buf, cast(dchar)c);
+                    if (c == terminator)
+                        break;
+                }
+                if (ferror(fp))
+                    StdioException();
+                return buf.length;
+            }
+            else
+            {
+                static assert(0);
+            }
+        }
+
+        buf.length = 0;
+        for (int c; (c = FGETC(fp)) != -1; )
+        {
+            buf ~= c;
+            if (c == terminator)
+                break;
+        }
+        if (ferror(fp))
+            StdioException();
+        return buf.length;
+    }
+    else
+    {
+        static assert(0);
+    }
+}
+
