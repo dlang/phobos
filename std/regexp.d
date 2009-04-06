@@ -1728,17 +1728,9 @@ public int test(string s)
                         (&program[pc + 1 + uint.sizeof])[0 .. len]);
                 if (src + len > input.length)
                     goto Lnomatch;
-                version (Win32)
-                {
-                    if (memicmp(cast(char*)&program[pc + 1 + uint.sizeof], &input[src], len * rchar.sizeof))
-                        goto Lnomatch;
-                }
-                else
-                {
-                    if (icmp((cast(char*)&program[pc + 1 + uint.sizeof])[0..len],
-                                    input[src .. src + len]))
-                        goto Lnomatch;
-                }
+                if (icmp((cast(char*)&program[pc + 1 + uint.sizeof])[0..len],
+                                input[src .. src + len]))
+                    goto Lnomatch;
                 src += len;
                 pc += 1 + uint.sizeof + len * rchar.sizeof;
                 break;
