@@ -51,6 +51,7 @@ the passed-in pointers.
 module std.getopt;
 private import std.string, std.conv, std.traits, std.contracts, std.bitmanip,
     std.algorithm, std.ctype;
+
 //version (unittest)
 //{
     import std.stdio; // for testing only
@@ -173,13 +174,14 @@ set $(D tuningParms) to [ "alpha" : 0.5, "beta" : 0.6 ].)  In general,
 keys and values can be of any parsable types.
  
 $(LI $(I Delegate options.) An option can be bound to a delegate with
-the signature $(D void delegate(string option)) or $(D void
-delegate(string option, string value)).
+the signature $(D void delegate()), $(D void delegate(string option))
+or $(D void delegate(string option, string value)).
 
-$(UL $(LI In the $(D void delegate(string option)) case, the option
-string (without the leading dash(es)) is passed to the delegate. After
-that, the option string is considered handled and removed from the
-options array.)
+$(UL $(LI In the $(D void delegate()) case, the delegate is invoked
+whenever the option is seen.) $(LI In the $(D void delegate(string
+option)) case, the option string (without the leading dash(es)) is
+passed to the delegate. After that, the option string is considered
+handled and removed from the options array.)
  
 ---------
 void main(string[] args)
@@ -308,25 +310,7 @@ A lonesome double-dash terminates $(D getopt) gathering. It is used to separate 
 
 void getopt(T...)(ref string[] args, T opts) {
     enforce(args.length,
-            "Invalid arguments string passed: program name missing");
-
-    // break space-separated options
-    for (size_t i; i < args.length; )
-    {
-        auto a = args[i];
-        if (a.length && a[0] == optionChar && std.algorithm.canFind!(isspace)(a))
-        {
-            // multiple options wrapped in one
-            auto more = split(a);
-            args = args[0 .. i] ~ more ~ args[i + 1 .. $];
-            i += more.length;
-        }
-        else
-        {
-            ++i;
-        }
-    }
-    
+            "Invalid arguments string passed: program name missing");    
     configuration cfg;
     return getoptImpl(args, cfg, opts);
 }
@@ -427,8 +411,11 @@ void handleOption(R)(string option, R receiver, ref string[] args,
             break;
         } else {
             // non-boolean option, which might include an argument
-            enum isDelegateWithOneParameter = is(typeof(receiver("")) : void);
-            if (!val && !incremental && !isDelegateWithOneParameter) {
+            //enum isDelegateWithOneParameter = is(typeof(receiver("")) : void);
+            enum isDelegateWithLessThanTwoParameters =
+                is(typeof(receiver) == delegate) &&
+                !is(typeof(receiver("", "")));
+            if (!isDelegateWithLessThanTwoParameters && !val && !incremental) {
                 // eat the next argument too
                 val = args[i];
                 args = args[0 .. i] ~ args[i + 1 .. $];
@@ -451,11 +438,17 @@ void handleOption(R)(string option, R receiver, ref string[] args,
                     // option with argument
                     receiver(option, val);
                 }
-                else
+                else static if (is(typeof(receiver("")) : void)) 
                 {
                     static assert(is(typeof(receiver("")) : void));
                     // boolean-style receiver
                     receiver(option);
+                }
+                else
+                {
+                    static assert(is(typeof(receiver()) : void));
+                    // boolean-style receiver without argument
+                    receiver();
                 }
             }
             else static if (isArray!(typeof(*receiver)))
@@ -582,7 +575,7 @@ unittest
     
     string data = "file.dat";
     int length = 24;
-    bool verbose = true;
+    bool verbose = false;
     args = (["program.name", "--length=5",
                       "--file", "dat.file", "--verbose"]).dup;
     getopt(
@@ -640,6 +633,15 @@ unittest
     }
     args = (["program.name", "--verbose", "2"]).dup;
     getopt(args, "verbose", &myHandler2);
+    assert(verbosityLevel == 2);
+
+    verbosityLevel = 1;
+    void myHandler3()
+    {
+        verbosityLevel = 2;
+    }
+    args = (["program.name", "--verbose"]).dup;
+    getopt(args, "verbose", &myHandler3);
     assert(verbosityLevel == 2);
 
     bool foo, bar;
