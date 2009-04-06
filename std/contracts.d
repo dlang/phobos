@@ -37,17 +37,11 @@
  */
 
 module std.contracts;
-private import std.conv;
-private import std.algorithm;
-private import std.iterator;
-private import std.traits;
-private import std.string;
-private import std.c.stdlib;
-private import std.c.string;
-private import core.stdc.errno;
+import std.array, std.c.string, std.conv, std.range, std.string, std.traits;
+import core.stdc.errno;
 version(unittest)
 {
-    private import std.stdio;
+    import std.stdio;
 }
 
 /*
@@ -84,13 +78,20 @@ version(unittest)
  */
 
 T enforce(T, string file = __FILE__, int line = __LINE__)
-    (T value, lazy string msg = null)
+    (T value, lazy const(char)[] msg = null)
 {
     if (!value) bailOut(file, line, msg);
     return value;
 }
 
-private void bailOut(string file, int line, string msg)
+T enforce(T, string file = __FILE__, int line = __LINE__)
+(T value, void delegate() dg)
+{
+    if (!value) dg();
+    return value;
+}
+
+private void bailOut(string file, int line, in char[] msg)
 {
     throw new Exception(text(file, '(', line, "): ",
                     msg ? msg : "Enforcement failed"));
@@ -341,6 +342,39 @@ unittest
 }
 
 /**
+Passes the type system the information that $(D range) is already
+sorted by predicate $(D pred). No checking is performed; debug builds
+may insert checks randomly. To insert a check, see $(XREF algorithm,
+isSorted).
+ */
+struct AssumeSorted(Range, alias pred = "a < b")
+{
+    /// Alias for $(D Range).
+    alias Range AssumeSorted;
+    /// The passed-in range.
+    Range assumeSorted;
+    /// The sorting predicate.
+    alias pred assumeSortedBy;
+}
+
+/// Ditto
+AssumeSorted!(Range, pred) assumeSorted(alias pred = "a < b", Range)
+(Range r)
+{
+    AssumeSorted!(Range, pred) result;
+    result.assumeSorted = r;
+    return result;
+}
+
+unittest
+{
+    static assert(is(AssumeSorted!(int[]).AssumeSorted == int[]));
+    int[] a = [ 1, 2 ];
+    auto b = assumeSorted(a);
+    assert(b.assumeSorted == a);
+}
+
+/**
 Returns $(D true) if $(D source)'s representation embeds a pointer
 that points to $(D target)'s representation or somewhere inside
 it. Note that evaluating $(D pointsTo(x, x)) checks whether $(D x) has
@@ -366,7 +400,7 @@ bool pointsTo(S, T)(ref S source, ref T target)
     {
         const void* p1 = source.ptr, p2 = p1 + source.length,
             b = &target, e = b + target.sizeof;
-        return overlap(range(p1, p2), range(b, e)).length != 0;
+        return overlap(p1[0 .. p2 - p1], b[0 .. e - b]).length != 0;
     }
     else
     {
@@ -409,17 +443,117 @@ class ErrnoException : Exception
     this(string msg, string file = null, uint line = 0)
     {
         errno = getErrno;
-	version (linux)
-	{
+        version (linux)
+        {
             char[1024] buf = void;
-	    auto s = std.c.string.strerror_r(errno, buf.ptr, buf.length);
-	}
-	else
-	{
-	    auto s = std.c.string.strerror(errno);
-	}
-	super((file ? file~'('~to!(string)(line)~"): " : "")
-                ~msg~" ("~std.string.toString(s)~")");
+            auto s = std.c.string.strerror_r(errno, buf.ptr, buf.length);
+        }
+        else
+        {
+            auto s = std.c.string.strerror(errno);
+        }
+        super((file ? file~'('~to!(string)(line)~"): " : "")
+                ~msg~" ("~to!string(s)~")");
     }
 }
 
+// structuralCast
+Target structuralCastImpl(Target, Source)(Source obj) if (is(Source : Object))
+{
+    alias BaseTypeTuple!(Target) TBases;
+    static if (is(TBases[0] == class))
+    {
+        // class-to-class structural cast
+        alias BaseTypeTuple!(Source) SBases;
+    }
+    else
+    {
+        static assert(false);
+    }
+    static assert(SBases.length >= TBases.length,
+            "Cannot structurally cast to a target with"
+            " fewer interfaces implemented");
+    static assert(
+        is(typeof(Target.tupleof) == typeof(Source.tupleof)),
+            "Cannot structurally cast to a target with more fields");
+    // Target bases must be a prefix of the source bases
+    foreach (i, B; TBases)
+    {
+        static assert(is(SBases[i] == B)
+                || is(SBases[i] == interface) && is(SBases[i] : B),
+                SBases[i].stringof ~ " does not inherit "
+                ~ B.stringof);
+    }
+    union Result
+    {
+        Source src;
+        Target tgt;
+    }
+    Result result = { obj };
+    return result.tgt;
+}
+
+template structurallyCompatible(S, T) if (!isArray!S || !isArray!T)
+{
+    enum structurallyCompatible =
+        FieldTypeTuple!S.length >= FieldTypeTuple!T.length
+        && is(FieldTypeTuple!S[0 .. FieldTypeTuple!T.length]
+                == FieldTypeTuple!T);
+}
+
+template structurallyCompatible(S, T) if (isArray!S && isArray!T)
+{
+    enum structurallyCompatible =
+        .structurallyCompatible!(ElementType!S, ElementType!T) &&
+        .structurallyCompatible!(ElementType!T, ElementType!S);
+}
+
+unittest
+{
+    struct X { uint a; }
+    static assert(structurallyCompatible!(uint[], X[]));
+    struct Y { uint a, b; }
+    static assert(!structurallyCompatible!(uint[], Y[]));
+    static assert(!structurallyCompatible!(Y[], uint[]));
+    static assert(!structurallyCompatible!(Y[], X[]));
+}
+
+/**
+Structural cast
+ */
+
+template structuralCast(Target)
+{
+    Target structuralCast(Source)(Source obj)
+    {
+        static if (is(Source : Object))
+        {
+            return .structuralCastImpl!(Target)(obj);
+        }
+        else
+        {
+            static if (structurallyCompatible!(Source, Target))
+                return *(cast(Target*) &obj);
+            else
+                static assert(false);
+        }
+    }
+}
+
+unittest
+{
+    interface I1 {}
+    interface I2 {}
+    class Base : I1 { int x; }
+    class A : I1 {}
+    class B : I1, I2 {}
+
+    auto b = new B;
+    auto a = structuralCast!(A)(b);
+    assert(a);
+
+    struct X { int a; }
+    int[] arr = [ 1 ];
+    auto x = structuralCast!(X[])(arr);
+    assert(x[0].a == 1);
+}
