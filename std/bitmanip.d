@@ -35,6 +35,11 @@ private template createAccessors(
         // No need to create any accessor
         enum result = "";
     }
+    else static if (len == 0)
+    {
+        // Fields of length 0 are always zero
+        enum result = "enum "~T.stringof~" "~name~" = 0;\n";
+    }
     else
     {
         static if (len + offset <= uint.sizeof * 8)
@@ -61,7 +66,7 @@ private template createAccessors(
             static assert(len == 1);
             enum result = 
             // getter
-                "bool " ~ name ~ "(){ return "
+                "bool " ~ name ~ "() const { return "
                 ~"("~store~" & "~myToString!(maskAllElse)~") != 0;}\n"
             // setter
                 ~"void " ~ name ~ "(bool v){"
@@ -71,7 +76,7 @@ private template createAccessors(
         else
         {
             // getter
-            enum result = T.stringof~" "~name~"()const{ auto result = "
+            enum result = T.stringof~" "~name~"() const { auto result = "
                 "("~store~" & "
                 ~ myToString!(maskAllElse) ~ ") >>"
                 ~ myToString!(offset) ~ ";"
@@ -199,6 +204,7 @@ struct FloatRep
                   ubyte, "exponent",  8,
                   bool,  "sign",      1));
     }
+    enum uint bias = 127, fractionBits = 23, exponentBits = 8, signBits = 1;
 }
 ----
 */
@@ -213,6 +219,7 @@ struct FloatRep
                   ubyte, "exponent",  8,
                   bool,  "sign",      1));
     }
+    enum uint bias = 127, fractionBits = 23, exponentBits = 8, signBits = 1;
 }
 
 /**
@@ -230,6 +237,7 @@ struct DoubleRep
                   ushort,  "exponent", 11,
                   bool,    "sign",      1));
     }
+    enum uint bias = 1023, signBits = 1, fractionBits = 52, exponentBits = 11;
 }
 ----
 */
@@ -244,6 +252,7 @@ struct DoubleRep
                   ushort, "exponent", 11,
                   bool,   "sign",      1));
     }
+    enum uint bias = 1023, signBits = 1, fractionBits = 52, exponentBits = 11;
 }
 
 unittest
