@@ -289,7 +289,8 @@ else
 
 version(Posix)
 {
-    alias std.c.process.getpid getpid;
+    //alias std.c.process.getpid getpid;
+    import core.sys.posix.unistd : getpid;
 }
 else version (Windows)
 {
@@ -364,7 +365,7 @@ overwrite) is false, returns normally. Otherwise, it throws an
 exception. Calls $(LINK2 std_c_stdlib.html#_setenv,
 std.c.stdlib._setenv) internally. */
 
-void setenv(in char[] name, in char[] value, bool overwrite)
+version(Posix) void setenv(in char[] name, in char[] value, bool overwrite)
 {
     errnoEnforce(
         std.c.stdlib.setenv(toStringz(name), toStringz(value), overwrite) == 0);
@@ -374,7 +375,7 @@ void setenv(in char[] name, in char[] value, bool overwrite)
 Removes variable $(D name) from the environment. Calls $(LINK2
 std_c_stdlib.html#_unsetenv, std.c.stdlib._unsetenv) internally. */
 
-void unsetenv(in char[] name)
+version(Posix) void unsetenv(in char[] name)
 {
     errnoEnforce(std.c.stdlib.unsetenv(toStringz(name)) == 0);
 }
