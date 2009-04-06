@@ -138,9 +138,9 @@ module std.regexp;
 
 private
 {
-    import std.c.stdio;
-    import std.c.stdlib;
-    import std.c.string;
+    import core.stdc.stdio;
+    import core.stdc.stdlib;
+    import core.stdc.string;
     import std.stdio;
     import std.string;
     import std.ctype;
