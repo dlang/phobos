@@ -308,7 +308,7 @@ template secantMethod(alias fun)
         auto fxn = unaryFun!(fun)(xn_1), d = xn_1 - xn;
         typeof(fxn) fxn_1;
         xn = xn_1;
-        while (!approxEqual(d, 0) && isFinite(d)) {
+        while (!approxEqual(d, 0) && isfinite(d)) {
             xn_1 = xn;
             xn -= d;
             fxn_1 = fxn;
