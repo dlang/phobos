@@ -9,50 +9,288 @@ Macros:
 
 WIKI = Phobos/StdNumeric
 
-Author:
+Authors:
 
 $(WEB erdani.org, Andrei Alexandrescu), Don Clugston
 */
 
-/*
- *  Copyright (C) 2004-2006 by Digital Mars, www.digitalmars.com
- *  Written by Andrei Alexandrescu, www.erdani.org
- *
- *  This software is provided 'as-is', without any express or implied
- *  warranty. In no event will the authors be held liable for any damages
- *  arising from the use of this software.
- *
- *  Permission is granted to anyone to use this software for any purpose,
- *  including commercial applications, and to alter it and redistribute it
- *  freely, subject to the following restrictions:
- *
- *  o  The origin of this software must not be misrepresented; you must not
- *     claim that you wrote the original software. If you use this software
- *     in a product, an acknowledgment in the product documentation would be
- *     appreciated but is not required.
- *  o  Altered source versions must be plainly marked as such, and must not
- *     be misrepresented as being the original software.
- *  o  This notice may not be removed or altered from any source
- *     distribution.
- */
-
 module std.numeric;
+import std.algorithm;
+import std.array;
+import std.bitmanip;
 import std.typecons;
 import std.math;
 import std.traits;
 import std.contracts;
 import std.random;
 import std.string;
+import std.range;
+import std.c.stdlib;
+import std.functional;
+import std.typetuple;
 version(unittest)
 {
     import std.stdio;
+    import std.conv;
 }
 
 /**
-   Implements the $(LINK2 http://tinyurl.com/2zb9yr,secant method) for
-   finding a root of the function $(D_PARAM f) starting from points
-   [xn_1, x_n] (ideally close to the root). $(D_PARAM Num) may be
-   $(D_PARAM float), $(D_PARAM double), or $(D_PARAM real).
+Flags for custom floating-point formats. In the case of $(LUCKY
+IEEE754) types, all of these flags are applied. 
+ */
+private enum CustomFloatFlags
+{
+/**
+Store values in normalized form by default, i.e. the fraction is
+assumed to be $(D 1.nnnn), not $(D 0.nnnn). Normalization is the
+default in all $(LUCKY IEE754) types. If a floating-point type is
+defined to store only numbers inside $(D (-1, 1)), normalization may
+not be useful.
+ */ 
+    storeNormalized = 1,
+/**
+Allow denormalized values (a la $(LUCKY IEEE754 denormalized)).
+If this flag is on, a value with an exponent
+containing all bits zero is considered to contain a denormalized
+value.
+ */ 
+    allowDenorm = 2,
+/**
+Support for infinity values (a la $(LUCKY IEEE754 _infinity)). If this
+flag is on, a value with an exponent containing all bits one and
+fraction zero is assumed to contain a (valid) allowDenormalized value. The sign,
+if applicable, is decided by the sign bit.
+ */ 
+        infinity = 4,
+/**
+Support for NaN (Not a Number) values (a la $(LUCKY IEEE754 Not a Number)).
+If this flag is on, a value with an exponent containing all
+bits one and a nonzero fraction is considered to contain a
+allowDenormalized value.
+ */ 
+        nan = 8,
+/**
+Include _all of the above options.
+ */
+        all = storeNormalized | allowDenorm | infinity | nan
+        }
+
+/**
+Allows user code to define custom floating-point formats. These
+formats are for storage only; to do operations on custom
+floating-point types, one must extract the value into a $(D float) or
+$(D double). After the operation is completed the result can be
+deposited in a custom floating-point value by using its assignment
+operator.
+
+Example:
+----
+// Define a 16-bit floating point type
+alias CustomFloat!(1, 5, 10) HalfFloat;
+auto x = HalfFloat(0.125);
+assert(halfFloat.get!float == 0.125);
+----
+ */
+struct CustomFloat(
+    bool signBit,       // allocate a sign bit? (true for float)
+    uint fractionBits,  // fraction bits (23 for float)
+    uint exponentBits,  // exponent bits (8 for float)
+    uint bias = (1u << (exponentBits - 1)) - 1, // bias (127 for float)
+    CustomFloatFlags flags = CustomFloatFlags.all)
+{
+    alias CustomFloatFlags Flags;
+    private enum totalSize = signBit + fractionBits + exponentBits;
+    static assert(totalSize % 8 == 0);
+    private mixin(bitfields!(
+                bool, "sign", signBit,
+                uint, "fraction", fractionBits,
+                uint, "exponent", exponentBits));
+    
+/**
+Initialize from a $(D float).
+ */
+    this(float input) { this = input; }
+/**
+Initialize from a $(D double).
+ */
+    this(double input) { this = input; }
+/**
+Assigns from either a $(D float) or a $(D double).
+ */ 
+    void opAssign(F)(F input) if (indexOf!(Unqual!F, float, double) >= 0)
+    {
+        static if (is(Unqual!F == float))
+            auto value = FloatRep(input);
+        else
+            auto value = DoubleRep(input);
+        // Assign the sign bit
+        static if (!signBit) enforce(!value.sign);
+        else sign = value.sign;
+
+        // Assign the exponent and fraction
+        auto e = value.exponent;
+        if (e == 0)
+        {
+            // denormalized source value
+            static if (flags & Flags.allowDenorm)
+            {
+                exponent = 0;
+                fraction = cast(typeof(fraction_max)) value.fraction;
+            }
+            else
+            {
+                assert(0);
+            }
+        }
+        else if (e == value.exponent_max)
+        {
+            // infinity or NaN
+            if (value.fraction == 0)
+                // Infinity
+                static if (flags & Flags.infinity)
+                {
+                    fraction = 0;
+                    exponent = exponent_max;
+                }
+                else
+                {
+                    assert(0);
+                }
+            else
+            {
+                // NaN
+                static if (flags & Flags.nan)
+                {
+                    fraction = cast(typeof(fraction())) value.fraction;
+                    exponent = exponent_max;
+                }
+                else
+                {
+                    assert(0);
+                }
+            }
+        }
+        else
+        {
+            // normal value
+            exponent = cast(typeof(exponent_max))
+                (value.exponent + (bias - value.bias));
+            static if (fractionBits >= value.fractionBits)
+            {
+                fraction = cast(typeof(fraction_max))
+                    (value.fraction << (fractionBits - value.fractionBits));
+            }
+            else
+            {
+                fraction = cast(typeof(fraction_max))
+                    (value.fraction >> (value.fractionBits - fractionBits));
+            }
+        }
+    }
+
+/**
+Fetches the stored value either as a $(D float) or $(D double).
+ */
+    F get(F)()
+    {
+        static if (is(Unqual!F == float))
+            FloatRep result = void;
+        else
+            DoubleRep result = void;
+        static if (signBit) result.sign = sign;
+        else result.sign = 0;
+        auto e = exponent;
+        if (e == 0)
+        {
+            // denormalized value
+            result.exponent = 0;
+            result.fraction = fraction;
+        }
+        else if (e == exponent_max)
+        {
+            // infinity or NaN
+        }
+        else
+        {
+            // normal value
+            result.exponent = cast(typeof(result.exponent_max))
+                (exponent + (result.bias - bias));
+            static if (fractionBits <= result.fractionBits)
+            {
+                alias Select!(result.fractionBits >= 32, ulong, uint) S;
+                result.fraction = cast(typeof(result.fraction_max))
+                    (cast(S) fraction << (result.fractionBits - fractionBits));
+            }
+            else
+            {
+                result.fraction = cast(typeof(result.fraction()))
+                    (fraction >> (fractionBits - result.fractionBits));
+            }
+        }
+        return result.value;
+    }
+}
+
+unittest
+{
+    alias TypeTuple!(
+        CustomFloat!(1, 5, 10),
+        CustomFloat!(0, 5, 11),
+        CustomFloat!(0, 1, 15)
+        ) FPTypes;
+    foreach (F; FPTypes)
+    {
+        auto x = F(0.125);
+        assert(x.get!float == 0.125F);
+        assert(x.get!double == 0.125);
+    }
+}
+
+/**
+Defines the fastest type to use when storing temporaries of a
+calculation intended to ultimately yield a result of type $(D F)
+(where $(D F) must be one of $(D float), $(D double), or $(D
+real)). When doing a multi-step computation, you may want to store
+intermediate results as $(D FPTemporary!F).
+
+Example:
+----
+// Average numbers in an array
+double avg(in double[] a)
+{
+    if (a.length == 0) return 0;
+    FPTemporary!double result = 0;
+    foreach (e; a) result += e;
+    return result / a.length;
+}
+----
+
+The necessity of $(D FPTemporary) stems from the optimized
+floating-point operations and registers present in virtually all
+processors. When adding numbers in the example above, the addition may
+in fact be done in $(D real) precision internally. In that case,
+storing the intermediate $(D result) in $(D double format) is not only
+less precise, it is also (surprisingly) slower, because a conversion
+from $(D real) to $(D double) is performed every pass through the
+loop. This being a lose-lose situation, $(D FPTemporary!F) has been
+defined as the $(I fastest) type to use for calculations at precision
+$(D F). There is no need to define a type for the $(I most accurate)
+calculations, as that is always $(D real).
+
+Finally, there is no guarantee that using $(D FPTemporary!F) will
+always be fastest, as the speed of floating-point calculations depends
+on very many factors.
+ */
+template FPTemporary(F) if (isFloatingPoint!F)
+{
+    alias real FPTemporary;
+}
+
+/**
+Implements the $(WEB tinyurl.com/2zb9yr, secant method) for finding a
+root of the function $(D fun) starting from points $(D [xn_1, x_n])
+(ideally close to the root). $(D Num) may be $(D float), $(D double),
+or $(D real).
 
 Example:
 
@@ -60,21 +298,21 @@ Example:
 float f(float x) {
     return cos(x) - x*x*x;
 }
-auto x = secantMethod(&f, 0f, 1f);
+auto x = secantMethod!(f)(0f, 1f);
 assert(approxEqual(x, 0.865474));
 ----
 */
-template secantMethod(alias F)
+template secantMethod(alias fun)
 {
     Num secantMethod(Num)(Num xn_1, Num xn) {
-        auto fxn = F(xn_1), d = xn_1 - xn;
+        auto fxn = unaryFun!(fun)(xn_1), d = xn_1 - xn;
         typeof(fxn) fxn_1;
         xn = xn_1;
         while (!approxEqual(d, 0) && isFinite(d)) {
             xn_1 = xn;
             xn -= d;
             fxn_1 = fxn;
-            fxn = F(xn);
+            fxn = unaryFun!(fun)(xn);
             d *= -fxn / (fxn - fxn_1);
         }
         return xn;
@@ -83,12 +321,15 @@ template secantMethod(alias F)
 
 unittest
 {
-    scope(failure) writeln(stderr, "Failure testing secantMethod");
+    scope(failure) stderr.writeln("Failure testing secantMethod");
     float f(float x) {
         return cos(x) - x*x*x;
     }
     invariant x = secantMethod!(f)(0f, 1f);
     assert(approxEqual(x, 0.865474));
+    auto d = &f;
+    invariant y = secantMethod!(d)(0f, 1f);
+    assert(approxEqual(y, 0.865474));
 }
 
 
@@ -96,12 +337,8 @@ private:
 // Return true if a and b have opposite sign.
 bool oppositeSigns(T)(T a, T b)
 {
-    // Use signbit() if available, otherwise check the signs.
-    static if (is(typeof(signbit(a)))) {    
-        return (signbit(a) ^ signbit(b))!=0;
-    } else return (a>0 && b<0) || (a>0 && b<0);
+    return signbit(a) != signbit(b);
 }
-
 
 public:
 
@@ -133,7 +370,7 @@ T findRoot(T, R)(R delegate(T) f, T a, T b)
 {
     auto r = findRoot(f, a, b, f(a), f(b), (T lo, T hi){ return false; });
     // Return the first value if it is smaller or NaN
-    return fabs(r._2) !> fabs(r._3) ? r._0 : r._1;
+    return fabs(r.field[2]) !> fabs(r.field[3]) ? r.field[0] : r.field[1];
 }
 
 /** Find root of a real function f(x) by bracketing, allowing the
@@ -151,8 +388,8 @@ T findRoot(T, R)(R delegate(T) f, T a, T b)
  *
  * fax = Value of $(D f(ax)).
  *
- * fax = Value of $(D f(ax)) and $(D f(bx)). ($(D f(ax)) and $(D
- * f(bx)) are commonly known in advance.)
+ * fbx = Value of $(D f(bx)). ($(D f(ax)) and $(D f(bx)) are commonly
+ * known in advance.)
  *
  * 
  * tolerance = Defines an early termination condition. Receives the
@@ -173,7 +410,7 @@ Tuple!(T, T, R, R) findRoot(T,R)(R delegate(T) f, T ax, T bx, R fax, R fbx,
     bool delegate(T lo, T hi) tolerance)
 in {
     assert(ax<>=0 && bx<>=0, "Limits must not be NaN");
-    assert(oppositeSigns(fax, fbx), "Parameters must bracket the root.");
+    assert(signbit(fax) != signbit(fbx), "Parameters must bracket the root.");
 }
 body {   
 // This code is (heavily) modified from TOMS748 (www.netlib.org). Some ideas
@@ -205,7 +442,7 @@ body {
             return;
         }
         // Determine new enclosing interval
-        if (oppositeSigns(fa, fc)) {
+        if (signbit(fa) != signbit(fc)) {
             d = b;
             fd = fb;
             b = c;
@@ -228,7 +465,7 @@ body {
             // Catastrophic cancellation
             if (a == 0) a = copysign(0.0L, b);
             else if (b == 0) b = copysign(0.0L, a);
-            else if (oppositeSigns(a, b)) return 0;
+            else if (signbit(a) != signbit(b)) return 0;
             T c = ieeeMean(a, b); 
             return c;
         }
@@ -410,8 +647,8 @@ whileloop:
     return Tuple!(T, T, R, R)(a, b, fa, fb);
 }
 
-unittest{
-    
+unittest
+{    
     int numProblems = 0;
     int numCalls;
     
@@ -422,8 +659,8 @@ unittest{
         auto result = findRoot(f, x1, x2, f(x1), f(x2),
           (real lo, real hi) { return false; });
         
-        auto flo = f(result._0);
-        auto fhi = f(result._1);
+        auto flo = f(result.field[0]);
+        auto fhi = f(result.field[1]);
         if (flo!=0) {
             assert(oppositeSigns(flo, fhi));
         }
@@ -589,51 +826,784 @@ unittest{
 */        
 }
 
-template tabulateFixed(alias fun, uint n,
-        real maxError, real left, real right)
+/**
+Computes $(LUCKY Euclidean distance) between input ranges $(D a) and
+$(D b). The two ranges must have the same length. The three-parameter
+version stops computation as soon as the distance is greater than or
+equal to $(D limit) (this is useful to save computation if a small
+distance is sought).
+ */
+CommonType!(ElementType!(Range1), ElementType!(Range2))
+euclideanDistance(Range1, Range2)(Range1 a, Range2 b)
+    if (isInputRange!(Range1) && isInputRange!(Range2))
 {
-    ReturnType!(fun) tabulateFixed(ParameterTypeTuple!(fun) arg)
+    enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
+    static if (haveLen) enforce(a.length == b.length);
+    typeof(return) result = 0;
+    for (; !a.empty; a.next, b.next)
     {
-        alias ParameterTypeTuple!(fun)[0] num;
-        static num[n] table;
-        alias arg[0] x;
-        enforce(left <= x && x < right);
-        invariant i = cast(uint) (table.length
-                * ((x - left) / (right - left)));
-        assert(i < n);
-        if (isnan(table[i])) {
-            // initialize it
-            auto x1 = left + i * (right - left) / n;
-            auto x2 = left + (i + 1) * (right - left) / n;
-            invariant y1 = fun(x1), y2 = fun(x2);
-            invariant y = 2 * y1 * y2 / (y1 + y2);
-            num wyda(num xx) { return fun(xx) - y; }
-            auto bestX = findRoot(&wyda, x1, x2);
-            table[i] = fun(bestX);
-            invariant leftError = abs((table[i] - y1) / y1);
-            enforce(leftError <= maxError, text(leftError, " > ", maxError));
-            invariant rightError = abs((table[i] - y2) / y2);
-            enforce(rightError <= maxError, text(rightError, " > ", maxError));
-        }
-        return table[i];
+        auto t = a.head - b.head;
+        result += t * t;
     }
+    static if (!haveLen) enforce(b.empty);
+    return sqrt(result);
+}
+
+/// Ditto
+CommonType!(ElementType!(Range1), ElementType!(Range2))
+euclideanDistance(Range1, Range2, F)(Range1 a, Range2 b, F limit)
+    if (isInputRange!(Range1) && isInputRange!(Range2))
+{
+    limit *= limit;
+    enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
+    static if (haveLen) enforce(a.length == b.length);
+    typeof(return) result = 0;
+    for (; ; a.next, b.next)
+    {
+        if (a.empty)
+        {
+            static if (!haveLen) enforce(b.empty);
+            break;
+        }
+        auto t = a.head - b.head;
+        result += t * t;
+        if (result >= limit) break;
+    }
+    return sqrt(result);
 }
 
 unittest
 {
-  version (none) // fails unit tests
-  {
-    enum epsilon = 0.01;
-    alias tabulateFixed!(tanh, 700, epsilon, 0.2, 3) fasttanh;
-    uint testSize = 100000;
-    auto rnd = Random(unpredictableSeed);
-    foreach (i; 0 .. testSize) {
-        invariant x = uniform(rnd, 0.2F, 3.0F);
-        invariant float y = fasttanh(x), w = tanh(x);
-        invariant e = abs(y - w) / w;
-        //writefln("%.20f", e);
-        enforce(e <= epsilon, text("x = ", x, ", fasttanh(x) = ", y,
-                        ", tanh(x) = ", w, ", relerr = ", e));
-    }
-  }
+    double[] a = [ 1., 2., ];
+    double[] b = [ 4., 6., ];
+    assert(euclideanDistance(a, b) == 5);
+    assert(euclideanDistance(a, b, 5) == 5);
+    assert(euclideanDistance(a, b, 4) == 5);
+    assert(euclideanDistance(a, b, 2) == 3);
 }
+
+/**
+Computes the $(LUCKY dot product) of input ranges $(D a) and $(D
+b). The two ranges must have the same length. If both ranges define
+length, the check is done once; otherwise, it is done at each
+iteration.
+ */
+CommonType!(ElementType!(Range1), ElementType!(Range2))
+dotProduct(Range1, Range2)(Range1 a, Range2 b)
+    if (isInputRange!(Range1) && isInputRange!(Range2) &&
+            !(isArray!(Range1) && isArray!(Range2)))
+{
+    enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
+    static if (haveLen) enforce(a.length == b.length);
+    typeof(return) result = 0;
+    for (; !a.empty; a.next, b.next)
+    {
+        result += a.head * b.head;
+    }
+    static if (!haveLen) enforce(b.empty);
+    return result;
+}
+
+/// Ditto
+Unqual!(CommonType!(F1, F2))
+dotProduct(F1, F2)(in F1[] avector, in F2[] bvector)
+{
+    invariant n = avector.length;
+    assert(n == bvector.length);
+    auto avec = avector.ptr, bvec = bvector.ptr;
+    typeof(return) sum0 = 0.0, sum1 = 0.0;
+    
+    const all_endp = avec + n;
+    const smallblock_endp = avec + (n & ~3);
+    const bigblock_endp = avec + (n & ~15);
+    
+    for (; avec != bigblock_endp; avec += 16, bvec += 16)
+    {
+        sum0 += avec[0] * bvec[0];
+        sum1 += avec[1] * bvec[1];
+        sum0 += avec[2] * bvec[2];
+        sum1 += avec[3] * bvec[3];
+        sum0 += avec[4] * bvec[4];
+        sum1 += avec[5] * bvec[5];
+        sum0 += avec[6] * bvec[6];
+        sum1 += avec[7] * bvec[7];
+        sum0 += avec[8] * bvec[8];
+        sum1 += avec[9] * bvec[9];
+        sum0 += avec[10] * bvec[10];
+        sum1 += avec[11] * bvec[11];
+        sum0 += avec[12] * bvec[12];
+        sum1 += avec[13] * bvec[13];
+        sum0 += avec[14] * bvec[14];
+        sum1 += avec[15] * bvec[15];
+    }
+    
+    for (; avec != smallblock_endp; avec += 4, bvec += 4) {
+        sum0 += avec[0] * bvec[0];
+        sum1 += avec[1] * bvec[1];
+        sum0 += avec[2] * bvec[2];
+        sum1 += avec[3] * bvec[3];
+    }
+    
+    sum0 += sum1;
+    
+    /* Do trailing portion in naive loop. */
+    while (avec != all_endp)
+        sum0 += (*avec++) * (*bvec++);
+    
+    return sum0;
+}
+
+unittest
+{
+    double[] a = [ 1., 2., ];
+    double[] b = [ 4., 6., ];
+    assert(dotProduct(a, b) == 16);
+}
+
+/**
+Computes the $(LUCKY cosine similarity) of input ranges $(D a) and $(D
+b). The two ranges must have the same length. If both ranges define
+length, the check is done once; otherwise, it is done at each
+iteration. If either range has all-zero elements, return 0.
+ */
+CommonType!(ElementType!(Range1), ElementType!(Range2))
+cosineSimilarity(Range1, Range2)(Range1 a, Range2 b)
+    if (isInputRange!(Range1) && isInputRange!(Range2))
+{
+    enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
+    static if (haveLen) enforce(a.length == b.length);
+    FPTemporary!(typeof(return)) norma = 0, normb = 0, dotprod = 0;
+    for (; !a.empty; a.next, b.next)
+    {
+        immutable t1 = a.head, t2 = b.head;
+        norma += t1 * t1;
+        normb += t2 * t2;
+        dotprod += t1 * t2;
+    }
+    static if (!haveLen) enforce(b.empty);
+    if (norma == 0 || normb == 0) return 0;
+    return dotprod / sqrt(norma * normb);
+}
+
+unittest
+{
+    double[] a = [ 1., 2., ];
+    double[] b = [ 4., 3., ];
+    // writeln(cosineSimilarity(a, b));
+    // writeln(10.0 / sqrt(5.0 * 25));
+    assert(approxEqual(cosineSimilarity(a, b), 10.0 / sqrt(5.0 * 25), 0.01));
+}
+
+// template tabulateFixed(alias fun, uint n,
+//         real maxError, real left, real right)
+// {
+//     ReturnType!(fun) tabulateFixed(ParameterTypeTuple!(fun) arg)
+//     {
+//         alias ParameterTypeTuple!(fun)[0] num;
+//         static num[n] table;
+//         alias arg[0] x;
+//         enforce(left <= x && x < right);
+//         invariant i = cast(uint) (table.length
+//                 * ((x - left) / (right - left)));
+//         assert(i < n);
+//         if (isnan(table[i])) {
+//             // initialize it
+//             auto x1 = left + i * (right - left) / n;
+//             auto x2 = left + (i + 1) * (right - left) / n;
+//             invariant y1 = fun(x1), y2 = fun(x2);
+//             invariant y = 2 * y1 * y2 / (y1 + y2);
+//             num wyda(num xx) { return fun(xx) - y; }
+//             auto bestX = findRoot(&wyda, x1, x2);
+//             table[i] = fun(bestX);
+//             invariant leftError = abs((table[i] - y1) / y1);
+//             enforce(leftError <= maxError, text(leftError, " > ", maxError));
+//             invariant rightError = abs((table[i] - y2) / y2);
+//             enforce(rightError <= maxError, text(rightError, " > ", maxError));
+//         }
+//         return table[i];
+//     }
+// }
+
+// unittest
+// {
+//     enum epsilon = 0.01;
+//     alias tabulateFixed!(tanh, 700, epsilon, 0.2, 3) fasttanh;
+//     uint testSize = 100000;
+//     auto rnd = Random(unpredictableSeed);
+//     foreach (i; 0 .. testSize) {
+//         invariant x = uniform(rnd, 0.2F, 3.0F);
+//         invariant float y = fasttanh(x), w = tanh(x);
+//         invariant e = abs(y - w) / w;
+//         //writefln("%.20f", e);
+//         enforce(e <= epsilon, text("x = ", x, ", fasttanh(x) = ", y,
+//                         ", tanh(x) = ", w, ", relerr = ", e));
+//     }
+// }
+
+/**
+Normalizes values in $(D range) by multiplying each element with a
+number chosen such that values sum up to $(D sum). If elements in $(D
+range) sum to zero, assigns $(D sum / range.length) to
+all. Normalization makes sense only if all elements in $(D range) are
+positive. $(D normalize) assumes that is the case without checking it.
+
+Returns: $(D true) if normalization completed normally, $(D false) if
+all elements in $(D range) were zero or if $(D range) is empty.
+ */
+bool normalize(R)(R range, ElementType!(R) sum = 1) if (isForwardRange!(R))
+{
+    ElementType!(R) s = 0;
+    // Step 1: Compute sum and length of the range
+    static if (hasLength!(R))
+    {
+        const length = range.length;
+        foreach (e; range)
+        {
+            s += e;
+        }
+    }
+    else
+    {
+        uint length = 0;
+        foreach (e; range)
+        {
+            s += e;
+            ++length;
+        }
+    }
+    // Step 2: perform normalization
+    if (s == 0)
+    {
+        if (length)
+        {
+            auto f = sum / range.length;
+            foreach (ref e; range) e = f;
+        }
+        return false;
+    }
+    // The path most traveled
+    assert(s >= 0);
+    auto f = sum / s;
+    foreach (ref e; range) e *= f;
+    return true;
+}
+
+unittest
+{
+    double[] a = [];
+    assert(!normalize(a));
+    a = [ 1., 3. ];
+    assert(normalize(a));
+    assert(a == [ 0.25, 0.75 ]);
+    a = [ 0., 0. ];
+    assert(!normalize(a));
+    assert(a == [ 0.5, 0.5 ]);
+}
+
+/**
+The so-called "all-lengths gap-weighted string kernel" computes a
+similarity measure between $(D s) and $(D t) based on all of their
+common subsequences of all lenghts. Gapped subsequences are also
+included.
+
+To understand what $(D gapWeightedSimilarity(s, t, lambda)) computes,
+consider first the case $(D lambda = 1) and the strings $(D s =
+["Hello", "brave", "new", "world"]) and $(D t = ["Hello", "new",
+"world"]). In that case, $(D gapWeightedSimilarity) counts the
+following matches:
+
+$(OL $(LI three matches of length 1, namely $(D "Hello"), $(D "new"),
+and $(D "world");) $(LI three matches of length 2, namely ($(D
+"Hello", "new")), ($(D "Hello", "world")), and ($(D "new", "world"));)
+$(LI one match of length 3, namely ($(D "Hello", "new", "world")).))
+
+The call $(D gapWeightedSimilarity(s, t, 1)) simply counts all of
+these matches and adds them up, returning 7.
+
+----
+string[] s = ["Hello", "brave", "new", "world"];
+string[] t = ["Hello", "new", "world"];
+assert(gapWeightedSimilarity(s, t, 1) == 7);
+----
+
+Note how the gaps in matching are simply ignored, for example ($(D
+"Hello", "new")) is deemed as good a match as ($(D "new",
+"world")). This may be too permissive for some applications. To
+eliminate gapped matches entirely, use $(D lambda = 0):
+
+----
+string[] s = ["Hello", "brave", "new", "world"];
+string[] t = ["Hello", "new", "world"];
+assert(gapWeightedSimilarity(s, t, 0) == 4);
+----
+
+The call above eliminated the gapped matches ($(D "Hello", "new")),
+($(D "Hello", "world")), and ($(D "Hello", "new", "world")) from the
+tally. That leaves only 4 matches.
+
+The most interesting case is when gapped matches still participate in
+the result, but not as strongly as ungapped matches. The result will
+be a smooth, fine-grained similarity measure between the input
+strings. This is where values of $(D lambda) between 0 and 1 enter
+into play: gapped matches are $(I exponentially penalized with the
+number of gaps) with base $(D lambda). This means that an ungapped
+match adds 1 to the return value; a match with one gap in either
+string adds $(D lambda) to the return value; ...; a match with a total
+of $(D n) gaps in both strings adds $(D pow(lambda, n)) to the return
+value. In the example above, we have 4 matches without gaps, 2 matches
+with one gap, and 1 match with three gaps. The latter match is ($(D
+"Hello", "world")), which has two gaps in the first string and one gap
+in the second string, totaling to three gaps. Summing these up we get
+$(D 4 + 2 * lambda + pow(lambda, 3)).
+
+----
+string[] s = ["Hello", "brave", "new", "world"];
+string[] t = ["Hello", "new", "world"];
+assert(gapWeightedSimilarity(s, t, 0.5) == 4 + 0.5 * 2 + 0.125);
+----
+
+$(D gapWeightedSimilarity) is useful wherever a smooth similarity
+measure between sequences allowing for approximate matches is
+needed. The examples above are given with words, but any sequences
+with elements comparable for equality are allowed, e.g. characters or
+numbers. $(D gapWeightedSimilarity) uses a highly optimized dynamic
+programming implementation that needs $(D 16 * min(s.length,
+t.length)) extra bytes of memory and $(BIGOH s.length * t.length) time
+to complete.
+ */
+F gapWeightedSimilarity(alias comp = "a == b", R1, R2, F)(R1 s, R2 t, F lambda)
+    if (isRandomAccessRange!(R1) && hasLength!(R1)
+            && isRandomAccessRange!(R2) && hasLength!(R2))
+{
+    if (s.length < t.length) return gapWeightedSimilarity(t, s, lambda);
+    if (!t.length) return 0;
+    immutable tl1 = t.length + 1;
+    auto dpvi = enforce(cast(F*) malloc(F.sizeof * 2 * t.length));
+    auto dpvi1 = dpvi + t.length;
+    scope(exit) free(dpvi < dpvi1 ? dpvi : dpvi1);
+    dpvi[0 .. t.length] = 0;
+    dpvi1[0] = 0;
+    immutable lambda2 = lambda * lambda;
+
+    F result = 0;
+    foreach (i; 0 .. s.length)
+    {
+        const si = s[i];
+        for (size_t j = 0;;)
+        {
+            F dpsij = void;
+            if (binaryFun!(comp)(si, t[j]))
+            {
+                dpsij = 1 + dpvi[j];
+                result += dpsij;
+            }
+            else
+            {
+                dpsij = 0;
+            }
+            immutable j1 = j + 1;
+            if (j1 == t.length) break;
+            dpvi1[j1] = dpsij + lambda * (dpvi1[j] + dpvi[j1])
+                - lambda2 * dpvi[j];
+            j = j1;
+        }
+        swap(dpvi, dpvi1);
+    }
+    return result;
+}
+
+unittest
+{
+    string[] s = ["Hello", "brave", "new", "world"];
+    string[] t = ["Hello", "new", "world"];
+    assert(gapWeightedSimilarity(s, t, 1) == 7);
+    assert(gapWeightedSimilarity(s, t, 0) == 4);
+    assert(gapWeightedSimilarity(s, t, 0.5) == 4 + 2 * 0.5 + 0.125);
+}
+
+/**
+The similarity per $(D gapWeightedSimilarity) has an issue in that it
+grows with the lengths of the two strings, even though the strings are
+not actually very similar. For example, the range $(D ["Hello",
+"world"]) is increasingly similar with the range $(D ["Hello",
+"world", "world", "world",...]) as more instances of $(D "world") are
+appended. To prevent that, $(D gapWeightedSimilarityNormalized)
+computes a normalized version of the similarity that is computed as
+$(D gapWeightedSimilarity(s, t, lambda) /
+sqrt(gapWeightedSimilarity(s, t, lambda) * gapWeightedSimilarity(s, t,
+lambda))). The function $(D gapWeightedSimilarityNormalized) (a
+so-called normalized kernel) is bounded in $(D [0, 1]), reaches $(D 0)
+only for ranges that don't match in any position, and $(D 1) only for
+identical ranges.
+
+Example:
+----
+string[] s = ["Hello", "brave", "new", "world"];
+string[] t = ["Hello", "new", "world"];
+assert(gapWeightedSimilarity(s, s, 1) == 15);
+assert(gapWeightedSimilarity(t, t, 1) == 7);
+assert(gapWeightedSimilarity(s, t, 1) == 7);
+assert(gapWeightedSimilarityNormalized(s, t, 1) ==
+7. / sqrt(15. * 7));
+----
+
+The optional parameters $(D sSelfSim) and $(D tSelfSim) are meant for
+avoiding duplicate computation. Many applications may have already
+computed $(D gapWeightedSimilarity(s, s, lambda)) and/or $(D
+gapWeightedSimilarity(t, t, lambda)). In that case, they can be passed
+as $(D sSelfSim) and $(D tSelfSim), respectively.
+ */
+Select!(isFloatingPoint!(F), F, double)
+gapWeightedSimilarityNormalized
+(alias comp = "a == b", R1, R2, F)(R1 s, R2 t, F lambda,
+        F sSelfSim = F.init, F tSelfSim = F.init)
+    if (isRandomAccessRange!(R1) && hasLength!(R1)
+            && isRandomAccessRange!(R2) && hasLength!(R2))
+{
+    static bool uncomputed(F n)
+    {
+        static if (isFloatingPoint!(F)) return isnan(n);
+        else return n == n.init;
+    }
+    if (uncomputed(sSelfSim))
+        sSelfSim = gapWeightedSimilarity!(comp)(s, s, lambda);
+    if (sSelfSim == 0) return 0;
+    if (uncomputed(tSelfSim))
+        tSelfSim = gapWeightedSimilarity!(comp)(t, t, lambda);
+    if (tSelfSim == 0) return 0;
+    return gapWeightedSimilarity!(comp)(s, t, lambda)
+        / sqrt(cast(typeof(return)) sSelfSim * tSelfSim);
+}
+
+unittest
+{
+    string[] s = ["Hello", "brave", "new", "world"];
+    string[] t = ["Hello", "new", "world"];
+    assert(gapWeightedSimilarity(s, s, 1) == 15);
+    assert(gapWeightedSimilarity(t, t, 1) == 7);
+    assert(gapWeightedSimilarity(s, t, 1) == 7);
+    assert(approxEqual(gapWeightedSimilarityNormalized(s, t, 1),
+                    7. / sqrt(15. * 7), 0.01));
+}
+
+/**
+Similar to $(D gapWeightedSimilarity), just works in an incremental
+manner by first revealing the matches of length 1, then gapped matches
+of length 2, and so on. The memory requirement is $(BIGOH s.length *
+t.length). The time complexity is $(BIGOH s.length * t.length) time
+for computing each step. Continuing on the previous example:
+
+----
+string[] s = ["Hello", "brave", "new", "world"];
+string[] t = ["Hello", "new", "world"];
+auto simIter = gapWeightedSimilarityIncremental(s, t, 1);
+assert(simIter.head == 3); // three 1-length matches
+simIter.next;
+assert(simIter.head == 3); // three 2-length matches
+simIter.next;
+assert(simIter.head == 1); // one 3-length match
+simIter.next;
+assert(simIter.empty);     // no more match
+----
+
+The implementation is based on the pseudocode in Fig. 4 of the paper
+$(WEB jmlr.csail.mit.edu/papers/volume6/rousu05a/rousu05a.pdf,
+"Efﬁcient Computation of Gapped Substring Kernels on Large Alphabets")
+by Rousu et al., with additional algorithmic and systems-level
+optimizations.
+ */
+struct GapWeightedSimilarityIncremental(Range, F = double)
+    if (isRandomAccessRange!(Range) && hasLength!(Range))
+{
+private:
+    Range s, t;
+    F currentValue = 0;
+    F * kl;
+    size_t gram = void;
+    F lambda = void, lambda2 = void;
+
+public:
+/**
+Constructs an object given two ranges $(D s) and $(D t) and a penalty
+$(D lambda). Constructor completes in $(BIGOH s.length * t.length)
+time and computes all matches of length 1.
+ */
+    this(Range s, Range t, F lambda) {
+        enforce(lambda > 0);
+        this.lambda = lambda;
+        this.lambda2 = lambda * lambda; // for efficiency only
+
+        size_t iMin = size_t.max, jMin = size_t.max,
+            iMax = 0, jMax = 0;
+        /* initialize */
+        Tuple!(uint, uint) * k0;
+        size_t k0len;
+        scope(exit) free(k0);
+        currentValue = 0;
+        foreach (i, si; s) {
+            foreach (j; 0 .. t.length) {
+                if (si != t[j]) continue;
+                k0 = cast(typeof(k0))
+                    realloc(k0, ++k0len * (*k0).sizeof);
+                with (k0[k0len - 1]) {
+                    field[0] = i;
+                    field[1] = j;
+                }
+                // Maintain the minimum and maximum i and j
+                if (iMin > i) iMin = i;
+                if (iMax < i) iMax = i;
+                if (jMin > j) jMin = j;
+                if (jMax < j) jMax = j;
+            }
+        }
+        
+        if (iMin > iMax) return;        
+        assert(k0len);
+
+        currentValue = k0len;
+        // Chop strings down to the useful sizes
+        s = s[iMin .. iMax + 1];
+        t = t[jMin .. jMax + 1];
+        this.s = s;
+        this.t = t;
+
+        // Si = errnoEnforce(cast(F *) malloc(t.length * F.sizeof));
+        kl = errnoEnforce(cast(F *) malloc(s.length * t.length * F.sizeof));
+
+        kl[0 .. s.length * t.length] = 0;
+        foreach (pos; 0 .. k0len) {
+            with (k0[pos]) {
+                kl[(field[0] - iMin) * t.length + field[1] -jMin] = lambda2;
+            }
+        }
+    }
+
+/**
+Computes the match of the next length. Completes in $(BIGOH s.length *
+t.length) time.
+ */ 
+    void next() {
+        // This is a large source of optimization: if similarity at
+        // the gram-1 level was 0, then we can safely assume
+        // similarity at the gram level is 0 as well.
+        if (empty) return;
+        
+        // Now attempt to match gapped substrings of length `gram'
+        ++gram;
+        currentValue = 0;
+
+        auto Si = cast(F*) alloca(t.length * F.sizeof);
+        Si[0 .. t.length] = 0;
+        foreach (i; 0 .. s.length)
+        {
+            const si = s[i];
+            F Sij_1 = 0;
+            F Si_1j_1 = 0;
+            auto kli = kl + i * t.length;
+            for (size_t j = 0;;)
+            {
+                const klij = kli[j];
+                const Si_1j = Si[j];
+                const tmp = klij + lambda * (Si_1j + Sij_1) - lambda2 * Si_1j_1;
+                // now update kl and currentValue
+                if (si == t[j])
+                    currentValue += kli[j] = lambda2 * Si_1j_1;
+                else
+                    kli[j] = 0;
+                // commit to Si
+                Si[j] = tmp;
+                if (++j == t.length) break;
+                // get ready for the next step; virtually increment j,
+                // so essentially stuffj_1 <-- stuffj
+                Si_1j_1 = Si_1j;
+                Sij_1 = tmp;
+            }
+        }
+        currentValue /= pow(lambda, 2 * (gram + 1));
+        
+        version (none)
+        {
+            Si_1[0 .. t.length] = 0;
+            kl[0 .. min(t.length, maxPerimeter + 1)] = 0;
+            foreach (i; 1 .. min(s.length, maxPerimeter + 1)) {
+                auto kli = kl + i * t.length;
+                assert(s.length > i);
+                const si = s[i];
+                auto kl_1i_1 = kl_1 + (i - 1) * t.length;
+                kli[0] = 0;
+                F lastS = 0;
+                foreach (j; 1 .. min(maxPerimeter - i + 1, t.length)) {
+                    immutable j_1 = j - 1;
+                    immutable tmp = kl_1i_1[j_1]
+                        + lambda * (Si_1[j] + lastS)
+                        - lambda2 * Si_1[j_1];
+                    kl_1i_1[j_1] = float.nan;
+                    Si_1[j_1] = lastS;
+                    lastS = tmp;
+                    if (si == t[j]) {
+                        currentValue += kli[j] = lambda2 * lastS;
+                    } else {
+                        kli[j] = 0;
+                    }
+                }
+                Si_1[t.length - 1] = lastS;
+            }
+            currentValue /= pow(lambda, 2 * (gram + 1));
+            // get ready for the next computation
+            swap(kl, kl_1);
+        }
+    }
+
+/**
+Returns the gapped similarity at the current match length (initially
+1, grows with each call to $(D next)).
+ */
+    F head() { return currentValue; }
+
+/**
+Returns whether there are more matches.
+ */
+    bool empty() {
+        if (currentValue) return false;
+        if (kl) {
+            free(kl);
+            kl = null;
+        }
+        return true;
+    }
+}
+
+/**
+Ditto
+ */
+GapWeightedSimilarityIncremental!(R, F) gapWeightedSimilarityIncremental(R, F)
+(R r1, R r2, F penalty)
+{
+    return typeof(return)(r1, r2, penalty);
+}
+
+unittest
+{
+    string[] s = ["Hello", "brave", "new", "world"];
+    string[] t = ["Hello", "new", "world"];
+    auto simIter = gapWeightedSimilarityIncremental(s, t, 1.0);
+    //foreach (e; simIter) writeln(e);
+    assert(simIter.head == 3); // three 1-length matches
+    simIter.next;
+    assert(simIter.head == 3, text(simIter.head)); // three 2-length matches
+    simIter.next;
+    assert(simIter.head == 1); // one 3-length matches
+    simIter.next;
+    assert(simIter.empty);     // no more match
+
+    s = ["Hello"];
+    t = ["bye"];
+    simIter = gapWeightedSimilarityIncremental(s, t, 0.5);
+    assert(simIter.empty);
+
+    s = ["Hello"];
+    t = ["Hello"];
+    simIter = gapWeightedSimilarityIncremental(s, t, 0.5);
+    assert(simIter.head == 1); // one match
+    simIter.next;
+    assert(simIter.empty);
+
+    s = ["Hello", "world"];
+    t = ["Hello"];
+    simIter = gapWeightedSimilarityIncremental(s, t, 0.5);
+    assert(simIter.head == 1); // one match
+    simIter.next;
+    assert(simIter.empty);
+
+    s = ["Hello", "world"];
+    t = ["Hello", "yah", "world"];
+    simIter = gapWeightedSimilarityIncremental(s, t, 0.5);
+    assert(simIter.head == 2); // two 1-gram matches
+    simIter.next;
+    assert(simIter.head == 0.5, text(simIter.head)); // one 2-gram match, 1 gap
+}
+
+unittest
+{
+    GapWeightedSimilarityIncremental!(string[]) sim =
+        GapWeightedSimilarityIncremental!(string[])(
+            ["nyuk", "I", "have", "no", "chocolate", "giba"],
+            ["wyda", "I", "have", "I", "have", "have", "I", "have", "hehe"],
+            0.5);
+    double witness[] = [ 7., 4.03125, 0, 0 ];
+    foreach (e; sim)
+    {
+        //writeln(e);
+        assert(e == witness.head);
+        witness.next;
+    }
+    witness = [ 3., 1.3125, 0.25 ];
+    sim = GapWeightedSimilarityIncremental!(string[])(
+        ["I", "have", "no", "chocolate"],
+        ["I", "have", "some", "chocolate"],
+        0.5);
+    foreach (e; sim)
+    {
+        //writeln(e);
+        assert(e == witness.head);
+        witness.next;
+    }
+    assert(witness.empty);
+}
+
+/*
+ *  Copyright (C) 2004-2009 by Digital Mars, www.digitalmars.com
+ *  Written by Andrei Alexandrescu, www.erdani.org
+ *
+ *  This software is provided 'as-is', without any express or implied
+ *  warranty. In no event will the authors be held liable for any damages
+ *  arising from the use of this software.
+ *
+ *  Permission is granted to anyone to use this software for any purpose,
+ *  including commercial applications, and to alter it and redistribute it
+ *  freely, subject to the following restrictions:
+ *
+ *  o  The origin of this software must not be misrepresented; you must not
+ *     claim that you wrote the original software. If you use this software
+ *     in a product, an acknowledgment in the product documentation would be
+ *     appreciated but is not required.
+ *  o  Altered source versions must be plainly marked as such, and must not
+ *     be misrepresented as being the original software.
+ *  o  This notice may not be removed or altered from any source
+ *     distribution.
+ */
+/+
+/**
+Primes generator
+*/
+struct Primes(UIntType)
+{
+    private UIntType[] found = [ 2 ];
+
+    UIntType head() { return found[$ - 1]; }
+
+    void next()
+    {
+      outer:
+        for (UIntType candidate = head + 1 + (head != 2); ; candidate += 2)
+        {
+            UIntType stop = cast(uint) sqrt(cast(double) candidate);
+            foreach (e; found)
+            {
+                if (e > stop) break;
+                if (candidate % e == 0) continue outer;
+            }
+            // found!
+            found ~= candidate;
+            break;
+        }
+    }
+
+    enum bool empty = false;
+}
+
+unittest
+{
+    foreach (e; take(10, Primes!(uint)())) writeln(e);
+}
++/
