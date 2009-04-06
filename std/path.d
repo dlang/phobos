@@ -26,9 +26,7 @@ module std.path;
 //debug=path;		// uncomment to turn on debugging printf's
 //private import std.stdio;
 
-private import std.string;
-private import std.file;
-private import std.contracts;
+import std.contracts, std.conv, std.file, std.string, std.traits;
 private import core.stdc.errno;
 
 version(Posix)
@@ -393,7 +391,7 @@ Char[] dirname(Char)(Char[] fullname)
             }
         }
     }
-    return i == 0 ? "." : fullname[0 .. i];
+    return i == 0 ? to!(Char[])(".") : fullname[0 .. i];
 }
 
 unittest
@@ -444,19 +442,20 @@ unittest
  * -----
  */
 
-string getDrive(string fullname)
-    out (result)
-    {
-	assert(result.length <= fullname.length);
-    }
-    body
-    {
+String getDrive(String)(String fullname) if (isSomeString!(String))
+// @@@ BUG 2799
+// out(result)
+// {
+//     assert(result.length <= fullname.length);
+// }
+body
+{
 	version(Win32)
 	{
-	    for (uint i = 0; i < fullname.length; i++)
+	    foreach (i; 0 .. fullname.length)
 	    {
-		if (fullname[i] == ':')
-		    return fullname[0 .. i + 1];
+            if (fullname[i] == ':')
+                return fullname[0 .. i + 1];
 	    }
 	    return null;
 	}
@@ -464,7 +463,7 @@ string getDrive(string fullname)
 	{
 	    return null;
 	}
-    }
+}
 
 /****************************
  * Appends a default extension to a filename.
@@ -573,7 +572,7 @@ string addExt(string filename, string ext)
  * -----
  */
 
-bool isabs(string path)
+bool isabs(in char[] path)
 {
     auto d = getDrive(path);
     version (Windows)
@@ -668,63 +667,63 @@ unittest
  * -----
  */
 
-string join(string p1, string p2, string[] more...)
+string join(in char[] p1, in char[] p2, in char[][] more...)
 {
-  version (Posix)
-  {
-    if (!more.length)
+    version (Posix)
     {
-        if (isabs(p2)) return p2;
-        if (p1.endsWith(sep) || altsep.length && p1.endsWith(altsep))
+        if (!more.length)
         {
-            return p1 ~ p2;
+            if (isabs(p2)) return p2.idup;
+            if (p1.endsWith(sep) || altsep.length && p1.endsWith(altsep))
+            {
+                return cast(string) (p1 ~ p2);
+            }
+            return cast(string) (p1 ~ sep ~ p2);
         }
-        return p1 ~ sep ~ p2;
+        // more components present
+        return join(join(p1, p2), more[0], more[1 .. $]);
     }
-    // more components present
-    return join(join(p1, p2), more[0], more[1 .. $]);
-  }
-  version (Windows)
-  { // The other version fails unit testing when under windows
-    if (!p2.length)
-        return p1;
-    if (!p1.length)
-        return p2;
+    version (Windows)
+    { // The other version fails unit testing when under windows
+        if (!p2.length)
+            return p1.idup;
+        if (!p1.length)
+            return p2.idup;
 
-    string p;
-    string d1;
+        string p;
+        const(char)[] d1;
 
-    if (getDrive(p2))
-    {
-	p = p2;
+        if (getDrive(p2))
+        {
+            p = p2.idup;
+        }
+        else
+        {
+            d1 = getDrive(p1);
+            if (p1.length == d1.length)
+            {
+                p = cast(string) (p1 ~ p2);
+            }
+            else if (p2[0] == '\\')
+            {
+                if (d1.length == 0)
+                    p = p2.idup;
+                else if (p1[p1.length - 1] == '\\')
+                    p = cast(string) (p1 ~ p2[1 .. p2.length]);
+                else
+                    p = cast(string) (p1 ~ p2);
+            }
+            else if (p1[p1.length - 1] == '\\')
+            {
+                p = cast(string) (p1 ~ p2);
+            }
+            else
+            {
+                p = cast(string)(p1 ~ sep ~ p2);
+            }
+        }
+        return p;
     }
-    else
-    {
-	d1 = getDrive(p1);
-	if (p1.length == d1.length)
-	{
-	    p = p1 ~ p2;
-	}
-	else if (p2[0] == '\\')
-	{
-	    if (d1.length == 0)
-		p = p2;
-	    else if (p1[p1.length - 1] == '\\')
-		p = p1 ~ p2[1 .. p2.length];
-	    else
-		p = p1 ~ p2;
-	}
-	else if (p1[p1.length - 1] == '\\')
-	{
-	    p = p1 ~ p2;
-	}
-	else
-	{
-	    p = cast(string)(p1 ~ sep ~ p2);
-	}
-    }
-    return p;
-  }
 }
 
 unittest
@@ -900,7 +899,7 @@ bool fncharmatch(dchar c1, dchar c2)
  * -----
  */
 
-bool fnmatch(string filename, string pattern)
+bool fnmatch(in char[] filename, in char[] pattern)
     in
     {
 	// Verify that pattern[] is valid
