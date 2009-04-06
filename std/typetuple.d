@@ -71,14 +71,14 @@ template TypeTuple(TList...)
 template indexOf(T, TList...)
 {
     static if (TList.length == 0)
-	const int indexOf = -1;
+        enum int indexOf = -1;
     else static if (is(T == TList[0]))
-	const int indexOf = 0;
+        enum int indexOf = 0;
     else
-	const int indexOf =
-		(indexOf!(T, TList[1 .. length]) == -1)
-			? -1
-			: 1 + indexOf!(T, TList[1 .. length]);
+        enum int indexOf =
+            (indexOf!(T, TList[1 .. length]) == -1)
+            ? -1
+            : 1 + indexOf!(T, TList[1 .. length]);
 }
 
 /// Kept for backwards compatibility
@@ -257,3 +257,4 @@ template DerivedToFront(TList...)
 						    TList[0],
 						    TList[1 .. length]))) DerivedToFront;
 }
+
