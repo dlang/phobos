@@ -70,8 +70,8 @@ version (Posix)
 
         ulong st_ino64;
     }
-    int fstat64(int, struct_stat64*);
-    int stat64(in char*, struct_stat64*);
+    extern(C) int fstat64(int, struct_stat64*);
+    extern(C) int stat64(in char*, struct_stat64*);
 }
 // }}}
 
