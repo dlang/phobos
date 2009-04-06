@@ -565,10 +565,11 @@ unittest // by Dave
 
     // smallish buffers
     for(int idx = 0; idx < 25; idx++) {
-        char[] buf = new char[rand() % 100];
+        char[] buf = new char[uniform(0, 100)];
 
         // Alternate between more & less compressible
-        foreach(inout char c; buf) c = ' ' + (rand() % (idx % 2 ? 91 : 2));
+        foreach(ref char c; buf)
+            c = cast(char) (' ' + (uniform(0, idx % 2 ? 91 : 2)));
 
         if(CompressThenUncompress(cast(ubyte[])buf)) {
             debug(zlib) printf("; Success.\n");
@@ -579,10 +580,11 @@ unittest // by Dave
 
     // larger buffers
     for(int idx = 0; idx < 25; idx++) {
-        char[] buf = new char[rand() % 1000/*0000*/];
+        char[] buf = new char[uniform(0, 1000/*0000*/)];
 
         // Alternate between more & less compressible
-        foreach(inout char c; buf) c = ' ' + (rand() % (idx % 2 ? 91 : 10));
+        foreach(inout char c; buf)
+            c = cast(char) (' ' + (uniform(0, idx % 2 ? 91 : 10)));
 
         if(CompressThenUncompress(cast(ubyte[])buf)) {
             debug(zlib) printf("; Success.\n");
