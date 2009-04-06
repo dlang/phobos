@@ -95,6 +95,16 @@ class OutBuffer
 	    offset += bytes.length;
 	}
 
+    void write(in wchar[] chars)
+	{
+        write(cast(ubyte[]) chars);
+	}
+
+    void write(const(dchar)[] chars)
+	{
+        write(cast(ubyte[]) chars);
+	}
+
     void write(ubyte b)		/// ditto
 	{
 	    reserve(ubyte.sizeof);
@@ -104,12 +114,13 @@ class OutBuffer
 
     void write(byte b) { write(cast(ubyte)b); }		/// ditto
     void write(char c) { write(cast(ubyte)c); }		/// ditto
+    void write(dchar c) { write(cast(uint)c); }		/// ditto
 
     void write(ushort w)		/// ditto
     {
-	reserve(ushort.sizeof);
-	*cast(ushort *)&data[offset] = w;
-	offset += ushort.sizeof;
+        reserve(ushort.sizeof);
+        *cast(ushort *)&data[offset] = w;
+        offset += ushort.sizeof;
     }
 
     void write(short s) { write(cast(ushort)s); }		/// ditto
@@ -160,14 +171,18 @@ class OutBuffer
 	offset += real.sizeof;
     }
 
-    void write(string s)		/// ditto
+    void write(in char[] s)		/// ditto
     {
-	write(cast(ubyte[])s);
+        write(cast(ubyte[])s);
     }
+    // void write(immutable(char)[] s)		/// ditto
+    // {
+    //     write(cast(ubyte[])s);
+    // }
 
     void write(OutBuffer buf)		/// ditto
     {
-	write(buf.toBytes());
+        write(buf.toBytes());
     }
 
     /****************************************
@@ -330,9 +345,9 @@ unittest
     //printf("buf = %p\n", buf);
     //printf("buf.offset = %x\n", buf.offset);
     assert(buf.offset == 0);
-    buf.write("hello");
+    buf.write("hello"[]);
     buf.write(cast(byte)0x20);
-    buf.write("world");
+    buf.write("world"[]);
     buf.printf(" %d", 6);
     //printf("buf = '%.*s'\n", buf.toString());
     assert(cmp(buf.toString(), "hello world 6") == 0);
