@@ -43,13 +43,13 @@ import std.typecons;
 import std.algorithm;
 import std.array;
 
-
 version (DigitalMars)
 {
     version (Windows)
     {
         // Specific to the way Digital Mars C does stdio
         version = DIGITAL_MARS_STDIO;
+        import std.c.stdio : __fhnd_info, FHND_WCHAR;
     }
 }
 
@@ -62,6 +62,11 @@ version (linux)
 version (OSX)
 {
     version = GENERIC_IO;
+}
+
+version(Windows)
+{
+    alias core.stdc.stdio.fopen fopen64;
 }
 
 version (DIGITAL_MARS_STDIO)
@@ -631,7 +636,7 @@ File) never takes the initiative in closing the file. */
 /**
 Returns the file number corresponding to this object.
  */
-    int fileno() const
+    version(Posix) int fileno() const
     {
         enforce(p && p.handle,
                 "Attempting to call fileno() on an unopened file");
