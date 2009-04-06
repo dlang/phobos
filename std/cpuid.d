@@ -39,6 +39,7 @@ COPYRIGHT:	Public Domain
 module std.cpuid;
 
 import std.string;
+import std.conv;
 
 version(D_InlineAsm_X86)
 {
@@ -274,7 +275,7 @@ private:
 	    return;
 
 	// seems many intel processors prepend whitespace
-	processorStr = std.string.strip(std.string.toString(dst)).idup;
+	processorStr = std.string.strip(to!string(dst)).idup;
     }
 
     private void getFeatureFlags()
