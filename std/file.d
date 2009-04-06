@@ -38,20 +38,12 @@ WIKI = Phobos/StdFile
 module std.file;
 
 private import core.memory;
-private import std.c.stdio;
-private import std.c.stdlib;
-private import core.stdc.errno;
-private import std.path;
-private import std.string;
-private import std.regexp;
-private import std.c.string;
-private import std.traits;
-private import std.conv;
-private import std.contracts;
-private import std.utf;
-version (unittest) {
-    private import std.stdio; // for testing only
-}
+import std.algorithm, std.array, std.c.stdio, std.c.stdlib, std.c.string,
+    std.contracts, std.conv, std.format, std.path, std.range, std.regexp,
+    std.stdio, std.string, std.traits, std.typecons, std.utf;
+// version (unittest) {
+//     private import std.stdio; // for testing only
+// }
 
 /* =========================== Win32 ======================= */
 
@@ -77,18 +69,18 @@ class FileException : Exception
 
     this(string name)
     {
-	this(name, "file I/O");
+        this(name, "file I/O");
     }
 
     this(string name, string message)
     {
-	super(name ~ ": " ~ message);
+        super(name ~ ": " ~ message);
     }
 
     this(string name, uint errno)
     {
-	this(name, sysErrorString(errno));
-	this.errno = errno;
+        this(name, sysErrorString(errno));
+        this.errno = errno;
     }
 }
 
@@ -102,50 +94,41 @@ class FileException : Exception
  * Throws: $(D FileException) on error.
  */
 
-void[] read(in string name)
+void[] read(in char[] name)
 {
-    DWORD numread;
-    HANDLE h;
+    HANDLE h = void;
 
     if (useWfuncs)
     {
-	const(wchar*) namez = std.utf.toUTF16z(name);
-	h = CreateFileW(namez,GENERIC_READ,FILE_SHARE_READ,null,OPEN_EXISTING,
-	    FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,cast(HANDLE)null);
+        const(wchar*) namez = std.utf.toUTF16z(name);
+        h = CreateFileW(namez,GENERIC_READ,FILE_SHARE_READ,null,OPEN_EXISTING,
+                FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
+                cast(HANDLE)null);
     }
     else
     {
-	const(char*) namez = toMBSz(name);
-	h = CreateFileA(namez,GENERIC_READ,FILE_SHARE_READ,null,OPEN_EXISTING,
-	    FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,cast(HANDLE)null);
+        const(char*) namez = toMBSz(name);
+        h = CreateFileA(namez,GENERIC_READ,FILE_SHARE_READ,null,OPEN_EXISTING,
+                FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
+                cast(HANDLE)null);
     }
 
-    if (h == INVALID_HANDLE_VALUE)
-	goto err1;
+    enforce(h != INVALID_HANDLE_VALUE,
+            new FileException(name.idup, GetLastError));
+    scope(exit) CloseHandle(h);
 
     auto size = GetFileSize(h, null);
-    if (size == INVALID_FILE_SIZE)
-	goto err2;
+    enforce(size != INVALID_FILE_SIZE,
+            new FileException(name.idup, GetLastError));
 
     auto buf = GC.malloc(size, GC.BlkAttr.NO_SCAN)[0 .. size];
+    scope(failure) delete buf;
 
-    if (ReadFile(h,buf.ptr,size,&numread,null) != 1)
-	goto err2;
-
-    if (numread != size)
-	goto err2;
-
-    if (!CloseHandle(h))
-	goto err;
-
+    DWORD numread;
+    enforce(ReadFile(h,buf.ptr, size, &numread, null) == 1
+            && numread == size,
+            new FileException(name.idup, GetLastError));
     return buf[0 .. size];
-
-err2:
-    CloseHandle(h);
-err:
-    delete buf;
-err1:
-    throw new FileException(name, GetLastError());
 }
 
 /*********************************************
@@ -153,40 +136,42 @@ err1:
  * Throws: $(D FileException) on error.
  */
 
-void write(in string name, const void[] buffer)
+void write(in char[] name, const void[] buffer)
 {
-    HANDLE h;
-    DWORD numwritten;
-
+    HANDLE h = void;
+    
     if (useWfuncs)
     {
-	const(wchar*) namez = std.utf.toUTF16z(name);
-	h = CreateFileW(namez,GENERIC_WRITE,0,null,CREATE_ALWAYS,
-	    FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,cast(HANDLE)null);
+        auto namez = std.utf.toUTF16z(name);
+        h = CreateFileW(namez,GENERIC_WRITE,0,null,CREATE_ALWAYS,
+                FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
+                cast(HANDLE)null);
     }
     else
     {
-	const(char*) namez = toMBSz(name);
-	h = CreateFileA(namez,GENERIC_WRITE,0,null,CREATE_ALWAYS,
-	    FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,cast(HANDLE)null);
+        auto namez = toMBSz(name);
+        h = CreateFileA(namez,GENERIC_WRITE,0,null,CREATE_ALWAYS,
+                FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
+                cast(HANDLE)null);
     }
     if (h == INVALID_HANDLE_VALUE)
-	goto err;
+        goto err;
 
+    DWORD numwritten;
     if (WriteFile(h,buffer.ptr,buffer.length,&numwritten,null) != 1)
-	goto err2;
+        goto err2;
 
     if (buffer.length != numwritten)
-	goto err2;
+        goto err2;
 
     if (!CloseHandle(h))
-	goto err;
+        goto err;
     return;
 
-err2:
+  err2:
     CloseHandle(h);
-err:
-    throw new FileException(name, GetLastError());
+  err:
+    throw new FileException(name.idup, GetLastError());
 }
 
 
@@ -195,7 +180,7 @@ err:
  * Throws: $(D FileException) on error.
  */
 
-void append(in string name, in void[] buffer)
+void append(in char[] name, in void[] buffer)
 {
     HANDLE h;
     DWORD numwritten;
@@ -230,7 +215,7 @@ void append(in string name, in void[] buffer)
 err2:
     CloseHandle(h);
 err:
-    throw new FileException(name, GetLastError());
+    throw new FileException(name.idup, GetLastError());
 }
 
 
@@ -239,68 +224,66 @@ err:
  * Throws: $(D FileException) on error.
  */
 
-void rename(in string from, in string to)
+void rename(in char[] from, in char[] to)
 {
     BOOL result = void;
 
     if (useWfuncs)
-	result = MoveFileW(std.utf.toUTF16z(from), std.utf.toUTF16z(to));
+        result = MoveFileW(std.utf.toUTF16z(from), std.utf.toUTF16z(to));
     else
-	result = MoveFileA(toMBSz(from), toMBSz(to));
+        result = MoveFileA(toMBSz(from), toMBSz(to));
     if (!result)
-	throw new FileException(to, GetLastError());
+        throw new FileException(to.idup, GetLastError());
 }
-
 
 /***************************************************
  * Delete file name[].
  * Throws: $(D FileException) on error.
  */
 
-void remove(in string name)
+void remove(in char[] name)
 {
     BOOL result = void;
 
     if (useWfuncs)
-	result = DeleteFileW(std.utf.toUTF16z(name));
+        result = DeleteFileW(std.utf.toUTF16z(name));
     else
-	result = DeleteFileA(toMBSz(name));
+        result = DeleteFileA(toMBSz(name));
     if (!result)
-	throw new FileException(name, GetLastError());
+        throw new FileException(name.idup, GetLastError());
 }
-
 
 /***************************************************
  * Get size of file name[].
  * Throws: $(D FileException) on error.
  */
 
-ulong getSize(in string name)
+ulong getSize(in char[] name)
 {
-    HANDLE findhndl;
-    uint resulth;
-    uint resultl;
+    HANDLE findhndl = void;
+    uint resulth = void;
+    uint resultl = void;
 
     if (useWfuncs)
     {
-	WIN32_FIND_DATAW filefindbuf;
+        WIN32_FIND_DATAW filefindbuf;
 
-	findhndl = FindFirstFileW(std.utf.toUTF16z(name), &filefindbuf);
-	resulth = filefindbuf.nFileSizeHigh;
-	resultl = filefindbuf.nFileSizeLow;
+        findhndl = FindFirstFileW(std.utf.toUTF16z(name), &filefindbuf);
+        resulth = filefindbuf.nFileSizeHigh;
+        resultl = filefindbuf.nFileSizeLow;
     }
     else
     {
-	WIN32_FIND_DATA filefindbuf = void;
+        WIN32_FIND_DATA filefindbuf;
 
-	findhndl = FindFirstFileA(toMBSz(name), &filefindbuf);
-	resulth = filefindbuf.nFileSizeHigh;
-	resultl = filefindbuf.nFileSizeLow;
+        findhndl = FindFirstFileA(toMBSz(name), &filefindbuf);
+        resulth = filefindbuf.nFileSizeHigh;
+        resultl = filefindbuf.nFileSizeLow;
     }
 
     if (findhndl == cast(HANDLE)-1)
     {
-	throw new FileException(name, GetLastError());
+        throw new FileException(name.idup, GetLastError());
     }
     FindClose(findhndl);
     return (cast(ulong)resulth << 32) + resultl;
@@ -311,32 +294,32 @@ ulong getSize(in string name)
  * Throws: $(D FileException) on error.
  */
 
-void getTimes(in string name, out d_time ftc, out d_time fta, out d_time ftm)
+void getTimes(in char[] name, out d_time ftc, out d_time fta, out d_time ftm)
 {
-    HANDLE findhndl;
+    HANDLE findhndl = void;
 
     if (useWfuncs)
     {
-	WIN32_FIND_DATAW filefindbuf;
+        WIN32_FIND_DATAW filefindbuf;
 
-	findhndl = FindFirstFileW(std.utf.toUTF16z(name), &filefindbuf);
-	ftc = std.date.FILETIME2d_time(&filefindbuf.ftCreationTime);
-	fta = std.date.FILETIME2d_time(&filefindbuf.ftLastAccessTime);
-	ftm = std.date.FILETIME2d_time(&filefindbuf.ftLastWriteTime);
+        findhndl = FindFirstFileW(std.utf.toUTF16z(name), &filefindbuf);
+        ftc = std.date.FILETIME2d_time(&filefindbuf.ftCreationTime);
+        fta = std.date.FILETIME2d_time(&filefindbuf.ftLastAccessTime);
+        ftm = std.date.FILETIME2d_time(&filefindbuf.ftLastWriteTime);
     }
     else
     {
-	WIN32_FIND_DATA filefindbuf = void;
+        WIN32_FIND_DATA filefindbuf;
 
-	findhndl = FindFirstFileA(toMBSz(name), &filefindbuf);
-	ftc = std.date.FILETIME2d_time(&filefindbuf.ftCreationTime);
-	fta = std.date.FILETIME2d_time(&filefindbuf.ftLastAccessTime);
-	ftm = std.date.FILETIME2d_time(&filefindbuf.ftLastWriteTime);
+        findhndl = FindFirstFileA(toMBSz(name), &filefindbuf);
+        ftc = std.date.FILETIME2d_time(&filefindbuf.ftCreationTime);
+        fta = std.date.FILETIME2d_time(&filefindbuf.ftLastAccessTime);
+        ftm = std.date.FILETIME2d_time(&filefindbuf.ftLastWriteTime);
     }
 
     if (findhndl == cast(HANDLE)-1)
     {
-	throw new FileException(name, GetLastError());
+        throw new FileException(name.idup, GetLastError());
     }
     FindClose(findhndl);
 }
@@ -352,10 +335,10 @@ bool exists(in string name)
     uint result;
 
     if (useWfuncs)
-	// http://msdn.microsoft.com/library/default.asp?url=/library/en-us/fileio/base/getfileattributes.asp
-	result = GetFileAttributesW(std.utf.toUTF16z(name));
+        // http://msdn.microsoft.com/library/default.asp?url=/library/en-us/fileio/base/getfileattributes.asp
+        result = GetFileAttributesW(std.utf.toUTF16z(name));
     else
-	result = GetFileAttributesA(toMBSz(name));
+        result = GetFileAttributesA(toMBSz(name));
 
     return result != 0xFFFFFFFF;
 }
@@ -365,17 +348,17 @@ bool exists(in string name)
  * Throws: $(D FileException) on error.
  */
 
-uint getAttributes(string name)
+uint getAttributes(in char[] name)
 {
-    uint result;
+    uint result = void;
 
     if (useWfuncs)
-	result = GetFileAttributesW(std.utf.toUTF16z(name));
+        result = GetFileAttributesW(std.utf.toUTF16z(name));
     else
-	result = GetFileAttributesA(toMBSz(name));
-    if (result == 0xFFFFFFFF)
+        result = GetFileAttributesA(toMBSz(name));
+    if (result == uint.max)
     {
-	throw new FileException(name, GetLastError());
+        throw new FileException(name.idup, GetLastError());
     }
     return result;
 }
@@ -385,7 +368,7 @@ uint getAttributes(string name)
  * Throws: $(D FileException) if name[] doesn't exist.
  */
 
-bool isfile(in string name)
+bool isfile(in char[] name)
 {
     return (getAttributes(name) & FILE_ATTRIBUTE_DIRECTORY) == 0;
 }
@@ -395,7 +378,7 @@ bool isfile(in string name)
  * Throws: $(D FileException) if name[] doesn't exist.
  */
 
-bool isdir(in string name)
+bool isdir(in char[] name)
 {
     return (getAttributes(name) & FILE_ATTRIBUTE_DIRECTORY) != 0;
 }
@@ -405,17 +388,18 @@ bool isdir(in string name)
  * Throws: $(D FileException) on error.
  */
 
-void chdir(in string pathname)
-{   BOOL result;
+void chdir(in char[] pathname)
+{
+    BOOL result = void;
 
     if (useWfuncs)
-	result = SetCurrentDirectoryW(std.utf.toUTF16z(pathname));
+        result = SetCurrentDirectoryW(std.utf.toUTF16z(pathname));
     else
-	result = SetCurrentDirectoryA(toMBSz(pathname));
+        result = SetCurrentDirectoryA(toMBSz(pathname));
 
     if (!result)
     {
-	throw new FileException(pathname, GetLastError());
+        throw new FileException(pathname.idup, GetLastError());
     }
 }
 
@@ -424,17 +408,18 @@ void chdir(in string pathname)
  * Throws: $(D FileException) on error.
  */
 
-void mkdir(in string pathname)
-{   BOOL result = void;
+void mkdir(in char[] pathname)
+{
+    BOOL result = void;
 
     if (useWfuncs)
-	result = CreateDirectoryW(std.utf.toUTF16z(pathname), null);
+        result = CreateDirectoryW(std.utf.toUTF16z(pathname), null);
     else
-	result = CreateDirectoryA(toMBSz(pathname), null);
+        result = CreateDirectoryA(toMBSz(pathname), null);
 
     if (!result)
     {
-	throw new FileException(pathname, GetLastError());
+        throw new FileException(pathname.idup, GetLastError());
     }
 }
 
@@ -442,9 +427,9 @@ void mkdir(in string pathname)
  * Make directory and all parent directories as needed.
  */
 
-void mkdirRecurse(string pathname)
+void mkdirRecurse(in char[] pathname)
 {
-    invariant left = dirname(pathname);
+    const left = dirname(pathname);
     exists(left) || mkdirRecurse(left);
     mkdir(pathname);
 }
@@ -454,18 +439,15 @@ void mkdirRecurse(string pathname)
  * Throws: $(D FileException) on error.
  */
 
-void rmdir(in string pathname)
-{   BOOL result = void;
-
+void rmdir(in char[] pathname)
+{
+    BOOL result = void;
     if (useWfuncs)
-	result = RemoveDirectoryW(std.utf.toUTF16z(pathname));
+        result = RemoveDirectoryW(std.utf.toUTF16z(pathname));
     else
-	result = RemoveDirectoryA(toMBSz(pathname));
+        result = RemoveDirectoryA(toMBSz(pathname));
 
-    if (!result)
-    {
-	throw new FileException(pathname, GetLastError());
-    }
+    enforce(result, new FileException(pathname.idup, GetLastError));
 }
 
 /****************************************************
@@ -543,32 +525,32 @@ struct DirEntry
     d_time lastWriteTime = d_time_nan;	/// time file was last written to
     uint attributes;		// Windows file attributes OR'd together
 
-    void init(string path, in WIN32_FIND_DATA *fd)
+    void init(in char[] path, in WIN32_FIND_DATA *fd)
     {
-	wchar[] wbuf;
-	size_t clength;
-	size_t wlength;
-	size_t n;
+        wchar[] wbuf;
+        size_t clength;
+        size_t wlength;
+        size_t n;
 
-	clength = std.c.string.strlen(fd.cFileName.ptr);
+        clength = std.c.string.strlen(fd.cFileName.ptr);
 
-	// Convert cFileName[] to unicode
-	wlength = MultiByteToWideChar(0,0,fd.cFileName.ptr,clength,null,0);
-	if (wlength > wbuf.length)
-	    wbuf.length = wlength;
-	n = MultiByteToWideChar(0,0,fd.cFileName.ptr,clength,cast(wchar*)wbuf,wlength);
-	assert(n == wlength);
-	// toUTF8() returns a new buffer
-	name = std.path.join(path, std.utf.toUTF8(wbuf[0 .. wlength]));
+        // Convert cFileName[] to unicode
+        wlength = MultiByteToWideChar(0,0,fd.cFileName.ptr,clength,null,0);
+        if (wlength > wbuf.length)
+            wbuf.length = wlength;
+        n = MultiByteToWideChar(0,0,fd.cFileName.ptr,clength,cast(wchar*)wbuf,wlength);
+        assert(n == wlength);
+        // toUTF8() returns a new buffer
+        name = std.path.join(path, std.utf.toUTF8(wbuf[0 .. wlength]));
 
-	size = (cast(ulong)fd.nFileSizeHigh << 32) | fd.nFileSizeLow;
-	creationTime = std.date.FILETIME2d_time(&fd.ftCreationTime);
-	lastAccessTime = std.date.FILETIME2d_time(&fd.ftLastAccessTime);
-	lastWriteTime = std.date.FILETIME2d_time(&fd.ftLastWriteTime);
-	attributes = fd.dwFileAttributes;
+        size = (cast(ulong)fd.nFileSizeHigh << 32) | fd.nFileSizeLow;
+        creationTime = std.date.FILETIME2d_time(&fd.ftCreationTime);
+        lastAccessTime = std.date.FILETIME2d_time(&fd.ftLastAccessTime);
+        lastWriteTime = std.date.FILETIME2d_time(&fd.ftLastWriteTime);
+        attributes = fd.dwFileAttributes;
     }
 
-    void init(string path, in WIN32_FIND_DATAW *fd)
+    void init(in char[] path, in WIN32_FIND_DATAW *fd)
     {
 	size_t clength = std.string.wcslen(fd.cFileName.ptr);
 	name = std.path.join(path, std.utf.toUTF8(fd.cFileName[0 .. clength]));
@@ -618,14 +600,14 @@ struct DirEntry
  * ----
  */
 
-string[] listdir(string pathname)
+string[] listdir(in char[] pathname)
 {
     string[] result;
-
+    
     bool listing(string filename)
     {
-	result ~= filename;
-	return true; // continue
+        result ~= filename;
+        return true; // continue
     }
 
     listdir(pathname, &listing);
@@ -674,7 +656,7 @@ string[] listdir(string pathname)
  * ----
  */
 
-string[] listdir(string pathname, string pattern)
+string[] listdir(in char[] pathname, in char[] pattern)
 {   string[] result;
 
     bool callback(DirEntry* de)
@@ -694,7 +676,7 @@ string[] listdir(string pathname, string pattern)
 
 /** Ditto */
 
-string[] listdir(string pathname, RegExp r)
+string[] listdir(in char[] pathname, RegExp r)
 {   string[] result;
 
     bool callback(DirEntry* de)
@@ -752,11 +734,11 @@ string[] listdir(string pathname, RegExp r)
  * ----
  */
 
-void listdir(in string pathname, bool delegate(string filename) callback)
+void listdir(in char[] pathname, bool delegate(string filename) callback)
 {
     bool listing(DirEntry* de)
     {
-	return callback(std.path.getBaseName(de.name));
+        return callback(std.path.getBaseName(de.name));
     }
 
     listdir(pathname, &listing);
@@ -798,7 +780,7 @@ void listdir(in string pathname, bool delegate(string filename) callback)
  * ----
  */
 
-void listdir(in string pathname, bool delegate(DirEntry* de) callback)
+void listdir(in char[] pathname, bool delegate(DirEntry* de) callback)
 {
     string c;
     HANDLE h;
@@ -807,57 +789,57 @@ void listdir(in string pathname, bool delegate(DirEntry* de) callback)
     c = std.path.join(pathname, "*.*");
     if (useWfuncs)
     {
-	WIN32_FIND_DATAW fileinfo;
+        WIN32_FIND_DATAW fileinfo;
 
-	h = FindFirstFileW(std.utf.toUTF16z(c), &fileinfo);
-	if (h != INVALID_HANDLE_VALUE)
-	{
-	    try
-	    {
-		do
-		{
-		    // Skip "." and ".."
-		    if (std.string.wcscmp(fileinfo.cFileName.ptr, ".") == 0 ||
-			std.string.wcscmp(fileinfo.cFileName.ptr, "..") == 0)
-			continue;
+        h = FindFirstFileW(std.utf.toUTF16z(c), &fileinfo);
+        if (h != INVALID_HANDLE_VALUE)
+        {
+            try
+            {
+                do
+                {
+                    // Skip "." and ".."
+                    if (std.string.wcscmp(fileinfo.cFileName.ptr, ".") == 0 ||
+                            std.string.wcscmp(fileinfo.cFileName.ptr, "..") == 0)
+                        continue;
 
-		    de.init(pathname, &fileinfo);
-		    if (!callback(&de))
-			break;
-		} while (FindNextFileW(h,&fileinfo) != FALSE);
-	    }
-	    finally
-	    {
-		FindClose(h);
-	    }
-	}
+                    de.init(pathname, &fileinfo);
+                    if (!callback(&de))
+                        break;
+                } while (FindNextFileW(h,&fileinfo) != FALSE);
+            }
+            finally
+            {
+                FindClose(h);
+            }
+        }
     }
     else
     {
-	WIN32_FIND_DATA fileinfo = void;
+        WIN32_FIND_DATA fileinfo;
 
-	h = FindFirstFileA(toMBSz(c), &fileinfo);
-	if (h != INVALID_HANDLE_VALUE)	// should we throw exception if invalid?
-	{
-	    try
-	    {
-		do
-		{
-		    // Skip "." and ".."
-		    if (std.c.string.strcmp(fileinfo.cFileName.ptr, ".") == 0 ||
-			std.c.string.strcmp(fileinfo.cFileName.ptr, "..") == 0)
-			continue;
+        h = FindFirstFileA(toMBSz(c), &fileinfo);
+        if (h != INVALID_HANDLE_VALUE)	// should we throw exception if invalid?
+        {
+            try
+            {
+                do
+                {
+                    // Skip "." and ".."
+                    if (std.c.string.strcmp(fileinfo.cFileName.ptr, ".") == 0 ||
+                            std.c.string.strcmp(fileinfo.cFileName.ptr, "..") == 0)
+                        continue;
 
-		    de.init(pathname, &fileinfo);
-		    if (!callback(&de))
-			break;
-		} while (FindNextFileA(h,&fileinfo) != FALSE);
-	    }
-	    finally
-	    {
-		FindClose(h);
-	    }
-	}
+                    de.init(pathname, &fileinfo);
+                    if (!callback(&de))
+                        break;
+                } while (FindNextFileA(h,&fileinfo) != FALSE);
+            }
+            finally
+            {
+                FindClose(h);
+            }
+        }
     }
 }
 
@@ -869,23 +851,20 @@ void listdir(in string pathname, bool delegate(DirEntry* de) callback)
  * Deprecated: use std.windows.charset.toMBSz instead.
  */
 
-const(char)* toMBSz(in string s)
-{
-    return std.windows.charset.toMBSz(s);
-}
+alias std.windows.charset.toMBSz toMBSz;
 
 
 /***************************************************
  * Copy a file from[] to[].
  */
 
-void copy(in string from, in string to)
+void copy(in char[] from, in char[] to)
 {
     invariant result = useWfuncs
-	? CopyFileW(std.utf.toUTF16z(from), std.utf.toUTF16z(to), false)
+        ? CopyFileW(std.utf.toUTF16z(from), std.utf.toUTF16z(to), false)
         : CopyFileA(toMBSz(from), toMBSz(to), false);
     if (!result)
-         throw new FileException(to, GetLastError);
+        throw new FileException(to.idup, GetLastError);
 }
 
 
@@ -912,26 +891,31 @@ class FileException : Exception
 
     this(string name)
     {
-	this(name, "file I/O");
+        this(name, "file I/O");
     }
 
-    this(string name, string message)
+    this(in char[] name, in char[] message)
     {
-	super(name ~ ": " ~ message);
+        super(cast(string) name ~ ": " ~ cast(string) message);
     }
 
-    this(string name, uint errno)
+    this(in char[] name, uint errno)
     {
         char[1024] buf = void;
-	auto s = strerror_r(errno, buf.ptr, buf.length);
-	this(name, std.string.toString(s));
-	this.errno = errno;
+        auto s = strerror_r(errno, buf.ptr, buf.length);
+        this(name, to!string(s));
+        this.errno = errno;
     }
 }
 
-private T cenforce(T)(T condition, lazy const(char)[] name)
+private T cenforce(T, string file = __FILE__, uint line = __LINE__)
+    (T condition, lazy const(char)[] name)
 {
-    if (!condition) throw new FileException(name.idup, errno);
+    if (!condition)
+    {
+        throw new FileException(
+            text("In ", file, "(", line, "), data file ", name), .getErrno);
+    }
     return condition;
 }
 
@@ -942,62 +926,57 @@ private T cenforce(T)(T condition, lazy const(char)[] name)
  *	array of bytes read
  */
 
-void[] read(string name)
+void[] read(in char[] name, size_t upTo = size_t.max)
 {
-    invariant fd = core.sys.posix.fcntl.open(toStringz(name), O_RDONLY);
+    // A few internal configuration parameters {
+    enum size_t
+        minInitialAlloc = 1024 * 4,
+        maxInitialAlloc = size_t.max / 2,
+        sizeIncrement = 1024 * 16,
+        maxSlackMemoryAllowed = 1024;
+    // }
+    
+    immutable fd = core.sys.posix.fcntl.open(toStringz(name), O_RDONLY);
     cenforce(fd != -1, name);
     scope(exit) core.sys.posix.unistd.close(fd);
 
-    stat_t statbuf = void;
-    cenforce(core.sys.posix.sys.stat.fstat(fd, &statbuf) == 0, name);
+    struct_stat64 statbuf = void;
+    cenforce(std.c.linux.linux.fstat64(fd, &statbuf) == 0, name);
+    //cenforce(core.sys.posix.sys.stat.fstat(fd, &statbuf) == 0, name);
 
-    void[] buf;
-    auto size = statbuf.st_size;
-    if (size == 0)
-    {	/* The size could be 0 if the file is a device or a procFS file,
-	 * so we just have to try reading it.
-	 */
-	int readsize = 1024;
-	while (1)
-	{
-	    buf = GC.realloc(buf.ptr, size + readsize, GC.BlkAttr.NO_SCAN)[0 .. cast(int)size + readsize];
-	    enforce(buf, "Out of memory");
-	    scope(failure) delete buf;
+    immutable initialAlloc = statbuf.st_size
+        ? min(statbuf.st_size + 1, maxInitialAlloc)
+        : minInitialAlloc;
+    auto result = GC.malloc(initialAlloc, GC.BlkAttr.NO_SCAN)
+        [0 .. initialAlloc];
+    scope(failure) delete result;
+    size_t size = 0;
 
-	    auto toread = readsize;
-	    while (toread)
-	    {
-		auto numread = core.sys.posix.unistd.read(fd, buf.ptr + size, toread);
-		cenforce(numread != -1, name);
-		size += numread;
-		if (numread == 0)
-		{   if (size == 0)			// it really was 0 size
-			delete buf;			// don't need the buffer
-		    return buf[0 .. size];		// end of file
-		}
-		toread -= numread;
-	    }
-	}
-    }
-    else
+    for (;;)
     {
-	buf = GC.malloc(size, GC.BlkAttr.NO_SCAN)[0 .. size];
-	enforce(buf, "Out of memory");
-	scope(failure) delete buf;
-
-	cenforce(core.sys.posix.unistd.read(fd, buf.ptr, size) == size, name);
-
-	return buf[0 .. size];
+        immutable actual = std.c.linux.linux.read(fd, result.ptr + size,
+                min(result.length, upTo) - size);
+        cenforce(actual != -1, name);
+        if (actual == 0) break;
+        size += actual;
+        if (size < result.length) continue;
+        immutable newAlloc = size + sizeIncrement;
+        result = GC.realloc(result.ptr, newAlloc, GC.BlkAttr.NO_SCAN)
+            [0 .. newAlloc];
     }
+
+    return result.length - size >= maxSlackMemoryAllowed
+        ? GC.realloc(result.ptr, size, GC.BlkAttr.NO_SCAN)[0 .. size]
+        : result[0 .. size];
 }
 
 unittest
 {
     version (linux)
     {	// A file with "zero" length that doesn't have 0 length at all
-	char[] s = cast(char[])std.file.read("/proc/sys/kernel/osrelease");
-	assert(s.length > 0);
-	//writefln("'%s'", s);
+        char[] s = cast(char[])std.file.read("/proc/sys/kernel/osrelease");
+        assert(s.length > 0);
+        //writefln("'%s'", s);
     }
 }
 
@@ -1013,15 +992,22 @@ unittest
  */
 
 S readText(S = string)(in string name)
+>>>>>>> .r1020
 {
-    auto result = cast(S) read(name);
-    std.utf.validate(result);
-    return result;
+    auto oddfile = "/proc/sys/kernel/osrelease";
+    if (exists(oddfile))
+    {
+        auto c = cast(char[]) read(oddfile);
+        assert(c.length > 0);
+        //std.stdio.write(c);
+    }
+    auto rnd = cast(int[]) read("/dev/urandom", 4 * 121);
+    assert(rnd.length == 121);
 }
 
 // Implementation helper for write and append
 
-private void writeImpl(in string name, in void[] buffer, in uint mode)
+private void writeImpl(in char[] name, in void[] buffer, in uint mode)
 {
     invariant fd = core.sys.posix.fcntl.open(toStringz(name),
             mode, 0660);
@@ -1039,7 +1025,7 @@ private void writeImpl(in string name, in void[] buffer, in uint mode)
  * Write a file.
  */
 
-void write(in string name, in void[] buffer)
+void write(in char[] name, in void[] buffer)
 {
     return writeImpl(name, buffer, O_CREAT | O_WRONLY | O_TRUNC);
 }
@@ -1048,7 +1034,7 @@ void write(in string name, in void[] buffer)
  * Append to a file.
  */
 
-void append(in string name, in void[] buffer)
+void append(in char[] name, in void[] buffer)
 {
     return writeImpl(name, buffer, O_APPEND | O_WRONLY | O_CREAT);
 }
@@ -1057,7 +1043,7 @@ void append(in string name, in void[] buffer)
  * Rename a file.
  */
 
-void rename(in string from, in string to)
+void rename(in char[] from, in char[] to)
 {
     cenforce(std.c.stdio.rename(toStringz(from), toStringz(to)) == 0, to);
 }
@@ -1066,7 +1052,7 @@ void rename(in string from, in string to)
  * Delete a file.
  */
 
-void remove(in string name)
+void remove(in char[] name)
 {
     cenforce(std.c.stdio.remove(toStringz(name)) == 0, name);
 }
@@ -1076,10 +1062,15 @@ void remove(in string name)
  * Get file size.
  */
 
-ulong getSize(in string name)
+ulong getSize(in char[] name)
 {
+<<<<<<< .mine
+    struct_stat64 statbuf = void;
+    cenforce(std.c.linux.linux.stat64(toStringz(name), &statbuf) == 0, name);
+=======
     stat_t statbuf = void;
     cenforce(core.sys.posix.sys.stat.stat(toStringz(name), &statbuf) == 0, name);
+>>>>>>> .r1020
     return statbuf.st_size;
 }
 
@@ -1088,7 +1079,7 @@ unittest
     scope(exit) system("rm -f /tmp/deleteme");
     // create a file of size 1
     assert(system("echo > /tmp/deleteme") == 0);
-    assert(getSize("/tmp/deleteme") == 1);
+    assert(getSize("/tmp/deleteme") == 1, text(getSize("/tmp/deleteme")));
     // create a file of size 3
     assert(system("echo ab > /tmp/deleteme") == 0);
     assert(getSize("/tmp/deleteme") == 3);
@@ -1098,10 +1089,15 @@ unittest
  * Get file attributes.
  */
 
-uint getAttributes(in string name)
+uint getAttributes(in char[] name)
 {
+<<<<<<< .mine
+    struct_stat64 statbuf = void;
+    cenforce(std.c.linux.linux.stat64(toStringz(name), &statbuf) == 0, name);
+=======
     stat_t statbuf = void;
     cenforce(core.sys.posix.sys.stat.stat(toStringz(name), &statbuf) == 0, name);
+>>>>>>> .r1020
     return statbuf.st_mode;
 }
 
@@ -1110,13 +1106,21 @@ uint getAttributes(in string name)
  * Throws: $(D FileException) on error.
  */
 
-void getTimes(in string name, out d_time ftc, out d_time fta, out d_time ftm)
+void getTimes(in char[] name, out d_time ftc, out d_time fta, out d_time ftm)
 {
+<<<<<<< .mine
+    struct_stat64 statbuf = void;
+    cenforce(std.c.linux.linux.stat64(toStringz(name), &statbuf) == 0, name);
+    ftc = cast(d_time) statbuf.st_ctime * std.date.TicksPerSecond;
+    fta = cast(d_time) statbuf.st_atime * std.date.TicksPerSecond;
+    ftm = cast(d_time) statbuf.st_mtime * std.date.TicksPerSecond;
+=======
     stat_t statbuf = void;
     cenforce(core.sys.posix.sys.stat.stat(toStringz(name), &statbuf) == 0, name);
 	ftc = cast(d_time) statbuf.st_ctime * std.date.TicksPerSecond;
 	fta = cast(d_time) statbuf.st_atime * std.date.TicksPerSecond;
 	ftm = cast(d_time) statbuf.st_mtime * std.date.TicksPerSecond;
+>>>>>>> .r1020
 }
 
 /*************************
@@ -1124,7 +1128,7 @@ void getTimes(in string name, out d_time ftc, out d_time fta, out d_time ftm)
  * Throws: $(D FileException) on error.
  */
 
-void setTimes(in string name, d_time fta, d_time ftm)
+void setTimes(in char[] name, d_time fta, d_time ftm)
 {
     version (linux)
     {
@@ -1135,12 +1139,15 @@ version (none) // does not compile
         //     cast(__time_t) (ftm / std.date.TicksPerSecond) };
         // enforce(utime(toStringz(name), &times) == 0);
         timeval[2] t = void;
-        t[0].tv_sec = fta / std.date.TicksPerSecond;
-        t[0].tv_usec = cast(long) ((cast(double) fta / std.date.TicksPerSecond)
-                * 1_000_000) % 1_000_000;
-        t[1].tv_sec = ftm / std.date.TicksPerSecond;
-        t[1].tv_usec = cast(long) ((cast(double) ftm / std.date.TicksPerSecond)
-                * 1_000_000) % 1_000_000;
+        t[0].tv_sec = to!int(fta / std.date.TicksPerSecond);
+        // @@@
+        t[0].tv_usec = cast(int)
+            (cast(long) ((cast(double) fta / std.date.TicksPerSecond)
+                    * 1_000_000) % 1_000_000);
+        t[1].tv_sec = to!int(ftm / std.date.TicksPerSecond);
+        t[1].tv_usec = cast(int)
+            (cast(long) ((cast(double) ftm / std.date.TicksPerSecond)
+                    * 1_000_000) % 1_000_000);
         enforce(utime(toStringz(name), t.ptr) == 0);
 }
 else
@@ -1172,10 +1179,15 @@ unittest
    file does not exist, throws a $(D FileException).
 */
 
-d_time lastModified(in string name)
+d_time lastModified(in char[] name)
 {
+<<<<<<< .mine
+    struct_stat64 statbuf = void;
+    cenforce(std.c.linux.linux.stat64(toStringz(name), &statbuf) == 0, name);
+=======
     stat_t statbuf = void;
     cenforce(core.sys.posix.sys.stat.stat(toStringz(name), &statbuf) == 0, name);
+>>>>>>> .r1020
     return cast(d_time) statbuf.st_mtime * std.date.TicksPerSecond;
 }
 
@@ -1207,10 +1219,15 @@ correctly prompts building it.
 
 */
 
-d_time lastModified(string name, d_time returnIfMissing)
+d_time lastModified(in char[] name, d_time returnIfMissing)
 {
+<<<<<<< .mine
+    struct_stat64 statbuf = void;
+    return std.c.linux.linux.stat64(toStringz(name), &statbuf) != 0
+=======
     stat_t statbuf = void;
     return core.sys.posix.sys.stat.stat(toStringz(name), &statbuf) != 0
+>>>>>>> .r1020
         ? returnIfMissing
         : cast(d_time) statbuf.st_mtime * std.date.TicksPerSecond;
 }
@@ -1246,16 +1263,16 @@ unittest
  * Is name a file?
  */
 
-bool isfile(in string name)
+bool isfile(in char[] name)
 {
     return (getAttributes(name) & S_IFMT) == S_IFREG;	// regular file
 }
 
 /****************************************************
- * Is name a directory?
+ * * Is name a directory?
  */
 
-bool isdir(in string name)
+bool isdir(in char[] name)
 {
     return (getAttributes(name) & S_IFMT) == S_IFDIR;
 }
@@ -1264,7 +1281,7 @@ bool isdir(in string name)
  * Change directory.
  */
 
-void chdir(string pathname)
+void chdir(in char[] pathname)
 {
     cenforce(core.sys.posix.unistd.chdir(toStringz(pathname)) == 0, pathname);
 }
@@ -1284,7 +1301,11 @@ void mkdir(in char[] pathname)
 
 void mkdirRecurse(in char[] pathname)
 {
+<<<<<<< .mine
+    const left = dirname(pathname);
+=======
     auto left = dirname(pathname);
+>>>>>>> .r1020
     exists(left) || mkdirRecurse(left);
     mkdir(pathname);
 }
@@ -1293,7 +1314,7 @@ void mkdirRecurse(in char[] pathname)
  * Remove directory.
  */
 
-void rmdir(string pathname)
+void rmdir(in char[] pathname)
 {
     cenforce(core.sys.posix.unistd.rmdir(toStringz(pathname)) == 0, pathname);
 }
@@ -1303,10 +1324,10 @@ Remove directory and all of its content and subdirectories,
 recursively.
  */
 
-void rmdirRecurse(string pathname)
+void rmdirRecurse(in char[] pathname)
 {
     // all children, recursively depth-first
-    foreach (DirEntry e; dirEntries(pathname, SpanMode.depth))
+    foreach (DirEntry e; dirEntries(pathname.idup, SpanMode.depth))
     {
         e.isdir ? rmdir(e.name) : remove(e.name);
     }
@@ -1342,71 +1363,88 @@ string getcwd()
 struct DirEntry
 {
     string name;			/// file or directory name
-    ulong _size = ~0UL;			// size of file in bytes
-    d_time _creationTime = d_time_nan;	// time of file creation
-    d_time _lastAccessTime = d_time_nan; // time file was last accessed
-    d_time _lastWriteTime = d_time_nan;	// time file was last written to
+    ulong _size = ~0UL;			/// size of file in bytes
+    d_time _creationTime = d_time_nan;	/// time of file creation
+    d_time _lastAccessTime = d_time_nan; /// time file was last accessed
+    d_time _lastWriteTime = d_time_nan;	/// time file was last written to
     ubyte d_type;
+<<<<<<< .mine
+    struct_stat64 statbuf;
+=======
     stat_t statbuf;
+>>>>>>> .r1020
     bool didstat;			// done lazy evaluation of stat()
 
-    void init(string path, dirent *fd)
+    void init(in char[] path, dirent *fd)
     {
         invariant len = std.c.string.strlen(fd.d_name.ptr);
-	name = std.path.join(path, fd.d_name[0 .. len].idup);
-	d_type = fd.d_type;
-	didstat = false;
+        name = std.path.join(path, fd.d_name[0 .. len].idup);
+        d_type = fd.d_type;
+        didstat = false;
     }
-
+    
     bool isdir()
     {
-	return (d_type & DT_DIR) != 0;
+        return (d_type & DT_DIR) != 0;
     }
-
+    
     bool isfile()
     {
-	return (d_type & DT_REG) != 0;
+        return (d_type & DT_REG) != 0;
     }
-
+    
     ulong size()
     {
-	ensureStatDone;
-	return _size;
+        ensureStatDone;
+        return _size;
     }
-
+    
     d_time creationTime()
     {
-	ensureStatDone;
-	return _creationTime;
+        ensureStatDone;
+        return _creationTime;
     }
-
+    
     d_time lastAccessTime()
     {
-	ensureStatDone;
-	return _lastAccessTime;
+        ensureStatDone;
+        return _lastAccessTime;
     }
-
+    
     d_time lastWriteTime()
     {
-	ensureStatDone;
-	return _lastWriteTime;
+        ensureStatDone;
+        return _lastWriteTime;
     }
-
+    
     /* This is to support lazy evaluation, because doing stat's is
      * expensive and not always needed.
      */
-
+    
     void ensureStatDone()
     {
         if (didstat) return;
+<<<<<<< .mine
+        enforce(std.c.linux.linux.stat64(toStringz(name), &statbuf) == 0,
+=======
 	enforce(core.sys.posix.sys.stat.stat(toStringz(name), &statbuf) == 0,
+>>>>>>> .r1020
                 "Failed to stat file `"~name~"'");
+<<<<<<< .mine
+        _size = statbuf.st_size;
+        _creationTime = cast(d_time)statbuf.st_ctime * std.date.TicksPerSecond;
+        _lastAccessTime = cast(d_time)statbuf.st_atime
+            * std.date.TicksPerSecond;
+        _lastWriteTime = cast(d_time)statbuf.st_mtime * std.date.TicksPerSecond;
+        didstat = true;
+=======
 	_size = cast(ulong)statbuf.st_size;
     _creationTime = cast(d_time)statbuf.st_ctime * std.date.TicksPerSecond;
     _lastAccessTime = cast(d_time)statbuf.st_atime * std.date.TicksPerSecond;
     _lastWriteTime = cast(d_time)statbuf.st_mtime * std.date.TicksPerSecond;
 
 	didstat = true;
+>>>>>>> .r1020
     }
 }
 
@@ -1415,7 +1453,7 @@ struct DirEntry
  * Return contents of directory.
  */
 
-string[] listdir(string pathname)
+string[] listdir(in char[] pathname)
 {
     string[] result;
     bool listing(string filename)
@@ -1428,7 +1466,7 @@ string[] listdir(string pathname)
     return result;
 }
 
-string[] listdir(string pathname, string pattern)
+string[] listdir(in char[] pathname, in char[] pattern)
 {   string[] result;
     bool callback(DirEntry* de)
     {
@@ -1445,7 +1483,7 @@ string[] listdir(string pathname, string pattern)
     return result;
 }
 
-string[] listdir(string pathname, RegExp r)
+string[] listdir(in char[] pathname, RegExp r)
 {   string[] result;
 
     bool callback(DirEntry* de)
@@ -1463,7 +1501,7 @@ string[] listdir(string pathname, RegExp r)
     return result;
 }
 
-void listdir(string pathname, bool delegate(string filename) callback)
+void listdir(in char[] pathname, bool delegate(string filename) callback)
 {
     bool listing(DirEntry* de)
     {
@@ -1473,7 +1511,7 @@ void listdir(string pathname, bool delegate(string filename) callback)
     listdir(pathname, &listing);
 }
 
-void listdir(string pathname, bool delegate(DirEntry* de) callback)
+void listdir(in char[] pathname, bool delegate(DirEntry* de) callback)
 {
     auto h = cenforce(opendir(toStringz(pathname)), pathname);
     scope(exit) closedir(h);
@@ -1495,7 +1533,7 @@ void listdir(string pathname, bool delegate(DirEntry* de) callback)
  * Copy a file. File timestamps are preserved.
  */
 
-void copy(in string from, in string to)
+void copy(in char[] from, in char[] to)
 {
     version (all)
     {
@@ -1503,8 +1541,13 @@ void copy(in string from, in string to)
         cenforce(fd != -1, from);
         scope(exit) core.sys.posix.unistd.close(fd);
 
+<<<<<<< .mine
+        struct_stat64 statbuf = void;
+        cenforce(std.c.linux.linux.fstat64(fd, &statbuf) == 0, from);
+=======
         stat_t statbuf = void;
         cenforce(core.sys.posix.sys.stat.fstat(fd, &statbuf) == 0, from);
+>>>>>>> .r1020
 
         auto toz = toStringz(to);
         invariant fdw = core.sys.posix.fcntl.open(toz,
@@ -1522,9 +1565,9 @@ void copy(in string from, in string to)
             }
             scope(exit) std.c.stdlib.free(buf);
 
-            for (size_t size = statbuf.st_size; size; )
+            for (auto size = statbuf.st_size; size; )
             {
-                invariant toxfer = (size > BUFSIZ) ? BUFSIZ : size;
+                invariant toxfer = (size > BUFSIZ) ? BUFSIZ : cast(size_t) size;
                 cenforce(core.sys.posix.unistd.read(fd, buf, toxfer) == toxfer
                         && core.sys.posix.unistd.write(fdw, buf, toxfer) == toxfer,
                         from);
@@ -1570,11 +1613,9 @@ unittest
     assert(buf == buf2);
 
     remove("unittest_write.tmp");
-    if (exists("unittest_write.tmp"))
-	assert(0);
+    assert(!exists("unittest_write.tmp"));
     remove("unittest_write2.tmp");
-    if (exists("unittest_write2.tmp"))
-	assert(0);
+    assert(!exists("unittest_write2.tmp"));
 }
 
 unittest
@@ -1615,7 +1656,7 @@ struct DirIterator
     private int doIt(D)(D dg, DirEntry * de)
     {
         alias ParameterTypeTuple!(D) Parms;
-        static if (is(Parms[0] : string))
+        static if (is(Parms[0] : const(char)[]))
         {
             return dg(de.name);
         }
@@ -1736,3 +1777,62 @@ unittest
     }
   }
 }
+
+/**
+Reads an entire file into an array.
+
+Example:
+----
+// Load file; each line is an int followed by comma, whitespace and a
+// double.
+auto a = slurp!(int, double)("filename", "%s, %s");
+----
+ */
+Select!(Types.length == 1, Types[0][], Tuple!(Types)[])
+slurp(Types...)(string filename, in char[] format)
+{
+    typeof(return) result;
+    auto app = appender(&result);
+    ElementType!(typeof(return)) toAdd;
+    auto f = File(filename);
+    scope(exit) f.close;
+    foreach (line; f.byLine())
+    {
+        line = formattedRead(line, format, &toAdd);
+        enforce(line.empty,
+                text("Trailing characters at the end of line: `", line,
+                        "'"));
+        app.put(toAdd);
+    }
+    return result;
+}
+
+unittest
+{
+    // Tuple!(int, double)[] x;
+    // auto app = appender(&x);
+    write("deleteme", "12 12.25\n345 1.125");
+    scope(exit) unlink("deleteme");
+    auto a = slurp!(int, double)("deleteme", "%s %s");
+    assert(a.length == 2);
+    assert(a[0] == tuple(12, 12.25));
+    assert(a[1] == tuple(345, 1.125));
+}
+
+/********************************************
+Read and validates (using $(XREF utf, validate)) a text file. $(D S)
+can be a type of array of characters of any width and constancy.
+
+Returns: array of characters read
+
+Throws: $(D FileException) on file error, $(D UtfException) on UTF
+decoding error.
+ */
+
+S readText(S = string)(in char[] name)
+{
+    auto result = cast(S) read(name);
+    std.utf.validate(result);
+    return result;
+}
+
