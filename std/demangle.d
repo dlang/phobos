@@ -22,6 +22,7 @@ module std.demangle;
 
 private import std.ctype;
 private import std.string;
+import std.conv;
 private import std.utf;
 import std.contracts;
 
@@ -522,7 +523,9 @@ unittest
     {
 	string r = demangle(name[0]);
         assert(r == name[1],
-            "table entry #" ~ toString(i) ~ ": '" ~ name[0] ~ "' demangles as '" ~ r ~ "' but is expected to be '" ~ name[1] ~ "'");
+                "table entry #" ~ to!string(i) ~ ": '" ~ name[0]
+                ~ "' demangles as '" ~ r ~ "' but is expected to be '"
+                ~ name[1] ~ "'");
 
     }
 }
