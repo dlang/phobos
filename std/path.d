@@ -26,12 +26,11 @@ module std.path;
 //debug=path;		// uncomment to turn on debugging printf's
 //private import std.stdio;
 
-import std.contracts, std.conv, std.file, std.string, std.traits;
-private import core.stdc.errno;
+import std.contracts, std.conv, std.file, std.process, std.string, std.traits;
+import core.stdc.errno, core.stdc.stdlib;
 
 version(Posix)
 {
-    private import std.c.stdlib;
     private import core.sys.posix.pwd;
     private import core.exception : onOutOfMemoryError;
 }
@@ -1109,35 +1108,33 @@ unittest
     version (Posix)
     {
 	// Retrieve the current home variable.
-	char* c_home = getenv("HOME");
+        auto c_home = std.process.getenv("HOME");
 
-	// Testing when there is no environment variable.
-	unsetenv("HOME");
-	assert(expandTilde("~/") == "~/");
-	assert(expandTilde("~") == "~");
-
-	// Testing when an environment variable is set.
-	int ret = setenv("HOME", "dmd/test\0", 1);
-	assert(ret == 0);
-	assert(expandTilde("~/") == "dmd/test/");
-	assert(expandTilde("~") == "dmd/test");
-
-	// The same, but with a variable ending in a slash.
-	ret = setenv("HOME", "dmd/test/\0", 1);
-	assert(ret == 0);
-	assert(expandTilde("~/") == "dmd/test/");
-	assert(expandTilde("~") == "dmd/test");
-
-	// Recover original HOME variable before continuing.
-	if (c_home)
-	    setenv("HOME", c_home, 1);
-	else
-	    unsetenv("HOME");
-
-	// Test user expansion for root. Are there unices without /root?
-	assert(expandTilde("~root") == "/root");
-	assert(expandTilde("~root/") == "/root/");
-	assert(expandTilde("~Idontexist/hey") == "~Idontexist/hey");
+        // Testing when there is no environment variable.
+        unsetenv("HOME");
+        assert(expandTilde("~/") == "~/");
+        assert(expandTilde("~") == "~");
+        
+        // Testing when an environment variable is set.
+        std.process.setenv("HOME", "dmd/test\0", 1);
+        assert(expandTilde("~/") == "dmd/test/");
+        assert(expandTilde("~") == "dmd/test");
+        
+        // The same, but with a variable ending in a slash.
+        std.process.setenv("HOME", "dmd/test/\0", 1);
+        assert(expandTilde("~/") == "dmd/test/");
+        assert(expandTilde("~") == "dmd/test");
+        
+        // Recover original HOME variable before continuing.
+        if (c_home)
+            std.process.setenv("HOME", c_home, 1);
+        else
+            unsetenv("HOME");
+        
+        // Test user expansion for root. Are there unices without /root?
+        assert(expandTilde("~root") == "/root");
+        assert(expandTilde("~root/") == "/root/");
+        assert(expandTilde("~Idontexist/hey") == "~Idontexist/hey");
     }
 }
 
@@ -1153,7 +1150,7 @@ private string expandFromEnvironment(string path)
     assert(path[0] == '~');
 
     // Get HOME and use that to replace the tilde.
-    char* home = getenv("HOME");
+    auto home = core.stdc.stdlib.getenv("HOME");
     if (home == null)
         return path;
 
