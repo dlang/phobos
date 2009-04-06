@@ -120,9 +120,9 @@ template ParameterTypeTuple(dg)
 template FieldTypeTuple(S)
 {
     static if (is(S == struct) || is(S == class) || is(S == union))
-	alias typeof(S.tupleof) FieldTypeTuple;
+        alias typeof(S.tupleof) FieldTypeTuple;
     else
-        alias S FieldTypeTuple;
+        alias TypeTuple!(S) FieldTypeTuple;
 	//static assert(0, "argument is not struct or class");
 }
 
@@ -771,20 +771,14 @@ unittest
 }
 
 /**
- * Detect whether T is a built-in integral type
+ * Detect whether T is a built-in integral type. Types $(D bool), $(D
+ * char), $(D wchar), and $(D dchar) are not considered integral.
  */
 
 template isIntegral(T)
 {
-    enum bool isIntegral =
-	is(immutable(T) == immutable(byte)) ||
-	is(immutable(T) == immutable(ubyte)) ||
-	is(immutable(T) == immutable(short)) ||
-	is(immutable(T) == immutable(ushort)) ||
-	is(immutable(T) == immutable(int)) ||
-	is(immutable(T) == immutable(uint)) ||
-	is(immutable(T) == immutable(long)) ||
-	is(immutable(T) == immutable(ulong));
+    enum bool isIntegral = indexOf!(Unqual!(T), byte,
+            ubyte, short, ushort, int, uint, long, ulong) >= 0;
 }
 
 unittest
@@ -841,42 +835,39 @@ unittest
 }
 
 /**
- * Detect whether T is a built-in floating point type
+ * Detect whether T is a built-in floating point type.
  */
 
 template isFloatingPoint(T)
 {
-    enum bool isFloatingPoint =
-	is(immutable(T) == immutable(float)) ||
-	is(immutable(T) == immutable(double)) ||
-	is(immutable(T) == immutable(real));
+    enum bool isFloatingPoint = indexOf!(Unqual!(T), float, double, real) >= 0;
 }
 
 unittest
 {
-    assert(isFloatingPoint!(float));
-    assert(isFloatingPoint!(const(float)));
-    assert(isFloatingPoint!(immutable(float)));
-    assert(isFloatingPoint!(shared(float)));
-    assert(isFloatingPoint!(shared(const(float))));
-
-    assert(isFloatingPoint!(double));
-    assert(isFloatingPoint!(const(double)));
-    assert(isFloatingPoint!(immutable(double)));
-    assert(isFloatingPoint!(shared(double)));
-    assert(isFloatingPoint!(shared(const(double))));
-
-    assert(isFloatingPoint!(real));
-    assert(isFloatingPoint!(const(real)));
-    assert(isFloatingPoint!(immutable(real)));
-    assert(isFloatingPoint!(shared(real)));
-    assert(isFloatingPoint!(shared(const(real))));
-
-    assert(!isFloatingPoint!(int));
+    foreach (F; TypeTuple!(float, double, real))
+    {
+        F a = 5.5;
+        static assert(isFloatingPoint!(typeof(a)));
+        const F b = 5.5;
+        static assert(isFloatingPoint!(typeof(b)));
+        immutable F c = 5.5;
+        static assert(isFloatingPoint!(typeof(c)));
+    }
+    foreach (T; TypeTuple!(int, long, char))
+    {
+        T a;
+        static assert(!isFloatingPoint!(typeof(a)));
+        const T b = 0;
+        static assert(!isFloatingPoint!(typeof(b)));
+        immutable T c = 0;
+        static assert(!isFloatingPoint!(typeof(c)));
+    }
 }
 
 /**
- * Detect whether T is a built-in numeric type
+Detect whether T is a built-in numeric type (integral or floating
+point).
  */
 
 template isNumeric(T)
@@ -885,12 +876,12 @@ template isNumeric(T)
 }
 
 /**
- * Detect whether T is one of the built-in string types
+Detect whether T is one of the built-in string types
  */
 
 template isSomeString(T)
 {
-    enum bool isSomeString = is(T : const(char[]))
+    enum isSomeString = is(T : const(char[]))
         || is(T : const(wchar[])) || is(T : const(dchar[]));
 }
 
@@ -997,48 +988,34 @@ template isExpressionTuple(T ...)
  * integral type, otherwise a compile-time error occurs.
  */
 
-template unsigned(T) {
-    static if (is(T == byte)) alias ubyte unsigned;
-    else static if (is(T == short)) alias ushort unsigned;
-    else static if (is(T == int)) alias uint unsigned;
-    else static if (is(T == long)) alias ulong unsigned;
-    else static if (is(T == ubyte)) alias ubyte unsigned;
-    else static if (is(T == ushort)) alias ushort unsigned;
-    else static if (is(T == uint)) alias uint unsigned;
-    else static if (is(T == ulong)) alias ulong unsigned;
-    else static if (is(T == char)) alias char unsigned;
-    else static if (is(T == wchar)) alias wchar unsigned;
-    else static if (is(T == dchar)) alias dchar unsigned;
+template Unsigned(T) {
+    static if (is(T == byte)) alias ubyte Unsigned;
+    else static if (is(T == short)) alias ushort Unsigned;
+    else static if (is(T == int)) alias uint Unsigned;
+    else static if (is(T == long)) alias ulong Unsigned;
+    else static if (is(T == ubyte)) alias ubyte Unsigned;
+    else static if (is(T == ushort)) alias ushort Unsigned;
+    else static if (is(T == uint)) alias uint Unsigned;
+    else static if (is(T == ulong)) alias ulong Unsigned;
+    else static if (is(T == char)) alias char Unsigned;
+    else static if (is(T == wchar)) alias wchar Unsigned;
+    else static if (is(T == dchar)) alias dchar Unsigned;
     else static if(is(T == enum)) {
-        static if (T.sizeof == 1) alias ubyte unsigned;
-        else static if (T.sizeof == 2) alias ushort unsigned;
-        else static if (T.sizeof == 4) alias uint unsigned;
-        else static if (T.sizeof == 8) alias ulong unsigned;
+        static if (T.sizeof == 1) alias ubyte Unsigned;
+        else static if (T.sizeof == 2) alias ushort Unsigned;
+        else static if (T.sizeof == 4) alias uint Unsigned;
+        else static if (T.sizeof == 8) alias ulong Unsigned;
         else static assert(false, "Type " ~ T.stringof
-                           ~ " does not have an unsigned counterpart");
+                           ~ " does not have an Unsigned counterpart");
     }
     else static assert(false, "Type " ~ T.stringof
-                       ~ " does not have an unsigned counterpart");
+                       ~ " does not have an Unsigned counterpart");
 }
 
 unittest
 {
-    alias unsigned!(int) U;
+    alias Unsigned!(int) U;
     assert(is(U == uint));
-}
-
-/******
- * Returns the mutable version of the type T.
- */
-
-template Mutable(T)
-{
-    static if (is(T U == const(U)))
-	alias U Mutable;
-    else static if (is(T U == invariant(U)))
-	alias U Mutable;
-    else
-	alias T Mutable;
 }
 
 /**
@@ -1058,3 +1035,111 @@ unittest
     static assert(mostNegative!(uint) == 0);
     static assert(mostNegative!(long) == long.min);
 }
+
+/**
+Removes all qualifiers, if any, from type $(D T).
+
+Example:
+----
+static assert(is(Unqual!(int) == int));
+static assert(is(Unqual!(const int) == int));
+static assert(is(Unqual!(immutable int) == int));
+----
+ */
+template Unqual(T) { alias T Unqual; }
+/// Ditto
+template Unqual(T : const(U), U) { alias U Unqual; }
+/// Ditto
+template Unqual(T : immutable(U), U) { alias U Unqual; }
+
+unittest
+{
+    static assert(is(Unqual!(int) == int));
+    static assert(is(Unqual!(const int) == int));
+    static assert(is(Unqual!(immutable int) == int));
+    alias immutable(int[]) ImmIntArr;
+    static assert(is(Unqual!(ImmIntArr) == immutable(int)[]));
+}
+
+/**
+Evaluates to $(D TypeTuple!(F[T[0]], F[T[1]], ..., F[T[$ - 1]])).
+
+Example:
+----
+alias staticMap!(Unqual, int, const int, immutable int) T;
+static assert(is(T == TypeTuple!(int, int, int)));
+----
+ */
+template staticMap(alias F, T...)
+{
+    static if (T.length == 1)
+    {
+        alias F!(T[0]) staticMap;
+    }
+    else
+    {
+        alias TypeTuple!(F!(T[0]), staticMap!(F, T[1 .. $])) staticMap;
+    }
+}
+
+unittest
+{
+    alias staticMap!(Unqual, int, const int, immutable int) T;
+    static assert(is(T == TypeTuple!(int, int, int)));
+}
+
+/**
+Evaluates to $(D F[T[0]] && F[T[1]] && ... && F[T[$ - 1]]).
+
+Example:
+----
+static assert(!allSatisfy!(isIntegral, int, double));
+static assert(allSatisfy!(isIntegral, int, long));
+----
+ */
+template allSatisfy(alias F, T...)
+{
+    static if (T.length == 1)
+    {
+        alias F!(T[0]) allSatisfy;
+    }
+    else
+    {
+        enum bool allSatisfy = F!(T[0]) && allSatisfy!(F, T[1 .. $]);
+    }
+}
+
+unittest
+{
+    static assert(!allSatisfy!(isIntegral, int, double));
+    static assert(allSatisfy!(isIntegral, int, long));
+}
+
+/**
+Aliases itself to $(D T) if the boolean $(D condition) is $(D true)
+and to $(D F) otherwise.
+
+Example:
+----
+alias Select!(size_t.sizeof == 4, int, long) Int;
+----
+ */
+template Select(bool condition, T, F)
+{
+    static if (condition) alias T Select;
+    else alias F Select;
+}
+
+unittest
+{
+    static assert(is(Select!(true, int, long) == int));
+    static assert(is(Select!(false, int, long) == long));
+}
+
+/**
+If $(D cond) is $(D true), returns $(D a) without evaluating $(D
+b). Otherwise, returns $(D b) without evaluating $(D a).
+ */
+A select(bool cond : true, A, B)(A a, lazy B b) { return a; }
+/// Ditto
+B select(bool cond : false, A, B)(lazy A a, B b) { return b; }
