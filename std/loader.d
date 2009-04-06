@@ -49,6 +49,7 @@ module std.loader;
  */
 
 private import std.string;
+import std.conv;
 private import std.c.string;
 private import std.c.stdlib;
 private import std.c.stdio;
@@ -470,12 +471,12 @@ public:
     {
       version (Posix)
       {
-	char[80] buf = void;
-	super(std.string.toString(strerror_r(errcode, buf.ptr, buf.length)).idup);
+          char[80] buf = void;
+          super(to!string(strerror_r(errcode, buf.ptr, buf.length)).idup);
       }
       else
       {
-	super(std.string.toString(strerror(errcode)).idup);
+          super(to!string(strerror(errcode)));
       }
     }
 }
