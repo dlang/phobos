@@ -2,12 +2,14 @@
 
 module std.array;
 
-private import std.c.stdio;
-private import core.memory;
-private import std.contracts;
-private import std.traits;
-private import std.string;
-private import std.algorithm;
+import std.c.stdio;
+import core.memory;
+import std.contracts;
+import std.traits;
+import std.string;
+import std.algorithm;
+import std.encoding;
+import std.typecons;
 version(unittest) private import std.stdio;
 
 /*
@@ -103,6 +105,189 @@ unittest
 }
 
 /**
+Implements the range interface primitive $(D empty) for built-in
+arrays. Due to the fact that nonmember functions can be called with
+the first argument using the dot notation, $(D array.empty) is
+equivalent to $(D empty(array)).
+
+Example:
+----
+void main()
+{
+    auto a = [ 1, 2, 3 ];
+    assert(!a.empty);
+    assert(a[3 .. $].empty);
+}
+----
+ */
+
+bool empty(T)(in T[] a) { return !a.length; }
+
+unittest
+{
+    auto a = [ 1, 2, 3 ];
+    assert(!a.empty);
+    assert(a[3 .. $].empty);
+}
+
+/**
+Implements the range interface primitive $(D next) for built-in
+arrays. Due to the fact that nonmember functions can be called with
+the first argument using the dot notation, $(D array.next) is
+equivalent to $(D next(array)).
+
+
+Example:
+----
+void main()
+{
+    int[] a = [ 1, 2, 3 ];
+    a.next;
+    assert(a == [ 2, 3 ]);
+}
+----
+*/
+
+void next(T)(ref T[] a)
+{
+    assert(a.length, "Attempting to next() past the end of an array of "
+            ~ T.stringof);
+    a = a[1 .. $];
+}
+
+unittest
+{
+    //@@@BUG 2608@@@
+    //auto a = [ 1, 2, 3 ];
+    int[] a = [ 1, 2, 3 ];
+    a.next;
+    assert(a == [ 2, 3 ]);
+}
+
+/**
+Implements the range interface primitive $(D retreat) for built-in
+arrays. Due to the fact that nonmember functions can be called with
+the first argument using the dot notation, $(D array.retreat) is
+equivalent to $(D retreat(array)).
+
+
+Example:
+----
+void main()
+{
+    int[] a = [ 1, 2, 3 ];
+    a.retreat;
+    assert(a == [ 1, 2 ]);
+}
+----
+*/
+
+void retreat(T)(ref T[] a) { assert(a.length); a = a[0 .. $ - 1]; }
+
+unittest
+{
+    //@@@BUG 2608@@@
+    //auto a = [ 1, 2, 3 ];
+    int[] a = [ 1, 2, 3 ];
+    a.retreat;
+    assert(a == [ 1, 2 ]);
+}
+
+/**
+Implements the range interface primitive $(D head) for built-in
+arrays. Due to the fact that nonmember functions can be called with
+the first argument using the dot notation, $(D array.head) is
+equivalent to $(D head(array)).
+
+
+Example:
+----
+void main()
+{
+    int[] a = [ 1, 2, 3 ];
+    assert(a.head == 1);
+}
+----
+*/
+ref T head(T)(T[] a)
+{
+    assert(a.length, "Attempting to fetch the head of an empty array");
+    return a[0];
+}
+
+/// Ditto
+void head(T)(T[] a, T v) { assert(a.length); a[0] = v; }
+
+/**
+Implements the range interface primitive $(D toe) for built-in
+arrays. Due to the fact that nonmember functions can be called with
+the first argument using the dot notation, $(D array.toe) is
+equivalent to $(D toe(array)).
+
+Example:
+----
+void main()
+{
+    int[] a = [ 1, 2, 3 ];
+    assert(a.head == 1);
+}
+----
+*/
+ref T toe(T)(T[] a) { assert(a.length); return a[a.length - 1]; }
+
+/**
+Implements the range interface primitive $(D put) for built-in
+arrays. Due to the fact that nonmember functions can be called with
+the first argument using the dot notation, $(D array.put(e)) is
+equivalent to $(D put(array, e)).
+
+Example:
+----
+void main()
+{
+    int[] a = [ 1, 2, 3 ];
+    int[] b = a;
+    a.put(5);
+    assert(a == [ 2, 3 ]);
+    assert(b == [ 5, 2, 3 ]);
+}
+----
+*/
+void put(T, E)(ref T[] a, E e) { assert(a.length); a[0] = e; a = a[1 .. $]; }
+
+// overlap
+/*
+Returns the overlapping portion, if any, of two arrays. Unlike $(D
+equal), $(D overlap) only compares the pointers in the ranges, not the
+values referred by them. If $(D r1) and $(D r2) have an overlapping
+slice, returns that slice. Otherwise, returns the null slice.
+
+Example:
+----
+int[] a = [ 10, 11, 12, 13, 14 ];
+int[] b = a[1 .. 3];
+assert(overlap(a, b) == [ 11, 12 ]);
+b = b.dup;
+// overlap disappears even though the content is the same
+assert(isEmpty(overlap(a, b)));
+----
+*/
+T[] overlap(T)(T[] r1, T[] r2)
+{
+    auto b = max(r1.ptr, r2.ptr);
+    auto e = min(&(r1.ptr[r1.length - 1]) + 1, &(r2.ptr[r2.length - 1]) + 1);
+    return b < e ? b[0 .. e - b] : null;
+}
+
+unittest
+{
+    int[] a = [ 10, 11, 12, 13, 14 ];
+    int[] b = a[1 .. 3];
+    a[1] = 100;
+    assert(overlap(a, b) == [ 100, 12 ]);
+}
+
+/**
 Inserts $(D stuff) in $(D container) at position $(D pos).
  */
 void insert(T, Range)(ref T[] array, size_t pos, Range stuff)
@@ -111,7 +296,7 @@ void insert(T, Range)(ref T[] array, size_t pos, Range stuff)
     {
         // presumably an array
         alias stuff toInsert;
-        assert(!overlap(array, toInsert));
+        //assert(!overlap(array, toInsert));
     }
     else
     {
@@ -130,7 +315,8 @@ void insert(T, Range)(ref T[] array, size_t pos, Range stuff)
         newLength = oldLength + delta;
 
     // Reallocate the array to make space for new content
-    array = (cast(T*) core.memory.GC.realloc(array.ptr, newLength * array[0].sizeof))[0 .. newLength];
+    array = (cast(T*) core.memory.GC.realloc(array.ptr,
+                    newLength * array[0].sizeof))[0 .. newLength];
     assert(array.length == newLength);
 
     // Move data in pos .. pos + stuff.length to the end of the array
@@ -156,26 +342,47 @@ unittest
     assert(a == [1, 99, 2, 3, 4, 5]);
 }
 
+// @@@ TODO: document this
+bool sameHead(T)(in T[] lhs, in T[] rhs)
+{
+    return lhs.ptr == rhs.ptr;
+}
+
 /**
 Erases elements from $(D array) with indices ranging from $(D from)
 (inclusive) to $(D to) (exclusive).
  */
-void erase(T)(ref T[] array, size_t from, size_t to)
-{
-    invariant newLength = array.length - (to - from);
-    foreach (i; to .. array.length)
-    {
-        move(array[i], array[from++]);
-    }
-    array.length = newLength;
-}
+// void erase(T)(ref T[] array, size_t from, size_t to)
+// {
+//     invariant newLength = array.length - (to - from);
+//     foreach (i; to .. array.length)
+//     {
+//         move(array[i], array[from++]);
+//     }
+//     array.length = newLength;
+// }
 
-unittest
-{
-    int[] a = [1, 2, 3, 4, 5];
-    erase(a, 1u, 3u);
-    assert(a == [1, 4, 5]);
-}
+// unittest
+// {
+//     int[] a = [1, 2, 3, 4, 5];
+//     erase(a, 1u, 3u);
+//     assert(a == [1, 4, 5]);
+// }
+
+/**
+Erases element from $(D array) at index $(D from).
+ */
+// void erase(T)(ref T[] array, size_t from)
+// {
+//     erase(array, from, from + 1);
+// }
+
+// unittest
+// {
+//     int[] a = [1, 2, 3, 4, 5];
+//     erase(a, 2u);
+//     assert(a == [1, 2, 4, 5]);
+// }
 
 /**
 Replaces elements from $(D array) with indices ranging from $(D from)
@@ -198,7 +405,7 @@ void replace(T, Range)(ref T[] array, size_t from, size_t to,
         //invariant stuffEnd = from + stuff.length;
         auto stuffEnd = from + stuff.length;
         array[from .. stuffEnd] = stuff;
-        erase(array, stuffEnd, to);
+        remove(array, tuple(stuffEnd, to));
     }
     else
     {
@@ -215,5 +422,174 @@ unittest
     int[] a = [1, 4, 5];
     replace(a, 1u, 2u, [2, 3, 4]);
     assert(a == [1, 2, 3, 4, 5]);
+}
+
+/**
+Implements an output range that appends data to an array. This is
+recommended over $(D a ~= data) because it is more efficient.
+
+Example:
+----
+auto arr = new char[0];
+auto app = appender(&arr);
+string b = "abcdefg";
+foreach (char c; b) app.put(c);
+assert(app.data == "abcdefg");
+
+int[] a = [ 1, 2 ];
+auto app2 = appender(&a);
+app2.put(3);
+app2.put([ 4, 5, 6 ]);
+assert(app2.data == [ 1, 2, 3, 4, 5, 6 ]);
+----
+ */
+
+struct Appender(A : T[], T)
+{
+private:
+    T[] * pArray;
+    size_t _capacity;
+
+public:
+/**
+Initialize an $(D Appender) with a pointer to an existing array. The
+$(D Appender) object will append to this array. If $(D null) is passed
+(or the default constructor gets called), the $(D Appender) object
+will allocate and use a new array.
+ */
+    this(T[] * p)
+    {
+        pArray = p;
+        if (!pArray) pArray = (new typeof(*pArray)[1]).ptr;
+        _capacity = GC.sizeOf(pArray.ptr) / T.sizeof;
+        //_capacity = .capacity(pArray.ptr) / T.sizeof;
+    }
+
+/**
+Returns the managed array.
+ */ 
+    T[] data()
+    {
+        return pArray ? *pArray : null;
+    }
+
+/**
+Returns the capacity of the array (the maximum number of elements the
+managed array can accommodate before triggering a reallocation).
+ */ 
+    size_t capacity() const { return _capacity; }
+
+    static if (is(const(T) : T))
+    {
+/**
+An alias for the accepted type to be appended.
+ */     
+        alias const(T) AcceptedElementType;
+    }
+    else
+    {
+        alias T AcceptedElementType;
+    }
+    
+/**
+Appends one item to the managed array.
+ */ 
+    void put(AcceptedElementType item)
+    {
+        if (!pArray) pArray = (new typeof(*pArray)[1]).ptr;
+        if (pArray.length < _capacity)
+        {
+            // Should do in-place construction here
+            pArray.ptr[pArray.length] = item;
+            *pArray = pArray.ptr[0 .. pArray.length + 1];
+        }
+        else
+        {
+            // Time to reallocate, do it and cache capacity
+            *pArray ~= item;
+            //_capacity = .capacity(pArray.ptr) / T.sizeof;
+            _capacity = GC.sizeOf(pArray.ptr) / T.sizeof;
+        }
+    }
+
+/**
+Appends another array to the managed array.
+ */ 
+    void put(AcceptedElementType[] items)
+    {
+        for (; !items.empty(); items.next()) {
+            put(items.head());
+        }
+    }
+
+    static if (is(Unqual!(T) == wchar) || is(Unqual!(T) == dchar))
+    {
+/**
+In case the managed array has type $(D char[]), $(D wchar[]), or $(D
+dchar[]), all other character widths and arrays thereof are also
+accepted.
+ */
+        void put(in char c) { encode!(T)((&c)[0 .. 1], this); }
+/// Ditto
+        void put(in char[] cs)
+        {
+            encode!(T)(cs, this);
+        }
+    }
+    static if (is(Unqual!(T) == char) || is(Unqual!(T) == dchar))
+    {
+/// Ditto
+        void put(in wchar dc) { assert(false); }
+/// Ditto
+        void put(in wchar[] dcs)
+        {
+            encode!(T)(dcs, this);
+        }
+    }
+    static if (is(Unqual!(T) == char) || is(Unqual!(T) == wchar))
+    {
+/// Ditto
+        void put(in dchar dc) { std.utf.encode(*pArray, dc); }
+/// Ditto
+        void put(in dchar[] wcs)
+        {
+            encode!(T)(wcs, this);
+        }
+    }
+
+/**
+Clears the managed array.
+*/
+    void clear()
+    {
+        if (!pArray) return;
+        pArray.length = 0;
+        //_capacity = .capacity(pArray.ptr) / T.sizeof;
+        _capacity = GC.sizeOf(pArray.ptr) / T.sizeof;
+    }
+}
+
+/**
+Convenience function that returns an $(D Appender!(T)) object
+initialized with $(D t).
+ */ 
+Appender!(E[]) appender(A : E[], E)(A * array = null)
+{
+    return Appender!(E[])(array);
+}
+
+unittest
+{
+    auto arr = new char[0];
+    auto app = appender(&arr);
+    string b = "abcdefg";
+    foreach (char c; b) app.put(c);
+    assert(app.data == "abcdefg");
+
+    int[] a = [ 1, 2 ];
+    auto app2 = appender(&a);
+    app2.put(3);
+    app2.put([ 4, 5, 6 ]);
+    assert(app2.data == [ 1, 2, 3, 4, 5, 6 ]);
 }
 
