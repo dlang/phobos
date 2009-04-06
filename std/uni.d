@@ -29,7 +29,7 @@ module std.uni;
 int isUniLower(dchar c)
 {
     if (c <= 0x7F)
-	return (c >= 'a' && c <= 'z');
+        return (c >= 'a' && c <= 'z');
 
     return isUniAlpha(c) && c == toUniLower(c);
 }
@@ -550,29 +550,29 @@ int isUniAlpha(dchar u)
 
     debug
     {
-	for (int i = 0; i < table.length; i++)
-	{
-	    assert(table[i][0] <= table[i][1]);
-	    if (i < table.length - 1)
-	    {
-		if (table[i][1] >= table[i + 1][0])
-		    printf("table[%d][1] = x%x, table[%d][0] = x%x\n", i, table[i][1], i + 1, table[i + 1][0]);
-		assert(table[i][1] < table[i + 1][0]);
-	    }
-	}
+        for (int i = 0; i < table.length; i++)
+        {
+            assert(table[i][0] <= table[i][1]);
+            if (i < table.length - 1)
+            {
+                //if (table[i][1] >= table[i + 1][0])
+                //printf("table[%d][1] = x%x, table[%d][0] = x%x\n", i, table[i][1], i + 1, table[i + 1][0]);
+                assert(table[i][1] < table[i + 1][0]);
+            }
+        }
     }
-
+    
     if (u < 0xAA)
     {
-	if (u < 'A')
-	    goto Lisnot;
-	if (u <= 'Z')
-	    goto Lis;
-	if (u < 'a')
-	    goto Lisnot;
-	if (u <= 'z')
-	    goto Lis;
-	goto Lisnot;
+        if (u < 'A')
+            goto Lisnot;
+        if (u <= 'Z')
+            goto Lis;
+        if (u < 'a')
+            goto Lisnot;
+        if (u <= 'z')
+            goto Lis;
+        goto Lisnot;
     }
 
     // Binary search
