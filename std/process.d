@@ -41,6 +41,7 @@ module std.process;
 
 private import std.c.stdlib;
 private import std.c.string;
+private import std.conv;
 private import std.string;
 private import std.c.process;
 private import core.stdc.errno;
@@ -52,7 +53,7 @@ version (Windows)
 }
 version (Posix)
 {
-    private import std.stdio : popen, readln, fclose;
+    private import std.stdio;
 }
 
 /**
@@ -180,9 +181,9 @@ Lerror:
     retval = errno;
     char[80] buf = void;
     throw new Exception(
-        "Cannot spawn " ~ toString(pathname) ~ "; "
-                      ~ toString(strerror_r(retval, buf.ptr, buf.length))
-                      ~ " [errno " ~ toString(retval) ~ "]");
+        "Cannot spawn " ~ to!string(pathname) ~ "; "
+        ~ to!string(strerror_r(retval, buf.ptr, buf.length))
+        ~ " [errno " ~ to!string(retval) ~ "]");
 }   // _spawnvp
 private
 {
@@ -248,7 +249,8 @@ version(Posix)
     else
     {
         // No, so must traverse PATHs, looking for first match
-	string[]    envPaths    =   std.string.split(std.string.toString(std.c.stdlib.getenv("PATH")), ":");
+        string[]    envPaths    =   std.string.split(
+            to!string(std.c.stdlib.getenv("PATH")), ":");
         int         iRet        =   0;
 
         // Note: if any call to execve() succeeds, this process will cease
@@ -314,35 +316,33 @@ else version (Windows)
 */
 string shell(string cmd)
 {
-version (linux)
-{
-    auto f = enforce(popen(cmd, "r"), "Could not execute: "~cmd);
-    scope(failure) f is null || fclose(f);
-    char[] line;
-    string result;
-    while (readln(f, line))
+    version (linux)
     {
-        result ~= line;
+        File f;
+        f.popen(cmd, "r");
+        char[] line;
+        string result;
+        while (f.readln(line))
+        {
+            result ~= line;
+        }
+        f.close;
+        return result;
     }
-    auto error = fclose(f) != 0;
-    f = null;
-    enforce(!error, "Process \""~cmd~"\" finished in error.");
-    return result;
-}
-else
-{
-    enforce(false, "shell() function not yet implemented on Windows");
-    return null;
-}
+    else
+    {
+        enforce(false, "shell() function not yet implemented on Windows");
+        return null;
+    }
 }
 
 unittest
 {
-version (linux)
-{
-    auto x = shell("echo wyda");
-    assert(x == "wyda\n");
-}
+    version (linux)
+    {
+        auto x = shell("echo wyda");
+        assert(x == "wyda\n");
+    }
 }
 
 /**
