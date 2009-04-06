@@ -105,14 +105,14 @@ void sum(ubyte[16] digest, in void[][] data...)
     context.finish(digest);
 }
 
-/******************
- * Prints a message digest in hexadecimal to stdout.
- */
-void printDigest(const ubyte digest[16])
-{
-    foreach (ubyte u; digest)
-	printf("%02x", u);
-}
+// /******************
+//  * Prints a message digest in hexadecimal to stdout.
+//  */
+// void printDigest(const ubyte digest[16])
+// {
+//     foreach (ubyte u; digest)
+//         printf("%02x", u);
+// }
 
 /****************************************
  * Converts MD5 digest to a string.
@@ -120,14 +120,14 @@ void printDigest(const ubyte digest[16])
 
 string digestToString(const ubyte[16] digest)
 {
-    char[] result = new char[32];
+    auto result = new char[32];
     int i;
-
+    
     foreach (ubyte u; digest)
     {
-	result[i] = std.string.hexdigits[u >> 4];
-	result[i + 1] = std.string.hexdigits[u & 15];
-	i += 2;
+        result[i] = std.string.hexdigits[u >> 4];
+        result[i + 1] = std.string.hexdigits[u & 15];
+        i += 2;
     }
     return assumeUnique(result);
 }
