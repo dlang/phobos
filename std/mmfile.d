@@ -147,9 +147,9 @@ class MmFile
         if (prot & PROT_WRITE && size > statbuf.st_size)
         {
             // Need to make the file size bytes big
-            std.c.linux.linux.lseek(fd, cast(int)(size - 1), SEEK_SET);
+            lseek(fd, cast(int)(size - 1), SEEK_SET);
             char c = 0;
-            std.c.linux.linux.write(fd, &c, 1);
+            core.sys.posix.unistd.write(fd, &c, 1);
         }
         else if (prot & PROT_READ && size == 0)
             size = statbuf.st_size;
@@ -358,23 +358,23 @@ class MmFile
     
             if (filename.length)
             {   
-                fd = std.c.linux.linux.open(namez, oflag, fmode);
+                fd = .open(namez, oflag, fmode);
                 errnoEnforce(fd != -1, "Could not open file "~filename);
     
                 struct_stat64 statbuf;
                 if (fstat64(fd, &statbuf))
                 {
                     //printf("\tfstat error, errno = %d\n",getErrno());
-                    std.c.linux.linux.close(fd);
+                    .close(fd);
                     errnoEnforce(false, "Could not stat file "~filename);
                 }
     
                 if (prot & PROT_WRITE && size > statbuf.st_size)
                 {
                     // Need to make the file size bytes big
-                    std.c.linux.linux.lseek(fd, cast(int)(size - 1), SEEK_SET);
+                    .lseek(fd, cast(int)(size - 1), SEEK_SET);
                     char c = 0;
-                    std.c.linux.linux.write(fd, &c, 1);
+                    core.sys.posix.unistd.write(fd, &c, 1);
                 }
                 else if (prot & PROT_READ && size == 0)
                     size = statbuf.st_size;
@@ -382,8 +382,9 @@ class MmFile
             else
             {
                 fd = -1;
-                assert(false, "Sean, please fix the MAP_ANONYMOUS thing.");
-                //flags |= MAP_ANONYMOUS;
+                //assert(false, "@@@Sean, please fix the MAP_ANONYMOUS thing.");
+                enum MAP_ANONYMOUS = 0x20;
+                flags |= MAP_ANONYMOUS;
             }
             this.size = size;
             size_t initial_map = (window && 2*window<size)
@@ -391,7 +392,7 @@ class MmFile
             p = mmap(address, initial_map, prot, flags, fd, 0);
             if (p == MAP_FAILED) {
                 if (fd != -1)
-                    std.c.linux.linux.close(fd);
+                    .close(fd);
                 errnoEnforce(fd != -1, "Could not map file "~filename);
             }
 
@@ -421,10 +422,10 @@ class MmFile
                     "Could not close handle");
             hFile = INVALID_HANDLE_VALUE;
         }
-        else version (linux)
+        else version (Posix)
         {
             errnoEnforce(fd == -1 || fd <= 2
-                    || std.c.linux.linux.close(fd) != -1,
+                    || .close(fd) != -1,
                     "Could not close handle");
             fd = -1;
         }
