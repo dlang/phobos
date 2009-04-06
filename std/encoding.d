@@ -9,35 +9,37 @@ between strings of different type, as well as validation and sanitization.
 
 Encodings currently supported are UTF-8, UTF-16, UTF-32, ASCII, ISO-8859-1
 (also known as LATIN-1), and WINDOWS-1252.
-The type AsciiChar represents an ASCII character.
-The type AsciiString represents an ASCII character.
-The type Latin1Char represents an ISO-8859-1 character.
-The type Latin1String represents an ISO-8859-1 character.
-The type Windows1252Char represents a Windows-1252 character.
-The type Windows1252String represents a Windows-1252 character.
 
-For cases where the _encoding is not known at compile-time, but is known at
-run-time, we provide the abstract class EncodingScheme and its subclasses.
-To construct a run-time encoder/decoder, one does e.g.
+$(UL
+$(LI The type $(D AsciiChar) represents an ASCII character.)
+$(LI The type $(D AsciiString) represents an ASCII string.)
+$(LI The type $(D Latin1Char) represents an ISO-8859-1 character.)
+$(LI The type $(D Latin1String) represents an ISO-8859-1 string.)
+$(LI The type $(D Windows1252Char) represents a Windows-1252 character.)
+$(LI The type $(D Windows1252String) represents a Windows-1252 string.))
+
+For cases where the _encoding is not known at compile-time, but is
+known at run-time, we provide the abstract class $(D EncodingScheme)
+and its subclasses.  To construct a run-time encoder/decoder, one does
+e.g.
 
 ----------------------------------------------------
     auto e = EncodingScheme.create("utf-8");
 ----------------------------------------------------
 
-This library supplies EncodingScheme subclasses for ASCII, ISO-8859-1
-(also known as LATIN-1), WINDOWS-1252, UTF-8, and (on little-endian
-architectures) UTF-16LE and UTF-32LE; or (on big-endian architectures)
-UTF-16BE and UTF-32BE.
+This library supplies $(D EncodingScheme) subclasses for ASCII,
+ISO-8859-1 (also known as LATIN-1), WINDOWS-1252, UTF-8, and (on
+little-endian architectures) UTF-16LE and UTF-32LE; or (on big-endian
+architectures) UTF-16BE and UTF-32BE.
 
-This library provides a mechanism whereby other modules may add EncodingScheme
-subclasses for any other encoding.
+This library provides a mechanism whereby other modules may add $(D
+EncodingScheme) subclasses for any other _encoding.
 
 Authors: Janice Caron
 
 Date: 2008.02.27 - 2008.05.07
 
 License: Public Domain
-
 
 Macros:
     WIKI=Phobos/StdEncoding
@@ -46,6 +48,7 @@ Macros:
 module std.encoding;
 import std.string;
 import std.traits;
+import std.range;
 
 unittest
 {
@@ -68,26 +71,32 @@ version (none) // fails unit tests
         [ 0xEF, 0xBF, 0xBF ],           // U+0000FFFF   three bytes
 
         // Other boundary conditions
-        [ 0xED, 0x9F, 0xBF ],           // U+0000D7FF   Last character before surrogates
-        [ 0xEE, 0x80, 0x80 ],           // U+0000E000   First character after surrogates
-        [ 0xEF, 0xBF, 0xBD ],           // U+0000FFFD   Unicode replacement character
-        [ 0xF4, 0x8F, 0xBF, 0xBF ],     // U+0010FFFF   Very last character
+        [ 0xED, 0x9F, 0xBF ],
+        // U+0000D7FF   Last character before surrogates
+        [ 0xEE, 0x80, 0x80 ],
+        // U+0000E000   First character after surrogates
+        [ 0xEF, 0xBF, 0xBD ],
+        // U+0000FFFD   Unicode replacement character
+        [ 0xF4, 0x8F, 0xBF, 0xBF ],
+        // U+0010FFFF   Very last character
 
         // Non-character code points
-        /*  NOTE: These are legal in UTF, and may be converted from one UTF to
-            another, however they do not represent Unicode characters. These
-            code points have been reserved by Unicode as non-character code
-            points. They are permissible for data exchange within an
-            application, but they are are not permitted to be used as
-            characters. Since this module deals with UTF, and not with Unicode
-            per se, we choose to accept them here. */
+        /*  NOTE: These are legal in UTF, and may be converted from
+            one UTF to another, however they do not represent Unicode
+            characters. These code points have been reserved by
+            Unicode as non-character code points. They are permissible
+            for data exchange within an application, but they are are
+            not permitted to be used as characters. Since this module
+            deals with UTF, and not with Unicode per se, we choose to
+            accept them here. */
         [ 0xDF, 0xBE ],                 // U+0000FFFE
         [ 0xDF, 0xBF ],                 // U+0000FFFF
     ];
 
     ubyte[][] invalidStrings =
     [
-        // First possible sequence of a certain length, but greater than U+10FFFF
+        // First possible sequence of a certain length, but greater
+        // than U+10FFFF
         [ 0xF8, 0x88, 0x80, 0x80, 0x80 ],           // U+00200000   five bytes
         [ 0xFC, 0x84, 0x80, 0x80, 0x80, 0x80 ],     // U+04000000   six bytes
 
@@ -97,8 +106,10 @@ version (none) // fails unit tests
         [ 0xFD, 0xBF, 0xBF, 0xBF, 0xBF, 0xBF ],     // U+7FFFFFFF   six bytes
 
         // Other boundary conditions
-        [ 0xF4, 0x90, 0x80, 0x80 ],                 // U+00110000   First code
-                                                    // point after last character
+        [ 0xF4, 0x90, 0x80, 0x80 ],                 // U+00110000
+                                                    // First code
+                                                    // point after
+                                                    // last character
 
         // Unexpected continuation bytes
         [ 0x80 ],
@@ -239,7 +250,7 @@ version (none) // fails unit tests
 
     // Make sure all transcodings work in both directions, using both forward
     // and reverse iteration
-    foreach(a;validStrings)
+    foreach(a; validStrings)
     {
         string s = cast(string)a;
         string s2;
@@ -347,62 +358,8 @@ version (none) // fails unit tests
 
 //=============================================================================
 
-/* A simple growable buffer for fast appending */
-deprecated struct Buffer(E)
-{
-    alias Mutable!(E) T;
-
-    private
-    {
-        T[] buffer;
-        uint index;
-
-        void reserve(uint spaceNeeded)
-        {
-            uint bufferLength = buffer.length;
-            if (bufferLength < index + spaceNeeded)
-            {
-                if (bufferLength == 0) bufferLength = 16;
-                while (bufferLength < index + spaceNeeded) bufferLength <<= 2;
-                buffer.length = bufferLength;
-            }
-        }
-    }
-
-    void opCatAssign(E c) // Append a single character
-    {
-        reserve(1);
-        buffer[index++] = c;
-    }
-
-    void opCatAssign(const(E)[] a) // Append an array of characters
-    {
-        reserve(a.length);
-        buffer[index..index+a.length] = a[0..$];
-        index += a.length;
-    }
-
-    T[] toArray() // Return the buffer, and reset it
-    {
-        auto t = buffer[0..index];
-        buffer = null;
-        index = 0;
-        return t;
-    }
-
-    invariant(T)[] toIArray() // Return the buffer as an invariant array, and reset it
-    {
-        auto t = cast(invariant(T)[])(buffer[0..index]);
-        buffer = null;
-        index = 0;
-        return t;
-    }
-}
-
-//=============================================================================
-
-/** Special value returned by safeDecode */
-enum dchar INVALID_SEQUENCE = cast(dchar)0xFFFFFFFF;
+/** Special value returned by $(D safeDecode) */
+enum dchar INVALID_SEQUENCE = cast(dchar) 0xFFFFFFFF;
 
 template EncoderFunctions()
 {
@@ -546,12 +503,6 @@ template EncoderFunctions()
     	e.encode(c);
     }
 
-    deprecated void encode(dchar c, ref Buffer!(E) buffer)
-    {
-        mixin EncodeToBuffer e;
-        e.encode(c);
-    }
-    
     void encode(dchar c, void delegate(E) dg)
     {
         mixin EncodeToDelegate e;
@@ -564,13 +515,13 @@ template EncoderFunctions()
         e.skip();
     }
 
-    dchar decode(ref const(E)[] s)
+    dchar decode(S)(ref S s)
     {
         mixin DecodeFromString e;
         return e.decode();
     }
 
-    dchar safeDecode(ref const(E)[] s)
+    dchar safeDecode(S)(ref S s)
     {
         mixin SafeDecodeFromString e;
         return e.safeDecode();
@@ -706,11 +657,14 @@ template EncoderInstance(E)
 //          ASCII
 //=============================================================================
 
-typedef char AsciiChar; ///
-alias invariant(AsciiChar)[] AsciiString; ///
+/** Defines various character sets. */
+typedef ubyte AsciiChar;
+/// Ditto
+alias invariant(AsciiChar)[] AsciiString; 
 
-template EncoderInstance(E:AsciiChar)
+template EncoderInstance(CharType : AsciiChar)
 {
+    alias AsciiChar E;
     alias AsciiString EString;
 
     string encodingName()
@@ -735,7 +689,13 @@ template EncoderInstance(E:AsciiChar)
     }
     body
     {
-		return 1;
+        return 1;
+    }
+
+    void encodeX(Range)(dchar c, Range r)
+    {
+        if (!canEncode(c)) c = '?';
+        r.write(cast(AsciiChar) c);
     }
 
     void encodeViaWrite()(dchar c)
@@ -777,11 +737,17 @@ template EncoderInstance(E:AsciiChar)
 //          ISO-8859-1
 //=============================================================================
 
-typedef ubyte Latin1Char; ///
+/** Defines an Latin1-encoded character. */
+typedef ubyte Latin1Char;
+/**
+Defines an Latin1-encoded string (as an array of $(D
+invariant(Latin1Char))).
+ */
 alias invariant(Latin1Char)[] Latin1String; ///
 
-template EncoderInstance(E:Latin1Char)
+template EncoderInstance(CharType : Latin1Char)
 {
+    alias Latin1Char E;
     alias Latin1String EString;
 
     string encodingName()
@@ -847,11 +813,17 @@ template EncoderInstance(E:Latin1Char)
 //          WINDOWS-1252
 //=============================================================================
 
-typedef ubyte Windows1252Char; ///
+/** Defines a Windows1252-encoded character. */
+typedef ubyte Windows1252Char;
+/**
+Defines an Windows1252-encoded string (as an array of $(D
+invariant(Windows1252Char))).
+ */
 alias invariant(Windows1252Char)[] Windows1252String; ///
 
-template EncoderInstance(E:Windows1252Char)
+template EncoderInstance(CharType : Windows1252Char)
 {
+    alias Windows1252Char E;
     alias Windows1252String EString;
 
     string encodingName()
@@ -859,7 +831,7 @@ template EncoderInstance(E:Windows1252Char)
         return "windows-1252";
     }
 
-    wstring charMap =
+    invariant wstring charMap =
         "\u20AC\uFFFD\u201A\u0192\u201E\u2026\u2020\u2021"
         "\u02C6\u2030\u0160\u2039\u0152\uFFFD\u017D\uFFFD"
         "\uFFFD\u2018\u2019\u201C\u201D\u2022\u2103\u2014"
@@ -868,7 +840,7 @@ template EncoderInstance(E:Windows1252Char)
 
     bool canEncode(dchar c)
     {
-        if (c < 0x80 || (c >= 0xA0 && c <0x100)) return true;
+        if (c < 0x80 || (c >= 0xA0 && c < 0x100)) return true;
         if (c >= 0xFFFD) return false;
         foreach(wchar d;charMap) { if (c == d) return true; }
         return false;
@@ -887,12 +859,12 @@ template EncoderInstance(E:Windows1252Char)
     }
     body
     {
-		return 1;
+        return 1;
     }
 
     void encodeViaWrite()(dchar c)
     {
-        if (c < 0x80 || (c >= 0xA0 && c <0x100)) {}
+        if (c < 0x80 || (c >= 0xA0 && c < 0x100)) {}
         else if (c >= 0xFFFD) { c = '?'; }
         else
         {
@@ -946,8 +918,9 @@ template EncoderInstance(E:Windows1252Char)
 //          UTF-8
 //=============================================================================
 
-template EncoderInstance(E:char)
+template EncoderInstance(CharType : char)
 {
+    alias char E;
     alias invariant(char)[] EString;
 
     string encodingName()
@@ -965,7 +938,7 @@ template EncoderInstance(E:char)
         return (c < 0xC0 || (c >= 0xC2 && c < 0xF5));
     }
 
-    byte[128] tailTable =
+    immutable ubyte[128] tailTable =
     [
         0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
         0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -994,10 +967,10 @@ template EncoderInstance(E:char)
     }
     body
     {
-		if (c < 0x80) return 1;
-		if (c < 0x800) return 2;
-		if (c < 0x10000) return 3;
-		return 4;
+        if (c < 0x80) return 1;
+        if (c < 0x800) return 2;
+        if (c < 0x10000) return 3;
+        return 4;
     }
 
     void encodeViaWrite()(dchar c)
@@ -1030,7 +1003,7 @@ template EncoderInstance(E:char)
     {
         auto c = read;
         if (c < 0xC0) return;
-        int n = tails(c);
+        int n = tails(cast(char) c);
         for (uint i=0; i<n; ++i)
         {
             read();
@@ -1041,7 +1014,7 @@ template EncoderInstance(E:char)
     {
         auto c = read;
         if (c < 0xC0) return c;
-        int n = tails(c);
+        int n = tails(cast(char) c);
         c &= (1 << (6 - n)) - 1;
         for (uint i=0; i<n; ++i)
         {
@@ -1091,7 +1064,7 @@ template EncoderInstance(E:char)
         {
             shift += 6;
             auto d = read;
-            uint n = tails(d);
+            uint n = tails(cast(char) d);
             uint mask = n == 0 ? 0x3F : (1 << (6 - n)) - 1;
             c += ((d & mask) << shift);
             if (n != 0) break;
@@ -1111,9 +1084,10 @@ template EncoderInstance(E:char)
 //          UTF-16
 //=============================================================================
 
-template EncoderInstance(E:wchar)
+template EncoderInstance(CharType : wchar)
 {
-    alias invariant(wchar)[] EString;
+    alias wchar E;
+    alias immutable(wchar)[] EString;
 
     string encodingName()
     {
@@ -1207,9 +1181,10 @@ template EncoderInstance(E:wchar)
 //          UTF-32
 //=============================================================================
 
-template EncoderInstance(E:dchar)
+template EncoderInstance(CharType : dchar)
 {
-    alias invariant(dchar)[] EString;
+    alias dchar E;
+    alias immutable(dchar)[] EString;
 
     string encodingName()
     {
@@ -1274,19 +1249,19 @@ template EncoderInstance(E:dchar)
 // Below are forwarding functions which expose the function to the user
 
 /**
- * Returns true if c is a valid code point
- *
- * Note that this includes the non-character code points U+FFFE and U+FFFF,
- * since these are valid code points (even though they are not valid
- * characters).
- *
- * Supercedes:
- * This function supercedes std.utf.startsValidDchar().
- *
- * Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
- *
- * Params:
- *    c = the code point to be tested
+Returns true if c is a valid code point
+
+ Note that this includes the non-character code points U+FFFE and U+FFFF,
+ since these are valid code points (even though they are not valid
+ characters).
+
+ Supercedes:
+ This function supercedes $(D std.utf.startsValidDchar()).
+
+ Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
+
+ Params:
+    c = the code point to be tested
  */
 bool isValidCodePoint(dchar c)
 {
@@ -1294,18 +1269,17 @@ bool isValidCodePoint(dchar c)
 }
 
 /**
- * Returns the name of an encoding.
- *
- * The type of encoding cannot be deduced. Therefore, it is necessary to
- * explicitly specify the encoding type.
- *
- * Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
- *
- * Examples:
- * -----------------------------------
- * writefln(encodingName!(Latin1Char));
- *     // writes ISO-8859-1
- * -----------------------------------
+ Returns the name of an encoding.
+
+ The type of encoding cannot be deduced. Therefore, it is necessary to
+ explicitly specify the encoding type.
+
+ Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
+
+ Examples:
+ -----------------------------------
+ assert(encodingName!(Latin1Char) == "ISO-8859-1");
+ -----------------------------------
  */
 string encodingName(T)()
 {
@@ -1323,19 +1297,18 @@ unittest
 }
 
 /**
- * Returns true iff it is possible to represent the specifed codepoint
- * in the encoding.
- *
- * The type of encoding cannot be deduced. Therefore, it is necessary to
- * explicitly specify the encoding type.
- *
- * Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
- *
- * Examples:
- * -----------------------------------
- * writefln(canEncode!(Latin1Char)('A'));
- *     // writes true
- * -----------------------------------
+ Returns true iff it is possible to represent the specifed codepoint
+ in the encoding.
+
+ The type of encoding cannot be deduced. Therefore, it is necessary to
+ explicitly specify the encoding type.
+
+ Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
+
+ Examples:
+ -----------------------------------
+ assert(canEncode!(Latin1Char)('A'));
+ -----------------------------------
  */
 bool canEncode(E)(dchar c)
 {
@@ -1353,14 +1326,14 @@ unittest
 }
 
 /**
- * Returns true if the code unit is legal. For example, the byte 0x80 would
- * not be legal in ASCII, because ASCII code units must always be in the range
- * 0x00 to 0x7F.
- *
- * Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
- *
- * Params:
- *    c = the code unit to be tested
+ Returns true if the code unit is legal. For example, the byte 0x80 would
+ not be legal in ASCII, because ASCII code units must always be in the range
+ 0x00 to 0x7F.
+
+ Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
+
+ Params:
+    c = the code unit to be tested
  */
 bool isValidCodeUnit(E)(E c)
 {
@@ -1379,27 +1352,21 @@ unittest
 }
 
 /**
- * Returns true if the string is encoded correctly
- *
- * Supercedes:
- * This function supercedes std.utf.validate(), however note that this
- * function returns a bool indicating whether the input was valid or not,
- * wheras the older funtion would throw an exception.
- *
- * Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
- *
- * Params:
- *    s = the string to be tested
+ Returns true if the string is encoded correctly
+
+ Supercedes:
+ This function supercedes std.utf.validate(), however note that this
+ function returns a bool indicating whether the input was valid or not,
+ wheras the older funtion would throw an exception.
+
+ Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
+
+ Params:
+    s = the string to be tested
  */
 bool isValid(E)(const(E)[] s)
 {
-    while (s.length != 0)
-    {
-        dchar d = EncoderInstance!(E).safeDecode(s);
-        if (d == INVALID_SEQUENCE)
-            return false;
-    }
-    return true;
+    return s.length == validLength(s);
 }
 
 unittest
@@ -1408,53 +1375,52 @@ unittest
 }
 
 /**
- * Returns the length of the longest possible substring, starting from
- * the first code unit, which is validly encoded.
- *
- * Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
- *
- * Params:
- *    s = the string to be tested
+ Returns the length of the longest possible substring, starting from
+ the first code unit, which is validly encoded.
+
+ Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
+
+ Params:
+    s = the string to be tested
  */
 uint validLength(E)(const(E)[] s)
 {
-    const(E)[] r = s;
-    const(E)[] t = s;
-    while (s.length != 0)
+    uint result, before = void;
+    while ((before = s.length) > 0)
     {
         if (EncoderInstance!(E).safeDecode(s) == INVALID_SEQUENCE)
             break;
-        t = s;
+        result += before - s.length;
     }
-    return r.length - t.length;
+    return result;
 }
 
 /**
- * Sanitizes a string by replacing malformed code unit sequences with valid
- * code unit sequences. The result is guaranteed to be valid for this encoding.
- *
- * If the input string is already valid, this function returns the original,
- * otherwise it constructs a new string by replacing all illegal code unit
- * sequences with the encoding's replacement character, Invalid sequences will
- * be replaced with the Unicode replacement character (U+FFFD) if the
- * character repertoire contains it, otherwise invalid sequences will be
- * replaced with '?'.
- *
- * Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
- *
- * Params:
- *    s = the string to be sanitized
+ Sanitizes a string by replacing malformed code unit sequences with valid
+ code unit sequences. The result is guaranteed to be valid for this encoding.
+
+ If the input string is already valid, this function returns the original,
+ otherwise it constructs a new string by replacing all illegal code unit
+ sequences with the encoding's replacement character, Invalid sequences will
+ be replaced with the Unicode replacement character (U+FFFD) if the
+ character repertoire contains it, otherwise invalid sequences will be
+ replaced with '?'.
+
+ Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
+
+ Params:
+    s = the string to be sanitized
  */
-invariant(E)[] sanitize(E)(invariant(E)[] s)
+immutable(E)[] sanitize(E)(immutable(E)[] s)
 {
     uint n = validLength(s);
     if (n == s.length) return s;
 
     auto repSeq = EncoderInstance!(E).replacementSequence;
 
-	// Count how long the string needs to be.
-	// Overestimating is not a problem
-	uint len = s.length;
+    // Count how long the string needs to be.
+    // Overestimating is not a problem
+    uint len = s.length;
     const(E)[] t = s[n..$];
     while (t.length != 0)
     {
@@ -1481,7 +1447,7 @@ invariant(E)[] sanitize(E)(invariant(E)[] s)
         offset += n;
         t = t[n..$];
     }
-    return cast(invariant(E)[])array[0..offset];
+    return cast(immutable(E)[])array[0..offset];
 }
 
 unittest
@@ -1490,17 +1456,17 @@ unittest
 }
 
 /**
- * Returns the length of the first encoded sequence.
- *
- * The input to this function MUST be validly encoded.
- * This is enforced by the function's in-contract.
- *
- * Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
- *
- * Params:
- *    s = the string to be sliced
+Returns the length of the first encoded sequence.
+
+The input to this function MUST be validly encoded.
+This is enforced by the function's in-contract.
+
+Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
+
+Params:
+s = the string to be sliced
  */
-uint firstSequence(E)(const(E)[] s) /// ditto
+uint firstSequence(E)(const(E)[] s)
 in
 {
     assert(s.length != 0);
@@ -1509,9 +1475,9 @@ in
 }
 body
 {
-    const(E)[] t = s;
+    auto before = s.length;
     EncoderInstance!(E).skip(s);
-    return t.length - s.length;
+    return before - s.length;
 }
 
 unittest
@@ -1520,17 +1486,17 @@ unittest
 }
 
 /**
- * Returns the length the last encoded sequence.
- *
- * The input to this function MUST be validly encoded.
- * This is enforced by the function's in-contract.
- *
- * Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
- *
- * Params:
- *    s = the string to be sliced
+ Returns the length the last encoded sequence.
+
+ The input to this function MUST be validly encoded.
+ This is enforced by the function's in-contract.
+
+ Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
+
+ Params:
+    s = the string to be sliced
  */
-uint lastSequence(E)(const(E)[] s) /// ditto
+uint lastSequence(E)(const(E)[] s)
 in
 {
     assert(s.length != 0);
@@ -1549,18 +1515,17 @@ unittest
 }
 
 /**
- * Returns the total number of code points encoded in a string.
- *
- * The input to this function MUST be validly encoded.
- * This is enforced by the function's in-contract.
- *
- * Supercedes:
- * This function supercedes std.utf.toUCSindex().
- *
- * Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
- *
- * Params:
- *    s = the string to be counted
+Returns the total number of code points encoded in a string.
+
+The input to this function MUST be validly encoded.  This is enforced
+by the function's in-contract.
+
+Supercedes: This function supercedes $(D std.utf.toUCSindex()).
+
+Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
+
+Params:
+s = the string to be counted
  */
 uint count(E)(const(E)[] s)
 in
@@ -1584,18 +1549,18 @@ unittest
 }
 
 /**
- * Returns the array index at which the (n+1)th code point begins.
- *
- * The input to this function MUST be validly encoded.
- * This is enforced by the function's in-contract.
- *
- * Supercedes:
- * This function supercedes std.utf.toUTFindex().
- *
- * Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
- *
- * Params:
- *    s = the string to be counted
+ Returns the array index at which the (n+1)th code point begins.
+
+ The input to this function MUST be validly encoded.
+ This is enforced by the function's in-contract.
+
+ Supercedes:
+ This function supercedes std.utf.toUTFindex().
+
+ Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
+
+ Params:
+    s = the string to be counted
  */
 int index(E)(const(E)[] s,int n)
 in
@@ -1616,48 +1581,48 @@ unittest
 }
 
 /**
- * Decodes a single code point.
- *
- * This function removes one or more code units from the start of a string,
- * and returns the decoded code point which those code units represent.
- *
- * The input to this function MUST be validly encoded.
- * This is enforced by the function's in-contract.
- *
- * Supercedes:
- * This function supercedes std.utf.decode(), however, note that the
- * function codePoints() supercedes it more conveniently.
- *
- * Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
- *
- * Params:
- *    s = the string whose first code point is to be decoded
+ Decodes a single code point.
+
+ This function removes one or more code units from the start of a string,
+ and returns the decoded code point which those code units represent.
+
+ The input to this function MUST be validly encoded.
+ This is enforced by the function's in-contract.
+
+ Supercedes:
+ This function supercedes std.utf.decode(), however, note that the
+ function codePoints() supercedes it more conveniently.
+
+ Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
+
+ Params:
+    s = the string whose first code point is to be decoded
  */
-dchar decode(E)(ref const(E)[] s)
+dchar decode(S)(ref S s)
 in
 {
     assert(s.length != 0);
-    const(E)[] u = s;
+    auto u = s;
     assert(safeDecode(u) != INVALID_SEQUENCE);
 }
 body
 {
-    return EncoderInstance!(E).decode(s);
+    return EncoderInstance!(typeof(s[0])).decode(s);
 }
 
 /**
- * Decodes a single code point from the end of a string.
- *
- * This function removes one or more code units from the end of a string,
- * and returns the decoded code point which those code units represent.
- *
- * The input to this function MUST be validly encoded.
- * This is enforced by the function's in-contract.
- *
- * Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
- *
- * Params:
- *    s = the string whose first code point is to be decoded
+ Decodes a single code point from the end of a string.
+
+ This function removes one or more code units from the end of a string,
+ and returns the decoded code point which those code units represent.
+
+ The input to this function MUST be validly encoded.
+ This is enforced by the function's in-contract.
+
+ Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
+
+ Params:
+    s = the string whose first code point is to be decoded
  */
 dchar decodeReverse(E)(ref const(E)[] s)
 in
@@ -1671,43 +1636,43 @@ body
 }
 
 /**
- * Decodes a single code point. The input does not have to be valid.
- *
- * This function removes one or more code units from the start of a string,
- * and returns the decoded code point which those code units represent.
- *
- * This function will accept an invalidly encoded string as input.
- * If an invalid sequence is found at the start of the string, this
- * function will remove it, and return the value INVALID_SEQUENCE.
- *
- * Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
- *
- * Params:
- *    s = the string whose first code point is to be decoded
+ Decodes a single code point. The input does not have to be valid.
+
+ This function removes one or more code units from the start of a string,
+ and returns the decoded code point which those code units represent.
+
+ This function will accept an invalidly encoded string as input.
+ If an invalid sequence is found at the start of the string, this
+ function will remove it, and return the value INVALID_SEQUENCE.
+
+ Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
+
+ Params:
+    s = the string whose first code point is to be decoded
  */
-dchar safeDecode(E)(ref const(E)[] s)
+dchar safeDecode(S)(ref S s)
 in
 {
     assert(s.length != 0);
 }
 body
 {
-    return EncoderInstance!(E).safeDecode(s);
+    return EncoderInstance!(typeof(s[0])).safeDecode(s);
 }
 
 /**
- * Returns the number of code units required to encode a single code point.
- *
- * The input to this function MUST be a valid code point.
- * This is enforced by the function's in-contract.
- *
- * The type of the output cannot be deduced. Therefore, it is necessary to
- * explicitly specify the encoding as a template parameter.
- *
- * Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
- *
- * Params:
- *    c = the code point to be encoded
+ Returns the number of code units required to encode a single code point.
+
+ The input to this function MUST be a valid code point.
+ This is enforced by the function's in-contract.
+
+ The type of the output cannot be deduced. Therefore, it is necessary to
+ explicitly specify the encoding as a template parameter.
+
+ Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
+
+ Params:
+    c = the code point to be encoded
  */
 uint encodedLength(E)(dchar c)
 in
@@ -1720,25 +1685,25 @@ body
 }
 
 /**
- * Encodes a single code point.
- *
- * This function encodes a single code point into one or more code units.
- * It returns a string containing those code units.
- *
- * The input to this function MUST be a valid code point.
- * This is enforced by the function's in-contract.
- *
- * The type of the output cannot be deduced. Therefore, it is necessary to
- * explicitly specify the encoding as a template parameter.
- *
- * Supercedes:
- * This function supercedes std.utf.encode(), however, note that the
- * function codeUnits() supercedes it more conveniently.
- *
- * Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
- *
- * Params:
- *    c = the code point to be encoded
+ Encodes a single code point.
+
+ This function encodes a single code point into one or more code units.
+ It returns a string containing those code units.
+
+ The input to this function MUST be a valid code point.
+ This is enforced by the function's in-contract.
+
+ The type of the output cannot be deduced. Therefore, it is necessary to
+ explicitly specify the encoding as a template parameter.
+
+ Supercedes:
+ This function supercedes std.utf.encode(), however, note that the
+ function codeUnits() supercedes it more conveniently.
+
+ Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
+
+ Params:
+    c = the code point to be encoded
  */
 E[] encode(E)(dchar c)
 in
@@ -1751,29 +1716,29 @@ body
 }
 
 /**
- * Encodes a single code point into an array.
- *
- * This function encodes a single code point into one or more code units
- * The code units are stored in a user-supplied fixed-size array,
- * which must be passed by reference.
- *
- * The input to this function MUST be a valid code point.
- * This is enforced by the function's in-contract.
- *
- * The type of the output cannot be deduced. Therefore, it is necessary to
- * explicitly specify the encoding as a template parameter.
- *
- * Supercedes:
- * This function supercedes std.utf.encode(), however, note that the
- * function codeUnits() supercedes it more conveniently.
- *
- * Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
- *
- * Params:
- *    c = the code point to be encoded
- *
- * Returns:
- *	  the number of code units written to the array
+ Encodes a single code point into an array.
+
+ This function encodes a single code point into one or more code units
+ The code units are stored in a user-supplied fixed-size array,
+ which must be passed by reference.
+
+ The input to this function MUST be a valid code point.
+ This is enforced by the function's in-contract.
+
+ The type of the output cannot be deduced. Therefore, it is necessary to
+ explicitly specify the encoding as a template parameter.
+
+ Supercedes:
+ This function supercedes std.utf.encode(), however, note that the
+ function codeUnits() supercedes it more conveniently.
+
+ Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
+
+ Params:
+    c = the code point to be encoded
+
+ Returns:
+	  the number of code units written to the array
  */
 uint encode(E)(dchar c, E[] array)
 in
@@ -1787,57 +1752,119 @@ body
     return array.length - t.length;
 }
 
+// /**
+//  * Encodes a single code point into a Buffer.
+//  *
+//  * This function encodes a single code point into one or more code units
+//  * The code units are stored in a growable buffer.
+//  *
+//  * The input to this function MUST be a valid code point.
+//  * This is enforced by the function's in-contract.
+//  *
+//  * The type of the output cannot be deduced. Therefore, it is necessary to
+//  * explicitly specify the encoding as a template parameter.
+//  *
+//  * Supercedes:
+//  * This function supercedes std.utf.encode(), however, note that the
+//  * function codeUnits() supercedes it more conveniently.
+//  *
+//  * Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
+//  *
+//  * Params:
+//  *    c = the code point to be encoded
+//  */
+// deprecated void encode(E)(dchar c, ref Buffer!(E) buffer)
+// in
+// {
+//     assert(isValidCodePoint(c));
+// }
+// body
+// {
+//     EncoderInstance!(E).encode(c,buffer);
+// }
+
 /**
- * Encodes a single code point into a Buffer.
- *
- * This function encodes a single code point into one or more code units
- * The code units are stored in a growable buffer.
- *
- * The input to this function MUST be a valid code point.
- * This is enforced by the function's in-contract.
- *
- * The type of the output cannot be deduced. Therefore, it is necessary to
- * explicitly specify the encoding as a template parameter.
- *
- * Supercedes:
- * This function supercedes std.utf.encode(), however, note that the
- * function codeUnits() supercedes it more conveniently.
- *
- * Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
- *
- * Params:
- *    c = the code point to be encoded
+Encodes $(D c) in units of type $(D E) and writes the result to the
+output range $(D R). Returns the number of $(D E)s written.
  */
-deprecated void encode(E)(dchar c, ref Buffer!(E) buffer)
-in
+
+uint encode(E, R)(dchar c, R range)
 {
-    assert(isValidCodePoint(c));
-}
-body
-{
-    EncoderInstance!(E).encode(c,buffer);
+    static if (is(E == char))
+    {
+        if (c <= 0x7F)
+        {
+            range.put(cast(char) c);
+            return 1;
+        }
+        if (c <= 0x7FF)
+        {
+            range.put(cast(char)(0xC0 | (c >> 6)));
+            range.put(cast(char)(0x80 | (c & 0x3F)));
+            return 2;
+        }
+        if (c <= 0xFFFF)
+        {
+            range.put(cast(char)(0xE0 | (c >> 12)));
+            range.put(cast(char)(0x80 | ((c >> 6) & 0x3F)));
+            range.put(cast(char)(0x80 | (c & 0x3F)));
+            return 3;
+        }
+        if (c <= 0x10FFFF)
+        {
+            range.put(cast(char)(0xF0 | (c >> 18)));
+            range.put(cast(char)(0x80 | ((c >> 12) & 0x3F)));
+            range.put(cast(char)(0x80 | ((c >> 6) & 0x3F)));
+            range.put(cast(char)(0x80 | (c & 0x3F)));
+            return 4;
+        }
+        else
+        {
+            assert(0);
+        }
+    }
+    else static if (is(E == wchar))
+    {
+        if (c <= 0xFFFF)
+        {
+            r.put(cast(wchar) c);
+            return 1;
+        }
+        r.put(cast(wchar) ((((c - 0x10000) >> 10) & 0x3FF) + 0xD800));
+        r.put(cast(wchar) (((c - 0x10000) & 0x3FF) + 0xDC00));
+        return 2;
+    }
+    else static if (is(E == dchar))
+    {
+        r.put(c);
+        return 1;
+    }
+    else
+    {
+        return 0;
+    }
 }
 
 /**
- * Encodes a single code point to a delegate.
- *
- * This function encodes a single code point into one or more code units.
- * The code units are passed one at a time to the supplied delegate.
- *
- * The input to this function MUST be a valid code point.
- * This is enforced by the function's in-contract.
- *
- * The type of the output cannot be deduced. Therefore, it is necessary to
- * explicitly specify the encoding as a template parameter.
- *
- * Supercedes:
- * This function supercedes std.utf.encode(), however, note that the
- * function codeUnits() supercedes it more conveniently.
- *
- * Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
- *
- * Params:
- *    c = the code point to be encoded
+ Encodes a single code point to a delegate.
+
+ This function encodes a single code point into one or more code units.
+ The code units are passed one at a time to the supplied delegate.
+
+ The input to this function MUST be a valid code point.
+ This is enforced by the function's in-contract.
+
+ The type of the output cannot be deduced. Therefore, it is necessary to
+ explicitly specify the encoding as a template parameter.
+
+ Supercedes:
+ This function supercedes std.utf.encode(), however, note that the
+ function codeUnits() supercedes it more conveniently.
+
+ Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
+
+ Params:
+    c = the code point to be encoded
  */
 void encode(E)(dchar c, void delegate(E) dg)
 in
@@ -1850,38 +1877,38 @@ body
 }
 
 /**
- * Returns a foreachable struct which can bidirectionally iterate over all
- * code points in a string.
- *
- * The input to this function MUST be validly encoded.
- * This is enforced by the function's in-contract.
- *
- * You can foreach either
- * with or without an index. If an index is specified, it will be initialized
- * at each iteration with the offset into the string at which the code point
- * begins.
- *
- * Supercedes:
- * This function supercedes std.utf.decode().
- *
- * Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
- *
- * Params:
- *    s = the string to be decoded
- *
- * Examples:
- * --------------------------------------------------------
- * string s = "hello world";
- * foreach(c;codePoints(s))
- * {
- *     // do something with c (which will always be a dchar)
- * }
- * --------------------------------------------------------
- *
- * Note that, currently, foreach(c:codePoints(s)) is superior to foreach(c;s)
- * in that the latter will fall over on encountering U+FFFF.
+ Returns a foreachable struct which can bidirectionally iterate over all
+ code points in a string.
+
+ The input to this function MUST be validly encoded.
+ This is enforced by the function's in-contract.
+
+ You can foreach either
+ with or without an index. If an index is specified, it will be initialized
+ at each iteration with the offset into the string at which the code point
+ begins.
+
+ Supercedes:
+ This function supercedes std.utf.decode().
+
+ Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
+
+ Params:
+    s = the string to be decoded
+
+ Examples:
+ --------------------------------------------------------
+ string s = "hello world";
+ foreach(c;codePoints(s))
+ {
+     // do something with c (which will always be a dchar)
+ }
+ --------------------------------------------------------
+
+ Note that, currently, foreach(c:codePoints(s)) is superior to foreach(c;s)
+ in that the latter will fall over on encountering U+FFFF.
  */
-CodePoints!(E) codePoints(E)(invariant(E)[] s)
+CodePoints!(E) codePoints(E)(immutable(E)[] s)
 in
 {
     assert(isValid(s));
@@ -1903,35 +1930,35 @@ unittest
 }
 
 /**
- * Returns a foreachable struct which can bidirectionally iterate over all
- * code units in a code point.
- *
- * The input to this function MUST be a valid code point.
- * This is enforced by the function's in-contract.
- *
- * The type of the output cannot be deduced. Therefore, it is necessary to
- * explicitly specify the encoding type in the template parameter.
- *
- * Supercedes:
- * This function supercedes std.utf.encode().
- *
- * Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
- *
- * Params:
- *    d = the code point to be encoded
- *
- * Examples:
- * --------------------------------------------------------
- * dchar d = '\u20AC';
- * foreach(c;codeUnits!(char)(d))
- * {
- *     writefln("%X",c)
- * }
- * // will print
- * // E2
- * // 82
- * // AC
- * --------------------------------------------------------
+ Returns a foreachable struct which can bidirectionally iterate over all
+ code units in a code point.
+
+ The input to this function MUST be a valid code point.
+ This is enforced by the function's in-contract.
+
+ The type of the output cannot be deduced. Therefore, it is necessary to
+ explicitly specify the encoding type in the template parameter.
+
+ Supercedes:
+ This function supercedes std.utf.encode().
+
+ Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
+
+ Params:
+    d = the code point to be encoded
+
+ Examples:
+ --------------------------------------------------------
+ dchar d = '\u20AC';
+ foreach(c;codeUnits!(char)(d))
+ {
+     writefln("%X",c)
+ }
+ // will print
+ // E2
+ // 82
+ // AC
+ --------------------------------------------------------
  */
 CodeUnits!(E) codeUnits(E)(dchar c)
 in
@@ -1957,34 +1984,49 @@ unittest
 }
 
 /**
- * Convert a string from one encoding to another. (See also to!() below).
- *
- * The input to this function MUST be validly encoded.
- * This is enforced by the function's in-contract.
- *
- * Supercedes:
- * This function supercedes std.utf.toUTF8(), std.utf.toUTF16() and
- * std.utf.toUTF32()
- * (but note that to!() supercedes it more conveniently).
- *
- * Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
- *
- * Params:
- *    s = the source string
- *    r = the destination string
- *
- * Examples:
- * --------------------------------------------------------
- * wstring ws;
- * transcode("hello world",ws);
- *     // transcode from UTF-8 to UTF-16
- *
- * Latin1String ls;
- * transcode(ws, ls);
- *     // transcode from UTF-16 to ISO-8859-1
- * --------------------------------------------------------
+Encodes $(D c) in units of type $(D E) and writes the result to the
+output range $(D R). Returns the number of $(D E)s written.
  */
-void transcode(Src,Dst)(invariant(Src)[] s,out invariant(Dst)[] r)
+
+uint encode(Tgt, Src, R)(in Src[] s, R range)
+{
+    uint result;
+    foreach (c; s)
+    {
+        result += encode!(Tgt)(c, range);
+    }
+    return result;
+}
+
+/**
+ Convert a string from one encoding to another. (See also to!() below).
+
+ The input to this function MUST be validly encoded.
+ This is enforced by the function's in-contract.
+
+ Supercedes:
+ This function supercedes std.utf.toUTF8(), std.utf.toUTF16() and
+ std.utf.toUTF32()
+ (but note that to!() supercedes it more conveniently).
+
+ Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
+
+ Params:
+    s = the source string
+    r = the destination string
+
+ Examples:
+ --------------------------------------------------------
+ wstring ws;
+ transcode("hello world",ws);
+     // transcode from UTF-8 to UTF-16
+
+ Latin1String ls;
+ transcode(ws, ls);
+     // transcode from UTF-16 to ISO-8859-1
+  --------------------------------------------------------
+ */
+void transcode(Src,Dst)(immutable(Src)[] s,out immutable(Dst)[] r)
 in
 {
     assert(isValid(s));
@@ -2010,29 +2052,29 @@ body
 }
 
 /*
- * Convert a string from one encoding to another. (See also transcode() above).
- *
- * The input to this function MUST be validly encoded.
- * This is enforced by the function's in-contract.
- *
- * Supercedes:
- * This function supercedes std.utf.toUTF8(), std.utf.toUTF16() and
- * std.utf.toUTF32().
- *
- * Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
- *
- * Params:
- *    Dst = the destination encoding type
- *    s = the source string
- *
- * Examples:
- * -----------------------------------------------------------------------------
- * auto ws = to!(wchar)("hello world");  // transcode from UTF-8 to UTF-16
- * auto ls = to!(Latin1Char)(ws);            // transcode from UTF-16 to ISO-8859-1
- * -----------------------------------------------------------------------------
+ Convert a string from one encoding to another. (See also transcode() above).
+
+ The input to this function MUST be validly encoded.
+ This is enforced by the function's in-contract.
+
+ Supercedes:
+ This function supercedes std.utf.toUTF8(), std.utf.toUTF16() and
+ std.utf.toUTF32().
+
+ Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
+
+ Params:
+    Dst = the destination encoding type
+    s = the source string
+
+ Examples:
+ -----------------------------------------------------------------------------
+ auto ws = to!(wchar)("hello world");  // transcode from UTF-8 to UTF-16
+ auto ls = to!(Latin1Char)(ws);            // transcode from UTF-16 to ISO-8859-1
+ -----------------------------------------------------------------------------
  */
 // TODO: Commented out for no - to be moved to std.conv
-// Dst to(Dst,Src)(invariant(Src)[] s)
+// Dst to(Dst,Src)(immutable(Src)[] s)
 // in
 // {
 //  assert(isValid(s));
@@ -2192,7 +2234,7 @@ abstract class EncodingScheme
          * Normally this will be a representation of some substitution
          * character, such as U+FFFD or '?'.
          */
-        abstract invariant(ubyte)[] replacementSequence();
+        abstract immutable(ubyte)[] replacementSequence();
     }
 
     /**
@@ -2243,7 +2285,7 @@ abstract class EncodingScheme
      * Params:
      *    s = the string to be sanitized
      */
-    invariant(ubyte)[] sanitize(invariant(ubyte)[] s)
+    immutable(ubyte)[] sanitize(immutable(ubyte)[] s)
     {
 		uint n = validLength(s);
 		if (n == s.length) return s;
@@ -2279,7 +2321,7 @@ abstract class EncodingScheme
 			offset += n;
 			t = t[n..$];
 		}
-		return cast(invariant(ubyte)[])array[0..offset];
+		return cast(immutable(ubyte)[])array[0..offset];
     }
 
     /**
@@ -2356,20 +2398,20 @@ abstract class EncodingScheme
 }
 
 /**
- * EncodingScheme to handle ASCII
- *
- * This scheme recognises the following names:
- *                 "ANSI_X3.4-1968",
- *                 "ANSI_X3.4-1986",
- *                 "ASCII",
- *                 "IBM367",
- *                 "ISO646-US",
- *                 "ISO_646.irv:1991",
- *                 "US-ASCII",
- *                 "cp367",
- *                 "csASCII"
- *                 "iso-ir-6",
- *                 "us"
+ EncodingScheme to handle ASCII
+
+ This scheme recognises the following names:
+                 "ANSI_X3.4-1968",
+                 "ANSI_X3.4-1986",
+                 "ASCII",
+                 "IBM367",
+                 "ISO646-US",
+                 "ISO_646.irv:1991",
+                 "US-ASCII",
+                 "cp367",
+                 "csASCII"
+                 "iso-ir-6",
+                 "us"
  */
 class EncodingSchemeASCII : EncodingScheme
 {
@@ -2436,26 +2478,26 @@ class EncodingSchemeASCII : EncodingScheme
             return c;
         }
 
-        override invariant(ubyte)[] replacementSequence()
+        override immutable(ubyte)[] replacementSequence()
         {
-            return cast(invariant(ubyte)[])"?";
+            return cast(immutable(ubyte)[])"?";
         }
     }
 }
 
 /**
- * EncodingScheme to handle Latin-1
- *
- * This scheme recognises the following names:
- *                 "CP819",
- *                 "IBM819",
- *                 "ISO-8859-1",
- *                 "ISO_8859-1",
- *                 "ISO_8859-1:1987",
- *                 "csISOLatin1",
- *                 "iso-ir-100",
- *                 "l1",
- *                 "latin1"
+ EncodingScheme to handle Latin-1
+
+ This scheme recognises the following names:
+                 "CP819",
+                 "IBM819",
+                 "ISO-8859-1",
+                 "ISO_8859-1",
+                 "ISO_8859-1:1987",
+                 "csISOLatin1",
+                 "iso-ir-100",
+                 "l1",
+                 "latin1"
  */
 class EncodingSchemeLatin1 : EncodingScheme
 {
@@ -2520,18 +2562,18 @@ class EncodingSchemeLatin1 : EncodingScheme
             return c;
         }
 
-        override invariant(ubyte)[] replacementSequence()
+        override immutable(ubyte)[] replacementSequence()
         {
-            return cast(invariant(ubyte)[])"?";
+            return cast(immutable(ubyte)[])"?";
         }
     }
 }
 
 /**
- * EncodingScheme to handle Windows-1252
- *
- * This scheme recognises the following names:
- *                 "windows-1252"
+ EncodingScheme to handle Windows-1252
+
+ This scheme recognises the following names:
+                 "windows-1252"
  */
 class EncodingSchemeWindows1252 : EncodingScheme
 {
@@ -2588,18 +2630,18 @@ class EncodingSchemeWindows1252 : EncodingScheme
             return c;
         }
 
-        override invariant(ubyte)[] replacementSequence()
+        override immutable(ubyte)[] replacementSequence()
         {
-            return cast(invariant(ubyte)[])"?";
+            return cast(immutable(ubyte)[])"?";
         }
     }
 }
 
 /**
- * EncodingScheme to handle UTF-8
- *
- * This scheme recognises the following names:
- *                 "UTF-8"
+ EncodingScheme to handle UTF-8
+
+ This scheme recognises the following names:
+                 "UTF-8"
  */
 class EncodingSchemeUtf8 : EncodingScheme
 {
@@ -2656,19 +2698,19 @@ class EncodingSchemeUtf8 : EncodingScheme
             return c;
         }
 
-        override invariant(ubyte)[] replacementSequence()
+        override immutable(ubyte)[] replacementSequence()
         {
-            return cast(invariant(ubyte)[])"\uFFFD";
+            return cast(immutable(ubyte)[])"\uFFFD";
         }
     }
 }
 
 /**
- * EncodingScheme to handle UTF-16 in native byte order
- *
- * This scheme recognises the following names:
- *                 "UTF-16LE" (little-endian architecture only)
- *                 "UTF-16BE" (big-endian architecture only)
+ EncodingScheme to handle UTF-16 in native byte order
+
+ This scheme recognises the following names:
+                 "UTF-16LE" (little-endian architecture only)
+                 "UTF-16BE" (big-endian architecture only)
  */
 class EncodingSchemeUtf16Native : EncodingScheme
 {
@@ -2704,7 +2746,7 @@ class EncodingSchemeUtf16Native : EncodingScheme
 
         override uint encode(dchar c, ubyte[] buffer)
         {
-	    auto r = cast(wchar[])cast(void[])buffer;
+        	auto r = cast(wchar[])buffer;
             return wchar.sizeof * std.encoding.encode(c,r);
         }
 
@@ -2715,7 +2757,7 @@ class EncodingSchemeUtf16Native : EncodingScheme
         }
         body
         {
-            auto t = cast(const(wchar)[]) cast(const(void)[]) s;
+            auto t = cast(const(wchar)[]) s;
             dchar c = std.encoding.decode(t);
             s = s[$-t.length..$];
             return c;
@@ -2728,25 +2770,25 @@ class EncodingSchemeUtf16Native : EncodingScheme
         }
         body
         {
-            auto t = cast(const(wchar)[]) cast(const(void)[]) s;
+            auto t = cast(const(wchar)[]) s;
             dchar c = std.encoding.safeDecode(t);
             s = s[$-t.length..$];
             return c;
         }
 
-        override invariant(ubyte)[] replacementSequence()
+        override immutable(ubyte)[] replacementSequence()
         {
-            return cast(invariant(ubyte)[])"\uFFFD"w;
+            return cast(immutable(ubyte)[])"\uFFFD"w;
         }
     }
 }
 
 /**
- * EncodingScheme to handle UTF-32 in native byte order
- *
- * This scheme recognises the following names:
- *                 "UTF-32LE" (little-endian architecture only)
- *                 "UTF-32BE" (big-endian architecture only)
+ EncodingScheme to handle UTF-32 in native byte order
+
+ This scheme recognises the following names:
+                 "UTF-32LE" (little-endian architecture only)
+                 "UTF-32BE" (big-endian architecture only)
  */
 class EncodingSchemeUtf32Native : EncodingScheme
 {
@@ -2812,9 +2854,9 @@ class EncodingSchemeUtf32Native : EncodingScheme
             return c;
         }
 
-        override invariant(ubyte)[] replacementSequence()
+        override immutable(ubyte)[] replacementSequence()
         {
-            return cast(invariant(ubyte)[])"\uFFFD"d;
+            return cast(immutable(ubyte)[])"\uFFFD"d;
         }
     }
 }
@@ -2825,7 +2867,7 @@ class EncodingSchemeUtf32Native : EncodingScheme
 // Helper functions
 version(unittest)
 {
-    void transcodeReverse(Src,Dst)(invariant(Src)[] s, out invariant(Dst)[] r)
+    void transcodeReverse(Src,Dst)(immutable(Src)[] s, out immutable(Dst)[] r)
     {
         static if(is(Src==Dst))
         {
@@ -2926,4 +2968,3 @@ version(unittest)
         return "0123456789ABCDEF"[n & 0xF];
     }
 }
-
