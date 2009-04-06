@@ -25,7 +25,6 @@ import std.conv;
 import std.functional;
 import std.traits;
 import std.typetuple;
-import std.stdio; // for debugging only
 import std.contracts;
 import std.system;
 import std.range;
@@ -33,12 +32,9 @@ version(unittest) {
     import std.stdio, std.typecons;
 }
 
-version (Windows)
+version (Windows) version (DigitalMars)
 {
-    version (DigitalMars)
-    {
-	version = DigitalMarsC;
-    }
+    version = DigitalMarsC;
 }
 
 version (DigitalMarsC)
@@ -46,15 +42,16 @@ version (DigitalMarsC)
     // This is DMC's internal floating point formatting function
     extern (C)
     {
-	extern char* function(int c, int flags, int precision, real* pdval,
-	    char* buf, int* psl, int width) __pfloatfmt;
+	extern char* function(int c, int flags, int precision,
+                in real* pdval,
+                char* buf, size_t* psl, int width) __pfloatfmt;
     }
     alias std.c.stdio._snprintf snprintf;
 }
 else
 {
     // Use C99 snprintf
-    extern (C) int snprintf(char* s, size_t n, const char* format, ...);
+    extern (C) int snprintf(char* s, size_t n, in char* format, ...);
 }
 
 /**********************************************************************
@@ -117,90 +114,68 @@ enum Mangle : char
     Tinvariant = 'y',
 }
 
-// return the TypeInfo for a primitive type and null otherwise.
-// This is required since for arrays of ints we only have the mangled
-// char to work from. If arrays always subclassed TypeInfo_Array this
+// return the TypeInfo for a primitive type and null otherwise.  This
+// is required since for arrays of ints we only have the mangled char
+// to work from. If arrays always subclassed TypeInfo_Array this
 // routine could go away.
 private TypeInfo primitiveTypeInfo(Mangle m) 
 {
-  TypeInfo ti;
-
-  switch (m)
-    {
-    case Mangle.Tvoid:
-      ti = typeid(void);break;
-    case Mangle.Tbool:
-      ti = typeid(bool);break;
-    case Mangle.Tbyte:
-      ti = typeid(byte);break;
-    case Mangle.Tubyte:
-      ti = typeid(ubyte);break;
-    case Mangle.Tshort:
-      ti = typeid(short);break;
-    case Mangle.Tushort:
-      ti = typeid(ushort);break;
-    case Mangle.Tint:
-      ti = typeid(int);break;
-    case Mangle.Tuint:
-      ti = typeid(uint);break;
-    case Mangle.Tlong:
-      ti = typeid(long);break;
-    case Mangle.Tulong:
-      ti = typeid(ulong);break;
-    case Mangle.Tfloat:
-      ti = typeid(float);break;
-    case Mangle.Tdouble:
-      ti = typeid(double);break;
-    case Mangle.Treal:
-      ti = typeid(real);break;
-    case Mangle.Tifloat:
-      ti = typeid(ifloat);break;
-    case Mangle.Tidouble:
-      ti = typeid(idouble);break;
-    case Mangle.Tireal:
-      ti = typeid(ireal);break;
-    case Mangle.Tcfloat:
-      ti = typeid(cfloat);break;
-    case Mangle.Tcdouble:
-      ti = typeid(cdouble);break;
-    case Mangle.Tcreal:
-      ti = typeid(creal);break;
-    case Mangle.Tchar:
-      ti = typeid(char);break;
-    case Mangle.Twchar:
-      ti = typeid(wchar);break;
-    case Mangle.Tdchar:
-      ti = typeid(dchar);
-    default:
-      ti = null;
+    static TypeInfo[Mangle] dic;
+    if (!dic.length) {
+        dic = [
+            Mangle.Tvoid : typeid(void),
+            Mangle.Tbool : typeid(bool),
+            Mangle.Tbyte : typeid(byte),
+            Mangle.Tubyte : typeid(ubyte),
+            Mangle.Tshort : typeid(short),
+            Mangle.Tushort : typeid(ushort),
+            Mangle.Tint : typeid(int),
+            Mangle.Tuint : typeid(uint),
+            Mangle.Tlong : typeid(long),
+            Mangle.Tulong : typeid(ulong),
+            Mangle.Tfloat : typeid(float),
+            Mangle.Tdouble : typeid(double),
+            Mangle.Treal : typeid(real),
+            Mangle.Tifloat : typeid(ifloat),
+            Mangle.Tidouble : typeid(idouble),
+            Mangle.Tireal : typeid(ireal),
+            Mangle.Tcfloat : typeid(cfloat),
+            Mangle.Tcdouble : typeid(cdouble),
+            Mangle.Tcreal : typeid(creal),
+            Mangle.Tchar : typeid(char),
+            Mangle.Twchar : typeid(wchar),
+            Mangle.Tdchar : typeid(dchar)
+            ];
     }
-  return ti;
+    auto p = m in dic;
+    return p ? *p : null;
 }
 
 /************************************
- * Interprets variadic argument list pointed to by argptr whose types are given
- * by arguments[], formats them according to embedded format strings in the
- * variadic argument list, and sends the resulting characters to putc.
+ * Interprets variadic argument list pointed to by argptr whose types
+ * are given by arguments[], formats them according to embedded format
+ * strings in the variadic argument list, and sends the resulting
+ * characters to putc.
  *
- * The variadic arguments are consumed in order.
- * Each is formatted into a sequence of chars, using the default format
- * specification for its type, and the
- * characters are sequentially passed to putc.
- * If a char[], wchar[], or dchar[]
- * argument is encountered, it is interpreted as a format string. As many
- * arguments as specified in the format string are consumed and formatted
- * according to the format specifications in that string and passed to putc. If
- * there are too few remaining arguments, a FormatError is thrown. If there are
- * more remaining arguments than needed by the format specification, the default
- * processing of arguments resumes until they are all consumed.
+ * The variadic arguments are consumed in order.  Each is formatted
+ * into a sequence of chars, using the default format specification
+ * for its type, and the characters are sequentially passed to putc.
+ * If a $(D char[]), $(D wchar[]), or $(D dchar[]) argument is
+ * encountered, it is interpreted as a format string. As many
+ * arguments as specified in the format string are consumed and
+ * formatted according to the format specifications in that string and
+ * passed to putc. If there are too few remaining arguments, a
+ * FormatError is thrown. If there are more remaining arguments than
+ * needed by the format specification, the default processing of
+ * arguments resumes until they are all consumed.
  *
  * Params:
  *	putc =	Output is sent do this delegate, character by character.
- *	arguments = Array of TypeInfo's, one for each argument to be formatted.
+ *	arguments = Array of $(D TypeInfo)s, one for each argument to be formatted.
  *	argptr = Points to variadic argument list.
  *
  * Throws:
- *	Mismatched arguments and formats result in a FormatError being thrown.
+ *	Mismatched arguments and formats result in a $(D FormatError) being thrown.
  *
  * Format_String:
  *	<a name="format-string">$(I Format strings)</a>
@@ -456,18 +431,18 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
 
     static TypeInfo skipCI(TypeInfo valti)
     {
-      while (1)
-      {
-	if (valti.classinfo.name.length == 18 &&
-	    valti.classinfo.name[9..18] == "Invariant")
-	    valti =	(cast(TypeInfo_Invariant)valti).next;
-	else if (valti.classinfo.name.length == 14 &&
-	    valti.classinfo.name[9..14] == "Const")
-	    valti =	(cast(TypeInfo_Const)valti).next;
-	else
-	    break;
-      }
-      return valti;
+        for (;;)
+        {
+            if (valti.classinfo.name.length == 18 &&
+                    valti.classinfo.name[9..18] == "Invariant")
+                valti =	(cast(TypeInfo_Invariant)valti).next;
+            else if (valti.classinfo.name.length == 14 &&
+                    valti.classinfo.name[9..14] == "Const")
+                valti =	(cast(TypeInfo_Const)valti).next;
+            else
+                break;
+        }
+        return valti;
     }
 
     void formatArg(char fc)
@@ -1552,43 +1527,7 @@ unittest
 }
 
 // Andrei
-//-------------------------------------------------------------------------------
-/**
- * Implements the static Writer interface for a string. Instantiate it
- * with the character type, e.g. StringWriter!(char),
- * StringWriter!(wchar), or StringWriter!(dchar). Regardless of
- * instantiation, StringWriter supports all character widths; it only
- * is the most efficient at accepting the character type it was
- * instantiated with.
- */
-struct StringWriter(Char)
-{
-    alias Char NativeChar;
-    Char[] backend;
-    void write(C)(in C[] s)
-    {
-        static if (C.sizeof == NativeChar.sizeof)
-        {
-            backend ~= s;
-        }
-        else
-        {
-            backend ~= to!(const(NativeChar)[])(s);
-        }
-    }
-    void putchar(C)(in C c)
-    {
-        static if (C.sizeof == NativeChar.sizeof)
-        {
-            backend ~= c;
-        }
-        else
-        {
-            backend ~= to!(const(NativeChar)[])(c);
-        }
-    }
-}
-
+//------------------------------------------------------------------------------
 import std.bitmanip;
 
 /*
@@ -1597,17 +1536,20 @@ import std.bitmanip;
  * assigning any semantics to the fields. */
 struct FormatInfo
 {
-    /** minimum width, default 0. If width == width.max, then width
-     was specified as '*' in the format string.
-    */
-    short width = 0; 
-    /** precision, default ushort.max - 1. If precision ==
-     precision.max, then precision was specified as '*' in the format string.
-    */
-    short precision = short.max - 1; // by convention max-1 == "no precision"
+    /** Special values for width and precision, DYNAMIC width or
+     * precision means that they were specified with '*' in the format
+     * string. */
+    enum short DYNAMIC = short.max;
+    /** Special value for precision */
+    enum short UNSPECIFIED = DYNAMIC - 1;
+    /** minimum width, default 0.  */
+    short width = 0;
+    /** precision. */
+    short precision = UNSPECIFIED; 
     /** The actual format specifier, 's' by default. */
     char spec = 's';
-    /** Index of the argument, 1 .. ubyte.max. (0 means not used)*/
+    /** Index of the argument for positional parameters, from 1 to
+     * ubyte.max. (0 means not used) */
     ubyte index;
     /* Flags: flDash for '-', flZero for '0', flSpace for ' ', flPlus
      *  for '+', flHash for '#'. */
@@ -1620,28 +1562,19 @@ struct FormatInfo
                 ubyte, "", 3));
     /* For arrays only: the trailing spec after the  */    
     const(char)[] innerTrailing;
-}
 
 /*
  * Given a string format specification fmt, parses a format
  * specifier. The string is assumed to start with the character
  * immediately following the '%'. The string is advanced to right
  * after the end of the format specifier. */
-FormatInfo parseFormatSpec(S)(ref S fmt)
-{
-    FormatInfo result;
-    if (!fmt.length) return result;
-    size_t i = 0;
-    for (;;)
-        switch (fmt[i])
-        {
-        case '-': result.flDash = true; ++i; break;
-        case '+': result.flPlus = true; ++i; break;
-        case '#': result.flHash = true; ++i; break;
-        case '0': result.flZero = true; ++i; break;
-        case ' ': result.flSpace = true; ++i; break;
-        case '*':
-            if (isdigit(fmt[++i]))
+    static FormatInfo parse(S)(ref S fmt)
+    {
+        FormatInfo result;
+        if (!fmt.length) return result;
+        size_t i = 0;
+        for (;;)
+            switch (fmt[i])
             {
             case '(':
             {
@@ -1685,16 +1618,16 @@ FormatInfo parseFormatSpec(S)(ref S fmt)
             case '*':
                 if (isdigit(fmt[++i]))
                 {
-                    // a '.*' followed by digits and '$' is a positional format
-                    fmt = fmt[i .. $];
+                    // a '*' followed by digits and '$' is a positional format
+                    fmt = fmt[1 .. $];
+                    result.width = -.parse!(typeof(result.width))(fmt);
                     i = 0;
-                    result.precision = cast(short)(-parse!(int)(fmt));
                     if (fmt[i++] != '$') throw new FormatError("$ expected");
                 }
-                else
+                else 
                 {
                     // read result
-                    result.precision = result.precision.max;
+                    result.width = DYNAMIC;
                 }
                 break;
             case '1': case '2': case '3': case '4':
@@ -1761,42 +1694,17 @@ FormatInfo parseFormatSpec(S)(ref S fmt)
                 // this is the format char
                 result.spec = fmt[i++];
                 //result.raw = to!(const(char)[])(fmt[0 .. i]);
-            }
-            else if (fmt[i] == '-')
-            {
-                // negative precision, as good as 0
-                result.precision = 0;
                 fmt = fmt[i .. $];
                 return result;
             } // end switch and for
     }
-// =======
-//                 i = 0;
-//                 parse!(int)(fmt); // skip digits
-//             }
-//             else
-//             {
-//                 fmt = fmt[i .. $];
-//                 i = 0;
-//                 result.precision =
-//                     cast(short)(isdigit(fmt[0]) ? parse!(int)(fmt) : 0);
-//             }
-//             break;
-//         default:
-//             // this is the format char
-//             result.spec = fmt[i];
-//             fmt = fmt[i + 1 .. $];
-//             return result;
-//         }
-//     //assert(false);
-// >>>>>>> .r1021
 }
 
-//-------------------------------------------------------------------------------
-// Writes characters in the format strings up to the first format specifier
-// and updates the format specifier to remove the written portion
-// The updated format fmt does not include the '%'
-private void writeUpToFormatSpec(Writer, S)(ref Writer w, ref S fmt)
+//------------------------------------------------------------------------------
+// Writes characters in the format strings up to the first format
+// specifier and updates the format specifier to remove the written
+// portion The updated format fmt does not include the '%'
+private void writeUpToFormatSpec(OutRange, S)(ref OutRange w, ref S fmt)
 {
     for (size_t i = 0; i < fmt.length; ++i)
     {
@@ -1808,7 +1716,8 @@ private void writeUpToFormatSpec(Writer, S)(ref Writer w, ref S fmt)
             fmt = fmt[i .. $];
             return;
         }
-        // doubled! Now print whatever we had, then update the string and move on
+        // doubled! Now print whatever we had, then update the string
+        // and move on
         w.put(fmt[0 .. i]);
         fmt = fmt[i + 1 .. $];
         i = 0;
@@ -1820,26 +1729,27 @@ private void writeUpToFormatSpec(Writer, S)(ref Writer w, ref S fmt)
 
 unittest
 {
-    StringWriter!(char) w;
+    Appender!(char[]) w;
     string fmt = "abc%sdef%sghi";
     writeUpToFormatSpec(w, fmt);
-    assert(w.backend == "abc" && fmt == "sdef%sghi");
+    assert(w.data == "abc" && fmt == "sdef%sghi");
     writeUpToFormatSpec(w, fmt);
-    assert(w.backend == "abcsdef" && fmt == "sghi");
+    assert(w.data == "abcsdef" && fmt == "sghi");
     // test with embedded %%s
     fmt = "ab%%cd%%ef%sg%%h%sij";
-    w.backend = null;
+    w.clear;
     writeUpToFormatSpec(w, fmt);
-    assert(w.backend == "ab%cd%ef" && fmt == "sg%%h%sij");
+    assert(w.data == "ab%cd%ef" && fmt == "sg%%h%sij");
     writeUpToFormatSpec(w, fmt);
-    assert(w.backend == "ab%cd%efsg%h" && fmt == "sij");
+    assert(w.data == "ab%cd%efsg%h" && fmt == "sij");
 }
 
 /*
  * Formats an integral number 'arg' according to 'f' and writes it to
  * 'w'.
  */ 
-private void formatIntegral(Writer, D)(ref Writer w, D argx, FormatInfo f)
+private void formatImplInt(Writer, D)(ref Writer w, D argx, FormatInfo f)
+//if (isIntegral!(D))
 {
     Unqual!(D) arg = argx;
     if (f.spec == 'r')
@@ -1860,7 +1770,7 @@ private void formatIntegral(Writer, D)(ref Writer w, D argx, FormatInfo f)
         }
         return;
     }
-    if (f.precision == f.precision.max - 1)
+    if (f.precision == FormatInfo.UNSPECIFIED)
     {
         // default precision for integrals is 1
         f.precision = 1;
@@ -1910,7 +1820,7 @@ private void formatIntegral(Writer, D)(ref Writer w, D argx, FormatInfo f)
         do
         {
             --i;
-            buffer[i] = cast(char)(n % base);
+            buffer[i] = cast(char) (n % base);
             n /= base;
             if (buffer[i] < 10) buffer[i] += '0';
             else buffer[i] += (f.spec == 'x' ? 'a' : 'A') - 10;
@@ -1970,7 +1880,8 @@ private void formatIntegral(Writer, D)(ref Writer w, D argx, FormatInfo f)
  * Formats a floating point number 'arg' according to 'f' and writes
  * it to 'w'.
  */ 
-private void formatFloat(Writer, D)(ref Writer w, D obj, FormatInfo f)
+private void formatImplFloat(Writer, D)(ref Writer w, D obj, FormatInfo f)
+//if (isFloatingPoint!(D))
 {
     if (f.spec == 'r')
     {
@@ -2011,11 +1922,11 @@ private void formatFloat(Writer, D)(ref Writer w, D obj, FormatInfo f)
     //printf("format: '%s'; geeba: %g\n", sprintfSpec.ptr, obj);
     char[512] buf;
     invariant n = snprintf(buf.ptr, buf.length,
-                       sprintfSpec.ptr,
-                       f.width,
-                       // negative precision is same as no precision specified
-                       f.precision == f.precision.max - 1 ? -1 : f.precision,
-                       obj);
+            sprintfSpec.ptr,
+            f.width,
+            // negative precision is same as no precision specified
+            f.precision == FormatInfo.UNSPECIFIED ? -1 : f.precision,
+            obj);
     if (n < 0) throw new FormatError("floating point formatting failure");
     w.put(buf[0 .. strlen(buf.ptr)]);
 }
@@ -2036,18 +1947,14 @@ private void formatGeneric(Writer, D)(ref Writer w, const(void)* arg,
         formatGeneric!(Writer, Original)(w, arg, f);
     } else static if (is(D Original == typedef)) {
         formatGeneric!(Writer, Original)(w, arg, f);
-    } else static if (is(D Original == enum)) {
-        formatGeneric!(Writer, Original)(w, arg, f);
-    } else static if (is(const D == const(float))
-                      || is(const(D) == const(double))
-                      || is(const(D) == const(real))) {
-        formatFloat(w, obj, f);
+    } else static if (isFloatingPoint!(D)) {
+        formatImplFloat(w, obj, f);
     } else static if (is(const(D) == const ifloat)) {
-        formatFloat(w, *cast(float*) &obj, f);
+        formatImplFloat(w, *cast(float*) &obj, f);
     } else static if (is(const(D) == const idouble)) {
-        formatFloat(w, *cast(double*) &obj, f);
+        formatImplFloat(w, *cast(double*) &obj, f);
     } else static if (is(const(D) == const ireal)) {
-        formatFloat(w, *cast(real*) &obj, f);
+        formatImplFloat(w, *cast(real*) &obj, f);
     } else static if (is(const(D) == const cfloat)
                       || is(const(D) == const cdouble)
                       || is(const(D) == const creal)) {
@@ -2209,7 +2116,8 @@ import std.format;
 string myFormat(A...)(A args)
 {
     StringWriter!(char) writer;
-    std.format.formattedWrite(writer, "%s et %s numeris romanis non sunt", args);
+    std.format.formattedWrite(writer,
+        "%s et %s numeris romanis non sunt", args);
     return writer.backend;
 }
 ...
@@ -2239,7 +2147,7 @@ undergoing active development. Do not rely on it.
 
 void formattedWrite(Writer, F, A...)(ref Writer w, const(F)[] fmt, A args)
 {
-    invariant len = args.length;
+    enum len = args.length;
     void function(ref Writer, const(void)*, FormatInfo) funs[len] = void;
     const(void)* argsAddresses[len] = void;
     foreach (i, arg; args)
@@ -2269,7 +2177,7 @@ void formattedWrite(Writer, F, A...)(ref Writer w, const(F)[] fmt, A args)
             }
             break;
         }
-        if (spec.width == spec.width.max)
+        if (spec.width == FormatInfo.DYNAMIC)
         {
             auto width = to!(typeof(spec.width))(getNthInt(currentArg, args));
             if (width < 0)
@@ -2293,13 +2201,13 @@ void formattedWrite(Writer, F, A...)(ref Writer w, const(F)[] fmt, A args)
             }
             spec.width = width;
         }
-        if (spec.precision == spec.precision.max)
+        if (spec.precision == FormatInfo.DYNAMIC)
         {
             auto precision = to!(typeof(spec.precision))(
                 getNthInt(currentArg, args));
             if (precision >= 0) spec.precision = precision;
             // else negative precision is same as no precision
-            else spec.precision = spec.precision.max - 1;
+            else spec.precision = FormatInfo.UNSPECIFIED;
             ++currentArg;
         }
         else if (spec.precision < 0)
@@ -2311,7 +2219,7 @@ void formattedWrite(Writer, F, A...)(ref Writer w, const(F)[] fmt, A args)
             if (currentArg < index) currentArg = index;
             if (precision >= 0) spec.precision = precision;
             // else negative precision is same as no precision
-            else spec.precision = spec.precision.max - 1;
+            else spec.precision = FormatInfo.UNSPECIFIED;
         }
         // Format!
         if (spec.index > 0)
@@ -2332,35 +2240,34 @@ void formattedWrite(Writer, F, A...)(ref Writer w, const(F)[] fmt, A args)
 
 unittest
 {
-    StringWriter!(char) stream;
+    Appender!(char[]) stream;
     formattedWrite(stream, "%s", 1.1);
-    assert(stream.backend == "1.1", stream.backend);
+    assert(stream.data == "1.1", stream.data);
 }
 
 unittest
 {
     // testing raw writes
-    StringWriter!(char) w;
-    w.backend = null;
+    Appender!(char[]) w;
     uint a = 0x02030405;
     formattedWrite(w, "%+r", a);
-    assert(w.backend.length == 4 && w.backend[0] == 2 && w.backend[1] == 3
-        && w.backend[2] == 4 && w.backend[3] == 5);
-    w.backend = null;
+    assert(w.data.length == 4 && w.data[0] == 2 && w.data[1] == 3
+        && w.data[2] == 4 && w.data[3] == 5);
+    w.clear;
     formattedWrite(w, "%-r", a);
-    assert(w.backend.length == 4 && w.backend[0] == 5 && w.backend[1] == 4
-        && w.backend[2] == 3 && w.backend[3] == 2);
+    assert(w.data.length == 4 && w.data[0] == 5 && w.data[1] == 4
+        && w.data[2] == 3 && w.data[3] == 2);
 }
 
 unittest
 {
     // testing positional parameters
-    StringWriter!(char) w;
-    w.backend = null;
-    formattedWrite(w, "Numbers %2$s and %1$s are reversed and %1$s%2$s repeated",
-        42, 0);
-    assert(w.backend == "Numbers 0 and 42 are reversed and 420 repeated",
-        w.backend);
+    Appender!(char[]) w;
+    formattedWrite(w,
+            "Numbers %2$s and %1$s are reversed and %1$s%2$s repeated",
+            42, 0);
+    assert(w.data == "Numbers 0 and 42 are reversed and 420 repeated",
+            w.data);
     w.clear;
     formattedWrite(w, "asd%s", 23);
     assert(w.data == "asd23", w.data);
@@ -2389,117 +2296,117 @@ unittest
    * is for %A.
    */
   version (linux)
-      assert(stream.backend == "1.67 -0X1.47AE147AE147BP+0 nan", stream.backend);
+      assert(stream.data == "1.67 -0X1.47AE147AE147BP+0 nan", stream.data);
   else
-      assert(stream.backend == "1.67 -0X1.47AE147AE147BP+0 nan");
-  stream.backend = null;
+      assert(stream.data == "1.67 -0X1.47AE147AE147BP+0 nan");
+  stream.clear;
 
   formattedWrite(stream, "%x %X", 0x1234AF, 0xAFAFAFAF);
-  assert(stream.backend == "1234af AFAFAFAF");
-  stream.backend = null;
+  assert(stream.data == "1234af AFAFAFAF");
+  stream.clear;
 
   formattedWrite(stream, "%b %o", 0x1234AF, 0xAFAFAFAF);
-  assert(stream.backend == "100100011010010101111 25753727657");
-  stream.backend = null;
+  assert(stream.data == "100100011010010101111 25753727657");
+  stream.clear;
 
   formattedWrite(stream, "%d %s", 0x1234AF, 0xAFAFAFAF);
-  assert(stream.backend == "1193135 2947526575");
-  stream.backend = null;
+  assert(stream.data == "1193135 2947526575");
+  stream.clear;
   
   formattedWrite(stream, "%s", 1.2 + 3.4i);
-  assert(stream.backend == "1.2+3.4i");
-  stream.backend = null;
+  assert(stream.data == "1.2+3.4i");
+  stream.clear;
   
   formattedWrite(stream, "%a %A", 1.32, 6.78f);
   //formattedWrite(stream, "%x %X", 1.32);
-  assert(stream.backend == "0x1.51eb851eb851fp+0 0X1.B1EB86P+2");
-  stream.backend = null;
+  assert(stream.data == "0x1.51eb851eb851fp+0 0X1.B1EB86P+2");
+  stream.clear;
 
   formattedWrite(stream, "%#06.*f",2,12.345);
-  assert(stream.backend == "012.35");
-  stream.backend = null;
+  assert(stream.data == "012.35");
+  stream.clear;
 
   formattedWrite(stream, "%#0*.*f",6,2,12.345);
-  assert(stream.backend == "012.35");
-  stream.backend = null;
+  assert(stream.data == "012.35");
+  stream.clear;
 
   const real constreal = 1;
   formattedWrite(stream, "%g",constreal);
-  assert(stream.backend == "1");
-  stream.backend = null;
+  assert(stream.data == "1");
+  stream.clear;
 
   formattedWrite(stream, "%7.4g:", 12.678);
-  assert(stream.backend == "  12.68:");
-  stream.backend = null;
+  assert(stream.data == "  12.68:");
+  stream.clear;
   
   formattedWrite(stream, "%7.4g:", 12.678L);
-  assert(stream.backend == "  12.68:");
-  stream.backend = null;
+  assert(stream.data == "  12.68:");
+  stream.clear;
   
   formattedWrite(stream, "%04f|%05d|%#05x|%#5x",-4.,-10,1,1);
-  assert(stream.backend == "-4.000000|-0010|0x001|  0x1",
-      stream.backend);
-  stream.backend = null;
+  assert(stream.data == "-4.000000|-0010|0x001|  0x1",
+      stream.data);
+  stream.clear;
   
   int i;
   string s;
   
   i = -10;
   formattedWrite(stream, "%d|%3d|%03d|%1d|%01.4f",i,i,i,i,cast(double) i);
-  assert(stream.backend == "-10|-10|-10|-10|-10.0000");
-  stream.backend = null;
+  assert(stream.data == "-10|-10|-10|-10|-10.0000");
+  stream.clear;
 
   i = -5;
   formattedWrite(stream, "%d|%3d|%03d|%1d|%01.4f",i,i,i,i,cast(double) i);
-  assert(stream.backend == "-5| -5|-05|-5|-5.0000");
-  stream.backend = null;
+  assert(stream.data == "-5| -5|-05|-5|-5.0000");
+  stream.clear;
 
   i = 0;
   formattedWrite(stream, "%d|%3d|%03d|%1d|%01.4f",i,i,i,i,cast(double) i);
-  assert(stream.backend == "0|  0|000|0|0.0000");
-  stream.backend = null;
+  assert(stream.data == "0|  0|000|0|0.0000");
+  stream.clear;
 
   i = 5;
   formattedWrite(stream, "%d|%3d|%03d|%1d|%01.4f",i,i,i,i,cast(double) i);
-  assert(stream.backend == "5|  5|005|5|5.0000");
-  stream.backend = null;
+  assert(stream.data == "5|  5|005|5|5.0000");
+  stream.clear;
 
   i = 10;
   formattedWrite(stream, "%d|%3d|%03d|%1d|%01.4f",i,i,i,i,cast(double) i);
-  assert(stream.backend == "10| 10|010|10|10.0000");
-  stream.backend = null;
+  assert(stream.data == "10| 10|010|10|10.0000");
+  stream.clear;
 
   formattedWrite(stream, "%.0d", 0);
-  assert(stream.backend == "");
-  stream.backend = null;
+  assert(stream.data == "");
+  stream.clear;
 
   formattedWrite(stream, "%.g", .34);
-  assert(stream.backend == "0.3");
-  stream.backend = null;
+  assert(stream.data == "0.3");
+  stream.clear;
   
-  stream.backend = null; formattedWrite(stream, "%.0g", .34);
-  assert(stream.backend == "0.3");
+  stream.clear; formattedWrite(stream, "%.0g", .34);
+  assert(stream.data == "0.3");
   
-  stream.backend = null; formattedWrite(stream, "%.2g", .34);
-  assert(stream.backend == "0.34");
+  stream.clear; formattedWrite(stream, "%.2g", .34);
+  assert(stream.data == "0.34");
   
-  stream.backend = null; formattedWrite(stream, "%0.0008f", 1e-08);
-  assert(stream.backend == "0.00000001");
+  stream.clear; formattedWrite(stream, "%0.0008f", 1e-08);
+  assert(stream.data == "0.00000001");
   
-  stream.backend = null; formattedWrite(stream, "%0.0008f", 1e-05);
-  assert(stream.backend == "0.00001000");
+  stream.clear; formattedWrite(stream, "%0.0008f", 1e-05);
+  assert(stream.data == "0.00001000");
   
   //return;
   //std.c.stdio.fwrite(stream.data.ptr, stream.data.length, 1, stderr);
   
   s = "helloworld";
   string r;
-  stream.backend = null; formattedWrite(stream, "%.2s", s[0..5]);
-  assert(stream.backend == "he");
-  stream.backend = null; formattedWrite(stream, "%.20s", s[0..5]);
-  assert(stream.backend == "hello");
-  stream.backend = null; formattedWrite(stream, "%8s", s[0..5]);
-  assert(stream.backend == "   hello");
+  stream.clear; formattedWrite(stream, "%.2s", s[0..5]);
+  assert(stream.data == "he");
+  stream.clear; formattedWrite(stream, "%.20s", s[0..5]);
+  assert(stream.data == "hello");
+  stream.clear; formattedWrite(stream, "%8s", s[0..5]);
+  assert(stream.data == "   hello");
 
     byte[] arrbyte = new byte[4];
     arrbyte[0] = 100;
@@ -2563,27 +2470,27 @@ unittest
   stream.clear; formattedWrite(stream, "%s", arr2);
   assert(stream.data == "hello world  foo");
 
-  stream.backend = null; formattedWrite(stream, "%.8d", 7);
-  assert(stream.backend == "00000007");
+  stream.clear; formattedWrite(stream, "%.8d", 7);
+  assert(stream.data == "00000007");
 
-  stream.backend = null; formattedWrite(stream, "%.8x", 10);
-  assert(stream.backend == "0000000a");
+  stream.clear; formattedWrite(stream, "%.8x", 10);
+  assert(stream.data == "0000000a");
 
-  stream.backend = null; formattedWrite(stream, "%-3d", 7);
-  assert(stream.backend == "7  ");
+  stream.clear; formattedWrite(stream, "%-3d", 7);
+  assert(stream.data == "7  ");
   
-  stream.backend = null; formattedWrite(stream, "%*d", -3, 7);
-  assert(stream.backend == "7  ");
+  stream.clear; formattedWrite(stream, "%*d", -3, 7);
+  assert(stream.data == "7  ");
 
-  stream.backend = null; formattedWrite(stream, "%.*d", -3, 7);
-  //writeln(stream.backend);
-  assert(stream.backend == "7");
+  stream.clear; formattedWrite(stream, "%.*d", -3, 7);
+  //writeln(stream.data);
+  assert(stream.data == "7");
 
 //  assert(false);
 //   typedef int myint;
 //   myint m = -7;
-//   stream.backend = null; formattedWrite(stream, "", m);
-//   assert(stream.backend == "-7");
+//   stream.clear; formattedWrite(stream, "", m);
+//   assert(stream.data == "-7");
   
   stream.clear; formattedWrite(stream, "%s", "abc"c);
   assert(stream.data == "abc");
@@ -2597,32 +2504,32 @@ unittest
   stream.clear; formattedWrite(stream, "%s", p);
   assert(stream.data == "DEADBEEF");
 
-  stream.backend = null; formattedWrite(stream, "%#x", 0xabcd);
-  assert(stream.backend == "0xabcd");
-  stream.backend = null; formattedWrite(stream, "%#X", 0xABCD);
-  assert(stream.backend == "0XABCD");
+  stream.clear; formattedWrite(stream, "%#x", 0xabcd);
+  assert(stream.data == "0xabcd");
+  stream.clear; formattedWrite(stream, "%#X", 0xABCD);
+  assert(stream.data == "0XABCD");
 
-  stream.backend = null; formattedWrite(stream, "%#o", 012345);
-  assert(stream.backend == "012345");
-  stream.backend = null; formattedWrite(stream, "%o", 9);
-  assert(stream.backend == "11");
+  stream.clear; formattedWrite(stream, "%#o", 012345);
+  assert(stream.data == "012345");
+  stream.clear; formattedWrite(stream, "%o", 9);
+  assert(stream.data == "11");
 
-  stream.backend = null; formattedWrite(stream, "%+d", 123);
-  assert(stream.backend == "+123");
-  stream.backend = null; formattedWrite(stream, "%+d", -123);
-  assert(stream.backend == "-123");
-  stream.backend = null; formattedWrite(stream, "% d", 123);
-  assert(stream.backend == " 123");
-  stream.backend = null; formattedWrite(stream, "% d", -123);
-  assert(stream.backend == "-123");
+  stream.clear; formattedWrite(stream, "%+d", 123);
+  assert(stream.data == "+123");
+  stream.clear; formattedWrite(stream, "%+d", -123);
+  assert(stream.data == "-123");
+  stream.clear; formattedWrite(stream, "% d", 123);
+  assert(stream.data == " 123");
+  stream.clear; formattedWrite(stream, "% d", -123);
+  assert(stream.data == "-123");
   
-  stream.backend = null; formattedWrite(stream, "%%");
-  assert(stream.backend == "%");
+  stream.clear; formattedWrite(stream, "%%");
+  assert(stream.data == "%");
   
-  stream.backend = null; formattedWrite(stream, "%d", true);
-  assert(stream.backend == "1");
-  stream.backend = null; formattedWrite(stream, "%d", false);
-  assert(stream.backend == "0");
+  stream.clear; formattedWrite(stream, "%d", true);
+  assert(stream.data == "1");
+  stream.clear; formattedWrite(stream, "%d", false);
+  assert(stream.data == "0");
     
     stream.clear; formattedWrite(stream, "%d", 'a');
     assert(stream.data == "97", stream.data);
@@ -2634,37 +2541,37 @@ unittest
     assert(stream.data == "97");
 
   byte b = byte.max;
-  stream.backend = null; formattedWrite(stream, "%x", b);
-  assert(stream.backend == "7f");
-  stream.backend = null; formattedWrite(stream, "%x", ++b);
-  assert(stream.backend == "80");
-  stream.backend = null; formattedWrite(stream, "%x", ++b);
-  assert(stream.backend == "81");
+  stream.clear; formattedWrite(stream, "%x", b);
+  assert(stream.data == "7f");
+  stream.clear; formattedWrite(stream, "%x", ++b);
+  assert(stream.data == "80");
+  stream.clear; formattedWrite(stream, "%x", ++b);
+  assert(stream.data == "81");
 
   short sh = short.max;
-  stream.backend = null; formattedWrite(stream, "%x", sh);
-  assert(stream.backend == "7fff");
-  stream.backend = null; formattedWrite(stream, "%x", ++sh);
-  assert(stream.backend == "8000");
-  stream.backend = null; formattedWrite(stream, "%x", ++sh);
-  assert(stream.backend == "8001");
+  stream.clear; formattedWrite(stream, "%x", sh);
+  assert(stream.data == "7fff");
+  stream.clear; formattedWrite(stream, "%x", ++sh);
+  assert(stream.data == "8000");
+  stream.clear; formattedWrite(stream, "%x", ++sh);
+  assert(stream.data == "8001");
   
   i = int.max;
-  stream.backend = null; formattedWrite(stream, "%x", i);
-  assert(stream.backend == "7fffffff");
-  stream.backend = null; formattedWrite(stream, "%x", ++i);
-  assert(stream.backend == "80000000");
-  stream.backend = null; formattedWrite(stream, "%x", ++i);
-  assert(stream.backend == "80000001");
+  stream.clear; formattedWrite(stream, "%x", i);
+  assert(stream.data == "7fffffff");
+  stream.clear; formattedWrite(stream, "%x", ++i);
+  assert(stream.data == "80000000");
+  stream.clear; formattedWrite(stream, "%x", ++i);
+  assert(stream.data == "80000001");
 
-  stream.backend = null; formattedWrite(stream, "%x", 10);
-  assert(stream.backend == "a");
-  stream.backend = null; formattedWrite(stream, "%X", 10);
-  assert(stream.backend == "A");
-  stream.backend = null; formattedWrite(stream, "%x", 15);
-  assert(stream.backend == "f");
-  stream.backend = null; formattedWrite(stream, "%X", 15);
-  assert(stream.backend == "F");
+  stream.clear; formattedWrite(stream, "%x", 10);
+  assert(stream.data == "a");
+  stream.clear; formattedWrite(stream, "%X", 10);
+  assert(stream.data == "A");
+  stream.clear; formattedWrite(stream, "%x", 15);
+  assert(stream.data == "f");
+  stream.clear; formattedWrite(stream, "%X", 15);
+  assert(stream.data == "F");
 
   Object c = null;
     stream.clear; formattedWrite(stream, "%s", c);
@@ -2687,15 +2594,15 @@ unittest
   static const dchar[] ds = ['a','b'];
   for (int j = 0; j < ds.length; ++j)
     {
-      stream.backend = null; formattedWrite(stream, " %d", ds[j]);
+      stream.clear; formattedWrite(stream, " %d", ds[j]);
       if (j == 0)
-	assert(stream.backend == " 97");
+	assert(stream.data == " 97");
       else
-	assert(stream.backend == " 98");
+	assert(stream.data == " 98");
     }
 
-  stream.backend = null; formattedWrite(stream, "%.-3d", 7);
-  assert(stream.backend == "7", ">" ~ stream.backend ~ "<");
+  stream.clear; formattedWrite(stream, "%.-3d", 7);
+  assert(stream.data == "7", ">" ~ stream.data ~ "<");
   
 
   // systematic test
@@ -2713,7 +2620,7 @@ unittest
                           foreach (prec; precs)
                               foreach (format; formats)
                               {
-                                  stream.backend = null; 
+                                  stream.clear; 
                                   auto fmt = "%" ~ flag1 ~ flag2  ~ flag3
                                       ~ flag4 ~ flag5 ~ width ~ prec ~ format
                                       ~ '\0';
@@ -2791,11 +2698,11 @@ unittest
                                       break;
                                   }
                                   auto exp = buf[0 .. strlen(buf.ptr)];
-                                  if (stream.backend != exp)
+                                  if (stream.data != exp)
                                   {
                                       writeln("Format: \"", fmt, '"');
                                       writeln("Expected: >", exp, "<");
-                                      writeln("Actual:   >", stream.backend,
+                                      writeln("Actual:   >", stream.data,
                                               "<");
                                       assert(false);
                                   }
@@ -2823,7 +2730,7 @@ unittest
        writefln(b);
    }
 
-   StringWriter!(char) stream;
+   Appender!(char[]) stream;
    alias TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong,
        float, double, real,
        ifloat, idouble, ireal, cfloat, cdouble, creal) AllNumerics;
@@ -2835,21 +2742,21 @@ unittest
            T value = 1 + 1i;
        else
            T value = 1;
-       stream.backend = null; formattedWrite(stream, "%s", value);
+       stream.clear; formattedWrite(stream, "%s", value);
        static if (is(T : creal))
-           assert(stream.backend == "1+1i");
+           assert(stream.data == "1+1i");
        else
-           assert(stream.backend == "1");
+           assert(stream.data == "1");
        // test typedefs too
        typedef T Wyda;
        Wyda another = 1;
-       stream.backend = null; formattedWrite(stream, "%s", another);
-       assert(stream.backend == "1");
+       stream.clear; formattedWrite(stream, "%s", another);
+       assert(stream.data == "1");
    }
    
    //auto r = std.string.format("%s", aa.values);
-   stream.backend = null; formattedWrite(stream, "%s", aa);
-   assert(stream.backend == "[3:[h,e,l,l,o],4:[b,e,t,t,y]]", stream.backend);
+   stream.clear; formattedWrite(stream, "%s", aa);
+   assert(stream.data == "[3:[h,e,l,l,o],4:[b,e,t,t,y]]", stream.data);
 //    r = std.string.format("%s", aa);
 //   assert(r == "[3:[h,e,l,l,o],4:[b,e,t,t,y]]");
 }
