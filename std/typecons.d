@@ -14,8 +14,7 @@ Synopsis:
 // value tuples
 alias Tuple!(float, "x", float, "y", float, "z") Coord;
 Coord c;
-c._0 = 1;         // access by index-based name
-c.field!(1) = 1;  // access by index
+c.field[1] = 1;   // access by index
 c.z = 1;          // access by given name
 alias Tuple!(string, string) DicEntry; // names can be omitted
 
@@ -73,12 +72,14 @@ $(WEB erdani.org, Andrei Alexandrescu), Bartosz Milewski, Don Clugston
  */
 
 module std.typecons;
-private import std.stdio;
-private import std.metastrings;
-private import std.contracts;
-private import std.typetuple;
-private import std.conv;
-private import std.traits;
+import std.stdio;
+import std.metastrings;
+import std.contracts;
+import std.typetuple;
+import std.conv;
+import std.traits;
+import std.array;
+import std.range;
 
 /**
 Encapsulates unique ownership of a resource. 
@@ -247,39 +248,47 @@ unittest
 }
 +/
 
-private template tupleImpl(uint index, T...)
+private template tupleFields(uint index, T...)
 {
     static if (!T.length)
     {
-        enum string result = "";
+        enum string tupleFields = "";
     }
     else
     {
-        enum string indexStr = ToString!(index);
-        enum string decl = T[0].stringof~" _"~indexStr~";"
-            ~"\ntemplate field(int i : "~indexStr~") { alias _"~indexStr
-            ~" field; }\n";
         static if (is(typeof(T[1]) : string))
         {
-            enum string result = decl ~ "alias _" ~ ToString!(index) ~ " "
-                ~ T[1] ~ ";\n" ~ tupleImpl!(index + 1, T[2 .. $]).result;
+            enum string tupleFields = "Type["~ToString!(index)~"] "~T[1]~"; "
+                ~ tupleFields!(index + 1, T[2 .. $]);
         }
         else
         {
-            enum string result = decl ~ tupleImpl!(index + 1, T[1 .. $]).result;
+            enum string tupleFields = "Type["~ToString!(index)~"] _"
+                ~ToString!(index)~"; "
+                ~ tupleFields!(index + 1, T[1 .. $]);
         }
     }
 }
 
+// Tuple
+private template noStrings(T...)
+{
+    template A(U...) { alias U A; }
+    static if (T.length == 0)
+        alias A!() Result;
+    else static if (is(typeof(T[0]) : string))
+        alias noStrings!(T[1 .. $]).Result Result;
+    else
+        alias A!(T[0], noStrings!(T[1 .. $]).Result) Result;
+}
+
 /**
-Tuple of values, for example $(D_PARAM Tuple!(int, string)) is a
-record that stores an $(D_PARAM int) and a $(D_PARAM
-string). $(D_PARAM Tuple) can be used to bundle values together,
-notably when returning multiple values from a function. If $(D_PARAM
-obj) is a tuple, the individual members are accessible with the syntax
-$(D_PARAM obj.field!(0)) for the first field, $(D_PARAM obj.field!(1))
-for the second, and so on. A shortcut notation is $(D_PARAM
-obj.)&#95;$(D_PARAM 0), $(D_PARAM obj.)&#95;$(D_PARAM 1) etc.
+Tuple of values, for example $(D Tuple!(int, string)) is a record that
+stores an $(D int) and a $(D string). $(D Tuple) can be used to bundle
+values together, notably when returning multiple values from a
+function. If $(D obj) is a tuple, the individual members are
+accessible with the syntax $(D obj.field[0]) for the first field, $(D
+obj.field[1]) for the second, and so on.
 
 The choice of zero-based indexing instead of one-base indexing was
 motivated by the ability to use value tuples with various compile-time
@@ -291,11 +300,11 @@ Example:
 ----
 Tuple!(int, int) point;
 // assign coordinates
-point._0 = 5;
-point.field!(1) = 6;
+point.field[0] = 5;
+point.field[1] = 6;
 // read coordinates
-auto x = point.field!(0);
-auto y = point._1;
+auto x = point.field[0];
+auto y = point.[1];
 ----
 
 Tuple members can be named. It is legal to mix named and unnamed
@@ -308,8 +317,8 @@ alias Tuple!(int, "index", string, "value") Entry;
 Entry e;
 e.index = 4;
 e.value = "Hello";
-assert(e._1 == "Hello");
-assert(e.field!(0) == 4);
+assert(e.field[1] == "Hello");
+assert(e.field[0] == 4);
 ----
 
 Tuples with named fields are distinct types from tuples with unnamed
@@ -327,34 +336,165 @@ assert(!is(typeof(point1) == typeof(point2))); // passes
 */
 struct Tuple(T...)
 {
-    mixin(tupleImpl!(0, T).result);
+public:
+/**
+   The type of the tuple's components.
+*/
+    alias noStrings!(T).Result Type;
+    union
+    {
+        Type field;
+        mixin(tupleFields!(0, T));
+    }
+    // @@@BUG 2800
+    //alias field this;
+/**
+   Constructor taking one value for each field. Each argument must be
+   implicitly assignable to the respective element of the target.
+ */
+    this(U...)(U values) if (U.length == Type.length)
+    {
+        foreach (i, Unused; T)
+        {
+            field[i] = values[i];
+        }
+    }
+
+/**
+   Constructor taking a compatible tuple. Each element of the source
+   must be implicitly assignable to the respective element of the
+   target.
+ */
+    // @@@BUG@@@
+    //this(U)(Tuple!(U) another)
+    this(U)(U another)
+    {
+        static assert(U.length == T.length);
+        foreach (i, Unused; T)
+        {
+            field[i] = another.field[i];
+        }
+    }
+
+/**
+   Comparison for equality.
+ */
+    bool opEquals(T)(T rhs)
+    {
+        static assert(field.length == rhs.field.length,
+                "Length mismatch in attempting to compare a "
+                ~typeof(this).stringof
+                ~" with a "~typeof(rhs).stringof);
+        foreach (i, f; field)
+        {
+            if (f != rhs.field[i]) return false;
+        }
+        return true;
+    }
+
+/**
+   The number of elements in the tuple.
+ */
+    enum size_t length = Type.length;
+
+/**
+   Assignment from another tuple. Each element of the source must be
+   implicitly assignable to the respective element of the target.
+ */
+    void opAssign(U)(U rhs)
+    {
+        foreach (i, Unused; noStrings!(T).Result)
+        {
+            field[i] = rhs.field[i];
+        }
+    }
+/**
+   Takes a slice of the tuple.
+
+   Example:
+
+----
+Tuple!(int, string, float, double) a;
+a.field[1] = "abc";
+a.field[2] = 4.5;
+auto s = a.slice!(1, 3);
+static assert(is(typeof(s) == Tuple!(string, float)));
+assert(s.field[0] == "abc" && s.field[1] == 4.5);
+----
+ */
+    ref Tuple!(Type[from .. to]) slice(uint from, uint to)()
+    {
+        return *cast(typeof(return) *) &(field[from]);
+    }
+
+    unittest
+    {
+        .Tuple!(int, string, float, double) a;
+        a.field[1] = "abc";
+        a.field[2] = 4.5;
+        auto s = a.slice!(1, 3);
+        static assert(is(typeof(s) == Tuple!(string, float)));
+        assert(s.field[0] == "abc" && s.field[1] == 4.5);
+    }
+
+    static string toStringHeader = Tuple.stringof ~ "(";
+    static string toStringFooter = ")";
+    static string toStringSeparator = ", ";
+
+/**
+   Converts to string.
+ */
     string toString()
     {
-        string result;
-        foreach (i, Type; FieldTypeTuple!(Tuple))
+        char[] result;
+        auto app = appender(&result);
+        app.put(toStringHeader);
+        foreach (i, Unused; noStrings!(T).Result)
         {
-            static if (i > 0) result ~= " ";
-            static if (is(typeof(to!(string)(*new Type))))
-            {
-                result ~= mixin("to!(string)(field!("~ToString!(i)~"))");
-            }
+            static if (i > 0) result ~= toStringSeparator;
+            static if (is(typeof(to!string(field[i]))))
+                app.put(to!string(field[i]));
             else
-            {
-                result ~= "unprintable("~Type.stringof~")";
-            }
+                app.put(typeof(field[i]).stringof); 
         }
-        return result;
+        app.put(toStringFooter);
+        return assumeUnique(result);
     }
 }
 
 unittest
 {
-    Tuple!(int, "a", int, "b") nosh;
-    nosh.a = 5;
-    assert(nosh._0 == 5);
-    assert(nosh.field!(0) == 5);
-    Tuple!(int, int, "b") nosh1;
-    assert(!is(typeof(nosh) == typeof(nosh1)));
+    {
+        Tuple!(int, "a", int, "b") nosh;
+        nosh.a = 5;
+        nosh.b = 6;
+        assert(nosh.a == 5);
+        assert(nosh.b == 6);
+    }
+    {
+        Tuple!(short, double) b;
+        b.field[1] = 5;
+        auto a = Tuple!(int, float)(b);
+        assert(a.field[0] == 0 && a.field[1] == 5);
+        a = Tuple!(int, float)(1, 2);
+        assert(a.field[0] == 1 && a.field[1] == 2);
+    }
+    Tuple!(int, int) nosh;
+    nosh.field[0] = 5;
+    assert(nosh.field[0] == 5);
+    // Tuple!(int, int) nosh1;
+    // assert(!is(typeof(nosh) == typeof(nosh1)));
+    assert(nosh.toString == "Tuple!(int,int)(5, 0)");
+    Tuple!(int, short) yessh;
+    nosh = yessh;
+
+    Tuple!(int, "a", float, "b") x;
+    static assert(x.a.offsetof == x.field[0].offsetof);
+    static assert(x.b.offsetof == x.field[1].offsetof);
+    x.b = 4.5;
+    x.a = 5;
+    assert(x.field[0] == 5 && x.field[1] == 4.5);
+    assert(x.a == 5 && x.b == 4.5);
 }
 
 /**
@@ -364,21 +504,16 @@ the arguments.
 Example:
 ----
 auto value = tuple(5, 6.7, "hello");
-assert(value._0 == 5);
-assert(value._1 == 6.7);
-assert(value._2 == "hello");
+assert(value.field[0] == 5);
+assert(value.field[1] == 6.7);
+assert(value.field[2] == "hello");
 ----
 */
 
 Tuple!(T) tuple(T...)(T args)
 {
     typeof(return) result;
-    foreach (i, U; T)
-    {
-        // @@@BUG@@@ in the compiler
-        // This should work: result.field!(i) = args[i];
-        mixin("result.field!("~ToString!(i)~") = args[i];");
-    }
+    static if (T.length > 0) result.field = args;
     return result;
 }
 
@@ -487,8 +622,8 @@ string enumToString(Abc v) { ... }
 Abc enumFromString(string s) { ... }
 ----
 
-The $(D_PARAM enumToString) function generates the unqualified names
-of the enumerated values, i.e. "A", "B", and "C". The $(D_PARAM
+The $(D enumToString) function generates the unqualified names
+of the enumerated values, i.e. "A", "B", and "C". The $(D
 enumFromString) function expects one of "A", "B", and "C", and throws
 an exception in any other case.
 
@@ -498,9 +633,8 @@ A base type can be specified for the enumeration like this:
 mixin(defineEnum!("Abc", ubyte, "A", "B", "C", 255));
 ----
 
-In this case the generated $(D_PARAM enum) will have a $(D_PARAM
-ubyte) representation.
-*/
+In this case the generated $(D enum) will have a $(D ubyte)
+representation.  */
 
 template defineEnum(string name, T...)
 {
@@ -558,11 +692,15 @@ break the soundness of D's type system and does not incur any of the
 risks usually associated with $(D cast).
 
  */
-template Rebindable(T : Object)
+template Rebindable(T) if (is(T : Object) || isArray!(T))
 {
     static if (!is(T X == const(U), U) && !is(T X == invariant(U), U))
     {
         alias T Rebindable;
+    }
+    else static if (isArray!(T))
+    {
+        alias const(ElementType!(T))[] Rebindable;
     }
     else
     {
@@ -615,7 +753,6 @@ unittest
     assert(obj2.foo == 42);
 }
 
-
 /**
   Order the provided members to minimize size while preserving alignment.
   Returns a declaration to be mixed in.
@@ -664,4 +801,36 @@ unittest {
     assert(alignForSize!(int[], char[3], short, double[5])(["x", "y","z", "w"]) =="double[5u] w;\nint[] x;\nshort z;\nchar[3u] y;\n");
     struct Foo{ int x; }
     assert(alignForSize!(ubyte, Foo, cdouble)(["x", "y","z"]) =="cdouble z;\nFoo y;\nubyte x;\n");    
+}
+
+/*--*
+First-class reference type
+*/
+struct Ref(T)
+{
+    private T * _p;
+    this(ref T value) { _p = &value; }
+    ref T opDot() { return *_p; }
+    /*ref*/ T opImplicitCastTo() { return *_p; }
+    ref T value() { return *_p; }
+    
+    void opAssign(T value)
+    {
+        *_p = value;
+    }
+    void opAssign(T * value)
+    {
+        _p = value;
+    }
+}
+
+unittest
+{
+    Ref!(int) x;
+    int y = 42;
+    x = &y;
+    assert(x.value == 42);
+    x = 5;
+    assert(x.value == 5);
+    assert(y == 5);
 }
