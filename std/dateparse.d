@@ -423,113 +423,114 @@ private:
 
     int parseString(string s)
     {
-	int n1;
-	int dp;
-	int sisave;
-	int result;
+        int n1;
+        int dp;
+        int sisave;
+        int result;
 
-	//message(DTEXT("DateParse::parseString('%ls')\n"), s);
-	this.s = s;
-	si = 0;
-	dp = nextToken();
-	for (;;)
-	{
-	    //message(DTEXT("\tdp = %d\n"), dp);
-	    switch (dp)
-	    {
-		case DP.end:
-		    result = 1;
-		Lret:
-		    return result;
+        //message(DTEXT("DateParse::parseString('%ls')\n"), s);
+        this.s = s;
+        si = 0;
+        dp = nextToken();
+        for (;;)
+        {
+            //message(DTEXT("\tdp = %d\n"), dp);
+            switch (dp)
+            {
+            case DP.end:
+                result = 1;
+            Lret:
+                return result;
 
-		case DP.err:
-		case_error:
-		    //message(DTEXT("\terror\n"));
-		default:
-		    result = 0;
-		    goto Lret;
+            case DP.err:
+            case_error:
+                //message(DTEXT("\terror\n"));
+            default:
+                result = 0;
+                goto Lret;
 
-		case DP.minus:
-		    break;			// ignore spurious '-'
+            case DP.minus:
+                break;			// ignore spurious '-'
 
-		case DP.weekday:
-		    weekday = number;
-		    break;
+            case DP.weekday:
+                weekday = number;
+                break;
 
-		case DP.month:		// month day, [year]
-		    month = number;
-		    dp = nextToken();
-		    if (dp == DP.number)
-		    {
-			day = number;
-			sisave = si;
-			dp = nextToken();
-			if (dp == DP.number)
-			{
-			    n1 = number;
-			    dp = nextToken();
-			    if (dp == DP.colon)
-			    {   // back up, not a year
-				si = sisave;
-			    }
-			    else
-			    {   year = n1;
-				continue;
-			    }
-			    break;
-			}
-		    }
-		    continue;
+            case DP.month:		// month day, [year]
+                month = number;
+                dp = nextToken();
+                if (dp == DP.number)
+                {
+                    day = number;
+                    sisave = si;
+                    dp = nextToken();
+                    if (dp == DP.number)
+                    {
+                        n1 = number;
+                        dp = nextToken();
+                        if (dp == DP.colon)
+                        {   // back up, not a year
+                            si = sisave;
+                        }
+                        else
+                        {   year = n1;
+                            continue;
+                        }
+                        break;
+                    }
+                }
+                continue;
 
-		case DP.number:
-		    n1 = number;
-		    dp = nextToken();
-		    switch (dp)
-		    {
-			case DP.end:
-			    year = n1;
-			    break;
+            case DP.number:
+                n1 = number;
+                dp = nextToken();
+                switch (dp)
+                {
+                case DP.end:
+                    year = n1;
+                    break;
 
-			case DP.minus:
-			case DP.slash:	// n1/ ? ? ?
-			    dp = parseCalendarDate(n1);
-			    if (dp == DP.err)
-				goto case_error;
-			    break;
+                case DP.minus:
+                case DP.slash:	// n1/ ? ? ?
+                    dp = parseCalendarDate(n1);
+                    if (dp == DP.err)
+                        goto case_error;
+                    break;
 
-		       case DP.colon:	// hh:mm [:ss] [am | pm]
-			    dp = parseTimeOfDay(n1);
-			    if (dp == DP.err)
-				goto case_error;
-			    break;
+                case DP.colon:	// hh:mm [:ss] [am | pm]
+                    dp = parseTimeOfDay(n1);
+                    if (dp == DP.err)
+                        goto case_error;
+                    break;
 
-		       case DP.ampm:
-			    hours = n1;
-			    minutes = 0;
-			    seconds = 0;
-			    ampm = number;
-			    break;
+                case DP.ampm:
+                    hours = n1;
+                    minutes = 0;
+                    seconds = 0;
+                    ampm = number;
+                    break;
 
-			case DP.month:
-			    day = n1;
-			    month = number;
-			    dp = nextToken();
-			    if (dp == DP.number)
-			    {   // day month year
-				year = number;
-				dp = nextToken();
-			    }
-			    break;
+                case DP.month:
+                    day = n1;
+                    month = number;
+                    dp = nextToken();
+                    if (dp == DP.number)
+                    {   // day month year
+                        year = number;
+                        dp = nextToken();
+                    }
+                    break;
 
-			default:
-			    year = n1;
-			    break;
-		    }
-		    continue;
-	    }
-	    dp = nextToken();
-	}
-	assert(0);
+                default:
+                    year = n1;
+                    break;
+                }
+                continue;
+            }
+            dp = nextToken();
+        }
+        // @@@ bug in the compiler: this is never reachable
+        assert(0);
     }
 
     int parseCalendarDate(int n1)
