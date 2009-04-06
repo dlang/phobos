@@ -1,4 +1,4 @@
-# Makefile to build OSX D runtime library libphobos.a.
+# Makefile to build linux D runtime library libphobos.a.
 # Targets:
 #	make
 #		Same as make unittest
@@ -11,7 +11,7 @@
 
 LIB=libphobos.a
 
-MAKEFILE=osx.mak
+MAKEFILE=freebsd.mak
 
 CFLAGS=-O -m32
 #CFLAGS=-g -m32
@@ -51,7 +51,8 @@ OBJS = asserterror.o deh2.o complex.o gcstats.o \
 	compiler.o system.o moduleinit.o md5.o base64.o \
 	path.o string.o math.o mmfile.o \
 	outbuffer.o ctype.o regexp.o random.o \
-	linux.o osx.o linuxsocket.o \
+	freebsd.o freebsdsocket.o freebsdmath.o \
+	linux.o \
 	stream.o cstream.o switcherr.o array.o gc.o \
 	thread.o utf.o uri.o \
 	Dcrc32.o conv.o errno.o alloca.o cmath2.o \
@@ -95,7 +96,7 @@ ZLIB_OBJS = etc/c/zlib/adler32.o etc/c/zlib/compress.o \
 	etc/c/zlib/inftrees.o etc/c/zlib/inffast.o
 
 GC_OBJS= internal/gc/gc.o internal/gc/gcold.o internal/gc/gcx.o \
-	internal/gc/gcbits.o internal/gc/gclinux.o internal/gc/gcosxc.o
+	internal/gc/gcbits.o internal/gc/gclinux.o
 
 SRC=	errno.c object.d unittest.d crc32.d gcstats.d
 
@@ -199,7 +200,8 @@ SRC_ZLIB= etc/c/zlib/trees.h \
 	etc/c/zlib/README \
 	etc/c/zlib/win32.mak \
 	etc/c/zlib/linux.mak \
-	etc/c/zlib/osx.mak
+	etc/c/zlib/osx.mak \
+	etc/c/zlib/freebsd.mak
 
 SRC_GC= internal/gc/gc.d \
 	internal/gc/gcold.d \
@@ -226,7 +228,7 @@ $(LIB) : $(OBJS) $(GC_OBJS) $(ZLIB_OBJS) $(SRCS) $(MAKEFILE)
 	$(DMD) -lib -of$(LIB) $(DFLAGS) $(SRCS) $(OBJS) $(ZLIB_OBJS) $(GC_OBJS)
 
 unittest :
-	$(DMD) $(DFLAGS) -unittest -version=Unittest unittest.d $(SRCS)
+	$(DMD) $(DFLAGS) -unittest -version=Unittest unittest.d $(SRCS) $(LIB)
 	./unittest
 
 cov : $(SRCS) $(LIB)
@@ -489,21 +491,24 @@ zip.o : std/zip.d
 stdarg.o : std/c/stdarg.d
 	$(DMD) -c $(DFLAGS) std/c/stdarg.d
 
+### std/c/freebsd
+
+freebsd.o : std/c/freebsd/freebsd.d
+	$(DMD) -c $(DFLAGS) std/c/freebsd/freebsd.d
+
+freebsdsocket.o : std/c/freebsd/socket.d
+	$(DMD) -c $(DFLAGS) std/c/freebsd/socket.d -offreebsdsocket.o
+
+freebsdmath.o : std/c/freebsd/math.d
+	$(DMD) -c $(DFLAGS) std/c/freebsd/math.d -offreebsdmath.o
+
+pthread.o : std/c/freebsd/pthread.d
+	$(DMD) -c $(DFLAGS) std/c/freebsd/pthread.d
+
 ### std/c/linux
 
 linux.o : std/c/linux/linux.d
 	$(DMD) -c $(DFLAGS) std/c/linux/linux.d
-
-linuxsocket.o : std/c/linux/socket.d
-	$(DMD) -c $(DFLAGS) std/c/linux/socket.d -oflinuxsocket.o
-
-pthread.o : std/c/linux/pthread.d
-	$(DMD) -c $(DFLAGS) std/c/linux/pthread.d
-	
-### std/c/osx
-
-osx.o : std/c/osx/osx.d
-	$(DMD) -c $(DFLAGS) std/c/osx/osx.d	
 
 ### etc
 

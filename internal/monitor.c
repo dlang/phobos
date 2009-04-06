@@ -12,7 +12,7 @@
 #include <assert.h>
 
 #if _WIN32
-#elif linux || __APPLE__
+#elif linux || __APPLE__ || __FreeBSD__
 #define USE_PTHREADS	1
 #else
 #endif
@@ -125,8 +125,10 @@ void _d_monitorrelease(Object *h)
 
 #if USE_PTHREADS
 
+#if linux || __APPLE__
 #ifndef PTHREAD_MUTEX_RECURSIVE
 #    define PTHREAD_MUTEX_RECURSIVE PTHREAD_MUTEX_RECURSIVE_NP
+#endif
 #endif
 
 // Includes attribute fixes from David Friedman's GDC port

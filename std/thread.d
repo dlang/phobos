@@ -530,9 +530,16 @@ void *os_query_stackBottom()
 version (Posix)
 {
 
-private import std.c.linux.linux;
-private import std.c.linux.linuxextern;
-private import std.c.linux.pthread;
+version (FreeBSD)
+{
+    private import std.c.freebsd.freebsd;
+    private import std.c.freebsd.pthread;
+}
+else
+{
+    private import std.c.linux.linux;
+    private import std.c.linux.pthread;
+}
 
 version (OSX)
 {

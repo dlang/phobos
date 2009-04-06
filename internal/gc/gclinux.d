@@ -1,10 +1,14 @@
 
-// Copyright (C) 2001-2004 by Digital Mars, www.digitalmars.com
+// Copyright (C) 2001-2009 by Digital Mars, http://www.digitalmars.com
 // All Rights Reserved
 // Written by Walter Bright
 
-import std.c.linux.linuxextern;
-import std.c.linux.linux;
+//import std.c.linux.linuxextern;
+
+version (FreeBSD)
+    import std.c.freebsd.freebsd;
+else
+    import std.c.linux.linux;
 
 version (OSX)
 {
@@ -15,6 +19,14 @@ version (OSX)
 	uint get_edata();
 
 	extern void* __osx_stack_end;	// set by D startup code
+    }
+}
+
+version (FreeBSD)
+{
+    extern (C)
+    {
+	extern char etext;
     }
 }
 
@@ -133,6 +145,11 @@ void os_query_staticdataseg(void **base, uint *nbytes)
 	//*nbytes = cast(byte *)get_end() - cast(byte *)get_etext();
 	*base = null;
 	*nbytes = 0;
+    }
+    else version (FreeBSD)
+    {
+	*base = cast(void *)&etext;
+	*nbytes = cast(byte *)&_end - cast(byte *)&etext;
     }
     else
     {

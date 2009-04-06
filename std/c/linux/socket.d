@@ -6,6 +6,13 @@
 
 module std.c.linux.socket;
 
+version (FreeBSD)
+{
+    public import std.c.freebsd.socket;
+}
+else
+{
+
 private import std.stdint;
 private import std.c.linux.linux;
 
@@ -509,3 +516,4 @@ struct hostent
 	}
 }
 
+}

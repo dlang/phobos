@@ -1147,6 +1147,12 @@ void getTimes(string name, out d_time ftc, out d_time fta, out d_time ftm)
 	fta = cast(d_time)statbuf.st_atimespec.tv_sec * std.date.TicksPerSecond;
 	ftm = cast(d_time)statbuf.st_mtimespec.tv_sec * std.date.TicksPerSecond;
     }
+    else version (FreeBSD)
+    {	// BUG: should add in tv_nsec field
+	ftc = cast(d_time)statbuf.st_ctimespec.tv_sec * std.date.TicksPerSecond;
+	fta = cast(d_time)statbuf.st_atimespec.tv_sec * std.date.TicksPerSecond;
+	ftm = cast(d_time)statbuf.st_mtimespec.tv_sec * std.date.TicksPerSecond;
+    }
     else
     {
 	static assert(0);
@@ -1341,6 +1347,12 @@ struct DirEntry
 	    _lastAccessTime = cast(d_time)statbuf.st_atimespec.tv_sec * std.date.TicksPerSecond;
 	    _lastWriteTime =  cast(d_time)statbuf.st_mtimespec.tv_sec * std.date.TicksPerSecond;
 	}
+	else version (FreeBSD)
+	{
+	    _creationTime =   cast(d_time)statbuf.st_ctimespec.tv_sec * std.date.TicksPerSecond;
+	    _lastAccessTime = cast(d_time)statbuf.st_atimespec.tv_sec * std.date.TicksPerSecond;
+	    _lastWriteTime =  cast(d_time)statbuf.st_mtimespec.tv_sec * std.date.TicksPerSecond;
+	}
 	else
 	{
 	    static assert(0);
@@ -1528,6 +1540,11 @@ void copy(string from, string to)
 	utim.modtime = cast(__time_t)statbuf.st_mtime;
     }
     else version (OSX)
+    {
+	utim.actime = cast(__time_t)statbuf.st_atimespec.tv_sec;
+	utim.modtime = cast(__time_t)statbuf.st_mtimespec.tv_sec;
+    }
+    else version (FreeBSD)
     {
 	utim.actime = cast(__time_t)statbuf.st_atimespec.tv_sec;
 	utim.modtime = cast(__time_t)statbuf.st_mtimespec.tv_sec;

@@ -23,6 +23,8 @@ CC=gcc
 #DMD=/dmd/bin/dmd
 DMD=dmd
 
+.SUFFIXES: .c .o .cpp .d .asm
+
 .c.o:
 	$(CC) -c $(CFLAGS) $*.c
 
@@ -48,7 +50,8 @@ OBJS = asserterror.o deh2.o complex.o gcstats.o \
 	outofmemory.o file.o \
 	compiler.o system.o moduleinit.o md5.o base64.o \
 	path.o string.o math.o mmfile.o \
-	outbuffer.o ctype.o regexp.o random.o linux.o linuxsocket.o \
+	outbuffer.o ctype.o regexp.o random.o \
+	linux.o linuxsocket.o \
 	stream.o cstream.o switcherr.o array.o gc.o \
 	thread.o utf.o uri.o \
 	Dcrc32.o conv.o errno.o alloca.o cmath2.o \
@@ -70,6 +73,9 @@ OBJS = asserterror.o deh2.o complex.o gcstats.o \
 	ti_void.o \
 	date.o dateparse.o llmath.o math2.o Czlib.o Dzlib.o zip.o \
 	pthread.o
+
+MAKEFILES= \
+	win32.mak linux.mak osx.mak freebsd.mak
 
 SRCS= \
         internal/aaA.d internal/adi.d \
@@ -152,6 +158,12 @@ SRC_STD_C_WIN= std/c/windows/windows.d std/c/windows/com.d \
 SRC_STD_C_LINUX= std/c/linux/linux.d std/c/linux/linuxextern.d \
 	std/c/linux/socket.d std/c/linux/pthread.d
 
+SRC_STD_C_OSX= std/c/osx/osx.d
+
+SRC_STD_C_FREEBSD= std/c/freebsd/freebsd.d \
+	std/c/freebsd/socket.d std/c/freebsd/pthread.d \
+	std/c/freebsd/math.d
+
 SRC_ETC=  etc/gamma.d
 
 SRC_ETC_C= etc/c/zlib.d
@@ -187,7 +199,8 @@ SRC_ZLIB= etc/c/zlib/trees.h \
 	etc/c/zlib/README \
 	etc/c/zlib/win32.mak \
 	etc/c/zlib/linux.mak \
-	etc/c/zlib/osx.mak
+	etc/c/zlib/osx.mak \
+	etc/c/zlib/freebsd.mak
 
 SRC_GC= internal/gc/gc.d \
 	internal/gc/gcold.d \
@@ -196,14 +209,16 @@ SRC_GC= internal/gc/gc.d \
 	internal/gc/gcbits.d \
 	internal/gc/win32.d \
 	internal/gc/gclinux.d \
+	internal/gc/gcosxc.c \
 	internal/gc/testgc.d \
 	internal/gc/win32.mak \
 	internal/gc/linux.mak \
-	internal/gc/osx.mak
+	internal/gc/osx.mak \
+	internal/gc/freebsd.mak
 
 ALLSRCS = $(SRC) $(SRC_STD) $(SRC_STD_C) $(SRC_TI) $(SRC_INT) $(SRC_STD_WIN) \
 	$(SRC_STD_C_WIN) $(SRC_STD_C_LINUX) $(SRC_ETC) $(SRC_ETC_C) \
-	$(SRC_ZLIB) $(SRC_GC)
+	$(SRC_ZLIB) $(SRC_GC) $(SRC_STD_C_FREEBSD)
 
 
 $(LIB) : $(OBJS) $(GC_OBJS) $(ZLIB_OBJS) $(SRCS) $(MAKEFILE)
@@ -609,9 +624,9 @@ ti_bit.o : std/typeinfo/ti_bit.d
 
 ##########################################################
 
-zip : $(ALLSRCS) osx.mak linux.mak win32.mak phoboslicense.txt
+zip : $(ALLSRCS) $(MAKEFILES) phoboslicense.txt
 	$(RM) phobos.zip
-	zip phobos $(ALLSRCS) osx.mak linux.mak win32.mak phoboslicense.txt
+	zip phobos $(ALLSRCS) $(MAKEFILES) phoboslicense.txt
 
 clean:
 	$(RM) $(LIB) $(OBJS) unittest unittest.o

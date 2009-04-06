@@ -20,19 +20,24 @@ const
 	Win32 = 1,		// Microsoft 32 bit Windows systems
 	linux,			// all linux systems
 	OSX,
+	FreeBSD,
     }
 
     version (Win32)
     {
 	Family family = Family.Win32;
     }
-    else version (Posix)
+    else version (linux)
     {
 	Family family = Family.linux;
     }
     else version (OSX)
     {
 	Family family = Family.OSX;
+    }
+    else version (FreeBSD)
+    {
+	Family family = Family.FreeBSD;
     }
     else
     {
@@ -51,6 +56,7 @@ const
 
 	RedHatLinux,
 	OSX,
+	FreeBSD,
     }
 
     /// Byte order endianness

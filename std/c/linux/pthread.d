@@ -1,9 +1,16 @@
 /* Written by Walter Bright, Christopher E. Miller, and many others.
- * www.digitalmars.com
+ * http://www.digitalmars.com
  * Placed into public domain.
  */
 
 module std.c.linux.pthread;
+
+version (FreeBSD)
+{
+    public import std.c.freebsd.pthread;
+}
+else
+{
 
 import std.c.linux.linux;
 
@@ -386,3 +393,5 @@ version(linux)
     void _pthread_cleanup_push_defer(_pthread_cleanup_buffer*, void function(void*), void*);
     void _pthread_cleanup_pop(_pthread_cleanup_buffer*, int);
     void _pthread_cleanup_pop_restore(_pthread_cleanup_buffer*, int);
+
+}

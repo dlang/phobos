@@ -65,8 +65,12 @@ else version(BsdSockets)
 {
 	version(Posix)
 	{
-		private import std.c.linux.linux, std.c.linux.socket;
-		private alias std.c.linux.linux.timeval _ctimeval;
+	    version (FreeBSD)
+		private import std.c.freebsd.socket;
+	    else
+		private import std.c.linux.socket;
+	    private import std.c.linux.linux;
+	    private alias std.c.linux.linux.timeval _ctimeval;
 	}
 
 	typedef int32_t socket_t = -1;
@@ -104,6 +108,16 @@ class SocketException: Exception
 			cs = strerror_r(errorCode, buf.ptr, buf.length);
 		    }
 		    else version (OSX)
+		    {
+			auto errs = strerror_r(errorCode, buf.ptr, buf.length);
+			if (errs == 0)
+			    cs = buf.ptr;
+			else
+			{
+			    cs = "Unknown error";
+			}
+		    }
+		    else version (FreeBSD)
 		    {
 			auto errs = strerror_r(errorCode, buf.ptr, buf.length);
 			if (errs == 0)

@@ -2,158 +2,88 @@
 /* Written by Walter Bright, Christopher E. Miller, and many others.
  * http://www.digitalmars.com/d/
  * Placed into public domain.
- * Linux(R) is the registered trademark of Linus Torvalds in the U.S. and other
- * countries.
  */
 
-module std.c.linux.linux;
+module std.c.freebsd.freebsd;
 
-version (FreeBSD)
-{
-    public import std.c.freebsd.freebsd;
-}
-else
-{
-public import std.c.linux.linuxextern;
-public import std.c.linux.pthread;
+version (FreeBSD) { } else { static assert(0); }
+
+public import std.c.freebsd.pthread;
 
 private import std.c.stdio;
 
-version (OSX)
+alias uint fflags_t;
+alias int clockid_t;
+alias int time_t;
+alias int __time_t;
+alias int pid_t;
+alias long off_t;
+alias long blkcnt_t;
+alias uint blksize_t;
+alias uint dev_t;
+alias uint gid_t;
+alias long id_t;
+//alias ulong ino64_t;
+alias uint ino_t;
+alias ushort mode_t;
+alias ushort nlink_t;
+alias uint uid_t;
+alias ulong fsblkcnt_t;
+alias ulong fsfilcnt_t;
+
+struct timespec
 {
-    alias int time_t;
-    alias int __time_t;
-    alias int pid_t;
-    alias long off_t;
-    alias long blkcnt_t;
-    alias int blksize_t;
-    alias int dev_t;
-    alias uint gid_t;
-    alias uint id_t;
-    alias ulong ino64_t;
-    alias uint ino_t;
-    alias ushort mode_t;
-    alias ushort nlink_t;
-    alias uint uid_t;
-    alias uint fsblkcnt_t;
-    alias uint fsfilcnt_t;
-
-    struct timespec
-    {
-	time_t tv_sec;
-	int tv_nsec;
-    }
-}
-
-version (linux)
-{
-    alias int __time_t;
-    alias int pid_t;
-    alias int off_t;
-    alias uint mode_t;
-
-    alias uint uid_t;
-    alias uint gid_t;
-
-    struct timespec
-    {
-        __time_t tv_sec;    /* seconds   */
-        int tv_nsec;        /* nanosecs. */
-    }
+    time_t tv_sec;
+    int tv_nsec;
 }
 
 static if (size_t.sizeof == 4)
     alias int ssize_t;
 else
     alias long ssize_t;
+alias ssize_t intptr_t;
 
-version(linux)
+enum : int
 {
-    enum : int
-    {
-    	SIGHUP = 1,
-    	SIGINT = 2,
-    	SIGQUIT = 3,
-    	SIGILL = 4,
-    	SIGTRAP = 5,
-    	SIGABRT = 6,
-    	SIGIOT = 6,
-    	SIGBUS = 7,
-    	SIGFPE = 8,
-    	SIGKILL = 9,
-    	SIGUSR1 = 10,
-    	SIGSEGV = 11,
-    	SIGUSR2 = 12,
-    	SIGPIPE = 13,
-    	SIGALRM = 14,
-    	SIGTERM = 15,
-    	SIGSTKFLT = 16,
-    	SIGCHLD = 17,
-    	SIGCONT = 18,
-    	SIGSTOP = 19,
-    	SIGTSTP = 20,
-    	SIGTTIN = 21,
-    	SIGTTOU = 22,
-    	SIGURG = 23,
-    	SIGXCPU = 24,
-    	SIGXFSZ = 25,
-    	SIGVTALRM = 26,
-    	SIGPROF = 27,
-    	SIGWINCH = 28,
-    	SIGPOLL = 29,
-    	SIGIO = 29,
-    	SIGPWR = 30,
-    	SIGSYS = 31,
-    	SIGUNUSED = 31,
-    }
+    SIGHUP = 1,
+    SIGINT = 2,
+    SIGQUIT = 3,
+    SIGILL = 4,
+    SIGTRAP = 5,
+    SIGABRT = 6,
+    SIGIOT = 6,
+    SIGEMT = 7,
+    SIGFPE = 8,
+    SIGKILL = 9,
+    SIGBUS = 10,
+    SIGSEGV = 11,
+    SIGSYS = 12,
+    SIGPIPE = 13,
+    SIGALRM = 14,
+    SIGTERM = 15,
+    SIGURG = 16,
+    SIGSTOP = 17,
+    SIGTSTP = 18,
+    SIGCONT = 19,
+    SIGCHLD = 20,
+    SIGTTIN = 21,
+    SIGTTOU = 22,
+    SIGIO = 23,
+    SIGXCPU = 24,
+    SIGXFSZ = 25,
+    SIGVTALRM = 26,
+    SIGPROF = 27,
+    SIGWINCH = 28,
+    SIGINFO = 29,
+    SIGUSR1 = 30,
+    SIGUSR2 = 31,
+    SIGTHR = 32,
+    SIGLWP = SIGTHR,
+    SIGRTMIN = 65,
+    SIGRTMAX = 126,
 }
 
-version(OSX)
-{
-    enum : int
-    {
-        SIGABRT   = 6,
-        SIGALRM   = 14,
-        SIGBUS    = 10,
-        SIGCHLD   = 20,
-        SIGCONT   = 19,
-        SIGFPE    = 8,
-        SIGHUP    = 1,
-        SIGILL    = 4,
-        SIGINT    = 2,
-        SIGKILL   = 9,
-        SIGPIPE   = 13,
-        SIGQUIT   = 3,
-        SIGSEGV   = 11,
-        SIGSTOP   = 17,
-        SIGTERM   = 15,
-        SIGTSTP   = 18,
-        SIGTTIN   = 21,
-        SIGTTOU   = 22,
-        SIGUSR1   = 30,
-        SIGUSR2   = 31,
-        SIGURG    = 16,
-    }
-}
-
-
-version (linux)
-{
-enum
-{
-    O_RDONLY = 0,
-    O_WRONLY = 1,
-    O_RDWR = 2,
-    O_CREAT = 0100,
-    O_EXCL = 0200,
-    O_TRUNC = 01000,
-    O_APPEND = 02000,
-    O_NONBLOCK = 0x800,
-}
-}
-
-version (OSX)
-{
+// fcntl.h
 enum
 {
     O_RDONLY = 0,
@@ -170,70 +100,39 @@ enum
     O_EXLOCK = 0x20,
     O_ASYNC = 0x40,
     O_NOFOLLOW = 0x100,
-    O_EVTONLY = 0x8000,
-    O_NOCTTY = 0x20000,
-    O_DIRECTORY = 0x100000,
-    O_SYMLINK   = 0x200000,
-}
+    O_NOCTTY = 0x8000,
+    O_DIRECT = 0x1000,
 }
 
-version (linux)
+// sys/stat.h
+struct struct_stat
 {
-    struct struct_stat	// distinguish it from the stat() function
-    {
-	ulong st_dev;	/// device
-	ushort __pad1;
-	uint st_ino;	/// file serial number
-	uint st_mode;	/// file mode
-	uint st_nlink;	/// link count
-	uint st_uid;	/// user ID of file's owner
-	uint st_gid;	/// user ID of group's owner
-	ulong st_rdev;	/// if device then device number
-	ushort __pad2;
-	int st_size;	/// file size in bytes
-	int st_blksize;	/// optimal I/O block size
-	int st_blocks;	/// number of allocated 512 byte blocks
-	int st_atime;
-	uint st_atimensec;
-	int st_mtime;
-	uint st_mtimensec;
-	int st_ctime;
-	uint st_ctimensec;
-
-	uint __unused4;
-	uint __unused5;
-    }
-}
-version (OSX)
-{
-    struct struct_stat
-    {
-	dev_t st_dev;
-	ino_t st_ino;
-	mode_t st_mode;
-	nlink_t st_nlink;
-	uid_t st_uid;
-	gid_t st_gid;
-	dev_t st_rdev;
-	timespec st_atimespec;
-	timespec st_mtimespec;
-	timespec st_ctimespec;
-	off_t st_size;
-	blkcnt_t st_blocks;
-	blksize_t st_blksize;
-	uint st_flags;
-	uint st_gen;
-	int st_lspare;
-	long st_qspare[2];
-    }
+    dev_t st_dev;
+    ino_t st_ino;
+    mode_t st_mode;
+    nlink_t st_nlink;
+    uid_t st_uid;
+    gid_t st_gid;
+    dev_t st_rdev;
+    timespec st_atimespec;
+    timespec st_mtimespec;
+    timespec st_ctimespec;
+    off_t st_size;
+    blkcnt_t st_blocks;
+    blksize_t st_blksize;
+    fflags_t st_flags;
+    uint st_gen;
+    int st_lspare;
+    timespec st_birthtimesspec;
+    ubyte[16 - timespec.sizeof] st_qspare;
 }
 
 unittest
 {
-    version (linux) assert(struct_stat.sizeof == 88);
-    version (OSX)   assert(struct_stat.sizeof == 96);
+    version (FreeBSD)   assert(struct_stat.sizeof == 96);
 }
 
+// sys/stat.h
 enum : int
 {
     S_IFIFO  = 0010000,
@@ -243,6 +142,8 @@ enum : int
     S_IFREG  = 0100000,
     S_IFLNK  = 0120000,
     S_IFSOCK = 0140000,
+    S_ISVTX  = 0001000,
+    S_IFWHT  = 0160000,
 
     S_IFMT   = 0170000,
 
@@ -296,10 +197,12 @@ extern (C)
     extern char** environ;
 }
 
+alias int suseconds_t;
+
 struct timeval
 {
-    int tv_sec;
-    int tv_usec;
+    time_t tv_sec;
+    suseconds_t tv_usec;
 }
 
 struct struct_timezone
@@ -320,7 +223,7 @@ struct tm
     int tm_yday;
     int tm_isdst;
     int tm_gmtoff;
-    int tm_zone;
+    char* tm_zone;
 }
 
 extern (C)
@@ -352,58 +255,30 @@ enum
 
 // Memory mapping sharing types
 
-version (linux)
-{
-    enum
-    {	MAP_SHARED	= 1,
-	MAP_PRIVATE	= 2,
-	MAP_TYPE	= 0x0F,
-	MAP_FIXED	= 0x10,
-	MAP_FILE	= 0,
-	MAP_ANONYMOUS	= 0x20,
-	MAP_ANON	= 0x20,
-	MAP_GROWSDOWN	= 0x100,
-	MAP_DENYWRITE	= 0x800,
-	MAP_EXECUTABLE	= 0x1000,
-	MAP_LOCKED	= 0x2000,
-	MAP_NORESERVE	= 0x4000,
-	MAP_POPULATE	= 0x8000,
-	MAP_NONBLOCK	= 0x10000,
-    }
+enum
+{   MAP_SHARED	= 1,
+    MAP_PRIVATE	= 2,
+    MAP_COPY	= MAP_PRIVATE,
+    MAP_FIXED	= 0x10,
+    MAP_FILE	= 0,
+    MAP_ANON	= 0x1000,
+    MAP_NORESERVE	= 0x40,
 
-    // Values for msync()
-
-    enum
-    {	MS_ASYNC	= 1,
-	MS_INVALIDATE	= 2,
-	MS_SYNC		= 4,
-    }
+    MAP_RENAME	 = 0x20,
+    MAP_RESERVED0080 = 0x80,
+    MAP_NOEXTEND	 = 0x100,
+    MAP_HASSEMAPHORE = 0x200,
+    MAP_STACK        = 0x400,
+    MAP_NOSYNC       = 0x800,
+    MAP_NOCORE       = 0x20000,
 }
 
-version (OSX)
-{
-    enum
-    {	MAP_SHARED	= 1,
-	MAP_PRIVATE	= 2,
-	MAP_FIXED	= 0x10,
-	MAP_FILE	= 0,
-	MAP_ANON	= 0x1000,
-	MAP_NORESERVE	= 0x40,
+// Values for msync()
 
-	MAP_RENAME	= 0x20,
-	MAP_RESERVED0080 = 0x80,
-	MAP_NOEXTEND	= 0x100,
-	MAP_HASSEMAPHORE = 0x200,
-	MAP_NOCACHE	= 0x400,
-    }
-
-    // Values for msync()
-
-    enum
-    {	MS_ASYNC	= 1,
-	MS_INVALIDATE	= 2,
-	MS_SYNC		= 0x10,
-    }
+enum
+{   MS_ASYNC	= 1,
+    MS_INVALIDATE	= 2,
+    MS_SYNC		= 0,
 }
 
 // Values for mlockall()
@@ -414,13 +289,6 @@ enum
 	MCL_FUTURE	= 2,
 }
 
-// Values for mremap()
-
-enum
-{
-	MREMAP_MAYMOVE	= 1,
-}
-
 // Values for madvise
 
 enum
@@ -429,6 +297,21 @@ enum
 	MADV_SEQUENTIAL	= 2,
 	MADV_WILLNEED	= 3,
 	MADV_DONTNEED	= 4,
+	MADV_FREE	= 5,
+	MADV_NOSYNC	= 6,
+	MADV_AUTOSYNC	= 7,
+	MADV_NOCORE	= 8,
+	MADV_CORE	= 9,
+	MADV_PROTECT	= 10,
+}
+
+enum
+{
+	MINCORE_INCORE = 1,
+	MINCORE_REFERENCED = 2,
+	MINCORE_MODIFIED = 4,
+	MINCORE_REFERENCED_OTHER = 8,
+	MINCORE_MODIFIED_OTHER = 0x10,
 }
 
 extern (C)
@@ -436,6 +319,8 @@ extern (C)
 void* mmap(void*, size_t, int, int, int, off_t);
 const void* MAP_FAILED = cast(void*)-1;
 
+int madvise(void*, size_t, int);
+int minherit(void*, size_t, int);
 int munmap(void*, size_t);
 int mprotect(void*, size_t, int);
 int msync(void*, size_t, int);
@@ -445,7 +330,7 @@ int munlock(void*, size_t);
 int mlockall(int);
 int munlockall();
 void* mremap(void*, size_t, size_t, int);
-int mincore(void*, size_t, ubyte*);
+int mincore(/*const*/ void*, size_t, ubyte*);
 int remap_file_pages(void*, size_t, int, size_t, int);
 int shm_open(in char*, int, int);
 int shm_unlink(in char*);
@@ -469,19 +354,10 @@ extern(C)
 
     struct dirent
     {
-	uint d_ino;		// this is int on some linuxes
-	off_t d_off;
+	uint d_fileno;		// this is int on some linuxes
 	ushort d_reclen;
 	ubyte d_type;		// this field isn't there on some linuxes
-	char[256] d_name;
-    }
-
-    struct dirent64
-    {
-	ulong d_ino;
-	long d_off;
-	ushort d_reclen;
-	ubyte d_type;
+	ubyte d_namlen;
 	char[256] d_name;
     }
 
@@ -511,7 +387,7 @@ extern(C)
 	enum
 	{
 		EINTR = 4,
-		EINPROGRESS = 115,
+		EINPROGRESS = 36,
 	}
 	
 	
@@ -573,7 +449,7 @@ extern (C)
      * See http://www.opengroup.org/onlinepubs/007908799/xsh/dlsym.html
      */
 
-    const int RTLD_NOW = 0x00002;	// Correct for Red Hat 8
+    const int RTLD_NOW = 2;
 
     void* dlopen(in char* file, int mode);
     int   dlclose(void* handle);
@@ -592,9 +468,13 @@ extern (C)
 	char *pw_passwd;
 	uid_t pw_uid;
 	gid_t pw_gid;
-	char *pw_gecos;
-	char *pw_dir;
-	char *pw_shell;
+	time_t pw_change;
+	char* pw_class;
+	char* pw_gecos;
+	char* pw_dir;
+	char* pw_shell;
+	time_t pw_expire;
+	int pw_fields;
     }
 
     int getpwnam_r(char*, passwd*, void*, size_t, passwd**);
@@ -616,57 +496,59 @@ extern (C)
 {
     /* from signal.h
      */
-    version (linux)
+    extern (C) alias void (*__sighandler_t)(int);
+    extern (C) alias void (*__sigaction_t)(int, void*, void*);
+
+    const SA_RESTART = 2;
+
+    const size_t _SIGSET_WORDS = 4;
+
+    struct sigset_t
     {
-	extern (C) alias void (*__sighandler_t)(int);
-
-	const SA_RESTART = 0x10000000u;
-
-	const size_t _SIGSET_NWORDS = 1024 / (8 * uint.sizeof);
-
-	struct sigset_t
-	{
-	    uint[_SIGSET_NWORDS] __val;
-	}
-
-	struct sigaction_t
-	{
-	    __sighandler_t sa_handler;
-	    sigset_t sa_mask;
-	    int sa_flags;
-	    void (*sa_restorer)();
-	}
-
-        int sigfillset(sigset_t*);
-        int sigdelset(sigset_t*, int);
-        int sigismember(sigset_t*, int);
-        int sigaction(int, sigaction_t*, sigaction_t*);
-        int sigsuspend(sigset_t*);
+	uint[_SIGSET_WORDS] __bits;
     }
+    alias sigset_t __sigset;
+    alias sigset_t __sigset_t;
+
+    struct sigaction_t
+    {
+	union
+	{   __sighandler_t sa_handler;
+	    __sigaction_t sa_sigaction;
+	}
+	int sa_flags;
+	sigset_t sa_mask;
+    }
+
+    int sigfillset(sigset_t*);
+    int sigdelset(sigset_t*, int);
+    int sigismember(sigset_t*, int);
+    int sigaction(int, sigaction_t*, sigaction_t*);
+    int sigsuspend(sigset_t*);
 }
 
 extern (C)
 {
     /* from semaphore.h
      */
+    alias intptr_t semid_t;
 
-  version (OSX)
-  {
-    alias int sem_t;
-  }
-  else version (linux)
-  {
     struct sem_t
     {
-        _pthread_fastlock __sem_lock;
-        int __sem_value;
-        void* __sem_waiting;
+	uint magic;
+	pthread_mutex_t lock;
+	pthread_cond_t gtzero;
+	uint count;
+	uint nwaiters;
+	semid_t semid;
+	int syssem;
+	struct LIST_ENTRY
+	{ sem_t *le_next;
+	  sem_t **le_prev;
+	}
+	LIST_ENTRY entry;
+	sem_t **backpointer;
     }
-  }
-  else
-  {
-    static assert(0);
-  }
     int sem_init(sem_t*, int, uint);
     int sem_wait(sem_t*);
     int sem_trywait(sem_t*);
@@ -686,6 +568,33 @@ extern (C)
 	__time_t modtime;
     }
 
-    int utime(char* filename, utimbuf* buf);
+    int utime(in char* filename, in utimbuf* buf);
 }
+
+extern (C)
+{
+    extern
+    {
+	void* __libc_stack_end;
+	int __data_start;
+	int _end;
+	int timezone;
+
+	void *_deh_beg;
+	void *_deh_end;
+    }
+}
+
+// sched.h
+
+enum
+{
+    SCHED_FIFO = 1,
+    SCHED_OTHER = 2,
+    SCHED_RR = 3
+}
+
+struct sched_param
+{
+    int sched_priority;
 }
