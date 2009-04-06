@@ -13,6 +13,7 @@ module std.cstream;
 
 import std.stream;
 import std.c.stdio;
+version(unittest) import std.stdio;
 
 /**
  * A Stream wrapper for a C file of type FILE*.
@@ -145,9 +146,9 @@ class CFile : Stream {
     file.write(i);
     // string#1 + string#2 + int should give exacly that
     version (Win32)
-      assert(file.position() == 19 + 13 + 4);
+        assert(file.position() == 19 + 13 + 4);
     version (Posix)
-      assert(file.position() == 18 + 13 + 4);
+        assert(file.position() == 18 + 13 + 4);
     file.close();
     // no operations are allowed when file is closed
     assert(!file.readable && !file.writeable && !file.seekable);
