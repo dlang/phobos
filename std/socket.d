@@ -36,13 +36,12 @@
 
 module std.socket;
 
-import std.string, std.c.string, std.c.stdlib, std.conv;
+import core.stdc.stdint, std.string, std.c.string, std.c.stdlib, std.conv;
 
 version(unittest)
 {
     private import std.c.stdio : printf;
 }
-
 
 version(Posix)
 {
@@ -51,7 +50,6 @@ version(Posix)
 
 version(Win32)
 {
-
 	pragma (lib, "ws2_32.lib");
 	pragma (lib, "wsock32.lib");
 
