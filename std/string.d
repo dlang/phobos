@@ -2,22 +2,23 @@
 // Written in the D programming language.
 
 /**
- * String handling functions. Objects of types $(D string), $(D
- * wstring), and $(D dstring) are value types and cannot be mutated
- * element-by-element. For using mutation during building strings, use
- * $(D char[]), $(D wchar[]), or $(D dchar[]). The $(D *string) types
- * are preferable because they don't exhibit undesired aliasing, thus
- * making code more robust.
- *
- * Authors:
- *
- * $(WEB digitalmars.com, Walter Bright), $(WEB erdani.org, Andrei
+String handling functions. Objects of types $(D _string), $(D
+wstring), and $(D dstring) are value types and cannot be mutated
+element-by-element. For using mutation during building strings, use
+$(D char[]), $(D wchar[]), or $(D dchar[]). The $(D *_string) types
+are preferable because they don't exhibit undesired aliasing, thus
+making code more robust.
+
+Authors:
+
+$(WEB digitalmars.com, Walter Bright), $(WEB erdani.org, Andrei
 Alexandrescu)
- *
- * Macros:
- *  WIKI = Phobos/StdString
- * Copyright:
- *  Public Domain
+
+Macros:
+ WIKI = Phobos/StdString
+
+Copyright:
+ Public Domain
  */
 
 /* Author:
@@ -32,6 +33,7 @@ module std.string;
 //debug=string;     // uncomment to turn on debugging printf's
 
 private import std.algorithm;
+private import std.array;
 private import std.stdio;
 private import std.c.stdio;
 private import std.c.stdlib;
@@ -48,9 +50,8 @@ private import std.conv;
 private import std.traits;
 private import core.exception : onRangeError;
 
-extern (C)
+version(Windows) extern (C)
 {
-
     size_t wcslen(in wchar *);
     int wcscmp(in wchar *, in wchar *);
 }
@@ -58,7 +59,7 @@ extern (C)
 /* ************* Exceptions *************** */
 
 /// Thrown on errors in string functions.
-typedef object.Exception StringException;
+typedef Exception StringException;
 
 /* ************* Constants *************** */
 
@@ -68,7 +69,7 @@ invariant char[8]  octdigits = "01234567";          /// 0..7
 invariant char[26] lowercase = "abcdefghijklmnopqrstuvwxyz";    /// a..z
 invariant char[26] uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";    /// A..Z
 invariant char[52] letters   = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-                   "abcdefghijklmnopqrstuvwxyz";    /// A..Za..z
+    "abcdefghijklmnopqrstuvwxyz";    /// A..Za..z
 invariant char[6] whitespace = " \t\v\r\n\f";           /// ASCII whitespace
 
 enum dchar LS = '\u2028';   /// UTF line separator
@@ -91,49 +92,15 @@ bool iswhite(dchar c)
         : (c == PS || c == LS);
 }
 
-/*********************************
-Convert string $(D s) to integer. $(RED Scheduled for deprecation. Use
-the $(D to!(int)(s)) or $(D parse!(int)(s)) routines in $(WEB
-std_conv, std.conv)).
- */
-
-long atoi(C)(in C[] s)
-{
-    return to!(long)(s);//std.c.stdlib.atoi(toStringz(s));
-}
-
-/*************************************
-Convert string to real. $(RED Scheduled for deprecation. Use the $(D
-to!(real)(s)) or $(D parse!(real)(s)) routines in $(WEB std_conv,
-std.conv)).
- */
-
-real atof(C)(in C[] s)
-{
-    return parse!(real)(s);
-}
-
-unittest
-{
-    alias TypeTuple!(char, wchar, dchar,
-            const char, const wchar, const dchar,
-            invariant char, invariant wchar, invariant dchar)
-        AllChars;
-    foreach (Char; AllChars)
-    {
-        auto s = to!(Char[])("123");
-        assert(atoi(s) == 123);
-    }
-}
-
 /**********************************
- * Compare two strings. cmp is case sensitive, icmp is case insensitive.
- * Returns:
- *  <table border=1 cellpadding=4 cellspacing=0>
- *  $(TR $(TD &lt; 0)  $(TD s1 &lt; s2))
- *  $(TR $(TD = 0)  $(TD s1 == s2))
- *  $(TR $(TD &gt; 0)  $(TD s1 &gt; s2))
- *  </table>
+Compare two strings. $(D _cmp) is case sensitive, $(D icmp) is case
+insensitive.
+
+$(BOOKTABLE Returns:,
+$(TR $(TD < 0)  $(TD $(D s1 < s2)))
+$(TR $(TD = 0)  $(TD $(D s1 == s2)))
+$(TR $(TD > 0)  $(TD $(D s1 > s2)))
+)
  */
 
 int cmp(C1, C2)(in C1[] s1, in C2[] s2)
@@ -155,7 +122,6 @@ int cmp(C1, C2)(in C1[] s1, in C2[] s2)
                 c2 = std.utf.decode(s2, i2);
             if (c1 != c2) return cast(int) c1 - cast(int) c2;
         }
-	assert(0);
     }
 }
 
@@ -224,30 +190,20 @@ unittest
     assert(result > 0);
 }
 
-/* ********************************
- * Converts a D array of chars to a C-style 0 terminated string.
- * Deprecated: replaced with toStringz().
- */
-
-deprecated const(char)* toCharz(string s)
-{
-    return toStringz(s);
-}
-
 /*********************************
- * Convert array of chars s[] to a C-style 0 terminated string.
- * s[] must not contain embedded 0's.
+ * Convert array of chars $(D s[]) to a C-style 0-terminated string.
+ * $(D s[]) must not contain embedded 0's.
  */
 
 const(char)* toStringz(const(char)[] s)
-    in
-    {
-        // The assert below contradicts the unittests!
+in
+{
+    // The assert below contradicts the unittests!
     //assert(memchr(s.ptr, 0, s.length) == null,
     //text(s.length, ": `", s, "'"));
-    }
-    out (result)
-    {
+}
+out (result)
+{
     if (result)
     {
         auto slen = s.length;
@@ -255,32 +211,32 @@ const(char)* toStringz(const(char)[] s)
         assert(strlen(result) == slen);
         assert(memcmp(result, s.ptr, slen) == 0);
     }
-    }
-    body
-    {
+}
+body
+{
     char[] copy;
-
+    
     /+ Unfortunately, this isn't reliable.
-       We could make this work if string literals are put
-       in read-only memory and we test if s[] is pointing into
-       that.
-
-        /* Peek past end of s[], if it's 0, no conversion necessary.
-         * Note that the compiler will put a 0 past the end of static
-         * strings, and the storage allocator will put a 0 past the end
-         * of newly allocated char[]'s.
-         */
-        char* p = &s[0] + s.length;
-        if (*p == 0)
-        return s;
-    +/
+     We could make this work if string literals are put
+     in read-only memory and we test if s[] is pointing into
+     that.
+     
+     /* Peek past end of s[], if it's 0, no conversion necessary.
+     * Note that the compiler will put a 0 past the end of static
+     * strings, and the storage allocator will put a 0 past the end
+     * of newly allocated char[]'s.
+     */
+     char* p = &s[0] + s.length;
+     if (*p == 0)
+     return s;
+     +/
 
     // Need to make a copy
     copy = new char[s.length + 1];
     copy[0..s.length] = s;
     copy[s.length] = 0;
     return copy.ptr;
-    }
+}
 
 // /// Ditto
 // const(char)* toStringz(invariant(char)[] s)
@@ -332,18 +288,18 @@ int find(in char[] s, dchar c)
 {
     if (c <= 0x7F)
     {   // Plain old ASCII
-    auto p = cast(char*)memchr(s.ptr, c, s.length);
-    if (p)
-        return p - cast(char *)s;
-    else
-        return -1;
+        auto p = cast(char*)memchr(s.ptr, c, s.length);
+        if (p)
+            return p - cast(char *)s;
+        else
+            return -1;
     }
 
     // c is a universal character
     foreach (int i, dchar c2; s)
     {
-    if (c == c2)
-        return i;
+        if (c == c2)
+            return i;
     }
     return -1;
 }
@@ -373,25 +329,25 @@ int ifind(in char[] s, dchar c)
 {
     if (c <= 0x7F)
     {   // Plain old ASCII
-    char c1 = cast(char) std.ctype.tolower(c);
+        char c1 = cast(char) std.ctype.tolower(c);
 
-    foreach (int i, char c2; s)
-    {
-        auto c3 = cast(char)std.ctype.tolower(c2);
-        if (c1 == c3)
-        return i;
-    }
+        foreach (int i, char c2; s)
+        {
+            auto c3 = cast(char)std.ctype.tolower(c2);
+            if (c1 == c3)
+                return i;
+        }
     }
     else
     {   // c is a universal character
-    dchar c1 = std.uni.toUniLower(c);
+        dchar c1 = std.uni.toUniLower(c);
 
-    foreach (int i, dchar c2; s)
-    {
-        auto c3 = std.uni.toUniLower(c2);
-        if (c1 == c3)
-        return i;
-    }
+        foreach (int i, dchar c2; s)
+        {
+            auto c3 = std.uni.toUniLower(c2);
+            if (c1 == c3)
+                return i;
+        }
     }
     return -1;
 }
@@ -917,13 +873,13 @@ void tolowerInPlace(C)(ref C[] s)
 {
     for (size_t i = 0; i < s.length; )
     {
-    invariant c = s[i];
-    if ('A' <= c && c <= 'Z')
-    {
+        invariant c = s[i];
+        if ('A' <= c && c <= 'Z')
+        {
             s[i++] = cast(C) (c + (cast(C)'a' - 'A'));
-    }
-    else if (c > 0x7F)
-    {
+        }
+        else if (c > 0x7F)
+        {
             // wide character
             size_t j = i;
             dchar dc = decode(s, j);
@@ -936,7 +892,7 @@ void tolowerInPlace(C)(ref C[] s)
             auto toAdd = to!(C[])(std.uni.toUniLower(dc));
             s = s[0 .. i] ~ toAdd  ~ s[j .. $];
             i += toAdd.length;
-    }
+        }
         else
         {
             ++i;
@@ -1041,13 +997,13 @@ void toupperInPlace(C)(ref C[] s)
 {
     for (size_t i = 0; i < s.length; )
     {
-    invariant c = s[i];
-    if ('a' <= c && c <= 'z')
-    {
+        invariant c = s[i];
+        if ('a' <= c && c <= 'z')
+        {
             s[i++] = cast(C) (c - (cast(C)'a' - 'A'));
-    }
-    else if (c > 0x7F)
-    {
+        }
+        else if (c > 0x7F)
+        {
             // wide character
             size_t j = i;
             dchar dc = decode(s, j);
@@ -1060,7 +1016,7 @@ void toupperInPlace(C)(ref C[] s)
             auto toAdd = to!(C[])(std.uni.toUniUpper(dc));
             s = s[0 .. i] ~ toAdd  ~ s[j .. $];
             i += toAdd.length;
-    }
+        }
         else
         {
             ++i;
@@ -1276,37 +1232,28 @@ unittest
 
 string join(in string[] words, string sep)
 {
-    char[] result;
-
-    if (words.length)
-    {
-    size_t len = 0;
-    size_t i;
-
-    for (i = 0; i < words.length; i++)
+    if (!words.length) return null;
+    immutable seplen = sep.length;
+    size_t len = (words.length - 1) * seplen;
+    
+    foreach (i; 0 .. words.length)
         len += words[i].length;
-
-    auto seplen = sep.length;
-    len += (words.length - 1) * seplen;
-
-    result = new char[len];
-
+    
+    auto result = new char[len];
+    
     size_t j;
-    i = 0;
-    while (true)
+    foreach (i; 0 .. words.length)
     {
-        uint wlen = words[i].length;
-
+        if (i > 0)
+        {
+            result[j .. j + seplen] = sep;
+            j += seplen;
+        }
+        immutable wlen = words[i].length;
         result[j .. j + wlen] = words[i];
         j += wlen;
-        i++;
-        if (i >= words.length)
-        break;
-        result[j .. j + seplen] = sep;
-        j += seplen;
     }
     assert(j == len);
-    }
     return assumeUnique(result);
 }
 
@@ -1652,44 +1599,37 @@ unittest
  * Strips leading or trailing whitespace, or both.
  */
 
-string stripl(string s)
+String stripl(String)(String s)
 {
     uint i;
-
     for (i = 0; i < s.length; i++)
     {
-    if (!std.ctype.isspace(s[i]))
-        break;
+        if (!std.ctype.isspace(s[i]))
+            break;
     }
     return s[i .. s.length];
 }
 
-string stripr(string s) /// ditto
+String stripr(String)(String s) /// ditto
 {
-    uint i;
-
-    for (i = s.length; i > 0; i--)
+    for (auto i = s.length;;)
     {
-    if (!std.ctype.isspace(s[i - 1]))
-        break;
+        if (i == 0) return null;
+        --i;
+        if (!std.ctype.isspace(s[i]))
+            return s[0 .. i + 1];
     }
-    return s[0 .. i];
 }
 
-string strip(string s) /// ditto
+String strip(String)(String s) /// ditto
 {
     return stripr(stripl(s));
 }
 
 unittest
 {
-    debug(string) printf("string.strip.unittest\n");
-    string s;
-    int i;
-
-    s = strip("  foo\t ");
-    i = cmp(s, "foo");
-    assert(i == 0);
+    assert(strip("  foo\t ") == "foo");
+    assert(strip("1") == "1");
 }
 
 /**
@@ -1698,59 +1638,46 @@ unittest
  */
 bool startsWith(A1, A2)(A1 longer, A2 shorter)
 {
-    static if (is(typeof(longer[0 .. shorter.length] == shorter)))
+    static if (isSomeString!(A1) && isSomeString!(A2))
     {
-        // the easy way: arrays, directly comparable
-        return longer.length >= shorter.length &&
-            longer[0 .. shorter.length] == shorter;
-    }
-    else
-    {
-        // different element types, etc.
-        static if (isSomeString!(A1) && isSomeString!(A2))
+        // UTF-informed comparison
+        // find the largest character of the two
+        static if (longer[0].sizeof > shorter[0].sizeof)
         {
-            // UTF-informed comparison
-            // find the largest character of the two
-            static if (longer[0].sizeof > shorter[0].sizeof)
+            alias typeof(longer[0]) Char;
+            foreach (Char c; shorter)
             {
-                alias typeof(longer[0]) Char;
-                if (shorter.length / Char.sizeof > longer.length) return false;
-                size_t i = 0;
-                foreach (Char c; shorter)
-                {
-                    if (i == longer.length || longer[i] != c) return false;
-                    ++i;
-                }
+                if (longer.empty || longer.head != c) return false;
+                longer.next;
             }
-            else
+            return true;
+        }
+        else static if (longer[0].sizeof < shorter[0].sizeof)
+        {
+            alias typeof(shorter[0]) Char;
+            foreach (Char c; longer)
             {
-                static assert(longer[0].sizeof < shorter[0].sizeof,
-                    "Looks like there's a bug in the compiler");
-                alias typeof(shorter[0]) Char;
-                if (shorter.length > longer.length) return false;
-                size_t i = 0;
-                foreach (Char c; longer)
-                {
-                    if (i == shorter.length) return true;
-                    if (shorter[i] != c) return false;
-                    ++i;
-                }
+                if (shorter.empty) return true;
+                if (shorter.head != c) return false;
+                shorter.next;
             }
+            return shorter.empty;
         }
         else
         {
-            // raw element-by-element comparison
-            if (longer.length < shorter.length) return false;
-            foreach (i, e; shorter)
-            {
-                if (longer[i] != e) return false;
-            }
+            return longer.length >= shorter.length
+                && longer[0 .. shorter.length] == shorter;
         }
-        return true;
+    }
+    else
+    {
+        // raw element-by-element comparison
+        return std.algorithm.startsWith(longer, shorter) == 1;
     }
 }
 
-unittest
+// Too slow for release mode
+debug unittest
 {
 version(none) // fails to compile with: Error: array equality comparison type mismatch, immutable(char)[] vs ubyte[]
 {
@@ -1790,60 +1717,48 @@ version(none) // fails to compile with: Error: array equality comparison type mi
  */
 bool endsWith(A1, A2)(A1 longer, A2 shorter)
 {
-    static if (is(typeof(longer[$ - shorter.length .. $] == shorter)))
+    // different element types, etc.
+    static if (isSomeString!(A1) && isSomeString!(A2))
     {
-        // the easy way: arrays, directly comparable
-        return longer.length >= shorter.length &&
-            longer[$ - shorter.length .. $] == shorter;
-    }
-    else
-    {
-        // different element types, etc.
-        static if (isSomeString!(A1) && isSomeString!(A2))
+        // UTF-informed comparison
+        // find the largest character of the two
+        static if (longer[0].sizeof > shorter[0].sizeof)
         {
-            // UTF-informed comparison
-            // find the largest character of the two
-            static if (longer[0].sizeof > shorter[0].sizeof)
+            alias typeof(longer[0]) Char;
+            foreach_reverse (Char c; shorter)
             {
-                alias typeof(longer[0]) Char;
-                if (shorter.length > longer.length * Char.sizeof) return false;
-                size_t i = longer.length - 1;
-                foreach_reverse (Char c; shorter)
-                {
-                    if (i == 0 || longer[i] != c) return false;
-                    --i;
-                }
+                if (longer.empty) return false;
+                if (longer.toe != c) return false;
+                longer.retreat;
             }
-            else
+            return true;
+        }
+        else static if (longer[0].sizeof < shorter[0].sizeof)
+        {
+            alias typeof(shorter[0]) Char;
+            foreach_reverse (Char c; longer)
             {
-                static assert(longer[0].sizeof < shorter[0].sizeof,
-                    "Looks like there's a bug in the compiler");
-                alias typeof(shorter[0]) Char;
-                if (shorter.length > longer.length) return false;
-                if (!shorter.length) return true;
-                size_t i = shorter.length - 1;
-                foreach_reverse (Char c; longer)
-                {
-                    if (i == 0) return true;
-                    if (shorter[i] != c) return false;
-                    --i;
-                }
+                if (shorter.empty) return true;
+                if (shorter.toe != c) return false;
+                shorter.retreat;
             }
+            return shorter.empty;
         }
         else
         {
-            // raw element-by-element comparison
-            if (longer.length < shorter.length) return false;
-            foreach (i, e; longer[$ - shorter.length .. $])
-            {
-                if (shorter[i] != e) return false;
-            }
+            return longer.length >= shorter.length
+                && longer[$ - shorter.length .. $] == shorter;
         }
-        return true;
+    }
+    else
+    {
+        //assert(0);
+        return std.algorithm.endsWith(longer, shorter) == 1;
     }
 }
 
-unittest
+// Too slow for release mode
+debug unittest
 {
     alias TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[])
         TestTypes;
@@ -1858,6 +1773,10 @@ version(none) // fails to compile with: Error: array equality comparison type mi
             {
                 auto a = to!(T1)("efgh"), b = to!(T2)("abcdefgh"),
                     c = to!(T2)(""), d = to!(T3)([1, 2]);
+                assert(endsWith(a, a));
+                assert(endsWith(b, b));
+                // writeln(T2.stringof);
+                // writeln(T1.stringof);
                 assert(endsWith(b, a));
                 assert(!endsWith(a, b));
                 assert(endsWith(b, c));
@@ -1879,8 +1798,8 @@ version(none) // fails to compile with: Error: array equality comparison type mi
         {
             auto a = to!(T1)([1, 2]);
             auto b = to!(T2)([0, 1, 2]);
-            assert(!endsWith(a, b));
-            assert(endsWith(b, a));
+            //assert(!std.string.endsWith(a, b));
+            // assert(endsWith(b, a));
         }
     }
 }
@@ -1896,24 +1815,24 @@ C[] chomp(C)(C[] s, in C[] delimiter = null)
     if (delimiter is null)
     {   auto len = s.length;
 
-    if (len)
-    {   auto c = s[len - 1];
+        if (len)
+        {   auto c = s[len - 1];
 
-        if (c == '\r')          // if ends in CR
-        len--;
-        else if (c == '\n')         // if ends in LF
-        {
-        len--;
-        if (len && s[len - 1] == '\r')
-            len--;          // remove CR-LF
+            if (c == '\r')          // if ends in CR
+                len--;
+            else if (c == '\n')         // if ends in LF
+            {
+                len--;
+                if (len && s[len - 1] == '\r')
+                    len--;          // remove CR-LF
+            }
         }
-    }
-    return s[0 .. len];
+        return s[0 .. len];
     }
     else if (s.length >= delimiter.length)
     {
-    if (s[length - delimiter.length .. length] == delimiter)
-        return s[0 .. length - delimiter.length];
+        if (s[length - delimiter.length .. length] == delimiter)
+            return s[0 .. length - delimiter.length];
     }
     return s;
 }
@@ -1979,24 +1898,21 @@ unittest
  */
 
 string chop(string s)
-{   auto len = s.length;
-
-    if (len)
-    {
+{
+    auto len = s.length;
+    if (!len) return s;
     if (len >= 2 && s[len - 1] == '\n' && s[len - 2] == '\r')
         return s[0 .. len - 2];
-
+    
     // If we're in a tail of a UTF-8 sequence, back up
     while ((s[len - 1] & 0xC0) == 0x80)
     {
         len--;
         if (len == 0)
-        throw new std.utf.UtfException("invalid UTF sequence", 0);
+            throw new std.utf.UtfException("invalid UTF sequence", 0);
     }
-
+    
     return s[0 .. len - 1];
-    }
-    return s;
 }
 
 
@@ -2153,7 +2069,8 @@ in
     // Verify that slice[] really is a slice of s[]
     int so = cast(char*)slice - cast(char*)s;
     assert(so >= 0);
-    //printf("s.length = %d, so = %d, slice.length = %d\n", s.length, so, slice.length);
+    //printf("s.length = %d, so = %d, slice.length = %d\n", s.length,
+    //so, slice.length);
     assert(s.length >= so + slice.length);
 }
 body
@@ -2165,7 +2082,8 @@ body
 
     result[0 .. so] = s[0 .. so];
     result[so .. so + replacement.length] = replacement;
-    result[so + replacement.length .. result.length] = s[so + slice.length .. s.length];
+    result[so + replacement.length .. result.length] =
+        s[so + slice.length .. s.length];
 
     return assumeUnique(result);
 }
@@ -2602,167 +2520,60 @@ unittest
     assert(i == 0);
 }
 
-/***********************************************
+/*
  * Convert to string.
  */
 
-string toString(bool b)
-{
-    return b ? "true" : "false";
-}
-
-/// ditto
-string toString(char c)
-{
-    char[] result = new char[2];
-    result[0] = c;
-    result[1] = 0;
-    return cast(string) result[0 .. 1];
-}
-
-/// ditto
-string toString(wchar c)
-{
-    char[] result;
-    encode(result, c);
-    return assumeUnique(result);
-}
-
-/// ditto
-string toString(dchar c)
-{
-    char[] result;
-    encode(result, c);
-    return assumeUnique(result);
-}
-
 unittest
 {
-    debug(string) printf("string.toString(char).unittest\n");
-
     string s = "foo";
     string s2;
     foreach (char c; s)
     {
-    s2 ~= std.string.toString(c);
+        s2 ~= to!string(c);
     }
     //printf("%.*s", s2);
     assert(s2 == "foo");
 }
 
-string toString(ubyte ub)  { return toString(cast(uint) ub); } /// ditto
-string toString(ushort us) { return toString(cast(uint) us); } /// ditto
-
-/// ditto
-string toString(uint u)
-{   char[uint.sizeof * 3] buffer = void;
-    int ndigits;
-    char[] result;
-
-    ndigits = 0;
-    if (u < 10)
-    // Avoid storage allocation for simple stuff
-    return digits[u .. u + 1];
-    else
-    {
-    while (u)
-    {
-        uint c = (u % 10) + '0';
-        u /= 10;
-        ndigits++;
-        buffer[buffer.length - ndigits] = cast(char)c;
-    }
-    result = new char[ndigits];
-    result[] = buffer[buffer.length - ndigits .. buffer.length];
-    }
-    return assumeUnique(result);
-}
-
 unittest
 {
-    debug(string) printf("string.toString(uint).unittest\n");
+    debug(string) printf("string.to!string(uint).unittest\n");
 
     string r;
     int i;
 
-    r = toString(0u);
+    r = to!string(0u);
     i = cmp(r, "0");
     assert(i == 0);
 
-    r = toString(9u);
+    r = to!string(9u);
     i = cmp(r, "9");
     assert(i == 0);
 
-    r = toString(123u);
+    r = to!string(123u);
     i = cmp(r, "123");
     assert(i == 0);
-}
-
-/// ditto
-string toString(ulong u)
-{   char[ulong.sizeof * 3] buffer;
-    int ndigits;
-    char[] result;
-
-    if (u < 0x1_0000_0000)
-    return toString(cast(uint)u);
-    ndigits = 0;
-    while (u)
-    {
-    char c = cast(char)((u % 10) + '0');
-    u /= 10;
-    ndigits++;
-    buffer[buffer.length - ndigits] = c;
-    }
-    result = new char[ndigits];
-    result[] = buffer[buffer.length - ndigits .. buffer.length];
-    return assumeUnique(result);
 }
 
 unittest
 {
-    debug(string) printf("string.toString(ulong).unittest\n");
+    debug(string) printf("string.to!string(ulong).unittest\n");
 
     string r;
     int i;
 
-    r = toString(0uL);
+    r = to!string(0uL);
     i = cmp(r, "0");
     assert(i == 0);
 
-    r = toString(9uL);
+    r = to!string(9uL);
     i = cmp(r, "9");
     assert(i == 0);
 
-    r = toString(123uL);
+    r = to!string(123uL);
     i = cmp(r, "123");
     assert(i == 0);
-}
-
-string toString(byte b)  { return toString(cast(int) b); } /// ditto
-string toString(short s) { return toString(cast(int) s); } /// ditto
-
-/// ditto
-string toString(int i)
-{   char[1 + int.sizeof * 3] buffer;
-    char[] result;
-
-    if (i >= 0)
-    return toString(cast(uint)i);
-
-    uint u = -i;
-    int ndigits = 1;
-    while (u)
-    {
-    char c = cast(char)((u % 10) + '0');
-    u /= 10;
-    buffer[buffer.length - ndigits] = c;
-    ndigits++;
-    }
-    buffer[buffer.length - ndigits] = '-';
-    result = new char[ndigits];
-    result[] = buffer[buffer.length - ndigits .. buffer.length];
-    return assumeUnique(result);
 }
 
 unittest
@@ -2772,231 +2583,61 @@ unittest
     string r;
     int i;
 
-    r = toString(0);
+    r = to!string(0);
     i = cmp(r, "0");
     assert(i == 0);
 
-    r = toString(9);
+    r = to!string(9);
     i = cmp(r, "9");
     assert(i == 0);
 
-    r = toString(123);
+    r = to!string(123);
     i = cmp(r, "123");
     assert(i == 0);
 
-    r = toString(-0);
+    r = to!string(-0);
     i = cmp(r, "0");
     assert(i == 0);
 
-    r = toString(-9);
+    r = to!string(-9);
     i = cmp(r, "-9");
     assert(i == 0);
 
-    r = toString(-123);
+    r = to!string(-123);
     i = cmp(r, "-123");
     assert(i == 0);
 }
 
-/// ditto
-string toString(long i)
-{   char[1 + long.sizeof * 3] buffer;
-    char[] result;
-
-    if (i >= 0)
-    return toString(cast(ulong)i);
-    if (cast(int)i == i)
-    return toString(cast(int)i);
-
-    ulong u = cast(ulong)(-i);
-    int ndigits = 1;
-    while (u)
-    {
-    char c = cast(char)((u % 10) + '0');
-    u /= 10;
-    buffer[buffer.length - ndigits] = c;
-    ndigits++;
-    }
-    buffer[buffer.length - ndigits] = '-';
-    result = new char[ndigits];
-    result[] = buffer[buffer.length - ndigits .. buffer.length];
-    return assumeUnique(result);
-}
-
 unittest
 {
-    debug(string) printf("string.toString(long).unittest\n");
+    debug(string) printf("string.to!string(long).unittest\n");
 
     string r;
     int i;
 
-    r = toString(0L);
+    r = to!string(0L);
     i = cmp(r, "0");
     assert(i == 0);
 
-    r = toString(9L);
+    r = to!string(9L);
     i = cmp(r, "9");
     assert(i == 0);
 
-    r = toString(123L);
+    r = to!string(123L);
     i = cmp(r, "123");
     assert(i == 0);
 
-    r = toString(-0L);
+    r = to!string(-0L);
     i = cmp(r, "0");
     assert(i == 0);
 
-    r = toString(-9L);
+    r = to!string(-9L);
     i = cmp(r, "-9");
     assert(i == 0);
 
-    r = toString(-123L);
+    r = to!string(-123L);
     i = cmp(r, "-123");
     assert(i == 0);
-}
-
-/// ditto
-string toString(float f) { return toString(cast(double) f); }
-
-/// ditto
-string toString(double d)
-{
-    char[20] buffer;
-
-    int len = sprintf(buffer.ptr, "%g", d);
-    return buffer[0 .. len].idup;
-}
-
-/// ditto
-string toString(real r)
-{
-    char[20] buffer;
-
-    int len = sprintf(buffer.ptr, "%Lg", r);
-    return buffer[0 .. len].idup;
-}
-
-/// ditto
-string toString(ifloat f) { return toString(cast(idouble) f); }
-
-/// ditto
-string toString(idouble d)
-{
-    char[21] buffer;
-
-    int len = sprintf(buffer.ptr, "%gi", d);
-    return buffer[0 .. len].idup;
-}
-
-/// ditto
-string toString(ireal r)
-{
-    char[21] buffer;
-
-    int len = sprintf(buffer.ptr, "%Lgi", r);
-    return buffer[0 .. len].idup;
-}
-
-/// ditto
-string toString(cfloat f) { return toString(cast(cdouble) f); }
-
-/// ditto
-string toString(cdouble d)
-{
-    char[20 + 1 + 20 + 1] buffer;
-
-    int len = sprintf(buffer.ptr, "%g+%gi", d.re, d.im);
-    return buffer[0 .. len].idup;
-}
-
-/// ditto
-string toString(creal r)
-{
-    char[20 + 1 + 20 + 1] buffer;
-
-    int len = sprintf(buffer.ptr, "%Lg+%Lgi", r.re, r.im);
-    return buffer[0 .. len].idup;
-}
-
-
-/******************************************
- * Convert value to string in _radix radix.
- *
- * radix must be a value from 2 to 36.
- * value is treated as a signed value only if radix is 10.
- * The characters A through Z are used to represent values 10 through 36.
- */
-string toString(long value, uint radix)
-in
-{
-    assert(radix >= 2 && radix <= 36);
-}
-body
-{
-    if (radix == 10)
-    return toString(value);     // handle signed cases only for radix 10
-    return toString(cast(ulong)value, radix);
-}
-
-/// ditto
-string toString(ulong value, uint radix)
-in
-{
-    assert(radix >= 2 && radix <= 36);
-}
-body
-{
-    char[value.sizeof * 8] buffer;
-    uint i = buffer.length;
-
-    if (value < radix && value < hexdigits.length)
-    return hexdigits[cast(size_t)value .. cast(size_t)value + 1];
-
-    do
-    {   ubyte c;
-
-    c = cast(ubyte)(value % radix);
-    value = value / radix;
-    i--;
-    buffer[i] = cast(char)((c < 10) ? c + '0' : c + 'A' - 10);
-    } while (value);
-    return buffer[i .. length].idup;
-}
-
-unittest
-{
-    debug(string) printf("string.toString(ulong, uint).unittest\n");
-
-    string r;
-    int i;
-
-    r = toString(-10L, 10u);
-    assert(r == "-10");
-
-    r = toString(15L, 2u);
-    //writefln("r = '%s'", r);
-    assert(r == "1111");
-
-    r = toString(1L, 2u);
-    //writefln("r = '%s'", r);
-    assert(r == "1");
-
-    r = toString(0x1234AFL, 16u);
-    //writefln("r = '%s'", r);
-    assert(r == "1234AF");
-}
-
-/*************************************************
- * Convert C-style 0 terminated string s to string string.
- */
-
-// string toString(invariant char *s)
-// {
-//     return s ? cast(string) s[0 .. strlen(s)] : cast(string)null;
-// }
-
-string toString(const char *s)
-{
-    return s ? s[0 .. strlen(s)].idup : cast(string)null;
 }
 
 unittest
@@ -3006,13 +2647,14 @@ unittest
     string r;
     int i;
 
-    r = toString(null);
+    r = to!string(cast(char*) null);
     i = cmp(r, "");
     assert(i == 0);
 
-    r = toString("foo\0");
-    i = cmp(r, "foo");
-    assert(i == 0);
+    r = to!string("foo\0".ptr);
+    assert(r == "foo");
+    // i = cmp(r, "foo");
+    // assert(i == 0);
 }
 
 
@@ -3020,14 +2662,13 @@ unittest
  * Format arguments into a string.
  */
 
-
 string format(...)
 {
     char[] s;
 
     void putc(dchar c)
     {
-    std.utf.encode(s, c);
+        std.utf.encode(s, c);
     }
 
     std.format.doFormat(&putc, _arguments, _argptr);
@@ -3065,7 +2706,6 @@ char[] sformat(char[] s, ...)
     std.format.doFormat(&putc, _arguments, _argptr);
     return s[0 .. i];
 }
-
 
 unittest
 {
@@ -3235,7 +2875,7 @@ size_t countchars(string s, string pattern)
 
     foreach (dchar c; s)
     {
-    count += inPattern(c, pattern);
+        count += inPattern(c, pattern);
     }
     return count;
 }
@@ -3266,21 +2906,18 @@ string removechars(string s, in string pattern)
     //writefln("removechars(%s, %s)", s, pattern);
     foreach (size_t i, dchar c; s)
     {
-    if (!inPattern(c, pattern))
-    {
+        if (inPattern(c, pattern)) continue;
         if (!changed)
         {   changed = true;
-        r = s[0 .. i].dup;
+            r = s[0 .. i].dup;
         }
         if (changed)
         {
-        std.utf.encode(r, c);
+            std.utf.encode(r, c);
         }
-    }
     }
     return assumeUnique(r);
 }
-
 
 unittest
 {
@@ -3972,9 +3609,9 @@ unittest
     assert(isNumeric("123f") == true);
     assert(isNumeric("123.u") == false);
 
-    assert(isNumeric(std.string.toString(real.nan)) == true);
-    assert(isNumeric(std.string.toString(-real.infinity)) == true);
-    assert(isNumeric(std.string.toString(123e+2+1234.78Li)) == true);
+    assert(isNumeric(to!string(real.nan)) == true);
+    assert(isNumeric(to!string(-real.infinity)) == true);
+    assert(isNumeric(to!string(123e+2+1234.78Li)) == true);
 
     s = "$250.99-";
     assert(isNumeric(s[1..s.length - 2]) == true);
@@ -4249,23 +3886,23 @@ size_t column(string str, int tabsize = 8)
 
     foreach (dchar c; str)
     {
-    switch (c)
-    {
+        switch (c)
+        {
         case '\t':
-        column = (column + tabsize) / tabsize * tabsize;
-        break;
+            column = (column + tabsize) / tabsize * tabsize;
+            break;
 
         case '\r':
         case '\n':
         case PS:
         case LS:
-        column = 0;
-        break;
+            column = 0;
+            break;
 
         default:
-        column++;
-        break;
-    }
+            column++;
+            break;
+        }
     }
     return column;
 }
@@ -4378,139 +4015,4 @@ unittest
     assert(wrap(" abcd   df ", 3) == "abcd\ndf\n");
     assert(wrap("x") == "x\n");
     assert(wrap("u u") == "u u\n");
-}
-
-
-/***************************
- * Does string s[] start with an email address?
- *
- * Deprecated: use std.uri.emailLength
- */
-deprecated string isEmail(string s)
-{   size_t i;
-
-    if (!isalpha(s[0]))
-    goto Lno;
-
-    for (i = 1; 1; i++)
-    {
-    if (i == s.length)
-        goto Lno;
-    auto c = s[i];
-    if (isalnum(c))
-        continue;
-    if (c == '-' || c == '_' || c == '.')
-        continue;
-    if (c != '@')
-        goto Lno;
-    i++;
-    break;
-    }
-    //writefln("test1 '%s'", s[0 .. i]);
-
-    /* Now do the part past the '@'
-     */
-    size_t lastdot;
-    for (; i < s.length; i++)
-    {
-    auto c = s[i];
-    if (isalnum(c))
-        continue;
-    if (c == '-' || c == '_')
-        continue;
-    if (c == '.')
-    {
-        lastdot = i;
-        continue;
-    }
-    break;
-    }
-    if (!lastdot || (i - lastdot != 3 && i - lastdot != 4))
-    goto Lno;
-
-    return s[0 .. i];
-
-Lno:
-    return null;
-}
-
-
-/***************************
- * Does string s[] start with a URL?
- *
- * Deprecated: use std.uri.uriLength
- */
-
-deprecated string isURL(string s)
-{
-    /* Must start with one of:
-     *  http://
-     *  https://
-     *  www.
-     */
-
-    size_t i;
-
-    if (s.length <= 4)
-    goto Lno;
-
-    //writefln("isURL(%s)", s);
-    if (s.length > 7 && std.string.icmp(s[0 .. 7], "http://") == 0)
-    i = 7;
-    else if (s.length > 8 && std.string.icmp(s[0 .. 8], "https://") == 0)
-    i = 8;
-//    if (icmp(s[0 .. 4], "www.") == 0)
-//  i = 4;
-    else
-    goto Lno;
-
-    size_t lastdot;
-    for (; i < s.length; i++)
-    {
-    auto c = s[i];
-    if (isalnum(c))
-        continue;
-    if (c == '-' || c == '_' || c == '?' ||
-        c == '=' || c == '%' || c == '&' ||
-        c == '/' || c == '+' || c == '#' ||
-        c == '~' || c == '$')
-        continue;
-    if (c == '.')
-    {
-        lastdot = i;
-        continue;
-    }
-    break;
-    }
-    //if (!lastdot || (i - lastdot != 3 && i - lastdot != 4))
-    if (!lastdot)
-    goto Lno;
-
-    return s[0 .. i];
-
-Lno:
-    return null;
-}
-
-// Undocumented yet
-
-private S textImpl(S, T...)(T args)
-{
-    S result;
-    foreach (arg; args)
-    {
-        result ~= to!(S)(arg);
-    }
-    return result;
-}
-
-string text(T...)(T args) { return textImpl!(string, T)(args); }
-wstring wtext(T...)(T args) { return textImpl!(wstring, T)(args); }
-dstring dtext(T...)(T args) { return textImpl!(dstring, T)(args); }
-
-unittest
-{
-    assert(text(42, ' ', 1.5, ": xyz") == "42 1.5: xyz");
-    assert(wtext(42, ' ', 1.5, ": xyz") == "42 1.5: xyz"w);
-    assert(dtext(42, ' ', 1.5, ": xyz") == "42 1.5: xyz"d);
 }
