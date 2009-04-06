@@ -19,10 +19,6 @@ import std.string : stdFormat = format;
 import std.traits;
 import std.typetuple;
 
-
-
-
-
 struct DynArg(int i) {
 	static assert (i >= 0);
 	
