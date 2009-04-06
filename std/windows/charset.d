@@ -13,7 +13,6 @@ private import std.windows.syserror;
 private import std.utf;
 private import std.string;
 
-
 /******************************************
  * Converts the UTF-8 string s into a null-terminated string in a Windows
  * 8-bit character set.
@@ -29,33 +28,33 @@ private import std.string;
  *	yaneurao, Walter Bright, Stewart Gordon
  */
 
-const(char)* toMBSz(string s, uint codePage = 0)
+const(char)* toMBSz(in char[] s, uint codePage = 0)
 {
     // Only need to do this if any chars have the high bit set
     foreach (char c; s)
     {
-	if (c >= 0x80)
-	{
-	    char[] result;
-	    int readLen;
-	    auto ws = std.utf.toUTF16z(s);
-	    result.length = WideCharToMultiByte(codePage, 0, ws, -1, null, 0,
-		null, null);
+        if (c >= 0x80)
+        {
+            char[] result;
+            int readLen;
+            auto ws = std.utf.toUTF16z(s);
+            result.length = WideCharToMultiByte(codePage, 0, ws, -1, null, 0,
+                    null, null);
 
-	    if (result.length)
-	    {
-		readLen = WideCharToMultiByte(codePage, 0, ws, -1, result.ptr,
-			result.length, null, null);
-	    }
+            if (result.length)
+            {
+                readLen = WideCharToMultiByte(codePage, 0, ws, -1, result.ptr,
+                        result.length, null, null);
+            }
 
-	    if (!readLen || readLen != result.length)
-	    {
-		throw new Exception("Couldn't convert string: " ~
-			sysErrorString(GetLastError()));
-	    }
+            if (!readLen || readLen != result.length)
+            {
+                throw new Exception("Couldn't convert string: " ~
+                        sysErrorString(GetLastError()));
+            }
 
-	    return result.ptr;
-	}
+            return result.ptr;
+        }
     }
     return std.string.toStringz(s);
 }
