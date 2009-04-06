@@ -68,8 +68,8 @@ class UtfException : Exception
 
     this(string s, size_t i)
     {
-	idx = i;
-	super(s);
+        idx = i;
+        super(s);
     }
 }
 
@@ -672,13 +672,13 @@ char[] toUTF8(char[4] buf, dchar c)
 
 string toUTF8(string s)
     in
-    {
+{
 	validate(s);
-    }
-    body
-    {
+}
+body
+{
 	return s;
-    }
+}
 
 /** ditto */
 
@@ -773,24 +773,24 @@ wstring toUTF16(const(char)[] s)
     r.length = 0;
     for (size_t i = 0; i < slen; )
     {
-	dchar c = s[i];
-	if (c <= 0x7F)
-	{
-	    i++;
-	    r ~= cast(wchar)c;
-	}
-	else
-	{
-	    c = decode(s, i);
-	    encode(r, c);
-	}
+        dchar c = s[i];
+        if (c <= 0x7F)
+        {
+            i++;
+            r ~= cast(wchar)c;
+        }
+        else
+        {
+            c = decode(s, i);
+            encode(r, c);
+        }
     }
     return cast(wstring) r; // ok because r is unique
 }
 
 /** ditto */
 
-const(wchar*) toUTF16z(string s)
+const(wchar*) toUTF16z(in char[] s)
 {
     wchar[] r;
     size_t slen = s.length;
