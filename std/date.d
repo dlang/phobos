@@ -1,15 +1,15 @@
-
 // Written in the D programming language.
 
 /**
- * Dates are represented in several formats. The date implementation revolves
- * around a central type, d_time, from which other formats are converted to and
- * from.
- * Dates are calculated using the Gregorian calendar.
- * References:
- *	$(LINK2 http://en.wikipedia.org/wiki/Gregorian_calendar, Gregorian calendar (Wikipedia))
- * Macros:
- *	WIKI = Phobos/StdDate
+ * Dates are represented in several formats. The date implementation
+ * revolves around a central type, d_time, from which other formats
+ * are converted to and from.  Dates are calculated using the
+ * Gregorian calendar.
+ *
+ * References: $(WEB wikipedia.org/wiki/Gregorian_calendar, Gregorian
+ * calendar (Wikipedia))
+ *
+ * Macros: WIKI = Phobos/StdDate
  */
 
 // Copyright (c) 1999-2008 by Digital Mars
@@ -21,6 +21,7 @@ module std.date;
 
 private import std.stdio;
 private import std.dateparse;
+import std.c.stdlib;
 import std.contracts;
 
 /**
@@ -548,9 +549,10 @@ int DaysInMonth(int year, int month)
 	case 9:
 	case 11:
 	    return 30;
-	default:
-	    assert(0);
+    default:
+        break;
     }
+    return enforce(false, "Invalid month passed to DaysInMonth");
 }
 
 unittest
@@ -779,7 +781,7 @@ d_time parse(string s)
     return n;
 }
 
-static this()
+extern(C) void std_date_static_this()
 {
     LocalTZA = getLocalTZA();
     //printf("LocalTZA = %g, %g\n", LocalTZA, LocalTZA / msPerHour);
@@ -930,6 +932,9 @@ version (Posix)
     private import core.sys.posix.time;
     private import core.sys.posix.sys.time;
 
+    /******
+     * Get current UTC time.
+     */
     d_time getUTCtime()
     {   timeval tv;
 
@@ -1027,7 +1032,7 @@ version (Posix)
 }
 
 
-/+ ====================== DOS File Time =============================== +/
+/+ DOS File Time +/
 
 /***
  * Type representing the DOS file date/time format.
@@ -1097,3 +1102,64 @@ DosFileTime toDosFileTime(d_time t)
 
     return cast(DosFileTime)dt;
 }
+
+/**
+Benchmarks code for speed assessment and comparison.
+
+Params:
+
+fun = aliases of callable objects (e.g. function names). Each should
+take no arguments.
+
+times = The number of times each function is to be executed.
+
+result = The optional store for the return value. If $(D null) is
+passed in, new store is allocated appropriately.
+
+Returns:
+
+An array of $(D n) $(D uint)s. Element at slot $(D i) contains the
+number of milliseconds spent in calling the $(D i)th function $(D
+times) times.
+
+Example:
+----
+int a;
+void f0() { }
+void f1() { auto b = a; }
+void f2() { auto b = to!(string)(a); }
+auto r = benchmark!(f0, f1, f2)(10_000_000);
+----
+ */
+uint[] benchmark(fun...)(uint times, uint[] result = null)
+{
+    result.length = fun.length;
+    result.length = 0;
+    foreach (i, Unused; fun)
+    {
+        immutable t = getUTCtime;
+        foreach (j; 0 .. times)
+        {
+            fun[i]();
+        }
+        auto delta = getUTCtime - t;
+        result ~= delta;
+    }
+    foreach (ref e; result)
+    {
+        e *= 1000;
+        e /= TicksPerSecond;
+    }
+    return result;
+}
+
+unittest
+{
+    int a;
+    void f0() { }
+    //void f1() { auto b = to!(string)(a); }
+    void f2() { auto b = (a); }
+    auto r = benchmark!(f0, f2)(100);
+    //writeln(r);
+}
+
