@@ -1629,51 +1629,50 @@ class BufferedStream : FilterStream {
   // reusing the memory in buffer if result will fit, otherwise
   // will reallocate (using concatenation)
   template TreadLine(T) {
-    T[] readLine(T[] inBuffer)
+      T[] readLine(T[] inBuffer)
       {
-	size_t    lineSize = 0;
-	bool    haveCR = false;
-	T       c = '\0';
-	size_t    idx = 0;
-	ubyte*  pc = cast(ubyte*)&c;
+          size_t    lineSize = 0;
+          bool    haveCR = false;
+          T       c = '\0';
+          size_t    idx = 0;
+          ubyte*  pc = cast(ubyte*)&c;
 
-      L0:
-	for(;;) {
-	  uint start = bufferCurPos;
-	L1:
-	  foreach(ubyte b; buffer[start .. bufferLen]) {
-	    bufferCurPos++;
-	    pc[idx] = b;
-	    if(idx < T.sizeof - 1) {
-	      idx++;
-	      continue L1;
-	    } else {
-	      idx = 0;
-	    }
-	    if(c == '\n' || haveCR) {
-	      if(haveCR && c != '\n') bufferCurPos--;
-	      break L0;
-	    } else {
-	      if(c == '\r') {
-		haveCR = true;
-	      } else {
-		if(lineSize < inBuffer.length) {
-		  inBuffer[lineSize] = c;
-		} else {
-		  inBuffer ~= c;
-		}
-		lineSize++;
-	      }
-	    }
-	  }
-	  flush();
-	  size_t res = super.readBlock(buffer.ptr, buffer.length);
-	  if(!res) break L0; // EOF
-	  bufferSourcePos = bufferLen = res;
-	  streamPos += res;
-	}
-
-	return inBuffer[0 .. lineSize];
+        L0:
+          for(;;) {
+              uint start = bufferCurPos;
+            L1:
+              foreach(ubyte b; buffer[start .. bufferLen]) {
+                  bufferCurPos++;
+                  pc[idx] = b;
+                  if(idx < T.sizeof - 1) {
+                      idx++;
+                      continue L1;
+                  } else {
+                      idx = 0;
+                  }
+                  if(c == '\n' || haveCR) {
+                      if(haveCR && c != '\n') bufferCurPos--;
+                      break L0;
+                  } else {
+                      if(c == '\r') {
+                          haveCR = true;
+                      } else {
+                          if(lineSize < inBuffer.length) {
+                              inBuffer[lineSize] = c;
+                          } else {
+                              inBuffer ~= c;
+                          }
+                          lineSize++;
+                      }
+                  }
+              }
+              flush();
+              size_t res = super.readBlock(buffer.ptr, buffer.length);
+              if(!res) break L0; // EOF
+              bufferSourcePos = bufferLen = res;
+              streamPos += res;
+          }
+          return inBuffer[0 .. lineSize];
       }
   } // template TreadLine(T)
 
