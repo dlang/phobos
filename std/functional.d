@@ -36,12 +36,12 @@ $(WEB erdani.org, Andrei Alexandrescu)
 
 module std.functional;
 
-import std.string; // for making string functions visible in *naryFun
-import std.conv; // for making conversions visible in *naryFun
 import std.typetuple;
 import std.typecons;
 import std.stdio;
 import std.metastrings;
+// for making various functions visible in *naryFun
+import std.string, std.conv, std.math, std.contracts, std.algorithm, std.range; 
 
 /**
 Transforms a string representing an expression into a unary
@@ -55,42 +55,80 @@ assert(isEven(2) && !isEven(1));
 ----
 */
 
-template unaryFun(alias comp, bool byRef = false)
+template unaryFun(alias funbody, bool byRef = false, string parmName = "a")
 {
-    alias unaryFunImpl!(comp, byRef).result unaryFun;
+    alias unaryFunImpl!(funbody, byRef, parmName).result unaryFun;
 }
 
-template unaryFunImpl(alias comp, bool byRef) {
-    static if (is(typeof(comp) : string))
+template unaryFunImpl(alias fun, bool byRef, string parmName = "a")
+{
+    static if (is(typeof(fun) : string))
     {
+        template Body(ElementType)
+        {
+            enum testAsExpression = "{"~ElementType.stringof
+                ~" "~parmName~"; return ("~fun~");}()";
+            enum testAsStmts = "{"~ElementType.stringof
+                ~" "~parmName~"; "~fun~"}()";
+            // pragma(msg, "Expr: "~testAsExpression);
+            // pragma(msg, "Stmts: "~testAsStmts);
+            static if (__traits(compiles, mixin(testAsExpression)))
+            {
+                enum string code = "return (" ~ fun ~ ");";
+                alias typeof(mixin(testAsExpression)) ReturnType;
+            }
+            // else static if (__traits(compiles, mixin(testAsStmts)))
+            // {
+            //     enum string code = fun;
+            //     alias typeof(mixin(testAsStmts)) ReturnType;
+            // }
+            else
+            {
+                // Credit for this idea goes to Don Clugston
+                // static assert is a bit broken,
+                // better to do it this way to provide a backtrace.
+                // pragma(msg, "Bad unary function: " ~ fun ~ " for type "
+                //         ~ ElementType.stringof);
+                static assert(false, "Bad unary function: " ~ fun ~
+                        " for type " ~ ElementType.stringof);
+            }
+        }
         static if (byRef)
         {
-            void result(ElementType)(ref ElementType a)
+            Body!(ElementType).ReturnType result(ElementType)(ref ElementType a)
             {
-                mixin(comp ~ ";");
+                mixin(Body!(ElementType).code);
             }
         }
         else
         {
-            // @@@BUG1816@@@: typeof(mixin(comp)) should work
-            typeof({ static ElementType a; return mixin(comp);}())
-                result(ElementType)(ElementType a)
+            Body!(ElementType).ReturnType result(ElementType)(ElementType __a)
             {
-                return mixin(comp);
+                mixin("alias __a "~parmName~";");
+                mixin(Body!(ElementType).code);
             }
+            // string mixme = "Body!(ElementType).ReturnType"
+            //     " result(ElementType)(ElementType a)
+            // { " ~ Body!(ElementType).code ~ " }";
+            // mixin(mixme);
         }
     }
     else
     {
-        //pragma(msg, comp.stringof);
-        alias comp result;
+        alias fun result;
     }
 }
 
 unittest
 {
-    static int f1(int a) { return a; }
+    static int f1(int a) { return a + 1; }
     static assert(is(typeof(unaryFun!(f1)(1)) == int));
+    assert(unaryFun!(f1)(41) == 42);
+    int f2(int a) { return a + 1; }
+    static assert(is(typeof(unaryFun!(f2)(1)) == int));
+    assert(unaryFun!(f2)(41) == 42);
+    assert(unaryFun!("a + 1")(41) == 42);
+    //assert(unaryFun!("return a + 1;")(41) == 42);
 }
 
 /**
@@ -108,31 +146,83 @@ assert(!greater("1", "2") && greater("2", "1"));
 ----
 */
 
-template binaryFun(alias comp)
+template binaryFun(alias funbody, string parm1Name = "a",
+        string parm2Name = "b")
 {
-    alias binaryFunImpl!(comp).binaryFun binaryFun;
+    alias binaryFunImpl!(funbody, parm1Name, parm2Name).result binaryFun;
 }
 
-template binaryFunImpl(alias comp)
+template binaryFunImpl(alias fun,
+        string parm1Name, string parm2Name)
 {
-    static if (is(typeof(comp) : string))
+    static if (is(typeof(fun) : string))
     {
-        // @@@BUG1816@@@: typeof(mixin(comp)) should work
-        typeof({
-                    static ElementType1 a;
-                    static ElementType2 b;
-                    return mixin(comp);
-                }())
-            binaryFun(ElementType1, ElementType2)
-            (ElementType1 a, ElementType2 b)
+        template Body(ElementType1, ElementType2)
         {
-            return mixin(comp);
+            enum testAsExpression = "{"~ElementType1.stringof
+                ~" "~parm1Name~"; "~ElementType2.stringof
+                ~" "~parm2Name~"; return ("~fun~");}()";
+            enum testAsStmts = "{"~ElementType1.stringof
+                ~" "~parm1Name~"; "~ElementType2.stringof
+                ~" "~parm2Name~"; "~fun~"}()";
+            static if (__traits(compiles, mixin(testAsExpression)))
+            {
+                enum string code = "return (" ~ fun ~ ");";
+                alias typeof(mixin(testAsExpression)) ReturnType;
+            }
+            // else static if (__traits(compiles, mixin(testAsStmts)))
+            // {
+            //     enum string code = fun;
+            //     alias typeof(mixin(testAsStmts)) ReturnType;
+            // }
+            else
+            {
+                // Credit for this idea goes to Don Clugston
+                enum string msg = 
+                    "Bad binary function q{" ~ fun ~ "}."
+                    ~" You need to use a valid D expression using symbols "
+                    ~parm1Name~" of type "~ElementType1.stringof~" and "
+                    ~parm2Name~" of type "~ElementType2.stringof~"."
+                    ~(fun.length && fun[$ - 1] == ';'
+                            ? " The trailing semicolon is _not_ needed."
+                            : "")
+                    ~(fun.length && fun[$ - 1] == '}'
+                            ? " The trailing bracket is mistaken."
+                            : "");
+                static assert(false, msg);
+            }
+        }
+        Body!(ElementType1, ElementType2).ReturnType
+            result(ElementType1, ElementType2)
+            (ElementType1 __a, ElementType2 __b)
+        {
+            mixin("alias __a "~parm1Name~";");
+            mixin("alias __b "~parm2Name~";");
+            mixin(Body!(ElementType1, ElementType2).code);
         }
     }
     else
     {
-        alias comp binaryFun;
+        alias fun result;
     }
+    // static if (is(typeof(comp) : string))
+    // {
+    //     // @@@BUG1816@@@: typeof(mixin(comp)) should work
+    //     typeof({
+    //                 static ElementType1 a;
+    //                 static ElementType2 b;
+    //                 return mixin(comp);
+    //             }())
+    //         binaryFun(ElementType1, ElementType2)
+    //         (ElementType1 a, ElementType2 b)
+    //     {
+    //         return mixin(comp);
+    //     }
+    // }
+    // else
+    // {
+    //     alias comp binaryFun;
+    // }
 }
 
 unittest
@@ -140,6 +230,16 @@ unittest
     alias binaryFun!(q{a < b}) less;
     assert(less(1, 2) && !less(2, 1));
     assert(less("1", "2") && !less("2", "1"));
+
+    static int f1(int a, string b) { return a + 1; }
+    static assert(is(typeof(binaryFun!(f1)(1, "2")) == int));
+    assert(binaryFun!(f1)(41, "a") == 42);
+    string f2(int a, string b) { return b ~ "2"; }
+    static assert(is(typeof(binaryFun!(f2)(1, "1")) == string));
+    assert(binaryFun!(f2)(1, "4") == "42");
+    assert(binaryFun!("a + b")(41, 1) == 42);
+    //@@BUG
+    //assert(binaryFun!("return a + b;")(41, 1) == 42);
 }
 
 /*
@@ -183,9 +283,18 @@ unittest
     assert(zyx(5, 4) == foo(4, 5));
 }
 
+/**
+Negates predicate $(D pred).
+
+Example:
+----
+string a = "   Hello, world!";
+assert(find!(not!isspace)(a) == "Hello, world!");
+----
+ */
 template not(alias pred)
 {
-    bool not(T...)(T args) { return !unaryFun!(pred)(args); }
+    bool not(T...)(T args) { return !pred(args); }
 }
 
 /*private*/ template Adjoin(F...)
@@ -201,6 +310,16 @@ template not(alias pred)
             alias F[0] headFun;
             alias typeof({ V values; return headFun(values); }()) Head;
             alias TypeTuple!(Head, Adjoin!(F[1 .. $]).For!(V).Result) Result;
+        }
+
+        Tuple!(Result) fun(V...)(V a)
+        {
+            typeof(return) result;
+            foreach (i, Unused; Result)
+            {
+                result.field[i] = F[i](a);
+            }
+            return result;
         }
     }
 }
@@ -218,7 +337,7 @@ static bool f1(int a) { return a != 0; }
 static int f2(int a) { return a / 2; }
 auto x = adjoin!(f1, f2)(5);
 assert(is(typeof(x) == Tuple!(bool, int)));
-assert(x._0 == true && x._1 == 2);
+assert(x._0 == true && x.field[1] == 2);
 ----
 */
 template adjoin(F...)
@@ -226,10 +345,9 @@ template adjoin(F...)
     Tuple!(Adjoin!(F).For!(V).Result) adjoin(V...)(V a)
     {
         typeof(return) result;
-        foreach (i, r; F)
+        foreach (i, Unused; Adjoin!(F).For!(V).Result)
         {
-            // @@@BUG@@@
-            mixin("result.field!("~ToString!(i)~") = F[i](a);");
+            result.field[i] = F[i](a);
         }
         return result;
     }
@@ -242,7 +360,7 @@ unittest
     auto x = adjoin!(F1, F2)(5);
     alias Adjoin!(F1, F2).For!(int).Result R;
     assert(is(typeof(x) == Tuple!(bool, int)));
-    assert(x._0 == true && x._1 == 2);
+    assert(x.field[0] && x.field[1] == 2);
 }
 
 // /*private*/ template NaryFun(string fun, string letter, V...)
@@ -351,14 +469,14 @@ template pipe(fun...)
 
 unittest
 {
-    string foo(int a) { return to!(string)(a); }
-    int bar(string a) { return to!(int)(a) + 1; }
-    double baz(int a) { return a + 0.5; }
-    assert(compose!(baz, bar, foo)(1) == 2.5);
-    assert(pipe!(foo, bar, baz)(1) == 2.5);
+    // string foo(int a) { return to!(string)(a); }
+    // int bar(string a) { return to!(int)(a) + 1; }
+    // double baz(int a) { return a + 0.5; }
+    // assert(compose!(baz, bar, foo)(1) == 2.5);
+    // assert(pipe!(foo, bar, baz)(1) == 2.5);
     
-    assert(compose!(baz, `to!(int)(a) + 1`, foo)(1) == 2.5);
-    assert(compose!(baz, bar)("1"[]) == 2.5);
+    // assert(compose!(baz, `to!(int)(a) + 1`, foo)(1) == 2.5);
+    // assert(compose!(baz, bar)("1"[]) == 2.5);
     
     // @@@BUG@@@
     //assert(compose!(baz, bar)("1") == 2.5);
