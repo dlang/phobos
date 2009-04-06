@@ -38,7 +38,8 @@ WIKI = Phobos/StdFile
 module std.file;
 
 private import core.memory;
-import std.algorithm, std.array, std.c.stdio, std.c.stdlib, std.c.string,
+import std.algorithm, std.array, core.stdc.stdio, core.stdc.stdlib,
+    core.stdc.string, core.stdc.errno,
     std.contracts, std.conv, std.format, std.path, std.range, std.regexp,
     std.stdio, std.string, std.traits, std.typecons, std.utf;
 //version(linux) import std.c.linux.linux;
@@ -360,7 +361,7 @@ void getTimes(in char[] name, out d_time ftc, out d_time fta, out d_time ftm)
  * Return 1 if it does, 0 if not.
  */
 
-bool exists(in string name)
+bool exists(in char[] name)
 {
     uint result;
 
@@ -911,6 +912,8 @@ private import core.sys.posix.fcntl;
 private import core.sys.posix.unistd;
 private import core.sys.posix.utime;
 private import core.sys.posix.sys.stat;
+import core.sys.posix.unistd;
+import core.sys.posix.sys.time;
 
 /***********************************
  */
@@ -931,8 +934,11 @@ class FileException : Exception
 
     this(in char[] name, uint errno)
     {
-        char[1024] buf = void;
-        auto s = strerror_r(errno, buf.ptr, buf.length);
+        // char[1024] buf = void;
+        // auto s = strerror_r(errno, buf.ptr, buf.length);
+        // this(name, to!string(s));
+        // this.errno = errno;
+        auto s = strerror(errno);
         this(name, to!string(s));
         this.errno = errno;
     }
@@ -985,7 +991,7 @@ void[] read(in char[] name, size_t upTo = size_t.max)
 
     for (;;)
     {
-        immutable actual = std.c.linux.linux.read(fd, result.ptr + size,
+        immutable actual = core.sys.posix.unistd.read(fd, result.ptr + size,
                 min(result.length, upTo) - size);
         cenforce(actual != -1, name);
         if (actual == 0) break;
@@ -1144,17 +1150,10 @@ void getTimes(in char[] name, out d_time ftc, out d_time fta, out d_time ftm)
 
 void setTimes(in char[] name, d_time fta, d_time ftm)
 {
-    version (linux)
+    version (Posix)
     {
-version (none) // does not compile
-{
-        // utimbuf times = {
-        //     cast(__time_t) (fta / std.date.TicksPerSecond),
-        //     cast(__time_t) (ftm / std.date.TicksPerSecond) };
-        // enforce(utime(toStringz(name), &times) == 0);
         timeval[2] t = void;
         t[0].tv_sec = to!int(fta / std.date.TicksPerSecond);
-        // @@@
         t[0].tv_usec = cast(int)
             (cast(long) ((cast(double) fta / std.date.TicksPerSecond)
                     * 1_000_000) % 1_000_000);
@@ -1162,12 +1161,7 @@ version (none) // does not compile
         t[1].tv_usec = cast(int)
             (cast(long) ((cast(double) ftm / std.date.TicksPerSecond)
                     * 1_000_000) % 1_000_000);
-        enforce(utime(toStringz(name), t.ptr) == 0);
-}
-else
-{
-	assert(0);
-}
+        enforce(utimes(toStringz(name), t) == 0);
     }
     else
     {
@@ -1789,7 +1783,7 @@ slurp(Types...)(string filename, in char[] format)
     return result;
 }
 
-unittest
+version(Posix) unittest
 {
     // Tuple!(int, double)[] x;
     // auto app = appender(&x);
