@@ -41,9 +41,39 @@ private import core.memory;
 import std.algorithm, std.array, std.c.stdio, std.c.stdlib, std.c.string,
     std.contracts, std.conv, std.format, std.path, std.range, std.regexp,
     std.stdio, std.string, std.traits, std.typecons, std.utf;
-// version (unittest) {
-//     private import std.stdio; // for testing only
-// }
+//version(linux) import std.c.linux.linux;
+
+// @@@@ TEMPORARY - THIS SHOULD BE IN THE CORE @@@
+// {{{
+version (Posix)
+{
+    struct struct_stat64	// distinguish it from the stat() function
+    {
+        ulong st_dev;	/// device
+        uint __pad1;
+        uint st_ino;	/// file serial number
+        uint st_mode;	/// file mode
+        uint st_nlink;	/// link count
+        uint st_uid;	/// user ID of file's owner
+        uint st_gid;	/// user ID of group's owner
+        ulong st_rdev;	/// if device then device number
+        uint __pad2;
+        align(4) ulong st_size;
+        int st_blksize;	/// optimal I/O block size
+        ulong st_blocks;	/// number of allocated 512 byte blocks
+        int st_atime;
+        uint st_atimensec;
+        int st_mtime;
+        uint st_mtimensec;
+        int st_ctime;
+        uint st_ctimensec;
+
+        ulong st_ino64;
+    }
+    int fstat64(int, struct_stat64*);
+    int stat64(in char*, struct_stat64*);
+}
+// }}}
 
 /* =========================== Win32 ======================= */
 
@@ -936,12 +966,13 @@ void[] read(in char[] name, size_t upTo = size_t.max)
         maxSlackMemoryAllowed = 1024;
     // }
     
-    immutable fd = core.sys.posix.fcntl.open(toStringz(name), O_RDONLY);
+    immutable fd = core.sys.posix.fcntl.open(toStringz(name),
+            core.sys.posix.fcntl.O_RDONLY);
     cenforce(fd != -1, name);
     scope(exit) core.sys.posix.unistd.close(fd);
 
     struct_stat64 statbuf = void;
-    cenforce(std.c.linux.linux.fstat64(fd, &statbuf) == 0, name);
+    cenforce(fstat64(fd, &statbuf) == 0, name);
     //cenforce(core.sys.posix.sys.stat.fstat(fd, &statbuf) == 0, name);
 
     immutable initialAlloc = statbuf.st_size
@@ -992,7 +1023,6 @@ unittest
  */
 
 S readText(S = string)(in string name)
->>>>>>> .r1020
 {
     auto oddfile = "/proc/sys/kernel/osrelease";
     if (exists(oddfile))
@@ -1064,13 +1094,8 @@ void remove(in char[] name)
 
 ulong getSize(in char[] name)
 {
-<<<<<<< .mine
     struct_stat64 statbuf = void;
-    cenforce(std.c.linux.linux.stat64(toStringz(name), &statbuf) == 0, name);
-=======
-    stat_t statbuf = void;
-    cenforce(core.sys.posix.sys.stat.stat(toStringz(name), &statbuf) == 0, name);
->>>>>>> .r1020
+    cenforce(stat64(toStringz(name), &statbuf) == 0, name);
     return statbuf.st_size;
 }
 
@@ -1091,13 +1116,9 @@ unittest
 
 uint getAttributes(in char[] name)
 {
-<<<<<<< .mine
     struct_stat64 statbuf = void;
-    cenforce(std.c.linux.linux.stat64(toStringz(name), &statbuf) == 0, name);
-=======
-    stat_t statbuf = void;
-    cenforce(core.sys.posix.sys.stat.stat(toStringz(name), &statbuf) == 0, name);
->>>>>>> .r1020
+    cenforce(stat64(toStringz(name), &statbuf) == 0, name);
+    //cenforce(core.sys.posix.sys.stat.stat(toStringz(name), &statbuf) == 0, name);
     return statbuf.st_mode;
 }
 
@@ -1108,19 +1129,12 @@ uint getAttributes(in char[] name)
 
 void getTimes(in char[] name, out d_time ftc, out d_time fta, out d_time ftm)
 {
-<<<<<<< .mine
     struct_stat64 statbuf = void;
-    cenforce(std.c.linux.linux.stat64(toStringz(name), &statbuf) == 0, name);
+    cenforce(stat64(toStringz(name), &statbuf) == 0, name);
+    //cenforce(core.sys.posix.sys.stat.stat(toStringz(name), &statbuf) == 0, name);
     ftc = cast(d_time) statbuf.st_ctime * std.date.TicksPerSecond;
     fta = cast(d_time) statbuf.st_atime * std.date.TicksPerSecond;
     ftm = cast(d_time) statbuf.st_mtime * std.date.TicksPerSecond;
-=======
-    stat_t statbuf = void;
-    cenforce(core.sys.posix.sys.stat.stat(toStringz(name), &statbuf) == 0, name);
-	ftc = cast(d_time) statbuf.st_ctime * std.date.TicksPerSecond;
-	fta = cast(d_time) statbuf.st_atime * std.date.TicksPerSecond;
-	ftm = cast(d_time) statbuf.st_mtime * std.date.TicksPerSecond;
->>>>>>> .r1020
 }
 
 /*************************
@@ -1181,13 +1195,9 @@ unittest
 
 d_time lastModified(in char[] name)
 {
-<<<<<<< .mine
     struct_stat64 statbuf = void;
-    cenforce(std.c.linux.linux.stat64(toStringz(name), &statbuf) == 0, name);
-=======
-    stat_t statbuf = void;
-    cenforce(core.sys.posix.sys.stat.stat(toStringz(name), &statbuf) == 0, name);
->>>>>>> .r1020
+    cenforce(stat64(toStringz(name), &statbuf) == 0, name);
+    //cenforce(core.sys.posix.sys.stat.stat(toStringz(name), &statbuf) == 0, name);
     return cast(d_time) statbuf.st_mtime * std.date.TicksPerSecond;
 }
 
@@ -1221,13 +1231,9 @@ correctly prompts building it.
 
 d_time lastModified(in char[] name, d_time returnIfMissing)
 {
-<<<<<<< .mine
     struct_stat64 statbuf = void;
-    return std.c.linux.linux.stat64(toStringz(name), &statbuf) != 0
-=======
-    stat_t statbuf = void;
-    return core.sys.posix.sys.stat.stat(toStringz(name), &statbuf) != 0
->>>>>>> .r1020
+    return stat64(toStringz(name), &statbuf) != 0
+    //return core.sys.posix.sys.stat.stat(toStringz(name), &statbuf) != 0
         ? returnIfMissing
         : cast(d_time) statbuf.st_mtime * std.date.TicksPerSecond;
 }
@@ -1301,11 +1307,7 @@ void mkdir(in char[] pathname)
 
 void mkdirRecurse(in char[] pathname)
 {
-<<<<<<< .mine
     const left = dirname(pathname);
-=======
-    auto left = dirname(pathname);
->>>>>>> .r1020
     exists(left) || mkdirRecurse(left);
     mkdir(pathname);
 }
@@ -1368,14 +1370,10 @@ struct DirEntry
     d_time _lastAccessTime = d_time_nan; /// time file was last accessed
     d_time _lastWriteTime = d_time_nan;	/// time file was last written to
     ubyte d_type;
-<<<<<<< .mine
     struct_stat64 statbuf;
-=======
-    stat_t statbuf;
->>>>>>> .r1020
     bool didstat;			// done lazy evaluation of stat()
 
-    void init(in char[] path, dirent *fd)
+    void init(in char[] path, core.sys.posix.dirent.dirent *fd)
     {
         invariant len = std.c.string.strlen(fd.d_name.ptr);
         name = std.path.join(path, fd.d_name[0 .. len].idup);
@@ -1424,27 +1422,15 @@ struct DirEntry
     void ensureStatDone()
     {
         if (didstat) return;
-<<<<<<< .mine
-        enforce(std.c.linux.linux.stat64(toStringz(name), &statbuf) == 0,
-=======
-	enforce(core.sys.posix.sys.stat.stat(toStringz(name), &statbuf) == 0,
->>>>>>> .r1020
+        enforce(stat64(toStringz(name), &statbuf) == 0,
                 "Failed to stat file `"~name~"'");
-<<<<<<< .mine
+        //enforce(core.sys.posix.sys.stat.stat(toStringz(name), &statbuf) == 0,
         _size = statbuf.st_size;
         _creationTime = cast(d_time)statbuf.st_ctime * std.date.TicksPerSecond;
         _lastAccessTime = cast(d_time)statbuf.st_atime
             * std.date.TicksPerSecond;
         _lastWriteTime = cast(d_time)statbuf.st_mtime * std.date.TicksPerSecond;
         didstat = true;
-=======
-	_size = cast(ulong)statbuf.st_size;
-    _creationTime = cast(d_time)statbuf.st_ctime * std.date.TicksPerSecond;
-    _lastAccessTime = cast(d_time)statbuf.st_atime * std.date.TicksPerSecond;
-    _lastWriteTime = cast(d_time)statbuf.st_mtime * std.date.TicksPerSecond;
-
-	didstat = true;
->>>>>>> .r1020
     }
 }
 
@@ -1541,13 +1527,9 @@ void copy(in char[] from, in char[] to)
         cenforce(fd != -1, from);
         scope(exit) core.sys.posix.unistd.close(fd);
 
-<<<<<<< .mine
         struct_stat64 statbuf = void;
-        cenforce(std.c.linux.linux.fstat64(fd, &statbuf) == 0, from);
-=======
-        stat_t statbuf = void;
-        cenforce(core.sys.posix.sys.stat.fstat(fd, &statbuf) == 0, from);
->>>>>>> .r1020
+        cenforce(fstat64(fd, &statbuf) == 0, from);
+        //cenforce(core.sys.posix.sys.stat.fstat(fd, &statbuf) == 0, from);
 
         auto toz = toStringz(to);
         invariant fdw = core.sys.posix.fcntl.open(toz,
