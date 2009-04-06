@@ -1439,9 +1439,8 @@ void diag(int line = __LINE__, string file = __FILE__)
 
 // Unittests
 
-unittest
+debug unittest
 {
-
     // This block of unittests demonstrates that we can shrink arrays correctly
     {
         auto a = makeBig( 0x00000000 );
@@ -1475,7 +1474,6 @@ unittest
         auto r = shrink(a);
         assert(r.digits == b.digits, hex(r));
     }
-
     // This block of unittests demonstrates that neg(Big) works
     {
         auto x = makeBig( 0x66666666, 0x66666660 );
