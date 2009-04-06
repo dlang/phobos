@@ -53,6 +53,7 @@ pragma(lib, "advapi32.lib");
 //import std.windows.types;
 private import std.string;
 private import std.c.windows.windows;
+import std.c.stdio;
 //private import std.windows.exceptions;
 
 //import synsoft.types;
