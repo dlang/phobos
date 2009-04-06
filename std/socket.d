@@ -36,7 +36,7 @@
 
 module std.socket;
 
-private import std.string, std.stdint, std.c.string, std.c.stdlib, core.stdc.errno;
+import std.string, std.c.string, std.c.stdlib, std.conv;
 
 version(unittest)
 {
@@ -72,7 +72,11 @@ else version(BsdSockets)
 	version(Posix)
 	{
 	    version(linux)
-            private import std.c.linux.socket;
+            import std.c.linux.socket : AF_IPX, AF_APPLETALK, SOCK_RDM,
+                IPPROTO_IGMP, IPPROTO_GGP, IPPROTO_PUP, IPPROTO_IDP,
+                protoent, servent, hostent, SD_RECEIVE, SD_SEND, SD_BOTH,
+                MSG_NOSIGNAL, INADDR_NONE, getprotobyname, getprotobynumber,
+                getservbyname, getservbyport, gethostbyname, gethostbyaddr;
         else version(OSX)
             private import std.c.osx.socket;
         else
@@ -234,7 +238,7 @@ class Protocol
 	void populate(protoent* proto)
 	{
 		type = cast(ProtocolType)proto.p_proto;
-		name = std.string.toString(proto.p_name).idup;
+		name = to!string(proto.p_name).idup;
 
 		int i;
 		for(i = 0;; i++)
@@ -248,8 +252,8 @@ class Protocol
 			aliases = new string[i];
 			for(i = 0; i != aliases.length; i++)
 			{
-			    aliases[i] =
-				std.string.toString(proto.p_aliases[i]).idup;
+                aliases[i] =
+                    to!string(proto.p_aliases[i]).idup;
 			}
 		}
 		else
@@ -288,11 +292,13 @@ unittest
 {
 	Protocol proto = new Protocol;
 	assert(proto.getProtocolByType(ProtocolType.TCP));
-	printf("About protocol TCP:\n\tName: %.*s\n", proto.name);
-	foreach(string s; proto.aliases)
-	{
-		printf("\tAlias: %.*s\n", s);
-	}
+	//printf("About protocol TCP:\n\tName: %.*s\n", proto.name);
+	// foreach(string s; proto.aliases)
+	// {
+	// 	printf("\tAlias: %.*s\n", s);
+	// }
+    assert(proto.name == "tcp");
+    assert(proto.aliases.length == 1 && proto.aliases[0] == "TCP");
 }
 
 
@@ -310,9 +316,9 @@ class Service
 
 	void populate(servent* serv)
 	{
-		name = std.string.toString(serv.s_name).idup;
+		name = to!string(serv.s_name).idup;
 		port = ntohs(cast(ushort)serv.s_port);
-		protocolName = std.string.toString(serv.s_proto).idup;
+		protocolName = to!string(serv.s_proto).idup;
 
 		int i;
 		for(i = 0;; i++)
@@ -327,7 +333,7 @@ class Service
 			for(i = 0; i != aliases.length; i++)
 			{
                             aliases[i] =
-                                std.string.toString(serv.s_aliases[i]).idup;
+                                to!string(serv.s_aliases[i]).idup;
 			}
 		}
 		else
@@ -395,12 +401,17 @@ unittest
 	Service serv = new Service;
 	if(serv.getServiceByName("epmap", "tcp"))
 	{
-		printf("About service epmap:\n\tService: %.*s\n\tPort: %d\n\tProtocol: %.*s\n",
-			serv.name, serv.port, serv.protocolName);
-		foreach(string s; serv.aliases)
-		{
-			printf("\tAlias: %.*s\n", s);
-		}
+		// printf("About service epmap:\n\tService: %.*s\n"
+        //         "\tPort: %d\n\tProtocol: %.*s\n",
+        //         serv.name, serv.port, serv.protocolName);
+		// foreach(string s; serv.aliases)
+		// {
+		// 	printf("\tAlias: %.*s\n", s);
+		// }
+        assert(serv.name == "loc-srv");
+        assert(serv.port == 135);
+        assert(serv.protocolName == "tcp");
+        assert(serv.aliases.length == 1 && serv.aliases[0] == "epmap");
 	}
 	else
 	{
@@ -447,7 +458,7 @@ class InternetHost
 		int i;
 		char* p;
 
-		name = std.string.toString(he.h_name).idup;
+		name = to!string(he.h_name).idup;
 
 		for(i = 0;; i++)
 		{
@@ -462,7 +473,7 @@ class InternetHost
 			for(i = 0; i != aliases.length; i++)
 			{
                             aliases[i] =
-                                std.string.toString(he.h_aliases[i]).idup;
+                                to!string(he.h_aliases[i]).idup;
 			}
 		}
 		else
@@ -546,23 +557,23 @@ unittest
 	InternetHost ih = new InternetHost;
 	if (!ih.getHostByName("www.digitalmars.com"))
 	    return;		// don't fail if not connected to internet
-	printf("addrList.length = %d\n", ih.addrList.length);
+	//printf("addrList.length = %d\n", ih.addrList.length);
 	assert(ih.addrList.length);
 	InternetAddress ia = new InternetAddress(ih.addrList[0], InternetAddress.PORT_ANY);
-	printf("IP address = %.*s\nname = %.*s\n", ia.toAddrString(), ih.name);
-	foreach(int i, string s; ih.aliases)
-	{
-		printf("aliases[%d] = %.*s\n", i, s);
-	}
-
-	printf("---\n");
+    assert(ih.name == "digitalmars.com");
+	// printf("IP address = %.*s\nname = %.*s\n", ia.toAddrString(), ih.name);
+	// foreach(int i, string s; ih.aliases)
+	// {
+	// 	printf("aliases[%d] = %.*s\n", i, s);
+	// }
+	// printf("---\n");
 
 	assert(ih.getHostByAddr(ih.addrList[0]));
-	printf("name = %.*s\n", ih.name);
-	foreach(int i, string s; ih.aliases)
-	{
-		printf("aliases[%d] = %.*s\n", i, s);
-	}
+	// printf("name = %.*s\n", ih.name);
+	// foreach(int i, string s; ih.aliases)
+	// {
+	// 	printf("aliases[%d] = %.*s\n", i, s);
+	// }
 }
 
 
@@ -718,13 +729,13 @@ class InternetAddress: Address
 	/// Human readable string representing the IPv4 address in dotted-decimal form.
 	string toAddrString()
 	{
-            return std.string.toString(inet_ntoa(sin.sin_addr)).idup;
+            return to!string(inet_ntoa(sin.sin_addr)).idup;
 	}
 
 	/// Human readable string representing the IPv4 port.
 	string toPortString()
 	{
-		return std.string.toString(port());
+		return std.conv.to!string(port());
 	}
 
 	/// Human readable string representing the IPv4 address and port in the form $(I a.b.c.d:e).
@@ -1277,7 +1288,7 @@ class Socket
 		char[256] result; // Host names are limited to 255 chars.
 		if(_SOCKET_ERROR == .gethostname(result.ptr, result.length))
 			throw new SocketException("Unable to obtain host name", _lasterr());
-		return std.string.toString(cast(char*)result).idup;
+		return to!string(cast(char*)result).idup;
 	}
 
 	/// Remote endpoint Address.
