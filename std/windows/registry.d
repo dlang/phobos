@@ -55,6 +55,7 @@ private import std.string;
 private import std.c.windows.windows;
 import std.c.stdio;
 //private import std.windows.exceptions;
+import std.conv;
 
 //import synsoft.types;
 /+ + These are borrowed from synsoft.types, until such time as something similar is in Phobos ++
@@ -681,30 +682,30 @@ body
 
             case    REG_VALUE_TYPE.REG_SZ:
             case    REG_VALUE_TYPE.REG_EXPAND_SZ:
-                value = std.string.toString(cast(char*)data);
+                value = to!string(cast(char*)data);
 		if (value.ptr == cast(char*)&u.qw)
 		    value = value.idup;		// don't point into the stack
                 break;
 version(LittleEndian)
 {
             case    REG_VALUE_TYPE.REG_DWORD_LITTLE_ENDIAN:
-                value = std.string.toString(u.dw);
+                value = to!string(u.dw);
                 break;
             case    REG_VALUE_TYPE.REG_DWORD_BIG_ENDIAN:
-                value = std.string.toString(swap(u.dw));
+                value = to!string(swap(u.dw));
                 break;
 }
 version(BigEndian)
 {
             case    REG_VALUE_TYPE.REG_DWORD_LITTLE_ENDIAN:
-                value = std.string.toString(swap(u.dw));
+                value = to!string(swap(u.dw));
                 break;
             case    REG_VALUE_TYPE.REG_DWORD_BIG_ENDIAN:
-                value = std.string.toString(u.dw);
+                value = to!string(u.dw);
                 break;
 }
             case    REG_VALUE_TYPE.REG_QWORD_LITTLE_ENDIAN:
-                value = std.string.toString(u.qw);
+                value = to!string(u.qw);
                 break;
         }
     }
@@ -1457,7 +1458,7 @@ public:
             throw new Win32Exception("Failed to expand environment variables");
         }
 
-        return std.string.toString(newValue.ptr);	// remove trailing 0
+        return to!string(newValue.ptr);	// remove trailing 0
     }
 
     /// Obtains the current value as an array of strings

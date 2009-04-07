@@ -75,6 +75,7 @@ public import std.zlib;
 
 int main(char[][] args)
 {
+
 version (all)
 {
     // Bring in unit test for module by referencing function in it
@@ -82,11 +83,11 @@ version (all)
     cmp("foo", "bar");			// string
     fncharmatch('a', 'b');		// path
     isNaN(1.0);				// math
-    std.conv.toDouble("1.0");		// std.conv
+    std.conv.to!double("1.0");		// std.conv
     OutBuffer b = new OutBuffer();	// outbuffer
     std.ctype.tolower('A');		// ctype
     RegExp r = new RegExp(null, null);	// regexp
-    std.random.rand();
+    uint ranseed = std.random.unpredictableSeed();
     int a[];
     a.reverse;				// adi
     a.sort;				// qsort

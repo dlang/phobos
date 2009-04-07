@@ -96,6 +96,7 @@ SRCS= std\math.d std\stdio.d std\dateparse.d std\date.d std\uni.d std\string.d \
 	std\path.d std\file.d std\outbuffer.d std\utf.d std\uri.d \
 	std\ctype.d std\random.d std\mmfile.d \
 	std\bitarray.d std\algorithm.d std\array.d std\numeric.d std\functional.d \
+	std\range.d std\stdiobase.d \
 	std\metastrings.d std\contracts.d std\getopt.d \
 	std\signals.d std\typetuple.d std\traits.d std\bind.d \
 	std\bitmanip.d std\typecons.d \
@@ -210,6 +211,7 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 	std\variant.d std\numeric.d std\bitmanip.d std\complex.d \
 	std\functional.d std\algorithm.d std\array.d std\typecons.d std\iterator.d \
 	std\xml.d std\encoding.d std\bigint.d \
+	std\range.d std\stdiobase.d
 	std\__fileinit.d
 
 SRC_STD_C= std\c\process.d std\c\stdlib.d std\c\time.d std\c\stdio.d \
