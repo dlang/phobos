@@ -60,6 +60,11 @@ version(LDC) {
     import ldc.intrinsics;
 }
 
+version(DigitalMars){
+    version=INLINE_YL2X;	// x87 has opcodes for these
+}
+
+
 private:
 /*
  * The following IEEE 'real' formats are currently supported:
@@ -1274,7 +1279,18 @@ unittest {
  *    )
  */
 
-real log(real x)                { return std.c.math.logl(x); }
+real log(real x)
+{
+    version (INLINE_YL2X)
+	return yl2x(x, LN2);
+    else
+	return std.c.math.logl(x);
+}
+
+unittest
+{
+    assert(log(E) == 1);
+}
 
 /**************************************
  * Calculate the base-10 logarithm of x.
@@ -1287,7 +1303,18 @@ real log(real x)                { return std.c.math.logl(x); }
  *      )
  */
 
-real log10(real x)              { return std.c.math.log10l(x); }
+real log10(real x)
+{
+    version (INLINE_YL2X)
+	return yl2x(x, LOG2);
+    else
+	return std.c.math.log10l(x);
+}
+
+unittest
+{
+    assert(log10(1000) == 3);
+}
 
 /******************************************
  *      Calculates the natural logarithm of 1 + x.
@@ -1317,7 +1344,13 @@ real log1p(real x)              { return std.c.math.log1pl(x); }
  *  $(TR $(TD +$(INFIN))    $(TD +$(INFIN)) $(TD no)           $(TD no) )
  *  )
  */
-real log2(real x)               { return std.c.math.log2l(x); }
+real log2(real x)
+{
+    version (INLINE_YL2X)
+	return yl2x(x, 1);
+    else
+	return std.c.math.log2l(x);
+}
 
 /*****************************************
  * Extracts the exponent of x as a signed integral value.
@@ -3055,11 +3088,28 @@ alias isNormal isnormal;
 alias isSubnormal issubnormal;
 alias isInfinity isinf;
 
+/* **********************************
+ * Building block functions, they
+ * translate to a single x87 instruction.
+ */
+
+pure nothrow real yl2x(real x, real y);		// y * log2(x)
+pure nothrow real yl2xp1(real x, real y);	// y * log2(x + 1)
+
+unittest
+{
+    version (INLINE_YL2X)
+    {
+	assert(yl2x(1024, 1) == 10);
+	assert(yl2xp1(1023, 1) == 10);
+    }
+}
+
 /*
  * Copyright:
- *      Copyright (c) 2001-2005 by Digital Mars,
+ *      Copyright (c) 2001-2009 by Digital Mars,
  *      All Rights Reserved,
- *      www.digitalmars.com
+ *      http://www.digitalmars.com
  * License:
  *  This software is provided 'as-is', without any express or implied
  *  warranty. In no event will the authors be held liable for any damages
