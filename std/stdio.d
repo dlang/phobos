@@ -864,7 +864,7 @@ $(D Range that locks the file and allows fast writing to it. */
                                     handle);
                         }
                     }
-                    else version (linux)
+                    else version (Posix)
                     {
                                  FPUTWC(c, handle);
                     }

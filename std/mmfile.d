@@ -314,7 +314,7 @@ class MmFile
         
             errnoEnforce(false);
         }
-        else version (linux)
+        else version (Posix)
         {
             auto namez = toStringz(filename);
             void* p;
@@ -445,7 +445,7 @@ class MmFile
         {
             FlushViewOfFile(data.ptr, data.length);
         }
-        else version (linux)
+        else version (Posix)
         {
             int i;
             i = msync(cast(void*)data, data.length, MS_SYNC);   // sys/mman.h
@@ -616,7 +616,7 @@ private:
         HANDLE hFileMap = null;
         uint dwDesiredAccess;
     }
-    else version (linux)
+    else version (Posix)
     {
         int fd;
         int prot;

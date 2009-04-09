@@ -1813,7 +1813,7 @@ class File: Stream {
     version(Windows) {
       seekable = GetFileType(hFile) == 1; // FILE_TYPE_DISK
     } else {
-      ulong result = lseek(hFile, 0, 0);
+      auto result = lseek(hFile, 0, 0);
       seekable = (result != ~0);
     }
   }
@@ -1982,12 +1982,12 @@ class File: Stream {
 	throw new SeekException("unable to move file pointer");
       ulong result = (cast(ulong)hi << 32) + low;
     } else version (Posix) {
-      ulong result = lseek(hFile, cast(int)offset, rel);
-      if (result == 0xFFFFFFFF)
+      auto result = lseek(hFile, cast(int)offset, rel);
+      if (result == cast(typeof(result))-1)
 	throw new SeekException("unable to move file pointer");
     }
     readEOF = false;
-    return result;
+    return cast(ulong)result;
   }
 
   /***

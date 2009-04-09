@@ -3,7 +3,7 @@
 DOCDIR = ../web/phobos
 DOC_OUTPUT_DIR = ../web/phobos
 DRUNTIMEDIR = ../druntime/lib
-PRODUCTIONLIBDIR = $(dir $(shell which dmd))/../lib
+PRODUCTIONLIBDIR = $(dir $(shell which dmd))../lib
 OBJDIR = obj
 DOCSRC = ../docsrc
 STDDOC = $(DOCSRC)/std.ddoc
@@ -45,7 +45,7 @@ STD_MODULES = $(addprefix std/, algorithm array atomics base64 bigint	\
         stdio stdiobase stream string syserror system traits typecons	\
         typetuple uni uri utf variant xml zip zlib)
 EXTRA_MODULES = $(addprefix std/c/, stdarg stdio) $(addprefix etc/c/,	\
-zlib) etc/algorithm etc/random
+zlib)
 EXTRA_MODULES_posix = $(addprefix std/c/linux/, linux socket)
 EXTRA_MODULES_win32 = $(addprefix std/c/windows/, com stat windows winsock) \
 	$(addprefix std/windows/, charset iunknown syserror)
@@ -92,7 +92,7 @@ SRC2LIB_$1 = $$(addsuffix .d,crc32 $(STD_MODULES) $(EXTRA_MODULES)	\
 $(EXTRA_MODULES_$1))
 
 $$(OBJDIR)/$1/$2/%$$(OBJSUFFIX_$1) : %.c $$(OBJDIR)/$1/$2/.directory
-	@mkdir --parents $$(dir $$@)
+	@mkdir -p $$(dir $$@)
 	$(CC_$1) -c $(CFLAGS_$1_$2) -o$$@ $$<
 
 $$(OBJDIR)/$1/$2/unittest/std/% : std/%.d				\
@@ -129,7 +129,7 @@ $(LIBDRUNTIME_$1)
 	@$(DMD_$1) $(DFLAGS_$2) -lib -of$$@ $$^
 
 $$(OBJDIR)/$1/$2/.directory :
-	mkdir --parents $$@
+	mkdir -p $$@
 
 $1/$2/unittest : $1/$2 $$(addprefix $$(OBJDIR)/$1/$2/unittest/,$(STD_MODULES))
 
