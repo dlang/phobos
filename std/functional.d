@@ -36,12 +36,9 @@ $(WEB erdani.org, Andrei Alexandrescu)
 
 module std.functional;
 
-import std.typetuple;
-import std.typecons;
-import std.stdio;
-import std.metastrings;
+import std.metastrings, std.stdio, std.traits, std.typecons, std.typetuple;
 // for making various functions visible in *naryFun
-import std.string, std.conv, std.math, std.contracts, std.algorithm, std.range; 
+import std.algorithm, std.contracts, std.conv, std.math, std.range, std.string; 
 
 /**
 Transforms a string representing an expression into a unary
@@ -295,6 +292,35 @@ assert(find!(not!isspace)(a) == "Hello, world!");
 template not(alias pred)
 {
     bool not(T...)(T args) { return !pred(args); }
+}
+
+/**
+Curries $(D fun) by tying its first argument to a particular value.
+
+Example:
+
+----
+int fun(int a, int b) { return a + b; }
+assert(curry!(fun, 5)(6) == 11);
+----
+ */
+template curry(alias fun, alias arg)
+{
+    ReturnType!fun curry(ParameterTypeTuple!(fun)[1] arg2)
+    {
+        return fun(arg, arg2);
+    }
+}
+
+unittest
+{
+    static int f1(int a, int b) { return a + b; }
+    assert(curry!(f1, 5)(6) == 11);
+    int x = 5;
+    int f2(int a, int b) { return a + b; }
+    assert(curry!(f2, x)(6) == 11);
+    auto f3 = &curry!(f2, x);
+    assert(f3(6) == 11);
 }
 
 /*private*/ template Adjoin(F...)
