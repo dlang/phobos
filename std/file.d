@@ -13,39 +13,17 @@ Macros:
 WIKI = Phobos/StdFile
 */
 
-/*
- *  Copyright (C) 2001-2004 by Digital Mars, www.digitalmars.com
- * Written by Walter Bright, Christopher E. Miller, Andre Fornacon
- *
- *  This software is provided 'as-is', without any express or implied
- *  warranty. In no event will the authors be held liable for any damages
- *  arising from the use of this software.
- *
- *  Permission is granted to anyone to use this software for any purpose,
- *  including commercial applications, and to alter it and redistribute it
- *  freely, subject to the following restrictions:
- *
- *  o  The origin of this software must not be misrepresented; you must not
- *     claim that you wrote the original software. If you use this software
- *     in a product, an acknowledgment in the product documentation would be
- *     appreciated but is not required.
- *  o  Altered source versions must be plainly marked as such, and must not
- *     be misrepresented as being the original software.
- *  o  This notice may not be removed or altered from any source
- *     distribution.
- */
-
 module std.file;
 
 import core.memory;
-import std.algorithm, std.array, core.stdc.stdio, core.stdc.stdlib,
-    core.stdc.string, core.stdc.errno,
+import core.stdc.stdio, core.stdc.stdlib, core.stdc.string,
+    core.stdc.errno, std.algorithm, std.array, 
     std.contracts, std.conv, std.date, std.format, std.path, std.range,
     std.regexp, std.stdio, std.string, std.traits, std.typecons,
     std.typetuple, std.utf;
 version (Win32)
 {
-    import std.c.windows.windows, std.date, std.utf, std.windows.charset,
+    import core.sys.windows.windows, std.windows.charset,
         std.windows.syserror, std.__fileinit;
 /*
  * Since Win 9x does not support the "W" API's, first convert
@@ -54,7 +32,7 @@ version (Win32)
  * (Thanks to yaneurao for this)
  */
     version(Windows) alias std.windows.charset.toMBSz toMBSz;
-    bool useWfuncs = true;	// initialized in std.__fileinit
+    bool useWfuncs = true;        // initialized in std.__fileinit
 }
 version (Posix)
 {
@@ -66,20 +44,20 @@ version (Posix)
 // {{{
 version (Posix)
 {
-    struct struct_stat64	// distinguish it from the stat() function
+    struct struct_stat64        // distinguish it from the stat() function
     {
-        ulong st_dev;	/// device
+        ulong st_dev;        /// device
         uint __pad1;
-        uint st_ino;	/// file serial number
-        uint st_mode;	/// file mode
-        uint st_nlink;	/// link count
-        uint st_uid;	/// user ID of file's owner
-        uint st_gid;	/// user ID of group's owner
-        ulong st_rdev;	/// if device then device number
+        uint st_ino;        /// file serial number
+        uint st_mode;        /// file mode
+        uint st_nlink;        /// link count
+        uint st_uid;        /// user ID of file's owner
+        uint st_gid;        /// user ID of group's owner
+        ulong st_rdev;        /// if device then device number
         uint __pad2;
         align(4) ulong st_size;
-        int st_blksize;	/// optimal I/O block size
-        ulong st_blocks;	/// number of allocated 512 byte blocks
+        int st_blksize;        /// optimal I/O block size
+        ulong st_blocks;        /// number of allocated 512 byte blocks
         int st_atime;
         uint st_atimensec;
         int st_mtime;
@@ -100,7 +78,7 @@ version (Posix)
 
 class FileException : Exception
 {
-    uint errno;			// operating system error code
+    uint errno;                        // operating system error code
     
     this(in char[] name, in char[] message)
     {
@@ -113,7 +91,7 @@ class FileException : Exception
         this.errno = errno;
     }
 
-    version(Posix) this(in char[] name, uint errno)
+    version(Posix) this(in char[] name, uint errno = .getErrno)
     {
         auto s = strerror(errno);
         this(name, to!string(s));
@@ -121,20 +99,31 @@ class FileException : Exception
     }
 }
 
+private T cenforce(T, string file = __FILE__, uint line = __LINE__)
+(T condition, lazy const(char)[] name)
+{
+    if (!condition)
+    {
+        throw new FileException(
+            text("In ", file, "(", line, "), data file ", name), .getErrno);
+    }
+    return condition;
+}
+
 /* **********************************
  * Basic File operations.
  */
 
 /********************************************
- * Read file $(D name), return array of bytes read.
- *
- * Throws: $(D FileException) on error.
+Read entire contents of file $(D name).
+
+Returns: Untyped array of bytes _read.
+
+Throws: $(D FileException) on error.
  */
 
 version(Windows) void[] read(in char[] name)
 {
-    void onError() { throw new FileException(name.idup); }
-    
     alias TypeTuple!(GENERIC_READ,
             FILE_SHARE_READ, (SECURITY_ATTRIBUTES*).init, OPEN_EXISTING,
             FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
@@ -144,16 +133,16 @@ version(Windows) void[] read(in char[] name)
         ? CreateFileW(std.utf.toUTF16z(name), defaults)
         : CreateFileA(toMBSz(name), defaults);
     
-    enforce(h != INVALID_HANDLE_VALUE, &onError);
-    scope(exit) enforce(CloseHandle(h), &onError);
+    cenforce(h != INVALID_HANDLE_VALUE, name);
+    scope(exit) cenforce(CloseHandle(h), name);
     const size = GetFileSize(h, null);
-    enforce(size != INVALID_FILE_SIZE, &onError);
+    cenforce(size != INVALID_FILE_SIZE, name);
     auto buf = GC.malloc(size, GC.BlkAttr.NO_SCAN)[0 .. size];
     scope(failure) delete buf;
     
     DWORD numread;
-    enforce(ReadFile(h,buf.ptr, size, &numread, null) == 1
-            && numread == size, &onError);
+    cenforce(ReadFile(h,buf.ptr, size, &numread, null) == 1
+            && numread == size, name);
     return buf[0 .. size];
 }
 
@@ -210,15 +199,45 @@ version (linux) unittest
     //writefln("'%s'", s);
 }
 
+/********************************************
+Read and validates (using $(XREF utf, validate)) a text file. $(D S)
+can be a type of array of characters of any width and constancy.
+
+Returns: Array of characters read.
+
+Throws: $(D FileException) on file error, $(D UtfException) on UTF
+decoding error.
+
+Example:
+
+----
+enforce(system("echo abc>deleteme") == 0);
+scope(exit) remove("deleteme");
+enforce(chomp(readText("deleteme")) == "abc");
+----
+ */
+
+S readText(S = string)(in char[] name)
+{
+    auto result = cast(S) read(name);
+    std.utf.validate(result);
+    return result;
+}
+
+unittest
+{
+    enforce(system("echo abc>deleteme") == 0);
+    scope(exit) remove("deleteme");
+    enforce(chomp(readText("deleteme")) == "abc");
+}
+
 /*********************************************
- * Write buffer[] to file name[].
+ * Write $(D buffer) to file $(D name).
  * Throws: $(D FileException) on error.
  */
 
 version(Windows) void write(in char[] name, const void[] buffer)
 {
-    void onError() { throw new FileException(name.idup); }
-    
     alias TypeTuple!(GENERIC_WRITE, 0, null, CREATE_ALWAYS,
             FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
             HANDLE.init)
@@ -227,12 +246,12 @@ version(Windows) void write(in char[] name, const void[] buffer)
         ? CreateFileW(std.utf.toUTF16z(name), defaults)
         : CreateFileA(toMBSz(name), defaults);
    
-    enforce(h != INVALID_HANDLE_VALUE, &onError);
-    scope(exit) enforce(CloseHandle(h), &onError);
+    cenforce(h != INVALID_HANDLE_VALUE, name);
+    scope(exit) cenforce(CloseHandle(h), name);
     DWORD numwritten;
-    enforce(WriteFile(h, buffer.ptr, buffer.length, &numwritten, null) == 1
+    cenforce(WriteFile(h, buffer.ptr, buffer.length, &numwritten, null) == 1
             && buffer.length == numwritten,
-            &onError);
+            name);
 }
 
 version(Posix) void write(in char[] name, in void[] buffer)
@@ -241,14 +260,12 @@ version(Posix) void write(in char[] name, in void[] buffer)
 }
 
 /*********************************************
- * Append buffer[] to file name[].
+ * Append $(D buffer) to file $(D name).
  * Throws: $(D FileException) on error.
  */
 
 version(Windows) void append(in char[] name, in void[] buffer)
 {
-    void onError() { throw new FileException(name.idup); }
-    
     alias TypeTuple!(GENERIC_WRITE,0,null,OPEN_ALWAYS,
             FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,HANDLE.init)
         defaults;
@@ -257,13 +274,13 @@ version(Windows) void append(in char[] name, in void[] buffer)
         ? CreateFileW(std.utf.toUTF16z(name), defaults)
         : CreateFileA(toMBSz(name), defaults);
     
-    enforce(h != INVALID_HANDLE_VALUE, &onError);
-    scope(exit) enforce(CloseHandle(h), &onError);
+    cenforce(h != INVALID_HANDLE_VALUE, name);
+    scope(exit) cenforce(CloseHandle(h), name);
     DWORD numwritten;
-    enforce(SetFilePointer(h, 0, null, FILE_END) != INVALID_SET_FILE_POINTER
+    cenforce(SetFilePointer(h, 0, null, FILE_END) != INVALID_SET_FILE_POINTER
             && WriteFile(h,buffer.ptr,buffer.length,&numwritten,null) == 1
             && buffer.length == numwritten,
-            &onError);
+            name);
 }
 
 version(Posix) void append(in char[] name, in void[] buffer)
@@ -290,7 +307,7 @@ version(Posix) private void writeImpl(in char[] name,
 }
 
 /***************************************************
- * Rename file from[] to to[].
+ * Rename file $(D from) to $(D to).
  * Throws: $(D FileException) on error.
  */
 
@@ -299,7 +316,9 @@ version(Windows) void rename(in char[] from, in char[] to)
     enforce(useWfuncs
             ? MoveFileW(std.utf.toUTF16z(from), std.utf.toUTF16z(to))
             : MoveFileA(toMBSz(from), toMBSz(to)),
-            new FileException(to.idup));
+            new FileException(
+                text("Attempting to rename file ", from, " to ",
+                        to)));
 }
 
 version(Posix) void rename(in char[] from, in char[] to)
@@ -308,16 +327,16 @@ version(Posix) void rename(in char[] from, in char[] to)
 }
 
 /***************************************************
- * Delete file name[].
- * Throws: $(D FileException) on error.
+Delete file $(D name).
+Throws: $(D FileException) on error.
  */
 
 version(Windows) void remove(in char[] name)
 {
-    enforce(useWfuncs
+    cenforce(useWfuncs
             ? DeleteFileW(std.utf.toUTF16z(name))
             : DeleteFileA(toMBSz(name)),
-            new FileException(name.idup));
+            name);
 }
 
 version(Posix) void remove(in char[] name)
@@ -343,7 +362,7 @@ version(Windows) ulong getSize(in char[] name)
         findhndl = FindFirstFileW(std.utf.toUTF16z(name), &filefindbuf);
         resulth = filefindbuf.nFileSizeHigh;
         resultl = filefindbuf.nFileSizeLow;
-        }
+    }
     else
     {
         WIN32_FIND_DATA filefindbuf;
@@ -353,8 +372,7 @@ version(Windows) ulong getSize(in char[] name)
         resultl = filefindbuf.nFileSizeLow;
     }
     
-    enforce(findhndl != cast(HANDLE)-1 && FindClose(findhndl),
-                new FileException(name.idup));
+    cenforce(findhndl != cast(HANDLE)-1 && FindClose(findhndl), name);
     return (cast(ulong) resulth << 32) + resultl;
 }
 
@@ -500,7 +518,7 @@ version(Windows) bool isfile(in char[] name)
 
 version(Posix) bool isfile(in char[] name)
 {
-    return (getAttributes(name) & S_IFMT) == S_IFREG;	// regular file
+    return (getAttributes(name) & S_IFMT) == S_IFREG;        // regular file
 }
     
 /****************************************************
@@ -542,16 +560,27 @@ version(Posix) void mkdir(in char[] pathname)
 }
 
 /****************************************************
+ * Make directory and all parent directories as needed.
+ */
+
+void mkdirRecurse(in char[] pathname)
+{
+    const left = dirname(pathname);
+    exists(left) || mkdirRecurse(left);
+    mkdir(pathname);
+}
+
+/****************************************************
  * Remove directory pathname[].
  * Throws: $(D FileException) on error.
  */
 
 version(Windows) void rmdir(in char[] pathname)
 {
-    enforce(useWfuncs
+    cenforce(useWfuncs
             ? RemoveDirectoryW(std.utf.toUTF16z(pathname))
             : RemoveDirectoryA(toMBSz(pathname)),
-            new FileException(pathname.idup));
+            pathname);
 }
 
 version(Posix) void rmdir(in char[] pathname)
@@ -567,24 +596,23 @@ version(Posix) void rmdir(in char[] pathname)
 
 version(Windows) string getcwd()
 {
-    void onError() { throw new FileException("getcwd"); }
     // A bit odd API: calling GetCurrentDirectory(0, null) returns
     // length including the \0, whereas calling with non-zero
     // params returns length excluding the \0.
     if (useWfuncs)
     {
         auto dir =
-            new wchar[enforce(GetCurrentDirectoryW(0, null), &onError)];
+            new wchar[enforce(GetCurrentDirectoryW(0, null), "getcwd")];
         dir = dir[0 .. GetCurrentDirectoryW(dir.length, dir.ptr)];
-        enforce(dir.length, &onError);
+        cenforce(dir.length, "getcwd");
         return to!string(dir);
     }
     else
     {
         auto dir =
-            new char[enforce(GetCurrentDirectoryA(0, null), &onError)];
+            new char[enforce(GetCurrentDirectoryA(0, null), "getcwd")];
         dir = dir[0 .. GetCurrentDirectoryA(dir.length, dir.ptr)];
-        enforce(dir.length, &onError);
+        cenforce(dir.length, "getcwd");
         return assumeUnique(dir);
     }
 }
@@ -666,7 +694,7 @@ version(Posix) d_time lastModified(in char[] name, d_time returnIfMissing)
 
 unittest
 {
-    system("echo a > deleteme") == 0 || assert(false);
+    system("echo a>deleteme") == 0 || assert(false);
     scope(exit) remove("deleteme");
     assert(lastModified("deleteme") >
             lastModified("this file does not exist", d_time.min));
@@ -679,12 +707,12 @@ unittest
 
 version(Windows) struct DirEntry
 {
-    string name;			/// file or directory name
-    ulong size = ~0UL;			/// size of file in bytes
-    d_time creationTime = d_time_nan;	/// time of file creation
-    d_time lastAccessTime = d_time_nan;	/// time file was last accessed
-    d_time lastWriteTime = d_time_nan;	/// time file was last written to
-    uint attributes;		// Windows file attributes OR'd together
+    string name;                        /// file or directory name
+    ulong size = ~0UL;                        /// size of file in bytes
+    d_time creationTime = d_time_nan;        /// time of file creation
+    d_time lastAccessTime = d_time_nan;        /// time file was last accessed
+    d_time lastWriteTime = d_time_nan;        /// time file was last written to
+    uint attributes;                // Windows file attributes OR'd together
     
     void init(in char[] path, in WIN32_FIND_DATA *fd)
     {
@@ -738,14 +766,14 @@ version(Windows) struct DirEntry
 
 version(Posix) struct DirEntry
 {
-    string name;			/// file or directory name
-    ulong _size = ~0UL;			/// size of file in bytes
-    d_time _creationTime = d_time_nan;	/// time of file creation
+    string name;                        /// file or directory name
+    ulong _size = ~0UL;                        /// size of file in bytes
+    d_time _creationTime = d_time_nan;        /// time of file creation
     d_time _lastAccessTime = d_time_nan; /// time file was last accessed
-    d_time _lastWriteTime = d_time_nan;	/// time file was last written to
+    d_time _lastWriteTime = d_time_nan;        /// time file was last written to
     ubyte d_type;
     struct_stat64 statbuf;
-    bool didstat;			// done lazy evaluation of stat()
+    bool didstat;                        // done lazy evaluation of stat()
         
     void init(in char[] path, core.sys.posix.dirent.dirent *fd)
     {
@@ -819,12 +847,12 @@ version(Posix) struct DirEntry
  * dirEntries) (see below).
  *
  * Params:
- *	callback =	Delegate that processes each
- *			DirEntry in turn. Returns true to
- *			continue, false to stop.
+ *        callback =        Delegate that processes each
+ *                        DirEntry in turn. Returns true to
+ *                        continue, false to stop.
  * Example:
- *	This program lists all the files in its
- *	path argument and all subdirectories thereof.
+ *        This program lists all the files in its
+ *        path argument and all subdirectories thereof.
  * ----
  * import std.stdio;
  * import std.file;
@@ -868,7 +896,7 @@ version(Windows) void listdir(in char[] pathname,
             de.init(pathname, &fileinfo);
             if (!callback(&de))
                 break;
-        } while (FindNextFileW(h,&fileinfo) != FALSE);
+        } while (FindNextFileW(h, &fileinfo) != FALSE);
     }
     else
     {
@@ -970,32 +998,29 @@ version(Posix) void copy(in char[] from, in char[] to)
         
     cenforce(utime(toz, &utim) != -1, from);
 }
-/* =========================== Posix ======================= */
-
-/***********************************
- */
-
-private T cenforce(T, string file = __FILE__, uint line = __LINE__)
-(T condition, lazy const(char)[] name)
-{
-    if (!condition)
-    {
-        throw new FileException(
-            text("In ", file, "(", line, "), data file ", name), .getErrno);
-    }
-    return condition;
-}
 
 /*************************
  * Set access/modified times of file $(D name).
  * Throws: $(D FileException) on error.
  */
 
-// version(Windows) void setTimes(in char[] name, d_time fta, d_time ftm)
-// {
-//     auto ta = d_time2FILETIME(fta);
-//     assert(false);
-// }
+version(Windows) void setTimes(in char[] name, d_time fta, d_time ftm)
+{
+    const ta = d_time2FILETIME(fta);
+    const tm = d_time2FILETIME(ftm);
+    alias TypeTuple!(GENERIC_READ,
+            FILE_SHARE_READ, (SECURITY_ATTRIBUTES*).init, OPEN_EXISTING,
+            FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
+            HANDLE.init)
+        defaults;
+    auto h = useWfuncs
+        ? CreateFileW(std.utf.toUTF16z(name), defaults)
+        : CreateFileA(toMBSz(name), defaults);
+    cenforce(h != INVALID_HANDLE_VALUE, name);
+    scope(exit) cenforce(CloseHandle(h), name);
+
+    cenforce(SetFileTime(h, null, &ta, &tm), name);
+}
 
 version(Posix) void setTimes(in char[] name, d_time fta, d_time ftm)
 {
@@ -1011,30 +1036,19 @@ version(Posix) void setTimes(in char[] name, d_time fta, d_time ftm)
     enforce(utimes(toStringz(name), t) == 0);
 }
     
-version(Posix) unittest
+unittest
 {
-    system("touch deleteme") == 0 || assert(false);
-    scope(exit) remove("deleteme");
+    system("echo a > deleteme") == 0 || assert(false);
+    //scope(exit) remove("deleteme");
     d_time ftc1, fta1, ftm1;
     getTimes("deleteme", ftc1, fta1, ftm1);
     setTimes("deleteme", fta1 + 1000, ftm1 + 1000);
     d_time ftc2, fta2, ftm2;
     getTimes("deleteme", ftc2, fta2, ftm2);
-    assert(fta1 + 1000 == fta2);
+    assert(fta1 + 1000 == fta2, text(fta1 + 1000, "!=", fta2));
     assert(ftm1 + 1000 == ftm2);
 }
     
-/****************************************************
- * Make directory and all parent directories as needed.
- */
-
-void mkdirRecurse(in char[] pathname)
-{
-    const left = dirname(pathname);
-    exists(left) || mkdirRecurse(left);
-    mkdir(pathname);
-}
-
 /****************************************************
 Remove directory and all of its content and subdirectories,
 recursively.
@@ -1093,11 +1107,11 @@ unittest
 {
     listdir (".", delegate bool (DirEntry * de)
     {
-	auto s = std.string.format("%s : c %s, w %s, a %s", de.name,
-		toUTCString (de.creationTime),
-		toUTCString (de.lastWriteTime),
-		toUTCString (de.lastAccessTime));
-	return true;
+        auto s = std.string.format("%s : c %s, w %s, a %s", de.name,
+                toUTCString (de.creationTime),
+                toUTCString (de.lastWriteTime),
+                toUTCString (de.lastAccessTime));
+        return true;
     }
     );
 }
@@ -1291,30 +1305,13 @@ unittest
     assert(a[1] == tuple(345, 1.125));
 }
 
-/********************************************
-Read and validates (using $(XREF utf, validate)) a text file. $(D S)
-can be a type of array of characters of any width and constancy.
-
-Returns: array of characters read
-
-Throws: $(D FileException) on file error, $(D UtfException) on UTF
-decoding error.
- */
-
-S readText(S = string)(in char[] name)
-{
-    auto result = cast(S) read(name);
-    std.utf.validate(result);
-    return result;
-}
-
 /***************************************************
  * Return contents of directory pathname[].
  * The names in the contents do not include the pathname.
  * Throws: $(D FileException) on error
  * Example:
- *	This program lists all the files and subdirectories in its
- *	path argument.
+ *        This program lists all the files and subdirectories in its
+ *        path argument.
  * ----
  * import std.stdio;
  * import std.file;
@@ -1324,7 +1321,7 @@ S readText(S = string)(in char[] name)
  *    auto dirs = std.file.listdir(args[1]);
  *
  *    foreach (d; dirs)
- *	writefln(d);
+ *        writefln(d);
  * }
  * ----
  */
@@ -1352,14 +1349,14 @@ unittest
  * Return all the files in the directory and its subdirectories
  * that match pattern or regular expression r.
  * Params:
- *	pathname = Directory name
- *	pattern = String with wildcards, such as $(RED "*.d"). The supported
- *		wildcard strings are described under fnmatch() in
- *		$(LINK2 std_path.html, std.path).
- *	r = Regular expression, for more powerful _pattern matching.
+ *        pathname = Directory name
+ *        pattern = String with wildcards, such as $(RED "*.d"). The supported
+ *                wildcard strings are described under fnmatch() in
+ *                $(LINK2 std_path.html, std.path).
+ *        r = Regular expression, for more powerful _pattern matching.
  * Example:
- *	This program lists all the files with a "d" extension in
- *	the path passed as the first argument.
+ *        This program lists all the files with a "d" extension in
+ *        the path passed as the first argument.
  * ----
  * import std.stdio;
  * import std.file;
@@ -1369,7 +1366,7 @@ unittest
  *    auto d_source_files = std.file.listdir(args[1], "*.d");
  *
  *    foreach (d; d_source_files)
- *	writefln(d);
+ *        writefln(d);
  * }
  * ----
  * A regular expression version that searches for all files with "d" or
@@ -1384,7 +1381,7 @@ unittest
  *    auto d_source_files = std.file.listdir(args[1], RegExp(r"\.(d|obj)$"));
  *
  *    foreach (d; d_source_files)
- *	writefln(d);
+ *        writefln(d);
  * }
  * ----
  */
@@ -1441,12 +1438,12 @@ string[] listdir(in char[] pathname, RegExp r)
  * dirEntries) (see below).
  *
  * Params:
- *	callback =	Delegate that processes each
- *			filename in turn. Returns true to
- *			continue, false to stop.
+ *        callback =        Delegate that processes each
+ *                        filename in turn. Returns true to
+ *                        continue, false to stop.
  * Example:
- *	This program lists all the files in its
- *	path argument, including the path.
+ *        This program lists all the files in its
+ *        path argument, including the path.
  * ----
  * import std.stdio;
  * import std.path;
@@ -1480,4 +1477,26 @@ void listdir(in char[] pathname, bool delegate(string filename) callback)
     
     listdir(pathname, &listing);
 }
+
+/*
+ *  Copyright (C) 2001-2004 by Digital Mars, www.digitalmars.com
+ * Written by Walter Bright, Christopher E. Miller, Andre Fornacon
+ *
+ *  This software is provided 'as-is', without any express or implied
+ *  warranty. In no event will the authors be held liable for any damages
+ *  arising from the use of this software.
+ *
+ *  Permission is granted to anyone to use this software for any purpose,
+ *  including commercial applications, and to alter it and redistribute it
+ *  freely, subject to the following restrictions:
+ *
+ *  o  The origin of this software must not be misrepresented; you must not
+ *     claim that you wrote the original software. If you use this software
+ *     in a product, an acknowledgment in the product documentation would be
+ *     appreciated but is not required.
+ *  o  Altered source versions must be plainly marked as such, and must not
+ *     be misrepresented as being the original software.
+ *  o  This notice may not be removed or altered from any source
+ *     distribution.
+ */
 
