@@ -258,12 +258,12 @@ private template tupleFields(uint index, T...)
     {
         static if (is(typeof(T[1]) : string))
         {
-            enum string tupleFields = "Type["~ToString!(index)~"] "~T[1]~"; "
+            enum string tupleFields = "Types["~ToString!(index)~"] "~T[1]~"; "
                 ~ tupleFields!(index + 1, T[2 .. $]);
         }
         else
         {
-            enum string tupleFields = "Type["~ToString!(index)~"] _"
+            enum string tupleFields = "Types["~ToString!(index)~"] _"
                 ~ToString!(index)~"; "
                 ~ tupleFields!(index + 1, T[1 .. $]);
         }
@@ -340,10 +340,10 @@ public:
 /**
    The type of the tuple's components.
 */
-    alias noStrings!(T).Result Type;
+    alias noStrings!(T).Result Types;
     union
     {
-        Type field;
+        Types field;
         mixin(tupleFields!(0, T));
     }
     // @@@BUG 2800
@@ -352,9 +352,9 @@ public:
    Constructor taking one value for each field. Each argument must be
    implicitly assignable to the respective element of the target.
  */
-    this(U...)(U values) if (U.length == Type.length)
+    this(U...)(U values) if (U.length == Types.length)
     {
-        foreach (i, Unused; T)
+        foreach (i, Unused; Types)
         {
             field[i] = values[i];
         }
@@ -369,8 +369,8 @@ public:
     //this(U)(Tuple!(U) another)
     this(U)(U another)
     {
-        static assert(U.length == T.length);
-        foreach (i, Unused; T)
+        static assert(U.Types.length == Types.length);
+        foreach (i, Unused; Types)
         {
             field[i] = another.field[i];
         }
@@ -391,11 +391,6 @@ public:
         }
         return true;
     }
-
-/**
-   The number of elements in the tuple.
- */
-    enum size_t length = Type.length;
 
 /**
    Assignment from another tuple. Each element of the source must be
@@ -422,7 +417,7 @@ static assert(is(typeof(s) == Tuple!(string, float)));
 assert(s.field[0] == "abc" && s.field[1] == 4.5);
 ----
  */
-    ref Tuple!(Type[from .. to]) slice(uint from, uint to)()
+    ref Tuple!(Types[from .. to]) slice(uint from, uint to)()
     {
         return *cast(typeof(return) *) &(field[from]);
     }
@@ -478,6 +473,8 @@ unittest
         assert(a.field[0] == 0 && a.field[1] == 5);
         a = Tuple!(int, float)(1, 2);
         assert(a.field[0] == 1 && a.field[1] == 2);
+        auto c = Tuple!(int, "a", double, "b")(a);
+        assert(c.field[0] == 1 && c.field[1] == 2);
     }
     Tuple!(int, int) nosh;
     nosh.field[0] = 5;
