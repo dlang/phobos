@@ -521,8 +521,10 @@ auto a = uniform(0.0f, 1.0f, gen);
 ----
  */
 CommonType!(T1, T2) uniform(string boundaries = `[)`,
-        UniformRandomNumberGenerator, T1, T2)
+        T1, T2, UniformRandomNumberGenerator)
 (T1 a, T2 b, ref UniformRandomNumberGenerator urng)
+if (is(CommonType!(T1, UniformRandomNumberGenerator) == void) &&
+        !is(CommonType!(T1, T2) == void))
 {
     alias CommonType!(T1, T2) NumberType;
     NumberType _a, _b;
@@ -584,9 +586,9 @@ CommonType!(T1, T2) uniform(string boundaries = `[)`,
 As above, but uses the default generator $(D rndGen).
  */
 CommonType!(T1, T2) uniform(string boundaries = q{[)}, T1, T2)
-(T1 a, T2 b)
+(T1 a, T2 b)  if (is(CommonType!(T1, T2)))
 {
-    return uniform!(boundaries, Random, T1, T2)(a, b, rndGen);
+    return uniform!(boundaries, T1, T2, Random)(a, b, rndGen);
 }
 
 unittest
