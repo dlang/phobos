@@ -85,7 +85,7 @@ T enforce(T, string file = __FILE__, int line = __LINE__)
 }
 
 T enforce(T, string file = __FILE__, int line = __LINE__)
-(T value, void delegate() dg)
+(T value, scope void delegate() dg)
 {
     if (!value) dg();
     return value;
