@@ -2786,18 +2786,18 @@ R formattedRead(R, S...)(R r, const(char)[] fmt, S args)
         alias typeof(*args[0]) A;
         //@@@BUG 2725
         //static if (is(A X == Tuple!(T), T))
-        static if (is(A.Type[0]))
+        static if (is(A.Types[0]))
         {
             //@@@BUG
-            //args[0].field[0] = parse!(A.Type[0])(r);
-            // static if (A.Type.length > 1)
+            //args[0].field[0] = parse!(A.Types[0])(r);
+            // static if (A.Types.length > 1)
             //     return formattedRead(r, fmt,
-            //             args[0].slice!(1, A.Type.length)(),
+            //             args[0].slice!(1, A.Types.length)(),
             //             args[1 .. $]);
             // else
             //     return formattedRead(r, fmt, args[1 .. $]);
             // assume it's a tuple
-            foreach (i, T; A.Type)
+            foreach (i, T; A.Types)
             {
                 //writeln("Parsing ", r, " with format ", fmt);
                 args[0].field[i] = unformat!(T)(r, spec);
