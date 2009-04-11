@@ -1839,7 +1839,8 @@ Creates a mathematical sequence given the initial values and a
 recurrence function that computes the next value from the existing
 values. The sequence comes in the form of an infinite forward
 range. The type $(D Recurrence) itself is seldom used directly; most
-often, series are obtained by calling the function $(D recurrence).
+often, recurrences are obtained by calling the function $(D
+recurrence).
 
 When calling $(D recurrence), the function that computes the next
 value is specified as a template argument, and the initial values in
@@ -1849,9 +1850,9 @@ state size of 2) because computing the next Fibonacci value needs the
 past two values.
 
 If the function is passed in string form, the state has name $(D "a")
-and the zero-based index in the series has name $(D "n"). The given
-string must return the desired value for $(D a[n]) given $(D a[n -
-1]), $(D a[n - 2]), $(D a[n - 3]),..., $(D a[n - stateSize]). The
+and the zero-based index in the recurrence has name $(D "n"). The
+given string must return the desired value for $(D a[n]) given $(D a[n
+- 1]), $(D a[n - 2]), $(D a[n - 3]),..., $(D a[n - stateSize]). The
 state size is dictated by the number of arguments passed to the call
 to $(D recurrence). The $(D Recurrence) class itself takes care of
 managing the recurrence's state and shifting it appropriately.
@@ -1863,7 +1864,7 @@ auto fib = recurrence!("a[n-1] + a[n-2]")(1, 1);
 // print the first 10 Fibonacci numbers
 foreach (e; take(10, fib)) { writeln(e); }
 // print the first 10 factorials
-foreach (e; take(10, recurrence!(a[n - 1] * n)(1))) { writeln(e); }
+foreach (e; take(10, recurrence!("a[n-1] * n")(1))) { writeln(e); }
 ----
  */
 struct Recurrence(alias fun, StateType, size_t stateSize)
@@ -1889,8 +1890,8 @@ struct Recurrence(alias fun, StateType, size_t stateSize)
 }
 
 /// Ditto
-Recurrence!(fun, CommonType!(State), State.length) series(alias fun, State...)
-    (State initial)
+Recurrence!(fun, CommonType!(State), State.length)
+recurrence(alias fun, State...)(State initial)
 {
     CommonType!(State)[State.length] state;
     foreach (i, Unused; State)
@@ -1902,20 +1903,20 @@ Recurrence!(fun, CommonType!(State), State.length) series(alias fun, State...)
 
 version(none) unittest
 {
-    auto fib = series!("a[n-1] + a[n-2]")(1, 1);
+    auto fib = recurrence!("a[n-1] + a[n-2]")(1, 1);
     int[] witness = [1, 1, 2, 3, 5, 8, 13, 21, 34, 55 ];
     //foreach (e; take(10, fib)) writeln(e);
     assert(equal(take(10, fib), witness));
     foreach (e; take(10, fib)) {}//writeln(e);
     //writeln(s.head);
-    auto fact = series!("a[n - 1] * n")(1);
+    auto fact = recurrence!("a[n - 1] * n")(1);
     foreach (e; take(10, fact)) {}//writeln(e);
-    auto piapprox = series!("a[n] + (n & 1 ? 4. : -4.) / (2 * n + 3)")(4.);
+    auto piapprox = recurrence!("a[n] + (n & 1 ? 4. : -4.) / (2 * n + 3)")(4.);
     foreach (e; take(20, piapprox)) {}//writeln(e);
 }
 
 /**
-$(D Sequence) is similar to $(D Series) except that iteration is
+$(D Sequence) is similar to $(D Recurrence) except that iteration is
 presented in the so-called $(WEB en.wikipedia.org/wiki/Closed_form,
 closed form). This means that the $(D n)th element in the series is
 computable directly from the initial values and $(D n) itself. This
@@ -1923,7 +1924,7 @@ implies that the interface offered by $(D Sequence) is a random-access
 range, as opposed to the regular $(D Recurrence), which only offers
 forward iteration.
 
-The state of the series is stored as a $(D Tuple) so it can be
+The state of the sequence is stored as a $(D Tuple) so it can be
 heterogeneous.
 
 Example:
@@ -1968,6 +1969,7 @@ public:
      enum bool empty = false;
 }
 
+/// Ditto
 Sequence!(fun, Tuple!(State)) sequence
     (alias fun, State...)(State args)
 {
