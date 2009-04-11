@@ -2434,9 +2434,9 @@ pure nothrow F pow(F)(F x, uint n) if (isFloatingPoint!(F))
 {
     if (n > int.max)
     {
-        assert(n >> 1 <= int.max);
+        //assert(n >> 1 <= int.max);
         // must reduce n so we can call the pow(real, int) overload
-        immutable result = pow(x*x, cast(int) (n >> 1));
+        auto result = pow(x*x, cast(int) (n >> 1));
         return (n & 1)
             ? result * x // odd power
             : result;
