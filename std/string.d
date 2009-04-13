@@ -2521,7 +2521,7 @@ unittest
 }
 
 /**
-Convert to string. WARNING. This function has been deprecated. Instead
+Convert to string. WARNING! This function has been deprecated. Instead
  of $(D toString(x)), you may want to import $(D std.conv) and use $(D
  to!string(x)) instead.
  */
@@ -2531,6 +2531,19 @@ deprecated auto toString(T)(T obj) if (is(typeof(to!string(T.init))))
             " Instead you may want to"
             " import std.conv and use to!string(x) instead of toString(x).");
     return to!string(obj);
+}
+
+/**
+Convert string to integer. WARNING. This function has been
+ deprecated. Instead of $(D atoi(s)), you may want to import $(D
+ std.conv) and use $(D to!int(s)) instead.
+ */
+deprecated auto atoi(T)(T obj) if (isSomeString!T)
+{
+    pragma(msg, "atoi("~T.stringof~") is deprecated."
+            " Instead you may want to"
+            " import std.conv and use to!int(x) instead of atoi(x).");
+    return to!int(obj);
 }
 
 unittest

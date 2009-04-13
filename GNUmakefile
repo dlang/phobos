@@ -106,6 +106,7 @@ $$(OBJDIR)/$1/$2/unittest/std/% : std/%.d				\
 		-of$$(call REL2ABS_$1,$$@) $$(call ABS2ABS_$1,/tmp/emptymain.d) \
 		$$(foreach F,$$<,$$(call REL2ABS_$1,$$F)) \
 		$(PRODUCTIONLIBDIR)/libphobos2tmp_$2$(LIBSUFFIX_$1)
+	@rm -rf $$(basename $$@).map
 # make the file very old so it builds and runs again if it fails
 	@touch $$@ -t 197001230123
 # run unittest
@@ -147,7 +148,7 @@ unittest : posix/release/unittest
 posix : posix/debug/unittest posix/release/unittest 
 win32 : win32/debug/unittest win32/release/unittest 
 
-all : $(foreach B,debug release, $(foreach S,posix win32, $S/$B))
+all : $(foreach B,debug release, $(foreach S,posix win32, $S/$B/unittest)) html
 clean :
 	rm -rf $(OBJDIR) $(DOC_OUTPUT_DIR)
 
