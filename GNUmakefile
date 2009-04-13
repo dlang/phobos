@@ -31,8 +31,10 @@ LIBDRUNTIME_posix = $(DRUNTIMEDIR)/libdruntime.a
 
 CFLAGS_posix_debug = -m32 -g
 CFLAGS_posix_release = -m32 -O3
-DFLAGS_debug = -w -g -debug
-DFLAGS_release = -w -O -release -inline
+DFLAGS_debug = -w -g -debug -d
+DFLAGS_release = -w -O -release -inline -d
+
+DDOCFLAGS=-version=ddoc -d -c -o- $(STDDOC)
 
 ################################################################################
 
@@ -156,22 +158,22 @@ $(eval $(foreach B,debug release, $(foreach S,posix win32, $(call	\
 # Dox
 
 $(DOC_OUTPUT_DIR)/%.html : %.d $(STDDOC)
-	$(DMD_win32) -version=ddoc -c -o- -Df$@ $(STDDOC) $<
+	$(DMD_win32) $(DDOCFLAGS) -Df$@ $<
 
 $(DOC_OUTPUT_DIR)/std_%.html : std/%.d $(STDDOC)
-	$(DMD_win32) -version=ddoc -c -o- -Df$@ $(STDDOC) $<
+	$(DMD_win32) $(DDOCFLAGS) -Df$@ $<
 
 $(DOC_OUTPUT_DIR)/std_c_%.html : std/c/%.d $(STDDOC)
-	$(DMD_win32) -version=ddoc -c -o- -Df$@ $(STDDOC) $<
+	$(DMD_win32) $(DDOCFLAGS) -Df$@ $<
 
 $(DOC_OUTPUT_DIR)/std_c_linux_%.html : std/c/linux/%.d $(STDDOC)
-	$(DMD_win32) -version=ddoc -c -o- -Df$@ $(STDDOC) $<
+	$(DMD_win32) $(DDOCFLAGS) -Df$@ $<
 
 $(STYLECSS_TGT) : $(STYLECSS_SRC)
 	cp $< $@
 
 html : $(addprefix $(DOC_OUTPUT_DIR)/, $(subst /,_,$(subst .d,.html,	\
 	$(SRC_DOCUMENTABLES)))) $(STYLECSS_TGT)
-	$(MAKE) -f $(DOCSRC)/linux.mak -C $(DOCSRC) --no-print-directory
+	@$(MAKE) -f $(DOCSRC)/linux.mak -C $(DOCSRC) --no-print-directory
 
 ##########################################################

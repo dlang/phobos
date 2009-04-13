@@ -778,7 +778,7 @@ unittest
     assert(a == b, text(b));
 }
 
-__EOF__
+//__EOF__
 /* ===================== Random ========================= */
 
 // BUG: not multithreaded

@@ -2520,9 +2520,18 @@ unittest
     assert(i == 0);
 }
 
-/*
- * Convert to string.
+/**
+Convert to string. WARNING. This function has been deprecated. Instead
+ of $(D toString(x)), you may want to import $(D std.conv) and use $(D
+ to!string(x)) instead.
  */
+deprecated auto toString(T)(T obj) if (is(typeof(to!string(T.init))))
+{
+    pragma(msg, "toString("~T.stringof~") is deprecated."
+            " Instead you may want to"
+            " import std.conv and use to!string(x) instead of toString(x).");
+    return to!string(obj);
+}
 
 unittest
 {
@@ -2578,7 +2587,7 @@ unittest
 
 unittest
 {
-    debug(string) printf("string.toString(int).unittest\n");
+    debug(string) printf("string.to!string(int).unittest\n");
 
     string r;
     int i;
@@ -2642,7 +2651,7 @@ unittest
 
 unittest
 {
-    debug(string) printf("string.toString(char*).unittest\n");
+    debug(string) printf("string.to!string(char*).unittest\n");
 
     string r;
     int i;
