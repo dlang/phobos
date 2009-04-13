@@ -2825,9 +2825,9 @@ void skipData(Range)(ref Range input, FormatInfo spec)
 {
     switch (spec.spec)
     {
-    case 'c': input.next; break;
+    case 'c': input.popFront; break;
     case 'd': assert(false, "Not implemented");
-    case 'u': while (!input.empty && isdigit(input.head)) input.next;
+    case 'u': while (!input.empty && isdigit(input.front)) input.popFront;
         break;
     default:
         assert(false, text("Not understood: ", spec.spec));
@@ -2888,19 +2888,19 @@ private R parseToFormatSpec(R)(R r, ref const(char)[] fmt)
             {
                 assert(!r.empty);
                 // Require a '%'
-                if (r.head != '%') break;
+                if (r.front != '%') break;
                 fmt = fmt[1 .. $];
-                r.next();
+                r.popFront();
             }
             else
             {
-                fmt.next;
+                fmt.popFront;
                 break;
             }
         }
         else
         {
-            if (fmt.head == ' ')
+            if (fmt.front == ' ')
             {
                 r = std.algorithm.find!(not!isspace)(r);
             }
@@ -2909,11 +2909,11 @@ private R parseToFormatSpec(R)(R r, ref const(char)[] fmt)
                 enforce(
                     !r.empty,
                     text("parseToFormatSpec: Cannot find character `",
-                            fmt.head, "' in the input string `", r, "'"));
-                if (r.head != fmt.head) break;
-                r.next;
+                            fmt.front, "' in the input string `", r, "'"));
+                if (r.front != fmt.front) break;
+                r.popFront;
             }
-            fmt.next;
+            fmt.popFront;
         }
     }
     return r;

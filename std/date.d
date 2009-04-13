@@ -38,7 +38,7 @@ alias long d_time;
 /**
  * A value for d_time that does not represent a valid time.
  */
-const d_time d_time_nan = long.min;
+enum d_time d_time_nan = long.min;
 
 /**
  * Time broken down into its components.
@@ -70,19 +70,20 @@ enum
     msPerMinute    = 60 * 1000,
     msPerHour      = 60 * msPerMinute,
     msPerDay       = 86_400_000,
-    TicksPerMs     = 1,
-    TicksPerSecond = 1000,                        /// Will be at least 1000
-    TicksPerMinute = TicksPerSecond * 60,
-    TicksPerHour   = TicksPerMinute * 60,
-    TicksPerDay    = TicksPerHour   * 24,
+    ticksPerMs     = 1,
+    ticksPerSecond = 1000,                        /// Will be at least 1000
+    ticksPerMinute = ticksPerSecond * 60,
+    ticksPerHour   = ticksPerMinute * 60,
+    ticksPerDay    = ticksPerHour   * 24,
 }
 
 d_time localTZA = 0;
 
-immutable char[] daystr = "SunMonTueWedThuFriSat";
-immutable char[] monstr = "JanFebMarAprMayJunJulAugSepOctNovDec";
+private immutable char[] daystr = "SunMonTueWedThuFriSat";
+private immutable char[] monstr = "JanFebMarAprMayJunJulAugSepOctNovDec";
 
-const int[12] mdays = [ 0,31,59,90,120,151,181,212,243,273,304,334 ];
+private immutable int[12] mdays =
+    [ 0,31,59,90,120,151,181,212,243,273,304,334 ];
 
 /********************************
  * Compute year and week [1..53] from t. The ISO 8601 week 1 is the first week
@@ -95,13 +96,13 @@ void toISO8601YearWeek(d_time t, out int year, out int week)
 {
     year = yearFromTime(t);
 
-    auto yday = Day(t) - DayFromYear(year);
+    auto yday = day(t) - dayFromYear(year);
 
     /* Determine day of week Jan 4 falls on.
      * Weeks begin on a Monday.
      */
 
-    auto d = DayFromYear(year);
+    auto d = dayFromYear(year);
     auto w = (d + 3/*Jan4*/ + 3) % 7;
     if (w < 0)
         w += 7;
@@ -125,7 +126,7 @@ void toISO8601YearWeek(d_time t, out int year, out int week)
     {   int d2;
         int ydaybeg2;
 
-        d2 = DayFromYear(year + 1);
+        d2 = dayFromYear(year + 1);
         w = (d2 + 3/*Jan4*/ + 3) % 7;
         if (w < 0)
             w += 7;
@@ -146,11 +147,9 @@ void toISO8601YearWeek(d_time t, out int year, out int week)
  * Divide time by divisor. Always round down, even if d is negative.
  */
 
-d_time floor(d_time d, int divisor)
+pure d_time floor(d_time d, int divisor)
 {
-    if (d < 0)
-        d -= divisor - 1;
-    return d / divisor;
+    return (d < 0 ? d - divisor - 1 : d) / divisor;
 }
 
 int dmod(d_time n, d_time d)
@@ -163,27 +162,27 @@ int dmod(d_time n, d_time d)
     return cast(int)r;
 }
 
-int HourFromTime(d_time t)
+int hourFromTime(d_time t)
 {
     return dmod(floor(t, msPerHour), hoursPerDay);
 }
 
-int MinFromTime(d_time t)
+int minFromTime(d_time t)
 {
     return dmod(floor(t, msPerMinute), minutesPerHour);
 }
 
-int SecFromTime(d_time t)
+int secFromTime(d_time t)
 {
-    return dmod(floor(t, TicksPerSecond), 60);
+    return dmod(floor(t, ticksPerSecond), 60);
 }
 
 int msFromTime(d_time t)
 {
-    return dmod(t / (TicksPerSecond / 1000), 1000);
+    return dmod(t / (ticksPerSecond / 1000), 1000);
 }
 
-int TimeWithinDay(d_time t)
+int timeWithinDay(d_time t)
 {
     return dmod(t, msPerDay);
 }
@@ -193,23 +192,23 @@ d_time toInteger(d_time n)
     return n;
 }
 
-int Day(d_time t)
+int day(d_time t)
 {
     return cast(int)floor(t, msPerDay);
 }
 
-int LeapYear(int y)
+pure bool leapYear(int y)
 {
     return ((y & 3) == 0 &&
             (y % 100 || (y % 400) == 0));
 }
 
-int DaysInYear(int y)
+int daysInYear(int y)
 {
-    return 365 + LeapYear(y);
+    return 365 + leapYear(y);
 }
 
-int DayFromYear(int y)
+pure int dayFromYear(int y)
 {
     return cast(int) (365 * (y - 1970) +
                 floor((y - 1969), 4) -
@@ -217,17 +216,17 @@ int DayFromYear(int y)
                 floor((y - 1601), 400));
 }
 
-d_time TimeFromYear(int y)
+pure d_time timeFromYear(int y)
 {
-    return cast(d_time)msPerDay * DayFromYear(y);
+    return cast(d_time)msPerDay * dayFromYear(y);
 }
 
 /*****************************
  * Calculates the year from the d_time t.
  */
 
-int yearFromTime(d_time t)
-{   int y;
+pure int yearFromTime(d_time t)
+{
 
     if (t == d_time_nan)
         return 0;
@@ -235,11 +234,11 @@ int yearFromTime(d_time t)
     // Hazard a guess
     //y = 1970 + cast(int) (t / (365.2425 * msPerDay));
     // Use integer only math
-    y = 1970 + cast(int) (t / (3652425 * (msPerDay / 10000)));
+    int y = 1970 + cast(int) (t / (3652425 * (msPerDay / 10000)));
 
-    if (TimeFromYear(y) <= t)
+    if (timeFromYear(y) <= t)
     {
-        while (TimeFromYear(y + 1) <= t)
+        while (timeFromYear(y + 1) <= t)
             y++;
     }
     else
@@ -248,7 +247,7 @@ int yearFromTime(d_time t)
         {
             y--;
         }
-        while (TimeFromYear(y) > t);
+        while (timeFromYear(y) > t);
     }
     return y;
 }
@@ -265,9 +264,9 @@ int yearFromTime(d_time t)
  *        $(LINK2 http://en.wikipedia.org/wiki/Leap_year, Wikipedia)
  */
 
-int inLeapYear(d_time t)
+pure bool inLeapYear(d_time t)
 {
-    return LeapYear(yearFromTime(t));
+    return leapYear(yearFromTime(t));
 }
 
 /*****************************
@@ -277,13 +276,12 @@ int inLeapYear(d_time t)
  *        0 represents January and 11 represents December.
  */
 
-int MonthFromTime(d_time t)
+int monthFromTime(d_time t)
 {
-    int month;
-
     auto year = yearFromTime(t);
-    auto day = Day(t) - DayFromYear(year);
+    auto day = day(t) - dayFromYear(year);
 
+    int month;
     if (day < 59)
     {
         if (day < 31)
@@ -295,7 +293,7 @@ int MonthFromTime(d_time t)
     }
     else
     {
-        day -= LeapYear(year);
+        day -= leapYear(year);
         if (day < 212)
         {
             if (day < 59)
@@ -335,14 +333,13 @@ int MonthFromTime(d_time t)
  * Returns:
  *        Integer in the range 1..31
  */
-int DateFromTime(d_time t)
+int dateFromTime(d_time t)
 {
-    int date;
-
     auto year = yearFromTime(t);
-    auto day = Day(t) - DayFromYear(year);
-    auto leap = LeapYear(year);
-    auto month = MonthFromTime(t);
+    auto day = day(t) - dayFromYear(year);
+    auto leap = leapYear(year);
+    auto month = monthFromTime(t);
+    int date;
     switch (month)
     {
         case 0:         date = day +   1;                break;
@@ -369,9 +366,9 @@ int DateFromTime(d_time t)
  *        Integer in the range 0..6, where 0 represents Sunday
  *        and 6 represents Saturday.
  */
-int WeekDay(d_time t)
+int weekDay(d_time t)
 {
-    auto w = (cast(int)Day(t) + 4) % 7;
+    auto w = (cast(int)day(t) + 4) % 7;
     if (w < 0)
         w += 7;
     return w;
@@ -385,30 +382,30 @@ d_time UTCtoLocalTime(d_time t)
 {
     return (t == d_time_nan)
         ? d_time_nan
-        : t + localTZA + DaylightSavingTA(t);
+        : t + localTZA + daylightSavingTA(t);
 }
 
 /***********************************
  * Convert from local time to UTC.
  */
 
-d_time LocalTimetoUTC(d_time t)
+d_time localTimetoUTC(d_time t)
 {
     return (t == d_time_nan)
         ? d_time_nan
 /* BUGZILLA 1752 says this line should be:
- *        : t - localTZA - DaylightSavingTA(t);
+ *        : t - localTZA - daylightSavingTA(t);
  */
-        : t - localTZA - DaylightSavingTA(t - localTZA);
+        : t - localTZA - daylightSavingTA(t - localTZA);
 }
 
 
-d_time MakeTime(d_time hour, d_time min, d_time sec, d_time ms)
+d_time makeTime(d_time hour, d_time min, d_time sec, d_time ms)
 {
-    return hour * TicksPerHour +
-           min * TicksPerMinute +
-           sec * TicksPerSecond +
-           ms * TicksPerMs;
+    return hour * ticksPerHour +
+           min * ticksPerMinute +
+           sec * ticksPerSecond +
+           ms * ticksPerMs;
 }
 
 /* *****************************
@@ -419,35 +416,35 @@ d_time MakeTime(d_time hour, d_time min, d_time sec, d_time ms)
  *        number of days since start of epoch
  */
 
-d_time MakeDay(d_time year, d_time month, d_time date)
+d_time makeDay(d_time year, d_time month, d_time date)
 {
-    auto y = cast(int)(year + floor(month, 12));
-    auto m = dmod(month, 12);
+    const y = cast(int)(year + floor(month, 12));
+    const m = dmod(month, 12);
 
-    auto leap = LeapYear(y);
-    auto t = TimeFromYear(y) + cast(d_time)mdays[m] * msPerDay;
+    const leap = leapYear(y);
+    auto t = timeFromYear(y) + cast(d_time) mdays[m] * msPerDay;
     if (leap && month >= 2)
         t += msPerDay;
 
     if (yearFromTime(t) != y ||
-        MonthFromTime(t) != m ||
-        DateFromTime(t) != 1)
+        monthFromTime(t) != m ||
+        dateFromTime(t) != 1)
     {
         return  d_time_nan;
     }
 
-    return Day(t) + date - 1;
+    return day(t) + date - 1;
 }
 
-d_time MakeDate(d_time day, d_time time)
+d_time makeDate(d_time day, d_time time)
 {
     if (day == d_time_nan || time == d_time_nan)
         return d_time_nan;
 
-    return day * TicksPerDay + time;
+    return day * ticksPerDay + time;
 }
 
-d_time TimeClip(d_time time)
+d_time timeClip(d_time time)
 {
     //printf("TimeClip(%g) = %g\n", time, toInteger(time));
 
@@ -467,7 +464,7 @@ d_time TimeClip(d_time time)
  *        the date in the month, 1..31, of the nth weekday
  */
 
-int DateFromNthWeekdayOfMonth(int year, int month, int weekday, int n)
+int dateFromNthWeekdayOfMonth(int year, int month, int weekday, int n)
 in
 {
     assert(1 <= month && month <= 12);
@@ -477,10 +474,10 @@ in
 body
 {
     // Get day of the first of the month
-    auto x = MakeDay(year, month - 1, 1);
+    auto x = makeDay(year, month - 1, 1);
 
     // Get the week day 0..6 of the first of this month
-    auto wd = WeekDay(MakeDate(x, 0));
+    auto wd = weekDay(makeDate(x, 0));
 
     // Get monthday of first occurrence of weekday in this month
     auto mday = weekday - wd + 1;
@@ -492,7 +489,7 @@ body
 
     // If monthday is more than the number of days in the month,
     // back up to 'last' occurrence
-    if (mday > 28 && mday > DaysInMonth(year, month))
+    if (mday > 28 && mday > daysInMonth(year, month))
     {        assert(n == 5);
         mday -= 7;
     }
@@ -502,10 +499,10 @@ body
 
 unittest
 {
-    assert(DateFromNthWeekdayOfMonth(2003,  3, 0, 5) == 30);
-    assert(DateFromNthWeekdayOfMonth(2003, 10, 0, 5) == 26);
-    assert(DateFromNthWeekdayOfMonth(2004,  3, 0, 5) == 28);
-    assert(DateFromNthWeekdayOfMonth(2004, 10, 0, 5) == 31);
+    assert(dateFromNthWeekdayOfMonth(2003,  3, 0, 5) == 30);
+    assert(dateFromNthWeekdayOfMonth(2003, 10, 0, 5) == 26);
+    assert(dateFromNthWeekdayOfMonth(2004,  3, 0, 5) == 28);
+    assert(dateFromNthWeekdayOfMonth(2004, 10, 0, 5) == 31);
 }
 
 /**************************************
@@ -514,7 +511,7 @@ unittest
  *        month = 1..12
  */
 
-int DaysInMonth(int year, int month)
+int daysInMonth(int year, int month)
 {
     switch (month)
     {
@@ -527,7 +524,7 @@ int DaysInMonth(int year, int month)
         case 12:
             return 31;
         case 2:
-            return 28 + LeapYear(year);
+            return 28 + leapYear(year);
         case 4:
         case 6:
         case 9:
@@ -536,13 +533,13 @@ int DaysInMonth(int year, int month)
     default:
         break;
     }
-    return enforce(false, "Invalid month passed to DaysInMonth");
+    return enforce(false, "Invalid month passed to daysInMonth");
 }
 
 unittest
 {
-    assert(DaysInMonth(2003, 2) == 28);
-    assert(DaysInMonth(2004, 2) == 29);
+    assert(daysInMonth(2003, 2) == 28);
+    assert(daysInMonth(2004, 2) == 29);
 }
 
 /*************************************
@@ -573,7 +570,7 @@ string toString(d_time time)
     if (time == d_time_nan)
         return "Invalid Date";
 
-    auto dst = DaylightSavingTA(time);
+    auto dst = daylightSavingTA(time);
     auto offset = localTZA + dst;
     auto t = time + offset;
     auto sign = '+';
@@ -591,10 +588,10 @@ string toString(d_time time)
 
     auto len = sprintf(buffer.ptr,
             "%.3s %.3s %02d %02d:%02d:%02d GMT%c%02d%02d %d",
-            &daystr[WeekDay(t) * 3],
-            &monstr[MonthFromTime(t) * 3],
-            DateFromTime(t),
-            HourFromTime(t), MinFromTime(t), SecFromTime(t),
+            &daystr[weekDay(t) * 3],
+            &monstr[monthFromTime(t) * 3],
+            dateFromTime(t),
+            hourFromTime(t), minFromTime(t), secFromTime(t),
             sign, hr, mn,
             cast(long)yearFromTime(t));
     
@@ -614,16 +611,16 @@ string toUTCString(d_time t)
 {
     // Years are supposed to be -285616 .. 285616, or 7 digits
     // "Tue, 02 Apr 1996 02:04:57 GMT"
-    char[] buffer = new char[25 + 7 + 1];
+    auto buffer = new char[25 + 7 + 1];
 
     if (t == d_time_nan)
         return "Invalid Date";
 
     auto len = sprintf(buffer.ptr, "%.3s, %02d %.3s %d %02d:%02d:%02d UTC",
-            &daystr[WeekDay(t) * 3], DateFromTime(t),
-            &monstr[MonthFromTime(t) * 3],
+            &daystr[weekDay(t) * 3], dateFromTime(t),
+            &monstr[monthFromTime(t) * 3],
             yearFromTime(t),
-            HourFromTime(t), MinFromTime(t), SecFromTime(t));
+            hourFromTime(t), minFromTime(t), secFromTime(t));
     
     // Ensure no buggy buffer overflows
     assert(len < buffer.length);
@@ -646,14 +643,14 @@ string toDateString(d_time time)
     if (time == d_time_nan)
         return "Invalid Date";
 
-    auto dst = DaylightSavingTA(time);
+    auto dst = daylightSavingTA(time);
     auto offset = localTZA + dst;
     auto t = time + offset;
 
     auto len = sprintf(buffer.ptr, "%.3s %.3s %02d %d",
-        &daystr[WeekDay(t) * 3],
-        &monstr[MonthFromTime(t) * 3],
-        DateFromTime(t),
+        &daystr[weekDay(t) * 3],
+        &monstr[monthFromTime(t) * 3],
+        dateFromTime(t),
         cast(long)yearFromTime(t));
 
     // Ensure no buggy buffer overflows
@@ -677,7 +674,7 @@ string toTimeString(d_time time)
     if (time == d_time_nan)
         return "Invalid Date";
 
-    auto dst = DaylightSavingTA(time);
+    auto dst = daylightSavingTA(time);
     auto offset = localTZA + dst;
     auto t = time + offset;
     auto sign = '+';
@@ -694,7 +691,7 @@ string toTimeString(d_time time)
     //printf("hr = %d, offset = %g, localTZA = %g, dst = %g, + = %g\n", hr, offset, localTZA, dst, localTZA + dst);
 
     auto len = sprintf(buffer.ptr, "%02d:%02d:%02d GMT%c%02d%02d",
-        HourFromTime(t), MinFromTime(t), SecFromTime(t),
+        hourFromTime(t), minFromTime(t), secFromTime(t),
         sign, hr, mn);
 
     // Ensure no buggy buffer overflows
@@ -706,8 +703,8 @@ string toTimeString(d_time time)
 
 
 /******************************************
- * Parses s as a textual date string, and returns it as a d_time.
- * If the string is not a valid date, d_time_nan is returned.
+ * Parses s as a textual date string, and returns it as a d_time.  If
+ * the string is not a valid date, $(D d_time_nan) is returned.
  */
 
 d_time parse(string s)
@@ -716,12 +713,7 @@ d_time parse(string s)
     {
         Date dp;
         dp.parse(s);
-
-        //writefln("year = %d, month = %d, day = %d", dp.year, dp.month, dp.day);
-        //writefln("%02d:%02d:%02d.%03d", dp.hour, dp.minute, dp.second, dp.ms);
-        //writefln("weekday = %d, ampm = %d, tzcorrection = %d", dp.weekday, 1, dp.tzcorrection);
-
-        auto time = MakeTime(dp.hour, dp.minute, dp.second, dp.ms);
+        auto time = makeTime(dp.hour, dp.minute, dp.second, dp.ms);
         if (dp.tzcorrection == int.min)
             time -= localTZA;
         else
@@ -729,9 +721,9 @@ d_time parse(string s)
             time += cast(d_time)(dp.tzcorrection / 100) * msPerHour +
                     cast(d_time)(dp.tzcorrection % 100) * msPerMinute;
         }
-        auto day = MakeDay(dp.year, dp.month - 1, dp.day);
-        auto result = MakeDate(day,time);
-        return TimeClip(result);
+        auto day = makeDay(dp.year, dp.month - 1, dp.day);
+        auto result = makeDate(day,time);
+        return timeClip(result);
     }
     catch
     {
@@ -758,7 +750,7 @@ version (Win32)
         SYSTEMTIME st;
         GetSystemTime(&st);                // get time in UTC
         return SYSTEMTIME2d_time(&st, 0);
-        //return c.time.time(null) * TicksPerSecond;
+        //return c.time.time(null) * ticksPerSecond;
     }
 
     static d_time FILETIME2d_time(const FILETIME *ft)
@@ -771,10 +763,10 @@ version (Win32)
 
     FILETIME d_time2FILETIME(d_time dt)
     {
-        static assert(10_000_000 >= TicksPerSecond);
-        static assert(10_000_000 % TicksPerSecond == 0);
-        enum ulong ticksFrom1601To1970 = 11_644_473_600UL * TicksPerSecond;
-        ulong t = (dt + ticksFrom1601To1970) * (10_000_000 / TicksPerSecond);
+        static assert(10_000_000 >= ticksPerSecond);
+        static assert(10_000_000 % ticksPerSecond == 0);
+        enum ulong ticksFrom1601To1970 = 11_644_473_600UL * ticksPerSecond;
+        ulong t = (dt + ticksFrom1601To1970) * (10_000_000 / ticksPerSecond);
         FILETIME result = void;
         result.dwLowDateTime = cast(uint) (t & uint.max);
         result.dwHighDateTime = cast(uint) (t >> 32);
@@ -798,8 +790,8 @@ version (Win32)
 
         if (st.wYear)
         {
-            time = MakeTime(st.wHour, st.wMinute, st.wSecond, st.wMilliseconds);
-            day = MakeDay(st.wYear, st.wMonth - 1, st.wDay);
+            time = makeTime(st.wHour, st.wMinute, st.wSecond, st.wMilliseconds);
+            day = makeDay(st.wYear, st.wMonth - 1, st.wDay);
         }
         else
         {   /* wYear being 0 is a flag to indicate relative time:
@@ -809,13 +801,13 @@ version (Win32)
              */
 
             auto year = yearFromTime(t);
-            auto mday = DateFromNthWeekdayOfMonth(year,
+            auto mday = dateFromNthWeekdayOfMonth(year,
                     st.wMonth, st.wDay, st.wDayOfWeek);
-            day = MakeDay(year, st.wMonth - 1, mday);
-            time = MakeTime(st.wHour, st.wMinute, 0, 0);
+            day = makeDay(year, st.wMonth - 1, mday);
+            time = makeTime(st.wHour, st.wMinute, 0, 0);
         }
-        auto n = MakeDate(day,time);
-        return TimeClip(n);
+        auto n = makeDate(day,time);
+        return timeClip(n);
     }
 
     d_time getLocalTZA()
@@ -833,13 +825,13 @@ version (Win32)
         {
             case TIME_ZONE_ID_STANDARD:
                 return -(tzi.Bias + tzi.StandardBias)
-                    * cast(d_time)(60 * TicksPerSecond);
+                    * cast(d_time)(60 * ticksPerSecond);
             case TIME_ZONE_ID_DAYLIGHT:
                 // falthrough
-                //t = -(tzi.Bias + tzi.DaylightBias) * cast(d_time)(60 * TicksPerSecond);
+                //t = -(tzi.Bias + tzi.DaylightBias) * cast(d_time)(60 * ticksPerSecond);
                 //break;
             case TIME_ZONE_ID_UNKNOWN:
-                return -(tzi.Bias) * cast(d_time)(60 * TicksPerSecond);
+                return -(tzi.Bias) * cast(d_time)(60 * ticksPerSecond);
             default:
                 return 0;
         }
@@ -849,7 +841,7 @@ version (Win32)
      * Get daylight savings time adjust for time dt.
      */
 
-    int DaylightSavingTA(d_time dt)
+    int daylightSavingTA(d_time dt)
     {
         TIME_ZONE_INFORMATION tzi = void;
         d_time ts;
@@ -872,7 +864,7 @@ version (Win32)
 
                 if (td <= dt && dt < ts)
                 {
-                    t = -tzi.DaylightBias * (60 * TicksPerSecond);
+                    t = -tzi.DaylightBias * (60 * ticksPerSecond);
                     //printf("DST is in effect, %d\n", t);
                 }
                 else
@@ -906,11 +898,11 @@ version (Posix)
         //printf("getUTCtime()\n");
         if (gettimeofday(&tv, null))
         {   // Some error happened - try time() instead
-            return time(null) * TicksPerSecond;
+            return time(null) * ticksPerSecond;
         }
 
-        return tv.tv_sec * cast(d_time)TicksPerSecond +
-                (tv.tv_usec / (1000000 / cast(d_time)TicksPerSecond));
+        return tv.tv_sec * cast(d_time)ticksPerSecond +
+                (tv.tv_usec / (1000000 / cast(d_time)ticksPerSecond));
     }
 
     d_time getLocalTZA()
@@ -922,12 +914,12 @@ version (Posix)
         {
             tm result;
             localtime_r(&t, &result);
-            return result.tm_gmtoff * TicksPerSecond;
+            return result.tm_gmtoff * ticksPerSecond;
         }
         else
         {
             localtime(&t);        // this will set timezone
-            return -(timezone * TicksPerSecond);
+            return -(timezone * ticksPerSecond);
         }
     }
 
@@ -935,7 +927,7 @@ version (Posix)
      * Get daylight savings time adjust for time dt.
      */
 
-    int DaylightSavingTA(d_time dt)
+    int daylightSavingTA(d_time dt)
     {
         tm *tmp;
         time_t t;
@@ -943,13 +935,13 @@ version (Posix)
 
         if (dt != d_time_nan)
         {
-            d_time seconds = dt / TicksPerSecond;
+            d_time seconds = dt / ticksPerSecond;
             t = cast(time_t) seconds;
             if (t == seconds)        // if in range
             {
                 tmp = localtime(&t);
                 if (tmp.tm_isdst > 0)
-                    dst = TicksPerHour;        // BUG: Assume daylight savings time is plus one hour.
+                    dst = ticksPerHour;        // BUG: Assume daylight savings time is plus one hour.
             }
             else // out of range for system time, use our own calculation
             {
@@ -965,10 +957,10 @@ version (Posix)
                  */
                 d_time dstt(int year, int month, int week, int weekday, int hour)
                 {
-                    auto mday = DateFromNthWeekdayOfMonth(year,  month, weekday, week);
-                    return TimeClip(MakeDate(
-                        MakeDay(year, month - 1, mday),
-                        MakeTime(hour, 0, 0, 0)));
+                    auto mday = dateFromNthWeekdayOfMonth(year,  month, weekday, week);
+                    return timeClip(makeDate(
+                        makeDay(year, month - 1, mday),
+                        makeTime(hour, 0, 0, 0)));
                 }
 
                 d_time start;
@@ -988,7 +980,7 @@ version (Posix)
                 }
 
                 if (start <= dt && dt < end)
-                    dst = TicksPerHour;
+                    dst = ticksPerHour;
                 //writefln("start = %s, dt = %s, end = %s, dst = %s", start, dt, end, dst);
             }
         }
@@ -1025,17 +1017,17 @@ d_time toDtime(DosFileTime time)
 
     d_time t;
 
-    t = std.date.MakeDate(std.date.MakeDay(year, month, dayofmonth),
-            std.date.MakeTime(hour, minute, second, 0));
+    t = std.date.makeDate(std.date.makeDay(year, month, dayofmonth),
+            std.date.makeTime(hour, minute, second, 0));
 
     assert(yearFromTime(t) == year);
-    assert(MonthFromTime(t) == month);
-    assert(DateFromTime(t) == dayofmonth);
-    assert(HourFromTime(t) == hour);
-    assert(MinFromTime(t) == minute);
-    assert(SecFromTime(t) == second);
+    assert(monthFromTime(t) == month);
+    assert(dateFromTime(t) == dayofmonth);
+    assert(hourFromTime(t) == hour);
+    assert(minFromTime(t) == minute);
+    assert(secFromTime(t) == second);
 
-    t -= localTZA + DaylightSavingTA(t);
+    t -= localTZA + daylightSavingTA(t);
 
     return t;
 }
@@ -1050,14 +1042,14 @@ DosFileTime toDosFileTime(d_time t)
     if (t == d_time_nan)
         return cast(DosFileTime)0;
 
-    t += localTZA + DaylightSavingTA(t);
+    t += localTZA + daylightSavingTA(t);
 
     uint year = yearFromTime(t);
-    uint month = MonthFromTime(t);
-    uint dayofmonth = DateFromTime(t);
-    uint hour = HourFromTime(t);
-    uint minute = MinFromTime(t);
-    uint second = SecFromTime(t);
+    uint month = monthFromTime(t);
+    uint dayofmonth = dateFromTime(t);
+    uint hour = hourFromTime(t);
+    uint minute = minFromTime(t);
+    uint second = secFromTime(t);
 
     dt = (year - 1980) << 25;
     dt |= ((month + 1) & 0x0F) << 21;
@@ -1114,7 +1106,7 @@ uint[] benchmark(fun...)(uint times, uint[] result = null)
     foreach (ref e; result)
     {
         e *= 1000;
-        e /= TicksPerSecond;
+        e /= ticksPerSecond;
     }
     return result;
 }

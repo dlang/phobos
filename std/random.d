@@ -16,7 +16,7 @@ Twister) with a period of 2 to the power of 19937". In
 memory-constrained situations, $(LUCKY linear congruential) generators
 such as $(D MinstdRand0) and $(D MinstdRand) might be useful. The
 standard library provides an alias $(D_PARAM Random) for whichever
-generator it finds the most fit for the target environment.
+generator it considers the most fit for the target environment.
 
 Example:
 
@@ -160,13 +160,13 @@ $(D x0).
                     ~ LinearCongruentialEngine.stringof);
         }
         _x = modulus ? (x0 % modulus) : x0;
-        next;
+        popFront;
     }
 
 /**
    Advances the random sequence.
 */
-    void next()
+    void popFront()
     {
         static if (m)
             _x = cast(UIntType) ((cast(ulong) a * _x + c) % m);
@@ -177,7 +177,7 @@ $(D x0).
 /**
    Returns the current number in the random sequence.
 */
-    UIntType head()
+    UIntType front()
     {
         return _x;
     }
@@ -211,10 +211,10 @@ Example:
 ----
 // seed with a constant
 auto rnd0 = MinstdRand0(1);
-auto n = rnd0.next; // same for each run
+auto n = rnd0.popFront; // same for each run
 // Seed with an unpredictable value
 rnd0.seed(unpredictableSeed);
-n = rnd0.next; // different across runs
+n = rnd0.popFront; // different across runs
 ----
  */
 alias LinearCongruentialEngine!(uint, 16807, 0, 2147483647) MinstdRand0;
@@ -234,15 +234,15 @@ unittest
     MinstdRand0 rnd0;
     foreach (e; checking0)
     {
-        assert(rnd0.head == e);
-        rnd0.next;
+        assert(rnd0.front == e);
+        rnd0.popFront;
     }
     // Test the 10000th invocation
     // Correct value taken from:
     // http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2461.pdf
     rnd0.seed;
     advance(rnd0, 9999);
-    assert(rnd0.head == 1043618065);
+    assert(rnd0.front == 1043618065);
 
     // Test MinstdRand
     auto checking = [48271UL,182605794,1291394886,1914720637,2078669041,
@@ -251,8 +251,8 @@ unittest
     MinstdRand rnd;
     foreach (e; checking)
     {
-        assert(rnd.head == e);
-        rnd.next;
+        assert(rnd.front == e);
+        rnd.popFront;
     }
 
     // Test the 10000th invocation
@@ -260,12 +260,12 @@ unittest
     // http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2461.pdf
     rnd.seed;
     advance(rnd, 9999);
-    assert(rnd.head == 399268537);
+    assert(rnd.front == 399268537);
 }
 
 /**
-   The $(WEB math.sci.hiroshima-u.ac.jp/~m-mat/MT/emt.html, Mersenne
-   Twister) generator.
+The $(WEB math.sci.hiroshima-u.ac.jp/~m-mat/MT/emt.html, Mersenne
+Twister) generator.
  */
 struct MersenneTwisterEngine(
     UIntType, size_t w, size_t n, size_t m, size_t r,
@@ -274,7 +274,7 @@ struct MersenneTwisterEngine(
     UIntType c, size_t l)
 {
 /**
-   Parameter for the generator.
+Parameter for the generator.
 */
     enum size_t wordSize = w;
     enum size_t stateSize = n;
@@ -335,13 +335,13 @@ struct MersenneTwisterEngine(
             //mt[mti] &= ResultType.max;
             /* for >32 bit machines */
         }
-        next;
+        popFront;
     }
 
 /**
    Advances the generator.
 */
-    void next()
+    void popFront()
     {
         enum UIntType
             upperMask = ~((cast(UIntType) 1u <<
@@ -357,7 +357,7 @@ struct MersenneTwisterEngine(
             if (mti == n + 1)  /* if init_genrand() has not been called, */
             {
                 seed(defaultSeed); /* a default initial seed is used */
-                return next;
+                return popFront;
             }
 
             int kk = 0;
@@ -394,11 +394,11 @@ struct MersenneTwisterEngine(
 /**
    Returns the current random value.
  */
-    UIntType head()
+    UIntType front()
     {
         if (mti == n + 1)
         {
-            next;
+            popFront;
         }
         return _y;
     }
@@ -426,10 +426,10 @@ Example:
 ----
 // seed with a constant
 Mt19937 gen;
-auto n = gen.head; // same for each run
+auto n = gen.front; // same for each run
 // Seed with an unpredictable value
 gen.seed(unpredictableSeed);
-n = gen.head; // different across runs
+n = gen.front; // different across runs
 ----
  */
 alias MersenneTwisterEngine!(uint, 32, 624, 397, 31, 0x9908b0df, 11, 7,
@@ -440,7 +440,7 @@ unittest
 {
     Mt19937 gen;
     advance(gen, 9999);
-    assert(gen.head == 4123659995);
+    assert(gen.front == 4123659995);
 }
 
 /**
@@ -452,7 +452,7 @@ Example:
 
 ----
 auto rnd = Random(unpredictableSeed);
-auto n = rnd.head;
+auto n = rnd.front;
 ...
 ----
 */
@@ -465,8 +465,8 @@ uint unpredictableSeed()
         rand.seed(getpid ^ cast(uint)getUTCtime);
         seeded = true;
     }
-    rand.next;
-    return cast(uint) (getUTCtime ^ rand.head);
+    rand.popFront;
+    return cast(uint) (getUTCtime ^ rand.front);
 }
 
 unittest
@@ -477,8 +477,8 @@ unittest
 }
 
 /**
-The "default", "favorite", "suggested" random number generator on the
-current platform. It is an alias for one of the previously-defined
+The "default", "favorite", "suggested" random number generator type on
+the current platform. It is an alias for one of the previously-defined
 generators. You may want to use it if (1) you need to generate some
 nice random numbers, and (2) you don't care for the minutiae of the
 method being used.
@@ -561,23 +561,23 @@ if (is(CommonType!(T1, UniformRandomNumberGenerator) == void) &&
         auto myRange = _b - _a;
         if (!myRange) return _a;
         assert(urng.max - urng.min >= myRange,
-                "UniformIntGenerator.next not implemented for large ranges");
+                "UniformIntGenerator.popFront not implemented for large ranges");
         Unsigned!(typeof((urng.max - urng.min + 1) / (myRange + 1)))
             bucketSize = 1 + (urng.max - urng.min - myRange) / (myRange + 1);
         //assert(bucketSize, to!(string)(myRange));
         NumberType r = void;
         do
         {
-            r = (urng.head - urng.min) / bucketSize;
-            urng.next;
+            r = (urng.front - urng.min) / bucketSize;
+            urng.popFront;
         }
         while (r > myRange);
         return _a + r;
     }
     else
     {
-        urng.next;
-        return _a + (_b - _a) * cast(NumberType) (urng.head - urng.min)
+        urng.popFront;
+        return _a + (_b - _a) * cast(NumberType) (urng.front - urng.min)
             / (urng.max - urng.min);
     }
 }
@@ -639,7 +639,7 @@ unittest
 }
 
 /**
-Throws a dice with relative probabilities stored in $(D
+Rolls a dice with relative probabilities stored in $(D
 proportions). Returns the index in $(D proportions) that was chosen.
 
 Example:
@@ -675,9 +675,9 @@ unittest {
 }
 
 /**
-Convers a given range $(D r) in a random manner, i.e. goes through
-each element of $(D r) once and only once, just in a random order. $(D
-r) must be a forward access range with length.
+Covers a given range $(D r) in a random manner, i.e. goes through each
+element of $(D r) once and only once, just in a random order. $(D r)
+must be a forward access range with length.
 
 Example:
 ----
@@ -702,15 +702,20 @@ struct RandomCover(Range, Random)
         _input = input;
         _rnd = rnd;
         _chosen.length = _input.length;
-        next;
+        popFront;
     }
 
-    ref ElementType!(Range) head()
+    auto opSlice()
+    {
+        return this;
+    }
+
+    ref ElementType!(Range) front()
     {
         return _input[_current];
     }
 
-    void next()
+    void popFront()
     {
         if (_alreadyChosen >= _input.length)
         {
@@ -796,7 +801,7 @@ deprecated void rand_seed(uint seed, uint index)
 }
 
 /**
-Get the next random number in sequence.
+Get the popFront random number in sequence.
 BUGS: Shares a global single state, not multithreaded.
 SCHEDULED FOR DEPRECATION.
 */

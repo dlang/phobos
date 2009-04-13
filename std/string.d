@@ -1647,8 +1647,8 @@ bool startsWith(A1, A2)(A1 longer, A2 shorter)
             alias typeof(longer[0]) Char;
             foreach (Char c; shorter)
             {
-                if (longer.empty || longer.head != c) return false;
-                longer.next;
+                if (longer.empty || longer.front != c) return false;
+                longer.popFront;
             }
             return true;
         }
@@ -1658,8 +1658,8 @@ bool startsWith(A1, A2)(A1 longer, A2 shorter)
             foreach (Char c; longer)
             {
                 if (shorter.empty) return true;
-                if (shorter.head != c) return false;
-                shorter.next;
+                if (shorter.front != c) return false;
+                shorter.popFront;
             }
             return shorter.empty;
         }
@@ -1728,8 +1728,8 @@ bool endsWith(A1, A2)(A1 longer, A2 shorter)
             foreach_reverse (Char c; shorter)
             {
                 if (longer.empty) return false;
-                if (longer.toe != c) return false;
-                longer.retreat;
+                if (longer.back != c) return false;
+                longer.popBack;
             }
             return true;
         }
@@ -1739,8 +1739,8 @@ bool endsWith(A1, A2)(A1 longer, A2 shorter)
             foreach_reverse (Char c; longer)
             {
                 if (shorter.empty) return true;
-                if (shorter.toe != c) return false;
-                shorter.retreat;
+                if (shorter.back != c) return false;
+                shorter.popBack;
             }
             return shorter.empty;
         }
@@ -3377,7 +3377,7 @@ final bool isNumeric(string s, in bool bAllowSep = false)
         c = sx[i];
 
         // Digits are good, continue checking
-        // with the next character... ;)
+        // with the popFront character... ;)
         if (c >= '0' && c <= '9')
             continue;
 

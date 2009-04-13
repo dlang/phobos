@@ -1572,7 +1572,7 @@ Copy zis.
     
 /**
 Range primitives that allow incremental matching against a string.
-
+   
 Example:
 ---
 import std.stdio;
@@ -1591,21 +1591,27 @@ void main()
 // abcabc[ab]ab
 // abcabcab[ab]
 ---
-     */
+ */
+
+    ref auto opSlice()
+    {
+        return this;
+    }
+
     bool empty() const
     {
         return pmatch[0].startIdx == pmatch[0].startIdx.max;
     }
 
     /// Ditto
-    void next()
+    void popFront()
     {
         assert(!empty);
         test;
     }
 
     /// Ditto
-    RegexMatch!(Range) head()
+    RegexMatch!(Range) front()
     {
         return this;
     }
@@ -1647,17 +1653,22 @@ void main()
         private Range input;
         private regmatch_t[] matches;
 
+        ref auto opSlice()
+        {
+            return this;
+        }
+
         bool empty()
         {
             return matches.empty;
         }
         
-        Range head()
+        Range front()
         {
             return input[matches[0].startIdx .. matches[0].endIdx];
         }
 
-        void next() {  matches.next; }
+        void popFront() {  matches.popFront; }
 
         size_t length()
         {
@@ -1887,7 +1898,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
             if (engine.program[0] == engine.REbol || engine.program[0] == engine.REanystar)
             {
                 if (!(engine.attributes & engine.REA.multiline)) break;
-                // Scan for the next \n
+                // Scan for the popFront \n
                 if (!chr(startindex, '\n'))
                     break;		// no match if '\n' not found
             }
@@ -2914,7 +2925,12 @@ struct Splitter(Range)
     //     _match.pmatch = _match.pmatch.dup;
     // }
 
-    Range head()
+    ref auto opSlice()
+    {
+        return this;
+    }
+
+    Range front()
     {
         //write("[");scope(success) writeln("]");
         assert(_offset <= _match.pre.length
@@ -2927,7 +2943,7 @@ struct Splitter(Range)
         return _offset >= _input.length;
     }
 
-    void next()
+    void popFront()
     {
         //write("[");scope(success) writeln("]");
         assert(!empty);
@@ -2940,7 +2956,7 @@ struct Splitter(Range)
         {
             // skip past the separator
             _offset = _match.pre.length + _match.hit.length;
-            _match.next;
+            _match.popFront;
         }
     }
 }

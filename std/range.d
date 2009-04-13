@@ -26,25 +26,25 @@ version(unittest)
 
 /**
 Returns $(D true) if $(D R) is an input range. An input range must
-define the primitives $(D empty), $(D next), and $(D head). The
+define the primitives $(D empty), $(D popFront), and $(D front). The
 following code should compile for any input range.
 
 ----
 R r;             // can define a range object
 if (r.empty) {}  // can test for empty
-r.next;          // can invoke next
-auto h = r.head; // can get the head of the range
+r.popFront;          // can invoke next
+auto h = r.front; // can get the front of the range
 ----
 
 The semantics of an input range (not checkable during compilation) are
 assumed to be the following ($(D r) is an object of type $(D R)):
 
 $(UL $(LI $(D r.empty) returns $(D false) iff there is more data
-available in the range.)  $(LI $(D r.head) returns the current element
+available in the range.)  $(LI $(D r.front) returns the current element
 in the range. It may return by value or by reference. Calling $(D
-r.head) is allowed only if calling $(D r.empty) has, or would have,
-returned $(D false).) $(LI $(D r.next) advances to the next element in
-the range. Calling $(D r.next) is allowed only if calling $(D r.empty)
+r.front) is allowed only if calling $(D r.empty) has, or would have,
+returned $(D false).) $(LI $(D r.popFront) advances to the popFront element in
+the range. Calling $(D r.popFront) is allowed only if calling $(D r.empty)
 has, or would have, returned $(D false).))
  */
 template isInputRange(R)
@@ -53,8 +53,8 @@ template isInputRange(R)
     {
         R r;             // can define a range object
         if (r.empty) {}  // can test for empty
-        r.next;          // can invoke next
-        auto h = r.head; // can get the head of the range
+        r.popFront;          // can invoke next
+        auto h = r.front; // can get the front of the range
     }()));
 }
 
@@ -64,9 +64,9 @@ unittest
     static assert(!isInputRange!(A));
     struct B
     {
-        void next();
+        void popFront();
         bool empty();
-        int head();
+        int front();
     }
     static assert(isInputRange!(B));
     static assert(isInputRange!(int[]));
@@ -87,7 +87,7 @@ The semantics of an output range (not checkable during compilation)
 are assumed to be the following ($(D r) is an object of type $(D R)):
 
 $(UL $(LI $(D r.put(e)) puts $(D e) in the range (in a range-dependent
-manner) and advances to the next position in the range. Successive
+manner) and advances to the popFront position in the range. Successive
 calls to $(D r.put) add elements to the range. $(D put) may throw to
 signal failure.))
  */
@@ -152,21 +152,21 @@ unittest
 
 /**
 Returns $(D true) if $(D R) is a bidirectional range. A bidirectional
-range is a forward range that also offers the primitives $(D toe) and
-$(D retreat). The following code should compile for any bidirectional
+range is a forward range that also offers the primitives $(D back) and
+$(D popBack). The following code should compile for any bidirectional
 range.
 
 ----
 R r;
 static assert(isForwardRange!(R)); // range is an input range
-r.retreat;                        // can invoke retreat
-auto t = r.toe;                   // can get the toe of the range
+r.popBack;                        // can invoke retreat
+auto t = r.back;                   // can get the back of the range
 ----
 The semantics of a bidirectional range (not checkable during compilation)
 are assumed to be the following ($(D r) is an object of type $(D R)):
 
-$(UL $(LI $(D r.toe) returns (possibly a reference to) the last
-element in the range. Calling $(D r.toe) is allowed only if calling
+$(UL $(LI $(D r.back) returns (possibly a reference to) the last
+element in the range. Calling $(D r.back) is allowed only if calling
 $(D r.empty) has, or would have, returned $(D false).))
  */
 template isBidirectionalRange(R)
@@ -174,8 +174,8 @@ template isBidirectionalRange(R)
     enum bool isBidirectionalRange = isForwardRange!(R) && is(typeof(
     {
         R r;
-        r.retreat;         // can invoke retreat
-        auto h = r.toe;    // can get the toe of the range
+        r.popBack;         // can invoke retreat
+        auto h = r.back;    // can get the back of the range
     }()));
 }
 
@@ -185,18 +185,18 @@ unittest
     static assert(!isBidirectionalRange!(A));
     struct B
     {
-        void next();
+        void popFront();
         bool empty();
-        int head();
+        int front();
     }
     static assert(!isBidirectionalRange!(B));
     struct C
     {
-        void next();
+        void popFront();
         bool empty();
-        int head();
-        void retreat();
-        int toe();
+        int front();
+        void popBack();
+        int back();
     }
     static assert(isBidirectionalRange!(C));
     static assert(isBidirectionalRange!(int[]));
@@ -240,27 +240,27 @@ unittest
     static assert(!isRandomAccessRange!(A));
     struct B
     {
-        void next();
+        void popFront();
         bool empty();
-        int head();
+        int front();
     }
     static assert(!isRandomAccessRange!(B));
     struct C
     {
-        void next();
+        void popFront();
         bool empty();
-        int head();
-        void retreat();
-        int toe();
+        int front();
+        void popBack();
+        int back();
     }
     static assert(!isRandomAccessRange!(C));
     struct D
     {
-        void next();
+        void popFront();
         bool empty();
-        int head();
-        void retreat();
-        int toe();
+        int front();
+        void popBack();
+        int back();
         ref int opIndex(uint);
         //int opSlice(uint, uint);
     }
@@ -270,17 +270,28 @@ unittest
 
 /**
 The element type of $(D R). $(D R) does not have to be a range. The
-element type is determined as the type yielded by $(D r.head) for an
+element type is determined as the type yielded by $(D r.front) for an
 object $(D r) or type $(D R). For example, $(D ElementType!(T[])) is
 $(D T).
  */
 template ElementType(R)
 {
-    //alias typeof({ R r; return r.head; }()) ElementType;
-    static if (is(typeof(R.init.head()) T))
+    //alias typeof({ R r; return front(r[]); }()) ElementType;
+    static if (is(typeof(R.front()) T))
         alias T ElementType;
     else
         alias void ElementType;
+}
+
+unittest
+{
+    enum XYZ : string { a = "foo" };
+    auto x = front(XYZ.a);
+    static assert(is(ElementType!(XYZ) : char));
+    immutable char[3] a = "abc";
+    static assert(is(ElementType!(typeof(a)) : char));
+    int[] i;
+    static assert(is(ElementType!(typeof(i)) : int));
 }
 
 /**
@@ -291,7 +302,7 @@ range.
 ----
 R r;
 static assert(isForwardRange!(R));  // range is forward
-swap(r.head, r.head);              // can swap elements of the range
+swap(r.front, r.front);              // can swap elements of the range
 ----
  */
 template hasSwappableElements(R)
@@ -300,7 +311,7 @@ template hasSwappableElements(R)
     {
         R r;
         static assert(isForwardRange!(R)); // range is forward
-        swap(r.head, r.head);             // can swap elements of the range
+        swap(r.front, r.front);             // can swap elements of the range
     }()));
 }
 
@@ -320,8 +331,8 @@ range.
 ----
 R r;
 static assert(isForwardRange!(R));  // range is forward
-auto e = r.head;
-r.head = e;                         // can assign elements of the range
+auto e = r.front;
+r.front = e;                         // can assign elements of the range
 ----
  */
 template hasAssignableElements(R)
@@ -330,8 +341,8 @@ template hasAssignableElements(R)
     {
         R r;
         static assert(isForwardRange!(R)); // range is forward
-        auto e = r.head;
-        r.head = e;                       // can assign elements of the range
+        auto e = r.front;
+        r.front = e;                       // can assign elements of the range
     }()));
 }
 
@@ -429,7 +440,7 @@ checking $(D upTo).
 
 Otherwise, walks the range through its length and returns the number
 of elements seen. Performes $(BIGOH n) evaluations of $(D range.empty)
-and $(D range.next), where $(D n) is the effective length of $(D
+and $(D range.popFront), where $(D n) is the effective length of $(D
 range). The $(D upTo) parameter is useful to "cut the losses" in case
 the interest is in seeing whether the range has at least some number
 of elements. If the parameter $(D upTo) is specified, stops if $(D
@@ -445,7 +456,7 @@ if (isInputRange!(Range))
     else
     {
         size_t result;
-        for (; result < upTo && !range.empty; range.next) ++result;
+        for (; result < upTo && !range.empty; range.popFront) ++result;
         return result;
     }
 }
@@ -473,6 +484,14 @@ private:
     
 public:
 /**
+Returns $(D this).
+ */
+    ref Retro opSlice()
+    {
+        return this;
+    }
+
+/**
 Forwards to $(D _input.empty).
  */
     bool empty()
@@ -481,35 +500,35 @@ Forwards to $(D _input.empty).
     }
 
 /**
-Forwards to $(D _input.retreat).
+Forwards to $(D _input.popBack).
  */
-    void next()
+    void popFront()
     {
-        _input.retreat;
+        _input.popBack;
     }
 
 /**
-Forwards to $(D _input.next).
+Forwards to $(D _input.popFront).
  */
-    void retreat()
+    void popBack()
     {
-        _input.next;
+        _input.popFront;
     }
 
 /**
-Forwards to $(D _input.toe).
+Forwards to $(D _input.back).
  */
-    ref ElementType!(R) head()
+    ref ElementType!(R) front()
     {
-        return _input.toe;
+        return _input.back;
     }
 
 /**
-Forwards to $(D _input.head).
+Forwards to $(D _input.front).
  */
-    ref ElementType!(R) toe()
+    ref ElementType!(R) back()
     {
-        return _input.head;
+        return _input.front;
     }
 
 /**
@@ -545,8 +564,8 @@ unittest
     void test(int[] input, int[] witness)
     {
         auto r = retro(input);
-        assert(r.head == witness.head);
-        assert(r.toe == witness.toe);
+        assert(r.front == witness.front);
+        assert(r.back == witness.back);
         assert(equal(r, witness));
     }
     test([ 1 ], [ 1 ]);
@@ -560,7 +579,7 @@ unittest
 /**
 Iterates range $(D r) with stride $(D n). If the range is a
 random-access range, moves by indexing into the range; otehrwise,
-moves by successive calls to $(D next).
+moves by successive calls to $(D popFront).
 
 Example:
 ----
@@ -596,12 +615,20 @@ Initializes the stride.
                 foreach (i; 0 .. slack)
                 {
                     if (_input.empty) break;
-                    _input.retreat;
+                    _input.popBack;
                 }
             }
         }
     }
     
+/**
+Returns $(D this).
+ */
+    Stride opSlice()
+    {
+        return this;
+    }
+
 /**
 Forwards to $(D _input.empty).
  */
@@ -613,7 +640,7 @@ Forwards to $(D _input.empty).
 /**
 @@@
  */
-    void next()
+    void popFront()
     {
         static if (isRandomAccessRange!(R) && hasLength!(R) && hasSlicing!(R))
         {
@@ -624,16 +651,16 @@ Forwards to $(D _input.empty).
         else
             foreach (i; 0 .. _n)
             {
-                _input.next;
+                _input.popFront;
                 if (_input.empty) break;
             }
     }
 
 /**
-Forwards to $(D _input.next).
+Forwards to $(D _input.popFront).
  */
     static if (hasLength!(R))
-        void retreat() 
+        void popBack() 
         {
             enforce(_input.length >= _n);
             static if (isRandomAccessRange!(R) && hasSlicing!(R))
@@ -645,25 +672,25 @@ Forwards to $(D _input.next).
                 foreach (i; 0 .. _n)
                 {
                     if (_input.empty) break;
-                    _input.retreat;
+                    _input.popBack;
                 }
             }
         }
 
 /**
-Forwards to $(D _input.head).
+Forwards to $(D _input.front).
  */
-    ref ElementType!(R) head()
+    ref ElementType!(R) front()
     {
-        return _input.head;
+        return _input.front;
     }
 
 /**
-Forwards to $(D _input.toe) after getting rid of any slack items.
+Forwards to $(D _input.back) after getting rid of any slack items.
  */
-    ref ElementType!(R) toe()
+    ref ElementType!(R) back()
     {
-        return _input.toe;
+        return _input.back;
     }
 
 /**
@@ -716,7 +743,7 @@ unittest
 Spans multiple ranges in sequence. The function $(D chain) takes any
 number of ranges and returns a $(D Chain!(R1, R2,...)) object. The
 ranges may be different, but they must have the same element type. The
-result is a range that offers the $(D head), $(D next), and $(D empty)
+result is a range that offers the $(D front), $(D popFront), and $(D empty)
 primitives. If all input ranges offer random access and $(D length),
 $(D Chain) offers them as well.
 
@@ -771,27 +798,27 @@ public:
         return true;
     }
     
-    void next()
+    void popFront()
     {
         foreach (i, Unused; R)
         {
             if (_input.field[i].empty) continue;
-            _input.field[i].next;
+            _input.field[i].popFront;
             return;
         }
     }
     
     //@@@BUG 2597@@@ 
-    //auto head()
+    //auto front()
     //@@@AWKWARD!!!@@@
     mixin(
         (allSameType ? "ref " : "")~
-        q{ElementType head()
+        q{ElementType front()
             {
                 foreach (i, Unused; R)
                 {
                     if (_input.field[i].empty) continue;
-                    return _input.field[i].head;
+                    return _input.field[i].front;
                 }
                 assert(false);
             }
@@ -801,23 +828,23 @@ public:
     {
         mixin(
             (allSameType ? "ref " : "")~
-            q{ElementType toe()
+            q{ElementType back()
                 {
                     foreach_reverse (i, Unused; R)
                     {
                         if (_input.field[i].empty) continue;
-                        return _input.field[i].toe;
+                        return _input.field[i].back;
                     }
                     assert(false);
                 }
             });
 
-        void retreat()
+        void popBack()
         {
             foreach_reverse (i, Unused; R)
             {
                 if (_input.field[i].empty) continue;
-                _input.field[i].retreat;
+                _input.field[i].popBack;
                 return;
             }
         }    
@@ -848,6 +875,14 @@ public:
                     assert(false);
                 }
             });
+/**
+Returns $(D this).
+ */
+    ChainImpl opSlice()
+    {
+        return this;
+    }
+
 
     static if (allSatisfy!(hasLength, R) && allSatisfy!(hasSlicing, R))
         ChainImpl opSlice(size_t begin, size_t end)
@@ -911,7 +946,7 @@ unittest
         auto s2 = chain(arr1, arr2);
         static assert(isBidirectionalRange!(typeof(s2)));
         static assert(isRandomAccessRange!(typeof(s2)));
-        s2.head() = 1;
+        s2.front() = 1;
         auto s = chain(arr1, arr2, arr3);
         assert(s[5] == 6);
         assert(equal(s, witness));
@@ -975,6 +1010,14 @@ function $(D radial(input, startingPoint)).
     }
 
 /**
+Returns $(D this).
+ */
+    ref Radial opSlice()
+    {
+        return this;
+    }
+
+/**
 Range primitive operation that returns $(D true) iff there are no more
 elements to be iterated.
  */
@@ -987,7 +1030,7 @@ elements to be iterated.
 Range primitive operation that advances the range to its next
 element.
  */
-    void next()
+    void popFront()
     {
         assert(!empty);
         // We started with low active
@@ -997,7 +1040,7 @@ element.
             if (_up.empty)
             {
                 // no more stuff up, attempt to continue in the low area
-                _low.retreat;
+                _low.popBack;
             }
             else
             {
@@ -1009,8 +1052,8 @@ element.
         {
             // we consumed both the lower and the upper area, must
             // make real progress up there
-            if (!_up.empty) _up.next;
-            if (!_low.empty) _low.retreat;
+            if (!_up.empty) _up.popFront;
+            if (!_low.empty) _low.popBack;
             if (!_low.empty) _upIsActive = false;
         }
     }
@@ -1019,19 +1062,19 @@ element.
 Range primitive operation that returns the currently iterated
 element. Throws if the range is empty.
  */
-    ref ElementType!(R) head()
+    ref ElementType!(R) front()
     {
-        enforce(!empty, "Calling head() against an empty "
+        enforce(!empty, "Calling front() against an empty "
                 ~typeof(this).stringof);
         if (!_upIsActive)
         {
             // @@@ Damndest thing... removing the enforce below causes
             // a segfault in release unittest
             enforce(!_low.empty);
-            return _low.toe;
+            return _low.back;
         }
         enforce(!_up.empty);
-        return _up.head;
+        return _up.front;
     }
 }
 
@@ -1093,29 +1136,29 @@ public:
         return _maxAvailable == 0 || _input.empty;
     }
     
-    void next()
+    void popFront()
     {
         enforce(_maxAvailable > 0);
-        _input.next;
+        _input.popFront;
         --_maxAvailable;
     }
     
     //@@@BUG 2597@@@ 
-    //auto head()
-    static if (is(typeof(&(R.init.head()))))
+    //auto front()
+    static if (is(typeof(&(R.init.front()))))
     {
-        ref ElementType!(R) head()
+        ref ElementType!(R) front()
         {
             enforce(_maxAvailable > 0);
-            return _input.head;
+            return _input.front;
         }
     }
     else
     {
-        ElementType!(R) head()
+        ElementType!(R) front()
         {
             enforce(_maxAvailable > 0);
-            return _input.head;
+            return _input.front;
         }
     }
 
@@ -1142,12 +1185,12 @@ public:
         }
 
     static if (isBidirectionalRange!(R))
-        /*ref*/ ElementType!(R) toe()
+        /*ref*/ ElementType!(R) back()
         {
-            return _input.toe;
+            return _input.back;
         }
     else static if (isRandomAccessRange!(R))
-        /*ref*/ ElementType!(R) toe()
+        /*ref*/ ElementType!(R) back()
         {
             return _input[length];
         }
@@ -1170,7 +1213,7 @@ version(none) unittest
 
 /+
 /**
-Eagerly advances a copy of $(D r) $(D n) times (by calling $(D r.next)
+Eagerly advances a copy of $(D r) $(D n) times (by calling $(D r.popFront)
 $(D n) times) and returns it. The pass of $(D r) into $(D drop) is by
 value, so the original range remains unchanged. Completes in $(BIGOH
 1) steps for ranges that support slicing, and in $(BIGOH n) time for
@@ -1192,7 +1235,7 @@ Range drop(Range)(size_t n, Range r) if (isInputRange!(Range))
     }
     else
     {
-        while (--n) r.next;
+        while (--n) r.popFront;
         return r;
     }
 }
@@ -1205,7 +1248,7 @@ version(none) unittest
 
 /**
 Eagerly advances $(D r) itself (not a copy) $(D n) times (by calling
-$(D r.next) $(D n) times). The pass of $(D r) into $(D drop) is by
+$(D r.popFront) $(D n) times). The pass of $(D r) into $(D drop) is by
 reference, so the original range is affected. Completes in $(BIGOH 1)
 steps for ranges that support slicing, and in $(BIGOH n) time for all
 other ranges.
@@ -1229,7 +1272,7 @@ size_t advance(Range)(ref Range r, size_t n) if (isInputRange!(Range))
         foreach (i; 0 .. n)
         {
             if (r.empty) return i;
-            r.next;
+            r.popFront;
         }
     }
     return n;
@@ -1244,7 +1287,7 @@ version(none) unittest
 
 /**
 Eagerly retreats $(D r) itself (not a copy) $(D n) times (by calling
-$(D r.retreat) $(D n) times). The pass of $(D r) into $(D
+$(D r.popBack) $(D n) times). The pass of $(D r) into $(D
 advanceRight) is by reference, so the original range is
 affected. Completes in $(BIGOH 1) steps for ranges that support
 slicing, and in $(BIGOH n) time for all other ranges.
@@ -1269,7 +1312,7 @@ size_t retreatN(Range)(ref Range r, size_t n) if (isInputRange!(Range))
         foreach (i; 0 .. n)
         {
             if (r.empty) return i;
-            r.retreat;
+            r.popBack;
         }
     }
     return n;
@@ -1293,13 +1336,13 @@ struct Repeat(T)
 {
     private T _value;
     /// Range primitive implementations.
-    ref T head() { return _value; }
+    ref T front() { return _value; }
     /// Ditto
-    ref T toe() { return _value; }
+    ref T back() { return _value; }
     /// Ditto
     enum bool empty = false;
     /// Ditto
-    void next() {}
+    void popFront() {}
     /// Ditto
     ref T opIndex(uint) { return _value; }
 }
@@ -1354,14 +1397,14 @@ struct Cycle(R) if (isForwardRange!(R))
         size_t _index;
         this(R input, size_t index = 0) { _original = input; _index = index; }
         /// Range primitive implementations.
-        ref ElementType!(R) head()
+        ref ElementType!(R) front()
         {
             return _original[_index % _original.length];
         }
         /// Ditto
         enum bool empty = false;
         /// Ditto
-        void next() { ++_index; }
+        void popFront() { ++_index; }
         ref ElementType!(R) opIndex(size_t n)
         {
             return _original[(n + _index) % _original.length];
@@ -1372,14 +1415,14 @@ struct Cycle(R) if (isForwardRange!(R))
         R _original, _current;
         this(R input) { _original = input; _current = input; }
         /// Range primitive implementations.
-        ref ElementType!(R) head() { return _current.head; }
+        ref ElementType!(R) front() { return _current.front; }
         /// Ditto
         static if (isBidirectionalRange!(R))
-            ref ElementType!(R) toe() { return _current.toe; }
+            ref ElementType!(R) back() { return _current.back; }
         /// Ditto
         enum bool empty = false;
         /// Ditto
-        void next() { _current.next; if (_current.empty) _current = _original; }
+        void popFront() { _current.popFront; if (_current.empty) _current = _original; }
     }
 }
 
@@ -1395,14 +1438,14 @@ struct Cycle(R) if (isStaticArray!(R))
         _index = index;
     }
     /// Range primitive implementations.
-    ref ElementType head()
+    ref ElementType front()
     {
         return _ptr[_index % R.length];
     }
     /// Ditto
     enum bool empty = false;
     /// Ditto
-    void next() { ++_index; }
+    void popFront() { ++_index; }
     ref ElementType opIndex(size_t n)
     {
         return _ptr[(n + _index) % R.length];
@@ -1471,7 +1514,7 @@ assert(equal(lst, [1, 2, 3][]));
 struct SListRange(T, Topology topology = Topology.flexible)
 {
 private:
-    struct Node { T _value; Node * _next; }
+    struct Node { T _value; Node * _popFront; }
     Node * _root;
     
 public:
@@ -1491,10 +1534,18 @@ assert(equal(lst, [1, 2, 3, 4, 5][]));
         {
             _root[i]._value = e;
             if (i > 0)
-                _root[i - 1]._next = &_root[i];
+                _root[i - 1]._popFront = &_root[i];
         }
     }
     
+/**
+Returns $(D this).
+ */
+    ref SListRange opSlice()
+    {
+        return this;
+    }
+
 /**
 Range primitive operation that returns $(D true) iff there are no more
 elements to be iterated.
@@ -1506,26 +1557,26 @@ elements to be iterated.
 
 /**
 Range primitive operation that advances the range to its _next
-element. Forwards to $(D _input.retreat).
+element. Forwards to $(D _input.popBack).
  */
-    void next()
+    void popFront()
     {
         enforce(_root);
-        _root = _root._next;
+        _root = _root._popFront;
     }
 
 /**
 Range primitive operation that returns the currently iterated
-element. Forwards to $(D _input.toe).
+element. Forwards to $(D _input.back).
  */
-    ref T head()
+    ref T front()
     {
         enforce(_root);
         return _root._value;
     }
 
 /**
-   Returns $(D true) iff $(D this) list and $(D rhs) have the same head.
+   Returns $(D true) iff $(D this) list and $(D rhs) have the same front.
 */
     bool sameHead(in SListRange!(T, topology) rhs) const
     {
@@ -1539,12 +1590,12 @@ element. Forwards to $(D _input.toe).
 BUG:
 This function may fail to compile due to $(WEB d.puremagic.com/issues/show_bug.cgi?id=2626,bug 2676).
  */
-SListRange!(T, t) cons(T, Topology t)(T head, SListRange!(T, t) tail)
+SListRange!(T, t) cons(T, Topology t)(T front, SListRange!(T, t) tail)
 {
     typeof(return) result;
     result._root = new typeof(return).Node;
-    result._root._value = head;
-    result._root._next = tail._root;
+    result._root._value = front;
+    result._root._popFront = tail._root;
     return result;
 }
 
@@ -1653,12 +1704,12 @@ stopping policy.
 /**
 Returns a proxy for the current iterated element.
  */
-    Proxy head()
+    Proxy front()
     {
         Proxy result;
         foreach (i, Unused; R)
         {
-            result.ptrs.field[i] = &ranges.field[i].head;
+            result.ptrs.field[i] = &ranges.field[i].front;
         }
         return result;
     }
@@ -1666,35 +1717,35 @@ Returns a proxy for the current iterated element.
 /**
 Returns a proxy for the rightmost element.
  */
-    Proxy toe()
+    Proxy back()
     {
         Proxy result;
         foreach (i, Unused; R)
         {
-            result.ptrs.field[i] = &ranges.field[i].toe;
+            result.ptrs.field[i] = &ranges.field[i].back;
         }
         return result;
     }
 
 /**
-Advances to the next element in all controlled ranges.
+Advances to the popFront element in all controlled ranges.
  */
-    void next()
+    void popFront()
     {
         foreach (i, Unused; R)
         {
-            ranges.field[i].next;
+            ranges.field[i].popFront;
         }
     }
 
 /**
-Calls $(D retreat) for all controlled ranges.
+Calls $(D popBack) for all controlled ranges.
  */
-    void retreat()
+    void popBack()
     {
         foreach (i, Unused; R)
         {
-            ranges.field[i].retreat;
+            ranges.field[i].popBack;
         }
     }
 
@@ -1829,14 +1880,14 @@ version(none) unittest
         assert(e.at!(0) == e.at!(1));
     }
     auto z = zip(a, b);
-    swap(z.head(), z.toe());
+    swap(z.front(), z.back());
     //@@@BUG@@@
     //sort!("a.at!(0) < b.at!(0)")(zip(a, b));
 }
 
 /**
 Creates a mathematical sequence given the initial values and a
-recurrence function that computes the next value from the existing
+recurrence function that computes the popFront value from the existing
 values. The sequence comes in the form of an infinite forward
 range. The type $(D Recurrence) itself is seldom used directly; most
 often, recurrences are obtained by calling the function $(D
@@ -1846,7 +1897,7 @@ When calling $(D recurrence), the function that computes the next
 value is specified as a template argument, and the initial values in
 the recurrence are passed as regular arguments. For example, in a
 Fibonacci sequence, there are two initial values (and therefore a
-state size of 2) because computing the next Fibonacci value needs the
+state size of 2) because computing the popFront Fibonacci value needs the
 past two values.
 
 If the function is passed in string form, the state has name $(D "a")
@@ -1874,14 +1925,14 @@ struct Recurrence(alias fun, StateType, size_t stateSize)
 
     this(StateType[stateSize] initial) { _state = initial; }
 
-    void next()
+    void popFront()
     {
         _state[_n % stateSize] = binaryFun!(fun, "a", "n")(
             cycle(_state, _n), _n);
         ++_n;
     }
 
-    StateType head()
+    StateType front()
     {
         return _state[_n % stateSize];
     }
@@ -1908,7 +1959,7 @@ version(none) unittest
     //foreach (e; take(10, fib)) writeln(e);
     assert(equal(take(10, fib), witness));
     foreach (e; take(10, fib)) {}//writeln(e);
-    //writeln(s.head);
+    //writeln(s.front);
     auto fact = recurrence!("a[n - 1] * n")(1);
     foreach (e; take(10, fact)) {}//writeln(e);
     auto piapprox = recurrence!("a[n] + (n & 1 ? 4. : -4.) / (2 * n + 3)")(4.);
@@ -1949,13 +2000,13 @@ public:
         this._cache = compute(this._state, this._n);
     }
     
-    ElementType head()
+    ElementType front()
     {
         //return ElementType.init;
         return this._cache;
     }
 
-    void next()
+    void popFront()
     {
         this._cache = compute(this._state, ++this._n);
     }
@@ -2025,8 +2076,8 @@ version(none) unittest
 
     int[] a = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
     auto r1 = iota(a.ptr, a.ptr + a.length, 1);
-    assert(r1.head == a.ptr);
-    assert(r1.toe == a.ptr + a.length);
+    assert(r1.front == a.ptr);
+    assert(r1.back == a.ptr + a.length);
 }
 
 /*

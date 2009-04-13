@@ -131,10 +131,10 @@ unittest
 }
 
 /**
-Implements the range interface primitive $(D next) for built-in
+Implements the range interface primitive $(D popFront) for built-in
 arrays. Due to the fact that nonmember functions can be called with
-the first argument using the dot notation, $(D array.next) is
-equivalent to $(D next(array)).
+the first argument using the dot notation, $(D array.popFront) is
+equivalent to $(D popFront(array)).
 
 
 Example:
@@ -142,15 +142,15 @@ Example:
 void main()
 {
     int[] a = [ 1, 2, 3 ];
-    a.next;
+    a.popFront;
     assert(a == [ 2, 3 ]);
 }
 ----
 */
 
-void next(T)(ref T[] a)
+void popFront(T)(ref T[] a)
 {
-    assert(a.length, "Attempting to next() past the end of an array of "
+    assert(a.length, "Attempting to popFront() past the end of an array of "
             ~ T.stringof);
     a = a[1 .. $];
 }
@@ -160,15 +160,15 @@ unittest
     //@@@BUG 2608@@@
     //auto a = [ 1, 2, 3 ];
     int[] a = [ 1, 2, 3 ];
-    a.next;
+    a.popFront;
     assert(a == [ 2, 3 ]);
 }
 
 /**
-Implements the range interface primitive $(D retreat) for built-in
+Implements the range interface primitive $(D popBack) for built-in
 arrays. Due to the fact that nonmember functions can be called with
-the first argument using the dot notation, $(D array.retreat) is
-equivalent to $(D retreat(array)).
+the first argument using the dot notation, $(D array.popBack) is
+equivalent to $(D popBack(array)).
 
 
 Example:
@@ -176,28 +176,28 @@ Example:
 void main()
 {
     int[] a = [ 1, 2, 3 ];
-    a.retreat;
+    a.popBack;
     assert(a == [ 1, 2 ]);
 }
 ----
 */
 
-void retreat(T)(ref T[] a) { assert(a.length); a = a[0 .. $ - 1]; }
+void popBack(T)(ref T[] a) { assert(a.length); a = a[0 .. $ - 1]; }
 
 unittest
 {
     //@@@BUG 2608@@@
     //auto a = [ 1, 2, 3 ];
     int[] a = [ 1, 2, 3 ];
-    a.retreat;
+    a.popBack;
     assert(a == [ 1, 2 ]);
 }
 
 /**
-Implements the range interface primitive $(D head) for built-in
+Implements the range interface primitive $(D front) for built-in
 arrays. Due to the fact that nonmember functions can be called with
-the first argument using the dot notation, $(D array.head) is
-equivalent to $(D head(array)).
+the first argument using the dot notation, $(D array.front) is
+equivalent to $(D front(array)).
 
 
 Example:
@@ -205,35 +205,35 @@ Example:
 void main()
 {
     int[] a = [ 1, 2, 3 ];
-    assert(a.head == 1);
+    assert(a.front == 1);
 }
 ----
 */
-ref T head(T)(T[] a)
+ref typeof(A[0]) front(A)(A a) if (is(typeof(A[0])))
 {
-    assert(a.length, "Attempting to fetch the head of an empty array");
+    assert(a.length, "Attempting to fetch the front of an empty array");
     return a[0];
 }
 
 /// Ditto
-void head(T)(T[] a, T v) { assert(a.length); a[0] = v; }
+void front(T)(T[] a, T v) { assert(a.length); a[0] = v; }
 
 /**
-Implements the range interface primitive $(D toe) for built-in
+Implements the range interface primitive $(D back) for built-in
 arrays. Due to the fact that nonmember functions can be called with
-the first argument using the dot notation, $(D array.toe) is
-equivalent to $(D toe(array)).
+the first argument using the dot notation, $(D array.back) is
+equivalent to $(D back(array)).
 
 Example:
 ----
 void main()
 {
     int[] a = [ 1, 2, 3 ];
-    assert(a.head == 1);
+    assert(a.front == 1);
 }
 ----
 */
-ref T toe(T)(T[] a) { assert(a.length); return a[a.length - 1]; }
+ref T back(T)(T[] a) { assert(a.length); return a[a.length - 1]; }
 
 /**
 Implements the range interface primitive $(D put) for built-in
@@ -517,8 +517,8 @@ Appends another array to the managed array.
  */ 
     void put(AcceptedElementType[] items)
     {
-        for (; !items.empty(); items.next()) {
-            put(items.head());
+        for (; !items.empty(); items.popFront()) {
+            put(items.front());
         }
     }
 

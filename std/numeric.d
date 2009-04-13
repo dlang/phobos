@@ -840,9 +840,9 @@ euclideanDistance(Range1, Range2)(Range1 a, Range2 b)
     enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
     static if (haveLen) enforce(a.length == b.length);
     typeof(return) result = 0;
-    for (; !a.empty; a.next, b.next)
+    for (; !a.empty; a.popFront, b.popFront)
     {
-        auto t = a.head - b.head;
+        auto t = a.front - b.front;
         result += t * t;
     }
     static if (!haveLen) enforce(b.empty);
@@ -858,14 +858,14 @@ euclideanDistance(Range1, Range2, F)(Range1 a, Range2 b, F limit)
     enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
     static if (haveLen) enforce(a.length == b.length);
     typeof(return) result = 0;
-    for (; ; a.next, b.next)
+    for (; ; a.popFront, b.popFront)
     {
         if (a.empty)
         {
             static if (!haveLen) enforce(b.empty);
             break;
         }
-        auto t = a.head - b.head;
+        auto t = a.front - b.front;
         result += t * t;
         if (result >= limit) break;
     }
@@ -896,9 +896,9 @@ dotProduct(Range1, Range2)(Range1 a, Range2 b)
     enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
     static if (haveLen) enforce(a.length == b.length);
     typeof(return) result = 0;
-    for (; !a.empty; a.next, b.next)
+    for (; !a.empty; a.popFront, b.popFront)
     {
-        result += a.head * b.head;
+        result += a.front * b.front;
     }
     static if (!haveLen) enforce(b.empty);
     return result;
@@ -973,9 +973,9 @@ cosineSimilarity(Range1, Range2)(Range1 a, Range2 b)
     enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
     static if (haveLen) enforce(a.length == b.length);
     FPTemporary!(typeof(return)) norma = 0, normb = 0, dotprod = 0;
-    for (; !a.empty; a.next, b.next)
+    for (; !a.empty; a.popFront, b.popFront)
     {
-        immutable t1 = a.head, t2 = b.head;
+        immutable t1 = a.front, t2 = b.front;
         norma += t1 * t1;
         normb += t2 * t2;
         dotprod += t1 * t2;
@@ -1297,12 +1297,12 @@ for computing each step. Continuing on the previous example:
 string[] s = ["Hello", "brave", "new", "world"];
 string[] t = ["Hello", "new", "world"];
 auto simIter = gapWeightedSimilarityIncremental(s, t, 1);
-assert(simIter.head == 3); // three 1-length matches
-simIter.next;
-assert(simIter.head == 3); // three 2-length matches
-simIter.next;
-assert(simIter.head == 1); // one 3-length match
-simIter.next;
+assert(simIter.front == 3); // three 1-length matches
+simIter.popFront;
+assert(simIter.front == 3); // three 2-length matches
+simIter.popFront;
+assert(simIter.front == 1); // one 3-length match
+simIter.popFront;
 assert(simIter.empty);     // no more match
 ----
 
@@ -1379,10 +1379,18 @@ time and computes all matches of length 1.
     }
 
 /**
-Computes the match of the next length. Completes in $(BIGOH s.length *
+Returns $(D this).
+ */
+    ref GapWeightedSimilarityIncremental opSlice()
+    {
+        return this;
+    }
+
+/**
+Computes the match of the popFront length. Completes in $(BIGOH s.length *
 t.length) time.
  */ 
-    void next() {
+    void popFront() {
         // This is a large source of optimization: if similarity at
         // the gram-1 level was 0, then we can safely assume
         // similarity at the gram level is 0 as well.
@@ -1413,7 +1421,7 @@ t.length) time.
                 // commit to Si
                 Si[j] = tmp;
                 if (++j == t.length) break;
-                // get ready for the next step; virtually increment j,
+                // get ready for the popFront step; virtually increment j,
                 // so essentially stuffj_1 <-- stuffj
                 Si_1j_1 = Si_1j;
                 Sij_1 = tmp;
@@ -1449,16 +1457,16 @@ t.length) time.
                 Si_1[t.length - 1] = lastS;
             }
             currentValue /= pow(lambda, 2 * (gram + 1));
-            // get ready for the next computation
+            // get ready for the popFront computation
             swap(kl, kl_1);
         }
     }
 
 /**
 Returns the gapped similarity at the current match length (initially
-1, grows with each call to $(D next)).
+1, grows with each call to $(D popFront)).
  */
-    F head() { return currentValue; }
+    F front() { return currentValue; }
 
 /**
 Returns whether there are more matches.
@@ -1488,12 +1496,12 @@ unittest
     string[] t = ["Hello", "new", "world"];
     auto simIter = gapWeightedSimilarityIncremental(s, t, 1.0);
     //foreach (e; simIter) writeln(e);
-    assert(simIter.head == 3); // three 1-length matches
-    simIter.next;
-    assert(simIter.head == 3, text(simIter.head)); // three 2-length matches
-    simIter.next;
-    assert(simIter.head == 1); // one 3-length matches
-    simIter.next;
+    assert(simIter.front == 3); // three 1-length matches
+    simIter.popFront;
+    assert(simIter.front == 3, text(simIter.front)); // three 2-length matches
+    simIter.popFront;
+    assert(simIter.front == 1); // one 3-length matches
+    simIter.popFront;
     assert(simIter.empty);     // no more match
 
     s = ["Hello"];
@@ -1504,23 +1512,23 @@ unittest
     s = ["Hello"];
     t = ["Hello"];
     simIter = gapWeightedSimilarityIncremental(s, t, 0.5);
-    assert(simIter.head == 1); // one match
-    simIter.next;
+    assert(simIter.front == 1); // one match
+    simIter.popFront;
     assert(simIter.empty);
 
     s = ["Hello", "world"];
     t = ["Hello"];
     simIter = gapWeightedSimilarityIncremental(s, t, 0.5);
-    assert(simIter.head == 1); // one match
-    simIter.next;
+    assert(simIter.front == 1); // one match
+    simIter.popFront;
     assert(simIter.empty);
 
     s = ["Hello", "world"];
     t = ["Hello", "yah", "world"];
     simIter = gapWeightedSimilarityIncremental(s, t, 0.5);
-    assert(simIter.head == 2); // two 1-gram matches
-    simIter.next;
-    assert(simIter.head == 0.5, text(simIter.head)); // one 2-gram match, 1 gap
+    assert(simIter.front == 2); // two 1-gram matches
+    simIter.popFront;
+    assert(simIter.front == 0.5, text(simIter.front)); // one 2-gram match, 1 gap
 }
 
 unittest
@@ -1534,8 +1542,8 @@ unittest
     foreach (e; sim)
     {
         //writeln(e);
-        assert(e == witness.head);
-        witness.next;
+        assert(e == witness.front);
+        witness.popFront;
     }
     witness = [ 3., 1.3125, 0.25 ];
     sim = GapWeightedSimilarityIncremental!(string[])(
@@ -1545,8 +1553,8 @@ unittest
     foreach (e; sim)
     {
         //writeln(e);
-        assert(e == witness.head);
-        witness.next;
+        assert(e == witness.front);
+        witness.popFront;
     }
     assert(witness.empty);
 }
@@ -1580,12 +1588,12 @@ struct Primes(UIntType)
 {
     private UIntType[] found = [ 2 ];
 
-    UIntType head() { return found[$ - 1]; }
+    UIntType front() { return found[$ - 1]; }
 
-    void next()
+    void popFront()
     {
       outer:
-        for (UIntType candidate = head + 1 + (head != 2); ; candidate += 2)
+        for (UIntType candidate = front + 1 + (front != 2); ; candidate += 2)
         {
             UIntType stop = cast(uint) sqrt(cast(double) candidate);
             foreach (e; found)

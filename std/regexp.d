@@ -1363,7 +1363,7 @@ public int test(string s)
             {
                 if (attributes & REA.multiline)
                 {
-                    // Scan for the next \n
+                    // Scan for the popFront \n
                     if (!chr(si, '\n'))
                         break;		// no match if '\n' not found
                 }
@@ -3347,7 +3347,12 @@ struct Splitter(Range)
         _chunkLength = _input.length - search().length;
     }
 
-    Range head()
+    ref auto opSlice()
+    {
+        return this;
+    }
+
+    Range front()
     {
         return _input[0 .. _chunkLength];
     }
@@ -3357,7 +3362,7 @@ struct Splitter(Range)
         return _input.empty;
     }
 
-    void next()
+    void popFront()
     {
         if (_chunkLength == _input.length)
         {

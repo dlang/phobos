@@ -23,25 +23,12 @@ WIKI=Phobos/StdStdio
 module std.stdio;
 
 public import core.stdc.stdio;
+import core.memory, core.stdc.errno, core.stdc.stddef,
+    core.stdc.stdlib, core.stdc.string, core.stdc.wchar_;
 import std.stdiobase;
-import core.memory;
-import std.format;
-import std.utf;
-import std.string;
-import core.stdc.errno;
-import core.stdc.stdlib;
-import core.stdc.string;
-import core.stdc.stddef;
-import core.stdc.wchar_;
-import std.conv;
-import std.traits;
-import std.contracts;
-import std.file;
-import std.metastrings;
-import std.typetuple;
-import std.typecons;
-import std.algorithm;
-import std.array;
+import std.algorithm, std.array, std.contracts, std.conv, std.file, std.format,
+    std.metastrings, std.range, std.string, std.traits, std.typecons,
+    std.typetuple, std.utf;
 
 version (DigitalMars)
 {
@@ -483,7 +470,7 @@ arguments in text format to the file. */
     {
         //writef("", args[0 .. $]);
         auto w = lockingTextWriter;
-        foreach(arg; args)
+        foreach (arg; args)
         {
             static if (isSomeString!(typeof(arg)))
             {
@@ -660,25 +647,31 @@ Range that reads one line at a time. */
             file = f;
             this.terminator = terminator;
             keepTerminator = kt;
-            next; // prime the range
+            popFront; // prime the range
             // @@@BUG@@@ line below should not exist
             //if (file.p) ++file.p.refs;
         }
 
         /// Range primitive implementations.
+        ByLine!(Char, Terminator) opSlice()
+        {
+            return this;
+        }
+
+        /// Ditto
         bool empty() const
         {
             return !file.isOpen;
         }
 
         /// Ditto
-        Char[] head()
+        Char[] front()
         {
             return line;
         }
 
         /// Ditto
-        void next()
+        void popFront()
         {
             enforce(file.isOpen);
             file.readln(line, terminator);
@@ -775,9 +768,12 @@ $(D Range that locks the file and allows fast writing to it. */
         }
         
         /// Range primitive implementations.
-        void put(C)(const(C)[] writeme) if (is(C : dchar))
+        void put(A)(A writeme) if (is(ElementType!A : dchar))
         {
-            //return;
+            alias ElementType!A C;
+            static assert(!is(C == void));
+            // writeln("typeof(A.init[0]) = ", typeof(A.init[0]),
+            //         ", ElementType!A = ", ElementType!A);
             if (writeme[0].sizeof == 1 && orientation <= 0)
             {
                 //file.write(writeme); causes infinite recursion!!!
@@ -1110,7 +1106,7 @@ writef("Date: %2$s %1$s", "October", 5); // "Date: 5 October"
 
 The positional and non-positional styles can be mixed in the same
 format string. (POSIX leaves this behavior undefined.) The internal
-counter for non-positional parameters tracks the next parameter after
+counter for non-positional parameters tracks the popFront parameter after
 the largest positional parameter already used.
 
 New starting with 2.008: raw format specifiers. Using the "%r"
@@ -1716,23 +1712,29 @@ struct ByRecord(Fields...)
         assert(f.isOpen);
         file = f;
         this.format = format;
-        next; // prime the range
+        popFront; // prime the range
     }
 
     /// Range primitive implementations.
+    ref auto opSlice()
+    {
+        return this;
+    }
+
+    /// Ditto
     bool empty() const
     {
         return !file.isOpen;
     }
 
     /// Ditto
-    ref Tuple!(Fields) head()
+    ref Tuple!(Fields) front()
     {
         return current;
     }
 
     /// Ditto
-    void next()
+    void popFront()
     {
         enforce(file.isOpen);
         file.readln(line);

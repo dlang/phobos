@@ -12,8 +12,8 @@ STYLECSS_TGT = $(DOC_OUTPUT_DIR)/../style.css
 
 ################################################################################
 
-CC_win32 = wine /home/andrei/d/dm/bin/dmc.exe
-DMD_win32 = wine /home/andrei/dmd/windows/bin/dmd.exe
+CC_win32 = wine dmc.exe
+DMD_win32 = wine dmd.exe
 OBJSUFFIX_win32 = .obj
 LIBSUFFIX_win32 = .lib
 EXESUFFIX_win32 = .exe
@@ -37,12 +37,12 @@ DFLAGS_release = -w -O -release -inline
 ################################################################################
 
 STD_MODULES = $(addprefix std/, algorithm array atomics base64 bigint	\
-        bitarray bitmanip boxer compiler complex contracts conv cpuid	\
-        cstream ctype date datebase dateparse demangle encoding file	\
-        format functional getopt intrinsic iterator loader math md5		\
-        metastrings mmfile numeric openrj outbuffer path perf process	\
-        random range regex regexp signals socket socketstream stdint	\
-        stdio stdiobase stream string syserror system traits typecons	\
+        bitmanip boxer compiler complex contracts conv cpuid cstream	\
+        ctype date datebase dateparse demangle encoding file format		\
+        functional getopt intrinsic iterator loader math md5			\
+        metastrings mmfile numeric outbuffer path perf process random	\
+        range regex regexp signals socket socketstream stdint stdio		\
+        stdiobase stream string syserror system traits typecons			\
         typetuple uni uri utf variant xml zip zlib)
 EXTRA_MODULES = $(addprefix std/c/, stdarg stdio) $(addprefix etc/c/,	\
 zlib)
@@ -156,16 +156,16 @@ $(eval $(foreach B,debug release, $(foreach S,posix win32, $(call	\
 # Dox
 
 $(DOC_OUTPUT_DIR)/%.html : %.d $(STDDOC)
-	$(DMD_posix) -c -o- -Df$@ $(STDDOC) $<
+	$(DMD_win32) -c -o- -Df$@ $(STDDOC) $<
 
 $(DOC_OUTPUT_DIR)/std_%.html : std/%.d $(STDDOC)
-	$(DMD_posix) -c -o- -Df$@ $(STDDOC) $<
+	$(DMD_win32) -c -o- -Df$@ $(STDDOC) $<
 
 $(DOC_OUTPUT_DIR)/std_c_%.html : std/c/%.d $(STDDOC)
-	$(DMD_posix) -c -o- -Df$@ $(STDDOC) $<
+	$(DMD_win32) -c -o- -Df$@ $(STDDOC) $<
 
 $(DOC_OUTPUT_DIR)/std_c_linux_%.html : std/c/linux/%.d $(STDDOC)
-	$(DMD_posix) -c -o- -Df$@ $(STDDOC) $<
+	$(DMD_win32) -c -o- -Df$@ $(STDDOC) $<
 
 $(STYLECSS_TGT) : $(STYLECSS_SRC)
 	cp $< $@

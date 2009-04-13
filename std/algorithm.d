@@ -66,7 +66,7 @@ in many languages of functional flavor. The call $(D map!(fun)(range))
 returns a range of which elements are obtained by applying $(D fun(x))
 left to right for all $(D x) in $(D range). The original ranges are
 not changed. Evaluation is done lazily. The range returned by $(D map)
-caches the last value such that evaluating $(D head) multiple times
+caches the last value such that evaluating $(D front) multiple times
 does not result in multiple calls to $(D fun).
 
 Example:
@@ -121,12 +121,16 @@ struct Map(alias fun, Range) if (isInputRange!(Range))
     Range _input;
     ElementType _cache;
 
-    private void fillCache() { if (!_input.empty) _cache = fun(_input.head); }
+    private void fillCache() { if (!_input.empty) _cache = fun(_input.front); }
 
-    this(Range input) { _input = input; fillCache; }    
+    this(Range input) { _input = input; fillCache; }
+    ref Map opSlice()
+    {
+        return this;
+    }
     bool empty() { return _input.empty; }
-    void next() { _input.next; fillCache; }
-    ElementType head() { return _cache; }
+    void popFront() { _input.popFront; fillCache; }
+    ElementType front() { return _cache; }
 }
 
 unittest
@@ -271,16 +275,16 @@ public:
     reduce(Range)(Range r)
     {
         static if (fun.length == 1)
-            auto e = r.head;
+            auto e = r.front;
         else
         {
             typeof(return) e;
             foreach (i, Unused; typeof(typeof(return).field))
             {
-                e.field[i] = r.head;
+                e.field[i] = r.front;
             }
         }
-        r.next;
+        r.popFront;
         return reduce(e, r);
     }
 }
@@ -321,11 +325,11 @@ assert(a == [ 5, 5, 5, 5 ]);
 ----
  */
 void fill(Range, Value)(Range range, Value filler)
-if (isForwardRange!Range && is(typeof(Range.init.head = Value.init)))
+if (isForwardRange!Range && is(typeof(Range.init.front = Value.init)))
 {
-    for (; !range.empty; range.next)
+    for (; !range.empty; range.popFront)
     {
-        range.head = filler;
+        range.front = filler;
     }
 }
 
@@ -362,14 +366,14 @@ assert(a == [ 8, 9, 8, 9, 8 ]);
 
 void fill(Range1, Range2)(Range1 range, Range2 filler)
 if (isForwardRange!Range1 && isForwardRange!Range2
-        && is(typeof(Range1.init.head = Range2.init.head)))
+        && is(typeof(Range1.init.front = Range2.init.front)))
 {
     enforce(!filler.empty);
     auto t = filler;
-    for (; !range.empty; range.next, t.next)
+    for (; !range.empty; range.popFront, t.popFront)
     {
         if (t.empty) t = filler;
-        range.head = t.head;
+        range.front = t.front;
     }
 }
 
@@ -419,21 +423,26 @@ struct Filter(alias pred, Range) if (isInputRange!(Range))
     this(Range r)
     {
         _input = r;
-        while (!_input.empty && !pred(_input.head)) _input.next;
+        while (!_input.empty && !pred(_input.front)) _input.popFront;
     }
     
+    ref Filter opSlice()
+    {
+        return this;
+    }
+
     bool empty() { return _input.empty; }
-    void next()
+    void popFront()
     {
         do
         {
-            _input.next;
-        } while (!_input.empty && !pred(_input.head));
+            _input.popFront;
+        } while (!_input.empty && !pred(_input.front));
     }
 
-    ElementType!(Range) head()
+    ElementType!(Range) front()
     {
-        return _input.head;
+        return _input.front;
     }
 }
 
@@ -515,10 +524,10 @@ $(D walkLength(src) >= walkLength(tgt))
  */
 Range2 moveAll(Range1, Range2)(Range1 src, Range2 tgt)
 {
-    for (; !src.empty; src.next, tgt.next)
+    for (; !src.empty; src.popFront, tgt.popFront)
     {
         enforce(!tgt.empty);
-        move(src.head, tgt.head);
+        move(src.front, tgt.front);
     }
     return tgt;
 }
@@ -541,10 +550,10 @@ leftover portion of the two ranges.
  */
 Tuple!(Range1, Range2) moveSome(Range1, Range2)(Range1 src, Range2 tgt)
 {
-    for (; !src.empty && !tgt.empty; src.next, tgt.next)
+    for (; !src.empty && !tgt.empty; src.popFront, tgt.popFront)
     {
         enforce(!tgt.empty);
-        move(src.head, tgt.head);
+        move(src.front, tgt.front);
     }
     return tuple(src, tgt);
 }
@@ -627,7 +636,12 @@ struct Splitter(Range, Separator)
         _chunkLength = _input.length - search().length;
     }
 
-    Range head()
+    ref auto opSlice()
+    {
+        return this;
+    }
+
+    Range front()
     {
         return _input[0 .. _chunkLength];
     }
@@ -637,7 +651,7 @@ struct Splitter(Range, Separator)
         return _input.empty;
     }
 
-    void next()
+    void popFront()
     {
         if (_chunkLength == _input.length)
         {
@@ -700,29 +714,34 @@ struct Uniq(alias pred, R)
         _input = input;
     }
 
-    void next()
+    ref Uniq opSlice()
     {
-        auto last = _input.head;
-        do
-        {
-            _input.next;
-        }
-        while (!_input.empty && binaryFun!(pred)(last, _input.head));
+        return this;
     }
 
-    void retreat()
+    void popFront()
     {
-        auto last = _input.toe;
+        auto last = _input.front;
         do
         {
-            _input.retreat;
+            _input.popFront;
         }
-        while (!_input.empty && binaryFun!(pred)(last, _input.toe));
+        while (!_input.empty && binaryFun!(pred)(last, _input.front));
+    }
+
+    void popBack()
+    {
+        auto last = _input.back;
+        do
+        {
+            _input.popBack;
+        }
+        while (!_input.empty && binaryFun!(pred)(last, _input.back));
     }
 
     bool empty() { return _input.empty; }
-    ElementType!(R) head() { return _input.head; }
-    ElementType!(R) toe() { return _input.toe; }
+    ElementType!(R) front() { return _input.front; }
+    ElementType!(R) back() { return _input.back; }
 }
 
 /// Ditto
@@ -766,23 +785,23 @@ assert(r == [ 1, 2, 3, 4, 5 ]);
 //     //auto target = begin(r), e = end(r);
 //     auto target = r;
 //     auto source = r;
-//     source.next;
+//     source.popFront;
 //     while (!source.empty)
 //     {
-//         if (!pred(target.head, source.head))
+//         if (!pred(target.front, source.front))
 //         {
-//             target.next;
+//             target.popFront;
 //             continue;
 //         }
 //         // found an equal *source and *target
 //         for (;;)
 //         {
 //             //@@@
-//             //move(source.head, target.head);
+//             //move(source.front, target.front);
 //             target[0] = source[0];
-//             source.next;
+//             source.popFront;
 //             if (source.empty) break;
-//             if (!pred(target.head, source.head)) target.next;
+//             if (!pred(target.front, source.front)) target.popFront;
 //         }
 //         break;
 //     }
@@ -808,7 +827,7 @@ assert(r == [ 1, 2, 3, 4, 5 ]);
 // }
 
 // find
-/* * Advances $(D haystack) by calling $(D haystack.next) up to the
+/* * Advances $(D haystack) by calling $(D haystack.popFront) up to the
 first occurrence of $(D needle), or until $(D haystack) becomes empty.
 An optional binary predicate $(D pred) instructs $(D find) on how to
 perform the comparison (with the current $(D haystack) element in the
@@ -992,7 +1011,7 @@ find(alias pred = "a == b", Range, Ranges...)
         foreach (i, Unused; Ranges)
         {
             alias needles[i] rhs;
-            static if (is(typeof(binaryFun!(pred)(lhs.head, rhs))))
+            static if (is(typeof(binaryFun!(pred)(lhs.front, rhs))))
             {
                 // Single-element lookup
                 auto r = lowerBound!(Range.assumeSortedBy)(lhs, rhs);
@@ -1008,9 +1027,9 @@ find(alias pred = "a == b", Range, Ranges...)
             {
                 // Subrange lookup
                 if (rhs.empty) continue;
-                auto lb = lowerBound!(Range.assumeSortedBy)(lhs, rhs.head);
+                auto lb = lowerBound!(Range.assumeSortedBy)(lhs, rhs.front);
                 if (lb.length == lhs.length) continue; // not found
-                auto eq = equalRange!(Range.assumeSortedBy)(lb, rhs.head);
+                auto eq = equalRange!(Range.assumeSortedBy)(lb, rhs.front);
                 foreach (j; lb.length .. lb.length + eq.length)
                 {
                     if (startsWith!(pred)(lhs[j .. $], rhs))
@@ -1054,7 +1073,7 @@ find(alias pred = "a == b", Range, Ranges...)
         }
         else
         {
-            for (;; haystack.next)
+            for (;; haystack.popFront)
             {
                 auto r = startsWith!(pred)(haystack, needles);
                 if (r || haystack.empty)
@@ -1256,8 +1275,8 @@ unittest
 }
 
 /**
-Advances the input range $(D haystack) by calling $(D haystack.next)
-until either $(D pred(haystack.head)), or $(D
+Advances the input range $(D haystack) by calling $(D haystack.popFront)
+until either $(D pred(haystack.front)), or $(D
 haystack.empty). Performs $(BIGOH haystack.length) evaluations of $(D
 pred). See also $(WEB sgi.com/tech/stl/find_if.html, STL's find_if).
 
@@ -1278,7 +1297,7 @@ assert(find!(pred)(arr) == arr);
 Range find(alias pred, Range)(Range haystack) if (isInputRange!(Range))
 {
     alias unaryFun!(pred) predFun;
-    for (; !haystack.empty && !predFun(haystack.head); haystack.next)
+    for (; !haystack.empty && !predFun(haystack.front); haystack.popFront)
     {
     }
     return haystack;
@@ -1336,30 +1355,30 @@ if (isInputRange!(Range))
     }
     else
     {
-        for (;; lhs.next)
+        for (;; lhs.popFront)
         {
             // Has any of the rhs's fell off its end?
             foreach (i, Unused; Ranges)
             {
-                static if (!is(typeof(binaryFun!(pred)(lhs.head, rhs[i]))))
+                static if (!is(typeof(binaryFun!(pred)(lhs.front, rhs[i]))))
                     if (rhs[i].empty) return i + 1; // found!
             }
             if (lhs.empty) return 0; // exhausted lhs, nothing found
             foreach (i, Unused; Ranges)
             {
-                static if (is(typeof(binaryFun!(pred)(lhs.head, rhs[i]))))
+                static if (is(typeof(binaryFun!(pred)(lhs.front, rhs[i]))))
                 {
                     // single-element comparison
-                    if (binaryFun!(pred)(lhs.head, rhs[i]))
+                    if (binaryFun!(pred)(lhs.front, rhs[i]))
                         return i + 1;
                     // mismatch, fall through
                 }
                 else
                 {
                     assert(!rhs[i].empty);
-                    if (binaryFun!(pred)(lhs.head, rhs[i].head))
+                    if (binaryFun!(pred)(lhs.front, rhs[i].front))
                     {
-                        rhs[i].next;
+                        rhs[i].popFront;
                         continue;
                     }
                 }
@@ -1417,13 +1436,13 @@ if (isInputRange!(Range))
 {
     alias doesThisEnd lhs;
     alias withOneOfThese rhs;
-    for (; !lhs.empty; lhs.retreat)
+    for (; !lhs.empty; lhs.popBack)
     {
         foreach (i, Unused; Ranges)
         {
-            static if (is(typeof(binaryFun!(pred)(lhs.toe, rhs[i]))))
+            static if (is(typeof(binaryFun!(pred)(lhs.back, rhs[i]))))
             {
-                if (binaryFun!(pred)(lhs.toe, rhs[i]))
+                if (binaryFun!(pred)(lhs.back, rhs[i]))
                     return i + 1;
                 // mismatch, fall through
             }
@@ -1434,9 +1453,9 @@ if (isInputRange!(Range))
                     // found a match!!!
                     return i + 1;
                 }
-                if (binaryFun!(pred)(lhs.toe, rhs[i].toe))
+                if (binaryFun!(pred)(lhs.back, rhs[i].back))
                 {
-                    rhs[i].retreat;
+                    rhs[i].popBack;
                     continue;
                 }
             }
@@ -1456,7 +1475,7 @@ if (isInputRange!(Range))
     // fell off the lhs range
     foreach (i, Unused; Ranges)
     {
-        static if (!is(typeof(binaryFun!(pred)(lhs.head, rhs[i]))))
+        static if (!is(typeof(binaryFun!(pred)(lhs.front, rhs[i]))))
             if (rhs[i].empty) return i + 1;
     }
     return 0;
@@ -1498,9 +1517,9 @@ Range findAdjacent(alias pred = "a == b", Range)(Range r)
     auto ahead = r;
     if (!ahead.empty)
     {
-        for (ahead.next; !ahead.empty; r.next, ahead.next)
+        for (ahead.popFront; !ahead.empty; r.popFront, ahead.popFront)
         {
-            if (binaryFun!(pred)(r.head, ahead.head)) break;
+            if (binaryFun!(pred)(r.front, ahead.front)) break;
         }
     }
     return r;
@@ -1517,8 +1536,8 @@ unittest
 
 // findAmong
 /**
-Advances $(D seq) by calling $(D seq.next) until either $(D
-find!(pred)(choices, seq.head)) is $(D true), or $(D seq) becomes
+Advances $(D seq) by calling $(D seq.popFront) until either $(D
+find!(pred)(choices, seq.front)) is $(D true), or $(D seq) becomes
 empty. Performs $(BIGOH seq.length * choices.length) evaluations of
 $(D pred). See also $(WEB sgi.com/tech/stl/find_first_of.html, STL's
 find_first_of).
@@ -1535,7 +1554,7 @@ Range1 findAmong(alias pred = "a == b", Range1, Range2)(
     Range1 seq, Range2 choices)
     if (isInputRange!(Range1) && isForwardRange!(Range2))
 {
-    for (; !seq.empty && find!(pred)(choices, seq.head).empty; seq.next)
+    for (; !seq.empty && find!(pred)(choices, seq.front).empty; seq.popFront)
     {
     }
     return seq;
@@ -1578,9 +1597,9 @@ Range1 findAmongSorted(alias less = "a < b", Range1, Range2)(
 {
     alias binaryFun!(less) lessFun; // pun not intended
     assert(isSorted!(lessFun)(choices));
-    for (; !seq.empty; seq.next)
+    for (; !seq.empty; seq.popFront)
     {
-        if (canFindSorted!(lessFun)(choices, seq.head)) break;
+        if (canFindSorted!(lessFun)(choices, seq.front)) break;
     }
     return seq;
 }
@@ -1678,8 +1697,8 @@ bool equal(alias pred = "a == b", Range1, Range2)(Range1 r1, Range2 r2)
     foreach (e1; r1)
     {
         if (r2.empty) return false;
-        if (!binaryFun!(pred)(e1, r2.head)) return false;
-        r2.next;
+        if (!binaryFun!(pred)(e1, r2.front)) return false;
+        r2.popFront;
     }
     return r2.empty;
 }
@@ -1859,15 +1878,15 @@ Tuple!(ElementType!(Range), size_t)
 minCount(alias pred = "a < b", Range)(Range range)
 {
     if (range.empty) return typeof(return)();
-    auto p = &(range.head);
+    auto p = &(range.front);
     size_t occurrences = 1;
-    for (range.next; !range.empty; range.next)
+    for (range.popFront; !range.empty; range.popFront)
     {
-        if (binaryFun!(pred)(*p, range.head)) continue;
-        if (binaryFun!(pred)(range.head, *p))
+        if (binaryFun!(pred)(*p, range.front)) continue;
+        if (binaryFun!(pred)(range.front, *p))
         {
             // change the min
-            p = &(range.head);
+            p = &(range.front);
             occurrences = 1;
         }
         else
@@ -1911,9 +1930,9 @@ Tuple!(Range1, Range2)
 mismatch(alias pred = "a == b", Range1, Range2)(Range1 r1, Range2 r2)
     if (isInputRange!(Range1) && isInputRange!(Range2))
 {
-    for (; !r1.empty && !r2.empty; r1.next(), r2.next())
+    for (; !r1.empty && !r2.empty; r1.popFront(), r2.popFront())
     {
-        if (!binaryFun!(pred)(r1.head, r2.head)) break;
+        if (!binaryFun!(pred)(r1.front, r2.front)) break;
     }
     return tuple(r1, r2);
 }
@@ -2242,9 +2261,9 @@ swapRanges(Range1, Range2)(Range1 r1, Range2 r2)
             && hasSwappableElements!(Range1) && hasSwappableElements!(Range2)
             && is(ElementType!(Range1) == ElementType!(Range2)))
 {
-    for (; !r1.empty && !r2.empty; r1.next, r2.next)
+    for (; !r1.empty && !r2.empty; r1.popFront, r2.popFront)
     {
-        swap(r1.head, r2.head);
+        swap(r1.front, r2.front);
     }
     return tuple(r1, r2);
 }
@@ -2276,10 +2295,10 @@ void reverse(Range)(Range r)
 {
     while (!r.empty)
     {
-        swap(r.head, r.toe);
-        r.next;
+        swap(r.front, r.back);
+        r.popFront;
         if (r.empty) break;
-        r.retreat;
+        r.popBack;
     }
 }
 
@@ -2383,10 +2402,10 @@ size_t bringToFront(Range1, Range2)(Range1 front, Range2 back)
 
         for (;;)
         {
-            swap(front2.head, back2.head);
+            swap(front2.front, back2.front);
         
-            front2.next;
-            back2.next;
+            front2.popFront;
+            back2.popFront;
             ++result;
             bool leftShorter = front2.empty;
             static if (sameHeadExists)
@@ -2452,7 +2471,7 @@ unittest
     // test with a SList
     auto lst = SListRange!(int)(1, 2, 3, 4, 5);
     assert(equal(lst, [1, 2, 3, 4, 5][]));
-    auto lst1 = lst; lst1.next; lst1.next;
+    auto lst1 = lst; lst1.popFront; lst1.popFront;
     assert(equal(lst1, [3, 4, 5][]));
     auto m = bringToFront(lst, lst1);
     //assert(equal(m, [1, 2][]));
@@ -2583,7 +2602,7 @@ moves is performed.)  $(LI Otherwise, if $(D s ==
 SwapStrategy.unstable && isBidirectionalRange!Range &&
 hasLength!Range), then elements are still moved from the end of the
 range, but time is spent on advancing between slots by repeated calls
-to $(D range.next).)  $(LI Otherwise, elements are moved incrementally
+to $(D range.popFront).)  $(LI Otherwise, elements are moved incrementally
 towards the front of $(D range); a given element is never moved
 several times, but more elements are moved than in the previous
 cases.))
@@ -2641,9 +2660,9 @@ if (isBidirectionalRange!Range && hasLength!Range && s != SwapStrategy.stable)
     auto rid = min(lDelta, rDelta);
     foreach (i; 0 .. rid)
     {
-        move(range.toe, t.head);
-        range.retreat;
-        t.next;
+        move(range.back, t.front);
+        range.popBack;
+        t.popFront;
     }
     if (rEnd - rStart == lEnd - lStart)
     {
@@ -2714,14 +2733,14 @@ if (isForwardRange!Range && !isBidirectionalRange!Range
             enum delta = 1;
         }
         assert(pos <= from);
-        for (; pos < from; ++pos, src.next, tgt.next)
+        for (; pos < from; ++pos, src.popFront, tgt.popFront)
         {
-            move(src.head, tgt.head);
+            move(src.front, tgt.front);
         }
         // now skip source to the "to" position
         src.advance(delta);
         pos += delta;
-        foreach (j; 0 .. delta) result.retreat;
+        foreach (j; 0 .. delta) result.popBack;
     }
     // leftover move
     moveAll(src, tgt);
@@ -2786,30 +2805,30 @@ if (isBidirectionalRange!Range)
     {
         for (;!range.empty;)
         {
-            if (!unaryFun!(pred)(range.head))
+            if (!unaryFun!(pred)(range.front))
             {
-                range.next;
+                range.popFront;
                 continue;
             }
-            move(range.toe, range.head);
-            range.retreat;
-            result.retreat;
+            move(range.back, range.front);
+            range.popBack;
+            result.popBack;
         }
     }
     else
     {
         auto tgt = range;
-        for (; !range.empty; range.next)
+        for (; !range.empty; range.popFront)
         {
-            if (unaryFun!(pred)(range.head))
+            if (unaryFun!(pred)(range.front))
             {
                 // yank this guy
-                result.retreat;
+                result.popBack;
                 continue;
             }
             // keep this guy
-            move(range.head, tgt.head);
-            tgt.next;
+            move(range.front, tgt.front);
+            tgt.popFront;
         }
     }
     return result;
@@ -2966,7 +2985,7 @@ Range partition(alias predicate,
     {
         if (r.length == 1)
         {
-            if (pred(r.head)) r.next;
+            if (pred(r.front)) r.popFront;
             return r;
         }
         const middle = r.length / 2;
@@ -2978,17 +2997,17 @@ Range partition(alias predicate,
     }
     else static if (ss == SwapStrategy.semistable)
     {
-        for (; !r.empty; r.next)
+        for (; !r.empty; r.popFront)
         {
             // skip the initial portion of "correct" elements
-            if (pred(r.head)) continue;
+            if (pred(r.front)) continue;
             // hit the first "bad" element
             auto result = r;
-            for (r.next; !r.empty; r.next)
+            for (r.popFront; !r.empty; r.popFront)
             {
-                if (!pred(r.head)) continue;
-                swap(result.head, r.head);
-                result.next;
+                if (!pred(r.front)) continue;
+                swap(result.front, r.front);
+                result.popFront;
             }
             return result;
         }
@@ -3003,22 +3022,22 @@ Range partition(alias predicate,
             for (;;)
             {
                 if (r.empty) return r;
-                if (!pred(r.head)) break;
-                r.next;
+                if (!pred(r.front)) break;
+                r.popFront;
             }
             // found the left bound
             assert(!r.empty);
             auto r1 = r;
             for (;;)
             {
-                if (pred(r1.toe)) break;
-                r1.retreat;
+                if (pred(r1.back)) break;
+                r1.popBack;
                 if (r1.empty) return r;
             }
             // found the right bound, swap & make progress
-            swap(r.head, r1.toe);
-            r.next;
-            r1.retreat;
+            swap(r.front, r1.back);
+            r.popFront;
+            r1.popBack;
         }
     }
 }
@@ -3080,12 +3099,12 @@ assert(isPartitioned!("a & 1")(r));
 bool isPartitioned(alias pred, Range)(Range r)
     if (isForwardRange!(Range))
 {
-    for (; !r.empty; r.next)
+    for (; !r.empty; r.popFront)
     {
-        if (unaryFun!(pred)(r.head)) continue;
-        for (r.next; !r.empty; r.next)
+        if (unaryFun!(pred)(r.front)) continue;
+        for (r.popFront; !r.empty; r.popFront)
         {
-            if (unaryFun!(pred)(r.head)) return false;
+            if (unaryFun!(pred)(r.front)) return false;
         }
         break;
     }
@@ -3137,13 +3156,13 @@ void topN(alias less = "a < b",
     while (!r.empty)
     {
         auto pivot = r.length / 2;
-        swap(r[pivot], r.toe);
+        swap(r[pivot], r.back);
         bool pred(ElementType!(Range) a)
         {
-            return binaryFun!(less)(a, r.toe);
+            return binaryFun!(less)(a, r.back);
         }
         auto right = partition!(pred, ss)(r);
-        swap(right.head, r.toe);
+        swap(right.front, r.back);
         pivot = r.length - right.length;
         if (pivot == nth) return;
         if (pivot < nth) r = r[pivot + 1 .. $];
@@ -3214,7 +3233,7 @@ void sort(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
         Range)(Range r)
 {
     alias binaryFun!(less) lessFun;
-    static if (is(typeof(lessFun(r.head, r.head)) == bool))
+    static if (is(typeof(lessFun(r.front, r.front)) == bool))
     {
         sortImpl!(lessFun, ss)(r);
         assert(isSorted!(lessFun)(r));
@@ -3329,13 +3348,13 @@ void sortImpl(alias less, SwapStrategy ss, Range)(Range r)
                 return less(a, r[r.length - 1]);
             }
             auto right = partition!(pred, ss)(r);
-            swap(right.head, r.toe);
+            swap(right.front, r.back);
             // done with partitioning
             if (r.length == right.length)
             {
                 // worst case: *b <= everything (also pivot <= everything)
                 // avoid quadratic behavior
-                do r.next; while (!r.empty && !less(right.head, r.head));
+                do r.popFront; while (!r.empty && !less(right.front, r.front));
             }
             else
             {
@@ -3357,8 +3376,8 @@ void sortImpl(alias less, SwapStrategy ss, Range)(Range r)
                 //auto firstPivotPos = find!(pred1)(r).ptr;
                 auto pivotSpan = find!(pred1)(r);
                 assert(!pivotSpan.empty);
-                assert(!less(pivotSpan.head, pivot)
-                       && !less(pivot, pivotSpan.head));
+                assert(!less(pivotSpan.front, pivot)
+                       && !less(pivot, pivotSpan.front));
                 // find the last occurrence of the pivot
                 bool pred2(Elem a) { return less(pivot, a); }
                 //auto lastPivotPos = find!(pred2)(pivotsRight[1 .. $]).ptr;
@@ -3420,14 +3439,14 @@ void schwartzSort(alias transform, alias less = "a < b",
         SwapStrategy ss = SwapStrategy.unstable, Range)(Range r)
     if (isRandomAccessRange!(Range) && hasLength!(Range))
 {
-    alias typeof(transform(r.head)) XformType;
+    alias typeof(transform(r.front)) XformType;
     auto xform = new XformType[r.length];
     foreach (i, e; r)
     {
         xform[i] = transform(e);
     }
     auto z = zip(xform, r);
-    alias typeof(z.head()) ProxyType;
+    alias typeof(z.front()) ProxyType;
     bool myLess(ProxyType a, ProxyType b)
     {
         return binaryFun!(less)(a.at!(0), b.at!(0));
@@ -3569,20 +3588,20 @@ bool isSorted(alias less = "a < b", Range)(Range r)
     static if (is(ElementType!(Range) == const))
     {
         auto ahead = r;
-        for (ahead.next; !ahead.empty; r.next, ahead.next)
+        for (ahead.popFront; !ahead.empty; r.popFront, ahead.popFront)
         {
-            if (binaryFun!(less)(ahead.head, r.head)) return false;
+            if (binaryFun!(less)(ahead.front, r.front)) return false;
         }
     }
     else
     {
-        // cache the last element so we avoid calling r.head twice
-        auto last = r.head;
-        for (r.next; !r.empty; r.next)
+        // cache the last element so we avoid calling r.front twice
+        auto last = r.front;
+        for (r.popFront; !r.empty; r.popFront)
         {
-            auto next = r.head;
-            if (binaryFun!(less)(next, last)) return false;
-            move(next, last);
+            auto popFront = r.front;
+            if (binaryFun!(less)(popFront, last)) return false;
+            move(popFront, last);
         }
     }
     return true;
@@ -3637,8 +3656,8 @@ void makeIndex(
 {
     // assume collection already ordered
     size_t i;
-    for (; !r.empty; r.next, ++i)
-        index[i] = &(r.head);
+    for (; !r.empty; r.popFront, ++i)
+        index[i] = &(r.front);
     enforce(index.length == i);
     // sort the index
     static bool indirectLess(ElementType!(RangeIndex) a,
@@ -3662,7 +3681,7 @@ void makeIndex(
     // assume collection already ordered
     size_t i;
     auto r1 = r;
-    for (; !r1.empty; r1.next, ++i)
+    for (; !r1.empty; r1.popFront, ++i)
         index[i] = i;
     enforce(index.length == i);
     // sort the index
@@ -4268,7 +4287,7 @@ struct BinaryHeap(Range, alias less = "a < b") if (isRandomAccessRange!(Range))
     {
         if (store.length <= 1) return;
         auto newEnd = store.length - 1;
-        swap(store.head, store[newEnd]);
+        swap(store.front, store[newEnd]);
         heapify(store[0 .. newEnd], 0);
     }
 
@@ -4329,8 +4348,8 @@ Pops the largest element (according to the predicate $(D less)).
     void pop()
     {
         enforce(_store.length);
-        if (_store.length > 1) swap(_store.head, _store.toe);
-        _store.retreat;
+        if (_store.length > 1) swap(_store.front, _store.back);
+        _store.popBack;
         heapify(_store, 0);
     }
 
@@ -4350,8 +4369,8 @@ heap is sorted and returned.
         auto result = _store[newSize .. _store.length];
         while  (_store.length > newSize)
         {
-            swap(_store.head, _store.toe);
-            _store.retreat;
+            swap(_store.front, _store.back);
+            _store.popBack;
             heapify(_store, 0);
         }
         return result;
@@ -4363,7 +4382,7 @@ newTop).
  */
     void replaceTop(ElementType!(Range) newTop)
     {
-        _store.head = newTop;
+        _store.front = newTop;
         heapify!(less)(_store, 0);
     }
 
@@ -4433,17 +4452,17 @@ TRange topNCopy(alias less = "a < b", SRange, TRange)
             target = target[0 .. i];
             break;
         }
-        target[i] = source.head;
-        source.next;
+        target[i] = source.front;
+        source.popFront;
     }
     if (target.empty) return target;
 
     auto heap = BinaryHeap!(TRange, less)(target);
     // now copy stuff into the target if it's smaller
-    for (; !source.empty; source.next)
+    for (; !source.empty; source.popFront)
     {
-        if (!binaryFun!(less)(source.head, heap.top)) continue;
-        heap.replaceTop(source.head);
+        if (!binaryFun!(less)(source.front, heap.top)) continue;
+        heap.replaceTop(source.front);
     }
     return sorted ? heap.pop(heap.length) : heap.release;
 }
@@ -4490,30 +4509,30 @@ public:
         this.r2 = r2;
         if (r1.empty) state = r2.empty ? State.bothEmpty : State.r1Empty;
         else if (r2.empty) state = State.r2Empty;
-        else if (comp(r2.head, r1.head)) state = State.usingR2;
+        else if (comp(r2.front, r1.front)) state = State.usingR2;
         else state = State.usingR1;
     }
     
-    void next()
+    void popFront()
     {
         switch (state)
         {
         case State.usingR1: 
-            r1.next;
+            r1.popFront;
             if (r1.empty) state = State.r1Empty;
-            else state = comp(r2.head, r1.head) ? State.usingR2 : State.usingR1;
+            else state = comp(r2.front, r1.front) ? State.usingR2 : State.usingR1;
             break;
         case State.r2Empty:
-            r1.next;
+            r1.popFront;
             if (r1.empty) state = State.bothEmpty;
             break;
         case State.usingR2:
-            r2.next;
+            r2.popFront;
             if (r2.empty) state = State.r2Empty;
-            else state = comp(r2.head, r1.head) ? State.usingR2 : State.usingR1;
+            else state = comp(r2.front, r1.front) ? State.usingR2 : State.usingR1;
             break;
         case State.r1Empty:
-            r2.next;
+            r2.popFront;
             if (r2.empty) state = State.bothEmpty;
             break;
         default:
@@ -4521,14 +4540,14 @@ public:
         }
     }
 
-    CommonType!(ElementType!(R1), ElementType!(R2)) head()
+    CommonType!(ElementType!(R1), ElementType!(R2)) front()
     {
         switch (state)
         {
         case State.usingR1: case State.r2Empty:
-            return r1.head;
+            return r1.front;
         case State.usingR2: case State.r1Empty:
-            return r2.head;
+            return r2.front;
         default:
             break;
         }
@@ -4571,14 +4590,14 @@ private:
         if (empty) return;
         for (;;)
         {
-            if (comp(r1.head, r2.head))
+            if (comp(r1.front, r2.front))
             {
-                r1.next;
+                r1.popFront;
                 if (r1.empty) return;
             }
-            else if (comp(r2.head, r1.head))
+            else if (comp(r2.front, r1.front))
             {
-                r2.next;
+                r2.popFront;
                 if (r2.empty) return;
             }
             else break;
@@ -4594,17 +4613,17 @@ public:
         adjustPosition;
     }
     
-    void next()
+    void popFront()
     {
-        r1.next;
-        r2.next;
+        r1.popFront;
+        r2.popFront;
         adjustPosition;
     }
 
-    CommonType!(ElementType!(R1), ElementType!(R2)) head()
+    CommonType!(ElementType!(R1), ElementType!(R2)) front()
     {
         assert(!empty);
-        return r1.head;
+        return r1.front;
     }
 
     bool empty() { return r1.empty || r2.empty; }
@@ -4641,16 +4660,16 @@ private:
     {
         while (!r1.empty)
         {
-            if (r2.empty || comp(r1.head, r2.head)) break;
-            if (comp(r2.head, r1.head))
+            if (r2.empty || comp(r1.front, r2.front)) break;
+            if (comp(r2.front, r1.front))
             {
-                r2.next;
+                r2.popFront;
             }
             else
             {
                 // both are equal
-                r1.next;
-                r2.next;
+                r1.popFront;
+                r2.popFront;
             }
         }
     }
@@ -4664,16 +4683,16 @@ public:
         adjustPosition;
     }
     
-    void next()
+    void popFront()
     {
-        r1.next;
+        r1.popFront;
         adjustPosition;
     }
 
-    ElementType!(R1) head()
+    ElementType!(R1) front()
     {
         assert(!empty);
-        return r1.head;
+        return r1.front;
     }
 
     bool empty() { return r1.empty; }

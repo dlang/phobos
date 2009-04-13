@@ -435,9 +435,9 @@ version(Posix) void getTimes(in char[] name,
 {
     struct_stat64 statbuf = void;
     cenforce(stat64(toStringz(name), &statbuf) == 0, name);
-    ftc = cast(d_time) statbuf.st_ctime * std.date.TicksPerSecond;
-    fta = cast(d_time) statbuf.st_atime * std.date.TicksPerSecond;
-    ftm = cast(d_time) statbuf.st_mtime * std.date.TicksPerSecond;
+    ftc = cast(d_time) statbuf.st_ctime * std.date.ticksPerSecond;
+    fta = cast(d_time) statbuf.st_atime * std.date.ticksPerSecond;
+    ftm = cast(d_time) statbuf.st_mtime * std.date.ticksPerSecond;
 }
     
 /***************************************************
@@ -647,7 +647,7 @@ version(Posix) d_time lastModified(in char[] name)
 {
     struct_stat64 statbuf = void;
     cenforce(stat64(toStringz(name), &statbuf) == 0, name);
-    return cast(d_time) statbuf.st_mtime * std.date.TicksPerSecond;
+    return cast(d_time) statbuf.st_mtime * std.date.ticksPerSecond;
 }
     
 /**
@@ -689,7 +689,7 @@ version(Posix) d_time lastModified(in char[] name, d_time returnIfMissing)
     struct_stat64 statbuf = void;
     return stat64(toStringz(name), &statbuf) != 0
         ? returnIfMissing
-        : cast(d_time) statbuf.st_mtime * std.date.TicksPerSecond;
+        : cast(d_time) statbuf.st_mtime * std.date.ticksPerSecond;
 }
 
 unittest
@@ -828,11 +828,11 @@ version(Posix) struct DirEntry
                 "Failed to stat file `"~name~"'");
         _size = statbuf.st_size;
         _creationTime = cast(d_time)statbuf.st_ctime
-            * std.date.TicksPerSecond;
+            * std.date.ticksPerSecond;
         _lastAccessTime = cast(d_time)statbuf.st_atime
-            * std.date.TicksPerSecond;
+            * std.date.ticksPerSecond;
         _lastWriteTime = cast(d_time)statbuf.st_mtime
-            * std.date.TicksPerSecond;
+            * std.date.ticksPerSecond;
         didstat = true;
     }
 }
@@ -1025,21 +1025,21 @@ version(Windows) void setTimes(in char[] name, d_time fta, d_time ftm)
 version(Posix) void setTimes(in char[] name, d_time fta, d_time ftm)
 {
     timeval[2] t = void;
-    t[0].tv_sec = to!int(fta / std.date.TicksPerSecond);
+    t[0].tv_sec = to!int(fta / std.date.ticksPerSecond);
     t[0].tv_usec = cast(int)
-        (cast(long) ((cast(double) fta / std.date.TicksPerSecond)
+        (cast(long) ((cast(double) fta / std.date.ticksPerSecond)
                 * 1_000_000) % 1_000_000);
-    t[1].tv_sec = to!int(ftm / std.date.TicksPerSecond);
+    t[1].tv_sec = to!int(ftm / std.date.ticksPerSecond);
     t[1].tv_usec = cast(int)
-        (cast(long) ((cast(double) ftm / std.date.TicksPerSecond)
+        (cast(long) ((cast(double) ftm / std.date.ticksPerSecond)
                 * 1_000_000) % 1_000_000);
     enforce(utimes(toStringz(name), t) == 0);
 }
     
 unittest
 {
-    system("echo a > deleteme") == 0 || assert(false);
-    //scope(exit) remove("deleteme");
+    system("echo a>deleteme") == 0 || assert(false);
+    scope(exit) remove("deleteme");
     d_time ftc1, fta1, ftm1;
     getTimes("deleteme", ftc1, fta1, ftm1);
     setTimes("deleteme", fta1 + 1000, ftm1 + 1000);
