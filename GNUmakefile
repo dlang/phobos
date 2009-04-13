@@ -156,16 +156,16 @@ $(eval $(foreach B,debug release, $(foreach S,posix win32, $(call	\
 # Dox
 
 $(DOC_OUTPUT_DIR)/%.html : %.d $(STDDOC)
-	$(DMD_win32) -c -o- -Df$@ $(STDDOC) $<
+	$(DMD_win32) -version=ddoc -c -o- -Df$@ $(STDDOC) $<
 
 $(DOC_OUTPUT_DIR)/std_%.html : std/%.d $(STDDOC)
-	$(DMD_win32) -c -o- -Df$@ $(STDDOC) $<
+	$(DMD_win32) -version=ddoc -c -o- -Df$@ $(STDDOC) $<
 
 $(DOC_OUTPUT_DIR)/std_c_%.html : std/c/%.d $(STDDOC)
-	$(DMD_win32) -c -o- -Df$@ $(STDDOC) $<
+	$(DMD_win32) -version=ddoc -c -o- -Df$@ $(STDDOC) $<
 
 $(DOC_OUTPUT_DIR)/std_c_linux_%.html : std/c/linux/%.d $(STDDOC)
-	$(DMD_win32) -c -o- -Df$@ $(STDDOC) $<
+	$(DMD_win32) -version=ddoc -c -o- -Df$@ $(STDDOC) $<
 
 $(STYLECSS_TGT) : $(STYLECSS_SRC)
 	cp $< $@
