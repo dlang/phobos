@@ -27,7 +27,6 @@
 
 public import std.base64;
 public import std.bind;
-public import std.bitarray;
 public import std.boxer;
 public import std.compiler;
 public import std.contracts;
@@ -125,10 +124,6 @@ version (all)
     std.math.lgamma(3);
 
     std.demangle.demangle("hello");
-
-    BitArray ba;			// std.bitarray
-    ba.length = 3;
-    ba[0] = true;
 
     std.uni.isUniAlpha('A');
 

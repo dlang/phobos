@@ -95,7 +95,7 @@ SRCS= std\math.d std\stdio.d std\dateparse.d std\date.d std\uni.d std\string.d \
 	std\compiler.d std\cpuid.d std\format.d std\demangle.d \
 	std\path.d std\file.d std\outbuffer.d std\utf.d std\uri.d \
 	std\ctype.d std\random.d std\mmfile.d \
-	std\bitarray.d std\algorithm.d std\array.d std\numeric.d std\functional.d \
+	std\algorithm.d std\array.d std\numeric.d std\functional.d \
 	std\range.d std\stdiobase.d \
 	std\metastrings.d std\contracts.d std\getopt.d \
 	std\signals.d std\typetuple.d std\traits.d std\bind.d \
@@ -129,7 +129,6 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_base64.html \
 	$(DOC)\std_bigint.html \
 	$(DOC)\std_bind.html \
-	$(DOC)\std_bitarray.html \
 	$(DOC)\std_bitmanip.html \
 	$(DOC)\std_boxer.html \
 	$(DOC)\std_compiler.html \
@@ -205,7 +204,7 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 	std\regexp.d std\random.d std\stream.d std\process.d \
 	std\socket.d std\socketstream.d std\loader.d std\stdarg.d std\format.d \
 	std\stdio.d std\perf.d std\openrj.d std\uni.d std\boxer.d \
-	std\cstream.d std\demangle.d std\bitarray.d \
+	std\cstream.d std\demangle.d \
 	std\signals.d std\cpuid.d std\typetuple.d std\traits.d std\bind.d \
 	std\metastrings.d std\contracts.d std\getopt.d \
 	std\variant.d std\numeric.d std\bitmanip.d std\complex.d \
@@ -312,9 +311,6 @@ base64.obj : std\base64.d
 
 bind.obj : std\bind.d
 	$(DMD) -c $(DFLAGS) -inline std\bind.d
-
-bitarray.obj : std\bitarray.d
-	$(DMD) -c $(DFLAGS) -inline std\bitarray.d
 
 bitmanip.obj : std\bitmanip.d
 	$(DMD) -c $(DFLAGS) std\bitmanip.d
@@ -534,9 +530,6 @@ $(DOC)\std_bigint.html : std.ddoc std\bigint.d
 
 $(DOC)\std_bind.html : std.ddoc std\bind.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_bind.html std.ddoc std\bind.d
-
-$(DOC)\std_bitarray.html : std.ddoc std\bitarray.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_bitarray.html std.ddoc std\bitarray.d
 
 $(DOC)\std_bitmanip.html : std.ddoc std\bitmanip.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_bitmanip.html std.ddoc std\bitmanip.d
