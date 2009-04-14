@@ -643,7 +643,7 @@ public:
  *    $(SV  +$(INFIN),+$(INFIN))
  *  )
  */
-real acosh(real x)
+pure nothrow real acosh(real x)
 {
     if (x > 1/real.epsilon)
         return LN2 + log(x);
@@ -651,9 +651,9 @@ real acosh(real x)
         return log(x + sqrt(x*x - 1));
 }
 /// ditto
-double acosh(double x)             { return acosh(cast(real)x); }
+pure nothrow double acosh(double x)             { return acosh(cast(real)x); }
 /// ditto
-float acosh(float x)               { return acosh(cast(real)x); }
+pure nothrow float acosh(float x)               { return acosh(cast(real)x); }
 
 
 unittest
@@ -680,7 +680,7 @@ unittest
  *    $(SV  $(PLUSMN)$(INFIN),$(PLUSMN)$(INFIN))
  *    )
  */
-real asinh(real x)
+pure nothrow real asinh(real x)
 {
     if (fabs(x) > 1 / real.epsilon) {   // beyond this point, x*x + 1 == x*x
             return copysign(LN2 + log(fabs(x)), x);
@@ -690,9 +690,9 @@ real asinh(real x)
     }
 }
 /// ditto
-double asinh(double x)             { return asinh(cast(real)x); }
+pure nothrow double asinh(double x)             { return asinh(cast(real)x); }
 /// ditto
-float asinh(float x)               { return asinh(cast(real)x); }
+pure nothrow float asinh(float x)               { return asinh(cast(real)x); }
 
 unittest
 {
@@ -720,15 +720,15 @@ unittest
  *    $(SV  -$(INFIN), -0)
  * )
  */
-real atanh(real x)
+pure nothrow real atanh(real x)
 {
     // log( (1+x)/(1-x) ) == log ( 1 + (2*x)/(1-x) )
     return  0.5 * log1p( 2 * x / (1 - x) );
 }
 /// ditto
-double atanh(double x)             { return atanh(cast(real)x); }
+pure nothrow double atanh(double x)             { return atanh(cast(real)x); }
 /// ditto
-float atanh(float x)               { return atanh(cast(real)x); }
+pure nothrow float atanh(float x)               { return atanh(cast(real)x); }
 
 
 unittest
@@ -1279,7 +1279,7 @@ unittest {
  *    )
  */
 
-real log(real x)
+pure nothrow real log(real x)
 {
     version (INLINE_YL2X)
 	return yl2x(x, LN2);
@@ -1303,7 +1303,7 @@ unittest
  *      )
  */
 
-real log10(real x)
+pure nothrow real log10(real x)
 {
     version (INLINE_YL2X)
 	return yl2x(x, LOG2);
@@ -1331,7 +1331,15 @@ unittest
  *  )
  */
 
-real log1p(real x)              { return std.c.math.log1pl(x); }
+pure nothrow real log1p(real x) {
+   version(INLINE_YL2X) {
+       // On x87, yl2xp1 is valid if and only if -0.5 <= lg(x) <= 0.5,
+       //    ie if -0.29<=x<=0.414
+       return (fabs(x) <= 0.25)  ? yl2xp1(x, LN2) : yl2x(x+1, LN2);
+   } else {
+      return std.c.math.log1pl(x); 
+   }
+}
 
 /***************************************
  * Calculates the base-2 logarithm of x:
@@ -1344,7 +1352,7 @@ real log1p(real x)              { return std.c.math.log1pl(x); }
  *  $(TR $(TD +$(INFIN))    $(TD +$(INFIN)) $(TD no)           $(TD no) )
  *  )
  */
-real log2(real x)
+pure nothrow real log2(real x)
 {
     version (INLINE_YL2X)
 	return yl2x(x, 1);
@@ -2214,7 +2222,7 @@ pure nothrow real nextUp(real x)
 }
 
 /** ditto */
-double nextUp(double x)
+pure nothrow double nextUp(double x)
 {
     ulong *ps = cast(ulong *)&x;
 
@@ -2236,7 +2244,7 @@ double nextUp(double x)
 }
 
 /** ditto */
-float nextUp(float x)
+pure nothrow float nextUp(float x)
 {
     uint *ps = cast(uint *)&x;
 
@@ -2278,13 +2286,13 @@ pure nothrow real nextDown(real x)
 }
 
 /** ditto */
-double nextDown(double x)
+pure nothrow double nextDown(double x)
 {
     return -nextUp(-x);
 }
 
 /** ditto */
-float nextDown(float x)
+pure nothrow float nextDown(float x)
 {
     return -nextUp(-x);
 }
@@ -2627,6 +2635,11 @@ F pow(F)(F x, F y) if (isFloatingPoint!(F))
             }
         }
     }
+/*
+version(INLINE_YL2X) {
+return exp2(yl2x(y, x));
+}
+*/
     return std.c.math.powl(x, y);
 }
 
