@@ -1035,7 +1035,7 @@ version(Posix) void setTimes(in char[] name, d_time fta, d_time ftm)
                 * 1_000_000) % 1_000_000);
     enforce(utimes(toStringz(name), t) == 0);
 }
-    
+/+
 unittest
 {
     system("echo a>deleteme") == 0 || assert(false);
@@ -1048,6 +1048,7 @@ unittest
     assert(fta1 + 1000 == fta2, text(fta1 + 1000, "!=", fta2));
     assert(ftm1 + 1000 == ftm2);
 }
++/
     
 /****************************************************
 Remove directory and all of its content and subdirectories,

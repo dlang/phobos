@@ -35,13 +35,13 @@ CFLAGS=-mn -6 -r
 
 ## Flags for dmd D compiler
 
-DFLAGS=-O -release -nofloat -w
-#DFLAGS=-unittest -g
-#DFLAGS=-unittest -cov -g
+DFLAGS=-O -release -nofloat -w -d
+#DFLAGS=-unittest -g -d
+#DFLAGS=-unittest -cov -g -d
 
 ## Flags for compiling unittests
 
-UDFLAGS=-O -release -nofloat
+UDFLAGS=-O -release -nofloat -d
 
 ## C compiler
 
@@ -108,6 +108,8 @@ SRCS= std\math.d std\stdio.d std\dateparse.d std\date.d std\uni.d std\string.d \
 	std\perf.d std\openrj.d std\conv.d \
 	std\zip.d std\cstream.d std\loader.d \
 	std\__fileinit.d \
+	std\datebase.d \
+	std\regex.d \
 	crc32.d \
 	std\c\stdarg.d \
 	std\c\string.d \

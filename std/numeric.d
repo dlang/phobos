@@ -1103,7 +1103,7 @@ unittest
 /**
 The so-called "all-lengths gap-weighted string kernel" computes a
 similarity measure between $(D s) and $(D t) based on all of their
-common subsequences of all lenghts. Gapped subsequences are also
+common subsequences of all lengths. Gapped subsequences are also
 included.
 
 To understand what $(D gapWeightedSimilarity(s, t, lambda)) computes,
