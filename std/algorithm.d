@@ -272,7 +272,7 @@ public:
     }
 
     ReturnType!(ElementType!(Range))
-    reduce(Range)(Range r)
+    reduce(Range)(Range r) if (isInputRange!Range)
     {
         static if (fun.length == 1)
             auto e = r.front;
@@ -3461,7 +3461,7 @@ unittest
         foreach (p; probs) {
             if (!p) continue;
             //enforce(p > 0 && p <= 1, "Wrong probability passed to entropy");
-            result -= p * log(p);
+            result -= p * log2(p);
         }
         return result;
     }
