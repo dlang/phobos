@@ -32,23 +32,12 @@ module std.string;
 
 //debug=string;     // uncomment to turn on debugging printf's
 
-private import std.algorithm;
-private import std.array;
-private import std.stdio;
-private import std.c.stdio;
-private import std.c.stdlib;
-private import std.c.string;
-private import std.utf;
-private import std.encoding;
-private import std.uni;
-private import std.format;
-private import std.ctype;
-private import std.stdarg;
-private import std.contracts;
-private import std.typetuple;
-private import std.conv;
-private import std.traits;
 private import core.exception : onRangeError;
+import core.stdc.stdio, core.stdc.stdlib,
+    core.stdc.string, std.algorithm, std.array, 
+    std.contracts, std.conv, std.ctype, std.encoding, std.format,
+    std.metastrings, std.stdarg, std.stdio, std.traits,
+    std.typetuple, std.uni, std.utf;
 
 version(Windows) extern (C)
 {
@@ -87,7 +76,7 @@ else version (Posix)
 
 bool iswhite(dchar c)
 {
-    return (c <= 0x7F)
+    return c <= 0x7F
         ? find(whitespace, c) != -1
         : (c == PS || c == LS);
 }
@@ -498,8 +487,8 @@ unittest
  */
 
 int find(in char[] s, in char[] sub)
-    out (result)
-    {
+out (result)
+{
     if (result == -1)
     {
     }
@@ -508,9 +497,9 @@ int find(in char[] s, in char[] sub)
         assert(0 <= result && result < s.length - sub.length + 1);
         assert(memcmp(&s[result], sub.ptr, sub.length) == 0);
     }
-    }
-    body
-    {
+}
+body
+{
     auto sublength = sub.length;
 
     if (sublength == 0)
@@ -521,31 +510,31 @@ int find(in char[] s, in char[] sub)
         auto c = sub[0];
         if (sublength == 1)
         {
-        auto p = cast(const char*)memchr(s.ptr, c, s.length);
-        if (p)
-            return p - &s[0];
+            auto p = cast(const char*)memchr(s.ptr, c, s.length);
+            if (p)
+                return p - &s[0];
         }
         else
         {
-        size_t imax = s.length - sublength + 1;
+            size_t imax = s.length - sublength + 1;
 
-        // Remainder of sub[]
-        auto q = &sub[1];
-        sublength--;
+            // Remainder of sub[]
+            auto q = &sub[1];
+            sublength--;
 
-        for (size_t i = 0; i < imax; i++)
-        {
-            auto p = cast(const char*)memchr(&s[i], c, imax - i);
-            if (!p)
-            break;
-            i = p - &s[0];
-            if (memcmp(p + 1, q, sublength) == 0)
-            return i;
-        }
+            for (size_t i = 0; i < imax; i++)
+            {
+                auto p = cast(const char*)memchr(&s[i], c, imax - i);
+                if (!p)
+                    break;
+                i = p - &s[0];
+                if (memcmp(p + 1, q, sublength) == 0)
+                    return i;
+            }
         }
     }
     return -1;
-    }
+}
 
 
 unittest
@@ -573,8 +562,8 @@ unittest
  */
 
 int ifind(in char[] s, in char[] sub)
-    out (result)
-    {
+out (result)
+{
     if (result == -1)
     {
     }
@@ -583,9 +572,9 @@ int ifind(in char[] s, in char[] sub)
         assert(0 <= result && result < s.length - sub.length + 1);
         assert(icmp(s[result .. result + sub.length], sub) == 0);
     }
-    }
-    body
-    {
+}
+body
+{
     auto sublength = sub.length;
     int i;
 
@@ -609,12 +598,12 @@ int ifind(in char[] s, in char[] sub)
 
         for (i = 0; i < imax; i++)
         {
-        auto j = ifind(s[i .. imax], c);
-        if (j == -1)
-            return -1;
-        i += j;
-        if (icmp(s[i + 1 .. i + sublength], subn) == 0)
-            return i;
+            auto j = ifind(s[i .. imax], c);
+            if (j == -1)
+                return -1;
+            i += j;
+            if (icmp(s[i + 1 .. i + sublength], subn) == 0)
+                return i;
         }
         i = -1;
     }
@@ -624,13 +613,13 @@ int ifind(in char[] s, in char[] sub)
 
         for (i = 0; i <= imax; i++)
         {
-        if (icmp(s[i .. i + sublength], sub) == 0)
-            return i;
+            if (icmp(s[i .. i + sublength], sub) == 0)
+                return i;
         }
         i = -1;
     }
     return i;
-    }
+}
 
 
 unittest
@@ -682,8 +671,8 @@ unittest
  */
 
 int rfind(in char[] s, in char[] sub)
-    out (result)
-    {
+out (result)
+{
     if (result == -1)
     {
     }
@@ -692,9 +681,9 @@ int rfind(in char[] s, in char[] sub)
         assert(0 <= result && result < s.length - sub.length + 1);
         assert(memcmp(&s[0] + result, sub.ptr, sub.length) == 0);
     }
-    }
-    body
-    {
+}
+body
+{
     char c;
 
     if (sub.length == 0)
@@ -706,12 +695,12 @@ int rfind(in char[] s, in char[] sub)
     {
         if (s[i] == c)
         {
-        if (memcmp(&s[i + 1], &sub[1], sub.length - 1) == 0)
-            return i;
+            if (memcmp(&s[i + 1], &sub[1], sub.length - 1) == 0)
+                return i;
         }
     }
     return -1;
-    }
+}
 
 unittest
 {
@@ -736,8 +725,8 @@ unittest
  */
 
 int irfind(in char[] s, in char[] sub)
-    out (result)
-    {
+out (result)
+{
     if (result == -1)
     {
     }
@@ -746,9 +735,9 @@ int irfind(in char[] s, in char[] sub)
         assert(0 <= result && result < s.length - sub.length + 1);
         assert(icmp(s[result .. result + sub.length], sub) == 0);
     }
-    }
-    body
-    {
+}
+body
+{
     dchar c;
 
     if (sub.length == 0)
@@ -761,23 +750,23 @@ int irfind(in char[] s, in char[] sub)
         c = std.ctype.tolower(c);
         for (int i = s.length - sub.length; i >= 0; i--)
         {
-        if (std.ctype.tolower(s[i]) == c)
-        {
-            if (icmp(s[i + 1 .. i + sub.length], sub[1 .. sub.length]) == 0)
-            return i;
-        }
+            if (std.ctype.tolower(s[i]) == c)
+            {
+                if (icmp(s[i + 1 .. i + sub.length], sub[1 .. sub.length]) == 0)
+                    return i;
+            }
         }
     }
     else
     {
         for (int i = s.length - sub.length; i >= 0; i--)
         {
-        if (icmp(s[i .. i + sub.length], sub) == 0)
-            return i;
+            if (icmp(s[i .. i + sub.length], sub) == 0)
+                return i;
         }
     }
     return -1;
-    }
+}
 
 unittest
 {
@@ -1188,19 +1177,19 @@ unittest
 string repeat(string s, size_t n)
 {
     if (n == 0)
-    return null;
+        return null;
     if (n == 1)
-    return s;
+        return s;
     char[] r = new char[n * s.length];
     if (s.length == 1)
-    r[] = s[0];
+        r[] = s[0];
     else
     {   auto len = s.length;
 
-    for (size_t i = 0; i < n * len; i += len)
-    {
-        r[i .. i + len] = s[];
-    }
+        for (size_t i = 0; i < n * len; i += len)
+        {
+            r[i .. i + len] = s[];
+        }
     }
     return assumeUnique(r);
 }
@@ -1344,12 +1333,12 @@ unittest
  */
 
 string[] split(string s, string delim)
-    in
-    {
+in
+{
     assert(delim.length > 0);
-    }
-    body
-    {
+}
+body
+{
     size_t i;
     size_t j;
     string[] words;
@@ -1359,89 +1348,89 @@ string[] split(string s, string delim)
     {
         if (delim.length == 1)
         {   char c = delim[0];
-        size_t nwords = 0;
-        auto p = s.ptr;
-        auto pend = p + s.length;
+            size_t nwords = 0;
+            auto p = s.ptr;
+            auto pend = p + s.length;
 
-        while (true)
-        {
-            nwords++;
-            p = cast(typeof(p))memchr(p, c, pend - p);
-            if (!p)
-            break;
-            p++;
-            if (p == pend)
-            {   nwords++;
-            break;
+            while (true)
+            {
+                nwords++;
+                p = cast(typeof(p))memchr(p, c, pend - p);
+                if (!p)
+                    break;
+                p++;
+                if (p == pend)
+                {   nwords++;
+                    break;
+                }
             }
-        }
-        words.length = nwords;
+            words.length = nwords;
 
-        int wordi = 0;
-        i = 0;
-        while (true)
-        {
-            p = cast(typeof(p))memchr(&s[i], c, s.length - i);
-            if (!p)
+            int wordi = 0;
+            i = 0;
+            while (true)
             {
-            words[wordi] = s[i .. s.length];
-            break;
+                p = cast(typeof(p))memchr(&s[i], c, s.length - i);
+                if (!p)
+                {
+                    words[wordi] = s[i .. s.length];
+                    break;
+                }
+                j = p - &s[0];
+                words[wordi] = s[i .. j];
+                wordi++;
+                i = j + 1;
+                if (i == s.length)
+                {
+                    words[wordi] = "";
+                    break;
+                }
             }
-            j = p - &s[0];
-            words[wordi] = s[i .. j];
-            wordi++;
-            i = j + 1;
-            if (i == s.length)
-            {
-            words[wordi] = "";
-            break;
-            }
-        }
-        assert(wordi + 1 == nwords);
+            assert(wordi + 1 == nwords);
         }
         else
         {   size_t nwords = 0;
 
-        while (true)
-        {
-            nwords++;
-            j = find(s[i .. s.length], delim);
-            if (j == -1)
-            break;
-            i += j + delim.length;
-            if (i == s.length)
-            {   nwords++;
-            break;
+            while (true)
+            {
+                nwords++;
+                j = find(s[i .. s.length], delim);
+                if (j == -1)
+                    break;
+                i += j + delim.length;
+                if (i == s.length)
+                {   nwords++;
+                    break;
+                }
+                assert(i < s.length);
             }
-            assert(i < s.length);
-        }
-        words.length = nwords;
+            words.length = nwords;
 
-        int wordi = 0;
-        i = 0;
-        while (true)
-        {
-            j = find(s[i .. s.length], delim);
-            if (j == -1)
+            int wordi = 0;
+            i = 0;
+            while (true)
             {
-            words[wordi] = s[i .. s.length];
-            break;
+                j = find(s[i .. s.length], delim);
+                if (j == -1)
+                {
+                    words[wordi] = s[i .. s.length];
+                    break;
+                }
+                words[wordi] = s[i .. i + j];
+                wordi++;
+                i += j + delim.length;
+                if (i == s.length)
+                {
+                    words[wordi] = "";
+                    break;
+                }
+                assert(i < s.length);
             }
-            words[wordi] = s[i .. i + j];
-            wordi++;
-            i += j + delim.length;
-            if (i == s.length)
-            {
-            words[wordi] = "";
-            break;
-            }
-            assert(i < s.length);
-        }
-        assert(wordi + 1 == nwords);
+            assert(wordi + 1 == nwords);
         }
     }
     return words;
-    }
+}
 
 unittest
 {
@@ -1522,20 +1511,20 @@ string[] splitlines(string s)
     for (i = 0; i < s.length; i++)
     {   char c;
 
-    c = s[i];
-    if (c == '\r' || c == '\n')
-    {
-        nlines++;
-        istart = i + 1;
-        if (c == '\r' && i + 1 < s.length && s[i + 1] == '\n')
+        c = s[i];
+        if (c == '\r' || c == '\n')
         {
-        i++;
-        istart++;
+            nlines++;
+            istart = i + 1;
+            if (c == '\r' && i + 1 < s.length && s[i + 1] == '\n')
+            {
+                i++;
+                istart++;
+            }
         }
     }
-    }
     if (istart != i)
-    nlines++;
+        nlines++;
 
     auto lines = new string[nlines];
     nlines = 0;
@@ -1543,22 +1532,22 @@ string[] splitlines(string s)
     for (i = 0; i < s.length; i++)
     {   char c;
 
-    c = s[i];
-    if (c == '\r' || c == '\n')
-    {
-        lines[nlines] = s[istart .. i];
-        nlines++;
-        istart = i + 1;
-        if (c == '\r' && i + 1 < s.length && s[i + 1] == '\n')
+        c = s[i];
+        if (c == '\r' || c == '\n')
         {
-        i++;
-        istart++;
+            lines[nlines] = s[istart .. i];
+            nlines++;
+            istart = i + 1;
+            if (c == '\r' && i + 1 < s.length && s[i + 1] == '\n')
+            {
+                i++;
+                istart++;
+            }
         }
-    }
     }
     if (istart != i)
     {   lines[nlines] = s[istart .. i];
-    nlines++;
+        nlines++;
     }
 
     assert(nlines == lines.length);
@@ -2525,9 +2514,11 @@ Convert to string. WARNING! This function has been deprecated. Instead
  of $(D toString(x)), you may want to import $(D std.conv) and use $(D
  to!string(x)) instead.
  */
-deprecated auto toString(T)(T obj) if (is(typeof(to!string(T.init))))
+deprecated auto toString(T, string f = __FILE__, uint line = __LINE__)(T obj)
+    if (is(typeof(to!string(T.init))))
 {
-    pragma(msg, "toString("~T.stringof~") is deprecated."
+    pragma(msg, "toString("~T.stringof~") called from "~f~"("~ToString!(line)
+            ~") is deprecated."
             " Instead you may want to"
             " import std.conv and use to!string(x) instead of toString(x).");
     return to!string(obj);
@@ -2538,9 +2529,11 @@ Convert string to integer. WARNING. This function has been
  deprecated. Instead of $(D atoi(s)), you may want to import $(D
  std.conv) and use $(D to!int(s)) instead.
  */
-deprecated auto atoi(T)(T obj) if (isSomeString!T)
+deprecated auto atoi(T, string f = __FILE__, uint line = __LINE__)(T obj)
+    if (isSomeString!T)
 {
-    pragma(msg, "atoi("~T.stringof~") is deprecated."
+    pragma(msg, "atoi("~T.stringof~") called from "~f~"("~ToString!(line)
+            ~") is deprecated."
             " Instead you may want to"
             " import std.conv and use to!int(x) instead of atoi(x).");
     return to!int(obj);
