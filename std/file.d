@@ -78,14 +78,28 @@ version (Posix)
 
 class FileException : Exception
 {
-    uint errno;                        // operating system error code
+/**
+OS error code.
+ */ 
+    immutable uint errno;
     
+/**
+Constructor taking the name of the file where error happened and the
+error number ($(LUCKY GetLastError) in Windows, $(D getErrno) in
+Posix).
+ */ 
     this(in char[] name, in char[] message)
     {
-        super(cast(string) name ~ ": " ~ cast(string) message);
+        super(text(name, ": ", message));
+        errno = 0;
     }
 
-    version(Windows) this(string name, uint errno = .getErrno)
+/**
+Constructor taking the name of the file where error happened and the
+error number ($(LUCKY GetLastError) in Windows, $(D getErrno) in
+Posix).
+ */ 
+    version(Windows) this(string name, uint errno = GetLastError)
     {
         this(name, sysErrorString(errno));
         this.errno = errno;
@@ -201,7 +215,10 @@ version (linux) unittest
 
 /********************************************
 Read and validates (using $(XREF utf, validate)) a text file. $(D S)
-can be a type of array of characters of any width and constancy.
+can be a type of array of characters of any width and constancy. No
+width conversion is performed; if the width of the characters in file
+$(D name) is different from the width of elements of $(D S),
+validation will fail.
 
 Returns: Array of characters read.
 
@@ -345,8 +362,9 @@ version(Posix) void remove(in char[] name)
 }
 
 /***************************************************
- * Get size of file name[].
- * Throws: $(D FileException) on error.
+Get size of file $(D name).
+
+Throws: $(D FileException) on error (e.g., file not found).
  */
 
 version(Windows) ulong getSize(in char[] name)
@@ -439,10 +457,97 @@ version(Posix) void getTimes(in char[] name,
     fta = cast(d_time) statbuf.st_atime * std.date.ticksPerSecond;
     ftm = cast(d_time) statbuf.st_mtime * std.date.ticksPerSecond;
 }
+
+/*
+Get creation/access/modified times of file $(D name) as a tuple.
+
+Throws: $(D FileException) on error.
+ */
+
+// Tuple!(d_time, "ftc", d_time, "fta", d_time, "ftm") getTimes(in char[] name)
+// {
+//     typeof(return) result = void;
+//     getTimes(name, result.ftc, result.fta, result.ftm);
+//     return result;
+// }
+
+// unittest
+// {
+//     auto t = getTimes(".").ftm;
+// }
+
+/**
+   Returns the time of the last modification of file $(D name). If the
+   file does not exist, throws a $(D FileException).
+*/
+
+version(Windows) d_time lastModified(in char[] name)
+{
+    d_time dummy = void, ftm = void;
+    getTimes(name, dummy, dummy, ftm);
+    return ftm;
+}
+
+version(Posix) d_time lastModified(in char[] name)
+{
+    struct_stat64 statbuf = void;
+    cenforce(stat64(toStringz(name), &statbuf) == 0, name);
+    return cast(d_time) statbuf.st_mtime * std.date.ticksPerSecond;
+}
     
+/**
+Returns the time of the last modification of file $(D name). If the
+file does not exist, returns $(D returnIfMissing).
+   
+A frequent usage pattern occurs in build automation tools such as
+$(WEB gnu.org/software/make, make) or $(WEB
+en.wikipedia.org/wiki/Apache_Ant, ant). To check whether file $(D
+target) must be rebuilt from file $(D source) (i.e., $(D target) is
+older than $(D source) or does not exist), use the comparison
+below. The code throws a $(D FileException) if $(D source) does not
+exist (as it should). On the other hand, the $(D d_time.min) default
+makes a non-existing $(D target) seem infinitely old so the test
+correctly prompts building it.
+
+----
+if (lastModified(source) >= lastModified(target, d_time.min))
+{
+    // must (re)build
+}
+else
+{
+    // target is up-to-date
+}
+----
+*/
+
+version(Windows) d_time lastModified(in char[] name, d_time returnIfMissing)
+{
+    if (!exists(name)) return returnIfMissing;
+    d_time dummy = void, ftm = void;
+    getTimes(name, dummy, dummy, ftm);
+    return ftm;
+}
+
+version(Posix) d_time lastModified(in char[] name, d_time returnIfMissing)
+{
+    struct_stat64 statbuf = void;
+    return stat64(toStringz(name), &statbuf) != 0
+        ? returnIfMissing
+        : cast(d_time) statbuf.st_mtime * std.date.ticksPerSecond;
+}
+
+unittest
+{
+    system("echo a>deleteme") == 0 || assert(false);
+    scope(exit) remove("deleteme");
+    assert(lastModified("deleteme") >
+            lastModified("this file does not exist", d_time.min));
+    assert(lastModified("deleteme") > lastModified(__FILE__));
+}
+
 /***************************************************
- * Does file name[] (or directory) exist?
- * Return 1 if it does, 0 if not.
+ * Does file (or directory) $(D name) exist?
  */
 
 version(Windows) bool exists(in char[] name)
@@ -470,8 +575,9 @@ unittest
 }
 
 /***************************************************
- * Get file name[] attributes.
- * Throws: $(D FileException) on error.
+Get file $(D name) attributes.
+
+Throws: $(D FileException) on error.
  */
 
 version(Windows) uint getAttributes(in char[] name)
@@ -541,8 +647,9 @@ version(Posix) void chdir(in char[] pathname)
 }
     
 /****************************************************
- * Make directory pathname[].
- * Throws: $(D FileException) on error.
+Make directory $(D pathname).
+
+Throws: $(D FileException) on error.
  */
 
 version(Windows) void mkdir(in char[] pathname)
@@ -571,8 +678,9 @@ void mkdirRecurse(in char[] pathname)
 }
 
 /****************************************************
- * Remove directory pathname[].
- * Throws: $(D FileException) on error.
+Remove directory $(D pathname).
+
+Throws: $(D FileException) on error.
  */
 
 version(Windows) void rmdir(in char[] pathname)
@@ -629,76 +737,6 @@ unittest
 {
     auto s = getcwd();
     assert(s.length);
-}
-
-/**
-   Returns the time of the last modification of file $(D name). If the
-   file does not exist, throws a $(D FileException).
-*/
-
-version(Windows) d_time lastModified(in char[] name)
-{
-    d_time dummy = void, ftm = void;
-    getTimes(name, dummy, dummy, ftm);
-    return ftm;
-}
-
-version(Posix) d_time lastModified(in char[] name)
-{
-    struct_stat64 statbuf = void;
-    cenforce(stat64(toStringz(name), &statbuf) == 0, name);
-    return cast(d_time) statbuf.st_mtime * std.date.ticksPerSecond;
-}
-    
-/**
-Returns the time of the last modification of file $(D name). If the
-file does not exist, returns $(D returnIfMissing).
-   
-A frequent usage pattern occurs in build automation tools such as
-$(WEB gnu.org/software/make, make) or $(WEB
-en.wikipedia.org/wiki/Apache_Ant, ant). To check whether file $(D
-target) must be rebuilt from file $(D source) (i.e., $(D target) is
-older than $(D source) or does not exist), use the comparison
-below. The code throws a $(D FileException) if $(D source) does not
-exist (as it should). On the other hand, the $(D d_time.min) default
-makes a non-existing $(D target) seem infinitely old so the test
-correctly prompts building it.
-
-----
-if (lastModified(source) >= lastModified(target, d_time.min))
-{
-    must (re)build
-}
-else
-{
-    target is up-to-date
-}
-----
-*/
-
-version(Windows) d_time lastModified(in char[] name, d_time returnIfMissing)
-{
-    if (!exists(name)) return returnIfMissing;
-    d_time dummy = void, ftm = void;
-    getTimes(name, dummy, dummy, ftm);
-    return ftm;
-}
-
-version(Posix) d_time lastModified(in char[] name, d_time returnIfMissing)
-{
-    struct_stat64 statbuf = void;
-    return stat64(toStringz(name), &statbuf) != 0
-        ? returnIfMissing
-        : cast(d_time) statbuf.st_mtime * std.date.ticksPerSecond;
-}
-
-unittest
-{
-    system("echo a>deleteme") == 0 || assert(false);
-    scope(exit) remove("deleteme");
-    assert(lastModified("deleteme") >
-            lastModified("this file does not exist", d_time.min));
-    assert(lastModified("deleteme") > lastModified(__FILE__));
 }
 
 /***************************************************
@@ -1008,10 +1046,8 @@ version(Windows) void setTimes(in char[] name, d_time fta, d_time ftm)
 {
     const ta = d_time2FILETIME(fta);
     const tm = d_time2FILETIME(ftm);
-    alias TypeTuple!(GENERIC_READ,
-            FILE_SHARE_READ, (SECURITY_ATTRIBUTES*).init, OPEN_EXISTING,
-            FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
-            HANDLE.init)
+    alias TypeTuple!(GENERIC_WRITE, 0, null, OPEN_EXISTING,
+            FILE_ATTRIBUTE_NORMAL, HANDLE.init)
         defaults;
     auto h = useWfuncs
         ? CreateFileW(std.utf.toUTF16z(name), defaults)
@@ -1042,6 +1078,7 @@ unittest
     scope(exit) remove("deleteme");
     d_time ftc1, fta1, ftm1;
     getTimes("deleteme", ftc1, fta1, ftm1);
+    enforce(collectException(setTimes("nonexistent", fta1, ftm1)));
     setTimes("deleteme", fta1 + 1000, ftm1 + 1000);
     d_time ftc2, fta2, ftm2;
     getTimes("deleteme", ftc2, fta2, ftm2);
