@@ -615,7 +615,7 @@ File) never takes the initiative in closing the file. */
 /**
 Returns the $(D FILE*) corresponding to this object.
  */
-    auto getFP()
+    FILE* getFP()
     {
         enforce(p && p.handle,
                 "Attempting to call getFP() on an unopened file");
