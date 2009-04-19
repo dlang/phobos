@@ -10,6 +10,9 @@ STDDOC = $(DOCSRC)/std.ddoc
 STYLECSS_SRC = $(DOCSRC)/style.css
 STYLECSS_TGT = $(DOC_OUTPUT_DIR)/../style.css
 
+OS = win32 posix
+BUILDS = debug release
+
 ################################################################################
 
 CC_win32 = wine dmc.exe
@@ -141,14 +144,11 @@ endef
 ################################################################################
 # Default OS is posix, default build is release
 default : posix/release
-debug : posix/debug
-release : posix/release
-unittest : posix/release/unittest
+$(foreach S,$(OS), $(eval $S : $(foreach B,$(BUILDS), $S/$B/unittest)))
+$(foreach B,$(BUILDS), $(eval $B : $(foreach S,$(OS), $S/$B/unittest)))
+unittest : $(foreach S,$(OS), $S)
 
-posix : posix/debug/unittest posix/release/unittest 
-win32 : win32/debug/unittest win32/release/unittest 
-
-all : $(foreach B,debug release, $(foreach S,posix win32, $S/$B/unittest)) html
+all : posix win32 html
 clean :
 	rm -rf $(OBJDIR) $(DOC_OUTPUT_DIR)
 
