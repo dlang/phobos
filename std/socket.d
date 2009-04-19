@@ -406,7 +406,8 @@ unittest
 		// {
 		// 	printf("\tAlias: %.*s\n", s);
 		// }
-        assert(serv.name == "loc-srv");
+	// For reasons unknown this is loc-srv on Wine and epmap on Windows
+        assert(serv.name == "loc-srv" || serv.name == "epmap", serv.name);
         assert(serv.port == 135);
         assert(serv.protocolName == "tcp");
         assert(serv.aliases.length == 1 && serv.aliases[0] == "epmap");
