@@ -2860,7 +2860,8 @@ private template acceptedSpecs(T)
 //------------------------------------------------------------------------------
 T unformat(T, Range)(ref Range input, FormatInfo spec) if (isIntegral!T)
 {
-    enforce(std.algorithm.find("cdosuxX", spec.spec).length);
+    enforce(std.algorithm.find("cdosuxX", spec.spec).length,
+            text("Wrong integral type specifier: `", spec.spec, "'"));
     if (std.algorithm.find("dsu", spec.spec).length)
     {
         return parse!T(input);
