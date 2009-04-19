@@ -1,4 +1,3 @@
-
 // Written in the D programming language.
 
 /* Written by Walter Bright and Andrei Alexandrescu
@@ -7,14 +6,11 @@
  */
 
 /********************************
- * Standard I/O functions that extend $(B std.c.stdio).
- * $(B std.c.stdio) is $(D_PARAM public)ally imported when importing
- * $(B std.stdio).
- *
- * Authors:
- *
- * $(WEB digitalmars.com, Walter Bright), $(WEB erdani.org, Andrei
-Alexandrescu)
+Standard I/O functions that extend $(B std.c.stdio).  $(B std.c.stdio)
+is $(D_PARAM public)ally imported when importing $(B std.stdio).
+
+Authors: $(WEB digitalmars.com, Walter Bright), $(WEB erdani.org,
+Andrei Alexandrescu)
   
 Macros:
 WIKI=Phobos/StdStdio
@@ -30,14 +26,11 @@ import std.algorithm, std.array, std.contracts, std.conv, std.file, std.format,
     std.metastrings, std.range, std.string, std.traits, std.typecons,
     std.typetuple, std.utf;
 
-version (DigitalMars)
+version (DigitalMars) version (Windows)
 {
-    version (Windows)
-    {
-        // Specific to the way Digital Mars C does stdio
-        version = DIGITAL_MARS_STDIO;
-        import std.c.stdio : __fhnd_info, FHND_WCHAR;
-    }
+    // Specific to the way Digital Mars C does stdio
+    version = DIGITAL_MARS_STDIO;
+    import std.c.stdio : __fhnd_info, FHND_WCHAR;
 }
 
 version (linux)
@@ -120,8 +113,8 @@ else version (GENERIC_IO)
 {
     extern (C)
     {
-	void flockfile(FILE*);
-	void funlockfile(FILE*);
+        void flockfile(FILE*);
+        void funlockfile(FILE*);
     }
 
     alias fputc FPUTC;
@@ -136,7 +129,6 @@ else
 {
     static assert(0, "unsupported C I/O system");
 }
-
 /**
 Encapsulates a $(D FILE*). Generally D does not attempt to provide
 thin wrappers over equivalent functions in the C standard library, but
@@ -174,7 +166,7 @@ void main(string args[])
 Hello, Jimmy!
 % __
 </pre>
-*/
+ */
 struct File
 {
     /*private*/ struct Impl
@@ -546,7 +538,7 @@ int main()
 {
     char[] buf;
     while (readln(stdin, buf))
-	write(buf);
+        write(buf);
     return 0;
 }
 ---
@@ -746,7 +738,8 @@ to this file. */
     }
 
 /**
-$(D Range that locks the file and allows fast writing to it. */ 
+$(D Range) that locks the file and allows fast writing to it.
+ */ 
     struct LockingTextWriter {
         //@@@ Hacky implementation due to bugs, see the correct
         //implementation at the end of this struct
@@ -928,60 +921,60 @@ void writefx(FILE* fp, TypeInfo[] arguments, void* argptr, int newline=false)
     FLOCK(fp);
     scope(exit) FUNLOCK(fp);
 
-    if (orientation <= 0)		// byte orientation or no orientation
+    if (orientation <= 0)                // byte orientation or no orientation
     {
-	void putc(dchar c)
-	{
-	    if (c <= 0x7F)
-	    {
-		FPUTC(c, fp);
-	    }
-	    else
-	    {
+        void putc(dchar c)
+        {
+            if (c <= 0x7F)
+            {
+                FPUTC(c, fp);
+            }
+            else
+            {
                 char[4] buf = void;
                 foreach (i; 0 .. std.utf.toUTF8(buf, c).length)
-		    FPUTC(buf[i], fp);
-	    }
-	}
+                    FPUTC(buf[i], fp);
+            }
+        }
 
-	std.format.doFormat(&putc, arguments, argptr);
-	if (newline)
-	    FPUTC('\n', fp);
+        std.format.doFormat(&putc, arguments, argptr);
+        if (newline)
+            FPUTC('\n', fp);
     }
-    else if (orientation > 0)		// wide orientation
+    else if (orientation > 0)                // wide orientation
     {
-	version (Windows)
-	{
-	    void putcw(dchar c)
-	    {
-		assert(isValidDchar(c));
-		if (c <= 0xFFFF)
-		{
-		    FPUTWC(c, fp);
-		}
-		else
-		{
-		    FPUTWC(cast(wchar) ((((c - 0x10000) >> 10) & 0x3FF) +
+        version (Windows)
+        {
+            void putcw(dchar c)
+            {
+                assert(isValidDchar(c));
+                if (c <= 0xFFFF)
+                {
+                    FPUTWC(c, fp);
+                }
+                else
+                {
+                    FPUTWC(cast(wchar) ((((c - 0x10000) >> 10) & 0x3FF) +
                                     0xD800), fp);
-		    FPUTWC(cast(wchar) (((c - 0x10000) & 0x3FF) + 0xDC00), fp);
-		}
-	    }
-	}
-	else version (Posix)
-	{
-	    void putcw(dchar c)
-	    {
-		FPUTWC(c, fp);
-	    }
-	}
-	else
-	{
-	    static assert(0);
-	}
+                    FPUTWC(cast(wchar) (((c - 0x10000) & 0x3FF) + 0xDC00), fp);
+                }
+            }
+        }
+        else version (Posix)
+        {
+            void putcw(dchar c)
+            {
+                FPUTWC(c, fp);
+            }
+        }
+        else
+        {
+            static assert(0);
+        }
 
-	std.format.doFormat(&putcw, arguments, argptr);
-	if (newline)
-	    FPUTWC('\n', fp);
+        std.format.doFormat(&putcw, arguments, argptr);
+        if (newline)
+            FPUTWC('\n', fp);
     }
 }
 
@@ -992,19 +985,12 @@ template isStreamingDevice(T)
 }
 
 /***********************************
- * If the first argument $(D args[0]) is a $(D FILE*), for
- * each argument $(D arg) in $(D args[1..$]), format the
- * argument (as per $(LINK2 std_conv.html, to!(string)(arg))) and
- * write the resulting string to $(D args[0]). If $(D
- * args[0]) is not a $(D FILE*), the call is equivalent to
- * $(D write(stdout, args)).
- *
- * A call without any arguments will fail to compile. In the
- * exceedingly rare case you'd want to print a $(D FILE*) to
- * $(D stdout) as a hex pointer, $(D write("", myFilePtr))
- * will do the trick.
- *
- * In case of an I/O error, throws an StdioException.
+For each argument $(D arg) in $(D args), format the argument (as per
+$(LINK2 std_conv.html, to!(string)(arg))) and write the resulting
+string to $(D args[0]). A call without any arguments will fail to
+compile.
+
+Throws: In case of an I/O error, throws an $(D StdioException).
  */
 void write(T...)(T args) if (!is(T[0] : File))
 {
@@ -1036,9 +1022,9 @@ unittest
 }
 
 /***********************************
- * Equivalent to $(D write(args, '\n')).  Calling $(D
- * writeln) without arguments is valid and just prints a newline to
- * the standard output.
+ * Equivalent to $(D write(args, '\n')).  Calling $(D writeln) without
+ * arguments is valid and just prints a newline to the standard
+ * output.
  */
 void writeln(T...)(T args)
 {
@@ -1190,15 +1176,15 @@ unittest
 /**********************************
  * Read line from stream $(D fp).
  * Returns:
- *	$(D null) for end of file,
- *	$(D char[]) for line read from $(D fp), including terminating character
+ *        $(D null) for end of file,
+ *        $(D char[]) for line read from $(D fp), including terminating character
  * Params:
- *	$(D fp) = input stream
- *	$(D terminator) = line terminator, '\n' by default
+ *        $(D fp) = input stream
+ *        $(D terminator) = line terminator, '\n' by default
  * Throws:
- *	$(D StdioException) on error
+ *        $(D StdioException) on error
  * Example:
- *	Reads $(D stdin) and writes it to $(D stdout).
+ *        Reads $(D stdin) and writes it to $(D stdout).
 ---
 import std.stdio;
 
@@ -1206,7 +1192,7 @@ int main()
 {
     char[] buf;
     while ((buf = readln()) != null)
-	write(buf);
+        write(buf);
     return 0;
 }
 ---
@@ -1380,7 +1366,7 @@ struct lines
         int result = 1;
         int c = void;
         FLOCK(f.p.handle);
-	scope(exit) FUNLOCK(f.p.handle);
+        scope(exit) FUNLOCK(f.p.handle);
         ubyte[] buffer;
         static if (Parms.length == 2)
             Parms[0] line = 0;
@@ -1668,7 +1654,7 @@ Initialize with a message and an error code. */
 /** Convenience functions that throw an $(D StdioException). */
     static void opCall(string msg)
     {
-	throw new StdioException(msg);
+        throw new StdioException(msg);
     }
     
 /// ditto
@@ -1892,8 +1878,8 @@ private size_t readlnImpl(FILE* fp, ref char[] buf, dchar terminator = '\n')
                 char c;
                 while (1)
                 {
-                    if (i == u)		// if end of buffer
-                        goto L1;	// give up
+                    if (i == u)                // if end of buffer
+                        goto L1;        // give up
                     c = p[i];
                     i++;
                     if (c != '\r')
@@ -1925,8 +1911,8 @@ private size_t readlnImpl(FILE* fp, ref char[] buf, dchar terminator = '\n')
             {
                 while (1)
                 {
-                    if (i == u)		// if end of buffer
-                        goto L1;	// give up
+                    if (i == u)                // if end of buffer
+                        goto L1;        // give up
                     auto c = p[i];
                     i++;
                     if (c == terminator)
@@ -2011,7 +1997,7 @@ private size_t readlnImpl(FILE* fp, ref char[] buf, dchar terminator = '\n')
         {
             if (ferror(fp))
                 StdioException();
-            buf.length = 0;		// end of file
+            buf.length = 0;                // end of file
             return 0;
         }
         buf = buf.ptr[0 .. GC.sizeOf(buf.ptr)];
