@@ -77,6 +77,17 @@ enum
     ticksPerDay    = ticksPerHour   * 24,
 }
 
+deprecated alias ticksPerSecond TicksPerSecond;
+deprecated alias ticksPerMs TicksPerMs;
+deprecated alias ticksPerMinute TicksPerMinute;
+deprecated alias ticksPerHour TicksPerHour;
+deprecated alias ticksPerDay TicksPerDay;
+
+unittest
+{
+    assert(ticksPerSecond == TicksPerSecond);
+}
+
 d_time localTZA = 0;
 
 private immutable char[] daystr = "SunMonTueWedThuFriSat";
