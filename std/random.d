@@ -21,11 +21,12 @@ generator it considers the most fit for the target environment.
 Example:
 
 ----
-Random gen;
-// Generate a uniformly-distributed integer in the range [0, 15]
-auto i = uniform(gen, 0, 15);
+// Generate a uniformly-distributed integer in the range [0, 15)
+auto i = uniform(0, 15);
 // Generate a uniformly-distributed real in the range [0, 100$(RPAREN)
-auto r = uniform(gen, 0.0L, 100.0L);
+// using a specific random generator
+Random gen;
+auto r = uniform(0.0L, 100.0L, gen);
 ----
 
 In addition to random number generators, this module features
@@ -53,7 +54,7 @@ WIKI = Phobos/StdRandom
 module std.random;
 
 import std.algorithm, std.c.time, std.contracts, std.conv, std.date, std.math,
-    std.process, std.range, std.stdio, std.traits;
+    std.numeric, std.process, std.range, std.stdio, std.traits;
 
 // Segments of the code in this file Copyright (c) 1997 by Rick Booth
 // From "Inner Loops" by Rick Booth, Addison-Wesley
@@ -555,7 +556,7 @@ if (is(CommonType!(T1, UniformRandomNumberGenerator) == void) &&
             _b = b - 1;
         }
         else
-            _b = nextafter(b, -b.infinity);
+            _b = nextafter(to!NumberType(b), -_b.infinity);
     else
         _b = b;
     enforce(_a <= _b,
@@ -566,7 +567,8 @@ if (is(CommonType!(T1, UniformRandomNumberGenerator) == void) &&
         auto myRange = _b - _a;
         if (!myRange) return _a;
         assert(urng.max - urng.min >= myRange,
-                "UniformIntGenerator.popFront not implemented for large ranges");
+                "UniformIntGenerator.popFront not implemented"
+                " for large ranges");
         Unsigned!(typeof((urng.max - urng.min + 1) / (myRange + 1)))
             bucketSize = 1 + (urng.max - urng.min - myRange) / (myRange + 1);
         //assert(bucketSize, to!(string)(myRange));
@@ -592,7 +594,7 @@ As above, but uses the default generator $(D rndGen).
  */
 version(ddoc)
     CommonType!(T1, T2) uniform(string boundaries = "[$(RPAREN)", T1, T2)
-        (T1 a, T2 b)  if (is(CommonType!(T1, T2)));
+        (T1 a, T2 b)  if (!is(CommonType!(T1, T2) == void));
 else
 CommonType!(T1, T2) uniform(string boundaries = "[)", T1, T2)
 (T1 a, T2 b)  if (is(CommonType!(T1, T2)))
@@ -620,6 +622,33 @@ unittest
     assert(0 <= b && b < 1, to!string(b));
     auto c = uniform(0.0, 1.0);
     assert(0 <= c && c < 1);
+}
+
+/**
+Generates a uniform probability distribution of size $(D n), i.e., an
+array of size $(D n) of positive numbers of type $(D F) that sum to
+$(D 1). If $(D useThis) is provided, it is used as storage.
+ */
+F[] uniformDistribution(F = double)(size_t n, F[] useThis = null)
+{
+    useThis.length = n;
+    foreach (ref e; useThis)
+    {
+        e = uniform(0.0, 1);
+    }
+    normalize(useThis);
+    return useThis;
+}
+
+unittest
+{
+    static assert(is(CommonType!(double, int) == double));
+    auto a = uniformDistribution(5);
+    enforce(a.length == 5);
+    enforce(approxEqual(reduce!"a + b"(a), 1));
+    a = uniformDistribution(10, a);
+    enforce(a.length == 10);
+    enforce(approxEqual(reduce!"a + b"(a), 1));
 }
 
 /**
