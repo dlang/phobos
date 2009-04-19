@@ -991,54 +991,10 @@ unittest
     double[] b = [ 4., 3., ];
     // writeln(cosineSimilarity(a, b));
     // writeln(10.0 / sqrt(5.0 * 25));
-    assert(approxEqual(cosineSimilarity(a, b), 10.0 / sqrt(5.0 * 25), 0.01));
+    assert(approxEqual(
+                cosineSimilarity(a, b), 10.0 / sqrt(5.0 * 25),
+                0.01));
 }
-
-// template tabulateFixed(alias fun, uint n,
-//         real maxError, real left, real right)
-// {
-//     ReturnType!(fun) tabulateFixed(ParameterTypeTuple!(fun) arg)
-//     {
-//         alias ParameterTypeTuple!(fun)[0] num;
-//         static num[n] table;
-//         alias arg[0] x;
-//         enforce(left <= x && x < right);
-//         invariant i = cast(uint) (table.length
-//                 * ((x - left) / (right - left)));
-//         assert(i < n);
-//         if (isnan(table[i])) {
-//             // initialize it
-//             auto x1 = left + i * (right - left) / n;
-//             auto x2 = left + (i + 1) * (right - left) / n;
-//             invariant y1 = fun(x1), y2 = fun(x2);
-//             invariant y = 2 * y1 * y2 / (y1 + y2);
-//             num wyda(num xx) { return fun(xx) - y; }
-//             auto bestX = findRoot(&wyda, x1, x2);
-//             table[i] = fun(bestX);
-//             invariant leftError = abs((table[i] - y1) / y1);
-//             enforce(leftError <= maxError, text(leftError, " > ", maxError));
-//             invariant rightError = abs((table[i] - y2) / y2);
-//             enforce(rightError <= maxError, text(rightError, " > ", maxError));
-//         }
-//         return table[i];
-//     }
-// }
-
-// unittest
-// {
-//     enum epsilon = 0.01;
-//     alias tabulateFixed!(tanh, 700, epsilon, 0.2, 3) fasttanh;
-//     uint testSize = 100000;
-//     auto rnd = Random(unpredictableSeed);
-//     foreach (i; 0 .. testSize) {
-//         invariant x = uniform(rnd, 0.2F, 3.0F);
-//         invariant float y = fasttanh(x), w = tanh(x);
-//         invariant e = abs(y - w) / w;
-//         //writefln("%.20f", e);
-//         enforce(e <= epsilon, text("x = ", x, ", fasttanh(x) = ", y,
-//                         ", tanh(x) = ", w, ", relerr = ", e));
-//     }
-// }
 
 /**
 Normalizes values in $(D range) by multiplying each element with a
@@ -1099,6 +1055,216 @@ unittest
     assert(!normalize(a));
     assert(a == [ 0.5, 0.5 ]);
 }
+
+/**
+Computes $(LUCKY _entropy) of input range $(D r) in bits. This
+function assumes (without checking) that the values in $(D r) are all
+in $(D [0, 1]). For the entropy to be meaningful, often $(D r) should
+be normalized too (i.e., its values should sum to 1). The
+two-parameter version stops evaluating as soon as the intermediate
+result is greater than or equal to $(D max).
+ */
+ElementType!Range entropy(Range)(Range r) if (isInputRange!Range)
+{
+    typeof(return) result = 0.0;
+    foreach (e; r)
+    {
+        if (!e) continue;
+        result -= e * log2(e);
+    }
+    return result;
+}
+
+/// Ditto
+ElementType!Range entropy(Range, F)(Range r, F max)
+if (isInputRange!Range
+        && !is(CommonType!(ElementType!Range, F) == void))
+{
+    typeof(return) result = 0.0;
+    foreach (e; r)
+    {
+        if (!e) continue;
+        result -= e * log2(e);
+        if (result >= max) break;
+    }
+    return result;
+}
+
+unittest
+{
+    double[] p = [ 0.0, 0, 0, 1 ];
+    assert(entropy(p) == 0);
+    p = [ 0.25, 0.25, 0.25, 0.25 ];
+    assert(entropy(p) == 2);
+    assert(entropy(p, 1) == 1);
+}
+
+/**
+Computes the $(LUCKY Kullback-Leibler divergence) between input ranges
+$(D a) and $(D b), which is the sum $(D ai * log(ai / bi)). The base
+of logarithm is 2. The ranges are assumed to contain elements in $(D
+[0, 1]). Usually the ranges are normalized probability distributions,
+but this is not required or checked by $(D
+kullbackLeiblerDivergence). If any element of $(D b) is zero, returns
+infinity. If the inputs are normalized, the result is positive.
+ */
+CommonType!(ElementType!Range1, ElementType!Range2)
+kullbackLeiblerDivergence(Range1, Range2)(Range1 a, Range2 b)
+    if (isInputRange!(Range1) && isInputRange!(Range2))
+{
+    enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
+    static if (haveLen) enforce(a.length == b.length);
+    FPTemporary!(typeof(return)) result = 0;
+    for (; !a.empty; a.popFront, b.popFront)
+    {
+        immutable t1 = a.front;
+        if (t1 == 0) continue;
+        immutable t2 = b.front;
+        if (t2 == 0) return result.infinity;
+        assert(t1 > 0 && t2 > 0);
+        result += t1 * log2(t1 / t2);
+    }
+    static if (!haveLen) enforce(b.empty);
+    return result;
+}
+
+unittest
+{
+    double[] p = [ 0.0, 0, 0, 1 ];
+    assert(kullbackLeiblerDivergence(p, p) == 0);
+    double[] p1 = [ 0.25, 0.25, 0.25, 0.25 ];
+    assert(kullbackLeiblerDivergence(p1, p1) == 0);
+    assert(kullbackLeiblerDivergence(p, p1) == 2);
+    assert(kullbackLeiblerDivergence(p1, p) == double.infinity);
+    double[] p2 = [ 0.2, 0.2, 0.2, 0.4 ];
+    assert(approxEqual(kullbackLeiblerDivergence(p1, p2), 0.0719281));
+    assert(approxEqual(kullbackLeiblerDivergence(p2, p1), 0.0780719));
+}
+
+/**
+Computes the $(LUCKY Jensen-Shannon divergence) between $(D a) and $(D
+b), which is the sum $(D (ai * log(2 * ai / (ai + bi)) + bi * log(2 *
+bi / (ai + bi))) / 2). The base of logarithm is 2. The ranges are
+assumed to contain elements in $(D [0, 1]). Usually the ranges are
+normalized probability distributions, but this is not required or
+checked by $(D jensenShannonDivergence). If the inputs are normalized,
+the result is bounded within $(D [0, 1]). The three-parameter version
+stops evaluations as soon as the intermediate result is greater than
+or equal to $(D limit).
+ */
+CommonType!(ElementType!Range1, ElementType!Range2)
+jensenShannonDivergence(Range1, Range2)(Range1 a, Range2 b)
+    if (isInputRange!Range1 && isInputRange!Range2)
+{
+    enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
+    static if (haveLen) enforce(a.length == b.length);
+    FPTemporary!(typeof(return)) result = 0;
+    for (; !a.empty; a.popFront, b.popFront)
+    {
+        immutable t1 = a.front;
+        immutable t2 = b.front;
+        immutable avg = (t1 + t2) / 2;
+        if (t1 != 0)
+        {
+            result += t1 * log2(t1 / avg);
+        }
+        if (t2 != 0)
+        {
+            result += t2 * log2(t2 / avg);
+        }
+    }
+    static if (!haveLen) enforce(b.empty);
+    return result / 2;
+}
+
+/// Ditto
+CommonType!(ElementType!Range1, ElementType!Range2)
+jensenShannonDivergence(Range1, Range2, F)(Range1 a, Range2 b, F limit)
+   if (isInputRange!Range1 && isInputRange!Range2
+           && is(typeof(CommonType!(ElementType!Range1, ElementType!Range2).init
+                           >= F.init) : bool))
+{
+    enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
+    static if (haveLen) enforce(a.length == b.length);
+    FPTemporary!(typeof(return)) result = 0;
+    limit *= 2;
+    for (; !a.empty; a.popFront, b.popFront)
+    {
+        immutable t1 = a.front;
+        immutable t2 = b.front;
+        immutable avg = (t1 + t2) / 2;
+        if (t1 != 0)
+        {
+            result += t1 * log2(t1 / avg);
+        }
+        if (t2 != 0)
+        {
+            result += t2 * log2(t2 / avg);
+        }
+        if (result >= limit) break;
+    }
+    static if (!haveLen) enforce(b.empty);
+    return result / 2;
+}
+
+unittest
+{
+    double[] p = [ 0.0, 0, 0, 1 ];
+    assert(jensenShannonDivergence(p, p) == 0);
+    double[] p1 = [ 0.25, 0.25, 0.25, 0.25 ];
+    assert(jensenShannonDivergence(p1, p1) == 0);
+    assert(approxEqual(jensenShannonDivergence(p1, p), 0.548795));
+    double[] p2 = [ 0.2, 0.2, 0.2, 0.4 ];
+    assert(approxEqual(jensenShannonDivergence(p1, p2), 0.0186218));
+    assert(approxEqual(jensenShannonDivergence(p2, p1), 0.0186218));
+    assert(approxEqual(jensenShannonDivergence(p2, p1, 0.005), 0.00602366));
+}
+
+// template tabulateFixed(alias fun, uint n,
+//         real maxError, real left, real right)
+// {
+//     ReturnType!(fun) tabulateFixed(ParameterTypeTuple!(fun) arg)
+//     {
+//         alias ParameterTypeTuple!(fun)[0] num;
+//         static num[n] table;
+//         alias arg[0] x;
+//         enforce(left <= x && x < right);
+//         invariant i = cast(uint) (table.length
+//                 * ((x - left) / (right - left)));
+//         assert(i < n);
+//         if (isnan(table[i])) {
+//             // initialize it
+//             auto x1 = left + i * (right - left) / n;
+//             auto x2 = left + (i + 1) * (right - left) / n;
+//             invariant y1 = fun(x1), y2 = fun(x2);
+//             invariant y = 2 * y1 * y2 / (y1 + y2);
+//             num wyda(num xx) { return fun(xx) - y; }
+//             auto bestX = findRoot(&wyda, x1, x2);
+//             table[i] = fun(bestX);
+//             invariant leftError = abs((table[i] - y1) / y1);
+//             enforce(leftError <= maxError, text(leftError, " > ", maxError));
+//             invariant rightError = abs((table[i] - y2) / y2);
+//             enforce(rightError <= maxError, text(rightError, " > ", maxError));
+//         }
+//         return table[i];
+//     }
+// }
+
+// unittest
+// {
+//     enum epsilon = 0.01;
+//     alias tabulateFixed!(tanh, 700, epsilon, 0.2, 3) fasttanh;
+//     uint testSize = 100000;
+//     auto rnd = Random(unpredictableSeed);
+//     foreach (i; 0 .. testSize) {
+//         invariant x = uniform(rnd, 0.2F, 3.0F);
+//         invariant float y = fasttanh(x), w = tanh(x);
+//         invariant e = abs(y - w) / w;
+//         //writefln("%.20f", e);
+//         enforce(e <= epsilon, text("x = ", x, ", fasttanh(x) = ", y,
+//                         ", tanh(x) = ", w, ", relerr = ", e));
+//     }
+// }
 
 /**
 The so-called "all-lengths gap-weighted string kernel" computes a
