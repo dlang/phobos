@@ -161,6 +161,8 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_perf.html \
 	$(DOC)\std_process.html \
 	$(DOC)\std_random.html \
+	$(DOC)\std_range.html \
+	$(DOC)\std_regex.html \
 	$(DOC)\std_regexp.html \
 	$(DOC)\std_signals.html \
 	$(DOC)\std_socket.html \
@@ -212,7 +214,8 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 	std\variant.d std\numeric.d std\bitmanip.d std\complex.d \
 	std\functional.d std\algorithm.d std\array.d std\typecons.d std\iterator.d \
 	std\xml.d std\encoding.d std\bigint.d \
-	std\range.d std\stdiobase.d
+	std\range.d std\stdiobase.d \
+	std\regex.d std\datebase.d \
 	std\__fileinit.d
 
 SRC_STD_C= std\c\process.d std\c\stdlib.d std\c\time.d std\c\stdio.d \
@@ -619,6 +622,12 @@ $(DOC)\std_process.html : std.ddoc std\process.d
 
 $(DOC)\std_random.html : std.ddoc std\random.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_random.html std.ddoc std\random.d
+
+$(DOC)\std_range.html : std.ddoc std\range.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_range.html std.ddoc std\range.d
+
+$(DOC)\std_regex.html : std.ddoc std\regex.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_regex.html std.ddoc std\regex.d
 
 $(DOC)\std_regexp.html : std.ddoc std\regexp.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_regexp.html std.ddoc std\regexp.d

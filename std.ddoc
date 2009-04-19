@@ -1,3 +1,24 @@
+BR =	<br>
+DDOC_DITTO     = $(BR)$0
+DDOC_SUMMARY   = $0$(P)
+DDOC_DESCRIPTION = $0$(P)
+DDOC_AUTHORS   = $(B Authors:)$(BR)$0$(P)
+DDOC_BUGS      = $(RED BUGS:)$(BR)$0$(P)
+DDOC_COPYRIGHT = $(B Copyright:)$(BR)$0$(P)
+DDOC_DATE      = $(B Date:)$(BR)$0$(P)
+DDOC_DEPRECATED = $(RED Deprecated:)$(BR)$0$(P)
+DDOC_EXAMPLES  = $(B Examples:)$(BR)$0$(P)
+DDOC_HISTORY   = $(B History:)$(BR)$0$(P)
+DDOC_LICENSE   = $(B License:)$(BR)$0$(P)
+DDOC_RETURNS   = $(B Returns:)$(BR)$0$(P)
+DDOC_SEE_ALSO  = $(B See Also:)$(BR)$0$(P)
+DDOC_STANDARDS = $(B Standards:)$(BR)$0$(P)
+DDOC_THROWS    = $(B Throws:)$(BR)$0$(P)
+DDOC_VERSION   = $(B Version:)$(BR)$0$(P)
+DDOC_SECTION_H = $(B $0)$(BR)
+DDOC_SECTION   = $0$(P)
+DDOC_PARAMS    = $(B Parameters:)<table class=parms>$0</table>$(P)
+DDOC_BLANKLINE	= $(P)
 
 DDOC = <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
    "http://www.w3.org/TR/html4/loose.dtd">
@@ -139,7 +160,6 @@ NAVIGATION_PHOBOS=
 	$(LI <a href="std_algorithm.html" title="General-purpose algorithms">std.algorithm</a>)
 	$(LI <a href="std_array.html" title="Array functions">std.array</a>)
 	$(LI <a href="std_base64.html" title="Encode/decode base64 format">std.base64</a>)
-	$(LI <a href="std_bigint.html" title="Multi precision integer arithmetic">std.bigint</a>)
 	$(LI <a href="std_bind.html" title="Function argument binding">std.bind</a>)
 	$(LI <a href="std_bitarray.html" title="Arrays of bits">std.bitarray</a>)
 	$(LI <a href="std_bitmanip.html" title="Bit-level manipulation">std.bitmanip</a>)
@@ -157,7 +177,7 @@ NAVIGATION_PHOBOS=
 	$(LI <a href="std_file.html" title="Basic file operations">std.file</a>)
 	$(LI <a href="std_format.html" title="Formatted conversions of values to strings">std.format</a>)
 	$(LI <a href="std_functional.html" title="functional">std.functional</a>)
-	$(LI <a href="std_gc.html" title="Control the garbage collector">core.memory</a>)
+	$(LI <a href="std_gc.html" title="Control the garbage collector">std.gc</a>)
 	$(LI <a href="std_getopt.html" title="Command line options">std.getopt</a>)
 	$(LI <a href="std_intrinsic.html" title="Compiler built in intrinsic functions">std.intrinsic</a>)
 	$(LI <a href="std_iterator.html" title="Defines iterators and ranges">std.iterator</a>)
@@ -166,12 +186,14 @@ NAVIGATION_PHOBOS=
 	$(LI <a href="std_metastrings.html" title="Metaprogramming with strings">std.metastrings</a>)
 	$(LI <a href="std_mmfile.html" title="Memory mapped files">std.mmfile</a>)
 	$(LI <a href="std_numeric.html" title="Numeric algorithms">std.numeric</a>)
-	$(LI <a href="std_openrj.html" title="Basic database">std.openrj</a>)
 	$(LI <a href="std_outbuffer.html" title="Assemble data into an array of bytes">std.outbuffer</a>)
+	$(LI <a href="std_outofmemory.html" title="Out of memory exception">std.outofmemory</a>)
 	$(LI <a href="std_path.html" title="Manipulate file names, path names, etc.">std.path</a>)
 	$(LI <a href="std_process.html" title="Create/destroy threads">std.process</a>)
 	$(LI <a href="std_random.html" title="Random number generation">std.random</a>)
-	$(LI <a href="std_regexp.html" title="regular expressions">std.regexp</a>)
+	$(LI <a href="std_range.html" title="Ranges">std.range</a>)
+	$(LI <a href="std_regex.html" title="regular expressions">std.regex</a>)
+	$(LI <a href="std_regexp.html" title="regular expressions (deprecated)">std.regexp</a>)
 	$(LI <a href="std_signals.html" title="Signals">std.signals</a>)
 	$(LI <a href="std_socket.html" title="Sockets">std.socket</a>)
 	$(LI <a href="std_socketstream.html" title="Stream for a blocking, connected Socket">std.socketstream</a>)
@@ -225,9 +247,13 @@ D_PSYMBOL = <span class="d_psymbol">$0</span>
 D_PARAM   = <span class="d_param">$0</span>
 RPAREN = )
 LPAREN = (
+LESS = &lt;
+GREATER = &gt;
 WEB = $(LINK2 http://$1,$2)
+LUCKY = $(WEB 
+google.com/search?btnI=I%27m+Feeling+Lucky&ie=UTF-8&oe=UTF-8&q=$0,$0)
 D = <font face=Courier><b>$0</b></font>
-D = <span class="d_psymbol"><i>$0</i></span>
+D = <span class="d_inlinecode">$0</span>
 BIGOH = <i><b>&Omicron;</i>(</i></b>$(D $0)<b></i>)</i></b>
 GLOSSARY = $(LINK2 ../2.0/glossary.html#$0, $0)
 
@@ -235,6 +261,8 @@ DDOC_PSYMBOL = <a name="$0"></a>$(U $0)
 DDOC_DECL  = $(DT <div class="d_decl">$0</div>)
 XREF = <a href=std_$1.html#$2>std.$1.$2</a>
 BUGZILLA = $(LINK2 http://d.puremagic.com/issues/show_bug.cgi?id=$0, Bugzilla $0)
+
+BOOKTABLE = <table cellspacing=0 cellpadding=5 class=book><caption>$1</caption>$2</table>
 
 
 COPYRIGHT= Copyright &copy; 1999-$(YEAR) by Digital Mars, All Rights Reserved

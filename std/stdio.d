@@ -37,11 +37,13 @@ version (linux)
 {
     // Specific to the way Gnu C does stdio
     version = GCC_IO;
+    extern(C) FILE* fopen64(const char*, const char*);
 }
 
 version (OSX)
 {
     version = GENERIC_IO;
+    alias core.stdc.stdio.fopen fopen64;
 }
 
 version(Windows)
@@ -1235,7 +1237,6 @@ private FILE* fopen(in char[] name, in char[] mode = "r")
 
 version (Posix)
 {
-    extern(C) FILE* fopen64(const char*, const char*);
     extern(C) FILE* popen(const char*, const char*);
 
 /***********************************
