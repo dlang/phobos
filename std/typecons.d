@@ -72,14 +72,7 @@ $(WEB erdani.org, Andrei Alexandrescu), Bartosz Milewski, Don Clugston
  */
 
 module std.typecons;
-import std.stdio;
-import std.metastrings;
-import std.contracts;
-import std.typetuple;
-import std.conv;
-import std.traits;
-import std.array;
-import std.range;
+import std.array, std.contracts, std.conv, std.metastrings, std.traits;
 
 /**
 Encapsulates unique ownership of a resource. 
@@ -481,7 +474,7 @@ unittest
     assert(nosh.field[0] == 5);
     // Tuple!(int, int) nosh1;
     // assert(!is(typeof(nosh) == typeof(nosh1)));
-    assert(nosh.toString == "Tuple!(int,int)(5, 0)");
+    assert(nosh.toString == "Tuple!(int,int)(5, 0)", nosh.toString);
     Tuple!(int, short) yessh;
     nosh = yessh;
 
