@@ -832,7 +832,7 @@ DEPRECATION.
 
 */
 
-deprecated void rand_seed(uint seed, uint index)
+void rand_seed(uint seed, uint index)
 {
     .seed = seed;
     .index = index;
