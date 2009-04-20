@@ -3530,8 +3530,9 @@ Sorts the random-access range $(D chain(lhs, rhs)) according to
 predicate $(D less). The left-hand side of the range $(D lhs) is
 assumed to be already sorted; $(D rhs) is assumed to be unsorted. The
 exact strategy chosen depends on the relative sizes of $(D lhs) and
-$(D rhs).  Performs $(BIGOH n * log(n)) (best case) to $(BIGOH n *
-log(n)) (worst-case) evaluations of $(D swap).
+$(D rhs).  Performs $(BIGOH lhs.length + rhs.length * log(rhs.length))
+(best case) to $(BIGOH (lhs.length + rhs.length) * log(lhs.length +
+rhs.length)) (worst-case) evaluations of $(D swap).
 
 Example:
 ----
