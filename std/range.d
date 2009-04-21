@@ -1586,9 +1586,6 @@ element. Forwards to $(D _input.back).
 
 /**
  Prepends $(D value) to the root of the list.
-
-BUG:
-This function may fail to compile due to $(WEB d.puremagic.com/issues/show_bug.cgi?id=2626,bug 2676).
  */
 SListRange!(T, t) cons(T, Topology t)(T front, SListRange!(T, t) tail)
 {
@@ -1599,7 +1596,7 @@ SListRange!(T, t) cons(T, Topology t)(T front, SListRange!(T, t) tail)
     return result;
 }
 
-version(none) unittest
+unittest
 {
     {
         SListRange!(int, Topology.flexible) lst;
