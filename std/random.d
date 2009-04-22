@@ -344,6 +344,7 @@ Parameter for the generator.
 */
     void popFront()
     {
+        if (mti == size_t.max) seed();
         enum UIntType
             upperMask = ~((cast(UIntType) 1u <<
                            (UIntType.sizeof * 8 - (w - r))) - 1),
@@ -355,20 +356,17 @@ Parameter for the generator.
         if (mti >= n)
         {
             /* generate N words at one time */
-            if (mti == n + 1)  /* if init_genrand() has not been called, */
-            {
-                seed(defaultSeed); /* a default initial seed is used */
-                return popFront;
-            }
 
             int kk = 0;
-            for (; kk < n - m; ++kk)
+            const limit1 = n - m;
+            for (; kk < limit1; ++kk)
             {
                 y = (mt[kk] & upperMask)|(mt[kk + 1] & lowerMask);
                 mt[kk] = cast(UIntType) (mt[kk + m] ^ (y >> 1)
-                                         ^ mag01[cast(UIntType) y & 0x1U]);
+                        ^ mag01[cast(UIntType) y & 0x1U]);
             }
-            for (; kk < n - 1; ++kk)
+            const limit2 = n - 1;
+            for (; kk < limit2; ++kk)
             {
                 y = (mt[kk] & upperMask)|(mt[kk + 1] & lowerMask);
                 mt[kk] = cast(UIntType) (mt[kk + (m -n)] ^ (y >> 1)
@@ -397,10 +395,7 @@ Parameter for the generator.
  */
     UIntType front()
     {
-        if (mti == n + 1)
-        {
-            popFront;
-        }
+        if (mti == size_t.max) seed();
         return _y;
     }
 
@@ -410,7 +405,7 @@ Always $(D false).
     enum bool empty = false;
     
     private UIntType mt[n];
-    private size_t mti = n + 1; /* means mt is not initialized */
+    private size_t mti = size_t.max; /* means mt is not initialized */
     UIntType _y = UIntType.max;
 }
 
@@ -442,6 +437,22 @@ unittest
     Mt19937 gen;
     advance(gen, 9999);
     assert(gen.front == 4123659995);
+}
+
+unittest
+{
+    uint a, b;
+    {
+        Mt19937 gen;
+        a = gen.front;
+    }
+    {
+        Mt19937 gen;
+        gen.popFront;
+        //advance(gen, 1);  // skip 1 element
+        b = gen.front;
+    }
+    assert(a != b);
 }
 
 /**
@@ -767,7 +778,7 @@ struct RandomCover(Range, Random)
         {
             if (_chosen[i]) { ++i; continue; }
             // Roll a dice with k faces
-            auto chooseMe = uniform(0, k - 1, _rnd) == 0;
+            auto chooseMe = uniform(0, k, _rnd) == 0;
             assert(k > 1 || chooseMe);
             if (chooseMe)
             {
