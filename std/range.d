@@ -1600,9 +1600,16 @@ unittest
 {
     {
         SListRange!(int, Topology.flexible) lst;
+        pragma(msg, " --- std.range(1603) broken test ---");
+        // DAC: DMD2.029 can't deduce the Topology argument.       
+        /+
         lst = cons(3, lst);
         lst = cons(2, lst);
         lst = cons(1, lst);
+        +/
+        lst = cons!(int, Topology.flexible)(3, lst);
+        lst = cons!(int, Topology.flexible)(2, lst);
+        lst = cons!(int, Topology.flexible)(1, lst);
         assert(equal(lst, [1, 2, 3][]));
     }
     {
