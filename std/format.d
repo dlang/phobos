@@ -2872,10 +2872,43 @@ T unformat(T, Range)(ref Range input, FormatInfo spec) if (isIntegral!T)
 //------------------------------------------------------------------------------
 T unformat(T, Range)(ref Range input, FormatInfo spec) if (isFloatingPoint!T)
 {
+    if (spec.spec == 'r')
+    {
+        // raw read
+        enforce(input.length >= T.sizeof);
+        enforce(ElementType!(Range).sizeof == 1);
+        union X
+        {
+            char[T.sizeof] raw;
+            T typed;
+        }
+        X x;
+        foreach (i; 0 .. T.sizeof)
+        {
+            x.raw[i] = input.front;
+            input.popFront;
+        }
+        return x.typed;
+    }
     enforce(std.algorithm.find(acceptedSpecs!T, spec.spec).length,
             text("Format specifier `", spec.spec,
                     "' not accepted for floating point types"));
     return parse!T(input);
+}
+
+unittest
+{
+    union A
+    {
+        char[float.sizeof] untyped;
+        float typed;
+    };
+    A a;
+    a.typed = 5.5;
+    char[] input = a.untyped[];
+    float witness;
+    formattedRead(input, "%r", &witness);
+    assert(witness == a.typed);
 }
 
 //------------------------------------------------------------------------------
