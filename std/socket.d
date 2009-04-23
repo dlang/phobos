@@ -314,9 +314,9 @@ class Service
 
 	void populate(servent* serv)
 	{
-		name = to!string(serv.s_name).idup;
+		name = to!string(serv.s_name);
 		port = ntohs(cast(ushort)serv.s_port);
-		protocolName = to!string(serv.s_proto).idup;
+		protocolName = to!string(serv.s_proto);
 
 		int i;
 		for(i = 0;; i++)
