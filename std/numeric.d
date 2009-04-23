@@ -1066,7 +1066,7 @@ result is greater than or equal to $(D max).
  */
 ElementType!Range entropy(Range)(Range r) if (isInputRange!Range)
 {
-    typeof(return) result = 0.0;
+    Unqual!(typeof(return)) result = 0.0;
     foreach (e; r)
     {
         if (!e) continue;
