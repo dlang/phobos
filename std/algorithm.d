@@ -1907,6 +1907,46 @@ unittest
     assert(c == tuple([2, 4], 1), text(c.field[0]));
 }
 
+// minPos
+/**
+Returns the position of the minimum element of forward range $(D
+range), i.e. a subrange of $(D range) starting at the position of its
+smallest element and with the same ending as $(D range). The function
+can actually be used for counting the maximum or any other ordering
+predicate (that's why $(D maxPos) is not provided).
+
+Example:
+----
+int[] a = [ 2, 3, 4, 1, 2, 4, 1, 1, 2 ];
+// Minimum is 1 and first occurs in position 3
+assert(minPos(a) == [ 1, 2, 4, 1, 1, 2 ]);
+// Maximum is 4 and first occurs in position 2
+assert(minPos!("a > b")(a) == [ 4, 1, 2, 4, 1, 1, 2 ]);
+----
+ */
+Range minPos(alias pred = "a < b", Range)(Range range)
+{
+    if (range.empty) return range;
+    auto result = range;
+    for (range.popFront; !range.empty; range.popFront)
+    {
+        if (binaryFun!(pred)(result.front, range.front)
+                || !binaryFun!(pred)(range.front, result.front)) continue;
+        // change the min
+        result = range;
+    }
+    return result;
+}
+
+unittest
+{
+    int[] a = [ 2, 3, 4, 1, 2, 4, 1, 1, 2 ];
+// Minimum is 1 and first occurs in position 3
+    assert(minPos(a) == [ 1, 2, 4, 1, 1, 2 ]);
+// Maximum is 4 and first occurs in position 5
+    assert(minPos!("a > b")(a) == [ 4, 1, 2, 4, 1, 1, 2 ]);
+}
+
 // mismatch
 /**
 Sequentially compares elements in $(D r1) and $(D r2) in lockstep, and
@@ -3566,9 +3606,9 @@ unittest
 
 // isSorted
 /**
-Checks whether a random-access range is sorted according to the
-comparison operation $(D less). Performs $(BIGOH r.length) evaluations
-of $(D less).
+Checks whether a forward range is sorted according to the comparison
+operation $(D less). Performs $(BIGOH r.length) evaluations of $(D
+less).
 
 Example:
 ----
