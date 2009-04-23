@@ -120,15 +120,7 @@ $$(OBJDIR)/$1/$2/unittest/std/% : std/%.d				\
 $(PRODUCTIONLIBDIR)/libphobos2tmp_$2$$(LIBSUFFIX_$1) : $$(LIB_$1_$2)
 	ln -sf $$(realpath $$<) $$@
 
-PRODUCTIONLIB_$1 = $(PRODUCTIONLIBDIR)/libphobos2$(LIBSUFFIX_$1)
-ifeq ($2,release)
-$1/$2 : $$(PRODUCTIONLIB_$1)
-$$(PRODUCTIONLIB_$1) : $$(LIB_$1_$2)
-	ln -sf $$(realpath $$<) $$@
-else
 $1/$2 : $$(LIB_$1_$2)
-endif
-
 $$(LIB_$1_$2) : $$(SRC2LIB_$1) $$(OBJS_$1_$2)					\
 $(LIBDRUNTIME_$1)
 	@echo $(DMD_$1) $(DFLAGS_$2) -lib -of$$@ "[...tons of files...]"
@@ -147,6 +139,8 @@ default : posix/release
 $(foreach S,$(OS), $(eval $S : $(foreach B,$(BUILDS), $S/$B/unittest)))
 $(foreach B,$(BUILDS), $(eval $B : $(foreach S,$(OS), $S/$B/unittest)))
 unittest : $(foreach S,$(OS), $S)
+production : posix/release
+	ln -sf $(realpath $(OBJDIR)/posix/release/libphobos2.a) $(PRODUCTIONLIBDIR)/libphobos2.a
 
 all : posix win32 html
 clean :
