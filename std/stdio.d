@@ -755,6 +755,33 @@ to this file. */
     }
 
 /**
+Iterates through a file a chunk at a time by using $(D foreach).
+
+Example:
+
+---------
+void main()
+{
+  foreach (ubyte[] buffer; stdin.byChunk(4096))
+  {
+    ... use buffer ...
+  }
+}
+---------
+
+The content of $(D buffer) is reused across calls. In the example
+above, $(D buffer.length) is 4096 for all iterations, except for the
+last one, in which case $(D buffer.length) may be less than 4096 (but
+always greater than zero).
+
+In case of an I/O error, an $(D StdioException) is thrown.
+ */
+    chunks byChunk(size_t chunkSize)
+    {
+        return chunks(this, chunkSize);
+    }
+
+/**
 $(D Range) that locks the file and allows fast writing to it.
  */ 
     struct LockingTextWriter {
