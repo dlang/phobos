@@ -1000,13 +1000,22 @@ template Unsigned(T) {
     else static if (is(T == char)) alias char Unsigned;
     else static if (is(T == wchar)) alias wchar Unsigned;
     else static if (is(T == dchar)) alias dchar Unsigned;
-    else static if(is(T == enum)) {
+    else static if(is(T == enum))
+    {
         static if (T.sizeof == 1) alias ubyte Unsigned;
         else static if (T.sizeof == 2) alias ushort Unsigned;
         else static if (T.sizeof == 4) alias uint Unsigned;
         else static if (T.sizeof == 8) alias ulong Unsigned;
         else static assert(false, "Type " ~ T.stringof
                            ~ " does not have an Unsigned counterpart");
+    }
+    else static if (is(T == immutable))
+    {
+        alias immutable(Unsigned!(Unqual!T)) Unsigned;
+    }
+    else static if (is(T == const))
+    {
+        alias const(Unsigned!(Unqual!T)) Unsigned;
     }
     else static assert(false, "Type " ~ T.stringof
                        ~ " does not have an Unsigned counterpart");
@@ -1016,6 +1025,13 @@ unittest
 {
     alias Unsigned!(int) U;
     assert(is(U == uint));
+    alias Unsigned!(const(int)) U1;
+    assert(is(U1 == const(uint)), U1.stringof);
+    alias Unsigned!(immutable(int)) U2;
+    assert(is(U2 == immutable(uint)), U2.stringof);
+    //struct S {}
+    //alias Unsigned!(S) U2;
+    //alias Unsigned!(double) U3;
 }
 
 /**
