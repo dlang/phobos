@@ -1916,11 +1916,12 @@ private void formatImplFloat(Writer, D)(ref Writer w, D obj, FormatInfo f)
     if (f.flHash) sprintfSpec[i++] = '#';
     sprintfSpec[i .. i + 3] = "*.*";
     i += 3;
-    if (is(const(D) == const(real))) sprintfSpec[i++] = 'L';
+    if (is(Unqual!D == real)) sprintfSpec[i++] = 'L';
     sprintfSpec[i++] = f.spec;
     sprintfSpec[i] = 0;
     //printf("format: '%s'; geeba: %g\n", sprintfSpec.ptr, obj);
     char[512] buf;
+    //writeln("Spec is: ", sprintfSpec);
     invariant n = snprintf(buf.ptr, buf.length,
             sprintfSpec.ptr,
             f.width,
