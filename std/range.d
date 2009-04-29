@@ -774,13 +774,22 @@ template Chain(R...) if (allSatisfy!(isInputRange, R))
 struct ChainImpl(R...)
 {
 private:
-    alias CommonType!(staticMap!(.ElementType, R)) ElementType;
-    template sameET(A) { enum sameET = is(.ElementType!(A) == ElementType); }
+    alias CommonType!(staticMap!(.ElementType, R)) RvalueElementType;
+    template sameET(A)
+    {
+        enum sameET = is(.ElementType!(A) == RvalueElementType);
+    }
     enum bool allSameType = allSatisfy!(sameET, R);
     
     Tuple!(R) _input;
     
 public:
+    // This doesn't work yet
+    static if (allSameType)
+        alias ref RvalueElementType ElementType;
+    else
+        alias RvalueElementType ElementType;
+    
     this(R input)
     {
         foreach (i, v; input)
@@ -1129,8 +1138,14 @@ struct Take(R) if (isInputRange!(R))
 private:
     size_t _maxAvailable;
     R _input;
+    enum bool byRef = is(typeof(&(R.init[0])));
     
 public:
+    static if (byRef)
+        alias ref .ElementType!(R) ElementType;
+    else
+        alias .ElementType!(R) ElementType;
+
     bool empty()
     {
         return _maxAvailable == 0 || _input.empty;
@@ -1143,24 +1158,13 @@ public:
         --_maxAvailable;
     }
     
-    //@@@BUG 2597@@@ 
-    //auto front()
-    static if (is(typeof(&(R.init.front()))))
-    {
-        ref ElementType!(R) front()
+    mixin(
+        (byRef ? "ref " : "")~
+        q{ElementType front()
         {
             enforce(_maxAvailable > 0);
             return _input.front;
-        }
-    }
-    else
-    {
-        ElementType!(R) front()
-        {
-            enforce(_maxAvailable > 0);
-            return _input.front;
-        }
-    }
+        }});
 
     static if (isInfinite!(R))
     {
@@ -1177,23 +1181,37 @@ public:
         }
     }
 
+    
     static if (isRandomAccessRange!(R))
-        ref ElementType!(R) opIndex(uint index)
-        {
-            enforce(_maxAvailable > index);
-            return _input[index];
-        }
+    {
+        mixin(
+            (byRef ? "ref " : "")~
+            q{ElementType opIndex(uint index)
+                {
+                    enforce(_maxAvailable > index);
+                    return _input[index];
+                }
+            });
+    }
 
     static if (isBidirectionalRange!(R))
-        /*ref*/ ElementType!(R) back()
-        {
-            return _input.back;
-        }
+        mixin(
+            (byRef ? "ref " : "")~
+            q{ElementType back()
+                {
+                    return _input.back;
+                }
+            });
     else static if (isRandomAccessRange!(R))
-        /*ref*/ ElementType!(R) back()
-        {
-            return _input[length];
-        }
+        mixin(
+            (byRef ? "ref " : "")~
+            q{ElementType back()
+                {
+                    return _input[length];
+                }
+            });
+    
+    Take opSlice() { return this; }
 }
 
 /// Ditto
@@ -2050,7 +2068,8 @@ version(none) unittest
 /**
 Returns a range that goes through the numbers $(D begin), $(D begin +
 step), $(D begin + 2 * step), $(D ...), up to and excluding $(D
-end). The range offered is a random access range.
+end). The range offered is a random access range. The two-arguments
+version has $(D step = 1).
 
 Example:
 ----
@@ -2070,11 +2089,19 @@ iota(B, E, S)(B begin, E end, S step)
     return take((end - begin + step - 1) / step, Seq(tuple(begin, step), 0u));
 }
 
-version(none) unittest
+/// Ditto
+Take!(Sequence!("a.field[0] + n * a.field[1]",
+                Tuple!(CommonType!(B, E), uint)))
+iota(B, E)(B begin, E end)
 {
-    auto r = iota(0, 10, 1);
+    return iota(begin, end, 1u);
+}
+
+unittest
+{
+    auto r = iota(0, 10);
     assert(equal(r, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9][]));
-    r = iota(0, 11, 3);
+    r = iota(0, 11, 3u);
     assert(equal(r, [0, 3, 6, 9][]));
     assert(r[2] == 6);
 
@@ -2082,6 +2109,357 @@ version(none) unittest
     auto r1 = iota(a.ptr, a.ptr + a.length, 1);
     assert(r1.front == a.ptr);
     assert(r1.back == a.ptr + a.length);
+}
+
+/**
+Options for the $(D FrontTransversal) and $(D Transversal) ranges
+(below).
+ */
+enum TransverseOptions
+{
+/**
+When transversed, the elements of a range of ranges are assumed to
+have different lengths (e.g. a jagged array).
+ */ 
+    assumeJagged, //default
+/**
+The transversal enforces that the elements of a range of ranges have
+all the same length (e.g. an array of arrays, all having the same
+length). Checking is done once upon construction of the transversal
+range.
+ */ 
+    enforceNotJagged,
+/**
+The transversal assumes, without verifying, that the elements of a
+range of ranges have all the same length. This option is useful if
+checking was already done from the outside of the range.
+ */ 
+    assumeNotJagged,
+}
+
+/**
+Given a range of ranges, iterate transversally through the first
+elements of each of the enclosed ranges.
+
+Example:
+----
+int[][] x = new int[][2];
+x[0] = [1, 2];
+x[1] = [3, 4];
+auto ror = frontTransversal(x);
+assert(equals(ror, [ 1, 3 ][]));
+---
+ */
+struct FrontTransversal(RangeOfRanges,
+        TransverseOptions opt = TransverseOptions.assumeJagged)
+{
+    alias typeof(RangeOfRanges.init.front().front()) ElementType;
+
+    private void prime()
+    {
+        static if (opt == TransverseOptions.assumeJagged)
+        {
+            while (!_input.empty && _input.front.empty)
+            {
+                _input.popFront;
+            }
+            static if (isBidirectionalRange!RangeOfRanges)
+            {
+                while (!_input.empty && _input.back.empty)
+                {
+                    _input.popBack;
+                }
+            }
+        }
+    }
+
+/**
+   Construction from an input.
+*/
+    this(RangeOfRanges input)
+    {
+        _input = input;
+        prime;
+        static if (opt == TransverseOptions.enforceNotJagged)
+            // (isRandomAccessRange!RangeOfRanges
+            //     && hasLength!(.ElementType!RangeOfRanges))
+        {
+            if (empty) return;
+            immutable commonLength = _input.front.length;
+            foreach (e; _input)
+            {
+                enforce(e.length == commonLength);
+            }
+        }
+    }
+    
+/**
+   Forward range primitives.
+*/
+    bool empty()
+    {
+        return _input.empty;
+    }
+
+/// Ditto
+    ref ElementType front()
+    {
+        assert(!empty);
+        return _input.front.front;
+    }
+
+/// Ditto
+    void popFront()
+    {
+        assert(!empty);
+        _input.popFront;
+        prime;
+    }
+
+    static if (isBidirectionalRange!RangeOfRanges)
+    {
+/**
+   Bidirectional primitives. They are offered if $(D
+isBidirectionalRange!RangeOfRanges).
+ */
+        ref ElementType back()
+        {
+            return _input.back.front;
+        }
+/// Ditto
+        void popBack()
+        {
+            assert(!empty);
+            _input.popBack;
+            prime;
+        }
+    }
+    
+    static if (isRandomAccessRange!RangeOfRanges &&
+            (opt == TransverseOptions.assumeNotJagged ||
+                    opt == TransverseOptions.enforceNotJagged))
+    {
+/**
+Random-access primitive. It is offered if $(D
+isRandomAccessRange!RangeOfRanges && (opt ==
+TransverseOptions.assumeNotJagged || opt ==
+TransverseOptions.enforceNotJagged)).
+ */
+        ref ElementType opIndex(size_t n)
+        {
+            return _input[n].front;
+        }
+    }
+
+    auto opSlice() { return this; }
+
+private:
+    RangeOfRanges _input;
+}
+
+/// Ditto
+FrontTransversal!(RangeOfRanges, opt) frontTransversal(RangeOfRanges,
+        TransverseOptions opt = TransverseOptions.assumeJagged)
+(RangeOfRanges rr)
+{
+    return typeof(return)(rr);
+}
+
+/**
+Given a range of ranges, iterate transversally through the the $(D
+n)th element of each of the enclosed ranges. All elements of the
+enclosing range must offer random access.
+
+Example:
+----
+int[][] x = new int[][2];
+x[0] = [1, 2];
+x[1] = [3, 4];
+auto ror = transversal(x, 1);
+assert(equals(ror, [ 2, 4 ][]));
+---
+ */
+struct Transversal(RangeOfRanges,
+        TransverseOptions opt = TransverseOptions.assumeJagged)
+{
+    alias typeof(RangeOfRanges.init.front().front()) ElementType;
+
+    private void prime()
+    {
+        static if (opt == TransverseOptions.assumeJagged)
+        {
+            while (!_input.empty && _input.front.length <= _n)
+            {
+                _input.popFront;
+            }
+            static if (isBidirectionalRange!RangeOfRanges)
+            {
+                while (!_input.empty && _input.back.length <= _n)
+                {
+                    _input.popBack;
+                }
+            }
+        }
+    }
+
+/**
+   Construction from an input and an index.
+ */
+    this(RangeOfRanges input, size_t n)
+    {
+        _input = input;
+        _n = n;
+        prime;
+        static if (opt == TransverseOptions.enforceNotJagged)
+        {
+            if (empty) return;
+            immutable commonLength = _input.front.length;
+            foreach (e; _input)
+            {
+                enforce(e.length == commonLength);
+            }
+        }
+    }
+
+/**
+   Forward range primitives.
+*/
+    bool empty()
+    {
+        return _input.empty;
+    }
+
+/// Ditto
+    ref ElementType front()
+    {
+        assert(!empty);
+        return _input.front[_n];
+    }
+
+/// Ditto
+    void popFront()
+    {
+        assert(!empty);
+        _input.popFront;
+        prime;
+    }
+
+    static if (isBidirectionalRange!RangeOfRanges)
+    {
+/**
+   Bidirectional primitives. They are offered if $(D
+isBidirectionalRange!RangeOfRanges).
+ */
+        ref ElementType back()
+        {
+            return _input.back[_n];
+        }
+        void popBack()
+        {
+            assert(!empty);
+            _input.popBack;
+            prime;
+        }
+    }
+    
+    static if (isRandomAccessRange!RangeOfRanges &&
+            (opt == TransverseOptions.assumeNotJagged ||
+                    opt == TransverseOptions.enforceNotJagged))
+    {
+/**
+Random-access primitive. It is offered if $(D
+isRandomAccessRange!RangeOfRanges && (opt ==
+TransverseOptions.assumeNotJagged || opt ==
+TransverseOptions.enforceNotJagged)).
+ */
+        ref ElementType opIndex(size_t n)
+        {
+            return _input[n][_n];
+        }
+    }
+
+    auto opSlice() { return this; }
+
+private:
+    RangeOfRanges _input;
+    size_t _n;
+}
+
+/// Ditto
+Transversal!(RangeOfRanges, opt) transversal(RangeOfRanges,
+        TransverseOptions opt = TransverseOptions.assumeJagged)
+(RangeOfRanges rr, size_t n)
+{
+    return typeof(return)(rr, n);
+}
+
+unittest
+{
+    int[][] x = new int[][2];
+    x[0] = [ 1, 2 ];
+    x[1] = [3, 4];
+    auto ror = transversal(x, 1);
+    auto witness = [ 2, 4 ];
+    uint i;
+    foreach (e; ror) assert(e == witness[i++]);
+    assert(i == 2);
+}
+
+struct Transposed(RangeOfRanges)
+{
+    alias typeof(map!"a.front"(RangeOfRanges.init)) ElementType;
+    
+    this(RangeOfRanges input)
+    {
+        this._input = input;
+    }
+    
+    ElementType front()
+    {
+        return map!"a.front"(_input);
+    }
+
+    void popFront()
+    {
+        foreach (e; _input)
+        {
+            if (e.empty) continue;
+            e.popFront;
+        }
+    }
+
+    // ElementType opIndex(size_t n)
+    // {
+    //     return _input[n].front;
+    // }
+
+    bool empty()
+    {
+        foreach (e; _input)
+            if (!e.empty) return false;
+        return true;
+    }
+
+    auto opSlice() { return this; }
+
+private:
+    RangeOfRanges _input;
+}
+
+auto transposed(RangeOfRanges)(RangeOfRanges rr)
+{
+    return Transposed!RangeOfRanges(rr);
+}
+
+version(none) unittest
+{
+    int[][] x = new int[][2];
+    x[0] = [ 1, 2 ];
+    x[1] = [3, 4];
+    auto tr = transposed(x);
+    foreach (e; tr)
+    {
+    }
 }
 
 /*
