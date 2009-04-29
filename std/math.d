@@ -1718,7 +1718,7 @@ real remquo(real x, real y, out int n)  /// ditto
  * Returns !=0 if e is a NaN.
  */
 
-pure nothrow int isNaN(real x)
+pure nothrow bool isNaN(real x)
 {
   alias floatTraits!(real) F;
   static if (real.mant_dig==53) { // double
