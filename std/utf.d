@@ -476,16 +476,76 @@ dchar decode(in dchar[] s, inout size_t idx)
 /* =================== Encode ======================= */
 
 /*******************************
+Encodes character $(D c) into fixed-size array $(D s). Returns the
+actual length of the encoded character (a number between 1 and 4 for
+$(D char[4]) buffers, and between 1 and 2 for $(D wchar[2]) buffers).
+ */
+
+size_t encode(/*ref*/ char[4] buf, dchar c)
+in
+{
+    assert(isValidDchar(c));
+}
+body
+{
+	if (c <= 0x7F)
+	{
+	    buf[0] = cast(char) c;
+        return 1;
+	}
+    if (c <= 0x7FF)
+    {
+        buf[0] = cast(char)(0xC0 | (c >> 6));
+        buf[1] = cast(char)(0x80 | (c & 0x3F));
+        return 2;
+    }
+    if (c <= 0xFFFF)
+    {
+        buf[0] = cast(char)(0xE0 | (c >> 12));
+        buf[1] = cast(char)(0x80 | ((c >> 6) & 0x3F));
+        buf[2] = cast(char)(0x80 | (c & 0x3F));
+        return 3;
+    }
+    if (c <= 0x10FFFF)
+    {
+        buf[0] = cast(char)(0xF0 | (c >> 18));
+        buf[1] = cast(char)(0x80 | ((c >> 12) & 0x3F));
+        buf[2] = cast(char)(0x80 | ((c >> 6) & 0x3F));
+        buf[3] = cast(char)(0x80 | (c & 0x3F));
+        return 4;
+    }
+    assert(0);
+}
+
+/// Ditto
+void encode(/*ref*/ wchar[2] buf, dchar c)
+in
+{
+	assert(isValidDchar(c));
+}
+body
+{
+	if (c <= 0xFFFF)
+	{
+	    buf[0] = cast(wchar) c;
+        return 1;
+	}
+    buf[0] = cast(wchar) ((((c - 0x10000) >> 10) & 0x3FF) + 0xD800);
+    buf[1] = cast(wchar) (((c - 0x10000) & 0x3FF) + 0xDC00);
+    return 2;
+}
+
+/*******************************
  * Encodes character c and appends it to array s[].
  */
 
 void encode(inout char[] s, dchar c)
-    in
-    {
-	assert(isValidDchar(c));
-    }
-    body
-    {
+in
+{
+    assert(isValidDchar(c));
+}
+body
+{
 	char[] r = s;
 
 	if (c <= 0x7F)
@@ -499,33 +559,33 @@ void encode(inout char[] s, dchar c)
 
 	    if (c <= 0x7FF)
 	    {
-		buf[0] = cast(char)(0xC0 | (c >> 6));
-		buf[1] = cast(char)(0x80 | (c & 0x3F));
-		L = 2;
+            buf[0] = cast(char)(0xC0 | (c >> 6));
+            buf[1] = cast(char)(0x80 | (c & 0x3F));
+            L = 2;
 	    }
 	    else if (c <= 0xFFFF)
 	    {
-		buf[0] = cast(char)(0xE0 | (c >> 12));
-		buf[1] = cast(char)(0x80 | ((c >> 6) & 0x3F));
-		buf[2] = cast(char)(0x80 | (c & 0x3F));
-		L = 3;
+            buf[0] = cast(char)(0xE0 | (c >> 12));
+            buf[1] = cast(char)(0x80 | ((c >> 6) & 0x3F));
+            buf[2] = cast(char)(0x80 | (c & 0x3F));
+            L = 3;
 	    }
 	    else if (c <= 0x10FFFF)
 	    {
-		buf[0] = cast(char)(0xF0 | (c >> 18));
-		buf[1] = cast(char)(0x80 | ((c >> 12) & 0x3F));
-		buf[2] = cast(char)(0x80 | ((c >> 6) & 0x3F));
-		buf[3] = cast(char)(0x80 | (c & 0x3F));
-		L = 4;
+            buf[0] = cast(char)(0xF0 | (c >> 18));
+            buf[1] = cast(char)(0x80 | ((c >> 12) & 0x3F));
+            buf[2] = cast(char)(0x80 | ((c >> 6) & 0x3F));
+            buf[3] = cast(char)(0x80 | (c & 0x3F));
+            L = 4;
 	    }
 	    else
 	    {
-		assert(0);
+            assert(0);
 	    }
 	    r ~= buf[0 .. L];
 	}
 	s = r;
-    }
+}
 
 unittest
 {
