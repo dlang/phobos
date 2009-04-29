@@ -4,12 +4,8 @@ module std.array;
 
 import std.c.stdio;
 import core.memory;
-import std.contracts;
-import std.traits;
-import std.string;
-import std.algorithm;
-import std.encoding;
-import std.typecons;
+import std.algorithm, std.contracts, std.conv, std.encoding, std.range,
+    std.string, std.traits, std.typecons;
 version(unittest) private import std.stdio;
 
 /*
@@ -430,7 +426,7 @@ recommended over $(D a ~= data) because it is more efficient.
 
 Example:
 ----
-auto arr = new char[0];
+string arr;
 auto app = appender(&arr);
 string b = "abcdefg";
 foreach (char c; b) app.put(c);
@@ -447,7 +443,7 @@ assert(app2.data == [ 1, 2, 3, 4, 5, 6 ]);
 struct Appender(A : T[], T)
 {
 private:
-    T[] * pArray;
+    Unqual!(T)[] * pArray;
     size_t _capacity;
 
 public:
@@ -459,10 +455,9 @@ will allocate and use a new array.
  */
     this(T[] * p)
     {
-        pArray = p;
+        pArray = cast(Unqual!(T)[] *) p;
         if (!pArray) pArray = (new typeof(*pArray)[1]).ptr;
         _capacity = GC.sizeOf(pArray.ptr) / T.sizeof;
-        //_capacity = .capacity(pArray.ptr) / T.sizeof;
     }
 
 /**
@@ -470,7 +465,7 @@ Returns the managed array.
  */ 
     T[] data()
     {
-        return pArray ? *pArray : null;
+        return cast(typeof(return)) (pArray ? *pArray : null);
     }
 
 /**
@@ -478,82 +473,68 @@ Returns the capacity of the array (the maximum number of elements the
 managed array can accommodate before triggering a reallocation).
  */ 
     size_t capacity() const { return _capacity; }
-
-    static if (is(const(T) : T))
-    {
-/**
-An alias for the accepted type to be appended.
- */     
-        alias const(T) AcceptedElementType;
-    }
-    else
-    {
-        alias T AcceptedElementType;
-    }
     
 /**
 Appends one item to the managed array.
  */ 
-    void put(AcceptedElementType item)
+    void put(U)(U item) if (isImplicitlyConvertible!(U, T) ||
+            isSomeString!(T[]) && isSomeString!(U[]))
     {
-        if (!pArray) pArray = (new typeof(*pArray)[1]).ptr;
-        if (pArray.length < _capacity)
+        static if (isSomeString!(T[]) && T.sizeof != U.sizeof)
         {
-            // Should do in-place construction here
-            pArray.ptr[pArray.length] = item;
-            *pArray = pArray.ptr[0 .. pArray.length + 1];
+            // must do some transcoding around here
+            encode!(T)(item, this);
         }
         else
         {
-            // Time to reallocate, do it and cache capacity
-            *pArray ~= item;
-            //_capacity = .capacity(pArray.ptr) / T.sizeof;
-            _capacity = GC.sizeOf(pArray.ptr) / T.sizeof;
+            if (!pArray) pArray = (new typeof(*pArray)[1]).ptr;
+            if (pArray.length < _capacity)
+            {
+                // Should do in-place construction here
+                pArray.ptr[pArray.length] = item;
+                *pArray = pArray.ptr[0 .. pArray.length + 1];
+            }
+            else
+            {
+                // Time to reallocate, do it and cache capacity
+                *pArray ~= item;
+                _capacity = GC.sizeOf(pArray.ptr) / T.sizeof;
+            }
         }
     }
 
 /**
-Appends another array to the managed array.
+Appends an entire range to the managed array.
  */ 
-    void put(AcceptedElementType[] items)
+    void put(Range)(Range items) if (isForwardRange!Range
+            && is(typeof(Appender.init.put(ElementType!(Range).init))))
     {
-        for (; !items.empty(); items.popFront()) {
-            put(items.front());
-        }
-    }
+        // @@@ UNCOMMENT WHEN BUG 2912 IS FIXED @@@
+        // static if (is(typeof(*cast(T[]*) pArray ~= items)))
+        // {
+        //     if (!pArray) pArray = (new typeof(*pArray)[1]).ptr;
+        //     *pArray ~= items;
+        // }
+        // else
+        // {
+        //     // Generic input range
+        //     for (; !items.empty; items.popFront)
+        //     {
+        //         put(items.front());
+        //     }
+        // }
 
-    static if (is(Unqual!(T) == wchar) || is(Unqual!(T) == dchar))
-    {
-/**
-In case the managed array has type $(D char[]), $(D wchar[]), or $(D
-dchar[]), all other character widths and arrays thereof are also
-accepted.
- */
-        void put(in char c) { encode!(T)((&c)[0 .. 1], this); }
-/// Ditto
-        void put(in char[] cs)
+        // @@@ Doctored version taking BUG 2912 into account @@@
+        static if (is(typeof(*cast(T[]*) pArray ~= items)) &&
+                T.sizeof == ElementType!Range.sizeof)
         {
-            encode!(T)(cs, this);
+            if (!pArray) pArray = (new typeof(*pArray)[1]).ptr;
+            *pArray ~= items;
         }
-    }
-    static if (is(Unqual!(T) == char) || is(Unqual!(T) == dchar))
-    {
-/// Ditto
-        void put(in wchar dc) { assert(false); }
-/// Ditto
-        void put(in wchar[] dcs)
+        else
         {
-            encode!(T)(dcs, this);
-        }
-    }
-    static if (is(Unqual!(T) == char) || is(Unqual!(T) == wchar))
-    {
-/// Ditto
-        void put(in dchar dc) { std.utf.encode(*pArray, dc); }
-/// Ditto
-        void put(in dchar[] wcs)
-        {
-            encode!(T)(wcs, this);
+            // Generic input range
+            foreach (e; items) put(e);
         }
     }
 
@@ -589,7 +570,7 @@ unittest
     int[] a = [ 1, 2 ];
     auto app2 = appender(&a);
     app2.put(3);
-    app2.put([ 4, 5, 6 ]);
+    app2.put([ 4, 5, 6 ][]);
     assert(app2.data == [ 1, 2, 3, 4, 5, 6 ]);
 }
 
