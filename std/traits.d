@@ -771,6 +771,26 @@ unittest
 }
 
 /**
+Is $(D From) implicitly convertible to $(D To)?
+ */
+
+template isImplicitlyConvertible(From, To)
+{
+    enum bool isImplicitlyConvertible = is(typeof({
+                        void fun(To) {}
+                        From f;
+                        fun(f);
+                    }()));
+}
+
+unittest
+{
+    static assert(isImplicitlyConvertible!(immutable(char), char));
+    static assert(isImplicitlyConvertible!(const(char), char));
+    static assert(isImplicitlyConvertible!(wchar, char));
+}
+
+/**
  * Detect whether T is a built-in integral type. Types $(D bool), $(D
  * char), $(D wchar), and $(D dchar) are not considered integral.
  */
