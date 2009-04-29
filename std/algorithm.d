@@ -608,32 +608,53 @@ assert(i == 3);
 */
 struct Splitter(Range, Separator)
 {
+private:
     Range _input;
     Separator _separator;
-    size_t _chunkLength;
+    size_t _frontLength = size_t.max;
+    static if (isBidirectionalRange!Range)
+        size_t _backLength = size_t.max;
+    enum bool separatorIsRange =
+        !is(typeof(ElementType!Range.init == _separator));
 
-    private Range search()
+    static if (separatorIsRange)
     {
-        return find(_input, _separator);
+        size_t separatorLength() { return _separator.length; }
+    }
+    else
+    {
+        enum size_t separatorLength = 1;
     }
 
-    private void advance()
+    void ensureFrontLength()
     {
-        static if (is(typeof(_separator.length)))
+        if (_frontLength != _frontLength.max) return;
+        // compute front length
+        _frontLength = _input.length - find(_input, _separator).length;
+        if (_frontLength == _input.length) _backLength = _frontLength;
+    }
+
+    void ensureBackLength()
+    {
+        if (_backLength != _backLength.max) return;
+        // compute back length
+        static if (separatorIsRange)
         {
-            _chunkLength += _separator.length;
+            _backLength = _input.length -
+                find(retro(_input), retro(_separator)).length;
         }
         else
         {
-            ++_chunkLength;
+            _backLength = _input.length -
+                find(retro(_input), _separator).length;
         }
     }
 
+public:
     this(Range input, Separator separator)
     {
         _input = input;
         _separator = separator;
-        _chunkLength = _input.length - search().length;
     }
 
     ref auto opSlice()
@@ -643,7 +664,8 @@ struct Splitter(Range, Separator)
 
     Range front()
     {
-        return _input[0 .. _chunkLength];
+        ensureFrontLength;
+        return _input[0 .. _frontLength];
     }
 
     bool empty()
@@ -653,19 +675,64 @@ struct Splitter(Range, Separator)
 
     void popFront()
     {
-        if (_chunkLength == _input.length)
+        assert(!empty);
+        ensureFrontLength;
+        if (_frontLength == _input.length)
         {
-            _input = _input[_chunkLength .. _input.length];
+            // done
+            _input = _input[_frontLength .. _frontLength];
+            _frontLength = 0;
+            _backLength = 0;
             return;
         }
-        advance;
-        _input = _input[_chunkLength .. _input.length];
-        _chunkLength = _input.length - search().length;
+        if (_frontLength && _frontLength + separatorLength == _input.length)
+        {
+            // Special case: popping the first-to-last item; there is
+            // an empty item right after this. Leave the separator in.
+            _input = _input[_frontLength .. _input.length];
+            _frontLength = 0;
+            return;
+        }
+        // Normal case, pop one item and the separator, get ready for
+        // reading the next item
+        _input = _input[_frontLength + separatorLength .. _input.length];
+        _frontLength = _frontLength.max;
+    }
+
+    Range back()
+    {
+        ensureBackLength;
+        return _input[_input.length - _backLength .. _input.length];
+    }
+
+    void popBack()
+    {
+        ensureBackLength;
+        if (_backLength == _input.length)
+        {
+            // done
+            _input = _input[0 .. 0];
+            _frontLength = 0;
+            _backLength = 0;
+            return;
+        }
+        if (_backLength && _backLength + separatorLength == _input.length)
+        {
+            // Special case: popping the first-to-last item; there is
+            // an empty item right before this. Leave the separator in.
+            _input = _input[0 .. _input.length - _backLength];
+            _backLength = 0;
+            return;
+        }
+        // Normal case
+        _input = _input[0 .. _input.length - _backLength - separatorLength];
+        _backLength = _backLength.max;
     }
 }
 
 /// Ditto
-Splitter!(Range, Separator) splitter(Range, Separator)(Range r, Separator s)
+Splitter!(Range, Separator)
+splitter(Range, Separator)(Range r, Separator s)
 if (is(typeof(ElementType!(Range).init == ElementType!(Separator).init)) ||
         is(typeof(ElementType!(Range).init == Separator.init)))
 {
@@ -677,18 +744,30 @@ unittest
     auto s = ",abc, de, fg,hi,";
     auto sp0 = splitter(s, ',');
     //foreach (e; sp) writeln("[", e, "]");
-    assert(equal(sp0, ["", "abc", " de", " fg", "hi"][]));
+    assert(equal(sp0, ["", "abc", " de", " fg", "hi", ""][]));
 
     auto s1 = ", abc, de,  fg, hi, ";
     auto sp1 = splitter(s1, ", ");
     //foreach (e; sp1) writeln("[", e, "]");
-    assert(equal(sp1, ["", "abc", "de", " fg", "hi"][]));
+    assert(equal(sp1, ["", "abc", "de", " fg", "hi", ""][]));
 
     int[] a = [ 1, 2, 0, 3, 0, 4, 5, 0 ];
-    int[][] w = [ [1, 2], [3], [4, 5] ];
+    int[][] w = [ [1, 2], [3], [4, 5], [] ];
     uint i;
-    foreach (e; splitter(a, 0)) assert(e == w[i++]);
-    assert(i == 3);
+    foreach (e; splitter(a, 0))
+    {
+        assert(i < w.length);
+        assert(e == w[i++]);
+    }
+    assert(i == w.length);
+    // Now go back
+    //auto s = splitter(a, 0);
+    foreach_reverse (e; splitter(a, 0))
+    {
+        assert(i > 0);
+        assert(equal(e, w[--i]), text(e));
+    }
+    assert(i == 0);
 }
 
 // uniq
