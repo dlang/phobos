@@ -699,6 +699,7 @@ public:
         _frontLength = _frontLength.max;
     }
 
+// Bidirectional functionality as suggested by Brad Roberts.
     Range back()
     {
         ensureBackLength;
