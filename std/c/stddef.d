@@ -25,6 +25,10 @@ else version (FreeBSD)
 {
     alias dchar wchar_t;
 }
+else version (Solaris)
+{
+    alias dchar wchar_t;
+}
 else
 {
     static assert(0);

@@ -75,7 +75,7 @@ OBJS = asserterror.o deh2.o complex.o gcstats.o \
 	pthread.o
 
 MAKEFILES= \
-	win32.mak linux.mak osx.mak freebsd.mak
+	win32.mak linux.mak osx.mak freebsd.mak solaris.mak
 
 SRCS= \
         internal/aaA.d internal/adi.d \
@@ -164,6 +164,9 @@ SRC_STD_C_FREEBSD= std/c/freebsd/freebsd.d \
 	std/c/freebsd/socket.d std/c/freebsd/pthread.d \
 	std/c/freebsd/math.d
 
+SRC_STD_C_SOLARIS= std/c/solaris/solaris.d \
+       std/c/solaris/socket.d std/c/solaris/pthread.d
+
 SRC_ETC=  etc/gamma.d
 
 SRC_ETC_C= etc/c/zlib.d
@@ -200,7 +203,8 @@ SRC_ZLIB= etc/c/zlib/trees.h \
 	etc/c/zlib/win32.mak \
 	etc/c/zlib/linux.mak \
 	etc/c/zlib/osx.mak \
-	etc/c/zlib/freebsd.mak
+	etc/c/zlib/freebsd.mak \
+	etc/c/zlib/solaris.mak
 
 SRC_GC= internal/gc/gc.d \
 	internal/gc/gcold.d \
@@ -214,11 +218,12 @@ SRC_GC= internal/gc/gc.d \
 	internal/gc/win32.mak \
 	internal/gc/linux.mak \
 	internal/gc/osx.mak \
+	internal/gc/solaris.mak \
 	internal/gc/freebsd.mak
 
 ALLSRCS = $(SRC) $(SRC_STD) $(SRC_STD_C) $(SRC_TI) $(SRC_INT) $(SRC_STD_WIN) \
 	$(SRC_STD_C_WIN) $(SRC_STD_C_LINUX) $(SRC_ETC) $(SRC_ETC_C) \
-	$(SRC_ZLIB) $(SRC_GC) $(SRC_STD_C_FREEBSD)
+	$(SRC_ZLIB) $(SRC_GC) $(SRC_STD_C_FREEBSD) $(SRC_STD_C_SOLARIS)
 
 
 $(LIB) : $(OBJS) $(GC_OBJS) $(ZLIB_OBJS) $(SRCS) $(MAKEFILE)

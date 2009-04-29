@@ -364,6 +364,62 @@ else version (FreeBSD)
     int  snprintf(char *,size_t,char *,...);
     int  vsnprintf(char *,size_t,char *,va_list);
 }
+else version (Solaris)
+{
+    const int EOF = -1;
+    const int BUFSIZ = 1024;
+    const int FOPEN_MAX = 20;
+    const int FILENAME_MAX = 1024;
+    const int TMP_MAX = 17576;
+    const int L_tmpnam = 25;
+    const int _NFILE = 20;
+
+    struct __sbuf
+    {
+       char* _base;
+       int _size;
+    }
+
+    struct _iobuf
+    {
+       align (1):
+
+       int _cnt;
+       ubyte* _ptr;
+       ubyte* _base;
+       ubyte _flag;
+       ubyte _magic;
+       ubyte[2] __bitflags;
+    }
+
+    enum { SEEK_SET, SEEK_CUR, SEEK_END }
+
+    alias _iobuf FILE; ///
+
+    enum
+    {
+       _IOFBF = 0000,
+       _IOLBF = 0100,
+       _IONBF = 0200,
+    }
+
+    alias long fpos_t;
+
+    extern FILE _iob[_NFILE];
+
+    const FILE *stdin  = &_iob[0];     ///
+    const FILE *stdout = &_iob[1];     ///
+    const FILE *stderr = &_iob[2];     ///
+
+    int  ferror(FILE *fp);
+    int  feof(FILE *fp);
+    void clearerr(FILE *fp);
+    void rewind(FILE *fp);
+    int  _bufsize(FILE *fp);
+    int  fileno(FILE *fp);
+    int  snprintf(char *,size_t,char *,...);
+    int  vsnprintf(char *,size_t,char *,va_list);
+}
 else
 {
     static assert(0);

@@ -535,6 +535,11 @@ version (FreeBSD)
     private import std.c.freebsd.freebsd;
     private import std.c.freebsd.pthread;
 }
+else version (Solaris)
+{
+    private import std.c.solaris.solaris;
+    private import std.c.solaris.pthread;
+}
 else
 {
     private import std.c.linux.linux;

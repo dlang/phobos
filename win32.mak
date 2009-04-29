@@ -65,7 +65,7 @@ OBJS= deh.obj complex.obj gcstats.obj \
 #	ti_bit.obj ti_Abit.obj
 
 MAKEFILES= \
-	win32.mak linux.mak osx.mak freebsd.mak
+	win32.mak linux.mak osx.mak freebsd.mak solaris.mak
 
 SRCS= std\math.d std\stdio.d std\dateparse.d std\date.d std\uni.d std\string.d \
         std\base64.d std\md5.d std\regexp.d \
@@ -253,6 +253,12 @@ SRC_STD_C_FREEBSD= std\c\freebsd\freebsd.d \
 	std\c\freebsd\socket.d std\c\freebsd\pthread.d \
 	std\c\freebsd\math.d
 
+SRC_STD_C_SOLARIS= std/c/solaris/solaris.d \
+       std/c/solaris/socket.d std/c/solaris/pthread.d
+
+SRC_STD_C_POSIX= std\c\posix\posix.d \
+	std\c\posix\socket.d std\c\posix\pthread.d
+
 SRC_ETC= etc\gamma.d
 
 SRC_ETC_C= etc\c\zlib.d
@@ -289,7 +295,8 @@ SRC_ZLIB= etc\c\zlib\trees.h \
 	etc\c\zlib\win32.mak \
 	etc\c\zlib\linux.mak \
 	etc\c\zlib\osx.mak \
-	etc\c\zlib\freebsd.mak
+	etc\c\zlib\freebsd.mak \
+	etc\c\zlib\solaris.mak
 
 SRC_GC= internal\gc\gc.d \
 	internal\gc\gcold.d \
@@ -303,7 +310,8 @@ SRC_GC= internal\gc\gc.d \
 	internal\gc\win32.mak \
 	internal\gc\linux.mak \
 	internal\gc\osx.mak \
-	internal\gc\freebsd.mak
+	internal\gc\freebsd.mak \
+	internal\gc\solaris.mak
 
 phobos.lib : $(OBJS) $(SRCS) minit.obj internal\gc\dmgc.lib \
 	etc\c\zlib\zlib.lib win32.mak
@@ -932,6 +940,8 @@ install:
 	$(CP) $(SRC_STD_C_LINUX) $(DIR)\src\phobos\std\c\linux
 	$(CP) $(SRC_STD_C_OSX) $(DIR)\src\phobos\std\c\osx
 	$(CP) $(SRC_STD_C_FREEBSD) $(DIR)\src\phobos\std\c\freebsd
+	$(CP) $(SRC_STD_C_SOLARIS) $(DIR)\src\phobos\std\c\solaris
+	$(CP) $(SRC_STD_C_POSIX) $(DIR)\src\phobos\std\c\posix
 	$(CP) $(SRC_ETC) $(DIR)\src\phobos\etc
 	$(CP) $(SRC_ETC_C) $(DIR)\src\phobos\etc\c
 	$(CP) $(SRC_ZLIB) $(DIR)\src\phobos\etc\c\zlib

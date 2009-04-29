@@ -12,7 +12,7 @@ CC=gcc
 OBJS= gc.o gcx.o gcbits.o gclinux.o gcold.o
 
 SRC= gc.d gcx.d gcbits.d win32.d gclinux.d gcold.d testgc.d \
-	win32.mak linux.mak osx.mak
+	win32.mak linux.mak osx.mak freebsd.mak solaris.mak
 
 .c.o:
 	$(CC) -c $(CFLAGS) $*

@@ -35,6 +35,12 @@ version (FreeBSD)
     extern (C) void* __libc_stack_end;
 }
 
+version (Solaris)
+{
+    // The bottom of the stack
+    extern (C) void* __libc_stack_end;
+}
+
 /***********************************
  * The D main() function supplied by the user's program
  */
@@ -67,6 +73,13 @@ extern (C) int main(size_t argc, char **argv)
     {	/* FreeBSD does not provide a way to get at the top of the
 	 * stack.
 	 * But as far as the gc is concerned, argv is at the top
+	 * of the main thread's stack, so save the address of that.
+	 */
+	__libc_stack_end = cast(void*)&argv;
+    }
+
+    version (Solaris)
+    {	/* As far as the gc is concerned, argv is at the top
 	 * of the main thread's stack, so save the address of that.
 	 */
 	__libc_stack_end = cast(void*)&argv;

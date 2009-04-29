@@ -1,4 +1,4 @@
-# Makefile to build FreeBSD D runtime library libphobos.a.
+# Makefile to build Solaris D runtime library libphobos.a.
 # Targets:
 #	make
 #		Same as make unittest
@@ -11,7 +11,7 @@
 
 LIB=libphobos.a
 
-MAKEFILE=freebsd.mak
+MAKEFILE=solaris.mak
 
 CFLAGS=-O -m32
 #CFLAGS=-g -m32
@@ -29,7 +29,7 @@ DMD=dmd
 	$(CC) -c $(CFLAGS) $*.c
 
 .cpp.o:
-	g++ -c $(CFLAGS) $*.cpp
+	g -c $(CFLAGS) $*.cpp
 
 .d.o:
 	$(DMD) -c $(DFLAGS) $*.d
@@ -43,7 +43,7 @@ test.o : test.d
 	$(DMD) -c test -g
 
 test : test.o $(LIB)
-	$(CC) -o $@ test.o $(LIB) -lpthread -lm -g
+	$(CC) -o $@ test.o $(LIB) -lpthread -lm -lsocket -lnsl -g
 
 OBJS = asserterror.o deh2.o complex.o gcstats.o \
 	critical.o object.o monitor.o \
@@ -51,7 +51,7 @@ OBJS = asserterror.o deh2.o complex.o gcstats.o \
 	compiler.o system.o moduleinit.o md5.o base64.o \
 	path.o string.o math.o mmfile.o \
 	outbuffer.o ctype.o regexp.o random.o \
-	freebsd.o freebsdsocket.o freebsdmath.o \
+	solaris.o solarissocket.o \
 	linux.o \
 	stream.o cstream.o switcherr.o array.o gc.o \
 	thread.o utf.o uri.o \
@@ -73,7 +73,8 @@ OBJS = asserterror.o deh2.o complex.o gcstats.o \
 	ti_Acfloat.o ti_Acdouble.o ti_Acreal.o \
 	ti_void.o \
 	date.o dateparse.o llmath.o math2.o Czlib.o Dzlib.o zip.o \
-	pthread.o
+	pthread.o \
+	Cstdio.o
 
 MAKEFILES= \
 	win32.mak linux.mak osx.mak freebsd.mak solaris.mak
@@ -233,7 +234,7 @@ $(LIB) : $(OBJS) $(GC_OBJS) $(ZLIB_OBJS) $(SRCS) $(MAKEFILE)
 	$(DMD) -lib -of$(LIB) $(DFLAGS) $(SRCS) $(OBJS) $(ZLIB_OBJS) $(GC_OBJS)
 
 unittest :
-	$(DMD) $(DFLAGS) -unittest -version=Unittest unittest.d $(SRCS) $(LIB)
+	$(DMD) $(DFLAGS) -unittest -version=Unittest unittest.d $(SRCS) $(LIB) -L-lsocket -L-lnsl
 	./unittest
 
 cov : $(SRCS) $(LIB)
@@ -496,19 +497,19 @@ zip.o : std/zip.d
 stdarg.o : std/c/stdarg.d
 	$(DMD) -c $(DFLAGS) std/c/stdarg.d
 
-### std/c/freebsd
+Cstdio.o : std/c/stdio.d
+	$(DMD) -c $(DFLAGS) std/c/stdio.d -ofCstdio.o
 
-freebsd.o : std/c/freebsd/freebsd.d
-	$(DMD) -c $(DFLAGS) std/c/freebsd/freebsd.d
+### std/c/solaris
 
-freebsdsocket.o : std/c/freebsd/socket.d
-	$(DMD) -c $(DFLAGS) std/c/freebsd/socket.d -offreebsdsocket.o
+solaris.o : std/c/solaris/solaris.d
+	$(DMD) -c $(DFLAGS) std/c/solaris/solaris.d
 
-freebsdmath.o : std/c/freebsd/math.d
-	$(DMD) -c $(DFLAGS) std/c/freebsd/math.d -offreebsdmath.o
+solarissocket.o	: std/c/solaris/socket.d
+	$(DMD) -c $(DFLAGS) std/c/solaris/socket.d -ofsolarissocket.o
 
-pthread.o : std/c/freebsd/pthread.d
-	$(DMD) -c $(DFLAGS) std/c/freebsd/pthread.d
+pthread.o : std/c/solaris/pthread.d
+	$(DMD) -c $(DFLAGS) std/c/solaris/pthread.d
 
 ### std/c/linux
 

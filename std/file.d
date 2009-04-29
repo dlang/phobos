@@ -1153,6 +1153,12 @@ void getTimes(string name, out d_time ftc, out d_time fta, out d_time ftm)
 	fta = cast(d_time)statbuf.st_atimespec.tv_sec * std.date.TicksPerSecond;
 	ftm = cast(d_time)statbuf.st_mtimespec.tv_sec * std.date.TicksPerSecond;
     }
+    else version (Solaris)
+    {  // BUG: should add in *nsec fields
+       ftc = cast(d_time)statbuf.st_ctime * std.date.TicksPerSecond;
+       fta = cast(d_time)statbuf.st_atime * std.date.TicksPerSecond;
+       ftm = cast(d_time)statbuf.st_mtime * std.date.TicksPerSecond;
+    }
     else
     {
 	static assert(0);
@@ -1277,6 +1283,10 @@ struct DirEntry
     {	size_t len = std.c.string.strlen(fd.d_name.ptr);
 	name = std.path.join(path, fd.d_name[0 .. len]);
 	d_type = fd.d_type;
+       // Some platforms, like Solaris, don't have this member.
+       // TODO: Bug: d_type is never set on Solaris (see bugzilla 2838 for fix.)
+       static if (is(fd.d_type))
+           d_type = fd.d_type;
 	didstat = 0;
     }
 
@@ -1352,6 +1362,12 @@ struct DirEntry
 	    _creationTime =   cast(d_time)statbuf.st_ctimespec.tv_sec * std.date.TicksPerSecond;
 	    _lastAccessTime = cast(d_time)statbuf.st_atimespec.tv_sec * std.date.TicksPerSecond;
 	    _lastWriteTime =  cast(d_time)statbuf.st_mtimespec.tv_sec * std.date.TicksPerSecond;
+	}
+	else version (Solaris)
+	{
+	    _creationTime   = cast(d_time)statbuf.st_ctime * std.date.TicksPerSecond;
+	    _lastAccessTime = cast(d_time)statbuf.st_atime * std.date.TicksPerSecond;
+	    _lastWriteTime  = cast(d_time)statbuf.st_mtime * std.date.TicksPerSecond;
 	}
 	else
 	{
@@ -1548,6 +1564,11 @@ void copy(string from, string to)
     {
 	utim.actime = cast(__time_t)statbuf.st_atimespec.tv_sec;
 	utim.modtime = cast(__time_t)statbuf.st_mtimespec.tv_sec;
+    }
+    else version (Solaris)
+    {
+       utim.actime = cast(__time_t)statbuf.st_atime;
+       utim.modtime = cast(__time_t)statbuf.st_mtime;
     }
     else
     {

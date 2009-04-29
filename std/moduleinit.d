@@ -90,6 +90,19 @@ version (FreeBSD)
     extern (C) ModuleReference *_Dmodule_ref;	// start of linked list
 }
 
+version (Solaris)
+{
+    // This linked list is created by a compiler generated function inserted
+    // into the .ctor list by the compiler.
+    struct ModuleReference
+    {
+       ModuleReference* next;
+       ModuleInfo mod;
+    }
+
+    extern (C) ModuleReference *_Dmodule_ref;  // start of linked list
+}
+
 version (OSX)
 {
     extern (C)
@@ -141,6 +154,21 @@ extern (C) void _moduleCtor()
 	{   _moduleinfo_array[len] = mr.mod;
 	    len++;
 	}
+    }
+
+    version (Solaris)
+    {
+       int len = 0;
+       ModuleReference *mr;
+
+       for (mr = _Dmodule_ref; mr; mr = mr.next)
+           len++;
+       _moduleinfo_array = new ModuleInfo[len];
+       len = 0;
+       for (mr = _Dmodule_ref; mr; mr = mr.next)
+       {   _moduleinfo_array[len] = mr.mod;
+           len++;
+       }
     }
 
     version (OSX)

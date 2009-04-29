@@ -459,7 +459,7 @@ void _d_monitor_epilog(void *x, void *y, Object *h)
 
 /* ======================== linux =============================== */
 
-#if linux || __APPLE__ || __FreeBSD__
+#if linux || __APPLE__ || __FreeBSD__ || __sun&&__SVR4
 
 #include	"mars.h"
 

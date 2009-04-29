@@ -67,6 +67,8 @@ else version(BsdSockets)
 	{
 	    version (FreeBSD)
 		private import std.c.freebsd.socket;
+	    else version (Solaris)
+		private import std.c.solaris.socket;
 	    else
 		private import std.c.linux.socket;
 	    private import std.c.linux.linux;
@@ -127,6 +129,16 @@ class SocketException: Exception
 			    cs = "Unknown error";
 			}
 		    }
+                    else version (Solaris)
+                    {
+                        auto errs = strerror_r(errorCode, buf.ptr, buf.length);
+                        if (errs == 0)
+                            cs = buf.ptr;
+                        else
+                        {
+                            cs = "Unknown error";
+                        }
+                    }
 		    else
 		    {
 			static assert(0);

@@ -53,6 +53,11 @@ version (FreeBSD)
     version = GENERIC_IO;
 }
 
+version (Solaris)
+{
+    version = GENERIC_IO;
+}
+
 version (DIGITAL_MARS_STDIO)
 {
     extern (C)

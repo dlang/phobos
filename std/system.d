@@ -21,6 +21,7 @@ const
 	linux,			// all linux systems
 	OSX,
 	FreeBSD,
+	Solaris,
     }
 
     version (Win32)
@@ -38,6 +39,10 @@ const
     else version (FreeBSD)
     {
 	Family family = Family.FreeBSD;
+    }
+    else version (Solaris)
+    {
+	Family family = Family.Solaris;
     }
     else
     {
@@ -57,6 +62,7 @@ const
 	RedHatLinux,
 	OSX,
 	FreeBSD,
+	Solaris,
     }
 
     /// Byte order endianness

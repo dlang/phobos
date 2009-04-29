@@ -1,5 +1,5 @@
 
-# makefile to build FreeBSD D garbage collector
+# makefile to build Solaris D garbage collector
 
 #DMD=../../../dmd
 DMD=dmd
@@ -14,8 +14,6 @@ OBJS= gc.o gcx.o gcbits.o gclinux.o gcold.o
 SRC= gc.d gcx.d gcbits.d win32.d gclinux.d gcold.d testgc.d \
 	win32.mak linux.mak osx.mak freebsd.mak solaris.mak
 
-.SUFFIXES: .c .o .d
-
 .c.o:
 	$(CC) -c $(CFLAGS) $*
 
@@ -24,13 +22,13 @@ SRC= gc.d gcx.d gcbits.d win32.d gclinux.d gcold.d testgc.d \
 
 targets : testgc dmgc.a
 
-testgc : testgc.o $(OBJS) freebsd.mak
+testgc : testgc.o $(OBJS) solaris.mak
 	$(DMD) -of$@ testgc.o gc.o gcx.o gcbits.o gclinux.o -g
 
 testgc.o : testgc.d
 	$(DMD) -c $(DFLAGS) testgc.d
 
-dmgc.a : $(OBJS) freebsd.mak
+dmgc.a : $(OBJS) solaris.mak
 	ar -r $@ $(OBJS)
 
 gc.o : gc.d

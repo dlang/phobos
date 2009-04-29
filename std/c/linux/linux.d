@@ -12,6 +12,10 @@ version (FreeBSD)
 {
     public import std.c.freebsd.freebsd;
 }
+else version (Solaris)
+{
+    public import std.c.solaris.solaris;
+}
 else
 {
 public import std.c.linux.linuxextern;

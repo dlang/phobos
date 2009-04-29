@@ -88,6 +88,29 @@ else version (FreeBSD)
 	char* tm_zone;
     }
 }
+else version (Solaris)
+{
+    const clock_t CLOCKS_PER_SEC = 1000000;
+    clock_t CLK_TCK        = 0; // deprecated, use sysconf(_SC_CLK_TCK)
+
+    extern (C) int sysconf(int);
+    static this()
+    {
+       CLK_TCK = _sysconf(3);
+    }
+
+    struct tm
+    {   int     tm_sec,
+               tm_min,
+               tm_hour,
+               tm_mday,
+               tm_mon,
+               tm_year,
+               tm_wday,
+               tm_yday,
+               tm_isdst;
+    }
+}
 else
 {
     static assert(0);

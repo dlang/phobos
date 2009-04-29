@@ -157,6 +157,48 @@ else version (FreeBSD)
 
     alias ushort fexcept_t;	/// Floating point status flags
 }
+else version (Solaris)
+{
+    /// Entire floating point environment
+
+    struct fenv_t
+    {
+       struct __fex_handler_t
+       {
+           int __mode;
+           void (*__handler)();
+       }
+
+       __fex_handler_t[12] __handlers;
+       uint __fsr;
+    }
+
+    /// Default floating point environment
+    extern fenv_t __fenv_dfl_env;
+
+    fenv_t* FE_DFL_ENV = &__fenv_dfl_env;
+
+    alias int fexcept_t;       /// Floating point status flags
+
+    int fetestexcept(int excepts);             ///
+    int feraiseexcept(int excepts);            ///
+    int feclearexcept(int excepts);            ///
+    //int fegetexcept(fexcept_t *flagp,int excepts);   ///
+    //int fesetexcept(fexcept_t *flagp,int excepts);   ///
+    int fegetround();                  ///
+    int fesetround(int round);         ///
+    int fegetprec();                   ///
+    int fesetprec(int prec);           ///
+    int fegetenv(fenv_t *envp);                ///
+    int fesetenv(fenv_t *envp);                ///
+    //void feprocentry(fenv_t *envp);  ///
+    //void feprocexit(const fenv_t *envp);     ///
+
+    int fegetexceptflag(fexcept_t *flagp,int excepts); ///
+    int fesetexceptflag(fexcept_t *flagp,int excepts); ///
+    int feholdexcept(fenv_t *envp);            ///
+    int feupdateenv(fenv_t *envp);             ///
+}
 else
 {
     static assert(0);
