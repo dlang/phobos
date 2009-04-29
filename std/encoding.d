@@ -1788,9 +1788,9 @@ Encodes $(D c) in units of type $(D E) and writes the result to the
 output range $(D R). Returns the number of $(D E)s written.
  */
 
-uint encode(E, R)(dchar c, R range)
+size_t encode(E, R)(dchar c, R range)
 {
-    static if (is(E == char))
+    static if (is(Unqual!E == char))
     {
         if (c <= 0x7F)
         {
@@ -1823,7 +1823,7 @@ uint encode(E, R)(dchar c, R range)
             assert(0);
         }
     }
-    else static if (is(E == wchar))
+    else static if (is(Unqual!E == wchar))
     {
         if (c <= 0xFFFF)
         {
@@ -1834,14 +1834,14 @@ uint encode(E, R)(dchar c, R range)
         r.put(cast(wchar) (((c - 0x10000) & 0x3FF) + 0xDC00));
         return 2;
     }
-    else static if (is(E == dchar))
+    else static if (is(Unqual!E == dchar))
     {
         r.put(c);
         return 1;
     }
     else
     {
-        return 0;
+        assert(0);
     }
 }
 
