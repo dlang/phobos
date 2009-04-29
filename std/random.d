@@ -726,7 +726,7 @@ unittest {
 /**
 Covers a given range $(D r) in a random manner, i.e. goes through each
 element of $(D r) once and only once, just in a random order. $(D r)
-must be a forward access range with length.
+must be a random-access range with length.
 
 Example:
 ----
