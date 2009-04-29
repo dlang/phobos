@@ -1729,7 +1729,7 @@ private void writeUpToFormatSpec(OutRange, S)(ref OutRange w, ref S fmt)
 
 unittest
 {
-    Appender!(char[]) w;
+    Appender!(string) w;
     string fmt = "abc%sdef%sghi";
     writeUpToFormatSpec(w, fmt);
     assert(w.data == "abc" && fmt == "sdef%sghi");
@@ -1932,6 +1932,15 @@ private void formatImplFloat(Writer, D)(ref Writer w, D obj, FormatInfo f)
     w.put(buf[0 .. strlen(buf.ptr)]);
 }
 
+unittest
+{
+    Appender!(string) a;
+    invariant real x = 5.5;
+    FormatInfo f;
+    formatImplFloat(a, x, f);
+    assert(a.data == "5.5");
+}
+
 /*
  * Formats an object of type 'D' according to 'f' and writes it to
  * 'w'. The pointer 'arg' is assumed to point to an object of type
@@ -2070,10 +2079,10 @@ private void formatGeneric(Writer, D)(ref Writer w, const(void)* arg,
 
 unittest
 {
-    Appender!(char[]) w;
+    Appender!(immutable(char)[]) w;
     int[] a = [ 1, 3, 2 ];
-    formattedWrite(w, "testing %(s, ) embedded", a);
-    assert(w.data == "testing 1, 3, 2 embedded", w.data);
+   	formattedWrite(w, "testing %(s, ) embedded", a);
+   	assert(w.data == "testing 1, 3, 2 embedded", w.data);
     w.clear;
     formattedWrite(w, "testing (%(s%) %()) embedded", a);
     assert(w.data == "testing (1) (3) (2) embedded", w.data);
@@ -2241,7 +2250,7 @@ void formattedWrite(Writer, F, A...)(ref Writer w, const(F)[] fmt, A args)
 
 unittest
 {
-    Appender!(char[]) stream;
+    Appender!(string) stream;
     formattedWrite(stream, "%s", 1.1);
     assert(stream.data == "1.1", stream.data);
 }
@@ -2249,7 +2258,7 @@ unittest
 unittest
 {
     // testing raw writes
-    Appender!(char[]) w;
+    Appender!(string) w;
     uint a = 0x02030405;
     formattedWrite(w, "%+r", a);
     assert(w.data.length == 4 && w.data[0] == 2 && w.data[1] == 3
@@ -2263,7 +2272,7 @@ unittest
 unittest
 {
     // testing positional parameters
-    Appender!(char[]) w;
+    Appender!(string) w;
     formattedWrite(w,
             "Numbers %2$s and %1$s are reversed and %1$s%2$s repeated",
             42, 0);
@@ -2281,7 +2290,7 @@ unittest
 {
     debug(format) printf("std.format.format.unittest\n");
     
-    Appender!(char[]) stream;
+    Appender!(string) stream;
     //goto here;
     
     formattedWrite(stream,
@@ -2493,12 +2502,12 @@ unittest
 //   stream.clear; formattedWrite(stream, "", m);
 //   assert(stream.data == "-7");
   
-  stream.clear; formattedWrite(stream, "%s", "abc"c);
-  assert(stream.data == "abc");
-  stream.clear; formattedWrite(stream, "%s", "def"w);
-  assert(stream.data == "def", "["~stream.data~"]");
-  stream.clear; formattedWrite(stream, "%s", "ghi"d);
-  assert(stream.data == "ghi");
+    stream.clear; formattedWrite(stream, "%s", "abc"c);
+    assert(stream.data == "abc");
+    stream.clear; formattedWrite(stream, "%s", "def"w);
+    assert(stream.data == "def", text(stream.data.length));
+    stream.clear; formattedWrite(stream, "%s", "ghi"d);
+    assert(stream.data == "ghi");
   
  here:
   void* p = cast(void*)0xDEADBEEF;
@@ -2731,7 +2740,7 @@ unittest
        writefln(b);
    }
 
-   Appender!(char[]) stream;
+   Appender!(string) stream;
    alias TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong,
        float, double, real,
        ifloat, idouble, ireal, cfloat, cdouble, creal) AllNumerics;
