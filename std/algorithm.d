@@ -4609,165 +4609,266 @@ version(none) unittest
 }
 
 /**
-Lazily computes the union of $(D r1) and $(D r2). The two ranges are
-assumed to be sorted by $(D less). The element types of the two ranges
-must have a common type.
+Lazily computes the union of two or more ranges $(D rs). The ranges
+are assumed to be sorted by $(D less). Elements in the output are not
+unique; the length of the output is the sum of the lengths of the
+inputs. (The $(D length) member is offered if all ranges also have
+length.) The element types of all ranges must have a common type.
+
+Example:
+----
+int[] a = [ 1, 2, 4, 5, 7, 9 ];
+int[] b = [ 0, 1, 2, 4, 7, 8 ];
+int[] c = [ 10 ];
+assert(setUnion(a, b).length == a.length + b.length);
+assert(equal(setUnion(a, b), [0, 1, 1, 2, 2, 4, 4, 5, 7, 7, 8, 9][]));
+assert(equal(setUnion(a, c, b),
+    [0, 1, 1, 2, 2, 4, 4, 5, 7, 7, 8, 9, 10][]));
+----
  */
-struct SetUnion(alias less = "a < b", R1, R2)
-    if (isInputRange!(R1) && isInputRange!(R2))
+struct SetUnion(alias less = "a < b", Rs...) if (allSatisfy!(isInputRange, Rs))
 {
 private:
-    R1 r1;
-    R2 r2;
+    Rs _r;
     alias binaryFun!(less) comp;
-    enum State { usingR1, usingR2, r1Empty, r2Empty, bothEmpty }
-    State state = State.bothEmpty;
+    uint _crt;
+
+    void adjustPosition(uint candidate = 0)()
+    {
+        static if (candidate == Rs.length)
+        {
+            _crt = _crt.max;
+        }
+        else
+        {
+            if (_r[candidate].empty)
+            {
+                adjustPosition!(candidate + 1)();
+                return;
+            }
+            foreach (i, U; Rs[candidate + 1 .. $])
+            {
+                enum j = candidate + i + 1;
+                if (_r[j].empty) continue;
+                if (comp(_r[j].front, _r[candidate].front))
+                {
+                    // a new candidate was found
+                    adjustPosition!(j)();
+                    return;
+                }
+            }
+            // Found a successful candidate
+            _crt = candidate;
+        }
+    }
 
 public:
-    this(R1 r1, R2 r2)
+    alias CommonType!(staticMap!(.ElementType, Rs)) ElementType;
+    
+    this(Rs rs)
     {
-        this.r1 = r1;
-        this.r2 = r2;
-        if (r1.empty) state = r2.empty ? State.bothEmpty : State.r1Empty;
-        else if (r2.empty) state = State.r2Empty;
-        else if (comp(r2.front, r1.front)) state = State.usingR2;
-        else state = State.usingR1;
+        this._r = rs;
+        adjustPosition();
+    }
+    
+    bool empty()
+    {
+        return _crt == _crt.max;
     }
     
     void popFront()
     {
-        switch (state)
+        // Assumes _crt is correct
+        assert(!empty);
+        foreach (i, U; Rs)
         {
-        case State.usingR1: 
-            r1.popFront;
-            if (r1.empty) state = State.r1Empty;
-            else state = comp(r2.front, r1.front) ? State.usingR2 : State.usingR1;
-            break;
-        case State.r2Empty:
-            r1.popFront;
-            if (r1.empty) state = State.bothEmpty;
-            break;
-        case State.usingR2:
-            r2.popFront;
-            if (r2.empty) state = State.r2Empty;
-            else state = comp(r2.front, r1.front) ? State.usingR2 : State.usingR1;
-            break;
-        case State.r1Empty:
-            r2.popFront;
-            if (r2.empty) state = State.bothEmpty;
-            break;
-        default:
-            break;
+            if (i < _crt) continue;
+            // found _crt
+            assert(!_r[i].empty);
+            _r[i].popFront;
+            adjustPosition();
+            return;
         }
+        assert(false);
     }
 
-    CommonType!(ElementType!(R1), ElementType!(R2)) front()
+    ElementType front()
     {
-        switch (state)
+        assert(!empty);
+        // Assume _crt is correct
+        foreach (i, U; Rs)
         {
-        case State.usingR1: case State.r2Empty:
-            return r1.front;
-        case State.usingR2: case State.r1Empty:
-            return r2.front;
-        default:
-            break;
+            if (i < _crt) continue;
+            assert(!_r[i].empty);
+            return _r[i].front;
         }
-        assert(false, text(state));
+        assert(false);
     }
 
-    bool empty() { return state == State.bothEmpty; }
+    static if (allSatisfy!(hasLength, Rs))
+    {
+        size_t length()
+        {
+            size_t result;
+            foreach (i, U; Rs)
+            {
+                result += _r[i].length;
+            }
+            return result;
+        }
+    }
+
+    ref auto opSlice() { return this; }
 }
 
 /// Ditto
-SetUnion!(less, R1, R2) setUnion(alias less = "a < b", R1, R2)
-(R1 r1, R2 r2)
+SetUnion!(less, Rs) setUnion(alias less = "a < b", Rs...)
+(Rs rs)
 {
-    return typeof(return)(r1, r2);
+    return typeof(return)(rs);
 }
 
-version(none) unittest
+unittest
 {
     int[] a = [ 1, 2, 4, 5, 7, 9 ];
     int[] b = [ 0, 1, 2, 4, 7, 8 ];
+    int[] c = [ 10 ];
     //foreach (e; setUnion(a, b)) writeln(e);
+    assert(setUnion(a, b).length == a.length + b.length);
     assert(equal(setUnion(a, b), [0, 1, 1, 2, 2, 4, 4, 5, 7, 7, 8, 9][]));
+    assert(equal(setUnion(a, c, b),
+                    [0, 1, 1, 2, 2, 4, 4, 5, 7, 7, 8, 9, 10][]));
 }
 
 /**
-Lazily computes the intersection of $(D r1) and $(D r2). The two
-ranges are assumed to be sorted by $(D less). The element types of the
-two ranges must have a common type.
+Lazily computes the intersection of two or more input ranges $(D
+rs). The ranges are assumed to be sorted by $(D less). The element
+types of all ranges must have a common type.
+
+Example:
+----
+int[] a = [ 1, 2, 4, 5, 7, 9 ];
+int[] b = [ 0, 1, 2, 4, 7, 8 ];
+int[] c = [ 0, 1, 4, 5, 7, 8 ];
+assert(equal(setIntersection(a, a), a));
+assert(equal(setIntersection(a, b), [1, 2, 4, 7][]));
+assert(equal(setIntersection(a, b, c), [1, 4, 7][]));
+----
  */
-struct SetIntersection(alias less = "a < b", R1, R2)
-    if (isInputRange!(R1) && isInputRange!(R2))
+struct SetIntersection(alias less = "a < b", Rs...)
+if (allSatisfy!(isInputRange, Rs))
 {
 private:
-    R1 r1;
-    R2 r2;
+    Rs _input;
     alias binaryFun!(less) comp;
-
+    alias CommonType!(staticMap!(.ElementType, Rs)) ElementType;
+    
     void adjustPosition()
     {
-        if (empty) return;
-        for (;;)
+        // we're choosing _input[0].front as pivot and we try to align
+        // all other values to it
+        if (_input[0].empty) return;
+        foreach (i, Unused; Rs)
         {
-            if (comp(r1.front, r2.front))
+            // alright, let's bring the two guys in sync
+            for (;;)
             {
-                r1.popFront;
-                if (r1.empty) return;
+                if (comp(_input[i].front, _input[0].front))
+                {
+                    // lhs > rhs
+                    _input[i].popFront;
+                    if (_input[i].empty) return;
+                }
+                else if (comp(_input[0].front, _input[i].front))
+                {
+                    // lhs < rhs
+                    _input[0].popFront;
+                    // recurse because we changed the pivot
+                    return adjustPosition;                    
+                }
+                else
+                {
+                    // here fronts are equal, so these two ranges are in sync
+                    break;
+                }
             }
-            else if (comp(r2.front, r1.front))
-            {
-                r2.popFront;
-                if (r2.empty) return;
-            }
-            else break;
+            // At this point ranges i through i + j are in sync
         }
+        // At this point all ranges are in sync!
     }
     
 public:
-    this(R1 r1, R2 r2)
+    this(Rs input)
     {
-        this.r1 = r1;
-        this.r2 = r2;
+        this._input = input;
         // position to the first element
         adjustPosition;
     }
     
     void popFront()
     {
-        r1.popFront;
-        r2.popFront;
+        assert(!empty);
+        foreach (i, U; Rs)
+        {
+            _input[i].popFront;
+        }
         adjustPosition;
     }
 
-    CommonType!(ElementType!(R1), ElementType!(R2)) front()
+    ElementType front()
     {
         assert(!empty);
-        return r1.front;
+        return _input[0].front;
     }
 
-    bool empty() { return r1.empty || r2.empty; }
+    bool empty()
+    {
+        foreach (i, U; Rs)
+        {
+            if (_input[i].empty) return true;
+        }
+        return false;
+    }
+
+    ref auto opSlice() { return this; }
 }
 
 /// Ditto
-SetIntersection!(less, R1, R2) setIntersection(alias less = "a < b", R1, R2)
-(R1 r1, R2 r2)
+SetIntersection!(less, Rs) setIntersection(alias less = "a < b", Rs...)
+(Rs ranges)
+if (allSatisfy!(isInputRange, Rs))
 {
-    return typeof(return)(r1, r2);
+    return typeof(return)(ranges);
 }
 
-version(none) unittest
+unittest
 {
     int[] a = [ 1, 2, 4, 5, 7, 9 ];
     int[] b = [ 0, 1, 2, 4, 7, 8 ];
+    int[] c = [ 0, 1, 4, 5, 7, 8 ];
+    //foreach (e; setIntersection(a, b, c)) writeln(e);
     assert(equal(setIntersection(a, b), [1, 2, 4, 7][]));
+    assert(equal(setIntersection(a, a), a));
+    assert(equal(setIntersection(a, b, b, a), [1, 2, 4, 7][]));
+    assert(equal(setIntersection(a, b, c), [1, 4, 7][]));
+    assert(equal(setIntersection(a, c, b), [1, 4, 7][]));
+    assert(equal(setIntersection(b, a, c), [1, 4, 7][]));
+    assert(equal(setIntersection(b, c, a), [1, 4, 7][]));
+    assert(equal(setIntersection(c, a, b), [1, 4, 7][]));
+    assert(equal(setIntersection(c, b, a), [1, 4, 7][]));
 }
 
 /**
 Lazily computes the difference of $(D r1) and $(D r2). The two ranges
 are assumed to be sorted by $(D less). The element types of the two
 ranges must have a common type.
+
+Example:
+----
+int[] a = [ 1, 2, 4, 5, 7, 9 ];
+int[] b = [ 0, 1, 2, 4, 7, 8 ];
+assert(equal(setDifference(a, b), [5, 9][]));
+----
  */
 struct SetDifference(alias less = "a < b", R1, R2)
     if (isInputRange!(R1) && isInputRange!(R2))
@@ -4817,6 +4918,8 @@ public:
     }
 
     bool empty() { return r1.empty; }
+
+    ref auto opSlice() { return this; }
 }
 
 /// Ditto
@@ -4826,12 +4929,111 @@ SetDifference!(less, R1, R2) setDifference(alias less = "a < b", R1, R2)
     return typeof(return)(r1, r2);
 }
 
-version(none) unittest
+unittest
 {
     int[] a = [ 1, 2, 4, 5, 7, 9 ];
     int[] b = [ 0, 1, 2, 4, 7, 8 ];
     //foreach (e; setDifference(a, b)) writeln(e);
     assert(equal(setDifference(a, b), [5, 9][]));
+}
+
+/**
+Lazily computes the symmetric difference of $(D r1) and $(D r2),
+i.e. the elements that are present in exactly one of $(D r1) and $(D
+r2). The two ranges are assumed to be sorted by $(D less), and the
+output is also sorted by $(D less). The element types of the two
+ranges must have a common type.
+
+Example:
+----
+int[] a = [ 1, 2, 4, 5, 7, 9 ];
+int[] b = [ 0, 1, 2, 4, 7, 8 ];
+assert(equal(setSymmetricDifference(a, b), [0, 5, 8, 9][]));
+----
+ */
+struct SetSymmetricDifference(alias less = "a < b", R1, R2)
+    if (isInputRange!(R1) && isInputRange!(R2))
+{
+private:
+    R1 r1;
+    R2 r2;
+    //bool usingR2;
+    alias binaryFun!(less) comp;
+
+    void adjustPosition()
+    {
+        while (!r1.empty && !r2.empty)
+        {
+            if (comp(r1.front, r2.front) || comp(r2.front, r1.front))
+            {
+                break;
+            }
+            // equal, pop both
+            r1.popFront;
+            r2.popFront;
+        }
+    }
+    
+public:
+    this(R1 r1, R2 r2)
+    {
+        this.r1 = r1;
+        this.r2 = r2;
+        // position to the first element
+        adjustPosition;
+    }
+    
+    void popFront()
+    {
+        assert(!empty);
+        if (r1.empty) r2.popFront;
+        else if (r2.empty) r1.popFront;
+        else
+        {
+            // neither is empty
+            if (comp(r1.front, r2.front))
+            {
+                r1.popFront;
+            }
+            else
+            {
+                assert(comp(r2.front, r1.front));
+                r2.popFront;
+            }
+        }
+        adjustPosition;
+    }
+
+    ElementType!(R1) front()
+    {
+        assert(!empty);
+        if (r2.empty || !r1.empty && comp(r1.front, r2.front))
+        {
+            return r1.front;
+        }
+        assert(r1.empty || comp(r2.front, r1.front));
+        return r2.front;
+    }
+
+    ref auto opSlice() { return this; }
+
+    bool empty() { return r1.empty && r2.empty; }
+}
+
+/// Ditto
+SetSymmetricDifference!(less, R1, R2)
+setSymmetricDifference(alias less = "a < b", R1, R2)
+(R1 r1, R2 r2)
+{
+    return typeof(return)(r1, r2);
+}
+
+unittest
+{
+    int[] a = [ 1, 2, 4, 5, 7, 9 ];
+    int[] b = [ 0, 1, 2, 4, 7, 8 ];
+    //foreach (e; setSymmetricDifference(a, b)) writeln(e);
+    assert(equal(setSymmetricDifference(a, b), [0, 5, 8, 9][]));
 }
 
 // Internal random array generators
