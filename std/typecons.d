@@ -372,7 +372,7 @@ public:
 /**
    Comparison for equality.
  */
-    bool opEquals(T)(T rhs)
+    bool opEquals(T)(T rhs) if (is(typeof(T.field)))
     {
         static assert(field.length == rhs.field.length,
                 "Length mismatch in attempting to compare a "
@@ -388,7 +388,7 @@ public:
 /**
    Comparison for ordering.
  */
-    int opCmp(T)(T rhs)
+    int opCmp(T)(T rhs) if (is(typeof(T.field)))
     {
         static assert(field.length == rhs.field.length,
                 "Length mismatch in attempting to compare a "
