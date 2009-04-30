@@ -386,6 +386,22 @@ public:
     }
 
 /**
+   Comparison for ordering.
+ */
+    int opCmp(T)(T rhs)
+    {
+        static assert(field.length == rhs.field.length,
+                "Length mismatch in attempting to compare a "
+                ~typeof(this).stringof
+                ~" with a "~typeof(rhs).stringof);
+        foreach (i, f; field)
+        {
+            if (f != rhs.field[i]) return f < rhs.field[i] ? -1 : 1;
+        }
+        return 0;
+    }
+
+/**
    Assignment from another tuple. Each element of the source must be
    implicitly assignable to the respective element of the target.
  */
@@ -485,6 +501,18 @@ unittest
     x.a = 5;
     assert(x.field[0] == 5 && x.field[1] == 4.5);
     assert(x.a == 5 && x.b == 4.5);
+
+    {
+        Tuple!(int, float) a, b;
+        a.field[0] = 5;
+        b.field[0] = 6;
+        assert(a < b);
+        a.field[0] = 6;
+        b.field[0] = 6;
+        a.field[1] = 7;
+        b.field[1] = 6;
+        assert(b < a);
+    }
 }
 
 /**
