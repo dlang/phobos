@@ -5163,7 +5163,7 @@ double[][] a =
 auto b = new Tuple!(double, uint)[1];
 largestPartialIntersection(a, b);
 // First member is the item, second is the occurrence count
-assert(b == tuple(7.0, 4u));
+assert(b[0] == tuple(7.0, 4u));
 ----
 
 $(D 7.0) is the correct answer because it occurs in $(D 4) out of the
@@ -5181,6 +5181,12 @@ all input ranges. This approach is faster than keeping an associative
 array of the occurrences and then selecting its top items, and also
 requires less memory ($(D largestPartialIntersection) builds its
 result directly in $(D tgt) and requires no extra memory).
+
+Warning: Because $(D largestPartialIntersection) does not allocate
+extra memory, it will leave $(D ror) modified. Namely, by the time $(D
+largestPartialIntersection) returns, all ranges in $(D ror) will have
+been advanced until they are empty. To avoid that, duplicate $(D ror)
+prior to calling (and perhaps cache the duplicate in between calls).
  */
 void largestPartialIntersection
 (alias less = "a < b", RangeOfRanges, Range)
@@ -5231,7 +5237,8 @@ unittest
     largestPartialIntersection(a, b, true);
     //sort(b);
     //writeln(b);
-    assert(b[0] == [ tuple(7., 4u), tuple(1., 3u) ][], text(b));
+    assert(b == [ tuple(7., 4u), tuple(1., 3u) ][], text(b));
+    assert(a[0].empty);
 }
 
 unittest
