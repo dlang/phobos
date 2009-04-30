@@ -271,9 +271,15 @@ Struct to string conversion calls $(D toString) against the struct if
 it is defined.
  */
 T to(T, S)(S s)
-if (is(S == struct) && isSomeString!(T) && is(S.init.toString))
+if (is(S == struct) && isSomeString!(T) && is(typeof(S.init.toString)))
 {
     return to!T(s.toString);
+}
+
+unittest
+{
+    struct S { string toString() { return "wyda"; } }
+    assert(to!string(S()) == "wyda");
 }
 
 /**
@@ -282,7 +288,7 @@ produces the list of fields.
  */
 T to(T, S)(S s, in T left = S.stringof~"(", in T separator = ", ",
         in T right = ")")
-if (is(S == struct) && isSomeString!(T) && !is(S.init.toString))
+if (is(S == struct) && isSomeString!(T) && !is(typeof(S.init.toString)))
 {
     Tuple!(FieldTypeTuple!(S)) * t = void;
     static if ((*t).sizeof == S.sizeof)
