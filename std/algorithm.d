@@ -1958,7 +1958,7 @@ Tuple!(ElementType!(Range), size_t)
 minCount(alias pred = "a < b", Range)(Range range)
 {
     if (range.empty) return typeof(return)();
-    auto p = &(range.front);
+    auto p = &(range.front());
     size_t occurrences = 1;
     for (range.popFront; !range.empty; range.popFront)
     {
@@ -1966,7 +1966,7 @@ minCount(alias pred = "a < b", Range)(Range range)
         if (binaryFun!(pred)(range.front, *p))
         {
             // change the min
-            p = &(range.front);
+            p = &(range.front());
             occurrences = 1;
         }
         else
@@ -3849,22 +3849,16 @@ void topNIndex(
     Range, RangeIndex)(Range r, RangeIndex index, bool sorted = false)
 if (isIntegral!(ElementType!(RangeIndex)))
 {
-    {
-        size_t i;
-        enforce(ElementType!(RangeIndex).max >= index.length,
-                "Index type too small");
-        foreach (ref e; index) e = cast(typeof(e)) i++;
-    }
+    enforce(ElementType!(RangeIndex).max >= index.length,
+            "Index type too small");
     bool indirectLess(ElementType!(RangeIndex) a, ElementType!(RangeIndex) b)
     {
         return binaryFun!(less)(r[a], r[b]);
     }
-    auto heap = BinaryHeap!(RangeIndex, indirectLess)(index);
-    foreach (i; index.length .. r.length)
+    auto heap = BinaryHeap!(RangeIndex, indirectLess)(index, 0);
+    foreach (i; 0 .. r.length)
     {
-        if (!indirectLess(cast(ElementType!(RangeIndex)) i, heap.top)) continue;
-        // replace the top with e
-        heap.replaceTop(cast(ElementType!(RangeIndex)) i);
+        heap.conditionalPut(cast(ElementType!RangeIndex) i);
     }
     if (sorted) heap.pop(heap.length);
 }
@@ -3875,21 +3869,15 @@ void topNIndex(
     Range, RangeIndex)(Range r, RangeIndex index, bool sorted = false)
 if (is(ElementType!(RangeIndex) == ElementType!(Range)*))
 {
-    {
-        size_t i;
-        foreach (ref e; index) e = &r[i++];
-    }
     static bool indirectLess(const ElementType!(RangeIndex) a,
             const ElementType!(RangeIndex) b)
     {
-        return binaryFun!(less)(*a, *b);
+        return binaryFun!less(*a, *b);
     }
-    auto heap = BinaryHeap!(RangeIndex, indirectLess)(index);
-    foreach (i; index.length .. r.length)
+    auto heap = BinaryHeap!(RangeIndex, indirectLess)(index, 0);
+    foreach (i; 0 .. r.length)
     {
-        if (!indirectLess(&r[i], heap.top)) continue;
-        // replace the top with e
-        heap.replaceTop(&r[i]);
+        heap.conditionalPut(&r[i]);
     }
     if (sorted) heap.pop(heap.length);
 }
@@ -3908,7 +3896,7 @@ unittest
         auto b = new ubyte[5];
         topNIndex!("a > b")(a, b, true);
         //foreach (e; b) writeln(e, ":", a[e]);
-        assert(b == [ cast(ubyte) 0, 2, 1, 6, 5]);
+        assert(b == [ cast(ubyte) 0, 2, 1, 6, 5], text(b));
     }
 }
 /+
@@ -4377,12 +4365,13 @@ assert(h.length == 0);
  */
 struct BinaryHeap(Range, alias less = "a < b") if (isRandomAccessRange!(Range))
 {
+    private size_t _length;
     private Range _store;
     private alias binaryFun!(less) comp;
 
     //@@@BUG
     //private static void heapify(Range r, size_t i)
-    void heapify(Range r, size_t i)
+    public void heapify(Range r, size_t i = 0)
     {
         auto b = 0;
         for (;;)
@@ -4390,7 +4379,7 @@ struct BinaryHeap(Range, alias less = "a < b") if (isRandomAccessRange!(Range))
             auto left = b + (i - b) * 2 + 1, right = left + 1;
             if (right == r.length)
             {
-                if (binaryFun!(less)(r[i], r[left])) swap(r[i], r[left]);
+                if (comp(r[i], r[left])) swap(r[i], r[left]);
                 return;
             }
             if (right > r.length) return;
@@ -4404,24 +4393,49 @@ struct BinaryHeap(Range, alias less = "a < b") if (isRandomAccessRange!(Range))
         }
     }
 
-    private void pop(Range store)
+    /*static*/ void pop(Range store)
     {
-        if (store.length <= 1) return;
-        auto newEnd = store.length - 1;
-        swap(store.front, store[newEnd]);
-        heapify(store[0 .. newEnd], 0);
+        assert(!store.empty);
+        if (store.length == 1) return;
+        swap(store.front, store.back);
+        heapify(store[0 .. store.length - 1]);
+    }
+
+    private void assertValid()
+    {
+        debug
+        {
+            if (_length < 2) return;
+            for (size_t n = _length - 1; n >= 1; --n)
+            {
+                auto parentIdx = (n - 1) / 2;
+                assert(!comp(_store[parentIdx], _store[n]), text(n));
+            }
+        }
     }
 
 public:
 /**
-Converts the range $(D r) into a heap. Performs $(BIGOH r.length)
-evaluations of $(D comp).
-*/
-    this(Range r)
+Converts the range $(D r) into a heap. If $(D initialSize) is
+specified, only the first $(D initialSize) elements in $(D r) are
+transformed into a heap, after which the heap can grow up to $(D
+r.length). Performs $(BIGOH min(r.length, initialSize)) evaluations of
+$(D less).
+ */
+    this(Range r, size_t initialSize = size_t.max)
     {
-        _store = r;
-        if (_store.length < 2) return;
-        auto i = (_store.length - 2) / 2;
+        acquire(r, initialSize);
+    }
+
+/**
+Takes ownership of a range.
+ */    
+    void acquire(Range r, size_t initialSize = size_t.max)
+    {
+        swap(r, _store);
+        _length = min(_store.length, initialSize);
+        if (_length < 2) return;
+        auto i = (_length - 2) / 2;
         // @@@BUG: statement not reachable
         // for (;;)
         // {
@@ -4429,38 +4443,89 @@ evaluations of $(D comp).
         //     if (i == 0) return;
         //     --i;
         // }
-        this.heapify(_store, i);
+        this.heapify(_store[0 .. _length], i);
         for (; i-- != 0;)
         {
-            this.heapify(_store, i);
+            this.heapify(_store[0 .. _length], i);
         }
+        assertValid;
     }
 
 /**
-Takes ownership of a range. The old content of the store is destroyed.
- */    
-    void acquire(Range r)
-    {
-        swap(r, _store);
-    }
-
-/**
-Clears the heap. Returns the contents of the store.
+Clears the heap. Returns the contents of the store (which satisfies
+the $(LUCKY heap property)).
  */    
     Range release()
     {
         Range result;
         swap(result, _store);
+        result = result[0 .. _length];
+        _length = 0;
         return result;
+    }
+
+/**
+Adds one element to the heap. If the length of the heap grows beyond
+the length of the range that the heap was associated with, a new range
+is allocated.
+ */
+    void push(ElementType!Range value)
+    {
+        //assertValid;
+        if (_length == _store.length)
+        {
+            // reallocate
+            _store.length = (_length + 1) * 2;
+        }
+        // no reallocation
+        _store[_length] = value;
+        // sink down the element
+        for (size_t n = _length; n; )
+        {
+            auto parentIdx = (n - 1) / 2;
+            if (!comp(_store[parentIdx], _store[n])) break; // done!
+            // must swap and continue
+            swap(_store[parentIdx], _store[n]);
+            n = parentIdx;
+        }
+        ++_length;
+        assertValid;
+    }
+    
+/**
+If $(D this.length < this.capacity), call $(D
+this.push(value)). Otherwise, if $(D less(value, this.top)), replace
+$(D this.top) with $(D value) and adjust the heap to maintain the heap
+property. This function is useful in scenarios where the largest $(D
+N) of a large set of candidates must be remembered.
+
+Returns: $(D true) if $(D value) was put in the heap, $(D false)
+otherwise.
+ */
+    bool conditionalPut(ElementType!Range value)
+    {
+        if (_length < _store.length)
+        {
+            push(value);
+            return true;
+        }
+        // must replace the top
+        assert(!_store.empty);
+        if (!comp(value, _store.front)) return false;
+        _store.front = value;
+        heapify(_store[0 .. _length]);
+        assertValid;
+        return true;
     }
 
 /**
 Get the _top element (the largest according to the predicate $(D
 less)).
  */
-    ref const(ElementType!(Range)) top()
+    ElementType!Range top()
     {
-        return _store[0];
+        assert(_length);
+        return _store.front;
     }
     
 /**
@@ -4468,10 +4533,10 @@ Pops the largest element (according to the predicate $(D less)).
  */
     void pop()
     {
-        enforce(_store.length);
-        if (_store.length > 1) swap(_store.front, _store.back);
-        _store.popBack;
-        heapify(_store, 0);
+        enforce(_length);
+        if (_length > 1) swap(_store.front, _store[_length - 1]);
+        --_length;
+        heapify(_store[0 .. _length]);
     }
 
 /**
@@ -4484,33 +4549,31 @@ heap is sorted and returned.
  */
     Range pop(size_t n)
     {
-        immutable size_t newSize = n >= _store.length
-            ? (n = _store.length, 0)
-            : _store.length - n;
-        auto result = _store[newSize .. _store.length];
-        while  (_store.length > newSize)
+        immutable size_t newSize = n >= _length
+            ? (n = _length, 0)
+            : _length - n;
+        auto result = _store[newSize .. _length];
+        while  (_length > newSize)
         {
-            swap(_store.front, _store.back);
-            _store.popBack;
-            heapify(_store, 0);
+            swap(_store.front, _store[_length - 1]);
+            --_length;
+            heapify(_store[0 .. _length]);
         }
         return result;
     }
 
 /**
-Replaces the top element (largest according to $(D less)) with $(D
-newTop).
- */
-    void replaceTop(ElementType!(Range) newTop)
+Returns the _length of the heap.
+ */    
+    size_t length() const
     {
-        _store.front = newTop;
-        heapify!(less)(_store, 0);
+        return _length;
     }
 
 /**
-Returns the _length of the heap.
+Returns the length of the range underlying the heap.
  */    
-    size_t length()
+    size_t capacity()
     {
         return _store.length;
     }
@@ -4521,28 +4584,30 @@ unittest
     {
         // example from "Introduction to Algorithms" Cormen et al., p 146
         int[] a = [ 4, 1, 3, 2, 16, 9, 10, 14, 8, 7 ];
-        //vnBinaryHeap!(int[]) h = BinaryHeap!(int[])(a);
+        BinaryHeap!(int[]) h = BinaryHeap!(int[])(a);
         //makeBinaryHeap!(binaryFun!("a < b"))(a);
-//        assert(a == [ 16, 14, 10, 8, 7, 9, 3, 2, 4, 1 ]);
+        assert(a == [ 16, 14, 10, 8, 7, 9, 3, 2, 4, 1 ]);
     }
-    // {
-    //     int[] a = [ 4, 1, 3, 2, 16, 9, 10, 14, 8, 7 ];
-    //     BinaryHeap!(int[]) h = BinaryHeap!(int[])(a);
-    //     //makeBinaryHeap!(binaryFun!("a < b"))(a);
-    //     auto b = h.pop(5);
-    //     assert(b == [ 8, 9, 10, 14, 16 ]);
-    //     b = h.pop(5);
-    //     assert(b == [ 1, 2, 3, 4, 7 ]);
-    //     assert(h.length == 0);
-    // }
-}
-
-version(none) unittest
-{
-    // example from "Introduction to Algorithms" Cormen et al., p 143
-    int[] a = [ 16, 4, 10, 14, 7, 9, 3, 2, 8, 1 ];
-    BinaryHeap!(int[]) h = BinaryHeap!(int[])(a);
-    assert(a == [ 16, 14, 10, 8, 7, 9, 3, 2, 4, 1 ]);
+    {
+        int[] a = [ 4, 1, 3, 2, 16, 9, 10, 14, 8, 7 ];
+        int[] b = new int[a.length];
+        BinaryHeap!(int[]) h = BinaryHeap!(int[])(b, 0);
+        foreach (e; a)
+        {
+            h.push(e);
+        }
+        assert(b == [ 16, 14, 10, 8, 7, 3, 9, 1, 4, 2 ], text(b));
+    }
+    {
+        int[] a = [ 4, 1, 3, 2, 16, 9, 10, 14, 8, 7 ];
+        BinaryHeap!(int[]) h = BinaryHeap!(int[])(a);
+        //makeBinaryHeap!(binaryFun!("a < b"))(a);
+        auto b = h.pop(5);
+        assert(b == [ 8, 9, 10, 14, 16 ]);
+        b = h.pop(5);
+        assert(b == [ 1, 2, 3, 4, 7 ]);
+        assert(h.length == 0);
+    }
 }
 
 /**
@@ -4565,30 +4630,12 @@ TRange topNCopy(alias less = "a < b", SRange, TRange)
     if (isInputRange!(SRange) && isRandomAccessRange!(TRange)
             && hasLength!(TRange) && hasSlicing!(TRange))
 {
-    // make an initial heap in the target
-    foreach (i; 0 .. target.length)
-    {
-        if (source.empty)
-        {
-            target = target[0 .. i];
-            break;
-        }
-        target[i] = source.front;
-        source.popFront;
-    }
-    if (target.empty) return target;
-
-    auto heap = BinaryHeap!(TRange, less)(target);
-    // now copy stuff into the target if it's smaller
-    for (; !source.empty; source.popFront)
-    {
-        if (!binaryFun!(less)(source.front, heap.top)) continue;
-        heap.replaceTop(source.front);
-    }
+    auto heap = BinaryHeap!(TRange, less)(target, 0);
+    foreach (e; source) heap.conditionalPut(e);
     return sorted ? heap.pop(heap.length) : heap.release;
 }
 
-version(none) unittest
+unittest
 {
     int[] a = [ 10, 16, 2, 3, 1, 5, 0 ];
     int[] b = new int[3];
@@ -4596,7 +4643,7 @@ version(none) unittest
     assert(b == [ 0, 1, 2 ]);
 }
 
-version(none) unittest
+unittest
 {
     auto r = Random(unpredictableSeed);
     int[] a = new int[uniform(1, 1000, r)];
@@ -5092,6 +5139,115 @@ version(unittest)
         }
         return result;
     }
+}
+
+// largestPartialIntersection
+/**
+Given a range of sorted forward ranges $(D ror), copies to $(D tgt)
+the elements that are common to most ranges, along with their number
+of occurrences. All ranges in $(D ror) are assumed to be sorted by $(D
+less). Only the most frequent $(D tgt.length) elements are returned.
+
+Example:
+----
+// Figure which number can be found in most arrays of the set of
+// arrays below.
+double[][] a =
+[
+    [ 1, 4, 7, 8 ],
+    [ 1, 7 ],
+    [ 1, 7, 8],
+    [ 4 ],
+    [ 7 ],
+];
+auto b = new Tuple!(double, uint)[1];
+largestPartialIntersection(a, b);
+// First member is the item, second is the occurrence count
+assert(b == tuple(7.0, 4u));
+----
+
+$(D 7.0) is the correct answer because it occurs in $(D 4) out of the
+$(D 5) inputs, more than any other number. The second member of the
+resulting tuple is indeed $(D 4) (recording the number of occurrences
+of $(D 7.0)). If more of the top-frequent numbers are needed, just
+create a larger $(D tgt) range. In the axample above, creating $(D b)
+with length $(D 2) yields $(D tuple(1.0, 3u)) in the second position.
+
+The function $(D largestPartialIntersection) is useful for
+e.g. searching an $(LUCKY inverted index) for the documents most
+likely to contain some terms of interest. The complexity of the search
+is $(BIGOH n * log(tgt.length)), where $(D n) is the sum of lengths of
+all input ranges. This approach is faster than keeping an associative
+array of the occurrences and then selecting its top items, and also
+requires less memory ($(D largestPartialIntersection) builds its
+result directly in $(D tgt) and requires no extra memory).
+ */
+void largestPartialIntersection
+(alias less = "a < b", RangeOfRanges, Range)
+(RangeOfRanges ror, Range tgt, bool sorted = false)
+{
+    alias binaryFun!less comp;
+    alias ElementType!(ElementType!RangeOfRanges) E;
+    alias ElementType!Range InfoType;
+    bool heapComp(InfoType a, InfoType b)
+    {
+        return a.field[1] > b.field[1];
+    }
+    auto heap = BinaryHeap!(Range, heapComp)(tgt, 0);
+    for (;;)
+    {
+        auto tr = frontTransversal(ror);
+        if (tr.empty) break;
+        auto mc = minCount!less(tr);
+        //auto cm = tuple(mc.field[1], mc.field[0]);
+        // auto cnt = mc.field[1];
+        // writeln(min);
+        // writeln(cnt);
+        // Put that on the heap
+        heap.conditionalPut(mc);
+        // Now remove that minimum element from wherever it occurred
+        foreach (ref r; ror)
+        {
+            if (r.empty) continue;
+            if (!comp(r.front, mc.field[0])
+                    && !comp(mc.field[0], r.front))
+                r.popFront;
+        }
+    }
+    if (sorted) heap.pop(heap.length);
+}
+
+unittest
+{
+    double[][] a =
+        [
+            [ 1, 4, 7, 8 ],
+            [ 1, 7 ],
+            [ 1, 7, 8],
+            [ 4 ],
+            [ 7 ],
+        ];
+    auto b = new Tuple!(double, uint)[2];
+    largestPartialIntersection(a, b, true);
+    //sort(b);
+    //writeln(b);
+    assert(b[0] == [ tuple(7., 4u), tuple(1., 3u) ][], text(b));
+}
+
+unittest
+{
+    string[][] a =
+        [
+            [ "1", "4", "7", "8" ],
+            [ "1", "7" ],
+            [ "1", "7", "8"],
+            [ "4" ],
+            [ "7" ],
+        ];
+    auto b = new Tuple!(string, uint)[2];
+    largestPartialIntersection(a, b, true);
+    //writeln(b);
+    assert(b == [ tuple("7", 4u), tuple("1", 3u) ][], text(b));
 }
 
 /*
