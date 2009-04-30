@@ -525,26 +525,12 @@ void *os_query_stackBottom()
 
 }
 
-/* ================================ linux ================================= */
+/* ================================ Posix ================================= */
 
 version (Posix)
 {
-
-version (FreeBSD)
-{
-    private import std.c.freebsd.freebsd;
-    private import std.c.freebsd.pthread;
-}
-else version (Solaris)
-{
-    private import std.c.solaris.solaris;
-    private import std.c.solaris.pthread;
-}
-else
-{
-    private import std.c.linux.linux;
-    private import std.c.linux.pthread;
-}
+private import std.c.posix.posix;
+private import std.c.posix.pthread;
 
 version (OSX)
 {

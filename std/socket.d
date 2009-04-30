@@ -65,14 +65,9 @@ else version(BsdSockets)
 {
 	version(Posix)
 	{
-	    version (FreeBSD)
-		private import std.c.freebsd.socket;
-	    else version (Solaris)
-		private import std.c.solaris.socket;
-	    else
-		private import std.c.linux.socket;
-	    private import std.c.linux.linux;
-	    private alias std.c.linux.linux.timeval _ctimeval;
+	    private import std.c.posix.socket;
+	    private import std.c.posix.posix;
+	    private alias std.c.posix.posix.timeval _ctimeval;
 	}
 
 	typedef int32_t socket_t = -1;

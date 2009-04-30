@@ -10,12 +10,16 @@ else version (OSX)
     // We really should separate osx out from linux
     public import std.c.linux.pthread;
 }
-version (FreeBSD)
+else version (FreeBSD)
 {
     public import std.c.freebsd.pthread;
 }
+else version (Solaris)
+{
+    public import std.c.solaris.pthread;
+}
 else
 {
-    static asssert(0);
+    static assert(0);
 }
 

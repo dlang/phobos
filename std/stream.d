@@ -1776,7 +1776,7 @@ version (Win32) {
   }
 }
 version (Posix) {
-  private import std.c.linux.linux;
+  private import std.c.posix.posix;
   alias int HANDLE;
 }
 
@@ -1857,7 +1857,7 @@ class File: Stream {
       isopen = hFile != INVALID_HANDLE_VALUE;
     }
     version (Posix) {
-      hFile = std.c.linux.linux.open(toStringz(filename), access | createMode, share);
+      hFile = std.c.posix.posix.open(toStringz(filename), access | createMode, share);
       isopen = hFile != -1;
     }
     if (!isopen)
@@ -1924,7 +1924,7 @@ class File: Stream {
 	  CloseHandle(hFile);
 	  hFile = null;
 	} else version (Posix) {
-	  std.c.linux.linux.close(hFile);
+	  std.c.posix.posix.close(hFile);
 	  hFile = -1;
 	}
       }
@@ -1949,7 +1949,7 @@ class File: Stream {
     version (Win32) {
       ReadFile(hFile, buffer, size, &size, null);
     } else version (Posix) {
-      size = std.c.linux.linux.read(hFile, buffer, size);
+      size = std.c.posix.posix.read(hFile, buffer, size);
       if (size == -1)
 	size = 0;
     }
@@ -1962,7 +1962,7 @@ class File: Stream {
     version (Win32) {
       WriteFile(hFile, buffer, size, &size, null);
     } else version (Posix) {
-      size = std.c.linux.linux.write(hFile, buffer, size);
+      size = std.c.posix.posix.write(hFile, buffer, size);
       if (size == -1)
 	size = 0;
     }

@@ -20,7 +20,7 @@ version (Win32)
 
 version (Posix)
 {
-    private import std.c.linux.linux;
+    private import std.c.posix.posix;
 }
 
 /* ===================== Random ========================= */

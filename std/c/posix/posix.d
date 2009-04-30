@@ -10,12 +10,16 @@ else version (OSX)
     // We really should separate osx out from linux
     public import std.c.linux.linux;
 }
-version (FreeBSD)
+else version (FreeBSD)
 {
     public import std.c.freebsd.freebsd;
 }
+else version (Solaris)
+{
+    public import std.c.solaris.solaris;
+}
 else
 {
-    static asssert(0);
+    static assert(0);
 }
 

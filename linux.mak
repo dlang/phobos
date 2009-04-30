@@ -52,6 +52,7 @@ OBJS = asserterror.o deh2.o complex.o gcstats.o \
 	path.o string.o math.o mmfile.o \
 	outbuffer.o ctype.o regexp.o random.o \
 	linux.o linuxsocket.o \
+	posix.o posixsocket.o posixpthread.o \
 	stream.o cstream.o switcherr.o array.o gc.o \
 	thread.o utf.o uri.o \
 	Dcrc32.o conv.o errno.o alloca.o cmath2.o \
@@ -167,6 +168,9 @@ SRC_STD_C_FREEBSD= std/c/freebsd/freebsd.d \
 SRC_STD_C_SOLARIS= std/c/solaris/solaris.d \
        std/c/solaris/socket.d std/c/solaris/pthread.d
 
+SRC_STD_C_POSIX= std/c/posix/posix.d \
+	std/c/posix/socket.d std/c/posix/pthread.d
+
 SRC_ETC=  etc/gamma.d
 
 SRC_ETC_C= etc/c/zlib.d
@@ -218,12 +222,13 @@ SRC_GC= internal/gc/gc.d \
 	internal/gc/win32.mak \
 	internal/gc/linux.mak \
 	internal/gc/osx.mak \
-	internal/gc/solaris.mak \
-	internal/gc/freebsd.mak
+	internal/gc/freebsd.mak \
+	internal/gc/solaris.mak
 
 ALLSRCS = $(SRC) $(SRC_STD) $(SRC_STD_C) $(SRC_TI) $(SRC_INT) $(SRC_STD_WIN) \
 	$(SRC_STD_C_WIN) $(SRC_STD_C_LINUX) $(SRC_ETC) $(SRC_ETC_C) \
-	$(SRC_ZLIB) $(SRC_GC) $(SRC_STD_C_FREEBSD) $(SRC_STD_C_SOLARIS)
+	$(SRC_ZLIB) $(SRC_GC) $(SRC_STD_C_FREEBSD) $(SRC_STD_C_SOLARIS) \
+	$(SRC_STD_C_POSIX)
 
 
 $(LIB) : $(OBJS) $(GC_OBJS) $(ZLIB_OBJS) $(SRCS) $(MAKEFILE)
@@ -505,6 +510,17 @@ linuxsocket.o : std/c/linux/socket.d
 
 pthread.o : std/c/linux/pthread.d
 	$(DMD) -c $(DFLAGS) std/c/linux/pthread.d
+
+### std/c/posix
+
+posix.o : std/c/posix/posix.d
+	$(DMD) -c $(DFLAGS) std/c/posix/posix.d
+
+posixsocket.o : std/c/posix/socket.d
+	$(DMD) -c $(DFLAGS) std/c/posix/socket.d -ofposixsocket.o
+
+posixpthread.o : std/c/posix/pthread.d
+	$(DMD) -c $(DFLAGS) std/c/posix/pthread.d -ofposixpthread.o
 
 ### etc
 

@@ -96,7 +96,7 @@ int spawnvp(int mode, string pathname, string[] argv)
 
 version (Posix)
 {
-private import std.c.linux.linux;
+private import std.c.posix.posix;
 int _spawnvp(int mode, char *pathname, char **argv)
 {
     int retval = 0;

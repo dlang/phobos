@@ -5,7 +5,7 @@
  *	WIKI = Phobos/StdPath
  * Copyright:
  *	Placed into public domain.
- *	www.digitalmars.com
+ *	http://www.digitalmars.com
  *
  * Grzegorz Adam Hankiewicz added some documentation.
  *
@@ -27,7 +27,7 @@ private import std.string;
 version(Posix)
 {
     private import std.c.stdlib;
-    private import std.c.linux.linux;
+    private import std.c.posix.posix;
     private import std.outofmemory;
 }
 

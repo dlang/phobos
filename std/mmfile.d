@@ -53,7 +53,7 @@ version (Win32)
 }
 else version (Posix)
 {
-	private import std.c.linux.linux;
+	private import std.c.posix.posix;
 }
 else
 {
@@ -278,26 +278,26 @@ class MmFile
 			{	
 				struct_stat statbuf;
 	
-				fd = std.c.linux.linux.open(namez, oflag, fmode);
+				fd = std.c.posix.posix.open(namez, oflag, fmode);
 				if (fd == -1)
 				{
 					// printf("\topen error, errno = %d\n",getErrno());
 					errNo();
 				}
 	
-				if (std.c.linux.linux.fstat(fd, &statbuf))
+				if (std.c.posix.posix.fstat(fd, &statbuf))
 				{
 					//printf("\tfstat error, errno = %d\n",getErrno());
-					std.c.linux.linux.close(fd);
+					std.c.posix.posix.close(fd);
 					errNo();
 				}
 	
 				if (prot & PROT_WRITE && size > statbuf.st_size)
 				{
 					// Need to make the file size bytes big
-					std.c.linux.linux.lseek(fd, cast(int)(size - 1), SEEK_SET);
+					std.c.posix.posix.lseek(fd, cast(int)(size - 1), SEEK_SET);
 					char c = 0;
-					std.c.linux.linux.write(fd, &c, 1);
+					std.c.posix.posix.write(fd, &c, 1);
 				}
 				else if (prot & PROT_READ && size == 0)
 					size = cast(ulong)statbuf.st_size;
@@ -316,7 +316,7 @@ else				static assert(0);
 			p = mmap(address, initial_map, prot, flags, fd, 0);
 			if (p == MAP_FAILED) {
 			  if (fd != -1)
-			    std.c.linux.linux.close(fd);
+			    std.c.posix.posix.close(fd);
 			  errNo();
 			}
 
@@ -347,7 +347,7 @@ else				static assert(0);
 		}
 		else version (Posix)
 		{
-			if (fd != -1 && std.c.linux.linux.close(fd) == -1)
+			if (fd != -1 && std.c.posix.posix.close(fd) == -1)
 				errNo();
 			fd = -1;
 		}

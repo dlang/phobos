@@ -843,7 +843,7 @@ version (Posix)
 {
 
 private import std.date;
-private import std.c.linux.linux;
+private import std.c.posix.posix;
 private import std.c.string;
 
 /***********************************
@@ -884,7 +884,7 @@ void[] read(string name)
 
     auto namez = toStringz(name);
     //printf("file.read('%s')\n",namez);
-    auto fd = std.c.linux.linux.open(namez, O_RDONLY);
+    auto fd = std.c.posix.posix.open(namez, O_RDONLY);
     if (fd == -1)
     {
         //printf("\topen error, errno = %d\n",getErrno());
@@ -892,7 +892,7 @@ void[] read(string name)
     }
 
     //printf("\tfile opened\n");
-    if (std.c.linux.linux.fstat(fd, &statbuf))
+    if (std.c.posix.posix.fstat(fd, &statbuf))
     {
         //printf("\tfstat error, errno = %d\n",getErrno());
         goto err2;
@@ -914,7 +914,7 @@ void[] read(string name)
 	    auto toread = readsize;
 	    while (toread)
 	    {
-		auto numread = std.c.linux.linux.read(fd, buf.ptr + size, toread);
+		auto numread = std.c.posix.posix.read(fd, buf.ptr + size, toread);
 		if (numread == -1)
 		    goto err2;
 		size += numread;
@@ -935,7 +935,7 @@ void[] read(string name)
 	if (buf.ptr)
 	    std.gc.hasNoPointers(buf.ptr);
 
-	auto numread = std.c.linux.linux.read(fd, buf.ptr, cast(int)size);
+	auto numread = std.c.posix.posix.read(fd, buf.ptr, cast(int)size);
 	if (numread != size)
 	{
 	    //printf("\tread error, errno = %d\n",getErrno());
@@ -944,7 +944,7 @@ void[] read(string name)
     }
 
   Leof:
-    if (std.c.linux.linux.close(fd) == -1)
+    if (std.c.posix.posix.close(fd) == -1)
     {
 	//printf("\tclose error, errno = %d\n",getErrno());
         goto err;
@@ -953,7 +953,7 @@ void[] read(string name)
     return buf[0 .. cast(size_t)size];
 
 err2:
-    std.c.linux.linux.close(fd);
+    std.c.posix.posix.close(fd);
 err:
     delete buf;
 
@@ -982,21 +982,21 @@ void write(string name, void[] buffer)
     char *namez;
 
     namez = toStringz(name);
-    fd = std.c.linux.linux.open(namez, O_CREAT | O_WRONLY | O_TRUNC, 0660);
+    fd = std.c.posix.posix.open(namez, O_CREAT | O_WRONLY | O_TRUNC, 0660);
     if (fd == -1)
         goto err;
 
-    numwritten = std.c.linux.linux.write(fd, buffer.ptr, buffer.length);
+    numwritten = std.c.posix.posix.write(fd, buffer.ptr, buffer.length);
     if (buffer.length != numwritten)
         goto err2;
 
-    if (std.c.linux.linux.close(fd) == -1)
+    if (std.c.posix.posix.close(fd) == -1)
         goto err;
 
     return;
 
 err2:
-    std.c.linux.linux.close(fd);
+    std.c.posix.posix.close(fd);
 err:
     throw new FileException(name, getErrno());
 }
@@ -1013,21 +1013,21 @@ void append(string name, void[] buffer)
     char *namez;
 
     namez = toStringz(name);
-    fd = std.c.linux.linux.open(namez, O_APPEND | O_WRONLY | O_CREAT, 0660);
+    fd = std.c.posix.posix.open(namez, O_APPEND | O_WRONLY | O_CREAT, 0660);
     if (fd == -1)
         goto err;
 
-    numwritten = std.c.linux.linux.write(fd, buffer.ptr, buffer.length);
+    numwritten = std.c.posix.posix.write(fd, buffer.ptr, buffer.length);
     if (buffer.length != numwritten)
         goto err2;
 
-    if (std.c.linux.linux.close(fd) == -1)
+    if (std.c.posix.posix.close(fd) == -1)
         goto err;
 
     return;
 
 err2:
-    std.c.linux.linux.close(fd);
+    std.c.posix.posix.close(fd);
 err:
     throw new FileException(name, getErrno());
 }
@@ -1070,7 +1070,7 @@ ulong getSize(string name)
 
     namez = toStringz(name);
     //printf("file.getSize('%s')\n",namez);
-    fd = std.c.linux.linux.open(namez, O_RDONLY);
+    fd = std.c.posix.posix.open(namez, O_RDONLY);
     if (fd == -1)
     {
         //printf("\topen error, errno = %d\n",getErrno());
@@ -1078,14 +1078,14 @@ ulong getSize(string name)
     }
 
     //printf("\tfile opened\n");
-    if (std.c.linux.linux.fstat(fd, &statbuf))
+    if (std.c.posix.posix.fstat(fd, &statbuf))
     {
         //printf("\tfstat error, errno = %d\n",getErrno());
         goto err2;
     }
     auto size = statbuf.st_size;
 
-    if (std.c.linux.linux.close(fd) == -1)
+    if (std.c.posix.posix.close(fd) == -1)
     {
 	//printf("\tclose error, errno = %d\n",getErrno());
         goto err;
@@ -1094,7 +1094,7 @@ ulong getSize(string name)
     return cast(ulong)size;
 
 err2:
-    std.c.linux.linux.close(fd);
+    std.c.posix.posix.close(fd);
 err:
 err1:
     throw new FileException(name, getErrno());
@@ -1111,7 +1111,7 @@ uint getAttributes(string name)
     char *namez;
 
     namez = toStringz(name);
-    if (std.c.linux.linux.stat(namez, &statbuf))
+    if (std.c.posix.posix.stat(namez, &statbuf))
     {
 	throw new FileException(name, getErrno());
     }
@@ -1130,7 +1130,7 @@ void getTimes(string name, out d_time ftc, out d_time fta, out d_time ftm)
     char *namez;
 
     namez = toStringz(name);
-    if (std.c.linux.linux.stat(namez, &statbuf))
+    if (std.c.posix.posix.stat(namez, &statbuf))
     {
 	throw new FileException(name, getErrno());
     }
@@ -1179,7 +1179,7 @@ int exists(char[] name)
     char *namez;
 
     namez = toStringz(name);
-    if (std.c.linux.linux.stat(namez, &statbuf))
+    if (std.c.posix.posix.stat(namez, &statbuf))
     {
 	return 0;
     }
@@ -1216,7 +1216,7 @@ int isdir(string name)
 
 void chdir(string pathname)
 {
-    if (std.c.linux.linux.chdir(toStringz(pathname)))
+    if (std.c.posix.posix.chdir(toStringz(pathname)))
     {
 	throw new FileException(pathname, getErrno());
     }
@@ -1228,7 +1228,7 @@ void chdir(string pathname)
 
 void mkdir(char[] pathname)
 {
-    if (std.c.linux.linux.mkdir(toStringz(pathname), 0777))
+    if (std.c.posix.posix.mkdir(toStringz(pathname), 0777))
     {
 	throw new FileException(pathname, getErrno());
     }
@@ -1240,7 +1240,7 @@ void mkdir(char[] pathname)
 
 void rmdir(string pathname)
 {
-    if (std.c.linux.linux.rmdir(toStringz(pathname)))
+    if (std.c.posix.posix.rmdir(toStringz(pathname)))
     {
 	throw new FileException(pathname, getErrno());
     }
@@ -1252,7 +1252,7 @@ void rmdir(string pathname)
 
 string getcwd()
 {
-    auto p = std.c.linux.linux.getcwd(null, 0);
+    auto p = std.c.posix.posix.getcwd(null, 0);
     if (!p)
     {
 	throw new FileException("cannot get cwd", getErrno());
@@ -1339,7 +1339,7 @@ struct DirEntry
 	char* namez;
 
 	namez = toStringz(name);
-	if (std.c.linux.linux.stat(namez, &statbuf))
+	if (std.c.posix.posix.stat(namez, &statbuf))
 	{
 	    //printf("\tstat error, errno = %d\n",getErrno());
 	    return;
@@ -1490,7 +1490,7 @@ void copy(string from, string to)
     char* toz = toStringz(to);
     //printf("file.copy(from='%s', to='%s')\n", fromz, toz);
 
-    int fd = std.c.linux.linux.open(fromz, O_RDONLY);
+    int fd = std.c.posix.posix.open(fromz, O_RDONLY);
     if (fd == -1)
     {
         //printf("\topen error, errno = %d\n",getErrno());
@@ -1498,13 +1498,13 @@ void copy(string from, string to)
     }
 
     //printf("\tfile opened\n");
-    if (std.c.linux.linux.fstat(fd, &statbuf))
+    if (std.c.posix.posix.fstat(fd, &statbuf))
     {
         //printf("\tfstat error, errno = %d\n",getErrno());
         goto err2;
     }
 
-    int fdw = std.c.linux.linux.open(toz, O_CREAT | O_WRONLY | O_TRUNC, 0660);
+    int fdw = std.c.posix.posix.open(toz, O_CREAT | O_WRONLY | O_TRUNC, 0660);
     if (fdw == -1)
     {
         //printf("\topen error, errno = %d\n",getErrno());
@@ -1526,13 +1526,13 @@ void copy(string from, string to)
     for (auto size = statbuf.st_size; size; )
     {	size_t toread = (size > BUFSIZ) ? BUFSIZ : cast(size_t)size;
 
-	auto n = std.c.linux.linux.read(fd, buf, toread);
+	auto n = std.c.posix.posix.read(fd, buf, toread);
 	if (n != toread)
 	{
 	    //printf("\tread error, errno = %d\n",getErrno());
 	    goto err5;
 	}
-	n = std.c.linux.linux.write(fdw, buf, toread);
+	n = std.c.posix.posix.write(fdw, buf, toread);
 	if (n != toread)
 	{
 	    //printf("\twrite error, errno = %d\n",getErrno());
@@ -1543,7 +1543,7 @@ void copy(string from, string to)
 
     std.c.stdlib.free(buf);
 
-    if (std.c.linux.linux.close(fdw) == -1)
+    if (std.c.posix.posix.close(fdw) == -1)
     {
 	//printf("\tclose error, errno = %d\n",getErrno());
         goto err2;
@@ -1580,7 +1580,7 @@ void copy(string from, string to)
 	goto err3;
     }
 
-    if (std.c.linux.linux.close(fd) == -1)
+    if (std.c.posix.posix.close(fd) == -1)
     {
 	//printf("\tclose error, errno = %d\n",getErrno());
         goto err1;
@@ -1591,11 +1591,11 @@ void copy(string from, string to)
 err5:
     std.c.stdlib.free(buf);
 err4:
-    std.c.linux.linux.close(fdw);
+    std.c.posix.posix.close(fdw);
 err3:
     std.c.stdio.remove(toz);
 err2:
-    std.c.linux.linux.close(fd);
+    std.c.posix.posix.close(fd);
 err1:
     throw new FileException(from, getErrno());
   }

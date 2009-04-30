@@ -928,7 +928,7 @@ version (Win32)
 version (Posix)
 {
 
-    private import std.c.linux.linux;
+    private import std.c.posix.posix;
 
     d_time getUTCtime()
     {   timeval tv;
@@ -967,7 +967,7 @@ version (Posix)
     int DaylightSavingTA(d_time dt)
     {
 	tm *tmp;
-	std.c.linux.linux.__time_t t;
+	std.c.posix.posix.__time_t t;
 	int dst = 0;
 
 	if (dt != d_time_nan)
