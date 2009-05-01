@@ -2258,8 +2258,9 @@ private:
 }
 
 /// Ditto
-FrontTransversal!(RangeOfRanges, opt) frontTransversal(RangeOfRanges,
-        TransverseOptions opt = TransverseOptions.assumeJagged)
+FrontTransversal!(RangeOfRanges, opt) frontTransversal(
+    TransverseOptions opt = TransverseOptions.assumeJagged,
+    RangeOfRanges)
 (RangeOfRanges rr)
 {
     return typeof(return)(rr);
@@ -2386,8 +2387,8 @@ private:
 }
 
 /// Ditto
-Transversal!(RangeOfRanges, opt) transversal(RangeOfRanges,
-        TransverseOptions opt = TransverseOptions.assumeJagged)
+Transversal!(RangeOfRanges, opt) transversal
+(TransverseOptions opt = TransverseOptions.assumeJagged, RangeOfRanges)
 (RangeOfRanges rr, size_t n)
 {
     return typeof(return)(rr, n);
