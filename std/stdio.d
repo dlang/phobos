@@ -946,11 +946,11 @@ $(D Range) that locks the file and allows fast writing to it.
     LockingTextWriter lockingTextWriter()
     {
         // @@@BUG2341@@@
-        //return LockingTextWriter(this);
+        return LockingTextWriter(this);
         // The code below avoids bug 2341
         //printf("Entering fn with %d refs\n", *_refs);
-        auto result = LockingTextWriter(this);
-        return result;
+        // auto result = LockingTextWriter(this);
+        // return result;
     }
 }
 
