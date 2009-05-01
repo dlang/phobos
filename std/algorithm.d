@@ -5185,13 +5185,19 @@ result directly in $(D tgt) and requires no extra memory).
 Warning: Because $(D largestPartialIntersection) does not allocate
 extra memory, it will leave $(D ror) modified. Namely, by the time $(D
 largestPartialIntersection) returns, all ranges in $(D ror) will have
-been advanced until they are empty. To avoid that, duplicate $(D ror)
-prior to calling (and perhaps cache the duplicate in between calls).
+been advanced until they are empty. If you want $(D ror) to preserve
+its contents after the call, pass a duplicate to $(D
+largestPartialIntersection) (and perhaps cache the duplicate in
+between calls).
  */
 void largestPartialIntersection
 (alias less = "a < b", RangeOfRanges, Range)
 (RangeOfRanges ror, Range tgt, bool sorted = false)
 {
+    // Preemptively get rid of all empty ranges in the input
+    // No need for stability either
+    ror = remove!("a.empty", SwapStrategy.unstable)(ror);
+    
     alias binaryFun!less comp;
     alias ElementType!(ElementType!RangeOfRanges) E;
     alias ElementType!Range InfoType;
@@ -5200,24 +5206,44 @@ void largestPartialIntersection
         return a.field[1] > b.field[1];
     }
     auto heap = BinaryHeap!(Range, heapComp)(tgt, 0);
+  bigloop:
     for (;;)
     {
-        auto tr = frontTransversal(ror);
+        auto tr = frontTransversal!(TransverseOptions.assumeNotJagged)(ror);
         if (tr.empty) break;
         auto mc = minCount!less(tr);
-        //auto cm = tuple(mc.field[1], mc.field[0]);
-        // auto cnt = mc.field[1];
-        // writeln(min);
-        // writeln(cnt);
-        // Put that on the heap
         heap.conditionalPut(mc);
         // Now remove that minimum element from wherever it occurred
-        foreach (ref r; ror)
+        for (size_t i = 0; i < ror.length; )
         {
-            if (r.empty) continue;
-            if (!comp(r.front, mc.field[0])
-                    && !comp(mc.field[0], r.front))
-                r.popFront;
+            auto r = &ror[i];
+            if ((*r).empty)
+            {
+                // this ought to be removed
+                swap(*r, ror.back);
+                ror.popBack;
+                if (i == ror.length)
+                {
+                    // get outta here for good
+                    break bigloop;
+                }
+                // no increment for i, revisit this guy and see what happens
+                continue;
+            }
+            if (!comp(mc.field[0], (*r).front))
+            {
+                // this guy is equal to the minimum
+                (*r).popFront;
+                // if ror[i] is empty, revisit because we want to get
+                // rid of it
+                if (! (*r).empty) ++i;
+            }
+            else
+            {
+                // normal case: nonempty range and no removal, just
+                // move on
+                ++i;
+            }
         }
     }
     if (sorted) heap.pop(heap.length);
