@@ -306,7 +306,7 @@ assert(curry!(fun, 5)(6) == 11);
  */
 template curry(alias fun, alias arg)
 {
-    ReturnType!fun curry(ParameterTypeTuple!(fun)[1] arg2)
+    auto curry(T)(T arg2) if (is(typeof(fun(arg, T.init))))
     {
         return fun(arg, arg2);
     }
