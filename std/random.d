@@ -546,14 +546,14 @@ if (is(CommonType!(T1, UniformRandomNumberGenerator) == void) &&
     alias CommonType!(T1, T2) NumberType;
     NumberType _a, _b;
     static if (boundaries[0] == '(')
-        static if (isIntegral!(NumberType))
+        static if (isIntegral!(NumberType) || is(Unqual!NumberType : dchar))
             _a = a + 1;
         else
             _a = nextafter(a, a.infinity);
     else
         _a = a;
     static if (boundaries[1] == ')')
-        static if (isIntegral!(NumberType))
+        static if (isIntegral!(NumberType) || is(Unqual!NumberType : dchar))
         {
             static if (_b.min == 0)
             {
@@ -567,13 +567,16 @@ if (is(CommonType!(T1, UniformRandomNumberGenerator) == void) &&
             _b = b - 1;
         }
         else
+        {
+            static assert(isFloatingPoint!NumberType);
             _b = nextafter(to!NumberType(b), -_b.infinity);
+        }
     else
         _b = b;
     enforce(_a <= _b,
             text("Invalid distribution range: ", boundaries[0], a,
                     ", ", b, boundaries[1]));
-    static if (isIntegral!(NumberType))
+    static if (isIntegral!(NumberType) || is(Unqual!NumberType : dchar))
     {
         auto myRange = _b - _a;
         if (!myRange) return _a;
@@ -583,10 +586,10 @@ if (is(CommonType!(T1, UniformRandomNumberGenerator) == void) &&
         Unsigned!(typeof((urng.max - urng.min + 1) / (myRange + 1)))
             bucketSize = 1 + (urng.max - urng.min - myRange) / (myRange + 1);
         //assert(bucketSize, to!(string)(myRange));
-        NumberType r = void;
+        NumberType r;
         do
         {
-            r = (urng.front - urng.min) / bucketSize;
+            r = cast(NumberType) ((urng.front - urng.min) / bucketSize);
             urng.popFront;
         }
         while (r > myRange);
@@ -594,6 +597,7 @@ if (is(CommonType!(T1, UniformRandomNumberGenerator) == void) &&
     }
     else
     {
+        static assert(isFloatingPoint!NumberType);
         urng.popFront;
         return _a + (_b - _a) * cast(NumberType) (urng.front - urng.min)
             / (urng.max - urng.min);
@@ -619,7 +623,13 @@ unittest
     foreach (i; 0 .. 20)
     {
         auto x = uniform(0., 15., gen);
-        assert(0 <= x && x <= 15);
+        assert(0 <= x && x < 15);
+        //writeln(x);
+    }
+    foreach (i; 0 .. 20)
+    {
+        auto x = uniform!"[]"('a', 'z', gen);
+        assert('a' <= x && x <= 'z');
         //writeln(x);
     }
 }
