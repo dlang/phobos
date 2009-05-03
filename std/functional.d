@@ -301,25 +301,41 @@ Example:
 
 ----
 int fun(int a, int b) { return a + b; }
-assert(curry!(fun, 5)(6) == 11);
+alias curry!(fun, 5) fun5;
+assert(fun5(6) == 11);
 ----
+
+Note that in most cases you'd use an alias instead of a value
+assignment. Using an alias allows you to curry template functions
+without committing to a particular type of the function.
  */
 template curry(alias fun, alias arg)
 {
-    auto curry(T)(T arg2) if (is(typeof(fun(arg, T.init))))
+    static if (is(typeof(fun) == delegate) || is(typeof(fun) == function))
     {
-        return fun(arg, arg2);
+        ReturnType!fun curry(ParameterTypeTuple!fun[1] arg2)
+        {
+            return fun(arg, arg2);
+        }
+    }
+    else
+    {
+        auto curry(T)(T arg2) if (is(typeof(fun(arg, T.init))))
+        {
+            return fun(arg, arg2);
+        }
     }
 }
 
 unittest
 {
-    static int f1(int a, int b) { return a + b; }
-    assert(curry!(f1, 5)(6) == 11);
+    // static int f1(int a, int b) { return a + b; }
+    // assert(curry!(f1, 5)(6) == 11);
     int x = 5;
     int f2(int a, int b) { return a + b; }
     assert(curry!(f2, x)(6) == 11);
-    auto f3 = &curry!(f2, x);
+    auto dg = &f2;
+    auto f3 = &curry!(dg, x);
     assert(f3(6) == 11);
 }
 
@@ -338,15 +354,15 @@ unittest
             alias TypeTuple!(Head, Adjoin!(F[1 .. $]).For!(V).Result) Result;
         }
 
-        Tuple!(Result) fun(V...)(V a)
-        {
-            typeof(return) result;
-            foreach (i, Unused; Result)
-            {
-                result.field[i] = F[i](a);
-            }
-            return result;
-        }
+        // Tuple!(Result) fun(V...)(V a)
+        // {
+        //     typeof(return) result;
+        //     foreach (i, Unused; Result)
+        //     {
+        //         result.field[i] = F[i](a);
+        //     }
+        //     return result;
+        // }
     }
 }
 
