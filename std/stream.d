@@ -2186,13 +2186,13 @@ enum BOM {
 }
 
 private const int NBOMS = 5;
-Endian[NBOMS] BOMEndian = 
+immutable Endian[NBOMS] BOMEndian = 
 [ std.system.endian, 
   Endian.LittleEndian, Endian.BigEndian,
   Endian.LittleEndian, Endian.BigEndian
   ];
 
-ubyte[][NBOMS] ByteOrderMarks = 
+immutable ubyte[][NBOMS] ByteOrderMarks = 
 [ [0xEF, 0xBB, 0xBF],
   [0xFF, 0xFE],
   [0xFE, 0xFF],
@@ -2244,7 +2244,7 @@ class EndianStream : FilterStream {
     int result = -1; // the last match or -1
     for (int i=0; i < NBOMS; ++i) {
       int j;
-      ubyte[] bom = ByteOrderMarks[i];
+      immutable ubyte[] bom = ByteOrderMarks[i];
       for (j=0; j < bom.length; ++j) {
 	if (n <= j) { // have to read more
 	  if (eof())
@@ -2380,7 +2380,7 @@ class EndianStream : FilterStream {
 
   /// Write the specified BOM b to the source stream.
   void writeBOM(BOM b) {
-    ubyte[] bom = ByteOrderMarks[b];
+    immutable ubyte[] bom = ByteOrderMarks[b];
     writeBlock(bom.ptr, bom.length);
   }
 

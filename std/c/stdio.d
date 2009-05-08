@@ -17,9 +17,7 @@ extern (C):
 
 version (Win32)
 {
-    extern FILE _iob[_NFILE];
-    extern void function() _fcloseallp;
-    extern ubyte __fhnd_info[_NFILE];
+    extern shared ubyte[_NFILE] __fhnd_info;
 
     enum
     {

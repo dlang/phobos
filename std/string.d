@@ -3693,7 +3693,7 @@ out (result)
 }
 body
 {
-    static dex =
+    static immutable dex =
     // ABCDEFGHIJKLMNOPQRSTUVWXYZ
       "01230120022455012623010202";
 

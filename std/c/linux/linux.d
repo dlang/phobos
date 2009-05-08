@@ -8,8 +8,21 @@
 
 module std.c.linux.linux;
 
-public import std.c.linux.linuxextern;
 public import std.c.linux.pthread;
+
+extern (C)
+{
+    extern __gshared
+    {
+	void* __libc_stack_end;
+	int __data_start;
+	int _end;
+	int timezone;
+
+	void *_deh_beg;
+	void *_deh_end;
+    }
+}
 
 struct struct_stat64	// distinguish it from the stat() function
 {

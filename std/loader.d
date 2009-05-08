@@ -161,8 +161,8 @@ public string ExeModule_Error()
 
 version(Windows)
 {
-    private int         s_init;
-    private int         s_lastError;    // This is NOT thread-specific
+    private __gshared int         s_init;
+    private __gshared int         s_lastError;    // This is NOT thread-specific
 
     private void record_error_()
     {
@@ -274,9 +274,9 @@ else version(Posix)
         }
     };
 
-    private int                     s_init;
-    private ExeModuleInfo [string]  s_modules;
-    private string                  s_lastError;    // This is NOT thread-specific
+    private __gshared int                     s_init;
+    private __gshared ExeModuleInfo [string]  s_modules;
+    private __gshared string                  s_lastError;    // This is NOT thread-specific
 
     private void record_error_()
     {

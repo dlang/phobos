@@ -228,7 +228,7 @@ SRC_STD_WIN= std\windows\registry.d \
 SRC_STD_C_WIN= std\c\windows\windows.d std\c\windows\com.d \
 	std\c\windows\winsock.d std\c\windows\stat.d
 
-SRC_STD_C_LINUX= std\c\linux\linux.d std\c\linux\linuxextern.d \
+SRC_STD_C_LINUX= std\c\linux\linux.d \
 	std\c\linux\socket.d std\c\linux\pthread.d std\c\linux\termios.d \
 	std\c\linux\tipc.d
 	

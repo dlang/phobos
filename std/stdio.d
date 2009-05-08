@@ -56,12 +56,14 @@ version (DIGITAL_MARS_STDIO)
     extern (C)
     {
         /* **
-         * Digital Mars under-the-hood C I/O functions
+         * Digital Mars under-the-hood C I/O functions.
+	 * Use _iobuf* for the unshared version of FILE*,
+	 * usable when the FILE is locked.
          */
-        int _fputc_nlock(int, FILE*);
-        int _fputwc_nlock(int, FILE*);
-        int _fgetc_nlock(FILE*);
-        int _fgetwc_nlock(FILE*);
+        int _fputc_nlock(int, _iobuf*);
+        int _fputwc_nlock(int, _iobuf*);
+        int _fgetc_nlock(_iobuf*);
+        int _fgetwc_nlock(_iobuf*);
         int __fp_lock(FILE*);
         void __fp_unlock(FILE*);
     }
@@ -83,17 +85,17 @@ else version (GCC_IO)
     private import core.sys.posix.stdio;
     extern (C)
     {
-        int fputc_unlocked(int, FILE*);
-        int fputwc_unlocked(wchar_t, FILE*);
-        int fgetc_unlocked(FILE*);
-        int fgetwc_unlocked(FILE*);
+        int fputc_unlocked(int, _iobuf*);
+        int fputwc_unlocked(wchar_t, _iobuf*);
+        int fgetc_unlocked(_iobuf*);
+        int fgetwc_unlocked(_iobuf*);
         void flockfile(FILE*);
         void funlockfile(FILE*);
         ssize_t getline(char**, size_t*, FILE*);
         ssize_t getdelim (char**, size_t*, int, FILE*);
         
         private size_t fwrite_unlocked(const(void)* ptr,
-                size_t size, size_t n, FILE *stream);
+                size_t size, size_t n, _iobuf *stream);
     }
 
     version (linux)
@@ -787,20 +789,23 @@ $(D Range) that locks the file and allows fast writing to it.
     struct LockingTextWriter {
         //@@@ Hacky implementation due to bugs, see the correct
         //implementation at the end of this struct
-        FILE * handle;
+	FILE* fps;		// the shared file handle
+        _iobuf* handle;		// the unshared version of fps
         int orientation;
 
         this(ref File f)
         {
             enforce(f.p && f.p.handle);
-            handle = f.p.handle;
-            orientation = fwide(handle, 0);
-            FLOCK(handle);
+	    fps = f.p.handle;
+            orientation = fwide(fps, 0);
+            FLOCK(fps);
+            handle = cast(_iobuf*)fps;
         }
 
         ~this()
         {
-            FUNLOCK(handle);
+            FUNLOCK(fps);
+	    fps = null;
             handle = null;
         }
         
@@ -816,7 +821,7 @@ $(D Range) that locks the file and allows fast writing to it.
                 //file.write(writeme); causes infinite recursion!!!
                 //file.rawWrite(writeme);
                 auto result =
-                .fwrite(writeme.ptr, C.sizeof, writeme.length, handle);
+                .fwrite(writeme.ptr, C.sizeof, writeme.length, fps);
                 //if (result == result.max) result = 0;
                 if (result != writeme.length) errnoEnforce(0);
             }
@@ -955,15 +960,17 @@ $(D Range) that locks the file and allows fast writing to it.
 }
 
 private
-void writefx(FILE* fp, TypeInfo[] arguments, void* argptr, int newline=false)
+void writefx(FILE* fps, TypeInfo[] arguments, void* argptr, int newline=false)
 {
-    int orientation = fwide(fp, 0);
+    int orientation = fwide(fps, 0);	// move this inside the lock?
 
     /* Do the file stream locking at the outermost level
      * rather than character by character.
      */
-    FLOCK(fp);
-    scope(exit) FUNLOCK(fp);
+    FLOCK(fps);
+    scope(exit) FUNLOCK(fps);
+
+    auto fp = cast(_iobuf*)fps;		// fp is locked version
 
     if (orientation <= 0)                // byte orientation or no orientation
     {
@@ -1413,7 +1420,7 @@ struct lines
         ubyte[] buffer;
         static if (Parms.length == 2)
             Parms[0] line = 0;
-        while ((c = FGETC(f.p.handle)) != -1)
+        while ((c = FGETC(cast(_iobuf*)f.p.handle)) != -1)
         {
             buffer ~= to!(ubyte)(c);
             if (c == terminator)
@@ -1709,24 +1716,29 @@ Initialize with a message and an error code. */
 
 extern(C) void std_stdio_static_this()
 {
+    //printf("std_stdio_static_this()\n");
+
     //Bind stdin, stdout, stderr
-    static File.Impl stdinImpl = { null, uint.max / 2, null };
+    __gshared File.Impl stdinImpl = { null, uint.max / 2, null };
     stdinImpl.handle = core.stdc.stdio.stdin;
     .stdin.p = &stdinImpl;
     // stdout
-    static File.Impl stdoutImpl = { null, uint.max / 2, null };
+    __gshared File.Impl stdoutImpl = { null, uint.max / 2, null };
     stdoutImpl.handle = core.stdc.stdio.stdout;
     .stdout.p = &stdoutImpl;
     // stderr
-    static File.Impl stderrImpl = { null, uint.max / 2, null };
+    __gshared File.Impl stderrImpl = { null, uint.max / 2, null };
     stderrImpl.handle = core.stdc.stdio.stderr;
     .stderr.p = &stderrImpl;
 }
 
 //---------
-File stdin;
-File stdout;
-File stderr;
+__gshared
+{
+    File stdin;
+    File stdout;
+    File stderr;
+}
 
 //------------------------------------------------------------------------------
 struct ByRecord(Fields...)
@@ -1821,12 +1833,17 @@ unittest
 }
 
 // Private implementation of readln
-private size_t readlnImpl(FILE* fp, ref char[] buf, dchar terminator = '\n')
+private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
 {
     version (DIGITAL_MARS_STDIO)
     {
-        FLOCK(fp);
-        scope(exit) FUNLOCK(fp);
+        FLOCK(fps);
+        scope(exit) FUNLOCK(fps);
+
+	/* Since fps is now locked, we can create an "unshared" version
+	 * of fp.
+	 */
+	auto fp = cast(_iobuf*)fps;
 
         if (__fhnd_info[fp._file] & FHND_WCHAR)
         {   /* Stream is in wide characters.
@@ -1856,7 +1873,7 @@ private size_t readlnImpl(FILE* fp, ref char[] buf, dchar terminator = '\n')
                     std.utf.encode(buf, c);
                 }
             }
-            if (ferror(fp))
+            if (ferror(fps))
                 StdioException();
             return buf.length;
         }
@@ -1894,7 +1911,8 @@ private size_t readlnImpl(FILE* fp, ref char[] buf, dchar terminator = '\n')
                     buf = p[0 .. i];
                     {
                         char[] buf2;
-                        readlnImpl(fp, buf2, terminator);
+			// This recursively does an unnecessary lock
+                        readlnImpl(fps, buf2, terminator);
                         buf ~= buf2;
                     }
                     return buf.length;
@@ -1905,7 +1923,7 @@ private size_t readlnImpl(FILE* fp, ref char[] buf, dchar terminator = '\n')
                     return i + 1;
                 }
             }
-            if (ferror(fp))
+            if (ferror(fps))
                 StdioException();
             buf = p[0 .. i];
             return i;
@@ -1975,12 +1993,13 @@ private size_t readlnImpl(FILE* fp, ref char[] buf, dchar terminator = '\n')
     }
     else version (GCC_IO)
     {
-        if (fwide(fp, 0) > 0)
+        if (fwide(fps, 0) > 0)
         {   /* Stream is in wide characters.
              * Read them and convert to chars.
              */
-            FLOCK(fp);
-            scope(exit) FUNLOCK(fp);
+            FLOCK(fps);
+            scope(exit) FUNLOCK(fps);
+	    auto fp = cast(_iobuf*)fps;
             version (Windows)
             {
                 buf.length = 0;
@@ -2022,7 +2041,7 @@ private size_t readlnImpl(FILE* fp, ref char[] buf, dchar terminator = '\n')
                     if (c == terminator)
                         break;
                 }
-                if (ferror(fp))
+                if (ferror(fps))
                     StdioException();
                 return buf.length;
             }
@@ -2034,11 +2053,11 @@ private size_t readlnImpl(FILE* fp, ref char[] buf, dchar terminator = '\n')
 
         char *lineptr = null;
         size_t n = 0;
-        auto s = getdelim(&lineptr, &n, terminator, fp);
+        auto s = getdelim(&lineptr, &n, terminator, fps);
         scope(exit) free(lineptr);
         if (s < 0)
         {
-            if (ferror(fp))
+            if (ferror(fps))
                 StdioException();
             buf.length = 0;                // end of file
             return 0;

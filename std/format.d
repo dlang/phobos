@@ -42,7 +42,7 @@ version (DigitalMarsC)
     // This is DMC's internal floating point formatting function
     extern (C)
     {
-	extern char* function(int c, int flags, int precision,
+	extern shared char* function(int c, int flags, int precision,
                 in real* pdval,
                 char* buf, size_t* psl, int width) __pfloatfmt;
     }
@@ -120,7 +120,8 @@ enum Mangle : char
 // routine could go away.
 private TypeInfo primitiveTypeInfo(Mangle m) 
 {
-    static TypeInfo[Mangle] dic;
+    // BUG: should fix this in static this() to avoid double checked locking bug
+    __gshared TypeInfo[Mangle] dic;
     if (!dic.length) {
         dic = [
             Mangle.Tvoid : typeid(void),

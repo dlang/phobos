@@ -831,7 +831,7 @@ unittest
 //__EOF__
 /* ===================== Random ========================= */
 
-// BUG: not multithreaded
+// seed and index are deliberately thread local
 
 private uint seed;		// starting seed
 private uint index;		// ith random number
@@ -926,7 +926,7 @@ static this()
             s = cast(ulong)((cast(long)tv.tv_sec << 32) + tv.tv_usec);
         }
     }
-    rand_seed(cast(uint) s, cast(uint)(s >> 32));
+    //rand_seed(cast(uint) s, cast(uint)(s >> 32));
 }
 
 

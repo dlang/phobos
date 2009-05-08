@@ -67,9 +67,9 @@ enum
     URI_Hash = 0x10,        // '#'
 }
 
-invariant char[16] hex2ascii = "0123456789ABCDEF";
+immutable char[16] hex2ascii = "0123456789ABCDEF";
 
-ubyte[128] uri_flags;       // indexed by character
+__gshared ubyte[128] uri_flags;       // indexed by character
 
 static this()
 {

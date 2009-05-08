@@ -210,17 +210,17 @@ class CFile : Stream {
 /**
  * CFile wrapper of std.c.stdio.stdin (not seekable).
  */
-CFile din;
+__gshared CFile din;
 
 /**
  * CFile wrapper of std.c.stdio.stdout (not seekable).
  */
-CFile dout;
+__gshared CFile dout;
 
 /**
  * CFile wrapper of std.c.stdio.stderr (not seekable).
  */
-CFile derr;
+__gshared CFile derr;
 
 static this() {
   // open standard I/O devices

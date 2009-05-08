@@ -187,7 +187,7 @@ dchar toUniUpper(dchar c)
 
 int isUniAlpha(dchar u)
 {
-    static dchar table[][2] =
+    static immutable dchar table[][2] =
     [
 	[ 'A', 'Z' ],
 	[ 'a', 'z' ],

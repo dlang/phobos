@@ -32,7 +32,7 @@ version (Win32)
  * (Thanks to yaneurao for this)
  */
     version(Windows) alias std.windows.charset.toMBSz toMBSz;
-    bool useWfuncs = true;        // initialized in std.__fileinit
+    shared bool useWfuncs = true;        // initialized in std.__fileinit
 }
 version (Posix)
 {

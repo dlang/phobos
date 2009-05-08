@@ -12,14 +12,4 @@
 
 module std.c.linux.linuxextern;
 
-extern (C)
-{
-    extern void* __libc_stack_end;
-    extern int __data_start;
-    extern int _end;
-    extern int timezone;
-
-    extern void *_deh_beg;
-    extern void *_deh_end;
-}
-
+// No longer needed since "extern" storage class

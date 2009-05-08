@@ -88,7 +88,7 @@ unittest
     assert(ticksPerSecond == TicksPerSecond);
 }
 
-d_time localTZA = 0;
+__gshared d_time localTZA = 0;
 
 private immutable char[] daystr = "SunMonTueWedThuFriSat";
 private immutable char[] monstr = "JanFebMarAprMayJunJulAugSepOctNovDec";

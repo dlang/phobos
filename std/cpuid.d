@@ -208,6 +208,8 @@ private:
 	    AMD
     }
 
+    __gshared
+    {
     uint flags, misc, exflags, apic, signature;
     uint _stepping, _model, _family;
 
@@ -217,6 +219,7 @@ private:
     uint maxThreads=1;
     uint maxCores=1;
     uint manufac=OTHER;
+    }
 
     /* **
      * fetches the cpu vendor string

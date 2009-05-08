@@ -2394,7 +2394,7 @@ abstract class EncodingScheme
         return t.length - s.length;
     }
 
-    static string[string] supported;
+    __gshared string[string] supported;
 }
 
 /**
