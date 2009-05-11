@@ -883,7 +883,7 @@ pure nothrow real expm1(real x)
         cmp AX, 0x401D; // avoid InvalidException in fist
         jae L_extreme;
         fldl2e;
-        fmul ; // y = x*log2(e)       
+        fmulp ST(1), ST; // y = x*log2(e)       
         fist dword ptr [ESP]; // scratchint = rndint(y)
         fisub dword ptr [ESP]; // y - rndint(y)
         // and now set scratchreal exponent
@@ -893,12 +893,12 @@ pure nothrow real expm1(real x)
         cmp EAX,0x8000;
         jge short L_largepositive;
         mov [ESP+8+8],AX;        
-        f2xm1; // 2^(y-rndint(y)) -1 
-        fld real ptr [ESP+8] ; // 2^rndint(y)
-        fmul ST(1), ST;
+        f2xm1; // 2ym1 = 2^(y-rndint(y)) -1
+        fld real ptr [ESP+8] ; // 2rndy = 2^rndint(y)
+        fmul ST(1), ST;  // ST=2rndy, ST(1)=2rndy*2ym1
         fld1;
-        fsubp ST(1), ST;
-        fadd;        
+        fsubp ST(1), ST; // ST = 2rndy-1, ST(1) = 2rndy * 2ym1 - 1
+        faddp ST(1), ST; // ST = 2rndy * 2ym1 + 2rndy - 1
         add ESP,12+8;        
         ret PARAMSIZE;
         
@@ -986,7 +986,7 @@ pure nothrow real exp2(real x)
 L_normal:
         f2xm1;
         fld1;
-        fadd; // 2^(x-rndint(x))
+        faddp ST(1), ST; // 2^(x-rndint(x))
         fld real ptr [ESP+8] ; // 2^rndint(x)
         add ESP,12+8;        
         fmulp ST(1), ST;
