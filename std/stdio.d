@@ -121,10 +121,15 @@ else version (GENERIC_IO)
         void funlockfile(FILE*);
     }
 
-    alias fputc FPUTC;
-    alias fputwc FPUTWC;
-    alias fgetc FGETC;
-    alias fgetwc FGETWC;
+    int fputc_unlocked(int c, _iobuf* fp) { return fputc(c, cast(shared) fp); }
+    int fputwc_unlocked(wchar_t c, _iobuf* fp) { return fputwc(c, cast(shared) fp); }
+    int fgetc_unlocked(_iobuf* fp) { return fgetc(cast(shared) fp); }
+    int fgetwc_unlocked(_iobuf* fp) { return fgetwc(cast(shared) fp); }
+
+    alias fputc_unlocked FPUTC;
+    alias fputwc_unlocked FPUTWC;
+    alias fgetc_unlocked FGETC;
+    alias fgetwc_unlocked FGETWC;
 
     alias flockfile FLOCK;
     alias funlockfile FUNLOCK;
@@ -2076,9 +2081,10 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
     }
     else version (GENERIC_IO)
     {
-        FLOCK(fp);
-        scope(exit) FUNLOCK(fp);
-        if (fwide(fp, 0) > 0)
+	FLOCK(fps);
+	scope(exit) FUNLOCK(fps);
+	auto fp = cast(_iobuf*)fps;
+        if (fwide(fps, 0) > 0)
         {   /* Stream is in wide characters.
              * Read them and convert to chars.
              */
@@ -2123,7 +2129,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
                     if (c == terminator)
                         break;
                 }
-                if (ferror(fp))
+                if (ferror(fps))
                     StdioException();
                 return buf.length;
             }
@@ -2140,7 +2146,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
             if (c == terminator)
                 break;
         }
-        if (ferror(fp))
+        if (ferror(fps))
             StdioException();
         return buf.length;
     }
