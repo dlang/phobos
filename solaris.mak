@@ -77,7 +77,7 @@ OBJS = asserterror.o deh2.o complex.o gcstats.o \
 	pthread.o \
 	Cstdio.o
 
-MAKEFILES= \
+ALLMAKEFILES= \
 	win32.mak linux.mak osx.mak freebsd.mak solaris.mak
 
 SRCS= \
@@ -655,9 +655,9 @@ ti_bit.o : std/typeinfo/ti_bit.d
 
 ##########################################################
 
-zip : $(ALLSRCS) $(MAKEFILES) phoboslicense.txt
+zip : $(ALLSRCS) $(ALLMAKEFILES) phoboslicense.txt
 	$(RM) phobos.zip
-	zip phobos $(ALLSRCS) $(MAKEFILES) phoboslicense.txt
+	zip phobos $(ALLSRCS) $(ALLMAKEFILES) phoboslicense.txt
 
 clean:
 	$(RM) $(LIB) $(OBJS) unittest unittest.o

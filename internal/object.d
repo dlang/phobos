@@ -284,9 +284,11 @@ class ClassInfo : Object
     //	2:			// has no possible pointers into GC memory
     //	4:			// has offTi[] member
     //	8:			// has constructors
+    //	32:			// has typeinfo
     void *deallocator;
     OffsetTypeInfo[] offTi;
     void function(Object) defaultConstructor;	// default Constructor
+    TypeInfo typeinfo;
 
     /*************
      * Search all modules for ClassInfo corresponding to classname.
@@ -516,7 +518,7 @@ class TypeInfo_Array : TypeInfo
 	hash_t hash = 0;
 	void[] a = *cast(void[]*)p;
 	for (size_t i = 0; i < a.length; i++)
-	    hash += value.getHash(a.ptr + i * sz);
+	    hash += value.getHash(a.ptr + i * sz) * 11;
         return hash;
     }
 

@@ -1,5 +1,6 @@
 # Makefile for zlib
 
+RM=rm -f
 CC=gcc
 LD=link
 CFLAGS=-O -m32

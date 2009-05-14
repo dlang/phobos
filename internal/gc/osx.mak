@@ -1,5 +1,5 @@
 
-# makefile to build linux D garbage collector
+# makefile to build osx D garbage collector
 
 #DMD=../../../dmd
 DMD=dmd
@@ -8,11 +8,12 @@ CFLAGS=-g -m32
 DFLAGS=-release -O -inline -I../..
 #DFLAGS=-release -inline -O
 CC=gcc
+MAKEFILE=osx.mak
 
 OBJS= gc.o gcx.o gcbits.o gclinux.o gcosxc.o gcold.o
 
 SRC= gc.d gcx.d gcbits.d win32.d gclinux.d gcosxc.c gcold.d testgc.d \
-	win32.mak linux.mak osx.mak freebsd.mak solaris.mak
+	win32.mak osx.mak linux.mak freebsd.mak solaris.mak
 
 .c.o:
 	$(CC) -c $(CFLAGS) $*
@@ -23,13 +24,13 @@ SRC= gc.d gcx.d gcbits.d win32.d gclinux.d gcosxc.c gcold.d testgc.d \
 #targets : testgc dmgc.a
 targets : dmgc.a
 
-testgc : testgc.o $(OBJS) linux.mak
+testgc : testgc.o $(OBJS) $(MAKEFILE)
 	$(DMD) -of$@ testgc.o gc.o gcx.o gcbits.o gclinux.o gcosxc.o -g
 
 testgc.o : testgc.d
 	$(DMD) -c $(DFLAGS) testgc.d
 
-dmgc.a : $(OBJS) linux.mak
+dmgc.a : $(OBJS) $(MAKEFILE)
 	ar -r $@ $(OBJS)
 
 gc.o : gc.d

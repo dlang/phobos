@@ -7,7 +7,9 @@ CFLAGS=-g -m32
 #DFLAGS=-unittest -g -release
 DFLAGS=-release -O -inline -I../..
 #DFLAGS=-release -inline -O
+RM=rm -f
 CC=gcc
+MAKEFILE=freebsd.mak
 
 OBJS= gc.o gcx.o gcbits.o gclinux.o gcold.o
 
@@ -24,13 +26,13 @@ SRC= gc.d gcx.d gcbits.d win32.d gclinux.d gcold.d testgc.d \
 
 targets : testgc dmgc.a
 
-testgc : testgc.o $(OBJS) freebsd.mak
+testgc : testgc.o $(OBJS) $(MAKEFILE)
 	$(DMD) -of$@ testgc.o gc.o gcx.o gcbits.o gclinux.o -g
 
 testgc.o : testgc.d
 	$(DMD) -c $(DFLAGS) testgc.d
 
-dmgc.a : $(OBJS) freebsd.mak
+dmgc.a : $(OBJS) $(MAKEFILE)
 	ar -r $@ $(OBJS)
 
 gc.o : gc.d

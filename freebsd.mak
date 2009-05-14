@@ -19,6 +19,7 @@ CFLAGS=-O -m32
 DFLAGS=-O -release -w
 #DFLAGS=-unittest -w
 
+RM=rm -f
 CC=gcc
 #DMD=/dmd/bin/dmd
 DMD=dmd
@@ -76,7 +77,7 @@ OBJS = asserterror.o deh2.o complex.o gcstats.o \
 	date.o dateparse.o llmath.o math2.o Czlib.o Dzlib.o zip.o \
 	pthread.o
 
-MAKEFILES= \
+ALLMAKEFILES= \
 	win32.mak linux.mak osx.mak freebsd.mak solaris.mak
 
 SRCS= \
@@ -654,9 +655,9 @@ ti_bit.o : std/typeinfo/ti_bit.d
 
 ##########################################################
 
-zip : $(ALLSRCS) $(MAKEFILES) phoboslicense.txt
+zip : $(ALLSRCS) $(ALLMAKEFILES) phoboslicense.txt
 	$(RM) phobos.zip
-	zip phobos $(ALLSRCS) $(MAKEFILES) phoboslicense.txt
+	zip phobos $(ALLSRCS) $(ALLMAKEFILES) phoboslicense.txt
 
 clean:
 	$(RM) $(LIB) $(OBJS) unittest unittest.o
