@@ -1875,14 +1875,13 @@ class File: Stream {
 			 out int share,
 			 out int createMode) {
     version (Win32) {
+      share |= FILE_SHARE_READ | FILE_SHARE_WRITE;
       if (mode & FileMode.In) {
 	access |= GENERIC_READ;
-	share |= FILE_SHARE_READ;
 	createMode = OPEN_EXISTING;
       }
       if (mode & FileMode.Out) {
 	access |= GENERIC_WRITE;
-	share |= FILE_SHARE_READ | FILE_SHARE_WRITE;
 	createMode = OPEN_ALWAYS; // will create if not present
       }
       if ((mode & FileMode.OutNew) == FileMode.OutNew) {
@@ -1890,14 +1889,13 @@ class File: Stream {
       }
     }
     version (Posix) {
+      share = 0666;
       if (mode & FileMode.In) {
 	access = O_RDONLY;
-	share = 0660;
       }
       if (mode & FileMode.Out) {
 	createMode = O_CREAT; // will create if not present
 	access = O_WRONLY;
-	share = 0660;
       }
       if (access == (O_WRONLY | O_RDONLY)) {
 	access = O_RDWR;
