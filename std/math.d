@@ -485,7 +485,7 @@ unittest
 
 /***************
  * Calculates the arc cosine of x,
- * returning a value ranging from -$(PI)/2 to $(PI)/2.
+ * returning a value ranging from 0 to $(PI).
  *
  *      $(TABLE_SV
  *      $(TR $(TH x)         $(TH acos(x)) $(TH invalid?))
