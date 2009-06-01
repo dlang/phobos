@@ -1170,10 +1170,10 @@ unittest
     }
    static if (real.mant_dig == 64) {
      static real extendedvals[][3] = [ // x,frexp,exp
-        [0x1.a5f1c2eb3fe4efp+73, 0x1.A5F1C2EB3FE4EFp-1,   74],    // normal
-        [0x1.fa01712e8f0471ap-1064,  0x1.fa01712e8f0471ap-1,     -1063],
-        [real.min,  .5,     -16381],
-        [real.min/2.0L, .5,     -16382]    // denormal
+        [0x1.a5f1c2eb3fe4efp+73L, 0x1.A5F1C2EB3FE4EFp-1L,   74],    // normal
+        [0x1.fa01712e8f0471ap-1064L,  0x1.fa01712e8f0471ap-1L,     -1063],
+        [real.min,  .5L,     -16381],
+        [real.min/2.0L, .5L,     -16382]    // denormal
      ];
 
     for (i = 0; i < extendedvals.length; i++) {
