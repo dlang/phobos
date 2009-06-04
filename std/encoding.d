@@ -1012,7 +1012,7 @@ template EncoderInstance(CharType : char)
 
     dchar decodeViaRead()()
     {
-        auto c = read;
+        dchar c = read;
         if (c < 0xC0) return c;
         int n = tails(cast(char) c);
         c &= (1 << (6 - n)) - 1;
@@ -1027,7 +1027,7 @@ template EncoderInstance(CharType : char)
     {
         dchar c = read;
         if (c < 0x80) return c;
-        int n = tails(c);
+        int n = tails(cast(char) c);
         if (n == 0) return INVALID_SEQUENCE;
 
         if (!canRead) return INVALID_SEQUENCE;
