@@ -1860,7 +1860,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
             for (int c = void; (c = FGETWC(fp)) != -1; )
             {
                 if ((c & ~0x7F) == 0)
-                {   buf ~= c;
+                {   buf ~= cast(char)c;
                     if (c == terminator)
                         break;
                 }
@@ -1968,7 +1968,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
                 }
                 if (i - 1)
                     memcpy(buf.ptr, p, i - 1);
-                buf[i - 1] = terminator;
+                buf[i - 1] = cast(char)terminator;
                 buf = buf[0 .. i];
                 if (terminator == '\n' && c == '\r')
                     i++;
