@@ -1693,7 +1693,7 @@ struct FormatInfo
                 break;
             default:
                 // this is the format char
-                result.spec = fmt[i++];
+                result.spec = cast(char)fmt[i++];
                 //result.raw = to!(const(char)[])(fmt[0 .. i]);
                 fmt = fmt[i .. $];
                 return result;
