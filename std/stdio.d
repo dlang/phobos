@@ -507,7 +507,7 @@ first argument. */
         " you may want to use write.";
         static assert(isSomeString!(S[0]), errorMessage);
         auto w = lockingTextWriter;
-        std.format.formattedWrite(w, args);
+        std.format.formattedWrite(w, "%s", args);
     }
 
 /**
@@ -515,7 +515,7 @@ Same as writef, plus adds a newline. */
     void writefln(S...)(S args)
     {
         auto w = lockingTextWriter;
-        std.format.formattedWrite(w, args);
+        std.format.formattedWrite(w, "%s", args);
         w.put('\n');
         .fflush(p.handle);
     }
