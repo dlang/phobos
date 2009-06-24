@@ -707,7 +707,7 @@ string decimal(Big b)
     while (b != Big.ZERO) {
         auto t = div(b, 10);
         b = t.q;
-        result ~= t.r + '0';
+        result ~= cast(char)(t.r + '0');
     }
     reverse(result);
     return assumeUnique(result);

@@ -429,11 +429,10 @@ string demangle(string name)
                                 error();
                             result ~= '"';
                             for (i = 0; i < n; i++)
-                            {        char c;
-
-                                c = (ascii2hex(name[ni + i * 2]) << 4) +
+                            {
+                                auto c = (ascii2hex(name[ni + i * 2]) << 4) +
                                      ascii2hex(name[ni + i * 2 + 1]);
-                                result ~= c;
+                                result ~= cast(char)c;
                             }
                             ni += n * 2;
                             result ~= '"';

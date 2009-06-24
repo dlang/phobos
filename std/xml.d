@@ -379,7 +379,7 @@ string decode(string s, DecodeMode mode=DecodeMode.LOOSE)
                     dchar d;
                     string t = s[i..$];
                     checkCharRef(t,d);
-                    buffer ~= d;
+                    buffer ~= cast(char)d;
                     i = s.length - t.length - 1;
                 }
                 catch(Err e)
