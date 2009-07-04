@@ -63,26 +63,26 @@ template TypeTuple(TList...)
  * void foo()
  * {
  *    writefln("The index of long is ",
- *          indexOf!(long, TypeTuple!(int, long, double)));
+ *          indexOfType!(long, TypeTuple!(int, long, double)));
  *    // prints: The index of long is 1
  * }
  * ---
  */
-template indexOf(T, TList...)
+template indexOfType(T, TList...)
 {
     static if (TList.length == 0)
-        enum int indexOf = -1;
+        enum int indexOfType = -1;
     else static if (is(T == TList[0]))
-        enum int indexOf = 0;
+        enum int indexOfType = 0;
     else
-        enum int indexOf =
-            (indexOf!(T, TList[1 .. length]) == -1)
+        enum int indexOfType =
+            (indexOfType!(T, TList[1 .. length]) == -1)
             ? -1
-            : 1 + indexOf!(T, TList[1 .. length]);
+            : 1 + indexOfType!(T, TList[1 .. length]);
 }
 
 /// Kept for backwards compatibility
-alias indexOf IndexOf;
+alias indexOfType IndexOf;
 
 /**
  * Returns a typetuple created from TList with the first occurrence,
