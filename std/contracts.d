@@ -452,46 +452,87 @@ class ErrnoException : Exception
         {
             auto s = std.c.string.strerror(errno);
         }
-        super((file ? file~'('~to!(string)(line)~"): " : "")
+        super((file ? file~'('~to!string(line)~"): " : "")
                 ~msg~" ("~to!string(s)~")");
     }
 }
 
 // structuralCast
-Target structuralCastImpl(Target, Source)(Source obj) if (is(Source : Object))
+// class-to-class structural cast
+Target structuralCast(Target, Source)(Source obj)
+    if (is(Source == class) || is(Target == class))
 {
-    alias BaseTypeTuple!(Target) TBases;
-    static if (is(TBases[0] == class))
-    {
-        // class-to-class structural cast
-        alias BaseTypeTuple!(Source) SBases;
-    }
-    else
-    {
-        static assert(false);
-    }
-    static assert(SBases.length >= TBases.length,
-            "Cannot structurally cast to a target with"
-            " fewer interfaces implemented");
-    static assert(
-        is(typeof(Target.tupleof) == typeof(Source.tupleof)),
-            "Cannot structurally cast to a target with more fields");
-    // Target bases must be a prefix of the source bases
-    foreach (i, B; TBases)
-    {
-        static assert(is(SBases[i] == B)
-                || is(SBases[i] == interface) && is(SBases[i] : B),
-                SBases[i].stringof ~ " does not inherit "
-                ~ B.stringof);
-    }
-    union Result
-    {
-        Source src;
-        Target tgt;
-    }
-    Result result = { obj };
-    return result.tgt;
+    // For the structural cast to work, the source and the target must
+    // have the same base class, and the target must add no data or
+    // methods
+    static assert(0, "Not implemented");
 }
+
+// interface-to-interface structural cast
+Target structuralCast(Target, Source)(Source obj)
+    if (is(Source == interface) || is(Target == interface))
+{
+}
+
+unittest
+{
+    interface I1 { void f1(); }
+    interface I2 { void f2(); }
+    interface I12 : I1, I2 { }
+    //pragma(msg, TransitiveBaseTypeTuple!I12.stringof);
+    //static assert(is(TransitiveBaseTypeTuple!I12 == TypeTuple!(I2, I1)));
+}
+
+// Target structuralCast(Target, Source)(Source obj)
+//     if (is(Source == interface) || is(Target == interface))
+// {
+//     static assert(is(BaseTypeTuple!(Source)[0] ==
+//                     BaseTypeTuple!(Target)[0]));
+//     alias BaseTypeTuple!(Source)[1 .. $] SBases;
+//     alias BaseTypeTuple!(Target)[1 .. $] TBases;
+//         else
+//         {
+//             // interface-to-class
+//             static assert(0);
+//         }
+//     }
+//     else
+//     {
+//         static if (is(Source == class))
+//         {
+//             // class-to-interface structural cast
+//             alias BaseTypeTuple!(Source)[1 .. $] SBases;
+//             alias BaseTypeTuple!(Target) TBases;
+//         }
+//         else
+//         {
+//             // interface-to-interface structural cast
+//             alias BaseTypeTuple!(Source) SBases;
+//             alias BaseTypeTuple!(Target) TBases;
+//         }
+//     }
+//     static assert(SBases.length >= TBases.length,
+//             "Cannot structurally cast to a target with"
+//             " more interfaces implemented");
+//     static assert(
+//         is(typeof(Target.tupleof) == typeof(Source.tupleof)),
+//             "Cannot structurally cast to a target with more fields");
+//     // Target bases must be a prefix of the source bases
+//     foreach (i, B; TBases)
+//     {
+//         static assert(is(SBases[i] == B)
+//                 || is(SBases[i] == interface) && is(SBases[i] : B),
+//                 SBases[i].stringof ~ " does not inherit "
+//                 ~ B.stringof);
+//     }
+//     union Result
+//     {
+//         Source src;
+//         Target tgt;
+//     }
+//     Result result = { obj };
+//     return result.tgt;
+// }
 
 template structurallyCompatible(S, T) if (!isArray!S || !isArray!T)
 {
@@ -510,50 +551,90 @@ template structurallyCompatible(S, T) if (isArray!S && isArray!T)
 
 unittest
 {
-    struct X { uint a; }
-    static assert(structurallyCompatible!(uint[], X[]));
-    struct Y { uint a, b; }
-    static assert(!structurallyCompatible!(uint[], Y[]));
-    static assert(!structurallyCompatible!(Y[], uint[]));
-    static assert(!structurallyCompatible!(Y[], X[]));
+    // struct X { uint a; }
+    // static assert(structurallyCompatible!(uint[], X[]));
+    // struct Y { uint a, b; }
+    // static assert(!structurallyCompatible!(uint[], Y[]));
+    // static assert(!structurallyCompatible!(Y[], uint[]));
+    // static assert(!structurallyCompatible!(Y[], X[]));
 }
 
-/**
-Structural cast
+/*
+Structural cast. Allows casting among class types that logically have
+a common base, but that base is not made explicit.
+
+Example:
+----
+interface Document { ... }
+interface Storable { ... }
+interface StorableDocument : Storable, Document { ... }
+class Doc : Storable, Document { ... }
+void process(StorableDocument d);
+...
+
+auto c = new Doc;
+process(c); // does not work
+process(structuralCast!StorableDocument(c)); // works
  */
 
-template structuralCast(Target)
+// template structuralCast(Target)
+// {
+//     Target structuralCast(Source)(Source obj)
+//     {
+//         static if (is(Source : Object) || is(Source == interface))
+//         {
+//             return .structuralCastImpl!(Target)(obj);
+//         }
+//         else
+//         {
+//             static if (structurallyCompatible!(Source, Target))
+//                 return *(cast(Target*) &obj);
+//             else
+//                 static assert(false);
+//         }
+//     }
+// }
+
+unittest
 {
-    Target structuralCast(Source)(Source obj)
-    {
-        static if (is(Source : Object))
-        {
-            return .structuralCastImpl!(Target)(obj);
-        }
-        else
-        {
-            static if (structurallyCompatible!(Source, Target))
-                return *(cast(Target*) &obj);
-            else
-                static assert(false);
-        }
-    }
+    // interface I1 {}
+    // interface I2 {}
+    // class Base : I1 { int x; }
+    // class A : I1 {}
+    // class B : I1, I2 {}
+
+    // auto b = new B;
+    // auto a = structuralCast!(A)(b);
+    // assert(a);
+
+    // struct X { int a; }
+    // int[] arr = [ 1 ];
+    // auto x = structuralCast!(X[])(arr);
+    // assert(x[0].a == 1);
 }
 
 unittest
 {
-    interface I1 {}
-    interface I2 {}
-    class Base : I1 { int x; }
-    class A : I1 {}
-    class B : I1, I2 {}
+    // interface Document { int fun(); }
+    // interface Storable { int gun(); }
+    // interface StorableDocument : Storable, Document {  }
+    // class Doc : Storable, Document {
+    //     int fun() { return 42; }
+    //     int gun() { return 43; }
+    // }
+    // void process(StorableDocument d) {
+    //     assert(d.fun + d.gun == 85, text(d.fun + d.gun));
+    // }
 
-    auto b = new B;
-    auto a = structuralCast!(A)(b);
-    assert(a);
-
-    struct X { int a; }
-    int[] arr = [ 1 ];
-    auto x = structuralCast!(X[])(arr);
-    assert(x[0].a == 1);
+    // auto c = new Doc;
+    // Document d = c;
+    // //process(c); // does not work
+    // union A
+    // {
+    //     Storable s;
+    //     StorableDocument sd;
+    // }
+    // A a = { c };
+    //process(a.sd); // works
+    //process(structuralCast!StorableDocument(d)); // works
 }
