@@ -63,8 +63,10 @@ template unaryFunImpl(alias fun, bool byRef, string parmName = "a")
     {
         template Body(ElementType)
         {
-            enum testAsExpression = "{"~ElementType.stringof
-                ~" "~parmName~"; return ("~fun~");}()";
+            // enum testAsExpression = "{"~ElementType.stringof
+            //     ~" "~parmName~"; return ("~fun~");}()";
+            enum testAsExpression = "{ ElementType "~parmName
+                ~"; return ("~fun~");}()"; 
             enum testAsStmts = "{"~ElementType.stringof
                 ~" "~parmName~"; "~fun~"}()";
             // pragma(msg, "Expr: "~testAsExpression);
