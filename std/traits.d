@@ -41,15 +41,15 @@ template ReturnType(alias dg)
 template ReturnType(dg, dummy = void)
 {
     static if (is(dg R == return))
-	alias R ReturnType;
+        alias R ReturnType;
     else static if (is(dg T : T*))
-	alias ReturnType!(T, void) ReturnType;
+        alias ReturnType!(T, void) ReturnType;
     else static if (is(dg S == struct))
-	alias ReturnType!(typeof(&dg.opCall), void) ReturnType;
+        alias ReturnType!(typeof(&dg.opCall), void) ReturnType;
     else static if (is(dg C == class))
-	alias ReturnType!(typeof(&dg.opCall), void) ReturnType;
+        alias ReturnType!(typeof(&dg.opCall), void) ReturnType;
     else
-	static assert(0, "argument has no return type");
+	    static assert(0, "argument has no return type");
 }
 
 unittest
@@ -100,15 +100,14 @@ template ParameterTypeTuple(alias dg)
 template ParameterTypeTuple(dg)
 {
     static if (is(dg P == function))
-	alias P ParameterTypeTuple;
+        alias P ParameterTypeTuple;
     else static if (is(dg P == delegate))
-	alias ParameterTypeTuple!(P) ParameterTypeTuple;
+        alias ParameterTypeTuple!P ParameterTypeTuple;
     else static if (is(dg P == P*))
-	alias ParameterTypeTuple!(P) ParameterTypeTuple;
+        alias ParameterTypeTuple!P ParameterTypeTuple;
     else
 	static assert(0, "argument has no parameters");
 }
-
 
 /***
  * Get the types of the fields of a struct or class.
@@ -485,9 +484,20 @@ unittest
 template BaseTypeTuple(A)
 {
     static if (is(A P == super))
-	alias P BaseTypeTuple;
+        alias P BaseTypeTuple;
     else
-	static assert(0, "argument is not a class or interface");
+	    static assert(0, "argument is not a class or interface");
+}
+
+unittest
+{
+    interface I1 { }
+    interface I2 { }
+    interface I12 : I1, I2 { }
+    static assert(is(BaseTypeTuple!I12 == TypeTuple!(I1, I2)));
+    interface I3 : I1 { }
+    interface I123 : I1, I2, I3 { }
+    static assert(is(BaseTypeTuple!I123 == TypeTuple!(I1, I2, I3)));
 }
 
 unittest
@@ -787,7 +797,8 @@ unittest
 {
     static assert(isImplicitlyConvertible!(immutable(char), char));
     static assert(isImplicitlyConvertible!(const(char), char));
-    static assert(isImplicitlyConvertible!(wchar, char));
+    static assert(isImplicitlyConvertible!(char, wchar));
+    static assert(!isImplicitlyConvertible!(wchar, char));
 }
 
 /**
@@ -797,7 +808,7 @@ unittest
 
 template isIntegral(T)
 {
-    enum bool isIntegral = indexOf!(Unqual!(T), byte,
+    enum bool isIntegral = indexOfType!(Unqual!(T), byte,
             ubyte, short, ushort, int, uint, long, ulong) >= 0;
 }
 
@@ -860,7 +871,7 @@ unittest
 
 template isFloatingPoint(T)
 {
-    enum bool isFloatingPoint = indexOf!(Unqual!(T), float, double, real) >= 0;
+    enum bool isFloatingPoint = indexOfType!(Unqual!(T), float, double, real) >= 0;
 }
 
 unittest
@@ -905,15 +916,40 @@ template isSomeString(T)
         || is(T : const(wchar[])) || is(T : const(dchar[]));
 }
 
-static assert(!isSomeString!(int));
-static assert(!isSomeString!(int[]));
-static assert(!isSomeString!(byte[]));
-static assert(isSomeString!(char[]));
-static assert(isSomeString!(dchar[]));
-static assert(isSomeString!(string));
-static assert(isSomeString!(wstring));
-static assert(isSomeString!(dstring));
-static assert(isSomeString!(char[4]));
+unittest
+{
+    static assert(!isSomeString!(int));
+    static assert(!isSomeString!(int[]));
+    static assert(!isSomeString!(byte[]));
+    static assert(isSomeString!(char[]));
+    static assert(isSomeString!(dchar[]));
+    static assert(isSomeString!(string));
+    static assert(isSomeString!(wstring));
+    static assert(isSomeString!(dstring));
+    static assert(isSomeString!(char[4]));
+}
+
+/**
+Detect whether T is one of the built-in character types
+ */
+
+template isSomeChar(T)
+{
+    enum isSomeChar = indexOfType!(Unqual!T, char, wchar, dchar) >= 0;
+}
+
+unittest
+{
+    static assert(!isSomeChar!(int));
+    static assert(!isSomeChar!(int));
+    static assert(!isSomeChar!(byte));
+    static assert(isSomeChar!(char));
+    static assert(isSomeChar!(dchar));
+    static assert(!isSomeChar!(string));
+    static assert(!isSomeChar!(wstring));
+    static assert(!isSomeChar!(dstring));
+    static assert(!isSomeChar!(char[4]));
+}
 
 /**
  * Detect whether T is an associative array type
@@ -991,6 +1027,26 @@ static assert(!isArray!(uint));
 static assert(!isArray!(uint[uint]));
 static assert(isArray!(void[]));
 
+/**
+ * Detect whether type $(D T) is a pointer.
+ */
+template isPointer(T)
+{
+    static if (is(T P == U*, U))
+    {
+        enum bool isPointer = true;
+    }
+    else
+    {
+        enum bool isPointer = false;
+    }
+}
+
+static assert(isPointer!(int*));
+static assert(!isPointer!(uint));
+static assert(!isPointer!(uint[uint]));
+static assert(!isPointer!(char[]));
+static assert(isPointer!(void*));
 
 /**
  * Tells whether the tuple T is an expression tuple.
