@@ -205,7 +205,8 @@ enum real SQRT1_2 =    0.70710678118654752440;  /** $(SQRT)$(HALF) */
  * For complex numbers, abs(z) = sqrt( $(POWER z.re, 2) + $(POWER z.im, 2) )
  * = hypot(z.re, z.im).
  */
-pure nothrow Num abs(Num)(Num x) if (is(typeof(Num >= 0)) && is(typeof(-Num)) &&
+pure nothrow Num abs(Num)(Num x)
+if (is(typeof(Num.init >= 0)) && is(typeof(-Num.init)) &&
         !(is(Num* : const(ifloat*)) || is(Num* : const(idouble*))
                 || is(Num* : const(ireal*))))
 {
@@ -2830,8 +2831,10 @@ body {
         // Ignore the useless implicit bit. (Bonus: this prevents overflows)
         ulong m = ((*xl) & 0x7FFF_FFFF_FFFF_FFFFL) + ((*yl) & 0x7FFF_FFFF_FFFF_FFFFL);
 
-        ushort e = (xe[F.EXPPOS_SHORT] & F.EXPMASK)
-                              + (ye[F.EXPPOS_SHORT] & F.EXPMASK);
+        // @@@ BUG? @@@
+        // Cast shouldn't be here
+        ushort e = cast(ushort) ((xe[F.EXPPOS_SHORT] & F.EXPMASK)
+                + (ye[F.EXPPOS_SHORT] & F.EXPMASK));
         if (m & 0x8000_0000_0000_0000L) {
             ++e;
             m &= 0x7FFF_FFFF_FFFF_FFFFL;
