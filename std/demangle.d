@@ -385,8 +385,7 @@ string demangle(string name)
                         error();
                     switch (name[ni++])
                     {
-                        case '0': case '1': case '2': case '3': case '4':
-                        case '5': case '6': case '7': case '8': case '9':
+                    case '0': .. case '9':
                             i = ni - 1;
                             while (ni < name.length && isdigit(name[ni]))
                                 ni++;
@@ -430,8 +429,9 @@ string demangle(string name)
                             result ~= '"';
                             for (i = 0; i < n; i++)
                             {
-                                auto c = (ascii2hex(name[ni + i * 2]) << 4) +
-                                     ascii2hex(name[ni + i * 2 + 1]);
+                                auto c = cast(char)
+                                    ((ascii2hex(name[ni + i * 2]) << 4) +
+                                            ascii2hex(name[ni + i * 2 + 1]));
                                 result ~= cast(char)c;
                             }
                             ni += n * 2;
