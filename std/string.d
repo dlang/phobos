@@ -1,4 +1,3 @@
-
 // Written in the D programming language.
 
 /**
@@ -36,8 +35,10 @@ private import core.exception : onRangeError;
 import core.stdc.stdio, core.stdc.stdlib,
     core.stdc.string, std.algorithm, std.array, 
     std.contracts, std.conv, std.ctype, std.encoding, std.format,
-    std.metastrings, std.stdarg, std.stdio, std.traits,
+    std.metastrings, std.range, std.regex, std.stdarg, std.stdio, std.traits,
     std.typetuple, std.uni, std.utf;
+
+public import std.algorithm : startsWith, endsWith;
 
 version(Windows) extern (C)
 {
@@ -77,7 +78,7 @@ else version (Posix)
 bool iswhite(dchar c)
 {
     return c <= 0x7F
-        ? find(whitespace, c) != -1
+        ? indexOf(whitespace, c) != -1
         : (c == PS || c == LS);
 }
 
@@ -264,31 +265,63 @@ unittest
     assert(p[0] == 'f' && p[1] == 'o' && p[2] == 'o' && p[3] == 0);
 }
 
-/******************************************
- * find, ifind _find first occurrence of c in string s.
- * rfind, irfind _find last occurrence of c in string s.
- *
- * find, rfind are case sensitive; ifind, irfind are case insensitive.
- * Returns:
- *  Index in s where c is found, -1 if not found.
+/**
+Flag indicating whether a search is case-sensitive.
+ */
+enum CaseSensitive { no, yes }
+
+/**
+$(D indexOf): find first occurrence of c in string s.  $(D
+lastIndexOf): find last occurrence of c in string s. $(D
+CaseSensitive.yes) means the searches are case sensitive.
+
+Returns: Index in $(D s) where $(D c) is found, -1 if not found.
  */
 
-int find(in char[] s, dchar c)
+int indexOf(in char[] s, dchar c, CaseSensitive cs = CaseSensitive.yes)
 {
-    if (c <= 0x7F)
-    {   // Plain old ASCII
-        auto p = cast(char*)memchr(s.ptr, c, s.length);
-        if (p)
-            return p - cast(char *)s;
-        else
-            return -1;
-    }
-
-    // c is a universal character
-    foreach (int i, dchar c2; s)
+    if (cs == CaseSensitive.yes)
     {
-        if (c == c2)
-            return i;
+        if (c <= 0x7F)
+        {   // Plain old ASCII
+            auto p = cast(char*)memchr(s.ptr, c, s.length);
+            if (p)
+                return p - cast(char *)s;
+            else
+                return -1;
+        }
+        
+        // c is a universal character
+        foreach (int i, dchar c2; s)
+        {
+            if (c == c2)
+                return i;
+        }
+    }
+    else
+    {
+        if (c <= 0x7F)
+        {   // Plain old ASCII
+            auto c1 = cast(char) std.ctype.tolower(c);
+            
+            foreach (int i, char c2; s)
+            {
+                auto c3 = cast(char)std.ctype.tolower(c2);
+                if (c1 == c3)
+                    return i;
+            }
+        }
+        else
+        {   // c is a universal character
+            dchar c1 = std.uni.toUniLower(c);
+            
+            foreach (int i, dchar c2; s)
+            {
+                auto c3 = std.uni.toUniLower(c2);
+                if (c1 == c3)
+                    return i;
+            }
+        }
     }
     return -1;
 }
@@ -299,13 +332,13 @@ unittest
 
     int i;
 
-    i = find(null, cast(dchar)'a');
+    i = indexOf(null, cast(dchar)'a');
     assert(i == -1);
-    i = find("def", cast(dchar)'a');
+    i = indexOf("def", cast(dchar)'a');
     assert(i == -1);
-    i = find("abba", cast(dchar)'a');
+    i = indexOf("abba", cast(dchar)'a');
     assert(i == 0);
-    i = find("def", cast(dchar)'f');
+    i = indexOf("def", cast(dchar)'f');
     assert(i == 2);
 }
 
@@ -314,140 +347,113 @@ unittest
  * ditto
  */
 
-int ifind(in char[] s, dchar c)
-{
-    if (c <= 0x7F)
-    {   // Plain old ASCII
-        char c1 = cast(char) std.ctype.tolower(c);
-
-        foreach (int i, char c2; s)
-        {
-            auto c3 = cast(char)std.ctype.tolower(c2);
-            if (c1 == c3)
-                return i;
-        }
-    }
-    else
-    {   // c is a universal character
-        dchar c1 = std.uni.toUniLower(c);
-
-        foreach (int i, dchar c2; s)
-        {
-            auto c3 = std.uni.toUniLower(c2);
-            if (c1 == c3)
-                return i;
-        }
-    }
-    return -1;
-}
-
 unittest
 {
-    debug(string) printf("string.ifind.unittest\n");
+    debug(string) printf("string.indexOf.unittest\n");
 
     int i;
 
-    i = ifind(null, cast(dchar)'a');
+    i = indexOf(null, cast(dchar)'a', CaseSensitive.no);
     assert(i == -1);
-    i = ifind("def", cast(dchar)'a');
+    i = indexOf("def", cast(dchar)'a', CaseSensitive.no);
     assert(i == -1);
-    i = ifind("Abba", cast(dchar)'a');
+    i = indexOf("Abba", cast(dchar)'a', CaseSensitive.no);
     assert(i == 0);
-    i = ifind("def", cast(dchar)'F');
+    i = indexOf("def", cast(dchar)'F', CaseSensitive.no);
     assert(i == 2);
 
     string sPlts = "Mars: the fourth Rock (Planet) from the Sun.";
 
-    i = ifind("def", cast(char)'f');
+    i = indexOf("def", cast(char)'f', CaseSensitive.no);
     assert(i == 2);
 
-    i = ifind(sPlts, cast(char)'P');
+    i = indexOf(sPlts, cast(char)'P', CaseSensitive.no);
     assert(i == 23);
-    i = ifind(sPlts, cast(char)'R');
+    i = indexOf(sPlts, cast(char)'R', CaseSensitive.no);
     assert(i == 2);
 }
 
+// @@@BUG@@@ This declaration shouldn't be needed
+//int lastIndexOf(in char[] s, in char[] c, CaseSensitive cs = CaseSensitive.yes);
 
 /******************************************
  * ditto
  */
 
-int rfind(in char[] s, dchar c)
+int lastIndexOf(in char[] s, dchar c, CaseSensitive cs = CaseSensitive.yes)
 {
-    size_t i;
-
-    if (c <= 0x7F)
-    {   // Plain old ASCII
-    for (i = s.length; i-- != 0;)
+    if (cs == CaseSensitive.yes)
     {
-        if (s[i] == c)
-        break;
+        if (c <= 0x7F)
+        {
+            // Plain old ASCII
+            auto i = s.length;
+            while (i-- != 0)
+            {
+                if (s[i] == c)
+                    break;
+            }
+            return i;
+        }
+        
+        // c is a universal character
+        char[4] buf;
+        auto t = std.utf.toUTF8(buf, c);
+        return lastIndexOf(s, t, cs);
     }
-    return i;
-    }
+    else
+    {
+        size_t i;
 
-    // c is a universal character
-    char[4] buf;
-    auto t = std.utf.toUTF8(buf, c);
-    return rfind(s, t);
+        if (c <= 0x7F)
+        {   // Plain old ASCII
+            char c1 = cast(char) std.ctype.tolower(c);
+
+            for (i = s.length; i-- != 0;)
+            {   char c2 = s[i];
+
+                c2 = cast(char) std.ctype.tolower(c2);
+                if (c1 == c2)
+                    break;
+            }
+        }
+        else
+        {   // c is a universal character
+            dchar c1 = std.uni.toUniLower(c);
+
+            for (i = s.length; i-- != 0;)
+            {   char cx = s[i];
+
+                if (cx <= 0x7F)
+                    continue;       // skip, since c is not ASCII
+                if ((cx & 0xC0) == 0x80)
+                    continue;       // skip non-starting UTF-8 chars
+
+                size_t j = i;
+                dchar c2 = std.utf.decode(s, j);
+                c2 = std.uni.toUniLower(c2);
+                if (c1 == c2)
+                    break;
+            }
+        }
+        return i;
+    }
 }
-
+    
 unittest
 {
     debug(string) printf("string.rfind.unittest\n");
-
+    
     int i;
-
-    i = rfind(null, cast(dchar)'a');
+    
+    i = lastIndexOf(null, cast(dchar)'a');
     assert(i == -1);
-    i = rfind("def", cast(dchar)'a');
+    i = lastIndexOf("def", cast(dchar)'a');
     assert(i == -1);
-    i = rfind("abba", cast(dchar)'a');
+    i = lastIndexOf("abba", cast(dchar)'a');
     assert(i == 3);
-    i = rfind("def", cast(dchar)'f');
+    i = lastIndexOf("def", cast(dchar)'f');
     assert(i == 2);
-}
-
-/******************************************
- * ditto
- */
-
-int irfind(in char[] s, dchar c)
-{
-    size_t i;
-
-    if (c <= 0x7F)
-    {   // Plain old ASCII
-    char c1 = cast(char) std.ctype.tolower(c);
-
-    for (i = s.length; i-- != 0;)
-    {   char c2 = s[i];
-
-        c2 = cast(char) std.ctype.tolower(c2);
-        if (c1 == c2)
-        break;
-    }
-    }
-    else
-    {   // c is a universal character
-    dchar c1 = std.uni.toUniLower(c);
-
-    for (i = s.length; i-- != 0;)
-    {   char cx = s[i];
-
-        if (cx <= 0x7F)
-        continue;       // skip, since c is not ASCII
-        if ((cx & 0xC0) == 0x80)
-        continue;       // skip non-starting UTF-8 chars
-
-        size_t j = i;
-        dchar c2 = std.utf.decode(s, j);
-        c2 = std.uni.toUniLower(c2);
-        if (c1 == c2)
-        break;
-    }
-    }
-    return i;
 }
 
 unittest
@@ -456,23 +462,23 @@ unittest
 
     int i;
 
-    i = irfind(null, cast(dchar)'a');
+    i = lastIndexOf(null, cast(dchar)'a', CaseSensitive.no);
     assert(i == -1);
-    i = irfind("def", cast(dchar)'a');
+    i = lastIndexOf("def", cast(dchar)'a', CaseSensitive.no);
     assert(i == -1);
-    i = irfind("AbbA", cast(dchar)'a');
+    i = lastIndexOf("AbbA", cast(dchar)'a', CaseSensitive.no);
     assert(i == 3);
-    i = irfind("def", cast(dchar)'F');
+    i = lastIndexOf("def", cast(dchar)'F', CaseSensitive.no);
     assert(i == 2);
 
     string sPlts = "Mars: the fourth Rock (Planet) from the Sun.";
 
-    i = irfind("def", cast(char)'f');
+    i = lastIndexOf("def", cast(char)'f', CaseSensitive.no);
     assert(i == 2);
 
-    i = irfind(sPlts, cast(char)'M');
+    i = lastIndexOf(sPlts, cast(char)'M', CaseSensitive.no);
     assert(i == 34);
-    i = irfind(sPlts, cast(char)'S');
+    i = lastIndexOf(sPlts, cast(char)'S', CaseSensitive.no);
     assert(i == 40);
 }
 
@@ -486,56 +492,105 @@ unittest
  *  Index in s where c is found, -1 if not found.
  */
 
-int find(in char[] s, in char[] sub)
+int indexOf(in char[] s, in char[] sub, CaseSensitive cs = CaseSensitive.yes)
 out (result)
 {
-    if (result == -1)
-    {
-    }
-    else
-    {
-        assert(0 <= result && result < s.length - sub.length + 1);
-        assert(memcmp(&s[result], sub.ptr, sub.length) == 0);
-    }
+    // if (result == -1)
+    // {
+    // }
+    // else
+    // {
+    //     assert(0 <= result && result < s.length - sub.length + 1);
+    //     assert(memcmp(&s[result], sub.ptr, sub.length) == 0);
+    // }
 }
 body
 {
-    auto sublength = sub.length;
-
-    if (sublength == 0)
-        return 0;
-
-    if (s.length >= sublength)
+    if (cs == CaseSensitive.yes)
     {
+        auto sublength = sub.length;
+
+        if (sublength == 0)
+            return 0;
+        
+        if (s.length >= sublength)
+        {
+            auto c = sub[0];
+            if (sublength == 1)
+            {
+                auto p = cast(const char*)memchr(s.ptr, c, s.length);
+                if (p)
+                    return p - &s[0];
+            }
+            else
+            {
+                size_t imax = s.length - sublength + 1;
+                
+                // Remainder of sub[]
+                auto q = &sub[1];
+                sublength--;
+                
+                for (size_t i = 0; i < imax; i++)
+                {
+                    auto p = cast(const char*)memchr(&s[i], c, imax - i);
+                    if (!p)
+                        break;
+                    i = p - &s[0];
+                    if (memcmp(p + 1, q, sublength) == 0)
+                        return i;
+                }
+            }
+        }
+        return -1;
+    }
+    else
+    {
+        auto sublength = sub.length;
+        int i;
+
+        if (sublength == 0)
+            return 0;
+
+        if (s.length < sublength)
+            return -1;
+
         auto c = sub[0];
         if (sublength == 1)
         {
-            auto p = cast(const char*)memchr(s.ptr, c, s.length);
-            if (p)
-                return p - &s[0];
+            i = indexOf(s, c, CaseSensitive.no);
         }
-        else
+        else if (c <= 0x7F)
         {
             size_t imax = s.length - sublength + 1;
 
             // Remainder of sub[]
-            auto q = &sub[1];
-            sublength--;
+            auto subn = sub[1 .. sublength];
 
-            for (size_t i = 0; i < imax; i++)
+            for (i = 0; i < imax; i++)
             {
-                auto p = cast(const char*)memchr(&s[i], c, imax - i);
-                if (!p)
-                    break;
-                i = p - &s[0];
-                if (memcmp(p + 1, q, sublength) == 0)
+                auto j = indexOf(s[i .. imax], c, cs);
+                if (j == -1)
+                    return -1;
+                i += j;
+                if (icmp(s[i + 1 .. i + sublength], subn) == 0)
                     return i;
             }
+            i = -1;
         }
-    }
-    return -1;
-}
+        else
+        {
+            size_t imax = s.length - sublength;
 
+            for (i = 0; i <= imax; i++)
+            {
+                if (icmp(s[i .. i + sublength], sub) == 0)
+                    return i;
+            }
+            i = -1;
+        }
+        return i;
+    }
+}    
 
 unittest
 {
@@ -543,84 +598,23 @@ unittest
 
     int i;
 
-    i = find(null, "a");
+    i = indexOf(null, "a");
     assert(i == -1);
-    i = find("def", "a");
+    i = indexOf("def", "a");
     assert(i == -1);
-    i = find("abba", "a");
+    i = indexOf("abba", "a");
     assert(i == 0);
-    i = find("def", "f");
+    i = indexOf("def", "f");
     assert(i == 2);
-    i = find("dfefffg", "fff");
+    i = indexOf("dfefffg", "fff");
     assert(i == 3);
-    i = find("dfeffgfff", "fff");
+    i = indexOf("dfeffgfff", "fff");
     assert(i == 6);
 }
 
 /******************************************
  * ditto
  */
-
-int ifind(in char[] s, in char[] sub)
-out (result)
-{
-    if (result == -1)
-    {
-    }
-    else
-    {
-        assert(0 <= result && result < s.length - sub.length + 1);
-        assert(icmp(s[result .. result + sub.length], sub) == 0);
-    }
-}
-body
-{
-    auto sublength = sub.length;
-    int i;
-
-    if (sublength == 0)
-        return 0;
-
-    if (s.length < sublength)
-        return -1;
-
-    auto c = sub[0];
-    if (sublength == 1)
-    {
-        i = ifind(s, c);
-    }
-    else if (c <= 0x7F)
-    {
-        size_t imax = s.length - sublength + 1;
-
-        // Remainder of sub[]
-        auto subn = sub[1 .. sublength];
-
-        for (i = 0; i < imax; i++)
-        {
-            auto j = ifind(s[i .. imax], c);
-            if (j == -1)
-                return -1;
-            i += j;
-            if (icmp(s[i + 1 .. i + sublength], subn) == 0)
-                return i;
-        }
-        i = -1;
-    }
-    else
-    {
-        size_t imax = s.length - sublength;
-
-        for (i = 0; i <= imax; i++)
-        {
-            if (icmp(s[i .. i + sublength], sub) == 0)
-                return i;
-        }
-        i = -1;
-    }
-    return i;
-}
-
 
 unittest
 {
@@ -628,41 +622,41 @@ unittest
 
     int i;
 
-    i = ifind(null, "a");
+    i = indexOf(null, "a", CaseSensitive.no);
     assert(i == -1);
-    i = ifind("def", "a");
+    i = indexOf("def", "a", CaseSensitive.no);
     assert(i == -1);
-    i = ifind("abba", "a");
-    assert(i == 0);
-    i = ifind("def", "f");
+    i = indexOf("abba", "a", CaseSensitive.no);
+    assert(i == 0, text(i));
+    i = indexOf("def", "f", CaseSensitive.no);
     assert(i == 2);
-    i = ifind("dfefffg", "fff");
+    i = indexOf("dfefffg", "fff", CaseSensitive.no);
     assert(i == 3);
-    i = ifind("dfeffgfff", "fff");
+    i = indexOf("dfeffgfff", "fff", CaseSensitive.no);
     assert(i == 6);
 
     string sPlts = "Mars: the fourth Rock (Planet) from the Sun.";
     string sMars = "Who\'s \'My Favorite Maritian?\'";
 
-    i = ifind(sMars, "MY fAVe");
+    i = indexOf(sMars, "MY fAVe", CaseSensitive.no);
     assert(i == -1);
-    i = ifind(sMars, "mY fAVOriTe");
+    i = indexOf(sMars, "mY fAVOriTe", CaseSensitive.no);
     assert(i == 7);
-    i = ifind(sPlts, "mArS:");
+    i = indexOf(sPlts, "mArS:", CaseSensitive.no);
     assert(i == 0);
-    i = ifind(sPlts, "rOcK");
+    i = indexOf(sPlts, "rOcK", CaseSensitive.no);
     assert(i == 17);
-    i = ifind(sPlts, "Un.");
+    i = indexOf(sPlts, "Un.", CaseSensitive.no);
     assert(i == 41);
-    i = ifind(sPlts, sPlts);
+    i = indexOf(sPlts, sPlts, CaseSensitive.no);
     assert(i == 0);
 
-    i = ifind("\u0100", "\u0100");
+    i = indexOf("\u0100", "\u0100", CaseSensitive.no);
     assert(i == 0);
 
     // Thanks to Carlos Santander B. and zwang
-    i = ifind("sus mejores cortesanos. Se embarcaron en el puerto de Dubai y",
-    "page-break-before");
+    i = indexOf("sus mejores cortesanos. Se embarcaron en el puerto de Dubai y",
+            "page-break-before", CaseSensitive.no);
     assert(i == -1);
 }
 
@@ -670,52 +664,86 @@ unittest
  * ditto
  */
 
-int rfind(in char[] s, in char[] sub)
+int lastIndexOf(in char[] s, in char[] sub, CaseSensitive cs = CaseSensitive.yes)
 out (result)
 {
-    if (result == -1)
-    {
-    }
-    else
-    {
-        assert(0 <= result && result < s.length - sub.length + 1);
-        assert(memcmp(&s[0] + result, sub.ptr, sub.length) == 0);
-    }
+    // if (result == -1)
+    // {
+    // }
+    // else
+    // {
+    //     assert(0 <= result && result < s.length - sub.length + 1);
+    //     assert(memcmp(&s[0] + result, sub.ptr, sub.length) == 0);
+    // }
 }
 body
 {
-    char c;
-
-    if (sub.length == 0)
-        return s.length;
-    c = sub[0];
-    if (sub.length == 1)
-        return rfind(s, c);
-    for (int i = s.length - sub.length; i >= 0; i--)
+    if (cs == CaseSensitive.yes)
     {
-        if (s[i] == c)
+        char c;
+        
+        if (sub.length == 0)
+            return s.length;
+        c = sub[0];
+        if (sub.length == 1)
+            return lastIndexOf(s, c);
+        for (int i = s.length - sub.length; i >= 0; i--)
         {
-            if (memcmp(&s[i + 1], &sub[1], sub.length - 1) == 0)
-                return i;
+            if (s[i] == c)
+            {
+                if (memcmp(&s[i + 1], &sub[1], sub.length - 1) == 0)
+                    return i;
+            }
         }
+        return -1;
     }
-    return -1;
+    else
+    {
+        dchar c;
+
+        if (sub.length == 0)
+            return s.length;
+        c = sub[0];
+        if (sub.length == 1)
+            return lastIndexOf(s, c, cs);
+        if (c <= 0x7F)
+        {
+            c = std.ctype.tolower(c);
+            for (int i = s.length - sub.length; i >= 0; i--)
+            {
+                if (std.ctype.tolower(s[i]) == c)
+                {
+                    if (icmp(s[i + 1 .. i + sub.length], sub[1 .. sub.length]) == 0)
+                        return i;
+                }
+            }
+        }
+        else
+        {
+            for (int i = s.length - sub.length; i >= 0; i--)
+            {
+                if (icmp(s[i .. i + sub.length], sub) == 0)
+                    return i;
+            }
+        }
+        return -1;
+    }
 }
 
 unittest
 {
     int i;
 
-    debug(string) printf("string.rfind.unittest\n");
-    i = rfind("abcdefcdef", "c");
+    debug(string) printf("string.lastIndexOf.unittest\n");
+    i = lastIndexOf("abcdefcdef", "c");
     assert(i == 6);
-    i = rfind("abcdefcdef", "cd");
+    i = lastIndexOf("abcdefcdef", "cd");
     assert(i == 6);
-    i = rfind("abcdefcdef", "x");
+    i = lastIndexOf("abcdefcdef", "x");
     assert(i == -1);
-    i = rfind("abcdefcdef", "xy");
+    i = lastIndexOf("abcdefcdef", "xy");
     assert(i == -1);
-    i = rfind("abcdefcdef", "");
+    i = lastIndexOf("abcdefcdef", "");
     assert(i == 10);
 }
 
@@ -724,83 +752,39 @@ unittest
  * ditto
  */
 
-int irfind(in char[] s, in char[] sub)
-out (result)
-{
-    if (result == -1)
-    {
-    }
-    else
-    {
-        assert(0 <= result && result < s.length - sub.length + 1);
-        assert(icmp(s[result .. result + sub.length], sub) == 0);
-    }
-}
-body
-{
-    dchar c;
-
-    if (sub.length == 0)
-        return s.length;
-    c = sub[0];
-    if (sub.length == 1)
-        return irfind(s, c);
-    if (c <= 0x7F)
-    {
-        c = std.ctype.tolower(c);
-        for (int i = s.length - sub.length; i >= 0; i--)
-        {
-            if (std.ctype.tolower(s[i]) == c)
-            {
-                if (icmp(s[i + 1 .. i + sub.length], sub[1 .. sub.length]) == 0)
-                    return i;
-            }
-        }
-    }
-    else
-    {
-        for (int i = s.length - sub.length; i >= 0; i--)
-        {
-            if (icmp(s[i .. i + sub.length], sub) == 0)
-                return i;
-        }
-    }
-    return -1;
-}
-
 unittest
 {
     int i;
 
-    debug(string) printf("string.irfind.unittest\n");
-    i = irfind("abcdefCdef", "c");
+    debug(string) printf("string.lastIndexOf.unittest\n");
+    i = lastIndexOf("abcdefCdef", "c", CaseSensitive.no);
     assert(i == 6);
-    i = irfind("abcdefCdef", "cD");
+    i = lastIndexOf("abcdefCdef", "cD", CaseSensitive.no);
     assert(i == 6);
-    i = irfind("abcdefcdef", "x");
+    i = lastIndexOf("abcdefcdef", "x", CaseSensitive.no);
     assert(i == -1);
-    i = irfind("abcdefcdef", "xy");
+    i = lastIndexOf("abcdefcdef", "xy", CaseSensitive.no);
     assert(i == -1);
-    i = irfind("abcdefcdef", "");
+    i = lastIndexOf("abcdefcdef", "", CaseSensitive.no);
     assert(i == 10);
 
     string sPlts = "Mars: the fourth Rock (Planet) from the Sun.";
     string sMars = "Who\'s \'My Favorite Maritian?\'";
 
-    i = irfind("abcdefcdef", "c");
+    i = lastIndexOf("abcdefcdef", "c", CaseSensitive.no);
     assert(i == 6);
-    i = irfind("abcdefcdef", "cd");
+    i = lastIndexOf("abcdefcdef", "cd", CaseSensitive.no);
     assert(i == 6);
-    i = irfind( "abcdefcdef", "def" );
+    i = lastIndexOf( "abcdefcdef", "def", CaseSensitive.no);
     assert(i == 7);
 
-    i = irfind(sMars, "RiTE maR");
+    i = lastIndexOf(sMars, "RiTE maR", CaseSensitive.no);
     assert(i == 14);
-    i = irfind(sPlts, "FOuRTh");
+    i = lastIndexOf(sPlts, "FOuRTh", CaseSensitive.no);
     assert(i == 10);
-    i = irfind(sMars, "whO\'s \'MY");
+    i = lastIndexOf(sMars, "whO\'s \'MY", CaseSensitive.no);
     assert(i == 0);
-    i = irfind(sMars, sMars);
+    i = lastIndexOf(sMars, sMars, CaseSensitive.no);
     assert(i == 0);
 }
 
@@ -1326,6 +1310,19 @@ unittest
     assert(i == 0);
 }
 
+auto splitter(String)(String s) if (isSomeString!String)
+{
+    return std.regex.splitter(s, regex("[ \t\n\r]+"));
+}
+
+unittest
+{
+    auto a = " a     bcd   ef gh ";
+    //foreach (e; splitter(a)) writeln(e);
+    assert(equal(splitter(a), ["", "a", "bcd", "ef", "gh", ""][]));
+    a = "";
+    assert(splitter(a).empty);
+}
 
 /**************************************
  * Split s[] into an array of words,
@@ -1394,7 +1391,7 @@ body
             while (true)
             {
                 nwords++;
-                j = find(s[i .. s.length], delim);
+                j = indexOf(s[i .. s.length], delim);
                 if (j == -1)
                     break;
                 i += j + delim.length;
@@ -1410,7 +1407,7 @@ body
             i = 0;
             while (true)
             {
-                j = find(s[i .. s.length], delim);
+                j = indexOf(s[i .. s.length], delim);
                 if (j == -1)
                 {
                     words[wordi] = s[i .. s.length];
@@ -1621,7 +1618,7 @@ unittest
     assert(strip("1") == "1");
 }
 
-/**
+/+
  * Returns $(D_PARAM true) if and only if the array $(D_PARAM longer)
  * starts with array $(D_PARAM shorter).
  */
@@ -1663,44 +1660,46 @@ bool startsWith(A1, A2)(A1 longer, A2 shorter)
         // raw element-by-element comparison
         return std.algorithm.startsWith(longer, shorter) == 1;
     }
-}
+}+/
 
 // Too slow for release mode
 debug unittest
 {
-version(none) // fails to compile with: Error: array equality comparison type mismatch, immutable(char)[] vs ubyte[]
-{
-    alias TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[])
-        StringTypes;
-    alias TypeTuple!(ubyte[], int[], double[]) OtherTypes;
-    foreach (T1 ; StringTypes)
+    // fails to compile with: Error: array equality comparison type
+    // mismatch, immutable(char)[] vs ubyte[]
+    version(none) 
     {
-        foreach (T2 ; StringTypes)
+        alias TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[])
+            StringTypes;
+        alias TypeTuple!(ubyte[], int[], double[]) OtherTypes;
+        foreach (T1 ; StringTypes)
         {
-            foreach (T3 ; OtherTypes)
+            foreach (T2 ; StringTypes)
             {
-                auto a = to!(T1)("abcde"), b = to!(T2)("abcdefgh"),
-                    c = to!(T2)("");
-                auto d = to!(T3)([2, 3]);
-                assert(startsWith(b, a));
-                assert(!startsWith(a, b));
-                assert(startsWith(b, c));
-                assert(startsWith(a, c));
-                assert(!startsWith(c, b));
-                assert(!startsWith(c, a));
-                assert(!startsWith(a, d));
-                assert(!startsWith(d, a));
-                assert(!startsWith(b, d));
-                assert(!startsWith(d, b));
-                assert(!startsWith(c, d));
-                assert(startsWith(d, c));
+                foreach (T3 ; OtherTypes)
+                {
+                    auto a = to!(T1)("abcde"), b = to!(T2)("abcdefgh"),
+                        c = to!(T2)("");
+                    auto d = to!(T3)([2, 3]);
+                    assert(startsWith(b, a));
+                    assert(!startsWith(a, b));
+                    assert(startsWith(b, c));
+                    assert(startsWith(a, c));
+                    assert(!startsWith(c, b));
+                    assert(!startsWith(c, a));
+                    assert(!startsWith(a, d));
+                    assert(!startsWith(d, a));
+                    assert(!startsWith(b, d));
+                    assert(!startsWith(d, b));
+                    assert(!startsWith(c, d));
+                    assert(startsWith(d, c));
+                }
             }
         }
     }
 }
-}
 
-/**
+/+
  * Returns $(D_PARAM true) if and only if the array $(D_PARAM longer)
  * ends with array $(D_PARAM shorter).
  */
@@ -1744,7 +1743,7 @@ bool endsWith(A1, A2)(A1 longer, A2 shorter)
         //assert(0);
         return std.algorithm.endsWith(longer, shorter) == 1;
     }
-}
+}+/
 
 // Too slow for release mode
 debug unittest
@@ -1752,46 +1751,48 @@ debug unittest
     alias TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[])
         TestTypes;
     alias TypeTuple!(ubyte[], int[], double[]) OtherTypes;
-version(none) // fails to compile with: Error: array equality comparison type mismatch, immutable(char)[] vs ubyte[]
-{
-    foreach (T1 ; TestTypes)
+     // fails to compile with: Error: array equality comparison type
+     // mismatch, immutable(char)[] vs ubyte[]
+    version(none)
     {
-        foreach (T2 ; TestTypes)
+        foreach (T1 ; TestTypes)
         {
-            foreach (T3 ; OtherTypes)
+            foreach (T2 ; TestTypes)
             {
-                auto a = to!(T1)("efgh"), b = to!(T2)("abcdefgh"),
-                    c = to!(T2)(""), d = to!(T3)([1, 2]);
-                assert(endsWith(a, a));
-                assert(endsWith(b, b));
-                // writeln(T2.stringof);
-                // writeln(T1.stringof);
-                assert(endsWith(b, a));
-                assert(!endsWith(a, b));
-                assert(endsWith(b, c));
-                assert(endsWith(a, c));
-                assert(!endsWith(c, b));
-                assert(!endsWith(c, a));
-                assert(!endsWith(a, d));
-                assert(!endsWith(d, a));
-                assert(!endsWith(b, d));
-                assert(!endsWith(d, b));
-                assert(!endsWith(c, d));
-                assert(endsWith(d, c));
+                foreach (T3 ; OtherTypes)
+                {
+                    auto a = to!(T1)("efgh"), b = to!(T2)("abcdefgh"),
+                        c = to!(T2)(""), d = to!(T3)([1, 2]);
+                    assert(endsWith(a, a));
+                    assert(endsWith(b, b));
+                    // writeln(T2.stringof);
+                    // writeln(T1.stringof);
+                    assert(endsWith(b, a));
+                    assert(!endsWith(a, b));
+                    assert(endsWith(b, c));
+                    assert(endsWith(a, c));
+                    assert(!endsWith(c, b));
+                    assert(!endsWith(c, a));
+                    assert(!endsWith(a, d));
+                    assert(!endsWith(d, a));
+                    assert(!endsWith(b, d));
+                    assert(!endsWith(d, b));
+                    assert(!endsWith(c, d));
+                    assert(endsWith(d, c));
+                }
+            }
+        }
+        foreach (T1; OtherTypes)
+        {
+            foreach (T2; OtherTypes)
+            {
+                auto a = to!(T1)([1, 2]);
+                auto b = to!(T2)([0, 1, 2]);
+                //assert(!std.string.endsWith(a, b));
+                // assert(endsWith(b, a));
             }
         }
     }
-    foreach (T1; OtherTypes)
-    {
-        foreach (T2; OtherTypes)
-        {
-            auto a = to!(T1)([1, 2]);
-            auto b = to!(T2)([0, 1, 2]);
-            //assert(!std.string.endsWith(a, b));
-            // assert(endsWith(b, a));
-        }
-    }
-}
 }
 
 /*******************************************
@@ -2016,15 +2017,15 @@ string replace(string s, string from, string to)
     istart = 0;
     while (istart < s.length)
     {
-    i = find(s[istart .. s.length], from);
-    if (i == -1)
-    {
-        p ~= s[istart .. s.length];
-        break;
-    }
-    p ~= s[istart .. istart + i];
-    p ~= to;
-    istart += i + from.length;
+        i = indexOf(s[istart .. s.length], from);
+        if (i == -1)
+        {
+            p ~= s[istart .. s.length];
+            break;
+        }
+        p ~= s[istart .. istart + i];
+        p ~= to;
+        istart += i + from.length;
     }
     return assumeUnique(p);
 }
@@ -2156,10 +2157,10 @@ size_t count(string s, string sub)
 
     for (i = 0; i < s.length; i += j + sub.length)
     {
-    j = find(s[i .. s.length], sub);
-    if (j == -1)
-        break;
-    count++;
+        j = indexOf(s[i .. s.length], sub);
+        if (j == -1)
+            break;
+        count++;
     }
     return count;
 }
@@ -4030,4 +4031,129 @@ unittest
     assert(wrap(" abcd   df ", 3) == "abcd\ndf\n");
     assert(wrap("x") == "x\n");
     assert(wrap("u u") == "u u\n");
+}
+
+/**
+
+ */
+struct ByCodeUnit(Range, Unit)
+if (isInputRange!Range
+        && indexOfType!(Unqual!Unit, char, wchar, dchar) >= 0
+        && indexOfType!(Unqual!(ElementType!Range), char, wchar, dchar) >= 0
+        && !is(Unqual!(ElementType!Range) == Unqual!Unit))
+{
+private:
+    alias Unqual!Unit ElementType;
+    alias Unqual!(.ElementType!Range) CodeType;
+    Range _input;
+    dchar _front;
+
+public:
+    this(Range input)
+    {
+        _input = input;
+        if (!input.empty) popFront;
+    }
+    
+    /// Range primitives
+    bool empty()
+    {
+        return _front == _front.init && _input.empty;
+    }
+
+    /// Ditto
+    ElementType front()
+    {
+        assert(!empty);
+        return _front;
+    }
+
+    void popFront()
+    {
+        assert(!empty);
+        if (_input.empty)
+        {
+            // yank the front
+            _front = _front.init;
+        }
+        else
+        {
+            _front = std.utf.decodeFront(_input);
+        }
+    }
+
+    static if (isBidirectionalRange!Range)
+    {
+        /// Ditto
+        ElementType back()
+        {
+            assert(!empty);
+            if (!_input.empty)
+            {
+                // Make a copy of the range so we don't consume it
+                auto copy = _input;
+                return std.utf.decodeBack(copy);
+            }
+            return _front;
+        }
+
+        /// Ditto
+        void popBack()
+        {
+            assert(!empty);
+            if (!_input.empty)
+                std.utf.decodeBack(_input);
+            else 
+                _front = _front.init;            
+        }
+    }
+}
+
+template ByCodeUnit(Range, Unit)
+if (indexOfType!(Unqual!Unit, char, wchar, dchar) >= 0
+        && indexOfType!(Unqual!(ElementType!Range), char, wchar, dchar) >= 0
+        && is(Unqual!(ElementType!Range) == Unqual!Unit))
+{
+    alias Range ByCodeUnit;
+}
+
+ByCodeUnit!(Range, dchar) byDchar(Range)(Range s)
+{
+    return typeof(return)(s);
+}
+
+unittest
+{
+    string s = "abcde";
+    size_t i;
+    foreach (e; byDchar(s))
+    {
+        assert(s[i++] == e);
+    }
+    foreach (e; retro(byDchar(s)))
+    {
+        assert(s[--i] == e);
+    }
+}
+
+// For backwards compatibility
+
+deprecated int find(in char[] s, dchar c)
+{
+    return indexOf(s, c, CaseSensitive.yes);
+}
+
+deprecated int ifind(in char[] s, dchar c)
+{
+    return indexOf(s, c, CaseSensitive.no);
+}
+
+deprecated int rfind(in char[] s, dchar c)
+{
+    return lastIndexOf(s, c, CaseSensitive.yes);
+}
+
+deprecated int irfind(in char[] s, dchar c)
+{
+    return lastIndexOf(s, c, CaseSensitive.no);
 }
