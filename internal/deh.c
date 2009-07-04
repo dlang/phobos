@@ -305,11 +305,15 @@ Object *_d_translate_se_to_d_exception(EXCEPTION_RECORD *exception_record)
             break;
 
 		case STATUS_PRIVILEGED_INSTRUCTION:
+#if 0 // doesn't compile
             if (*((unsigned char *)(exception_record->ExceptionAddress))==0xF4) { // HLT
                 pti = _d_create_exception_object(&_Class_5Error, "assert(0) or HLT instruction");
             } else {
                 pti = _d_create_exception_object(&_Class_5Error, "Privileged Instruction");
             }
+#else
+            pti = _d_create_exception_object(&_Class_9Exception, "Privileged Instruction");
+#endif
             break;
 
 		case STATUS_ILLEGAL_INSTRUCTION:
