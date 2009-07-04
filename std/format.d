@@ -12,13 +12,10 @@ module std.format;
 
 //debug=format;		// uncomment to turn on debugging printf's
 
-import std.algorithm;
+import std.algorithm, std.array, std.bitmanip; 
 import std.stdarg;	// caller will need va_list
-import std.array;
 import std.utf;
-import std.c.stdio;
-import std.c.stdlib;
-import std.c.string;
+import core.stdc.stdio, core.stdc.stdlib, core.stdc.string;
 import std.string;
 import std.ctype;
 import std.conv;
@@ -1529,7 +1526,6 @@ unittest
 
 // Andrei
 //------------------------------------------------------------------------------
-import std.bitmanip;
 
 /*
  * A compiled version of an individual writef format
@@ -1561,7 +1557,7 @@ struct FormatInfo
                 bool, "flPlus", 1,
                 bool, "flHash", 1,
                 ubyte, "", 3));
-    /* For arrays only: the trailing spec after the  */    
+    /* For arrays only: the trailing  */    
     const(char)[] innerTrailing;
 
 /*
@@ -1572,7 +1568,7 @@ struct FormatInfo
     static FormatInfo parse(S)(ref S fmt)
     {
         FormatInfo result;
-        if (!fmt.length) return result;
+        if (fmt.empty) return result;
         size_t i = 0;
         for (;;)
             switch (fmt[i])
@@ -1590,10 +1586,13 @@ struct FormatInfo
                 for (int innerParens;; ++j)
                 {
                     check(j < fmt.length);
-                    if (fmt[j] == '(') ++innerParens;
-                    else if (fmt[j] == ')')
+                    if (fmt[j] == ')')
                     {
                         if (innerParens-- == 0) break;
+                    }
+                    else if (fmt[j] == '(')
+                    {
+                        ++innerParens;
                     }
                     else if (fmt[j] == '%')
                     {
@@ -1749,8 +1748,8 @@ unittest
  * Formats an integral number 'arg' according to 'f' and writes it to
  * 'w'.
  */ 
-private void formatImplInt(Writer, D)(ref Writer w, D argx, FormatInfo f)
-//if (isIntegral!(D))
+private void formatImpl(Writer, D)(ref Writer w, D argx, FormatInfo f)
+if (isIntegral!(D))
 {
     Unqual!(D) arg = argx;
     if (f.spec == 'r')
@@ -1793,7 +1792,7 @@ private void formatImplInt(Writer, D)(ref Writer w, D argx, FormatInfo f)
         f.spec == 'x' || f.spec == 'X' ? 16 :
         f.spec == 'o' ? 8 :
         f.spec == 'b' ? 2 :
-        f.spec == 's' || f.spec == 'd' ? 10 :
+        f.spec == 's' || f.spec == 'd' || f.spec == 'u' ? 10 :
         0;
     if (base == 0) throw new FormatError("integral");
     // figure out sign and continue in unsigned mode
@@ -1881,8 +1880,8 @@ private void formatImplInt(Writer, D)(ref Writer w, D argx, FormatInfo f)
  * Formats a floating point number 'arg' according to 'f' and writes
  * it to 'w'.
  */ 
-private void formatImplFloat(Writer, D)(ref Writer w, D obj, FormatInfo f)
-//if (isFloatingPoint!(D))
+private void formatImpl(Writer, D)(ref Writer w, D obj, FormatInfo f)
+if (isFloatingPoint!(D))
 {
     if (f.spec == 'r')
     {
@@ -1902,7 +1901,7 @@ private void formatImplFloat(Writer, D)(ref Writer w, D obj, FormatInfo f)
         }
         return;
     }
-    if (std.string.find("fgFGaAeEs", f.spec) < 0) {
+    if (std.string.indexOf("fgFGaAeEs", f.spec) < 0) {
         throw new FormatError("floating");
     }
     if (f.spec == 's') f.spec = 'g';
@@ -1938,7 +1937,7 @@ unittest
     Appender!(string) a;
     invariant real x = 5.5;
     FormatInfo f;
-    formatImplFloat(a, x, f);
+    formatImpl(a, x, f);
     assert(a.data == "5.5");
 }
 
@@ -1959,21 +1958,21 @@ private void formatGeneric(Writer, D)(ref Writer w, const(void)* arg,
     } else static if (is(D Original == typedef)) {
         formatGeneric!(Writer, Original)(w, arg, f);
     } else static if (isFloatingPoint!(D)) {
-        formatImplFloat(w, obj, f);
+        formatImpl(w, obj, f);
     } else static if (is(const(D) == const ifloat)) {
-        formatImplFloat(w, *cast(float*) &obj, f);
+        formatImpl(w, *cast(float*) &obj, f);
     } else static if (is(const(D) == const idouble)) {
-        formatImplFloat(w, *cast(double*) &obj, f);
+        formatImpl(w, *cast(double*) &obj, f);
     } else static if (is(const(D) == const ireal)) {
-        formatImplFloat(w, *cast(real*) &obj, f);
+        formatImpl(w, *cast(real*) &obj, f);
     } else static if (is(const(D) == const cfloat)
                       || is(const(D) == const cdouble)
                       || is(const(D) == const creal)) {
-        formatImplFloat(w, obj.re, f);
+        formatImpl(w, obj.re, f);
         // @@@BUG 2367@@@
         //w.write("+");
         w.put('+');
-        formatImplFloat(w, obj.im, f);
+        formatImpl(w, obj.im, f);
         // @@@BUG 2367@@@
         //w.put("i");
         w.put('i');
@@ -1984,7 +1983,7 @@ private void formatGeneric(Writer, D)(ref Writer w, const(void)* arg,
             auto s = obj ? "true" : "false";
             w.put(s);
         } else {
-            formatImplInt(w, cast(int) obj, f);
+            formatImpl(w, cast(int) obj, f);
         }
     } else static if (is(const(D) == const char)
             || is(const(D) == const wchar)
@@ -1992,10 +1991,10 @@ private void formatGeneric(Writer, D)(ref Writer w, const(void)* arg,
         if (f.spec == 's') {
             w.put(obj);
         } else {
-            formatImplInt(w, cast(uint) obj, f);
+            formatImpl(w, cast(uint) obj, f);
         }
     } else static if (isIntegral!(D)) {
-        formatImplInt(w, obj, f);
+        formatImpl(w, obj, f);
     } else static if (is(D : const(char)[]) || is(D : const(wchar)[])
                       || is(D : const(dchar)[])) {
         auto s = obj[0 .. f.precision < $ ? f.precision : $];
@@ -2017,16 +2016,19 @@ private void formatGeneric(Writer, D)(ref Writer w, const(void)* arg,
         w.put('[');
         w.put(']');
     } else static if (isArray!(D)) {
+        auto memberSpec = f;
+        memberSpec.innerTrailing = null;
         if (f.spec == 'r')
         {
             // raw writes
-            foreach (i, e; obj) formatGeneric!(Writer, typeof(e))(w, &e, f);
+            foreach (i, e; obj) formatGeneric!(Writer, typeof(e))
+                                    (w, &e, memberSpec);
         }
         else
         {
             if (obj.length == 0) return;
             // formatted writes
-            formatGeneric!(Writer, typeof(obj[0]))(w, &obj[0], f);
+            formatGeneric!(Writer, typeof(obj[0]))(w, &obj[0], memberSpec);
             if (!f.innerTrailing)
             {
                 foreach (i, e; obj[1 .. $])
@@ -2049,7 +2051,10 @@ private void formatGeneric(Writer, D)(ref Writer w, const(void)* arg,
                             w.put(c);
                         }
                     }
-                    else w.put(f.innerTrailing);
+                    else
+                    {
+                        w.put(f.innerTrailing);
+                    }
                     formatGeneric!(Writer, typeof(e))(w, &e, f);
                 }
             }
@@ -2254,6 +2259,13 @@ unittest
     Appender!(string) stream;
     formattedWrite(stream, "%s", 1.1);
     assert(stream.data == "1.1", stream.data);
+}
+
+unittest
+{
+    Appender!(string) stream;
+    formattedWrite(stream, "%u", 42);
+    assert(stream.data == "42", stream.data);
 }
 
 unittest
@@ -2773,7 +2785,7 @@ unittest
 }
 
 //------------------------------------------------------------------------------
-R formattedRead(R, S...)(R r, const(char)[] fmt, S args)
+void formattedRead(R, S...)(ref R r, const(char)[] fmt, S args)
 {
     static if (!S.length)
     {
@@ -2907,6 +2919,28 @@ T unformat(T, Range)(ref Range input, FormatInfo spec) if (isFloatingPoint!T)
     return parse!T(input);
 }
 
+//------------------------------------------------------------------------------
+T unformat(T, Range)(ref Range input, FormatInfo spec) if (is(T == typedef))
+{
+    static if (is(T Original == typedef))
+    {
+        return cast(T) unformat!Original(input, spec);
+    }
+    else
+    {
+        static assert(false);
+    }
+}
+
+unittest
+{
+    typedef int Int;
+    string s = "123";
+    Int x;
+    formattedRead(s, "%s", &x);
+    assert(x == 123);
+}
+
 unittest
 {
     union A
@@ -2954,7 +2988,8 @@ private R parseToFormatSpec(R)(R r, ref const(char)[] fmt)
                 enforce(
                     !r.empty,
                     text("parseToFormatSpec: Cannot find character `",
-                            fmt.front, "' in the input string `", r, "'"));
+                            fmt.front, "' in the input string."));
+                //static assert(0);
                 if (r.front != fmt.front) break;
                 r.popFront;
             }

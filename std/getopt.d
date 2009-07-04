@@ -461,7 +461,7 @@ void handleOption(R)(string option, R receiver, ref string[] args,
                 // hash receiver
                 alias typeof(receiver.keys[0]) K;
                 alias typeof(receiver.values[0]) V;
-                auto j = std.string.find(val, assignChar);
+                auto j = std.string.indexOf(val, assignChar);
                 auto key = val[0 .. j], value = val[j + 1 .. $];
                 (*receiver)[to!(K)(key)] = to!(V)(value);
             }
@@ -515,7 +515,7 @@ private bool optMatch(string arg, string optPattern, ref string value,
     invariant isLong = arg.length > 1 && arg[0] == optionChar;
     // yank the second '-' if present
     if (isLong) arg = arg[1 .. $];
-    invariant eqPos = std.string.find(arg, assignChar);
+    invariant eqPos = std.string.indexOf(arg, assignChar);
     if (eqPos >= 0)
     {
         // argument looks like --opt=value
@@ -543,7 +543,7 @@ private bool optMatch(string arg, string optPattern, ref string value,
         if (arg == v || !cfg.caseSensitive && toupper(arg) == toupper(v))
             return true;
         if (cfg.bundling && !isLong && v.length == 1
-                && std.string.find(arg, v) >= 0)
+                && std.string.indexOf(arg, v) >= 0)
             return true;
     }
     return false;

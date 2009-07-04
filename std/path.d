@@ -610,17 +610,17 @@ string rel2abs(string path)
         return path;
     }
     auto myDir = getcwd;
-    if (path.startsWith(curdir))
+    if (path.startsWith(curdir[]))
     {
         auto p = path[curdir.length .. $];
-        if (p.startsWith(sep))
+        if (p.startsWith(sep[]))
             path = p[sep.length .. $];
-        else if (altsep.length && p.startsWith(altsep))
+        else if (altsep.length && p.startsWith(altsep[]))
             path = p[altsep.length .. $];
         else if (!p.length)
             path = null;
     }
-    return myDir.endsWith(sep) || path.length
+    return myDir.endsWith(sep[]) || path.length
         ? join(myDir, path)
         : myDir;
 }
@@ -673,7 +673,7 @@ string join(in char[] p1, in char[] p2, in char[][] more...)
         if (!more.length)
         {
             if (isabs(p2)) return p2.idup;
-            if (p1.endsWith(sep) || altsep.length && p1.endsWith(altsep))
+            if (p1.endsWith(sep[]) || altsep.length && p1.endsWith(altsep[]))
             {
                 return cast(string) (p1 ~ p2);
             }
@@ -1199,7 +1199,7 @@ private string expandFromDatabase(string path)
 
     // Extract username, searching for path separator.
     string username;
-    int last_char = find(path, sep[0]);
+    int last_char = indexOf(path, sep[0]);
 
     if (last_char == -1)
     {

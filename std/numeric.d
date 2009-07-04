@@ -117,7 +117,7 @@ Initialize from a $(D double).
 /**
 Assigns from either a $(D float) or a $(D double).
  */ 
-    void opAssign(F)(F input) if (indexOf!(Unqual!F, float, double) >= 0)
+    void opAssign(F)(F input) if (indexOfType!(Unqual!F, float, double) >= 0)
     {
         static if (is(Unqual!F == float))
             auto value = FloatRep(input);
@@ -1105,8 +1105,11 @@ $(D a) and $(D b), which is the sum $(D ai * log(ai / bi)). The base
 of logarithm is 2. The ranges are assumed to contain elements in $(D
 [0, 1]). Usually the ranges are normalized probability distributions,
 but this is not required or checked by $(D
-kullbackLeiblerDivergence). If any element of $(D b) is zero, returns
-infinity. If the inputs are normalized, the result is positive.
+kullbackLeiblerDivergence). If any element $(D bi) is zero and the
+corresponding element $(D ai) nonzero, returns infinity. (Otherwise,
+if $(D ai == 0 && bi == 0), the term $(D ai * log(ai / bi)) is
+considered zero.) If the inputs are normalized, the result is
+positive.
  */
 CommonType!(ElementType!Range1, ElementType!Range2)
 kullbackLeiblerDivergence(Range1, Range2)(Range1 a, Range2 b)
@@ -1154,7 +1157,8 @@ or equal to $(D limit).
  */
 CommonType!(ElementType!Range1, ElementType!Range2)
 jensenShannonDivergence(Range1, Range2)(Range1 a, Range2 b)
-    if (isInputRange!Range1 && isInputRange!Range2)
+    if (isInputRange!Range1 && isInputRange!Range2
+            && is(CommonType!(ElementType!Range1, ElementType!Range2)))
 {
     enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
     static if (haveLen) enforce(a.length == b.length);
@@ -1409,8 +1413,7 @@ string[] t = ["Hello", "new", "world"];
 assert(gapWeightedSimilarity(s, s, 1) == 15);
 assert(gapWeightedSimilarity(t, t, 1) == 7);
 assert(gapWeightedSimilarity(s, t, 1) == 7);
-assert(gapWeightedSimilarityNormalized(s, t, 1) ==
-7. / sqrt(15. * 7));
+assert(gapWeightedSimilarityNormalized(s, t, 1) == 7. / sqrt(15. * 7));
 ----
 
 The optional parameters $(D sSelfSim) and $(D tSelfSim) are meant for
