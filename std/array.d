@@ -8,86 +8,113 @@ import std.algorithm, std.contracts, std.conv, std.encoding, std.range,
     std.string, std.traits, std.typecons;
 version(unittest) private import std.stdio;
 
-/*
-Returns an array consisting of $(D elements).
+/**
+Returns a newly-allocated array consisting of a copy of the input
+range $(D r).
 
 Example:
 
 ----
-auto a = array(1, 2, 3);
-assert(is(typeof(a) == int[]));
-assert(a == [ 1, 2, 3 ]);
-auto b = array(1, 2.2, 3);
-assert(is(typeof(b) == double[]));
-assert(b == [ 1.0, 2.2, 3 ]);
+auto a = array([1, 2, 3, 4, 5][]);
+assert(a == [ 1, 2, 3, 4, 5 ]);
 ----
  */
-// CommonType!(Ts)[] array(Ts...)(Ts elements)
-// {
-//     alias CommonType!(Ts) E;
-//     alias typeof(return) R;
-//     // 1. Allocate untyped memory
-//     auto result = cast(E*) enforce(std.gc.malloc(elements.length * R.sizeof),
-//             text("Out of memory while allocating an array of ",
-//                     elements.length, " objects of type ", E.stringof));
-//     // 2. Initialize the memory
-//     size_t constructedElements = 0;
-//     scope(failure)
-//     {
-//         // Deconstruct only what was constructed
-//         foreach_reverse (i; 0 .. constructedElements)
-//         {
-//             try
-//             {
-//                 //result[i].~E();
-//             }
-//             catch (Exception e)
-//             {
-//             }
-//         }
-//         // free the entire array
-//         std.gc.realloc(result, 0);
-//     }
-//     foreach (src; elements)
-//     {
-//         static if (is(typeof(new(result + constructedElements) E(src))))
-//         {
-//             new(result + constructedElements) E(src);
-//         }
-//         else
-//         {
-//             result[constructedElements] = src;
-//         }
-//         ++constructedElements;
-//     }
-//     // 3. Success constructing all elements, type the array and return it
-//     setTypeInfo(typeid(E), result);
-//     return result[0 .. constructedElements];
-// }
+ElementType!Range[] array(Range)(Range r) if (isForwardRange!Range)
+{
+    alias ElementType!Range E;
+    static if (hasLength!Range)
+    {
+        if (r.empty) return null;
+        auto result = (cast(E*) enforce(GC.malloc(r.length * E.sizeof),
+                text("Out of memory while allocating an array of ",
+                        r.length, " objects of type ", E.stringof)))[0 .. r.length];
+        foreach (ref e; result)
+        {
+            // hacky
+            static if (is(typeof(&e.opAssign)))
+            {
+                // this should be in-place construction
+                new(&e) E(r.front);
+            }
+            else
+            {
+                e = r.front;
+            }
+            r.popFront;
+        }
+        return result;
+    }
+    else
+    {
+        auto a = Appender!(E[])();
+        foreach (e; r)
+        {
+            a.put(e);
+        }
+        return a.data;
+    }
+    // // 2. Initialize the memory
+    // size_t constructedElements = 0;
+    // scope(failure)
+    // {
+    //     // Deconstruct only what was constructed
+    //     foreach_reverse (i; 0 .. constructedElements)
+    //     {
+    //         try
+    //         {
+    //             //result[i].~E();
+    //         }
+    //         catch (Exception e)
+    //         {
+    //         }
+    //     }
+    //     // free the entire array
+    //     std.gc.realloc(result, 0);
+    // }
+    // foreach (src; elements)
+    // {
+    //     static if (is(typeof(new(result + constructedElements) E(src))))
+    //     {
+    //         new(result + constructedElements) E(src);
+    //     }
+    //     else
+    //     {
+    //         result[constructedElements] = src;
+    //     }
+    //     ++constructedElements;
+    // }
+    // // 3. Success constructing all elements, type the array and return it
+    // setTypeInfo(typeid(E), result);
+    // return result[0 .. constructedElements];
+}
 
-// unittest
-// {
-//     auto a = array(1, 2, 3, 4, 5);
-//     writeln(a);
-//     assert(a == [ 1, 2, 3, 4, 5 ]);
+version(unittest)
+{
+    struct TestArray { int x; string toString() { return .to!string(x); } }
+}
 
-//     struct S { int x; string toString() { return .toString(x); } }
-//     auto b = array(S(1), S(2));
-//     writeln(b);
+unittest
+{
+    auto a = array([1, 2, 3, 4, 5][]);
+    //writeln(a);
+    assert(a == [ 1, 2, 3, 4, 5 ]);
 
-//     class C
-//     {
-//         int x;
-//         this(int y) { x = y; }
-//         string toString() { return .toString(x); }
-//     }
-//     auto c = array(new C(1), new C(2));
-//     writeln(c);
+    auto b = array([TestArray(1), TestArray(2)][]);
+    //writeln(b);
 
-//     auto d = array(1, 2.2, 3);
-//     assert(is(typeof(d) == double[]));
-//     writeln(d);
-// }
+    class C
+    {
+        int x;
+        this(int y) { x = y; }
+        override string toString() { return .to!string(x); }
+    }
+    auto c = array([new C(1), new C(2)][]);
+    //writeln(c);
+
+    auto d = array([1., 2.2, 3][]);
+    assert(is(typeof(d) == double[]));
+    //writeln(d);
+}
 
 template IndexType(C : T[], T)
 {
@@ -574,3 +601,244 @@ unittest
     assert(app2.data == [ 1, 2, 3, 4, 5, 6 ]);
 }
 
+/*
+A simple slice type only holding pointers to the beginning and the end
+of an array. Experimental duplication of the built-in slice - do not
+use yet.
+ */
+struct SimpleSlice(T)
+{
+    private T * _b, _e;
+
+    this(U...)(U values)
+    {
+        _b = cast(T*) core.memory.GC.malloc(U.length * T.sizeof);
+        _e = _b + U.length;
+        foreach (i, Unused; U) _b[i] = values[i];
+    }
+
+    void opAssign(R)(R anotherSlice)
+    {
+        static if (is(typeof(*_b = anotherSlice)))
+        {
+            // assign all elements to a value
+            foreach (p; _b .. _e)
+            {
+                *p = anotherSlice;
+            }
+        }
+        else
+        {
+            // assign another slice to this
+            enforce(anotherSlice.length == length);
+            auto p = _b;
+            foreach (p; _b .. _e)
+            {
+                *p = anotherSlice.front;
+                anotherSlice.popFront;
+            }
+        }
+    }
+
+/**
+   Range primitives.
+ */
+    bool empty() const
+    {
+        assert(_b <= _e);
+        return _b == _e;
+    }
+
+/// Ditto
+    ref T front()
+    {
+        assert(!empty);
+        return *_b;
+    }
+
+/// Ditto
+    void popFront()
+    {
+        assert(!empty);
+        ++_b;
+    }
+
+/// Ditto
+    ref T back()
+    {
+        assert(!empty);
+        return _e[-1];
+    }
+
+/// Ditto
+    void popBack()
+    {
+        assert(!empty);
+        --_e;
+    }
+
+/// Ditto
+    T opIndex(size_t n)
+    {
+        assert(n < length);
+        return _b[n];
+    }
+
+/// Ditto
+    const(T) opIndex(size_t n) const
+    {
+        assert(n < length);
+        return _b[n];
+    }
+
+/// Ditto
+    void opIndexAssign(T value, size_t n)
+    {
+        assert(n < length);
+        _b[n] = value;
+    }
+
+/// Ditto
+    SimpleSliceLvalue!T opSlice()
+    {
+        typeof(return) result = void;
+        result._b = _b;
+        result._e = _e;
+        return result;
+    }
+
+/// Ditto
+    SimpleSliceLvalue!T opSlice(size_t x, size_t y)
+    {
+        enforce(x <= y && y <= length);
+        typeof(return) result = { _b + x, _b + y };
+        return result;
+    }
+
+/// Returns the length of the slice.
+    size_t length() const
+    {
+        return _e - _b;
+    }
+
+/**
+Sets the length of the slice. Newly added elements will be filled with
+$(D T.init).
+ */
+    void length(size_t newLength)
+    {
+        immutable oldLength = length;
+        _b = cast(T*) core.memory.GC.realloc(_b, newLength * T.sizeof);
+        _e = _b + newLength;
+        this[oldLength .. length] = T.init;
+    }
+
+/// Concatenation.
+    SimpleSlice opCat(R)(R another)
+    {
+        immutable newLen = length + another.length;
+        typeof(return) result = void;
+        result._b = cast(T*)
+            core.memory.GC.malloc(newLen * T.sizeof);
+        result._e = result._b + newLen;
+        result[0 .. this.length] = this;
+        result[this.length .. result.length] = another;
+        return result;
+    }
+
+/// Concatenation with rebinding.
+    void opCatAssign(R)(R another)
+    {
+        auto newThis = this ~ another;
+        move(newThis, this);
+    }
+}
+
+// Support for mass assignment
+struct SimpleSliceLvalue(T)
+{
+    private SimpleSlice!T _s;
+    alias _s this;
+
+    void opAssign(R)(R anotherSlice)
+    {
+        static if (is(typeof(*_b = anotherSlice)))
+        {
+            // assign all elements to a value
+            foreach (p; _b .. _e)
+            {
+                *p = anotherSlice;
+            }
+        }
+        else
+        {
+            // assign another slice to this
+            enforce(anotherSlice.length == length);
+            auto p = _b;
+            foreach (p; _b .. _e)
+            {
+                *p = anotherSlice.front;
+                anotherSlice.popFront;
+            }
+        }
+    }
+}
+
+unittest
+{
+    // SimpleSlice!(int) s;
+
+    // s = SimpleSlice!(int)(4, 5, 6);
+    // assert(equal(s, [4, 5, 6][]));
+    // assert(s.length == 3);
+    // assert(s[0] == 4);
+    // assert(s[1] == 5);
+    // assert(s[2] == 6);
+    
+    // assert(s[] == s);
+    // assert(s[0 .. s.length] == s);
+    // assert(equal(s[0 .. s.length - 1], [4, 5][]));
+
+    // auto s1 = s ~ s[0 .. 1];
+    // assert(equal(s1, [4, 5, 6, 4][]));
+
+    // assert(s1[3] == 4);
+    // s1[3] = 42;
+    // assert(s1[3] == 42);
+
+    // const s2 = s;
+    // assert(s2.length == 3);
+    // assert(!s2.empty);
+    // assert(s2[0] == s[0]);
+
+    // s[0 .. 2] = 10;
+    // assert(equal(s, [10, 10, 6][]));
+
+    // s ~= [ 5, 9 ][];
+    // assert(equal(s, [10, 10, 6, 5, 9][]));
+
+    // s.length = 7;
+    // assert(equal(s, [10, 10, 6, 5, 9, 0, 0][]));
+}
+
+/*
+ *  Copyright (C) 2004-2009 by Digital Mars, www.digitalmars.com
+ *  Written by Andrei Alexandrescu, www.erdani.org
+ *
+ *  This software is provided 'as-is', without any express or implied
+ *  warranty. In no event will the authors be held liable for any damages
+ *  arising from the use of this software.
+ *
+ *  Permission is granted to anyone to use this software for any purpose,
+ *  including commercial applications, and to alter it and redistribute it
+ *  freely, subject to the following restrictions:
+ *
+ *  o  The origin of this software must not be misrepresented; you must not
+ *     claim that you wrote the original software. If you use this software
+ *     in a product, an acknowledgment in the product documentation would be
+ *     appreciated but is not required.
+ *  o  Altered source versions must be plainly marked as such, and must not
+ *     be misrepresented as being the original software.
+ *  o  This notice may not be removed or altered from any source
+ *     distribution.
+ */
