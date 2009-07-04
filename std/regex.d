@@ -1516,7 +1516,7 @@ Regex!(Unqual!(ElementType!(String))) regex(String)
     return typeof(return)(pattern, flags);
 }
 
-/*****************************
+/**
 $(D RegexMatch) is the type returned by a call to $(D match). It
 stores the matching state and can be inspected and iterated.
  */
@@ -1570,6 +1570,11 @@ Copy zis.
         pmatch = pmatch.dup;
     }
     
+    // ref auto opSlice()
+    // {
+    //     return this;
+    // }
+
 /**
 Range primitives that allow incremental matching against a string.
    
@@ -1592,12 +1597,6 @@ void main()
 // abcabcab[ab]
 ---
  */
-
-    ref auto opSlice()
-    {
-        return this;
-    }
-
     bool empty() const
     {
         return pmatch[0].startIdx == pmatch[0].startIdx.max;
@@ -2661,7 +2660,8 @@ and, using the format string, generate and return a new string.
             switch (c)
             {
             case '&':
-                result ~= input[pmatch[0].startIdx .. pmatch[0].endIdx];
+                result ~= to!string(
+                    input[pmatch[0].startIdx .. pmatch[0].endIdx]);
                 break;
 
             case '\\':
@@ -2674,8 +2674,8 @@ and, using the format string, generate and return a new string.
                         j = c - '0';
                         if (j <= engine.re_nsub && pmatch[j].startIdx
                                 != pmatch[j].endIdx)
-                            result ~=
-                                input[pmatch[j].startIdx .. pmatch[j].endIdx];
+                            result ~= to!string
+                                (input[pmatch[j].startIdx .. pmatch[j].endIdx]);
                         break;
                     }
                 }
@@ -2916,7 +2916,15 @@ struct Splitter(Range)
     this(Range input, Rx separator)
     {
         _input = input;
-        _match = match(_input, separator);
+        if (_input.empty)
+        {
+            // there is nothing to match at all, make _offset > 0
+            _offset = 1;
+        }
+        else
+        {
+            _match = match(_input, separator);
+        }
     }
 
     // @@@BUG 2674 and 2675
@@ -2933,14 +2941,14 @@ struct Splitter(Range)
     Range front()
     {
         //write("[");scope(success) writeln("]");
-        assert(_offset <= _match.pre.length
+        assert(!empty && _offset <= _match.pre.length
                 && _match.pre.length <= _input.length);
         return _input[_offset .. min($, _match.pre.length)];
     }
 
     bool empty()
     {
-        return _offset >= _input.length;
+        return _offset > _input.length;
     }
 
     void popFront()
@@ -2950,7 +2958,7 @@ struct Splitter(Range)
         if (_match.empty)
         {
             // No more separators, work is done here
-            _offset = _input.length;
+            _offset = _input.length + 1;
         }
         else
         {
@@ -2974,7 +2982,7 @@ unittest
 {
     auto s1 = ", abc, de,  fg, hi, ";
     auto sp1 = splitter(s1, regex(", *"));
-    auto w1 = ["", "abc", "de", "fg", "hi"];
+    auto w1 = ["", "abc", "de", "fg", "hi", ""];
     assert(equal(sp1, w1[]));
 
     auto s2 = ", abc, de,  fg, hi";
@@ -2988,6 +2996,23 @@ unittest
 {
     char[] s1 = ", abc, de,  fg, hi, ".dup;
     auto sp2 = splitter(s1, regex(", *"));
+}
+
+String[] split(String)(String input, Regex!(char) rx)
+{
+    Appender!(String[]) a;
+    foreach (e; splitter(input, rx))
+    {
+        a.put(e);
+    }
+    return a.data;
+}
+
+unittest
+{
+    auto s1 = ", abc, de,  fg, hi, ";
+    auto w1 = ["", "abc", "de", "fg", "hi", ""];
+    assert(equal(split(s1, regex(", *")), w1[]));
 }
 
 /*
