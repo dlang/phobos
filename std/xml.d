@@ -289,11 +289,11 @@ string encode(string s)
     // std.string.write.replace
     // does not do copy-on-write, but instead copies always.
 
-    if (s.find('&') != -1) s = replace(s,"&","&amp;");
-    if (s.find('"') != -1) s = replace(s,"\"","&quot;");
-    if (s.find("'") != -1) s = replace(s,"'","&apos;");
-    if (s.find('<') != -1) s = replace(s,"<","&lt;");
-    if (s.find('>') != -1) s = replace(s,">","&gt;");
+    if (s.indexOf('&') != -1) s = replace(s,"&","&amp;");
+    if (s.indexOf('"') != -1) s = replace(s,"\"","&quot;");
+    if (s.indexOf("'") != -1) s = replace(s,"'","&apos;");
+    if (s.indexOf('<') != -1) s = replace(s,"<","&lt;");
+    if (s.indexOf('>') != -1) s = replace(s,">","&gt;");
     return s;
 }
 
@@ -378,8 +378,9 @@ string decode(string s, DecodeMode mode=DecodeMode.LOOSE)
                 {
                     dchar d;
                     string t = s[i..$];
-                    checkCharRef(t,d);
-                    buffer ~= cast(char)d;
+                    checkCharRef(t, d);
+                    char[4] temp;
+                    buffer ~= temp[0 .. std.utf.encode(temp, d)];
                     i = s.length - t.length - 1;
                 }
                 catch(Err e)
@@ -1136,7 +1137,7 @@ class Comment : Item
      */
     this(string content)
     {
-        if (content == "-" || content.find("==") != -1)
+        if (content == "-" || content.indexOf("==") != -1)
             throw new CommentException(content);
         this.content = content;
     }
@@ -1216,7 +1217,7 @@ class CData : Item
      */
     this(string content)
     {
-        if (content.find("]]>") != -1) throw new CDataException(content);
+        if (content.indexOf("]]>") != -1) throw new CDataException(content);
         this.content = content;
     }
 
@@ -1375,7 +1376,7 @@ class XMLInstruction : Item
      */
     this(string content)
     {
-        if (content.find(">") != -1) throw new XIException(content);
+        if (content.indexOf(">") != -1) throw new XIException(content);
         this.content = content;
     }
 
@@ -1454,7 +1455,7 @@ class ProcessingInstruction : Item
      */
     this(string content)
     {
-        if (content.find("?>") != -1) throw new PIException(content);
+        if (content.indexOf("?>") != -1) throw new PIException(content);
         this.content = content;
     }
 
@@ -1873,28 +1874,28 @@ class ElementParser
             if (startsWith(*s,"<!--"))
             {
                 chop(*s,4);
-                t = chop(*s,find(*s,"-->"));
+                t = chop(*s,indexOf(*s,"-->"));
                 if (commentHandler.funcptr !is null) commentHandler(t);
                 chop(*s,3);
             }
             else if (startsWith(*s,"<![CDATA["))
             {
                 chop(*s,9);
-                t = chop(*s,find(*s,"]]>"));
+                t = chop(*s,indexOf(*s,"]]>"));
                 if (cdataHandler.funcptr !is null) cdataHandler(t);
                 chop(*s,3);
             }
             else if (startsWith(*s,"<!"))
             {
                 chop(*s,2);
-                t = chop(*s,find(*s,">"));
+                t = chop(*s,indexOf(*s,">"));
                 if (xiHandler.funcptr !is null) xiHandler(t);
                 chop(*s,1);
             }
             else if (startsWith(*s,"<?"))
             {
                 chop(*s,2);
-                t = chop(*s,find(*s,"?>"));
+                t = chop(*s,indexOf(*s,"?>"));
                 if (piHandler.funcptr !is null) piHandler(t);
                 chop(*s,2);
             }
@@ -1969,7 +1970,7 @@ class ElementParser
             }
             else
             {
-                t = chop(*s,find(*s,"<"));
+                t = chop(*s,indexOf(*s,"<"));
                 if (rawTextHandler.funcptr !is null)
                     rawTextHandler(t);
                 else if (textHandler.funcptr !is null)
@@ -2127,7 +2128,7 @@ private
         mixin Check!("Comment");
 
         try { checkLiteral("<!--",s); } catch(Err e) { fail(e); }
-        int n = s.find("--");
+        int n = s.indexOf("--");
         if (n == -1) fail("unterminated comment");
         s = s[0..n];
         try { checkLiteral("-->",s); } catch(Err e) { fail(e); }
@@ -2467,7 +2468,7 @@ private
     {
         // Deliberately no mixin Check here.
 
-        int n = s.find(end);
+        int n = s.indexOf(end);
         if (n == -1) throw new Err(s,"Unable to find terminating \""~end~"\"");
         s = s[n..$];
         checkLiteral(end,s);
@@ -2588,7 +2589,7 @@ unittest
     }
     catch(CheckException e)
     {
-        int n = e.toString().find("end tag name \"genres\" differs"
+        int n = e.toString().indexOf("end tag name \"genres\" differs"
             " from start tag name \"genre\"");
         assert(n != -1);
     }
@@ -2658,7 +2659,7 @@ class CheckException : XMLException
     private void complete(string entire)
     {
         string head = entire[0..$-tail.length];
-        int n = head.rfind('\n') + 1;
+        int n = head.lastIndexOf('\n') + 1;
         line = head.count("\n") + 1;
         dstring t;
         transcode(head[n..$],t);
