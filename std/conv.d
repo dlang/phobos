@@ -1,62 +1,20 @@
 // Written in the D programming language.
-
-/*
- *  Copyright (C) 2002-2007 by Digital Mars, www.digitalmars.com
- *  Written by Walter Bright
- *  Some parts contributed by David L. Davis
- *  Major rewrite by Andrei Alexandrescu
- *
- *  This software is provided 'as-is', without any express or implied
- *  warranty. In no event will the authors be held liable for any damages
- *  arising from the use of this software.
- *
- *  Permission is granted to anyone to use this software for any purpose,
- *  including commercial applications, and to alter it and redistribute it
- *  freely, subject to the following restrictions:
- *
- *  o  The origin of this software must not be misrepresented; you must not
- *     claim that you wrote the original software. If you use this software
- *     in a product, an acknowledgment in the product documentation would be
- *     appreciated but is not required.
- *  o  Altered source versions must be plainly marked as such, and must not
- *     be misrepresented as being the original software.
- *  o  This notice may not be removed or altered from any source
- *     distribution.
- */
-
-/***********
+/**
 A one-stop shop for converting values from one type to another.
 
 Authors:
 
 $(WEB digitalmars.com, Walter Bright), $(WEB erdani.org, Andrei
-Alexandrescu)
+Alexandrescu), Shin Fujishiro
 */
 
 module std.conv;
 
-import core.memory;
-import std.string;  // for atof(), toString()
-//import std.c.stdlib;
-import core.stdc.stdlib;
-import std.math;  // for fabs(), isnan()
-import std.stdio; // for writefln() and printf()
-import std.typetuple; // for unittests
-import std.utf; // for string-to-string conversions
-import std.array;
-import std.range;
-import std.contracts;
-private import std.string;  // for atof(), toString()
-private import core.stdc.errno;
-private import std.math;  // for fabs(), isNaN()
-private import std.stdio; // for writefln() and printf()
-private import std.typetuple; // for unittests
-private import std.utf; // for string-to-string conversions
-import std.traits;
-import std.typecons;
-import std.ctype;
-import std.c.string; // memcpy
-
+import core.memory, core.stdc.errno, core.stdc.string, core.stdc.stdlib,
+    std.array, std.contracts,
+    std.ctype, std.math, std.range, std.stdio,
+    std.string, std.traits, std.typecons, std.typetuple,
+    std.utf;
 //debug=conv;		// uncomment to turn on debugging printf's
 
 /* ************* Exceptions *************** */
@@ -321,24 +279,56 @@ unittest
 }
 
 /**
-Enumerated types are printed as their base type (not the symbolic
-names).
+Enumerated types are converted to strings as their symbolic names.
  */
 T to(T, S)(S s) if (is(S == enum) && isSomeString!(T)
         && !implicitlyConverts!(S, T))
 {
-    static if (is(S E == enum)) return to!(T)(cast(E) (s));
-    else static assert(false);
+    mixin (enumToStringImpl!(S).code);
+}
+
+// internal
+private template enumToStringImpl(Enum)
+{
+    template generate(alias members)
+    {
+        static if (members.length)
+        {
+            enum m = members[0];
+            enum code =
+                "if (s == S." ~ m ~ ") return `" ~ m ~ "`;" ~
+                generate!(members[1 .. $]).code;
+        }
+        else
+        {
+            enum code = "throw new ConvError(`"
+                "There is no corresponding enum member name in " ~
+                Enum.stringof ~ "`);";
+        }
+    }
+    enum code = generate!(__traits(allMembers, Enum)).code;
 }
 
 unittest
 {
-    enum A : int { a = 123, b = 234 }
-    assert(to!string(A.a) == "123");
-    enum B : string { a = "123", b = "234" }
-    assert(to!string(B.a) == "123");
-    enum C : double { a = 123, b = 234 }
-    assert(to!string(C.a) == "123");
+    enum E { a, b, c }
+    assert(to! string(E.a) == "a"c);
+    assert(to!wstring(E.b) == "b"w);
+    assert(to!dstring(E.c) == "c"d);
+
+    enum F : real { x = 1.414, y = 1.732, z = 2.236 }
+    assert(to! string(F.x) == "x"c);
+    assert(to!wstring(F.y) == "y"w);
+    assert(to!dstring(F.z) == "z"d);
+
+    try
+    {
+        to!string(cast(E) (E.max + 1));
+        assert(0);
+    }
+    catch (ConvError e)
+    {
+    }
 }
 
 /**
@@ -989,6 +979,81 @@ if (isSomeString!Source && isIntegral!Target)
 }
 
 Target parse(Target, Source)(ref Source s)
+if (isSomeString!Source && is(Target == enum))
+{
+    mixin(enumFromStringImpl!Target.code);
+}
+
+private template enumFromStringImpl(Enum)
+{
+    template generate(alias members)
+    {
+        static if (members.length)
+        {
+            enum m = members[0];
+            enum code =
+                "if (s.length >= `"~m~"`.length && s[0 .. `"~m~"`.length] == `"
+                ~ m ~ "`) { s = s[`"~m~"`.length .. $]; return Target."
+                ~ m ~ "; }" ~
+                generate!(members[1 .. $]).code;
+        }
+        else
+        {
+            enum code = "throw new ConvError(`"
+                "There is no corresponding enum member value in " ~
+                Enum.stringof ~ "`);";
+        }
+    }
+    enum code = generate!(__traits(allMembers, Enum)).code;
+}
+
+unittest
+{
+    enum E { a, b, c }
+    assert(to!E("a"c) == E.a);
+    assert(to!E("b"w) == E.b);
+    assert(to!E("c"d) == E.c);
+
+    enum F : real { x = 1.414, y = 1.732, z = 2.236 }
+    assert(to!F("x"c) == F.x);
+    assert(to!F("y"w) == F.y);
+    assert(to!F("z"d) == F.z);
+
+    try
+    {
+        to!E("d");
+        assert(0);
+    }
+    catch (ConvError e)
+    {
+    }
+}
+
+Target parse(Target, Source)(ref Source s)
+    if (!isSomeString!Source && isSomeChar!(ElementType!Source)
+        && isIntegral!Target)
+{
+    char[] accum;
+    foreach (c; s)
+    {
+        writeln(c);
+        if ("0123456789-+".indexOf(c) < 0)
+        {
+            static if (is(typeof(s.unget(c)))) s.unget(c);
+            break;
+        }
+        accum ~= c;
+    }
+    return parse!Target(accum);
+}
+
+Target parse(Target, Source)(ref Source s)
+if (!isSomeString!Source && isFloatingPoint!Target)
+{
+    static assert(0);
+}
+
+Target parse(Target, Source)(ref Source s)
 if (isSomeString!Source && isFloatingPoint!Target)
 {
     //writefln("toFloat('%s')", s);
@@ -1043,6 +1108,16 @@ unittest
 {
     string s = "123";
     auto a = parse!int(s);
+}
+
+// Parsing typedefs forwards to their host types
+Target parse(Target, Source)(ref Source s)
+if (isSomeString!Source && is(Target == typedef))
+{
+    static if (is(Target T == typedef))
+        return cast(Target) parse!T(s);
+    else
+        static assert(0);
 }
 
 // Customizable integral parse
@@ -2388,7 +2463,7 @@ T to(T, S)(S value) if (isIntegral!S && S.min < 0
 
 /// Unsigned integers (uint and ulong).
 T to(T, S)(S input)
-if (indexOf!(Unqual!S, uint, ulong) >= 0 && isSomeString!T)
+if (std.traits.indexOfType!(Unqual!S, uint, ulong) >= 0 && isSomeString!T)
 {
     Unqual!S value = input;
     alias Unqual!(ElementType!T) Char;
@@ -2420,7 +2495,7 @@ if (indexOf!(Unqual!S, uint, ulong) >= 0 && isSomeString!T)
 }
 
 /// $(D char), $(D wchar), $(D dchar) to a string type.
-T to(T, S)(S c) if (indexOf!(Unqual!S, char, wchar, dchar) >= 0
+T to(T, S)(S c) if (indexOfType!(Unqual!S, char, wchar, dchar) >= 0
         && isSomeString!(T))
 {
     static if (ElementType!T.sizeof >= S.sizeof)
@@ -2454,7 +2529,7 @@ unittest
 }
 
 /// Signed values ($(D int) and $(D long)).
-T to(T, S)(S value) if (indexOf!(Unqual!S, int, long) >= 0 && isSomeString!T)
+T to(T, S)(S value) if (indexOfType!(Unqual!S, int, long) >= 0 && isSomeString!T)
 {
     if (value >= 0)
         return to!T(cast(Unsigned!(S)) value);
@@ -2511,7 +2586,6 @@ unittest
 /// C-style strings
 T to(T, S)(S s) if (is(S : const(char)*) && isSomeString!(T))
 {
-    //if (s) writeln("cacat ", s[0 .. strlen(s)]);
     return s ? cast(T) s[0 .. strlen(s)].dup : cast(string)null;
 }
 
@@ -2592,7 +2666,7 @@ T to(T, S)(S r) if (is(Unqual!S == creal) && isSomeString!(T))
  * The characters A through Z are used to represent values 10 through 36.
  */
 T to(T, S)(S value, uint radix)
-if (indexOf!(Unqual!S, int, long) >= 0 && isSomeString!(T))
+if (isIntegral!(Unqual!S) && !is(Unqual!S == ulong) && isSomeString!(T))
 in
 {
     assert(radix >= 2 && radix <= 36);
@@ -2628,6 +2702,12 @@ body
         buffer[i] = cast(char)((c < 10) ? c + '0' : c + 'A' - 10);
     } while (value);
     return to!T(buffer[i .. length].dup);
+}
+
+unittest
+{
+    size_t x = 16;
+    assert(to!string(x, 16) == "10");
 }
 
 unittest
@@ -2770,6 +2850,7 @@ unittest
     i = cmp(r, "-123");
     assert(i == 0);
 }
+
 unittest
 {
     debug(string) printf("string.to!string(ulong, uint).unittest\n");
@@ -2857,19 +2938,28 @@ unittest
     assert(i == 0);
 }
 
+/**
+Pointer to string conversions prints the pointer as a $(D size_t) value.
+ */
+T to(T, S)(S value)
+if (isPointer!S && !isSomeChar!(typeof(*S.init)) && isSomeString!T)
+{
+    return to!T(cast(size_t) value, 16u);
+}
+
 private S textImpl(S, U...)(U args)
 {
     S result;
     foreach (i, arg; args)
     {
-        result ~= to!(S)(args[i]);
+        result ~= to!S(args[i]);
     }
     return result;
 }
 
 /**
-   Convenience functions for converting any number and types of arguments
-   into text (the three character widths).
+   Convenience functions for converting any number and types of
+   arguments into _text (the three character widths).
 
    Example:
    ----
@@ -2880,13 +2970,46 @@ private S textImpl(S, U...)(U args)
 */
 string text(T...)(T args) { return textImpl!(string, T)(args); }
 ///ditto
-// wstring wtext(T...)(T args) { return textImpl!(wstring, T)(args); }
-// ///ditto
-// dstring dtext(T...)(T args) { return textImpl!(dstring, T)(args); }
+wstring wtext(T...)(T args) { return textImpl!(wstring, T)(args); }
+///ditto
+dstring dtext(T...)(T args) { return textImpl!(dstring, T)(args); }
 
 unittest
 {
-    // assert(text(42, ' ', 1.5, ": xyz") == "42 1.5: xyz");
-    // assert(wtext(42, ' ', 1.5, ": xyz") == "42 1.5: xyz"w);
-    // assert(dtext(42, ' ', 1.5, ": xyz") == "42 1.5: xyz"d);
+    assert(text(42, ' ', 1.5, ": xyz") == "42 1.5: xyz");
+    assert(wtext(42, ' ', 1.5, ": xyz") == "42 1.5: xyz"w);
+    assert(dtext(42, ' ', 1.5, ": xyz") == "42 1.5: xyz"d);
 }
+
+unittest
+{
+    typedef uint Testing;
+    auto s = "123";
+    auto t = parse!Testing(s);
+    assert(t == cast(Testing) 123);
+}
+
+/*
+ *  Copyright (C) 2002-2007 by Digital Mars, www.digitalmars.com
+ *  Written by Walter Bright
+ *  Some parts contributed by David L. Davis
+ *  Major rewrite by Andrei Alexandrescu
+ *
+ *  This software is provided 'as-is', without any express or implied
+ *  warranty. In no event will the authors be held liable for any damages
+ *  arising from the use of this software.
+ *
+ *  Permission is granted to anyone to use this software for any purpose,
+ *  including commercial applications, and to alter it and redistribute it
+ *  freely, subject to the following restrictions:
+ *
+ *  o  The origin of this software must not be misrepresented; you must not
+ *     claim that you wrote the original software. If you use this software
+ *     in a product, an acknowledgment in the product documentation would be
+ *     appreciated but is not required.
+ *  o  Altered source versions must be plainly marked as such, and must not
+ *     be misrepresented as being the original software.
+ *  o  This notice may not be removed or altered from any source
+ *     distribution.
+ */
+
