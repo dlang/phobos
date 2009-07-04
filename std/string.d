@@ -4143,6 +4143,18 @@ deprecated int find(in char[] s, dchar c)
     return indexOf(s, c, CaseSensitive.yes);
 }
 
+deprecated int find(in char[] str, in char[] sub)
+{
+    return indexOf(str, sub, CaseSensitive.yes);
+}
+
+unittest
+{
+    string a = "abc";
+    string b = "bc";
+    assert(find(a, b) == 1);
+}
+
 deprecated int ifind(in char[] s, dchar c)
 {
     return indexOf(s, c, CaseSensitive.no);
