@@ -51,6 +51,7 @@ import std.functional;
 import std.math;
 import std.metastrings;
 import std.range;
+import std.string;
 import std.traits;
 import std.typecons;
 import std.typetuple;
@@ -117,17 +118,13 @@ template map(fun...)
 
 struct Map(alias fun, Range) if (isInputRange!(Range))
 {
-    alias typeof(fun(.ElementType!(Range))) ElementType;
+    alias typeof(fun(.ElementType!(Range).init)) ElementType;
     Range _input;
     ElementType _cache;
 
     private void fillCache() { if (!_input.empty) _cache = fun(_input.front); }
 
     this(Range input) { _input = input; fillCache; }
-    ref Map opSlice()
-    {
-        return this;
-    }
     bool empty() { return _input.empty; }
     void popFront() { _input.popFront; fillCache; }
     ElementType front() { return _cache; }
@@ -253,13 +250,14 @@ private:
     }
 
 public:
-    E reduce(E, Range)(E e0, Range r)
+    E reduce(E, R)(E result, R r)
     {
-        Unqual!(typeof(return)) result = e0;
         foreach (e; r)
         {
             static if (fun.length == 1)
+            {
                 result = binaryFun!(fun[0])(result, e);
+            }
             else
             {
                 foreach (i, Unused; typeof(E.field))
@@ -274,8 +272,11 @@ public:
     ReturnType!(ElementType!(Range))
     reduce(Range)(Range r) if (isInputRange!Range)
     {
+        enforce(!r.empty);
         static if (fun.length == 1)
+        {
             auto e = r.front;
+        }
         else
         {
             typeof(return) e;
@@ -576,19 +577,62 @@ Preconditions:
 $(D !pointsTo(lhs, lhs) && !pointsTo(lhs, rhs) && !pointsTo(rhs, lhs)
 && !pointsTo(rhs, rhs))
 */
-void swap(T)(ref T lhs, ref T rhs) if (!is(typeof(T.init.proxySwap(T.init))))
+// void swap(T)(ref T lhs, ref T rhs)
+// {
+//     assert(!pointsTo(lhs, lhs) && !pointsTo(lhs, rhs)
+//             && !pointsTo(rhs, lhs) && !pointsTo(rhs, rhs));
+//     auto t = lhs;
+//     lhs = rhs;
+//     rhs = t;
+// }
+
+void swap(T)(ref T a, ref T b)  if (!is(typeof(T.init.proxySwap(T.init))))
 {
-    assert(!pointsTo(lhs, lhs) && !pointsTo(lhs, rhs)
-            && !pointsTo(rhs, lhs) && !pointsTo(rhs, rhs));
-    auto t = lhs;
-    lhs = rhs;
-    rhs = t;
+   static if (is(T == struct))
+   {
+      // For structs, move memory directly
+      // First check for undue aliasing
+      assert(!pointsTo(a, b) && !pointsTo(b, a) 
+         && !pointsTo(a, a) && !pointsTo(b, b));
+      // Swap bits
+      ubyte[T.sizeof] t = void;
+      memcpy(&t, &a, T.sizeof);
+      memcpy(&a, &b, T.sizeof);
+      memcpy(&b, &t, T.sizeof);
+   }
+   else
+   {
+      // For non-struct types, suffice to do the classic swap
+      auto t = a;
+      a = b;
+      b = t;
+   }
 }
 
 // Not yet documented
 void swap(T)(T lhs, T rhs) if (is(typeof(T.init.proxySwap(T.init))))
 {
     lhs.proxySwap(rhs);
+}
+
+unittest
+{
+    int a = 42, b = 34;
+    swap(a, b);
+    assert(a == 34 && b == 42);
+    
+    struct S { int x; char c; int[] y; }
+    S s1 = { 0, 'z', [ 1, 2 ] };
+    S s2 = { 42, 'a', [ 4, 6 ] };
+    //writeln(s2.tupleof.stringof);
+    swap(s1, s2);
+    assert(s1.x == 42);
+    assert(s1.c == 'a');
+    assert(s1.y == [ 4, 6 ]);
+
+    assert(s2.x == 0);
+    assert(s2.c == 'z');
+    assert(s2.y == [ 1, 2 ]);
 }
 
 // split
@@ -827,7 +871,7 @@ struct Uniq(alias pred, R)
 /// Ditto
 Uniq!(pred, Range) uniq(alias pred = "a == b", Range)(Range r)
 {
-    return Uniq!(pred, Range)(r);
+    return typeof(return)(r);
 }
 
 unittest
@@ -835,6 +879,79 @@ unittest
     int[] arr = [ 1, 2, 2, 2, 2, 3, 4, 4, 4, 5 ];
     auto r = uniq(arr);
     assert(equal(r, [ 1, 2, 3, 4, 5 ][]));
+}
+
+// group
+/**
+Similarly to $(D uniq), $(D group) iterates unique consecutive
+elements of the given range. The element type is $(D
+Tuple!(ElementType!R, uint)) because it includes the count of
+equivalent elements seen. Equivalence of elements is assessed by using
+the predicate $(D pred), by default $(D "a == b").
+
+$(D Group) is an input range if $(D R) is an input range, and a
+forward range in all other cases.
+
+Example:
+----
+int[] arr = [ 1, 2, 2, 2, 2, 3, 4, 4, 4, 5 ];
+assert(equal(group(arr), [ tuple(1, 1u), tuple(2, 4u), tuple(3, 1u),
+    tuple(4, 3u), tuple(5, 1u) ][]));
+----
+*/
+struct Group(alias pred, R) if (isInputRange!R)
+{
+    private R _input;
+    private Tuple!(ElementType!R, uint) _current;
+    private alias binaryFun!pred comp;
+    
+    this(R input)
+    {
+        _input = input;
+        if (!_input.empty) popFront;
+    }
+
+    void popFront()
+    {
+        if (_input.empty)
+        {
+            _current.field[1] = 0;
+        }
+        else
+        {
+            _current = tuple(_input.front, 1u);
+            _input.popFront;
+            while (!_input.empty && comp(_current.field[0], _input.front))
+            {
+                ++_current.field[1];
+                _input.popFront;
+            }
+        }
+    }
+
+    bool empty()
+    {
+        return _current.field[1] == 0;
+    }
+
+    ref Tuple!(ElementType!R, uint) front()
+    {
+        assert(!empty);
+        return _current;
+    }
+}
+
+/// Ditto
+Group!(pred, Range) group(alias pred = "a == b", Range)(Range r)
+{
+    return typeof(return)(r);
+}
+
+unittest
+{
+    int[] arr = [ 1, 2, 2, 2, 2, 3, 4, 4, 4, 5 ];
+    assert(equal(group(arr), [ tuple(1, 1u), tuple(2, 4u), tuple(3, 1u),
+                            tuple(4, 3u), tuple(5, 1u) ][]));
 }
 
 // overwriteAdjacent
@@ -1326,9 +1443,7 @@ public:
     }
 }
 
-/**
-Ditto
- */
+/// Ditto
 BoyerMooreFinder!(binaryFun!(pred), Range) boyerMooreFinder
 (alias pred = "a == b", Range)
 (Range needle) if (isRandomAccessRange!(Range))
@@ -1392,6 +1507,94 @@ unittest
 }
 
 /**
+Interval option specifier for $(D until) (below) and others.
+ */
+enum OpenRight
+{
+    no, /// Interval is closed to the right (last element included)
+    yes /// Interval is open to the right (last element is not included)
+}
+
+/**
+Lazily iterates $(D range) until value $(D sentinel) is found, at
+which point it stops.
+
+Example:
+----
+int[] a = [ 1, 2, 4, 7, 7, 2, 4, 7, 3, 5];
+assert(equal(a.until(7), [1, 2, 4][]));
+assert(equal(a.until(7, OpenRight.no), [1, 2, 4, 7][]));
+----
+ */
+struct Until(alias pred, Range, Sentinel) if (isInputRange!Range)
+{
+    private Range _input;
+    private Sentinel _sentinel;
+    // mixin(bitfields!(
+    //             OpenRight, "_openRight", 1,
+    //             bool,  "_done", 1,
+    //             uint, "", 6));
+    //             OpenRight, "_openRight", 1,
+    //             bool,  "_done", 1,
+    OpenRight _openRight;
+    bool _done;
+
+    this(Range input, Sentinel sentinel, OpenRight openRight = OpenRight.yes)
+    {
+        _input = input;
+        _sentinel = sentinel;
+        _openRight = openRight;
+        _done = _input.empty || openRight && binaryFun!pred(_input.front, _sentinel);
+    }
+
+    bool empty()
+    {
+        return _done;
+    }
+
+    ElementType!Range front()
+    {
+        assert(!empty);
+        return _input.front;
+    }
+
+    void popFront()
+    {
+        assert(!empty);
+        if (!_openRight)
+        {
+            if (binaryFun!pred(_input.front, _sentinel))
+            {
+                _done = true;
+                return;
+            }
+            _input.popFront;
+            _done = _input.empty;
+        }
+        else
+        {
+            _input.popFront;
+            _done = _input.empty || binaryFun!pred(_input.front, _sentinel);
+        }
+    }
+}
+
+/// Ditto
+Until!(pred, Range, Sentinel) until
+(alias pred = "a == b", Range, Sentinel)
+(Range range, Sentinel sentinel, OpenRight openRight = OpenRight.yes)
+{
+    return typeof(return)(range, sentinel, openRight);
+}
+
+unittest
+{
+    int[] a = [ 1, 2, 4, 7, 7, 2, 4, 7, 3, 5];
+    assert(equal(a.until(7), [1, 2, 4][]));
+    assert(equal(a.until(7, OpenRight.no), [1, 2, 4, 7][]));
+}
+
+/**
 If the range $(D doesThisStart) starts with $(I any) of the $(D
 withOneOfThese) ranges or elements, returns 1 if it starts with $(D
 withOneOfThese[0]), 2 if it starts with $(D withOneOfThese[1]), and so
@@ -1413,7 +1616,8 @@ assert(startsWith("abc", "x", "aaa", 'a', "sab") == 3);
  */
 uint startsWith(alias pred = "a == b", Range, Ranges...)
 (Range doesThisStart, Ranges withOneOfThese)
-if (isInputRange!(Range))
+if (isInputRange!Range && Ranges.length > 0
+        && indexOfType!(Unqual!(ElementType!Range), char, wchar) < 0)
 {
     static assert(Ranges.length > 0);
     alias doesThisStart lhs;
@@ -1423,6 +1627,7 @@ if (isInputRange!(Range))
     {
         alias doesThisStart haystack;
         alias withOneOfThese[0] needle;
+        //writeln("Matching: ", haystack, " with ", needle);
         if (haystack.length < needle.length) return 0;
         foreach (j; 0 .. needle.length)
         {
@@ -1450,7 +1655,7 @@ if (isInputRange!(Range))
                 {
                     // single-element comparison
                     if (binaryFun!(pred)(lhs.front, rhs[i]))
-                        return i + 1;
+                        return i + 1; // single element found
                     // mismatch, fall through
                 }
                 else
@@ -1458,8 +1663,7 @@ if (isInputRange!(Range))
                     assert(!rhs[i].empty);
                     if (binaryFun!(pred)(lhs.front, rhs[i].front))
                     {
-                        rhs[i].popFront;
-                        continue;
+                        continue; // matched, just finish this loop
                     }
                 }
                 // found a mismatch, only continue searching the others
@@ -1475,8 +1679,31 @@ if (isInputRange!(Range))
                     return cast(uint) (r <= i ? r : r + 1);
                 }
             }
+            // At this point everybody matched one element
+            foreach (i, Unused; Ranges)
+            {
+                static if (!is(typeof(binaryFun!(pred)(lhs.front, rhs[i]))))
+                    rhs[i].popFront;
+            }
         }
     }
+}
+
+// Specialization for ranges of characters
+uint startsWith(alias pred = "a == b", Range, Ranges...)
+(Range doesThisStart, Ranges withOneOfThese)
+if (isInputRange!(Range) && Ranges.length > 0
+        && indexOfType!(Unqual!(ElementType!Range), char, wchar) >= 0)
+{
+    auto searchMe = byDchar(doesThisStart);
+    foreach (i, R; Ranges)
+    {
+        static if (indexOfType!(Unqual!(ElementType!R), char, wchar) >= 0)
+            return startsWith!pred(searchMe,
+                    withOneOfThese[0 .. i], byDchar(withOneOfThese[i]),
+                withOneOfThese[i + 1 .. $]);
+    }
+    return startsWith!pred(searchMe, withOneOfThese);
 }
 
 unittest
@@ -1512,7 +1739,7 @@ assert(endsWith("abc", "x", "aaa", 'c', "sab") == 3);
 uint
 endsWith(alias pred = "a == b", Range, Ranges...)
 (Range doesThisEnd, Ranges withOneOfThese)
-if (isInputRange!(Range))
+if (isInputRange!(Range) && Ranges.length > 0)
 {
     alias doesThisEnd lhs;
     alias withOneOfThese rhs;
@@ -1573,6 +1800,9 @@ unittest
     assert(endsWith("abc", "x", "aa", "bc") == 3);
     assert(endsWith("abc", "x", "aaa", "sab") == 0);
     assert(endsWith("abc", "x", "aaa", 'c', "sab") == 3);
+    // string a = "abc";
+    // immutable(char[1]) b = "c";
+    // assert(wyda(a, b));
 }
 
 // findAdjacent
@@ -1772,7 +2002,8 @@ assert(equal!(approxEqual)(b, c));
 ----
 */
 bool equal(alias pred = "a == b", Range1, Range2)(Range1 r1, Range2 r2)
-    if (isInputRange!(Range1) && isInputRange!(Range2))
+if (isInputRange!(Range1) && isInputRange!(Range2)
+        && is(typeof(binaryFun!pred(Range1.init.front, Range2.init.front))))
 {
     foreach (e1; r1)
     {
@@ -2522,6 +2753,7 @@ size_t bringToFront(Range1, Range2)(Range1 front, Range2 back)
 
         for (;;)
         {
+            // make progress for this pass through the loop
             swap(front2.front, back2.front);
         
             front2.popFront;
@@ -2570,7 +2802,7 @@ unittest
     // // The signature taking range and mid
     arr[] = [4, 5, 6, 7, 1, 2, 3];
     // p = rotate(arr, arr.ptr + 4);
-    p = bringToFront(arr, arr[4 .. $]);
+    p = bringToFront(arr[0 .. 4], arr[4 .. $]);
     //assert(p - arr.ptr == 3);
     //assert(p is arr[3 .. $]);
     assert(arr == [ 1, 2, 3, 4, 5, 6, 7 ]);
@@ -2582,11 +2814,13 @@ unittest
     foreach (ref e; a) e = uniform(-100, 100, rnd);
     foreach (ref e; b) e = uniform(-100, 100, rnd);
     int[] c = a ~ b;
-    // auto n = rotate(c, c.ptr + a.length);
-    auto n = bringToFront(c, c[a.length .. $]);
+    // writeln("a= ", a);
+    // writeln("b= ", b);
+    auto n = bringToFront(c[0 .. a.length], c[a.length .. $]);
+    //writeln("c= ", c);
     // assert(n == c.ptr + b.length);
     //assert(n is c[b.length .. $]);
-    assert(c == b ~ a);
+    assert(c == b ~ a, text(c));
 
     // test with a SList
     auto lst = SListRange!(int)(1, 2, 3, 4, 5);
@@ -3112,8 +3346,8 @@ Range partition(alias predicate,
         alias .partition!(pred, ss, Range) recurse;
         auto lower = recurse(r[0 .. middle]);
         auto upper = recurse(r[middle .. $]);
-        bringToFront(lower, r[middle .. $ - upper.length]);
-        return r[$ - lower.length - upper.length .. $];
+        bringToFront(lower, r[middle .. r.length - upper.length]);
+        return r[r.length - lower.length - upper.length .. r.length];
     }
     else static if (ss == SwapStrategy.semistable)
     {
@@ -3137,27 +3371,29 @@ Range partition(alias predicate,
     {
         // Inspired from www.stepanovpapers.com/PAM3-partition_notes.pdf,
         // section "Bidirectional Partition Algorithm (Hoare)"
+        auto result = r;
         for (;;)
         {
             for (;;)
             {
-                if (r.empty) return r;
+                if (r.empty) return result;
                 if (!pred(r.front)) break;
                 r.popFront;
+                result.popFront;
             }
             // found the left bound
             assert(!r.empty);
-            auto r1 = r;
             for (;;)
             {
-                if (pred(r1.back)) break;
-                r1.popBack;
-                if (r1.empty) return r;
+                if (pred(r.back)) break;
+                r.popBack;
+                if (r.empty) return result;
             }
             // found the right bound, swap & make progress
-            swap(r.front, r1.back);
+            swap(r.front, r.back);
             r.popFront;
-            r1.popBack;
+            result.popFront;
+            r.popBack;
         }
     }
 }
@@ -3239,13 +3475,13 @@ unittest
 
 // topN
 /**
-Reorders the range $(D r = [first, last$(RPAREN)) using $(D swap) such
-that $(D nth) points to the element that would fall there if the range
-were fully sorted. Effectively, it finds the nth smallest (according
-to $(D less)) element in $(D r). In addition, it also partitions $(D
-r) such that all elements $(D p1) in $(D [first, nth$(RPAREN)) satisfy
-$(D less(*p1, *nth)), and all elements $(D p2) in $(D [nth,
-last$(RPAREN)) satisfy $(D !less(*p2, nth)). Performs $(BIGOH
+Reorders the range $(D r) using $(D swap) such that $(D r[nth]) refers
+to the element that would fall there if the range were fully
+sorted. In addition, it also partitions $(D r) such that all elements
+$(D e1) from $(D r[0]) to $(D r[nth]) satisfy $(D !less(r[nth], e1)),
+and all elements $(D e2) from $(D r[nth]) to $(D r[r.length]) satisfy
+$(D !less(e2, r[nth])). Effectively, it finds the nth smallest
+(according to $(D less)) elements in $(D r). Performs $(BIGOH
 r.length) (if unstable) or $(BIGOH r.length * log(r.length)) (if
 stable) evaluations of $(D less) and $(D swap). See also $(WEB
 sgi.com/tech/stl/nth_element.html, STL's nth_element).
@@ -3285,8 +3521,16 @@ void topN(alias less = "a < b",
         swap(right.front, r.back);
         pivot = r.length - right.length;
         if (pivot == nth) return;
-        if (pivot < nth) r = r[pivot + 1 .. $];
-        else r = r[0 ..pivot];
+        if (pivot < nth)
+        {
+            ++pivot;
+            r = r[pivot .. $];
+            nth -= pivot;
+        }
+        else
+        {
+            r = r[0 .. pivot];
+        }
     }
 }
 
@@ -3318,6 +3562,19 @@ unittest
     n = 0;
     topN(v, n);
     assert(v[n] == 1);
+
+    double[][] v1 = [[-10, -5], [-10, -3], [-10, -5], [-10, -4],
+            [-10, -5], [-9, -5], [-9, -3], [-9, -5],];
+        
+    // double[][] v1 = [ [-10, -5], [-10, -4], [-9, -5], [-9, -5],
+    //         [-10, -5], [-10, -3], [-10, -5], [-9, -3],];
+    double[]*[] idx = [ &v1[0], &v1[1], &v1[2], &v1[3], &v1[4], &v1[5], &v1[6],
+            &v1[7], ];
+    
+    auto mid = v1.length / 2;
+    topN!((a, b){ return (*a)[1] < (*b)[1]; })(idx, mid);
+    foreach (e; idx[0 .. mid]) assert((*e)[1] <= (*idx[mid])[1]);
+    foreach (e; idx[mid .. $]) assert((*e)[1] >= (*idx[mid])[1]);
 }
 
 // sort
@@ -3422,7 +3679,7 @@ void optimisticInsertionSort(alias less, Range)(Range r)
     if (r.length <= 1) return;
     for (auto i = 1; i != r.length; )
     {
-        // move down to find the insertion point
+        // move to the left to find the insertion point
         auto p = i - 1;
         for (;;)
         {
@@ -3434,17 +3691,42 @@ void optimisticInsertionSort(alias less, Range)(Range r)
             if (p == 0) break;
             --p;
         }
+        if (i == p)
+        {
+            // already in place
+            ++i;
+            continue;
+        }
+        assert(less(r[i], r[p]));
         // move up to see how many we can insert
         auto iOld = i, iPrev = i;
         ++i;
-        while (i != e && less(r[i], r[p]) && !less(r[i], r[iPrev]))
-        {
-            ++i;
-            ++iPrev;
-        }
+        // The code commented below has a darn bug in it.
+        // while (i != r.length && less(r[i], r[p]) && !less(r[i], r[iPrev]))
+        // {
+        //     ++i;
+        //     ++iPrev;
+        // }
         // do the insertion
-        rotate(r[p .. i], r[iOld .. $]);
+        //assert(isSorted!(less)(r[0 .. iOld]));
+        //assert(isSorted!(less)(r[iOld .. i]));
+        //assert(less(r[i - 1], r[p]));
+        //assert(p == 0 || !less(r[i - 1], r[p - 1]));
+        bringToFront(r[p .. iOld], r[iOld .. i]);
+        //assert(isSorted!(less)(r[0 .. i]));
     }
+}
+
+unittest
+{
+    auto rnd = Random(1);
+    int a[] = new int[uniform(100, 200, rnd)];
+    foreach (ref e; a) {
+        e = uniform(-100, 100, rnd);
+    }
+
+    optimisticInsertionSort!(binaryFun!("a < b"), int[])(a);
+    assert(isSorted(a));
 }
 
 // @@@BUG1904
@@ -3462,10 +3744,10 @@ void sortImpl(alias less, SwapStrategy ss, Range)(Range r)
         static if (ss == SwapStrategy.unstable)
         {
             // partition
-            swap(r[pivotIdx], r[r.length - 1]);
+            swap(r[pivotIdx], r.back);
             bool pred(ElementType!(Range) a)
             {
-                return less(a, r[r.length - 1]);
+                return less(a, r.back);
             }
             auto right = partition!(pred, ss)(r);
             swap(right.front, r.back);
@@ -3478,8 +3760,15 @@ void sortImpl(alias less, SwapStrategy ss, Range)(Range r)
             }
             else
             {
-                .sortImpl!(less, ss, Range)(r[0 .. r.length - right.length]);
-                r = right[1 .. right.length];
+                auto left = r[0 .. r.length - right.length];
+                right.popFront; // no need to consider right.front,
+                                // it's in the proper place already
+                if (right.length > left.length)
+                {
+                    swap(left, right);
+                }
+                .sortImpl!(less, ss, Range)(right);
+                r = left;
             }
         }
         else // handle semistable and stable the same
@@ -3843,12 +4132,22 @@ unittest
             (index3));
 }
 
+/**
+Specifies whether the output of certain algorithm is desired in sorted
+format.
+ */
+enum SortOutput {
+    no,  /// Don't sort output
+    yes, /// Sort output
+}
+
 void topNIndex(
     alias less = "a < b",
     SwapStrategy ss = SwapStrategy.unstable,
-    Range, RangeIndex)(Range r, RangeIndex index, bool sorted = false)
+    Range, RangeIndex)(Range r, RangeIndex index, SortOutput sorted = SortOutput.no)
 if (isIntegral!(ElementType!(RangeIndex)))
 {
+    if (index.empty) return;
     enforce(ElementType!(RangeIndex).max >= index.length,
             "Index type too small");
     bool indirectLess(ElementType!(RangeIndex) a, ElementType!(RangeIndex) b)
@@ -3860,15 +4159,16 @@ if (isIntegral!(ElementType!(RangeIndex)))
     {
         heap.conditionalPut(cast(ElementType!RangeIndex) i);
     }
-    if (sorted) heap.pop(heap.length);
+    if (sorted == SortOutput.yes) heap.pop(heap.length);
 }
 
 void topNIndex(
     alias less = "a < b",
     SwapStrategy ss = SwapStrategy.unstable,
-    Range, RangeIndex)(Range r, RangeIndex index, bool sorted = false)
+    Range, RangeIndex)(Range r, RangeIndex index, SortOutput sorted = SortOutput.no)
 if (is(ElementType!(RangeIndex) == ElementType!(Range)*))
 {
+    if (index.empty) return;
     static bool indirectLess(const ElementType!(RangeIndex) a,
             const ElementType!(RangeIndex) b)
     {
@@ -3879,7 +4179,7 @@ if (is(ElementType!(RangeIndex) == ElementType!(Range)*))
     {
         heap.conditionalPut(&r[i]);
     }
-    if (sorted) heap.pop(heap.length);
+    if (sorted == SortOutput.yes) heap.pop(heap.length);
 }
 
 unittest
@@ -3887,14 +4187,14 @@ unittest
     {
         int[] a = [ 10, 8, 9, 2, 4, 6, 7, 1, 3, 5 ];
         int*[] b = new int*[5];
-        topNIndex!("a > b")(a, b, true);
+        topNIndex!("a > b")(a, b, SortOutput.yes);
         //foreach (e; b) writeln(*e);
         assert(b == [ &a[0], &a[2], &a[1], &a[6], &a[5]]);
     }
     {
         int[] a = [ 10, 8, 9, 2, 4, 6, 7, 1, 3, 5 ];
         auto b = new ubyte[5];
-        topNIndex!("a > b")(a, b, true);
+        topNIndex!("a > b")(a, b, SortOutput.yes);
         //foreach (e; b) writeln(e, ":", a[e]);
         assert(b == [ cast(ubyte) 0, 2, 1, 6, 5], text(b));
     }
@@ -4348,9 +4648,14 @@ unittest
 /**
 Implements a $(WEB en.wikipedia.org/wiki/Binary_heap, binary heap)
 collection on top of a given range type (usually $(D T[])). The binary
-heap structures the underlying range such that extracting the largest
-element is done fast in $(BIGOH log n). Successive extractions of the
-largest element effect the heapsort algorithm.
+heap induces structure over the underlying range such that accessing
+the largest element is a $(BIGOH 1) operation and extracting it is
+done fast in $(BIGOH log n) time. (If $(D less) is the less-than
+operator, $(D BinaryHeap) defines a so-called max-heap. To define a
+min-heap, instantiate BinaryHeap with $(D "a > b") as its predicate.)
+Successive extractions of the largest element effect the heapsort
+algorithm, which will leave the original range sorted in ascending
+order according to $(D less).
 
 Example:
 ----
@@ -4371,12 +4676,11 @@ struct BinaryHeap(Range, alias less = "a < b") if (isRandomAccessRange!(Range))
 
     //@@@BUG
     //private static void heapify(Range r, size_t i)
-    public void heapify(Range r, size_t i = 0)
+    public void percolateDown(Range r, size_t i = 0)
     {
-        auto b = 0;
         for (;;)
         {
-            auto left = b + (i - b) * 2 + 1, right = left + 1;
+            auto left = i * 2 + 1, right = left + 1;
             if (right == r.length)
             {
                 if (comp(r[i], r[left])) swap(r[i], r[left]);
@@ -4398,7 +4702,7 @@ struct BinaryHeap(Range, alias less = "a < b") if (isRandomAccessRange!(Range))
         assert(!store.empty);
         if (store.length == 1) return;
         swap(store.front, store.back);
-        heapify(store[0 .. store.length - 1]);
+        percolateDown(store[0 .. store.length - 1]);
     }
 
     private void assertValid()
@@ -4422,7 +4726,7 @@ transformed into a heap, after which the heap can grow up to $(D
 r.length). Performs $(BIGOH min(r.length, initialSize)) evaluations of
 $(D less).
  */
-    this(Range r, size_t initialSize = size_t.max)
+    this(Range r, size_t initialSize = size_t.max) //if (isRandomAccessRange!Range)
     {
         acquire(r, initialSize);
     }
@@ -4439,18 +4743,29 @@ Takes ownership of a range.
         // @@@BUG: statement not reachable
         // for (;;)
         // {
-        //     this.heapify(_store, i);
+        //     this.percolateDown(_store, i);
         //     if (i == 0) return;
         //     --i;
         // }
-        this.heapify(_store[0 .. _length], i);
+        this.percolateDown(_store[0 .. _length], i);
         for (; i-- != 0;)
         {
-            this.heapify(_store[0 .. _length], i);
+            this.percolateDown(_store[0 .. _length], i);
         }
         assertValid;
     }
 
+/**
+Takes ownership of a range assuming it already was organized as a
+heap.
+ */    
+    void assume(Range r, size_t initialSize = size_t.max)
+    {
+        _store = r;
+        _length = min(_store.length, initialSize);
+        assertValid;
+    }
+    
 /**
 Clears the heap. Returns the contents of the store (which satisfies
 the $(LUCKY heap property)).
@@ -4511,9 +4826,9 @@ otherwise.
         }
         // must replace the top
         assert(!_store.empty);
-        if (!comp(value, _store.front)) return false;
+        if (!comp(value, _store.front)) return false; // value >= largest
         _store.front = value;
-        heapify(_store[0 .. _length]);
+        percolateDown(_store[0 .. _length]);
         assertValid;
         return true;
     }
@@ -4536,7 +4851,7 @@ Pops the largest element (according to the predicate $(D less)).
         enforce(_length);
         if (_length > 1) swap(_store.front, _store[_length - 1]);
         --_length;
-        heapify(_store[0 .. _length]);
+        percolateDown(_store[0 .. _length]);
     }
 
 /**
@@ -4557,7 +4872,7 @@ heap is sorted and returned.
         {
             swap(_store.front, _store[_length - 1]);
             --_length;
-            heapify(_store[0 .. _length]);
+            percolateDown(_store[0 .. _length]);
         }
         return result;
     }
@@ -4626,20 +4941,21 @@ assert(b == [ 0, 1, 2 ]);
 ----
  */
 TRange topNCopy(alias less = "a < b", SRange, TRange)
-    (SRange source, TRange target, bool sorted = false)
+    (SRange source, TRange target, SortOutput sorted = SortOutput.no)
     if (isInputRange!(SRange) && isRandomAccessRange!(TRange)
             && hasLength!(TRange) && hasSlicing!(TRange))
 {
+    if (target.empty) return target;
     auto heap = BinaryHeap!(TRange, less)(target, 0);
     foreach (e; source) heap.conditionalPut(e);
-    return sorted ? heap.pop(heap.length) : heap.release;
+    return sorted == SortOutput.yes ? heap.pop(heap.length) : heap.release;
 }
 
 unittest
 {
     int[] a = [ 10, 16, 2, 3, 1, 5, 0 ];
     int[] b = new int[3];
-    topNCopy(a, b, true);
+    topNCopy(a, b, SortOutput.yes);
     assert(b == [ 0, 1, 2 ]);
 }
 
@@ -4651,7 +4967,7 @@ unittest
     randomShuffle(a, r);
     auto n = uniform(0, a.length, r);
     int[] b = new int[n];
-    topNCopy!(binaryFun!("a < b"))(a, b, true);
+    topNCopy!(binaryFun!("a < b"))(a, b, SortOutput.yes);
     assert(isSorted!(binaryFun!("a < b"))(b));
 }
 
@@ -4764,8 +5080,6 @@ public:
             return result;
         }
     }
-
-    ref auto opSlice() { return this; }
 }
 
 /// Ditto
@@ -4805,43 +5119,30 @@ assert(equal(setIntersection(a, b, c), [1, 4, 7][]));
 struct SetIntersection(alias less = "a < b", Rs...)
 if (allSatisfy!(isInputRange, Rs))
 {
+    static assert(Rs.length == 2);
 private:
     Rs _input;
     alias binaryFun!(less) comp;
     alias CommonType!(staticMap!(.ElementType, Rs)) ElementType;
-    
+
     void adjustPosition()
     {
-        // we're choosing _input[0].front as pivot and we try to align
-        // all other values to it
-        if (_input[0].empty) return;
-        foreach (i, Unused; Rs)
+        // Positions to the first two elements that are equal
+        while (!empty)
         {
-            // alright, let's bring the two guys in sync
-            for (;;)
+            if (comp(_input[0].front, _input[1].front))
             {
-                if (comp(_input[i].front, _input[0].front))
-                {
-                    // lhs > rhs
-                    _input[i].popFront;
-                    if (_input[i].empty) return;
-                }
-                else if (comp(_input[0].front, _input[i].front))
-                {
-                    // lhs < rhs
-                    _input[0].popFront;
-                    // recurse because we changed the pivot
-                    return adjustPosition;                    
-                }
-                else
-                {
-                    // here fronts are equal, so these two ranges are in sync
-                    break;
-                }
+                _input[0].popFront;
             }
-            // At this point ranges i through i + j are in sync
+            else if (comp(_input[1].front, _input[0].front))
+            {
+                _input[1].popFront;
+            }
+            else
+            {
+                break;
+            }
         }
-        // At this point all ranges are in sync!
     }
     
 public:
@@ -4852,22 +5153,6 @@ public:
         adjustPosition;
     }
     
-    void popFront()
-    {
-        assert(!empty);
-        foreach (i, U; Rs)
-        {
-            _input[i].popFront;
-        }
-        adjustPosition;
-    }
-
-    ElementType front()
-    {
-        assert(!empty);
-        return _input[0].front;
-    }
-
     bool empty()
     {
         foreach (i, U; Rs)
@@ -4877,7 +5162,21 @@ public:
         return false;
     }
 
-    ref auto opSlice() { return this; }
+    void popFront()
+    {
+        assert(!empty);
+        assert(!comp(_input[0].front, _input[1].front)
+                && !comp(_input[1].front, _input[0].front));
+        _input[0].popFront;
+        _input[1].popFront;
+        adjustPosition;
+    }
+
+    ElementType front()
+    {
+        assert(!empty);
+        return _input[0].front;
+    }
 }
 
 /// Ditto
@@ -4896,13 +5195,13 @@ unittest
     //foreach (e; setIntersection(a, b, c)) writeln(e);
     assert(equal(setIntersection(a, b), [1, 2, 4, 7][]));
     assert(equal(setIntersection(a, a), a));
-    assert(equal(setIntersection(a, b, b, a), [1, 2, 4, 7][]));
-    assert(equal(setIntersection(a, b, c), [1, 4, 7][]));
-    assert(equal(setIntersection(a, c, b), [1, 4, 7][]));
-    assert(equal(setIntersection(b, a, c), [1, 4, 7][]));
-    assert(equal(setIntersection(b, c, a), [1, 4, 7][]));
-    assert(equal(setIntersection(c, a, b), [1, 4, 7][]));
-    assert(equal(setIntersection(c, b, a), [1, 4, 7][]));
+    // assert(equal(setIntersection(a, b, b, a), [1, 2, 4, 7][]));
+    // assert(equal(setIntersection(a, b, c), [1, 4, 7][]));
+    // assert(equal(setIntersection(a, c, b), [1, 4, 7][]));
+    // assert(equal(setIntersection(b, a, c), [1, 4, 7][]));
+    // assert(equal(setIntersection(b, c, a), [1, 4, 7][]));
+    // assert(equal(setIntersection(c, a, b), [1, 4, 7][]));
+    // assert(equal(setIntersection(c, b, a), [1, 4, 7][]));
 }
 
 /**
@@ -4965,8 +5264,6 @@ public:
     }
 
     bool empty() { return r1.empty; }
-
-    ref auto opSlice() { return this; }
 }
 
 /// Ditto
@@ -5141,6 +5438,114 @@ version(unittest)
     }
 }
 
+// NWayUnion
+/**
+Computes the union of multiple sets. The input sets are passed as a
+range of ranges and each is assumed to be sorted by $(D
+less). Computation is done lazily, one union element at a time. The
+complexity of one $(D popFront) operation is $(BIGOH
+log(ror.length)). However, the length of $(D ror) decreases as ranges
+in it are exhausted, so the complexity of a full pass through $(D
+NWayUnion) is dependent on the distribution of the lengths of ranges
+contained within $(D ror). If all ranges have the same length $(D n)
+(worst case scenario), the complexity of a full pass through $(D
+NWayUnion) is $(BIGOH n * ror.length * log(ror.length)), i.e., $(D
+log(ror.length)) times worse than just spanning all ranges in
+turn. The output comes sorted (unstably) by $(D less).
+
+Warning: Because $(D NWayUnion) does not allocate extra memory, it
+will leave $(D ror) modified. Namely, $(D NWayUnion) assumes ownership
+of $(D ror) and discretionarily swaps and advances elements of it. If
+you want $(D ror) to preserve its contents after the call, you may
+want to pass a duplicate to $(D NWayUnion) (and perhaps cache the
+duplicate in between calls).
+
+Example:
+----
+double[][] a =
+[
+    [ 1, 4, 7, 8 ],
+    [ 1, 7 ],
+    [ 1, 7, 8],
+    [ 4 ],
+    [ 7 ],
+];
+auto witness = [
+    1, 1, 1, 4, 4, 7, 7, 7, 7, 8, 8
+];
+assert(equal(nWayUnion(a), witness[]));
+----
+ */
+struct NWayUnion(alias less, RangeOfRanges)
+{
+    private alias .ElementType!(.ElementType!RangeOfRanges) ElementType;
+    private alias binaryFun!less comp;   
+    private RangeOfRanges _ror;
+    static bool compFront(.ElementType!RangeOfRanges a, .ElementType!RangeOfRanges b)
+    {
+        // revert comparison order so we get the smallest elements first
+        return comp(b.front, a.front);
+    }
+    BinaryHeap!(RangeOfRanges, compFront) _heap;
+    
+    this(RangeOfRanges ror)
+    {
+        // Preemptively get rid of all empty ranges in the input
+        // No need for stability either
+        _ror = remove!("a.empty", SwapStrategy.unstable)(ror);
+        //Build the heap across the range
+        _heap.acquire(_ror);
+    }
+    
+    bool empty() { return _ror.empty; }
+    
+    ref ElementType front()
+    {
+        return _heap.top.front;
+    }
+    
+    void popFront()
+    {
+        _heap.pop;
+        // let's look at the guy just popped
+        _ror.back.popFront;
+        if (_ror.back.empty)
+        {
+            _ror.popBack;
+            // nothing else to do: the empty range is not in the
+            // heap and not in _ror
+            return;
+        }
+        // Put the popped range back in the heap
+        _heap.conditionalPut(_ror.back) || assert(false);
+    }
+}
+
+/// Ditto
+NWayUnion!(less, RangeOfRanges) nWayUnion
+(alias less = "a < b", RangeOfRanges)
+(RangeOfRanges ror)
+{
+    return typeof(return)(ror);
+}
+
+unittest
+{
+    double[][] a =
+    [
+        [ 1, 4, 7, 8 ],
+        [ 1, 7 ],
+        [ 1, 7, 8],
+        [ 4 ],
+        [ 7 ],
+    ];
+    auto witness = [
+        1, 1, 1, 4, 4, 7, 7, 7, 7, 8, 8
+    ];
+    //foreach (e; nWayUnion(a)) writeln(e);
+    assert(equal(nWayUnion(a), witness[]));
+}
+
 // largestPartialIntersection
 /**
 Given a range of sorted forward ranges $(D ror), copies to $(D tgt)
@@ -5183,70 +5588,66 @@ requires less memory ($(D largestPartialIntersection) builds its
 result directly in $(D tgt) and requires no extra memory).
 
 Warning: Because $(D largestPartialIntersection) does not allocate
-extra memory, it will leave $(D ror) modified. Namely, by the time $(D
-largestPartialIntersection) returns, all ranges in $(D ror) will have
-been advanced until they are empty. If you want $(D ror) to preserve
-its contents after the call, pass a duplicate to $(D
-largestPartialIntersection) (and perhaps cache the duplicate in
-between calls).
+extra memory, it will leave $(D ror) modified. Namely, $(D
+largestPartialIntersection) assumes ownership of $(D ror) and
+discretionarily swaps and advances elements of it. If you want $(D
+ror) to preserve its contents after the call, you may want to pass a
+duplicate to $(D largestPartialIntersection) (and perhaps cache the
+duplicate in between calls).
  */
 void largestPartialIntersection
 (alias less = "a < b", RangeOfRanges, Range)
-(RangeOfRanges ror, Range tgt, bool sorted = false)
+(RangeOfRanges ror, Range tgt, SortOutput sorted = SortOutput.no)
 {
-    // Preemptively get rid of all empty ranges in the input
-    // No need for stability either
-    ror = remove!("a.empty", SwapStrategy.unstable)(ror);
-    
-    alias binaryFun!less comp;
-    alias ElementType!(ElementType!RangeOfRanges) E;
+    struct UnitWeights
+    {
+        static int opIndex(ElementType!(ElementType!RangeOfRanges)) { return 1; }
+    }
+    return largestPartialIntersectionWeighted!less(ror, tgt, UnitWeights(),
+            sorted);
+}
+
+// largestPartialIntersectionWeighted
+/**
+Similar to $(D largestPartialIntersection), but associates a weight
+with each distinct element in the intersection. 
+
+Example:
+----
+// Figure which number can be found in most arrays of the set of
+// arrays below, with specific per-element weights
+double[][] a =
+[
+    [ 1, 4, 7, 8 ],
+    [ 1, 7 ],
+    [ 1, 7, 8],
+    [ 4 ],
+    [ 7 ],
+];
+auto b = new Tuple!(double, uint)[1];
+double[double] weights = [ 1:1.2, 4:2.3, 7:1.1, 8:1.1 ];
+largestPartialIntersectionWeighted(a, b, weights);
+// First member is the item, second is the occurrence count
+assert(b[0] == tuple(4.0, 2u));
+----
+
+The correct answer in this case is $(D 4.0), which, although only
+appears two times, has a total weight $(D 4.6) (three times its weight
+$(D 2.3)). The value $(D 7) is weighted with $(D 1.1) and occurs four
+times for a total weight $(D 4.4).
+ */
+void largestPartialIntersectionWeighted
+(alias less = "a < b", RangeOfRanges, Range, WeightsAA)
+(RangeOfRanges ror, Range tgt, WeightsAA weights, SortOutput sorted = SortOutput.no)
+{
+    if (tgt.empty) return;
     alias ElementType!Range InfoType;
     bool heapComp(InfoType a, InfoType b)
     {
-        return a.field[1] > b.field[1];
+        return weights[a.field[0]] * a.field[1] >
+            weights[b.field[0]] * b.field[1];
     }
-    auto heap = BinaryHeap!(Range, heapComp)(tgt, 0);
-  bigloop:
-    for (;;)
-    {
-        auto tr = frontTransversal!(TransverseOptions.assumeNotJagged)(ror);
-        if (tr.empty) break;
-        auto mc = minCount!less(tr);
-        heap.conditionalPut(mc);
-        // Now remove that minimum element from wherever it occurred
-        for (size_t i = 0; i < ror.length; )
-        {
-            auto r = &ror[i];
-            if ((*r).empty)
-            {
-                // this ought to be removed
-                swap(*r, ror.back);
-                ror.popBack;
-                if (i == ror.length)
-                {
-                    // get outta here for good
-                    break bigloop;
-                }
-                // no increment for i, revisit this guy and see what happens
-                continue;
-            }
-            if (!comp(mc.field[0], (*r).front))
-            {
-                // this guy is equal to the minimum
-                (*r).popFront;
-                // if ror[i] is empty, revisit because we want to get
-                // rid of it
-                if (! (*r).empty) ++i;
-            }
-            else
-            {
-                // normal case: nonempty range and no removal, just
-                // move on
-                ++i;
-            }
-        }
-    }
-    if (sorted) heap.pop(heap.length);
+    topNCopy!heapComp(group(nWayUnion!less(ror)), tgt, sorted);
 }
 
 unittest
@@ -5260,7 +5661,7 @@ unittest
             [ 7 ],
         ];
     auto b = new Tuple!(double, uint)[2];
-    largestPartialIntersection(a, b, true);
+    largestPartialIntersection(a, b, SortOutput.yes);
     //sort(b);
     //writeln(b);
     assert(b == [ tuple(7., 4u), tuple(1., 3u) ][], text(b));
@@ -5278,9 +5679,29 @@ unittest
             [ "7" ],
         ];
     auto b = new Tuple!(string, uint)[2];
-    largestPartialIntersection(a, b, true);
+    largestPartialIntersection(a, b, SortOutput.yes);
     //writeln(b);
     assert(b == [ tuple("7", 4u), tuple("1", 3u) ][], text(b));
+}
+
+unittest
+{
+// Figure which number can be found in most arrays of the set of
+// arrays below, with specific per-element weights
+    double[][] a =
+        [
+            [ 1, 4, 7, 8 ],
+            [ 1, 7 ],
+            [ 1, 7, 8],
+            [ 4 ],
+            [ 7 ],
+            ];
+    auto b = new Tuple!(double, uint)[1];
+    double[double] weights = [ 1:1.2, 4:2.3, 7:1.1, 8:1.1 ];
+    largestPartialIntersectionWeighted(a, b, weights);
+// First member is the item, second is the occurrence count
+    //writeln(b[0]);
+    assert(b[0] == tuple(4.0, 2u));
 }
 
 /*
