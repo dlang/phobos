@@ -1100,7 +1100,7 @@ void f2() { auto b = to!(string)(a); }
 auto r = benchmark!(f0, f1, f2)(10_000_000);
 ----
  */
-uint[] benchmark(fun...)(uint times, uint[] result = null)
+ulong[] benchmark(fun...)(uint times, ulong[] result = null)
 {
     result.length = fun.length;
     result.length = 0;
@@ -1111,7 +1111,7 @@ uint[] benchmark(fun...)(uint times, uint[] result = null)
         {
             fun[i]();
         }
-        auto delta = getUTCtime - t;
+        immutable delta = getUTCtime - t;
         result ~= delta;
     }
     foreach (ref e; result)
