@@ -187,7 +187,7 @@ private:
     public template allowed(T)
     {
         enum bool allowed = is(T == VariantN) || T.sizeof <= size
-            && (!AllowedTypes.length || indexOf!(T, AllowedTypes) >= 0);
+            && (!AllowedTypes.length || indexOfType!(T, AllowedTypes) >= 0);
     }
 
     // Each internal operation is encoded with an identifier. See
@@ -930,7 +930,7 @@ public:
     /// ditto
     VariantN opIndexAssign(T, N)(T value, N i)
     {
-        VariantN args[2] = [ VariantN(value), VariantN(i) ];
+        VariantN[2] args = [ VariantN(value), VariantN(i) ];
         fptr(OpID.indexAssign, &store, &args) == 0 || assert(false);
         return args[0];
     }
