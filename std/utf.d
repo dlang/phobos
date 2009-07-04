@@ -43,7 +43,7 @@
 module std.utf;
 
 private import std.stdio;
-import std.contracts;
+import std.contracts, std.conv, std.range, std.typecons;
 
 //debug=utf;		// uncomment to turn on debugging printf's
 
@@ -53,8 +53,8 @@ deprecated class UtfError : Error
 
     this(string s, size_t i)
     {
-	idx = i;
-	super(s);
+        idx = i;
+        super(s);
     }
 }
 
@@ -64,12 +64,22 @@ deprecated class UtfError : Error
 
 class UtfException : Exception
 {
-    size_t idx;	/// index in string of where error occurred
+    //size_t idx;	/// index in string of where error occurred
+    uint[4] sequence;
+    size_t len;
 
-    this(string s, size_t i)
+    this(string s, dchar[] data...)
     {
-        idx = i;
+        len = data.length;
+        foreach (i, e; data) sequence[i] = e;
         super(s);
+    }
+
+    override string toString()
+    {
+        string result = "Invalid UTF sequence:";
+        foreach (i; 0 .. len) result ~= " " ~ to!string(sequence[i]);
+        return result;
     }
 }
 
@@ -103,7 +113,7 @@ unittest
 }
 
 
-invariant ubyte[256] UTF8stride =
+private invariant ubyte[256] UTF8stride =
 [
     1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
     1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
@@ -168,15 +178,15 @@ size_t toUCSindex(in char[] s, size_t i)
 {
     size_t n;
     size_t j;
-
+    
     for (j = 0; j < i; )
     {
-	j += stride(s, j);
-	n++;
+        j += stride(s, j);
+        n++;
     }
     if (j > i)
     {
-	throw new UtfException("1invalid UTF-8 sequence", j);
+        throw new UtfException("1invalid UTF-8 sequence");
     }
     return n;
 }
@@ -195,7 +205,7 @@ size_t toUCSindex(in wchar[] s, size_t i)
     }
     if (j > i)
     {
-	throw new UtfException("2invalid UTF-16 sequence", j);
+	throw new UtfException("2invalid UTF-16 sequence");
     }
     return n;
 }
@@ -219,7 +229,7 @@ size_t toUTFindex(in char[] s, size_t n)
     {
 	uint j = UTF8stride[s[i]];
 	if (j == 0xFF)
-	    throw new UtfException("3invalid UTF-8 sequence", i);
+	    throw new UtfException("3invalid UTF-8 sequence ", s[i]);
 	i += j;
     }
     return i;
@@ -255,25 +265,23 @@ size_t toUTFindex(in dchar[] s, size_t n)
  */
 
 dchar decode(in char[] s, inout size_t idx)
-    in
-    {
-	assert(idx >= 0 && idx < s.length);
-    }
-    out (result)
-    {
+in
+{
+    assert(idx >= 0 && idx < s.length);
+}
+out (result)
+{
 	assert(isValidDchar(result));
-    }
-    body
-    {
+}
+body
+{
 	size_t len = s.length;
 	dchar V;
 	size_t i = idx;
 	char u = s[i];
-
+    
 	if (u & 0x80)
-	{   uint n;
-	    char u2;
-
+	{        
 	    /* The following encodings are valid, except for the 5 and 6 byte
 	     * combinations:
 	     *	0xxxxxxx
@@ -283,23 +291,24 @@ dchar decode(in char[] s, inout size_t idx)
 	     *	111110xx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx
 	     *	1111110x 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx
 	     */
-	    for (n = 1; ; n++)
+        uint n = 1;
+        for (; ; n++)
 	    {
-		if (n > 4)
-		    goto Lerr;		// only do the first 4 of 6 encodings
-		if (((u << n) & 0x80) == 0)
-		{
-		    if (n == 1)
-			goto Lerr;
-		    break;
-		}
+            if (n > 4)
+                goto Lerr;		// only do the first 4 of 6 encodings
+            if (((u << n) & 0x80) == 0)
+            {
+                if (n == 1)
+                    goto Lerr;
+                break;
+            }
 	    }
 
 	    // Pick off (7 - n) significant bits of B from first byte of octet
 	    V = cast(dchar)(u & ((1 << (7 - n)) - 1));
 
-	    if (i + (n - 1) >= len)
-		goto Lerr;			// off end of string
+	    if (i + n > len)
+            goto Lerr;			// off end of string
 
 	    /* The following combinations are overlong, and illegal:
 	     *	1100000x (10xxxxxx)
@@ -308,23 +317,23 @@ dchar decode(in char[] s, inout size_t idx)
 	     *	11111000 10000xxx (10xxxxxx 10xxxxxx 10xxxxxx)
 	     *	11111100 100000xx (10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx)
 	     */
-	    u2 = s[i + 1];
+	    auto u2 = s[i + 1];
 	    if ((u & 0xFE) == 0xC0 ||
-		(u == 0xE0 && (u2 & 0xE0) == 0x80) ||
-		(u == 0xF0 && (u2 & 0xF0) == 0x80) ||
-		(u == 0xF8 && (u2 & 0xF8) == 0x80) ||
-		(u == 0xFC && (u2 & 0xFC) == 0x80))
-		goto Lerr;			// overlong combination
-
-	    for (uint j = 1; j != n; j++)
+                (u == 0xE0 && (u2 & 0xE0) == 0x80) ||
+                (u == 0xF0 && (u2 & 0xF0) == 0x80) ||
+                (u == 0xF8 && (u2 & 0xF8) == 0x80) ||
+                (u == 0xFC && (u2 & 0xFC) == 0x80))
+            goto Lerr;			// overlong combination
+        
+	    foreach (j; 1 .. n)
 	    {
-		u = s[i + j];
-		if ((u & 0xC0) != 0x80)
-		    goto Lerr;			// trailing bytes are 10xxxxxx
-		V = (V << 6) | (u & 0x3F);
+            u = s[i + j];
+            if ((u & 0xC0) != 0x80)
+                goto Lerr;			// trailing bytes are 10xxxxxx
+            V = (V << 6) | (u & 0x3F);
 	    }
 	    if (!isValidDchar(V))
-		goto Lerr;
+            goto Lerr;
 	    i += n;
 	}
 	else
@@ -335,11 +344,11 @@ dchar decode(in char[] s, inout size_t idx)
 
 	idx = i;
 	return V;
-
-      Lerr:
+    
+  Lerr:
 	//printf("\ndecode: idx = %d, i = %d, length = %d s = \n'%.*s'\n%x\n'%.*s'\n", idx, i, s.length, s, s[i], s[i .. length]);
-	throw new UtfException("4invalid UTF-8 sequence", i);
-    }
+	throw new UtfException("4invalid UTF-8 sequence", s[i]);
+}
 
 unittest
 {   size_t i;
@@ -397,16 +406,16 @@ unittest
 /** ditto */
 
 dchar decode(in wchar[] s, inout size_t idx)
-    in
-    {
+in
+{
 	assert(idx >= 0 && idx < s.length);
-    }
-    out (result)
-    {
+}
+out (result)
+{
 	assert(isValidDchar(result));
-    }
-    body
-    {
+}
+body
+{
 	string msg;
 	dchar V;
 	size_t i = idx;
@@ -416,28 +425,28 @@ dchar decode(in wchar[] s, inout size_t idx)
 	{   if (u >= 0xD800 && u <= 0xDBFF)
 	    {   uint u2;
 
-		if (i + 1 == s.length)
-		{   msg = "surrogate UTF-16 high value past end of string";
-		    goto Lerr;
-		}
-		u2 = s[i + 1];
-		if (u2 < 0xDC00 || u2 > 0xDFFF)
-		{   msg = "surrogate UTF-16 low value out of range";
-		    goto Lerr;
-		}
-		u = ((u - 0xD7C0) << 10) + (u2 - 0xDC00);
-		i += 2;
+            if (i + 1 == s.length)
+            {   msg = "surrogate UTF-16 high value past end of string";
+                goto Lerr;
+            }
+            u2 = s[i + 1];
+            if (u2 < 0xDC00 || u2 > 0xDFFF)
+            {   msg = "surrogate UTF-16 low value out of range";
+                goto Lerr;
+            }
+            u = ((u - 0xD7C0) << 10) + (u2 - 0xDC00);
+            i += 2;
 	    }
 	    else if (u >= 0xDC00 && u <= 0xDFFF)
 	    {   msg = "unpaired surrogate UTF-16 value";
-		goto Lerr;
+            goto Lerr;
 	    }
 	    else if (u == 0xFFFE || u == 0xFFFF)
 	    {   msg = "illegal UTF-16 value";
-		goto Lerr;
+            goto Lerr;
 	    }
 	    else
-		i++;
+            i++;
 	}
 	else
 	{
@@ -447,19 +456,19 @@ dchar decode(in wchar[] s, inout size_t idx)
 	idx = i;
 	return cast(dchar)u;
 
-      Lerr:
-	throw new UtfException(msg, i);
-    }
+  Lerr:
+	throw new UtfException(msg, s[i]);
+}
 
 /** ditto */
 
 dchar decode(in dchar[] s, inout size_t idx)
-    in
-    {
+in
+{
 	assert(idx >= 0 && idx < s.length);
-    }
-    body
-    {
+}
+body
+{
 	size_t i = idx;
 	dchar c = s[i];
 
@@ -468,10 +477,217 @@ dchar decode(in dchar[] s, inout size_t idx)
 	idx = i + 1;
 	return c;
 
-      Lerr:
-	throw new UtfException("5invalid UTF-32 value", i);
+  Lerr:
+	throw new UtfException("5invalid UTF-32 value", c);
+}
+
+// Decodes one dchar from input range $(D r). Returns the decoded
+// character and the shortened range.
+dchar decodeFront(Range)(ref Range r)
+out (result)
+{
+	assert(isValidDchar(result));
+}
+body
+{
+    enforce(!r.empty);
+	char u = r.front;
+    r.popFront;
+    
+	if (!(u & 0x80))
+    {
+        // simplest case: one single character
+        return u;
+    }
+    
+    void enforce(bool c)
+    {
+        if (c) return;
+        throw new UtfException("Invalid UTF-8 sequence", u);
+    }
+    
+    /* The following encodings are valid, except for the 5 and 6 byte
+     * combinations:
+     *	0xxxxxxx
+     *	110xxxxx 10xxxxxx
+     *	1110xxxx 10xxxxxx 10xxxxxx
+     *	11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
+     *	111110xx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx
+     *	1111110x 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx
+     */
+    uint n = void;
+    switch (u & 0b1111_0000)
+    {
+    case 0b1100_0000: case 0b1101_0000:
+        n = 2;
+        break;
+    case 0b1110_0000:
+        n = 3;
+        break;
+    case 0b1111_0000:
+        enforce(!(u & 0b0000_1000));
+        n = 4;
+        break;
+    default:
+        enforce(0);
     }
 
+    // Pick off (7 - n) significant bits of B from first byte of octet
+    auto result = cast(dchar) (u & ((1 << (7 - n)) - 1));
+
+    /* The following combinations are overlong, and illegal:
+     *	1100000x (10xxxxxx)
+     *	11100000 100xxxxx (10xxxxxx)
+     *	11110000 1000xxxx (10xxxxxx 10xxxxxx)
+     *	11111000 10000xxx (10xxxxxx 10xxxxxx 10xxxxxx)
+     *	11111100 100000xx (10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx)
+     */
+    char u2 = r.front;
+    enforce(!((u & 0xFE) == 0xC0 ||
+                    (u == 0xE0 && (u2 & 0xE0) == 0x80) ||
+                    (u == 0xF0 && (u2 & 0xF0) == 0x80) ||
+                    (u == 0xF8 && (u2 & 0xF8) == 0x80) ||
+                    (u == 0xFC && (u2 & 0xFC) == 0x80))); // overlong combination
+    
+    foreach (j; 1 .. n)
+    {
+        enforce(!r.empty);
+        u = r.front;
+        r.popFront;
+        enforce((u & 0xC0) == 0x80); // trailing bytes are 10xxxxxx
+        result = (result << 6) | (u & 0x3F);
+    }
+    enforce(isValidDchar(result));
+	return result;
+}
+
+unittest
+{
+    debug(utf) printf("utf.decodeFront.unittest\n");
+
+    static string s1 = "abcd";
+    auto c = decodeFront(s1);
+    assert(c == cast(dchar)'a');
+    assert(s1 == "bcd");
+    c = decodeFront(s1);
+    assert(c == cast(dchar)'b');
+    assert(s1 == "cd");
+
+    static string s2 = "\xC2\xA9";
+    c = decodeFront(s2);
+    assert(c == cast(dchar)'\u00A9');
+    assert(s2 == "");
+
+    static string s3 = "\xE2\x89\xA0";
+    c = decodeFront(s3);
+    assert(c == cast(dchar)'\u2260');
+    assert(s3 == "");
+
+    static string[] s4 =
+    [	"\xE2\x89",		// too short
+	"\xC0\x8A",
+	"\xE0\x80\x8A",
+	"\xF0\x80\x80\x8A",
+	"\xF8\x80\x80\x80\x8A",
+	"\xFC\x80\x80\x80\x80\x8A",
+    ];
+
+    for (int j = 0; j < s4.length; j++)
+    {
+        int i = 0;
+        try
+        {
+            c = decodeFront(s4[j]);
+            assert(0);
+        }
+        catch (UtfException u)
+        {
+            i = 23;
+            delete u;
+        }
+        assert(i == 23);
+    }
+}
+
+// Decodes one dchar from input range $(D r). Returns the decoded
+// character and the shortened range.
+dchar decodeBack(Range)(ref Range r)
+{
+    enforce(!r.empty);
+    char[4] chars;
+    chars[3] = r.back;
+    r.popBack;
+    if (! (chars[3] & 0x80))
+    {
+        return chars[3];
+    }
+    size_t idx = 2;
+    chars[2] = r.back;
+    r.popBack;
+    /* The following encodings are valid, except for the 5 and 6 byte
+     * combinations:
+     *	0xxxxxxx
+     *	110xxxxx 10xxxxxx
+     *	1110xxxx 10xxxxxx 10xxxxxx
+     *	11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
+     *	111110xx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx
+     *	1111110x 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx
+     */
+    if (! (chars[idx] & 0b0100_0000)) { chars[1] = r.back; r.popBack; idx = 1; }
+    if (! (chars[idx] & 0b0100_0000)) { chars[0] = r.back; r.popBack; idx = 0; }
+    auto encoded = chars[idx .. $];
+    auto decoded = decodeFront(encoded);
+    enforce(encoded.empty);
+    return decoded;
+}
+
+unittest
+{
+    debug(utf) printf("utf.decodeBack.unittest\n");
+
+    static string s1 = "abcd";
+    auto c = decodeBack(s1);
+    assert(c == cast(dchar)'d');
+    assert(s1 == "abc");
+    c = decodeBack(s1);
+    assert(c == cast(dchar)'c');
+    assert(s1 == "ab");
+
+    static string s2 = "\xC2\xA9";
+    c = decodeBack(s2);
+    assert(c == cast(dchar)'\u00A9');
+    assert(s2 == "");
+
+    static string s3 = "\xE2\x89\xA0";
+    c = decodeBack(s3);
+    assert(c == cast(dchar)'\u2260');
+    assert(s3 == "");
+
+    static string[] s4 =
+    [	"\xE2\x89",		// too short
+	"\xC0\x8A",
+	"\xE0\x80\x8A",
+	"\xF0\x80\x80\x8A",
+	"\xF8\x80\x80\x80\x8A",
+	"\xFC\x80\x80\x80\x80\x8A",
+    ];
+
+    for (int j = 0; j < s4.length; j++)
+    {
+        int i;
+        try
+        {
+            c = decodeBack(s4[j]);
+            assert(0);
+        }
+        catch (UtfException u)
+        {
+            i = 23;
+            delete u;
+        }
+        assert(i == 23);
+    }
+}
 
 /* =================== Encode ======================= */
 
@@ -481,7 +697,7 @@ actual length of the encoded character (a number between 1 and 4 for
 $(D char[4]) buffers, and between 1 and 2 for $(D wchar[2]) buffers).
  */
 
-size_t encode(/*ref*/ char[4] buf, dchar c)
+size_t encode(/*ref*/ char[4] buf, in dchar c)
 in
 {
     assert(isValidDchar(c));
