@@ -468,6 +468,18 @@ unittest
     assert(walkLength(a, 0) == 3);
 }
 
+private template isRetro(R)
+{
+    static if (is(R R1 == Retro!R2, R2))
+    {
+        enum isRetro = true;
+    }
+    else
+    {
+        enum isRetro = false;
+    }
+}
+
 /**
 Iterates a bidirectional range backwards.
 
@@ -477,12 +489,15 @@ int[] a = [ 1, 2, 3, 4, 5 ];
 assert(equal(retro(a) == [ 5, 4, 3, 2, 1 ][]));
 ----
  */
-struct Retro(R) if (isBidirectionalRange!(R))
+struct Retro(R) if (isBidirectionalRange!(R) && !isRetro!R)
 {
 private:
     R _input;
+    enum bool byRef = is(typeof(&(R.init.front())));
     
 public:
+    alias R Source;
+    
 /**
 Returns $(D this).
  */
@@ -515,22 +530,28 @@ Forwards to $(D _input.popFront).
         _input.popFront;
     }
 
+/// @@@UGLY@@@
 /**
 Forwards to $(D _input.back).
  */
-    ref ElementType!(R) front()
-    {
-        return _input.back;
-    }
+    mixin(
+        (byRef ? "ref " : "")~
+        q{ElementType!(R) front()
+            {
+                return _input.back;
+            }
+        });
 
 /**
 Forwards to $(D _input.front).
  */
-    ref ElementType!(R) back()
-    {
-        return _input.front;
-    }
-
+    mixin(
+        (byRef ? "ref " : "")~
+        q{ElementType!(R) back()
+            {
+                return _input.front;
+            }
+        });
 /**
 Forwards to $(D _input[_input.length - n + 1]). Defined only if $(D R)
 is a random access range and if $(D R) defines $(D R.length).
@@ -553,13 +574,24 @@ hasLength!(R)).
         }
 }
 
+template Retro(R) if (isRetro!R)
+{
+    alias R.Source Retro;
+}
+
 /// Ditto
-Retro!(R) retro(R)(R input)
-    if (isBidirectionalRange!(R))
-{ return Retro!(R)(input); }
+Retro!(R) retro(R)(R input) if (isBidirectionalRange!(R))
+{
+    static if (isRetro!R)
+        return input._input;
+    else
+        return Retro!(R)(input);
+}
 
 unittest
 {
+    int[] a;
+    static assert(is(typeof(a) == typeof(retro(retro(a)))));
     static assert(isRandomAccessRange!(Retro!(int[])));
     void test(int[] input, int[] witness)
     {
@@ -1141,6 +1173,8 @@ private:
     enum bool byRef = is(typeof(&(R.init[0])));
     
 public:
+    alias R Source;
+    
     static if (byRef)
         alias ref .ElementType!(R) ElementType;
     else
@@ -1157,7 +1191,8 @@ public:
         _input.popFront;
         --_maxAvailable;
     }
-    
+
+    // @@@@@@@@@@@ UGLY @@@@@@@@@@@@@@@
     mixin(
         (byRef ? "ref " : "")~
         q{ElementType front()
@@ -1950,7 +1985,7 @@ struct Recurrence(alias fun, StateType, size_t stateSize)
     void popFront()
     {
         _state[_n % stateSize] = binaryFun!(fun, "a", "n")(
-            cycle(_state, _n), _n);
+            cycle(_state, _n), _n + stateSize);
         ++_n;
     }
 
@@ -1974,7 +2009,7 @@ recurrence(alias fun, State...)(State initial)
     return typeof(return)(state);
 }
 
-version(none) unittest
+unittest
 {
     auto fib = recurrence!("a[n-1] + a[n-2]")(1, 1);
     int[] witness = [1, 1, 2, 3, 5, 8, 13, 21, 34, 55 ];
@@ -1982,8 +2017,9 @@ version(none) unittest
     assert(equal(take(10, fib), witness));
     foreach (e; take(10, fib)) {}//writeln(e);
     //writeln(s.front);
-    auto fact = recurrence!("a[n - 1] * n")(1);
-    foreach (e; take(10, fact)) {}//writeln(e);
+    auto fact = recurrence!("n * a[n-1]")(1);
+    assert( equal(take(10, fact), [1, 1, 2, 2*3, 2*3*4, 2*3*4*5, 2*3*4*5*6,
+                            2*3*4*5*6*7, 2*3*4*5*6*7*8, 2*3*4*5*6*7*8*9][]) );
     auto piapprox = recurrence!("a[n] + (n & 1 ? 4. : -4.) / (2 * n + 3)")(4.);
     foreach (e; take(20, piapprox)) {}//writeln(e);
 }
@@ -2085,8 +2121,10 @@ Take!(Sequence!("a.field[0] + n * a.field[1]",
 iota(B, E, S)(B begin, E end, S step)
 {
     enforce(step != 0);
-    alias Sequence!("a.field[0] + n * a.field[1]", Tuple!(B, S)) Seq;
-    return take((end - begin + step - 1) / step, Seq(tuple(begin, step), 0u));
+    return typeof(return)
+        ((end - begin + step - 1) / step,
+                typeof(return).Source(
+                    Tuple!(CommonType!(B, E), S)(begin, step), 0u));
 }
 
 /// Ditto
@@ -2109,6 +2147,12 @@ unittest
     auto r1 = iota(a.ptr, a.ptr + a.length, 1);
     assert(r1.front == a.ptr);
     assert(r1.back == a.ptr + a.length);
+}
+
+unittest
+{
+    auto idx = new size_t[100];
+    copy(iota(0, idx.length), idx);
 }
 
 /**
