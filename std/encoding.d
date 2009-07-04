@@ -1196,7 +1196,7 @@ template EncoderInstance(CharType : dchar)
         return isValidCodePoint(c);
     }
 
-    bool isValidCodeUnit(wchar c)
+    bool isValidCodeUnit(dchar c)
     {
         return isValidCodePoint(c);
     }
@@ -1213,7 +1213,7 @@ template EncoderInstance(CharType : dchar)
 
     void encodeViaWrite()(dchar c)
     {
-        write(cast(dchar)c);
+        write(c);
     }
 
     void skipViaRead()()
@@ -2916,7 +2916,7 @@ version(unittest)
         {
             if (c >= 0x20 && c < 0x80)
             {
-                r ~= c;
+                r ~= cast(char) c;
             }
             else
             {
@@ -2934,11 +2934,11 @@ version(unittest)
     string makeReadable(dstring s)
     {
         string r = "\"";
-        foreach(dchar c;s)
+        foreach(dchar c; s)
         {
             if (c >= 0x20 && c < 0x80)
             {
-                r ~= c;
+                r ~= cast(char) c;
             }
             else if (c < 0x10000)
             {
