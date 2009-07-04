@@ -4169,3 +4169,18 @@ deprecated int irfind(in char[] s, dchar c)
 {
     return lastIndexOf(s, c, CaseSensitive.no);
 }
+
+deprecated int ifind(in char[] s, in char[] c)
+{
+    return indexOf(s, c, CaseSensitive.no);
+}
+
+deprecated int rfind(in char[] s, in char[] c)
+{
+    return lastIndexOf(s, c, CaseSensitive.yes);
+}
+
+deprecated int irfind(in char[] s, in char[] c)
+{
+    return lastIndexOf(s, c, CaseSensitive.no);
+}
