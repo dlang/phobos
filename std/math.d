@@ -1314,7 +1314,8 @@ pure nothrow real log10(real x)
 
 unittest
 {
-    assert(log10(1000) == 3);
+    //printf("%Lg\n", log10(1000) - 3);
+    assert(fabs(log10(1000) - 3) < .000001);
 }
 
 /******************************************

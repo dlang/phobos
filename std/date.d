@@ -1112,7 +1112,7 @@ ulong[] benchmark(fun...)(uint times, ulong[] result = null)
             fun[i]();
         }
         immutable delta = getUTCtime - t;
-        result ~= delta;
+        result ~= cast(uint)delta;
     }
     foreach (ref e; result)
     {

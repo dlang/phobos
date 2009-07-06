@@ -2096,7 +2096,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
                 for (int c; (c = FGETWC(fp)) != -1; )
                 {
                     if ((c & ~0x7F) == 0)
-                        buf ~= cast(char) c;
+                        buf ~= cast(char)c;
                     else
                         std.utf.encode(buf, cast(dchar)c);
                     if (c == terminator)
@@ -2179,7 +2179,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
                 for (int c; (c = FGETWC(fp)) != -1; )
                 {
                     if ((c & ~0x7F) == 0)
-                        buf ~= c;
+                        buf ~= cast(char)c;
                     else
                         std.utf.encode(buf, cast(dchar)c);
                     if (c == terminator)
@@ -2198,7 +2198,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
         buf.length = 0;
         for (int c; (c = FGETC(fp)) != -1; )
         {
-            buf ~= c;
+            buf ~= cast(char)c;
             if (c == terminator)
                 break;
         }

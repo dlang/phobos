@@ -599,24 +599,24 @@ template InterfacesTuple(T)
 
 unittest
 {
-    interface I1 {}
-    interface I2 {}
+    interface J1 {}
+    interface J2 {}
     {
         // doc example
-        class A : I1, I2 { }
-        class B : A, I1 { }
+        class A : J1, J2 { }
+        class B : A, J1 { }
         class C : B { }
         alias InterfacesTuple!(C) TL;
-        assert(is(TL[0] == I1) && is(TL[1] == I2));
+        assert(is(TL[0] == J1) && is(TL[1] == J2));
     }
-    class B1 : I1, I2 {}
-    class B2 : B1, I1 {}
-    class B3 : B2, I2 {}
+    class B1 : J1, J2 {}
+    class B2 : B1, J1 {}
+    class B3 : B2, J2 {}
     alias InterfacesTuple!(B3) TL;
     //
     assert(TL.length == 2);
-    assert(is (TL[0] == I2));
-    assert(is (TL[1] == I1));
+    assert(is (TL[0] == J2));
+    assert(is (TL[1] == J1));
 }
 
 /**
@@ -653,18 +653,18 @@ template TransitiveBaseTypeTuple(T)
 
 unittest
 {
-    interface I1 {}
-    interface I2 {}
+    interface J1 {}
+    interface J2 {}
     class B1 {}
-    class B2 : B1, I1, I2 {}
-    class B3 : B2, I1 {}
+    class B2 : B1, J1, J2 {}
+    class B3 : B2, J1 {}
     alias TransitiveBaseTypeTuple!(B3) TL;
     assert(TL.length == 5);
     assert(is (TL[0] == B2));
     assert(is (TL[1] == B1));
     assert(is (TL[2] == Object));
-    assert(is (TL[3] == I1));
-    assert(is (TL[4] == I2));
+    assert(is (TL[3] == J1));
+    assert(is (TL[4] == J2));
     
     assert(TransitiveBaseTypeTuple!(Object).length == 0);
 }
