@@ -412,7 +412,7 @@ private:
 
         case OpID.catAssign:
             auto me = cast(A*) pStore;
-            static if (is(typeof((*me)[0])) && !is(typeof(me.keys)))
+            static if (is(typeof((*me)[0])) && is(typeof((*me) ~= *me)))
             {
                 // array type; parm is the element to append
                 auto arg = cast(VariantN*) parm;
