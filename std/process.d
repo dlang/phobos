@@ -48,6 +48,7 @@ private import core.stdc.errno;
 private import std.contracts;
 version (Windows)
 {
+    import std.array, std.format, std.random, std.file;
     private import std.stdio : readln, fclose;
     private import std.c.windows.windows:GetCurrentProcessId;
 }
@@ -315,35 +316,39 @@ else version (Windows)
    ... use f ...
    ----
 */
-string shell(string cmd)
+version (linux) string shell(string cmd)
 {
-    version (linux)
+    File f;
+    f.popen(cmd, "r");
+    char[] line;
+    string result;
+    while (f.readln(line))
     {
-        File f;
-        f.popen(cmd, "r");
-        char[] line;
-        string result;
-        while (f.readln(line))
-        {
-            result ~= line;
-        }
-        f.close;
-        return result;
+        result ~= line;
     }
-    else
+    f.close;
+    return result;
+}
+
+version (Windows) string shell(string cmd)
+{
+    // Generate a random filename
+    Appender!string a;
+    foreach (ref e; 0 .. 8)
     {
-        enforce(false, "shell() function not yet implemented on Windows");
-        return null;
+        formattedWrite(a, "%x", rndGen.front);
+        rndGen.popFront;
     }
+    auto filename = a.data;
+    scope(exit) if (exists(filename)) remove(filename);
+    errnoEnforce(system(cmd ~ "> " ~ filename) == 0);
+    return readText(filename);
 }
 
 unittest
 {
-    version (linux)
-    {
-        auto x = shell("echo wyda");
-        assert(x == "wyda\n");
-    }
+    auto x = shell("echo wyda");
+    assert(x == "wyda\n");
 }
 
 /**
