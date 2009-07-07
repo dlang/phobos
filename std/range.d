@@ -2121,10 +2121,20 @@ Take!(Sequence!("a.field[0] + n * a.field[1]",
 iota(B, E, S)(B begin, E end, S step)
 {
     enforce(step != 0);
-    return typeof(return)
-        ((end - begin + step - 1) / step,
-                typeof(return).Source(
-                    Tuple!(CommonType!(B, E), S)(begin, step), 0u));
+    auto approxCount = (end - begin + step - 1) / step;
+    static if (isFloatingPoint!(typeof(approxCount)))
+    {
+        enforce(approxCount <= size_t.max,
+            "iota: too many items in range");
+        invariant count = cast(size_t) approxCount;
+    }
+    else
+    {
+        size_t count = approxCount;
+    }
+    return typeof(return)(count,
+            typeof(return).Source(
+                Tuple!(CommonType!(B, E), S)(begin, step), 0u));
 }
 
 /// Ditto
