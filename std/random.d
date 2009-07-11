@@ -543,7 +543,7 @@ else
 if (is(CommonType!(T1, UniformRandomNumberGenerator) == void) &&
         !is(CommonType!(T1, T2) == void))
 {
-    alias CommonType!(T1, T2) NumberType;
+    alias Unqual!(CommonType!(T1, T2)) NumberType;
     NumberType _a, _b;
     static if (boundaries[0] == '(')
         static if (isIntegral!(NumberType) || is(Unqual!NumberType : dchar))
