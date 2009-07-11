@@ -21,7 +21,7 @@ import std.algorithm;
 import std.functional;
 version(unittest)
 {
-    import std.stdio;
+    import std.conv, std.math, std.stdio;
 }
 
 /**
@@ -1203,9 +1203,15 @@ public:
 
     static if (isInfinite!(R))
     {
-        size_t length()
+        size_t length() const
         {
             return _maxAvailable;
+        }
+
+        void popBack()
+        {
+            enforce(_maxAvailable);
+            --_maxAvailable;
         }
     }
     else static if (hasLength!(R))
@@ -1214,8 +1220,22 @@ public:
         {
             return min(_maxAvailable, _input.length);
         }
-    }
 
+        static if (isBidirectionalRange!(R))
+        {
+            void popBack()
+            {
+                if (_maxAvailable > _input.length)
+                {
+                    --_maxAvailable;
+                }
+                else
+                {
+                    _input.popBack;
+                }
+            }
+        }
+    }
     
     static if (isRandomAccessRange!(R))
     {
@@ -1230,6 +1250,7 @@ public:
     }
 
     static if (isBidirectionalRange!(R))
+    {
         mixin(
             (byRef ? "ref " : "")~
             q{ElementType back()
@@ -1237,14 +1258,19 @@ public:
                     return _input.back;
                 }
             });
-    else static if (isRandomAccessRange!(R))
+    }
+    else static if (isRandomAccessRange!(R) && isInfinite!(R))
+    {
+        // Random access but not bidirectional could happen in the
+        // case of e.g. some infinite ranges
         mixin(
             (byRef ? "ref " : "")~
             q{ElementType back()
                 {
-                    return _input[length];
+                    return _input[length - 1];
                 }
             });
+    }
     
     Take opSlice() { return this; }
 }
@@ -1592,14 +1618,6 @@ assert(equal(lst, [1, 2, 3, 4, 5][]));
     }
     
 /**
-Returns $(D this).
- */
-    ref SListRange opSlice()
-    {
-        return this;
-    }
-
-/**
 Range primitive operation that returns $(D true) iff there are no more
 elements to be iterated.
  */
@@ -1653,16 +1671,9 @@ unittest
 {
     {
         SListRange!(int, Topology.flexible) lst;
-        pragma(msg, " --- std.range(1603) broken test ---");
-        // DAC: DMD2.029 can't deduce the Topology argument.       
-        /+
         lst = cons(3, lst);
         lst = cons(2, lst);
         lst = cons(1, lst);
-        +/
-        lst = cons!(int, Topology.flexible)(3, lst);
-        lst = cons!(int, Topology.flexible)(2, lst);
-        lst = cons!(int, Topology.flexible)(1, lst);
         assert(equal(lst, [1, 2, 3][]));
     }
     {
@@ -2075,7 +2086,7 @@ public:
         return compute(this._state, n);
     }
 
-     enum bool empty = false;
+    enum bool empty = false;
 }
 
 /// Ditto
@@ -2114,29 +2125,52 @@ assert(equal(r, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9][]));
 r = iota(0, 11, 3);
 assert(equal(r, [0, 3, 6, 9][]));
 assert(r[2] == 6);
+auto rf = iota(0.0, 0.5, 0.1);
+assert(equal(rf, [0.0, 0.1, 0.2, 0.3, 0.4]));
 ----
  */
 Take!(Sequence!("a.field[0] + n * a.field[1]",
                 Tuple!(CommonType!(B, E), S)))
 iota(B, E, S)(B begin, E end, S step)
+if (is(typeof((E.init - B.init) + 1 * S.init)))
 {
     enforce(step != 0);
-    auto approxCount = (end - begin + step - 1) / step;
-    static if (isFloatingPoint!(typeof(approxCount)))
+    enforce(begin <= end && step > 0
+            || begin >= end && step < 0);
+
+    // actual count must be strictly less than aBitAboveCount
+    immutable ebs = end - begin + step;
+    auto aBitAboveCount = ebs / step;
+    assert(aBitAboveCount >= 0);
+
+    // "less" function that is "greater" for negative step
+    bool myless(typeof(ebs) a, typeof(ebs) b)
     {
-        enforce(approxCount <= size_t.max,
+        return step > 0 ? a < b : a > b;
+    }
+    
+    if (!myless(aBitAboveCount * step, ebs)) --aBitAboveCount;
+    static if (isFloatingPoint!(typeof(aBitAboveCount)))
+    {
+        enforce(aBitAboveCount <= size_t.max,
             "iota: too many items in range");
-        invariant count = cast(size_t) approxCount;
+        auto count = cast(size_t) aBitAboveCount;
     }
     else
     {
-        size_t count = approxCount;
+        size_t count = aBitAboveCount;
     }
+    if (myless(count * step, end - begin)) ++count;
+    assert(myless((count - 1) * step, end - begin),
+            text("begin=", begin, "; end=", end, "; step=", step,
+                    "; count=", count));
+    assert(!myless(count * step, end - begin), text("begin=", begin,
+                    "; end=", end, "; step=", step, "; count=", count));
     return typeof(return)(count,
             typeof(return).Source(
                 Tuple!(CommonType!(B, E), S)(begin, step), 0u));
 }
-
+       
 /// Ditto
 Take!(Sequence!("a.field[0] + n * a.field[1]",
                 Tuple!(CommonType!(B, E), uint)))
@@ -2147,16 +2181,34 @@ iota(B, E)(B begin, E end)
 
 unittest
 {
-    auto r = iota(0, 10);
+    auto r = iota(0, 10, 1);
     assert(equal(r, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9][]));
-    r = iota(0, 11, 3u);
+    r = iota(0, -10, -1);
+    assert(equal(r, [0, -1, -2, -3, -4, -5, -6, -7, -8, -9][]));
+    r = iota(0, 11, 3);
     assert(equal(r, [0, 3, 6, 9][]));
     assert(r[2] == 6);
 
     int[] a = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
     auto r1 = iota(a.ptr, a.ptr + a.length, 1);
     assert(r1.front == a.ptr);
-    assert(r1.back == a.ptr + a.length);
+    assert(r1.back == a.ptr + a.length - 1);
+
+    auto rf = iota(0.0, 0.5, 0.1);
+    //foreach (e; rf) writeln(e - 0.3);
+    assert(approxEqual(rf, [0.0, 0.1, 0.2, 0.3, 0.4][]));
+    // With something just above 0.5
+    rf = iota(0.0, nextUp(0.5), 0.1);
+    //foreach (e; rf) writeln(e);
+    assert(approxEqual(rf, [0.0, 0.1, 0.2, 0.3, 0.4, 0.5][]));
+
+    // going down
+    rf = iota(0.0, -0.5, -0.1);
+    //foreach (e; rf) writeln(e);
+    assert(approxEqual(rf, [0.0, -0.1, -0.2, -0.3, -0.4][]));
+    rf = iota(0.0, nextDown(-0.5), -0.1);
+    //foreach (e; rf) writeln(e);
+    assert(approxEqual(rf, [0.0, -0.1, -0.2, -0.3, -0.4, -0.5][]));
 }
 
 unittest
