@@ -2131,10 +2131,10 @@ import std.format;
 
 string myFormat(A...)(A args)
 {
-    StringWriter!(char) writer;
+    Appender!(string) writer;
     std.format.formattedWrite(writer,
         "%s et %s numeris romanis non sunt", args);
-    return writer.backend;
+    return writer.data;
 }
 ...
 int x = 42;
@@ -2146,9 +2146,9 @@ opengroup.org/onlinepubs/009695399/functions/printf.html, POSIX)
 style.  Example:
 
 -------------------------
-StringWriter!(char) writer;
+Appender!(string) writer;
 std.format.formattedWrite(writer, "Date: %2$s %1$s", "October", 5);
-assert(writer.backend == "Date: 5 October");
+assert(writer.data == "Date: 5 October");
 ------------------------
 
 The positional and non-positional styles can be mixed in the same
