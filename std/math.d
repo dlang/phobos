@@ -45,11 +45,8 @@ module(system) std.math;
 
 //debug=math;           // uncomment to turn on debugging printf's
 
-private import std.stdio;
-private import std.c.stdio;
-private import std.string;
-private import std.c.math;
-private import std.traits;
+import core.stdc.math, core.stdc.stdio;
+import std.range, std.stdio, std.string, std.traits;
 
 version(GNU){
     // GDC can't actually do inline asm.
@@ -468,11 +465,11 @@ unittest
  *      $(TR $(TD $(NAN))    $(TD $(NAN))  $(TD yes))
  *  )
  */
-float acos(float x)               { return std.c.math.acosf(x); }
+float acos(float x)               { return core.stdc.math.acosf(x); }
 /// ditto
-double acos(double x)               { return std.c.math.acos(x); }
+double acos(double x)               { return core.stdc.math.acos(x); }
 /// ditto
-real acos(real x)               { return std.c.math.acosl(x); }
+real acos(real x)               { return core.stdc.math.acosl(x); }
 
 /***************
  * Calculates the arc sine of x,
@@ -485,11 +482,11 @@ real acos(real x)               { return std.c.math.acosl(x); }
  *      $(TR $(TD $(LT)-1.0)    $(TD $(NAN))       $(TD yes))
  *  )
  */
-float asin(float x)               { return std.c.math.asinf(x); }
+float asin(float x)               { return core.stdc.math.asinf(x); }
 /// ditto
-double asin(double x)               { return std.c.math.asin(x); }
+double asin(double x)               { return core.stdc.math.asin(x); }
 /// ditto
-real asin(real x)               { return std.c.math.asinl(x); }
+real asin(real x)               { return core.stdc.math.asinl(x); }
 
 /***************
  * Calculates the arc tangent of x,
@@ -501,11 +498,11 @@ real asin(real x)               { return std.c.math.asinl(x); }
  *      $(TR $(TD $(PLUSMN)$(INFIN)) $(TD $(NAN))       $(TD yes))
  *  )
  */
-float atan(float x)               { return std.c.math.atanf(x); }
+float atan(float x)               { return core.stdc.math.atanf(x); }
 /// ditto
-double atan(double x)               { return std.c.math.atan(x); }
+double atan(double x)               { return core.stdc.math.atan(x); }
 /// ditto
-real atan(real x)               { return std.c.math.atanl(x); }
+real atan(real x)               { return core.stdc.math.atanl(x); }
 
 /***************
  * Calculates the arc tangent of y / x,
@@ -528,11 +525,11 @@ real atan(real x)               { return std.c.math.atanl(x); }
  *      $(TR $(TD $(PLUSMN)$(INFIN)) $(TD -$(INFIN))    $(TD $(PLUSMN)3$(PI)/4))
  *      )
  */
-float atan2(float y, float x)      { return std.c.math.atan2f(y,x); }
+float atan2(float y, float x)      { return core.stdc.math.atan2f(y,x); }
 /// ditto
-double atan2(double y, double x)      { return std.c.math.atan2(y,x); }
+double atan2(double y, double x)      { return core.stdc.math.atan2(y,x); }
 /// ditto
-real atan2(real y, real x)      { return std.c.math.atan2l(y,x); }
+real atan2(real y, real x)      { return core.stdc.math.atan2l(y,x); }
 
 /***********************************
  * Calculates the hyperbolic cosine of x.
@@ -833,7 +830,7 @@ pure nothrow real exp(real x) {
    // and exp2 are so similar).
     return exp2(LOG2E*x);
     } else {
-        return std.c.math.exp(x);        
+        return core.stdc.math.exp(x);        
     }    
 }
 /// ditto
@@ -929,7 +926,7 @@ L_largenegative:
         ret PARAMSIZE;
       }
     } else {
-        return std.c.math.expm1(x);                
+        return core.stdc.math.expm1(x);                
     }
 }
 
@@ -1028,7 +1025,7 @@ L_was_nan:
         ret PARAMSIZE;
       }
     } else {
-        return std.c.math.exp2(x);
+        return core.stdc.math.exp2(x);
     }    
 }
 
@@ -1245,10 +1242,10 @@ unittest
  *      $(TR $(TD $(NAN))            $(TD FP_ILOGBNAN) $(TD no))
  *      )
  */
-int ilogb(real x)               { return std.c.math.ilogbl(x); }
+int ilogb(real x)               { return core.stdc.math.ilogbl(x); }
 
-alias std.c.math.FP_ILOGB0   FP_ILOGB0;
-alias std.c.math.FP_ILOGBNAN FP_ILOGBNAN;
+alias core.stdc.math.FP_ILOGB0   FP_ILOGB0;
+alias core.stdc.math.FP_ILOGBNAN FP_ILOGBNAN;
 
 
 /*******************************************
@@ -1285,7 +1282,7 @@ pure nothrow real log(real x)
     version (INLINE_YL2X)
 	return yl2x(x, LN2);
     else
-	return std.c.math.logl(x);
+	return core.stdc.math.logl(x);
 }
 
 unittest
@@ -1307,9 +1304,9 @@ unittest
 pure nothrow real log10(real x)
 {
     version (INLINE_YL2X)
-	return yl2x(x, LOG2);
+        return yl2x(x, LOG2);
     else
-	return std.c.math.log10l(x);
+        return core.stdc.math.log10l(x);
 }
 
 unittest
@@ -1339,7 +1336,7 @@ pure nothrow real log1p(real x) {
        //    ie if -0.29<=x<=0.414
        return (fabs(x) <= 0.25)  ? yl2xp1(x, LN2) : yl2x(x+1, LN2);
    } else {
-      return std.c.math.log1pl(x); 
+      return core.stdc.math.log1pl(x); 
    }
 }
 
@@ -1359,7 +1356,7 @@ pure nothrow real log2(real x)
     version (INLINE_YL2X)
 	return yl2x(x, 1);
     else
-	return std.c.math.log2l(x);
+	return core.stdc.math.log2l(x);
 }
 
 /*****************************************
@@ -1376,7 +1373,7 @@ pure nothrow real log2(real x)
  *      $(TR $(TD $(PLUSMN)0.0)      $(TD -$(INFIN)) $(TD yes) )
  *      )
  */
-real logb(real x)               { return std.c.math.logbl(x); }
+real logb(real x)               { return core.stdc.math.logbl(x); }
 
 /************************************
  * Calculates the remainder from the calculation x/y.
@@ -1392,7 +1389,7 @@ real logb(real x)               { return std.c.math.logbl(x); }
  *  $(TR $(TD !=$(PLUSMNINF)) $(TD $(PLUSMNINF))  $(TD x)            $(TD no))
  * )
  */
-real modf(real x, inout real y) { return std.c.math.modfl(x,&y); }
+real modf(real x, inout real y) { return core.stdc.math.modfl(x,&y); }
 
 /*************************************
  * Efficiently calculates x * 2$(SUP n).
@@ -1417,7 +1414,7 @@ real scalbn(real x, int n)
             fstp ST(1), ST;
         }
     } else {
-        return std.c.math.scalbnl(x, n);
+        return core.stdc.math.scalbnl(x, n);
     }
 }
 
@@ -1435,7 +1432,7 @@ unittest {
  *      $(TR $(TD $(PLUSMN)$(INFIN)) $(TD $(PLUSMN)$(INFIN)) $(TD no) )
  *      )
  */
-real cbrt(real x)               { return std.c.math.cbrtl(x); }
+real cbrt(real x)               { return core.stdc.math.cbrtl(x); }
 
 
 /*******************************
@@ -1538,14 +1535,14 @@ unittest
  *
  * <img src="erf.gif" alt="error function">
  */
-real erf(real x)                { return std.c.math.erfl(x); }
+real erf(real x)                { return core.stdc.math.erfl(x); }
 
 /**********************************
  * Returns the complementary error function of x, which is 1 - erf(x).
  *
  * <img src="erfc.gif" alt="complementary error function">
  */
-real erfc(real x)               { return std.c.math.erfcl(x); }
+real erfc(real x)               { return core.stdc.math.erfcl(x); }
 
 /***********************************
  * Natural logarithm of gamma function.
@@ -1564,7 +1561,7 @@ real erfc(real x)               { return std.c.math.erfcl(x); }
  */
 real lgamma(real x)
 {
-    return std.c.math.lgammal(x);
+    return core.stdc.math.lgammal(x);
 
     // Use etc.gamma.lgamma for those C systems that are missing it
 }
@@ -1595,7 +1592,7 @@ real lgamma(real x)
  */
 real tgamma(real x)
 {
-    return std.c.math.tgammal(x);
+    return core.stdc.math.tgammal(x);
 
     // Use etc.gamma.tgamma for those C systems that are missing it
 }
@@ -1604,13 +1601,13 @@ real tgamma(real x)
  * Returns the value of x rounded upward to the next integer
  * (toward positive infinity).
  */
-real ceil(real x)               { return std.c.math.ceill(x); }
+real ceil(real x)               { return core.stdc.math.ceill(x); }
 
 /**************************************
  * Returns the value of x rounded downward to the next integer
  * (toward negative infinity).
  */
-real floor(real x)              { return std.c.math.floorl(x); }
+real floor(real x)              { return core.stdc.math.floorl(x); }
 
 /******************************************
  * Rounds x to the nearest integer value, using the current rounding
@@ -1619,7 +1616,7 @@ real floor(real x)              { return std.c.math.floorl(x); }
  * Unlike the rint functions, nearbyint does not raise the
  * FE_INEXACT exception.
  */
-real nearbyint(real x) { return std.c.math.nearbyintl(x); }
+real nearbyint(real x) { return core.stdc.math.nearbyintl(x); }
 
 /**********************************
  * Rounds x to the nearest integer value, using the current rounding
@@ -1644,7 +1641,7 @@ pure nothrow real rint(real x);      /* intrinsic */
 long lrint(real x)
 {
     version (Posix)
-        return std.c.math.llrintl(x);
+        return core.stdc.math.llrintl(x);
     else version(D_InlineAsm_X86)
     {
         long n;
@@ -1664,7 +1661,7 @@ long lrint(real x)
  * If the fractional part of x is exactly 0.5, the return value is rounded to
  * the even integer.
  */
-real round(real x) { return std.c.math.roundl(x); }
+real round(real x) { return core.stdc.math.roundl(x); }
 
 /**********************************************
  * Return the value of x rounded to the nearest integer.
@@ -1675,14 +1672,14 @@ real round(real x) { return std.c.math.roundl(x); }
 long lround(real x)
 {
     version (Posix)
-        return std.c.math.llroundl(x);    else        throw new NotImplemented("lround");}
+        return core.stdc.math.llroundl(x);    else        throw new NotImplemented("lround");}
 
 /****************************************************
  * Returns the integer portion of x, dropping the fractional portion.
  *
  * This is also known as "chop" rounding.
  */
-real trunc(real x) { return std.c.math.truncl(x); }
+real trunc(real x) { return core.stdc.math.truncl(x); }
 
 /****************************************************
  * Calculate the remainder x REM y, following IEC 60559.
@@ -1706,12 +1703,12 @@ real trunc(real x) { return std.c.math.truncl(x); }
  *
  * Note: remquo not supported on windows
  */
-real remainder(real x, real y) { return std.c.math.remainderl(x, y); }
+real remainder(real x, real y) { return core.stdc.math.remainderl(x, y); }
 
 real remquo(real x, real y, out int n)  /// ditto
 {
     version (Posix)
-        return std.c.math.remquol(x, y, &n);
+        return core.stdc.math.remquol(x, y, &n);
     else
         throw new NotImplemented("remquo");
 }
@@ -2405,7 +2402,7 @@ unittest
     assert(nextafter(c, c.infinity) > c);
 }
 
-//real nexttoward(real x, real y) { return std.c.math.nexttowardl(x, y); }
+//real nexttoward(real x, real y) { return core.stdc.math.nexttowardl(x, y); }
 
 /*******************************************
  * Returns the positive difference between x and y.
@@ -2642,7 +2639,7 @@ version(INLINE_YL2X) {
 return exp2(yl2x(y, x));
 }
 */
-    return std.c.math.powl(x, y);
+    return core.stdc.math.powl(x, y);
 }
 
 unittest
@@ -3045,32 +3042,46 @@ unittest
    Computes whether $(D lhs) is approximately equal to $(D rhs)
    admitting a maximum relative difference $(D maxRelDiff) and a
    maximum absolute difference $(D maxAbsDiff).
+
+   If the two inputs are ranges, $(D approxEqual) returns true if and
+   only if the ranges have the same number of elements and if $(D
+   approxEqual) evaluates to $(D true) for each pair of elements.
  */
-// BUG: Not nothrow, because of the assert in the array case. 
-pure bool approxEqual(T, U, V)(T lhs, U rhs, V maxRelDiff, V maxAbsDiff = 0)
+bool approxEqual(T, U, V)(T lhs, U rhs, V maxRelDiff, V maxAbsDiff = 0)
 {
-    static if (isArray!(T)) {
-        immutable n = lhs.length;
-        static if (isArray!(U)) {
-            // Two arrays
-            assert(n == rhs.length);
-            for (uint i = 0; i != n; ++i) {
-                if (!approxEqual(lhs[i], rhs[i], maxRelDiff, maxAbsDiff))
-                    return false;
-            }
-        } else {
-            // lhs is array, rhs is number
-            for (uint i = 0; i != n; ++i) {
-                if (!approxEqual(lhs[i], rhs, maxRelDiff, maxAbsDiff))
+    static if (isInputRange!T)
+    {
+        static if (isInputRange!U)
+        {
+            // Two ranges
+            for (;; lhs.popFront, rhs.popFront)
+            {
+                if (lhs.empty) return rhs.empty;
+                if (rhs.empty) return lhs.empty;
+                if (!approxEqual(lhs.front, rhs.front, maxRelDiff, maxAbsDiff))
                     return false;
             }
         }
-        return true;
-    } else {
-        static if (isArray!(U)) {
+        else
+        {
+            // lhs is range, rhs is number
+            for (; !lhs.empty; lhs.popFront)
+            {
+                if (!approxEqual(lhs.front, rhs, maxRelDiff, maxAbsDiff))
+                    return false;
+            }
+            return true;
+        }
+    }
+    else
+    {
+        static if (isInputRange!U)
+        {
             // lhs is number, rhs is array
-            return approxEqual(rhs, lhs, maxRelDiff);
-        } else {
+            return approxEqual(rhs, lhs, maxRelDiff, maxAbsDiff);
+        }
+        else
+        {
             // two numbers
             //static assert(is(T : real) && is(U : real));
             if (rhs == 0) {
@@ -3085,7 +3096,8 @@ pure bool approxEqual(T, U, V)(T lhs, U rhs, V maxRelDiff, V maxAbsDiff = 0)
 /**
    Returns $(D approxEqual(lhs, rhs, 0.01)).
  */
-pure bool approxEqual(T, U)(T lhs, U rhs) {
+bool approxEqual(T, U)(T lhs, U rhs)
+{
     return approxEqual(lhs, rhs, 0.01);
 }
 
