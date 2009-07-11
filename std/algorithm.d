@@ -3509,18 +3509,23 @@ void topN(alias less = "a < b",
 {
     static assert(ss == SwapStrategy.unstable,
             "Stable topN not yet implemented");
-    while (!r.empty)
+    while (r.length > nth)
     {
         auto pivot = r.length / 2;
         swap(r[pivot], r.back);
+        assert(!binaryFun!(less)(r.back, r.back));
         bool pred(ElementType!(Range) a)
         {
             return binaryFun!(less)(a, r.back);
         }
         auto right = partition!(pred, ss)(r);
+        assert(right.length >= 1);
         swap(right.front, r.back);
         pivot = r.length - right.length;
-        if (pivot == nth) return;
+        if (pivot == nth)
+        {
+            return;
+        }
         if (pivot < nth)
         {
             ++pivot;
@@ -3529,6 +3534,7 @@ void topN(alias less = "a < b",
         }
         else
         {
+            assert(pivot < r.length);
             r = r[0 .. pivot];
         }
     }
@@ -3541,17 +3547,20 @@ unittest
     int[] v = [ 7, 6, 5, 4, 3, 2, 1, 0 ];
     auto n = 3;
     topN!("a < b")(v, n);
-    assert(v[n] == n);
+    assert(reduce!max(v[0 .. n]) <= v[n]);
+    assert(reduce!min(v[n + 1 .. $]) >= v[n]);
     //
     v = ([3, 4, 5, 6, 7, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5]).dup;
     n = 3;
     topN(v, n);
-    assert(v[n] == 3);
+    assert(reduce!max(v[0 .. n]) <= v[n]);
+    assert(reduce!min(v[n + 1 .. $]) >= v[n]);
     //
     v = ([3, 4, 5, 6, 7, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5]).dup;
     n = 1;
     topN(v, n);
-    assert(v[n] == 2);
+    assert(reduce!max(v[0 .. n]) <= v[n]);
+    assert(reduce!min(v[n + 1 .. $]) >= v[n]);
     //
     v = ([3, 4, 5, 6, 7, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5]).dup;
     n = v.length - 1;
@@ -3575,6 +3584,24 @@ unittest
     topN!((a, b){ return (*a)[1] < (*b)[1]; })(idx, mid);
     foreach (e; idx[0 .. mid]) assert((*e)[1] <= (*idx[mid])[1]);
     foreach (e; idx[mid .. $]) assert((*e)[1] >= (*idx[mid])[1]);
+}
+
+unittest
+{
+    int[] a = new int[uniform(1, 10000)];
+        foreach (ref e; a) e = uniform(-1000, 1000);
+    auto k = uniform(0, a.length);
+    topN(a, k);
+    if (k > 0)
+    {
+        auto left = reduce!max(a[0 .. k]);
+        assert(left <= a[k]);
+    }
+    if (k + 1 < a.length)
+    {
+        auto right = reduce!min(a[k + 1 .. $]);
+        assert(right >= a[k]);
+    }
 }
 
 // sort
