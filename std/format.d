@@ -784,7 +784,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
 
 	    case Mangle.Tpointer:
 		vnumber = cast(ulong)va_arg!(void*)(argptr);
-		uc = 1;
+		if (fc != 'x' && fc != 'X')		uc = 1;
 		flags |= FL0pad;
 		if (!(flags & FLprecision))
 		{   flags |= FLprecision;
