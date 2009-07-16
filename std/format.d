@@ -747,7 +747,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
 
 	    case Mangle.Tpointer:
 		vnumber = cast(ulong)va_arg!(void*)(argptr);
-		uc = 1;
+		if (fc != 'x')  uc = 1;
 		flags |= FL0pad;
 		if (!(flags & FLprecision))
 		{   flags |= FLprecision;
@@ -2060,7 +2060,7 @@ private void formatGeneric(Writer, D)(ref Writer w, const(void)* arg,
             }
         }
     } else static if (is(const(D) : const void*)) {
-        f.spec = 'X';
+        if (f.spec!='x') f.spec = 'X';
         const fake = cast(ulong) obj;
         formatGeneric!(Writer, ulong)(w, &fake, f);
     } else static if (is(const(D) : const Object)) {
