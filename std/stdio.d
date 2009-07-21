@@ -316,7 +316,7 @@ First calls $(D detach) (throwing on failure), and then runs a command
 by calling the C standard library function $(WEB
 opengroup.org/onlinepubs/007908799/xsh/_popen.html, _popen).
  */
-    version(linux) void popen(string command, string stdioOpenmode = "r")
+    version(Posix) void popen(string command, string stdioOpenmode = "r")
     {
         detach;
         p = new Impl(errnoEnforce(.popen(command, stdioOpenmode),
@@ -1808,7 +1808,7 @@ Initialize with a message and an error code. */
     this(string message, uint e = .getErrno)
     {
         errno = e;
-        version (linux)
+        version (Posix)
         {
             char[256] buf = void;
             assert(false);

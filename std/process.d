@@ -4,7 +4,7 @@
  *  Copyright (C) 2003-2009 by Digital Mars, http://www.digitalmars.com
  *  Written by Matthew Wilson and Walter Bright
  *
- *  Incorporating idea (for execvpe() on Linux) from Russ Lewis
+ *  Incorporating idea (for execvpe() on Posix) from Russ Lewis
  *
  *  Updated: 21st August 2004
  *
@@ -81,7 +81,7 @@ int system(string command)
     const commandz = toStringz(command);
     invariant status = std.c.process.system(commandz);
     if (status == -1) return status;
-    version (linux)
+    version (Posix)
         return (status & 0x0000ff00) >>> 8;
     else
         return status;
@@ -111,7 +111,7 @@ private void toAStringz(in string[] a, const(char)**az)
 //    }
 //}
 
-// Incorporating idea (for spawnvp() on linux) from Dave Fladebo
+// Incorporating idea (for spawnvp() on Posix) from Dave Fladebo
 
 alias std.c.process._P_WAIT P_WAIT;
 alias std.c.process._P_NOWAIT P_NOWAIT;
@@ -316,7 +316,7 @@ else version (Windows)
    ... use f ...
    ----
 */
-version (linux) string shell(string cmd)
+version (Posix) string shell(string cmd)
 {
     File f;
     f.popen(cmd, "r");
@@ -387,7 +387,7 @@ version(Posix) void unsetenv(in char[] name)
 
 unittest
 {
-  version (linux)
+  version (Posix)
   {
     setenv("wyda", "geeba", true);
     assert(getenv("wyda") == "geeba");
