@@ -412,9 +412,9 @@ in {
     assert(ax<>=0 && bx<>=0, "Limits must not be NaN");
     assert(signbit(fax) != signbit(fbx), "Parameters must bracket the root.");
 }
-body {   
-// This code is (heavily) modified from TOMS748 (www.netlib.org). Some ideas
-// were borrowed from the Boost Mathematics Library.
+body {
+// Author: Don Clugston. This code is (heavily) modified from TOMS748 (www.netlib.org).
+// The changes to improve the worst-cast performance are entirely original.
 
     T a, b, d;  // [a..b] is our current bracket. d is the third best guess.
     R fa, fb, fd; // Values of f at a, b, d.
@@ -596,8 +596,8 @@ whileloop:
             if ((a-b) == a || (b-a) == b) {
                 if ( (a>0 && b<0) || (a<0 && b>0) ) c = 0;
                 else {
-                    if (a==0) c = ieeeMean(copysign(0.0L, b), b);
-                    else if (b==0) c = ieeeMean(copysign(0.0L, a), a);
+                    if (a==0) c = ieeeMean(cast(T)copysign(0.0L, b), b);
+                    else if (b==0) c = ieeeMean(cast(T)copysign(0.0L, a), a);
                     else c = ieeeMean(a, b);
                 }
             } else {
@@ -811,6 +811,10 @@ unittest
         return x<0.3*real.max? -0.999e-3 : 1.0;
     }
     testFindRoot(&worstcase, -real.max, real.max);
+    
+    // just check that the double + float cases compile
+    findRoot((double x){ return 0.0; }, -double.max, double.max);
+    findRoot((float x){ return 0.0f; }, -float.max, float.max);
        
 /*   
    int grandtotal=0;
