@@ -193,6 +193,7 @@ const(void)[] uncompress(const(void)[] srcbuf, uint destlen = 0u, int winbits = 
 		throw new ZlibException(err);
 	}
     }
+    assert(0);
 }
 
 unittest

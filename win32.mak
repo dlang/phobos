@@ -26,7 +26,7 @@ CP=cp
 
 ## Directory where dmd has been installed
 
-DIR=\dmd
+DIR=\dmd2
 
 ## Flags for dmc C compiler
 
@@ -763,8 +763,8 @@ cleanhtml:
 	del $(DOCS)
 
 install:
-	$(CP) phobos.lib $(DIR)\lib
-	$(CP) $(DRUNTIME)\lib\gcstub.obj $(DIR)\lib
+	$(CP) phobos.lib $(DIR)\windows\lib
+	$(CP) $(DRUNTIME)\lib\gcstub.obj $(DIR)\windows\lib
 	$(CP) win32.mak linux.mak osx.mak phoboslicense.txt std.ddoc $(DIR)\src\phobos
 	$(CP) $(SRC) $(DIR)\src\phobos
 	$(CP) $(SRC_STD) $(DIR)\src\phobos\std
