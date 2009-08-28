@@ -904,10 +904,10 @@ void mulInner(Big a, UpPtr rp, WideDigit y)
         poke(rp,c);
         xp = next(xp);
         rp = next(rp);
-        c = updateShr(c);
+        c = updateUShr(c);
     }
 
-    mixin(runOnce(   "mulCore","updateShr","xs","y"));
+    mixin(runOnce(   "mulCore","updateUShr","xs","y"));
 }
 
 void divInner(DownPtr xp, DownPtr cachePtr, size_t len)
@@ -1591,6 +1591,10 @@ debug unittest
         auto z = makeBig( 0x00012345, 0x6789ABCD, 0xEFEDCBA9, 0x87654321 );
         auto r = mul(x,y);
         assert(r.digits == z.digits, hex(r));
+	 // Bugzilla 2987
+        BigInt a = "871782912000";
+        BigInt b = "760005445655199744000000";
+        assert(a * a == b);
     }
 
     // This block of unittests demonstrates that mul(Big,uint) works
