@@ -47,8 +47,6 @@ class TypeInfo_Ag : TypeInfo
 		    break;
 	    }
 	}
-
-	return hash;
     }
 
     int equals(void *p1, void *p2)

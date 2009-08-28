@@ -35,8 +35,6 @@ class TypeInfo_As : TypeInfo
 		    break;
 	    }
 	}
-
-	return hash;
     }
 
     int equals(void *p1, void *p2)
