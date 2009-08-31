@@ -52,8 +52,6 @@ import std.range;
 
 unittest
 {
-version (none) // fails unit tests
-{
     ubyte[][] validStrings =
     [
         // Plain ASCII
@@ -353,7 +351,6 @@ version (none) // fails unit tests
         assert(buffer[0] == 0xC3);
         assert(buffer[1] == 0xA3);
     }
-}
 }
 
 //=============================================================================
@@ -1056,7 +1053,7 @@ template EncoderInstance(CharType : char)
 
     dchar decodeReverseViaRead()()
     {
-        auto c = read;
+        dchar c = read;
         if (c < 0x80) return c;
         uint shift = 0;
         c &= 0x3F;

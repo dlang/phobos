@@ -7,12 +7,12 @@
  * Authors:
  *
  * $(WEB digitalmars.com, Walter Bright), Tomasz Stachowiak ($(D
- *	isExpressionTuple)), $(WEB erdani.org, Andrei Alexandrescu)
+ *        isExpressionTuple)), $(WEB erdani.org, Andrei Alexandrescu)
  *
  * Macros:
- *	WIKI = Phobos/StdTraits
+ *        WIKI = Phobos/StdTraits
  * Copyright:
- *	Public Domain
+ *        Public Domain
  */
 
 module std.traits;
@@ -32,10 +32,10 @@ import std.typetuple;
  */
 template ReturnType(alias dg)
 {
-    static if (is(typeof(dg)))	// if dg is an expression
-	alias ReturnType!(typeof(dg), void) ReturnType;
-    else			// dg is a type
-	alias ReturnType!(dg, void) ReturnType;
+    static if (is(typeof(dg)))        // if dg is an expression
+        alias ReturnType!(typeof(dg), void) ReturnType;
+    else                        // dg is a type
+        alias ReturnType!(dg, void) ReturnType;
 }
 
 template ReturnType(dg, dummy = void)
@@ -44,19 +44,17 @@ template ReturnType(dg, dummy = void)
         alias R ReturnType;
     else static if (is(dg T : T*))
         alias ReturnType!(T, void) ReturnType;
-    else static if (is(dg S == struct))
-        alias ReturnType!(typeof(&dg.opCall), void) ReturnType;
-    else static if (is(dg C == class))
+    else static if (is(typeof(&dg.opCall) == return))
         alias ReturnType!(typeof(&dg.opCall), void) ReturnType;
     else
-	    static assert(0, "argument has no return type");
+        static assert(0, "argument has no return type");
 }
 
 unittest
 {
     struct G
     {
-	int opCall (int i) { return 1;}
+        int opCall (int i) { return 1;}
     }
 
     alias ReturnType!(G) ShouldBeInt;
@@ -71,7 +69,7 @@ unittest
 
     class C
     {
-	int opCall (int i) { return 1;}
+        int opCall (int i) { return 1;}
     }
 
     static assert(is(ReturnType!(C) == int));
@@ -81,23 +79,28 @@ unittest
 }
 
 /***
- * Get the types of the paramters to a function,
- * a pointer to function, or a delegate as a tuple.
- * Example:
- * ---
- * import std.traits;
- * int foo(int, long);
- * void bar(ParameterTypeTuple!(foo));      // declares void bar(int, long);
- * void abc(ParameterTypeTuple!(foo)[1]);   // declares void abc(long);
- * ---
- */
+Get, as a tuple, the types of the parameters to a function, a pointer
+to function, a delegate, a struct with an $(D opCall), a pointer to a
+struct with an $(D opCall), or a class with an $(D opCall).
+ 
+Example:
+---
+import std.traits;
+int foo(int, long);
+void bar(ParameterTypeTuple!(foo));      // declares void bar(int, long);
+void abc(ParameterTypeTuple!(foo)[1]);   // declares void abc(long);
+---
+*/
 template ParameterTypeTuple(alias dg)
 {
-    alias ParameterTypeTuple!(typeof(dg)) ParameterTypeTuple;
+    static if (is(typeof(dg)))  // if dg is an expression
+        alias ParameterTypeTuple!(typeof(dg), void) ParameterTypeTuple;
+    else
+        alias ParameterTypeTuple!(dg, void) ParameterTypeTuple;
 }
 
 /** ditto */
-template ParameterTypeTuple(dg)
+template ParameterTypeTuple(dg, dummy = void)
 {
     static if (is(dg P == function))
         alias P ParameterTypeTuple;
@@ -105,8 +108,23 @@ template ParameterTypeTuple(dg)
         alias ParameterTypeTuple!P ParameterTypeTuple;
     else static if (is(dg P == P*))
         alias ParameterTypeTuple!P ParameterTypeTuple;
+    else static if (is(typeof(&dg.opCall) == return))
+        alias ParameterTypeTuple!(typeof(&dg.opCall), void) ParameterTypeTuple;
     else
-	static assert(0, "argument has no parameters");
+        static assert(0, "argument has no parameters");
+}
+
+unittest
+{
+    int foo(int i, bool b) { return 0; }
+    static assert (is(ParameterTypeTuple!(foo) == TypeTuple!(int, bool)));
+    static assert (is(ParameterTypeTuple!(typeof(&foo))
+        == TypeTuple!(int, bool)));
+    struct S { real opCall(real r, int i) { return 0.0; } }
+    S s;
+    static assert (is(ParameterTypeTuple!(S) == TypeTuple!(real, int)));
+    static assert (is(ParameterTypeTuple!(S*) == TypeTuple!(real, int)));
+    static assert (is(ParameterTypeTuple!(s) == TypeTuple!(real, int)));
 }
 
 /***
@@ -122,7 +140,7 @@ template FieldTypeTuple(S)
         alias typeof(S.tupleof) FieldTypeTuple;
     else
         alias TypeTuple!(S) FieldTypeTuple;
-	//static assert(0, "argument is not struct or class");
+        //static assert(0, "argument is not struct or class");
 }
 
 // // FieldOffsetsTuple
@@ -201,9 +219,9 @@ template FieldTypeTuple(S)
 // template FieldOffsetsTuple(S)
 // {
 //     static if (is(S == struct) || is(S == class))
-// 	alias typeof(S.tupleof) FieldTypeTuple;
+//         alias typeof(S.tupleof) FieldTypeTuple;
 //     else
-// 	static assert(0, "argument is not struct or class");
+//         static assert(0, "argument is not struct or class");
 // }
 
 /***
@@ -476,7 +494,7 @@ unittest
  * void main()
  * {
  *     alias BaseTypeTuple!(B) TL;
- *     writeln(typeid(TL));	// prints: (A,I)
+ *     writeln(typeid(TL));        // prints: (A,I)
  * }
  * ---
  */
@@ -486,7 +504,7 @@ template BaseTypeTuple(A)
     static if (is(A P == super))
         alias P BaseTypeTuple;
     else
-	    static assert(0, "argument is not a class or interface");
+            static assert(0, "argument is not a class or interface");
 }
 
 unittest
@@ -532,7 +550,7 @@ unittest
  * void main()
  * {
  *     alias BaseClassesTuple!(C) TL;
- *     writeln(typeid(TL));	// prints: (B,A,Object)
+ *     writeln(typeid(TL));        // prints: (B,A,Object)
  * }
  * ---
  */
@@ -573,50 +591,68 @@ template BaseClassesTuple(T)
  * void main()
  * {
  *     alias InterfacesTuple!(C) TL;
- *     writeln(typeid(TL));	// prints: (I1, I2)
+ *     writeln(typeid(TL));        // prints: (I1, I2)
  * }
  * ---
  */
 
 template InterfacesTuple(T)
 {
-    static if (is(T == Object))
-    {
+    static if (is(T S == super) && S.length)
+        alias NoDuplicates!(InterfacesTuple_Flatten!(S))
+            InterfacesTuple;
+    else
         alias TypeTuple!() InterfacesTuple;
-    }
-    static if (is(BaseTypeTuple!(T)[0] == Object))
+}
+
+// internal
+private template InterfacesTuple_Flatten(H, T...)
+{
+    static if (T.length)
     {
-        alias TypeTuple!(BaseTypeTuple!(T)[1 .. $]) InterfacesTuple;
+        alias TypeTuple!(
+                InterfacesTuple_Flatten!(H),
+                InterfacesTuple_Flatten!(T))
+            InterfacesTuple_Flatten;
     }
     else
     {
-        alias NoDuplicates!(
-            TypeTuple!(BaseTypeTuple!(T)[1 .. $], // direct interfaces
-                       InterfacesTuple!(BaseTypeTuple!(T)[0])))
-            InterfacesTuple;
+        static if (is(H == interface))
+            alias TypeTuple!(H, InterfacesTuple!(H))
+                InterfacesTuple_Flatten;
+        else
+            alias InterfacesTuple!(H) InterfacesTuple_Flatten;
     }
 }
 
 unittest
 {
-    interface J1 {}
-    interface J2 {}
-    {
+    struct Test1_WorkaroundForBug2986 {
         // doc example
-        class A : J1, J2 { }
-        class B : A, J1 { }
+        interface I1 {}
+        interface I2 {}
+        class A : I1, I2 { }
+        class B : A, I1 { }
         class C : B { }
         alias InterfacesTuple!(C) TL;
-        assert(is(TL[0] == J1) && is(TL[1] == J2));
+        static assert(is(TL[0] == I1) && is(TL[1] == I2));
+     }
+    struct Test2_WorkaroundForBug2986 {
+        interface Iaa {}
+        interface Iab {}
+        interface Iba {}
+        interface Ibb {}
+        interface Ia : Iaa, Iab {}
+        interface Ib : Iba, Ibb {}
+        interface I : Ia, Ib {}
+        interface J {}
+        class B : J {}
+        class C : B, Ia, Ib {}
+        static assert(is(InterfacesTuple!(I) ==
+                        TypeTuple!(Ia, Iaa, Iab, Ib, Iba, Ibb)));
+        static assert(is(InterfacesTuple!(C) ==
+                        TypeTuple!(J, Ia, Iaa, Iab, Ib, Iba, Ibb)));
     }
-    class B1 : J1, J2 {}
-    class B2 : B1, J1 {}
-    class B3 : B2, J2 {}
-    alias InterfacesTuple!(B3) TL;
-    //
-    assert(TL.length == 2);
-    assert(is (TL[0] == J2));
-    assert(is (TL[1] == J1));
 }
 
 /**
@@ -636,7 +672,7 @@ unittest
  * void main()
  * {
  *     alias TransitiveBaseTypeTuple!(C) TL;
- *     writeln(typeid(TL));	// prints: (B,A,Object,I)
+ *     writeln(typeid(TL));        // prints: (B,A,Object,I)
  * }
  * ---
  */
@@ -690,7 +726,7 @@ template CommonType(T...)
         alias void CommonType;
     else static if (T.length == 1)
         alias T[0] CommonType;
-    else static if (is(typeof(true ? T[0] : T[1]) U))
+    else static if (is(typeof(true ? T[0].init : T[1].init) U))
         alias CommonType!(U, T[2 .. $]) CommonType;
     else
         alias void CommonType;
@@ -808,7 +844,7 @@ unittest
 
 template isIntegral(T)
 {
-    enum bool isIntegral = indexOfType!(Unqual!(T), byte,
+    enum bool isIntegral = staticIndexOf!(Unqual!(T), byte,
             ubyte, short, ushort, int, uint, long, ulong) >= 0;
 }
 
@@ -871,7 +907,8 @@ unittest
 
 template isFloatingPoint(T)
 {
-    enum bool isFloatingPoint = indexOfType!(Unqual!(T), float, double, real) >= 0;
+    enum bool isFloatingPoint = staticIndexOf!(Unqual!(T),
+            float, double, real) >= 0;
 }
 
 unittest
@@ -935,7 +972,7 @@ Detect whether T is one of the built-in character types
 
 template isSomeChar(T)
 {
-    enum isSomeChar = indexOfType!(Unqual!T, char, wchar, dchar) >= 0;
+    enum isSomeChar = staticIndexOf!(Unqual!T, char, wchar, dchar) >= 0;
 }
 
 unittest
@@ -1054,9 +1091,9 @@ static assert(isPointer!(void*));
 template isExpressionTuple(T ...)
 {
     static if (is(void function(T)))
-	enum bool isExpressionTuple = false;
+        enum bool isExpressionTuple = false;
     else
-	enum bool isExpressionTuple = true;
+        enum bool isExpressionTuple = true;
 }
 
 /**

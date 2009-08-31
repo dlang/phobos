@@ -855,17 +855,18 @@ In case of an I/O error, an $(D StdioException) is thrown.
 /**
 $(D Range) that locks the file and allows fast writing to it.
  */ 
-    struct LockingTextWriter {
+    struct LockingTextWriter
+    {
         //@@@ Hacky implementation due to bugs, see the correct
         //implementation at the end of this struct
-	FILE* fps;		// the shared file handle
+        FILE* fps;		    // the shared file handle
         _iobuf* handle;		// the unshared version of fps
         int orientation;
 
         this(ref File f)
         {
             enforce(f.p && f.p.handle);
-	    fps = f.p.handle;
+            fps = f.p.handle;
             orientation = fwide(fps, 0);
             FLOCK(fps);
             handle = cast(_iobuf*)fps;
@@ -874,12 +875,12 @@ $(D Range) that locks the file and allows fast writing to it.
         ~this()
         {
             FUNLOCK(fps);
-	    fps = null;
+            fps = null;
             handle = null;
         }
         
         /// Range primitive implementations.
-        void put(A)(A writeme) if (is(ElementType!A : dchar))
+        void put(A)(A writeme) if (is(ElementType!A : const(dchar)))
         {
             alias ElementType!A C;
             static assert(!is(C == void));
@@ -890,7 +891,7 @@ $(D Range) that locks the file and allows fast writing to it.
                 //file.write(writeme); causes infinite recursion!!!
                 //file.rawWrite(writeme);
                 auto result =
-                .fwrite(writeme.ptr, C.sizeof, writeme.length, fps);
+                    .fwrite(writeme.ptr, C.sizeof, writeme.length, fps);
                 //if (result == result.max) result = 0;
                 if (result != writeme.length) errnoEnforce(0);
             }
@@ -907,7 +908,7 @@ $(D Range) that locks the file and allows fast writing to it.
         // @@@BUG@@@ 2340
         //void front(C)(C c) if (is(C : dchar)) {
         /// ditto
-        void put(C)(C c) if (is(C : dchar))
+        void put(C)(C c) if (is(C : const(dchar)))
         {
             static if (c.sizeof == 1)
             {
@@ -921,19 +922,19 @@ $(D Range) that locks the file and allows fast writing to it.
                 {
                     if (c <= 0x7F)
                     {
-                        FPUTC(c, backend);
+                        FPUTC(c, handle);
                     }
                     else
                     {
                         char[4] buf;
                         auto b = std.utf.toUTF8(buf, c);
                         foreach (i ; 0 .. b.length)
-                            FPUTC(b[i], backend);
+                            FPUTC(b[i], handle);
                     }
                 }
                 else
                 {
-                    FPUTWC(c, backend);
+                    FPUTWC(c, handle);
                 }
             }
             else // 32-bit characters
@@ -945,12 +946,12 @@ $(D Range) that locks the file and allows fast writing to it.
                         FPUTC(c, handle);
                     }
                     else
-                        {
-                            char[4] buf;
-                            auto b = std.utf.toUTF8(buf, c);
-                            foreach (i ; 0 .. b.length)
-                                FPUTC(b[i], handle);
-                        }
+                    {
+                        char[4] buf = void;
+                        auto b = std.utf.toUTF8(buf, c);
+                        foreach (i ; 0 .. b.length)
+                            FPUTC(b[i], handle);
+                    }
                 }
                 else
                 {
@@ -959,7 +960,7 @@ $(D Range) that locks the file and allows fast writing to it.
                         assert(isValidDchar(c));
                         if (c <= 0xFFFF)
                         {
-                                FPUTWC(c, handle);
+                            FPUTWC(c, handle);
                         }
                         else
                         {
@@ -973,7 +974,7 @@ $(D Range) that locks the file and allows fast writing to it.
                     }
                     else version (Posix)
                     {
-                                 FPUTWC(c, handle);
+                        FPUTWC(c, handle);
                     }
                     else
                     {

@@ -52,6 +52,8 @@ class ConvOverflowError : ConvError
     {
         super("Error: overflow " ~ s);
     }
+    // @@@BUG@@@ Issue 3269
+    // pure
     static void raise(string s)
     {
         throw new ConvOverflowError(s);
@@ -229,7 +231,7 @@ Struct to string conversion calls $(D toString) against the struct if
 it is defined.
  */
 T to(T, S)(S s)
-if (is(S == struct) && isSomeString!(T) && is(typeof(S.init.toString)))
+if (is(S == struct) && isSomeString!(T) && is(typeof(&S.init.toString)))
 {
     return to!T(s.toString);
 }
@@ -246,7 +248,7 @@ produces the list of fields.
  */
 T to(T, S)(S s, in T left = S.stringof~"(", in T separator = ", ",
         in T right = ")")
-if (is(S == struct) && isSomeString!(T) && !is(typeof(S.init.toString)))
+if (is(S == struct) && isSomeString!(T) && !is(typeof(&S.init.toString)))
 {
     Tuple!(FieldTypeTuple!(S)) * t = void;
     static if ((*t).sizeof == S.sizeof)
@@ -394,7 +396,7 @@ auto d = to!(byte)(a); // throw ConvOverflowError
 double e = 4.2e6;
 auto f = to!(int)(e); // f == 4200000
 e = -3.14;
-auto g = to!(uint)(e); // fails: floating-to-integral underflow
+auto g = to!(uint)(e); // fails: floating-to-integral negative overflow
 e = 3.14;
 auto h = to!(uint)(e); // h = 3
 e = 3.99;
@@ -572,6 +574,41 @@ unittest
 }
 
 /**
+Object-_to-non-object conversions look for a method "to" of the source
+object.
+
+Example:
+----
+class Date
+{
+    T to(T)() if(is(T == long))
+    {
+        return timestamp;
+    }
+    ...
+}
+
+unittest
+{
+    auto d = new Date;
+    auto ts = to!long(d); // same as d.to!long()
+}
+----
+ */
+T to(T, S)(S value) if (is(S : Object) && !is(T : Object) && !isSomeString!T
+        && is(typeof(S.init.to!(T)()) : T))
+{
+    return value.to!T();
+}
+
+unittest
+{
+    class B { T to(T)() { return 43; } }
+    auto b = new B;
+    assert(to!int(b) == 43);
+}
+
+/**
 Narrowing numeric-numeric conversions throw when the value does not
 fit in the narrower type.
  */
@@ -589,7 +626,7 @@ if (!implicitlyConverts!(S, T)
             static assert(tSmallest < 0);
             invariant good = value >= tSmallest;
         }
-        if (!good) ConvOverflowError.raise("Conversion underflow");
+        if (!good) ConvOverflowError.raise("Conversion negative overflow");
     }
     static if (S.max > T.max) {
         // possible overflow
@@ -859,25 +896,22 @@ Rounded conversions do not work with non-integral target types.
 
 template roundTo(Target) {
     Target roundTo(Source)(Source value) {
-        static assert(is(Source == float) || is(Source == double)
-                || is(Source == real));
-        static assert(is(Target == byte) || is(Target == ubyte)
-                || is(Target == short) || is(Target == ushort)
-                || is(Target == int) || is(Target == uint)
-                || is(Target == long) || is(Target == ulong));
+        static assert(isFloatingPoint!Source);
+        static assert(isIntegral!Target);
         return to!(Target)(value + (value < 0 ? -0.5 : 0.5));
     }
 }
 
 unittest {
-  assert(roundTo!(int)(3.14) == 3);
-  assert(roundTo!(int)(3.49) == 3);
-  assert(roundTo!(int)(3.5) == 4);
-  assert(roundTo!(int)(3.999) == 4);
-  assert(roundTo!(int)(-3.14) == -3);
-  assert(roundTo!(int)(-3.49) == -3);
-  assert(roundTo!(int)(-3.5) == -4);
-  assert(roundTo!(int)(-3.999) == -4);
+    assert(roundTo!(int)(3.14) == 3);
+    assert(roundTo!(int)(3.49) == 3);
+    assert(roundTo!(int)(3.5) == 4);
+    assert(roundTo!(int)(3.999) == 4);
+    assert(roundTo!(int)(-3.14) == -3);
+    assert(roundTo!(int)(-3.49) == -3);
+    assert(roundTo!(int)(-3.5) == -4);
+    assert(roundTo!(int)(-3.999) == -4);
+    assert(roundTo!(const int)(to!(const double)(-3.999)) == -4);
 }
 
 /***************************************************************
@@ -2463,7 +2497,7 @@ T to(T, S)(S value) if (isIntegral!S && S.min < 0
 
 /// Unsigned integers (uint and ulong).
 T to(T, S)(S input)
-if (std.traits.indexOfType!(Unqual!S, uint, ulong) >= 0 && isSomeString!T)
+if (std.traits.staticIndexOf!(Unqual!S, uint, ulong) >= 0 && isSomeString!T)
 {
     Unqual!S value = input;
     alias Unqual!(ElementType!T) Char;
@@ -2495,7 +2529,7 @@ if (std.traits.indexOfType!(Unqual!S, uint, ulong) >= 0 && isSomeString!T)
 }
 
 /// $(D char), $(D wchar), $(D dchar) to a string type.
-T to(T, S)(S c) if (indexOfType!(Unqual!S, char, wchar, dchar) >= 0
+T to(T, S)(S c) if (staticIndexOf!(Unqual!S, char, wchar, dchar) >= 0
         && isSomeString!(T))
 {
     static if (ElementType!T.sizeof >= S.sizeof)
@@ -2529,28 +2563,26 @@ unittest
 }
 
 /// Signed values ($(D int) and $(D long)).
-T to(T, S)(S value) if (indexOfType!(Unqual!S, int, long) >= 0 && isSomeString!T)
+T to(T, S)(S value)
+if (staticIndexOf!(Unqual!S, int, long) >= 0 && isSomeString!T)
 {
     if (value >= 0)
         return to!T(cast(Unsigned!(S)) value);
 
     alias Unqual!(ElementType!T) Char;
     Char[1 + S.sizeof * 3] buffer;
-    Char[] result;
 
-    ulong u = cast(ulong)(-value);
-    int ndigits = 1;
+    auto u = -cast(Unsigned!S) value;
+    uint ndigits = 1;
     while (u)
     {
-        char c = cast(char)((u % 10) + '0');
+        immutable c = cast(char)((u % 10) + '0');
         u /= 10;
-        buffer[buffer.length - ndigits] = c;
-        ndigits++;
+        buffer[$ - ndigits] = c;
+        ++ndigits;
     }
-    buffer[buffer.length - ndigits] = '-';
-    result = new Char[ndigits];
-    result[] = buffer[buffer.length - ndigits .. buffer.length];
-    return cast(T) result;
+    buffer[$ - ndigits] = '-';
+    return cast(T) buffer[buffer.length - ndigits .. buffer.length].dup;
 }
 
 unittest

@@ -211,7 +211,7 @@ assert(r.field[0] == 2);  // minimum
 assert(r.field[1] == 11); // maximum
 
 // Compute sum and sum of squares in one pass
-r = reduce!("a + b", "a + b * b")(0.0, 0.0, a);
+r = reduce!("a + b", "a + b * b")(tuple(0.0, 0.0), a);
 assert(r.field[0] == 35);  // sum
 assert(r.field[1] == 233); // sum of squares
 // Compute average and standard deviation from the above
@@ -655,6 +655,7 @@ struct Splitter(Range, Separator)
 private:
     Range _input;
     Separator _separator;
+    // _frontLength == size_t.max means empty
     size_t _frontLength = size_t.max;
     static if (isBidirectionalRange!Range)
         size_t _backLength = size_t.max;
@@ -673,6 +674,7 @@ private:
     void ensureFrontLength()
     {
         if (_frontLength != _frontLength.max) return;
+        assert(!_input.empty);
         // compute front length
         _frontLength = _input.length - find(_input, _separator).length;
         if (_frontLength == _input.length) _backLength = _frontLength;
@@ -681,6 +683,7 @@ private:
     void ensureBackLength()
     {
         if (_backLength != _backLength.max) return;
+        assert(!_input.empty);
         // compute back length
         static if (separatorIsRange)
         {
@@ -701,20 +704,16 @@ public:
         _separator = separator;
     }
 
-    ref auto opSlice()
-    {
-        return this;
-    }
-
     Range front()
     {
+        assert(!empty);
         ensureFrontLength;
         return _input[0 .. _frontLength];
     }
 
     bool empty()
     {
-        return _input.empty;
+        return _frontLength == size_t.max && _input.empty;
     }
 
     void popFront()
@@ -723,23 +722,25 @@ public:
         ensureFrontLength;
         if (_frontLength == _input.length)
         {
-            // done
+            // done, there's no separator in sight
             _input = _input[_frontLength .. _frontLength];
-            _frontLength = 0;
-            _backLength = 0;
+            _frontLength = _frontLength.max;
+            _backLength = _backLength.max;
             return;
         }
-        if (_frontLength && _frontLength + separatorLength == _input.length)
+        if (_frontLength + separatorLength == _input.length)
         {
             // Special case: popping the first-to-last item; there is
-            // an empty item right after this. Leave the separator in.
-            _input = _input[_frontLength .. _input.length];
+            // an empty item right after this.
+            _input = _input[_input.length .. _input.length];
             _frontLength = 0;
+            _backLength = 0;
             return;
         }
         // Normal case, pop one item and the separator, get ready for
         // reading the next item
         _input = _input[_frontLength + separatorLength .. _input.length];
+        // mark _frontLength as uninitialized
         _frontLength = _frontLength.max;
     }
 
@@ -757,15 +758,16 @@ public:
         {
             // done
             _input = _input[0 .. 0];
-            _frontLength = 0;
-            _backLength = 0;
+            _frontLength = _frontLength.max;
+            _backLength = _backLength.max;
             return;
         }
-        if (_backLength && _backLength + separatorLength == _input.length)
+        if (_backLength + separatorLength == _input.length)
         {
-            // Special case: popping the first-to-last item; there is
+            // Special case: popping the first-to-first item; there is
             // an empty item right before this. Leave the separator in.
-            _input = _input[0 .. _input.length - _backLength];
+            _input = _input[0 .. 0];
+            _frontLength = 0;
             _backLength = 0;
             return;
         }
@@ -788,7 +790,7 @@ unittest
 {
     auto s = ",abc, de, fg,hi,";
     auto sp0 = splitter(s, ',');
-    //foreach (e; sp) writeln("[", e, "]");
+    //foreach (e; sp0) writeln("[", e, "]");
     assert(equal(sp0, ["", "abc", " de", " fg", "hi", ""][]));
 
     auto s1 = ", abc, de,  fg, hi, ";
@@ -813,6 +815,17 @@ unittest
         assert(equal(e, w[--i]), text(e));
     }
     assert(i == 0);
+}
+
+unittest
+{
+    auto s6 = ",";
+    auto sp6 = splitter(s6, ',');
+    foreach (e; sp6)
+    {
+        //writeln("{", e, "}");
+    }
+    assert(equal(sp6, ["", ""][]));
 }
 
 // uniq
@@ -1529,7 +1542,8 @@ assert(equal(a.until(7, OpenRight.no), [1, 2, 4, 7][]));
 struct Until(alias pred, Range, Sentinel) if (isInputRange!Range)
 {
     private Range _input;
-    private Sentinel _sentinel;
+    static if (!is(Sentinel == void))
+        private Sentinel _sentinel;
     // mixin(bitfields!(
     //             OpenRight, "_openRight", 1,
     //             bool,  "_done", 1,
@@ -1539,13 +1553,22 @@ struct Until(alias pred, Range, Sentinel) if (isInputRange!Range)
     OpenRight _openRight;
     bool _done;
 
-    this(Range input, Sentinel sentinel, OpenRight openRight = OpenRight.yes)
-    {
-        _input = input;
-        _sentinel = sentinel;
-        _openRight = openRight;
-        _done = _input.empty || openRight && binaryFun!pred(_input.front, _sentinel);
-    }
+    static if (!is(Sentinel == void))
+        this(Range input, Sentinel sentinel,
+                OpenRight openRight = OpenRight.yes)
+        {
+            _input = input;
+            _sentinel = sentinel;
+            _openRight = openRight;
+            _done = _input.empty || openRight && predSatisfied();
+        }
+    else
+        this(Range input, OpenRight openRight = OpenRight.yes)
+        {
+            _input = input;
+            _openRight = openRight;
+            _done = _input.empty || openRight && predSatisfied();
+        }
 
     bool empty()
     {
@@ -1558,12 +1581,20 @@ struct Until(alias pred, Range, Sentinel) if (isInputRange!Range)
         return _input.front;
     }
 
+    bool predSatisfied()
+    {
+        static if (is(Sentinel == void))
+            return unaryFun!pred(_input.front);
+        else
+            return binaryFun!pred(_input.front, _sentinel);
+    }
+
     void popFront()
     {
         assert(!empty);
         if (!_openRight)
         {
-            if (binaryFun!pred(_input.front, _sentinel))
+            if (predSatisfied())
             {
                 _done = true;
                 return;
@@ -1574,17 +1605,26 @@ struct Until(alias pred, Range, Sentinel) if (isInputRange!Range)
         else
         {
             _input.popFront;
-            _done = _input.empty || binaryFun!pred(_input.front, _sentinel);
+            _done = _input.empty || predSatisfied;
         }
     }
 }
 
 /// Ditto
-Until!(pred, Range, Sentinel) until
-(alias pred = "a == b", Range, Sentinel)
+Until!(pred, Range, Sentinel)
+until(alias pred = "a == b", Range, Sentinel)
 (Range range, Sentinel sentinel, OpenRight openRight = OpenRight.yes)
+if (!is(Sentinel == OpenRight))
 {
     return typeof(return)(range, sentinel, openRight);
+}
+
+/// Ditto
+Until!(pred, Range, void)
+until(alias pred, Range)
+(Range range, OpenRight openRight = OpenRight.yes)
+{
+    return typeof(return)(range, openRight);
 }
 
 unittest
@@ -1592,6 +1632,7 @@ unittest
     int[] a = [ 1, 2, 4, 7, 7, 2, 4, 7, 3, 5];
     assert(equal(a.until(7), [1, 2, 4][]));
     assert(equal(a.until(7, OpenRight.no), [1, 2, 4, 7][]));
+    assert(equal(until!"a == 2"(a, OpenRight.no), [1, 2][]));
 }
 
 /**
@@ -1617,7 +1658,7 @@ assert(startsWith("abc", "x", "aaa", 'a', "sab") == 3);
 uint startsWith(alias pred = "a == b", Range, Ranges...)
 (Range doesThisStart, Ranges withOneOfThese)
 if (isInputRange!Range && Ranges.length > 0
-        && indexOfType!(Unqual!(ElementType!Range), char, wchar) < 0)
+        && staticIndexOf!(Unqual!(ElementType!Range), char, wchar) < 0)
 {
     static assert(Ranges.length > 0);
     alias doesThisStart lhs;
@@ -1693,12 +1734,12 @@ if (isInputRange!Range && Ranges.length > 0
 uint startsWith(alias pred = "a == b", Range, Ranges...)
 (Range doesThisStart, Ranges withOneOfThese)
 if (isInputRange!(Range) && Ranges.length > 0
-        && indexOfType!(Unqual!(ElementType!Range), char, wchar) >= 0)
+        && staticIndexOf!(Unqual!(ElementType!Range), char, wchar) >= 0)
 {
     auto searchMe = byDchar(doesThisStart);
     foreach (i, R; Ranges)
     {
-        static if (indexOfType!(Unqual!(ElementType!R), char, wchar) >= 0)
+        static if (staticIndexOf!(Unqual!(ElementType!R), char, wchar) >= 0)
             return startsWith!pred(searchMe,
                     withOneOfThese[0 .. i], byDchar(withOneOfThese[i]),
                 withOneOfThese[i + 1 .. $]);
@@ -2996,7 +3037,7 @@ if (isBidirectionalRange!Range && hasLength!Range && s != SwapStrategy.stable)
     if (rEnd == range.length)
     {
         // must remove the last elements of the range
-        range.retreatN(rEnd - rStart);
+        range.popBackN(rEnd - rStart);
         static if (Offset.length > 1)
         {
             return .remove!(s, Range, Offset[0 .. $ - 1])
@@ -3092,7 +3133,7 @@ if (isForwardRange!Range && !isBidirectionalRange!Range
             move(src.front, tgt.front);
         }
         // now skip source to the "to" position
-        src.advance(delta);
+        src.popFrontN(delta);
         pos += delta;
         foreach (j; 0 .. delta) result.popBack;
     }

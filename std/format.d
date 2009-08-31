@@ -2074,7 +2074,9 @@ private void formatGeneric(Writer, D)(ref Writer w, const(void)* arg,
     } else static if (is(D : const(char))) {
         // somebody rid me of this hack
         w.put(obj);
-    } else static if (is(typeof(obj.toString))) {
+    } else static if (is(typeof(to!string(obj)))) {
+        w.put(to!string(obj));
+    } else static if (is(typeof(&obj.toString))) {
         auto s = obj.toString;
         w.put(s);                                        
     } else {

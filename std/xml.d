@@ -118,6 +118,7 @@ void main()
  */
 
 module std.xml;
+import std.array;
 import std.string;
 import std.encoding;
 
@@ -283,27 +284,42 @@ bool isExtender(dchar c)
  * writefln(encode("a > b")); // writes "a &gt; b"
  * --------------
  */
-string encode(string s)
+S encode(S)(S s, S buffer = null)
 {
-    // The ifs are (temprarily, we hope) necessary, because
-    // std.string.write.replace
-    // does not do copy-on-write, but instead copies always.
+    string r;
+    size_t lastI;
+    if (buffer) buffer.length = 0;
+    auto result = appender(&buffer);
 
-    if (s.indexOf('&') != -1) s = replace(s,"&","&amp;");
-    if (s.indexOf('"') != -1) s = replace(s,"\"","&quot;");
-    if (s.indexOf("'") != -1) s = replace(s,"'","&apos;");
-    if (s.indexOf('<') != -1) s = replace(s,"<","&lt;");
-    if (s.indexOf('>') != -1) s = replace(s,">","&gt;");
-    return s;
+    foreach (i, c; s)
+    {
+        switch (c)
+        {
+        case '&':  r = "&amp;"; break;
+        case '"':  r = "&quot;"; break;
+        case '\'': r = "&apos;"; break;
+        case '<':  r = "&lt;"; break;
+        case '>':  r = "&gt;"; break;
+        default: continue;
+        }
+        // Replace with r
+        result.put(s[lastI .. i]);
+        result.put(r);
+        lastI = i + 1;
+    }
+
+    if (!result.data) return s;
+    result.put(s[lastI .. $]);
+    return result.data;
 }
 
 unittest
 {
     assert(encode("hello") is "hello");
-    assert(encode("a > b") == "a &gt; b");
+    assert(encode("a > b") == "a &gt; b", encode("a > b"));
     assert(encode("a < b") == "a &lt; b");
     assert(encode("don't") == "don&apos;t");
-    assert(encode("\"hi\"") == "&quot;hi&quot;");
+    assert(encode("\"hi\"") == "&quot;hi&quot;", encode("\"hi\""));
     assert(encode("cat & dog") == "cat &amp; dog");
 }
 
@@ -1945,6 +1961,12 @@ class ElementParser
                 else if (tag_.isEmpty)
                 {
                 	Tag startTag = new Tag(tag_.name);
+
+                    // FIX by hed010gy, for bug 2979
+                    // http://d.puremagic.com/issues/show_bug.cgi?id=2979
+                    if (tag_.attr.length > 0)
+                          foreach(tn,tv; tag_.attr) startTag.attr[tn]=tv;
+                    // END FIX
 
 					// Handle the pretend start tag
 					string s2;

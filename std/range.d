@@ -159,7 +159,7 @@ range.
 ----
 R r;
 static assert(isForwardRange!(R)); // range is an input range
-r.popBack;                        // can invoke retreat
+r.popBack;                        // can invoke popBack
 auto t = r.back;                   // can get the back of the range
 ----
 The semantics of a bidirectional range (not checkable during compilation)
@@ -174,7 +174,7 @@ template isBidirectionalRange(R)
     enum bool isBidirectionalRange = isForwardRange!(R) && is(typeof(
     {
         R r;
-        r.popBack;         // can invoke retreat
+        r.popBack;         // can invoke popBack
         auto h = r.back;    // can get the back of the range
     }()));
 }
@@ -376,7 +376,8 @@ unittest
 /**
 Returns $(D true) if $(D Range) is an infinite input range. An
 infinite input range is an input range that has a statically-defined
-$(empty) member that is always $(D false), for example:
+enumerated member called $(D empty) that is always $(D false), for
+example:
 
 ----
 struct InfiniteRange
@@ -559,7 +560,7 @@ is a random access range and if $(D R) defines $(D R.length).
     static if (isRandomAccessRange!(R) && hasLength!(R))
         ref ElementType!(R) opIndex(uint n)
         {
-            return _input[_input.length - n + 1];
+            return _input[_input.length - n - 1];
         }
 
 /**
@@ -743,7 +744,7 @@ hasLength!(R)).
     static if (hasLength!(R))
         size_t length()
         {
-            return _input.length / _n;
+            return (_input.length + _n - 1) / _n;
         }
 }
 
@@ -903,6 +904,7 @@ public:
         }
 
     static if (allSatisfy!(isRandomAccessRange, R))
+    {
         mixin(
             (allSameType ? "ref " : "")~
             q{ElementType opIndex(uint index)
@@ -916,14 +918,22 @@ public:
                     assert(false);
                 }
             });
-/**
-Returns $(D this).
- */
-    ChainImpl opSlice()
-    {
-        return this;
-    }
 
+        static if (allSameType) void opIndexAssign(ElementType v, uint index)
+        {
+            foreach (i, Unused; R)
+            {
+                immutable length = _input.field[i].length;
+                if (index < length)
+                {
+                    _input.field[i][index] = v;
+                    return;
+                }
+                index -= length;
+            }
+            assert(false);
+        }
+    }
 
     static if (allSatisfy!(hasLength, R) && allSatisfy!(hasSlicing, R))
         ChainImpl opSlice(size_t begin, size_t end)
@@ -997,6 +1007,13 @@ unittest
         int[] arr1 = [ 1, 2, 3, 4 ];
         int[] witness = [ 1, 2, 3, 4 ];
         assert(equal(chain(arr1), witness));
+    }
+    {
+        uint[] foo = [1,2,3,4,5];
+        uint[] bar = [1,2,3,4,5];
+        auto c = chain(foo, bar);
+        c[3] = 42;
+        assert(c[3] == 42);
     }
 }
 
@@ -1291,12 +1308,11 @@ version(none) unittest
 }
 
 /+
-/**
-Eagerly advances a copy of $(D r) $(D n) times (by calling $(D r.popFront)
-$(D n) times) and returns it. The pass of $(D r) into $(D drop) is by
-value, so the original range remains unchanged. Completes in $(BIGOH
-1) steps for ranges that support slicing, and in $(BIGOH n) time for
-all other ranges.
+/** Eagerly advances a copy of $(D r) $(D n) times (by calling $(D
+r.popFront) $(D n) times) and returns it. The pass of $(D r) into $(D
+drop) is by value, so the original range remains unchanged. Completes
+in $(BIGOH 1) steps for ranges that support slicing, and in $(BIGOH n)
+time for all other ranges.
 
 Example:
 ----
@@ -1327,19 +1343,19 @@ version(none) unittest
 
 /**
 Eagerly advances $(D r) itself (not a copy) $(D n) times (by calling
-$(D r.popFront) $(D n) times). The pass of $(D r) into $(D drop) is by
-reference, so the original range is affected. Completes in $(BIGOH 1)
-steps for ranges that support slicing, and in $(BIGOH n) time for all
-other ranges.
+$(D r.popFront) $(D n) times). The pass of $(D r) into $(D popFrontN)
+is by reference, so the original range is affected. Completes in
+$(BIGOH 1) steps for ranges that support slicing, and in $(BIGOH n)
+time for all other ranges.
 
 Example:
 ----
 int[] a = [ 1, 2, 3, 4, 5 ];
-a.advance(2);
+a.popFrontN(2);
 assert(a == [ 3, 4, 5 ]);
 ----
  */
-size_t advance(Range)(ref Range r, size_t n) if (isInputRange!(Range))
+size_t popFrontN(Range)(ref Range r, size_t n) if (isInputRange!(Range))
 {
     static if (hasSlicing!(Range) && hasLength!(Range))
     {
@@ -1360,25 +1376,25 @@ size_t advance(Range)(ref Range r, size_t n) if (isInputRange!(Range))
 version(none) unittest
 {
     int[] a = [ 1, 2, 3, 4, 5 ];
-    a.advance(2);
+    a.popFrontN(2);
     assert(a == [ 3, 4, 5 ]);
 }
 
 /**
-Eagerly retreats $(D r) itself (not a copy) $(D n) times (by calling
-$(D r.popBack) $(D n) times). The pass of $(D r) into $(D
-advanceRight) is by reference, so the original range is
+Eagerly reduces $(D r) itself (not a copy) $(D n) times from its right
+side (by calling $(D r.popBack) $(D n) times). The pass of $(D r) into
+$(D popBackN) is by reference, so the original range is
 affected. Completes in $(BIGOH 1) steps for ranges that support
 slicing, and in $(BIGOH n) time for all other ranges.
 
 Example:
 ----
 int[] a = [ 1, 2, 3, 4, 5 ];
-a.advanceRight(2);
+a.popBackN(2);
 assert(a == [ 1, 2, 3 ]);
 ----
  */
-size_t retreatN(Range)(ref Range r, size_t n) if (isInputRange!(Range))
+size_t popBackN(Range)(ref Range r, size_t n) if (isInputRange!(Range))
 {
     static if (hasSlicing!(Range) && hasLength!(Range))
     {
@@ -1400,7 +1416,7 @@ size_t retreatN(Range)(ref Range r, size_t n) if (isInputRange!(Range))
 version(none) unittest
 {
     int[] a = [ 1, 2, 3, 4, 5 ];
-    a.retreatN(2);
+    a.popBackN(2);
     assert(a == [ 1, 2, 3 ]);
 }
 
@@ -1593,7 +1609,7 @@ assert(equal(lst, [1, 2, 3][]));
 struct SListRange(T, Topology topology = Topology.flexible)
 {
 private:
-    struct Node { T _value; Node * _popFront; }
+    struct Node { T _value; Node * _next; }
     Node * _root;
     
 public:
@@ -1613,7 +1629,7 @@ assert(equal(lst, [1, 2, 3, 4, 5][]));
         {
             _root[i]._value = e;
             if (i > 0)
-                _root[i - 1]._popFront = &_root[i];
+                _root[i - 1]._next = &_root[i];
         }
     }
     
@@ -1628,12 +1644,12 @@ elements to be iterated.
 
 /**
 Range primitive operation that advances the range to its _next
-element. Forwards to $(D _input.popBack).
+element.
  */
     void popFront()
     {
         enforce(_root);
-        _root = _root._popFront;
+        _root = _root._next;
     }
 
 /**
@@ -1663,7 +1679,7 @@ SListRange!(T, t) cons(T, Topology t)(T front, SListRange!(T, t) tail)
     typeof(return) result;
     result._root = new typeof(return).Node;
     result._root._value = front;
-    result._root._popFront = tail._root;
+    result._root._next = tail._root;
     return result;
 }
 

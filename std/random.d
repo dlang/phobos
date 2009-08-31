@@ -183,7 +183,7 @@ $(D x0).
         return _x;
     }
 /**
-Always $(D true) (random generators are infinite ranges).
+Always $(D false) (random generators are infinite ranges).
  */
     enum bool empty = false;
     
@@ -212,10 +212,10 @@ Example:
 ----
 // seed with a constant
 auto rnd0 = MinstdRand0(1);
-auto n = rnd0.popFront; // same for each run
+auto n = rnd0.front; // same for each run
 // Seed with an unpredictable value
 rnd0.seed(unpredictableSeed);
-n = rnd0.popFront; // different across runs
+n = rnd0.front; // different across runs
 ----
  */
 alias LinearCongruentialEngine!(uint, 16807, 0, 2147483647) MinstdRand0;
@@ -242,7 +242,7 @@ unittest
     // Correct value taken from:
     // http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2461.pdf
     rnd0.seed;
-    advance(rnd0, 9999);
+    popFrontN(rnd0, 9999);
     assert(rnd0.front == 1043618065);
 
     // Test MinstdRand
@@ -260,7 +260,7 @@ unittest
     // Correct value taken from:
     // http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2461.pdf
     rnd.seed;
-    advance(rnd, 9999);
+    popFrontN(rnd, 9999);
     assert(rnd.front == 399268537);
 }
 
@@ -435,7 +435,7 @@ alias MersenneTwisterEngine!(uint, 32, 624, 397, 31, 0x9908b0df, 11, 7,
 unittest
 {
     Mt19937 gen;
-    advance(gen, 9999);
+    popFrontN(gen, 9999);
     assert(gen.front == 4123659995);
 }
 
@@ -449,7 +449,7 @@ unittest
     {
         Mt19937 gen;
         gen.popFront;
-        //advance(gen, 1);  // skip 1 element
+        //popFrontN(gen, 1);  // skip 1 element
         b = gen.front;
     }
     assert(a != b);
@@ -599,9 +599,10 @@ if (is(CommonType!(T1, UniformRandomNumberGenerator) == void) &&
     else
     {
         static assert(isFloatingPoint!NumberType);
-        urng.popFront;
-        return _a + (_b - _a) * cast(NumberType) (urng.front - urng.min)
+        auto result = _a + (_b - _a) * cast(NumberType) (urng.front - urng.min)
             / (urng.max - urng.min);
+        urng.popFront;
+        return result;
     }
 }
 

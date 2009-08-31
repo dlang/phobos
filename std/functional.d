@@ -158,12 +158,15 @@ template binaryFunImpl(alias fun,
     {
         template Body(ElementType1, ElementType2)
         {
-            enum testAsExpression = "{"~ElementType1.stringof
-                ~" "~parm1Name~"; "~ElementType2.stringof
-                ~" "~parm2Name~"; return ("~fun~");}()";
-            enum testAsStmts = "{"~ElementType1.stringof
-                ~" "~parm1Name~"; "~ElementType2.stringof
-                ~" "~parm2Name~"; "~fun~"}()";
+            enum testAsExpression = "{ ElementType1 "
+                ~parm1Name~"; ElementType2 "
+                ~parm2Name~"; return ("~fun~");}()";
+            // enum testAsExpression = "{"~ElementType1.stringof
+            //     ~" "~parm1Name~"; "~ElementType2.stringof
+            //     ~" "~parm2Name~"; return ("~fun~");}()";
+            // enum testAsStmts = "{"~ElementType1.stringof
+            //     ~" "~parm1Name~"; "~ElementType2.stringof
+            //     ~" "~parm2Name~"; "~fun~"}()";
             static if (__traits(compiles, mixin(testAsExpression)))
             {
                 enum string code = "return (" ~ fun ~ ");";

@@ -18,8 +18,8 @@ module std.file;
 import core.memory;
 import core.stdc.stdio, core.stdc.stdlib, core.stdc.string,
     core.stdc.errno, std.algorithm, std.array, 
-    std.contracts, std.conv, std.date, std.format, std.path, std.range,
-    std.regexp, std.stdio, std.string, std.traits, std.typecons,
+    std.contracts, std.conv, std.date, std.format, std.path, std.process,
+    std.range, std.regexp, std.stdio, std.string, std.traits, std.typecons,
     std.typetuple, std.utf;
 version (Win32)
 {
@@ -136,7 +136,7 @@ Returns: Untyped array of bytes _read.
 Throws: $(D FileException) on error.
  */
 
-version(Windows) void[] read(in char[] name)
+version(Windows) void[] read(in char[] name, size_t upTo = size_t.max)
 {
     alias TypeTuple!(GENERIC_READ,
             FILE_SHARE_READ, (SECURITY_ATTRIBUTES*).init, OPEN_EXISTING,
@@ -149,18 +149,19 @@ version(Windows) void[] read(in char[] name)
     
     cenforce(h != INVALID_HANDLE_VALUE, name);
     scope(exit) cenforce(CloseHandle(h), name);
-    const size = GetFileSize(h, null);
+    auto size = GetFileSize(h, null);
     cenforce(size != INVALID_FILE_SIZE, name);
+    size = min(upTo, size);
     auto buf = GC.malloc(size, GC.BlkAttr.NO_SCAN)[0 .. size];
     scope(failure) delete buf;
     
-    DWORD numread;
+    DWORD numread = void;
     cenforce(ReadFile(h,buf.ptr, size, &numread, null) == 1
             && numread == size, name);
     return buf[0 .. size];
 }
 
-version(Posix) void[] read(in char[] name, size_t upTo = size_t.max)
+version(Posix) void[] read(in char[] name, in size_t upTo = size_t.max)
 {
     // A few internal configuration parameters {
     enum size_t
@@ -205,10 +206,16 @@ version(Posix) void[] read(in char[] name, size_t upTo = size_t.max)
         : result[0 .. size];
 }
 
+unittest
+{
+    write("std.file.deleteme", "1234");
+    assert(read("std.file.deleteme", 2) == "12");
+}
+
 version (linux) unittest
 {    
     // A file with "zero" length that doesn't have 0 length at all
-    char[] s = cast(char[])std.file.read("/proc/sys/kernel/osrelease");
+    auto s = std.file.readText("/proc/sys/kernel/osrelease");
     assert(s.length > 0);
     //writefln("'%s'", s);
 }
@@ -243,7 +250,7 @@ S readText(S = string)(in char[] name)
 
 unittest
 {
-    enforce(system("echo abc>deleteme") == 0);
+    enforce(std.process.system("echo abc>deleteme") == 0);
     scope(exit) remove("deleteme");
     enforce(chomp(readText("deleteme")) == "abc");
 }
@@ -401,15 +408,19 @@ version(Posix) ulong getSize(in char[] name)
     return statbuf.st_size;
 }
     
-version(Posix) unittest
+unittest
 {
-    scope(exit) system("rm -f /tmp/deleteme");
+    version(Windows)
+        auto deleteme = std.path.join(std.process.getenv("TEMP"), "deleteme");
+    else
+        auto deleteme = "/tmp/deleteme";
+    scope(exit) if (exists(deleteme)) remove(deleteme);
     // create a file of size 1
-    assert(system("echo > /tmp/deleteme") == 0);
-    assert(getSize("/tmp/deleteme") == 1, text(getSize("/tmp/deleteme")));
+    write(deleteme, "a");
+    assert(getSize(deleteme) == 1);
     // create a file of size 3
-    assert(system("echo ab > /tmp/deleteme") == 0);
-    assert(getSize("/tmp/deleteme") == 3);
+    write(deleteme, "abc");
+    assert(getSize(deleteme) == 3);
 }
     
 /*************************
@@ -539,11 +550,11 @@ version(Posix) d_time lastModified(in char[] name, d_time returnIfMissing)
 
 unittest
 {
-    system("echo a>deleteme") == 0 || assert(false);
+    std.process.system("echo a>deleteme") == 0 || assert(false);
     scope(exit) remove("deleteme");
     assert(lastModified("deleteme") >
             lastModified("this file does not exist", d_time.min));
-    assert(lastModified("deleteme") > lastModified(__FILE__));
+    //assert(lastModified("deleteme") > lastModified(__FILE__));
 }
 
 /***************************************************
@@ -569,7 +580,7 @@ unittest
 {
     assert(exists("."));
     assert(!exists("this file does not exist"));
-    system("echo a > deleteme") == 0 || assert(false);
+    std.process.system("echo a >deleteme") == 0 || assert(false);
     scope(exit) remove("deleteme");
     assert(exists("deleteme"));
 }
@@ -1279,11 +1290,12 @@ unittest
 {
     version (linux)
     {
-        assert(system("mkdir --parents dmd-testing") == 0);
-        scope(exit) system("rm -rf dmd-testing");
-        assert(system("mkdir --parents dmd-testing/somedir") == 0);
-        assert(system("touch dmd-testing/somefile") == 0);
-        assert(system("touch dmd-testing/somedir/somedeepfile") == 0);
+        assert(std.process.system("mkdir --parents dmd-testing") == 0);
+        scope(exit) std.process.system("rm -rf dmd-testing");
+        assert(std.process.system("mkdir --parents dmd-testing/somedir") == 0);
+        assert(std.process.system("touch dmd-testing/somefile") == 0);
+        assert(std.process.system("touch dmd-testing/somedir/somedeepfile")
+                == 0);
         foreach (string name; dirEntries("dmd-testing", SpanMode.shallow))
         {
         }

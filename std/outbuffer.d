@@ -42,7 +42,7 @@ class OutBuffer
     invariant()
     {
 	//printf("this = %p, offset = %x, data.length = %u\n", this, offset, data.length);
-	assert(offset <= data.length);
+        assert(offset <= data.length);
     }
 
     this()

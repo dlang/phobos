@@ -1927,16 +1927,21 @@ pure nothrow bool isIdentical(real x, real y)
     // We're doing a bitwise comparison so the endianness is irrelevant.
     long*   pxs = cast(long *)&x;
     long*   pys = cast(long *)&y;
- static if (real.mant_dig == 53){ //double
-    return pxs[0] == pys[0];
- } else static if (real.mant_dig == 113 || real.mant_dig==106) {
-      // quadruple or doubledouble
-    return pxs[0] == pys[0] && pxs[1] == pys[1];
- } else { // real80
-    ushort* pxe = cast(ushort *)&x;
-    ushort* pye = cast(ushort *)&y;
-    return pxe[4] == pye[4] && pxs[0] == pys[0];
- }
+    static if (real.mant_dig == 53)
+    { //double
+        return pxs[0] == pys[0];
+    }
+    else static if (real.mant_dig == 113 || real.mant_dig==106)
+    {
+        // quadruple or doubledouble
+        return pxs[0] == pys[0] && pxs[1] == pys[1];
+    }
+    else
+    { // real80
+        ushort* pxe = cast(ushort *)&x;
+        ushort* pye = cast(ushort *)&y;
+        return pxe[4] == pye[4] && pxs[0] == pys[0];
+    }
 }
 
 /*********************************
@@ -1957,6 +1962,8 @@ unittest
     assert(signbit(-168.1234));
     assert(!signbit(0.0));
     assert(signbit(-0.0));
+    assert(signbit(-double.max));
+    assert(!signbit(double.max));
 }
 
 /*********************************

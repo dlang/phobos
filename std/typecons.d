@@ -852,3 +852,241 @@ unittest
     assert(x.value == 5);
     assert(y == 5);
 }
+
+/**
+Defines a value paired with a distinctive "null" state that denotes
+the absence of a valud value. If default constructed, a $(D
+Nullable!T) object starts in the null state. Assigning it renders it
+non-null. Calling $(D nullify) can nullify it again.
+
+Example:
+----
+Nullable!int a;
+assert(a.isNull);
+a = 5;
+assert(!a.isNull);
+assert(a == 5);
+----
+
+Practically $(D Nullable!T) stores a $(D T) and a $(D bool). 
+ */
+struct Nullable(T)
+{
+    private T _value;
+    private bool _isNull = true;
+
+/**
+Constructor initializing $(D this) with $(D value).
+ */ 
+    this(T value)
+    {
+        _value = value;
+        _isNull = false;
+    }
+
+/**
+Returns $(D true) if and only if $(D this) is in the null state.
+ */ 
+    bool isNull()
+    {
+        return _isNull;
+    }
+
+/**
+Forces $(D this) to the null state.
+ */ 
+    void nullify()
+    {
+        // destroy
+        //static if (is(typeof(_value.__dtor()))) _value.__dtor();
+        _isNull = true;
+    }
+
+/**
+Assigns $(D value) to the internally-held state. If the assignment
+succeeds, $(D this) becomes non-null.
+ */ 
+    void opAssign(T value)
+    {
+        _value = value;
+        _isNull = false;
+    }
+
+/**
+Gets the value. Throws an exception if $(D this) is in the null
+state. This function is also called for the implicit conversion to $(D
+T).
+ */
+    ref T get()
+    {
+        enforce(!isNull);
+        return _value;
+    }
+
+/**
+Implicitly converts to $(D T). Throws an exception if $(D this) is in
+the null state.
+ */
+    alias get this;
+}
+
+unittest
+{
+    Nullable!int a;
+    assert(a.isNull);
+    a = 5;
+    assert(!a.isNull);
+    assert(a == 5);
+}
+
+/**
+Just like $(D Nullable!T), except that the null state is defined as a
+particular value. For example, $(D Nullable!(uint, uint.max)) is an
+$(D uint) that sets aside the value $(D uint.max) to denote a null
+state. $(D Nullable!(T, nullValue)) is more storage-efficient than $(D
+Nullable!T) because it does not need to store an extra $(D bool).
+ */
+struct Nullable(T, T nullValue)
+{
+    private T _value = nullValue;
+
+/**
+Constructor initializing $(D this) with $(D value).
+ */ 
+    this(T value)
+    {
+        _value = value;
+    }
+    
+/**
+Returns $(D true) if and only if $(D this) is in the null state.
+ */ 
+    bool isNull()
+    {
+        return _value == nullValue;
+    }
+
+/**
+Forces $(D this) to the null state.
+ */ 
+    void nullify()
+    {
+        _value = nullValue;
+    }
+
+/**
+Assigns $(D value) to the internally-held state. No null checks are
+made.
+ */ 
+    void opAssign(T value)
+    {
+        _value = value;
+    }
+    
+/**
+Gets the value. Throws an exception if $(D this) is in the null
+state. This function is also called for the implicit conversion to $(D
+T).
+ */
+    ref T get()
+    {
+        enforce(!isNull);
+        return _value;
+    }
+
+/**
+Implicitly converts to $(D T). Throws an exception if $(D this) is in
+the null state.
+ */
+    alias get this;
+}
+
+unittest
+{
+    Nullable!(int, int.min) a;
+    assert(a.isNull);
+    a = 5;
+    assert(!a.isNull);
+    assert(a == 5);
+}
+
+/**
+Just like $(D Nullable!T), except that the object refers to a value
+sitting elsewhere in memory. This makes assignments overwrite the
+initially assigned value. Internally $(D NullableRef!T) only stores a
+pointer to $(D T) (i.e., $(D Nullable!T.sizeof == (T*).sizeof)).
+ */
+struct NullableRef(T)
+{
+    private T* _value;
+
+/**
+Constructor binding $(D this) with $(D value).
+ */ 
+    this(T * value)
+    {
+        _value = value;
+    }
+    
+/**
+Binds the internal state to $(D value).
+ */ 
+    void bind(T * value)
+    {
+        _value = value;
+    }
+    
+/**
+Returns $(D true) if and only if $(D this) is in the null state.
+ */ 
+    bool isNull()
+    {
+        return _value is null;
+    }
+
+/**
+Forces $(D this) to the null state.
+ */ 
+    void nullify()
+    {
+        _value = null;
+    }
+
+/**
+Assigns $(D value) to the internally-held state. 
+ */ 
+    void opAssign(T value)
+    {
+        enforce(_value);
+        *_value = value;
+    }
+    
+/**
+Gets the value. Throws an exception if $(D this) is in the null
+state. This function is also called for the implicit conversion to $(D
+T).
+ */
+    ref T get()
+    {
+        enforce(!isNull);
+        return *_value;
+    }
+
+/**
+Implicitly converts to $(D T). Throws an exception if $(D this) is in
+the null state.
+ */
+    alias get this;
+}
+
+unittest
+{
+    int x = 5;
+    auto a = NullableRef!(int)(&x);
+    assert(!a.isNull);
+    assert(a == 5);
+    a = 42;
+    assert(!a.isNull);
+    assert(a == 42);
+}
+

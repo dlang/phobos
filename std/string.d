@@ -1255,7 +1255,7 @@ unittest
  * using whitespace as the delimiter.
  */
 
-string[] split(string s)
+S[] split(S)(S s) if (isSomeString!S)
 {
     size_t i;
     size_t istart = 0;
@@ -1329,7 +1329,7 @@ unittest
  * using delim[] as the delimiter.
  */
 
-string[] split(string s, string delim)
+S1[] split(S1, S2)(S1 s, S2 delim) if (isSomeString!S1 && isSomeString!S2)
 in
 {
     assert(delim.length > 0);
@@ -4038,8 +4038,8 @@ unittest
  */
 struct ByCodeUnit(Range, Unit)
 if (isInputRange!Range
-        && indexOfType!(Unqual!Unit, char, wchar, dchar) >= 0
-        && indexOfType!(Unqual!(ElementType!Range), char, wchar, dchar) >= 0
+        && staticIndexOf!(Unqual!Unit, char, wchar, dchar) >= 0
+        && staticIndexOf!(Unqual!(ElementType!Range), char, wchar, dchar) >= 0
         && !is(Unqual!(ElementType!Range) == Unqual!Unit))
 {
 private:
@@ -4110,8 +4110,8 @@ public:
 }
 
 template ByCodeUnit(Range, Unit)
-if (indexOfType!(Unqual!Unit, char, wchar, dchar) >= 0
-        && indexOfType!(Unqual!(ElementType!Range), char, wchar, dchar) >= 0
+if (staticIndexOf!(Unqual!Unit, char, wchar, dchar) >= 0
+        && staticIndexOf!(Unqual!(ElementType!Range), char, wchar, dchar) >= 0
         && is(Unqual!(ElementType!Range) == Unqual!Unit))
 {
     alias Range ByCodeUnit;

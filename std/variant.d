@@ -177,6 +177,7 @@ private:
         ubyte[maxDataSize] data;
     }
     enum size = SizeChecker.sizeof - (int function()).sizeof;
+    static assert(size >= (void*).sizeof);
 
     /** Tells whether a type $(D_PARAM T) is statically allowed for
      * storage inside a $(D_PARAM VariantN) object by looking
@@ -186,14 +187,18 @@ private:
      */
     public template allowed(T)
     {
-        enum bool allowed = is(T == VariantN) || T.sizeof <= size
-            && (!AllowedTypes.length || indexOfType!(T, AllowedTypes) >= 0);
+        enum bool allowed
+            = is(T == VariantN)
+            ||
+            //T.sizeof <= size &&
+            (AllowedTypes.length == 0 || staticIndexOf!(T, AllowedTypes) >= 0);
     }
 
     // Each internal operation is encoded with an identifier. See
     // the "handler" function below.
     enum OpID { getTypeInfo, get, compare, testConversion, toString,
-                index, indexAssign, catAssign, copyOut, length }
+            index, indexAssign, catAssign, copyOut, length,
+            apply }
 
     // state
     int function(OpID selector, ubyte[size]* store, void* data) fptr
@@ -237,7 +242,7 @@ private:
         case OpID.length:
             throw new VariantException(
                 "Attempt to use an uninitialized VariantN");
-        default: assert(false);
+        default: assert(false, "Invalid OpID");
         }
         return 0;
     }
@@ -245,6 +250,18 @@ private:
     // Handler for all of a type's operations
     static int handler(A)(OpID selector, ubyte[size]* pStore, void* parm)
     {
+        static A* getPtr(void* untyped)
+        {
+            static if (A.sizeof <= size)
+            {
+                return cast(A*) untyped;
+            }
+            else
+            {
+                return *cast(A**) untyped;
+            }
+        }
+        auto zis = getPtr(pStore);
         // Input: TypeInfo object
         // Output: target points to a copy of *me, if me was not null
         // Returns: true iff the A can be converted to the type represented
@@ -258,10 +275,11 @@ private:
                 // found!!!
                 static if (is(typeof(*cast(T*) target = *src)))
                 {
+                    auto zat = cast(T*) target;
                     if (src)
                     {
-                        assert(target);
-                        *cast(T*) target = *src;
+                        assert(target, "target must be non-null");
+                        *zat = *src;
                     }
                 }
                 else
@@ -282,30 +300,29 @@ private:
         case OpID.copyOut:
             auto target = cast(VariantN *) parm;
             assert(target);
-            tryPutting(cast(A*) pStore, typeid(A), &target.store)
+            tryPutting(zis, typeid(A), cast(void*) getPtr(&target.store))
                 || assert(false);
             target.fptr = &handler!(A);
             break;
         case OpID.get:
-            return !tryPutting(cast(A*) pStore, *cast(TypeInfo*) parm, parm);
+            return !tryPutting(zis, *cast(TypeInfo*) parm, parm);
         case OpID.testConversion:
             return !tryPutting(null, *cast(TypeInfo*) parm, null);
         case OpID.compare:
-            auto me = cast(A*) pStore;
             auto rhsP = cast(VariantN *) parm;
             auto rhsType = rhsP.type;
             // Are we the same?
             if (rhsType == typeid(A))
             {
                 // cool! Same type!
-                auto rhsPA = cast(A*) &rhsP.store;
-                if (*rhsPA == *me)
+                auto rhsPA = getPtr(&rhsP.store);
+                if (*rhsPA == *zis)
                 {
                     return 0;
                 }
                 static if (is(typeof(A.init < A.init)))
                 {
-                    return *me < *rhsPA ? -1 : 1;
+                    return *zis < *rhsPA ? -1 : 1;
                 }
                 else
                 {
@@ -315,7 +332,7 @@ private:
             }
             VariantN temp;
             // Do I convert to rhs?
-            if (tryPutting(me, rhsType, &temp.store))
+            if (tryPutting(zis, rhsType, &temp.store))
             {
                 // cool, I do; temp's store contains my data in rhs's type!
                 // also fix up its fptr
@@ -323,19 +340,19 @@ private:
                 // now lhsWithRhsType is a full-blown VariantN of rhs's type
                 return temp.opCmp(*rhsP);
             }
-            // Does rhs convert to me?
+            // Does rhs convert to zis?
             *cast(TypeInfo*) &temp.store = typeid(A);
             if (rhsP.fptr(OpID.get, &rhsP.store, &temp.store) == 0)
             {
                 // cool! Now temp has rhs in my type!
-                auto rhsPA = cast(A*) temp.store;
-                if (*rhsPA == *me)
+                auto rhsPA = getPtr(&temp.store);
+                if (*rhsPA == *zis)
                 {
                     return 0;
                 }
                 static if (is(typeof(A.init < A.init)))
                 {
-                    return *me < *rhsPA ? -1 : 1;
+                    return *zis < *rhsPA ? -1 : 1;
                 }
                 else
                 {
@@ -346,15 +363,14 @@ private:
             return int.min; // dunno
         case OpID.toString:
             auto target = cast(string*) parm;
-            auto me = cast(A*) pStore;
-            static if (is(typeof(to!(string)(*me))))
+            static if (is(typeof(to!(string)(*zis))))
             {
-                *target = to!(string)(*me);
+                *target = to!(string)(*zis);
                 break;
             }
-            else static if (is(typeof((*me).toString)))
+            else static if (is(typeof((*zis).toString)))
             {
-                *target = (*me).toString;
+                *target = (*zis).toString;
                 break;
             }
             else
@@ -363,7 +379,6 @@ private:
             }
 
         case OpID.index:
-            auto me = cast(A*) pStore;
             // Added allowed!(...) prompted by a bug report by Chris
             // Nicholson-Sauls.
             static if (isArray!(A) && allowed!(typeof(A.init[0])))
@@ -372,14 +387,14 @@ private:
                 auto result = cast(VariantN*) parm;
                 size_t index = result.convertsTo!(int)
                     ? result.get!(int) : result.get!(size_t);
-                *result = (*me)[index];
+                *result = (*zis)[index];
                 break;
             }
             else static if (isAssociativeArray!(A)
                     && allowed!(typeof(A.init.values[0])))
             {
                 auto result = cast(VariantN*) parm;
-                *result = (*me)[result.get!(typeof(A.keys[0]))];
+                *result = (*zis)[result.get!(typeof(A.keys[0]))];
                 break;
             }
             else
@@ -388,22 +403,21 @@ private:
             }
 
         case OpID.indexAssign:
-            auto me = cast(A*) pStore;
-            static if (isArray!(A) && is(typeof((*me)[0] = (*me)[0])))
+            static if (isArray!(A) && is(typeof((*zis)[0] = (*zis)[0])))
             {
                 // array type; result comes first, index comes second
                 auto args = cast(VariantN*) parm;
                 size_t index = args[1].convertsTo!(int)
                     ? args[1].get!(int) : args[1].get!(size_t);
-                (*me)[index] = args[0].get!(typeof((*me)[0]));
-		break;
+                (*zis)[index] = args[0].get!(typeof((*zis)[0]));
+                break;
             }
             else static if (isAssociativeArray!(A))
             {
                 auto args = cast(VariantN*) parm;
-                (*me)[args[1].get!(typeof(A.keys[0]))]
+                (*zis)[args[1].get!(typeof(A.keys[0]))]
                     = args[0].get!(typeof(A.values[0]));
-		break;
+                break;
             }
             else
             {
@@ -411,21 +425,20 @@ private:
             }
 
         case OpID.catAssign:
-            auto me = cast(A*) pStore;
-            static if (is(typeof((*me)[0])) && is(typeof((*me) ~= *me)))
+            static if (is(typeof((*zis)[0])) && is(typeof((*zis) ~= *zis)))
             {
                 // array type; parm is the element to append
                 auto arg = cast(VariantN*) parm;
-                alias typeof((*me)[0]) E;
+                alias typeof((*zis)[0]) E;
                 if (arg[0].convertsTo!(E))
                 {
                     // append one element to the array
-                    (*me) ~= [ arg[0].get!(E) ];
+                    (*zis) ~= [ arg[0].get!(E) ];
                 }
                 else
                 {
                     // append a whole array to the array
-                    (*me) ~= arg[0].get!(A);
+                    (*zis) ~= arg[0].get!(A);
                 }
 		break;
             }
@@ -435,15 +448,17 @@ private:
             }
 
         case OpID.length:
-            auto me = cast(A*) pStore;
-            static if (is(typeof(me.length)))
+            static if (is(typeof(zis.length)))
             {
-                return me.length;
+                return zis.length;
             }
             else
             {
                 throw new VariantException(typeid(A), typeid(void[]));
             }
+
+        case OpID.apply:
+            assert(0);
 
         default: assert(false);
         }
@@ -481,25 +496,29 @@ public:
         }
         else
         {
-            static if (is(T : const(VariantN)))
+            static if (is(T : VariantN))
             {
                 rhs.fptr(OpID.copyOut, &rhs.store, &this);
+            }
+            else static if (is(T : const(VariantN)))
+            {
+                static assert(false,
+                        "Assigning Variant objects from const Variant"
+                        " objects is currently not supported.");
             }
             else
             {
                 static if (T.sizeof <= size)
                 {
-                    //*cast(U*) &store = rhs;
                     memcpy(&store, &rhs, rhs.sizeof);
-                    fptr = &handler!(T);
                 }
                 else
                 {
-                    static assert(false, "Cannot store type "
-                            ~ T.stringof ~ " in a " ~ VariantN.stringof
-                            ~ "; it's too large. Try storing a pointer"
-                            ", or using VariantN with a larger size.");
+                    auto p = new T;
+                    *p = rhs;
+                    memcpy(&store, &p, p.sizeof);
                 }
+                fptr = &handler!(T);
             }
             return this;
         }
@@ -520,9 +539,10 @@ public:
      * ----
      */
     
-    bool hasValue()
+    bool hasValue() const
     {
-        return fptr != &handler!(void);
+        // @@@BUG@@@ in compiler, the cast shouldn't be needed
+        return cast(typeof(&handler!(void))) fptr != &handler!(void);
     }
 
     /**
@@ -553,7 +573,7 @@ public:
      * Returns the $(D_PARAM typeid) of the currently held value.
      */
     
-    TypeInfo type()
+    TypeInfo type() const
     {
         TypeInfo result;
         fptr(OpID.getTypeInfo, null, &result);
@@ -607,15 +627,32 @@ public:
      * VariantException).
      */
     
-    DecayStaticToDynamicArray!(T) get(T)()
+    DecayStaticToDynamicArray!(T) get(T)() if (!is(T == const))
     {
         union Buf
         {
             TypeInfo info;
             DecayStaticToDynamicArray!(T) result;
         };
+        auto p = *cast(T**) &store;
         Buf buf = { typeid(DecayStaticToDynamicArray!(T)) };
         if (fptr(OpID.get, &store, &buf))
+        {
+            throw new VariantException(type, typeid(T));
+        }
+        return buf.result;
+    }
+
+    DecayStaticToDynamicArray!(T) get(T)() const if (is(T == const))
+    {
+        union Buf
+        {
+            TypeInfo info;
+            DecayStaticToDynamicArray!(Unqual!T) result;
+        };
+        auto p = *cast(T**) &store;
+        Buf buf = { typeid(DecayStaticToDynamicArray!(T)) };
+        if (fptr(OpID.get, cast(Unqual!(typeof(&store))) &store, &buf))
         {
             throw new VariantException(type, typeid(T));
         }
@@ -942,6 +979,22 @@ public:
     size_t length()
     {
         return cast(size_t) fptr(OpID.length, &store, null);
+    }
+
+    /**
+       If the $(D VariantN) contains an array, applies $(D dg) to each
+       element of the array in turn. Otherwise, throws an exception.
+     */
+    int opApply(Delegate)(Delegate dg)
+    {
+        // @@@TODO@@@ make this much more general.
+        alias ParameterTypeTuple!(Delegate)[0] A;
+        auto arr = get!(A[]);
+        foreach (ref e; arr)
+        {
+            if (dg(e)) return 1;
+        }
+        return 0;
     }
 }
 
@@ -1307,3 +1360,32 @@ unittest
 }
 
 
+unittest
+{
+    struct Huge {
+        real a, b, c, d, e, f, g;
+    }
+    
+    Huge huge;
+    huge.e = 42;
+    Variant v;
+    v = huge;  // Compile time error.
+    assert(v.get!(Huge).e == 42);
+}
+
+unittest
+{
+    const x = Variant(42);
+    auto y = x.get!(const int)();
+}
+
+// test iteration
+unittest
+{
+    auto v = Variant([ 1, 2, 3, 4 ][]);
+    auto j = 0;
+    foreach (int i; v)
+    {
+        assert(i == ++j);
+    }
+}

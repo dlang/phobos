@@ -1,34 +1,33 @@
-
 // Written in the D programming language.
 
 /**
- * Templates with which to do compile time manipulation of strings.
- *
- * Macros:
- *	WIKI = Phobos/StdMetastrings
- * Copyright:
- *	Public Domain
- */
+Templates with which to do compile-time manipulation of strings.
 
-/*
- * Authors:
- *	Walter Bright, Digital Mars, www.digitalmars.com
- *	Don Clugston
+Authors: $(WEB digitalmars.com, Walter Bright, Digital Mars), Don
+Clugston
+
+Macros:
+   WIKI = Phobos/StdMetastrings
+Copyright:
+   Public Domain
  */
 
 module std.metastrings;
 
 /**
- * Formats constants into a string at compile time.
- * Analogous to std.string.format().
- * Parameters:
- *	A =	tuple of constants, which can be strings,
- *		characters, or integral values.
- * Formats:
- *	The formats supported are %s for strings, and %%
- *	for the % character.
- * Example:
- * ---
+Formats constants into a string at compile time.  Analogous to $(XREF
+string,format).
+
+Parameters:
+
+A = tuple of constants, which can be strings, characters, or integral
+    values.
+    
+Formats:
+ *    The formats supported are %s for strings, and %%
+ *    for the % character.
+Example:
+---
 import std.metastrings;
 import std.stdio;
 
@@ -43,179 +42,174 @@ void main()
 template Format(A...)
 {
     static if (A.length == 0)
-	const char[] Format = "";
-    else static if (is(typeof(A[0]) : char[]))
-	const char[] Format = FormatString!(A[0], A[1..$]);
-	//const char[] Format = FormatString!(A[0]);
+        enum Format = "";
+    else static if (is(typeof(A[0]) : const(char)[]))
+        enum Format = FormatString!(A[0], A[1..$]);
     else
-	const char[] Format = ToString!(A[0]) ~ Format!(A[1..$]);
+        enum Format = toStringNow!(A[0]) ~ Format!(A[1..$]);
 }
 
 template FormatString(const(char)[] F, A...)
 {
     static if (F.length == 0)
-	const char[] FormatString = Format!(A);
+        enum FormatString = Format!(A);
     else static if (F.length == 1)
-	const char[] FormatString = F[0] ~ Format!(A);
+        enum FormatString = F[0] ~ Format!(A);
     else static if (F[0..2] == "%s")
-	const char[] FormatString = ToString!(A[0]) ~ FormatString!(F[2..$],A[1..$]);
+        enum FormatString
+            = toStringNow!(A[0]) ~ FormatString!(F[2..$],A[1..$]);
     else static if (F[0..2] == "%%")
-	const char[] FormatString = "%" ~ FormatString!(F[2..$],A);
-    else static if (F[0] == '%')
-	static assert(0, "unrecognized format %" ~ F[1]);
+        enum FormatString = "%" ~ FormatString!(F[2..$],A);
     else
-	const char[] FormatString = F[0] ~ FormatString!(F[1..$],A);
+    {
+        static assert(F[0] != '%', "unrecognized format %" ~ F[1]);
+        enum FormatString = F[0] ~ FormatString!(F[1..$],A);
+    }
+}
+
+unittest
+{
+    auto s = Format!("hel%slo", "world", -138, 'c', true);
+    assert(s == "helworldlo-138ctrue", "[" ~ s ~ "]");
 }
 
 /**
  * Convert constant argument to a string.
  */
 
-template ToString(ulong U)
+template toStringNow(ulong v)
 {
-    static if (U < 10)
-	invariant char[] ToString = "" ~ cast(char)(U + '0');
+    static if (v < 10)
+        enum toStringNow = "" ~ cast(char)(v + '0');
     else
-	invariant char[] ToString = ToString!(U / 10) ~ ToString!(U % 10);
+        enum toStringNow = toStringNow!(v / 10) ~ toStringNow!(v % 10);
 }
 
-static assert(ToString!(1uL << 62) == "4611686018427387904");
+static assert(toStringNow!(1uL << 62) == "4611686018427387904");
 
 /// ditto
-template ToString(long I)
+template toStringNow(long v)
 {
-    static if (I < 0)
-	invariant char[] ToString = "-" ~ ToString!(cast(ulong)(-I));
+    static if (v < 0)
+        enum toStringNow = "-" ~ toStringNow!(cast(ulong) -v);
     else
-	invariant char[] ToString = ToString!(cast(ulong)I);
+        enum toStringNow = toStringNow!(cast(ulong) v);
 }
 
-static assert(ToString!(0x100000000) == "4294967296");
+static assert(toStringNow!(0x100000000) == "4294967296");
+static assert(toStringNow!(-138L) == "-138");
 
 /// ditto
-template ToString(uint U)
+template toStringNow(uint U)
 {
-    invariant char[] ToString = ToString!(cast(ulong)U);
-}
-
-/// ditto
-template ToString(int I)
-{
-    invariant char[] ToString = ToString!(cast(long)I);
+    enum toStringNow = toStringNow!(cast(ulong)U);
 }
 
 /// ditto
-template ToString(ushort U)
+template toStringNow(int I)
 {
-    invariant char[] ToString = ToString!(cast(ulong)U);
+    enum toStringNow = toStringNow!(cast(long)I);
 }
 
 /// ditto
-template ToString(short I)
+template toStringNow(bool B)
 {
-    invariant char[] ToString = ToString!(cast(long)I);
+    enum toStringNow = B ? "true" : "false";
 }
 
 /// ditto
-template ToString(ubyte U)
+template toStringNow(string S)
 {
-    invariant char[] ToString = ToString!(cast(ulong)U);
+    enum toStringNow = S;
 }
 
 /// ditto
-template ToString(byte I)
+template toStringNow(char C)
 {
-    invariant char[] ToString = ToString!(cast(long)I);
-}
-
-/// ditto
-template ToString(bool B)
-{
-    invariant char[] ToString = B ? "true" : "false";
-}
-
-/// ditto
-template ToString(string S)
-{
-    invariant char[] ToString = S;
-}
-
-/// ditto
-template ToString(char C)
-{
-    invariant char[] ToString = "" ~ C;
-}
-
-unittest
-{
-    auto s = Format!("hel%slo", "world", -138, 'c', true);
-    // BUG 1616 filed: assert(s == "helworldlo-138ctrue", "[" ~ s ~ "]");
+    enum toStringNow = "" ~ C;
 }
 
 
 /********
  * Parse unsigned integer literal from the start of string s.
  * returns:
- *	.value = the integer literal as a string,
- *	.rest = the string following the integer literal
+ *    .value = the integer literal as a string,
+ *    .rest = the string following the integer literal
  * Otherwise:
- *	.value = null,
- *	.rest = s
+ *    .value = null,
+ *    .rest = s
  */
 
-template ParseUinteger(const(char)[] s)
+template parseUinteger(const(char)[] s)
 {
     static if (s.length == 0)
-    {	const char[] value = "";
-	const char[] rest = "";
+    {
+        enum value = "";
+        enum rest = "";
     }
     else static if (s[0] >= '0' && s[0] <= '9')
-    {	const char[] value = s[0] ~ ParseUinteger!(s[1..$]).value;
-	const char[] rest = ParseUinteger!(s[1..$]).rest;
+    {
+        enum value = s[0] ~ parseUinteger!(s[1..$]).value;
+        enum rest = parseUinteger!(s[1..$]).rest;
     }
     else
-    {	const char[] value = "";
-	const char[] rest = s;
+    {
+        enum value = "";
+        enum rest = s;
     }
 }
 
 /********
- * Parse integer literal optionally preceded by '-'
- * from the start of string s.
- * returns:
- *	.value = the integer literal as a string,
- *	.rest = the string following the integer literal
- * Otherwise:
- *	.value = null,
- *	.rest = s
- */
+Parse integer literal optionally preceded by $(D '-') from the start
+of string $(D s).
 
-template ParseInteger(const(char)[] s)
+Returns:
+   .value = the integer literal as a string,
+   .rest = the string following the integer literal
+
+Otherwise:
+   .value = null,
+   .rest = s
+*/
+
+template parseInteger(const(char)[] s)
 {
     static if (s.length == 0)
-    {	const char[] value = "";
-	const char[] rest = "";
+    {
+        enum value = "";
+        enum rest = "";
     }
     else static if (s[0] >= '0' && s[0] <= '9')
-    {	const char[] value = s[0] ~ ParseUinteger!(s[1..$]).value;
-	const char[] rest = ParseUinteger!(s[1..$]).rest;
+    {
+        enum value = s[0] ~ parseUinteger!(s[1..$]).value;
+        enum rest = parseUinteger!(s[1..$]).rest;
     }
     else static if (s.length >= 2 &&
-		s[0] == '-' && s[1] >= '0' && s[1] <= '9')
-    {	const char[] value = s[0..2] ~ ParseUinteger!(s[2..$]).value;
-	const char[] rest = ParseUinteger!(s[2..$]).rest;
+            s[0] == '-' && s[1] >= '0' && s[1] <= '9')
+    {
+        enum value = s[0..2] ~ parseUinteger!(s[2..$]).value;
+        enum rest = parseUinteger!(s[2..$]).rest;
     }
     else
-    {	const char[] value = "";
-	const char[] rest = s;
+    {
+        enum value = "";
+        enum rest = s;
     }
 }
 
 unittest
 {
-    assert(ParseUinteger!("1234abc").value == "1234");
-    assert(ParseUinteger!("1234abc").rest == "abc");
-    assert(ParseInteger!("-1234abc").value == "-1234");
-    assert(ParseInteger!("-1234abc").rest == "abc");
+    assert(parseUinteger!("1234abc").value == "1234");
+    assert(parseUinteger!("1234abc").rest == "abc");
+    assert(parseInteger!("-1234abc").value == "-1234");
+    assert(parseInteger!("-1234abc").rest == "abc");
 }
 
+/**
+Deprecated aliases held for backward compatibility.
+*/
+deprecated alias toStringNow ToString;
+/// Ditto
+deprecated alias parseUinteger ParseUinteger;
+/// Ditto
+deprecated alias parseUinteger ParseInteger;
