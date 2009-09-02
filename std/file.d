@@ -684,7 +684,17 @@ version(Posix) void mkdir(in char[] pathname)
 void mkdirRecurse(in char[] pathname)
 {
     const left = dirname(pathname);
-    exists(left) || mkdirRecurse(left);
+    if (!exists(left))
+    {
+	version (Windows)
+	{   /* Prevent infinite recursion if left is "d:\" and
+	     * drive d does not exist.
+	     */
+	    if (left.length >= 3 && left[length - 2] == ':')
+		throw new FileException(left.idup);
+	}
+	mkdirRecurse(left);
+    }
     mkdir(pathname);
 }
 
@@ -1116,10 +1126,10 @@ void rmdirRecurse(in char[] pathname)
 
 version(Windows) unittest
 {
-    auto d = r"c:\deleteme\a\b\c\d\e\f\g";
+    auto d = r"\deleteme\a\b\c\d\e\f\g";
     mkdirRecurse(d);
-    rmdirRecurse(r"c:\deleteme");
-    enforce(!exists(r"c:\deleteme"));
+    rmdirRecurse(r"\deleteme");
+    enforce(!exists(r"\deleteme"));
 }
 
 version(Posix) unittest
