@@ -1251,63 +1251,65 @@ unittest
 
 
 /**************************************
- * Split s[] into an array of words,
- * using whitespace as the delimiter.
+Split $(D s[]) into an array of words, using whitespace as delimiter.
  */
 
 S[] split(S)(S s) if (isSomeString!S)
 {
-    size_t i;
-    size_t istart = 0;
+    size_t istart;
     bool inword = false;
-    string[] words;
+    S[] result;
 
-    for (i = 0; i < s.length; i++)
+    foreach (i; 0 .. s.length)
     {
-    switch (s[i])
-    {
+        switch (s[i])
+        {
         case ' ':
         case '\t':
         case '\f':
         case '\r':
         case '\n':
         case '\v':
-        if (inword)
-        {
-            words ~= s[istart .. i];
-            inword = false;
-        }
-        break;
+            if (inword)
+            {
+                result ~= s[istart .. i];
+                inword = false;
+            }
+            break;
 
         default:
-        if (!inword)
-        {   istart = i;
-            inword = true;
+            if (!inword)
+            {
+                istart = i;
+                inword = true;
+            }
+            break;
         }
-        break;
-    }
     }
     if (inword)
-    words ~= s[istart .. i];
-    return words;
+        result ~= s[istart .. $];
+    return result;
 }
 
 unittest
 {
-    debug(string) printf("string.split1\n");
+    foreach (S; TypeTuple!(string, wstring, dstring))
+    {
+        debug(string) printf("string.split1\n");
 
-    string s = " peter paul\tjerry ";
-    string[] words;
-    int i;
-
-    words = split(s);
-    assert(words.length == 3);
-    i = cmp(words[0], "peter");
-    assert(i == 0);
-    i = cmp(words[1], "paul");
-    assert(i == 0);
-    i = cmp(words[2], "jerry");
-    assert(i == 0);
+        S s = " peter paul\tjerry ";
+        S[] words;
+        int i;
+        
+        words = split(s);
+        assert(words.length == 3);
+        i = cmp(words[0], "peter");
+        assert(i == 0);
+        i = cmp(words[1], "paul");
+        assert(i == 0);
+        i = cmp(words[2], "jerry");
+        assert(i == 0);
+    }
 }
 
 auto splitter(String)(String s) if (isSomeString!String)
@@ -1498,20 +1500,17 @@ unittest
  * The delimiter is not included in the line.
  */
 
-string[] splitlines(string s)
+S[] splitlines(S)(S s)
 {
-    uint i;
-    uint istart;
-    uint nlines;
+    size_t i, istart;
+    auto result = Appender!(S[])();
 
-    nlines = 0;
-    for (i = 0; i < s.length; i++)
-    {   char c;
-
-        c = s[i];
+    foreach (i; 0 .. s.length)
+    {   
+        immutable c = s[i];
         if (c == '\r' || c == '\n')
         {
-            nlines++;
+            result.put(s[istart .. i]);
             istart = i + 1;
             if (c == '\r' && i + 1 < s.length && s[i + 1] == '\n')
             {
@@ -1520,66 +1519,45 @@ string[] splitlines(string s)
             }
         }
     }
-    if (istart != i)
-        nlines++;
-
-    auto lines = new string[nlines];
-    nlines = 0;
-    istart = 0;
-    for (i = 0; i < s.length; i++)
-    {   char c;
-
-        c = s[i];
-        if (c == '\r' || c == '\n')
-        {
-            lines[nlines] = s[istart .. i];
-            nlines++;
-            istart = i + 1;
-            if (c == '\r' && i + 1 < s.length && s[i + 1] == '\n')
-            {
-                i++;
-                istart++;
-            }
-        }
-    }
-    if (istart != i)
-    {   lines[nlines] = s[istart .. i];
-        nlines++;
+    if (istart != s.length)
+    {
+        result.put(s[istart .. $]);
     }
 
-    assert(nlines == lines.length);
-    return lines;
+    return result.data;
 }
 
 unittest
 {
     debug(string) printf("string.splitlines\n");
 
-    string s = "\rpeter\n\rpaul\r\njerry\n";
-    string[] lines;
-    int i;
+    foreach (S; TypeTuple!(string, wstring, dstring))
+    {
+        S s = "\rpeter\n\rpaul\r\njerry\n";
+        S[] lines;
+        int i;
 
-    lines = splitlines(s);
-    //printf("lines.length = %d\n", lines.length);
-    assert(lines.length == 5);
-    //printf("lines[0] = %llx, '%.*s'\n", lines[0], lines[0]);
-    assert(lines[0].length == 0);
-    i = cmp(lines[1], "peter");
-    assert(i == 0);
-    assert(lines[2].length == 0);
-    i = cmp(lines[3], "paul");
-    assert(i == 0);
-    i = cmp(lines[4], "jerry");
-    assert(i == 0);
+        lines = splitlines(s);
+        //printf("lines.length = %d\n", lines.length);
+        assert(lines.length == 5);
+        //printf("lines[0] = %llx, '%.*s'\n", lines[0], lines[0]);
+        assert(lines[0].length == 0);
+        i = cmp(lines[1], "peter");
+        assert(i == 0);
+        assert(lines[2].length == 0);
+        i = cmp(lines[3], "paul");
+        assert(i == 0);
+        i = cmp(lines[4], "jerry");
+        assert(i == 0);
 
-    s = s[0 .. s.length - 1];   // lop off trailing \n
-    lines = splitlines(s);
-    //printf("lines.length = %d\n", lines.length);
-    assert(lines.length == 5);
-    i = cmp(lines[4], "jerry");
-    assert(i == 0);
+        s = s[0 .. s.length - 1];   // lop off trailing \n
+        lines = splitlines(s);
+        //printf("lines.length = %d\n", lines.length);
+        assert(lines.length == 5);
+        i = cmp(lines[4], "jerry");
+        assert(i == 0);
+    }
 }
-
 
 /*****************************************
  * Strips leading or trailing whitespace, or both.
