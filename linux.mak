@@ -53,7 +53,7 @@ CFLAGS_posix_release = -m32 -O3 $(CFLAGS)
 
 # D flags for all OSs, but customized by build
 DFLAGS_debug = -w -g -debug -d $(DFLAGS)
-DFLAGS_release = -w -O -release -inline -d $(DFLAGS)
+DFLAGS_release = -w -O -release -inline -nofloat -d $(DFLAGS)
 
 # D flags for documentation generation
 DDOCFLAGS=-version=ddoc -d -c -o- $(STDDOC)
@@ -131,7 +131,7 @@ CC$1$2 = $$(call RUN_$1,$(CC_$1))
 DMD$1$2 = $$(call RUN_$1,$(DMD_$1))
 
 $$(ROOT$1$2)/%$$(OBJSUFFIX_$1) : %.c $$(ROOT$1$2)/.directory	
-	@mkdir --parents $$(dir $$@) || [ -d $$(dir $$@) ]
+	@[ -d $$(dir $$@) ] || mkdir --parents $$(dir $$@) || [ -d $$(dir $$@) ]
 	$$(CC$1$2) -c $(CFLAGS_$1_$2) -o$$@ $$<
 
 $$(ROOT$1$2)/emptymain.d : $$(ROOT$1$2)/.directory
