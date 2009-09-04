@@ -2572,7 +2572,7 @@ if (staticIndexOf!(Unqual!S, int, long) >= 0 && isSomeString!T)
     alias Unqual!(ElementType!T) Char;
     Char[1 + S.sizeof * 3] buffer;
 
-    auto u = -cast(Unsigned!S) value;
+    auto u = -cast(Unqual!(Unsigned!S)) value;
     uint ndigits = 1;
     while (u)
     {
@@ -2613,6 +2613,10 @@ unittest
     r = to!string(-123L);
     i = cmp(r, "-123");
     assert(i == 0);
+
+    const h  = 6;
+    string s = to!string(h);
+    assert(s == "6");
 }
 
 /// C-style strings
