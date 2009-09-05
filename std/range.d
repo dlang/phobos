@@ -1,8 +1,8 @@
 // Written in the D programming language.
 /**
 This module defines a few useful _range incarnations. Credit for ideas
-in building this module go to $(WEB
-fantascienza.net/leonardo/so/dlibs/all.html, bearophile).
+in building this module go to $(WEB fantascienza.net/leonardo/so/,
+Leonardo Maffi).
 
 Author:
 
