@@ -19,6 +19,7 @@ import std.traits;
 import std.typecons;
 import std.algorithm;
 import std.functional;
+import std.conv;
 version(unittest)
 {
     import std.conv, std.math, std.stdio;
