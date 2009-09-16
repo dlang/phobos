@@ -1,13 +1,19 @@
 // Written in the D programming language.
+
 /**
 A one-stop shop for converting values from one type to another.
 
-Authors:
+Copyright: Copyright Digital Mars 2007 - 2009.
+License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+Authors:   $(WEB digitalmars.com, Walter Bright),
+           $(WEB erdani.org, Andrei Alexandrescu),
+           Shin Fujishiro
 
-$(WEB digitalmars.com, Walter Bright), $(WEB erdani.org, Andrei
-Alexandrescu), Shin Fujishiro
+         Copyright Digital Mars 2007 - 2009.
+Distributed under the Boost Software License, Version 1.0.
+   (See accompanying file LICENSE_1_0.txt or copy at
+         http://www.boost.org/LICENSE_1_0.txt)
 */
-
 module std.conv;
 
 import core.memory, core.stdc.errno, core.stdc.string, core.stdc.stdlib,
@@ -15,7 +21,7 @@ import core.memory, core.stdc.errno, core.stdc.string, core.stdc.stdlib,
     std.ctype, std.math, std.range, std.stdio,
     std.string, std.traits, std.typecons, std.typetuple,
     std.utf;
-//debug=conv;		// uncomment to turn on debugging printf's
+//debug=conv;           // uncomment to turn on debugging printf's
 
 /* ************* Exceptions *************** */
 
@@ -1093,7 +1099,7 @@ if (isSomeString!Source && isFloatingPoint!Target)
     //writefln("toFloat('%s')", s);
     auto sz = toStringz(to!(const char[])(s));
     if (std.ctype.isspace(*sz))
-	goto Lerr;
+        goto Lerr;
 
     // issue 1589
     version (Windows)
@@ -1269,36 +1275,36 @@ unittest
 
     invariant string[] errors =
     [
-	"",
-	"-",
-	"+",
-	"-+",
-	" ",
-	" 0",
-	"0 ",
-	"- 0",
-	"1-",
-	"xx",
-	"123h",
-	"2147483648",
-	"-2147483649",
-	"5656566565",
+        "",
+        "-",
+        "+",
+        "-+",
+        " ",
+        " 0",
+        "0 ",
+        "- 0",
+        "1-",
+        "xx",
+        "123h",
+        "2147483648",
+        "-2147483649",
+        "5656566565",
     ];
 
     for (int j = 0; j < errors.length; j++)
     {
-	i = 47;
-	try
-	{
-	    i = to!int(errors[j]);
-	    //printf("i = %d\n", i);
-	}
-	catch (Error e)
-	{
-	    debug(conv) e.print();
-	    i = 3;
-	}
-	assert(i == 3);
+        i = 47;
+        try
+        {
+            i = to!int(errors[j]);
+            //printf("i = %d\n", i);
+        }
+        catch (Error e)
+        {
+            debug(conv) e.print();
+            i = 3;
+        }
+        assert(i == 3);
     }
 }
 
@@ -1332,36 +1338,36 @@ unittest
 
     static string[] errors =
     [
-	"",
-	"-",
-	"+",
-	"-+",
-	" ",
-	" 0",
-	"0 ",
-	"- 0",
-	"1-",
-	"+5",
-	"-78",
-	"xx",
-	"123h",
-	"4294967296",
+        "",
+        "-",
+        "+",
+        "-+",
+        " ",
+        " 0",
+        "0 ",
+        "- 0",
+        "1-",
+        "+5",
+        "-78",
+        "xx",
+        "123h",
+        "4294967296",
     ];
 
     for (int j = 0; j < errors.length; j++)
     {
-	i = 47;
-	try
-	{
-	    i = to!uint(errors[j]);
-	    //printf("i = %d\n", i);
-	}
-	catch (Error e)
-	{
-	    debug(conv) e.print();
-	    i = 3;
-	}
-	assert(i == 3);
+        i = 47;
+        try
+        {
+            i = to!uint(errors[j]);
+            //printf("i = %d\n", i);
+        }
+        catch (Error e)
+        {
+            debug(conv) e.print();
+            i = 3;
+        }
+        assert(i == 3);
     }
 }
 
@@ -1407,35 +1413,35 @@ unittest
 
     static string[] errors =
     [
-	"",
-	"-",
-	"+",
-	"-+",
-	" ",
-	" 0",
-	"0 ",
-	"- 0",
-	"1-",
-	"xx",
-	"123h",
-	"9223372036854775808",
-	"-9223372036854775809",
+        "",
+        "-",
+        "+",
+        "-+",
+        " ",
+        " 0",
+        "0 ",
+        "- 0",
+        "1-",
+        "xx",
+        "123h",
+        "9223372036854775808",
+        "-9223372036854775809",
     ];
 
     for (int j = 0; j < errors.length; j++)
     {
-	i = 47;
-	try
-	{
-	    i = to!long(errors[j]);
-	    //printf("l = %d\n", i);
-	}
-	catch (Error e)
-	{
-	    debug(conv) e.print();
-	    i = 3;
-	}
-	assert(i == 3);
+        i = 47;
+        try
+        {
+            i = to!long(errors[j]);
+            //printf("l = %d\n", i);
+        }
+        catch (Error e)
+        {
+            debug(conv) e.print();
+            i = 3;
+        }
+        assert(i == 3);
     }
 }
 
@@ -1477,36 +1483,36 @@ unittest
 
     static string[] errors =
     [
-	"",
-	"-",
-	"+",
-	"-+",
-	" ",
-	" 0",
-	"0 ",
-	"- 0",
-	"1-",
-	"+5",
-	"-78",
-	"xx",
-	"123h",
-	"18446744073709551616",
+        "",
+        "-",
+        "+",
+        "-+",
+        " ",
+        " 0",
+        "0 ",
+        "- 0",
+        "1-",
+        "+5",
+        "-78",
+        "xx",
+        "123h",
+        "18446744073709551616",
     ];
 
     for (int j = 0; j < errors.length; j++)
     {
-	i = 47;
-	try
-	{
-	    i = to!ulong(errors[j]);
-	    //printf("i = %d\n", i);
-	}
-	catch (Error e)
-	{
-	    debug(conv) e.print();
-	    i = 3;
-	}
-	assert(i == 3);
+        i = 47;
+        try
+        {
+            i = to!ulong(errors[j]);
+            //printf("i = %d\n", i);
+        }
+        catch (Error e)
+        {
+            debug(conv) e.print();
+            i = 3;
+        }
+        assert(i == 3);
     }
 }
 
@@ -1546,35 +1552,35 @@ unittest
 
     static string[] errors =
     [
-	"",
-	"-",
-	"+",
-	"-+",
-	" ",
-	" 0",
-	"0 ",
-	"- 0",
-	"1-",
-	"xx",
-	"123h",
-	"32768",
-	"-32769",
+        "",
+        "-",
+        "+",
+        "-+",
+        " ",
+        " 0",
+        "0 ",
+        "- 0",
+        "1-",
+        "xx",
+        "123h",
+        "32768",
+        "-32769",
     ];
 
     for (int j = 0; j < errors.length; j++)
     {
-	i = 47;
-	try
-	{
-	    i = to!short(errors[j]);
-	    printf("i = %d\n", i);
-	}
-	catch (Error e)
-	{
-	    debug(conv) e.print();
-	    i = 3;
-	}
-	assert(i == 3);
+        i = 47;
+        try
+        {
+            i = to!short(errors[j]);
+            printf("i = %d\n", i);
+        }
+        catch (Error e)
+        {
+            debug(conv) e.print();
+            i = 3;
+        }
+        assert(i == 3);
     }
 }
 
@@ -1609,36 +1615,36 @@ unittest
 
     static string[] errors =
     [
-	"",
-	"-",
-	"+",
-	"-+",
-	" ",
-	" 0",
-	"0 ",
-	"- 0",
-	"1-",
-	"+5",
-	"-78",
-	"xx",
-	"123h",
-	"65536",
+        "",
+        "-",
+        "+",
+        "-+",
+        " ",
+        " 0",
+        "0 ",
+        "- 0",
+        "1-",
+        "+5",
+        "-78",
+        "xx",
+        "123h",
+        "65536",
     ];
 
     for (int j = 0; j < errors.length; j++)
     {
-	i = 47;
-	try
-	{
-	    i = to!ushort(errors[j]);
-	    printf("i = %d\n", i);
-	}
-	catch (Error e)
-	{
-	    debug(conv) e.print();
-	    i = 3;
-	}
-	assert(i == 3);
+        i = 47;
+        try
+        {
+            i = to!ushort(errors[j]);
+            printf("i = %d\n", i);
+        }
+        catch (Error e)
+        {
+            debug(conv) e.print();
+            i = 3;
+        }
+        assert(i == 3);
     }
 }
 
@@ -1679,35 +1685,35 @@ unittest
 
     static string[] errors =
     [
-	"",
-	"-",
-	"+",
-	"-+",
-	" ",
-	" 0",
-	"0 ",
-	"- 0",
-	"1-",
-	"xx",
-	"123h",
-	"128",
-	"-129",
+        "",
+        "-",
+        "+",
+        "-+",
+        " ",
+        " 0",
+        "0 ",
+        "- 0",
+        "1-",
+        "xx",
+        "123h",
+        "128",
+        "-129",
     ];
 
     for (int j = 0; j < errors.length; j++)
     {
-	i = 47;
-	try
-	{
-	    i = to!byte(errors[j]);
-	    printf("i = %d\n", i);
-	}
-	catch (Error e)
-	{
-	    debug(conv) e.print();
-	    i = 3;
-	}
-	assert(i == 3);
+        i = 47;
+        try
+        {
+            i = to!byte(errors[j]);
+            printf("i = %d\n", i);
+        }
+        catch (Error e)
+        {
+            debug(conv) e.print();
+            i = 3;
+        }
+        assert(i == 3);
     }
 }
 
@@ -1742,36 +1748,36 @@ unittest
 
     static string[] errors =
     [
-	"",
-	"-",
-	"+",
-	"-+",
-	" ",
-	" 0",
-	"0 ",
-	"- 0",
-	"1-",
-	"+5",
-	"-78",
-	"xx",
-	"123h",
-	"256",
+        "",
+        "-",
+        "+",
+        "-+",
+        " ",
+        " 0",
+        "0 ",
+        "- 0",
+        "1-",
+        "+5",
+        "-78",
+        "xx",
+        "123h",
+        "256",
     ];
 
     for (int j = 0; j < errors.length; j++)
     {
-	i = 47;
-	try
-	{
-	    i = to!ubyte(errors[j]);
-	    printf("i = %d\n", i);
-	}
-	catch (Error e)
-	{
-	    debug(conv) e.print();
-	    i = 3;
-	}
-	assert(i == 3);
+        i = 47;
+        try
+        {
+            i = to!ubyte(errors[j]);
+            printf("i = %d\n", i);
+        }
+        catch (Error e)
+        {
+            debug(conv) e.print();
+            i = 3;
+        }
+        assert(i == 3);
     }
 }
 
@@ -1783,7 +1789,7 @@ unittest
 //     //writefln("toFloat('%s')", s);
 //     auto sz = toStringz(to!(const char[])(s));
 //     if (std.ctype.isspace(*sz))
-// 	goto Lerr;
+//      goto Lerr;
 
 //     // issue 1589
 //     version (Windows)
@@ -1859,11 +1865,11 @@ unittest
     bool ok = false;
     try
     {
-	to!float("\x00");
+        to!float("\x00");
     }
     catch (ConvError e)
     {
-	ok = true;
+        ok = true;
     }
     assert(ok);
 }
@@ -1910,11 +1916,11 @@ unittest
     bool ok = false;
     try
     {
-	to!double("\x00");
+        to!double("\x00");
     }
     catch (ConvError e)
     {
-	ok = true;
+        ok = true;
     }
     assert(ok);
 }
@@ -1965,11 +1971,11 @@ unittest
     bool ok = false;
     try
     {
-	to!real("\x00");
+        to!real("\x00");
     }
     catch (ConvError e)
     {
-	ok = true;
+        ok = true;
     }
     assert(ok);
 }
@@ -3024,28 +3030,3 @@ unittest
     auto t = parse!Testing(s);
     assert(t == cast(Testing) 123);
 }
-
-/*
- *  Copyright (C) 2002-2007 by Digital Mars, www.digitalmars.com
- *  Written by Walter Bright
- *  Some parts contributed by David L. Davis
- *  Major rewrite by Andrei Alexandrescu
- *
- *  This software is provided 'as-is', without any express or implied
- *  warranty. In no event will the authors be held liable for any damages
- *  arising from the use of this software.
- *
- *  Permission is granted to anyone to use this software for any purpose,
- *  including commercial applications, and to alter it and redistribute it
- *  freely, subject to the following restrictions:
- *
- *  o  The origin of this software must not be misrepresented; you must not
- *     claim that you wrote the original software. If you use this software
- *     in a product, an acknowledgment in the product documentation would be
- *     appreciated but is not required.
- *  o  Altered source versions must be plainly marked as such, and must not
- *     be misrepresented as being the original software.
- *  o  This notice may not be removed or altered from any source
- *     distribution.
- */
-

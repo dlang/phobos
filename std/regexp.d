@@ -1,30 +1,7 @@
 // Written in the D programming language.
+// Regular Expressions.
 
-// Regular Expressions
-
-/*
- *  Copyright (C) 2000-2005 by Digital Mars, www.digitalmars.com
- *  Written by Walter Bright
- *
- *  This software is provided 'as-is', without any express or implied
- *  warranty. In no event will the authors be held liable for any damages
- *  arising from the use of this software.
- *
- *  Permission is granted to anyone to use this software for any purpose,
- *  including commercial applications, and to alter it and redistribute it
- *  freely, subject to the following restrictions:
- *
- *  o  The origin of this software must not be misrepresented; you must not
- *     claim that you wrote the original software. If you use this software
- *     in a product, an acknowledgment in the product documentation would be
- *     appreciated but is not required.
- *  o  Altered source versions must be plainly marked as such, and must not
- *     be misrepresented as being the original software.
- *  o  This notice may not be removed or altered from any source
- *     distribution.
- */
-
-/**********************************************
+/**
  * $(LINK2 http://www.digitalmars.com/ctg/regular.html, Regular
  * expressions) are a powerful method of string pattern matching.  The
  * regular expression language used in this library is the same as
@@ -39,68 +16,77 @@
  * In the following guide, $(I pattern)[] refers to a
  * $(LINK2 http://www.digitalmars.com/ctg/regular.html, regular expression).
  * The $(I attributes)[] refers to
-	a string controlling the interpretation
-	of the regular expression.
-	It consists of a sequence of one or more
-	of the following characters:
-
-	<table border=1 cellspacing=0 cellpadding=5>
-	<caption>Attribute Characters</caption>
-	$(TR $(TH Attribute) $(TH Action))
-	<tr>
-	$(TD $(B g))
-	$(TD global; repeat over the whole input string)
-	</tr>
-	<tr>
-	$(TD $(B i))
-	$(TD case insensitive)
-	</tr>
-	<tr>
-	$(TD $(B m))
-	$(TD treat as multiple lines separated by newlines)
-	</tr>
-	</table>
-    *
-    * The $(I format)[] string has the formatting characters:
-    *
-    *	<table border=1 cellspacing=0 cellpadding=5>
-	<caption>Formatting Characters</caption>
-	$(TR $(TH Format) $(TH Replaced With))
-	$(TR
-	$(TD $(B $$))	$(TD $)
-	)
-	$(TR
-	$(TD $(B $&amp;))	$(TD The matched substring.)
-	)
-	$(TR
-	$(TD $(B $`))	$(TD The portion of string that precedes the matched substring.)
-	)
-	$(TR
-	$(TD $(B $'))	$(TD The portion of string that follows the matched substring.)
-	)
-	$(TR
-	$(TD $(B $(DOLLAR))$(I n)) $(TD The $(I n)th capture, where $(I n)
-			is a single digit 1-9
-			and $$(I n) is not followed by a decimal digit.)
-	)
-	$(TR
-	$(TD $(B $(DOLLAR))$(I nn)) $(TD The $(I nn)th capture, where $(I nn)
-			is a two-digit decimal
-			number 01-99.
-			If $(I nn)th capture is undefined or more than the number
-			of parenthesized subexpressions, use the empty
-			string instead.)
-	)
-	</table>
-
-    *	Any other $ are left as is.
-    *
-    * References:
-    *	$(LINK2 http://en.wikipedia.org/wiki/Regular_expressions, Wikipedia)
-    * Macros:
-    *	WIKI = StdRegexp
-    *	DOLLAR = $
-    */
+ * a string controlling the interpretation
+ * of the regular expression.
+ * It consists of a sequence of one or more
+ * of the following characters:
+ *
+ * <table border=1 cellspacing=0 cellpadding=5>
+ * <caption>Attribute Characters</caption>
+ * $(TR $(TH Attribute) $(TH Action))
+ * <tr>
+ * $(TD $(B g))
+ * $(TD global; repeat over the whole input string)
+ * </tr>
+ * <tr>
+ * $(TD $(B i))
+ * $(TD case insensitive)
+ * </tr>
+ * <tr>
+ * $(TD $(B m))
+ * $(TD treat as multiple lines separated by newlines)
+ * </tr>
+ * </table>
+ *
+ * The $(I format)[] string has the formatting characters:
+ *
+ * <table border=1 cellspacing=0 cellpadding=5>
+ * <caption>Formatting Characters</caption>
+ * $(TR $(TH Format) $(TH Replaced With))
+ * $(TR
+ * $(TD $(B $$))    $(TD $)
+ * )
+ * $(TR
+ * $(TD $(B $&amp;))    $(TD The matched substring.)
+ * )
+ * $(TR
+ * $(TD $(B $`))    $(TD The portion of string that precedes the matched substring.)
+ * )
+ * $(TR
+ * $(TD $(B $'))    $(TD The portion of string that follows the matched substring.)
+ * )
+ * $(TR
+ * $(TD $(B $(DOLLAR))$(I n)) $(TD The $(I n)th capture, where $(I n)
+ *      is a single digit 1-9
+ *      and $$(I n) is not followed by a decimal digit.)
+ * )
+ * $(TR
+ * $(TD $(B $(DOLLAR))$(I nn)) $(TD The $(I nn)th capture, where $(I nn)
+ *      is a two-digit decimal
+ *      number 01-99.
+ *      If $(I nn)th capture is undefined or more than the number
+ *      of parenthesized subexpressions, use the empty
+ *      string instead.)
+ * )
+ * </table>
+ * 
+ * Any other $ are left as is.
+ *
+ * References:
+ *  $(LINK2 http://en.wikipedia.org/wiki/Regular_expressions, Wikipedia)
+ * Macros:
+ *  WIKI = StdRegexp
+ *  DOLLAR = $
+ *
+ * Copyright: Copyright Digital Mars 2000 - 2009.
+ * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+ * Authors:   $(WEB digitalmars.com, Walter Bright)
+ *
+ *          Copyright Digital Mars 2000 - 2009.
+ * Distributed under the Boost Software License, Version 1.0.
+ *    (See accompanying file LICENSE_1_0.txt or copy at
+ *          http://www.boost.org/LICENSE_1_0.txt)
+ */
 
 /*
   Escape sequences:
@@ -134,7 +120,7 @@
 
 module std.regexp;
 
-//debug = regexp;		// uncomment to turn on debugging printf's
+//debug = regexp;       // uncomment to turn on debugging printf's
 
 private
 {
@@ -154,8 +140,8 @@ private
 
 /** Regular expression to extract an _email address.
  * References:
- *	$(LINK2 http://www.regular-expressions.info/email.html, How to Find or Validate an Email Address)$(BR)
- *	$(LINK2 http://tools.ietf.org/html/rfc2822#section-3.4.1, RFC 2822 Internet Message Format)
+ *  $(LINK2 http://www.regular-expressions.info/email.html, How to Find or Validate an Email Address)$(BR)
+ *  $(LINK2 http://tools.ietf.org/html/rfc2822#section-3.4.1, RFC 2822 Internet Message Format)
  */
 string email =
     r"[a-zA-Z]([.]?([[a-zA-Z0-9_]-]+)*)?@([[a-zA-Z0-9_]\-_]+\.)+[a-zA-Z]{2,6}";
@@ -177,32 +163,32 @@ class RegExpException : Exception
 
 struct regmatch_t
 {
-    int rm_so;			// index of start of match
-    int rm_eo;			// index past end of match
+    int rm_so;          // index of start of match
+    int rm_eo;          // index past end of match
 }
 
-private alias char rchar;	// so we can make a wchar version
+private alias char rchar;   // so we can make a wchar version
 
 /******************************************************
  * Search string for matches with regular expression
  * pattern with attributes.
  * Replace each match with string generated from format.
  * Params:
- *	s = String to search.
- *	pattern = Regular expression pattern.
- *	format = Replacement string format.
- *	attributes = Regular expression attributes.
+ *  s = String to search.
+ *  pattern = Regular expression pattern.
+ *  format = Replacement string format.
+ *  attributes = Regular expression attributes.
  * Returns:
- *	the resulting string
+ *  the resulting string
  * Example:
- *	Replace the letters 'a' with the letters 'ZZ'.
+ *  Replace the letters 'a' with the letters 'ZZ'.
  * ---
  * s = "Strap a rocket engine on a chicken."
  * sub(s, "a", "ZZ")        // result: StrZZp a rocket engine on a chicken.
  * sub(s, "a", "ZZ", "g")   // result: StrZZp ZZ rocket engine on ZZ chicken.
  * ---
- *	The replacement format can reference the matches using
- *	the $&amp;, $$, $', $`, $0 .. $99 notation:
+ *  The replacement format can reference the matches using
+ *  the $&amp;, $$, $', $`, $0 .. $99 notation:
  * ---
  * sub(s, "[ar]", "[$&]", "g") // result: St[r][a]p [a] [r]ocket engine on [a] chi
  * ---
@@ -230,10 +216,10 @@ unittest
  * Pass each match to delegate dg.
  * Replace each match with the return value from dg.
  * Params:
- *	s = String to search.
- *	pattern = Regular expression pattern.
- *	dg = Delegate
- *	attributes = Regular expression attributes.
+ *  s = String to search.
+ *  pattern = Regular expression pattern.
+ *  dg = Delegate
+ *  attributes = Regular expression attributes.
  * Returns: the resulting string.
  * Example:
  * Capitalize the letters 'a' and 'r':
@@ -267,10 +253,10 @@ string sub(string s, string pattern, string delegate(RegExp) dg, string attribut
 
         // Optimize by using std.string.replace if possible - Dave Fladebo
         string slice = result[offset + so .. offset + eo];
-        if (r.attributes & RegExp.REA.global &&		// global, so replace all
-                !(r.attributes & RegExp.REA.ignoreCase) &&	// not ignoring case
-                !(r.attributes & RegExp.REA.multiline) &&	// not multiline
-                pattern == slice)				// simple pattern (exact match, no special characters) 
+        if (r.attributes & RegExp.REA.global &&     // global, so replace all
+                !(r.attributes & RegExp.REA.ignoreCase) &&  // not ignoring case
+                !(r.attributes & RegExp.REA.multiline) &&   // not multiline
+                pattern == slice)               // simple pattern (exact match, no special characters) 
         {
             debug(regexp)
                      printf("pattern: %.*s, slice: %.*s, replacement: %.*s\n",pattern,result[offset + so .. offset + eo],replacement);
@@ -285,7 +271,7 @@ string sub(string s, string pattern, string delegate(RegExp) dg, string attribut
             offset += replacement.length - (eo - so);
 
             if (lastindex == eo)
-                lastindex++;		// always consume some source
+                lastindex++;        // always consume some source
             else
                 lastindex = eo;
         }
@@ -323,10 +309,10 @@ unittest
 /*************************************************
  * Search $(D_PARAM s[]) for first match with $(D_PARAM pattern).
  * Params:
- *	s = String to search.
- *	pattern = Regular expression pattern.
+ *  s = String to search.
+ *  pattern = Regular expression pattern.
  * Returns:
- *	index into s[] of match if found, -1 if no match.
+ *  index into s[] of match if found, -1 if no match.
  * Example:
  * ---
  * auto s = "abcabcabab";
@@ -391,10 +377,10 @@ unittest
 /*************************************************
  * Search $(D_PARAM s[]) for last match with $(D_PARAM pattern).
  * Params:
- *	s = String to search.
- *	pattern = Regular expression pattern.
+ *  s = String to search.
+ *  pattern = Regular expression pattern.
  * Returns:
- *	index into s[] of match if found, -1 if no match.
+ *  index into s[] of match if found, -1 if no match.
  * Example:
  * ---
  * auto s = "abcabcabab";
@@ -412,7 +398,7 @@ int rfind(string s, RegExp pattern)
     {   int eo = pattern.pmatch[0].rm_eo;
         i = pattern.pmatch[0].rm_so;
         if (lastindex == eo)
-            lastindex++;		// always consume some source
+            lastindex++;        // always consume some source
         else
             lastindex = eo;
     }
@@ -459,7 +445,7 @@ int rfind(string s, string pattern, string attributes = null)
     {   int eo = r.pmatch[0].rm_eo;
         i = r.pmatch[0].rm_so;
         if (lastindex == eo)
-            lastindex++;		// always consume some source
+            lastindex++;        // always consume some source
         else
             lastindex = eo;
     }
@@ -489,10 +475,10 @@ unittest
  * Split s[] into an array of strings, using the regular
  * expression $(D_PARAM pattern) as the separator.
  * Params:
- *	s = String to search.
- *	pattern = Regular expression pattern.
+ *  s = String to search.
+ *  pattern = Regular expression pattern.
  * Returns:
- * 	array of slices into s[]
+ *  array of slices into s[]
  * Example:
  * ---
  * foreach (s; split("abcabcabab", RegExp("C.", "i")))
@@ -533,7 +519,7 @@ unittest
 
 /********************************************
   Returns:
-  	Same as $(D_PARAM split(s, RegExp(pattern, attributes))).
+    Same as $(D_PARAM split(s, RegExp(pattern, attributes))).
 
 WARNING:
 
@@ -574,11 +560,11 @@ unittest
 /****************************************************
  * Search s[] for first match with pattern[] with attributes[].
  * Params:
- *	s = String to search.
- *	pattern = Regular expression pattern.
- *	attributes = Regular expression attributes.
+ *  s = String to search.
+ *  pattern = Regular expression pattern.
+ *  attributes = Regular expression attributes.
  * Returns:
- *	corresponding RegExp if found, null if not.
+ *  corresponding RegExp if found, null if not.
  * Example:
  * ---
  * import std.stdio;
@@ -600,7 +586,7 @@ RegExp search(string s, string pattern, string attributes = null)
 {
     auto r = new RegExp(pattern, attributes);
     if (!r.test(s))
-    {	delete r;
+    {   delete r;
         assert(r is null);
     }
     return r;
@@ -618,7 +604,7 @@ unittest
         assert(m[2] == null);
     }
     else
-	assert(0);
+    assert(0);
 
     if (auto n = std.regexp.search("abcdef", "g"))
     {
@@ -641,7 +627,7 @@ class RegExp
      * with <i>attributes</i> into
      * an internal form for fast execution.
      * Params:
-     *	pattern = regular expression
+     *  pattern = regular expression
      *  attributes = _attributes
      * Throws: RegExpException if there are any compilation errors.
      * Example:
@@ -660,7 +646,7 @@ class RegExp
     /*****
      * Generate instance of RegExp.
      * Params:
-     *	pattern = regular expression
+     *  pattern = regular expression
      *  attributes = _attributes
      * Throws: RegExpException if there are any compilation errors.
      * Example:
@@ -696,7 +682,7 @@ class RegExp
     /************************************
      * Set up for start of foreach loop.
      * Returns:
-     *	search() returns instance of RegExp set up to _search string[].
+     *  search() returns instance of RegExp set up to _search string[].
      * Example:
      * ---
      * import std.stdio;
@@ -809,16 +795,16 @@ class RegExp
         return input[pmatch[0].rm_eo .. $];
     }
 
-    uint re_nsub;		// number of parenthesized subexpression matches
-    regmatch_t[] pmatch;	// array [re_nsub + 1]
+    uint re_nsub;       // number of parenthesized subexpression matches
+    regmatch_t[] pmatch;    // array [re_nsub + 1]
 
-    string input;		// the string to search
+    string input;       // the string to search
 
     // per instance:
 
-    string pattern;		// source text of the regular expression
+    string pattern;     // source text of the regular expression
 
-    string flags;		// source text of the attributes parameter
+    string flags;       // source text of the attributes parameter
 
     int errors;
 
@@ -826,22 +812,22 @@ class RegExp
 
     enum REA
     {
-        global		= 1,	// has the g attribute
-            ignoreCase	= 2,	// has the i attribute
-            multiline	= 4,	// if treat as multiple lines separated
+        global      = 1,    // has the g attribute
+            ignoreCase  = 2,    // has the i attribute
+            multiline   = 4,    // if treat as multiple lines separated
         // by newlines, or as a single line
-            dotmatchlf	= 8,	// if . matches \n
+            dotmatchlf  = 8,    // if . matches \n
             }
 
 
 private:
-    size_t src;			// current source index in input[]
-    size_t src_start;		// starting index for match in input[]
-    size_t p;			// position of parser in pattern[]
-    regmatch_t gmatch;		// match for the entire regular expression
+    size_t src;         // current source index in input[]
+    size_t src_start;       // starting index for match in input[]
+    size_t p;           // position of parser in pattern[]
+    regmatch_t gmatch;      // match for the entire regular expression
     // (serves as storage for pmatch[0])
 
-    const(ubyte)[] program;	// pattern[] compiled into regular expression program
+    const(ubyte)[] program; // pattern[] compiled into regular expression program
     OutBuffer buf;
 
 
@@ -853,30 +839,30 @@ private:
 
     enum : ubyte
     {
-        REend,		// end of program
-            REchar,		// single character
-            REichar,		// single character, case insensitive
-            REdchar,		// single UCS character
-            REidchar,		// single wide character, case insensitive
-            REanychar,		// any character
-            REanystar,		// ".*"
-            REstring,		// string of characters
-            REistring,		// string of characters, case insensitive
-            REtestbit,		// any in bitmap, non-consuming
-            REbit,		// any in the bit map
-            REnotbit,		// any not in the bit map
-            RErange,		// any in the string
-            REnotrange,		// any not in the string
-            REor,		// a | b
-            REplus,		// 1 or more
-            REstar,		// 0 or more
-            REquest,		// 0 or 1
-            REnm,		// n..m
-            REnmq,		// n..m, non-greedy version
-            REbol,		// beginning of line
-            REeol,		// end of line
-            REparen,		// parenthesized subexpression
-            REgoto,		// goto offset
+        REend,      // end of program
+            REchar,     // single character
+            REichar,        // single character, case insensitive
+            REdchar,        // single UCS character
+            REidchar,       // single wide character, case insensitive
+            REanychar,      // any character
+            REanystar,      // ".*"
+            REstring,       // string of characters
+            REistring,      // string of characters, case insensitive
+            REtestbit,      // any in bitmap, non-consuming
+            REbit,      // any in the bit map
+            REnotbit,       // any not in the bit map
+            RErange,        // any in the string
+            REnotrange,     // any not in the string
+            REor,       // a | b
+            REplus,     // 1 or more
+            REstar,     // 0 or more
+            REquest,        // 0 or 1
+            REnm,       // n..m
+            REnmq,      // n..m, non-greedy version
+            REbol,      // beginning of line
+            REeol,      // end of line
+            REparen,        // parenthesized subexpression
+            REgoto,     // goto offset
 
             REwordboundary,
             REnotwordboundary,
@@ -908,9 +894,9 @@ private:
 
             switch (c)
             {
-            case 'g': att = REA.global;		break;
-            case 'i': att = REA.ignoreCase;	break;
-            case 'm': att = REA.multiline;	break;
+            case 'g': att = REA.global;     break;
+            case 'i': att = REA.ignoreCase; break;
+            case 'm': att = REA.multiline;  break;
             default:
                 error("unrecognized attribute");
                 return;
@@ -936,7 +922,7 @@ private:
         p = 0;
         parseRegexp();
         if (p < pattern.length)
-        {	error("unmatched ')'");
+        {   error("unmatched ')'");
         }
         optimize();
         program = buf.data;
@@ -957,7 +943,7 @@ private:
  * Split s[] into an array of strings, using the regular
  * expression as the separator.
  * Returns:
- * 	array of slices into s[]
+ *  array of slices into s[]
  */
 
     public string[] split(string s)
@@ -973,7 +959,7 @@ private:
             for (q = p; q != s.length;)
             {
                 if (test(s, q))
-                {	int e;
+                {   int e;
 
                     q = pmatch[0].rm_so;
                     e = pmatch[0].rm_eo;
@@ -985,7 +971,7 @@ private:
                             int so = pmatch[i].rm_so;
                             int eo = pmatch[i].rm_eo;
                             if (so == eo)
-                            {   so = 0;	// -1 gives array bounds error
+                            {   so = 0; // -1 gives array bounds error
                                 eo = 0;
                             }
                             result ~= s[so .. eo];
@@ -1056,7 +1042,7 @@ private:
 /*************************************************
  * Search string[] for match with regular expression.
  * Returns:
- *	index of match if successful, -1 if not found
+ *  index of match if successful, -1 if not found
  */
 
     public int find(string string)
@@ -1067,7 +1053,7 @@ private:
         if (i)
             i = pmatch[0].rm_so;
         else
-            i = -1;			// no match
+            i = -1;         // no match
         return i;
     }
 
@@ -1089,8 +1075,8 @@ private:
 /*************************************************
  * Search s[] for match.
  * Returns:
- *	If global attribute, return same value as exec(s).
- *	If not global attribute, return array of all matches.
+ *  If global attribute, return same value as exec(s).
+ *  If not global attribute, return array of all matches.
  */
 
     public string[] match(string s)
@@ -1106,7 +1092,7 @@ private:
 
                 result ~= input[pmatch[0].rm_so .. eo];
                 if (lastindex == eo)
-                    lastindex++;		// always consume some source
+                    lastindex++;        // always consume some source
                 else
                     lastindex = eo;
             }
@@ -1170,11 +1156,11 @@ private:
 
             // Optimize by using std.string.replace if possible - Dave Fladebo
             string slice = result[offset + so .. offset + eo];
-            if (attributes & REA.global &&		// global, so replace all
-                    !(attributes & REA.ignoreCase) &&	// not ignoring case
-                    !(attributes & REA.multiline) &&	// not multiline
-                    pattern == slice &&			// simple pattern (exact match, no special characters) 
-                    format == replacement)		// simple format, not $ formats
+            if (attributes & REA.global &&      // global, so replace all
+                    !(attributes & REA.ignoreCase) &&   // not ignoring case
+                    !(attributes & REA.multiline) &&    // not multiline
+                    pattern == slice &&         // simple pattern (exact match, no special characters) 
+                    format == replacement)      // simple format, not $ formats
             {
                 debug(regexp)
                          printf("pattern: %.*s, slice: %.*s, format: %.*s, replacement: %.*s\n",pattern,result[offset + so .. offset + eo],format,replacement);
@@ -1189,7 +1175,7 @@ private:
                 offset += replacement.length - (eo - so);
 
                 if (lastindex == eo)
-                    lastindex++;		// always consume some source
+                    lastindex++;        // always consume some source
                 else
                     lastindex = eo;
             }
@@ -1223,7 +1209,7 @@ private:
 /*************************************************
  * Search string[] for match.
  * Returns:
- *	array of slices into string[] representing matches
+ *  array of slices into string[] representing matches
  */
 
     public string[] exec(string string)
@@ -1239,7 +1225,7 @@ private:
  * Pick up where last exec(string) or exec() left off,
  * searching string[] for next match.
  * Returns:
- *	array of slices into string[] representing matches
+ *  array of slices into string[] representing matches
  */
 
     public string[] exec()
@@ -1319,7 +1305,7 @@ public int test(string s)
         pmatch[0].rm_eo = 0;
         if (startindex < 0 || startindex > input.length)
         {
-            return 0;			// fail
+            return 0;           // fail
         }
         //debug(regexp) printProgram(program);
 
@@ -1337,12 +1323,12 @@ public int test(string s)
             if (firstc)
             {
                 if (si == input.length)
-                    break;			// no match
+                    break;          // no match
                 if (input[si] != firstc)
                 {
                     si++;
-                    if (!chr(si, firstc))	// if first character not found
-                        break;		// no match
+                    if (!chr(si, firstc))   // if first character not found
+                        break;      // no match
                 }
             }
             for (int i = 0; i < re_nsub + 1; i++)
@@ -1365,7 +1351,7 @@ public int test(string s)
                 {
                     // Scan for the popFront \n
                     if (!chr(si, '\n'))
-                        break;		// no match if '\n' not found
+                        break;      // no match if '\n' not found
                 }
                 else
                     break;
@@ -1374,7 +1360,7 @@ public int test(string s)
                 break;
             //debug(regexp) printf("Starting new try: '%.*s'\n", input[si + 1 .. input.length]);
         }
-        return 0;		// no match
+        return 0;       // no match
     }
 
     /**
@@ -1608,8 +1594,8 @@ public int test(string s)
 /**************************************************
  * Match input against a section of the program[].
  * Returns:
- *	1 if successful match
- *	0 no match
+ *  1 if successful match
+ *  0 no match
  */
 
     int trymatch(int pc, int pcend)
@@ -1633,7 +1619,7 @@ public int test(string s)
         psave = null;
         for (;;)
         {
-            if (pc == pcend)		// if done matching
+            if (pc == pcend)        // if done matching
             {   debug(regex) printf("\tprogend\n");
                 return 1;
             }
@@ -1840,7 +1826,7 @@ public int test(string s)
                 if (trymatch(pop, pcend))
                 {
                     if (pcend != program.length)
-                    {	int s;
+                    {   int s;
 
                         s = src;
                         if (trymatch(pcend, program.length))
@@ -1862,11 +1848,11 @@ public int test(string s)
                         src = ss;
                     }
                     else
-                    {	debug(regexp) printf("\tfirst operand matched\n");
+                    {   debug(regexp) printf("\tfirst operand matched\n");
                         return 1;
                     }
                 }
-                pc = pop + len;		// proceed with 2nd branch
+                pc = pop + len;     // proceed with 2nd branch
                 break;
 
             case REgoto:
@@ -1898,7 +1884,7 @@ public int test(string s)
                         // BUG: should we save/restore pmatch[]?
                         if (trymatch(pc, program.length))
                         {
-                            src = s1;		// no match
+                            src = s1;       // no match
                             break;
                         }
                     }
@@ -1927,7 +1913,7 @@ public int test(string s)
                     //else
                     //psave = new regmatch_t[re_nsub + 1];
                 }
-                if (program[pc] == REnmq)	// if minimal munch
+                if (program[pc] == REnmq)   // if minimal munch
                 {
                     for (; count < m; count++)
                     {   int s1;
@@ -1955,7 +1941,7 @@ public int test(string s)
                         }
                     }
                 }
-                else	// maximal munch
+                else    // maximal munch
                 {
                     for (; count < m; count++)
                     {   int s1;
@@ -1983,7 +1969,7 @@ public int test(string s)
                             src = s1;
                             if (trymatch(pop + len, program.length))
                             {
-                                src = s1;		// no match
+                                src = s1;       // no match
                                 memcpy(pmatch.ptr, psave, (re_nsub + 1) * regmatch_t.sizeof);
                                 break;
                             }
@@ -2012,7 +1998,7 @@ public int test(string s)
 
             case REend:
                 debug(regexp) printf("\tREend\n");
-                return 1;		// successful match
+                return 1;       // successful match
 
             case REwordboundary:
                 debug(regexp) printf("\tREwordboundary\n");
@@ -2222,7 +2208,7 @@ public int test(string s)
             m = 1;
             goto Lnm;
 
-        case '{':	// {n} {n,} {n,m}
+        case '{':   // {n} {n,} {n,m}
             p++;
             if (p == plength || !isdigit(pattern[p]))
                 goto Lerr;
@@ -2235,8 +2221,8 @@ public int test(string s)
                 if (p == plength)
                     goto Lerr;
             } while (isdigit(pattern[p]));
-            if (pattern[p] == '}')		// {n}
-            {	m = n;
+            if (pattern[p] == '}')      // {n}
+            {   m = n;
                 goto Lnm;
             }
             if (pattern[p] != ',')
@@ -2244,13 +2230,13 @@ public int test(string s)
             p++;
             if (p == plength)
                 goto Lerr;
-            if (pattern[p] == /*{*/ '}')	// {n,}
-            {	m = inf;
+            if (pattern[p] == /*{*/ '}')    // {n,}
+            {   m = inf;
                 goto Lnm;
             }
             if (!isdigit(pattern[p]))
                 goto Lerr;
-            m = 0;			// {n,m}
+            m = 0;          // {n,m}
             do
             {
                 // BUG: handle overflow
@@ -2267,7 +2253,7 @@ public int test(string s)
             p++;
             op = REnm;
             if (p < plength && pattern[p] == '?')
-            {	op = REnmq;	// minimal munch version
+            {   op = REnmq; // minimal munch version
                 p++;
             }
             len = buf.offset - offset;
@@ -2311,7 +2297,7 @@ public int test(string s)
                 p++;
                 buf.write(REparen);
                 offset = buf.offset;
-                buf.write(cast(uint)0);		// reserve space for length
+                buf.write(cast(uint)0);     // reserve space for length
                 buf.write(re_nsub);
                 re_nsub++;
                 parseRegexp();
@@ -2354,14 +2340,14 @@ public int test(string s)
                 c = pattern[p];
                 switch (c)
                 {
-                case 'b':    op = REwordboundary;	 goto Lop;
+                case 'b':    op = REwordboundary;    goto Lop;
                 case 'B':    op = REnotwordboundary; goto Lop;
-                case 'd':    op = REdigit;		 goto Lop;
-                case 'D':    op = REnotdigit;	 goto Lop;
-                case 's':    op = REspace;		 goto Lop;
-                case 'S':    op = REnotspace;	 goto Lop;
-                case 'w':    op = REword;		 goto Lop;
-                case 'W':    op = REnotword;	 goto Lop;
+                case 'd':    op = REdigit;       goto Lop;
+                case 'D':    op = REnotdigit;    goto Lop;
+                case 's':    op = REspace;       goto Lop;
+                case 'S':    op = REnotspace;    goto Lop;
+                case 'w':    op = REword;        goto Lop;
+                case 'W':    op = REnotword;     goto Lop;
 
                 Lop:
                     buf.write(op);
@@ -2421,7 +2407,7 @@ public int test(string s)
                     int len;
 
                     for (q = p; q < pattern.length; ++q)
-                    {	rchar qc = pattern[q];
+                    {   rchar qc = pattern[q];
 
                         switch (qc)
                         {
@@ -2434,11 +2420,11 @@ public int test(string s)
                             q--;
                             break;
 
-                        case '(':	case ')':
+                        case '(':   case ')':
                         case '|':
-                        case '[':	case ']':
-                        case '.':	case '^':
-                        case '$':	case '\\':
+                        case '[':   case ']':
+                        case '.':   case '^':
+                        case '$':   case '\\':
                         case '}':
                             break;
 
@@ -2505,7 +2491,7 @@ private:
                 maxc = u;
                 b = u / 8;
                 if (b >= maxb)
-                {	uint u2;
+                {   uint u2;
 
                     u2 = base ? base - &buf.data[0] : 0;
                     buf.fill0(b - maxb + 1);
@@ -2548,7 +2534,7 @@ private:
         }
         buf.write(op);
         offset = buf.offset;
-        buf.write(cast(uint)0);		// reserve space for length
+        buf.write(cast(uint)0);     // reserve space for length
         buf.reserve(128 / 8);
         auto r = new Range(buf);
         if (op == REnotbit)
@@ -2740,15 +2726,15 @@ private:
         int i;
         rchar tc;
 
-        c = pattern[p];		// none of the cases are multibyte
+        c = pattern[p];     // none of the cases are multibyte
         switch (c)
         {
-        case 'b':    c = '\b';	break;
-        case 'f':    c = '\f';	break;
-        case 'n':    c = '\n';	break;
-        case 'r':    c = '\r';	break;
-        case 't':    c = '\t';	break;
-        case 'v':    c = '\v';	break;
+        case 'b':    c = '\b';  break;
+        case 'f':    c = '\f';  break;
+        case 'n':    c = '\n';  break;
+        case 'r':    c = '\r';  break;
+        case 't':    c = '\t';  break;
+        case 'v':    c = '\v';  break;
 
             // BUG: Perl does \a and \e too, should we?
 
@@ -2787,7 +2773,7 @@ private:
                     // Treat overflow as if last
                     // digit was not an octal digit
                     if (c >= 0xFF)
-                    {	c >>= 3;
+                    {   c >>= 3;
                         return c;
                     }
                 }
@@ -2810,7 +2796,7 @@ private:
                     c = c * 16 + (tc - 'a' + 10);
                 else if ('A' <= tc && tc <= 'F')
                     c = c * 16 + (tc - 'A' + 10);
-                else if (i == 0)	// if no hex digits after \x
+                else if (i == 0)    // if no hex digits after \x
                 {
                     // Not a valid \xXX sequence
                     return 'x';
@@ -2963,7 +2949,7 @@ private:
                 return 1;
 
             case REanychar:
-                return 0;		// no point
+                return 0;       // no point
 
             case REstring:
                 len = *cast(uint *)&prog[i + 1];
@@ -3215,22 +3201,22 @@ private:
 
 /************************************
  * Like replace(char[] format), but uses old style formatting:
-		<table border=1 cellspacing=0 cellpadding=5>
-		<th>Format
-		<th>Description
-		<tr>
-		<td><b>&</b>
-		<td>replace with the match
-		</tr>
-		<tr>
-		<td><b>\</b><i>n</i>
-		<td>replace with the <i>n</i>th parenthesized match, <i>n</i> is 1..9
-		</tr>
-		<tr>
-		<td><b>\</b><i>c</i>
-		<td>replace with char <i>c</i>.
-		</tr>
-		</table>
+        <table border=1 cellspacing=0 cellpadding=5>
+        <th>Format
+        <th>Description
+        <tr>
+        <td><b>&</b>
+        <td>replace with the match
+        </tr>
+        <tr>
+        <td><b>\</b><i>n</i>
+        <td>replace with the <i>n</i>th parenthesized match, <i>n</i> is 1..9
+        </tr>
+        <tr>
+        <td><b>\</b><i>c</i>
+        <td>replace with char <i>c</i>.
+        </tr>
+        </table>
 */
 
     public string replaceOld(string format)

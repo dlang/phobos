@@ -35,17 +35,20 @@ architectures) UTF-16BE and UTF-32BE.
 This library provides a mechanism whereby other modules may add $(D
 EncodingScheme) subclasses for any other _encoding.
 
-Authors: Janice Caron
-
-Date: 2008.02.27 - 2008.05.07
-
-License: Public Domain
-
 Macros:
     WIKI=Phobos/StdEncoding
-*/
 
+Copyright: Copyright Janice Caron 2008 - 2009.
+License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+Authors:   Janice Caron
+
+         Copyright Janice Caron 2008 - 2009.
+Distributed under the Boost Software License, Version 1.0.
+   (See accompanying file LICENSE_1_0.txt or copy at
+         http://www.boost.org/LICENSE_1_0.txt)
+*/
 module std.encoding;
+
 import std.string;
 import std.traits;
 import std.range;
@@ -335,12 +338,12 @@ unittest
     
     // Make sure we can count properly
     {
-    	assert(encodedLength!(char)('A') == 1);
-    	assert(encodedLength!(char)('\u00E3') == 2);
-    	assert(encodedLength!(char)('\u2028') == 3);
-    	assert(encodedLength!(char)('\U0010FFF0') == 4);
-    	assert(encodedLength!(wchar)('A') == 1);
-    	assert(encodedLength!(wchar)('\U0010FFF0') == 2);
+        assert(encodedLength!(char)('A') == 1);
+        assert(encodedLength!(char)('\u00E3') == 2);
+        assert(encodedLength!(char)('\u2028') == 3);
+        assert(encodedLength!(char)('\U0010FFF0') == 4);
+        assert(encodedLength!(wchar)('A') == 1);
+        assert(encodedLength!(wchar)('\U0010FFF0') == 2);
     }
     
     // Make sure we can write into mutable arrays
@@ -386,7 +389,7 @@ template EncoderFunctions()
     
     template WriteToArray()
     {
-    	void write(E c) { array[0] = c; array = array[1..$]; }
+        void write(E c) { array[0] = c; array = array[1..$]; }
     }
 
     deprecated template WriteToBuffer()
@@ -441,8 +444,8 @@ template EncoderFunctions()
     
     template EncodeToArray()
     {
-    	mixin WriteToArray;
-    	mixin EncodeViaWrite;
+        mixin WriteToArray;
+        mixin EncodeViaWrite;
     }
 
     deprecated template EncodeToBuffer()
@@ -496,8 +499,8 @@ template EncoderFunctions()
 
     void encode(dchar c, ref E[] array)
     {
-    	mixin EncodeToArray e;
-    	e.encode(c);
+        mixin EncodeToArray e;
+        e.encode(c);
     }
 
     void encode(dchar c, void delegate(E) dg)
@@ -682,7 +685,7 @@ template EncoderInstance(CharType : AsciiChar)
     uint encodedLength(dchar c)
     in
     {
-    	assert(canEncode(c));
+        assert(canEncode(c));
     }
     body
     {
@@ -765,11 +768,11 @@ template EncoderInstance(CharType : Latin1Char)
     uint encodedLength(dchar c)
     in
     {
-    	assert(canEncode(c));
+        assert(canEncode(c));
     }
     body
     {
-		return 1;
+                return 1;
     }
 
     void encodeViaWrite()(dchar c)
@@ -852,7 +855,7 @@ template EncoderInstance(CharType : Windows1252Char)
     uint encodedLength(dchar c)
     in
     {
-    	assert(canEncode(c));
+        assert(canEncode(c));
     }
     body
     {
@@ -960,7 +963,7 @@ template EncoderInstance(CharType : char)
     uint encodedLength(dchar c)
     in
     {
-    	assert(canEncode(c));
+        assert(canEncode(c));
     }
     body
     {
@@ -1104,11 +1107,11 @@ template EncoderInstance(CharType : wchar)
     uint encodedLength(dchar c)
     in
     {
-    	assert(canEncode(c));
+        assert(canEncode(c));
     }
     body
     {
-		return (c < 0x10000) ? 1 : 2;
+                return (c < 0x10000) ? 1 : 2;
     }
 
     void encodeViaWrite()(dchar c)
@@ -1201,11 +1204,11 @@ template EncoderInstance(CharType : dchar)
     uint encodedLength(dchar c)
     in
     {
-    	assert(canEncode(c));
+        assert(canEncode(c));
     }
     body
     {
-		return 1;
+                return 1;
     }
 
     void encodeViaWrite()(dchar c)
@@ -1735,7 +1738,7 @@ body
     c = the code point to be encoded
 
  Returns:
-	  the number of code units written to the array
+          the number of code units written to the array
  */
 uint encode(E)(dchar c, E[] array)
 in
@@ -1744,7 +1747,7 @@ in
 }
 body
 {
-	E[] t = array;
+        E[] t = array;
     EncoderInstance!(E).encode(c,t);
     return array.length - t.length;
 }
@@ -2284,41 +2287,41 @@ abstract class EncodingScheme
      */
     immutable(ubyte)[] sanitize(immutable(ubyte)[] s)
     {
-		uint n = validLength(s);
-		if (n == s.length) return s;
+                uint n = validLength(s);
+                if (n == s.length) return s;
 
-		auto repSeq = replacementSequence;
+                auto repSeq = replacementSequence;
 
-		// Count how long the string needs to be.
-		// Overestimating is not a problem
-		uint len = s.length;
-		const(ubyte)[] t = s[n..$];
-		while (t.length != 0)
-		{
-			dchar c = safeDecode(t);
-			assert(c == INVALID_SEQUENCE);
-			len += repSeq.length;
-			t = t[validLength(t)..$];
-		}
+                // Count how long the string needs to be.
+                // Overestimating is not a problem
+                uint len = s.length;
+                const(ubyte)[] t = s[n..$];
+                while (t.length != 0)
+                {
+                        dchar c = safeDecode(t);
+                        assert(c == INVALID_SEQUENCE);
+                        len += repSeq.length;
+                        t = t[validLength(t)..$];
+                }
 
-		// Now do the write
-		ubyte[] array = new ubyte[len];
-		array[0..n] = s[0..n];
-		uint offset = n;
+                // Now do the write
+                ubyte[] array = new ubyte[len];
+                array[0..n] = s[0..n];
+                uint offset = n;
 
-		t = s[n..$];
-		while (t.length != 0)
-		{
-			dchar c = safeDecode(t);
-			assert(c == INVALID_SEQUENCE);
-			array[offset..offset+repSeq.length] = repSeq[];
-			offset += repSeq.length;
-			n = validLength(t);
-			array[offset..offset+n] = t[0..n];
-			offset += n;
-			t = t[n..$];
-		}
-		return cast(immutable(ubyte)[])array[0..offset];
+                t = s[n..$];
+                while (t.length != 0)
+                {
+                        dchar c = safeDecode(t);
+                        assert(c == INVALID_SEQUENCE);
+                        array[offset..offset+repSeq.length] = repSeq[];
+                        offset += repSeq.length;
+                        n = validLength(t);
+                        array[offset..offset+n] = t[0..n];
+                        offset += n;
+                        t = t[n..$];
+                }
+                return cast(immutable(ubyte)[])array[0..offset];
     }
 
     /**
@@ -2450,12 +2453,12 @@ class EncodingSchemeASCII : EncodingScheme
         
         override uint encodedLength(dchar c)
         {
-        	return std.encoding.encodedLength!(AsciiChar)(c);
+                return std.encoding.encodedLength!(AsciiChar)(c);
         }
 
         override uint encode(dchar c, ubyte[] buffer)
         {
-        	auto r = cast(AsciiChar[])buffer;
+                auto r = cast(AsciiChar[])buffer;
             return std.encoding.encode(c,r);
         }
 
@@ -2534,12 +2537,12 @@ class EncodingSchemeLatin1 : EncodingScheme
 
         override uint encodedLength(dchar c)
         {
-        	return std.encoding.encodedLength!(Latin1Char)(c);
+                return std.encoding.encodedLength!(Latin1Char)(c);
         }
 
         override uint encode(dchar c, ubyte[] buffer)
         {
-        	auto r = cast(Latin1Char[])buffer;
+                auto r = cast(Latin1Char[])buffer;
             return std.encoding.encode(c,r);
         }
 
@@ -2602,12 +2605,12 @@ class EncodingSchemeWindows1252 : EncodingScheme
 
         override uint encodedLength(dchar c)
         {
-        	return std.encoding.encodedLength!(Windows1252Char)(c);
+                return std.encoding.encodedLength!(Windows1252Char)(c);
         }
 
         override uint encode(dchar c, ubyte[] buffer)
         {
-        	auto r = cast(Windows1252Char[])buffer;
+                auto r = cast(Windows1252Char[])buffer;
             return std.encoding.encode(c,r);
         }
 
@@ -2670,12 +2673,12 @@ class EncodingSchemeUtf8 : EncodingScheme
 
         override uint encodedLength(dchar c)
         {
-        	return std.encoding.encodedLength!(char)(c);
+                return std.encoding.encodedLength!(char)(c);
         }
 
         override uint encode(dchar c, ubyte[] buffer)
         {
-        	auto r = cast(char[])buffer;
+                auto r = cast(char[])buffer;
             return std.encoding.encode(c,r);
         }
 
@@ -2738,12 +2741,12 @@ class EncodingSchemeUtf16Native : EncodingScheme
 
         override uint encodedLength(dchar c)
         {
-        	return std.encoding.encodedLength!(wchar)(c);
+                return std.encoding.encodedLength!(wchar)(c);
         }
 
         override uint encode(dchar c, ubyte[] buffer)
         {
-        	auto r = cast(wchar[])buffer;
+                auto r = cast(wchar[])buffer;
             return wchar.sizeof * std.encoding.encode(c,r);
         }
 
@@ -2816,12 +2819,12 @@ class EncodingSchemeUtf32Native : EncodingScheme
 
         override uint encodedLength(dchar c)
         {
-        	return std.encoding.encodedLength!(dchar)(c);
+                return std.encoding.encodedLength!(dchar)(c);
         }
 
         override uint encode(dchar c, ubyte[] buffer)
         {
-        	auto r = cast(dchar[])buffer;
+                auto r = cast(dchar[])buffer;
             return dchar.sizeof * std.encoding.encode(c,r);
         }
 

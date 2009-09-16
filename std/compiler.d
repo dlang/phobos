@@ -1,17 +1,20 @@
-// Written in the D programming language
-
-/**
- * Macros:
- *	WIKI = Phobos/StdCompiler
- */
+// Written in the D programming language.
 
 /**
  * Identify the compiler used and its various features.
- * Authors: Walter Bright, www.digitalmars.com
- * License: Public Domain
+ *
+ * Macros:
+ *      WIKI = Phobos/StdCompiler
+ *
+ * Copyright: Copyright Digital Mars 2000 - 2009.
+ * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+ * Authors:   $(WEB digitalmars.com, Walter Bright)
+ *
+ *          Copyright Digital Mars 2000 - 2009.
+ * Distributed under the Boost Software License, Version 1.0.
+ *    (See accompanying file LICENSE_1_0.txt or copy at
+ *          http://www.boost.org/LICENSE_1_0.txt)
  */
-
-
 module std.compiler;
 
 const
@@ -22,7 +25,7 @@ const
     /// Master list of D compiler vendors.
     enum Vendor
     {
-	DigitalMars = 1,	/// Digital Mars
+        DigitalMars = 1,        /// Digital Mars
     }
 
     /// Which vendor produced this compiler.
@@ -34,7 +37,7 @@ const
      * version_major.version_minor
      */
     uint version_major = __VERSION__ / 1000;
-    uint version_minor = __VERSION__ % 1000;	/// ditto
+    uint version_minor = __VERSION__ % 1000;    /// ditto
 
 
     /**

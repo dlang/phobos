@@ -4,17 +4,20 @@
  * Templates with which to extract information about
  * types at compile time.
  *
- * Authors:
- *
- * $(WEB digitalmars.com, Walter Bright), Tomasz Stachowiak ($(D
- *        isExpressionTuple)), $(WEB erdani.org, Andrei Alexandrescu)
- *
  * Macros:
- *        WIKI = Phobos/StdTraits
- * Copyright:
- *        Public Domain
+ *  WIKI = Phobos/StdTraits
+ *
+ * Copyright: Copyright Digital Mars 2005 - 2009.
+ * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+ * Authors:   $(WEB digitalmars.com, Walter Bright),
+ *            Tomasz Stachowiak ($(D isExpressionTuple)),
+ *            $(WEB erdani.org, Andrei Alexandrescu)
+ *
+ *          Copyright Digital Mars 2005 - 2009.
+ * Distributed under the Boost Software License, Version 1.0.
+ *    (See accompanying file LICENSE_1_0.txt or copy at
+ *          http://www.boost.org/LICENSE_1_0.txt)
  */
-
 module std.traits;
 import std.typetuple;
 

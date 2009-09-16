@@ -1,4 +1,3 @@
-
 // Written in the D programming language.
 
 /**
@@ -10,45 +9,27 @@ supported in the form of long options introduced by a double dash
 ("--"). Support for bundling of command line options, as was the case
 with the more traditional single-letter approach, is provided but not
 enabled by default.
-
-Author:
-
-$(WEB erdani.org, Andrei Alexandrescu)
-
-Credits:
-
-This module and its documentation are inspired by Perl's $(WEB
-perldoc.perl.org/Getopt/Long.html, Getopt::Long) module. The syntax of
-D's $(D getopt) is simpler than its Perl counterpart because $(D
-getopt) infers the expected parameter types from the static types of
-the passed-in pointers.
    
-   Macros:
-   WIKI = Phobos/StdGetopt
+Macros:
+
+WIKI = Phobos/StdGetopt
+
+Copyright: Copyright Andrei Alexandrescu 2008 - 2009.
+License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+Authors:   $(WEB erdani.org, Andrei Alexandrescu)
+Credits:   This module and its documentation are inspired by Perl's $(WEB
+                   perldoc.perl.org/Getopt/Long.html, Getopt::Long) module. The syntax of
+                   D's $(D getopt) is simpler than its Perl counterpart because $(D
+                   getopt) infers the expected parameter types from the static types of
+                   the passed-in pointers.
+
+         Copyright Andrei Alexandrescu 2008 - 2009.
+Distributed under the Boost Software License, Version 1.0.
+   (See accompanying file LICENSE_1_0.txt or copy at
+         http://www.boost.org/LICENSE_1_0.txt)
 */
-
-/* Author:
- *	Andrei Alexandrescu, www.erdani.org
- *
- *  This software is provided 'as-is', without any express or implied
- *  warranty. In no event will the authors be held liable for any damages
- *  arising from the use of this software.
- *
- *  Permission is granted to anyone to use this software for any purpose,
- *  including commercial applications, and to alter it and redistribute it
- *  freely, subject to the following restrictions:
- *
- *  o  The origin of this software must not be misrepresented; you must not
- *     claim that you wrote the original software. If you use this software
- *     in a product, an acknowledgment in the product documentation would be
- *     appreciated but is not required.
- *  o  Altered source versions must be plainly marked as such, and must not
- *     be misrepresented as being the original software.
- *  o  This notice may not be removed or altered from any source
- *     distribution.
- */
-
 module std.getopt;
+
 private import std.string, std.conv, std.traits, std.contracts, std.bitmanip,
     std.algorithm, std.ctype;
 

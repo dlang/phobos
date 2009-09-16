@@ -1,19 +1,20 @@
-// Written in the D programming language
+// Written in the D programming language.
 
 /**
  * Boilerplate:
- *	$(std_boilerplate.html)
+ *      $(std_boilerplate.html)
  * Macros:
- *	WIKI = Phobos/StdOutbuffer
- * Copyright:
- *	Copyright (c) 2001-2005 by Digital Mars
- *	All Rights Reserved
- *	www.digitalmars.com
+ *      WIKI = Phobos/StdOutbuffer
+ *
+ * Copyright: Copyright Digital Mars 2000 - 2009.
+ * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+ * Authors:   $(WEB digitalmars.com, Walter Bright)
+ *
+ *          Copyright Digital Mars 2000 - 2009.
+ * Distributed under the Boost Software License, Version 1.0.
+ *    (See accompanying file LICENSE_1_0.txt or copy at
+ *          http://www.boost.org/LICENSE_1_0.txt)
  */
-
-
-// Written by Walter Bright
-
 module std.outbuffer;
 
 private
@@ -41,13 +42,13 @@ class OutBuffer
 
     invariant()
     {
-	//printf("this = %p, offset = %x, data.length = %u\n", this, offset, data.length);
+        //printf("this = %p, offset = %x, data.length = %u\n", this, offset, data.length);
         assert(offset <= data.length);
     }
 
     this()
     {
-	//printf("in OutBuffer constructor\n");
+        //printf("in OutBuffer constructor\n");
     }
 
     /*********************************
@@ -66,121 +67,121 @@ class OutBuffer
 
 
     void reserve(uint nbytes)
-	in
-	{
-	    assert(offset + nbytes >= offset);
-	}
-	out
-	{
-	    assert(offset + nbytes <= data.length);
-	}
-	body
-	{
-	    //c.stdio.printf("OutBuffer.reserve: length = %d, offset = %d, nbytes = %d\n", data.length, offset, nbytes);
-	    if (data.length < offset + nbytes)
-	    {
-		data.length = (offset + nbytes) * 2;
-		GC.clrAttr(data.ptr, GC.BlkAttr.NO_SCAN);
-	    }
-	}
+        in
+        {
+            assert(offset + nbytes >= offset);
+        }
+        out
+        {
+            assert(offset + nbytes <= data.length);
+        }
+        body
+        {
+            //c.stdio.printf("OutBuffer.reserve: length = %d, offset = %d, nbytes = %d\n", data.length, offset, nbytes);
+            if (data.length < offset + nbytes)
+            {
+                data.length = (offset + nbytes) * 2;
+                GC.clrAttr(data.ptr, GC.BlkAttr.NO_SCAN);
+            }
+        }
 
     /*************************************
      * Append data to the internal buffer.
      */
 
     void write(const(ubyte)[] bytes)
-	{
-	    reserve(bytes.length);
-	    data[offset .. offset + bytes.length] = bytes;
-	    offset += bytes.length;
-	}
+        {
+            reserve(bytes.length);
+            data[offset .. offset + bytes.length] = bytes;
+            offset += bytes.length;
+        }
 
     void write(in wchar[] chars)
-	{
+        {
         write(cast(ubyte[]) chars);
-	}
+        }
 
     void write(const(dchar)[] chars)
-	{
+        {
         write(cast(ubyte[]) chars);
-	}
+        }
 
-    void write(ubyte b)		/// ditto
-	{
-	    reserve(ubyte.sizeof);
-	    this.data[offset] = b;
-	    offset += ubyte.sizeof;
-	}
+    void write(ubyte b)         /// ditto
+        {
+            reserve(ubyte.sizeof);
+            this.data[offset] = b;
+            offset += ubyte.sizeof;
+        }
 
-    void write(byte b) { write(cast(ubyte)b); }		/// ditto
-    void write(char c) { write(cast(ubyte)c); }		/// ditto
-    void write(dchar c) { write(cast(uint)c); }		/// ditto
+    void write(byte b) { write(cast(ubyte)b); }         /// ditto
+    void write(char c) { write(cast(ubyte)c); }         /// ditto
+    void write(dchar c) { write(cast(uint)c); }         /// ditto
 
-    void write(ushort w)		/// ditto
+    void write(ushort w)                /// ditto
     {
         reserve(ushort.sizeof);
         *cast(ushort *)&data[offset] = w;
         offset += ushort.sizeof;
     }
 
-    void write(short s) { write(cast(ushort)s); }		/// ditto
+    void write(short s) { write(cast(ushort)s); }               /// ditto
 
-    void write(wchar c)		/// ditto
+    void write(wchar c)         /// ditto
     {
-	reserve(wchar.sizeof);
-	*cast(wchar *)&data[offset] = c;
-	offset += wchar.sizeof;
+        reserve(wchar.sizeof);
+        *cast(wchar *)&data[offset] = c;
+        offset += wchar.sizeof;
     }
 
-    void write(uint w)		/// ditto
+    void write(uint w)          /// ditto
     {
-	reserve(uint.sizeof);
-	*cast(uint *)&data[offset] = w;
-	offset += uint.sizeof;
+        reserve(uint.sizeof);
+        *cast(uint *)&data[offset] = w;
+        offset += uint.sizeof;
     }
 
-    void write(int i) { write(cast(uint)i); }		/// ditto
+    void write(int i) { write(cast(uint)i); }           /// ditto
 
-    void write(ulong l)		/// ditto
+    void write(ulong l)         /// ditto
     {
-	reserve(ulong.sizeof);
-	*cast(ulong *)&data[offset] = l;
-	offset += ulong.sizeof;
+        reserve(ulong.sizeof);
+        *cast(ulong *)&data[offset] = l;
+        offset += ulong.sizeof;
     }
 
-    void write(long l) { write(cast(ulong)l); }		/// ditto
+    void write(long l) { write(cast(ulong)l); }         /// ditto
 
-    void write(float f)		/// ditto
+    void write(float f)         /// ditto
     {
-	reserve(float.sizeof);
-	*cast(float *)&data[offset] = f;
-	offset += float.sizeof;
+        reserve(float.sizeof);
+        *cast(float *)&data[offset] = f;
+        offset += float.sizeof;
     }
 
-    void write(double f)		/// ditto
+    void write(double f)                /// ditto
     {
-	reserve(double.sizeof);
-	*cast(double *)&data[offset] = f;
-	offset += double.sizeof;
+        reserve(double.sizeof);
+        *cast(double *)&data[offset] = f;
+        offset += double.sizeof;
     }
 
-    void write(real f)		/// ditto
+    void write(real f)          /// ditto
     {
-	reserve(real.sizeof);
-	*cast(real *)&data[offset] = f;
-	offset += real.sizeof;
+        reserve(real.sizeof);
+        *cast(real *)&data[offset] = f;
+        offset += real.sizeof;
     }
 
-    void write(in char[] s)		/// ditto
+    void write(in char[] s)             /// ditto
     {
         write(cast(ubyte[])s);
     }
-    // void write(immutable(char)[] s)		/// ditto
+    // void write(immutable(char)[] s)          /// ditto
     // {
     //     write(cast(ubyte[])s);
     // }
 
-    void write(OutBuffer buf)		/// ditto
+    void write(OutBuffer buf)           /// ditto
     {
         write(buf.toBytes());
     }
@@ -191,9 +192,9 @@ class OutBuffer
 
     void fill0(uint nbytes)
     {
-	reserve(nbytes);
-	data[offset .. offset + nbytes] = 0;
-	offset += nbytes;
+        reserve(nbytes);
+        data[offset .. offset + nbytes] = 0;
+        offset += nbytes;
     }
 
     /**********************************
@@ -203,18 +204,18 @@ class OutBuffer
     void alignSize(uint alignsize)
     in
     {
-	assert(alignsize && (alignsize & (alignsize - 1)) == 0);
+        assert(alignsize && (alignsize & (alignsize - 1)) == 0);
     }
     out
     {
-	assert((offset & (alignsize - 1)) == 0);
+        assert((offset & (alignsize - 1)) == 0);
     }
     body
     {   uint nbytes;
 
-	nbytes = offset & (alignsize - 1);
-	if (nbytes)
-	    fill0(alignsize - nbytes);
+        nbytes = offset & (alignsize - 1);
+        if (nbytes)
+            fill0(alignsize - nbytes);
     }
 
     /****************************************
@@ -223,8 +224,8 @@ class OutBuffer
 
     void align2()
     {
-	if (offset & 1)
-	    write(cast(byte)0);
+        if (offset & 1)
+            write(cast(byte)0);
     }
 
     /****************************************
@@ -233,10 +234,10 @@ class OutBuffer
 
     void align4()
     {
-	if (offset & 3)
-	{   uint nbytes = (4 - offset) & 3;
-	    fill0(nbytes);
-	}
+        if (offset & 3)
+        {   uint nbytes = (4 - offset) & 3;
+            fill0(nbytes);
+        }
     }
 
     /**************************************
@@ -245,8 +246,8 @@ class OutBuffer
 
     override string toString()
     {
-	//printf("OutBuffer.toString()\n");
-	return cast(string) data[0 .. offset].idup;
+        //printf("OutBuffer.toString()\n");
+        return cast(string) data[0 .. offset].idup;
     }
 
     /*****************************************
@@ -255,49 +256,49 @@ class OutBuffer
 
     void vprintf(string format, va_list args)
     {
-	char[128] buffer;
-	char* p;
-	uint psize;
-	int count;
+        char[128] buffer;
+        char* p;
+        uint psize;
+        int count;
 
-	auto f = toStringz(format);
-	p = buffer.ptr;
-	psize = buffer.length;
-	for (;;)
-	{
-	    version(Win32)
-	    {
-		count = _vsnprintf(p,psize,f,args);
-		if (count != -1)
-		    break;
-		psize *= 2;
-		p = cast(char *) alloca(psize);	// buffer too small, try again with larger size
-	    }
-	    version(Posix)
-	    {
-		count = vsnprintf(p,psize,f,args);
-		if (count == -1)
-		    psize *= 2;
-		else if (count >= psize)
-		    psize = count + 1;
-		else
-		    break;
-		/+
-		if (p != buffer)
-		    c.stdlib.free(p);
-		p = (char *) c.stdlib.malloc(psize);	// buffer too small, try again with larger size
-		+/
-		p = cast(char *) alloca(psize);	// buffer too small, try again with larger size
-	    }
-	}
-	write(cast(ubyte[]) p[0 .. count]);
-	/+
-	version (Posix)
-	{
-	    if (p != buffer)
-		c.stdlib.free(p);
-	}
-	+/
+        auto f = toStringz(format);
+        p = buffer.ptr;
+        psize = buffer.length;
+        for (;;)
+        {
+            version(Win32)
+            {
+                count = _vsnprintf(p,psize,f,args);
+                if (count != -1)
+                    break;
+                psize *= 2;
+                p = cast(char *) alloca(psize); // buffer too small, try again with larger size
+            }
+            version(Posix)
+            {
+                count = vsnprintf(p,psize,f,args);
+                if (count == -1)
+                    psize *= 2;
+                else if (count >= psize)
+                    psize = count + 1;
+                else
+                    break;
+                /+
+                if (p != buffer)
+                    c.stdlib.free(p);
+                p = (char *) c.stdlib.malloc(psize);    // buffer too small, try again with larger size
+                +/
+                p = cast(char *) alloca(psize); // buffer too small, try again with larger size
+            }
+        }
+        write(cast(ubyte[]) p[0 .. count]);
+        /+
+        version (Posix)
+        {
+            if (p != buffer)
+                c.stdlib.free(p);
+        }
+        +/
     }
 
     /*****************************************
@@ -306,10 +307,10 @@ class OutBuffer
 
     void printf(string format, ...)
     {
-	va_list ap;
-	ap = cast(va_list)&format;
-	ap += format.sizeof;
-	vprintf(format, ap);
+        va_list ap;
+        ap = cast(va_list)&format;
+        ap += format.sizeof;
+        vprintf(format, ap);
     }
 
     /*****************************************
@@ -318,22 +319,22 @@ class OutBuffer
      */
 
     void spread(uint index, uint nbytes)
-	in
-	{
-	    assert(index <= offset);
-	}
-	body
-	{
-	    reserve(nbytes);
+        in
+        {
+            assert(index <= offset);
+        }
+        body
+        {
+            reserve(nbytes);
 
-	    // This is an overlapping copy - should use memmove()
-	    for (uint i = offset; i > index; )
-	    {
-		--i;
-		data[i + nbytes] = data[i];
-	    }
-	    offset += nbytes;
-	}
+            // This is an overlapping copy - should use memmove()
+            for (uint i = offset; i > index; )
+            {
+                --i;
+                data[i + nbytes] = data[i];
+            }
+            offset += nbytes;
+        }
 }
 
 unittest

@@ -169,9 +169,6 @@ D language compiler. Also, check out the
 	<dt><a href="object.html"><b>object</b></a>
 	<dd>The root class of the inheritance hierarchy
 
-	<dt><a href="std_openrj.html"><b>std.openrj</b></a>
-	<dd>Basic database.
-
 	<dt><a href="std_outbuffer.html"><b>std.outbuffer</b></a>
 	<dd>Assemble data into an array of bytes
 

@@ -1,4 +1,5 @@
-// Written in the D programming language
+// Written in the D programming language.
+
 /**
  * Elementary mathematical functions.
  *
@@ -9,9 +10,6 @@
  * 
  * Unlike C, there is no global 'errno' variable. Consequently, almost all of
  * these functions are pure nothrow.
- *  
- * Authors:
- *      Walter Bright, Don Clugston
  *      
  * Macros:
  *      WIKI = Phobos/StdMath
@@ -40,6 +38,16 @@
  *      GT = &gt;
  *      SQRT = &radix;
  *      HALF = &frac12;
+ *
+ * Copyright: Copyright Digital Mars 2000 - 2009.
+ * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+ * Authors:   $(WEB digitalmars.com, Walter Bright),
+ *                        Don Clugston
+ *
+ *          Copyright Digital Mars 2000 - 2009.
+ * Distributed under the Boost Software License, Version 1.0.
+ *    (See accompanying file LICENSE_1_0.txt or copy at
+ *          http://www.boost.org/LICENSE_1_0.txt)
  */
 module(system) std.math;
 
@@ -58,7 +66,7 @@ version(LDC) {
 }
 
 version(DigitalMars){
-    version=INLINE_YL2X;	// x87 has opcodes for these
+    version=INLINE_YL2X;        // x87 has opcodes for these
 }
 
 
@@ -1280,9 +1288,9 @@ unittest {
 pure nothrow real log(real x)
 {
     version (INLINE_YL2X)
-	return yl2x(x, LN2);
+        return yl2x(x, LN2);
     else
-	return core.stdc.math.logl(x);
+        return core.stdc.math.logl(x);
 }
 
 unittest
@@ -1354,9 +1362,9 @@ pure nothrow real log1p(real x) {
 pure nothrow real log2(real x)
 {
     version (INLINE_YL2X)
-	return yl2x(x, 1);
+        return yl2x(x, 1);
     else
-	return core.stdc.math.log2l(x);
+        return core.stdc.math.log2l(x);
 }
 
 /*****************************************
@@ -1785,7 +1793,7 @@ pure nothrow int isNormal(X)(X x)
         // doubledouble is normal if the least significant part is normal.
         return isNormal((cast(double*)&x)[MANTISSA_LSB]);
     } else {
-	ushort e = F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT];
+        ushort e = F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT];
         return (e != F.EXPMASK && e!=0);
     }
 }
@@ -3018,10 +3026,10 @@ body
                 ;
             }
         }
-	else
-	{
-	    static assert(0);
-	}
+        else
+        {
+            static assert(0);
+        }
     }
     else
     {
@@ -3129,43 +3137,14 @@ alias isInfinity isinf;
  * translate to a single x87 instruction.
  */
 
-pure nothrow real yl2x(real x, real y);		// y * log2(x)
-pure nothrow real yl2xp1(real x, real y);	// y * log2(x + 1)
+pure nothrow real yl2x(real x, real y);         // y * log2(x)
+pure nothrow real yl2xp1(real x, real y);       // y * log2(x + 1)
 
 unittest
 {
     version (INLINE_YL2X)
     {
-	assert(yl2x(1024, 1) == 10);
-	assert(yl2xp1(1023, 1) == 10);
+        assert(yl2x(1024, 1) == 10);
+        assert(yl2xp1(1023, 1) == 10);
     }
 }
-
-/*
- * Copyright:
- *      Copyright (c) 2001-2009 by Digital Mars,
- *      All Rights Reserved,
- *      http://www.digitalmars.com
- * License:
- *  This software is provided 'as-is', without any express or implied
- *  warranty. In no event will the authors be held liable for any damages
- *  arising from the use of this software.
- *
- *  Permission is granted to anyone to use this software for any purpose,
- *  including commercial applications, and to alter it and redistribute it
- *  freely, subject to the following restrictions:
- *
- *  <ul>
- *  <li> The origin of this software must not be misrepresented; you must not
- *       claim that you wrote the original software. If you use this software
- *       in a product, an acknowledgment in the product documentation would be
- *       appreciated but is not required.
- *  </li>
- *  <li> Altered source versions must be plainly marked as such, and must not
- *       be misrepresented as being the original software.
- *  </li>
- *  <li> This notice may not be removed or altered from any source
- *       distribution.
- *  </li>
- *  </ul>
- */

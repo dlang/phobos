@@ -1,30 +1,4 @@
-// Written in the D programming language
-
-/*
- *  Copyright (C) 2003-2009 by Digital Mars, http://www.digitalmars.com
- *  Written by Matthew Wilson and Walter Bright
- *
- *  Incorporating idea (for execvpe() on Posix) from Russ Lewis
- *
- *  Updated: 21st August 2004
- *
- *  This software is provided 'as-is', without any express or implied
- *  warranty. In no event will the authors be held liable for any damages
- *  arising from the use of this software.
- *
- *  Permission is granted to anyone to use this software for any purpose,
- *  including commercial applications, and to alter it and redistribute it
- *  freely, subject to the following restrictions:
- *
- *  o  The origin of this software must not be misrepresented; you must not
- *     claim that you wrote the original software. If you use this software
- *     in a product, an acknowledgment in the product documentation would be
- *     appreciated but is not required.
- *  o  Altered source versions must be plainly marked as such, and must not
- *     be misrepresented as being the original software.
- *  o  This notice may not be removed or altered from any source
- *     distribution.
- */
+// Written in the D programming language.
 
 /**
 Authors:
@@ -35,8 +9,17 @@ Alexandrescu)
 Macros:
 
 WIKI=Phobos/StdProcess
-*/
 
+Copyright: Copyright Digital Mars 2007 - 2009.
+License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+Authors:   $(WEB digitalmars.com, Walter Bright),
+           $(WEB erdani.org, Andrei Alexandrescu)
+
+         Copyright Digital Mars 2007 - 2009.
+Distributed under the Boost Software License, Version 1.0.
+   (See accompanying file LICENSE_1_0.txt or copy at
+         http://www.boost.org/LICENSE_1_0.txt)
+*/
 module std.process;
 
 private import std.c.stdlib;
@@ -103,11 +86,11 @@ private void toAStringz(in string[] a, const(char)**az)
 //{
 //    int spawnvp(int mode, string pathname, string[] argv)
 //    {
-//	char** argv_ = cast(char**)alloca((char*).sizeof * (1 + argv.length));
+//      char** argv_ = cast(char**)alloca((char*).sizeof * (1 + argv.length));
 //
-//	toAStringz(argv, argv_);
+//      toAStringz(argv, argv_);
 //
-//	return std.c.process.spawnvp(mode, toStringz(pathname), argv_);
+//      return std.c.process.spawnvp(mode, toStringz(pathname), argv_);
 //    }
 //}
 

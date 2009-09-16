@@ -5,7 +5,7 @@
  * predicates (a la $(D_PARAM assert)).
  *
  * Macros:
- *	WIKI = Phobos/StdContracts
+ *      WIKI = Phobos/StdContracts
  *
  * Synopsis:
  *
@@ -27,16 +27,18 @@
  * }
  * ----
  *
- * Author:
+ * Copyright: Copyright Andrei Alexandrescu 2008 - 2009.
+ * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+ * Authors:   $(WEB erdani.org, Andrei Alexandrescu)
+ * Credits:   Brad Roberts came up with the name $(D_PARAM contracts).
  *
- * $(WEB erdani.org, Andrei Alexandrescu)
- *
- * Credits:
- *
- * Brad Roberts came up with the name $(D_PARAM contracts).
+ *          Copyright Andrei Alexandrescu 2008 - 2009.
+ * Distributed under the Boost Software License, Version 1.0.
+ *    (See accompanying file LICENSE_1_0.txt or copy at
+ *          http://www.boost.org/LICENSE_1_0.txt)
  */
-
 module std.contracts;
+
 import std.array, std.c.string, std.conv, std.range, std.string, std.traits;
 import core.stdc.errno;
 version(unittest)
@@ -439,7 +441,7 @@ unittest
  */
 class ErrnoException : Exception
 {
-    uint errno;			// operating system error code
+    uint errno;                 // operating system error code
     this(string msg, string file = null, uint line = 0)
     {
         errno = getErrno;

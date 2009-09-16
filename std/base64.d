@@ -1,4 +1,4 @@
-// Written in the D programming language
+// Written in the D programming language.
 
 /**
  * Encodes/decodes MIME base64 data.

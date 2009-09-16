@@ -11,12 +11,6 @@ Document, but that is not their primary purpose. The handling capabilities of
 DocumentParser and ElementParser are sufficiently customizable that you can
 make them do pretty much whatever you want.
 
-Authors: Janice Caron
-
-Date: 2008.02.12 - 2008.05.07
-
-License: Public Domain
-
 Example: This example creates a DOM (Document Object Model) tree
     from an XML file.
 ------------------------------------------------------------------------------
@@ -113,11 +107,20 @@ void main()
     writefln(join(doc.pretty(3),"\n"));
 }
 -------------------------------------------------------------------------------
- * Macros:
- *	WIKI=Phobos/StdXml
- */
+Macros:
+    WIKI=Phobos/StdXml
 
+Copyright: Copyright Janice Caron 2008 - 2009.
+License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+Authors:   Janice Caron
+
+         Copyright Janice Caron 2008 - 2009.
+Distributed under the Boost Software License, Version 1.0.
+   (See accompanying file LICENSE_1_0.txt or copy at
+         http://www.boost.org/LICENSE_1_0.txt)
+*/
 module std.xml;
+
 import std.array;
 import std.string;
 import std.encoding;
@@ -1653,9 +1656,9 @@ class ElementParser
         // Private constructor for empty tags
         this(Tag tag, string* t)
         {
-        	s = t;
-        	this();
-        	tag_ = tag;
+            s = t;
+            this();
+            tag_ = tag;
         }
     }
 
@@ -1940,10 +1943,10 @@ class ElementParser
                     auto startTag = startTags[tag_.name];
                     string text;
 
-					invariant(char)* p = startTag.tagString.ptr
-						+ startTag.tagString.length;
-					invariant(char)* q = tag_.tagString.ptr;
-					text = p[0..(q-p)];
+                    invariant(char)* p = startTag.tagString.ptr
+                        + startTag.tagString.length;
+                    invariant(char)* q = tag_.tagString.ptr;
+                    text = p[0..(q-p)];
 
                     auto element = new Element(startTag);
                     if (text.length != 0) element ~= new Text(text);
@@ -1960,7 +1963,7 @@ class ElementParser
                 }
                 else if (tag_.isEmpty)
                 {
-                	Tag startTag = new Tag(tag_.name);
+                    Tag startTag = new Tag(tag_.name);
 
                     // FIX by hed010gy, for bug 2979
                     // http://d.puremagic.com/issues/show_bug.cgi?id=2979
@@ -1968,26 +1971,26 @@ class ElementParser
                           foreach(tn,tv; tag_.attr) startTag.attr[tn]=tv;
                     // END FIX
 
-					// Handle the pretend start tag
-					string s2;
-					auto parser = new ElementParser(startTag,&s2);
-					auto handler1 = startTag.name in onStartTag;
-					if (handler1 !is null) (*handler1)(parser);
-					else
-					{
-						handler1 = null in onStartTag;
-						if (handler1 !is null) (*handler1)(parser);
-					}
-					
-					// Handle the pretend end tag
-					auto element = new Element(startTag);
-					auto handler2 = tag_.name in onEndTag;
-					if (handler2 !is null) (*handler2)(element);
-					else
-					{
-						handler2 = null in onEndTag;
-						if (handler2 !is null) (*handler2)(element);
-					}
+                    // Handle the pretend start tag
+                    string s2;
+                    auto parser = new ElementParser(startTag,&s2);
+                    auto handler1 = startTag.name in onStartTag;
+                    if (handler1 !is null) (*handler1)(parser);
+                    else
+                    {
+                        handler1 = null in onStartTag;
+                        if (handler1 !is null) (*handler1)(parser);
+                    }
+                    
+                    // Handle the pretend end tag
+                    auto element = new Element(startTag);
+                    auto handler2 = tag_.name in onEndTag;
+                    if (handler2 !is null) (*handler2)(element);
+                    else
+                    {
+                        handler2 = null in onEndTag;
+                        if (handler2 !is null) (*handler2)(element);
+                    }
                 }
             }
             else

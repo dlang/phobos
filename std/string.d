@@ -8,25 +8,19 @@ $(D char[]), $(D wchar[]), or $(D dchar[]). The $(D *_string) types
 are preferable because they don't exhibit undesired aliasing, thus
 making code more robust.
 
-Authors:
-
-$(WEB digitalmars.com, Walter Bright), $(WEB erdani.org, Andrei
-Alexandrescu)
-
 Macros:
- WIKI = Phobos/StdString
+WIKI = Phobos/StdString
 
-Copyright:
- Public Domain
+Copyright: Copyright Digital Mars 2007 - 2009.
+License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+Authors:   $(WEB digitalmars.com, Walter Bright),
+           $(WEB erdani.org, Andrei Alexandrescu)
+
+         Copyright Digital Mars 2007 - 2009.
+Distributed under the Boost Software License, Version 1.0.
+   (See accompanying file LICENSE_1_0.txt or copy at
+         http://www.boost.org/LICENSE_1_0.txt)
  */
-
-/* Author:
- *  Walter Bright, Digital Mars, www.digitalmars.com
- */
-
-// The code is not optimized for speed, that will have to wait
-// until the design is solidified.
-
 module std.string;
 
 //debug=string;     // uncomment to turn on debugging printf's

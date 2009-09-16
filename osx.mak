@@ -118,13 +118,13 @@ $$(OBJDIR)/$1/$2/unittest/std/% : std/%.d				\
 	@touch $$@
 
 $(PRODUCTIONLIBDIR)/libphobos2tmp_$2$$(LIBSUFFIX_$1) : $$(LIB_$1_$2)
-	ln -sf $$(realpath $$<) $$@
+	sudo ln -sf $$(realpath $$<) $$@
 
 PRODUCTIONLIB_$1 = $(PRODUCTIONLIBDIR)/libphobos2$(LIBSUFFIX_$1)
 ifeq ($2,release)
 $1/$2 : $$(PRODUCTIONLIB_$1)
 $$(PRODUCTIONLIB_$1) : $$(LIB_$1_$2)
-	ln -sf $$(realpath $$<) $$@
+	sudo ln -sf $$(realpath $$<) $$@
 else
 $1/$2 : $$(LIB_$1_$2)
 endif

@@ -1,4 +1,4 @@
-// Written in the D programming language
+// Written in the D programming language.
 
 /**
 Facilities for random number generation. The old-style functions
@@ -34,23 +34,24 @@ distributions, which skew a generator's output statistical
 distribution in various ways. So far the uniform distribution for
 integers and real numbers have been implemented.
 
-Author:
-
-$(WEB erdani.org, Andrei Alexandrescu)
-
-Credits:
-
-The entire random number library architecture is derived from the
-excellent $(WEB
-open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2461.pdf, C++0X) random
-number facility proposed by Jens Maurer and contributed to by
-researchers at the Fermi laboratory.
-
 Macros:
 
 WIKI = Phobos/StdRandom
-*/
 
+
+Copyright: Copyright Andrei Alexandrescu 2008 - 2009.
+License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+Authors:   $(WEB erdani.org, Andrei Alexandrescu)
+Credits:   The entire random number library architecture is derived from the
+           excellent $(WEB open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2461.pdf, C++0X)
+           random number facility proposed by Jens Maurer and contributed to by
+           researchers at the Fermi laboratory.
+
+         Copyright Andrei Alexandrescu 2008 - 2009.
+Distributed under the Boost Software License, Version 1.0.
+   (See accompanying file LICENSE_1_0.txt or copy at
+         http://www.boost.org/LICENSE_1_0.txt)
+*/
 module std.random;
 
 import std.algorithm, std.c.time, std.contracts, std.conv, std.date, std.math,
@@ -974,8 +975,8 @@ unittest
 
 // seed and index are deliberately thread local
 
-private uint seed;		// starting seed
-private uint index;		// ith random number
+private uint seed;              // starting seed
+private uint index;             // ith random number
 
 /**
 The random number generator is seeded at program startup with a random
@@ -1030,7 +1031,7 @@ deprecated uint rand()
 
     loword = seed;
     hiword = index++;
-    for (i = 0; i < 4; i++)		// loop limit can be 2..20, we choose 4
+    for (i = 0; i < 4; i++)             // loop limit can be 2..20, we choose 4
     {
         hihold  = hiword;                           // save hiword for later
         temp    = hihold ^  xormix1[i];             // mix up bits of hiword
@@ -1075,16 +1076,16 @@ unittest
 {
     static uint results[10] =
     [
-	0x8c0188cb,
-	0xb161200c,
-	0xfc904ac5,
-	0x2702e049,
-	0x9705a923,
-	0x1c139d89,
-	0x346b6d1f,
-	0xf8c33e32,
-	0xdb9fef76,
-	0xa97fcb3f
+        0x8c0188cb,
+        0xb161200c,
+        0xfc904ac5,
+        0x2702e049,
+        0x9705a923,
+        0x1c139d89,
+        0x346b6d1f,
+        0xf8c33e32,
+        0xdb9fef76,
+        0xa97fcb3f
     ];
     int i;
     uint seedsave = seed;
@@ -1092,9 +1093,9 @@ unittest
 
     rand_seed(1234, 5678);
     for (i = 0; i < 10; i++)
-    {	uint r = rand();
-	//printf("0x%x,\n", rand());
-	assert(r == results[i]);
+    {   uint r = rand();
+        //printf("0x%x,\n", rand());
+        assert(r == results[i]);
     }
 
     seed = seedsave;

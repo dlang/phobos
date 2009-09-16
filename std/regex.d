@@ -1,8 +1,7 @@
 // Written in the D programming language.
+// Regular Expressions.
 
-// Regular Expressions
-
-/**********************************************
+/**
 $(WEB digitalmars.com/ctg/regular.html, Regular expressions) are a
 powerful method of string pattern matching.  The regular expression
 language used in this library is the same as that commonly used,
@@ -47,17 +46,24 @@ subexpressions, use the empty string instead.)))
 
 Any other $ are left as is.
 
-Authors: $(WEB www.digitalmars.com, Walter Bright) and $(WEB
-www.erdani.org, Andrei Alexandrescu).
-
 References: $(WEB en.wikipedia.org/wiki/Regular_expressions,
 Wikipedia)
 
 Macros:
+
 WIKI = StdRegex
 DOLLAR = $
 
- */
+Copyright: Copyright Digital Mars 2000 - 2009.
+License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+Authors:   $(WEB digitalmars.com, Walter Bright),
+           $(WEB erdani.org, Andrei Alexandrescu)
+
+         Copyright Digital Mars 2000 - 2009.
+Distributed under the Boost Software License, Version 1.0.
+   (See accompanying file LICENSE_1_0.txt or copy at
+         http://www.boost.org/LICENSE_1_0.txt)
+*/
 
 /*
 Escape sequences:
@@ -90,7 +96,7 @@ http://www.unicode.org/unicode/reports/tr18/
 
 module std.regex;
 
-//debug = regex;		// uncomment to turn on debugging printf's
+//debug = regex;                // uncomment to turn on debugging printf's
 
 import core.stdc.stdio;
 import core.stdc.stdlib;
@@ -178,47 +184,47 @@ private:
     alias Tuple!(uint, "startIdx", uint, "endIdx") regmatch_t;
     enum REA
     {
-        global		= 1,	// has the g attribute
-        ignoreCase	= 2,	// has the i attribute
-        multiline	= 4,	// if treat as multiple lines separated by
+        global          = 1,    // has the g attribute
+        ignoreCase      = 2,    // has the i attribute
+        multiline       = 4,    // if treat as multiple lines separated by
                             // newlines, or as a single line
-        dotmatchlf	= 8,	// if . matches \n
+        dotmatchlf      = 8,    // if . matches \n
     }
     enum uint inf = ~0u;
     
     uint re_nsub;        // number of parenthesized subexpression matches
     ubyte attributes;
-    immutable(ubyte)[] program;	// pattern[] compiled into regular
+    immutable(ubyte)[] program; // pattern[] compiled into regular
                                 // expression program
 
 // Opcodes
 
     enum : ubyte
     {
-        REend,		// end of program
-            REchar,		// single character
-            REichar,		// single character, case insensitive
-            REdchar,		// single UCS character
-            REidchar,		// single wide character, case insensitive
-            REanychar,		// any character
-            REanystar,		// ".*"
-            REstring,		// string of characters
-            REistring,		// string of characters, case insensitive
-            REtestbit,		// any in bitmap, non-consuming
-            REbit,		// any in the bit map
-            REnotbit,		// any not in the bit map
-            RErange,		// any in the string
-            REnotrange,		// any not in the string
-            REor,		// a | b
-            REplus,		// 1 or more
-            REstar,		// 0 or more
-            REquest,		// 0 or 1
-            REnm,		// n..m
-            REnmq,		// n..m, non-greedy version
-            REbol,		// beginning of line
-            REeol,		// end of line
-            REparen,		// parenthesized subexpression
-            REgoto,		// goto offset
+        REend,          // end of program
+            REchar,             // single character
+            REichar,            // single character, case insensitive
+            REdchar,            // single UCS character
+            REidchar,           // single wide character, case insensitive
+            REanychar,          // any character
+            REanystar,          // ".*"
+            REstring,           // string of characters
+            REistring,          // string of characters, case insensitive
+            REtestbit,          // any in bitmap, non-consuming
+            REbit,              // any in the bit map
+            REnotbit,           // any not in the bit map
+            RErange,            // any in the string
+            REnotrange,         // any not in the string
+            REor,               // a | b
+            REplus,             // 1 or more
+            REstar,             // 0 or more
+            REquest,            // 0 or 1
+            REnm,               // n..m
+            REnmq,              // n..m, non-greedy version
+            REbol,              // beginning of line
+            REeol,              // end of line
+            REparen,            // parenthesized subexpression
+            REgoto,             // goto offset
 
             REwordboundary,
             REnotwordboundary,
@@ -308,9 +314,9 @@ Returns the number of parenthesized captures
 
             switch (c)
             {
-            case 'g': att = REA.global;		break;
-            case 'i': att = REA.ignoreCase;	break;
-            case 'm': att = REA.multiline;	break;
+            case 'g': att = REA.global;         break;
+            case 'i': att = REA.ignoreCase;     break;
+            case 'm': att = REA.multiline;      break;
             default:
                 error("unrecognized attribute");
                 return;
@@ -330,7 +336,7 @@ Returns the number of parenthesized captures
         size_t p = 0;
         parseRegex(pattern, p, buf);
         if (p < pattern.length)
-        {	error("unmatched ')'");
+        {       error("unmatched ')'");
         }
         optimize(buf);
         program = cast(immutable(ubyte)[]) buf.data;
@@ -496,7 +502,7 @@ Returns the number of parenthesized captures
             m = 1;
             goto Lnm;
 
-        case '{':	// {n} {n,} {n,m}
+        case '{':       // {n} {n,} {n,m}
             p++;
             if (p == plength || !isdigit(pattern[p]))
                 goto Lerr;
@@ -509,8 +515,8 @@ Returns the number of parenthesized captures
                 if (p == plength)
                     goto Lerr;
             } while (isdigit(pattern[p]));
-            if (pattern[p] == '}')		// {n}
-            {	m = n;
+            if (pattern[p] == '}')              // {n}
+            {   m = n;
                 goto Lnm;
             }
             if (pattern[p] != ',')
@@ -518,13 +524,13 @@ Returns the number of parenthesized captures
             p++;
             if (p == plength)
                 goto Lerr;
-            if (pattern[p] == /*{*/ '}')	// {n,}
-            {	m = inf;
+            if (pattern[p] == /*{*/ '}')        // {n,}
+            {   m = inf;
                 goto Lnm;
             }
             if (!isdigit(pattern[p]))
                 goto Lerr;
-            m = 0;			// {n,m}
+            m = 0;                      // {n,m}
             do
             {
                 // BUG: handle overflow
@@ -541,7 +547,7 @@ Returns the number of parenthesized captures
             p++;
             op = REnm;
             if (p < plength && pattern[p] == '?')
-            {	op = REnmq;	// minimal munch version
+            {   op = REnmq;     // minimal munch version
                 p++;
             }
             len = buf.offset - offset;
@@ -584,7 +590,7 @@ Returns the number of parenthesized captures
             p++;
             buf.write(REparen);
             offset = buf.offset;
-            buf.write(cast(uint)0);		// reserve space for length
+            buf.write(cast(uint)0);             // reserve space for length
             buf.write(re_nsub);
             re_nsub++;
             parseRegex(pattern, p, buf);
@@ -627,14 +633,14 @@ Returns the number of parenthesized captures
             c = pattern[p];
             switch (c)
             {
-            case 'b':    op = REwordboundary;	 goto Lop;
+            case 'b':    op = REwordboundary;    goto Lop;
             case 'B':    op = REnotwordboundary; goto Lop;
-            case 'd':    op = REdigit;		 goto Lop;
-            case 'D':    op = REnotdigit;	 goto Lop;
-            case 's':    op = REspace;		 goto Lop;
-            case 'S':    op = REnotspace;	 goto Lop;
-            case 'w':    op = REword;		 goto Lop;
-            case 'W':    op = REnotword;	 goto Lop;
+            case 'd':    op = REdigit;           goto Lop;
+            case 'D':    op = REnotdigit;        goto Lop;
+            case 's':    op = REspace;           goto Lop;
+            case 'S':    op = REnotspace;        goto Lop;
+            case 'w':    op = REword;            goto Lop;
+            case 'W':    op = REnotword;         goto Lop;
                 
             Lop:
                 buf.write(op);
@@ -694,7 +700,7 @@ Returns the number of parenthesized captures
                 int len;
 
                 for (; q < pattern.length; ++q)
-                {	auto qc = pattern[q];
+                {       auto qc = pattern[q];
 
                     switch (qc)
                     {
@@ -707,11 +713,11 @@ Returns the number of parenthesized captures
                         q--;
                         break;
 
-                    case '(':	case ')':
+                    case '(':   case ')':
                     case '|':
-                    case '[':	case ']':
-                    case '.':	case '^':
-                    case '$':	case '\\':
+                    case '[':   case ']':
+                    case '.':   case '^':
+                    case '$':   case '\\':
                     case '}':
                         break;
 
@@ -780,7 +786,7 @@ Returns the number of parenthesized captures
             maxc = u;
             uint b = u / 8;
             if (b >= maxb)
-            {	uint u2;
+            {   uint u2;
                 
                 u2 = base ? base - &buf.data[0] : 0;
                 buf.fill0(b - maxb + 1);
@@ -821,7 +827,7 @@ Returns the number of parenthesized captures
         }
         buf.write(op);
         offset = buf.offset;
-        buf.write(cast(uint)0);		// reserve space for length
+        buf.write(cast(uint)0);         // reserve space for length
         buf.reserve(128 / 8);
         auto r = new Range(buf);
         if (op == REnotbit)
@@ -1030,7 +1036,7 @@ Returns the number of parenthesized captures
                 return 1;
 
             case REanychar:
-                return 0;		// no point
+                return 0;               // no point
 
             case REstring:
                 len = *cast(uint *)&prog[i + 1] / E.sizeof;
@@ -1185,15 +1191,15 @@ Returns the number of parenthesized captures
         int i;
         E tc;
 
-        c = pattern[p];		// none of the cases are multibyte
+        c = pattern[p];         // none of the cases are multibyte
         switch (c)
         {
-        case 'b':    c = '\b';	break;
-        case 'f':    c = '\f';	break;
-        case 'n':    c = '\n';	break;
-        case 'r':    c = '\r';	break;
-        case 't':    c = '\t';	break;
-        case 'v':    c = '\v';	break;
+        case 'b':    c = '\b';  break;
+        case 'f':    c = '\f';  break;
+        case 'n':    c = '\n';  break;
+        case 'r':    c = '\r';  break;
+        case 't':    c = '\t';  break;
+        case 'v':    c = '\v';  break;
 
             // BUG: Perl does \a and \e too, should we?
 
@@ -1232,7 +1238,7 @@ Returns the number of parenthesized captures
                     // Treat overflow as if last
                     // digit was not an octal digit
                     if (c >= 0xFF)
-                    {	c >>= 3;
+                    {   c >>= 3;
                         return c;
                     }
                 }
@@ -1255,7 +1261,7 @@ Returns the number of parenthesized captures
                     c = c * 16 + (tc - 'a' + 10);
                 else if ('A' <= tc && tc <= 'F')
                     c = c * 16 + (tc - 'A' + 10);
-                else if (i == 0)	// if no hex digits after \x
+                else if (i == 0)        // if no hex digits after \x
                 {
                     // Not a valid \xXX sequence
                     return 'x';
@@ -1533,8 +1539,8 @@ Get or set the engine of the match.
     public Regex engine;
     // the string to search
     Range input;
-    size_t src;			    // current source index in input[]
-    size_t src_start;		// starting index for match in input[]
+    size_t src;                     // current source index in input[]
+    size_t src_start;           // starting index for match in input[]
     regmatch_t[] pmatch;    // array [engine.re_nsub + 1]
 
 /*
@@ -1781,13 +1787,13 @@ Returns $(D hit) (converted to $(D string) if necessary).
 /+
             // Optimize by using std.string.replace if possible - Dave Fladebo
             auto slice = result[offset + so .. offset + eo];
-            if (attributes & REA.global &&		// global, so replace all
-                    !(attributes & REA.ignoreCase) &&	// not ignoring case
-                    !(attributes & REA.multiline) &&	// not multiline
-                    pattern == slice &&			// simple pattern
+            if (attributes & REA.global &&              // global, so replace all
+                    !(attributes & REA.ignoreCase) &&   // not ignoring case
+                    !(attributes & REA.multiline) &&    // not multiline
+                    pattern == slice &&                 // simple pattern
                                                 // (exact match, no
                                                 // special characters)
-                    format == replacement)		// simple format, not $ formats
+                    format == replacement)              // simple format, not $ formats
             {
                 debug(regex)
                          printf("pattern: %.*s, slice: %.*s, format: %.*s"
@@ -1805,7 +1811,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 offset += replacement.length - (eo - so);
 
                 if (lastindex == eo)
-                    lastindex++;		// always consume some source
+                    lastindex++;                // always consume some source
                 else
                     lastindex = eo;
             }
@@ -1850,7 +1856,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
         {
             pmatch[0].startIdx = pmatch[0].startIdx.max;
             pmatch[0].endIdx = pmatch[0].endIdx.max;
-            return 0;			// fail
+            return 0;                   // fail
         }
         //engine.printProgram(engine.program);
         pmatch[0].startIdx = 0;
@@ -1871,13 +1877,13 @@ Returns $(D hit) (converted to $(D string) if necessary).
             {
                 if (startindex == input.length)
                 {
-                    break;			// no match
+                    break;                      // no match
                 }
                 if (input[startindex] != firstc)
                 {
                     startindex++;
-                    if (!chr(startindex, firstc))	// 1st char not found
-                        break;		                // no match
+                    if (!chr(startindex, firstc))       // 1st char not found
+                        break;                          // no match
                 }
             }
             foreach (i; 0 .. engine.re_nsub + 1)
@@ -1899,7 +1905,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 if (!(engine.attributes & engine.REA.multiline)) break;
                 // Scan for the popFront \n
                 if (!chr(startindex, '\n'))
-                    break;		// no match if '\n' not found
+                    break;              // no match if '\n' not found
             }
             if (startindex == input.length)
                 break;
@@ -1967,8 +1973,8 @@ Returns $(D hit) (converted to $(D string) if necessary).
 /* *************************************************
  * Match input against a section of the program[].
  * Returns:
- *	1 if successful match
- *	0 no match
+ *      1 if successful match
+ *      0 no match
  */
 
     private bool trymatch(uint pc, uint pcend)
@@ -1990,7 +1996,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
         regmatch_t *psave = null;
         for (;;)
         {
-            if (pc == pcend)		// if done matching
+            if (pc == pcend)            // if done matching
             {   debug(regex) printf("\tprogend\n");
                 return true;
             }
@@ -2218,7 +2224,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 if (trymatch(pop, pcend))
                 {
                     if (pcend != engine.program.length)
-                    {	int s;
+                    {   int s;
 
                         s = src;
                         if (trymatch(pcend, engine.program.length))
@@ -2242,11 +2248,11 @@ Returns $(D hit) (converted to $(D string) if necessary).
                         src = ss;
                     }
                     else
-                    {	debug(regex) printf("\tfirst operand matched\n");
+                    {   debug(regex) printf("\tfirst operand matched\n");
                         return 1;
                     }
                 }
-                pc = pop + len;		// proceed with 2nd branch
+                pc = pop + len;         // proceed with 2nd branch
                 break;
 
             case engine.REgoto:
@@ -2277,7 +2283,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
                         // BUG: should we save/restore pmatch[]?
                         if (trymatch(pc, engine.program.length))
                         {
-                            src = s1;		// no match
+                            src = s1;           // no match
                             break;
                         }
                     }
@@ -2306,7 +2312,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
                     psave = cast(regmatch_t *)alloca(
                         (engine.re_nsub + 1) * regmatch_t.sizeof);
                 }
-                if (engine.program[pc] == engine.REnmq)	// if minimal munch
+                if (engine.program[pc] == engine.REnmq) // if minimal munch
                 {
                     for (; count < m; count++)
                     {   int s1;
@@ -2337,7 +2343,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
                         }
                     }
                 }
-                else	// maximal munch
+                else    // maximal munch
                 {
                     for (; count < m; count++)
                     {
@@ -2365,7 +2371,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
                             src = s1;
                             if (trymatch(pop + len, engine.program.length))
                             {
-                                src = s1;		// no match
+                                src = s1;               // no match
                                 memcpy(pmatch.ptr, psave,
                                         (engine.re_nsub + 1) * regmatch_t.sizeof);
                                 break;
@@ -2396,7 +2402,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
 
             case engine.REend:
                 debug(regex) printf("\tREend\n");
-                return 1;		// successful match
+                return 1;               // successful match
 
             case engine.REwordboundary:
                 debug(regex) printf("\tREwordboundary\n");
@@ -2628,22 +2634,22 @@ and, using the format string, generate and return a new string.
 
 /* ***********************************
  * Like replace(char[] format), but uses old style formatting:
-		<table border=1 cellspacing=0 cellpadding=5>
-		<th>Format
-		<th>Description
-		<tr>
-		<td><b>&</b>
-		<td>replace with the match
-		</tr>
-		<tr>
-		<td><b>\</b><i>n</i>
-		<td>replace with the <i>n</i>th parenthesized match, <i>n</i> is 1..9
-		</tr>
-		<tr>
-		<td><b>\</b><i>c</i>
-		<td>replace with char <i>c</i>.
-		</tr>
-		</table>
+                <table border=1 cellspacing=0 cellpadding=5>
+                <th>Format
+                <th>Description
+                <tr>
+                <td><b>&</b>
+                <td>replace with the match
+                </tr>
+                <tr>
+                <td><b>\</b><i>n</i>
+                <td>replace with the <i>n</i>th parenthesized match, <i>n</i> is 1..9
+                </tr>
+                <tr>
+                <td><b>\</b><i>c</i>
+                <td>replace with char <i>c</i>.
+                </tr>
+                </table>
 */
 
     deprecated private string replaceOld(string format)
@@ -2840,9 +2846,9 @@ Range replace(alias fun, Range, Regex)
 /+
         // Optimize by using std.string.replace if possible - Dave Fladebo
         auto slice = result[offset + so .. offset + eo];
-        if (rx.attributes & rx.REA.global &&		// global, so replace all
-                !(rx.attributes & rx.REA.ignoreCase) &&	// not ignoring case
-                !(rx.attributes & rx.REA.multiline) &&	// not multiline
+        if (rx.attributes & rx.REA.global &&            // global, so replace all
+                !(rx.attributes & rx.REA.ignoreCase) && // not ignoring case
+                !(rx.attributes & rx.REA.multiline) &&  // not multiline
                 pattern == slice) // simple pattern (exact match, no
                                   // special characters)
         {
@@ -2861,7 +2867,7 @@ Range replace(alias fun, Range, Regex)
             offset += replacement.length - (eo - so);
 
             if (lastindex == eo)
-                lastindex++;		// always consume some source
+                lastindex++;            // always consume some source
             else
                 lastindex = eo;
         }
@@ -3073,175 +3079,175 @@ unittest
     };
 
     static TestVectors tv[] = [
-        {  "(a)\\1",	"abaab","y",	"&",	"aa" },
-        {  "abc",	"abc",	"y",	"&",	"abc" },
-        {  "abc",	"xbc",	"n",	"-",	"-" },
-        {  "abc",	"axc",	"n",	"-",	"-" },
-        {  "abc",	"abx",	"n",	"-",	"-" },
-        {  "abc",	"xabcy","y",	"&",	"abc" },
-        {  "abc",	"ababc","y",	"&",	"abc" },
-        {  "ab*c",	"abc",	"y",	"&",	"abc" },
-        {  "ab*bc",	"abc",	"y",	"&",	"abc" },
-        {  "ab*bc",	"abbc",	"y",	"&",	"abbc" },
-        {  "ab*bc",	"abbbbc","y",	"&",	"abbbbc" },
-        {  "ab+bc",	"abbc",	"y",	"&",	"abbc" },
-        {  "ab+bc",	"abc",	"n",	"-",	"-" },
-        {  "ab+bc",	"abq",	"n",	"-",	"-" },
-        {  "ab+bc",	"abbbbc","y",	"&",	"abbbbc" },
-        {  "ab?bc",	"abbc",	"y",	"&",	"abbc" },
-        {  "ab?bc",	"abc",	"y",	"&",	"abc" },
-        {  "ab?bc",	"abbbbc","n",	"-",	"-" },
-        {  "ab?c",	"abc",	"y",	"&",	"abc" },
-        {  "^abc$",	"abc",	"y",	"&",	"abc" },
-        {  "^abc$",	"abcc",	"n",	"-",	"-" },
-        {  "^abc",	"abcc",	"y",	"&",	"abc" },
-        {  "^abc$",	"aabc",	"n",	"-",	"-" },
-        {  "abc$",	"aabc",	"y",	"&",	"abc" },
-        {  "^",	"abc",	"y",	"&",	"" },
-        {  "$",	"abc",	"y",	"&",	"" },
-        {  "a.c",	"abc",	"y",	"&",	"abc" },
-        {  "a.c",	"axc",	"y",	"&",	"axc" },
-        {  "a.*c",	"axyzc","y",	"&",	"axyzc" },
-        {  "a.*c",	"axyzd","n",	"-",	"-" },
-        {  "a[bc]d",	"abc",	"n",	"-",	"-" },
-        {  "a[bc]d",	"abd",	"y",	"&",	"abd" },
-        {  "a[b-d]e",	"abd",	"n",	"-",	"-" },
-        {  "a[b-d]e",	"ace",	"y",	"&",	"ace" },
-        {  "a[b-d]",	"aac",	"y",	"&",	"ac" },
-        {  "a[-b]",	"a-",	"y",	"&",	"a-" },
-        {  "a[b-]",	"a-",	"y",	"&",	"a-" },
-        {  "a[b-a]",	"-",	"c",	"-",	"-" },
-        {  "a[]b",	"-",	"c",	"-",	"-" },
-        {  "a[",	"-",	"c",	"-",	"-" },
-        {  "a]",	"a]",	"y",	"&",	"a]" },
-        {  "a[]]b",	"a]b",	"y",	"&",	"a]b" },
-        {  "a[^bc]d",	"aed",	"y",	"&",	"aed" },
-        {  "a[^bc]d",	"abd",	"n",	"-",	"-" },
-        {  "a[^-b]c",	"adc",	"y",	"&",	"adc" },
-        {  "a[^-b]c",	"a-c",	"n",	"-",	"-" },
-        {  "a[^]b]c",	"a]c",	"n",	"-",	"-" },
-        {  "a[^]b]c",	"adc",	"y",	"&",	"adc" },
-        {  "ab|cd",	"abc",	"y",	"&",	"ab" },
-        {  "ab|cd",	"abcd",	"y",	"&",	"ab" },
-        {  "()ef",	"def",	"y",	"&-\\1",	"ef-" },
-//{  "()*",	"-",	"c",	"-",	"-" },
-        {  "()*",	"-",	"y",	"-",	"-" },
-        {  "*a",	"-",	"c",	"-",	"-" },
-//{  "^*",	"-",	"c",	"-",	"-" },
-        {  "^*",	"-",	"y",	"-",	"-" },
-//{  "$*",	"-",	"c",	"-",	"-" },
-        {  "$*",	"-",	"y",	"-",	"-" },
-        {  "(*)b",	"-",	"c",	"-",	"-" },
-        {  "$b",	"b",	"n",	"-",	"-" },
-        {  "a\\",	"-",	"c",	"-",	"-" },
-        {  "a\\(b",	"a(b",	"y",	"&-\\1",	"a(b-" },
-        {  "a\\(*b",	"ab",	"y",	"&",	"ab" },
-        {  "a\\(*b",	"a((b",	"y",	"&",	"a((b" },
-        {  "a\\\\b",	"a\\b",	"y",	"&",	"a\\b" },
-        {  "abc)",	"-",	"c",	"-",	"-" },
-        {  "(abc",	"-",	"c",	"-",	"-" },
-        {  "((a))",	"abc",	"y",	"&-\\1-\\2",	"a-a-a" },
-        {  "(a)b(c)",	"abc",	"y",	"&-\\1-\\2",	"abc-a-c" },
-        {  "a+b+c",	"aabbabc","y",	"&",	"abc" },
-        {  "a**",	"-",	"c",	"-",	"-" },
-//{  "a*?",	"-",	"c",	"-",	"-" },
-        {  "a*?a",	"aa",	"y",	"&",	"a" },
-//{  "(a*)*",	"-",	"c",	"-",	"-" },
-        {  "(a*)*",	"aaa",	"y",	"-",	"-" },
-//{  "(a*)+",	"-",	"c",	"-",	"-" },
-        {  "(a*)+",	"aaa",	"y",	"-",	"-" },
-//{  "(a|)*",	"-",	"c",	"-",	"-" },
-        {  "(a|)*",	"-",	"y",	"-",	"-" },
-//{  "(a*|b)*",	"-",	"c",	"-",	"-" },
-        {  "(a*|b)*",	"aabb",	"y",	"-",	"-" },
-        {  "(a|b)*",	"ab",	"y",	"&-\\1",	"ab-b" },
-        {  "(a+|b)*",	"ab",	"y",	"&-\\1",	"ab-b" },
-        {  "(a+|b)+",	"ab",	"y",	"&-\\1",	"ab-b" },
-        {  "(a+|b)?",	"ab",	"y",	"&-\\1",	"a-a" },
-        {  "[^ab]*",	"cde",	"y",	"&",	"cde" },
-//{  "(^)*",	"-",	"c",	"-",	"-" },
-        {  "(^)*",	"-",	"y",	"-",	"-" },
-//{  "(ab|)*",	"-",	"c",	"-",	"-" },
-        {  "(ab|)*",	"-",	"y",	"-",	"-" },
-        {  ")(",	"-",	"c",	"-",	"-" },
-        {  "",	"abc",	"y",	"&",	"" },
-        {  "abc",	"",	"n",	"-",	"-" },
-        {  "a*",	"",	"y",	"&",	"" },
-        {  "([abc])*d", "abbbcd",	"y",	"&-\\1",	"abbbcd-c" },
-        {  "([abc])*bcd", "abcd",	"y",	"&-\\1",	"abcd-a" },
-        {  "a|b|c|d|e", "e",	"y",	"&",	"e" },
-        {  "(a|b|c|d|e)f", "ef",	"y",	"&-\\1",	"ef-e" },
-//{  "((a*|b))*", "-",	"c",	"-",	"-" },
-        {  "((a*|b))*", "aabb", "y",	"-",	"-" },
-        {  "abcd*efg",	"abcdefg",	"y",	"&",	"abcdefg" },
-        {  "ab*",	"xabyabbbz",	"y",	"&",	"ab" },
-        {  "ab*",	"xayabbbz",	"y",	"&",	"a" },
-        {  "(ab|cd)e",	"abcde",	"y",	"&-\\1",	"cde-cd" },
-        {  "[abhgefdc]ij",	"hij",	"y",	"&",	"hij" },
-        {  "^(ab|cd)e",	"abcde",	"n",	"x\\1y",	"xy" },
-        {  "(abc|)ef",	"abcdef",	"y",	"&-\\1",	"ef-" },
-        {  "(a|b)c*d",	"abcd",	"y",	"&-\\1",	"bcd-b" },
-        {  "(ab|ab*)bc",	"abc",	"y",	"&-\\1",	"abc-a" },
-        {  "a([bc]*)c*",	"abc",	"y",	"&-\\1",	"abc-bc" },
-        {  "a([bc]*)(c*d)",	"abcd",	"y",	"&-\\1-\\2",	"abcd-bc-d" },
-        {  "a([bc]+)(c*d)",	"abcd",	"y",	"&-\\1-\\2",	"abcd-bc-d" },
-        {  "a([bc]*)(c+d)",	"abcd",	"y",	"&-\\1-\\2",	"abcd-b-cd" },
-        {  "a[bcd]*dcdcde",	"adcdcde",	"y",	"&",	"adcdcde" },
-        {  "a[bcd]+dcdcde",	"adcdcde",	"n",	"-",	"-" },
-        {  "(ab|a)b*c",	"abc",	"y",	"&-\\1",	"abc-ab" },
-        {  "((a)(b)c)(d)",	"abcd",	"y",	"\\1-\\2-\\3-\\4",	"abc-a-b-d" },
-        {  "[a-zA-Z_][a-zA-Z0-9_]*",	"alpha",	"y",	"&",	"alpha" },
-        {  "^a(bc+|b[eh])g|.h$",	"abh",	"y",	"&-\\1",	"bh-" },
-        {  "(bc+d$|ef*g.|h?i(j|k))",	"effgz",	"y",	"&-\\1-\\2",	"effgz-effgz-" },
-        {  "(bc+d$|ef*g.|h?i(j|k))",	"ij",	"y",	"&-\\1-\\2",	"ij-ij-j" },
-        {  "(bc+d$|ef*g.|h?i(j|k))",	"effg",	"n",	"-",	"-" },
-        {  "(bc+d$|ef*g.|h?i(j|k))",	"bcdd",	"n",	"-",	"-" },
-        {  "(bc+d$|ef*g.|h?i(j|k))",	"reffgz",	"y",	"&-\\1-\\2",	"effgz-effgz-" },
-//{    "((((((((((a))))))))))",	"-",	"c",	"-",	"-" },
-        {  "(((((((((a)))))))))",	"a",	"y",	"&",	"a" },
-        {  "multiple words of text",	"uh-uh",	"n",	"-",	"-" },
-        {  "multiple words",	"multiple words, yeah",	"y",	"&",	"multiple words" },
-        {  "(.*)c(.*)",	"abcde",	"y",	"&-\\1-\\2",	"abcde-ab-de" },
-        {  "\\((.*), (.*)\\)",	"(a, b)",	"y",	"(\\2, \\1)",	"(b, a)" },
-        {  "abcd",	"abcd",	"y",	"&-\\&-\\\\&",	"abcd-&-\\abcd" },
-        {  "a(bc)d",	"abcd",	"y",	"\\1-\\\\1-\\\\\\1",	"bc-\\1-\\bc" },
-        {  "[k]",			"ab",	"n",	"-",	"-" },
-        {  "[ -~]*",			"abc",	"y",	"&",	"abc" },
-        {  "[ -~ -~]*",		"abc",	"y",	"&",	"abc" },
-        {  "[ -~ -~ -~]*",		"abc",	"y",	"&",	"abc" },
-        {  "[ -~ -~ -~ -~]*",		"abc",	"y",	"&",	"abc" },
-        {  "[ -~ -~ -~ -~ -~]*",	"abc",	"y",	"&",	"abc" },
-        {  "[ -~ -~ -~ -~ -~ -~]*",	"abc",	"y",	"&",	"abc" },
-        {  "[ -~ -~ -~ -~ -~ -~ -~]*",	"abc",	"y",	"&",	"abc" },
-        {  "a{2}",	"candy",		"n",	"",	"" },
-        {  "a{2}",	"caandy",		"y",	"&",	"aa" },
-        {  "a{2}",	"caaandy",		"y",	"&",	"aa" },
-        {  "a{2,}",	"candy",		"n",	"",	"" },
-        {  "a{2,}",	"caandy",		"y",	"&",	"aa" },
-        {  "a{2,}",	"caaaaaandy",		"y",	"&",	"aaaaaa" },
-        {  "a{1,3}",	"cndy",			"n",	"",	"" },
-        {  "a{1,3}",	"candy",		"y",	"&",	"a" },
-        {  "a{1,3}",	"caandy",		"y",	"&",	"aa" },
-        {  "a{1,3}",	"caaaaaandy",		"y",	"&",	"aaa" },
-        {  "e?le?",	"angel",		"y",	"&",	"el" },
-        {  "e?le?",	"angle",		"y",	"&",	"le" },
-        {  "\\bn\\w",	"noonday",		"y",	"&",	"no" },
-        {  "\\wy\\b",	"possibly yesterday",	"y",	"&",	"ly" },
-        {  "\\w\\Bn",	"noonday",		"y",	"&",	"on" },
-        {  "y\\B\\w",	"possibly yesterday",	"y",	"&",	"ye" },
-        {  "\\cJ",	"abc\ndef",		"y",	"&",	"\n" },
-        {  "\\d",	"B2 is",		"y",	"&",	"2" },
-        {  "\\D",	"B2 is",		"y",	"&",	"B" },
-        {  "\\s\\w*",	"foo bar",		"y",	"&",	" bar" },
-        {  "\\S\\w*",	"foo bar",		"y",	"&",	"foo" },
-        {  "abc",	"ababc",		"y",	"&",	"abc" },
-        {  "apple(,)\\sorange\\1",	"apple, orange, cherry, peach",	"y", "&", "apple, orange," },
-        {  "(\\w+)\\s(\\w+)",		"John Smith", "y", "\\2, \\1", "Smith, John" },
-        {  "\\n\\f\\r\\t\\v",		"abc\n\f\r\t\vdef", "y", "&", "\n\f\r\t\v" },
-        {  ".*c",	"abcde",		"y",	"&",	"abc" },
+        {  "(a)\\1",    "abaab","y",    "&",    "aa" },
+        {  "abc",       "abc",  "y",    "&",    "abc" },
+        {  "abc",       "xbc",  "n",    "-",    "-" },
+        {  "abc",       "axc",  "n",    "-",    "-" },
+        {  "abc",       "abx",  "n",    "-",    "-" },
+        {  "abc",       "xabcy","y",    "&",    "abc" },
+        {  "abc",       "ababc","y",    "&",    "abc" },
+        {  "ab*c",      "abc",  "y",    "&",    "abc" },
+        {  "ab*bc",     "abc",  "y",    "&",    "abc" },
+        {  "ab*bc",     "abbc", "y",    "&",    "abbc" },
+        {  "ab*bc",     "abbbbc","y",   "&",    "abbbbc" },
+        {  "ab+bc",     "abbc", "y",    "&",    "abbc" },
+        {  "ab+bc",     "abc",  "n",    "-",    "-" },
+        {  "ab+bc",     "abq",  "n",    "-",    "-" },
+        {  "ab+bc",     "abbbbc","y",   "&",    "abbbbc" },
+        {  "ab?bc",     "abbc", "y",    "&",    "abbc" },
+        {  "ab?bc",     "abc",  "y",    "&",    "abc" },
+        {  "ab?bc",     "abbbbc","n",   "-",    "-" },
+        {  "ab?c",      "abc",  "y",    "&",    "abc" },
+        {  "^abc$",     "abc",  "y",    "&",    "abc" },
+        {  "^abc$",     "abcc", "n",    "-",    "-" },
+        {  "^abc",      "abcc", "y",    "&",    "abc" },
+        {  "^abc$",     "aabc", "n",    "-",    "-" },
+        {  "abc$",      "aabc", "y",    "&",    "abc" },
+        {  "^", "abc",  "y",    "&",    "" },
+        {  "$", "abc",  "y",    "&",    "" },
+        {  "a.c",       "abc",  "y",    "&",    "abc" },
+        {  "a.c",       "axc",  "y",    "&",    "axc" },
+        {  "a.*c",      "axyzc","y",    "&",    "axyzc" },
+        {  "a.*c",      "axyzd","n",    "-",    "-" },
+        {  "a[bc]d",    "abc",  "n",    "-",    "-" },
+        {  "a[bc]d",    "abd",  "y",    "&",    "abd" },
+        {  "a[b-d]e",   "abd",  "n",    "-",    "-" },
+        {  "a[b-d]e",   "ace",  "y",    "&",    "ace" },
+        {  "a[b-d]",    "aac",  "y",    "&",    "ac" },
+        {  "a[-b]",     "a-",   "y",    "&",    "a-" },
+        {  "a[b-]",     "a-",   "y",    "&",    "a-" },
+        {  "a[b-a]",    "-",    "c",    "-",    "-" },
+        {  "a[]b",      "-",    "c",    "-",    "-" },
+        {  "a[",        "-",    "c",    "-",    "-" },
+        {  "a]",        "a]",   "y",    "&",    "a]" },
+        {  "a[]]b",     "a]b",  "y",    "&",    "a]b" },
+        {  "a[^bc]d",   "aed",  "y",    "&",    "aed" },
+        {  "a[^bc]d",   "abd",  "n",    "-",    "-" },
+        {  "a[^-b]c",   "adc",  "y",    "&",    "adc" },
+        {  "a[^-b]c",   "a-c",  "n",    "-",    "-" },
+        {  "a[^]b]c",   "a]c",  "n",    "-",    "-" },
+        {  "a[^]b]c",   "adc",  "y",    "&",    "adc" },
+        {  "ab|cd",     "abc",  "y",    "&",    "ab" },
+        {  "ab|cd",     "abcd", "y",    "&",    "ab" },
+        {  "()ef",      "def",  "y",    "&-\\1",        "ef-" },
+//{  "()*",     "-",    "c",    "-",    "-" },
+        {  "()*",       "-",    "y",    "-",    "-" },
+        {  "*a",        "-",    "c",    "-",    "-" },
+//{  "^*",      "-",    "c",    "-",    "-" },
+        {  "^*",        "-",    "y",    "-",    "-" },
+//{  "$*",      "-",    "c",    "-",    "-" },
+        {  "$*",        "-",    "y",    "-",    "-" },
+        {  "(*)b",      "-",    "c",    "-",    "-" },
+        {  "$b",        "b",    "n",    "-",    "-" },
+        {  "a\\",       "-",    "c",    "-",    "-" },
+        {  "a\\(b",     "a(b",  "y",    "&-\\1",        "a(b-" },
+        {  "a\\(*b",    "ab",   "y",    "&",    "ab" },
+        {  "a\\(*b",    "a((b", "y",    "&",    "a((b" },
+        {  "a\\\\b",    "a\\b", "y",    "&",    "a\\b" },
+        {  "abc)",      "-",    "c",    "-",    "-" },
+        {  "(abc",      "-",    "c",    "-",    "-" },
+        {  "((a))",     "abc",  "y",    "&-\\1-\\2",    "a-a-a" },
+        {  "(a)b(c)",   "abc",  "y",    "&-\\1-\\2",    "abc-a-c" },
+        {  "a+b+c",     "aabbabc","y",  "&",    "abc" },
+        {  "a**",       "-",    "c",    "-",    "-" },
+//{  "a*?",     "-",    "c",    "-",    "-" },
+        {  "a*?a",      "aa",   "y",    "&",    "a" },
+//{  "(a*)*",   "-",    "c",    "-",    "-" },
+        {  "(a*)*",     "aaa",  "y",    "-",    "-" },
+//{  "(a*)+",   "-",    "c",    "-",    "-" },
+        {  "(a*)+",     "aaa",  "y",    "-",    "-" },
+//{  "(a|)*",   "-",    "c",    "-",    "-" },
+        {  "(a|)*",     "-",    "y",    "-",    "-" },
+//{  "(a*|b)*", "-",    "c",    "-",    "-" },
+        {  "(a*|b)*",   "aabb", "y",    "-",    "-" },
+        {  "(a|b)*",    "ab",   "y",    "&-\\1",        "ab-b" },
+        {  "(a+|b)*",   "ab",   "y",    "&-\\1",        "ab-b" },
+        {  "(a+|b)+",   "ab",   "y",    "&-\\1",        "ab-b" },
+        {  "(a+|b)?",   "ab",   "y",    "&-\\1",        "a-a" },
+        {  "[^ab]*",    "cde",  "y",    "&",    "cde" },
+//{  "(^)*",    "-",    "c",    "-",    "-" },
+        {  "(^)*",      "-",    "y",    "-",    "-" },
+//{  "(ab|)*",  "-",    "c",    "-",    "-" },
+        {  "(ab|)*",    "-",    "y",    "-",    "-" },
+        {  ")(",        "-",    "c",    "-",    "-" },
+        {  "",  "abc",  "y",    "&",    "" },
+        {  "abc",       "",     "n",    "-",    "-" },
+        {  "a*",        "",     "y",    "&",    "" },
+        {  "([abc])*d", "abbbcd",       "y",    "&-\\1",        "abbbcd-c" },
+        {  "([abc])*bcd", "abcd",       "y",    "&-\\1",        "abcd-a" },
+        {  "a|b|c|d|e", "e",    "y",    "&",    "e" },
+        {  "(a|b|c|d|e)f", "ef",        "y",    "&-\\1",        "ef-e" },
+//{  "((a*|b))*", "-",  "c",    "-",    "-" },
+        {  "((a*|b))*", "aabb", "y",    "-",    "-" },
+        {  "abcd*efg",  "abcdefg",      "y",    "&",    "abcdefg" },
+        {  "ab*",       "xabyabbbz",    "y",    "&",    "ab" },
+        {  "ab*",       "xayabbbz",     "y",    "&",    "a" },
+        {  "(ab|cd)e",  "abcde",        "y",    "&-\\1",        "cde-cd" },
+        {  "[abhgefdc]ij",      "hij",  "y",    "&",    "hij" },
+        {  "^(ab|cd)e", "abcde",        "n",    "x\\1y",        "xy" },
+        {  "(abc|)ef",  "abcdef",       "y",    "&-\\1",        "ef-" },
+        {  "(a|b)c*d",  "abcd", "y",    "&-\\1",        "bcd-b" },
+        {  "(ab|ab*)bc",        "abc",  "y",    "&-\\1",        "abc-a" },
+        {  "a([bc]*)c*",        "abc",  "y",    "&-\\1",        "abc-bc" },
+        {  "a([bc]*)(c*d)",     "abcd", "y",    "&-\\1-\\2",    "abcd-bc-d" },
+        {  "a([bc]+)(c*d)",     "abcd", "y",    "&-\\1-\\2",    "abcd-bc-d" },
+        {  "a([bc]*)(c+d)",     "abcd", "y",    "&-\\1-\\2",    "abcd-b-cd" },
+        {  "a[bcd]*dcdcde",     "adcdcde",      "y",    "&",    "adcdcde" },
+        {  "a[bcd]+dcdcde",     "adcdcde",      "n",    "-",    "-" },
+        {  "(ab|a)b*c", "abc",  "y",    "&-\\1",        "abc-ab" },
+        {  "((a)(b)c)(d)",      "abcd", "y",    "\\1-\\2-\\3-\\4",      "abc-a-b-d" },
+        {  "[a-zA-Z_][a-zA-Z0-9_]*",    "alpha",        "y",    "&",    "alpha" },
+        {  "^a(bc+|b[eh])g|.h$",        "abh",  "y",    "&-\\1",        "bh-" },
+        {  "(bc+d$|ef*g.|h?i(j|k))",    "effgz",        "y",    "&-\\1-\\2",    "effgz-effgz-" },
+        {  "(bc+d$|ef*g.|h?i(j|k))",    "ij",   "y",    "&-\\1-\\2",    "ij-ij-j" },
+        {  "(bc+d$|ef*g.|h?i(j|k))",    "effg", "n",    "-",    "-" },
+        {  "(bc+d$|ef*g.|h?i(j|k))",    "bcdd", "n",    "-",    "-" },
+        {  "(bc+d$|ef*g.|h?i(j|k))",    "reffgz",       "y",    "&-\\1-\\2",    "effgz-effgz-" },
+//{    "((((((((((a))))))))))", "-",    "c",    "-",    "-" },
+        {  "(((((((((a)))))))))",       "a",    "y",    "&",    "a" },
+        {  "multiple words of text",    "uh-uh",        "n",    "-",    "-" },
+        {  "multiple words",    "multiple words, yeah", "y",    "&",    "multiple words" },
+        {  "(.*)c(.*)", "abcde",        "y",    "&-\\1-\\2",    "abcde-ab-de" },
+        {  "\\((.*), (.*)\\)",  "(a, b)",       "y",    "(\\2, \\1)",   "(b, a)" },
+        {  "abcd",      "abcd", "y",    "&-\\&-\\\\&",  "abcd-&-\\abcd" },
+        {  "a(bc)d",    "abcd", "y",    "\\1-\\\\1-\\\\\\1",    "bc-\\1-\\bc" },
+        {  "[k]",                       "ab",   "n",    "-",    "-" },
+        {  "[ -~]*",                    "abc",  "y",    "&",    "abc" },
+        {  "[ -~ -~]*",         "abc",  "y",    "&",    "abc" },
+        {  "[ -~ -~ -~]*",              "abc",  "y",    "&",    "abc" },
+        {  "[ -~ -~ -~ -~]*",           "abc",  "y",    "&",    "abc" },
+        {  "[ -~ -~ -~ -~ -~]*",        "abc",  "y",    "&",    "abc" },
+        {  "[ -~ -~ -~ -~ -~ -~]*",     "abc",  "y",    "&",    "abc" },
+        {  "[ -~ -~ -~ -~ -~ -~ -~]*",  "abc",  "y",    "&",    "abc" },
+        {  "a{2}",      "candy",                "n",    "",     "" },
+        {  "a{2}",      "caandy",               "y",    "&",    "aa" },
+        {  "a{2}",      "caaandy",              "y",    "&",    "aa" },
+        {  "a{2,}",     "candy",                "n",    "",     "" },
+        {  "a{2,}",     "caandy",               "y",    "&",    "aa" },
+        {  "a{2,}",     "caaaaaandy",           "y",    "&",    "aaaaaa" },
+        {  "a{1,3}",    "cndy",                 "n",    "",     "" },
+        {  "a{1,3}",    "candy",                "y",    "&",    "a" },
+        {  "a{1,3}",    "caandy",               "y",    "&",    "aa" },
+        {  "a{1,3}",    "caaaaaandy",           "y",    "&",    "aaa" },
+        {  "e?le?",     "angel",                "y",    "&",    "el" },
+        {  "e?le?",     "angle",                "y",    "&",    "le" },
+        {  "\\bn\\w",   "noonday",              "y",    "&",    "no" },
+        {  "\\wy\\b",   "possibly yesterday",   "y",    "&",    "ly" },
+        {  "\\w\\Bn",   "noonday",              "y",    "&",    "on" },
+        {  "y\\B\\w",   "possibly yesterday",   "y",    "&",    "ye" },
+        {  "\\cJ",      "abc\ndef",             "y",    "&",    "\n" },
+        {  "\\d",       "B2 is",                "y",    "&",    "2" },
+        {  "\\D",       "B2 is",                "y",    "&",    "B" },
+        {  "\\s\\w*",   "foo bar",              "y",    "&",    " bar" },
+        {  "\\S\\w*",   "foo bar",              "y",    "&",    "foo" },
+        {  "abc",       "ababc",                "y",    "&",    "abc" },
+        {  "apple(,)\\sorange\\1",      "apple, orange, cherry, peach", "y", "&", "apple, orange," },
+        {  "(\\w+)\\s(\\w+)",           "John Smith", "y", "\\2, \\1", "Smith, John" },
+        {  "\\n\\f\\r\\t\\v",           "abc\n\f\r\t\vdef", "y", "&", "\n\f\r\t\v" },
+        {  ".*c",       "abcde",                "y",    "&",    "abc" },
         {  "^\\w+((;|=)\\w+)+$", "some=host=tld", "y", "&-\\1-\\2", "some=host=tld-=tld-=" },
         {  "^\\w+((\\.|-)\\w+)+$", "some.host.tld", "y", "&-\\1-\\2", "some.host.tld-.tld-." },
-        {  "q(a|b)*q",	"xxqababqyy",		"y",	"&-\\1",	"qababq-b" },
+        {  "q(a|b)*q",  "xxqababqyy",           "y",    "&-\\1",        "qababq-b" },
 
         {  "^(a)(b){0,1}(c*)",   "abcc", "y", "\\1 \\2 \\3", "a b cc" },
         {  "^(a)((b){0,1})(c*)", "abcc", "y", "\\1 \\2 \\3", "a b b" },

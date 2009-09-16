@@ -1,7 +1,6 @@
-// Written in the D programming language
-// This is part of the Phobos runtime libary for the D programming language.
+// Written in the D programming language.
 
-/********************************
+/**
  * Signals and Slots are an implementation of the Observer Pattern.
  * Essentially, when a Signal is emitted, a list of connected Observers
  * (called slots) are called.
@@ -12,48 +11,53 @@
  * longer necessary to instrument the slots.
  *
  * References:
- *	$(LINK2 http://scottcollins.net/articles/a-deeper-look-at-_signals-and-slots.html, A Deeper Look at Signals and Slots)$(BR)
- *	$(LINK2 http://en.wikipedia.org/wiki/Observer_pattern, Observer pattern)$(BR)
- *	$(LINK2 http://en.wikipedia.org/wiki/Signals_and_slots, Wikipedia)$(BR)
- *	$(LINK2 http://boost.org/doc/html/$(SIGNALS).html, Boost Signals)$(BR)
- *	$(LINK2 http://doc.trolltech.com/4.1/signalsandslots.html, Qt)$(BR)
+ *      $(LINK2 http://scottcollins.net/articles/a-deeper-look-at-_signals-and-slots.html, A Deeper Look at Signals and Slots)$(BR)
+ *      $(LINK2 http://en.wikipedia.org/wiki/Observer_pattern, Observer pattern)$(BR)
+ *      $(LINK2 http://en.wikipedia.org/wiki/Signals_and_slots, Wikipedia)$(BR)
+ *      $(LINK2 http://boost.org/doc/html/$(SIGNALS).html, Boost Signals)$(BR)
+ *      $(LINK2 http://doc.trolltech.com/4.1/signalsandslots.html, Qt)$(BR)
  *
- *	There has been a great deal of discussion in the D newsgroups
- *	over this, and several implementations:
+ *      There has been a great deal of discussion in the D newsgroups
+ *      over this, and several implementations:
  *
- *	$(LINK2 http://www.digitalmars.com/d/archives/digitalmars/D/announce/signal_slots_library_4825.html, signal slots library)$(BR)
- *	$(LINK2 http://www.digitalmars.com/d/archives/digitalmars/D/Signals_and_Slots_in_D_42387.html, Signals and Slots in D)$(BR)
- *	$(LINK2 http://www.digitalmars.com/d/archives/digitalmars/D/Dynamic_binding_--_Qt_s_Signals_and_Slots_vs_Objective-C_42260.html, Dynamic binding -- Qt's Signals and Slots vs Objective-C)$(BR)
- *	$(LINK2 http://www.digitalmars.com/d/archives/digitalmars/D/Dissecting_the_SS_42377.html, Dissecting the SS)$(BR)
- *	$(LINK2 http://www.digitalmars.com/d/archives/digitalmars/D/dwt/about_harmonia_454.html, about harmonia)$(BR)
- *	$(LINK2 http://www.digitalmars.com/d/archives/digitalmars/D/announce/1502.html, Another event handling module)$(BR)
- *	$(LINK2 http://www.digitalmars.com/d/archives/digitalmars/D/41825.html, Suggestion: signal/slot mechanism)$(BR)
- *	$(LINK2 http://www.digitalmars.com/d/archives/digitalmars/D/13251.html, Signals and slots?)$(BR)
- *	$(LINK2 http://www.digitalmars.com/d/archives/digitalmars/D/10714.html, Signals and slots ready for evaluation)$(BR)
- *	$(LINK2 http://www.digitalmars.com/d/archives/digitalmars/D/1393.html, Signals &amp; Slots for Walter)$(BR)
- *	$(LINK2 http://www.digitalmars.com/d/archives/28456.html, Signal/Slot mechanism?)$(BR)
- *	$(LINK2 http://www.digitalmars.com/d/archives/19470.html, Modern Features?)$(BR)
- *	$(LINK2 http://www.digitalmars.com/d/archives/16592.html, Delegates vs interfaces)$(BR)
- *	$(LINK2 http://www.digitalmars.com/d/archives/16583.html, The importance of component programming (properties, signals and slots, etc))$(BR)
- *	$(LINK2 http://www.digitalmars.com/d/archives/16368.html, signals and slots)$(BR)
+ *      $(LINK2 http://www.digitalmars.com/d/archives/digitalmars/D/announce/signal_slots_library_4825.html, signal slots library)$(BR)
+ *      $(LINK2 http://www.digitalmars.com/d/archives/digitalmars/D/Signals_and_Slots_in_D_42387.html, Signals and Slots in D)$(BR)
+ *      $(LINK2 http://www.digitalmars.com/d/archives/digitalmars/D/Dynamic_binding_--_Qt_s_Signals_and_Slots_vs_Objective-C_42260.html, Dynamic binding -- Qt's Signals and Slots vs Objective-C)$(BR)
+ *      $(LINK2 http://www.digitalmars.com/d/archives/digitalmars/D/Dissecting_the_SS_42377.html, Dissecting the SS)$(BR)
+ *      $(LINK2 http://www.digitalmars.com/d/archives/digitalmars/D/dwt/about_harmonia_454.html, about harmonia)$(BR)
+ *      $(LINK2 http://www.digitalmars.com/d/archives/digitalmars/D/announce/1502.html, Another event handling module)$(BR)
+ *      $(LINK2 http://www.digitalmars.com/d/archives/digitalmars/D/41825.html, Suggestion: signal/slot mechanism)$(BR)
+ *      $(LINK2 http://www.digitalmars.com/d/archives/digitalmars/D/13251.html, Signals and slots?)$(BR)
+ *      $(LINK2 http://www.digitalmars.com/d/archives/digitalmars/D/10714.html, Signals and slots ready for evaluation)$(BR)
+ *      $(LINK2 http://www.digitalmars.com/d/archives/digitalmars/D/1393.html, Signals &amp; Slots for Walter)$(BR)
+ *      $(LINK2 http://www.digitalmars.com/d/archives/28456.html, Signal/Slot mechanism?)$(BR)
+ *      $(LINK2 http://www.digitalmars.com/d/archives/19470.html, Modern Features?)$(BR)
+ *      $(LINK2 http://www.digitalmars.com/d/archives/16592.html, Delegates vs interfaces)$(BR)
+ *      $(LINK2 http://www.digitalmars.com/d/archives/16583.html, The importance of component programming (properties, signals and slots, etc))$(BR)
+ *      $(LINK2 http://www.digitalmars.com/d/archives/16368.html, signals and slots)$(BR)
  *
  * Bugs:
- *	Slots can only be delegates formed from class objects or
- *	interfaces to class objects. If a delegate to something else
- *	is passed to connect(), such as a struct member function,
- *	a nested function or a COM interface, undefined behavior
- *	will result.
+ *      Slots can only be delegates formed from class objects or
+ *      interfaces to class objects. If a delegate to something else
+ *      is passed to connect(), such as a struct member function,
+ *      a nested function or a COM interface, undefined behavior
+ *      will result.
  *
- *	Not safe for multiple threads operating on the same signals
- *	or slots.
+ *      Not safe for multiple threads operating on the same signals
+ *      or slots.
  * Macros:
- *	WIKI = Phobos/StdSignals
- *	SIGNALS=signals
- * Copyright:
- *	Public Domain
- * Author: Walter Bright, Digital Mars, www.digitalmars.com
+ *      WIKI = Phobos/StdSignals
+ *      SIGNALS=signals
+ *
+ * Copyright: Copyright Digital Mars 2000 - 2009.
+ * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+ * Authors:   $(WEB digitalmars.com, Walter Bright)
+ *
+ *          Copyright Digital Mars 2000 - 2009.
+ * Distributed under the Boost Software License, Version 1.0.
+ *    (See accompanying file LICENSE_1_0.txt or copy at
+ *          http://www.boost.org/LICENSE_1_0.txt)
  */
-
 module std.signals;
 
 import std.stdio;
@@ -85,7 +89,7 @@ class Observer
 {   // our slot
     void watch(string msg, int i)
     {
-	writefln("Observed msg '%s' and value %s", msg, i);
+        writefln("Observed msg '%s' and value %s", msg, i);
     }
 }
 
@@ -95,12 +99,12 @@ class Foo
 
     int value(int v)
     {
-	if (v != _value)
-	{   _value = v;
-	    // call all the connected slots with the two parameters
-	    emit("setting new value", v);
-	}
-	return v;
+        if (v != _value)
+        {   _value = v;
+            // call all the connected slots with the two parameters
+            emit("setting new value", v);
+        }
+        return v;
     }
 
     // Mix in all the code we need to make Foo into a signal
@@ -115,15 +119,15 @@ void main()
     Foo a = new Foo;
     Observer o = new Observer;
 
-    a.value = 3;		// should not call o.watch()
-    a.connect(&o.watch);	// o.watch is the slot
-    a.value = 4;		// should call o.watch()
-    a.disconnect(&o.watch);	// o.watch is no longer a slot
-    a.value = 5;		// so should not call o.watch()
-    a.connect(&o.watch);	// connect again
-    a.value = 6;		// should call o.watch()
-    delete o;			// destroying o should automatically disconnect it
-    a.value = 7;		// should not call o.watch()
+    a.value = 3;                // should not call o.watch()
+    a.connect(&o.watch);        // o.watch is the slot
+    a.value = 4;                // should call o.watch()
+    a.disconnect(&o.watch);     // o.watch is no longer a slot
+    a.value = 5;                // so should not call o.watch()
+    a.connect(&o.watch);        // connect again
+    a.value = 6;                // should call o.watch()
+    delete o;                   // destroying o should automatically disconnect it
+    a.value = 7;                // should not call o.watch()
 }
 ---
  * which should print:
@@ -152,9 +156,9 @@ template Signal(T1...)
     void emit( T1 i )
     {
         foreach (slot; slots[0 .. slots_idx])
-	{   if (slot)
-		slot(i);
-	}
+        {   if (slot)
+                slot(i);
+        }
     }
 
     /***
@@ -162,36 +166,36 @@ template Signal(T1...)
      */
     void connect(slot_t slot)
     {
-	/* Do this:
-	 *    slots ~= slot;
-	 * but use malloc() and friends instead
-	 */
-	auto len = slots.length;
-	if (slots_idx == len)
-	{
-	    if (slots.length == 0)
-	    {
-		len = 4;
-		auto p = std.signals.calloc(slot_t.sizeof, len);
-		if (!p)
-		    onOutOfMemoryError();
-		slots = (cast(slot_t*)p)[0 .. len];
-	    }
-	    else
-	    {
-		len = len * 2 + 4;
-		auto p = std.signals.realloc(slots.ptr, slot_t.sizeof * len);
-		if (!p)
-		    onOutOfMemoryError();
-		slots = (cast(slot_t*)p)[0 .. len];
-		slots[slots_idx + 1 .. length] = null;
-	    }
-	}
-	slots[slots_idx++] = slot;
+        /* Do this:
+         *    slots ~= slot;
+         * but use malloc() and friends instead
+         */
+        auto len = slots.length;
+        if (slots_idx == len)
+        {
+            if (slots.length == 0)
+            {
+                len = 4;
+                auto p = std.signals.calloc(slot_t.sizeof, len);
+                if (!p)
+                    onOutOfMemoryError();
+                slots = (cast(slot_t*)p)[0 .. len];
+            }
+            else
+            {
+                len = len * 2 + 4;
+                auto p = std.signals.realloc(slots.ptr, slot_t.sizeof * len);
+                if (!p)
+                    onOutOfMemoryError();
+                slots = (cast(slot_t*)p)[0 .. len];
+                slots[slots_idx + 1 .. length] = null;
+            }
+        }
+        slots[slots_idx++] = slot;
 
      L1:
-	Object o = _d_toObject(slot.ptr);
-	rt_attachDisposeEvent(o, &unhook);
+        Object o = _d_toObject(slot.ptr);
+        rt_attachDisposeEvent(o, &unhook);
     }
 
     /***
@@ -199,20 +203,20 @@ template Signal(T1...)
      */
     void disconnect( slot_t slot)
     {
-	debug (signal) writefln("Signal.disconnect(slot)");
-	for (size_t i = 0; i < slots_idx; )
-	{
-	    if (slots[i] == slot)
-	    {	slots_idx--;
-		slots[i] = slots[slots_idx];
-		slots[slots_idx] = null;	// not strictly necessary
+        debug (signal) writefln("Signal.disconnect(slot)");
+        for (size_t i = 0; i < slots_idx; )
+        {
+            if (slots[i] == slot)
+            {   slots_idx--;
+                slots[i] = slots[slots_idx];
+                slots[slots_idx] = null;        // not strictly necessary
 
-		Object o = _d_toObject(slot.ptr);
-		rt_detachDisposeEvent(o, &unhook);
-	    }
-	    else
-		i++;
-	}
+                Object o = _d_toObject(slot.ptr);
+                rt_detachDisposeEvent(o, &unhook);
+            }
+            else
+                i++;
+        }
     }
 
     /* **
@@ -222,17 +226,17 @@ template Signal(T1...)
      */
     void unhook(Object o)
     {
-	debug (signal) writefln("Signal.unhook(o = %s)", cast(void*)o);
-	for (size_t i = 0; i < slots_idx; )
-	{
-	    if (_d_toObject(slots[i].ptr) is o)
-	    {	slots_idx--;
-		slots[i] = slots[slots_idx];
-		slots[slots_idx] = null;	// not strictly necessary
-	    }
-	    else
-		i++;
-	}
+        debug (signal) writefln("Signal.unhook(o = %s)", cast(void*)o);
+        for (size_t i = 0; i < slots_idx; )
+        {
+            if (_d_toObject(slots[i].ptr) is o)
+            {   slots_idx--;
+                slots[i] = slots[slots_idx];
+                slots[slots_idx] = null;        // not strictly necessary
+            }
+            else
+                i++;
+        }
     }
 
     /* **
@@ -240,28 +244,28 @@ template Signal(T1...)
      */
     ~this()
     {
-	/* **
-	 * When this object is destroyed, need to let every slot
-	 * know that this object is destroyed so they are not left
-	 * with dangling references to it.
-	 */
-	if (slots)
-	{
-	    foreach (slot; slots[0 .. slots_idx])
-	    {
-		if (slot)
-		{   Object o = _d_toObject(slot.ptr);
-		    rt_detachDisposeEvent(o, &unhook);
-		}
-	    }
-	    std.signals.free(slots.ptr);
-	    slots = null;
-	}
+        /* **
+         * When this object is destroyed, need to let every slot
+         * know that this object is destroyed so they are not left
+         * with dangling references to it.
+         */
+        if (slots)
+        {
+            foreach (slot; slots[0 .. slots_idx])
+            {
+                if (slot)
+                {   Object o = _d_toObject(slot.ptr);
+                    rt_detachDisposeEvent(o, &unhook);
+                }
+            }
+            std.signals.free(slots.ptr);
+            slots = null;
+        }
     }
 
   private:
-    slot_t[] slots;		// the slots to call from emit()
-    size_t slots_idx;		// used length of slots[]
+    slot_t[] slots;             // the slots to call from emit()
+    size_t slots_idx;           // used length of slots[]
 }
 
 // A function whose sole purpose is to get this module linked in
@@ -272,12 +276,12 @@ unittest
 {
     class Observer
     {
-	void watch(string msg, int i)
-	{
-	    //writefln("Observed msg '%s' and value %s", msg, i);
+        void watch(string msg, int i)
+        {
+            //writefln("Observed msg '%s' and value %s", msg, i);
             captured_value = i;
             captured_msg   = msg;
-	}
+        }
 
         void clear()
         {
@@ -292,21 +296,21 @@ unittest
 
     class Foo
     {
-	int value() { return _value; }
+        int value() { return _value; }
 
-	int value(int v)
-	{
-	    if (v != _value)
-	    {   _value = v;
-		emit("setting new value", v);
-	    }
-	    return v;
-	}
+        int value(int v)
+        {
+            if (v != _value)
+            {   _value = v;
+                emit("setting new value", v);
+            }
+            return v;
+        }
 
-	mixin Signal!(string, int);
+        mixin Signal!(string, int);
 
       private:
-	int _value;
+        int _value;
     }
 
     Foo a = new Foo;

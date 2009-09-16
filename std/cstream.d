@@ -1,14 +1,21 @@
-// Written in the D programming language
+// Written in the D programming language.
 
 /**
  * The std.cstream module bridges std.c.stdio (or std.stdio) and std.stream.
  * Both std.c.stdio and std.stream are publicly imported by std.cstream.
- * Authors: Ben Hinkle
- * License: Public Domain
+ *
  * Macros:
- *	WIKI=Phobos/StdCstream
+ *      WIKI=Phobos/StdCstream
+ *
+ * Copyright: Copyright Ben Hinkle 2007 - 2009.
+ * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+ * Authors:   Ben Hinkle
+ *
+ *          Copyright Ben Hinkle 2007 - 2009.
+ * Distributed under the Boost Software License, Version 1.0.
+ *    (See accompanying file LICENSE_1_0.txt or copy at
+ *          http://www.boost.org/LICENSE_1_0.txt)
  */
-
 module std.cstream;
 
 import std.stream;

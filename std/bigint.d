@@ -34,18 +34,19 @@ Example:
         assert(i == e);
 ----------------------------------------------------
 
-Authors: Janice Caron
-
-Date: 2008.05.18
-
-License: Public Domain
-
-
 Macros:
     WIKI=Phobos/StdBigint
-*/
 
-module bigint;
+Copyright: Copyright Janice Caron 2008 - 2009.
+License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+Authors:   Janice Caron
+
+         Copyright Janice Caron 2008 - 2009.
+Distributed under the Boost Software License, Version 1.0.
+   (See accompanying file LICENSE_1_0.txt or copy at
+         http://www.boost.org/LICENSE_1_0.txt)
+*/
+module std.bigint;
 
 import std.string       : format;
 import std.stdio        : writef, writefln;
@@ -1591,7 +1592,7 @@ debug unittest
         auto z = makeBig( 0x00012345, 0x6789ABCD, 0xEFEDCBA9, 0x87654321 );
         auto r = mul(x,y);
         assert(r.digits == z.digits, hex(r));
-	 // Bugzilla 2987
+         // Bugzilla 2987
         BigInt a = "871782912000";
         BigInt b = "760005445655199744000000";
         assert(a * a == b);

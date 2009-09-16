@@ -1,34 +1,20 @@
-// Written in the D programming language
-
-/* Copyright 2004-2008 by Digital Mars
- * Written by Walter Bright and Matthew Wilson
- *
- * This software is provided 'as-is', without any express or implied
- * warranty. In no event will the authors be held liable for any damages
- * arising from the use of this software.
- *
- * Permission is granted to anyone to use this software for any purpose,
- * including commercial applications, and to alter it and redistribute it
- * freely, in both source and binary form, subject to the following
- * restrictions:
- *
- * -  The origin of this software must not be misrepresented; you must not
- *    claim that you wrote the original software. If you use this software
- *    in a product, an acknowledgment in the product documentation would be
- *    appreciated but is not required.
- * -  Altered source versions must be plainly marked as such, and must not
- *    be misrepresented as being the original software.
- * -  This notice may not be removed or altered from any source
- *    distribution.
- *
- */
+// Written in the D programming language.
 
 /**
  * Read and write memory mapped files.
  * Macros:
  *  WIKI=Phobos/StdMmfile
+ *
+ * Copyright: Copyright Digital Mars 2004 - 2009.
+ * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+ * Authors:   $(WEB digitalmars.com, Walter Bright),
+ *            Matthew Wilson
+ *
+ *          Copyright Digital Mars 2004 - 2009.
+ * Distributed under the Boost Software License, Version 1.0.
+ *    (See accompanying file LICENSE_1_0.txt or copy at
+ *          http://www.boost.org/LICENSE_1_0.txt)
  */
-
 module std.mmfile;
 
 private import std.file;
@@ -59,7 +45,7 @@ else version (Posix)
 {
     private import core.sys.posix.fcntl;
     private import core.sys.posix.unistd;
-	private import core.sys.posix.sys.mman;
+        private import core.sys.posix.sys.mman;
     private import core.sys.posix.sys.stat;
 }
 else

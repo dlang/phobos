@@ -1,13 +1,19 @@
-// Written in the D programming language
-// Put in the public domain by Bartosz Milewski
+// Written in the D programming language.
 
 /**
 Implements processor dependent parts of the atomics library.
 
-
-Author: Bartosz Milewski
 Macros:
     WIKI = Phobos/Atomics
+    
+Copyright: Copyright Bartosz Milewski 2008 - 2009.
+License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+Authors:   Bartosz Milewski
+
+         Copyright Bartosz Milewski 2008 - 2009.
+Distributed under the Boost Software License, Version 1.0.
+   (See accompanying file LICENSE_1_0.txt or copy at
+         http://www.boost.org/LICENSE_1_0.txt)
 */
 
 version (D_InlineAsm_X86)
@@ -65,11 +71,11 @@ asm {
 unittest
 {
     uint x = 1;
-	bool success = CAS(&x, 1, 2);
-	assert(success);
-	assert(x == 2);
-	
-	success = CAS(&x, 1, 3);
-	assert(!success);
-	assert(x == 2);
+        bool success = CAS(&x, 1, 2);
+        assert(success);
+        assert(x == 2);
+        
+        success = CAS(&x, 1, 3);
+        assert(!success);
+        assert(x == 2);
 }

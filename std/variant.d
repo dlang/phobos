@@ -11,7 +11,7 @@
  * languages, and comfortable exploratory programming. 
  *
  * Macros:
- *	WIKI = Phobos/StdVariant
+ *  WIKI = Phobos/StdVariant
  *
  * Synopsis:
  *
@@ -46,41 +46,23 @@
  * assert(*a.peek!(Foo) == foo); // and full type information is preserved
  * ----
  * 
- * Author:
- *
- * $(WEB erdani.org, Andrei Alexandrescu)
-
- * 
  * Credits:
  * 
  * Reviewed by Brad Roberts. Daniel Keep provided a detailed code
  * review prompting the following improvements: (1) better support for
  * arrays; (2) support for associative arrays; (3) friendlier behavior
  * towards the garbage collector.
+ *
+ * Copyright: Copyright Andrei Alexandrescu 2007 - 2009.
+ * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+ * Authors:   $(WEB erdani.org, Andrei Alexandrescu)
+ * Credits:   Brad Roberts came up with the name $(D_PARAM contracts).
+ *
+ *          Copyright Andrei Alexandrescu 2007 - 2009.
+ * Distributed under the Boost Software License, Version 1.0.
+ *    (See accompanying file LICENSE_1_0.txt or copy at
+ *          http://www.boost.org/LICENSE_1_0.txt)
  */
-
-/*
- *  Copyright (C) 2004-2006 by Digital Mars, www.digitalmars.com
- *  Written by Andrei Alexandrescu, www.erdani.org
- *
- *  This software is provided 'as-is', without any express or implied
- *  warranty. In no event will the authors be held liable for any damages
- *  arising from the use of this software.
- *
- *  Permission is granted to anyone to use this software for any purpose,
- *  including commercial applications, and to alter it and redistribute it
- *  freely, subject to the following restrictions:
- *
- *  o  The origin of this software must not be misrepresented; you must not
- *     claim that you wrote the original software. If you use this software
- *     in a product, an acknowledgment in the product documentation would be
- *     appreciated but is not required.
- *  o  Altered source versions must be plainly marked as such, and must not
- *     be misrepresented as being the original software.
- *  o  This notice may not be removed or altered from any source
- *     distribution.
- */
-
 module std.variant;
 
 import std.traits, std.c.string, std.typetuple, std.conv;
@@ -440,7 +422,7 @@ private:
                     // append a whole array to the array
                     (*zis) ~= arg[0].get!(A);
                 }
-		break;
+        break;
             }
             else
             {
@@ -890,7 +872,7 @@ public:
     //     temp ~= this;
     //     return temp;
     // }
- 	
+    
     ///ditto
     VariantN opAddAssign(T)(T rhs)  { return this = this + rhs; }
     ///ditto
@@ -1223,7 +1205,7 @@ version(none) unittest
 unittest
 {
     Variant v;
- 	
+    
     assert(!v.hasValue);
     v = 42;
     assert( v.peek!(int) );
@@ -1239,7 +1221,7 @@ unittest
     assert( v.get!(string) == "Hello, World!" );
     assert(!is(char[] : wchar[]));
     assert( !v.convertsTo!(wchar[]) );
-    assert( v.get!(string) == "Hello, World!" ); 	
+    assert( v.get!(string) == "Hello, World!" );    
 
     v = [1,2,3,4,5];
     assert( v.peek!(int[]) );
@@ -1254,7 +1236,7 @@ unittest
     
     auto u = Variant(v);
     assert( u.peek!(double) );
-    assert( *u.peek!(double) == 3.1413 ); 	
+    assert( *u.peek!(double) == 3.1413 );   
 
     // operators
     v = 38;
@@ -1280,7 +1262,7 @@ unittest
     assert( Variant(4) >> Variant(2) == 1 );
     assert( Variant("abc") ~ "def" == "abcdef" );
     assert( Variant("abc") ~ Variant("def") == "abcdef" );
- 	
+    
     v = 38;
     v += 4;
     assert( v == 42 );
@@ -1293,7 +1275,7 @@ unittest
     v = 38; v ^= 5; assert( v == 35 );
     v = 38; v <<= 1; assert( v == 76 );
     v = 38; v >>= 1; assert( v == 19 );
- 	
+    
     v = "abc";
     v ~= "def";
     assert( v == "abcdef", *v.peek!(char[]) );
@@ -1310,12 +1292,12 @@ unittest
         auto v1 = Variant(42);
         auto v2 = Variant("foo");
         auto v3 = Variant(1+2.0i);
- 	
+    
         int[Variant] hash;
         hash[v1] = 0;
         hash[v2] = 1;
         hash[v3] = 2;
- 	
+    
         assert( hash[v1] == 0 );
         assert( hash[v2] == 1 );
         assert( hash[v3] == 2 );
@@ -1326,7 +1308,7 @@ unittest
         hash["b"] = 2;
         hash["c"] = 3;
         Variant vhash = hash;
- 	
+    
         assert( vhash.get!(int[char[]])["a"] == 1 );
         assert( vhash.get!(int[char[]])["b"] == 2 );
         assert( vhash.get!(int[char[]])["c"] == 3 );

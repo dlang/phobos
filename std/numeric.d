@@ -9,12 +9,18 @@ Macros:
 
 WIKI = Phobos/StdNumeric
 
-Authors:
+Copyright: Copyright Andrei Alexandrescu 2008 - 2009.
+License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+Authors:   $(WEB erdani.org, Andrei Alexandrescu),
+                   Don Clugston
 
-$(WEB erdani.org, Andrei Alexandrescu), Don Clugston
+         Copyright Andrei Alexandrescu 2008 - 2009.
+Distributed under the Boost Software License, Version 1.0.
+   (See accompanying file LICENSE_1_0.txt or copy at
+         http://www.boost.org/LICENSE_1_0.txt)
 */
-
 module std.numeric;
+
 import std.algorithm;
 import std.array;
 import std.bitmanip;

@@ -1,21 +1,21 @@
 // Written in the D programming language.
 
-/*
- * Placed into the Public Domain.
- */
-
-/****
+/**
  * Demangle D mangled names.
+ *
  * Macros:
- *        WIKI = Phobos/StdDemangle
+ *  WIKI = Phobos/StdDemangle
+ *
+ * Copyright: Copyright Digital Mars 2000 - 2009.
+ * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+ * Authors:   $(WEB digitalmars.com, Walter Bright),
+ *                        Thomas Kuehne, Frits van Bommel
+ *
+ *          Copyright Digital Mars 2000 - 2009.
+ * Distributed under the Boost Software License, Version 1.0.
+ *    (See accompanying file LICENSE_1_0.txt or copy at
+ *          http://www.boost.org/LICENSE_1_0.txt)
  */
-
-/* Authors:
- *        Walter Bright, Digital Mars, www.digitalmars.com
- *        Thomas Kuehne
- *        Frits van Bommel
- */
-
 module std.demangle;
 
 //debug=demangle;                // uncomment to turn on debugging printf's

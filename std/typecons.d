@@ -43,34 +43,17 @@ void bar()
 }
 ----
 
-Author:
+Copyright: Copyright Andrei Alexandrescu 2008 - 2009.
+License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+Authors:   $(WEB erdani.org, Andrei Alexandrescu),
+           $(WEB bartoszmilewski.wordpress.com, Bartosz Milewski),
+           Don Clugston
 
-$(WEB erdani.org, Andrei Alexandrescu), Bartosz Milewski, Don Clugston
-
+         Copyright Andrei Alexandrescu 2008 - 2009.
+Distributed under the Boost Software License, Version 1.0.
+   (See accompanying file LICENSE_1_0.txt or copy at
+         http://www.boost.org/LICENSE_1_0.txt)
 */
-
-/*
- *  Copyright (C) 2004-2006 by Digital Mars, www.digitalmars.com
- *  Written by Andrei Alexandrescu, www.erdani.org
- *
- *  This software is provided 'as-is', without any express or implied
- *  warranty. In no event will the authors be held liable for any damages
- *  arising from the use of this software.
- *
- *  Permission is granted to anyone to use this software for any purpose,
- *  including commercial applications, and to alter it and redistribute it
- *  freely, subject to the following restrictions:
- *
- *  o  The origin of this software must not be misrepresented; you must not
- *     claim that you wrote the original software. If you use this software
- *     in a product, an acknowledgment in the product documentation would be
- *     appreciated but is not required.
- *  o  Altered source versions must be plainly marked as such, and must not
- *     be misrepresented as being the original software.
- *  o  This notice may not be removed or altered from any source
- *     distribution.
- */
-
 module std.typecons;
 import std.array, std.contracts, std.conv, std.metastrings, std.traits;
 
@@ -92,36 +75,36 @@ else
     alias T * RefT;
 public:
 /+ Doesn't work yet
-	/** 
-	The safe constructor. It creates the resource and 
-	guarantees unique ownership of it (unless the constructor
-	of $(D T) publishes aliases of $(D this)), 
-	*/
-	this(A...)(A args)
-	{
-		_p = new T(args);
-	}
+    /** 
+    The safe constructor. It creates the resource and 
+    guarantees unique ownership of it (unless the constructor
+    of $(D T) publishes aliases of $(D this)), 
+    */
+    this(A...)(A args)
+    {
+        _p = new T(args);
+    }
 +/
 
-	/**
-	Constructor that takes an rvalue.
-	It will ensure uniqueness, as long as the rvalue
-	isn't just a view on an lvalue (e.g., a cast)
-	Typical usage:
-	----
-	Unique!(Foo) f = new Foo;
-	----
-	*/
+    /**
+    Constructor that takes an rvalue.
+    It will ensure uniqueness, as long as the rvalue
+    isn't just a view on an lvalue (e.g., a cast)
+    Typical usage:
+    ----
+    Unique!(Foo) f = new Foo;
+    ----
+    */
     this(RefT p)
     {
         writeln("Unique constructor with rvalue");
         _p = p;
     }
-	/**
-	Constructor that takes an lvalue. It nulls its source.
-	The nulling will ensure uniqueness as long as there
-	are no previous aliases to the source.
-	*/
+    /**
+    Constructor that takes an lvalue. It nulls its source.
+    The nulling will ensure uniqueness as long as there
+    are no previous aliases to the source.
+    */
     this(ref RefT p)
     {
         _p = p;
@@ -130,29 +113,29 @@ public:
         assert(p is null);
     }
 /+ Doesn't work yet
-	/** 
-	Constructor that takes a Unique of a type that is convertible to our type:
-	Disallow construction from lvalue (force the use of release on the source Unique)
-	If the source is an rvalue, null its content, so the destrutctor doesn't delete it
+    /** 
+    Constructor that takes a Unique of a type that is convertible to our type:
+    Disallow construction from lvalue (force the use of release on the source Unique)
+    If the source is an rvalue, null its content, so the destrutctor doesn't delete it
 
-	Typically used by the compiler to return $(D Unique) of derived type as $(D Unique) 
-	of base type.
+    Typically used by the compiler to return $(D Unique) of derived type as $(D Unique) 
+    of base type.
 
-	Example:
-	----
-	Unique!(Base) create()
-	{
-	    Unique!(Derived) d = new Derived;
-		return d; // Implicit Derived->Base conversion
-	}
-	----
-	*/
-	this(U)(ref Unique!(U) u) = null;
-	this(U)(Unique!(U) u)
-	{
-		_p = u._p;
-		u._p = null;
-	}
+    Example:
+    ----
+    Unique!(Base) create()
+    {
+        Unique!(Derived) d = new Derived;
+        return d; // Implicit Derived->Base conversion
+    }
+    ----
+    */
+    this(U)(ref Unique!(U) u) = null;
+    this(U)(Unique!(U) u)
+    {
+        _p = u._p;
+        u._p = null;
+    }
 +/
 
     ~this()
@@ -165,7 +148,7 @@ public:
     {
         return _p is null;
     }
-	/** Returns a unique rvalue. Nullifies the current contents */
+    /** Returns a unique rvalue. Nullifies the current contents */
     Unique release()
     {
         writeln("Release");
@@ -174,13 +157,13 @@ public:
         writeln("return from Release");
         return u;
     }
-	/** Forwards member access to contents */
+    /** Forwards member access to contents */
     RefT opDot() { return _p; }
 
 /+ doesn't work yet!
-	/**
-	Postblit operator is undefined to prevent the cloning of $(D Unique) objects
-	*/
+    /**
+    Postblit operator is undefined to prevent the cloning of $(D Unique) objects
+    */
     this(this) = null;
  +/
 

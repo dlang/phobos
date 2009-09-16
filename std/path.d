@@ -8,19 +8,20 @@
  * if it was a file. To differentiate these cases, use the std.file
  * module first (i.e. $(D std.file.isDir())).
  *
- * Authors:
- *
- * $(WEB digitalmars.com, Walter Bright), Grzegorz Adam Hankiewicz,
-Thomas K&uuml;hne, $(WEB erdani.org, Andrei Alexandrescu)
- *
  * Macros:
  *	WIKI = Phobos/StdPath
- * Copyright:
- *	Placed into public domain.
- *	www.digitalmars.com
  *
+ * Copyright: Copyright Digital Mars 2000 - 2009.
+ * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+ * Authors:   $(WEB digitalmars.com, Walter Bright),
+ *	      Grzegorz Adam Hankiewicz, Thomas K&uuml;hne,
+ * 	      $(WEB erdani.org, Andrei Alexandrescu)
+ *
+ *          Copyright Digital Mars 2000 - 2009.
+ * Distributed under the Boost Software License, Version 1.0.
+ *    (See accompanying file LICENSE_1_0.txt or copy at
+ *          http://www.boost.org/LICENSE_1_0.txt)
  */
-
 module std.path;
 
 //debug=path;		// uncomment to turn on debugging printf's

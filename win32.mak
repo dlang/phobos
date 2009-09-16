@@ -105,7 +105,7 @@ SRCS= std\math.d std\stdio.d std\dateparse.d std\date.d std\uni.d std\string.d \
 	std\system.d \
 	std\iterator.d std\encoding.d std\variant.d \
 	std\stream.d std\socket.d std\socketstream.d \
-	std\perf.d std\openrj.d std\conv.d \
+	std\perf.d std\conv.d \
 	std\zip.d std\cstream.d std\loader.d \
 	std\__fileinit.d \
 	std\datebase.d \
@@ -155,7 +155,6 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_metastrings.html \
 	$(DOC)\std_mmfile.html \
 	$(DOC)\std_numeric.html \
-	$(DOC)\std_openrj.html \
 	$(DOC)\std_outbuffer.html \
 	$(DOC)\std_path.html \
 	$(DOC)\std_perf.html \
@@ -207,7 +206,7 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 	std\intrinsic.d std\syserror.d \
 	std\regexp.d std\random.d std\stream.d std\process.d \
 	std\socket.d std\socketstream.d std\loader.d std\stdarg.d std\format.d \
-	std\stdio.d std\perf.d std\openrj.d std\uni.d std\boxer.d \
+	std\stdio.d std\perf.d std\uni.d std\boxer.d \
 	std\cstream.d std\demangle.d \
 	std\signals.d std\cpuid.d std\typetuple.d std\traits.d std\bind.d \
 	std\metastrings.d std\contracts.d std\getopt.d \
@@ -388,9 +387,6 @@ mmfile.obj : std\mmfile.d
 
 numeric.obj : std\numeric.d
 	$(DMD) -c $(DFLAGS) std\numeric.d
-
-openrj.obj : std\openrj.d
-	$(DMD) -c $(DFLAGS) std\openrj.d
 
 outbuffer.obj : std\outbuffer.d
 	$(DMD) -c $(DFLAGS) std\outbuffer.d
@@ -604,9 +600,6 @@ $(DOC)\std_mmfile.html : std.ddoc std\mmfile.d
 
 $(DOC)\std_numeric.html : std.ddoc std\numeric.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_numeric.html std.ddoc std\numeric.d
-
-$(DOC)\std_openrj.html : std.ddoc std\openrj.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_openrj.html std.ddoc std\openrj.d
 
 $(DOC)\std_outbuffer.html : std.ddoc std\outbuffer.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_outbuffer.html std.ddoc std\outbuffer.d

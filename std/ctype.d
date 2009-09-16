@@ -1,20 +1,23 @@
-/*
- * Written in the D programming language.
- * Placed into the Public Domain.
- * Digital Mars, www.digitalmars.com
- * Written by Walter Bright
- */
+// Written in the D programming language.
 
 /**
  * Simple ASCII character classification functions.
  * For Unicode classification, see $(LINK2 std_uni.html, std.uni).
  * References:
- *	$(LINK2 http://www.digitalmars.com/d/ascii-table.html, ASCII Table),
- *	$(LINK2 http://en.wikipedia.org/wiki/Ascii, Wikipedia)
+ *      $(LINK2 http://www.digitalmars.com/d/ascii-table.html, ASCII Table),
+ *      $(LINK2 http://en.wikipedia.org/wiki/Ascii, Wikipedia)
  * Macros:
- *	WIKI=Phobos/StdCtype
+ *      WIKI=Phobos/StdCtype
+ *
+ * Copyright: Copyright Digital Mars 2000 - 2009.
+ * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+ * Authors:   $(WEB digitalmars.com, Walter Bright)
+ *
+ *          Copyright Digital Mars 2000 - 2009.
+ * Distributed under the Boost Software License, Version 1.0.
+ *    (See accompanying file LICENSE_1_0.txt or copy at
+ *          http://www.boost.org/LICENSE_1_0.txt)
  */
-
 module std.ctype;
 
 /**
@@ -86,11 +89,11 @@ int isascii(dchar c)  { return c <= 0x7F; }
 pure dchar tolower(dchar c)
     out (result)
     {
-	assert(!isupper(result));
+        assert(!isupper(result));
     }
     body
     {
-	return isupper(c) ? c + (cast(dchar)'a' - 'A') : c;
+        return isupper(c) ? c + (cast(dchar)'a' - 'A') : c;
     }
 
 
@@ -101,47 +104,47 @@ pure dchar tolower(dchar c)
 dchar toupper(dchar c)
     out (result)
     {
-	assert(!islower(result));
+        assert(!islower(result));
     }
     body
     {
-	return islower(c) ? c - (cast(dchar)'a' - 'A') : c;
+        return islower(c) ? c - (cast(dchar)'a' - 'A') : c;
     }
 
 private:
 
 enum
 {
-    _SPC =	8,
-    _CTL =	0x20,
-    _BLK =	0x40,
-    _HEX =	0x80,
-    _UC  =	1,
-    _LC  =	2,
-    _PNC =	0x10,
-    _DIG =	4,
-    _ALP =	_UC|_LC,
+    _SPC =      8,
+    _CTL =      0x20,
+    _BLK =      0x40,
+    _HEX =      0x80,
+    _UC  =      1,
+    _LC  =      2,
+    _PNC =      0x10,
+    _DIG =      4,
+    _ALP =      _UC|_LC,
 }
 
 immutable ubyte _ctype[128] =
 [
-	_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,
-	_CTL,_CTL|_SPC,_CTL|_SPC,_CTL|_SPC,_CTL|_SPC,_CTL|_SPC,_CTL,_CTL,
-	_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,
-	_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,
-	_SPC|_BLK,_PNC,_PNC,_PNC,_PNC,_PNC,_PNC,_PNC,
-	_PNC,_PNC,_PNC,_PNC,_PNC,_PNC,_PNC,_PNC,
-	_DIG|_HEX,_DIG|_HEX,_DIG|_HEX,_DIG|_HEX,_DIG|_HEX,
-	_DIG|_HEX,_DIG|_HEX,_DIG|_HEX,_DIG|_HEX,_DIG|_HEX,
-	_PNC,_PNC,_PNC,_PNC,_PNC,_PNC,
-	_PNC,_UC|_HEX,_UC|_HEX,_UC|_HEX,_UC|_HEX,_UC|_HEX,_UC|_HEX,_UC,
-	_UC,_UC,_UC,_UC,_UC,_UC,_UC,_UC,
-	_UC,_UC,_UC,_UC,_UC,_UC,_UC,_UC,
-	_UC,_UC,_UC,_PNC,_PNC,_PNC,_PNC,_PNC,
-	_PNC,_LC|_HEX,_LC|_HEX,_LC|_HEX,_LC|_HEX,_LC|_HEX,_LC|_HEX,_LC,
-	_LC,_LC,_LC,_LC,_LC,_LC,_LC,_LC,
-	_LC,_LC,_LC,_LC,_LC,_LC,_LC,_LC,
-	_LC,_LC,_LC,_PNC,_PNC,_PNC,_PNC,_CTL
+        _CTL,_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,
+        _CTL,_CTL|_SPC,_CTL|_SPC,_CTL|_SPC,_CTL|_SPC,_CTL|_SPC,_CTL,_CTL,
+        _CTL,_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,
+        _CTL,_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,
+        _SPC|_BLK,_PNC,_PNC,_PNC,_PNC,_PNC,_PNC,_PNC,
+        _PNC,_PNC,_PNC,_PNC,_PNC,_PNC,_PNC,_PNC,
+        _DIG|_HEX,_DIG|_HEX,_DIG|_HEX,_DIG|_HEX,_DIG|_HEX,
+        _DIG|_HEX,_DIG|_HEX,_DIG|_HEX,_DIG|_HEX,_DIG|_HEX,
+        _PNC,_PNC,_PNC,_PNC,_PNC,_PNC,
+        _PNC,_UC|_HEX,_UC|_HEX,_UC|_HEX,_UC|_HEX,_UC|_HEX,_UC|_HEX,_UC,
+        _UC,_UC,_UC,_UC,_UC,_UC,_UC,_UC,
+        _UC,_UC,_UC,_UC,_UC,_UC,_UC,_UC,
+        _UC,_UC,_UC,_PNC,_PNC,_PNC,_PNC,_PNC,
+        _PNC,_LC|_HEX,_LC|_HEX,_LC|_HEX,_LC|_HEX,_LC|_HEX,_LC|_HEX,_LC,
+        _LC,_LC,_LC,_LC,_LC,_LC,_LC,_LC,
+        _LC,_LC,_LC,_LC,_LC,_LC,_LC,_LC,
+        _LC,_LC,_LC,_PNC,_PNC,_PNC,_PNC,_CTL
 ];
 
 
