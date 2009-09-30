@@ -720,7 +720,7 @@ body
 }
 
 /// Ditto
-void encode(/*ref*/ wchar[2] buf, dchar c)
+size_t encode(/*ref*/ wchar[2] buf, dchar c)
 in
 {
     assert(isValidDchar(c));

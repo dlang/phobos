@@ -724,11 +724,11 @@ $(DOC)\std_c_wcharh.html : std.ddoc std\c\wcharh.d
 
 ######################################################
 
-zip : win32.mak linux.mak osx.mak phoboslicense.txt std.ddoc $(SRC) \
+zip : win32.mak linux.mak osx.mak std.ddoc $(SRC) \
 	$(SRC_STD) $(SRC_STD_C) $(SRC_TI) $(SRC_INT) $(SRC_STD_WIN) \
 	$(SRC_STD_C_LINUX) $(SRC_STD_C_OSX) $(SRC_ETC) $(SRC_ETC_C) $(SRC_ZLIB) $(SRC_GC)
 	del phobos.zip
-	zip32 -u phobos win32.mak linux.mak osx.mak phoboslicense.txt std.ddoc
+	zip32 -u phobos win32.mak linux.mak osx.mak std.ddoc
 	zip32 -u phobos $(SRC)
 	zip32 -u phobos $(SRC_TI)
 	zip32 -u phobos $(SRC_INT)
@@ -758,7 +758,7 @@ cleanhtml:
 install:
 	$(CP) phobos.lib $(DIR)\windows\lib
 	$(CP) $(DRUNTIME)\lib\gcstub.obj $(DIR)\windows\lib
-	$(CP) win32.mak linux.mak osx.mak phoboslicense.txt std.ddoc $(DIR)\src\phobos
+	$(CP) win32.mak linux.mak osx.mak std.ddoc $(DIR)\src\phobos
 	$(CP) $(SRC) $(DIR)\src\phobos
 	$(CP) $(SRC_STD) $(DIR)\src\phobos\std
 	$(CP) $(SRC_STD_C) $(DIR)\src\phobos\std\c

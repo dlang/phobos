@@ -1496,7 +1496,7 @@ unittest
 
 S[] splitlines(S)(S s)
 {
-    size_t i, istart;
+    size_t istart;
     auto result = Appender!(S[])();
 
     foreach (i; 0 .. s.length)
