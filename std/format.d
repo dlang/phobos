@@ -2801,7 +2801,6 @@ void formattedRead(R, S...)(ref R r, const(char)[] fmt, S args)
     {
         r = parseToFormatSpec(r, fmt);
         enforce(fmt.length == 0);
-        return r;
     }
     else
     {
