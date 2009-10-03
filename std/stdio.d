@@ -604,16 +604,17 @@ import std.stdio;
 int main()
 {
     char[] buf;
-    while (readln(stdin, buf))
+    while (stdin.readln(buf))
         write(buf);
     return 0;
 }
 ---
-    This method is more efficient than the one in the previous example
-because $(D readln(stdin, buf)) reuses (if possible) memory
-allocated by $(D buf), whereas $(D buf = readln()) makes a
-new memory allocation with every line.
-*/
+
+This method is more efficient than the one in the previous example
+because $(D stdin.readln(buf)) reuses (if possible) memory allocated
+by $(D buf), whereas $(D buf = stdin.readln()) makes a new memory allocation
+with every line.  */
+
     size_t readln(ref char[] buf, dchar terminator = '\n')
     {
         enforce(p && p.handle, "Attempt to read from an unopened file.");
