@@ -340,7 +340,7 @@ unittest
 }
 
 /**
-A $(D typedef Type Symbol) is printed as $(D Type(value)).
+A $(D typedef Type Symbol) is converted to string as $(D "Type(value)").
  */
 T to(T, S)(S s, in T left = S.stringof~"(", in T right = ")")
 if (is(S == typedef) && isSomeString!(T))
@@ -2501,17 +2501,20 @@ T to(T, S)(S value) if (isIntegral!S && S.min < 0
     return to!T(cast(int) value);
 }
 
-/// Unsigned integers (uint and ulong).
+/// Unsigned integers (uint and ulong) to string.
 T to(T, S)(S input)
 if (std.traits.staticIndexOf!(Unqual!S, uint, ulong) >= 0 && isSomeString!T)
 {
     Unqual!S value = input;
     alias Unqual!(ElementType!T) Char;
-    if (value < 10)
+    static if (is(ElementType!T == const) || is(ElementType!T == immutable))
     {
-        static invariant Char[10] digits = "0123456789";
-        // Avoid storage allocation for simple stuff
-        return digits[cast(size_t) value .. cast(size_t) value + 1];
+        if (value < 10)
+        {
+            static invariant Char[10] digits = "0123456789";
+            // Avoid storage allocation for simple stuff
+            return digits[cast(size_t) value .. cast(size_t) value + 1];
+        }
     }
 
     static if (S.sizeof == uint.sizeof)
@@ -2565,6 +2568,8 @@ unittest
             Char1 c = 'a';
             assert(to!(Char2[])(c)[0] == c);
         }
+        uint x = 4;
+        assert(to!(Char1[])(x) == "4");
     }
 }
 
@@ -2574,8 +2579,21 @@ if (staticIndexOf!(Unqual!S, int, long) >= 0 && isSomeString!T)
 {
     if (value >= 0)
         return to!T(cast(Unsigned!(S)) value);
-
     alias Unqual!(ElementType!T) Char;
+
+    // Cache read-only data only for const and immutable - mutable
+    // data is supposed to use allocation in all cases
+    static if (is(ElementType!T == const) || is(ElementType!T == immutable))
+    {
+        if (value > -10)
+        {
+            static immutable Char[20] data =
+                "00-1-2-3-4-5-6-7-8-9";
+            invariant i = cast(size_t) -value * 2;
+            return data[i .. i + 2];
+        }
+    }
+
     Char[1 + S.sizeof * 3] buffer;
 
     auto u = -cast(Unqual!(Unsigned!S)) value;
@@ -2587,6 +2605,7 @@ if (staticIndexOf!(Unqual!S, int, long) >= 0 && isSomeString!T)
         buffer[$ - ndigits] = c;
         ++ndigits;
     }
+    assert(ndigits <= buffer.length);
     buffer[$ - ndigits] = '-';
     return cast(T) buffer[buffer.length - ndigits .. buffer.length].dup;
 }
