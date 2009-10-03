@@ -29,7 +29,7 @@
 module std.utf;
 
 private import std.stdio;
-import std.contracts, std.conv, std.range, std.typecons;
+import std.contracts, std.conv, std.range, std.traits, std.typecons;
 
 //debug=utf;        // uncomment to turn on debugging printf's
 
@@ -477,7 +477,7 @@ out (result)
 body
 {
     enforce(!r.empty);
-    char u = r.front;
+	Unqual!(ElementType!Range) u = r.front;
     r.popFront;
     
     if (!(u & 0x80))
@@ -528,7 +528,7 @@ body
      *  11111000 10000xxx (10xxxxxx 10xxxxxx 10xxxxxx)
      *  11111100 100000xx (10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx)
      */
-    char u2 = r.front;
+    auto u2 = r.front;
     enforce(!((u & 0xFE) == 0xC0 ||
                     (u == 0xE0 && (u2 & 0xE0) == 0x80) ||
                     (u == 0xF0 && (u2 & 0xF0) == 0x80) ||
@@ -600,7 +600,7 @@ unittest
 dchar decodeBack(Range)(ref Range r)
 {
     enforce(!r.empty);
-    char[4] chars;
+    Unqual!(ElementType!Range)[4] chars;
     chars[3] = r.back;
     r.popBack;
     if (! (chars[3] & 0x80))
