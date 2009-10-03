@@ -256,8 +256,9 @@ private:
     }
 
 public:
-    E reduce(E, R)(E result, R r)
+    Unqual!E reduce(E, R)(E seed, R r)
     {
+        Unqual!E result = seed;
         foreach (e; r)
         {
             static if (fun.length == 1)
@@ -319,6 +320,15 @@ unittest
     // Stringize with commas
     string rep = reduce!("a ~ `, ` ~ to!(string)(b)")("", a);
     assert(rep[2 .. $] == "1, 2, 3, 4, 5");
+}
+
+unittest
+{
+    const float a = 0.0;
+    const float[] b = [ 1.2, 3, 3.3 ];
+    float[] c = [ 1.2, 3, 3.3 ];
+    auto r = reduce!"a + b"(a, b);
+    r = reduce!"a + b"(a, c);
 }
 
 /**
