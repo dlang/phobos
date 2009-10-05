@@ -2524,7 +2524,7 @@ if (std.traits.staticIndexOf!(Unqual!S, uint, ulong) >= 0 && isSomeString!T)
     
     auto result = cast(Char[])
         GC.malloc(Char.sizeof * maxlength, GC.BlkAttr.NO_SCAN)
-        [0 .. maxlength];
+        [0 .. Char.sizeof * maxlength];
 
     uint ndigits = 0;
     while (value)
@@ -2535,6 +2535,12 @@ if (std.traits.staticIndexOf!(Unqual!S, uint, ulong) >= 0 && isSomeString!T)
         result[$ - ndigits] = c;
     }
     return cast(T) result[$ - ndigits .. $];
+}
+
+unittest
+{
+    assert(wtext(int.max) == "2147483647"w);
+    assert(wtext(int.min) == "-2147483648"w);
 }
 
 /// $(D char), $(D wchar), $(D dchar) to a string type.
