@@ -1278,10 +1278,12 @@ unittest
  * using delim[] as the delimiter.
  */
 
-S1[] split(S1, S2)(S1 s, S2 delim) if (isSomeString!S1 && isSomeString!S2)
+Unqual!(S1)[] split(S1, S2)(S1 s, S2 delim)
+        if (isSomeString!S1 && isSomeString!S2)
 {
-    auto app = Appender!(S1[])();
-    foreach (word; std.algorithm.splitter(s, delim))
+    Unqual!(S1) us = s;
+    auto app = Appender!(Unqual!(S1)[])();
+    foreach (word; std.algorithm.splitter(us, delim))
     {
         app.put(word);
     }
@@ -1292,14 +1294,14 @@ unittest
 {
     debug(string) printf("string.split2\n");
     foreach (S; TypeTuple!(string, wstring, dstring,
+                    immutable(string), immutable(wstring), immutable(dstring),
                     char[], wchar[], dchar[],
                     const(char)[], const(wchar)[], const(dchar)[]))
     {
         S s = to!S(",peter,paul,jerry,");
-        S[] words;
         int i;
 
-        words = split(s, ",");
+        auto words = split(s, ",");
         assert(words.length == 5, text(words.length));
         i = cmp(words[0], "");
         assert(i == 0);
@@ -1312,21 +1314,21 @@ unittest
         i = cmp(words[4], "");
         assert(i == 0);
 
-        s = s[0 .. s.length - 1];   // lop off trailing ','
-        words = split(s, ",");
+        auto s1 = s[0 .. s.length - 1];   // lop off trailing ','
+        words = split(s1, ",");
         assert(words.length == 4);
         i = cmp(words[3], "jerry");
         assert(i == 0);
 
-        s = s[1 .. s.length];   // lop off leading ','
-        words = split(s, ",");
+        auto s2 = s1[1 .. s1.length];   // lop off leading ','
+        words = split(s2, ",");
         assert(words.length == 3);
         i = cmp(words[0], "peter");
         assert(i == 0);
 
-        S s2 = to!S(",,peter,,paul,,jerry,,");
+        auto s3 = to!S(",,peter,,paul,,jerry,,");
 
-        words = split(s2, ",,");
+        words = split(s3, ",,");
         //printf("words.length = %d\n", words.length);
         assert(words.length == 5);
         i = cmp(words[0], "");
@@ -1340,14 +1342,14 @@ unittest
         i = cmp(words[4], "");
         assert(i == 0);
 
-        s2 = s2[0 .. s2.length - 2];    // lop off trailing ',,'
-        words = split(s2, ",,");
+        auto s4 = s3[0 .. s3.length - 2];    // lop off trailing ',,'
+        words = split(s4, ",,");
         assert(words.length == 4);
         i = cmp(words[3], "jerry");
         assert(i == 0);
 
-        s2 = s2[2 .. s2.length];    // lop off leading ',,'
-        words = split(s2, ",,");
+        auto s5 = s4[2 .. s4.length];    // lop off leading ',,'
+        words = split(s5, ",,");
         assert(words.length == 3);
         i = cmp(words[0], "peter");
         assert(i == 0);
