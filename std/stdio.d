@@ -270,21 +270,22 @@ object refers to it anymore.
                 1, name);
     }
 
-    // ~this()
-    // {
-    //     if (!p) return;
-    //     // @@@BUG@@@ These lines prematurely close the file
-    //     if (p.refs == 1) close;
-    //     else --p.refs;
-    // }
+    ~this()
+    {
+        if (!p) return;
+        // @@@BUG@@@ These lines prematurely close the file
+        //printf("Destroying file `%s' with %d refs\n", toStringz(p.name), p.refs);
+        if (p.refs == 1) close;
+        else --p.refs;
+    }
 
-    // this(this)
-    // {
-    //     //printf("Copying file with %d refs\n", _refs ? *_refs : 9999);
-    //     if (!p) return;
-    //     enforce(p.refs);
-    //     ++p.refs;
-    // }
+    this(this)
+    {
+        if (!p) return;
+        //printf("Copying file %s with %d refs\n", toStringz(p.name), p.refs);
+        enforce(p.refs);
+        ++p.refs;
+    }
 
 /**
 Assigns a file to another. The target of the assignment gets detached
@@ -293,9 +294,12 @@ file.
  */
     void opAssign(File rhs)
     {
+        // printf("Assigning file %s with %d refs\n",
+        //         toStringz(rhs.p.name), rhs.p.refs);
         // @@@BUG@@@
-        //swap(p, rhs.p);
-        p = rhs.p;
+        swap(p, rhs.p);
+        // p = rhs.p;
+        // rhs.p = null;
     }
     
 /**
@@ -735,12 +739,6 @@ Range that reads one line at a time. */
         }
 
         /// Range primitive implementations.
-        ByLine!(Char, Terminator) opSlice()
-        {
-            return this;
-        }
-
-        /// Ditto
         bool empty() const
         {
             return !file.isOpen;
