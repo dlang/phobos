@@ -1739,6 +1739,32 @@ unittest
     assert(witness.empty);
 }
 
+/**
+Computes the greatest common divisor of $(D a) and $(D b) by using
+Euler's algorithm.
+ */
+T gcd(T)(T a, T b) {
+    static if (is(T == const) || is(T == immutable)) {
+        return gcd!(Unqual!T)(a, b);
+    } else {
+        static if (T.min < 0) {
+            enforce(a >= 0 && b >=0);
+        }
+        while (b) {
+            auto t = b;
+            b = a % b;
+            a = t;
+        }
+        return a;
+    }
+}
+
+unittest {
+    assert(gcd(2 * 5 * 7 * 7, 5 * 7 * 11) == 5 * 7);
+    const int a = 5 * 13 * 23 * 23, b = 13 * 59;
+    assert(gcd(a, b) == 13);
+}
+
 /*
  *  Copyright (C) 2004-2009 by Digital Mars, www.digitalmars.com
  *  Written by Andrei Alexandrescu, www.erdani.org
