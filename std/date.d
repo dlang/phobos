@@ -211,13 +211,19 @@ int day(d_time t)
     return cast(int)floor(t, msPerDay);
 }
 
-pure bool leapYear(int y)
+pure bool leapYear(uint y)
 {
-    return ((y & 3) == 0 &&
-            (y % 100 || (y % 400) == 0));
+    return (y % 4) == 0 && (y % 100 || (y % 400) == 0);
 }
 
-int daysInYear(int y)
+unittest {
+    assert(!leapYear(1970));
+    assert(leapYear(1984));
+    assert(leapYear(2000));
+    assert(!leapYear(2100));
+}
+
+pure uint daysInYear(uint y)
 {
     return 365 + leapYear(y);
 }
