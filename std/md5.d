@@ -94,7 +94,7 @@ import std.c.stdio : printf;
  * Computes MD5 digest of several arrays of data.
  */
 
-void sum(ubyte[16] digest, in void[][] data...)
+void sum(ref ubyte[16] digest, in void[][] data...)
 {
     MD5_CTX context;
     context.start();
@@ -118,7 +118,7 @@ void sum(ubyte[16] digest, in void[][] data...)
  * Converts MD5 digest to a string.
  */
 
-string digestToString(const ubyte[16] digest)
+string digestToString(in ubyte[16] digest)
 {
     auto result = new char[32];
     int i;
@@ -293,7 +293,7 @@ struct MD5_CTX
     /** MD5 finalization. Ends an MD5 message-digest operation, writing the
      * the message to digest and zeroing the context.
      */
-    void finish(ubyte[16] digest)         /* message digest */
+    void finish(ref ubyte[16] digest)         /* message digest */
     {
       ubyte bits[8];
       uint index, padLen;
