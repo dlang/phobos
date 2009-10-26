@@ -142,6 +142,57 @@ The parameters of this distribution. The random number is $(D_PARAM x
     static assert(m == 0 ||
             (cast(ulong)a * (m-1) + c) % m == (c < a ? c - a + m : c - a));
 
+    // Check for maximum range
+    private static ulong gcd(ulong a, ulong b) {
+        while (b) {
+            auto t = b;
+            b = a % b;
+            a = t;
+        }
+        return a;
+    }
+
+    private static ulong primeFactorsOnly(ulong n) {
+        ulong result = 1;
+        ulong iter = 2;
+        for (; n >= iter * iter; iter += 2 - (iter == 2)) {
+            if (n % iter) continue;
+            result *= iter;
+            do {
+                n /= iter;
+            } while (n % iter == 0);
+        }
+        return result * n;
+    }
+    
+    unittest {
+        static assert(primeFactorsOnly(100) == 10);
+        //writeln(primeFactorsOnly(11));
+        static assert(primeFactorsOnly(11) == 11);
+        static assert(primeFactorsOnly(7 * 7 * 7 * 11 * 15 * 11) == 7 * 11 * 15);
+        static assert(primeFactorsOnly(129 * 2) == 129 * 2);
+        // enum x = primeFactorsOnly(7 * 7 * 7 * 11 * 15);
+        // static assert(x == 7 * 11 * 15);
+    }
+    
+    private static bool properLinearCongruentialParameters(ulong m,
+            ulong a, ulong c) {
+        // Bounds checking
+        if (m == 0 || a == 0 || a >= m || c >= m) return false;
+        // c and m are relatively prime
+        if (c > 0 && gcd(c, m) != 1) return false;
+        // a - 1 is divisible by all prime factors of m
+        if ((a - 1) % primeFactorsOnly(m)) return false;
+        // if a - 1 is multiple of 4, then m is a  multiple of 4 too.
+        if ((a - 1) % 4 == 0 && m % 4) return false;
+        // Passed all tests
+        return true;
+    }
+    
+    // check here
+    static assert(c == 0 || properLinearCongruentialParameters(m, a, c),
+            "Incorrect instantiation of LinearCongruentialEngine");
+
 /**
 Constructs a $(D_PARAM LinearCongruentialEngine) generator seeded with
 $(D x0).
