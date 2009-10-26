@@ -1515,40 +1515,6 @@ unittest
 }
 
 /**
-Returns the total number of code points encoded in a string.
-
-The input to this function MUST be validly encoded.  This is enforced
-by the function's in-contract.
-
-Supercedes: This function supercedes $(D std.utf.toUCSindex()).
-
-Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
-
-Params:
-s = the string to be counted
- */
-uint count(E)(const(E)[] s)
-in
-{
-    assert(isValid(s));
-}
-body
-{
-    uint n = 0;
-    while (s.length != 0)
-    {
-        EncoderInstance!(E).skip(s);
-        ++n;
-    }
-    return n;
-}
-
-unittest
-{
-    assert(count("\u20AC100") == 4);
-}
-
-/**
  Returns the array index at which the (n+1)th code point begins.
 
  The input to this function MUST be validly encoded.
