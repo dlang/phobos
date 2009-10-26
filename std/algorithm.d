@@ -3562,7 +3562,7 @@ Stable topN has not been implemented yet.
 void topN(alias less = "a < b",
         SwapStrategy ss = SwapStrategy.unstable,
         Range)(Range r, size_t nth)
-    if (isRandomAccessRange!(Range))
+    if (isRandomAccessRange!(Range) && hasLength!Range)
 {
     static assert(ss == SwapStrategy.unstable,
             "Stable topN not yet implemented");
@@ -3659,6 +3659,42 @@ unittest
         auto right = reduce!min(a[k + 1 .. $]);
         assert(right >= a[k]);
     }
+}
+
+/**
+Stores the smallest elements of the two ranges in the left-hand range.
+ */
+void topN(alias less = "a < b",
+        SwapStrategy ss = SwapStrategy.unstable,
+        Range1, Range2)(Range1 r1, Range2 r2)
+    if (isRandomAccessRange!(Range1) && hasLength!Range1 &&
+            isInputRange!Range2 && is(ElementType!Range1 == ElementType!Range2))
+{
+    static assert(ss == SwapStrategy.unstable,
+            "Stable topN not yet implemented");
+    auto heap = BinaryHeap!Range1(r1);
+    foreach (ref e; r2) {
+        if (binaryFun!(less)(e, heap.top())) {
+            // Must swap the elements
+            typeof(e) t;
+            move(e, t);
+            move(heap.top(), e);
+            heap.replaceTop(t);
+        }
+    }
+}
+
+unittest
+{
+    int[] a = [ 5, 7, 2, 6, 7 ];
+    int[] b = [ 2, 1, 5, 6, 7, 3, 0 ];
+    topN(a, b);
+    sort(a);
+    sort(b);
+    assert(a == [0, 1, 2, 2, 3]);
+    assert(b == [5, 5, 6, 6, 7, 7, 7]);
+    //writeln(a);
+    //writeln(b);
 }
 
 // sort
@@ -4918,10 +4954,23 @@ otherwise.
     }
 
 /**
+Replaces the top of the heap (the largest element in the heap) with
+$(D value).
+ */ 
+    void replaceTop(ElementType!Range value)
+    {
+        // must replace the top
+        assert(!_store.empty);
+        _store.front = value;
+        percolateDown(_store[0 .. _length]);
+        assertValid;
+    }
+
+/**
 Get the _top element (the largest according to the predicate $(D
 less)).
  */
-    ElementType!Range top()
+    ref ElementType!Range top()
     {
         assert(_length);
         return _store.front;
