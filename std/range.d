@@ -508,14 +508,6 @@ public:
     alias R Source;
     
 /**
-Returns $(D this).
- */
-    ref Retro opSlice()
-    {
-        return this;
-    }
-
-/**
 Forwards to $(D _input.empty).
  */
     bool empty()
@@ -1306,7 +1298,7 @@ Take!(R) take(R)(size_t n, R input) if (isInputRange!(R))
     return Take!(R)(n, input);
 }
 
-version(none) unittest
+unittest
 {
     int[] arr1 = [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ];
     auto s = take(5, arr1);
@@ -1314,40 +1306,6 @@ version(none) unittest
     assert(s[4] == 5);
     assert(equal(s, [ 1, 2, 3, 4, 5 ][]));
 }
-
-/+
-/** Eagerly advances a copy of $(D r) $(D n) times (by calling $(D
-r.popFront) $(D n) times) and returns it. The pass of $(D r) into $(D
-drop) is by value, so the original range remains unchanged. Completes
-in $(BIGOH 1) steps for ranges that support slicing, and in $(BIGOH n)
-time for all other ranges.
-
-Example:
-----
-int[] a = [ 1, 2, 3, 4, 5 ];
-int[] b = drop(2, a);
-assert(a == [ 1, 2, 3, 4, 5 ]);
-assert(b == [ 3, 4, 5 ]);
-----
- */
-Range drop(Range)(size_t n, Range r) if (isInputRange!(Range))
-{
-    static if (hasSlicing!(Range))
-    {
-        return r[n .. r.length];
-    }
-    else
-    {
-        while (--n) r.popFront;
-        return r;
-    }
-}
-
-version(none) unittest
-{
-    assert(equal(drop(2, [1, 2, 3, 4][]), [ 3, 4 ][]));
-}
-+/
 
 /**
 Eagerly advances $(D r) itself (not a copy) $(D n) times (by calling
@@ -1381,7 +1339,7 @@ size_t popFrontN(Range)(ref Range r, size_t n) if (isInputRange!(Range))
     return n;
 }
 
-version(none) unittest
+unittest
 {
     int[] a = [ 1, 2, 3, 4, 5 ];
     a.popFrontN(2);
@@ -1421,7 +1379,7 @@ size_t popBackN(Range)(ref Range r, size_t n) if (isInputRange!(Range))
     return n;
 }
 
-version(none) unittest
+unittest
 {
     int[] a = [ 1, 2, 3, 4, 5 ];
     a.popBackN(2);
@@ -1453,7 +1411,7 @@ struct Repeat(T)
 /// Ditto
 Repeat!(T) repeat(T)(T value) { return Repeat!(T)(value); }
 
-version(none) unittest
+unittest
 {
     enforce(equal(take(4, repeat(5)), [ 5, 5, 5, 5 ][]));
 }
@@ -1467,7 +1425,7 @@ Take!(Repeat!(T)) replicate(T)(size_t n, T value)
     return take(n, repeat(value));
 }
 
-version(none) unittest
+unittest
 {
     enforce(equal(replicate(4, 5), [ 5, 5, 5, 5 ][]));
 }
@@ -1525,7 +1483,11 @@ struct Cycle(R) if (isForwardRange!(R))
         /// Ditto
         enum bool empty = false;
         /// Ditto
-        void popFront() { _current.popFront; if (_current.empty) _current = _original; }
+        void popFront()
+        {
+            _current.popFront;
+            if (_current.empty) _current = _original;
+        }
     }
 }
 
@@ -1535,7 +1497,8 @@ struct Cycle(R) if (isStaticArray!(R))
     private alias typeof(R[0]) ElementType;
     private ElementType* _ptr;
     private size_t _index;
-    this(/*ref*/ R input, size_t index = 0)
+    
+    this(ref R input, size_t index = 0)
     {
         _ptr = input.ptr;
         _index = index;
@@ -1556,23 +1519,28 @@ struct Cycle(R) if (isStaticArray!(R))
 }
 
 /// Ditto
-Cycle!(R) cycle(R)(R input)
-    if (isForwardRange!(R) || isStaticArray!(R))
+Cycle!(R) cycle(R)(R input) if (isForwardRange!(R))
 {
     return Cycle!(R)(input);
 }
 
 /// Ditto
-Cycle!(R) cycle(R)(R input, size_t index)
-    if (isRandomAccessRange!(R) || isStaticArray!(R))
+Cycle!(R) cycle(R)(R input, size_t index) if (isRandomAccessRange!(R))
 {
     return Cycle!(R)(input, index);
 }
 
-version(none) unittest
+/// Ditto
+Cycle!(R) cycle(R)(ref R input, size_t index = 0) if (isStaticArray!R)
+{
+    return Cycle!(R)(input, index);
+}
+
+unittest
 {
     assert(equal(take(5, cycle([1, 2][])), [ 1, 2, 1, 2, 1 ][]));
     int[3] a = [ 1, 2, 3 ];
+    static assert(isStaticArray!(typeof(a)));
     auto c = cycle(a);
     assert(a.ptr == c._ptr);
     assert(equal(take(5, cycle(a)), [ 1, 2, 3, 1, 2 ][]));
@@ -1963,7 +1931,7 @@ enum StoppingPolicy
     requireSameLength,
 }
 
-version(none) unittest
+unittest
 {
     int[] a = [ 1, 2, 3 ];
     float[] b = [ 1., 2, 3 ];
@@ -2044,7 +2012,7 @@ recurrence(alias fun, State...)(State initial)
     return typeof(return)(state);
 }
 
-unittest
+version(none) unittest
 {
     auto fib = recurrence!("a[n-1] + a[n-2]")(1, 1);
     int[] witness = [1, 1, 2, 3, 5, 8, 13, 21, 34, 55 ];
@@ -2120,7 +2088,7 @@ Sequence!(fun, Tuple!(State)) sequence
     return typeof(return)(tuple(args));
 }
 
-version(none) unittest
+unittest
 {
     // alias Sequence!("a.field[0] += a.field[1]",
     //         Tuple!(int, int)) Gen;
@@ -2552,7 +2520,7 @@ struct Transposed(RangeOfRanges)
 
     void popFront()
     {
-        foreach (e; _input)
+        foreach (ref e; _input)
         {
             if (e.empty) continue;
             e.popFront;
@@ -2582,13 +2550,17 @@ auto transposed(RangeOfRanges)(RangeOfRanges rr)
     return Transposed!RangeOfRanges(rr);
 }
 
-version(none) unittest
+unittest
 {
     int[][] x = new int[][2];
-    x[0] = [ 1, 2 ];
+    x[0] = [1, 2];
     x[1] = [3, 4];
     auto tr = transposed(x);
+    int[][] witness = [ [ 1, 3 ], [ 2, 4 ] ];
+    uint i;
+    
     foreach (e; tr)
     {
+        assert(array(e) == witness[i++]);
     }
 }
