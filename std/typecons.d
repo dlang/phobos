@@ -322,6 +322,7 @@ public:
         Types field;
         mixin(tupleFields!(0, T));
     }
+    alias field expand;
     // @@@BUG 2800
     //alias field this;
 /**
