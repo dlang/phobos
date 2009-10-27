@@ -28,7 +28,7 @@
  */
 module std.utf;
 
-private import std.stdio;
+import std.stdio, std.string;
 import std.contracts, std.conv, std.range, std.traits, std.typecons;
 
 //debug=utf;        // uncomment to turn on debugging printf's
@@ -683,7 +683,7 @@ actual length of the encoded character (a number between 1 and 4 for
 $(D char[4]) buffers, and between 1 and 2 for $(D wchar[2]) buffers).
  */
 
-size_t encode(/*ref*/ char[4] buf, in dchar c)
+size_t encode(ref char[4] buf, in dchar c)
 in
 {
     assert(isValidDchar(c));
@@ -720,7 +720,7 @@ body
 }
 
 /// Ditto
-size_t encode(/*ref*/ wchar[2] buf, dchar c)
+size_t encode(ref wchar[2] buf, dchar c)
 in
 {
     assert(isValidDchar(c));
@@ -886,7 +886,7 @@ void validate(S)(in S s)
     invariant len = s.length;
     for (size_t i = 0; i < len; )
     {
-    decode(s, i);
+        decode(s, i);
     }
 }
 
@@ -895,37 +895,37 @@ void validate(S)(in S s)
 char[] toUTF8(out char[4] buf, dchar c)
     in
     {
-    assert(isValidDchar(c));
+        assert(isValidDchar(c));
     }
     body
     {
-    if (c <= 0x7F)
-    {
-        buf[0] = cast(char) c;
-        return buf[0 .. 1];
-    }
-    else if (c <= 0x7FF)
-    {
-        buf[0] = cast(char)(0xC0 | (c >> 6));
-        buf[1] = cast(char)(0x80 | (c & 0x3F));
-        return buf[0 .. 2];
-    }
-    else if (c <= 0xFFFF)
-    {
-        buf[0] = cast(char)(0xE0 | (c >> 12));
-        buf[1] = cast(char)(0x80 | ((c >> 6) & 0x3F));
-        buf[2] = cast(char)(0x80 | (c & 0x3F));
-        return buf[0 .. 3];
-    }
-    else if (c <= 0x10FFFF)
-    {
-        buf[0] = cast(char)(0xF0 | (c >> 18));
-        buf[1] = cast(char)(0x80 | ((c >> 12) & 0x3F));
-        buf[2] = cast(char)(0x80 | ((c >> 6) & 0x3F));
-        buf[3] = cast(char)(0x80 | (c & 0x3F));
-        return buf[0 .. 4];
-    }
-    assert(0);
+        if (c <= 0x7F)
+        {
+            buf[0] = cast(char) c;
+            return buf[0 .. 1];
+        }
+        else if (c <= 0x7FF)
+        {
+            buf[0] = cast(char)(0xC0 | (c >> 6));
+            buf[1] = cast(char)(0x80 | (c & 0x3F));
+            return buf[0 .. 2];
+        }
+        else if (c <= 0xFFFF)
+        {
+            buf[0] = cast(char)(0xE0 | (c >> 12));
+            buf[1] = cast(char)(0x80 | ((c >> 6) & 0x3F));
+            buf[2] = cast(char)(0x80 | (c & 0x3F));
+            return buf[0 .. 3];
+        }
+        else if (c <= 0x10FFFF)
+        {
+            buf[0] = cast(char)(0xF0 | (c >> 18));
+            buf[1] = cast(char)(0x80 | ((c >> 12) & 0x3F));
+            buf[2] = cast(char)(0x80 | ((c >> 6) & 0x3F));
+            buf[3] = cast(char)(0x80 | (c & 0x3F));
+            return buf[0 .. 4];
+        }
+        assert(0);
     }
 
 /*******************
@@ -1225,3 +1225,30 @@ unittest
     w = toUTF16(d);
     assert(w == "he\U0010AAAAllo");
 }
+
+/**
+Returns the total number of code points encoded in a string.
+
+The input to this function MUST be validly encoded.
+
+Supercedes: This function supercedes $(D std.utf.toUCSindex()).
+
+Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
+
+Params:
+s = the string to be counted
+ */
+uint count(E)(const(E)[] s)
+{
+    //assert(isValid(s));
+    return walkLength(byDchar(s));
+}
+
+unittest
+{
+    assert(count("") == 0);
+    assert(count("a") == 1);
+    assert(count("abc") == 3);
+    assert(count("\u20AC100") == 4);
+}
+
