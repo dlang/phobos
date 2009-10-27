@@ -388,8 +388,7 @@ string decode(string s, DecodeMode mode=DecodeMode.LOOSE)
         {
             if (buffer.length == 0)
             {
-                buffer = s.dup;
-                buffer.length = i;
+                buffer = s[0 .. i].dup;
             }
             if (startsWith(s[i..$],"&#"))
             {

@@ -3093,7 +3093,7 @@ unittest
    only if the ranges have the same number of elements and if $(D
    approxEqual) evaluates to $(D true) for each pair of elements.
  */
-bool approxEqual(T, U, V)(T lhs, U rhs, V maxRelDiff, V maxAbsDiff = 0)
+bool approxEqual(T, U, V)(T lhs, U rhs, V maxRelDiff, V maxAbsDiff = 1e-5)
 {
     static if (isInputRange!T)
     {
@@ -3130,21 +3130,22 @@ bool approxEqual(T, U, V)(T lhs, U rhs, V maxRelDiff, V maxAbsDiff = 0)
         {
             // two numbers
             //static assert(is(T : real) && is(U : real));
-            if (rhs == 0) {
-                return (lhs == 0 ? 0 : 1) <= maxRelDiff;
+            if (rhs == 0)
+            {
+                return fabs(lhs) <= maxAbsDiff;
             }
             return fabs((lhs - rhs) / rhs) <= maxRelDiff
-                || maxAbsDiff != 0 && fabs(lhs - rhs) < maxAbsDiff;
+                || maxAbsDiff != 0 && fabs(lhs - rhs) <= maxAbsDiff;
         }
     }
 }
 
 /**
-   Returns $(D approxEqual(lhs, rhs, 0.01)).
+   Returns $(D approxEqual(lhs, rhs, 1e-2, 1e-5)).
  */
 bool approxEqual(T, U)(T lhs, U rhs)
 {
-    return approxEqual(lhs, rhs, 0.01);
+    return approxEqual(lhs, rhs, 1e-2, 1e-5);
 }
 
 unittest

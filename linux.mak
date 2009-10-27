@@ -52,7 +52,7 @@ CFLAGS_posix_release = -m32 -O3 $(CFLAGS)
 
 # D flags for all OSs, but customized by build
 DFLAGS_debug = -w -g -debug -d $(DFLAGS)
-DFLAGS_release = -w -O -release -inline -nofloat -d $(DFLAGS)
+DFLAGS_release = -w -O -release -nofloat -d $(DFLAGS)
 
 # D flags for documentation generation
 DDOCFLAGS=-version=ddoc -d -c -o- $(STDDOC)
@@ -157,8 +157,8 @@ $$(ROOT$1$2)/unittest/std/%$$(EXESUFFIX_$1) : std/%.d $$(LIB_$1_$2) $$(ROOT$1$2)
 $1/$2 : $$(LIB_$1_$2)
 $$(LIB_$1_$2) : $$(SRC2LIB_$1) $$(OBJS_$1_$2)					\
 $(LIBDRUNTIME_$1)
-	@echo $$(DMD$1$2) $(DFLAGS_$2) -lib -of$$@ "[...tons of files...]"
-	@$$(DMD$1$2) $(DFLAGS_$2) -lib -of$$@ $$^
+#	@echo $$(DMD$1$2) $(DFLAGS_$2) -lib -of$$@ "[...tons of files...]"
+	$$(DMD$1$2) $(DFLAGS_$2) -lib -of$$@ $$^
 
 $$(ROOT$1$2)/.directory :
 	mkdir --parents $$(OBJDIR) || exists $$(OBJDIR)
