@@ -360,10 +360,9 @@ unittest
                 short, byte, byte, byte)).
         equals!(short, 1111, byte, byte));
 
-    // @@@BUG@@@
-    // static assert(Pack!(Replace!(1111, "11",
-    //             2222, 1111, 1111, 1111)).
-    //     equals!(2222, "11", 1111, 1111));
+    static assert(Pack!(Replace!(1111, "11",
+                2222, 1111, 1111, 1111)).
+        equals!(2222, "11", 1111, 1111));
 }
 
 /**
@@ -440,10 +439,9 @@ unittest
                 byte, short, byte, byte)).
         equals!(1111, short, 1111, 1111));
 
-    // @@@BUG@@@
-    // static assert(Pack!(ReplaceAll!(1111, "11",
-    //             1111, 2222, 1111, 1111)).
-    //     equals!("11", 2222, "11", "11"));
+    static assert(Pack!(ReplaceAll!(1111, "11",
+                1111, 2222, 1111, 1111)).
+        equals!("11", 2222, "11", "11"));
 }
 
 /**
@@ -574,7 +572,7 @@ private template isSame(ab...)
                     !__traits(compiles, expectType!(ab[1])) &&
                      __traits(compiles, ab[0] == ab[1]))
     {
-        static if (!__traits(compiles, &ab[0]) &&
+        static if (!__traits(compiles, &ab[0]) ||
                    !__traits(compiles, &ab[1]))
             enum isSame = (ab[0] == ab[1]);
         else
