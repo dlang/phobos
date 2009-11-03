@@ -2,7 +2,7 @@
 
 DOCDIR = ../web/phobos
 DOC_OUTPUT_DIR = ../web/phobos
-DRUNTIMEDIR = ../druntime/lib
+DRUNTIMEDIR = ../druntime
 PRODUCTIONLIBDIR = $(dir $(shell which dmd))../lib
 OBJDIR = obj
 DOCSRC = ../docsrc

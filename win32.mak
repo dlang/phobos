@@ -61,6 +61,7 @@ DOC=..\..\html\d\phobos
 ## Location of druntime tree
 
 DRUNTIME=..\druntime
+DRUNTIMELIB=$(DRUNTIME)\druntime.lib
 
 .c.obj:
 	$(CC) -c $(CFLAGS) $*
@@ -110,9 +111,15 @@ SRCS= std\math.d std\stdio.d std\dateparse.d std\date.d std\uni.d std\string.d \
 	std\__fileinit.d \
 	std\datebase.d \
 	std\regex.d \
+	std\stdarg.d \
+	std\stdint.d \
 	crc32.d \
+	std\c\process.d \
 	std\c\stdarg.d \
+	std\c\stddef.d \
+	std\c\stdlib.d \
 	std\c\string.d \
+	std\c\time.d \
 	std\c\math.d \
 	std\c\windows\com.d \
 	std\c\windows\stat.d \
@@ -271,9 +278,9 @@ SRC_ZLIB= etc\c\zlib\trees.h \
 	etc\c\zlib\osx.mak
 
 phobos.lib : $(OBJS) $(SRCS) \
-	etc\c\zlib\zlib.lib $(DRUNTIME)\lib\release\druntime.lib win32.mak
+	etc\c\zlib\zlib.lib $(DRUNTIMELIB) win32.mak
 	$(DMD) -lib -ofphobos.lib $(DFLAGS) $(SRCS) $(OBJS) \
-		etc\c\zlib\zlib.lib $(DRUNTIME)\lib\release\druntime.lib
+		etc\c\zlib\zlib.lib $(DRUNTIMELIB)
 
 unittest : $(SRCS) phobos.lib
 	$(DMD) $(UDFLAGS) -L/co -unittest unittest.d $(SRCS) phobos.lib

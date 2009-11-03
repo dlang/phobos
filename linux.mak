@@ -1,7 +1,7 @@
 # Makefile to build linux D runtime library libphobos2.a and its unit test
 
 DOC_OUTPUT_DIR = ../web/2.0/phobos
-DRUNTIMEDIR = ../druntime/lib/release
+DRUNTIMEDIR = ../druntime
 PRODUCTIONLIBDIR = $(dir $(shell which dmd))../lib
 OBJDIR = obj
 DOCSRC = ../docsrc
