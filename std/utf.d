@@ -332,7 +332,7 @@ body
     return V;
     
   Lerr:
-    //printf("\ndecode: idx = %d, i = %d, length = %d s = \n'%.*s'\n%x\n'%.*s'\n", idx, i, s.length, s, s[i], s[i .. length]);
+    //printf("\ndecode: idx = %d, i = %d, length = %d s = \n'%.*s'\n%x\n'%.*s'\n", idx, i, s.length, s, s[i], s[i .. $]);
     throw new UtfException("4invalid UTF-8 sequence", s[i]);
 }
 

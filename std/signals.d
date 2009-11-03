@@ -188,7 +188,7 @@ template Signal(T1...)
                 if (!p)
                     onOutOfMemoryError();
                 slots = (cast(slot_t*)p)[0 .. len];
-                slots[slots_idx + 1 .. length] = null;
+                slots[slots_idx + 1 .. $] = null;
             }
         }
         slots[slots_idx++] = slot;

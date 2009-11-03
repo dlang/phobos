@@ -1187,7 +1187,7 @@ private string combineCPathWithDPath(char* c_path, string path, int char_pos)
 
     // Do we append something from path?
     if (char_pos < path.length)
-	cp ~= path[char_pos .. length];
+	cp ~= path[char_pos .. $];
 
     return cp;
 }
@@ -1207,7 +1207,7 @@ private string expandFromDatabase(string path)
 
     if (last_char == -1)
     {
-        username = path[1 .. length] ~ '\0';
+        username = path[1 .. $] ~ '\0';
 	last_char = username.length + 1;
     }
     else

@@ -656,11 +656,11 @@ unittest
     assert( mf[50 .. 60] == str );
     ubyte[] data2 = cast(ubyte[])mf[20*K .. 60*K];
     assert( data2.length == 40*K );
-    assert( data2[length-1] == 0 );
+    assert( data2[$-1] == 0 );
     mf[100*K-1] = cast(ubyte)'b';
     data2 = cast(ubyte[])mf[21*K .. 100*K];
     assert( data2.length == 79*K );
-    assert( data2[length-1] == 'b' );
+    assert( data2[$-1] == 'b' );
     delete mf;
     std.file.remove("testing.txt");
     // Create anonymous mapping

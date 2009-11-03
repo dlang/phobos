@@ -148,9 +148,9 @@ alias staticIndexOf IndexOf;
 //     static if (TList.length == 0)
 //  alias TList Erase;
 //     else static if (is(T == TList[0]))
-//  alias TList[1 .. length] Erase;
+//  alias TList[1 .. $] Erase;
 //     else
-//  alias TypeTuple!(TList[0], Erase!(T, TList[1 .. length])) Erase;
+//  alias TypeTuple!(TList[0], Erase!(T, TList[1 .. $])) Erase;
 // }
  template Erase(T, TList...)
  {
@@ -274,7 +274,7 @@ template NoDuplicates(TList...)
     static if (TList.length == 0)
     alias TList NoDuplicates;
     else
-    alias TypeTuple!(TList[0], NoDuplicates!(EraseAll!(TList[0], TList[1 .. length]))) NoDuplicates;
+    alias TypeTuple!(TList[0], NoDuplicates!(EraseAll!(TList[0], TList[1 .. $]))) NoDuplicates;
 }
 
 unittest
@@ -460,7 +460,7 @@ template Reverse(TList...)
     static if (TList.length == 0)
     alias TList Reverse;
     else
-    alias TypeTuple!(Reverse!(TList[1 .. length]), TList[0]) Reverse;
+    alias TypeTuple!(Reverse!(TList[1 .. $]), TList[0]) Reverse;
 }
 
 /**
@@ -481,9 +481,9 @@ template MostDerived(T, TList...)
     static if (TList.length == 0)
     alias T MostDerived;
     else static if (is(TList[0] : T))
-    alias MostDerived!(TList[0], TList[1 .. length]) MostDerived;
+    alias MostDerived!(TList[0], TList[1 .. $]) MostDerived;
     else
-    alias MostDerived!(T, TList[1 .. length]) MostDerived;
+    alias MostDerived!(T, TList[1 .. $]) MostDerived;
 }
 
 /**
@@ -506,10 +506,10 @@ template DerivedToFront(TList...)
     static if (TList.length == 0)
     alias TList DerivedToFront;
     else
-    alias TypeTuple!(MostDerived!(TList[0], TList[1 .. length]),
-                    DerivedToFront!(ReplaceAll!(MostDerived!(TList[0], TList[1 .. length]),
+    alias TypeTuple!(MostDerived!(TList[0], TList[1 .. $]),
+                    DerivedToFront!(ReplaceAll!(MostDerived!(TList[0], TList[1 .. $]),
                             TList[0],
-                            TList[1 .. length]))) DerivedToFront;
+                            TList[1 .. $]))) DerivedToFront;
 }
 
 

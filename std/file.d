@@ -729,7 +729,7 @@ void mkdirRecurse(in char[] pathname)
         {   /* Prevent infinite recursion if left is "d:\" and
              * drive d does not exist.
              */
-            if (left.length >= 3 && left[length - 2] == ':')
+            if (left.length >= 3 && left[$ - 2] == ':')
                 throw new FileException(left.idup);
         }
         mkdirRecurse(left);

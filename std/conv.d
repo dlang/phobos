@@ -2768,7 +2768,7 @@ body
         i--;
         buffer[i] = cast(char)((c < 10) ? c + '0' : c + 'A' - 10);
     } while (value);
-    return to!T(buffer[i .. length].dup);
+    return to!T(buffer[i .. $].dup);
 }
 
 unittest

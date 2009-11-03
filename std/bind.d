@@ -730,9 +730,9 @@ alias Tuple!(byte, ubyte, short, ushort, int, uint, long, ulong, /+cent, ucent, 
 */
 template dynArgTypes(int i, FuncParams, BoundArgs, int minParamsLeft) {
         
-        // performs slicing on the tuple ... tuple[i .. length]
+        // performs slicing on the tuple ... tuple[i .. $]
         template sliceOffTuple(T, int i) {
-                alias Tuple!(T.type[i..length]) res;
+                alias Tuple!(T.type[i .. $]) res;
         }
         
         // prepends a T to the resulting tuple

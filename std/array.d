@@ -740,7 +740,7 @@ $(D T.init).
         immutable oldLength = length;
         _b = cast(T*) core.memory.GC.realloc(_b, newLength * T.sizeof);
         _e = _b + newLength;
-        this[oldLength .. length] = T.init;
+        this[oldLength .. $] = T.init;
     }
 
 /// Concatenation.

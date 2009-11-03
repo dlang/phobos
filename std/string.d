@@ -759,7 +759,7 @@ S tolower(S)(S s) if (isSomeString!S)
         }
         else if (c > 0x7F)
         {
-            foreach (size_t j, dchar dc; s[i .. length])
+            foreach (size_t j, dchar dc; s[i .. $])
             {
                 if (std.uni.isUniUpper(dc))
                 {
@@ -883,7 +883,7 @@ S toupper(S)(S s) if (isSomeString!S)
         }
         else if (c > 0x7F)
         {
-            foreach (size_t j, dchar dc; s[i .. length])
+            foreach (size_t j, dchar dc; s[i .. $])
             {
                 if (std.uni.isUniLower(dc))
                 {
@@ -1662,8 +1662,8 @@ C[] chomp(C)(C[] s, in C[] delimiter = null)
     }
     else if (s.length >= delimiter.length)
     {
-        if (s[length - delimiter.length .. length] == delimiter)
-            return s[0 .. length - delimiter.length];
+        if (s[$ - delimiter.length .. $] == delimiter)
+            return s[0 .. $ - delimiter.length];
     }
     return s;
 }
@@ -2961,7 +2961,7 @@ unittest
 
 string succ(string s)
 {
-    if (s.length && isalnum(s[length - 1]))
+    if (s.length && isalnum(s[$ - 1]))
     {
     char[] r = s.dup;
     size_t i = r.length - 1;
@@ -2986,7 +2986,7 @@ string succ(string s)
             {
             char[] t = new char[r.length + 1];
             t[0] = cast(char)carry;
-            t[1 .. length] = r[];
+            t[1 .. $] = r[];
             return assumeUnique(t);
             }
             i--;

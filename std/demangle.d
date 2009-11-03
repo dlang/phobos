@@ -334,7 +334,7 @@ string demangle(string name)
             default:
                 size_t i = ni - 1;
                 ni = name.length;
-                p = name[i .. length];
+                p = name[i .. $];
                 goto L1;
         }
     }
