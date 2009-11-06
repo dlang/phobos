@@ -1156,8 +1156,8 @@ Returns the most negative value of the numeric type T.
 
 template mostNegative(T)
 {
-    static if (T.min == 0) enum byte mostNegative = 0;
-    else static if (T.min > 0) enum mostNegative = -T.max;
+    static if (is(typeof(T.min_normal))) enum mostNegative = -T.max;
+    else static if (T.min == 0) enum byte mostNegative = 0;
     else enum mostNegative = T.min;
 }
 

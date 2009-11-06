@@ -1854,7 +1854,7 @@ unittest
     // min and max
     f = to!float("1.17549e-38");
     assert(feq(cast(real)f, cast(real)1.17549e-38));
-    assert(feq(cast(real)f, cast(real)float.min));
+    assert(feq(cast(real)f, cast(real)float.min_normal));
     f = to!float("3.40282e+38");
     assert(to!string(f) == to!string(3.40282e+38));
 
@@ -1903,7 +1903,7 @@ unittest
     // min and max
     d = to!double("2.22507e-308");
     assert(feq(cast(real)d, cast(real)2.22508e-308));
-    assert(feq(cast(real)d, cast(real)double.min));
+    assert(feq(cast(real)d, cast(real)double.min_normal));
     d = to!double("1.79769e+308");
     assert(to!string(d) == to!string(1.79769e+308));
     assert(to!string(d) == to!string(double.max));
@@ -1954,8 +1954,8 @@ unittest
     assert(to!string(r) == to!string(real.max / 2L));
 
     // min and max
-    r = to!real(to!string(real.min));
-    assert(to!string(r) == to!string(real.min));
+    r = to!real(to!string(real.min_normal));
+    assert(to!string(r) == to!string(real.min_normal));
     r = to!real(to!string(real.max));
     assert(to!string(r) == to!string(real.max));
 
@@ -2009,9 +2009,9 @@ version (none)
         assert(to!string(ift) == to!string(456.77i));
 
         // min and max
-        ift = toIfloat(to!string(ifloat.min));
-        assert(to!string(ift) == to!string(ifloat.min) );
-        assert(feq(cast(ireal)ift, cast(ireal)ifloat.min));
+        ift = toIfloat(to!string(ifloat.min_normal));
+        assert(to!string(ift) == to!string(ifloat.min_normal) );
+        assert(feq(cast(ireal)ift, cast(ireal)ifloat.min_normal));
 
         ift = toIfloat(to!string(ifloat.max));
         assert(to!string(ift) == to!string(ifloat.max));
@@ -2047,10 +2047,10 @@ version (none)
         assert(id == 123.45e+302i);
 
         // min and max
-        id = toIdouble(to!string(idouble.min));
-        assert(to!string( id ) == to!string(idouble.min));
-        assert(feq(cast(ireal)id.re, cast(ireal)idouble.min.re));
-        assert(feq(cast(ireal)id.im, cast(ireal)idouble.min.im));
+        id = toIdouble(to!string(idouble.min_normal));
+        assert(to!string( id ) == to!string(idouble.min_normal));
+        assert(feq(cast(ireal)id.re, cast(ireal)idouble.min_normal.re));
+        assert(feq(cast(ireal)id.im, cast(ireal)idouble.min_normal.im));
 
         id = toIdouble(to!string(idouble.max));
         assert(to!string(id) == to!string(idouble.max));
@@ -2088,9 +2088,9 @@ version (none)
 
         // min and max
         ir = toIreal(to!string(ireal.min));
-        assert(to!string(ir) == to!string(ireal.min));
-        assert(feq(cast(real)ir.re, cast(real)ireal.min.re));
-        assert(feq(cast(real)ir.im, cast(real)ireal.min.im));
+        assert(to!string(ir) == to!string(ireal.min_normal));
+        assert(feq(cast(real)ir.re, cast(real)ireal.min_normal.re));
+        assert(feq(cast(real)ir.im, cast(real)ireal.min_normal.im));
 
         ir = toIreal(to!string(ireal.max));
         assert(to!string(ir) == to!string(ireal.max));

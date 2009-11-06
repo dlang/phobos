@@ -99,7 +99,7 @@ template floatTraits(T) {
     // EXPMASK is a ushort mask to select the exponent portion (without sign)
     // EXPPOS_SHORT is the index of the exponent when represented as a ushort array.
     // SIGNPOS_BYTE is the index of the sign when represented as a ubyte array.
-    // RECIP_EPSILON is the value such that (smallest_denormal) * RECIP_EPSILON == T.min
+    // RECIP_EPSILON is the value such that (smallest_denormal) * RECIP_EPSILON == T.min_normal
     enum T RECIP_EPSILON = (1/T.epsilon);
     static if (T.mant_dig == 24)
     { // float
@@ -1033,7 +1033,7 @@ L_extreme:  // Extreme exponent. X is very large positive, very
             fstsw AX;
             test AX, 0x0400; // NaN_or_zero, but we already know x!=0 
             jz L_was_nan;  // if x is NaN, returns x
-            // set scratchreal = real.min
+            // set scratchreal = real.min_normal
             // squaring it will return 0, setting underflow flag
             mov word  ptr [ESP+8+8], 1;
             test AX, 0x0200;
@@ -1215,7 +1215,7 @@ unittest
          [1.0,   .5,     1],
          [-1.0,  -.5,    1],
          [2.0,   .5,     2],
-         [double.min/2.0, .5, -1022],
+         [double.min_normal/2.0, .5, -1022],
          [real.infinity,real.infinity,int.max],
          [-real.infinity,-real.infinity,int.min],
          [real.nan,real.nan,int.min],
@@ -1238,8 +1238,8 @@ unittest
         static real extendedvals[][3] = [ // x,frexp,exp
                                           [0x1.a5f1c2eb3fe4efp+73L, 0x1.A5F1C2EB3FE4EFp-1L,   74],    // normal
                                           [0x1.fa01712e8f0471ap-1064L,  0x1.fa01712e8f0471ap-1L,     -1063],
-                                          [real.min,  .5,     -16381],
-                                          [real.min/2.0L, .5,     -16382]    // denormal
+                                          [real.min_normal,  .5,     -16381],
+                                          [real.min_normal/2.0L, .5,     -16382]    // denormal
                                            ];
 
         for (i = 0; i < extendedvals.length; i++) {
@@ -1500,13 +1500,13 @@ pure nothrow real hypot(real x, real y)
     // Scale x and y to avoid underflow and overflow.
     // If one is huge and the other tiny, return the larger. 
     // If both are huge, avoid overflow by scaling by 1/sqrt(real.max/2).
-    // If both are tiny, avoid underflow by scaling by sqrt(real.min*real.epsilon).         
+    // If both are tiny, avoid underflow by scaling by sqrt(real.min_normal*real.epsilon).         
 
-    enum real SQRTMIN = 0.5*sqrt(real.min); // This is a power of 2.
+    enum real SQRTMIN = 0.5*sqrt(real.min_normal); // This is a power of 2.
     enum real SQRTMAX = 1.0L/SQRTMIN; // 2^((max_exp)/2) = nextUp(sqrt(real.max))
 
     static assert(2*(SQRTMAX/2)*(SQRTMAX/2) <= real.max);
-    static assert(real.min*real.max>2 && real.min*real.max<=4); // Proves that sqrt(real.max) ~~  0.5/sqrt(real.min)
+    static assert(real.min_normal*real.max>2 && real.min_normal*real.max<=4); // Proves that sqrt(real.max) ~~  0.5/sqrt(real.min_normal)
 
     real u = fabs(x);
     real v = fabs(y);    
@@ -1545,10 +1545,10 @@ unittest
             [ -0.0,   -0.0,   0.0],
             [ 3.0,     4.0,   5.0],
             [ -300,   -400,   500],
-            [88/(64*sqrt(real.min)), 105/(64*sqrt(real.min)), 137/(64*sqrt(real.min))],
-            [88/(128*sqrt(real.min)), 105/(128*sqrt(real.min)), 137/(128*sqrt(real.min))],
-            [3*real.min*real.epsilon, 4*real.min*real.epsilon, 5*real.min*real.epsilon],
-            [ real.min, real.min, sqrt(2.0L)*real.min],
+            [88/(64*sqrt(real.min_normal)), 105/(64*sqrt(real.min_normal)), 137/(64*sqrt(real.min_normal))],
+            [88/(128*sqrt(real.min_normal)), 105/(128*sqrt(real.min_normal)), 137/(128*sqrt(real.min_normal))],
+            [3*real.min_normal*real.epsilon, 4*real.min_normal*real.epsilon, 5*real.min_normal*real.epsilon],
+            [ real.min_normal, real.min_normal, sqrt(2.0L)*real.min_normal],
             [ real.max/sqrt(2.0L), real.max/sqrt(2.0L), real.max],
             [ real.infinity, real.nan, real.infinity],
             [ real.nan, real.infinity, real.infinity],
@@ -1845,7 +1845,7 @@ unittest
     assert(!isNormal(e));
     assert(!isNormal(real.infinity));
     assert(isNormal(-real.max));
-    assert(!isNormal(real.min/4));
+    assert(!isNormal(real.min_normal/4));
 
 }
 
@@ -2190,7 +2190,7 @@ debug(UnitTest) {
  *  $(TABLE_SV
  *    $(SVH x,            nextUp(x)   )
  *    $(SV  -$(INFIN),    -real.max   )
- *    $(SV  $(PLUSMN)0.0, real.min*real.epsilon )
+ *    $(SV  $(PLUSMN)0.0, real.min_normal*real.epsilon )
  *    $(SV  real.max,     $(INFIN) )
  *    $(SV  $(INFIN),     $(INFIN) )
  *    $(SV  $(NAN),       $(NAN)   )
@@ -2319,7 +2319,7 @@ pure nothrow float nextUp(float x)
  *  $(TABLE_SV
  *    $(SVH x,            nextDown(x)   )
  *    $(SV  $(INFIN),     real.max  )
- *    $(SV  $(PLUSMN)0.0, -real.min*real.epsilon )
+ *    $(SV  $(PLUSMN)0.0, -real.min_normal*real.epsilon )
  *    $(SV  -real.max,    -$(INFIN) )
  *    $(SV  -$(INFIN),    -$(INFIN) )
  *    $(SV  $(NAN),       $(NAN)    )
@@ -2356,13 +2356,13 @@ unittest {
         assert( nextUp(-1.0L-real.epsilon) == -1.0 );
         assert( nextUp(-2.0L) == -2.0 + real.epsilon);
         // denormals and zero
-        assert( nextUp(-real.min) == -real.min*(1-real.epsilon) );
-        assert( nextUp(-real.min*(1-real.epsilon)) == -real.min*(1-2*real.epsilon) );
-        assert( isIdentical(-0.0L, nextUp(-real.min*real.epsilon)) );
-        assert( nextUp(-0.0L) == real.min*real.epsilon );
-        assert( nextUp(0.0L) == real.min*real.epsilon );
-        assert( nextUp(real.min*(1-real.epsilon)) == real.min );
-        assert( nextUp(real.min) == real.min*(1+real.epsilon) );
+        assert( nextUp(-real.min_normal) == -real.min_normal*(1-real.epsilon) );
+        assert( nextUp(-real.min_normal*(1-real.epsilon)) == -real.min_normal*(1-2*real.epsilon) );
+        assert( isIdentical(-0.0L, nextUp(-real.min_normal*real.epsilon)) );
+        assert( nextUp(-0.0L) == real.min_normal*real.epsilon );
+        assert( nextUp(0.0L) == real.min_normal*real.epsilon );
+        assert( nextUp(real.min_normal*(1-real.epsilon)) == real.min_normal );
+        assert( nextUp(real.min_normal) == real.min_normal*(1+real.epsilon) );
         // positive numbers
         assert( nextUp(1.0L) == 1.0 + real.epsilon );
         assert( nextUp(2.0L-real.epsilon) == 2.0 );
@@ -2378,13 +2378,13 @@ unittest {
     assert( nextUp(-2.0) == -2.0 + double.epsilon);
     // denormals and zero
 
-    assert( nextUp(-double.min) == -double.min*(1-double.epsilon) );
-    assert( nextUp(-double.min*(1-double.epsilon)) == -double.min*(1-2*double.epsilon) );
-    assert( isIdentical(-0.0, nextUp(-double.min*double.epsilon)) );
-    assert( nextUp(0.0) == double.min*double.epsilon );
-    assert( nextUp(-0.0) == double.min*double.epsilon );
-    assert( nextUp(double.min*(1-double.epsilon)) == double.min );
-    assert( nextUp(double.min) == double.min*(1+double.epsilon) );
+    assert( nextUp(-double.min_normal) == -double.min_normal*(1-double.epsilon) );
+    assert( nextUp(-double.min_normal*(1-double.epsilon)) == -double.min_normal*(1-2*double.epsilon) );
+    assert( isIdentical(-0.0, nextUp(-double.min_normal*double.epsilon)) );
+    assert( nextUp(0.0) == double.min_normal*double.epsilon );
+    assert( nextUp(-0.0) == double.min_normal*double.epsilon );
+    assert( nextUp(double.min_normal*(1-double.epsilon)) == double.min_normal );
+    assert( nextUp(double.min_normal) == double.min_normal*(1+double.epsilon) );
     // positive numbers
     assert( nextUp(1.0) == 1.0 + double.epsilon );
     assert( nextUp(2.0-double.epsilon) == 2.0 );
@@ -2392,14 +2392,14 @@ unittest {
 
     float fn = NaN(0xABC);
     assert(isIdentical(nextUp(fn), fn));
-    float f = -float.min*(1-float.epsilon);
-    float f1 = -float.min;
+    float f = -float.min_normal*(1-float.epsilon);
+    float f1 = -float.min_normal;
     assert( nextUp(f1) ==  f);
     f = 1.0f+float.epsilon;
     f1 = 1.0f;
     assert( nextUp(f1) == f );
     f1 = -0.0f;
-    assert( nextUp(f1) == float.min*float.epsilon);
+    assert( nextUp(f1) == float.min_normal*float.epsilon);
     assert( nextUp(float.infinity)==float.infinity );
 
     assert(nextDown(1.0L+real.epsilon)==1.0);
@@ -2807,7 +2807,7 @@ unittest
    assert(feqrel(1.5-real.epsilon,1.5L)==real.mant_dig-1);
    assert(feqrel(1.5-real.epsilon,1.5+real.epsilon)==real.mant_dig-2);
 
-   assert(feqrel(real.min/8,real.min/17)==3);;
+   assert(feqrel(real.min_normal/8,real.min_normal/17)==3);;
 
    // Numbers that are close
    assert(feqrel(0x1.Bp+84, 0x1.B8p+84)==5);
@@ -2947,8 +2947,8 @@ unittest {
       assert(ieeeMean(1.0L,real.infinity)==0x1p8192L);
       assert(ieeeMean(0.0L,real.infinity)==1.5);
     }
-    assert(ieeeMean(0.5*real.min*(1-4*real.epsilon),0.5*real.min)
-           == 0.5*real.min*(1-2*real.epsilon));
+    assert(ieeeMean(0.5*real.min_normal*(1-4*real.epsilon),0.5*real.min_normal)
+           == 0.5*real.min_normal*(1-2*real.epsilon));
 }
 
 public:

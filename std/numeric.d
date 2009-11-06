@@ -701,7 +701,7 @@ unittest
     real power(real x) {
         ++powercalls;
         ++numCalls;
-        return pow(x, n) + double.min;
+        return pow(x, n) + double.min_normal;
     }
     int [] power_nvals = [3, 5, 7, 9, 19, 25];
     // Alefeld paper states that pow(x,n) is a very poor case, where bisection
