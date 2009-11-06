@@ -61,7 +61,7 @@ DOC=..\..\html\d\phobos
 ## Location of druntime tree
 
 DRUNTIME=..\druntime
-DRUNTIMELIB=$(DRUNTIME)\druntime.lib
+DRUNTIMELIB=$(DRUNTIME)\lib\druntime.lib
 
 .c.obj:
 	$(CC) -c $(CFLAGS) $*
