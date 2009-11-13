@@ -49,7 +49,7 @@
  *    (See accompanying file LICENSE_1_0.txt or copy at
  *          http://www.boost.org/LICENSE_1_0.txt)
  */
-module(system) std.math;
+module std.math;
 
 //debug=math;           // uncomment to turn on debugging printf's
 
