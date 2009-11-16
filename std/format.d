@@ -180,7 +180,7 @@ private TypeInfo primitiveTypeInfo(Mangle m)
     case Mangle.Twchar:
       ti = typeid(wchar);break;
     case Mangle.Tdchar:
-      ti = typeid(dchar);
+      ti = typeid(dchar);break;
     default:
       ti = null;
     }
