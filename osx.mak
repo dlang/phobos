@@ -44,7 +44,7 @@ DDOCFLAGS=-version=ddoc -d -c -o- $(STDDOC)
 STD_MODULES = $(addprefix std/, algorithm array atomics base64 bigint	\
         bitmanip boxer compiler complex contracts conv cpuid cstream	\
         ctype date datebase dateparse demangle encoding file format		\
-        functional getopt intrinsic iterator loader math md5			\
+        functional getopt intrinsic iterator json loader math md5		\
         metastrings mmfile numeric outbuffer path perf process random	\
         range regex regexp signals socket socketstream stdint stdio		\
         stdiobase stream string syserror system traits typecons			\

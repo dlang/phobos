@@ -113,6 +113,7 @@ SRCS= std\math.d std\stdio.d std\dateparse.d std\date.d std\uni.d std\string.d \
 	std\regex.d \
 	std\stdarg.d \
 	std\stdint.d \
+	std\json.d \
 	crc32.d \
 	std\c\process.d \
 	std\c\stdarg.d \
@@ -157,6 +158,7 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_getopt.html \
 	$(DOC)\std_intrinsic.html \
 	$(DOC)\std_iterator.html \
+	$(DOC)\std_json.html \
 	$(DOC)\std_math.html \
 	$(DOC)\std_md5.html \
 	$(DOC)\std_metastrings.html \
@@ -219,7 +221,7 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 	std\metastrings.d std\contracts.d std\getopt.d \
 	std\variant.d std\numeric.d std\bitmanip.d std\complex.d \
 	std\functional.d std\algorithm.d std\array.d std\typecons.d std\iterator.d \
-	std\xml.d std\encoding.d std\bigint.d \
+	std\json.d std\xml.d std\encoding.d std\bigint.d \
 	std\range.d std\stdiobase.d \
 	std\regex.d std\datebase.d \
 	std\__fileinit.d
@@ -376,6 +378,9 @@ getopt.obj : std\getopt.d
 
 iterator.obj : std\iterator.d
 	$(DMD) -c $(DFLAGS) std\iterator.d
+
+json.obj : std\json.d
+	$(DMD) -c $(DFLAGS) std\json.d
 
 loader.obj : std\loader.d
 	$(DMD) -c $(DFLAGS) std\loader.d
@@ -592,6 +597,9 @@ $(DOC)\std_iterator.html : std.ddoc std\iterator.d
 
 $(DOC)\std_intrinsic.html : std.ddoc std\intrinsic.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_intrinsic.html std.ddoc std\intrinsic.d
+
+$(DOC)\std_json.html : std.ddoc std\json.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_json.html std.ddoc std\json.d
 
 $(DOC)\std_math.html : std.ddoc std\math.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_math.html std.ddoc std\math.d
