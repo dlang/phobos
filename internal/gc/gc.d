@@ -903,6 +903,152 @@ byte[] _d_arrayappendcT(TypeInfo ti, inout byte[] x, ...)
     return x;
 }
 
+/**
+ * Append dchar to char[]
+ */
+extern (C) char[] _d_arrayappendcd(inout char[] x, dchar c)
+{
+    const sizeelem = c.sizeof;            // array element size
+    auto cap = _gc.capacity(x.ptr);
+    auto length = x.length;
+
+    // c could encode into from 1 to 4 characters
+    int nchars;
+    if (c <= 0x7F)
+        nchars = 1;
+    else if (c <= 0x7FF)
+        nchars = 2;
+    else if (c <= 0xFFFF)
+        nchars = 3;
+    else if (c <= 0x10FFFF)
+        nchars = 4;
+    else
+	assert(0);	// invalid utf character - should we throw an exception instead?
+
+    auto newlength = length + nchars;
+    auto newsize = newlength * sizeelem;
+
+    assert(cap == 0 || length * sizeelem <= cap);
+
+    debug(PRINTF) printf("_d_arrayappendcd(sizeelem = %d, ptr = %p, length = %d, cap = %d)\n", sizeelem, x.ptr, x.length, cap);
+
+    if (cap <= newsize)
+    {   byte* newdata;
+
+	if (cap >= 4096)
+	{   // Try to extend in-place
+	    auto u = _gc.extend(x.ptr, (newsize + 1) - cap, (newsize + 1) - cap);
+	    if (u)
+	    {
+		goto L1;
+	    }
+	}
+        debug(PRINTF) printf("_d_arrayappendcd(length = %d, newlength = %d, cap = %d)\n", length, newlength, cap);
+        auto newcap = newCapacity(newlength, sizeelem);
+        assert(newcap >= newlength * sizeelem);
+        newdata = cast(byte *)_gc.malloc(newcap + 1);
+	_gc.hasNoPointers(newdata);
+        memcpy(newdata, x.ptr, length * sizeelem);
+        (cast(void**)(&x))[1] = newdata;
+    }
+  L1:
+    *cast(size_t *)&x = newlength;
+    char* ptr = &x.ptr[length];
+
+    if (c <= 0x7F)
+    {
+        ptr[0] = cast(char) c;
+    }
+    else if (c <= 0x7FF)
+    {
+        ptr[0] = cast(char)(0xC0 | (c >> 6));
+        ptr[1] = cast(char)(0x80 | (c & 0x3F));
+    }
+    else if (c <= 0xFFFF)
+    {
+        ptr[0] = cast(char)(0xE0 | (c >> 12));
+        ptr[1] = cast(char)(0x80 | ((c >> 6) & 0x3F));
+        ptr[2] = cast(char)(0x80 | (c & 0x3F));
+    }
+    else if (c <= 0x10FFFF)
+    {
+        ptr[0] = cast(char)(0xF0 | (c >> 18));
+        ptr[1] = cast(char)(0x80 | ((c >> 12) & 0x3F));
+        ptr[2] = cast(char)(0x80 | ((c >> 6) & 0x3F));
+        ptr[3] = cast(char)(0x80 | (c & 0x3F));
+    }
+    else
+	assert(0);
+
+    assert((cast(size_t)x.ptr & 15) == 0);
+    assert(_gc.capacity(x.ptr) > x.length * sizeelem);
+    return x;
+}
+
+
+/**
+ * Append dchar to wchar[]
+ */
+extern (C) wchar[] _d_arrayappendwd(inout wchar[] x, dchar c)
+{
+    const sizeelem = c.sizeof;            // array element size
+    auto cap = _gc.capacity(x.ptr);
+    auto length = x.length;
+
+    // c could encode into from 1 to 2 w characters
+    int nchars;
+    if (c <= 0xFFFF)
+        nchars = 1;
+    else
+        nchars = 2;
+
+    auto newlength = length + nchars;
+    auto newsize = newlength * sizeelem;
+
+    assert(cap == 0 || length * sizeelem <= cap);
+
+    debug(PRINTF) printf("_d_arrayappendwd(sizeelem = %d, ptr = %p, length = %d, cap = %d)\n", sizeelem, x.ptr, x.length, cap);
+
+    if (cap <= newsize)
+    {   byte* newdata;
+
+	if (cap >= 4096)
+	{   // Try to extend in-place
+	    auto u = _gc.extend(x.ptr, (newsize + 1) - cap, (newsize + 1) - cap);
+	    if (u)
+	    {
+		goto L1;
+	    }
+	}
+
+        debug(PRINTF) printf("_d_arrayappendwd(length = %d, newlength = %d, cap = %d)\n", length, newlength, cap);
+        auto newcap = newCapacity(newlength, sizeelem);
+        assert(newcap >= newlength * sizeelem);
+        newdata = cast(byte *)_gc.malloc(newcap + 1);
+	_gc.hasNoPointers(newdata);
+        memcpy(newdata, x.ptr, length * sizeelem);
+        (cast(void**)(&x))[1] = newdata;
+    }
+  L1:
+    *cast(size_t *)&x = newlength;
+    wchar* ptr = &x.ptr[length];
+
+    if (c <= 0xFFFF)
+    {
+        ptr[0] = cast(wchar) c;
+    }
+    else
+    {
+	ptr[0] = cast(wchar) ((((c - 0x10000) >> 10) & 0x3FF) + 0xD800);
+	ptr[1] = cast(wchar) (((c - 0x10000) & 0x3FF) + 0xDC00);
+    }
+
+    assert((cast(size_t)x.ptr & 15) == 0);
+    assert(_gc.capacity(x.ptr) > x.length * sizeelem);
+    return x;
+}
+
+
 extern (C)
 byte[] _d_arraycatT(TypeInfo ti, byte[] x, byte[] y)
 out (result)
