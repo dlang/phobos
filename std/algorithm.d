@@ -1176,7 +1176,7 @@ Sorted:
 
 Searching can be sped up considerably if $(D haystack) is already
 sorted by an ordering predicate $(D less). The speedup can only occur
-it the following relation between $(D pred) and $(D less) holds:
+if the following relation between $(D pred) and $(D less) holds:
 
 $(D pred(a, b) == (!less(a, b) && !less(b, a)))
 
