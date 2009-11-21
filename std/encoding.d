@@ -55,19 +55,10 @@ import std.range;
 
 unittest
 {
-    ubyte[][] validStrings =
+    static ubyte[][] validStrings =
     [
         // Plain ASCII
-	/* The following line used to work. The problem is array literals are now
-	 * brought to a common type before the ubyte[][] is applied. So the ubyte[]
-	 * of the first is merged with the int[0] of the second, which fails,
-	 * since e?ubyte[]:int[0] doesn't work.
-	 * One solution is to set the array elements out the same way.
-	 */
-        //cast(ubyte[])"hello",
-	/* Replacement for above line
-	 */
-	[ 0x68, 0x65, 0x6C, 0x6C, 0x6F ],
+        cast(ubyte[])"hello",
 
         // First possible sequence of a certain length
         [ 0x00 ],                       // U+00000000   one byte
@@ -103,7 +94,7 @@ unittest
         [ 0xDF, 0xBF ],                 // U+0000FFFF
     ];
 
-    ubyte[][] invalidStrings =
+    static ubyte[][] invalidStrings =
     [
         // First possible sequence of a certain length, but greater
         // than U+10FFFF
@@ -217,7 +208,7 @@ unittest
         [ 0xED, 0xBF, 0xBF ],       // U+DFFF
     ];
 
-    string[] sanitizedStrings =
+    static string[] sanitizedStrings =
     [
         "\uFFFD","\uFFFD",
         "\uFFFD","\uFFFD","\uFFFD","\uFFFD","\uFFFD","\uFFFD"," \uFFFD ",
