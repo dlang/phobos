@@ -4316,7 +4316,7 @@ unittest
         auto b = new ubyte[5];
         topNIndex!("a > b")(a, b, SortOutput.yes);
         //foreach (e; b) writeln(e, ":", a[e]);
-        assert(b == [ cast(ubyte) 0, 2, 1, 6, 5], text(b));
+        assert(b == [ cast(ubyte) 0, cast(ubyte)2, cast(ubyte)1, cast(ubyte)6, cast(ubyte)5], text(b));
     }
 }
 /+
