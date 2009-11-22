@@ -242,7 +242,7 @@ Always $(D false) (random generators are infinite ranges).
 /**
    Compares against $(D_PARAM rhs) for equality.
  */
-    bool opEquals(LinearCongruentialEngine rhs) const
+    bool opEquals(ref const LinearCongruentialEngine rhs) const
     {
         return _x == rhs._x;
     }

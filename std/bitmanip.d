@@ -297,12 +297,12 @@ struct BitArray
     size_t len;
     uint* ptr;
 
-    size_t dim()
+    const size_t dim()
     {
         return (len + 31) / 32;
     }
 
-    size_t length()
+    const size_t length()
     {
         return len;
     }
@@ -578,7 +578,7 @@ struct BitArray
      * Support for operators == and != for bit arrays.
      */
 
-    bool opEquals(BitArray a2)
+    const bool opEquals(const ref BitArray a2)
     {   int i;
 
         if (this.length != a2.length)

@@ -208,7 +208,7 @@ struct Box
     }
     
     /** Return whether this value could be unboxed as the given type without throwing. */
-    bool unboxable(TypeInfo test)
+    bool unboxable(TypeInfo test) const
     {
         if (type is test)
             return true;
@@ -335,9 +335,14 @@ struct Box
      * Compare this box's value with another box. This implicitly casts if the
      * types are different, identical to the regular type system.    
      */
-    bool opEquals(Box other)
+    const bool opEquals(const ref Box other)
     {
-        return opEqualsInternal(other, false);
+        return (cast(Box)this).opEqualsInternal(cast(Box)other, false);
+    }
+    
+    const bool opEquals(Box other)
+    {
+        return (cast(Box)this).opEqualsInternal(other, false);
     }
     
     private float opCmpInternal(Box other, bool inverted)
