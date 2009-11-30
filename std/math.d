@@ -69,6 +69,15 @@ version(DigitalMars){
     version=INLINE_YL2X;        // x87 has opcodes for these
 }
 
+version (X86){
+    version = X86_Any;
+}
+
+version (X86_64){
+    version = X86_Any;
+}
+
+
 
 private:
 /*
@@ -490,11 +499,15 @@ unittest
  *      $(TR $(TD $(NAN))    $(TD $(NAN))  $(TD yes))
  *  )
  */
-float acos(float x)               { return core.stdc.math.acosf(x); }
+pure nothrow real acos(real x)
+{
+    return atan2(sqrt(1-x*x), x);
+}
+
 /// ditto
-double acos(double x)             { return core.stdc.math.acos(x); }
+pure nothrow double acos(double x)   { return acos(cast(real)x); }
 /// ditto
-real acos(real x)               { return core.stdc.math.acosl(x); }
+pure nothrow float acos(float x)     { return acos(cast(real)x); }
 
 /***************
  * Calculates the arc sine of x,
@@ -507,11 +520,14 @@ real acos(real x)               { return core.stdc.math.acosl(x); }
  *      $(TR $(TD $(LT)-1.0)    $(TD $(NAN))       $(TD yes))
  *  )
  */
-float asin(float x)               { return core.stdc.math.asinf(x); }
+pure nothrow real asin(real x)
+{
+    return atan2(x, sqrt(1-x*x));
+}
 /// ditto
-double asin(double x)               { return core.stdc.math.asin(x); }
+pure nothrow double asin(double x)   { return asin(cast(real)x); }
 /// ditto
-real asin(real x)               { return core.stdc.math.asinl(x); }
+pure nothrow float asin(float x)     { return asin(cast(real)x); }
 
 /***************
  * Calculates the arc tangent of x,
@@ -523,11 +539,11 @@ real asin(real x)               { return core.stdc.math.asinl(x); }
  *      $(TR $(TD $(PLUSMN)$(INFIN)) $(TD $(NAN))       $(TD yes))
  *  )
  */
-float atan(float x)               { return core.stdc.math.atanf(x); }
+pure nothrow real atan(real x)       { return atan2(x, 1.0L); }
 /// ditto
-double atan(double x)               { return core.stdc.math.atan(x); }
+pure nothrow double atan(double x)   { return atan(cast(real)x); }
 /// ditto
-real atan(real x)               { return core.stdc.math.atanl(x); }
+pure nothrow float atan(float x)     { return atan(cast(real)x); }
 
 /***************
  * Calculates the arc tangent of y / x,
@@ -550,11 +566,33 @@ real atan(real x)               { return core.stdc.math.atanl(x); }
  *      $(TR $(TD $(PLUSMN)$(INFIN)) $(TD -$(INFIN))    $(TD $(PLUSMN)3$(PI)/4))
  *      )
  */
-float atan2(float y, float x)      { return core.stdc.math.atan2f(y,x); }
+pure nothrow real atan2(real y, real x)
+{
+    version(D_InlineAsm_X86)
+    {
+        asm {
+            fld y;
+            fld x;
+            fpatan;
+        }
+    }
+    else
+    {
+        return core.stdc.math.atan2l(y,x);
+    }
+}
+
 /// ditto
-double atan2(double y, double x)      { return core.stdc.math.atan2(y,x); }
+pure nothrow double atan2(double y, double x)
+{
+    return atan2(cast(real)y, cast(real)x);
+}
+
 /// ditto
-real atan2(real y, real x)      { return core.stdc.math.atan2l(y,x); }
+pure nothrow float atan2(float y, float x) 
+{
+    return atan2(cast(real)y, cast(real)x);
+}
 
 /***********************************
  * Calculates the hyperbolic cosine of x.
@@ -571,9 +609,9 @@ pure nothrow real cosh(real x)               {
     return (y + 1.0/y) * 0.5;
 }
 /// ditto
-pure nothrow double cosh(double x)               { return cosh(cast(real)x); }
+pure nothrow double cosh(double x)   { return cosh(cast(real)x); }
 /// ditto
-pure nothrow float cosh(float x)               { return cosh(cast(real)x); }
+pure nothrow float cosh(float x)     { return cosh(cast(real)x); }
 
 
 /***********************************
@@ -598,9 +636,9 @@ pure nothrow real sinh(real x)
     return 0.5 * y / (y+1) * (y+2);
 }
 /// ditto
-pure nothrow double sinh(double x)               { return sinh(cast(real)x); }
+pure nothrow double sinh(double x)   { return sinh(cast(real)x); }
 /// ditto
-pure nothrow float sinh(float x)               { return sinh(cast(real)x); }
+pure nothrow float sinh(float x)     { return sinh(cast(real)x); }
 
 
 /***********************************
@@ -622,9 +660,9 @@ pure nothrow real tanh(real x)
     return y / (y + 2);
 }
 /// ditto
-pure nothrow double tanh(double x)             { return tanh(cast(real)x); }
+pure nothrow double tanh(double x)   { return tanh(cast(real)x); }
 /// ditto
-pure nothrow float tanh(float x)               { return tanh(cast(real)x); }
+pure nothrow float tanh(float x)     { return tanh(cast(real)x); }
 
 private:
 /* Returns cosh(x) + I * sinh(x)
@@ -674,9 +712,9 @@ pure nothrow real acosh(real x)
         return log(x + sqrt(x*x - 1));
 }
 /// ditto
-pure nothrow double acosh(double x)             { return acosh(cast(real)x); }
+pure nothrow double acosh(double x)  { return acosh(cast(real)x); }
 /// ditto
-pure nothrow float acosh(float x)               { return acosh(cast(real)x); }
+pure nothrow float acosh(float x)    { return acosh(cast(real)x); }
 
 
 unittest
@@ -712,9 +750,9 @@ pure nothrow real asinh(real x)
        : copysign(log1p(fabs(x) + x*x / (1 + sqrt(x*x + 1)) ), x);
 }
 /// ditto
-pure nothrow double asinh(double x)             { return asinh(cast(real)x); }
+pure nothrow double asinh(double x)  { return asinh(cast(real)x); }
 /// ditto
-pure nothrow float asinh(float x)               { return asinh(cast(real)x); }
+pure nothrow float asinh(float x)    { return asinh(cast(real)x); }
 
 unittest
 {
@@ -748,9 +786,9 @@ pure nothrow real atanh(real x)
     return  0.5 * log1p( 2 * x / (1 - x) );
 }
 /// ditto
-pure nothrow double atanh(double x)             { return atanh(cast(real)x); }
+pure nothrow double atanh(double x)  { return atanh(cast(real)x); }
 /// ditto
-pure nothrow float atanh(float x)               { return atanh(cast(real)x); }
+pure nothrow float atanh(float x)    { return atanh(cast(real)x); }
 
 
 unittest
@@ -956,6 +994,8 @@ L_largenegative:
     }
 }
 
+
+
 /**
  * Calculates 2$(SUP x).
  *
@@ -1061,6 +1101,72 @@ unittest{
     assert(exp2(-9.0L)== 1.0L/512.0);
     assert(exp(3.0L) == E*E*E);
 }
+
+unittest
+{    
+    FloatingPointControl ctrl;
+    ctrl.disableExceptions(FloatingPointControl.allExceptions);
+    ctrl.rounding = FloatingPointControl.roundToNearest;
+    
+    // @@BUG@@: Non-immutable array literals are ridiculous.
+    // Note that these are only valid for 80-bit reals: overflow will be different for 64-bit reals.
+    static const real [2][] exptestpoints = 
+    [ // x,            exp(x)    
+        [1.0L,           E                           ], 
+        [0.5L,           0x1.A612_98E1_E069_BC97p+0L ],
+        [3.0L,           E*E*E                       ],
+        [0x1.1p13L,      0x1.29aeffefc8ec645p+12557L ], // near overflow
+        [-0x1.18p13L,    0x1.5e4bf54b4806db9p-12927L ], // near underflow
+        [-0x1.625p13L,   0x1.a6bd68a39d11f35cp-16358L],
+        [-0x1p30L,       0                           ], // underflow - subnormal
+        [-0x1.62DAFp13L, 0x1.96c53d30277021dp-16383L ],
+        [-0x1.643p13L,   0x1p-16444L                 ],
+        [-0x1.645p13L,   0                           ], // underflow to zero
+        [0x1p80L,        real.infinity               ], // far overflow
+        [real.infinity,  real.infinity               ],
+        [0x1.7p13L,      real.infinity               ]  // close overflow
+    ];    
+    real x;
+    IeeeFlags f;
+    for (int i=0; i<exptestpoints.length;++i) {
+        resetIeeeFlags();
+        x = exp(exptestpoints[i][0]);
+        f = ieeeFlags();
+        assert(x == exptestpoints[i][1]);
+        // Check the overflow bit
+        assert(f.overflow() == (fabs(x) == real.infinity));
+        // Check the underflow bit
+        assert(f.underflow() == (fabs(x) < real.min_normal));
+        // Invalid and div by zero shouldn't be affected.
+        assert(!f.invalid);
+        assert(!f.divByZero);
+    }
+    // Ideally, exp(0) would not set the inexact flag. 
+    // Unfortunately, fldl2e sets it!
+    // So it's not realistic to avoid setting it.
+    assert(exp(0.0L) == 1.0);
+    
+    // NaN propagation. Doesn't set flags, bcos was already NaN.
+    resetIeeeFlags();
+    x = exp(real.nan);
+    f = ieeeFlags();
+    assert(isIdentical(x,real.nan));
+    assert(f.flags == 0);
+    
+    resetIeeeFlags();
+    x = exp(-real.nan); 
+    f = ieeeFlags;
+    assert(isIdentical(x, -real.nan));
+    assert(f.flags == 0);
+    
+    x = exp(NaN(0x123));
+    assert(isIdentical(x, NaN(0x123)));
+    
+    // High resolution test
+    assert(exp(0.5L) == 0x1.A612_98E1_E069_BC97_2DFE_FAB6D_33Fp+0L);    
+    
+}
+
 
 /**
  * Calculate cos(y) + i sin(y).
@@ -1751,6 +1857,300 @@ real remquo(real x, real y, out int n)  /// ditto
     else
         throw new NotImplemented("remquo");
 }
+
+/** IEEE exception status flags ('sticky bits')
+
+ These flags indicate that an exceptional floating-point condition has occurred.
+ They indicate that a NaN or an infinity has been generated, that a result
+ is inexact, or that a signalling NaN has been encountered. If floating-point 
+ exceptions are enabled (unmasked), a hardware exception will be generated
+ instead of setting these flags. 
+
+ Example:
+ ----
+    real a=3.5;
+    // Set all the flags to zero
+    resetIeeeFlags();
+    assert(!ieeeFlags.divByZero);
+    // Perform a division by zero.
+    a/=0.0L;
+    assert(a==real.infinity);
+    assert(ieeeFlags.divByZero);
+    // Create a NaN
+    a*=0.0L;
+    assert(ieeeFlags.invalid);
+    assert(isNaN(a));
+
+    // Check that calling func() has no effect on the
+    // status flags.
+    IeeeFlags f = ieeeFlags;
+    func();
+    assert(ieeeFlags == f);
+
+ ----
+ */
+struct IeeeFlags
+{
+private:
+    // The x87 FPU status register is 16 bits.
+    // The Pentium SSE2 status register is 32 bits.
+    uint flags;
+    version (X86_Any) {
+        // Applies to both x87 status word (16 bits) and SSE2 status word(32 bits).
+        enum : int {
+            INEXACT_MASK   = 0x20,
+            UNDERFLOW_MASK = 0x10,
+            OVERFLOW_MASK  = 0x08,
+            DIVBYZERO_MASK = 0x04,
+            INVALID_MASK   = 0x01
+        }
+        // Don't bother about denormals, they are not supported on most CPUs.
+        //  DENORMAL_MASK = 0x02;
+    } else version (PPC) {
+        // PowerPC FPSCR is a 32-bit register.
+        enum : int {
+            INEXACT_MASK   = 0x600,
+            UNDERFLOW_MASK = 0x010,
+            OVERFLOW_MASK  = 0x008,
+            DIVBYZERO_MASK = 0x020,
+            INVALID_MASK   = 0xF80 // PowerPC has five types of invalid exceptions.
+        }
+    } else version(Sparc) { // SPARC FSR is a 32bit register
+             //(64 bits for Sparc 7 & 8, but high 32 bits are uninteresting).
+        enum : int {
+            INEXACT_MASK   = 0x020,
+            UNDERFLOW_MASK = 0x080,
+            OVERFLOW_MASK  = 0x100,
+            DIVBYZERO_MASK = 0x040,
+            INVALID_MASK   = 0x200
+        }
+    }
+private:
+    static uint getIeeeFlags()
+    {
+        version(D_InlineAsm_X86) {
+            asm {
+                 fstsw AX;
+                 // NOTE: If compiler supports SSE2, need to OR the result with
+                 // the SSE2 status register.
+                 // Clear all irrelevant bits
+                 and EAX, 0x03D;
+            }             
+        } else version (PPC) {
+            assert(0, "Not yet supported");
+        } else {
+           /*   SPARC:
+               int retval;
+               asm { st %fsr, retval; }
+               return retval;
+            */
+           assert(0, "Not yet supported");
+        }
+    }
+    static void resetIeeeFlags()
+    {
+        version(D_InlineAsm_X86) {
+            asm {
+                fnclex;
+            }
+        } else {
+            /* SPARC:
+              int tmpval;
+              asm { st %fsr, tmpval; }
+              tmpval &=0xFFFF_FC00;
+              asm { ld tmpval, %fsr; }
+            */
+           assert(0, "Not yet supported");
+        }
+    }
+public:
+     /// The result cannot be represented exactly, so rounding occured.
+     /// (example: x = sin(0.1); }
+     bool inexact() { return (flags & INEXACT_MASK) != 0; }
+     /// A zero was generated by underflow (example: x = real.min*real.epsilon/2;)
+     bool underflow() { return (flags & UNDERFLOW_MASK) != 0; }
+     /// An infinity was generated by overflow (example: x = real.max*2;)
+     bool overflow() { return (flags & OVERFLOW_MASK) != 0; }
+     /// An infinity was generated by division by zero (example: x = 3/0.0; )
+     bool divByZero() { return (flags & DIVBYZERO_MASK) != 0; }
+     /// A machine NaN was generated. (example: x = real.infinity * 0.0; )
+     bool invalid() { return (flags & INVALID_MASK) != 0; }
+}
+
+
+/// Set all of the floating-point status flags to false.
+void resetIeeeFlags() { IeeeFlags.resetIeeeFlags; }
+
+/// Return a snapshot of the current state of the floating-point status flags.
+IeeeFlags ieeeFlags()
+{
+   return IeeeFlags(IeeeFlags.getIeeeFlags());
+}
+
+/** Control the Floating point hardware
+
+  Change the IEEE754 floating-point rounding mode and the floating-point 
+  hardware exceptions.
+  
+  By default, the rounding mode is roundToNearest and all hardware exceptions 
+  are disabled. For most applications, debugging is easier if the $(I division
+  by zero), $(I overflow), and $(I invalid operation) exceptions are enabled. 
+  These three are combined into a $(I severeExceptions) value for convenience.
+  Note in particular that if $(I invalidException) is enabled, a hardware trap
+  will be generated whenever an uninitialized floating-point variable is used. 
+  
+  All changes are temporary. The previous state is restored at the
+  end of the scope.
+
+  
+Example:
+ ----
+  {
+    // Enable hardware exceptions for division by zero, overflow to infinity, 
+    // invalid operations, and uninitialized floating-point variables.
+    
+    FloatingPointControl fpctrl;
+    fpctrl.enableExceptions(FloatingPointControl.severeExceptions);
+  
+    double y = x*3.0; // will generate a hardware exception, if x is uninitialized.
+    // 
+    fpctrl.rounding = FloatingPointControl.roundUp;
+    
+    // The hardware exceptions will be disabled when leaving this scope.
+    // The original rounding mode will also be restored.
+  }
+    
+ ----
+  
+ */
+struct FloatingPointControl
+{
+    alias uint RoundingMode;
+    
+    /** IEEE rounding modes.
+     * The default mode is roundToNearest.
+     */
+    enum : RoundingMode
+    {
+        roundToNearest = 0x0000,
+        roundDown      = 0x0400,
+        roundUp        = 0x0800,
+        roundToZero    = 0x0C00
+    };
+    /** IEEE hardware exceptions.
+     *  By default, all exceptions are masked (disabled).
+     */
+    enum : uint
+    {
+        inexactException   = 0x20,
+        underflowException = 0x10,
+        overflowException  = 0x08,
+        divByZeroException = 0x04,
+        invalidException   = 0x01,
+        /// Severe = The overflow, division by zero, and invalid exceptions.
+        severeExceptions   = overflowException | divByZeroException
+                             | invalidException,
+        allExceptions      = severeExceptions | underflowException 
+                             | inexactException,
+    };
+private:    
+    enum ushort EXCEPTION_MASK = 0x3F;
+    enum ushort ROUNDING_MASK = 0xC00;
+public:    
+    /// Enable (unmask) specific hardware exceptions. Multiple exceptions may be ORed together.
+    void enableExceptions(uint exceptions)
+    {
+        initialize();
+        setControlState(getControlState() & ~(exceptions & EXCEPTION_MASK));
+    }
+    /// Disable (mask) specific hardware exceptions. Multiple exceptions may be ORed together.
+    void disableExceptions(uint exceptions)
+    {
+        initialize();
+        setControlState(getControlState() | (exceptions & EXCEPTION_MASK));
+    }    
+    //// Change the floating-point hardware rounding mode
+    void rounding(RoundingMode newMode)
+    {
+        ushort old = getControlState();
+        setControlState((old & ~ROUNDING_MASK) | (newMode & ROUNDING_MASK));
+    }
+    /// Return the exceptions which are currently enabled (unmasked)
+    static uint enabledExceptions()
+    {
+        return (getControlState() & EXCEPTION_MASK) ^ EXCEPTION_MASK;
+    }
+    /// Return the currently active rounding mode
+    static RoundingMode rounding()
+    {
+        return cast(RoundingMode)(getControlState() & ROUNDING_MASK);
+    }
+    ///  Clear all pending exceptions, then restore the original exception state and rounding mode.
+    ~this()
+    {
+        clearExceptions();
+        setControlState(savedState);
+    }
+private:
+    ushort savedState;
+    
+    bool initialized=false;
+    void initialize()
+    {
+        // BUG: This works around the absence of this() constructors.
+        if (initialized) return;
+        clearExceptions();
+        savedState = getControlState();
+        initialized=true;
+    }
+    // Clear all pending exceptions
+    static void clearExceptions()
+    {
+        asm
+        {
+            fclex;
+        }
+    }
+    // Read from the control register
+    static ushort getControlState()
+    {
+        short cont;
+        asm
+        {
+            xor EAX, EAX;
+            fstcw cont;
+        }
+        return cont;
+    }
+    // Set the control register
+    static void setControlState(ushort newState)
+    {
+        asm
+        {
+             fclex;
+             fldcw newState;       
+        }
+    }   
+}
+
+unittest
+{
+   {
+        FloatingPointControl ctrl;
+        ctrl.enableExceptions(FloatingPointControl.divByZeroException 
+                           | FloatingPointControl.overflowException);
+        assert(ctrl.enabledExceptions() == 
+            FloatingPointControl.divByZeroException 
+          | FloatingPointControl.overflowException);
+        
+        ctrl.rounding = FloatingPointControl.roundUp;
+        assert(FloatingPointControl.rounding == FloatingPointControl.roundUp);
+    }
+    assert(FloatingPointControl.rounding 
+       == FloatingPointControl.roundToNearest);
+    assert(FloatingPointControl.enabledExceptions() ==0);
+}
+
 
 /*********************************
  * Returns !=0 if e is a NaN.
