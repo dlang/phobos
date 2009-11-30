@@ -1848,19 +1848,19 @@ string zfill(string s, int width)
 
 string replace(string s, string from, string to)
 {
-    char[] p;
-    int i;
-    size_t istart;
+    if (from.length == 0) return s;
 
-    //printf("replace('%.*s','%.*s','%.*s')\n", s, from, to);
-    if (from.length == 0)
-    return s;
-    istart = 0;
-    while (istart < s.length)
+    char[] p;
+    for (size_t istart; istart < s.length; )
     {
-        i = indexOf(s[istart .. s.length], from);
+        auto i = indexOf(s[istart .. s.length], from);
         if (i == -1)
         {
+            if (istart == 0)
+            {
+                // Never found, so just return s
+                return s;
+            }
             p ~= s[istart .. s.length];
             break;
         }
@@ -1888,6 +1888,8 @@ unittest
     r = replace(s, "", to);
     i = cmp(r, "This is a foo foo list");
     assert(i == 0);
+
+    assert(replace(r, "won't find this", "whatever") is r);
 }
 
 /*****************************
