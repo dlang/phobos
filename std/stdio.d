@@ -1812,7 +1812,6 @@ Initialize with a message and an error code. */
         version (Posix)
         {
             char[256] buf = void;
-            assert(false);
             auto s = std.c.string.strerror_r(errno, buf.ptr, buf.length);
         }
         else
