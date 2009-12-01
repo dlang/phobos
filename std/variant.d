@@ -8,7 +8,7 @@
  * $(LINK2 http://en.wikipedia.org/wiki/Algebraic_data_type,algebraic type)).
  * Such types are useful
  * for type-uniform binary interfaces, interfacing with scripting
- * languages, and comfortable exploratory programming. 
+ * languages, and comfortable exploratory programming.
  *
  * Macros:
  *  WIKI = Phobos/StdVariant
@@ -18,15 +18,15 @@
  * ----
  * Variant a; // Must assign before use, otherwise exception ensues
  * // Initialize with an integer; make the type int
- * Variant b = 42; 
+ * Variant b = 42;
  * assert(b.type == typeid(int));
  * // Peek at the value
  * assert(b.peek!(int) !is null && *b.peek!(int) == 42);
  * // Automatically convert per language rules
  * auto x = b.get!(real);
  * // Assign any other type, including other variants
- * a = b; 
- * a = 3.14; 
+ * a = b;
+ * a = 3.14;
  * assert(a.type == typeid(double));
  * // Implicit conversions work just as with built-in types
  * assert(a > b);
@@ -42,12 +42,12 @@
  * // Can also assign class values
  * class Foo {}
  * auto foo = new Foo;
- * a = foo; 
+ * a = foo;
  * assert(*a.peek!(Foo) == foo); // and full type information is preserved
  * ----
- * 
+ *
  * Credits:
- * 
+ *
  * Reviewed by Brad Roberts. Daniel Keep provided a detailed code
  * review prompting the following improvements: (1) better support for
  * arrays; (2) support for associative arrays; (3) friendlier behavior
@@ -137,7 +137,7 @@ template This2Variant(V, T...)
  *
  * Both $(D_PARAM Algebraic) and $(D_PARAM Variant) share $(D_PARAM
  * VariantN)'s interface. (See their respective documentations below.)
- * 
+ *
  * $(D_PARAM VariantN) is a discriminated union type parameterized
  * with the largest size of the types stored ($(D_PARAM maxDataSize))
  * and with the list of allowed types ($(D_PARAM AllowedTypes)). If
@@ -151,7 +151,7 @@ struct VariantN(size_t maxDataSize, AllowedTypesX...)
 {
 private:
     alias This2Variant!(VariantN, AllowedTypesX) AllowedTypes;
-    
+
     // Compute the largest practical size from maxDataSize
     struct SizeChecker
     {
@@ -190,7 +190,7 @@ private:
         ubyte[size] store = void;
         // conservatively mark the region as pointers
         static if (size >= (void*).sizeof)
-            void* p[size / (void*).sizeof]; 
+            void* p[size / (void*).sizeof];
     }
 
     // internals
@@ -228,7 +228,7 @@ private:
         }
         return 0;
     }
-    
+
     // Handler for all of a type's operations
     static int handler(A)(OpID selector, ubyte[size]* pStore, void* parm)
     {
@@ -247,7 +247,7 @@ private:
         // Input: TypeInfo object
         // Output: target points to a copy of *me, if me was not null
         // Returns: true iff the A can be converted to the type represented
-        // by the incoming TypeInfo 
+        // by the incoming TypeInfo
         static bool tryPutting(A* src, TypeInfo targetType, void* target)
         {
             alias TypeTuple!(A, ImplicitConversionTargets!(A)) AllTypes;
@@ -273,7 +273,7 @@ private:
             }
             return false;
         }
-        
+
         switch (selector)
         {
         case OpID.getTypeInfo:
@@ -365,7 +365,7 @@ private:
             // Nicholson-Sauls.
             static if (isArray!(A) && allowed!(typeof(A.init[0])))
             {
-                // array type; input and output are the same VariantN 
+                // array type; input and output are the same VariantN
                 auto result = cast(VariantN*) parm;
                 size_t index = result.convertsTo!(int)
                     ? result.get!(int) : result.get!(size_t);
@@ -520,7 +520,7 @@ public:
      * assert(a.hasValue);
      * ----
      */
-    
+
     bool hasValue() const
     {
         // @@@BUG@@@ in compiler, the cast shouldn't be needed
@@ -533,7 +533,7 @@ public:
      * value. Otherwise, returns $(D_PARAM null). In cases
      * where $(D_PARAM T) is statically disallowed, $(D_PARAM
      * peek) will not compile.
-     * 
+     *
      * Example:
      * ----
      * Variant a = 5;
@@ -554,7 +554,7 @@ public:
     /**
      * Returns the $(D_PARAM typeid) of the currently held value.
      */
-    
+
     TypeInfo type() const
     {
         TypeInfo result;
@@ -608,7 +608,7 @@ public:
      * conversion is not possible, throws a $(D_PARAM
      * VariantException).
      */
-    
+
     DecayStaticToDynamicArray!(T) get(T)() if (!is(T == const))
     {
         union Buf
@@ -676,7 +676,7 @@ public:
     /**
      * Formats the stored value as a string.
      */
-    
+
     string toString()
     {
         string result;
@@ -713,7 +713,7 @@ public:
         auto result = fptr(OpID.compare, &store, &temp);
         if (result == int.min)
         {
-            throw new VariantException(type, rhs.type);
+            throw new VariantException(type, temp.type);
         }
         return result;
     }
@@ -809,7 +809,7 @@ public:
 
     // Commenteed all _r versions for now because of ambiguities
     // arising when two Variants are used
-    
+
     /////ditto
     // VariantN opSub_r(T)(T lhs)
     // {
@@ -872,7 +872,7 @@ public:
     //     temp ~= this;
     //     return temp;
     // }
-    
+
     ///ditto
     VariantN opAddAssign(T)(T rhs)  { return this = this + rhs; }
     ///ditto
@@ -997,7 +997,7 @@ public:
  * Currently, $(D_PARAM Algebraic) does not allow recursive data
  * types. They will be allowed in a future iteration of the
  * implementation.
- * 
+ *
  * Example:
  * ----
  * auto v = Algebraic!(int, double, string)(5);
@@ -1077,7 +1077,7 @@ Variant[] variantArray(T...)(T args)
  * $(D_PARAM coerce) is attempted with an incompatible target type;)
  * $(LI A comparison between $(D_PARAM Variant) objects of
  * incompatible types is attempted.))
- * 
+ *
  */
 
 // @@@ BUG IN COMPILER. THE 'STATIC' BELOW SHOULD NOT COMPILE
@@ -1138,7 +1138,7 @@ version(none) unittest
     auto variantArrayAsVariant = Variant(heterogeneous);
     assert(variantArrayAsVariant[0] == 1);
     assert(variantArrayAsVariant.length == 3);
-    
+
     // array tests
     auto arr = Variant([1.2].dup);
     auto e = arr[0];
@@ -1160,7 +1160,7 @@ version(none) unittest
     assert(a != c);
     // comparison via implicit conversions
     a = 42; b = 42.0; assert(a == b);
-        
+
     // try failing conversions
     bool failed = false;
     try
@@ -1205,7 +1205,7 @@ version(none) unittest
 unittest
 {
     Variant v;
-    
+
     assert(!v.hasValue);
     v = 42;
     assert( v.peek!(int) );
@@ -1221,7 +1221,7 @@ unittest
     assert( v.get!(string) == "Hello, World!" );
     assert(!is(char[] : wchar[]));
     assert( !v.convertsTo!(wchar[]) );
-    assert( v.get!(string) == "Hello, World!" );    
+    assert( v.get!(string) == "Hello, World!" );
 
     v = [1,2,3,4,5];
     assert( v.peek!(int[]) );
@@ -1233,10 +1233,10 @@ unittest
     //@@@ BUG IN COMPILER: DOUBLE SHOULD NOT IMPLICITLY CONVERT TO FLOAT
     assert( !v.convertsTo!(float) );
     assert( *v.peek!(double) == 3.1413 );
-    
+
     auto u = Variant(v);
     assert( u.peek!(double) );
-    assert( *u.peek!(double) == 3.1413 );   
+    assert( *u.peek!(double) == 3.1413 );
 
     // operators
     v = 38;
@@ -1262,7 +1262,7 @@ unittest
     assert( Variant(4) >> Variant(2) == 1 );
     assert( Variant("abc") ~ "def" == "abcdef" );
     assert( Variant("abc") ~ Variant("def") == "abcdef" );
-    
+
     v = 38;
     v += 4;
     assert( v == 42 );
@@ -1275,7 +1275,8 @@ unittest
     v = 38; v ^= 5; assert( v == 35 );
     v = 38; v <<= 1; assert( v == 76 );
     v = 38; v >>= 1; assert( v == 19 );
-    
+    v = 38; v += 1;  assert( v < 40 );
+
     v = "abc";
     v ~= "def";
     assert( v == "abcdef", *v.peek!(char[]) );
@@ -1292,12 +1293,12 @@ unittest
         auto v1 = Variant(42);
         auto v2 = Variant("foo");
         auto v3 = Variant(1+2.0i);
-    
+
         int[Variant] hash;
         hash[v1] = 0;
         hash[v2] = 1;
         hash[v3] = 2;
-    
+
         assert( hash[v1] == 0 );
         assert( hash[v2] == 1 );
         assert( hash[v3] == 2 );
@@ -1308,7 +1309,7 @@ unittest
         hash["b"] = 2;
         hash["c"] = 3;
         Variant vhash = hash;
-    
+
         assert( vhash.get!(int[char[]])["a"] == 1 );
         assert( vhash.get!(int[char[]])["b"] == 2 );
         assert( vhash.get!(int[char[]])["c"] == 3 );
@@ -1347,7 +1348,7 @@ unittest
     struct Huge {
         real a, b, c, d, e, f, g;
     }
-    
+
     Huge huge;
     huge.e = 42;
     Variant v;
