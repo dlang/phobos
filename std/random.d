@@ -55,7 +55,7 @@ Distributed under the Boost Software License, Version 1.0.
 module std.random;
 
 import std.algorithm, std.c.time, std.contracts, std.conv, std.date, std.math,
-    std.numeric, std.process, std.range, std.stdio, std.traits;
+    std.numeric, std.process, std.range, std.stdio, std.traits, core.thread;
 
 // Segments of the code in this file Copyright (c) 1997 by Rick Booth
 // From "Inner Loops" by Rick Booth, Addison-Wesley
@@ -164,7 +164,7 @@ The parameters of this distribution. The random number is $(D_PARAM x
         }
         return result * n;
     }
-    
+
     unittest {
         static assert(primeFactorsOnly(100) == 10);
         //writeln(primeFactorsOnly(11));
@@ -174,7 +174,7 @@ The parameters of this distribution. The random number is $(D_PARAM x
         // enum x = primeFactorsOnly(7 * 7 * 7 * 11 * 15);
         // static assert(x == 7 * 11 * 15);
     }
-    
+
     private static bool properLinearCongruentialParameters(ulong m,
             ulong a, ulong c) {
         // Bounds checking
@@ -188,7 +188,7 @@ The parameters of this distribution. The random number is $(D_PARAM x
         // Passed all tests
         return true;
     }
-    
+
     // check here
     static assert(c == 0 || properLinearCongruentialParameters(m, a, c),
             "Incorrect instantiation of LinearCongruentialEngine");
@@ -238,7 +238,7 @@ $(D x0).
 Always $(D false) (random generators are infinite ranges).
  */
     enum bool empty = false;
-    
+
 /**
    Compares against $(D_PARAM rhs) for equality.
  */
@@ -455,7 +455,7 @@ Parameter for the generator.
 Always $(D false).
  */
     enum bool empty = false;
-    
+
     private UIntType mt[n];
     private size_t mti = size_t.max; /* means mt is not initialized */
     UIntType _y = UIntType.max;
@@ -526,7 +526,8 @@ uint unpredictableSeed()
     static bool seeded;
     static MinstdRand0 rand;
     if (!seeded) {
-        rand.seed(getpid ^ cast(uint)getUTCtime);
+        uint threadID = cast(uint) cast(void*) Thread.getThis();
+        rand.seed((getpid + threadID) ^ cast(uint) getUTCtime);
         seeded = true;
     }
     rand.popFront;
@@ -1108,7 +1109,7 @@ static this()
     {
         // time.h
         // sys/time.h
-        
+
         timeval tv;
         if (gettimeofday(&tv, null))
         {   // Some error happened - try time() instead
