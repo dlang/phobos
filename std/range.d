@@ -443,7 +443,7 @@ unittest
 /**
 This is a best-effort implementation of $(D length) for any kind of
 range.
- 
+
 If $(D hasLength!(Range)), simply returns $(D range.length) without
 checking $(D upTo).
 
@@ -503,10 +503,10 @@ struct Retro(R) if (isBidirectionalRange!(R) && !isRetro!R)
 private:
     R _input;
     enum bool byRef = is(typeof(&(R.init.front())));
-    
+
 public:
     alias R Source;
-    
+
 /**
 Forwards to $(D _input.empty).
  */
@@ -625,7 +625,7 @@ struct Stride(R) if (isInputRange!(R))
 private:
     R _input;
     size_t _n;
-    
+
 public:
 /**
 Initializes the stride.
@@ -653,7 +653,7 @@ Initializes the stride.
             }
         }
     }
-    
+
 /**
 Returns $(D this).
  */
@@ -693,7 +693,7 @@ Forwards to $(D _input.empty).
 Forwards to $(D _input.popFront).
  */
     static if (hasLength!(R))
-        void popBack() 
+        void popBack()
         {
             enforce(_input.length >= _n);
             static if (isRandomAccessRange!(R) && hasSlicing!(R))
@@ -813,16 +813,16 @@ private:
         enum sameET = is(.ElementType!(A) == RvalueElementType);
     }
     enum bool allSameType = allSatisfy!(sameET, R);
-    
+
     Tuple!(R) _input;
-    
+
 public:
     // This doesn't work yet
     static if (allSameType)
         alias ref RvalueElementType ElementType;
     else
         alias RvalueElementType ElementType;
-    
+
     this(R input)
     {
         foreach (i, v; input)
@@ -830,7 +830,7 @@ public:
             _input.field[i] = v;
         }
     }
-    
+
     bool empty()
     {
         foreach (i, Unused; R)
@@ -839,7 +839,7 @@ public:
         }
         return true;
     }
-    
+
     void popFront()
     {
         foreach (i, Unused; R)
@@ -849,12 +849,12 @@ public:
             return;
         }
     }
-    
-    //@@@BUG 2597@@@ 
+
+    //@@@BUG 2597@@@
     //auto front()
     //@@@AWKWARD!!!@@@
     mixin(
-        (allSameType ? "ref " : "")~
+        ((allSameType && allSatisfy!(hasAssignableElements, R)) ? "ref " : "")~
         q{ElementType front()
             {
                 foreach (i, Unused; R)
@@ -869,7 +869,7 @@ public:
     static if (allSatisfy!(isBidirectionalRange, R))
     {
         mixin(
-            (allSameType ? "ref " : "")~
+            ((allSameType && allSatisfy!(hasAssignableElements, R)) ? "ref " : "")~
             q{ElementType back()
                 {
                     foreach_reverse (i, Unused; R)
@@ -889,9 +889,9 @@ public:
                 _input.field[i].popBack;
                 return;
             }
-        }    
+        }
     }
-    
+
     static if (allSatisfy!(hasLength, R))
         size_t length()
         {
@@ -906,7 +906,7 @@ public:
     static if (allSatisfy!(isRandomAccessRange, R))
     {
         mixin(
-            (allSameType ? "ref " : "")~
+            ((allSameType && allSatisfy!(hasAssignableElements, R)) ? "ref " : "")~
             q{ElementType opIndex(uint index)
                 {
                     foreach (i, Unused; R)
@@ -919,7 +919,8 @@ public:
                 }
             });
 
-        static if (allSameType) void opIndexAssign(ElementType v, uint index)
+        static if (allSameType && allSatisfy!(hasAssignableElements, R))
+        void opIndexAssign(ElementType v, uint index)
         {
             foreach (i, Unused; R)
             {
@@ -1015,6 +1016,10 @@ unittest
         c[3] = 42;
         assert(c[3] == 42);
     }
+
+    // Make sure bug 3311 is fixed.  ChainImpl should compile even if not all
+    // elements are mutable.
+    auto c = chain( iota(0, 10), iota(0, 10) );
 }
 
 /**
@@ -1036,7 +1041,7 @@ struct Radial(R) if (isRandomAccessRange!(R) && hasLength!(R))
 private:
     R _low, _up;
     bool _upIsActive;
-    
+
 public:
 /**
 Takes a range and starts iterating from its median point. Ranges with
@@ -1188,10 +1193,10 @@ private:
     size_t _maxAvailable;
     R _input;
     enum bool byRef = is(typeof(&(R.init[0])));
-    
+
 public:
     alias R Source;
-    
+
     static if (byRef)
         alias ref .ElementType!(R) ElementType;
     else
@@ -1201,7 +1206,7 @@ public:
     {
         return _maxAvailable == 0 || _input.empty;
     }
-    
+
     void popFront()
     {
         enforce(_maxAvailable > 0);
@@ -1253,7 +1258,7 @@ public:
             }
         }
     }
-    
+
     static if (isRandomAccessRange!(R))
     {
         mixin(
@@ -1288,7 +1293,7 @@ public:
                 }
             });
     }
-    
+
     Take opSlice() { return this; }
 }
 
@@ -1497,7 +1502,7 @@ struct Cycle(R) if (isStaticArray!(R))
     private alias typeof(R[0]) ElementType;
     private ElementType* _ptr;
     private size_t _index;
-    
+
     this(ref R input, size_t index = 0)
     {
         _ptr = input.ptr;
@@ -1587,10 +1592,10 @@ struct SListRange(T, Topology topology = Topology.flexible)
 private:
     struct Node { T _value; Node * _next; }
     Node * _root;
-    
+
 public:
 /**
-Constructor taking an array of values. 
+Constructor taking an array of values.
 
 Example:
 ----
@@ -1608,7 +1613,7 @@ assert(equal(lst, [1, 2, 3, 4, 5][]));
                 _root[i - 1]._next = &_root[i];
         }
     }
-    
+
 /**
 Range primitive operation that returns $(D true) iff there are no more
 elements to be iterated.
@@ -1692,7 +1697,7 @@ Example:
 ----
 int[] a = [ 1, 2, 3 ];
 string[] b = [ "a", "b", "c" ];
-// prints 1:a 2:b 3:c 
+// prints 1:a 2:b 3:c
 foreach (e; zip(a, b))
 {
     write(e.at!(0), ':', e.at!(1), ' ');
@@ -1745,7 +1750,7 @@ stopping policy.
         {
             switch (stoppingPolicy)
             {
-            case StoppingPolicy.shortest: 
+            case StoppingPolicy.shortest:
                 if (ranges.field[i + 1].empty) return true;
                 break;
             case StoppingPolicy.longest:
@@ -1833,7 +1838,7 @@ $(D length).
             }
             return result;
         }
-    
+
 /**
 Returns a slice of the range. Defined only if all range define
 slicing.
@@ -2060,7 +2065,7 @@ public:
         this._state = initial;
         this._cache = compute(this._state, this._n);
     }
-    
+
     ElementType front()
     {
         //return ElementType.init;
@@ -2140,7 +2145,7 @@ if (is(typeof((E.init - B.init) + 1 * S.init)))
     {
         return step > 0 ? a < b : a > b;
     }
-    
+
     if (!myless(aBitAboveCount * step, ebs)) --aBitAboveCount;
     static if (isFloatingPoint!(typeof(aBitAboveCount)))
     {
@@ -2162,7 +2167,7 @@ if (is(typeof((E.init - B.init) + 1 * S.init)))
             typeof(return).Source(
                 Tuple!(CommonType!(B, E), S)(begin, step), 0u));
 }
-       
+
 /// Ditto
 Take!(Sequence!("a.field[0] + n * a.field[1]",
                 Tuple!(CommonType!(B, E), uint)))
@@ -2218,20 +2223,20 @@ enum TransverseOptions
 /**
 When transversed, the elements of a range of ranges are assumed to
 have different lengths (e.g. a jagged array).
- */ 
+ */
     assumeJagged, //default
 /**
 The transversal enforces that the elements of a range of ranges have
 all the same length (e.g. an array of arrays, all having the same
 length). Checking is done once upon construction of the transversal
 range.
- */ 
+ */
     enforceNotJagged,
 /**
 The transversal assumes, without verifying, that the elements of a
 range of ranges have all the same length. This option is useful if
 checking was already done from the outside of the range.
- */ 
+ */
     assumeNotJagged,
 }
 
@@ -2290,7 +2295,7 @@ struct FrontTransversal(RangeOfRanges,
             }
         }
     }
-    
+
 /**
    Forward range primitives.
 */
@@ -2332,7 +2337,7 @@ isBidirectionalRange!RangeOfRanges).
             prime;
         }
     }
-    
+
     static if (isRandomAccessRange!RangeOfRanges &&
             (opt == TransverseOptions.assumeNotJagged ||
                     opt == TransverseOptions.enforceNotJagged))
@@ -2460,7 +2465,7 @@ isBidirectionalRange!RangeOfRanges).
             prime;
         }
     }
-    
+
     static if (isRandomAccessRange!RangeOfRanges &&
             (opt == TransverseOptions.assumeNotJagged ||
                     opt == TransverseOptions.enforceNotJagged))
@@ -2507,12 +2512,12 @@ unittest
 struct Transposed(RangeOfRanges)
 {
     alias typeof(map!"a.front"(RangeOfRanges.init)) ElementType;
-    
+
     this(RangeOfRanges input)
     {
         this._input = input;
     }
-    
+
     ElementType front()
     {
         return map!"a.front"(_input);
@@ -2558,7 +2563,7 @@ unittest
     auto tr = transposed(x);
     int[][] witness = [ [ 1, 3 ], [ 2, 4 ] ];
     uint i;
-    
+
     foreach (e; tr)
     {
         assert(array(e) == witness[i++]);
