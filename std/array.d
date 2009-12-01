@@ -1,6 +1,6 @@
 // Written in the D programming language.
 
-/** 
+/**
 Copyright: Copyright Andrei Alexandrescu 2008 - 2009.
 License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
 Authors:   $(WEB erdani.org, Andrei Alexandrescu)
@@ -35,7 +35,13 @@ ElementType!Range[] array(Range)(Range r) if (isForwardRange!Range)
     static if (hasLength!Range)
     {
         if (r.empty) return null;
-        auto result = (cast(E*) enforce(GC.malloc(r.length * E.sizeof),
+
+        // Determines whether the GC should scan the array.
+        auto blkInfo = (typeid(E).flags & 1) ?
+                       cast(GC.BlkAttr) 0 :
+                       GC.BlkAttr.NO_SCAN;
+
+        auto result = (cast(E*) enforce(GC.malloc(r.length * E.sizeof, blkInfo),
                 text("Out of memory while allocating an array of ", r.length,
                         " objects of type ", E.stringof)))[0 .. r.length];
         foreach (ref e; result)
@@ -499,7 +505,7 @@ will allocate and use a new array.
 
 /**
 Returns the managed array.
- */ 
+ */
     T[] data()
     {
         return cast(typeof(return)) (pArray ? *pArray : null);
@@ -508,12 +514,12 @@ Returns the managed array.
 /**
 Returns the capacity of the array (the maximum number of elements the
 managed array can accommodate before triggering a reallocation).
- */ 
+ */
     size_t capacity() const { return _capacity; }
-    
+
 /**
 Appends one item to the managed array.
- */ 
+ */
     void put(U)(U item) if (isImplicitlyConvertible!(U, T) ||
             isSomeString!(T[]) && isSomeString!(U[]))
     {
@@ -542,7 +548,7 @@ Appends one item to the managed array.
 
 /**
 Appends an entire range to the managed array.
- */ 
+ */
     void put(Range)(Range items) if (isForwardRange!Range
             && is(typeof(Appender.init.put(ElementType!(Range).init))))
     {
@@ -590,7 +596,7 @@ Clears the managed array.
 /**
 Convenience function that returns an $(D Appender!(T)) object
 initialized with $(D t).
- */ 
+ */
 Appender!(E[]) appender(A : E[], E)(A * array = null)
 {
     return Appender!(E[])(array);
@@ -804,7 +810,7 @@ unittest
     // assert(s[0] == 4);
     // assert(s[1] == 5);
     // assert(s[2] == 6);
-    
+
     // assert(s[] == s);
     // assert(s[0 .. s.length] == s);
     // assert(equal(s[0 .. s.length - 1], [4, 5][]));
