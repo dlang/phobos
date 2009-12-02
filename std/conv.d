@@ -2503,7 +2503,7 @@ T to(T, S)(S value) if (isIntegral!S && S.min < 0
 
 /// Unsigned integers (uint and ulong) to string.
 T to(T, S)(S input)
-if (std.traits.staticIndexOf!(Unqual!S, uint, ulong) >= 0 && isSomeString!T)
+if (std.typetuple.staticIndexOf!(Unqual!S, uint, ulong) >= 0 && isSomeString!T)
 {
     Unqual!S value = input;
     alias Unqual!(ElementType!T) Char;
