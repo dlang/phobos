@@ -781,6 +781,6 @@ install:
 	$(CP) $(SRC_STD_C_WIN) $(DIR)\src\phobos\std\c\windows
 	$(CP) $(SRC_STD_C_LINUX) $(DIR)\src\phobos\std\c\linux
 	$(CP) $(SRC_STD_C_OSX) $(DIR)\src\phobos\std\c\osx
-	$(CP) $(SRC_ETC) $(DIR)\src\phobos\etc
+	#$(CP) $(SRC_ETC) $(DIR)\src\phobos\etc
 	$(CP) $(SRC_ETC_C) $(DIR)\src\phobos\etc\c
 	$(CP) $(SRC_ZLIB) $(DIR)\src\phobos\etc\c\zlib
