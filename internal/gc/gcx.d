@@ -2033,6 +2033,11 @@ struct Gcx
 	    }
 	}
 
+	/* After done marking, resume the frozen threads. This is necessary
+	 * so that the finalizers can run without deadlocking with some frozen thread.
+	 */
+	Thread.resumeAll();
+
 	// Free up everything not marked
 	debug(COLLECT_PRINTF) printf("\tfree'ing\n");
 	size_t freedpages = 0;
@@ -2191,8 +2196,6 @@ struct Gcx
 
 	debug(COLLECT_PRINTF) printf("recovered pages = %d\n", recoveredpages);
 	debug(COLLECT_PRINTF) printf("\tfree'd %u bytes, %u pages from %u pools\n", freed, freedpages, npools);
-
-	Thread.resumeAll();
 
 	return freedpages + recoveredpages;
     }
