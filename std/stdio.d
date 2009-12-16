@@ -20,10 +20,10 @@ Distributed under the Boost Software License, Version 1.0.
 module std.stdio;
 
 public import core.stdc.stdio;
-import core.memory, core.stdc.errno, core.stdc.stddef,
+private import core.memory, core.stdc.errno, core.stdc.stddef,
     core.stdc.stdlib, core.stdc.string, core.stdc.wchar_;
-import std.stdiobase;
-import std.algorithm, std.array, std.contracts, std.conv, std.file, std.format,
+private import std.stdiobase;
+private import std.algorithm, std.array, std.contracts, std.conv, std.file, std.format,
     /*std.metastrings,*/ std.range, std.string, std.traits, std.typecons,
     std.typetuple, std.utf;
 
