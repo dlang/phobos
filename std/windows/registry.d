@@ -316,12 +316,12 @@ extern (Windows)
     LONG    RegFlushKey(in HKEY hkey);
     LONG    RegQueryValueExA(   in HKEY hkey, in LPCSTR lpValueName, in Reserved 
                             ,   out REG_VALUE_TYPE type, in void *lpData
-                            ,   inout DWORD cbData);
+                            ,   ref DWORD cbData);
     LONG    RegEnumKeyExA(  in HKEY hkey, in DWORD dwIndex, in LPSTR lpName
-                        ,   inout DWORD cchName, in Reserved , in LPSTR lpClass
+                        ,   ref DWORD cchName, in Reserved , in LPSTR lpClass
                         ,   in LPDWORD cchClass, in FILETIME *ftLastWriteTime);
     LONG    RegEnumValueA(  in HKEY hkey, in DWORD dwIndex, in LPSTR lpValueName
-                        ,   inout DWORD cchValueName, in Reserved 
+                        ,   ref DWORD cchValueName, in Reserved 
                         ,   in LPDWORD lpType, in void *lpData
                         ,   in LPDWORD lpcbData);
     LONG    RegQueryInfoKeyA(   in HKEY hkey, in LPSTR lpClass
@@ -536,7 +536,7 @@ body
     return (ERROR_SUCCESS == lRes) ? hkeyDup : null;
 }
 
-private LONG Reg_EnumKeyName_(  in HKEY hkey, in DWORD index, inout char [] name
+private LONG Reg_EnumKeyName_(  in HKEY hkey, in DWORD index, ref char [] name
                             ,   out DWORD cchName)
 in
 {
@@ -573,7 +573,7 @@ body
 
 
 private LONG Reg_EnumValueName_(in HKEY hkey, in DWORD dwIndex, in LPSTR lpName
-                            ,   inout DWORD cchName)
+                            ,   ref DWORD cchName)
 in
 {
     assert(!(null is hkey));
@@ -1708,7 +1708,7 @@ public:
 ///@}
 
 public:
-    int opApply(int delegate(inout string name) dg)
+    int opApply(int delegate(ref string name) dg)
     {
         int     result  =   0;
         HKEY    hkey    =   m_key.m_hkey;
@@ -1839,7 +1839,7 @@ public:
 ///@}
 
 public:
-    int opApply(int delegate(inout Key key) dg)
+    int opApply(int delegate(ref Key key) dg)
     {
         int         result  =   0;
         HKEY        hkey    =   m_key.m_hkey;
@@ -1981,7 +1981,7 @@ public:
 ///@}
 
 public:
-    int opApply(int delegate(inout string name) dg)
+    int opApply(int delegate(ref string name) dg)
     {
         int     result  =   0;
         HKEY    hkey    =   m_key.m_hkey;
@@ -2106,7 +2106,7 @@ public:
 ///@}
 
 public:
-    int opApply(int delegate(inout Value value) dg)
+    int opApply(int delegate(ref Value value) dg)
     {
         int     result  =   0;
         HKEY    hkey    =   m_key.m_hkey;
