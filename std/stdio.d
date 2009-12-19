@@ -635,7 +635,7 @@ with every line.  */
     
 /** ditto */
     // TODO: optimize this
-    size_t readln(inout wchar[] buf, dchar terminator = '\n')
+    size_t readln(ref wchar[] buf, dchar terminator = '\n')
     {
         string s = readln(terminator);
         if (!s.length) return 0;
@@ -649,7 +649,7 @@ with every line.  */
 
 /** ditto */
 // TODO: fold this together with wchar
-    size_t readln(inout dchar[] buf, dchar terminator = '\n')
+    size_t readln(ref dchar[] buf, dchar terminator = '\n')
     {
         string s = readln(terminator);
         if (!s.length) return 0;
@@ -1376,7 +1376,7 @@ string readln(dchar terminator = '\n')
 }
 
 /** ditto */
-size_t readln(inout char[] buf, dchar terminator = '\n')
+size_t readln(ref char[] buf, dchar terminator = '\n')
 {
     return stdin.readln(buf, terminator);
 }

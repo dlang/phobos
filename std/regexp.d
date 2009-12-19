@@ -711,7 +711,7 @@ class RegExp
     }
 
     /** ditto */
-    public int opApply(int delegate(inout RegExp) dg)
+    public int opApply(int delegate(ref RegExp) dg)
     {
         int result;
         RegExp r = this;
@@ -1378,7 +1378,7 @@ public int test(string s)
         assert("abc" != RegExp(".b.."));
     }
 
-    int chr(inout uint si, rchar c)
+    int chr(ref uint si, rchar c)
     {
         for (; si < input.length; si++)
         {

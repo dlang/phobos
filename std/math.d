@@ -1524,7 +1524,7 @@ real logb(real x)               { return core.stdc.math.logbl(x); }
  *  $(TR $(TD !=$(PLUSMNINF)) $(TD $(PLUSMNINF))  $(TD x)            $(TD no))
  * )
  */
-real modf(real x, inout real y) { return core.stdc.math.modfl(x,&y); }
+real modf(real x, ref real y) { return core.stdc.math.modfl(x,&y); }
 
 /*************************************
  * Efficiently calculates x * 2$(SUP n).

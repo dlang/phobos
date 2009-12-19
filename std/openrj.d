@@ -620,11 +620,11 @@ public:
     /**
      *
      */
-    int opApply(int delegate(inout Field field) dg)
+    int opApply(int delegate(ref Field field) dg)
     {
         int result  =   0;
 
-        foreach (inout field; m_fields)
+        foreach (ref field; m_fields)
         {
             result = dg(field);
 
@@ -1000,11 +1000,11 @@ public:
     /**
      *
      */
-    int opApply(int delegate(inout Record record) dg)
+    int opApply(int delegate(ref Record record) dg)
     {
         int result  =   0;
 
-        foreach(inout Record record; m_records)
+        foreach(ref Record record; m_records)
         {
             result = dg(record);
 
@@ -1020,11 +1020,11 @@ public:
     /**
      *
      */
-    int opApply(int delegate(inout Field field) dg)
+    int opApply(int delegate(ref Field field) dg)
     {
         int result  =   0;
 
-        foreach(inout Field field; m_fields)
+        foreach(ref Field field; m_fields)
         {
             result = dg(field);
 

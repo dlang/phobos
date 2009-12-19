@@ -143,12 +143,12 @@ public HXModule ExeModule_AddRef(HXModule hModule)
  *
  * \param hModule The module handler. It must not be null.
  */
-public void ExeModule_Release(inout HXModule hModule)
+public void ExeModule_Release(ref HXModule hModule)
 {
     ExeModule_Release_(hModule);
 }
 
-public void *ExeModule_GetSymbol(inout HXModule hModule, in string symbolName)
+public void *ExeModule_GetSymbol(ref HXModule hModule, in string symbolName)
 {
     return ExeModule_GetSymbol_(hModule, symbolName);
 }
@@ -207,7 +207,7 @@ version(Windows)
         return ExeModule_Load_(ExeModule_GetPath_(hModule));
     }
 
-    private void ExeModule_Release_(inout HXModule hModule)
+    private void ExeModule_Release_(ref HXModule hModule)
     in
     {
         assert(null !is hModule);
@@ -221,7 +221,7 @@ version(Windows)
         hModule = null;
     }
 
-    private void *ExeModule_GetSymbol_(inout HXModule hModule, in string symbolName)
+    private void *ExeModule_GetSymbol_(ref HXModule hModule, in string symbolName)
     in
     {
         assert(null !is hModule);
@@ -364,7 +364,7 @@ else version(Posix)
         }
     }
 
-    private void ExeModule_Release_(inout HXModule hModule)
+    private void ExeModule_Release_(ref HXModule hModule)
     in
     {
         assert(null !is hModule);
@@ -396,7 +396,7 @@ else version(Posix)
         hModule = null;
     }
 
-    private void *ExeModule_GetSymbol_(inout HXModule hModule, in string symbolName)
+    private void *ExeModule_GetSymbol_(ref HXModule hModule, in string symbolName)
     in
     {
         assert(null !is hModule);

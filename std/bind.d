@@ -88,7 +88,7 @@ template _assign(T) {
                         a[] = b[];
                 }
         } else {
-                void _assign(inout T a, inout T b) {
+                void _assign(ref T a, ref T b) {
                         a = b;
                 }
         }
@@ -119,7 +119,7 @@ template _assign(T, Y, bool copyStaticArrays = true) {
         } else static if (!isStaticArray!(T) && isStaticArray!(Y)) {
                 
                 // the destination is a dynamic array and the source is a static array. this sometimes needs a .dup
-                void _assign(inout T a, DynamicArrayType!(Y) b) {
+                void _assign(ref T a, DynamicArrayType!(Y) b) {
                         static if (copyStaticArrays) {
                                 a = b.dup;
                         } else {
@@ -129,7 +129,7 @@ template _assign(T, Y, bool copyStaticArrays = true) {
         } else {
                 
                 // none of the items is a static array
-                void _assign(inout T a, inout Y b) {
+                void _assign(ref T a, ref Y b) {
                         static if (IndexOf!(T, NumericTypes.type) != -1 && IndexOf!(Y, NumericTypes.type) != -1) {
                                 a = cast(T)b;
                         } else {
@@ -407,7 +407,7 @@ template MBoundFunc() {
         // argI = indexes AllBoundArgs
         // fargI = indexes funcArgs
         // bargI = indexes boundArgs
-        void copyArgs(int argI = 0, int fargI = 0, int bargI = 0)(inout SpecifiedParams funcArgs, DynParams dynArgs) {
+        void copyArgs(int argI = 0, int fargI = 0, int bargI = 0)(ref SpecifiedParams funcArgs, DynParams dynArgs) {
                 static if (argI < AllBoundArgs.length) {
 
                         // the argI-th arg is a composed/nested function
@@ -503,7 +503,7 @@ template MBoundFunc() {
                         // and convert pointers back to references by hand
                         static if (!is(typeof(FAlias) == EmptySlot) && IndexOf!(PassByRef, ParamPassingMethods.type) != -1) {
                                 
-                                // function parameter type pointers (int, float*, inout char) -> (int*, float*, char*)
+                                // function parameter type pointers (int, float*, ref char) -> (int*, float*, char*)
                                 PointerTuple!(Tuple!(RealFuncParams.type[0 .. SpecifiedParams.length])) ptrs;
                                 
                                 // initialize the 'ptrs' tuple instance
@@ -677,9 +677,9 @@ typeof(new BoundFunc!(FT, NullAlias, Tuple!(ArgList))) bind(FT, ArgList...)(FT f
         to bind them. It doesn't, however mean that the resulting delegate can be called, omitting some of its parameters. It only means that these
         arguments that have default values in the function provided to bindAlias don't have to be bound explicitly.
         
-        Additionally, bindAlias takes care of functions with out/inout parameters, by converting them to pointers internally. A function like:
+        Additionally, bindAlias takes care of functions with out/ref parameters, by converting them to pointers internally. A function like:
 ---
-void foo(inout a)
+void foo(ref a)
 ---     
         can be bound using:
 ---
@@ -898,7 +898,7 @@ template ExtractedBoundArgs(BoundArgs ...) {
 /*
         Given a tuple that bind() was called with, it will copy all data that a BoundFunc object will store into an ExtractedBoundArgs tuple
 */
-void extractBoundArgs(int dst, int src, BoundArgs ...)(inout ExtractedBoundArgs!(BoundArgs) result, BoundArgs boundArgs) {
+void extractBoundArgs(int dst, int src, BoundArgs ...)(ref ExtractedBoundArgs!(BoundArgs) result, BoundArgs boundArgs) {
         static if (dst < result.length) {
                 // again, we only want non-dynamic arguments here
                 static if (!isDynArg!(BoundArgs[src])) {
@@ -997,7 +997,7 @@ template FuncReferenceParamsAsPointers_impl(alias Func) {
 /*
         Takes a function/delegate alias and converts its refence parameters to pointers. E.g.
         
-        void function(int, inout char, float*)    ->   (int, char*, float*)
+        void function(int, ref char, float*)    ->   (int, char*, float*)
 */
 template FuncReferenceParamsAsPointers(alias Func) {
         alias FuncReferenceParamsAsPointers_impl!(Func).res FuncReferenceParamsAsPointers;

@@ -631,7 +631,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
 	  auto mSave = m;
 	  valti = skipCI(valti);
 	  keyti = skipCI(keyti);
-	  foreach(inout fakevalue; vaa)
+	  foreach(ref fakevalue; vaa)
 	  {
 	    if (comma) putc(',');
 	    comma = true;

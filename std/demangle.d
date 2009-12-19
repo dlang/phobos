@@ -276,7 +276,7 @@ string demangle(string name)
                             goto default;
 
                         case 'K':
-                            args ~= "inout ";
+                            args ~= "ref ";
                             ni++;
                             goto default;
 

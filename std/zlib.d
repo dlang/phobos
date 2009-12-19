@@ -589,7 +589,7 @@ unittest // by Dave
         char[] buf = new char[uniform(0, 1000/*0000*/)];
 
         // Alternate between more & less compressible
-        foreach(inout char c; buf)
+        foreach(ref char c; buf)
             c = cast(char) (' ' + (uniform(0, idx % 2 ? 91 : 10)));
 
         if(CompressThenUncompress(cast(ubyte[])buf)) {

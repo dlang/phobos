@@ -405,7 +405,7 @@ struct BitArray
     /**********************************************
      * Support for foreach loops for BitArray.
      */
-    int opApply(int delegate(inout bool) dg)
+    int opApply(int delegate(ref bool) dg)
     {
         int result;
 
@@ -420,7 +420,7 @@ struct BitArray
     }
 
     /** ditto */
-    int opApply(int delegate(inout size_t, inout bool) dg)
+    int opApply(int delegate(ref size_t, ref bool) dg)
     {
         int result;
 

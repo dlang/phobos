@@ -218,28 +218,28 @@ struct MD5_CTX
     /* FF, GG, HH, and II transformations for rounds 1, 2, 3, and 4.
      * Rotation is separate from addition to prevent recomputation.
      */
-    static void FF(inout uint a, uint b, uint c, uint d, uint x, uint s, uint ac)
+    static void FF(ref uint a, uint b, uint c, uint d, uint x, uint s, uint ac)
     {
 	a += F (b, c, d) + x + cast(uint)(ac);
 	a = ROTATE_LEFT (a, s);
 	a += b;
     }
 
-    static void GG(inout uint a, uint b, uint c, uint d, uint x, uint s, uint ac)
+    static void GG(ref uint a, uint b, uint c, uint d, uint x, uint s, uint ac)
     {
 	a += G (b, c, d) + x + cast(uint)(ac);
 	a = ROTATE_LEFT (a, s);
 	a += b;
     }
 
-    static void HH(inout uint a, uint b, uint c, uint d, uint x, uint s, uint ac)
+    static void HH(ref uint a, uint b, uint c, uint d, uint x, uint s, uint ac)
     {
 	a += H (b, c, d) + x + cast(uint)(ac);
 	a = ROTATE_LEFT (a, s);
 	a += b;
     }
 
-    static void II(inout uint a, uint b, uint c, uint d, uint x, uint s, uint ac)
+    static void II(ref uint a, uint b, uint c, uint d, uint x, uint s, uint ac)
     {
 	a += I (b, c, d) + x + cast(uint)(ac);
 	a = ROTATE_LEFT (a, s);
