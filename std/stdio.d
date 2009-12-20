@@ -237,9 +237,9 @@ struct File
 {
     /*private*/ struct Impl
     {
-        FILE * handle;
-        uint refs;
-        string name;
+        FILE * handle = null;
+        uint refs = uint.max / 2;
+        string name = null;
         this(FILE* h, uint r, string n)
         {
             handle = h;
@@ -1840,15 +1840,15 @@ extern(C) void std_stdio_static_this()
     //printf("std_stdio_static_this()\n");
 
     //Bind stdin, stdout, stderr
-    __gshared File.Impl stdinImpl = { null, uint.max / 2, null };
+    __gshared File.Impl stdinImpl;
     stdinImpl.handle = core.stdc.stdio.stdin;
     .stdin.p = &stdinImpl;
     // stdout
-    __gshared File.Impl stdoutImpl = { null, uint.max / 2, null };
+    __gshared File.Impl stdoutImpl;
     stdoutImpl.handle = core.stdc.stdio.stdout;
     .stdout.p = &stdoutImpl;
     // stderr
-    __gshared File.Impl stderrImpl = { null, uint.max / 2, null };
+    __gshared File.Impl stderrImpl;
     stderrImpl.handle = core.stdc.stdio.stderr;
     .stderr.p = &stderrImpl;
 }
