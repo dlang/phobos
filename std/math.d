@@ -1609,7 +1609,7 @@ pure nothrow real hypot(real x, real y)
     // If both are tiny, avoid underflow by scaling by sqrt(real.min_normal*real.epsilon).         
 
     enum real SQRTMIN = 0.5*sqrt(real.min_normal); // This is a power of 2.
-    enum real SQRTMAX = 1.0L/SQRTMIN; // 2^((max_exp)/2) = nextUp(sqrt(real.max))
+    enum real SQRTMAX = 1.0L/SQRTMIN; // 2^^((max_exp)/2) = nextUp(sqrt(real.max))
 
     static assert(2*(SQRTMAX/2)*(SQRTMAX/2) <= real.max);
     static assert(real.min_normal*real.max>2 && real.min_normal*real.max<=4); // Proves that sqrt(real.max) ~~  0.5/sqrt(real.min_normal)
@@ -2880,29 +2880,12 @@ pure nothrow real fmin(real x, real y) { return x < y ? x : y; }
 pure nothrow real fma(real x, real y, real z) { return (x * y) + z; }
 
 /*******************************************************************
- * Fast integral powers.
+ * Compute the value of x $(SUP n), where n is an integer
  */
-
-pure nothrow F pow(F)(F x, uint n) if (isFloatingPoint!(F))
-{
-    if (n > int.max)
-    {
-        //assert(n >> 1 <= int.max);
-        // must reduce n so we can call the pow(real, int) overload
-        auto result = pow(x*x, cast(int) (n >> 1));
-        return (n & 1)
-            ? result * x // odd power
-            : result;
-    }
-    return pow(x, cast(int) n);
-}
-
-/// Ditto
-
-pure nothrow F pow(F)(F x, int n) if (isFloatingPoint!(F))
+pure nothrow F pow(F, G)(F x, G n) if (isFloatingPoint!(F) && isIntegral!(G))
 {
     real p = 1.0, v = void;
-    int m = n;
+    G m = n;
     if (n < 0)
     {
         switch (n)
@@ -2941,6 +2924,51 @@ pure nothrow F pow(F)(F x, int n) if (isFloatingPoint!(F))
         if (!m)
             break;
         v *= v;
+    }
+    return p;
+}
+
+
+/** Compute the value of an integer x, raised to the power of a positive
+ * integer n.
+ *
+ *  If both x and n are 0, the result is 1.
+ *  If n is negative, an integer divide error will occur at runtime,
+ * regardless of the value of x.
+ */
+
+pure nothrow typeof(F.init*G.init) pow(F, G)(F x, G n) if (isIntegral!(F) && isIntegral!(G))
+{
+    if (n<0) return x/0; // Only support positive powers
+    typeof(F.init*G.init) p, v = void;
+    G m = n;
+
+    switch (m)
+    {
+    case 0:
+        p = 1;
+        break;
+
+    case 1:
+        p = x;
+        break;
+
+    case 2:
+        p = x * x;
+        break;
+
+    default:
+        v = x;
+        p = 1;
+        while (1){
+            if (m & 1)
+                p *= v;
+            m >>= 1;
+            if (!m)
+                break;
+            v *= v;
+        }
+        break;
     }
     return p;
 }
