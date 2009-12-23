@@ -520,8 +520,8 @@ windows.obj : std\c\windows\windows.d
 
 ################## DOCS ####################################
 
-$(DOC)\object.html : std.ddoc $(DRUNTIME)\src\compiler\dmd\object_.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\object.html std.ddoc $(DRUNTIME)\src\compiler\dmd\object_.d -I$(DRUNTIME)\src\compiler\dmd
+$(DOC)\object.html : std.ddoc $(DRUNTIME)\src\object_.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\object.html std.ddoc $(DRUNTIME)\src\object_.d -I$(DRUNTIME)\src\
 
 $(DOC)\phobos.html : std.ddoc phobos.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\phobos.html std.ddoc phobos.d
@@ -586,8 +586,8 @@ $(DOC)\std_format.html : std.ddoc std\format.d
 $(DOC)\std_functional.html : std.ddoc std\functional.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_functional.html std.ddoc std\functional.d
 
-$(DOC)\std_gc.html : std.ddoc $(DRUNTIME)\src\common\core\memory.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_gc.html std.ddoc $(DRUNTIME)\src\common\core\memory.d
+$(DOC)\std_gc.html : std.ddoc $(DRUNTIME)\src\core\memory.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_gc.html std.ddoc $(DRUNTIME)\src\core\memory.d
 
 $(DOC)\std_getopt.html : std.ddoc std\getopt.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_getopt.html std.ddoc std\getopt.d
@@ -664,8 +664,8 @@ $(DOC)\std_string.html : std.ddoc std\string.d
 $(DOC)\std_system.html : std.ddoc std\system.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_system.html std.ddoc std\system.d
 
-$(DOC)\std_thread.html : std.ddoc $(DRUNTIME)\src\common\core\thread.d
-	$(DMD) -c -o- -d $(DFLAGS) -Df$(DOC)\std_thread.html std.ddoc $(DRUNTIME)\src\common\core\thread.d
+$(DOC)\std_thread.html : std.ddoc $(DRUNTIME)\src\core\thread.d
+	$(DMD) -c -o- -d $(DFLAGS) -Df$(DOC)\std_thread.html std.ddoc $(DRUNTIME)\src\core\thread.d
 
 $(DOC)\std_traits.html : std.ddoc std\traits.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_traits.html std.ddoc std\traits.d
