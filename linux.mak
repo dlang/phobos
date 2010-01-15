@@ -130,7 +130,7 @@ CC$1$2 = $$(call RUN_$1,$(CC_$1))
 DMD$1$2 = $$(call RUN_$1,$(DMD_$1))
 
 $$(ROOT$1$2)/%$$(OBJSUFFIX_$1) : %.c $$(ROOT$1$2)/.directory	
-	@[ -d $$(dir $$@) ] || mkdir --parents $$(dir $$@) || [ -d $$(dir $$@) ]
+	@[ -d $$(dir $$@) ] || mkdir -p $$(dir $$@) || [ -d $$(dir $$@) ]
 	$$(CC$1$2) -c $(CFLAGS_$1_$2) -o$$@ $$<
 
 $$(ROOT$1$2)/emptymain.d : $$(ROOT$1$2)/.directory
@@ -161,12 +161,12 @@ $(LIBDRUNTIME_$1)
 	$$(DMD$1$2) $(DFLAGS_$2) -lib -of$$@ $$^
 
 $$(ROOT$1$2)/.directory :
-	mkdir --parents $$(OBJDIR) || exists $$(OBJDIR)
+	mkdir -p $$(OBJDIR) || exists $$(OBJDIR)
 	if [ "$(SERVER_$1)" != "" ]; then \
-		$$(call RUN_$1,mkdir) --parents $$(OBJDIR)/$1 && \
+		$$(call RUN_$1,mkdir) -p $$(OBJDIR)/$1 && \
 		ln -sf $(HOMEMAP_$1)/$(SERVERDIR_$1)/$$(OBJDIR)/$1 obj/ ; \
 	fi
-	mkdir --parents $$@ || [ -d $$@ ]
+	mkdir -p $$@ || [ -d $$@ ]
 
 $1/$2/unittest : $1/$2 $$(addsuffix $$(EXESUFFIX_$1),$$(addprefix $$(OBJDIR)/$1/$2/unittest/,$(STD_MODULES)))
 
