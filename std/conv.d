@@ -2521,10 +2521,13 @@ if (std.typetuple.staticIndexOf!(Unqual!S, uint, ulong) >= 0 && isSomeString!T)
         enum maxlength = S.sizeof * 3;
     else
         auto maxlength = (value > uint.max ? S.sizeof : uint.sizeof) * 3;
-    
-    auto result = cast(Char[])
-        GC.malloc(Char.sizeof * maxlength, GC.BlkAttr.NO_SCAN)
-        [0 .. Char.sizeof * maxlength];
+ 
+    Char [] result;
+    if (__ctfe) result = new Char[maxlength];
+    else 
+        result = cast(Char[])
+            GC.malloc(Char.sizeof * maxlength, GC.BlkAttr.NO_SCAN)
+            [0 .. Char.sizeof * maxlength];
 
     uint ndigits = 0;
     while (value)
