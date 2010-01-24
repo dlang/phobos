@@ -177,8 +177,20 @@ The parameters of this distribution. The random number is $(D_PARAM x
 
     private static bool properLinearCongruentialParameters(ulong m,
             ulong a, ulong c) {
+        if (m == 0)
+        {
+            static if (is(UIntType == uint))
+            {
+                // Assume m is uint.max + 1
+                m = (1uL << 32);
+            }
+            else
+            {
+                return false;
+            }
+        }
         // Bounds checking
-        if (m == 0 || a == 0 || a >= m || c >= m) return false;
+        if (a == 0 || a >= m || c >= m) return false;
         // c and m are relatively prime
         if (c > 0 && gcd(c, m) != 1) return false;
         // a - 1 is divisible by all prime factors of m
@@ -222,9 +234,34 @@ $(D x0).
     void popFront()
     {
         static if (m)
-            _x = cast(UIntType) ((cast(ulong) a * _x + c) % m);
+        {
+            static if (is(UIntType == uint) && m == uint.max)
+            {
+                immutable ulong
+                    x = (cast(ulong) a * _x + c),
+                    v = x >> 32,
+                    w = x & uint.max;
+                immutable y = cast(uint)(v + w);
+                _x = (y < v || y == uint.max) ? (y + 1) : y;
+            }
+            else static if (is(UIntType == uint) && m == int.max)
+            {
+                immutable ulong
+                    x = (cast(ulong) a * _x + c),
+                    v = x >> 31,
+                    w = x & int.max;
+                immutable uint y = cast(uint)(v + w);
+                _x = (y >= int.max) ? (y - int.max) : y;
+            }
+            else
+            {
+                _x = cast(UIntType) ((cast(ulong) a * _x + c) % m);
+            }
+        }
         else
+        {
             _x = a * _x + c;
+        }
     }
 
 /**
@@ -234,6 +271,7 @@ $(D x0).
     {
         return _x;
     }
+    
 /**
 Always $(D false) (random generators are infinite ranges).
  */
@@ -247,8 +285,8 @@ Always $(D false) (random generators are infinite ranges).
         return _x == rhs._x;
     }
 
-    private UIntType _x = m ? a + c : (a + c) % m;
-};
+    private UIntType _x = m ? (a + c) % m : (a + c);
+}
 
 /**
 Define $(D_PARAM LinearCongruentialEngine) generators with well-chosen
