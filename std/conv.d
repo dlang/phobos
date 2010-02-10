@@ -314,7 +314,7 @@ private template enumToStringImpl(Enum)
                 Enum.stringof ~ "`);";
         }
     }
-    enum code = generate!(__traits(allMembers, Enum)).code;
+    enum code = generate!([__traits(allMembers, Enum)]).code;
 }
 
 unittest
@@ -1044,7 +1044,7 @@ private template enumFromStringImpl(Enum)
                 Enum.stringof ~ "`);";
         }
     }
-    enum code = generate!(__traits(allMembers, Enum)).code;
+    enum code = generate!([__traits(allMembers, Enum)]).code;
 }
 
 unittest

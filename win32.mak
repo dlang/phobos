@@ -192,6 +192,7 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_zip.html \
 	$(DOC)\std_zlib.html \
 	$(DOC)\std_windows_charset.html \
+	$(DOC)\std_windows_registry.html \
 	$(DOC)\std_c_fenv.html \
 	$(DOC)\std_c_locale.html \
 	$(DOC)\std_c_math.html \
@@ -702,6 +703,9 @@ $(DOC)\std_zlib.html : std.ddoc std\zlib.d
 
 $(DOC)\std_windows_charset.html : std.ddoc std\windows\charset.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_windows_charset.html std.ddoc std\windows\charset.d
+
+$(DOC)\std_windows_registry.html : std.ddoc std\windows\registry.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_windows_registry.html std.ddoc std\windows\registry.d
 
 $(DOC)\std_c_fenv.html : std.ddoc std\c\fenv.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_c_fenv.html std.ddoc std\c\fenv.d
