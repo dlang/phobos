@@ -172,6 +172,7 @@ DOCS=	$(DOC)\std_path.html $(DOC)\std_math.html $(DOC)\std_outbuffer.html \
 	$(DOC)\std_uri.html \
 	$(DOC)\std_utf.html \
 	$(DOC)\std_windows_charset.html \
+	$(DOC)\std_windows_registry.html \
 	$(DOC)\std_c_fenv.html \
 	$(DOC)\std_c_locale.html \
 	$(DOC)\std_c_math.html \
@@ -861,6 +862,9 @@ $(DOC)\std_zlib.html : std.ddoc std\zlib.d
 
 $(DOC)\std_windows_charset.html : std.ddoc std\windows\charset.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_windows_charset.html std.ddoc std\windows\charset.d
+
+$(DOC)\std_windows_registry.html : std.ddoc std\windows\registry.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_windows_registry.html std.ddoc std\windows\registry.d
 
 $(DOC)\object.html : std.ddoc internal\object.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\object.html std.ddoc internal\object.d
