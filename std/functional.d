@@ -513,3 +513,82 @@ unittest
     // @@@BUG@@@
     //assert(compose!(`a + 0.5`, `to!(int)(a) + 1`, foo)(1) == 2.5);
 }
+
+private struct DelegateFaker(R, Args...) {
+    R doIt(Args args) {
+        // When this function gets called, the this pointer isn't really a
+        // this pointer (no instance even really exists), but a function
+        // pointer that points to the function
+        // to be called.  Cast it to the correct type and call it.
+
+        auto fp = cast(R function(Args)) &this;
+        return fp(args);
+    }
+}
+
+/**Convert a function pointer to a delegate with the same parameter list and
+ * return type, avoiding heap allocations and use of auxiliary storage.
+ *
+ * Examples:
+ * ---
+ * void doStuff() {
+ *     writeln("Hello, world.");
+ * }
+ *
+ * void runDelegate(void delegate() myDelegate) {
+ *     myDelegate();
+ * }
+ *
+ * auto delegateToPass = toDelegate(&doStuff);
+ * runDelegate(delegateToPass);  // Calls doStuff, prints "Hello, world."
+ * ---
+ *
+ * Bugs:  Doesn't work properly with ref return.  (See DMD bug 3756.)
+ */
+auto toDelegate(F)(F fp) {
+
+    // Workaround for DMD Bug 1818.
+    mixin("alias " ~ ReturnType!(F).stringof ~
+        " delegate" ~ ParameterTypeTuple!(F).stringof ~ " DelType;");
+
+    version(none) {
+        // What the code would be if it weren't for bug 1818:
+        alias ReturnType!(F) delegate(ParameterTypeTuple!(F)) DelType;
+    }
+
+    static struct DelegateFields {
+        union {
+            DelType del;
+            pragma(msg, typeof(del));
+
+            struct {
+                void* contextPtr;
+                void* funcPtr;
+            }
+        }
+    }
+
+    // fp is stored in the returned delegate's context pointer.  The returned
+    // delegate's function pointer points to DelegateFaker.doIt.
+    DelegateFields df;
+    df.contextPtr = cast(void*) fp;
+
+    DelegateFaker!(ReturnType!(F), ParameterTypeTuple!(F)) dummy;
+    auto dummyDel = &(dummy.doIt);
+    df.funcPtr = dummyDel.funcptr;
+
+    return df.del;
+}
+
+unittest {
+    static int inc(ref uint num) {
+        num++;
+        return 8675309;
+    }
+
+    uint myNum = 0;
+    auto incMyNumDel = toDelegate(&inc);
+    static assert(is(typeof(incMyNumDel) == int delegate(ref uint)));
+    auto returnVal = incMyNumDel(myNum);
+    assert(myNum == 1);
+}
