@@ -3,7 +3,7 @@
 /**
 Standard I/O functions that extend $(B std.c.stdio).  $(B std.c.stdio)
 is $(D_PARAM public)ally imported when importing $(B std.stdio).
-  
+
 Macros:
 WIKI=Phobos/StdStdio
 
@@ -72,7 +72,7 @@ version (DIGITAL_MARS_STDIO)
     alias _fputwc_nlock FPUTWC;
     alias _fgetc_nlock FGETC;
     alias _fgetwc_nlock FGETWC;
-    
+
     alias __fp_lock FLOCK;
     alias __fp_unlock FUNLOCK;
 }
@@ -94,7 +94,7 @@ else version (GCC_IO)
         void funlockfile(FILE*);
         ssize_t getline(char**, size_t*, FILE*);
         ssize_t getdelim (char**, size_t*, int, FILE*);
-        
+
         private size_t fwrite_unlocked(const(void)* ptr,
                 size_t size, size_t n, _iobuf *stream);
     }
@@ -147,7 +147,7 @@ struct ByRecord(Fields...)
     char[] line;
     Tuple!(Fields) current;
     string format;
-        
+
     this(File f, string format)
     {
         assert(f.isOpen);
@@ -157,7 +157,7 @@ struct ByRecord(Fields...)
     }
 
     /// Range primitive implementations.
-    bool empty() 
+    bool empty()
     {
         return !file.isOpen;
     }
@@ -256,7 +256,7 @@ cplusplus.com/reference/clibrary/cstdio/fopen.html, fopen)
 function). Throws an exception if the file could not be opened.
 
 Copying one $(D File) object to another results in the two $(D File)
-objects referring to the same underlying file. 
+objects referring to the same underlying file.
 
 The destructor automatically closes the file as soon as no $(D File)
 object refers to it anymore.
@@ -301,7 +301,7 @@ file.
         // p = rhs.p;
         // rhs.p = null;
     }
-    
+
 /**
 First calls $(D detach) (throwing on failure), and then attempts to
 _open file $(D name) with mode $(D stdioOpenmode). The mode has the
@@ -361,7 +361,7 @@ the file handle.
     {
         return !p.handle || .ferror(cast(FILE*) p.handle);
     }
-    
+
 /**
 Detaches from the underlying file. If the sole owner, calls $(D close)
 and throws if that fails.
@@ -373,7 +373,7 @@ and throws if that fails.
         //if (p.refs == 1) close;
         p = null;
     }
-    
+
 /**
 If the file was unopened, succeeds vacuously. Otherwise closes the
 file (by calling $(WEB
@@ -543,7 +543,7 @@ arguments in text format to the file. */
             }
         }
     }
-        
+
 /**
 If the file is not opened, throws an exception. Otherwise, writes its
 arguments in text format to the file, followed by a newline. */
@@ -624,7 +624,7 @@ with every line.  */
         enforce(p && p.handle, "Attempt to read from an unopened file.");
         return readlnImpl(p.handle, buf, terminator);
     }
-    
+
 /** ditto */
     string readln(dchar terminator = '\n')
     {
@@ -632,7 +632,7 @@ with every line.  */
         readln(buf, terminator);
         return assumeUnique(buf);
     }
-    
+
 /** ditto */
     // TODO: optimize this
     size_t readln(ref wchar[] buf, dchar terminator = '\n')
@@ -690,7 +690,7 @@ File) never takes the initiative in closing the file. */
         result.p = new Impl(f, 9999, null);
         return result;
     }
-    
+
 /**
 Returns the $(D FILE*) corresponding to this object.
  */
@@ -705,7 +705,7 @@ Returns the $(D FILE*) corresponding to this object.
     {
         assert(stdout.getFP == std.c.stdio.stdout);
     }
-    
+
 /**
 Returns the file number corresponding to this object.
  */
@@ -715,9 +715,9 @@ Returns the file number corresponding to this object.
                 "Attempting to call fileno() on an unopened file");
         return core.stdc.stdio.fileno(cast(FILE*) p.handle);
     }
-    
+
 /**
-Range that reads one line at a time. */ 
+Range that reads one line at a time. */
     enum KeepTerminator : bool { no, yes }
     /// ditto
     struct ByLine(Char, Terminator)
@@ -726,7 +726,7 @@ Range that reads one line at a time. */
         Char[] line;
         Terminator terminator;
         KeepTerminator keepTerminator;
-        
+
         this(File f, KeepTerminator kt = KeepTerminator.no,
                 Terminator terminator = '\n')
         {
@@ -765,7 +765,7 @@ Range that reads one line at a time. */
 
 /**
 Convenience function that returns the $(D LinesReader) corresponding
-to this file. */ 
+to this file. */
     ByLine!(Char, Terminator) byLine(Terminator = char, Char = char)
     (KeepTerminator keepTerminator = KeepTerminator.no,
             Terminator terminator = '\n')
@@ -854,7 +854,7 @@ In case of an I/O error, an $(D StdioException) is thrown.
 
 /**
 $(D Range) that locks the file and allows fast writing to it.
- */ 
+ */
     struct LockingTextWriter
     {
         //@@@ Hacky implementation due to bugs, see the correct
@@ -878,7 +878,7 @@ $(D Range) that locks the file and allows fast writing to it.
             fps = null;
             handle = null;
         }
-        
+
         /// Range primitive implementations.
         void put(A)(A writeme) if (is(ElementType!A : const(dchar)))
         {
@@ -904,7 +904,7 @@ $(D Range) that locks the file and allows fast writing to it.
                 }
             }
         }
-        
+
         // @@@BUG@@@ 2340
         //void front(C)(C c) if (is(C : dchar)) {
         /// ditto
@@ -983,9 +983,9 @@ $(D Range) that locks the file and allows fast writing to it.
                 }
             }
         }
-        
+
         //@@@BUG correct implementation is below:
-        
+
         // File file;
         // int orientation;
 
@@ -1004,7 +1004,7 @@ $(D Range) that locks the file and allows fast writing to it.
         // // {
         // //     //FLOCK(file.p.handle);
         // // }
-        
+
         // ~this()
         // {
         //     if (!file.p.handle) return;
@@ -1457,7 +1457,7 @@ Example:
   }
 ----
 
- In case of an I/O error, an $(D StdioException) is thrown. 
+ In case of an I/O error, an $(D StdioException) is thrown.
  */
 
 struct lines
@@ -1707,7 +1707,7 @@ The content of $(D buffer) is reused across calls. In the
  except for the last one, in which case $(D buffer.length) may
  be less than 4096 (but always greater than zero).
 
- In case of an I/O error, an $(D StdioException) is thrown. 
+ In case of an I/O error, an $(D StdioException) is thrown.
 */
 
 struct chunks
@@ -1827,7 +1827,7 @@ Initialize with a message and an error code. */
     {
         throw new StdioException(msg);
     }
-    
+
 /// ditto
     static void opCall()
     {
@@ -1911,12 +1911,13 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
              * Read them and convert to chars.
              */
             static assert(wchar_t.sizeof == 2);
+            auto app = appender(&buf);
             buf.length = 0;
             int c2;
             for (int c = void; (c = FGETWC(fp)) != -1; )
             {
                 if ((c & ~0x7F) == 0)
-                {   buf ~= cast(char)c;
+                {   app.put(cast(char) c);
                     if (c == terminator)
                         break;
                 }
@@ -1949,45 +1950,28 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
              * cases.
              */
           L1:
-            char *p;
+            if(buf.ptr is null)
+            {
+                sz = 128;
+                auto p = cast(char*) GC.malloc(sz, GC.BlkAttr.NO_SCAN);
+                buf = p[0 .. 0];
+            } else {
+                buf.length = 0;
+            }
 
-            if (sz)
-            {
-                p = buf.ptr;
-            }
-            else
-            {
-                sz = 64;
-                p = cast(char*) GC.malloc(sz, GC.BlkAttr.NO_SCAN);
-                buf = p[0 .. sz];
-            }
-            size_t i = 0;
-            for (int c = void; (c = FGETC(fp)) != -1; )
-            {
-                if ((p[i] = cast(char)c) != terminator)
-                {
-                    i++;
-                    if (i < sz)
-                        continue;
-                    buf = p[0 .. i];
-                    {
-                        char[] buf2;
-            // This recursively does an unnecessary lock
-                        readlnImpl(fps, buf2, terminator);
-                        buf ~= buf2;
-                    }
+            auto app = appender(&buf);
+            int c;
+            while((c = FGETC(fp)) != -1) {
+                app.put(cast(char) c);
+                if(buf[$ - 1] == terminator) {
                     return buf.length;
                 }
-                else
-                {
-                    buf = p[0 .. i + 1];
-                    return i + 1;
-                }
+
             }
+
             if (ferror(fps))
                 StdioException();
-            buf = p[0 .. i];
-            return i;
+            return buf.length;
         }
         else
         {
@@ -2211,4 +2195,3 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
         static assert(0);
     }
 }
-
