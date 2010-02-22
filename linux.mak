@@ -45,48 +45,17 @@ test.o : test.d
 test : test.o $(LIB)
 	$(CC) -o $@ test.o $(LIB) -lpthread -lm -g
 
-OBJS = asserterror.o deh2.o complex.o gcstats.o \
+OBJS = complex.o gcstats.o \
 	critical.o object.o monitor.o \
-	outofmemory.o file.o \
-	compiler.o system.o moduleinit.o md5.o base64.o \
-	path.o string.o math.o mmfile.o \
-	outbuffer.o ctype.o regexp.o random.o \
 	linux.o linuxsocket.o \
 	posix.o posixsocket.o posixpthread.o \
-	stream.o cstream.o switcherr.o array.o gc.o \
-	thread.o utf.o uri.o \
-	Dcrc32.o conv.o errno.o alloca.o cmath2.o \
-	process.o syserror.o metastrings.o \
-	socket.o socketstream.o stdarg.o stdio.o format.o \
-	perf.o openrj.o uni.o trace.o boxer.o \
-	demangle.o cover.o bitarray.o bind.o \
-	signals.o cpuid.o traits.o typetuple.o loader.o \
-	ti_wchar.o ti_uint.o ti_short.o ti_ushort.o \
-	ti_byte.o ti_ubyte.o ti_long.o ti_ulong.o ti_ptr.o \
-	ti_float.o ti_double.o ti_real.o ti_delegate.o \
-	ti_creal.o ti_ireal.o ti_cfloat.o ti_ifloat.o \
-	ti_cdouble.o ti_idouble.o \
-	ti_AC.o ti_Ag.o ti_Ashort.o \
-	ti_C.o ti_int.o ti_char.o ti_dchar.o \
-	ti_Aint.o ti_Along.o \
-	ti_Afloat.o ti_Adouble.o ti_Areal.o \
-	ti_Acfloat.o ti_Acdouble.o ti_Acreal.o \
-	ti_void.o \
-	date.o dateparse.o llmath.o math2.o Czlib.o Dzlib.o zip.o \
+	Dcrc32.o errno.o \
+	std_c_stdarg.o \
+	Czlib.o \
 	pthread.o
 
 ALLMAKEFILES= \
 	win32.mak linux.mak osx.mak freebsd.mak solaris.mak
-
-SRCS= \
-        internal/aaA.d internal/adi.d \
-        internal/aApply.d internal/aApplyR.d internal/memset.d \
-        internal/arraycast.d internal/arraycat.d \
-        internal/switch.d internal/qsort.d internal/invariant.d \
-        internal/dmain2.d internal/cast.d internal/obj.d \
-        internal/arrayfloat.d internal/arraydouble.d internal/arrayreal.d \
-        internal/arraybyte.d internal/arrayshort.d internal/arrayint.d \
-
 
 ZLIB_OBJS = etc/c/zlib/adler32.o etc/c/zlib/compress.o \
 	etc/c/zlib/crc32.o etc/c/zlib/gzio.o \
@@ -128,11 +97,11 @@ SRC_TI=	\
 	std/typeinfo/ti_creal.d std/typeinfo/ti_ireal.d \
 	std/typeinfo/ti_cfloat.d std/typeinfo/ti_ifloat.d \
 	std/typeinfo/ti_cdouble.d std/typeinfo/ti_idouble.d \
-	std/typeinfo/ti_Adchar.d \
 	std/typeinfo/ti_Ashort.d \
 	std/typeinfo/ti_Ag.d \
 	std/typeinfo/ti_AC.d std/typeinfo/ti_C.d \
 	std/typeinfo/ti_int.d std/typeinfo/ti_char.d \
+	std/typeinfo/ti_dchar.d \
 	std/typeinfo/ti_Aint.d \
 	std/typeinfo/ti_Along.d \
 	std/typeinfo/ti_Afloat.d std/typeinfo/ti_Adouble.d \
@@ -141,13 +110,20 @@ SRC_TI=	\
 	std/typeinfo/ti_Acreal.d \
 	std/typeinfo/ti_void.d
 
+SRC_INTC=	\
+	internal/complex.c internal/critical.c \
+	internal/minit.asm internal/deh.c \
+	internal/monitor.c \
+	internal/mars.h
+
+
 SRC_INT=	\
-	internal/switch.d internal/complex.c internal/critical.c \
-	internal/minit.asm internal/alloca.d internal/llmath.d internal/deh.c \
-	internal/arraycat.d internal/invariant.d internal/monitor.c \
+	internal/switch.d \
+	internal/alloca.d internal/llmath.d \
+	internal/arraycat.d internal/invariant.d \
 	internal/memset.d internal/arraycast.d internal/aaA.d internal/adi.d \
 	internal/dmain2.d internal/cast.d internal/qsort.d internal/deh2.d \
-	internal/cmath2.d internal/obj.d internal/mars.h internal/aApply.d \
+	internal/cmath2.d internal/obj.d internal/aApply.d \
 	internal/aApplyR.d internal/object.d internal/trace.d internal/qsort2.d
 
 SRC_STD_WIN= std/windows/registry.d \
@@ -225,10 +201,25 @@ SRC_GC= internal/gc/gc.d \
 	internal/gc/freebsd.mak \
 	internal/gc/solaris.mak
 
-ALLSRCS = $(SRC) $(SRC_STD) $(SRC_STD_C) $(SRC_TI) $(SRC_INT) $(SRC_STD_WIN) \
+ALLSRCS = $(SRC) $(SRC_STD) $(SRC_STD_C) $(SRC_TI) $(SRC_INTC) $(SRC_INT) $(SRC_STD_WIN) \
 	$(SRC_STD_C_WIN) $(SRC_STD_C_LINUX) $(SRC_ETC) $(SRC_ETC_C) \
 	$(SRC_ZLIB) $(SRC_GC) $(SRC_STD_C_FREEBSD) $(SRC_STD_C_SOLARIS) \
 	$(SRC_STD_C_POSIX)
+
+
+SRCS= \
+        internal/aaA.d internal/adi.d \
+        internal/aApply.d internal/aApplyR.d internal/memset.d \
+        internal/arraycast.d internal/arraycat.d \
+        internal/switch.d internal/qsort.d internal/invariant.d \
+        internal/dmain2.d internal/cast.d internal/obj.d \
+        internal/arrayfloat.d internal/arraydouble.d internal/arrayreal.d \
+        internal/arraybyte.d internal/arrayshort.d internal/arrayint.d \
+	internal/deh2.d internal/llmath.d \
+	internal/trace.d internal/cmath2.d \
+	internal/alloca.d \
+	$(SRC_STD) \
+	$(SRC_TI)
 
 
 $(LIB) : $(OBJS) $(GC_OBJS) $(ZLIB_OBJS) $(SRCS) $(MAKEFILE)
@@ -497,8 +488,8 @@ zip.o : std/zip.d
 
 ### std/c
 
-stdarg.o : std/c/stdarg.d
-	$(DMD) -c $(DFLAGS) std/c/stdarg.d
+std_c_stdarg.o : std/c/stdarg.d
+	$(DMD) -c $(DFLAGS) std/c/stdarg.d -ofstd_c_stdarg.o
 
 ### std/c/linux
 
