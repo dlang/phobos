@@ -235,11 +235,8 @@ template isRandomAccessRange(R)
 {
     enum bool isRandomAccessRange =
         (isBidirectionalRange!(R) || isInfinite!(R))
-        && is(typeof(
-    {
-        R r;
-        auto e = r[1];     // can index
-    }()));
+        && is(typeof(R.init[1]))
+        && !isNarrowString!R;
 }
 
 unittest
@@ -295,9 +292,9 @@ unittest
 {
     enum XYZ : string { a = "foo" };
     auto x = front(XYZ.a);
-    static assert(is(ElementType!(XYZ) : char));
+    static assert(is(ElementType!(XYZ) : dchar));
     immutable char[3] a = "abc";
-    static assert(is(ElementType!(typeof(a)) : char));
+    static assert(is(ElementType!(typeof(a)) : dchar));
     int[] i;
     static assert(is(ElementType!(typeof(i)) : int));
 }
@@ -328,7 +325,7 @@ unittest
     static assert(!hasSwappableElements!(const int[]));
     static assert(!hasSwappableElements!(const(int)[]));
     static assert(hasSwappableElements!(int[]));
-    static assert(hasSwappableElements!(char[]));
+    //static assert(hasSwappableElements!(char[]));
 }
 
 /**
@@ -371,7 +368,8 @@ other ranges may be infinite.
  */
 template hasLength(R)
 {
-    enum bool hasLength = is(typeof(R.init.length) : ulong);
+    enum bool hasLength = is(typeof(R.init.length) : ulong) &&
+        !isNarrowString!R;
 }
 
 unittest
@@ -458,7 +456,7 @@ upTo) steps have been taken and returns $(D upTo).
 size_t walkLength(Range)(Range range, size_t upTo = size_t.max)
 if (isInputRange!(Range))
 {
-    static if (hasLength!(Range))
+    static if (isRandomAccessRange!Range && hasLength!Range)
     {
         return range.length;
     }
@@ -558,7 +556,7 @@ Forwards to $(D _input[_input.length - n + 1]). Defined only if $(D R)
 is a random access range and if $(D R) defines $(D R.length).
  */
     static if (isRandomAccessRange!(R) && hasLength!(R))
-        ref ElementType!(R) opIndex(uint n)
+        ref ElementType!R opIndex(uint n)
         {
             return _input[_input.length - n - 1];
         }
@@ -568,7 +566,7 @@ Range primitive operation that returns the length of the
 range. Forwards to $(D _input.length) and is defined only if $(D
 hasLength!(R)).
  */
-    static if (hasLength!(R))
+    static if (hasLength!R || isNarrowString!R)
         size_t length()
         {
             return _input.length;
@@ -1180,7 +1178,7 @@ offers random access and $(D length), $(D Take) offers them as well.
 Example:
 ----
 int[] arr1 = [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ];
-auto s = take(5, arr1);
+auto s = take(arr1, 5);
 assert(s.length == 5);
 assert(s[4] == 5);
 assert(equal(s, [ 1, 2, 3, 4, 5 ][]));
@@ -1190,8 +1188,8 @@ assert(equal(s, [ 1, 2, 3, 4, 5 ][]));
 struct Take(R) if (isInputRange!(R))
 {
 private:
-    size_t _maxAvailable;
     R _input;
+    size_t _maxAvailable;
     enum bool byRef = is(typeof(&(R.init[0])));
 
 public:
@@ -1293,20 +1291,18 @@ public:
                 }
             });
     }
-
-    Take opSlice() { return this; }
 }
 
 /// Ditto
-Take!(R) take(R)(size_t n, R input) if (isInputRange!(R))
+Take!(R) take(R)(R input, size_t n) if (isInputRange!(R))
 {
-    return Take!(R)(n, input);
+    return Take!(R)(input, n);
 }
 
 unittest
 {
     int[] arr1 = [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ];
-    auto s = take(5, arr1);
+    auto s = take(arr1, 5);
     assert(s.length == 5);
     assert(s[4] == 5);
     assert(equal(s, [ 1, 2, 3, 4, 5 ][]));
@@ -1394,7 +1390,7 @@ unittest
 /**
 Repeats one value forever. Example:
 ----
-enforce(equal(take(4, repeat(5)), [ 5, 5, 5, 5 ][]));
+enforce(equal(take(repeat(5), 4), [ 5, 5, 5, 5 ][]));
 ----
  */
 
@@ -1418,21 +1414,21 @@ Repeat!(T) repeat(T)(T value) { return Repeat!(T)(value); }
 
 unittest
 {
-    enforce(equal(take(4, repeat(5)), [ 5, 5, 5, 5 ][]));
+    enforce(equal(take(repeat(5), 4), [ 5, 5, 5, 5 ][]));
 }
 
 /**
-Replicates $(D value) exactly $(D n) times. Equivalent to $(D take(n,
-repeat(value))).
+Replicates $(D value) exactly $(D n) times. Equivalent to $(D
+take(repeat(value), n)).
  */
-Take!(Repeat!(T)) replicate(T)(size_t n, T value)
+Take!(Repeat!(T)) replicate(T)(T value, size_t n)
 {
-    return take(n, repeat(value));
+    return take(repeat(value), n);
 }
 
 unittest
 {
-    enforce(equal(replicate(4, 5), [ 5, 5, 5, 5 ][]));
+    enforce(equal(replicate(5, 4), [ 5, 5, 5, 5 ][]));
 }
 
 /**
@@ -1446,7 +1442,7 @@ mostly for performance reasons.
 
 Example:
 ----
-assert(equal(take(5, cycle([1, 2][])), [ 1, 2, 1, 2, 1 ][]));
+assert(equal(take(cycle([1, 2][]), 5), [ 1, 2, 1, 2, 1 ][]));
 ----
 
 Tip: This is a great way to implement simple circular buffers.
@@ -1543,12 +1539,12 @@ Cycle!(R) cycle(R)(ref R input, size_t index = 0) if (isStaticArray!R)
 
 unittest
 {
-    assert(equal(take(5, cycle([1, 2][])), [ 1, 2, 1, 2, 1 ][]));
+    assert(equal(take(cycle([1, 2][]), 5), [ 1, 2, 1, 2, 1 ][]));
     int[3] a = [ 1, 2, 3 ];
     static assert(isStaticArray!(typeof(a)));
     auto c = cycle(a);
     assert(a.ptr == c._ptr);
-    assert(equal(take(5, cycle(a)), [ 1, 2, 3, 1, 2 ][]));
+    assert(equal(take(cycle(a), 5), [ 1, 2, 3, 1, 2 ][]));
 }
 
 /**
@@ -1978,9 +1974,9 @@ Example:
 // a[0] = 1, a[1] = 1, and compute a[n+1] = a[n-1] + a[n]
 auto fib = recurrence!("a[n-1] + a[n-2]")(1, 1);
 // print the first 10 Fibonacci numbers
-foreach (e; take(10, fib)) { writeln(e); }
+foreach (e; take(fib, 10)) { writeln(e); }
 // print the first 10 factorials
-foreach (e; take(10, recurrence!("a[n-1] * n")(1))) { writeln(e); }
+foreach (e; take(recurrence!("a[n-1] * n")(1), 10)) { writeln(e); }
 ----
  */
 struct Recurrence(alias fun, StateType, size_t stateSize)
@@ -2021,15 +2017,15 @@ version(none) unittest
 {
     auto fib = recurrence!("a[n-1] + a[n-2]")(1, 1);
     int[] witness = [1, 1, 2, 3, 5, 8, 13, 21, 34, 55 ];
-    //foreach (e; take(10, fib)) writeln(e);
-    assert(equal(take(10, fib), witness));
-    foreach (e; take(10, fib)) {}//writeln(e);
+    //foreach (e; take(fib, 10)) writeln(e);
+    assert(equal(take(fib, 10), witness));
+    foreach (e; take(fib, 10)) {}//writeln(e);
     //writeln(s.front);
     auto fact = recurrence!("n * a[n-1]")(1);
-    assert( equal(take(10, fact), [1, 1, 2, 2*3, 2*3*4, 2*3*4*5, 2*3*4*5*6,
+    assert( equal(take(fact, 10), [1, 1, 2, 2*3, 2*3*4, 2*3*4*5, 2*3*4*5*6,
                             2*3*4*5*6*7, 2*3*4*5*6*7*8, 2*3*4*5*6*7*8*9][]) );
     auto piapprox = recurrence!("a[n] + (n & 1 ? 4. : -4.) / (2 * n + 3)")(4.);
-    foreach (e; take(20, piapprox)) {}//writeln(e);
+    foreach (e; take(piapprox, 20)) {}//writeln(e);
 }
 
 /**
@@ -2098,14 +2094,14 @@ unittest
     // alias Sequence!("a.field[0] += a.field[1]",
     //         Tuple!(int, int)) Gen;
     // Gen x = Gen(tuple(0, 5));
-    // foreach (e; take(15, x))
+    // foreach (e; take(x, 15))
     // {}//writeln(e);
 
     auto y = Sequence!("a.field[0] + n * a.field[1]", Tuple!(int, int))
         (tuple(0, 4));
     //@@BUG
     //auto y = sequence!("a.field[0] + n * a.field[1]")(0, 4);
-    //foreach (e; take(15, y))
+    //foreach (e; take(y, 15))
     {}//writeln(e);
 }
 
@@ -2163,9 +2159,8 @@ if (is(typeof((E.init - B.init) + 1 * S.init)))
                     "; count=", count));
     assert(!myless(count * step, end - begin), text("begin=", begin,
                     "; end=", end, "; step=", step, "; count=", count));
-    return typeof(return)(count,
-            typeof(return).Source(
-                Tuple!(CommonType!(B, E), S)(begin, step), 0u));
+    return typeof(return)(typeof(return).Source(
+                Tuple!(CommonType!(B, E), S)(begin, step), 0u), count);
 }
 
 /// Ditto

@@ -20,9 +20,9 @@ Distributed under the Boost Software License, Version 1.0.
 module std.stdio;
 
 public import core.stdc.stdio;
+private import std.stdiobase;
 private import core.memory, core.stdc.errno, core.stdc.stddef,
     core.stdc.stdlib, core.stdc.string, core.stdc.wchar_;
-private import std.stdiobase;
 private import std.algorithm, std.array, std.contracts, std.conv, std.file, std.format,
     /*std.metastrings,*/ std.range, std.string, std.traits, std.typecons,
     std.typetuple, std.utf;
@@ -618,47 +618,88 @@ This method is more efficient than the one in the previous example
 because $(D stdin.readln(buf)) reuses (if possible) memory allocated
 by $(D buf), whereas $(D buf = stdin.readln()) makes a new memory allocation
 with every line.  */
-
-    size_t readln(ref char[] buf, dchar terminator = '\n')
+    S readln(S = string)(dchar terminator = '\n')
     {
-        enforce(p && p.handle, "Attempt to read from an unopened file.");
-        return readlnImpl(p.handle, buf, terminator);
-    }
-
-/** ditto */
-    string readln(dchar terminator = '\n')
-    {
-        char[] buf;
+        Unqual!(typeof(S.init[0]))[] buf;
         readln(buf, terminator);
         return assumeUnique(buf);
     }
 
-/** ditto */
-    // TODO: optimize this
-    size_t readln(ref wchar[] buf, dchar terminator = '\n')
+    unittest
     {
-        string s = readln(terminator);
-        if (!s.length) return 0;
-        buf.length = 0;
-        foreach (wchar c; s)
+        std.file.write("deleteme", "hello\nworld\n");
+        scope(exit) std.file.remove("deleteme");
+        foreach (C; Tuple!(char, wchar, dchar).Types)
         {
-            buf ~= c;
+            auto witness = [ "hello\n", "world\n" ];
+            auto f = File("deleteme");
+            uint i = 0;
+            immutable(C)[] buf;
+            while ((buf = f.readln!(typeof(buf))()).length)
+            {
+                assert(i < witness.length);
+                assert(equal(buf, witness[i++]));
+            }
+            assert(i == witness.length);
+        }
+    }
+
+/** ditto */
+    size_t readln(C)(ref C[] buf, dchar terminator = '\n') if (isSomeChar!C)
+    {
+        static if (is(C == char))
+        {
+            enforce(p && p.handle, "Attempt to read from an unopened file.");
+            return readlnImpl(p.handle, buf, terminator);
+        }
+        else
+        {
+            // TODO: optimize this
+            string s = readln(terminator);
+            if (!s.length) return 0;
+            buf.length = 0;
+            foreach (wchar c; s)
+            {
+                buf ~= c;
+            }
+            return buf.length;
+        }
+    }
+
+/** ditto */
+    size_t readln(C, R)(ref C[] buf, R terminator)
+        if (isBidirectionalRange!R && is(typeof(terminator.front == buf[0])))
+    {
+        auto last = terminator.back();
+        C[] buf2;
+        swap(buf, buf2);
+        for (;;) {
+            if (!readln(buf2, last) || endsWith(buf2, terminator)) {
+                if (buf.empty) {
+                    buf = buf2;
+                } else {
+                    buf ~= buf2;
+                }
+                break;
+            }
+            buf ~= buf2;
         }
         return buf.length;
     }
 
-/** ditto */
-// TODO: fold this together with wchar
-    size_t readln(ref dchar[] buf, dchar terminator = '\n')
+    unittest
     {
-        string s = readln(terminator);
-        if (!s.length) return 0;
-        buf.length = 0;
-        foreach (dchar c; s)
+        std.file.write("deleteme", "hello\n\rworld\nhow\n\rare ya");
+        auto witness = [ "hello\n\r", "world\nhow\n\r", "are ya" ];
+        scope(exit) std.file.remove("deleteme");
+        auto f = File("deleteme");
+        uint i = 0;
+        char[] buf;
+        while (f.readln(buf, "\n\r"))
         {
-            buf ~= c;
+            assert(i < witness.length);
+            assert(buf == witness[i++]);
         }
-        return buf.length;
     }
 
     size_t readf(Data...)(in char[] format, Data data)
@@ -882,7 +923,10 @@ $(D Range) that locks the file and allows fast writing to it.
         /// Range primitive implementations.
         void put(A)(A writeme) if (is(ElementType!A : const(dchar)))
         {
-            alias ElementType!A C;
+            static if (isSomeString!A)
+                alias typeof(writeme[0]) C;
+            else
+                alias ElementType!A C;
             static assert(!is(C == void));
             // writeln("typeof(A.init[0]) = ", typeof(A.init[0]),
             //         ", ElementType!A = ", ElementType!A);
@@ -1053,7 +1097,8 @@ $(D Range) that locks the file and allows fast writing to it.
 
         void popFront()
         {
-            enforce(_f.p && _f.p.handle, "Attempt to read from an unopened file.");
+            enforce(_f.p && _f.p.handle,
+                    "Attempt to read from an unopened file.");
             assert(!empty);
             _crt = getc(cast(FILE*) _f.p.handle);
         }
@@ -1176,16 +1221,16 @@ unittest
     scope(failure) printf("Failed test at line %d\n", __LINE__);
     void[] buf;
     write(buf);
-    // // test write
+    // test write
     string file = "dmd-build-test.deleteme.txt";
     auto f = File(file, "w");
-    scope(exit) { std.file.remove(file); }
-    f.write("Hello, ",  "world number ", 42, "!");
-    f.close;
-    assert(cast(char[]) std.file.read(file) == "Hello, world number 42!");
+//    scope(exit) { std.file.remove(file); }
+     f.write("Hello, ",  "world number ", 42, "!");
+     f.close;
+     assert(cast(char[]) std.file.read(file) == "Hello, world number 42!");
     // // test write on stdout
-    auto saveStdout = stdout;
-    scope(exit) stdout = saveStdout;
+    //auto saveStdout = stdout;
+    //scope(exit) stdout = saveStdout;
     //stdout.open(file, "w");
     Object obj;
     //write("Hello, ",  "world number ", 42, "! ", obj);
@@ -1837,8 +1882,6 @@ Initialize with a message and an error code. */
 
 extern(C) void std_stdio_static_this()
 {
-    //printf("std_stdio_static_this()\n");
-
     //Bind stdin, stdout, stderr
     __gshared File.Impl stdinImpl;
     stdinImpl.handle = core.stdc.stdio.stdin;

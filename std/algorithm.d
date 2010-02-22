@@ -138,6 +138,7 @@ struct Map(alias fun, Range) if (isInputRange!(Range))
 
 unittest
 {
+    scope(failure) writeln("Unittest failed at line ", __LINE__);
     int[] arr1 = [ 1, 2, 3, 4 ];
     int[] arr2 = [ 5, 6 ];
     auto squares = map!("a * a")(arr1);
@@ -319,7 +320,7 @@ unittest
     a = [ 1, 2, 3, 4, 5 ];
     // Stringize with commas
     string rep = reduce!("a ~ `, ` ~ to!(string)(b)")("", a);
-    assert(rep[2 .. $] == "1, 2, 3, 4, 5");
+    assert(rep[2 .. $] == "1, 2, 3, 4, 5", "["~rep[2 .. $]~"]");
 }
 
 unittest
@@ -529,6 +530,14 @@ unittest
     assert(s21.a == 1 && s21.b == null && s22.a == 10 && s22.b != null);
 }
 
+/// Ditto
+T move(T)(ref T src)
+{
+    T result;
+    move(src, result);
+    return result;
+}
+
 // moveAll
 /**
 For each element $(D a) in $(D src) and each element $(D b) in $(D
@@ -667,6 +676,7 @@ assert(i == 3);
 ----
 */
 struct Splitter(Range, Separator)
+    if (!is(typeof(ElementType!Range.init == Separator.init)))
 {
 private:
     Range _input;
@@ -675,17 +685,8 @@ private:
     size_t _frontLength = size_t.max;
     static if (isBidirectionalRange!Range)
         size_t _backLength = size_t.max;
-    enum bool separatorIsRange =
-        !is(typeof(ElementType!Range.init == _separator));
 
-    static if (separatorIsRange)
-    {
-        size_t separatorLength() { return _separator.length; }
-    }
-    else
-    {
-        enum size_t separatorLength = 1;
-    }
+    size_t separatorLength() { return _separator.length; }
 
     void ensureFrontLength()
     {
@@ -693,23 +694,20 @@ private:
         assert(!_input.empty);
         // compute front length
         _frontLength = _input.length - find(_input, _separator).length;
-        if (_frontLength == _input.length) _backLength = _frontLength;
+        static if (isBidirectionalRange!Range)
+            if (_frontLength == _input.length) _backLength = _frontLength;
     }
 
     void ensureBackLength()
     {
-        if (_backLength != _backLength.max) return;
+        static if (isBidirectionalRange!Range)
+            if (_backLength != _backLength.max) return;
         assert(!_input.empty);
         // compute back length
-        static if (separatorIsRange)
+        static if (isBidirectionalRange!Range)
         {
             _backLength = _input.length -
                 find(retro(_input), retro(_separator)).length;
-        }
-        else
-        {
-            _backLength = _input.length -
-                find(retro(_input), _separator).length;
         }
     }
 
@@ -741,7 +739,8 @@ public:
             // done, there's no separator in sight
             _input = _input[_frontLength .. _frontLength];
             _frontLength = _frontLength.max;
-            _backLength = _backLength.max;
+            static if (isBidirectionalRange!Range)
+                _backLength = _backLength.max;
             return;
         }
         if (_frontLength + separatorLength == _input.length)
@@ -750,7 +749,8 @@ public:
             // an empty item right after this.
             _input = _input[_input.length .. _input.length];
             _frontLength = 0;
-            _backLength = 0;
+            static if (isBidirectionalRange!Range)
+                _backLength = 0;
             return;
         }
         // Normal case, pop one item and the separator, get ready for
@@ -761,35 +761,123 @@ public:
     }
 
 // Bidirectional functionality as suggested by Brad Roberts.
+    static if (isBidirectionalRange!Range)
+    {
+        Range back()
+        {
+            ensureBackLength;
+            return _input[_input.length - _backLength .. _input.length];
+        }
+
+        void popBack()
+        {
+            ensureBackLength;
+            if (_backLength == _input.length)
+            {
+                // done
+                _input = _input[0 .. 0];
+                _frontLength = _frontLength.max;
+                _backLength = _backLength.max;
+                return;
+            }
+            if (_backLength + separatorLength == _input.length)
+            {
+                // Special case: popping the first-to-first item; there is
+                // an empty item right before this. Leave the separator in.
+                _input = _input[0 .. 0];
+                _frontLength = 0;
+                _backLength = 0;
+                return;
+            }
+            // Normal case
+            _input = _input[0 .. _input.length - _backLength - separatorLength];
+            _backLength = _backLength.max;
+        }
+    }
+}
+
+struct Splitter(Range, Separator)
+    if (is(typeof(ElementType!Range.init == Separator.init)))
+{
+    Range _input;
+    Separator _separator;
+    size_t _frontLength = size_t.max;
+    size_t _backLength = size_t.max;
+
+    this(Range input, Separator separator)
+    {
+        _input = input;
+        _separator = separator;
+        computeFront();
+        computeBack();
+    }
+
+    bool empty()
+    {
+        return _input.empty;
+    }
+
+    Range front()
+    {
+        if (_frontLength == _frontLength.max)
+        {
+            // This is not the first iteration, clean up separators
+            while (!_input.empty && _input.front == _separator)
+                _input.popFront();
+            computeFront();
+        }
+        return _input[0 .. _frontLength];
+    }
+
+    void popFront()
+    {
+        computeFront();
+        _input = _input[_frontLength .. $];
+        _frontLength = _frontLength.max;
+    }
+
     Range back()
     {
-        ensureBackLength;
-        return _input[_input.length - _backLength .. _input.length];
+        if (_backLength == _backLength.max)
+        {
+            while (!_input.empty && _input.back == _separator) _input.popBack();
+            computeBack();
+        }
+        assert(_backLength <= _input.length, text(_backLength));
+        return _input[$ - _backLength .. $];
     }
 
     void popBack()
     {
-        ensureBackLength;
-        if (_backLength == _input.length)
-        {
-            // done
-            _input = _input[0 .. 0];
-            _frontLength = _frontLength.max;
-            _backLength = _backLength.max;
-            return;
-        }
-        if (_backLength + separatorLength == _input.length)
-        {
-            // Special case: popping the first-to-first item; there is
-            // an empty item right before this. Leave the separator in.
-            _input = _input[0 .. 0];
-            _frontLength = 0;
-            _backLength = 0;
-            return;
-        }
-        // Normal case
-        _input = _input[0 .. _input.length - _backLength - separatorLength];
+        computeBack();
+        enforce(_backLength <= _input.length);
+        _input = _input[0 .. $ - _backLength];
         _backLength = _backLength.max;
+    }
+
+private:
+    void computeFront()
+    {
+        if (_frontLength == _frontLength.max)
+        {
+            _frontLength = _input.length - _input.find(_separator).length;
+        }
+    }
+    void computeBack()
+    {
+        if (_backLength == _backLength.max)
+        {
+            //_backLength = find(retro(_input), _separator).length;
+            _backLength = 0;
+            auto i = _input;
+            while (!i.empty)
+            {
+                if (i.back == _separator) break;
+                ++_backLength;
+                i.popBack();
+            }
+        }
+        assert(_backLength <= _input.length);
     }
 }
 
@@ -824,8 +912,9 @@ unittest
     }
     assert(i == w.length);
     // Now go back
-    //auto s = splitter(a, 0);
-    foreach_reverse (e; splitter(a, 0))
+    auto s2 = splitter(a, 0);
+    
+    foreach_reverse (e; s2)
     {
         assert(i > 0);
         assert(equal(e, w[--i]), text(e));
@@ -1415,7 +1504,7 @@ is ignored.
             && needle[virtual_begin - 1] == needle[$ - portion - 1])
             return 0;
         
-        invariant delta = portion - ignore;
+        immutable delta = portion - ignore;
         return equal(needle[needle.length - delta .. needle.length],
                 needle[virtual_begin .. virtual_begin + delta]);
     }
@@ -1475,7 +1564,7 @@ public:
 /// Ditto
 BoyerMooreFinder!(binaryFun!(pred), Range) boyerMooreFinder
 (alias pred = "a == b", Range)
-(Range needle) if (isRandomAccessRange!(Range))
+(Range needle) if (isRandomAccessRange!(Range) || isSomeString!Range)
 {
     return typeof(return)(needle);
 }
@@ -2405,13 +2494,18 @@ struct Levenshtein(Range, alias equals, CostType = size_t)
     
     CostType distance(Range s, Range t)
     {
-        AllocMatrix(s.length + 1, t.length + 1);
+        auto slen = walkLength(s), tlen = walkLength(t);
+        AllocMatrix(slen + 1, tlen + 1);
         foreach (i; 1 .. rows)
         {
+            auto sfront = s.front;
+            s.popFront();
+            auto tt = t;
             foreach (j; 1 .. cols)
             {
                 auto cSub = _matrix[i - 1][j - 1] 
-                    + (equals(s[i - 1], t[j - 1]) ? 0 : _substitutionIncrement);
+                    + (equals(sfront, tt.front) ? 0 : _substitutionIncrement);
+                tt.popFront();
                 auto cIns = _matrix[i][j - 1] + _insertionIncrement;
                 auto cDel = _matrix[i - 1][j] + _deletionIncrement;
                 switch (min_index(cSub, cIns, cDel)) {
@@ -2427,7 +2521,7 @@ struct Levenshtein(Range, alias equals, CostType = size_t)
                 }
             }
         }
-        return _matrix[s.length][t.length];
+        return _matrix[slen][tlen];
     }
   
     EditOp[] path(Range s, Range t)
@@ -2528,7 +2622,7 @@ assert(levenshteinDistance!("toupper(a) == toupper(b)")
 */
 size_t levenshteinDistance(alias equals = "a == b", Range1, Range2)
     (Range1 s, Range2 t)
-    if (isRandomAccessRange!(Range1) && isRandomAccessRange!(Range2))
+    if (isForwardRange!(Range1) && isForwardRange!(Range2))
 {
     Levenshtein!(Range1, binaryFun!(equals), uint) lev;
     return lev.distance(s, t);
@@ -2549,7 +2643,7 @@ assert(equals(p.field[1], "nrrnsnnn"));
 Tuple!(size_t, EditOp[])
 levenshteinDistanceAndPath(alias equals = "a == b", Range1, Range2)
     (Range1 s, Range2 t)
-    if (isRandomAccessRange!(Range1) && isRandomAccessRange!(Range2))
+    if (isForwardRange!(Range1) && isForwardRange!(Range2))
 {
     Levenshtein!(Range, binaryFun!(equals)) lev;
     auto d = lev.distance(s, t);
@@ -2603,7 +2697,7 @@ auto d = copy(a, b);
 ----
 
 To copy at most $(D n) elements from range $(D a) to range $(D b), you
-may want to use $(D copy(take(n, a), b)). To copy those elements from
+may want to use $(D copy(take(a, n), b)). To copy those elements from
 range $(D a) that satisfy predicate $(D pred) to range $(D b), you may
 want to use $(D copy(filter!(pred)(a), b)).
 
@@ -2699,7 +2793,7 @@ assert(arr == [ 3, 2, 1 ]);
 ----
 */
 void reverse(Range)(Range r)
-//if (isBidirectionalRange!(Range) && hasSwappableElements!(Range))
+if (isBidirectionalRange!(Range) && hasSwappableElements!(Range))
 {
     while (!r.empty)
     {

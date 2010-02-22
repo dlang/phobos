@@ -15,7 +15,7 @@ module std.array;
 import std.c.stdio;
 import core.memory;
 import std.algorithm, std.contracts, std.conv, std.encoding, std.range,
-    std.string, std.traits, std.typecons;
+    std.string, std.traits, std.typecons, std.utf;
 version(unittest) private import std.stdio;
 
 /**
@@ -160,7 +160,7 @@ void main()
 ----
  */
 
-bool empty(T)(in T[] a) { return !a.length; }
+@property bool empty(T)(in T[] a) { return !a.length; }
 
 unittest
 {
@@ -187,7 +187,7 @@ void main()
 ----
 */
 
-void popFront(T)(ref T[] a)
+void popFront(T)(ref T[] a) if (!is(Unqual!T == char) && !is(Unqual!T == wchar))
 {
     assert(a.length, "Attempting to popFront() past the end of an array of "
             ~ T.stringof);
@@ -201,6 +201,25 @@ unittest
     int[] a = [ 1, 2, 3 ];
     a.popFront;
     assert(a == [ 2, 3 ]);
+}
+
+void popFront(T)(ref T[] a) if (is(Unqual!T == char) || is(Unqual!T == wchar))
+{
+    assert(a.length, "Attempting to popFront() past the end of an array of "
+            ~ T.stringof);
+    a = a[std.utf.stride(a, 0) .. $];
+}
+
+unittest
+{
+    string s1 = "\xC2\xA9hello";
+    s1.popFront();
+    assert(s1 == "hello");
+    wstring s2 = "\xC2\xA9hello";
+    s2.popFront();
+    assert(s2 == "hello");
+    string s3 = "\u20AC100";
+    //write(s3, '\n');
 }
 
 /**
@@ -221,7 +240,11 @@ void main()
 ----
 */
 
-void popBack(T)(ref T[] a) { assert(a.length); a = a[0 .. $ - 1]; }
+void popBack(T)(ref T[] a) if (!is(Unqual!T == char) && !is(Unqual!T == wchar))
+{
+    assert(a.length);
+    a = a[0 .. $ - 1];
+}
 
 unittest
 {
@@ -230,6 +253,63 @@ unittest
     int[] a = [ 1, 2, 3 ];
     a.popBack;
     assert(a == [ 1, 2 ]);
+}
+
+void popBack(T)(ref T[] a) if (is(Unqual!T == char))
+{
+    immutable n = a.length;
+    const p = a.ptr + n;
+    if (n >= 1 && (p[-1] & 0b1100_0000) != 0b1000_0000)
+    {
+        a = a[0 .. n - 1];
+    }
+    else if (n >= 2 && (p[-2] & 0b1100_0000) != 0b1000_0000)
+    {
+        a = a[0 .. n - 2];
+    }
+    else if (n >= 3 && (p[-3] & 0b1100_0000) != 0b1000_0000)
+    {
+        a = a[0 .. n - 3];
+    }
+    else if (n >= 4 && (p[-4] & 0b1100_0000) != 0b1000_0000)
+    {
+        a = a[0 .. n - 4];
+    }
+    else
+    {
+        assert(false, "Invalid UTF character at end of string");
+    }
+}
+
+unittest
+{
+    string s = "hello\xE2\x89\xA0";
+    s.popBack();
+    assert(s == "hello", s);
+
+    string s3 = "\xE2\x89\xA0";
+    auto c = decodeBack(s3);
+    assert(c == cast(dchar)'\u2260');
+    assert(s3 == "");
+}
+
+void popBack(T)(ref T[] a) if (is(Unqual!T == wchar))
+{
+    assert(a.length);
+    if (a.length == 1)
+    {
+        a = a[0 .. 0];
+        return;
+    }
+    invariant c = a[$ - 2];
+    a = a[0 .. $ - 1 - (c >= 0xD800 && c <= 0xDBFF)]; 
+}
+
+unittest
+{
+    wstring s = "hello\xE2\x89\xA0";
+    s.popBack();
+    assert(s == "hello");
 }
 
 /**
@@ -248,14 +328,24 @@ void main()
 }
 ----
 */
-ref typeof(A[0]) front(A)(A a) if (is(typeof(A[0])))
+ref typeof(A[0]) front(A)(A a) if (is(typeof(A[0])) && !isNarrowString!A)
 {
     assert(a.length, "Attempting to fetch the front of an empty array");
     return a[0];
 }
 
+dchar front(A)(A a) if (is(typeof(A[0])) && isNarrowString!A)
+{
+    assert(a.length, "Attempting to fetch the front of an empty array");
+    size_t i = 0;
+    return decode(a, i);
+}
+
 /// Ditto
-void front(T)(T[] a, T v) { assert(a.length); a[0] = v; }
+void front(T)(T[] a, T v) if (!isNarrowString!A)
+{
+    assert(a.length); a[0] = v;
+}
 
 /**
 Implements the range interface primitive $(D back) for built-in
@@ -272,7 +362,45 @@ void main()
 }
 ----
 */
-ref T back(T)(T[] a) { assert(a.length); return a[a.length - 1]; }
+ref typeof(A.init[0]) back(A)(A a) if (is(typeof(A.init[0]))
+        && !isNarrowString!A)
+{
+    enforce(a.length, "Attempting to fetch the back of an empty array");
+    return a[$ - 1];
+}
+
+dchar back(A)(A a)
+if (is(typeof(A.init[0])) && isNarrowString!A && a[0].sizeof < 4)
+{
+    assert(a.length, "Attempting to fetch the back of an empty array");
+    auto n = a.length;
+    const p = a.ptr + n;
+    if (n >= 1 && (p[-1] & 0b1100_0000) != 0b1000_0000)
+    {
+        --n;
+        return std.utf.decode(a, n);
+    }
+    else if (n >= 2 && (p[-2] & 0b1100_0000) != 0b1000_0000)
+    {
+        n -= 2;
+        return decode(a, n);
+    }
+    else if (n >= 3 && (p[-3] & 0b1100_0000) != 0b1000_0000)
+    {
+        n -= 3;
+        return decode(a, n);
+    }
+    else if (n >= 4 && (p[-4] & 0b1100_0000) != 0b1000_0000)
+    {
+        n -= 4;
+        return decode(a, n);
+    }
+    else
+    {
+        throw new UtfException("Invalid UTF character at end of string");
+    }
+}
+
 
 /**
 Implements the range interface primitive $(D put) for built-in
@@ -521,21 +649,24 @@ managed array can accommodate before triggering a reallocation).
 Appends one item to the managed array.
  */
     void put(U)(U item) if (isImplicitlyConvertible!(U, T) ||
-            isSomeString!(T[]) && isSomeString!(U[]))
+            isSomeChar!T && isSomeChar!U)
     {
-        static if (isSomeString!(T[]) && T.sizeof != U.sizeof)
+        static if (isSomeChar!T && isSomeChar!U && T.sizeof < U.sizeof)
         {
             // must do some transcoding around here
-            encode!(T)(item, this);
+            Unqual!T[T.sizeof == 1 ? 4 : 2] encoded;
+            auto len = std.utf.encode(encoded, item);
+            put(encoded[0 .. len]);
         }
         else
         {
             if (!pArray) pArray = (new typeof(*pArray)[1]).ptr;
-            if (pArray.length < _capacity)
+            immutable len = pArray.length;
+            if (len < _capacity)
             {
                 // Should do in-place construction here
-                pArray.ptr[pArray.length] = item;
-                *pArray = pArray.ptr[0 .. pArray.length + 1];
+                pArray.ptr[len] = item;
+                *pArray = pArray.ptr[0 .. len + 1];
             }
             else
             {
@@ -550,34 +681,21 @@ Appends one item to the managed array.
 Appends an entire range to the managed array.
  */
     void put(Range)(Range items) if (isForwardRange!Range
-            && is(typeof(Appender.init.put(ElementType!(Range).init))))
+            && is(typeof(Appender.init.put(items.front))))
     {
-        // @@@ UNCOMMENT WHEN BUG 2912 IS FIXED @@@
-        // static if (is(typeof(*cast(T[]*) pArray ~= items)))
-        // {
-        //     if (!pArray) pArray = (new typeof(*pArray)[1]).ptr;
-        //     *pArray ~= items;
-        // }
-        // else
-        // {
-        //     // Generic input range
-        //     for (; !items.empty; items.popFront)
-        //     {
-        //         put(items.front());
-        //     }
-        // }
-
-        // @@@ Doctored version taking BUG 2912 into account @@@
-        static if (is(typeof(*cast(T[]*) pArray ~= items)) &&
-                T.sizeof == ElementType!Range.sizeof)
+        static if (is(typeof(*pArray ~= items)))
         {
             if (!pArray) pArray = (new typeof(*pArray)[1]).ptr;
             *pArray ~= items;
         }
         else
         {
+            //pragma(msg, Range.stringof);
             // Generic input range
-            foreach (e; items) put(e);
+            for (; !items.empty; items.popFront)
+            {
+                put(items.front());
+            }
         }
     }
 

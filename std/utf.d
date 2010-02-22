@@ -129,7 +129,9 @@ private invariant ubyte[256] UTF8stride =
 
 uint stride(in char[] s, size_t i)
 {
-    return UTF8stride[s[i]];
+    invariant result = UTF8stride[s[i]];
+    assert(result > 0 && result <= 6);
+    return result;
 }
 
 /**
@@ -469,7 +471,7 @@ body
 
 // Decodes one dchar from input range $(D r). Returns the decoded
 // character and the shortened range.
-dchar decodeFront(Range)(ref Range r)
+dchar decodeFront(Range)(ref Range r) if (!isSomeString!Range)
 out (result)
 {
     assert(isValidDchar(result));
@@ -528,6 +530,7 @@ body
      *  11111000 10000xxx (10xxxxxx 10xxxxxx 10xxxxxx)
      *  11111100 100000xx (10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx)
      */
+    assert(!r.empty);
     auto u2 = r.front;
     enforce(!((u & 0xFE) == 0xC0 ||
                     (u == 0xE0 && (u2 & 0xE0) == 0x80) ||
@@ -597,7 +600,7 @@ unittest
 
 // Decodes one dchar from input range $(D r). Returns the decoded
 // character and the shortened range.
-dchar decodeBack(Range)(ref Range r)
+dchar decodeBack(Range)(ref Range r) if (!isSomeString!Range)
 {
     enforce(!r.empty);
     Unqual!(ElementType!Range)[4] chars;
@@ -627,13 +630,28 @@ dchar decodeBack(Range)(ref Range r)
     return decoded;
 }
 
+dchar decodeFront(Range)(ref Range r) if (isSomeString!Range)
+{
+    auto result = r.front;
+    r.popFront();
+    return result;
+}
+
+dchar decodeBack(Range)(ref Range r) if (isSomeString!Range)
+{
+    auto result = r.back;
+    r.popBack();
+    return result;
+}
+
 unittest
 {
     debug(utf) printf("utf.decodeBack.unittest\n");
 
-    static string s1 = "abcd";
+    string s1 = "abcd";
     auto c = decodeBack(s1);
     assert(c == cast(dchar)'d');
+
     assert(s1 == "abc");
     c = decodeBack(s1);
     assert(c == cast(dchar)'c');
@@ -644,7 +662,7 @@ unittest
     assert(c == cast(dchar)'\u00A9');
     assert(s2 == "");
 
-    static string s3 = "\xE2\x89\xA0";
+    string s3 = "\xE2\x89\xA0";
     c = decodeBack(s3);
     assert(c == cast(dchar)'\u2260');
     assert(s3 == "");
@@ -1178,7 +1196,6 @@ unittest
     assert(w == "hello");
     d = toUTF32(c);
     assert(d == "hello");
-
     c = toUTF8(w);
     assert(c == "hello");
     d = toUTF32(w);
@@ -1238,10 +1255,16 @@ Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
 Params:
 s = the string to be counted
  */
-uint count(E)(const(E)[] s)
+size_t count(E)(const(E)[] s) if (isSomeChar!E && E.sizeof < 4)
 {
-    //assert(isValid(s));
-    return walkLength(byDchar(s));
+    return walkLength(s);
+//     size_t result = 0;
+//     while (!s.empty)
+//     {
+//         ++result;
+//         s.popFront();
+//     }
+//     return result;
 }
 
 unittest

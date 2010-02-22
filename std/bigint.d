@@ -710,7 +710,7 @@ string decimal(Big b)
         b = t.q;
         result ~= cast(char)(t.r + '0');
     }
-    reverse(result);
+    reverse(cast(ubyte[]) result);
     return assumeUnique(result);
 }
 

@@ -1566,7 +1566,7 @@ struct FormatInfo
                 bool, "flHash", 1,
                 ubyte, "", 3));
     /* For arrays only: the trailing  */    
-    const(char)[] innerTrailing;
+    const(char)[] innerTrailing, trailing;
 
 /*
  * Given a string format specification fmt, parses a format
@@ -1577,6 +1577,7 @@ struct FormatInfo
     {
         FormatInfo result;
         if (fmt.empty) return result;
+        scope(success) result.trailing = to!(const(char)[])(fmt);
         size_t i = 0;
         for (;;)
             switch (fmt[i])
@@ -2867,7 +2868,8 @@ void skipData(Range)(ref Range input, FormatInfo spec)
 }
 
 //------------------------------------------------------------------------------
-T unformat(T, Range)(ref Range input, FormatInfo spec) if (isArray!T)
+T unformat(T, Range)(ref Range input, FormatInfo spec)
+    if (isArray!T && !isSomeString!T)
 {
     Appender!(T) app;
     for (;;)
@@ -2880,6 +2882,42 @@ T unformat(T, Range)(ref Range input, FormatInfo spec) if (isArray!T)
                                 // separator
     }
     return app.data;
+}
+
+//------------------------------------------------------------------------------
+T unformat(T, Range)(ref Range input, FormatInfo spec) if (isSomeString!T)
+{
+    Appender!(T) app;
+    if (spec.trailing.empty)
+    {
+        for (; !input.empty; input.popFront())
+        {
+            app.put(input.front);
+        }
+    }
+    else
+    {
+        for (; !input.empty && !input.startsWith(spec.trailing.front);
+             input.popFront())
+        {
+            app.put(input.front);
+        }
+    }
+    //input = input[spec.innerTrailing.length .. $];
+    return app.data;
+}
+
+unittest
+{
+    string s1, s2;
+    char[] line = "hello, world".dup;
+    formattedRead(line, "%s", &s1);
+    assert(s1 == "hello, world", s1);
+
+    line = "hello, world;yah".dup;
+    formattedRead(line, "%s;%s", &s1, &s2);
+    assert(s1 == "hello, world", s1);
+    assert(s2 == "yah", s2);
 }
 
 private template acceptedSpecs(T)
@@ -2908,17 +2946,25 @@ T unformat(T, Range)(ref Range input, FormatInfo spec) if (isFloatingPoint!T)
     {
         // raw read
         enforce(input.length >= T.sizeof);
-        enforce(ElementType!(Range).sizeof == 1);
+        enforce(isSomeString!Range || ElementType!(Range).sizeof == 1);
         union X
         {
-            char[T.sizeof] raw;
+            ubyte[T.sizeof] raw;
             T typed;
         }
         X x;
         foreach (i; 0 .. T.sizeof)
         {
-            x.raw[i] = input.front;
-            input.popFront;
+            static if (isSomeString!Range)
+            {
+                x.raw[i] = input[0];
+                input = input[1 .. $];
+            }
+            else
+            {
+                x.raw[i] = input.front;
+                input.popFront();
+            }
         }
         return x.typed;
     }

@@ -1749,7 +1749,7 @@ body
 //     EncoderInstance!(E).encode(c,buffer);
 // }
 
-/**
+/*
 Encodes $(D c) in units of type $(D E) and writes the result to the
 output range $(D R). Returns the number of $(D E)s written.
  */

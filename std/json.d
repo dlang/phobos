@@ -64,14 +64,14 @@ JSONValue parseJSON(T)(in T json, int maxDepth = -1) if(isInputRange!T) {
 	if(json.empty()) return root;
 
 	int depth = -1;
-	char next = 0;
+	dchar next = 0;
 	int line = 1, pos = 1;
 
 	void error(string msg) {
 		throw new JSONException(msg, line, pos);
 	}
 
-	char peekChar() {
+	dchar peekChar() {
 		if(!next) {
 			if(json.empty()) return '\0';
 			next = json.front();
@@ -84,10 +84,10 @@ JSONValue parseJSON(T)(in T json, int maxDepth = -1) if(isInputRange!T) {
 		while(isspace(peekChar())) next = 0;
 	}
 
-	char getChar(bool SkipWhitespace = false)() {
+	dchar getChar(bool SkipWhitespace = false)() {
 		static if(SkipWhitespace) skipWhitespace();
 
-		char c = void;
+		dchar c = void;
 		if(next) {
 			c = next;
 			next = 0;
@@ -111,16 +111,17 @@ JSONValue parseJSON(T)(in T json, int maxDepth = -1) if(isInputRange!T) {
 
 	void checkChar(bool SkipWhitespace = true, bool CaseSensitive = true)(char c) {
 		static if(SkipWhitespace) skipWhitespace();
-		char c2 = getChar();
-		static if(!CaseSensitive) c2 = cast(char)tolower(c2);
+		auto c2 = getChar();
+		static if(!CaseSensitive) c2 = tolower(c2);
 
 		if(c2 != c) error(text("Found '", c2, "' when expecting '", c, "'."));
 	}
 
-	bool testChar(bool SkipWhitespace = true, bool CaseSensitive = true)(char c) {
+	bool testChar(bool SkipWhitespace = true, bool CaseSensitive = true)(char c)
+    {
 		static if(SkipWhitespace) skipWhitespace();
-		char c2 = peekChar();
-		static if(!CaseSensitive) c2 = cast(char)tolower(c2);
+		auto c2 = peekChar();
+		static if (!CaseSensitive) c2 = tolower(c2);
 
 		if(c2 != c) return false;
 
@@ -139,7 +140,7 @@ JSONValue parseJSON(T)(in T json, int maxDepth = -1) if(isInputRange!T) {
 
 		case '\\':
 			getChar();
-			char c = getChar();
+			auto c = getChar();
 			switch(c) {
 			case '"':	str.put('"');	break;
 			case '\\':	str.put('\\');	break;
@@ -152,7 +153,7 @@ JSONValue parseJSON(T)(in T json, int maxDepth = -1) if(isInputRange!T) {
 			case 'u':
 				dchar val = 0;
 				foreach_reverse(i; 0 .. 4) {
-					char hex = cast(char)toupper(getChar());
+					auto hex = toupper(getChar());
 					if(!isxdigit(hex)) error("Expecting hex character");
 					val += (isdigit(hex) ? hex - '0' : hex - 'A') << (4 * i);
 				}
@@ -166,8 +167,8 @@ JSONValue parseJSON(T)(in T json, int maxDepth = -1) if(isInputRange!T) {
 			goto Next;
 
 		default:
-			char c = getChar();
-			appendJSONChar(&str, c, getChar(), &error);
+			auto c = getChar();
+			appendJSONChar(&str, c, &error);
 			goto Next;
 		}
 
@@ -179,7 +180,7 @@ JSONValue parseJSON(T)(in T json, int maxDepth = -1) if(isInputRange!T) {
 
 		if(maxDepth != -1 && depth > maxDepth) error("Nesting too deep.");
 
-		char c = getChar!true();
+		auto c = getChar!true();
 
 		switch(c) {
 		case '{':
@@ -314,8 +315,8 @@ string toJSON(in JSONValue* root) {
 	void toString(string str) {
 		json.put('"');
 
-		for(int i; i != str.length; i++) {
-			switch(str[i]) {
+		foreach (dchar c; str) {
+			switch(c) {
 			case '"':	json.put("\\\"");	break;
 			case '\\':	json.put("\\\\");	break;
 			case '/':	json.put("\\/");	break;
@@ -325,7 +326,7 @@ string toJSON(in JSONValue* root) {
 			case '\r':	json.put("\\r");	break;
 			case '\t':	json.put("\\t");	break;
 			default:
-				appendJSONChar(&json, str[i], str[++i],
+				appendJSONChar(&json, c,
 					(string msg){throw new JSONException(msg);});
 			}
 		}
@@ -388,23 +389,25 @@ string toJSON(in JSONValue* root) {
 	return json.data;
 }
 
-private void appendJSONChar(Appender!string* dst, char c, lazy char next,
+private void appendJSONChar(Appender!string* dst, dchar c,
 	scope void delegate(string) error)
 {
-	int stride = UTFStride((&c)[0 .. 1], 0);
-	if(stride == 1) {
-		if(iscntrl(c)) error("Illegal control character.");
-		dst.put(c);
-	}
-	else {
-		char[6] utf = void;
-		utf[0] = c;
-		foreach(i; 1 .. stride) utf[i] = next;
-		size_t index = 0;
-		if(iscntrl(toUnicode(utf[0 .. stride], index)))
-			error("Illegal control character");
-		dst.put(utf[0 .. stride]);
-	}
+    if(iscntrl(c)) error("Illegal control character.");
+    dst.put(c);
+// 	int stride = UTFStride((&c)[0 .. 1], 0);
+// 	if(stride == 1) {
+// 		if(iscntrl(c)) error("Illegal control character.");
+// 		dst.put(c);
+// 	}
+// 	else {
+// 		char[6] utf = void;
+// 		utf[0] = c;
+// 		foreach(i; 1 .. stride) utf[i] = next;
+// 		size_t index = 0;
+// 		if(iscntrl(toUnicode(utf[0 .. stride], index)))
+// 			error("Illegal control character");
+// 		dst.put(utf[0 .. stride]);
+// 	}
 }
 
 /**

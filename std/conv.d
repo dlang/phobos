@@ -152,11 +152,11 @@ Converts array (other than strings) to string. The left bracket,
 separator, and right bracket are configurable. Each element is
 converted by calling $(D to!T).
  */
-T to(T, S)(S s, in T leftBracket = "[", in T separator = ", ",
-    in T rightBracket = "]")
+T to(T, S)(S s, in T leftBracket = "", in T separator = " ",
+    in T rightBracket = "")
 if (isSomeString!(T) && !isSomeString!(S) && isArray!(S))
 {
-    alias Unqual!(ElementType!(T)) Char;
+    alias Unqual!(typeof(T.init[0])) Char;
     // array-to-string conversion
     static if (is(S == void[])
             || is(S == const(void)[]) || is(S == invariant(void)[])) {
@@ -171,7 +171,7 @@ if (isSomeString!(T) && !isSomeString!(S) && isArray!(S))
         result.put(leftBracket);
         foreach (i, e; s) {
             if (i) result.put(separator);
-            result.put(to!(T)(e));
+            result.put(to!T(e));
         }
         result.put(rightBracket);
         return cast(T) result.data;
@@ -180,11 +180,13 @@ if (isSomeString!(T) && !isSomeString!(S) && isArray!(S))
 
 unittest
 {
+    long[] b = [ 1, 3, 5 ];
+    auto s = to!string(b);
+    //printf("%d, |%*s|\n", s.length, s.length, s.ptr);
+    assert(to!string(b) == "1 3 5", s);
     double[2] a = [ 1.5, 2.5 ];
     //writeln(to!string(a));
-    assert(to!string(a) == "[1.5, 2.5]");
-    short[] b = [ 1, 3, 5 ];
-    assert(to!string(b) == "[1, 3, 5]");
+    assert(to!string(a) == "1.5 2.5");
 }
 
 /**
@@ -196,7 +198,7 @@ T to(T, S)(S s, in T leftBracket = "[", in T keyval = ":",
         in T separator = ", ", in T rightBracket = "]")
 if (isAssociativeArray!(S) && isSomeString!(T))
 {
-    alias Unqual!(ElementType!(T)) Char;
+    alias Unqual!(typeof(T.init[0])) Char;
     Appender!(Char[]) result;
     // hash-to-string conversion
     result.put(leftBracket);
@@ -261,7 +263,7 @@ if (is(S == struct) && isSomeString!(T) && !is(typeof(&S.init.toString)))
     {
         // ok, attempt to forge the tuple
         t = cast(typeof(t)) &s;
-        alias Unqual!(ElementType!(T)) Char;
+        alias Unqual!(typeof(T.init[0])) Char;
         Appender!(Char[]) app;
         app.put(left);
         foreach (i, e; t.field)
@@ -874,7 +876,7 @@ unittest {
     // test array to string conversion
     foreach (T ; AllNumerics) {
         auto a = [to!(T)(1), 2, 3];
-        assert(to!(string)(a) == "[1, 2, 3]");
+        assert(to!(string)(a) == "1 2 3");
     }
     // test enum to int conversion
     // enum Testing { Test1, Test2 };
@@ -1096,13 +1098,8 @@ if (!isSomeString!Source && isFloatingPoint!Target)
 Target parse(Target, Source)(ref Source s)
 if (isSomeString!Source && isFloatingPoint!Target)
 {
-    //writefln("toFloat('%s')", s);
-    auto sz = toStringz(to!(const char[])(s));
-    if (std.ctype.isspace(*sz))
-        goto Lerr;
-
     // issue 1589
-    version (Windows)
+    //version (Windows)
     {
         if (icmp(s, "nan") == 0)
         {
@@ -1111,27 +1108,52 @@ if (isSomeString!Source && isFloatingPoint!Target)
         }
     }
 
-    // BUG: should set __locale_decpoint to "." for DMC
+    auto t = s;
+    if (t.startsWith('+', '-')) t.popFront();
+    munch(t, "0-9"); // integral part
+    if (t.startsWith('.'))
+    {
+        t.popFront(); // decimal point
+        munch(t, "0-9"); // fractionary part
+    }
+    if (t.startsWith('E', 'e'))
+    {
+        t.popFront();
+        if (t.startsWith('+', '-')) t.popFront();
+        munch(t, "0-9"); // exponent
+    }
+    auto len = s.length - t.length;
+    char sz[80] = void;
+    enforce(len < sz.length);
+    foreach (i; 0 .. len) sz[i] = s[i];
+    sz[len] = 0;  
+    
+//     //writefln("toFloat('%s')", s);
+//     auto sz = toStringz(to!(const char[])(s));
+//     if (std.ctype.isspace(*sz))
+//         goto Lerr;
+
+//     // BUG: should set __locale_decpoint to "." for DMC
 
     setErrno(0);
     char* endptr;
     static if (is(Target == float))
-        auto f = strtof(sz, &endptr);
+        auto f = strtof(sz.ptr, &endptr);
     else static if (is(Target == double))
-        auto f = strtod(sz, &endptr);
+        auto f = strtod(sz.ptr, &endptr);
     else static if (is(Target == real))
-        auto f = strtold(sz, &endptr);
+        auto f = strtold(sz.ptr, &endptr);
     else
         static assert(false);
     if (getErrno() == ERANGE)
         goto Lerr;
     assert(endptr);
-    if (endptr == sz)
+    if (endptr == sz.ptr)
     {
         // no progress
         goto Lerr;
     }
-    s = s[endptr - sz .. $];
+    s = s[endptr - sz.ptr .. $];
     return f;
   Lerr:
     conv_error!(Source, Target)(s);
@@ -1573,7 +1595,6 @@ unittest
         try
         {
             i = to!short(errors[j]);
-            printf("i = %d\n", i);
         }
         catch (Error e)
         {
@@ -1637,7 +1658,7 @@ unittest
         try
         {
             i = to!ushort(errors[j]);
-            printf("i = %d\n", i);
+            debug(conv) printf("i = %d\n", i);
         }
         catch (Error e)
         {
@@ -1706,7 +1727,7 @@ unittest
         try
         {
             i = to!byte(errors[j]);
-            printf("i = %d\n", i);
+            debug(conv) printf("i = %d\n", i);
         }
         catch (Error e)
         {
@@ -1770,7 +1791,7 @@ unittest
         try
         {
             i = to!ubyte(errors[j]);
-            printf("i = %d\n", i);
+            debug(conv) printf("i = %d\n", i);
         }
         catch (Error e)
         {
@@ -2506,8 +2527,9 @@ T to(T, S)(S input)
 if (std.typetuple.staticIndexOf!(Unqual!S, uint, ulong) >= 0 && isSomeString!T)
 {
     Unqual!S value = input;
-    alias Unqual!(ElementType!T) Char;
-    static if (is(ElementType!T == const) || is(ElementType!T == immutable))
+    alias Unqual!(typeof(T.init[0])) Char;
+    static if (is(typeof(T.init[0]) == const) ||
+            is(typeof(T.init[0]) == immutable))
     {
         if (value < 10)
         {
@@ -2522,21 +2544,23 @@ if (std.typetuple.staticIndexOf!(Unqual!S, uint, ulong) >= 0 && isSomeString!T)
     else
         auto maxlength = (value > uint.max ? S.sizeof : uint.sizeof) * 3;
  
-    Char [] result;
-    if (__ctfe) result = new Char[maxlength];
+    Char[] result;
+    if (__ctfe)
+        result = new Char[maxlength];
     else 
         result = cast(Char[])
             GC.malloc(Char.sizeof * maxlength, GC.BlkAttr.NO_SCAN)
             [0 .. Char.sizeof * maxlength];
 
     uint ndigits = 0;
-    while (value)
+    do
     {
         const c = cast(Char) ((value % 10) + '0');
         value /= 10;
         ndigits++;
         result[$ - ndigits] = c;
     }
+    while (value);
     return cast(T) result[$ - ndigits .. $];
 }
 
@@ -2544,20 +2568,22 @@ unittest
 {
     assert(wtext(int.max) == "2147483647"w);
     assert(wtext(int.min) == "-2147483648"w);
+    assert(to!string(0L) == "0");
 }
 
 /// $(D char), $(D wchar), $(D dchar) to a string type.
 T to(T, S)(S c) if (staticIndexOf!(Unqual!S, char, wchar, dchar) >= 0
         && isSomeString!(T))
 {
-    static if (ElementType!T.sizeof >= S.sizeof)
+    alias typeof(T.init[0]) Char;
+    static if (Char.sizeof >= S.sizeof)
     {
         return [ c ];
     }
     else
     {
-        Unqual!(ElementType!T)[] result;
-        encode(result, cast(dchar) c);
+        Unqual!Char[] result;
+        encode(result, c);
         return cast(T) result;
     }
 }
@@ -2588,7 +2614,7 @@ if (staticIndexOf!(Unqual!S, int, long) >= 0 && isSomeString!T)
 {
     if (value >= 0)
         return to!T(cast(Unsigned!(S)) value);
-    alias Unqual!(ElementType!T) Char;
+    alias Unqual!(typeof(T.init[0])) Char;
 
     // Cache read-only data only for const and immutable - mutable
     // data is supposed to use allocation in all cases

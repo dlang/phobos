@@ -952,8 +952,7 @@ Detect whether T is one of the built-in string types
 
 template isSomeString(T)
 {
-    enum isSomeString = is(T : const(char[]))
-        || is(T : const(wchar[])) || is(T : const(dchar[]));
+    enum isSomeString = isNarrowString!T || is(T : const(dchar[]));
 }
 
 unittest
@@ -967,6 +966,24 @@ unittest
     static assert(isSomeString!(wstring));
     static assert(isSomeString!(dstring));
     static assert(isSomeString!(char[4]));
+}
+
+template isNarrowString(T)
+{
+    enum isNarrowString = is(T : const(char[])) || is(T : const(wchar[]));
+}
+
+unittest
+{
+    static assert(!isNarrowString!(int));
+    static assert(!isNarrowString!(int[]));
+    static assert(!isNarrowString!(byte[]));
+    static assert(isNarrowString!(char[]));
+    static assert(!isNarrowString!(dchar[]));
+    static assert(isNarrowString!(string));
+    static assert(isNarrowString!(wstring));
+    static assert(!isNarrowString!(dstring));
+    static assert(isNarrowString!(char[4]));
 }
 
 /**
