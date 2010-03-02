@@ -665,7 +665,10 @@ T to(T, S)(S src) if (isArray!(S) && isArray!(T) && !isSomeString!(T)
     alias typeof(T.init[0]) E;
     auto result = new E[src.length];
     foreach (i, e; src) {
-        result[i] = to!(E)(e);
+	/* Temporarily cast to mutable type, so we can get it initialized,
+	 * this is ok because there are no other references to result[]
+	 */
+        cast()(result[i]) = to!(E)(e);
     }
     return result;
 }
