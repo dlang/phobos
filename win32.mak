@@ -97,7 +97,7 @@ SRCS= std\math.d std\stdio.d std\dateparse.d std\date.d std\uni.d std\string.d \
 	std\path.d std\file.d std\outbuffer.d std\utf.d std\uri.d \
 	std\ctype.d std\random.d std\mmfile.d \
 	std\algorithm.d std\array.d std\numeric.d std\functional.d \
-	std\range.d std\stdiobase.d \
+	std\range.d std\stdiobase.d std\concurrency.d \
 	std\metastrings.d std\contracts.d std\getopt.d \
 	std\signals.d std\typetuple.d std\traits.d std\bind.d \
 	std\bitmanip.d std\typecons.d \
@@ -141,6 +141,7 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_bind.html \
 	$(DOC)\std_bitmanip.html \
 	$(DOC)\std_boxer.html \
+	$(DOC)\std_concurrency.html \
 	$(DOC)\std_compiler.html \
 	$(DOC)\std_complex.html \
 	$(DOC)\std_contracts.html \
@@ -222,7 +223,7 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 	std\metastrings.d std\contracts.d std\getopt.d \
 	std\variant.d std\numeric.d std\bitmanip.d std\complex.d \
 	std\functional.d std\algorithm.d std\array.d std\typecons.d std\iterator.d \
-	std\json.d std\xml.d std\encoding.d std\bigint.d \
+	std\json.d std\xml.d std\encoding.d std\bigint.d std\concurrency.d \
 	std\range.d std\stdiobase.d \
 	std\regex.d std\datebase.d \
 	std\__fileinit.d
@@ -331,6 +332,9 @@ bitmanip.obj : std\bitmanip.d
 
 boxer.obj : std\boxer.d
 	$(DMD) -c $(DFLAGS) std\boxer.d
+	
+concurrency.obj : std\concurrency.d
+	$(DMD) -c $(DFLAGS) std\concurrency.d
 
 compiler.obj : std\compiler.d
 	$(DMD) -c $(DFLAGS) std\compiler.d
@@ -550,6 +554,9 @@ $(DOC)\std_bitmanip.html : std.ddoc std\bitmanip.d
 
 $(DOC)\std_boxer.html : std.ddoc std\boxer.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_boxer.html std.ddoc std\boxer.d
+
+$(DOC)\std_concurrency.html : std.ddoc std\concurrency.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_concurrency.html std.ddoc std\concurrency.d
 
 $(DOC)\std_compiler.html : std.ddoc std\compiler.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_compiler.html std.ddoc std\compiler.d
