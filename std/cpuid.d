@@ -122,7 +122,7 @@ version(D_InlineAsm_X86)
     uint family()               {return _family;}
     //uint processorType()      {return (signature>>>12)&0x3;}
 
-    static this()
+    shared static this()
     {
         getVendorString();
         getProcessorString();

@@ -155,7 +155,7 @@ class SocketException: Exception
 }
 
 
-static this()
+shared static this()
 {
 	version(Win32)
 	{

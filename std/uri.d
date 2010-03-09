@@ -56,7 +56,7 @@ immutable char[16] hex2ascii = "0123456789ABCDEF";
 
 __gshared ubyte[128] uri_flags;       // indexed by character
 
-static this()
+shared static this()
 {
     // Initialize uri_flags[]
 

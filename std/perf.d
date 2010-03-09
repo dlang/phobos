@@ -87,7 +87,7 @@ version(Windows)
     private:
 	/** Class constructor
 	*/
-	static this()
+	shared static this()
 	{
 	    // Detects availability of the high performance hardware counter, and if
 	    // not available adjusts 
@@ -206,8 +206,8 @@ version(Windows)
     private:
 	epoch_type		m_start;    // start of measurement period
 	epoch_type		m_end;	    // End of measurement period
-	static interval_t	sm_freq;    // Frequency
-	static measure_func	sm_fn;	    // Measurement function
+	__gshared const interval_t	    sm_freq;    // Frequency
+	__gshared const measure_func	sm_fn;	    // Measurement function
     }
 
     unittest
@@ -598,7 +598,7 @@ version(Windows)
 	/** Class constructor
 	   
 	*/ 
-	static this()
+	shared static this()
 	{
 	    sm_process = GetCurrentProcess();
 	}
@@ -744,7 +744,7 @@ version(Windows)
 	epoch_type	m_kernelEnd;
 	epoch_type	m_userStart;
 	epoch_type	m_userEnd;
-	static HANDLE	sm_process;
+	__gshared HANDLE	sm_process;
     }
 
     unittest

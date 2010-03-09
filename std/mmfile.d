@@ -32,9 +32,9 @@ version (Win32)
     private import std.c.windows.windows;
     private import std.utf;
     
-    private uint dwVersion;
+    private __gshared const uint dwVersion;
     
-    static this()
+    shared static this()
     {
         /* http://msdn.microsoft.com/library/default.asp?url=/library/en-us
            /sysinfo/base/getversion.asp */
@@ -45,7 +45,7 @@ else version (Posix)
 {
     private import core.sys.posix.fcntl;
     private import core.sys.posix.unistd;
-        private import core.sys.posix.sys.mman;
+    private import core.sys.posix.sys.mman;
     private import core.sys.posix.sys.stat;
 }
 else

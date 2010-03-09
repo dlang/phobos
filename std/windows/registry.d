@@ -1572,7 +1572,7 @@ private:
 public class Registry
 {
 private:
-    static this()
+    shared static this()
     {
         sm_keyClassesRoot       = new Key(  Reg_Dup_(HKEY_CLASSES_ROOT)
                                         ,   "HKEY_CLASSES_ROOT", false);
@@ -1613,13 +1613,13 @@ public:
 //@}
 
 private:
-    static Key  sm_keyClassesRoot;
-    static Key  sm_keyCurrentUser;
-    static Key  sm_keyLocalMachine;
-    static Key  sm_keyUsers;
-    static Key  sm_keyPerformanceData;
-    static Key  sm_keyCurrentConfig;
-    static Key  sm_keyDynData;
+    __gshared Key  sm_keyClassesRoot;
+    __gshared Key  sm_keyCurrentUser;
+    __gshared Key  sm_keyLocalMachine;
+    __gshared Key  sm_keyUsers;
+    __gshared Key  sm_keyPerformanceData;
+    __gshared Key  sm_keyCurrentConfig;
+    __gshared Key  sm_keyDynData;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

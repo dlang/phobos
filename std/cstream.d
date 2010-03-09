@@ -229,7 +229,7 @@ __gshared CFile dout;
  */
 __gshared CFile derr;
 
-static this() {
+shared static this() {
   // open standard I/O devices
   din = new CFile(std.c.stdio.stdin,FileMode.In);
   dout = new CFile(std.c.stdio.stdout,FileMode.Out);

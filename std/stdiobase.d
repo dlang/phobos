@@ -17,7 +17,7 @@ module std.stdiobase;
 
 extern(C) void std_stdio_static_this();
 
-static this()
+shared static this()
 {
     std_stdio_static_this();
 }

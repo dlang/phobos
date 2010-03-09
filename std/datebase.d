@@ -17,7 +17,7 @@ module std.datebase;
 
 extern(C) void std_date_static_this();
 
-static this()
+shared static this()
 {
     std_date_static_this;
 }

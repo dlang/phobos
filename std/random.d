@@ -1135,7 +1135,7 @@ deprecated uint rand()
     return hiword;
 }
 
-static this()
+shared static this()
 {
     ulong s;
 

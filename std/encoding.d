@@ -2075,7 +2075,7 @@ abstract class EncodingScheme
      * ----------------------------------------------
      * class Amiga1251 : EncodingScheme
      * {
-     *     static this()
+     *     shared static this()
      *     {
      *         EncodingScheme.register("path.to.Amiga1251");
      *     }
@@ -2381,7 +2381,7 @@ abstract class EncodingScheme
  */
 class EncodingSchemeASCII : EncodingScheme
 {
-    static this()
+    shared static this()
     {
         EncodingScheme.register("std.encoding.EncodingSchemeASCII");
     }
@@ -2467,7 +2467,7 @@ class EncodingSchemeASCII : EncodingScheme
  */
 class EncodingSchemeLatin1 : EncodingScheme
 {
-    static this()
+    shared static this()
     {
         EncodingScheme.register("std.encoding.EncodingSchemeLatin1");
     }
@@ -2543,7 +2543,7 @@ class EncodingSchemeLatin1 : EncodingScheme
  */
 class EncodingSchemeWindows1252 : EncodingScheme
 {
-    static this()
+    shared static this()
     {
         EncodingScheme.register("std.encoding.EncodingSchemeWindows1252");
     }
@@ -2611,7 +2611,7 @@ class EncodingSchemeWindows1252 : EncodingScheme
  */
 class EncodingSchemeUtf8 : EncodingScheme
 {
-    static this()
+    shared static this()
     {
         EncodingScheme.register("std.encoding.EncodingSchemeUtf8");
     }
@@ -2680,7 +2680,7 @@ class EncodingSchemeUtf8 : EncodingScheme
  */
 class EncodingSchemeUtf16Native : EncodingScheme
 {
-    static this()
+    shared static this()
     {
         EncodingScheme.register("std.encoding.EncodingSchemeUtf16Native");
     }
@@ -2758,7 +2758,7 @@ class EncodingSchemeUtf16Native : EncodingScheme
  */
 class EncodingSchemeUtf32Native : EncodingScheme
 {
-    static this()
+    shared static this()
     {
         EncodingScheme.register("std.encoding.EncodingSchemeUtf32Native");
     }
