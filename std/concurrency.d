@@ -49,10 +49,28 @@ private
 
 
 /**
+ *
+ */
+class MessageMismatch : Exception
+{
+    this( string msg = "Unexpected message type" )
+    {
+        super( msg );
+    }
+}
+
+
+/**
  * An opaque type used to represent a logical local process.
  */
 struct Tid
 {
+    void send(T...)( Tid tid, T vals )
+    {
+        _send( tid, vals );
+    }
+    
+
 private:
     this( MessageBox m )
     {
@@ -102,11 +120,20 @@ Tid spawn(T...)( void function(T) fn, T args )
 
 
 /**
- * Sends the supplied value to the context represented by tid.  This tid may
- * represent 
+ * Sends the supplied value to the context represented by tid.
  */
 void send(T...)( Tid tid, T vals )
-{   
+{
+    _send( tid, vals );
+}
+
+
+/*
+ * Implementation of send.  This allows parameter checking to be different for
+ * both Tid.send() and .send().
+ */
+private void _send(T...)( Tid tid, T vals )
+{
     alias Tuple!(T) Wrap;
 
     static if( Variant.allowed!(Wrap) )
@@ -134,45 +161,104 @@ void send(T...)( Tid tid, T vals )
  */
 void receive(T...)( T ops )
 {
-    mbox.get(
-        ( Variant val )
-        {            
-            foreach( i, t; TypeTuple!(T) )
-            {
-                alias Tuple!(ParameterTypeTuple!(t)) Vals;
-                auto op = ops[i];
+    _receive( ops );
+}
 
-                static if( is( Vals == Tuple!(Variant) ) )
+
+/**
+ *
+ */
+Tuple!(T) receiveOnly(T...)()
+{
+    Tuple!(T) ret;
+
+    _receive( ( T val )
+              {
+                  foreach( i, v; ret.Types )
+                      ret.field[i] = val[i];
+              },
+              ( Variant val )
+              {
+                  throw new MessageMismatch;
+              } );
+    return ret;
+}
+
+
+/**
+ *
+ */
+bool receiveTimeout(T...)( long ms, T ops )
+{
+    static enum long TICKS_PER_MILLI = 10_000;
+    return _receive( ms * TICKS_PER_MILLI, ops );
+}
+
+
+/*
+ *
+ */
+private bool _receive(T...)( T ops )
+{
+    static assert( T.length );
+
+    static if( isImplicitlyConvertible!(T[0], long) )
+    {
+        alias TypeTuple!(T[1 .. $]) Ops;
+        ops = ops[1 .. $];
+    }
+    else
+    {
+        alias TypeTuple!(T) Ops;
+    }
+
+    bool get( Variant val )
+    {
+        foreach( i, t; Ops )
+        {
+            alias Tuple!(ParameterTypeTuple!(t)) Vals;
+            auto op = ops[i];
+
+            static if( is( Vals == Tuple!(Variant) ) )
+            {
+                static if( is( ReturnType!(t) == bool ) )
+                    return op( val );
+                op( val );
+                return true;
+            }
+            static if( Variant.allowed!(Vals) )
+            {
+                if( val.convertsTo!(Vals) )
                 {
                     static if( is( ReturnType!(t) == bool ) )
-                        return op( val );
-                    op( val );
+                        return op( val.get!(Vals).expand );
+                    op( val.get!(Vals).expand );
                     return true;
                 }
-                static if( Variant.allowed!(Vals) )
+            }
+            else
+            {
+                if( val.convertsTo!(Vals*) )
                 {
-                    if( val.convertsTo!(Vals) )
-                    {
-                        static if( is( ReturnType!(t) == bool ) )
-                            return op( val.get!(Vals).expand );
-                        op( val.get!(Vals).expand );
-                        return true;
-                    }
-                }
-                else
-                {
-                    if( val.convertsTo!(Vals*) )
-                    {
-                        static if( is( ReturnType!(t) == bool ) )
-                            return op( val.get!(Vals*).expand );
-                        op( val.get!(Vals*).expand );
-                        return true;
-                    }
+                    static if( is( ReturnType!(t) == bool ) )
+                        return op( val.get!(Vals*).expand );
+                    op( val.get!(Vals*).expand );
+                    return true;
                 }
             }
-            return false;
         }
-    );
+        return false;
+    }
+    
+    static if( isImplicitlyConvertible!(T[0], long) )
+    {
+        return mbox.get( ops[0], &get );
+    }
+    else
+    {
+        mbox.get( &get );
+        return true;
+    }
 }
 
 
@@ -224,6 +310,35 @@ private
                 bool ok = newvals.get( op );
                 m_local.put( newvals );
                 if( ok ) return;
+            }
+        }
+        
+        
+        final bool get( scope bool delegate(T) op, long period )
+        in
+        {
+            assert( period >= 0 );
+        }
+        body
+        {
+            if( m_local.get( op ) )
+                return true;
+            while( true )
+            { 
+                ListT newvals;
+        
+                synchronized( m_sharedLock )
+                {
+                    while( m_shared.isEmpty )
+                    {
+                        if( !m_sharedRecv.wait( period ) )
+                            return false;
+                    }
+                    newvals.put( m_shared );
+                }
+                bool ok = newvals.get( op );
+                m_local.put( newvals );
+                if( ok ) return true;
             }
         }
     
