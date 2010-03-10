@@ -467,7 +467,4 @@ version( unittest )
         send( tid, "the quick brown fox" );
         receive( (string val) { writefln( "spawned thread returned: %s", val ); } );
     }
-
-
-    void main() {}
 }
