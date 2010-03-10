@@ -92,15 +92,12 @@ version(Windows)
 	    // Detects availability of the high performance hardware counter, and if
 	    // not available adjusts 
 
-	    if(QueryPerformanceFrequency(&sm_freq))
-	    {
-		sm_fn	=   &_qpc;
-	    }
+	    interval_t freq;
+	    if (QueryPerformanceFrequency(&freq))
+		sm_freq =   freq;
 	    else
-	    {
 		sm_freq =   1000;
-		sm_fn	=   &_qtc;
-	    }
+	    sm_fn	=   &_qtc;
 	}
 
     public:
