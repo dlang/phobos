@@ -139,28 +139,14 @@ class Thread
 	    if (state != TS.INITIAL)
 		error("already started");
 
-	    for (int i = 0; 1; i++)
-	    {
-		if (i == allThreads.length)
-		    error("too many threads");
-		if (!allThreads[i])
-		{   allThreads[i] = this;
-		    idx = i;
-		    if (i >= allThreadsDim)
-			allThreadsDim = i + 1;
-		    break;
-		}
-	    }
-	    nthreads++;
+            add_thread();
 
 	    state = TS.RUNNING;
 	    hdl = _beginthreadex(null, cast(uint)stacksize, &threadstart, cast(void*)this, 0, &id);
 	    if (hdl == cast(thread_hdl)0)
 	    {
-		allThreads[idx] = null;
-		nthreads--;
+		del_thread();
 		state = TS.FINISHED;
-		idx = -1;
 		error("failed to start");
 	    }
 	}
@@ -299,13 +285,10 @@ class Thread
     }
 
     /**
-     * Returns a reference to the Thread for the thread that called the
-     * function.
+     * Returns a reference to the Thread with the given id
      */
-    static Thread getThis()
+    static Thread _getThreadById(thread_id id)
     {
-	//printf("getThis(), allThreadsDim = %d\n", allThreadsDim);
-        thread_id id = GetCurrentThreadId();
         for (int i = 0; i < allThreadsDim; i++)
         {
             Thread t = allThreads[i];
@@ -314,6 +297,24 @@ class Thread
                 return t;
             }
         }
+	return null;
+    }
+    /**
+     * Returns a reference to the Thread for the thread that called the
+     * function.
+     */
+    static Thread _getThis()
+    {
+	//printf("getThis(), allThreadsDim = %d\n", allThreadsDim);
+        thread_id id = GetCurrentThreadId();
+	return _getThreadById(id);
+    }
+
+    static Thread getThis()
+    {
+	Thread t = _getThis();
+	if(t)
+		return t;
 	printf("didn't find it\n");
 	assert(0);
     }
@@ -397,7 +398,7 @@ class Thread
     /**
      *
      */
-    static uint nthreads = 1;
+    static uint nthreads = 0;
 
   private:
 
@@ -444,14 +445,55 @@ class Thread
 	debug (thread) printf("Ending thread %d\n", t.idx);
         synchronized (Thread.classinfo)
         {
-            allThreads[t.idx] = null;
-            nthreads--;
+	    t.del_thread();
 	    t.state = TS.TERMINATED;
-            t.idx = -1;
         }
 	return result;
     }
 
+    /**************************************
+     * Add thread to array of all threads and set index into array
+     * call with synchronized (Thread.classinfo)
+     */
+
+    void add_thread()
+    {
+	// there might be threads that already exist when attaching all existing threads,
+	//  but still call DllMain with DLL_THREAD_ATTACH
+	if(_getThreadById(id))
+	    return;
+	
+	for (int i = 0; 1; i++)
+	{
+	    if (i == allThreads.length)
+		error("too many threads");
+	    if (!allThreads[i])
+	    {   allThreads[i] = this;
+		idx = i;
+		if (i >= allThreadsDim)
+		    allThreadsDim = i + 1;
+		break;
+	    }
+	}
+	nthreads++;
+    }
+
+    /**************************************
+     * Delete thread from array of all threads
+     * call with synchronized (Thread.classinfo)
+     */
+
+    void del_thread()
+    {
+            assert(allThreads[idx] == this);
+
+            allThreads[idx] = null;
+            nthreads--;
+            idx = -1;
+
+            while(allThreadsDim > 0 && !allThreads[allThreadsDim - 1])
+		allThreadsDim--;            
+    }
 
     /**************************************
      * Create a Thread for global main().
@@ -459,19 +501,68 @@ class Thread
 
     public static void thread_init()
     {
-	Thread t = new Thread();
-
-	t.state = TS.RUNNING;
-	t.id = GetCurrentThreadId();
-	t.hdl = Thread.getCurrentThreadHandle();
-	t.stackBottom = os_query_stackBottom();
-
 	assert(!allThreads[0]);
-	allThreads[0] = t;
-	allThreadsDim = 1;
-	t.idx = 0;
+	thread_attach();
     }
 
+    /**************************************
+     * Attach to current thread
+     */
+
+    public static void thread_attach()
+    {
+	thread_attach(GetCurrentThreadId(), Thread.getCurrentThreadHandle(), os_query_stackBottom());
+    }
+
+    public static void thread_attach(thread_id id, thread_hdl hdl, void* bottom)
+    {
+	// the gc should not be touched before attaching to the thread, because
+	//  it might interfere with threads that use the GC, but won't suspend
+	//  this thread. So we use a Thread object created by an attached thread.
+	// This is not necessary for the main (first) thread, because there is no
+	// concurrent thread.
+	Thread t;
+	if(nextThread)
+	{
+	    t = nextThread;
+	    nextThread = null;
+	}
+	else
+	{
+	    t = new Thread();
+	}
+
+	t.state = TS.RUNNING;
+	t.id = id;
+	t.hdl = hdl;
+	t.stackBottom = bottom;
+
+	synchronized (Thread.classinfo)
+	    t.add_thread();
+
+	nextThread = new Thread();
+    }
+
+    static Thread nextThread; // preallocate thread to avoid allocation before attaching
+
+    /**************************************
+     * Detach from current thread
+     */
+
+    public static void thread_detach()
+    {
+	if(Thread t = _getThis())
+	    synchronized (Thread.classinfo)
+		t.del_thread();
+    }
+    
+    public static void thread_detach(thread_id id)
+    {
+	if(Thread t = _getThreadById(id))
+	    synchronized (Thread.classinfo)
+		t.del_thread();
+    }
+    
     static ~this()
     {
 	if (allThreadsDim)
@@ -590,21 +681,7 @@ class Thread
 	    error("already started");
 
 	synchronized (Thread.classinfo)
-	{
-	    for (int i = 0; 1; i++)
-	    {
-		if (i == allThreads.length)
-		    error("too many threads");
-		if (!allThreads[i])
-		{   allThreads[i] = this;
-		    idx = i;
-		    if (i >= allThreadsDim)
-			allThreadsDim = i + 1;
-		    break;
-		}
-	    }
-	    nthreads++;
-	}
+	    idx = add_thread();
 
 	state = TS.RUNNING;
 	//printf("creating thread x%x\n", this);
@@ -884,7 +961,7 @@ class Thread
 	sched_yield();
     }
 
-    static uint nthreads = 1;
+    static uint nthreads = 0;
 
   private:
 

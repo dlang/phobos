@@ -76,7 +76,8 @@ SRCS= std\math.d std\stdio.d std\dateparse.d std\date.d std\uni.d std\string.d \
         std\bitarray.d \
         std\signals.d std\typetuple.d std\traits.d std\bind.d \
         std\switcherr.d \
-        std\thread.d std\moduleinit.d std\boxer.d \
+        std\thread.d std\thread_helper.d \
+	std\moduleinit.d std\boxer.d \
         std\stream.d std\socket.d std\socketstream.d \
         std\perf.d std\openrj.d std\conv.d \
         std\zip.d std\cstream.d std\loader.d \
@@ -199,7 +200,7 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 	std\stdio.d std\perf.d std\openrj.d std\uni.d std\boxer.d \
 	std\cstream.d std\demangle.d std\cover.d std\bitarray.d \
 	std\signals.d std\cpuid.d std\typetuple.d std\traits.d std\bind.d \
-	std\metastrings.d
+	std\metastrings.d std\thread_helper.d
 
 SRC_STD_C= std\c\process.d std\c\stdlib.d std\c\time.d std\c\stdio.d \
 	std\c\math.d std\c\stdarg.d std\c\stddef.d std\c\fenv.d std\c\string.d \
@@ -547,6 +548,9 @@ system.obj : std\system.d
 
 thread.obj : std\thread.d
 	$(DMD) -c $(DFLAGS) std\thread.d
+
+thread_helper.obj : std\thread_helper.d
+	$(DMD) -c $(DFLAGS) std\thread_helper.d
 
 traits.obj : std\traits.d
 	$(DMD) -c $(DFLAGS) std\traits.d -oftraits.obj
