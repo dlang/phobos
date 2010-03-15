@@ -1235,7 +1235,8 @@ unittest
     assert( !v.convertsTo!(wchar[]) );
     assert( v.get!(string) == "Hello, World!" );
 
-    v = [1,2,3,4,5];
+    // Literal arrays are dynamically-typed
+    v = cast(int[5]) [1,2,3,4,5];
     assert( v.peek!(int[5]) );
     assert( v.get!(int[5]) == [1,2,3,4,5] );
 
