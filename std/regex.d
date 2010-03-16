@@ -3346,7 +3346,7 @@ template loadFile(Types...)
 unittest
 {
 // DAC: This doesn't create the file before running the test!
-pragma(msg, " --- std.regex(3318) broken test --- ");
+pragma(msg, " --- std.regex("~ __LINE__.stringof ~") broken test --- ");
 /+
     string tmp = "/tmp/deleteme";
     std.file.write(tmp, "1 abc\n2 defg\n3 hijklm");

@@ -292,7 +292,7 @@ unittest
     version (Windows)
     {
 	// These fail, don't know why
-	pragma(msg, " --- socket.d(" ~ __LINE__ ~ ") broken test ---");
+	pragma(msg, " --- std.socket(" ~ __LINE__.stringof ~ ") broken test ---");
     }
     else
     {
