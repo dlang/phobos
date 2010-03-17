@@ -94,10 +94,15 @@ version(Windows)
 
 	    interval_t freq;
 	    if (QueryPerformanceFrequency(&freq))
+	    {
 		sm_freq =   freq;
+		sm_fn    =   &_qpc;
+	    }
 	    else
+	    {
 		sm_freq =   1000;
-	    sm_fn	=   &_qtc;
+		sm_fn    =   &_qtc;
+	    }
 	}
 
     public:
