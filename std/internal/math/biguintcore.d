@@ -79,7 +79,8 @@ public:
 struct BigUint {
 private:
     invariant() {
-        assert( data.length == 1 || data[$-1] != 0 );
+    // @@@BUG@@@ Compiler bug 3986:
+        //assert( data.length == 1 || data[$-1] != 0 );
     }
     BigDigit [] data = ZERO; 
     this(BigDigit [] x) {
