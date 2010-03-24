@@ -117,6 +117,8 @@ SRCS= std\math.d std\stdio.d std\dateparse.d std\date.d std\uni.d std\string.d \
 	std\stdarg.d \
 	std\stdint.d \
 	std\json.d \
+	std\internal\math\biguintcore.d \
+	std\internal\math\biguintnoasm.d std\internal\math\biguintx86.d \
 	crc32.d \
 	std\c\process.d \
 	std\c\stdarg.d \
@@ -229,6 +231,8 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 	std\json.d std\xml.d std\encoding.d std\bigint.d std\concurrency.d \
 	std\range.d std\stdiobase.d \
 	std\regex.d std\datebase.d \
+	std\internal\math\biguintcore.d \
+	std\internal\math\biguintnoasm.d std\internal\math\biguintx86.d \
 	std\__fileinit.d
 
 SRC_STD_C= std\c\process.d std\c\stdlib.d std\c\time.d std\c\stdio.d \
@@ -482,6 +486,19 @@ Dzlib.obj : std\zlib.d
 
 zip.obj : std\zip.d
 	$(DMD) -c $(DFLAGS) std\zip.d
+	
+bigint.obj : std\bigint.d
+	$(DMD) -c $(DFLAGS) std\bigint.d
+
+biguintcore.obj : std\internal\math\biguintcore.d
+	$(DMD) -c $(DFLAGS) std\internal\math\biguintcore.d
+
+biguintnoasm.obj : std\internal\math\biguintnoasm.d
+	$(DMD) -c $(DFLAGS) std\internal\math\biguintnoasm.d
+
+biguintx86.obj : std\internal\math\biguintx86.d
+	$(DMD) -c $(DFLAGS) std\internal\math\biguintx86.d
+
 
 ### std\windows
 
