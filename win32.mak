@@ -55,6 +55,9 @@ DMD=dmd
 
 ## Location of where to write the html documentation files
 
+DOCSRC = ../docsrc
+STDDOC = $(DOCSRC)/std.ddoc
+
 DOC=..\..\html\d\phobos
 #DOC=..\doc\phobos
 
@@ -525,236 +528,236 @@ windows.obj : std\c\windows\windows.d
 
 ################## DOCS ####################################
 
-$(DOC)\object.html : std.ddoc $(DRUNTIME)\src\object_.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\object.html std.ddoc $(DRUNTIME)\src\object_.d -I$(DRUNTIME)\src\
+$(DOC)\object.html : $(STDDOC) $(DRUNTIME)\src\object_.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\object.html $(STDDOC) $(DRUNTIME)\src\object_.d -I$(DRUNTIME)\src\
 
-$(DOC)\phobos.html : std.ddoc phobos.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\phobos.html std.ddoc phobos.d
+$(DOC)\phobos.html : $(STDDOC) phobos.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\phobos.html $(STDDOC) phobos.d
 
-$(DOC)\std_algorithm.html : std.ddoc std\algorithm.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_algorithm.html std.ddoc std\algorithm.d
+$(DOC)\std_algorithm.html : $(STDDOC) std\algorithm.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_algorithm.html $(STDDOC) std\algorithm.d
 
-$(DOC)\std_array.html : std.ddoc std\array.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_array.html std.ddoc std\array.d
+$(DOC)\std_array.html : $(STDDOC) std\array.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_array.html $(STDDOC) std\array.d
 
-$(DOC)\std_atomics.html : std.ddoc std\atomics.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_atomics.html std.ddoc std\atomics.d
+$(DOC)\std_atomics.html : $(STDDOC) std\atomics.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_atomics.html $(STDDOC) std\atomics.d
 
-$(DOC)\std_base64.html : std.ddoc std\base64.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_base64.html std.ddoc std\base64.d
+$(DOC)\std_base64.html : $(STDDOC) std\base64.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_base64.html $(STDDOC) std\base64.d
 
-$(DOC)\std_bigint.html : std.ddoc std\bigint.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_bigint.html std.ddoc std\bigint.d
+$(DOC)\std_bigint.html : $(STDDOC) std\bigint.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_bigint.html $(STDDOC) std\bigint.d
 
-$(DOC)\std_bind.html : std.ddoc std\bind.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_bind.html std.ddoc std\bind.d
+$(DOC)\std_bind.html : $(STDDOC) std\bind.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_bind.html $(STDDOC) std\bind.d
 
-$(DOC)\std_bitmanip.html : std.ddoc std\bitmanip.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_bitmanip.html std.ddoc std\bitmanip.d
+$(DOC)\std_bitmanip.html : $(STDDOC) std\bitmanip.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_bitmanip.html $(STDDOC) std\bitmanip.d
 
-$(DOC)\std_boxer.html : std.ddoc std\boxer.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_boxer.html std.ddoc std\boxer.d
+$(DOC)\std_boxer.html : $(STDDOC) std\boxer.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_boxer.html $(STDDOC) std\boxer.d
 
-$(DOC)\std_concurrency.html : std.ddoc std\concurrency.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_concurrency.html std.ddoc std\concurrency.d
+$(DOC)\std_concurrency.html : $(STDDOC) std\concurrency.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_concurrency.html $(STDDOC) std\concurrency.d
 
-$(DOC)\std_compiler.html : std.ddoc std\compiler.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_compiler.html std.ddoc std\compiler.d
+$(DOC)\std_compiler.html : $(STDDOC) std\compiler.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_compiler.html $(STDDOC) std\compiler.d
 
-$(DOC)\std_complex.html : std.ddoc std\complex.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_complex.html std.ddoc std\complex.d
+$(DOC)\std_complex.html : $(STDDOC) std\complex.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_complex.html $(STDDOC) std\complex.d
 
-$(DOC)\std_contracts.html : std.ddoc std\contracts.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_contracts.html std.ddoc std\contracts.d
+$(DOC)\std_contracts.html : $(STDDOC) std\contracts.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_contracts.html $(STDDOC) std\contracts.d
 
-$(DOC)\std_conv.html : std.ddoc std\conv.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_conv.html std.ddoc std\conv.d
+$(DOC)\std_conv.html : $(STDDOC) std\conv.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_conv.html $(STDDOC) std\conv.d
 
-$(DOC)\std_cpuid.html : std.ddoc std\cpuid.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_cpuid.html std.ddoc std\cpuid.d
+$(DOC)\std_cpuid.html : $(STDDOC) std\cpuid.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_cpuid.html $(STDDOC) std\cpuid.d
 
-$(DOC)\std_cstream.html : std.ddoc std\cstream.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_cstream.html std.ddoc std\cstream.d
+$(DOC)\std_cstream.html : $(STDDOC) std\cstream.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_cstream.html $(STDDOC) std\cstream.d
 
-$(DOC)\std_ctype.html : std.ddoc std\ctype.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_ctype.html std.ddoc std\ctype.d
+$(DOC)\std_ctype.html : $(STDDOC) std\ctype.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_ctype.html $(STDDOC) std\ctype.d
 
-$(DOC)\std_date.html : std.ddoc std\date.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_date.html std.ddoc std\date.d
+$(DOC)\std_date.html : $(STDDOC) std\date.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_date.html $(STDDOC) std\date.d
 
-$(DOC)\std_demangle.html : std.ddoc std\demangle.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_demangle.html std.ddoc std\demangle.d
+$(DOC)\std_demangle.html : $(STDDOC) std\demangle.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_demangle.html $(STDDOC) std\demangle.d
 
-$(DOC)\std_file.html : std.ddoc std\file.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_file.html std.ddoc std\file.d
+$(DOC)\std_file.html : $(STDDOC) std\file.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_file.html $(STDDOC) std\file.d
 
-$(DOC)\std_format.html : std.ddoc std\format.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_format.html std.ddoc std\format.d
+$(DOC)\std_format.html : $(STDDOC) std\format.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_format.html $(STDDOC) std\format.d
 
-$(DOC)\std_functional.html : std.ddoc std\functional.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_functional.html std.ddoc std\functional.d
+$(DOC)\std_functional.html : $(STDDOC) std\functional.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_functional.html $(STDDOC) std\functional.d
 
-$(DOC)\std_gc.html : std.ddoc $(DRUNTIME)\src\core\memory.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_gc.html std.ddoc $(DRUNTIME)\src\core\memory.d
+$(DOC)\std_gc.html : $(STDDOC) $(DRUNTIME)\src\core\memory.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_gc.html $(STDDOC) $(DRUNTIME)\src\core\memory.d
 
-$(DOC)\std_getopt.html : std.ddoc std\getopt.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_getopt.html std.ddoc std\getopt.d
+$(DOC)\std_getopt.html : $(STDDOC) std\getopt.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_getopt.html $(STDDOC) std\getopt.d
 
-$(DOC)\std_iterator.html : std.ddoc std\iterator.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_iterator.html std.ddoc std\iterator.d
+$(DOC)\std_iterator.html : $(STDDOC) std\iterator.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_iterator.html $(STDDOC) std\iterator.d
 
-$(DOC)\std_intrinsic.html : std.ddoc std\intrinsic.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_intrinsic.html std.ddoc std\intrinsic.d
+$(DOC)\std_intrinsic.html : $(STDDOC) std\intrinsic.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_intrinsic.html $(STDDOC) std\intrinsic.d
 
-$(DOC)\std_json.html : std.ddoc std\json.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_json.html std.ddoc std\json.d
+$(DOC)\std_json.html : $(STDDOC) std\json.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_json.html $(STDDOC) std\json.d
 
-$(DOC)\std_math.html : std.ddoc std\math.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_math.html std.ddoc std\math.d
+$(DOC)\std_math.html : $(STDDOC) std\math.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_math.html $(STDDOC) std\math.d
 
-$(DOC)\std_md5.html : std.ddoc std\md5.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_md5.html std.ddoc std\md5.d
+$(DOC)\std_md5.html : $(STDDOC) std\md5.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_md5.html $(STDDOC) std\md5.d
 
-$(DOC)\std_metastrings.html : std.ddoc std\metastrings.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_metastrings.html std.ddoc std\metastrings.d
+$(DOC)\std_metastrings.html : $(STDDOC) std\metastrings.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_metastrings.html $(STDDOC) std\metastrings.d
 
-$(DOC)\std_mmfile.html : std.ddoc std\mmfile.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_mmfile.html std.ddoc std\mmfile.d
+$(DOC)\std_mmfile.html : $(STDDOC) std\mmfile.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_mmfile.html $(STDDOC) std\mmfile.d
 
-$(DOC)\std_numeric.html : std.ddoc std\numeric.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_numeric.html std.ddoc std\numeric.d
+$(DOC)\std_numeric.html : $(STDDOC) std\numeric.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_numeric.html $(STDDOC) std\numeric.d
 
-$(DOC)\std_outbuffer.html : std.ddoc std\outbuffer.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_outbuffer.html std.ddoc std\outbuffer.d
+$(DOC)\std_outbuffer.html : $(STDDOC) std\outbuffer.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_outbuffer.html $(STDDOC) std\outbuffer.d
 
-$(DOC)\std_path.html : std.ddoc std\path.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_path.html std.ddoc std\path.d
+$(DOC)\std_path.html : $(STDDOC) std\path.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_path.html $(STDDOC) std\path.d
 
-$(DOC)\std_perf.html : std.ddoc std\perf.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_perf.html std.ddoc std\perf.d
+$(DOC)\std_perf.html : $(STDDOC) std\perf.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_perf.html $(STDDOC) std\perf.d
 
-$(DOC)\std_process.html : std.ddoc std\process.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_process.html std.ddoc std\process.d
+$(DOC)\std_process.html : $(STDDOC) std\process.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_process.html $(STDDOC) std\process.d
 
-$(DOC)\std_random.html : std.ddoc std\random.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_random.html std.ddoc std\random.d
+$(DOC)\std_random.html : $(STDDOC) std\random.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_random.html $(STDDOC) std\random.d
 
-$(DOC)\std_range.html : std.ddoc std\range.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_range.html std.ddoc std\range.d
+$(DOC)\std_range.html : $(STDDOC) std\range.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_range.html $(STDDOC) std\range.d
 
-$(DOC)\std_regex.html : std.ddoc std\regex.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_regex.html std.ddoc std\regex.d
+$(DOC)\std_regex.html : $(STDDOC) std\regex.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_regex.html $(STDDOC) std\regex.d
 
-$(DOC)\std_regexp.html : std.ddoc std\regexp.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_regexp.html std.ddoc std\regexp.d
+$(DOC)\std_regexp.html : $(STDDOC) std\regexp.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_regexp.html $(STDDOC) std\regexp.d
 
-$(DOC)\std_signals.html : std.ddoc std\signals.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_signals.html std.ddoc std\signals.d
+$(DOC)\std_signals.html : $(STDDOC) std\signals.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_signals.html $(STDDOC) std\signals.d
 
-$(DOC)\std_socket.html : std.ddoc std\socket.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_socket.html std.ddoc std\socket.d
+$(DOC)\std_socket.html : $(STDDOC) std\socket.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_socket.html $(STDDOC) std\socket.d
 
-$(DOC)\std_socketstream.html : std.ddoc std\socketstream.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_socketstream.html std.ddoc std\socketstream.d
+$(DOC)\std_socketstream.html : $(STDDOC) std\socketstream.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_socketstream.html $(STDDOC) std\socketstream.d
 
-$(DOC)\std_stdint.html : std.ddoc std\stdint.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_stdint.html std.ddoc std\stdint.d
+$(DOC)\std_stdint.html : $(STDDOC) std\stdint.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_stdint.html $(STDDOC) std\stdint.d
 
-$(DOC)\std_stdio.html : std.ddoc std\stdio.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_stdio.html std.ddoc std\stdio.d
+$(DOC)\std_stdio.html : $(STDDOC) std\stdio.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_stdio.html $(STDDOC) std\stdio.d
 
-$(DOC)\std_stream.html : std.ddoc std\stream.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_stream.html -d std.ddoc std\stream.d
+$(DOC)\std_stream.html : $(STDDOC) std\stream.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_stream.html -d $(STDDOC) std\stream.d
 
-$(DOC)\std_string.html : std.ddoc std\string.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_string.html std.ddoc std\string.d
+$(DOC)\std_string.html : $(STDDOC) std\string.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_string.html $(STDDOC) std\string.d
 
-$(DOC)\std_system.html : std.ddoc std\system.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_system.html std.ddoc std\system.d
+$(DOC)\std_system.html : $(STDDOC) std\system.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_system.html $(STDDOC) std\system.d
 
-$(DOC)\std_thread.html : std.ddoc $(DRUNTIME)\src\core\thread.d
-	$(DMD) -c -o- -d $(DFLAGS) -Df$(DOC)\std_thread.html std.ddoc $(DRUNTIME)\src\core\thread.d
+$(DOC)\std_thread.html : $(STDDOC) $(DRUNTIME)\src\core\thread.d
+	$(DMD) -c -o- -d $(DFLAGS) -Df$(DOC)\std_thread.html $(STDDOC) $(DRUNTIME)\src\core\thread.d
 
-$(DOC)\std_traits.html : std.ddoc std\traits.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_traits.html std.ddoc std\traits.d
+$(DOC)\std_traits.html : $(STDDOC) std\traits.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_traits.html $(STDDOC) std\traits.d
 
-$(DOC)\std_typecons.html : std.ddoc std\typecons.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_typecons.html std.ddoc std\typecons.d
+$(DOC)\std_typecons.html : $(STDDOC) std\typecons.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_typecons.html $(STDDOC) std\typecons.d
 
-$(DOC)\std_typetuple.html : std.ddoc std\typetuple.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_typetuple.html std.ddoc std\typetuple.d
+$(DOC)\std_typetuple.html : $(STDDOC) std\typetuple.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_typetuple.html $(STDDOC) std\typetuple.d
 
-$(DOC)\std_uni.html : std.ddoc std\uni.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_uni.html std.ddoc std\uni.d
+$(DOC)\std_uni.html : $(STDDOC) std\uni.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_uni.html $(STDDOC) std\uni.d
 
-$(DOC)\std_uri.html : std.ddoc std\uri.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_uri.html std.ddoc std\uri.d
+$(DOC)\std_uri.html : $(STDDOC) std\uri.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_uri.html $(STDDOC) std\uri.d
 
-$(DOC)\std_utf.html : std.ddoc std\utf.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_utf.html std.ddoc std\utf.d
+$(DOC)\std_utf.html : $(STDDOC) std\utf.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_utf.html $(STDDOC) std\utf.d
 
-$(DOC)\std_variant.html : std.ddoc std\variant.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_variant.html std.ddoc std\variant.d
+$(DOC)\std_variant.html : $(STDDOC) std\variant.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_variant.html $(STDDOC) std\variant.d
 
-$(DOC)\std_xml.html : std.ddoc std\xml.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_xml.html std.ddoc std\xml.d
+$(DOC)\std_xml.html : $(STDDOC) std\xml.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_xml.html $(STDDOC) std\xml.d
 
-$(DOC)\std_encoding.html : std.ddoc std\encoding.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_encoding.html std.ddoc std\encoding.d
+$(DOC)\std_encoding.html : $(STDDOC) std\encoding.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_encoding.html $(STDDOC) std\encoding.d
 
-$(DOC)\std_zip.html : std.ddoc std\zip.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_zip.html std.ddoc std\zip.d
+$(DOC)\std_zip.html : $(STDDOC) std\zip.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_zip.html $(STDDOC) std\zip.d
 
-$(DOC)\std_zlib.html : std.ddoc std\zlib.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_zlib.html std.ddoc std\zlib.d
+$(DOC)\std_zlib.html : $(STDDOC) std\zlib.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_zlib.html $(STDDOC) std\zlib.d
 
-$(DOC)\std_windows_charset.html : std.ddoc std\windows\charset.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_windows_charset.html std.ddoc std\windows\charset.d
+$(DOC)\std_windows_charset.html : $(STDDOC) std\windows\charset.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_windows_charset.html $(STDDOC) std\windows\charset.d
 
-$(DOC)\std_windows_registry.html : std.ddoc std\windows\registry.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_windows_registry.html std.ddoc std\windows\registry.d
+$(DOC)\std_windows_registry.html : $(STDDOC) std\windows\registry.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_windows_registry.html $(STDDOC) std\windows\registry.d
 
-$(DOC)\std_c_fenv.html : std.ddoc std\c\fenv.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_c_fenv.html std.ddoc std\c\fenv.d
+$(DOC)\std_c_fenv.html : $(STDDOC) std\c\fenv.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_c_fenv.html $(STDDOC) std\c\fenv.d
 
-$(DOC)\std_c_locale.html : std.ddoc std\c\locale.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_c_locale.html std.ddoc std\c\locale.d
+$(DOC)\std_c_locale.html : $(STDDOC) std\c\locale.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_c_locale.html $(STDDOC) std\c\locale.d
 
-$(DOC)\std_c_math.html : std.ddoc std\c\math.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_c_math.html std.ddoc std\c\math.d
+$(DOC)\std_c_math.html : $(STDDOC) std\c\math.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_c_math.html $(STDDOC) std\c\math.d
 
-$(DOC)\std_c_process.html : std.ddoc std\c\process.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_c_process.html std.ddoc std\c\process.d
+$(DOC)\std_c_process.html : $(STDDOC) std\c\process.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_c_process.html $(STDDOC) std\c\process.d
 
-$(DOC)\std_c_stdarg.html : std.ddoc std\c\stdarg.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_c_stdarg.html std.ddoc std\c\stdarg.d
+$(DOC)\std_c_stdarg.html : $(STDDOC) std\c\stdarg.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_c_stdarg.html $(STDDOC) std\c\stdarg.d
 
-$(DOC)\std_c_stddef.html : std.ddoc std\c\stddef.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_c_stddef.html std.ddoc std\c\stddef.d
+$(DOC)\std_c_stddef.html : $(STDDOC) std\c\stddef.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_c_stddef.html $(STDDOC) std\c\stddef.d
 
-$(DOC)\std_c_stdio.html : std.ddoc std\c\stdio.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_c_stdio.html std.ddoc std\c\stdio.d
+$(DOC)\std_c_stdio.html : $(STDDOC) std\c\stdio.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_c_stdio.html $(STDDOC) std\c\stdio.d
 
-$(DOC)\std_c_stdlib.html : std.ddoc std\c\stdlib.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_c_stdlib.html std.ddoc std\c\stdlib.d
+$(DOC)\std_c_stdlib.html : $(STDDOC) std\c\stdlib.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_c_stdlib.html $(STDDOC) std\c\stdlib.d
 
-$(DOC)\std_c_string.html : std.ddoc std\c\string.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_c_string.html std.ddoc std\c\string.d
+$(DOC)\std_c_string.html : $(STDDOC) std\c\string.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_c_string.html $(STDDOC) std\c\string.d
 
-$(DOC)\std_c_time.html : std.ddoc std\c\time.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_c_time.html std.ddoc std\c\time.d
+$(DOC)\std_c_time.html : $(STDDOC) std\c\time.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_c_time.html $(STDDOC) std\c\time.d
 
-$(DOC)\std_c_wcharh.html : std.ddoc std\c\wcharh.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_c_wcharh.html std.ddoc std\c\wcharh.d
+$(DOC)\std_c_wcharh.html : $(STDDOC) std\c\wcharh.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_c_wcharh.html $(STDDOC) std\c\wcharh.d
 
 
 ######################################################
 
-zip : win32.mak linux.mak osx.mak std.ddoc $(SRC) \
+zip : win32.mak linux.mak osx.mak $(STDDOC) $(SRC) \
 	$(SRC_STD) $(SRC_STD_C) $(SRC_TI) $(SRC_INT) $(SRC_STD_WIN) \
 	$(SRC_STD_C_LINUX) $(SRC_STD_C_OSX) $(SRC_ETC) $(SRC_ETC_C) $(SRC_ZLIB) $(SRC_GC)
 	del phobos.zip
-	zip32 -u phobos win32.mak linux.mak osx.mak std.ddoc
+	zip32 -u phobos win32.mak linux.mak osx.mak $(STDDOC)
 	zip32 -u phobos $(SRC)
 	zip32 -u phobos $(SRC_TI)
 	zip32 -u phobos $(SRC_INT)
@@ -784,7 +787,7 @@ cleanhtml:
 install:
 	$(CP) phobos.lib $(DIR)\windows\lib
 	$(CP) $(DRUNTIME)\lib\gcstub.obj $(DIR)\windows\lib
-	$(CP) win32.mak linux.mak osx.mak std.ddoc $(DIR)\src\phobos
+	$(CP) win32.mak linux.mak osx.mak $(STDDOC) $(DIR)\src\phobos
 	$(CP) $(SRC) $(DIR)\src\phobos
 	$(CP) $(SRC_STD) $(DIR)\src\phobos\std
 	$(CP) $(SRC_STD_C) $(DIR)\src\phobos\std\c
