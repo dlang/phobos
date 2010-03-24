@@ -40,7 +40,7 @@ DDOCFLAGS=-version=ddoc -d -c -o- $(STDDOC)
 CC =
 DMD =
 CFLAGS =
-DFLAGS =
+DFLAGS = 
 
 # BUILD can be debug or release, but is unset by default; recursive
 # invocation will set it. See the debug and release targets below.
@@ -85,10 +85,11 @@ ifeq ($(OS),posix)
 endif
 
 # Set DFLAGS
+DFLAGS := -I$(DRUNTIME_PATH)/import
 ifeq ($(BUILD),debug)
-	DFLAGS=-w -g -debug -d
+	DFLAGS += -w -g -debug -d
 else
-	DFLAGS=-w -O -release -nofloat -d
+	DFLAGS += -w -O -release -nofloat -d
 endif
 
 # Set DOTOBJ and DOTEXE
