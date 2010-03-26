@@ -7,7 +7,8 @@ Copyright: Copyright Digital Mars 2007 - 2009.
 License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
 Authors:   $(WEB digitalmars.com, Walter Bright),
            $(WEB erdani.org, Andrei Alexandrescu),
-           Shin Fujishiro
+           Shin Fujishiro,
+           Adam D. Ruppe
 
          Copyright Digital Mars 2007 - 2009.
 Distributed under the Boost Software License, Version 1.0.
@@ -21,6 +22,8 @@ import core.memory, core.stdc.errno, core.stdc.string, core.stdc.stdlib,
     std.ctype, std.math, std.range, std.stdio,
     std.string, std.traits, std.typecons, std.typetuple,
     std.utf;
+import std.metastrings;
+
 //debug=conv;           // uncomment to turn on debugging printf's
 
 /* ************* Exceptions *************** */
@@ -3086,4 +3089,234 @@ unittest
     auto s = "123";
     auto t = parse!Testing(s);
     assert(t == cast(Testing) 123);
+}
+
+//------------------------------------------------------------------------------
+// octal
+//------------------------------------------------------------------------------
+/*
+Take a look at int.max and int.max+1 in octal and the logic for this
+function follows directly.
+ */
+template octalFitsInInt(string octalNum) {
+	// note it is important to strip the literal of all
+	// non-numbers. kill the suffix and underscores lest they mess up
+	// the number of digits here that we depend on.
+    enum bool octalFitsInInt = strippedOctalLiteral(octalNum).length < 11 ||
+        strippedOctalLiteral(octalNum).length == 11 &&
+        strippedOctalLiteral(octalNum)[0] == '1';
+}
+
+string strippedOctalLiteral(string original) {
+	string stripped;
+	foreach (c; original)
+		if (c >= '0' && c <= '7')
+			stripped ~= c;
+	return stripped;
+}
+
+template literalIsLong(string num) {
+	static if (num.length > 1)
+        // can be xxL or xxLu according to spec
+		enum literalIsLong = (num[$-1] == 'L' || num[$-2] == 'L');
+	else
+		enum literalIsLong = false;
+}
+
+template literalIsUnsigned(string num) {
+	static if (num.length > 1)
+        // can be xxL or xxLu according to spec
+		enum literalIsUnsigned = (num[$-1] == 'u' || num[$-2] == 'u')
+            // both cases are allowed too
+            || (num[$-1] == 'U' || num[$-2] == 'U'); 
+	else
+        enum literalIsUnsigned = false;
+}
+
+/**
+The $(D octal) facility is intended as an experimental facility to
+replace _octal literals starting with $(D '0'), which many find
+confusing. Using $(D octal!177) or $(D octal!"177") instead of $(D
+0177) as an _octal literal makes code clearer and the intent more
+visible. If use of this facility becomes preponderent, a future
+version of the language may deem old-style _octal literals deprecated.
+
+The rules for strings are the usual for literals: If it can fit in an
+$(D int), it is an $(D int). Otherwise, it is a $(D long). But, if the
+user specifically asks for a $(D long) with the $(D L) suffix, always
+give the $(D long). Give an unsigned iff it is asked for with the $(D
+U) or $(D u) suffix. _Octals created from integers preserve the type
+of the passed-in integral.
+
+Example:
+----
+// same as 0177
+auto x = octal!177;
+// octal is a compile-time device
+enum y = octal!160;
+// Create an unsigned octal
+auto z = octal!"1_000_000u";
+----
+ */
+int octal(string num)()
+if((octalFitsInInt!(num) && !literalIsLong!(num)) && !literalIsUnsigned!(num)) {
+	return octal!(int, num);
+}
+
+/// Ditto
+long octal(string num)()
+if((!octalFitsInInt!(num) || literalIsLong!(num)) && !literalIsUnsigned!(num)) {
+	return octal!(long, num);
+}
+
+/// Ditto
+uint octal(string num)()
+if((octalFitsInInt!(num) && !literalIsLong!(num)) && literalIsUnsigned!(num)) {
+	return octal!(int, num);
+}
+
+/// Ditto
+ulong octal(string num)()
+if((!octalFitsInInt!(num) || literalIsLong!(num)) && literalIsUnsigned!(num)) {
+	return octal!(long, num);
+}
+
+/*
+Returns if the given string is a correctly formatted octal literal.
+
+The format is specified in lex.html. The leading zero is allowed, but
+not required.
+ */
+bool isOctalLiteralString(string num) {
+	if (num.length == 0)
+		return false;
+    
+	// Must start with a number. To avoid confusion, literals that
+    // start with a '0' are not allowed
+    if (num[0] == '0' && num.length > 1)
+        return false;
+	if (num[0] < '0' || num[0] > '7')
+		return false;
+	
+	foreach (i, c; num) {
+		if ((c < '0' || c > '7') && c != '_') // not a legal character
+			if (i < num.length - 2)
+				return false;
+			else { // gotta check for those suffixes
+				if (c != 'U' && c != 'u' && c != 'L')
+					return false;
+				if (i != num.length - 1) {
+                    // if we're not the last one, the next one must
+                    // also be a suffix to be valid
+					char c2 = num[$-1];
+					if (c2 != 'U' && c2 != 'u' && c2 != 'L')
+						return false; // spam at the end of the string
+					if (c2 == c)
+						return false; // repeats are disallowed
+				}
+			}
+	}
+
+	return true;
+}
+
+/*
+	Returns true if the given compile time string is an octal literal.
+*/
+template isOctalLiteral(string num) {
+	enum bool isOctalLiteral = isOctalLiteralString(num);
+}
+
+/*
+	Takes a string, num, which is an octal literal, and returns its
+	value, in the type T specified.
+
+	So:
+
+	int a = octal!(int, "10");
+
+	assert(a == 8);
+*/
+T octal(T, string num)() {
+    static assert(isOctalLiteral!num, num ~ " is not a valid octal literal");
+
+    ulong pow = 1;
+    T value = 0;
+
+    for (int pos = num.length - 1; pos >= 0; pos--) {
+        char s = num[pos];
+	if (s < '0' || s > '7') // we only care about digits; skip the rest
+        // safe to skip - this is checked out in the assert so these
+        // are just suffixes
+		continue; 
+	
+	value += pow * (s - '0');
+	pow *= 8;
+  }
+
+  return value;
+}
+
+/// Ditto
+template octal(alias s) if (isIntegral!(typeof(s))) {
+	enum auto octal = octal!(typeof(s), toStringNow!(s));
+}
+
+unittest
+{
+	// ensure that you get the right types, even with embedded underscores
+	auto w = octal!"100_000_000_000";
+	static assert(!is(typeof(w) == int));
+	auto w2 = octal!"1_000_000_000";
+	static assert(is(typeof(w2) == int));
+
+    static assert(octal!"45" == 37);
+    static assert(octal!"0" == 0);
+    static assert(octal!"7" == 7);
+    static assert(octal!"10" == 8);
+    static assert(octal!"666" == 438);
+
+    static assert(octal!45 == 37);
+    static assert(octal!0 == 0);
+    static assert(octal!7 == 7);
+    static assert(octal!10 == 8);
+    static assert(octal!666 == 438);
+
+    static assert(octal!"66_6" == 438);
+
+    static assert(octal!2520046213 == 356535435);
+    static assert(octal!"2520046213" == 356535435);
+
+    static assert(octal!17777777777 == int.max);
+
+    static assert(!__traits(compiles, octal!823));
+
+    // for some reason, this line fails, though if you try it in code,
+    // it indeed doesn't compile... weird.
+
+    // static assert(!__traits(compiles, octal!"823"));
+
+    static assert(!__traits(compiles, octal!"_823"));
+    static assert(!__traits(compiles, octal!"spam"));
+    static assert(!__traits(compiles, octal!"77%"));
+
+    int a;
+    long b;
+
+    // biggest value that should fit in an it
+    static assert(__traits(compiles,  a = octal!"17777777777"));
+    // should not fit in the int
+    static assert(!__traits(compiles, a = octal!"20000000000"));
+    // ... but should fit in a long
+    static assert(__traits(compiles, b = octal!"20000000000")); 
+    
+    static assert(!__traits(compiles, a = octal!"1L"));
+
+    // this should pass, but it doesn't, since the int converter
+    // doesn't pass along its suffix to helper templates
+
+    //static assert(!__traits(compiles, a = octal!1L));
+
+    static assert(__traits(compiles, b = octal!"1L"));
+    static assert(__traits(compiles, b = octal!1L));
 }
