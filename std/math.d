@@ -1615,31 +1615,39 @@ pure nothrow real hypot(real x, real y)
     static assert(real.min_normal*real.max>2 && real.min_normal*real.max<=4); // Proves that sqrt(real.max) ~~  0.5/sqrt(real.min_normal)
 
     real u = fabs(x);
-    real v = fabs(y);    
-    if (u >= SQRTMAX*0.5)
+    real v = fabs(y);
+    if (!(u >= v))  // check for NaN as well.
     {
-        if (v < SQRTMAX*real.epsilon)   return u; // hypot(huge, tiny) == huge
-        if (u == real.infinity && v!=v) return u; // hypot(inf, nan) == inf
-    }
-    else if (v >= SQRTMAX*0.5)
-    { 
-        if (u < SQRTMAX*real.epsilon)   return v; // hypot(tiny, huge) == huge        
-        if (v == real.infinity && u!=u) return v; // hypot(nan, inf) == inf
-    }
-    else if (u<=SQRTMIN || v<=SQRTMIN)
+        v = u;
+        u = fabs(y);
+        if (u == real.infinity) return u; // hypot(inf, nan) == inf
+        if (v == real.infinity) return v; // hypot(nan, inf) == inf
+    }    
+    // Now u >= v, or else one is NaN.
+    if (v >= SQRTMAX*0.5)
     {
-        // at least one is tiny, avoid underflow
-        u *= SQRTMAX / real.epsilon; v *= SQRTMAX/real.epsilon;
+            // hypot(huge, huge) -- avoid overflow
+        u *= SQRTMIN*0.5;
+        v *= SQRTMIN*0.5;    
+        return sqrt(u*u + v*v) * SQRTMAX * 2.0;
+    }
+    if (u <= SQRTMIN)
+    {
+        // hypot (tiny, tiny) -- avoid underflow
+        // This is only necessary to avoid setting the underflow
+        // flag.
+        u *= SQRTMAX / real.epsilon;
+        v *= SQRTMAX/real.epsilon;
         return sqrt(u*u + v*v) * SQRTMIN * real.epsilon;
     }
-    else
+    if (u * real.epsilon > v)
     {
-        // both are in the normal range
-        return sqrt(u*u + v*v);
+        // hypot (huge, tiny) = huge
+        return u;    
     }
-    // hypot(huge, huge) -- avoid overflow
-    u *= SQRTMIN*0.5; v *= SQRTMIN*0.5;    
-    return sqrt(u*u + v*v) * SQRTMAX * 2.0;
+    
+    // both are in the normal range
+    return sqrt(u*u + v*v);
 }
 
 unittest
@@ -1651,6 +1659,8 @@ unittest
             [ -0.0,   -0.0,   0.0],
             [ 3.0,     4.0,   5.0],
             [ -300,   -400,   500],
+            [0.0,      7.0,   7.0],
+            [9.0,   9*real.epsilon,   9.0],
             [88/(64*sqrt(real.min_normal)), 105/(64*sqrt(real.min_normal)), 137/(64*sqrt(real.min_normal))],
             [88/(128*sqrt(real.min_normal)), 105/(128*sqrt(real.min_normal)), 137/(128*sqrt(real.min_normal))],
             [3*real.min_normal*real.epsilon, 4*real.min_normal*real.epsilon, 5*real.min_normal*real.epsilon],
