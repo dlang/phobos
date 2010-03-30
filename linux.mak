@@ -130,7 +130,9 @@ STD_MODULES = $(addprefix std/, algorithm array atomics base64 bigint	\
 
 # Other D modules that aren't under std/
 EXTRA_MODULES := $(addprefix std/c/, stdarg stdio) $(addprefix etc/c/,	\
-zlib)
+        zlib) $(addprefix std/internal/math, biguintcore biguintnoasm   \
+        biguintx86 )
+
 # OS-specific D modules
 EXTRA_MODULES_POSIX := $(addprefix std/c/linux/, linux socket)
 EXTRA_MODULES_WIN32 := $(addprefix std/c/windows/, com stat windows		\
