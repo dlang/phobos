@@ -681,7 +681,21 @@ class Thread
 	    error("already started");
 
 	synchronized (Thread.classinfo)
-	    idx = add_thread();
+	{
+	    for (int i = 0; 1; i++)
+	    {
+		if (i == allThreads.length)
+		    error("too many threads");
+		if (!allThreads[i])
+		{   allThreads[i] = this;
+		    idx = i;
+		    if (i >= allThreadsDim)
+			allThreadsDim = i + 1;
+		    break;
+		}
+	    }
+	    nthreads++;
+	}
 
 	state = TS.RUNNING;
 	//printf("creating thread x%x\n", this);
@@ -961,7 +975,7 @@ class Thread
 	sched_yield();
     }
 
-    static uint nthreads = 0;
+    static uint nthreads = 1;
 
   private:
 
