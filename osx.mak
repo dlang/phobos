@@ -1,180 +1,249 @@
 # Makefile to build linux D runtime library libphobos2.a and its unit test
+#
+# make clean => removes all targets built by the makefile
+#
+# make zip => creates a zip file of all the sources (not targets)
+# referred to by the makefile, including the makefile
+#
+# make release => makes release build of the library (this is also the
+# default target)
+#
+# make debug => makes debug build of the library
+#
+# make unittest => builds all unittests (for both debug and release)
+# and runs them
+#
+# make html => makes html documentation
+#
+# make install => copies library to /usr/lib 
 
-DOCDIR = ../web/phobos
-DOC_OUTPUT_DIR = ../web/phobos
-DRUNTIMEDIR = ../druntime
-PRODUCTIONLIBDIR = $(dir $(shell which dmd))../lib
-OBJDIR = obj
+# Configurable stuff, usually from the command line
+#
+# OS can be posix, win32, win32remote, win32wine, or osx
+OS = posix
+
+# Configurable stuff that's rarely edited
+DRUNTIME_PATH = ../druntime
+ZIPFILE = phobos.zip
+ROOT_OF_THEM_ALL = generated
+ROOT = $(ROOT_OF_THEM_ALL)/$(OS)/$(BUILD)
+# Documentation-related stuff
 DOCSRC = ../docsrc
-STDDOC = $(DOCSRC)/std.ddoc
+DOC_OUTPUT_DIR = ../web/2.0/phobos
 STYLECSS_SRC = $(DOCSRC)/style.css
 STYLECSS_TGT = $(DOC_OUTPUT_DIR)/../style.css
-
-OS = posix
-BUILDS = debug release
-
-################################################################################
-
-CC_win32 = wine dmc.exe
-DMD_win32 = wine dmd.exe
-OBJSUFFIX_win32 = .obj
-LIBSUFFIX_win32 = .lib
-EXESUFFIX_win32 = .exe
-CFLAGS_win32_debug = 
-CFLAGS_win32_release = 
-LIBDRUNTIME_win32 = 
-
-CC_posix = cc
-DMD_posix = dmd
-OBJDIR_posix = obj/posix
-OBJSUFFIX_posix = .o
-LIBSUFFIX_posix = .a
-EXESUFFIX_posix =
-LIBDRUNTIME_posix = $(DRUNTIMEDIR)/libdruntime.a
-
-CFLAGS_posix_debug = -m32 -g
-CFLAGS_posix_release = -m32 -O3
-DFLAGS_debug = -w -g -debug -d
-DFLAGS_release = -w -O -release -inline -d
-
+SRC_DOCUMENTABLES = phobos.d $(addsuffix .d,$(STD_MODULES))
+STDDOC = $(DOCSRC)/std.ddoc
 DDOCFLAGS=-version=ddoc -d -c -o- $(STDDOC)
 
+# Variable defined in an OS-dependent manner (see below)
+CC =
+DMD =
+CFLAGS =
+DFLAGS = 
+
+# BUILD can be debug or release, but is unset by default; recursive
+# invocation will set it. See the debug and release targets below.
+BUILD = 
+
+# Fetch the makefile name, will use it in recursive calls
+MAKEFILE:=$(lastword $(MAKEFILE_LIST))
+
+# Set DRUNTIME name and full path
+ifeq (,$(findstring win,$(OS)))
+	DRUNTIME = $(DRUNTIME_PATH)/lib/libdruntime.a
+else
+	DRUNTIME = $(DRUNTIME_PATH)/lib/druntime.lib
+endif
+
+# Set CC and DMD
+ifeq ($(OS),win32wine)
+	CC = wine $(HOME)/dmc/bin/dmc.exe
+	DMD = wine dmd.exe
+else
+	ifeq ($(OS),win32remote)
+		DMD = ssh 206.125.170.138 "cd code/dmd/phobos && dmd"
+		CC = ssh 206.125.170.138 "cd code/dmd/phobos && dmc"
+	else
+		DMD = dmd
+		ifeq ($(OS),win32)
+			CC = dmc
+		else
+			CC = cc
+		endif
+	endif
+endif
+
+# Set CFLAGS
+ifeq ($(OS),posix)
+	CFLAGS += -m32
+	ifeq ($(BUILD),debug)
+		CFLAGS += -g
+	else
+		CFLAGS += -O3
+	endif
+endif
+
+# Set DFLAGS
+DFLAGS := -I$(DRUNTIME_PATH)/import
+ifeq ($(BUILD),debug)
+	DFLAGS += -w -g -debug -d
+else
+	DFLAGS += -w -O -release -nofloat -d
+endif
+
+# Set DOTOBJ and DOTEXE
+ifeq (,$(findstring win,$(OS)))
+	DOTOBJ:=.o
+	DOTEXE=
+else
+	DOTOBJ:=.obj
+	DOTEXE=.exe
+endif
+
+# Set LINKOPTS
+ifeq ($(OS),posix)
+	LINKOPTS=-L-ldl -L-L$(ROOT)
+else
+	LINKOPTS=
+endif
+
+# Set LIB, the ultimate target
+ifeq (,$(findstring win,$(OS)))
+	LIB = $(ROOT)/libphobos2.a
+else
+	LIB = $(ROOT)/phobos.lib
+endif
+
 ################################################################################
+MAIN = $(ROOT)/emptymain.d
 
 # Stuff in std/
 STD_MODULES = $(addprefix std/, algorithm array atomics base64 bigint	\
-        bitmanip boxer concurrency compiler complex contracts conv      \
-        cpuid cstream ctype date datebase dateparse demangle encoding   \
-        file format	functional getopt intrinsic iterator json loader    \
-        math md5 metastrings mmfile numeric outbuffer path perf process \
-        random range regex regexp signals socket socketstream stdint    \
-        stdio stdiobase stream string syserror system traits typecons	\
+        bitmanip boxer compiler complex contracts conv cpuid cstream	\
+        ctype date datebase dateparse demangle encoding file format		\
+        functional getopt intrinsic iterator json loader math md5		\
+        metastrings mmfile numeric outbuffer path perf process random	\
+        range regex regexp signals socket socketstream stdint stdio		\
+        stdiobase stream string syserror system traits typecons			\
         typetuple uni uri utf variant xml zip zlib)
-        
+
 # Other D modules that aren't under std/
-EXTRA_MODULES = $(addprefix std/c/, stdarg stdio) $(addprefix etc/c/,	\
-        zlib) $(addprefix std/internal/math, biguintcore biguintnoasm   \
+EXTRA_MODULES := $(addprefix std/c/, stdarg stdio) $(addprefix etc/c/,	\
+        zlib) $(addprefix std/internal/math/, biguintcore biguintnoasm  \
         biguintx86 )
 
 # OS-specific D modules
-EXTRA_MODULES_posix = $(addprefix std/c/linux/, linux socket)
-EXTRA_MODULES_win32 = $(addprefix std/c/windows/, com stat windows winsock) \
-	$(addprefix std/windows/, charset iunknown syserror)
-C_MODULES = $(addprefix etc/c/zlib/, adler32 compress crc32 gzio	\
-	uncompr deflate trees zutil inflate infback inftrees inffast)
-
-SRC_DOCUMENTABLES = phobos.d $(addsuffix .d,$(STD_MODULES))
-
-define LINKOPTS_win32
-endef
-define LINKOPTS_posix
--defaultlib=phobos2tmp_$1 -debuglib=phobos2tmp_$1 -L-ldl
-endef
-
-define REL2ABS_win32
-'z:$(subst /,\,$(realpath .)/$1)'
-endef
-define REL2ABS_posix
-$1
-endef
-
-define ABS2ABS_win32
-'z:$(subst /,\,$1)'
-endef
-define ABS2ABS_posix
-$1
-endef
-
-define RUN_win32
-wine $1
-endef
-define RUN_posix
-$1
-endef
-
-################################################################################
-define GENERATE
-# $1 is OS, $2 is the build
-
-OBJS_$1_$2 = $$(addsuffix $$(OBJSUFFIX_$1), $$(addprefix	\
-$$(OBJDIR)/$1/$2/, $$(basename $$(C_MODULES))))
-LIB_$1_$2 = $$(OBJDIR)/$1/$2/libphobos2$$(LIBSUFFIX_$1)
-SRC2LIB_$1 = $$(addsuffix .d,crc32 $(STD_MODULES) $(EXTRA_MODULES)	\
-$(EXTRA_MODULES_$1))
-
-$$(OBJDIR)/$1/$2/%$$(OBJSUFFIX_$1) : %.c $$(OBJDIR)/$1/$2/.directory
-	@mkdir -p $$(dir $$@)
-	$(CC_$1) -c $(CFLAGS_$1_$2) -o$$@ $$<
-
-$$(OBJDIR)/$1/$2/unittest/std/% : std/%.d				\
-	$(PRODUCTIONLIBDIR)/libphobos2tmp_$2$(LIBSUFFIX_$1)
-	@echo 'void main(){}' >/tmp/emptymain.d
-	@echo Testing $$@
-	@$(DMD_$1) $(DFLAGS_$2) -unittest \
-		$$(call LINKOPTS_$1,$2) \
-		-of$$(call REL2ABS_$1,$$@) $$(call ABS2ABS_$1,/tmp/emptymain.d) \
-		$$(foreach F,$$<,$$(call REL2ABS_$1,$$F)) \
-		$(PRODUCTIONLIBDIR)/libphobos2tmp_$2$(LIBSUFFIX_$1)
-	@rm -rf $$(basename $$@).map
-# make the file very old so it builds and runs again if it fails
-	@touch $$@ -t 197001230123
-# run unittest
-	@$$(call RUN_$1,$$@)
-# succeeded, render the file new again
-	@touch $$@
-
-$(PRODUCTIONLIBDIR)/libphobos2tmp_$2$$(LIBSUFFIX_$1) : $$(LIB_$1_$2)
-	sudo ln -sf $$(realpath $$<) $$@
-
-PRODUCTIONLIB_$1 = $(PRODUCTIONLIBDIR)/libphobos2$(LIBSUFFIX_$1)
-ifeq ($2,release)
-$1/$2 : $$(PRODUCTIONLIB_$1)
-$$(PRODUCTIONLIB_$1) : $$(LIB_$1_$2)
-	sudo ln -sf $$(realpath $$<) $$@
+EXTRA_MODULES_POSIX := $(addprefix std/c/linux/, linux socket)
+EXTRA_MODULES_WIN32 := $(addprefix std/c/windows/, com stat windows		\
+		winsock) $(addprefix std/windows/, charset iunknown syserror)
+ifeq (,$(findstring win,$(OS)))
+	EXTRA_MODULES+=$(EXTRA_MODULES_POSIX)
 else
-$1/$2 : $$(LIB_$1_$2)
+	EXTRA_MODULES+=$(EXTRA_MODULES_WIN32)
 endif
 
-$$(LIB_$1_$2) : $$(SRC2LIB_$1) $$(OBJS_$1_$2)					\
-$(LIBDRUNTIME_$1)
-	@echo $(DMD_$1) $(DFLAGS_$2) -lib -of$$@ "[...tons of files...]"
-	@$(DMD_$1) $(DFLAGS_$2) -lib -of$$@ $$^
+# Aggregate all D modules relevant to this build
+D_MODULES = crc32 $(STD_MODULES) $(EXTRA_MODULES)
+# Add the .d suffix to the module names
+D_FILES = $(addsuffix .d,$(D_MODULES))
+# Aggregate all D modules over all OSs (this is for the zip file)
+ALL_D_FILES = $(addsuffix .d,crc32 $(STD_MODULES) $(EXTRA_MODULES)	\
+$(EXTRA_MODULES_POSIX) $(EXTRA_MODULES_WIN32))
 
-$$(OBJDIR)/$1/$2/.directory :
-	mkdir -p $$@
+# C files to be part of the build
+C_MODULES = $(addprefix etc/c/zlib/, adler32 compress crc32 deflate	\
+	gzio infback inffast inflate inftrees trees uncompr zutil)
+C_FILES = $(addsuffix .c,$(C_MODULES))
+# C files that are not compiled (right now only zlib-related)
+C_EXTRAS = $(addprefix etc/c/zlib/, algorithm.txt ChangeLog crc32.h	\
+deflate.h example.c inffast.h inffixed.h inflate.h inftrees.h		\
+linux.mak minigzip.c osx.mak README trees.h win32.mak zconf.h		\
+zconf.in.h zlib.3 zlib.h zutil.h)
+# Aggregate all C files over all OSs (this is for the zip file)
+ALL_C_FILES = $(C_FILES) $(C_EXTRAS)
 
-$1/$2/unittest : $1/$2 $$(addprefix $$(OBJDIR)/$1/$2/unittest/,$(STD_MODULES))
-
-endef
+OBJS = $(addsuffix $(DOTOBJ),$(addprefix $(ROOT)/,$(C_MODULES)))
 
 ################################################################################
-# Default OS is posix, default build is release
-default : posix/release
-$(foreach S,$(OS), $(eval $S : $(foreach B,$(BUILDS), $S/$B/unittest)))
-$(foreach B,$(BUILDS), $(eval $B : $(foreach S,$(OS), $S/$B/unittest)))
-unittest : $(foreach S,$(OS), $S)
+# Rules begin here
+################################################################################
 
-all : posix win32 html
+ifeq ($(BUILD),)
+# No build was defined, so here we define release and debug
+# targets. BUILD is not defined in user runs, only by recursive
+# self-invocations. So the targets in this branch are accessible to
+# end users.
+release : 
+	$(MAKE) --no-print-directory -f $(MAKEFILE) OS=$(OS) BUILD=release
+debug : 
+	$(MAKE) --no-print-directory -f $(MAKEFILE) OS=$(OS) BUILD=debug
+unittest : 
+	$(MAKE) --no-print-directory -f $(MAKEFILE) OS=$(OS) BUILD=debug unittest
+	$(MAKE) --no-print-directory -f $(MAKEFILE) OS=$(OS) BUILD=release unittest
+else
+# This branch is normally taken in recursive builds. All we need to do
+# is set the default build to $(BUILD) (which is either debug or
+# release) and then let the unittest depend on that build's unittests.
+$(BUILD) : $(LIB)
+unittest : $(addprefix $(ROOT)/unittest/,$(D_MODULES))
+endif
+
+################################################################################
+
+$(ROOT)/%$(DOTOBJ) : %.c
+	@[ -d $(dir $@) ] || mkdir -p $(dir $@) || [ -d $(dir $@) ]
+	$(CC) -c $(CFLAGS) $< -o$@
+
+$(LIB) : $(OBJS) $(ALL_D) $(DRUNTIME)
+	$(DMD) $(DFLAGS) -lib -of$@ $(DRUNTIME) $(D_FILES) $(OBJS)
+
+$(ROOT)/unittest/%$(DOTEXE) : %.d $(LIB) $(ROOT)/emptymain.d
+	@echo Testing $@
+	@$(DMD) $(DFLAGS) -unittest $(LINKOPTS) -of$@ $(ROOT)/emptymain.d $<
+# make the file very old so it builds and runs again if it fails
+	@touch -t 197001230123 $@
+# run unittest in its own directory
+	@$@
+# succeeded, render the file new again
+	@touch $@
+
+# Disable implicit rule
+%$(DOTEXE) : %$(DOTOBJ)
+
+$(ROOT)/emptymain.d : $(ROOT)/.directory
+	@echo 'void main(){}' >$@
+
+$(ROOT)/.directory :
+	mkdir -p $(ROOT) || exists $(ROOT)
+	touch $@
+
 clean :
-	rm -rf $(OBJDIR) $(DOC_OUTPUT_DIR)
+	rm -rf $(ROOT_OF_THEM_ALL) $(ZIPFILE) $(DOC_OUTPUT_DIR)
 
-$(eval $(foreach B,debug release, $(foreach S,posix win32, $(call	\
-	GENERATE,$S,$B))))
+zip :
+	zip $(ZIPFILE) $(MAKEFILE) $(ALL_D_FILES) $(ALL_C_FILES)
+
+install : release
+	sudo cp $(LIB) /usr/lib/
+
+$(DRUNTIME) :
+	$(MAKE) -C $(DRUNTIME_PATH) -f posix.mak
 
 ###########################################################
-# Dox
+# html documentation
 
 $(DOC_OUTPUT_DIR)/%.html : %.d $(STDDOC)
-	$(DMD_win32) $(DDOCFLAGS) -Df$@ $<
+	wine dmd $(DDOCFLAGS) -Df$@ $<
 
 $(DOC_OUTPUT_DIR)/std_%.html : std/%.d $(STDDOC)
-	$(DMD_win32) $(DDOCFLAGS) -Df$@ $<
+	wine dmd $(DDOCFLAGS) -Df$@ $<
 
 $(DOC_OUTPUT_DIR)/std_c_%.html : std/c/%.d $(STDDOC)
-	$(DMD_win32) $(DDOCFLAGS) -Df$@ $<
+	wine dmd $(DDOCFLAGS) -Df$@ $<
 
 $(DOC_OUTPUT_DIR)/std_c_linux_%.html : std/c/linux/%.d $(STDDOC)
-	$(DMD_win32) $(DDOCFLAGS) -Df$@ $<
+	wine dmd $(DDOCFLAGS) -Df$@ $<
 
 $(STYLECSS_TGT) : $(STYLECSS_SRC)
 	cp $< $@
@@ -182,5 +251,3 @@ $(STYLECSS_TGT) : $(STYLECSS_SRC)
 html : $(addprefix $(DOC_OUTPUT_DIR)/, $(subst /,_,$(subst .d,.html,	\
 	$(SRC_DOCUMENTABLES)))) $(STYLECSS_TGT)
 	@$(MAKE) -f $(DOCSRC)/linux.mak -C $(DOCSRC) --no-print-directory
-
-##########################################################
