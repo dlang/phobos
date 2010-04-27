@@ -293,7 +293,7 @@ SRC_ZLIB= etc\c\zlib\trees.h \
 
 phobos.lib : $(OBJS) $(SRCS) \
 	etc\c\zlib\zlib.lib $(DRUNTIMELIB) win32.mak
-	$(DMD) -lib -ofphobos.lib $(DFLAGS) $(SRCS) $(OBJS) \
+	$(DMD) -lib -ofphobos.lib -Xfphobos.json $(DFLAGS) $(SRCS) $(OBJS) \
 		etc\c\zlib\zlib.lib $(DRUNTIMELIB)
 
 unittest : $(SRCS) phobos.lib
@@ -801,6 +801,7 @@ clean:
 	del $(DOCS)
 	del unittest.obj unittest.map unittest.exe
 	del phobos.lib
+	del phobos.json
 
 cleanhtml:
 	del $(DOCS)
