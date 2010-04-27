@@ -319,7 +319,7 @@ phobos.lib : $(OBJS) $(SRCS) minit.obj internal\gc\dmgc.lib \
 	etc\c\zlib\zlib.lib win32.mak
 #	lib -c -p32 phobos.lib $(OBJS) minit.obj internal\gc\dmgc.lib \
 #		etc\c\zlib\zlib.lib
-        $(DMD) -lib -ofphobos.lib $(DFLAGS) $(SRCS) $(OBJS) minit.obj \
+        $(DMD) -lib -ofphobos.lib -Xfphobos.json $(DFLAGS) $(SRCS) $(OBJS) minit.obj \
                 internal\gc\dmgc.lib etc\c\zlib\zlib.lib
 
 unittest : $(SRCS) phobos.lib
@@ -934,6 +934,8 @@ zip : $(MAKEFILES) phoboslicense.txt std.ddoc $(SRC) \
 clean:
 	del $(OBJS)
 	del $(DOCS)
+	del phobos.json
+	del phobos.lib
 
 cleanhtml:
 	del $(DOCS)
