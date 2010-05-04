@@ -849,22 +849,25 @@ struct SimpleSlice(T)
         return result;
     }
 
-/// Returns the length of the slice.
-    size_t length() const
+    @property
     {
-        return _e - _b;
-    }
+        /// Returns the length of the slice.
+        size_t length() const
+        {
+            return _e - _b;
+        }
 
-/**
-Sets the length of the slice. Newly added elements will be filled with
-$(D T.init).
- */
-    void length(size_t newLength)
-    {
-        immutable oldLength = length;
-        _b = cast(T*) core.memory.GC.realloc(_b, newLength * T.sizeof);
-        _e = _b + newLength;
-        this[oldLength .. $] = T.init;
+        /**
+        Sets the length of the slice. Newly added elements will be filled with
+        $(D T.init).
+         */
+        void length(size_t newLength)
+        {
+            immutable oldLength = length;
+            _b = cast(T*) core.memory.GC.realloc(_b, newLength * T.sizeof);
+            _e = _b + newLength;
+            this[oldLength .. $] = T.init;
+        }
     }
 
 /// Concatenation.

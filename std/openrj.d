@@ -527,7 +527,7 @@ public:
     /**
      *
      */
-    uint length()
+    @property uint length()
     {
         return numFields();
     }
@@ -894,7 +894,7 @@ public:
     /**
      *
      */
-    uint length()
+    @property uint length()
     {
         return numRecords();
     }

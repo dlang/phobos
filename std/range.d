@@ -377,6 +377,10 @@ unittest
     static assert(hasLength!(int[]));
     struct A { ulong length; }
     static assert(hasLength!(A));
+    struct B { size_t length() { return 0; } }
+    static assert(!hasLength!(B));
+    struct C { @property size_t length() { return 0; } }
+    static assert(hasLength!(C));
 }
 
 /**
@@ -567,7 +571,7 @@ range. Forwards to $(D _input.length) and is defined only if $(D
 hasLength!(R)).
  */
     static if (hasLength!R || isNarrowString!R)
-        size_t length()
+        @property size_t length()
         {
             return _input.length;
         }
@@ -740,7 +744,7 @@ range. Forwards to $(D _input.length) and is defined only if $(D
 hasLength!(R)).
  */
     static if (hasLength!(R))
-        size_t length()
+        @property size_t length()
         {
             return (_input.length + _n - 1) / _n;
         }
@@ -891,7 +895,7 @@ public:
     }
 
     static if (allSatisfy!(hasLength, R))
-        size_t length()
+        @property size_t length()
         {
             size_t result;
             foreach (i, Unused; R)
@@ -1223,7 +1227,7 @@ public:
 
     static if (isInfinite!(R))
     {
-        size_t length() const
+        @property size_t length() const
         {
             return _maxAvailable;
         }
@@ -1236,7 +1240,7 @@ public:
     }
     else static if (hasLength!(R))
     {
-        size_t length()
+        @property size_t length()
         {
             return min(_maxAvailable, _input.length);
         }
@@ -1815,7 +1819,7 @@ Returns the length of this range. Defined only if all ranges define
 $(D length).
  */
     static if (allSatisfy!(hasLength, R))
-        size_t length()
+        @property size_t length()
         {
             auto result = ranges.field[0].length;
             if (stoppingPolicy == StoppingPolicy.requireSameLength)

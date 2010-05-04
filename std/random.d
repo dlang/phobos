@@ -858,7 +858,7 @@ struct RandomCover(Range, Random)
     }
 
     static if (hasLength!Range)
-        size_t length()
+        @property size_t length()
         {
             return (1 + _input.length) - _alreadyChosen;
         }
@@ -999,7 +999,7 @@ Constructor.
     }
 
 /// Ditto
-    size_t length()
+    @property size_t length()
     {
         return _toSelect;
     }

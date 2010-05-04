@@ -969,7 +969,7 @@ public:
      * returns the length of that array. Otherwise, throws an
      * exception.
      */
-    size_t length()
+    @property size_t length()
     {
         return cast(size_t) fptr(OpID.length, &store, null);
     }

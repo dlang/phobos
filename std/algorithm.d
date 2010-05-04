@@ -1555,7 +1555,7 @@ public:
         return haystack[$ .. $];
     }
 
-    size_t length()
+    @property size_t length()
     {
         return needle.length;
     }
@@ -5107,7 +5107,7 @@ heap is sorted and returned.
 /**
 Returns the _length of the heap.
  */    
-    size_t length() const
+    @property size_t length() const
     {
         return _length;
     }
@@ -5297,7 +5297,7 @@ public:
 
     static if (allSatisfy!(hasLength, Rs))
     {
-        size_t length()
+        @property size_t length()
         {
             size_t result;
             foreach (i, U; Rs)

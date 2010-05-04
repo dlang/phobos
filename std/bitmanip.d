@@ -302,31 +302,34 @@ struct BitArray
         return (len + 31) / 32;
     }
 
-    const size_t length()
+    @property
     {
-        return len;
-    }
-
-    void length(size_t newlen)
-    {
-        if (newlen != len)
+        const size_t length()
         {
-            size_t olddim = dim();
-            size_t newdim = (newlen + 31) / 32;
+            return len;
+        }
 
-            if (newdim != olddim)
+        void length(size_t newlen)
+        {
+            if (newlen != len)
             {
-                // Create a fake array so we can use D's realloc machinery
-                uint[] b = ptr[0 .. olddim];
-                b.length = newdim;                // realloc
-                ptr = b.ptr;
-                if (newdim & 31)
-                {   // Set any pad bits to 0
-                    ptr[newdim - 1] &= ~(~0 << (newdim & 31));
-                }
-            }
+                size_t olddim = dim();
+                size_t newdim = (newlen + 31) / 32;
 
-            len = newlen;
+                if (newdim != olddim)
+                {
+                    // Create a fake array so we can use D's realloc machinery
+                    uint[] b = ptr[0 .. olddim];
+                    b.length = newdim;                // realloc
+                    ptr = b.ptr;
+                    if (newdim & 31)
+                    {   // Set any pad bits to 0
+                        ptr[newdim - 1] &= ~(~0 << (newdim & 31));
+                    }
+                }
+
+                len = newlen;
+            }
         }
     }
 

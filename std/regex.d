@@ -1676,7 +1676,7 @@ void main()
 
         void popFront() {  matches.popFront; }
 
-        size_t length()
+        @property size_t length()
         {
             foreach (i; 0 .. matches.length)
             {
