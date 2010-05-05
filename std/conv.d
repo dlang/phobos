@@ -101,15 +101,15 @@ T to(T, S)(S s) if (!implicitlyConverts!(S, T) && isSomeString!(T)
         // same width, only qualifier conversion
         enum tIsConst = is(T == const(char)[]) || is(T == const(wchar)[])
             || is(T == const(dchar)[]);
-        enum tIsInvariant = is(T == invariant(char)[])
-            || is(T == invariant(wchar)[]) || is(T == invariant(dchar)[]);
+        enum tIsInvariant = is(T == immutable(char)[])
+            || is(T == immutable(wchar)[]) || is(T == immutable(dchar)[]);
         static if (tIsConst) {
             return s;
         } else static if (tIsInvariant) {
-            // conversion (mutable|const) -> invariant
+            // conversion (mutable|const) -> immutable
             return s.idup;
         } else {
-            // conversion (invariant|const) -> mutable
+            // conversion (immutable|const) -> mutable
             return s.dup;
         }
     } else {
@@ -131,12 +131,12 @@ unittest
     alias TypeTuple!(char, wchar, dchar) Chars;
     foreach (LhsC; Chars)
     {
-        alias TypeTuple!(LhsC[], const(LhsC)[], invariant(LhsC)[]) LhStrings;
+        alias TypeTuple!(LhsC[], const(LhsC)[], immutable(LhsC)[]) LhStrings;
         foreach (Lhs; LhStrings)
         {
             foreach (RhsC; Chars)
             {
-                alias TypeTuple!(RhsC[], const(RhsC)[], invariant(RhsC)[])
+                alias TypeTuple!(RhsC[], const(RhsC)[], immutable(RhsC)[])
                     RhStrings;
                 foreach (Rhs; RhStrings)
                 {
@@ -162,7 +162,7 @@ if (isSomeString!(T) && !isSomeString!(S) && isArray!(S))
     alias Unqual!(typeof(T.init[0])) Char;
     // array-to-string conversion
     static if (is(S == void[])
-            || is(S == const(void)[]) || is(S == invariant(void)[])) {
+            || is(S == const(void)[]) || is(S == immutable(void)[])) {
         auto raw = cast(const(ubyte)[]) s;
         enforce(raw.length % Char.sizeof == 0, "Alignment mismatch"
                 " in converting a " ~ S.stringof ~ " to a " ~ T.stringof);
@@ -632,10 +632,10 @@ if (!implicitlyConverts!(S, T)
     static if (sSmallest < 0) {
         // possible underflow converting from a signed
         static if (tSmallest == 0) {
-            invariant good = value >= 0;
+            immutable good = value >= 0;
         } else {
             static assert(tSmallest < 0);
-            invariant good = value >= tSmallest;
+            immutable good = value >= tSmallest;
         }
         if (!good) ConvOverflowError.raise("Conversion negative overflow");
     }
@@ -684,7 +684,7 @@ unittest
     assert(b == [ 1.0f, 2, 3 ]);
     auto c = to!(string[])(b);
     assert(c[0] == "1" && c[1] == "2" && c[2] == "3");
-    invariant(int)[3] d = [ 1, 2, 3 ];
+    immutable(int)[3] d = [ 1, 2, 3 ];
     b = to!(float[])(d);
     assert(b == [ 1.0f, 2, 3 ]);
     uint[][] e = [ a, a ];
@@ -728,7 +728,7 @@ unittest {
             assert(s1 == to!(T[])(s2));
             auto s3 = to!(const(U)[])(s1);
             assert(s1 == to!(T[])(s3));
-            auto s4 = to!(invariant(U)[])(s1);
+            auto s4 = to!(immutable(U)[])(s1);
             assert(s1 == to!(T[])(s4));
         }
     }
@@ -848,7 +848,7 @@ unittest {
     // test parsing
     {
         foreach (T; AllNumerics) {
-            // from type invariant(char)[2]
+            // from type immutable(char)[2]
             auto a = to!(T)("42");
             assert(a == 42);
             // from type char[]
@@ -860,7 +860,7 @@ unittest {
             s2[] = "42";
             a = to!(T)(s2);
             assert(a == 42);
-            // from type invariant(wchar)[2]
+            // from type immutable(wchar)[2]
             a = to!(T)("42"w);
             assert(a == 42);
         }
@@ -1210,7 +1210,7 @@ if (isSomeString!Source && is(Target == typedef))
 //     else
 //     {
 //         // Larger than int types
-//         invariant length = s.length;
+//         immutable length = s.length;
 //         if (!length)
 //             goto Lerr;
 
@@ -1301,7 +1301,7 @@ unittest
     i = to!int("-2147483648");
     assert(i == 0x80000000);
 
-    invariant string[] errors =
+    immutable string[] errors =
     [
         "",
         "-",
@@ -1809,7 +1809,7 @@ unittest
 }
 
 // @@@ BUG IN COMPILER
-// lvalue of type invariant(T)[] should be implicitly convertible to
+// lvalue of type immutable(T)[] should be implicitly convertible to
 // ref const(T)[].
 // F parseFloating(S : S[], F)(ref S[] s)
 // {
@@ -2539,7 +2539,7 @@ if (std.typetuple.staticIndexOf!(Unqual!S, uint, ulong) >= 0 && isSomeString!T)
     {
         if (value < 10)
         {
-            static invariant Char[10] digits = "0123456789";
+            static immutable Char[10] digits = "0123456789";
             // Avoid storage allocation for simple stuff
             return digits[cast(size_t) value .. cast(size_t) value + 1];
         }
@@ -2597,7 +2597,7 @@ T to(T, S)(S c) if (staticIndexOf!(Unqual!S, char, wchar, dchar) >= 0
 version(unittest) private alias TypeTuple!(
     char, wchar, dchar,
     const(char), const(wchar), const(dchar),
-    invariant(char), invariant(wchar), invariant(dchar))
+    immutable(char), immutable(wchar), immutable(dchar))
                       AllChars;
 
 unittest
@@ -2630,7 +2630,7 @@ if (staticIndexOf!(Unqual!S, int, long) >= 0 && isSomeString!T)
         {
             static immutable Char[20] data =
                 "00-1-2-3-4-5-6-7-8-9";
-            invariant i = cast(size_t) -value * 2;
+            immutable i = cast(size_t) -value * 2;
             return data[i .. i + 2];
         }
     }

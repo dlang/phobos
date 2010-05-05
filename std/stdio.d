@@ -1670,7 +1670,7 @@ unittest
     // test with ubyte[] inputs
     //@@@BUG 2612@@@
     //alias TypeTuple!(immutable(ubyte)[], ubyte[]) TestedWith2;
-    alias TypeTuple!(invariant(ubyte)[], ubyte[]) TestedWith2;
+    alias TypeTuple!(immutable(ubyte)[], ubyte[]) TestedWith2;
     foreach (T; TestedWith2) {
         // test looping with an empty file
         std.file.write(file, "");

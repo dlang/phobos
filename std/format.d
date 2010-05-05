@@ -116,7 +116,7 @@ enum Mangle : char
     Tdelegate = 'D',
 
     Tconst    = 'x',
-    Tinvariant = 'y',
+    Timmutable = 'y',
 }
 
 // return the TypeInfo for a primitive type and null otherwise.  This
@@ -859,7 +859,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
 			    break;
 
 			case Mangle.Tconst:
-			case Mangle.Tinvariant:
+			case Mangle.Timmutable:
 			    mi++;
 			    continue;
 
@@ -1042,7 +1042,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
             if (ti.classinfo.name.length <= mi)
                 goto Lerror;
             m = cast(Mangle)ti.classinfo.name[mi++];
-        } while (m == Mangle.Tconst || m == Mangle.Tinvariant);
+        } while (m == Mangle.Tconst || m == Mangle.Timmutable);
         
         if (m == Mangle.Tarray)
         {
@@ -1092,7 +1092,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
                 break;
                 
             case Mangle.Tconst:
-            case Mangle.Tinvariant:
+            case Mangle.Timmutable:
                 mi++;
                 goto L1;
                 
@@ -1220,7 +1220,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
                 do
                 {
                     m = cast(Mangle)ti.classinfo.name[mi++];
-                } while (m == Mangle.Tconst || m == Mangle.Tinvariant);
+                } while (m == Mangle.Tconst || m == Mangle.Timmutable);
                 
                 if (c > 0x7F)		// if UTF sequence
                     goto Lerror;	// format specifiers can't be UTF
@@ -1509,7 +1509,7 @@ unittest
     r = std.string.format("%s", TestEnum.Value2);
     assert(r == "1");
 
-    invariant(char[5])[int] aa = ([3:"hello", 4:"betty"]);
+    immutable(char[5])[int] aa = ([3:"hello", 4:"betty"]);
     r = std.string.format("%s", aa.values);
     assert(r == "[[h,e,l,l,o],[b,e,t,t,y]]");
     r = std.string.format("%s", aa);
@@ -1931,7 +1931,7 @@ if (isFloatingPoint!(D))
     //printf("format: '%s'; geeba: %g\n", sprintfSpec.ptr, obj);
     char[512] buf;
     //writeln("Spec is: ", sprintfSpec);
-    invariant n = snprintf(buf.ptr, buf.length,
+    immutable n = snprintf(buf.ptr, buf.length,
             sprintfSpec.ptr,
             f.width,
             // negative precision is same as no precision specified
@@ -1944,7 +1944,7 @@ if (isFloatingPoint!(D))
 unittest
 {
     Appender!(string) a;
-    invariant real x = 5.5;
+    immutable real x = 5.5;
     FormatInfo f;
     formatImpl(a, x, f);
     assert(a.data == "5.5");
@@ -2618,7 +2618,7 @@ unittest
     stream.clear; formattedWrite(stream, "%s", TestEnum.Value2);
     assert(stream.data == "1", stream.data);
 
-  //invariant(char[5])[int] aa = ([3:"hello", 4:"betty"]);
+  //immutable(char[5])[int] aa = ([3:"hello", 4:"betty"]);
   //stream.clear; formattedWrite(stream, "%s", aa.values);
   //std.c.stdio.fwrite(stream.data.ptr, stream.data.length, 1, stderr);
   //assert(stream.data == "[[h,e,l,l,o],[b,e,t,t,y]]");
@@ -2745,7 +2745,7 @@ unittest
 
 unittest
 {
-   invariant(char[5])[int] aa = ([3:"hello", 4:"betty"]);
+   immutable(char[5])[int] aa = ([3:"hello", 4:"betty"]);
    if (false) writeln(aa.keys);
    assert(aa[3] == "hello");
    assert(aa[4] == "betty");

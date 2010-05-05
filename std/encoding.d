@@ -660,7 +660,7 @@ template EncoderInstance(E)
 /** Defines various character sets. */
 typedef ubyte AsciiChar;
 /// Ditto
-alias invariant(AsciiChar)[] AsciiString; 
+alias immutable(AsciiChar)[] AsciiString; 
 
 template EncoderInstance(CharType : AsciiChar)
 {
@@ -741,9 +741,9 @@ template EncoderInstance(CharType : AsciiChar)
 typedef ubyte Latin1Char;
 /**
 Defines an Latin1-encoded string (as an array of $(D
-invariant(Latin1Char))).
+immutable(Latin1Char))).
  */
-alias invariant(Latin1Char)[] Latin1String; ///
+alias immutable(Latin1Char)[] Latin1String; ///
 
 template EncoderInstance(CharType : Latin1Char)
 {
@@ -817,9 +817,9 @@ template EncoderInstance(CharType : Latin1Char)
 typedef ubyte Windows1252Char;
 /**
 Defines an Windows1252-encoded string (as an array of $(D
-invariant(Windows1252Char))).
+immutable(Windows1252Char))).
  */
-alias invariant(Windows1252Char)[] Windows1252String; ///
+alias immutable(Windows1252Char)[] Windows1252String; ///
 
 template EncoderInstance(CharType : Windows1252Char)
 {
@@ -831,7 +831,7 @@ template EncoderInstance(CharType : Windows1252Char)
         return "windows-1252";
     }
 
-    invariant wstring charMap =
+    immutable wstring charMap =
         "\u20AC\uFFFD\u201A\u0192\u201E\u2026\u2020\u2021"
         "\u02C6\u2030\u0160\u2039\u0152\uFFFD\u017D\uFFFD"
         "\uFFFD\u2018\u2019\u201C\u201D\u2022\u2103\u2014"
@@ -921,7 +921,7 @@ template EncoderInstance(CharType : Windows1252Char)
 template EncoderInstance(CharType : char)
 {
     alias char E;
-    alias invariant(char)[] EString;
+    alias immutable(char)[] EString;
 
     string encodingName()
     {

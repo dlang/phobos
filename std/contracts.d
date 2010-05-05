@@ -243,7 +243,7 @@ unittest
 }
 
 /**
- * Casts a mutable array to an invariant array in an idiomatic
+ * Casts a mutable array to an immutable array in an idiomatic
  * manner. Technically, $(D_PARAM assumeUnique) just inserts a cast,
  * but its name documents assumptions on the part of the
  * caller. $(D_PARAM assumeUnique(arr)) should only be called when
@@ -253,7 +253,7 @@ unittest
  * assumeUnique(arr)) indicates commitment from the caller that there
  * is no more mutable access to any of $(D_PARAM arr)'s elements
  * (transitively), and that all future accesses will be done through
- * the invariant array returned by $(D_PARAM assumeUnique).
+ * the immutable array returned by $(D_PARAM assumeUnique).
  *
  * Typically, $(D_PARAM assumeUnique) is used to return arrays from
  * functions that have allocated and built them.
@@ -296,7 +296,7 @@ unittest
  *
  * The example above wreaks havoc on client code because it is
  * modifying arrays that callers considered immutable. To obtain an
- * invariant array from the writable array $(D_PARAM buffer), replace
+ * immutable array from the writable array $(D_PARAM buffer), replace
  * the last line with:
  * ----
  * return to!(string)(sneaky); // not that sneaky anymore
@@ -315,9 +315,9 @@ unittest
  *
  */
 
-invariant(T)[] assumeUnique(T)(ref T[] array)
+immutable(T)[] assumeUnique(T)(ref T[] array)
 {
-    auto result = cast(invariant(T)[]) array;
+    auto result = cast(immutable(T)[]) array;
     array = null;
     return result;
 }
@@ -326,12 +326,12 @@ unittest
 {
     int[] arr = new int[1];
     auto arr1 = assumeUnique(arr);
-    assert(is(typeof(arr1) == invariant(int)[]) && arr == null);
+    assert(is(typeof(arr1) == immutable(int)[]) && arr == null);
 }
 
-invariant(T[U]) assumeUnique(T, U)(ref T[U] array)
+immutable(T[U]) assumeUnique(T, U)(ref T[U] array)
 {
-    auto result = cast(invariant(T[U])) array;
+    auto result = cast(immutable(T[U])) array;
     array = null;
     return result;
 }
@@ -341,7 +341,7 @@ version(none) unittest
 {
     int[string] arr = ["a":1];
     auto arr1 = assumeUnique(arr);
-    assert(is(typeof(arr1) == invariant(int[string])) && arr == null);
+    assert(is(typeof(arr1) == immutable(int[string])) && arr == null);
 }
 
 /**

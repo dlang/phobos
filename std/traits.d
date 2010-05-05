@@ -358,9 +358,9 @@ private template HasRawPointerImpl(T...)
     else
     {
         static if (is(T[0] foo : U*, U))
-            enum hasRawAliasing = !is(U == invariant);
+            enum hasRawAliasing = !is(U == immutable);
         else static if (is(T[0] foo : U[], U))
-            enum hasRawAliasing = !is(U == invariant);
+            enum hasRawAliasing = !is(U == immutable);
         else
             enum hasRawAliasing = false;
         enum result = hasRawAliasing || HasRawPointerImpl!(T[1 .. $]).result;
@@ -371,7 +371,7 @@ private template HasRawPointerImpl(T...)
 Statically evaluates to $(D true) if and only if $(D T)'s
 representation contains at least one field of pointer or array type.
 Members of class types are not considered raw pointers. Pointers to
-invariant objects are not considered raw aliasing.
+immutable objects are not considered raw aliasing.
 
 Example:
 ---
@@ -437,7 +437,7 @@ unittest
 
 /*
 Statically evaluates to $(D true) if and only if $(D T)'s
-representation includes at least one non-invariant object reference.
+representation includes at least one non-immutable object reference.
 */
 
 private template hasObjects(T...)
@@ -464,9 +464,9 @@ private template hasObjects(T...)
 /**
 Returns $(D true) if and only if $(D T)'s representation includes at
 least one of the following: $(OL $(LI a raw pointer $(D U*) and $(D U)
-is not invariant;) $(LI an array $(D U[]) and $(D U) is not
-invariant;) $(LI a reference to a class type $(D C) and $(D C) is not
-invariant.))
+is not immutable;) $(LI an array $(D U[]) and $(D U) is not
+immutable;) $(LI a reference to a class type $(D C) and $(D C) is not
+immutable.))
 */
 
 template hasAliasing(T...)
@@ -1022,7 +1022,7 @@ static assert(!isAssociativeArray!(int));
 static assert(!isAssociativeArray!(int[]));
 static assert(isAssociativeArray!(int[int]));
 static assert(isAssociativeArray!(int[string]));
-static assert(isAssociativeArray!(invariant(char[5])[int]));
+static assert(isAssociativeArray!(immutable(char[5])[int]));
 
 /**
  * Detect whether type T is a static array.
@@ -1041,12 +1041,12 @@ static assert (isStaticArray!(int[51]));
 static assert (isStaticArray!(int[][2]));
 static assert (isStaticArray!(char[][int][11]));
 static assert (!isStaticArray!(const(int)[]));
-static assert (!isStaticArray!(invariant(int)[]));
+static assert (!isStaticArray!(immutable(int)[]));
 static assert (!isStaticArray!(const(int)[4][]));
 static assert (!isStaticArray!(int[]));
 static assert (!isStaticArray!(int[char]));
 static assert (!isStaticArray!(int[1][]));
-static assert (isStaticArray!(invariant char[13u]));
+static assert (isStaticArray!(immutable char[13u]));
 static assert (isStaticArray!(const(real)[1]));
 static assert (isStaticArray!(const(real)[1][1]));
 //static assert (isStaticArray!(typeof("string literal")));

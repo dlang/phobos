@@ -82,7 +82,7 @@ const(char)* toMBSz(in char[] s, uint codePage = 0)
  * Authors: Stewart Gordon, Walter Bright
  */
 
-string fromMBSz(invariant(char)* s, int codePage = 0)
+string fromMBSz(immutable(char)* s, int codePage = 0)
 {
     const(char)* c;
 

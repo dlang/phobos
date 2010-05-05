@@ -29,7 +29,7 @@ void foo()
     assert(enumFromString(s, m1) && m1 == m);
 }
 
-// Rebindable references to const and invariant objects
+// Rebindable references to const and immutable objects
 void bar()
 {
     const w1 = new Widget, w2 = new Widget;
@@ -696,7 +696,7 @@ risks usually associated with $(D cast).
  */
 template Rebindable(T) if (is(T : Object) || isArray!(T))
 {
-    static if (!is(T X == const(U), U) && !is(T X == invariant(U), U))
+    static if (!is(T X == const(U), U) && !is(T X == immutable(U), U))
     {
         alias T Rebindable;
     }
@@ -745,10 +745,10 @@ unittest
     obj1 = new const(C);
     assert(obj1.get !is null);
 
-    Rebindable!(invariant(C)) obj2;
-    static assert(is(typeof(obj2.get) == invariant(C)));
+    Rebindable!(immutable(C)) obj2;
+    static assert(is(typeof(obj2.get) == immutable(C)));
     static assert(is(typeof(obj2.stripped) == C));
-    obj2 = new invariant(C);
+    obj2 = new immutable(C);
     assert(obj1.get !is null);
 
     // test opDot
