@@ -41,35 +41,35 @@ version(Windows)
 
     /** String used to separate directory names in a path. Under
      *  Windows this is a backslash, under Linux a slash. */
-    invariant char[1] sep = "\\";
+    immutable char[1] sep = "\\";
     /** Alternate version of sep[] used in Windows (a slash). Under
      *  Linux this is empty. */
-    invariant char[1] altsep = "/";
+    immutable char[1] altsep = "/";
     /** Path separator string. A semi colon under Windows, a colon
      *  under Linux. */
-    invariant char[1] pathsep = ";";
+    immutable char[1] pathsep = ";";
     /** String used to separate lines, \r\n under Windows and \n
      * under Linux. */
-    invariant char[2] linesep = "\r\n"; /// String used to separate lines.
-    invariant char[1] curdir = ".";	 /// String representing the current directory.
-    invariant char[2] pardir = ".."; /// String representing the parent directory.
+    immutable char[2] linesep = "\r\n"; /// String used to separate lines.
+    immutable char[1] curdir = ".";	 /// String representing the current directory.
+    immutable char[2] pardir = ".."; /// String representing the parent directory.
 }
 version(Posix)
 {
     /** String used to separate directory names in a path. Under
      *  Windows this is a backslash, under Linux a slash. */
-    invariant char[1] sep = "/";
+    immutable char[1] sep = "/";
     /** Alternate version of sep[] used in Windows (a slash). Under
      *  Linux this is empty. */
-    invariant char[0] altsep;
+    immutable char[0] altsep;
     /** Path separator string. A semi colon under Windows, a colon
      *  under Linux. */
-    invariant char[1] pathsep = ":";
+    immutable char[1] pathsep = ":";
     /** String used to separate lines, \r\n under Windows and \n
      * under Linux. */
-    invariant char[1] linesep = "\n";
-    invariant char[1] curdir = ".";	 /// String representing the current directory.
-    invariant char[2] pardir = ".."; /// String representing the parent directory.
+    immutable char[1] linesep = "\n";
+    immutable char[1] curdir = ".";	 /// String representing the current directory.
+    immutable char[2] pardir = ".."; /// String representing the parent directory.
 }
 
 /*****************************

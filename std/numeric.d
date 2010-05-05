@@ -331,10 +331,10 @@ unittest
     float f(float x) {
         return cos(x) - x*x*x;
     }
-    invariant x = secantMethod!(f)(0f, 1f);
+    immutable x = secantMethod!(f)(0f, 1f);
     assert(approxEqual(x, 0.865474));
     auto d = &f;
-    invariant y = secantMethod!(d)(0f, 1f);
+    immutable y = secantMethod!(d)(0f, 1f);
     assert(approxEqual(y, 0.865474));
 }
 
@@ -919,7 +919,7 @@ dotProduct(Range1, Range2)(Range1 a, Range2 b)
 Unqual!(CommonType!(F1, F2))
 dotProduct(F1, F2)(in F1[] avector, in F2[] bvector)
 {
-    invariant n = avector.length;
+    immutable n = avector.length;
     assert(n == bvector.length);
     auto avec = avector.ptr, bvec = bvector.ptr;
     typeof(return) sum0 = 0.0, sum1 = 0.0;
@@ -1244,21 +1244,21 @@ unittest
 //         static num[n] table;
 //         alias arg[0] x;
 //         enforce(left <= x && x < right);
-//         invariant i = cast(uint) (table.length
+//         immutable i = cast(uint) (table.length
 //                 * ((x - left) / (right - left)));
 //         assert(i < n);
 //         if (isnan(table[i])) {
 //             // initialize it
 //             auto x1 = left + i * (right - left) / n;
 //             auto x2 = left + (i + 1) * (right - left) / n;
-//             invariant y1 = fun(x1), y2 = fun(x2);
-//             invariant y = 2 * y1 * y2 / (y1 + y2);
+//             immutable y1 = fun(x1), y2 = fun(x2);
+//             immutable y = 2 * y1 * y2 / (y1 + y2);
 //             num wyda(num xx) { return fun(xx) - y; }
 //             auto bestX = findRoot(&wyda, x1, x2);
 //             table[i] = fun(bestX);
-//             invariant leftError = abs((table[i] - y1) / y1);
+//             immutable leftError = abs((table[i] - y1) / y1);
 //             enforce(leftError <= maxError, text(leftError, " > ", maxError));
-//             invariant rightError = abs((table[i] - y2) / y2);
+//             immutable rightError = abs((table[i] - y2) / y2);
 //             enforce(rightError <= maxError, text(rightError, " > ", maxError));
 //         }
 //         return table[i];
@@ -1272,9 +1272,9 @@ unittest
 //     uint testSize = 100000;
 //     auto rnd = Random(unpredictableSeed);
 //     foreach (i; 0 .. testSize) {
-//         invariant x = uniform(rnd, 0.2F, 3.0F);
-//         invariant float y = fasttanh(x), w = tanh(x);
-//         invariant e = abs(y - w) / w;
+//         immutable x = uniform(rnd, 0.2F, 3.0F);
+//         immutable float y = fasttanh(x), w = tanh(x);
+//         immutable e = abs(y - w) / w;
 //         //writefln("%.20f", e);
 //         enforce(e <= epsilon, text("x = ", x, ", fasttanh(x) = ", y,
 //                         ", tanh(x) = ", w, ", relerr = ", e));

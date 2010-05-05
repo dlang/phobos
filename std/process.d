@@ -62,7 +62,7 @@ int system(string command)
 {
     if (!command) return std.c.process.system(null);
     const commandz = toStringz(command);
-    invariant status = std.c.process.system(commandz);
+    immutable status = std.c.process.system(commandz);
     if (status == -1) return status;
     version (Posix)
         return (status & 0x0000ff00) >>> 8;

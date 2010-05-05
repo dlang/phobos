@@ -493,10 +493,10 @@ private bool optMatch(string arg, string optPattern, ref string value,
     if (!arg.length || arg[0] != optionChar) return false;
     // yank the leading '-'
     arg = arg[1 .. $];
-    invariant isLong = arg.length > 1 && arg[0] == optionChar;
+    immutable isLong = arg.length > 1 && arg[0] == optionChar;
     // yank the second '-' if present
     if (isLong) arg = arg[1 .. $];
-    invariant eqPos = std.string.indexOf(arg, assignChar);
+    immutable eqPos = std.string.indexOf(arg, assignChar);
     if (eqPos >= 0)
     {
         // argument looks like --opt=value

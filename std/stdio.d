@@ -434,7 +434,7 @@ file handle and throws on error.
     T[] rawRead(T)(T[] buffer)
     {
         enforce(buffer.length);
-        invariant result =
+        immutable result =
             .fread(buffer.ptr, T.sizeof, buffer.length, p.handle);
         errnoEnforce(!error);
         return result ? buffer[0 .. result] : null;

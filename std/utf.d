@@ -99,7 +99,7 @@ unittest
 }
 
 
-private invariant ubyte[256] UTF8stride =
+private immutable ubyte[256] UTF8stride =
 [
     1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
     1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
@@ -129,7 +129,7 @@ private invariant ubyte[256] UTF8stride =
 
 uint stride(in char[] s, size_t i)
 {
-    invariant result = UTF8stride[s[i]];
+    immutable result = UTF8stride[s[i]];
     assert(result > 0 && result <= 6);
     return result;
 }
@@ -141,7 +141,7 @@ uint stride(in char[] s, size_t i)
 
 uint stride(in wchar[] s, size_t i)
 {
-    invariant uint u = s[i];
+    immutable uint u = s[i];
     return 1 + (u >= 0xD800 && u <= 0xDBFF);
 }
 
@@ -901,7 +901,7 @@ Checks to see if string is well formed or not. $(D S) can be an array
 
 void validate(S)(in S s)
 {
-    invariant len = s.length;
+    immutable len = s.length;
     for (size_t i = 0; i < len; )
     {
         decode(s, i);

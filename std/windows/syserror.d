@@ -46,7 +46,7 @@ string sysErrorString(uint errcode)
     result[0 .. r] = buffer[0 .. r];
     result[r] = 0;
 
-    auto res = std.windows.charset.fromMBSz(cast(invariant)result.ptr);
+    auto res = std.windows.charset.fromMBSz(cast(immutable)result.ptr);
 
     LocalFree(cast(HLOCAL)buffer);
     return res;

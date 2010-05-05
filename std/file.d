@@ -356,12 +356,12 @@ version(Posix) void append(in char[] name, in void[] buffer)
 version(Posix) private void writeImpl(in char[] name,
         in void[] buffer, in uint mode)
 {
-    invariant fd = core.sys.posix.fcntl.open(toStringz(name),
+    immutable fd = core.sys.posix.fcntl.open(toStringz(name),
             mode, 0660);
     cenforce(fd != -1, name);
     {
         scope(failure) core.sys.posix.unistd.close(fd);
-        invariant size = buffer.length;
+        immutable size = buffer.length;
         cenforce(
             core.sys.posix.unistd.write(fd, buffer.ptr, size) == size,
             name);
@@ -875,7 +875,7 @@ version(Posix) struct DirEntry
         
     void init(in char[] path, core.sys.posix.dirent.dirent *fd)
     {
-        invariant len = std.c.string.strlen(fd.d_name.ptr);
+        immutable len = std.c.string.strlen(fd.d_name.ptr);
         name = std.path.join(path, fd.d_name[0 .. len].idup);
         d_type = fd.d_type;
         didstat = false;
@@ -1043,7 +1043,7 @@ Copy file $(D from) to file $(D to). File timestamps are preserved.
 
 version(Windows) void copy(in char[] from, in char[] to)
 {
-    invariant result = useWfuncs
+    immutable result = useWfuncs
         ? CopyFileW(std.utf.toUTF16z(from), std.utf.toUTF16z(to), false)
         : CopyFileA(toMBSz(from), toMBSz(to), false);
     if (!result)
@@ -1052,7 +1052,7 @@ version(Windows) void copy(in char[] from, in char[] to)
 
 version(Posix) void copy(in char[] from, in char[] to)
 {
-    invariant fd = core.sys.posix.fcntl.open(toStringz(from), O_RDONLY);
+    immutable fd = core.sys.posix.fcntl.open(toStringz(from), O_RDONLY);
     cenforce(fd != -1, from);
     scope(exit) core.sys.posix.unistd.close(fd);
         
@@ -1061,7 +1061,7 @@ version(Posix) void copy(in char[] from, in char[] to)
     //cenforce(core.sys.posix.sys.stat.fstat(fd, &statbuf) == 0, from);
         
     auto toz = toStringz(to);
-    invariant fdw = core.sys.posix.fcntl.open(toz,
+    immutable fdw = core.sys.posix.fcntl.open(toz,
             O_CREAT | O_WRONLY | O_TRUNC, 0660);
     cenforce(fdw != -1, from);
     scope(failure) std.c.stdio.remove(toz);
@@ -1078,7 +1078,7 @@ version(Posix) void copy(in char[] from, in char[] to)
             
         for (auto size = statbuf.st_size; size; )
         {
-            invariant toxfer = (size > BUFSIZ) ? BUFSIZ : cast(size_t) size;
+            immutable toxfer = (size > BUFSIZ) ? BUFSIZ : cast(size_t) size;
             cenforce(
                 core.sys.posix.unistd.read(fd, buf, toxfer) == toxfer
                 && core.sys.posix.unistd.write(fdw, buf, toxfer) == toxfer,

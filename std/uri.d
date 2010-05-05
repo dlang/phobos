@@ -60,7 +60,7 @@ shared static this()
 {
     // Initialize uri_flags[]
 
-    static void helper(invariant char[] p, uint flags)
+    static void helper(immutable char[] p, uint flags)
     {   int i;
 
     for (i = 0; i < p.length; i++)
