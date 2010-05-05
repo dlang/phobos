@@ -439,7 +439,7 @@ Parameter for the generator.
             upperMask = ~((cast(UIntType) 1u <<
                            (UIntType.sizeof * 8 - (w - r))) - 1),
             lowerMask = (cast(UIntType) 1u << r) - 1;
-        static invariant UIntType mag01[2] = [0x0UL, a];
+        static immutable UIntType mag01[2] = [0x0UL, a];
 
         ulong y = void;
 
@@ -805,9 +805,9 @@ auto z = dice(70, 20, 10); // z is 0 70% of the time, 1 30% of the time,
 */
 
 size_t dice(R)(ref R rnd, double[] proportions...) {
-    invariant sum = reduce!("(assert(b >= 0), a + b)")(0.0, proportions);
+    immutable sum = reduce!("(assert(b >= 0), a + b)")(0.0, proportions);
     enforce(sum > 0, "Proportions in a dice cannot sum to zero");
-    invariant point = uniform(0.0, sum, rnd);
+    immutable point = uniform(0.0, sum, rnd);
     assert(point < sum);
     auto mass = 0.0;
     foreach (i, e; proportions) {

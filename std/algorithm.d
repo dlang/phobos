@@ -2210,11 +2210,11 @@ MinType!(T1, T2, T) min(T1, T2, T...)(T1 a, T2 b, T xs)
         static if (isIntegral!(T1) && isIntegral!(T2)
                    && (mostNegative!(T1) < 0) != (mostNegative!(T2) < 0))
             static if (mostNegative!(T1) < 0)
-                invariant chooseB = b < a && a > 0;
+                immutable chooseB = b < a && a > 0;
             else
-                invariant chooseB = b < a || b < 0;
+                immutable chooseB = b < a || b < 0;
         else
-                invariant chooseB = b < a;
+                immutable chooseB = b < a;
         return cast(typeof(return)) (chooseB ? b : a);
     }
     else
@@ -2285,11 +2285,11 @@ MaxType!(T1, T2, T) max(T1, T2, T...)(T1 a, T2 b, T xs)
         static if (isIntegral!(T1) && isIntegral!(T2)
                    && (mostNegative!(T1) < 0) != (mostNegative!(T2) < 0))
             static if (mostNegative!(T1) < 0)
-                invariant chooseB = b > a || a < 0;
+                immutable chooseB = b > a || a < 0;
             else
-                invariant chooseB = b > a && b > 0;
+                immutable chooseB = b > a && b > 0;
         else
-            invariant chooseB = b > a;
+            immutable chooseB = b > a;
         return cast(typeof(return)) (chooseB ? b : a);
     }
     else
@@ -4236,7 +4236,7 @@ bool isSorted(alias less = "a < b", Range)(Range r)
 Computes an index for $(D r) based on the comparison $(D less). The
 index is a sorted array of pointers or indices into the original
 range. This technique is similar to sorting, but it is more flexible
-because (1) it allows "sorting" of invariant collections, (2) allows
+because (1) it allows "sorting" of immutable collections, (2) allows
 binary search even if the original collection does not offer random
 access, (3) allows multiple indexes, each on a different predicate,
 and (4) may be faster when dealing with large objects. However, using
@@ -4519,7 +4519,7 @@ target.length < source.length), in which case only the smallest $(D
 target.length) elements in $(D source) get indexed. The target
 provides a sorted "view" into $(D source). This technique is similar
 to sorting and partial sorting, but it is more flexible because (1) it
-allows "sorting" of invariant collections, (2) allows binary search
+allows "sorting" of immutable collections, (2) allows binary search
 even if the original collection does not offer random access, (3)
 allows multiple indexes, each on a different comparison criterion, (4)
 may be faster when dealing with large objects. However, using an index
@@ -4539,7 +4539,7 @@ predicate $(D less(source[a], source[b])).))
 Example:
 
 ----
-invariant arr = [ 2, 3, 1 ];
+immutable arr = [ 2, 3, 1 ];
 int* index[3];
 partialIndex(arr, index);
 assert(*index[0] == 1 && *index[1] == 2 && *index[2] == 3);
@@ -4556,8 +4556,8 @@ void partialIndex(
 
 unittest
 {
-    invariant arr = [ 2, 3, 1 ];
-    auto index = new invariant(int)*[3];
+    immutable arr = [ 2, 3, 1 ];
+    auto index = new immutable(int)*[3];
     partialIndex!(binaryFun!("a < b"))(arr, index);
     assert(*index[0] == 1 && *index[1] == 2 && *index[2] == 3);
     assert(isSorted!("*a < *b")(index));
@@ -4587,8 +4587,8 @@ unittest
     }
 
     {
-        invariant arr = [ 2, 3, 1 ];
-        auto index = new invariant(int)*[arr.length];
+        immutable arr = [ 2, 3, 1 ];
+        auto index = new immutable(int)*[arr.length];
         partialIndex!(less)(arr, index);
         assert(*index[0] == 1 && *index[1] == 2 && *index[2] == 3);
         assert(isSorted!(q{*a < *b})(index));

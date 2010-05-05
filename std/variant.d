@@ -608,9 +608,9 @@ public:
     //     }
     // }
 
-    // static assert(is(DecayStaticToDynamicArray!(invariant(char)[21]) ==
-    //                  invariant(char)[]),
-    //               DecayStaticToDynamicArray!(invariant(char)[21]).stringof);
+    // static assert(is(DecayStaticToDynamicArray!(immutable(char)[21]) ==
+    //                  immutable(char)[]),
+    //               DecayStaticToDynamicArray!(immutable(char)[21]).stringof);
 
     /**
      * Returns the value stored in the $(D_PARAM VariantN) object,

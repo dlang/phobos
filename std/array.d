@@ -301,7 +301,7 @@ void popBack(T)(ref T[] a) if (is(Unqual!T == wchar))
         a = a[0 .. 0];
         return;
     }
-    invariant c = a[$ - 2];
+    immutable c = a[$ - 2];
     a = a[0 .. $ - 1 - (c >= 0xD800 && c <= 0xDBFF)]; 
 }
 
@@ -472,11 +472,11 @@ void insert(T, Range)(ref T[] array, size_t pos, Range stuff)
     }
 
     // @@@BUG 2130@@@
-    // invariant
+    // immutable
     //     size_t delta = toInsert.length,
     //     size_t oldLength = array.length,
     //     size_t newLength = oldLength + delta;
-    invariant
+    immutable
         delta = toInsert.length,
         oldLength = array.length,
         newLength = oldLength + delta;
@@ -521,7 +521,7 @@ Erases elements from $(D array) with indices ranging from $(D from)
  */
 // void erase(T)(ref T[] array, size_t from, size_t to)
 // {
-//     invariant newLength = array.length - (to - from);
+//     immutable newLength = array.length - (to - from);
 //     foreach (i; to .. array.length)
 //     {
 //         move(array[i], array[from++]);
@@ -569,7 +569,7 @@ void replace(T, Range)(ref T[] array, size_t from, size_t to,
     {
         // replacement reduces length
         // BUG 2128
-        //invariant stuffEnd = from + stuff.length;
+        //immutable stuffEnd = from + stuff.length;
         auto stuffEnd = from + stuff.length;
         array[from .. stuffEnd] = stuff;
         remove(array, tuple(stuffEnd, to));
@@ -578,7 +578,7 @@ void replace(T, Range)(ref T[] array, size_t from, size_t to,
     {
         // replacement increases length
         // @@@TODO@@@: optimize this
-        invariant replaceLen = to - from;
+        immutable replaceLen = to - from;
         array[from .. to] = stuff[0 .. replaceLen];
         insert(array, to, stuff[replaceLen .. $]);
     }
