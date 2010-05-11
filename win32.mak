@@ -105,6 +105,7 @@ SRCS= std\math.d std\stdio.d std\dateparse.d std\date.d std\uni.d std\string.d \
 	std\signals.d std\typetuple.d std\traits.d std\bind.d \
 	std\bitmanip.d std\typecons.d \
 	std\boxer.d \
+	std\complex.d \
 	std\process.d \
 	std\system.d \
 	std\iterator.d std\encoding.d std\variant.d \
