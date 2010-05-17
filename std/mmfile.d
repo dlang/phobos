@@ -128,8 +128,8 @@ class MmFile
         }
 
         // Adjust size
-        stat_t statbuf = void;
-        errnoEnforce(stat(fd, &statbuf) == 0);
+        struct_stat64 statbuf = void;
+        errnoEnforce(stat64(fd, &statbuf) == 0);
         if (prot & PROT_WRITE && size > statbuf.st_size)
         {
             // Need to make the file size bytes big
@@ -347,8 +347,8 @@ class MmFile
                 fd = .open(namez, oflag, fmode);
                 errnoEnforce(fd != -1, "Could not open file "~filename);
     
-                stat_t statbuf;
-                if (fstat(fd, &statbuf))
+                struct_stat64 statbuf;
+                if (fstat64(fd, &statbuf))
                 {
                     //printf("\tfstat error, errno = %d\n",getErrno());
                     .close(fd);
