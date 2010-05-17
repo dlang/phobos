@@ -128,8 +128,8 @@ class MmFile
         }
 
         // Adjust size
-        struct_stat64 statbuf = void;
-        errnoEnforce(fstat64(fd, &statbuf) == 0);
+        stat_t statbuf = void;
+        errnoEnforce(stat(fd, &statbuf) == 0);
         if (prot & PROT_WRITE && size > statbuf.st_size)
         {
             // Need to make the file size bytes big
@@ -347,8 +347,8 @@ class MmFile
                 fd = .open(namez, oflag, fmode);
                 errnoEnforce(fd != -1, "Could not open file "~filename);
     
-                struct_stat64 statbuf;
-                if (fstat64(fd, &statbuf))
+                stat_t statbuf;
+                if (fstat(fd, &statbuf))
                 {
                     //printf("\tfstat error, errno = %d\n",getErrno());
                     .close(fd);
@@ -368,9 +368,7 @@ class MmFile
             else
             {
                 fd = -1;
-                //assert(false, "@@@Sean, please fix the MAP_ANONYMOUS thing.");
-                enum MAP_ANONYMOUS = 0x20;
-                flags |= MAP_ANONYMOUS;
+                flags |= MAP_ANON;
             }
             this.size = size;
             size_t initial_map = (window && 2*window<size)

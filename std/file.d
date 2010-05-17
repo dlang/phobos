@@ -43,74 +43,6 @@ version (Posix)
         core.sys.posix.sys.time, core.sys.posix.unistd, core.sys.posix.utime;
 }
 
-// @@@@ TEMPORARY - THIS SHOULD BE IN THE CORE @@@
-// {{{
-version (Posix)
-{
-    version (OSX)
-    {
-        struct struct_stat64        // distinguish it from the stat() function
-        {
-            uint st_dev;        /// device
-            ushort st_mode;
-            ushort st_nlink;        /// link count
-            ulong st_ino;        /// file serial number
-            uint st_uid;        /// user ID of file's owner
-            uint st_gid;        /// user ID of group's owner
-            uint st_rdev;        /// if device then device number
-
-            int st_atime;
-            uint st_atimensec;
-            int st_mtime;
-            uint st_mtimensec;
-            int st_ctime;
-            uint st_ctimensec;
-            int st_birthtime;
-            uint st_birthtimensec;
-
-            ulong st_size;
-            long st_blocks;        /// number of allocated 512 byte blocks
-            int st_blksize;        /// optimal I/O block size
-
-            ulong st_ino64;
-            uint st_flags;
-            uint st_gen;
-            int st_lspare; /* RESERVED: DO NOT USE! */
-            long st_qspare[2]; /* RESERVED: DO NOT USE! */
-        }
-    }
-    else
-    {
-        struct struct_stat64        // distinguish it from the stat() function
-        {
-            ulong st_dev;        /// device
-            uint __pad1;
-            uint st_ino;        /// file serial number
-            uint st_mode;        /// file mode
-            uint st_nlink;        /// link count
-            uint st_uid;        /// user ID of file's owner
-            uint st_gid;        /// user ID of group's owner
-            ulong st_rdev;        /// if device then device number
-            uint __pad2;
-            align(4) ulong st_size;
-            int st_blksize;        /// optimal I/O block size
-            ulong st_blocks;        /// number of allocated 512 byte blocks
-            int st_atime;
-            uint st_atimensec;
-            int st_mtime;
-            uint st_mtimensec;
-            int st_ctime;
-            uint st_ctimensec;
-
-            ulong st_ino64;
-        }
-    }
-    
-    extern(C) int fstat64(int, struct_stat64*);
-    extern(C) int stat64(in char*, struct_stat64*);
-}
-// }}}
-
 /***********************************
  * Exception thrown for file I/O errors.
  */
@@ -215,13 +147,13 @@ version(Posix) void[] read(in char[] name, in size_t upTo = size_t.max)
     cenforce(fd != -1, name);
     scope(exit) core.sys.posix.unistd.close(fd);
     
-    struct_stat64 statbuf = void;
-    cenforce(fstat64(fd, &statbuf) == 0, name);
+    stat_t statbuf = void;
+    cenforce(fstat(fd, &statbuf) == 0, name);
     //cenforce(core.sys.posix.sys.stat.fstat(fd, &statbuf) == 0, name);
     
-    immutable initialAlloc = statbuf.st_size
+    immutable initialAlloc = to!size_t(statbuf.st_size
         ? min(statbuf.st_size + 1, maxInitialAlloc)
-        : minInitialAlloc;
+        : minInitialAlloc);
     auto result = GC.malloc(initialAlloc, GC.BlkAttr.NO_SCAN)
         [0 .. initialAlloc];
     scope(failure) delete result;
@@ -442,8 +374,8 @@ version(Windows) ulong getSize(in char[] name)
 
 version(Posix) ulong getSize(in char[] name)
 {
-    struct_stat64 statbuf = void;
-    cenforce(stat64(toStringz(name), &statbuf) == 0, name);
+    stat_t statbuf = void;
+    cenforce(stat(toStringz(name), &statbuf) == 0, name);
     return statbuf.st_size;
 }
     
@@ -501,8 +433,8 @@ version(Windows) void getTimes(in char[] name,
 version(Posix) void getTimes(in char[] name,
         out d_time ftc, out d_time fta, out d_time ftm)
 {
-    struct_stat64 statbuf = void;
-    cenforce(stat64(toStringz(name), &statbuf) == 0, name);
+    stat_t statbuf = void;
+    cenforce(stat(toStringz(name), &statbuf) == 0, name);
     ftc = cast(d_time) statbuf.st_ctime * std.date.ticksPerSecond;
     fta = cast(d_time) statbuf.st_atime * std.date.ticksPerSecond;
     ftm = cast(d_time) statbuf.st_mtime * std.date.ticksPerSecond;
@@ -540,8 +472,8 @@ version(Windows) d_time lastModified(in char[] name)
 
 version(Posix) d_time lastModified(in char[] name)
 {
-    struct_stat64 statbuf = void;
-    cenforce(stat64(toStringz(name), &statbuf) == 0, name);
+    stat_t statbuf = void;
+    cenforce(stat(toStringz(name), &statbuf) == 0, name);
     return cast(d_time) statbuf.st_mtime * std.date.ticksPerSecond;
 }
     
@@ -581,8 +513,8 @@ version(Windows) d_time lastModified(in char[] name, d_time returnIfMissing)
 
 version(Posix) d_time lastModified(in char[] name, d_time returnIfMissing)
 {
-    struct_stat64 statbuf = void;
-    return stat64(toStringz(name), &statbuf) != 0
+    stat_t statbuf = void;
+    return stat(toStringz(name), &statbuf) != 0
         ? returnIfMissing
         : cast(d_time) statbuf.st_mtime * std.date.ticksPerSecond;
 }
@@ -642,8 +574,8 @@ version(Windows) uint getAttributes(in char[] name)
 
 version(Posix) uint getAttributes(in char[] name)
 {
-    struct_stat64 statbuf = void;
-    cenforce(stat64(toStringz(name), &statbuf) == 0, name);
+    stat_t statbuf = void;
+    cenforce(stat(toStringz(name), &statbuf) == 0, name);
     return statbuf.st_mode;
 }
 
@@ -870,7 +802,7 @@ version(Posix) struct DirEntry
     d_time _lastAccessTime = d_time_nan; /// time file was last accessed
     d_time _lastWriteTime = d_time_nan;        /// time file was last written to
     ubyte d_type;
-    struct_stat64 statbuf;
+    stat_t statbuf;
     bool didstat;                        // done lazy evaluation of stat()
         
     void init(in char[] path, core.sys.posix.dirent.dirent *fd)
@@ -922,7 +854,7 @@ version(Posix) struct DirEntry
     void ensureStatDone()
     {
         if (didstat) return;
-        enforce(stat64(toStringz(name), &statbuf) == 0,
+        enforce(stat(toStringz(name), &statbuf) == 0,
                 "Failed to stat file `"~name~"'");
         _size = statbuf.st_size;
         _creationTime = cast(d_time)statbuf.st_ctime
@@ -1056,8 +988,8 @@ version(Posix) void copy(in char[] from, in char[] to)
     cenforce(fd != -1, from);
     scope(exit) core.sys.posix.unistd.close(fd);
         
-    struct_stat64 statbuf = void;
-    cenforce(fstat64(fd, &statbuf) == 0, from);
+    stat_t statbuf = void;
+    cenforce(fstat(fd, &statbuf) == 0, from);
     //cenforce(core.sys.posix.sys.stat.fstat(fd, &statbuf) == 0, from);
         
     auto toz = toStringz(to);

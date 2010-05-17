@@ -67,9 +67,9 @@ version(Win32)
 }
 else version(BsdSockets)
 {
-	version(Posix)
-	{
-	    version(linux)
+    version(Posix)
+    {
+        version(linux)
             import std.c.linux.socket : AF_IPX, AF_APPLETALK, SOCK_RDM,
                 IPPROTO_IGMP, IPPROTO_GGP, IPPROTO_PUP, IPPROTO_IDP,
                 protoent, servent, hostent, SD_RECEIVE, SD_SEND, SD_BOTH,
@@ -77,6 +77,15 @@ else version(BsdSockets)
                 getservbyname, getservbyport, gethostbyname, gethostbyaddr;
         else version(OSX)
             private import std.c.osx.socket;
+        else version(FreeBSD)
+        {
+            import core.sys.posix.sys.socket;
+            import core.sys.posix.sys.select;
+            import std.c.freebsd.socket;
+            private enum SD_RECEIVE = SHUT_RD;
+            private enum SD_SEND    = SHUT_WR;
+            private enum SD_BOTH    = SHUT_RDWR;
+        }
         else
             static assert(false);
         private import core.sys.posix.fcntl;
@@ -87,18 +96,18 @@ else version(BsdSockets)
         private import core.sys.posix.sys.time;
         //private import core.sys.posix.sys.select;
         private import core.sys.posix.sys.socket;
-		private alias core.sys.posix.sys.time.timeval _ctimeval;
-	}
+        private alias core.sys.posix.sys.time.timeval _ctimeval;
+    }
     private import core.stdc.errno;
 
-	typedef int32_t socket_t = -1;
-	private const int _SOCKET_ERROR = -1;
+    typedef int32_t socket_t = -1;
+    private const int _SOCKET_ERROR = -1;
 
 
-	private int _lasterr()
-	{
-		return errno;
-	}
+    private int _lasterr()
+    {
+        return errno;
+    }
 }
 else
 {
@@ -135,6 +144,16 @@ class SocketException: Exception
 			    cs = "Unknown error";
 			}
 		    }
+		    else version (FreeBSD)
+		    {
+			auto errs = strerror_r(errorCode, buf.ptr, buf.length);
+			if (errs == 0)
+			    cs = buf.ptr;
+			else
+			{
+			    cs = "Unknown error";
+			}
+                    }
 		    else
 		    {
 			static assert(0);
@@ -568,7 +587,7 @@ unittest
 	//printf("addrList.length = %d\n", ih.addrList.length);
 	assert(ih.addrList.length);
 	InternetAddress ia = new InternetAddress(ih.addrList[0], InternetAddress.PORT_ANY);
-    assert(ih.name == "digitalmars.com");
+    assert(ih.name == "www.digitalmars.com");
 	// printf("IP address = %.*s\nname = %.*s\n", ia.toAddrString(), ih.name);
 	// foreach(int i, string s; ih.aliases)
 	// {

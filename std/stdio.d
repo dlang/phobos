@@ -47,6 +47,12 @@ version (OSX)
     alias core.stdc.stdio.fopen fopen64;
 }
 
+version (FreeBSD)
+{
+    version = GENERIC_IO;
+    alias core.stdc.stdio.fopen fopen64;
+}
+
 version(Windows)
 {
     alias core.stdc.stdio.fopen fopen64;
@@ -1857,7 +1863,15 @@ Initialize with a message and an error code. */
         version (Posix)
         {
             char[256] buf = void;
-            auto s = std.c.string.strerror_r(errno, buf.ptr, buf.length);
+            version (linux)
+            {
+                auto s = std.c.string.strerror_r(errno, buf.ptr, buf.length);
+            }
+            else
+            {
+                std.c.string.strerror_r(errno, buf.ptr, buf.length);
+                auto s = buf.ptr;
+            }
         }
         else
         {
