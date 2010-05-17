@@ -1408,7 +1408,9 @@ struct Repeat(T)
     /// Ditto
     enum bool empty = false;
     /// Ditto
-    void popFront() {}
+    void popFront() const {}
+    /// Ditto
+    void popBack() const {}
     /// Ditto
     ref T opIndex(uint) { return _value; }
 }
