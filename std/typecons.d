@@ -48,6 +48,7 @@ License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
 Authors:   $(WEB erdani.org, Andrei Alexandrescu),
            $(WEB bartoszmilewski.wordpress.com, Bartosz Milewski),
            Don Clugston
+           Masahiro Nakagawa
 
          Copyright Andrei Alexandrescu 2008 - 2009.
 Distributed under the Boost Software License, Version 1.0.
@@ -518,6 +519,309 @@ Tuple!(T) tuple(T...)(T args)
     static if (T.length > 0) result.field = args;
     return result;
 }
+
+
+/**
+ * $(D Ignore) represents a ignored element.
+ */
+struct Ignore {}
+immutable Ignore ignore;
+
+
+/**
+ * $(D Tie) binds some variables for tuple unpacking
+ *
+ * This struct is a internal implementation. Please use $(D tie) function.
+ *
+ * Example:
+ * -----
+ * int    n;
+ * double d;
+ *
+ * tie(n, d) = tuple(10, 3.14);
+ *
+ * assert(n == 10);
+ * assert(d == 3.14);
+ * -----
+ *
+ * $(D Tie) can be nested. 'ignore' is used for ignoring assignment.
+ *
+ * Example:
+ * -----
+ * ubyte  n;
+ * double d;
+ * string s;
+ *
+ * tie(ignore, tie(d, s)) = tuple(true, tuple(1.4142, "Hi!"));
+ *
+ * assert(n == 0);
+ * assert(d == 1.4142);
+ * assert(s == "Hi!");
+ * -----
+ *
+ * $(D Tie) supports user-defined type. User-defined type needs to implement $(D opTie) method.
+ *
+ * Example:
+ * -----
+ * struct S
+ * {
+ *     uint n; double d;
+ *
+ *     void opTie(U...)(ref Tie!U tie)
+ *     {
+ *         tie = tuple(n, d);
+ *     }
+ * }
+ *
+ * auto   s = S(10, 3.14);
+ * uint   n;
+ * double d;
+ *
+ * tie(n, d) = s;
+ *
+ * assert(n == 10);
+ * assert(d == 3.14);
+ * -----
+ */
+struct Tie(Types...) if (Types.length > 1)
+{
+  private:
+    template toAssignable(U)
+    {
+        static if (isPointer!(U) || isTie!(U) || is(U == typeof(ignore)))
+            alias U toAssignable;
+        else
+            alias U* toAssignable;
+    }
+
+    alias staticMap!(toAssignable, Types) T;
+
+    T captures_;  // references to variables
+
+
+  public:
+    /**
+     * Constructs a $(D Tie) with $(D_PARAM variables) argument.
+     *
+     * Params:
+     *  variables = a tuple to bind.
+     */
+    this(ref Types variables)
+    {
+        foreach (i, variable; variables) {
+            static if (is(typeof(variable) == typeof(ignore))) {}      // ignore
+                // do nothing
+            else static if (isPointer!(Types[i]) || isTie!(Types[i]))  // pointer, nested tie
+                captures_[i] = variables[i];
+            else                                                       // basic types
+                captures_[i] = &variables[i];
+        }
+    }
+
+
+    /**
+     * Assignment from $(D_PARAM rhs).
+     *
+     * Params:
+     *  rhs = Tuple, Tie, or User-defined type to assign.
+     *
+     * Returns:
+     *  this for chaining.
+     */
+    Tie!Types opAssign(U)(auto ref U rhs)
+    {
+        static if (is(U X == Tuple!(W), W...))
+            assignTuple(rhs);
+        else static if (__traits(compiles, rhs.opTie))
+            rhs.opTie(this);
+        else static if (is(U == Tie) && __traits(isRef, rhs))  // nested
+            this.tupleof = rhs.tupleof;
+        else static if (is(U X == Tie!(W), W...))              // chain
+            assignTie(rhs);
+        else
+            static assert(false, "Unsupported type: " ~ U.stringof);
+
+        return this;
+    }
+
+
+  private:
+    void assignTuple(U...)(ref Tuple!U rhs)
+    {
+        static if (isMatching!U) {
+            foreach (i, capture; captures_) {
+                static if (isPointer!(T[i]))                  // capture
+                    *captures_[i] = rhs.field[i];
+                else static if (is(T[i] V == Tie!(W), W...))  // nested
+                    capture = rhs.field[i];
+            }
+        } else {
+            static assert(false, "Tuple contents are mismatched");
+        }
+    }
+
+
+    void assignTie(U...)(ref Tie!U rhs)
+    {
+        static if (isMatching!U) {
+            foreach (i, capture; captures_) {
+                static if (isPointer!(T[i]))                  // capture
+                    *captures_[i] = *rhs.captures_[i];
+                else static if (is(T[i] V == Tie!(W), W...))  // nested
+                    capture.assignTie(rhs.captures_[i]);
+            }
+        } else {
+            static assert(false, "Tie contents are mismatched");
+        }
+    }
+
+
+    template isMatching(U...)
+    {
+        static if (T.length == U.length)
+            enum isMatching = verify!(0, U).result;
+        else
+            enum isMatching = false;
+    }
+
+
+    /*
+     * Verifies each element.
+     */
+    template verify(uint I, U...)
+    {
+        static assert(T.length == I + U.length, "Caluculation failure");
+
+        static if (U.length == 0) {
+            enum result = true;
+        } else {
+            alias T[I] Lhs;
+            alias U[0] Rhs;
+
+            static if (is(Lhs == typeof(ignore)))                     // ignore
+                enum result = true && verify!(I + 1, U[1..$]).result;
+            else static if (isImplicitlyConvertible!(Rhs, Types[I]))  // capture
+                enum result = true && verify!(I + 1, U[1..$]).result;
+            else static if (isTie!Lhs && isTuple!Rhs)                 // nested
+                enum result = true && verify!(I + 1, U[1..$]).result;
+            else
+                enum result = false;
+        }
+    }
+}
+
+
+/**
+ * Binds $(D_PARAM variables) using $(D Tie).
+ *
+ * Params:
+ *  variables = the contents to bind.
+ *
+ * Returns:
+ *  a $(D Tie) object binds $(D_PARAM variables).
+ */
+Tie!(T) tie(T...)(auto ref T variables)
+{
+    return typeof(return)(variables);
+}
+
+
+/**
+ * Detects whether T is a $(D Tie) type.
+ */
+private template isTie(T)
+{
+    enum isTie = __traits(compiles, { void f(X...)(Tie!X x) {}; f(T.init); });
+}
+
+
+/**
+ * Detects whether T is a $(D Tuple) type.
+ */
+private template isTuple(T)
+{
+    enum isTuple = __traits(compiles, { void f(X...)(Tuple!X x) {}; f(T.init); });
+}
+
+
+unittest
+{
+    { // capture
+        int    n;
+        double d;
+
+        tie(n, d) = tuple(20, 1.4142);
+
+        assert(n == 20);
+        assert(d == 1.4142);
+    }
+    { // ignore
+        ulong  n = 10;
+        double d = 3.14;
+
+        tie(n, ignore) = tuple(20, 1.4142);
+        
+        assert(n == 20);
+        assert(d == 3.14);
+
+        tie(ignore, d) = tuple(20, 1.4142);
+        
+        assert(n == 20);
+        assert(d == 1.4142);
+    }
+    { // nested
+        ubyte  n;
+        double d;
+        string s;
+
+        tie(n, tie(d, s)) = tuple(true, tuple(1.4142, "Hi!"));
+
+        assert(n == 1);
+        assert(d == 1.4142);
+        assert(s == "Hi!");
+    }
+    { // chain
+        ulong  a, b;
+        real   c, d;
+        string e, f;
+
+        tie(a, tie(c, e)) = tie(b, tie(d, f)) = tuple(9, tuple(1.4142L, "Hi!"));
+
+        assert(a == 9);
+        assert(b == 9);
+        assert(c == 1.4142L);
+        assert(d == 1.4142L);
+        assert(e == "Hi!");
+        assert(f == "Hi!");
+    }
+    { // user-defined type
+        static class C
+        {
+            int n_; double d_;
+
+            this(int n, double d)
+            { 
+                n_ = n;
+                d_ = d;
+            }
+
+            void opTie(U...)(ref Tie!U tie)
+            {
+                tie = tuple(n_, d_);
+            }
+        }
+
+        auto   c = new C(10, 3.14);
+        int    n;
+        double d;
+
+        tie(n, d) = c;
+        
+        assert(n == 10);
+        assert(d == 3.14);
+    }
+}
+
 
 private template enumValuesImpl(string name, BaseType, long index, T...)
 {
