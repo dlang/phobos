@@ -129,7 +129,7 @@ class MmFile
 
         // Adjust size
         struct_stat64 statbuf = void;
-        errnoEnforce(stat64(fd, &statbuf) == 0);
+        errnoEnforce(fstat64(fd, &statbuf) == 0);
         if (prot & PROT_WRITE && size > statbuf.st_size)
         {
             // Need to make the file size bytes big
