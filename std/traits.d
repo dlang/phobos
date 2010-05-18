@@ -1213,60 +1213,6 @@ unittest
 }
 
 /**
-Evaluates to $(D TypeTuple!(F[T[0]], F[T[1]], ..., F[T[$ - 1]])).
-
-Example:
-----
-alias staticMap!(Unqual, int, const int, immutable int) T;
-static assert(is(T == TypeTuple!(int, int, int)));
-----
- */
-template staticMap(alias F, T...)
-{
-    static if (T.length == 1)
-    {
-        alias F!(T[0]) staticMap;
-    }
-    else
-    {
-        alias TypeTuple!(F!(T[0]), staticMap!(F, T[1 .. $])) staticMap;
-    }
-}
-
-unittest
-{
-    alias staticMap!(Unqual, int, const int, immutable int) T;
-    static assert(is(T == TypeTuple!(int, int, int)));
-}
-
-/**
-Evaluates to $(D F[T[0]] && F[T[1]] && ... && F[T[$ - 1]]).
-
-Example:
-----
-static assert(!allSatisfy!(isIntegral, int, double));
-static assert(allSatisfy!(isIntegral, int, long));
-----
- */
-template allSatisfy(alias F, T...)
-{
-    static if (T.length == 1)
-    {
-        alias F!(T[0]) allSatisfy;
-    }
-    else
-    {
-        enum bool allSatisfy = F!(T[0]) && allSatisfy!(F, T[1 .. $]);
-    }
-}
-
-unittest
-{
-    static assert(!allSatisfy!(isIntegral, int, double));
-    static assert(allSatisfy!(isIntegral, int, long));
-}
-
-/**
 Aliases itself to $(D T) if the boolean $(D condition) is $(D true)
 and to $(D F) otherwise.
 

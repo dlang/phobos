@@ -24,6 +24,7 @@ public import std.array;
 import std.contracts;
 import std.traits;
 import std.typecons;
+import std.typetuple;
 import std.algorithm;
 import std.functional;
 import std.conv;

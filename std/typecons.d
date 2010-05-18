@@ -56,7 +56,7 @@ Distributed under the Boost Software License, Version 1.0.
          http://www.boost.org/LICENSE_1_0.txt)
 */
 module std.typecons;
-import std.array, std.contracts, std.conv, std.metastrings, std.traits;
+import std.array, std.contracts, std.conv, std.metastrings, std.traits, std.typetuple;
 
 /**
 Encapsulates unique ownership of a resource. 
