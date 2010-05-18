@@ -1537,7 +1537,7 @@ struct lines
 //         return result;
 //     }
 
-    int opApply(D)(D dg)
+    int opApply(D)(scope D dg)
     {
 //         scope(exit) {
 //             if (fileName.length && fclose(f))
@@ -1582,7 +1582,7 @@ struct lines
         }
     }
     // no UTF checking
-    int opApplyRaw(D)(D dg)
+    int opApplyRaw(D)(scope D dg)
     {
         alias ParameterTypeTuple!(dg) Parms;
         enum duplicate = is(Parms[$ - 1] : immutable(ubyte)[]);
@@ -1785,7 +1785,7 @@ struct chunks
 //         return result;
 //     }
 
-    int opApply(D)(D dg)
+    int opApply(D)(scope D dg)
     {
         const maxStackSize = 1024 * 16;
         ubyte[] buffer = void;

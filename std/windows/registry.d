@@ -1708,7 +1708,7 @@ public:
 ///@}
 
 public:
-    int opApply(int delegate(ref string name) dg)
+    int opApply(scope int delegate(ref string name) dg)
     {
         int     result  =   0;
         HKEY    hkey    =   m_key.m_hkey;
@@ -1839,7 +1839,7 @@ public:
 ///@}
 
 public:
-    int opApply(int delegate(ref Key key) dg)
+    int opApply(scope int delegate(ref Key key) dg)
     {
         int         result  =   0;
         HKEY        hkey    =   m_key.m_hkey;
@@ -1981,7 +1981,7 @@ public:
 ///@}
 
 public:
-    int opApply(int delegate(ref string name) dg)
+    int opApply(scope int delegate(ref string name) dg)
     {
         int     result  =   0;
         HKEY    hkey    =   m_key.m_hkey;
@@ -2106,7 +2106,7 @@ public:
 ///@}
 
 public:
-    int opApply(int delegate(ref Value value) dg)
+    int opApply(scope int delegate(ref Value value) dg)
     {
         int     result  =   0;
         HKEY    hkey    =   m_key.m_hkey;

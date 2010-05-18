@@ -978,7 +978,7 @@ public:
        If the $(D VariantN) contains an array, applies $(D dg) to each
        element of the array in turn. Otherwise, throws an exception.
      */
-    int opApply(Delegate)(Delegate dg)
+    int opApply(Delegate)(scope Delegate dg)
     {
         // @@@TODO@@@ make this much more general.
         alias ParameterTypeTuple!(Delegate)[0] A;

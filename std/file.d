@@ -1263,7 +1263,7 @@ struct DirIterator
         }
     }
 
-    int opApply(D)(D dg)
+    int opApply(D)(scope D dg)
     {
         int result = 0;
         // worklist used only in breadth-first traversal

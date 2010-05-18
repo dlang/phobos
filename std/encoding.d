@@ -552,7 +552,7 @@ struct CodePoints(E)
         return codePoints;
     }
 
-    int opApply(int delegate(ref dchar) dg)
+    int opApply(scope int delegate(ref dchar) dg)
     {
         int result = 0;
         while (s.length != 0)
@@ -564,7 +564,7 @@ struct CodePoints(E)
         return result;
     }
 
-    int opApply(int delegate(ref uint, ref dchar) dg)
+    int opApply(scope int delegate(ref uint, ref dchar) dg)
     {
         uint i = 0;
         int result = 0;
@@ -580,7 +580,7 @@ struct CodePoints(E)
         return result;
     }
 
-    int opApplyReverse(int delegate(ref dchar) dg)
+    int opApplyReverse(scope int delegate(ref dchar) dg)
     {
         int result = 0;
         while (s.length != 0)
@@ -592,7 +592,7 @@ struct CodePoints(E)
         return result;
     }
 
-    int opApplyReverse(int delegate(ref uint, ref dchar) dg)
+    int opApplyReverse(scope int delegate(ref uint, ref dchar) dg)
     {
         int result = 0;
         while (s.length != 0)
@@ -622,7 +622,7 @@ struct CodeUnits(E)
         return codeUnits;
     }
 
-    int opApply(int delegate(ref E) dg)
+    int opApply(scope int delegate(ref E) dg)
     {
         int result = 0;
         foreach(E c;s)
@@ -633,7 +633,7 @@ struct CodeUnits(E)
         return result;
     }
 
-    int opApplyReverse(int delegate(ref E) dg)
+    int opApplyReverse(scope int delegate(ref E) dg)
     {
         int result = 0;
         foreach_reverse(E c;s)

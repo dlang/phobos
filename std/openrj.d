@@ -620,7 +620,7 @@ public:
     /**
      *
      */
-    int opApply(int delegate(ref Field field) dg)
+    int opApply(scope int delegate(ref Field field) dg)
     {
         int result  =   0;
 
@@ -640,7 +640,7 @@ public:
     /**
      *
      */
-    int opApply(int delegate(in string name, in string value) dg)
+    int opApply(scope int delegate(in string name, in string value) dg)
     {
         int result  =   0;
 
@@ -1000,7 +1000,7 @@ public:
     /**
      *
      */
-    int opApply(int delegate(ref Record record) dg)
+    int opApply(scope int delegate(ref Record record) dg)
     {
         int result  =   0;
 
@@ -1020,7 +1020,7 @@ public:
     /**
      *
      */
-    int opApply(int delegate(ref Field field) dg)
+    int opApply(scope int delegate(ref Field field) dg)
     {
         int result  =   0;
 

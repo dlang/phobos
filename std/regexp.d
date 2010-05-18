@@ -711,7 +711,7 @@ class RegExp
     }
 
     /** ditto */
-    public int opApply(int delegate(ref RegExp) dg)
+    public int opApply(scope int delegate(ref RegExp) dg)
     {
         int result;
         RegExp r = this;
