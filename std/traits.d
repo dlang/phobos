@@ -40,7 +40,7 @@ private
     }
 
     /* Demangles mstr as the storage class part of Argument. */
-    auto demangleParameterStorageClass(string mstr)
+    Demangle!uint demangleParameterStorageClass(string mstr)
     {
         uint pstc = 0; // parameter storage class
 
@@ -71,7 +71,7 @@ private
     }
 
     /* Demangles mstr as FuncAttrs. */
-    auto demangleFunctionAttributes(string mstr)
+    Demangle!uint demangleFunctionAttributes(string mstr)
     {
         enum LOOKUP_ATTRIBUTE =
         [
@@ -96,21 +96,6 @@ private
             else assert(0);
         }
         return Demangle!uint(atts, mstr);
-    }
-
-    /* Demangles mstr as CallConvention. */
-    auto demangleLinkage(string mstr)
-    {
-        enum LOOKUP_LINKAGE =
-        [
-            'F': "D",
-            'U': "C",
-            'W': "Windows",
-            'V': "Pascal",
-            'R': "C++"
-        ];
-        // CallConvention --> F | U | W | V | R
-        return Demangle!string( LOOKUP_LINKAGE[ mstr[0] ], mstr[1 .. $] );
     }
 }
 
@@ -249,7 +234,7 @@ enum ParameterStorageClass : uint
 template ParameterStorageClassTuple(func...)
     if (func.length == 1 && isCallable!(func))
 {
-    alias ParameterStorageClassTupleImpl!(FunctionTypeOf!(func)).Result
+    alias ParameterStorageClassTupleImpl!(Unqual!(FunctionTypeOf!(func))).Result
             ParameterStorageClassTuple;
 }
 
@@ -262,7 +247,7 @@ private template ParameterStorageClassTupleImpl(Func)
     alias ParameterTypeTuple!(Func) Params;
 
     // chop off CallConvention and FuncAttrs
-    enum margs = demangleFunctionAttributes( mangledName!(Func)[1 .. $] ).rest;
+    enum margs = demangleFunctionAttributes(mangledName!(Func)[1 .. $]).rest;
 
     // demangle Arguments and store parameter storage classes in a tuple
     template demangleNextParameter(string margs, size_t i = 0)
@@ -301,6 +286,21 @@ unittest
     static assert(test_pstc[2] == STC.OUT);
     static assert(test_pstc[3] == STC.LAZY);
     static assert(test_pstc[4] == STC.NONE);
+
+    interface Test
+    {
+        void test_const(int) const;
+        void test_sharedconst(int) shared const;
+    }
+    Test testi;
+
+    alias ParameterStorageClassTuple!(Test.test_const) test_const_pstc;
+    static assert(test_const_pstc.length == 1);
+    static assert(test_const_pstc[0] == STC.NONE);
+
+    alias ParameterStorageClassTuple!(testi.test_sharedconst) test_sharedconst_pstc;
+    static assert(test_sharedconst_pstc.length == 1);
+    static assert(test_sharedconst_pstc[0] == STC.NONE);
 }
 
 
@@ -339,7 +339,7 @@ template functionAttributes(func...)
     if (func.length == 1 && isCallable!(func))
 {
     enum uint functionAttributes = demangleFunctionAttributes(
-            mangledName!( FunctionTypeOf!(func) )[1 .. $] ).value;
+            mangledName!(Unqual!(FunctionTypeOf!(func)))[1 .. $] ).value;
 }
 
 unittest
@@ -368,6 +368,14 @@ unittest
     //static assert(functionAttributes!(ref_property) == FA.REF | FA.PROPERTY);
     void safe_nothrow() @safe nothrow { }
     static assert(functionAttributes!(safe_nothrow) == FA.SAFE | FA.NOTHROW);
+
+    interface Test2
+    {
+        int pure_const() pure const;
+        int pure_sharedconst() pure shared const;
+    }
+    static assert(functionAttributes!(Test2.pure_const) == FA.PURE);
+    static assert(functionAttributes!(Test2.pure_sharedconst) == FA.PURE);
 }
 
 
@@ -388,8 +396,17 @@ template functionLinkage(func...)
     if (func.length == 1 && isCallable!(func))
 {
     enum string functionLinkage =
-        demangleLinkage( mangledName!(FunctionTypeOf!(func)) ).value;
+        LOOKUP_LINKAGE[ mangledName!(Unqual!(FunctionTypeOf!(func)))[0] ];
 }
+
+private enum LOOKUP_LINKAGE =
+[
+    'F': "D",
+    'U': "C",
+    'W': "Windows",
+    'V': "Pascal",
+    'R': "C++"
+];
 
 unittest
 {
@@ -397,6 +414,14 @@ unittest
     extern(C) void Cfunc() {}
     static assert(functionLinkage!(Dfunc) == "D");
     static assert(functionLinkage!(Cfunc) == "C");
+
+    interface Test
+    {
+        void const_func() const;
+        void sharedconst_func() shared const;
+    }
+    static assert(functionLinkage!(Test.const_func) == "D");
+    static assert(functionLinkage!(Test.sharedconst_func) == "D");
 }
 
 
@@ -426,7 +451,7 @@ template variadicFunctionStyle(func...)
     if (func.length == 1 && isCallable!(func))
 {
     enum Variadic variadicFunctionStyle =
-        determineVariadicity!( FunctionTypeOf!(func) )();
+        determineVariadicity!( Unqual!(FunctionTypeOf!(func)) )();
 }
 
 private Variadic determineVariadicity(Func)()
