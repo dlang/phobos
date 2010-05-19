@@ -1144,6 +1144,149 @@ unittest
 }
 
 
+/**
+Returns a tuple of non-static functions with the name $(D name) declared in the
+class or interface $(D C).  Covariant duplicates are shrunk into the most
+derived one.
+
+Example:
+--------------------
+interface I { I foo(); }
+class B
+{
+    real foo(real v) { return v; }
+}
+class C : B, I
+{
+    override C foo() { return this; } // covariant overriding of I.foo()
+}
+alias MemberFunctionsTuple!(C, "foo") foos;
+static assert(foos.length == 2);
+static assert(__traits(isSame, foos[0], C.foo));
+static assert(__traits(isSame, foos[1], B.foo));
+--------------------
+ */
+template MemberFunctionsTuple(C, string name)
+    if (is(C == class) || is(C == interface))
+{
+    static if (__traits(hasMember, C, name))
+        alias MemberFunctionTupleImpl!(C, name).result MemberFunctionsTuple;
+    else
+        alias TypeTuple!() MemberFunctionsTuple;
+}
+
+private template MemberFunctionTupleImpl(C, string name)
+{
+    /*
+     * First, collect all overloads in the class hierarchy.
+     */
+    template CollectOverloads(Node)
+    {
+        static if (__traits(hasMember, Node, name))
+        {
+            // Get all overloads in sight (not hidden).
+            alias TypeTuple!(__traits(getVirtualFunctions, Node, name)) inSight;
+
+            // And collect all overloads in ancestor classes to reveal hidden
+            // methods.  The result may contain duplicates.
+            template walkThru(Parents...)
+            {
+                static if (Parents.length > 0)
+                    alias TypeTuple!(
+                                CollectOverloads!(Parents[0]).result,
+                                walkThru!(Parents[1 .. $])
+                            ) walkThru;
+                else
+                    alias TypeTuple!() walkThru;
+            }
+
+            static if (is(Node Parents == super))
+                alias TypeTuple!(inSight, walkThru!(Parents)) result;
+            else
+                alias TypeTuple!(inSight) result;
+        }
+        else
+            alias TypeTuple!() result; // no overloads in this hierarchy
+    }
+
+    // Remove symbolic duplicates; covariant duplicates still remain.
+    alias NoDuplicates!(CollectOverloads!(C).result) overloads;
+
+    /*
+     * Now shrink covariant overloads into one.
+     */
+    template shrink(overloads...)
+    {
+        static if (overloads.length > 0)
+        {
+            alias shrinkOne!(overloads).result temp;
+            alias TypeTuple!(temp[0], shrink!(temp[1 .. $]).result) result;
+        }
+        else
+            alias TypeTuple!() result; // done
+    }
+
+    // .result[0]    = the most derived one in the covariant siblings of target
+    // .result[1..$] = non-covariant others
+    template shrinkOne(/+ alias target, rest... +/ args...)
+    {
+        alias args[0] target; // prevent property functions from being evaluated
+        alias args[1 .. $] rest;
+
+        static if (rest.length > 0)
+        {
+            alias FunctionTypeOf!(target) Target;
+            alias FunctionTypeOf!(rest[0]) Rest0;
+
+            static if (isCovariantWith!(Target, Rest0))
+                // target overrides rest[0] -- erase rest[0].
+                alias shrinkOne!(target, rest[1 .. $]).result result;
+            else static if (isCovariantWith!(Rest0, Target))
+                // rest[0] overrides target -- erase target.
+                alias shrinkOne!(rest[0], rest[1 .. $]).result result;
+            else
+                // target and rest[0] are distinct.
+                alias TypeTuple!(
+                            shrinkOne!(target, rest[1 .. $]).result,
+                            rest[0] // keep
+                        ) result;
+        }
+        else
+            alias TypeTuple!(target) result; // done
+    }
+
+    // done.
+    alias shrink!(overloads).result result;
+}
+
+unittest
+{
+    interface I     { I test(); }
+    interface J : I { J test(); }
+    interface K     { K test(int); }
+    class B : I, K
+    {
+        K test(int) { return this; }
+        B test() { return this; }
+        static void test(string) { }
+    }
+    class C : B, J
+    {
+        C test() { return this; }
+    }
+    alias MemberFunctionsTuple!(C, "test") test;
+    static assert(test.length == 2);
+    static assert(is(FunctionTypeOf!(test[0]) == FunctionTypeOf!(C.test)));
+    static assert(is(FunctionTypeOf!(test[1]) == FunctionTypeOf!(B.test)));
+    alias MemberFunctionsTuple!(C, "noexist") noexist;
+    static assert(noexist.length == 0);
+
+    interface L { int prop() @property; }
+    alias MemberFunctionsTuple!(L, "prop") prop;
+    static assert(prop.length == 1);
+}
+
+
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
 // Type Convertion
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
@@ -1278,6 +1421,210 @@ unittest
     static assert(isImplicitlyConvertible!(const(char), char));
     static assert(isImplicitlyConvertible!(char, wchar));
     static assert(!isImplicitlyConvertible!(wchar, char));
+}
+
+
+/*
+Works like $(D isImplicitlyConvertible), except this cares only about storage
+classes of the arguments.
+ */
+private template isStorageClassImplicitlyConvertible(From, To)
+{
+    enum isStorageClassImplicitlyConvertible = isImplicitlyConvertible!(
+            ModifyTypePreservingSTC!(Pointify, From),
+            ModifyTypePreservingSTC!(Pointify,   To) );
+}
+private template Pointify(T) { alias void* Pointify; }
+
+unittest
+{
+    static assert(isStorageClassImplicitlyConvertible!(          int, const int));
+    static assert(isStorageClassImplicitlyConvertible!(immutable int, const int));
+    static assert(! isStorageClassImplicitlyConvertible!(const int,           int));
+    static assert(! isStorageClassImplicitlyConvertible!(const int, immutable int));
+    static assert(! isStorageClassImplicitlyConvertible!(int, shared int));
+    static assert(! isStorageClassImplicitlyConvertible!(shared int, int));
+}
+
+
+/**
+Determines whether the function type $(D F) is covariant with $(D G), i.e.,
+functions of the type $(D F) can override ones of the type $(D G).
+
+Example:
+--------------------
+interface I { I clone(); }
+interface J { J clone(); }
+class C : I
+{
+    override C clone()   // covariant overriding of I.clone()
+    {
+        return new C;
+    }
+}
+
+// C.clone() can override I.clone(), indeed.
+static assert(isCovariantWith!(typeof(C.clone), typeof(I.clone)));
+
+// C.clone() can't override J.clone(); the return type C is not implicitly
+// convertible to J.
+static assert(isCovariantWith!(typeof(C.clone), typeof(J.clone)));
+--------------------
+ */
+template isCovariantWith(F, G)
+    if (is(F == function) && is(G == function))
+{
+    static if (is(F : G))
+        enum isCovariantWith = true;
+    else
+        enum isCovariantWith = isCovariantWithImpl!(F, G).yes;
+}
+
+private template isCovariantWithImpl(Upr, Lwr)
+{
+    /*
+     * Check for calling convention: require exact match.
+     */
+    template checkLinkage()
+    {
+        enum ok = functionLinkage!(Upr) == functionLinkage!(Lwr);
+    }
+    /*
+     * Check for variadic parameter: require exact match.
+     */
+    template checkVariadicity()
+    {
+        enum ok = variadicFunctionStyle!(Upr) == variadicFunctionStyle!(Lwr);
+    }
+    /*
+     * Check for function storage class:
+     *  - overrider can have narrower storage class than base
+     */
+    template checkSTC()
+    {
+        // Note the order of arguments.  The convertion order Lwr -> Upr is
+        // correct since Upr should be semantically 'narrower' than Lwr.
+        enum ok = isStorageClassImplicitlyConvertible!(Lwr, Upr);
+    }
+    /*
+     * Check for function attributes:
+     *  - require exact match for ref and @property
+     *  - overrider can add pure and nothrow, but can't remove them
+     *  - trust: ?
+     */
+    template checkAttributes()
+    {
+        alias FunctionAttribute FA;
+        enum uprAtts = functionAttributes!(Upr);
+        enum lwrAtts = functionAttributes!(Lwr);
+        //
+        enum WANT_EXACT = FA.REF | FA.PROPERTY;
+        enum TRUST = FA.SAFE | FA.TRUSTED;
+        enum ok =
+            ((uprAtts & WANT_EXACT) == (lwrAtts & WANT_EXACT)) &&
+            ((uprAtts & FA.PURE   ) >= (lwrAtts & FA.PURE   )) &&
+            ((uprAtts & FA.NOTHROW) >= (lwrAtts & FA.NOTHROW)) &&
+            ((uprAtts & TRUST     ) >= (lwrAtts & TRUST     )) ;  // XXX
+    }
+    /*
+     * Check for return type: usual implicit convertion.
+     */
+    template checkReturnType()
+    {
+        enum ok = is(ReturnType!(Upr) : ReturnType!(Lwr));
+    }
+    /*
+     * Check for parameters:
+     *  - require exact match for types (cf. bugzilla 3075)
+     *  - require exact match for in, out, ref and lazy
+     *  - overrider can add scope, but can't remove
+     */
+    template checkParameters()
+    {
+        alias ParameterStorageClass STC;
+        alias ParameterTypeTuple!(Upr) UprParams;
+        alias ParameterTypeTuple!(Lwr) LwrParams;
+        alias ParameterStorageClassTuple!(Upr) UprPSTCs;
+        alias ParameterStorageClassTuple!(Lwr) LwrPSTCs;
+        //
+        template checkNext(size_t i)
+        {
+            static if (i < UprParams.length)
+            {
+                enum uprStc = UprPSTCs[i];
+                enum lwrStc = LwrPSTCs[i];
+                //
+                enum WANT_EXACT = STC.OUT | STC.REF | STC.LAZY;
+                enum ok =
+                    ((uprStc & WANT_EXACT) == (lwrStc & WANT_EXACT)) &&
+                    ((uprStc & STC.SCOPE ) >= (lwrStc & STC.SCOPE )) &&
+                    checkNext!(i + 1).ok;
+            }
+            else
+                enum ok = true; // done
+        }
+        static if (UprParams.length == LwrParams.length)
+            enum ok = is(UprParams == LwrParams) && checkNext!(0).ok;
+        else
+            enum ok = false;
+    }
+
+    /* run all the checks */
+    enum bool yes =
+        checkLinkage    !().ok &&
+        checkVariadicity!().ok &&
+        checkSTC        !().ok &&
+        checkAttributes !().ok &&
+        checkReturnType !().ok &&
+        checkParameters !().ok ;
+}
+
+version (unittest) private template isCovariantWith(alias f, alias g)
+{
+    enum bool isCovariantWith = isCovariantWith!(typeof(f), typeof(g));
+}
+unittest
+{
+    // covariant return type
+    interface I     {}
+    interface J : I {}
+    interface BaseA            {          const(I) test(int); }
+    interface DerivA_1 : BaseA { override const(J) test(int); }
+    interface DerivA_2 : BaseA { override       J  test(int); }
+    static assert(isCovariantWith!(DerivA_1.test, BaseA.test));
+    static assert(isCovariantWith!(DerivA_2.test, BaseA.test));
+    static assert(! isCovariantWith!(BaseA.test, DerivA_1.test));
+    static assert(! isCovariantWith!(BaseA.test, DerivA_2.test));
+    static assert(isCovariantWith!(BaseA.test, BaseA.test));
+    static assert(isCovariantWith!(DerivA_1.test, DerivA_1.test));
+    static assert(isCovariantWith!(DerivA_2.test, DerivA_2.test));
+
+    // scope parameter
+    interface BaseB            {          void test(      int,       int); }
+    interface DerivB_1 : BaseB { override void test(scope int,       int); }
+    interface DerivB_2 : BaseB { override void test(      int, scope int); }
+    interface DerivB_3 : BaseB { override void test(scope int, scope int); }
+    static assert(isCovariantWith!(DerivB_1.test, BaseB.test));
+    static assert(isCovariantWith!(DerivB_2.test, BaseB.test));
+    static assert(isCovariantWith!(DerivB_3.test, BaseB.test));
+    static assert(! isCovariantWith!(BaseB.test, DerivB_1.test));
+    static assert(! isCovariantWith!(BaseB.test, DerivB_2.test));
+    static assert(! isCovariantWith!(BaseB.test, DerivB_3.test));
+
+    // function storage class
+    interface BaseC            {          void test()      ; }
+    interface DerivC_1 : BaseC { override void test() const; }
+    static assert(isCovariantWith!(DerivC_1.test, BaseC.test));
+    static assert(! isCovariantWith!(BaseC.test, DerivC_1.test));
+
+    // trust
+    interface BaseE            {          void test()         ; }
+    interface DerivE_1 : BaseE { override void test() @safe   ; }
+    interface DerivE_2 : BaseE { override void test() @trusted; }
+    static assert(isCovariantWith!(DerivE_1.test, BaseE.test));
+    static assert(isCovariantWith!(DerivE_2.test, BaseE.test));
+    static assert(! isCovariantWith!(BaseE.test, DerivE_1.test));
+    static assert(! isCovariantWith!(BaseE.test, DerivE_2.test));
 }
 
 
