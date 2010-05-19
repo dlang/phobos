@@ -1549,7 +1549,7 @@ template isExpressionTuple(T ...)
 {
     static if (T.length > 0)
         enum bool isExpressionTuple =
-            __traits(compiles, { enum ex = T[0]; }) &&
+            !is(T[0]) && __traits(compiles, { auto ex = T[0]; }) &&
             isExpressionTuple!(T[1 .. $]);
     else
         enum bool isExpressionTuple = true; // default
@@ -1560,6 +1560,7 @@ unittest
     void foo();
     static int bar() { return 42; }
     enum aa = [ 1: -1 ];
+    alias int myint;
 
     static assert(isExpressionTuple!(42));
     static assert(isExpressionTuple!(aa));
@@ -1569,6 +1570,8 @@ unittest
     static assert(! isExpressionTuple!(isExpressionTuple));
     static assert(! isExpressionTuple!(foo));
     static assert(! isExpressionTuple!( (a) { } ));
+    static assert(! isExpressionTuple!(int));
+    static assert(! isExpressionTuple!(myint));
 }
 
 
