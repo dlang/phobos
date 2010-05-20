@@ -526,7 +526,7 @@ private struct DelegateFaker(R, Args...) {
     }
 }
 
-/**Convert a function pointer to a delegate with the same parameter list and
+/**Convert a callable to a delegate with the same parameter list and
  * return type, avoiding heap allocations and use of auxiliary storage.
  *
  * Examples:
@@ -545,39 +545,53 @@ private struct DelegateFaker(R, Args...) {
  *
  * Bugs:  Doesn't work properly with ref return.  (See DMD bug 3756.)
  */
-auto toDelegate(F)(F fp) {
+auto ref toDelegate(F)(auto ref F fp) if (isCallable!(F)) {
 
-    // Workaround for DMD Bug 1818.
-    mixin("alias " ~ ReturnType!(F).stringof ~
-        " delegate" ~ ParameterTypeTuple!(F).stringof ~ " DelType;");
-
-    version(none) {
-        // What the code would be if it weren't for bug 1818:
-        alias ReturnType!(F) delegate(ParameterTypeTuple!(F)) DelType;
+    static if (is(F == delegate))
+    {
+        return fp;
     }
+    else static if (is(typeof(&F.opCall) == delegate)
+                || (is(typeof(&F.opCall) V : V*) && is(V == function)))
+    {
+        return toDelegate(&fp.opCall);
+    }
+    else
+    {
+        // Workaround for DMD Bug 1818.
+        mixin("alias " ~ ReturnType!(F).stringof ~
+            " delegate" ~ ParameterTypeTuple!(F).stringof ~ " DelType;");
 
-    static struct DelegateFields {
-        union {
-            DelType del;
-            pragma(msg, typeof(del));
+        version(none) {
+            // What the code would be if it weren't for bug 1818:
+            alias ReturnType!(F) delegate(ParameterTypeTuple!(F)) DelType;
+        }
 
-            struct {
-                void* contextPtr;
-                void* funcPtr;
+        static struct DelegateFields {
+            union {
+                DelType del;
+                //pragma(msg, typeof(del));
+
+                struct {
+                    void* contextPtr;
+                    void* funcPtr;
+                }
             }
         }
+
+        // fp is stored in the returned delegate's context pointer.
+        // The returned delegate's function pointer points to
+        // DelegateFaker.doIt.
+        DelegateFields df;
+
+        df.contextPtr = cast(void*) fp;
+
+        DelegateFaker!(ReturnType!(F), ParameterTypeTuple!(F)) dummy;
+        auto dummyDel = &(dummy.doIt);
+        df.funcPtr = dummyDel.funcptr;
+
+        return df.del;
     }
-
-    // fp is stored in the returned delegate's context pointer.  The returned
-    // delegate's function pointer points to DelegateFaker.doIt.
-    DelegateFields df;
-    df.contextPtr = cast(void*) fp;
-
-    DelegateFaker!(ReturnType!(F), ParameterTypeTuple!(F)) dummy;
-    auto dummyDel = &(dummy.doIt);
-    df.funcPtr = dummyDel.funcptr;
-
-    return df.del;
 }
 
 unittest {
@@ -591,4 +605,27 @@ unittest {
     static assert(is(typeof(incMyNumDel) == int delegate(ref uint)));
     auto returnVal = incMyNumDel(myNum);
     assert(myNum == 1);
+    
+    interface I { int opCall(); }
+    class C: I { int opCall() { inc(myNum); return myNum;} }
+    auto c = new C;
+    auto i = cast(I) c;
+    
+    auto getvalc = toDelegate(c);
+    assert(getvalc() == 2);
+    
+    auto getvali = toDelegate(i);
+    assert(getvali() == 3);
+    
+    struct S1 { int opCall() { inc(myNum); return myNum; } }
+    static assert(!is(typeof(&s1.opCall) == delegate));
+    S1 s1;
+    auto getvals1 = toDelegate(s1);
+    assert(getvals1() == 4);
+    
+    struct S2 { static int opCall() { return 123456; } }
+    static assert(!is(typeof(&S2.opCall) == delegate));
+    S2 s2;
+    auto getvals2 =&S2.opCall;
+    assert(getvals2() == 123456);
 }
