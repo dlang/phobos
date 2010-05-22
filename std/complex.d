@@ -139,7 +139,7 @@ struct Complex(T)  if (isFloatingPoint!T)
     {
         alias typeof(return) C;
         auto w = C(this.re, this.im);
-        return w.opOpAssign!(op~"=")(z);
+        return w.opOpAssign!(op)(z);
     }
 
 
@@ -149,7 +149,7 @@ struct Complex(T)  if (isFloatingPoint!T)
     {
         alias typeof(return) C;
         auto w = C(this.re, this.im);
-        return w.opOpAssign!(op~"=")(r);
+        return w.opOpAssign!(op)(r);
     }
 
 
@@ -203,17 +203,17 @@ struct Complex(T)  if (isFloatingPoint!T)
 
     // complex += complex,  complex -= complex
     Complex opOpAssign(string op, C)(C z)
-        if ((op == "+=" || op == "-=") && is(C R == Complex!R))
+        if ((op == "+" || op == "-") && is(C R == Complex!R))
     {
-        mixin ("re "~op~" z.re;");
-        mixin ("im "~op~" z.im;");
+        mixin ("re "~op~"= z.re;");
+        mixin ("im "~op~"= z.im;");
         return this;
     }
 
 
     // complex *= complex
     Complex opOpAssign(string op, C)(C z)
-        if (op == "*=" && is(C R == Complex!R))
+        if (op == "*" && is(C R == Complex!R))
     {
         auto temp = re*z.re - im*z.im;
         im = im*z.re + re*z.im;
@@ -224,7 +224,7 @@ struct Complex(T)  if (isFloatingPoint!T)
 
     // complex /= complex
     Complex opOpAssign(string op, C)(C z)
-        if (op == "/=" && is(C R == Complex!R))
+        if (op == "/" && is(C R == Complex!R))
     {
         if (fabs(z.re) < fabs(z.im))
         {
@@ -250,7 +250,7 @@ struct Complex(T)  if (isFloatingPoint!T)
 
     // complex ^^= complex
     Complex opOpAssign(string op, C)(C z)
-        if (op == "^^=" && is(C R == Complex!R))
+        if (op == "^^" && is(C R == Complex!R))
     {
         FPTemporary!T r = abs;
         FPTemporary!T t = arg;
@@ -264,25 +264,25 @@ struct Complex(T)  if (isFloatingPoint!T)
 
 
     // complex += numeric,  complex -= numeric
-    Complex opOpAssign(string op, U : T)(U a)  if (op == "+=" || op == "-=")
+    Complex opOpAssign(string op, U : T)(U a)  if (op == "+" || op == "-")
     {
-        mixin ("re "~op~" a;");
+        mixin ("re "~op~"= a;");
         return this;
     }
 
 
     // complex *= numeric,  complex /= numeric
-    Complex opOpAssign(string op, U : T)(U a)  if (op == "*=" || op == "/=")
+    Complex opOpAssign(string op, U : T)(U a)  if (op == "*" || op == "/")
     {
-        mixin ("re "~op~" a;");
-        mixin ("im "~op~" a;");
+        mixin ("re "~op~"= a;");
+        mixin ("im "~op~"= a;");
         return this;
     }
 
 
     // complex ^^= real
     Complex opOpAssign(string op, R)(R r)
-        if (op == "^^=" && isFloatingPoint!R)
+        if (op == "^^" && isFloatingPoint!R)
     {
         FPTemporary!T ab = abs^^r;
         FPTemporary!T ar = arg*r;
@@ -294,7 +294,7 @@ struct Complex(T)  if (isFloatingPoint!T)
 
     // complex ^^= int
     Complex opOpAssign(string op, U)(U i)
-        if (op == "^^=" && isIntegral!U)
+        if (op == "^^" && isIntegral!U)
     {
         switch (i)
         {
