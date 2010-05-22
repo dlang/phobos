@@ -10,72 +10,72 @@ class TypeInfo_As : TypeInfo
     char[] toString() { return "short[]"; }
 
     hash_t getHash(void *p)
-    {	short[] s = *cast(short[]*)p;
-	size_t len = s.length;
-	short *str = s.ptr;
-	hash_t hash = 0;
+    {   short[] s = *cast(short[]*)p;
+        size_t len = s.length;
+        short *str = s.ptr;
+        hash_t hash = 0;
 
-	while (1)
-	{
-	    switch (len)
-	    {
-		case 0:
-		    return hash;
+        while (1)
+        {
+            switch (len)
+            {
+                case 0:
+                    return hash;
 
-		case 1:
-		    hash *= 9;
-		    hash += *cast(ushort *)str;
-		    return hash;
+                case 1:
+                    hash *= 9;
+                    hash += *cast(ushort *)str;
+                    return hash;
 
-		default:
-		    hash *= 9;
-		    hash += *cast(uint *)str;
-		    str += 2;
-		    len -= 2;
-		    break;
-	    }
-	}
+                default:
+                    hash *= 9;
+                    hash += *cast(uint *)str;
+                    str += 2;
+                    len -= 2;
+                    break;
+            }
+        }
     }
 
     int equals(void *p1, void *p2)
     {
-	short[] s1 = *cast(short[]*)p1;
-	short[] s2 = *cast(short[]*)p2;
+        short[] s1 = *cast(short[]*)p1;
+        short[] s2 = *cast(short[]*)p2;
 
-	return s1.length == s2.length &&
-	       memcmp(cast(void *)s1, cast(void *)s2, s1.length * short.sizeof) == 0;
+        return s1.length == s2.length &&
+               memcmp(cast(void *)s1, cast(void *)s2, s1.length * short.sizeof) == 0;
     }
 
     int compare(void *p1, void *p2)
     {
-	short[] s1 = *cast(short[]*)p1;
-	short[] s2 = *cast(short[]*)p2;
-	size_t len = s1.length;
+        short[] s1 = *cast(short[]*)p1;
+        short[] s2 = *cast(short[]*)p2;
+        size_t len = s1.length;
 
-	if (s2.length < len)
-	    len = s2.length;
-	for (size_t u = 0; u < len; u++)
-	{
-	    int result = s1[u] - s2[u];
-	    if (result)
-		return result;
-	}
-	return cast(int)s1.length - cast(int)s2.length;
+        if (s2.length < len)
+            len = s2.length;
+        for (size_t u = 0; u < len; u++)
+        {
+            int result = s1[u] - s2[u];
+            if (result)
+                return result;
+        }
+        return cast(int)s1.length - cast(int)s2.length;
     }
 
     size_t tsize()
     {
-	return (short[]).sizeof;
+        return (short[]).sizeof;
     }
 
     uint flags()
     {
-	return 1;
+        return 1;
     }
 
     TypeInfo next()
     {
-	return typeid(short);
+        return typeid(short);
     }
 }
 
@@ -88,24 +88,24 @@ class TypeInfo_At : TypeInfo_As
 
     int compare(void *p1, void *p2)
     {
-	ushort[] s1 = *cast(ushort[]*)p1;
-	ushort[] s2 = *cast(ushort[]*)p2;
-	size_t len = s1.length;
+        ushort[] s1 = *cast(ushort[]*)p1;
+        ushort[] s2 = *cast(ushort[]*)p2;
+        size_t len = s1.length;
 
-	if (s2.length < len)
-	    len = s2.length;
-	for (size_t u = 0; u < len; u++)
-	{
-	    int result = s1[u] - s2[u];
-	    if (result)
-		return result;
-	}
-	return cast(int)s1.length - cast(int)s2.length;
+        if (s2.length < len)
+            len = s2.length;
+        for (size_t u = 0; u < len; u++)
+        {
+            int result = s1[u] - s2[u];
+            if (result)
+                return result;
+        }
+        return cast(int)s1.length - cast(int)s2.length;
     }
 
     TypeInfo next()
     {
-	return typeid(ushort);
+        return typeid(ushort);
     }
 }
 
@@ -117,7 +117,7 @@ class TypeInfo_Au : TypeInfo_At
 
     TypeInfo next()
     {
-	return typeid(wchar);
+        return typeid(wchar);
     }
 }
 

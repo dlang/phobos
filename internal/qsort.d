@@ -1,16 +1,16 @@
 /*
-	Portions of this file are:
-	Copyright Prototronics, 1987
-	Totem Lake P.O. 8117
-	Kirkland, Washington 98034
-	(206) 820-1972
-	Licensed to Digital Mars.
+        Portions of this file are:
+        Copyright Prototronics, 1987
+        Totem Lake P.O. 8117
+        Kirkland, Washington 98034
+        (206) 820-1972
+        Licensed to Digital Mars.
 
-	June 11, 1987 from Ray Gardner's
-	Denver, Colorado) public domain version
+        June 11, 1987 from Ray Gardner's
+        Denver, Colorado) public domain version
 
-	Use qsort2.d instead of this file if a redistributable version of
-	_adSort() is required.
+        Use qsort2.d instead of this file if a redistributable version of
+        _adSort() is required.
 */
 
 
@@ -24,7 +24,7 @@
 **    Oct. 1978, and Corrigendum, Comm. ACM, June 1979.
 */
 
-//debug=qsort;		// uncomment to turn on debugging printf's
+//debug=qsort;          // uncomment to turn on debugging printf's
 
 import std.c.stdio;
 import std.c.stdlib;
@@ -38,28 +38,28 @@ struct Array
 }
 
 
-private const int _maxspan = 7;	// subarrays of _maxspan or fewer elements
-				// will be sorted by a simple insertion sort
+private const int _maxspan = 7; // subarrays of _maxspan or fewer elements
+                                // will be sorted by a simple insertion sort
 
-/* Adjust _maxspan according to relative cost of a swap and a compare.  Reduce 
-_maxspan (not less than 1) if a swap is very expensive such as when you have 
-an array of large structures to be sorted, rather than an array of pointers to 
-structures.  The default value is optimized for a high cost for compares. */ 
+/* Adjust _maxspan according to relative cost of a swap and a compare.  Reduce
+_maxspan (not less than 1) if a swap is very expensive such as when you have
+an array of large structures to be sorted, rather than an array of pointers to
+structures.  The default value is optimized for a high cost for compares. */
 
 
 extern (C) long _adSort(Array a, TypeInfo ti)
 {
   byte* base;
-  byte*[40] stack;		// stack
-  byte** sp;		        // stack pointer
-  byte* i, j, limit;		// scan and limit pointers
+  byte*[40] stack;              // stack
+  byte** sp;                    // stack pointer
+  byte* i, j, limit;            // scan and limit pointers
   uint thresh;                  // size of _maxspan elements in bytes
   uint width = ti.tsize();
 
   base = cast(byte *)a.ptr;
   thresh = _maxspan * width;             // init threshold
   sp = stack.ptr;                        // init stack pointer
-  limit = base + a.length * width;	 // pointer past end of array
+  limit = base + a.length * width;       // pointer past end of array
   while (1)                              // repeat until done then return
   {
     while (limit - base > thresh)        // if more than _maxspan elements
@@ -68,42 +68,42 @@ extern (C) long _adSort(Array a, TypeInfo ti)
       ti.swap((cast(uint)(limit - base) >> 1) -
            (((cast(uint)(limit - base) >> 1)) % width) + base, base);
 
-      i = base + width;			// i scans from left to right
-      j = limit - width;		// j scans from right to left
+      i = base + width;                 // i scans from left to right
+      j = limit - width;                // j scans from right to left
 
-      if (ti.compare(i, j) > 0)		// Sedgewick's
-        ti.swap(i, j);			//    three-element sort
-      if (ti.compare(base, j) > 0)	// sets things up
-        ti.swap(base, j);		// so that
-      if (ti.compare(i, base) > 0)	// *i <= *base <= *j
-        ti.swap(i, base);		// *base is the pivot element
+      if (ti.compare(i, j) > 0)         // Sedgewick's
+        ti.swap(i, j);                  //    three-element sort
+      if (ti.compare(base, j) > 0)      // sets things up
+        ti.swap(base, j);               // so that
+      if (ti.compare(i, base) > 0)      // *i <= *base <= *j
+        ti.swap(i, base);               // *base is the pivot element
 
       while (1)
       {
-        do				// move i right until *i >= pivot
+        do                              // move i right until *i >= pivot
           i += width;
         while (ti.compare(i, base) < 0);
-        do				// move j left until *j <= pivot
+        do                              // move j left until *j <= pivot
           j -= width;
         while (ti.compare(j, base) > 0);
-        if (i > j)			// break loop if pointers crossed
+        if (i > j)                      // break loop if pointers crossed
           break;
-        ti.swap(i, j);			// else swap elements, keep scanning
+        ti.swap(i, j);                  // else swap elements, keep scanning
       }
-      ti.swap(base, j);			// move pivot into correct place
-      if (j - base > limit - i)		// if left subarray is larger...
+      ti.swap(base, j);                 // move pivot into correct place
+      if (j - base > limit - i)         // if left subarray is larger...
       {
-        sp[0] = base;			// stack left subarray base
-        sp[1] = j;			//    and limit
-        base = i;			// sort the right subarray
+        sp[0] = base;                   // stack left subarray base
+        sp[1] = j;                      //    and limit
+        base = i;                       // sort the right subarray
       }
-      else				// else right subarray is larger
+      else                              // else right subarray is larger
       {
-        sp[0] = i;			// stack right subarray base
-        sp[1] = limit;			//    and limit
-        limit = j;			// sort the left subarray
+        sp[0] = i;                      // stack right subarray base
+        sp[1] = limit;                  //    and limit
+        limit = j;                      // sort the left subarray
       }
-      sp += 2;				// increment stack pointer
+      sp += 2;                          // increment stack pointer
       assert(sp < cast(byte**)stack + stack.length);
     }
 
@@ -120,13 +120,13 @@ extern (C) long _adSort(Array a, TypeInfo ti)
       i += width;
     }
 
-    if (sp > stack.ptr)			// if any entries on stack...
+    if (sp > stack.ptr)                 // if any entries on stack...
     {
-      sp -= 2;				// pop the base and limit
+      sp -= 2;                          // pop the base and limit
       base = sp[0];
       limit = sp[1];
     }
-    else				// else stack empty, all done
+    else                                // else stack empty, all done
       return *cast(long*)(&a);
   }
   assert(0);
@@ -154,9 +154,9 @@ unittest
 
     for (int i = 0; i < a.length - 1; i++)
     {
-	//printf("i = %d", i);
-	//printf(" %d %d\n", a[i], a[i + 1]);
-	assert(a[i] <= a[i + 1]);
+        //printf("i = %d", i);
+        //printf(" %d %d\n", a[i], a[i + 1]);
+        assert(a[i] <= a[i + 1]);
     }
 }
 

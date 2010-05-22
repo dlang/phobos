@@ -39,10 +39,10 @@ void[] _d_arraycast(size_t tsize, size_t fsize, void[] a)
     auto nbytes = length * fsize;
     if (nbytes % tsize != 0)
     {
-	throw new Error("array cast misalignment");
+        throw new Error("array cast misalignment");
     }
     length = nbytes / tsize;
-    *cast(size_t *)&a = length;	// jam new length
+    *cast(size_t *)&a = length; // jam new length
     return a;
 }
 
@@ -79,10 +79,10 @@ void[] _d_arraycast_frombit(uint tsize, void[] a)
 
     if (length & 7)
     {
-	throw new Error("bit[] array cast misalignment");
+        throw new Error("bit[] array cast misalignment");
     }
     length /= 8 * tsize;
-    *cast(size_t *)&a = length;	// jam new length
+    *cast(size_t *)&a = length; // jam new length
     return a;
 }
 

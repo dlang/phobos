@@ -61,102 +61,102 @@ extern (C) int main(size_t argc, char **argv)
     int myebx;
 
     version (OSX)
-    {	/* OSX does not provide a way to get at the top of the
-	 * stack, except for the magic value 0xC0000000.
-	 * But as far as the gc is concerned, argv is at the top
-	 * of the main thread's stack, so save the address of that.
-	 */
-	__osx_stack_end = cast(void*)&argv;
+    {   /* OSX does not provide a way to get at the top of the
+         * stack, except for the magic value 0xC0000000.
+         * But as far as the gc is concerned, argv is at the top
+         * of the main thread's stack, so save the address of that.
+         */
+        __osx_stack_end = cast(void*)&argv;
     }
 
     version (FreeBSD)
-    {	/* FreeBSD does not provide a way to get at the top of the
-	 * stack.
-	 * But as far as the gc is concerned, argv is at the top
-	 * of the main thread's stack, so save the address of that.
-	 */
-	__libc_stack_end = cast(void*)&argv;
+    {   /* FreeBSD does not provide a way to get at the top of the
+         * stack.
+         * But as far as the gc is concerned, argv is at the top
+         * of the main thread's stack, so save the address of that.
+         */
+        __libc_stack_end = cast(void*)&argv;
     }
 
     version (Solaris)
-    {	/* As far as the gc is concerned, argv is at the top
-	 * of the main thread's stack, so save the address of that.
-	 */
-	__libc_stack_end = cast(void*)&argv;
+    {   /* As far as the gc is concerned, argv is at the top
+         * of the main thread's stack, so save the address of that.
+         */
+        __libc_stack_end = cast(void*)&argv;
     }
 
     version (Posix)
     {
-	_STI_monitor_staticctor();
-	_STI_critical_init();
-	gc_init();
-	am = cast(char[] *) malloc(argc * (char[]).sizeof);
-	// BUG: alloca() conflicts with try-catch-finally stack unwinding
-	//am = (char[] *) alloca(argc * (char[]).sizeof);
+        _STI_monitor_staticctor();
+        _STI_critical_init();
+        gc_init();
+        am = cast(char[] *) malloc(argc * (char[]).sizeof);
+        // BUG: alloca() conflicts with try-catch-finally stack unwinding
+        //am = (char[] *) alloca(argc * (char[]).sizeof);
     }
     version (Win32)
     {
-	gc_init();
-	_minit();
-	am = cast(char[] *) alloca(argc * (char[]).sizeof);
+        gc_init();
+        _minit();
+        am = cast(char[] *) alloca(argc * (char[]).sizeof);
     }
 
     if (no_catch_exceptions)
     {
-	_moduleCtor();
-	_moduleUnitTests();
+        _moduleCtor();
+        _moduleUnitTests();
 
-	for (size_t i = 0; i < argc; i++)
-	{
-	    auto len = strlen(argv[i]);
-	    am[i] = argv[i][0 .. len];
-	}
+        for (size_t i = 0; i < argc; i++)
+        {
+            auto len = strlen(argv[i]);
+            am[i] = argv[i][0 .. len];
+        }
 
-	args = am[0 .. argc];
+        args = am[0 .. argc];
 
-	result = main(args);
-	_moduleDtor();
-	gc_term();
+        result = main(args);
+        _moduleDtor();
+        gc_term();
     }
     else
     {
-	try
-	{
-	    _moduleCtor();
-	    _moduleUnitTests();
+        try
+        {
+            _moduleCtor();
+            _moduleUnitTests();
 
-	    for (size_t i = 0; i < argc; i++)
-	    {
-		auto len = strlen(argv[i]);
-		am[i] = argv[i][0 .. len];
-	    }
+            for (size_t i = 0; i < argc; i++)
+            {
+                auto len = strlen(argv[i]);
+                am[i] = argv[i][0 .. len];
+            }
 
-	    args = am[0 .. argc];
+            args = am[0 .. argc];
 
-	    result = main(args);
-	    _moduleDtor();
-	    gc_term();
-	}
-	catch (Object o)
-	{
-	    version (none)
-	    {
-		printf("Error: ");
-		o.print();
-	    }
-	    else
-	    {
-		fprintf(stderr, "Error: %.*s\n", o.toString());
-	    }
-	    exit(EXIT_FAILURE);
-	}
+            result = main(args);
+            _moduleDtor();
+            gc_term();
+        }
+        catch (Object o)
+        {
+            version (none)
+            {
+                printf("Error: ");
+                o.print();
+            }
+            else
+            {
+                fprintf(stderr, "Error: %.*s\n", o.toString());
+            }
+            exit(EXIT_FAILURE);
+        }
     }
 
     version (Posix)
     {
-	free(am);
-	_STD_critical_term();
-	_STD_monitor_staticdtor();
+        free(am);
+        _STD_critical_term();
+        _STD_monitor_staticdtor();
     }
     return result;
 }

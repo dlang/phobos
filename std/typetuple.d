@@ -10,18 +10,18 @@
  * list that is a slice of the old one.
  *
  * References:
- *	Based on ideas in Table 3.1 from
- *	$(LINK2 http://www.amazon.com/exec/obidos/ASIN/0201704315/ref=ase_classicempire/102-2957199-2585768,
- *		Modern C++ Design),
- *	 Andrei Alexandrescu (Addison-Wesley Professional, 2001)
+ *      Based on ideas in Table 3.1 from
+ *      $(LINK2 http://www.amazon.com/exec/obidos/ASIN/0201704315/ref=ase_classicempire/102-2957199-2585768,
+ *              Modern C++ Design),
+ *       Andrei Alexandrescu (Addison-Wesley Professional, 2001)
  * Macros:
- *	WIKI = Phobos/StdTypeTuple
+ *      WIKI = Phobos/StdTypeTuple
  * Copyright:
- *	Public Domain
+ *      Public Domain
  */
 
 /* Author:
- *	Walter Bright, Digital Mars, www.digitalmars.com
+ *      Walter Bright, Digital Mars, www.digitalmars.com
  */
 
 module std.typetuple;
@@ -71,14 +71,14 @@ template TypeTuple(TList...)
 template IndexOf(T, TList...)
 {
     static if (TList.length == 0)
-	const int IndexOf = -1;
+        const int IndexOf = -1;
     else static if (is(T == TList[0]))
-	const int IndexOf = 0;
+        const int IndexOf = 0;
     else
-	const int IndexOf =
-		(IndexOf!(T, TList[1 .. length]) == -1)
-			? -1
-			: 1 + IndexOf!(T, TList[1 .. length]);
+        const int IndexOf =
+                (IndexOf!(T, TList[1 .. length]) == -1)
+                        ? -1
+                        : 1 + IndexOf!(T, TList[1 .. length]);
 }
 
 /**
@@ -94,11 +94,11 @@ template IndexOf(T, TList...)
 template Erase(T, TList...)
 {
     static if (TList.length == 0)
-	alias TList Erase;
+        alias TList Erase;
     else static if (is(T == TList[0]))
-	alias TList[1 .. length] Erase;
+        alias TList[1 .. length] Erase;
     else
-	alias TypeTuple!(TList[0], Erase!(T, TList[1 .. length])) Erase;
+        alias TypeTuple!(TList[0], Erase!(T, TList[1 .. length])) Erase;
 }
 
 /**
@@ -116,11 +116,11 @@ template Erase(T, TList...)
 template EraseAll(T, TList...)
 {
     static if (TList.length == 0)
-	alias TList EraseAll;
+        alias TList EraseAll;
     else static if (is(T == TList[0]))
-	alias EraseAll!(T, TList[1 .. length]) EraseAll;
+        alias EraseAll!(T, TList[1 .. length]) EraseAll;
     else
-	alias TypeTuple!(TList[0], EraseAll!(T, TList[1 .. length])) EraseAll;
+        alias TypeTuple!(TList[0], EraseAll!(T, TList[1 .. length])) EraseAll;
 }
 
 /**
@@ -138,9 +138,9 @@ template EraseAll(T, TList...)
 template NoDuplicates(TList...)
 {
     static if (TList.length == 0)
-	alias TList NoDuplicates;
+        alias TList NoDuplicates;
     else
-	alias TypeTuple!(TList[0], NoDuplicates!(EraseAll!(TList[0], TList[1 .. length]))) NoDuplicates;
+        alias TypeTuple!(TList[0], NoDuplicates!(EraseAll!(TList[0], TList[1 .. length]))) NoDuplicates;
 }
 
 /**
@@ -158,11 +158,11 @@ template NoDuplicates(TList...)
 template Replace(T, U, TList...)
 {
     static if (TList.length == 0)
-	alias TList Replace;
+        alias TList Replace;
     else static if (is(T == TList[0]))
-	alias TypeTuple!(U, TList[1 .. length]) Replace;
+        alias TypeTuple!(U, TList[1 .. length]) Replace;
     else
-	alias TypeTuple!(TList[0], Replace!(T, U, TList[1 .. length])) Replace;
+        alias TypeTuple!(TList[0], Replace!(T, U, TList[1 .. length])) Replace;
 }
 
 /**
@@ -180,11 +180,11 @@ template Replace(T, U, TList...)
 template ReplaceAll(T, U, TList...)
 {
     static if (TList.length == 0)
-	alias TList ReplaceAll;
+        alias TList ReplaceAll;
     else static if (is(T == TList[0]))
-	alias TypeTuple!(U, ReplaceAll!(T, U, TList[1 .. length])) ReplaceAll;
+        alias TypeTuple!(U, ReplaceAll!(T, U, TList[1 .. length])) ReplaceAll;
     else
-	alias TypeTuple!(TList[0], ReplaceAll!(T, U, TList[1 .. length])) ReplaceAll;
+        alias TypeTuple!(TList[0], ReplaceAll!(T, U, TList[1 .. length])) ReplaceAll;
 }
 
 /**
@@ -201,9 +201,9 @@ template ReplaceAll(T, U, TList...)
 template Reverse(TList...)
 {
     static if (TList.length == 0)
-	alias TList Reverse;
+        alias TList Reverse;
     else
-	alias TypeTuple!(Reverse!(TList[1 .. length]), TList[0]) Reverse;
+        alias TypeTuple!(Reverse!(TList[1 .. length]), TList[0]) Reverse;
 }
 
 /**
@@ -222,11 +222,11 @@ template Reverse(TList...)
 template MostDerived(T, TList...)
 {
     static if (TList.length == 0)
-	alias T MostDerived;
+        alias T MostDerived;
     else static if (is(TList[0] : T))
-	alias MostDerived!(TList[0], TList[1 .. length]) MostDerived;
+        alias MostDerived!(TList[0], TList[1 .. length]) MostDerived;
     else
-	alias MostDerived!(T, TList[1 .. length]) MostDerived;
+        alias MostDerived!(T, TList[1 .. length]) MostDerived;
 }
 
 /**
@@ -247,10 +247,10 @@ template MostDerived(T, TList...)
 template DerivedToFront(TList...)
 {
     static if (TList.length == 0)
-	alias TList DerivedToFront;
+        alias TList DerivedToFront;
     else
-	alias TypeTuple!(MostDerived!(TList[0], TList[1 .. length]),
-	                DerivedToFront!(ReplaceAll!(MostDerived!(TList[0], TList[1 .. length]),
-						    TList[0],
-						    TList[1 .. length]))) DerivedToFront;
+        alias TypeTuple!(MostDerived!(TList[0], TList[1 .. length]),
+                        DerivedToFront!(ReplaceAll!(MostDerived!(TList[0], TList[1 .. length]),
+                                                    TList[0],
+                                                    TList[1 .. length]))) DerivedToFront;
 }

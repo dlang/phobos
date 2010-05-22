@@ -11,47 +11,47 @@ class AssertError : Error
 
     this(char[] filename, uint linnum)
     {
-	this(filename, linnum, null);
+        this(filename, linnum, null);
     }
 
     this(char[] filename, uint linnum, char[] msg)
     {
-	this.linnum = linnum;
-	this.filename = filename;
+        this.linnum = linnum;
+        this.filename = filename;
 
-	char* buffer;
-	size_t len;
-	int count;
+        char* buffer;
+        size_t len;
+        int count;
 
-	/* This code is careful to not use gc allocated memory,
-	 * as that may be the source of the problem.
-	 * Instead, stick with C functions.
-	 */
+        /* This code is careful to not use gc allocated memory,
+         * as that may be the source of the problem.
+         * Instead, stick with C functions.
+         */
 
-	len = 23 + filename.length + uint.sizeof * 3 + msg.length + 1;
-	buffer = cast(char*)std.c.stdlib.malloc(len);
-	if (buffer == null)
-	    super("AssertError no memory");
-	else
-	{
-	    version (Win32) alias _snprintf snprintf;
-	    count = snprintf(buffer, len, "AssertError Failure %.*s(%u) %.*s",
-		filename, linnum, msg);
-	    if (count >= len || count == -1)
-	    {	super("AssertError internal failure");
-		std.c.stdlib.free(buffer);
-	    }
-	    else
-		super(buffer[0 .. count]);
-	}
+        len = 23 + filename.length + uint.sizeof * 3 + msg.length + 1;
+        buffer = cast(char*)std.c.stdlib.malloc(len);
+        if (buffer == null)
+            super("AssertError no memory");
+        else
+        {
+            version (Win32) alias _snprintf snprintf;
+            count = snprintf(buffer, len, "AssertError Failure %.*s(%u) %.*s",
+                filename, linnum, msg);
+            if (count >= len || count == -1)
+            {   super("AssertError internal failure");
+                std.c.stdlib.free(buffer);
+            }
+            else
+                super(buffer[0 .. count]);
+        }
     }
 
     ~this()
     {
-	if (msg.ptr && msg[12] == 'F')	// if it was allocated with malloc()
-	{   std.c.stdlib.free(msg.ptr);
-	    msg = null;
-	}
+        if (msg.ptr && msg[12] == 'F')  // if it was allocated with malloc()
+        {   std.c.stdlib.free(msg.ptr);
+            msg = null;
+        }
     }
 }
 

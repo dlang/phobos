@@ -1,9 +1,9 @@
 /**
  * Macros:
- *	WIKI=Phobos/StdOutOfMemory
+ *      WIKI=Phobos/StdOutOfMemory
  * Copyright:
- *	Placed into public domain.
- *	www.digitalmars.com
+ *      Placed into public domain.
+ *      www.digitalmars.com
  */
 
 
@@ -22,20 +22,20 @@ class OutOfMemoryException : Exception
      */
     this()
     {
-	super(s);
+        super(s);
     }
 
     char[] toString()
     {
-	return s;
+        return s;
     }
 }
 
 extern (C) void _d_OutOfMemory()
 {
     throw cast(OutOfMemoryException)
-	  cast(void *)
-	  OutOfMemoryException.classinfo.init;
+          cast(void *)
+          OutOfMemoryException.classinfo.init;
 }
 
 static this()

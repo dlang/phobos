@@ -8,10 +8,10 @@
  * Simple ASCII character classification functions.
  * For Unicode classification, see $(LINK2 std_uni.html, std.uni).
  * References:
- *	$(LINK2 http://www.digitalmars.com/d/ascii-table.html, ASCII Table),
- *	$(LINK2 http://en.wikipedia.org/wiki/Ascii, Wikipedia)
+ *      $(LINK2 http://www.digitalmars.com/d/ascii-table.html, ASCII Table),
+ *      $(LINK2 http://en.wikipedia.org/wiki/Ascii, Wikipedia)
  * Macros:
- *	WIKI=Phobos/StdCtype
+ *      WIKI=Phobos/StdCtype
  */
 
 module std.ctype;
@@ -85,11 +85,11 @@ int isascii(dchar c)  { return c <= 0x7F; }
 dchar tolower(dchar c)
     out (result)
     {
-	assert(!isupper(result));
+        assert(!isupper(result));
     }
     body
     {
-	return isupper(c) ? c + (cast(dchar)'a' - 'A') : c;
+        return isupper(c) ? c + (cast(dchar)'a' - 'A') : c;
     }
 
 
@@ -100,47 +100,47 @@ dchar tolower(dchar c)
 dchar toupper(dchar c)
     out (result)
     {
-	assert(!islower(result));
+        assert(!islower(result));
     }
     body
     {
-	return islower(c) ? c - (cast(dchar)'a' - 'A') : c;
+        return islower(c) ? c - (cast(dchar)'a' - 'A') : c;
     }
 
 private:
 
 enum
 {
-    _SPC =	8,
-    _CTL =	0x20,
-    _BLK =	0x40,
-    _HEX =	0x80,
-    _UC  =	1,
-    _LC  =	2,
-    _PNC =	0x10,
-    _DIG =	4,
-    _ALP =	_UC|_LC,
+    _SPC =      8,
+    _CTL =      0x20,
+    _BLK =      0x40,
+    _HEX =      0x80,
+    _UC  =      1,
+    _LC  =      2,
+    _PNC =      0x10,
+    _DIG =      4,
+    _ALP =      _UC|_LC,
 }
 
 ubyte _ctype[128] =
 [
-	_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,
-	_CTL,_CTL|_SPC,_CTL|_SPC,_CTL|_SPC,_CTL|_SPC,_CTL|_SPC,_CTL,_CTL,
-	_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,
-	_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,
-	_SPC|_BLK,_PNC,_PNC,_PNC,_PNC,_PNC,_PNC,_PNC,
-	_PNC,_PNC,_PNC,_PNC,_PNC,_PNC,_PNC,_PNC,
-	_DIG|_HEX,_DIG|_HEX,_DIG|_HEX,_DIG|_HEX,_DIG|_HEX,
-	_DIG|_HEX,_DIG|_HEX,_DIG|_HEX,_DIG|_HEX,_DIG|_HEX,
-	_PNC,_PNC,_PNC,_PNC,_PNC,_PNC,
-	_PNC,_UC|_HEX,_UC|_HEX,_UC|_HEX,_UC|_HEX,_UC|_HEX,_UC|_HEX,_UC,
-	_UC,_UC,_UC,_UC,_UC,_UC,_UC,_UC,
-	_UC,_UC,_UC,_UC,_UC,_UC,_UC,_UC,
-	_UC,_UC,_UC,_PNC,_PNC,_PNC,_PNC,_PNC,
-	_PNC,_LC|_HEX,_LC|_HEX,_LC|_HEX,_LC|_HEX,_LC|_HEX,_LC|_HEX,_LC,
-	_LC,_LC,_LC,_LC,_LC,_LC,_LC,_LC,
-	_LC,_LC,_LC,_LC,_LC,_LC,_LC,_LC,
-	_LC,_LC,_LC,_PNC,_PNC,_PNC,_PNC,_CTL
+        _CTL,_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,
+        _CTL,_CTL|_SPC,_CTL|_SPC,_CTL|_SPC,_CTL|_SPC,_CTL|_SPC,_CTL,_CTL,
+        _CTL,_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,
+        _CTL,_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,_CTL,
+        _SPC|_BLK,_PNC,_PNC,_PNC,_PNC,_PNC,_PNC,_PNC,
+        _PNC,_PNC,_PNC,_PNC,_PNC,_PNC,_PNC,_PNC,
+        _DIG|_HEX,_DIG|_HEX,_DIG|_HEX,_DIG|_HEX,_DIG|_HEX,
+        _DIG|_HEX,_DIG|_HEX,_DIG|_HEX,_DIG|_HEX,_DIG|_HEX,
+        _PNC,_PNC,_PNC,_PNC,_PNC,_PNC,
+        _PNC,_UC|_HEX,_UC|_HEX,_UC|_HEX,_UC|_HEX,_UC|_HEX,_UC|_HEX,_UC,
+        _UC,_UC,_UC,_UC,_UC,_UC,_UC,_UC,
+        _UC,_UC,_UC,_UC,_UC,_UC,_UC,_UC,
+        _UC,_UC,_UC,_PNC,_PNC,_PNC,_PNC,_PNC,
+        _PNC,_LC|_HEX,_LC|_HEX,_LC|_HEX,_LC|_HEX,_LC|_HEX,_LC|_HEX,_LC,
+        _LC,_LC,_LC,_LC,_LC,_LC,_LC,_LC,
+        _LC,_LC,_LC,_LC,_LC,_LC,_LC,_LC,
+        _LC,_LC,_LC,_PNC,_PNC,_PNC,_PNC,_CTL
 ];
 
 

@@ -6,15 +6,15 @@
  * types at compile time.
  *
  * Macros:
- *	WIKI = Phobos/StdTraits
+ *      WIKI = Phobos/StdTraits
  * Copyright:
- *	Public Domain
+ *      Public Domain
  */
 
 /*
  * Authors:
- *	Walter Bright, Digital Mars, www.digitalmars.com
- *	Tomasz Stachowiak (isStaticArray, isExpressionTuple)
+ *      Walter Bright, Digital Mars, www.digitalmars.com
+ *      Tomasz Stachowiak (isStaticArray, isExpressionTuple)
  */
 
 module std.traits;
@@ -38,9 +38,9 @@ template ReturnType(alias dg)
 template ReturnType(dg)
 {
     static if (is(dg R == return))
-	alias R ReturnType;
+        alias R ReturnType;
     else
-	static assert(0, "argument has no return type");
+        static assert(0, "argument has no return type");
 }
 
 /***
@@ -63,13 +63,13 @@ template ParameterTypeTuple(alias dg)
 template ParameterTypeTuple(dg)
 {
     static if (is(dg P == function))
-	alias P ParameterTypeTuple;
+        alias P ParameterTypeTuple;
     else static if (is(dg P == delegate))
-	alias ParameterTypeTuple!(P) ParameterTypeTuple;
+        alias ParameterTypeTuple!(P) ParameterTypeTuple;
     else static if (is(dg P == P*))
-	alias ParameterTypeTuple!(P) ParameterTypeTuple;
+        alias ParameterTypeTuple!(P) ParameterTypeTuple;
     else
-	static assert(0, "argument has no parameters");
+        static assert(0, "argument has no parameters");
 }
 
 
@@ -83,9 +83,9 @@ template ParameterTypeTuple(dg)
 template FieldTypeTuple(S)
 {
     static if (is(S == struct) || is(S == class))
-	alias typeof(S.tupleof) FieldTypeTuple;
+        alias typeof(S.tupleof) FieldTypeTuple;
     else
-	static assert(0, "argument is not struct or class");
+        static assert(0, "argument is not struct or class");
 }
 
 
@@ -102,7 +102,7 @@ template FieldTypeTuple(S)
  * void main()
  * {
  *     alias BaseTypeTuple!(B) TL;
- *     writefln(typeid(TL));	// prints: (A,I)
+ *     writefln(typeid(TL));    // prints: (A,I)
  * }
  * ---
  */
@@ -110,9 +110,9 @@ template FieldTypeTuple(S)
 template BaseTypeTuple(A)
 {
     static if (is(A P == super))
-	alias P BaseTypeTuple;
+        alias P BaseTypeTuple;
     else
-	static assert(0, "argument is not a class or interface");
+        static assert(0, "argument is not a class or interface");
 }
 
 unittest
@@ -132,24 +132,24 @@ unittest
 template isStaticArray_impl(T)
 {
     const T inst = void;
-    
+
     static if (is(typeof(T.length)))
     {
-	static if (!is(T == typeof(T.init)))
-	{			// abuses the fact that int[5].init == int
-	    static if (is(T == typeof(T[0])[inst.length]))
-	    {	// sanity check. this check alone isn't enough because dmd complains about dynamic arrays
-		const bool res = true;
-	    }
-	    else
-		const bool res = false;
-	}
-	else
-	    const bool res = false;
+        static if (!is(T == typeof(T.init)))
+        {                       // abuses the fact that int[5].init == int
+            static if (is(T == typeof(T[0])[inst.length]))
+            {   // sanity check. this check alone isn't enough because dmd complains about dynamic arrays
+                const bool res = true;
+            }
+            else
+                const bool res = false;
+        }
+        else
+            const bool res = false;
     }
     else
     {
-	    const bool res = false;
+            const bool res = false;
     }
 }
 /**
@@ -174,9 +174,9 @@ static assert (!isStaticArray!(int[1][]));
 template isExpressionTuple(T ...)
 {
     static if (is(void function(T)))
-	const bool isExpressionTuple = false;
+        const bool isExpressionTuple = false;
     else
-	const bool isExpressionTuple = true;
+        const bool isExpressionTuple = true;
 }
 
 

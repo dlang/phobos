@@ -46,29 +46,29 @@ extern (C) int _aApplyRcd1(char[] aa, dg_t dg)
 
     debug(apply) printf("_aApplyRcd1(), len = %d\n", aa.length);
     for (size_t i = aa.length; i != 0; )
-    {	dchar d;
+    {   dchar d;
 
-	i--;
-	d = aa[i];
-	if (d & 0x80)
-	{   char c = cast(char)d;
-	    uint j;
-	    uint m = 0x3F;
-	    d = 0;
-	    while ((c & 0xC0) != 0xC0)
-	    {	if (i == 0)
-		    throw new std.utf.UtfException("Invalid UTF-8 sequence", 0);
-		i--;
-		d |= (c & 0x3F) << j;
-		j += 6;
-		m >>= 1;
-		c = aa[i];
-	    }
-	    d |= (c & m) << j;
-	}
-	result = dg(cast(void *)&d);
-	if (result)
-	    break;
+        i--;
+        d = aa[i];
+        if (d & 0x80)
+        {   char c = cast(char)d;
+            uint j;
+            uint m = 0x3F;
+            d = 0;
+            while ((c & 0xC0) != 0xC0)
+            {   if (i == 0)
+                    throw new std.utf.UtfException("Invalid UTF-8 sequence", 0);
+                i--;
+                d |= (c & 0x3F) << j;
+                j += 6;
+                m >>= 1;
+                c = aa[i];
+            }
+            d |= (c & m) << j;
+        }
+        result = dg(cast(void *)&d);
+        if (result)
+            break;
     }
     return result;
 }
@@ -82,16 +82,16 @@ unittest
 
     foreach_reverse(dchar d; s)
     {
-	switch (i)
-	{
-	    case 0:	assert(d == 'o'); break;
-	    case 1:	assert(d == 'l'); break;
-	    case 2:	assert(d == 'l'); break;
-	    case 3:	assert(d == 'e'); break;
-	    case 4:	assert(d == 'h'); break;
-	    default:	assert(0);
-	}
-	i++;
+        switch (i)
+        {
+            case 0:     assert(d == 'o'); break;
+            case 1:     assert(d == 'l'); break;
+            case 2:     assert(d == 'l'); break;
+            case 3:     assert(d == 'e'); break;
+            case 4:     assert(d == 'h'); break;
+            default:    assert(0);
+        }
+        i++;
     }
     assert(i == 5);
 
@@ -99,16 +99,16 @@ unittest
     i = 0;
     foreach_reverse(dchar d; s)
     {
-	//printf("i = %d, d = %x\n", i, d);
-	switch (i)
-	{
-	    case 0:	assert(d == 'b'); break;
-	    case 1:	assert(d == '\U00100456'); break;
-	    case 2:	assert(d == '\u1234'); break;
-	    case 3:	assert(d == 'a'); break;
-	    default:	assert(0);
-	}
-	i++;
+        //printf("i = %d, d = %x\n", i, d);
+        switch (i)
+        {
+            case 0:     assert(d == 'b'); break;
+            case 1:     assert(d == '\U00100456'); break;
+            case 2:     assert(d == '\u1234'); break;
+            case 3:     assert(d == 'a'); break;
+            default:    assert(0);
+        }
+        i++;
     }
     assert(i == 4);
 }
@@ -120,19 +120,19 @@ extern (C) int _aApplyRwd1(wchar[] aa, dg_t dg)
 
     debug(apply) printf("_aApplyRwd1(), len = %d\n", aa.length);
     for (size_t i = aa.length; i != 0; )
-    {	dchar d;
+    {   dchar d;
 
-	i--;
-	d = aa[i];
-	if (d >= 0xDC00 && d <= 0xDFFF)
-	{   if (i == 0)
-		throw new std.utf.UtfException("Invalid UTF-16 sequence", 0);
-	    i--;
-	    d = ((aa[i] - 0xD7C0) << 10) + (d - 0xDC00);
-	}
-	result = dg(cast(void *)&d);
-	if (result)
-	    break;
+        i--;
+        d = aa[i];
+        if (d >= 0xDC00 && d <= 0xDFFF)
+        {   if (i == 0)
+                throw new std.utf.UtfException("Invalid UTF-16 sequence", 0);
+            i--;
+            d = ((aa[i] - 0xD7C0) << 10) + (d - 0xDC00);
+        }
+        result = dg(cast(void *)&d);
+        if (result)
+            break;
     }
     return result;
 }
@@ -146,16 +146,16 @@ unittest
 
     foreach_reverse(dchar d; s)
     {
-	switch (i)
-	{
-	    case 0:	assert(d == 'o'); break;
-	    case 1:	assert(d == 'l'); break;
-	    case 2:	assert(d == 'l'); break;
-	    case 3:	assert(d == 'e'); break;
-	    case 4:	assert(d == 'h'); break;
-	    default:	assert(0);
-	}
-	i++;
+        switch (i)
+        {
+            case 0:     assert(d == 'o'); break;
+            case 1:     assert(d == 'l'); break;
+            case 2:     assert(d == 'l'); break;
+            case 3:     assert(d == 'e'); break;
+            case 4:     assert(d == 'h'); break;
+            default:    assert(0);
+        }
+        i++;
     }
     assert(i == 5);
 
@@ -163,16 +163,16 @@ unittest
     i = 0;
     foreach_reverse(dchar d; s)
     {
-	//printf("i = %d, d = %x\n", i, d);
-	switch (i)
-	{
-	    case 0:	assert(d == 'b'); break;
-	    case 1:	assert(d == '\U00100456'); break;
-	    case 2:	assert(d == '\u1234'); break;
-	    case 3:	assert(d == 'a'); break;
-	    default:	assert(0);
-	}
-	i++;
+        //printf("i = %d, d = %x\n", i, d);
+        switch (i)
+        {
+            case 0:     assert(d == 'b'); break;
+            case 1:     assert(d == '\U00100456'); break;
+            case 2:     assert(d == '\u1234'); break;
+            case 3:     assert(d == 'a'); break;
+            default:    assert(0);
+        }
+        i++;
     }
     assert(i == 4);
 }
@@ -184,41 +184,41 @@ extern (C) int _aApplyRcw1(char[] aa, dg_t dg)
 
     debug(apply) printf("_aApplyRcw1(), len = %d\n", aa.length);
     for (size_t i = aa.length; i != 0; )
-    {	dchar d;
-	wchar w;
+    {   dchar d;
+        wchar w;
 
-	i--;
-	w = aa[i];
-	if (w & 0x80)
-	{   char c = cast(char)w;
-	    uint j;
-	    uint m = 0x3F;
-	    d = 0;
-	    while ((c & 0xC0) != 0xC0)
-	    {	if (i == 0)
-		    throw new std.utf.UtfException("Invalid UTF-8 sequence", 0);
-		i--;
-		d |= (c & 0x3F) << j;
-		j += 6;
-		m >>= 1;
-		c = aa[i];
-	    }
-	    d |= (c & m) << j;
+        i--;
+        w = aa[i];
+        if (w & 0x80)
+        {   char c = cast(char)w;
+            uint j;
+            uint m = 0x3F;
+            d = 0;
+            while ((c & 0xC0) != 0xC0)
+            {   if (i == 0)
+                    throw new std.utf.UtfException("Invalid UTF-8 sequence", 0);
+                i--;
+                d |= (c & 0x3F) << j;
+                j += 6;
+                m >>= 1;
+                c = aa[i];
+            }
+            d |= (c & m) << j;
 
-	    if (d <= 0xFFFF)
-		w = cast(wchar) d;
-	    else
-	    {
-		w = cast(wchar) ((((d - 0x10000) >> 10) & 0x3FF) + 0xD800);
-		result = dg(cast(void *)&w);
-		if (result)
-		    break;
-		w = cast(wchar) (((d - 0x10000) & 0x3FF) + 0xDC00);
-	    }
-	}
-	result = dg(cast(void *)&w);
-	if (result)
-	    break;
+            if (d <= 0xFFFF)
+                w = cast(wchar) d;
+            else
+            {
+                w = cast(wchar) ((((d - 0x10000) >> 10) & 0x3FF) + 0xD800);
+                result = dg(cast(void *)&w);
+                if (result)
+                    break;
+                w = cast(wchar) (((d - 0x10000) & 0x3FF) + 0xDC00);
+            }
+        }
+        result = dg(cast(void *)&w);
+        if (result)
+            break;
     }
     return result;
 }
@@ -232,16 +232,16 @@ unittest
 
     foreach_reverse(wchar d; s)
     {
-	switch (i)
-	{
-	    case 0:	assert(d == 'o'); break;
-	    case 1:	assert(d == 'l'); break;
-	    case 2:	assert(d == 'l'); break;
-	    case 3:	assert(d == 'e'); break;
-	    case 4:	assert(d == 'h'); break;
-	    default:	assert(0);
-	}
-	i++;
+        switch (i)
+        {
+            case 0:     assert(d == 'o'); break;
+            case 1:     assert(d == 'l'); break;
+            case 2:     assert(d == 'l'); break;
+            case 3:     assert(d == 'e'); break;
+            case 4:     assert(d == 'h'); break;
+            default:    assert(0);
+        }
+        i++;
     }
     assert(i == 5);
 
@@ -249,17 +249,17 @@ unittest
     i = 0;
     foreach_reverse(wchar d; s)
     {
-	//printf("i = %d, d = %x\n", i, d);
-	switch (i)
-	{
-	    case 0:	assert(d == 'b'); break;
-	    case 1:	assert(d == 0xDBC1); break;
-	    case 2:	assert(d == 0xDC56); break;
-	    case 3:	assert(d == 0x1234); break;
-	    case 4:	assert(d == 'a'); break;
-	    default:	assert(0);
-	}
-	i++;
+        //printf("i = %d, d = %x\n", i, d);
+        switch (i)
+        {
+            case 0:     assert(d == 'b'); break;
+            case 1:     assert(d == 0xDBC1); break;
+            case 2:     assert(d == 0xDC56); break;
+            case 3:     assert(d == 0x1234); break;
+            case 4:     assert(d == 'a'); break;
+            default:    assert(0);
+        }
+        i++;
     }
     assert(i == 5);
 }
@@ -271,36 +271,36 @@ extern (C) int _aApplyRwc1(wchar[] aa, dg_t dg)
 
     debug(apply) printf("_aApplyRwc1(), len = %d\n", aa.length);
     for (size_t i = aa.length; i != 0; )
-    {	dchar d;
-	char c;
+    {   dchar d;
+        char c;
 
-	i--;
-	d = aa[i];
-	if (d >= 0xDC00 && d <= 0xDFFF)
-	{   if (i == 0)
-		throw new std.utf.UtfException("Invalid UTF-16 sequence", 0);
-	    i--;
-	    d = ((aa[i] - 0xD7C0) << 10) + (d - 0xDC00);
-	}
+        i--;
+        d = aa[i];
+        if (d >= 0xDC00 && d <= 0xDFFF)
+        {   if (i == 0)
+                throw new std.utf.UtfException("Invalid UTF-16 sequence", 0);
+            i--;
+            d = ((aa[i] - 0xD7C0) << 10) + (d - 0xDC00);
+        }
 
-	if (d & ~0x7F)
-	{
-	    char[4] buf;
-	    char[] b;
+        if (d & ~0x7F)
+        {
+            char[4] buf;
+            char[] b;
 
-	    b = std.utf.toUTF8(buf, d);
-	    foreach (char c2; b)
-	    {
-		result = dg(cast(void *)&c2);
-		if (result)
-		    return result;
-	    }
-	    continue;
-	}
-	c = cast(char)d;
-	result = dg(cast(void *)&c);
-	if (result)
-	    break;
+            b = std.utf.toUTF8(buf, d);
+            foreach (char c2; b)
+            {
+                result = dg(cast(void *)&c2);
+                if (result)
+                    return result;
+            }
+            continue;
+        }
+        c = cast(char)d;
+        result = dg(cast(void *)&c);
+        if (result)
+            break;
     }
     return result;
 }
@@ -314,16 +314,16 @@ unittest
 
     foreach_reverse(char d; s)
     {
-	switch (i)
-	{
-	    case 0:	assert(d == 'o'); break;
-	    case 1:	assert(d == 'l'); break;
-	    case 2:	assert(d == 'l'); break;
-	    case 3:	assert(d == 'e'); break;
-	    case 4:	assert(d == 'h'); break;
-	    default:	assert(0);
-	}
-	i++;
+        switch (i)
+        {
+            case 0:     assert(d == 'o'); break;
+            case 1:     assert(d == 'l'); break;
+            case 2:     assert(d == 'l'); break;
+            case 3:     assert(d == 'e'); break;
+            case 4:     assert(d == 'h'); break;
+            default:    assert(0);
+        }
+        i++;
     }
     assert(i == 5);
 
@@ -331,21 +331,21 @@ unittest
     i = 0;
     foreach_reverse(char d; s)
     {
-	//printf("i = %d, d = %x\n", i, d);
-	switch (i)
-	{
-	    case 0:	assert(d == 'b'); break;
-	    case 1:	assert(d == 0xF4); break;
-	    case 2:	assert(d == 0x80); break;
-	    case 3:	assert(d == 0x91); break;
-	    case 4:	assert(d == 0x96); break;
-	    case 5:	assert(d == 0xE1); break;
-	    case 6:	assert(d == 0x88); break;
-	    case 7:	assert(d == 0xB4); break;
-	    case 8:	assert(d == 'a'); break;
-	    default:	assert(0);
-	}
-	i++;
+        //printf("i = %d, d = %x\n", i, d);
+        switch (i)
+        {
+            case 0:     assert(d == 'b'); break;
+            case 1:     assert(d == 0xF4); break;
+            case 2:     assert(d == 0x80); break;
+            case 3:     assert(d == 0x91); break;
+            case 4:     assert(d == 0x96); break;
+            case 5:     assert(d == 0xE1); break;
+            case 6:     assert(d == 0x88); break;
+            case 7:     assert(d == 0xB4); break;
+            case 8:     assert(d == 'a'); break;
+            default:    assert(0);
+        }
+        i++;
     }
     assert(i == 9);
 }
@@ -357,30 +357,30 @@ extern (C) int _aApplyRdc1(dchar[] aa, dg_t dg)
 
     debug(apply) printf("_aApplyRdc1(), len = %d\n", aa.length);
     for (size_t i = aa.length; i != 0;)
-    {	dchar d = aa[--i];
-	char c;
+    {   dchar d = aa[--i];
+        char c;
 
-	if (d & ~0x7F)
-	{
-	    char[4] buf;
-	    char[] b;
+        if (d & ~0x7F)
+        {
+            char[4] buf;
+            char[] b;
 
-	    b = std.utf.toUTF8(buf, d);
-	    foreach (char c2; b)
-	    {
-		result = dg(cast(void *)&c2);
-		if (result)
-		    return result;
-	    }
-	    continue;
-	}
-	else
-	{
-	    c = cast(char)d;
-	}
-	result = dg(cast(void *)&c);
-	if (result)
-	    break;
+            b = std.utf.toUTF8(buf, d);
+            foreach (char c2; b)
+            {
+                result = dg(cast(void *)&c2);
+                if (result)
+                    return result;
+            }
+            continue;
+        }
+        else
+        {
+            c = cast(char)d;
+        }
+        result = dg(cast(void *)&c);
+        if (result)
+            break;
     }
     return result;
 }
@@ -394,16 +394,16 @@ unittest
 
     foreach_reverse(char d; s)
     {
-	switch (i)
-	{
-	    case 0:	assert(d == 'o'); break;
-	    case 1:	assert(d == 'l'); break;
-	    case 2:	assert(d == 'l'); break;
-	    case 3:	assert(d == 'e'); break;
-	    case 4:	assert(d == 'h'); break;
-	    default:	assert(0);
-	}
-	i++;
+        switch (i)
+        {
+            case 0:     assert(d == 'o'); break;
+            case 1:     assert(d == 'l'); break;
+            case 2:     assert(d == 'l'); break;
+            case 3:     assert(d == 'e'); break;
+            case 4:     assert(d == 'h'); break;
+            default:    assert(0);
+        }
+        i++;
     }
     assert(i == 5);
 
@@ -411,21 +411,21 @@ unittest
     i = 0;
     foreach_reverse(char d; s)
     {
-	//printf("i = %d, d = %x\n", i, d);
-	switch (i)
-	{
-	    case 0:	assert(d == 'b'); break;
-	    case 1:	assert(d == 0xF4); break;
-	    case 2:	assert(d == 0x80); break;
-	    case 3:	assert(d == 0x91); break;
-	    case 4:	assert(d == 0x96); break;
-	    case 5:	assert(d == 0xE1); break;
-	    case 6:	assert(d == 0x88); break;
-	    case 7:	assert(d == 0xB4); break;
-	    case 8:	assert(d == 'a'); break;
-	    default:	assert(0);
-	}
-	i++;
+        //printf("i = %d, d = %x\n", i, d);
+        switch (i)
+        {
+            case 0:     assert(d == 'b'); break;
+            case 1:     assert(d == 0xF4); break;
+            case 2:     assert(d == 0x80); break;
+            case 3:     assert(d == 0x91); break;
+            case 4:     assert(d == 0x96); break;
+            case 5:     assert(d == 0xE1); break;
+            case 6:     assert(d == 0x88); break;
+            case 7:     assert(d == 0xB4); break;
+            case 8:     assert(d == 'a'); break;
+            default:    assert(0);
+        }
+        i++;
     }
     assert(i == 9);
 }
@@ -437,22 +437,22 @@ extern (C) int _aApplyRdw1(dchar[] aa, dg_t dg)
 
     debug(apply) printf("_aApplyRdw1(), len = %d\n", aa.length);
     for (size_t i = aa.length; i != 0; )
-    {	dchar d = aa[--i];
-	wchar w;
+    {   dchar d = aa[--i];
+        wchar w;
 
-	if (d <= 0xFFFF)
-	    w = cast(wchar) d;
-	else
-	{
-	    w = cast(wchar) ((((d - 0x10000) >> 10) & 0x3FF) + 0xD800);
-	    result = dg(cast(void *)&w);
-	    if (result)
-		break;
-	    w = cast(wchar) (((d - 0x10000) & 0x3FF) + 0xDC00);
-	}
-	result = dg(cast(void *)&w);
-	if (result)
-	    break;
+        if (d <= 0xFFFF)
+            w = cast(wchar) d;
+        else
+        {
+            w = cast(wchar) ((((d - 0x10000) >> 10) & 0x3FF) + 0xD800);
+            result = dg(cast(void *)&w);
+            if (result)
+                break;
+            w = cast(wchar) (((d - 0x10000) & 0x3FF) + 0xDC00);
+        }
+        result = dg(cast(void *)&w);
+        if (result)
+            break;
     }
     return result;
 }
@@ -466,16 +466,16 @@ unittest
 
     foreach_reverse(wchar d; s)
     {
-	switch (i)
-	{
-	    case 0:	assert(d == 'o'); break;
-	    case 1:	assert(d == 'l'); break;
-	    case 2:	assert(d == 'l'); break;
-	    case 3:	assert(d == 'e'); break;
-	    case 4:	assert(d == 'h'); break;
-	    default:	assert(0);
-	}
-	i++;
+        switch (i)
+        {
+            case 0:     assert(d == 'o'); break;
+            case 1:     assert(d == 'l'); break;
+            case 2:     assert(d == 'l'); break;
+            case 3:     assert(d == 'e'); break;
+            case 4:     assert(d == 'h'); break;
+            default:    assert(0);
+        }
+        i++;
     }
     assert(i == 5);
 
@@ -483,17 +483,17 @@ unittest
     i = 0;
     foreach_reverse(wchar d; s)
     {
-	//printf("i = %d, d = %x\n", i, d);
-	switch (i)
-	{
-	    case 0:	assert(d == 'b'); break;
-	    case 1:	assert(d == 0xDBC1); break;
-	    case 2:	assert(d == 0xDC56); break;
-	    case 3:	assert(d == 0x1234); break;
-	    case 4:	assert(d == 'a'); break;
-	    default:	assert(0);
-	}
-	i++;
+        //printf("i = %d, d = %x\n", i, d);
+        switch (i)
+        {
+            case 0:     assert(d == 'b'); break;
+            case 1:     assert(d == 0xDBC1); break;
+            case 2:     assert(d == 0xDC56); break;
+            case 3:     assert(d == 0x1234); break;
+            case 4:     assert(d == 'a'); break;
+            default:    assert(0);
+        }
+        i++;
     }
     assert(i == 5);
 }
@@ -512,29 +512,29 @@ extern (C) int _aApplyRcd2(char[] aa, dg2_t dg)
 
     debug(apply) printf("_aApplyRcd2(), len = %d\n", len);
     for (i = len; i != 0; )
-    {	dchar d;
+    {   dchar d;
 
-	i--;
-	d = aa[i];
-	if (d & 0x80)
-	{   char c = cast(char)d;
-	    uint j;
-	    uint m = 0x3F;
-	    d = 0;
-	    while ((c & 0xC0) != 0xC0)
-	    {	if (i == 0)
-		    throw new std.utf.UtfException("Invalid UTF-8 sequence", 0);
-		i--;
-		d |= (c & 0x3F) << j;
-		j += 6;
-		m >>= 1;
-		c = aa[i];
-	    }
-	    d |= (c & m) << j;
-	}
-	result = dg(&i, cast(void *)&d);
-	if (result)
-	    break;
+        i--;
+        d = aa[i];
+        if (d & 0x80)
+        {   char c = cast(char)d;
+            uint j;
+            uint m = 0x3F;
+            d = 0;
+            while ((c & 0xC0) != 0xC0)
+            {   if (i == 0)
+                    throw new std.utf.UtfException("Invalid UTF-8 sequence", 0);
+                i--;
+                d |= (c & 0x3F) << j;
+                j += 6;
+                m >>= 1;
+                c = aa[i];
+            }
+            d |= (c & m) << j;
+        }
+        result = dg(&i, cast(void *)&d);
+        if (result)
+            break;
     }
     return result;
 }
@@ -548,17 +548,17 @@ unittest
 
     foreach_reverse(k, dchar d; s)
     {
-	assert(k == 4 - i);
-	switch (i)
-	{
-	    case 0:	assert(d == 'o'); break;
-	    case 1:	assert(d == 'l'); break;
-	    case 2:	assert(d == 'l'); break;
-	    case 3:	assert(d == 'e'); break;
-	    case 4:	assert(d == 'h'); break;
-	    default:	assert(0);
-	}
-	i++;
+        assert(k == 4 - i);
+        switch (i)
+        {
+            case 0:     assert(d == 'o'); break;
+            case 1:     assert(d == 'l'); break;
+            case 2:     assert(d == 'l'); break;
+            case 3:     assert(d == 'e'); break;
+            case 4:     assert(d == 'h'); break;
+            default:    assert(0);
+        }
+        i++;
     }
     assert(i == 5);
 
@@ -566,16 +566,16 @@ unittest
     i = 0;
     foreach_reverse(k, dchar d; s)
     {
-	//printf("i = %d, k = %d, d = %x\n", i, k, d);
-	switch (i)
-	{
-	    case 0:	assert(d == 'b'); assert(k == 8); break;
-	    case 1:	assert(d == '\U00100456'); assert(k == 4); break;
-	    case 2:	assert(d == '\u1234'); assert(k == 1); break;
-	    case 3:	assert(d == 'a'); assert(k == 0); break;
-	    default:	assert(0);
-	}
-	i++;
+        //printf("i = %d, k = %d, d = %x\n", i, k, d);
+        switch (i)
+        {
+            case 0:     assert(d == 'b'); assert(k == 8); break;
+            case 1:     assert(d == '\U00100456'); assert(k == 4); break;
+            case 2:     assert(d == '\u1234'); assert(k == 1); break;
+            case 3:     assert(d == 'a'); assert(k == 0); break;
+            default:    assert(0);
+        }
+        i++;
     }
     assert(i == 4);
 }
@@ -587,19 +587,19 @@ extern (C) int _aApplyRwd2(wchar[] aa, dg2_t dg)
 
     debug(apply) printf("_aApplyRwd2(), len = %d\n", aa.length);
     for (size_t i = aa.length; i != 0; )
-    {	dchar d;
+    {   dchar d;
 
-	i--;
-	d = aa[i];
-	if (d >= 0xDC00 && d <= 0xDFFF)
-	{   if (i == 0)
-		throw new std.utf.UtfException("Invalid UTF-16 sequence", 0);
-	    i--;
-	    d = ((aa[i] - 0xD7C0) << 10) + (d - 0xDC00);
-	}
-	result = dg(&i, cast(void *)&d);
-	if (result)
-	    break;
+        i--;
+        d = aa[i];
+        if (d >= 0xDC00 && d <= 0xDFFF)
+        {   if (i == 0)
+                throw new std.utf.UtfException("Invalid UTF-16 sequence", 0);
+            i--;
+            d = ((aa[i] - 0xD7C0) << 10) + (d - 0xDC00);
+        }
+        result = dg(&i, cast(void *)&d);
+        if (result)
+            break;
     }
     return result;
 }
@@ -613,18 +613,18 @@ unittest
 
     foreach_reverse(k, dchar d; s)
     {
-	//printf("i = %d, k = %d, d = %x\n", i, k, d);
-	assert(k == 4 - i);
-	switch (i)
-	{
-	    case 0:	assert(d == 'o'); break;
-	    case 1:	assert(d == 'l'); break;
-	    case 2:	assert(d == 'l'); break;
-	    case 3:	assert(d == 'e'); break;
-	    case 4:	assert(d == 'h'); break;
-	    default:	assert(0);
-	}
-	i++;
+        //printf("i = %d, k = %d, d = %x\n", i, k, d);
+        assert(k == 4 - i);
+        switch (i)
+        {
+            case 0:     assert(d == 'o'); break;
+            case 1:     assert(d == 'l'); break;
+            case 2:     assert(d == 'l'); break;
+            case 3:     assert(d == 'e'); break;
+            case 4:     assert(d == 'h'); break;
+            default:    assert(0);
+        }
+        i++;
     }
     assert(i == 5);
 
@@ -632,16 +632,16 @@ unittest
     i = 0;
     foreach_reverse(k, dchar d; s)
     {
-	//printf("i = %d, k = %d, d = %x\n", i, k, d);
-	switch (i)
-	{
-	    case 0:	assert(k == 4); assert(d == 'b'); break;
-	    case 1:	assert(k == 2); assert(d == '\U00100456'); break;
-	    case 2:	assert(k == 1); assert(d == '\u1234'); break;
-	    case 3:	assert(k == 0); assert(d == 'a'); break;
-	    default:	assert(0);
-	}
-	i++;
+        //printf("i = %d, k = %d, d = %x\n", i, k, d);
+        switch (i)
+        {
+            case 0:     assert(k == 4); assert(d == 'b'); break;
+            case 1:     assert(k == 2); assert(d == '\U00100456'); break;
+            case 2:     assert(k == 1); assert(d == '\u1234'); break;
+            case 3:     assert(k == 0); assert(d == 'a'); break;
+            default:    assert(0);
+        }
+        i++;
     }
     assert(i == 4);
 }
@@ -653,41 +653,41 @@ extern (C) int _aApplyRcw2(char[] aa, dg2_t dg)
 
     debug(apply) printf("_aApplyRcw2(), len = %d\n", aa.length);
     for (size_t i = aa.length; i != 0; )
-    {	dchar d;
-	wchar w;
+    {   dchar d;
+        wchar w;
 
-	i--;
-	w = aa[i];
-	if (w & 0x80)
-	{   char c = cast(char)w;
-	    uint j;
-	    uint m = 0x3F;
-	    d = 0;
-	    while ((c & 0xC0) != 0xC0)
-	    {	if (i == 0)
-		    throw new std.utf.UtfException("Invalid UTF-8 sequence", 0);
-		i--;
-		d |= (c & 0x3F) << j;
-		j += 6;
-		m >>= 1;
-		c = aa[i];
-	    }
-	    d |= (c & m) << j;
+        i--;
+        w = aa[i];
+        if (w & 0x80)
+        {   char c = cast(char)w;
+            uint j;
+            uint m = 0x3F;
+            d = 0;
+            while ((c & 0xC0) != 0xC0)
+            {   if (i == 0)
+                    throw new std.utf.UtfException("Invalid UTF-8 sequence", 0);
+                i--;
+                d |= (c & 0x3F) << j;
+                j += 6;
+                m >>= 1;
+                c = aa[i];
+            }
+            d |= (c & m) << j;
 
-	    if (d <= 0xFFFF)
-		w = cast(wchar) d;
-	    else
-	    {
-		w = cast(wchar) ((((d - 0x10000) >> 10) & 0x3FF) + 0xD800);
-		result = dg(&i, cast(void *)&w);
-		if (result)
-		    break;
-		w = cast(wchar) (((d - 0x10000) & 0x3FF) + 0xDC00);
-	    }
-	}
-	result = dg(&i, cast(void *)&w);
-	if (result)
-	    break;
+            if (d <= 0xFFFF)
+                w = cast(wchar) d;
+            else
+            {
+                w = cast(wchar) ((((d - 0x10000) >> 10) & 0x3FF) + 0xD800);
+                result = dg(&i, cast(void *)&w);
+                if (result)
+                    break;
+                w = cast(wchar) (((d - 0x10000) & 0x3FF) + 0xDC00);
+            }
+        }
+        result = dg(&i, cast(void *)&w);
+        if (result)
+            break;
     }
     return result;
 }
@@ -701,18 +701,18 @@ unittest
 
     foreach_reverse(k, wchar d; s)
     {
-	//printf("i = %d, k = %d, d = %x\n", i, k, d);
-	assert(k == 4 - i);
-	switch (i)
-	{
-	    case 0:	assert(d == 'o'); break;
-	    case 1:	assert(d == 'l'); break;
-	    case 2:	assert(d == 'l'); break;
-	    case 3:	assert(d == 'e'); break;
-	    case 4:	assert(d == 'h'); break;
-	    default:	assert(0);
-	}
-	i++;
+        //printf("i = %d, k = %d, d = %x\n", i, k, d);
+        assert(k == 4 - i);
+        switch (i)
+        {
+            case 0:     assert(d == 'o'); break;
+            case 1:     assert(d == 'l'); break;
+            case 2:     assert(d == 'l'); break;
+            case 3:     assert(d == 'e'); break;
+            case 4:     assert(d == 'h'); break;
+            default:    assert(0);
+        }
+        i++;
     }
     assert(i == 5);
 
@@ -720,17 +720,17 @@ unittest
     i = 0;
     foreach_reverse(k, wchar d; s)
     {
-	//printf("i = %d, k = %d, d = %x\n", i, k, d);
-	switch (i)
-	{
-	    case 0:	assert(k == 8); assert(d == 'b'); break;
-	    case 1:	assert(k == 4); assert(d == 0xDBC1); break;
-	    case 2:	assert(k == 4); assert(d == 0xDC56); break;
-	    case 3:	assert(k == 1); assert(d == 0x1234); break;
-	    case 4:	assert(k == 0); assert(d == 'a'); break;
-	    default:	assert(0);
-	}
-	i++;
+        //printf("i = %d, k = %d, d = %x\n", i, k, d);
+        switch (i)
+        {
+            case 0:     assert(k == 8); assert(d == 'b'); break;
+            case 1:     assert(k == 4); assert(d == 0xDBC1); break;
+            case 2:     assert(k == 4); assert(d == 0xDC56); break;
+            case 3:     assert(k == 1); assert(d == 0x1234); break;
+            case 4:     assert(k == 0); assert(d == 'a'); break;
+            default:    assert(0);
+        }
+        i++;
     }
     assert(i == 5);
 }
@@ -742,36 +742,36 @@ extern (C) int _aApplyRwc2(wchar[] aa, dg2_t dg)
 
     debug(apply) printf("_aApplyRwc2(), len = %d\n", aa.length);
     for (size_t i = aa.length; i != 0; )
-    {	dchar d;
-	char c;
+    {   dchar d;
+        char c;
 
-	i--;
-	d = aa[i];
-	if (d >= 0xDC00 && d <= 0xDFFF)
-	{   if (i == 0)
-		throw new std.utf.UtfException("Invalid UTF-16 sequence", 0);
-	    i--;
-	    d = ((aa[i] - 0xD7C0) << 10) + (d - 0xDC00);
-	}
+        i--;
+        d = aa[i];
+        if (d >= 0xDC00 && d <= 0xDFFF)
+        {   if (i == 0)
+                throw new std.utf.UtfException("Invalid UTF-16 sequence", 0);
+            i--;
+            d = ((aa[i] - 0xD7C0) << 10) + (d - 0xDC00);
+        }
 
-	if (d & ~0x7F)
-	{
-	    char[4] buf;
-	    char[] b;
+        if (d & ~0x7F)
+        {
+            char[4] buf;
+            char[] b;
 
-	    b = std.utf.toUTF8(buf, d);
-	    foreach (char c2; b)
-	    {
-		result = dg(&i, cast(void *)&c2);
-		if (result)
-		    return result;
-	    }
-	    continue;
-	}
-	c = cast(char)d;
-	result = dg(&i, cast(void *)&c);
-	if (result)
-	    break;
+            b = std.utf.toUTF8(buf, d);
+            foreach (char c2; b)
+            {
+                result = dg(&i, cast(void *)&c2);
+                if (result)
+                    return result;
+            }
+            continue;
+        }
+        c = cast(char)d;
+        result = dg(&i, cast(void *)&c);
+        if (result)
+            break;
     }
     return result;
 }
@@ -785,18 +785,18 @@ unittest
 
     foreach_reverse(k, char d; s)
     {
-	//printf("i = %d, k = %d, d = %x\n", i, k, d);
-	assert(k == 4 - i);
-	switch (i)
-	{
-	    case 0:	assert(d == 'o'); break;
-	    case 1:	assert(d == 'l'); break;
-	    case 2:	assert(d == 'l'); break;
-	    case 3:	assert(d == 'e'); break;
-	    case 4:	assert(d == 'h'); break;
-	    default:	assert(0);
-	}
-	i++;
+        //printf("i = %d, k = %d, d = %x\n", i, k, d);
+        assert(k == 4 - i);
+        switch (i)
+        {
+            case 0:     assert(d == 'o'); break;
+            case 1:     assert(d == 'l'); break;
+            case 2:     assert(d == 'l'); break;
+            case 3:     assert(d == 'e'); break;
+            case 4:     assert(d == 'h'); break;
+            default:    assert(0);
+        }
+        i++;
     }
     assert(i == 5);
 
@@ -804,21 +804,21 @@ unittest
     i = 0;
     foreach_reverse(k, char d; s)
     {
-	//printf("i = %d, k = %d, d = %x\n", i, k, d);
-	switch (i)
-	{
-	    case 0:	assert(k == 4); assert(d == 'b'); break;
-	    case 1:	assert(k == 2); assert(d == 0xF4); break;
-	    case 2:	assert(k == 2); assert(d == 0x80); break;
-	    case 3:	assert(k == 2); assert(d == 0x91); break;
-	    case 4:	assert(k == 2); assert(d == 0x96); break;
-	    case 5:	assert(k == 1); assert(d == 0xE1); break;
-	    case 6:	assert(k == 1); assert(d == 0x88); break;
-	    case 7:	assert(k == 1); assert(d == 0xB4); break;
-	    case 8:	assert(k == 0); assert(d == 'a'); break;
-	    default:	assert(0);
-	}
-	i++;
+        //printf("i = %d, k = %d, d = %x\n", i, k, d);
+        switch (i)
+        {
+            case 0:     assert(k == 4); assert(d == 'b'); break;
+            case 1:     assert(k == 2); assert(d == 0xF4); break;
+            case 2:     assert(k == 2); assert(d == 0x80); break;
+            case 3:     assert(k == 2); assert(d == 0x91); break;
+            case 4:     assert(k == 2); assert(d == 0x96); break;
+            case 5:     assert(k == 1); assert(d == 0xE1); break;
+            case 6:     assert(k == 1); assert(d == 0x88); break;
+            case 7:     assert(k == 1); assert(d == 0xB4); break;
+            case 8:     assert(k == 0); assert(d == 'a'); break;
+            default:    assert(0);
+        }
+        i++;
     }
     assert(i == 9);
 }
@@ -830,29 +830,29 @@ extern (C) int _aApplyRdc2(dchar[] aa, dg2_t dg)
 
     debug(apply) printf("_aApplyRdc2(), len = %d\n", aa.length);
     for (size_t i = aa.length; i != 0; )
-    {	dchar d = aa[--i];
-	char c;
+    {   dchar d = aa[--i];
+        char c;
 
-	if (d & ~0x7F)
-	{
-	    char[4] buf;
-	    char[] b;
+        if (d & ~0x7F)
+        {
+            char[4] buf;
+            char[] b;
 
-	    b = std.utf.toUTF8(buf, d);
-	    foreach (char c2; b)
-	    {
-		result = dg(&i, cast(void *)&c2);
-		if (result)
-		    return result;
-	    }
-	    continue;
-	}
-	else
-	{   c = cast(char)d;
-	}
-	result = dg(&i, cast(void *)&c);
-	if (result)
-	    break;
+            b = std.utf.toUTF8(buf, d);
+            foreach (char c2; b)
+            {
+                result = dg(&i, cast(void *)&c2);
+                if (result)
+                    return result;
+            }
+            continue;
+        }
+        else
+        {   c = cast(char)d;
+        }
+        result = dg(&i, cast(void *)&c);
+        if (result)
+            break;
     }
     return result;
 }
@@ -866,18 +866,18 @@ unittest
 
     foreach_reverse(k, char d; s)
     {
-	//printf("i = %d, k = %d, d = %x\n", i, k, d);
-	assert(k == 4 - i);
-	switch (i)
-	{
-	    case 0:	assert(d == 'o'); break;
-	    case 1:	assert(d == 'l'); break;
-	    case 2:	assert(d == 'l'); break;
-	    case 3:	assert(d == 'e'); break;
-	    case 4:	assert(d == 'h'); break;
-	    default:	assert(0);
-	}
-	i++;
+        //printf("i = %d, k = %d, d = %x\n", i, k, d);
+        assert(k == 4 - i);
+        switch (i)
+        {
+            case 0:     assert(d == 'o'); break;
+            case 1:     assert(d == 'l'); break;
+            case 2:     assert(d == 'l'); break;
+            case 3:     assert(d == 'e'); break;
+            case 4:     assert(d == 'h'); break;
+            default:    assert(0);
+        }
+        i++;
     }
     assert(i == 5);
 
@@ -885,21 +885,21 @@ unittest
     i = 0;
     foreach_reverse(k, char d; s)
     {
-	//printf("i = %d, k = %d, d = %x\n", i, k, d);
-	switch (i)
-	{
-	    case 0:	assert(k == 3); assert(d == 'b'); break;
-	    case 1:	assert(k == 2); assert(d == 0xF4); break;
-	    case 2:	assert(k == 2); assert(d == 0x80); break;
-	    case 3:	assert(k == 2); assert(d == 0x91); break;
-	    case 4:	assert(k == 2); assert(d == 0x96); break;
-	    case 5:	assert(k == 1); assert(d == 0xE1); break;
-	    case 6:	assert(k == 1); assert(d == 0x88); break;
-	    case 7:	assert(k == 1); assert(d == 0xB4); break;
-	    case 8:	assert(k == 0); assert(d == 'a'); break;
-	    default:	assert(0);
-	}
-	i++;
+        //printf("i = %d, k = %d, d = %x\n", i, k, d);
+        switch (i)
+        {
+            case 0:     assert(k == 3); assert(d == 'b'); break;
+            case 1:     assert(k == 2); assert(d == 0xF4); break;
+            case 2:     assert(k == 2); assert(d == 0x80); break;
+            case 3:     assert(k == 2); assert(d == 0x91); break;
+            case 4:     assert(k == 2); assert(d == 0x96); break;
+            case 5:     assert(k == 1); assert(d == 0xE1); break;
+            case 6:     assert(k == 1); assert(d == 0x88); break;
+            case 7:     assert(k == 1); assert(d == 0xB4); break;
+            case 8:     assert(k == 0); assert(d == 'a'); break;
+            default:    assert(0);
+        }
+        i++;
     }
     assert(i == 9);
 }
@@ -911,22 +911,22 @@ extern (C) int _aApplyRdw2(dchar[] aa, dg2_t dg)
 
     debug(apply) printf("_aApplyRdw2(), len = %d\n", aa.length);
     for (size_t i = aa.length; i != 0; )
-    {	dchar d = aa[--i];
-	wchar w;
+    {   dchar d = aa[--i];
+        wchar w;
 
-	if (d <= 0xFFFF)
-	    w = cast(wchar) d;
-	else
-	{
-	    w = cast(wchar) ((((d - 0x10000) >> 10) & 0x3FF) + 0xD800);
-	    result = dg(&i, cast(void *)&w);
-	    if (result)
-		break;
-	    w = cast(wchar) (((d - 0x10000) & 0x3FF) + 0xDC00);
-	}
-	result = dg(&i, cast(void *)&w);
-	if (result)
-	    break;
+        if (d <= 0xFFFF)
+            w = cast(wchar) d;
+        else
+        {
+            w = cast(wchar) ((((d - 0x10000) >> 10) & 0x3FF) + 0xD800);
+            result = dg(&i, cast(void *)&w);
+            if (result)
+                break;
+            w = cast(wchar) (((d - 0x10000) & 0x3FF) + 0xDC00);
+        }
+        result = dg(&i, cast(void *)&w);
+        if (result)
+            break;
     }
     return result;
 }
@@ -940,18 +940,18 @@ unittest
 
     foreach_reverse(k, wchar d; s)
     {
-	//printf("i = %d, k = %d, d = %x\n", i, k, d);
-	assert(k == 4 - i);
-	switch (i)
-	{
-	    case 0:	assert(d == 'o'); break;
-	    case 1:	assert(d == 'l'); break;
-	    case 2:	assert(d == 'l'); break;
-	    case 3:	assert(d == 'e'); break;
-	    case 4:	assert(d == 'h'); break;
-	    default:	assert(0);
-	}
-	i++;
+        //printf("i = %d, k = %d, d = %x\n", i, k, d);
+        assert(k == 4 - i);
+        switch (i)
+        {
+            case 0:     assert(d == 'o'); break;
+            case 1:     assert(d == 'l'); break;
+            case 2:     assert(d == 'l'); break;
+            case 3:     assert(d == 'e'); break;
+            case 4:     assert(d == 'h'); break;
+            default:    assert(0);
+        }
+        i++;
     }
     assert(i == 5);
 
@@ -959,17 +959,17 @@ unittest
     i = 0;
     foreach_reverse(k, wchar d; s)
     {
-	//printf("i = %d, k = %d, d = %x\n", i, k, d);
-	switch (i)
-	{
-	    case 0:	assert(k == 3); assert(d == 'b'); break;
-	    case 1:	assert(k == 2); assert(d == 0xDBC1); break;
-	    case 2:	assert(k == 2); assert(d == 0xDC56); break;
-	    case 3:	assert(k == 1); assert(d == 0x1234); break;
-	    case 4:	assert(k == 0); assert(d == 'a'); break;
-	    default:	assert(0);
-	}
-	i++;
+        //printf("i = %d, k = %d, d = %x\n", i, k, d);
+        switch (i)
+        {
+            case 0:     assert(k == 3); assert(d == 'b'); break;
+            case 1:     assert(k == 2); assert(d == 0xDBC1); break;
+            case 2:     assert(k == 2); assert(d == 0xDC56); break;
+            case 3:     assert(k == 1); assert(d == 0x1234); break;
+            case 4:     assert(k == 0); assert(d == 'a'); break;
+            default:    assert(0);
+        }
+        i++;
     }
     assert(i == 5);
 }

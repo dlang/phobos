@@ -940,6 +940,9 @@ clean:
 cleanhtml:
 	del $(DOCS)
 
+detab:
+	detab $(SRCS)
+
 install:
 	$(CP) phobos.lib gcstub.obj $(DIR)\windows\lib
 	$(CP) $(MAKEFILES) phoboslicense.txt minit.obj std.ddoc $(DIR)\src\phobos

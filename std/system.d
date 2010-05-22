@@ -5,7 +5,7 @@
  * Authors: Walter Bright, http://www.digitalmars.com
  * License: Public Domain
  * Macros:
- *	WIKI = Phobos/StdSystem
+ *      WIKI = Phobos/StdSystem
  */
 
 
@@ -17,65 +17,65 @@ const
     // Operating system family
     enum Family
     {
-	Win32 = 1,		// Microsoft 32 bit Windows systems
-	linux,			// all linux systems
-	OSX,
-	FreeBSD,
-	Solaris,
+        Win32 = 1,              // Microsoft 32 bit Windows systems
+        linux,                  // all linux systems
+        OSX,
+        FreeBSD,
+        Solaris,
     }
 
     version (Win32)
     {
-	Family family = Family.Win32;
+        Family family = Family.Win32;
     }
     else version (linux)
     {
-	Family family = Family.linux;
+        Family family = Family.linux;
     }
     else version (OSX)
     {
-	Family family = Family.OSX;
+        Family family = Family.OSX;
     }
     else version (FreeBSD)
     {
-	Family family = Family.FreeBSD;
+        Family family = Family.FreeBSD;
     }
     else version (Solaris)
     {
-	Family family = Family.Solaris;
+        Family family = Family.Solaris;
     }
     else
     {
-	static assert(0);
+        static assert(0);
     }
 
     // More specific operating system name
     enum OS
     {
-	Windows95 = 1,
-	Windows98,
-	WindowsME,
-	WindowsNT,
-	Windows2000,
-	WindowsXP,
+        Windows95 = 1,
+        Windows98,
+        WindowsME,
+        WindowsNT,
+        Windows2000,
+        WindowsXP,
 
-	RedHatLinux,
-	OSX,
-	FreeBSD,
-	Solaris,
+        RedHatLinux,
+        OSX,
+        FreeBSD,
+        Solaris,
     }
 
     /// Byte order endianness
 
     enum Endian
     {
-	BigEndian,	/// big endian byte order
-	LittleEndian	/// little endian byte order
+        BigEndian,      /// big endian byte order
+        LittleEndian    /// little endian byte order
     }
 
     version(LittleEndian)
     {
-	/// Native system endianness
+        /// Native system endianness
         Endian endian = Endian.LittleEndian;
     }
     else

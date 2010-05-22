@@ -3,7 +3,7 @@
 /**
  * Support UTF-8 on Windows 95, 98 and ME systems.
  * Macros:
- *	WIKI = Phobos/StdWindowsCharset
+ *      WIKI = Phobos/StdWindowsCharset
  */
 
 module std.windows.charset;
@@ -25,7 +25,7 @@ private import std.string;
  *   2 - Mac
  *
  * Authors:
- *	yaneurao, Walter Bright, Stewart Gordon
+ *      yaneurao, Walter Bright, Stewart Gordon
  */
 
 char* toMBSz(char[] s, uint codePage = 0)
@@ -33,28 +33,28 @@ char* toMBSz(char[] s, uint codePage = 0)
     // Only need to do this if any chars have the high bit set
     foreach (char c; s)
     {
-	if (c >= 0x80)
-	{
-	    char[] result;
-	    int readLen;
-	    wchar* ws = std.utf.toUTF16z(s);
-	    result.length = WideCharToMultiByte(codePage, 0, ws, -1, null, 0,
-		null, null);
+        if (c >= 0x80)
+        {
+            char[] result;
+            int readLen;
+            wchar* ws = std.utf.toUTF16z(s);
+            result.length = WideCharToMultiByte(codePage, 0, ws, -1, null, 0,
+                null, null);
 
-	    if (result.length)
-	    {
-		readLen = WideCharToMultiByte(codePage, 0, ws, -1, result.ptr,
-			result.length, null, null);
-	    }
+            if (result.length)
+            {
+                readLen = WideCharToMultiByte(codePage, 0, ws, -1, result.ptr,
+                        result.length, null, null);
+            }
 
-	    if (!readLen || readLen != result.length)
-	    {
-		throw new Exception("Couldn't convert string: " ~
-			sysErrorString(GetLastError()));
-	    }
+            if (!readLen || readLen != result.length)
+            {
+                throw new Exception("Couldn't convert string: " ~
+                        sysErrorString(GetLastError()));
+            }
 
-	    return result.ptr;
-	}
+            return result.ptr;
+        }
     }
     return std.string.toStringz(s);
 }
@@ -79,29 +79,29 @@ char[] fromMBSz(char* s, int codePage = 0)
 
     for (c = s; *c != 0; c++)
     {
-	if (*c >= 0x80)
-	{
-	    wchar[] result;
-	    int readLen;
+        if (*c >= 0x80)
+        {
+            wchar[] result;
+            int readLen;
 
-	    result.length = MultiByteToWideChar(codePage, 0, s, -1, null, 0);
+            result.length = MultiByteToWideChar(codePage, 0, s, -1, null, 0);
 
-	    if (result.length)
-	    {
-		readLen = MultiByteToWideChar(codePage, 0, s, -1, result.ptr,
-			result.length);
-	    }
+            if (result.length)
+            {
+                readLen = MultiByteToWideChar(codePage, 0, s, -1, result.ptr,
+                        result.length);
+            }
 
-	    if (!readLen || readLen != result.length)
-	    {
-		throw new Exception("Couldn't convert string: " ~
-		    sysErrorString(GetLastError()));
-	    }
+            if (!readLen || readLen != result.length)
+            {
+                throw new Exception("Couldn't convert string: " ~
+                    sysErrorString(GetLastError()));
+            }
 
-	    return std.utf.toUTF8(result[0 .. result.length-1]); // omit trailing null
-	}
+            return std.utf.toUTF8(result[0 .. result.length-1]); // omit trailing null
+        }
     }
-    return s[0 .. c-s];		// string is ASCII, no conversion necessary
+    return s[0 .. c-s];         // string is ASCII, no conversion necessary
 }
 
 

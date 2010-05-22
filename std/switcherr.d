@@ -12,12 +12,12 @@ class SwitchError : Error
 
     this(char[] filename, uint linnum)
     {
-	this.linnum = linnum;
-	this.filename = filename;
+        this.linnum = linnum;
+        this.filename = filename;
 
-	char[] buffer = new char[17 + filename.length + linnum.sizeof * 3 + 1];
-	int len = sprintf(buffer.ptr, "Switch Default %.*s(%u)", filename, linnum);
-	super(buffer[0..len]);
+        char[] buffer = new char[17 + filename.length + linnum.sizeof * 3 + 1];
+        int len = sprintf(buffer.ptr, "Switch Default %.*s(%u)", filename, linnum);
+        super(buffer[0..len]);
     }
 
 
@@ -30,7 +30,7 @@ class SwitchError : Error
 
     void print()
     {
-	printf("Switch Default %s(%u)\n", cast(char *)filename, linnum);
+        printf("Switch Default %s(%u)\n", cast(char *)filename, linnum);
     }
 }
 

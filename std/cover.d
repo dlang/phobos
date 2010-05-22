@@ -24,12 +24,12 @@
 /**
  * Code coverage analyzer.
  * Bugs:
- *	$(UL
- *	$(LI the execution counters are 32 bits in size, and can overflow)
- *	$(LI inline asm statements are not counted)
- *	)
+ *      $(UL
+ *      $(LI the execution counters are 32 bits in size, and can overflow)
+ *      $(LI inline asm statements are not counted)
+ *      )
  * Macros:
- *	WIKI = Phobos/StdCover
+ *      WIKI = Phobos/StdCover
  */
 
 module std.cover;
@@ -42,9 +42,9 @@ private
 {
     struct Cover
     {
-	string filename;
-	BitArray valid;
-	uint[] data;
+        string filename;
+        BitArray valid;
+        uint[] data;
     }
 
     Cover[] gdata;
@@ -74,9 +74,9 @@ void setDestDir(string pathname)
 /***********************************
  * Set merge mode.
  * Params:
- *	flag = true means new data is summed with existing data in the
- *		listing file; false means a new listing file is always
- *		created.
+ *      flag = true means new data is summed with existing data in the
+ *              listing file; false means a new listing file is always
+ *              created.
  */
 
 void setMerge(bool flag)
@@ -103,81 +103,81 @@ static ~this()
 
     foreach (Cover c; gdata)
     {
-	//printf("filename = '%.*s'\n", c.filename);
+        //printf("filename = '%.*s'\n", c.filename);
 
-	// Generate source file name
-	string srcfilename = std.path.join(srcpath, c.filename);
+        // Generate source file name
+        string srcfilename = std.path.join(srcpath, c.filename);
 
-	string buf = cast(string)std.file.read(srcfilename);
-	string[] lines = std.string.splitlines(buf);
+        string buf = cast(string)std.file.read(srcfilename);
+        string[] lines = std.string.splitlines(buf);
 
-	// Generate listing file name
-	string lstfilename = std.path.addExt(std.path.getBaseName(c.filename), "lst");
+        // Generate listing file name
+        string lstfilename = std.path.addExt(std.path.getBaseName(c.filename), "lst");
 
-	if (merge && exists(lstfilename) && isfile(lstfilename))
-	{
-	    string lst = cast(string)std.file.read(lstfilename);
-	    string[] lstlines = std.string.splitlines(lst);
+        if (merge && exists(lstfilename) && isfile(lstfilename))
+        {
+            string lst = cast(string)std.file.read(lstfilename);
+            string[] lstlines = std.string.splitlines(lst);
 
-	    for (size_t i = 0; i < lstlines.length; i++)
-	    {
-		if (i >= c.data.length)
-		    break;
-		int count = 0;
-		foreach (char c2; lstlines[i])
-		{
-		    switch (c2)
-		    {	case ' ':
-			    continue;
-			case '0': case '1': case '2': case '3': case '4':
-			case '5': case '6': case '7': case '8': case '9':
-			    count = count * 10 + c2 - '0';
-			    continue;
-			default:
-			    break;
-		    }
-		    break;
-		}
-		//printf("[%d] %d\n", i, count);
-		c.data[i] += count;
-	    }
-	}
+            for (size_t i = 0; i < lstlines.length; i++)
+            {
+                if (i >= c.data.length)
+                    break;
+                int count = 0;
+                foreach (char c2; lstlines[i])
+                {
+                    switch (c2)
+                    {   case ' ':
+                            continue;
+                        case '0': case '1': case '2': case '3': case '4':
+                        case '5': case '6': case '7': case '8': case '9':
+                            count = count * 10 + c2 - '0';
+                            continue;
+                        default:
+                            break;
+                    }
+                    break;
+                }
+                //printf("[%d] %d\n", i, count);
+                c.data[i] += count;
+            }
+        }
 
-	FILE *flst = std.c.stdio.fopen(lstfilename.ptr, "wb");
-	if (!flst)
-	    throw new std.file.FileException(lstfilename, "cannot open for write");
+        FILE *flst = std.c.stdio.fopen(lstfilename.ptr, "wb");
+        if (!flst)
+            throw new std.file.FileException(lstfilename, "cannot open for write");
 
-	uint nno;
-	uint nyes;
+        uint nno;
+        uint nyes;
 
-	for (int i = 0; i < c.data.length; i++)
-	{
-	    //printf("[%2d] = %u\n", i, c.data[i]);
-	    if (i < lines.length)
-	    {
-		uint n = c.data[i];
-		string line = lines[i];
-		line = std.string.expandtabs(line);
-		if (n == 0)
-		{
-		    if (c.valid[i])
-		    {	nno++;
-			fwritefln(flst, "0000000|%s", line);
-		    }
-		    else
-			fwritefln(flst, "       |%s", line);
-		}
-		else
-		{   nyes++;
-		    fwritefln(flst, "%7s|%s", n, line);
-		}
-	    }
-	}
+        for (int i = 0; i < c.data.length; i++)
+        {
+            //printf("[%2d] = %u\n", i, c.data[i]);
+            if (i < lines.length)
+            {
+                uint n = c.data[i];
+                string line = lines[i];
+                line = std.string.expandtabs(line);
+                if (n == 0)
+                {
+                    if (c.valid[i])
+                    {   nno++;
+                        fwritefln(flst, "0000000|%s", line);
+                    }
+                    else
+                        fwritefln(flst, "       |%s", line);
+                }
+                else
+                {   nyes++;
+                    fwritefln(flst, "%7s|%s", n, line);
+                }
+            }
+        }
 
-	if (nyes + nno)		// no divide by 0 bugs
-	    fwritefln(flst, "%s is %s%% covered", c.filename, (nyes * 100) / (nyes + nno));
+        if (nyes + nno)         // no divide by 0 bugs
+            fwritefln(flst, "%s is %s%% covered", c.filename, (nyes * 100) / (nyes + nno));
 
-	std.c.stdio.fclose(flst);
+        std.c.stdio.fclose(flst);
     }
 }
 

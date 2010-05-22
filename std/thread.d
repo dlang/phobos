@@ -31,7 +31,7 @@
  * It is important to use the $(B Thread) class to create and manage
  * threads as the garbage collector needs to know about all the threads.
  * Macros:
- *	WIKI=Phobos/StdThread
+ *      WIKI=Phobos/StdThread
  */
 
 module std.thread;
@@ -51,8 +51,8 @@ extern (Windows) alias uint (*stdfp)(void *);
 
 extern (C)
     thread_hdl _beginthreadex(void* security, uint stack_size,
-	stdfp start_addr, void* arglist, uint initflag,
-	thread_id* thrdaddr);
+        stdfp start_addr, void* arglist, uint initflag,
+        thread_id* thrdaddr);
 
 private const uint  WAIT_TIMEOUT = 258;
 
@@ -71,7 +71,7 @@ class ThreadError : Error
 {
     this(string s)
     {
-	super("Thread error: " ~ s);
+        super("Thread error: " ~ s);
     }
 }
 
@@ -81,13 +81,13 @@ class ThreadError : Error
 class Thread
 {
     /**
-     * Constructor used by classes derived from Thread that override main(). 
+     * Constructor used by classes derived from Thread that override main().
      * The optional stacksize parameter default value of 0 will cause threads
      * to be created with the default size for the executable - Dave Fladebo
      */
     this(size_t stacksize = 0)
     {
-	this.stacksize = stacksize;
+        this.stacksize = stacksize;
     }
 
     /**
@@ -95,9 +95,9 @@ class Thread
      */
     this(int (*fp)(void *), void *arg, size_t stacksize = 0)
     {
-	this.fp = fp;
-	this.arg = arg;
-	this.stacksize = stacksize;
+        this.fp = fp;
+        this.arg = arg;
+        this.stacksize = stacksize;
     }
 
     /**
@@ -105,8 +105,8 @@ class Thread
      */
     this(int delegate() dg, size_t stacksize = 0)
     {
-	this.dg = dg;
-	this.stacksize = stacksize;
+        this.dg = dg;
+        this.stacksize = stacksize;
     }
 
     /**
@@ -134,22 +134,22 @@ class Thread
      */
     void start()
     {
-	synchronized (Thread.classinfo)
-	{
-	    if (state != TS.INITIAL)
-		error("already started");
+        synchronized (Thread.classinfo)
+        {
+            if (state != TS.INITIAL)
+                error("already started");
 
             add_thread();
 
-	    state = TS.RUNNING;
-	    hdl = _beginthreadex(null, cast(uint)stacksize, &threadstart, cast(void*)this, 0, &id);
-	    if (hdl == cast(thread_hdl)0)
-	    {
-		del_thread();
-		state = TS.FINISHED;
-		error("failed to start");
-	    }
-	}
+            state = TS.RUNNING;
+            hdl = _beginthreadex(null, cast(uint)stacksize, &threadstart, cast(void*)this, 0, &id);
+            if (hdl == cast(thread_hdl)0)
+            {
+                del_thread();
+                state = TS.FINISHED;
+                error("failed to start");
+            }
+        }
     }
 
     /**
@@ -160,11 +160,11 @@ class Thread
      */
     int run()
     {
-	if (fp)
-	    return fp(arg);
-	else if (dg)
-	    return dg();
-	assert(0);
+        if (fp)
+            return fp(arg);
+        else if (dg)
+            return dg();
+        assert(0);
     }
 
     /*****************************
@@ -175,16 +175,16 @@ class Thread
      */
     void wait()
     {
-	if (isSelf)
-	    error("wait on self");
-	if (state != TS.FINISHED)
-	{   DWORD dw;
+        if (isSelf)
+            error("wait on self");
+        if (state != TS.FINISHED)
+        {   DWORD dw;
 
-	    dw = WaitForSingleObject(hdl, 0xFFFFFFFF);
+            dw = WaitForSingleObject(hdl, 0xFFFFFFFF);
             state = TS.FINISHED;
             CloseHandle(hdl);
             hdl = null;
-	}
+        }
     }
 
     /******************************
@@ -196,19 +196,19 @@ class Thread
      */
     void wait(uint milliseconds)
     {
-	if (isSelf)
-	    error("wait on self");
-	if (state != TS.FINISHED)
-	{   DWORD dw;
+        if (isSelf)
+            error("wait on self");
+        if (state != TS.FINISHED)
+        {   DWORD dw;
 
-	    dw = WaitForSingleObject(hdl, milliseconds);
-	    if (dw != WAIT_TIMEOUT)
-	    {
-		state = TS.FINISHED;
-		CloseHandle(hdl);
-		hdl = null;
-	    }
-	}
+            dw = WaitForSingleObject(hdl, milliseconds);
+            if (dw != WAIT_TIMEOUT)
+            {
+                state = TS.FINISHED;
+                CloseHandle(hdl);
+                hdl = null;
+            }
+        }
     }
 
     /**
@@ -216,9 +216,9 @@ class Thread
      */
     enum TS
     {
-	INITIAL,	/// The thread hasn't been started yet.
-	RUNNING,	/// The thread is running or paused.
-	TERMINATED,	/// The thread has ended.
+        INITIAL,        /// The thread hasn't been started yet.
+        RUNNING,        /// The thread is running or paused.
+        TERMINATED,     /// The thread has ended.
         FINISHED        /// The thread has been cleaned up
     }
 
@@ -227,7 +227,7 @@ class Thread
      */
     TS getState()
     {
-	return state;
+        return state;
     }
 
     /**
@@ -235,11 +235,11 @@ class Thread
      */
     enum PRIORITY
     {
-	INCREASE,	/// Increase thread priority
-	DECREASE,	/// Decrease thread priority
-	IDLE,		/// Assign thread low priority
-	CRITICAL,	/// Assign thread high priority
-	NORMAL,
+        INCREASE,       /// Increase thread priority
+        DECREASE,       /// Decrease thread priority
+        IDLE,           /// Assign thread low priority
+        CRITICAL,       /// Assign thread high priority
+        NORMAL,
     }
 
     /**
@@ -248,31 +248,31 @@ class Thread
      */
     void setPriority(PRIORITY p)
     {
-	int nPriority;
+        int nPriority;
 
-	switch (p)
-	{
-	    case PRIORITY.INCREASE:
-		nPriority = THREAD_PRIORITY_ABOVE_NORMAL;
-		break;
-	    case PRIORITY.DECREASE:
-		nPriority = THREAD_PRIORITY_BELOW_NORMAL;
-		break;
-	    case PRIORITY.IDLE:
-		nPriority = THREAD_PRIORITY_IDLE;
-		break;
-	    case PRIORITY.CRITICAL:
-		nPriority = THREAD_PRIORITY_TIME_CRITICAL;
-		break;
-	    case PRIORITY.NORMAL:
-		nPriority = THREAD_PRIORITY_NORMAL;
-		break;
-	    default:
-		assert(0);
-	}
+        switch (p)
+        {
+            case PRIORITY.INCREASE:
+                nPriority = THREAD_PRIORITY_ABOVE_NORMAL;
+                break;
+            case PRIORITY.DECREASE:
+                nPriority = THREAD_PRIORITY_BELOW_NORMAL;
+                break;
+            case PRIORITY.IDLE:
+                nPriority = THREAD_PRIORITY_IDLE;
+                break;
+            case PRIORITY.CRITICAL:
+                nPriority = THREAD_PRIORITY_TIME_CRITICAL;
+                break;
+            case PRIORITY.NORMAL:
+                nPriority = THREAD_PRIORITY_NORMAL;
+                break;
+            default:
+                assert(0);
+        }
 
-	if (SetThreadPriority(hdl, nPriority) == THREAD_PRIORITY_ERROR_RETURN)
-	    error("set priority");
+        if (SetThreadPriority(hdl, nPriority) == THREAD_PRIORITY_ERROR_RETURN)
+            error("set priority");
     }
 
     /**
@@ -280,8 +280,8 @@ class Thread
      */
     bool isSelf()
     {
-	//printf("id = %d, self = %d\n", id, pthread_self());
-	return (id == GetCurrentThreadId());
+        //printf("id = %d, self = %d\n", id, pthread_self());
+        return (id == GetCurrentThreadId());
     }
 
     /**
@@ -297,7 +297,7 @@ class Thread
                 return t;
             }
         }
-	return null;
+        return null;
     }
     /**
      * Returns a reference to the Thread for the thread that called the
@@ -305,18 +305,18 @@ class Thread
      */
     static Thread _getThis()
     {
-	//printf("getThis(), allThreadsDim = %d\n", allThreadsDim);
+        //printf("getThis(), allThreadsDim = %d\n", allThreadsDim);
         thread_id id = GetCurrentThreadId();
-	return _getThreadById(id);
+        return _getThreadById(id);
     }
 
     static Thread getThis()
     {
-	Thread t = _getThis();
-	if(t)
-		return t;
-	printf("didn't find it\n");
-	assert(0);
+        Thread t = _getThis();
+        if(t)
+                return t;
+        printf("didn't find it\n");
+        assert(0);
     }
 
     /**
@@ -324,7 +324,7 @@ class Thread
      */
     static Thread[] getAll()
     {
-	synchronized (Thread.classinfo) return allThreads[0 .. allThreadsDim];
+        synchronized (Thread.classinfo) return allThreads[0 .. allThreadsDim];
     }
 
     /**
@@ -332,8 +332,8 @@ class Thread
      */
     void pause()
     {
-	if (state != TS.RUNNING || SuspendThread(hdl) == 0xFFFFFFFF)
-	    error("cannot pause");
+        if (state != TS.RUNNING || SuspendThread(hdl) == 0xFFFFFFFF)
+            error("cannot pause");
     }
 
     /**
@@ -341,8 +341,8 @@ class Thread
      */
     void resume()
     {
-	if (state != TS.RUNNING || ResumeThread(hdl) == 0xFFFFFFFF)
-	    error("cannot resume");
+        if (state != TS.RUNNING || ResumeThread(hdl) == 0xFFFFFFFF)
+            error("cannot resume");
     }
 
     /**
@@ -354,14 +354,14 @@ class Thread
         {
             if (nthreads > 1)
             {
-		thread_id thisid = GetCurrentThreadId();
+                thread_id thisid = GetCurrentThreadId();
 
-		for (int i = 0; i < allThreadsDim; i++)
-		{
-		    Thread t = allThreads[i];
-		    if (t && t.id != thisid && t.state == TS.RUNNING)
-			t.pause();
-		}
+                for (int i = 0; i < allThreadsDim; i++)
+                {
+                    Thread t = allThreads[i];
+                    if (t && t.id != thisid && t.state == TS.RUNNING)
+                        t.pause();
+                }
             }
         }
     }
@@ -392,7 +392,7 @@ class Thread
      */
     static void yield()
     {
-	Sleep(0);
+        Sleep(0);
     }
 
     /**
@@ -403,10 +403,10 @@ class Thread
   private:
 
     static uint allThreadsDim;
-    static Thread[0x400] allThreads;	// length matches value in C runtime
+    static Thread[0x400] allThreads;    // length matches value in C runtime
 
     TS state;
-    int idx = -1;			// index into allThreads[]
+    int idx = -1;                       // index into allThreads[]
     thread_id id;
     size_t stacksize = 0;
 
@@ -417,7 +417,7 @@ class Thread
 
     void error(string msg)
     {
-	throw new ThreadError(msg);
+        throw new ThreadError(msg);
     }
 
 
@@ -427,28 +427,28 @@ class Thread
 
     extern (Windows) static uint threadstart(void *p)
     {
-	Thread t = cast(Thread)p;
-	int result;
+        Thread t = cast(Thread)p;
+        int result;
 
-	debug (thread) printf("Starting thread %d\n", t.idx);
-	t.stackBottom = os_query_stackBottom();
-	try
-	{
-	    result = t.run();
-	}
-	catch (Object o)
-	{
-	    fprintf(stderr, "Error: %.*s\n", o.toString());
-	    result = 1;
-	}
+        debug (thread) printf("Starting thread %d\n", t.idx);
+        t.stackBottom = os_query_stackBottom();
+        try
+        {
+            result = t.run();
+        }
+        catch (Object o)
+        {
+            fprintf(stderr, "Error: %.*s\n", o.toString());
+            result = 1;
+        }
 
-	debug (thread) printf("Ending thread %d\n", t.idx);
+        debug (thread) printf("Ending thread %d\n", t.idx);
         synchronized (Thread.classinfo)
         {
-	    t.del_thread();
-	    t.state = TS.TERMINATED;
+            t.del_thread();
+            t.state = TS.TERMINATED;
         }
-	return result;
+        return result;
     }
 
     /**************************************
@@ -458,24 +458,24 @@ class Thread
 
     void add_thread()
     {
-	// there might be threads that already exist when attaching all existing threads,
-	//  but still call DllMain with DLL_THREAD_ATTACH
-	if(_getThreadById(id))
-	    return;
-	
-	for (int i = 0; 1; i++)
-	{
-	    if (i == allThreads.length)
-		error("too many threads");
-	    if (!allThreads[i])
-	    {   allThreads[i] = this;
-		idx = i;
-		if (i >= allThreadsDim)
-		    allThreadsDim = i + 1;
-		break;
-	    }
-	}
-	nthreads++;
+        // there might be threads that already exist when attaching all existing threads,
+        //  but still call DllMain with DLL_THREAD_ATTACH
+        if(_getThreadById(id))
+            return;
+
+        for (int i = 0; 1; i++)
+        {
+            if (i == allThreads.length)
+                error("too many threads");
+            if (!allThreads[i])
+            {   allThreads[i] = this;
+                idx = i;
+                if (i >= allThreadsDim)
+                    allThreadsDim = i + 1;
+                break;
+            }
+        }
+        nthreads++;
     }
 
     /**************************************
@@ -492,7 +492,7 @@ class Thread
             idx = -1;
 
             while(allThreadsDim > 0 && !allThreads[allThreadsDim - 1])
-		allThreadsDim--;            
+                allThreadsDim--;
     }
 
     /**************************************
@@ -501,8 +501,8 @@ class Thread
 
     public static void thread_init()
     {
-	assert(!allThreads[0]);
-	thread_attach();
+        assert(!allThreads[0]);
+        thread_attach();
     }
 
     /**************************************
@@ -511,36 +511,36 @@ class Thread
 
     public static void thread_attach()
     {
-	thread_attach(GetCurrentThreadId(), Thread.getCurrentThreadHandle(), os_query_stackBottom());
+        thread_attach(GetCurrentThreadId(), Thread.getCurrentThreadHandle(), os_query_stackBottom());
     }
 
     public static void thread_attach(thread_id id, thread_hdl hdl, void* bottom)
     {
-	// the gc should not be touched before attaching to the thread, because
-	//  it might interfere with threads that use the GC, but won't suspend
-	//  this thread. So we use a Thread object created by an attached thread.
-	// This is not necessary for the main (first) thread, because there is no
-	// concurrent thread.
-	Thread t;
-	if(nextThread)
-	{
-	    t = nextThread;
-	    nextThread = null;
-	}
-	else
-	{
-	    t = new Thread();
-	}
+        // the gc should not be touched before attaching to the thread, because
+        //  it might interfere with threads that use the GC, but won't suspend
+        //  this thread. So we use a Thread object created by an attached thread.
+        // This is not necessary for the main (first) thread, because there is no
+        // concurrent thread.
+        Thread t;
+        if(nextThread)
+        {
+            t = nextThread;
+            nextThread = null;
+        }
+        else
+        {
+            t = new Thread();
+        }
 
-	t.state = TS.RUNNING;
-	t.id = id;
-	t.hdl = hdl;
-	t.stackBottom = bottom;
+        t.state = TS.RUNNING;
+        t.id = id;
+        t.hdl = hdl;
+        t.stackBottom = bottom;
 
-	synchronized (Thread.classinfo)
-	    t.add_thread();
+        synchronized (Thread.classinfo)
+            t.add_thread();
 
-	nextThread = new Thread();
+        nextThread = new Thread();
     }
 
     static Thread nextThread; // preallocate thread to avoid allocation before attaching
@@ -551,27 +551,27 @@ class Thread
 
     public static void thread_detach()
     {
-	if(Thread t = _getThis())
-	    synchronized (Thread.classinfo)
-		t.del_thread();
+        if(Thread t = _getThis())
+            synchronized (Thread.classinfo)
+                t.del_thread();
     }
-    
+
     public static void thread_detach(thread_id id)
     {
-	if(Thread t = _getThreadById(id))
-	    synchronized (Thread.classinfo)
-		t.del_thread();
+        if(Thread t = _getThreadById(id))
+            synchronized (Thread.classinfo)
+                t.del_thread();
     }
-    
+
     static ~this()
     {
-	if (allThreadsDim)
-	{
-	    CloseHandle(allThreads[0].hdl);
-	    allThreads[0].hdl = GetCurrentThread();
-	}
+        if (allThreadsDim)
+        {
+            CloseHandle(allThreads[0].hdl);
+            allThreads[0].hdl = GetCurrentThread();
+        }
     }
-          
+
     /********************************************
      * Returns the handle of the current thread.
      * This is needed because GetCurrentThread() always returns -2 which
@@ -583,19 +583,19 @@ class Thread
      */
     static thread_hdl getCurrentThreadHandle()
     {
-	thread_hdl currentThread = GetCurrentThread();
-	thread_hdl actualThreadHandle;
+        thread_hdl currentThread = GetCurrentThread();
+        thread_hdl actualThreadHandle;
 
-	//thread_hdl currentProcess = cast(thread_hdl)-1;
-	thread_hdl currentProcess = GetCurrentProcess(); // http://www.digitalmars.com/drn-bin/wwwnews?D/21217
+        //thread_hdl currentProcess = cast(thread_hdl)-1;
+        thread_hdl currentProcess = GetCurrentProcess(); // http://www.digitalmars.com/drn-bin/wwwnews?D/21217
 
 
-	uint access = cast(uint)0x00000002;
+        uint access = cast(uint)0x00000002;
 
-	DuplicateHandle(currentProcess, currentThread, currentProcess,
-			 &actualThreadHandle, cast(uint)0, TRUE, access);
+        DuplicateHandle(currentProcess, currentThread, currentProcess,
+                         &actualThreadHandle, cast(uint)0, TRUE, access);
 
-	return actualThreadHandle;
+        return actualThreadHandle;
      }
 }
 
@@ -608,9 +608,9 @@ void *os_query_stackBottom()
 {
     asm
     {
-	naked			;
-	mov	EAX,FS:4	;
-	ret			;
+        naked                   ;
+        mov     EAX,FS:4        ;
+        ret                     ;
     }
 }
 
@@ -633,7 +633,7 @@ class ThreadError : Error
 {
     this(string s)
     {
-	super("Thread error: " ~ s);
+        super("Thread error: " ~ s);
     }
 }
 
@@ -643,26 +643,26 @@ class Thread
     //  to be created with the default pthread size - Dave Fladebo
     this(size_t stacksize = 0)
     {
-	init(stacksize);
+        init(stacksize);
     }
 
     this(int (*fp)(void *), void *arg, size_t stacksize = 0)
     {
-	this.fp = fp;
-	this.arg = arg;
-	init(stacksize);
+        this.fp = fp;
+        this.arg = arg;
+        init(stacksize);
     }
 
     this(int delegate() dg, size_t stacksize = 0)
     {
-	this.dg = dg;
-	init(stacksize);
+        this.dg = dg;
+        init(stacksize);
     }
 
     ~this()
     {
-	pthread_cond_destroy(&waitCond);
-	pthread_mutex_destroy(&waitMtx);
+        pthread_cond_destroy(&waitCond);
+        pthread_mutex_destroy(&waitMtx);
         if (state != TS.FINISHED)
             pthread_detach(id);
     }
@@ -677,106 +677,106 @@ class Thread
 
     void start()
     {
-	if (state != TS.INITIAL)
-	    error("already started");
+        if (state != TS.INITIAL)
+            error("already started");
 
-	synchronized (Thread.classinfo)
-	{
-	    for (int i = 0; 1; i++)
-	    {
-		if (i == allThreads.length)
-		    error("too many threads");
-		if (!allThreads[i])
-		{   allThreads[i] = this;
-		    idx = i;
-		    if (i >= allThreadsDim)
-			allThreadsDim = i + 1;
-		    break;
-		}
-	    }
-	    nthreads++;
-	}
+        synchronized (Thread.classinfo)
+        {
+            for (int i = 0; 1; i++)
+            {
+                if (i == allThreads.length)
+                    error("too many threads");
+                if (!allThreads[i])
+                {   allThreads[i] = this;
+                    idx = i;
+                    if (i >= allThreadsDim)
+                        allThreadsDim = i + 1;
+                    break;
+                }
+            }
+            nthreads++;
+        }
 
-	state = TS.RUNNING;
-	//printf("creating thread x%x\n", this);
-	//result = pthread_create(&id, null, &threadstart, this);
-	// Create with thread attributes to allow non-default stack size - Dave Fladebo
-	int result = pthread_create(&id, &threadAttrs, &threadstart, cast(void*)this);
-	if (result)
-	{   state = TS.FINISHED;
-	    synchronized (Thread.classinfo) allThreads[idx] = null;
-	    idx = -1;
-	    error("failed to start");	// BUG: should report errno
-	}
-	//printf("t = x%x, id = %d\n", this, id);
-	version (OSX)
+        state = TS.RUNNING;
+        //printf("creating thread x%x\n", this);
+        //result = pthread_create(&id, null, &threadstart, this);
+        // Create with thread attributes to allow non-default stack size - Dave Fladebo
+        int result = pthread_create(&id, &threadAttrs, &threadstart, cast(void*)this);
+        if (result)
+        {   state = TS.FINISHED;
+            synchronized (Thread.classinfo) allThreads[idx] = null;
+            idx = -1;
+            error("failed to start");   // BUG: should report errno
+        }
+        //printf("t = x%x, id = %d\n", this, id);
+        version (OSX)
         {
             machid = pthread_mach_thread_np( id );
             if( machid == machid.init )
                 error("failed to obtain machid");
-        }	
+        }
     }
 
     int run()
     {
-	if (fp)
-	    return fp(arg);
-	else if (dg)
-	    return dg();
-	assert(0);
+        if (fp)
+            return fp(arg);
+        else if (dg)
+            return dg();
+        assert(0);
     }
 
     void wait()
     {
-	if (isSelf)
-	    error("wait on self");
+        if (isSelf)
+            error("wait on self");
 
-	if (state != TS.FINISHED)
-	{
-	    void *value;
+        if (state != TS.FINISHED)
+        {
+            void *value;
 
-	    int result = pthread_join(id, &value);
+            int result = pthread_join(id, &value);
             state = TS.FINISHED;
-	    if (result)
-		error("failed to wait");
-	}
+            if (result)
+                error("failed to wait");
+        }
     }
 
     void wait(uint milliseconds)
     {
-	// Implemented for POSIX systems by Dave Fladebo
-	if (isSelf)
-	    error("wait on self");
-	if (state != TS.FINISHED)
-	{
-	    timespec ts; 
-	    timeval  tv;
+        // Implemented for POSIX systems by Dave Fladebo
+        if (isSelf)
+            error("wait on self");
+        if (state != TS.FINISHED)
+        {
+            timespec ts;
+            timeval  tv;
 
-	    pthread_mutex_lock(&waitMtx);
-	    gettimeofday(&tv, null);
-	    ts.tv_sec = cast(__time_t)tv.tv_sec + cast(__time_t)(milliseconds / 1_000);
-	    ts.tv_nsec = (tv.tv_usec * 1_000) + ((milliseconds % 1_000) * 1_000_000);
-	    if (ts.tv_nsec > 1_000_000_000)
-	    {
-		ts.tv_sec += 1;
-		ts.tv_nsec -= 1_000_000_000;
-	    }
-	    if (pthread_cond_timedwait(&waitCond, &waitMtx, &ts))
-	    {
-		int oldstate, oldtype;
-		pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
-		pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, &oldtype);
+            pthread_mutex_lock(&waitMtx);
+            gettimeofday(&tv, null);
+            ts.tv_sec = cast(__time_t)tv.tv_sec + cast(__time_t)(milliseconds / 1_000);
+            ts.tv_nsec = (tv.tv_usec * 1_000) + ((milliseconds % 1_000) * 1_000_000);
+            if (ts.tv_nsec > 1_000_000_000)
+            {
+                ts.tv_sec += 1;
+                ts.tv_nsec -= 1_000_000_000;
+            }
+            if (pthread_cond_timedwait(&waitCond, &waitMtx, &ts))
+            {
+                int oldstate, oldtype;
+                pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
+                pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, &oldtype);
 
-		if (pthread_cancel(id))     // thread was not completed in the timeout period, cancel it
-		{
-		    pthread_mutex_unlock(&waitMtx);
-		    error("cannot terminate thread via timed wait");
-		}
+                if (pthread_cancel(id))     // thread was not completed in the timeout period, cancel it
+                {
+                    pthread_mutex_unlock(&waitMtx);
+                    error("cannot terminate thread via timed wait");
+                }
 
-		pthread_setcancelstate(oldstate, null);
-		pthread_setcanceltype(oldtype, null);
+                pthread_setcancelstate(oldstate, null);
+                pthread_setcanceltype(oldtype, null);
 
-		state = TS.TERMINATED;
+                state = TS.TERMINATED;
                 synchronized (Thread.classinfo)
                 {
                     allThreads[idx] = null;
@@ -784,72 +784,72 @@ class Thread
                     nthreads--;
                 }
 
-		pthread_mutex_unlock(&waitMtx);
-	    }
-	    else
-	    {
-		pthread_mutex_unlock(&waitMtx);
-		wait();	// condition has been signalled as complete (see threadstart()), terminate normally
-	    }
-	}
+                pthread_mutex_unlock(&waitMtx);
+            }
+            else
+            {
+                pthread_mutex_unlock(&waitMtx);
+                wait(); // condition has been signalled as complete (see threadstart()), terminate normally
+            }
+        }
     }
 
     enum TS
     {
-	INITIAL,        // created
-	RUNNING,        // running
-	TERMINATED,     // execution finished
+        INITIAL,        // created
+        RUNNING,        // running
+        TERMINATED,     // execution finished
         FINISHED        // pthread_join()'ed
     }
 
     TS getState()
     {
-	return state;
+        return state;
     }
 
     enum PRIORITY
     {
-	INCREASE,
-	DECREASE,
-	IDLE,
-	CRITICAL
+        INCREASE,
+        DECREASE,
+        IDLE,
+        CRITICAL
     }
 
     void setPriority(PRIORITY p)
     {
-	/+ not implemented
-	int nPriority;
+        /+ not implemented
+        int nPriority;
 
-	switch (p)
-	{
-	    case PRIORITY.INCREASE:
-		nPriority = THREAD_PRIORITY_ABOVE_NORMAL;
-		break;
-	    case PRIORITY.DECREASE:
-		nPriority = THREAD_PRIORITY_BELOW_NORMAL;
-		break;
-	    case PRIORITY.IDLE:
-		nPriority = THREAD_PRIORITY_IDLE;
-		break;
-	    case PRIORITY.CRITICAL:
-		nPriority = THREAD_PRIORITY_TIME_CRITICAL;
-		break;
-	}
+        switch (p)
+        {
+            case PRIORITY.INCREASE:
+                nPriority = THREAD_PRIORITY_ABOVE_NORMAL;
+                break;
+            case PRIORITY.DECREASE:
+                nPriority = THREAD_PRIORITY_BELOW_NORMAL;
+                break;
+            case PRIORITY.IDLE:
+                nPriority = THREAD_PRIORITY_IDLE;
+                break;
+            case PRIORITY.CRITICAL:
+                nPriority = THREAD_PRIORITY_TIME_CRITICAL;
+                break;
+        }
 
-	if (SetThreadPriority(hdl, nPriority) == THREAD_PRIORITY_ERROR_RETURN)
-	    error("set priority");
-	+/
+        if (SetThreadPriority(hdl, nPriority) == THREAD_PRIORITY_ERROR_RETURN)
+            error("set priority");
+        +/
     }
 
     int isSelf()
     {
-	//printf("id = %d, self = %d\n", id, pthread_self());
-	return pthread_equal(pthread_self(), id);
+        //printf("id = %d, self = %d\n", id, pthread_self());
+        return pthread_equal(pthread_self(), id);
     }
 
     static Thread getThis()
     {
-	//printf("getThis(), allThreadsDim = %d\n", allThreadsDim);
+        //printf("getThis(), allThreadsDim = %d\n", allThreadsDim);
         pthread_t id = pthread_self();
         //printf("id = %d\n", id);
         for (int i = 0; i < allThreadsDim; i++)
@@ -861,13 +861,13 @@ class Thread
                 return t;
             }
         }
-	printf("didn't find it\n");
-	assert(null);
+        printf("didn't find it\n");
+        assert(null);
     }
 
     static Thread[] getAll()
     {
-	synchronized (Thread.classinfo) return allThreads[0 .. allThreadsDim];
+        synchronized (Thread.classinfo) return allThreads[0 .. allThreadsDim];
     }
 
     void pause()
@@ -879,12 +879,12 @@ class Thread
         }
         else
         {
-	    if (state == TS.RUNNING)
-	    {
-	        if (pthread_kill(id, SIGUSR1))
-		    error("cannot pause");
+            if (state == TS.RUNNING)
+            {
+                if (pthread_kill(id, SIGUSR1))
+                    error("cannot pause");
                 else
-                    sem_wait(&flagSuspend);	// wait for acknowledgement
+                    sem_wait(&flagSuspend);     // wait for acknowledgement
             }
             else
                 error("cannot pause");
@@ -900,14 +900,14 @@ class Thread
         }
         else
         {
-	    if (state == TS.RUNNING)
-	    {
-	        if (pthread_kill(id, SIGUSR2))
-		    error("cannot resume");
+            if (state == TS.RUNNING)
+            {
+                if (pthread_kill(id, SIGUSR2))
+                    error("cannot resume");
             }
-	    else
-	        error("cannot resume");
-	}
+            else
+                error("cannot resume");
+        }
     }
 
     static void pauseAll()
@@ -924,30 +924,30 @@ class Thread
                     Thread t = allThreads[i];
                     if (t && !pthread_equal(thisid, t.id) && t.state == TS.RUNNING)
                     {
-			version (OSX)
-			{
-			    if (t.state != TS.RUNNING || thread_suspend(t.machid) != KERN_SUCCESS)
-				t.error("cannot pause");
-			}
-        		else
-			{
+                        version (OSX)
+                        {
+                            if (t.state != TS.RUNNING || thread_suspend(t.machid) != KERN_SUCCESS)
+                                t.error("cannot pause");
+                        }
+                        else
+                        {
                             if (pthread_kill(t.id, SIGUSR1))
-                        	t.error("cannot pause");
+                                t.error("cannot pause");
                             else
-                            	npause++;	// count of paused threads
-			}
+                                npause++;       // count of paused threads
+                        }
                     }
                 }
 
-		version (OSX) {}
-		else
-		{
+                version (OSX) {}
+                else
+                {
                     // Wait for each paused thread to acknowledge
                     while (npause--)
                     {
-                    	sem_wait(&flagSuspend);
+                        sem_wait(&flagSuspend);
                     }
-		}
+                }
             }
         }
     }
@@ -972,7 +972,7 @@ class Thread
 
     static void yield()
     {
-	sched_yield();
+        sched_yield();
     }
 
     static uint nthreads = 1;
@@ -989,7 +989,7 @@ class Thread
     static sem_t flagSuspend;
 
     TS state;
-    int idx = -1;			// index into allThreads[]
+    int idx = -1;                       // index into allThreads[]
     int flags = 0;
 
     pthread_attr_t threadAttrs;
@@ -1003,26 +1003,26 @@ class Thread
 
     void error(string msg)
     {
-	throw new ThreadError(msg);
+        throw new ThreadError(msg);
     }
 
     void init(size_t stackSize)
     {
-	// set to default values regardless
-	// passing this as the 2nd arg. for pthread_create()
-	// w/o setting an attribute is equivalent to passing null.
-	pthread_attr_init(&threadAttrs);
-	if (stackSize > 0)
-	{
-	    if (pthread_attr_setstacksize(&threadAttrs,stackSize))
-		error("cannot set stack size");
-	}
+        // set to default values regardless
+        // passing this as the 2nd arg. for pthread_create()
+        // w/o setting an attribute is equivalent to passing null.
+        pthread_attr_init(&threadAttrs);
+        if (stackSize > 0)
+        {
+            if (pthread_attr_setstacksize(&threadAttrs,stackSize))
+                error("cannot set stack size");
+        }
 
-	if (pthread_mutex_init(&waitMtx, null))
-	    error("cannot initialize wait mutex");
+        if (pthread_mutex_init(&waitMtx, null))
+            error("cannot initialize wait mutex");
 
-	if (pthread_cond_init(&waitCond, null))
-	    error("cannot initialize wait condition");
+        if (pthread_cond_init(&waitCond, null))
+            error("cannot initialize wait condition");
     }
 
     /************************************************
@@ -1031,42 +1031,42 @@ class Thread
 
     extern (C) static void *threadstart(void *p)
     {
-	Thread t = cast(Thread)p;
-	int result;
+        Thread t = cast(Thread)p;
+        int result;
 
-	debug (thread) printf("Starting thread x%x (%d)\n", t, t.idx);
+        debug (thread) printf("Starting thread x%x (%d)\n", t, t.idx);
 
-	// Need to set t.id here, because thread is off and running
-	// before pthread_create() sets it.
-	t.id = pthread_self();
-	
-	version (OSX)
+        // Need to set t.id here, because thread is off and running
+        // before pthread_create() sets it.
+        t.id = pthread_self();
+
+        version (OSX)
         {
             t.machid = pthread_mach_thread_np( t.id );
-        }	
+        }
 
-	t.stackBottom = getESP();
-	try
-	{
-	    if(t.state == TS.RUNNING)
-		pthread_cond_signal(&t.waitCond);     // signal the wait condition (see the timed wait function)
-	    result = t.run();
-	}
-	catch (Object o)
-	{
-	    fprintf(stderr, "Error: %.*s\n", o.toString());
-	    result = 1;
-	}
+        t.stackBottom = getESP();
+        try
+        {
+            if(t.state == TS.RUNNING)
+                pthread_cond_signal(&t.waitCond);     // signal the wait condition (see the timed wait function)
+            result = t.run();
+        }
+        catch (Object o)
+        {
+            fprintf(stderr, "Error: %.*s\n", o.toString());
+            result = 1;
+        }
 
-	debug (thread) printf("Ending thread %d\n", t.idx);
-	t.state = TS.TERMINATED;
+        debug (thread) printf("Ending thread %d\n", t.idx);
+        t.state = TS.TERMINATED;
         synchronized (Thread.classinfo)
         {
             allThreads[t.idx] = null;
             t.idx = -1;
             nthreads--;
         }
-	return cast(void*)result;
+        return cast(void*)result;
     }
 
 
@@ -1076,71 +1076,71 @@ class Thread
 
     public static void thread_init()
     {
-	Thread t = new Thread();
+        Thread t = new Thread();
 
-	t.state = TS.RUNNING;
-	t.id = pthread_self();
+        t.state = TS.RUNNING;
+        t.id = pthread_self();
 
-	version (none)
-	{
-	    // See discussion: http://autopackage.org/forums/viewtopic.php?t=22
-	    static void** libc_stack_end;
+        version (none)
+        {
+            // See discussion: http://autopackage.org/forums/viewtopic.php?t=22
+            static void** libc_stack_end;
 
-	    if (libc_stack_end == libc_stack_end.init)
-	    {
-		void* handle = dlopen(null, RTLD_NOW);
-		libc_stack_end = cast(void **)dlsym(handle, "__libc_stack_end");
-		dlclose(handle);
-	    }
-	    t.stackBottom = *libc_stack_end;
-	}
-	else version (OSX)
-	{
+            if (libc_stack_end == libc_stack_end.init)
+            {
+                void* handle = dlopen(null, RTLD_NOW);
+                libc_stack_end = cast(void **)dlsym(handle, "__libc_stack_end");
+                dlclose(handle);
+            }
+            t.stackBottom = *libc_stack_end;
+        }
+        else version (OSX)
+        {
             t.machid = pthread_mach_thread_np( t.id );
             if( t.machid == machid.init )
                 t.error("failed to obtain machid");
 
-	    t.stackBottom = __osx_stack_end;
-	}
-	else
-	{
-	    t.stackBottom = cast(void*)__libc_stack_end;
-	}
+            t.stackBottom = __osx_stack_end;
+        }
+        else
+        {
+            t.stackBottom = cast(void*)__libc_stack_end;
+        }
 
-	assert(!allThreads[0]);
-	allThreads[0] = t;
-	allThreadsDim = 1;
-	t.idx = 0;
+        assert(!allThreads[0]);
+        allThreads[0] = t;
+        allThreadsDim = 1;
+        t.idx = 0;
 
         version (OSX) {}
         else
         {
             /* Install signal handlers so we can suspend/resume threads
-	     */
+             */
 
-	    int result;
-	    sigaction_t sigact;
-	    result = sigfillset(&sigact.sa_mask);
-	    if (result)
-	        goto Lfail;
-	    sigact.sa_handler = &pauseHandler;
-	    sigact.sa_flags = SA_RESTART;
-	    result = sigaction(SIGUSR1, &sigact, null);
-	    if (result)
-	        goto Lfail;
-	    sigact.sa_handler = &resumeHandler;
-	    result = sigaction(SIGUSR2, &sigact, null);
-	    if (result)
-	        goto Lfail;
+            int result;
+            sigaction_t sigact;
+            result = sigfillset(&sigact.sa_mask);
+            if (result)
+                goto Lfail;
+            sigact.sa_handler = &pauseHandler;
+            sigact.sa_flags = SA_RESTART;
+            result = sigaction(SIGUSR1, &sigact, null);
+            if (result)
+                goto Lfail;
+            sigact.sa_handler = &resumeHandler;
+            result = sigaction(SIGUSR2, &sigact, null);
+            if (result)
+                goto Lfail;
 
-	    result = sem_init(&flagSuspend, 0, 0);
-	    if (result)
-	        goto Lfail;
+            result = sem_init(&flagSuspend, 0, 0);
+            if (result)
+                goto Lfail;
         }
-	return;
+        return;
 
       Lfail:
-	t.error("cannot initialize threads");
+        t.error("cannot initialize threads");
     }
 
     version (OSX) {}
@@ -1151,39 +1151,39 @@ class Thread
          */
 
         extern (C) static void pauseHandler(int sig)
-        {	int result;
+        {       int result;
 
-    	// Save all registers on the stack so they'll be scanned by the GC
-    	asm
-    	{
-    	    pusha	;
-    	}
+        // Save all registers on the stack so they'll be scanned by the GC
+        asm
+        {
+            pusha       ;
+        }
 
-    	assert(sig == SIGUSR1);
+        assert(sig == SIGUSR1);
 
-    	sigset_t sigmask;
-    	result = sigfillset(&sigmask);
-    	assert(result == 0);
-    	result = sigdelset(&sigmask, SIGUSR2);
-    	assert(result == 0);
+        sigset_t sigmask;
+        result = sigfillset(&sigmask);
+        assert(result == 0);
+        result = sigdelset(&sigmask, SIGUSR2);
+        assert(result == 0);
 
-    	Thread t = getThis();
-    	t.stackTop = getESP();
-    	t.flags &= ~1;
-    	// Release the semaphore _after_ stackTop is set
-    	sem_post(&flagSuspend);
-    	while (1)
-    	{
-    	    sigsuspend(&sigmask);	// suspend until SIGUSR2
-    	    if (t.flags & 1)		// ensure it was resumeHandler()
-    		break;
-    	}
+        Thread t = getThis();
+        t.stackTop = getESP();
+        t.flags &= ~1;
+        // Release the semaphore _after_ stackTop is set
+        sem_post(&flagSuspend);
+        while (1)
+        {
+            sigsuspend(&sigmask);       // suspend until SIGUSR2
+            if (t.flags & 1)            // ensure it was resumeHandler()
+                break;
+        }
 
-    	// Restore all registers
-    	asm
-    	{
-    	    popa	;
-    	}
+        // Restore all registers
+        asm
+        {
+            popa        ;
+        }
         }
 
         /**********************************
@@ -1192,19 +1192,19 @@ class Thread
 
         extern (C) static void resumeHandler(int sig)
         {
-    	Thread t = getThis();
+        Thread t = getThis();
 
-    	t.flags |= 1;
+        t.flags |= 1;
         }
     }
 
     public static void* getESP()
     {
-	asm
-	{   naked	;
-	    mov EAX,ESP	;
-	    ret		;
-	}
+        asm
+        {   naked       ;
+            mov EAX,ESP ;
+            ret         ;
+        }
     }
 }
 

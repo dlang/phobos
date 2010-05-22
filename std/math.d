@@ -75,7 +75,7 @@ version(GNU){
     // GDC can't actually do inline asm.
 } else version(D_InlineAsm_X86) {
     version = Naked_D_InlineAsm_X86;
-} else version(LDC) {    
+} else version(LDC) {
     import ldc.intrinsics;
     version(X86)
     {
@@ -84,7 +84,7 @@ version(GNU){
 }
 
 version(DigitalMars){
-    version=INLINE_YL2X;	// x87 has opcodes for these
+    version=INLINE_YL2X;        // x87 has opcodes for these
 }
 
 private:
@@ -423,7 +423,7 @@ trigerr:
     return real.nan;
 
 Lret:
-    ;    
+    ;
     } else {
         return stdc.math.tanl(x);
     }
@@ -554,7 +554,7 @@ real atan2(real y, real x)      { return std.c.math.atan2l(y,x); }
  */
 real cosh(real x)               {
     //  cosh = (exp(x)+exp(-x))/2.
-    // The naive implementation works correctly. 
+    // The naive implementation works correctly.
     real y = exp(x);
     return (y + 1.0/y) * 0.5;
 }
@@ -570,13 +570,13 @@ real cosh(real x)               {
  */
 real sinh(real x)
 {
-    //  sinh(x) =  (exp(x)-exp(-x))/2;    
+    //  sinh(x) =  (exp(x)-exp(-x))/2;
     // Very large arguments could cause an overflow, but
     // the maximum value of x for which exp(x) + exp(-x)) != exp(x)
     // is x = 0.5 * (real.mant_dig) * LN2. // = 22.1807 for real80.
     if (fabs(x) > real.mant_dig * LN2) {
         return copysign(0.5 * exp(fabs(x)), x);
-    }    
+    }
     real y = expm1(x);
     return 0.5 * y / (y+1) * (y+2);
 }
@@ -594,7 +594,7 @@ real tanh(real x)
 {
     //  tanh(x) = (exp(x) - exp(-x))/(exp(x)+exp(-x))
     if (fabs(x) > real.mant_dig * LN2) {
-        return copysign(1, x);        
+        return copysign(1, x);
     }
     real y = expm1(2*x);
     return y / (y + 2);
@@ -788,8 +788,8 @@ real exp(real x) {
    // and exp2 are so similar).
     return exp2(LOG2E*x);
     } else {
-        return std.c.math.exp(x);        
-    }    
+        return std.c.math.exp(x);
+    }
 }
 
 /**
@@ -807,24 +807,24 @@ real exp(real x) {
  *    $(TR $(TD $(NAN))        $(TD $(NAN))       )
  *  )
  */
-real expm1(real x) 
+real expm1(real x)
 {
     version(Naked_D_InlineAsm_X86) {
       enum { PARAMSIZE = (real.sizeof+3)&(0xFFFF_FFFC) } // always a multiple of 4
       asm {
         /*  expm1() for x87 80-bit reals, IEEE754-2008 conformant.
          * Author: Don Clugston.
-         * 
+         *
          *    expm1(x) = 2^(rndint(y))* 2^(y-rndint(y)) - 1 where y = LN2*x.
          *    = 2rndy * 2ym1 + 2rndy - 1, where 2rndy = 2^(rndint(y))
          *     and 2ym1 = (2^(y-rndint(y))-1).
          *    If 2rndy  < 0.5*real.epsilon, result is -1.
          *    Implementation is otherwise the same as for exp2()
          */
-        naked;        
+        naked;
         fld real ptr [ESP+4] ; // x
         mov AX, [ESP+4+8]; // AX = exponent and sign
-        sub ESP, 12+8; // Create scratch space on the stack 
+        sub ESP, 12+8; // Create scratch space on the stack
         // [ESP,ESP+2] = scratchint
         // [ESP+4..+6, +8..+10, +10] = scratchreal
         // set scratchreal mantissa = 1.0
@@ -834,7 +834,7 @@ real expm1(real x)
         cmp AX, 0x401D; // avoid InvalidException in fist
         jae L_extreme;
         fldl2e;
-        fmul ; // y = x*log2(e)       
+        fmul ; // y = x*log2(e)
         fist dword ptr [ESP]; // scratchint = rndint(y)
         fisub dword ptr [ESP]; // y - rndint(y)
         // and now set scratchreal exponent
@@ -843,26 +843,26 @@ real expm1(real x)
         jle short L_largenegative;
         cmp EAX,0x8000;
         jge short L_largepositive;
-        mov [ESP+8+8],AX;        
-        f2xm1; // 2^(y-rndint(y)) -1 
+        mov [ESP+8+8],AX;
+        f2xm1; // 2^(y-rndint(y)) -1
         fld real ptr [ESP+8] ; // 2^rndint(y)
         fmul ST(1), ST;
         fld1;
         fsubp ST(1), ST;
-        fadd;        
-        add ESP,12+8;        
+        fadd;
+        add ESP,12+8;
         ret PARAMSIZE;
-        
+
 L_extreme: // Extreme exponent. X is very large positive, very
         // large negative, infinity, or NaN.
         fxam;
         fstsw AX;
-        test AX, 0x0400; // NaN_or_zero, but we already know x!=0 
+        test AX, 0x0400; // NaN_or_zero, but we already know x!=0
         jz L_was_nan;  // if x is NaN, returns x
         test AX, 0x0200;
         jnz L_largenegative;
-L_largepositive:        
-        // Set scratchreal = real.max. 
+L_largepositive:
+        // Set scratchreal = real.max.
         // squaring it will create infinity, and set overflow flag.
         mov word  ptr [ESP+8+8], 0x7FFE;
         fstp ST(0), ST;
@@ -871,7 +871,7 @@ L_largepositive:
 L_was_nan:
         add ESP,12+8;
         ret PARAMSIZE;
-L_largenegative:        
+L_largenegative:
         fstp ST(0), ST;
         fld1;
         fchs; // return -1. Underflow flag is not set.
@@ -879,7 +879,7 @@ L_largenegative:
         ret PARAMSIZE;
       }
     } else {
-        return std.c.math.expm1(x);                
+        return std.c.math.expm1(x);
     }
 }
 
@@ -893,30 +893,30 @@ L_largenegative:
  *    $(TR $(TD $(NAN))        $(TD $(NAN))    )
  *  )
  */
-real exp2(real x) 
+real exp2(real x)
 {
     version(Naked_D_InlineAsm_X86) {
       enum { PARAMSIZE = (real.sizeof+3)&(0xFFFF_FFFC) } // always a multiple of 4
       asm {
         /*  exp2() for x87 80-bit reals, IEEE754-2008 conformant.
          * Author: Don Clugston.
-         * 
+         *
          * exp2(x) = 2^(rndint(x))* 2^(y-rndint(x))
          * The trick for high performance is to avoid the fscale(28cycles on core2),
          * frndint(19 cycles), leaving f2xm1(19 cycles) as the only slow instruction.
-         * 
+         *
          * We can do frndint by using fist. BUT we can't use it for huge numbers,
          * because it will set the Invalid Operation flag is overflow or NaN occurs.
          * Fortunately, whenever this happens the result would be zero or infinity.
-         * 
+         *
          * We can perform fscale by directly poking into the exponent. BUT this doesn't
          * work for the (very rare) cases where the result is subnormal. So we fall back
          * to the slow method in that case.
          */
-        naked;        
+        naked;
         fld real ptr [ESP+4] ; // x
         mov AX, [ESP+4+8]; // AX = exponent and sign
-        sub ESP, 12+8; // Create scratch space on the stack 
+        sub ESP, 12+8; // Create scratch space on the stack
         // [ESP,ESP+2] = scratchint
         // [ESP+4..+6, +8..+10, +10] = scratchreal
         // set scratchreal mantissa = 1.0
@@ -933,43 +933,43 @@ real exp2(real x)
         jle short L_subnormal;
         cmp EAX,0x8000;
         jge short L_overflow;
-        mov [ESP+8+8],AX;        
+        mov [ESP+8+8],AX;
 L_normal:
         f2xm1;
         fld1;
         fadd; // 2^(x-rndint(x))
         fld real ptr [ESP+8] ; // 2^rndint(x)
-        add ESP,12+8;        
+        add ESP,12+8;
         fmulp ST(1), ST;
         ret PARAMSIZE;
 
 L_subnormal:
         // Result will be subnormal.
-        // In this rare case, the simple poking method doesn't work. 
+        // In this rare case, the simple poking method doesn't work.
         // The speed doesn't matter, so use the slow fscale method.
         fild dword ptr [ESP];  // scratchint
         fld1;
         fscale;
         fstp real ptr [ESP+8]; // scratchreal = 2^scratchint
-        fstp ST(0),ST;         // drop scratchint        
+        fstp ST(0),ST;         // drop scratchint
         jmp L_normal;
-        
+
 L_extreme: // Extreme exponent. X is very large positive, very
         // large negative, infinity, or NaN.
         fxam;
         fstsw AX;
-        test AX, 0x0400; // NaN_or_zero, but we already know x!=0 
+        test AX, 0x0400; // NaN_or_zero, but we already know x!=0
         jz L_was_nan;  // if x is NaN, returns x
         // set scratchreal = real.min
         // squaring it will return 0, setting underflow flag
         mov word  ptr [ESP+8+8], 1;
         test AX, 0x0200;
         jnz L_waslargenegative;
-L_overflow:        
+L_overflow:
         // Set scratchreal = real.max.
         // squaring it will create infinity, and set overflow flag.
         mov word  ptr [ESP+8+8], 0x7FFE;
-L_waslargenegative:        
+L_waslargenegative:
         fstp ST(0), ST;
         fld real ptr [ESP+8];  // load scratchreal
         fmul ST(0), ST;        // square it, to create havoc!
@@ -979,7 +979,7 @@ L_was_nan:
       }
     } else {
         return std.c.math.exp2(x);
-    }    
+    }
 }
 
 /**
@@ -1019,7 +1019,7 @@ unittest
  *      Calculate and return $(I x) and $(I exp) such that
  *      value =$(I x)*2$(SUP exp) and
  *      .5 $(LT)= |$(I x)| $(LT) 1.0
- *      
+ *
  *      $(I x) has same sign as value.
  *
  *      $(TABLE_SV
@@ -1069,7 +1069,7 @@ real frexp(real value, out int exp)
         vu[F.EXPPOS_SHORT] =
             cast(ushort)((0x8000 & vu[F.EXPPOS_SHORT]) | 0x3FFE);
     }
-  } else static if (real.mant_dig == 113) { // quadruple      
+  } else static if (real.mant_dig == 113) { // quadruple
         if (ex) { // If exponent is non-zero
             if (ex == F.EXPMASK) {   // infinity or NaN
                 if (vl[MANTISSA_LSB] |
@@ -1087,7 +1087,7 @@ real frexp(real value, out int exp)
                 vu[F.EXPPOS_SHORT] =
                    cast(ushort)((0x8000 & vu[F.EXPPOS_SHORT]) | 0x3FFE);
             }
-        } else if ((vl[MANTISSA_LSB] 
+        } else if ((vl[MANTISSA_LSB]
                   |(vl[MANTISSA_MSB] & 0x0000_FFFF_FFFF_FFFF)) == 0) {
             // value is +-0.0
             exp = 0;
@@ -1096,7 +1096,7 @@ real frexp(real value, out int exp)
         value *= F.POW2MANTDIG;
         ex = vu[F.EXPPOS_SHORT] & F.EXPMASK;
         exp = ex - F.EXPBIAS - 113;
-        vu[F.EXPPOS_SHORT] = 
+        vu[F.EXPPOS_SHORT] =
                   cast(ushort)((0x8000 & vu[F.EXPPOS_SHORT]) | 0x3FFE);
     }
   } else static if (real.mant_dig==53) { // real is double
@@ -1229,9 +1229,9 @@ real ldexp(real n, int exp);    /* intrinsic */
 real log(real x)
 {
     version (INLINE_YL2X)
-	return yl2x(x, LN2);
+        return yl2x(x, LN2);
     else
-	return std.c.math.logl(x);
+        return std.c.math.logl(x);
 }
 
 unittest
@@ -1253,9 +1253,9 @@ unittest
 real log10(real x)
 {
     version (INLINE_YL2X)
-	return yl2x(x, LOG2);
+        return yl2x(x, LOG2);
     else
-	return std.c.math.log10l(x);
+        return std.c.math.log10l(x);
 }
 
 unittest
@@ -1295,9 +1295,9 @@ real log1p(real x)              { return std.c.math.log1pl(x); }
 real log2(real x)
 {
     version (INLINE_YL2X)
-	return yl2x(x, 1);
+        return yl2x(x, 1);
     else
-	return std.c.math.log2l(x);
+        return std.c.math.log2l(x);
 }
 
 
@@ -2825,10 +2825,10 @@ body
                 ;
             }
         }
-	else
-	{
-	    static assert(0);
-	}
+        else
+        {
+            static assert(0);
+        }
     }
     else
     {
@@ -2857,15 +2857,15 @@ unittest
  * translate to a single x87 instruction.
  */
 
-real yl2x(real x, real y);	// y * log2(x)
-real yl2xp1(real x, real y);	// y * log2(x + 1)
+real yl2x(real x, real y);      // y * log2(x)
+real yl2xp1(real x, real y);    // y * log2(x + 1)
 
 unittest
 {
     version (INLINE_YL2X)
     {
-	assert(yl2x(1024, 1) == 10);
-	assert(yl2xp1(1023, 1) == 10);
+        assert(yl2x(1024, 1) == 10);
+        assert(yl2xp1(1023, 1) == 10);
     }
 }
 

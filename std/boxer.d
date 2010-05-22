@@ -2,7 +2,7 @@
  * This module is a set of types and functions for converting any object (value
  * or heap) into a generic box type, allowing the user to pass that object
  * around without knowing what's in the box, and then allowing him to recover
- * the value afterwards. 
+ * the value afterwards.
  *
  * Example:
 ---
@@ -18,15 +18,15 @@ real r = unbox!(real)(b);
  * UnboxException. As demonstrated, it uses implicit casts to behave in the exact
  * same way that static types behave. So for example, you can unbox from int to
  * real, but you cannot unbox from real to int: that would require an explicit
- * cast. 
+ * cast.
  *
  * This therefore means that attempting to unbox an int as a string will throw
  * an error instead of formatting it. In general, you can call the toString method
  * on the box and receive a good result, depending upon whether std.string.format
- * accepts it. 
+ * accepts it.
  *
  * Boxes can be compared to one another and they can be used as keys for
- * associative arrays. 
+ * associative arrays.
  *
  * There are also functions for converting to and from arrays of boxes.
  *
@@ -50,16 +50,16 @@ a = boxArray(arg_types, arg_data);
  * with the array.
  *
  * Authors:
- *	Burton Radons
+ *      Burton Radons
  * License:
- *	Public Domain
+ *      Public Domain
  * Bugs:
- *	$(UL
- *	$(LI $(BUGZILLA 309))
- *	$(LI $(BUGZILLA 1968))
- *	)
+ *      $(UL
+ *      $(LI $(BUGZILLA 309))
+ *      $(LI $(BUGZILLA 1968))
+ *      )
  * Macros:
- *	WIKI=Phobos/StdBoxer
+ *      WIKI=Phobos/StdBoxer
  */
 
 module std.boxer;
@@ -72,7 +72,7 @@ private import std.utf;
   * and recovering them later.  This comes into play in a wide spectrum of
   * utilities, such as with a scripting language, or as additional user data
   * for an object.
-  * 
+  *
   * Box an object by calling the box function:
   *
   *     Box x = box(4);
@@ -93,7 +93,7 @@ private import std.utf;
   * throw an error and not format it.  In general, you can call the toString
   * method on the box and receive a good result, depending upon whether
   * std.string.format accepts it.
-  * 
+  *
   * Boxes can be compared to one another and they can be used as keys for
   * associative arrays.  Boxes of different types can be compared to one
   * another, using the same casting rules as the main type system.
@@ -115,7 +115,7 @@ private import std.utf;
   *     bool unboxable!(T) (Box value);
   *     bool Box.unboxable(TypeInfo T);
   */
-  
+
 /** Return the next type in an array typeinfo, or null if there is none. */
 private bool isArrayTypeInfo(TypeInfo type)
 {
@@ -127,7 +127,7 @@ private bool isArrayTypeInfo(TypeInfo type)
 private enum TypeClass
 {
     Bool, /**< bool */
-    Bit = Bool,	// for backwards compatibility
+    Bit = Bool, // for backwards compatibility
     Integer, /**< byte, ubyte, short, ushort, int, uint, long, ulong */
     Float, /**< float, double, real */
     Complex, /**< cfloat, cdouble, creal */
@@ -149,13 +149,13 @@ private enum TypeClass
 struct Box
 {
     private TypeInfo p_type; /**< The type of the contained object. */
-    
+
     private union
     {
         void* p_longData; /**< An array of the contained object. */
         void[8] p_shortData; /**< Data used when the object is small. */
     }
-    
+
     private static TypeClass findTypeClass(TypeInfo type)
     {
         if (cast(TypeInfo_Class) type)
@@ -194,36 +194,36 @@ struct Box
             }
         }
     }
-    
+
     /** Return whether this value could be unboxed as the given type without throwing. */
     bool unboxable(TypeInfo test)
     {
         if (type is test)
             return true;
-        
+
         TypeInfo_Class ca = cast(TypeInfo_Class) type, cb = cast(TypeInfo_Class) test;
-        
+
         if (ca !is null && cb !is null)
         {
             ClassInfo ia = (*cast(Object *) data).classinfo, ib = cb.info;
-            
+
             for ( ; ia !is null; ia = ia.base)
                 if (ia is ib)
                     return true;
             return false;
         }
-        
+
         TypeClass ta = findTypeClass(type), tb = findTypeClass(test);
-        
+
         if (type is typeid(void*) && *cast(void**) data is null)
             return (tb == TypeClass.Class || tb == TypeClass.Pointer || tb == TypeClass.Array);
-        
+
         if (test is typeid(void*))
             return (tb == TypeClass.Class || tb == TypeClass.Pointer || tb == TypeClass.Array);
-        
+
         if (ta == TypeClass.Pointer && tb == TypeClass.Pointer)
             return (cast(TypeInfo_Pointer)type).next is (cast(TypeInfo_Pointer)test).next;
-        
+
         if ((ta == tb && ta != TypeClass.Other)
         || (ta == TypeClass.Bool && tb == TypeClass.Integer)
         || (ta <= TypeClass.Integer && tb == TypeClass.Float)
@@ -231,7 +231,7 @@ struct Box
             return true;
         return false;
     }
-    
+
     /**
      * Property for the type contained by the box.
      * This is initially null and cannot be assigned directly.
@@ -241,7 +241,7 @@ struct Box
     {
         return p_type;
     }
-    
+
     /**
      * Property for the data pointer to the value of the box.
      * This is initially null and cannot be assigned directly.
@@ -250,41 +250,41 @@ struct Box
     void[] data()
     {
         size_t size = type.tsize();
-        
+
         return size <= p_shortData.length ? p_shortData[0..size] : p_longData[0..size];
     }
 
     /**
      * Attempt to convert the boxed value into a string using std.string.format;
      * this will throw if that function cannot handle it. If the box is
-     * uninitialized then this returns "".    
+     * uninitialized then this returns "".
      */
     char[] toString()
     {
         if (type is null)
             return "<empty box>";
-        
+
         TypeInfo[2] arguments;
         char[] string;
         void[] args = new void[(char[]).sizeof + data.length];
         char[] format = "%s";
-        
+
         arguments[0] = typeid(char[]);
         arguments[1] = type;
-        
+
         void putc(dchar ch)
         {
             std.utf.encode(string, ch);
         }
-        
+
         args[0..(char[]).sizeof] = (cast(void*) &format)[0..(char[]).sizeof];
         args[(char[]).sizeof..length] = data;
         std.format.doFormat(&putc, arguments, args.ptr);
         delete args;
-        
+
         return string;
     }
-    
+
     private bool opEqualsInternal(Box other, bool inverted)
     {
         if (type != other.type)
@@ -295,13 +295,13 @@ struct Box
                     return false;
                 return other.opEqualsInternal(*this, true);
             }
-            
+
             TypeClass ta = findTypeClass(type), tb = findTypeClass(other.type);
-            
+
             if (ta <= TypeClass.Integer && tb <= TypeClass.Integer)
             {
                 char[] na = type.toString, nb = other.type.toString;
-                
+
                 if (na == "ulong" || nb == "ulong")
                     return unbox!(ulong)(*this) == unbox!(ulong)(other);
                 return unbox!(long)(*this) == unbox!(long)(other);
@@ -312,22 +312,22 @@ struct Box
                 return unbox!(creal)(*this) == unbox!(creal)(other);
             else if (tb == TypeClass.Imaginary)
                 return unbox!(ireal)(*this) == unbox!(ireal)(other);
-            
+
             assert (0);
         }
-        
+
         return cast(bool)type.equals(data.ptr, other.data.ptr);
     }
 
     /**
      * Compare this box's value with another box. This implicitly casts if the
-     * types are different, identical to the regular type system.    
+     * types are different, identical to the regular type system.
      */
     bool opEquals(Box other)
     {
         return opEqualsInternal(other, false);
     }
-    
+
     private float opCmpInternal(Box other, bool inverted)
     {
         if (type != other.type)
@@ -338,9 +338,9 @@ struct Box
                     return 0;
                 return other.opCmpInternal(*this, true);
             }
-            
+
             TypeClass ta = findTypeClass(type), tb = findTypeClass(other.type);
-            
+
             if (ta <= TypeClass.Integer && tb == TypeClass.Integer)
             {
                 if (type == typeid(ulong) || other.type == typeid(ulong))
@@ -348,7 +348,7 @@ struct Box
                     ulong va = unbox!(ulong)(*this), vb = unbox!(ulong)(other);
                     return va > vb ? 1 : va < vb ? -1 : 0;
                 }
-                
+
                 long va = unbox!(long)(*this), vb = unbox!(long)(other);
                 return va > vb ? 1 : va < vb ? -1 : 0;
             }
@@ -367,10 +367,10 @@ struct Box
                 ireal va = unbox!(ireal)(*this), vb = unbox!(ireal)(other);
                 return va > vb ? 1 : va < vb ? -1 : va == vb ? 0 : float.nan;
             }
-            
+
             assert (0);
         }
-        
+
         return type.compare(data.ptr, other.data.ptr);
     }
 
@@ -394,8 +394,8 @@ struct Box
 
 /**
  * Box the single argument passed to the function. If more or fewer than one
- * argument is passed, this will assert. 
- */    
+ * argument is passed, this will assert.
+ */
 Box box(...)
 in
 {
@@ -410,7 +410,7 @@ body
  * Box the explicitly-defined object. type must not be null; data must not be
  * null if the type's size is greater than zero.
  * The data is copied.
- */    
+ */
 Box box(TypeInfo type, void* data)
 in
 {
@@ -420,13 +420,13 @@ body
 {
     Box result;
     size_t size = type.tsize();
-    
+
     result.p_type = type;
     if (size <= result.p_shortData.length)
         result.p_shortData[0..size] = data[0..size];
     else
         result.p_longData = data[0..size].dup.ptr;
-        
+
     return result;
 }
 
@@ -438,23 +438,23 @@ private size_t argumentLength(size_t baseLength)
 
 /**
  * Convert a list of arguments into a list of boxes.
- */    
+ */
 Box[] boxArray(TypeInfo[] types, void* data)
 {
     Box[] array = new Box[types.length];
-    
+
     foreach(size_t index, TypeInfo type; types)
     {
         array[index] = box(type, data);
         data += argumentLength(type.tsize());
     }
-    
+
     return array;
 }
 
 /**
  * Box each argument passed to the function, returning an array of boxes.
- */    
+ */
 Box[] boxArray(...)
 {
     return boxArray(_arguments, _argptr);
@@ -462,16 +462,16 @@ Box[] boxArray(...)
 
 /**
  * Convert an array of boxes into an array of arguments.
- */    
+ */
 void boxArrayToArguments(Box[] arguments, out TypeInfo[] types, out void* data)
 {
     size_t dataLength;
     void* pointer;
-    
+
     /* Determine the number of bytes of data to allocate by summing the arguments. */
     foreach (Box item; arguments)
         dataLength += argumentLength(item.data.length);
-        
+
     types = new TypeInfo[arguments.length];
     pointer = data = (new void[dataLength]).ptr;
 
@@ -481,16 +481,16 @@ void boxArrayToArguments(Box[] arguments, out TypeInfo[] types, out void* data)
         types[index] = item.type;
         pointer[0..item.data.length] = item.data;
         pointer += argumentLength(item.data.length);
-    }    
+    }
 }
 
 /**
  * This class is thrown if unbox is unable to cast the value into the desired
  * result.
- */    
+ */
 class UnboxException : Exception
 {
-    Box object;	/// This is the box that the user attempted to unbox.
+    Box object; /// This is the box that the user attempted to unbox.
 
     TypeInfo outputType; /// This is the type that the user attempted to unbox the value as.
 
@@ -512,7 +512,7 @@ private template unboxCastReal(T)
     T unboxCastReal(Box value)
     {
         assert (value.type !is null);
-        
+
         if (value.type is typeid(float))
             return cast(T) *cast(float*) value.data;
         if (value.type is typeid(double))
@@ -529,7 +529,7 @@ private template unboxCastInteger(T)
     T unboxCastInteger(Box value)
     {
         assert (value.type !is null);
-        
+
         if (value.type is typeid(int))
             return cast(T) *cast(int*) value.data;
         if (value.type is typeid(uint))
@@ -558,7 +558,7 @@ private template unboxCastComplex(T)
     T unboxCastComplex(Box value)
     {
         assert (value.type !is null);
-        
+
         if (value.type is typeid(cfloat))
             return cast(T) *cast(cfloat*) value.data;
         if (value.type is typeid(cdouble))
@@ -581,7 +581,7 @@ private template unboxCastImaginary(T)
     T unboxCastImaginary(Box value)
     {
         assert (value.type !is null);
-        
+
         if (value.type is typeid(ifloat))
             return cast(T) *cast(ifloat*) value.data;
         if (value.type is typeid(idouble))
@@ -597,7 +597,7 @@ private template unboxCastImaginary(T)
  * takes a box object and returns the specified type.
  *
  * To use it, instantiate the template with the desired result type, and then
- * call the function with the box to convert. 
+ * call the function with the box to convert.
  * This will implicitly cast base types as necessary and in a way consistent
  * with static types - for example, it will cast a boxed byte into int, but it
  * won't cast a boxed float into short.
@@ -613,13 +613,13 @@ private template unboxCastImaginary(T)
  * Box y = box(4);
  * int x = unbox!(int) (y);
  * ---
- */    
+ */
 template unbox(T)
 {
     T unbox(Box value)
     {
         assert (value.type !is null);
-        
+
         if (typeid(T) is value.type)
             return *cast(T*) value.data;
         throw new UnboxException(value, typeid(T));
@@ -649,19 +649,19 @@ template unbox(T : Object)
     T unbox(Box value)
     {
         assert (value.type !is null);
-        
+
         if (typeid(T) == value.type || cast(TypeInfo_Class) value.type)
         {
             Object object = *cast(Object*)value.data;
             T result = cast(T)object;
-            
+
             if (object is null)
                 return null;
             if (result is null)
                 throw new UnboxException(value, typeid(T));
             return result;
         }
-        
+
         if (typeid(void*) is value.type && *cast(void**) value.data is null)
             return null;
         throw new UnboxException(value, typeid(T));
@@ -673,7 +673,7 @@ template unbox(T : T[])
     T[] unbox(Box value)
     {
         assert (value.type !is null);
-        
+
         if (typeid(T[]) is value.type)
             return *cast(T[]*) value.data;
         if (typeid(void*) is value.type && *cast(void**) value.data is null)
@@ -687,14 +687,14 @@ template unbox(T : T*)
     T* unbox(Box value)
     {
         assert (value.type !is null);
-        
+
         if (typeid(T*) is value.type)
             return *cast(T**) value.data;
         if (typeid(void*) is value.type && *cast(void**) value.data is null)
             return null;
         if (typeid(T[]) is value.type)
             return (*cast(T[]*) value.data).ptr;
-        
+
         throw new UnboxException(value, typeid(T*));
     }
 }
@@ -704,14 +704,14 @@ template unbox(T : void*)
     T unbox(Box value)
     {
         assert (value.type !is null);
-        
+
         if (cast(TypeInfo_Pointer) value.type)
             return *cast(void**) value.data;
         if (isArrayTypeInfo(value.type))
             return (*cast(void[]*) value.data).ptr;
         if (cast(TypeInfo_Class) value.type)
             return cast(T)(*cast(Object*) value.data);
-        
+
         throw new UnboxException(value, typeid(T));
     }
 }
@@ -719,7 +719,7 @@ template unbox(T : void*)
 /**
  * Return whether the value can be unboxed as the given type; if this returns
  * false, attempting to do so will throw UnboxException.
- */    
+ */
 template unboxable(T)
 {
     bool unboxable(Box value)
@@ -735,7 +735,7 @@ private template unboxTest(T)
     {
         T result;
         bool unboxable = value.unboxable(typeid(T));
-        
+
         try result = unbox!(T) (value);
         catch (UnboxException error)
         {
@@ -744,7 +744,7 @@ private template unboxTest(T)
             assert (!unboxable);
             throw error;
         }
-        
+
         if (!unboxable)
             throw new Error ("Unboxed " ~ value.type.toString ~ " as " ~ typeid(T).toString ~ "; however, unboxable says it should fail.");
         return result;
@@ -757,9 +757,9 @@ unittest
     class B : A { }
     struct SA { }
     struct SB { }
-    
+
     Box a, b;
-    
+
     /* Call the function, catch UnboxException, return that it threw correctly. */
     bool fails(void delegate()func)
     {
@@ -768,107 +768,107 @@ unittest
             return true;
         return false;
     }
-    
+
     /* Check that equals and comparison work properly. */
     a = box(0);
     b = box(32);
     assert (a != b);
     assert (a == a);
     assert (a < b);
-    
+
     /* Check that toString works properly. */
     assert (b.toString == "32");
-    
+
     /* Assert that unboxable works. */
     assert (unboxable!(char[])(box("foobar")));
-    
+
     /* Assert that we can cast from int to byte. */
     assert (unboxTest!(byte)(b) == 32);
-    
+
     /* Assert that we can cast from int to real. */
     assert (unboxTest!(real)(b) == 32.0L);
-    
+
     /* Check that real works properly. */
     assert (unboxTest!(real)(box(32.45L)) == 32.45L);
-    
+
     /* Assert that we cannot implicitly cast from real to int. */
     assert(fails(delegate void() { unboxTest!(int)(box(1.3)); }));
-    
+
     /* Check that the unspecialized unbox template works. */
     assert(unboxTest!(char[])(box("foobar")) == "foobar");
-    
+
     /* Assert that complex works correctly. */
     assert(unboxTest!(cdouble)(box(1 + 2i)) == 1 + 2i);
-    
+
     /* Assert that imaginary works correctly. */
     assert(unboxTest!(ireal)(box(45i)) == 45i);
-    
+
     /* Create an array of boxes from arguments. */
     Box[] array = boxArray(16, "foobar", new Object);
-    
+
     assert(array.length == 3);
     assert(unboxTest!(int)(array[0]) == 16);
     assert(unboxTest!(char[])(array[1]) == "foobar");
     assert(unboxTest!(Object)(array[2]) !is null);
-    
+
     /* Convert the box array back into arguments. */
     TypeInfo[] array_types;
     void* array_data;
-    
+
     boxArrayToArguments(array, array_types, array_data);
     assert (array_types.length == 3);
-    
+
     /* Confirm the symmetry. */
     assert (boxArray(array_types, array_data) == array);
-    
+
     /* Assert that we can cast from int to creal. */
     assert (unboxTest!(creal)(box(45)) == 45+0i);
-    
+
     /* Assert that we can cast from idouble to creal. */
     assert (unboxTest!(creal)(box(45i)) == 0+45i);
-    
+
     /* Assert that equality testing casts properly. */
     assert (box(1) == box(cast(byte)1));
     assert (box(cast(real)4) == box(4));
     assert (box(5) == box(5+0i));
     assert (box(0+4i) == box(4i));
     assert (box(8i) == box(0+8i));
-    
+
     /* Assert that comparisons cast properly. */
     assert (box(450) < box(451));
     assert (box(4) > box(3.0));
     assert (box(0+3i) < box(0+4i));
-    
+
     /* Assert that casting from bool to int works. */
     assert (1 == unboxTest!(int)(box(true)));
     assert (box(1) == box(true));
- 
+
     /* Assert that unboxing to an object works properly. */
     assert (unboxTest!(B)(box(cast(A)new B)) !is null);
-    
-    /* Assert that illegal object casting fails properly. */   
+
+    /* Assert that illegal object casting fails properly. */
     assert (fails(delegate void() { unboxTest!(B)(box(new A)); }));
-    
+
     /* Assert that we can unbox a null. */
     assert (unboxTest!(A)(box(cast(A)null)) is null);
     assert (unboxTest!(A)(box(null)) is null);
-    
+
     /* Unboxing null in various contexts. */
     assert (unboxTest!(char[])(box(null)) is null);
     assert (unboxTest!(int*)(box(null)) is null);
-    
+
     /* Assert that unboxing between pointer types fails. */
     int [1] p;
     assert (fails(delegate void() { unboxTest!(char*)(box(p.ptr)); }));
-    
+
     /* Assert that unboxing various types as void* does work. */
     assert (unboxTest!(void*)(box(p.ptr))); // int*
     assert (unboxTest!(void*)(box(p))); // int[]
     assert (unboxTest!(void*)(box(new A))); // Object
-    
+
     /* Assert that we can't unbox an integer as bool. */
     assert (!unboxable!(bool) (box(4)));
-    
+
     /* Assert that we can't unbox a struct as another struct. */
     SA sa;
     assert (!unboxable!(SB)(box(sa)));

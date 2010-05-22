@@ -42,21 +42,21 @@ extern (C):
 
 /***********************
  * Computes:
- *	a[] = b[] + c[]
+ *      a[] = b[] + c[]
  */
 
 T[] _arraySliceSliceAddSliceAssign_r(T[] a, T[] c, T[] b)
 in
 {
-	assert(a.length == b.length && b.length == c.length);
-	assert(disjoint(a, b));
-	assert(disjoint(a, c));
-	assert(disjoint(b, c));
+        assert(a.length == b.length && b.length == c.length);
+        assert(disjoint(a, b));
+        assert(disjoint(a, c));
+        assert(disjoint(b, c));
 }
 body
 {
     for (int i = 0; i < a.length; i++)
-	a[i] = b[i] + c[i];
+        a[i] = b[i] + c[i];
     return a;
 }
 
@@ -65,35 +65,35 @@ unittest
     printf("_arraySliceSliceAddSliceAssign_r unittest\n");
     for (cpuid = 0; cpuid < CPUID_MAX; cpuid++)
     {
-	version (log) printf("    cpuid %d\n", cpuid);
+        version (log) printf("    cpuid %d\n", cpuid);
 
-	for (int j = 0; j < 2; j++)
-	{
-	    const int dim = 67;
-	    T[] a = new T[dim + j];	// aligned on 16 byte boundary
-	    a = a[j .. dim + j];	// misalign for second iteration
-	    T[] b = new T[dim + j];
-	    b = b[j .. dim + j];
-	    T[] c = new T[dim + j];
-	    c = c[j .. dim + j];
+        for (int j = 0; j < 2; j++)
+        {
+            const int dim = 67;
+            T[] a = new T[dim + j];     // aligned on 16 byte boundary
+            a = a[j .. dim + j];        // misalign for second iteration
+            T[] b = new T[dim + j];
+            b = b[j .. dim + j];
+            T[] c = new T[dim + j];
+            c = c[j .. dim + j];
 
-	    for (int i = 0; i < dim; i++)
-	    {   a[i] = cast(T)i;
-		b[i] = cast(T)(i + 7);
-		c[i] = cast(T)(i * 2);
-	    }
+            for (int i = 0; i < dim; i++)
+            {   a[i] = cast(T)i;
+                b[i] = cast(T)(i + 7);
+                c[i] = cast(T)(i * 2);
+            }
 
-	    c[] = a[] + b[];
+            c[] = a[] + b[];
 
-	    for (int i = 0; i < dim; i++)
-	    {
-		if (c[i] != cast(T)(a[i] + b[i]))
-		{
-		    printf("[%d]: %Lg != %Lg + %Lg\n", i, c[i], a[i], b[i]);
-		    assert(0);
-		}
-	    }
-	}
+            for (int i = 0; i < dim; i++)
+            {
+                if (c[i] != cast(T)(a[i] + b[i]))
+                {
+                    printf("[%d]: %Lg != %Lg + %Lg\n", i, c[i], a[i], b[i]);
+                    assert(0);
+                }
+            }
+        }
     }
 }
 
@@ -101,21 +101,21 @@ unittest
 
 /***********************
  * Computes:
- *	a[] = b[] - c[]
+ *      a[] = b[] - c[]
  */
 
 T[] _arraySliceSliceMinSliceAssign_r(T[] a, T[] c, T[] b)
 in
 {
-	assert(a.length == b.length && b.length == c.length);
-	assert(disjoint(a, b));
-	assert(disjoint(a, c));
-	assert(disjoint(b, c));
+        assert(a.length == b.length && b.length == c.length);
+        assert(disjoint(a, b));
+        assert(disjoint(a, c));
+        assert(disjoint(b, c));
 }
 body
 {
     for (int i = 0; i < a.length; i++)
-	a[i] = b[i] - c[i];
+        a[i] = b[i] - c[i];
     return a;
 }
 
@@ -125,35 +125,35 @@ unittest
     printf("_arraySliceSliceMinSliceAssign_r unittest\n");
     for (cpuid = 0; cpuid < CPUID_MAX; cpuid++)
     {
-	version (log) printf("    cpuid %d\n", cpuid);
+        version (log) printf("    cpuid %d\n", cpuid);
 
-	for (int j = 0; j < 2; j++)
-	{
-	    const int dim = 67;
-	    T[] a = new T[dim + j];	// aligned on 16 byte boundary
-	    a = a[j .. dim + j];	// misalign for second iteration
-	    T[] b = new T[dim + j];
-	    b = b[j .. dim + j];
-	    T[] c = new T[dim + j];
-	    c = c[j .. dim + j];
+        for (int j = 0; j < 2; j++)
+        {
+            const int dim = 67;
+            T[] a = new T[dim + j];     // aligned on 16 byte boundary
+            a = a[j .. dim + j];        // misalign for second iteration
+            T[] b = new T[dim + j];
+            b = b[j .. dim + j];
+            T[] c = new T[dim + j];
+            c = c[j .. dim + j];
 
-	    for (int i = 0; i < dim; i++)
-	    {   a[i] = cast(T)i;
-		b[i] = cast(T)(i + 7);
-		c[i] = cast(T)(i * 2);
-	    }
+            for (int i = 0; i < dim; i++)
+            {   a[i] = cast(T)i;
+                b[i] = cast(T)(i + 7);
+                c[i] = cast(T)(i * 2);
+            }
 
-	    c[] = a[] - b[];
+            c[] = a[] - b[];
 
-	    for (int i = 0; i < dim; i++)
-	    {
-		if (c[i] != cast(T)(a[i] - b[i]))
-		{
-		    printf("[%d]: %Lg != %Lg - %Lg\n", i, c[i], a[i], b[i]);
-		    assert(0);
-		}
-	    }
-	}
+            for (int i = 0; i < dim; i++)
+            {
+                if (c[i] != cast(T)(a[i] - b[i]))
+                {
+                    printf("[%d]: %Lg != %Lg - %Lg\n", i, c[i], a[i], b[i]);
+                    assert(0);
+                }
+            }
+        }
     }
 }
 
@@ -161,7 +161,7 @@ unittest
 
 /***********************
  * Computes:
- *	a[] -= b[] * value
+ *      a[] -= b[] * value
  */
 
 T[] _arraySliceExpMulSliceMinass_r(T[] a, T value, T[] b)
@@ -171,14 +171,14 @@ T[] _arraySliceExpMulSliceMinass_r(T[] a, T value, T[] b)
 
 /***********************
  * Computes:
- *	a[] += b[] * value
+ *      a[] += b[] * value
  */
 
 T[] _arraySliceExpMulSliceAddass_r(T[] a, T value, T[] b)
 in
 {
-	assert(a.length == b.length);
-	assert(disjoint(a, b));
+        assert(a.length == b.length);
+        assert(disjoint(a, b));
 }
 body
 {
@@ -188,7 +188,7 @@ body
 
     // Handle remainder
     while (aptr < aend)
-	*aptr++ += *bptr++ * value;
+        *aptr++ += *bptr++ * value;
 
     return a;
 }
@@ -199,37 +199,37 @@ unittest
 
     cpuid = 1;
     {
-	version (log) printf("    cpuid %d\n", cpuid);
+        version (log) printf("    cpuid %d\n", cpuid);
 
-	for (int j = 0; j < 1; j++)
-	{
-	    const int dim = 67;
-	    T[] a = new T[dim + j];	// aligned on 16 byte boundary
-	    a = a[j .. dim + j];	// misalign for second iteration
-	    T[] b = new T[dim + j];
-	    b = b[j .. dim + j];
-	    T[] c = new T[dim + j];
-	    c = c[j .. dim + j];
+        for (int j = 0; j < 1; j++)
+        {
+            const int dim = 67;
+            T[] a = new T[dim + j];     // aligned on 16 byte boundary
+            a = a[j .. dim + j];        // misalign for second iteration
+            T[] b = new T[dim + j];
+            b = b[j .. dim + j];
+            T[] c = new T[dim + j];
+            c = c[j .. dim + j];
 
-	    for (int i = 0; i < dim; i++)
-	    {   a[i] = cast(T)i;
-		b[i] = cast(T)(i + 7);
-		c[i] = cast(T)(i * 2);
-	    }
+            for (int i = 0; i < dim; i++)
+            {   a[i] = cast(T)i;
+                b[i] = cast(T)(i + 7);
+                c[i] = cast(T)(i * 2);
+            }
 
-	    b[] = c[];
-	    c[] += a[] * 6;
+            b[] = c[];
+            c[] += a[] * 6;
 
-	    for (int i = 0; i < dim; i++)
-	    {
-		//printf("[%d]: %Lg ?= %Lg + %Lg * 6\n", i, c[i], b[i], a[i]);
-		if (c[i] != cast(T)(b[i] + a[i] * 6))
-		{
-		    printf("[%d]: %Lg ?= %Lg + %Lg * 6\n", i, c[i], b[i], a[i]);
-		    assert(0);
-		}
-	    }
-	}
+            for (int i = 0; i < dim; i++)
+            {
+                //printf("[%d]: %Lg ?= %Lg + %Lg * 6\n", i, c[i], b[i], a[i]);
+                if (c[i] != cast(T)(b[i] + a[i] * 6))
+                {
+                    printf("[%d]: %Lg ?= %Lg + %Lg * 6\n", i, c[i], b[i], a[i]);
+                    assert(0);
+                }
+            }
+        }
     }
 }
 

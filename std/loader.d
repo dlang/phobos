@@ -36,7 +36,7 @@
 
 
 
-/** \file D/std/loader.d This file contains the \c D standard library 
+/** \file D/std/loader.d This file contains the \c D standard library
  * executable module loader library, and the ExeModule class.
  */
 
@@ -78,14 +78,14 @@ else version(Posix)
 
     extern(C)
     {
-	alias void* HModule_;
+        alias void* HModule_;
     }
 }
 else
 {
-	const int platform_not_discriminated = 0;
+        const int platform_not_discriminated = 0;
 
-	static assert(platform_not_discriminated);
+        static assert(platform_not_discriminated);
 }
 
 /** The platform-independent module handle. Note that this has to be
@@ -106,7 +106,7 @@ typedef void    *HXModule;
 
 /** ExeModule library Initialisation
  *
- * \retval <0 Initialisation failed. Processing must gracefully terminate, 
+ * \retval <0 Initialisation failed. Processing must gracefully terminate,
  * without making any use of the ExeModule library
  * \retval 0 Initialisation succeeded for the first time. Any necessary resources
  * were successfully allocated
@@ -122,7 +122,7 @@ public void ExeModule_Uninit()
     ExeModule_Uninit_();
 }
 
-/** 
+/**
  *
  * \note The value of the handle returned may not be a valid handle for your operating
  * system, and you <b>must not</b> attempt to use it with any other operating system
@@ -239,20 +239,20 @@ version(Windows)
 
     private string ExeModule_Error_()
     {
-	return sysErrorString(s_lastError);
+        return sysErrorString(s_lastError);
     }
 
     private string ExeModule_GetPath_(HXModule hModule)
     {
         char    szFileName[260]; // Need to use a constant here
 
-	// http://msdn.microsoft.com/library/default.asp?url=/library/en-us/dllproc/base/getmodulefilename.asp
+        // http://msdn.microsoft.com/library/default.asp?url=/library/en-us/dllproc/base/getmodulefilename.asp
         uint cch = GetModuleFileNameA(cast(HModule_)hModule, szFileName.ptr, szFileName.length);
 
-	if (cch == 0)
-	{
+        if (cch == 0)
+        {
             record_error_();
-	}
+        }
         return szFileName[0 .. cch].dup;
     }
 }
@@ -308,8 +308,8 @@ else version(Posix)
     }
     body
     {
-	ExeModuleInfo*   mi_p = moduleName in s_modules;
-	ExeModuleInfo   mi = mi_p is null ? null : *mi_p;
+        ExeModuleInfo*   mi_p = moduleName in s_modules;
+        ExeModuleInfo   mi = mi_p is null ? null : *mi_p;
 
         if(null !is mi)
         {
@@ -448,9 +448,9 @@ else version(Posix)
 }
 else
 {
-	const int platform_not_discriminated = 0;
+        const int platform_not_discriminated = 0;
 
-	static assert(platform_not_discriminated);
+        static assert(platform_not_discriminated);
 }
 
 /* /////////////////////////////////////////////////////////////////////////////
@@ -470,12 +470,12 @@ public:
     {
       version (Posix)
       {
-	char[80] buf = void;
-	super(std.string.toString(strerror_r(errcode, buf.ptr, buf.length)).dup);
+        char[80] buf = void;
+        super(std.string.toString(strerror_r(errcode, buf.ptr, buf.length)).dup);
       }
       else
       {
-	super(std.string.toString(strerror(errcode)).dup);
+        super(std.string.toString(strerror(errcode)).dup);
       }
     }
 }
@@ -500,19 +500,19 @@ public:
         }
         else
         {
-	    version (Windows)
-	    {
-		string path = Path();
-		m_hModule = cast(HXModule)LoadLibraryA(toStringz(path));
-		if (m_hModule == null)
-		    throw new ExeModuleException(GetLastError());
-	    }
-	    else version (Posix)
-	    {
-		m_hModule = ExeModule_AddRef(hModule);
-	    }
-	    else
-		static assert(0);
+            version (Windows)
+            {
+                string path = Path();
+                m_hModule = cast(HXModule)LoadLibraryA(toStringz(path));
+                if (m_hModule == null)
+                    throw new ExeModuleException(GetLastError());
+            }
+            else version (Posix)
+            {
+                m_hModule = ExeModule_AddRef(hModule);
+            }
+            else
+                static assert(0);
         }
     }
 
@@ -523,22 +523,22 @@ public:
     }
     body
     {
-	version (Windows)
-	{
-	    m_hModule = cast(HXModule)LoadLibraryA(toStringz(moduleName));
-	    if (null is m_hModule)
-		throw new ExeModuleException(GetLastError());
-	}
-	else version (Posix)
-	{
-	    m_hModule = ExeModule_Load(moduleName);
-	    if (null is m_hModule)
-		throw new ExeModuleException(ExeModule_Error());
-	}
-	else
-	{
-	    static assert(0);		// unsupported system
-	}
+        version (Windows)
+        {
+            m_hModule = cast(HXModule)LoadLibraryA(toStringz(moduleName));
+            if (null is m_hModule)
+                throw new ExeModuleException(GetLastError());
+        }
+        else version (Posix)
+        {
+            m_hModule = ExeModule_Load(moduleName);
+            if (null is m_hModule)
+                throw new ExeModuleException(ExeModule_Error());
+        }
+        else
+        {
+            static assert(0);           // unsupported system
+        }
     }
     ~this()
     {
@@ -557,17 +557,17 @@ public:
     {
         if(null !is m_hModule)
         {
-	    version (Windows)
-	    {
-		if(!FreeLibrary(cast(HModule_)m_hModule))
-		    throw new ExeModuleException(GetLastError());
-	    }
-	    else version (Posix)
-	    {
-		ExeModule_Release(m_hModule);
-	    }
-	    else
-		static assert(0);
+            version (Windows)
+            {
+                if(!FreeLibrary(cast(HModule_)m_hModule))
+                    throw new ExeModuleException(GetLastError());
+            }
+            else version (Posix)
+            {
+                ExeModule_Release(m_hModule);
+            }
+            else
+                static assert(0);
         }
     }
 /// @}
@@ -582,27 +582,27 @@ public:
      */
     void *getSymbol(in string symbolName)
     {
-	version (Windows)
-	{
-	    void *symbol = GetProcAddress(cast(HModule_)m_hModule, toStringz(symbolName));
-	    if(null is symbol)
-	    {
-		throw new ExeModuleException(GetLastError());
-	    }
-	}
-	else version (Posix)
-	{
-	    void *symbol = ExeModule_GetSymbol(m_hModule, symbolName);
+        version (Windows)
+        {
+            void *symbol = GetProcAddress(cast(HModule_)m_hModule, toStringz(symbolName));
+            if(null is symbol)
+            {
+                throw new ExeModuleException(GetLastError());
+            }
+        }
+        else version (Posix)
+        {
+            void *symbol = ExeModule_GetSymbol(m_hModule, symbolName);
 
-	    if(null is symbol)
-	    {
-		throw new ExeModuleException(ExeModule_Error());
-	    }
-	}
-	else
-	{
-	    static assert(0);
-	}
+            if(null is symbol)
+            {
+                throw new ExeModuleException(ExeModule_Error());
+            }
+        }
+        else
+        {
+            static assert(0);
+        }
 
         return symbol;
     }
@@ -635,23 +635,23 @@ public:
     {
         assert(null != m_hModule);
 
-	version (Windows)
-	{
-	    char szFileName[260]; // Need to use a constant here
+        version (Windows)
+        {
+            char szFileName[260]; // Need to use a constant here
 
-	    // http://msdn.microsoft.com/library/default.asp?url=/library/en-us/dllproc/base/getmodulefilename.asp
-	    uint cch = GetModuleFileNameA(cast(HModule_)m_hModule, szFileName.ptr, szFileName.length);
-	    if (cch == 0)
-		throw new ExeModuleException(GetLastError());
+            // http://msdn.microsoft.com/library/default.asp?url=/library/en-us/dllproc/base/getmodulefilename.asp
+            uint cch = GetModuleFileNameA(cast(HModule_)m_hModule, szFileName.ptr, szFileName.length);
+            if (cch == 0)
+                throw new ExeModuleException(GetLastError());
 
-	    return szFileName[0 .. cch].dup;
-	}
-	else version (Posix)
-	{
-	    return ExeModule_GetPath_(m_hModule);
-	}
-	else
-	    static assert(0);
+            return szFileName[0 .. cch].dup;
+        }
+        else version (Posix)
+        {
+            return ExeModule_GetPath_(m_hModule);
+        }
+        else
+            static assert(0);
     }
 /// @}
 

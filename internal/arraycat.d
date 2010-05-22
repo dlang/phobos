@@ -21,20 +21,20 @@ void[] _d_arraycopy(uint size, void[] from, void[] to)
 
     if (to.length != from.length)
     {
-	//throw new Error(std.string.format("lengths don't match for array copy, %s = %s", to.length, from.length));
-	throw new Error(cast(string) ("lengths don't match for array copy," ~
+        //throw new Error(std.string.format("lengths don't match for array copy, %s = %s", to.length, from.length));
+        throw new Error(cast(string) ("lengths don't match for array copy," ~
                                       toString(to.length) ~ " = "
                                       ~ toString(from.length)));
     }
     else if (to.ptr + to.length * size <= from.ptr ||
-	from.ptr + from.length * size <= to.ptr)
+        from.ptr + from.length * size <= to.ptr)
     {
-	memcpy(to.ptr, from.ptr, to.length * size);
+        memcpy(to.ptr, from.ptr, to.length * size);
     }
     else
     {
-	throw new Error("overlapping array copy");
-	//memmove(to.ptr, from.ptr, to.length * size);
+        throw new Error("overlapping array copy");
+        //memmove(to.ptr, from.ptr, to.length * size);
     }
     return to;
 }

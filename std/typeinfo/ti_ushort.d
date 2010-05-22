@@ -9,31 +9,31 @@ class TypeInfo_t : TypeInfo
 
     hash_t getHash(void *p)
     {
-	return *cast(ushort *)p;
+        return *cast(ushort *)p;
     }
 
     int equals(void *p1, void *p2)
     {
-	return *cast(ushort *)p1 == *cast(ushort *)p2;
+        return *cast(ushort *)p1 == *cast(ushort *)p2;
     }
 
     int compare(void *p1, void *p2)
     {
-	return *cast(ushort *)p1 - *cast(ushort *)p2;
+        return *cast(ushort *)p1 - *cast(ushort *)p2;
     }
 
     size_t tsize()
     {
-	return ushort.sizeof;
+        return ushort.sizeof;
     }
 
     void swap(void *p1, void *p2)
     {
-	ushort t;
+        ushort t;
 
-	t = *cast(ushort *)p1;
-	*cast(ushort *)p1 = *cast(ushort *)p2;
-	*cast(ushort *)p2 = t;
+        t = *cast(ushort *)p1;
+        *cast(ushort *)p1 = *cast(ushort *)p2;
+        *cast(ushort *)p2 = t;
     }
 }
 

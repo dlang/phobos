@@ -9,7 +9,7 @@ version (Windows)
 }
 else
 {
-    static assert(0);		// Windows only
+    static assert(0);           // Windows only
 }
 
 extern (Windows)
@@ -165,24 +165,24 @@ enum : uint
 
 enum
 {
-	ERROR_SUCCESS =                    0,
-	ERROR_INVALID_FUNCTION =           1,
-	ERROR_FILE_NOT_FOUND =             2,
-	ERROR_PATH_NOT_FOUND =             3,
-	ERROR_TOO_MANY_OPEN_FILES =        4,
-	ERROR_ACCESS_DENIED =              5,
-	ERROR_INVALID_HANDLE =             6,
-	ERROR_NO_MORE_FILES =              18,
-	ERROR_MORE_DATA =		   234,
-	ERROR_NO_MORE_ITEMS =		   259,
+        ERROR_SUCCESS =                    0,
+        ERROR_INVALID_FUNCTION =           1,
+        ERROR_FILE_NOT_FOUND =             2,
+        ERROR_PATH_NOT_FOUND =             3,
+        ERROR_TOO_MANY_OPEN_FILES =        4,
+        ERROR_ACCESS_DENIED =              5,
+        ERROR_INVALID_HANDLE =             6,
+        ERROR_NO_MORE_FILES =              18,
+        ERROR_MORE_DATA =                  234,
+        ERROR_NO_MORE_ITEMS =              259,
 }
 
 enum
 {
-	DLL_PROCESS_ATTACH = 1,
-	DLL_THREAD_ATTACH =  2,
-	DLL_THREAD_DETACH =  3,
-	DLL_PROCESS_DETACH = 0,
+        DLL_PROCESS_ATTACH = 1,
+        DLL_THREAD_ATTACH =  2,
+        DLL_THREAD_DETACH =  3,
+        DLL_PROCESS_DETACH = 0,
 }
 
 enum
@@ -219,41 +219,41 @@ enum
 {
     FILE_SHARE_READ                 = 0x00000001,
     FILE_SHARE_WRITE                = 0x00000002,
-    FILE_SHARE_DELETE               = 0x00000004,  
-    FILE_ATTRIBUTE_READONLY         = 0x00000001,  
-    FILE_ATTRIBUTE_HIDDEN           = 0x00000002,  
-    FILE_ATTRIBUTE_SYSTEM           = 0x00000004,  
-    FILE_ATTRIBUTE_DIRECTORY        = 0x00000010,  
-    FILE_ATTRIBUTE_ARCHIVE          = 0x00000020,  
-    FILE_ATTRIBUTE_NORMAL           = 0x00000080,  
-    FILE_ATTRIBUTE_TEMPORARY        = 0x00000100,  
-    FILE_ATTRIBUTE_COMPRESSED       = 0x00000800,  
-    FILE_ATTRIBUTE_OFFLINE          = 0x00001000,  
-    FILE_NOTIFY_CHANGE_FILE_NAME    = 0x00000001,   
-    FILE_NOTIFY_CHANGE_DIR_NAME     = 0x00000002,   
-    FILE_NOTIFY_CHANGE_ATTRIBUTES   = 0x00000004,   
-    FILE_NOTIFY_CHANGE_SIZE         = 0x00000008,   
-    FILE_NOTIFY_CHANGE_LAST_WRITE   = 0x00000010,   
-    FILE_NOTIFY_CHANGE_LAST_ACCESS  = 0x00000020,   
-    FILE_NOTIFY_CHANGE_CREATION     = 0x00000040,   
-    FILE_NOTIFY_CHANGE_SECURITY     = 0x00000100,   
-    FILE_ACTION_ADDED               = 0x00000001,   
-    FILE_ACTION_REMOVED             = 0x00000002,   
-    FILE_ACTION_MODIFIED            = 0x00000003,   
-    FILE_ACTION_RENAMED_OLD_NAME    = 0x00000004,   
-    FILE_ACTION_RENAMED_NEW_NAME    = 0x00000005,   
-    FILE_CASE_SENSITIVE_SEARCH      = 0x00000001,  
-    FILE_CASE_PRESERVED_NAMES       = 0x00000002,  
-    FILE_UNICODE_ON_DISK            = 0x00000004,  
-    FILE_PERSISTENT_ACLS            = 0x00000008,  
-    FILE_FILE_COMPRESSION           = 0x00000010,  
-    FILE_VOLUME_IS_COMPRESSED       = 0x00008000,  
+    FILE_SHARE_DELETE               = 0x00000004,
+    FILE_ATTRIBUTE_READONLY         = 0x00000001,
+    FILE_ATTRIBUTE_HIDDEN           = 0x00000002,
+    FILE_ATTRIBUTE_SYSTEM           = 0x00000004,
+    FILE_ATTRIBUTE_DIRECTORY        = 0x00000010,
+    FILE_ATTRIBUTE_ARCHIVE          = 0x00000020,
+    FILE_ATTRIBUTE_NORMAL           = 0x00000080,
+    FILE_ATTRIBUTE_TEMPORARY        = 0x00000100,
+    FILE_ATTRIBUTE_COMPRESSED       = 0x00000800,
+    FILE_ATTRIBUTE_OFFLINE          = 0x00001000,
+    FILE_NOTIFY_CHANGE_FILE_NAME    = 0x00000001,
+    FILE_NOTIFY_CHANGE_DIR_NAME     = 0x00000002,
+    FILE_NOTIFY_CHANGE_ATTRIBUTES   = 0x00000004,
+    FILE_NOTIFY_CHANGE_SIZE         = 0x00000008,
+    FILE_NOTIFY_CHANGE_LAST_WRITE   = 0x00000010,
+    FILE_NOTIFY_CHANGE_LAST_ACCESS  = 0x00000020,
+    FILE_NOTIFY_CHANGE_CREATION     = 0x00000040,
+    FILE_NOTIFY_CHANGE_SECURITY     = 0x00000100,
+    FILE_ACTION_ADDED               = 0x00000001,
+    FILE_ACTION_REMOVED             = 0x00000002,
+    FILE_ACTION_MODIFIED            = 0x00000003,
+    FILE_ACTION_RENAMED_OLD_NAME    = 0x00000004,
+    FILE_ACTION_RENAMED_NEW_NAME    = 0x00000005,
+    FILE_CASE_SENSITIVE_SEARCH      = 0x00000001,
+    FILE_CASE_PRESERVED_NAMES       = 0x00000002,
+    FILE_UNICODE_ON_DISK            = 0x00000004,
+    FILE_PERSISTENT_ACLS            = 0x00000008,
+    FILE_FILE_COMPRESSION           = 0x00000010,
+    FILE_VOLUME_IS_COMPRESSED       = 0x00008000,
 }
 
 enum
 {
     MAILSLOT_NO_MESSAGE = cast(DWORD)-1,
-    MAILSLOT_WAIT_FOREVER = cast(DWORD)-1, 
+    MAILSLOT_WAIT_FOREVER = cast(DWORD)-1,
 }
 
 enum : uint
@@ -335,9 +335,9 @@ struct WIN32_FIND_DATAW {
 
 enum
 {
-	STD_INPUT_HANDLE =    cast(DWORD)-10,
-	STD_OUTPUT_HANDLE =   cast(DWORD)-11,
-	STD_ERROR_HANDLE =    cast(DWORD)-12,
+        STD_INPUT_HANDLE =    cast(DWORD)-10,
+        STD_OUTPUT_HANDLE =   cast(DWORD)-11,
+        STD_ERROR_HANDLE =    cast(DWORD)-12,
 }
 
 export
@@ -356,11 +356,11 @@ BOOL RemoveDirectoryW(LPCWSTR lpPathName);
 BOOL   CloseHandle(HANDLE hObject);
 
 HANDLE CreateFileA(char *lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode,
-	SECURITY_ATTRIBUTES *lpSecurityAttributes, DWORD dwCreationDisposition,
-	DWORD dwFlagsAndAttributes, HANDLE hTemplateFile);
+        SECURITY_ATTRIBUTES *lpSecurityAttributes, DWORD dwCreationDisposition,
+        DWORD dwFlagsAndAttributes, HANDLE hTemplateFile);
 HANDLE CreateFileW(LPCWSTR lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode,
-	SECURITY_ATTRIBUTES *lpSecurityAttributes, DWORD dwCreationDisposition,
-	DWORD dwFlagsAndAttributes, HANDLE hTemplateFile);
+        SECURITY_ATTRIBUTES *lpSecurityAttributes, DWORD dwCreationDisposition,
+        DWORD dwFlagsAndAttributes, HANDLE hTemplateFile);
 
 BOOL   DeleteFileA(char *lpFileName);
 BOOL   DeleteFileW(LPCWSTR lpFileName);
@@ -380,11 +380,11 @@ BOOL   CopyFileW(LPCWSTR lpExistingFileName, LPCWSTR lpNewFileName, BOOL bFailIf
 BOOL   MoveFileA(char *from, char *to);
 BOOL   MoveFileW(LPCWSTR lpExistingFileName, LPCWSTR lpNewFileName);
 BOOL   ReadFile(HANDLE hFile, void *lpBuffer, DWORD nNumberOfBytesToRead,
-	DWORD *lpNumberOfBytesRead, OVERLAPPED *lpOverlapped);
+        DWORD *lpNumberOfBytesRead, OVERLAPPED *lpOverlapped);
 DWORD  SetFilePointer(HANDLE hFile, LONG lDistanceToMove,
-	LONG *lpDistanceToMoveHigh, DWORD dwMoveMethod);
+        LONG *lpDistanceToMoveHigh, DWORD dwMoveMethod);
 BOOL   WriteFile(HANDLE hFile, void *lpBuffer, DWORD nNumberOfBytesToWrite,
-	DWORD *lpNumberOfBytesWritten, OVERLAPPED *lpOverlapped);
+        DWORD *lpNumberOfBytesWritten, OVERLAPPED *lpOverlapped);
 DWORD  GetModuleFileNameA(HMODULE hModule, LPSTR lpFilename, DWORD nSize);
 }
 
@@ -425,17 +425,17 @@ BOOL DisableThreadLibraryCalls(HMODULE hLibModule);
 
 enum
 {
-	KEY_QUERY_VALUE =         0x0001,
-	KEY_SET_VALUE =           0x0002,
-	KEY_CREATE_SUB_KEY =      0x0004,
-	KEY_ENUMERATE_SUB_KEYS =  0x0008,
-	KEY_NOTIFY =              0x0010,
-	KEY_CREATE_LINK =         0x0020,
+        KEY_QUERY_VALUE =         0x0001,
+        KEY_SET_VALUE =           0x0002,
+        KEY_CREATE_SUB_KEY =      0x0004,
+        KEY_ENUMERATE_SUB_KEYS =  0x0008,
+        KEY_NOTIFY =              0x0010,
+        KEY_CREATE_LINK =         0x0020,
 
-	KEY_READ =       cast(int)((STANDARD_RIGHTS_READ | KEY_QUERY_VALUE | KEY_ENUMERATE_SUB_KEYS | KEY_NOTIFY)   & ~SYNCHRONIZE),
-	KEY_WRITE =      cast(int)((STANDARD_RIGHTS_WRITE | KEY_SET_VALUE | KEY_CREATE_SUB_KEY) & ~SYNCHRONIZE),
-	KEY_EXECUTE =    cast(int)(KEY_READ & ~SYNCHRONIZE),
-	KEY_ALL_ACCESS = cast(int)((STANDARD_RIGHTS_ALL | KEY_QUERY_VALUE | KEY_SET_VALUE | KEY_CREATE_SUB_KEY | KEY_ENUMERATE_SUB_KEYS | KEY_NOTIFY | KEY_CREATE_LINK) & ~SYNCHRONIZE),
+        KEY_READ =       cast(int)((STANDARD_RIGHTS_READ | KEY_QUERY_VALUE | KEY_ENUMERATE_SUB_KEYS | KEY_NOTIFY)   & ~SYNCHRONIZE),
+        KEY_WRITE =      cast(int)((STANDARD_RIGHTS_WRITE | KEY_SET_VALUE | KEY_CREATE_SUB_KEY) & ~SYNCHRONIZE),
+        KEY_EXECUTE =    cast(int)(KEY_READ & ~SYNCHRONIZE),
+        KEY_ALL_ACCESS = cast(int)((STANDARD_RIGHTS_ALL | KEY_QUERY_VALUE | KEY_SET_VALUE | KEY_CREATE_SUB_KEY | KEY_ENUMERATE_SUB_KEYS | KEY_NOTIFY | KEY_CREATE_LINK) & ~SYNCHRONIZE),
 }
 
 //
@@ -444,8 +444,8 @@ enum
 
 enum : int
 {
-	REG_CREATED_NEW_KEY =         0x00000001,   // New Registry Key created
-	REG_OPENED_EXISTING_KEY =     0x00000002,   // Existing Key opened
+        REG_CREATED_NEW_KEY =         0x00000001,   // New Registry Key created
+        REG_OPENED_EXISTING_KEY =     0x00000002,   // Existing Key opened
 }
 
 
@@ -455,21 +455,21 @@ enum : int
 //
 enum
 {
-	REG_NONE =                    0,   // No value type
-	REG_SZ =                      1,   // Unicode nul terminated string
-	REG_EXPAND_SZ =               2,   // Unicode nul terminated string
+        REG_NONE =                    0,   // No value type
+        REG_SZ =                      1,   // Unicode nul terminated string
+        REG_EXPAND_SZ =               2,   // Unicode nul terminated string
                                             // (with environment variable references)
-	REG_BINARY =                  3,   // Free form binary
-	REG_DWORD =                   4,   // 32-bit number
-	REG_DWORD_LITTLE_ENDIAN =     4,   // 32-bit number (same as REG_DWORD)
-	REG_DWORD_BIG_ENDIAN =        5,   // 32-bit number
-	REG_LINK =                    6,   // Symbolic Link (unicode)
-	REG_MULTI_SZ =                7,   // Multiple Unicode strings
-	REG_RESOURCE_LIST =           8,   // Resource list in the resource map
-	REG_FULL_RESOURCE_DESCRIPTOR = 9,  // Resource list in the hardware description
-	REG_RESOURCE_REQUIREMENTS_LIST = 10,
-	REG_QWORD =			11,
-	REG_QWORD_LITTLE_ENDIAN =	11,
+        REG_BINARY =                  3,   // Free form binary
+        REG_DWORD =                   4,   // 32-bit number
+        REG_DWORD_LITTLE_ENDIAN =     4,   // 32-bit number (same as REG_DWORD)
+        REG_DWORD_BIG_ENDIAN =        5,   // 32-bit number
+        REG_LINK =                    6,   // Symbolic Link (unicode)
+        REG_MULTI_SZ =                7,   // Multiple Unicode strings
+        REG_RESOURCE_LIST =           8,   // Resource list in the resource map
+        REG_FULL_RESOURCE_DESCRIPTOR = 9,  // Resource list in the hardware description
+        REG_RESOURCE_REQUIREMENTS_LIST = 10,
+        REG_QWORD =                     11,
+        REG_QWORD_LITTLE_ENDIAN =       11,
 }
 
 /*
@@ -477,57 +477,57 @@ enum
  */
 enum
 {
-	MB_OK =                       0x00000000,
-	MB_OKCANCEL =                 0x00000001,
-	MB_ABORTRETRYIGNORE =         0x00000002,
-	MB_YESNOCANCEL =              0x00000003,
-	MB_YESNO =                    0x00000004,
-	MB_RETRYCANCEL =              0x00000005,
+        MB_OK =                       0x00000000,
+        MB_OKCANCEL =                 0x00000001,
+        MB_ABORTRETRYIGNORE =         0x00000002,
+        MB_YESNOCANCEL =              0x00000003,
+        MB_YESNO =                    0x00000004,
+        MB_RETRYCANCEL =              0x00000005,
 
 
-	MB_ICONHAND =                 0x00000010,
-	MB_ICONQUESTION =             0x00000020,
-	MB_ICONEXCLAMATION =          0x00000030,
-	MB_ICONASTERISK =             0x00000040,
+        MB_ICONHAND =                 0x00000010,
+        MB_ICONQUESTION =             0x00000020,
+        MB_ICONEXCLAMATION =          0x00000030,
+        MB_ICONASTERISK =             0x00000040,
 
 
-	MB_USERICON =                 0x00000080,
-	MB_ICONWARNING =              MB_ICONEXCLAMATION,
-	MB_ICONERROR =                MB_ICONHAND,
+        MB_USERICON =                 0x00000080,
+        MB_ICONWARNING =              MB_ICONEXCLAMATION,
+        MB_ICONERROR =                MB_ICONHAND,
 
 
-	MB_ICONINFORMATION =          MB_ICONASTERISK,
-	MB_ICONSTOP =                 MB_ICONHAND,
+        MB_ICONINFORMATION =          MB_ICONASTERISK,
+        MB_ICONSTOP =                 MB_ICONHAND,
 
-	MB_DEFBUTTON1 =               0x00000000,
-	MB_DEFBUTTON2 =               0x00000100,
-	MB_DEFBUTTON3 =               0x00000200,
+        MB_DEFBUTTON1 =               0x00000000,
+        MB_DEFBUTTON2 =               0x00000100,
+        MB_DEFBUTTON3 =               0x00000200,
 
-	MB_DEFBUTTON4 =               0x00000300,
-
-
-	MB_APPLMODAL =                0x00000000,
-	MB_SYSTEMMODAL =              0x00001000,
-	MB_TASKMODAL =                0x00002000,
-
-	MB_HELP =                     0x00004000, // Help Button
+        MB_DEFBUTTON4 =               0x00000300,
 
 
-	MB_NOFOCUS =                  0x00008000,
-	MB_SETFOREGROUND =            0x00010000,
-	MB_DEFAULT_DESKTOP_ONLY =     0x00020000,
+        MB_APPLMODAL =                0x00000000,
+        MB_SYSTEMMODAL =              0x00001000,
+        MB_TASKMODAL =                0x00002000,
+
+        MB_HELP =                     0x00004000, // Help Button
 
 
-	MB_TOPMOST =                  0x00040000,
-	MB_RIGHT =                    0x00080000,
-	MB_RTLREADING =               0x00100000,
+        MB_NOFOCUS =                  0x00008000,
+        MB_SETFOREGROUND =            0x00010000,
+        MB_DEFAULT_DESKTOP_ONLY =     0x00020000,
 
 
-	MB_TYPEMASK =                 0x0000000F,
-	MB_ICONMASK =                 0x000000F0,
-	MB_DEFMASK =                  0x00000F00,
-	MB_MODEMASK =                 0x00003000,
-	MB_MISCMASK =                 0x0000C000,
+        MB_TOPMOST =                  0x00040000,
+        MB_RIGHT =                    0x00080000,
+        MB_RTLREADING =               0x00100000,
+
+
+        MB_TYPEMASK =                 0x0000000F,
+        MB_ICONMASK =                 0x000000F0,
+        MB_DEFMASK =                  0x00000F00,
+        MB_MODEMASK =                 0x00003000,
+        MB_MISCMASK =                 0x0000C000,
 }
 
 
@@ -546,24 +546,24 @@ const HKEY HKEY_DYN_DATA =               cast(HKEY)(0x80000006);
 
 enum
 {
-	REG_OPTION_RESERVED =         (0x00000000),   // Parameter is reserved
+        REG_OPTION_RESERVED =         (0x00000000),   // Parameter is reserved
 
-	REG_OPTION_NON_VOLATILE =     (0x00000000),   // Key is preserved
+        REG_OPTION_NON_VOLATILE =     (0x00000000),   // Key is preserved
                                                     // when system is rebooted
 
-	REG_OPTION_VOLATILE =         (0x00000001),   // Key is not preserved
+        REG_OPTION_VOLATILE =         (0x00000001),   // Key is not preserved
                                                     // when system is rebooted
 
-	REG_OPTION_CREATE_LINK =      (0x00000002),   // Created key is a
+        REG_OPTION_CREATE_LINK =      (0x00000002),   // Created key is a
                                                     // symbolic link
 
-	REG_OPTION_BACKUP_RESTORE =   (0x00000004),   // open for backup or restore
+        REG_OPTION_BACKUP_RESTORE =   (0x00000004),   // open for backup or restore
                                                     // special access rules
                                                     // privilege required
 
-	REG_OPTION_OPEN_LINK =        (0x00000008),   // Open symbolic link
+        REG_OPTION_OPEN_LINK =        (0x00000008),   // Open symbolic link
 
-	REG_LEGAL_OPTION = (REG_OPTION_RESERVED | REG_OPTION_NON_VOLATILE | REG_OPTION_VOLATILE | REG_OPTION_CREATE_LINK | REG_OPTION_BACKUP_RESTORE | REG_OPTION_OPEN_LINK),
+        REG_LEGAL_OPTION = (REG_OPTION_RESERVED | REG_OPTION_NON_VOLATILE | REG_OPTION_VOLATILE | REG_OPTION_CREATE_LINK | REG_OPTION_BACKUP_RESTORE | REG_OPTION_OPEN_LINK),
 }
 
 export LONG RegDeleteKeyA(HKEY hKey, LPCSTR lpSubKey);
@@ -606,46 +606,46 @@ alias MEMORY_BASIC_INFORMATION* PMEMORY_BASIC_INFORMATION;
 
 enum
 {
-	SECTION_QUERY       = 0x0001,
-	SECTION_MAP_WRITE   = 0x0002,
-	SECTION_MAP_READ    = 0x0004,
-	SECTION_MAP_EXECUTE = 0x0008,
-	SECTION_EXTEND_SIZE = 0x0010,
+        SECTION_QUERY       = 0x0001,
+        SECTION_MAP_WRITE   = 0x0002,
+        SECTION_MAP_READ    = 0x0004,
+        SECTION_MAP_EXECUTE = 0x0008,
+        SECTION_EXTEND_SIZE = 0x0010,
 
-	SECTION_ALL_ACCESS = cast(int)(STANDARD_RIGHTS_REQUIRED|SECTION_QUERY| SECTION_MAP_WRITE | SECTION_MAP_READ | SECTION_MAP_EXECUTE | SECTION_EXTEND_SIZE),
-	PAGE_NOACCESS          = 0x01,
-	PAGE_READONLY          = 0x02,
-	PAGE_READWRITE         = 0x04,
-	PAGE_WRITECOPY         = 0x08,
-	PAGE_EXECUTE           = 0x10,
-	PAGE_EXECUTE_READ      = 0x20,
-	PAGE_EXECUTE_READWRITE = 0x40,
-	PAGE_EXECUTE_WRITECOPY = 0x80,
-	PAGE_GUARD            = 0x100,
-	PAGE_NOCACHE          = 0x200,
-	MEM_COMMIT           = 0x1000,
-	MEM_RESERVE          = 0x2000,
-	MEM_DECOMMIT         = 0x4000,
-	MEM_RELEASE          = 0x8000,
-	MEM_FREE            = 0x10000,
-	MEM_PRIVATE         = 0x20000,
-	MEM_MAPPED          = 0x40000,
-	MEM_RESET           = 0x80000,
-	MEM_TOP_DOWN       = 0x100000,
-	SEC_FILE           = 0x800000,
-	SEC_IMAGE         = 0x1000000,
-	SEC_RESERVE       = 0x4000000,
-	SEC_COMMIT        = 0x8000000,
-	SEC_NOCACHE      = 0x10000000,
-	MEM_IMAGE        = SEC_IMAGE,
+        SECTION_ALL_ACCESS = cast(int)(STANDARD_RIGHTS_REQUIRED|SECTION_QUERY| SECTION_MAP_WRITE | SECTION_MAP_READ | SECTION_MAP_EXECUTE | SECTION_EXTEND_SIZE),
+        PAGE_NOACCESS          = 0x01,
+        PAGE_READONLY          = 0x02,
+        PAGE_READWRITE         = 0x04,
+        PAGE_WRITECOPY         = 0x08,
+        PAGE_EXECUTE           = 0x10,
+        PAGE_EXECUTE_READ      = 0x20,
+        PAGE_EXECUTE_READWRITE = 0x40,
+        PAGE_EXECUTE_WRITECOPY = 0x80,
+        PAGE_GUARD            = 0x100,
+        PAGE_NOCACHE          = 0x200,
+        MEM_COMMIT           = 0x1000,
+        MEM_RESERVE          = 0x2000,
+        MEM_DECOMMIT         = 0x4000,
+        MEM_RELEASE          = 0x8000,
+        MEM_FREE            = 0x10000,
+        MEM_PRIVATE         = 0x20000,
+        MEM_MAPPED          = 0x40000,
+        MEM_RESET           = 0x80000,
+        MEM_TOP_DOWN       = 0x100000,
+        SEC_FILE           = 0x800000,
+        SEC_IMAGE         = 0x1000000,
+        SEC_RESERVE       = 0x4000000,
+        SEC_COMMIT        = 0x8000000,
+        SEC_NOCACHE      = 0x10000000,
+        MEM_IMAGE        = SEC_IMAGE,
 }
 
 enum
 {
-	FILE_MAP_COPY =       SECTION_QUERY,
-	FILE_MAP_WRITE =      SECTION_MAP_WRITE,
-	FILE_MAP_READ =       SECTION_MAP_READ,
-	FILE_MAP_ALL_ACCESS = SECTION_ALL_ACCESS,
+        FILE_MAP_COPY =       SECTION_QUERY,
+        FILE_MAP_WRITE =      SECTION_MAP_WRITE,
+        FILE_MAP_READ =       SECTION_MAP_READ,
+        FILE_MAP_ALL_ACCESS = SECTION_ALL_ACCESS,
 }
 
 
@@ -663,36 +663,36 @@ enum
 
 enum
 {
-	FILE_READ_DATA =            ( 0x0001 ),   // file & pipe
-	FILE_LIST_DIRECTORY =       ( 0x0001 ),    // directory
+        FILE_READ_DATA =            ( 0x0001 ),   // file & pipe
+        FILE_LIST_DIRECTORY =       ( 0x0001 ),    // directory
 
-	FILE_WRITE_DATA =           ( 0x0002 ),    // file & pipe
-	FILE_ADD_FILE =             ( 0x0002 ),    // directory
+        FILE_WRITE_DATA =           ( 0x0002 ),    // file & pipe
+        FILE_ADD_FILE =             ( 0x0002 ),    // directory
 
-	FILE_APPEND_DATA =          ( 0x0004 ),    // file
-	FILE_ADD_SUBDIRECTORY =     ( 0x0004 ),    // directory
-	FILE_CREATE_PIPE_INSTANCE = ( 0x0004 ),    // named pipe
+        FILE_APPEND_DATA =          ( 0x0004 ),    // file
+        FILE_ADD_SUBDIRECTORY =     ( 0x0004 ),    // directory
+        FILE_CREATE_PIPE_INSTANCE = ( 0x0004 ),    // named pipe
 
-	FILE_READ_EA =              ( 0x0008 ),    // file & directory
+        FILE_READ_EA =              ( 0x0008 ),    // file & directory
 
-	FILE_WRITE_EA =             ( 0x0010 ),    // file & directory
+        FILE_WRITE_EA =             ( 0x0010 ),    // file & directory
 
-	FILE_EXECUTE =              ( 0x0020 ),    // file
-	FILE_TRAVERSE =             ( 0x0020 ),    // directory
+        FILE_EXECUTE =              ( 0x0020 ),    // file
+        FILE_TRAVERSE =             ( 0x0020 ),    // directory
 
-	FILE_DELETE_CHILD =         ( 0x0040 ),    // directory
+        FILE_DELETE_CHILD =         ( 0x0040 ),    // directory
 
-	FILE_READ_ATTRIBUTES =      ( 0x0080 ),    // all
+        FILE_READ_ATTRIBUTES =      ( 0x0080 ),    // all
 
-	FILE_WRITE_ATTRIBUTES =     ( 0x0100 ),    // all
+        FILE_WRITE_ATTRIBUTES =     ( 0x0100 ),    // all
 
-	FILE_ALL_ACCESS =	    cast(int)(STANDARD_RIGHTS_REQUIRED | SYNCHRONIZE | 0x1FF),
+        FILE_ALL_ACCESS =           cast(int)(STANDARD_RIGHTS_REQUIRED | SYNCHRONIZE | 0x1FF),
 
-	FILE_GENERIC_READ =         cast(int)(STANDARD_RIGHTS_READ  | FILE_READ_DATA |  FILE_READ_ATTRIBUTES |                 FILE_READ_EA |  SYNCHRONIZE),
+        FILE_GENERIC_READ =         cast(int)(STANDARD_RIGHTS_READ  | FILE_READ_DATA |  FILE_READ_ATTRIBUTES |                 FILE_READ_EA |  SYNCHRONIZE),
 
-	FILE_GENERIC_WRITE =        cast(int)(STANDARD_RIGHTS_WRITE | FILE_WRITE_DATA |  FILE_WRITE_ATTRIBUTES |                      FILE_WRITE_EA  |  FILE_APPEND_DATA |  SYNCHRONIZE),
+        FILE_GENERIC_WRITE =        cast(int)(STANDARD_RIGHTS_WRITE | FILE_WRITE_DATA |  FILE_WRITE_ATTRIBUTES |                      FILE_WRITE_EA  |  FILE_APPEND_DATA |  SYNCHRONIZE),
 
-	FILE_GENERIC_EXECUTE =      cast(int)(STANDARD_RIGHTS_EXECUTE | FILE_READ_ATTRIBUTES |                 FILE_EXECUTE |  SYNCHRONIZE),
+        FILE_GENERIC_EXECUTE =      cast(int)(STANDARD_RIGHTS_EXECUTE | FILE_READ_ATTRIBUTES |                 FILE_EXECUTE |  SYNCHRONIZE),
 }
 
 export
@@ -750,9 +750,9 @@ struct TIME_ZONE_INFORMATION {
 
 enum
 {
-	TIME_ZONE_ID_UNKNOWN =  0,
-	TIME_ZONE_ID_STANDARD = 1,
-	TIME_ZONE_ID_DAYLIGHT = 2,
+        TIME_ZONE_ID_UNKNOWN =  0,
+        TIME_ZONE_ID_STANDARD = 1,
+        TIME_ZONE_ID_DAYLIGHT = 2,
 }
 
 export void GetSystemTime(SYSTEMTIME* lpSystemTime);
@@ -778,13 +778,13 @@ export DWORD FormatMessageA(DWORD dwFlags, LPCVOID lpSource, DWORD dwMessageId, 
 
 enum
 {
-	FORMAT_MESSAGE_ALLOCATE_BUFFER = 0x00000100,
-	FORMAT_MESSAGE_IGNORE_INSERTS =  0x00000200,
-	FORMAT_MESSAGE_FROM_STRING =     0x00000400,
-	FORMAT_MESSAGE_FROM_HMODULE =    0x00000800,
-	FORMAT_MESSAGE_FROM_SYSTEM =     0x00001000,
-	FORMAT_MESSAGE_ARGUMENT_ARRAY =  0x00002000,
-	FORMAT_MESSAGE_MAX_WIDTH_MASK =  0x000000FF,
+        FORMAT_MESSAGE_ALLOCATE_BUFFER = 0x00000100,
+        FORMAT_MESSAGE_IGNORE_INSERTS =  0x00000200,
+        FORMAT_MESSAGE_FROM_STRING =     0x00000400,
+        FORMAT_MESSAGE_FROM_HMODULE =    0x00000800,
+        FORMAT_MESSAGE_FROM_SYSTEM =     0x00001000,
+        FORMAT_MESSAGE_ARGUMENT_ARRAY =  0x00002000,
+        FORMAT_MESSAGE_MAX_WIDTH_MASK =  0x000000FF,
 };
 
 
@@ -807,51 +807,51 @@ enum
 
 enum
 {
-	LANG_NEUTRAL                     = 0x00,
+        LANG_NEUTRAL                     = 0x00,
 
-	LANG_AFRIKAANS                   = 0x36,
-	LANG_ALBANIAN                    = 0x1c,
-	LANG_ARABIC                      = 0x01,
-	LANG_BASQUE                      = 0x2d,
-	LANG_BELARUSIAN                  = 0x23,
-	LANG_BULGARIAN                   = 0x02,
-	LANG_CATALAN                     = 0x03,
-	LANG_CHINESE                     = 0x04,
-	LANG_CROATIAN                    = 0x1a,
-	LANG_CZECH                       = 0x05,
-	LANG_DANISH                      = 0x06,
-	LANG_DUTCH                       = 0x13,
-	LANG_ENGLISH                     = 0x09,
-	LANG_ESTONIAN                    = 0x25,
-	LANG_FAEROESE                    = 0x38,
-	LANG_FARSI                       = 0x29,
-	LANG_FINNISH                     = 0x0b,
-	LANG_FRENCH                      = 0x0c,
-	LANG_GERMAN                      = 0x07,
-	LANG_GREEK                       = 0x08,
-	LANG_HEBREW                      = 0x0d,
-	LANG_HUNGARIAN                   = 0x0e,
-	LANG_ICELANDIC                   = 0x0f,
-	LANG_INDONESIAN                  = 0x21,
-	LANG_ITALIAN                     = 0x10,
-	LANG_JAPANESE                    = 0x11,
-	LANG_KOREAN                      = 0x12,
-	LANG_LATVIAN                     = 0x26,
-	LANG_LITHUANIAN                  = 0x27,
-	LANG_NORWEGIAN                   = 0x14,
-	LANG_POLISH                      = 0x15,
-	LANG_PORTUGUESE                  = 0x16,
-	LANG_ROMANIAN                    = 0x18,
-	LANG_RUSSIAN                     = 0x19,
-	LANG_SERBIAN                     = 0x1a,
-	LANG_SLOVAK                      = 0x1b,
-	LANG_SLOVENIAN                   = 0x24,
-	LANG_SPANISH                     = 0x0a,
-	LANG_SWEDISH                     = 0x1d,
-	LANG_THAI                        = 0x1e,
-	LANG_TURKISH                     = 0x1f,
-	LANG_UKRAINIAN                   = 0x22,
-	LANG_VIETNAMESE                  = 0x2a,
+        LANG_AFRIKAANS                   = 0x36,
+        LANG_ALBANIAN                    = 0x1c,
+        LANG_ARABIC                      = 0x01,
+        LANG_BASQUE                      = 0x2d,
+        LANG_BELARUSIAN                  = 0x23,
+        LANG_BULGARIAN                   = 0x02,
+        LANG_CATALAN                     = 0x03,
+        LANG_CHINESE                     = 0x04,
+        LANG_CROATIAN                    = 0x1a,
+        LANG_CZECH                       = 0x05,
+        LANG_DANISH                      = 0x06,
+        LANG_DUTCH                       = 0x13,
+        LANG_ENGLISH                     = 0x09,
+        LANG_ESTONIAN                    = 0x25,
+        LANG_FAEROESE                    = 0x38,
+        LANG_FARSI                       = 0x29,
+        LANG_FINNISH                     = 0x0b,
+        LANG_FRENCH                      = 0x0c,
+        LANG_GERMAN                      = 0x07,
+        LANG_GREEK                       = 0x08,
+        LANG_HEBREW                      = 0x0d,
+        LANG_HUNGARIAN                   = 0x0e,
+        LANG_ICELANDIC                   = 0x0f,
+        LANG_INDONESIAN                  = 0x21,
+        LANG_ITALIAN                     = 0x10,
+        LANG_JAPANESE                    = 0x11,
+        LANG_KOREAN                      = 0x12,
+        LANG_LATVIAN                     = 0x26,
+        LANG_LITHUANIAN                  = 0x27,
+        LANG_NORWEGIAN                   = 0x14,
+        LANG_POLISH                      = 0x15,
+        LANG_PORTUGUESE                  = 0x16,
+        LANG_ROMANIAN                    = 0x18,
+        LANG_RUSSIAN                     = 0x19,
+        LANG_SERBIAN                     = 0x1a,
+        LANG_SLOVAK                      = 0x1b,
+        LANG_SLOVENIAN                   = 0x24,
+        LANG_SPANISH                     = 0x0a,
+        LANG_SWEDISH                     = 0x1d,
+        LANG_THAI                        = 0x1e,
+        LANG_TURKISH                     = 0x1f,
+        LANG_UKRAINIAN                   = 0x22,
+        LANG_VIETNAMESE                  = 0x2a,
 }
 //
 //  Sublanguage IDs.
@@ -862,85 +862,85 @@ enum
 //
 enum
 {
-	SUBLANG_NEUTRAL =                  0x00,    // language neutral
-	SUBLANG_DEFAULT =                  0x01,    // user default
-	SUBLANG_SYS_DEFAULT =              0x02,    // system default
+        SUBLANG_NEUTRAL =                  0x00,    // language neutral
+        SUBLANG_DEFAULT =                  0x01,    // user default
+        SUBLANG_SYS_DEFAULT =              0x02,    // system default
 
-	SUBLANG_ARABIC_SAUDI_ARABIA =      0x01,    // Arabic (Saudi Arabia)
-	SUBLANG_ARABIC_IRAQ =              0x02,    // Arabic (Iraq)
-	SUBLANG_ARABIC_EGYPT =             0x03,    // Arabic (Egypt)
-	SUBLANG_ARABIC_LIBYA =             0x04,    // Arabic (Libya)
-	SUBLANG_ARABIC_ALGERIA =           0x05,    // Arabic (Algeria)
-	SUBLANG_ARABIC_MOROCCO =           0x06,    // Arabic (Morocco)
-	SUBLANG_ARABIC_TUNISIA =           0x07,    // Arabic (Tunisia)
-	SUBLANG_ARABIC_OMAN =              0x08,    // Arabic (Oman)
-	SUBLANG_ARABIC_YEMEN =             0x09,    // Arabic (Yemen)
-	SUBLANG_ARABIC_SYRIA =             0x0a,    // Arabic (Syria)
-	SUBLANG_ARABIC_JORDAN =            0x0b,    // Arabic (Jordan)
-	SUBLANG_ARABIC_LEBANON =           0x0c,    // Arabic (Lebanon)
-	SUBLANG_ARABIC_KUWAIT =            0x0d,    // Arabic (Kuwait)
-	SUBLANG_ARABIC_UAE =               0x0e,    // Arabic (U.A.E)
-	SUBLANG_ARABIC_BAHRAIN =           0x0f,    // Arabic (Bahrain)
-	SUBLANG_ARABIC_QATAR =             0x10,    // Arabic (Qatar)
-	SUBLANG_CHINESE_TRADITIONAL =      0x01,    // Chinese (Taiwan)
-	SUBLANG_CHINESE_SIMPLIFIED =       0x02,    // Chinese (PR China)
-	SUBLANG_CHINESE_HONGKONG =         0x03,    // Chinese (Hong Kong)
-	SUBLANG_CHINESE_SINGAPORE =        0x04,    // Chinese (Singapore)
-	SUBLANG_DUTCH =                    0x01,    // Dutch
-	SUBLANG_DUTCH_BELGIAN =            0x02,    // Dutch (Belgian)
-	SUBLANG_ENGLISH_US =               0x01,    // English (USA)
-	SUBLANG_ENGLISH_UK =               0x02,    // English (UK)
-	SUBLANG_ENGLISH_AUS =              0x03,    // English (Australian)
-	SUBLANG_ENGLISH_CAN =              0x04,    // English (Canadian)
-	SUBLANG_ENGLISH_NZ =               0x05,    // English (New Zealand)
-	SUBLANG_ENGLISH_EIRE =             0x06,    // English (Irish)
-	SUBLANG_ENGLISH_SOUTH_AFRICA =     0x07,    // English (South Africa)
-	SUBLANG_ENGLISH_JAMAICA =          0x08,    // English (Jamaica)
-	SUBLANG_ENGLISH_CARIBBEAN =        0x09,    // English (Caribbean)
-	SUBLANG_ENGLISH_BELIZE =           0x0a,    // English (Belize)
-	SUBLANG_ENGLISH_TRINIDAD =         0x0b,    // English (Trinidad)
-	SUBLANG_FRENCH =                   0x01,    // French
-	SUBLANG_FRENCH_BELGIAN =           0x02,    // French (Belgian)
-	SUBLANG_FRENCH_CANADIAN =          0x03,    // French (Canadian)
-	SUBLANG_FRENCH_SWISS =             0x04,    // French (Swiss)
-	SUBLANG_FRENCH_LUXEMBOURG =        0x05,    // French (Luxembourg)
-	SUBLANG_GERMAN =                   0x01,    // German
-	SUBLANG_GERMAN_SWISS =             0x02,    // German (Swiss)
-	SUBLANG_GERMAN_AUSTRIAN =          0x03,    // German (Austrian)
-	SUBLANG_GERMAN_LUXEMBOURG =        0x04,    // German (Luxembourg)
-	SUBLANG_GERMAN_LIECHTENSTEIN =     0x05,    // German (Liechtenstein)
-	SUBLANG_ITALIAN =                  0x01,    // Italian
-	SUBLANG_ITALIAN_SWISS =            0x02,    // Italian (Swiss)
-	SUBLANG_KOREAN =                   0x01,    // Korean (Extended Wansung)
-	SUBLANG_KOREAN_JOHAB =             0x02,    // Korean (Johab)
-	SUBLANG_NORWEGIAN_BOKMAL =         0x01,    // Norwegian (Bokmal)
-	SUBLANG_NORWEGIAN_NYNORSK =        0x02,    // Norwegian (Nynorsk)
-	SUBLANG_PORTUGUESE =               0x02,    // Portuguese
-	SUBLANG_PORTUGUESE_BRAZILIAN =     0x01,    // Portuguese (Brazilian)
-	SUBLANG_SERBIAN_LATIN =            0x02,    // Serbian (Latin)
-	SUBLANG_SERBIAN_CYRILLIC =         0x03,    // Serbian (Cyrillic)
-	SUBLANG_SPANISH =                  0x01,    // Spanish (Castilian)
-	SUBLANG_SPANISH_MEXICAN =          0x02,    // Spanish (Mexican)
-	SUBLANG_SPANISH_MODERN =           0x03,    // Spanish (Modern)
-	SUBLANG_SPANISH_GUATEMALA =        0x04,    // Spanish (Guatemala)
-	SUBLANG_SPANISH_COSTA_RICA =       0x05,    // Spanish (Costa Rica)
-	SUBLANG_SPANISH_PANAMA =           0x06,    // Spanish (Panama)
-	SUBLANG_SPANISH_DOMINICAN_REPUBLIC = 0x07,  // Spanish (Dominican Republic)
-	SUBLANG_SPANISH_VENEZUELA =        0x08,    // Spanish (Venezuela)
-	SUBLANG_SPANISH_COLOMBIA =         0x09,    // Spanish (Colombia)
-	SUBLANG_SPANISH_PERU =             0x0a,    // Spanish (Peru)
-	SUBLANG_SPANISH_ARGENTINA =        0x0b,    // Spanish (Argentina)
-	SUBLANG_SPANISH_ECUADOR =          0x0c,    // Spanish (Ecuador)
-	SUBLANG_SPANISH_CHILE =            0x0d,    // Spanish (Chile)
-	SUBLANG_SPANISH_URUGUAY =          0x0e,    // Spanish (Uruguay)
-	SUBLANG_SPANISH_PARAGUAY =         0x0f,    // Spanish (Paraguay)
-	SUBLANG_SPANISH_BOLIVIA =          0x10,    // Spanish (Bolivia)
-	SUBLANG_SPANISH_EL_SALVADOR =      0x11,    // Spanish (El Salvador)
-	SUBLANG_SPANISH_HONDURAS =         0x12,    // Spanish (Honduras)
-	SUBLANG_SPANISH_NICARAGUA =        0x13,    // Spanish (Nicaragua)
-	SUBLANG_SPANISH_PUERTO_RICO =      0x14,    // Spanish (Puerto Rico)
-	SUBLANG_SWEDISH =                  0x01,    // Swedish
-	SUBLANG_SWEDISH_FINLAND =          0x02,    // Swedish (Finland)
+        SUBLANG_ARABIC_SAUDI_ARABIA =      0x01,    // Arabic (Saudi Arabia)
+        SUBLANG_ARABIC_IRAQ =              0x02,    // Arabic (Iraq)
+        SUBLANG_ARABIC_EGYPT =             0x03,    // Arabic (Egypt)
+        SUBLANG_ARABIC_LIBYA =             0x04,    // Arabic (Libya)
+        SUBLANG_ARABIC_ALGERIA =           0x05,    // Arabic (Algeria)
+        SUBLANG_ARABIC_MOROCCO =           0x06,    // Arabic (Morocco)
+        SUBLANG_ARABIC_TUNISIA =           0x07,    // Arabic (Tunisia)
+        SUBLANG_ARABIC_OMAN =              0x08,    // Arabic (Oman)
+        SUBLANG_ARABIC_YEMEN =             0x09,    // Arabic (Yemen)
+        SUBLANG_ARABIC_SYRIA =             0x0a,    // Arabic (Syria)
+        SUBLANG_ARABIC_JORDAN =            0x0b,    // Arabic (Jordan)
+        SUBLANG_ARABIC_LEBANON =           0x0c,    // Arabic (Lebanon)
+        SUBLANG_ARABIC_KUWAIT =            0x0d,    // Arabic (Kuwait)
+        SUBLANG_ARABIC_UAE =               0x0e,    // Arabic (U.A.E)
+        SUBLANG_ARABIC_BAHRAIN =           0x0f,    // Arabic (Bahrain)
+        SUBLANG_ARABIC_QATAR =             0x10,    // Arabic (Qatar)
+        SUBLANG_CHINESE_TRADITIONAL =      0x01,    // Chinese (Taiwan)
+        SUBLANG_CHINESE_SIMPLIFIED =       0x02,    // Chinese (PR China)
+        SUBLANG_CHINESE_HONGKONG =         0x03,    // Chinese (Hong Kong)
+        SUBLANG_CHINESE_SINGAPORE =        0x04,    // Chinese (Singapore)
+        SUBLANG_DUTCH =                    0x01,    // Dutch
+        SUBLANG_DUTCH_BELGIAN =            0x02,    // Dutch (Belgian)
+        SUBLANG_ENGLISH_US =               0x01,    // English (USA)
+        SUBLANG_ENGLISH_UK =               0x02,    // English (UK)
+        SUBLANG_ENGLISH_AUS =              0x03,    // English (Australian)
+        SUBLANG_ENGLISH_CAN =              0x04,    // English (Canadian)
+        SUBLANG_ENGLISH_NZ =               0x05,    // English (New Zealand)
+        SUBLANG_ENGLISH_EIRE =             0x06,    // English (Irish)
+        SUBLANG_ENGLISH_SOUTH_AFRICA =     0x07,    // English (South Africa)
+        SUBLANG_ENGLISH_JAMAICA =          0x08,    // English (Jamaica)
+        SUBLANG_ENGLISH_CARIBBEAN =        0x09,    // English (Caribbean)
+        SUBLANG_ENGLISH_BELIZE =           0x0a,    // English (Belize)
+        SUBLANG_ENGLISH_TRINIDAD =         0x0b,    // English (Trinidad)
+        SUBLANG_FRENCH =                   0x01,    // French
+        SUBLANG_FRENCH_BELGIAN =           0x02,    // French (Belgian)
+        SUBLANG_FRENCH_CANADIAN =          0x03,    // French (Canadian)
+        SUBLANG_FRENCH_SWISS =             0x04,    // French (Swiss)
+        SUBLANG_FRENCH_LUXEMBOURG =        0x05,    // French (Luxembourg)
+        SUBLANG_GERMAN =                   0x01,    // German
+        SUBLANG_GERMAN_SWISS =             0x02,    // German (Swiss)
+        SUBLANG_GERMAN_AUSTRIAN =          0x03,    // German (Austrian)
+        SUBLANG_GERMAN_LUXEMBOURG =        0x04,    // German (Luxembourg)
+        SUBLANG_GERMAN_LIECHTENSTEIN =     0x05,    // German (Liechtenstein)
+        SUBLANG_ITALIAN =                  0x01,    // Italian
+        SUBLANG_ITALIAN_SWISS =            0x02,    // Italian (Swiss)
+        SUBLANG_KOREAN =                   0x01,    // Korean (Extended Wansung)
+        SUBLANG_KOREAN_JOHAB =             0x02,    // Korean (Johab)
+        SUBLANG_NORWEGIAN_BOKMAL =         0x01,    // Norwegian (Bokmal)
+        SUBLANG_NORWEGIAN_NYNORSK =        0x02,    // Norwegian (Nynorsk)
+        SUBLANG_PORTUGUESE =               0x02,    // Portuguese
+        SUBLANG_PORTUGUESE_BRAZILIAN =     0x01,    // Portuguese (Brazilian)
+        SUBLANG_SERBIAN_LATIN =            0x02,    // Serbian (Latin)
+        SUBLANG_SERBIAN_CYRILLIC =         0x03,    // Serbian (Cyrillic)
+        SUBLANG_SPANISH =                  0x01,    // Spanish (Castilian)
+        SUBLANG_SPANISH_MEXICAN =          0x02,    // Spanish (Mexican)
+        SUBLANG_SPANISH_MODERN =           0x03,    // Spanish (Modern)
+        SUBLANG_SPANISH_GUATEMALA =        0x04,    // Spanish (Guatemala)
+        SUBLANG_SPANISH_COSTA_RICA =       0x05,    // Spanish (Costa Rica)
+        SUBLANG_SPANISH_PANAMA =           0x06,    // Spanish (Panama)
+        SUBLANG_SPANISH_DOMINICAN_REPUBLIC = 0x07,  // Spanish (Dominican Republic)
+        SUBLANG_SPANISH_VENEZUELA =        0x08,    // Spanish (Venezuela)
+        SUBLANG_SPANISH_COLOMBIA =         0x09,    // Spanish (Colombia)
+        SUBLANG_SPANISH_PERU =             0x0a,    // Spanish (Peru)
+        SUBLANG_SPANISH_ARGENTINA =        0x0b,    // Spanish (Argentina)
+        SUBLANG_SPANISH_ECUADOR =          0x0c,    // Spanish (Ecuador)
+        SUBLANG_SPANISH_CHILE =            0x0d,    // Spanish (Chile)
+        SUBLANG_SPANISH_URUGUAY =          0x0e,    // Spanish (Uruguay)
+        SUBLANG_SPANISH_PARAGUAY =         0x0f,    // Spanish (Paraguay)
+        SUBLANG_SPANISH_BOLIVIA =          0x10,    // Spanish (Bolivia)
+        SUBLANG_SPANISH_EL_SALVADOR =      0x11,    // Spanish (El Salvador)
+        SUBLANG_SPANISH_HONDURAS =         0x12,    // Spanish (Honduras)
+        SUBLANG_SPANISH_NICARAGUA =        0x13,    // Spanish (Nicaragua)
+        SUBLANG_SPANISH_PUERTO_RICO =      0x14,    // Spanish (Puerto Rico)
+        SUBLANG_SWEDISH =                  0x01,    // Swedish
+        SUBLANG_SWEDISH_FINLAND =          0x02,    // Swedish (Finland)
 }
 //
 //  Sorting IDs.
@@ -948,20 +948,20 @@ enum
 
 enum
 {
-	SORT_DEFAULT                   = 0x0,    // sorting default
+        SORT_DEFAULT                   = 0x0,    // sorting default
 
-	SORT_JAPANESE_XJIS             = 0x0,    // Japanese XJIS order
-	SORT_JAPANESE_UNICODE          = 0x1,    // Japanese Unicode order
+        SORT_JAPANESE_XJIS             = 0x0,    // Japanese XJIS order
+        SORT_JAPANESE_UNICODE          = 0x1,    // Japanese Unicode order
 
-	SORT_CHINESE_BIG5              = 0x0,    // Chinese BIG5 order
-	SORT_CHINESE_PRCP              = 0x0,    // PRC Chinese Phonetic order
-	SORT_CHINESE_UNICODE           = 0x1,    // Chinese Unicode order
-	SORT_CHINESE_PRC               = 0x2,    // PRC Chinese Stroke Count order
+        SORT_CHINESE_BIG5              = 0x0,    // Chinese BIG5 order
+        SORT_CHINESE_PRCP              = 0x0,    // PRC Chinese Phonetic order
+        SORT_CHINESE_UNICODE           = 0x1,    // Chinese Unicode order
+        SORT_CHINESE_PRC               = 0x2,    // PRC Chinese Stroke Count order
 
-	SORT_KOREAN_KSC                = 0x0,    // Korean KSC order
-	SORT_KOREAN_UNICODE            = 0x1,    // Korean Unicode order
+        SORT_KOREAN_KSC                = 0x0,    // Korean KSC order
+        SORT_KOREAN_UNICODE            = 0x1,    // Korean Unicode order
 
-	SORT_GERMAN_PHONE_BOOK         = 0x1,    // German Phone Book order
+        SORT_GERMAN_PHONE_BOOK         = 0x1,    // German Phone Book order
 }
 
 // end_r_winnt
@@ -1004,20 +1004,20 @@ struct FLOATING_SAVE_AREA {
 
 enum
 {
-	SIZE_OF_80387_REGISTERS =      80,
+        SIZE_OF_80387_REGISTERS =      80,
 //
 // The following flags control the contents of the CONTEXT structure.
 //
-	CONTEXT_i386 =    0x00010000,    // this assumes that i386 and
-	CONTEXT_i486 =    0x00010000,    // i486 have identical context records
+        CONTEXT_i386 =    0x00010000,    // this assumes that i386 and
+        CONTEXT_i486 =    0x00010000,    // i486 have identical context records
 
-	CONTEXT_CONTROL =         (CONTEXT_i386 | 0x00000001), // SS:SP, CS:IP, FLAGS, BP
-	CONTEXT_INTEGER =         (CONTEXT_i386 | 0x00000002), // AX, BX, CX, DX, SI, DI
-	CONTEXT_SEGMENTS =        (CONTEXT_i386 | 0x00000004), // DS, ES, FS, GS
-	CONTEXT_FLOATING_POINT =  (CONTEXT_i386 | 0x00000008), // 387 state
-	CONTEXT_DEBUG_REGISTERS = (CONTEXT_i386 | 0x00000010), // DB 0-3,6,7
+        CONTEXT_CONTROL =         (CONTEXT_i386 | 0x00000001), // SS:SP, CS:IP, FLAGS, BP
+        CONTEXT_INTEGER =         (CONTEXT_i386 | 0x00000002), // AX, BX, CX, DX, SI, DI
+        CONTEXT_SEGMENTS =        (CONTEXT_i386 | 0x00000004), // DS, ES, FS, GS
+        CONTEXT_FLOATING_POINT =  (CONTEXT_i386 | 0x00000008), // 387 state
+        CONTEXT_DEBUG_REGISTERS = (CONTEXT_i386 | 0x00000010), // DB 0-3,6,7
 
-	CONTEXT_FULL = (CONTEXT_CONTROL | CONTEXT_INTEGER | CONTEXT_SEGMENTS),
+        CONTEXT_FULL = (CONTEXT_CONTROL | CONTEXT_INTEGER | CONTEXT_SEGMENTS),
 }
 
 struct CONTEXT
@@ -1100,20 +1100,20 @@ struct CONTEXT
 
 enum
 {
-	THREAD_BASE_PRIORITY_LOWRT =  15,  // value that gets a thread to LowRealtime-1
-	THREAD_BASE_PRIORITY_MAX =    2,   // maximum thread base priority boost
-	THREAD_BASE_PRIORITY_MIN =    -2,  // minimum thread base priority boost
-	THREAD_BASE_PRIORITY_IDLE =   -15, // value that gets a thread to idle
+        THREAD_BASE_PRIORITY_LOWRT =  15,  // value that gets a thread to LowRealtime-1
+        THREAD_BASE_PRIORITY_MAX =    2,   // maximum thread base priority boost
+        THREAD_BASE_PRIORITY_MIN =    -2,  // minimum thread base priority boost
+        THREAD_BASE_PRIORITY_IDLE =   -15, // value that gets a thread to idle
 
-	THREAD_PRIORITY_LOWEST =          THREAD_BASE_PRIORITY_MIN,
-	THREAD_PRIORITY_BELOW_NORMAL =    (THREAD_PRIORITY_LOWEST+1),
-	THREAD_PRIORITY_NORMAL =          0,
-	THREAD_PRIORITY_HIGHEST =         THREAD_BASE_PRIORITY_MAX,
-	THREAD_PRIORITY_ABOVE_NORMAL =    (THREAD_PRIORITY_HIGHEST-1),
-	THREAD_PRIORITY_ERROR_RETURN =    int.max,
+        THREAD_PRIORITY_LOWEST =          THREAD_BASE_PRIORITY_MIN,
+        THREAD_PRIORITY_BELOW_NORMAL =    (THREAD_PRIORITY_LOWEST+1),
+        THREAD_PRIORITY_NORMAL =          0,
+        THREAD_PRIORITY_HIGHEST =         THREAD_BASE_PRIORITY_MAX,
+        THREAD_PRIORITY_ABOVE_NORMAL =    (THREAD_PRIORITY_HIGHEST-1),
+        THREAD_PRIORITY_ERROR_RETURN =    int.max,
 
-	THREAD_PRIORITY_TIME_CRITICAL =   THREAD_BASE_PRIORITY_LOWRT,
-	THREAD_PRIORITY_IDLE =            THREAD_BASE_PRIORITY_IDLE,
+        THREAD_PRIORITY_TIME_CRITICAL =   THREAD_BASE_PRIORITY_LOWRT,
+        THREAD_PRIORITY_IDLE =            THREAD_BASE_PRIORITY_IDLE,
 }
 
 export HANDLE GetCurrentThread();
@@ -1121,7 +1121,7 @@ export BOOL GetProcessTimes(HANDLE hProcess, LPFILETIME lpCreationTime, LPFILETI
 export HANDLE GetCurrentProcess();
 export DWORD GetCurrentProcessId();
 export BOOL DuplicateHandle (HANDLE sourceProcess, HANDLE sourceThread,
-        HANDLE targetProcessHandle, HANDLE *targetHandle, DWORD access, 
+        HANDLE targetProcessHandle, HANDLE *targetHandle, DWORD access,
         BOOL inheritHandle, DWORD options);
 export DWORD GetCurrentThreadId();
 export BOOL SetThreadPriority(HANDLE hThread, int nPriority);
@@ -1142,118 +1142,118 @@ export BOOL QueryPerformanceFrequency(long* lpFrequency);
 
 enum
 {
-	WM_NOTIFY =                       0x004E,
-	WM_INPUTLANGCHANGEREQUEST =       0x0050,
-	WM_INPUTLANGCHANGE =              0x0051,
-	WM_TCARD =                        0x0052,
-	WM_HELP =                         0x0053,
-	WM_USERCHANGED =                  0x0054,
-	WM_NOTIFYFORMAT =                 0x0055,
+        WM_NOTIFY =                       0x004E,
+        WM_INPUTLANGCHANGEREQUEST =       0x0050,
+        WM_INPUTLANGCHANGE =              0x0051,
+        WM_TCARD =                        0x0052,
+        WM_HELP =                         0x0053,
+        WM_USERCHANGED =                  0x0054,
+        WM_NOTIFYFORMAT =                 0x0055,
 
-	NFR_ANSI =                             1,
-	NFR_UNICODE =                          2,
-	NF_QUERY =                             3,
-	NF_REQUERY =                           4,
+        NFR_ANSI =                             1,
+        NFR_UNICODE =                          2,
+        NF_QUERY =                             3,
+        NF_REQUERY =                           4,
 
-	WM_CONTEXTMENU =                  0x007B,
-	WM_STYLECHANGING =                0x007C,
-	WM_STYLECHANGED =                 0x007D,
-	WM_DISPLAYCHANGE =                0x007E,
-	WM_GETICON =                      0x007F,
-	WM_SETICON =                      0x0080,
-
-
-
-	WM_NCCREATE =                     0x0081,
-	WM_NCDESTROY =                    0x0082,
-	WM_NCCALCSIZE =                   0x0083,
-	WM_NCHITTEST =                    0x0084,
-	WM_NCPAINT =                      0x0085,
-	WM_NCACTIVATE =                   0x0086,
-	WM_GETDLGCODE =                   0x0087,
-
-	WM_NCMOUSEMOVE =                  0x00A0,
-	WM_NCLBUTTONDOWN =                0x00A1,
-	WM_NCLBUTTONUP =                  0x00A2,
-	WM_NCLBUTTONDBLCLK =              0x00A3,
-	WM_NCRBUTTONDOWN =                0x00A4,
-	WM_NCRBUTTONUP =                  0x00A5,
-	WM_NCRBUTTONDBLCLK =              0x00A6,
-	WM_NCMBUTTONDOWN =                0x00A7,
-	WM_NCMBUTTONUP =                  0x00A8,
-	WM_NCMBUTTONDBLCLK =              0x00A9,
-
-	WM_KEYFIRST =                     0x0100,
-	WM_KEYDOWN =                      0x0100,
-	WM_KEYUP =                        0x0101,
-	WM_CHAR =                         0x0102,
-	WM_DEADCHAR =                     0x0103,
-	WM_SYSKEYDOWN =                   0x0104,
-	WM_SYSKEYUP =                     0x0105,
-	WM_SYSCHAR =                      0x0106,
-	WM_SYSDEADCHAR =                  0x0107,
-	WM_KEYLAST =                      0x0108,
-
-
-	WM_IME_STARTCOMPOSITION =         0x010D,
-	WM_IME_ENDCOMPOSITION =           0x010E,
-	WM_IME_COMPOSITION =              0x010F,
-	WM_IME_KEYLAST =                  0x010F,
-
-
-	WM_INITDIALOG =                   0x0110,
-	WM_COMMAND =                      0x0111,
-	WM_SYSCOMMAND =                   0x0112,
-	WM_TIMER =                        0x0113,
-	WM_HSCROLL =                      0x0114,
-	WM_VSCROLL =                      0x0115,
-	WM_INITMENU =                     0x0116,
-	WM_INITMENUPOPUP =                0x0117,
-	WM_MENUSELECT =                   0x011F,
-	WM_MENUCHAR =                     0x0120,
-	WM_ENTERIDLE =                    0x0121,
-
-	WM_CTLCOLORMSGBOX =               0x0132,
-	WM_CTLCOLOREDIT =                 0x0133,
-	WM_CTLCOLORLISTBOX =              0x0134,
-	WM_CTLCOLORBTN =                  0x0135,
-	WM_CTLCOLORDLG =                  0x0136,
-	WM_CTLCOLORSCROLLBAR =            0x0137,
-	WM_CTLCOLORSTATIC =               0x0138,
+        WM_CONTEXTMENU =                  0x007B,
+        WM_STYLECHANGING =                0x007C,
+        WM_STYLECHANGED =                 0x007D,
+        WM_DISPLAYCHANGE =                0x007E,
+        WM_GETICON =                      0x007F,
+        WM_SETICON =                      0x0080,
 
 
 
-	WM_MOUSEFIRST =                   0x0200,
-	WM_MOUSEMOVE =                    0x0200,
-	WM_LBUTTONDOWN =                  0x0201,
-	WM_LBUTTONUP =                    0x0202,
-	WM_LBUTTONDBLCLK =                0x0203,
-	WM_RBUTTONDOWN =                  0x0204,
-	WM_RBUTTONUP =                    0x0205,
-	WM_RBUTTONDBLCLK =                0x0206,
-	WM_MBUTTONDOWN =                  0x0207,
-	WM_MBUTTONUP =                    0x0208,
-	WM_MBUTTONDBLCLK =                0x0209,
+        WM_NCCREATE =                     0x0081,
+        WM_NCDESTROY =                    0x0082,
+        WM_NCCALCSIZE =                   0x0083,
+        WM_NCHITTEST =                    0x0084,
+        WM_NCPAINT =                      0x0085,
+        WM_NCACTIVATE =                   0x0086,
+        WM_GETDLGCODE =                   0x0087,
+
+        WM_NCMOUSEMOVE =                  0x00A0,
+        WM_NCLBUTTONDOWN =                0x00A1,
+        WM_NCLBUTTONUP =                  0x00A2,
+        WM_NCLBUTTONDBLCLK =              0x00A3,
+        WM_NCRBUTTONDOWN =                0x00A4,
+        WM_NCRBUTTONUP =                  0x00A5,
+        WM_NCRBUTTONDBLCLK =              0x00A6,
+        WM_NCMBUTTONDOWN =                0x00A7,
+        WM_NCMBUTTONUP =                  0x00A8,
+        WM_NCMBUTTONDBLCLK =              0x00A9,
+
+        WM_KEYFIRST =                     0x0100,
+        WM_KEYDOWN =                      0x0100,
+        WM_KEYUP =                        0x0101,
+        WM_CHAR =                         0x0102,
+        WM_DEADCHAR =                     0x0103,
+        WM_SYSKEYDOWN =                   0x0104,
+        WM_SYSKEYUP =                     0x0105,
+        WM_SYSCHAR =                      0x0106,
+        WM_SYSDEADCHAR =                  0x0107,
+        WM_KEYLAST =                      0x0108,
+
+
+        WM_IME_STARTCOMPOSITION =         0x010D,
+        WM_IME_ENDCOMPOSITION =           0x010E,
+        WM_IME_COMPOSITION =              0x010F,
+        WM_IME_KEYLAST =                  0x010F,
+
+
+        WM_INITDIALOG =                   0x0110,
+        WM_COMMAND =                      0x0111,
+        WM_SYSCOMMAND =                   0x0112,
+        WM_TIMER =                        0x0113,
+        WM_HSCROLL =                      0x0114,
+        WM_VSCROLL =                      0x0115,
+        WM_INITMENU =                     0x0116,
+        WM_INITMENUPOPUP =                0x0117,
+        WM_MENUSELECT =                   0x011F,
+        WM_MENUCHAR =                     0x0120,
+        WM_ENTERIDLE =                    0x0121,
+
+        WM_CTLCOLORMSGBOX =               0x0132,
+        WM_CTLCOLOREDIT =                 0x0133,
+        WM_CTLCOLORLISTBOX =              0x0134,
+        WM_CTLCOLORBTN =                  0x0135,
+        WM_CTLCOLORDLG =                  0x0136,
+        WM_CTLCOLORSCROLLBAR =            0x0137,
+        WM_CTLCOLORSTATIC =               0x0138,
 
 
 
-	WM_MOUSELAST =                    0x0209,
+        WM_MOUSEFIRST =                   0x0200,
+        WM_MOUSEMOVE =                    0x0200,
+        WM_LBUTTONDOWN =                  0x0201,
+        WM_LBUTTONUP =                    0x0202,
+        WM_LBUTTONDBLCLK =                0x0203,
+        WM_RBUTTONDOWN =                  0x0204,
+        WM_RBUTTONUP =                    0x0205,
+        WM_RBUTTONDBLCLK =                0x0206,
+        WM_MBUTTONDOWN =                  0x0207,
+        WM_MBUTTONUP =                    0x0208,
+        WM_MBUTTONDBLCLK =                0x0209,
 
 
+
+        WM_MOUSELAST =                    0x0209,
 
 
 
 
 
 
-	WM_PARENTNOTIFY =                 0x0210,
-	MENULOOP_WINDOW =                 0,
-	MENULOOP_POPUP =                  1,
-	WM_ENTERMENULOOP =                0x0211,
-	WM_EXITMENULOOP =                 0x0212,
 
 
-	WM_NEXTMENU =                     0x0213,
+        WM_PARENTNOTIFY =                 0x0210,
+        MENULOOP_WINDOW =                 0,
+        MENULOOP_POPUP =                  1,
+        WM_ENTERMENULOOP =                0x0211,
+        WM_EXITMENULOOP =                 0x0212,
+
+
+        WM_NEXTMENU =                     0x0213,
 }
 
 enum
@@ -1261,16 +1261,16 @@ enum
 /*
  * Dialog Box Command IDs
  */
-	IDOK =                1,
-	IDCANCEL =            2,
-	IDABORT =             3,
-	IDRETRY =             4,
-	IDIGNORE =            5,
-	IDYES =               6,
-	IDNO =                7,
+        IDOK =                1,
+        IDCANCEL =            2,
+        IDABORT =             3,
+        IDRETRY =             4,
+        IDIGNORE =            5,
+        IDYES =               6,
+        IDNO =                7,
 
-	IDCLOSE =         8,
-	IDHELP =          9,
+        IDCLOSE =         8,
+        IDHELP =          9,
 
 
 // end_r_winuser
@@ -1288,21 +1288,21 @@ enum
 /*
  * Edit Control Styles
  */
-	ES_LEFT =             0x0000,
-	ES_CENTER =           0x0001,
-	ES_RIGHT =            0x0002,
-	ES_MULTILINE =        0x0004,
-	ES_UPPERCASE =        0x0008,
-	ES_LOWERCASE =        0x0010,
-	ES_PASSWORD =         0x0020,
-	ES_AUTOVSCROLL =      0x0040,
-	ES_AUTOHSCROLL =      0x0080,
-	ES_NOHIDESEL =        0x0100,
-	ES_OEMCONVERT =       0x0400,
-	ES_READONLY =         0x0800,
-	ES_WANTRETURN =       0x1000,
+        ES_LEFT =             0x0000,
+        ES_CENTER =           0x0001,
+        ES_RIGHT =            0x0002,
+        ES_MULTILINE =        0x0004,
+        ES_UPPERCASE =        0x0008,
+        ES_LOWERCASE =        0x0010,
+        ES_PASSWORD =         0x0020,
+        ES_AUTOVSCROLL =      0x0040,
+        ES_AUTOHSCROLL =      0x0080,
+        ES_NOHIDESEL =        0x0100,
+        ES_OEMCONVERT =       0x0400,
+        ES_READONLY =         0x0800,
+        ES_WANTRETURN =       0x1000,
 
-	ES_NUMBER =           0x2000,
+        ES_NUMBER =           0x2000,
 
 
 // end_r_winuser
@@ -1312,20 +1312,20 @@ enum
 /*
  * Edit Control Notification Codes
  */
-	EN_SETFOCUS =         0x0100,
-	EN_KILLFOCUS =        0x0200,
-	EN_CHANGE =           0x0300,
-	EN_UPDATE =           0x0400,
-	EN_ERRSPACE =         0x0500,
-	EN_MAXTEXT =          0x0501,
-	EN_HSCROLL =          0x0601,
-	EN_VSCROLL =          0x0602,
+        EN_SETFOCUS =         0x0100,
+        EN_KILLFOCUS =        0x0200,
+        EN_CHANGE =           0x0300,
+        EN_UPDATE =           0x0400,
+        EN_ERRSPACE =         0x0500,
+        EN_MAXTEXT =          0x0501,
+        EN_HSCROLL =          0x0601,
+        EN_VSCROLL =          0x0602,
 
 
 /* Edit control EM_SETMARGIN parameters */
-	EC_LEFTMARGIN =       0x0001,
-	EC_RIGHTMARGIN =      0x0002,
-	EC_USEFONTINFO =      0xffff,
+        EC_LEFTMARGIN =       0x0001,
+        EC_RIGHTMARGIN =      0x0002,
+        EC_USEFONTINFO =      0xffff,
 
 
 
@@ -1335,44 +1335,44 @@ enum
 /*
  * Edit Control Messages
  */
-	EM_GETSEL =               0x00B0,
-	EM_SETSEL =               0x00B1,
-	EM_GETRECT =              0x00B2,
-	EM_SETRECT =              0x00B3,
-	EM_SETRECTNP =            0x00B4,
-	EM_SCROLL =               0x00B5,
-	EM_LINESCROLL =           0x00B6,
-	EM_SCROLLCARET =          0x00B7,
-	EM_GETMODIFY =            0x00B8,
-	EM_SETMODIFY =            0x00B9,
-	EM_GETLINECOUNT =         0x00BA,
-	EM_LINEINDEX =            0x00BB,
-	EM_SETHANDLE =            0x00BC,
-	EM_GETHANDLE =            0x00BD,
-	EM_GETTHUMB =             0x00BE,
-	EM_LINELENGTH =           0x00C1,
-	EM_REPLACESEL =           0x00C2,
-	EM_GETLINE =              0x00C4,
-	EM_LIMITTEXT =            0x00C5,
-	EM_CANUNDO =              0x00C6,
-	EM_UNDO =                 0x00C7,
-	EM_FMTLINES =             0x00C8,
-	EM_LINEFROMCHAR =         0x00C9,
-	EM_SETTABSTOPS =          0x00CB,
-	EM_SETPASSWORDCHAR =      0x00CC,
-	EM_EMPTYUNDOBUFFER =      0x00CD,
-	EM_GETFIRSTVISIBLELINE =  0x00CE,
-	EM_SETREADONLY =          0x00CF,
-	EM_SETWORDBREAKPROC =     0x00D0,
-	EM_GETWORDBREAKPROC =     0x00D1,
-	EM_GETPASSWORDCHAR =      0x00D2,
+        EM_GETSEL =               0x00B0,
+        EM_SETSEL =               0x00B1,
+        EM_GETRECT =              0x00B2,
+        EM_SETRECT =              0x00B3,
+        EM_SETRECTNP =            0x00B4,
+        EM_SCROLL =               0x00B5,
+        EM_LINESCROLL =           0x00B6,
+        EM_SCROLLCARET =          0x00B7,
+        EM_GETMODIFY =            0x00B8,
+        EM_SETMODIFY =            0x00B9,
+        EM_GETLINECOUNT =         0x00BA,
+        EM_LINEINDEX =            0x00BB,
+        EM_SETHANDLE =            0x00BC,
+        EM_GETHANDLE =            0x00BD,
+        EM_GETTHUMB =             0x00BE,
+        EM_LINELENGTH =           0x00C1,
+        EM_REPLACESEL =           0x00C2,
+        EM_GETLINE =              0x00C4,
+        EM_LIMITTEXT =            0x00C5,
+        EM_CANUNDO =              0x00C6,
+        EM_UNDO =                 0x00C7,
+        EM_FMTLINES =             0x00C8,
+        EM_LINEFROMCHAR =         0x00C9,
+        EM_SETTABSTOPS =          0x00CB,
+        EM_SETPASSWORDCHAR =      0x00CC,
+        EM_EMPTYUNDOBUFFER =      0x00CD,
+        EM_GETFIRSTVISIBLELINE =  0x00CE,
+        EM_SETREADONLY =          0x00CF,
+        EM_SETWORDBREAKPROC =     0x00D0,
+        EM_GETWORDBREAKPROC =     0x00D1,
+        EM_GETPASSWORDCHAR =      0x00D2,
 
-	EM_SETMARGINS =           0x00D3,
-	EM_GETMARGINS =           0x00D4,
-	EM_SETLIMITTEXT =         EM_LIMITTEXT, /* ;win40 Name change */
-	EM_GETLIMITTEXT =         0x00D5,
-	EM_POSFROMCHAR =          0x00D6,
-	EM_CHARFROMPOS =          0x00D7,
+        EM_SETMARGINS =           0x00D3,
+        EM_GETMARGINS =           0x00D4,
+        EM_SETLIMITTEXT =         EM_LIMITTEXT, /* ;win40 Name change */
+        EM_GETLIMITTEXT =         0x00D5,
+        EM_POSFROMCHAR =          0x00D6,
+        EM_CHARFROMPOS =          0x00D7,
 
 
 
@@ -1382,117 +1382,117 @@ enum
 /*
  * EDITWORDBREAKPROC code values
  */
-	WB_LEFT =            0,
-	WB_RIGHT =           1,
-	WB_ISDELIMITER =     2,
+        WB_LEFT =            0,
+        WB_RIGHT =           1,
+        WB_ISDELIMITER =     2,
 
 // begin_r_winuser
 
 /*
  * Button Control Styles
  */
-	BS_PUSHBUTTON =       0x00000000,
-	BS_DEFPUSHBUTTON =    0x00000001,
-	BS_CHECKBOX =         0x00000002,
-	BS_AUTOCHECKBOX =     0x00000003,
-	BS_RADIOBUTTON =      0x00000004,
-	BS_3STATE =           0x00000005,
-	BS_AUTO3STATE =       0x00000006,
-	BS_GROUPBOX =         0x00000007,
-	BS_USERBUTTON =       0x00000008,
-	BS_AUTORADIOBUTTON =  0x00000009,
-	BS_OWNERDRAW =        0x0000000B,
-	BS_LEFTTEXT =         0x00000020,
+        BS_PUSHBUTTON =       0x00000000,
+        BS_DEFPUSHBUTTON =    0x00000001,
+        BS_CHECKBOX =         0x00000002,
+        BS_AUTOCHECKBOX =     0x00000003,
+        BS_RADIOBUTTON =      0x00000004,
+        BS_3STATE =           0x00000005,
+        BS_AUTO3STATE =       0x00000006,
+        BS_GROUPBOX =         0x00000007,
+        BS_USERBUTTON =       0x00000008,
+        BS_AUTORADIOBUTTON =  0x00000009,
+        BS_OWNERDRAW =        0x0000000B,
+        BS_LEFTTEXT =         0x00000020,
 
-	BS_TEXT =             0x00000000,
-	BS_ICON =             0x00000040,
-	BS_BITMAP =           0x00000080,
-	BS_LEFT =             0x00000100,
-	BS_RIGHT =            0x00000200,
-	BS_CENTER =           0x00000300,
-	BS_TOP =              0x00000400,
-	BS_BOTTOM =           0x00000800,
-	BS_VCENTER =          0x00000C00,
-	BS_PUSHLIKE =         0x00001000,
-	BS_MULTILINE =        0x00002000,
-	BS_NOTIFY =           0x00004000,
-	BS_FLAT =             0x00008000,
-	BS_RIGHTBUTTON =      BS_LEFTTEXT,
+        BS_TEXT =             0x00000000,
+        BS_ICON =             0x00000040,
+        BS_BITMAP =           0x00000080,
+        BS_LEFT =             0x00000100,
+        BS_RIGHT =            0x00000200,
+        BS_CENTER =           0x00000300,
+        BS_TOP =              0x00000400,
+        BS_BOTTOM =           0x00000800,
+        BS_VCENTER =          0x00000C00,
+        BS_PUSHLIKE =         0x00001000,
+        BS_MULTILINE =        0x00002000,
+        BS_NOTIFY =           0x00004000,
+        BS_FLAT =             0x00008000,
+        BS_RIGHTBUTTON =      BS_LEFTTEXT,
 
 
 
 /*
  * User Button Notification Codes
  */
-	BN_CLICKED =          0,
-	BN_PAINT =            1,
-	BN_HILITE =           2,
-	BN_UNHILITE =         3,
-	BN_DISABLE =          4,
-	BN_DOUBLECLICKED =    5,
+        BN_CLICKED =          0,
+        BN_PAINT =            1,
+        BN_HILITE =           2,
+        BN_UNHILITE =         3,
+        BN_DISABLE =          4,
+        BN_DOUBLECLICKED =    5,
 
-	BN_PUSHED =           BN_HILITE,
-	BN_UNPUSHED =         BN_UNHILITE,
-	BN_DBLCLK =           BN_DOUBLECLICKED,
-	BN_SETFOCUS =         6,
-	BN_KILLFOCUS =        7,
+        BN_PUSHED =           BN_HILITE,
+        BN_UNPUSHED =         BN_UNHILITE,
+        BN_DBLCLK =           BN_DOUBLECLICKED,
+        BN_SETFOCUS =         6,
+        BN_KILLFOCUS =        7,
 
 /*
  * Button Control Messages
  */
-	BM_GETCHECK =        0x00F0,
-	BM_SETCHECK =        0x00F1,
-	BM_GETSTATE =        0x00F2,
-	BM_SETSTATE =        0x00F3,
-	BM_SETSTYLE =        0x00F4,
+        BM_GETCHECK =        0x00F0,
+        BM_SETCHECK =        0x00F1,
+        BM_GETSTATE =        0x00F2,
+        BM_SETSTATE =        0x00F3,
+        BM_SETSTYLE =        0x00F4,
 
-	BM_CLICK =           0x00F5,
-	BM_GETIMAGE =        0x00F6,
-	BM_SETIMAGE =        0x00F7,
+        BM_CLICK =           0x00F5,
+        BM_GETIMAGE =        0x00F6,
+        BM_SETIMAGE =        0x00F7,
 
-	BST_UNCHECKED =      0x0000,
-	BST_CHECKED =        0x0001,
-	BST_INDETERMINATE =  0x0002,
-	BST_PUSHED =         0x0004,
-	BST_FOCUS =          0x0008,
+        BST_UNCHECKED =      0x0000,
+        BST_CHECKED =        0x0001,
+        BST_INDETERMINATE =  0x0002,
+        BST_PUSHED =         0x0004,
+        BST_FOCUS =          0x0008,
 
 
 /*
  * Static Control Constants
  */
-	SS_LEFT =             0x00000000,
-	SS_CENTER =           0x00000001,
-	SS_RIGHT =            0x00000002,
-	SS_ICON =             0x00000003,
-	SS_BLACKRECT =        0x00000004,
-	SS_GRAYRECT =         0x00000005,
-	SS_WHITERECT =        0x00000006,
-	SS_BLACKFRAME =       0x00000007,
-	SS_GRAYFRAME =        0x00000008,
-	SS_WHITEFRAME =       0x00000009,
-	SS_USERITEM =         0x0000000A,
-	SS_SIMPLE =           0x0000000B,
-	SS_LEFTNOWORDWRAP =   0x0000000C,
+        SS_LEFT =             0x00000000,
+        SS_CENTER =           0x00000001,
+        SS_RIGHT =            0x00000002,
+        SS_ICON =             0x00000003,
+        SS_BLACKRECT =        0x00000004,
+        SS_GRAYRECT =         0x00000005,
+        SS_WHITERECT =        0x00000006,
+        SS_BLACKFRAME =       0x00000007,
+        SS_GRAYFRAME =        0x00000008,
+        SS_WHITEFRAME =       0x00000009,
+        SS_USERITEM =         0x0000000A,
+        SS_SIMPLE =           0x0000000B,
+        SS_LEFTNOWORDWRAP =   0x0000000C,
 
-	SS_OWNERDRAW =        0x0000000D,
-	SS_BITMAP =           0x0000000E,
-	SS_ENHMETAFILE =      0x0000000F,
-	SS_ETCHEDHORZ =       0x00000010,
-	SS_ETCHEDVERT =       0x00000011,
-	SS_ETCHEDFRAME =      0x00000012,
-	SS_TYPEMASK =         0x0000001F,
+        SS_OWNERDRAW =        0x0000000D,
+        SS_BITMAP =           0x0000000E,
+        SS_ENHMETAFILE =      0x0000000F,
+        SS_ETCHEDHORZ =       0x00000010,
+        SS_ETCHEDVERT =       0x00000011,
+        SS_ETCHEDFRAME =      0x00000012,
+        SS_TYPEMASK =         0x0000001F,
 
-	SS_NOPREFIX =         0x00000080, /* Don't do "&" character translation */
+        SS_NOPREFIX =         0x00000080, /* Don't do "&" character translation */
 
-	SS_NOTIFY =           0x00000100,
-	SS_CENTERIMAGE =      0x00000200,
-	SS_RIGHTJUST =        0x00000400,
-	SS_REALSIZEIMAGE =    0x00000800,
-	SS_SUNKEN =           0x00001000,
-	SS_ENDELLIPSIS =      0x00004000,
-	SS_PATHELLIPSIS =     0x00008000,
-	SS_WORDELLIPSIS =     0x0000C000,
-	SS_ELLIPSISMASK =     0x0000C000,
+        SS_NOTIFY =           0x00000100,
+        SS_CENTERIMAGE =      0x00000200,
+        SS_RIGHTJUST =        0x00000400,
+        SS_REALSIZEIMAGE =    0x00000800,
+        SS_SUNKEN =           0x00001000,
+        SS_ENDELLIPSIS =      0x00004000,
+        SS_PATHELLIPSIS =     0x00008000,
+        SS_WORDELLIPSIS =     0x0000C000,
+        SS_ELLIPSISMASK =     0x0000C000,
 
 
 // end_r_winuser
@@ -1501,17 +1501,17 @@ enum
 /*
  * Static Control Mesages
  */
-	STM_SETICON =         0x0170,
-	STM_GETICON =         0x0171,
+        STM_SETICON =         0x0170,
+        STM_GETICON =         0x0171,
 
-	STM_SETIMAGE =        0x0172,
-	STM_GETIMAGE =        0x0173,
-	STN_CLICKED =         0,
-	STN_DBLCLK =          1,
-	STN_ENABLE =          2,
-	STN_DISABLE =         3,
+        STM_SETIMAGE =        0x0172,
+        STM_GETIMAGE =        0x0173,
+        STN_CLICKED =         0,
+        STN_DBLCLK =          1,
+        STN_ENABLE =          2,
+        STN_DISABLE =         3,
 
-	STM_MSGMAX =          0x0174,
+        STM_MSGMAX =          0x0174,
 }
 
 
@@ -1521,53 +1521,53 @@ enum
  * Window Messages
  */
 
-	WM_NULL =                         0x0000,
-	WM_CREATE =                       0x0001,
-	WM_DESTROY =                      0x0002,
-	WM_MOVE =                         0x0003,
-	WM_SIZE =                         0x0005,
+        WM_NULL =                         0x0000,
+        WM_CREATE =                       0x0001,
+        WM_DESTROY =                      0x0002,
+        WM_MOVE =                         0x0003,
+        WM_SIZE =                         0x0005,
 
-	WM_ACTIVATE =                     0x0006,
+        WM_ACTIVATE =                     0x0006,
 /*
  * WM_ACTIVATE state values
  */
-	WA_INACTIVE =     0,
-	WA_ACTIVE =       1,
-	WA_CLICKACTIVE =  2,
+        WA_INACTIVE =     0,
+        WA_ACTIVE =       1,
+        WA_CLICKACTIVE =  2,
 
-	WM_SETFOCUS =                     0x0007,
-	WM_KILLFOCUS =                    0x0008,
-	WM_ENABLE =                       0x000A,
-	WM_SETREDRAW =                    0x000B,
-	WM_SETTEXT =                      0x000C,
-	WM_GETTEXT =                      0x000D,
-	WM_GETTEXTLENGTH =                0x000E,
-	WM_PAINT =                        0x000F,
-	WM_CLOSE =                        0x0010,
-	WM_QUERYENDSESSION =              0x0011,
-	WM_QUIT =                         0x0012,
-	WM_QUERYOPEN =                    0x0013,
-	WM_ERASEBKGND =                   0x0014,
-	WM_SYSCOLORCHANGE =               0x0015,
-	WM_ENDSESSION =                   0x0016,
-	WM_SHOWWINDOW =                   0x0018,
-	WM_WININICHANGE =                 0x001A,
+        WM_SETFOCUS =                     0x0007,
+        WM_KILLFOCUS =                    0x0008,
+        WM_ENABLE =                       0x000A,
+        WM_SETREDRAW =                    0x000B,
+        WM_SETTEXT =                      0x000C,
+        WM_GETTEXT =                      0x000D,
+        WM_GETTEXTLENGTH =                0x000E,
+        WM_PAINT =                        0x000F,
+        WM_CLOSE =                        0x0010,
+        WM_QUERYENDSESSION =              0x0011,
+        WM_QUIT =                         0x0012,
+        WM_QUERYOPEN =                    0x0013,
+        WM_ERASEBKGND =                   0x0014,
+        WM_SYSCOLORCHANGE =               0x0015,
+        WM_ENDSESSION =                   0x0016,
+        WM_SHOWWINDOW =                   0x0018,
+        WM_WININICHANGE =                 0x001A,
 
-	WM_SETTINGCHANGE =                WM_WININICHANGE,
+        WM_SETTINGCHANGE =                WM_WININICHANGE,
 
 
 
-	WM_DEVMODECHANGE =                0x001B,
-	WM_ACTIVATEAPP =                  0x001C,
-	WM_FONTCHANGE =                   0x001D,
-	WM_TIMECHANGE =                   0x001E,
-	WM_CANCELMODE =                   0x001F,
-	WM_SETCURSOR =                    0x0020,
-	WM_MOUSEACTIVATE =                0x0021,
-	WM_CHILDACTIVATE =                0x0022,
-	WM_QUEUESYNC =                    0x0023,
+        WM_DEVMODECHANGE =                0x001B,
+        WM_ACTIVATEAPP =                  0x001C,
+        WM_FONTCHANGE =                   0x001D,
+        WM_TIMECHANGE =                   0x001E,
+        WM_CANCELMODE =                   0x001F,
+        WM_SETCURSOR =                    0x0020,
+        WM_MOUSEACTIVATE =                0x0021,
+        WM_CHILDACTIVATE =                0x0022,
+        WM_QUEUESYNC =                    0x0023,
 
-	WM_GETMINMAXINFO =                0x0024,
+        WM_GETMINMAXINFO =                0x0024,
 }
 
 struct RECT
@@ -1593,18 +1593,18 @@ alias PAINTSTRUCT* PPAINTSTRUCT, NPPAINTSTRUCT, LPPAINTSTRUCT;
 
 enum
 {
-	DCX_WINDOW =           0x00000001,
-	DCX_CACHE =            0x00000002,
-	DCX_NORESETATTRS =     0x00000004,
-	DCX_CLIPCHILDREN =     0x00000008,
-	DCX_CLIPSIBLINGS =     0x00000010,
-	DCX_PARENTCLIP =       0x00000020,
-	DCX_EXCLUDERGN =       0x00000040,
-	DCX_INTERSECTRGN =     0x00000080,
-	DCX_EXCLUDEUPDATE =    0x00000100,
-	DCX_INTERSECTUPDATE =  0x00000200,
-	DCX_LOCKWINDOWUPDATE = 0x00000400,
-	DCX_VALIDATE =         0x00200000,
+        DCX_WINDOW =           0x00000001,
+        DCX_CACHE =            0x00000002,
+        DCX_NORESETATTRS =     0x00000004,
+        DCX_CLIPCHILDREN =     0x00000008,
+        DCX_CLIPSIBLINGS =     0x00000010,
+        DCX_PARENTCLIP =       0x00000020,
+        DCX_EXCLUDERGN =       0x00000040,
+        DCX_INTERSECTRGN =     0x00000080,
+        DCX_EXCLUDEUPDATE =    0x00000100,
+        DCX_INTERSECTUPDATE =  0x00000200,
+        DCX_LOCKWINDOWUPDATE = 0x00000400,
+        DCX_VALIDATE =         0x00200000,
 }
 
 export
@@ -1636,18 +1636,18 @@ export
 // flags for RedrawWindow()
 enum
 {
-	RDW_INVALIDATE =          0x0001,
-	RDW_INTERNALPAINT =       0x0002,
-	RDW_ERASE =               0x0004,
-	RDW_VALIDATE =            0x0008,
-	RDW_NOINTERNALPAINT =     0x0010,
-	RDW_NOERASE =             0x0020,
-	RDW_NOCHILDREN =          0x0040,
-	RDW_ALLCHILDREN =         0x0080,
-	RDW_UPDATENOW =           0x0100,
-	RDW_ERASENOW =            0x0200,
-	RDW_FRAME =               0x0400,
-	RDW_NOFRAME =             0x0800,
+        RDW_INVALIDATE =          0x0001,
+        RDW_INTERNALPAINT =       0x0002,
+        RDW_ERASE =               0x0004,
+        RDW_VALIDATE =            0x0008,
+        RDW_NOINTERNALPAINT =     0x0010,
+        RDW_NOERASE =             0x0020,
+        RDW_NOCHILDREN =          0x0040,
+        RDW_ALLCHILDREN =         0x0080,
+        RDW_UPDATENOW =           0x0100,
+        RDW_ERASENOW =            0x0200,
+        RDW_FRAME =               0x0400,
+        RDW_NOFRAME =             0x0800,
 }
 
 export
@@ -1666,122 +1666,122 @@ export
 
 enum
 {
-	OUT_DEFAULT_PRECIS =          0,
-	OUT_STRING_PRECIS =           1,
-	OUT_CHARACTER_PRECIS =        2,
-	OUT_STROKE_PRECIS =           3,
-	OUT_TT_PRECIS =               4,
-	OUT_DEVICE_PRECIS =           5,
-	OUT_RASTER_PRECIS =           6,
-	OUT_TT_ONLY_PRECIS =          7,
-	OUT_OUTLINE_PRECIS =          8,
-	OUT_SCREEN_OUTLINE_PRECIS =   9,
+        OUT_DEFAULT_PRECIS =          0,
+        OUT_STRING_PRECIS =           1,
+        OUT_CHARACTER_PRECIS =        2,
+        OUT_STROKE_PRECIS =           3,
+        OUT_TT_PRECIS =               4,
+        OUT_DEVICE_PRECIS =           5,
+        OUT_RASTER_PRECIS =           6,
+        OUT_TT_ONLY_PRECIS =          7,
+        OUT_OUTLINE_PRECIS =          8,
+        OUT_SCREEN_OUTLINE_PRECIS =   9,
 
-	CLIP_DEFAULT_PRECIS =     0,
-	CLIP_CHARACTER_PRECIS =   1,
-	CLIP_STROKE_PRECIS =      2,
-	CLIP_MASK =               0xf,
-	CLIP_LH_ANGLES =          (1<<4),
-	CLIP_TT_ALWAYS =          (2<<4),
-	CLIP_EMBEDDED =           (8<<4),
+        CLIP_DEFAULT_PRECIS =     0,
+        CLIP_CHARACTER_PRECIS =   1,
+        CLIP_STROKE_PRECIS =      2,
+        CLIP_MASK =               0xf,
+        CLIP_LH_ANGLES =          (1<<4),
+        CLIP_TT_ALWAYS =          (2<<4),
+        CLIP_EMBEDDED =           (8<<4),
 
-	DEFAULT_QUALITY =         0,
-	DRAFT_QUALITY =           1,
-	PROOF_QUALITY =           2,
+        DEFAULT_QUALITY =         0,
+        DRAFT_QUALITY =           1,
+        PROOF_QUALITY =           2,
 
-	NONANTIALIASED_QUALITY =  3,
-	ANTIALIASED_QUALITY =     4,
-
-
-	DEFAULT_PITCH =           0,
-	FIXED_PITCH =             1,
-	VARIABLE_PITCH =          2,
-
-	MONO_FONT =               8,
+        NONANTIALIASED_QUALITY =  3,
+        ANTIALIASED_QUALITY =     4,
 
 
-	ANSI_CHARSET =            0,
-	DEFAULT_CHARSET =         1,
-	SYMBOL_CHARSET =          2,
-	SHIFTJIS_CHARSET =        128,
-	HANGEUL_CHARSET =         129,
-	GB2312_CHARSET =          134,
-	CHINESEBIG5_CHARSET =     136,
-	OEM_CHARSET =             255,
+        DEFAULT_PITCH =           0,
+        FIXED_PITCH =             1,
+        VARIABLE_PITCH =          2,
 
-	JOHAB_CHARSET =           130,
-	HEBREW_CHARSET =          177,
-	ARABIC_CHARSET =          178,
-	GREEK_CHARSET =           161,
-	TURKISH_CHARSET =         162,
-	VIETNAMESE_CHARSET =      163,
-	THAI_CHARSET =            222,
-	EASTEUROPE_CHARSET =      238,
-	RUSSIAN_CHARSET =         204,
+        MONO_FONT =               8,
 
-	MAC_CHARSET =             77,
-	BALTIC_CHARSET =          186,
 
-	FS_LATIN1 =               0x00000001L,
-	FS_LATIN2 =               0x00000002L,
-	FS_CYRILLIC =             0x00000004L,
-	FS_GREEK =                0x00000008L,
-	FS_TURKISH =              0x00000010L,
-	FS_HEBREW =               0x00000020L,
-	FS_ARABIC =               0x00000040L,
-	FS_BALTIC =               0x00000080L,
-	FS_VIETNAMESE =           0x00000100L,
-	FS_THAI =                 0x00010000L,
-	FS_JISJAPAN =             0x00020000L,
-	FS_CHINESESIMP =          0x00040000L,
-	FS_WANSUNG =              0x00080000L,
-	FS_CHINESETRAD =          0x00100000L,
-	FS_JOHAB =                0x00200000L,
-	FS_SYMBOL =               cast(int)0x80000000L,
+        ANSI_CHARSET =            0,
+        DEFAULT_CHARSET =         1,
+        SYMBOL_CHARSET =          2,
+        SHIFTJIS_CHARSET =        128,
+        HANGEUL_CHARSET =         129,
+        GB2312_CHARSET =          134,
+        CHINESEBIG5_CHARSET =     136,
+        OEM_CHARSET =             255,
+
+        JOHAB_CHARSET =           130,
+        HEBREW_CHARSET =          177,
+        ARABIC_CHARSET =          178,
+        GREEK_CHARSET =           161,
+        TURKISH_CHARSET =         162,
+        VIETNAMESE_CHARSET =      163,
+        THAI_CHARSET =            222,
+        EASTEUROPE_CHARSET =      238,
+        RUSSIAN_CHARSET =         204,
+
+        MAC_CHARSET =             77,
+        BALTIC_CHARSET =          186,
+
+        FS_LATIN1 =               0x00000001L,
+        FS_LATIN2 =               0x00000002L,
+        FS_CYRILLIC =             0x00000004L,
+        FS_GREEK =                0x00000008L,
+        FS_TURKISH =              0x00000010L,
+        FS_HEBREW =               0x00000020L,
+        FS_ARABIC =               0x00000040L,
+        FS_BALTIC =               0x00000080L,
+        FS_VIETNAMESE =           0x00000100L,
+        FS_THAI =                 0x00010000L,
+        FS_JISJAPAN =             0x00020000L,
+        FS_CHINESESIMP =          0x00040000L,
+        FS_WANSUNG =              0x00080000L,
+        FS_CHINESETRAD =          0x00100000L,
+        FS_JOHAB =                0x00200000L,
+        FS_SYMBOL =               cast(int)0x80000000L,
 
 
 /* Font Families */
-	FF_DONTCARE =         (0<<4), /* Don't care or don't know. */
-	FF_ROMAN =            (1<<4), /* Variable stroke width, serifed. */
+        FF_DONTCARE =         (0<<4), /* Don't care or don't know. */
+        FF_ROMAN =            (1<<4), /* Variable stroke width, serifed. */
                                     /* Times Roman, Century Schoolbook, etc. */
-	FF_SWISS =            (2<<4), /* Variable stroke width, sans-serifed. */
+        FF_SWISS =            (2<<4), /* Variable stroke width, sans-serifed. */
                                     /* Helvetica, Swiss, etc. */
-	FF_MODERN =           (3<<4), /* Constant stroke width, serifed or sans-serifed. */
+        FF_MODERN =           (3<<4), /* Constant stroke width, serifed or sans-serifed. */
                                     /* Pica, Elite, Courier, etc. */
-	FF_SCRIPT =           (4<<4), /* Cursive, etc. */
-	FF_DECORATIVE =       (5<<4), /* Old English, etc. */
+        FF_SCRIPT =           (4<<4), /* Cursive, etc. */
+        FF_DECORATIVE =       (5<<4), /* Old English, etc. */
 
 /* Font Weights */
-	FW_DONTCARE =         0,
-	FW_THIN =             100,
-	FW_EXTRALIGHT =       200,
-	FW_LIGHT =            300,
-	FW_NORMAL =           400,
-	FW_MEDIUM =           500,
-	FW_SEMIBOLD =         600,
-	FW_BOLD =             700,
-	FW_EXTRABOLD =        800,
-	FW_HEAVY =            900,
+        FW_DONTCARE =         0,
+        FW_THIN =             100,
+        FW_EXTRALIGHT =       200,
+        FW_LIGHT =            300,
+        FW_NORMAL =           400,
+        FW_MEDIUM =           500,
+        FW_SEMIBOLD =         600,
+        FW_BOLD =             700,
+        FW_EXTRABOLD =        800,
+        FW_HEAVY =            900,
 
-	FW_ULTRALIGHT =       FW_EXTRALIGHT,
-	FW_REGULAR =          FW_NORMAL,
-	FW_DEMIBOLD =         FW_SEMIBOLD,
-	FW_ULTRABOLD =        FW_EXTRABOLD,
-	FW_BLACK =            FW_HEAVY,
+        FW_ULTRALIGHT =       FW_EXTRALIGHT,
+        FW_REGULAR =          FW_NORMAL,
+        FW_DEMIBOLD =         FW_SEMIBOLD,
+        FW_ULTRABOLD =        FW_EXTRABOLD,
+        FW_BLACK =            FW_HEAVY,
 
-	PANOSE_COUNT =               10,
-	PAN_FAMILYTYPE_INDEX =        0,
-	PAN_SERIFSTYLE_INDEX =        1,
-	PAN_WEIGHT_INDEX =            2,
-	PAN_PROPORTION_INDEX =        3,
-	PAN_CONTRAST_INDEX =          4,
-	PAN_STROKEVARIATION_INDEX =   5,
-	PAN_ARMSTYLE_INDEX =          6,
-	PAN_LETTERFORM_INDEX =        7,
-	PAN_MIDLINE_INDEX =           8,
-	PAN_XHEIGHT_INDEX =           9,
+        PANOSE_COUNT =               10,
+        PAN_FAMILYTYPE_INDEX =        0,
+        PAN_SERIFSTYLE_INDEX =        1,
+        PAN_WEIGHT_INDEX =            2,
+        PAN_PROPORTION_INDEX =        3,
+        PAN_CONTRAST_INDEX =          4,
+        PAN_STROKEVARIATION_INDEX =   5,
+        PAN_ARMSTYLE_INDEX =          6,
+        PAN_LETTERFORM_INDEX =        7,
+        PAN_MIDLINE_INDEX =           8,
+        PAN_XHEIGHT_INDEX =           9,
 
-	PAN_CULTURE_LATIN =           0,
+        PAN_CULTURE_LATIN =           0,
 }
 
 struct RGBQUAD {
@@ -1905,19 +1905,19 @@ export
 /* Text Alignment Options */
 enum
 {
-	TA_NOUPDATECP =                0,
-	TA_UPDATECP =                  1,
+        TA_NOUPDATECP =                0,
+        TA_UPDATECP =                  1,
 
-	TA_LEFT =                      0,
-	TA_RIGHT =                     2,
-	TA_CENTER =                    6,
+        TA_LEFT =                      0,
+        TA_RIGHT =                     2,
+        TA_CENTER =                    6,
 
-	TA_TOP =                       0,
-	TA_BOTTOM =                    8,
-	TA_BASELINE =                  24,
+        TA_TOP =                       0,
+        TA_BOTTOM =                    8,
+        TA_BASELINE =                  24,
 
-	TA_RTLREADING =                256,
-	TA_MASK =       (TA_BASELINE+TA_CENTER+TA_UPDATECP+TA_RTLREADING),
+        TA_RTLREADING =                256,
+        TA_MASK =       (TA_BASELINE+TA_CENTER+TA_UPDATECP+TA_RTLREADING),
 }
 
 struct POINT
@@ -1980,39 +1980,39 @@ alias WNDCLASSA WNDCLASS;
  */
 enum : uint
 {
-	WS_OVERLAPPED =       0x00000000,
-	WS_POPUP =            0x80000000,
-	WS_CHILD =            0x40000000,
-	WS_MINIMIZE =         0x20000000,
-	WS_VISIBLE =          0x10000000,
-	WS_DISABLED =         0x08000000,
-	WS_CLIPSIBLINGS =     0x04000000,
-	WS_CLIPCHILDREN =     0x02000000,
-	WS_MAXIMIZE =         0x01000000,
-	WS_CAPTION =          0x00C00000,  /* WS_BORDER | WS_DLGFRAME  */
-	WS_BORDER =           0x00800000,
-	WS_DLGFRAME =         0x00400000,
-	WS_VSCROLL =          0x00200000,
-	WS_HSCROLL =          0x00100000,
-	WS_SYSMENU =          0x00080000,
-	WS_THICKFRAME =       0x00040000,
-	WS_GROUP =            0x00020000,
-	WS_TABSTOP =          0x00010000,
+        WS_OVERLAPPED =       0x00000000,
+        WS_POPUP =            0x80000000,
+        WS_CHILD =            0x40000000,
+        WS_MINIMIZE =         0x20000000,
+        WS_VISIBLE =          0x10000000,
+        WS_DISABLED =         0x08000000,
+        WS_CLIPSIBLINGS =     0x04000000,
+        WS_CLIPCHILDREN =     0x02000000,
+        WS_MAXIMIZE =         0x01000000,
+        WS_CAPTION =          0x00C00000,  /* WS_BORDER | WS_DLGFRAME  */
+        WS_BORDER =           0x00800000,
+        WS_DLGFRAME =         0x00400000,
+        WS_VSCROLL =          0x00200000,
+        WS_HSCROLL =          0x00100000,
+        WS_SYSMENU =          0x00080000,
+        WS_THICKFRAME =       0x00040000,
+        WS_GROUP =            0x00020000,
+        WS_TABSTOP =          0x00010000,
 
-	WS_MINIMIZEBOX =      0x00020000,
-	WS_MAXIMIZEBOX =      0x00010000,
+        WS_MINIMIZEBOX =      0x00020000,
+        WS_MAXIMIZEBOX =      0x00010000,
 
-	WS_TILED =            WS_OVERLAPPED,
-	WS_ICONIC =           WS_MINIMIZE,
-	WS_SIZEBOX =          WS_THICKFRAME,
+        WS_TILED =            WS_OVERLAPPED,
+        WS_ICONIC =           WS_MINIMIZE,
+        WS_SIZEBOX =          WS_THICKFRAME,
 
 /*
  * Common Window Styles
  */
-	WS_OVERLAPPEDWINDOW = (WS_OVERLAPPED |            WS_CAPTION |  WS_SYSMENU |  WS_THICKFRAME |            WS_MINIMIZEBOX |                 WS_MAXIMIZEBOX),
-	WS_TILEDWINDOW =      WS_OVERLAPPEDWINDOW,
-	WS_POPUPWINDOW =      (WS_POPUP |  WS_BORDER |  WS_SYSMENU),
-	WS_CHILDWINDOW =      (WS_CHILD),
+        WS_OVERLAPPEDWINDOW = (WS_OVERLAPPED |            WS_CAPTION |  WS_SYSMENU |  WS_THICKFRAME |            WS_MINIMIZEBOX |                 WS_MAXIMIZEBOX),
+        WS_TILEDWINDOW =      WS_OVERLAPPEDWINDOW,
+        WS_POPUPWINDOW =      (WS_POPUP |  WS_BORDER |  WS_SYSMENU),
+        WS_CHILDWINDOW =      (WS_CHILD),
 }
 
 /*
@@ -2020,22 +2020,22 @@ enum : uint
  */
 enum
 {
-	CS_VREDRAW =          0x0001,
-	CS_HREDRAW =          0x0002,
-	CS_KEYCVTWINDOW =     0x0004,
-	CS_DBLCLKS =          0x0008,
-	CS_OWNDC =            0x0020,
-	CS_CLASSDC =          0x0040,
-	CS_PARENTDC =         0x0080,
-	CS_NOKEYCVT =         0x0100,
-	CS_NOCLOSE =          0x0200,
-	CS_SAVEBITS =         0x0800,
-	CS_BYTEALIGNCLIENT =  0x1000,
-	CS_BYTEALIGNWINDOW =  0x2000,
-	CS_GLOBALCLASS =      0x4000,
+        CS_VREDRAW =          0x0001,
+        CS_HREDRAW =          0x0002,
+        CS_KEYCVTWINDOW =     0x0004,
+        CS_DBLCLKS =          0x0008,
+        CS_OWNDC =            0x0020,
+        CS_CLASSDC =          0x0040,
+        CS_PARENTDC =         0x0080,
+        CS_NOKEYCVT =         0x0100,
+        CS_NOCLOSE =          0x0200,
+        CS_SAVEBITS =         0x0800,
+        CS_BYTEALIGNCLIENT =  0x1000,
+        CS_BYTEALIGNWINDOW =  0x2000,
+        CS_GLOBALCLASS =      0x4000,
 
 
-	CS_IME =              0x00010000,
+        CS_IME =              0x00010000,
 }
 
 export
@@ -2056,54 +2056,54 @@ const LPSTR IDC_CROSS =           cast(LPSTR)(32515);
  */
 enum
 {
-	CTLCOLOR_MSGBOX =         0,
-	CTLCOLOR_EDIT =           1,
-	CTLCOLOR_LISTBOX =        2,
-	CTLCOLOR_BTN =            3,
-	CTLCOLOR_DLG =            4,
-	CTLCOLOR_SCROLLBAR =      5,
-	CTLCOLOR_STATIC =         6,
-	CTLCOLOR_MAX =            7,
+        CTLCOLOR_MSGBOX =         0,
+        CTLCOLOR_EDIT =           1,
+        CTLCOLOR_LISTBOX =        2,
+        CTLCOLOR_BTN =            3,
+        CTLCOLOR_DLG =            4,
+        CTLCOLOR_SCROLLBAR =      5,
+        CTLCOLOR_STATIC =         6,
+        CTLCOLOR_MAX =            7,
 
-	COLOR_SCROLLBAR =         0,
-	COLOR_BACKGROUND =        1,
-	COLOR_ACTIVECAPTION =     2,
-	COLOR_INACTIVECAPTION =   3,
-	COLOR_MENU =              4,
-	COLOR_WINDOW =            5,
-	COLOR_WINDOWFRAME =       6,
-	COLOR_MENUTEXT =          7,
-	COLOR_WINDOWTEXT =        8,
-	COLOR_CAPTIONTEXT =       9,
-	COLOR_ACTIVEBORDER =      10,
-	COLOR_INACTIVEBORDER =    11,
-	COLOR_APPWORKSPACE =      12,
-	COLOR_HIGHLIGHT =         13,
-	COLOR_HIGHLIGHTTEXT =     14,
-	COLOR_BTNFACE =           15,
-	COLOR_BTNSHADOW =         16,
-	COLOR_GRAYTEXT =          17,
-	COLOR_BTNTEXT =           18,
-	COLOR_INACTIVECAPTIONTEXT = 19,
-	COLOR_BTNHIGHLIGHT =      20,
+        COLOR_SCROLLBAR =         0,
+        COLOR_BACKGROUND =        1,
+        COLOR_ACTIVECAPTION =     2,
+        COLOR_INACTIVECAPTION =   3,
+        COLOR_MENU =              4,
+        COLOR_WINDOW =            5,
+        COLOR_WINDOWFRAME =       6,
+        COLOR_MENUTEXT =          7,
+        COLOR_WINDOWTEXT =        8,
+        COLOR_CAPTIONTEXT =       9,
+        COLOR_ACTIVEBORDER =      10,
+        COLOR_INACTIVEBORDER =    11,
+        COLOR_APPWORKSPACE =      12,
+        COLOR_HIGHLIGHT =         13,
+        COLOR_HIGHLIGHTTEXT =     14,
+        COLOR_BTNFACE =           15,
+        COLOR_BTNSHADOW =         16,
+        COLOR_GRAYTEXT =          17,
+        COLOR_BTNTEXT =           18,
+        COLOR_INACTIVECAPTIONTEXT = 19,
+        COLOR_BTNHIGHLIGHT =      20,
 
 
-	COLOR_3DDKSHADOW =        21,
-	COLOR_3DLIGHT =           22,
-	COLOR_INFOTEXT =          23,
-	COLOR_INFOBK =            24,
+        COLOR_3DDKSHADOW =        21,
+        COLOR_3DLIGHT =           22,
+        COLOR_INFOTEXT =          23,
+        COLOR_INFOBK =            24,
 
-	COLOR_DESKTOP =           COLOR_BACKGROUND,
-	COLOR_3DFACE =            COLOR_BTNFACE,
-	COLOR_3DSHADOW =          COLOR_BTNSHADOW,
-	COLOR_3DHIGHLIGHT =       COLOR_BTNHIGHLIGHT,
-	COLOR_3DHILIGHT =         COLOR_BTNHIGHLIGHT,
-	COLOR_BTNHILIGHT =        COLOR_BTNHIGHLIGHT,
+        COLOR_DESKTOP =           COLOR_BACKGROUND,
+        COLOR_3DFACE =            COLOR_BTNFACE,
+        COLOR_3DSHADOW =          COLOR_BTNSHADOW,
+        COLOR_3DHIGHLIGHT =       COLOR_BTNHIGHLIGHT,
+        COLOR_3DHILIGHT =         COLOR_BTNHIGHLIGHT,
+        COLOR_BTNHILIGHT =        COLOR_BTNHIGHLIGHT,
 }
 
 enum : int
 {
-	CW_USEDEFAULT = cast(int)0x80000000
+        CW_USEDEFAULT = cast(int)0x80000000
 }
 
 /*
@@ -2196,45 +2196,45 @@ export BOOL ShowWindow(HWND hWnd, int nCmdShow);
 
 /* Stock Logical Objects */
 enum
-{	WHITE_BRUSH =         0,
-	LTGRAY_BRUSH =        1,
-	GRAY_BRUSH =          2,
-	DKGRAY_BRUSH =        3,
-	BLACK_BRUSH =         4,
-	NULL_BRUSH =          5,
-	HOLLOW_BRUSH =        NULL_BRUSH,
-	WHITE_PEN =           6,
-	BLACK_PEN =           7,
-	NULL_PEN =            8,
-	OEM_FIXED_FONT =      10,
-	ANSI_FIXED_FONT =     11,
-	ANSI_VAR_FONT =       12,
-	SYSTEM_FONT =         13,
-	DEVICE_DEFAULT_FONT = 14,
-	DEFAULT_PALETTE =     15,
-	SYSTEM_FIXED_FONT =   16,
-	DEFAULT_GUI_FONT =    17,
-	STOCK_LAST =          17,
+{       WHITE_BRUSH =         0,
+        LTGRAY_BRUSH =        1,
+        GRAY_BRUSH =          2,
+        DKGRAY_BRUSH =        3,
+        BLACK_BRUSH =         4,
+        NULL_BRUSH =          5,
+        HOLLOW_BRUSH =        NULL_BRUSH,
+        WHITE_PEN =           6,
+        BLACK_PEN =           7,
+        NULL_PEN =            8,
+        OEM_FIXED_FONT =      10,
+        ANSI_FIXED_FONT =     11,
+        ANSI_VAR_FONT =       12,
+        SYSTEM_FONT =         13,
+        DEVICE_DEFAULT_FONT = 14,
+        DEFAULT_PALETTE =     15,
+        SYSTEM_FIXED_FONT =   16,
+        DEFAULT_GUI_FONT =    17,
+        STOCK_LAST =          17,
 }
 
 /*
  * ShowWindow() Commands
  */
 enum
-{	SW_HIDE =             0,
-	SW_SHOWNORMAL =       1,
-	SW_NORMAL =           1,
-	SW_SHOWMINIMIZED =    2,
-	SW_SHOWMAXIMIZED =    3,
-	SW_MAXIMIZE =         3,
-	SW_SHOWNOACTIVATE =   4,
-	SW_SHOW =             5,
-	SW_MINIMIZE =         6,
-	SW_SHOWMINNOACTIVE =  7,
-	SW_SHOWNA =           8,
-	SW_RESTORE =          9,
-	SW_SHOWDEFAULT =      10,
-	SW_MAX =              10,
+{       SW_HIDE =             0,
+        SW_SHOWNORMAL =       1,
+        SW_NORMAL =           1,
+        SW_SHOWMINIMIZED =    2,
+        SW_SHOWMAXIMIZED =    3,
+        SW_MAXIMIZE =         3,
+        SW_SHOWNOACTIVATE =   4,
+        SW_SHOW =             5,
+        SW_MINIMIZE =         6,
+        SW_SHOWMINNOACTIVE =  7,
+        SW_SHOWNA =           8,
+        SW_RESTORE =          9,
+        SW_SHOWDEFAULT =      10,
+        SW_MAX =              10,
 }
 
 struct TEXTMETRICA
@@ -2267,31 +2267,31 @@ export  BOOL   GetTextMetricsA(HDC, TEXTMETRICA*);
  * Scroll Bar Constants
  */
 enum
-{	SB_HORZ =             0,
-	SB_VERT =             1,
-	SB_CTL =              2,
-	SB_BOTH =             3,
+{       SB_HORZ =             0,
+        SB_VERT =             1,
+        SB_CTL =              2,
+        SB_BOTH =             3,
 }
 
 /*
  * Scroll Bar Commands
  */
 enum
-{	SB_LINEUP =           0,
-	SB_LINELEFT =         0,
-	SB_LINEDOWN =         1,
-	SB_LINERIGHT =        1,
-	SB_PAGEUP =           2,
-	SB_PAGELEFT =         2,
-	SB_PAGEDOWN =         3,
-	SB_PAGERIGHT =        3,
-	SB_THUMBPOSITION =    4,
-	SB_THUMBTRACK =       5,
-	SB_TOP =              6,
-	SB_LEFT =             6,
-	SB_BOTTOM =           7,
-	SB_RIGHT =            7,
-	SB_ENDSCROLL =        8,
+{       SB_LINEUP =           0,
+        SB_LINELEFT =         0,
+        SB_LINEDOWN =         1,
+        SB_LINERIGHT =        1,
+        SB_PAGEUP =           2,
+        SB_PAGELEFT =         2,
+        SB_PAGEDOWN =         3,
+        SB_PAGERIGHT =        3,
+        SB_THUMBPOSITION =    4,
+        SB_THUMBTRACK =       5,
+        SB_TOP =              6,
+        SB_LEFT =             6,
+        SB_BOTTOM =           7,
+        SB_RIGHT =            7,
+        SB_ENDSCROLL =        8,
 }
 
 export int SetScrollPos(HWND hWnd, int nBar, int nPos, BOOL bRedraw);
@@ -2314,119 +2314,119 @@ export int ScrollWindowEx(HWND hWnd, int dx, int dy, RECT* prcScroll, RECT* prcC
  * Virtual Keys, Standard Set
  */
 enum
-{	VK_LBUTTON =        0x01,
-	VK_RBUTTON =        0x02,
-	VK_CANCEL =         0x03,
-	VK_MBUTTON =        0x04, /* NOT contiguous with L & RBUTTON */
+{       VK_LBUTTON =        0x01,
+        VK_RBUTTON =        0x02,
+        VK_CANCEL =         0x03,
+        VK_MBUTTON =        0x04, /* NOT contiguous with L & RBUTTON */
 
-	VK_BACK =           0x08,
-	VK_TAB =            0x09,
+        VK_BACK =           0x08,
+        VK_TAB =            0x09,
 
-	VK_CLEAR =          0x0C,
-	VK_RETURN =         0x0D,
+        VK_CLEAR =          0x0C,
+        VK_RETURN =         0x0D,
 
-	VK_SHIFT =          0x10,
-	VK_CONTROL =        0x11,
-	VK_MENU =           0x12,
-	VK_PAUSE =          0x13,
-	VK_CAPITAL =        0x14,
+        VK_SHIFT =          0x10,
+        VK_CONTROL =        0x11,
+        VK_MENU =           0x12,
+        VK_PAUSE =          0x13,
+        VK_CAPITAL =        0x14,
 
 
-	VK_ESCAPE =         0x1B,
+        VK_ESCAPE =         0x1B,
 
-	VK_SPACE =          0x20,
-	VK_PRIOR =          0x21,
-	VK_NEXT =           0x22,
-	VK_END =            0x23,
-	VK_HOME =           0x24,
-	VK_LEFT =           0x25,
-	VK_UP =             0x26,
-	VK_RIGHT =          0x27,
-	VK_DOWN =           0x28,
-	VK_SELECT =         0x29,
-	VK_PRINT =          0x2A,
-	VK_EXECUTE =        0x2B,
-	VK_SNAPSHOT =       0x2C,
-	VK_INSERT =         0x2D,
-	VK_DELETE =         0x2E,
-	VK_HELP =           0x2F,
+        VK_SPACE =          0x20,
+        VK_PRIOR =          0x21,
+        VK_NEXT =           0x22,
+        VK_END =            0x23,
+        VK_HOME =           0x24,
+        VK_LEFT =           0x25,
+        VK_UP =             0x26,
+        VK_RIGHT =          0x27,
+        VK_DOWN =           0x28,
+        VK_SELECT =         0x29,
+        VK_PRINT =          0x2A,
+        VK_EXECUTE =        0x2B,
+        VK_SNAPSHOT =       0x2C,
+        VK_INSERT =         0x2D,
+        VK_DELETE =         0x2E,
+        VK_HELP =           0x2F,
 
 /* VK_0 thru VK_9 are the same as ASCII '0' thru '9' (0x30 - 0x39) */
 /* VK_A thru VK_Z are the same as ASCII 'A' thru 'Z' (0x41 - 0x5A) */
 
-	VK_LWIN =           0x5B,
-	VK_RWIN =           0x5C,
-	VK_APPS =           0x5D,
+        VK_LWIN =           0x5B,
+        VK_RWIN =           0x5C,
+        VK_APPS =           0x5D,
 
-	VK_NUMPAD0 =        0x60,
-	VK_NUMPAD1 =        0x61,
-	VK_NUMPAD2 =        0x62,
-	VK_NUMPAD3 =        0x63,
-	VK_NUMPAD4 =        0x64,
-	VK_NUMPAD5 =        0x65,
-	VK_NUMPAD6 =        0x66,
-	VK_NUMPAD7 =        0x67,
-	VK_NUMPAD8 =        0x68,
-	VK_NUMPAD9 =        0x69,
-	VK_MULTIPLY =       0x6A,
-	VK_ADD =            0x6B,
-	VK_SEPARATOR =      0x6C,
-	VK_SUBTRACT =       0x6D,
-	VK_DECIMAL =        0x6E,
-	VK_DIVIDE =         0x6F,
-	VK_F1 =             0x70,
-	VK_F2 =             0x71,
-	VK_F3 =             0x72,
-	VK_F4 =             0x73,
-	VK_F5 =             0x74,
-	VK_F6 =             0x75,
-	VK_F7 =             0x76,
-	VK_F8 =             0x77,
-	VK_F9 =             0x78,
-	VK_F10 =            0x79,
-	VK_F11 =            0x7A,
-	VK_F12 =            0x7B,
-	VK_F13 =            0x7C,
-	VK_F14 =            0x7D,
-	VK_F15 =            0x7E,
-	VK_F16 =            0x7F,
-	VK_F17 =            0x80,
-	VK_F18 =            0x81,
-	VK_F19 =            0x82,
-	VK_F20 =            0x83,
-	VK_F21 =            0x84,
-	VK_F22 =            0x85,
-	VK_F23 =            0x86,
-	VK_F24 =            0x87,
+        VK_NUMPAD0 =        0x60,
+        VK_NUMPAD1 =        0x61,
+        VK_NUMPAD2 =        0x62,
+        VK_NUMPAD3 =        0x63,
+        VK_NUMPAD4 =        0x64,
+        VK_NUMPAD5 =        0x65,
+        VK_NUMPAD6 =        0x66,
+        VK_NUMPAD7 =        0x67,
+        VK_NUMPAD8 =        0x68,
+        VK_NUMPAD9 =        0x69,
+        VK_MULTIPLY =       0x6A,
+        VK_ADD =            0x6B,
+        VK_SEPARATOR =      0x6C,
+        VK_SUBTRACT =       0x6D,
+        VK_DECIMAL =        0x6E,
+        VK_DIVIDE =         0x6F,
+        VK_F1 =             0x70,
+        VK_F2 =             0x71,
+        VK_F3 =             0x72,
+        VK_F4 =             0x73,
+        VK_F5 =             0x74,
+        VK_F6 =             0x75,
+        VK_F7 =             0x76,
+        VK_F8 =             0x77,
+        VK_F9 =             0x78,
+        VK_F10 =            0x79,
+        VK_F11 =            0x7A,
+        VK_F12 =            0x7B,
+        VK_F13 =            0x7C,
+        VK_F14 =            0x7D,
+        VK_F15 =            0x7E,
+        VK_F16 =            0x7F,
+        VK_F17 =            0x80,
+        VK_F18 =            0x81,
+        VK_F19 =            0x82,
+        VK_F20 =            0x83,
+        VK_F21 =            0x84,
+        VK_F22 =            0x85,
+        VK_F23 =            0x86,
+        VK_F24 =            0x87,
 
-	VK_NUMLOCK =        0x90,
-	VK_SCROLL =         0x91,
+        VK_NUMLOCK =        0x90,
+        VK_SCROLL =         0x91,
 
 /*
  * VK_L* & VK_R* - left and right Alt, Ctrl and Shift virtual keys.
  * Used only as parameters to GetAsyncKeyState() and GetKeyState().
  * No other API or message will distinguish left and right keys in this way.
  */
-	VK_LSHIFT =         0xA0,
-	VK_RSHIFT =         0xA1,
-	VK_LCONTROL =       0xA2,
-	VK_RCONTROL =       0xA3,
-	VK_LMENU =          0xA4,
-	VK_RMENU =          0xA5,
+        VK_LSHIFT =         0xA0,
+        VK_RSHIFT =         0xA1,
+        VK_LCONTROL =       0xA2,
+        VK_RCONTROL =       0xA3,
+        VK_LMENU =          0xA4,
+        VK_RMENU =          0xA5,
 
 
-	VK_PROCESSKEY =     0xE5,
+        VK_PROCESSKEY =     0xE5,
 
 
-	VK_ATTN =           0xF6,
-	VK_CRSEL =          0xF7,
-	VK_EXSEL =          0xF8,
-	VK_EREOF =          0xF9,
-	VK_PLAY =           0xFA,
-	VK_ZOOM =           0xFB,
-	VK_NONAME =         0xFC,
-	VK_PA1 =            0xFD,
-	VK_OEM_CLEAR =      0xFE,
+        VK_ATTN =           0xF6,
+        VK_CRSEL =          0xF7,
+        VK_EXSEL =          0xF8,
+        VK_EREOF =          0xF9,
+        VK_PLAY =           0xFA,
+        VK_ZOOM =           0xFB,
+        VK_NONAME =         0xFC,
+        VK_PA1 =            0xFD,
+        VK_OEM_CLEAR =      0xFE,
 }
 
 export LRESULT SendMessageA(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam);
@@ -2492,9 +2492,9 @@ short         GetFileTitleW(LPCWSTR, LPWSTR, WORD);
 
 enum
 {
-	PM_NOREMOVE =         0x0000,
-	PM_REMOVE =           0x0001,
-	PM_NOYIELD =          0x0002,
+        PM_NOREMOVE =         0x0000,
+        PM_REMOVE =           0x0001,
+        PM_NOYIELD =          0x0002,
 }
 
 /* Bitmap Header Definition */
@@ -2572,7 +2572,7 @@ export HWND ChildWindowFromPoint(HWND hWndParent, POINT Point);
 
 
 export BOOL TrackPopupMenu(HMENU hMenu, UINT uFlags, int x, int y,
-	int nReserved, HWND hWnd, RECT *prcRect);
+        int nReserved, HWND hWnd, RECT *prcRect);
 
 align (2) struct DLGTEMPLATE {
     DWORD style;
@@ -2597,50 +2597,50 @@ alias LPCDLGTEMPLATEA LPCDLGTEMPLATE;
 
 
 export int DialogBoxParamA(HINSTANCE hInstance, LPCSTR lpTemplateName,
-	HWND hWndParent, DLGPROC lpDialogFunc, LPARAM dwInitParam);
+        HWND hWndParent, DLGPROC lpDialogFunc, LPARAM dwInitParam);
 export int DialogBoxIndirectParamA(HINSTANCE hInstance,
-	LPCDLGTEMPLATEA hDialogTemplate, HWND hWndParent, DLGPROC lpDialogFunc,
-	LPARAM dwInitParam);
+        LPCDLGTEMPLATEA hDialogTemplate, HWND hWndParent, DLGPROC lpDialogFunc,
+        LPARAM dwInitParam);
 
 enum : DWORD
 {
-	SRCCOPY =             cast(DWORD)0x00CC0020, /* dest = source                   */
-	SRCPAINT =            cast(DWORD)0x00EE0086, /* dest = source OR dest           */
-	SRCAND =              cast(DWORD)0x008800C6, /* dest = source AND dest          */
-	SRCINVERT =           cast(DWORD)0x00660046, /* dest = source XOR dest          */
-	SRCERASE =            cast(DWORD)0x00440328, /* dest = source AND (NOT dest)   */
-	NOTSRCCOPY =          cast(DWORD)0x00330008, /* dest = (NOT source)             */
-	NOTSRCERASE =         cast(DWORD)0x001100A6, /* dest = (NOT src) AND (NOT dest) */
-	MERGECOPY =           cast(DWORD)0x00C000CA, /* dest = (source AND pattern)     */
-	MERGEPAINT =          cast(DWORD)0x00BB0226, /* dest = (NOT source) OR dest     */
-	PATCOPY =             cast(DWORD)0x00F00021, /* dest = pattern                  */
-	PATPAINT =            cast(DWORD)0x00FB0A09, /* dest = DPSnoo                   */
-	PATINVERT =           cast(DWORD)0x005A0049, /* dest = pattern XOR dest         */
-	DSTINVERT =           cast(DWORD)0x00550009, /* dest = (NOT dest)               */
-	BLACKNESS =           cast(DWORD)0x00000042, /* dest = BLACK                    */
-	WHITENESS =           cast(DWORD)0x00FF0062, /* dest = WHITE                    */
+        SRCCOPY =             cast(DWORD)0x00CC0020, /* dest = source                   */
+        SRCPAINT =            cast(DWORD)0x00EE0086, /* dest = source OR dest           */
+        SRCAND =              cast(DWORD)0x008800C6, /* dest = source AND dest          */
+        SRCINVERT =           cast(DWORD)0x00660046, /* dest = source XOR dest          */
+        SRCERASE =            cast(DWORD)0x00440328, /* dest = source AND (NOT dest)   */
+        NOTSRCCOPY =          cast(DWORD)0x00330008, /* dest = (NOT source)             */
+        NOTSRCERASE =         cast(DWORD)0x001100A6, /* dest = (NOT src) AND (NOT dest) */
+        MERGECOPY =           cast(DWORD)0x00C000CA, /* dest = (source AND pattern)     */
+        MERGEPAINT =          cast(DWORD)0x00BB0226, /* dest = (NOT source) OR dest     */
+        PATCOPY =             cast(DWORD)0x00F00021, /* dest = pattern                  */
+        PATPAINT =            cast(DWORD)0x00FB0A09, /* dest = DPSnoo                   */
+        PATINVERT =           cast(DWORD)0x005A0049, /* dest = pattern XOR dest         */
+        DSTINVERT =           cast(DWORD)0x00550009, /* dest = (NOT dest)               */
+        BLACKNESS =           cast(DWORD)0x00000042, /* dest = BLACK                    */
+        WHITENESS =           cast(DWORD)0x00FF0062, /* dest = WHITE                    */
 }
 
 enum
 {
-	SND_SYNC =            0x0000, /* play synchronously (default) */
-	SND_ASYNC =           0x0001, /* play asynchronously */
-	SND_NODEFAULT =       0x0002, /* silence (!default) if sound not found */
-	SND_MEMORY =          0x0004, /* pszSound points to a memory file */
-	SND_LOOP =            0x0008, /* loop the sound until next sndPlaySound */
-	SND_NOSTOP =          0x0010, /* don't stop any currently playing sound */
+        SND_SYNC =            0x0000, /* play synchronously (default) */
+        SND_ASYNC =           0x0001, /* play asynchronously */
+        SND_NODEFAULT =       0x0002, /* silence (!default) if sound not found */
+        SND_MEMORY =          0x0004, /* pszSound points to a memory file */
+        SND_LOOP =            0x0008, /* loop the sound until next sndPlaySound */
+        SND_NOSTOP =          0x0010, /* don't stop any currently playing sound */
 
-	SND_NOWAIT =	0x00002000, /* don't wait if the driver is busy */
-	SND_ALIAS =       0x00010000, /* name is a registry alias */
-	SND_ALIAS_ID =	0x00110000, /* alias is a predefined ID */
-	SND_FILENAME =    0x00020000, /* name is file name */
-	SND_RESOURCE =    0x00040004, /* name is resource name or atom */
+        SND_NOWAIT =    0x00002000, /* don't wait if the driver is busy */
+        SND_ALIAS =       0x00010000, /* name is a registry alias */
+        SND_ALIAS_ID =  0x00110000, /* alias is a predefined ID */
+        SND_FILENAME =    0x00020000, /* name is file name */
+        SND_RESOURCE =    0x00040004, /* name is resource name or atom */
 
-	SND_PURGE =           0x0040, /* purge non-static events for task */
-	SND_APPLICATION =     0x0080, /* look for application specific association */
+        SND_PURGE =           0x0040, /* purge non-static events for task */
+        SND_APPLICATION =     0x0080, /* look for application specific association */
 
 
-	SND_ALIAS_START =	0,     /* alias base */
+        SND_ALIAS_START =       0,     /* alias base */
 }
 
 export  BOOL   PlaySoundA(LPCSTR pszSound, HMODULE hmod, DWORD fdwSound);
@@ -2663,30 +2663,30 @@ alias LOGPEN* PLOGPEN, NPLOGPEN, LPLOGPEN;
 
 enum
 {
-	PS_SOLID =            0,
-	PS_DASH =             1, /* -------  */
-	PS_DOT =              2, /* .......  */
-	PS_DASHDOT =          3, /* _._._._  */
-	PS_DASHDOTDOT =       4, /* _.._.._  */
-	PS_NULL =             5,
-	PS_INSIDEFRAME =      6,
-	PS_USERSTYLE =        7,
-	PS_ALTERNATE =        8,
-	PS_STYLE_MASK =       0x0000000F,
+        PS_SOLID =            0,
+        PS_DASH =             1, /* -------  */
+        PS_DOT =              2, /* .......  */
+        PS_DASHDOT =          3, /* _._._._  */
+        PS_DASHDOTDOT =       4, /* _.._.._  */
+        PS_NULL =             5,
+        PS_INSIDEFRAME =      6,
+        PS_USERSTYLE =        7,
+        PS_ALTERNATE =        8,
+        PS_STYLE_MASK =       0x0000000F,
 
-	PS_ENDCAP_ROUND =     0x00000000,
-	PS_ENDCAP_SQUARE =    0x00000100,
-	PS_ENDCAP_FLAT =      0x00000200,
-	PS_ENDCAP_MASK =      0x00000F00,
+        PS_ENDCAP_ROUND =     0x00000000,
+        PS_ENDCAP_SQUARE =    0x00000100,
+        PS_ENDCAP_FLAT =      0x00000200,
+        PS_ENDCAP_MASK =      0x00000F00,
 
-	PS_JOIN_ROUND =       0x00000000,
-	PS_JOIN_BEVEL =       0x00001000,
-	PS_JOIN_MITER =       0x00002000,
-	PS_JOIN_MASK =        0x0000F000,
+        PS_JOIN_ROUND =       0x00000000,
+        PS_JOIN_BEVEL =       0x00001000,
+        PS_JOIN_MITER =       0x00002000,
+        PS_JOIN_MASK =        0x0000F000,
 
-	PS_COSMETIC =         0x00000000,
-	PS_GEOMETRIC =        0x00010000,
-	PS_TYPE_MASK =        0x000F0000,
+        PS_COSMETIC =         0x00000000,
+        PS_GEOMETRIC =        0x00010000,
+        PS_TYPE_MASK =        0x000F0000,
 }
 
 export  HPALETTE   CreatePalette(LOGPALETTE *);
@@ -2703,7 +2703,7 @@ export  BOOL      CreateScalableFontResourceW(DWORD, LPCWSTR, LPCWSTR, LPCWSTR);
 COLORREF RGB(int r, int g, int b)
 {
     return cast(COLORREF)
-	((cast(BYTE)r|(cast(WORD)(cast(BYTE)g)<<8))|((cast(DWORD)cast(BYTE)b)<<16));
+        ((cast(BYTE)r|(cast(WORD)(cast(BYTE)g)<<8))|((cast(DWORD)cast(BYTE)b)<<16));
 }
 
 export  BOOL   LineTo(HDC, int, int);
@@ -2737,8 +2737,8 @@ export int wsprintfW(LPWSTR, LPCWSTR, ...);
 
 enum : uint
 {
-	INFINITE = uint.max,
-	WAIT_OBJECT_0 = 0,
+        INFINITE = uint.max,
+        WAIT_OBJECT_0 = 0,
 }
 
 export HANDLE CreateSemaphoreA(LPSECURITY_ATTRIBUTES lpSemaphoreAttributes, LONG lInitialCount, LONG lMaximumCount, LPCTSTR lpName);
@@ -2778,15 +2778,15 @@ alias KEY_EVENT_RECORD *PKEY_EVENT_RECORD;
 
 enum
 {
-	RIGHT_ALT_PRESSED =     0x0001, // the right alt key is pressed.
-	LEFT_ALT_PRESSED =      0x0002, // the left alt key is pressed.
-	RIGHT_CTRL_PRESSED =    0x0004, // the right ctrl key is pressed.
-	LEFT_CTRL_PRESSED =     0x0008, // the left ctrl key is pressed.
-	SHIFT_PRESSED =         0x0010, // the shift key is pressed.
-	NUMLOCK_ON =            0x0020, // the numlock light is on.
-	SCROLLLOCK_ON =         0x0040, // the scrolllock light is on.
-	CAPSLOCK_ON =           0x0080, // the capslock light is on.
-	ENHANCED_KEY =          0x0100, // the key is enhanced.
+        RIGHT_ALT_PRESSED =     0x0001, // the right alt key is pressed.
+        LEFT_ALT_PRESSED =      0x0002, // the left alt key is pressed.
+        RIGHT_CTRL_PRESSED =    0x0004, // the right ctrl key is pressed.
+        LEFT_CTRL_PRESSED =     0x0008, // the left ctrl key is pressed.
+        SHIFT_PRESSED =         0x0010, // the shift key is pressed.
+        NUMLOCK_ON =            0x0020, // the numlock light is on.
+        SCROLLLOCK_ON =         0x0040, // the scrolllock light is on.
+        CAPSLOCK_ON =           0x0080, // the capslock light is on.
+        ENHANCED_KEY =          0x0100, // the key is enhanced.
 }
 
 struct MOUSE_EVENT_RECORD {
@@ -2802,11 +2802,11 @@ alias MOUSE_EVENT_RECORD *PMOUSE_EVENT_RECORD;
 //
 enum
 {
-	FROM_LEFT_1ST_BUTTON_PRESSED =    0x0001,
-	RIGHTMOST_BUTTON_PRESSED =        0x0002,
-	FROM_LEFT_2ND_BUTTON_PRESSED =    0x0004,
-	FROM_LEFT_3RD_BUTTON_PRESSED =    0x0008,
-	FROM_LEFT_4TH_BUTTON_PRESSED =    0x0010,
+        FROM_LEFT_1ST_BUTTON_PRESSED =    0x0001,
+        RIGHTMOST_BUTTON_PRESSED =        0x0002,
+        FROM_LEFT_2ND_BUTTON_PRESSED =    0x0004,
+        FROM_LEFT_3RD_BUTTON_PRESSED =    0x0008,
+        FROM_LEFT_4TH_BUTTON_PRESSED =    0x0010,
 }
 
 //
@@ -2815,8 +2815,8 @@ enum
 
 enum
 {
-	MOUSE_MOVED =   0x0001,
-	DOUBLE_CLICK =  0x0002,
+        MOUSE_MOVED =   0x0001,
+        DOUBLE_CLICK =  0x0002,
 }
 
 struct WINDOW_BUFFER_SIZE_RECORD {
@@ -2852,11 +2852,11 @@ alias INPUT_RECORD *PINPUT_RECORD;
 
 enum
 {
-	KEY_EVENT =         0x0001, // Event contains key event record
-	MOUSE_EVENT =       0x0002, // Event contains mouse event record
-	WINDOW_BUFFER_SIZE_EVENT = 0x0004, // Event contains window change event record
-	MENU_EVENT = 0x0008, // Event contains menu event record
-	FOCUS_EVENT = 0x0010, // event contains focus change
+        KEY_EVENT =         0x0001, // Event contains key event record
+        MOUSE_EVENT =       0x0002, // Event contains mouse event record
+        WINDOW_BUFFER_SIZE_EVENT = 0x0004, // Event contains window change event record
+        MENU_EVENT = 0x0008, // Event contains menu event record
+        FOCUS_EVENT = 0x0010, // event contains focus change
 }
 
 struct CHAR_INFO {
@@ -2874,14 +2874,14 @@ alias CHAR_INFO *PCHAR_INFO;
 
 enum
 {
-	FOREGROUND_BLUE =      0x0001, // text color contains blue.
-	FOREGROUND_GREEN =     0x0002, // text color contains green.
-	FOREGROUND_RED =       0x0004, // text color contains red.
-	FOREGROUND_INTENSITY = 0x0008, // text color is intensified.
-	BACKGROUND_BLUE =      0x0010, // background color contains blue.
-	BACKGROUND_GREEN =     0x0020, // background color contains green.
-	BACKGROUND_RED =       0x0040, // background color contains red.
-	BACKGROUND_INTENSITY = 0x0080, // background color is intensified.
+        FOREGROUND_BLUE =      0x0001, // text color contains blue.
+        FOREGROUND_GREEN =     0x0002, // text color contains green.
+        FOREGROUND_RED =       0x0004, // text color contains red.
+        FOREGROUND_INTENSITY = 0x0008, // text color is intensified.
+        BACKGROUND_BLUE =      0x0010, // background color contains blue.
+        BACKGROUND_GREEN =     0x0020, // background color contains green.
+        BACKGROUND_RED =       0x0040, // background color contains red.
+        BACKGROUND_INTENSITY = 0x0080, // background color is intensified.
 }
 
 struct CONSOLE_SCREEN_BUFFER_INFO {
@@ -2901,17 +2901,17 @@ alias CONSOLE_CURSOR_INFO *PCONSOLE_CURSOR_INFO;
 
 enum
 {
-	ENABLE_PROCESSED_INPUT = 0x0001,
-	ENABLE_LINE_INPUT =      0x0002,
-	ENABLE_ECHO_INPUT =      0x0004,
-	ENABLE_WINDOW_INPUT =    0x0008,
-	ENABLE_MOUSE_INPUT =     0x0010,
+        ENABLE_PROCESSED_INPUT = 0x0001,
+        ENABLE_LINE_INPUT =      0x0002,
+        ENABLE_ECHO_INPUT =      0x0004,
+        ENABLE_WINDOW_INPUT =    0x0008,
+        ENABLE_MOUSE_INPUT =     0x0010,
 }
 
 enum
 {
-	ENABLE_PROCESSED_OUTPUT =    0x0001,
-	ENABLE_WRAP_AT_EOL_OUTPUT =  0x0002,
+        ENABLE_PROCESSED_OUTPUT =    0x0001,
+        ENABLE_WRAP_AT_EOL_OUTPUT =  0x0002,
 }
 
 BOOL PeekConsoleInputA(HANDLE hConsoleInput, PINPUT_RECORD lpBuffer, DWORD nLength, LPDWORD lpNumberOfEventsRead);
@@ -2970,91 +2970,91 @@ BOOL SetConsoleOutputCP(UINT wCodePageID);
 
 enum : int
 {
-	CONSOLE_TEXTMODE_BUFFER = 1,
+        CONSOLE_TEXTMODE_BUFFER = 1,
 }
 
 enum
 {
-	SM_CXSCREEN =             0,
-	SM_CYSCREEN =             1,
-	SM_CXVSCROLL =            2,
-	SM_CYHSCROLL =            3,
-	SM_CYCAPTION =            4,
-	SM_CXBORDER =             5,
-	SM_CYBORDER =             6,
-	SM_CXDLGFRAME =           7,
-	SM_CYDLGFRAME =           8,
-	SM_CYVTHUMB =             9,
-	SM_CXHTHUMB =             10,
-	SM_CXICON =               11,
-	SM_CYICON =               12,
-	SM_CXCURSOR =             13,
-	SM_CYCURSOR =             14,
-	SM_CYMENU =               15,
-	SM_CXFULLSCREEN =         16,
-	SM_CYFULLSCREEN =         17,
-	SM_CYKANJIWINDOW =        18,
-	SM_MOUSEPRESENT =         19,
-	SM_CYVSCROLL =            20,
-	SM_CXHSCROLL =            21,
-	SM_DEBUG =                22,
-	SM_SWAPBUTTON =           23,
-	SM_RESERVED1 =            24,
-	SM_RESERVED2 =            25,
-	SM_RESERVED3 =            26,
-	SM_RESERVED4 =            27,
-	SM_CXMIN =                28,
-	SM_CYMIN =                29,
-	SM_CXSIZE =               30,
-	SM_CYSIZE =               31,
-	SM_CXFRAME =              32,
-	SM_CYFRAME =              33,
-	SM_CXMINTRACK =           34,
-	SM_CYMINTRACK =           35,
-	SM_CXDOUBLECLK =          36,
-	SM_CYDOUBLECLK =          37,
-	SM_CXICONSPACING =        38,
-	SM_CYICONSPACING =        39,
-	SM_MENUDROPALIGNMENT =    40,
-	SM_PENWINDOWS =           41,
-	SM_DBCSENABLED =          42,
-	SM_CMOUSEBUTTONS =        43,
+        SM_CXSCREEN =             0,
+        SM_CYSCREEN =             1,
+        SM_CXVSCROLL =            2,
+        SM_CYHSCROLL =            3,
+        SM_CYCAPTION =            4,
+        SM_CXBORDER =             5,
+        SM_CYBORDER =             6,
+        SM_CXDLGFRAME =           7,
+        SM_CYDLGFRAME =           8,
+        SM_CYVTHUMB =             9,
+        SM_CXHTHUMB =             10,
+        SM_CXICON =               11,
+        SM_CYICON =               12,
+        SM_CXCURSOR =             13,
+        SM_CYCURSOR =             14,
+        SM_CYMENU =               15,
+        SM_CXFULLSCREEN =         16,
+        SM_CYFULLSCREEN =         17,
+        SM_CYKANJIWINDOW =        18,
+        SM_MOUSEPRESENT =         19,
+        SM_CYVSCROLL =            20,
+        SM_CXHSCROLL =            21,
+        SM_DEBUG =                22,
+        SM_SWAPBUTTON =           23,
+        SM_RESERVED1 =            24,
+        SM_RESERVED2 =            25,
+        SM_RESERVED3 =            26,
+        SM_RESERVED4 =            27,
+        SM_CXMIN =                28,
+        SM_CYMIN =                29,
+        SM_CXSIZE =               30,
+        SM_CYSIZE =               31,
+        SM_CXFRAME =              32,
+        SM_CYFRAME =              33,
+        SM_CXMINTRACK =           34,
+        SM_CYMINTRACK =           35,
+        SM_CXDOUBLECLK =          36,
+        SM_CYDOUBLECLK =          37,
+        SM_CXICONSPACING =        38,
+        SM_CYICONSPACING =        39,
+        SM_MENUDROPALIGNMENT =    40,
+        SM_PENWINDOWS =           41,
+        SM_DBCSENABLED =          42,
+        SM_CMOUSEBUTTONS =        43,
 
 
-	SM_CXFIXEDFRAME =         SM_CXDLGFRAME,
-	SM_CYFIXEDFRAME =         SM_CYDLGFRAME,
-	SM_CXSIZEFRAME =          SM_CXFRAME,
-	SM_CYSIZEFRAME =          SM_CYFRAME,
+        SM_CXFIXEDFRAME =         SM_CXDLGFRAME,
+        SM_CYFIXEDFRAME =         SM_CYDLGFRAME,
+        SM_CXSIZEFRAME =          SM_CXFRAME,
+        SM_CYSIZEFRAME =          SM_CYFRAME,
 
-	SM_SECURE =               44,
-	SM_CXEDGE =               45,
-	SM_CYEDGE =               46,
-	SM_CXMINSPACING =         47,
-	SM_CYMINSPACING =         48,
-	SM_CXSMICON =             49,
-	SM_CYSMICON =             50,
-	SM_CYSMCAPTION =          51,
-	SM_CXSMSIZE =             52,
-	SM_CYSMSIZE =             53,
-	SM_CXMENUSIZE =           54,
-	SM_CYMENUSIZE =           55,
-	SM_ARRANGE =              56,
-	SM_CXMINIMIZED =          57,
-	SM_CYMINIMIZED =          58,
-	SM_CXMAXTRACK =           59,
-	SM_CYMAXTRACK =           60,
-	SM_CXMAXIMIZED =          61,
-	SM_CYMAXIMIZED =          62,
-	SM_NETWORK =              63,
-	SM_CLEANBOOT =            67,
-	SM_CXDRAG =               68,
-	SM_CYDRAG =               69,
-	SM_SHOWSOUNDS =           70,
-	SM_CXMENUCHECK =          71,
-	SM_CYMENUCHECK =          72,
-	SM_SLOWMACHINE =          73,
-	SM_MIDEASTENABLED =       74,
-	SM_CMETRICS =             75,
+        SM_SECURE =               44,
+        SM_CXEDGE =               45,
+        SM_CYEDGE =               46,
+        SM_CXMINSPACING =         47,
+        SM_CYMINSPACING =         48,
+        SM_CXSMICON =             49,
+        SM_CYSMICON =             50,
+        SM_CYSMCAPTION =          51,
+        SM_CXSMSIZE =             52,
+        SM_CYSMSIZE =             53,
+        SM_CXMENUSIZE =           54,
+        SM_CYMENUSIZE =           55,
+        SM_ARRANGE =              56,
+        SM_CXMINIMIZED =          57,
+        SM_CYMINIMIZED =          58,
+        SM_CXMAXTRACK =           59,
+        SM_CYMAXTRACK =           60,
+        SM_CXMAXIMIZED =          61,
+        SM_CYMAXIMIZED =          62,
+        SM_NETWORK =              63,
+        SM_CLEANBOOT =            67,
+        SM_CXDRAG =               68,
+        SM_CYDRAG =               69,
+        SM_SHOWSOUNDS =           70,
+        SM_CXMENUCHECK =          71,
+        SM_CYMENUCHECK =          72,
+        SM_SLOWMACHINE =          73,
+        SM_MIDEASTENABLED =       74,
+        SM_CMETRICS =             75,
 }
 
 int GetSystemMetrics(int nIndex);

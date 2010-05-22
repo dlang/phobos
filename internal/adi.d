@@ -28,7 +28,7 @@
  *     distribution.
  */
 
-//debug=adi;		// uncomment to turn on debugging printf's
+//debug=adi;            // uncomment to turn on debugging printf's
 
 import std.stdio;
 import std.c.stdio;
@@ -54,61 +54,61 @@ extern (C) long _adReverseChar(char[] a)
 {
     if (a.length > 1)
     {
-	char[6] tmp;
-	char[6] tmplo;
-	char* lo = a.ptr;
-	char* hi = &a[length - 1];
+        char[6] tmp;
+        char[6] tmplo;
+        char* lo = a.ptr;
+        char* hi = &a[length - 1];
 
-	while (lo < hi)
-	{   auto clo = *lo;
-	    auto chi = *hi;
+        while (lo < hi)
+        {   auto clo = *lo;
+            auto chi = *hi;
 
-	    //printf("lo = %d, hi = %d\n", lo, hi);
-	    if (clo <= 0x7F && chi <= 0x7F)
-	    {
-		//printf("\tascii\n");
-		*lo = chi;
-		*hi = clo;
-		lo++;
-		hi--;
-		continue;
-	    }
+            //printf("lo = %d, hi = %d\n", lo, hi);
+            if (clo <= 0x7F && chi <= 0x7F)
+            {
+                //printf("\tascii\n");
+                *lo = chi;
+                *hi = clo;
+                lo++;
+                hi--;
+                continue;
+            }
 
-	    uint stridelo = std.utf.UTF8stride[clo];
+            uint stridelo = std.utf.UTF8stride[clo];
 
-	    uint stridehi = 1;
-	    while ((chi & 0xC0) == 0x80)
-	    {
-		chi = *--hi;
-		stridehi++;
-		assert(hi >= lo);
-	    }
-	    if (lo == hi)
-		break;
+            uint stridehi = 1;
+            while ((chi & 0xC0) == 0x80)
+            {
+                chi = *--hi;
+                stridehi++;
+                assert(hi >= lo);
+            }
+            if (lo == hi)
+                break;
 
-	    //printf("\tstridelo = %d, stridehi = %d\n", stridelo, stridehi);
-	    if (stridelo == stridehi)
-	    {
+            //printf("\tstridelo = %d, stridehi = %d\n", stridelo, stridehi);
+            if (stridelo == stridehi)
+            {
 
-		memcpy(tmp.ptr, lo, stridelo);
-		memcpy(lo, hi, stridelo);
-		memcpy(hi, tmp.ptr, stridelo);
-		lo += stridelo;
-		hi--;
-		continue;
-	    }
+                memcpy(tmp.ptr, lo, stridelo);
+                memcpy(lo, hi, stridelo);
+                memcpy(hi, tmp.ptr, stridelo);
+                lo += stridelo;
+                hi--;
+                continue;
+            }
 
-	    /* Shift the whole array. This is woefully inefficient
-	     */
-	    memcpy(tmp.ptr, hi, stridehi);
-	    memcpy(tmplo.ptr, lo, stridelo);
-	    memmove(lo + stridehi, lo + stridelo , (hi - lo) - stridelo);
-	    memcpy(lo, tmp.ptr, stridehi);
-	    memcpy(hi + stridehi - stridelo, tmplo.ptr, stridelo);
+            /* Shift the whole array. This is woefully inefficient
+             */
+            memcpy(tmp.ptr, hi, stridehi);
+            memcpy(tmplo.ptr, lo, stridelo);
+            memmove(lo + stridehi, lo + stridelo , (hi - lo) - stridelo);
+            memcpy(lo, tmp.ptr, stridehi);
+            memcpy(hi + stridehi - stridelo, tmplo.ptr, stridelo);
 
-	    lo += stridehi;
-	    hi = hi - 1 + (stridehi - stridelo);
-	}
+            lo += stridehi;
+            hi = hi - 1 + (stridehi - stridelo);
+        }
     }
     return *cast(long*)(&a);
 }
@@ -150,59 +150,59 @@ extern (C) long _adReverseWchar(wchar[] a)
 {
     if (a.length > 1)
     {
-	wchar[2] tmp;
-	wchar* lo = a.ptr;
-	wchar* hi = &a[length - 1];
+        wchar[2] tmp;
+        wchar* lo = a.ptr;
+        wchar* hi = &a[length - 1];
 
-	while (lo < hi)
-	{   auto clo = *lo;
-	    auto chi = *hi;
+        while (lo < hi)
+        {   auto clo = *lo;
+            auto chi = *hi;
 
-	    if ((clo < 0xD800 || clo > 0xDFFF) &&
-		(chi < 0xD800 || chi > 0xDFFF))
-	    {
-		*lo = chi;
-		*hi = clo;
-		lo++;
-		hi--;
-		continue;
-	    }
+            if ((clo < 0xD800 || clo > 0xDFFF) &&
+                (chi < 0xD800 || chi > 0xDFFF))
+            {
+                *lo = chi;
+                *hi = clo;
+                lo++;
+                hi--;
+                continue;
+            }
 
-	    int stridelo = 1 + (clo >= 0xD800 && clo <= 0xDBFF);
+            int stridelo = 1 + (clo >= 0xD800 && clo <= 0xDBFF);
 
-	    int stridehi = 1;
-	    if (chi >= 0xDC00 && chi <= 0xDFFF)
-	    {
-		chi = *--hi;
-		stridehi++;
-		assert(hi >= lo);
-	    }
-	    if (lo == hi)
-		break;
+            int stridehi = 1;
+            if (chi >= 0xDC00 && chi <= 0xDFFF)
+            {
+                chi = *--hi;
+                stridehi++;
+                assert(hi >= lo);
+            }
+            if (lo == hi)
+                break;
 
-	    if (stridelo == stridehi)
-	    {	int stmp;
+            if (stridelo == stridehi)
+            {   int stmp;
 
-		assert(stridelo == 2);
-		assert(stmp.sizeof == 2 * (*lo).sizeof);
-		stmp = *cast(int*)lo;
-		*cast(int*)lo = *cast(int*)hi;
-		*cast(int*)hi = stmp;
-		lo += stridelo;
-		hi--;
-		continue;
-	    }
+                assert(stridelo == 2);
+                assert(stmp.sizeof == 2 * (*lo).sizeof);
+                stmp = *cast(int*)lo;
+                *cast(int*)lo = *cast(int*)hi;
+                *cast(int*)hi = stmp;
+                lo += stridelo;
+                hi--;
+                continue;
+            }
 
-	    /* Shift the whole array. This is woefully inefficient
-	     */
-	    memcpy(tmp.ptr, hi, stridehi * wchar.sizeof);
-	    memcpy(hi + stridehi - stridelo, lo, stridelo * wchar.sizeof);
-	    memmove(lo + stridehi, lo + stridelo , (hi - (lo + stridelo)) * wchar.sizeof);
-	    memcpy(lo, tmp.ptr, stridehi * wchar.sizeof);
+            /* Shift the whole array. This is woefully inefficient
+             */
+            memcpy(tmp.ptr, hi, stridehi * wchar.sizeof);
+            memcpy(hi + stridehi - stridelo, lo, stridelo * wchar.sizeof);
+            memmove(lo + stridehi, lo + stridelo , (hi - (lo + stridelo)) * wchar.sizeof);
+            memcpy(lo, tmp.ptr, stridehi * wchar.sizeof);
 
-	    lo += stridehi;
-	    hi = hi - 1 + (stridehi - stridelo);
-	}
+            lo += stridehi;
+            hi = hi - 1 + (stridehi - stridelo);
+        }
     }
     return *cast(long*)(&a);
 }
@@ -232,46 +232,46 @@ unittest
 extern (C) long _adReverse(Array a, size_t szelem)
     out (result)
     {
-	assert(result is *cast(long*)(&a));
+        assert(result is *cast(long*)(&a));
     }
     body
     {
-	if (a.length >= 2)
-	{
-	    byte* tmp;
-	    byte[16] buffer;
+        if (a.length >= 2)
+        {
+            byte* tmp;
+            byte[16] buffer;
 
-	    void* lo = a.ptr;
-	    void* hi = a.ptr + (a.length - 1) * szelem;
+            void* lo = a.ptr;
+            void* hi = a.ptr + (a.length - 1) * szelem;
 
-	    tmp = buffer.ptr;
-	    if (szelem > 16)
-	    {
-		//version (Win32)
-		    tmp = cast(byte*) alloca(szelem);
-		//else
-		    //tmp = new byte[szelem];
-	    }
+            tmp = buffer.ptr;
+            if (szelem > 16)
+            {
+                //version (Win32)
+                    tmp = cast(byte*) alloca(szelem);
+                //else
+                    //tmp = new byte[szelem];
+            }
 
-	    for (; lo < hi; lo += szelem, hi -= szelem)
-	    {
-		memcpy(tmp, lo,  szelem);
-		memcpy(lo,  hi,  szelem);
-		memcpy(hi,  tmp, szelem);
-	    }
+            for (; lo < hi; lo += szelem, hi -= szelem)
+            {
+                memcpy(tmp, lo,  szelem);
+                memcpy(lo,  hi,  szelem);
+                memcpy(hi,  tmp, szelem);
+            }
 
-	    version (Win32)
-	    {
-	    }
-	    else
-	    {
-		//if (szelem > 16)
-		    // BUG: bad code is generate for delete pointer, tries
-		    // to call delclass.
-		    //delete tmp;
-	    }
-	}
-	return *cast(long*)(&a);
+            version (Win32)
+            {
+            }
+            else
+            {
+                //if (szelem > 16)
+                    // BUG: bad code is generate for delete pointer, tries
+                    // to call delclass.
+                    //delete tmp;
+            }
+        }
+        return *cast(long*)(&a);
     }
 
 unittest
@@ -283,31 +283,31 @@ unittest
     size_t i;
 
     for (i = 0; i < 5; i++)
-	a[i] = i;
+        a[i] = i;
     b = a.reverse;
     assert(b is a);
     for (i = 0; i < 5; i++)
-	assert(a[i] == 4 - i);
+        assert(a[i] == 4 - i);
 
     struct X20
-    {	// More than 16 bytes in size
-	int a;
-	int b, c, d, e;
+    {   // More than 16 bytes in size
+        int a;
+        int b, c, d, e;
     }
 
     X20[] c = new X20[5];
     X20[] d;
 
     for (i = 0; i < 5; i++)
-    {	c[i].a = i;
-	c[i].e = 10;
+    {   c[i].a = i;
+        c[i].e = 10;
     }
     d = c.reverse;
     assert(d is c);
     for (i = 0; i < 5; i++)
     {
-	assert(c[i].a == 4 - i);
-	assert(c[i].e == 10);
+        assert(c[i].a == 4 - i);
+        assert(c[i].e == 10);
     }
 }
 
@@ -320,25 +320,25 @@ version (none)
 extern (C) bit[] _adReverseBit(bit[] a)
     out (result)
     {
-	assert(result is a);
+        assert(result is a);
     }
     body
     {
-	if (a.length >= 2)
-	{
-	    bit t;
-	    int lo, hi;
+        if (a.length >= 2)
+        {
+            bit t;
+            int lo, hi;
 
-	    lo = 0;
-	    hi = a.length - 1;
-	    for (; lo < hi; lo++, hi--)
-	    {
-		t = a[lo];
-		a[lo] = a[hi];
-		a[hi] = t;
-	    }
-	}
-	return a;
+            lo = 0;
+            hi = a.length - 1;
+            for (; lo < hi; lo++, hi--)
+            {
+                t = a[lo];
+                a[lo] = a[hi];
+                a[hi] = t;
+            }
+        }
+        return a;
     }
 
 unittest
@@ -354,7 +354,7 @@ unittest
     b.reverse;
     for (i = 0; i < 5; i++)
     {
-	assert(b[i] == data[4 - i]);
+        assert(b[i] == data[4 - i]);
     }
 }
 }
@@ -367,16 +367,16 @@ extern (C) long _adSortChar(char[] a)
 {
     if (a.length > 1)
     {
-	dstring da = toUTF32(a);
-	da.sort;
-	size_t i = 0;
-	foreach (dchar d; da)
-	{   char[4] buf;
-	    string t = toUTF8(buf, d);
-	    a[i .. i + t.length] = t[];
-	    i += t.length;
-	}
-	delete da;
+        dstring da = toUTF32(a);
+        da.sort;
+        size_t i = 0;
+        foreach (dchar d; da)
+        {   char[4] buf;
+            string t = toUTF8(buf, d);
+            a[i .. i + t.length] = t[];
+            i += t.length;
+        }
+        delete da;
     }
     return *cast(long*)(&a);
 }
@@ -389,16 +389,16 @@ extern (C) long _adSortWchar(wchar[] a)
 {
     if (a.length > 1)
     {
-	dstring da = toUTF32(a);
-	da.sort;
-	size_t i = 0;
-	foreach (dchar d; da)
-	{   wchar[2] buf;
-	    wstring t = toUTF16(buf, d);
-	    a[i .. i + t.length] = t[];
-	    i += t.length;
-	}
-	delete da;
+        dstring da = toUTF32(a);
+        da.sort;
+        size_t i = 0;
+        foreach (dchar d; da)
+        {   wchar[2] buf;
+            wstring t = toUTF16(buf, d);
+            a[i .. i + t.length] = t[];
+            i += t.length;
+        }
+        delete da;
     }
     return *cast(long*)(&a);
 }
@@ -412,46 +412,46 @@ version (none)
 extern (C) bit[] _adSortBit(bit[] a)
     out (result)
     {
-	assert(result is a);
+        assert(result is a);
     }
     body
     {
-	if (a.length >= 2)
-	{
-	    size_t lo, hi;
+        if (a.length >= 2)
+        {
+            size_t lo, hi;
 
-	    lo = 0;
-	    hi = a.length - 1;
-	    while (1)
-	    {
-		while (1)
-		{
-		    if (lo >= hi)
-			goto Ldone;
-		    if (a[lo] == true)
-			break;
-		    lo++;
-		}
+            lo = 0;
+            hi = a.length - 1;
+            while (1)
+            {
+                while (1)
+                {
+                    if (lo >= hi)
+                        goto Ldone;
+                    if (a[lo] == true)
+                        break;
+                    lo++;
+                }
 
-		while (1)
-		{
-		    if (lo >= hi)
-			goto Ldone;
-		    if (a[hi] == false)
-			break;
-		    hi--;
-		}
+                while (1)
+                {
+                    if (lo >= hi)
+                        goto Ldone;
+                    if (a[hi] == false)
+                        break;
+                    hi--;
+                }
 
-		a[lo] = false;
-		a[hi] = true;
+                a[lo] = false;
+                a[hi] = true;
 
-		lo++;
-		hi--;
-	    }
-	Ldone:
-	    ;
-	}
-	return a;
+                lo++;
+                hi--;
+            }
+        Ldone:
+            ;
+        }
+        return a;
     }
 
 unittest
@@ -463,15 +463,15 @@ unittest
 /***************************************
  * Support for array equality test.
  * Returns:
- *	1	equal
- *	0	not equal
+ *      1       equal
+ *      0       not equal
  */
 
 extern (C) int _adEq(Array a1, Array a2, TypeInfo ti)
 {
     //printf("_adEq(a1.length = %d, a2.length = %d)\n", a1.length, a2.length);
     if (a1.length != a2.length)
-	return 0;		// not equal
+        return 0;               // not equal
     auto sz = ti.tsize();
     auto p1 = a1.ptr;
     auto p2 = a2.ptr;
@@ -479,29 +479,29 @@ extern (C) int _adEq(Array a1, Array a2, TypeInfo ti)
 /+
     for (int i = 0; i < a1.length; i++)
     {
-	printf("%4x %4x\n", (cast(short*)p1)[i], (cast(short*)p2)[i]);
+        printf("%4x %4x\n", (cast(short*)p1)[i], (cast(short*)p2)[i]);
     }
 +/
 
     if (sz == 1)
-	// We should really have a ti.isPOD() check for this
-	return (memcmp(p1, p2, a1.length) == 0);
+        // We should really have a ti.isPOD() check for this
+        return (memcmp(p1, p2, a1.length) == 0);
 
     for (size_t i = 0; i < a1.length; i++)
     {
-	if (!ti.equals(p1 + i * sz, p2 + i * sz))
-	    return 0;		// not equal
+        if (!ti.equals(p1 + i * sz, p2 + i * sz))
+            return 0;           // not equal
     }
-    return 1;			// equal
+    return 1;                   // equal
 }
 
 extern (C) int _adEq2(Array a1, Array a2, TypeInfo ti)
 {
     //printf("_adEq2(a1.length = %d, a2.length = %d)\n", a1.length, a2.length);
     if (a1.length != a2.length)
-	return 0;		// not equal
+        return 0;               // not equal
     if (!ti.equals(&a1, &a2))
-	return 0;
+        return 0;
     return 1;
 }
 
@@ -528,14 +528,14 @@ extern (C) int _adEqBit(Array a1, Array a2)
 {   size_t i;
 
     if (a1.length != a2.length)
-	return 0;		// not equal
+        return 0;               // not equal
     auto p1 = cast(byte*)a1.ptr;
     auto p2 = cast(byte*)a2.ptr;
     auto n = a1.length / 8;
     for (i = 0; i < n; i++)
     {
-	if (p1[i] != p2[i])
-	    return 0;		// not equal
+        if (p1[i] != p2[i])
+            return 0;           // not equal
     }
 
     ubyte mask;
@@ -572,28 +572,28 @@ extern (C) int _adCmp(Array a1, Array a2, TypeInfo ti)
     //printf("adCmp()\n");
     auto len = a1.length;
     if (a2.length < len)
-	len = a2.length;
+        len = a2.length;
     auto sz = ti.tsize();
     void *p1 = a1.ptr;
     void *p2 = a2.ptr;
 
     if (sz == 1)
-    {	// We should really have a ti.isPOD() check for this
-	auto c = memcmp(p1, p2, len);
-	if (c)
-	    return c;
+    {   // We should really have a ti.isPOD() check for this
+        auto c = memcmp(p1, p2, len);
+        if (c)
+            return c;
     }
     else
     {
-	for (size_t i = 0; i < len; i++)
-	{
-	    auto c = ti.compare(p1 + i * sz, p2 + i * sz);
-	    if (c)
-		return c;
-	}
+        for (size_t i = 0; i < len; i++)
+        {
+            auto c = ti.compare(p1 + i * sz, p2 + i * sz);
+            if (c)
+                return c;
+        }
     }
     if (a1.length == a2.length)
-	return 0;
+        return 0;
     return (a1.length > a2.length) ? 1 : -1;
 }
 
@@ -629,108 +629,108 @@ extern (C) int _adCmpChar(Array a1, Array a2)
 version (X86)
 {
     asm
-    {	naked			;
+    {   naked                   ;
 
-        push    EDI		;
-        push    ESI		;
+        push    EDI             ;
+        push    ESI             ;
 
-        mov    ESI,a1+4[4+ESP]	;
-        mov    EDI,a2+4[4+ESP]	;
+        mov    ESI,a1+4[4+ESP]  ;
+        mov    EDI,a2+4[4+ESP]  ;
 
-        mov    ECX,a1[4+ESP]	;
-        mov    EDX,a2[4+ESP]	;
+        mov    ECX,a1[4+ESP]    ;
+        mov    EDX,a2[4+ESP]    ;
 
-	cmp	ECX,EDX		;
-	jb	GotLength	;
+        cmp     ECX,EDX         ;
+        jb      GotLength       ;
 
-	mov	ECX,EDX		;
+        mov     ECX,EDX         ;
 
 GotLength:
-        cmp    ECX,4		;
-        jb    DoBytes		;
+        cmp    ECX,4            ;
+        jb    DoBytes           ;
 
         // Do alignment if neither is dword aligned
-        test    ESI,3		;
-        jz    Aligned		;
+        test    ESI,3           ;
+        jz    Aligned           ;
 
-        test	EDI,3		;
-        jz    Aligned		;
+        test    EDI,3           ;
+        jz    Aligned           ;
 DoAlign:
-        mov    AL,[ESI]		; //align ESI to dword bounds
-        mov    DL,[EDI]		;
+        mov    AL,[ESI]         ; //align ESI to dword bounds
+        mov    DL,[EDI]         ;
 
-        cmp    AL,DL		;
-        jnz    Unequal		;
+        cmp    AL,DL            ;
+        jnz    Unequal          ;
 
-        inc    ESI		;
-        inc    EDI		;
+        inc    ESI              ;
+        inc    EDI              ;
 
-        test    ESI,3		;
+        test    ESI,3           ;
 
-        lea    ECX,[ECX-1]	;
-        jnz    DoAlign		;
+        lea    ECX,[ECX-1]      ;
+        jnz    DoAlign          ;
 Aligned:
-        mov    EAX,ECX		;
+        mov    EAX,ECX          ;
 
-	// do multiple of 4 bytes at a time
+        // do multiple of 4 bytes at a time
 
-        shr    ECX,2		;
-        jz    TryOdd		;
+        shr    ECX,2            ;
+        jz    TryOdd            ;
 
-        repe			;
-	cmpsd			;
+        repe                    ;
+        cmpsd                   ;
 
-        jnz    UnequalQuad	;
+        jnz    UnequalQuad      ;
 
 TryOdd:
-        mov    ECX,EAX		;
+        mov    ECX,EAX          ;
 DoBytes:
-	// if still equal and not end of string, do up to 3 bytes slightly
-	// slower.
+        // if still equal and not end of string, do up to 3 bytes slightly
+        // slower.
 
-        and    ECX,3		;
-        jz    Equal		;
+        and    ECX,3            ;
+        jz    Equal             ;
 
-        repe			;
-	cmpsb			;
+        repe                    ;
+        cmpsb                   ;
 
-        jnz    Unequal		;
+        jnz    Unequal          ;
 Equal:
-        mov    EAX,a1[4+ESP]	;
-        mov    EDX,a2[4+ESP]	;
+        mov    EAX,a1[4+ESP]    ;
+        mov    EDX,a2[4+ESP]    ;
 
-        sub    EAX,EDX		;
-        pop    ESI		;
+        sub    EAX,EDX          ;
+        pop    ESI              ;
 
-        pop    EDI		;
-        ret			;
+        pop    EDI              ;
+        ret                     ;
 
 UnequalQuad:
-        mov    EDX,[EDI-4]	;
-        mov    EAX,[ESI-4]	;
+        mov    EDX,[EDI-4]      ;
+        mov    EAX,[ESI-4]      ;
 
-        cmp    AL,DL		;
-        jnz    Unequal		;
+        cmp    AL,DL            ;
+        jnz    Unequal          ;
 
-        cmp    AH,DH		;
-        jnz    Unequal		;
+        cmp    AH,DH            ;
+        jnz    Unequal          ;
 
-        shr    EAX,16		;
+        shr    EAX,16           ;
 
-        shr    EDX,16		;
+        shr    EDX,16           ;
 
-        cmp    AL,DL		;
-        jnz    Unequal		;
+        cmp    AL,DL            ;
+        jnz    Unequal          ;
 
-        cmp    AH,DH		;
+        cmp    AH,DH            ;
 Unequal:
-        sbb    EAX,EAX		;
-        pop    ESI		;
+        sbb    EAX,EAX          ;
+        pop    ESI              ;
 
-        or     EAX,1		;
-        pop    EDI		;
+        or     EAX,1            ;
+        pop    EDI              ;
 
-        ret			;
+        ret                     ;
     }
 }
 else
@@ -741,10 +741,10 @@ else
     //printf("adCmpChar()\n");
     len = a1.length;
     if (a2.length < len)
-	len = a2.length;
+        len = a2.length;
     c = string.memcmp(cast(char *)a1.ptr, cast(char *)a2.ptr, len);
     if (!c)
-	c = cast(int)a1.length - cast(int)a2.length;
+        c = cast(int)a1.length - cast(int)a2.length;
     return c;
 }
 }
@@ -779,22 +779,22 @@ extern (C) int _adCmpBit(Array a1, Array a2)
 
     len = a1.length;
     if (a2.length < len)
-	len = a2.length;
+        len = a2.length;
     ubyte *p1 = cast(ubyte*)a1.ptr;
     ubyte *p2 = cast(ubyte*)a2.ptr;
     uint n = len / 8;
     for (i = 0; i < n; i++)
     {
-	if (p1[i] != p2[i])
-	    break;		// not equal
+        if (p1[i] != p2[i])
+            break;              // not equal
     }
     for (uint j = i * 8; j < len; j++)
-    {	ubyte mask = cast(ubyte)(1 << j);
-	int c;
+    {   ubyte mask = cast(ubyte)(1 << j);
+        int c;
 
-	c = cast(int)(p1[i] & mask) - cast(int)(p2[i] & mask);
-	if (c)
-	    return c;
+        c = cast(int)(p1[i] & mask) - cast(int)(p2[i] & mask);
+        if (c)
+            return c;
     }
     return cast(int)a1.length - cast(int)a2.length;
 }

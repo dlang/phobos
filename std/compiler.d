@@ -1,7 +1,7 @@
 
 /**
  * Macros:
- *	WIKI = Phobos/StdCompiler
+ *      WIKI = Phobos/StdCompiler
  */
 
 /**
@@ -21,7 +21,7 @@ const
     /// Master list of D compiler vendors.
     enum Vendor
     {
-	DigitalMars = 1,	/// Digital Mars
+        DigitalMars = 1,        /// Digital Mars
     }
 
     /// Which vendor produced this compiler.
@@ -33,7 +33,7 @@ const
      * version_major.version_minor
      */
     uint version_major = __VERSION__ / 1000;
-    uint version_minor = __VERSION__ % 1000;	/// ditto
+    uint version_minor = __VERSION__ % 1000;    /// ditto
 
 
     /**
