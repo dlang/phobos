@@ -7,6 +7,7 @@ that allow construction of new, useful general-purpose types.
 Macros:
 
 WIKI = Phobos/StdVariant
+EM   = <em>$0</em>
  
 Synopsis:
 
@@ -47,8 +48,9 @@ Copyright: Copyright Andrei Alexandrescu 2008 - 2009.
 License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
 Authors:   $(WEB erdani.org, Andrei Alexandrescu),
            $(WEB bartoszmilewski.wordpress.com, Bartosz Milewski),
-           Don Clugston
-           Masahiro Nakagawa
+           Don Clugston,
+           Masahiro Nakagawa,
+           Shin Fujishiro
 
          Copyright Andrei Alexandrescu 2008 - 2009.
 Distributed under the Boost Software License, Version 1.0.
@@ -1381,3 +1383,720 @@ unittest
 }
 
 +/
+
+
+/**
+$(D AutoImplement), by default, automatically implements all abstract member
+functions in the class or interface $(D Base) as do-nothing functions.
+
+--------------------
+abstract class Base
+{
+    int m_value;
+    this(int v) { m_value = v; }
+    int value() @property { return m_value; }
+
+    abstract real realValue() @property;
+    abstract void doSomething();
+}
+
+void main()
+{
+    auto obj = new AutoImplement!Base(42);
+    writeln(obj.value);     // prints "42"
+
+    // Abstract functions are implemented as do-nothing:
+    writeln(obj.realValue); // prints "NaN"
+    obj.doSomething();      // does nothing
+}
+--------------------
+
+The behavior can be customized with the parameters.
+
+Params:
+  how  = A template which determines _how functions will be
+         implemented/overridden.
+
+         Two arguments are passed to $(D how): the first one is the $(D Base),
+         and the second one is an alias to a function to be implemented.  Then
+         $(D how) must return a implemented function body as a string.
+
+         The generated function body can use these keywords:
+         $(UL
+            $(LI $(D a0), $(D a1), &hellip;: arguments passed to the function;)
+            $(LI $(D args): a tuple of the arguments;)
+            $(LI $(D self): an alias to the function itself;)
+            $(LI $(D parent): an alias to the overridden function (if any).)
+         )
+
+        You may want to use templated property functions (instead of Implicit
+        Template Properties) to generate complex functions:
+--------------------
+// Prints log messages for each call to overridden functions.
+string generateLogger(C, alias fun)() @property
+{
+    enum qname = C.stringof ~ "." ~ __traits(identifier, fun);
+    string stmt;
+
+    stmt ~= q{ struct Importer { import std.stdio; } };
+    stmt ~= `Importer.writeln$(LPAREN)"Log: ` ~ qname ~ `(", args, ")"$(RPAREN);`;
+    static if (!__traits(isAbstractFunction, fun))
+    {
+        static if (is(typeof(return) == void))
+            stmt ~= q{ parent(args); };
+        else
+            stmt ~= q{
+                auto r = parent(args);
+                Importer.writeln("--> ", r);
+                return r;
+            };
+    }
+    return stmt;
+}
+--------------------
+
+  what = A template which determines _what functions should be
+         implemented/overridden.
+
+         An argument is passed to $(D what): an alias to a non-final member
+         function in $(D Base).  Then $(D what) must return a boolean value.
+         Return $(D true) to indicate that the passed function should be
+         implemented/overridden.
+
+--------------------
+// Sees if fun returns something.
+template hasValue(alias fun)
+{
+    enum bool hasValue = !is(ReturnType!(fun) == void);
+}
+--------------------
+
+
+Note:
+
+Generated code is inserted in the scope of $(D std.typecons) module.  Thus,
+any useful functions outside $(D std.typecons) cannot be used in the generated
+code.  To workaround this problem, you may $(D import) necessary things in a
+local struct, as done in the $(D generateLogger()) template in the above
+example.
+
+
+BUGS:
+
+$(UL
+ $(LI Variadic arguments to constructors are not forwarded to super.)
+ $(LI Deep interface inheritance causes compile error with messages like
+      "Error: function std.typecons._AutoImplement!(Foo)._AutoImplement.bar
+      does not override any function".  [$(BUGZILLA 2525), $(BUGZILLA 3525)] )
+ $(LI The $(D parent) keyword is actually a delegate to the super class'
+      corresponding member function.  [$(BUGZILLA 2540)] )
+ $(LI Using $(D alias) template parameter in $(D how) and/or $(D what) may
+      cause strange compile error.  Use template tuple parameter instead to
+      workaround this problem.  [$(BUGZILLA 4217)] )
+)
+ */
+class AutoImplement( Base,
+        alias how = generateEmptyFunction, alias what = isAbstractFunction )
+    : Base
+{
+    private alias AutoImplement_Helper!(
+            "autoImplement_helper_", "Base", Base, how, what )
+             autoImplement_helper_;
+    override mixin(autoImplement_helper_.code);
+}
+
+/*
+ * Code-generating stuffs are encupsulated in this helper template so that
+ * namespace pollusion, which can cause name confliction with Base's public
+ * members, should be minimized.
+ */
+private template AutoImplement_Helper(string myName, string baseName,
+        Base, alias generateMethodBody, alias cherrypickMethod)
+{
+private static:
+    //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
+    // Internal stuffs
+    //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
+
+    // this would be deprecated by std.typelist.Filter
+    template staticFilter(alias pred, lst...)
+    {
+        alias staticFilterImpl!(pred, lst).result staticFilter;
+    }
+    template staticFilterImpl(alias pred, lst...)
+    {
+        static if (lst.length > 0)
+        {
+            alias staticFilterImpl!(pred, lst[1 .. $]).result tail;
+            //
+            static if (true && pred!(lst[0]))
+                alias TypeTuple!(lst[0], tail) result;
+            else
+                alias tail result;
+        }
+        else
+            alias TypeTuple!() result;
+    }
+
+    // Returns function overload sets in the class C, filtered with pred.
+    template enumerateOverloads(C, alias pred)
+    {
+        alias enumerateOverloadsImpl!(C, pred, traits_allMembers!(C)).result
+                enumerateOverloads;
+    }
+    template enumerateOverloadsImpl(C, alias pred, names...)
+    {
+        static if (names.length > 0)
+        {
+            alias staticFilter!(pred, MemberFunctionsTuple!(C, ""~names[0])) methods;
+            alias enumerateOverloadsImpl!(C, pred, names[1 .. $]).result next;
+
+            static if (methods.length > 0)
+                alias TypeTuple!(OverloadSet!(""~names[0], methods), next) result;
+            else
+                alias next result;
+        }
+        else
+            alias TypeTuple!() result;
+    }
+
+
+    //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
+    // Target functions
+    //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
+
+    // Add a non-final check to the cherrypickMethod.
+    template canonicalPicker(fun.../+[BUG 4217]+/)
+    {
+        enum bool canonicalPicker = !__traits(isFinalFunction, fun[0]) &&
+                                    cherrypickMethod!(fun);
+    }
+
+    /*
+     * A tuple of overload sets, each item of which consists of functions to be
+     * implemented by the generated code.
+     */
+    alias enumerateOverloads!(Base, canonicalPicker) targetOverloadSets;
+
+    /*
+     * A tuple of the super class' constructors.  Used for forwarding
+     * constructor calls.
+     */
+    static if (__traits(hasMember, Base, "__ctor"))
+        alias OverloadSet!("__ctor", __traits(getOverloads, Base, "__ctor"))
+                ctorOverloadSet;
+    else
+        alias OverloadSet!("__ctor") ctorOverloadSet; // empty
+
+
+    //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
+    // Type information
+    //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
+
+    /*
+     * The generated code will be mixed into AutoImplement, which will be
+     * instantiated in this module's scope.  Thus, any user-defined types are
+     * out of scope and cannot be used directly (i.e. by their names).
+     *
+     * We will use FuncInfo instances for accessing return types and parameter
+     * types of the implemented functions.  The instances will be populated to
+     * the AutoImplement's scope in a certain way; see the populate() below.
+     */
+
+    // Returns the preferred identifier for the FuncInfo instance for the i-th
+    // overloaded function with the name.
+    template INTERNAL_FUNCINFO_ID(string name, size_t i)
+    {
+        enum string INTERNAL_FUNCINFO_ID = "F_" ~ name ~ "_" ~ toStringNow!(i);
+    }
+
+    /*
+     * Insert FuncInfo instances about all the target functions here.  This
+     * enables the generated code to access type information via, for example,
+     * "autoImplement_helper_.F_foo_1".
+     */
+    template populate(overloads...)
+    {
+        static if (overloads.length > 0)
+        {
+            mixin populate!(overloads[0].name, overloads[0].contents);
+            mixin populate!(overloads[1 .. $]);
+        }
+    }
+    template populate(string name, methods...)
+    {
+        static if (methods.length > 0)
+        {
+            mixin populate!(name, methods[0 .. $ - 1]);
+            //
+            alias methods[$ - 1] target;
+            enum ith = methods.length - 1;
+            mixin( "alias FuncInfo!(target) " ~
+                        INTERNAL_FUNCINFO_ID!(name, ith) ~ ";" );
+        }
+    }
+
+    public mixin populate!(targetOverloadSets);
+    public mixin populate!(  ctorOverloadSet );
+
+
+    //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
+    // Code-generating policies
+    //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
+
+    /* Common policy configurations for generating constructors and methods. */
+    template CommonGeneratingPolicy()
+    {
+        // base class identifier which generated code should use
+        enum string BASE_CLASS_ID = baseName;
+
+        // FuncInfo instance identifier which generated code should use
+        template FUNCINFO_ID(string name, size_t i)
+        {
+            enum string FUNCINFO_ID =
+                myName ~ "." ~ INTERNAL_FUNCINFO_ID!(name, i);
+        }
+
+        // preferred identifier for i-th parameter variable
+        template PARAMETER_VARIABLE_ID(size_t i)
+        {
+            enum string PARAMETER_VARIABLE_ID = "a" ~ toStringNow!(i);
+        }
+    }
+
+    /* Policy configurations for generating constructors. */
+    template ConstructorGeneratingPolicy()
+    {
+        mixin CommonGeneratingPolicy;
+
+        /* Generates constructor body.  Just forward to the base class' one. */
+        string generateFunctionBody(ctor.../+[BUG 4217]+/)() @property
+        {
+            enum varstyle = variadicFunctionStyle!(typeof(&ctor[0]));
+
+            static if (varstyle & (Variadic.C | Variadic.D))
+            {
+                // the argptr-forwarding problem
+                pragma(msg, "Warning: AutoImplement!(", Base, ") ",
+                        "ignored variadic arguments to the constructor ",
+                        FunctionTypeOf!(typeof(&ctor[0])) );
+            }
+            return "super(args);";
+        }
+    }
+
+    /* Policy configurations for genearting target methods. */
+    template MethodGeneratingPolicy()
+    {
+        mixin CommonGeneratingPolicy;
+
+        /* Geneartes method body. */
+        string generateFunctionBody(func.../+[BUG 4217]+/)() @property
+        {
+            return generateMethodBody!(Base, func); // given
+        }
+    }
+
+
+    //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
+    // Generated code
+    //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
+
+    alias MemberFunctionGenerator!( ConstructorGeneratingPolicy!() )
+            ConstructorGenerator;
+    alias MemberFunctionGenerator!( MethodGeneratingPolicy!() )
+            MethodGenerator;
+
+    public enum string code =
+        ConstructorGenerator.generateCode!(  ctorOverloadSet ) ~ "\n" ~
+             MethodGenerator.generateCode!(targetOverloadSets);
+
+    debug (SHOW_GENERATED_CODE)
+    {
+        pragma(msg, "-------------------- < ", Base, " >");
+        pragma(msg, code);
+        pragma(msg, "--------------------");
+    }
+}
+
+//debug = SHOW_GENERATED_CODE;
+unittest
+{
+    // no function to implement
+    {
+        interface I_1 {}
+        auto o = new AutoImplement!I_1;
+    }
+    // return value
+    {
+        interface I_2 { real test(); }
+        auto o = new AutoImplement!I_2;
+        assert(o.test() !<>= 0); // NaN
+    }
+    // parameters
+    {
+        interface I_3 { void test(int, in int, out int, ref int, lazy int); }
+        auto o = new AutoImplement!I_3;
+    }
+    // use of user-defined type
+    {
+        typedef int MyInt;
+        interface I_4 { MyInt test(); }
+        auto o = new AutoImplement!I_4;
+    }
+    // overloads
+    {
+        interface I_5
+        {
+            void test(string);
+            real test(real);
+            int  test();
+            int  test() @property; // ?
+        }
+        auto o = new AutoImplement!I_5;
+    }
+    // constructor forwarding
+    {
+        static class C_6
+        {
+            this(int n) { assert(n == 42); }
+            this(string s) { assert(s == "Deeee"); }
+            this(...) {}
+        }
+        auto o1 = new AutoImplement!C_6(42);
+        auto o2 = new AutoImplement!C_6("Deeee");
+        auto o3 = new AutoImplement!C_6(1, 2, 3, 4);
+    }
+    /+ // deep inheritance
+    {
+    // XXX [BUG 2525,3525]
+    // NOTE: [r494] func.c(504-571) FuncDeclaration::semantic()
+        interface I { void foo(); }
+        interface J : I {}
+        interface K : J {}
+        static abstract class C_8 : K {}
+        auto o = new AutoImplement!C_8;
+    } +/
+    // doc example
+    {
+        static class Base
+        {
+            int m_value;
+            this(int v) { m_value = v; }
+            int value() @property { return m_value; }
+
+            abstract real realValue() @property;
+            abstract void doSomething();
+        }
+
+        auto obj = new AutoImplement!Base(42);
+        assert(obj.value == 42);
+
+        assert(obj.realValue !<>= 0); // NaN
+        obj.doSomething();
+    }
+}
+
+
+/**
+The default $(EM how)-policy for $(D AutoImplement).  Every generated function
+returns the default value without doing anything.
+ */
+template generateEmptyFunction(C, func.../+[BUG 4217]+/)
+{
+    static if (is(ReturnType!(func) == void))
+        enum string generateEmptyFunction = q{
+        };
+    else static if (functionAttributes!(func) & FunctionAttribute.REF)
+        enum string generateEmptyFunction = q{
+            static typeof(return) dummy;
+            return dummy;
+        };
+    else
+        enum string generateEmptyFunction = q{
+            return typeof(return).init;
+        };
+}
+
+
+/**
+A $(EM how)-policy for $(D AutoImplement).  Every generated function fails with
+$(D AssertError) and does never return.  Useful for trapping use of
+not-yet-implemented functions.
+
+Example:
+--------------------
+class C
+{
+    abstract void notYetImplemented();
+}
+
+void main()
+{
+    auto obj = new AutoImplement!(C, generateAssertTrap);
+    obj.notYetImplemented(); // throws AssertError
+}
+--------------------
+ */
+template generateAssertTrap(C, func.../+[BUG 4217]+/)
+{
+    enum string generateAssertTrap =
+        `assert(0, "` ~ (C.stringof ~ "." ~ __traits(identifier, func))
+                ~ ` is not implemented");`;
+}
+
+unittest // doc example
+{
+    static class C
+    {
+        abstract void notYetImplemented();
+    }
+
+    auto o = new AutoImplement!(C, generateAssertTrap);
+    try
+    {
+        o.notYetImplemented();
+        assert(0);
+    }
+    catch (Error e) {}
+}
+
+
+/*
+Used by MemberFunctionGenerator.
+ */
+private template OverloadSet(string nam, T...)
+{
+    enum string name = nam;
+    alias T contents;
+}
+
+/*
+Used by MemberFunctionGenerator.
+ */
+private template FuncInfo(alias func, /+[BUG 4217 ?]+/ T = typeof(&func))
+{
+    alias         ReturnType!(T) RT;
+    alias ParameterTypeTuple!(T) PT;
+}
+
+/*
+General-purpose member function generator.
+ */
+private template MemberFunctionGenerator(alias Policy)
+{
+private static:
+    //mixin Policy; // can't
+
+    //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
+    // Internal stuffs
+    //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
+
+    enum CONSTRUCTOR_NAME = "__ctor";
+    enum WITH_BASE_CLASS  = __traits(compiles, Policy.BASE_CLASS_ID);
+
+    // Returns a tuple consisting of 0,1,2,...,n-1.  For static foreach.
+    template CountUp(size_t n)
+    {
+        static if (n > 0)
+            alias TypeTuple!(CountUp!(n - 1), n - 1) CountUp;
+        else
+            alias TypeTuple!() CountUp;
+    }
+
+
+    //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
+    // Code generator
+    //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
+
+    /*
+     * Runs through all the target overload sets and generates D code which
+     * implements all the functions in the overload sets.
+     */
+    public string generateCode(overloads...)() @property
+    {
+        string code = "";
+
+        // run through all the overload sets
+        foreach (i_; CountUp!(0 + overloads.length)) // workaround
+        {
+            enum i = 0 + i_; // workaround
+            alias overloads[i] oset;
+
+            code ~= generateCodeForOverloadSet!(oset);
+
+            static if (WITH_BASE_CLASS && oset.name != CONSTRUCTOR_NAME)
+            {
+                // The generated function declarations may hide existing ones
+                // in the base class (cf. HiddenFuncError), so we put an alias
+                // declaration here to reveal possible hidden functions.
+                code ~= Format!("alias %s.%s %s;\n",
+                            Policy.BASE_CLASS_ID, // [BUG 2540] super.
+                            oset.name, oset.name );
+            }
+        }
+        return code;
+    }
+
+    // handle each overload set
+    private string generateCodeForOverloadSet(alias oset)() @property
+    {
+        string code = "";
+
+        foreach (i_; CountUp!(0 + oset.contents.length)) // workaround
+        {
+            enum i = 0 + i_; // workaround
+            code ~= generateFunction!(
+                    oset.contents[i], Policy.FUNCINFO_ID!(oset.name, i)) ~ "\n";
+        }
+        return code;
+    }
+
+    /*
+     * Returns D code which implements the function func.  This function
+     * actually generates only the declarator part; the function body part is
+     * generated by the functionGenerator() policy.
+     */
+    //private string generateFunction(alias func, string myFuncInfo)() @property
+    private string generateFunction(args_.../+[BUG 4217]+/)() @property
+    {
+        alias args_[0..1] func; enum myFuncInfo = args_[1];
+
+        enum name   = __traits(identifier, func);
+        enum isCtor = (name == CONSTRUCTOR_NAME);
+
+        string code; // the result
+
+        /*** Function Declarator ***/
+        {
+            alias FunctionAttribute FA;
+            enum atts     = functionAttributes!(func);
+            enum realName = isCtor ? "this" : name;
+
+            /* Just for the sake of Format!(...). */
+            static string make_postAtts()
+            {
+                string poatts = "";
+                if (atts & FA.PURE    ) poatts ~= " pure";
+                if (atts & FA.NOTHROW ) poatts ~= " nothrow";
+                if (atts & FA.PROPERTY) poatts ~= " @property";
+                if (atts & FA.SAFE    ) poatts ~= " @safe";
+                if (atts & FA.TRUSTED ) poatts ~= " @trusted";
+                return poatts;
+            }
+            enum postAtts = make_postAtts();
+
+            static string make_returnType()
+            {
+                string rtype = "";
+
+                if (!isCtor)
+                {
+                    if (atts & FA.REF) rtype ~= "ret ";
+                    rtype ~= myFuncInfo ~ ".RT";
+                }
+                return rtype;
+            }
+            enum returnType = make_returnType();
+
+            //
+            code ~= Format!("extern(%s) %s %s(%s) %s\n",
+                    functionLinkage!(func),
+                    returnType,
+                    realName,
+                    ""~generateParameters!(func, myFuncInfo),
+                    postAtts );
+        }
+
+        /*** Function Body ***/
+        code ~= "{\n";
+        {
+            enum nparams = ParameterTypeTuple!(func).length;
+
+            /* Declare keywords: args, self and parent. */
+            string preamble;
+
+            preamble ~= "alias TypeTuple!(" ~ enumerateParameters!(nparams) ~ ") args;\n";
+            if (!isCtor)
+            {
+                preamble ~= "alias " ~ name ~ " self;\n";
+                if (WITH_BASE_CLASS && !__traits(isAbstractFunction, func))
+                    //preamble ~= "alias super." ~ name ~ " parent;\n"; // [BUG 2540]
+                    preamble ~= "auto parent = &super." ~ name ~ ";\n";
+            }
+
+            //
+            code ~= preamble;
+            code ~= Policy.generateFunctionBody!(func);
+        }
+        code ~= "}";
+
+        return code;
+    }
+
+    /*
+     * Returns D code which declares function parameters.
+     * "ref int a0, real a1, ..."
+     */
+    //private string generateParameters(alias func, string myFuncInfo)() @property
+    private string generateParameters(args_.../+[BUG 4217]+/)() @property
+    {
+        alias args_[0..1] func; enum myFuncInfo = args_[1];
+
+        alias ParameterStorageClass STC;
+        alias ParameterStorageClassTuple!(func) stcs;
+        enum nparams = stcs.length;
+
+        string params = ""; // the result
+
+        foreach (i, stc; stcs)
+        {
+            if (i > 0) params ~= ", ";
+
+            // Parameter storage classes.
+            if (stc & STC.SCOPE) params ~= "scope ";
+            if (stc & STC.OUT  ) params ~= "out ";
+            if (stc & STC.REF  ) params ~= "ref ";
+            if (stc & STC.LAZY ) params ~= "lazy ";
+
+            // Take parameter type from the FuncInfo.
+            params ~= myFuncInfo ~ ".PT[" ~ toStringNow!(i) ~ "]";
+
+            // Declare a parameter variable.
+            params ~= " " ~ Policy.PARAMETER_VARIABLE_ID!(i);
+        }
+
+        // Add some ellipsis part if needed.
+        final switch (variadicFunctionStyle!(func))
+        {
+            case Variadic.NO:
+                break;
+
+            case Variadic.C, Variadic.D:
+                // (...) or (a, b, ...)
+                params ~= (nparams == 0) ? "..." : ", ...";
+                break;
+
+            case Variadic.TYPESAFE:
+                params ~= " ...";
+                break;
+        }
+
+        return params;
+    }
+
+    // Returns D code which enumerates n parameter variables using comma as the
+    // separator.  "a0, a1, a2, a3"
+    private string enumerateParameters(size_t n)() @property
+    {
+        string params = "";
+
+        foreach (i_; CountUp!(n))
+        {
+            enum i = 0 + i_; // workaround
+            if (i > 0) params ~= ", ";
+            params ~= Policy.PARAMETER_VARIABLE_ID!(i);
+        }
+        return params;
+    }
+}

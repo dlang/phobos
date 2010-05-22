@@ -460,7 +460,7 @@ private Variadic determineVariadicity(Func)()
     immutable callconv = functionLinkage!(Func);
     immutable mfunc = mangledName!(Func);
     immutable mtype = mangledName!(ReturnType!(Func));
-    debug assert(mfunc[$ - mtype.length .. $] == mtype);
+    debug assert(mfunc[$ - mtype.length .. $] == mtype, mfunc ~ "|" ~ mtype);
 
     immutable argclose = mfunc[$ - mtype.length - 1];
     final switch (argclose)
@@ -554,6 +554,22 @@ unittest
     StaticCallable* stcall_ptr;
     static assert(is( FunctionTypeOf!(stcall_val) == typeof(test) ));
     static assert(is( FunctionTypeOf!(stcall_ptr) == typeof(test) ));
+
+    interface Overloads {
+        void test(string);
+        real test(real);
+        int  test();
+        int  test() @property;
+    }
+    alias TypeTuple!(__traits(getVirtualFunctions, Overloads, "test")) ov;
+    alias FunctionTypeOf!(ov[0]) F_ov0;
+    alias FunctionTypeOf!(ov[1]) F_ov1;
+    alias FunctionTypeOf!(ov[2]) F_ov2;
+    alias FunctionTypeOf!(ov[3]) F_ov3;
+    static assert(is(F_ov0* == void function(string)));
+    static assert(is(F_ov1* == real function(real)));
+    static assert(is(F_ov2* == int function()));
+    static assert(is(F_ov3* == int function() @property));
 }
 
 
@@ -1272,7 +1288,7 @@ unittest
     }
     class C : B, J
     {
-        C test() { return this; }
+        override C test() { return this; }
     }
     alias MemberFunctionsTuple!(C, "test") test;
     static assert(test.length == 2);
@@ -2075,6 +2091,17 @@ unittest
 }
 
 
+/**
+Exactly the same as the builtin traits:
+$(D ___traits(_isAbstractFunction, method)).
+ */
+template isAbstractFunction(alias method)
+{
+    enum bool isAbstractFunction  = __traits(isAbstractFunction, method);
+}
+
+
+
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
 // General Types
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
@@ -2343,13 +2370,48 @@ private string removeDummyEnvelope(string s)
 
 unittest
 {
+    typedef int MyInt;
     class C { int value() @property { return 0; } }
     static assert(mangledName!(int) == int.mangleof);
     static assert(mangledName!(C) == C.mangleof);
+    static assert(mangledName!(MyInt)[$ - 7 .. $] == "T5MyInt");
     static assert(mangledName!(C.value)[$ - 12 .. $] == "5valueMFNdZi");
     static assert(mangledName!(mangledName) == "3std6traits11mangledName");
     static assert(mangledName!(removeDummyEnvelope) ==
             "_D3std6traits19removeDummyEnvelopeFAyaZAya");
+}
+
+
+/*
+workaround for [BUG 2234] "allMembers does not return interface members"
+ */
+package template traits_allMembers(Agg)
+{
+    static if (is(Agg == class) || is(Agg == interface))
+        alias NoDuplicates!( __traits(allMembers, Agg),
+                    traits_allMembers_ifaces!(InterfacesTuple!(Agg)) )
+                traits_allMembers;
+    else
+        alias TypeTuple!(__traits(allMembers, Agg)) traits_allMembers;
+}
+private template traits_allMembers_ifaces(I...)
+{
+    static if (I.length > 0)
+        alias TypeTuple!( __traits(allMembers, I[0]),
+                    traits_allMembers_ifaces!(I[1 .. $]) )
+                traits_allMembers_ifaces;
+    else
+        alias TypeTuple!() traits_allMembers_ifaces;
+}
+
+unittest
+{
+    interface I { void test(); }
+    interface J : I { }
+    interface K : J { }
+    alias traits_allMembers!(K) names;
+    static assert(names.length == 1);
+    static assert(names[0] == "test");
 }
 
 
