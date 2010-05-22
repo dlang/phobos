@@ -1209,8 +1209,8 @@ private template MemberFunctionTupleImpl(C, string name)
             alias TypeTuple!() result; // no overloads in this hierarchy
     }
 
-    // Remove symbolic duplicates; covariant duplicates still remain.
-    alias NoDuplicates!(CollectOverloads!(C).result) overloads;
+    // duplicates in this tuple will be removed by shrink()
+    alias CollectOverloads!(C).result overloads;
 
     /*
      * Now shrink covariant overloads into one.
@@ -1230,7 +1230,7 @@ private template MemberFunctionTupleImpl(C, string name)
     // .result[1..$] = non-covariant others
     template shrinkOne(/+ alias target, rest... +/ args...)
     {
-        alias args[0] target; // prevent property functions from being evaluated
+        alias args[0 .. 1] target; // prevent property functions from being evaluated
         alias args[1 .. $] rest;
 
         static if (rest.length > 0)
@@ -1284,6 +1284,19 @@ unittest
     interface L { int prop() @property; }
     alias MemberFunctionsTuple!(L, "prop") prop;
     static assert(prop.length == 1);
+
+    interface Test_I
+    {
+        void foo();
+        void foo(int);
+        void foo(int, int);
+    }
+    interface Test : Test_I {}
+    alias MemberFunctionsTuple!(Test, "foo") Test_foo;
+    static assert(Test_foo.length == 3);
+    static assert(is(typeof(&Test_foo[0]) == void function()));
+    static assert(is(typeof(&Test_foo[2]) == void function(int)));
+    static assert(is(typeof(&Test_foo[1]) == void function(int, int)));
 }
 
 
