@@ -693,6 +693,7 @@ class InternetAddress: Address
                                  "Unable to resolve host '" ~ addr ~ "'");
                         uiaddr = ih.addrList[0];
                 }
+                sin.sin_family = AddressFamily.INET;
                 sin.sin_addr.s_addr = htonl(uiaddr);
                 sin.sin_port = htons(port);
         }
@@ -704,6 +705,7 @@ class InternetAddress: Address
          */
         this(uint addr, ushort port)
         {
+                sin.sin_family = AddressFamily.INET;
                 sin.sin_addr.s_addr = htonl(addr);
                 sin.sin_port = htons(port);
         }
@@ -711,6 +713,7 @@ class InternetAddress: Address
         /// ditto
         this(ushort port)
         {
+                sin.sin_family = AddressFamily.INET;
                 sin.sin_addr.s_addr = 0; //any, "0.0.0.0"
                 sin.sin_port = htons(port);
         }
