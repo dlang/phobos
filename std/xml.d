@@ -991,7 +991,7 @@ class Tag
                 reqc(s,'=');
                 munch(s,whitespace);
                 reqc(s,'"');
-                string val = encode(munch(s,"^\""));
+                string val = decode(munch(s,"^\""), DecodeMode.LOOSE);
                 reqc(s,'"');
                 munch(s,whitespace);
                 attr[key] = val;
@@ -1945,7 +1945,7 @@ class ElementParser
                     immutable(char)* p = startTag.tagString.ptr
                         + startTag.tagString.length;
                     immutable(char)* q = tag_.tagString.ptr;
-                    text = p[0..(q-p)];
+                    text = decode(p[0..(q-p)], DecodeMode.LOOSE);
 
                     auto element = new Element(startTag);
                     if (text.length != 0) element ~= new Text(text);
@@ -2618,6 +2618,25 @@ unittest
         assert(n != -1);
     }
   }
+}
+
+unittest
+{
+    string s = q"EOS
+<?xml version="1.0" encoding="utf-8"?> <Tests>
+    <Test thing="What &amp; Up">What &amp; Up Second</Test>
+</Tests>
+EOS";
+    auto xml = new DocumentParser(s);
+
+    xml.onStartTag["Test"] = (ElementParser xml) {
+        assert(xml.tag.attr["thing"] == "What & Up");
+    };
+
+    xml.onEndTag["Test"] = (in Element e) {
+        assert(e.text == "What & Up Second");
+    };
+    xml.parse();
 }
 
 /** The base class for exceptions thrown by this module */
