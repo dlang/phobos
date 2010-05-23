@@ -18,9 +18,6 @@
  * Distributed under the Boost Software License, Version 1.0.
  *    (See accompanying file LICENSE_1_0.txt or copy at
  *          http://www.boost.org/LICENSE_1_0.txt)
- *
- * Macros:
- *   EM = <em>$0</em>
  */
 module std.traits;
 import std.typetuple;
@@ -500,8 +497,8 @@ static assert(is( FunctionTypeOf!(C.value) == function ));
 --------------------
 
 Note:
-Do not confuse function types with function $(EM pointer) types; function types
-are usually used for compile-time reflection purposes.
+Do not confuse function types with function pointer types; function types are
+usually used for compile-time reflection purposes.
  */
 template FunctionTypeOf(func...)
     if (func.length == 1 && isCallable!(func))
@@ -2060,7 +2057,7 @@ unittest
 
 
 /**
-Detect whether $(D T) is a callable object, which can be $(EM called) with the
+Detect whether $(D T) is a callable object, which can be called with the
 function call operator $(D $(LPAREN)...$(RPAREN)).
  */
 template isCallable(T...)
@@ -2301,7 +2298,7 @@ unittest
 Returns the mangled name of symbol or type $(D sth).
 
 $(D mangledName) is the same as builtin $(D .mangleof) property, except that
-the $(EM correct) names of property functions are obtained.
+the correct names of property functions are obtained.
 --------------------
 module test;
 import std.traits : mangledName;
@@ -2371,10 +2368,13 @@ private string removeDummyEnvelope(string s)
 unittest
 {
     typedef int MyInt;
+    MyInt test() { return 0; }
     class C { int value() @property { return 0; } }
     static assert(mangledName!(int) == int.mangleof);
     static assert(mangledName!(C) == C.mangleof);
     static assert(mangledName!(MyInt)[$ - 7 .. $] == "T5MyInt");
+    //static assert(mangledName!(test)[$ - 7 .. $] == "T5MyInt");
+        // seems bug in dmd: the preceding T is omitted
     static assert(mangledName!(C.value)[$ - 12 .. $] == "5valueMFNdZi");
     static assert(mangledName!(mangledName) == "3std6traits11mangledName");
     static assert(mangledName!(removeDummyEnvelope) ==

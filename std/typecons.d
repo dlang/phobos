@@ -7,7 +7,6 @@ that allow construction of new, useful general-purpose types.
 Macros:
 
 WIKI = Phobos/StdVariant
-EM   = <em>$0</em>
  
 Synopsis:
 
@@ -1386,11 +1385,14 @@ unittest
 
 
 /**
-$(D AutoImplement), by default, automatically implements all abstract member
-functions in the class or interface $(D Base) as do-nothing functions.
+$(D BlackHole!Base) is a subclass of $(D Base) which automatically implements
+all abstract member functions in $(D Base) as do-nothing functions.  Each
+auto-implemented function just returns the default value of the return type
+without doing anything.
 
+Example:
 --------------------
-abstract class Base
+abstract class C
 {
     int m_value;
     this(int v) { m_value = v; }
@@ -1402,20 +1404,108 @@ abstract class Base
 
 void main()
 {
-    auto obj = new AutoImplement!Base(42);
-    writeln(obj.value);     // prints "42"
+    auto c = new BlackHole!C(42);
+    writeln(c.value);     // prints "42"
 
     // Abstract functions are implemented as do-nothing:
-    writeln(obj.realValue); // prints "NaN"
-    obj.doSomething();      // does nothing
+    writeln(c.realValue); // prints "NaN"
+    c.doSomething();      // does nothing
 }
 --------------------
 
-The behavior can be customized with the parameters.
+See_Also:
+  AutoImplement, generateEmptyFunction
+ */
+template BlackHole(Base)
+{
+    alias AutoImplement!(Base, generateEmptyFunction, isAbstractFunction)
+            BlackHole;
+}
+
+unittest
+{
+    // return default
+    {
+        interface I_1 { real test(); }
+        auto o = new BlackHole!I_1;
+        assert(o.test() !<>= 0); // NaN
+    }
+    // doc example
+    {
+        static class C
+        {
+            int m_value;
+            this(int v) { m_value = v; }
+            int value() @property { return m_value; }
+
+            abstract real realValue() @property;
+            abstract void doSomething();
+        }
+
+        auto c = new BlackHole!C(42);
+        assert(c.value == 42);
+
+        assert(c.realValue !<>= 0); // NaN
+        c.doSomething();
+    }
+}
+
+
+/**
+$(D WhiteHole!Base) is a subclass of $(D Base) which automatically implements
+all abstract member functions as throw-always functions.  Each auto-implemented
+function fails with $(D AsertError) and does never return.  Useful for trapping
+use of not-yet-implemented functions.
+
+Example:
+--------------------
+class C
+{
+    abstract void notYetImplemented();
+}
+
+void main()
+{
+    auto c = new WhiteHole!C;
+    c.notYetImplemented(); // throws AssertError
+}
+--------------------
+
+See_Also:
+  AutoImplement, generateAssertTrap
+ */
+template WhiteHole(Base)
+{
+    alias AutoImplement!(Base, generateAssertTrap, isAbstractFunction)
+            WhiteHole;
+}
+
+unittest
+{
+    // doc example
+    {
+        static class C
+        {
+            abstract void notYetImplemented();
+        }
+
+        auto c = new WhiteHole!C;
+        try
+        {
+            c.notYetImplemented();
+            assert(0);
+        }
+        catch (Error e) {}
+    }
+}
+
+
+/**
+$(D AutoImplement) automatically implements (by default) all abstract member
+functions in the class or interface $(D Base) in specified way.
 
 Params:
-  how  = A template which determines _how functions will be
-         implemented/overridden.
+  how  = template which specifies _how functions will be implemented/overridden.
 
          Two arguments are passed to $(D how): the first one is the $(D Base),
          and the second one is an alias to a function to be implemented.  Then
@@ -1455,7 +1545,7 @@ string generateLogger(C, alias fun)() @property
 }
 --------------------
 
-  what = A template which determines _what functions should be
+  what = template which determines _what functions should be
          implemented/overridden.
 
          An argument is passed to $(D what): an alias to a non-final member
@@ -1490,14 +1580,12 @@ $(UL
       does not override any function".  [$(BUGZILLA 2525), $(BUGZILLA 3525)] )
  $(LI The $(D parent) keyword is actually a delegate to the super class'
       corresponding member function.  [$(BUGZILLA 2540)] )
- $(LI Using $(D alias) template parameter in $(D how) and/or $(D what) may
-      cause strange compile error.  Use template tuple parameter instead to
-      workaround this problem.  [$(BUGZILLA 4217)] )
+ $(LI Using alias template parameter in $(D how) and/or $(D what) may cause
+     strange compile error.  Use template tuple parameter instead to workaround
+     this problem.  [$(BUGZILLA 4217)] )
 )
  */
-class AutoImplement( Base,
-        alias how = generateEmptyFunction, alias what = isAbstractFunction )
-    : Base
+class AutoImplement(Base, alias how, alias what = isAbstractFunction) : Base
 {
     private alias AutoImplement_Helper!(
             "autoImplement_helper_", "Base", Base, how, what )
@@ -1725,24 +1813,18 @@ unittest
     // no function to implement
     {
         interface I_1 {}
-        auto o = new AutoImplement!I_1;
-    }
-    // return value
-    {
-        interface I_2 { real test(); }
-        auto o = new AutoImplement!I_2;
-        assert(o.test() !<>= 0); // NaN
+        auto o = new BlackHole!I_1;
     }
     // parameters
     {
         interface I_3 { void test(int, in int, out int, ref int, lazy int); }
-        auto o = new AutoImplement!I_3;
+        auto o = new BlackHole!I_3;
     }
     // use of user-defined type
     {
-        typedef int MyInt;
-        interface I_4 { MyInt test(); }
-        auto o = new AutoImplement!I_4;
+        struct S {}
+        interface I_4 { S test(); }
+        auto o = new BlackHole!I_4;
     }
     // overloads
     {
@@ -1753,7 +1835,7 @@ unittest
             int  test();
             int  test() @property; // ?
         }
-        auto o = new AutoImplement!I_5;
+        auto o = new BlackHole!I_5;
     }
     // constructor forwarding
     {
@@ -1763,9 +1845,9 @@ unittest
             this(string s) { assert(s == "Deeee"); }
             this(...) {}
         }
-        auto o1 = new AutoImplement!C_6(42);
-        auto o2 = new AutoImplement!C_6("Deeee");
-        auto o3 = new AutoImplement!C_6(1, 2, 3, 4);
+        auto o1 = new BlackHole!C_6(42);
+        auto o2 = new BlackHole!C_6("Deeee");
+        auto o3 = new BlackHole!C_6(1, 2, 3, 4);
     }
     /+ // deep inheritance
     {
@@ -1775,90 +1857,8 @@ unittest
         interface J : I {}
         interface K : J {}
         static abstract class C_8 : K {}
-        auto o = new AutoImplement!C_8;
-    } +/
-    // doc example
-    {
-        static class Base
-        {
-            int m_value;
-            this(int v) { m_value = v; }
-            int value() @property { return m_value; }
-
-            abstract real realValue() @property;
-            abstract void doSomething();
-        }
-
-        auto obj = new AutoImplement!Base(42);
-        assert(obj.value == 42);
-
-        assert(obj.realValue !<>= 0); // NaN
-        obj.doSomething();
-    }
-}
-
-
-/**
-The default $(EM how)-policy for $(D AutoImplement).  Every generated function
-returns the default value without doing anything.
- */
-template generateEmptyFunction(C, func.../+[BUG 4217]+/)
-{
-    static if (is(ReturnType!(func) == void))
-        enum string generateEmptyFunction = q{
-        };
-    else static if (functionAttributes!(func) & FunctionAttribute.REF)
-        enum string generateEmptyFunction = q{
-            static typeof(return) dummy;
-            return dummy;
-        };
-    else
-        enum string generateEmptyFunction = q{
-            return typeof(return).init;
-        };
-}
-
-
-/**
-A $(EM how)-policy for $(D AutoImplement).  Every generated function fails with
-$(D AssertError) and does never return.  Useful for trapping use of
-not-yet-implemented functions.
-
-Example:
---------------------
-class C
-{
-    abstract void notYetImplemented();
-}
-
-void main()
-{
-    auto obj = new AutoImplement!(C, generateAssertTrap);
-    obj.notYetImplemented(); // throws AssertError
-}
---------------------
- */
-template generateAssertTrap(C, func.../+[BUG 4217]+/)
-{
-    enum string generateAssertTrap =
-        `assert(0, "` ~ (C.stringof ~ "." ~ __traits(identifier, func))
-                ~ ` is not implemented");`;
-}
-
-unittest // doc example
-{
-    static class C
-    {
-        abstract void notYetImplemented();
-    }
-
-    auto o = new AutoImplement!(C, generateAssertTrap);
-    try
-    {
-        o.notYetImplemented();
-        assert(0);
-    }
-    catch (Error e) {}
+        auto o = new BlackHole!C_8;
+    }+/
 }
 
 
@@ -2099,4 +2099,33 @@ private static:
         }
         return params;
     }
+}
+
+
+/**
+Predefined how-policies for $(D AutoImplement).  These templates are used by
+$(D BlackHole) and $(D WhiteHole), respectively.
+ */
+template generateEmptyFunction(C, func.../+[BUG 4217]+/)
+{
+    static if (is(ReturnType!(func) == void))
+        enum string generateEmptyFunction = q{
+        };
+    else static if (functionAttributes!(func) & FunctionAttribute.REF)
+        enum string generateEmptyFunction = q{
+            static typeof(return) dummy;
+            return dummy;
+        };
+    else
+        enum string generateEmptyFunction = q{
+            return typeof(return).init;
+        };
+}
+
+/// ditto
+template generateAssertTrap(C, func.../+[BUG 4217]+/)
+{
+    enum string generateAssertTrap =
+        `assert(0, "` ~ (C.stringof ~ "." ~ __traits(identifier, func))
+                ~ ` is not implemented");`;
 }
