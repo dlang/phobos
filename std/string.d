@@ -4051,6 +4051,7 @@ deprecated int find(in char[] str, in char[] sub)
     return indexOf(str, sub, CaseSensitive.yes);
 }
 
+deprecated
 unittest
 {
     string a = "abc";

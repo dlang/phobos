@@ -1161,7 +1161,7 @@ shared static this()
     //rand_seed(cast(uint) s, cast(uint)(s >> 32));
 }
 
-
+deprecated
 unittest
 {
     static uint results[10] =

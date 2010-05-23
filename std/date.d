@@ -86,6 +86,7 @@ deprecated alias ticksPerMinute TicksPerMinute;
 deprecated alias ticksPerHour TicksPerHour;
 deprecated alias ticksPerDay TicksPerDay;
 
+deprecated
 unittest
 {
     assert(ticksPerSecond == TicksPerSecond);
