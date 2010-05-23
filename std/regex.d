@@ -2706,7 +2706,7 @@ inspection or for iterating over all matches (if the regular
 expression was built with the "g" option).
  */
 RegexMatch!(Range) match(Range, Engine)(Range r, Engine engine)
-if (is(Engine == Regex!(Unqual!(typeof(Range.init[0])))))
+if (is(Unqual!Engine == Regex!(Unqual!(typeof(Range.init[0])))))
 {
     return typeof(return)(engine, r);
 }
@@ -2788,7 +2788,7 @@ assert(replace("noon", regex("^n"), "[$&]") == "[n]oon");
  */
 
 Range replace(Range, Engine, String)(Range input, Engine regex, String format)
-if (is(Engine == Regex!(Unqual!(typeof(Range.init[0])))))
+if (is(Unqual!Engine == Regex!(Unqual!(typeof(Range.init[0])))))
 {
     return RegexMatch!(Range)(regex, input).replaceAll(format);
 }
@@ -2907,7 +2907,7 @@ Example:
 ----
 auto s1 = ", abc, de,  fg, hi, ";
 assert(equal(splitter(s1, regex(", *")),
-    ["", "abc", "de", "fg", "hi"][]));
+    ["", "abc", "de", "fg", "hi", ""][]));
 ----
  */
 struct Splitter(Range)
