@@ -1536,7 +1536,7 @@ private template isCovariantWithImpl(Upr, Lwr)
      * Check for function attributes:
      *  - require exact match for ref and @property
      *  - overrider can add pure and nothrow, but can't remove them
-     *  - trust: ?
+     *  - @safe and @trusted are covariant with each other, unremovable
      */
     template checkAttributes()
     {
@@ -1545,12 +1545,12 @@ private template isCovariantWithImpl(Upr, Lwr)
         enum lwrAtts = functionAttributes!(Lwr);
         //
         enum WANT_EXACT = FA.REF | FA.PROPERTY;
-        enum TRUST = FA.SAFE | FA.TRUSTED;
+        enum SAFETY = FA.SAFE | FA.TRUSTED;
         enum ok =
-            ((uprAtts & WANT_EXACT) == (lwrAtts & WANT_EXACT)) &&
-            ((uprAtts & FA.PURE   ) >= (lwrAtts & FA.PURE   )) &&
-            ((uprAtts & FA.NOTHROW) >= (lwrAtts & FA.NOTHROW)) &&
-            ((uprAtts & TRUST     ) >= (lwrAtts & TRUST     )) ;  // XXX
+            (  (uprAtts & WANT_EXACT) ==   (lwrAtts & WANT_EXACT)) &&
+            (  (uprAtts & FA.PURE   ) >=   (lwrAtts & FA.PURE   )) &&
+            (  (uprAtts & FA.NOTHROW) >=   (lwrAtts & FA.NOTHROW)) &&
+            (!!(uprAtts & SAFETY    ) >= !!(lwrAtts & SAFETY    )) ;
     }
     /*
      * Check for return type: usual implicit convertion.
@@ -1643,7 +1643,7 @@ unittest
     static assert(isCovariantWith!(DerivC_1.test, BaseC.test));
     static assert(! isCovariantWith!(BaseC.test, DerivC_1.test));
 
-    // trust
+    // increasing safety
     interface BaseE            {          void test()         ; }
     interface DerivE_1 : BaseE { override void test() @safe   ; }
     interface DerivE_2 : BaseE { override void test() @trusted; }
@@ -1651,6 +1651,20 @@ unittest
     static assert(isCovariantWith!(DerivE_2.test, BaseE.test));
     static assert(! isCovariantWith!(BaseE.test, DerivE_1.test));
     static assert(! isCovariantWith!(BaseE.test, DerivE_2.test));
+
+    // @safe and @trusted
+    interface BaseF
+    {
+        void test1() @safe;
+        void test2() @trusted;
+    }
+    interface DerivF : BaseF
+    {
+        override void test1() @trusted;
+        override void test2() @safe;
+    }
+    static assert(isCovariantWith!(DerivF.test1, BaseF.test1));
+    static assert(isCovariantWith!(DerivF.test2, BaseF.test2));
 }
 
 
