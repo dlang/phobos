@@ -556,8 +556,8 @@ Replaces elements from $(D array) with indices ranging from $(D from)
 (inclusive) to $(D to) (exclusive) with the range $(D stuff). Expands
 or shrinks the array as needed.
  */
-void replace(T, Range)(ref T[] array, size_t from, size_t to,
-        Range stuff)
+void replace(T, Range)(ref T[] array, size_t from, size_t to, Range stuff)
+    if (is(ElementType!Range == T))
 {
     // container = container[0 .. from] ~ stuff ~ container[to .. $];
     if (overlap(array, stuff))
@@ -572,7 +572,7 @@ void replace(T, Range)(ref T[] array, size_t from, size_t to,
         //immutable stuffEnd = from + stuff.length;
         auto stuffEnd = from + stuff.length;
         array[from .. stuffEnd] = stuff;
-        remove(array, tuple(stuffEnd, to));
+        array = remove(array, tuple(stuffEnd, to));
     }
     else
     {
@@ -584,11 +584,24 @@ void replace(T, Range)(ref T[] array, size_t from, size_t to,
     }
 }
 
+
+void replace(T, Range)(ref T[] array, size_t from, size_t to, Range stuff)
+    if (!is(ElementType!Range == T) && is(Unqual!Range == void*))
+{
+    replace(array, from, to, cast(T[])[]);
+}
+
+
+
 unittest
 {
     int[] a = [1, 4, 5];
     replace(a, 1u, 2u, [2, 3, 4]);
     assert(a == [1, 2, 3, 4, 5]);
+    replace(a, 1u, 2u, cast(int[])[]);
+    assert(a == [1, 3, 4, 5]);
+    replace(a, 1u, 2u, null);
+    assert(a == [1, 4, 5]);
 }
 
 /**
