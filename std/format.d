@@ -2037,7 +2037,7 @@ private void formatGeneric(Writer, D)(ref Writer w, const(void)* arg,
         {
             if (obj.length == 0) return;
             // formatted writes
-            formatGeneric!(Writer, typeof(obj[0]))(w, &obj[0], memberSpec);
+            formatGeneric!(Writer, typeof(obj[0]))(w, obj.ptr, memberSpec);
             if (!f.innerTrailing)
             {
                 foreach (i, e; obj[1 .. $])
