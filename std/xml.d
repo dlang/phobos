@@ -137,7 +137,26 @@ immutable cdata = "<![CDATA[";
  */
 bool isChar(dchar c) // rule 2
 {
-    return lookup(CharTable,c);
+    if (c <= 0xD7FF)
+    {
+        if (c >= 0x20)
+            return true;
+        switch(c)
+        {
+        case 0xA:
+        case 0x9:
+        case 0xD:
+            return true;
+        default:
+            return false;
+        }
+    }
+    else if (0xE000 <= c && c <= 0x10FFFF)
+    {
+        if ((c & 0x1FFFFE) != 0xFFFE) // U+FFFE and U+FFFF
+            return true;
+    }
+    return false;
 }
 
 unittest
@@ -164,6 +183,12 @@ unittest
     assert( isChar(cast(dchar)0x10000));
     assert( isChar(cast(dchar)0x10FFFF));
     assert(!isChar(cast(dchar)0x110000));
+
+    debug (stdxml_TestHardcodedChecks)
+    {
+        foreach (c; 0 .. dchar.max + 1)
+            assert(isChar(c) == lookup(CharTable, c));
+    }
 }
 
 /**
@@ -192,7 +217,19 @@ bool isSpace(dchar c)
  */
 bool isDigit(dchar c)
 {
-    return lookup(DigitTable,c);
+    if (c <= 0x0039 && c >= 0x0030)
+        return true;
+    else
+        return lookup(DigitTable,c);
+}
+
+unittest
+{
+    debug (stdxml_TestHardcodedChecks)
+    {
+        foreach (c; 0 .. dchar.max + 1)
+            assert(isDigit(c) == lookup(DigitTable, c));
+    }
 }
 
 /**
@@ -219,7 +256,28 @@ bool isLetter(dchar c) // rule 84
  */
 bool isIdeographic(dchar c)
 {
-    return lookup(IdeographicTable,c);
+    if (c == 0x3007)
+        return true;
+    if (c <= 0x3029 && c >= 0x3021 )
+        return true;
+    if (c <= 0x9FA5 && c >= 0x4E00)
+        return true;
+    return false;
+}
+
+unittest
+{
+    assert(isIdeographic('\u4E00'));
+    assert(isIdeographic('\u9FA5'));
+    assert(isIdeographic('\u3007'));
+    assert(isIdeographic('\u3021'));
+    assert(isIdeographic('\u3029'));
+
+    debug (stdxml_TestHardcodedChecks)
+    {
+        foreach (c; 0 .. dchar.max + 1)
+            assert(isIdeographic(c) == lookup(IdeographicTable, c));
+    }
 }
 
 /**
@@ -2829,7 +2887,7 @@ private
         0x1FCC,0x1FD0,0x1FD3,0x1FD6,0x1FDB,0x1FE0,0x1FEC,0x1FF2,0x1FF4,0x1FF6,
         0x1FFC,0x2126,0x2126,0x212A,0x212B,0x212E,0x212E,0x2180,0x2182,0x3041,
         0x3094,0x30A1,0x30FA,0x3105,0x312C,0xAC00,0xD7A3];
-    immutable IdeographicTable=[0x4E00,0x9FA5,0x3007,0x3007,0x3021,0x3029];
+    immutable IdeographicTable=[0x3007,0x3007,0x3021,0x3029,0x4E00,0x9FA5];
     immutable CombiningCharTable=[0x0300,0x0345,0x0360,0x0361,0x0483,0x0486,
         0x0591,0x05A1,0x05A3,0x05B9,0x05BB,0x05BD,0x05BF,0x05BF,0x05C1,0x05C2,
         0x05C4,0x05C4,0x064B,0x0652,0x0670,0x0670,0x06D6,0x06DC,0x06DD,0x06DF,
