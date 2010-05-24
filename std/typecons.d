@@ -999,7 +999,7 @@ break the soundness of D's type system and does not incur any of the
 risks usually associated with $(D cast).
 
  */
-template Rebindable(T) if (is(T : Object) || isArray!(T))
+template Rebindable(T) if (is(T == class) || is(T == interface) || isArray!(T))
 {
     static if (!is(T X == const(U), U) && !is(T X == immutable(U), U))
     {
@@ -1058,6 +1058,11 @@ unittest
 
     // test opDot
     assert(obj2.foo == 42);
+
+    interface I { final int foo() const { return 42; } }
+    Rebindable!(I) obj3;
+    static assert(is(typeof(obj3) == I));
+    static assert(is(typeof(obj3.foo()) == int));
 }
 
 /**
