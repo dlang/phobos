@@ -2154,7 +2154,7 @@ private
         try { checkLiteral("<!--",s); } catch(Err e) { fail(e); }
         int n = s.indexOf("--");
         if (n == -1) fail("unterminated comment");
-        s = s[0..n];
+        s = s[n..$];
         try { checkLiteral("-->",s); } catch(Err e) { fail(e); }
     }
 
@@ -2618,6 +2618,26 @@ unittest
         assert(n != -1);
     }
   }
+}
+
+unittest
+{
+    string s = q"EOS
+<?xml version="1.0"?>
+<set>
+    <one>A</one>
+    <!-- comment -->
+    <two>B</two>
+</set>
+EOS";
+    try
+    {
+        check(s);
+    }
+    catch (CheckException e)
+    {
+        assert(0, e.toString());
+    }
 }
 
 unittest
