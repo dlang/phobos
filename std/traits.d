@@ -901,7 +901,8 @@ private template hasObjects(T...)
     }
     else
     {
-        enum hasObjects = is(T[0] == class) || hasObjects!(T[1 .. $]);
+        enum hasObjects = (is(T[0] == class) && !is(T[0] == immutable)) ||
+            hasObjects!(T[1 .. $]);
     }
 }
 
@@ -924,6 +925,8 @@ unittest
     static assert(hasAliasing!(S1));
     struct S2 { string a; }
     static assert(!hasAliasing!(S2));
+    struct S3 { int a; immutable Object b; }
+    static assert(!hasAliasing!(S3));
 }
 
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
