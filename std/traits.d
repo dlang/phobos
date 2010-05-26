@@ -2021,6 +2021,40 @@ unittest
 
 
 /**
+Detect whether symbol or type $(D T) is a function pointer.
+ */
+template isFunctionPointer(T...)
+    if (T.length == 1)
+{
+    static if (is(T[0] U) || is(typeof(T[0]) U))
+    {
+        static if (is(U F : F*) && is(F == function))
+            enum bool isFunctionPointer = true;
+        else
+            enum bool isFunctionPointer = false;
+    }
+    else
+        enum bool isFunctionPointer = false;
+}
+
+unittest
+{
+    static void foo() {}
+    void bar() {}
+
+    auto fpfoo = &foo;
+    static assert(isFunctionPointer!(fpfoo));
+    static assert(isFunctionPointer!(void function()));
+
+    auto dgbar = &bar;
+    static assert(! isFunctionPointer!(dgbar));
+    static assert(! isFunctionPointer!(void delegate()));
+    static assert(! isFunctionPointer!(foo));
+    static assert(! isFunctionPointer!(bar));
+}
+
+
+/**
 Detect whether symbol or type $(D T) is a function, a function pointer or a delegate.
  */
 template isSomeFunction(T...)

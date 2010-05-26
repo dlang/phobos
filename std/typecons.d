@@ -1536,9 +1536,9 @@ functions in the class or interface $(D Base) in specified way.
 Params:
   how  = template which specifies _how functions will be implemented/overridden.
 
-         Two arguments are passed to $(D how): the first one is the $(D Base),
-         and the second one is an alias to a function to be implemented.  Then
-         $(D how) must return a implemented function body as a string.
+         Two arguments are passed to $(D how): the type $(D Base) and an alias
+         to an implemented function.  Then $(D how) must return an implemented
+         function body as a string.
 
          The generated function body can use these keywords:
          $(UL
@@ -1773,12 +1773,6 @@ private static:
             enum string FUNCINFO_ID =
                 myName ~ "." ~ INTERNAL_FUNCINFO_ID!(name, i);
         }
-
-        // preferred identifier for i-th parameter variable
-        template PARAMETER_VARIABLE_ID(size_t i)
-        {
-            enum string PARAMETER_VARIABLE_ID = "a" ~ toStringNow!(i);
-        }
     }
 
     /* Policy configurations for generating constructors. */
@@ -1878,6 +1872,32 @@ unittest
         auto o2 = new BlackHole!C_6("Deeee");
         auto o3 = new BlackHole!C_6(1, 2, 3, 4);
     }
+    // attributes
+    {
+        interface I_7
+        {
+            ref int test_ref();
+            int test_pure() pure;
+            int test_nothrow() nothrow;
+            int test_property() @property;
+            int test_safe() @safe;
+            int test_trusted() @trusted;
+            int test_system() @system;
+            int test_pure_nothrow() pure nothrow;
+        }
+        auto o = new BlackHole!I_7;
+    }
+    // storage classes
+    {
+        interface I_8
+        {
+            void test_const() const;
+            void test_immutable() immutable;
+            void test_shared() shared;
+            void test_shared_const() shared const;
+        }
+        auto o = new BlackHole!I_8;
+    }
     /+ // deep inheritance
     {
     // XXX [BUG 2525,3525]
@@ -1885,8 +1905,8 @@ unittest
         interface I { void foo(); }
         interface J : I {}
         interface K : J {}
-        static abstract class C_8 : K {}
-        auto o = new BlackHole!C_8;
+        static abstract class C_9 : K {}
+        auto o = new BlackHole!C_9;
     }+/
 }
 
@@ -1894,7 +1914,7 @@ unittest
 /*
 Used by MemberFunctionGenerator.
  */
-private template OverloadSet(string nam, T...)
+package template OverloadSet(string nam, T...)
 {
     enum string name = nam;
     alias T contents;
@@ -1903,26 +1923,71 @@ private template OverloadSet(string nam, T...)
 /*
 Used by MemberFunctionGenerator.
  */
-private template FuncInfo(alias func, /+[BUG 4217 ?]+/ T = typeof(&func))
+package template FuncInfo(alias func, /+[BUG 4217 ?]+/ T = typeof(&func))
 {
     alias         ReturnType!(T) RT;
     alias ParameterTypeTuple!(T) PT;
 }
+package template FuncInfo(Func)
+{
+    alias         ReturnType!(Func) RT;
+    alias ParameterTypeTuple!(Func) PT;
+}
 
 /*
 General-purpose member function generator.
+--------------------
+template GeneratingPolicy()
+{
+    // [optional] the name of the class where functions are derived
+    enum string BASE_CLASS_ID;
+
+    // [optional] define this if you have only function types
+    enum bool WITHOUT_SYMBOL;
+
+    // [optional] Returns preferred identifier for i-th parameter.
+    template PARAMETER_VARIABLE_ID(size_t i);
+
+    // Returns the identifier of the FuncInfo instance for the i-th overload
+    // of the specified name.  The identifier must be accessible in the scope
+    // where generated code is mixed.
+    template FUNCINFO_ID(string name, size_t i);
+
+    // Returns implemented function body as a string.  When WITHOUT_SYMBOL is
+    // defined, the latter is used.
+    template generateFunctionBody(alias func);
+    template generateFunctionBody(string name, FuncType);
+}
+--------------------
  */
-private template MemberFunctionGenerator(alias Policy)
+package template MemberFunctionGenerator(alias Policy)
 {
 private static:
-    //mixin Policy; // can't
-
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
     // Internal stuffs
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
 
     enum CONSTRUCTOR_NAME = "__ctor";
-    enum WITH_BASE_CLASS  = __traits(compiles, Policy.BASE_CLASS_ID);
+
+    // true if functions are derived from a base class
+    enum WITH_BASE_CLASS = __traits(hasMember, Policy, "BASE_CLASS_ID");
+
+    // true if functions are specified as types, not symbols
+    enum WITHOUT_SYMBOL = __traits(hasMember, Policy, "WITHOUT_SYMBOL");
+
+    // preferred identifier for i-th parameter variable
+    static if (__traits(hasMember, Policy, "PARAMETER_VARIABLE_ID"))
+    {
+        alias Policy.PARAMETER_VARIABLE_ID PARAMETER_VARIABLE_ID;
+    }
+    else
+    {
+        template PARAMETER_VARIABLE_ID(size_t i)
+        {
+            enum string PARAMETER_VARIABLE_ID = "a" ~ toStringNow!(i);
+                // default: a0, a1, ...
+        }
+    }
 
     // Returns a tuple consisting of 0,1,2,...,n-1.  For static foreach.
     template CountUp(size_t n)
@@ -1976,7 +2041,8 @@ private static:
         {
             enum i = 0 + i_; // workaround
             code ~= generateFunction!(
-                    oset.contents[i], Policy.FUNCINFO_ID!(oset.name, i)) ~ "\n";
+                    Policy.FUNCINFO_ID!(oset.name, i), oset.name,
+                    oset.contents[i]) ~ "\n";
         }
         return code;
     }
@@ -1986,23 +2052,37 @@ private static:
      * actually generates only the declarator part; the function body part is
      * generated by the functionGenerator() policy.
      */
-    //private string generateFunction(alias func, string myFuncInfo)() @property
-    private string generateFunction(args_.../+[BUG 4217]+/)() @property
+    public string generateFunction(
+            string myFuncInfo, string name, func... )() @property
     {
-        alias args_[0..1] func; enum myFuncInfo = args_[1];
-
-        enum name   = __traits(identifier, func);
         enum isCtor = (name == CONSTRUCTOR_NAME);
 
         string code; // the result
 
         /*** Function Declarator ***/
         {
+            alias FunctionTypeOf!(func) Func;
             alias FunctionAttribute FA;
             enum atts     = functionAttributes!(func);
             enum realName = isCtor ? "this" : name;
 
-            /* Just for the sake of Format!(...). */
+            /* Made them CTFE funcs just for the sake of Format!(...) */
+
+            // return type with optional "ref"
+            static string make_returnType()
+            {
+                string rtype = "";
+
+                if (!isCtor)
+                {
+                    if (atts & FA.REF) rtype ~= "ref ";
+                    rtype ~= myFuncInfo ~ ".RT";
+                }
+                return rtype;
+            }
+            enum returnType = make_returnType();
+
+            // function attributes attached after declaration
             static string make_postAtts()
             {
                 string poatts = "";
@@ -2015,26 +2095,24 @@ private static:
             }
             enum postAtts = make_postAtts();
 
-            static string make_returnType()
+            // function storage class
+            static string make_storageClass()
             {
-                string rtype = "";
-
-                if (!isCtor)
-                {
-                    if (atts & FA.REF) rtype ~= "ret ";
-                    rtype ~= myFuncInfo ~ ".RT";
-                }
-                return rtype;
+                string postc = "";
+                if (is(Func ==    shared)) postc ~= " shared";
+                if (is(Func ==     const)) postc ~= " const";
+                if (is(Func == immutable)) postc ~= " immutable";
+                return postc;
             }
-            enum returnType = make_returnType();
+            enum storageClass = make_storageClass();
 
             //
-            code ~= Format!("extern(%s) %s %s(%s) %s\n",
+            code ~= Format!("extern(%s) %s %s(%s) %s %s\n",
                     functionLinkage!(func),
                     returnType,
                     realName,
-                    ""~generateParameters!(func, myFuncInfo),
-                    postAtts );
+                    ""~generateParameters!(myFuncInfo, func),
+                    postAtts, storageClass );
         }
 
         /*** Function Body ***/
@@ -2054,9 +2132,14 @@ private static:
                     preamble ~= "auto parent = &super." ~ name ~ ";\n";
             }
 
-            //
+            // Function body
+            static if (WITHOUT_SYMBOL)
+                enum fbody = Policy.generateFunctionBody!(name, func);
+            else
+                enum fbody = Policy.generateFunctionBody!(func);
+
             code ~= preamble;
-            code ~= Policy.generateFunctionBody!(func);
+            code ~= fbody;
         }
         code ~= "}";
 
@@ -2067,11 +2150,8 @@ private static:
      * Returns D code which declares function parameters.
      * "ref int a0, real a1, ..."
      */
-    //private string generateParameters(alias func, string myFuncInfo)() @property
-    private string generateParameters(args_.../+[BUG 4217]+/)() @property
+    private string generateParameters(string myFuncInfo, func...)() @property
     {
-        alias args_[0..1] func; enum myFuncInfo = args_[1];
-
         alias ParameterStorageClass STC;
         alias ParameterStorageClassTuple!(func) stcs;
         enum nparams = stcs.length;
@@ -2092,7 +2172,7 @@ private static:
             params ~= myFuncInfo ~ ".PT[" ~ toStringNow!(i) ~ "]";
 
             // Declare a parameter variable.
-            params ~= " " ~ Policy.PARAMETER_VARIABLE_ID!(i);
+            params ~= " " ~ PARAMETER_VARIABLE_ID!(i);
         }
 
         // Add some ellipsis part if needed.
@@ -2124,7 +2204,7 @@ private static:
         {
             enum i = 0 + i_; // workaround
             if (i > 0) params ~= ", ";
-            params ~= Policy.PARAMETER_VARIABLE_ID!(i);
+            params ~= PARAMETER_VARIABLE_ID!(i);
         }
         return params;
     }

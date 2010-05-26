@@ -514,16 +514,50 @@ unittest
     //assert(compose!(`a + 0.5`, `to!(int)(a) + 1`, foo)(1) == 2.5);
 }
 
-private struct DelegateFaker(R, Args...) {
-    R doIt(Args args) {
-        // When this function gets called, the this pointer isn't really a
-        // this pointer (no instance even really exists), but a function
-        // pointer that points to the function
-        // to be called.  Cast it to the correct type and call it.
+private struct DelegateFaker(F) {
+    /*
+     * What all the stuff below does is this:
+     *--------------------
+     * struct DelegateFaker(F) {
+     *     extern(linkage)
+     *     [ref] ReturnType!F doIt(ParameterTypeTuple!F args) [@attributes]
+     *     {
+     *         auto fp = cast(F) &this;
+     *         return fp(args);
+     *     }
+     * }
+     *--------------------
+     */
 
-        auto fp = cast(R function(Args)) &this;
-        return fp(args);
+    // We will use MemberFunctionGenerator in std.typecons.  This is a policy
+    // configuration for generating the doIt().
+    template GeneratingPolicy()
+    {
+        // Inform the genereator that we only have type information.
+        enum WITHOUT_SYMBOL = true;
+
+        // Generate the function body of doIt().
+        template generateFunctionBody(unused...)
+        {
+            enum generateFunctionBody =
+            // [ref] ReturnType doIt(ParameterTypeTuple args) @attributes
+            q{
+                // When this function gets called, the this pointer isn't
+                // really a this pointer (no instance even really exists), but
+                // a function pointer that points to the function to be called.
+                // Cast it to the correct type and call it.
+
+                auto fp = cast(F) &this; // XXX doesn't work with @safe
+                return fp(args);
+            };
+        }
     }
+    // Type information used by the generated code.
+    alias FuncInfo!(F) FuncInfo_doIt;
+
+    // Generate the member function doIt().
+    mixin( std.typecons.MemberFunctionGenerator!(GeneratingPolicy!())
+            .generateFunction!("FuncInfo_doIt", "doIt", F) );
 }
 
 /**Convert a callable to a delegate with the same parameter list and
@@ -543,7 +577,11 @@ private struct DelegateFaker(R, Args...) {
  * runDelegate(delegateToPass);  // Calls doStuff, prints "Hello, world."
  * ---
  *
- * Bugs:  Doesn't work properly with ref return.  (See DMD bug 3756.)
+ * BUGS:
+ * $(UL
+ *   $(LI Does not work with $(D @safe) functions.)
+ *   $(LI Ignores C-style / D-style variadic arguments.)
+ * )
  */
 auto toDelegate(F)(auto ref F fp) if (isCallable!(F)) {
 
@@ -558,14 +596,7 @@ auto toDelegate(F)(auto ref F fp) if (isCallable!(F)) {
     }
     else
     {
-        // Workaround for DMD Bug 1818.
-        mixin("alias " ~ ReturnType!(F).stringof ~
-            " delegate" ~ ParameterTypeTuple!(F).stringof ~ " DelType;");
-
-        version(none) {
-            // What the code would be if it weren't for bug 1818:
-            alias ReturnType!(F) delegate(ParameterTypeTuple!(F)) DelType;
-        }
+        alias typeof(&(new DelegateFaker!(F)).doIt) DelType;
 
         static struct DelegateFields {
             union {
@@ -586,7 +617,7 @@ auto toDelegate(F)(auto ref F fp) if (isCallable!(F)) {
 
         df.contextPtr = cast(void*) fp;
 
-        DelegateFaker!(ReturnType!(F), ParameterTypeTuple!(F)) dummy;
+        DelegateFaker!(F) dummy;
         auto dummyDel = &(dummy.doIt);
         df.funcPtr = dummyDel.funcptr;
 
@@ -628,4 +659,60 @@ unittest {
     S2 s2;
     auto getvals2 =&S2.opCall;
     assert(getvals2() == 123456);
+
+    /* test for attributes */
+    {
+        static int refvar = 0xDeadFace;
+
+        static ref int func_ref() { return refvar; }
+        static int func_pure() pure { return 1; }
+        static int func_nothrow() nothrow { return 2; }
+        static int func_property() @property { return 3; }
+        static int func_safe() @safe { return 4; }
+        static int func_trusted() @trusted { return 5; }
+        static int func_system() @system { return 6; }
+        static int func_pure_nothrow() pure nothrow { return 7; }
+        static int func_pure_nothrow_safe() pure @safe { return 8; }
+
+        auto dg_ref = toDelegate(&func_ref);
+        auto dg_pure = toDelegate(&func_pure);
+        auto dg_nothrow = toDelegate(&func_nothrow);
+        auto dg_property = toDelegate(&func_property);
+        //auto dg_safe = toDelegate(&func_safe);
+        auto dg_trusted = toDelegate(&func_trusted);
+        auto dg_system = toDelegate(&func_system);
+        auto dg_pure_nothrow = toDelegate(&func_pure_nothrow);
+        //auto dg_pure_nothrow_safe = toDelegate(&func_pure_nothrow_safe);
+
+        //static assert(is(typeof(dg_ref) == ref int delegate())); // [BUG@DMD]
+        static assert(is(typeof(dg_pure) == int delegate() pure));
+        static assert(is(typeof(dg_nothrow) == int delegate() nothrow));
+        static assert(is(typeof(dg_property) == int delegate() @property));
+        //static assert(is(typeof(dg_safe) == int delegate() @safe));
+        static assert(is(typeof(dg_trusted) == int delegate() @trusted));
+        static assert(is(typeof(dg_system) == int delegate() @system));
+        static assert(is(typeof(dg_pure_nothrow) == int delegate() pure nothrow));
+        //static assert(is(typeof(dg_pure_nothrow_safe) == int delegate() pure nothrow @safe));
+
+        assert(dg_ref() == refvar);
+        assert(dg_pure() == 1);
+        assert(dg_nothrow() == 2);
+        assert(dg_property() == 3);
+        //assert(dg_safe() == 4);
+        assert(dg_trusted() == 5);
+        assert(dg_system() == 6);
+        assert(dg_pure_nothrow() == 7);
+        //assert(dg_pure_nothrow_safe() == 8);
+    }
+    /* test for linkage */
+    {
+        struct S
+        {
+            extern(C) static void xtrnC() {}
+            extern(D) static void xtrnD() {}
+        }
+        auto dg_xtrnC = toDelegate(&S.xtrnC);
+        auto dg_xtrnD = toDelegate(&S.xtrnD);
+        static assert(! is(typeof(dg_xtrnC) == typeof(dg_xtrnD)));
+    }
 }
