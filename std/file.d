@@ -167,7 +167,7 @@ private T cenforce(T, string file = __FILE__, uint line = __LINE__)
     if (!condition)
     {
         throw new FileException(
-            text("In ", file, "(", line, "), data file ", name), .getErrno);
+            text("In ", file, "(", line, "), data file ", name));
     }
     return condition;
 }
