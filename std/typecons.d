@@ -1022,6 +1022,18 @@ template Rebindable(T) if (is(T == class) || is(T == interface) || isArray!(T))
             {
                 stripped = cast(U) another;
             }
+            void opAssign(Rebindable another)
+            {
+                stripped = another.stripped;
+            }
+            static if (is(T == const U))
+            {
+                // safely assign immutable to const
+                void opAssign(Rebindable!(immutable U) another)
+                {
+                    stripped = another.stripped;
+                }
+            }
             static Rebindable opCall(T initializer)
             {
                 Rebindable result;
@@ -1062,7 +1074,19 @@ unittest
     interface I { final int foo() const { return 42; } }
     Rebindable!(I) obj3;
     static assert(is(typeof(obj3) == I));
-    static assert(is(typeof(obj3.foo()) == int));
+
+    Rebindable!(const I) obj4;
+    static assert(is(typeof(obj4.get) == const I));
+    static assert(is(typeof(obj4.stripped) == I));
+    static assert(is(typeof(obj4.foo()) == int));
+    obj4 = new class I {};
+
+    Rebindable!(immutable C) obj5i;
+    Rebindable!(const C) obj5c;
+    obj5c = obj5c;
+    obj5c = obj5i;
+    obj5i = obj5i;
+    static assert(!__traits(compiles, obj5i = obj5c));
 }
 
 /**
