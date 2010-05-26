@@ -2813,24 +2813,24 @@ unittest
 string removechars(string s, in string pattern)
 {
     char[] r;
-    bool changed;
+    bool changed = false;
 
-    //writefln("removechars(%s, %s)", s, pattern);
     foreach (size_t i, dchar c; s)
     {
-        if (inPattern(c, pattern)) continue;
-        if (!changed)
-        {   changed = true;
-            r = s[0 .. i].dup;
+        if (inPattern(c, pattern)){
+                if (!changed)
+                {   changed = true;
+                    r = s[0 .. i].dup;
+                }
+                continue;
         }
         if (changed)
         {
             std.utf.encode(r, c);
         }
     }
-    return assumeUnique(r);
+    return (changed? assumeUnique(r) : s);
 }
-
 unittest
 {
     debug(string) printf("std.string.removechars.unittest\n");
@@ -2843,6 +2843,8 @@ unittest
     assert(r == "hell wld");
     r = removechars("hello world", "d");
     assert(r == "hello worl");
+    r = removechars("hah", "h");
+    assert(r == "a");
 }
 
 
