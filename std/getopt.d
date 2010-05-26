@@ -583,8 +583,8 @@ unittest
     getopt(args, "tune", &tuningParms);
     assert(args.length == 1);
     assert(tuningParms.length == 2);
-    assert(0.4999 < tuningParms["alpha"] && tuningParms["alpha"] < 0.5001);
-    assert(0.5999 < tuningParms["beta"] && tuningParms["beta"] < 0.6001);
+    assert(tuningParms["alpha"] == 0.5);
+    assert(tuningParms["beta"] == 0.6);
 
     uint verbosityLevel = 1;
     void myHandler(string option)
