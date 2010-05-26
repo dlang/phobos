@@ -545,7 +545,7 @@ private struct DelegateFaker(R, Args...) {
  *
  * Bugs:  Doesn't work properly with ref return.  (See DMD bug 3756.)
  */
-auto ref toDelegate(F)(auto ref F fp) if (isCallable!(F)) {
+auto toDelegate(F)(auto ref F fp) if (isCallable!(F)) {
 
     static if (is(F == delegate))
     {
