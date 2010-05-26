@@ -289,7 +289,7 @@ Throws: $(D Exception) if there are any compilation errors.
             msg = ree.toString();
             //writefln("message: %s", ree);
         }
-        assert(msg == "object.Exception: unrecognized attribute");
+        assert(indexOf(msg, "unrecognized attribute") >= 0);
     }
 
 /**
