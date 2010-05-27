@@ -1419,6 +1419,10 @@ all abstract member functions in $(D Base) as do-nothing functions.  Each
 auto-implemented function just returns the default value of the return type
 without doing anything.
 
+The name came from
+$(WEB search.cpan.org/~sburke/Class-_BlackHole-0.04/lib/Class/_BlackHole.pm, Class::_BlackHole)
+Perl module by Sean M. Burke.
+
 Example:
 --------------------
 abstract class C
@@ -1483,8 +1487,12 @@ unittest
 /**
 $(D WhiteHole!Base) is a subclass of $(D Base) which automatically implements
 all abstract member functions as throw-always functions.  Each auto-implemented
-function fails with $(D AsertError) and does never return.  Useful for trapping
-use of not-yet-implemented functions.
+function fails with throwing an $(D Error) and does never return.  Useful for
+trapping use of not-yet-implemented functions.
+
+The name came from
+$(WEB search.cpan.org/~mschwern/Class-_WhiteHole-0.04/lib/Class/_WhiteHole.pm, Class::_WhiteHole)
+Perl module by Michael G Schwern.
 
 Example:
 --------------------
@@ -1496,9 +1504,13 @@ class C
 void main()
 {
     auto c = new WhiteHole!C;
-    c.notYetImplemented(); // throws AssertError
+    c.notYetImplemented(); // throws an Error
 }
 --------------------
+
+BUGS:
+  Nothrow functions cause program to abort in release mode because the trap is
+  implemented with $(D assert(0)) for nothrow functions.
 
 See_Also:
   AutoImplement, generateAssertTrap
@@ -1509,8 +1521,32 @@ template WhiteHole(Base)
             WhiteHole;
 }
 
+// / ditto
+class NotImplementedError : Error
+{
+    this(string method)
+    {
+        super(method ~ " is not implemented");
+    }
+}
+
 unittest
 {
+    // nothrow
+    debug // see the BUGS above
+    {
+        interface I_1
+        {
+            void foo();
+            void bar() nothrow;
+        }
+        auto o = new WhiteHole!I_1;
+        uint trap;
+        try { o.foo(); } catch (Error e) { ++trap; }
+        assert(trap == 1);
+        try { o.bar(); } catch (Error e) { ++trap; }
+        assert(trap == 2);
+    }
     // doc example
     {
         static class C
@@ -2234,7 +2270,17 @@ template generateEmptyFunction(C, func.../+[BUG 4217]+/)
 /// ditto
 template generateAssertTrap(C, func.../+[BUG 4217]+/)
 {
-    enum string generateAssertTrap =
-        `assert(0, "` ~ (C.stringof ~ "." ~ __traits(identifier, func))
-                ~ ` is not implemented");`;
+    static if (functionAttributes!(func) & FunctionAttribute.NOTHROW) //XXX
+    {
+        pragma(msg, "Warning: WhiteHole!(", C, ") used assert(0) instead "
+                "of Error for the auto-implemented nothrow function ",
+                C, ".", __traits(identifier, func));
+        enum string generateAssertTrap =
+            `assert(0, "` ~ C.stringof ~ "." ~ __traits(identifier, func)
+                    ~ ` is not implemented");`;
+    }
+    else
+        enum string generateAssertTrap =
+            `throw new NotImplementedError("` ~ C.stringof ~ "."
+                    ~ __traits(identifier, func) ~ `");`;
 }
