@@ -31,7 +31,7 @@ version (DigitalMars) version (Windows)
 {
     // Specific to the way Digital Mars C does stdio
     version = DIGITAL_MARS_STDIO;
-    import std.c.stdio : __fhnd_info, FHND_WCHAR;
+    import std.c.stdio : __fhnd_info, FHND_WCHAR, FHND_TEXT;
 }
 
 version (linux)
@@ -73,6 +73,8 @@ version (DIGITAL_MARS_STDIO)
         int _fgetwc_nlock(_iobuf*);
         int __fp_lock(FILE*);
         void __fp_unlock(FILE*);
+
+        int setmode(int, int);
     }
     alias _fputc_nlock FPUTC;
     alias _fputwc_nlock FPUTWC;
@@ -81,6 +83,10 @@ version (DIGITAL_MARS_STDIO)
 
     alias __fp_lock FLOCK;
     alias __fp_unlock FUNLOCK;
+
+    alias setmode _setmode;
+    enum _O_BINARY = 0x8000;
+    int _fileno(FILE* f) { return f._file; }
 }
 else version (GCC_IO)
 {
@@ -436,23 +442,69 @@ file handle and throws on error.
 If the file is not opened, throws an exception. Otherwise, calls $(WEB
 cplusplus.com/reference/clibrary/cstdio/fread.html, fread) for the
 file handle and throws on error.
+
+$(D rawRead) always read in binary mode on Windows.
  */
     T[] rawRead(T)(T[] buffer)
     {
         enforce(buffer.length);
+        version(Windows)
+        {
+            immutable fd = ._fileno(p.handle);
+            immutable mode = ._setmode(fd, _O_BINARY);
+            scope(exit) ._setmode(fd, mode);
+            version(DIGITAL_MARS_STDIO)
+            {
+                // @@@BUG@@@ 4243
+                immutable info = __fhnd_info[fd];
+                __fhnd_info[fd] &= ~FHND_TEXT;
+                scope(exit) __fhnd_info[fd] = info;
+            }
+        }
         immutable result =
             .fread(buffer.ptr, T.sizeof, buffer.length, p.handle);
         errnoEnforce(!error);
         return result ? buffer[0 .. result] : null;
     }
 
+    unittest
+    {
+        std.file.write("deleteme", "\r\n\n\r\n");
+        scope(exit) std.file.remove("deleteme");
+        auto f = File("deleteme", "r");
+        auto buf = f.rawRead(new char[5]);
+        f.close();
+        assert(buf == "\r\n\n\r\n");
+        /+
+        buf = stdin.rawRead(new char[5]);
+        assert(buf == "\r\n\n\r\n");
+        +/
+    }
+
 /**
 If the file is not opened, throws an exception. Otherwise, calls $(WEB
 cplusplus.com/reference/clibrary/cstdio/fwrite.html, fwrite) for the
 file handle and throws on error.
+
+$(D rawWrite) always write in binary mode on Windows.
  */
     void rawWrite(T)(in T[] buffer)
     {
+        version(Windows)
+        {
+            flush(); // before changing translation mode
+            immutable fd = ._fileno(p.handle);
+            immutable mode = ._setmode(fd, _O_BINARY);
+            scope(exit) ._setmode(fd, mode);
+            version(DIGITAL_MARS_STDIO)
+            {
+                // @@@BUG@@@ 4243
+                immutable info = __fhnd_info[fd];
+                __fhnd_info[fd] &= ~FHND_TEXT;
+                scope(exit) __fhnd_info[fd] = info;
+            }
+            scope(exit) flush(); // before restoring translation mode
+        }
         auto result =
             .fwrite(buffer.ptr, T.sizeof, buffer.length, p.handle);
         if (result == result.max) result = 0;
@@ -460,6 +512,18 @@ file handle and throws on error.
                 text("Wrote ", result, " instead of ", buffer.length,
                         " objects of type ", T.stringof, " to file `",
                         p.name, "'"));
+    }
+
+    unittest
+    {
+        auto f = File("deleteme", "w");
+        scope(exit) std.file.remove("deleteme");
+        f.rawWrite("\r\n\n\r\n");
+        f.close();
+        assert(std.file.read("deleteme") == "\r\n\n\r\n");
+        /+
+        stdout.rawWrite("\r\n\n\r\n");
+        +/
     }
 
 /**
