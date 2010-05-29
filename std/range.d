@@ -1197,12 +1197,6 @@ private:
     size_t _maxAvailable;
     enum bool byRef = is(typeof(&_input.front) == ElementType!(R)*);
 
-    enum bool backByIndex = // Take.back = input[min(n,$) - 1]
-        isRandomAccessRange!(R) && (hasLength!(R) || isInfinite!(R));
-
-    enum bool backByBack  = // Take.back = input.back
-        !backByIndex && isBidirectionalRange!(R) && hasLength!(R);
-
 public:
     alias R Source;
 
@@ -1210,17 +1204,6 @@ public:
         alias ref .ElementType!(R) ElementType;
     else
         alias .ElementType!(R) ElementType;
-
-    this(R input, size_t maxAvailable)
-    {
-        static if (backByBack)
-        {
-            while (input.length > maxAvailable)
-                input.popBack;
-        }
-        _input = input;
-        _maxAvailable = maxAvailable;
-    }
 
     bool empty()
     {
@@ -1230,7 +1213,7 @@ public:
     void popFront()
     {
         enforce(_maxAvailable > 0,
-            "Attenpting to popFront() past the end of a "
+            "Attempting to popFront() past the end of a "
             ~ Take.stringof);
         _input.popFront;
         --_maxAvailable;
@@ -1262,12 +1245,12 @@ public:
         }
     }
 
-    static if (backByIndex)
+    static if (isRandomAccessRange!(R) && (hasLength!(R) || isInfinite!(R)))
     {
         void popBack()
         {
             enforce(_maxAvailable > 0,
-                "Attenpting to popBack() past the beginning of a "
+                "Attempting to popBack() past the beginning of a "
                 ~ Take.stringof);
             --_maxAvailable;
         }
@@ -1277,29 +1260,6 @@ public:
             q{/+auto ref+/ ElementType back()
             {
                 return _input[this.length - 1];
-            }});
-    }
-    else static if (backByBack)
-    {
-        invariant()
-        {
-            assert(_input.length <= _maxAvailable);
-        }
-
-        void popBack()
-        {
-            enforce(_maxAvailable > 0,
-                "Attenpting to popBack() past the beginning of a "
-                ~ Take.stringof);
-            --_maxAvailable;
-            _input.popBack;
-        }
-
-        mixin(
-            (byRef ? "ref " : "")~
-            q{/+auto ref+/ ElementType back()
-            {
-                return _input.back;
             }});
     }
 
