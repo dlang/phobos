@@ -1,7 +1,7 @@
 /**
  * This is a low-level messaging API upon which more structured or restrictive
  * APIs may be built.  The general idea is that every messageable entity is
- * represtented by a common handle type (called a Cid in this implementation),
+ * represented by a common handle type (called a Cid in this implementation),
  * which allows messages to be sent to in-process threads, on-host processes,
  * and foreign-host processes using the same interface.  This is an important
  * aspect of scalability because it allows the components of a program to be
