@@ -472,13 +472,11 @@ public:
      * generic type. Statically rejects disallowed types.
      */
 
-    static VariantN opCall(T)(T value)
+    this(T)(T value)
     {
         static assert(allowed!(T), "Cannot store a " ~ T.stringof
             ~ " in a " ~ VariantN.stringof);
-        VariantN result;
-        result.opAssign(value);
-        return result;
+        opAssign(value);
     }
 
     /** Assigns a $(D_PARAM VariantN) from a generic

@@ -540,16 +540,14 @@ struct CodePoints(E)
 {
     const(E)[] s;
 
-    static CodePoints opCall(const(E)[] s)
+    this(const(E)[] s)
     in
     {
         assert(isValid(s));
     }
     body
     {
-        CodePoints codePoints;
-        codePoints.s = s;
-        return codePoints;
+        this.s = s;
     }
 
     int opApply(scope int delegate(ref dchar) dg)
@@ -610,16 +608,14 @@ struct CodeUnits(E)
 {
     E[] s;
 
-    static CodeUnits opCall(dchar d)
+    this(dchar d)
     in
     {
         assert(isValidCodePoint(d));
     }
     body
     {
-        CodeUnits codeUnits;
-        codeUnits.s = encode!(E)(d);
-        return codeUnits;
+        s = encode!(E)(d);
     }
 
     int opApply(scope int delegate(ref E) dg)

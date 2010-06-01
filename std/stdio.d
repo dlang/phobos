@@ -1579,14 +1579,12 @@ struct lines
 {
     private File f;
     private dchar terminator = '\n';
-    private string fileName;
+    // private string fileName;  // Curretly, no use
 
-    static lines opCall(File f, dchar terminator = '\n')
+    this(File f, dchar terminator = '\n')
     {
-        lines result;
-        result.f = f;
-        result.terminator = terminator;
-        return result;
+        this.f = f;
+        this.terminator = terminator;
     }
 
     // Keep these commented lines for later, when Walter fixes the
@@ -1829,15 +1827,17 @@ struct chunks
 {
     private File f;
     private size_t size;
-    private string fileName;
+    // private string fileName; // Currently, no use
 
-    static chunks opCall(File f, size_t size)
+    this(File f, size_t size)
+    in
     {
-        assert(size);
-        chunks result;
-        result.f = f;
-        result.size = size;
-        return result;
+        assert(size, "size must be larger than 0");
+    }
+    body
+    {
+        this.f = f;
+        this.size = size;
     }
 
 //     static chunks opCall(string fName, size_t size)

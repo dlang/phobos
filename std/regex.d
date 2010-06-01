@@ -254,24 +254,9 @@ attributes = The _attributes (g, i, and m accepted)
 
 Throws: $(D Exception) if there are any compilation errors.
  */
-    public static Regex opCall(String)
-    (String pattern, string attributes = null)
+    this(String)(String pattern, string attributes = null)
     {
-        static Tuple!(String, string) lastReq;
-        static typeof(return) lastResult;
-        if (lastReq.field[0] == pattern && lastReq.field[1] == attributes)
-        {
-            // cache hit
-            return lastResult;
-        }
-        // cache miss        
-        Regex result;
-        result.initialize(pattern, attributes);
-        lastReq.field[0] = cast(String) pattern.dup;
-        lastReq.field[1] = cast(string) attributes.dup;
-        lastResult = result;
-        return result;
-        //return new RegexImpl(pattern, attributes);
+        compile(pattern, attributes);
     }
 
     unittest
@@ -1519,7 +1504,21 @@ Returns the number of parenthesized captures
 Regex!(Unqual!(typeof(String.init[0]))) regex(String)
 (String pattern, string flags = null)
 {
-    return typeof(return)(pattern, flags);
+    static Tuple!(String, string) lastReq;
+    static typeof(return) lastResult;
+    if (lastReq.field[0] == pattern && lastReq.field[1] == flags)
+    {
+        // cache hit
+        return lastResult;
+    }
+
+    auto result = typeof(return)(pattern, flags);
+
+    lastReq.field[0] = cast(String) pattern.dup;
+    lastReq.field[1] = cast(string) flags.dup;
+    lastResult = result;
+
+    return result;
 }
 
 /**

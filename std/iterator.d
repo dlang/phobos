@@ -113,10 +113,10 @@ Type that reverses the iteration order of a range.
 struct Retro(R : E[], E)
 {
     E[] forward;
-    static Retro opCall(E[] range)
+
+    this(E[] range)
     {
-        Retro result = { range };
-        return result;
+        forward = range;
     }
 }
 

@@ -731,11 +731,9 @@ template Rebindable(T) if (is(T == class) || is(T == interface) || isArray!(T))
                     stripped = another.stripped;
                 }
             }
-            static Rebindable opCall(T initializer)
+            this(T initializer)
             {
-                Rebindable result;
-                result = initializer;
-                return result;
+                opAssign(initializer);
             }
             alias original get;
             T opDot() {
