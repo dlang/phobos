@@ -119,7 +119,7 @@ endif
 MAIN = $(ROOT)/emptymain.d
 
 # Stuff in std/
-STD_MODULES = $(addprefix std/, algorithm array atomics base64 	\
+STD_MODULES = $(addprefix std/, algorithm array atomics base64 bigint	\
         bitmanip boxer compiler complex contracts conv cpuid cstream	\
         ctype date datebase dateparse demangle encoding file format		\
         functional getopt intrinsic iterator json loader math md5		\
