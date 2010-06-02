@@ -1982,7 +1982,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 if (src == input.length)
                     goto Lnomatch;
                 debug(regex) printf("\tREchar '%c', src = '%c'\n",
-                        program[pc + 1], input[src]);
+                                    engine.program[pc + 1], input[src]);
                 if (engine.program[pc + 1] != input[src])
                     goto Lnomatch;
                 src++;
@@ -1994,7 +1994,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 if (src == input.length)
                     goto Lnomatch;
                 debug(regex) printf("\tREichar '%c', src = '%c'\n",
-                        program[pc + 1], input[src]);
+                                    engine.program[pc + 1], input[src]);
                 c1 = engine.program[pc + 1];
                 c2 = input[src];
                 if (c1 != c2)
@@ -2011,10 +2011,10 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 break;
 
             case engine.REdchar:
-                debug(regex) printf("\tREdchar '%c', src = '%c'\n",
-                        *(cast(dchar *)&program[pc + 1]), input[src]);
                 if (src == input.length)
                     goto Lnomatch;
+                debug(regex) printf("\tREdchar '%c', src = '%c'\n",
+                                    *(cast(dchar *)&engine.program[pc + 1]), input[src]);
                 if (*(cast(dchar *)&engine.program[pc + 1]) != input[src])
                     goto Lnomatch;
                 src++;
@@ -2022,10 +2022,10 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 break;
 
             case engine.REidchar:
-                debug(regex) printf("\tREidchar '%c', src = '%c'\n",
-                        *(cast(dchar *)&program[pc + 1]), input[src]);
                 if (src == input.length)
                     goto Lnomatch;
+                debug(regex) printf("\tREidchar '%c', src = '%c'\n",
+                                    *(cast(dchar *)&engine.program[pc + 1]), input[src]);
                 c1 = *(cast(dchar *)&engine.program[pc + 1]);
                 c2 = input[src];
                 if (c1 != c2)
@@ -2056,7 +2056,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 assert(len % E.sizeof == 0);
                 len /= E.sizeof;
                 debug(regex) printf("\tREstring x%x, '%.*s'\n", len,
-                        (&program[pc + 1 + uint.sizeof])[0 .. len]);
+                                    (&engine.program[pc + 1 + uint.sizeof])[0 .. len]);
                 if (src + len > input.length)
                     goto Lnomatch;
                 if (memcmp(&engine.program[pc + 1 + uint.sizeof],
@@ -2071,7 +2071,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 assert(len % E.sizeof == 0);
                 len /= E.sizeof;
                 debug(regex) printf("\tREistring x%x, '%.*s'\n", len,
-                        (&program[pc + 1 + uint.sizeof])[0 .. len]);
+                                    (&engine.program[pc + 1 + uint.sizeof])[0 .. len]);
                 if (src + len > input.length)
                     goto Lnomatch;
                 // version (Win32)
@@ -2093,10 +2093,10 @@ Returns $(D hit) (converted to $(D string) if necessary).
 
             case engine.REtestbit:
                 pu = (cast(ushort *)&engine.program[pc + 1]);
-                debug(regex) printf("\tREtestbit %d, %d, '%c', x%02x\n",
-                        pu[0], pu[1], input[src], input[src]);
                 if (src == input.length)
                     goto Lnomatch;
+                debug(regex) printf("\tREtestbit %d, %d, '%c', x%02x\n",
+                                    pu[0], pu[1], input[src], input[src]);
                 len = pu[1];
                 c1 = input[src];
                 if (c1 <= pu[0] &&
@@ -2106,11 +2106,11 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 break;
 
             case engine.REbit:
-                pu = (cast(ushort *)&engine.program[pc + 1]);
-                debug(regex) printf("\tREbit %d, %d, '%c'\n",
-                        pu[0], pu[1], input[src]);
                 if (src == input.length)
                     goto Lnomatch;
+                pu = (cast(ushort *)&engine.program[pc + 1]);
+                debug(regex) printf("\tREbit %d, %d, '%c'\n",
+                                    pu[0], pu[1], input[src]);
                 len = pu[1];
                 c1 = input[src];
                 if (c1 > pu[0])
@@ -2122,11 +2122,11 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 break;
 
             case engine.REnotbit:
-                pu = (cast(ushort *)&engine.program[pc + 1]);
-                debug(regex) printf("\tREnotbit %d, %d, '%c'\n",
-                        pu[0], pu[1], input[src]);
                 if (src == input.length)
                     goto Lnomatch;
+                pu = (cast(ushort *)&engine.program[pc + 1]);
+                debug(regex) printf("\tREnotbit %d, %d, '%c'\n",
+                                    pu[0], pu[1], input[src]);
                 len = pu[1];
                 c1 = input[src];
                 if (c1 <= pu[0] &&
@@ -2273,7 +2273,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 n = puint[1];
                 m = puint[2];
                 debug(regex) printf("\tREnm%s len=%d, n=%u, m=%u\n",
-                        (engine.program[pc] == REnmq) ? cast(char*)"q"
+                        (engine.program[pc] == engine.REnmq) ? cast(char*)"q"
                         : cast(char*)"", len, n, m);
                 pop = pc + 1 + uint.sizeof * 3;
                 for (count = 0; count < n; count++)
