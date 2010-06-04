@@ -65,9 +65,9 @@ class MessageMismatch : Exception
  */
 struct Tid
 {
-    void send(T...)( Tid tid, T vals )
+    void send(T...)( T vals )
     {
-        _send( tid, vals );
+        _send( this, vals );
     }
     
 
@@ -165,23 +165,58 @@ void receive(T...)( T ops )
 }
 
 
-/**
- *
- */
-Tuple!(T) receiveOnly(T...)()
+version( all )
 {
-    Tuple!(T) ret;
+    /**
+     *
+     */
+    Tuple!(T) receiveOnly(T...)()
+    {
+        Tuple!(T) ret;
 
-    _receive( ( T val )
-              {
-                  foreach( i, v; ret.Types )
-                      ret.field[i] = val[i];
-              },
-              ( Variant val )
-              {
-                  throw new MessageMismatch;
-              } );
-    return ret;
+        _receive( ( T val )
+                  {
+                      foreach( i, v; ret.Types )
+                          ret.field[i] = val[i];
+                  },
+                  ( Variant val )
+                  {
+                      throw new MessageMismatch;
+                  } );
+        return ret;
+    }
+}
+else
+{
+    private template receiveOnlyRet(T...)
+    {
+        static if( T.length == 1 )
+            alias T receiveOnlyRet;
+        else
+            alias Tuple!(T) receiveOnlyRet;
+    }
+
+    /**
+     *
+     */
+    receiveOnlyRet!(T) receiveOnly(T...)()
+    {
+        Tuple!(T) ret;
+
+        _receive( ( T val )
+                  {
+                      static if( T.length )
+                          ret.field = val;
+                  },
+                  ( Variant val )
+                  {
+                      throw new MessageMismatch;
+                  } );
+        static if( T.length == 1 )
+            return ret.field[0];
+        else
+            return ret;
+    }
 }
 
 
