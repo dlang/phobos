@@ -165,58 +165,34 @@ void receive(T...)( T ops )
 }
 
 
-version( all )
+private template receiveOnlyRet(T...)
 {
-    /**
-     *
-     */
-    Tuple!(T) receiveOnly(T...)()
-    {
-        Tuple!(T) ret;
-
-        _receive( ( T val )
-                  {
-                      foreach( i, v; ret.Types )
-                          ret.field[i] = val[i];
-                  },
-                  ( Variant val )
-                  {
-                      throw new MessageMismatch;
-                  } );
-        return ret;
-    }
+    static if( T.length == 1 )
+        alias T[0] receiveOnlyRet;
+    else
+        alias Tuple!(T) receiveOnlyRet;
 }
-else
+
+/**
+ *
+ */
+receiveOnlyRet!(T) receiveOnly(T...)()
 {
-    private template receiveOnlyRet(T...)
-    {
-        static if( T.length == 1 )
-            alias T receiveOnlyRet;
-        else
-            alias Tuple!(T) receiveOnlyRet;
-    }
+    Tuple!(T) ret;
 
-    /**
-     *
-     */
-    receiveOnlyRet!(T) receiveOnly(T...)()
-    {
-        Tuple!(T) ret;
-
-        _receive( ( T val )
-                  {
-                      static if( T.length )
-                          ret.field = val;
-                  },
-                  ( Variant val )
-                  {
-                      throw new MessageMismatch;
-                  } );
-        static if( T.length == 1 )
-            return ret.field[0];
-        else
-            return ret;
-    }
+    _receive( ( T val )
+              {
+                  static if( T.length )
+                      ret.field = val;
+              },
+              ( Variant val )
+              {
+                  throw new MessageMismatch;
+              } );
+    static if( T.length == 1 )
+        return ret.field[0];
+    else
+        return ret;
 }
 
 
@@ -294,6 +270,35 @@ private bool _receive(T...)( T ops )
         mbox.get( &get );
         return true;
     }
+}
+
+
+/**
+ *
+ */
+enum OnCrowding
+{
+    block,          ///
+    throwException, ///
+    ignore          ///
+}
+
+
+/**
+ *
+ */
+void setMaxMailboxSize( Tid tid, size_t messages, OnCrowding doThis )
+{
+    
+}
+
+
+/**
+ *
+ */
+void setMaxMailboxSize( Tid tid, size_t messages, bool function(Tid) onCrowdingDoThis )
+{
+    
 }
 
 
