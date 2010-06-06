@@ -157,7 +157,7 @@ unittest
 Get, as a tuple, the types of the parameters to a function, a pointer
 to function, a delegate, a struct with an $(D opCall), a pointer to a
 struct with an $(D opCall), or a class with an $(D opCall).
- 
+
 Example:
 ---
 import std.traits;
@@ -937,7 +937,7 @@ unittest
  * Get a $(D_PARAM TypeTuple) of the base class and base interfaces of
  * this class or interface. $(D_PARAM BaseTypeTuple!(Object)) returns
  * the empty type tuple.
- * 
+ *
  * Example:
  * ---
  * import std.traits, std.typetuple, std.stdio;
@@ -1317,7 +1317,7 @@ unittest
 
 
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
-// Type Convertion
+// Type Conversion
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
 
 /**
