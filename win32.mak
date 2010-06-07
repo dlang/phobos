@@ -95,7 +95,7 @@ OBJS= Czlib.obj Dzlib.obj \
 #	ti_bit.obj ti_Abit.obj
 
 SRCS= std\math.d std\stdio.d std\dateparse.d std\date.d std\uni.d std\string.d \
-	std\atomics.d std\base64.d std\md5.d std\xml.d std\bigint.d std\regexp.d \
+	std\base64.d std\md5.d std\xml.d std\bigint.d std\regexp.d \
 	std\compiler.d std\cpuid.d std\format.d std\demangle.d \
 	std\path.d std\file.d std\outbuffer.d std\utf.d std\uri.d \
 	std\ctype.d std\random.d std\mmfile.d \
@@ -218,7 +218,7 @@ SRC=	unittest.d crc32.d phobos.d
 SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 	std\math.d std\string.d std\path.d std\date.d \
 	std\ctype.d std\file.d std\compiler.d std\system.d \
-	std\outbuffer.d std\md5.d std\atomics.d std\base64.d \
+	std\outbuffer.d std\md5.d std\base64.d \
 	std\dateparse.d std\mmfile.d \
 	std\intrinsic.d std\syserror.d \
 	std\regexp.d std\random.d std\stream.d std\process.d \
@@ -328,9 +328,6 @@ algorithm.obj : std\algorithm.d
 
 array.obj : std\array.d
 	$(DMD) -c $(DFLAGS) std\array.d
-
-atomics.obj : std\atomics.d
-	$(DMD) -c $(DFLAGS) -inline std\atomics.d
 
 base64.obj : std\base64.d
 	$(DMD) -c $(DFLAGS) -inline std\base64.d
@@ -560,9 +557,6 @@ $(DOC)\std_algorithm.html : $(STDDOC) std\algorithm.d
 
 $(DOC)\std_array.html : $(STDDOC) std\array.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_array.html $(STDDOC) std\array.d
-
-$(DOC)\std_atomics.html : $(STDDOC) std\atomics.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_atomics.html $(STDDOC) std\atomics.d
 
 $(DOC)\std_base64.html : $(STDDOC) std\base64.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_base64.html $(STDDOC) std\base64.d

@@ -119,14 +119,14 @@ endif
 MAIN = $(ROOT)/emptymain.d
 
 # Stuff in std/
-STD_MODULES = $(addprefix std/, algorithm array atomics base64 bigint	\
-        bitmanip boxer compiler complex concurrency contracts conv      \
-		cpuid cstream ctype date datebase dateparse demangle encoding   \
-		file format functional getopt intrinsic iterator json loader    \
-		math md5 metastrings mmfile numeric outbuffer path perf process \
-		random range regex regexp signals socket socketstream stdint    \
-		stdio stdiobase stream string syserror system traits typecons	\
-        typetuple uni uri utf variant xml zip zlib)
+STD_MODULES = $(addprefix std/, algorithm array base64 bigint bitmanip  \
+		boxer compiler complex concurrency contracts conv cpuid cstream \
+		ctype date datebase dateparse demangle encoding file format 	\
+		functional getopt intrinsic iterator json loader math md5 		\
+		metastrings mmfile numeric outbuffer path perf process random 	\
+		range regex regexp signals socket socketstream stdint stdio 	\
+		stdiobase stream string syserror system traits typecons			\
+		typetuple uni uri utf variant xml zip zlib)
 
 # Other D modules that aren't under std/
 EXTRA_MODULES := $(addprefix std/c/, stdarg stdio) $(addprefix etc/c/,	\
