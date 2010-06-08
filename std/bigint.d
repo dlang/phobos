@@ -3,8 +3,8 @@
  * Performance is optimized for numbers below ~1000 decimal digits.
  * For X86 machines, highly optimised assembly routines are used.
  *
- * The following algorithms are currently implemented: 
- * $(UL 
+ * The following algorithms are currently implemented:
+ * $(UL
  * $(LI Karatsuba multiplication)
  * $(LI Squaring is optimized independently of multiplication)
  * $(LI Divide-and-conquer division)
@@ -27,18 +27,18 @@ private import std.internal.math.biguintcore;
  *
  * All arithmetic operations are supported, except
  * unsigned shift right (>>>). Logical operations are not currently supported.
- * 
+ *
  * BigInt implements value semantics using copy-on-write. This means that
  * assignment is cheap, but operations such as x++ will cause heap
  * allocation. (But note that for most bigint operations, heap allocation is
  * inevitable anyway).
- 
+
  Example:
 ----------------------------------------------------
         BigInt a = "9588669891916142";
         BigInt b = "7452469135154800";
         auto c = a * b;
-        assert(c == "71459266416693160362545788781600");        
+        assert(c == "71459266416693160362545788781600");
         auto d = b * a;
         assert(d == "71459266416693160362545788781600");
         assert(d == c);
@@ -96,28 +96,28 @@ public:
         if (isZero()) neg = false;
         sign = neg;
     }
-    
+
     ///
     this(T: long) (T x)
     {
         data = data.init; // Workaround for compiler bug
         opAssign(x);
     }
-    
+
     ///
     void opAssign(T: long)(T x)
     {
         data = cast(ulong)((x < 0) ? -x : x);
         sign = (x < 0);
     }
-    
+
     ///
     void opAssign(T:BigInt)(T x)
     {
         data = x.data;
         sign = x.sign;
     }
-        
+
     // BigInt op= integer
     BigInt opOpAssign(string op, T)(T y)  if ((op=="+=" || op=="-=" || op=="*=" || op=="/=" || op=="%=" || op==">>=" || op=="<<=" || op=="^^=") && is (T: long))
     {
@@ -173,11 +173,11 @@ public:
         {
             sign = (y&1)? sign : false;
             data = BigUint.pow(data, y);
-        } 
+        }
         else static assert(0, "BigInt " ~ op[0..$-1] ~ " " ~ T.stringof ~ " is not supported");
         return this;
     }
-    
+
     // BigInt op= BigInt
     BigInt opOpAssign(string op, T)(T y)  if ((op=="+=" || op=="-=" || op=="*=" || op=="/=" || op=="%=") && is (T: BigInt))
     {
@@ -216,14 +216,14 @@ public:
         BigInt r = this;
         return r.opOpAssign!(op ~ "=")(y);
     }
-    
+
     // BigInt op integer
     BigInt opBinary(string op, T)(T y)  if ((op=="+" || op == "*" || op=="-" || op=="/" || op==">>" || op=="<<" || op=="^^") && is (T: long))
     {
         BigInt r = this;
         return r.opOpAssign!(op ~ "=")(y);
     }
-    
+
     //
     int opBinary(string op, T:int)(T y) if (op=="%")
     {
@@ -232,15 +232,15 @@ public:
         int rem = BigUint.modInt(data, u);
         // x%y always has the same sign as x.
         // This is not the same as mathematical mod.
-        return sign ? -rem : rem; 
+        return sign ? -rem : rem;
     }
-    
+
     // Commutative operators
     BigInt opBinaryRight(string op, T)(T y)  if ((op=="+" || op=="*") && !is(T: BigInt))
     {
         return opBinary!(op)(y);
     }
-    
+
     //  integer op BigInt
     BigInt opBinaryRight(string op, T)(T y)  if ((op=="-") && is(T: long))
     {
@@ -253,7 +253,7 @@ public:
         }
         return r;
     }
-    
+
     BigInt opUnary(string op)()
     {
        static if (op=="-")
@@ -281,18 +281,18 @@ public:
     bool opEquals(Tdummy=void)(ref const BigInt y) const {
        return sign == y.sign && y.data == data;
     }
-    
+
     ///
     bool opEquals(T: int)(T y) const{
         if (sign!=(y<0)) return 0;
         return data.opEquals(cast(ulong)(y>=0?y:-y));
     }
-    
+
     ///
     int opCmp(T:long)(T y) {
      //   if (y==0) return sign? -1: 1;
         if (sign!=(y<0)) return sign ? -1 : 1;
-        int cmp = data.opCmp(cast(ulong)(y>=0? y: -y));        
+        int cmp = data.opCmp(cast(ulong)(y>=0? y: -y));
         return sign? -cmp: cmp;
     }
     ///
@@ -304,13 +304,13 @@ public:
     /// Returns the value of this BigInt as a long,
     /// or +- long.max if outside the representable range.
     long toLong() {
-        return (sign ? -1 : 1)* 
+        return (sign ? -1 : 1)*
           (data.ulongLength() == 1  && (data.peekUlong(0) <= cast(ulong)(long.max)) ? cast(long)(data.peekUlong(0)): long.max);
     }
     /// Returns the value of this BigInt as an int,
     /// or +- long.max if outside the representable range.
     long toInt() {
-        return (sign ? -1 : 1)* 
+        return (sign ? -1 : 1)*
           (data.uintLength() == 1  && (data.peekUint(0) <= cast(uint)(int.max)) ? cast(int)(data.peekUint(0)): int.max);
     }
     /// Number of significant uints which are used in storing this number.
@@ -318,8 +318,8 @@ public:
     int uintLength() { return data.uintLength(); }
     /// Number of significant ulongs which are used in storing this number.
     /// The absolute value of this BigInt is always < 2^(64*ulongLength)
-    int ulongLength() { return data.ulongLength(); } 
-    
+    int ulongLength() { return data.ulongLength(); }
+
     /** Convert the BigInt to string, passing it to 'sink'.
      *
      * $(TABLE  The output format is controlled via formatString:
@@ -341,7 +341,7 @@ public:
             sink(buff);
        }
     }
-/+    
+/+
 private:
     /// Convert to a hexadecimal string, with an underscore every
     /// 8 characters.
@@ -351,7 +351,7 @@ private:
         else buff = buff[1..$];
         return buff;
     }
-+/    
++/
 private:
     void negate() { if (!data.isZero()) sign = !sign; }
     bool isZero() const { return data.isZero(); }
@@ -385,7 +385,7 @@ unittest {
     assert( toHex(BigInt("0x00000000000000000000000000000000000A234567890123456789"))
         == "A23_45678901_23456789");
     assert( toHex(BigInt("0x000_00_000000_000_000_000000000000_000000_")) == "0");
-    
+
     assert(BigInt(-0x12345678).toInt() == -0x12345678);
     assert(BigInt(-0x12345678).toLong() == -0x12345678);
     assert(BigInt(0x1234_5678_9ABC_5A5AL).toLong() == 0x1234_5678_9ABC_5A5AL);

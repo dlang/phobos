@@ -192,12 +192,10 @@ endif
 
 ################################################################################
 
-# Remove the bigint line after the bug is fixed
 std/all.d : $(MAKEFILE)
 	@echo module std.all\;\\n \
 		$(addprefix public import ,$(addsuffix \;\\n,$(STD_MODULES))) | \
-		sed -e 's|/|.|' -e '/public import std\.all/d' \
-			-e 's|\(public import std\.bigint;\)|// \1|' >$@
+		sed -e 's|/|.|' -e '/public import std\.all/d' >$@
 
 $(ROOT)/%$(DOTOBJ) : %.c
 	@[ -d $(dir $@) ] || mkdir -p $(dir $@) || [ -d $(dir $@) ]
