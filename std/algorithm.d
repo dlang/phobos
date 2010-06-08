@@ -37,30 +37,18 @@ sort(a);            // no predicate, "a < b" is implicit
 Macros:
 WIKI = Phobos/StdAlgorithm
 
-Copyright: Copyright Andrei Alexandrescu 2008 - 2009.
-License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
-Authors:   $(WEB erdani.org, Andrei Alexandrescu)
+Copyright: Andrei Alexandrescu 2008-.
 
-         Copyright Andrei Alexandrescu 2008 - 2009.
-Distributed under the Boost Software License, Version 1.0.
-   (See accompanying file LICENSE_1_0.txt or copy at
-         http://www.boost.org/LICENSE_1_0.txt)
-*/
+License: $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
+
+Authors:   $(WEB erdani.com, Andrei Alexandrescu)
+ */
 module std.algorithm;
 
 import std.c.string;
-import std.array;
-import std.contracts;
-import std.conv;
-import std.date;
-import std.functional;
-import std.math;
-import std.metastrings;
-import std.range;
-import std.string;
-import std.traits;
-import std.typecons;
-import std.typetuple;
+import std.array, std.container, std.contracts, std.conv, std.date,
+    std.functional, std.math, std.metastrings, std.range, std.string,
+    std.traits, std.typecons, std.typetuple;
 
 version(unittest)
 {
@@ -134,6 +122,14 @@ struct Map(alias fun, Range) if (isInputRange!(Range))
     bool empty() { return _input.empty; }
     void popFront() { _input.popFront; fillCache; }
     ElementType front() { return _cache; }
+    static if (isForwardRange!Range)
+        @property Map save()
+        {
+            Map result;
+            result._input = _input.save;
+            result._cache = _cache;
+            return result;
+        }
 }
 
 unittest
@@ -300,8 +296,8 @@ public:
 
 unittest
 {
-    int[] a = [ 3, 4 ];
-    auto r = reduce!("a + b")(0, a);
+    double[] a = [ 3, 4 ];
+    auto r = reduce!("a + b")(0.0, a);
     assert(r == 7);
     r = reduce!("a + b")(a);
     assert(r == 7);
@@ -312,7 +308,7 @@ unittest
     assert(r1 == 107);
 
     // two funs
-    auto r2 = reduce!("a + b", "a - b")(tuple(0, 0), a);
+    auto r2 = reduce!("a + b", "a - b")(tuple(0., 0.), a);
     assert(r2.field[0] == 7 && r2.field[1] == -7);
     auto r3 = reduce!("a + b", "a - b")(a);
     assert(r3.field[0] == 7 && r3.field[1] == -1);
@@ -376,7 +372,7 @@ filler). If $(D filler) is empty, an exception is thrown.
 Example:
 ----
 int[] a = [ 1, 2, 3, 4, 5 ];
-int[] b = [ 8, 9 ]; 
+int[] b = [ 8, 9 ];
 fill(a, b);
 assert(a == [ 8, 9, 8, 9, 8 ]);
 ----
@@ -443,7 +439,7 @@ struct Filter(alias pred, Range) if (isInputRange!(Range))
         _input = r;
         while (!_input.empty && !pred(_input.front)) _input.popFront;
     }
-    
+
     ref Filter opSlice()
     {
         return this;
@@ -601,23 +597,14 @@ Preconditions:
 
 $(D !pointsTo(lhs, lhs) && !pointsTo(lhs, rhs) && !pointsTo(rhs, lhs)
 && !pointsTo(rhs, rhs))
-*/
-// void swap(T)(ref T lhs, ref T rhs)
-// {
-//     assert(!pointsTo(lhs, lhs) && !pointsTo(lhs, rhs)
-//             && !pointsTo(rhs, lhs) && !pointsTo(rhs, rhs));
-//     auto t = lhs;
-//     lhs = rhs;
-//     rhs = t;
-// }
-
-void swap(T)(ref T a, ref T b)  if (!is(typeof(T.init.proxySwap(T.init))))
+ */
+void swap(T)(ref T a, ref T b) if (!is(typeof(T.init.proxySwap(T.init))))
 {
    static if (is(T == struct))
    {
       // For structs, move memory directly
       // First check for undue aliasing
-      assert(!pointsTo(a, b) && !pointsTo(b, a) 
+      assert(!pointsTo(a, b) && !pointsTo(b, a)
          && !pointsTo(a, a) && !pointsTo(b, b));
       // Swap bits
       ubyte[T.sizeof] t = void;
@@ -645,7 +632,7 @@ unittest
     int a = 42, b = 34;
     swap(a, b);
     assert(a == 34 && b == 42);
-    
+
     struct S { int x; char c; int[] y; }
     S s1 = { 0, 'z', [ 1, 2 ] };
     S s2 = { 42, 'a', [ 4, 6 ] };
@@ -662,21 +649,120 @@ unittest
 
 // split
 /**
-Splits a range using another range or an element as a separator. This
-can be used with any range type, but is most popular with string
-types.
+Splits a range using an element as a separator. This can be used with
+any range type, but is most popular with string types.
+
+Two adjacent separators are considered to surround an empty element in
+the split range.
+
+If the empty range is given, the result is a range with one empty
+element. If a range with one separator is given, the result is a range
+with two empty elements.
 
 Example:
 ---
-int[] a = [ 1, 2, 0, 3, 0, 4, 5, 0 ];
-int[][] w = [ [1, 2], [3], [4, 5] ];
-uint i;
-foreach (e; splitter(a)) assert(e == w[i++]);
-assert(i == 3);
+assert(equal(splitter("hello  world", ' ') == [ "hello", "", "world" ]));
+int[] a = [ 1, 2, 0, 0, 3, 0, 4, 5, 0 ];
+int[][] w = [ [1, 2], [], [3], [4, 5] ];
+assert(equal(splitter(a, 0), w));
+a = null;
+assert(equal(splitter(a, 0), [ (int[]).init ]));
+a = [ 0 ];
+assert(equal(splitter(a, 0), [ (int[]).init, (int[]).init ]));
+a = [ 0, 1 ];
+assert(equal(splitter(a, 0), [ [], [1] ]));
 ----
 */
 struct Splitter(Range, Separator)
-    if (!is(typeof(ElementType!Range.init == Separator.init)))
+    if (is(typeof(ElementType!Range.init == Separator.init)))
+{
+private:
+    Range _input;
+    Separator _separator;
+    enum size_t _unComputed = size_t.max - 1, _atEnd = size_t.max;
+    size_t _frontLength = _unComputed;
+
+public:
+    this(Range input, Separator separator)
+    {
+        _input = input;
+        _separator = separator;
+        // computeFront();
+        // computeBack();
+    }
+
+    @property bool empty()
+    {
+        return _frontLength == _atEnd;
+    }
+
+    @property Range front()
+    {
+        assert(!empty);
+        if (_frontLength == _unComputed)
+        {
+            _frontLength = _input.indexOf(_separator);
+            if (_frontLength == -1) _frontLength = _input.length;
+        }
+        return _input[0 .. _frontLength];
+    }
+
+    void popFront()
+    {
+        assert(!empty);
+        if (_frontLength == _unComputed)
+        {
+            front;
+        }
+        assert(_frontLength <= _input.length);
+        if (_frontLength == _input.length)
+        {
+            // no more input and need to fetch => done
+            _frontLength = _atEnd;
+        }
+        else
+        {
+            _input = _input[_frontLength .. $];
+            skipOver(_input, _separator) || assert(false);
+            _frontLength = _unComputed;
+        }
+    }
+}
+
+/// Ditto
+Splitter!(Range, Separator)
+splitter(Range, Separator)(Range r, Separator s)
+if (is(typeof(ElementType!(Range).init == ElementType!(Separator).init))
+       ||
+    is(typeof(ElementType!(Range).init == Separator.init))
+    )
+{
+    return typeof(return)(r, s);
+}
+
+unittest
+{
+    assert(equal(splitter("hello  world", ' '), [ "hello", "", "world" ]));
+    int[] a = [ 1, 2, 0, 0, 3, 0, 4, 5, 0 ];
+    int[][] w = [ [1, 2], [], [3], [4, 5], [] ];
+    // foreach (x; splitter(a, 0)) {
+    //     writeln("[", x, "]");
+    // }
+    assert(equal(splitter(a, 0), w));
+    a = null;
+    assert(equal(splitter(a, 0), [ (int[]).init ][]));
+    a = [ 0 ];
+    assert(equal(splitter(a, 0), [ (int[]).init, (int[]).init ][]));
+    a = [ 0, 1 ];
+    assert(equal(splitter(a, 0), [ [], [1] ][]));
+}
+
+/**
+Splits a range using another range as a separator. This can be used
+with any range type, but is most popular with string types.
+ */
+struct Splitter(Range, Separator)
+    if (is(typeof(Range.init.front == Separator.init.front)))
 {
 private:
     Range _input;
@@ -796,100 +882,6 @@ public:
     }
 }
 
-struct Splitter(Range, Separator)
-    if (is(typeof(ElementType!Range.init == Separator.init)))
-{
-    Range _input;
-    Separator _separator;
-    size_t _frontLength = size_t.max;
-    size_t _backLength = size_t.max;
-
-    this(Range input, Separator separator)
-    {
-        _input = input;
-        _separator = separator;
-        computeFront();
-        computeBack();
-    }
-
-    bool empty()
-    {
-        return _input.empty;
-    }
-
-    Range front()
-    {
-        if (_frontLength == _frontLength.max)
-        {
-            // This is not the first iteration, clean up separators
-            while (!_input.empty && _input.front == _separator)
-                _input.popFront();
-            computeFront();
-        }
-        return _input[0 .. _frontLength];
-    }
-
-    void popFront()
-    {
-        computeFront();
-        _input = _input[_frontLength .. $];
-        _frontLength = _frontLength.max;
-    }
-
-    Range back()
-    {
-        if (_backLength == _backLength.max)
-        {
-            while (!_input.empty && _input.back == _separator) _input.popBack();
-            computeBack();
-        }
-        assert(_backLength <= _input.length, text(_backLength));
-        return _input[$ - _backLength .. $];
-    }
-
-    void popBack()
-    {
-        computeBack();
-        enforce(_backLength <= _input.length);
-        _input = _input[0 .. $ - _backLength];
-        _backLength = _backLength.max;
-    }
-
-private:
-    void computeFront()
-    {
-        if (_frontLength == _frontLength.max)
-        {
-            _frontLength = _input.length - _input.find(_separator).length;
-        }
-    }
-    void computeBack()
-    {
-        if (_backLength == _backLength.max)
-        {
-            //_backLength = find(retro(_input), _separator).length;
-            _backLength = 0;
-            auto i = _input;
-            while (!i.empty)
-            {
-                if (i.back == _separator) break;
-                ++_backLength;
-                i.popBack();
-            }
-        }
-        assert(_backLength <= _input.length);
-    }
-}
-
-/// Ditto
-Splitter!(Range, Separator)
-splitter(Range, Separator)(Range r, Separator s)
-if (is(typeof(ElementType!(Range).init == ElementType!(Separator).init)) ||
-        is(typeof(ElementType!(Range).init == Separator.init)))
-{
-    return typeof(return)(r, s);
-}
-
 unittest
 {
     auto s = ",abc, de, fg,hi,";
@@ -913,13 +905,13 @@ unittest
     assert(i == w.length);
     // Now go back
     auto s2 = splitter(a, 0);
-    
-    foreach_reverse (e; s2)
-    {
-        assert(i > 0);
-        assert(equal(e, w[--i]), text(e));
-    }
-    assert(i == 0);
+
+    // foreach_reverse (e; s2)
+    // {
+    //     assert(i > 0);
+    //     assert(equal(e, w[--i]), text(e));
+    // }
+    // assert(i == 0);
 }
 
 unittest
@@ -931,6 +923,108 @@ unittest
         //writeln("{", e, "}");
     }
     assert(equal(sp6, ["", ""][]));
+}
+
+struct Splitter(alias isTerminator, Range,
+        Slice = Select!(is(typeof(Range.init[0 .. 1])),
+                Range,
+                ElementType!(Range)[]))
+{
+    private Range _input;
+    private size_t _end;
+    private alias unaryFun!isTerminator _isTerminator;
+
+    this(Range input)
+    {
+        _input = input;
+        if (_input.empty)
+        {
+            _end = _end.max;
+        }
+        else
+        {
+            // Chase first terminator
+            while (_end < _input.length && !_isTerminator(_input[_end]))
+            {
+                ++_end;
+            }
+        }
+    }
+
+    @property bool empty()
+    {
+        return _end == _end.max;
+    }
+
+    @property Range front()
+    {
+        assert(!empty);
+        return _input[0 .. _end];
+    }
+
+    void popFront()
+    {
+        assert(!empty);
+        if (_input.empty)
+        {
+            _end = _end.max;
+            return;
+        }
+        // Skip over existing word
+        _input = _input[_end .. $];
+        // Skip terminator
+        for (;;)
+        {
+            if (_input.empty)
+            {
+                // Nothing following the terminator - done
+                _end = _end.max;
+                return;
+            }
+            if (!_isTerminator(_input.front))
+            {
+                // Found a legit next field
+                break;
+            }
+            _input.popFront();
+        }
+        assert(!_input.empty && !_isTerminator(_input.front));
+        // Prime _end
+        _end = 1;
+        while (_end < _input.length && !_isTerminator(_input[_end]))
+        {
+            ++_end;
+        }
+    }
+}
+
+Splitter!(isTerminator, Range)
+splitter(alias isTerminator, Range)(Range input)
+if (is(typeof(unaryFun!(isTerminator)(ElementType!(Range).init))))
+{
+    return typeof(return)(input);
+}
+
+unittest
+{
+    void compare(string sentence, string[] witness)
+    {
+        foreach (word; splitter!"a == ' '"(sentence))
+        {
+            assert(word == witness.front, word);
+            witness.popFront();
+        }
+        assert(witness.empty, witness[0]);
+    }
+
+    compare(" Mary    has a little lamb.   ",
+            ["", "Mary", "has", "a", "little", "lamb."]);
+    compare("Mary    has a little lamb.   ",
+            ["Mary", "has", "a", "little", "lamb."]);
+    compare("Mary    has a little lamb.",
+            ["Mary", "has", "a", "little", "lamb."]);
+    compare("", []);
+    compare(" ", [""]);
 }
 
 // uniq
@@ -950,7 +1044,7 @@ assert(equal(uniq(arr), [ 1, 2, 3, 4, 5 ][]));
 struct Uniq(alias pred, R)
 {
     R _input;
-    
+
     this(R input)
     {
         _input = input;
@@ -1022,7 +1116,7 @@ struct Group(alias pred, R) if (isInputRange!R)
     private R _input;
     private Tuple!(ElementType!R, uint) _current;
     private alias binaryFun!pred comp;
-    
+
     this(R input)
     {
         _input = input;
@@ -1138,7 +1232,7 @@ assert(r == [ 1, 2, 3, 4, 5 ]);
 //     auto r = overwriteAdjacent(arr);
 //     assert(r == [ 1, 2, 3, 4, 5 ]);
 //     assert(arr == [ 1, 2, 3, 4, 5, 3, 4, 4, 4, 5 ]);
-    
+
 // }
 
 // find
@@ -1347,7 +1441,7 @@ find(alias pred = "a == b", Range, Ranges...)
                 auto eq = equalRange!(Range.assumeSortedBy)(lb, rhs.front);
                 foreach (j; lb.length .. lb.length + eq.length)
                 {
-                    if (startsWith!(pred)(lhs[j .. $], rhs))
+                    if (startsWith!(pred)(lhs[j .. $], rhs[]))
                         return select!(Ranges.length == 1)(
                             lhs[j .. $], tuple(lhs[j .. $], i + 1));
                 }
@@ -1373,6 +1467,7 @@ find(alias pred = "a == b", Range, Ranges...)
     }
     else
     {
+        // Bona fide find
         static if (Ranges.length == 1 && allSatisfy!(hasLength, Ranges, Range)
                 && is(typeof(binaryFun!(pred)(haystack[1], needles[0][1]))))
         {
@@ -1404,7 +1499,7 @@ find(alias pred = "a == b", Range, Ranges...)
 unittest
 {
     int[] a = [ -1, 0, 1, 2, 3, 4, 5 ];
-    assert(find(assumeSorted(a), 3) == [3, 4, 5]);
+    assert(find(assumeSorted(a), 3) == [3, 4, 5][]);
     assert(find(assumeSorted(a), 9).empty);
     assert(find(assumeSorted(a), 5) == [5]);
     assert(find(assumeSorted(a), -2).empty);
@@ -1476,7 +1571,7 @@ private:
     size_t skip[];
     int[ElementType!(Range)] occ;
     Range needle;
-  
+
     int occurrence(ElementType!(Range) c)
     {
         auto p = c in occ;
@@ -1496,14 +1591,14 @@ is ignored.
     {
         int virtual_begin = needle.length - offset - portion;
         int ignore = 0;
-        if (virtual_begin < 0) { 
+        if (virtual_begin < 0) {
             ignore = -virtual_begin;
-            virtual_begin = 0; 
+            virtual_begin = 0;
         }
-        if (virtual_begin > 0 
+        if (virtual_begin > 0
             && needle[virtual_begin - 1] == needle[$ - portion - 1])
             return 0;
-        
+
         immutable delta = portion - ignore;
         return equal(needle[needle.length - delta .. needle.length],
                 needle[virtual_begin .. virtual_begin + delta]);
@@ -1520,14 +1615,14 @@ public:
         {
             this.occ[n] = i;
         }
-        /* Preprocess #2: init skip[] */  
+        /* Preprocess #2: init skip[] */
         /* Note: This step could be made a lot faster.
          * A simple implementation is shown here. */
         this.skip = new size_t[needle.length];
         foreach (a; 0 .. needle.length)
         {
             size_t value = 0;
-            while (value < needle.length 
+            while (value < needle.length
                    && !needlematch(needle, a, value))
             {
                 ++value;
@@ -1622,6 +1717,39 @@ unittest
     assert(find!("a > 2")(a) == [3]);
     bool pred(int x) { return x + 1 > 1.5; }
     assert(find!(pred)(a) == a);
+}
+
+/**
+If $(D haystack) supports slicing, returns the smallest number $(D n)
+such that $(D haystack[n .. $].startsWith!pred(needle)). Oherwise,
+returns the smallest $(D n) such that after $(D n) calls to $(D
+haystack.popFront), $(D haystack.startsWith!pred(needle)). If no such
+number could be found, return $(D -1).
+ */
+int indexOf(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
+if (is(typeof(startsWith!pred(haystack, needle))))
+{
+    static if (isNarrowString!R1)
+    {
+        // Narrow strings are handled a bit differently
+        auto length = haystack.length;
+        for (; !haystack.empty; haystack.popFront)
+        {
+            if (startsWith!pred(haystack, needle))
+            {
+                return length - haystack.length;
+            }
+        }
+    }
+    else
+    {
+        typeof(return) result;
+        for (; !haystack.empty; ++result, haystack.popFront())
+        {
+            if (startsWith!pred(haystack, needle)) return result;
+        }
+    }
+    return -1;
 }
 
 /**
@@ -1757,17 +1885,19 @@ assert(startsWith("abc", "a", "a") == 1);
 assert(startsWith("abc", "x", "a", "b") == 2);
 assert(startsWith("abc", "x", "aa", "ab") == 3);
 assert(startsWith("abc", "x", "aaa", "sab") == 0);
-assert(startsWith("abc", "x", "aaa", 'a', "sab") == 3);
+assert(startsWith("abc", "x", "aaa", "a", "sab") == 3);
 ----
  */
 uint startsWith(alias pred = "a == b", Range, Ranges...)
 (Range doesThisStart, Ranges withOneOfThese)
 if (isInputRange!Range && Ranges.length > 0
-        && staticIndexOf!(Unqual!(ElementType!Range), char, wchar) < 0)
+        // TODO: the condition below is incomplete
+        && is(typeof(binaryFun!pred(doesThisStart.front,
+                                withOneOfThese[0].front))))
 {
-    static assert(Ranges.length > 0);
     alias doesThisStart lhs;
     alias withOneOfThese rhs;
+    // Special  case for two arrays
     static if (Ranges.length == 1 && isArray!(Range) && isArray!(Ranges[0])
             && is(typeof(binaryFun!(pred)(lhs[0], rhs[0][0]))))
     {
@@ -1786,70 +1916,39 @@ if (isInputRange!Range && Ranges.length > 0
     }
     else
     {
-        for (;; lhs.popFront)
+        // Make one pass looking for empty ranges
+        foreach (i, Unused; Ranges)
         {
-            // Has any of the rhs's fell off its end?
+            // Empty range matches everything
+            if (rhs[i].empty) return i + 1;
+        }
+        bool mismatch[Ranges.length];
+        uint mismatched;
+        for (; !lhs.empty; lhs.popFront)
+        {
             foreach (i, Unused; Ranges)
             {
-                static if (!is(typeof(binaryFun!(pred)(lhs.front, rhs[i]))))
-                    if (rhs[i].empty) return i + 1; // found!
-            }
-            if (lhs.empty) return 0; // exhausted lhs, nothing found
-            foreach (i, Unused; Ranges)
-            {
-                static if (is(typeof(binaryFun!(pred)(lhs.front, rhs[i]))))
+                if (mismatch[i]) continue;
+                if (binaryFun!pred(lhs.front, rhs[i].front))
                 {
-                    // single-element comparison
-                    if (binaryFun!(pred)(lhs.front, rhs[i]))
-                        return i + 1; // single element found
-                    // mismatch, fall through
+                    // Stay in the game
+                    rhs[i].popFront();
+                    // Done with success if exhausted
+                    if (rhs[i].empty) return i + 1;
                 }
                 else
                 {
-                    assert(!rhs[i].empty);
-                    if (binaryFun!(pred)(lhs.front, rhs[i].front))
+                    // Out with this guy, or maybe everyone
+                    if (++mismatched == Ranges.length)
                     {
-                        continue; // matched, just finish this loop
+                        return 0;
                     }
+                    mismatch[i] = true;
                 }
-                // found a mismatch, only continue searching the others
-                static if (Ranges.length == 1) 
-                {
-                    return 0;
-                }
-                else
-                {
-                    auto r = startsWith!(pred)(lhs, rhs[0 .. i],
-                            rhs[i + 1 .. $]);
-                    if (!r) return 0u;
-                    return cast(uint) (r <= i ? r : r + 1);
-                }
-            }
-            // At this point everybody matched one element
-            foreach (i, Unused; Ranges)
-            {
-                static if (!is(typeof(binaryFun!(pred)(lhs.front, rhs[i]))))
-                    rhs[i].popFront;
             }
         }
+        return 0;
     }
-}
-
-// Specialization for ranges of characters
-uint startsWith(alias pred = "a == b", Range, Ranges...)
-(Range doesThisStart, Ranges withOneOfThese)
-if (isInputRange!(Range) && Ranges.length > 0
-        && staticIndexOf!(Unqual!(ElementType!Range), char, wchar) >= 0)
-{
-    auto searchMe = byDchar(doesThisStart);
-    foreach (i, R; Ranges)
-    {
-        static if (staticIndexOf!(Unqual!(ElementType!R), char, wchar) >= 0)
-            return startsWith!pred(searchMe,
-                    withOneOfThese[0 .. i], byDchar(withOneOfThese[i]),
-                withOneOfThese[i + 1 .. $]);
-    }
-    return startsWith!pred(searchMe, withOneOfThese);
 }
 
 unittest
@@ -1857,13 +1956,88 @@ unittest
     assert(startsWith("abc", ""));
     assert(startsWith("abc", "a"));
     assert(!startsWith("abc", "b"));
+    assert(!startsWith("abc", "b", "bc", "abcd", "xyz"));
     assert(startsWith("abc", "a", "b") == 1);
     assert(startsWith("abc", "b", "a") == 2);
     assert(startsWith("abc", "a", "a") == 1);
     assert(startsWith("abc", "x", "a", "b") == 2);
     assert(startsWith("abc", "x", "aa", "ab") == 3);
     assert(startsWith("abc", "x", "aaa", "sab") == 0);
-    assert(startsWith("abc", "x", "aaa", 'a', "sab") == 3);
+    assert(startsWith("abc", "x", "aaa", "a", "sab") == 3);
+}
+
+/**
+Checks whether $(D doesThisStart) starts with one of the individual
+elements $(D withOneOfThese) according to $(D pred).
+
+Example:
+----
+assert(startsWith("abc", 'x', 'n', 'a') == 3);
+----
+ */
+uint startsWith(alias pred = "a == b", Range, Elements...)
+(Range doesThisStart, Elements withOneOfThese)
+if (isInputRange!Range && Elements.length > 0
+        && is(typeof(binaryFun!pred(doesThisStart.front, withOneOfThese[0]))))
+{
+    if (doesThisStart.empty) return 0;
+    auto front = doesThisStart.front;
+    foreach (i, Unused; Elements)
+    {
+        if (binaryFun!pred(front, withOneOfThese[i])) return i + 1;
+    }
+    return 0;
+}
+
+unittest
+{
+    assert(!startsWith("abc", 'x', 'n', 'b'));
+    assert(startsWith("abc", 'x', 'n', 'a') == 3);
+}
+
+/**
+If $(D startsWith(r1, r2)), consume the corresponding elements off $(D
+r1) and return $(D true). Otherwise, leave $(D r1) unchanged and
+return $(D false).
+ */
+bool skipOver(alias pred = "a == b", R1, R2)(ref R1 r1, R2 r2)
+if (is(typeof(binaryFun!pred(r1.front, r2.front))))
+{
+    auto r = r1.save;
+    while (!r2.empty && !r.empty && binaryFun!pred(r.front, r2.front))
+    {
+        r.popFront();
+        r2.popFront();
+    }
+    return r2.empty ? (r1 = r, true) : false;
+}
+
+unittest
+{
+    auto s1 = "Hello world";
+    assert(!skipOver(s1, "Ha"));
+    assert(s1 == "Hello world");
+    assert(skipOver(s1, "Hell") && s1 == "o world");
+}
+
+/**
+Checks whether a range starts with an element, and if so, consume that
+element off $(D r) and return $(D true). Otherwise, leave $(D r)
+unchanged and return $(D false).
+ */
+bool skipOver(alias pred = "a == b", R, E)(ref R r, E e)
+if (is(typeof(binaryFun!pred(r.front, e))))
+{
+    return binaryFun!pred(r.front, e)
+        ? (r.popFront(), true)
+        : false;
+}
+
+unittest {
+    auto s1 = "Hello world";
+    assert(!skipOver(s1, "Ha"));
+    assert(s1 == "Hello world");
+    assert(skipOver(s1, "Hell") && s1 == "o world");
 }
 
 /**
@@ -1885,70 +2059,104 @@ assert(endsWith("abc", "x", "aaa", 'c', "sab") == 3);
 uint
 endsWith(alias pred = "a == b", Range, Ranges...)
 (Range doesThisEnd, Ranges withOneOfThese)
-if (isInputRange!(Range) && Ranges.length > 0)
+if (isInputRange!(Range) && Ranges.length > 0
+        && is(typeof(binaryFun!pred(doesThisEnd.back, withOneOfThese[0].back))))
 {
     alias doesThisEnd lhs;
     alias withOneOfThese rhs;
-    for (; !lhs.empty; lhs.popBack)
+    // Special  case for two arrays
+    static if (Ranges.length == 1 && isArray!(Range) && isArray!(Ranges[0])
+            && is(typeof(binaryFun!(pred)(lhs[0], rhs[0][0]))))
     {
+        if (lhs.length < rhs[0].length) return 0;
+        auto k = lhs.length - rhs[0].length;
+        foreach (j; 0 .. rhs[0].length)
+        {
+            if (!binaryFun!(pred)(rhs[0][j], lhs[j + k]))
+                // not found
+                return 0u;
+        }
+        // found!
+        return 1u;
+    }
+    else
+    {
+        // Make one pass looking for empty ranges
         foreach (i, Unused; Ranges)
         {
-            static if (is(typeof(binaryFun!(pred)(lhs.back, rhs[i]))))
+            // Empty range matches everything
+            if (rhs[i].empty) return i + 1;
+        }
+        bool mismatch[Ranges.length];
+        for (; !lhs.empty; lhs.popBack)
+        {
+            foreach (i, Unused; Ranges)
             {
-                if (binaryFun!(pred)(lhs.back, rhs[i]))
-                    return i + 1;
-                // mismatch, fall through
-            }
-            else
-            {
-                if (rhs[i].empty)
+                if (mismatch[i]) continue;
+                if (binaryFun!pred(lhs.back, rhs[i].back))
                 {
-                    // found a match!!!
-                    return i + 1;
+                    // Stay in the game
+                    rhs[i].popBack();
+                    // Done with success if exhausted
+                    if (rhs[i].empty) return i + 1;
                 }
-                if (binaryFun!(pred)(lhs.back, rhs[i].back))
+                else
                 {
-                    rhs[i].popBack;
-                    continue;
+                    // Out
+                    mismatch[i] = true;
                 }
-            }
-            // found a mismatch, only continue searching the others
-            static if (Ranges.length == 1) 
-            {
-                return 0;
-            }
-            else
-            {
-                auto r = endsWith!(pred)(lhs, rhs[0 .. i], rhs[i + 1 .. $]);
-                if (!r) return 0;
-                return r <= i ? r : r + 1;
             }
         }
+        return 0;
     }
-    // fell off the lhs range
-    foreach (i, Unused; Ranges)
-    {
-        static if (!is(typeof(binaryFun!(pred)(lhs.front, rhs[i]))))
-            if (rhs[i].empty) return i + 1;
-    }
-    return 0;
 }
 
 unittest
 {
     assert(endsWith("abc", ""));
     assert(!endsWith("abc", "a"));
+    assert(!endsWith("abc", 'a'));
     assert(!endsWith("abc", "b"));
-    assert(endsWith("abc", "a", 'c') == 2);
+    assert(endsWith("abc", "a", "c") == 2);
+    assert(endsWith("abc", 'a', 'c') == 2);
     assert(endsWith("abc", "c", "a") == 1);
     assert(endsWith("abc", "c", "c") == 1);
     assert(endsWith("abc", "x", "c", "b") == 2);
     assert(endsWith("abc", "x", "aa", "bc") == 3);
     assert(endsWith("abc", "x", "aaa", "sab") == 0);
-    assert(endsWith("abc", "x", "aaa", 'c', "sab") == 3);
+    assert(endsWith("abc", "x", "aaa", "c", "sab") == 3);
     // string a = "abc";
     // immutable(char[1]) b = "c";
     // assert(wyda(a, b));
+}
+
+/**
+Checks whether $(D doesThisEnd) starts with one of the individual
+elements $(D withOneOfThese) according to $(D pred).
+
+Example:
+----
+assert(endsWith("abc", 'x', 'c', 'a') == 2);
+----
+ */
+uint endsWith(alias pred = "a == b", Range, Elements...)
+(Range doesThisEnd, Elements withOneOfThese)
+if (isInputRange!Range && Elements.length > 0
+        && is(typeof(binaryFun!pred(doesThisEnd.front, withOneOfThese[0]))))
+{
+    if (doesThisEnd.empty) return 0;
+    auto back = doesThisEnd.back;
+    foreach (i, Unused; Elements)
+    {
+        if (binaryFun!pred(back, withOneOfThese[i])) return i + 1;
+    }
+    return 0;
+}
+
+unittest
+{
+    assert(!startsWith("abc", 'x', 'n', 'b'));
+    assert(startsWith("abc", 'x', 'n', 'a') == 3);
 }
 
 // findAdjacent
@@ -2149,7 +2357,7 @@ assert(equal!(approxEqual)(b, c));
 */
 bool equal(alias pred = "a == b", Range1, Range2)(Range1 r1, Range2 r2)
 if (isInputRange!(Range1) && isInputRange!(Range2)
-        && is(typeof(binaryFun!pred(Range1.init.front, Range2.init.front))))
+        && is(typeof(binaryFun!pred(r1.front, r2.front))))
 {
     foreach (e1; r1)
     {
@@ -2251,7 +2459,7 @@ template MaxType(T...)
             alias CommonType!(T[0 .. 2]) MaxType;
         else static if (T[1].max > T[0].max)
             alias T[1] MaxType;
-        else 
+        else
             alias T[0] MaxType;
     }
     else
@@ -2444,7 +2652,7 @@ unittest
     assert(m.field[1] == [ 7.3, 4, 8 ]);
 
     int[] a = [ 1, 2, 3 ];
-    int[] b = [ 1, 2, 4, 5 ];    
+    int[] b = [ 1, 2, 4, 5 ];
     auto mm = mismatch(a, b);
     assert(mm.field[0] == [3]);
     assert(mm.field[1] == [4, 5]);
@@ -2485,13 +2693,13 @@ struct Levenshtein(Range, alias equals, CostType = size_t)
         _deletionIncrement = n;
         InitMatrix();
     }
-    
+
     void insertionIncrement(CostType n)
     {
         _insertionIncrement = n;
         InitMatrix();
     }
-    
+
     CostType distance(Range s, Range t)
     {
         auto slen = walkLength(s), tlen = walkLength(t);
@@ -2503,7 +2711,7 @@ struct Levenshtein(Range, alias equals, CostType = size_t)
             auto tt = t;
             foreach (j; 1 .. cols)
             {
-                auto cSub = _matrix[i - 1][j - 1] 
+                auto cSub = _matrix[i - 1][j - 1]
                     + (equals(sfront, tt.front) ? 0 : _substitutionIncrement);
                 tt.popFront();
                 auto cIns = _matrix[i][j - 1] + _insertionIncrement;
@@ -2523,7 +2731,7 @@ struct Levenshtein(Range, alias equals, CostType = size_t)
         }
         return _matrix[slen][tlen];
     }
-  
+
     EditOp[] path(Range s, Range t)
     {
         distance(s, t);
@@ -2538,8 +2746,8 @@ struct Levenshtein(Range, alias equals, CostType = size_t)
         while (i || j) {
             auto cIns = j == 0 ? CostType.max : _matrix[i][j - 1];
             auto cDel = i == 0 ? CostType.max : _matrix[i - 1][j];
-            auto cSub = i == 0 || j == 0 
-                ? CostType.max 
+            auto cSub = i == 0 || j == 0
+                ? CostType.max
                 : _matrix[i - 1][j - 1];
             switch (min_index(cSub, cIns, cDel)) {
             case 0:
@@ -2562,7 +2770,7 @@ struct Levenshtein(Range, alias equals, CostType = size_t)
         reverse(result);
         return result;
     }
-    
+
 private:
     CostType _deletionIncrement = 1,
         _insertionIncrement = 1,
@@ -2898,15 +3106,17 @@ size_t bringToFront(Range1, Range2)(Range1 front, Range2 back)
         if (back.empty || front.empty) return result;
         static if (sameHeadExists)
             if (front.sameHead(back)) return result;
-        
-        auto front2 = front;
-        auto back2 = back;
+
+        auto front2 = front.save;
+        auto back2 = back.save;
 
         for (;;)
         {
             // make progress for this pass through the loop
-            swap(front2.front, back2.front);
-        
+            auto t1 = moveFront(front2), t2 = moveFront(back2);
+            front2.front = move(t2);
+            back2.front = move(t1);
+
             front2.popFront;
             back2.popFront;
             ++result;
@@ -2972,19 +3182,6 @@ unittest
     // assert(n == c.ptr + b.length);
     //assert(n is c[b.length .. $]);
     assert(c == b ~ a, text(c));
-
-    // test with a SList
-    auto lst = SListRange!(int)(1, 2, 3, 4, 5);
-    assert(equal(lst, [1, 2, 3, 4, 5][]));
-    auto lst1 = lst; lst1.popFront; lst1.popFront;
-    assert(equal(lst1, [3, 4, 5][]));
-    auto m = bringToFront(lst, lst1);
-    //assert(equal(m, [1, 2][]));
-    assert(equal(lst, [3, 4, 5, 1, 2][]));
-    arr = [ 6, 7, 8 ];
-    bringToFront(lst, arr);
-    assert(equal(lst, [6, 7, 8, 3, 4 ][]));
-    assert(equal(arr, [5, 1, 2][]));
 }
 
 // SwapStrategy
@@ -3035,7 +3232,7 @@ enum SwapStrategy
        Preserve the relative ordering of elements to the largest
        extent allowed by the algorithm's requirements.
     */
-    stable,     
+    stable,
 }
 
 /**
@@ -3158,7 +3355,7 @@ if (isBidirectionalRange!Range && hasLength!Range && s != SwapStrategy.stable)
             return range;
         }
     }
-    
+
     // Ok, there are "live" elements at the end of the range
     auto t = range;
     auto lDelta = lEnd - lStart, rDelta = rEnd - rStart;
@@ -3402,7 +3599,7 @@ assert(arr == [ 1, 3, 4, 5, 4, 5, 2  ]);
 //     alias Iterator!(Range) It;
 //     bool comp(typeof(*It) a) { return !binaryFun!(pred)(a, v); }
 //     static void assignIterB(It a, It b) { *a = *b; }
-//     return range(begin(r), 
+//     return range(begin(r),
 //             partitionold!(comp,
 //                     ss, assignIterB, Range)(r));
 // }
@@ -3725,12 +3922,12 @@ unittest
 
     double[][] v1 = [[-10, -5], [-10, -3], [-10, -5], [-10, -4],
             [-10, -5], [-9, -5], [-9, -3], [-9, -5],];
-        
+
     // double[][] v1 = [ [-10, -5], [-10, -4], [-9, -5], [-9, -5],
     //         [-10, -5], [-10, -3], [-10, -5], [-9, -3],];
     double[]*[] idx = [ &v1[0], &v1[1], &v1[2], &v1[3], &v1[4], &v1[5], &v1[6],
             &v1[7], ];
-    
+
     auto mid = v1.length / 2;
     topN!((a, b){ return (*a)[1] < (*b)[1]; })(idx, mid);
     foreach (e; idx[0 .. mid]) assert((*e)[1] <= (*idx[mid])[1]);
@@ -3767,14 +3964,9 @@ void topN(alias less = "a < b",
     static assert(ss == SwapStrategy.unstable,
             "Stable topN not yet implemented");
     auto heap = BinaryHeap!Range1(r1);
-    foreach (ref e; r2) {
-        if (binaryFun!(less)(e, heap.top())) {
-            // Must swap the elements
-            typeof(e) t;
-            move(e, t);
-            move(heap.top(), e);
-            heap.replaceTop(t);
-        }
+    for (; !r2.empty; r2.popFront)
+    {
+        heap.conditionalPut(r2.front);
     }
 }
 
@@ -3786,9 +3978,6 @@ unittest
     sort(a);
     sort(b);
     assert(a == [0, 1, 2, 2, 3]);
-    assert(b == [5, 5, 6, 6, 7, 7, 7]);
-    //writeln(a);
-    //writeln(b);
 }
 
 // sort
@@ -3809,7 +3998,7 @@ assert(array == [ 4, 3, 2, 1 ]);
 // sort in ascending order
 sort(array);
 assert(array == [ 1, 2, 3, 4 ]);
-// sort with a delegate 
+// sort with a delegate
 bool myComp(int x, int y) { return x > y; }
 sort!(myComp)(array);
 assert(array == [ 4, 3, 2, 1 ]);
@@ -3843,7 +4032,7 @@ unittest
     foreach (ref e; a) {
         e = uniform(-100, 100, rnd);
     }
-    
+
     int i = 0;
     bool greater2(int a, int b) { return a + i > b + i; }
     bool delegate(int, int) greater = &greater2;
@@ -3950,7 +4139,7 @@ void sortImpl(alias less, SwapStrategy ss, Range)(Range r)
     alias ElementType!(Range) Elem;
     enum uint optimisticInsertionSortGetsBetter = 1;
     static assert(optimisticInsertionSortGetsBetter >= 1);
-    
+
     while (r.length > optimisticInsertionSortGetsBetter)
     {
         const pivotIdx = getPivot!(less)(r);
@@ -3994,7 +4183,7 @@ void sortImpl(alias less, SwapStrategy ss, Range)(Range r)
             if (r.length == right.length)
             {
                 // bad, bad pivot. pivot <= everything
-                // find the first occurrence of the pivot                
+                // find the first occurrence of the pivot
                 bool pred1(Elem a) { return !less(pivot, a); }
                 //auto firstPivotPos = find!(pred1)(r).ptr;
                 auto pivotSpan = find!(pred1)(r);
@@ -4023,7 +4212,7 @@ void sortImpl(alias less, SwapStrategy ss, Range)(Range r)
         optimisticInsertionSort!(less, Range)(r);
     }
 }
-    
+
 // schwartzSort
 /**
 Sorts a range using an algorithm akin to the $(WEB
@@ -4609,7 +4798,7 @@ unittest
 }
 
 // Commented out for now, needs reimplementation
- 
+
 // // schwartzMakeIndex
 // /**
 // Similar to $(D makeIndex) but using $(D schwartzSort) to sort the
@@ -4832,6 +5021,46 @@ unittest
     assert(p == [ 2 ]);
 }
 
+// canFind
+/**
+Returns $(D true) if and only if $(D value) can be found in $(D
+range). Performs $(BIGOH r.length) evaluations of $(D pred). */
+
+bool canFind(alias pred = "a == b", Range, V)(Range range, V value)
+if (is(typeof(find!pred(range, value))))
+{
+    return !find!pred(range, value).empty;
+}
+
+unittest
+{
+    auto a = rndstuff!(int);
+    if (a.length)
+    {
+        auto b = a[a.length / 2];
+        assert(canFind(a, b));
+    }
+}
+
+// canFind
+/**
+Returns $(D true) if and only if a value $(D v) satisfying the
+predicate $(D pred) can be found in the forward range $(D
+range). Performs $(BIGOH r.length) evaluations of $(D pred).
+ */
+
+bool canFind(alias pred, Range)(Range range)
+if (is(typeof(find!pred(range))))
+{
+    return !find!pred(range).empty;
+}
+
+unittest
+{
+    auto a = [ 1, 2, 0, 4 ];
+    assert(canFind!"a == 2"(a));
+}
+
 // canFindSorted
 /**
 Returns $(D true) if and only if $(D value) can be found in $(D
@@ -4856,299 +5085,6 @@ unittest
         auto b = a[a.length / 2];
         sort(a);
         assert(canFindSorted(a, b));
-    }
-}
-
-/**
-Implements a $(WEB en.wikipedia.org/wiki/Binary_heap, binary heap)
-collection on top of a given range type (usually $(D T[])). The binary
-heap induces structure over the underlying range such that accessing
-the largest element is a $(BIGOH 1) operation and extracting it is
-done fast in $(BIGOH log n) time. (If $(D less) is the less-than
-operator, $(D BinaryHeap) defines a so-called max-heap. To define a
-min-heap, instantiate BinaryHeap with $(D "a > b") as its predicate.)
-Successive extractions of the largest element effect the heapsort
-algorithm, which will leave the original range sorted in ascending
-order according to $(D less).
-
-Example:
-----
-int[] a = [ 4, 1, 3, 2, 16, 9, 10, 14, 8, 7 ];
-auto h = BinaryHeap!(int[])(a);
-auto b = h.pop(5);
-assert(b == [ 8, 9, 10, 14, 16 ]);
-b = h.pop(5);
-assert(b == [ 1, 2, 3, 4, 7 ]);
-assert(h.length == 0);
-----
- */
-struct BinaryHeap(Range, alias less = "a < b") if (isRandomAccessRange!(Range))
-{
-    private size_t _length;
-    private Range _store;
-    private alias binaryFun!(less) comp;
-
-    //@@@BUG
-    //private static void heapify(Range r, size_t i)
-    public void percolateDown(Range r, size_t i = 0)
-    {
-        for (;;)
-        {
-            auto left = i * 2 + 1, right = left + 1;
-            if (right == r.length)
-            {
-                if (comp(r[i], r[left])) swap(r[i], r[left]);
-                return;
-            }
-            if (right > r.length) return;
-            assert(left < r.length && right < r.length);
-            auto largest = comp(r[i], r[left])
-                ? (comp(r[left], r[right]) ? right : left)
-                : (comp(r[i], r[right]) ? right : i);
-            if (largest == i) return;
-            swap(r[i], r[largest]);
-            i = largest;
-        }
-    }
-
-    /*static*/ void pop(Range store)
-    {
-        assert(!store.empty);
-        if (store.length == 1) return;
-        swap(store.front, store.back);
-        percolateDown(store[0 .. store.length - 1]);
-    }
-
-    private void assertValid()
-    {
-        debug
-        {
-            if (_length < 2) return;
-            for (size_t n = _length - 1; n >= 1; --n)
-            {
-                auto parentIdx = (n - 1) / 2;
-                assert(!comp(_store[parentIdx], _store[n]), text(n));
-            }
-        }
-    }
-
-public:
-/**
-Converts the range $(D r) into a heap. If $(D initialSize) is
-specified, only the first $(D initialSize) elements in $(D r) are
-transformed into a heap, after which the heap can grow up to $(D
-r.length). Performs $(BIGOH min(r.length, initialSize)) evaluations of
-$(D less).
- */
-    this(Range r, size_t initialSize = size_t.max) //if (isRandomAccessRange!Range)
-    {
-        acquire(r, initialSize);
-    }
-
-/**
-Takes ownership of a range.
- */    
-    void acquire(Range r, size_t initialSize = size_t.max)
-    {
-        swap(r, _store);
-        _length = min(_store.length, initialSize);
-        if (_length < 2) return;
-        auto i = (_length - 2) / 2;
-        // @@@BUG: statement not reachable
-        // for (;;)
-        // {
-        //     this.percolateDown(_store, i);
-        //     if (i == 0) return;
-        //     --i;
-        // }
-        this.percolateDown(_store[0 .. _length], i);
-        for (; i-- != 0;)
-        {
-            this.percolateDown(_store[0 .. _length], i);
-        }
-        assertValid;
-    }
-
-/**
-Takes ownership of a range assuming it already was organized as a
-heap.
- */    
-    void assume(Range r, size_t initialSize = size_t.max)
-    {
-        _store = r;
-        _length = min(_store.length, initialSize);
-        assertValid;
-    }
-    
-/**
-Clears the heap. Returns the contents of the store (which satisfies
-the $(LUCKY heap property)).
- */    
-    Range release()
-    {
-        Range result;
-        swap(result, _store);
-        result = result[0 .. _length];
-        _length = 0;
-        return result;
-    }
-
-/**
-Adds one element to the heap. If the length of the heap grows beyond
-the length of the range that the heap was associated with, a new range
-is allocated.
- */
-    void push(ElementType!Range value)
-    {
-        //assertValid;
-        if (_length == _store.length)
-        {
-            // reallocate
-            _store.length = (_length + 1) * 2;
-        }
-        // no reallocation
-        _store[_length] = value;
-        // sink down the element
-        for (size_t n = _length; n; )
-        {
-            auto parentIdx = (n - 1) / 2;
-            if (!comp(_store[parentIdx], _store[n])) break; // done!
-            // must swap and continue
-            swap(_store[parentIdx], _store[n]);
-            n = parentIdx;
-        }
-        ++_length;
-        assertValid;
-    }
-    
-/**
-If $(D this.length < this.capacity), call $(D
-this.push(value)). Otherwise, if $(D less(value, this.top)), replace
-$(D this.top) with $(D value) and adjust the heap to maintain the heap
-property. This function is useful in scenarios where the largest $(D
-N) of a large set of candidates must be remembered.
-
-Returns: $(D true) if $(D value) was put in the heap, $(D false)
-otherwise.
- */
-    bool conditionalPut(ElementType!Range value)
-    {
-        if (_length < _store.length)
-        {
-            push(value);
-            return true;
-        }
-        // must replace the top
-        assert(!_store.empty);
-        if (!comp(value, _store.front)) return false; // value >= largest
-        _store.front = value;
-        percolateDown(_store[0 .. _length]);
-        assertValid;
-        return true;
-    }
-
-/**
-Replaces the top of the heap (the largest element in the heap) with
-$(D value).
- */ 
-    void replaceTop(ElementType!Range value)
-    {
-        // must replace the top
-        assert(!_store.empty);
-        _store.front = value;
-        percolateDown(_store[0 .. _length]);
-        assertValid;
-    }
-
-/**
-Get the _top element (the largest according to the predicate $(D
-less)).
- */
-    ref ElementType!Range top()
-    {
-        assert(_length);
-        return _store.front;
-    }
-    
-/**
-Pops the largest element (according to the predicate $(D less)).
- */
-    void pop()
-    {
-        enforce(_length);
-        if (_length > 1) swap(_store.front, _store[_length - 1]);
-        --_length;
-        percolateDown(_store[0 .. _length]);
-    }
-
-/**
-Pops the $(D n) largest elements (according to the predicate $(D
-less)) and returns a range containing them (which is in fact a
-subrange of the heap's underlying range). The returned range is sorted
-in increasing order by $(D less), and after the call the heap does not
-contain those elements anymore. If $(D n >= this.length), the entire
-heap is sorted and returned.
- */
-    Range pop(size_t n)
-    {
-        immutable size_t newSize = n >= _length
-            ? (n = _length, 0)
-            : _length - n;
-        auto result = _store[newSize .. _length];
-        while  (_length > newSize)
-        {
-            swap(_store.front, _store[_length - 1]);
-            --_length;
-            percolateDown(_store[0 .. _length]);
-        }
-        return result;
-    }
-
-/**
-Returns the _length of the heap.
- */    
-    @property size_t length() const
-    {
-        return _length;
-    }
-
-/**
-Returns the length of the range underlying the heap.
- */    
-    size_t capacity()
-    {
-        return _store.length;
-    }
-}
-
-unittest
-{
-    {
-        // example from "Introduction to Algorithms" Cormen et al., p 146
-        int[] a = [ 4, 1, 3, 2, 16, 9, 10, 14, 8, 7 ];
-        BinaryHeap!(int[]) h = BinaryHeap!(int[])(a);
-        //makeBinaryHeap!(binaryFun!("a < b"))(a);
-        assert(a == [ 16, 14, 10, 8, 7, 9, 3, 2, 4, 1 ]);
-    }
-    {
-        int[] a = [ 4, 1, 3, 2, 16, 9, 10, 14, 8, 7 ];
-        int[] b = new int[a.length];
-        BinaryHeap!(int[]) h = BinaryHeap!(int[])(b, 0);
-        foreach (e; a)
-        {
-            h.push(e);
-        }
-        assert(b == [ 16, 14, 10, 8, 7, 3, 9, 1, 4, 2 ], text(b));
-    }
-    {
-        int[] a = [ 4, 1, 3, 2, 16, 9, 10, 14, 8, 7 ];
-        BinaryHeap!(int[]) h = BinaryHeap!(int[])(a);
-        //makeBinaryHeap!(binaryFun!("a < b"))(a);
-        auto b = h.pop(5);
-        assert(b == [ 8, 9, 10, 14, 16 ]);
-        b = h.pop(5);
-        assert(b == [ 1, 2, 3, 4, 7 ]);
-        assert(h.length == 0);
     }
 }
 
@@ -5254,18 +5190,18 @@ private:
 
 public:
     alias CommonType!(staticMap!(.ElementType, Rs)) ElementType;
-    
+
     this(Rs rs)
     {
         this._r = rs;
         adjustPosition();
     }
-    
+
     bool empty()
     {
         return _crt == _crt.max;
     }
-    
+
     void popFront()
     {
         // Assumes _crt is correct
@@ -5371,7 +5307,7 @@ private:
             }
         }
     }
-    
+
 public:
     this(Rs input)
     {
@@ -5379,7 +5315,7 @@ public:
         // position to the first element
         adjustPosition;
     }
-    
+
     bool empty()
     {
         foreach (i, U; Rs)
@@ -5468,7 +5404,7 @@ private:
             }
         }
     }
-    
+
 public:
     this(R1 r1, R2 r2)
     {
@@ -5477,7 +5413,7 @@ public:
         // position to the first element
         adjustPosition;
     }
-    
+
     void popFront()
     {
         r1.popFront;
@@ -5544,7 +5480,7 @@ private:
             r2.popFront;
         }
     }
-    
+
 public:
     this(R1 r1, R2 r2)
     {
@@ -5553,7 +5489,7 @@ public:
         // position to the first element
         adjustPosition;
     }
-    
+
     void popFront()
     {
         assert(!empty);
@@ -5706,7 +5642,7 @@ assert(equal(nWayUnion(a), witness[]));
 struct NWayUnion(alias less, RangeOfRanges)
 {
     private alias .ElementType!(.ElementType!RangeOfRanges) ElementType;
-    private alias binaryFun!less comp;   
+    private alias binaryFun!less comp;
     private RangeOfRanges _ror;
     static bool compFront(.ElementType!RangeOfRanges a, .ElementType!RangeOfRanges b)
     {
@@ -5714,7 +5650,7 @@ struct NWayUnion(alias less, RangeOfRanges)
         return comp(b.front, a.front);
     }
     BinaryHeap!(RangeOfRanges, compFront) _heap;
-    
+
     this(RangeOfRanges ror)
     {
         // Preemptively get rid of all empty ranges in the input
@@ -5723,17 +5659,17 @@ struct NWayUnion(alias less, RangeOfRanges)
         //Build the heap across the range
         _heap.acquire(_ror);
     }
-    
+
     bool empty() { return _ror.empty; }
-    
+
     ref ElementType front()
     {
-        return _heap.top.front;
+        return _heap.front.front;
     }
-    
+
     void popFront()
     {
-        _heap.pop;
+        _heap.popFront();
         // let's look at the guy just popped
         _ror.back.popFront;
         if (_ror.back.empty)
@@ -5837,7 +5773,7 @@ void largestPartialIntersection
 // largestPartialIntersectionWeighted
 /**
 Similar to $(D largestPartialIntersection), but associates a weight
-with each distinct element in the intersection. 
+with each distinct element in the intersection.
 
 Example:
 ----
