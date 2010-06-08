@@ -27,7 +27,7 @@ $(TR $(TD $(B i)) $(TD case insensitive))
 $(TR $(TD $(B m)) $(TD treat as multiple lines separated by newlines)))
 
 The $(D format[]) string has the formatting characters:
-    
+
 $(BOOKTABLE Formatting Characters,
 $(TR $(TH Format) $(TH Replaced With))
 $(TR  $(TD $(B $$)) $(TD $))
@@ -191,7 +191,7 @@ private:
         dotmatchlf      = 8,    // if . matches \n
     }
     enum uint inf = ~0u;
-    
+
     uint re_nsub;        // number of parenthesized subexpression matches
     ubyte attributes;
     immutable(ubyte)[] program; // pattern[] compiled into regular
@@ -274,7 +274,7 @@ Throws: $(D Exception) if there are any compilation errors.
             msg = ree.toString();
             //writefln("message: %s", ree);
         }
-        assert(indexOf(msg, "unrecognized attribute") >= 0);
+        assert(std.algorithm.indexOf(msg, "unrecognized attribute") >= 0);
     }
 
 /**
@@ -626,7 +626,7 @@ Returns the number of parenthesized captures
             case 'S':    op = REnotspace;        goto Lop;
             case 'w':    op = REword;            goto Lop;
             case 'W':    op = REnotword;         goto Lop;
-                
+
             Lop:
                 buf.write(op);
                 p++;
@@ -747,7 +747,7 @@ Returns the number of parenthesized captures
         }
         return 1;
     }
-    
+
     class Range
     {
         uint maxc;
@@ -764,7 +764,7 @@ Returns the number of parenthesized captures
         }
 
         void setbitmax(uint u)
-        {   
+        {
             //printf("setbitmax(x%x), maxc = x%x\n", u, maxc);
             if (u <= maxc)
                 return;
@@ -772,7 +772,7 @@ Returns the number of parenthesized captures
             uint b = u / 8;
             if (b >= maxb)
             {   uint u2;
-                
+
                 u2 = base ? base - &buf.data[0] : 0;
                 buf.fill0(b - maxb + 1);
                 base = &buf.data[u2];
@@ -1574,7 +1574,7 @@ Copy zis.
     {
         pmatch = pmatch.dup;
     }
-    
+
     // ref auto opSlice()
     // {
     //     return this;
@@ -1582,7 +1582,7 @@ Copy zis.
 
 /**
 Range primitives that allow incremental matching against a string.
-   
+
 Example:
 ---
 import std.stdio;
@@ -1667,7 +1667,7 @@ void main()
         {
             return matches.empty;
         }
-        
+
         Range front()
         {
             return input[matches[0].startIdx .. matches[0].endIdx];
@@ -1747,7 +1747,7 @@ The matched portion of the input.
                         " vs. ", input.length));
         return input[pmatch[0].startIdx .. pmatch[0].endIdx];
     }
-    
+
 /*******************
 Returns the slice of the input that follows the matched substring.
  */
@@ -1755,7 +1755,7 @@ Returns the slice of the input that follows the matched substring.
     {
         return input[pmatch[0].endIdx < $ ? pmatch[0].endIdx : $ .. $];
     }
-    
+
 /**
 Returns $(D hit) (converted to $(D string) if necessary).
 */
@@ -1763,7 +1763,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
     {
         return to!string(hit);
     }
-    
+
 /* ************************************************
  * Find regular expression matches in s[]. Replace those matches
  * with a new string composed of format[] merged with the result of the
@@ -1822,7 +1822,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
         return result;
     }
 
-/* 
+/*
  * Test s[] starting at startindex against regular expression.
  * Returns: 0 for no match, !=0 for match
  */
@@ -1851,7 +1851,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
             if (engine.attributes & engine.REA.ignoreCase && isalpha(firstc))
                 firstc = 0;
         }
-        
+
         for (;; ++startindex)
         {
             if (firstc)
@@ -1990,7 +1990,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
                 break;
 
             case engine.REichar:
-                
+
                 if (src == input.length)
                     goto Lnomatch;
                 debug(regex) printf("\tREichar '%c', src = '%c'\n",
@@ -2501,7 +2501,7 @@ Returns $(D hit) (converted to $(D string) if necessary).
 // p is following the \ char
 /* ==================== replace ======================= */
 
-/* 
+/*
 After a match was found, this function will take the match results
 and, using the format string, generate and return a new string.
  */
@@ -2886,7 +2886,7 @@ unittest
     string bar(RegexMatch!(string) r) { return "l"; }
     r = replace!(bar)("hello", regex("l", "g"));
     assert(r == "hello");
-    
+
     string baz(RegexMatch!(string) m)
     {
         return std.string.toupper(m.hit);
