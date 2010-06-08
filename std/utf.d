@@ -6,7 +6,7 @@
  * For Win32 systems, the C wchar_t type is UTF-16 and corresponds to the D
  * wchar type.
  * For linux systems, the C wchar_t type is UTF-32 and corresponds to
- * the D utf.dchar type. 
+ * the D utf.dchar type.
  *
  * UTF character support is restricted to (\u0000 &lt;= character &lt;= \U0010FFFF).
  *
@@ -166,7 +166,7 @@ size_t toUCSindex(in char[] s, size_t i)
 {
     size_t n;
     size_t j;
-    
+
     for (j = 0; j < i; )
     {
         j += stride(s, j);
@@ -267,9 +267,9 @@ body
     dchar V;
     size_t i = idx;
     char u = s[i];
-    
+
     if (u & 0x80)
-    {        
+    {
         /* The following encodings are valid, except for the 5 and 6 byte
          * combinations:
          *  0xxxxxxx
@@ -312,7 +312,7 @@ body
                 (u == 0xF8 && (u2 & 0xF8) == 0x80) ||
                 (u == 0xFC && (u2 & 0xFC) == 0x80))
             goto Lerr;          // overlong combination
-        
+
         foreach (j; 1 .. n)
         {
             u = s[i + j];
@@ -332,7 +332,7 @@ body
 
     idx = i;
     return V;
-    
+
   Lerr:
     //printf("\ndecode: idx = %d, i = %d, length = %d s = \n'%.*s'\n%x\n'%.*s'\n", idx, i, s.length, s, s[i], s[i .. $]);
     throw new UtfException("4invalid UTF-8 sequence", s[i]);
@@ -467,230 +467,6 @@ body
 
   Lerr:
     throw new UtfException("5invalid UTF-32 value", c);
-}
-
-// Decodes one dchar from input range $(D r). Returns the decoded
-// character and the shortened range.
-dchar decodeFront(Range)(ref Range r) if (!isSomeString!Range)
-out (result)
-{
-    assert(isValidDchar(result));
-}
-body
-{
-    enforce(!r.empty);
-	Unqual!(ElementType!Range) u = r.front;
-    r.popFront;
-    
-    if (!(u & 0x80))
-    {
-        // simplest case: one single character
-        return u;
-    }
-    
-    void enforce(bool c)
-    {
-        if (c) return;
-        throw new UtfException("Invalid UTF-8 sequence", u);
-    }
-    
-    /* The following encodings are valid, except for the 5 and 6 byte
-     * combinations:
-     *  0xxxxxxx
-     *  110xxxxx 10xxxxxx
-     *  1110xxxx 10xxxxxx 10xxxxxx
-     *  11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
-     *  111110xx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx
-     *  1111110x 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx
-     */
-    uint n = void;
-    switch (u & 0b1111_0000)
-    {
-    case 0b1100_0000: case 0b1101_0000:
-        n = 2;
-        break;
-    case 0b1110_0000:
-        n = 3;
-        break;
-    case 0b1111_0000:
-        enforce(!(u & 0b0000_1000));
-        n = 4;
-        break;
-    default:
-        enforce(0);
-    }
-
-    // Pick off (7 - n) significant bits of B from first byte of octet
-    auto result = cast(dchar) (u & ((1 << (7 - n)) - 1));
-
-    /* The following combinations are overlong, and illegal:
-     *  1100000x (10xxxxxx)
-     *  11100000 100xxxxx (10xxxxxx)
-     *  11110000 1000xxxx (10xxxxxx 10xxxxxx)
-     *  11111000 10000xxx (10xxxxxx 10xxxxxx 10xxxxxx)
-     *  11111100 100000xx (10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx)
-     */
-    assert(!r.empty);
-    auto u2 = r.front;
-    enforce(!((u & 0xFE) == 0xC0 ||
-                    (u == 0xE0 && (u2 & 0xE0) == 0x80) ||
-                    (u == 0xF0 && (u2 & 0xF0) == 0x80) ||
-                    (u == 0xF8 && (u2 & 0xF8) == 0x80) ||
-                    (u == 0xFC && (u2 & 0xFC) == 0x80))); // overlong combination
-    
-    foreach (j; 1 .. n)
-    {
-        enforce(!r.empty);
-        u = r.front;
-        r.popFront;
-        enforce((u & 0xC0) == 0x80); // trailing bytes are 10xxxxxx
-        result = (result << 6) | (u & 0x3F);
-    }
-    enforce(isValidDchar(result));
-    return result;
-}
-
-unittest
-{
-    debug(utf) printf("utf.decodeFront.unittest\n");
-
-    static string s1 = "abcd";
-    auto c = decodeFront(s1);
-    assert(c == cast(dchar)'a');
-    assert(s1 == "bcd");
-    c = decodeFront(s1);
-    assert(c == cast(dchar)'b');
-    assert(s1 == "cd");
-
-    static string s2 = "\xC2\xA9";
-    c = decodeFront(s2);
-    assert(c == cast(dchar)'\u00A9');
-    assert(s2 == "");
-
-    static string s3 = "\xE2\x89\xA0";
-    c = decodeFront(s3);
-    assert(c == cast(dchar)'\u2260');
-    assert(s3 == "");
-
-    static string[] s4 =
-    [   "\xE2\x89",     // too short
-    "\xC0\x8A",
-    "\xE0\x80\x8A",
-    "\xF0\x80\x80\x8A",
-    "\xF8\x80\x80\x80\x8A",
-    "\xFC\x80\x80\x80\x80\x8A",
-    ];
-
-    for (int j = 0; j < s4.length; j++)
-    {
-        int i = 0;
-        try
-        {
-            c = decodeFront(s4[j]);
-            assert(0);
-        }
-        catch (UtfException u)
-        {
-            i = 23;
-            delete u;
-        }
-        assert(i == 23);
-    }
-}
-
-// Decodes one dchar from input range $(D r). Returns the decoded
-// character and the shortened range.
-dchar decodeBack(Range)(ref Range r) if (!isSomeString!Range)
-{
-    enforce(!r.empty);
-    Unqual!(ElementType!Range)[4] chars;
-    chars[3] = r.back;
-    r.popBack;
-    if (! (chars[3] & 0x80))
-    {
-        return chars[3];
-    }
-    size_t idx = 2;
-    chars[2] = r.back;
-    r.popBack;
-    /* The following encodings are valid, except for the 5 and 6 byte
-     * combinations:
-     *  0xxxxxxx
-     *  110xxxxx 10xxxxxx
-     *  1110xxxx 10xxxxxx 10xxxxxx
-     *  11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
-     *  111110xx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx
-     *  1111110x 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx
-     */
-    if (! (chars[idx] & 0b0100_0000)) { chars[1] = r.back; r.popBack; idx = 1; }
-    if (! (chars[idx] & 0b0100_0000)) { chars[0] = r.back; r.popBack; idx = 0; }
-    auto encoded = chars[idx .. $];
-    auto decoded = decodeFront(encoded);
-    enforce(encoded.empty);
-    return decoded;
-}
-
-dchar decodeFront(Range)(ref Range r) if (isSomeString!Range)
-{
-    auto result = r.front;
-    r.popFront();
-    return result;
-}
-
-dchar decodeBack(Range)(ref Range r) if (isSomeString!Range)
-{
-    auto result = r.back;
-    r.popBack();
-    return result;
-}
-
-unittest
-{
-    debug(utf) printf("utf.decodeBack.unittest\n");
-
-    string s1 = "abcd";
-    auto c = decodeBack(s1);
-    assert(c == cast(dchar)'d');
-
-    assert(s1 == "abc");
-    c = decodeBack(s1);
-    assert(c == cast(dchar)'c');
-    assert(s1 == "ab");
-
-    static string s2 = "\xC2\xA9";
-    c = decodeBack(s2);
-    assert(c == cast(dchar)'\u00A9');
-    assert(s2 == "");
-
-    string s3 = "\xE2\x89\xA0";
-    c = decodeBack(s3);
-    assert(c == cast(dchar)'\u2260');
-    assert(s3 == "");
-
-    static string[] s4 =
-    [   "\xE2\x89",     // too short
-    "\xC0\x8A",
-    "\xE0\x80\x8A",
-    "\xF0\x80\x80\x8A",
-    "\xF8\x80\x80\x80\x8A",
-    "\xFC\x80\x80\x80\x80\x8A",
-    ];
-
-    for (int j = 0; j < s4.length; j++)
-    {
-        int i;
-        try
-        {
-            c = decodeBack(s4[j]);
-            assert(0);
-        }
-        catch (UtfException u)
-        {
-            i = 23;
-            delete u;
-        }
-        assert(i == 23);
-    }
 }
 
 /* =================== Encode ======================= */
@@ -890,7 +666,7 @@ ubyte codeLength(C)(dchar c)
         return 1;
     }
 }
-    
+
 /* =================== Validation ======================= */
 
 /***********************************
