@@ -1081,7 +1081,8 @@ version(Posix) void copy(in char[] from, in char[] to)
         if (!buf)
         {
             BUFSIZ = 4096;
-            buf = enforce(std.c.stdlib.malloc(BUFSIZ), "Out of memory");
+            buf = std.c.stdlib.malloc(BUFSIZ);
+            buf || assert(false, "Out of memory in std.file.copy");
         }
         scope(exit) std.c.stdlib.free(buf);
             
