@@ -278,30 +278,30 @@ unittest
  * -----
  */
 
-string basename(string fullname, string extension = null)
-    out (result)
-    {
-	assert(result.length <= fullname.length);
-    }
-    body
-    {
+S basename(S)(S fullname, string extension = null)
+out (result)
+{
+    assert(result.length <= fullname.length);
+}
+body
+{
 	auto i = fullname.length;
 	for (; i > 0; i--)
 	{
 	    version(Win32)
 	    {
-		if (fullname[i - 1] == ':' || fullname[i - 1] == '\\')
-		    break;
+            if (fullname[i - 1] == ':' || fullname[i - 1] == '\\')
+                break;
 	    }
 	    version(Posix)
 	    {
-		if (fullname[i - 1] == '/')
-		    break;
+            if (fullname[i - 1] == '/')
+                break;
 	    }
 	}
 	return chomp(fullname[i .. fullname.length],
-                     extension ? extension : "");
-    }
+            extension ? extension : "");
+}
 
 /** Alias for $(D_PARAM basename), kept for backward
  * compatibility. New code should use $(D_PARAM basename). */
