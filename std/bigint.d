@@ -19,7 +19,7 @@
  *          http://www.boost.org/LICENSE_1_0.txt)
  */
 
-module bigint;
+module std.bigint;
 
 private import std.internal.math.biguintcore;
 
