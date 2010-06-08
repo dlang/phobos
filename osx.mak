@@ -15,7 +15,7 @@
 #
 # make html => makes html documentation
 #
-# make install => copies library to /usr/lib 
+# make install => copies library to /usr/lib
 
 # Configurable stuff, usually from the command line
 #
@@ -40,11 +40,11 @@ DDOCFLAGS=-version=ddoc -d -c -o- $(STDDOC)
 CC =
 DMD =
 CFLAGS =
-DFLAGS = 
+DFLAGS =
 
 # BUILD can be debug or release, but is unset by default; recursive
 # invocation will set it. See the debug and release targets below.
-BUILD = 
+BUILD =
 
 # Fetch the makefile name, will use it in recursive calls
 MAKEFILE:=$(lastword $(MAKEFILE_LIST))
@@ -119,14 +119,14 @@ endif
 MAIN = $(ROOT)/emptymain.d
 
 # Stuff in std/
-STD_MODULES = $(addprefix std/, algorithm array base64 bigint bitmanip  \
-		boxer compiler complex concurrency contracts conv cpuid cstream \
-		ctype date datebase dateparse demangle encoding file format 	\
-		functional getopt intrinsic iterator json loader math md5 		\
-		metastrings mmfile numeric outbuffer path perf process random 	\
-		range regex regexp signals socket socketstream stdint stdio 	\
-		stdiobase stream string syserror system traits typecons			\
-		typetuple uni uri utf variant xml zip zlib)
+STD_MODULES = $(addprefix std/, algorithm array base64 bigint bitmanip	\
+        boxer compiler complex concurrency container contracts conv		\
+        cpuid cstream ctype date datebase dateparse demangle encoding	\
+        file format functional getopt intrinsic json loader math md5	\
+        metastrings mmfile numeric outbuffer path perf process random	\
+        range regex regexp signals socket socketstream stdint stdio		\
+        stdiobase stream string syserror system traits typecons			\
+        typetuple uni uri utf variant xml zip zlib)
 
 # Other D modules that aren't under std/
 EXTRA_MODULES := $(addprefix std/c/, stdarg stdio) $(addprefix etc/c/,	\
@@ -174,11 +174,11 @@ ifeq ($(BUILD),)
 # targets. BUILD is not defined in user runs, only by recursive
 # self-invocations. So the targets in this branch are accessible to
 # end users.
-release : 
+release :
 	$(MAKE) --no-print-directory -f $(MAKEFILE) OS=$(OS) BUILD=release
-debug : 
+debug :
 	$(MAKE) --no-print-directory -f $(MAKEFILE) OS=$(OS) BUILD=debug
-unittest : 
+unittest :
 	$(MAKE) --no-print-directory -f $(MAKEFILE) OS=$(OS) BUILD=debug unittest
 	$(MAKE) --no-print-directory -f $(MAKEFILE) OS=$(OS) BUILD=release unittest
 else
