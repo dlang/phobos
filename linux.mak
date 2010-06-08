@@ -132,7 +132,7 @@ STD_MODULES = $(addprefix std/, algorithm all array base64 bigint		\
 # Other D modules that aren't under std/
 EXTRA_MODULES := $(addprefix std/c/, stdarg stdio) $(addprefix etc/c/,	\
         zlib) $(addprefix std/internal/math/, biguintcore biguintnoasm  \
-        biguintx86 )
+        biguintx86)
 
 # OS-specific D modules
 EXTRA_MODULES_POSIX := $(addprefix std/c/linux/, linux socket)
@@ -191,6 +191,13 @@ unittest : $(addsuffix $(DOTEXE),$(addprefix $(ROOT)/unittest/,$(D_MODULES)))
 endif
 
 ################################################################################
+
+# Remove the bigint line after the bug is fixed
+std/all.d : $(MAKEFILE)
+	@echo module std.all\;\\n \
+		$(addprefix public import ,$(addsuffix \;\\n,$(STD_MODULES))) | \
+		sed -e 's|/|.|' -e '/public import std\.all/d' \
+			-e 's|\(public import std\.bigint;\)|// \1|' >$@
 
 $(ROOT)/%$(DOTOBJ) : %.c
 	@[ -d $(dir $@) ] || mkdir -p $(dir $@) || [ -d $(dir $@) ]
