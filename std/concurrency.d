@@ -69,14 +69,14 @@ struct Tid
     {
         _send( this, vals );
     }
-    
+
 
 private:
     this( MessageBox m )
     {
         mbox = m;
     }
-    
+
 
     MessageBox  mbox;
 }
@@ -105,13 +105,13 @@ Tid spawn(T...)( void function(T) fn, T args )
 {
     // TODO: MessageList and &exec should be shared.
     auto tid = Tid( new MessageBox );
-    
+
     void exec()
     {
         mbox = tid.mbox;
         fn( args );
     }
-    
+
     auto t = new Thread( &exec );
 
     t.start();
@@ -148,7 +148,7 @@ private void _send(T...)( Tid tid, T vals )
     {
         // TODO: This should be shared.
         Wrap* wrap = cast(Wrap*) (new void[Wrap.sizeof]).ptr;
-        
+
         foreach( i, e; vals )
             wrap.field[i] = e;
         tid.mbox.put( Variant( wrap ) );
@@ -237,14 +237,19 @@ private bool _receive(T...)( T ops )
                 op( val );
                 return true;
             }
-            static if( Variant.allowed!(Vals) )
+            else static if( Variant.allowed!(Vals) )
             {
                 if( val.convertsTo!(Vals) )
                 {
                     static if( is( ReturnType!(t) == bool ) )
+                    {
                         return op( val.get!(Vals).expand );
-                    op( val.get!(Vals).expand );
-                    return true;
+                    }
+                    else
+                    {
+                        op( val.get!(Vals).expand );
+                        return true;
+                    }
                 }
             }
             else
@@ -260,7 +265,7 @@ private bool _receive(T...)( T ops )
         }
         return false;
     }
-    
+
     static if( isImplicitlyConvertible!(T[0], long) )
     {
         return mbox.get( ops[0], &get );
@@ -289,7 +294,7 @@ enum OnCrowding
  */
 void setMaxMailboxSize( Tid tid, size_t messages, OnCrowding doThis )
 {
-    
+
 }
 
 
@@ -298,7 +303,7 @@ void setMaxMailboxSize( Tid tid, size_t messages, OnCrowding doThis )
  */
 void setMaxMailboxSize( Tid tid, size_t messages, bool function(Tid) onCrowdingDoThis )
 {
-    
+
 }
 
 
@@ -320,8 +325,8 @@ private
             m_sharedLock = new Mutex;
             m_sharedRecv = new Condition( m_sharedLock );
         }
-    
-    
+
+
     private:
         final void put( T val )
         {
@@ -331,16 +336,16 @@ private
                 m_sharedRecv.notify();
             }
         }
-    
-    
+
+
         final void get( scope bool delegate(T) op )
         {
             if( m_local.get( op ) )
                 return;
             while( true )
-            { 
+            {
                 ListT newvals;
-        
+
                 synchronized( m_sharedLock )
                 {
                     while( m_shared.isEmpty )
@@ -352,8 +357,8 @@ private
                 if( ok ) return;
             }
         }
-        
-        
+
+
         final bool get( scope bool delegate(T) op, long period )
         in
         {
@@ -364,9 +369,9 @@ private
             if( m_local.get( op ) )
                 return true;
             while( true )
-            { 
+            {
                 ListT newvals;
-        
+
                 synchronized( m_sharedLock )
                 {
                     while( m_shared.isEmpty )
@@ -381,8 +386,8 @@ private
                 if( ok ) return true;
             }
         }
-    
-    
+
+
     private:
         alias List!(T) ListT;
 
@@ -391,16 +396,16 @@ private
         Mutex       m_sharedLock;
         Condition   m_sharedRecv;
     }
-    
-    
+
+
     struct List(T)
-    {    
+    {
         void put( T val )
         {
             put( new Node( val ) );
         }
-    
-    
+
+
         void put( ref List!(T) rhs )
         {
             if( !rhs.isEmpty )
@@ -412,12 +417,12 @@ private
                 rhs.m_last = null;
             }
         }
-    
-    
+
+
         bool get( scope bool delegate(T) op )
         {
             Node* n = cast(Node*) &m_first;
-        
+
             for( ; n.next; n = n.next )
             {
                 if( op( n.next.val ) )
@@ -434,27 +439,27 @@ private
             }
             return false;
         }
-    
-    
+
+
         bool isEmpty()
         {
             return m_first is null;
         }
-    
+
 
     private:
         struct Node
         {
             Node*   next;
             T       val;
-        
+
             this( T v )
             {
                 val = v;
             }
         }
-    
-    
+
+
         void put( Node* n )
         {
             if( !isEmpty )
@@ -466,8 +471,8 @@ private
             m_first = n;
             m_last = n;
         }
-    
-    
+
+
         Node* m_first;
         Node* m_last;
     }
@@ -478,20 +483,21 @@ version( unittest )
 {
     void testfn( Tid tid )
     {
-        receive( (float val) { writefln( "got float: %s", val ); },
-                 (int val, int val2) { writefln( "got int: %s, %s", val, val2 ); } );
-        receive( (Tuple!(int, int) val) { writefln( "got tuple: %s", val ); } );
-        receive( (Variant val) { writefln( "got something: %s", val ); } );
+        receive( (float val) { assert(0); },
+                (int val, int val2) { assert(val == 42 && val2 == 86); } );
+        receive( (Tuple!(int, int) val) { assert(val.field[0] == 42
+                            && val.field[1] == 86 ); } );
+        receive( (Variant val) {  } );
         receive( (string val)
                  {
                      if( "the quick brown fox" != val )
                          return false;
-                     writefln( "matched string: %s", val );
                      return true;
                  },
                  (string val)
                  {
                      writefln( "got string: %s", val );
+                     assert(0);
                  } );
         send( tid, "done" );
     }
@@ -505,6 +511,6 @@ version( unittest )
         send( tid, tuple(42, 86) );
         send( tid, "hello", "there" );
         send( tid, "the quick brown fox" );
-        receive( (string val) { writefln( "spawned thread returned: %s", val ); } );
+        receive( (string val) { assert(val == "done"); } );
     }
 }
