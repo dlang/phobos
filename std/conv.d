@@ -4,7 +4,9 @@
 A one-stop shop for converting values from one type to another.
 
 Copyright: Copyright Digital Mars 2007 - 2009.
-License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+
+License:   $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
+
 Authors:   $(WEB digitalmars.com, Walter Bright),
            $(WEB erdani.org, Andrei Alexandrescu),
            Shin Fujishiro,
@@ -45,11 +47,13 @@ class ConvError : Error
     // }
 }
 
-private void conv_error(S, T)(S source)
+private void conv_error(S, T, string f = __FILE__, uint ln = __LINE__)
+(S source)
 {
     throw new ConvError(cast(string)
-                        ("Can't convert value `"~to!(string)(source)~"' of type "
-                         ~S.stringof~" to type "~T.stringof));
+            ("std.conv("~to!string(ln)
+                    ~"): Can't convert value `"~to!(string)(source)~"' of type "
+                    ~S.stringof~" to type "~T.stringof));
 }
 
 /**
@@ -155,8 +159,8 @@ Converts array (other than strings) to string. The left bracket,
 separator, and right bracket are configurable. Each element is
 converted by calling $(D to!T).
  */
-T to(T, S)(S s, in T leftBracket = "", in T separator = " ",
-    in T rightBracket = "")
+T to(T, S)(S s, in T leftBracket = "[", in T separator = " ",
+    in T rightBracket = "]")
 if (isSomeString!(T) && !isSomeString!(S) && isArray!(S))
 {
     alias Unqual!(typeof(T.init[0])) Char;
@@ -186,10 +190,10 @@ unittest
     long[] b = [ 1, 3, 5 ];
     auto s = to!string(b);
     //printf("%d, |%*s|\n", s.length, s.length, s.ptr);
-    assert(to!string(b) == "1 3 5", s);
+    assert(to!string(b) == "[1 3 5]", s);
     double[2] a = [ 1.5, 2.5 ];
     //writeln(to!string(a));
-    assert(to!string(a) == "1.5 2.5");
+    assert(to!string(a) == "[1.5 2.5]");
 }
 
 /**
@@ -696,9 +700,11 @@ unittest
 Associative array to associative array conversion converts each key
 and each value in turn.
  */
-T to(T : V2[K2], S : V1[K1], K1, V1, K2, V2)(S src)
-//if (isAssociativeArray!(S) && isAssociativeArray!(T))
+T to(T, S)(S src)
+if (isAssociativeArray!(S) && isAssociativeArray!(T))
 {
+    alias typeof(T.keys[0]) K2;
+    alias typeof(T.values[0]) V2;
     T result;
     foreach (k1, v1; src)
     {
@@ -708,13 +714,13 @@ T to(T : V2[K2], S : V1[K1], K1, V1, K2, V2)(S src)
 }
 
 unittest {
-    // hash to hash conversions
+    //hash to hash conversions
     int[string] a;
     a["0"] = 1;
     a["1"] = 2;
     auto b = to!(double[dstring])(a);
     assert(b["0"d] == 1 && b["1"d] == 2);
-    // hash to string conversion
+    //hash to string conversion
     assert(to!(string)(a) == "[0:1, 1:2]");
 }
 
@@ -882,7 +888,7 @@ unittest {
     // test array to string conversion
     foreach (T ; AllNumerics) {
         auto a = [to!(T)(1), 2, 3];
-        assert(to!(string)(a) == "1 2 3");
+        assert(to!(string)(a) == "[1 2 3]");
     }
     // test enum to int conversion
     // enum Testing { Test1, Test2 };
@@ -961,7 +967,7 @@ if (isSomeString!Source && isIntegral!Target)
         auto result = cast(Target) v;
         if (result != v)
         {
-            conv_error!(Source, Target)(s); 
+            conv_error!(Source, Target)(s);
         }
         return result;
     }
@@ -1132,8 +1138,8 @@ if (isSomeString!Source && isFloatingPoint!Target)
     char sz[80] = void;
     enforce(len < sz.length);
     foreach (i; 0 .. len) sz[i] = s[i];
-    sz[len] = 0;  
-    
+    sz[len] = 0;
+
 //     //writefln("toFloat('%s')", s);
 //     auto sz = toStringz(to!(const char[])(s));
 //     if (std.ctype.isspace(*sz))
@@ -1152,7 +1158,9 @@ if (isSomeString!Source && isFloatingPoint!Target)
     else
         static assert(false);
     if (getErrno() == ERANGE)
+    {
         goto Lerr;
+    }
     assert(endptr);
     if (endptr == sz.ptr)
     {
@@ -1169,7 +1177,7 @@ if (isSomeString!Source && isFloatingPoint!Target)
 // Target parse(Target, Source)(ref Source s)
 // if (isSomeString!Source && isSomeString!Target)
 // {
-    
+
 // }
 
 unittest
@@ -1201,9 +1209,9 @@ if (isSomeString!Source && is(Target == typedef))
 //             alias uint N1;
 //         auto v = parseIntegral!(S, N1)(s);
 //         auto result = cast(N) v;
-//         if (result != v) 
+//         if (result != v)
 //         {
-//             ConvError.raise!(S, N)(s); 
+//             ConvError.raise!(S, N)(s);
 //         }
 //         return result;
 //     }
@@ -1338,7 +1346,7 @@ unittest
 
 
 /*
-Tests for to!uint 
+Tests for to!uint
  */
 unittest
 {
@@ -2131,7 +2139,7 @@ version (none)
         ireal ir;
 
         ir = toIreal(to!string("123.45"));
-        assert(feq(cast(real)ir.re, cast(real)123.45i)); 
+        assert(feq(cast(real)ir.re, cast(real)123.45i));
 
         ir = toIreal(to!string("123.45e+82i"));
         assert(to!string(ir) == to!string(123.45e+82i));
@@ -2180,18 +2188,18 @@ version (none)
 
         // atof(s1);
         endptr = &s1[s1.length - 1];
-        r1 = strtold(s1, &endptr); 
+        r1 = strtold(s1, &endptr);
 
         // atof(s2);
         endptr = &s2[s2.length - 1];
-        r2 = strtold(s2, &endptr); 
+        r2 = strtold(s2, &endptr);
 
         cf = cast(cfloat)(r1 + (r2 * 1.0i));
 
-        //writefln( "toCfloat() r1=%g, r2=%g, cf=%g, max=%g", 
+        //writefln( "toCfloat() r1=%g, r2=%g, cf=%g, max=%g",
         //           r1, r2, cf, cfloat.max);
-        // Currently disabled due to a posted bug where a 
-        // complex float greater-than compare to .max compares 
+        // Currently disabled due to a posted bug where a
+        // complex float greater-than compare to .max compares
         // incorrectly.
         //if (cf > cfloat.max)
         //    goto Loverflow;
@@ -2224,7 +2232,7 @@ version (none)
 
         // nan ( nan+nani )
         cf = toCfloat("nani");
-        //writefln("toCfloat() cf=%g, cf=\"%s\", nan=%s", 
+        //writefln("toCfloat() cf=%g, cf=\"%s\", nan=%s",
         //         cf, to!string(cf), to!string(cfloat.nan));
         assert(to!string(cf) == to!string(cfloat.nan));
 
@@ -2259,7 +2267,7 @@ version (none)
 
         // atof(s1);
         endptr = &s1[s1.length - 1];
-        r1 = strtold(s1, &endptr); 
+        r1 = strtold(s1, &endptr);
 
         // atof(s2);
         endptr = &s2[s2.length - 1];
@@ -2334,13 +2342,13 @@ version (none)
 
         // atof(s1);
         endptr = &s1[s1.length - 1];
-        r1 = strtold(s1, &endptr); 
+        r1 = strtold(s1, &endptr);
 
         // atof(s2);
         endptr = &s2[s2.length - 1];
         r2 = strtold(s2, &endptr); //atof(s2);
 
-        //writefln("toCreal() r1=%g, r2=%g, s1=\"%s\", s2=\"%s\", nan=%g", 
+        //writefln("toCreal() r1=%g, r2=%g, s1=\"%s\", s2=\"%s\", nan=%g",
         //          r1, r2, s1, s2, creal.nan);
 
         if (s1 =="nan" && s2 == "nani")
@@ -2348,8 +2356,8 @@ version (none)
         else if (r2 != 0.0)
             cr = cast(creal)(r1 + (r2 * 1.0i));
         else
-            cr = cast(creal)(r1 + 0.0i);    
-    
+            cr = cast(creal)(r1 + 0.0i);
+
         return cr;
 
       Lerr:
@@ -2573,11 +2581,11 @@ if (std.typetuple.staticIndexOf!(Unqual!S, uint, ulong) >= 0 && isSomeString!T)
         enum maxlength = S.sizeof * 3;
     else
         auto maxlength = (value > uint.max ? S.sizeof : uint.sizeof) * 3;
- 
+
     Char[] result;
     if (__ctfe)
         result = new Char[maxlength];
-    else 
+    else
         result = cast(Char[])
             GC.malloc(Char.sizeof * maxlength, GC.BlkAttr.NO_SCAN)
             [0 .. Char.sizeof * maxlength];
@@ -2815,10 +2823,10 @@ body
 {
     char[value.sizeof * 8] buffer;
     uint i = buffer.length;
-    
+
     if (value < radix && value < hexdigits.length)
         return hexdigits[cast(size_t)value .. cast(size_t)value + 1];
-    
+
     do
     {
         ubyte c;
@@ -3152,7 +3160,7 @@ template literalIsUnsigned(string num) {
         // can be xxL or xxLu according to spec
 		enum literalIsUnsigned = (num[$-1] == 'u' || num[$-2] == 'u')
             // both cases are allowed too
-            || (num[$-1] == 'U' || num[$-2] == 'U'); 
+            || (num[$-1] == 'U' || num[$-2] == 'U');
 	else
         enum literalIsUnsigned = false;
 }
@@ -3214,14 +3222,14 @@ not required.
 bool isOctalLiteralString(string num) {
 	if (num.length == 0)
 		return false;
-    
+
 	// Must start with a number. To avoid confusion, literals that
     // start with a '0' are not allowed
     if (num[0] == '0' && num.length > 1)
         return false;
 	if (num[0] < '0' || num[0] > '7')
 		return false;
-	
+
 	foreach (i, c; num) {
 		if ((c < '0' || c > '7') && c != '_') // not a legal character
 			if (i < num.length - 2)
@@ -3272,8 +3280,8 @@ T octal(T, string num)() {
 	if (s < '0' || s > '7') // we only care about digits; skip the rest
         // safe to skip - this is checked out in the assert so these
         // are just suffixes
-		continue; 
-	
+		continue;
+
 	value += pow * (s - '0');
 	pow *= 8;
   }
@@ -3332,8 +3340,8 @@ unittest
     // should not fit in the int
     static assert(!__traits(compiles, a = octal!"20000000000"));
     // ... but should fit in a long
-    static assert(__traits(compiles, b = octal!"20000000000")); 
-    
+    static assert(__traits(compiles, b = octal!"20000000000"));
+
     static assert(!__traits(compiles, a = octal!"1L"));
 
     // this should pass, but it doesn't, since the int converter
@@ -3344,3 +3352,89 @@ unittest
     static assert(__traits(compiles, b = octal!"1L"));
     static assert(__traits(compiles, b = octal!1L));
 }
+
+T to(T, S)(S src) if (is(T == struct) && is(typeof(T(src))))
+{
+    return T(src);
+}
+
+// Bugzilla 3961
+unittest
+{
+    struct Int { int x; }
+    Int i = to!Int(1);
+}
+
+// emplace
+/**
+Given a raw memory area $(D chunk), constructs an object of type $(D
+T) at that address. The constructor is passed the arguments $(D
+Args). The $(D chunk) must be as least as large as $(D T) needs and
+should have an alignment multiple of $(D T)'s alignment.
+
+This function can be $(D @trusted) if the corresponding constructor of
+$(D T) is $(D @safe).
+
+Returns: A pointer to the newly constructed object.
+ */
+T* emplace(T, Args...)(void[] chunk, Args args) if (!is(T == class))
+{
+    enforce(chunk.length >= T.sizeof);
+    auto a = cast(size_t) chunk.ptr;
+    enforce(a % T.alignof == 0);
+    auto result = cast(typeof(return)) chunk.ptr;
+
+    static void initialize(void * p)
+    {
+        static init = T.init;
+        memcpy(p, &init, T.sizeof);
+    }
+
+    static if (is(typeof(result.__ctor(args))))
+    {
+        // T defines a genuine constructor accepting args
+        // Go the classic route: write .init first, then call ctor
+        initialize(chunk.ptr);
+        result.__ctor(args);
+    }
+    else static if (Args.length == 1)
+    {
+        // T doesn't define a constructor, must be a primitive type
+        static if (is(typeof(result.opAssign(args))))
+        {
+            static init = T.init;
+            memcpy(p, &init, T.sizeof);
+        }
+        *result = args[0];
+    }
+    else static if (Args.length == 0)
+    {
+        // Just initialize the thing
+        initialize(chunk.ptr);
+    }
+    else
+    {
+        static assert(false, "Don't know how to initialize an object of type "
+                ~ T.stringof ~ " with arguments " ~ Args.stringof);
+    }
+    return result;
+}
+
+unittest
+{
+    int a;
+    int b = 42;
+    assert(*emplace!int((cast(void*) &a)[0 .. int.sizeof], b) == 42);
+
+    struct S
+    {
+        double x = 5, y = 6;
+        this(int a, int b) { assert(x == 5 && y == 6); x = a; y = b; }
+    }
+
+    auto s1 = new void[S.sizeof];
+    auto s2 = S(42, 43);
+    assert(*emplace!S(s1, s2) == s2);
+    assert(*emplace!S(s1, 44, 45) == S(44, 45));
+}
+
