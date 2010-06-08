@@ -108,7 +108,7 @@ SRCS= std\math.d std\stdio.d std\dateparse.d std\date.d std\uni.d std\string.d \
 	std\complex.d \
 	std\process.d \
 	std\system.d \
-	std\iterator.d std\encoding.d std\variant.d \
+	std\encoding.d std\variant.d \
 	std\stream.d std\socket.d std\socketstream.d \
 	std\perf.d std\conv.d \
 	std\zip.d std\cstream.d std\loader.d \
@@ -164,7 +164,6 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_gc.html \
 	$(DOC)\std_getopt.html \
 	$(DOC)\std_intrinsic.html \
-	$(DOC)\std_iterator.html \
 	$(DOC)\std_json.html \
 	$(DOC)\std_math.html \
 	$(DOC)\std_md5.html \
@@ -228,7 +227,7 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
 	std\signals.d std\cpuid.d std\typetuple.d std\traits.d std\bind.d \
 	std\metastrings.d std\contracts.d std\getopt.d \
 	std\variant.d std\numeric.d std\bitmanip.d std\complex.d \
-	std\functional.d std\algorithm.d std\array.d std\typecons.d std\iterator.d \
+	std\functional.d std\algorithm.d std\array.d std\typecons.d \
 	std\json.d std\xml.d std\encoding.d std\bigint.d std\concurrency.d \
 	std\range.d std\stdiobase.d \
 	std\regex.d std\datebase.d \
@@ -249,7 +248,7 @@ SRC_STD_C_WIN= std\c\windows\windows.d std\c\windows\com.d \
 SRC_STD_C_LINUX= std\c\linux\linux.d \
 	std\c\linux\socket.d std\c\linux\pthread.d std\c\linux\termios.d \
 	std\c\linux\tipc.d
-	
+
 SRC_STD_C_OSX= std\c\osx\socket.d
 
 SRC_STD_INTERNAL_MATH= std\internal\math\biguintcore.d \
@@ -340,7 +339,7 @@ bitmanip.obj : std\bitmanip.d
 
 boxer.obj : std\boxer.d
 	$(DMD) -c $(DFLAGS) std\boxer.d
-	
+
 concurrency.obj : std\concurrency.d
 	$(DMD) -c $(DFLAGS) std\concurrency.d
 
@@ -388,9 +387,6 @@ functional.obj : std\functional.d
 
 getopt.obj : std\getopt.d
 	$(DMD) -c $(DFLAGS) std\getopt.d
-
-iterator.obj : std\iterator.d
-	$(DMD) -c $(DFLAGS) std\iterator.d
 
 json.obj : std\json.d
 	$(DMD) -c $(DFLAGS) std\json.d
@@ -487,7 +483,7 @@ Dzlib.obj : std\zlib.d
 
 zip.obj : std\zip.d
 	$(DMD) -c $(DFLAGS) std\zip.d
-	
+
 bigint.obj : std\bigint.d
 	$(DMD) -c $(DFLAGS) std\bigint.d
 
@@ -617,9 +613,6 @@ $(DOC)\std_gc.html : $(STDDOC) $(DRUNTIME)\src\core\memory.d
 
 $(DOC)\std_getopt.html : $(STDDOC) std\getopt.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_getopt.html $(STDDOC) std\getopt.d
-
-$(DOC)\std_iterator.html : $(STDDOC) std\iterator.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_iterator.html $(STDDOC) std\iterator.d
 
 $(DOC)\std_intrinsic.html : $(STDDOC) std\intrinsic.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_intrinsic.html $(STDDOC) std\intrinsic.d
