@@ -69,7 +69,7 @@
  *      string instead.)
  * )
  * </table>
- * 
+ *
  * Any other $ are left as is.
  *
  * References:
@@ -256,7 +256,7 @@ string sub(string s, string pattern, string delegate(RegExp) dg, string attribut
         if (r.attributes & RegExp.REA.global &&     // global, so replace all
                 !(r.attributes & RegExp.REA.ignoreCase) &&  // not ignoring case
                 !(r.attributes & RegExp.REA.multiline) &&   // not multiline
-                pattern == slice)               // simple pattern (exact match, no special characters) 
+                pattern == slice)               // simple pattern (exact match, no special characters)
         {
             debug(regexp)
                      printf("pattern: %.*s, slice: %.*s, replacement: %.*s\n",pattern,result[offset + so .. offset + eo],replacement);
@@ -341,7 +341,7 @@ unittest
 /**
    Returns:
 
-   Same as $(D_PARAM find(s, RegExp(pattern, attributes))). 
+   Same as $(D_PARAM find(s, RegExp(pattern, attributes))).
 
    WARNING:
 
@@ -425,7 +425,7 @@ unittest
 /*************************************************
 Returns:
 
-  Same as $(D_PARAM rfind(s, RegExp(pattern, attributes))). 
+  Same as $(D_PARAM rfind(s, RegExp(pattern, attributes))).
 
 WARNING:
 
@@ -676,7 +676,7 @@ class RegExp
             msg = ree.toString();
             //writefln("message: %s", ree);
         }
-        assert(indexOf(msg, "unrecognized attribute") >= 0);
+        assert(std.algorithm.indexOf(msg, "unrecognized attribute") >= 0);
     }
 
     /************************************
@@ -772,7 +772,7 @@ class RegExp
 
        Scheduled for deprecation due to confusion with overloaded
        $(D_PARAM match(string)). Instead of $(D_PARAM regex.match(n))
-       you may want to use $(D_PARAM regex[n]). 
+       you may want to use $(D_PARAM regex[n]).
     */
     public string match(size_t n)
     {
@@ -1032,7 +1032,7 @@ private:
         j = join(result, ",");
         i = std.string.cmp(j, "ab");
         assert(i == 0);
-    
+
         result = r.match("ac");
         j = join(result, ",");
         i = std.string.cmp(j, "ac");
@@ -1159,7 +1159,7 @@ private:
             if (attributes & REA.global &&      // global, so replace all
                     !(attributes & REA.ignoreCase) &&   // not ignoring case
                     !(attributes & REA.multiline) &&    // not multiline
-                    pattern == slice &&         // simple pattern (exact match, no special characters) 
+                    pattern == slice &&         // simple pattern (exact match, no special characters)
                     format == replacement)      // simple format, not $ formats
             {
                 debug(regexp)
