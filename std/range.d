@@ -30,7 +30,7 @@ import std.functional;
 import std.conv;
 version(unittest)
 {
-    import std.conv, std.math, std.stdio;
+    import std.container, std.conv, std.math, std.stdio;
 }
 
 /**
@@ -149,7 +149,8 @@ template isForwardRange(R)
     enum bool isForwardRange = isInputRange!(R) && is(typeof(
     {
         R r1;
-        R r2 = r1;           // can copy a range object
+        R r2 = r1.save;           // can call "save" against a range
+                                  // object
     }()));
 }
 
@@ -201,11 +202,12 @@ unittest
     static assert(!isBidirectionalRange!(B));
     struct C
     {
+        @property bool empty();
+        @property C save();
         void popFront();
-        bool empty();
-        int front();
+        @property int front();
         void popBack();
-        int back();
+        @property int back();
     }
     static assert(isBidirectionalRange!(C));
     static assert(isBidirectionalRange!(int[]));
@@ -262,11 +264,12 @@ unittest
     static assert(!isRandomAccessRange!(C));
     struct D
     {
-        void popFront();
         bool empty();
+        @property D save();
         int front();
-        void popBack();
+        void popFront();
         int back();
+        void popBack();
         ref int opIndex(uint);
         //int opSlice(uint, uint);
     }
@@ -316,7 +319,6 @@ template hasSwappableElements(R)
     enum bool hasSwappableElements = isForwardRange!(R) && is(typeof(
     {
         R r;
-        static assert(isForwardRange!(R)); // range is forward
         swap(r.front, r.front);             // can swap elements of the range
     }()));
 }
@@ -401,7 +403,7 @@ struct InfiniteRange
 
 template isInfinite(Range)
 {
-    static if (isInputRange!(Range) && is(char[1 + Range.empty]))
+    static if (isInputRange!Range && is(char[1 + Range.empty]))
         enum bool isInfinite = !Range.empty;
     else
         enum bool isInfinite = false;
@@ -519,6 +521,14 @@ Forwards to $(D _input.empty).
     }
 
 /**
+Returns a copy of $(D this).
+ */
+    @property Retro save()
+    {
+        return Retro(_input.save);
+    }
+
+/**
 Forwards to $(D _input.popBack).
  */
     void popFront()
@@ -561,10 +571,16 @@ Forwards to $(D _input[_input.length - n + 1]). Defined only if $(D R)
 is a random access range and if $(D R) defines $(D R.length).
  */
     static if (isRandomAccessRange!(R) && hasLength!(R))
-        ref ElementType!R opIndex(uint n)
-        {
-            return _input[_input.length - n - 1];
-        }
+        static if (byRef)
+            auto ref ElementType!R opIndex(uint n)
+            {
+                return _input[_input.length - n - 1];
+            }
+        else
+            ElementType!R opIndex(uint n)
+            {
+                return _input[_input.length - n - 1];
+            }
 
 /**
 Range primitive operation that returns the length of the
@@ -660,9 +676,9 @@ Initializes the stride.
 /**
 Returns $(D this).
  */
-    Stride opSlice()
+    @property Stride save()
     {
-        return this;
+        return Stride(_input.save, _n);
     }
 
 /**
@@ -764,7 +780,6 @@ unittest
     static assert(isRandomAccessRange!(Stride!(int[])));
     void test(size_t n, int[] input, int[] witness)
     {
-        //foreach (e; stride(input, n)) writeln(e);
         assert(equal(stride(input, n), witness));
     }
     test(1, [], []);
@@ -843,6 +858,17 @@ public:
         return true;
     }
 
+    static if (allSatisfy!(isForwardRange, R))
+        ChainImpl save()
+        {
+            auto result = ChainImpl();
+            foreach (i, Unused; R)
+            {
+                result._input.field[i] = _input.field[i].save;
+            }
+            return result;
+        }
+
     void popFront()
     {
         foreach (i, Unused; R)
@@ -853,21 +879,41 @@ public:
         }
     }
 
-    //@@@BUG 2597@@@
-    //auto front()
-    //@@@AWKWARD!!!@@@
-    mixin(
-        ((allSameType && allSatisfy!(hasAssignableElements, R)) ? "ref " : "")~
-        q{ElementType front()
+    @property RvalueElementType front()
+    {
+        foreach (i, Unused; R)
+        {
+            if (_input.field[i].empty) continue;
+            return _input.field[i].front;
+        }
+        assert(false);
+    }
+
+    static if (allSatisfy!(hasAssignableElements, R))
+    {
+        // @@@BUG@@@
+        //@property void front(T)(T v) if (is(T : RvalueElementType))
+        @property void front(RvalueElementType v)
+        {
+            foreach (i, Unused; R)
             {
-                foreach (i, Unused; R)
-                {
-                    if (_input.field[i].empty) continue;
-                    return _input.field[i].front;
-                }
-                assert(false);
+                if (_input.field[i].empty) continue;
+                _input.field[i].front = v;
+                return;
             }
-        });
+            assert(false);
+        }
+    }
+
+    RvalueElementType moveFront()
+    {
+        foreach (i, Unused; R)
+        {
+            if (_input.field[i].empty) continue;
+            return .moveFront(_input.field[i]);
+        }
+        assert(false);
+    }
 
     static if (allSatisfy!(isBidirectionalRange, R))
     {
@@ -989,6 +1035,7 @@ Chain!(R) chain(R...)(R input)
     else
         return input[0];
 }
+
 unittest
 {
     {
@@ -1001,7 +1048,7 @@ unittest
         auto s2 = chain(arr1, arr2);
         static assert(isBidirectionalRange!(typeof(s2)));
         static assert(isRandomAccessRange!(typeof(s2)));
-        s2.front() = 1;
+        s2.front = 1;
         auto s = chain(arr1, arr2, arr3);
         assert(s[5] == 6);
         assert(equal(s, witness));
@@ -1189,12 +1236,10 @@ assert(s[4] == 5);
 assert(equal(s, [ 1, 2, 3, 4, 5 ][]));
 ----
  */
-
 struct Take(R) if (isInputRange!(R))
 {
-private:
-    R _input;
-    size_t _maxAvailable;
+    R original;
+    private size_t _maxAvailable;
     enum bool byRef = is(typeof(&_input.front) == ElementType!(R)*);
 
 public:
@@ -1207,28 +1252,42 @@ public:
 
     bool empty()
     {
-        return _maxAvailable == 0 || _input.empty;
+        return _maxAvailable == 0 || original.empty;
     }
+
+    static if (isForwardRange!R)
+        @property Take save()
+        {
+            return Take(original.save, _maxAvailable);
+        }
 
     void popFront()
     {
         enforce(_maxAvailable > 0,
             "Attempting to popFront() past the end of a "
             ~ Take.stringof);
-        _input.popFront;
+        original.popFront;
         --_maxAvailable;
     }
 
-    // @@@@@@@@@@@ UGLY @@@@@@@@@@@@@@@
-    mixin(
-        (byRef ? "ref " : "")~
-        q{ElementType front()
-        {
-            enforce(_maxAvailable > 0,
+    @property ElementType front()
+    {
+        enforce(_maxAvailable > 0,
                 "Attempting to fetch the front of an empty "
                 ~ Take.stringof);
-            return _input.front;
-        }});
+        return original.front;
+    }
+
+    static if (hasAssignableElements!R)
+        @property void front(ElementType v)
+        {
+            original.front = v;
+        }
+
+    ElementType moveFront()
+    {
+        return .moveFront(original);
+    }
 
     static if (isInfinite!(R))
     {
@@ -1241,7 +1300,7 @@ public:
     {
         @property size_t length()
         {
-            return min(_maxAvailable, _input.length);
+            return min(_maxAvailable, original.length);
         }
     }
 
@@ -1259,7 +1318,7 @@ public:
             (byRef ? "ref " : "")~
             q{/+auto ref+/ ElementType back()
             {
-                return _input[this.length - 1];
+                return original[this.length - 1];
             }});
     }
 
@@ -1272,17 +1331,39 @@ public:
                 enforce(index < this.length,
                     "Attempting to index out of the bounds of a "
                     ~ Take.stringof);
-                return _input[index];
+                return original[index];
             }});
     }
 
     Take opSlice() { return this; }
+
+    @property size_t maxLength() const
+    {
+        return _maxAvailable;
+    }
 }
 
 /// Ditto
-Take!(R) take(R)(R input, size_t n) if (isInputRange!(R))
+Take!(R) take(R)(R input, size_t n) if (isInputRange!R && !hasSlicing!R)
 {
     return Take!(R)(input, n);
+}
+
+/// Ditto
+auto take(R)(R input, size_t n) if (isInputRange!R && hasSlicing!R)
+{
+    static if (hasLength!R)
+    {
+        // @@@BUG@@@
+        //return input[0 .. min(n, @)];
+        return input[0 .. min(n, input.length)];
+    }
+    else
+    {
+        static assert(isInfinite!R,
+                "Nonsensical finite range with slicing but no length");
+        return input[0 .. n];
+    }
 }
 
 unittest
@@ -1385,9 +1466,9 @@ struct Repeat(T)
 {
     private T _value;
     /// Range primitive implementations.
-    ref T front() { return _value; }
+    @property ref T front() { return _value; }
     /// Ditto
-    ref T back() { return _value; }
+    @property ref T back() { return _value; }
     /// Ditto
     enum bool empty = false;
     /// Ditto
@@ -1464,7 +1545,7 @@ struct Cycle(R) if (isForwardRange!(R))
     else
     {
         R _original, _current;
-        this(R input) { _original = input; _current = input; }
+        this(R input) { _original = input; _current = input.save; }
         /// Range primitive implementations.
         ref ElementType!(R) front() { return _current.front; }
         /// Ditto
@@ -1534,143 +1615,6 @@ unittest
     auto c = cycle(a);
     assert(a.ptr == c._ptr);
     assert(equal(take(cycle(a), 5), [ 1, 2, 3, 1, 2 ][]));
-}
-
-/**
-Policy that controls whether or not a range (e.g. $(XREF range,
-SListRange)) iterating a container can modify its topology. By
-topology of a container we understand the layout of the container's
-slots and the links between them, regardless of the actual content of
-the container's elements. For example, a singly-linked list with three
-elements has the topology of three cells linked by pointers. The
-topology is not concerned with the content of the nodes, only with the
-shape of the three connected cells.
- */
-enum Topology
-{
-/** The range cannot change the container's topology (whereas it can
-    change its content). This is useful if e.g. the container must
-    control creation and destruction of its slots.
- */
-    fixed,
-/** The range can change the underlying container's structure. This is
-    useful if the range is free-floating and is not owned by any
-    container.
- */
-    flexible
-}
-
-/**
-Defines a simple and efficient singly-linked list. The list implements
-the forward range concept. By default the list has flexible topology,
-e.g. appending to it is possible.
-
-Example:
-----
-SListRange!(int, Topology.flexible) lst(2, 3);
-lst = cons(1, lst);
-assert(equal(lst, [1, 2, 3][]));
-----
- */
-struct SListRange(T, Topology topology = Topology.flexible)
-{
-private:
-    struct Node { T _value; Node * _next; }
-    Node * _root;
-
-public:
-/**
-Constructor taking an array of values.
-
-Example:
-----
-auto lst = SListRange!(int)(1, 2, 3, 4, 5);
-assert(equal(lst, [1, 2, 3, 4, 5][]));
-----
-*/
-    this(T[] values...)
-    {
-        _root = (new Node[values.length]).ptr;
-        foreach (i, e; values)
-        {
-            _root[i]._value = e;
-            if (i > 0)
-                _root[i - 1]._next = &_root[i];
-        }
-    }
-
-/**
-Range primitive operation that returns $(D true) iff there are no more
-elements to be iterated.
- */
-    bool empty() const
-    {
-        return _root is null;
-    }
-
-/**
-Range primitive operation that advances the range to its _next
-element.
- */
-    void popFront()
-    {
-        enforce(_root);
-        _root = _root._next;
-    }
-
-/**
-Range primitive operation that returns the currently iterated
-element. Forwards to $(D _input.back).
- */
-    ref T front()
-    {
-        enforce(_root);
-        return _root._value;
-    }
-
-/**
-   Returns $(D true) iff $(D this) list and $(D rhs) have the same front.
-*/
-    bool sameHead(in SListRange!(T, topology) rhs) const
-    {
-        return _root == rhs._root;
-    }
-}
-
-/**
- Prepends $(D value) to the root of the list.
- */
-SListRange!(T, t) cons(T, Topology t)(T front, SListRange!(T, t) tail)
-{
-    typeof(return) result;
-    result._root = new typeof(return).Node;
-    result._root._value = front;
-    result._root._next = tail._root;
-    return result;
-}
-
-unittest
-{
-    {
-        SListRange!(int, Topology.flexible) lst;
-        lst = cons(3, lst);
-        lst = cons(2, lst);
-        lst = cons(1, lst);
-        assert(equal(lst, [1, 2, 3][]));
-    }
-    {
-        auto lst = SListRange!(int)(1, 2, 3);
-        assert(equal(lst, [1, 2, 3][]));
-        uint i;
-        foreach (e; lst)
-        {
-            assert(e == ++i);
-        }
-    }
-    {
-        auto lst = SListRange!(int)(1, 2, 3);
-        assert(equal(lst, [1, 2, 3][]));
-    }
 }
 
 /**
@@ -1750,6 +1694,18 @@ stopping policy.
         }
         return firstRangeIsEmpty;
     }
+
+    static if (allSatisfy!(isForwardRange, R))
+        @property Zip save()
+        {
+            Zip result;
+            result.stoppingPolicy = stoppingPolicy;
+            foreach (i, Unused; R)
+            {
+                result.ranges.field[i] = ranges.field[i].save;
+            }
+            return result;
+        }
 
 /**
 Returns a proxy for the current iterated element.
@@ -2057,6 +2013,11 @@ public:
         return this._cache;
     }
 
+    ElementType moveFront()
+    {
+        return move(_cache);
+    }
+
     void popFront()
     {
         this._cache = compute(this._state, ++this._n);
@@ -2069,6 +2030,8 @@ public:
     }
 
     enum bool empty = false;
+
+    @property Sequence save() { return this; }
 }
 
 /// Ditto
@@ -2160,10 +2123,21 @@ iota(B, E)(B begin, E end)
     return iota(begin, end, 1u);
 }
 
+/// Ditto
+Take!(Sequence!("a.field[0] + n * a.field[1]",
+                Tuple!(E, uint)))
+iota(E)(E end)
+{
+    E begin = 0;
+    return iota(begin, end, 1u);
+}
+
 unittest
 {
     auto r = iota(0, 10, 1);
     assert(equal(r, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9][]));
+    auto rr = iota(10);
+    assert(equal(rr, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9][]));
     r = iota(0, -10, -1);
     assert(equal(r, [0, -1, -2, -3, -4, -5, -6, -7, -8, -9][]));
     r = iota(0, 11, 3);
@@ -2528,6 +2502,11 @@ struct Transposed(RangeOfRanges)
         return true;
     }
 
+    @property Transposed save()
+    {
+        return Transposed(_input.save);
+    }
+
     auto opSlice() { return this; }
 
 private:
@@ -2551,5 +2530,478 @@ unittest
     foreach (e; tr)
     {
         assert(array(e) == witness[i++]);
+    }
+}
+
+/**
+Moves the front of $(D r) out and returns it. Leaves $(D r.front) in a
+destroyable state that does not allocate any resources (usually equal
+to its $(D .init) value).
+ */
+ElementType!R moveFront(R)(R r)
+if (is(typeof(&r.front()) == ElementType!R*))
+{
+    return move(r.front);
+}
+
+unittest
+{
+    struct R
+    {
+        ref int front() { static int x = 42; return x; }
+    }
+    R r;
+    assert(moveFront(r) == 42);
+}
+
+/// Ditto
+ElementType!R moveFront(R)(R r)
+if (is(typeof(&R.moveFront)))
+{
+    return r.moveFront();
+}
+
+/**
+Moves the front of $(D r) out and returns it. Leaves $(D r.front) in a
+destroyable state that does not allocate any resources (usually equal
+to its $(D .init) value).
+ */
+ElementType!R moveBack(R)(R r)
+if (isInputRange!R && is(typeof(&r.front) == ElementType!R*))
+{
+    return move(r.back);
+}
+
+/// Ditto
+ElementType!R moveBack(R)(R r)
+if (isInputRange!R && is(typeof(&R.moveBack)))
+{
+    return r.moveBack();
+}
+
+/**
+Moves element at index $(D i) of $(D r) out and returns it. Leaves $(D
+r.front) in a destroyable state that does not allocate any resources
+(usually equal to its $(D .init) value).
+ */
+ElementType!R moveAt(R)(R r, size_t i)
+if (is(typeof(&r[i]) == ElementType!R*))
+{
+    return move(r[i]);
+}
+
+/// Ditto
+ElementType!R moveAt(R)(R r, size_t i)
+if (is(typeof(&R.moveAt)))
+{
+    return r.moveAt(i);
+}
+
+unittest
+{
+    auto a = [ 1, 2, 3 ];
+    assert(moveFront(a) == 1);
+    // define a perfunctory input range
+    struct InputRange
+    {
+        @property bool empty() { return false; }
+        @property int front() { return 42; }
+        void popFront() {}
+        int moveFront() { return 43; }
+    }
+    InputRange r;
+    assert(moveFront(r) == 43);
+}
+
+// BinaryHeap
+/**
+Implements a $(WEB en.wikipedia.org/wiki/Binary_heap, binary heap)
+range on top of a given random-access range type (usually $(D T[])) or
+a random-access container type (usually $(D Array!T)). The binary heap
+induces structure over the underlying store such that accessing the
+largest element is a $(BIGOH 1) operation and extracting it is done
+fast in $(BIGOH log n) time. (If $(D less) is the less-than operator -
+the default - then $(D BinaryHeap) defines a so-called max-heap. To
+define a min-heap, instantiate BinaryHeap with $(D "a > b") as its
+predicate.)
+
+Simply walking the $(D BinaryHeap) range (which is a forward range)
+amounts to lazily fetching elements of $(D Store) in descending
+order. Walking the $(D BinaryHeap) to completion leaves the underlying
+store sorted in ascending order but, again, yields elements in
+descending order.
+
+If $(D Store) is a range, the $(D BinaryHeap) cannot grow beyond the
+size of that range. If $(D Store) is a container, the $(D BinaryHeap)
+may grow by adding elements to the container.
+
+Example:
+----
+int[] a = [ 4, 1, 3, 2, 16, 9, 10, 14, 8, 7 ];
+auto h = heapify(a);
+assert(equal(h, [ 16, 14, 10, 9, 8, 7, 4, 3, 2, 1 ]));
+assert(equal(a, [ 1, 2, 3, 4, 7, 8, 9, 10, 14, 16 ]));
+----
+ */
+struct BinaryHeap(Store, alias less = "a < b")
+if (isRandomAccessRange!(Store) || isRandomAccessRange!(Store[]))
+{
+// Really weird @@BUG@@: if you comment out the "private:" label below,
+// std.algorithm can't unittest anymore
+
+//private:
+    private size_t _length;
+    private Store _store;
+    private alias binaryFun!(less) comp;
+
+    private void assertValid()
+    {
+        debug
+        {
+            if (_length < 2) return;
+            for (size_t n = _length - 1; n >= 1; --n)
+            {
+                auto parentIdx = (n - 1) / 2;
+                assert(!comp(_store[parentIdx], _store[n]), text(n));
+            }
+        }
+    }
+
+    private void percolateDown(Store r, size_t i, size_t length)
+    {
+        for (;;)
+        {
+            auto left = i * 2 + 1, right = left + 1;
+            if (right == length)
+            {
+                if (comp(r[i], r[left])) swap(r, i, left);
+                return;
+            }
+            if (right > length) return;
+            assert(left < length && right < length);
+            auto largest = comp(r[i], r[left])
+                ? (comp(r[left], r[right]) ? right : left)
+                : (comp(r[i], r[right]) ? right : i);
+            if (largest == i) return;
+            swap(r, i, largest);
+            i = largest;
+        }
+    }
+
+    // @@@BUG@@@: add private here, std.algorithm doesn't unittest anymore
+    /*private*/ void pop(Store store)
+    {
+        assert(!store.empty);
+        if (store.length == 1) return;
+        auto t1 = moveFront(store[]);
+        auto t2 = moveBack(store[]);
+        store.front = move(t2);
+        store.back = move(t1);
+        percolateDown(store, 0, store.length - 1);
+    }
+
+    /*private*/ static void swap(Store _store, size_t i, size_t j)
+    {
+        static if (is(typeof(swap(_store[i], _store[j]))))
+        {
+            swap(_store[i], _store[j]);
+        }
+        else static if (is(typeof(_store.moveAt(i))))
+        {
+            auto t1 = _store.moveAt(i);
+            auto t2 = _store.moveAt(j);
+            _store[i] = move(t2);
+            _store[j] = move(t1);
+        }
+        else // assume it's a container and access its range with []
+        {
+            auto t1 = _store[].moveAt(i);
+            auto t2 = _store[].moveAt(j);
+            _store[i] = move(t2);
+            _store[j] = move(t1);
+        }
+    }
+
+public:
+/**
+Converts the range $(D r) into a heap. If $(D initialSize) is
+specified, only the first $(D initialSize) elements in $(D r) are
+transformed into a heap, after which the heap can grow up to $(D
+r.length). Performs $(BIGOH min(r.length, initialSize)) evaluations of
+$(D less).
+ */
+    this(Store r, size_t initialSize = size_t.max)
+    {
+        acquire(r, initialSize);
+    }
+
+/**
+Takes ownership of a range.
+ */
+    void acquire(Store r, size_t initialSize = size_t.max)
+    {
+        _store = move(r);
+        _length = min(_store.length, initialSize);
+        if (_length < 2) return;
+        for (auto i = (_length - 2) / 2; ; )
+        {
+            this.percolateDown(_store, i, _length);
+            if (i-- == 0) break;
+        }
+        assertValid;
+    }
+
+/**
+Takes ownership of a range assuming it already was organized as a
+heap.
+ */
+    void assume(Store r, size_t initialSize = size_t.max)
+    {
+        _store = r;
+        _length = min(_store.length, initialSize);
+        assertValid;
+    }
+
+/**
+Clears the heap. Returns the portion of the store that satisfies the
+$(LUCKY heap property).
+ */
+    auto release()
+    {
+        auto result = _store[0 .. _length];
+        _store = Store.init;
+        _length = 0;
+        return result;
+    }
+
+/**
+Adds one element to the heap. If the length of the heap grows beyond
+the length of the range that the heap was associated with, a new range
+is allocated.
+ */
+    void put(ElementType!Store value)
+    {
+        if (_length == _store.length)
+        {
+            static if (is(_store.insertBack(value)))
+            {
+                // reallocate
+                _store.insertBack(value);
+            }
+            else
+            {
+                // can't grow
+                enforce(false, "Cannot grow a heap created over a range");
+            }
+        }
+        else
+        {
+            // no reallocation
+            _store[_length] = value;
+        }
+        // sink down the element
+        for (size_t n = _length; n; )
+        {
+            auto parentIdx = (n - 1) / 2;
+            if (!comp(_store[parentIdx], _store[n])) break; // done!
+            // must swap and continue
+            swap(_store, parentIdx, n);
+            n = parentIdx;
+        }
+        ++_length;
+        assertValid;
+    }
+
+/// ditto
+    alias put push;
+
+/**
+If $(D this.length < this.capacity), call $(D this.push(value)).
+Otherwise, if $(D less(value, this.top)), replace $(D this.top) with
+$(D value) and adjust the heap to maintain the heap property. This
+function is useful in scenarios where the largest $(D N) of a large
+set of candidates must be remembered.
+
+Returns: $(D true) if $(D value) was put in the heap, $(D false)
+otherwise.
+ */
+    bool conditionalPut(ElementType!Store value)
+    {
+        if (_length < _store.length)
+        {
+            put(value);
+            return true;
+        }
+        // must replace the top
+        assert(!_store.empty);
+        if (!comp(value, _store.front)) return false; // value >= largest
+        _store.front = value;
+        percolateDown(_store, 0, _length);
+        assertValid;
+        return true;
+    }
+
+    @property bool empty() const
+    {
+        return _length == 0;
+    }
+
+    @property BinaryHeap save()
+    {
+        return this;
+    }
+
+    // @@@BUG@@@ Revert the order of the following two functions and
+    // you'll have a unittest error in std.algorithm
+/**
+Get the _top element (the largest according to the predicate $(D
+less)).
+ */
+    @property ElementType!Store front()
+    {
+        assert(_length);
+        return _store.front;
+    }
+
+/**
+Replaces the top of the heap (the largest element in the heap) with
+$(D value).
+ */
+    @property void front(ElementType!Store value)
+    {
+        // must replace the top
+        assert(!_store.empty);
+        _store.front = value;
+        percolateDown(_store, 0, _length);
+        assertValid;
+    }
+
+/**
+Pops the largest element (according to the predicate $(D less)).
+ */
+    void popFront()
+    {
+        enforce(_length);
+        if (_length > 1)
+        {
+            auto t1 = moveFront(_store[]);
+            auto t2 = moveAt(_store[], _length - 1);
+            _store.front = move(t2);
+            _store[_length - 1] = move(t1);
+        }
+        --_length;
+        percolateDown(_store, 0, _length);
+    }
+
+/**
+Pops the $(D n) largest elements (according to the predicate $(D
+less)) and returns a range containing them (which is in fact a
+subrange of the heap's underlying range). The returned range is sorted
+in increasing order by $(D less), and after the call the heap does not
+contain those elements anymore. If $(D n >= this.length), the entire
+heap is sorted and returned.
+ */
+    auto pop(size_t n)
+    {
+        immutable size_t newSize = n >= _length
+            ? (n = _length, 0)
+            : _length - n;
+        auto result = _store[newSize .. _length];
+        while  (_length > newSize)
+        {
+            auto t1 = moveFront(_store[]);
+            auto t2 = moveAt(_store[], _length - 1);
+            _store.front = move(t2);
+            _store[_length - 1] = move(t1);
+            --_length;
+            percolateDown(_store, 0, _length);
+        }
+        return result;
+    }
+
+/**
+Returns the _length of the heap.
+ */
+    @property size_t length() const
+    {
+        return _length;
+    }
+
+/**
+Returns the length of the range underlying the heap.
+ */
+    size_t capacity()
+    {
+        return _store.length;
+    }
+}
+
+auto heapify(Store)(Store s, size_t initialSize = size_t.max)
+{
+    return BinaryHeap!Store(s, initialSize);
+}
+
+unittest
+{
+    {
+        // example from "Introduction to Algorithms" Cormen et al., p 146
+        int[] a = [ 4, 1, 3, 2, 16, 9, 10, 14, 8, 7 ];
+        auto h = heapify(a);
+        //makeBinaryHeap!(binaryFun!("a < b"))(a);
+        assert(a == [ 16, 14, 10, 8, 7, 9, 3, 2, 4, 1 ]);
+        assert(equal(h, [ 16, 14, 10, 9, 8, 7, 4, 3, 2, 1 ]));
+    }
+    {
+        int[] a = [ 4, 1, 3, 2, 16, 9, 10, 14, 8, 7 ];
+        int[] b = new int[a.length];
+        BinaryHeap!(int[]) h = BinaryHeap!(int[])(b, 0);
+        foreach (e; a)
+        {
+            h.put(e);
+        }
+        assert(b == [ 16, 14, 10, 8, 7, 3, 9, 1, 4, 2 ], text(b));
+    }
+    {
+        int[] a = [ 4, 1, 3, 2, 16, 9, 10, 14, 8, 7 ];
+        BinaryHeap!(int[]) h = BinaryHeap!(int[])(a);
+        //makeBinaryHeap!(binaryFun!("a < b"))(a);
+        auto b = h.pop(5);
+        assert(b == [ 8, 9, 10, 14, 16 ]);
+        b = h.pop(5);
+        assert(b == [ 1, 2, 3, 4, 7 ]);
+        assert(h.length == 0);
+    }
+}
+
+// unittests for BinaryHeap instantiated with a container
+unittest
+{
+    {
+        // example from "Introduction to Algorithms" Cormen et al., p 146
+        auto a = make!(Array!int)(4, 1, 3, 2, 16, 9, 10, 14, 8, 7);
+        auto h = heapify(a);
+        //makeBinaryHeap!(binaryFun!("a < b"))(a);
+        assert(equal(a[], [ 16, 14, 10, 8, 7, 9, 3, 2, 4, 1 ]));
+        assert(equal(h, [ 16, 14, 10, 9, 8, 7, 4, 3, 2, 1 ]));
+    }
+    {
+        auto a = make!(Array!int)(4, 1, 3, 2, 16, 9, 10, 14, 8, 7);
+        int[] b = new int[a.length];
+        auto h = heapify(b, 0);
+        foreach (e; a)
+        {
+            h.put(e);
+        }
+        assert(b == [ 16, 14, 10, 8, 7, 3, 9, 1, 4, 2 ], text(b));
+    }
+    {
+        auto a = make!(Array!int)(4, 1, 3, 2, 16, 9, 10, 14, 8, 7);
+        auto h = heapify(a);
+        //makeBinaryHeap!(binaryFun!("a < b"))(a);
+        auto b = h.pop(5);
+        assert(b == [ 8, 9, 10, 14, 16 ]);
+        b = h.pop(5);
+        assert(b == [ 1, 2, 3, 4, 7 ]);
+        assert(h.length == 0);
     }
 }
