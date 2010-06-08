@@ -339,7 +339,7 @@ assert(a == [ 5, 5, 5, 5 ]);
 ----
  */
 void fill(Range, Value)(Range range, Value filler)
-if (isForwardRange!Range && is(typeof(Range.init.front = Value.init)))
+if (isForwardRange!Range && is(typeof(range.front = filler)))
 {
     for (; !range.empty; range.popFront)
     {
