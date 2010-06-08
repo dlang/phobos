@@ -110,7 +110,7 @@ SRCS= std\math.d std\stdio.d std\dateparse.d std\date.d std\uni.d std\string.d \
 	std\system.d \
 	std\encoding.d std\variant.d \
 	std\stream.d std\socket.d std\socketstream.d \
-	std\perf.d std\conv.d \
+	std\perf.d std\container.d std\conv.d \
 	std\zip.d std\cstream.d std\loader.d \
 	std\__fileinit.d \
 	std\datebase.d \
@@ -151,6 +151,7 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_compiler.html \
 	$(DOC)\std_complex.html \
 	$(DOC)\std_contracts.html \
+	$(DOC)\std_container.html \
 	$(DOC)\std_conv.html \
 	$(DOC)\std_cpuid.html \
 	$(DOC)\std_cstream.html \
@@ -214,7 +215,7 @@ DOCS=	$(DOC)\object.html \
 
 SRC=	unittest.d crc32.d phobos.d
 
-SRC_STD= std\zlib.d std\zip.d std\stdint.d std\conv.d std\utf.d std\uri.d \
+SRC_STD= std\zlib.d std\zip.d std\stdint.d std\container.d std\conv.d std\utf.d std\uri.d \
 	std\math.d std\string.d std\path.d std\date.d \
 	std\ctype.d std\file.d std\compiler.d std\system.d \
 	std\outbuffer.d std\md5.d std\base64.d \
@@ -351,6 +352,9 @@ complex.obj : std\complex.d
 
 contracts.obj : std\contracts.d
 	$(DMD) -c $(DFLAGS) std\contracts.d
+
+container.obj : std\container.d
+	$(DMD) -c $(DFLAGS) std\container.d
 
 conv.obj : std\conv.d
 	$(DMD) -c $(DFLAGS) std\conv.d
@@ -583,6 +587,9 @@ $(DOC)\std_contracts.html : $(STDDOC) std\contracts.d
 
 $(DOC)\std_conv.html : $(STDDOC) std\conv.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_conv.html $(STDDOC) std\conv.d
+
+$(DOC)\std_container.html : $(STDDOC) std\container.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_container.html $(STDDOC) std\container.d
 
 $(DOC)\std_cpuid.html : $(STDDOC) std\cpuid.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_cpuid.html $(STDDOC) std\cpuid.d
