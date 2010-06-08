@@ -447,7 +447,7 @@ $(D rawRead) always read in binary mode on Windows.
  */
     T[] rawRead(T)(T[] buffer)
     {
-        enforce(buffer.length);
+        enforce(buffer.length, "rawRead must take a non-empty buffer");
         version(Windows)
         {
             immutable fd = ._fileno(p.handle);
