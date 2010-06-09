@@ -1314,7 +1314,33 @@ unittest
  * arguments is valid and just prints a newline to the standard
  * output.
  */
+void writeln(T...)(T args) if (T.length == 0)
+{
+    enforce(fputc('\n', .stdout.p.handle) == '\n');
+}
+
+unittest
+{
+    // Just make sure the call compiles
+    if (false) writeln();
+}
+
+/// ditto
 void writeln(T...)(T args)
+if (T.length == 1 && is(typeof(args[0]) : const(char)[]))
+{
+    enforce(fprintf(.stdout.p.handle, "%*s\n",
+                    args[0].length, args[0].ptr) >= 0);
+}
+
+unittest
+{
+    if (false) writeln("wyda");
+}
+
+/// Ditto
+void writeln(T...)(T args)
+if (T.length > 1 || T.length == 1 && !is(typeof(args[0]) : const(char)[]))
 {
     stdout.write(args, '\n');
 }
