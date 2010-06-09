@@ -26,7 +26,7 @@ Parameters:
 
 A = tuple of constants, which can be strings, characters, or integral
     values.
-    
+
 Formats:
  *    The formats supported are %s for strings, and %%
  *    for the % character.
@@ -89,7 +89,10 @@ template toStringNow(ulong v)
         enum toStringNow = toStringNow!(v / 10) ~ toStringNow!(v % 10);
 }
 
-static assert(toStringNow!(1uL << 62) == "4611686018427387904");
+unittest
+{
+    static assert(toStringNow!(1uL << 62) == "4611686018427387904");
+}
 
 /// ditto
 template toStringNow(long v)
@@ -100,8 +103,11 @@ template toStringNow(long v)
         enum toStringNow = toStringNow!(cast(ulong) v);
 }
 
-static assert(toStringNow!(0x100000000) == "4294967296");
-static assert(toStringNow!(-138L) == "-138");
+unittest
+{
+    static assert(toStringNow!(0x100000000) == "4294967296");
+    static assert(toStringNow!(-138L) == "-138");
+}
 
 /// ditto
 template toStringNow(uint U)

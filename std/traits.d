@@ -22,7 +22,6 @@
 module std.traits;
 import std.typetuple;
 
-
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
 // Functions
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
@@ -95,7 +94,6 @@ private
         return Demangle!uint(atts, mstr);
     }
 }
-
 
 /***
  * Get the type of the return value from a function,
@@ -1871,11 +1869,14 @@ template isAssociativeArray(T)
         is(typeof(T.keys)) && is(typeof(T.values));
 }
 
-static assert(!isAssociativeArray!(int));
-static assert(!isAssociativeArray!(int[]));
-static assert(isAssociativeArray!(int[int]));
-static assert(isAssociativeArray!(int[string]));
-static assert(isAssociativeArray!(immutable(char[5])[int]));
+unittest
+{
+    static assert(!isAssociativeArray!(int));
+    static assert(!isAssociativeArray!(int[]));
+    static assert(isAssociativeArray!(int[int]));
+    static assert(isAssociativeArray!(int[string]));
+    static assert(isAssociativeArray!(immutable(char[5])[int]));
+}
 
 /**
  * Detect whether type T is a static array.
@@ -1890,21 +1891,24 @@ template isStaticArray(T)
     enum bool isStaticArray = false;
 }
 
-static assert (isStaticArray!(int[51]));
-static assert (isStaticArray!(int[][2]));
-static assert (isStaticArray!(char[][int][11]));
-static assert (!isStaticArray!(const(int)[]));
-static assert (!isStaticArray!(immutable(int)[]));
-static assert (!isStaticArray!(const(int)[4][]));
-static assert (!isStaticArray!(int[]));
-static assert (!isStaticArray!(int[char]));
-static assert (!isStaticArray!(int[1][]));
-static assert (isStaticArray!(immutable char[13u]));
-static assert (isStaticArray!(const(real)[1]));
-static assert (isStaticArray!(const(real)[1][1]));
-static assert (isStaticArray!(void[0]));
-static assert (!isStaticArray!(int[int]));
-static assert (!isStaticArray!(int));
+unittest
+{
+    static assert (isStaticArray!(int[51]));
+    static assert (isStaticArray!(int[][2]));
+    static assert (isStaticArray!(char[][int][11]));
+    static assert (!isStaticArray!(const(int)[]));
+    static assert (!isStaticArray!(immutable(int)[]));
+    static assert (!isStaticArray!(const(int)[4][]));
+    static assert (!isStaticArray!(int[]));
+    static assert (!isStaticArray!(int[char]));
+    static assert (!isStaticArray!(int[1][]));
+    static assert (isStaticArray!(immutable char[13u]));
+    static assert (isStaticArray!(const(real)[1]));
+    static assert (isStaticArray!(const(real)[1][1]));
+    static assert (isStaticArray!(void[0]));
+    static assert (!isStaticArray!(int[int]));
+    static assert (!isStaticArray!(int));
+}
 
 /**
  * Detect whether type T is a dynamic array.
@@ -1919,8 +1923,11 @@ template isDynamicArray(T : U[], U)
   enum bool isDynamicArray = !isStaticArray!(T);
 }
 
-static assert(isDynamicArray!(int[]));
-static assert(!isDynamicArray!(int[5]));
+unittest
+{
+    static assert(isDynamicArray!(int[]));
+    static assert(!isDynamicArray!(int[5]));
+}
 
 /**
  * Detect whether type T is an array.
@@ -1930,11 +1937,14 @@ template isArray(T)
     enum bool isArray = isStaticArray!(T) || isDynamicArray!(T);
 }
 
-static assert(isArray!(int[]));
-static assert(isArray!(int[5]));
-static assert(!isArray!(uint));
-static assert(!isArray!(uint[uint]));
-static assert(isArray!(void[]));
+unittest
+{
+    static assert(isArray!(int[]));
+    static assert(isArray!(int[5]));
+    static assert(!isArray!(uint));
+    static assert(!isArray!(uint[uint]));
+    static assert(isArray!(void[]));
+}
 
 /**
  * Detect whether type $(D T) is a pointer.
@@ -1951,11 +1961,14 @@ template isPointer(T)
     }
 }
 
-static assert(isPointer!(int*));
-static assert(!isPointer!(uint));
-static assert(!isPointer!(uint[uint]));
-static assert(!isPointer!(char[]));
-static assert(isPointer!(void*));
+unittest
+{
+    static assert(isPointer!(int*));
+    static assert(!isPointer!(uint));
+    static assert(!isPointer!(uint[uint]));
+    static assert(!isPointer!(char[]));
+    static assert(isPointer!(void*));
+}
 
 /**
  * Tells whether the tuple T is an expression tuple.

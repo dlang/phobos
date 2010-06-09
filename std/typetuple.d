@@ -75,7 +75,7 @@ template staticIndexOf(T, TList...)
 {
     enum staticIndexOf = genericIndexOf!(T, TList).index;
 }
- 
+
 /// Ditto
 template staticIndexOf(alias T, TList...)
 {
@@ -187,7 +187,7 @@ private template GenericErase(args...)
         alias TypeTuple!() result;
     }
  }
- 
+
 unittest
 {
     static assert(Pack!(Erase!(int,
@@ -246,7 +246,7 @@ private template GenericEraseAll(args...)
         alias TypeTuple!() result;
     }
  }
- 
+
 unittest
 {
     static assert(Pack!(EraseAll!(int,
@@ -347,7 +347,7 @@ private template GenericReplace(args...)
         alias TypeTuple!() result;
     }
  }
- 
+
 unittest
 {
     static assert(Pack!(Replace!(byte, ubyte,
@@ -426,7 +426,7 @@ private template GenericReplaceAll(args...)
         alias TypeTuple!() result;
     }
 }
- 
+
 unittest
 {
     static assert(Pack!(ReplaceAll!(byte, ubyte,
