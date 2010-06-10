@@ -12,7 +12,7 @@ WIKI = Phobos/StdNumeric
 Copyright: Copyright Andrei Alexandrescu 2008 - 2009.
 License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
 Authors:   $(WEB erdani.org, Andrei Alexandrescu),
-                   Don Clugston
+                   Don Clugston, Robert Jacques
 
          Copyright Andrei Alexandrescu 2008 - 2009.
 Distributed under the Boost Software License, Version 1.0.
@@ -34,221 +34,531 @@ import std.range;
 import std.c.stdlib;
 import std.functional;
 import std.typetuple;
+import std.intrinsic;
+
 version(unittest)
 {
     import std.stdio;
     import std.conv;
+	void main(){}
+}
+/// Format flags for CustomFloat.
+public enum CustomFloatFlags {
+
+    /// Adds a sign bit to allow for signed numbers.
+    signed = 1,
+
+    /**
+     * Store values in normalized form by default. The actual precision of the
+     * significand is extended by 1 bit by assuming an implicit leading bit of 1
+     * instead of 0. i.e. $(D 1.nnnn) instead of $(D 0.nnnn).
+     * True for all $(LUCKY IEE754) types
+     */
+    storeNormalized = 2,
+
+    /**
+     * Stores the significand in $(LUCKY IEEE754 denormalized) form when the
+     * exponent is 0. Required to express the value 0.
+     */
+    allowDenorm = 4,
+
+    /// Allows the storage of $(LUCKY IEEE754 _infinity) values.
+    infinity = 8,
+
+    /// Allows the storage of $(LUCKY IEEE754 Not a Number) values.
+    nan = 16,
+
+    /**
+     * If set, select an exponent bias such that max_exp = 1.
+     * i.e. so that the maximum value is >= 1.0 and < 2.0.
+     * Ignored if the exponent bias is manually specified.
+     */
+    probability = 32,
+
+    /// If set, unsigned custom floats are assumed to be negative.
+    negativeUnsigned = 64,
+
+    /**If set, 0 is the only allowed $(LUCKY IEEE754 denormalized) number.
+     * Requires allowDenorm and storeNormalized.
+     */
+    allowDenormZeroOnly = 128 | allowDenorm | storeNormalized,
+
+    /// Include _all of the $(LUCKY IEEE754) options.
+    ieee = signed | storeNormalized | allowDenorm | infinity | nan ,
+
+    /// Include none of the above options.
+    none = 0
+}
+
+// 64-bit version of std.intrinsic.bsr
+private int bsr(ulong value) {
+    union Ulong {
+        ulong raw;
+        struct {
+            uint low;
+            uint high;
+        }
+    }
+    Ulong v;
+    v.raw = value;
+    return v.high==0 ? std.intrinsic.bsr(v.low) : std.intrinsic.bsr(v.high) + 32;
 }
 
 /**
-Flags for custom floating-point formats. In the case of $(LUCKY
-IEEE754) types, all of these flags are applied. 
+ * Allows user code to define custom floating-point formats. These formats are
+ * for storage only; all operations on them are performed by first implicitly
+ * extracting them to $(D real) first. After the operation is completed the
+ * result can be stored in a custom floating-point value via assignment.
+ *
+ * Example:
+ * ----
+ * // Define a 16-bit floating point values
+ * CustomFloat!16                                x;     // Using the number of bits
+ * CustomFloat!(10, 5)                           y;     // Using the precision and exponent width
+ * CustomFloat!(10, 5,CustomFloatFlags.ieee)     z;     // Using the precision, exponent width and format flags
+ * CustomFloat!(10, 5,CustomFloatFlags.ieee, 15) w;     // Using the precision, exponent width, format flags and exponent offset bias
+ *
+ * // Use the 16-bit floats mostly like normal numbers
+ * w = x*y - 1;
+ * writeln(w);
+ *
+ * // Functions calls require conversion
+ * z = sin(+x)           + cos(+y);                     // Use uniary plus to concisely convert to a real
+ * z = sin(x.re)         + cos(y.re);                   // Or use the .re property to convert to a real
+ * z = sin(x.get!float)  + cos(y.get!float);            // Or use get!T
+ * z = sin(cast(float)x) + cos(cast(float)y);           // Or use cast(T) to explicitly convert
+ *
+ * // Define a 8-bit custom float for storing probabilities
+ * alias CustomFloat!(4, 4, CustomFloatFlags.ieee^CustomFloatFlags.probability^CustomFloatFlags.signed ) Probability;
+ * auto p = Probability(0.5);
+ * ----
  */
-private enum CustomFloatFlags
+template CustomFloat(uint bits)
+if( bits == 8 || bits == 16 || bits == 32 || bits == 64 || bits == 80) {
+    static if(bits ==  8) alias CustomFloat!( 4, 3) CustomFloat;
+    static if(bits == 16) alias CustomFloat!(10, 5) CustomFloat;
+    static if(bits == 32) alias CustomFloat!(23, 8) CustomFloat;
+    static if(bits == 64) alias CustomFloat!(52,11) CustomFloat;
+    static if(bits == 80) alias CustomFloat!(64, 15,
+        CustomFloatFlags.ieee^CustomFloatFlags.storeNormalized) CustomFloat;
+}
+///ditto
+template CustomFloat(uint precision, uint exponentWidth,CustomFloatFlags flags = CustomFloatFlags.ieee)
+if(  ( (flags & flags.signed) + precision + exponentWidth) % 8 == 0 && precision + exponentWidth > 0)
 {
-/**
-Store values in normalized form by default, i.e. the fraction is
-assumed to be $(D 1.nnnn), not $(D 0.nnnn). Normalization is the
-default in all $(LUCKY IEE754) types. If a floating-point type is
-defined to store only numbers inside $(D (-1, 1)), normalization may
-not be useful.
- */ 
-    storeNormalized = 1,
-/**
-Allow denormalized values (a la $(LUCKY IEEE754 denormalized)).
-If this flag is on, a value with an exponent
-containing all bits zero is considered to contain a denormalized
-value.
- */ 
-    allowDenorm = 2,
-/**
-Support for infinity values (a la $(LUCKY IEEE754 _infinity)). If this
-flag is on, a value with an exponent containing all bits one and
-fraction zero is assumed to contain a (valid) allowDenormalized value. The sign,
-if applicable, is decided by the sign bit.
- */ 
-        infinity = 4,
-/**
-Support for NaN (Not a Number) values (a la $(LUCKY IEEE754 Not a Number)).
-If this flag is on, a value with an exponent containing all
-bits one and a nonzero fraction is considered to contain a
-allowDenormalized value.
- */ 
-        nan = 8,
-/**
-Include _all of the above options.
- */
-        all = storeNormalized | allowDenorm | infinity | nan
-        }
-
-/**
-Allows user code to define custom floating-point formats. These
-formats are for storage only; to do operations on custom
-floating-point types, one must extract the value into a $(D float) or
-$(D double). After the operation is completed the result can be
-deposited in a custom floating-point value by using its assignment
-operator.
-
-Example:
-----
-// Define a 16-bit floating point type
-alias CustomFloat!(1, 5, 10) HalfFloat;
-auto x = HalfFloat(0.125);
-assert(halfFloat.get!float == 0.125);
-----
- */
+    alias CustomFloat!(precision,exponentWidth,flags,
+                       (1 << (exponentWidth  - ((flags&flags.probability)==0) ))
+                       - ((flags&(flags.nan|flags.infinity))!=0) - ((flags&flags.probability)!=0)
+                       ) CustomFloat; // ((flags&CustomFloatFlags.probability)==0)
+}
+///ditto
 struct CustomFloat(
-    bool signBit,       // allocate a sign bit? (true for float)
-    uint fractionBits,  // fraction bits (23 for float)
-    uint exponentBits,  // exponent bits (8 for float)
-    uint bias = (1u << (exponentBits - 1)) - 1, // bias (127 for float)
-    CustomFloatFlags flags = CustomFloatFlags.all)
+    uint                precision,  // fraction bits (23 for float)
+    uint                exponentWidth,  // exponent bits (8 for float)  Exponent width
+    CustomFloatFlags    flags,
+    uint                bias)
+    if(( (flags & flags.signed)  + precision + exponentWidth) % 8 == 0 &&
+       precision + exponentWidth > 0)
 {
-    alias CustomFloatFlags Flags;
-    private enum totalSize = signBit + fractionBits + exponentBits;
-    static assert(totalSize % 8 == 0);
-    private mixin(bitfields!(
-                bool, "sign", signBit,
-                uint, "fraction", fractionBits,
-                uint, "exponent", exponentBits));
-    
-/**
-Initialize from a $(D float).
- */
-    this(float input) { this = input; }
-/**
-Initialize from a $(D double).
- */
-    this(double input) { this = input; }
-/**
-Assigns from either a $(D float) or a $(D double).
- */ 
-    void opAssign(F)(F input) if (staticIndexOf!(Unqual!F, float, double) >= 0)
+    private:
+        // get the correct unsigned bitfield type to support > 32 bits
+        template uType(uint bits) {
+            static if(bits <= size_t.sizeof*8)  alias size_t uType;
+            else                                alias ulong  uType;
+        }
+
+        // get the correct signed   bitfield type to support > 32 bits
+        template sType(uint bits) {
+            static if(bits <= ptrdiff_t.sizeof*8-1) alias ptrdiff_t sType;
+            else                                    alias long      sType;
+        }
+
+        alias uType!precision     T_sig;
+        alias uType!exponentWidth T_exp;
+        alias sType!exponentWidth T_signed_exp;
+
+        alias CustomFloatFlags Flags;
+
+        // Facilitate converting numeric types to custom float
+        union ToBinary(F) if(is(CustomFloat!(F.sizeof*8))) {
+            F set;
+            CustomFloat!(F.sizeof*8) get;
+
+            // Convert F to the correct binary type.
+            static typeof(get) opCall(F value) {
+                ToBinary r;
+                r.set = value;
+                return r.get;
+            }
+            alias get this;
+        }
+
+        // Perform IEEE rounding with round to nearest detection
+        void roundedShift(T,U)(ref T sig, U shift) {
+            if( sig << (T.sizeof*8 - shift) == cast(T) 1uL << (T.sizeof*8 - 1) ) {
+                // round to even
+                sig >>= shift;
+                sig  += sig & 1;
+            } else {
+                sig >>= shift - 1;
+                sig  += sig & 1;
+                // Perform standard rounding
+                sig >>= 1;
+            }
+        }
+
+        // Convert the current value to signed exponent, normalized form
+        void toNormalized(T,U)(ref T sig, ref U exp) {
+            sig = significand;
+            auto shift = (T.sizeof*8) - precision;
+            exp = exponent;
+            static if(flags&(Flags.infinity|Flags.nan)) {
+                // Handle inf or nan
+                if(exp == exponent_max) {
+                    exp = exp.max;
+                    sig <<= shift;
+                    static if(flags&Flags.storeNormalized) {
+                        // Save inf/nan in denormalized format
+                        sig >>= 1;
+                        sig  += cast(T) 1uL << (T.sizeof*8 - 1);
+                    }
+                    return;
+                }
+            }
+            if( (~flags&Flags.storeNormalized) ||
+               // Convert denormalized form to normalized form
+                ((flags&Flags.allowDenorm)&&(exp==0)) ){
+                if(sig > 0) {
+                    auto shift2 = precision - bsr(sig);
+                    exp  -= shift2-1;
+                    shift += shift2;
+                } else {                                // value = 0.0
+                    exp = exp.min;
+                    return;
+                }
+            }
+            sig <<= shift;
+            exp -= bias;
+        }
+
+        // Set the current value from signed exponent, normalized form
+        void fromNormalized(T,U)(ref T sig, ref U exp) {
+            auto shift = (T.sizeof*8) - precision;
+            if(exp == exp.max) {
+                // infinity or nan
+                exp = exponent_max;
+                static if(flags & Flags.storeNormalized) sig <<= 1;
+                // convert back to normalized form
+                static if(~flags & Flags.infinity)
+                // No infinity support?
+                    enforce(sig != 0,"Infinity floating point value assigned to a "
+                            ~ typeof(this).stringof~" (no infinity support).");
+                static if(~flags & Flags.nan)                           // No NaN support?
+                    enforce(sig == 0,"NaN floating point value assigned to a " ~
+                            typeof(this).stringof~" (no nan support).");
+                sig >>= shift;
+                return;
+            }
+            if(exp == exp.min){     // 0.0
+                 exp = 0;
+                 sig = 0;
+                 return;
+            }
+
+            exp += bias;
+            if( exp <= 0 ) {
+                static if( ( flags&Flags.allowDenorm) ||
+                          // Convert from normalized form to denormalized
+                           (~flags&Flags.storeNormalized) ) {
+                    shift += -exp;
+                    roundedShift(sig,1);
+                    sig   += cast(T) 1uL << (T.sizeof*8 - 1);
+                    // Add the leading 1
+                    exp    = 0;
+                } else enforce( (flags&Flags.storeNormalized) && exp == 0,
+                    "Underflow occured assigning to a " ~
+                    typeof(this).stringof ~ " (no denormal support).");
+            } else {
+                static if(~flags&Flags.storeNormalized) {
+                     // Convert from normalized form to denormalized
+                    roundedShift(sig,1);
+                    sig  += cast(T) 1uL << (T.sizeof*8 - 1);
+                     // Add the leading 1
+                }
+            }
+
+            if(shift > 0)
+                roundedShift(sig,shift);
+            if(sig > significand_max) {
+                // handle significand overflow (should only be 1 bit)
+                static if(~flags&Flags.storeNormalized) {
+                    sig >>= 1;
+                } else
+                    sig &= significand_max;
+                exp++;
+            }
+            static if((flags&Flags.allowDenormZeroOnly)==Flags.allowDenormZeroOnly) {
+                // disallow non-zero denormals
+                if(exp == 0) {
+                    sig <<= 1;
+                    if(sig > significand_max && (sig&significand_max) > 0 )
+                        // Check and round to even
+                        exp++;
+                    sig = 0;
+                }
+            }
+
+            if(exp >= exponent_max ) {
+                static if( flags&(Flags.infinity|Flags.nan) ) {
+                    sig         = 0;
+                    exp         = exponent_max;
+                    static if(~flags&(Flags.infinity))
+                        enforce( false, "Overflow occured assigning to a " ~
+                            typeof(this).stringof~" (no infinity support).");
+                } else
+                    enforce( exp == exponent_max, "Overflow occured assigning to a "
+                        ~ typeof(this).stringof~" (no infinity support).");
+            }
+        }
+
+    public:
+        static if( precision == 64 ) { // CustomFloat!80 support hack
+            ulong significand;
+            enum ulong significand_max = ulong.max;
+            mixin(bitfields!(
+                T_exp , "exponent", exponentWidth,
+                bool  , "sign"    , flags & flags.signed ));
+
+        } else {
+            mixin(bitfields!(
+                T_sig, "significand", precision,
+                T_exp, "exponent"   , exponentWidth,
+                bool , "sign"       , flags & flags.signed ));
+        }
+
+    /// Returns: infinity value
+    static if (flags & Flags.infinity)
+        static @property CustomFloat infinity() {
+            CustomFloat value;
+            static if (flags & Flags.signed)
+            value.sign          = 0;
+            value.significand   = 0;
+            value.exponent      = exponent_max;
+            return value;
+        }
+
+    /// Returns: NaN value
+    static if (flags & Flags.nan)
+        static @property CustomFloat nan() {
+            CustomFloat value;
+            static if (flags & Flags.signed)
+            value.sign          = 0;
+            value.significand   = cast(typeof(significand_max)) 1L << (precision-1);
+            value.exponent      = exponent_max;
+            return value;
+        }
+
+    /// Returns: number of decimal digits of precision
+    static @property size_t dig(){
+        return cast(size_t) log10( 1uL << precision - (flags&Flags.storeNormalized != 0));
+    }
+
+    /// Returns: smallest increment to the value 1
+    static @property CustomFloat epsilon() {
+            CustomFloat value;
+            static if (flags & Flags.signed)
+            value.sign       = 0;
+            T_signed_exp exp = -precision;
+            T_sig        sig = 0;
+            value.fromNormalized(sig,exp);
+            if(exp == 0 && sig == 0) { // underflowed to zero
+                static if((flags&Flags.allowDenorm) || (~flags&Flags.storeNormalized))
+                    sig = 1;
+                else
+                    sig = cast(T) 1uL << (precision - 1);
+            }
+            value.exponent     = cast(value.T_exp) exp;
+            value.significand  = cast(value.T_sig) sig;
+            return value;
+    }
+
+    /// the number of bits in mantissa
+    enum mant_dig = precision + (flags&Flags.storeNormalized != 0);
+
+    /// Returns: maximum int value such that 10<sup>max_10_exp</sup> is representable
+    static @property int max_10_exp(){ return cast(int) log10( +max ); }
+
+    /// maximum int value such that 2<sup>max_exp-1</sup> is representable
+    enum max_exp = exponent_max-bias+((~flags&(Flags.infinity|flags.nan))!=0);
+
+    /// Returns: minimum int value such that 10<sup>min_10_exp</sup> is representable
+    static @property int min_10_exp(){ return cast(int) log10( +min_normal ); }
+
+    /// minimum int value such that 2<sup>min_exp-1</sup> is representable as a normalized value
+    enum min_exp = cast(T_signed_exp)-bias +1+ ((flags&Flags.allowDenorm)!=0);
+
+    /// Returns: largest representable value that's not infinity
+    static @property CustomFloat max() {
+            CustomFloat value;
+            static if (flags & Flags.signed)
+            value.sign        = 0;
+            value.exponent    = exponent_max - ((flags&(flags.infinity|flags.nan)) != 0);
+            value.significand = significand_max;
+            return value;
+    }
+
+    /// Returns: smallest representable normalized value that's not 0
+    static @property CustomFloat min_normal() {
+            CustomFloat value;
+            static if (flags & Flags.signed)
+            value.sign        = 0;
+            value.exponent    = 1;
+            static if(flags&Flags.storeNormalized)
+                value.significand = 0;
+            else
+                value.significand = cast(T_sig) 1uL << (precision - 1);;
+            return value;
+    }
+
+    /// Returns: real part
+    @property CustomFloat re()   { return this;              }
+
+    /// Returns: imaginary part
+    static @property CustomFloat im()   { return CustomFloat(0.0f); }
+
+    /// Initialize from any $(D real) compatible type.
+    this(F)(F input) if (__traits(compiles, cast(real)input )) { this = input; }
+
+    /// Self assignment
+    void opAssign(F:CustomFloat)(F input) {
+        static if (flags & Flags.signed)
+        sign        = input.sign;
+        exponent    = input.exponent;
+        significand = input.significand;
+    }
+
+    /// Assigns from any $(D real) compatible type.
+    void opAssign(F)(F input)
+        if (__traits(compiles, cast(real)input ))
     {
-        static if (is(Unqual!F == float))
-            auto value = FloatRep(input);
-        else
-            auto value = DoubleRep(input);
+
+        static if( staticIndexOf!(Unqual!F, float, double, real) >= 0 )
+                auto value = ToBinary!(Unqual!F)(input);
+        else    auto value = ToBinary!(real    )(input);
         // Assign the sign bit
-        static if (!signBit) enforce(!value.sign);
-        else sign = value.sign;
-
-        // Assign the exponent and fraction
-        auto e = value.exponent;
-        if (e == 0)
-        {
-            // denormalized source value
-            static if (flags & Flags.allowDenorm)
-            {
-                exponent = 0;
-                fraction = cast(typeof(fraction_max)) value.fraction;
-            }
-            else
-            {
-                assert(0);
-            }
-        }
-        else if (e == value.exponent_max)
-        {
-            // infinity or NaN
-            if (value.fraction == 0)
-                // Infinity
-                static if (flags & Flags.infinity)
-                {
-                    fraction = 0;
-                    exponent = exponent_max;
-                }
-                else
-                {
-                    assert(0);
-                }
-            else
-            {
-                // NaN
-                static if (flags & Flags.nan)
-                {
-                    fraction = cast(typeof(fraction())) value.fraction;
-                    exponent = exponent_max;
-                }
-                else
-                {
-                    assert(0);
-                }
-            }
-        }
+        static if (~flags & Flags.signed)
+            enforce( (!value.sign)^((flags&flags.negativeUnsigned)>0) ,
+                "Incorrectly signed floating point value assigned to a " ~
+                typeof(this).stringof~" (no sign support).");
         else
-        {
-            // normal value
-            exponent = cast(typeof(exponent_max))
-                (value.exponent + (bias - value.bias));
-            static if (fractionBits >= value.fractionBits)
-            {
-                fraction = cast(typeof(fraction_max))
-                    (value.fraction << (fractionBits - value.fractionBits));
-            }
-            else
-            {
-                fraction = cast(typeof(fraction_max))
-                    (value.fraction >> (value.fractionBits - fractionBits));
-            }
-        }
+            sign = value.sign;
+
+        CommonType!(T_signed_exp ,value.T_signed_exp ) exp = value.exponent;
+        CommonType!(T_sig,        value.T_sig        ) sig = value.significand;
+
+        value.toNormalized(sig,exp);
+        fromNormalized(sig,exp);
+
+
+        assert(exp <= exponent_max,    text(typeof(this).stringof ~
+            " exponent too large: "   ,exp," > ",exponent_max,   "\t",input,"\t",sig) );
+        assert(sig <= significand_max, text(typeof(this).stringof ~
+            " significand too large: ",sig," > ",significand_max,
+            "\t",input,"\t",exp," ",exponent_max) );
+        exponent    = cast(T_exp) exp;
+        significand = cast(T_sig) sig;
     }
 
-/**
-Fetches the stored value either as a $(D float) or $(D double).
- */
-    F get(F)()
+    /// Fetches the stored value either as a $(D float), $(D double) or $(D real).
+    @property F get(F)()
+        if (staticIndexOf!(Unqual!F, float, double, real) >= 0)
     {
-        static if (is(Unqual!F == float))
-            FloatRep result = void;
-        else
-            DoubleRep result = void;
-        static if (signBit) result.sign = sign;
-        else result.sign = 0;
-        auto e = exponent;
-        if (e == 0)
-        {
-            // denormalized value
-            result.exponent = 0;
-            result.fraction = fraction;
-        }
-        else if (e == exponent_max)
-        {
-            // infinity or NaN
-        }
-        else
-        {
-            // normal value
-            result.exponent = cast(typeof(result.exponent_max))
-                (exponent + (result.bias - bias));
-            static if (fractionBits <= result.fractionBits)
-            {
-                alias Select!(result.fractionBits >= 32, ulong, uint) S;
-                result.fraction = cast(typeof(result.fraction_max))
-                    (cast(S) fraction << (result.fractionBits - fractionBits));
-            }
-            else
-            {
-                result.fraction = cast(typeof(result.fraction()))
-                    (fraction >> (fractionBits - result.fractionBits));
-            }
-        }
-        return result.value;
+        ToBinary!F result;
+
+        static if (flags&Flags.signed) result.sign = sign;
+        else                           result.sign = (flags&flags.negativeUnsigned) > 0;
+        CommonType!(T_signed_exp ,result.get.T_signed_exp ) exp = exponent;             // Assign the exponent and fraction
+        CommonType!(T_sig,        result.get.T_sig        ) sig = significand;
+
+        toNormalized(sig,exp);
+        result.fromNormalized(sig,exp);
+        assert(exp <= result.exponent_max,    text("get exponent too large: "   ,exp," > ",result.exponent_max) );
+        assert(sig <= result.significand_max, text("get significand too large: ",sig," > ",result.significand_max) );
+        result.exponent     = cast(result.get.T_exp) exp;
+        result.significand  = cast(result.get.T_sig) sig;
+        return result.set;
     }
+    ///ditto
+    T opCast(T)() if (__traits(compiles, get!T )) { return get!T; }
+
+    /// Convert the CustomFloat to a real and perform the relavent operator on the result
+    real opUnary(string op)() if( __traits(compiles, mixin(op~`(get!real)`)) || op=="++" || op=="--" ){
+        static if(op=="++" || op=="--") {
+            auto result = get!real;
+            this = mixin(op~`result`);
+            return result;
+        } else
+            return mixin(op~`get!real`);
+    }
+
+    /// ditto
+    real opBinary(string op,T)(T b) if( __traits(compiles, mixin(`get!real`~op~`b`)  )  ) {
+        return mixin(`get!real`~op~`b`);
+    }
+
+    /// ditto
+    real opBinaryRight(string op,T)(T a) if( __traits(compiles, mixin(`a`~op~`get!real`) )  &&
+                                            !__traits(compiles, mixin(`get!real`~op~`b`) )  ) {
+        return mixin(`a`~op~`get!real`);
+    }
+
+    /// ditto
+    int opCmp(T)(auto ref T b) if(__traits(compiles, cast(real)b )  ) {
+        auto x = get!real;
+        auto y = cast(real) b;
+        return  (x>=y)-(x<=y);
+    }
+
+    /// ditto
+    void opOpAssign(string op, T)(auto ref T b) if ( __traits(compiles, mixin(`get!real`~op[0..$-1]~`cast(real)b`))) {
+        return mixin(`this = this `~op[0..$-1]~` cast(real)b`);
+    }
+
+    /// ditto
+    string toString() { return to!string(get!real); }
 }
 
 unittest
 {
     alias TypeTuple!(
-        CustomFloat!(1, 5, 10),
-        CustomFloat!(0, 5, 11),
-        CustomFloat!(0, 1, 15)
+        CustomFloat!(5, 10),
+        CustomFloat!(5, 11, CustomFloatFlags.ieee ^ CustomFloatFlags.signed),
+        CustomFloat!(1, 15, CustomFloatFlags.ieee ^ CustomFloatFlags.signed),
+        CustomFloat!(4, 3, CustomFloatFlags.ieee | CustomFloatFlags.probability ^ CustomFloatFlags.signed)
+
         ) FPTypes;
     foreach (F; FPTypes)
     {
         auto x = F(0.125);
         assert(x.get!float == 0.125F);
         assert(x.get!double == 0.125);
+
+        x -= 0.0625;
+        assert(x.get!float == 0.0625F);
+        assert(x.get!double == 0.0625);
+
+        x *= 2;
+        assert(x.get!float == 0.125F);
+        assert(x.get!double == 0.125);
+
+        x /= 4;
+        assert(x.get!float == 0.03125);
+        assert(x.get!double == 0.03125);
+
+        x = 0.5;
+        x ^^= 4;
+        assert(x.get!float == 1 / 16.0F);
+        assert(x.get!double == 1 / 16.0);
     }
 }
 
@@ -356,7 +666,7 @@ public:
  * has more than one root in the range, one will be chosen
  * arbitrarily.  If $(D f(x)) returns NaN, NaN will be returned;
  * otherwise, this algorithm is guaranteed to succeed.
- *  
+ *
  * Uses an algorithm based on TOMS748, which uses inverse cubic
  * interpolation whenever possible, otherwise reverting to parabolic
  * or secant interpolation. Compared to TOMS748, this implementation
@@ -383,7 +693,7 @@ T findRoot(T, R)(R delegate(T) f, T a, T b)
  * termination condition to be specified.
  *
  * Params:
- * 
+ *
  * f = Function to be analyzed
  *
  * ax = Left bound of initial range of $(D f) known to contain the
@@ -397,7 +707,7 @@ T findRoot(T, R)(R delegate(T) f, T a, T b)
  * fbx = Value of $(D f(bx)). ($(D f(ax)) and $(D f(bx)) are commonly
  * known in advance.)
  *
- * 
+ *
  * tolerance = Defines an early termination condition. Receives the
  *             current upper and lower bounds on the root. The
  *             delegate must return $(D true) when these bounds are
@@ -425,20 +735,20 @@ body {
     T a, b, d;  // [a..b] is our current bracket. d is the third best guess.
     R fa, fb, fd; // Values of f at a, b, d.
     bool done = false; // Has a root been found?
-    
+
     // Allow ax and bx to be provided in reverse order
     if (ax <= bx) {
-        a = ax; fa = fax; 
+        a = ax; fa = fax;
         b = bx; fb = fbx;
     } else {
-        a = bx; fa = fbx; 
+        a = bx; fa = fbx;
         b = ax; fb = fax;
     }
 
     // Test the function at point c; update brackets accordingly
     void bracket(T c)
     {
-        T fc = f(c);        
+        T fc = f(c);
         if (fc !<> 0) { // Exact solution, or NaN
             a = c;
             fa = fc;
@@ -472,7 +782,7 @@ body {
             if (a == 0) a = copysign(0.0L, b);
             else if (b == 0) b = copysign(0.0L, a);
             else if (signbit(a) != signbit(b)) return 0;
-            T c = ieeeMean(a, b); 
+            T c = ieeeMean(a, b);
             return c;
         }
        // avoid overflow
@@ -482,10 +792,10 @@ body {
        if (c == a || c == b) return (a + b) / 2;
        return c;
     }
-    
+
     /* Uses 'numsteps' newton steps to approximate the zero in [a..b] of the
        quadratic polynomial interpolating f(x) at a, b, and d.
-       Returns:         
+       Returns:
          The approximate zero in [a..b] of the quadratic polynomial.
     */
     T newtonQuadratic(int numsteps)
@@ -494,20 +804,20 @@ body {
         T a0 = fa;
         T a1 = (fb - fa)/(b - a);
         T a2 = ((fd - fb)/(d - b) - a1)/(d - a);
-    
+
         // Determine the starting point of newton steps.
         T c = oppositeSigns(a2, fa) ? a  : b;
-     
+
         // start the safeguarded newton steps.
-        for (int i = 0; i<numsteps; ++i) {        
+        for (int i = 0; i<numsteps; ++i) {
             T pc = a0 + (a1 + a2 * (c - b))*(c - a);
             T pdc = a1 + a2*((2.0 * c) - (a + b));
             if (pdc == 0) return a - a0 / a1;
-            else c = c - pc / pdc;        
+            else c = c - pc / pdc;
         }
-        return c;    
+        return c;
     }
-    
+
     // On the first iteration we take a secant step:
     if (fa !<> 0) {
         done = true;
@@ -522,41 +832,41 @@ body {
     }
     // Starting with the second iteration, higher-order interpolation can
     // be used.
-    int itnum = 1;   // Iteration number    
+    int itnum = 1;   // Iteration number
     int baditer = 1; // Num bisections to take if an iteration is bad.
     T c, e;  // e is our fourth best guess
-    R fe;   
+    R fe;
 whileloop:
-    while(!done && (b != nextUp(a)) && !tolerance(a, b)) {        
+    while(!done && (b != nextUp(a)) && !tolerance(a, b)) {
         T a0 = a, b0 = b; // record the brackets
-      
+
         // Do two higher-order (cubic or parabolic) interpolation steps.
-        for (int QQ = 0; QQ < 2; ++QQ) {      
-            // Cubic inverse interpolation requires that 
-            // all four function values fa, fb, fd, and fe are distinct; 
+        for (int QQ = 0; QQ < 2; ++QQ) {
+            // Cubic inverse interpolation requires that
+            // all four function values fa, fb, fd, and fe are distinct;
             // otherwise use quadratic interpolation.
-            bool distinct = (fa != fb) && (fa != fd) && (fa != fe) 
+            bool distinct = (fa != fb) && (fa != fd) && (fa != fe)
                          && (fb != fd) && (fb != fe) && (fd != fe);
             // The first time, cubic interpolation is impossible.
             if (itnum<2) distinct = false;
             bool ok = distinct;
-            if (distinct) {                
+            if (distinct) {
                 // Cubic inverse interpolation of f(x) at a, b, d, and e
                 real q11 = (d - e) * fd / (fe - fd);
                 real q21 = (b - d) * fb / (fd - fb);
                 real q31 = (a - b) * fa / (fb - fa);
                 real d21 = (b - d) * fd / (fd - fb);
                 real d31 = (a - b) * fb / (fb - fa);
-                      
+
                 real q22 = (d21 - q11) * fb / (fe - fb);
                 real q32 = (d31 - q21) * fa / (fd - fa);
                 real d32 = (d31 - q21) * fd / (fd - fa);
                 real q33 = (d32 - q22) * fa / (fe - fa);
                 c = a + (q31 + q32 + q33);
                 if (c!<>=0 || (c <= a) || (c >= b)) {
-                    // DAC: If the interpolation predicts a or b, it's 
+                    // DAC: If the interpolation predicts a or b, it's
                     // probable that it's the actual root. Only allow this if
-                    // we're already close to the root.                
+                    // we're already close to the root.
                     if (c == a && a - b != a) {
                         c = nextUp(a);
                     }
@@ -576,7 +886,7 @@ whileloop:
                     c = secant_interpolate(a, b, fa, fb);
                 }
             }
-            ++itnum;                
+            ++itnum;
             e = d;
             fe = fd;
             bracket(c);
@@ -597,7 +907,7 @@ whileloop:
         }
         c = u - 2 * (fu / (fb - fa)) * (b - a);
         // DAC: If the secant predicts a value equal to an endpoint, it's
-        // probably false.      
+        // probably false.
         if(c==a || c==b || c!<>=0 || fabs(c - u) > (b - a) / 2) {
             if ((a-b) == a || (b-a) == b) {
                 if ( (a>0 && b<0) || (a<0 && b>0) ) c = 0;
@@ -608,7 +918,7 @@ whileloop:
                 }
             } else {
                 c = a + (b - a) / 2;
-            }       
+            }
         }
         e = d;
         fe = fd;
@@ -616,27 +926,27 @@ whileloop:
         if(done || (b == nextUp(a)) || tolerance(a, b))
             break;
 
-        // IMPROVE THE WORST-CASE PERFORMANCE       
-        // We must ensure that the bounds reduce by a factor of 2 
+        // IMPROVE THE WORST-CASE PERFORMANCE
+        // We must ensure that the bounds reduce by a factor of 2
         // in binary space! every iteration. If we haven't achieved this
         // yet, or if we don't yet know what the exponent is,
         // perform a binary chop.
 
-        if( (a==0 || b==0 || 
-            (fabs(a) >= 0.5 * fabs(b) && fabs(b) >= 0.5 * fabs(a))) 
+        if( (a==0 || b==0 ||
+            (fabs(a) >= 0.5 * fabs(b) && fabs(b) >= 0.5 * fabs(a)))
             &&  (b - a) < 0.25 * (b0 - a0))  {
-                baditer = 1;        
+                baditer = 1;
                 continue;
             }
         // DAC: If this happens on consecutive iterations, we probably have a
         // pathological function. Perform a number of bisections equal to the
         // total number of consecutive bad iterations.
-        
+
         if ((b - a) < 0.25 * (b0 - a0)) baditer = 1;
         for (int QQ = 0; QQ < baditer ;++QQ) {
             e = d;
             fe = fd;
-    
+
             T w;
             if ((a>0 && b<0) ||(a<0 && b>0)) w = 0;
             else {
@@ -654,10 +964,10 @@ whileloop:
 }
 
 unittest
-{    
+{
     int numProblems = 0;
     int numCalls;
-    
+
     void testFindRoot(real delegate(real) f, real x1, real x2) {
         numCalls=0;
         ++numProblems;
@@ -665,14 +975,14 @@ unittest
         assert(signbit(x1) != signbit(x2));
         auto result = findRoot(f, x1, x2, f(x1), f(x2),
           (real lo, real hi) { return false; });
-        
+
         auto flo = f(result.field[0]);
         auto fhi = f(result.field[1]);
         if (flo!=0) {
             assert(oppositeSigns(flo, fhi));
         }
     }
-    
+
     // Test functions
     real cubicfn (real x) {
        ++numCalls;
@@ -684,12 +994,12 @@ unittest
     // Test a function with more than one root.
     real multisine(real x) { ++numCalls; return sin(x); }
     //testFindRoot( &multisine, 6, 90);
-    //testFindRoot(&cubicfn, -100, 100);    
+    //testFindRoot(&cubicfn, -100, 100);
     //testFindRoot( &cubicfn, -double.max, real.max);
-    
-    
+
+
 /* Tests from the paper:
- * "On Enclosing Simple Roots of Nonlinear Equations", G. Alefeld, F.A. Potra, 
+ * "On Enclosing Simple Roots of Nonlinear Equations", G. Alefeld, F.A. Potra,
  *   Yixun Shi, Mathematics of Computation 61, pp733-744 (1993).
  */
     // Parameters common to many alefeld tests.
@@ -697,7 +1007,7 @@ unittest
     real ale_a, ale_b;
 
     int powercalls = 0;
-    
+
     real power(real x) {
         ++powercalls;
         ++numCalls;
@@ -705,11 +1015,11 @@ unittest
     }
     int [] power_nvals = [3, 5, 7, 9, 19, 25];
     // Alefeld paper states that pow(x,n) is a very poor case, where bisection
-    // outperforms his method, and gives total numcalls = 
-    // 921 for bisection (2.4 calls per bit), 1830 for Alefeld (4.76/bit), 
+    // outperforms his method, and gives total numcalls =
+    // 921 for bisection (2.4 calls per bit), 1830 for Alefeld (4.76/bit),
     // 2624 for brent (6.8/bit)
     // ... but that is for double, not real80.
-    // This poor performance seems mainly due to catastrophic cancellation, 
+    // This poor performance seems mainly due to catastrophic cancellation,
     // which is avoided here by the use of ieeeMean().
     // I get: 231 (0.48/bit).
     // IE this is 10X faster in Alefeld's worst case
@@ -718,11 +1028,11 @@ unittest
         n = k;
         //testFindRoot(&power, -1, 10);
     }
-    
+
     int powerProblems = numProblems;
 
     // Tests from Alefeld paper
-        
+
     int [9] alefeldSums;
     real alefeld0(real x){
         ++alefeldSums[0];
@@ -752,19 +1062,19 @@ unittest
        ++alefeldSums[4];
        return x*x - pow(1-x, n);
    }
-   
+
    real alefeld5(real x) {
         ++numCalls;
        ++alefeldSums[5];
        return (1+pow(1.0L-n, 4))*x - pow(1.0L-n*x, 4);
    }
-   
+
    real alefeld6(real x) {
         ++numCalls;
        ++alefeldSums[6];
        return exp(-n*x)*(x-1.01L) + pow(x, n);
    }
-   
+
    real alefeld7(real x) {
         ++numCalls;
        ++alefeldSums[7];
@@ -785,14 +1095,14 @@ unittest
    int [] nvals_5 = [1, 2, 4, 5, 8, 15, 20];
    int [] nvals_6 = [1, 5, 10, 15, 20];
    int [] nvals_7 = [2, 5, 15, 20];
-  
+
     for(int i=4; i<12; i+=2) {
        n = i;
        ale_a = 0.2;
        //testFindRoot(&alefeld2, 0, 5);
        ale_a=1;
        //testFindRoot(&alefeld2, 0.95, 4.05);
-       //testFindRoot(&alefeld2, 0, 1.5);       
+       //testFindRoot(&alefeld2, 0, 1.5);
     }
     foreach(i; nvals_3) {
         n=i;
@@ -813,28 +1123,28 @@ unittest
     foreach(i; nvals_7) {
         n=i;
         //testFindRoot(&alefeld7, 0.01L, 1);
-    }   
+    }
     real worstcase(real x) { ++numCalls;
         return x<0.3*real.max? -0.999e-3 : 1.0;
     }
     //testFindRoot(&worstcase, -real.max, real.max);
-    
+
     // just check that the double + float cases compile
     //findRoot((double x){ return 0.0; }, -double.max, double.max);
     //findRoot((float x){ return 0.0f; }, -float.max, float.max);
-       
-/*   
+
+/*
    int grandtotal=0;
    foreach(calls; alefeldSums) {
        grandtotal+=calls;
    }
    grandtotal-=2*numProblems;
-   printf("\nALEFELD TOTAL = %d avg = %f (alefeld avg=19.3 for double)\n", 
+   printf("\nALEFELD TOTAL = %d avg = %f (alefeld avg=19.3 for double)\n",
    grandtotal, (1.0*grandtotal)/numProblems);
    powercalls -= 2*powerProblems;
-   printf("POWER TOTAL = %d avg = %f ", powercalls, 
+   printf("POWER TOTAL = %d avg = %f ", powercalls,
         (1.0*powercalls)/powerProblems);
-*/        
+*/
 }
 
 /**
@@ -923,11 +1233,11 @@ dotProduct(F1, F2)(in F1[] avector, in F2[] bvector)
     assert(n == bvector.length);
     auto avec = avector.ptr, bvec = bvector.ptr;
     typeof(return) sum0 = 0.0, sum1 = 0.0;
-    
+
     const all_endp = avec + n;
     const smallblock_endp = avec + (n & ~3);
     const bigblock_endp = avec + (n & ~15);
-    
+
     for (; avec != bigblock_endp; avec += 16, bvec += 16)
     {
         sum0 += avec[0] * bvec[0];
@@ -947,20 +1257,20 @@ dotProduct(F1, F2)(in F1[] avector, in F2[] bvector)
         sum0 += avec[14] * bvec[14];
         sum1 += avec[15] * bvec[15];
     }
-    
+
     for (; avec != smallblock_endp; avec += 4, bvec += 4) {
         sum0 += avec[0] * bvec[0];
         sum1 += avec[1] * bvec[1];
         sum0 += avec[2] * bvec[2];
         sum1 += avec[3] * bvec[3];
     }
-    
+
     sum0 += sum1;
-    
+
     /* Do trailing portion in naive loop. */
     while (avec != all_endp)
         sum0 += (*avec++) * (*bvec++);
-    
+
     return sum0;
 }
 
@@ -1536,8 +1846,8 @@ time and computes all matches of length 1.
                 if (jMax < j) jMax = j;
             }
         }
-        
-        if (iMin > iMax) return;        
+
+        if (iMin > iMax) return;
         assert(k0len);
 
         currentValue = k0len;
@@ -1569,13 +1879,13 @@ Returns $(D this).
 /**
 Computes the match of the popFront length. Completes in $(BIGOH s.length *
 t.length) time.
- */ 
+ */
     void popFront() {
         // This is a large source of optimization: if similarity at
         // the gram-1 level was 0, then we can safely assume
         // similarity at the gram level is 0 as well.
         if (empty) return;
-        
+
         // Now attempt to match gapped substrings of length `gram'
         ++gram;
         currentValue = 0;
@@ -1608,7 +1918,7 @@ t.length) time.
             }
         }
         currentValue /= pow(lambda, 2 * (gram + 1));
-        
+
         version (none)
         {
             Si_1[0 .. t.length] = 0;
