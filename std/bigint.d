@@ -119,19 +119,19 @@ public:
     }
 
     // BigInt op= integer
-    BigInt opOpAssign(string op, T)(T y)  if ((op=="+=" || op=="-=" || op=="*=" || op=="/=" || op=="%=" || op==">>=" || op=="<<=" || op=="^^=") && is (T: long))
+    BigInt opOpAssign(string op, T)(T y)  if ((op=="+" || op=="-" || op=="*" || op=="/" || op=="%" || op==">>" || op=="<<" || op=="^^") && is (T: long))
     {
         ulong u = cast(ulong)(y < 0 ? -y : y);
 
-        static if (op=="+=")
+        static if (op=="+")
         {
             data = BigUint.addOrSubInt(data, u, sign!=(y<0), &sign);
         }
-        else static if (op=="-=")
+        else static if (op=="-")
         {
             data = BigUint.addOrSubInt(data, u, sign == (y<0), &sign);
         }
-        else static if (op=="*=")
+        else static if (op=="*")
         {
             if (y == 0) {
                 sign = false;
@@ -141,14 +141,14 @@ public:
                 data = BigUint.mulInt(data, y);
             }
         }
-        else static if (op=="/=")
+        else static if (op=="/")
         {
             assert(y!=0, "Division by zero");
             static assert(!is(T==long) && !is(T==ulong));
             data = BigUint.divInt(data, cast(uint)u);
             sign = data.isZero()? false : sign ^ (y<0);
         }
-        else static if (op=="%=")
+        else static if (op=="%")
         {
             assert(y!=0, "Division by zero");
             static assert(!is(T==long) && !is(T==ulong));
@@ -156,12 +156,12 @@ public:
             // x%y always has the same sign as x.
             // This is not the same as mathematical mod.
         }
-        else static if (op==">>=" || op=="<<=")
+        else static if (op==">>" || op=="<<")
         {
             // Do a left shift if y>0 and <<, or
             // if y<0 and >>; else do a right shift.
             if (y == 0) return this;
-            else if ((y > 0) == (op=="<<=")) {
+            else if ((y > 0) == (op=="<<")) {
                 // Sign never changes during left shift
                 data = data.opShl(u);
             } else {
@@ -169,44 +169,44 @@ public:
                 if (data.isZero()) sign = false;
             }
         }
-        else static if (op=="^^=")
+        else static if (op=="^^")
         {
             sign = (y&1)? sign : false;
             data = BigUint.pow(data, y);
         }
-        else static assert(0, "BigInt " ~ op[0..$-1] ~ " " ~ T.stringof ~ " is not supported");
+        else static assert(0, "BigInt " ~ op[0..$-1] ~ "= " ~ T.stringof ~ " is not supported");
         return this;
     }
 
     // BigInt op= BigInt
-    BigInt opOpAssign(string op, T)(T y)  if ((op=="+=" || op=="-=" || op=="*=" || op=="/=" || op=="%=") && is (T: BigInt))
+    BigInt opOpAssign(string op, T)(T y)  if ((op=="+" || op=="-" || op=="*" || op=="/" || op=="%") && is (T: BigInt))
     {
-        static if (op=="+=")
+        static if (op=="+")
         {
             data = BigUint.addOrSub(data, y.data, sign != y.sign, &sign);
         }
-        else static if (op=="-=")
+        else static if (op=="-")
         {
             data = BigUint.addOrSub(data, y.data, sign == y.sign, &sign);
         }
-        else static if (op=="*=")
+        else static if (op=="*")
         {
             data = BigUint.mul(data, y.data);
             sign = isZero() ? false : sign ^ y.sign;
         }
-        else static if (op=="/=")
+        else static if (op=="/")
         {
             if (!isZero()) {
                 sign ^= y.sign;
                 data = BigUint.div(data, y.data);
             }
         }
-        else static if (op=="%="){
+        else static if (op=="%"){
             if (!isZero()) {
                 data = BigUint.mod(data, y.data);
             }
         }
-        else static assert(0, "BigInt " ~ op[0..$-1] ~ " " ~ T.stringof ~ " is not supported");
+        else static assert(0, "BigInt " ~ op[0..$-1] ~ "= " ~ T.stringof ~ " is not supported");
         return this;
     }
 
@@ -214,14 +214,14 @@ public:
     BigInt opBinary(string op, T)(T y)  if ((op=="+" || op == "*" || op=="-" || op=="/" || op=="%") && is (T: BigInt))
     {
         BigInt r = this;
-        return r.opOpAssign!(op ~ "=")(y);
+        return r.opOpAssign!(op)(y);
     }
 
     // BigInt op integer
     BigInt opBinary(string op, T)(T y)  if ((op=="+" || op == "*" || op=="-" || op=="/" || op==">>" || op=="<<" || op=="^^") && is (T: long))
     {
         BigInt r = this;
-        return r.opOpAssign!(op ~ "=")(y);
+        return r.opOpAssign!(op)(y);
     }
 
     //
