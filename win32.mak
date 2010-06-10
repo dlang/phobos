@@ -118,6 +118,7 @@ SRCS= std\math.d std\stdio.d std\dateparse.d std\date.d std\uni.d std\string.d \
 	std\stdarg.d \
 	std\stdint.d \
 	std\json.d \
+	std\gregorian.d \
 	std\internal\math\biguintcore.d \
 	std\internal\math\biguintnoasm.d std\internal\math\biguintx86.d \
 	crc32.d \
@@ -164,6 +165,7 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_functional.html \
 	$(DOC)\std_gc.html \
 	$(DOC)\std_getopt.html \
+	$(DOC)\std_gregorian.html \
 	$(DOC)\std_intrinsic.html \
 	$(DOC)\std_json.html \
 	$(DOC)\std_math.html \
@@ -234,7 +236,7 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\container.d std\conv.d std\utf.d 
 	std\regex.d std\datebase.d \
 	std\internal\math\biguintcore.d \
 	std\internal\math\biguintnoasm.d std\internal\math\biguintx86.d \
-	std\__fileinit.d
+	std\__fileinit.d std\gregorian.d
 
 SRC_STD_C= std\c\process.d std\c\stdlib.d std\c\time.d std\c\stdio.d \
 	std\c\math.d std\c\stdarg.d std\c\stddef.d std\c\fenv.d std\c\string.d \
@@ -620,6 +622,9 @@ $(DOC)\std_gc.html : $(STDDOC) $(DRUNTIME)\src\core\memory.d
 
 $(DOC)\std_getopt.html : $(STDDOC) std\getopt.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_getopt.html $(STDDOC) std\getopt.d
+
+$(DOC)\std_gregorian.html : $(STDDOC) std\gregorian.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_gregorian.html $(STDDOC) std\gregorian.d
 
 $(DOC)\std_intrinsic.html : $(STDDOC) std\intrinsic.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_intrinsic.html $(STDDOC) std\intrinsic.d

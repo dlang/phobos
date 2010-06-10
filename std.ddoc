@@ -172,6 +172,7 @@ NAVIGATION_PHOBOS=
 	$(LI <a href="std_functional.html" title="functional">std.functional</a>)
 	$(LI <a href="std_gc.html" title="Control the garbage collector">std.gc</a>)
 	$(LI <a href="std_getopt.html" title="Command line options">std.getopt</a>)
+	$(LI <a href="std_gregorian.html" title="Gregorian Calendar">std.gregorian</a>)
 	$(LI <a href="std_intrinsic.html" title="Compiler built in intrinsic functions">std.intrinsic</a>)
 	$(LI <a href="std_iterator.html" title="Defines iterators and ranges">std.iterator</a>)
 	$(LI <a href="std_math.html" title="the usual math functions">std.math</a>)
