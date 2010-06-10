@@ -1330,7 +1330,7 @@ void writeln(T...)(T args)
 if (T.length == 1 && is(typeof(args[0]) : const(char)[]))
 {
     enforce(fprintf(.stdout.p.handle, "%.*s\n",
-                    args[0].length, args[0].ptr) >= 0);
+                    cast(int) args[0].length, args[0].ptr) >= 0);
 }
 
 unittest
