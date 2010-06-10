@@ -40,7 +40,6 @@ version(unittest)
 {
     import std.stdio;
     import std.conv;
-	void main(){}
 }
 /// Format flags for CustomFloat.
 public enum CustomFloatFlags {
