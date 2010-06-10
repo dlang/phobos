@@ -1888,7 +1888,8 @@ assert(startsWith("abc", "x", "aaa", "sab") == 0);
 assert(startsWith("abc", "x", "aaa", "a", "sab") == 3);
 ----
  */
-uint startsWith(alias pred = "a == b", Range, Ranges...)
+Select!(Ranges.length == 1, bool, uint)
+startsWith(alias pred = "a == b", Range, Ranges...)
 (Range doesThisStart, Ranges withOneOfThese)
 if (isInputRange!Range && Ranges.length > 0
         // TODO: the condition below is incomplete
@@ -1953,6 +1954,7 @@ if (isInputRange!Range && Ranges.length > 0
 
 unittest
 {
+    bool x = startsWith("ab", "a");
     assert(startsWith("abc", ""));
     assert(startsWith("abc", "a"));
     assert(!startsWith("abc", "b"));
@@ -3966,7 +3968,7 @@ void topN(alias less = "a < b",
     auto heap = BinaryHeap!Range1(r1);
     for (; !r2.empty; r2.popFront)
     {
-        heap.conditionalPut(r2.front);
+        heap.conditionalInsert(r2.front);
     }
 }
 
@@ -4560,15 +4562,19 @@ if (isIntegral!(ElementType!(RangeIndex)))
     auto heap = BinaryHeap!(RangeIndex, indirectLess)(index, 0);
     foreach (i; 0 .. r.length)
     {
-        heap.conditionalPut(cast(ElementType!RangeIndex) i);
+        heap.conditionalInsert(cast(ElementType!RangeIndex) i);
     }
-    if (sorted == SortOutput.yes) heap.pop(heap.length);
+    if (sorted == SortOutput.yes)
+    {
+        while (!heap.empty) heap.removeFront();
+    }
 }
 
 void topNIndex(
     alias less = "a < b",
     SwapStrategy ss = SwapStrategy.unstable,
-    Range, RangeIndex)(Range r, RangeIndex index, SortOutput sorted = SortOutput.no)
+    Range, RangeIndex)(Range r, RangeIndex index,
+            SortOutput sorted = SortOutput.no)
 if (is(ElementType!(RangeIndex) == ElementType!(Range)*))
 {
     if (index.empty) return;
@@ -4580,9 +4586,12 @@ if (is(ElementType!(RangeIndex) == ElementType!(Range)*))
     auto heap = BinaryHeap!(RangeIndex, indirectLess)(index, 0);
     foreach (i; 0 .. r.length)
     {
-        heap.conditionalPut(&r[i]);
+        heap.conditionalInsert(&r[i]);
     }
-    if (sorted == SortOutput.yes) heap.pop(heap.length);
+    if (sorted == SortOutput.yes)
+    {
+        while (!heap.empty) heap.removeFront();
+    }
 }
 
 unittest
@@ -5110,8 +5119,13 @@ TRange topNCopy(alias less = "a < b", SRange, TRange)
 {
     if (target.empty) return target;
     auto heap = BinaryHeap!(TRange, less)(target, 0);
-    foreach (e; source) heap.conditionalPut(e);
-    return sorted == SortOutput.yes ? heap.pop(heap.length) : heap.release;
+    foreach (e; source) heap.conditionalInsert(e);
+    auto result = target[0 .. heap.length];
+    if (sorted == SortOutput.yes)
+    {
+        while (!heap.empty) heap.removeFront();
+    }
+    return result;
 }
 
 unittest
@@ -5644,7 +5658,8 @@ struct NWayUnion(alias less, RangeOfRanges)
     private alias .ElementType!(.ElementType!RangeOfRanges) ElementType;
     private alias binaryFun!less comp;
     private RangeOfRanges _ror;
-    static bool compFront(.ElementType!RangeOfRanges a, .ElementType!RangeOfRanges b)
+    static bool compFront(.ElementType!RangeOfRanges a,
+            .ElementType!RangeOfRanges b)
     {
         // revert comparison order so we get the smallest elements first
         return comp(b.front, a.front);
@@ -5669,7 +5684,7 @@ struct NWayUnion(alias less, RangeOfRanges)
 
     void popFront()
     {
-        _heap.popFront();
+        _heap.removeFront();
         // let's look at the guy just popped
         _ror.back.popFront;
         if (_ror.back.empty)
@@ -5680,7 +5695,7 @@ struct NWayUnion(alias less, RangeOfRanges)
             return;
         }
         // Put the popped range back in the heap
-        _heap.conditionalPut(_ror.back) || assert(false);
+        _heap.conditionalInsert(_ror.back) || assert(false);
     }
 }
 
