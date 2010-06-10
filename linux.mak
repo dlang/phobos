@@ -225,7 +225,7 @@ $(ROOT)/.directory :
 	touch $@
 
 clean :
-	rm -rf $(ROOT_OF_THEM_ALL) $(ZIPFILE) $(DOC_OUTPUT_DIR)
+	rm -rf $(ROOT_OF_THEM_ALL) $(ZIPFILE) $(DOC_OUTPUT_DIR) std/all.d
 
 zip :
 	zip $(ZIPFILE) $(MAKEFILE) $(ALL_D_FILES) $(ALL_C_FILES)
