@@ -7,7 +7,7 @@ that allow construction of new, useful general-purpose types.
 Macros:
 
 WIKI = Phobos/StdVariant
- 
+
 Synopsis:
 
 ----
@@ -33,37 +33,33 @@ void foo()
 void bar()
 {
     const w1 = new Widget, w2 = new Widget;
-    w1.foo(); 
+    w1.foo();
     // w1 = w2 would not work; can't rebind const object
     auto r = Rebindable!(const Widget)(w1);
     // invoke method as if r were a Widget object
-    r.foo(); 
+    r.foo();
     // rebind r to refer to another object
     r = w2;
 }
 ----
 
-Copyright: Copyright Andrei Alexandrescu 2008 - 2009.
-License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+Copyright: Copyright the respective authors, 2008-
+License:   $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   $(WEB erdani.org, Andrei Alexandrescu),
            $(WEB bartoszmilewski.wordpress.com, Bartosz Milewski),
            Don Clugston,
            Shin Fujishiro
-
-         Copyright Andrei Alexandrescu 2008 - 2009.
-Distributed under the Boost Software License, Version 1.0.
-   (See accompanying file LICENSE_1_0.txt or copy at
-         http://www.boost.org/LICENSE_1_0.txt)
-*/
+ */
 module std.typecons;
-import std.array, std.contracts, std.conv, std.metastrings, std.traits, std.typetuple;
+import core.stdc.stdlib, std.algorithm, std.array, std.contracts, std.conv,
+    std.metastrings, std.traits, std.typetuple;
 
 /**
-Encapsulates unique ownership of a resource. 
-Resource of type T is deleted at the end of the scope, unless it is transferred.
-The transfer can be explicit, by calling $(D release), or implicit, when returning
-Unique from a function. The resource can be a polymorphic class object, in which case
-Unique behaves polymorphically too.
+Encapsulates unique ownership of a resource.  Resource of type T is
+deleted at the end of the scope, unless it is transferred.  The
+transfer can be explicit, by calling $(D release), or implicit, when
+returning Unique from a function. The resource can be a polymorphic
+class object, in which case Unique behaves polymorphically too.
 
 Example:
 */
@@ -76,10 +72,10 @@ else
     alias T * RefT;
 public:
 /+ Doesn't work yet
-    /** 
-    The safe constructor. It creates the resource and 
+    /**
+    The safe constructor. It creates the resource and
     guarantees unique ownership of it (unless the constructor
-    of $(D T) publishes aliases of $(D this)), 
+    of $(D T) publishes aliases of $(D this)),
     */
     this(A...)(A args)
     {
@@ -114,12 +110,12 @@ public:
         assert(p is null);
     }
 /+ Doesn't work yet
-    /** 
+    /**
     Constructor that takes a Unique of a type that is convertible to our type:
     Disallow construction from lvalue (force the use of release on the source Unique)
     If the source is an rvalue, null its content, so the destrutctor doesn't delete it
 
-    Typically used by the compiler to return $(D Unique) of derived type as $(D Unique) 
+    Typically used by the compiler to return $(D Unique) of derived type as $(D Unique)
     of base type.
 
     Example:
@@ -206,13 +202,13 @@ unittest
         int val() const { return 3; }
     }
     alias Unique!(Foo) UFoo;
-    
+
     UFoo f(UFoo u)
     {
         writeln("inside f");
         return u;
     }
-    
+
     auto uf = UFoo(new Foo);
     assert(!uf.isEmpty);
     assert(uf.val == 3);
@@ -444,7 +440,7 @@ assert(s.field[0] == "abc" && s.field[1] == 4.5);
             static if (is(typeof(to!string(field[i]))))
                 app.put(to!string(field[i]));
             else
-                app.put(typeof(field[i]).stringof); 
+                app.put(typeof(field[i]).stringof);
         }
         app.put(toStringFooter);
         return assumeUnique(result);
@@ -804,7 +800,7 @@ char [] alignForSize(E...)(string[E.length] names)
 {
     // Sort all of the members by .alignof.
     // BUG: Alignment is not always optimal for align(1) structs
-    // or 80-bit reals. 
+    // or 80-bit reals.
     // TRICK: Use the fact that .alignof is always a power of 2,
     // and maximum 16 on extant systems. Thus, we can perform
     // a very limited radix sort.
@@ -831,7 +827,7 @@ char [] alignForSize(E...)(string[E.length] names)
 unittest {
     // assert(alignForSize!(int[], char[3], short, double[5])(["x", "y","z", "w"]) =="double[5u] w;\nint[] x;\nshort z;\nchar[3u] y;\n");
     struct Foo{ int x; }
-    // assert(alignForSize!(ubyte, Foo, cdouble)(["x", "y","z"]) =="cdouble z;\nFoo y;\nubyte x;\n");    
+    // assert(alignForSize!(ubyte, Foo, cdouble)(["x", "y","z"]) =="cdouble z;\nFoo y;\nubyte x;\n");
 }
 
 /*--*
@@ -844,7 +840,7 @@ struct Ref(T)
     ref T opDot() { return *_p; }
     /*ref*/ T opImplicitCastTo() { return *_p; }
     ref T value() { return *_p; }
-    
+
     void opAssign(T value)
     {
         *_p = value;
@@ -883,7 +879,7 @@ assert(!a.isNull);
 assert(a == 5);
 ----
 
-Practically $(D Nullable!T) stores a $(D T) and a $(D bool). 
+Practically $(D Nullable!T) stores a $(D T) and a $(D bool).
  */
 struct Nullable(T)
 {
@@ -892,7 +888,7 @@ struct Nullable(T)
 
 /**
 Constructor initializing $(D this) with $(D value).
- */ 
+ */
     this(T value)
     {
         _value = value;
@@ -901,7 +897,7 @@ Constructor initializing $(D this) with $(D value).
 
 /**
 Returns $(D true) if and only if $(D this) is in the null state.
- */ 
+ */
     bool isNull()
     {
         return _isNull;
@@ -909,7 +905,7 @@ Returns $(D true) if and only if $(D this) is in the null state.
 
 /**
 Forces $(D this) to the null state.
- */ 
+ */
     void nullify()
     {
         // destroy
@@ -920,7 +916,7 @@ Forces $(D this) to the null state.
 /**
 Assigns $(D value) to the internally-held state. If the assignment
 succeeds, $(D this) becomes non-null.
- */ 
+ */
     void opAssign(T value)
     {
         _value = value;
@@ -967,15 +963,15 @@ struct Nullable(T, T nullValue)
 
 /**
 Constructor initializing $(D this) with $(D value).
- */ 
+ */
     this(T value)
     {
         _value = value;
     }
-    
+
 /**
 Returns $(D true) if and only if $(D this) is in the null state.
- */ 
+ */
     bool isNull()
     {
         return _value == nullValue;
@@ -983,7 +979,7 @@ Returns $(D true) if and only if $(D this) is in the null state.
 
 /**
 Forces $(D this) to the null state.
- */ 
+ */
     void nullify()
     {
         _value = nullValue;
@@ -992,12 +988,12 @@ Forces $(D this) to the null state.
 /**
 Assigns $(D value) to the internally-held state. No null checks are
 made.
- */ 
+ */
     void opAssign(T value)
     {
         _value = value;
     }
-    
+
 /**
 Gets the value. Throws an exception if $(D this) is in the null
 state. This function is also called for the implicit conversion to $(D
@@ -1037,23 +1033,23 @@ struct NullableRef(T)
 
 /**
 Constructor binding $(D this) with $(D value).
- */ 
+ */
     this(T * value)
     {
         _value = value;
     }
-    
+
 /**
 Binds the internal state to $(D value).
- */ 
+ */
     void bind(T * value)
     {
         _value = value;
     }
-    
+
 /**
 Returns $(D true) if and only if $(D this) is in the null state.
- */ 
+ */
     bool isNull()
     {
         return _value is null;
@@ -1061,21 +1057,21 @@ Returns $(D true) if and only if $(D this) is in the null state.
 
 /**
 Forces $(D this) to the null state.
- */ 
+ */
     void nullify()
     {
         _value = null;
     }
 
 /**
-Assigns $(D value) to the internally-held state. 
- */ 
+Assigns $(D value) to the internally-held state.
+ */
     void opAssign(T value)
     {
         enforce(_value);
         *_value = value;
     }
-    
+
 /**
 Gets the value. Throws an exception if $(D this) is in the null
 state. This function is also called for the implicit conversion to $(D
@@ -1979,3 +1975,181 @@ template generateAssertTrap(C, func.../+[BUG 4217]+/)
             `throw new NotImplementedError("` ~ C.stringof ~ "."
                     ~ __traits(identifier, func) ~ `");`;
 }
+
+/**
+Options regarding auto-initialization of a $(D RefCounted) object (see
+the definition of $(D RefCounted) below).
+ */
+enum RefCountedAutoInitialize
+{
+    /// Do not auto-initialize the object
+    no,
+    /// Auto-initialize the object
+    yes,
+}
+
+/**
+Defines a reference-counted object containing a $(D T) value as
+payload. $(D RefCounted) keeps track of all references of an object,
+and when the reference count goes down to zero, frees the underlying
+store. $(D RefCounted) uses $(D malloc) and $(D free) for operation.
+
+$(D RefCounted) is unsafe and should be used with care. No references
+to the payload should be escaped outside the $(D RefCounted) object.
+
+The $(D autoInit) option makes the object ensure the store is
+automatically initialized. Leaving $(D autoInit ==
+RefCountedAutoInitialize.yes) (the default option) is convenient but
+has the cost of a test whenever the payload is accessed. If $(D
+autoInit == RefCountedAutoInitialize.no), user code must call either
+$(D refCountedIsInitialized) or $(D refCountedEnsureInitialized)
+before attempting to access the payload. Not doing so results in null
+pointer dereference.
+
+Example:
+----
+// A pair of an $(D int) and a $(D size_t) - the latter being the
+// reference count - will be dynamically allocated
+auto rc1 = RefCounted!int(5);
+assert(rc1 == 5);
+// No more allocation, add just one extra reference count
+auto rc2 = rc1;
+// Reference semantics
+rc2 = 42;
+assert(rc1 == 42);
+// the pair will be freed when rc1 and rc2 go out of scope
+----
+ */
+struct RefCounted(T, RefCountedAutoInitialize autoInit =
+        RefCountedAutoInitialize.yes)
+if (!is(T == class))
+{
+    private Tuple!(T, "payload_", size_t, "count_") * refCountedStore_;
+
+    private void refCountedInitialize(A...)(A args)
+    {
+        auto p = malloc((*refCountedStore_).sizeof)
+            [0 .. (*refCountedStore_).sizeof];
+        emplace!T(p[0 .. T.sizeof], args);
+        refCountedStore_ = cast(typeof(refCountedStore_)) p;
+        refCountedStore_.count_ = 1;
+    }
+
+/**
+Returns $(D true) if and only if the underlying store has been
+allocated and initialized.
+ */
+    @property bool refCountedIsInitialized() const
+    {
+        return refCountedStore_ !is null;
+    }
+
+/**
+Makes sure the payload was properly initialized. Such a call is
+typically inserted before using the payload.
+ */
+    void refCountedEnsureInitialized()
+    {
+        if (refCountedIsInitialized()) return;
+        refCountedInitialize();
+    }
+
+/**
+Constructor that initializes the payload.
+
+Postcondition: $(D refCountedIsInitialized)
+ */
+    this(A...)(A args) if (A.length > 0)
+    {
+        refCountedInitialize(args);
+    }
+
+/**
+Constructor that tracks the reference count appropriately. If $(D
+!refCountedIsInitialized), does nothing.
+ */
+    this(this)
+    {
+        if (!refCountedIsInitialized) return;
+        ++refCountedStore_.count_;
+    }
+
+/**
+Destructor that tracks the reference count appropriately. If $(D
+!refCountedIsInitialized), does nothing. When the reference count goes
+down to zero, calls $(D clear) agaist the payload and calls $(D free)
+to deallocate the corresponding resource.
+ */
+    ~this()
+    {
+        if (!refCountedStore_ || --refCountedStore_.count_) return;
+        // Done, deallocate
+        clear(*refCountedStore_);
+        free(refCountedStore_);
+        refCountedStore_ = null;
+    }
+
+/**
+Assignment operators
+ */
+    void opAssign(RefCounted!T rhs)
+    {
+        swap(refCountedStore_, rhs.refCountedStore_);
+    }
+
+/// Ditto
+    void opAssign(T rhs)
+    {
+        refCountedPayload() = move(rhs);
+    }
+
+/**
+Returns a reference to the payload. If (autoInit ==
+RefCountedAutoInitialize.yes), calls $(D
+refCountedEnsureInitialized). Otherwise, just issues $(D
+assert(refCountedIsInitialized)).
+ */
+    alias refCountedPayload this;
+
+/**
+Returns a reference to the payload. If (autoInit ==
+RefCountedAutoInitialize.yes), calls $(D
+refCountedEnsureInitialized). Otherwise, just issues $(D
+assert(refCountedIsInitialized)). Used with $(D alias
+refCountedPayload this;), so callers can just use the $(D RefCounted)
+object as a $(D T).
+ */
+    @property ref T refCountedPayload() {
+        static if (autoInit == RefCountedAutoInitialize.yes)
+        {
+            refCountedEnsureInitialized();
+        }
+        else
+        {
+            assert(refCountedIsInitialized);
+        }
+        return refCountedStore_.payload_;
+    }
+}
+
+unittest
+{
+    RefCounted!int* p;
+    {
+        auto rc1 = RefCounted!int(5);
+        p = &rc1;
+        assert(rc1 == 5);
+        assert(rc1.refCountedStore_.count_ == 1);
+        auto rc2 = rc1;
+        assert(rc1.refCountedStore_.count_ == 2);
+        // Reference semantics
+        rc2 = 42;
+        assert(rc1 == 42);
+        rc2 = rc2;
+        assert(rc2.refCountedStore_.count_ == 2);
+        rc1 = rc2;
+        assert(rc1.refCountedStore_.count_ == 2);
+    }
+    assert(p.refCountedStore_ == null);
+}
+
