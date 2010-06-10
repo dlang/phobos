@@ -138,7 +138,7 @@ public:
                 data = 0UL;
             } else {
                 sign = (sign != (y<0));
-                data = BigUint.mulInt(data, y);
+                data = BigUint.mulInt(data, u);
             }
         }
         else static if (op=="/")
@@ -172,7 +172,7 @@ public:
         else static if (op=="^^")
         {
             sign = (y&1)? sign : false;
-            data = BigUint.pow(data, y);
+            data = BigUint.pow(data, u);
         }
         else static assert(0, "BigInt " ~ op[0..$-1] ~ "= " ~ T.stringof ~ " is not supported");
         return this;
