@@ -3386,8 +3386,8 @@ T* emplace(T, Args...)(void[] chunk, Args args) if (!is(T == class))
 
     static void initialize(void * p)
     {
-        static init = T.init;
-        memcpy(p, &init, T.sizeof);
+        static T i;
+        memcpy(p, &i, T.sizeof);
     }
 
     static if (is(typeof(result.__ctor(args))))
