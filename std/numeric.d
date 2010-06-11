@@ -519,8 +519,8 @@ struct CustomFloat(
     }
 
     /// ditto
-    void opOpAssign(string op, T)(auto ref T b) if ( __traits(compiles, mixin(`get!real`~op[0..$-1]~`cast(real)b`))) {
-        return mixin(`this = this `~op[0..$-1]~` cast(real)b`);
+    void opOpAssign(string op, T)(auto ref T b) if ( __traits(compiles, mixin(`get!real`~op~`cast(real)b`))) {
+        return mixin(`this = this `~op~` cast(real)b`);
     }
 
     /// ditto
@@ -539,7 +539,7 @@ unittest
 
     pragma(msg, " --- std.numeric(" ~ __LINE__.stringof ~ ") CustomFloat broken test ---");
 
-/+
+
     foreach (F; FPTypes)
     {
         auto x = F(0.125);
@@ -563,7 +563,7 @@ unittest
         assert(x.get!float == 1 / 16.0F);
         assert(x.get!double == 1 / 16.0);
     }
-+/
+
 }
 
 /**
