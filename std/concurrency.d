@@ -339,6 +339,51 @@ private
                 alias TypeTuple!(T) Ops;
             }
             
+            bool onUserMsg( Message msg )
+            {
+                Variant data = msg.data;
+
+                foreach( i, t; Ops )
+                {
+                    alias Tuple!(ParameterTypeTuple!(t)) Wrap;
+                    auto op = ops[i];
+
+                    static if( is( Wrap == Tuple!(Variant) ) )
+                    {
+                        static if( is( ReturnType!(t) == bool ) )
+                            return op( data );
+                        op( data );
+                        return true;
+                    }
+                    else static if( Variant.allowed!(Wrap) )
+                    {
+                        if( data.convertsTo!(Wrap) )
+                        {
+                            static if( is( ReturnType!(t) == bool ) )
+                            {
+                                return op( data.get!(Wrap).expand );
+                            }
+                            else
+                            {
+                                op( data.get!(Wrap).expand );
+                                return true;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        if( data.convertsTo!(Wrap*) )
+                        {
+                            static if( is( ReturnType!(t) == bool ) )
+                                return op( data.get!(Wrap*).expand );
+                            op( data.get!(Wrap*).expand );
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            }
+            
             bool ownerDead = false;
             
             bool onLinkDeadMsg( Variant data )
@@ -367,41 +412,46 @@ private
                         owned[i]   = owned[$-1];
                         owned[$-1] = Tid.init;
                         owned = owned[0 .. $-1];
-                        // BUG: This message should be removed, since it has
-                        //      been processed.  Control messages really need
-                        //      special handling since they're typically
-                        //      removed when encountered but the scan
-                        //      continues.
-                        return false;
+                        return true;
                     }
                 }
                 return false;
             }
             
-            bool match( Message msg )
+            bool onControlMsg( Message msg )
             {
                 switch( msg.type )
                 {
-                case MsgType.User:
-                    return onUserMsg( msg.data, ops );
                 case MsgType.LinkDead:
                     return onLinkDeadMsg( msg.data );
+                default:
+                    return false;
                 }
+            }
+            
+            bool isControlMsg( Message msg )
+            {
+                return msg.type != MsgType.User;
             }
             
             bool scan( ref ListT list )
             {
-                for( auto range = list[]; !range.empty; range.popFront() )
+                for( auto range = list[]; !range.empty; )
                 {
-                    // TODO: Maybe check message type here.  If it's a user
-                    //       message then remove and return if match==true.
-                    //       If it's a control message then maybe remove
-                    //       but continue processing.
-                    if( match( range.front ) )
+                    if( isControlMsg( range.front ) )
+                    {
+                        if( onControlMsg( range.front ) )
+                            list.removeAt( range );
+                        else
+                            range.popFront();
+                        continue;
+                    }
+                    if( onUserMsg( range.front ) )
                     {
                         list.removeAt( range );
                         return true;
                     }
+                    range.popFront();
                 }
                 return false;
             }
@@ -439,50 +489,6 @@ private
         ListT       m_shared;
         Mutex       m_sharedLock;
         Condition   m_sharedRecv;
-    }
-    
-    
-    bool onUserMsg(Ops...)( Variant data, Ops ops )
-    {
-        foreach( i, t; Ops )
-        {
-            alias Tuple!(ParameterTypeTuple!(t)) Wrap;
-            auto op = ops[i];
-
-            static if( is( Wrap == Tuple!(Variant) ) )
-            {
-                static if( is( ReturnType!(t) == bool ) )
-                    return op( data );
-                op( data );
-                return true;
-            }
-            else static if( Variant.allowed!(Wrap) )
-            {
-                if( data.convertsTo!(Wrap) )
-                {
-                    static if( is( ReturnType!(t) == bool ) )
-                    {
-                        return op( data.get!(Wrap).expand );
-                    }
-                    else
-                    {
-                        op( data.get!(Wrap).expand );
-                        return true;
-                    }
-                }
-            }
-            else
-            {
-                if( data.convertsTo!(Wrap*) )
-                {
-                    static if( is( ReturnType!(t) == bool ) )
-                        return op( data.get!(Wrap*).expand );
-                    op( data.get!(Wrap*).expand );
-                    return true;
-                }
-            }
-        }
-        return false;
     }
 
 
