@@ -976,6 +976,8 @@ unittest
     auto s = make!(SList!int)(1, 2, 3);
 }
 
+version (none)
+{
 /**
 _Array type with straightforward implementation building on $(D T[]).
  */
@@ -1540,13 +1542,14 @@ unittest
     a.linearRemove(a[4 .. 6]);
     assert(a == Array!int(0, 1, 2, 3, 6, 7, 8));
 }
+}
 
 /**
 Array type with deterministic control of memory. The memory allocated
 for the array is reclaimed as soon as possible; there is no reliance
 on the garbage collector.
  */
-struct TightArray(T)
+struct Array(T)
 {
     private struct Data
     {
@@ -1594,7 +1597,7 @@ struct TightArray(T)
         _data = null;
     }
 
-    void opAssign(TightArray another)
+    void opAssign(Array another)
     {
         swap(this, another);
     }
@@ -1602,7 +1605,7 @@ struct TightArray(T)
 /**
 Comparison for equality.
  */
-    bool opEquals(ref const TightArray rhs) const
+    bool opEquals(ref const Array rhs) const
     {
         if (empty) return rhs.empty;
         if (rhs.empty) return false;
@@ -1742,10 +1745,10 @@ duplicated.
 
 Complexity: $(BIGOH n).
  */
-    @property TightArray dup()
+    @property Array dup()
     {
         if (!_data) return this;
-        return TightArray(_data._payload);
+        return Array(_data._payload);
     }
 
 /**
@@ -1897,10 +1900,10 @@ define $(D opBinary).
 Complexity: $(BIGOH n + m), where m is the number of elements in $(D
 stuff)
  */
-    TightArray opBinary(string op, Stuff)(Stuff stuff) if (op == "~")
+    Array opBinary(string op, Stuff)(Stuff stuff) if (op == "~")
     {
         // TODO: optimize
-        TightArray result;
+        Array result;
         result ~= this[];
         result ~= stuff;
         return result;
@@ -2232,29 +2235,29 @@ $(D r)
 
 unittest
 {
-    TightArray!int a;
+    Array!int a;
     assert(a.empty);
 }
 
 unittest
 {
-    auto a = TightArray!int(1, 2, 3);
+    auto a = Array!int(1, 2, 3);
     auto b = a.dup;
-    assert(b == TightArray!int(1, 2, 3));
+    assert(b == Array!int(1, 2, 3));
     b.front = 42;
-    assert(b == TightArray!int(42, 2, 3));
-    assert(a == TightArray!int(1, 2, 3));
+    assert(b == Array!int(42, 2, 3));
+    assert(a == Array!int(1, 2, 3));
 }
 
 unittest
 {
-    auto a = TightArray!int(1, 2, 3);
+    auto a = Array!int(1, 2, 3);
     assert(a.length == 3);
 }
 
 unittest
 {
-    TightArray!int a;
+    Array!int a;
     a.reserve(1000);
     assert(a.length == 0);
     assert(a.empty);
@@ -2269,51 +2272,51 @@ unittest
 
 unittest
 {
-    auto a = TightArray!int(1, 2, 3);
+    auto a = Array!int(1, 2, 3);
     a[1] *= 42;
     assert(a[1] == 84);
 }
 
 unittest
 {
-    auto a = TightArray!int(1, 2, 3);
-    auto b = TightArray!int(11, 12, 13);
-    assert(a ~ b == TightArray!int(1, 2, 3, 11, 12, 13));
-    assert(a ~ b[] == TightArray!int(1, 2, 3, 11, 12, 13));
+    auto a = Array!int(1, 2, 3);
+    auto b = Array!int(11, 12, 13);
+    assert(a ~ b == Array!int(1, 2, 3, 11, 12, 13));
+    assert(a ~ b[] == Array!int(1, 2, 3, 11, 12, 13));
 }
 
 unittest
 {
-    auto a = TightArray!int(1, 2, 3);
-    auto b = TightArray!int(11, 12, 13);
+    auto a = Array!int(1, 2, 3);
+    auto b = Array!int(11, 12, 13);
     a ~= b;
-    assert(a == TightArray!int(1, 2, 3, 11, 12, 13));
+    assert(a == Array!int(1, 2, 3, 11, 12, 13));
 }
 
 unittest
 {
-    auto a = TightArray!int(1, 2, 3, 4);
+    auto a = Array!int(1, 2, 3, 4);
     assert(a.removeAny() == 4);
-    assert(a == TightArray!int(1, 2, 3));
+    assert(a == Array!int(1, 2, 3));
 }
 
 unittest
 {
-    auto a = TightArray!int(1, 2, 3, 4, 5);
+    auto a = Array!int(1, 2, 3, 4, 5);
     auto r = a[2 .. a.length];
     assert(a.insertBefore(r, 42) == 1);
-    assert(a == TightArray!int(1, 2, 42, 3, 4, 5));
+    assert(a == Array!int(1, 2, 42, 3, 4, 5));
     r = a[2 .. 2];
     assert(a.insertBefore(r, [8, 9]) == 2);
-    assert(a == TightArray!int(1, 2, 8, 9, 42, 3, 4, 5));
+    assert(a == Array!int(1, 2, 8, 9, 42, 3, 4, 5));
 }
 
 unittest
 {
-    auto a = TightArray!int(0, 1, 2, 3, 4, 5, 6, 7, 8);
+    auto a = Array!int(0, 1, 2, 3, 4, 5, 6, 7, 8);
     a.linearRemove(a[4 .. 6]);
-    auto b = TightArray!int(0, 1, 2, 3, 6, 7, 8);
-    assert(a == TightArray!int(0, 1, 2, 3, 6, 7, 8));
+    auto b = Array!int(0, 1, 2, 3, 6, 7, 8);
+    assert(a == Array!int(0, 1, 2, 3, 6, 7, 8));
 }
 
 // BinaryHeap

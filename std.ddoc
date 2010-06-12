@@ -159,6 +159,7 @@ NAVIGATION_PHOBOS=
 	$(LI <a href="std_compiler.html" title="Information about the D compiler implementation">std.compiler</a>)
 	$(LI <a href="std_complex.html" title="Complex numbers">std.complex</a>)
 	$(LI <a href="std_concurrency.html" title="Message Passing">std.conconcurrency</a>)
+	$(LI <a href="std_container.html" title="Containers">std.container</a>)
 	$(LI <a href="std_contracts.html" title="Think assert">std.contracts</a>)
 	$(LI <a href="std_conv.html" title="Conversion of strings to integers">std.conv</a>)
 	$(LI <a href="std_cover.html" title="D coverage analyzer">std.cover</a>)
