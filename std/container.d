@@ -18,7 +18,8 @@ Authors: $(WEB erdani.com, Andrei Alexandrescu)
 module std.container;
 
 import core.stdc.stdlib, core.stdc.string, std.algorithm, std.contracts,
-    std.conv, std.functional, std.range, std.traits, std.typecons;
+    std.conv, std.functional, std.range, std.traits, std.typecons,
+    core.memory;
 version(unittest) import std.stdio;
 
 /**
@@ -1562,9 +1563,12 @@ struct Array(T)
 
     this(U)(U[] values...) if (isImplicitlyConvertible!(U, T))
     {
+	auto p = malloc(T.sizeof * values.length);
+	if (T.sizeof >= size_t.sizeof && p)
+	    GC.addRange(p, T.sizeof * values.length);
         _data = emplace!Data(
             malloc(Data.sizeof)[0 .. Data.sizeof],
-            (cast(T*) malloc(T.sizeof * values.length))[0 .. values.length]);
+            (cast(T*) p)[0 .. values.length]);
         assert(_data._refCount == 1);
         foreach (i, e; values)
         {
@@ -1592,6 +1596,8 @@ struct Array(T)
         assert(_data._refCount == 1);
         --_data._refCount;
         foreach (ref e; _data._payload) .clear(e);
+	if (T.sizeof >= size_t.sizeof)
+	    GC.removeRange(_data._payload.ptr);
         free(_data._payload.ptr);
         free(_data);
         _data = null;
@@ -1783,18 +1789,45 @@ Complexity: $(BIGOH 1)
     {
         if (!_data)
         {
+	    auto p = malloc(elements * T.sizeof);
+	    if (T.sizeof >= size_t.sizeof && p)	// should use hasPointers instead
+		GC.addRange(p, T.sizeof * elements);
             _data = emplace!Data(malloc(Data.sizeof)[0 .. Data.sizeof],
-                    (cast(T*) malloc(elements * T.sizeof))[0 .. 0]);
+                    (cast(T*) p)[0 .. 0]);
             _data._capacity = elements;
         }
         else
         {
             if (elements <= _data._capacity) return;
-            auto newPayload = (cast(T*) realloc(
-                        _data._payload.ptr,
-                        elements * T.sizeof))[0 .. _data._payload.length];
-            newPayload || assert(false);
-            _data._payload = newPayload;
+
+	    auto sz = elements * T.sizeof;
+	    if (T.sizeof >= size_t.sizeof)	// should use hasPointers instead
+	    {
+		/* Because of the transactional nature of this relative to the
+		 * garbage collector, ensure no threading bugs by using malloc/copy/free
+		 * rather than realloc.
+		 */
+		auto newPayload = (cast(T*) malloc(sz))[0 .. _data._payload.length];
+		newPayload || assert(false);
+		newPayload[] = _data._payload[];	// copy old data over to new array
+		// Zero out unused capacity to prevent gc from seeing false pointers
+		memset(newPayload.ptr + _data._payload.length,
+		       0,
+		       (elements - _data._payload.length) * T.sizeof);
+		GC.addRange(newPayload.ptr, sz);
+		GC.removeRange(_data._payload.ptr);
+		free(_data._payload.ptr);
+		_data._payload = newPayload;
+	    }
+	    else
+	    {
+		/* These can't have pointers, so no need to zero unused region
+		 */
+		auto newPayload = (cast(T*) realloc(_data._payload.ptr, sz))
+			[0 .. _data._payload.length];
+		newPayload || assert(false);
+		_data._payload = newPayload;
+	    }
             _data._capacity = elements;
         }
     }

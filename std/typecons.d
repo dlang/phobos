@@ -52,7 +52,7 @@ Authors:   $(WEB erdani.org, Andrei Alexandrescu),
  */
 module std.typecons;
 import core.stdc.stdlib, std.algorithm, std.array, std.contracts, std.conv,
-    std.metastrings, std.traits, std.typetuple;
+    std.metastrings, std.traits, std.typetuple, core.memory;
 
 /**
 Encapsulates unique ownership of a resource.  Resource of type T is
@@ -2028,8 +2028,10 @@ if (!is(T == class))
 
     private void refCountedInitialize(A...)(A args)
     {
-        auto p = malloc((*refCountedStore_).sizeof)
-            [0 .. (*refCountedStore_).sizeof];
+	const sz = (*refCountedStore_).sizeof;
+        auto p = malloc(sz)[0 .. sz];
+	if (sz >= size_t.sizeof && p.ptr)
+	    GC.addRange(p.ptr, sz);
         emplace!T(p[0 .. T.sizeof], args);
         refCountedStore_ = cast(typeof(refCountedStore_)) p;
         refCountedStore_.count_ = 1;
@@ -2085,6 +2087,8 @@ to deallocate the corresponding resource.
         if (!refCountedStore_ || --refCountedStore_.count_) return;
         // Done, deallocate
         clear(*refCountedStore_);
+	if ((*refCountedStore_).sizeof >= size_t.sizeof && refCountedStore_)
+	    GC.removeRange(refCountedStore_);
         free(refCountedStore_);
         refCountedStore_ = null;
     }
