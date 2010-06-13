@@ -179,9 +179,12 @@ struct CustomFloat(
         alias CustomFloatFlags Flags;
 
         // Facilitate converting numeric types to custom float
-        union ToBinary(F) if(is(CustomFloat!(F.sizeof*8))) {
+        union ToBinary(F) if(is(CustomFloat!(F.sizeof*8)) || is(F == real)) {
             F set;
-            CustomFloat!(F.sizeof*8) get;
+
+            // If on Linux or Mac, where 80-bit reals are padded, ignore the
+            // padding.
+            CustomFloat!(min(F.sizeof*8, 80)) get;
 
             // Convert F to the correct binary type.
             static typeof(get) opCall(F value) {
