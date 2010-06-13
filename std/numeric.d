@@ -24,6 +24,7 @@ module std.numeric;
 import std.algorithm;
 import std.array;
 import std.bitmanip;
+import std.conv;
 import std.typecons;
 import std.math;
 import std.traits;
@@ -39,7 +40,6 @@ import std.intrinsic;
 version(unittest)
 {
     import std.stdio;
-    import std.conv;
 }
 /// Format flags for CustomFloat.
 public enum CustomFloatFlags {
