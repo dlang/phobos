@@ -568,9 +568,9 @@ Complexity: $(BIGOH 1)
 
     unittest
     {
-        auto s = SList(1, 2, 3);
+        auto s = SList!int(1, 2, 3);
         s.front = 42;
-        assert(s == SList(42, 2, 3));
+        assert(s == SList!int(42, 2, 3));
     }
 
 /**
