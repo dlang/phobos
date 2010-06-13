@@ -1475,6 +1475,8 @@ struct Repeat(T)
     void popFront() {}
     /// Ditto
     void popBack() {}
+	/// Ditto
+	@property Repeat!(T) save() { return this; }
     /// Ditto
     ref T opIndex(uint) { return _value; }
 }
