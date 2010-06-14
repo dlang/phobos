@@ -132,6 +132,8 @@ unittest
     assert(result < 0);
     result = cmp("aaaa", "aaa"d);
     assert(result > 0);
+    result = cmp("aaa", "aaa"d);
+    assert(result == 0);
 }
 
 /*********************************
