@@ -846,7 +846,7 @@ wstring toUTF16(const(char)[] s)
 
 /** ditto */
 
-const(wchar*) toUTF16z(in char[] s)
+const(wchar)* toUTF16z(in char[] s)
 {
     wchar[] r;
     size_t slen = s.length;
