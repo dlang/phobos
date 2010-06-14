@@ -366,7 +366,7 @@ version(Posix) private void writeImpl(in char[] name,
         in void[] buffer, in uint mode)
 {
     immutable fd = core.sys.posix.fcntl.open(toStringz(name),
-            mode, 0660);
+            mode, octal!666);
     cenforce(fd != -1, name);
     {
         scope(failure) core.sys.posix.unistd.close(fd);
@@ -1071,7 +1071,7 @@ version(Posix) void copy(in char[] from, in char[] to)
         
     auto toz = toStringz(to);
     immutable fdw = core.sys.posix.fcntl.open(toz,
-            O_CREAT | O_WRONLY | O_TRUNC, 0660);
+            O_CREAT | O_WRONLY | O_TRUNC, octal!666);
     cenforce(fdw != -1, from);
     scope(failure) std.c.stdio.remove(toz);
     {
