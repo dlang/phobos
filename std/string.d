@@ -100,7 +100,7 @@ int cmp(C1, C2)(in C1[] s1, in C2[] s2)
         size_t i1, i2;
         for (;;)
         {
-            if (i1 == s1.length) return s2.length - i2;
+            if (i1 == s1.length) return i2 - s2.length;
             if (i2 == s2.length) return s1.length - i1;
             immutable c1 = std.utf.decode(s1, i1),
                 c2 = std.utf.decode(s2, i2);
@@ -127,6 +127,10 @@ unittest
     result = cmp("abc"d, "abd");
     assert(result < 0);
     result = cmp("bbc", "abc"w);
+    assert(result > 0);
+    result = cmp("aaa", "aaaa"d);
+    assert(result < 0);
+    result = cmp("aaaa", "aaa"d);
     assert(result > 0);
 }
 
