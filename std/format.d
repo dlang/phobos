@@ -2025,22 +2025,23 @@ private void formatGeneric(Writer, D)(ref Writer w, const(void)* arg,
         w.put('[');
         w.put(']');
     } else static if (isArray!(D)) {
+        auto arr = obj[];
         auto memberSpec = f;
         memberSpec.innerTrailing = null;
         if (f.spec == 'r')
         {
             // raw writes
-            foreach (i, e; obj) formatGeneric!(Writer, typeof(e))
+            foreach (i, e; arr) formatGeneric!(Writer, typeof(e))
                                     (w, &e, memberSpec);
         }
         else
         {
-            if (obj.length == 0) return;
+            if (arr.length == 0) return;
             // formatted writes
-            formatGeneric!(Writer, typeof(obj[0]))(w, obj.ptr, memberSpec);
+            formatGeneric!(Writer, typeof(*arr.ptr))(w, arr.ptr, memberSpec);
             if (!f.innerTrailing)
             {
-                foreach (i, e; obj[1 .. $])
+                foreach (i, e; arr[1 .. $])
                 {
                     w.put(' ');
                     formatGeneric!(Writer, typeof(e))(w, &e, f);
@@ -2050,7 +2051,7 @@ private void formatGeneric(Writer, D)(ref Writer w, const(void)* arg,
             {
                 const hasEscapes = 
                     std.algorithm.find(f.innerTrailing, '%').length > 0;
-                foreach (i, e; obj[1 .. $])
+                foreach (i, e; arr[1 .. $])
                 {
                     if (hasEscapes)
                     {
