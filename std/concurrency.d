@@ -49,8 +49,8 @@ private
     
     enum MsgType
     {
-        User,
-        LinkDead,
+        user,
+        linkDead,
     }
     
     struct Message
@@ -64,9 +64,9 @@ private
         }
     }
 
-    MessageBox mbox;
-    Tid[]      owned;
-    Tid        owner;
+    MessageBox  mbox;
+    bool[Tid]   links;
+    Tid         owner;
 }
 
 
@@ -78,11 +78,12 @@ static this()
 
 static ~this()
 {
+    mbox.close();
     auto me = thisTid;
-    foreach( tid; owned )
-        _send( MsgType.LinkDead, tid, me );
+    foreach( tid; links.keys )
+        _send( MsgType.linkDead, tid, me );
     if( owner != Tid.init )
-        _send( MsgType.LinkDead, owner, me );
+        _send( MsgType.linkDead, owner, me );
 }
 
 
@@ -103,10 +104,28 @@ class MessageMismatch : Exception
  */
 class OwnerTerminated : Exception
 {
-    this( string msg = "Owner terminated" )
+    this( Tid t, string msg = "Owner terminated" )
     {
         super( msg );
+        tid = t;
     }
+    
+    Tid tid;
+}
+
+
+/**
+ *
+ */
+class LinkTerminated : Exception
+{
+    this( Tid t, string msg = "Link terminated" )
+    {
+        super( msg );
+        tid = t;
+    }
+    
+    Tid tid;
 }
 
 
@@ -142,7 +161,11 @@ private:
 
 
 /**
- * Executes the supplied function in a new context represented by Tid.
+ * Executes the supplied function in a new context represented by Tid.  The
+ * calling context is designated as the owner of the new context.  When the
+ * owner context terminated an OwnerTerminated message will be sent to the
+ * new context, causing an OwnerTerminated exception to be thrown on
+ * receive().
  *
  * Params:
  *  fn   = The function to execute.
@@ -164,11 +187,43 @@ Tid spawn(T...)( void function(T) fn, T args )
         fn( args );
     }
 
-    auto t = new Thread( &exec );
-    
-    t.start();
-    owned ~= spawnTid;
+    auto t = new Thread( &exec ); t.start();
+    links[spawnTid] = false;
     return spawnTid;
+}
+
+
+/**
+ * Executes the supplied function in a new context represented by Tid.  This
+ * new context has no owner but is linked to the calling context so that if
+ * either it or the calling context terminates a LinkTerminated message will
+ * be sent to the other, causing a LinkTerminated exception to be thrown on
+ * receive().
+ *
+ * Params:
+ *  fn   = The function to execute.
+ *  args = Arguments to the function.
+ *
+ * Returns:
+ *  A Tid representing the new context.
+ */
+Tid spawnLinked(T...)( void function(T) fn, T args )
+{
+    // TODO: MessageList and &exec should be shared.
+    auto spawnTid = Tid( new MessageBox );
+    auto linkTid  = thisTid;
+
+    void exec()
+    {
+        mbox  = spawnTid.mbox;
+        links[linkTid] = true;
+        owner = null;
+        fn( args );
+    }
+
+    auto t = new Thread( &exec ); t.start();
+    links[spawnTid] = true;
+    return spawnTid;   
 }
 
 
@@ -216,7 +271,7 @@ private void _send(T...)( MsgType type, Tid tid, T vals )
  */
 private void _send(T...)( Tid tid, T vals )
 {
-    _send( MsgType.User, tid, vals );
+    _send( MsgType.user, tid, vals );
 }
 
 
@@ -310,6 +365,7 @@ private
         {
             m_sharedLock = new Mutex;
             m_sharedRecv = new Condition( m_sharedLock );
+            m_sharedOpen = true;
         }
         
         
@@ -317,8 +373,13 @@ private
         {
             synchronized( m_sharedLock )
             {
-                m_shared.put( val );
-                m_sharedRecv.notify();
+                // TODO: Generate an error here if m_sharedOpen is false?
+                //       Or maybe put a message in the caller's queue?
+                if( m_sharedOpen )
+                {
+                    m_shared.put( val );
+                    m_sharedRecv.notify();
+                }
             }
         }
         
@@ -405,15 +466,12 @@ private
                     ownerDead = true;
                     return false;
                 }
-                foreach( i, e; owned )
+                if( bool* depends = (wrap.field[0] in links) )
                 {
-                    if( wrap.field[0] == e )
-                    {
-                        owned[i]   = owned[$-1];
-                        owned[$-1] = Tid.init;
-                        owned = owned[0 .. $-1];
-                        return true;
-                    }
+                    links.remove( wrap.field[0] );
+                    if( *depends )
+                        throw new LinkTerminated( wrap.field[0] );
+                    return false;
                 }
                 return false;
             }
@@ -422,16 +480,11 @@ private
             {
                 switch( msg.type )
                 {
-                case MsgType.LinkDead:
+                case MsgType.linkDead:
                     return onLinkDeadMsg( msg.data );
                 default:
                     return false;
                 }
-            }
-            
-            bool isControlMsg( Message msg )
-            {
-                return msg.type != MsgType.User;
             }
             
             bool scan( ref ListT list )
@@ -440,6 +493,7 @@ private
                 {
                     if( isControlMsg( range.front ) )
                     {
+                        scope(failure) list.removeAt( range );
                         if( onControlMsg( range.front ) )
                             list.removeAt( range );
                         else
@@ -458,7 +512,7 @@ private
             
             while( true )
             {
-                ListT newvals;
+                ListT newmsgs;
 
                 if( scan( m_local ) )
                     return;
@@ -467,18 +521,69 @@ private
                     while( m_shared.empty )
                     {
                         if( ownerDead )
-                            throw new OwnerTerminated;
+                        {
+                            owner = Tid.init;
+                            throw new OwnerTerminated( owner );
+                        }
                         static if( isImplicitlyConvertible!(T[0], long) )
                             m_sharedRecv.wait( period );
                         else
                             m_sharedRecv.wait();
                     }
-                    newvals.put( m_shared );
+                    newmsgs.put( m_shared );
                 }
-                bool ok = scan( newvals );
-                m_local.put( newvals );
+                bool ok = scan( newmsgs );
+                m_local.put( newmsgs );
                 if( ok ) return;
             }
+        }
+        
+        
+        final void close()
+        {
+            void onLinkDeadMsg( Variant data )
+            {
+                alias Tuple!(Tid) Wrap;
+
+                static if( Variant.allowed!(Wrap) )
+                {
+                    assert( data.convertsTo!(Wrap) );
+                    auto wrap = data.get!(Wrap);
+                }
+                else
+                {
+                    assert( data.convertsTo!(Wrap*) );
+                    auto wrap = data.get!(Wrap*);
+                }
+                links.remove( wrap.field[0] );
+            }
+    
+            void sweep( ref ListT list )
+            {
+                for( auto range = list[]; !range.empty; range.popFront() )
+                {
+                    if( range.front.type == MsgType.linkDead )
+                        onLinkDeadMsg( range.front.data );
+                }
+            }
+            
+            ListT newmsgs;
+
+            sweep( m_local );
+            synchronized( m_sharedLock )
+            {
+                newmsgs.put( m_shared );
+                m_sharedOpen = false;
+            }
+            sweep( newmsgs );
+            m_local.clear();          
+        }
+        
+        
+    private:
+        final bool isControlMsg( Message msg )
+        {
+            return msg.type != MsgType.user;
         }
         
     
@@ -487,6 +592,7 @@ private
         
         ListT       m_local;
         ListT       m_shared;
+        bool        m_sharedOpen;
         Mutex       m_sharedLock;
         Condition   m_sharedRecv;
     }
@@ -572,6 +678,12 @@ private
             Node* todelete = n.next;
             n.next = n.next.next;
             //delete todelete;
+        }
+        
+        
+        void clear()
+        {
+            m_first = m_last = null;
         }
 
 
