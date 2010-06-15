@@ -140,7 +140,7 @@ unittest
  * ditto
  */
 
-int icmp(in char[] s1, in char[] s2)
+int icmp(C1, C2)(in C1[] s1, in C2[] s2)
 {
     size_t i1, i2;
     for (;;)
@@ -166,8 +166,8 @@ unittest
     assert(result == 0);
     result = icmp("ABC", "abc");
     assert(result == 0);
-    result = icmp(null, null);
-    assert(result == 0);
+//    result = icmp(null, null);        // Commented out since icmp()
+//    assert(result == 0);              // has become templated.
     result = icmp("", "");
     assert(result == 0);
     result = icmp("abc", "abcd");
@@ -178,6 +178,26 @@ unittest
     assert(result < 0);
     result = icmp("bbc", "abc");
     assert(result > 0);
+    result = icmp("abc", "abc"w);
+    assert (result == 0);
+    result = icmp("ABC"w, "abc");
+    assert (result == 0);
+    result = icmp("", ""w);
+    assert (result == 0);
+    result = icmp("abc"w, "abcd");
+    assert(result < 0);
+    result = icmp("abcd", "abc"w);
+    assert(result > 0);
+    result = icmp("abc", "abd");
+    assert(result < 0);
+    result = icmp("bbc"w, "abc");
+    assert(result > 0);
+    result = icmp("aaa", "aaaa"d);
+    assert(result < 0);
+    result = icmp("aaaa"w, "aaa"d);
+    assert(result > 0);
+    result = icmp("aaa"d, "aaa"w);
+    assert(result == 0);
 }
 
 /*********************************

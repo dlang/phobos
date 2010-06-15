@@ -1186,6 +1186,26 @@ unittest
     auto a = parse!int(s);
 }
 
+
+// string to bool conversions
+Target parse(Target, Source)(ref Source s)
+    if (isSomeString!Source && is(Target==bool))
+{
+    if (s.length >= 4 && icmp(s[0 .. 4], "true")==0)
+    {
+        s = s[4 .. $];
+        return true;
+    }
+    if (s.length >= 5 && icmp(s[0 .. 5], "false")==0)
+    {
+        s = s[5 .. $];
+        return false;
+    }
+    conv_error!(Source, Target)(s);
+    assert(0);
+}
+
+
 // Parsing typedefs forwards to their host types
 Target parse(Target, Source)(ref Source s)
 if (isSomeString!Source && is(Target == typedef))
@@ -1815,6 +1835,44 @@ unittest
         assert(i == 3);
     }
 }
+
+
+/*
+    Tests for to!bool and parse!bool
+*/
+unittest
+{
+    debug(conv) printf("conv.to!bool.unittest\n");
+    
+    assert (to!bool("TruE") == true);
+    assert (to!bool("faLse"d) == false);
+    try
+    {
+        to!bool("maybe");
+        assert (false);
+    }
+    catch (ConvError e) { }
+
+    auto t = "TrueType";
+    assert (parse!bool(t) == true);
+    assert (t == "Type");
+
+    auto f = "False killer whale"d;
+    assert (parse!bool(f) == false);
+    assert (f == " killer whale"d);
+
+    auto m = "maybe";
+    try
+    {
+        parse!bool(m);
+        assert (false);
+    }
+    catch (ConvError e)
+    {
+        assert (m == "maybe");  // m shouldn't change on failure
+    }
+}
+
 
 // @@@ BUG IN COMPILER
 // lvalue of type immutable(T)[] should be implicitly convertible to
