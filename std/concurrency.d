@@ -217,7 +217,7 @@ Tid spawnLinked(T...)( void function(T) fn, T args )
     {
         mbox  = spawnTid.mbox;
         links[linkTid] = true;
-        owner = null;
+        //owner = Tid.init;
         fn( args );
     }
 
