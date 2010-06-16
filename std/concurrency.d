@@ -177,6 +177,38 @@ private:
 Tid spawn(T...)( void function(T) fn, T args )
 {
     // TODO: MessageList and &exec should be shared.
+    return spawn_( false, fn, args );
+}
+
+
+/**
+ * Executes the supplied function in a new context represented by Tid.  This
+ * new context is linked to the calling context so that if either it or the
+ * calling context terminates a LinkTerminated message will be sent to the
+ * other, causing a LinkTerminated exception to be thrown on receive().  The
+ * owner relationship from spawn() is preserved as well, so if the link
+ * between threads is broken, owner termination will still result in an
+ * OwnerTerminated exception to be thrown on receive().
+ *
+ * Params:
+ *  fn   = The function to execute.
+ *  args = Arguments to the function.
+ *
+ * Returns:
+ *  A Tid representing the new context.
+ */
+Tid spawnLinked(T...)( void function(T) fn, T args )
+{
+    return spawn_( true, fn, args );
+}
+
+
+/*
+ *
+ */
+private Tid spawn_(T...)( bool linked, void function(T) fn, T args )
+{
+    // TODO: MessageList and &exec should be shared.
     auto spawnTid = Tid( new MessageBox );
     auto ownerTid = thisTid;
 
@@ -188,42 +220,8 @@ Tid spawn(T...)( void function(T) fn, T args )
     }
 
     auto t = new Thread( &exec ); t.start();
-    links[spawnTid] = false;
+    links[spawnTid] = linked;
     return spawnTid;
-}
-
-
-/**
- * Executes the supplied function in a new context represented by Tid.  This
- * new context has no owner but is linked to the calling context so that if
- * either it or the calling context terminates a LinkTerminated message will
- * be sent to the other, causing a LinkTerminated exception to be thrown on
- * receive().
- *
- * Params:
- *  fn   = The function to execute.
- *  args = Arguments to the function.
- *
- * Returns:
- *  A Tid representing the new context.
- */
-Tid spawnLinked(T...)( void function(T) fn, T args )
-{
-    // TODO: MessageList and &exec should be shared.
-    auto spawnTid = Tid( new MessageBox );
-    auto linkTid  = thisTid;
-
-    void exec()
-    {
-        mbox  = spawnTid.mbox;
-        links[linkTid] = true;
-        //owner = Tid.init;
-        fn( args );
-    }
-
-    auto t = new Thread( &exec ); t.start();
-    links[spawnTid] = true;
-    return spawnTid;   
 }
 
 
@@ -445,6 +443,36 @@ private
                 return false;
             }
             
+            void onOwnerDead()
+            {
+                for( auto range = m_local[]; !range.empty; range.popFront() )
+                {
+                    if( range.front.type == MsgType.linkDead )
+                    {
+                        alias Tuple!(Tid) Wrap;
+
+                        static if( Variant.allowed!(Wrap) )
+                        {
+                            assert( range.front.data.convertsTo!(Wrap) );
+                            auto wrap = range.front.data.get!(Wrap);
+                        }
+                        else
+                        {
+                            assert( range.front.data.convertsTo!(Wrap*) );
+                            auto wrap = range.front.data.get!(Wrap*);
+                        }
+
+                        if( wrap.field[0] == owner )
+                        {
+                            m_local.removeAt( range );
+                            break;
+                        }
+                    }
+                }
+                scope(failure) owner = Tid.init;
+                throw new OwnerTerminated( owner );
+            }
+            
             bool ownerDead = false;
             
             bool onLinkDeadMsg( Variant data )
@@ -461,16 +489,20 @@ private
                     assert( data.convertsTo!(Wrap*) );
                     auto wrap = data.get!(Wrap*);
                 }
-                if( wrap.field[0] == owner )
-                {
-                    ownerDead = true;
-                    return false;
-                }
                 if( bool* depends = (wrap.field[0] in links) )
                 {
                     links.remove( wrap.field[0] );
                     if( *depends )
+                    {
+                        if( wrap.field[0] == owner )
+                            owner = Tid.init;
                         throw new LinkTerminated( wrap.field[0] );
+                    }
+                    return false;
+                }
+                if( wrap.field[0] == owner )
+                {
+                    ownerDead = true;
                     return false;
                 }
                 return false;
@@ -521,10 +553,7 @@ private
                     while( m_shared.empty )
                     {
                         if( ownerDead )
-                        {
-                            owner = Tid.init;
-                            throw new OwnerTerminated( owner );
-                        }
+                            onOwnerDead();
                         static if( isImplicitlyConvertible!(T[0], long) )
                             m_sharedRecv.wait( period );
                         else
@@ -556,6 +585,8 @@ private
                     auto wrap = data.get!(Wrap*);
                 }
                 links.remove( wrap.field[0] );
+                if( wrap.field[0] == owner )
+                    owner = Tid.init;
             }
     
             void sweep( ref ListT list )
