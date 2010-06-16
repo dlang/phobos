@@ -2104,6 +2104,11 @@ unittest
     w.clear;
     formattedWrite(w, "testing (%(s%) %()) embedded", a);
     assert(w.data == "testing (1) (3) (2) embedded", w.data);
+
+    int[0] empt = [];
+    w.clear;
+    formattedWrite(w, "(%s)", empt);
+    assert(w.data == "()", w.data);
 }
 
 //------------------------------------------------------------------------------
