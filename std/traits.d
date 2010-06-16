@@ -455,7 +455,7 @@ private Variadic determineVariadicity(Func)()
     immutable callconv = functionLinkage!(Func);
     immutable mfunc = mangledName!(Func);
     immutable mtype = mangledName!(ReturnType!(Func));
-    //debug assert(mfunc[$ - mtype.length .. $] == mtype, mfunc ~ "|" ~ mtype); // link error?
+    debug assert(mfunc[$ - mtype.length .. $] == mtype, mfunc ~ "|" ~ mtype);
 
     immutable argclose = mfunc[$ - mtype.length - 1];
     final switch (argclose)
