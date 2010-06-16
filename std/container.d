@@ -1657,7 +1657,7 @@ Defines the container's primary range, which is a random-access range.
             }
             assert(_data._refCount == 1);
             foreach (ref e; _data._payload) .clear(e);
-            free(_data._payload);
+            free(_data._payload.ptr);
             free(_data);
             _data = null;
             _a = _b = 0;
