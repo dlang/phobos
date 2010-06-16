@@ -27,6 +27,8 @@ import std.typetuple;
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
 
 // Petit demangler
+// (this or similar thing will eventually go to std.demangle if necessary
+//  ctfe stuffs are available)
 private
 {
     struct Demangle(T)
@@ -95,6 +97,13 @@ private
     }
 }
 
+// workaround @@@BUG4333@@@
+private template staticLength(tuple...)
+{
+    enum size_t staticLength = tuple.length;
+}
+
+
 /***
  * Get the type of the return value from a function,
  * a pointer to function, a delegate, a struct
@@ -107,10 +116,10 @@ private
  * ReturnType!(foo) x;   // x is declared as int
  * ---
  */
-template ReturnType(dg...)
-    if (dg.length == 1 && isCallable!(dg))
+template ReturnType(/+@@@BUG4217@@@+/func...)
+    if (/+@@@BUG4333@@@+/staticLength!(func) == 1)
 {
-    static if (is(FunctionTypeOf!(dg) R == return))
+    static if (is(FunctionTypeOf!(func) R == return))
         alias R ReturnType;
     else
         static assert(0, "argument has no return type");
@@ -149,6 +158,9 @@ unittest
     }
     alias ReturnType!(Test.prop) R_Test_prop;
     static assert(is(R_Test_prop == int));
+
+    alias ReturnType!((int a) { return a; }) R_dglit;
+    static assert(is(R_dglit == int));
 }
 
 /***
@@ -164,8 +176,8 @@ void bar(ParameterTypeTuple!(foo));      // declares void bar(int, long);
 void abc(ParameterTypeTuple!(foo)[1]);   // declares void abc(long);
 ---
 */
-template ParameterTypeTuple(dg...)
-    if (dg.length == 1 && isCallable!(dg))
+template ParameterTypeTuple(/+@@@BUG4217@@@+/dg...)
+    if (/+@@@BUG4333@@@+/staticLength!(dg) == 1)
 {
     static if (is(FunctionTypeOf!(dg) P == function))
         alias P ParameterTypeTuple;
@@ -191,6 +203,10 @@ unittest
     }
     alias ParameterTypeTuple!(Test.prop) P_Test_prop;
     static assert(P_Test_prop.length == 0);
+
+    alias ParameterTypeTuple!((int a){}) P_dglit;
+    static assert(P_dglit.length == 1);
+    static assert(is(P_dglit[0] == int));
 }
 
 
@@ -226,11 +242,14 @@ enum ParameterStorageClass : uint
 }
 
 /// ditto
-template ParameterStorageClassTuple(func...)
-    if (func.length == 1 && isCallable!(func))
+template ParameterStorageClassTuple(/+@@@BUG4217@@@+/func...)
+    if (/+@@@BUG4333@@@+/staticLength!(func) == 1)
 {
-    alias ParameterStorageClassTupleImpl!(Unqual!(FunctionTypeOf!(func))).Result
-            ParameterStorageClassTuple;
+    static if (is(FunctionTypeOf!(func) F))
+        alias ParameterStorageClassTupleImpl!(Unqual!(F)).Result
+                ParameterStorageClassTuple;
+    else
+        static assert(0, "argument has no parameters");
 }
 
 private template ParameterStorageClassTupleImpl(Func)
@@ -296,6 +315,10 @@ unittest
     alias ParameterStorageClassTuple!(testi.test_sharedconst) test_sharedconst_pstc;
     static assert(test_sharedconst_pstc.length == 1);
     static assert(test_sharedconst_pstc[0] == STC.NONE);
+
+    alias ParameterStorageClassTuple!((ref int a) {}) dglit_pstc;
+    static assert(dglit_pstc.length == 1);
+    static assert(dglit_pstc[0] == STC.REF);
 }
 
 
@@ -330,11 +353,14 @@ enum FunctionAttribute : uint
 }
 
 /// ditto
-template functionAttributes(func...)
-    if (func.length == 1 && isCallable!(func))
+template functionAttributes(/+@@@BUG4217@@@+/func...)
+    if (/+@@@BUG4333@@@+/staticLength!(func) == 1)
 {
-    enum uint functionAttributes = demangleFunctionAttributes(
-            mangledName!(Unqual!(FunctionTypeOf!(func)))[1 .. $] ).value;
+    static if (is(FunctionTypeOf!(func) F))
+        enum uint functionAttributes = demangleFunctionAttributes(
+                mangledName!(Unqual!(F))[1 .. $] ).value;
+    else
+        static assert(0, "argument is not a function");
 }
 
 unittest
@@ -359,7 +385,7 @@ unittest
 
     int pure_nothrow() pure nothrow { return 0; }
     static assert(functionAttributes!(pure_nothrow) == FA.PURE | FA.NOTHROW);
-    //ref int ref_property() @property { return *(new int); } // [BUG 2509]
+    //ref int ref_property() @property { return *(new int); } // @@@BUG2509@@@
     //static assert(functionAttributes!(ref_property) == FA.REF | FA.PROPERTY);
     void safe_nothrow() @safe nothrow { }
     static assert(functionAttributes!(safe_nothrow) == FA.SAFE | FA.NOTHROW);
@@ -371,6 +397,8 @@ unittest
     }
     static assert(functionAttributes!(Test2.pure_const) == FA.PURE);
     static assert(functionAttributes!(Test2.pure_sharedconst) == FA.PURE);
+
+    static assert(functionAttributes!((int a) {}) == FA.NONE);
 }
 
 
@@ -387,11 +415,14 @@ string b = functionLinkage!(fp);
 assert(b == "C"); // extern(C)
 --------------------
  */
-template functionLinkage(func...)
-    if (func.length == 1 && isCallable!(func))
+template functionLinkage(/+@@@BUG4217@@@+/func...)
+    if (/+@@@BUG4333@@@+/staticLength!(func) == 1)
 {
-    enum string functionLinkage =
-        LOOKUP_LINKAGE[ mangledName!(Unqual!(FunctionTypeOf!(func)))[0] ];
+    static if (is(FunctionTypeOf!(func) F))
+        enum string functionLinkage =
+            LOOKUP_LINKAGE[ mangledName!(Unqual!(F))[0] ];
+    else
+        static assert(0, "argument is not a function");
 }
 
 private enum LOOKUP_LINKAGE =
@@ -417,6 +448,8 @@ unittest
     }
     static assert(functionLinkage!(Test.const_func) == "D");
     static assert(functionLinkage!(Test.sharedconst_func) == "D");
+
+    static assert(functionLinkage!((int a){}) == "D");
 }
 
 
@@ -442,11 +475,14 @@ enum Variadic
 }
 
 /// ditto
-template variadicFunctionStyle(func...)
-    if (func.length == 1 && isCallable!(func))
+template variadicFunctionStyle(/+@@@BUG4217@@@+/func...)
+    if (/+@@@BUG4333@@@+/staticLength!(func) == 1)
 {
-    enum Variadic variadicFunctionStyle =
-        determineVariadicity!( Unqual!(FunctionTypeOf!(func)) )();
+    static if (is(FunctionTypeOf!(func) F))
+        enum Variadic variadicFunctionStyle =
+            determineVariadicity!(Unqual!(F))();
+    else
+        static assert(0, "argument is not a function");
 }
 
 private Variadic determineVariadicity(Func)()
@@ -477,6 +513,8 @@ unittest
     static assert(variadicFunctionStyle!(cstyle) == Variadic.C);
     static assert(variadicFunctionStyle!(dstyle) == Variadic.D);
     static assert(variadicFunctionStyle!(typesafe) == Variadic.TYPESAFE);
+
+    static assert(variadicFunctionStyle!((int[] a...) {}) == Variadic.TYPESAFE);
 }
 
 
@@ -498,9 +536,15 @@ Note:
 Do not confuse function types with function pointer types; function types are
 usually used for compile-time reflection purposes.
  */
-template FunctionTypeOf(func...)
-    if (func.length == 1 && isCallable!(func))
+template FunctionTypeOf(/+@@@BUG4217@@@+/func...)
+    if (/+@@@BUG4333@@@+/staticLength!(func) == 1)
 {
+    alias FunctionTypeOf_bug4333!(func).FunctionTypeOf FunctionTypeOf;
+}
+private template FunctionTypeOf_bug4333(func...)
+{
+    /+@@@BUG4333@@@+/enum dummy__ = func.length;
+
     static if (is(typeof(& func[0]) Fsym : Fsym*) && is(Fsym == function))
     {
         alias Fsym FunctionTypeOf; // HIT: function symbol
@@ -522,7 +566,7 @@ template FunctionTypeOf(func...)
         else static if (is(T Fdlg == delegate))
             alias Fdlg FunctionTypeOf; // HIT: delegate
     }
-    else static assert(0);
+    else static assert(0, "argument is not a callable object");
 }
 
 unittest
@@ -565,6 +609,9 @@ unittest
     static assert(is(F_ov1* == real function(real)));
     static assert(is(F_ov2* == int function()));
     static assert(is(F_ov3* == int function() @property));
+
+    alias FunctionTypeOf!((int a){ return a; }) F_dglit;
+    static assert(is(F_dglit* == int function(int)));
 }
 
 
@@ -2037,7 +2084,7 @@ unittest
 Detect whether symbol or type $(D T) is a function pointer.
  */
 template isFunctionPointer(T...)
-    if (T.length == 1)
+    if (/+@@@BUG4333@@@+/staticLength!(T) == 1)
 {
     static if (is(T[0] U) || is(typeof(T[0]) U))
     {
@@ -2064,15 +2111,23 @@ unittest
     static assert(! isFunctionPointer!(void delegate()));
     static assert(! isFunctionPointer!(foo));
     static assert(! isFunctionPointer!(bar));
+
+    static assert(!isFunctionPointer!((int a) {}));
 }
 
 
 /**
 Detect whether symbol or type $(D T) is a function, a function pointer or a delegate.
  */
-template isSomeFunction(T...)
-    if (T.length == 1)
+template isSomeFunction(/+@@@BUG4217@@@+/T...)
+    if (/+@@@BUG4333@@@+/staticLength!(T) == 1)
 {
+    enum bool isSomeFunction = isSomeFunction_bug4333!(T).isSomeFunction;
+}
+private template isSomeFunction_bug4333(T...)
+{
+    /+@@@BUG4333@@@+/enum dummy__ = T.length;
+
     static if (is(typeof(& T[0]) U : U*) && is(U == function))
     {
         // T is a function symbol.
@@ -2117,6 +2172,8 @@ unittest
     static assert(! isSomeFunction!(int));
     static assert(! isSomeFunction!(val));
     static assert(! isSomeFunction!(isSomeFunction));
+
+    static assert(isSomeFunction!((int a) { return a; }));
 }
 
 
@@ -2124,9 +2181,15 @@ unittest
 Detect whether $(D T) is a callable object, which can be called with the
 function call operator $(D $(LPAREN)...$(RPAREN)).
  */
-template isCallable(T...)
-    if (T.length == 1)
+template isCallable(/+@@@BUG4217@@@+/T...)
+    if (/+@@@BUG4333@@@+/staticLength!(T) == 1)
 {
+    enum bool isCallable = isCallable_bug4333!(T).isCallable;
+}
+private template isCallable_bug4333(T...)
+{
+    /+@@@BUG4333@@@+/enum dummy__ = T.length;
+
     static if (is(typeof(& T[0].opCall) == delegate))
         // T is a object which has a member function opCall().
         enum bool isCallable = true;
@@ -2149,6 +2212,8 @@ unittest
     static assert( isCallable!(c.opCall));
     static assert( isCallable!(I.value));
     static assert(!isCallable!(I));
+
+    static assert(isCallable!((int a) { return a; }));
 }
 
 
@@ -2156,9 +2221,10 @@ unittest
 Exactly the same as the builtin traits:
 $(D ___traits(_isAbstractFunction, method)).
  */
-template isAbstractFunction(alias method)
+template isAbstractFunction(/+@@@BUG4217@@@+/method...)
+    if (/+@@@BUG4333@@@+/staticLength!(method) == 1)
 {
-    enum bool isAbstractFunction  = __traits(isAbstractFunction, method);
+    enum bool isAbstractFunction  = __traits(isAbstractFunction, method[0]);
 }
 
 
@@ -2181,7 +2247,7 @@ static assert(is(Unqual!(shared(const int)) == int));
  */
 template Unqual(T)
 {
-    version (none) // Error: recursive alias declaration [BUG 1308]
+    version (none) // Error: recursive alias declaration @@@BUG1308@@@
     {
              static if (is(T U ==     const U)) alias Unqual!U Unqual;
         else static if (is(T U == immutable U)) alias Unqual!U Unqual;
@@ -2375,7 +2441,7 @@ pragma(msg, mangledName!(C.value)); // prints "_D4test1C5valueMFNdZi"
 --------------------
  */
 template mangledName(sth...)
-    if (sth.length == 1)
+    if (/+@@@BUG4333@@@+/staticLength!(sth) == 1)
 {
     enum string mangledName = removeDummyEnvelope(Dummy!(sth).Hook.mangleof);
 }
@@ -2442,11 +2508,13 @@ unittest
     static assert(mangledName!(mangledName) == "3std6traits11mangledName");
     static assert(mangledName!(removeDummyEnvelope) ==
             "_D3std6traits19removeDummyEnvelopeFAyaZAya");
+    int x;
+    static assert(mangledName!((int a) { return a+x; })[$ - 5 .. $] == "MFiZi");
 }
 
 
 /*
-workaround for [BUG 2234] "allMembers does not return interface members"
+workaround for @@@BUG2234@@@ "allMembers does not return interface members"
  */
 package template traits_allMembers(Agg)
 {
