@@ -746,7 +746,7 @@ $(D r) and $(D m) is the length of $(D stuff).
             return insertFront(stuff);
         }
         enforce(r._head);
-        auto n = findLastNode(_root);
+        auto n = findLastNode(r._head);
         SList tmp;
         auto result = tmp.insertFront(stuff);
         n._next = tmp._root;
