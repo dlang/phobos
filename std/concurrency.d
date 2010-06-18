@@ -87,6 +87,11 @@ static ~this()
 }
 
 
+//////////////////////////////////////////////////////////////////////////////
+// Exceptions
+//////////////////////////////////////////////////////////////////////////////
+
+
 /**
  *
  */
@@ -130,6 +135,26 @@ class LinkTerminated : Exception
 
 
 /**
+ *
+ */
+class MailboxFull : Exception
+{
+    this( Tid t, string msg = "Mailbox full" )
+    {
+        super( msg );
+        tid = t;
+    }
+    
+    Tid tid;
+}
+
+
+//////////////////////////////////////////////////////////////////////////////
+// Thread ID
+//////////////////////////////////////////////////////////////////////////////
+
+
+/**
  * An opaque type used to represent a logical local process.
  */
 struct Tid
@@ -158,6 +183,11 @@ private:
 {
     return Tid( mbox );
 }
+
+
+//////////////////////////////////////////////////////////////////////////////
+// Thread Creation
+//////////////////////////////////////////////////////////////////////////////
 
 
 /**
@@ -223,6 +253,11 @@ private Tid spawn_(T...)( bool linked, void function(T) fn, T args )
     links[spawnTid] = linked;
     return spawnTid;
 }
+
+
+//////////////////////////////////////////////////////////////////////////////
+// Sending and Receiving Messages
+//////////////////////////////////////////////////////////////////////////////
 
 
 /**
@@ -323,65 +358,187 @@ bool receiveTimeout(T...)( long ms, T ops )
 }
 
 
+//////////////////////////////////////////////////////////////////////////////
+// MessageBox Limits
+//////////////////////////////////////////////////////////////////////////////
+
+
 /**
- *
+ * These behaviors may be specified when a mailbox is full.
  */
 enum OnCrowding
 {
-    block,          ///
-    throwException, ///
-    ignore          ///
-}
-
-
-/**
- *
- */
-void setMaxMailboxSize( Tid tid, size_t messages, OnCrowding doThis )
-{
-
-}
-
-
-/**
- *
- */
-void setMaxMailboxSize( Tid tid, size_t messages, bool function(Tid) onCrowdingDoThis )
-{
-
+    block,          /// Wait until room is available.
+    throwException, /// Throw a MailboxFull exception.
+    ignore          /// Abort the send and return.
 }
 
 
 private
 {
+    bool onCrowdingBlock( Tid tid )
+    {
+        return true;
+    }
+    
+    
+    bool onCrowdingThrow( Tid tid )
+    {
+        throw new MailboxFull( tid );
+    }
+    
+    
+    bool onCrowdingIgnore( Tid tid )
+    {
+        return false;
+    }
+}
+
+
+/**
+ * Sets a limit on the maximum number of user messages allowed in the mailbox.
+ * If this limit is reached, the caller attempting to add a new message will
+ * execute the behavior specified by doThis.  If messages is zero, the mailbox
+ * is unbounded.
+ *
+ * Params:
+ *  tid      = The Tid of the thread for which this limit should be set.
+ *  messages = The maximum number of messages or zero if no limit.
+ *  doThis   = The behavior executed when a message is sent to a full
+ *             mailbox.
+ */
+void setMaxMailboxSize( Tid tid, size_t messages, OnCrowding doThis )
+{
+    final switch( doThis )
+    {
+    case OnCrowding.block:
+        return tid.mbox.setMaxMsgs( messages, &onCrowdingBlock );
+    case OnCrowding.throwException:
+        return tid.mbox.setMaxMsgs( messages, &onCrowdingThrow );
+    case OnCrowding.ignore:
+        return tid.mbox.setMaxMsgs( messages, &onCrowdingIgnore );
+    }
+}
+
+
+/**
+ * Sets a limit on the maximum number of user messages allowed in the mailbox.
+ * If this limit is reached, the caller attempting to add a new message will
+ * execute onCrowdingDoThis.  If messages is zero, the mailbox is unbounded.
+ *
+ * Params:
+ *  tid      = The Tid of the thread for which this limit should be set.
+ *  messages = The maximum number of messages or zero if no limit.
+ *  onCrowdingDoThis = The routine called when a message is sent to a full
+ *                     mailbox.
+ */
+void setMaxMailboxSize( Tid tid, size_t messages, bool function(Tid) onCrowdingDoThis )
+{
+    tid.mbox.setMaxMsgs( messages, onCrowdingDoThis );
+}
+
+
+//////////////////////////////////////////////////////////////////////////////
+// MessageBox Implementation
+//////////////////////////////////////////////////////////////////////////////
+
+
+private
+{
     /*
-     *
+     * A MessageBox is a message queue for one thread.  Other threads may send
+     * messages to this owner by calling put(), and the owner receives them by
+     * calling get().  The put() call is therefore effectively shared and the
+     * get() call is effectively local.  setMaxMsgs may be used by any thread
+     * to limit the size of the message queue.
      */
     class MessageBox
     {
         this()
         {
-            m_sharedLock = new Mutex;
-            m_sharedRecv = new Condition( m_sharedLock );
-            m_sharedOpen = true;
+            m_lock      = new Mutex;
+            m_putMsg    = new Condition( m_lock );
+            m_notFull   = new Condition( m_lock );
+            m_closed    = false;
         }
         
         
-        final void put( Message val )
+        /*
+         * Sets a limit on the maximum number of user messages allowed in the
+         * mailbox.  If this limit is reached, the caller attempting to add
+         * a new message will execute call.  If num is zero, there is no limit
+         * on the message queue.
+         *
+         * Params:
+         *  num  = The maximum size of the queue or zero if the queue is
+         *         unbounded.
+         *  call = The routine to call when the queue is full.
+         */
+        final void setMaxMsgs( size_t num, bool function(Tid) call )
         {
-            synchronized( m_sharedLock )
+            synchronized( m_lock )
             {
-                // TODO: Generate an error here if m_sharedOpen is false?
-                //       Or maybe put a message in the caller's queue?
-                if( m_sharedOpen )
+                m_maxMsgs   = num;
+                m_onMaxMsgs = call;
+            }
+        }
+        
+        
+        /*
+         * If maxMsgs is not set, the message is added to the queue and the
+         * owner is notified.  If the queue is full, the message will still be
+         * accepted if it is a control message, otherwise onCrowdingDoThis is
+         * called.  If the routine returns true, this call will block until
+         * the owner has made space available in the queue.  If it returns
+         * false, this call will abort.
+         *
+         * Params:
+         *  msg = The message to put in the queue.
+         *
+         * Throws:
+         *  An exception if the queue is full and onCrowdingDoThis throws.
+         */
+        final void put( Message msg )
+        {
+            synchronized( m_lock )
+            {
+                // TODO: Generate an error here if m_closed is true, or maybe
+                //       put a message in the caller's queue?
+                if( !m_closed )
                 {
-                    m_shared.put( val );
-                    m_sharedRecv.notify();
+                    while( true )
+                    {
+                        if( !mboxFull() || isControlMsg( msg ) )
+                        {
+                            m_sharedBox.put( msg );
+                            m_putMsg.notify();
+                            return;
+                        }
+                        if( m_onMaxMsgs !is null && !m_onMaxMsgs( thisTid ) )
+                        {
+                            return;
+                        }
+                        m_putQueue++;
+                        m_notFull.wait();
+                        m_putQueue--;
+                    }
                 }
             }
         }
         
         
+        /*
+         * Matches ops against each message in turn until a match is found.
+         *
+         * Params:
+         *  ops = The operations to match.  Each may return a bool to indicate
+         *        whether a message with a matching type is truly a match.
+         * 
+         * Throws:
+         *  LinkTerminated if a linked thread terminated, or OwnerTerminated
+         * if the owner thread terminates and no existing messages match the
+         * supplied ops.
+         */
         final void get(T...)( T ops )
         {
             static assert( T.length );
@@ -389,6 +546,7 @@ private
             static if( isImplicitlyConvertible!(T[0], long) )
             {
                 alias TypeTuple!(T[1 .. $]) Ops;
+                enum timedWait = true;
                 assert( ops[0] >= 0 );
                 long period = ops[0];
                 ops = ops[1 .. $];
@@ -396,6 +554,7 @@ private
             else
             {
                 alias TypeTuple!(T) Ops;
+                enum timedWait = false;
             }
             
             bool onUserMsg( Message msg )
@@ -441,36 +600,6 @@ private
                     }
                 }
                 return false;
-            }
-            
-            void onOwnerDead()
-            {
-                for( auto range = m_local[]; !range.empty; range.popFront() )
-                {
-                    if( range.front.type == MsgType.linkDead )
-                    {
-                        alias Tuple!(Tid) Wrap;
-
-                        static if( Variant.allowed!(Wrap) )
-                        {
-                            assert( range.front.data.convertsTo!(Wrap) );
-                            auto wrap = range.front.data.get!(Wrap);
-                        }
-                        else
-                        {
-                            assert( range.front.data.convertsTo!(Wrap*) );
-                            auto wrap = range.front.data.get!(Wrap*);
-                        }
-
-                        if( wrap.field[0] == owner )
-                        {
-                            m_local.removeAt( range );
-                            break;
-                        }
-                    }
-                }
-                scope(failure) owner = Tid.init;
-                throw new OwnerTerminated( owner );
             }
             
             bool ownerDead = false;
@@ -544,30 +673,44 @@ private
             
             while( true )
             {
-                ListT newmsgs;
+                ListT arrived;
 
-                if( scan( m_local ) )
+                if( scan( m_localBox ) )
                     return;
-                synchronized( m_sharedLock )
+                synchronized( m_lock )
                 {
-                    while( m_shared.empty )
+                    updateMsgCount();
+                    while( m_sharedBox.empty )
                     {
                         if( ownerDead )
                             onOwnerDead();
-                        static if( isImplicitlyConvertible!(T[0], long) )
-                            m_sharedRecv.wait( period );
+                        // NOTE: We're notifying all waiters here instead of just
+                        //       a few because the onCrowding behavior may have
+                        //       changed and we don't want to block sender threads
+                        //       unnecessarily if the new behavior is not to block.
+                        //       This will admittedly result in spurious wakeups
+                        //       in other situations, but what can you do?
+                        if( m_putQueue && !mboxFull() )
+                            m_notFull.notifyAll();
+                        static if( timedWait )
+                            m_putMsg.wait( period );
                         else
-                            m_sharedRecv.wait();
+                            m_putMsg.wait();
                     }
-                    newmsgs.put( m_shared );
+                    arrived.put( m_sharedBox );
                 }
-                bool ok = scan( newmsgs );
-                m_local.put( newmsgs );
+                bool ok = scan( arrived );
+                m_localBox.put( arrived );
                 if( ok ) return;
             }
         }
         
         
+        /*
+         * Called on thread termination.  This routine processes any remaining
+         * control messages, clears out message queues, and sets a flag to
+         * reject any future messages.
+         */
         final void close()
         {
             void onLinkDeadMsg( Variant data )
@@ -598,42 +741,130 @@ private
                 }
             }
             
-            ListT newmsgs;
+            ListT arrived;
 
-            sweep( m_local );
-            synchronized( m_sharedLock )
+            sweep( m_localBox );
+            synchronized( m_lock )
             {
-                newmsgs.put( m_shared );
-                m_sharedOpen = false;
+                arrived.put( m_sharedBox );
+                m_closed = true;
             }
-            sweep( newmsgs );
-            m_local.clear();          
+            m_localBox.clear(); 
+            sweep( arrived );       
         }
         
         
     private:
-        final bool isControlMsg( Message msg )
+        //////////////////////////////////////////////////////////////////////
+        // Routines involving shared data, m_lock must be held.
+        //////////////////////////////////////////////////////////////////////
+        
+        
+        size_t mboxFull()
+        {
+            return m_maxMsgs &&
+                   m_maxMsgs <= m_localMsgs + m_sharedBox.length;
+        }
+        
+        
+        void updateMsgCount()
+        {
+            m_localMsgs = m_localBox.length;
+        }
+        
+        
+    private:
+        //////////////////////////////////////////////////////////////////////
+        // Routines for specific message types, no lock necessary.
+        //////////////////////////////////////////////////////////////////////
+        
+
+        void onOwnerDead()
+        {
+            for( auto range = m_localBox[]; !range.empty; range.popFront() )
+            {
+                if( range.front.type == MsgType.linkDead )
+                {
+                    alias Tuple!(Tid) Wrap;
+
+                    static if( Variant.allowed!(Wrap) )
+                    {
+                        assert( range.front.data.convertsTo!(Wrap) );
+                        auto wrap = range.front.data.get!(Wrap);
+                    }
+                    else
+                    {
+                        assert( range.front.data.convertsTo!(Wrap*) );
+                        auto wrap = range.front.data.get!(Wrap*);
+                    }
+
+                    if( wrap.field[0] == owner )
+                    {
+                        m_localBox.removeAt( range );
+                        break;
+                    }
+                }
+            }
+            scope(failure) owner = Tid.init;
+            throw new OwnerTerminated( owner );
+        }
+        
+        
+    private:
+        //////////////////////////////////////////////////////////////////////
+        // Routines involving local data only, no lock needed.
+        //////////////////////////////////////////////////////////////////////
+        
+
+        pure final bool isControlMsg( Message msg )
         {
             return msg.type != MsgType.user;
         }
         
     
     private:
-        alias List!(Message) ListT;
+        //////////////////////////////////////////////////////////////////////
+        // Type declarations.
+        //////////////////////////////////////////////////////////////////////
         
-        ListT       m_local;
-        ListT       m_shared;
-        bool        m_sharedOpen;
-        Mutex       m_sharedLock;
-        Condition   m_sharedRecv;
+        
+        alias bool function(Tid) OnMaxFn;
+        alias List!(Message)     ListT;
+        
+    private:
+        //////////////////////////////////////////////////////////////////////
+        // Local data, no lock needed.
+        //////////////////////////////////////////////////////////////////////
+        
+        
+        ListT       m_localBox;
+        
+        
+    private:
+        //////////////////////////////////////////////////////////////////////
+        // Shared data, m_lock must be held on access.
+        //////////////////////////////////////////////////////////////////////
+        
+        
+        Mutex       m_lock;
+        Condition   m_putMsg;
+        Condition   m_notFull;
+        size_t      m_putQueue;
+        ListT       m_sharedBox;
+        OnMaxFn     m_onMaxMsgs;
+        size_t      m_localMsgs;
+        size_t      m_maxMsgs;
+        bool        m_closed;
     }
 
 
+    /*
+     *
+     */
     struct List(T)
     {
         struct Range
         {
-
             bool empty() const
             {
                 return !m_prev.next;
@@ -672,31 +903,48 @@ private
         }
 
 
+        /*
+         *
+         */
         void put( T val )
         {
             put( new Node( val ) );
+            m_count++;
         }
 
 
+        /*
+         *
+         */
         void put( ref List!(T) rhs )
         {
             if( !rhs.empty )
             {
                 put( rhs.m_first );
                 while( m_last.next !is null )
+                {
                     m_last = m_last.next;
+                    m_count++;
+                }
                 rhs.m_first = null;
-                rhs.m_last = null;
+                rhs.m_last  = null;
+                rhs.m_count = 0;
             }
         }
 
 
+        /*
+         *
+         */
         Range opSlice()
         {
             return Range( cast(Node*) &m_first );
         }
 
 
+        /*
+         *
+         */
         void removeAt( Range r )
         {
             Node* n = r.m_prev;
@@ -709,15 +957,31 @@ private
             Node* todelete = n.next;
             n.next = n.next.next;
             //delete todelete;
+            m_count--;
         }
         
         
+        /*
+         *
+         */
+        @property size_t length()
+        {
+            return m_count;
+        }
+        
+        
+        /*
+         *
+         */
         void clear()
         {
             m_first = m_last = null;
         }
 
-
+        
+        /*
+         *
+         */
         bool empty()
         {
             return m_first is null;
@@ -737,6 +1001,9 @@ private
         }
 
 
+        /*
+         *
+         */
         void put( Node* n )
         {
             if( !empty )
@@ -750,8 +1017,9 @@ private
         }
 
 
-        Node* m_first;
-        Node* m_last;
+        Node*   m_first;
+        Node*   m_last;
+        size_t  m_count;
     }
 }
 
