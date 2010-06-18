@@ -154,9 +154,14 @@ struct Map(alias fun, Range) if (isInputRange!(Range))
         fillCache;
     }
 
-    @property bool empty() {
-        return _input.empty;
-    }
+	static if(isInfinite!Range) {
+		// Propagate infinite-ness.
+		enum bool empty = false;
+	} else {		
+		@property bool empty() {
+			return _input.empty;
+		}
+	}
 
     void popFront() {
         _input.popFront;
@@ -255,8 +260,13 @@ unittest
     assert(fibsSquares.front == 4);
     fibsSquares.popFront;
     assert(fibsSquares.front == 9);
+	
+	auto repeatMap = map!"a"(repeat(1));
+	static assert(isInfinite!(typeof(repeatMap)));
+	
+	auto intRange = map!"a"([1,2,3]);
+	static assert(isRandomAccessRange!(typeof(intRange)));
 }
-
 
 // reduce
 /**
@@ -554,7 +564,12 @@ struct Filter(alias pred, Range) if (isInputRange!(Range))
         return this;
     }
 
-    bool empty() { return _input.empty; }
+	static if(isInfinite!Range) {
+		enum bool empty = false;
+	} else {
+		bool empty() { return _input.empty; }
+	}
+	
     void popFront()
     {
         do
@@ -578,6 +593,9 @@ unittest
     a = [ 1, 22, 3, 42, 5 ];
     auto under10 = filter!("a < 10")(a);
     assert(equal(under10, [1, 3, 5][]));
+	
+	auto infinite = filter!"a > 2"(repeat(3));
+	static assert(isInfinite!(typeof(infinite)));
 }
 
 // move
