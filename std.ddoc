@@ -250,7 +250,7 @@ google.com/search?btnI=I%27m+Feeling+Lucky&ie=UTF-8&oe=UTF-8&q=$0,$0)
 D = <font face=Courier><b>$0</b></font>
 D = <span class="d_inlinecode">$0</span>
 BIGOH = <i><b>&Omicron;</i>(</i></b>$(D $0)<b></i>)</i></b>
-GLOSSARY = $(LINK2 ../2.0/glossary.html#$0, $0)
+GLOSSARY = $(LINK2 ../glossary.html#$0, $0)
 
 DDOC_PSYMBOL = <a name="$0"></a>$(U $0)
 DDOC_DECL  = $(DT <div class="d_decl">$0</div>)
