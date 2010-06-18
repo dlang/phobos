@@ -2006,6 +2006,7 @@ public:
     this(State initial, size_t n = 0)
     {
         this._state = initial;
+		this._n = n;
         this._cache = compute(this._state, this._n);
     }
 
@@ -2028,7 +2029,7 @@ public:
     ElementType opIndex(size_t n)
     {
         //return ElementType.init;
-        return compute(this._state, n);
+        return compute(this._state, n + this._n);
     }
 
     enum bool empty = false;
@@ -2057,6 +2058,13 @@ unittest
     //auto y = sequence!("a.field[0] + n * a.field[1]")(0, 4);
     //foreach (e; take(y, 15))
     {}//writeln(e);
+	
+	auto odds = Sequence!("a.field[0] + n * a.field[1]", Tuple!(int, int))(tuple(1, 2));	
+	for(int currentOdd = 1; currentOdd <= 21; currentOdd += 2) {
+		assert(odds.front == odds[0]);
+		assert(odds[0] == currentOdd);
+		odds.popFront();
+	}
 }
 
 /**
