@@ -116,13 +116,83 @@ struct Map(alias fun, Range) if (isInputRange!(Range))
     Range _input;
     ElementType _cache;
 
-    private void fillCache() { if (!_input.empty) _cache = fun(_input.front); }
+    static if(isBidirectionalRange!(Range)) {
+    // Using a second cache would lead to at least 1 extra function evaluation
+    // and wasted space when 99% of the time this range will only be iterated
+    // over in the forward direction.  Use a bool to determine whether cache
+    // is front or back instead.
+        bool cacheIsBack;
 
-    this(Range input) { _input = input; fillCache; }
-    bool empty() { return _input.empty; }
-    void popFront() { _input.popFront; fillCache; }
-    ElementType front() { return _cache; }
-    static if (isForwardRange!Range)
+        private void fillCacheBack() {
+            if (!_input.empty) _cache = fun(_input.back);
+            cacheIsBack = true;
+        }
+
+        ElementType back() {
+            if(!cacheIsBack) {
+                fillCacheBack();
+            }
+            return _cache;
+        }
+
+        void popBack() {
+            _input.popBack;
+            fillCacheBack();
+        }
+    }
+
+    private void fillCache() {
+        if (!_input.empty) _cache = fun(_input.front);
+
+        static if(isBidirectionalRange!(Range)) {
+            cacheIsBack = false;
+        }
+    }
+
+    this(Range input) {
+        _input = input;
+        fillCache;
+    }
+
+    @property bool empty() {
+        return _input.empty;
+    }
+
+    void popFront() {
+        _input.popFront;
+        fillCache;
+    }
+
+    ElementType front() {
+        static if(isBidirectionalRange!(Range)) {
+            if(cacheIsBack) {
+                fillCache();
+            }
+        }
+        return _cache;
+    }
+
+    static if(isRandomAccessRange!Range) {
+        ElementType opIndex(size_t index) {
+            return fun(_input[index]);
+        }
+    }
+
+    // hasLength is busted, Bug 2873
+    static if(is(typeof(_input.length) : ulong)
+        || is(typeof(_input.length()) : ulong)) {
+        size_t length() {
+            return _input.length;
+        }
+    }
+
+    static if(hasSlicing!(Range)) {
+        typeof(this) opSlice(size_t lowerBound, size_t upperBound) {
+            return typeof(this)(_input[lowerBound..upperBound]);
+        }
+    }
+	
+	static if (isForwardRange!Range)
         @property Map save()
         {
             Map result;
@@ -141,13 +211,52 @@ unittest
     assert(equal(squares, [ 1, 4, 9, 16 ][]));
     assert(equal(map!("a * a")(chain(arr1, arr2)), [ 1, 4, 9, 16, 25, 36 ][]));
 
+    // Test the caching stuff.
+    auto squares2 = squares;
+    assert(squares2.back == 16);
+    assert(squares2.front == 1);
+    squares2.popFront;
+    assert(squares2.front == 4);
+    squares2.popBack;
+    assert(squares2.front == 4);
+    assert(squares2.back == 9);
+
+    assert(equal(map!("a * a")(chain(arr1, arr2)), [ 1, 4, 9, 16, 25, 36 ][]));
+
     uint i;
     foreach (e; map!("a", "a * a")(arr1))
     {
         assert(e.field[0] == ++i);
         assert(e.field[1] == i * i);
     }
+
+    // Test length.
+    assert(squares.length == 4);
+    assert(map!"a * a"(chain(arr1, arr2)).length == 6);
+
+    // Test indexing.
+    assert(squares[0] == 1);
+    assert(squares[1] == 4);
+    assert(squares[2] == 9);
+    assert(squares[3] == 16);
+
+    // Test slicing.
+    auto squareSlice = squares[1..squares.length - 1];
+    assert(equal(squareSlice, [4, 9][]));
+    assert(squareSlice.back == 9);
+    assert(squareSlice[1] == 9);
+
+    // Test on a forward range to make sure it compiles when all the fancy
+    // stuff is disabled.
+    auto fibsSquares = map!"a * a"(recurrence!("a[n-1] + a[n-2]")(1, 1));
+    assert(fibsSquares.front == 1);
+    fibsSquares.popFront;
+    fibsSquares.popFront;
+    assert(fibsSquares.front == 4);
+    fibsSquares.popFront;
+    assert(fibsSquares.front == 9);
 }
+
 
 // reduce
 /**
