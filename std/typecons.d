@@ -348,7 +348,7 @@ public:
    must be implicitly assignable to the respective element of the
    target.
  */
-    this(U : Tuple!(V), V...)(U another)
+    this(V=void, U...)(Tuple!(U) another)
     {
         static assert(V.length == Types.length);
         foreach (i, Unused; Types)
