@@ -236,14 +236,14 @@ private:
     {
         static A* getPtr(void* untyped)
         {
-            static if (A.sizeof <= size)
+            if (untyped)
             {
-                return cast(A*) untyped;
+                static if (A.sizeof <= size)
+                    return cast(A*) untyped;
+                else
+                    return *cast(A**) untyped;
             }
-            else
-            {
-                return *cast(A**) untyped;
-            }
+            return null;
         }
         auto zis = getPtr(pStore);
         // Input: TypeInfo object
