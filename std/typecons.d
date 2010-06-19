@@ -322,6 +322,15 @@ public:
     alias field expand;
     // @@@BUG 2800
     //alias field this;
+    
+/**
+   Default constructor.
+ */
+    this(U...)(U values) if (U.length == 0)
+    {
+        
+    }
+
 /**
    Constructor taking one value for each field. Each argument must be
    implicitly assignable to the respective element of the target.
@@ -339,11 +348,9 @@ public:
    must be implicitly assignable to the respective element of the
    target.
  */
-    // @@@BUG@@@
-    //this(U)(Tuple!(U) another)
-    this(U)(U another)
+    this(U : Tuple!(V), V...)(U another)
     {
-        static assert(U.Types.length == Types.length);
+        static assert(V.length == Types.length);
         foreach (i, Unused; Types)
         {
             field[i] = another.field[i];

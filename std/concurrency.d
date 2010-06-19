@@ -49,7 +49,8 @@ private
     
     enum MsgType
     {
-        user,
+        standard,
+        priority,
         linkDead,
     }
     
@@ -58,9 +59,29 @@ private
         MsgType type;
         Variant data;
         
-        this( MsgType t )
+        this(T...)( MsgType t, T vals )
         {
             type = t;
+            data = Tuple!(T)( vals );
+        }
+    }
+    
+    struct Priority
+    {
+        Variant   data;
+        Throwable fail;
+
+        this(T...)( T vals )
+        {
+            data = Tuple!(T)( vals );
+            static if( T.length == 1 && is( T[0] : Throwable ) )
+            {
+                fail = vals[0];
+            }
+            else
+            {
+                fail = new PriorityMessageException!(T)( vals );
+            }
         }
     }
 
@@ -131,6 +152,25 @@ class LinkTerminated : Exception
     }
     
     Tid tid;
+}
+
+
+/**
+ *
+ */
+class PriorityMessageException(T...) : Exception
+{
+    this( T vals )
+    {
+        super( "Priority message" );
+        static if( T.length == 1 )
+             message       = vals;
+        else message.field = vals;
+    }
+    
+    static if( T.length == 1 )
+         T         message;
+    else Tuple!(T) message;
 }
 
 
@@ -269,33 +309,12 @@ void send(T...)( Tid tid, T vals )
 }
 
 
-/*
- * Implementation of send.  This allows parameter checking to be different for
- * both Tid.send() and .send().
+/**
+ *
  */
-private void _send(T...)( MsgType type, Tid tid, T vals )
+void prioritySend(T...)( Tid tid, T vals )
 {
-    alias Tuple!(T) Wrap;
-
-    static if( Variant.allowed!(Wrap) )
-    {
-        Wrap    wrap;
-        Message msg  = Message( type );
-
-        wrap.field = vals;
-        msg.data   = wrap;
-        tid.mbox.put( msg );
-    }
-    else
-    {
-        // TODO: This should be shared.
-        Wrap*   wrap = cast(Wrap*) (new void[Wrap.sizeof]).ptr;
-        Message msg  = Message( type );
-
-        wrap.field = vals;
-        msg.data   = wrap;
-        tid.mbox.put( msg );
-    }
+    _send( MsgType.priority, tid, Priority( vals ) );
 }
 
 
@@ -304,7 +323,17 @@ private void _send(T...)( MsgType type, Tid tid, T vals )
  */
 private void _send(T...)( Tid tid, T vals )
 {
-    _send( MsgType.user, tid, vals );
+    _send( MsgType.standard, tid, vals );
+}
+
+
+/*
+ * Implementation of send.  This allows parameter checking to be different for
+ * both Tid.send() and .send().
+ */
+private void _send(T...)( MsgType type, Tid tid, T vals )
+{    
+    tid.mbox.put( Message( type, vals ) );
 }
 
 
@@ -508,6 +537,11 @@ private
                 {
                     while( true )
                     {
+                        if( isPriorityMsg( msg ) )
+                        {
+                            m_sharedPty.put( msg );
+                            m_putMsg.notify();
+                        }
                         if( !mboxFull() || isControlMsg( msg ) )
                         {
                             m_sharedBox.put( msg );
@@ -557,7 +591,7 @@ private
                 enum timedWait = false;
             }
             
-            bool onUserMsg( Message msg )
+            bool onStandardMsg( Message msg )
             {
                 Variant data = msg.data;
 
@@ -573,28 +607,15 @@ private
                         op( data );
                         return true;
                     }
-                    else static if( Variant.allowed!(Wrap) )
+                    else if( data.convertsTo!(Wrap) )
                     {
-                        if( data.convertsTo!(Wrap) )
+                        static if( is( ReturnType!(t) == bool ) )
                         {
-                            static if( is( ReturnType!(t) == bool ) )
-                            {
-                                return op( data.get!(Wrap).expand );
-                            }
-                            else
-                            {
-                                op( data.get!(Wrap).expand );
-                                return true;
-                            }
+                            return op( data.get!(Wrap).expand );
                         }
-                    }
-                    else
-                    {
-                        if( data.convertsTo!(Wrap*) )
+                        else
                         {
-                            static if( is( ReturnType!(t) == bool ) )
-                                return op( data.get!(Wrap*).expand );
-                            op( data.get!(Wrap*).expand );
+                            op( data.get!(Wrap).expand );
                             return true;
                         }
                     }
@@ -661,7 +682,7 @@ private
                             range.popFront();
                         continue;
                     }
-                    if( onUserMsg( range.front ) )
+                    if( onStandardMsg( range.front ) )
                     {
                         list.removeAt( range );
                         return true;
@@ -671,16 +692,43 @@ private
                 return false;
             }
             
+            
+            bool pty( ref ListT list )
+            {
+                alias Tuple!(Priority) Wrap;
+
+                if( !list.empty )
+                {
+                    auto    range = list[];
+                    Variant data  = range.front.data;
+                    assert( data.convertsTo!(Wrap) );
+                    auto p = data.get!(Wrap).field[0];
+                    Message msg;
+                    
+                    msg.data = p.data;
+                    if( onStandardMsg( msg ) )
+                    {
+                        list.removeAt( range );
+                        return true;
+                    }
+                    throw p.fail;
+                }
+                return false;
+            }
+            
             while( true )
             {
                 ListT arrived;
 
-                if( scan( m_localBox ) )
+                if( pty( m_localPty ) ||
+                    scan( m_localBox ) )
+                {
                     return;
+                }
                 synchronized( m_lock )
                 {
                     updateMsgCount();
-                    while( m_sharedBox.empty )
+                    while( m_sharedPty.empty && m_sharedBox.empty )
                     {
                         if( ownerDead )
                             onOwnerDead();
@@ -697,11 +745,19 @@ private
                         else
                             m_putMsg.wait();
                     }
+                    m_localPty.put( m_sharedPty );
                     arrived.put( m_sharedBox );
                 }
-                bool ok = scan( arrived );
+                if( m_localPty.empty )
+                {
+                    bool ok = scan( arrived );
+                    m_localBox.put( arrived );
+                    if( ok ) return;
+                    else continue;
+                }
                 m_localBox.put( arrived );
-                if( ok ) return;
+                pty( m_localPty );
+                return;
             }
         }
         
@@ -760,7 +816,7 @@ private
         //////////////////////////////////////////////////////////////////////
         
         
-        size_t mboxFull()
+        bool mboxFull()
         {
             return m_maxMsgs &&
                    m_maxMsgs <= m_localMsgs + m_sharedBox.length;
@@ -818,7 +874,14 @@ private
 
         pure final bool isControlMsg( Message msg )
         {
-            return msg.type != MsgType.user;
+            return msg.type != MsgType.standard &&
+                   msg.type != MsgType.priority;
+        }
+        
+        
+        pure final bool isPriorityMsg( Message msg )
+        {
+            return msg.type == MsgType.priority;
         }
         
     
@@ -838,6 +901,7 @@ private
         
         
         ListT       m_localBox;
+        ListT       m_localPty;
         
         
     private:
@@ -851,6 +915,7 @@ private
         Condition   m_notFull;
         size_t      m_putQueue;
         ListT       m_sharedBox;
+        ListT       m_sharedPty;
         OnMaxFn     m_onMaxMsgs;
         size_t      m_localMsgs;
         size_t      m_maxMsgs;
@@ -1026,6 +1091,8 @@ private
 
 version( unittest )
 {
+    import std.stdio;
+
     void testfn( Tid tid )
     {
         receive( (float val) { assert(0); },
