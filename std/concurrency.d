@@ -64,6 +64,12 @@ private
             type = t;
             data = Tuple!(T)( vals );
         }
+        
+        this(U=void, T...)( MsgType t, Tuple!(T) vals )
+        {
+            type = t;
+            data = vals;
+        }
     }
     
     struct Priority
@@ -1096,10 +1102,16 @@ version( unittest )
     void testfn( Tid tid )
     {
         receive( (float val) { assert(0); },
-                (int val, int val2) { assert(val == 42 && val2 == 86); } );
-        receive( (Tuple!(int, int) val) { assert(val.field[0] == 42
-                            && val.field[1] == 86 ); } );
-        receive( (Variant val) {  } );
+                 (int val, int val2)
+                 {
+                     assert( val == 42 && val2 == 86 );
+                 } );
+        receive( (Tuple!(int, int) val)
+                 {
+                     assert( val.field[0] == 42 &&
+                             val.field[1] == 86 );
+                 } );
+        receive( (Variant val) {} );
         receive( (string val)
                  {
                      if( "the quick brown fox" != val )

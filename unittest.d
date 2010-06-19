@@ -17,6 +17,7 @@ public import std.base64;
 public import std.bind;
 public import std.boxer;
 public import std.compiler;
+public import std.concurrency;
 public import std.contracts;
 public import std.conv;
 public import std.cpuid;
@@ -74,6 +75,7 @@ version (all)
     std.ctype.tolower('A');		// ctype
     RegExp r = new RegExp(null, null);	// regexp
     uint ranseed = std.random.unpredictableSeed();
+    thisTid();
     int a[];
     a.reverse;				// adi
     a.sort;				// qsort
