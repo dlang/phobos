@@ -47,6 +47,13 @@ private
     import std.typecons;
     import std.typetuple;
     
+    template isTuple(T)
+    {
+       enum isTuple = __traits(compiles,
+                               { void f(X...)(Tuple!(X) t) {};
+                                 f(T.init); });
+    }
+    
     enum MsgType
     {
         standard,
@@ -64,7 +71,7 @@ private
             type = t;
             data = Tuple!(T)( vals );
         }
-        
+
         this(U=void, T...)( MsgType t, Tuple!(T) vals )
         {
             type = t;
@@ -603,7 +610,8 @@ private
 
                 foreach( i, t; Ops )
                 {
-                    alias Tuple!(ParameterTypeTuple!(t)) Wrap;
+                    alias ParameterTypeTuple!(t) Args;
+                    alias Tuple!(Args) Wrap;
                     auto op = ops[i];
 
                     static if( is( Wrap == Tuple!(Variant) ) )
@@ -613,7 +621,19 @@ private
                         op( data );
                         return true;
                     }
-                    else if( data.convertsTo!(Wrap) )
+                    static if( Args.length == 1 && isTuple!(Args) )
+                    {
+                        static if( is( ReturnType!(t) == bool ) )
+                        {
+                            return op( data.get!(Args) );
+                        }
+                        else
+                        {
+                            op( data.get!(Args) );
+                            return true;
+                        }
+                    }
+                    if( data.convertsTo!(Wrap) )
                     {
                         static if( is( ReturnType!(t) == bool ) )
                         {
