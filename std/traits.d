@@ -384,11 +384,11 @@ unittest
     static assert(!(functionAttributes!(Set.safeF) & FA.TRUSTED));
 
     int pure_nothrow() pure nothrow { return 0; }
-    static assert(functionAttributes!(pure_nothrow) == FA.PURE | FA.NOTHROW);
+    static assert(functionAttributes!(pure_nothrow) == (FA.PURE | FA.NOTHROW));
     //ref int ref_property() @property { return *(new int); } // @@@BUG2509@@@
-    //static assert(functionAttributes!(ref_property) == FA.REF | FA.PROPERTY);
+    //static assert(functionAttributes!(ref_property) == (FA.REF | FA.PROPERTY));
     void safe_nothrow() @safe nothrow { }
-    static assert(functionAttributes!(safe_nothrow) == FA.SAFE | FA.NOTHROW);
+    static assert(functionAttributes!(safe_nothrow) == (FA.SAFE | FA.NOTHROW));
 
     interface Test2
     {

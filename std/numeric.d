@@ -362,7 +362,7 @@ struct CustomFloat(
 
     /// Returns: number of decimal digits of precision
     static @property size_t dig(){
-        return cast(size_t) log10( 1uL << precision - (flags&Flags.storeNormalized != 0));
+        return cast(size_t) log10( 1uL << precision - ((flags&Flags.storeNormalized) != 0));
     }
 
     /// Returns: smallest increment to the value 1
@@ -385,7 +385,7 @@ struct CustomFloat(
     }
 
     /// the number of bits in mantissa
-    enum mant_dig = precision + (flags&Flags.storeNormalized != 0);
+    enum mant_dig = precision + ((flags&Flags.storeNormalized) != 0);
 
     /// Returns: maximum int value such that 10<sup>max_10_exp</sup> is representable
     static @property int max_10_exp(){ return cast(int) log10( +max ); }
