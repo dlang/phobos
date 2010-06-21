@@ -471,8 +471,8 @@ static BigUint divInt(T)(BigUint x, T y) if ( is(T==uint) ){
 // return x % y
 static uint modInt(T)(BigUint x, T y) if ( is(T == uint) ){
     assert(y!=0);
-    if (y&(-y)==y) { // perfect power of 2        
-        return x.data[0]&(y-1);   
+    if ((y&(-y)) == y) { // perfect power of 2        
+        return x.data[0] & (y-1);   
     } else {
         // horribly inefficient - malloc, copy, & store are unnecessary.
         uint [] wasteful = new BigDigit[x.data.length];
