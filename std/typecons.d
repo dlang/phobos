@@ -350,7 +350,7 @@ public:
  */
     this(V=void, U...)(Tuple!(U) another)
     {
-        static assert(V.length == Types.length);
+        static assert(U.length == Types.length);
         foreach (i, Unused; Types)
         {
             field[i] = another.field[i];
