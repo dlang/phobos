@@ -1475,8 +1475,8 @@ struct Repeat(T)
     void popFront() {}
     /// Ditto
     void popBack() {}
-	/// Ditto
-	@property Repeat!(T) save() { return this; }
+    /// Ditto
+    @property Repeat!(T) save() { return this; }
     /// Ditto
     ref T opIndex(uint) { return _value; }
 }
@@ -1543,6 +1543,10 @@ struct Cycle(R) if (isForwardRange!(R))
         {
             return _original[(n + _index) % _original.length];
         }
+        /// Ditto
+        @property Cycle!(R) save() {
+            return Cycle!(R)(this._original.save, this._index);
+        }
     }
     else
     {
@@ -1561,6 +1565,11 @@ struct Cycle(R) if (isForwardRange!(R))
             _current.popFront;
             if (_current.empty) _current = _original;
         }
+
+        @property Cycle!(R) save() {
+            return Cycle!(R)(this._original.save, this._current.save);
+        }
+        
     }
 }
 
@@ -1589,6 +1598,10 @@ struct Cycle(R) if (isStaticArray!(R))
     {
         return _ptr[(n + _index) % R.length];
     }
+
+	@property Cycle!(R) save() {
+		return this;
+	}
 }
 
 /// Ditto
@@ -2006,7 +2019,7 @@ public:
     this(State initial, size_t n = 0)
     {
         this._state = initial;
-		this._n = n;
+        this._n = n;
         this._cache = compute(this._state, this._n);
     }
 
@@ -2058,13 +2071,13 @@ unittest
     //auto y = sequence!("a.field[0] + n * a.field[1]")(0, 4);
     //foreach (e; take(y, 15))
     {}//writeln(e);
-	
-	auto odds = Sequence!("a.field[0] + n * a.field[1]", Tuple!(int, int))(tuple(1, 2));	
-	for(int currentOdd = 1; currentOdd <= 21; currentOdd += 2) {
-		assert(odds.front == odds[0]);
-		assert(odds[0] == currentOdd);
-		odds.popFront();
-	}
+    
+    auto odds = Sequence!("a.field[0] + n * a.field[1]", Tuple!(int, int))(tuple(1, 2));    
+    for(int currentOdd = 1; currentOdd <= 21; currentOdd += 2) {
+        assert(odds.front == odds[0]);
+        assert(odds[0] == currentOdd);
+        odds.popFront();
+    }
 }
 
 /**
