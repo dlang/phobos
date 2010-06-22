@@ -617,11 +617,16 @@ private
                     static if( is( Wrap == Tuple!(Variant) ) )
                     {
                         static if( is( ReturnType!(t) == bool ) )
+                        {
                             return op( data );
-                        op( data );
-                        return true;
+                        }
+                        else
+                        {
+                            op( data );
+                            return true;
+                        }
                     }
-                    static if( Args.length == 1 && isTuple!(Args) )
+                    else static if( Args.length == 1 && isTuple!(Args) )
                     {
                         static if( is( ReturnType!(t) == bool ) )
                         {
@@ -633,16 +638,19 @@ private
                             return true;
                         }
                     }
-                    if( data.convertsTo!(Wrap) )
+                    else
                     {
-                        static if( is( ReturnType!(t) == bool ) )
+                        if( data.convertsTo!(Wrap) )
                         {
-                            return op( data.get!(Wrap).expand );
-                        }
-                        else
-                        {
-                            op( data.get!(Wrap).expand );
-                            return true;
+                            static if( is( ReturnType!(t) == bool ) )
+                            {
+                                return op( data.get!(Wrap).expand );
+                            }
+                            else
+                            {
+                                op( data.get!(Wrap).expand );
+                                return true;
+                            }
                         }
                     }
                 }
