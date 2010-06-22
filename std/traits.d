@@ -856,6 +856,24 @@ private template HasRawPointerImpl(T...)
     }
 }
 
+private template HasRawLocalPointerImpl(T...)
+{
+    static if (T.length == 0)
+    {
+        enum result = false;
+    }
+    else
+    {
+        static if (is(T[0] foo : U*, U))
+            enum hasRawLocalAliasing = !is(U == immutable) && !is(U == shared);
+        else static if (is(T[0] foo : U[], U))
+            enum hasRawLocalAliasing = !is(U == immutable) && !is(U == shared);
+        else
+            enum hasRawLocalAliasing = false;
+        enum result = hasRawLocalAliasing || HasRawLocalPointerImpl!(T[1 .. $]).result;
+    }
+}
+
 /*
 Statically evaluates to $(D true) if and only if $(D T)'s
 representation contains at least one field of pointer or array type.
@@ -926,6 +944,92 @@ unittest
 
 /*
 Statically evaluates to $(D true) if and only if $(D T)'s
+representation contains at least one non-shared field of pointer or
+array type.  Members of class types are not considered raw pointers.
+Pointers to immutable objects are not considered raw aliasing.
+
+Example:
+---
+// simple types
+static assert(!hasRawLocalAliasing!(int));
+static assert(hasRawLocalAliasing!(char*));
+static assert(!hasRawLocalAliasing!(shared char*));
+// references aren't raw pointers
+static assert(!hasRawLocalAliasing!(Object));
+// built-in arrays do contain raw pointers
+static assert(hasRawLocalAliasing!(int[]));
+static assert(!hasRawLocalAliasing!(shared int[]));
+// aggregate of simple types
+struct S1 { int a; double b; }
+static assert(!hasRawLocalAliasing!(S1));
+// indirect aggregation
+struct S2 { S1 a; double b; }
+static assert(!hasRawLocalAliasing!(S2));
+// struct with a pointer member
+struct S3 { int a; double * b; }
+static assert(hasRawLocalAliasing!(S3));
+struct S4 { int a; shared double * b; }
+static assert(hasRawLocalAliasing!(S4));
+// struct with an indirect pointer member
+struct S5 { S3 a; double b; }
+static assert(hasRawLocalAliasing!(S5));
+struct S6 { S4 a; double b; }
+static assert(!hasRawLocalAliasing!(S6));
+----
+*/
+
+private template hasRawLocalAliasing(T...)
+{
+    enum hasRawLocalAliasing
+        = HasRawLocalPointerImpl!(RepresentationTypeTuple!(T)).result;
+}
+
+unittest
+{
+// simple types
+    static assert(!hasRawLocalAliasing!(int));
+    static assert(hasRawLocalAliasing!(char*));
+    static assert(!hasRawLocalAliasing!(shared char*));
+// references aren't raw pointers
+    static assert(!hasRawLocalAliasing!(Object));
+    static assert(!hasRawLocalAliasing!(int));
+    struct S1 { int z; }
+    static assert(!hasRawLocalAliasing!(S1));
+    struct S2 { int* z; }
+    static assert(hasRawLocalAliasing!(S2));
+    struct S3 { shared int* z; }
+    static assert(!hasRawLocalAliasing!(S3));
+    struct S4 { int a; int* z; int c; }
+    static assert(hasRawLocalAliasing!(S4));
+    struct S5 { int a; shared int* z; int c; }
+    static assert(!hasRawLocalAliasing!(S5));
+    struct S6 { int a; int z; int c; }
+    static assert(!hasRawLocalAliasing!(S6));
+    struct S7 { int a; Object z; int c; }
+    static assert(!hasRawLocalAliasing!(S7));
+    union S8 { int a; int b; }
+    static assert(!hasRawLocalAliasing!(S8));
+    union S9 { int a; int * b; }
+    static assert(hasRawLocalAliasing!(S9));
+    union S10 { int a; shared int * b; }
+    static assert(!hasRawLocalAliasing!(S10));
+    typedef int* S11;
+    static assert(hasRawLocalAliasing!(S11));
+    typedef shared int* S12;
+    static assert(hasRawLocalAliasing!(S12));
+    enum S13 { a };
+    static assert(!hasRawLocalAliasing!(S13));
+    // indirect members
+    struct S14 { S9 a; int b; }
+    static assert(hasRawLocalAliasing!(S14));
+    struct S15 { S10 a; int b; }
+    static assert(!hasRawLocalAliasing!(S15));
+    struct S16 { S6 a; int b; }
+    static assert(!hasRawLocalAliasing!(S16));
+}
+
+/*
+Statically evaluates to $(D true) if and only if $(D T)'s
 representation includes at least one non-immutable object reference.
 */
 
@@ -951,6 +1055,35 @@ private template hasObjects(T...)
     }
 }
 
+/*
+Statically evaluates to $(D true) if and only if $(D T)'s
+representation includes at least one non-immutable non-shared object
+reference.
+*/
+
+private template hasLocalObjects(T...)
+{
+    static if (T.length == 0)
+    {
+        enum hasLocalObjects = false;
+    }
+    else static if (is(T[0] U == typedef))
+    {
+        enum hasLocalObjects = hasLocalObjects!(U, T[1 .. $]);
+    }
+    else static if (is(T[0] == struct))
+    {
+        enum hasLocalObjects = hasLocalObjects!(
+            RepresentationTypeTuple!(T[0]), T[1 .. $]);
+    }
+    else
+    {
+        enum hasLocalObjects = (is(T[0] == class) &&
+                                !is(T[0] == immutable) && !is(T[0] == shared)) ||
+            hasLocalObjects!(T[1 .. $]);
+    }
+}
+
 /**
 Returns $(D true) if and only if $(D T)'s representation includes at
 least one of the following: $(OL $(LI a raw pointer $(D U*) and $(D U)
@@ -972,6 +1105,36 @@ unittest
     static assert(!hasAliasing!(S2));
     struct S3 { int a; immutable Object b; }
     static assert(!hasAliasing!(S3));
+}
+
+/**
+Returns $(D true) if and only if $(D T)'s representation includes at
+least one of the following: $(OL $(LI a raw pointer $(D U*) and $(D U)
+is not immutable or shared;) $(LI an array $(D U[]) and $(D U) is not
+immutable or shared;) $(LI a reference to a class type $(D C) and
+$(D C) is not immutable or shared.))
+*/
+
+template hasLocalAliasing(T...)
+{
+    enum hasLocalAliasing = hasRawLocalAliasing!(T) || hasLocalObjects!(T);
+}
+
+unittest
+{
+    struct S1 { int a; Object b; }
+    static assert(hasLocalAliasing!(S1));
+    struct S2 { string a; }
+    static assert(!hasLocalAliasing!(S2));
+    struct S3 { int a; immutable Object b; }
+    static assert(!hasLocalAliasing!(S3));
+    
+    struct S4 { int a; shared Object b; }
+    static assert(!hasLocalAliasing!(S4));
+    struct S5 { char[] a; }
+    static assert(hasLocalAliasing!(S5));
+    struct S6 { shared char[] b; }
+    static assert(!hasLocalAliasing!(S6));
 }
 
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
