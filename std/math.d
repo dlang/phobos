@@ -2895,7 +2895,7 @@ pure nothrow real fma(real x, real y, real z) { return (x * y) + z; }
 pure nothrow F pow(F, G)(F x, G n) if (isFloatingPoint!(F) && isIntegral!(G))
 {
     real p = 1.0, v = void;
-    G m = n;
+    Unsigned!G m = n;
     if (n < 0)
     {
         switch (n)
