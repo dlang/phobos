@@ -1569,7 +1569,7 @@ struct Cycle(R) if (isForwardRange!(R))
         @property Cycle!(R) save() {
             return Cycle!(R)(this._original.save, this._current.save);
         }
-        
+
     }
 }
 
@@ -2071,8 +2071,8 @@ unittest
     //auto y = sequence!("a.field[0] + n * a.field[1]")(0, 4);
     //foreach (e; take(y, 15))
     {}//writeln(e);
-    
-    auto odds = Sequence!("a.field[0] + n * a.field[1]", Tuple!(int, int))(tuple(1, 2));    
+
+    auto odds = Sequence!("a.field[0] + n * a.field[1]", Tuple!(int, int))(tuple(1, 2));
     for(int currentOdd = 1; currentOdd <= 21; currentOdd += 2) {
         assert(odds.front == odds[0]);
         assert(odds[0] == currentOdd);
@@ -2097,62 +2097,127 @@ auto rf = iota(0.0, 0.5, 0.1);
 assert(equal(rf, [0.0, 0.1, 0.2, 0.3, 0.4]));
 ----
  */
-Take!(Sequence!("a.field[0] + n * a.field[1]",
-                Tuple!(CommonType!(B, E), S)))
-iota(B, E, S)(B begin, E end, S step)
+Iota!(CommonType!(B, E), S) iota(B, E, S)(B begin, E end, S step)
 if (is(typeof((E.init - B.init) + 1 * S.init)))
 {
-    enforce(step != 0);
-    enforce(begin <= end && step > 0
-            || begin >= end && step < 0);
-
-    // actual count must be strictly less than aBitAboveCount
-    immutable ebs = end - begin + step;
-    auto aBitAboveCount = ebs / step;
-    assert(aBitAboveCount >= 0);
-
-    // "less" function that is "greater" for negative step
-    bool myless(typeof(ebs) a, typeof(ebs) b)
-    {
-        return step > 0 ? a < b : a > b;
-    }
-
-    if (!myless(aBitAboveCount * step, ebs)) --aBitAboveCount;
-    static if (isFloatingPoint!(typeof(aBitAboveCount)))
-    {
-        enforce(aBitAboveCount <= size_t.max,
-            "iota: too many items in range");
-        auto count = cast(size_t) aBitAboveCount;
-    }
-    else
-    {
-        size_t count = aBitAboveCount;
-    }
-    if (myless(count * step, end - begin)) ++count;
-    assert(myless((count - 1) * step, end - begin),
-            text("begin=", begin, "; end=", end, "; step=", step,
-                    "; count=", count));
-    assert(!myless(count * step, end - begin), text("begin=", begin,
-                    "; end=", end, "; step=", step, "; count=", count));
-    return typeof(return)(typeof(return).Source(
-                Tuple!(CommonType!(B, E), S)(begin, step), 0u), count);
+    return Iota!(CommonType!(B, E), S)(begin, end, step);
 }
 
 /// Ditto
-Take!(Sequence!("a.field[0] + n * a.field[1]",
-                Tuple!(CommonType!(B, E), uint)))
-iota(B, E)(B begin, E end)
+Iota!(CommonType!(B, E), uint) iota(B, E)(B begin, E end)
 {
     return iota(begin, end, 1u);
 }
 
 /// Ditto
-Take!(Sequence!("a.field[0] + n * a.field[1]",
-                Tuple!(E, uint)))
-iota(E)(E end)
+Iota!(E, uint) iota(E)(E end)
 {
     E begin = 0;
     return iota(begin, end, 1u);
+}
+
+// Iota for integers and pointers
+/// Ditto
+struct Iota(N, S) if ((isIntegral!N || isPointer!N) && isIntegral!S) {
+    private N current, pastLast;
+    private S step;
+    this(N current, N pastLast, S step)
+    {
+        enforce(step != 0 && current != pastLast);
+        this.current = current;
+        this.step = step;
+        if (step > 0)
+        {
+            this.pastLast = pastLast - 1;
+            this.pastLast -= (this.pastLast - current) % step;
+        }
+        else
+        {
+            this.pastLast = pastLast + 1;
+            this.pastLast += (this.pastLast - current) % step;
+        }
+        this.pastLast += step;
+    }
+    bool empty() const { return current == pastLast; }
+    N front() { return current; }
+    alias front moveFront;
+    void popFront()
+    {
+        current += step;
+    }
+    N back() { return pastLast - step; }
+    alias back moveBack;
+    void popBack()
+    {
+        pastLast -= step;
+    }
+    Iota save() { return this; }
+    N opIndex(size_t n)
+    {
+        return current + step * n;
+    }
+    size_t length()
+    {
+        return (pastLast - current) / step;
+    }
+}
+
+// Iota for floating-point numbers
+/// Ditto
+struct Iota(N, S) if (isFloatingPoint!N && isNumeric!S) {
+    private N start;
+    private S step;
+    private size_t index, count;
+    this(N start, N end, S step)
+    {
+        this.start = start;
+        this.step = step;
+        enforce(step != 0
+                && (start <= end && step > 0 || start >= end && step < 0));
+        immutable fcount = (end - start) / step;
+        enforce(fcount >= 0, "iota: incorrect startup parameters");
+        count = to!size_t(fcount);
+        auto pastEnd = start + count * step;
+        if (step > 0)
+        {
+            if (pastEnd < end) ++count;
+            assert(start + count * step >= end, text(count));
+        }
+        else
+        {
+            if (pastEnd > end) ++count;
+            assert(start + count * step <= end);
+        }
+    }
+    bool empty() const { return index == count; }
+    N front() { return start + step * index; }
+    alias front moveFront;
+    void popFront()
+    {
+        enforce(!empty);
+        ++index;
+    }
+    N back()
+    {
+        enforce(!empty);
+        return start + step * (count - 1);
+    }
+    alias back moveBack;
+    void popBack()
+    {
+        enforce(!empty);
+        --count;
+    }
+    Iota save() { return this; }
+    N opIndex(size_t n)
+    {
+        enforce(n < count);
+        return start + step * n;
+    }
+    size_t length()
+    {
+        return count;
+    }
 }
 
 unittest
@@ -2171,9 +2236,8 @@ unittest
     auto r1 = iota(a.ptr, a.ptr + a.length, 1);
     assert(r1.front == a.ptr);
     assert(r1.back == a.ptr + a.length - 1);
-
     auto rf = iota(0.0, 0.5, 0.1);
-    //foreach (e; rf) writeln(e - 0.3);
+    //foreach (e; rf) writeln(e);
     assert(approxEqual(rf, [0.0, 0.1, 0.2, 0.3, 0.4][]));
     // With something just above 0.5
     rf = iota(0.0, nextUp(0.5), 0.1);
