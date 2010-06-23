@@ -1519,13 +1519,9 @@ assert(equal(take(cycle([1, 2][]), 5), [ 1, 2, 1, 2, 1 ][]));
 
 Tip: This is a great way to implement simple circular buffers.
  */
-struct Cycle(R) if (isForwardRange!(R))
+struct Cycle(R) if (isForwardRange!(R) && !isInfinite!(R))
 {
-    static if (isInfinite!(R))
-    {
-        alias R Cycle;
-    }
-    else static if (isRandomAccessRange!(R) && hasLength!(R))
+    static if (isRandomAccessRange!(R) && hasLength!(R))
     {
         R _original;
         size_t _index;
@@ -1574,6 +1570,12 @@ struct Cycle(R) if (isForwardRange!(R))
 }
 
 /// Ditto
+template Cycle(R) if (isInfinite!(R))
+{ 
+    alias R Cycle;
+}
+
+/// Ditto
 struct Cycle(R) if (isStaticArray!(R))
 {
     private alias typeof(R[0]) ElementType;
@@ -1605,15 +1607,21 @@ struct Cycle(R) if (isStaticArray!(R))
 }
 
 /// Ditto
-Cycle!(R) cycle(R)(R input) if (isForwardRange!(R))
+Cycle!(R) cycle(R)(R input) if (isForwardRange!(R) && !isInfinite!(R))
 {
     return Cycle!(R)(input);
 }
 
 /// Ditto
-Cycle!(R) cycle(R)(R input, size_t index) if (isRandomAccessRange!(R))
+Cycle!(R) cycle(R)(R input, size_t index) if (isRandomAccessRange!(R) && !isInfinite!(R))
 {
     return Cycle!(R)(input, index);
+}
+
+/// Ditto
+Cycle!(R) cycle(R)(R input) if (isInfinite!(R))
+{
+    return input;
 }
 
 /// Ditto
@@ -1630,6 +1638,20 @@ unittest
     auto c = cycle(a);
     assert(a.ptr == c._ptr);
     assert(equal(take(cycle(a), 5), [ 1, 2, 3, 1, 2 ][]));
+}
+
+unittest // For infinite ranges
+{
+    struct InfRange
+    {
+        void popFront() { }
+        int front() { return 0; }
+        enum empty = false;
+    }
+    
+    InfRange i;
+    auto c = cycle(i);
+    assert (c == i);
 }
 
 /**
