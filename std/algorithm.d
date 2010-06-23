@@ -157,7 +157,7 @@ struct Map(alias fun, Range) if (isInputRange!(Range))
 	static if(isInfinite!Range) {
 		// Propagate infinite-ness.
 		enum bool empty = false;
-	} else {		
+	} else {
 		@property bool empty() {
 			return _input.empty;
 		}
@@ -196,7 +196,7 @@ struct Map(alias fun, Range) if (isInputRange!(Range))
             return typeof(this)(_input[lowerBound..upperBound]);
         }
     }
-	
+
 	static if (isForwardRange!Range)
         @property Map save()
         {
@@ -260,10 +260,10 @@ unittest
     assert(fibsSquares.front == 4);
     fibsSquares.popFront;
     assert(fibsSquares.front == 9);
-	
+
 	auto repeatMap = map!"a"(repeat(1));
 	static assert(isInfinite!(typeof(repeatMap)));
-	
+
 	auto intRange = map!"a"([1,2,3]);
 	static assert(isRandomAccessRange!(typeof(intRange)));
 }
@@ -569,7 +569,7 @@ struct Filter(alias pred, Range) if (isInputRange!(Range))
 	} else {
 		bool empty() { return _input.empty; }
 	}
-	
+
     void popFront()
     {
         do
@@ -582,6 +582,14 @@ struct Filter(alias pred, Range) if (isInputRange!(Range))
     {
         return _input.front;
     }
+
+    static if(isForwardRange!Range)
+    {
+        @property typeof(this) save()
+        {
+            return typeof(this)(_input.save);
+        }
+    }
 }
 
 unittest
@@ -589,13 +597,16 @@ unittest
     int[] a = [ 3, 4 ];
     auto r = filter!("a > 3")(a);
     assert(equal(r, [ 4 ][]));
+    static assert(isForwardRange!(typeof(r)));
 
     a = [ 1, 22, 3, 42, 5 ];
     auto under10 = filter!("a < 10")(a);
     assert(equal(under10, [1, 3, 5][]));
-	
+    static assert(isForwardRange!(typeof(under10)));
+
 	auto infinite = filter!"a > 2"(repeat(3));
 	static assert(isInfinite!(typeof(infinite)));
+	static assert(isForwardRange!(typeof(infinite)));
 }
 
 // move
