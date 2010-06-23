@@ -46,6 +46,8 @@ private import std.stdio;
 
 //debug=utf;            // uncomment to turn on debugging printf's
 
+
+
 deprecated class UtfError : Error
 {
     size_t idx; // index in string of where error occurred
@@ -70,6 +72,20 @@ class UtfException : Exception
         idx = i;
         super(s);
     }
+}
+
+// For unittests
+private bool expectError_(lazy void expr)
+{
+    try
+    {
+        expr;
+    }
+    catch (UtfException e)
+    {
+        return true;
+    }
+    return false;
 }
 
 /*******************************
@@ -99,6 +115,16 @@ unittest
     debug(utf) printf("utf.isValidDchar.unittest\n");
     assert(isValidDchar(cast(dchar)'a') == true);
     assert(isValidDchar(cast(dchar)0x1FFFFF) == false);
+
+    assert(!isValidDchar(cast(dchar)0x00D800));
+    assert(!isValidDchar(cast(dchar)0x00DBFF));
+    assert(!isValidDchar(cast(dchar)0x00DC00));
+    assert(!isValidDchar(cast(dchar)0x00DFFF));
+    assert(isValidDchar(cast(dchar)0x00FFFE));
+    assert(isValidDchar(cast(dchar)0x00FFFF));
+    assert(isValidDchar(cast(dchar)0x01FFFF));
+    assert(isValidDchar(cast(dchar)0x10FFFF));
+    assert(!isValidDchar(cast(dchar)0x110000));
 }
 
 
@@ -398,6 +424,21 @@ unittest
     }
 }
 
+unittest
+{
+    size_t i;
+
+    i = 0; assert(decode("\xEF\xBF\xBE"c, i) == cast(dchar) 0xFFFE);
+    i = 0; assert(decode("\xEF\xBF\xBF"c, i) == cast(dchar) 0xFFFF);
+    assert(expectError_( decode("\xED\xA0\x80"c, i) ));
+    assert(expectError_( decode("\xED\xAD\xBF"c, i) ));
+    assert(expectError_( decode("\xED\xAE\x80"c, i) ));
+    assert(expectError_( decode("\xED\xAF\xBF"c, i) ));
+    assert(expectError_( decode("\xED\xB0\x80"c, i) ));
+    assert(expectError_( decode("\xED\xBE\x80"c, i) ));
+    assert(expectError_( decode("\xED\xBF\xBF"c, i) ));
+}
+
 /** ditto */
 
 dchar decode(wchar[] s, inout size_t idx)
@@ -436,12 +477,10 @@ dchar decode(wchar[] s, inout size_t idx)
             {   msg = "unpaired surrogate UTF-16 value";
                 goto Lerr;
             }
-            else if (u == 0xFFFE || u == 0xFFFF)
-            {   msg = "illegal UTF-16 value";
-                goto Lerr;
-            }
             else
                 i++;
+            // Note: u+FFFE and u+FFFF are specifically permitted by the
+            // Unicode standard for application internal use (see isValidDchar)
         }
         else
         {
@@ -454,6 +493,14 @@ dchar decode(wchar[] s, inout size_t idx)
       Lerr:
         throw new UtfException(msg, i);
     }
+
+unittest
+{
+    size_t i;
+
+    i = 0; assert(decode([ cast(wchar) 0xFFFE ], i) == cast(dchar) 0xFFFE && i == 1);
+    i = 0; assert(decode([ cast(wchar) 0xFFFF ], i) == cast(dchar) 0xFFFF && i == 1);
+}
 
 /** ditto */
 
@@ -484,16 +531,12 @@ dchar decode(dchar[] s, inout size_t idx)
  */
 
 void encode(inout char[] s, dchar c)
-    in
-    {
-        assert(isValidDchar(c));
-    }
-    body
     {
         char[] r = s;
 
         if (c <= 0x7F)
         {
+            assert(isValidDchar(c));
             r ~= cast(char) c;
         }
         else
@@ -503,12 +546,18 @@ void encode(inout char[] s, dchar c)
 
             if (c <= 0x7FF)
             {
+                assert(isValidDchar(c));
                 buf[0] = cast(char)(0xC0 | (c >> 6));
                 buf[1] = cast(char)(0x80 | (c & 0x3F));
                 L = 2;
             }
             else if (c <= 0xFFFF)
             {
+                if (0xD800 <= c && c <= 0xDFFF)
+                    throw new UtfException(
+                        "encoding a surrogate code point in UTF-8",
+                        s.length);
+                assert(isValidDchar(c));
                 buf[0] = cast(char)(0xE0 | (c >> 12));
                 buf[1] = cast(char)(0x80 | ((c >> 6) & 0x3F));
                 buf[2] = cast(char)(0x80 | (c & 0x3F));
@@ -516,6 +565,7 @@ void encode(inout char[] s, dchar c)
             }
             else if (c <= 0x10FFFF)
             {
+                assert(isValidDchar(c));
                 buf[0] = cast(char)(0xF0 | (c >> 18));
                 buf[1] = cast(char)(0x80 | ((c >> 12) & 0x3F));
                 buf[2] = cast(char)(0x80 | ((c >> 6) & 0x3F));
@@ -524,7 +574,10 @@ void encode(inout char[] s, dchar c)
             }
             else
             {
-                assert(0);
+                assert(!isValidDchar(c));
+                throw new UtfException(
+                    "encoding an invalid code point in UTF-8",
+                    s.length);
             }
             r ~= buf[0 .. L];
         }
@@ -550,43 +603,111 @@ unittest
     assert(s == "abcda\xC2\xA9\xE2\x89\xA0");
 }
 
+unittest
+{
+    char[] buf;
+
+    encode(buf, '\u0000'); assert(buf[0 .. $] == "\u0000");
+    encode(buf, '\u007F'); assert(buf[1 .. $] == "\u007F");
+    encode(buf, '\u0080'); assert(buf[2 .. $] == "\u0080");
+    encode(buf, '\u07FF'); assert(buf[4 .. $] == "\u07FF");
+    encode(buf, '\u0800'); assert(buf[6 .. $] == "\u0800");
+    encode(buf, '\uD7FF'); assert(buf[9 .. $] == "\uD7FF");
+    encode(buf, '\uE000'); assert(buf[12 .. $] == "\uE000");
+    encode(buf, 0xFFFE); assert(buf[15 .. $] == "\xEF\xBF\xBE");
+    encode(buf, 0xFFFF); assert(buf[18 .. $] == "\xEF\xBF\xBF");
+    encode(buf, '\U00010000'); assert(buf[21 .. $] == "\U00010000");
+    encode(buf, '\U0010FFFF'); assert(buf[25 .. $] == "\U0010FFFF");
+
+    assert(expectError_( encode(buf, cast(dchar) 0xD800) ));
+    assert(expectError_( encode(buf, cast(dchar) 0xDBFF) ));
+    assert(expectError_( encode(buf, cast(dchar) 0xDC00) ));
+    assert(expectError_( encode(buf, cast(dchar) 0xDFFF) ));
+    assert(expectError_( encode(buf, cast(dchar) 0x110000) ));
+}
+
 /** ditto */
 
 void encode(inout wchar[] s, dchar c)
-    in
-    {
-        assert(isValidDchar(c));
-    }
-    body
     {
         wchar[] r = s;
 
         if (c <= 0xFFFF)
         {
+            if (0xD800 <= c && c <= 0xDFFF)
+                throw new UtfException(
+                    "encoding an isolated surrogate code point in UTF-16",
+                    s.length);
+            assert(isValidDchar(c));
             r ~= cast(wchar) c;
         }
-        else
+        else if (c <= 0x10FFFF)
         {
             wchar[2] buf;
 
+            assert(isValidDchar(c));
             buf[0] = cast(wchar) ((((c - 0x10000) >> 10) & 0x3FF) + 0xD800);
             buf[1] = cast(wchar) (((c - 0x10000) & 0x3FF) + 0xDC00);
             r ~= buf;
         }
+        else
+        {
+            assert(!isValidDchar(c));
+            throw new UtfException(
+                "encoding an invalid code point in UTF-16",
+                s.length);
+        }
         s = r;
     }
+
+unittest
+{
+    wchar[] buf;
+
+    encode(buf, '\u0000'); assert(buf[0] == '\u0000');
+    encode(buf, '\uD7FF'); assert(buf[1] == '\uD7FF');
+    encode(buf, '\uE000'); assert(buf[2] == '\uE000');
+    encode(buf, 0xFFFE); assert(buf[3] == 0xFFFE);
+    encode(buf, 0xFFFF); assert(buf[4] == 0xFFFF);
+    encode(buf, '\U00010000'); assert(buf[5 .. $] == "\U00010000");
+    encode(buf, '\U0010FFFF'); assert(buf[7 .. $] == "\U0010FFFF");
+
+    assert(expectError_( encode(buf, cast(dchar) 0xD800) ));
+    assert(expectError_( encode(buf, cast(dchar) 0xDBFF) ));
+    assert(expectError_( encode(buf, cast(dchar) 0xDC00) ));
+    assert(expectError_( encode(buf, cast(dchar) 0xDFFF) ));
+    assert(expectError_( encode(buf, cast(dchar) 0x110000) ));
+}
 
 /** ditto */
 
 void encode(inout dchar[] s, dchar c)
-    in
     {
+        if ((0xD800 <= c && c <= 0xDFFF) || 0x10FFFF < c)
+            throw new UtfException(
+                "encoding an invalid code point in UTF-32",
+                s.length);
         assert(isValidDchar(c));
-    }
-    body
-    {
         s ~= c;
     }
+
+unittest
+{
+    dchar[] buf;
+
+    encode(buf, '\u0000'); assert(buf[0] == '\u0000');
+    encode(buf, '\uD7FF'); assert(buf[1] == '\uD7FF');
+    encode(buf, '\uE000'); assert(buf[2] == '\uE000');
+    encode(buf, 0xFFFE ); assert(buf[3] == 0xFFFE);
+    encode(buf, 0xFFFF ); assert(buf[4] == 0xFFFF);
+    encode(buf, '\U0010FFFF'); assert(buf[5] == '\U0010FFFF');
+
+    assert(expectError_( encode(buf, cast(dchar) 0xD800) ));
+    assert(expectError_( encode(buf, cast(dchar) 0xDBFF) ));
+    assert(expectError_( encode(buf, cast(dchar) 0xDC00) ));
+    assert(expectError_( encode(buf, cast(dchar) 0xDFFF) ));
+    assert(expectError_( encode(buf, cast(dchar) 0x110000) ));
+}
 
 /* =================== Validation ======================= */
 
@@ -635,25 +756,26 @@ void validate(dchar[] s)
 /* =================== Conversion to UTF8 ======================= */
 
 char[] toUTF8(char[4] buf, dchar c)
-    in
-    {
-        assert(isValidDchar(c));
-    }
-    body
     {
         if (c <= 0x7F)
         {
+            assert(isValidDchar(c));
             buf[0] = cast(char) c;
             return buf[0 .. 1];
         }
         else if (c <= 0x7FF)
         {
+            assert(isValidDchar(c));
             buf[0] = cast(char)(0xC0 | (c >> 6));
             buf[1] = cast(char)(0x80 | (c & 0x3F));
             return buf[0 .. 2];
         }
         else if (c <= 0xFFFF)
         {
+            if (0xD800 <= c && c <= 0xDFFF)
+                throw new UtfException(
+                    "encoding a surrogate code point in UTF-8", 0);
+            assert(isValidDchar(c));
             buf[0] = cast(char)(0xE0 | (c >> 12));
             buf[1] = cast(char)(0x80 | ((c >> 6) & 0x3F));
             buf[2] = cast(char)(0x80 | (c & 0x3F));
@@ -661,26 +783,48 @@ char[] toUTF8(char[4] buf, dchar c)
         }
         else if (c <= 0x10FFFF)
         {
+            assert(isValidDchar(c));
             buf[0] = cast(char)(0xF0 | (c >> 18));
             buf[1] = cast(char)(0x80 | ((c >> 12) & 0x3F));
             buf[2] = cast(char)(0x80 | ((c >> 6) & 0x3F));
             buf[3] = cast(char)(0x80 | (c & 0x3F));
             return buf[0 .. 4];
         }
-        assert(0);
+        assert(!isValidDchar(c));
+        throw new UtfException(
+            "encoding an invalid code point in UTF-8", 0);
     }
+
+unittest
+{
+    char[4] buf;
+
+    assert(toUTF8(buf, '\u0000') == "\u0000");
+    assert(toUTF8(buf, '\u007F') == "\u007F");
+    assert(toUTF8(buf, '\u0080') == "\u0080");
+    assert(toUTF8(buf, '\u07FF') == "\u07FF");
+    assert(toUTF8(buf, '\u0800') == "\u0800");
+    assert(toUTF8(buf, '\uD7FF') == "\uD7FF");
+    assert(toUTF8(buf, '\uE000') == "\uE000");
+    assert(toUTF8(buf, 0xFFFE) == "\xEF\xBF\xBE");
+    assert(toUTF8(buf, 0xFFFF) == "\xEF\xBF\xBF");
+    assert(toUTF8(buf, '\U00010000') == "\U00010000");
+    assert(toUTF8(buf, '\U0010FFFF') == "\U0010FFFF");
+
+    assert(expectError_( toUTF8(buf, cast(dchar) 0xD800) ));
+    assert(expectError_( toUTF8(buf, cast(dchar) 0xDBFF) ));
+    assert(expectError_( toUTF8(buf, cast(dchar) 0xDC00) ));
+    assert(expectError_( toUTF8(buf, cast(dchar) 0xDFFF) ));
+    assert(expectError_( toUTF8(buf, cast(dchar) 0x110000) ));
+}
 
 /*******************
  * Encodes string s into UTF-8 and returns the encoded string.
  */
 
 char[] toUTF8(char[] s)
-    in
     {
         validate(s);
-    }
-    body
-    {
         return s;
     }
 
@@ -743,24 +887,45 @@ char[] toUTF8(dchar[] s)
 /* =================== Conversion to UTF16 ======================= */
 
 wchar[] toUTF16(wchar[2] buf, dchar c)
-    in
-    {
-        assert(isValidDchar(c));
-    }
-    body
     {
         if (c <= 0xFFFF)
         {
+            if (0xD800 <= c && c <= 0xDFFF)
+                throw new UtfException(
+                    "encoding an isolated surrogate code point in UTF-16", 0);
+            assert(isValidDchar(c));
             buf[0] = cast(wchar) c;
             return buf[0 .. 1];
         }
-        else
+        else if (c <= 0x10FFFF)
         {
             buf[0] = cast(wchar) ((((c - 0x10000) >> 10) & 0x3FF) + 0xD800);
             buf[1] = cast(wchar) (((c - 0x10000) & 0x3FF) + 0xDC00);
             return buf[0 .. 2];
         }
+        assert(!isValidDchar(c));
+        throw new UtfException(
+            "encoding an invalid code point in UTF-16", 0);
     }
+
+unittest
+{
+    wchar[2] buf;
+
+    assert(toUTF16(buf, '\u0000') == "\u0000");
+    assert(toUTF16(buf, '\uD7FF') == "\uD7FF");
+    assert(toUTF16(buf, '\uE000') == "\uE000");
+    assert(toUTF16(buf, 0xFFFE)[0] == 0xFFFE);
+    assert(toUTF16(buf, 0xFFFF)[0] == 0xFFFF);
+    assert(toUTF16(buf, '\U00010000') == "\U00010000");
+    assert(toUTF16(buf, '\U0010FFFF') == "\U0010FFFF");
+
+    assert(expectError_( toUTF16(buf, cast(dchar) 0xD800) ));
+    assert(expectError_( toUTF16(buf, cast(dchar) 0xDBFF) ));
+    assert(expectError_( toUTF16(buf, cast(dchar) 0xDC00) ));
+    assert(expectError_( toUTF16(buf, cast(dchar) 0xDFFF) ));
+    assert(expectError_( toUTF16(buf, cast(dchar) 0x110000) ));
+}
 
 /****************
  * Encodes string s into UTF-16 and returns the encoded string.
@@ -822,12 +987,8 @@ wchar* toUTF16z(char[] s)
 /** ditto */
 
 wchar[] toUTF16(wchar[] s)
-    in
     {
         validate(s);
-    }
-    body
-    {
         return s;
     }
 
@@ -896,12 +1057,8 @@ dchar[] toUTF32(wchar[] s)
 /** ditto */
 
 dchar[] toUTF32(dchar[] s)
-    in
     {
         validate(s);
-    }
-    body
-    {
         return s;
     }
 
