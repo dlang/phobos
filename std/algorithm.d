@@ -1968,6 +1968,30 @@ struct Until(alias pred, Range, Sentinel) if (isInputRange!Range)
             _done = _input.empty || predSatisfied;
         }
     }
+
+    static if (!is(Sentinel == void))
+        @property Until save()
+        {
+            Until result;
+
+            result._input     = _input.save;
+            result._sentinel  = _sentinel;
+            result._openRight = _openRight;
+            result._done      = _done;
+
+            return result;
+        }
+    else
+        @property Until save()
+        {
+            Until result;
+
+            result._input     = _input.save;
+            result._openRight = _openRight;
+            result._done      = _done;
+
+            return result;
+        }
 }
 
 /// Ditto
@@ -1990,6 +2014,10 @@ until(alias pred, Range)
 unittest
 {
     int[] a = [ 1, 2, 4, 7, 7, 2, 4, 7, 3, 5];
+
+    assert(isForwardRange!(typeof(a.until(7))));
+    assert(isForwardRange!(typeof(until!"a == 2"(a, OpenRight.no))));
+
     assert(equal(a.until(7), [1, 2, 4][]));
     assert(equal(a.until(7, OpenRight.no), [1, 2, 4, 7][]));
     assert(equal(until!"a == 2"(a, OpenRight.no), [1, 2][]));
