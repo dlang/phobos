@@ -2176,25 +2176,36 @@ struct Iota(N, S) if ((isIntegral!N || isPointer!N) && isIntegral!S) {
         }
         this.pastLast += step;
     }
-    bool empty() const { return current == pastLast; }
-    N front() { return current; }
+    /// Ditto
+    @property bool empty() const { return current == pastLast; }
+    /// Ditto
+    @property N front() { return current; }
+    /// Ditto
     alias front moveFront;
+    /// Ditto
     void popFront()
     {
         current += step;
     }
-    N back() { return pastLast - step; }
+    /// Ditto
+    @property N back() { return pastLast - step; }
+    /// Ditto
     alias back moveBack;
+    /// Ditto
     void popBack()
     {
         pastLast -= step;
     }
-    Iota save() { return this; }
+    /// Ditto
+    @property Iota save() { return this; }
+    /// Ditto
     N opIndex(size_t n)
     {
         return current + step * n;
     }
-    size_t length()
+    /// Ditto
+    @property Select!(max(N.sizeof, S.sizeof) > size_t.sizeof, ulong, size_t)
+    length() const
     {
         return (pastLast - current) / step;
     }
@@ -2210,8 +2221,7 @@ struct Iota(N, S) if (isFloatingPoint!N && isNumeric!S) {
     {
         this.start = start;
         this.step = step;
-        enforce(step != 0
-                && (start <= end && step > 0 || start >= end && step < 0));
+        enforce(step != 0);
         immutable fcount = (end - start) / step;
         enforce(fcount >= 0, "iota: incorrect startup parameters");
         count = to!size_t(fcount);
@@ -2219,7 +2229,7 @@ struct Iota(N, S) if (isFloatingPoint!N && isNumeric!S) {
         if (step > 0)
         {
             if (pastEnd < end) ++count;
-            assert(start + count * step >= end, text(count));
+            assert(start + count * step >= end);
         }
         else
         {
@@ -2227,32 +2237,42 @@ struct Iota(N, S) if (isFloatingPoint!N && isNumeric!S) {
             assert(start + count * step <= end);
         }
     }
-    bool empty() const { return index == count; }
-    N front() { return start + step * index; }
+    /// Range primitives
+    @property bool empty() const { return index == count; }
+    /// Ditto
+    @property N front() { return start + step * index; }
+    /// Ditto
     alias front moveFront;
+    /// Ditto
     void popFront()
     {
         enforce(!empty);
         ++index;
     }
-    N back()
+    /// Ditto
+    @property N back()
     {
         enforce(!empty);
         return start + step * (count - 1);
     }
+    /// Ditto
     alias back moveBack;
+    /// Ditto
     void popBack()
     {
         enforce(!empty);
         --count;
     }
-    Iota save() { return this; }
+    /// Ditto
+    @property Iota save() { return this; }
+    /// Ditto
     N opIndex(size_t n)
     {
         enforce(n < count);
         return start + step * n;
     }
-    size_t length()
+    /// Ditto
+    @property size_t length() const
     {
         return count;
     }
@@ -2289,6 +2309,10 @@ unittest
     rf = iota(0.0, nextDown(-0.5), -0.1);
     //foreach (e; rf) writeln(e);
     assert(approxEqual(rf, [0.0, -0.1, -0.2, -0.3, -0.4, -0.5][]));
+
+    // iota of longs
+    auto rl = iota(5_000_000L);
+    assert(rl.length == 5_000_000L);
 }
 
 unittest
