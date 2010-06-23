@@ -214,6 +214,8 @@ struct Tid
 {
     void send(T...)( T vals )
     {
+        static assert( !hasLocalAliasing!(T),
+                       "Aliases to mutable thread-local data not allowed." );
         _send( this, vals );
     }
 
@@ -259,6 +261,8 @@ private:
  */
 Tid spawn(T...)( void function(T) fn, T args )
 {
+    static assert( !hasLocalAliasing!(T),
+                   "Aliases to mutable thread-local data not allowed." );
     // TODO: MessageList and &exec should be shared.
     return spawn_( false, fn, args );
 }
@@ -282,6 +286,8 @@ Tid spawn(T...)( void function(T) fn, T args )
  */
 Tid spawnLinked(T...)( void function(T) fn, T args )
 {
+    static assert( !hasLocalAliasing!(T),
+                   "Aliases to mutable thread-local data not allowed." );
     return spawn_( true, fn, args );
 }
 
@@ -318,6 +324,8 @@ private Tid spawn_(T...)( bool linked, void function(T) fn, T args )
  */
 void send(T...)( Tid tid, T vals )
 {
+    static assert( !hasLocalAliasing!(T),
+                   "Aliases to mutable thread-local data not allowed." );
     _send( tid, vals );
 }
 
@@ -327,6 +335,8 @@ void send(T...)( Tid tid, T vals )
  */
 void prioritySend(T...)( Tid tid, T vals )
 {
+    static assert( !hasLocalAliasing!(T),
+                   "Aliases to mutable thread-local data not allowed." );
     _send( MsgType.priority, tid, Priority( vals ) );
 }
 
