@@ -1487,6 +1487,7 @@ Repeat!(T) repeat(T)(T value) { return Repeat!(T)(value); }
 unittest
 {
     enforce(equal(take(repeat(5), 4), [ 5, 5, 5, 5 ][]));
+    static assert(isForwardRange!(Repeat!(uint)));
 }
 
 /**
@@ -1549,7 +1550,7 @@ struct Cycle(R) if (isForwardRange!(R) && !isInfinite!(R))
         R _original, _current;
         this(R input) { _original = input; _current = input.save; }
         /// Range primitive implementations.
-        ref ElementType!(R) front() { return _current.front; }
+        auto ref front() { return _current.front; }
         /// Ditto
         static if (isBidirectionalRange!(R))
             ref ElementType!(R) back() { return _current.back; }
@@ -1563,7 +1564,10 @@ struct Cycle(R) if (isForwardRange!(R) && !isInfinite!(R))
         }
 
         @property Cycle!(R) save() {
-            return Cycle!(R)(this._original.save, this._current.save);
+            Cycle!(R) ret;
+            ret._original = this._original.save;
+            ret._current =  this._current.save;
+            return ret;
         }
 
     }
@@ -1571,7 +1575,7 @@ struct Cycle(R) if (isForwardRange!(R) && !isInfinite!(R))
 
 /// Ditto
 template Cycle(R) if (isInfinite!(R))
-{ 
+{
     alias R Cycle;
 }
 
@@ -1633,11 +1637,23 @@ Cycle!(R) cycle(R)(ref R input, size_t index = 0) if (isStaticArray!R)
 unittest
 {
     assert(equal(take(cycle([1, 2][]), 5), [ 1, 2, 1, 2, 1 ][]));
+    static assert(isForwardRange!(Cycle!(uint[])));
+
+    struct DummyRange {
+        uint num;
+        ref uint front() { return num;  }
+        void popFront() { num++;   }
+        @property bool empty() { return num >= 10; }
+        typeof(this) save() { return this; }
+    }
+    static assert(isForwardRange!(Cycle!(DummyRange)));
+
     int[3] a = [ 1, 2, 3 ];
     static assert(isStaticArray!(typeof(a)));
     auto c = cycle(a);
     assert(a.ptr == c._ptr);
     assert(equal(take(cycle(a), 5), [ 1, 2, 3, 1, 2 ][]));
+    static assert(isForwardRange!(typeof(c)));
 }
 
 unittest // For infinite ranges
@@ -1648,7 +1664,7 @@ unittest // For infinite ranges
         int front() { return 0; }
         enum empty = false;
     }
-    
+
     InfRange i;
     auto c = cycle(i);
     assert (c == i);
