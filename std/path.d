@@ -27,7 +27,7 @@ module std.path;
 //debug=path;		// uncomment to turn on debugging printf's
 //private import std.stdio;
 
-import std.contracts, std.conv, std.file, std.process, std.string, std.traits;
+import std.array, std.conv, std.file, std.process, std.string, std.traits;
 import core.stdc.errno, core.stdc.stdlib;
 
 version(Posix)
@@ -102,7 +102,7 @@ version (Posix) alias std.string.cmp fcmp;
  *
  * Examples:
  * -----
- * version(Win32)
+ * version(Windows)
  * {
  *     getExt(r"d:\path\foo.bat") // "bat"
  *     getExt(r"d:\path.two\bar") // null
@@ -121,19 +121,23 @@ string getExt(string fullname)
     auto i = fullname.length;
     while (i > 0)
     {
-	if (fullname[i - 1] == '.')
-	    return fullname[i .. fullname.length];
-	i--;
-	version(Win32)
-	{
-	    if (fullname[i] == ':' || fullname[i] == '\\')
-		break;
-	}
-	version(Posix)
-	{
-	    if (fullname[i] == '/')
-		break;
-	}
+        if (fullname[i - 1] == '.')
+            return fullname[i .. fullname.length];
+        i--;
+        version(Windows)
+        {
+            if (fullname[i] == ':' || fullname[i] == '\\')
+                break;
+        }
+        else version(Posix)
+        {
+            if (fullname[i] == '/')
+                break;
+        }
+        else
+        {
+            static assert(0);
+        }
     }
     return null;
 }
@@ -143,28 +147,28 @@ unittest
     debug(path) printf("path.getExt.unittest\n");
     string result;
 
-    version (Win32)
+    version (Windows)
 	result = getExt("d:\\path\\foo.bat");
     version (Posix)
 	result = getExt("/path/foo.bat");
     auto i = cmp(result, "bat");
     assert(i == 0);
 
-    version (Win32)
+    version (Windows)
 	result = getExt("d:\\path\\foo.");
     version (Posix)
 	result = getExt("d/path/foo.");
     i = cmp(result, "");
     assert(i == 0);
 
-    version (Win32)
+    version (Windows)
 	result = getExt("d:\\path\\foo");
     version (Posix)
 	result = getExt("d/path/foo");
     i = cmp(result, "");
     assert(i == 0);
 
-    version (Win32)
+    version (Windows)
 	result = getExt("d:\\path.bar\\foo");
     version (Posix)
 	result = getExt("/path.bar/foo");
@@ -193,7 +197,7 @@ unittest
  *
  * Examples:
  * -----
- * version(Win32)
+ * version(Windows)
  * {
  *     getName(r"d:\path\foo.bat") => "d:\path\foo"
  *     getName(r"d:\path.two\bar") => null
@@ -212,19 +216,23 @@ string getName(string fullname)
     auto i = fullname.length;
     while (i > 0)
     {
-	if (fullname[i - 1] == '.')
-	    return fullname[0 .. i - 1];
-	i--;
-	version(Win32)
-	{
-	    if (fullname[i] == ':' || fullname[i] == '\\')
-		break;
-	}
-	version(Posix)
-	{
-	    if (fullname[i] == '/')
-		break;
-	}
+        if (fullname[i - 1] == '.')
+            return fullname[0 .. i - 1];
+        i--;
+        version(Windows)
+        {
+            if (fullname[i] == ':' || fullname[i] == '\\')
+                break;
+        }
+        else version(Posix)
+        {
+            if (fullname[i] == '/')
+                break;
+        }
+        else
+        {
+            static assert(0);
+        }
     }
     return null;
 }
@@ -239,7 +247,7 @@ unittest
     assert(i == 0);
 
     result = getName("d:\\path.two\\bar");
-    version (Win32)
+    version (Windows)
 	i = cmp(result, "");
     version (Posix)
 	i = cmp(result, "d:\\path");
@@ -265,7 +273,7 @@ unittest
  *
  * Examples:
  * -----
- * version(Win32)
+ * version(Windows)
  * {
  *     basename(r"d:\path\foo.bat") => "foo.bat"
  *     basename(r"d:\path\foo", ".bat") => "foo"
@@ -278,29 +286,34 @@ unittest
  * -----
  */
 
-S basename(S)(S fullname, string extension = null)
+String basename(String, ExtString = string)(String fullname, ExtString extension = null)
+    if (isSomeString!(String) && isSomeString!(ExtString))
 out (result)
 {
     assert(result.length <= fullname.length);
 }
 body
 {
-	auto i = fullname.length;
-	for (; i > 0; i--)
-	{
-	    version(Win32)
-	    {
-            if (fullname[i - 1] == ':' || fullname[i - 1] == '\\')
+    auto i = fullname.length;
+    for (; i > 0; i--)
+    {
+        version(Windows)
+        {
+            if (fullname[i - 1] == ':' || fullname[i - 1] == '\\' || fullname[i - 1] == '/')
                 break;
-	    }
-	    version(Posix)
-	    {
+        }
+        else version(Posix)
+        {
             if (fullname[i - 1] == '/')
                 break;
-	    }
-	}
-	return chomp(fullname[i .. fullname.length],
-            extension ? extension : "");
+        }
+        else
+        {
+            static assert(0);
+        }
+    }
+    return chomp(fullname[i .. fullname.length],
+            extension.length ? extension : "");
 }
 
 /** Alias for $(D_PARAM basename), kept for backward
@@ -331,6 +344,17 @@ unittest
 	result = basename("a/b.cde", ".cde");
     assert(result == "b");
 
+    version (Windows)
+    {
+        assert(basename("abc/xyz") == "xyz");
+        assert(basename("abc/") == "");
+        assert(basename("C:/a/b") == "b");
+        assert(basename(`C:\a/b`) == "b");
+    }
+
+    assert(basename("~/dmd.conf"w, ".conf"d) == "dmd");
+    assert(basename("~/dmd.conf"d, ".conf"d) == "dmd");
+    assert(basename("dmd.conf"w.dup, ".conf"d.dup) == "dmd");
 }
 
 /**************************
@@ -342,74 +366,132 @@ unittest
  * also terminates the search.
  *
  * Returns: If a path separator was found, all the characters to its
- * left are returned. Otherwise, $(D ".") is returned.
+ * left without any trailing path separators are returned. Otherwise,
+ * $(D ".") is returned.
  *
- * Under Windows, the found path separator will be included in the
- * returned string if it is preceeded by a colon.
+ * The found path separator will be included in the returned string
+ * if and only if it represents the root.
  *
  * Throws: Nothing.
  *
  * Examples:
  * -----
- * version(Win32)
+ * version(Windows)
  * {
  *     assert(dirname(r"d:\path\foo.bat") == r"d:\path");
- *     assert(dirname(dirname(r"d:\path\foo.bat")) == r"d:\");
+ *     assert(dirname(r"d:\path") == r"d:\");
+ *     assert(dirname("d:foo.bat") == "d:.");
+ *     assert(dirname("foo.bat") == ".");
  * }
  * version(Posix)
  * {
  *     assert(dirname("/home/user") == "/home");
- *     assert(dirname(dirname("/home/user")) == "");
+ *     assert(dirname("/home") == "/");
+ *     assert(dirname("user") == ".");
  * }
  * -----
  */
 
-Char[] dirname(Char)(Char[] fullname)
+String dirname(String)(String fullname)
+    if (isSomeString!(String))
 {
-    auto i = fullname.length;
-    for (; i > 0; i--)
+    Unqual!String s = fullname;
+
+    version (Posix)
     {
-        version(Win32)
+        enum immutable(String) sep    = .sep,
+                               curdir = .curdir;
+        for (; !s.empty; s.popBack)
         {
-            if (fullname[i - 1] == ':')
+            if (s.endsWith(sep))
                 break;
-            if (fullname[i - 1] == sep[0] || fullname[i - 1] == altsep[0])
-            {
-                // Leave separator when it's the starting character
-		// (current root) or when it's preceded by ':'
-		// (absolute root)
-                if (i != 1 && fullname[i - 2] != ':')
-                    i--;
-                break;
-            }
         }
-        version(Posix)
-        {
-            if (fullname[i - 1] == sep[0])
-            {   i--;
-                break;
-            }
-        }
+        if (s.empty)
+            return to!(String)(curdir);
+
+        // remove excess non-root slashes: "/home//" --> "/home"
+        while (s.length > sep.length && s.endsWith(sep))
+            s.popBack;
+        return s;
     }
-    return i == 0 ? to!(Char[])(".") : fullname[0 .. i];
+    else version (Windows)
+    {
+        enum immutable(String) sep    = .sep,
+                               altsep = .altsep,
+                               curdir = .curdir,
+                               drvsep = ":";
+        bool foundSep;
+        for (; !s.empty; s.popBack)
+        {
+            if (uint withWhat = s.endsWith(sep, altsep, drvsep))
+            {
+                foundSep = (withWhat != 3);
+                break;
+            }
+        }
+        if (!foundSep)
+        {
+            if (s.empty)
+                return to!(String)(curdir);
+            else
+                return to!(String)(s ~ curdir); // cases like "C:."
+        }
+
+        // remove excess non-root separators: "C:\\" --> "C:\"
+        while (s.endsWith(sep) || s.endsWith(altsep))
+        {
+            auto ss = s.save;
+            s.popBack;
+            if (s.empty || s.endsWith(drvsep))
+            {
+                s = ss; // preserve path separator representing root
+                break;
+            }
+        }
+        return s;
+    }
+    else // unknown platform
+    {
+        static assert(0);
+    }
 }
 
 unittest
 {
     assert(dirname("") == ".");
     assert(dirname("fileonly") == ".");
+
     version (Posix)
     {
         assert(dirname("/path/to/file") == "/path/to");
+        assert(dirname("/home") == "/");
+
+        assert(dirname("/dev/zero"w) == "/dev");
+        assert(dirname("/dev/null"d) == "/dev");
+        assert(dirname(".login"w.dup) == ".");
+        assert(dirname(".login"d.dup) == ".");
+
+        // doc example
+        assert(dirname("/home/user") == "/home");
+        assert(dirname("/home") == "/");
+        assert(dirname("user") == ".");
     }
-    else
+    version (Windows)
     {
-        version (Win32)
-        {
-            assert(dirname(r"\path\to\file") == r"\path\to");
-            assert(dirname(r"\foo") == r"\");
-            assert(dirname(r"c:\foo") == r"c:\");
-        }
+        assert(dirname(r"\path\to\file") == r"\path\to");
+        assert(dirname(r"\foo") == r"\");
+        assert(dirname(r"c:\foo") == r"c:\");
+
+        assert(dirname("\\Windows"w) == "\\");
+        assert(dirname("\\Users"d) == "\\");
+        assert(dirname("ntuser.dat"w.dup) == ".");
+        assert(dirname("ntuser.dat"d.dup) == ".");
+
+        // doc example
+        assert(dirname(r"d:\path\foo.bat") == r"d:\path");
+        assert(dirname(r"d:\path") == "d:\\");
+        assert(dirname("d:foo.bat") == "d:.");
+        assert(dirname("foo.bat") == ".");
     }
 }
 
@@ -423,6 +505,76 @@ unittest
     auto d = getDirName(filename);
     assert(d == "foo");
 }
+
+unittest // dirname + basename
+{
+    static immutable Common_dirbasename_testcases =
+    [
+        [ "/usr/lib"  , "/usr"   , "lib"    ],
+        [ "/usr/"     , "/usr"   , ""       ],
+        [ "/usr"      , "/"      , "usr"    ],
+        [ "/"         , "/"      , ""       ],
+
+        [ "var/run"   , "var"    , "run"    ],
+        [ "var/"      , "var"    , ""       ],
+        [ "var"       , "."      , "var"    ],
+        [ "."         , "."      , "."      ],
+
+        [ "/usr///lib", "/usr"   , "lib"    ],
+        [ "///usr///" , "///usr" , ""       ],
+        [ "///usr"    , "/"      , "usr"    ],
+        [ "///"       , "/"      , ""       ],
+        [ "var///run" , "var"    , "run"    ],
+        [ "var///"    , "var"    , ""       ],
+
+        [ "a/b/c"     , "a/b"    , "c"      ],
+        [ "a///c"     , "a"      , "c"      ],
+        [ "/\u7A74"   , "/"      , "\u7A74" ],
+        [ "/\u7A74/." , "/\u7A74", "."      ]
+    ];
+
+    static immutable Windows_dirbasename_testcases =
+        Common_dirbasename_testcases ~
+    [
+        [ "C:\\Users\\7mi", "C:\\Users", "7mi"   ],
+        [ "C:\\Users\\"   , "C:\\Users", ""      ],
+        [ "C:\\Users"     , "C:\\"     , "Users" ],
+        [ "C:\\"          , "C:\\"     , ""      ],
+
+        [ "C:Temp"        , "C:."      , "Temp"  ],
+        [ "C:"            , "C:."      , ""      ],
+        [ "\\dmd\\src"    , "\\dmd"    , "src"   ],
+        [ "\\dmd\\"       , "\\dmd"    , ""      ],
+        [ "\\dmd"         , "\\"       , "dmd"   ],
+
+        [ "C:/Users/7mi"  , "C:/Users" , "7mi"   ],
+        [ "C:/Users/"     , "C:/Users" , ""      ],
+        [ "C:/Users"      , "C:/"      , "Users" ],
+        [ "C:/"           , "C:/"      , ""      ],
+
+        [ "C:\\//WinNT"   , "C:\\"     , "WinNT" ],
+        [ "C://\\WinNT"   , "C:/"      , "WinNT" ],
+
+        [ `a\b\c`         , `a\b`      , "c"     ],
+        [ `a\\\c`         , "a"        , "c"     ]
+    ];
+
+    version (Windows)
+        alias Windows_dirbasename_testcases testcases;
+    else
+        alias Common_dirbasename_testcases testcases;
+
+    foreach (tc; testcases)
+    {
+        string path = tc[0];
+        string dir  = tc[1];
+        string base = tc[2];
+
+        assert(path.dirname == dir);
+        assert(path.basename == base);
+    }
+}
+
 
 /********************************
  * Extracts the drive letter of a path.
@@ -450,19 +602,23 @@ String getDrive(String)(String fullname) if (isSomeString!(String))
 // }
 body
 {
-	version(Win32)
-	{
-	    foreach (i; 0 .. fullname.length)
-	    {
+    version(Windows)
+    {
+        foreach (i; 0 .. fullname.length)
+        {
             if (fullname[i] == ':')
                 return fullname[0 .. i + 1];
-	    }
-	    return null;
-	}
-	version(Posix)
-	{
-	    return null;
-	}
+        }
+        return null;
+    }
+    else version(Posix)
+    {
+        return null;
+    }
+    else
+    {
+        static assert(0);
+    }
 }
 
 /****************************
@@ -558,7 +714,7 @@ string addExt(string filename, string ext)
  *
  * Examples:
  * -----
- * version(Win32)
+ * version(Windows)
  * {
  *     isabs(r"relative\path") => 0
  *     isabs(r"\relative\path") => 0
@@ -577,11 +733,17 @@ bool isabs(in char[] path)
     auto d = getDrive(path);
     version (Windows)
     {
-	return d.length < path.length &&
-	    (path[d.length] == sep[0] || path[d.length] == altsep[0]);
+        return d.length < path.length &&
+            (path[d.length] == sep[0] || path[d.length] == altsep[0]);
+    }
+    else version (Posix)
+    {
+        return d.length < path.length && path[d.length] == sep[0];
     }
     else
-	return d.length < path.length && path[d.length] == sep[0];
+    {
+        static assert(0);
+    }
 }
 
 unittest
@@ -654,7 +816,7 @@ unittest
  *
  * Examples:
  * -----
- * version(Win32)
+ * version(Windows)
  * {
  *     join(r"c:\foo", "bar") => r"c:\foo\bar"
  *     join("foo", r"d:\bar") => r"d:\bar"
@@ -684,7 +846,7 @@ string join(in char[] p1, in char[] p2, in char[][] more...)
         }
         return cast(string) (p1 ~ sep ~ p2);
     }
-    version (Windows)
+    else version (Windows)
     { 
         if (!p2.length)
             return p1.idup;
@@ -725,6 +887,10 @@ string join(in char[] p1, in char[] p2, in char[][] more...)
         }
         return p;
     }
+    else // unknown platform
+    {
+        static assert(0);
+    }
 }
 
 unittest
@@ -735,13 +901,13 @@ unittest
     int i;
 
     p = join("foo", "bar");
-    version (Win32)
+    version (Windows)
 	i = cmp(p, "foo\\bar");
     version (Posix)
 	i = cmp(p, "foo/bar");
     assert(i == 0);
 
-    version (Win32)
+    version (Windows)
     {	p = join("foo\\", "bar");
 	i = cmp(p, "foo\\bar");
     }
@@ -751,7 +917,7 @@ unittest
     }
     assert(i == 0);
 
-    version (Win32)
+    version (Windows)
     {	p = join("foo", "\\bar");
 	i = cmp(p, "\\bar");
     }
@@ -761,7 +927,7 @@ unittest
     }
     assert(i == 0);
 
-    version (Win32)
+    version (Windows)
     {	p = join("foo\\", "\\bar");
 	i = cmp(p, "\\bar");
     }
@@ -771,7 +937,7 @@ unittest
     }
     assert(i == 0);
 
-    version(Win32)
+    version(Windows)
     {
         p = join("d:", "bar");
         i = cmp(p, "d:bar");
@@ -822,7 +988,7 @@ unittest
  *
  * Examples:
  * -----
- * version(Win32)
+ * version(Windows)
  * {
  *     fncharmatch('a', 'b') => 0
  *     fncharmatch('A', 'a') => 1
@@ -837,21 +1003,25 @@ unittest
 
 bool fncharmatch(dchar c1, dchar c2)
 {
-    version (Win32)
+    version (Windows)
     {
-	if (c1 != c2)
-	{
-	    if ('A' <= c1 && c1 <= 'Z')
-		c1 += cast(char)'a' - 'A';
-	    if ('A' <= c2 && c2 <= 'Z')
-		c2 += cast(char)'a' - 'A';
-	    return c1 == c2;
-	}
-	return true;
+        if (c1 != c2)
+        {
+            if ('A' <= c1 && c1 <= 'Z')
+                c1 += cast(char)'a' - 'A';
+            if ('A' <= c2 && c2 <= 'Z')
+                c2 += cast(char)'a' - 'A';
+            return c1 == c2;
+        }
+        return true;
     }
-    version (Posix)
+    else version (Posix)
     {
-	return c1 == c2;
+        return c1 == c2;
+    }
+    else
+    {
+        static assert(0);
     }
 }
 
@@ -885,7 +1055,7 @@ bool fncharmatch(dchar c1, dchar c2)
  *
  * Examples:
  * -----
- * version(Win32)
+ * version(Windows)
  * {
  *     fnmatch("foo.bar", "*") => 1
  *     fnmatch(r"foo/foo\bar", "f*b*r") => 1
@@ -996,7 +1166,7 @@ unittest
 {
     debug(path) printf("path.fnmatch.unittest\n");
 
-    version (Win32)
+    version (Windows)
 	assert(fnmatch("foo", "Foo"));
     version (Posix)
 	assert(!fnmatch("foo", "Foo"));
@@ -1082,25 +1252,25 @@ string expandTilde(string inputPath)
 {
     version(Posix)
     {
-	static assert(sep.length == 1);
+        static assert(sep.length == 1);
 
         // Return early if there is no tilde in path.
         if (inputPath.length < 1 || inputPath[0] != '~')
-	    return inputPath;
+            return inputPath;
 
-	if (inputPath.length == 1 || inputPath[1] == sep[0])
-	    return expandFromEnvironment(inputPath);
+        if (inputPath.length == 1 || inputPath[1] == sep[0])
+            return expandFromEnvironment(inputPath);
         else
-	    return expandFromDatabase(inputPath);
+            return expandFromDatabase(inputPath);
     }
     else version(Windows)
     {
-	// Put here real windows implementation.
-	return inputPath;
+        // Put here real windows implementation.
+        return inputPath;
     }
     else
     {
-	static assert(0); // Guard. Implement on other platforms.
+        static assert(0); // Guard. Implement on other platforms.
     }
 }
 
