@@ -31,6 +31,121 @@ import std.conv;
 version(unittest)
 {
     import std.container, std.conv, std.math, std.stdio;
+
+    // Used with the dummy ranges for testing higher order ranges.
+    enum RangeType {
+        Input,
+        Forward,
+        Bidirectional,
+        Random
+    }
+
+    enum Length {
+        Yes,
+        No
+    }
+
+    enum ReturnBy {
+        Reference,
+        Value
+    }
+
+    // Range that's useful for testing other higher order ranges,
+    // can be parametrized with attributes.  It just dumbs down an array of
+    // numbers 1..10.
+    struct DummyRange(ReturnBy _r, Length _l, RangeType _rt) {
+        // These enums are so that the template params are visible outside
+        // this instantiation.
+        enum r = _r;
+        enum l = _l;
+        enum rt = _rt;
+
+        uint[] arr = [1U, 2U, 3U, 4U, 5U, 6U, 7U, 8U, 9U, 10U];
+
+        void reinit() {
+            // Workaround for DMD bug 4378
+            arr = [1U, 2U, 3U, 4U, 5U, 6U, 7U, 8U, 9U, 10U];
+        }
+
+        void popFront() {
+            arr = arr[1..$];
+        }
+
+        @property bool empty() {
+            return arr.length == 0;
+        }
+
+        static if(r == ReturnBy.Reference) {
+            @property ref uint front() {
+                return arr[0];
+            }
+        } else {
+            @property uint front() {
+                return arr[0];
+            }
+        }
+
+        static if(rt >= RangeType.Forward) {
+            @property typeof(this) save() {
+                return this;
+            }
+        }
+
+        static if(rt >= RangeType.Bidirectional) {
+            void popBack() {
+                arr = arr[0..$ - 1];
+            }
+
+            static if(r == ReturnBy.Reference) {
+                @property ref uint back() {
+                    return arr[$ - 1];
+                }
+            } else {
+                @property uint back() {
+                    return arr[$ - 1];
+                }
+            }
+        }
+
+        static if(rt >= RangeType.Random) {
+            static if(r == ReturnBy.Reference) {
+                @property ref uint opIndex(size_t index) {
+                    return arr[index];
+                }
+            } else {
+                @property uint opIndex(size_t index) {
+                    return arr[index];
+                }
+            }
+        }
+
+        static if(l == Length.Yes) {
+            @property size_t length() {
+                return arr.length;
+            }
+        }
+    }
+
+    alias TypeTuple!(
+        DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Input),
+        DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Forward),
+        DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Bidirectional),
+        DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Random),
+        DummyRange!(ReturnBy.Reference, Length.No, RangeType.Input),
+        DummyRange!(ReturnBy.Reference, Length.No, RangeType.Forward),
+        DummyRange!(ReturnBy.Reference, Length.No, RangeType.Bidirectional),
+        DummyRange!(ReturnBy.Reference, Length.No, RangeType.Random),
+        DummyRange!(ReturnBy.Value, Length.Yes, RangeType.Input),
+        DummyRange!(ReturnBy.Value, Length.Yes, RangeType.Forward),
+        DummyRange!(ReturnBy.Value, Length.Yes, RangeType.Bidirectional),
+        DummyRange!(ReturnBy.Value, Length.Yes, RangeType.Random),
+        DummyRange!(ReturnBy.Value, Length.No, RangeType.Input),
+        DummyRange!(ReturnBy.Value, Length.No, RangeType.Forward),
+        DummyRange!(ReturnBy.Value, Length.No, RangeType.Bidirectional),
+        DummyRange!(ReturnBy.Value, Length.No, RangeType.Random)
+    ) AllDummyRanges;
+
+    alias TypeTuple!(1,2,3,4,5,6,7,8,9,0,11,12,13,14,15,16) DummyIndices;
 }
 
 /**
@@ -626,6 +741,32 @@ unittest
     test([ 1, 2, 3, 4 ], [ 4, 3, 2, 1 ]);
     test([ 1, 2, 3, 4, 5 ], [ 5, 4, 3, 2, 1 ]);
     test([ 1, 2, 3, 4, 5, 6 ], [ 6, 5, 4, 3, 2, 1 ]);
+
+    foreach(DummyType; AllDummyRanges) {
+        static if(!isBidirectionalRange!DummyType) {
+            static assert(!__traits(compiles, Retro!DummyType));
+        } else {
+            DummyType dummyRange;
+            dummyRange.reinit();
+
+            auto myRetro = retro(dummyRange);
+            assert(myRetro.front == 10);
+            assert(myRetro.back == 1);
+
+            static if(isRandomAccessRange!DummyType && hasLength!DummyType) {
+                assert(myRetro[0] == myRetro.front);
+
+                static if(DummyType.r == ReturnBy.Reference) {
+                    myRetro[9]++;
+                    assert(dummyRange[0] == 2);
+                    myRetro.front++;
+                    assert(myRetro.front == 11);
+                    myRetro.back++;
+                    assert(myRetro.back == 3);
+                }
+            }
+        }
+    }
 }
 
 /**
@@ -662,7 +803,7 @@ Initializes the stride.
             {
                 _input = _input[0 .. _input.length - slack];
             }
-            else
+            else static if(isBidirectionalRange!(R))
             {
                 foreach (i; 0 .. slack)
                 {
@@ -676,9 +817,12 @@ Initializes the stride.
 /**
 Returns $(D this).
  */
-    @property Stride save()
+    static if(isForwardRange!(R))
     {
-        return Stride(_input.save, _n);
+        @property Stride save()
+        {
+            return Stride(_input.save, _n);
+        }
     }
 
 /**
@@ -711,7 +855,7 @@ Forwards to $(D _input.empty).
 /**
 Forwards to $(D _input.popFront).
  */
-    static if (hasLength!(R))
+    static if (isBidirectionalRange!(R) && hasLength!(R))
         void popBack()
         {
             enforce(_input.length >= _n);
@@ -740,9 +884,12 @@ Forwards to $(D _input.front).
 /**
 Forwards to $(D _input.back) after getting rid of any slack items.
  */
-    ref ElementType!(R) back()
+    static if(isBidirectionalRange!(R) && hasLength!(R))
     {
-        return _input.back;
+        ref ElementType!(R) back()
+        {
+            return _input.back;
+        }
     }
 
 /**
@@ -788,6 +935,32 @@ unittest
     test(2, arr, [1, 3, 5, 7, 9]);
     test(3, arr, [1, 4, 7, 10]);
     test(4, arr, [1, 5, 9]);
+
+    foreach(DummyType; AllDummyRanges) {
+        static if(DummyType.r == ReturnBy.Reference) {
+            // Doesn't work yet w/o ref returns, see DMD bug 3294.
+            DummyType dummyRange;
+            dummyRange.reinit();
+
+            auto myStride = stride(dummyRange, 4);
+            assert(myStride.front == 1);
+            assert(equal(myStride, [1, 5, 9]));
+
+            static if(hasLength!DummyType) {
+                assert(myStride.length == 3);
+            }
+
+            static if(isBidirectionalRange!DummyType && hasLength!DummyType) {
+                assert(myStride.back == 9);
+            }
+
+            static if(isRandomAccessRange!DummyType && hasLength!DummyType) {
+                assert(myStride[0] == 1);
+                assert(myStride[1] == 5);
+                assert(myStride[2] == 9);
+            }
+        }
+    }
 }
 
 /**
@@ -1605,9 +1778,9 @@ struct Cycle(R) if (isStaticArray!(R))
         return _ptr[(n + _index) % R.length];
     }
 
-	@property Cycle!(R) save() {
-		return this;
-	}
+    @property Cycle!(R) save() {
+        return this;
+    }
 }
 
 /// Ditto
@@ -1638,15 +1811,6 @@ unittest
 {
     assert(equal(take(cycle([1, 2][]), 5), [ 1, 2, 1, 2, 1 ][]));
     static assert(isForwardRange!(Cycle!(uint[])));
-
-    struct DummyRange {
-        uint num;
-        ref uint front() { return num;  }
-        void popFront() { num++;   }
-        @property bool empty() { return num >= 10; }
-        typeof(this) save() { return this; }
-    }
-    static assert(isForwardRange!(Cycle!(DummyRange)));
 
     int[3] a = [ 1, 2, 3 ];
     static assert(isStaticArray!(typeof(a)));
