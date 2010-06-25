@@ -126,6 +126,8 @@ version(unittest)
         }
     }
 
+    enum dummyLength = 10;
+
     alias TypeTuple!(
         DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Input),
         DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Forward),
@@ -134,15 +136,13 @@ version(unittest)
         DummyRange!(ReturnBy.Reference, Length.No, RangeType.Input),
         DummyRange!(ReturnBy.Reference, Length.No, RangeType.Forward),
         DummyRange!(ReturnBy.Reference, Length.No, RangeType.Bidirectional),
-        DummyRange!(ReturnBy.Reference, Length.No, RangeType.Random),
         DummyRange!(ReturnBy.Value, Length.Yes, RangeType.Input),
         DummyRange!(ReturnBy.Value, Length.Yes, RangeType.Forward),
         DummyRange!(ReturnBy.Value, Length.Yes, RangeType.Bidirectional),
         DummyRange!(ReturnBy.Value, Length.Yes, RangeType.Random),
         DummyRange!(ReturnBy.Value, Length.No, RangeType.Input),
         DummyRange!(ReturnBy.Value, Length.No, RangeType.Forward),
-        DummyRange!(ReturnBy.Value, Length.No, RangeType.Bidirectional),
-        DummyRange!(ReturnBy.Value, Length.No, RangeType.Random)
+        DummyRange!(ReturnBy.Value, Length.No, RangeType.Bidirectional)
     ) AllDummyRanges;
 
     alias TypeTuple!(1,2,3,4,5,6,7,8,9,0,11,12,13,14,15,16) DummyIndices;
@@ -354,7 +354,8 @@ template isRandomAccessRange(R)
     enum bool isRandomAccessRange =
         (isBidirectionalRange!(R) || isInfinite!(R))
         && is(typeof(R.init[1]))
-        && !isNarrowString!R;
+        && !isNarrowString!R
+        && (hasLength!R || isInfinite!R);
 }
 
 unittest
@@ -386,6 +387,7 @@ unittest
         int back();
         void popBack();
         ref int opIndex(uint);
+        @property size_t length();
         //int opSlice(uint, uint);
     }
     static assert(isRandomAccessRange!(D));
@@ -938,7 +940,7 @@ unittest
 
     foreach(DummyType; AllDummyRanges) {
         static if(DummyType.r == ReturnBy.Reference) {
-            // Doesn't work yet w/o ref returns, see DMD bug 3294.
+            // Doesn't work yet w/o ref returns, see DMD bug 3294 and 3894.
             DummyType dummyRange;
             dummyRange.reinit();
 
@@ -1243,6 +1245,24 @@ unittest
     // Make sure bug 3311 is fixed.  ChainImpl should compile even if not all
     // elements are mutable.
     auto c = chain( iota(0, 10), iota(0, 10) );
+
+    // Check that chain at least instantiates and compiles with every possible
+    // pair of DummyRange types, in either order.
+
+// This test should be uncommented when DMD bug 4379 gets fixed.
+//    foreach(DummyType1; AllDummyRanges) {
+//        DummyType1 dummy1;
+//        foreach(DummyType2; AllDummyRanges) {
+//            DummyType2 dummy2;
+//            auto myChain = chain(dummy1, dummy2);
+//            assert(myChain.front == 1);
+//            foreach(i; 0..dummyLength) {
+//                myChain.popFront();
+//            }
+//            assert(myChain.front == 1);
+//        }
+//    }
+
 }
 
 /**
@@ -1393,6 +1413,12 @@ unittest
     test([ 1, 2, 3, 4, 5, 6 ], [ 3, 4, 2, 5, 1, 6 ]);
     int[] a = [ 1, 2, 3, 4, 5 ];
     assert(equal(radial(a, 1), [ 2, 3, 1, 4, 5 ][]));
+
+    // Test instantiation without lvalue elements.
+
+    // Doesn't instantiate!
+    //DummyRange!(ReturnBy.Value, Length.Yes, RangeType.Random) dummy;
+    //assert(equal(radial(dummy, 4), [5, 6, 4, 7, 3, 8, 2, 9, 1]));
 }
 
 /**
@@ -1547,6 +1573,12 @@ unittest
     assert(s[4] == 5);
     assert(equal(s, [ 1, 2, 3, 4, 5 ][]));
     assert(equal(retro(s), [ 5, 4, 3, 2, 1 ][]));
+
+    foreach(DummyType; AllDummyRanges) {
+        DummyType dummy;
+        auto t = take(dummy, 5);
+        assert(equal(t, [1,2,3,4,5]));
+    }
 }
 
 /**
@@ -1723,7 +1755,7 @@ struct Cycle(R) if (isForwardRange!(R) && !isInfinite!(R))
         R _original, _current;
         this(R input) { _original = input; _current = input.save; }
         /// Range primitive implementations.
-        auto ref front() { return _current.front; }
+        ref ElementType!(R) front() { return _current.front; }
         /// Ditto
         static if (isBidirectionalRange!(R))
             ref ElementType!(R) back() { return _current.back; }
@@ -1818,6 +1850,17 @@ unittest
     assert(a.ptr == c._ptr);
     assert(equal(take(cycle(a), 5), [ 1, 2, 3, 1, 2 ][]));
     static assert(isForwardRange!(typeof(c)));
+
+    foreach(DummyType; AllDummyRanges) {
+        // Bug 4387
+        static if(isForwardRange!(DummyType) && DummyType.r == ReturnBy.Reference) {
+            DummyType dummy;
+            auto cy = cycle(dummy);
+            static assert(isForwardRange!(typeof(cy)));
+            auto t = take(cy, 20);
+            assert(equal(t, [1,2,3,4,5,6,7,8,9,10,1,2,3,4,5,6,7,8,9,10]));
+        }
+    }
 }
 
 unittest // For infinite ranges
@@ -2846,15 +2889,47 @@ unittest
     }
 }
 
+// Tests to see whether a struct has a postblit.  Hacky, probably needs to
+// be fixed if a new frontend is ever written.
+private template hasPostblit(R) {
+    static if(!is(R == struct)) {
+        enum bool hasPostblit = false;
+    } else {
+        enum hasPostblit = is(typeof({
+            R r;
+            return &r.__postblit;
+        }));
+    }
+}
+
+unittest {
+    struct S {
+        this(this) {}
+    }
+
+    struct S2 {}
+
+    static assert(hasPostblit!S);
+    static assert(!hasPostblit!S2);
+}
+
 /**
 Moves the front of $(D r) out and returns it. Leaves $(D r.front) in a
 destroyable state that does not allocate any resources (usually equal
 to its $(D .init) value).
  */
 ElementType!R moveFront(R)(R r)
-if (is(typeof(&r.front()) == ElementType!R*))
 {
-    return move(r.front);
+    static if(is(typeof(&R.moveFront))) {
+        return r.moveFront();
+    } else static if(!hasPostblit!(ElementType!(R))) {
+        return r.front;
+    } else static if(is(typeof(&r.front()) == ElementType!R*)) {
+        return move(r.front);
+    } else {
+        static assert(0,
+            "Cannot move front of a range with a postblit and an rvalue front.");
+    }
 }
 
 unittest
@@ -2862,16 +2937,10 @@ unittest
     struct R
     {
         ref int front() { static int x = 42; return x; }
+        this(this){}
     }
     R r;
     assert(moveFront(r) == 42);
-}
-
-/// Ditto
-ElementType!R moveFront(R)(R r)
-if (is(typeof(&R.moveFront)))
-{
-    return r.moveFront();
 }
 
 /**
