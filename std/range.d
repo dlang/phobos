@@ -2149,6 +2149,18 @@ unittest
     swap(z.front(), z.back());
     //@@@BUG@@@
     //sort!("a.at!(0) < b.at!(0)")(zip(a, b));
+
+// Horribly broken.  See bugs 4402, 3123
+//    foreach(DummyType1; AllDummyRanges) {
+//        DummyType1 d1;
+//        foreach(DummyType2; AllDummyRanges) {
+//            DummyType2 d2;
+//            auto r = zip(d1, d2);
+//
+//            assert(equal(map!"a.at!0"(r), [1,2,3,4,5,6,7,8,9,10]));
+//            assert(equal(map!"a.at!1"(r), [1,2,3,4,5,6,7,8,9,10]));
+//        }
+//    }
 }
 
 /**
@@ -2683,6 +2695,16 @@ FrontTransversal!(RangeOfRanges, opt) frontTransversal(
     return typeof(return)(rr);
 }
 
+unittest {
+    foreach(DummyType; AllDummyRanges) {
+        static if(DummyType.r == ReturnBy.Reference) { // Bug 4403
+            auto dummies = [DummyType.init, DummyType.init];
+            auto ft = frontTransversal(dummies);
+            assert(equal(ft, [1, 1]));
+        }
+    }
+}
+
 /**
 Given a range of ranges, iterate transversally through the the $(D
 n)th element of each of the enclosed ranges. All elements of the
@@ -2821,6 +2843,14 @@ unittest
     uint i;
     foreach (e; ror) assert(e == witness[i++]);
     assert(i == 2);
+
+    // Test w/o ref return.  Doesn't work due to bug 4404.
+//    alias DummyRange!(ReturnBy.Value, Length.Yes, RangeType.Random) D;
+//    auto drs = [D.init, D.init];
+//    foreach(num; 0..10) {
+//        auto t = transversal(drs, num);
+//        assert(equal(t, [num + 1, num + 1]));
+//  }
 }
 
 struct Transposed(RangeOfRanges)
