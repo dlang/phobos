@@ -596,21 +596,22 @@ private
          * if the owner thread terminates and no existing messages match the
          * supplied ops.
          */
-        final void get(T...)( T ops )
+        final void get(T...)( T vals )
         {
             static assert( T.length );
 
             static if( isImplicitlyConvertible!(T[0], long) )
             {
                 alias TypeTuple!(T[1 .. $]) Ops;
+                alias vals[1 .. $] ops;
+                assert( vals[0] >= 0 );
                 enum timedWait = true;
-                assert( ops[0] >= 0 );
-                long period = ops[0];
-                ops = ops[1 .. $];
+                long period = vals[0];
             }
             else
             {
                 alias TypeTuple!(T) Ops;
+                alias vals[0 .. $] ops;
                 enum timedWait = false;
             }
             
