@@ -298,6 +298,8 @@ class ClassInfo : Object
     {
 	foreach (m; ModuleInfo.modules())
 	{
+	    if (!m)
+		continue;
 	    //writefln("module %s, %d", m.name, m.localClasses.length);
 	    foreach (c; m.localClasses)
 	    {
