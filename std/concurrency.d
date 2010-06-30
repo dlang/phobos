@@ -590,13 +590,17 @@ private
          * Params:
          *  ops = The operations to match.  Each may return a bool to indicate
          *        whether a message with a matching type is truly a match.
+         *
+         * Returns:
+         *  true if a message was retrieved and false if not (such as if a
+         *  timeout occurred).
          * 
          * Throws:
          *  LinkTerminated if a linked thread terminated, or OwnerTerminated
          * if the owner thread terminates and no existing messages match the
          * supplied ops.
          */
-        final void get(T...)( T vals )
+        final bool get(T...)( T vals )
         {
             static assert( T.length );
 
@@ -768,7 +772,7 @@ private
                 if( pty( m_localPty ) ||
                     scan( m_localBox ) )
                 {
-                    return;
+                    return true;
                 }
                 synchronized( m_lock )
                 {
@@ -786,9 +790,14 @@ private
                         if( m_putQueue && !mboxFull() )
                             m_notFull.notifyAll();
                         static if( timedWait )
-                            m_putMsg.wait( period );
+                        {
+                            if( !m_putMsg.wait( period ) )
+                                return false;
+                        }
                         else
+                        {
                             m_putMsg.wait();
+                        }
                     }
                     m_localPty.put( m_sharedPty );
                     arrived.put( m_sharedBox );
@@ -797,12 +806,12 @@ private
                 {
                     bool ok = scan( arrived );
                     m_localBox.put( arrived );
-                    if( ok ) return;
+                    if( ok ) return true;
                     else continue;
                 }
                 m_localBox.put( arrived );
                 pty( m_localPty );
-                return;
+                return true;
             }
         }
         
