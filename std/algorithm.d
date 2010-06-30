@@ -53,6 +53,8 @@ import std.array, std.container, std.contracts, std.conv, std.date,
 version(unittest)
 {
     import std.random, std.stdio, std.string;
+
+    mixin(dummyRanges);
 }
 
 /**
@@ -128,7 +130,7 @@ struct Map(alias fun, Range) if (isInputRange!(Range))
             cacheIsBack = true;
         }
 
-        ElementType back() {
+        @property ElementType back() {
             if(!cacheIsBack) {
                 fillCacheBack();
             }
@@ -168,7 +170,7 @@ struct Map(alias fun, Range) if (isInputRange!(Range))
         fillCache;
     }
 
-    ElementType front() {
+    @property ElementType front() {
         static if(isBidirectionalRange!(Range)) {
             if(cacheIsBack) {
                 fillCache();
@@ -184,9 +186,9 @@ struct Map(alias fun, Range) if (isInputRange!(Range))
     }
 
     // hasLength is busted, Bug 2873
-    static if(is(typeof(_input.length) : ulong)
-        || is(typeof(_input.length()) : ulong)) {
-        size_t length() {
+    static if(is(typeof(_input.length) : size_t)
+        || is(typeof(_input.length()) : size_t)) {
+        @property size_t length() {
             return _input.length;
         }
     }
@@ -266,6 +268,12 @@ unittest
 
 	auto intRange = map!"a"([1,2,3]);
 	static assert(isRandomAccessRange!(typeof(intRange)));
+
+    foreach(DummyType; AllDummyRanges) {
+	    DummyType d;
+	    auto m = map!"a * a"(d);
+	    assert(equal(m, [1,4,9,16,25,36,49,64,81,100]));
+	}
 }
 
 // reduce
@@ -607,6 +615,12 @@ unittest
 	auto infinite = filter!"a > 2"(repeat(3));
 	static assert(isInfinite!(typeof(infinite)));
 	static assert(isForwardRange!(typeof(infinite)));
+
+	foreach(DummyType; AllDummyRanges) {
+	    DummyType d;
+	    auto f = filter!"a & 1"(d);
+	    assert(equal(f, [1,3,5,7,9]));
+	}
 }
 
 // move
@@ -893,6 +907,15 @@ unittest
     assert(equal(splitter(a, 0), [ (int[]).init, (int[]).init ][]));
     a = [ 0, 1 ];
     assert(equal(splitter(a, 0), [ [], [1] ][]));
+
+//    foreach(DummyType; AllDummyRanges) {  // Bug 4408
+//        DummyType d;
+//        auto s = splitter(d, 5);
+//        assert(equal(s, [[1,2,3,4], [6,7,8,9,10]]));
+//
+//        auto s2 = splitter(d, [4, 5]);
+//        assert(equal(s2, [[1,2,3], [6,7,8,9,10]]));
+//    }
 }
 
 /**
@@ -1203,19 +1226,28 @@ struct Uniq(alias pred, R)
         while (!_input.empty && binaryFun!(pred)(last, _input.front));
     }
 
-    void popBack()
-    {
-        auto last = _input.back;
-        do
+    static if(isBidirectionalRange!R) {
+        void popBack()
         {
-            _input.popBack;
+            auto last = _input.back;
+            do
+            {
+                _input.popBack;
+            }
+            while (!_input.empty && binaryFun!(pred)(last, _input.back));
         }
-        while (!_input.empty && binaryFun!(pred)(last, _input.back));
+
+        ElementType!(R) back() { return _input.back; }
     }
 
     bool empty() { return _input.empty; }
     ElementType!(R) front() { return _input.front; }
-    ElementType!(R) back() { return _input.back; }
+
+    static if(isForwardRange!R) {
+        @property typeof(this) save() {
+            return typeof(this)(_input.save);
+        }
+    }
 }
 
 /// Ditto
@@ -1229,6 +1261,19 @@ unittest
     int[] arr = [ 1, 2, 2, 2, 2, 3, 4, 4, 4, 5 ];
     auto r = uniq(arr);
     assert(equal(r, [ 1, 2, 3, 4, 5 ][]));
+    assert(equal(retro(r), retro([ 1, 2, 3, 4, 5 ][])));
+
+    foreach(DummyType; AllDummyRanges) {
+        DummyType d;
+        auto u = uniq(d);
+        assert(equal(u, [1,2,3,4,5,6,7,8,9,10]));
+
+        static assert(d.rt == RangeType.Input || isForwardRange!(typeof(u)));
+
+        static if(d.rt >= RangeType.Bidirectional) {
+            assert(equal(retro(u), [10,9,8,7,6,5,4,3,2,1]));
+        }
+    }
 }
 
 // group
@@ -1279,15 +1324,25 @@ struct Group(alias pred, R) if (isInputRange!R)
         }
     }
 
-    bool empty()
+    @property bool empty()
     {
         return _current.field[1] == 0;
     }
 
-    ref Tuple!(ElementType!R, uint) front()
+    @property ref Tuple!(ElementType!R, uint) front()
     {
         assert(!empty);
         return _current;
+    }
+
+    static if(isForwardRange!R) {
+        @property typeof(this) save() {
+            typeof(this) ret;
+            ret._input = this._input.save;
+            ret._current = this._current;
+
+            return ret;
+        }
     }
 }
 
@@ -1302,6 +1357,17 @@ unittest
     int[] arr = [ 1, 2, 2, 2, 2, 3, 4, 4, 4, 5 ];
     assert(equal(group(arr), [ tuple(1, 1u), tuple(2, 4u), tuple(3, 1u),
                             tuple(4, 3u), tuple(5, 1u) ][]));
+
+    foreach(DummyType; AllDummyRanges) {
+        DummyType d;
+        auto g = group(d);
+
+        static assert(d.rt == RangeType.Input || isForwardRange!(typeof(g)));
+
+        assert(equal(g, [tuple(1, 1u), tuple(2, 1u), tuple(3, 1u), tuple(4, 1u),
+            tuple(5, 1u), tuple(6, 1u), tuple(7, 1u), tuple(8, 1u),
+            tuple(9, 1u), tuple(10, 1u)]));
+    }
 }
 
 // overwriteAdjacent

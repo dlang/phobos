@@ -28,10 +28,11 @@ import std.typetuple;
 import std.algorithm;
 import std.functional;
 import std.conv;
-version(unittest)
-{
-    import std.container, std.conv, std.math, std.stdio;
 
+// For testing only.  This code is included in a string literal to be included
+// in whatever module it's needed in, so that each module that uses it can be
+// tested individually, without needing to link to std.range.
+enum dummyRanges = q{
     // Used with the dummy ranges for testing higher order ranges.
     enum RangeType {
         Input,
@@ -146,6 +147,13 @@ version(unittest)
     ) AllDummyRanges;
 
     alias TypeTuple!(1,2,3,4,5,6,7,8,9,0,11,12,13,14,15,16) DummyIndices;
+};
+
+version(unittest)
+{
+    import std.container, std.conv, std.math, std.stdio;
+
+    mixin(dummyRanges);
 }
 
 /**
