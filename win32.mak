@@ -941,7 +941,7 @@ cleanhtml:
 	del $(DOCS)
 
 detab:
-	detab $(SRCS)
+	detab $(SRCS) $(SRC_INT)
 
 install:
 	$(CP) phobos.lib gcstub.obj $(DIR)\windows\lib

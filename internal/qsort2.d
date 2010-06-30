@@ -31,8 +31,8 @@ extern (C) long _adSort(Array a, TypeInfo ti)
 {
     synchronized
     {
-	tiglobal = ti;
-	std.c.stdlib.qsort(a.ptr, a.length, cast(size_t)ti.tsize(), &cmp);
+        tiglobal = ti;
+        std.c.stdlib.qsort(a.ptr, a.length, cast(size_t)ti.tsize(), &cmp);
     }
     return *cast(long*)(&a);
 }
@@ -60,9 +60,9 @@ unittest
 
     for (int i = 0; i < a.length - 1; i++)
     {
-	//printf("i = %d", i);
-	//printf(" %d %d\n", a[i], a[i + 1]);
-	assert(a[i] <= a[i + 1]);
+        //printf("i = %d", i);
+        //printf(" %d %d\n", a[i], a[i + 1]);
+        assert(a[i] <= a[i + 1]);
     }
 }
 

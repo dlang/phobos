@@ -21,17 +21,17 @@ Complex _complex_div(Complex x, Complex y)
 
     if (fabs(y.re) < fabs(y.im))
     {
-	r = y.re / y.im;
-	den = y.im + r * y.re;
-	q.re = (x.re * r + x.im) / den;
-	q.im = (x.im * r - x.re) / den;
+        r = y.re / y.im;
+        den = y.im + r * y.re;
+        q.re = (x.re * r + x.im) / den;
+        q.im = (x.im * r - x.re) / den;
     }
     else
     {
-	r = y.im / y.re;
-	den = y.re + r * y.im;
-	q.re = (x.re + r * x.im) / den;
-	q.im = (x.im - r * x.re) / den;
+        r = y.im / y.re;
+        den = y.re + r * y.im;
+        q.re = (x.re + r * x.im) / den;
+        q.im = (x.im - r * x.re) / den;
     }
     return q;
 }
@@ -52,18 +52,18 @@ long double _complex_abs(Complex z)
     x = fabs(z.re);
     y = fabs(z.im);
     if (x == 0)
-	ans = y;
+        ans = y;
     else if (y == 0)
-	ans = x;
+        ans = x;
     else if (x > y)
     {
-	temp = y / x;
-	ans = x * sqrt(1 + temp * temp);
+        temp = y / x;
+        ans = x * sqrt(1 + temp * temp);
     }
     else
     {
-	temp = x / y;
-	ans = y * sqrt(1 + temp * temp);
+        temp = x / y;
+        ans = y * sqrt(1 + temp * temp);
     }
     return ans;
 }
@@ -75,33 +75,33 @@ Complex _complex_sqrt(Complex z)
 
     if (z.re == 0 && z.im == 0)
     {
-	c.re = 0;
-	c.im = 0;
+        c.re = 0;
+        c.im = 0;
     }
     else
     {
-	x = fabs(z.re);
-	y = fabs(z.im);
-	if (x >= y)
-	{
-	    r = y / x;
-	    w = sqrt(x) * sqrt(0.5 * (1 + sqrt(1 + r * r)));
-	}
-	else
-	{
-	    r = x / y;
-	    w = sqrt(y) * sqrt(0.5 * (r + sqrt(1 + r * r)));
-	}
-	if (z.re >= 0)
-	{
-	    c.re = w;
-	    c.im = z.im / (w + w);
-	}
-	else
-	{
-	    c.im = (z.im >= 0) ? w : -w;
-	    c.re = z.im / (c.im + c.im);
-	}
+        x = fabs(z.re);
+        y = fabs(z.im);
+        if (x >= y)
+        {
+            r = y / x;
+            w = sqrt(x) * sqrt(0.5 * (1 + sqrt(1 + r * r)));
+        }
+        else
+        {
+            r = x / y;
+            w = sqrt(y) * sqrt(0.5 * (r + sqrt(1 + r * r)));
+        }
+        if (z.re >= 0)
+        {
+            c.re = w;
+            c.im = z.im / (w + w);
+        }
+        else
+        {
+            c.im = (z.im >= 0) ? w : -w;
+            c.re = z.im / (c.im + c.im);
+        }
     }
     return c;
 }

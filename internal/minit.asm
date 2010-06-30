@@ -15,9 +15,9 @@ endif
 ; Provide a default resolution for weak extern records, no way in C
 ; to define an omf symbol with a specific value
 public __nullext
-__nullext	equ 0
+__nullext       equ 0
 
-	extrn	__moduleinfo_array:near
+        extrn   __moduleinfo_array:near
 
 ; This bit of assembler is needed because, from C or D, one cannot
 ; specify the names of data segments. Why does this matter?
@@ -30,9 +30,9 @@ __nullext	equ 0
 ; ever refers to 'FMB' and 'FME', we get to control the order in which
 ; these segments appear relative to 'FM' by using a GROUP statement.
 ; So, we have in memory:
-;	FMB	empty segment
-;	FM	contains all the pointers
-;	FME	empty segment
+;       FMB     empty segment
+;       FM      contains all the pointers
+;       FME     empty segment
 ; and finding the limits of FM is as easy as taking the address of FMB
 ; and the address of FME.
 
@@ -48,14 +48,14 @@ FME     ends
 XOB     segment dword use32 public 'BSS'
 XOB     ends
 XO      segment dword use32 public 'BSS'
-	dd	?
+        dd      ?
 XO      ends
 XOE     segment dword use32 public 'BSS'
 XOE     ends
 
 DGROUP         group   FMB,FM,FME
 
-	begcode minit
+        begcode minit
 
 ; extern (C) void _minit();
 ; Converts array of ModuleInfo pointers to a D dynamic array of them,
@@ -63,17 +63,17 @@ DGROUP         group   FMB,FM,FME
 ; Result is written to:
 ; extern (C) ModuleInfo[] _moduleinfo_array;
 
-	public	__minit
-__minit	proc	near
-	mov	EDX,offset DATAGRP:FMB
-	mov	EAX,offset DATAGRP:FME
-	mov	dword ptr __moduleinfo_array+4,EDX
-	sub	EAX,EDX			; size in bytes of FM segment
-	shr	EAX,2			; convert to array length
-	mov	dword ptr __moduleinfo_array,EAX
-	ret
+        public  __minit
+__minit proc    near
+        mov     EDX,offset DATAGRP:FMB
+        mov     EAX,offset DATAGRP:FME
+        mov     dword ptr __moduleinfo_array+4,EDX
+        sub     EAX,EDX                 ; size in bytes of FM segment
+        shr     EAX,2                   ; convert to array length
+        mov     dword ptr __moduleinfo_array,EAX
+        ret
 __minit endp
 
-	endcode minit
+        endcode minit
 
-	end
+        end
