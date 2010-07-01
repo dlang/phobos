@@ -848,7 +848,7 @@ private template HasRawPointerImpl(T...)
     {
         static if (is(T[0] foo : U*, U))
             enum hasRawAliasing = !is(U == immutable);
-        else static if (is(T[0] foo : U[], U))
+        else static if (is(T[0] foo : U[], U) && !isStaticArray!(T[0]))
             enum hasRawAliasing = !is(U == immutable);
         else
             enum hasRawAliasing = false;
@@ -1105,6 +1105,8 @@ unittest
     static assert(!hasAliasing!(S2));
     struct S3 { int a; immutable Object b; }
     static assert(!hasAliasing!(S3));
+    struct X { float[3] vals; }
+    static assert(!hasAliasing!X);
 }
 
 /**
@@ -1128,7 +1130,7 @@ unittest
     static assert(!hasLocalAliasing!(S2));
     struct S3 { int a; immutable Object b; }
     static assert(!hasLocalAliasing!(S3));
-    
+
     struct S4 { int a; shared Object b; }
     static assert(!hasLocalAliasing!(S4));
     struct S5 { char[] a; }
@@ -2075,12 +2077,22 @@ unittest
 
 template isAssociativeArray(T)
 {
-    enum bool isAssociativeArray =
-        is(typeof(T.keys)) && is(typeof(T.values));
+    enum bool isAssociativeArray = __traits(isAssociativeArray, T);
 }
 
 unittest
 {
+    struct Foo {
+        @property uint[] keys() {
+            return null;
+        }
+
+        @property uint[] values() {
+            return null;
+        }
+    }
+
+    static assert(!isAssociativeArray!(Foo));
     static assert(!isAssociativeArray!(int));
     static assert(!isAssociativeArray!(int[]));
     static assert(isAssociativeArray!(int[int]));
