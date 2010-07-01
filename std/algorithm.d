@@ -565,6 +565,10 @@ struct Filter(alias pred, Range) if (isInputRange!(Range))
     {
         _input = r;
         while (!_input.empty && !pred(_input.front)) _input.popFront;
+        static if (isBidirectionalRange!Range) {
+            while (!_input.empty && !pred(_input.back)) _input.popBack;
+        }
+
     }
 
     ref Filter opSlice()
@@ -591,6 +595,19 @@ struct Filter(alias pred, Range) if (isInputRange!(Range))
         return _input.front;
     }
 
+    static if (isBidirectionalRange!Range) {
+        void popBack()
+        {
+            do
+            {
+                _input.popBack;
+            } while (!_input.empty && !pred(_input.back));
+        }
+
+        ElementType!(Range) back() { return _input.back;}
+    }
+
+
     static if(isForwardRange!Range)
     {
         @property typeof(this) save()
@@ -616,10 +633,24 @@ unittest
 	static assert(isInfinite!(typeof(infinite)));
 	static assert(isForwardRange!(typeof(infinite)));
 
+    auto nums = [0,1,2,3,4];
+    auto forward = filter!"a % 2 == 0"(nums);
+    assert(equal(retro(forward), [4,2,0][])); // f is a bidirectional range
+
+
 	foreach(DummyType; AllDummyRanges) {
 	    DummyType d;
 	    auto f = filter!"a & 1"(d);
 	    assert(equal(f, [1,3,5,7,9]));
+
+	    static if(isForwardRange!DummyType) {
+	        static assert(isForwardRange!(typeof(f)));
+	    }
+
+	    static if(isBidirectionalRange!DummyType) {
+	        static assert(isBidirectionalRange!(typeof(f)));
+	        assert(equal(retro(f), [9,7,5,3,1]));
+	    }
 	}
 }
 
