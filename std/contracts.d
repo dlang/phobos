@@ -95,8 +95,24 @@ T enforce(T, string file = __FILE__, int line = __LINE__)
 
 private void bailOut(string file, int line, in char[] msg)
 {
-    throw new Exception(text(file, '(', line, "): ",
-                    msg ? msg : "Enforcement failed"));
+    throw new Exception(msg ? msg.idup : "Enforcement failed", file, line);
+}
+
+unittest
+{
+    assert (enforce(123) == 123);
+
+    try
+    {
+        enforce(false, "error");
+        assert (false);
+    }
+    catch (Exception e)
+    {
+        assert (e.msg == "error");
+        assert (e.file == __FILE__);
+        assert (e.line == __LINE__-7);
+    }
 }
 
 /**
