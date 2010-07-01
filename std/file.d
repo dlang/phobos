@@ -132,13 +132,18 @@ OS error code.
     immutable uint errno;
     
 /**
-Constructor taking the name of the file where error happened and the
-error number ($(LUCKY GetLastError) in Windows, $(D getErrno) in
-Posix).
+Constructor taking the name of the file where error happened and a
+message describing the error.
  */ 
     this(in char[] name, in char[] message)
     {
         super(text(name, ": ", message));
+        errno = 0;
+    }
+
+    this(in char[] name, in char[] message, string sourceFile, int sourceLine)
+    {
+        super(text(name, ": ", message), sourceFile, sourceLine);
         errno = 0;
     }
 
@@ -147,7 +152,7 @@ Constructor taking the name of the file where error happened and the
 error number ($(LUCKY GetLastError) in Windows, $(D getErrno) in
 Posix).
  */ 
-    version(Windows) this(string name, uint errno = GetLastError)
+    version(Windows) this(in char[] name, uint errno = GetLastError)
     {
         this(name, sysErrorString(errno));
         this.errno = errno;
@@ -159,6 +164,21 @@ Posix).
         this(name, to!string(s));
         this.errno = errno;
     }
+
+    version(Windows) this(in char[] name, string sourceFile, int sourceLine,
+        uint errno = GetLastError)
+    {
+        this(name, sysErrorString(errno), sourceFile, sourceLine);
+        this.errno = errno;
+    }
+
+    version(Posix) this(in char[] name, string sourceFile, int sourceLine,
+        uint errno = .getErrno)
+    {
+        auto s = strerror(errno);
+        this(name, to!string(s), sourceFile, sourceLine);
+        this.errno = errno;
+    }
 }
 
 private T cenforce(T, string file = __FILE__, uint line = __LINE__)
@@ -166,8 +186,7 @@ private T cenforce(T, string file = __FILE__, uint line = __LINE__)
 {
     if (!condition)
     {
-        throw new FileException(
-            text("In ", file, "(", line, "), data file ", name));
+        throw new FileException(name, file, line);
     }
     return condition;
 }
