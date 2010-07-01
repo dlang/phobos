@@ -577,7 +577,7 @@ struct Filter(alias pred, Range) if (isInputRange!(Range))
     }
 
 	static if(isInfinite!Range) {
-		enum bool empty = false;
+		enum bool empty = false;  // Propagate infiniteness.
 	} else {
 		bool empty() { return _input.empty; }
 	}
@@ -874,9 +874,15 @@ public:
         // computeBack();
     }
 
-    @property bool empty()
+    static if(isInfinite!Range)
     {
-        return _frontLength == _atEnd;
+        enum bool empty = false;
+    } else
+    {
+        @property bool empty()
+        {
+            return _frontLength == _atEnd;
+        }
     }
 
     @property Range front()
@@ -996,16 +1002,23 @@ public:
         _separator = separator;
     }
 
-    Range front()
+    @property Range front()
     {
         assert(!empty);
         ensureFrontLength;
         return _input[0 .. _frontLength];
     }
 
-    bool empty()
+    static if(isInfinite!Range)
     {
-        return _frontLength == size_t.max && _input.empty;
+        enum bool empty = false;  // Propagate infiniteness
+    }
+    else
+    {
+        @property bool empty()
+        {
+            return _frontLength == size_t.max && _input.empty;
+        }
     }
 
     void popFront()
@@ -1041,7 +1054,7 @@ public:
 // Bidirectional functionality as suggested by Brad Roberts.
     static if (isBidirectionalRange!Range)
     {
-        Range back()
+        @property Range back()
         {
             ensureBackLength;
             return _input[_input.length - _backLength .. _input.length];
@@ -1143,9 +1156,16 @@ struct Splitter(alias isTerminator, Range,
         }
     }
 
-    @property bool empty()
+    static if(isInfinite!Range)
     {
-        return _end == _end.max;
+        enum bool empty = false;  // Propagate infiniteness.
+    }
+    else
+    {
+        @property bool empty()
+        {
+            return _end == _end.max;
+        }
     }
 
     @property Range front()
@@ -1257,7 +1277,10 @@ struct Uniq(alias pred, R)
         while (!_input.empty && binaryFun!(pred)(last, _input.front));
     }
 
-    static if(isBidirectionalRange!R) {
+    @property ElementType!(R) front() { return _input.front; }
+
+    static if(isBidirectionalRange!R)
+    {
         void popBack()
         {
             auto last = _input.back;
@@ -1268,11 +1291,18 @@ struct Uniq(alias pred, R)
             while (!_input.empty && binaryFun!(pred)(last, _input.back));
         }
 
-        ElementType!(R) back() { return _input.back; }
+        @property ElementType!(R) back() { return _input.back; }
     }
 
-    bool empty() { return _input.empty; }
-    ElementType!(R) front() { return _input.front; }
+    static if(isInfinite!R)
+    {
+        enum bool empty = false;  // Propagate infiniteness.
+    }
+    else
+    {
+        @property bool empty() { return _input.empty; }
+    }
+
 
     static if(isForwardRange!R) {
         @property typeof(this) save() {
@@ -1355,9 +1385,16 @@ struct Group(alias pred, R) if (isInputRange!R)
         }
     }
 
-    @property bool empty()
+    static if(isInfinite!R)
     {
-        return _current.field[1] == 0;
+        enum bool empty = false;  // Propagate infiniteness.
+    }
+    else
+    {
+        @property bool empty()
+        {
+            return _current.field[1] == 0;
+        }
     }
 
     @property ref Tuple!(ElementType!R, uint) front()
@@ -2038,12 +2075,12 @@ struct Until(alias pred, Range, Sentinel) if (isInputRange!Range)
             _done = _input.empty || openRight && predSatisfied();
         }
 
-    bool empty()
+    @property bool empty()
     {
         return _done;
     }
 
-    ElementType!Range front()
+    @property ElementType!Range front()
     {
         assert(!empty);
         return _input.front;
@@ -5474,7 +5511,7 @@ public:
         adjustPosition();
     }
 
-    bool empty()
+    @property bool empty()
     {
         return _crt == _crt.max;
     }
@@ -5495,7 +5532,7 @@ public:
         assert(false);
     }
 
-    ElementType front()
+    @property ElementType front()
     {
         assert(!empty);
         // Assume _crt is correct
@@ -5593,7 +5630,7 @@ public:
         adjustPosition;
     }
 
-    bool empty()
+    @property bool empty()
     {
         foreach (i, U; Rs)
         {
@@ -5612,7 +5649,7 @@ public:
         adjustPosition;
     }
 
-    ElementType front()
+    @property ElementType front()
     {
         assert(!empty);
         return _input[0].front;
@@ -5697,7 +5734,7 @@ public:
         adjustPosition;
     }
 
-    ElementType!(R1) front()
+    @property ElementType!(R1) front()
     {
         assert(!empty);
         return r1.front;
@@ -5788,7 +5825,7 @@ public:
         adjustPosition;
     }
 
-    ElementType!(R1) front()
+    @property ElementType!(R1) front()
     {
         assert(!empty);
         if (r2.empty || !r1.empty && comp(r1.front, r2.front))
@@ -5801,7 +5838,7 @@ public:
 
     ref auto opSlice() { return this; }
 
-    bool empty() { return r1.empty && r2.empty; }
+    @property bool empty() { return r1.empty && r2.empty; }
 }
 
 /// Ditto
@@ -5938,9 +5975,9 @@ struct NWayUnion(alias less, RangeOfRanges)
         _heap.acquire(_ror);
     }
 
-    bool empty() { return _ror.empty; }
+    @property bool empty() { return _ror.empty; }
 
-    ref ElementType front()
+    @property ref ElementType front()
     {
         return _heap.front.front;
     }
