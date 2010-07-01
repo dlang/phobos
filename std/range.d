@@ -640,7 +640,7 @@ public:
 /**
 Forwards to $(D _input.empty).
  */
-    bool empty()
+    @property bool empty()
     {
         return _input.empty;
     }
@@ -838,7 +838,7 @@ Returns $(D this).
 /**
 Forwards to $(D _input.empty).
  */
-    bool empty()
+    @property bool empty()
     {
         return _input.empty;
     }
@@ -886,7 +886,7 @@ Forwards to $(D _input.popFront).
 /**
 Forwards to $(D _input.front).
  */
-    ref ElementType!(R) front()
+    @property ref ElementType!(R) front()
     {
         return _input.front;
     }
@@ -896,7 +896,7 @@ Forwards to $(D _input.back) after getting rid of any slack items.
  */
     static if(isBidirectionalRange!(R) && hasLength!(R))
     {
-        ref ElementType!(R) back()
+        @property ref ElementType!(R) back()
         {
             return _input.back;
         }
@@ -1032,7 +1032,7 @@ public:
         }
     }
 
-    bool empty()
+    @property bool empty()
     {
         foreach (i, Unused; R)
         {
@@ -1335,7 +1335,7 @@ Returns $(D this).
 Range primitive operation that returns $(D true) iff there are no more
 elements to be iterated.
  */
-    bool empty()
+    @property bool empty()
     {
         return _low.empty && _up.empty;
     }
@@ -1376,7 +1376,7 @@ element.
 Range primitive operation that returns the currently iterated
 element. Throws if the range is empty.
  */
-    ref ElementType!(R) front()
+    @property ref ElementType!(R) front()
     {
         enforce(!empty, "Calling front() against an empty "
                 ~typeof(this).stringof);
@@ -1457,7 +1457,7 @@ public:
     else
         alias .ElementType!(R) ElementType;
 
-    bool empty()
+    @property bool empty()
     {
         return _maxAvailable == 0 || original.empty;
     }
@@ -1741,7 +1741,7 @@ struct Cycle(R) if (isForwardRange!(R) && !isInfinite!(R))
         size_t _index;
         this(R input, size_t index = 0) { _original = input; _index = index; }
         /// Range primitive implementations.
-        ref ElementType!(R) front()
+        @property ref ElementType!(R) front()
         {
             return _original[_index % _original.length];
         }
@@ -1763,10 +1763,10 @@ struct Cycle(R) if (isForwardRange!(R) && !isInfinite!(R))
         R _original, _current;
         this(R input) { _original = input; _current = input.save; }
         /// Range primitive implementations.
-        ref ElementType!(R) front() { return _current.front; }
+        @property ref ElementType!(R) front() { return _current.front; }
         /// Ditto
         static if (isBidirectionalRange!(R))
-            ref ElementType!(R) back() { return _current.back; }
+            @property ref ElementType!(R) back() { return _current.back; }
         /// Ditto
         enum bool empty = false;
         /// Ditto
@@ -1805,7 +1805,7 @@ struct Cycle(R) if (isStaticArray!(R))
         _index = index;
     }
     /// Range primitive implementations.
-    ref ElementType front()
+    @property ref ElementType front()
     {
         return _ptr[_index % R.length];
     }
@@ -1978,7 +1978,7 @@ stopping policy.
 /**
 Returns a proxy for the current iterated element.
  */
-    Proxy front()
+    @property Proxy front()
     {
         Proxy result;
         foreach (i, Unused; R)
@@ -1991,7 +1991,7 @@ Returns a proxy for the current iterated element.
 /**
 Returns a proxy for the rightmost element.
  */
-    Proxy back()
+    @property Proxy back()
     {
         Proxy result;
         foreach (i, Unused; R)
@@ -2218,7 +2218,7 @@ struct Recurrence(alias fun, StateType, size_t stateSize)
         ++_n;
     }
 
-    StateType front()
+    @property StateType front()
     {
         return _state[_n % stateSize];
     }
@@ -2288,7 +2288,7 @@ public:
         this._cache = compute(this._state, this._n);
     }
 
-    ElementType front()
+    @property ElementType front()
     {
         //return ElementType.init;
         return this._cache;
@@ -2633,13 +2633,13 @@ struct FrontTransversal(RangeOfRanges,
 /**
    Forward range primitives.
 */
-    bool empty()
+    @property bool empty()
     {
         return _input.empty;
     }
 
 /// Ditto
-    ref ElementType front()
+    @property ref ElementType front()
     {
         assert(!empty);
         return _input.front.front;
@@ -2659,7 +2659,7 @@ struct FrontTransversal(RangeOfRanges,
    Bidirectional primitives. They are offered if $(D
 isBidirectionalRange!RangeOfRanges).
  */
-        ref ElementType back()
+        @property ref ElementType back()
         {
             return _input.back.front;
         }
@@ -2772,13 +2772,13 @@ struct Transversal(RangeOfRanges,
 /**
    Forward range primitives.
 */
-    bool empty()
+    @property bool empty()
     {
         return _input.empty;
     }
 
 /// Ditto
-    ref ElementType front()
+    @property ref ElementType front()
     {
         assert(!empty);
         return _input.front[_n];
@@ -2798,7 +2798,7 @@ struct Transversal(RangeOfRanges,
    Bidirectional primitives. They are offered if $(D
 isBidirectionalRange!RangeOfRanges).
  */
-        ref ElementType back()
+        @property ref ElementType back()
         {
             return _input.back[_n];
         }
@@ -2870,7 +2870,7 @@ struct Transposed(RangeOfRanges)
         this._input = input;
     }
 
-    ElementType front()
+    @property ElementType front()
     {
         return map!"a.front"(_input);
     }
@@ -2889,7 +2889,7 @@ struct Transposed(RangeOfRanges)
     //     return _input[n].front;
     // }
 
-    bool empty()
+    @property bool empty()
     {
         foreach (e; _input)
             if (!e.empty) return false;
