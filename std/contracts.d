@@ -471,8 +471,7 @@ class ErrnoException : Exception
         {
             auto s = std.c.string.strerror(errno);
         }
-        super((file ? file~'('~to!string(line)~"): " : "")
-                ~msg~" ("~to!string(s)~")");
+        super(msg~" ("~to!string(s)~")", file, line);
     }
 }
 
