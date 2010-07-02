@@ -866,7 +866,7 @@ private template HasRawLocalPointerImpl(T...)
     {
         static if (is(T[0] foo : U*, U))
             enum hasRawLocalAliasing = !is(U == immutable) && !is(U == shared);
-        else static if (is(T[0] foo : U[], U))
+        else static if (is(T[0] foo : U[], U) && !isStaticArray!(T[0]))
             enum hasRawLocalAliasing = !is(U == immutable) && !is(U == shared);
         else
             enum hasRawLocalAliasing = false;
@@ -1137,6 +1137,8 @@ unittest
     static assert(hasLocalAliasing!(S5));
     struct S6 { shared char[] b; }
     static assert(!hasLocalAliasing!(S6));
+    struct S7 { float[3] vals; }
+    static assert(!hasLocalAliasing!(S7));
 }
 
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
