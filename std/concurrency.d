@@ -54,6 +54,15 @@ private
                                  f(T.init); });
     }
     
+    template hasLocalAliasing(T...)
+    {
+        static if( !T.length )
+            enum hasLocalAliasing = false;
+        else
+            enum hasLocalAliasing = (std.traits.hasLocalAliasing!(T[0]) && !is(T[0] == Tid)) ||
+                                    std.concurrency.hasLocalAliasing!(T[1 .. $]);
+    }
+
     enum MsgType
     {
         standard,
