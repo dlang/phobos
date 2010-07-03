@@ -272,6 +272,8 @@ unittest
     foreach(DummyType; AllDummyRanges) {
 	    DummyType d;
 	    auto m = map!"a * a"(d);
+
+	    static assert(propagatesRangeType!(typeof(m), DummyType));
 	    assert(equal(m, [1,4,9,16,25,36,49,64,81,100]));
 	}
 }
@@ -1834,6 +1836,12 @@ unittest
     int[] b = [ 1, 2, 3 ];
     assert(find(a, b) == [ 1, 2, 3, 4, 5 ]);
     assert(find(b, a).empty);
+
+    foreach(DummyType; AllDummyRanges) {
+        DummyType d;
+        auto findRes = find(d, 5);
+        assert(equal(findRes, [5,6,7,8,9,10]));
+    }
 }
 
 /// Ditto

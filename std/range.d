@@ -154,6 +154,30 @@ version(unittest)
     import std.container, std.conv, std.math, std.stdio;
 
     mixin(dummyRanges);
+
+    // Tests whether forward, bidirectional and random access properties are
+    // propagated properly from the base range(s) R to the higher order range
+    // H.  Useful in combination with DummyRange for testing several higher
+    // order ranges.
+    template propagatesRangeType(H, R...) {
+        static if(allSatisfy!(isRandomAccessRange, R)) {
+           enum bool propagatesRangeType = isRandomAccessRange!H;
+        } else static if(allSatisfy!(isBidirectionalRange, R)) {
+            enum bool propagatesRangeType = isBidirectionalRange!H;
+        } else static if(allSatisfy!(isForwardRange, R)) {
+            enum bool propagatesRangeType = isForwardRange!H;
+        } else {
+            enum bool propagatesRangeType = isInputRange!H;
+        }
+    }
+
+    template propagatesLength(H, R...) {
+        static if(allSatisfy!(hasLength, R)) {
+            enum bool propagatesLength = hasLength!H;
+        } else {
+            enum bool propagatesLength = !hasLength!H;
+        }
+    }
 }
 
 /**
@@ -760,6 +784,7 @@ unittest
             dummyRange.reinit();
 
             auto myRetro = retro(dummyRange);
+            static assert(propagatesRangeType!(typeof(myRetro), DummyType));
             assert(myRetro.front == 10);
             assert(myRetro.back == 1);
 
@@ -953,6 +978,12 @@ unittest
             dummyRange.reinit();
 
             auto myStride = stride(dummyRange, 4);
+
+            // Should fail if no length and bidirectional b/c there's no way
+            // to know how much slack we have.
+            static if(hasLength!DummyType || !isBidirectionalRange!DummyType) {
+                static assert(propagatesRangeType!(typeof(myStride), DummyType));
+            }
             assert(myStride.front == 1);
             assert(equal(myStride, [1, 5, 9]));
 
@@ -1257,20 +1288,35 @@ unittest
     // Check that chain at least instantiates and compiles with every possible
     // pair of DummyRange types, in either order.
 
-// This test should be uncommented when DMD bug 4379 gets fixed.
+    // This test should be uncommented when DMD bug 4379 gets fixed, or if
+    // you've made sure you've turned off -O.  (Bug 4379 is triggered by -O).
 //    foreach(DummyType1; AllDummyRanges) {
 //        DummyType1 dummy1;
 //        foreach(DummyType2; AllDummyRanges) {
 //            DummyType2 dummy2;
 //            auto myChain = chain(dummy1, dummy2);
+//
+//            static assert(
+//                propagatesRangeType!(typeof(myChain), DummyType1, DummyType2)
+//            );
+//
 //            assert(myChain.front == 1);
 //            foreach(i; 0..dummyLength) {
 //                myChain.popFront();
 //            }
 //            assert(myChain.front == 1);
+//
+//            static if(isBidirectionalRange!DummyType1 &&
+//                      isBidirectionalRange!DummyType2) {
+//                assert(myChain.back == 10);
+//            }
+//
+//            static if(isRandomAccessRange!DummyType1 &&
+//                      isRandomAccessRange!DummyType2) {
+//                assert(myChain[0] == 1);
+//            }
 //        }
 //    }
-
 }
 
 /**
@@ -1511,7 +1557,7 @@ public:
         }
     }
 
-    static if (isRandomAccessRange!(R) && (hasLength!(R) || isInfinite!(R)))
+    static if (isRandomAccessRange!(R))
     {
         void popBack()
         {
@@ -1527,10 +1573,7 @@ public:
             {
                 return original[this.length - 1];
             }});
-    }
 
-    static if (isRandomAccessRange!(R))
-    {
         mixin(
             (byRef ? "ref " : "")~
             q{/+auto ref+/ ElementType opIndex(size_t index)
@@ -1585,6 +1628,18 @@ unittest
     foreach(DummyType; AllDummyRanges) {
         DummyType dummy;
         auto t = take(dummy, 5);
+        alias typeof(t) T;
+
+        static if(isRandomAccessRange!DummyType) {
+            static assert(isRandomAccessRange!T);
+            assert(t[4] == 5);
+        } else static if(isForwardRange!DummyType) {
+            static assert(isForwardRange!T);
+        }
+
+        // Bidirectional ranges can't be propagated properly if they don't
+        // also have random access.
+
         assert(equal(t, [1,2,3,4,5]));
     }
 }
