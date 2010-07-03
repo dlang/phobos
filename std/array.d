@@ -388,7 +388,7 @@ void main()
 ref typeof(A.init[0]) back(A)(A a) if (is(typeof(A.init[0]))
         && !isNarrowString!A)
 {
-    enforce(a.length, "Attempting to fetch the back of an empty array");
+    assert(a.length, "Attempting to fetch the back of an empty array");
     return a[$ - 1];
 }
 
