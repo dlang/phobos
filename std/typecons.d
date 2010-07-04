@@ -51,8 +51,8 @@ Authors:   $(WEB erdani.org, Andrei Alexandrescu),
            Shin Fujishiro
  */
 module std.typecons;
-import core.stdc.stdlib, std.algorithm, std.array, std.contracts, std.conv,
-    std.metastrings, std.traits, std.typetuple, core.memory;
+import core.stdc.stdlib, std.algorithm, std.array, std.conv,
+    std.exception, std.metastrings, std.traits, std.typetuple, core.memory;
 version(unittest) import std.stdio;
 
 /**

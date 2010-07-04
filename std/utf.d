@@ -28,7 +28,7 @@
  */
 module std.utf;
 
-import std.contracts, std.conv, std.range, std.traits, std.typecons;
+import std.conv, std.exception, std.range, std.traits, std.typecons;
 
 //debug=utf;        // uncomment to turn on debugging printf's
 

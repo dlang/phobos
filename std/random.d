@@ -54,7 +54,7 @@ Distributed under the Boost Software License, Version 1.0.
 */
 module std.random;
 
-import std.algorithm, std.c.time, std.contracts, std.conv, std.date, std.math,
+import std.algorithm, std.c.time, std.conv, std.date, std.exception, std.math,
     std.numeric, std.process, std.range, std.stdio, std.traits, core.thread;
 
 // Segments of the code in this file Copyright (c) 1997 by Rick Booth
@@ -271,7 +271,7 @@ $(D x0).
     {
         return _x;
     }
-    
+
 /**
 Always $(D false) (random generators are infinite ranges).
  */
@@ -636,18 +636,18 @@ if (is(CommonType!(T1, UniformRandomNumberGenerator) == void) &&
 {
     alias Unqual!(CommonType!(T1, T2)) NumberType;
     NumberType _a, _b;
-    static if (boundaries[0] == '(') 
+    static if (boundaries[0] == '(')
 	{
-        static if (isIntegral!(NumberType) || is(Unqual!NumberType : dchar)) 
+        static if (isIntegral!(NumberType) || is(Unqual!NumberType : dchar))
 		{
             _a = a;
 			_a++;
-        } 
+        }
 		else {
             _a = nextafter(a, a.infinity);
 		}
-    } 
-	else 
+    }
+	else
 	{
         _a = a;
 	}
@@ -734,13 +734,13 @@ unittest
         assert('a' <= x && x <= 'z');
         //writeln(x);
     }
-	
+
 	foreach (i; 0 .. 20)
     {
         auto x = uniform('a', 'z', gen);
         assert('a' <= x && x < 'z');
     }
-	
+
 	foreach(i; 0 .. 20) {
 	    immutable ubyte a = 0;
 		immutable ubyte b = 15;

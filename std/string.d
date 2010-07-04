@@ -27,8 +27,8 @@ module std.string;
 
 private import core.exception : onRangeError;
 import core.stdc.stdio, core.stdc.stdlib,
-    core.stdc.string, std.algorithm, std.array, 
-    std.contracts, std.conv, std.ctype, std.encoding, std.format,
+    core.stdc.string, std.algorithm, std.array,
+    std.conv, std.ctype, std.encoding, std.exception, std.format,
     std.metastrings, std.range, std.regex, std.stdarg, std.stdio, std.traits,
     std.typetuple, std.uni, std.utf;
 
@@ -225,12 +225,12 @@ out (result)
 body
 {
     char[] copy;
-    
+
     /+ Unfortunately, this isn't reliable.
      We could make this work if string literals are put
      in read-only memory and we test if s[] is pointing into
      that.
-     
+
      /* Peek past end of s[], if it's 0, no conversion necessary.
      * Note that the compiler will put a 0 past the end of static
      * strings, and the storage allocator will put a 0 past the end
@@ -313,7 +313,7 @@ if (isSomeString!(Char[]))
                     return -1;
             }
         }
-        
+
         // c is a universal character
         foreach (int i, dchar c2; s)
         {
@@ -326,7 +326,7 @@ if (isSomeString!(Char[]))
         if (c <= 0x7F)
         {   // Plain old ASCII
             auto c1 = cast(char) std.ctype.tolower(c);
-            
+
             foreach (int i, Char c2; s)
             {
                 auto c3 = cast(Char)std.ctype.tolower(c2);
@@ -337,7 +337,7 @@ if (isSomeString!(Char[]))
         else
         {   // c is a universal character
             auto c1 = std.uni.toUniLower(c);
-            
+
             foreach (int i, dchar c2; s)
             {
                 auto c3 = std.uni.toUniLower(c2);
@@ -394,12 +394,12 @@ unittest
         assert(i == 0);
         i = indexOf("def", cast(dchar)'F', CaseSensitive.no);
         assert(i == 2);
-        
+
         string sPlts = "Mars: the fourth Rock (Planet) from the Sun.";
-        
+
         i = indexOf("def", cast(char)'f', CaseSensitive.no);
         assert(i == 2);
-        
+
         i = indexOf(sPlts, cast(char)'P', CaseSensitive.no);
         assert(i == 23);
         i = indexOf(sPlts, cast(char)'R', CaseSensitive.no);
@@ -429,7 +429,7 @@ int lastIndexOf(in char[] s, dchar c, CaseSensitive cs = CaseSensitive.yes)
             }
             return i;
         }
-        
+
         // c is a universal character
         char[4] buf;
         auto t = std.utf.toUTF8(buf, c);
@@ -473,13 +473,13 @@ int lastIndexOf(in char[] s, dchar c, CaseSensitive cs = CaseSensitive.yes)
         return i;
     }
 }
-    
+
 unittest
 {
     debug(string) printf("string.rfind.unittest\n");
-    
+
     int i;
-    
+
     i = lastIndexOf(null, cast(dchar)'a');
     assert(i == -1);
     i = lastIndexOf("def", cast(dchar)'a');
@@ -519,12 +519,12 @@ unittest
 /**
 $(D indexOf) find first occurrence of $(D sub[]) in string $(D s[]).
 lastIndexOf find last occurrence of $(D sub[]) in string $(D s[]).
- 
+
 $(D CaseSensitive cs) controls whether the comparisons are case
 sensitive or not.
- 
+
 Returns:
-  
+
 Index in $(D s) where $(D sub) is found, $(D -1) if not found.
  */
 
@@ -619,7 +619,7 @@ unittest
         i = indexOf("dfeffgfff", "fff", CaseSensitive.no);
         assert(i == 6);
     }
-    
+
     string sPlts = "Mars: the fourth Rock (Planet) from the Sun.";
     string sMars = "Who\'s \'My Favorite Maritian?\'";
 
@@ -654,7 +654,7 @@ int lastIndexOf(in char[] s, in char[] sub, CaseSensitive cs = CaseSensitive.yes
     if (cs == CaseSensitive.yes)
     {
         char c;
-        
+
         if (sub.length == 0)
             return s.length;
         c = sub[0];
@@ -1196,12 +1196,12 @@ string join(in string[] words, string sep)
     if (!words.length) return null;
     immutable seplen = sep.length;
     size_t len = (words.length - 1) * seplen;
-    
+
     foreach (i; 0 .. words.length)
         len += words[i].length;
-    
+
     auto result = new char[len];
-    
+
     size_t j;
     foreach (i; 0 .. words.length)
     {
@@ -1288,7 +1288,7 @@ unittest
         S s = " peter paul\tjerry ";
         S[] words;
         int i;
-        
+
         words = split(s);
         assert(words.length == 3);
         i = cmp(words[0], "peter");
@@ -1411,7 +1411,7 @@ S[] splitlines(S)(S s)
     auto result = Appender!(S[])();
 
     foreach (i; 0 .. s.length)
-    {   
+    {
         immutable c = s[i];
         if (c == '\r' || c == '\n')
         {
@@ -1550,7 +1550,7 @@ debug unittest
 {
     // fails to compile with: Error: array equality comparison type
     // mismatch, immutable(char)[] vs ubyte[]
-    version(none) 
+    version(none)
     {
         alias TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[])
             StringTypes;
@@ -1783,7 +1783,7 @@ string chop(string s)
     if (!len) return s;
     if (len >= 2 && s[len - 1] == '\n' && s[len - 2] == '\r')
         return s[0 .. len - 2];
-    
+
     // If we're in a tail of a UTF-8 sequence, back up
     while ((s[len - 1] & 0xC0) == 0x80)
     {
@@ -1791,7 +1791,7 @@ string chop(string s)
         if (len == 0)
             throw new std.utf.UtfException("invalid UTF sequence", 0);
     }
-    
+
     return s[0 .. len - 1];
 }
 
@@ -3999,7 +3999,7 @@ public:
         _input = input;
         if (!input.empty) popFront;
     }
-    
+
     /// Range primitives
     bool empty()
     {
@@ -4048,8 +4048,8 @@ public:
             assert(!empty);
             if (!_input.empty)
                 std.utf.decodeBack(_input);
-            else 
-                _front = _front.init;            
+            else
+                _front = _front.init;
         }
     }
 }

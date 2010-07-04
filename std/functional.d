@@ -20,7 +20,7 @@ module std.functional;
 
 import std.metastrings, std.stdio, std.traits, std.typecons, std.typetuple;
 // for making various functions visible in *naryFun
-import std.algorithm, std.contracts, std.conv, std.math, std.range, std.string; 
+import std.algorithm, std.conv, std.exception, std.math, std.range, std.string;
 
 /**
 Transforms a string representing an expression into a unary
@@ -48,7 +48,7 @@ template unaryFunImpl(alias fun, bool byRef, string parmName = "a")
             // enum testAsExpression = "{"~ElementType.stringof
             //     ~" "~parmName~"; return ("~fun~");}()";
             enum testAsExpression = "{ ElementType "~parmName
-                ~"; return ("~fun~");}()"; 
+                ~"; return ("~fun~");}()";
             enum testAsStmts = "{"~ElementType.stringof
                 ~" "~parmName~"; "~fun~"}()";
             // pragma(msg, "Expr: "~testAsExpression);
@@ -162,7 +162,7 @@ template binaryFunImpl(alias fun,
             else
             {
                 // Credit for this idea goes to Don Clugston
-                enum string msg = 
+                enum string msg =
                     "Bad binary function q{" ~ fun ~ "}."
                     ~" You need to use a valid D expression using symbols "
                     ~parm1Name~" of type "~ElementType1.stringof~" and "
@@ -413,7 +413,7 @@ unittest
 // }
 
 // /**
-// naryFun 
+// naryFun
 //  */
 // template naryFun(string fun)
 // {
@@ -451,7 +451,7 @@ template compose(fun...) { alias composeImpl!(fun).doIt compose; }
 // Implementation of compose
 template composeImpl(fun...)
 {
-	static if (fun.length == 1) 
+	static if (fun.length == 1)
 	{
         static if (is(typeof(fun[0]) : string))
             alias unaryFun!(fun[0]) doIt;
@@ -489,7 +489,7 @@ template composeImpl(fun...)
    execution is the same as lexical order.
 
    Example:
-   
+
 ----
 // Read an entire text file, split the resulting string in
 // whitespace-separated tokens, and then convert each token into an
@@ -510,10 +510,10 @@ unittest
     // double baz(int a) { return a + 0.5; }
     // assert(compose!(baz, bar, foo)(1) == 2.5);
     // assert(pipe!(foo, bar, baz)(1) == 2.5);
-    
+
     // assert(compose!(baz, `to!(int)(a) + 1`, foo)(1) == 2.5);
     // assert(compose!(baz, bar)("1"[]) == 2.5);
-    
+
     // @@@BUG@@@
     //assert(compose!(baz, bar)("1") == 2.5);
 
@@ -643,24 +643,24 @@ unittest {
     static assert(is(typeof(incMyNumDel) == int delegate(ref uint)));
     auto returnVal = incMyNumDel(myNum);
     assert(myNum == 1);
-    
+
     interface I { int opCall(); }
     class C: I { int opCall() { inc(myNum); return myNum;} }
     auto c = new C;
     auto i = cast(I) c;
-    
+
     auto getvalc = toDelegate(c);
     assert(getvalc() == 2);
-    
+
     auto getvali = toDelegate(i);
     assert(getvali() == 3);
-    
+
     struct S1 { int opCall() { inc(myNum); return myNum; } }
     static assert(!is(typeof(&s1.opCall) == delegate));
     S1 s1;
     auto getvals1 = toDelegate(s1);
     assert(getvals1() == 4);
-    
+
     struct S2 { static int opCall() { return 123456; } }
     static assert(!is(typeof(&S2.opCall) == delegate));
     S2 s2;

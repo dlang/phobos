@@ -18,9 +18,9 @@ module std.format;
 //debug=format;                // uncomment to turn on debugging printf's
 
 import core.stdc.stdio, core.stdc.stdlib, core.stdc.string;
-import std.algorithm, std.array, std.bitmanip, std.contracts, std.conv,
-    std.ctype, std.functional, std.range, std.stdarg, std.string, std.system,
-    std.traits, std.typetuple, std.utf;
+import std.algorithm, std.array, std.bitmanip, std.conv,
+    std.ctype, std.exception, std.functional, std.range, std.stdarg,
+    std.string, std.system, std.traits, std.typetuple, std.utf;
 version(unittest) {
     import std.stdio, std.typecons;
 }

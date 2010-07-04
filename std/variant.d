@@ -56,7 +56,6 @@
  * Copyright: Copyright Andrei Alexandrescu 2007 - 2009.
  * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
  * Authors:   $(WEB erdani.org, Andrei Alexandrescu)
- * Credits:   Brad Roberts came up with the name $(D_PARAM contracts).
  *
  *          Copyright Andrei Alexandrescu 2007 - 2009.
  * Distributed under the Boost Software License, Version 1.0.
@@ -68,7 +67,7 @@ module std.variant;
 import std.traits, std.c.string, std.typetuple, std.conv;
 version(unittest)
 {
-    import std.contracts, std.stdio;
+    import std.exception, std.stdio;
 }
 
 private template maxSize(T...)

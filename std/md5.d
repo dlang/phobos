@@ -5,10 +5,10 @@
  */
 
 /**
- * Computes MD5 digests of arbitrary data. MD5 digests are 16 byte quantities that are like a checksum or crc, but are more robust. 
+ * Computes MD5 digests of arbitrary data. MD5 digests are 16 byte quantities that are like a checksum or crc, but are more robust.
  *
  * There are two ways to do this. The first does it all in one function call to
- * sum(). The second is for when the data is buffered. 
+ * sum(). The second is for when the data is buffered.
  *
  * Bugs:
  * MD5 digests have been demonstrated to not be unique.
@@ -87,7 +87,7 @@ module std.md5;
 //debug=md5;		// uncomment to turn on debugging printf's
 
 import std.string;
-import std.contracts;
+import std.exception;
 import std.c.stdio : printf;
 
 /***************************************
@@ -122,7 +122,7 @@ string digestToString(in ubyte[16] digest)
 {
     auto result = new char[32];
     int i;
-    
+
     foreach (ubyte u; digest)
     {
         result[i] = std.string.hexdigits[u >> 4];
@@ -141,7 +141,7 @@ Example:
 string a = "Mary has ", b = "a little lamb";
 int[] c = [ 1, 2, 3, 4, 5 ];
 string d = getDigestString(a, b, c);
-----   
+----
 */
 string getDigestString(in void[][] data...)
 {

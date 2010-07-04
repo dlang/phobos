@@ -14,7 +14,7 @@ module std.array;
 
 import std.c.stdio;
 import core.memory;
-import std.algorithm, std.contracts, std.conv, std.encoding, std.range,
+import std.algorithm, std.conv, std.encoding, std.exception, std.range,
     std.string, std.traits, std.typecons, std.utf;
 version(unittest) private import std.stdio;
 

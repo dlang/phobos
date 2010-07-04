@@ -24,7 +24,7 @@ module std.date;
 
 private import std.stdio;
 private import std.dateparse;
-import std.c.stdlib, std.contracts, std.conv;
+import std.c.stdlib, std.conv, std.exception;
 
 /**
  * $(D d_time) is a signed arithmetic type giving the time elapsed
@@ -615,7 +615,7 @@ string toString(d_time time)
             hourFromTime(t), minFromTime(t), secFromTime(t),
             sign, hr, mn,
             cast(long)yearFromTime(t));
-    
+
     // Ensure no buggy buffer overflows
     //printf("len = %d, buffer.length = %d\n", len, buffer.length);
     assert(len < buffer.length);
@@ -642,10 +642,10 @@ string toUTCString(d_time t)
             &monstr[monthFromTime(t) * 3],
             yearFromTime(t),
             hourFromTime(t), minFromTime(t), secFromTime(t));
-    
+
     // Ensure no buggy buffer overflows
     assert(len < buffer.length);
-    
+
     return cast(string) buffer[0 .. len];
 }
 
@@ -929,7 +929,7 @@ version (Posix)
     d_time getLocalTZA()
     {
         time_t t;
-        
+
         time(&t);
         version (OSX)
         {

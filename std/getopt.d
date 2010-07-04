@@ -2,14 +2,14 @@
 
 /**
 Processing of command line options.
-   
+
 The getopt module implements a $(D getopt) function, which adheres to
 the POSIX syntax for command line options. GNU extensions are
 supported in the form of long options introduced by a double dash
 ("--"). Support for bundling of command line options, as was the case
 with the more traditional single-letter approach, is provided but not
 enabled by default.
-   
+
 Macros:
 
 WIKI = Phobos/StdGetopt
@@ -30,8 +30,8 @@ Distributed under the Boost Software License, Version 1.0.
 */
 module std.getopt;
 
-private import std.string, std.conv, std.traits, std.contracts, std.bitmanip,
-    std.algorithm, std.ctype;
+private import std.string, std.conv, std.traits, std.bitmanip,
+    std.algorithm, std.ctype, std.exception;
 
 //version (unittest)
 //{
@@ -90,7 +90,7 @@ void main(string[] args)
  $(LI $(I Numeric options.) If an option is bound to a numeric type, a
  number is expected as the next option, or right within the option
  separated with an "=" sign:
- 
+
 ---------
   uint timeout;
   getopt(args, "timeout", &timeout);
@@ -98,7 +98,7 @@ void main(string[] args)
 
  Invoking the program with "--timeout=5" or "--timeout 5" will set
  $(D timeout) to 5.)
- 
+
  $(UL $(LI $(I Incremental options.) If an option name has a "+" suffix and
  is bound to a numeric type, then the option's value tracks the number
  of times the option occurred on the command line:
@@ -114,11 +114,11 @@ void main(string[] args)
  --paranoid", the "42" does not set $(D paranoid) to 42;
  instead, $(D paranoid) is set to 2 and "42" is not considered
  as part of the program options.))
- 
+
  $(LI $(I String options.) If an option is bound to a string, a string
  is expected as the next option, or right within the option separated
  with an "=" sign:
- 
+
 ---------
 string outputFile;
 getopt(args, "output", &outputFile);
@@ -127,11 +127,11 @@ getopt(args, "output", &outputFile);
  Invoking the program with "--output=myfile.txt" or "--output
  myfile.txt" will set $(D outputFile) to "myfile.txt".) If you want to
  pass a string containing spaces, you need to use the quoting that is
- appropriate to your shell, e.g. --output='my file.txt'. 
- 
+ appropriate to your shell, e.g. --output='my file.txt'.
+
  $(LI $(I Array options.) If an option is bound to an array, a new
  element is appended to the array each time the option occurs:
- 
+
 ---------
 string[] outputFiles;
 getopt(args, "output", &outputFiles);
@@ -140,11 +140,11 @@ getopt(args, "output", &outputFiles);
  Invoking the program with "--output=myfile.txt --output=yourfile.txt"
  or "--output myfile.txt --output yourfile.txt" will set $(D
  outputFiles) to [ "myfile.txt", "yourfile.txt" ] .)
- 
+
  $(LI $(I Hash options.) If an option is bound to an associative
  array, a string of the form "name=value" is expected as the next
  option, or right within the option separated with an "=" sign:
- 
+
 ---------
 double[string] tuningParms;
 getopt(args, "tune", &tuningParms);
@@ -153,7 +153,7 @@ getopt(args, "tune", &tuningParms);
 Invoking the program with e.g. "--tune=alpha=0.5 --tune beta=0.6" will
 set $(D tuningParms) to [ "alpha" : 0.5, "beta" : 0.6 ].)  In general,
 keys and values can be of any parsable types.
- 
+
 $(LI $(I Delegate options.) An option can be bound to a delegate with
 the signature $(D void delegate()), $(D void delegate(string option))
 or $(D void delegate(string option, string value)).
@@ -163,7 +163,7 @@ whenever the option is seen.) $(LI In the $(D void delegate(string
 option)) case, the option string (without the leading dash(es)) is
 passed to the delegate. After that, the option string is considered
 handled and removed from the options array.)
- 
+
 ---------
 void main(string[] args)
 {
@@ -189,7 +189,7 @@ option string is handled as an option with one argument, and parsed
 accordingly. The option and its value are passed to the
 delegate. After that, whatever was passed to the delegate is
 considered handled and removed from the list.)
- 
+
 ---------
 void main(string[] args)
 {
@@ -291,7 +291,7 @@ A lonesome double-dash terminates $(D getopt) gathering. It is used to separate 
 
 void getopt(T...)(ref string[] args, T opts) {
     enforce(args.length,
-            "Invalid arguments string passed: program name missing");    
+            "Invalid arguments string passed: program name missing");
     configuration cfg;
     return getoptImpl(args, cfg, opts);
 }
@@ -354,7 +354,7 @@ private void getoptImpl(T...)(ref string[] args,
             {
                 // not an option
                 if (cfg.stopOnFirstNonOption) break;
-                continue; 
+                continue;
             }
             if (endOfOptions.length && a == endOfOptions) break;
             if (!cfg.passThrough)
@@ -386,7 +386,7 @@ void handleOption(R)(string option, R receiver, ref string[] args,
         // found it; from here on, commit to eat args[i]
         // (and potentially args[i + 1] too)
         args = args[0 .. i] ~ args[i + 1 .. $];
-                
+
         static if (is(typeof(*receiver) == bool)) {
             *receiver = true;
             break;
@@ -414,12 +414,12 @@ void handleOption(R)(string option, R receiver, ref string[] args,
             }
             else static if (is(typeof(receiver) == delegate))
             {
-                static if (is(typeof(receiver("", "")) : void)) 
+                static if (is(typeof(receiver("", "")) : void))
                 {
                     // option with argument
                     receiver(option, val);
                 }
-                else static if (is(typeof(receiver("")) : void)) 
+                else static if (is(typeof(receiver("")) : void))
                 {
                     static assert(is(typeof(receiver("")) : void));
                     // boolean-style receiver
@@ -553,7 +553,7 @@ unittest
                       "--paranoid", "--paranoid", "--paranoid"]).dup;
     getopt(args, "paranoid+", &paranoid);
     assert(paranoid == 5, to!(string)(paranoid));
-    
+
     string data = "file.dat";
     int length = 24;
     bool verbose = false;
@@ -562,7 +562,7 @@ unittest
     getopt(
         args,
         "length",  &length,
-        "file",    &data,     
+        "file",    &data,
         "verbose", &verbose);
     assert(args.length == 1);
     assert(data == "dat.file");
@@ -638,7 +638,7 @@ unittest
 
     args = (["program.name", "--foo", "nonoption", "--bar"]).dup;
     foo = bar = false;
-    getopt(args, 
+    getopt(args,
         std.getopt.config.stopOnFirstNonOption,
         "foo", &foo,
         "bar", &bar);
@@ -646,7 +646,7 @@ unittest
 
     args = (["program.name", "--foo", "nonoption", "--zab"]).dup;
     foo = bar = false;
-    getopt(args, 
+    getopt(args,
         std.getopt.config.stopOnFirstNonOption,
         "foo", &foo,
         "bar", &bar);

@@ -16,7 +16,7 @@ Authors:   $(WEB erdani.org, Andrei Alexandrescu)
 module std.range;
 
 public import std.array;
-import std.contracts;
+import std.exception;
 import std.traits;
 import std.typecons;
 import std.typetuple;

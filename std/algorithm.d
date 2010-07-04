@@ -46,7 +46,7 @@ Authors:   $(WEB erdani.com, Andrei Alexandrescu)
 module std.algorithm;
 
 import std.c.string;
-import std.array, std.container, std.contracts, std.conv, std.date,
+import std.array, std.container, std.conv, std.date, std.exception,
     std.functional, std.math, std.metastrings, std.range, std.string,
     std.traits, std.typecons, std.typetuple;
 
@@ -776,7 +776,7 @@ unittest
 
 // swap
 /**
-Swaps $(D lhs) and $(D rhs). See also $(XREF contracts, pointsTo).
+Swaps $(D lhs) and $(D rhs). See also $(XREF exception, pointsTo).
 
 Preconditions:
 
@@ -1646,7 +1646,7 @@ log(haystack.length)) steps are needed to position $(D haystack) at
 the beginning of the search. Also, once positioned, the search will
 continue only as long as haystack and the needle start with equal
 elements. To inform $(D find) that you want to perform a binary
-search, wrap $(D haystack) with a call to $(XREF contracts,
+search, wrap $(D haystack) with a call to $(XREF exception,
 assumeSorted). Then $(D find) will assume that $(D pred) and $(D less)
 are in the right relation and also that $(D haystack) is already
 sorted by $(D less).

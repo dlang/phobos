@@ -39,21 +39,21 @@ private
     //import core.sync.condition;
     //import core.sync.mutex;
     import std.algorithm;
-    import std.contracts;
+    import std.exception;
     import std.range;
     import std.stdio;
     import std.range;
     import std.traits;
     import std.typecons;
     import std.typetuple;
-    
+
     template isTuple(T)
     {
        enum isTuple = __traits(compiles,
                                { void f(X...)(Tuple!(X) t) {};
                                  f(T.init); });
     }
-    
+
     template hasLocalAliasing(T...)
     {
         static if( !T.length )
@@ -69,12 +69,12 @@ private
         priority,
         linkDead,
     }
-    
+
     struct Message
     {
         MsgType type;
         Variant data;
-        
+
         this(T...)( MsgType t, T vals )
         {
             type = t;
@@ -87,7 +87,7 @@ private
             data = vals;
         }
     }
-    
+
     struct Priority
     {
         Variant   data;
@@ -157,7 +157,7 @@ class OwnerTerminated : Exception
         super( msg );
         tid = t;
     }
-    
+
     Tid tid;
 }
 
@@ -172,7 +172,7 @@ class LinkTerminated : Exception
         super( msg );
         tid = t;
     }
-    
+
     Tid tid;
 }
 
@@ -189,7 +189,7 @@ class PriorityMessageException(T...) : Exception
              message       = vals;
         else message.field = vals;
     }
-    
+
     static if( T.length == 1 )
          T         message;
     else Tuple!(T) message;
@@ -206,7 +206,7 @@ class MailboxFull : Exception
         super( msg );
         tid = t;
     }
-    
+
     Tid tid;
 }
 
@@ -364,7 +364,7 @@ private void _send(T...)( Tid tid, T vals )
  * both Tid.send() and .send().
  */
 private void _send(T...)( MsgType type, Tid tid, T vals )
-{    
+{
     tid.mbox.put( Message( type, vals ) );
 }
 
@@ -441,14 +441,14 @@ private
     {
         return true;
     }
-    
-    
+
+
     bool onCrowdingThrow( Tid tid )
     {
         throw new MailboxFull( tid );
     }
-    
-    
+
+
     bool onCrowdingIgnore( Tid tid )
     {
         return false;
@@ -522,8 +522,8 @@ private
             m_notFull   = new Condition( m_lock );
             m_closed    = false;
         }
-        
-        
+
+
         /*
          * Sets a limit on the maximum number of user messages allowed in the
          * mailbox.  If this limit is reached, the caller attempting to add
@@ -543,8 +543,8 @@ private
                 m_onMaxMsgs = call;
             }
         }
-        
-        
+
+
         /*
          * If maxMsgs is not set, the message is added to the queue and the
          * owner is notified.  If the queue is full, the message will still be
@@ -591,8 +591,8 @@ private
                 }
             }
         }
-        
-        
+
+
         /*
          * Matches ops against each message in turn until a match is found.
          *
@@ -603,7 +603,7 @@ private
          * Returns:
          *  true if a message was retrieved and false if not (such as if a
          *  timeout occurred).
-         * 
+         *
          * Throws:
          *  LinkTerminated if a linked thread terminated, or OwnerTerminated
          * if the owner thread terminates and no existing messages match the
@@ -627,7 +627,7 @@ private
                 alias vals[0 .. $] ops;
                 enum timedWait = false;
             }
-            
+
             bool onStandardMsg( Message msg )
             {
                 Variant data = msg.data;
@@ -680,9 +680,9 @@ private
                 }
                 return false;
             }
-            
+
             bool ownerDead = false;
-            
+
             bool onLinkDeadMsg( Variant data )
             {
                 alias Tuple!(Tid) Wrap;
@@ -715,7 +715,7 @@ private
                 }
                 return false;
             }
-            
+
             bool onControlMsg( Message msg )
             {
                 switch( msg.type )
@@ -726,7 +726,7 @@ private
                     return false;
                 }
             }
-            
+
             bool scan( ref ListT list )
             {
                 for( auto range = list[]; !range.empty; )
@@ -749,8 +749,8 @@ private
                 }
                 return false;
             }
-            
-            
+
+
             bool pty( ref ListT list )
             {
                 alias Tuple!(Priority) Wrap;
@@ -762,7 +762,7 @@ private
                     assert( data.convertsTo!(Wrap) );
                     auto p = data.get!(Wrap).field[0];
                     Message msg;
-                    
+
                     msg.data = p.data;
                     if( onStandardMsg( msg ) )
                     {
@@ -773,7 +773,7 @@ private
                 }
                 return false;
             }
-            
+
             while( true )
             {
                 ListT arrived;
@@ -823,8 +823,8 @@ private
                 return true;
             }
         }
-        
-        
+
+
         /*
          * Called on thread termination.  This routine processes any remaining
          * control messages, clears out message queues, and sets a flag to
@@ -850,7 +850,7 @@ private
                 if( wrap.field[0] == owner )
                     owner = Tid.init;
             }
-    
+
             void sweep( ref ListT list )
             {
                 for( auto range = list[]; !range.empty; range.popFront() )
@@ -859,7 +859,7 @@ private
                         onLinkDeadMsg( range.front.data );
                 }
             }
-            
+
             ListT arrived;
 
             sweep( m_localBox );
@@ -868,35 +868,35 @@ private
                 arrived.put( m_sharedBox );
                 m_closed = true;
             }
-            m_localBox.clear(); 
-            sweep( arrived );       
+            m_localBox.clear();
+            sweep( arrived );
         }
-        
-        
+
+
     private:
         //////////////////////////////////////////////////////////////////////
         // Routines involving shared data, m_lock must be held.
         //////////////////////////////////////////////////////////////////////
-        
-        
+
+
         bool mboxFull()
         {
             return m_maxMsgs &&
                    m_maxMsgs <= m_localMsgs + m_sharedBox.length;
         }
-        
-        
+
+
         void updateMsgCount()
         {
             m_localMsgs = m_localBox.length;
         }
-        
-        
+
+
     private:
         //////////////////////////////////////////////////////////////////////
         // Routines for specific message types, no lock necessary.
         //////////////////////////////////////////////////////////////////////
-        
+
 
         void onOwnerDead()
         {
@@ -927,52 +927,52 @@ private
             scope(failure) owner = Tid.init;
             throw new OwnerTerminated( owner );
         }
-        
-        
+
+
     private:
         //////////////////////////////////////////////////////////////////////
         // Routines involving local data only, no lock needed.
         //////////////////////////////////////////////////////////////////////
-        
+
 
         pure final bool isControlMsg( Message msg )
         {
             return msg.type != MsgType.standard &&
                    msg.type != MsgType.priority;
         }
-        
-        
+
+
         pure final bool isPriorityMsg( Message msg )
         {
             return msg.type == MsgType.priority;
         }
-        
-    
+
+
     private:
         //////////////////////////////////////////////////////////////////////
         // Type declarations.
         //////////////////////////////////////////////////////////////////////
-        
-        
+
+
         alias bool function(Tid) OnMaxFn;
         alias List!(Message)     ListT;
-        
+
     private:
         //////////////////////////////////////////////////////////////////////
         // Local data, no lock needed.
         //////////////////////////////////////////////////////////////////////
-        
-        
+
+
         ListT       m_localBox;
         ListT       m_localPty;
-        
-        
+
+
     private:
         //////////////////////////////////////////////////////////////////////
         // Shared data, m_lock must be held on access.
         //////////////////////////////////////////////////////////////////////
-        
-        
+
+
         Mutex       m_lock;
         Condition   m_putMsg;
         Condition   m_notFull;
@@ -1000,7 +1000,7 @@ private
 
             @property T front()
             {
-                enforce( m_prev.next ); 
+                enforce( m_prev.next );
                 return m_prev.next.val;
             }
 
@@ -1087,8 +1087,8 @@ private
             //delete todelete;
             m_count--;
         }
-        
-        
+
+
         /*
          *
          */
@@ -1096,8 +1096,8 @@ private
         {
             return m_count;
         }
-        
-        
+
+
         /*
          *
          */
@@ -1106,7 +1106,7 @@ private
             m_first = m_last = null;
         }
 
-        
+
         /*
          *
          */

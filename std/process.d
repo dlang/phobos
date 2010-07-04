@@ -28,7 +28,7 @@ private import std.conv;
 private import std.string;
 private import std.c.process;
 private import core.stdc.errno;
-private import std.contracts;
+private import std.exception;
 version (Windows)
 {
     import std.array, std.format, std.random, std.file;

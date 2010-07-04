@@ -33,7 +33,7 @@ private import std.ctype;
 private import std.c.stdlib;
 private import std.utf;
 private import std.stdio;
-import std.contracts;
+import std.exception;
 
 class URIerror : Error
 {
