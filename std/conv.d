@@ -19,11 +19,11 @@ Distributed under the Boost Software License, Version 1.0.
 */
 module std.conv;
 
-import core.memory, core.stdc.errno, core.stdc.string, core.stdc.stdlib,
-    std.array, std.contracts,
-    std.ctype, std.math, std.range, std.stdio,
-    std.string, std.traits, std.typecons, std.typetuple,
-    std.utf;
+import core.stdc.math : ldexpl;
+import core.memory, core.stdc.errno, core.stdc.string,
+    core.stdc.stdlib;
+import std.array, std.ctype, std.exception, std.math, std.range, std.stdio,
+    std.string, std.traits, std.typecons, std.typetuple, std.utf;
 import std.metastrings;
 
 //debug=conv;           // uncomment to turn on debugging printf's
@@ -958,7 +958,7 @@ assert(test == "");
  */
 
 Target parse(Target, Source)(ref Source s)
-if (isSomeString!Source && isIntegral!Target)
+if (isSomeChar!(ElementType!Source) && isIntegral!Target)
 {
     static if (Target.sizeof < int.sizeof)
     {
@@ -974,9 +974,10 @@ if (isSomeString!Source && isIntegral!Target)
     else
     {
         // Larger than int types
-        immutable length = s.length;
-        if (!length)
-            goto Lerr;
+        // immutable length = s.length;
+        // if (!length)
+        //     goto Lerr;
+        if (s.empty) goto Lerr;
 
         static if (Target.min < 0)
             int sign = 0;
@@ -985,27 +986,32 @@ if (isSomeString!Source && isIntegral!Target)
         Target v = 0;
         size_t i = 0;
         enum char maxLastDigit = Target.min < 0 ? '7' : '5';
-        for (; i < length; i++)
+        //for (; i < length; i++)
+        for (; !s.empty; ++i)
         {
-            immutable c = s[i];
+            //immutable c = s[i];
+            immutable c = s.front;
             if (c >= '0' && c <= '9')
             {
                 if (v >= Target.max/10 &&
                         (v != Target.max/10|| c + sign > maxLastDigit))
                     goto Loverflow;
                 v = cast(Target) (v * 10 + (c - '0'));
+                s.popFront();
             }
             else static if (Target.min < 0)
             {
                 if (c == '-' && i == 0)
                 {
-                    if (length == 1)
+                    s.popFront();
+                    if (s.empty)
                         goto Lerr;
                     sign = -1;
                 }
                 else if (c == '+' && i == 0)
                 {
-                    if (length == 1)
+                    s.popFront();
+                    if (s.empty)
                         goto Lerr;
                 }
                 else
@@ -1015,7 +1021,7 @@ if (isSomeString!Source && isIntegral!Target)
                 break;
         }
         if (i == 0) goto Lerr;
-        s = s[i .. $];
+        //s = s[i .. $];
         static if (Target.min < 0)
         {
             if (sign == -1)
@@ -1083,102 +1089,303 @@ unittest
     }
 }
 
-Target parse(Target, Source)(ref Source s)
-    if (!isSomeString!Source && isSomeChar!(ElementType!Source)
-        && isIntegral!Target)
+Target parse(Target, Source)(ref Source p)
+if (isInputRange!Source && /*!isSomeString!Source && */isFloatingPoint!Target)
 {
-    char[] accum;
-    foreach (c; s)
+    static immutable real negtab[] =
+        [ 1e-4096L,1e-2048L,1e-1024L,1e-512L,1e-256L,1e-128L,1e-64L,1e-32L,
+                1e-16L,1e-8L,1e-4L,1e-2L,1e-1L,1.0L ];
+    static immutable real postab[] =
+        [ 1e+4096L,1e+2048L,1e+1024L,1e+512L,1e+256L,1e+128L,1e+64L,1e+32L,
+                1e+16L,1e+8L,1e+4L,1e+2L,1e+1L ];
+    // static immutable string infinity = "infinity";
+    // static immutable string nans = "nans";
+
+    while (enforce(!p.empty), isspace(p.front))
     {
-        writeln(c);
-        if ("0123456789-+".indexOf(c) < 0)
+        p.popFront();
+    }
+    char sign = 0;                       /* indicating +                 */
+    switch (p.front)
+    {
+        case '-': sign++; goto case '+';
+        case '+': p.popFront(); enforce(!p.empty);
+        default: {}
+    }
+
+    const bool isHex = p.front == '0'
+        && (p.popFront(), p.front == 'x' || p.front == 'X');
+
+    real ldval = 0.0;
+    char dot = 0;                        /* if decimal point has been seen */
+    int exp = 0;
+    long msdec = 0, lsdec = 0;
+    ulong msscale = 1;
+
+    if (isHex)
+    {
+        int guard = 0;
+        int anydigits = 0;
+        uint ndigits = 0;
+
+        p.popFront();
+        while (!p.empty)
         {
-            static if (is(typeof(s.unget(c)))) s.unget(c);
-            break;
+            int i = p.front;
+            while (isxdigit(i))
+            {
+                anydigits = 1;
+                i = isalpha(i) ? ((i & ~0x20) - ('A' - 10)) : i - '0';
+                if (ndigits < 16)
+                {
+                    msdec = msdec * 16 + i;
+                    if (msdec)
+                        ndigits++;
+                }
+                else if (ndigits == 16)
+                {
+                    while (msdec >= 0)
+                    {
+                        exp--;
+                        msdec <<= 1;
+                        i <<= 1;
+                        if (i & 0x10)
+                            msdec |= 1;
+                    }
+                    guard = i << 4;
+                    ndigits++;
+                    exp += 4;
+                }
+                else
+                {
+                    guard |= i;
+                    exp += 4;
+                }
+                exp -= dot;
+                p.popFront();
+                if (p.empty) break;
+                i = p.front;
+            }
+            if (i == '.' && !dot)
+            {       p.popFront();
+                dot = 4;
+            }
+            else
+                break;
         }
-        accum ~= c;
-    }
-    return parse!Target(accum);
-}
 
-Target parse(Target, Source)(ref Source s)
-if (!isSomeString!Source && isFloatingPoint!Target)
-{
-    static assert(0);
-}
-
-Target parse(Target, Source)(ref Source s)
-if (isSomeString!Source && isFloatingPoint!Target)
-{
-    // issue 1589
-    //version (Windows)
-    {
-        if (icmp(s, "nan") == 0)
+        // Round up if (guard && (sticky || odd))
+        if (guard & 0x80 && (guard & 0x7F || msdec & 1))
         {
-            s = s[3 .. $];
-            return Target.nan;
+            msdec++;
+            if (msdec == 0)                 // overflow
+            {   msdec = 0x8000000000000000L;
+                exp++;
+            }
+        }
+
+        enforce(anydigits);         // if error (no digits seen)
+        enforce(!p.empty && (p.front == 'p' || p.front == 'P'),
+                "Floating point parsing: exponent is required");
+        char sexp;
+        int e;
+
+        sexp = 0;
+        p.popFront();
+        if (!p.empty)
+        {
+            switch (p.front)
+            {   case '-':    sexp++;
+                case '+':    p.popFront(); enforce(!p.empty);
+                default: {}
+            }
+        }
+        ndigits = 0;
+        e = 0;
+        while (!p.empty && isdigit(p.front))
+        {
+            if (e < 0x7FFFFFFF / 10 - 10) // prevent integer overflow
+            {
+                e = e * 10 + p.front - '0';
+            }
+            p.popFront();
+            ndigits = 1;
+        }
+        exp += (sexp) ? -e : e;
+        enforce(ndigits);           // if no digits in exponent
+
+        if (msdec)
+        {
+            int e2 = 0x3FFF + 63;
+
+            // left justify mantissa
+            while (msdec >= 0)
+            {   msdec <<= 1;
+                e2--;
+            }
+
+            // Stuff mantissa directly into real
+            *cast(long *)&ldval = msdec;
+            (cast(ushort *)&ldval)[4] = cast(ushort) e2;
+
+            // Exponent is power of 2, not power of 10
+            ldval = ldexpl(ldval,exp);
+        }
+        goto L6;
+    }
+    else // not hex
+    {
+        if (toupper(p.front) == 'N')
+        {
+            // nan
+            enforce((p.popFront(), !p.empty && toupper(p.front) == 'A')
+                    && (p.popFront(), !p.empty && toupper(p.front) == 'N'));
+            // skip past the last 'n'
+            p.popFront();
+            return typeof(return).nan;
+        }
+
+        bool sawDigits = false;
+
+        while (!p.empty)
+        {
+            int i = p.front;
+            while (isdigit(i))
+            {
+                sawDigits = true;        /* must have at least 1 digit   */
+                if (msdec < (0x7FFFFFFFFFFFL-10)/10)
+                    msdec = msdec * 10 + (i - '0');
+                else if (msscale < (0xFFFFFFFF-10)/10)
+                {   lsdec = lsdec * 10 + (i - '0');
+                    msscale *= 10;
+                }
+                else
+                {
+                    exp++;
+                }
+                exp -= dot;
+                p.popFront();
+                if (p.empty) break;
+                i = p.front;
+            }
+            if (i == '.' && !dot)
+            {
+                p.popFront();
+                dot++;
+            }
+            else
+            {
+                break;
+            }
+        }
+        enforce(sawDigits);               // if error (no digits seen)
+    }
+    if (!p.empty && (p.front == 'e' || p.front == 'E'))
+    {
+        char sexp;
+        int e;
+
+        sexp = 0;
+        p.popFront();
+        enforce(!p.empty);
+        switch (p.front)
+        {   case '-':    sexp++;
+            case '+':    p.popFront();
+            default: {}
+        }
+        bool sawDigits = 0;
+        e = 0;
+        while (!p.empty && isdigit(p.front))
+        {
+            if (e < 0x7FFFFFFF / 10 - 10)   // prevent integer overflow
+            {
+                e = e * 10 + p.front - '0';
+            }
+            p.popFront();
+            sawDigits = 1;
+        }
+        exp += (sexp) ? -e : e;
+        enforce(sawDigits);               // if no digits in exponent
+    }
+
+    ldval = msdec;
+    if (msscale != 1)               /* if stuff was accumulated in lsdec */
+        ldval = ldval * msscale + lsdec;
+    if (ldval)
+    {
+        uint u = 0;
+        int pow = 4096;
+
+        while (exp > 0)
+        {
+            while (exp >= pow)
+            {
+                ldval *= postab[u];
+                exp -= pow;
+            }
+            pow >>= 1;
+            u++;
+        }
+        while (exp < 0)
+        {
+            while (exp <= -pow)
+            {
+                ldval *= negtab[u];
+                enforce(ldval != 0); // errno = ERANGE;
+                exp += pow;
+            }
+            pow >>= 1;
+            u++;
         }
     }
+  L6: // if overflow occurred
+    enforce(ldval != core.stdc.math.HUGE_VAL); // errno = ERANGE;
 
-    auto t = s;
-    if (t.startsWith('+', '-')) t.popFront();
-    munch(t, "0-9"); // integral part
-    if (t.startsWith('.'))
-    {
-        t.popFront(); // decimal point
-        munch(t, "0-9"); // fractionary part
-    }
-    if (t.startsWith('E', 'e'))
-    {
-        t.popFront();
-        if (t.startsWith('+', '-')) t.popFront();
-        munch(t, "0-9"); // exponent
-    }
-    auto len = s.length - t.length;
-    char sz[80] = void;
-    enforce(len < sz.length);
-    foreach (i; 0 .. len) sz[i] = s[i];
-    sz[len] = 0;
-
-//     //writefln("toFloat('%s')", s);
-//     auto sz = toStringz(to!(const char[])(s));
-//     if (std.ctype.isspace(*sz))
-//         goto Lerr;
-
-//     // BUG: should set __locale_decpoint to "." for DMC
-
-    setErrno(0);
-    char* endptr;
-    static if (is(Target == float))
-        auto f = strtof(sz.ptr, &endptr);
-    else static if (is(Target == double))
-        auto f = strtod(sz.ptr, &endptr);
-    else static if (is(Target == real))
-        auto f = strtold(sz.ptr, &endptr);
-    else
-        static assert(false);
-    if (getErrno() == ERANGE)
-    {
-        goto Lerr;
-    }
-    assert(endptr);
-    if (endptr == sz.ptr)
-    {
-        // no progress
-        goto Lerr;
-    }
-    s = s[endptr - sz.ptr .. $];
-    return f;
-  Lerr:
-    conv_error!(Source, Target)(s);
-    assert(0);
+  L1:
+    return (sign) ? -ldval : ldval;
 }
 
-// Target parse(Target, Source)(ref Source s)
-// if (isSomeString!Source && isSomeString!Target)
-// {
+unittest
+{
+    struct longdouble
+    {
+        ushort value[5];
+    }
 
-// }
+    real ld;
+    longdouble x;
+    real ld1;
+    longdouble x1;
+    int i;
+
+    string s = "0x1.FFFFFFFFFFFFFFFEp-16382";
+    ld = parse!real(s);
+    assert(s.empty);
+    x = *cast(longdouble *)&ld;
+    ld1 = strtold("0x1.FFFFFFFFFFFFFFFEp-16382", null);
+    x1 = *cast(longdouble *)&ld1;
+    assert(x1 == x && ld1 == ld);
+
+    // for (i = 4; i >= 0; i--)
+    // {
+    //     printf("%04x ", x.value[i]);
+    // }
+    // printf("\n");
+    assert(!errno);
+
+    s = "1.0e5";
+    ld = parse!real(s);
+    assert(s.empty);
+    x = *cast(longdouble *)&ld;
+    ld1 = strtold("1.0e5", null);
+    x1 = *cast(longdouble *)&ld1;
+
+    // for (i = 4; i >= 0; i--)
+    // {
+    //     printf("%04x ", x.value[i]);
+    // }
+    // printf("\n");
+}
 
 unittest
 {
@@ -1843,7 +2050,7 @@ unittest
 unittest
 {
     debug(conv) printf("conv.to!bool.unittest\n");
-    
+
     assert (to!bool("TruE") == true);
     assert (to!bool("faLse"d) == false);
     try
@@ -2620,7 +2827,7 @@ T to(T, S)(S value) if (isIntegral!S && S.min < 0
 
 /// Unsigned integers (uint and ulong) to string.
 T to(T, S)(S input)
-if (std.typetuple.staticIndexOf!(Unqual!S, uint, ulong) >= 0 && isSomeString!T)
+if (staticIndexOf!(Unqual!S, uint, ulong) >= 0 && isSomeString!T)
 {
     Unqual!S value = input;
     alias Unqual!(typeof(T.init[0])) Char;
@@ -2642,18 +2849,24 @@ if (std.typetuple.staticIndexOf!(Unqual!S, uint, ulong) >= 0 && isSomeString!T)
 
     Char[] result;
     if (__ctfe)
+    {
         result = new Char[maxlength];
+    }
     else
+    {
         result = cast(Char[])
             GC.malloc(Char.sizeof * maxlength, GC.BlkAttr.NO_SCAN)
             [0 .. Char.sizeof * maxlength];
+    }
 
     uint ndigits = 0;
     do
     {
-        const c = cast(Char) ((value % 10) + '0');
-        value /= 10;
-        ndigits++;
+        auto div = value / 10;
+        auto rem = value % 10;
+        const c = cast(Char) (rem + '0');
+        value = div;
+        ++ndigits;
         result[$ - ndigits] = c;
     }
     while (value);
@@ -2859,12 +3072,8 @@ T to(T, S)(S r) if (is(Unqual!S == creal) && isSomeString!(T))
  */
 T to(T, S)(S value, uint radix)
 if (isIntegral!(Unqual!S) && !is(Unqual!S == ulong) && isSomeString!(T))
-in
 {
-    assert(radix >= 2 && radix <= 36);
-}
-body
-{
+    enforce(radix >= 2 && radix <= 36);
     if (radix == 10)
         return to!string(value);     // handle signed cases only for radix 10
     return to!string(cast(ulong) value, radix);
