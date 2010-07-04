@@ -7,24 +7,19 @@ is $(D_PARAM public)ally imported when importing $(B std.stdio).
 Macros:
 WIKI=Phobos/StdStdio
 
-Copyright: Copyright Digital Mars 2007 - 2009.
-License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+Copyright: Copyright Digital Mars 2007-.
+License:   $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   $(WEB digitalmars.com, Walter Bright),
            $(WEB erdani.org, Andrei Alexandrescu)
-
-         Copyright Digital Mars 2007 - 2009.
-Distributed under the Boost Software License, Version 1.0.
-   (See accompanying file LICENSE_1_0.txt or copy at
-         http://www.boost.org/LICENSE_1_0.txt)
  */
 module std.stdio;
 
 public import core.stdc.stdio;
-private import std.stdiobase;
-private import core.memory, core.stdc.errno, core.stdc.stddef,
-    core.stdc.stdlib, core.stdc.string, core.stdc.wchar_;
-private import std.algorithm, std.array, std.contracts, std.conv, std.file, std.format,
-    /*std.metastrings,*/ std.range, std.string, std.traits, std.typecons,
+import std.stdiobase;
+import core.memory, core.stdc.errno, core.stdc.stddef, core.stdc.stdlib,
+    core.stdc.string, core.stdc.wchar_;
+import std.algorithm, std.array, std.contracts, std.conv, std.file, std.format,
+    std.range, std.string, std.traits, std.typecons,
     std.typetuple, std.utf;
 
 version (DigitalMars) version (Windows)
@@ -64,8 +59,8 @@ version (DIGITAL_MARS_STDIO)
     {
         /* **
          * Digital Mars under-the-hood C I/O functions.
-     * Use _iobuf* for the unshared version of FILE*,
-     * usable when the FILE is locked.
+         * Use _iobuf* for the unshared version of FILE*,
+         * usable when the FILE is locked.
          */
         int _fputc_nlock(int, _iobuf*);
         int _fputwc_nlock(int, _iobuf*);
@@ -135,7 +130,10 @@ else version (GENERIC_IO)
     }
 
     int fputc_unlocked(int c, _iobuf* fp) { return fputc(c, cast(shared) fp); }
-    int fputwc_unlocked(wchar_t c, _iobuf* fp) { return fputwc(c, cast(shared) fp); }
+    int fputwc_unlocked(wchar_t c, _iobuf* fp)
+    {
+        return fputwc(c, cast(shared) fp);
+    }
     int fgetc_unlocked(_iobuf* fp) { return fgetc(cast(shared) fp); }
     int fgetwc_unlocked(_iobuf* fp) { return fgetwc(cast(shared) fp); }
 
@@ -155,11 +153,13 @@ else
 //------------------------------------------------------------------------------
 struct ByRecord(Fields...)
 {
+private:
     File file;
     char[] line;
     Tuple!(Fields) current;
     string format;
 
+public:
     this(File f, string format)
     {
         assert(f.isOpen);
@@ -169,13 +169,13 @@ struct ByRecord(Fields...)
     }
 
     /// Range primitive implementations.
-    bool empty()
+    @property bool empty()
     {
         return !file.isOpen;
     }
 
     /// Ditto
-    ref Tuple!(Fields) front()
+    @property ref Tuple!(Fields) front()
     {
         return current;
     }
@@ -247,7 +247,7 @@ Hello, Jimmy!
  */
 struct File
 {
-    /*private*/ struct Impl
+    private struct Impl
     {
         FILE * handle = null;
         uint refs = uint.max / 2;
@@ -259,7 +259,7 @@ struct File
             name = n;
         }
     }
-    /*private*/ Impl * p;
+    private Impl * p;
 
 /**
 Constructor taking the name of the file to open and the open mode
@@ -273,20 +273,17 @@ objects referring to the same underlying file.
 The destructor automatically closes the file as soon as no $(D File)
 object refers to it anymore.
  */
-
     this(string name, in char[] stdioOpenmode = "rb")
     {
         p = new Impl(errnoEnforce(.fopen(name, stdioOpenmode),
-                        "Cannot open file `"~name
-                        ~"' in mode `"~stdioOpenmode.idup~"'"),
+                        text("Cannot open file `", name, "' in mode `",
+                                stdioOpenmode, "'")),
                 1, name);
     }
 
     ~this()
     {
         if (!p) return;
-        // @@@BUG@@@ These lines prematurely close the file
-        //printf("Destroying file `%s' with %d refs\n", toStringz(p.name), p.refs);
         if (p.refs == 1) close;
         else --p.refs;
     }
@@ -294,8 +291,7 @@ object refers to it anymore.
     this(this)
     {
         if (!p) return;
-        //printf("Copying file %s with %d refs\n", toStringz(p.name), p.refs);
-        enforce(p.refs);
+        assert(p.refs);
         ++p.refs;
     }
 
@@ -306,12 +302,7 @@ file.
  */
     void opAssign(File rhs)
     {
-        // printf("Assigning file %s with %d refs\n",
-        //         toStringz(rhs.p.name), rhs.p.refs);
-        // @@@BUG@@@
         swap(p, rhs.p);
-        // p = rhs.p;
-        // rhs.p = null;
     }
 
 /**
@@ -321,7 +312,7 @@ same semantics as in the C standard library $(WEB
 cplusplus.com/reference/clibrary/cstdio/fopen.html, fopen) function.
 Throws exception in case of error.
  */
-    void open(string name, string stdioOpenmode = "rb")
+    void open(string name, in char[] stdioOpenmode = "rb")
     {
         detach;
         auto another = File(name, stdioOpenmode);
@@ -333,7 +324,7 @@ First calls $(D detach) (throwing on failure), and then runs a command
 by calling the C standard library function $(WEB
 opengroup.org/onlinepubs/007908799/xsh/_popen.html, _popen).
  */
-    version(Posix) void popen(string command, string stdioOpenmode = "r")
+    version(Posix) void popen(string command, in char[] stdioOpenmode = "r")
     {
         detach;
         p = new Impl(errnoEnforce(.popen(command, stdioOpenmode),
@@ -342,7 +333,7 @@ opengroup.org/onlinepubs/007908799/xsh/_popen.html, _popen).
     }
 
 /** Returns $(D true) if the file is opened. */
-    bool isOpen() const
+    @property bool isOpen() const
     {
         return p !is null && p.handle;
     }
@@ -352,14 +343,14 @@ Returns $(D true) if the file is at end (see $(WEB
 cplusplus.com/reference/clibrary/cstdio/feof.html, feof)). The file
 must be opened, otherwise an exception is thrown.
  */
-    bool eof() const
+    @property bool eof() const
     {
         enforce(p && p.handle, "Calling eof() against an unopened file.");
         return .feof(cast(FILE*) p.handle) != 0;
     }
 
 /** Returns the name of the file, if any. */
-    string name() const
+    @property string name() const
     {
         return p.name;
     }
@@ -369,7 +360,7 @@ If the file is not opened, returns $(D false). Otherwise, returns
 $(WEB cplusplus.com/reference/clibrary/cstdio/ferror.html, ferror) for
 the file handle.
  */
-    bool error() const
+    @property bool error() const
     {
         return !p.handle || .ferror(cast(FILE*) p.handle);
     }
@@ -521,9 +512,6 @@ $(D rawWrite) always write in binary mode on Windows.
         f.rawWrite("\r\n\n\r\n");
         f.close();
         assert(std.file.read("deleteme") == "\r\n\n\r\n");
-        /+
-        stdout.rawWrite("\r\n\n\r\n");
-        +/
     }
 
 /**
@@ -563,8 +551,7 @@ file handle. Throws on error.
  */
     void rewind()
     {
-        enforce(p && p.handle,
-                "Attempting to rewind() an unopened file");
+        enforce(isOpen, "Attempting to rewind() an unopened file");
         .rewind(p.handle);
     }
 
@@ -575,11 +562,9 @@ the file handle.
  */
     void setvbuf(size_t size, int mode = _IOFBF)
     {
-        errnoEnforce(
-            .setvbuf(enforce(p.handle,
-                            "Attempting to call setvbuf() on an unopened file"),
-                    null, mode, size) == 0,
-            "Could not set buffering for file `"~p.name~"'");
+        enforce(isOpen, "Attempting to call setvbuf() on an unopened file");
+        errnoEnforce(.setvbuf(p.handle, null, mode, size) == 0,
+                "Could not set buffering for file `"~p.name~"'");
     }
 
 /**
@@ -588,11 +573,10 @@ $(WEB cplusplus.com/reference/clibrary/cstdio/_setvbuf.html,
 _setvbuf) for the file handle. */
     void setvbuf(void[] buf, int mode = _IOFBF)
     {
-        errnoEnforce(
-            .setvbuf(enforce(p.handle,
-                            "Attempting to call setvbuf() on an unopened file"),
-                    cast(char*) buf.ptr, mode, buf.length) == 0,
-            "Could not set buffering for file `"~p.name~"'");
+        enforce(isOpen, "Attempting to call setvbuf() on an unopened file");
+        errnoEnforce(.setvbuf(p.handle,
+                        cast(char*) buf.ptr, mode, buf.length) == 0,
+                "Could not set buffering for file `"~p.name~"'");
     }
 
 /**
@@ -600,7 +584,7 @@ If the file is not opened, throws an exception. Otherwise, writes its
 arguments in text format to the file. */
     void write(S...)(S args)
     {
-        auto w = lockingTextWriter;
+        auto w = lockingTextWriter();
         foreach (arg; args)
         {
             static if (isSomeString!(typeof(arg)))
@@ -620,7 +604,8 @@ arguments in text format to the file, followed by a newline. */
     void writeln(S...)(S args)
     {
         write(args, '\n');
-        .fflush(p.handle);
+        errnoEnforce(.fflush(p.handle) == 0,
+                    "Could not flush file `"~p.name~"'");
     }
 
     private enum errorMessage =
@@ -774,9 +759,20 @@ with every line.  */
 
     size_t readf(Data...)(in char[] format, Data data)
     {
-        auto input = InputByChar(this);
+        assert(isOpen);
+        auto input = LockingTextReader(this);
         formattedRead(input, format, data);
         return 1;
+    }
+
+    unittest
+    {
+        std.file.write("deleteme", "hello\nworld\n");
+        scope(exit) std.file.remove("deleteme");
+        string s;
+        auto f = File("deleteme");
+        f.readf("%s\n", &s);
+        assert(s == "hello", "["~s~"]");
     }
 
 /**
@@ -1134,66 +1130,91 @@ $(D Range) that locks the file and allows fast writing to it.
 /// Convenience function.
     LockingTextWriter lockingTextWriter()
     {
-        // @@@BUG2341@@@
         return LockingTextWriter(this);
-        // The code below avoids bug 2341
-        //printf("Entering fn with %d refs\n", *_refs);
-        // auto result = LockingTextWriter(this);
-        // return result;
     }
 }
 
-    struct InputByChar
+struct LockingTextReader
+{
+    private File _f;
+    private dchar _crt;
+
+    this(File f)
     {
-        private File _f;
-        private dchar _crt;
-
-        this(File f)
-        {
-            _f = f;
-        }
-
-        bool empty()
-        {
-            return _f.eof;
-        }
-
-        dchar front()
-        {
-            assert(!empty);
-            if (_crt == _crt.init) popFront;
-            return _crt;
-        }
-
-        void popFront()
-        {
-            enforce(_f.p && _f.p.handle,
-                    "Attempt to read from an unopened file.");
-            assert(!empty);
-            _crt = getc(cast(FILE*) _f.p.handle);
-        }
-
-        void unget(dchar c)
-        {
-            ungetc(c, cast(FILE*) _f.p.handle);
-        }
+        enforce(f.isOpen);
+        _f = f;
+        FLOCK(_f.p.handle);
     }
+
+    this(this)
+    {
+        FLOCK(_f.p.handle);
+    }
+
+    ~this()
+    {
+        // File locking has its own reference count
+        if (_f.isOpen) FUNLOCK(_f.p.handle);
+    }
+
+    void opAssign(LockingTextReader r)
+    {
+        swap(this, r);
+    }
+
+    @property bool empty()
+    {
+        if (!_f.isOpen || _f.eof) return true;
+        if (_crt == _crt.init)
+        {
+            _crt = FGETC(cast(_iobuf*) _f.p.handle);
+            if (_crt == -1)
+            {
+                clear(_f);
+                return true;
+            }
+            else
+            {
+                enforce(ungetc(_crt, cast(FILE*) _f.p.handle) == _crt);
+            }
+        }
+        return false;
+    }
+
+    dchar front()
+    {
+        enforce(!empty);
+        return _crt;
+    }
+
+    void popFront()
+    {
+        enforce(!empty);
+        if (FGETC(cast(_iobuf*) _f.p.handle) == -1)
+        {
+            enforce(_f.eof);
+        }
+        _crt = _crt.init;
+    }
+
+    // void unget(dchar c)
+    // {
+    //     ungetc(c, cast(FILE*) _f.p.handle);
+    // }
+}
 
 unittest
 {
-    // std.file.write("deleteme", "1 2 3");
-    // int x, y;
-    // auto f = File("deleteme");
-    // scope(exit) f.close;
-    // //auto input = InputByChar(f);
-    // //std.format.formattedRead(input, "%d ", &x);
-    // f.readf("%d ", &x);
-    // assert(x == 1);
-    // f.readf("%d ", &x);
-    // assert(x == 2);
-    // //f.readf("%d ", &x);
-    // assert(x == 3);
-    pragma(msg, "--- todo: readf ---");
+    std.file.write("deleteme", "1 2 3");
+    int x, y;
+    auto f = File("deleteme");
+    f.readf("%s ", &x);
+    assert(x == 1);
+    f.readf("%d ", &x);
+    assert(x == 2);
+    f.readf("%d ", &x);
+    assert(x == 3);
+    //pragma(msg, "--- todo: readf ---");
 }
 
 private
@@ -1485,6 +1506,20 @@ unittest
         assert(read == "Hello, nice world number 42!\r\n1\r\n1\r\n1\r\n", read);
     else
         assert(read == "Hello, nice world number 42!\n1\n1\n1\n", "["~read~"]");
+}
+
+/**
+ * Formatted read one line from stdin.
+ */
+void readf(A...)(in char[] format, A args)
+{
+    return stdin.readf(format, args);
+}
+
+unittest
+{
+    float f;
+    if (false) readf("%s", &f);
 }
 
 /**********************************
@@ -2025,46 +2060,168 @@ unittest
         }
         assert(i == 3);
     }
-    // {
-    //     std.file.write("deleteme", "1:2 3\n4:1 5\n5:100");
-    //     File f = File("deleteme");
-    //     scope(exit) f.close;
-    //     auto t = [ tuple(1, [2,3][]), tuple(4, [1,5][]), tuple(5, [100][]) ];
-    //     uint i;
-    //     foreach (e; f.byRecord!(int, int[])("%s:%(s )"))
-    //     {
-    //         //writeln(e);
-    //         assert(e == t[i++]);
-    //     }
-    //     assert(i == 3);
-    // }
 }
 
 // Private implementation of readln
+version (DIGITAL_MARS_STDIO)
 private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
 {
-    version (DIGITAL_MARS_STDIO)
-    {
-        FLOCK(fps);
-        scope(exit) FUNLOCK(fps);
+    FLOCK(fps);
+    scope(exit) FUNLOCK(fps);
 
     /* Since fps is now locked, we can create an "unshared" version
      * of fp.
      */
     auto fp = cast(_iobuf*)fps;
 
-        if (__fhnd_info[fp._file] & FHND_WCHAR)
-        {   /* Stream is in wide characters.
-             * Read them and convert to chars.
-             */
-            static assert(wchar_t.sizeof == 2);
-            auto app = appender(&buf);
+    if (__fhnd_info[fp._file] & FHND_WCHAR)
+    {   /* Stream is in wide characters.
+         * Read them and convert to chars.
+         */
+        static assert(wchar_t.sizeof == 2);
+        auto app = appender(&buf);
+        buf.length = 0;
+        for (int c = void; (c = FGETWC(fp)) != -1; )
+        {
+            if ((c & ~0x7F) == 0)
+            {   app.put(cast(char) c);
+                if (c == terminator)
+                    break;
+            }
+            else
+            {
+                if (c >= 0xD800 && c <= 0xDBFF)
+                {
+                    int c2 = void;
+                    if ((c2 = FGETWC(fp)) != -1 ||
+                            c2 < 0xDC00 && c2 > 0xDFFF)
+                    {
+                        StdioException("unpaired UTF-16 surrogate");
+                    }
+                    c = ((c - 0xD7C0) << 10) + (c2 - 0xDC00);
+                }
+                std.utf.encode(buf, c);
+            }
+        }
+        if (ferror(fps))
+            StdioException();
+        return buf.length;
+    }
+
+    auto sz = GC.sizeOf(buf.ptr);
+    //auto sz = buf.length;
+    buf = buf.ptr[0 .. sz];
+    if (fp._flag & _IONBF)
+    {
+        /* Use this for unbuffered I/O, when running
+         * across buffer boundaries, or for any but the common
+         * cases.
+         */
+      L1:
+        if(buf.ptr is null)
+        {
+            sz = 128;
+            auto p = cast(char*) GC.malloc(sz, GC.BlkAttr.NO_SCAN);
+            buf = p[0 .. 0];
+        } else {
             buf.length = 0;
-            int c2;
+        }
+
+        auto app = appender(&buf);
+        int c;
+        while((c = FGETC(fp)) != -1) {
+            app.put(cast(char) c);
+            if(buf[$ - 1] == terminator) {
+                return buf.length;
+            }
+
+        }
+
+        if (ferror(fps))
+            StdioException();
+        return buf.length;
+    }
+    else
+    {
+        int u = fp._cnt;
+        char* p = fp._ptr;
+        int i;
+        if (fp._flag & _IOTRAN)
+        {   /* Translated mode ignores \r and treats ^Z as end-of-file
+             */
+            char c;
+            while (1)
+            {
+                if (i == u)                // if end of buffer
+                    goto L1;        // give up
+                c = p[i];
+                i++;
+                if (c != '\r')
+                {
+                    if (c == terminator)
+                        break;
+                    if (c != 0x1A)
+                        continue;
+                    goto L1;
+                }
+                else
+                {   if (i != u && p[i] == terminator)
+                        break;
+                    goto L1;
+                }
+            }
+            if (i > sz)
+            {
+                buf = cast(char[])GC.malloc(i, GC.BlkAttr.NO_SCAN)[0 .. i];
+            }
+            if (i - 1)
+                memcpy(buf.ptr, p, i - 1);
+            buf[i - 1] = cast(char)terminator;
+            buf = buf[0 .. i];
+            if (terminator == '\n' && c == '\r')
+                i++;
+        }
+        else
+        {
+            while (1)
+            {
+                if (i == u)                // if end of buffer
+                    goto L1;        // give up
+                auto c = p[i];
+                i++;
+                if (c == terminator)
+                    break;
+            }
+            if (i > sz)
+            {
+                buf = cast(char[])GC.malloc(i, GC.BlkAttr.NO_SCAN)[0 .. i];
+            }
+            memcpy(buf.ptr, p, i);
+            buf = buf[0 .. i];
+        }
+        fp._cnt -= i;
+        fp._ptr += i;
+        return i;
+    }
+}
+
+version (GCC_IO)
+private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
+{
+    if (fwide(fps, 0) > 0)
+    {   /* Stream is in wide characters.
+         * Read them and convert to chars.
+         */
+        FLOCK(fps);
+        scope(exit) FUNLOCK(fps);
+        auto fp = cast(_iobuf*)fps;
+        version (Windows)
+        {
+            buf.length = 0;
             for (int c = void; (c = FGETWC(fp)) != -1; )
             {
                 if ((c & ~0x7F) == 0)
-                {   app.put(cast(char) c);
+                {   buf ~= c;
                     if (c == terminator)
                         break;
                 }
@@ -2072,6 +2229,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
                 {
                     if (c >= 0xD800 && c <= 0xDBFF)
                     {
+                        int c2 = void;
                         if ((c2 = FGETWC(fp)) != -1 ||
                                 c2 < 0xDC00 && c2 > 0xDFFF)
                         {
@@ -2082,263 +2240,126 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
                     std.utf.encode(buf, c);
                 }
             }
-            if (ferror(fps))
+            if (ferror(fp))
                 StdioException();
             return buf.length;
         }
-
-        auto sz = GC.sizeOf(buf.ptr);
-        //auto sz = buf.length;
-        buf = buf.ptr[0 .. sz];
-        if (fp._flag & _IONBF)
+        else version (Posix)
         {
-            /* Use this for unbuffered I/O, when running
-             * across buffer boundaries, or for any but the common
-             * cases.
-             */
-          L1:
-            if(buf.ptr is null)
+            buf.length = 0;
+            for (int c; (c = FGETWC(fp)) != -1; )
             {
-                sz = 128;
-                auto p = cast(char*) GC.malloc(sz, GC.BlkAttr.NO_SCAN);
-                buf = p[0 .. 0];
-            } else {
-                buf.length = 0;
+                if ((c & ~0x7F) == 0)
+                    buf ~= cast(char)c;
+                else
+                    std.utf.encode(buf, cast(dchar)c);
+                if (c == terminator)
+                    break;
             }
-
-            auto app = appender(&buf);
-            int c;
-            while((c = FGETC(fp)) != -1) {
-                app.put(cast(char) c);
-                if(buf[$ - 1] == terminator) {
-                    return buf.length;
-                }
-
-            }
-
             if (ferror(fps))
                 StdioException();
             return buf.length;
         }
         else
         {
-            int u = fp._cnt;
-            char* p = fp._ptr;
-            int i;
-            if (fp._flag & _IOTRAN)
-            {   /* Translated mode ignores \r and treats ^Z as end-of-file
-                 */
-                char c;
-                while (1)
-                {
-                    if (i == u)                // if end of buffer
-                        goto L1;        // give up
-                    c = p[i];
-                    i++;
-                    if (c != '\r')
-                    {
-                        if (c == terminator)
-                            break;
-                        if (c != 0x1A)
-                            continue;
-                        goto L1;
-                    }
-                    else
-                    {   if (i != u && p[i] == terminator)
-                            break;
-                        goto L1;
-                    }
-                }
-                if (i > sz)
-                {
-                    buf = cast(char[])GC.malloc(i, GC.BlkAttr.NO_SCAN)[0 .. i];
-                }
-                if (i - 1)
-                    memcpy(buf.ptr, p, i - 1);
-                buf[i - 1] = cast(char)terminator;
-                buf = buf[0 .. i];
-                if (terminator == '\n' && c == '\r')
-                    i++;
-            }
-            else
-            {
-                while (1)
-                {
-                    if (i == u)                // if end of buffer
-                        goto L1;        // give up
-                    auto c = p[i];
-                    i++;
-                    if (c == terminator)
-                        break;
-                }
-                if (i > sz)
-                {
-                    buf = cast(char[])GC.malloc(i, GC.BlkAttr.NO_SCAN)[0 .. i];
-                }
-                memcpy(buf.ptr, p, i);
-                buf = buf[0 .. i];
-            }
-            fp._cnt -= i;
-            fp._ptr += i;
-            return i;
+            static assert(0);
         }
     }
-    else version (GCC_IO)
-    {
-        if (fwide(fps, 0) > 0)
-        {   /* Stream is in wide characters.
-             * Read them and convert to chars.
-             */
-            FLOCK(fps);
-            scope(exit) FUNLOCK(fps);
-        auto fp = cast(_iobuf*)fps;
-            version (Windows)
-            {
-                buf.length = 0;
-                int c2;
-                for (int c = void; (c = FGETWC(fp)) != -1; )
-                {
-                    if ((c & ~0x7F) == 0)
-                    {   buf ~= c;
-                        if (c == terminator)
-                            break;
-                    }
-                    else
-                    {
-                        if (c >= 0xD800 && c <= 0xDBFF)
-                        {
-                            if ((c2 = FGETWC(fp)) != -1 ||
-                                    c2 < 0xDC00 && c2 > 0xDFFF)
-                            {
-                                StdioException("unpaired UTF-16 surrogate");
-                            }
-                            c = ((c - 0xD7C0) << 10) + (c2 - 0xDC00);
-                        }
-                        std.utf.encode(buf, c);
-                    }
-                }
-                if (ferror(fp))
-                    StdioException();
-                return buf.length;
-            }
-            else version (Posix)
-            {
-                buf.length = 0;
-                for (int c; (c = FGETWC(fp)) != -1; )
-                {
-                    if ((c & ~0x7F) == 0)
-                        buf ~= cast(char)c;
-                    else
-                        std.utf.encode(buf, cast(dchar)c);
-                    if (c == terminator)
-                        break;
-                }
-                if (ferror(fps))
-                    StdioException();
-                return buf.length;
-            }
-            else
-            {
-                static assert(0);
-            }
-        }
 
-        char *lineptr = null;
-        size_t n = 0;
-        auto s = getdelim(&lineptr, &n, terminator, fps);
-        scope(exit) free(lineptr);
-        if (s < 0)
-        {
-            if (ferror(fps))
-                StdioException();
-            buf.length = 0;                // end of file
-            return 0;
-        }
-        buf = buf.ptr[0 .. GC.sizeOf(buf.ptr)];
-        if (s <= buf.length)
-        {
-            buf.length = s;
-            buf[] = lineptr[0 .. s];
-        }
-        else
-        {
-            buf = lineptr[0 .. s].dup;
-        }
-        return s;
-    }
-    else version (GENERIC_IO)
+    char *lineptr = null;
+    size_t n = 0;
+    auto s = getdelim(&lineptr, &n, terminator, fps);
+    scope(exit) free(lineptr);
+    if (s < 0)
     {
-    FLOCK(fps);
-    scope(exit) FUNLOCK(fps);
-    auto fp = cast(_iobuf*)fps;
-        if (fwide(fps, 0) > 0)
-        {   /* Stream is in wide characters.
-             * Read them and convert to chars.
-             */
-            version (Windows)
-            {
-                buf.length = 0;
-                int c2;
-                for (int c; (c = FGETWC(fp)) != -1; )
-                {
-                    if ((c & ~0x7F) == 0)
-                    {   buf ~= c;
-                        if (c == terminator)
-                            break;
-                    }
-                    else
-                    {
-                        if (c >= 0xD800 && c <= 0xDBFF)
-                        {
-                            if ((c2 = FGETWC(fp)) != -1 ||
-                                    c2 < 0xDC00 && c2 > 0xDFFF)
-                            {
-                                StdioException("unpaired UTF-16 surrogate");
-                            }
-                            c = ((c - 0xD7C0) << 10) + (c2 - 0xDC00);
-                        }
-                        std.utf.encode(buf, c);
-                    }
-                }
-                if (ferror(fp))
-                    StdioException();
-                return buf.length;
-            }
-            else version (Posix)
-            {
-                buf.length = 0;
-                for (int c; (c = FGETWC(fp)) != -1; )
-                {
-                    if ((c & ~0x7F) == 0)
-                        buf ~= cast(char)c;
-                    else
-                        std.utf.encode(buf, cast(dchar)c);
-                    if (c == terminator)
-                        break;
-                }
-                if (ferror(fps))
-                    StdioException();
-                return buf.length;
-            }
-            else
-            {
-                static assert(0);
-            }
-        }
-
-        buf.length = 0;
-        for (int c; (c = FGETC(fp)) != -1; )
-        {
-            buf ~= cast(char)c;
-            if (c == terminator)
-                break;
-        }
         if (ferror(fps))
             StdioException();
-        return buf.length;
+        buf.length = 0;                // end of file
+        return 0;
+    }
+    buf = buf.ptr[0 .. GC.sizeOf(buf.ptr)];
+    if (s <= buf.length)
+    {
+        buf.length = s;
+        buf[] = lineptr[0 .. s];
     }
     else
     {
-        static assert(0);
+        buf = lineptr[0 .. s].dup;
     }
+    return s;
+}
+
+version (GENERIC_IO)
+private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
+{
+    FLOCK(fps);
+    scope(exit) FUNLOCK(fps);
+    auto fp = cast(_iobuf*)fps;
+    if (fwide(fps, 0) > 0)
+    {   /* Stream is in wide characters.
+         * Read them and convert to chars.
+         */
+        version (Windows)
+        {
+            buf.length = 0;
+            for (int c; (c = FGETWC(fp)) != -1; )
+            {
+                if ((c & ~0x7F) == 0)
+                {   buf ~= c;
+                    if (c == terminator)
+                        break;
+                }
+                else
+                {
+                    if (c >= 0xD800 && c <= 0xDBFF)
+                    {
+                        int c2 = void;
+                        if ((c2 = FGETWC(fp)) != -1 ||
+                                c2 < 0xDC00 && c2 > 0xDFFF)
+                        {
+                            StdioException("unpaired UTF-16 surrogate");
+                        }
+                        c = ((c - 0xD7C0) << 10) + (c2 - 0xDC00);
+                    }
+                    std.utf.encode(buf, c);
+                }
+            }
+            if (ferror(fp))
+                StdioException();
+            return buf.length;
+        }
+        else version (Posix)
+        {
+            buf.length = 0;
+            for (int c; (c = FGETWC(fp)) != -1; )
+            {
+                if ((c & ~0x7F) == 0)
+                    buf ~= cast(char)c;
+                else
+                    std.utf.encode(buf, cast(dchar)c);
+                if (c == terminator)
+                    break;
+            }
+            if (ferror(fps))
+                StdioException();
+            return buf.length;
+        }
+        else
+        {
+            static assert(0);
+        }
+    }
+
+    // Narrow stream
+    buf.length = 0;
+    for (int c; (c = FGETC(fp)) != -1; )
+    {
+        buf ~= cast(char)c;
+        if (c == terminator)
+            break;
+    }
+    if (ferror(fps))
+        StdioException();
+    return buf.length;
 }
