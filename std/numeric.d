@@ -28,7 +28,7 @@ import std.conv;
 import std.typecons;
 import std.math;
 import std.traits;
-import std.contracts;
+import std.exception;
 import std.random;
 import std.string;
 import std.range;

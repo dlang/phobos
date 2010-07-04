@@ -23,7 +23,7 @@ private import core.stdc.stdlib;
 private import core.stdc.errno;
 private import std.path;
 private import std.string;
-import std.contracts, std.conv, std.stdio;
+import std.conv, std.exception, std.stdio;
 
 //debug = MMFILE;
 
@@ -31,9 +31,9 @@ version (Win32)
 {
     private import std.c.windows.windows;
     private import std.utf;
-    
+
     private __gshared const uint dwVersion;
-    
+
     shared static this()
     {
         /* http://msdn.microsoft.com/library/default.asp?url=/library/en-us
@@ -85,13 +85,13 @@ class MmFile
     {
         this(file.fileno, mode, size, address, window);
     }
-    
+
     version(linux) private this(int fildes, Mode mode, ulong size,
             void* address, size_t window)
     {
         int oflag;
         int fmode;
-    
+
         switch (mode)
         {
         case Mode.Read:
@@ -100,7 +100,7 @@ class MmFile
             oflag = O_RDONLY;
             fmode = 0;
             break;
-    
+
         case Mode.ReadWriteNew:
             assert(size != 0);
             flags = MAP_SHARED;
@@ -108,14 +108,14 @@ class MmFile
             oflag = O_CREAT | O_RDWR | O_TRUNC;
             fmode = 0660;
             break;
-    
+
         case Mode.ReadWrite:
             flags = MAP_SHARED;
             prot = PROT_READ | PROT_WRITE;
             oflag = O_CREAT | O_RDWR;
             fmode = 0660;
             break;
-    
+
         case Mode.ReadCopyOnWrite:
             flags = MAP_PRIVATE;
             prot = PROT_READ | PROT_WRITE;
@@ -150,7 +150,7 @@ class MmFile
         }
         data = p[0 .. initial_map];
     }
-    
+
     /**
      * Open memory mapped file filename in mode.
      * File is closed when the object instance is deleted.
@@ -165,7 +165,7 @@ class MmFile
      *      If null, the system selects the most convenient address.
      *  window = preferred block size of the amount of data to map at one time
      *      with 0 meaning map the entire file. The window size must be a
-     *      multiple of the memory allocation page size. 
+     *      multiple of the memory allocation page size.
      * Throws:
      *  std.file.FileException
      */
@@ -176,7 +176,7 @@ class MmFile
         this.mMode = mode;
         this.window = window;
         this.address = address;
-    
+
         version (Win32)
         {
             void* p;
@@ -184,13 +184,13 @@ class MmFile
             uint dwShareMode;
             uint dwCreationDisposition;
             uint flProtect;
-        
+
             if (dwVersion & 0x80000000 && (dwVersion & 0xFF) == 3)
             {
                 throw new FileException(filename,
                         "Win32s does not implement mm files");
             }
-        
+
             switch (mode)
             {
             case Mode.Read:
@@ -234,7 +234,7 @@ class MmFile
             default:
                 assert(0);
             }
-        
+
             if (filename)
             {
                 if (useWfuncs)
@@ -264,13 +264,13 @@ class MmFile
             }
             else
                 hFile = null;
-        
+
             int hi = cast(int)(size>>32);
             hFileMap = CreateFileMappingA(hFile, null, flProtect,
                     hi, cast(uint)size, null);
             if (hFileMap == null)               // mapping failed
                 goto err1;
-        
+
             if (size == 0)
             {
                 uint sizehi;
@@ -278,26 +278,26 @@ class MmFile
                 size = (cast(ulong)sizehi << 32) + sizelow;
             }
             this.size = size;
-        
+
             size_t initial_map = (window && 2*window<size)
                 ? 2*window : cast(size_t)size;
             p = MapViewOfFileEx(hFileMap, dwDesiredAccess, 0, 0,
                     initial_map, address);
             if (!p) goto err1;
             data = p[0 .. initial_map];
-        
+
             debug (MMFILE) printf("MmFile.this(): p = %p, size = %d\n", p, size);
             return;
-        
+
           err1:
             if (hFileMap != null)
                 CloseHandle(hFileMap);
             hFileMap = null;
-        
+
             if (hFile != INVALID_HANDLE_VALUE)
                 CloseHandle(hFile);
             hFile = INVALID_HANDLE_VALUE;
-        
+
             errnoEnforce(false);
         }
         else version (Posix)
@@ -306,7 +306,7 @@ class MmFile
             void* p;
             int oflag;
             int fmode;
-    
+
             switch (mode)
             {
             case Mode.Read:
@@ -315,7 +315,7 @@ class MmFile
                 oflag = O_RDONLY;
                 fmode = 0;
                 break;
-    
+
             case Mode.ReadWriteNew:
                 assert(size != 0);
                 flags = MAP_SHARED;
@@ -323,14 +323,14 @@ class MmFile
                 oflag = O_CREAT | O_RDWR | O_TRUNC;
                 fmode = 0660;
                 break;
-    
+
             case Mode.ReadWrite:
                 flags = MAP_SHARED;
                 prot = PROT_READ | PROT_WRITE;
                 oflag = O_CREAT | O_RDWR;
                 fmode = 0660;
                 break;
-    
+
             case Mode.ReadCopyOnWrite:
                 flags = MAP_PRIVATE;
                 prot = PROT_READ | PROT_WRITE;
@@ -341,12 +341,12 @@ class MmFile
             default:
                 assert(0);
             }
-    
+
             if (filename.length)
-            {   
+            {
                 fd = .open(namez, oflag, fmode);
                 errnoEnforce(fd != -1, "Could not open file "~filename);
-    
+
                 struct_stat64 statbuf;
                 if (fstat64(fd, &statbuf))
                 {
@@ -354,7 +354,7 @@ class MmFile
                     .close(fd);
                     errnoEnforce(false, "Could not stat file "~filename);
                 }
-    
+
                 if (prot & PROT_WRITE && size > statbuf.st_size)
                 {
                     // Need to make the file size bytes big
@@ -504,15 +504,15 @@ class MmFile
 
 
     // return true if the given position is currently mapped
-    private int mapped(ulong i) 
+    private int mapped(ulong i)
     {
-        debug (MMFILE) printf("MmFile.mapped(%lld, %lld, %d)\n", i,start, 
+        debug (MMFILE) printf("MmFile.mapped(%lld, %lld, %d)\n", i,start,
                 data.length);
         return i >= start && i < start+data.length;
     }
 
     // unmap the current range
-    private void unmap() 
+    private void unmap()
     {
         debug (MMFILE) printf("MmFile.unmap()\n");
         version(Windows) {
@@ -529,7 +529,7 @@ class MmFile
     }
 
     // map range
-    private void map(ulong start, size_t len) 
+    private void map(ulong start, size_t len)
     {
         debug (MMFILE) printf("MmFile.map(%lld, %d)\n", start, len);
         void* p;
@@ -548,7 +548,7 @@ class MmFile
     }
 
     // ensure a given position is mapped
-    private void ensureMapped(ulong i) 
+    private void ensureMapped(ulong i)
     {
         debug (MMFILE) printf("MmFile.ensureMapped(%lld)\n", i);
         if (!mapped(i)) {
@@ -559,14 +559,14 @@ class MmFile
                 ulong block = i/window;
                 if (block == 0)
                     map(0,2*window);
-                else 
+                else
                     map(window*(block-1),3*window);
             }
         }
     }
 
     // ensure a given range is mapped
-    private void ensureMapped(ulong i, ulong j) 
+    private void ensureMapped(ulong i, ulong j)
     {
         debug (MMFILE) printf("MmFile.ensureMapped(%lld, %lld)\n", i, j);
         if (!mapped(i) || !mapped(j-1)) {
