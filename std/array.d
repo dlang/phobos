@@ -649,22 +649,45 @@ assert(app2.data == [ 1, 2, 3, 4, 5, 6 ]);
 
 struct Appender(A : T[], T)
 {
-private:
-    Unqual!(T)[] * pArray;
-    size_t _capacity;
+    private Unqual!(T)[] * pArray;
+    private enum size_t extraSize = (size_t.sizeof * 2) - 1;
 
-public:
-/**
-Initialize an $(D Appender) with a pointer to an existing array. The
-$(D Appender) object will append to this array. If $(D null) is passed
-(or the default constructor gets called), the $(D Appender) object
-will allocate and use a new array.
- */
+    private void allocateCapacity()
+    {
+        assert(pArray);
+        // make room for capacity
+        immutable len = pArray.length;
+        *pArray = (cast(Unqual!(T)*) GC.realloc(pArray.ptr,
+                        len * T.sizeof + extraSize))
+            [0 .. len];
+        capacity() = (GC.sizeOf(pArray.ptr) - extraSize)
+            / T.sizeof;
+    }
+
+    /**
+       Initialize an $(D Appender) with a pointer to an existing
+       array. The $(D Appender) object will append to this array. If
+       $(D null) is passed (or the default constructor gets called),
+       the $(D Appender) object will allocate and use a new array.
+    */
     this(T[] * p)
     {
-        pArray = cast(Unqual!(T)[] *) p;
-        if (!pArray) pArray = (new typeof(*pArray)[1]).ptr;
-        _capacity = GC.sizeOf(pArray.ptr) / T.sizeof;
+        pArray = p ? cast(Unqual!(T)[] *) p : (new typeof(*pArray)[1]).ptr;
+        // make room for capacity
+        allocateCapacity();
+    }
+
+    /**
+       Returns the capacity of the array (the maximum number of
+       elements the managed array can accommodate before triggering a
+       reallocation).
+    */
+    @property ref size_t capacity()
+    {
+        enforce(pArray);
+        auto p = cast(ubyte*) (pArray.ptr + pArray.length);
+        while (cast(size_t) p & 3) ++p;
+        return *cast(size_t *) p;
     }
 
 /**
@@ -674,12 +697,6 @@ Returns the managed array.
     {
         return cast(typeof(return)) (pArray ? *pArray : null);
     }
-
-/**
-Returns the capacity of the array (the maximum number of elements the
-managed array can accommodate before triggering a reallocation).
- */
-    size_t capacity() const { return _capacity; }
 
 /**
 Appends one item to the managed array.
@@ -696,19 +713,24 @@ Appends one item to the managed array.
         }
         else
         {
-            if (!pArray) pArray = (new typeof(*pArray)[1]).ptr;
-            immutable len = pArray.length;
-            if (len < _capacity)
+            if (!pArray)
             {
-                // Should do in-place construction here
-                pArray.ptr[len] = item;
+                pArray = (new typeof(*pArray)[1]).ptr;
+                goto APPEND;
+            }
+            immutable len = pArray.length;
+            if (len < capacity)
+            {
+                emplace!(Unqual!T)
+                    (cast(void[]) pArray.ptr[len .. len + 1], item);
                 *pArray = pArray.ptr[0 .. len + 1];
             }
             else
             {
+              APPEND:
                 // Time to reallocate, do it and cache capacity
                 *pArray ~= item;
-                _capacity = GC.sizeOf(pArray.ptr) / T.sizeof;
+                allocateCapacity();
             }
         }
     }
@@ -723,6 +745,7 @@ Appends an entire range to the managed array.
         {
             if (!pArray) pArray = (new typeof(*pArray)[1]).ptr;
             *pArray ~= items;
+            allocateCapacity();
         }
         else
         {
@@ -742,8 +765,7 @@ Clears the managed array.
     {
         if (!pArray) return;
         pArray.length = 0;
-        //_capacity = .capacity(pArray.ptr) / T.sizeof;
-        _capacity = GC.sizeOf(pArray.ptr) / T.sizeof;
+        allocateCapacity();
     }
 }
 
@@ -753,7 +775,7 @@ initialized with $(D t).
  */
 Appender!(E[]) appender(A : E[], E)(A * array = null)
 {
-    return Appender!(E[])(array);
+    return Appender!(E[])(array ? array : (new A[1]).ptr);
 }
 
 unittest
@@ -766,6 +788,7 @@ unittest
 
     int[] a = [ 1, 2 ];
     auto app2 = appender(&a);
+    assert(app2.data == [ 1, 2 ]);
     app2.put(3);
     app2.put([ 4, 5, 6 ][]);
     assert(app2.data == [ 1, 2, 3, 4, 5, 6 ]);
