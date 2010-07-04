@@ -53,7 +53,6 @@ import std.array, std.container, std.contracts, std.conv, std.date,
 version(unittest)
 {
     import std.random, std.stdio, std.string;
-
     mixin(dummyRanges);
 }
 
@@ -118,20 +117,20 @@ struct Map(alias fun, Range) if (isInputRange!(Range))
     Range _input;
     ElementType _cache;
 
-    static if(isBidirectionalRange!(Range)) {
+    static if (isBidirectionalRange!(Range)) {
     // Using a second cache would lead to at least 1 extra function evaluation
     // and wasted space when 99% of the time this range will only be iterated
     // over in the forward direction.  Use a bool to determine whether cache
     // is front or back instead.
-        bool cacheIsBack;
+        bool cacheIsBack_;
 
         private void fillCacheBack() {
             if (!_input.empty) _cache = fun(_input.back);
-            cacheIsBack = true;
+            cacheIsBack_ = true;
         }
 
         @property ElementType back() {
-            if(!cacheIsBack) {
+            if (!cacheIsBack_) {
                 fillCacheBack();
             }
             return _cache;
@@ -147,7 +146,7 @@ struct Map(alias fun, Range) if (isInputRange!(Range))
         if (!_input.empty) _cache = fun(_input.front);
 
         static if(isBidirectionalRange!(Range)) {
-            cacheIsBack = false;
+            cacheIsBack_ = false;
         }
     }
 
@@ -156,7 +155,7 @@ struct Map(alias fun, Range) if (isInputRange!(Range))
         fillCache;
     }
 
-	static if(isInfinite!Range) {
+	static if (isInfinite!Range) {
 		// Propagate infinite-ness.
 		enum bool empty = false;
 	} else {
@@ -167,33 +166,33 @@ struct Map(alias fun, Range) if (isInputRange!(Range))
 
     void popFront() {
         _input.popFront;
-        fillCache;
+        fillCache();
     }
 
     @property ElementType front() {
-        static if(isBidirectionalRange!(Range)) {
-            if(cacheIsBack) {
+        static if (isBidirectionalRange!(Range)) {
+            if (cacheIsBack_) {
                 fillCache();
             }
         }
         return _cache;
     }
 
-    static if(isRandomAccessRange!Range) {
+    static if (isRandomAccessRange!Range) {
         ElementType opIndex(size_t index) {
             return fun(_input[index]);
         }
     }
 
     // hasLength is busted, Bug 2873
-    static if(is(typeof(_input.length) : size_t)
+    static if (is(typeof(_input.length) : size_t)
         || is(typeof(_input.length()) : size_t)) {
         @property size_t length() {
             return _input.length;
         }
     }
 
-    static if(hasSlicing!(Range)) {
+    static if (hasSlicing!(Range)) {
         typeof(this) opSlice(size_t lowerBound, size_t upperBound) {
             return typeof(this)(_input[lowerBound..upperBound]);
         }
@@ -202,10 +201,7 @@ struct Map(alias fun, Range) if (isInputRange!(Range))
 	static if (isForwardRange!Range)
         @property Map save()
         {
-            Map result;
-            result._input = _input.save;
-            result._cache = _cache;
-            return result;
+            return this;
         }
 }
 
@@ -219,8 +215,10 @@ unittest
     assert(equal(map!("a * a")(chain(arr1, arr2)), [ 1, 4, 9, 16, 25, 36 ][]));
 
     // Test the caching stuff.
-    auto squares2 = squares;
+    assert(squares.back == 16);
+    auto squares2 = squares.save;
     assert(squares2.back == 16);
+
     assert(squares2.front == 1);
     squares2.popFront;
     assert(squares2.front == 4);
@@ -578,7 +576,7 @@ struct Filter(alias pred, Range) if (isInputRange!(Range))
         return this;
     }
 
-	static if(isInfinite!Range) {
+	static if (isInfinite!Range) {
 		enum bool empty = false;  // Propagate infiniteness.
 	} else {
 		bool empty() { return _input.empty; }
@@ -610,7 +608,7 @@ struct Filter(alias pred, Range) if (isInputRange!(Range))
     }
 
 
-    static if(isForwardRange!Range)
+    static if (isForwardRange!Range)
     {
         @property typeof(this) save()
         {
@@ -645,11 +643,11 @@ unittest
 	    auto f = filter!"a & 1"(d);
 	    assert(equal(f, [1,3,5,7,9]));
 
-	    static if(isForwardRange!DummyType) {
+	    static if (isForwardRange!DummyType) {
 	        static assert(isForwardRange!(typeof(f)));
 	    }
 
-	    static if(isBidirectionalRange!DummyType) {
+	    static if (isBidirectionalRange!DummyType) {
 	        static assert(isBidirectionalRange!(typeof(f)));
 	        assert(equal(retro(f), [9,7,5,3,1]));
 	    }
@@ -876,7 +874,7 @@ public:
         // computeBack();
     }
 
-    static if(isInfinite!Range)
+    static if (isInfinite!Range)
     {
         enum bool empty = false;
     } else
@@ -1011,7 +1009,7 @@ public:
         return _input[0 .. _frontLength];
     }
 
-    static if(isInfinite!Range)
+    static if (isInfinite!Range)
     {
         enum bool empty = false;  // Propagate infiniteness
     }
@@ -1158,7 +1156,7 @@ struct Splitter(alias isTerminator, Range,
         }
     }
 
-    static if(isInfinite!Range)
+    static if (isInfinite!Range)
     {
         enum bool empty = false;  // Propagate infiniteness.
     }
@@ -1281,7 +1279,7 @@ struct Uniq(alias pred, R)
 
     @property ElementType!(R) front() { return _input.front; }
 
-    static if(isBidirectionalRange!R)
+    static if (isBidirectionalRange!R)
     {
         void popBack()
         {
@@ -1296,7 +1294,7 @@ struct Uniq(alias pred, R)
         @property ElementType!(R) back() { return _input.back; }
     }
 
-    static if(isInfinite!R)
+    static if (isInfinite!R)
     {
         enum bool empty = false;  // Propagate infiniteness.
     }
@@ -1306,7 +1304,7 @@ struct Uniq(alias pred, R)
     }
 
 
-    static if(isForwardRange!R) {
+    static if (isForwardRange!R) {
         @property typeof(this) save() {
             return typeof(this)(_input.save);
         }
@@ -1333,7 +1331,7 @@ unittest
 
         static assert(d.rt == RangeType.Input || isForwardRange!(typeof(u)));
 
-        static if(d.rt >= RangeType.Bidirectional) {
+        static if (d.rt >= RangeType.Bidirectional) {
             assert(equal(retro(u), [10,9,8,7,6,5,4,3,2,1]));
         }
     }
@@ -1387,7 +1385,7 @@ struct Group(alias pred, R) if (isInputRange!R)
         }
     }
 
-    static if(isInfinite!R)
+    static if (isInfinite!R)
     {
         enum bool empty = false;  // Propagate infiniteness.
     }
@@ -1405,7 +1403,7 @@ struct Group(alias pred, R) if (isInputRange!R)
         return _current;
     }
 
-    static if(isForwardRange!R) {
+    static if (isForwardRange!R) {
         @property typeof(this) save() {
             typeof(this) ret;
             ret._input = this._input.save;
