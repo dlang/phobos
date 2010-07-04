@@ -53,6 +53,7 @@ Authors:   $(WEB erdani.org, Andrei Alexandrescu),
 module std.typecons;
 import core.stdc.stdlib, std.algorithm, std.array, std.contracts, std.conv,
     std.metastrings, std.traits, std.typetuple, core.memory;
+version(unittest) import std.stdio;
 
 /**
 Encapsulates unique ownership of a resource.  Resource of type T is
@@ -322,13 +323,12 @@ public:
     alias field expand;
     // @@@BUG 2800
     //alias field this;
-    
+
 /**
    Default constructor.
  */
     this(U...)(U values) if (U.length == 0)
     {
-        
     }
 
 /**
@@ -366,9 +366,9 @@ public:
                 "Length mismatch in attempting to compare a "
                 ~typeof(this).stringof
                 ~" with a "~typeof(rhs).stringof);
-        foreach (i, f; field)
+        foreach (i, Unused; Types)
         {
-            if (f != rhs.field[i]) return false;
+            if (field[i] != rhs.field[i]) return false;
         }
         return true;
     }
@@ -382,24 +382,29 @@ public:
                 "Length mismatch in attempting to compare a "
                 ~typeof(this).stringof
                 ~" with a "~typeof(rhs).stringof);
-        foreach (i, f; field)
+        foreach (i, Unused; Types)
         {
-            if (f != rhs.field[i]) return f < rhs.field[i] ? -1 : 1;
+            if (field[i] != rhs.field[i])
+            {
+                return field[i] < rhs.field[i] ? -1 : 1;
+            }
         }
         return 0;
     }
 
+// Should really be opAssign, not assign
 /**
    Assignment from another tuple. Each element of the source must be
    implicitly assignable to the respective element of the target.
  */
-    void opAssign(U)(U rhs) if (is(typeof(U.init.field[0])))
+    void assign(U)(U rhs) if (is(typeof(U.init.field[0])))
     {
-        foreach (i, Unused; noStrings!(T).Result)
+        foreach (i, Unused; Types)
         {
             field[i] = rhs.field[i];
         }
     }
+
 /**
    Takes a slice of the tuple.
 
@@ -480,7 +485,7 @@ unittest
     // assert(!is(typeof(nosh) == typeof(nosh1)));
     assert(nosh.toString == "Tuple!(int,int)(5, 0)", nosh.toString);
     Tuple!(int, short) yessh;
-    nosh = yessh;
+    nosh.assign(yessh);
 
     Tuple!(int, "a", float, "b") x;
     static assert(x.a.offsetof == x.field[0].offsetof);
@@ -2031,17 +2036,17 @@ struct RefCounted(T, RefCountedAutoInitialize autoInit =
         RefCountedAutoInitialize.yes)
 if (!is(T == class))
 {
-    private Tuple!(T, "payload_", size_t, "count_") * refCountedStore_;
+    private Tuple!(T, "_payload", size_t, "_count") * _refCountedStore;
 
     private void refCountedInitialize(A...)(A args)
     {
-	const sz = (*refCountedStore_).sizeof;
+        const sz = (*_refCountedStore).sizeof;
         auto p = malloc(sz)[0 .. sz];
-	if (sz >= size_t.sizeof && p.ptr)
-	    GC.addRange(p.ptr, sz);
+        if (sz >= size_t.sizeof && p.ptr)
+            GC.addRange(p.ptr, sz);
         emplace!T(p[0 .. T.sizeof], args);
-        refCountedStore_ = cast(typeof(refCountedStore_)) p;
-        refCountedStore_.count_ = 1;
+        _refCountedStore = cast(typeof(_refCountedStore)) p;
+        _refCountedStore._count = 1;
     }
 
 /**
@@ -2050,7 +2055,7 @@ allocated and initialized.
  */
     @property bool refCountedIsInitialized() const
     {
-        return refCountedStore_ !is null;
+        return _refCountedStore !is null;
     }
 
 /**
@@ -2059,7 +2064,7 @@ typically inserted before using the payload.
  */
     void refCountedEnsureInitialized()
     {
-        if (refCountedIsInitialized()) return;
+        if (refCountedIsInitialized) return;
         refCountedInitialize();
     }
 
@@ -2080,7 +2085,7 @@ Constructor that tracks the reference count appropriately. If $(D
     this(this)
     {
         if (!refCountedIsInitialized) return;
-        ++refCountedStore_.count_;
+        ++_refCountedStore._count;
     }
 
 /**
@@ -2091,21 +2096,21 @@ to deallocate the corresponding resource.
  */
     ~this()
     {
-        if (!refCountedStore_ || --refCountedStore_.count_) return;
+        if (!_refCountedStore || --_refCountedStore._count) return;
         // Done, deallocate
-        clear(*refCountedStore_);
-	if ((*refCountedStore_).sizeof >= size_t.sizeof && refCountedStore_)
-	    GC.removeRange(refCountedStore_);
-        free(refCountedStore_);
-        refCountedStore_ = null;
+        clear(*_refCountedStore);
+        if (hasIndirections!T && _refCountedStore)
+            GC.removeRange(_refCountedStore);
+        free(_refCountedStore);
+        _refCountedStore = null;
     }
 
 /**
 Assignment operators
  */
-    void opAssign(RefCounted!T rhs)
+    void opAssign(RefCounted rhs)
     {
-        swap(refCountedStore_, rhs.refCountedStore_);
+        swap(_refCountedStore, rhs._refCountedStore);
     }
 
 /// Ditto
@@ -2139,7 +2144,22 @@ object as a $(D T).
         {
             assert(refCountedIsInitialized);
         }
-        return refCountedStore_.payload_;
+        return _refCountedStore._payload;
+    }
+
+//
+    @property ref const(T) refCountedPayload() const {
+        static if (autoInit == RefCountedAutoInitialize.yes)
+        {
+            // @@@
+            //refCountedEnsureInitialized();
+            assert(refCountedIsInitialized);
+        }
+        else
+        {
+            assert(refCountedIsInitialized);
+        }
+        return _refCountedStore._payload;
     }
 }
 
@@ -2150,17 +2170,37 @@ unittest
         auto rc1 = RefCounted!int(5);
         p = &rc1;
         assert(rc1 == 5);
-        assert(rc1.refCountedStore_.count_ == 1);
+        assert(rc1._refCountedStore._count == 1);
         auto rc2 = rc1;
-        assert(rc1.refCountedStore_.count_ == 2);
+        assert(rc1._refCountedStore._count == 2);
         // Reference semantics
         rc2 = 42;
         assert(rc1 == 42);
         rc2 = rc2;
-        assert(rc2.refCountedStore_.count_ == 2);
+        assert(rc2._refCountedStore._count == 2);
         rc1 = rc2;
-        assert(rc1.refCountedStore_.count_ == 2);
+        assert(rc1._refCountedStore._count == 2);
     }
-    assert(p.refCountedStore_ == null);
+    assert(p._refCountedStore == null);
+
+    // RefCounted as a member
+    struct A
+    {
+        RefCounted!int x;
+        this(int y)
+        {
+            x.refCountedInitialize(y);
+        }
+        A copy()
+        {
+            auto another = this;
+            return another;
+        }
+    }
+    auto a = A(4);
+    auto b = a.copy();
+    if (a.x._refCountedStore._count != 2) {
+        stderr.writeln("*** BUG 4356 still unfixed");
+    }
 }
 
