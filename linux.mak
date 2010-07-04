@@ -85,7 +85,7 @@ ifeq ($(OS),posix)
 endif
 
 # Set DFLAGS
-DFLAGS := -I$(DRUNTIME_PATH)/import
+DFLAGS := -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS)
 ifeq ($(BUILD),debug)
 	DFLAGS += -w -g -debug -d
 else
@@ -119,15 +119,15 @@ endif
 MAIN = $(ROOT)/emptymain.d
 
 # Stuff in std/
-STD_MODULES = $(addprefix std/, algorithm all array base64 bigint		\
-        bitmanip boxer compiler complex concurrency container			\
-        contracts conv cpuid cstream ctype date datebase dateparse		\
-        demangle encoding file format functional getopt gregorian		\
-        intrinsic json loader math md5 metastrings mmfile numeric		\
-        outbuffer path perf process random range regex regexp signals	\
-        socket socketstream stdint stdio stdiobase stream string		\
-        syserror system traits typecons typetuple uni uri utf variant	\
-        xml zip zlib)
+STD_MODULES = $(addprefix std/, algorithm array base64 bigint bitmanip	\
+        boxer compiler complex concurrency container contracts conv		\
+        cpuid cstream ctype date datebase dateparse demangle encoding	\
+        exception file format functional getopt gregorian intrinsic		\
+        json loader math md5 metastrings mmfile numeric outbuffer path	\
+        perf process random range regex regexp signals socket			\
+        socketstream stdint stdio stdiobase stream string syserror		\
+        system traits typecons typetuple uni uri utf variant xml zip	\
+        zlib)
 
 # Other D modules that aren't under std/
 EXTRA_MODULES := $(addprefix std/c/, stdarg stdio) $(addprefix etc/c/,	\
@@ -192,11 +192,6 @@ endif
 
 ################################################################################
 
-std/all.d : $(MAKEFILE)
-	@echo module std.all\;\\n \
-		$(addprefix public import ,$(addsuffix \;\\n,$(STD_MODULES))) | \
-		sed -e 's|/|.|' -e '/public import std\.all/d' >$@
-
 $(ROOT)/%$(DOTOBJ) : %.c
 	@[ -d $(dir $@) ] || mkdir -p $(dir $@) || [ -d $(dir $@) ]
 	$(CC) -c $(CFLAGS) $< -o$@
@@ -225,7 +220,7 @@ $(ROOT)/.directory :
 	touch $@
 
 clean :
-	rm -rf $(ROOT_OF_THEM_ALL) $(ZIPFILE) $(DOC_OUTPUT_DIR) std/all.d
+	rm -rf $(ROOT_OF_THEM_ALL) $(ZIPFILE) $(DOC_OUTPUT_DIR)
 
 zip :
 	zip $(ZIPFILE) $(MAKEFILE) $(ALL_D_FILES) $(ALL_C_FILES)
@@ -257,3 +252,4 @@ $(STYLECSS_TGT) : $(STYLECSS_SRC)
 html : $(addprefix $(DOC_OUTPUT_DIR)/, $(subst /,_,$(subst .d,.html,	\
 	$(SRC_DOCUMENTABLES)))) $(STYLECSS_TGT)
 	@$(MAKE) -f $(DOCSRC)/linux.mak -C $(DOCSRC) --no-print-directory
+
