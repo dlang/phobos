@@ -201,7 +201,9 @@ struct Map(alias fun, Range) if (isInputRange!(Range))
 	static if (isForwardRange!Range)
         @property Map save()
         {
-            return this;
+            auto result = this;
+            result._input = result._input.save;
+            return result;
         }
 }
 
