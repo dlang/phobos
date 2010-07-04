@@ -381,15 +381,32 @@ Example:
 void main()
 {
     int[] a = [ 1, 2, 3 ];
-    assert(a.front == 1);
+    assert(a.back == 3);
 }
 ----
 */
-ref typeof(A.init[0]) back(A)(A a) if (is(typeof(A.init[0]))
-        && !isNarrowString!A)
+ref typeof(A.init[0]) back(A)(A a)
+if (is(typeof(A.init[0])) && !isNarrowString!A)
 {
-    assert(a.length, "Attempting to fetch the back of an empty array");
+    // @@@BUG@@@ The assert below crashes the unittest due to a bug in
+    //   the compiler
+    version (bug4426)
+    {
+        assert(a.length, "Attempting to fetch the back of an empty array");
+    }
+    else
+    {
+        assert(a.length);
+    }
     return a[$ - 1];
+}
+
+unittest
+{
+    int[] a = [ 1, 2, 3 ];
+    assert(a.back == 3);
+    a.back += 4;
+    assert(a.back == 7);
 }
 
 dchar back(A)(A a)
