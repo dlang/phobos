@@ -838,7 +838,7 @@ RepresentationOffsets
 
 // hasRawAliasing
 
-private template HasRawPointerImpl(T...)
+private template hasRawPointerImpl(T...)
 {
     static if (T.length == 0)
     {
@@ -852,7 +852,7 @@ private template HasRawPointerImpl(T...)
             enum hasRawAliasing = !is(U == immutable);
         else
             enum hasRawAliasing = false;
-        enum result = hasRawAliasing || HasRawPointerImpl!(T[1 .. $]).result;
+        enum result = hasRawAliasing || hasRawPointerImpl!(T[1 .. $]).result;
     }
 }
 
@@ -906,7 +906,7 @@ static assert(hasRawAliasing!(S4));
 private template hasRawAliasing(T...)
 {
     enum hasRawAliasing
-        = HasRawPointerImpl!(RepresentationTypeTuple!(T)).result;
+        = hasRawPointerImpl!(RepresentationTypeTuple!(T)).result;
 }
 
 unittest
@@ -1107,6 +1107,40 @@ unittest
     static assert(!hasAliasing!(S3));
     struct X { float[3] vals; }
     static assert(!hasAliasing!X);
+}
+
+/**
+Returns $(D true) if and only if $(D T)'s representation includes at
+least one of the following: $(OL $(LI a raw pointer $(D U*);) $(LI an
+array $(D U[]);) $(LI a reference to a class type $(D C).))
+ */
+
+template hasIndirections(T)
+{
+    enum hasIndirections = hasIndirectionsImpl!(RepresentationTypeTuple!T);
+}
+
+template hasIndirectionsImpl(T...)
+{
+    static if (!T.length)
+    {
+        enum hasIndirectionsImpl = false;
+    }
+    else
+    {
+        enum hasIndirectionsImpl = isPointer!(T[0]) || isDynamicArray!(T[0]) ||
+            is (T[0] : const(Object)) || hasIndirectionsImpl!(T[1 .. $]);
+    }
+}
+
+unittest
+{
+    struct S1 { int a; Object b; }
+    static assert(hasIndirections!(S1));
+    struct S2 { string a; }
+    static assert(hasIndirections!(S2));
+    struct S3 { int a; immutable Object b; }
+    static assert(hasIndirections!(S3));
 }
 
 /**
