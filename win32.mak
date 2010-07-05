@@ -106,6 +106,7 @@ SRCS= std\math.d std\stdio.d std\dateparse.d std\date.d std\uni.d std\string.d \
 	std\bitmanip.d std\typecons.d \
 	std\boxer.d \
 	std\complex.d \
+	std\exception.d \
 	std\process.d \
 	std\system.d \
 	std\encoding.d std\variant.d \
@@ -160,6 +161,7 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_date.html \
 	$(DOC)\std_demangle.html \
 	$(DOC)\std_encoding.html \
+	$(DOC)\std_exception.html \
 	$(DOC)\std_file.html \
 	$(DOC)\std_format.html \
 	$(DOC)\std_functional.html \
@@ -236,7 +238,7 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\container.d std\conv.d std\utf.d 
 	std\regex.d std\datebase.d \
 	std\internal\math\biguintcore.d \
 	std\internal\math\biguintnoasm.d std\internal\math\biguintx86.d \
-	std\__fileinit.d std\gregorian.d
+	std\__fileinit.d std\gregorian.d std\exception.d
 
 SRC_STD_C= std\c\process.d std\c\stdlib.d std\c\time.d std\c\stdio.d \
 	std\c\math.d std\c\stdarg.d std\c\stddef.d std\c\fenv.d std\c\string.d \
@@ -378,6 +380,9 @@ dateparse.obj : std\dateparse.d std\date.d
 
 demangle.obj : std\demangle.d
 	$(DMD) -c $(DFLAGS) std\demangle.d
+
+exception.obj : std\exception.d
+	$(DMD) -c $(DFLAGS) std\exception.d
 
 file.obj : std\file.d
 	$(DMD) -c $(DFLAGS) std\file.d
@@ -608,6 +613,9 @@ $(DOC)\std_date.html : $(STDDOC) std\date.d
 $(DOC)\std_demangle.html : $(STDDOC) std\demangle.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_demangle.html $(STDDOC) std\demangle.d
 
+$(DOC)\std_exception.html : $(STDDOC) std\exception.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_exception.html $(STDDOC) std\exception.d
+
 $(DOC)\std_file.html : $(STDDOC) std\file.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_file.html $(STDDOC) std\file.d
 
@@ -821,3 +829,5 @@ install:
 	#$(CP) $(SRC_ETC) $(DIR)\src\phobos\etc
 	$(CP) $(SRC_ETC_C) $(DIR)\src\phobos\etc\c
 	$(CP) $(SRC_ZLIB) $(DIR)\src\phobos\etc\c\zlib
+	$(CP) $(DOCS) $(DIR)\html\d\phobos
+
