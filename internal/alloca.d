@@ -27,6 +27,8 @@ extern size_t _pastdata;
 
 extern (C) void* __alloca(int nbytes)
 {
+  version (D_InlineAsm_X86)
+  {
     asm
     {
         naked                   ;
@@ -124,6 +126,11 @@ extern (C) void* __alloca(int nbytes)
         pop     EBX             ;
         ret                     ;
     }
+  }
+  else version (D_InlineAsm_X86_64)
+	static assert(0);
+  else
+	static assert(0);
 }
 
 

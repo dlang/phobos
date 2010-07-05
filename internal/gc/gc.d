@@ -280,6 +280,14 @@ ulong _d_newarrayT(TypeInfo ti, size_t length)
 		jc	Loverflow	;
 	    }
 	}
+        else version (D_InlineAsm_X86_64)
+	    asm
+	    {
+		mov	RAX,size	;
+		mul	RAX,length	;
+		mov	size,RAX	;
+		jc	Loverflow	;
+	    }
 	else
 	    size *= length;
 	p = _gc.malloc(size + 1);
@@ -321,6 +329,14 @@ ulong _d_newarrayiT(TypeInfo ti, size_t length)
 		jc	Loverflow	;
 	    }
 	}
+        else version (D_InlineAsm_X86_64)
+	    asm
+	    {
+		mov	RAX,size	;
+		mul	RAX,length	;
+		mov	size,RAX	;
+		jc	Loverflow	;
+	    }
 	else
 	    size *= length;
 	auto p = _gc.malloc(size + 1);
@@ -581,6 +597,14 @@ body
 		jc	Loverflow	;
 	    }
 	}
+        else version (D_InlineAsm_X86_64)
+	    asm
+	    {
+		mov	RAX,size	;
+		mul	RAX,length	;
+		mov	size,RAX	;
+		jc	Loverflow	;
+	    }
 	else
 	{
 	    size_t newsize = sizeelem * newlength;
@@ -684,6 +708,14 @@ body
 		jc	Loverflow	;
 	    }
 	}
+        else version (D_InlineAsm_X86_64)
+	    asm
+	    {
+		mov	RAX,size	;
+		mul	RAX,length	;
+		mov	size,RAX	;
+		jc	Loverflow	;
+	    }
 	else
 	{
 	    size_t newsize = sizeelem * newlength;

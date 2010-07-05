@@ -360,7 +360,15 @@ private REG_VALUE_TYPE _RVT_from_Endian(Endian endian)
 
 private uint swap(in uint i)
 {
-    version(X86)
+    version (D_InlineAsm_X86)
+    {
+        asm
+        {    naked;
+             bswap EAX ;
+             ret ;
+        }
+    }
+    else version (D_InlineAsm_X86_64)
     {
         asm
         {    naked;

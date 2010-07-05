@@ -87,7 +87,7 @@ struct GCBits
 	{
 	    return std.intrinsic.btr(data + 1, i);
 	}
-	else version (Asm86)
+	else version (D_InlineAsm_X86)
 	{
 	    asm
 	    {

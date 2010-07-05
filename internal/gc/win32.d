@@ -74,12 +74,22 @@ pthread_t pthread_self()
 
 void *os_query_stackBottom()
 {
-    asm
-    {
-	naked			;
-	mov	EAX,FS:4	;
-	ret			;
-    }
+    version (D_InlineAsm_X86)
+	asm
+	{
+	    naked		;
+	    mov	EAX,FS:4	;
+	    ret			;
+	}
+   else version (D_InlineAsm_X86_64)
+	asm
+	{
+	    naked		;
+	    mov	RAX,FS:8	;
+	    ret			;
+	}
+   else
+	static assert(0);
 }
 
 /**********************************************

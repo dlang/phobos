@@ -19,6 +19,7 @@ extern (C):
 
 void __ULDIV__()
 {
+  version (D_InlineAsm_X86)
     asm
     {
         naked                   ;
@@ -176,6 +177,10 @@ quo1:   // Quotient is 1
         xor     EDX,EDX         ;
         ret                     ;
     }
+  else version (D_InlineAsm_X86_64)
+	static assert(0);
+  else
+	static assert(0);
 }
 
 
@@ -191,6 +196,7 @@ quo1:   // Quotient is 1
 
 void __LDIV__()
 {
+  version (D_InlineAsm_X86)
     asm
     {
         naked                   ;
@@ -239,6 +245,10 @@ L10:    test    ECX,ECX         ;       // [ECX,EBX] negative?
 
 L12:    jmp     __ULDIV__       ;
     }
+  else version (D_InlineAsm_X86_64)
+	static assert(0);
+  else
+	static assert(0);
 }
 
 
@@ -250,6 +260,7 @@ L12:    jmp     __ULDIV__       ;
 
 void __LCMP__()
 {
+  version (D_InlineAsm_X86)
     asm
     {
         naked                   ;
@@ -268,6 +279,10 @@ C3:     inc     EDX             ;
 C2:     pop     EDX             ;
 C1:     ret                     ;
     }
+  else version (D_InlineAsm_X86_64)
+	static assert(0);
+  else
+	static assert(0);
 }
 
 
@@ -281,6 +296,7 @@ real __U64_LDBL()
 {
     version (OSX)
     {
+      version (D_InlineAsm_X86)
         asm
         {   naked                               ;
             push        EDX                     ;
@@ -299,9 +315,14 @@ real __U64_LDBL()
             add         ESP, 8                  ;
             ret                                 ;
         }
+      else version (D_InlineAsm_X86_64)
+	    static assert(0);
+      else
+	    static assert(0);
     }
     else
     {
+      version (D_InlineAsm_X86)
         asm
         {   naked                               ;
             push        EDX                     ;
@@ -316,12 +337,17 @@ real __U64_LDBL()
             add         ESP, 8                  ;
             ret                                 ;
         }
+      else version (D_InlineAsm_X86_64)
+	    static assert(0);
+      else
+	    static assert(0);
     }
 }
 
 // Same as __U64_LDBL, but return result as double in [EDX,EAX]
 ulong __ULLNGDBL()
 {
+  version (D_InlineAsm_X86)
     asm
     {   naked                                   ;
         call __U64_LDBL                         ;
@@ -331,6 +357,10 @@ ulong __ULLNGDBL()
         pop  EDX                                ;
         ret                                     ;
     }
+  else version (D_InlineAsm_X86_64)
+        static assert(0);
+  else
+        static assert(0);
 }
 
 // Convert double to ulong
@@ -342,6 +372,7 @@ ulong __DBLULLNG()
     // BUG: should handle NAN's and overflows
     version (OSX)
     {
+      version (D_InlineAsm_X86)
         asm
         {   naked                               ;
             push        0xFBF                   ; // roundTo0
@@ -376,9 +407,14 @@ ulong __DBLULLNG()
             add         ESP,24                  ;
             ret                                 ;
         }
+      else version (D_InlineAsm_X86_64)
+	    static assert(0);
+      else
+	    static assert(0);
     }
     else
     {
+      version (D_InlineAsm_X86)
         asm
         {   naked                               ;
             push        EDX                     ;
@@ -409,6 +445,10 @@ ulong __DBLULLNG()
             add         ESP,8                   ;
             ret                                 ;
         }
+      else version (D_InlineAsm_X86_64)
+	    static assert(0);
+      else
+	    static assert(0);
     }
 }
 
@@ -419,6 +459,7 @@ uint __DBLULNG()
     // BUG: should handle NAN's and overflows
     version (OSX)
     {
+      version (D_InlineAsm_X86)
         asm
         {   naked                               ;
             push        0xFBF                   ; // roundTo0
@@ -431,9 +472,14 @@ uint __DBLULNG()
             add         ESP,12                  ;
             ret                                 ;
         }
+      else version (D_InlineAsm_X86_64)
+	    static assert(0);
+      else
+	    static assert(0);
     }
     else
     {
+      version (D_InlineAsm_X86)
         asm
         {   naked                               ;
             sub         ESP,16                  ;
@@ -445,6 +491,10 @@ uint __DBLULNG()
             add         ESP,12                  ;
             ret                                 ;
         }
+      else version (D_InlineAsm_X86_64)
+	    static assert(0);
+      else
+	    static assert(0);
     }
 }
 
@@ -454,6 +504,7 @@ ulong __LDBLULLNG()
 {
     version (OSX)
     {
+      version (D_InlineAsm_X86)
         asm
         {   naked                               ;
             push        0xFBF                   ; // roundTo0
@@ -485,9 +536,14 @@ ulong __LDBLULLNG()
             add         ESP,24                  ;
             ret                                 ;
         }
+      else version (D_InlineAsm_X86_64)
+	    static assert(0);
+      else
+	    static assert(0);
     }
     else
     {
+      version (D_InlineAsm_X86)
         asm
         {   naked                               ;
             sub         ESP,16                  ;
@@ -515,6 +571,10 @@ ulong __LDBLULLNG()
             add         ESP,8                   ;
             ret                                 ;
         }
+      else version (D_InlineAsm_X86_64)
+	    static assert(0);
+      else
+	    static assert(0);
     }
 }
 

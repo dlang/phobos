@@ -148,7 +148,7 @@ uint __eh_find_caller(uint regbp, uint *pretaddr)
 
 extern (Windows) void _d_throw(Object *h)
 {
-    uint regebp;
+    size_t regebp;
 
     debug
     {
@@ -156,10 +156,18 @@ extern (Windows) void _d_throw(Object *h)
         printf("\tvptr = %p\n", *cast(void **)h);
     }
 
-    asm
-    {
-        mov regebp,EBP  ;
-    }
+    version (D_InlineAsm_X86)
+	asm
+	{
+	    mov regebp,EBP  ;
+	}
+    else version (D_InlineAsm_X86_64)
+	asm
+	{
+	    mov regebp,RBP  ;
+	}
+    else
+	static assert(0);
 
 //static uint abc;
 //if (++abc == 2) *(char *)0=0;
@@ -261,20 +269,33 @@ extern (Windows) void _d_throw(Object *h)
 
                         // Jump to catch block. Does not return.
                         {
-                            uint catch_esp;
+                            size_t catch_esp;
                             fp_t catch_addr;
 
                             catch_addr = cast(fp_t)(pcb.code);
                             catch_esp = regebp - handler_table.espoffset - fp_t.sizeof;
-                            asm
-                            {
-                                mov     EAX,catch_esp   ;
-                                mov     ECX,catch_addr  ;
-                                mov     [EAX],ECX       ;
-                                mov     EBP,regebp      ;
-                                mov     ESP,EAX         ; // reset stack
-                                ret                     ; // jump to catch block
-                            }
+			    version (D_InlineAsm_X86)
+				asm
+				{
+				    mov     EAX,catch_esp   ;
+				    mov     ECX,catch_addr  ;
+				    mov     [EAX],ECX       ;
+				    mov     EBP,regebp      ;
+				    mov     ESP,EAX         ; // reset stack
+				    ret                     ; // jump to catch block
+				}
+			    else version (D_InlineAsm_X86_64)
+				asm
+				{
+				    mov     RAX,catch_esp   ;
+				    mov     RCX,catch_addr  ;
+				    mov     [RAX],RCX       ;
+				    mov     RBP,regebp      ;
+				    mov     RSP,RAX         ; // reset stack
+				    ret                     ; // jump to catch block
+				}
+			    else
+				static assert(0);
                         }
                     }
                 }
@@ -288,31 +309,63 @@ extern (Windows) void _d_throw(Object *h)
 
                 version (OSX)
                 {
-                    asm
-                    {
-                        sub     ESP,4           ;
-                        push    EBX             ;
-                        mov     EBX,blockaddr   ;
-                        push    EBP             ;
-                        mov     EBP,regebp      ;
-                        call    EBX             ;
-                        pop     EBP             ;
-                        pop     EBX             ;
-                        add     ESP,4           ;
-                    }
+		    version (D_InlineAsm_X86)
+			asm
+			{
+			    sub     ESP,4           ;
+			    push    EBX             ;
+			    mov     EBX,blockaddr   ;
+			    push    EBP             ;
+			    mov     EBP,regebp      ;
+			    call    EBX             ;
+			    pop     EBP             ;
+			    pop     EBX             ;
+			    add     ESP,4           ;
+			}
+		    else version (D_InlineAsm_X86_64)
+			asm
+			{
+			    sub     RSP,8           ;
+			    push    RBX             ;
+			    mov     RBX,blockaddr   ;
+			    push    RBP             ;
+			    mov     RBP,regebp      ;
+			    call    RBX             ;
+			    pop     RBP             ;
+			    pop     RBX             ;
+			    add     RSP,8           ;
+			}
+		    else
+			static assert(0);
                 }
                 else
                 {
-                    asm
-                    {
-                        push    EBX             ;
-                        mov     EBX,blockaddr   ;
-                        push    EBP             ;
-                        mov     EBP,regebp      ;
-                        call    EBX             ;
-                        pop     EBP             ;
-                        pop     EBX             ;
-                    }
+		    version (D_InlineAsm_X86)
+			asm
+			{
+			    push    EBX             ;
+			    mov     EBX,blockaddr   ;
+			    push    EBP             ;
+			    mov     EBP,regebp      ;
+			    call    EBX             ;
+			    pop     EBP             ;
+			    pop     EBX             ;
+			}
+		    else version (D_InlineAsm_X86_64)
+			asm
+			{
+			    sub     RSP,8           ;
+			    push    RBX             ;
+			    mov     RBX,blockaddr   ;
+			    push    RBP             ;
+			    mov     RBP,regebp      ;
+			    call    RBX             ;
+			    pop     RBP             ;
+			    pop     RBX             ;
+			    add     RSP,8           ;
+			}
+		    else
+			static assert(0);
                 }
             }
         }

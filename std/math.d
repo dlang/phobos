@@ -391,7 +391,8 @@ unittest{
 
 real tan(real x)
 {
-    version(Naked_D_InlineAsm_X86) {
+    version(Naked_D_InlineAsm_X86)
+    {
     asm
     {
         fld     x[EBP]                  ; // load theta

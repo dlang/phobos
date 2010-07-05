@@ -1831,11 +1831,20 @@ struct Gcx
 	// get put on the stack so they'll be scanned
 	void *sp;
 	size_t result;
-	asm
-	{
-	    pushad		;
-	    mov	sp[EBP],ESP	;
-	}
+	version (D_InlineAsm_X86)
+	    asm
+	    {
+		pushad		;
+		mov	sp[EBP],ESP	;
+	    }
+	else version (D_InlineAsm_X86_64)
+	    asm
+	    {
+		pushad		;
+		mov	sp[EBP],ESP	;
+	    }
+	else
+	    static assert(0);
 	result = fullcollect(sp);
 	asm
 	{
