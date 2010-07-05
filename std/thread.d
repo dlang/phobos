@@ -621,7 +621,7 @@ void *os_query_stackBottom()
         ret                     ;
     }
     else
-	static assert(0);
+        static assert(0);
 }
 
 }
@@ -1210,20 +1210,20 @@ class Thread
 
     public static void* getESP()
     {
-	version (D_InlineAsm_X86)
-	    asm
-	    {   naked       ;
-		mov EAX,ESP ;
-		ret         ;
-	    }
-	else version (D_InlineAsm_X86_64)
-	    asm
-	    {   naked       ;
-		mov RAX,RSP ;
-		ret         ;
-	    }
-	else
-	    static assert(0);
+        version (D_InlineAsm_X86)
+            asm
+            {   naked       ;
+                mov EAX,ESP ;
+                ret         ;
+            }
+        else version (D_InlineAsm_X86_64)
+            asm
+            {   naked       ;
+                mov RAX,RSP ;
+                ret         ;
+            }
+        else
+            static assert(0);
     }
 }
 

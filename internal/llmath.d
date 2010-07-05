@@ -178,9 +178,9 @@ quo1:   // Quotient is 1
         ret                     ;
     }
   else version (D_InlineAsm_X86_64)
-	static assert(0);
+        static assert(0);
   else
-	static assert(0);
+        static assert(0);
 }
 
 
@@ -246,9 +246,9 @@ L10:    test    ECX,ECX         ;       // [ECX,EBX] negative?
 L12:    jmp     __ULDIV__       ;
     }
   else version (D_InlineAsm_X86_64)
-	static assert(0);
+        static assert(0);
   else
-	static assert(0);
+        static assert(0);
 }
 
 
@@ -280,9 +280,9 @@ C2:     pop     EDX             ;
 C1:     ret                     ;
     }
   else version (D_InlineAsm_X86_64)
-	static assert(0);
+        static assert(0);
   else
-	static assert(0);
+        static assert(0);
 }
 
 
@@ -316,9 +316,9 @@ real __U64_LDBL()
             ret                                 ;
         }
       else version (D_InlineAsm_X86_64)
-	    static assert(0);
+            static assert(0);
       else
-	    static assert(0);
+            static assert(0);
     }
     else
     {
@@ -338,9 +338,9 @@ real __U64_LDBL()
             ret                                 ;
         }
       else version (D_InlineAsm_X86_64)
-	    static assert(0);
+            static assert(0);
       else
-	    static assert(0);
+            static assert(0);
     }
 }
 
@@ -408,9 +408,9 @@ ulong __DBLULLNG()
             ret                                 ;
         }
       else version (D_InlineAsm_X86_64)
-	    static assert(0);
+            static assert(0);
       else
-	    static assert(0);
+            static assert(0);
     }
     else
     {
@@ -446,9 +446,9 @@ ulong __DBLULLNG()
             ret                                 ;
         }
       else version (D_InlineAsm_X86_64)
-	    static assert(0);
+            static assert(0);
       else
-	    static assert(0);
+            static assert(0);
     }
 }
 
@@ -473,9 +473,9 @@ uint __DBLULNG()
             ret                                 ;
         }
       else version (D_InlineAsm_X86_64)
-	    static assert(0);
+            static assert(0);
       else
-	    static assert(0);
+            static assert(0);
     }
     else
     {
@@ -492,9 +492,9 @@ uint __DBLULNG()
             ret                                 ;
         }
       else version (D_InlineAsm_X86_64)
-	    static assert(0);
+            static assert(0);
       else
-	    static assert(0);
+            static assert(0);
     }
 }
 
@@ -537,9 +537,9 @@ ulong __LDBLULLNG()
             ret                                 ;
         }
       else version (D_InlineAsm_X86_64)
-	    static assert(0);
+            static assert(0);
       else
-	    static assert(0);
+            static assert(0);
     }
     else
     {
@@ -572,9 +572,9 @@ ulong __LDBLULLNG()
             ret                                 ;
         }
       else version (D_InlineAsm_X86_64)
-	    static assert(0);
+            static assert(0);
       else
-	    static assert(0);
+            static assert(0);
     }
 }
 

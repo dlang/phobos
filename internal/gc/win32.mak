@@ -13,21 +13,21 @@ CC=dmc
 CFLAGS=-g -mn -6 -r -Igc
 
 .c.obj:
-	$(CC) -c $(CFLAGS) $*
+        $(CC) -c $(CFLAGS) $*
 
 .cpp.obj:
-	$(CC) -c $(CFLAGS) $*
+        $(CC) -c $(CFLAGS) $*
 
 .d.obj:
-	$(DMD) -c $(DFLAGS) $*
+        $(DMD) -c $(DFLAGS) $*
 
 .asm.obj:
-	$(CC) -c $*
+        $(CC) -c $*
 
 targets : testgc.exe dmgc.lib
 
 testgc.exe : testgc.obj dmgc.lib
-	$(DMD) testgc.obj dmgc.lib -g
+        $(DMD) testgc.obj dmgc.lib -g
 
 testgc.obj : testgc.d
 
@@ -36,30 +36,30 @@ OBJS= gc.obj gcold.obj gcx.obj gcbits.obj win32.obj
 SRC= gc.d gcold.d gcx.d gcbits.d win32.d gclinux.d testgc.d win32.mak linux.mak
 
 #dmgc.lib : $(OBJS) win32.mak
-#	del dmgc.lib
-#	lib dmgc /c/noi +gc+gcold+gcx+gcbits+win32;
+#       del dmgc.lib
+#       lib dmgc /c/noi +gc+gcold+gcx+gcbits+win32;
 
 dmgc.lib : gc.d gcold.obj gcx.d gcbits.d win32.d
-	$(DMD) $(DFLAGS) -I..\.. -lib -ofdmgc.lib gc.d gcold.obj gcx.d gcbits.d win32.d
+        $(DMD) $(DFLAGS) -I..\.. -lib -ofdmgc.lib gc.d gcold.obj gcx.d gcbits.d win32.d
 
 gc.obj : gc.d
-	$(DMD) -c $(DFLAGS) $*
+        $(DMD) -c $(DFLAGS) $*
 
 gcold.obj : gcold.d
-	$(DMD) -c $(DFLAGS) $*
+        $(DMD) -c $(DFLAGS) $*
 
 gcx.obj : gcx.d gcbits.d
-	$(DMD) -c $(DFLAGS) gcx gcbits
+        $(DMD) -c $(DFLAGS) gcx gcbits
 
 #gcbits.obj : gcbits.d
 
 win32.obj : win32.d
 
 zip : $(SRC)
-	del dmgc.zip
-	zip32 dmgc $(SRC)
+        del dmgc.zip
+        zip32 dmgc $(SRC)
 
 clean:
-	del $(OBJS)
-	del dmgc.lib
-	del testgc.exe
+        del $(OBJS)
+        del dmgc.lib
+        del testgc.exe

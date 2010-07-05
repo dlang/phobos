@@ -222,20 +222,20 @@ private:
     {
         char* dst = vendorStr.ptr;
         // puts the vendor string into dst
-	version (D_InlineAsm_X86)
-	    asm
-	    {
-		mov EAX, 0                  ;
-		cpuid                       ;
-		mov EAX, dst                ;
-		mov [EAX], EBX              ;
-		mov [EAX+4], EDX            ;
-		mov [EAX+8], ECX            ;
-	    }
-	else version (D_InlineAsm_X86_64)
-	    static assert(0);
-	else
-	    static assert(0);
+        version (D_InlineAsm_X86)
+            asm
+            {
+                mov EAX, 0                  ;
+                cpuid                       ;
+                mov EAX, dst                ;
+                mov [EAX], EBX              ;
+                mov [EAX+4], EDX            ;
+                mov [EAX+8], ECX            ;
+            }
+        else version (D_InlineAsm_X86_64)
+            static assert(0);
+        else
+            static assert(0);
     }
 
     private void getProcessorString()
@@ -243,7 +243,7 @@ private:
         char[48] buffer;
         char* dst = buffer.ptr;
         // puts the processor string into dst
-	version (D_InlineAsm_X86)
+        version (D_InlineAsm_X86)
         asm
         {
             mov EAX, 0x8000_0000        ;
@@ -273,10 +273,10 @@ private:
             pop EDI                     ;
         PSLabel:                        ;
         }
-	else version (D_InlineAsm_X86_64)
-	    static assert(0);
-	else
-	    static assert(0);
+        else version (D_InlineAsm_X86_64)
+            static assert(0);
+        else
+            static assert(0);
 
         if (buffer[0] == char.init) // no support
             return;
@@ -288,7 +288,7 @@ private:
     private void getFeatureFlags()
     {
         uint f,m,e,a,s;
-	version (D_InlineAsm_X86)
+        version (D_InlineAsm_X86)
         asm
         {
             mov EAX, 0                  ;
@@ -314,10 +314,10 @@ private:
         FeatLabel2:
             ;
         }
-	else version (D_InlineAsm_X86_64)
-	    static assert(0);
-	else
-	    static assert(0);
+        else version (D_InlineAsm_X86_64)
+            static assert(0);
+        else
+            static assert(0);
         flags = f;
         misc = m;
         exflags = e;
@@ -329,7 +329,7 @@ private:
     {
         uint n;
         ubyte b = 0;
-	version (D_InlineAsm_X86)
+        version (D_InlineAsm_X86)
         asm
         {
             mov EAX, 0                  ;
@@ -343,10 +343,10 @@ private:
             mov b, 1                    ;
         IntelSingle:                    ;
         }
-	else version (D_InlineAsm_X86_64)
-	    static assert(0);
-	else
-	    static assert(0);
+        else version (D_InlineAsm_X86_64)
+            static assert(0);
+        else
+            static assert(0);
         if (b != 0)
         {
             maxCores = ((n>>>26)&0x3F)+1;
@@ -362,7 +362,7 @@ private:
     {
         ubyte n;
         ubyte b = 0;
-	version (D_InlineAsm_X86)
+        version (D_InlineAsm_X86)
         asm
         {
             mov EAX, 0x8000_0000        ;
@@ -375,10 +375,10 @@ private:
             mov b, 1                    ;
         AMDSingle:                      ;
         }
-	else version (D_InlineAsm_X86_64)
-	    static assert(0);
-	else
-	    static assert(0);
+        else version (D_InlineAsm_X86_64)
+            static assert(0);
+        else
+            static assert(0);
         if (b != 0)
         {
             maxCores = n+1;

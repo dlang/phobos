@@ -16,11 +16,11 @@ version (OSX)
 {
     extern (C)
     {
-	uint get_end();
-	uint get_etext();
-	uint get_edata();
+        uint get_end();
+        uint get_etext();
+        uint get_edata();
 
-	extern void* __osx_stack_end;	// set by D startup code
+        extern void* __osx_stack_end;   // set by D startup code
     }
 }
 
@@ -28,7 +28,7 @@ version (FreeBSD)
 {
     extern (C)
     {
-	extern char etext;
+        extern char etext;
     }
 }
 
@@ -36,7 +36,7 @@ version (Solaris)
 {
     extern (C)
     {
-	extern char etext;
+        extern char etext;
     }
 }
 
@@ -51,7 +51,7 @@ extern (C)
     // from <bits/mman.h>
     enum { PROT_NONE = 0, PROT_READ = 1, PROT_WRITE = 2, PROT_EXEC = 4 }
     enum { MAP_SHARED = 1, MAP_PRIVATE = 2, MAP_TYPE = 0x0F,
-	   MAP_FIXED = 0x10, MAP_FILE = 0, MAP_ANON = 0x20 }
+           MAP_FIXED = 0x10, MAP_FILE = 0, MAP_ANON = 0x20 }
 }
 +/
 
@@ -70,8 +70,8 @@ void *os_mem_map(uint nbytes)
 /***********************************
  * Commit memory.
  * Returns:
- *	0	success
- *	!=0	failure
+ *      0       success
+ *      !=0     failure
  */
 
 int os_mem_commit(void *base, uint offset, uint nbytes)
@@ -83,8 +83,8 @@ int os_mem_commit(void *base, uint offset, uint nbytes)
 /***********************************
  * Decommit memory.
  * Returns:
- *	0	success
- *	!=0	failure
+ *      0       success
+ *      !=0     failure
  */
 
 int os_mem_decommit(void *base, uint offset, uint nbytes)
@@ -95,8 +95,8 @@ int os_mem_decommit(void *base, uint offset, uint nbytes)
 /***********************************
  * Unmap memory allocated with os_mem_map().
  * Returns:
- *	0	success
- *	!=0	failure
+ *      0       success
+ *      !=0     failure
  */
 
 int os_mem_unmap(void *base, uint nbytes)
@@ -112,28 +112,28 @@ int os_mem_unmap(void *base, uint nbytes)
 void *os_query_stackBottom()
 {
     version (none)
-    {	// See discussion: http://autopackage.org/forums/viewtopic.php?t=22
-	static void** libc_stack_end;
+    {   // See discussion: http://autopackage.org/forums/viewtopic.php?t=22
+        static void** libc_stack_end;
 
-	if (libc_stack_end == libc_stack_end.init)
-	{
-	    void* handle = dlopen(null, RTLD_NOW);
-	    libc_stack_end = cast(void **)dlsym(handle, "__libc_stack_end");
-	    dlclose(handle);
-	}
-	return *libc_stack_end;
+        if (libc_stack_end == libc_stack_end.init)
+        {
+            void* handle = dlopen(null, RTLD_NOW);
+            libc_stack_end = cast(void **)dlsym(handle, "__libc_stack_end");
+            dlclose(handle);
+        }
+        return *libc_stack_end;
     }
     else version (OSX)
     {
-	/* A better method would be to set this value as the address
-	 * of a local variable defined in extern(C) main().
-	 */
-	//return cast(void*)0xC0000000;
-	return __osx_stack_end;
+        /* A better method would be to set this value as the address
+         * of a local variable defined in extern(C) main().
+         */
+        //return cast(void*)0xC0000000;
+        return __osx_stack_end;
     }
     else
-    {	// This doesn't resolve on all versions of Linux
-	return __libc_stack_end;
+    {   // This doesn't resolve on all versions of Linux
+        return __libc_stack_end;
     }
 }
 
@@ -145,30 +145,30 @@ void *os_query_stackBottom()
 void os_query_staticdataseg(void **base, uint *nbytes)
 {
     version (OSX)
-    {	/* These are probably wrong.
-	 * See http://www.manpagez.com/man/3/get_etext/
-	 * Should use dylib(3) instead.
-	 *
-	 * EDIT: should be handled by _d_osx_image_init() now. - SK
-	 */
-	//*base = cast(void *)get_etext();
-	//*nbytes = cast(byte *)get_end() - cast(byte *)get_etext();
-	*base = null;
-	*nbytes = 0;
+    {   /* These are probably wrong.
+         * See http://www.manpagez.com/man/3/get_etext/
+         * Should use dylib(3) instead.
+         *
+         * EDIT: should be handled by _d_osx_image_init() now. - SK
+         */
+        //*base = cast(void *)get_etext();
+        //*nbytes = cast(byte *)get_end() - cast(byte *)get_etext();
+        *base = null;
+        *nbytes = 0;
     }
     else version (FreeBSD)
     {
-	*base = cast(void *)&etext;
-	*nbytes = cast(byte *)&_end - cast(byte *)&etext;
+        *base = cast(void *)&etext;
+        *nbytes = cast(byte *)&_end - cast(byte *)&etext;
     }
     else version (Solaris)
     {
-	*base = cast(void *)&etext;
-	*nbytes = cast(byte *)&_end - cast(byte *)&etext;
+        *base = cast(void *)&etext;
+        *nbytes = cast(byte *)&_end - cast(byte *)&etext;
     }
     else
     {
-	*base = cast(void *)&__data_start;
-	*nbytes = cast(byte *)&_end - cast(byte *)&__data_start;
+        *base = cast(void *)&__data_start;
+        *nbytes = cast(byte *)&_end - cast(byte *)&__data_start;
     }
 }

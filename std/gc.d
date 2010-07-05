@@ -27,7 +27,7 @@
  * specific interaction. These functions are for advanced applications that
  * benefit from tuning the operation of the collector.
  * Macros:
- *	WIKI=Phobos/StdGc
+ *      WIKI=Phobos/StdGc
  */
 
 module std.gc;
@@ -42,22 +42,22 @@ import gcstats;
  use addRoot() or addRange() to tell the collector not to free the memory it
  points to.
  */
-void addRoot(void *p);		// add p to list of roots
+void addRoot(void *p);          // add p to list of roots
 
 /**
  * Remove p from list of roots.
  */
-void removeRoot(void *p);	// remove p from list of roots
+void removeRoot(void *p);       // remove p from list of roots
 
 /**
  * Add range to scan for roots.
  */
-void addRange(void *pbot, void *ptop);	// add range to scan for roots
+void addRange(void *pbot, void *ptop);  // add range to scan for roots
 
 /**
  * Remove range.
  */
-void removeRange(void *pbot);		// remove range
+void removeRange(void *pbot);           // remove range
 
 /**
  * Mark a gc allocated block of memory as possibly containing pointers.
@@ -101,8 +101,8 @@ void[] realloc(void* p, size_t nbytes);
  * by at least minbytes beyond its current capacity,
  * up to a maximum of maxbytes.
  * Returns:
- *	0 if could not extend p,
- *	total size of entire memory block if successful.
+ *      0 if could not extend p,
+ *      total size of entire memory block if successful.
  */
 size_t extend(void* p, size_t minbytes, size_t maxbytes);
 

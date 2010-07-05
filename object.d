@@ -37,27 +37,27 @@ struct Interface
 {
     ClassInfo classinfo;
     void *[] vtbl;
-    int offset;			// offset to Interface 'this' from Object 'this'
+    int offset;                 // offset to Interface 'this' from Object 'this'
 }
 
 class ClassInfo : Object
 {
-    byte[] init;		// class static initializer
-    char[] name;		// class name
-    void *[] vtbl;		// virtual function pointer table
+    byte[] init;                // class static initializer
+    char[] name;                // class name
+    void *[] vtbl;              // virtual function pointer table
     Interface[] interfaces;
     ClassInfo base;
     void *destructor;
     void (*classInvariant)(Object);
     uint flags;
-    //	1:			// IUnknown
-    //	2:			// has no possible pointers into GC memory
-    //	4:			// has offTi[] member
-    //	8:			// has constructors
-    //	32:			// has typeinfo
+    //  1:                      // IUnknown
+    //  2:                      // has no possible pointers into GC memory
+    //  4:                      // has offTi[] member
+    //  8:                      // has constructors
+    //  32:                     // has typeinfo
     void *deallocator;
     OffsetTypeInfo[] offTi;
-    void* defaultConstructor;	// default Constructor
+    void* defaultConstructor;   // default Constructor
     TypeInfo typeinfo;
 
     static ClassInfo find(char[] classname);
@@ -80,7 +80,7 @@ class TypeInfo
     TypeInfo next();
     void[] init();
     uint flags();
-    // 1:			// has possible pointers into GC memory
+    // 1:                       // has possible pointers into GC memory
     OffsetTypeInfo[] offTi();
 }
 

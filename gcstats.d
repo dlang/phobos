@@ -5,11 +5,11 @@
 
 struct GCStats
 {
-    uint poolsize;		// total size of pool
-    uint usedsize;		// bytes allocated
-    uint freeblocks;		// number of blocks marked FREE
-    uint freelistsize;		// total of memory on free lists
-    uint pageblocks;		// number of blocks marked PAGE
+    uint poolsize;              // total size of pool
+    uint usedsize;              // bytes allocated
+    uint freeblocks;            // number of blocks marked FREE
+    uint freelistsize;          // total of memory on free lists
+    uint pageblocks;            // number of blocks marked PAGE
 }
 
 

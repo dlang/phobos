@@ -14,9 +14,9 @@ template va_arg(T)
 {
     T va_arg(inout va_list _argptr)
     {
-	T arg = *cast(T*)_argptr;
-	_argptr = _argptr + ((T.sizeof + int.sizeof - 1) & ~(int.sizeof - 1));
-	return arg;
+        T arg = *cast(T*)_argptr;
+        _argptr = _argptr + ((T.sizeof + int.sizeof - 1) & ~(int.sizeof - 1));
+        return arg;
     }
 }
 

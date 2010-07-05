@@ -4,7 +4,7 @@
  * Authors: Walter Bright, Digital Mars, www.digitalmars.com
  * License: Public Domain
  * Macros:
- *	WIKI=Phobos/StdCProcess
+ *      WIKI=Phobos/StdCProcess
  */
 
 module std.c.process;
@@ -47,8 +47,8 @@ version (Windows)
     extern (Windows) alias uint (*stdfp)(void *);
 
     uint _beginthreadex(void* security, uint stack_size,
-	    stdfp start_addr, void* arglist, uint initflag,
-	    uint* thrdaddr);
+            stdfp start_addr, void* arglist, uint initflag,
+            uint* thrdaddr);
 
     void _endthread();
     void _endthreadex(uint);

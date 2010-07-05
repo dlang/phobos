@@ -20,8 +20,8 @@ void *os_mem_map(uint nbytes)
 /***********************************
  * Commit memory.
  * Returns:
- *	0	success
- *	!=0	failure
+ *      0       success
+ *      !=0     failure
  */
 
 int os_mem_commit(void *base, uint offset, uint nbytes)
@@ -36,8 +36,8 @@ int os_mem_commit(void *base, uint offset, uint nbytes)
 /***********************************
  * Decommit memory.
  * Returns:
- *	0	success
- *	!=0	failure
+ *      0       success
+ *      !=0     failure
  */
 
 int os_mem_decommit(void *base, uint offset, uint nbytes)
@@ -49,8 +49,8 @@ int os_mem_decommit(void *base, uint offset, uint nbytes)
  * Unmap memory allocated with os_mem_map().
  * Memory must have already been decommitted.
  * Returns:
- *	0	success
- *	!=0	failure
+ *      0       success
+ *      !=0     failure
  */
 
 int os_mem_unmap(void *base, uint nbytes)
@@ -75,21 +75,21 @@ pthread_t pthread_self()
 void *os_query_stackBottom()
 {
     version (D_InlineAsm_X86)
-	asm
-	{
-	    naked		;
-	    mov	EAX,FS:4	;
-	    ret			;
-	}
+        asm
+        {
+            naked               ;
+            mov EAX,FS:4        ;
+            ret                 ;
+        }
    else version (D_InlineAsm_X86_64)
-	asm
-	{
-	    naked		;
-	    mov	RAX,FS:8	;
-	    ret			;
-	}
+        asm
+        {
+            naked               ;
+            mov RAX,FS:8        ;
+            ret                 ;
+        }
    else
-	static assert(0);
+        static assert(0);
 }
 
 /**********************************************
@@ -98,9 +98,9 @@ void *os_query_stackBottom()
 
 extern (C)
 {
-    extern int _xi_a;	// &_xi_a just happens to be start of data segment
-    extern int _edata;	// &_edata is start of BSS segment
-    extern int _end;	// &_end is past end of BSS
+    extern int _xi_a;   // &_xi_a just happens to be start of data segment
+    extern int _edata;  // &_edata is start of BSS segment
+    extern int _end;    // &_end is past end of BSS
 }
 
 void os_query_staticdataseg(void **base, uint *nbytes)
@@ -125,7 +125,7 @@ void os_query_staticdataseg(void **base, uint *nbytes)
     // up into PAGE_READWRITE and PAGE_WRITECOPY.
     // This means there are multiple regions to query, and
     // can even wind up including the code segment.
-    assert(0);				// fix implementation
+    assert(0);                          // fix implementation
 
     GetSystemInfo(&si);
     p = (char *)((uint)(&dummy) & ~(si.dwPageSize - 1));
@@ -134,20 +134,20 @@ void os_query_staticdataseg(void **base, uint *nbytes)
         !(mbi.Protect & PAGE_GUARD) &&
         mbi.AllocationBase != 0)
     {
-	bottom = (void *)mbi.BaseAddress;
-	size = (uint)mbi.RegionSize;
+        bottom = (void *)mbi.BaseAddress;
+        size = (uint)mbi.RegionSize;
 
-	printf("dwPageSize        = x%x\n", si.dwPageSize);
-	printf("&dummy            = %p\n", &dummy);
-	printf("BaseAddress       = %p\n", mbi.BaseAddress);
-	printf("AllocationBase    = %p\n", mbi.AllocationBase);
-	printf("AllocationProtect = x%x\n", mbi.AllocationProtect);
-	printf("RegionSize        = x%x\n", mbi.RegionSize);
-	printf("State             = x%x\n", mbi.State);
-	printf("Protect           = x%x\n", mbi.Protect);
-	printf("Type              = x%x\n\n", mbi.Type);
+        printf("dwPageSize        = x%x\n", si.dwPageSize);
+        printf("&dummy            = %p\n", &dummy);
+        printf("BaseAddress       = %p\n", mbi.BaseAddress);
+        printf("AllocationBase    = %p\n", mbi.AllocationBase);
+        printf("AllocationProtect = x%x\n", mbi.AllocationProtect);
+        printf("RegionSize        = x%x\n", mbi.RegionSize);
+        printf("State             = x%x\n", mbi.State);
+        printf("Protect           = x%x\n", mbi.Protect);
+        printf("Type              = x%x\n\n", mbi.Type);
 
-	p -= si.dwPageSize;
+        p -= si.dwPageSize;
     }
 
     *base = bottom;

@@ -19,123 +19,123 @@ struct GCBits
     const int BITS_MASK = 31;
 
     uint *data = null;
-    uint nwords = 0;	// allocated words in data[] excluding sentinals
-    uint nbits = 0;	// number of bits in data[] excluding sentinals
+    uint nwords = 0;    // allocated words in data[] excluding sentinals
+    uint nbits = 0;     // number of bits in data[] excluding sentinals
 
     void Dtor()
     {
-	if (data)
-	{
-	    free(data);
-	    data = null;
-	}
+        if (data)
+        {
+            free(data);
+            data = null;
+        }
     }
 
     invariant
     {
-	if (data)
-	{
-	    assert(nwords * data[0].sizeof * 8 >= nbits);
-	}
+        if (data)
+        {
+            assert(nwords * data[0].sizeof * 8 >= nbits);
+        }
     }
 
     void alloc(uint nbits)
     {
-	this.nbits = nbits;
-	nwords = (nbits + (BITS_PER_WORD - 1)) >> BITS_SHIFT;
-	data = cast(uint *)calloc(nwords + 2, uint.sizeof);
-	if (!data)
-	    _d_OutOfMemory();
+        this.nbits = nbits;
+        nwords = (nbits + (BITS_PER_WORD - 1)) >> BITS_SHIFT;
+        data = cast(uint *)calloc(nwords + 2, uint.sizeof);
+        if (!data)
+            _d_OutOfMemory();
     }
 
     uint test(uint i)
     in
     {
-	assert(i < nbits);
+        assert(i < nbits);
     }
     body
     {
-	//return (cast(bit *)(data + 1))[i];
-	return data[1 + (i >> BITS_SHIFT)] & (1 << (i & BITS_MASK));
+        //return (cast(bit *)(data + 1))[i];
+        return data[1 + (i >> BITS_SHIFT)] & (1 << (i & BITS_MASK));
     }
 
     void set(uint i)
     in
     {
-	assert(i < nbits);
+        assert(i < nbits);
     }
     body
     {
-	//(cast(bit *)(data + 1))[i] = 1;
-	data[1 + (i >> BITS_SHIFT)] |= (1 << (i & BITS_MASK));
+        //(cast(bit *)(data + 1))[i] = 1;
+        data[1 + (i >> BITS_SHIFT)] |= (1 << (i & BITS_MASK));
     }
 
     void clear(uint i)
     in
     {
-	assert(i < nbits);
+        assert(i < nbits);
     }
     body
     {
-	//(cast(bit *)(data + 1))[i] = 0;
-	data[1 + (i >> BITS_SHIFT)] &= ~(1 << (i & BITS_MASK));
+        //(cast(bit *)(data + 1))[i] = 0;
+        data[1 + (i >> BITS_SHIFT)] &= ~(1 << (i & BITS_MASK));
     }
 
     uint testClear(uint i)
     {
-	version (bitops)
-	{
-	    return std.intrinsic.btr(data + 1, i);
-	}
-	else version (D_InlineAsm_X86)
-	{
-	    asm
-	    {
-		naked			;
-		mov	EAX,data[EAX]	;
-		mov	ECX,i-4[ESP]	;
-		btr	4[EAX],ECX	;
-		sbb	EAX,EAX		;
-		ret	4		;
-	    }
-	}
-	else
-	{   uint result;
+        version (bitops)
+        {
+            return std.intrinsic.btr(data + 1, i);
+        }
+        else version (D_InlineAsm_X86)
+        {
+            asm
+            {
+                naked                   ;
+                mov     EAX,data[EAX]   ;
+                mov     ECX,i-4[ESP]    ;
+                btr     4[EAX],ECX      ;
+                sbb     EAX,EAX         ;
+                ret     4               ;
+            }
+        }
+        else
+        {   uint result;
 
-	    //result = (cast(bit *)(data + 1))[i];
-	    //(cast(bit *)(data + 1))[i] = 0;
+            //result = (cast(bit *)(data + 1))[i];
+            //(cast(bit *)(data + 1))[i] = 0;
 
-	    uint *p = &data[1 + (i >> BITS_SHIFT)];
-	    uint mask = (1 << (i & BITS_MASK));
-	    result = *p & mask;
-	    *p &= ~mask;
-	    return result;
-	}
+            uint *p = &data[1 + (i >> BITS_SHIFT)];
+            uint mask = (1 << (i & BITS_MASK));
+            result = *p & mask;
+            *p &= ~mask;
+            return result;
+        }
     }
 
     void zero()
     {
-	memset(data + 1, 0, nwords * uint.sizeof);
+        memset(data + 1, 0, nwords * uint.sizeof);
     }
 
     void copy(GCBits *f)
     in
     {
-	assert(nwords == f.nwords);
+        assert(nwords == f.nwords);
     }
     body
     {
-	memcpy(data + 1, f.data + 1, nwords * uint.sizeof);
+        memcpy(data + 1, f.data + 1, nwords * uint.sizeof);
     }
 
     uint *base()
     in
     {
-	assert(data);
+        assert(data);
     }
     body
     {
-	return data + 1;
+        return data + 1;
     }
 }
 

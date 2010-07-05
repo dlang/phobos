@@ -57,23 +57,23 @@ private uint[256] crc32_table =
 
 uint init_crc32()
 {
-	return cast(uint)-1;
+        return cast(uint)-1;
 }
 
 uint update_crc32(ubyte val, uint crc)
 {
-	return crc32_table[cast(ubyte) crc ^ val] ^ (crc >> 8);
+        return crc32_table[cast(ubyte) crc ^ val] ^ (crc >> 8);
 }
 
 uint update_crc32(char val, uint crc)
 {
-	return update_crc32(cast(ubyte) val, crc);
+        return update_crc32(cast(ubyte) val, crc);
 }
 
 uint strcrc32(char[] s)
 {
-	uint crc = init_crc32();
-	for (int i = 0; i < s.length; i++)
-		crc = update_crc32(s[i], crc);
-	return crc;
+        uint crc = init_crc32();
+        for (int i = 0; i < s.length; i++)
+                crc = update_crc32(s[i], crc);
+        return crc;
 }

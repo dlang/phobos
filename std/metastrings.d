@@ -5,15 +5,15 @@
  * Templates with which to do compile time manipulation of strings.
  *
  * Macros:
- *	WIKI = Phobos/StdMetastrings
+ *      WIKI = Phobos/StdMetastrings
  * Copyright:
- *	Public Domain
+ *      Public Domain
  */
 
 /*
  * Authors:
- *	Walter Bright, Digital Mars, www.digitalmars.com
- *	Don Clugston
+ *      Walter Bright, Digital Mars, www.digitalmars.com
+ *      Don Clugston
  */
 
 module std.metastrings;
@@ -22,11 +22,11 @@ module std.metastrings;
  * Formats constants into a string at compile time.
  * Analogous to std.string.format().
  * Parameters:
- *	A =	tuple of constants, which can be strings,
- *		characters, or integral values.
+ *      A =     tuple of constants, which can be strings,
+ *              characters, or integral values.
  * Formats:
- *	The formats supported are %s for strings, and %%
- *	for the % character.
+ *      The formats supported are %s for strings, and %%
+ *      for the % character.
  * Example:
  * ---
 import std.metastrings;
@@ -43,28 +43,28 @@ void main()
 template Format(A...)
 {
     static if (A.length == 0)
-	const char[] Format = "";
+        const char[] Format = "";
     else static if (is(typeof(A[0]) : char[]))
-	const char[] Format = FormatString!(A[0], A[1..$]);
-	//const char[] Format = FormatString!(A[0]);
+        const char[] Format = FormatString!(A[0], A[1..$]);
+        //const char[] Format = FormatString!(A[0]);
     else
-	const char[] Format = ToString!(A[0]) ~ Format!(A[1..$]);
+        const char[] Format = ToString!(A[0]) ~ Format!(A[1..$]);
 }
 
 template FormatString(string F, A...)
 {
     static if (F.length == 0)
-	const char[] FormatString = Format!(A);
+        const char[] FormatString = Format!(A);
     else static if (F.length == 1)
-	const char[] FormatString = F[0] ~ Format!(A);
+        const char[] FormatString = F[0] ~ Format!(A);
     else static if (F[0..2] == "%s")
-	const char[] FormatString = ToString!(A[0]) ~ FormatString!(F[2..$],A[1..$]);
+        const char[] FormatString = ToString!(A[0]) ~ FormatString!(F[2..$],A[1..$]);
     else static if (F[0..2] == "%%")
-	const char[] FormatString = "%" ~ FormatString!(F[2..$],A);
+        const char[] FormatString = "%" ~ FormatString!(F[2..$],A);
     else static if (F[0] == '%')
-	static assert(0, "unrecognized format %" ~ F[1]);
+        static assert(0, "unrecognized format %" ~ F[1]);
     else
-	const char[] FormatString = F[0] ~ FormatString!(F[1..$],A);
+        const char[] FormatString = F[0] ~ FormatString!(F[1..$],A);
 }
 
 /**
@@ -74,18 +74,18 @@ template FormatString(string F, A...)
 template ToString(ulong U)
 {
     static if (U < 10)
-	const char[] ToString = "" ~ cast(char)(U + '0');
+        const char[] ToString = "" ~ cast(char)(U + '0');
     else
-	const char[] ToString = ToString!(U / 10) ~ ToString!(U % 10);
+        const char[] ToString = ToString!(U / 10) ~ ToString!(U % 10);
 }
 
 /// ditto
 template ToString(long I)
 {
     static if (I < 0)
-	const char[] ToString = "-" ~ ToString!(cast(ulong)(-I));
+        const char[] ToString = "-" ~ ToString!(cast(ulong)(-I));
     else
-	const char[] ToString = ToString!(cast(ulong)I);
+        const char[] ToString = ToString!(cast(ulong)I);
 }
 
 static assert(ToString!(0x100000000) == "4294967296");
@@ -154,26 +154,26 @@ unittest
 /********
  * Parse unsigned integer literal from the start of string s.
  * returns:
- *	.value = the integer literal as a string,
- *	.rest = the string following the integer literal
+ *      .value = the integer literal as a string,
+ *      .rest = the string following the integer literal
  * Otherwise:
- *	.value = null,
- *	.rest = s
+ *      .value = null,
+ *      .rest = s
  */
 
 template ParseUinteger(string s)
 {
     static if (s.length == 0)
-    {	const char[] value = "";
-	const char[] rest = "";
+    {   const char[] value = "";
+        const char[] rest = "";
     }
     else static if (s[0] >= '0' && s[0] <= '9')
-    {	const char[] value = s[0] ~ ParseUinteger!(s[1..$]).value;
-	const char[] rest = ParseUinteger!(s[1..$]).rest;
+    {   const char[] value = s[0] ~ ParseUinteger!(s[1..$]).value;
+        const char[] rest = ParseUinteger!(s[1..$]).rest;
     }
     else
-    {	const char[] value = "";
-	const char[] rest = s;
+    {   const char[] value = "";
+        const char[] rest = s;
     }
 }
 
@@ -181,31 +181,31 @@ template ParseUinteger(string s)
  * Parse integer literal optionally preceded by '-'
  * from the start of string s.
  * returns:
- *	.value = the integer literal as a string,
- *	.rest = the string following the integer literal
+ *      .value = the integer literal as a string,
+ *      .rest = the string following the integer literal
  * Otherwise:
- *	.value = null,
- *	.rest = s
+ *      .value = null,
+ *      .rest = s
  */
 
 template ParseInteger(string s)
 {
     static if (s.length == 0)
-    {	const char[] value = "";
-	const char[] rest = "";
+    {   const char[] value = "";
+        const char[] rest = "";
     }
     else static if (s[0] >= '0' && s[0] <= '9')
-    {	const char[] value = s[0] ~ ParseUinteger!(s[1..$]).value;
-	const char[] rest = ParseUinteger!(s[1..$]).rest;
+    {   const char[] value = s[0] ~ ParseUinteger!(s[1..$]).value;
+        const char[] rest = ParseUinteger!(s[1..$]).rest;
     }
     else static if (s.length >= 2 &&
-		s[0] == '-' && s[1] >= '0' && s[1] <= '9')
-    {	const char[] value = s[0..2] ~ ParseUinteger!(s[2..$]).value;
-	const char[] rest = ParseUinteger!(s[2..$]).rest;
+                s[0] == '-' && s[1] >= '0' && s[1] <= '9')
+    {   const char[] value = s[0..2] ~ ParseUinteger!(s[2..$]).value;
+        const char[] rest = ParseUinteger!(s[2..$]).rest;
     }
     else
-    {	const char[] value = "";
-	const char[] rest = s;
+    {   const char[] value = "";
+        const char[] rest = s;
     }
 }
 

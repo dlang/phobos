@@ -158,26 +158,26 @@ alias gz_header* gz_headerp;
 
 enum
 {
-	Z_NO_FLUSH      = 0,
-	Z_PARTIAL_FLUSH = 1, /* will be removed, use Z_SYNC_FLUSH instead */
-	Z_SYNC_FLUSH    = 2,
-	Z_FULL_FLUSH    = 3,
-	Z_FINISH        = 4,
-	Z_BLOCK         = 5
+        Z_NO_FLUSH      = 0,
+        Z_PARTIAL_FLUSH = 1, /* will be removed, use Z_SYNC_FLUSH instead */
+        Z_SYNC_FLUSH    = 2,
+        Z_FULL_FLUSH    = 3,
+        Z_FINISH        = 4,
+        Z_BLOCK         = 5
 }
 /* Allowed flush values; see deflate() and inflate() below for details */
 
 enum
 {
-	Z_OK            = 0,
-	Z_STREAM_END    = 1,
-	Z_NEED_DICT     = 2,
-	Z_ERRNO         = -1,
-	Z_STREAM_ERROR  = -2,
-	Z_DATA_ERROR    = -3,
-	Z_MEM_ERROR     = -4,
-	Z_BUF_ERROR     = -5,
-	Z_VERSION_ERROR = -6,
+        Z_OK            = 0,
+        Z_STREAM_END    = 1,
+        Z_NEED_DICT     = 2,
+        Z_ERRNO         = -1,
+        Z_STREAM_ERROR  = -2,
+        Z_DATA_ERROR    = -3,
+        Z_MEM_ERROR     = -4,
+        Z_BUF_ERROR     = -5,
+        Z_VERSION_ERROR = -6,
 }
 /* Return codes for the compression/decompression functions. Negative
  * values are errors, positive values are used for special but normal events.
@@ -185,36 +185,36 @@ enum
 
 enum
 {
-	Z_NO_COMPRESSION         = 0,
-	Z_BEST_SPEED             = 1,
-	Z_BEST_COMPRESSION       = 9,
-	Z_DEFAULT_COMPRESSION    = -1,
+        Z_NO_COMPRESSION         = 0,
+        Z_BEST_SPEED             = 1,
+        Z_BEST_COMPRESSION       = 9,
+        Z_DEFAULT_COMPRESSION    = -1,
 }
 /* compression levels */
 
 enum
 {
-	Z_FILTERED            = 1,
-	Z_HUFFMAN_ONLY        = 2,
-	Z_RLE                 = 3,
-	Z_FIXED               = 4,
-	Z_DEFAULT_STRATEGY    = 0,
+        Z_FILTERED            = 1,
+        Z_HUFFMAN_ONLY        = 2,
+        Z_RLE                 = 3,
+        Z_FIXED               = 4,
+        Z_DEFAULT_STRATEGY    = 0,
 }
 /* compression strategy; see deflateInit2() below for details */
 
 enum
 {
-	Z_BINARY   = 0,
-	Z_TEXT     = 1,
-	Z_UNKNOWN  = 2,
+        Z_BINARY   = 0,
+        Z_TEXT     = 1,
+        Z_UNKNOWN  = 2,
 
-	Z_ASCII    = Z_TEXT
+        Z_ASCII    = Z_TEXT
 }
 /* Possible values of the data_type field (though see inflate()) */
 
 enum
 {
-	Z_DEFLATED   = 8,
+        Z_DEFLATED   = 8,
 }
 /* The deflate compression method (the only one supported in this version) */
 
@@ -233,7 +233,7 @@ int deflateInit(z_streamp strm, int level)
 {
     return deflateInit_(strm, level, ZLIB_VERSION.ptr, z_stream.sizeof);
 }
-/* 
+/*
      Initializes the internal stream state for compression. The fields
    zalloc, zfree and opaque must be initialized before by the caller.
    If zalloc and zfree are set to Z_NULL, deflateInit updates them to
@@ -358,7 +358,7 @@ int inflateInit(z_streamp strm)
 {
     return inflateInit_(strm, ZLIB_VERSION.ptr, z_stream.sizeof);
 }
-/* 
+/*
      Initializes the internal stream state for decompression. The fields
    next_in, avail_in, zalloc, zfree and opaque must be initialized before by
    the caller. If next_in is not Z_NULL and avail_in is large enough (the exact
@@ -554,7 +554,7 @@ int deflateInit2(z_streamp strm,
    method). msg is set to null if there is no error message.  deflateInit2 does
    not perform any compression: this will be done by deflate().
 */
-                            
+
 int deflateSetDictionary(z_streamp strm, ubyte* dictionary, uint  dictLength);
 /*
      Initializes the compression dictionary from the given byte sequence
@@ -693,7 +693,7 @@ int deflateParams(z_streamp strm, int level, int strategy);
 */
 
 int deflateTune(z_streamp strm, int good_length, int max_lazy, int nice_length,
-	int max_chain);
+        int max_chain);
 /*
      Fine tune deflate's internal compression parameters.  This should only be
    used by someone who understands the algorithm used by zlib's deflate for
@@ -755,7 +755,7 @@ int inflateInit2(z_streamp strm, int windowBits)
 {
     return inflateInit2_(strm, windowBits, ZLIB_VERSION.ptr, z_stream.sizeof);
 }
-/*   
+/*
      This is another version of inflateInit with an extra parameter. The
    fields next_in, avail_in, zalloc, zfree and opaque must be initialized
    before by the caller.
@@ -816,7 +816,7 @@ int inflateSetDictionary(z_streamp strm, ubyte* dictionary, uint  dictLength);
 */
 
 int inflateSync(z_streamp strm);
-/* 
+/*
     Skips invalid compressed data until a full flush point (see above the
   description of deflate with Z_FULL_FLUSH) can be found, or until all
   available input is skipped. No output is provided.
@@ -858,7 +858,7 @@ int inflateReset(z_streamp strm);
 
 int inflateBackInit(z_stream* strm, int windowBits, ubyte* window)
 {
-    return inflateBackInit_(strm, windowBits, window, ZLIB_VERSION.ptr, z_stream.sizeof);   
+    return inflateBackInit_(strm, windowBits, window, ZLIB_VERSION.ptr, z_stream.sizeof);
 }
 /*
      Initialize the internal stream state for decompression using inflateBack()
@@ -1076,7 +1076,7 @@ int uncompress(ubyte* dest,
 
 
 typedef void* gzFile;
-alias int z_off_t;		// file offset
+alias int z_off_t;              // file offset
 
 gzFile gzopen(char* path, char* mode);
 /*
@@ -1193,7 +1193,7 @@ int gzflush(gzFile file, int flush);
 */
 
 z_off_t gzseek(gzFile file, z_off_t offset, int whence);
-/* 
+/*
       Sets the starting position for the next gzread or gzwrite on the
    given compressed file. The offset represents a number of bytes in the
    uncompressed data stream. The whence parameter is defined as in lseek(2);
@@ -1318,7 +1318,7 @@ uint crc32_combine (uint crc1, uint crc2, z_off_t len2);
    check value of seq1 and seq2 concatenated, requiring only crc1, crc2, and
    len2.
 */
- 
+
 
                         /* various hacks, don't look :) */
 
@@ -1329,11 +1329,11 @@ int deflateInit_(z_streamp strm,
                  int level,
                  char* versionx,
                  int stream_size);
-                 
+
 int inflateInit_(z_streamp strm,
                  char* versionx,
                  int stream_size);
-                 
+
 int deflateInit2_(z_streamp strm,
                   int level,
                   int method,
@@ -1342,18 +1342,18 @@ int deflateInit2_(z_streamp strm,
                   int strategy,
                   char* versionx,
                   int stream_size);
-                  
+
 int inflateBackInit_(z_stream* strm,
                      int windowBits,
                      ubyte* window,
                      char* z_version,
                      int stream_size);
-                     
+
 int inflateInit2_(z_streamp strm,
                   int windowBits,
                   char* versionx,
                   int stream_size);
-                  
+
 char* zError(int err);
 int inflateSyncPoint(z_streamp z);
 uint* get_crc_table();

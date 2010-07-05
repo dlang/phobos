@@ -128,9 +128,9 @@ extern (C) void* __alloca(int nbytes)
     }
   }
   else version (D_InlineAsm_X86_64)
-	static assert(0);
+        static assert(0);
   else
-	static assert(0);
+        static assert(0);
 }
 
 

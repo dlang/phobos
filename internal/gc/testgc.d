@@ -22,16 +22,16 @@ alias GC gc_t;
 gc_t newGC()
 {
     version (all)
-    {	void* p;
-	ClassInfo ci = GC.classinfo;
+    {   void* p;
+        ClassInfo ci = GC.classinfo;
 
-	p = std.c.stdlib.malloc(ci.init.length);
-	(cast(byte*)p)[0 .. ci.init.length] = ci.init[];
-	return cast(GC)p;
+        p = std.c.stdlib.malloc(ci.init.length);
+        (cast(byte*)p)[0 .. ci.init.length] = ci.init[];
+        return cast(GC)p;
     }
     else
     {
-	return cast(gc_t)std.c.stdlib.calloc(1, GC.sizeof);
+        return cast(gc_t)std.c.stdlib.calloc(1, GC.sizeof);
     }
 }
 
@@ -47,7 +47,7 @@ void printStats(gc_t gc)
 
     //gc.getStats(stats);
     printf("poolsize = x%x, usedsize = x%x, freelistsize = x%x, freeblocks = %d, pageblocks = %d\n",
-	stats.poolsize, stats.usedsize, stats.freelistsize, stats.freeblocks, stats.pageblocks);
+        stats.poolsize, stats.usedsize, stats.freelistsize, stats.freeblocks, stats.pageblocks);
 }
 
 uint PERMUTE(uint key)
@@ -62,8 +62,8 @@ void fill(void *p, uint key, uint size)
 
     for (i = 0; i < size; i++)
     {
-	key = PERMUTE(key);
-	q[i] = cast(byte)key;
+        key = PERMUTE(key);
+        q[i] = cast(byte)key;
     }
 }
 
@@ -74,8 +74,8 @@ void verify(void *p, uint key, uint size)
 
     for (i = 0; i < size; i++)
     {
-	key = PERMUTE(key);
-	assert(q[i] == cast(byte)key);
+        key = PERMUTE(key);
+        assert(q[i] == cast(byte)key);
     }
 }
 
@@ -142,22 +142,22 @@ void smoke2()
 
     for (i = 0; i < SMOKE2_SIZE; i++)
     {
-	p = cast(int *)gc.calloc(i + 1, 500);
-	p[0] = i * 3;
-	foo[i] = p;
-	gc.setFinalizer(cast(void *)p, &finalizer);
+        p = cast(int *)gc.calloc(i + 1, 500);
+        p[0] = i * 3;
+        foo[i] = p;
+        gc.setFinalizer(cast(void *)p, &finalizer);
     }
 
     for (i = 0; i < SMOKE2_SIZE; i += 2)
     {
-	p = foo[i];
-	if (p[0] != i * 3)
-	{
-	    printf("p = %x, i = %d, p[0] = %d\n", p, i, p[0]);
-	    //c.stdio.fflush(stdout);
-	}
-	assert(p[0] == i * 3);
-	gc.free(p);
+        p = foo[i];
+        if (p[0] != i * 3)
+        {
+            printf("p = %x, i = %d, p[0] = %d\n", p, i, p[0]);
+            //c.stdio.fflush(stdout);
+        }
+        assert(p[0] == i * 3);
+        gc.free(p);
     }
 
     p = null;
@@ -185,13 +185,13 @@ void smoke3()
 //    for (i = 0; i < 1000000; i++)
     for (i = 0; i < 1000; i++)
     {
-	uint size = std.random.rand() % 2048;
-	p = cast(int *)gc.malloc(size);
-	memset(p, i, size);
+        uint size = std.random.rand() % 2048;
+        p = cast(int *)gc.malloc(size);
+        memset(p, i, size);
 
-	size = std.random.rand() % 2048;
-	p = cast(int *)gc.realloc(p, size);
-	memset(p, i + 1, size);
+        size = std.random.rand() % 2048;
+        p = cast(int *)gc.realloc(p, size);
+        memset(p, i + 1, size);
     }
 
     p = null;
@@ -217,14 +217,14 @@ void smoke4()
 
     for (i = 0; i < 80000; i++)
     {
-	uint size = i;
-	p = cast(int *)gc.malloc(size);
-	memset(p, i, size);
+        uint size = i;
+        p = cast(int *)gc.malloc(size);
+        memset(p, i, size);
 
-	size = std.random.rand() % 2048;
-	gc.check(p);
-	p = cast(int *)gc.realloc(p, size);
-	memset(p, i + 1, size);
+        size = std.random.rand() % 2048;
+        gc.check(p);
+        p = cast(int *)gc.realloc(p, size);
+        memset(p, i + 1, size);
     }
 
     p = null;
@@ -252,31 +252,31 @@ void smoke5(gc_t gc)
 
     for (j = 0; j < 20; j++)
     {
-	for (i = 0; i < 2000 /*4000*/; i++)
-	{
-	    uint size = (std.random.rand() % 2048) + 1;
-	    uint index = std.random.rand() % SMOKE5_SIZE;
+        for (i = 0; i < 2000 /*4000*/; i++)
+        {
+            uint size = (std.random.rand() % 2048) + 1;
+            uint index = std.random.rand() % SMOKE5_SIZE;
 
-	    //printf("index = %d, size = %d\n", index, size);
-	    p = array[index] - offset[index];
-	    p = cast(byte *)gc.realloc(p, size);
-	    if (array[index])
-	    {	uint s;
+            //printf("index = %d, size = %d\n", index, size);
+            p = array[index] - offset[index];
+            p = cast(byte *)gc.realloc(p, size);
+            if (array[index])
+            {   uint s;
 
-		//printf("\tverify = %d\n", p[0]);
-		s = offset[index];
-		if (size < s)
-		    s = size;
-		verify(p, index, s);
-	    }
-	    array[index] = p;
-	    fill(p, index, size);
-	    offset[index] = std.random.rand() % size;
-	    array[index] += offset[index];
+                //printf("\tverify = %d\n", p[0]);
+                s = offset[index];
+                if (size < s)
+                    s = size;
+                verify(p, index, s);
+            }
+            array[index] = p;
+            fill(p, index, size);
+            offset[index] = std.random.rand() % size;
+            array[index] += offset[index];
 
-	    //printf("p[0] = %d\n", p[0]);
-	}
-	gc.fullCollect();
+            //printf("p[0] = %d\n", p[0]);
+        }
+        gc.fullCollect();
     }
 
     p = null;
@@ -293,7 +293,7 @@ void test1()
     char[] a=new char[0];
     uint c = 200000;
     while (c--)
-	a ~= 'x';
+        a ~= 'x';
     //printf("a = '%.*s'\n", a);
     printf("test1() done\n");
 }
@@ -305,7 +305,7 @@ void test2()
     char[] str;
 
     for (int i = 0; i < 10_000; i++)
-	str = str ~ "ABCDEFGHIJKLMNOPQRST";
+        str = str ~ "ABCDEFGHIJKLMNOPQRST";
 }
 
 /* ---------------------------- */

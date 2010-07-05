@@ -809,9 +809,9 @@ void _trace_pro_n()
         ret                             ;
     }
       else version (D_InlineAsm_X86_64)
-	    static assert(0);
+            static assert(0);
       else
-	    static assert(0);
+            static assert(0);
   }
   else
   {
@@ -841,9 +841,9 @@ void _trace_pro_n()
         ret                             ;
     }
       else version (D_InlineAsm_X86_64)
-	    static assert(0);
+            static assert(0);
       else
-	    static assert(0);
+            static assert(0);
   }
 }
 
@@ -871,9 +871,9 @@ void _trace_epi_n()
     }
    }
       else version (D_InlineAsm_X86_64)
-	    static assert(0);
+            static assert(0);
       else
-	    static assert(0);
+            static assert(0);
   }
   else
   {
@@ -891,9 +891,9 @@ void _trace_epi_n()
     }
    }
       else version (D_InlineAsm_X86_64)
-	    static assert(0);
+            static assert(0);
       else
-	    static assert(0);
+            static assert(0);
   }
 }
 
@@ -912,7 +912,7 @@ else version (X86)
     {
         void QueryPerformanceCounter(timer_t* ctr)
         {
-	  version (D_InlineAsm_X86)
+          version (D_InlineAsm_X86)
             asm
             {   naked                   ;
                 mov       ECX,EAX       ;
@@ -921,10 +921,10 @@ else version (X86)
                 mov   4[ECX],EDX        ;
                 ret                     ;
             }
-	  else version (D_InlineAsm_X86_64)
-		static assert(0);
-	  else
-		static assert(0);
+          else version (D_InlineAsm_X86_64)
+                static assert(0);
+          else
+                static assert(0);
         }
 
         void QueryPerformanceFrequency(timer_t* freq)
