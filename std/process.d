@@ -316,7 +316,7 @@ version (Posix) string shell(string cmd)
 version (Windows) string shell(string cmd)
 {
     // Generate a random filename
-    Appender!string a;
+    auto a = appender!string();
     foreach (ref e; 0 .. 8)
     {
         formattedWrite(a, "%x", rndGen.front);

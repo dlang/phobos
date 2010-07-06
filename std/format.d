@@ -1706,7 +1706,7 @@ struct FormatInfo
 // Writes characters in the format strings up to the first format
 // specifier and updates the format specifier to remove the written
 // portion The updated format fmt does not include the '%'
-private void writeUpToFormatSpec(OutRange, S)(ref OutRange w, ref S fmt)
+private void writeUpToFormatSpec(OutRange, S)(OutRange w, ref S fmt)
 {
     for (size_t i = 0; i < fmt.length; ++i)
     {
@@ -1752,7 +1752,7 @@ unittest
  * Formats an integral number 'arg' according to 'f' and writes it to
  * 'w'.
  */
-private void formatImpl(Writer, D)(ref Writer w, D argx, FormatInfo f)
+private void formatImpl(Writer, D)(Writer w, D argx, FormatInfo f)
 if (isIntegral!(D))
 {
     Unqual!(D) arg = argx;
@@ -1884,7 +1884,7 @@ if (isIntegral!(D))
  * Formats a floating point number 'arg' according to 'f' and writes
  * it to 'w'.
  */
-private void formatImpl(Writer, D)(ref Writer w, D obj, FormatInfo f)
+private void formatImpl(Writer, D)(Writer w, D obj, FormatInfo f)
 if (isFloatingPoint!(D))
 {
     if (f.spec == 'r')
@@ -1938,7 +1938,7 @@ if (isFloatingPoint!(D))
 
 unittest
 {
-    Appender!(string) a;
+    auto a = appender!(string)();
     immutable real x = 5.5;
     FormatInfo f;
     formatImpl(a, x, f);
@@ -1950,7 +1950,7 @@ unittest
  * 'w'. The pointer 'arg' is assumed to point to an object of type
  * 'D'.
  */
-private void formatGeneric(Writer, D)(ref Writer w, const(void)* arg,
+private void formatGeneric(Writer, D)(Writer w, const(void)* arg,
     FormatInfo f)
 {
     auto obj = *cast(D*) arg;
@@ -2144,7 +2144,7 @@ import std.format;
 
 string myFormat(A...)(A args)
 {
-    Appender!(string) writer;
+    auto writer = appender!string();
     std.format.formattedWrite(writer,
         "%s et %s numeris romanis non sunt", args);
     return writer.data;
@@ -2159,7 +2159,7 @@ opengroup.org/onlinepubs/009695399/functions/printf.html, POSIX)
 style.  Example:
 
 -------------------------
-Appender!(string) writer;
+auto writer = appender!string();
 std.format.formattedWrite(writer, "Date: %2$s %1$s", "October", 5);
 assert(writer.data == "Date: 5 October");
 ------------------------
@@ -2174,10 +2174,10 @@ This is the function internally used by writef* but it's still
 undergoing active development. Do not rely on it.
  */
 
-void formattedWrite(Writer, F, A...)(ref Writer w, const(F)[] fmt, A args)
+void formattedWrite(Writer, F, A...)(Writer w, const(F)[] fmt, A args)
 {
     enum len = args.length;
-    void function(ref Writer, const(void)*, FormatInfo) funs[len] = void;
+    void function(Writer, const(void)*, FormatInfo) funs[len] = void;
     const(void)* argsAddresses[len] = void;
     foreach (i, arg; args)
     {
@@ -2266,14 +2266,14 @@ void formattedWrite(Writer, F, A...)(ref Writer w, const(F)[] fmt, A args)
 
 unittest
 {
-    auto stream = appender((string*).init);
+    auto stream = appender!string();
     formattedWrite(stream, "%s", 1.1);
     assert(stream.data == "1.1", stream.data);
 }
 
 unittest
 {
-    auto stream = appender((string*).init);
+    auto stream = appender!string();
     formattedWrite(stream, "%u", 42);
     assert(stream.data == "42", stream.data);
 }

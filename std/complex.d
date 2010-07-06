@@ -388,7 +388,7 @@ unittest
     auto c2 = Complex!double(0.5, 2.0);
 
     assert (c2 == +c2);
-    
+
     assert ((-c2).re == -(c2.re));
     assert ((-c2).im == -(c2.im));
     assert (c2 == -(-c2));
@@ -509,12 +509,12 @@ unittest
 {
     // Convert to string.
     auto z1 = Complex!real(0.123456789, 0.123456789);
-    Appender!string s1;
+    auto s1 = appender!string();
     z1.toString(s1, "s");
     assert (s1.data == "0.123457+0.123457i");
 
     auto z2 = z1.conj;
-    Appender!string s2;
+    auto s2 = appender!string();
     z2.toString(s2, ".8e");
     assert (s2.data == "1.23456789e-01-1.23456789e-01i");
 }
@@ -523,7 +523,7 @@ unittest
 
 
 /*  Fold Complex!(Complex!T) to Complex!T.
-    
+
     The rationale for this is that just like the real line is a
     subspace of the complex plane, the complex plane is a subspace
     of itself.  Example of usage:

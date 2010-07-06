@@ -62,7 +62,7 @@ ElementType!Range[] array(Range)(Range r) if (isForwardRange!Range)
     }
     else
     {
-        auto a = Appender!(E[])();
+        auto a = appender!(E[])();
         foreach (e; r)
         {
             a.put(e);
@@ -701,7 +701,8 @@ struct Appender(A : T[], T)
     */
     @property ref size_t capacity()
     {
-        enforce(pArray);
+        enforce(pArray, "You must initialize Appender by calling the"
+                " appender function before using it");
         auto p = cast(ubyte*) (pArray.ptr + pArray.length);
         while (cast(size_t) p & 3) ++p;
         return *cast(size_t *) p;
@@ -710,7 +711,7 @@ struct Appender(A : T[], T)
 /**
 Returns the managed array.
  */
-    T[] data()
+    @property T[] data()
     {
         return cast(typeof(return)) (pArray ? *pArray : null);
     }
@@ -721,6 +722,8 @@ Appends one item to the managed array.
     void put(U)(U item) if (isImplicitlyConvertible!(U, T) ||
             isSomeChar!T && isSomeChar!U)
     {
+        enforce(pArray, "You must initialize Appender by calling the"
+                " appender function before using it");
         static if (isSomeChar!T && isSomeChar!U && T.sizeof < U.sizeof)
         {
             // must do some transcoding around here
@@ -758,6 +761,8 @@ Appends an entire range to the managed array.
     void put(Range)(Range items) if (isForwardRange!Range
             && is(typeof(Appender.init.put(items.front))))
     {
+        enforce(pArray, "You must initialize Appender by calling the"
+                " appender function before using it");
         static if (is(typeof(*pArray ~= items)))
         {
             if (!pArray) pArray = (new typeof(*pArray)[1]).ptr;

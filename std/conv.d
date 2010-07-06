@@ -174,7 +174,7 @@ if (isSomeString!(T) && !isSomeString!(S) && isArray!(S))
         memcpy(result.ptr, s.ptr, s.length);
         return cast(T) result;
     } else {
-        Appender!(Char[]) result;
+        auto result = appender!(Char[])();
         result.put(leftBracket);
         foreach (i, e; s) {
             if (i) result.put(separator);
@@ -206,7 +206,7 @@ T to(T, S)(S s, in T leftBracket = "[", in T keyval = ":",
 if (isAssociativeArray!(S) && isSomeString!(T))
 {
     alias Unqual!(typeof(T.init[0])) Char;
-    Appender!(Char[]) result;
+    auto result = appender!(Char[])();
     // hash-to-string conversion
     result.put(leftBracket);
     bool first = true;
@@ -271,7 +271,7 @@ if (is(S == struct) && isSomeString!(T) && !is(typeof(&S.init.toString)))
         // ok, attempt to forge the tuple
         t = cast(typeof(t)) &s;
         alias Unqual!(typeof(T.init[0])) Char;
-        Appender!(Char[]) app;
+        auto app = appender!(Char[])();
         app.put(left);
         foreach (i, e; t.field)
         {

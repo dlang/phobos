@@ -130,7 +130,7 @@ JSONValue parseJSON(T)(in T json, int maxDepth = -1) if(isInputRange!T) {
 	}
 
 	string parseString() {
-		Appender!string str;
+		auto str = appender!string();
 
 	Next:
 		switch(peekChar()) {
@@ -223,7 +223,7 @@ JSONValue parseJSON(T)(in T json, int maxDepth = -1) if(isInputRange!T) {
 
 		case '0': .. case '9':
 		case '-':
-			Appender!string number;
+			auto number = appender!string();
 			bool isFloat;
 
 			void readInteger() {
@@ -310,7 +310,7 @@ JSONValue parseJSON(T)(in T json, int maxDepth = -1) if(isInputRange!T) {
  Takes a tree of JSON values and returns the serialized string.
 */
 string toJSON(in JSONValue* root) {
-	Appender!string json;
+	auto json = appender!string();
 
 	void toString(string str) {
 		json.put('"');

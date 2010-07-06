@@ -1456,7 +1456,7 @@ unittest
 
 string[] listdir(in char[] pathname)
 {
-    Appender!(string[]) result;
+    auto result = appender!(string[])();
 
     bool listing(string filename)
     {
@@ -1516,7 +1516,7 @@ unittest
 
 string[] listdir(in char[] pathname, in char[] pattern)
 {
-    Appender!(string[]) result;
+    auto result = appender!(string[])();
 
     bool callback(DirEntry* de)
     {
@@ -1538,7 +1538,7 @@ string[] listdir(in char[] pathname, in char[] pattern)
 
 string[] listdir(in char[] pathname, RegExp r)
 {
-    Appender!(string[]) result;
+    auto result = appender!(string[])();
 
     bool callback(DirEntry* de)
     {

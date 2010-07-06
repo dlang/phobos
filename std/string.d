@@ -1324,7 +1324,7 @@ Unqual!(S1)[] split(S1, S2)(S1 s, S2 delim)
         if (isSomeString!S1 && isSomeString!S2)
 {
     Unqual!(S1) us = s;
-    auto app = Appender!(Unqual!(S1)[])();
+    auto app = appender!(Unqual!(S1)[])();
     foreach (word; std.algorithm.splitter(us, delim))
     {
         app.put(word);
@@ -1408,7 +1408,7 @@ unittest
 S[] splitlines(S)(S s)
 {
     size_t istart;
-    auto result = Appender!(S[])();
+    auto result = appender!(S[])();
 
     foreach (i; 0 .. s.length)
     {

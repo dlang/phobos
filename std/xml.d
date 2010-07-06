@@ -349,8 +349,8 @@ S encode(S)(S s, S buffer = null)
 {
     string r;
     size_t lastI;
-    if (buffer) buffer.length = 0;
-    auto result = appender(&buffer);
+    if (buffer.length) buffer.length = 0;
+    Appender!S result;
 
     foreach (i, c; s)
     {
@@ -364,6 +364,10 @@ S encode(S)(S s, S buffer = null)
         default: continue;
         }
         // Replace with r
+        if (!result.data)
+        {
+            result = appender(&buffer);
+        }
         result.put(s[lastI .. i]);
         result.put(r);
         lastI = i + 1;
@@ -1709,7 +1713,7 @@ class ElementParser
             this();
             tag_ = parent.tag_;
         }
-        
+
         // Private constructor for empty tags
         this(Tag tag, string* t)
         {
@@ -2038,7 +2042,7 @@ class ElementParser
                         handler1 = null in onStartTag;
                         if (handler1 !is null) (*handler1)(parser);
                     }
-                    
+
                     // Handle the pretend end tag
                     auto element = new Element(startTag);
                     auto handler2 = tag_.name in onEndTag;

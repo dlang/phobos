@@ -1717,7 +1717,7 @@ foreach (m; match("abracadabra", "(.)a(.)"))
     unittest
     {
         // @@@BUG@@@ This doesn't work if a client module uses -unittest
-        // Appender!(char[]) app;
+        // auto app = appender!string();
         // foreach (m; match("abracadabra", "(.)a(.)"))
         // {
         //     assert(m.captures.length == 3);
@@ -3004,7 +3004,7 @@ unittest
 
 String[] split(String)(String input, Regex!(char) rx)
 {
-    Appender!(String[]) a;
+    auto a = appender!(String[])();
     foreach (e; splitter(input, rx))
     {
         a.put(e);
@@ -3324,7 +3324,7 @@ template loadFile(Types...)
 {
     Tuple!(Types)[] loadFile(Char)(string filename, Regex!(Char) rx)
     {
-        Appender!(typeof(return)) result;
+        auto result = appender!(typeof(return));
         auto f = File(filename);
         scope(exit) f.close;
         RegexMatch!(Char[]) match;
