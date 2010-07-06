@@ -1706,7 +1706,7 @@ struct FormatInfo
 // Writes characters in the format strings up to the first format
 // specifier and updates the format specifier to remove the written
 // portion The updated format fmt does not include the '%'
-private void writeUpToFormatSpec(OutRange, S)(OutRange w, ref S fmt)
+private void writeUpToFormatSpec(OutRange, S)(ref OutRange w, ref S fmt)
 {
     for (size_t i = 0; i < fmt.length; ++i)
     {
@@ -1752,7 +1752,7 @@ unittest
  * Formats an integral number 'arg' according to 'f' and writes it to
  * 'w'.
  */
-private void formatImpl(Writer, D)(Writer w, D argx, FormatInfo f)
+private void formatImpl(Writer, D)(ref Writer w, D argx, FormatInfo f)
 if (isIntegral!(D))
 {
     Unqual!(D) arg = argx;
@@ -2174,7 +2174,7 @@ This is the function internally used by writef* but it's still
 undergoing active development. Do not rely on it.
  */
 
-void formattedWrite(Writer, F, A...)(Writer w, const(F)[] fmt, A args)
+void formattedWrite(Writer, F, A...)(ref Writer w, const(F)[] fmt, A args)
 {
     enum len = args.length;
     void function(ref Writer, const(void)*, FormatInfo) funs[len] = void;
