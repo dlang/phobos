@@ -470,9 +470,31 @@ assert(a == [ 5, 5, 5, 5 ]);
 void fill(Range, Value)(Range range, Value filler)
 if (isForwardRange!Range && is(typeof(range.front = filler)))
 {
-    for (; !range.empty; range.popFront)
+    alias ElementType!Range T;
+    static if (hasElaborateCopyConstructor!T || !isDynamicArray!Range)
     {
+        for (; !range.empty; range.popFront)
+        {
+            range.front = filler;
+        }
+    }
+    else
+    {
+        if (range.empty) return;
+        // Range is a dynamic array of bald values, just fill memory
+        // Can't use memcpy or memmove coz ranges overlap
         range.front = filler;
+        auto bytesToFill = T.sizeof * (range.length - 1);
+        auto bytesFilled = T.sizeof;
+        while (bytesToFill)
+        {
+            auto fillNow = min(bytesToFill, bytesFilled);
+            memcpy(cast(void*) range.ptr + bytesFilled,
+                    cast(void*) range.ptr,
+                  fillNow);
+            bytesToFill -= fillNow;
+            bytesFilled += fillNow;
+        }
     }
 }
 
@@ -480,7 +502,7 @@ unittest
 {
     int[] a = [ 1, 2, 3 ];
     fill(a, 6);
-    assert(a == [ 6, 6, 6 ]);
+    assert(a == [ 6, 6, 6 ], text(a));
     void fun0()
     {
         foreach (i; 0 .. 1000)
@@ -526,6 +548,119 @@ unittest
     int[] b = [1, 2];
     fill(a, b);
     assert(a == [ 1, 2, 1, 2, 1 ]);
+}
+
+/**
+Fills a range with a value. Assumes that the range does not currently
+contain meaningful content. This is of interest for structs that
+define copy constructors (for all other types, fill and
+uninitializedFill are equivalent).
+
+Example:
+----
+struct S { ... }
+S[] s = (cast(S*) malloc(5 * S.sizeof))[0 .. 5];
+uninitializedFill(s, 42);
+assert(s == [ 42, 42, 42, 42, 42 ]);
+----
+ */
+void uninitializedFill(Range, Value)(Range range, Value filler)
+if (isForwardRange!Range && is(typeof(range.front = filler)))
+{
+    alias ElementType!Range T;
+    if (range.empty) return;
+    static if (hasElaborateCopyConstructor!T)
+    {
+        // Must construct stuff by the book
+        for (; !range.empty; range.popFront)
+        {
+            emplace!T((cast(void*) &range.front)[0 .. T.sizeof], filler);
+        }
+    }
+    else
+    {
+        // Doesn't matter whether fill is initialized or not
+        return fill(range, filler);
+    }
+}
+
+unittest
+{
+    int[] a = [ 1, 2, 3 ];
+    uninitializedFill(a, 6);
+    assert(a == [ 6, 6, 6 ]);
+    void fun0()
+    {
+        foreach (i; 0 .. 1000)
+        {
+            foreach (ref e; a) e = 6;
+        }
+    }
+    void fun1() { foreach (i; 0 .. 1000) fill(a, 6); }
+    //void fun2() { foreach (i; 0 .. 1000) fill2(a, 6); }
+    //writeln(benchmark!(fun0, fun1, fun2)(10000));
+}
+
+/**
+Initializes all elements of a range with their $(D .init)
+value. Assumes that the range does not currently contain meaningful
+content.
+
+Example:
+----
+struct S { ... }
+S[] s = (cast(S*) malloc(5 * S.sizeof))[0 .. 5];
+initialize(s);
+assert(s == [ 0, 0, 0, 0, 0 ]);
+----
+ */
+void initializeAll(Range)(Range range)
+if (isForwardRange!Range && is(typeof(range.front = range.front)))
+{
+    alias ElementType!Range T;
+    static assert(is(typeof(&(range.front()))) || !hasElaborateAssign!T,
+            "Cannot initialize a range that does not expose"
+            " references to its elements");
+    static if (!isDynamicArray!Range)
+    {
+        static if (is(typeof(&(range.front()))))
+        {
+            // Range exposes references
+            for (; !range.empty; range.popFront)
+            {
+                memcpy(&(range.front()), &T.init, T.sizeof);
+            }
+        }
+        else
+        {
+            // Go the slow route
+            for (; !range.empty; range.popFront)
+            {
+                range.front = filler;
+            }
+        }
+    }
+    else
+    {
+        fill(range, T.init);
+    }
+}
+
+unittest
+{
+    int[] a = [ 1, 2, 3 ];
+    uninitializedFill(a, 6);
+    assert(a == [ 6, 6, 6 ]);
+    void fun0()
+    {
+        foreach (i; 0 .. 1000)
+        {
+            foreach (ref e; a) e = 6;
+        }
+    }
+    void fun1() { foreach (i; 0 .. 1000) fill(a, 6); }
+    //void fun2() { foreach (i; 0 .. 1000) fill2(a, 6); }
+    //writeln(benchmark!(fun0, fun1, fun2)(10000));
 }
 
 // filter
@@ -3229,12 +3364,11 @@ assert(b[0 .. $ - c.length] == [ 1, 5, 9, 1 ]);
 
  */
 Range2 copy(Range1, Range2)(Range1 source, Range2 target)
-    if (isInputRange!(Range1)
-            && isOutputRange!(Range2, ElementType!(Range1)))
+if (isInputRange!Range1 && isOutputRange!(Range2, ElementType!Range1))
 {
-    foreach (e; source)
+    for (; !source.empty; source.popFront())
     {
-        target.put(e);
+        put(target, source.front);
     }
     return target;
 }
@@ -3407,7 +3541,7 @@ assert(arr == [ 1, 2, 3, 4, 5, 6, 7 ]);
 ----
 */
 size_t bringToFront(Range1, Range2)(Range1 front, Range2 back)
-    if (isForwardRange!(Range1) && isForwardRange!(Range2))
+    if (isForwardRange!Range1 && isForwardRange!Range2)
 {
     enum bool sameHeadExists = is(typeof(front.sameHead(back)));
     size_t result;
