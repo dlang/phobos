@@ -225,22 +225,32 @@ unittest
 }
 
 /**
-Returns $(D true) if $(D R) is an output range. An output range must
-define the primitive $(D put) that accepts an object of type $(D
-E). The following code should compile for any output range.
+Returns $(D true) if $(D R) is an output range. An output range can be
+defined in two ways.
+
+$(OL $(LI $(D R) might define the primitive $(D put) that accepts an
+object convertible to $(D E). The following code should compile for
+such an output range:
 
 ----
-R r;             // can define a range object
+R r;
 E e;
 r.put(e);        // can write an element to the range
 ----
-The semantics of an output range (not checkable during compilation)
-are assumed to be the following ($(D r) is an object of type $(D R)):
 
-$(UL $(LI $(D r.put(e)) puts $(D e) in the range (in a range-dependent
-manner) and advances to the popFront position in the range. Successive
-calls to $(D r.put) add elements to the range. $(D put) may throw to
-signal failure.))
+The semantics of $(D r.put(e)) an output range (not checkable during
+compilation) are assumed to output $(D e) to $(D r) and advance to the
+next position in $(D r), such that successive calls to $(D r.put) add
+extra elements to $(D r).)
+
+$(LI An input range with assignable elements is also an output
+range. In that case, inserting elements into the range is effected
+with two primitive calls: $(D r.front = e, r.popFront()). Such a range
+functions for output only as long as it is not empty.))
+
+To write elements to either kind of output range, call the free
+function $(D put(r, e)) defined below. That function takes the
+appropriate cource of action depending on the range's kind.
  */
 template isOutputRange(R, E)
 {
@@ -249,7 +259,30 @@ template isOutputRange(R, E)
         R r;            // can define a range object
         E e;
         r.put(e);       // can write element to range
+    }())) || isInputRange!R && is(typeof(
+    {
+        R r;               // can define a range object
+        E e;
+        r.front = e;       // can assign to the front of range
     }()));
+}
+
+/**
+Outputs $(D e) to $(D r), which must be an output range. Depending on
+the range's kind, it either evaluates $(D r.put(e)) or $(D (r.front =
+e, r.popFront())).
+ */
+void put(R, E)(ref R r, E e) if (isOutputRange!(R, E))
+{
+    static if (is(typeof(&r.put)))
+    {
+        r.put(e);
+    }
+    else
+    {
+        r.front = e;
+        r.popFront();
+    }
 }
 
 unittest
