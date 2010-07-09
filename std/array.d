@@ -65,7 +65,7 @@ ElementType!Range[] array(Range)(Range r) if (isForwardRange!Range)
         auto a = appender!(E[])();
         foreach (e; r)
         {
-            a.put(e);
+            put(a, e);
         }
         return a.data;
     }
@@ -442,7 +442,7 @@ if (is(typeof(A.init[0])) && isNarrowString!A && a[0].sizeof < 4)
 }
 
 
-/**
+/*
 Implements the range interface primitive $(D put) for built-in
 arrays. Due to the fact that nonmember functions can be called with
 the first argument using the dot notation, $(D array.put(e)) is
@@ -460,7 +460,8 @@ void main()
 }
 ----
 */
-void put(T, E)(ref T[] a, E e) { assert(a.length); a[0] = e; a = a[1 .. $]; }
+alias std.range.put put;
+ //void put(T, E)(ref T[] a, E e) { assert(a.length); a[0] = e; a = a[1 .. $]; }
 
 // overlap
 /*
