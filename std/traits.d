@@ -1175,6 +1175,48 @@ unittest
     static assert(!hasLocalAliasing!(S7));
 }
 
+/**
+ True if a type defines an elaborate copy constructor. Elaborate copy
+ constructors are introduced by defining $(D this(this)) for a $(D
+ struct). (Non-struct types do not have elaborate copy constructors.)
+ */
+template hasElaborateCopyConstructor(T)
+{
+    enum hasElaborateCopyConstructor = is(typeof(&T.__postblit));
+}
+
+unittest
+{
+    static assert(!hasElaborateCopyConstructor!int);
+    struct S
+    {
+        this(this) {}
+    }
+    static assert(hasElaborateCopyConstructor!S);
+}
+
+/**
+   True if a type defines an elaborate assignmentq. Elaborate
+   assignments are introduced by defining $(D opAssign(typeof(this)))
+   or $(D opAssign(ref typeof(this))) for a $(D struct). (Non-struct
+   types do not have elaborate assignments.)
+ */
+template hasElaborateAssign(T)
+{
+    enum hasElaborateAssign = is(typeof(T.init.opAssign(T.init)));
+}
+
+unittest
+{
+    static assert(!hasElaborateAssign!int);
+    struct S { void opAssign(S) {} }
+    static assert(hasElaborateAssign!S);
+    struct S1 { void opAssign(ref S1) {} }
+    static assert(hasElaborateAssign!S1);
+    struct S2 { void opAssign(S1) {} }
+    static assert(!hasElaborateAssign!S2);
+}
+
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
 // Classes and Interfaces
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
