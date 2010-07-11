@@ -29,7 +29,7 @@ auto a = array([1, 2, 3, 4, 5][]);
 assert(a == [ 1, 2, 3, 4, 5 ]);
 ----
  */
-ElementType!Range[] array(Range)(Range r) if (isForwardRange!Range)
+ElementType!Range[] array(Range)(Range r) if (isInputRange!Range)
 {
     alias ElementType!Range E;
     static if (hasLength!Range)
