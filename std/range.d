@@ -1,9 +1,9 @@
 // Written in the D programming language.
 
 /**
-This module defines a few useful _range incarnations. Credit for ideas
-in building this module go to $(WEB fantascienza.net/leonardo/so/,
-Leonardo Maffi).
+This module defines a few useful _range incarnations. Credit for some
+of the ideas in building this module goes to $(WEB
+fantascienza.net/leonardo/so/, Leonardo Maffi).
 
 Macros:
 
@@ -226,16 +226,18 @@ unittest
 
 /**
 Returns $(D true) if $(D R) is an output range. An output range can be
-defined in two ways.
+defined in three ways.
 
-$(OL $(LI $(D R) might define the primitive $(D put) that accepts an
-object convertible to $(D E). The following code should compile for
-such an output range:
+$(OL
+
+$(LI $(D R) might define the primitive $(D put) that accepts an object
+convertible to $(D E). The following code should compile for such an
+output range:
 
 ----
 R r;
 E e;
-r.put(e);        // can write an element to the range
+r.put(e);       // can write an element to the range
 ----
 
 The semantics of $(D r.put(e)) an output range (not checkable during
@@ -246,7 +248,16 @@ extra elements to $(D r).)
 $(LI An input range with assignable elements is also an output
 range. In that case, inserting elements into the range is effected
 with two primitive calls: $(D r.front = e, r.popFront()). Such a range
-functions for output only as long as it is not empty.))
+functions for output only as long as it is not empty.)
+
+----
+R r;
+E e;
+r.front = e;    // can write an element to the range
+----
+
+$(LI Any $(D function) or $(D delegate) accepting arrays of $(D E) as
+input is also a valid output range.))
 
 To write elements to either kind of output range, call the free
 function $(D put(r, e)) defined below. That function takes the
@@ -256,32 +267,64 @@ template isOutputRange(R, E)
 {
     enum bool isOutputRange = is(typeof(
     {
-        R r;            // can define a range object
+        R r;
         E e;
-        r.put(e);       // can write element to range
-    }())) || isInputRange!R && is(typeof(
+        r.put(e);          // can write element to range
+    }()))
+        ||
+    isInputRange!R && is(typeof(
     {
-        R r;               // can define a range object
+        R r;
         E e;
         r.front = e;       // can assign to the front of range
+    }()))
+        ||
+        is(typeof(
+    {
+        R r;
+        E[] es;
+        r(es);
     }()));
 }
 
 /**
 Outputs $(D e) to $(D r), which must be an output range. Depending on
-the range's kind, it either evaluates $(D r.put(e)) or $(D (r.front =
-e, r.popFront())).
+the range's kind, it evaluates one of the following:
+
+$(OL
+
+$(LI If $(D R) defines $(D put), then output is effected by evaluating
+$(D r.put(e)).)
+
+$(LI Else if $(D R) is an input range with assignable front, then
+output is effected by evaluating $(D (r.front = e, r.popFront())).)
+
+$(LI Else if $(D R) is a function type, a delegate type, or a type
+defining $(D opCall), then output is effected by evaluating $(D
+r(e)).)
  */
 void put(R, E)(ref R r, E e) if (isOutputRange!(R, E))
 {
-    static if (is(typeof(&r.put)))
+    static if (!isArray!R && is(typeof(r.put(e))))
     {
         r.put(e);
     }
-    else
+    else static if (isInputRange!R && is(typeof(r.front = e)))
     {
         r.front = e;
         r.popFront();
+    }
+    else static if (isArray!E && is(typeof(r(e))))
+    {
+        r(e);
+    }
+    else static if (is(typeof(r(new E[]))))
+    {
+        r((&e)[0 .. 1]);
+    }
+    else
+    {
+        static assert(false);
     }
 }
 
@@ -295,6 +338,12 @@ unittest
     }
     static assert(isOutputRange!(B, int));
     static assert(isOutputRange!(int[], int));
+}
+
+unittest
+{
+    void myprint(in char[] s) { writeln('[', s, ']'); }
+    static assert(isOutputRange!(typeof(&myprint), char));
 }
 
 /**
