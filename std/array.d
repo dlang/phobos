@@ -441,28 +441,6 @@ if (is(typeof(A.init[0])) && isNarrowString!A && a[0].sizeof < 4)
     }
 }
 
-
-/*
-Implements the range interface primitive $(D put) for built-in
-arrays. Due to the fact that nonmember functions can be called with
-the first argument using the dot notation, $(D array.put(e)) is
-equivalent to $(D put(array, e)).
-
-Example:
-----
-void main()
-{
-    int[] a = [ 1, 2, 3 ];
-    int[] b = a;
-    a.put(5);
-    assert(a == [ 2, 3 ]);
-    assert(b == [ 5, 2, 3 ]);
-}
-----
-*/
-alias std.range.put put;
- //void put(T, E)(ref T[] a, E e) { assert(a.length); a[0] = e; a = a[1 .. $]; }
-
 // overlap
 /*
 Returns the overlapping portion, if any, of two arrays. Unlike $(D
