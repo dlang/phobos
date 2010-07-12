@@ -815,7 +815,7 @@ struct FormatSpec(Char)
 void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
 if (is(const(T) == const(void[])))
 {
-    w.put(cast(const ubyte[]) val);
+    put(w, cast(const ubyte[]) val);
 }
 
 unittest
@@ -856,12 +856,12 @@ if (isIntegral!T)
         {
             // must swap bytes
             foreach_reverse (i; 0 .. arg.sizeof)
-                w.put(begin[i]);
+                put(w, begin[i]);
         }
         else
         {
             foreach (i; 0 .. arg.sizeof)
-                w.put(begin[i]);
+                put(w, begin[i]);
         }
         return;
     }
@@ -923,7 +923,7 @@ if (isIntegral!T)
         digits = buffer[i .. $]; // got the digits without the sign
     }
     // adjust precision to print a '0' for octal if alternate format is on
-    if (base == 8 && f.flHash()
+    if (base == 8 && f.flHash
         && (f.precision <= digits.length)) // too low precision
     {
         //f.precision = digits.length + (arg != 0);
@@ -936,7 +936,7 @@ if (isIntegral!T)
         f.width // start with the minimum width
         - digits.length  // take away digits to print
         - (forcedPrefix != 0) // take away the sign if any
-        - (base == 16 && f.flHash() && arg ? 2 : 0); // 0x or 0X
+        - (base == 16 && f.flHash && arg ? 2 : 0); // 0x or 0X
     const int delta = f.precision - digits.length;
     if (delta > 0) spacesToPrint -= delta;
     //writeln(spacesToPrint);
@@ -949,26 +949,26 @@ if (isIntegral!T)
                 cast(typeof(f.precision)) (spacesToPrint + digits.length);
                 //to!(typeof(f.precision))(spacesToPrint + digits.length);
         }
-        else if (leftPad) foreach (i ; 0 .. spacesToPrint) w.put(' ');
+        else if (leftPad) foreach (i ; 0 .. spacesToPrint) put(w, ' ');
     }
     // write sign
-    if (forcedPrefix) w.put(forcedPrefix);
+    if (forcedPrefix) put(w, forcedPrefix);
     // write 0x or 0X
-    if (base == 16 && f.flHash() && arg) {
+    if (base == 16 && f.flHash && arg) {
         // @@@ overcome bug in dmd;
         //w.write(f.spec == 'x' ? "0x" : "0X"); //crashes the compiler
-        w.put('0');
-        w.put(f.spec == 'x' ? 'x' : 'X'); // x or X
+        put(w, '0');
+        put(w, f.spec == 'x' ? 'x' : 'X'); // x or X
     }
     // write the digits
     if (arg || f.precision)
     {
         int zerosToPrint = f.precision - digits.length;
-        foreach (i ; 0 .. zerosToPrint) w.put('0');
-        w.put(digits);
+        foreach (i ; 0 .. zerosToPrint) put(w, '0');
+        put(w, digits);
     }
     // write the spaces to the right if left-align
-    if (!leftPad) foreach (i ; 0 .. spacesToPrint) w.put(' ');
+    if (!leftPad) foreach (i ; 0 .. spacesToPrint) put(w, ' ');
 }
 
 /**
@@ -987,12 +987,12 @@ if (isFloatingPoint!D)
         {
             // must swap bytes
             foreach_reverse (i; 0 .. obj.sizeof)
-                w.put(begin[i]);
+                put(w, begin[i]);
         }
         else
         {
             foreach (i; 0 .. obj.sizeof)
-                w.put(begin[i]);
+                put(w, begin[i]);
         }
         return;
     }
@@ -1024,7 +1024,7 @@ if (isFloatingPoint!D)
             f.precision == f.UNSPECIFIED ? -1 : f.precision,
             obj);
     if (n < 0) throw new FormatError("floating point formatting failure");
-    w.put(buf[0 .. strlen(buf.ptr)]);
+    put(w, buf[0 .. strlen(buf.ptr)]);
 }
 
 unittest
@@ -1045,7 +1045,7 @@ void formatValue(Writer, T, Char)(Writer w, T val,
 if (is(T : bool))
 {
     if (f.spec == 's') {
-        w.put(val ? "true" : "false");
+        put(w, val ? "true" : "false");
     } else {
         formatValue(w, cast(int) val, f);
     }
@@ -1061,7 +1061,7 @@ void formatValue(Writer, T, Char)(Writer w, T val,
 if (isSomeChar!T)
 {
     if (f.spec == 's') {
-        w.put(val);
+        put(w, val);
     } else {
         formatValue(w, cast(uint) val, f);
     }
@@ -1079,15 +1079,15 @@ if (isSomeString!T && !isStaticArray!T)
     {
         // right align
         if (f.width > s.length)
-            foreach (i ; 0 .. f.width - s.length) w.put(' ');
-        w.put(s);
+            foreach (i ; 0 .. f.width - s.length) put(w, ' ');
+        put(w, s);
     }
     else
     {
         // left align
-        w.put(s);
+        put(w, s);
         if (f.width > s.length)
-            foreach (i ; 0 .. f.width - s.length) w.put(' ');
+            foreach (i ; 0 .. f.width - s.length) put(w, ' ');
     }
 }
 
@@ -1121,13 +1121,13 @@ if (isInputRange!T && !isSomeChar!(ElementType!T))
         // formatted writes
         if (!f.nested)
         {
-            w.put(f.seqBefore);
-            scope(exit) w.put(f.seqAfter);
+            put(w, f.seqBefore);
+            scope(exit) put(w, f.seqAfter);
             formatValue(w, arr.front, f);
             arr.popFront();
             for (size_t i; !arr.empty; arr.popFront(), ++i)
             {
-                w.put(f.seqSeparator);
+                put(w, f.seqSeparator);
                 formatValue(w, arr.front, f);
             }
         }
@@ -1166,7 +1166,7 @@ if (isInputRange!T && !isSomeChar!(ElementType!T))
             //     formatValue(w, arr.front, itemFmt);
             //     arr.popFront();
             //     if (arr.empty) break;
-            //     w.put(tail);
+            //     put(w, tail);
             // }
         }
     }
@@ -1179,8 +1179,8 @@ void formatValue(Writer, T, Char)(Writer w, T val,
         ref FormatSpec!Char f)
 if (is(D == void[0]))
 {
-    w.put(seqBefore);
-    w.put(seqAfter);
+    put(w, seqBefore);
+    put(w, seqAfter);
 }
 
 /**
@@ -1202,8 +1202,8 @@ void formatValue(Writer, T, Char)(Writer w, T val,
         ref FormatSpec!Char f)
 if (is(T == class))
 {
-    if (val is null) w.put("null");
-    else w.put(val.toString);
+    if (val is null) put(w, "null");
+    else put(w, val.toString);
 }
 
 /**
@@ -1218,9 +1218,9 @@ if (isAssociativeArray!T)
     foreach (ref k, v; val)
     {
         if (firstTime) firstTime = false;
-        else w.put(' ');
+        else put(w, ' ');
         formatValue(w, k, f);
-        w.put(':');
+        put(w, ':');
         formatValue(w, v, f);
     }
 }
@@ -1233,13 +1233,13 @@ void formatValue(Writer, T, Char)(Writer w, T val,
         ref FormatSpec!Char f)
 if (is(T == struct) && !isInputRange!T)
 {
-    if (is(typeof(w.put(val.toString))))
+    if (is(typeof(put(w, val.toString))))
     {
-        w.put(val.toString);
+        put(w, val.toString);
     }
     else
     {
-        w.put(S.stringof);
+        put(w, S.stringof);
     }
 }
 
