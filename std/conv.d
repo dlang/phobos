@@ -3634,10 +3634,10 @@ unittest
 
 // emplace
 /**
-Given a raw memory area $(D chunk), constructs an object of type $(D
-T) at that address. The constructor is passed the arguments $(D
-Args). The $(D chunk) must be as least as large as $(D T) needs and
-should have an alignment multiple of $(D T)'s alignment.
+Given a raw memory area $(D chunk), constructs an object of non-$(D
+class) type $(D T) at that address. The constructor is passed the
+arguments $(D Args). The $(D chunk) must be as least as large as $(D
+T) needs and should have an alignment multiple of $(D T)'s alignment.
 
 This function can be $(D @trusted) if the corresponding constructor of
 $(D T) is $(D @safe).
@@ -3703,6 +3703,60 @@ unittest
     auto s2 = S(42, 43);
     assert(*emplace!S(s1, s2) == s2);
     assert(*emplace!S(s1, 44, 45) == S(44, 45));
+}
+
+// emplace
+/**
+Given a raw memory area $(D chunk), constructs an object of $(D class)
+type $(D T) at that address. The constructor is passed the arguments
+$(D Args). The $(D chunk) must be as least as large as $(D T) needs
+and should have an alignment multiple of $(D T)'s alignment. (The size
+of a $(D class) instance is obtained by using $(D
+__traits(classInstanceSize, T))).
+
+This function can be $(D @trusted) if the corresponding constructor of
+$(D T) is $(D @safe).
+
+Returns: A pointer to the newly constructed object.
+ */
+T emplace(T, Args...)(void[] chunk, Args args) if (is(T == class))
+{
+    enforce(chunk.length >= __traits(classInstanceSize, T));
+    auto a = cast(size_t) chunk.ptr;
+    enforce(a % real.alignof == 0);
+    auto result = cast(typeof(return)) chunk.ptr;
+
+    // Initialize the object in its pre-ctor state
+    (cast(byte[]) chunk)[] = typeid(T).init[];
+
+    // Call the ctor if any
+    static if (is(typeof(result.__ctor(args))))
+    {
+        // T defines a genuine constructor accepting args
+        // Go the classic route: write .init first, then call ctor
+        result.__ctor(args);
+    }
+    else
+    {
+        static assert(args.length == 0 && !is(typeof(&T.__ctor)),
+                "Don't know how to initialize an object of type "
+                ~ T.stringof ~ " with arguments " ~ Args.stringof);
+    }
+    return result;
+}
+
+unittest
+{
+    class A
+    {
+        int x = 5;
+        int y = 42;
+        this(int z) { assert(x == 5 && y == 42); x = y = z;}
+    }
+    static byte[__traits(classInstanceSize,A)] buf;
+    auto a = emplace!A(cast(void[]) buf, 55);
+    assert(a.x == 55 && a.y == 55);
+    static assert(!is(typeof(emplace!A(cast(void[]) buf))));
 }
 
 unittest
