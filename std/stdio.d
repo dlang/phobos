@@ -87,9 +87,8 @@ else version (GCC_IO)
 {
     /* **
      * Gnu under-the-hood C I/O functions; see
-     * http://www.gnu.org/software/libc/manual/html_node/I_002fO-on-Streams.html#I_002fO-on-Streams
+     * http://gnu.org/software/libc/manual/html_node/I_002fO-on-Streams.html
      */
-    //private import std.c.linux.linux;
     private import core.sys.posix.stdio;
     extern (C)
     {
@@ -622,7 +621,7 @@ first argument. */
         assert(p);
         assert(p.handle);
         static assert(isSomeString!(S[0]), errorMessage);
-        auto w = lockingTextWriter;
+        auto w = lockingTextWriter();
         std.format.formattedWrite(w, args);
     }
 
@@ -1489,23 +1488,23 @@ unittest
                 "Hello, nice world number 42!\n",
                 cast(char[]) std.file.read(file));
     // test write on stdout
-    auto saveStdout = stdout;
-    scope(exit) stdout = saveStdout;
-    stdout.open(file, "w");
-    assert(stdout.isOpen);
-    writefln("Hello, %s world number %s!", "nice", 42);
-    foreach (F ; TypeTuple!(ifloat, idouble, ireal))
-    {
-        F a = 5i;
-        F b = a % 2;
-        writeln(b);
-    }
-    stdout.close;
-    auto read = cast(char[]) std.file.read(file);
-    version (Windows)
-        assert(read == "Hello, nice world number 42!\r\n1\r\n1\r\n1\r\n", read);
-    else
-        assert(read == "Hello, nice world number 42!\n1\n1\n1\n", "["~read~"]");
+    // auto saveStdout = stdout;
+    // scope(exit) stdout = saveStdout;
+    // stdout.open(file, "w");
+    // assert(stdout.isOpen);
+    // writefln("Hello, %s world number %s!", "nice", 42);
+    // foreach (F ; TypeTuple!(ifloat, idouble, ireal))
+    // {
+    //     F a = 5i;
+    //     F b = a % 2;
+    //     writeln(b);
+    // }
+    // stdout.close;
+    // auto read = cast(char[]) std.file.read(file);
+    // version (Windows)
+    //     assert(read == "Hello, nice world number 42!\r\n1\r\n1\r\n1\r\n", read);
+    // else
+    //     assert(read == "Hello, nice world number 42!\n1\n1\n1\n", "["~read~"]");
 }
 
 /**
