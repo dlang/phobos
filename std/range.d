@@ -225,106 +225,81 @@ unittest
 }
 
 /**
-Returns $(D true) if $(D R) is an output range. An output range can be
-defined in three ways.
+Outputs $(D e) to $(D r). The exact effect is dependent upon the two
+types. which must be an output range. Several cases are accepted, as
+described below. The code snippets are attempted in order, and the
+first to compile "wins" and gets evaluated.
 
-$(OL
+$(BOOKTABLE ,
 
-$(LI $(D R) might define the primitive $(D put) that accepts an object
-convertible to $(D E). The following code should compile for such an
-output range:
+$(TR $(TH Code Snippet) $(TH Scenario))
 
-----
-R r;
-E e;
-r.put(e);       // can write an element to the range
-----
+$(TR $(TD $(D r.put(e);)) $(TD $(D R) specifically defines a method
+$(D put) accepting an $(D E).))
 
-The semantics of $(D r.put(e)) an output range (not checkable during
-compilation) are assumed to output $(D e) to $(D r) and advance to the
-next position in $(D r), such that successive calls to $(D r.put) add
-extra elements to $(D r).)
+$(TR $(TD $(D r.put([ e ]);)) $(TD $(D R) specifically defines a
+method $(D put) accepting an $(D E[]).))
 
-$(LI An input range with assignable elements is also an output
-range. In that case, inserting elements into the range is effected
-with two primitive calls: $(D r.front = e, r.popFront()). Such a range
-functions for output only as long as it is not empty.)
+$(TR $(TD $(D r.front = e; r.popFront();)) $(TD $(D R) is an input
+range and $(D e) is assignable to $(D r.front).))
 
-----
-R r;
-E e;
-r.front = e;    // can write an element to the range
-----
+$(TR $(TD $(D for (; !e.empty; e.popFront()) put(r, e.front);)) $(TD
+Copying range $(D E) to range $(D R).))
 
-$(LI Any $(D function) or $(D delegate) accepting arrays of $(D E) as
-input is also a valid output range.))
+$(TR $(TD $(D r(e);)) $(TD $(D R) is e.g. a delegate accepting an $(D
+E).))
 
-To write elements to either kind of output range, call the free
-function $(D put(r, e)) defined below. That function takes the
-appropriate cource of action depending on the range's kind.
+$(TR $(TD $(D r([ e ]);)) $(TD $(D R) is e.g. a $(D delegate)
+accepting an $(D E[]).))
+
+)
  */
-template isOutputRange(R, E)
+void put(R, E)(ref R r, E e)
 {
-    enum bool isOutputRange = is(typeof(
+    static if (hasMember!(R, "put"))
     {
-        R r;
-        E e;
-        r.put(e);          // can write element to range
-    }()))
-        ||
-    isInputRange!R && is(typeof(
-    {
-        R r;
-        E e;
-        r.front = e;       // can assign to the front of range
-    }()))
-        ||
-        is(typeof(
-    {
-        R r;
-        E[] es;
-        r(es);
-    }()));
-}
-
-/**
-Outputs $(D e) to $(D r), which must be an output range. Depending on
-the range's kind, it evaluates one of the following:
-
-$(OL
-
-$(LI If $(D R) defines $(D put), then output is effected by evaluating
-$(D r.put(e)).)
-
-$(LI Else if $(D R) is an input range with assignable front, then
-output is effected by evaluating $(D (r.front = e, r.popFront())).)
-
-$(LI Else if $(D R) is a function type, a delegate type, or a type
-defining $(D opCall), then output is effected by evaluating $(D
-r(e)).)
- */
-void put(R, E)(ref R r, E e) if (isOutputRange!(R, E))
-{
-    static if (!isArray!R && is(typeof(r.put(e))))
-    {
-        r.put(e);
-    }
-    else static if (isInputRange!R && is(typeof(r.front = e)))
-    {
-        r.front = e;
-        r.popFront();
-    }
-    else static if (isArray!E && is(typeof(r(e))))
-    {
-        r(e);
-    }
-    else static if (is(typeof(r(new E[]))))
-    {
-        r((&e)[0 .. 1]);
+        // commit to using the "put" method
+        static if (!isArray!R && is(typeof(r.put(e))))
+        {
+            r.put(e);
+        }
+        else static if (!isArray!R && is(typeof(r.put((&e)[0..1]))))
+        {
+            r.put((&e)[0..1]);
+        }
     }
     else
     {
-        static assert(false);
+        static if (isInputRange!R)
+        {
+            // Commit to using assignment to front
+            static if (is(typeof(r.front = e, r.popFront())))
+            {
+                r.front = e;
+                r.popFront();
+            }
+            else static if (isInputRange!E && is(typeof(put(r, e.front))))
+            {
+                for (; !e.empty; e.popFront()) put(r, e.front);
+            }
+        }
+        else
+        {
+            // Commit to using opCall
+            static if (is(typeof(r(e))))
+            {
+                r(e);
+            }
+            else static if (is(typeof(r((&e)[0..1]))))
+            {
+                r((&e)[0..1]);
+            }
+            else
+            {
+                static assert(false,
+                        "Cannot put a "~E.stringof~" into a "~R.stringof);
+            }
+        }
     }
 }
 
@@ -334,16 +309,54 @@ unittest
     static assert(!isInputRange!(A));
     struct B
     {
-        void put(int);
+        void put(int) {}
     }
-    static assert(isOutputRange!(B, int));
-    static assert(isOutputRange!(int[], int));
+    B b;
+    put(b, 5);
+}
+
+unittest
+{
+    int[] a = [1, 2, 3], b = [10, 20];
+    auto c = a;
+    put(a, b);
+    assert(c == [10, 20, 3]);
+    assert(a == [3]);
+}
+
+unittest
+{
+    int[] a = new int[10];
+    int b;
+    static assert(isInputRange!(typeof(a)));
+    put(a, b);
+}
+
+unittest
+{
+    void myprint(in char[] s) { }
+    auto r = &myprint;
+    put(r, 'a');
+}
+
+/**
+Returns $(D true) if $(D R) is an output range for elements of type
+$(D E). An output range can be defined functionally as a range that
+supports the operation $(D put(r, e)) as defined above.
+ */
+template isOutputRange(R, E)
+{
+    enum bool isOutputRange = is(typeof({ R r; E e; put(r, e); }()));
 }
 
 unittest
 {
     void myprint(in char[] s) { writeln('[', s, ']'); }
     static assert(isOutputRange!(typeof(&myprint), char));
+
+    auto app = appender!string;
+    string s;
+    static assert(isOutputRange!(Appender!string, string));
 }
 
 /**
@@ -2346,7 +2359,7 @@ struct Recurrence(alias fun, StateType, size_t stateSize)
     void popFront()
     {
         _state[_n % stateSize] = binaryFun!(fun, "a", "n")(
-            cycle(_state, _n), _n + stateSize);
+            cycle(_state), _n + stateSize);
         ++_n;
     }
 
@@ -2370,7 +2383,7 @@ recurrence(alias fun, State...)(State initial)
     return typeof(return)(state);
 }
 
-version(none) unittest
+unittest
 {
     auto fib = recurrence!("a[n-1] + a[n-2]")(1, 1);
     int[] witness = [1, 1, 2, 3, 5, 8, 13, 21, 34, 55 ];
@@ -2383,6 +2396,11 @@ version(none) unittest
                             2*3*4*5*6*7, 2*3*4*5*6*7*8, 2*3*4*5*6*7*8*9][]) );
     auto piapprox = recurrence!("a[n] + (n & 1 ? 4. : -4.) / (2 * n + 3)")(4.);
     foreach (e; take(piapprox, 20)) {}//writeln(e);
+
+    // Thanks to yebblies for this test and the associated fix
+    auto r = recurrence!"a[n-2]"(1, 2);
+    witness = [1, 2, 1, 2, 1];
+    assert(equal(take(r, 5), witness));
 }
 
 /**
