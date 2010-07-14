@@ -5,25 +5,15 @@
 
     Authors:    Lars Tandle Kyllingstad
     Copyright:  Copyright (c) 2010, Lars T. Kyllingstad.
-    License:    $(LINK2 http://www.boost.org/LICENSE_1_0.txt, Boost License 1.0)
+    License:    $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0)
 */
 module std.complex;
 
-/*
-Distributed under the Boost Software License, Version 1.0.
-   (See accompanying file LICENSE_1_0.txt or copy at
-         http://www.boost.org/LICENSE_1_0.txt)
-*/
 
-
+import std.format;
 import std.math;
 import std.numeric;
 import std.traits;
-
-// For toString():
-import std.array;
-import std.format;
-import std.range;
 
 
 
@@ -322,51 +312,39 @@ struct Complex(T)  if (isFloatingPoint!T)
 
 
 
-    /** Convert the complex number to a string representation, and pass it
-        to the output range $(D writer).
+    /** Convert the complex number to a string representation.
+    
+        If a $(D sink) delegate is specified, the string is passed to it
+        and this function returns $(D null).  Otherwise, this function
+        returns the string representation directly.
 
         The output format is controlled via $(D formatSpec), which should consist
-        of a single POSIX format specifier, without the percent (%) character.
+        of a single POSIX format specifier, including the percent (%) character.
         Note that complex numbers are floating point numbers, so the only
         valid format characters are 'e', 'f', 'g', 'a', and 's', where 's'
-        gives the default behaviour. Positional parameters are not valid.
+        gives the default behaviour. Positional parameters are not valid
+        in this context.
 
         See the $(LINK2 std_format.html, std.format documentation) for
         more information.
     */
-    void toString(Writer, String)(ref Writer writer, String formatSpec) const
-        if (isOutputRange!(Writer, String))
+    string toString
+        (void delegate(const(char)[]) sink = null, string formatSpec = "%s")
+        const
     {
-        enum maxNoAlloc = 30;
-        if (formatSpec.length <= maxNoAlloc)
+        if (sink == null)
         {
-            // Avoid allocating in most cases.
-            char[2*maxNoAlloc+4] fmt;
-            fmt[0] = '%';
-            int i = 1;
-            int j = 1 + formatSpec.length;
-            fmt[i .. j] = formatSpec[];
-            i = j;
-            if (signbit(im)==0) fmt[i++] = '+';
-            fmt[i++] = '%';
-            j = i + formatSpec.length;
-            fmt[i .. j] = formatSpec[];
-            fmt[j] = 'i';
+            char[] buf;
+            buf.reserve(100);
+            toString((const(char)[] s) { buf ~= s; }, formatSpec);
+            return cast(string) buf;
+        }
 
-            formattedWrite(
-                writer,
-                fmt[0 .. j+1],
-                re, im);
-        }
-        else
-        {
-            // For unlikely long format specifiers.
-            auto pm = signbit(im)==0 ? "+" : "";
-            formattedWrite(
-                writer,
-                "%"~formatSpec~pm~"%"~formatSpec~"i",
-                re, im);
-        }
+        formattedWrite(sink, formatSpec, re);
+        if (signbit(im) == 0)  sink("+");
+        formattedWrite(sink, formatSpec, im);
+        sink("i");
+        return null;
     }
 }
 
@@ -508,15 +486,20 @@ unittest
 unittest
 {
     // Convert to string.
-    auto z1 = Complex!real(0.123456789, 0.123456789);
-    auto s1 = appender!string();
-    z1.toString(s1, "s");
-    assert (s1.data == "0.123457+0.123457i");
 
+    // Using default format specifier
+    auto z1 = Complex!real(0.123456789, 0.123456789);
+    char[] s1;
+    z1.toString((const(char)[] c) { s1 ~= c; });
+    assert (s1 == "0.123457+0.123457i");
+    assert (s1 == z1.toString());
+
+    // Using custom format specifier
     auto z2 = z1.conj;
-    auto s2 = appender!string();
-    z2.toString(s2, ".8e");
-    assert (s2.data == "1.23456789e-01-1.23456789e-01i");
+    char[] s2;
+    z2.toString((const(char)[] c) { s2 ~= c; }, "%.8e");
+    assert (s2 == "1.23456789e-01-1.23456789e-01i");
+    assert (s2 == z2.toString(null, "%.8e"));
 }
 
 
