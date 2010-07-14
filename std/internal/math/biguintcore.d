@@ -564,7 +564,8 @@ static BigUint pow(BigUint x, ulong y)
             int p = highestPowerBelowUintMax(x0);
             if (y <= p) { // Just do it with pow               
                 result = cast(ulong)intpow(x0, y);
-                if (evenshiftbits+firstnonzero == 0) return result;
+                if (evenbits + firstnonzero == 0)
+                    return result;
                 return result<< (evenbits + firstnonzero*BigDigit.sizeof)*y;
             }
             y0 = y/p;
