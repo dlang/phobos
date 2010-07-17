@@ -164,7 +164,8 @@ int opCmp(Tdummy = void)(BigUint y)
 ///
 int opCmp(Tulong)(Tulong y) if (is (Tulong == ulong))
 {
-    if (data.length>2) return 1;
+    if (data.length > 2)
+        return 1;
     uint ylo = cast(uint)(y & 0xFFFF_FFFF);
     uint yhi = cast(uint)(y >> 32);
     if (data.length == 2 && data[1] != yhi) {
@@ -178,17 +179,21 @@ bool opEquals(Tdummy = void)(ref const BigUint y) const {
        return y.data[] == data[];
 }
 
-int opEquals(Tdummy = void)(ulong y) const {
-    if (data.length>2) return 0;
+bool opEquals(Tdummy = void)(ulong y) const {
+    if (data.length > 2)
+        return false;
     uint ylo = cast(uint)(y & 0xFFFF_FFFF);
     uint yhi = cast(uint)(y >> 32);
-    if (data.length==2 && data[1]!=yhi) return 0;
-    if (data.length==1 && yhi!=0) return 0;
+    if (data.length==2 && data[1]!=yhi)
+        return false;
+    if (data.length==1 && yhi!=0)
+        return false;
     return (data[0] == ylo);
 }
 
-
-bool isZero() const { return data.length == 1 && data[0] == 0; }
+bool isZero() const {
+    return data.length == 1 && data[0] == 0;
+}
 
 int numBytes() const {
     return data.length * BigDigit.sizeof;

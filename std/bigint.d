@@ -204,6 +204,9 @@ public:
         else static if (op=="%"){
             if (!isZero()) {
                 data = BigUint.mod(data, y.data);
+                // x%y always has the same sign as x.
+                if (isZero())
+                    sign = false;
             }
         }
         else static assert(0, "BigInt " ~ op[0..$-1] ~ "= " ~ T.stringof ~ " is not supported");
