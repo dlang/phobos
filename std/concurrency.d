@@ -272,7 +272,6 @@ Tid spawn(T...)( void function(T) fn, T args )
 {
     static assert( !hasLocalAliasing!(T),
                    "Aliases to mutable thread-local data not allowed." );
-    // TODO: MessageList and &exec should be shared.
     return spawn_( false, fn, args );
 }
 
@@ -317,6 +316,7 @@ private Tid spawn_(T...)( bool linked, void function(T) fn, T args )
         fn( args );
     }
 
+    // TODO: MessageList and &exec should be shared.
     auto t = new Thread( &exec ); t.start();
     links[spawnTid] = linked;
     return spawnTid;
@@ -374,6 +374,29 @@ private void _send(T...)( MsgType type, Tid tid, T vals )
  */
 void receive(T...)( T ops )
 {
+    foreach( i, t1; T )
+    {
+        static assert( is( t1 == function ) || is( t1 == delegate ) );
+        alias ParameterTypeTuple!(t1) a1;
+        
+        if( i < T.length )
+        {
+            static assert( a1.length != 1 || !is( a1[0] == Variant ),
+                           "function with arguments " ~ a1.stringof ~
+                           " occludes successive function" );
+
+            foreach( t2; T[i+1 .. $] )
+            {
+                static assert( is( t2 == function ) || is( t2 == delegate ) );
+                alias ParameterTypeTuple!(t2) a2;
+
+                static assert( !is( a1 == a2 ),
+                               "function with arguments " ~ a1.stringof ~
+                               " occludes successive function" );
+            }
+        }
+    }
+
     mbox.get( ops );
 }
 
