@@ -2254,3 +2254,97 @@ unittest
     }
 }
 
+/**
+Allocates a $(D class) object right inside the current scope,
+therefore avoiding the overhead of $(D new). This facility is unsafe;
+it is the responsibility of the user to not escape a reference to the
+object outside the scope.
+
+Example:
+----
+unittest
+{
+    class A { int x; }
+    auto a1 = scoped!A();
+    auto a2 = scoped!A();
+    a1.x = 42;
+    a2.x = 53;
+    assert(a1.x == 42);
+}
+----
+ */
+@system auto scoped(T, Args...)(Args args) if (is(T == class))
+{
+    struct Scoped
+    {
+        private ubyte[__traits(classInstanceSize, T)] Scoped_store = void;
+        @property T Scoped_payload()
+        {
+            return cast(T) (Scoped_store.ptr);
+        }
+        alias Scoped_payload this;
+
+        this(Args...)(Args args) if (is(typeof(T.init.__ctor(args))))
+        {
+            emplace!T(cast(void[]) Scoped_store, args);
+        }
+
+        @disable this(this) { writeln("Scoped this(this)"); assert(false); }
+
+        static if (is(typeof(T.init.__dtor())))
+        {
+            ~this()
+            {
+                Scoped.__dtor();
+            }
+        }
+    }
+
+    static if (Args.length == 0)
+    {
+        byte[__traits(classInstanceSize, T)] result;
+        result[] = typeid(T).init[];
+        static if (is(typeof(T.init.__ctor())))
+        {
+            (cast(T) result.ptr).__ctor();
+        }
+        return cast(Scoped) result;
+    }
+    else
+    {
+        return Scoped(args);
+    }
+}
+
+unittest
+{
+    class A { int x = 1; }
+    auto a1 = scoped!A();
+    assert(a1.x == 1);
+    auto a2 = scoped!A();
+    a1.x = 42;
+    a2.x = 53;
+    assert(a1.x == 42);
+}
+
+unittest
+{
+    class A { int x = 1; this() { x = 2; } }
+    auto a1 = scoped!A();
+    assert(a1.x == 2);
+    auto a2 = scoped!A();
+    a1.x = 42;
+    a2.x = 53;
+    assert(a1.x == 42);
+}
+
+unittest
+{
+    class A { int x = 1; this(int y) { x = y; } }
+    auto a1 = scoped!A(5);
+    assert(a1.x == 5);
+    auto a2 = scoped!A();
+    a1.x = 42;
+    a2.x = 53;
+    assert(a1.x == 42);
+}
