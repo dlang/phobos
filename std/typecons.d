@@ -51,9 +51,9 @@ Authors:   $(WEB erdani.org, Andrei Alexandrescu),
            Shin Fujishiro
  */
 module std.typecons;
-import core.stdc.stdlib, std.algorithm, std.array, std.conv,
-    std.exception, std.metastrings, std.traits, std.typetuple, core.memory;
-version(unittest) import std.stdio;
+import core.memory, core.stdc.stdlib;
+import std.algorithm, std.array, std.conv, std.exception, std.metastrings,
+    std.stdio, std.traits, std.typetuple;
 
 /**
 Encapsulates unique ownership of a resource.  Resource of type T is
@@ -2295,7 +2295,7 @@ unittest
         {
             ~this()
             {
-                Scoped.__dtor();
+                Scoped_payload.__dtor();
             }
         }
     }
@@ -2340,7 +2340,7 @@ unittest
 
 unittest
 {
-    class A { int x = 1; this(int y) { x = y; } }
+    class A { int x = 1; this(int y) { x = y; } ~this() {} }
     auto a1 = scoped!A(5);
     assert(a1.x == 5);
     auto a2 = scoped!A();
