@@ -2284,11 +2284,6 @@ unittest
         }
         alias Scoped_payload this;
 
-        this(Args...)(Args args) if (is(typeof(T.init.__ctor(args))))
-        {
-            emplace!T(cast(void[]) Scoped_store, args);
-        }
-
         @disable this(this) { writeln("Scoped this(this)"); assert(false); }
 
         static if (is(typeof(T.init.__dtor())))
@@ -2300,20 +2295,20 @@ unittest
         }
     }
 
+    byte[__traits(classInstanceSize, T)] result;
     static if (Args.length == 0)
     {
-        byte[__traits(classInstanceSize, T)] result;
         result[] = typeid(T).init[];
         static if (is(typeof(T.init.__ctor())))
         {
             (cast(T) result.ptr).__ctor();
         }
-        return cast(Scoped) result;
     }
     else
     {
-        return Scoped(args);
+        emplace!T(cast(void[]) result, args);
     }
+    return cast(Scoped) result;
 }
 
 unittest
