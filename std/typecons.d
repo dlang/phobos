@@ -2275,7 +2275,7 @@ unittest
  */
 @system auto scoped(T, Args...)(Args args) if (is(T == class))
 {
-    struct Scoped
+    static struct Scoped
     {
         private ubyte[__traits(classInstanceSize, T)] Scoped_store = void;
         @property T Scoped_payload()
@@ -2284,13 +2284,18 @@ unittest
         }
         alias Scoped_payload this;
 
-        @disable this(this) { writeln("Scoped this(this)"); assert(false); }
-
-        static if (is(typeof(T.init.__dtor())))
+        @disable this(this)
         {
-            ~this()
+            writeln("Illegal call to Scoped this(this)");
+            assert(false);
+        }
+
+        ~this()
+        {
+            destroy(Scoped_payload);
+            if ((cast(void**) Scoped_store.ptr)[1]) // if monitor is not null
             {
-                Scoped_payload.__dtor();
+                _d_monitordelete(Scoped_payload, true);
             }
         }
     }
@@ -2309,6 +2314,27 @@ unittest
         emplace!T(cast(void[]) result, args);
     }
     return cast(Scoped) result;
+}
+
+// Used by scoped() above
+private extern (C) static void _d_monitordelete(Object h, bool det);
+
+/*
+  Used by scoped() above.  Calls the destructors of an object
+  transitively up the inheritance path, but work properly only if the
+  static type of the object (T) is known.
+ */
+private void destroy(T)(T obj) if (is(T == class))
+{
+    static if (is(typeof(obj.__dtor())))
+    {
+        obj.__dtor();
+    }
+    static if (!is(T == Object) && is(T Base == super))
+    {
+        Base b = obj;
+        destroy(b);
+    }
 }
 
 unittest
@@ -2342,4 +2368,15 @@ unittest
     a1.x = 42;
     a2.x = 53;
     assert(a1.x == 42);
+}
+
+unittest
+{
+    class A { static bool dead; ~this() { dead = true; } }
+    class B : A { static bool dead; ~this() { dead = true; } }
+    {
+        auto b = scoped!B;
+    }
+    assert(B.dead, "asdasd");
+    assert(A.dead, "asdasd");
 }
