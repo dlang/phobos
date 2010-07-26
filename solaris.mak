@@ -81,13 +81,13 @@ ALLMAKEFILES= \
 	win32.mak linux.mak osx.mak freebsd.mak solaris.mak
 
 SRCS= \
-        internal/aaA.d internal/adi.d \
-        internal/aApply.d internal/aApplyR.d internal/memset.d \
-        internal/arraycast.d internal/arraycat.d \
-        internal/switch.d internal/qsort.d internal/invariant.d \
-        internal/dmain2.d internal/cast.d internal/obj.d \
-        internal/arrayfloat.d internal/arraydouble.d internal/arrayreal.d \
-        internal/arraybyte.d internal/arrayshort.d internal/arrayint.d \
+	internal/aaA.d internal/adi.d \
+	internal/aApply.d internal/aApplyR.d internal/memset.d \
+	internal/arraycast.d internal/arraycat.d \
+	internal/switch.d internal/qsort.d internal/invariant.d \
+	internal/dmain2.d internal/cast.d internal/obj.d \
+	internal/arrayfloat.d internal/arraydouble.d internal/arrayreal.d \
+	internal/arraybyte.d internal/arrayshort.d internal/arrayint.d \
 
 
 ZLIB_OBJS = etc/c/zlib/adler32.o etc/c/zlib/compress.o \

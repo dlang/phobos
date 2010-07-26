@@ -68,75 +68,75 @@ MAKEFILES= \
 	win32.mak linux.mak osx.mak freebsd.mak solaris.mak
 
 SRCS= std\math.d std\stdio.d std\dateparse.d std\date.d std\uni.d std\string.d \
-        std\base64.d std\md5.d std\regexp.d \
-        std\compiler.d std\cpuid.d std\format.d std\demangle.d \
-        std\path.d std\outbuffer.d std\utf.d std\uri.d \
-        std\ctype.d std\random.d std\array.d std\mmfile.d \
-        std\asserterror.d std\system.d \
-        std\bitarray.d \
-        std\signals.d std\typetuple.d std\traits.d std\bind.d \
-        std\switcherr.d \
-        std\thread.d std\thread_helper.d \
+	std\base64.d std\md5.d std\regexp.d \
+	std\compiler.d std\cpuid.d std\format.d std\demangle.d \
+	std\path.d std\outbuffer.d std\utf.d std\uri.d \
+	std\ctype.d std\random.d std\array.d std\mmfile.d \
+	std\asserterror.d std\system.d \
+	std\bitarray.d \
+	std\signals.d std\typetuple.d std\traits.d std\bind.d \
+	std\switcherr.d \
+	std\thread.d std\thread_helper.d \
 	std\moduleinit.d std\boxer.d \
-        std\stream.d std\socket.d std\socketstream.d \
-        std\perf.d std\openrj.d std\conv.d \
-        std\zip.d std\cstream.d std\loader.d \
+	std\stream.d std\socket.d std\socketstream.d \
+	std\perf.d std\openrj.d std\conv.d \
+	std\zip.d std\cstream.d std\loader.d \
 	std\outofmemory.d \
 	std\cover.d \
 	std\file.d \
 	std\math2.d \
-        internal\aaA.d internal\adi.d \
-        internal\aApply.d internal\aApplyR.d internal\memset.d \
-        internal\arraycast.d internal\arraycat.d \
-        internal\switch.d internal\qsort.d internal\invariant.d \
-        internal\dmain2.d internal\cast.d internal\obj.d \
-        internal\arrayfloat.d internal\arraydouble.d internal\arrayreal.d \
-        internal\arraybyte.d internal\arrayshort.d internal\arrayint.d \
+	internal\aaA.d internal\adi.d \
+	internal\aApply.d internal\aApplyR.d internal\memset.d \
+	internal\arraycast.d internal\arraycat.d \
+	internal\switch.d internal\qsort.d internal\invariant.d \
+	internal\dmain2.d internal\cast.d internal\obj.d \
+	internal\arrayfloat.d internal\arraydouble.d internal\arrayreal.d \
+	internal\arraybyte.d internal\arrayshort.d internal\arrayint.d \
 	etc\gamma.d \
-        std\c\stdarg.d \
-        std\c\windows\com.d \
-        std\c\windows\stat.d \
-        std\c\windows\windows.d \
-        std\c\windows\winsock.d \
-        std\windows\charset.d \
-        std\windows\iunknown.d \
-        std\windows\registry.d \
-        std\windows\syserror.d \
-        std\typeinfo\ti_ptr.d \
-        std\typeinfo\ti_delegate.d \
-        std\typeinfo\ti_void.d \
-        std\typeinfo\ti_C.d \
-        std\typeinfo\ti_byte.d \
-        std\typeinfo\ti_ubyte.d \
-        std\typeinfo\ti_short.d \
-        std\typeinfo\ti_ushort.d \
-        std\typeinfo\ti_int.d \
-        std\typeinfo\ti_uint.d \
-        std\typeinfo\ti_long.d \
-        std\typeinfo\ti_ulong.d \
-        std\typeinfo\ti_char.d \
-        std\typeinfo\ti_wchar.d \
-        std\typeinfo\ti_dchar.d \
-        std\typeinfo\ti_cdouble.d \
-        std\typeinfo\ti_double.d \
-        std\typeinfo\ti_idouble.d \
-        std\typeinfo\ti_cfloat.d \
-        std\typeinfo\ti_float.d \
-        std\typeinfo\ti_ifloat.d \
-        std\typeinfo\ti_creal.d \
-        std\typeinfo\ti_real.d \
-        std\typeinfo\ti_ireal.d \
-        std\typeinfo\ti_AC.d \
-        std\typeinfo\ti_Ag.d \
-        std\typeinfo\ti_Ashort.d \
-        std\typeinfo\ti_Aint.d \
-        std\typeinfo\ti_Along.d \
-        std\typeinfo\ti_Afloat.d \
-        std\typeinfo\ti_Adouble.d \
-        std\typeinfo\ti_Areal.d \
-        std\typeinfo\ti_Acfloat.d \
-        std\typeinfo\ti_Acdouble.d \
-        std\typeinfo\ti_Acreal.d
+	std\c\stdarg.d \
+	std\c\windows\com.d \
+	std\c\windows\stat.d \
+	std\c\windows\windows.d \
+	std\c\windows\winsock.d \
+	std\windows\charset.d \
+	std\windows\iunknown.d \
+	std\windows\registry.d \
+	std\windows\syserror.d \
+	std\typeinfo\ti_ptr.d \
+	std\typeinfo\ti_delegate.d \
+	std\typeinfo\ti_void.d \
+	std\typeinfo\ti_C.d \
+	std\typeinfo\ti_byte.d \
+	std\typeinfo\ti_ubyte.d \
+	std\typeinfo\ti_short.d \
+	std\typeinfo\ti_ushort.d \
+	std\typeinfo\ti_int.d \
+	std\typeinfo\ti_uint.d \
+	std\typeinfo\ti_long.d \
+	std\typeinfo\ti_ulong.d \
+	std\typeinfo\ti_char.d \
+	std\typeinfo\ti_wchar.d \
+	std\typeinfo\ti_dchar.d \
+	std\typeinfo\ti_cdouble.d \
+	std\typeinfo\ti_double.d \
+	std\typeinfo\ti_idouble.d \
+	std\typeinfo\ti_cfloat.d \
+	std\typeinfo\ti_float.d \
+	std\typeinfo\ti_ifloat.d \
+	std\typeinfo\ti_creal.d \
+	std\typeinfo\ti_real.d \
+	std\typeinfo\ti_ireal.d \
+	std\typeinfo\ti_AC.d \
+	std\typeinfo\ti_Ag.d \
+	std\typeinfo\ti_Ashort.d \
+	std\typeinfo\ti_Aint.d \
+	std\typeinfo\ti_Along.d \
+	std\typeinfo\ti_Afloat.d \
+	std\typeinfo\ti_Adouble.d \
+	std\typeinfo\ti_Areal.d \
+	std\typeinfo\ti_Acfloat.d \
+	std\typeinfo\ti_Acdouble.d \
+	std\typeinfo\ti_Acreal.d
 
 DOCS=	$(DOC)\std_path.html $(DOC)\std_math.html $(DOC)\std_outbuffer.html \
 	$(DOC)\std_stream.html $(DOC)\std_string.html $(DOC)\std_base64.html \
@@ -319,12 +319,12 @@ phobos.lib : $(OBJS) $(SRCS) minit.obj internal\gc\dmgc.lib \
 	etc\c\zlib\zlib.lib win32.mak
 #	lib -c -p32 phobos.lib $(OBJS) minit.obj internal\gc\dmgc.lib \
 #		etc\c\zlib\zlib.lib
-        $(DMD) -lib -ofphobos.lib -Xfphobos.json $(DFLAGS) $(SRCS) $(OBJS) minit.obj \
-                internal\gc\dmgc.lib etc\c\zlib\zlib.lib
+	$(DMD) -lib -ofphobos.lib -Xfphobos.json $(DFLAGS) $(SRCS) $(OBJS) minit.obj \
+		internal\gc\dmgc.lib etc\c\zlib\zlib.lib
 
 unittest : $(SRCS) phobos.lib
-        $(DMD) $(DFLAGS) -unittest -version=Unittest unittest.d $(SRCS) phobos.lib
-        unittest
+	$(DMD) $(DFLAGS) -unittest -version=Unittest unittest.d $(SRCS) phobos.lib
+	unittest
 
 #unittest : unittest.exe
 #       unittest
@@ -334,8 +334,8 @@ unittest : $(SRCS) phobos.lib
 #       dmc unittest.obj -g
 
 cov : $(SRCS) phobos.lib
-        $(DMD) -cov -unittest -ofcov.exe unittest.d $(SRCS) phobos.lib
-        cov
+	$(DMD) -cov -unittest -ofcov.exe unittest.d $(SRCS) phobos.lib
+	cov
 
 html : $(DOCS)
 
@@ -943,7 +943,8 @@ cleanhtml:
 detab:
 	detab $(SRC) \
 	$(SRC_STD) $(SRC_STD_C) $(SRC_TI) $(SRC_INT) $(SRC_STD_WIN) \
-	$(SRC_STDLINUX) $(SRC_ETC) $(SRC_ETC_C) $(SRC_ZLIB) $(SRC_GC)
+	$(SRC_STDLINUX)
+# $(SRC_ETC) $(SRC_ETC_C) $(SRC_ZLIB) $(SRC_GC)
 
 install:
 	$(CP) phobos.lib gcstub.obj $(DIR)\windows\lib
