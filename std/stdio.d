@@ -620,6 +620,7 @@ first argument. */
     {
         assert(p);
         assert(p.handle);
+        static assert(S.length>0, errorMessage);
         static assert(isSomeString!(S[0]), errorMessage);
         auto w = lockingTextWriter();
         std.format.formattedWrite(w, args);
@@ -629,6 +630,7 @@ first argument. */
 Same as writef, plus adds a newline. */
     void writefln(S...)(S args)
     {
+        static assert(S.length>0, errorMessage);
         static assert(isSomeString!(S[0]), errorMessage);
         auto w = lockingTextWriter;
         std.format.formattedWrite(w, args);
