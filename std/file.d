@@ -43,6 +43,19 @@ version (Posix)
         core.sys.posix.sys.time, core.sys.posix.unistd, core.sys.posix.utime;
 }
 
+version (unittest)
+{
+    private string deleteme = "deleteme.dmd.unittest";
+
+    static this()
+    {
+        version(Windows)
+            deleteme = std.path.join(std.process.getenv("TEMP"), deleteme);
+        else
+            deleteme = "/tmp/" ~ deleteme;
+    }
+}
+
 // @@@@ TEMPORARY - THIS SHOULD BE IN THE CORE @@@
 // {{{
 version (Posix)
@@ -275,8 +288,10 @@ version(Posix) void[] read(in char[] name, in size_t upTo = size_t.max)
 
 unittest
 {
-    write("std.file.deleteme", "1234");
-    assert(read("std.file.deleteme", 2) == "12");
+    write(deleteme, "1234");
+    scope(exit) remove(deleteme);
+    assert(read(deleteme, 2) == "12");
+    assert(read(deleteme) == "1234");
 }
 
 version (linux) unittest
@@ -317,9 +332,9 @@ S readText(S = string)(in char[] name)
 
 unittest
 {
-    enforce(std.process.system("echo abc>deleteme") == 0);
-    scope(exit) remove("deleteme");
-    enforce(chomp(readText("deleteme")) == "abc");
+    enforce(std.process.system("echo abc>"~deleteme) == 0);
+    scope(exit) remove(deleteme);
+    enforce(chomp(readText(deleteme)) == "abc");
 }
 
 /*********************************************
@@ -477,13 +492,9 @@ version(Posix) ulong getSize(in char[] name)
 
 unittest
 {
-    version(Windows)
-        auto deleteme = std.path.join(std.process.getenv("TEMP"), "deleteme");
-    else
-        auto deleteme = "/tmp/deleteme";
-    scope(exit) if (exists(deleteme)) remove(deleteme);
     // create a file of size 1
     write(deleteme, "a");
+    scope(exit) remove(deleteme);
     assert(getSize(deleteme) == 1);
     // create a file of size 3
     write(deleteme, "abc");
