@@ -720,9 +720,11 @@ Appends one item to the managed array.
             immutable len = pArray.length;
             if (len < capacity)
             {
+                auto cap = capacity;
                 emplace!(Unqual!T)
                     (cast(void[]) pArray.ptr[len .. len + 1], item);
                 *pArray = pArray.ptr[0 .. len + 1];
+                capacity() = cap - 1;
             }
             else
             {
