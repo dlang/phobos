@@ -1136,12 +1136,12 @@ if (isInputRange!T && !isSomeChar!(ElementType!T))
             // Nested specifier is to be used
             for (;;)
             {
-                auto f = FormatSpec!Char(f.nested);
-                f.writeUpToNextSpec(w);
-                formatValue(w, arr.front, f);
+                auto fmt = FormatSpec!Char(f.nested);
+                fmt.writeUpToNextSpec(w);
+                formatValue(w, arr.front, fmt);
                 arr.popFront();
                 if (arr.empty) break;
-                f.writeUpToNextSpec(w);
+                fmt.writeUpToNextSpec(w);
             }
 
             // auto itemFormatString = f.nested;
@@ -1169,6 +1169,46 @@ if (isInputRange!T && !isSomeChar!(ElementType!T))
             //     put(w, tail);
             // }
         }
+    }
+}
+
+void formatValue(Writer, T, Char)(Writer w, T val,
+        ref FormatSpec!Char f)
+if (isInputRange!T && !isSomeString!T && isSomeChar!(ElementType!T))
+{
+    if (!f.flDash)
+    {
+        static if (hasLength!T)
+        {
+            // right align
+            auto len = val.length;
+        }
+        else static if (isForwardRange!T)
+        {
+            auto len = walkLength(val.save);
+        }
+        else
+        {
+            enforce(f.width == 0, "Cannot right-align a range without length");
+            size_t len = 0;
+        }
+        if (f.width > len)
+            foreach (i ; 0 .. f.width - len) put(w, ' ');
+        for (; !val.empty; val.popFront())
+        {
+            put(w, val.front);
+        }
+    }
+    else
+    {
+        // left align
+        size_t printed = 0;
+        for (; !val.empty; val.popFront(), ++printed)
+        {
+            put(w, val.front);
+        }
+        if (f.width > printed)
+            foreach (i ; 0 .. f.width - printed) put(w, ' ');
     }
 }
 
@@ -1384,9 +1424,15 @@ unittest
         assert(stream.data == "1.67 -0X1.47AE147AE147BP+0 nan",
                 stream.data);
     }
+    else version (OSX)
+    {
+        assert(stream.data == "1.67 -0X1.47AE147AE147BP+0 nan",
+                stream.data);
+    }
     else
     {
-        assert(stream.data == "1.67-0X1.47AE147AE147BP+0 nan");
+        assert(stream.data == "1.67-0X1.47AE147AE147BP+0 nan",
+                stream.data);
     }
     stream.clear;
 
@@ -3206,6 +3252,8 @@ unittest
      */
     version (linux)
         assert(s == "1.67 -0XA.3D70A3D70A3D8P-3 nan");
+    else version (OSX)
+        assert(s == "1.67 -0XA.3D70A3D70A3D8P-3 nan", s);
     else
         assert(s == "1.67 -0X1.47AE147AE147BP+0 nan");
 
