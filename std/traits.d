@@ -2178,6 +2178,7 @@ unittest
     static assert(!isSomeChar!(wstring));
     static assert(!isSomeChar!(dstring));
     static assert(!isSomeChar!(char[4]));
+    static assert(isSomeChar!(immutable(char)));
 }
 
 /**
