@@ -20,7 +20,7 @@ import std.typecons;
 import std.conv;
 version(unittest) import std.stdio;
 
-unittest
+version(none) unittest
 {
     auto d = Date(2010, May, 1);
     auto d1 = d;
@@ -32,7 +32,7 @@ unittest
     assert(Date(2010, Jan, 5).dayOfYear == 5);
 }
 
-unittest
+version(none) unittest
 {
     auto d1 = Date(negInfin);
     auto d2 = Date(posInfin);
@@ -41,13 +41,13 @@ unittest
     auto d5 = Date(minDateTime);
 }
 
-unittest
+version(none) unittest
 {
     auto d1 = fromString("2002-1-25");
     auto d2 = fromUndelimitedString("20020125");
 }
 
-unittest
+version(none) unittest
 {
     auto d1 = dayClockLocalDay();
     auto d2 = dayClockUniversalDay();
