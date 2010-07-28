@@ -578,11 +578,11 @@ unittest
   // Grab the date and time relative to UTC
   lNow = std.date.getUTCtime();
   // Convert this into the local date and time for display.
-  lNowString = std.date.toString(lNow);
+  lNowString = std.date.UTCtoString(lNow);
  * ------------------------------------
  */
 
-string toString(d_time time)
+string UTCtoString(d_time time)
 {
     // Years are supposed to be -285616 .. 285616, or 7 digits
     // "Tue Apr 02 02:04:57 GMT-0800 1996"
