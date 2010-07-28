@@ -738,6 +738,8 @@ Defines the container's primary range, which embodies a forward range.
         /// Forward range primitives.
         bool empty() const { return !_head; }
         /// ditto
+        @property Range save() { return this; }
+        /// ditto
         @property T front() { return _head._payload; }
         /// ditto
         @property void front(T value)
@@ -757,6 +759,11 @@ Defines the container's primary range, which embodies a forward range.
             enforce(_head);
             return move(_head._payload);
         }
+    }
+
+    unittest
+    {
+        static assert(isForwardRange!Range);
     }
 
 /**
