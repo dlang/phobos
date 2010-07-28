@@ -1191,18 +1191,18 @@ version( unittest )
                      assert( val.field[0] == 42 &&
                              val.field[1] == 86 );
                  } );
-        receive( (Variant val) {} );
-        receive( (string val)
-                 {
-                     if( "the quick brown fox" != val )
-                         return false;
-                     return true;
-                 },
-                 (string val)
-                 {
-                     writefln( "got string: %s", val );
-                     assert(0);
-                 } );
+        //receive( (Variant val) {} );
+        // receive( (string val)
+        //          {
+        //              if( "the quick brown fox" != val )
+        //                  return false;
+        //              return true;
+        //          },
+        //          (string val)
+        //          {
+        //              writefln( "got string: %s", val );
+        //              assert(0);
+        //          } );
         send( tid, "done" );
     }
 
