@@ -810,6 +810,7 @@ Forwards to $(D _input[_input.length - n + 1]). Defined only if $(D R)
 is a random access range and if $(D R) defines $(D R.length).
  */
     static if (isRandomAccessRange!(R) && hasLength!(R))
+    {
         static if (byRef)
             auto ref ElementType!R opIndex(uint n)
             {
@@ -820,6 +821,12 @@ is a random access range and if $(D R) defines $(D R.length).
             {
                 return _input[_input.length - n - 1];
             }
+        static if (hasSlicing!R)
+            typeof(this) opSlice(size_t a, size_t b)
+            {
+                return retro(_input[_input.length - b .. _input.length - a]);
+            }
+    }
 
 /**
 Range primitive operation that returns the length of the
@@ -849,6 +856,7 @@ Retro!(R) retro(R)(R input) if (isBidirectionalRange!(R))
 
 unittest
 {
+    static assert(isBidirectionalRange!(Retro!string));
     int[] a;
     static assert(is(typeof(a) == typeof(retro(retro(a)))));
     static assert(isRandomAccessRange!(Retro!(int[])));
@@ -3013,14 +3021,14 @@ unittest
 
 struct Transposed(RangeOfRanges)
 {
-    alias typeof(map!"a.front"(RangeOfRanges.init)) ElementType;
+    //alias typeof(map!"a.front"(RangeOfRanges.init)) ElementType;
 
     this(RangeOfRanges input)
     {
         this._input = input;
     }
 
-    @property ElementType front()
+    @property auto front()
     {
         return map!"a.front"(_input);
     }
@@ -3137,16 +3145,33 @@ destroyable state that does not allocate any resources (usually equal
 to its $(D .init) value).
  */
 ElementType!R moveBack(R)(R r)
-if (isInputRange!R && is(typeof(&r.front) == ElementType!R*))
+if (isBidirectionalRange!R && is(typeof(&(r.front())) == ElementType!R*))
 {
     return move(r.back);
 }
 
 /// Ditto
 ElementType!R moveBack(R)(R r)
-if (isInputRange!R && is(typeof(&R.moveBack)))
+if (isBidirectionalRange!R && is(typeof(&R.moveBack)))
 {
     return r.moveBack();
+}
+
+unittest
+{
+    struct TestRange
+    {
+        int payload;
+        @property bool empty() { return false; }
+        @property TestRange save() { return this; }
+        @property ref int front() { return payload; }
+        @property ref int back() { return payload; }
+        void popFront() { }
+        void popBack() { }
+    }
+    static assert(isBidirectionalRange!TestRange);
+    TestRange r;
+    auto x = moveBack(r);
 }
 
 /**
