@@ -587,7 +587,8 @@ unittest
 	//printf("addrList.length = %d\n", ih.addrList.length);
 	assert(ih.addrList.length);
 	InternetAddress ia = new InternetAddress(ih.addrList[0], InternetAddress.PORT_ANY);
-    assert(ih.name == "www.digitalmars.com");
+    assert(ih.name == "www.digitalmars.com" || ih.name == "digitalmars.com",
+            ih.name);
 	// printf("IP address = %.*s\nname = %.*s\n", ia.toAddrString(), ih.name);
 	// foreach(int i, string s; ih.aliases)
 	// {
