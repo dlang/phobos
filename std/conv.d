@@ -37,13 +37,21 @@ class ConvError : Error
         super(s);
     }
 }
-
+       
 private void convError(S, T, string f = __FILE__, uint ln = __LINE__)(S source)
 {
     throw new ConvError(cast(string)
             ("std.conv("~to!string(ln)
                     ~"): Can't convert value `"~to!(string)(source)~"' of type "
                     ~S.stringof~" to type "~T.stringof));
+}
+
+private void convError(S, T, string f = __FILE__, uint ln = __LINE__)(S source, int radix)
+{
+    throw new ConvError(cast(string)
+            ("std.conv("~to!string(ln)
+                    ~"): Can't convert value `"~to!(string)(source)~"' of type "
+                    ~S.stringof~" base "~to!(string)(radix)~" to type "~T.stringof));
 }
 
 /**
@@ -963,7 +971,7 @@ if (isSomeChar!(ElementType!Source) && isIntegral!Target)
     static if (Target.sizeof < int.sizeof)
     {
         // smaller types are handled like integers
-        auto v = parse!(Select!(Target.min < 0, int, uint), Source)(s);
+        auto v = .parse!(Select!(Target.min < 0, int, uint))(s);
         auto result = cast(Target) v;
         if (result != v)
         {
@@ -1036,6 +1044,77 @@ if (isSomeChar!(ElementType!Source) && isIntegral!Target)
         convError!(Source, Target)(s);
         return 0;
     }
+}
+
+/// ditto
+Target parse(Target, Source)(ref Source s, uint radix)
+if (isSomeString!Source && isIntegral!Target)
+in
+{
+    assert(radix >= 2 && radix <= 36);
+}
+body
+{
+    immutable length = s.length;
+    immutable int max = (radix < 10 ? '0' : 'a'-10) + radix;
+    
+    Target v = 0;
+    size_t i = 0;
+    for (; i < length; ++i)
+    {
+        int c = s[i];
+        if (c < '0')
+            break;
+        if (radix < 10)
+        {
+            if (c >= max)
+                break;
+        }
+        else 
+        {
+            if (c > '9')
+            {
+                c |= 0x20;//poorman's tolower
+                if (c < 'a' || c >= max)
+                    break;
+                c -= 'a'-10-'0';
+            }
+        }
+        auto blah = cast(Target) (v * radix + c - '0');
+        if (blah < v)
+            goto Loverflow;
+        v = blah;
+    }
+    if (!i)
+        goto Lerr;
+    s = s[i..$];
+    return v;
+Loverflow:
+    ConvOverflowError.raise("Overflow in integral conversion");
+Lerr:
+    convError!(Source, Target)(s, radix);
+    return 0;
+}
+
+unittest
+{
+    // @@@BUG@@@ the size of China
+	// foreach (i; 2..37) {
+	// 	assert(parse!int("0",i) == 0);
+	// 	assert(parse!int("1",i) == 1);
+	// 	assert(parse!byte("10",i) == i);
+	// }
+	foreach (i; 2..37) {
+        string s = "0";
+		assert(parse!int(s,i) == 0);
+        s = "1";
+		assert(parse!int(s,i) == 1);
+        s = "10";
+		assert(parse!byte(s,i) == i);
+	}
+	assert(parse!int("0011001101101",2) == 0b0011001101101);
+	assert(parse!int("765",8) == 0765);
+	assert(parse!int("fCDe",16) == 0xfcde);
 }
 
 Target parse(Target, Source)(ref Source s)
@@ -3723,7 +3802,7 @@ T emplace(T, Args...)(void[] chunk, Args args) if (is(T == class))
 {
     enforce(chunk.length >= __traits(classInstanceSize, T));
     auto a = cast(size_t) chunk.ptr;
-    enforce(a % real.alignof == 0);
+    enforce(a % T.alignof == 0, text(a, " vs. ", T.alignof));
     auto result = cast(typeof(return)) chunk.ptr;
 
     // Initialize the object in its pre-ctor state
@@ -3753,7 +3832,7 @@ unittest
         int y = 42;
         this(int z) { assert(x == 5 && y == 42); x = y = z;}
     }
-    static byte[__traits(classInstanceSize,A)] buf;
+    static byte[__traits(classInstanceSize, A)] buf;
     auto a = emplace!A(cast(void[]) buf, 55);
     assert(a.x == 55 && a.y == 55);
     static assert(!is(typeof(emplace!A(cast(void[]) buf))));
