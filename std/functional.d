@@ -326,33 +326,6 @@ unittest
     assert(f3(6) == 11);
 }
 
-/*private*/ template Adjoin(F...)
-{
-    template For(V...)
-    {
-        static if (F.length == 0)
-        {
-            alias TypeTuple!() Result;
-        }
-        else
-        {
-            alias F[0] headFun;
-            alias typeof({ V values; return headFun(values); }()) Head;
-            alias TypeTuple!(Head, Adjoin!(F[1 .. $]).For!(V).Result) Result;
-        }
-
-        // Tuple!(Result) fun(V...)(V a)
-        // {
-        //     typeof(return) result;
-        //     foreach (i, Unused; Result)
-        //     {
-        //         result.field[i] = F[i](a);
-        //     }
-        //     return result;
-        // }
-    }
-}
-
 /**
 Takes multiple functions and adjoins them together. The result is a
 $(XREF typecons, Tuple) with one element per passed-in function. Upon
@@ -369,27 +342,56 @@ assert(is(typeof(x) == Tuple!(bool, int)));
 assert(x._0 == true && x.field[1] == 2);
 ----
 */
-template adjoin(F...)
+template adjoin(F...) if (F.length)
 {
-    Tuple!(Adjoin!(F).For!(V).Result) adjoin(V...)(V a)
+    auto adjoin(V...)(V a)
     {
-        typeof(return) result;
-        foreach (i, Unused; Adjoin!(F).For!(V).Result)
+        static if (F.length == 1)
         {
-            result.field[i] = F[i](a);
+            return F[0](a);
         }
-        return result;
+        else static if (F.length == 2)
+        {
+            return tuple(F[0](a), F[1](a));
+        }
+        else
+        {
+            alias typeof(F[0](a)) Head;
+            Tuple!(Head, typeof(.adjoin!(F[1..$])(a)).Types) result = void;
+            foreach (i, Unused; result.Types)
+            {
+                auto store = (cast(void*) &result.field[i])
+                    [0 .. result.field[i].sizeof];
+                emplace!(typeof(result.field[i]))(store, F[i](a));
+            }
+            return result;
+        }
     }
 }
 
 unittest
 {
     static bool F1(int a) { return a != 0; }
+    auto x1 = adjoin!(F1)(5);
     static int F2(int a) { return a / 2; }
-    auto x = adjoin!(F1, F2)(5);
-    alias Adjoin!(F1, F2).For!(int).Result R;
-    assert(is(typeof(x) == Tuple!(bool, int)));
-    assert(x.field[0] && x.field[1] == 2);
+    auto x2 = adjoin!(F1, F2)(5);
+    assert(is(typeof(x2) == Tuple!(bool, int)));
+    assert(x2.field[0] && x2.field[1] == 2);
+    auto x3 = adjoin!(F1, F2, F2)(5);
+    assert(is(typeof(x3) == Tuple!(bool, int, int)));
+    assert(x3.field[0] && x3.field[1] == 2 && x3.field[2] == 2);
+
+    bool F4(int a) { return a != x1; }
+    alias adjoin!(F4) eff4;
+    static struct S
+    {
+        bool delegate(int) store;
+        int fun() { return 42 + store(5); }
+    }
+    S s;
+    s.store = (int a) { return eff4(a); };
+    auto x4 = s.fun();
+    assert(x4 == 43);
 }
 
 // /*private*/ template NaryFun(string fun, string letter, V...)
