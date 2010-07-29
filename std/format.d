@@ -588,7 +588,7 @@ struct FormatSpec(Char)
         auto f = FormatSpec("abc%sdef%sghi");
         f.writeUpToNextSpec(w);
         assert(w.data == "abc", w.data);
-        assert(f.trailing == "def%sghi", f.trailing);
+        assert(f.trailing == "def%sghi", text(f.trailing));
         f.writeUpToNextSpec(w);
         assert(w.data == "abcdef", w.data);
         assert(f.trailing == "ghi");
