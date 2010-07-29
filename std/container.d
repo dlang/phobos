@@ -2486,8 +2486,6 @@ unittest
 _Array specialized for $(D bool). Packs together values efficiently by
 allocating one bit per element.
  */
-version(none)
-{
 struct Array(T) if (is(T == bool))
 {
     static immutable uint bitsPerWord = size_t.sizeof * 8;
@@ -3252,5 +3250,4 @@ unittest
 {
     Array!bool a;
     assert(a.empty);
-}
 }
