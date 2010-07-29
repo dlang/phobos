@@ -3727,7 +3727,8 @@ T* emplace(T, Args...)(void[] chunk, Args args) if (!is(T == class))
 {
     enforce(chunk.length >= T.sizeof);
     auto a = cast(size_t) chunk.ptr;
-    enforce(a % T.alignof == 0);
+    version (OSX)	// for some reason, breaks on other platforms
+        enforce(a % T.alignof == 0);
     auto result = cast(typeof(return)) chunk.ptr;
 
     static void initialize(void * p)

@@ -1431,7 +1431,7 @@ unittest
     }
     else
     {
-        assert(stream.data == "1.67-0X1.47AE147AE147BP+0 nan",
+        assert(stream.data == "1.67 -0X1.47AE147AE147BP+0 nan",
                 stream.data);
     }
     stream.clear;
