@@ -53,6 +53,10 @@ DMD=$(DIR)\bin\dmd
 #DMD=..\dmd
 DMD=dmd
 
+## Location of the svn repository
+
+SVN=\svnproj\phobos\phobos
+
 ## Location of where to write the html documentation files
 
 DOCSRC = ../docsrc
@@ -781,11 +785,11 @@ $(DOC)\std_c_wcharh.html : $(STDDOC) std\c\wcharh.d
 
 ######################################################
 
-zip : win32.mak linux.mak osx.mak $(STDDOC) $(SRC) \
+zip : win32.mak posix.mak $(STDDOC) $(SRC) \
 	$(SRC_STD) $(SRC_STD_C) $(SRC_TI) $(SRC_INT) $(SRC_STD_WIN) \
 	$(SRC_STD_C_LINUX) $(SRC_STD_C_OSX) $(SRC_ETC) $(SRC_ETC_C) $(SRC_ZLIB) $(SRC_GC)
 	del phobos.zip
-	zip32 -u phobos win32.mak linux.mak osx.mak $(STDDOC)
+	zip32 -u phobos win32.mak posix.mak $(STDDOC)
 	zip32 -u phobos $(SRC)
 	zip32 -u phobos $(SRC_TI)
 	zip32 -u phobos $(SRC_INT)
@@ -817,7 +821,7 @@ cleanhtml:
 install:
 	$(CP) phobos.lib $(DIR)\windows\lib
 	$(CP) $(DRUNTIME)\lib\gcstub.obj $(DIR)\windows\lib
-	$(CP) win32.mak linux.mak osx.mak $(STDDOC) $(DIR)\src\phobos
+	$(CP) win32.mak posix.mak $(STDDOC) $(DIR)\src\phobos
 	$(CP) $(SRC) $(DIR)\src\phobos
 	$(CP) $(SRC_STD) $(DIR)\src\phobos\std
 	$(CP) $(SRC_STD_C) $(DIR)\src\phobos\std\c
@@ -830,4 +834,19 @@ install:
 	$(CP) $(SRC_ETC_C) $(DIR)\src\phobos\etc\c
 	$(CP) $(SRC_ZLIB) $(DIR)\src\phobos\etc\c\zlib
 	$(CP) $(DOCS) $(DIR)\html\d\phobos
+
+svn:
+	$(CP) win32.mak posix.mak $(STDDOC) $(SVN)\ 
+	$(CP) $(SRC) $(SVN)\ 
+	$(CP) $(SRC_STD) $(SVN)\std
+	$(CP) $(SRC_STD_C) $(SVN)\std\c
+	$(CP) $(SRC_STD_WIN) $(SVN)\std\windows
+	$(CP) $(SRC_STD_C_WIN) $(SVN)\std\c\windows
+	$(CP) $(SRC_STD_C_LINUX) $(SVN)\std\c\linux
+	$(CP) $(SRC_STD_C_OSX) $(SVN)\std\c\osx
+	$(CP) $(SRC_STD_INTERNAL_MATH) $(SVN)\std\internal\math
+	#$(CP) $(SRC_ETC) $(SVN)\etc
+	$(CP) $(SRC_ETC_C) $(SVN)\etc\c
+	$(CP) $(SRC_ZLIB) $(SVN)\etc\c\zlib
+
 
