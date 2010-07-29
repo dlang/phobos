@@ -1056,13 +1056,15 @@ if (is(T : bool))
    formatted as Unicode characters with %s and as integers with
    integral-specific format specs.
  */
-void formatValue(Writer, T, Char)(Writer w, T val,
-        ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
 if (isSomeChar!T)
 {
-    if (f.spec == 's') {
+    if (f.spec == 's')
+    {
         put(w, val);
-    } else {
+    }
+    else
+    {
         formatValue(w, cast(uint) val, f);
     }
 }
@@ -1286,11 +1288,30 @@ if (is(T == struct) && !isInputRange!T)
 /**
    Static-size arrays are formatted just like arrays.
  */
-void formatValue(Writer, T, Char)(Writer w, ref T val,
-        ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(Writer w, ref T val, ref FormatSpec!Char f)
 if (isStaticArray!T)
 {
     formatValue(w, val[], f);
+}
+
+/*
+   Formatting a $(D creal) is deprecated but still kept around for a while.
+ */
+void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
+if (is(T : creal))
+{
+    formatValue(w, val.re, f);
+    put(w, '+');
+    formatValue(w, val.im, f);
+    put(w, 'i');
+}
+
+unittest
+{
+    FormatSpec!char f;
+    auto a = appender!string();
+    void[] val;
+    formatValue(a, val, f);
 }
 
 /*
