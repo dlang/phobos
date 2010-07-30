@@ -278,7 +278,7 @@ point.field[0] = 5;
 point.field[1] = 6;
 // read coordinates
 auto x = point.field[0];
-auto y = point.[1];
+auto y = point.field[1];
 ----
 
 Tuple members can be named. It is legal to mix named and unnamed
