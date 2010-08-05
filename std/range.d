@@ -525,7 +525,7 @@ $(D T).
 template ElementType(R)
 {
     //alias typeof({ R r; return front(r[]); }()) ElementType;
-    static if (is(typeof(R.front()) T))
+    static if (is(typeof({return R.init.front();}()) T))
         alias T ElementType;
     else
         alias void ElementType;
