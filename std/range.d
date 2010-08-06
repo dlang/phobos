@@ -540,6 +540,8 @@ unittest
     static assert(is(ElementType!(typeof(a)) : dchar));
     int[] i;
     static assert(is(ElementType!(typeof(i)) : int));
+    void[] buf;
+    static assert(is(ElementType!(typeof(buf)) : void));
 }
 
 /**
