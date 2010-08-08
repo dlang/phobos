@@ -96,8 +96,8 @@ void main(string[] args)
   getopt(args, "timeout", &timeout);
 ---------
 
- Invoking the program with "--timeout=5" or "--timeout 5" will set
- $(D timeout) to 5.)
+To set $(D timeout) to $(D 5), invoke the program with either $(D
+--timeout=5) or $(D --timeout 5).
 
  $(UL $(LI $(I Incremental options.) If an option name has a "+" suffix and
  is bound to a numeric type, then the option's value tracks the number
@@ -113,7 +113,7 @@ void main(string[] args)
  expects a parameter, e.g. in the command line "--paranoid 42
  --paranoid", the "42" does not set $(D paranoid) to 42;
  instead, $(D paranoid) is set to 2 and "42" is not considered
- as part of the program options.))
+ as part of the normal program arguments.))
 
  $(LI $(I String options.) If an option is bound to a string, a string
  is expected as the next option, or right within the option separated
@@ -256,9 +256,32 @@ etc. because the directive $(D
 std.getopt.config.caseInsensitive) turned sensitivity off before
 option "bar" was parsed.
 
+$(B "Short" versus "long" options)
+
+Traditionally, programs accepted single-letter options preceded by
+only one dash (e.g. $(D -t)). $(D getopt) accepts such parameters
+seamlessly. When used with a double-dash (e.g. $(D --t), a
+single-letter option behaves the same as a multi-letter option. When
+used with a single dash, a single-letter option is accepted. If the
+option has a parameter, that must be "stuck" to the option without
+any intervening space or "=":
+
+---------
+uint timeout;
+getopt(args, "timeout|t", &timeout);
+---------
+
+To set $(D timeout) to $(D 5), use either of the following: $(D --timeout=5),
+$(D --timeout 5), $(D --t=5), $(D --t 5), or $(D -t5). Forms such as $(D -t 5)
+and $(D -timeout=5) will be not accepted.
+
+For more details about short options, refer also to the next section.
+
 $(B Bundling)
 
-Single-letter options can be bundled together, i.e. "-abc" is the same as "-a -b -c". By default, this confusing option is turned off. You can turn it on with the $(D std.getopt.config.bundling) directive:
+Single-letter options can be bundled together, i.e. "-abc" is the same as
+$(D "-a -b -c"). By default, this confusing option is turned off. You can
+turn it on with the $(D std.getopt.config.bundling) directive:
 
 ---------
 bool foo, bar;
@@ -268,11 +291,14 @@ getopt(args,
     "bar|b", &bar);
 ---------
 
-In case you want to only enable bundling for some of the parameters, bundling can be turned off with $(D std.getopt.config.noBundling).
+In case you want to only enable bundling for some of the parameters,
+bundling can be turned off with $(D std.getopt.config.noBundling).
 
 $(B Passing unrecognized options through)
 
-If an application needs to do its own processing of whichever arguments $(D getopt) did not understand, it can pass the $(D std.getopt.config.passThrough) directive to $(D getopt):
+If an application needs to do its own processing of whichever arguments
+$(D getopt) did not understand, it can pass the
+$(D std.getopt.config.passThrough) directive to $(D getopt):
 
 ---------
 bool foo, bar;
@@ -282,11 +308,16 @@ getopt(args,
     "bar", &bar);
 ---------
 
-An unrecognized option such as "--baz" will be found untouched in $(D args) after $(D getopt) returns.
+An unrecognized option such as "--baz" will be found untouched in
+$(D args) after $(D getopt) returns.
 
 $(B Options Terminator)
 
-A lonesome double-dash terminates $(D getopt) gathering. It is used to separate program options from other parameters (e.g. options to be passed to another program). Invoking the example above with "--foo -- --bar" parses foo but leaves "--bar" in $(D args). The double-dash itself is removed from the argument array.
+A lonesome double-dash terminates $(D getopt) gathering. It is used to
+separate program options from other parameters (e.g. options to be passed
+to another program). Invoking the example above with $(D "--foo -- --bar")
+parses foo but leaves "--bar" in $(D args). The double-dash itself is
+removed from the argument array.
 */
 
 void getopt(T...)(ref string[] args, T opts) {
