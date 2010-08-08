@@ -65,7 +65,7 @@ ElementType!Range[] array(Range)(Range r) if (isInputRange!Range)
         auto a = appender!(E[])();
         foreach (e; r)
         {
-            put(a, e);
+            a.put(e);
         }
         return a.data;
     }
@@ -645,54 +645,137 @@ assert(app2.data == [ 1, 2, 3, 4, 5, 6 ]);
 
 struct Appender(A : T[], T)
 {
-    private Unqual!(T)[] * pArray;
-    private enum size_t extraSize = (size_t.sizeof * 2) - 1;
+private:
+    Unqual!(T)[] * pArray;
 
-    private void allocateCapacity()
+    void allocateAndWriteCapacity()
+    {
+        immutable chunkSize = GC.sizeOf(pArray.ptr);
+        immutable cap = chunkSize / T.sizeof;
+        immutable surplus = chunkSize - pArray.length * T.sizeof;
+        immutable capRepSize = cap < ubyte.max ? 1 : cap < ushort.max ? 3
+            : cap < uint.max ? 7 : 15;
+        if (surplus >= capRepSize)
+        {
+            // Enough room
+            writeCapacity(cap);
+        }
+        else
+        {
+            immutable len = pArray.length;
+            *pArray = (cast(Unqual!(T)*) GC.realloc(pArray.ptr,
+                            chunkSize + capRepSize))[0 .. len];
+            return allocateAndWriteCapacity();
+        }
+    }
+
+    void writeCapacity(size_t cap)
     {
         assert(pArray);
-        // make room for capacity
-        immutable len = pArray.length;
-        *pArray = (cast(Unqual!(T)*) GC.realloc(pArray.ptr,
-                        len * T.sizeof + extraSize))
-            [0 .. len];
-        capacity() = (GC.sizeOf(pArray.ptr) - extraSize)
-            / T.sizeof;
+        assert(pArray.ptr);
+        auto p = cast(ubyte*) (pArray.ptr + pArray.length);
+        if (cap < ubyte.max)
+        {
+            *p = cast(ubyte) cap;
+        }
+        else if (cap < ushort.max)
+        {
+            *p++ = ubyte.max;
+            *p++ = cast(ubyte) cap;
+            *p++ = cast(ubyte) (cap >> 8);
+        }
+        else if (cap < uint.max)
+        {
+            *p++ = ubyte.max;
+            *p++ = ubyte.max;
+            *p++ = ubyte.max;
+            *p++ = cast(ubyte) cap;
+            *p++ = cast(ubyte) (cap >> 8);
+            *p++ = cast(ubyte) (cap >> 16);
+            *p++ = cast(ubyte) (cap >> 24);
+        }
+        else
+        {
+            static if (size_t.max == ulong.max)
+            {
+                *p++ = ubyte.max;
+                *p++ = ubyte.max;
+                *p++ = ubyte.max;
+                *p++ = ubyte.max;
+                *p++ = ubyte.max;
+                *p++ = ubyte.max;
+                *p++ = ubyte.max;
+                *p++ = cast(ubyte) cap;
+                *p++ = cast(ubyte) (cap >> 8);
+                *p++ = cast(ubyte) (cap >> 16);
+                *p++ = cast(ubyte) (cap >> 24);
+                *p++ = cast(ubyte) (cap >> 32L);
+                *p++ = cast(ubyte) (cap >> 40L);
+                *p++ = cast(ubyte) (cap >> 48L);
+                *p++ = cast(ubyte) (cap >> 56L);
+            }
+        }
     }
 
-    /**
-       Initialize an $(D Appender) with a pointer to an existing
-       array. The $(D Appender) object will append to this array. If
-       $(D null) is passed (or the default constructor gets called),
-       the $(D Appender) object will allocate and use a new array.
-    */
+    size_t readCapacity()
+    {
+        assert(pArray);
+        assert(pArray.ptr);
+        auto p = cast(ubyte*) (pArray.ptr + pArray.length);
+        if (*p < ubyte.max)
+        {
+            return *p;
+        }
+        if (p[1] < ubyte.max && p[2] < ubyte.max)
+        {
+            return p[1] + (p[2] << 8);
+        }
+        if (p[3] < ubyte.max && p[4] < ubyte.max && p[5] < ubyte.max &&
+                p[6] < ubyte.max)
+        {
+            return p[3] + (p[4] << 8) + (p[5] << 16) + (p[6] << 24);
+        }
+        else
+        {
+            static if (size_t.max == ulong.max)
+            {
+                return p[7] + (p[8] << 8) + (p[9] << 16) + (p[10] << 24)
+                    + (p[11] << 32) + (p[12] << 40) + (p[13] << 48) +
+                    (p[14] << 56);
+            }
+        }
+        assert(0);
+    }
+
+public:
+/**
+Initialize an $(D Appender) with a pointer to an existing array. The
+$(D Appender) object will append to this array. If $(D null) is passed
+(or the default constructor gets called), the $(D Appender) object
+will allocate and use a new array.
+ */
     this(T[] * p)
     {
-        pArray = p ? cast(Unqual!(T)[] *) p : (new typeof(*pArray)[1]).ptr;
-        // make room for capacity
-        allocateCapacity();
-    }
-
-    /**
-       Returns the capacity of the array (the maximum number of
-       elements the managed array can accommodate before triggering a
-       reallocation).
-    */
-    @property ref size_t capacity()
-    {
-        enforce(pArray, "You must initialize Appender by calling the"
-                " appender function before using it");
-        auto p = cast(ubyte*) (pArray.ptr + pArray.length);
-        while (cast(size_t) p & 3) ++p;
-        return *cast(size_t *) p;
+        pArray = cast(Unqual!(T)[] *) p;
+        if (!pArray) pArray = (new typeof(*pArray)[1]).ptr;
+        allocateAndWriteCapacity();
     }
 
 /**
 Returns the managed array.
  */
-    @property T[] data()
+    T[] data()
     {
         return cast(typeof(return)) (pArray ? *pArray : null);
+    }
+
+/**
+Returns the capacity of the array (the maximum number of elements the
+managed array can accommodate before triggering a reallocation).
+ */
+    size_t capacity()
+    {
+        return pArray && pArray.ptr ? readCapacity() : 0;
     }
 
 /**
@@ -701,8 +784,6 @@ Appends one item to the managed array.
     void put(U)(U item) if (isImplicitlyConvertible!(U, T) ||
             isSomeChar!T && isSomeChar!U)
     {
-        enforce(pArray, "You must initialize Appender by calling the"
-                " appender function before using it");
         static if (isSomeChar!T && isSomeChar!U && T.sizeof < U.sizeof)
         {
             // must do some transcoding around here
@@ -712,26 +793,19 @@ Appends one item to the managed array.
         }
         else
         {
-            if (!pArray)
-            {
-                pArray = (new typeof(*pArray)[1]).ptr;
-                goto APPEND;
-            }
+            if (!pArray) pArray = (new typeof(*pArray)[1]).ptr;
             immutable len = pArray.length;
             if (len < capacity)
             {
-                auto cap = capacity;
-                emplace!(Unqual!T)
-                    (cast(void[]) pArray.ptr[len .. len + 1], item);
+                // Should do in-place construction here
+                pArray.ptr[len] = item;
                 *pArray = pArray.ptr[0 .. len + 1];
-                capacity() = cap - 1;
             }
             else
             {
-              APPEND:
                 // Time to reallocate, do it and cache capacity
                 *pArray ~= item;
-                allocateCapacity();
+                allocateAndWriteCapacity();
             }
         }
     }
@@ -742,13 +816,10 @@ Appends an entire range to the managed array.
     void put(Range)(Range items) if (isForwardRange!Range
             && is(typeof(Appender.init.put(items.front))))
     {
-        enforce(pArray, "You must initialize Appender by calling the"
-                " appender function before using it");
         static if (is(typeof(*pArray ~= items)))
         {
             if (!pArray) pArray = (new typeof(*pArray)[1]).ptr;
             *pArray ~= items;
-            allocateCapacity();
         }
         else
         {
@@ -768,7 +839,7 @@ Clears the managed array.
     {
         if (!pArray) return;
         pArray.length = 0;
-        allocateCapacity();
+        writeCapacity(GC.sizeOf(pArray.ptr) / T.sizeof);
     }
 }
 
@@ -778,7 +849,7 @@ initialized with $(D t).
  */
 Appender!(E[]) appender(A : E[], E)(A * array = null)
 {
-    return Appender!(E[])(array ? array : (new A[1]).ptr);
+    return Appender!(E[])(array);
 }
 
 unittest
