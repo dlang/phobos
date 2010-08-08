@@ -289,7 +289,7 @@ version(Posix) void[] read(in char[] name, in size_t upTo = size_t.max)
 unittest
 {
     write(deleteme, "1234");
-    scope(exit) remove(deleteme);
+    scope(exit) { assert(exists(deleteme)); remove(deleteme); }
     assert(read(deleteme, 2) == "12");
     assert(read(deleteme) == "1234");
 }
@@ -332,8 +332,8 @@ S readText(S = string)(in char[] name)
 
 unittest
 {
-    enforce(std.process.system("echo abc>"~deleteme) == 0);
-    scope(exit) remove(deleteme);
+    write(deleteme, "abc\n");
+    scope(exit) { assert(exists(deleteme)); remove(deleteme); }
     enforce(chomp(readText(deleteme)) == "abc");
 }
 
@@ -494,7 +494,7 @@ unittest
 {
     // create a file of size 1
     write(deleteme, "a");
-    scope(exit) remove(deleteme);
+    scope(exit) { assert(exists(deleteme)); remove(deleteme); }
     assert(getSize(deleteme) == 1);
     // create a file of size 3
     write(deleteme, "abc");
@@ -628,10 +628,12 @@ version(Posix) d_time lastModified(in char[] name, d_time returnIfMissing)
 
 unittest
 {
-    std.process.system("echo a>deleteme") == 0 || assert(false);
-    scope(exit) remove("deleteme");
-    assert(lastModified("deleteme") >
-            lastModified("this file does not exist", d_time.min));
+    //std.process.system("echo a>deleteme") == 0 || assert(false);
+    if (exists(deleteme)) remove(deleteme);
+    write(deleteme, "a\n");
+    scope(exit) { assert(exists(deleteme)); remove(deleteme); }
+    // assert(lastModified("deleteme") >
+    //         lastModified("this file does not exist", d_time.min));
     //assert(lastModified("deleteme") > lastModified(__FILE__));
 }
 
@@ -658,9 +660,9 @@ unittest
 {
     assert(exists("."));
     assert(!exists("this file does not exist"));
-    std.process.system("echo a >deleteme") == 0 || assert(false);
-    scope(exit) remove("deleteme");
-    assert(exists("deleteme"));
+    write(deleteme, "a\n");
+    scope(exit) { assert(exists(deleteme)); remove(deleteme); }
+    assert(exists(deleteme));
 }
 
 /***************************************************
@@ -1174,14 +1176,14 @@ version(Posix) void setTimes(in char[] name, d_time fta, d_time ftm)
 /+
 unittest
 {
-    system("echo a>deleteme") == 0 || assert(false);
-    scope(exit) remove("deleteme");
+    write(deleteme, "a\n");
+    scope(exit) { assert(exists(deleteme)); remove(deleteme); }
     d_time ftc1, fta1, ftm1;
-    getTimes("deleteme", ftc1, fta1, ftm1);
+    getTimes(deleteme, ftc1, fta1, ftm1);
     enforce(collectException(setTimes("nonexistent", fta1, ftm1)));
-    setTimes("deleteme", fta1 + 1000, ftm1 + 1000);
+    setTimes(deleteme, fta1 + 1000, ftm1 + 1000);
     d_time ftc2, fta2, ftm2;
-    getTimes("deleteme", ftc2, fta2, ftm2);
+    getTimes(deleteme, ftc2, fta2, ftm2);
     assert(fta1 + 1000 == fta2, text(fta1 + 1000, "!=", fta2));
     assert(ftm1 + 1000 == ftm2);
 }
@@ -1205,10 +1207,10 @@ void rmdirRecurse(in char[] pathname)
 
 version(Windows) unittest
 {
-    auto d = r"\deleteme\a\b\c\d\e\f\g";
+    auto d = deleteme ~ r".dir\a\b\c\d\e\f\g";
     mkdirRecurse(d);
-    rmdirRecurse(r"\deleteme");
-    enforce(!exists(r"\deleteme"));
+    rmdirRecurse(deleteme ~ ".dir");
+    enforce(!exists(deleteme ~ ".dir"));
 }
 
 version(Posix) unittest
@@ -1436,9 +1438,9 @@ unittest
 {
     // Tuple!(int, double)[] x;
     // auto app = appender(&x);
-    write("deleteme", "12 12.25\n345 1.125");
-    scope(exit) remove("deleteme");
-    auto a = slurp!(int, double)("deleteme", "%s %s");
+    write(deleteme, "12 12.25\n345 1.125");
+    scope(exit) { assert(exists(deleteme)); remove(deleteme); }
+    auto a = slurp!(int, double)(deleteme, "%s %s");
     assert(a.length == 2);
     assert(a[0] == tuple(12, 12.25));
     assert(a[1] == tuple(345, 1.125));
