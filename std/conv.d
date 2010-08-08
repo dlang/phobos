@@ -178,8 +178,10 @@ if (isSomeString!(T) && !isSomeString!(S) && isArray!(S))
     static if (is(S == void[])
             || is(S == const(void)[]) || is(S == immutable(void)[])) {
         auto raw = cast(const(ubyte)[]) s;
-        enforce(raw.length % Char.sizeof == 0, "Alignment mismatch"
-                " in converting a " ~ S.stringof ~ " to a " ~ T.stringof);
+        enforce(raw.length % Char.sizeof == 0,
+                new ConvError("Alignment mismatch in converting a "
+                        ~ S.stringof ~ " to a "
+                        ~ T.stringof));
         auto result = new Char[raw.length / Char.sizeof];
         memcpy(result.ptr, s.ptr, s.length);
         return cast(T) result;
@@ -1214,15 +1216,19 @@ if (isInputRange!Source && /*!isSomeString!Source && */isFloatingPoint!Target)
     // static immutable string infinity = "infinity";
     // static immutable string nans = "nans";
 
-    while (enforce(!p.empty), isspace(p.front))
+    for (;;)
     {
+        enforce(!p.empty,
+                new ConvError("error converting input to floating point"));
+        if (!isspace(p.front)) break;
         p.popFront();
     }
     char sign = 0;                       /* indicating +                 */
     switch (p.front)
     {
         case '-': sign++; goto case '+';
-        case '+': p.popFront(); enforce(!p.empty);
+        case '+': p.popFront(); enforce(!p.empty,
+                new ConvError("error converting input to floating point"));
         default: {}
     }
 
@@ -1297,9 +1303,10 @@ if (isInputRange!Source && /*!isSomeString!Source && */isFloatingPoint!Target)
             }
         }
 
-        enforce(anydigits);         // if error (no digits seen)
+        enforce(anydigits,
+                new ConvError("Error converting input to floating point"));
         enforce(!p.empty && (p.front == 'p' || p.front == 'P'),
-                "Floating point parsing: exponent is required");
+                new ConvError("Floating point parsing: exponent is required"));
         char sexp;
         int e;
 
@@ -1309,7 +1316,9 @@ if (isInputRange!Source && /*!isSomeString!Source && */isFloatingPoint!Target)
         {
             switch (p.front)
             {   case '-':    sexp++;
-                case '+':    p.popFront(); enforce(!p.empty);
+                case '+':    p.popFront(); enforce(!p.empty,
+                        new ConvError("Error converting input"
+                                " to floating point"));
                 default: {}
             }
         }
@@ -1325,7 +1334,8 @@ if (isInputRange!Source && /*!isSomeString!Source && */isFloatingPoint!Target)
             ndigits = 1;
         }
         exp += (sexp) ? -e : e;
-        enforce(ndigits);           // if no digits in exponent
+        enforce(ndigits, new ConvError("Error converting input"
+                        " to floating point"));
 
         if (msdec)
         {
@@ -1352,7 +1362,8 @@ if (isInputRange!Source && /*!isSomeString!Source && */isFloatingPoint!Target)
         {
             // nan
             enforce((p.popFront(), !p.empty && toupper(p.front) == 'A')
-                    && (p.popFront(), !p.empty && toupper(p.front) == 'N'));
+                    && (p.popFront(), !p.empty && toupper(p.front) == 'N'),
+                   new ConvError("error converting input to floating point"));
             // skip past the last 'n'
             p.popFront();
             return typeof(return).nan;
@@ -1391,7 +1402,7 @@ if (isInputRange!Source && /*!isSomeString!Source && */isFloatingPoint!Target)
                 break;
             }
         }
-        enforce(sawDigits);               // if error (no digits seen)
+        enforce(sawDigits, new ConvError("no digits seen"));
     }
     if (!p.empty && (p.front == 'e' || p.front == 'E'))
     {
@@ -1400,7 +1411,7 @@ if (isInputRange!Source && /*!isSomeString!Source && */isFloatingPoint!Target)
 
         sexp = 0;
         p.popFront();
-        enforce(!p.empty);
+        enforce(!p.empty, new ConvError("Unexpected end of input"));
         switch (p.front)
         {   case '-':    sexp++;
             case '+':    p.popFront();
@@ -1418,7 +1429,7 @@ if (isInputRange!Source && /*!isSomeString!Source && */isFloatingPoint!Target)
             sawDigits = 1;
         }
         exp += (sexp) ? -e : e;
-        enforce(sawDigits);               // if no digits in exponent
+        enforce(sawDigits, new ConvError("No digits seen."));
     }
 
     ldval = msdec;
@@ -1444,7 +1455,7 @@ if (isInputRange!Source && /*!isSomeString!Source && */isFloatingPoint!Target)
             while (exp <= -pow)
             {
                 ldval *= negtab[u];
-                enforce(ldval != 0); // errno = ERANGE;
+                enforce(ldval != 0, new ConvError("Range error"));
                 exp += pow;
             }
             pow >>= 1;
@@ -1452,7 +1463,7 @@ if (isInputRange!Source && /*!isSomeString!Source && */isFloatingPoint!Target)
         }
     }
   L6: // if overflow occurred
-    enforce(ldval != core.stdc.math.HUGE_VAL); // errno = ERANGE;
+    enforce(ldval != core.stdc.math.HUGE_VAL, new ConvError("Range error"));
 
   L1:
     return (sign) ? -ldval : ldval;
@@ -3203,7 +3214,7 @@ T toImpl(T, S)(S r) if (is(Unqual!S == creal) && isSomeString!(T))
 T toImpl(T, S)(S value, uint radix)
 if (isIntegral!(Unqual!S) && !is(Unqual!S == ulong) && isSomeString!(T))
 {
-    enforce(radix >= 2 && radix <= 36);
+    enforce(radix >= 2 && radix <= 36, new ConvError("Radix error"));
     if (radix == 10)
         return to!string(value);     // handle signed cases only for radix 10
     return to!string(cast(ulong) value, radix);
@@ -3792,10 +3803,11 @@ Returns: A pointer to the newly constructed object.
  */
 T* emplace(T, Args...)(void[] chunk, Args args) if (!is(T == class))
 {
-    enforce(chunk.length >= T.sizeof);
+    enforce(chunk.length >= T.sizeof,
+            new ConvError("emplace: target size too small"));
     auto a = cast(size_t) chunk.ptr;
     version (OSX)	// for some reason, breaks on other platforms
-        enforce(a % T.alignof == 0);
+        enforce(a % T.alignof == 0, new ConvError("misalignment"));
     auto result = cast(typeof(return)) chunk.ptr;
 
     static void initialize(void * p)
@@ -3869,7 +3881,8 @@ Returns: A pointer to the newly constructed object.
  */
 T emplace(T, Args...)(void[] chunk, Args args) if (is(T == class))
 {
-    enforce(chunk.length >= __traits(classInstanceSize, T));
+    enforce(chunk.length >= __traits(classInstanceSize, T),
+           new ConvError("emplace: chunk size too small"));
     auto a = cast(size_t) chunk.ptr;
     enforce(a % T.alignof == 0, text(a, " vs. ", T.alignof));
     auto result = cast(typeof(return)) chunk.ptr;
