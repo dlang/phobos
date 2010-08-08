@@ -965,8 +965,6 @@ $(D Range) that locks the file and allows fast writing to it.
  */
     struct LockingTextWriter
     {
-        //@@@ Hacky implementation due to bugs, see the correct
-        //implementation at the end of this struct
         FILE* fps;          // the shared file handle
         _iobuf* handle;     // the unshared version of fps
         int orientation;
@@ -987,10 +985,10 @@ $(D Range) that locks the file and allows fast writing to it.
             handle = null;
         }
 
-	this(this)
-	{
-	    FLOCK(fps);
-	}
+        this(this)
+        {
+            FLOCK(fps);
+        }
 
         /// Range primitive implementations.
         void put(A)(A writeme) if (is(ElementType!A : const(dchar)))
@@ -1000,15 +998,12 @@ $(D Range) that locks the file and allows fast writing to it.
             else
                 alias ElementType!A C;
             static assert(!is(C == void));
-            // writeln("typeof(A.init[0]) = ", typeof(A.init[0]),
-            //         ", ElementType!A = ", ElementType!A);
             if (writeme[0].sizeof == 1 && orientation <= 0)
             {
                 //file.write(writeme); causes infinite recursion!!!
                 //file.rawWrite(writeme);
                 auto result =
                     .fwrite(writeme.ptr, C.sizeof, writeme.length, fps);
-                //if (result == result.max) result = 0;
                 if (result != writeme.length) errnoEnforce(0);
             }
             else
@@ -1099,38 +1094,6 @@ $(D Range) that locks the file and allows fast writing to it.
                 }
             }
         }
-
-        //@@@BUG correct implementation is below:
-
-        // File file;
-        // int orientation;
-
-        // this(File f)
-        // {
-        //     enforce(f.isOpen);
-        //     swap(file, f);
-        //     // @@@BUG@@@ This line should NOT be there!
-        //     file.p.refs++;
-        //     orientation = fwide(file.p.handle, 0);
-        //     //FLOCK(file.p.handle);
-        // }
-
-        // // @@@BUG@@@ uncomment and you get a linker error
-        // // this(this)
-        // // {
-        // //     //FLOCK(file.p.handle);
-        // // }
-
-        // ~this()
-        // {
-        //     if (!file.p.handle) return;
-        //     //FUNLOCK(file.p.handle);
-        // }
-
-        // void opAssign(LockingTextWriter rhs)
-        // {
-        //     swap(this, rhs);
-        // }
     }
 
 /// Convenience function.
