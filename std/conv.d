@@ -37,7 +37,7 @@ class ConvError : Error
         super(s);
     }
 }
-       
+
 private void convError(S, T, string f = __FILE__, uint ln = __LINE__)(S source)
 {
     throw new ConvError(cast(string)
@@ -79,6 +79,7 @@ private template implicitlyConverts(S, T)
 
 unittest
 {
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     assert(!implicitlyConverts!(const(char)[], string));
     assert(implicitlyConverts!(string, const(char)[]));
 }
@@ -140,6 +141,7 @@ T toImpl(T, S)(S s) if (!implicitlyConverts!(S, T) && isSomeString!(T)
 
 unittest
 {
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     alias TypeTuple!(char, wchar, dchar) Chars;
     foreach (LhsC; Chars)
     {
@@ -195,6 +197,7 @@ if (isSomeString!(T) && !isSomeString!(S) && isArray!(S))
 
 unittest
 {
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     long[] b = [ 1, 3, 5 ];
     auto s = to!string(b);
     //printf("%d, |%*s|\n", s.length, s.length, s.ptr);
@@ -242,6 +245,7 @@ if (is(S : Object) && isSomeString!(T))
 
 unittest
 {
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     class A { override string toString() { return "an A"; } }
     A a;
     assert(to!string(a) == "null");
@@ -261,6 +265,7 @@ if (is(S == struct) && isSomeString!(T) && is(typeof(&S.init.toString)))
 
 unittest
 {
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     struct S { string toString() { return "wyda"; } }
     assert(to!string(S()) == "wyda");
 }
@@ -298,6 +303,7 @@ if (is(S == struct) && isSomeString!(T) && !is(typeof(&S.init.toString)))
 
 unittest
 {
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     struct S { int a = 42; float b = 43.5; }
     S s;
     assert(to!string(s) == "S(42, 43.5)");
@@ -336,6 +342,7 @@ private template enumToStringImpl(Enum)
 
 unittest
 {
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     enum E { a, b, c }
     assert(to! string(E.a) == "a"c);
     assert(to!wstring(E.b) == "b"w);
@@ -370,6 +377,7 @@ if (is(S == typedef) && isSomeString!(T))
 
 unittest
 {
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     typedef double Km;
     Km km = 42;
     assert(to!string(km) == "Km(42)");
@@ -377,6 +385,7 @@ unittest
 
 unittest
 {
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     auto a = "abcx"w;
     const(void)[] b = a;
     assert(b.length == 8);
@@ -511,6 +520,7 @@ Target toImpl(Target, Source)(Source value) if (implicitlyConverts!(Source, Targ
 
 unittest
 {
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     int a = 42;
     auto b = to!long(a);
     assert(a == b);
@@ -526,6 +536,7 @@ T toImpl(T, S)(S b) if (is(Unqual!S == bool) && isSomeString!(T))
 
 unittest
 {
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     bool b;
     assert(to!string(b) == "false");
     b = true;
@@ -554,6 +565,7 @@ T toImpl(T, S)(S value) if (is(S : const(char)[]) && !isSomeString!(T))
 
 unittest
 {
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     foreach (Char; TypeTuple!(char, wchar, dchar))
     {
         auto a = to!(Char[])("123");
@@ -580,6 +592,7 @@ T toImpl(T, S)(S value) if (is(S : Object) && is(T : Object))
 
 unittest
 {
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     // Testing object conversions
     class A {} class B : A {} class C : A {}
     A a1 = new A, a2 = new B, a3 = new C;
@@ -613,6 +626,7 @@ class Date
 
 unittest
 {
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     auto d = new Date;
     auto ts = to!long(d); // same as d.to!long()
 }
@@ -626,6 +640,7 @@ T toImpl(T, S)(S value) if (is(S : Object) && !is(T : Object) && !isSomeString!T
 
 unittest
 {
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     class B { T to(T)() { return 43; } }
     auto b = new B;
     assert(to!int(b) == 43);
@@ -690,6 +705,7 @@ T toImpl(T, S)(S src) if (isArray!(S) && isArray!(T) && !isSomeString!(T)
 
 unittest
 {
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     // array to array conversions
     uint[] a = ([ 1u, 2, 3 ]).dup;
     auto b = to!(float[])(a);
@@ -721,7 +737,8 @@ if (isAssociativeArray!(S) && isAssociativeArray!(T))
     return result;
 }
 
-unittest {
+unittest
+{
     //hash to hash conversions
     int[string] a;
     a["0"] = 1;
@@ -732,7 +749,9 @@ unittest {
     assert(to!(string)(a) == "[0:1, 1:2]");
 }
 
-unittest {
+unittest
+{
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     // string tests
     alias TypeTuple!(char, wchar, dchar) AllChars;
     foreach (T; AllChars) {
@@ -810,7 +829,10 @@ private void testFloatingToIntegral(Floating, Integral)() {
     }
 }
 
-unittest {
+unittest
+{
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+
     alias TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong)
     AllInts;
     alias TypeTuple!(float, double, real) AllFloats;
@@ -930,7 +952,9 @@ template roundTo(Target) {
     }
 }
 
-unittest {
+unittest
+{
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     assert(roundTo!(int)(3.14) == 3);
     assert(roundTo!(int)(3.49) == 3);
     assert(roundTo!(int)(3.5) == 4);
@@ -1056,26 +1080,26 @@ in
 body
 {
     immutable length = s.length;
-    immutable int max = (radix < 10 ? '0' : 'a'-10) + radix;
-    
+    immutable uint beyond = (radix < 10 ? '0' : 'a'-10) + radix;
+
     Target v = 0;
     size_t i = 0;
     for (; i < length; ++i)
     {
-        int c = s[i];
+        uint c = s[i];
         if (c < '0')
             break;
         if (radix < 10)
         {
-            if (c >= max)
+            if (c >= beyond)
                 break;
         }
-        else 
+        else
         {
             if (c > '9')
             {
                 c |= 0x20;//poorman's tolower
-                if (c < 'a' || c >= max)
+                if (c < 'a' || c >= beyond)
                     break;
                 c -= 'a'-10-'0';
             }
@@ -1087,7 +1111,8 @@ body
     }
     if (!i)
         goto Lerr;
-    s = s[i..$];
+    assert(i <= s.length);
+    s = s[i .. $];
     return v;
 Loverflow:
     ConvOverflowError.raise("Overflow in integral conversion");
@@ -1098,6 +1123,7 @@ Lerr:
 
 unittest
 {
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     // @@@BUG@@@ the size of China
 	// foreach (i; 2..37) {
 	// 	assert(parse!int("0",i) == 0);
@@ -1112,9 +1138,16 @@ unittest
         s = "10";
 		assert(parse!byte(s,i) == i);
 	}
-	assert(parse!int("0011001101101",2) == 0b0011001101101);
-	assert(parse!int("765",8) == 0765);
-	assert(parse!int("fCDe",16) == 0xfcde);
+    // Same @@@BUG@@@ as above
+	//assert(parse!int("0011001101101", 2) == 0b0011001101101);
+	// assert(parse!int("765",8) == 0765);
+	// assert(parse!int("fCDe",16) == 0xfcde);
+    auto s = "0011001101101";
+	assert(parse!int(s, 2) == 0b0011001101101);
+    s = "765";
+	assert(parse!int(s, 8) == octal!765);
+    s = "fCDe";
+	assert(parse!int(s, 16) == 0xfcde);
 }
 
 Target parse(Target, Source)(ref Source s)
@@ -1148,6 +1181,7 @@ private template enumFromStringImpl(Enum)
 
 unittest
 {
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     enum E { a, b, c }
     assert(to!E("a"c) == E.a);
     assert(to!E("b"w) == E.b);
@@ -1426,6 +1460,7 @@ if (isInputRange!Source && /*!isSomeString!Source && */isFloatingPoint!Target)
 
 unittest
 {
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     struct longdouble
     {
         ushort value[5];
@@ -1468,6 +1503,7 @@ unittest
 
 unittest
 {
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     string s = "123";
     auto a = parse!int(s);
 }
@@ -1587,6 +1623,7 @@ if (isSomeString!Source && is(Target == typedef))
 
 unittest
 {
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     debug(conv) printf("conv.to!int.unittest\n");
 
     int i;
@@ -1643,7 +1680,7 @@ unittest
         }
         catch (Error e)
         {
-            debug(conv) e.print();
+            debug(conv) writeln(e);
             i = 3;
         }
         assert(i == 3);
@@ -1656,6 +1693,7 @@ Tests for to!uint
  */
 unittest
 {
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     debug(conv) printf("conv.to!uint.unittest\n");
 
     uint i;
@@ -1706,7 +1744,7 @@ unittest
         }
         catch (Error e)
         {
-            debug(conv) e.print();
+            debug(conv) writeln(e);
             i = 3;
         }
         assert(i == 3);
@@ -1719,6 +1757,7 @@ Tests for to!long
 
 unittest
 {
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     debug(conv) printf("conv.to!long.unittest\n");
 
     long i;
@@ -1780,7 +1819,7 @@ unittest
         }
         catch (Error e)
         {
-            debug(conv) e.print();
+            debug(conv) writeln(e);
             i = 3;
         }
         assert(i == 3);
@@ -1794,6 +1833,7 @@ Tests for to!ulong
 
 unittest
 {
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     debug(conv) printf("conv.to!ulong.unittest\n");
 
     ulong i;
@@ -1851,7 +1891,7 @@ unittest
         }
         catch (Error e)
         {
-            debug(conv) e.print();
+            debug(conv) writeln(e);
             i = 3;
         }
         assert(i == 3);
@@ -1864,6 +1904,7 @@ Tests for toShort
 
 unittest
 {
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     debug(conv) printf("conv.to!short.unittest\n");
 
     short i;
@@ -1918,7 +1959,7 @@ unittest
         }
         catch (Error e)
         {
-            debug(conv) e.print();
+            debug(conv) writeln(e);
             i = 3;
         }
         assert(i == 3);
@@ -1932,6 +1973,7 @@ Tests for to!ushort
 
 unittest
 {
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     debug(conv) printf("conv.to!ushort.unittest\n");
 
     ushort i;
@@ -1982,7 +2024,7 @@ unittest
         }
         catch (Error e)
         {
-            debug(conv) e.print();
+            debug(conv) writeln(e);
             i = 3;
         }
         assert(i == 3);
@@ -1996,6 +2038,7 @@ Tests for to!byte
 
 unittest
 {
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     debug(conv) printf("conv.to!byte.unittest\n");
 
     byte i;
@@ -2051,7 +2094,7 @@ unittest
         }
         catch (Error e)
         {
-            debug(conv) e.print();
+            debug(conv) writeln(e);
             i = 3;
         }
         assert(i == 3);
@@ -2065,6 +2108,7 @@ Tests for to!ubyte
 
 unittest
 {
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     debug(conv) printf("conv.to!ubyte.unittest\n");
 
     ubyte i;
@@ -2115,7 +2159,7 @@ unittest
         }
         catch (Error e)
         {
-            debug(conv) e.print();
+            debug(conv) writeln(e);
             i = 3;
         }
         assert(i == 3);
@@ -2128,6 +2172,7 @@ unittest
 */
 unittest
 {
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     debug(conv) printf("conv.to!bool.unittest\n");
 
     assert (to!bool("TruE") == true);
@@ -2209,6 +2254,7 @@ unittest
 
 unittest
 {
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     debug( conv ) writefln( "conv.to!float.unittest" );
     float f;
 
@@ -2267,6 +2313,7 @@ Tests for to!double
 
 unittest
 {
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     debug( conv ) writefln( "conv.to!double.unittest" );
     double d;
 
@@ -2325,6 +2372,7 @@ Tests for to!real
  */
 unittest
 {
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     debug(conv) writefln("conv.to!real.unittest");
     real r;
 
@@ -2954,6 +3002,7 @@ if (staticIndexOf!(Unqual!S, uint, ulong) >= 0 && isSomeString!T)
 
 unittest
 {
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     assert(wtext(int.max) == "2147483647"w);
     assert(wtext(int.min) == "-2147483648"w);
     assert(to!string(0L) == "0");
@@ -2984,6 +3033,7 @@ version(unittest) private alias TypeTuple!(
 
 unittest
 {
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     foreach (Char1; AllChars)
     {
         foreach (Char2; AllChars)
@@ -3035,6 +3085,7 @@ if (staticIndexOf!(Unqual!S, int, long) >= 0 && isSomeString!T)
 
 unittest
 {
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     string r;
     int i;
 
@@ -3186,12 +3237,14 @@ body
 
 unittest
 {
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     size_t x = 16;
     assert(to!string(x, 16) == "10");
 }
 
 unittest
 {
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     debug(string) printf("string.toString(ulong, uint).unittest\n");
 
     string r;
@@ -3215,6 +3268,7 @@ unittest
 
 unittest
 {
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     debug(string) printf("string.toString(char).unittest\n");
 
     string s = "foo";
@@ -3229,6 +3283,7 @@ unittest
 
 unittest
 {
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     debug(string) printf("string.toString(uint).unittest\n");
 
     string r;
@@ -3249,6 +3304,7 @@ unittest
 
 unittest
 {
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     debug(string) printf("string.toString(ulong).unittest\n");
 
     string r;
@@ -3269,6 +3325,7 @@ unittest
 
 unittest
 {
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     debug(string) printf("string.toString(int).unittest\n");
 
     string r;
@@ -3301,6 +3358,7 @@ unittest
 
 unittest
 {
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     debug(string) printf("string.toString(long).unittest\n");
 
     string r;
@@ -3333,6 +3391,7 @@ unittest
 
 unittest
 {
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     debug(string) printf("string.to!string(ulong, uint).unittest\n");
 
     string r;
@@ -3356,6 +3415,7 @@ unittest
 
 unittest
 {
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     debug(string) printf("string.to!string(char*).unittest\n");
 
     string r;
@@ -3372,6 +3432,7 @@ unittest
 
 unittest
 {
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     string s = "foo";
     string s2;
     foreach (char c; s)
@@ -3384,6 +3445,7 @@ unittest
 
 unittest
 {
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     string r;
     int i;
 
@@ -3402,6 +3464,7 @@ unittest
 
 unittest
 {
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     string r;
     int i;
 
@@ -3456,6 +3519,7 @@ dstring dtext(T...)(T args) { return textImpl!(dstring, T)(args); }
 
 unittest
 {
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     assert(text(42, ' ', 1.5, ": xyz") == "42 1.5: xyz");
     assert(wtext(42, ' ', 1.5, ": xyz") == "42 1.5: xyz"w);
     assert(dtext(42, ' ', 1.5, ": xyz") == "42 1.5: xyz"d);
@@ -3463,6 +3527,7 @@ unittest
 
 unittest
 {
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     typedef uint Testing;
     auto s = "123";
     auto t = parse!Testing(s);
@@ -3642,6 +3707,7 @@ template octal(alias s) if (isIntegral!(typeof(s))) {
 
 unittest
 {
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
 	// ensure that you get the right types, even with embedded underscores
 	auto w = octal!"100_000_000_000";
 	static assert(!is(typeof(w) == int));
@@ -3707,6 +3773,7 @@ T toImpl(T, S)(S src) if (is(T == struct) && is(typeof(T(src))))
 // Bugzilla 3961
 unittest
 {
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     struct Int { int x; }
     Int i = to!Int(1);
 }
@@ -3769,6 +3836,7 @@ T* emplace(T, Args...)(void[] chunk, Args args) if (!is(T == class))
 
 unittest
 {
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     int a;
     int b = 42;
     assert(*emplace!int((cast(void*) &a)[0 .. int.sizeof], b) == 42);
@@ -3827,6 +3895,7 @@ T emplace(T, Args...)(void[] chunk, Args args) if (is(T == class))
 
 unittest
 {
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     class A
     {
         int x = 5;
@@ -3841,6 +3910,7 @@ unittest
 
 unittest
 {
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     // Check fix for http://d.puremagic.com/issues/show_bug.cgi?id=2971
     assert(equal(map!(to!int)(["42", "34", "345"]), [42, 34, 345]));
 }
