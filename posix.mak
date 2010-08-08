@@ -73,7 +73,7 @@ endif
 # Set CC and DMD
 ifeq ($(OS),win32wine)
 	CC = wine $(HOME)/dmc/bin/dmc.exe
-	DMD = wine dmd.exe
+	DMD = wine $(HOME)/dmd2/windows/bin/dmd.exe
 else
 	ifeq ($(OS),win32remote)
 		DMD = ssh 206.125.170.138 "cd code/dmd/phobos && dmd"
@@ -110,16 +110,18 @@ endif
 ifeq (,$(findstring win,$(OS)))
 	DOTOBJ:=.o
 	DOTEXE:=
+	PATHSEP:=/
 else
 	DOTOBJ:=.obj
 	DOTEXE:=.exe
+	PATHSEP:=$(shell echo "\\")
 endif
 
 # Set LINKOPTS
 ifeq ($(OS),posix)
 	LINKOPTS=-L-ldl -L-L$(ROOT)
 else
-	LINKOPTS=
+	LINKOPTS=-L/co $(LIB)
 endif
 
 # Set DDOC, the documentation generator
@@ -222,7 +224,8 @@ $(LIB) : $(OBJS) $(ALL_D_FILES) $(DRUNTIME)
 
 $(ROOT)/unittest/%$(DOTEXE) : %.d $(LIB) $(ROOT)/emptymain.d
 	@echo Testing $@
-	@$(DMD) $(DFLAGS) -unittest $(LINKOPTS) -of$@ -L-L`dirname $(LIB)` $(ROOT)/emptymain.d $<
+	@$(DMD) $(DFLAGS) -unittest $(LINKOPTS) $(subst /,$(PATHSEP),"-of$@") \
+	 	$(ROOT)/emptymain.d $<
 # make the file very old so it builds and runs again if it fails
 	@touch -t 197001230123 $@
 # run unittest in its own directory
