@@ -987,6 +987,11 @@ $(D Range) that locks the file and allows fast writing to it.
             handle = null;
         }
 
+	this(this)
+	{
+	    FLOCK(fps);
+	}
+
         /// Range primitive implementations.
         void put(A)(A writeme) if (is(ElementType!A : const(dchar)))
         {
