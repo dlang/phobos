@@ -1,6 +1,8 @@
 
 module std.c.windows.com;
 
+pragma(lib,"uuid");
+
 private import std.c.windows.windows;
 private import std.string;
 
