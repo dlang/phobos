@@ -1275,13 +1275,13 @@ void formatValue(Writer, T, Char)(Writer w, T val,
         ref FormatSpec!Char f)
 if (is(T == struct) && !isInputRange!T)
 {
-    if (is(typeof(put(w, val.toString))))
+    static if (is(typeof(val.toString() == string)))
     {
-        put(w, val.toString);
+        put(w, val.toString());
     }
     else
     {
-        put(w, S.stringof);
+        put(w, T.stringof);
     }
 }
 
@@ -1310,7 +1310,45 @@ unittest
 {
     FormatSpec!char f;
     auto a = appender!string();
-    void[] val;
+    creal val = 1 + 1i;
+    formatValue(a, val, f);
+}
+
+/*
+   Formatting an $(D ireal) is deprecated but still kept around for a while.
+ */
+void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
+if (is(T : ireal))
+{
+    formatValue(w, val.im, f);
+    put(w, 'i');
+}
+
+unittest
+{
+    FormatSpec!char f;
+    auto a = appender!string();
+    ireal val = 1i;
+    formatValue(a, val, f);
+}
+
+/*
+   Formatting a $(D typedef) is deprecated but still kept around for a while.
+ */
+deprecated void formatValue(Writer, T, Char)
+(Writer w, T val, ref FormatSpec!Char f)
+if (is(T == typedef))
+{
+    static if (is(T U == typedef)) {
+        formatValue(w, cast(U) val, f);
+    }
+}
+
+unittest
+{
+    FormatSpec!char f;
+    auto a = appender!string();
+    ireal val = 1i;
     formatValue(a, val, f);
 }
 
