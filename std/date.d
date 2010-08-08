@@ -623,6 +623,9 @@ string UTCtoString(d_time time)
     return assumeUnique(buffer);
 }
 
+/// Alias for UTCtoString (deprecated).
+deprecated alias UTCtoString toString;
+
 /***********************************
  * Converts t into a text string of the form: "Www, dd Mmm yyyy hh:mm:ss UTC".
  * If t is invalid, "Invalid date" is returned.
