@@ -830,6 +830,10 @@ unittest
 
     // With chain
     assert(equal(filter!overX(chain(a, nums)), [22, 42]));
+
+    // With copying of inner struct Filter to Map
+    auto arr = [1,2,3,4,5];
+    auto m = map!"a + 1"(filter!"a < 4"(arr));
 }
 
 // move
