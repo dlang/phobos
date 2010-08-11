@@ -247,8 +247,9 @@ unittest
 {
     // scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] arr1 = [ 1, 2, 3, 4 ];
+    const int[] arr1Const = arr1;
     int[] arr2 = [ 5, 6 ];
-    auto squares = map!("a * a")(arr1);
+    auto squares = map!("a * a")(arr1Const);
     assert(equal(squares, [ 1, 4, 9, 16 ][]));
     assert(equal(map!("a * a")(chain(arr1, arr2)), [ 1, 4, 9, 16, 25, 36 ][]));
 
@@ -763,12 +764,14 @@ struct Filter(alias pred, Range) if (isInputRange!(Range))
 unittest
 {
     int[] a = [ 3, 4 ];
-    auto r = filter!("a > 3")(a);
+    const aConst = a;
+    auto r = filter!("a > 3")(aConst);
     assert(equal(r, [ 4 ][]));
 
     a = [ 1, 22, 3, 42, 5 ];
     auto under10 = filter!("a < 10")(a);
     assert(equal(under10, [1, 3, 5][]));
+    assert(under10.save == under10);
 
     // With copying of inner struct Filter to Map
     auto arr = [1,2,3,4,5];
