@@ -114,8 +114,8 @@ struct Map(alias fun, Range) if (isInputRange!(Range))
 {
     alias fun _fun;
     alias typeof({ return _fun(.ElementType!(Range).init); }()) ElementType;
-    Range _input;
-    ElementType _cache;
+    Unqual!Range _input;
+    Unqual!ElementType _cache;
 
     static if (isBidirectionalRange!(Range))
     {
@@ -724,7 +724,7 @@ filter(alias pred, Range)(Range rs)
 
 struct Filter(alias pred, Range) if (isInputRange!(Range))
 {
-    Range _input;
+    Unqual!Range _input;
 
     this(Range r)
     {
@@ -749,6 +749,14 @@ struct Filter(alias pred, Range) if (isInputRange!(Range))
     ElementType!(Range) front()
     {
         return _input.front;
+    }
+
+    static if(isForwardRange!Range)
+    {
+        @property typeof(this) save()
+        {
+            return typeof(this)(_input);
+        }
     }
 }
 
@@ -1504,7 +1512,7 @@ unittest
 
 // joiner
 /**
-Lazily joins a range of ranges with a separator. The range of ranges 
+Lazily joins a range of ranges with a separator. The range of ranges
 
 Example:
 ----
