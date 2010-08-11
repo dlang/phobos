@@ -712,6 +712,64 @@ assert(r1 == [ 2.5 ]);
 ----
  */
 
+version (all)
+{
+/* This is the older version. Too many problems with the newer one.
+ */
+Filter!(unaryFun!(pred), Range)
+filter(alias pred, Range)(Range rs)
+{
+    return typeof(return)(rs);
+}
+
+struct Filter(alias pred, Range) if (isInputRange!(Range))
+{
+    Range _input;
+
+    this(Range r)
+    {
+        _input = r;
+        while (!_input.empty && !pred(_input.front)) _input.popFront;
+    }
+
+    ref Filter opSlice()
+    {
+        return this;
+    }
+
+    bool empty() { return _input.empty; }
+    void popFront()
+    {
+        do
+        {
+            _input.popFront;
+        } while (!_input.empty && !pred(_input.front));
+    }
+
+    ElementType!(Range) front()
+    {
+        return _input.front;
+    }
+}
+
+unittest
+{
+    int[] a = [ 3, 4 ];
+    auto r = filter!("a > 3")(a);
+    assert(equal(r, [ 4 ][]));
+
+    a = [ 1, 22, 3, 42, 5 ];
+    auto under10 = filter!("a < 10")(a);
+    assert(equal(under10, [1, 3, 5][]));
+
+    // With copying of inner struct Filter to Map
+    auto arr = [1,2,3,4,5];
+    auto m = map!"a + 1"(filter!"a < 4"(arr));
+}
+
+}
+else
+{
 template filter(alias predicate)
 {
     auto filter(Range)(Range rs) if (isInputRange!(Range))
@@ -834,6 +892,7 @@ unittest
     // With copying of inner struct Filter to Map
     auto arr = [1,2,3,4,5];
     auto m = map!"a + 1"(filter!"a < 4"(arr));
+}
 }
 
 // move
