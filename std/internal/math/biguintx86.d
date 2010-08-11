@@ -787,9 +787,8 @@ unittest
     uint [] bb = [0x1234_1234, 0xF0F0_F0F0, 0x00C0_C0C0, 0xF0F0_F0F0, 0xC0C0_C0C0];
     multibyteMulAdd!('+')(bb[1..$-1], aa[1..$-2], 16, 5);
     assert(bb[0] == 0x1234_1234 && bb[4] == 0xC0C0_C0C0);
-    // @@@BUG@@@
-    // assert(bb[1] == 0x2222_2230 + 0xF0F0_F0F0+5 && bb[2] == 0x5555_5561+0x00C0_C0C0+1
-    //     && bb[3] == 0x9999_99A4+0xF0F0_F0F0 );
+    assert(bb[1] == 0x2222_2230 + 0xF0F0_F0F0+5 && bb[2] == 0x5555_5561+0x00C0_C0C0+1
+         && bb[3] == 0x9999_99A4+0xF0F0_F0F0 );
 }
 
 /** 

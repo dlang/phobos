@@ -1105,9 +1105,8 @@ unittest {
     uint [] q = new uint[u.length - v.length + 1];
     uint [] r = new uint[2];
     divModInternal(q, r, u, v);
-    // @@@BUGBUGBUG@@@
-    //assert(q[]==[0xFFFF_FFFFu, 0]);
-    //assert(r[]==[0xFFFF_FFFFu, 0x7FFF_FFFF]);
+    assert(q[]==[0xFFFF_FFFFu, 0]);
+    assert(r[]==[0xFFFF_FFFFu, 0x7FFF_FFFF]);
     u = [0, 0xFFFF_FFFE, 0x8000_0001];
     v = [0xFFFF_FFFF, 0x8000_0000];
     divModInternal(q, r, u, v);
@@ -1783,8 +1782,7 @@ unittest{
     uint [] q1 = q.dup;  
     blockDivMod(q, b, a);
     r = b[0..a.length];
-    // @@@BUG@@@
-    //assert(r[]==r1[]);
-    //assert(q[]==q1[]);
+    assert(r[]==r1[]);
+    assert(q[]==q1[]);
 }
 
