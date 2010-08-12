@@ -61,8 +61,11 @@
 module std.signals;
 
 import std.stdio;
+public // These functions are accessed by mixed-in code
+{
 import std.c.stdlib : calloc, realloc, free;
 import core.exception : onOutOfMemoryError;
+}
 
 // Special function for internal use only.
 // Use of this is where the slot had better be a delegate
