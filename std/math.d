@@ -56,6 +56,10 @@ module std.math;
 import core.stdc.math, core.stdc.stdio;
 import std.range, std.stdio, std.string, std.traits;
 
+version(unittest) {
+    import std.typetuple;
+}
+
 version(GNU){
     // GDC can't actually do inline asm.
 } else version(D_InlineAsm_X86) {
@@ -832,6 +836,31 @@ extern (C) real rndtonl(real x);
     float sqrt(float x);    /* intrinsic */
     double sqrt(double x);  /* intrinsic */ /// ditto
     real sqrt(real x);      /* intrinsic */ /// ditto
+}
+
+@trusted pure nothrow {  // Should be @safe.  See bugs 4328, 4330.
+    // Create explicit overloads for integer sqrts.  No ddoc for these because
+    // hopefully a more elegant solution will eventually be found, so we don't
+    // want people relying too heavily on the minutiae of this, for example,
+    // by taking the address of sqrt(int) or something.
+    real sqrt(byte x) { return sqrt(cast(real) x); }
+    real sqrt(ubyte x) { return sqrt(cast(real) x); }
+    real sqrt(short x) { return sqrt(cast(real) x); }
+    real sqrt(ushort x) { return sqrt(cast(real) x); }
+    real sqrt(int x) { return sqrt(cast(real) x); }
+    real sqrt(uint x) { return sqrt(cast(real) x); }
+    real sqrt(long x) { return sqrt(cast(real) x); }
+    real sqrt(ulong x) { return sqrt(cast(real) x); }
+}
+
+unittest {
+    alias TypeTuple!(byte, ubyte, short, ushort,
+                     int, uint, long, ulong, float, double, real) Numerics;
+    foreach(T; Numerics) {
+        immutable T two = 2;
+        assert(approxEqual(sqrt(two), SQRT2),
+            "sqrt unittest failed on type " ~ T.stringof);
+    }
 }
 
 pure nothrow creal sqrt(creal z)
