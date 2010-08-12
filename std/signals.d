@@ -61,11 +61,8 @@
 module std.signals;
 
 import std.stdio;
-public // These functions are accessed by mixed-in code
-{
 import std.c.stdlib : calloc, realloc, free;
 import core.exception : onOutOfMemoryError;
-}
 
 // Special function for internal use only.
 // Use of this is where the slot had better be a delegate
@@ -143,6 +140,8 @@ void main()
 
 template Signal(T1...)
 {
+    static import std.c.stdlib;
+    static import core.exception;
     /***
      * A slot is implemented as a delegate.
      * The slot_t is the type of the delegate.
@@ -179,17 +178,17 @@ template Signal(T1...)
             if (slots.length == 0)
             {
                 len = 4;
-                auto p = std.signals.calloc(slot_t.sizeof, len);
+                auto p = std.c.stdlib.calloc(slot_t.sizeof, len);
                 if (!p)
-                    onOutOfMemoryError();
+                    core.exception.onOutOfMemoryError();
                 slots = (cast(slot_t*)p)[0 .. len];
             }
             else
             {
                 len = len * 2 + 4;
-                auto p = std.signals.realloc(slots.ptr, slot_t.sizeof * len);
+                auto p = std.c.stdlib.realloc(slots.ptr, slot_t.sizeof * len);
                 if (!p)
-                    onOutOfMemoryError();
+                    core.exception.onOutOfMemoryError();
                 slots = (cast(slot_t*)p)[0 .. len];
                 slots[slots_idx + 1 .. $] = null;
             }
@@ -261,7 +260,7 @@ template Signal(T1...)
                     rt_detachDisposeEvent(o, &unhook);
                 }
             }
-            std.signals.free(slots.ptr);
+            std.c.stdlib.free(slots.ptr);
             slots = null;
         }
     }
