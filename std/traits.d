@@ -2654,6 +2654,31 @@ unittest
     //alias Unsigned!(double) U3;
 }
 
+/**
+Returns the largest type, i.e. T such that T.sizeof is the largest.  If more
+than one type is of the same size, the leftmost argument of these in will be
+returned.
+*/
+template Largest(T...) if(T.length >= 1) {
+    static if(T.length == 1) {
+        alias T[0] Largest;
+    } static if(T.length == 2) {
+        static if(T[0].sizeof >= T[1].sizeof) {
+            alias T[0] Largest;
+        } else {
+            alias T[1] Largest;
+        }
+    } else {
+        alias Largest!(Largest!(T[0], T[1]), T[2..$]) Largest;
+    }
+}
+
+unittest {
+    static assert(is(Largest!(uint, ubyte, ulong, real) == real));
+    static assert(is(Largest!(ulong, double) == ulong));
+    static assert(is(Largest!(double, ulong) == double));
+    static assert(is(Largest!(uint, byte, double, short) == double));
+}
 
 /**
 Returns the corresponding signed type for T. T must be a numeric integral type,

@@ -7,10 +7,10 @@
  * floating-point arithmetic, including the use of camelCase names rather
  * than C99-style lower case names. All of these functions behave correctly
  * when presented with an infinity or NaN.
- * 
+ *
  * Unlike C, there is no global 'errno' variable. Consequently, almost all of
  * these functions are pure nothrow.
- *      
+ *
  * Macros:
  *      WIKI = Phobos/StdMath
  *
@@ -61,7 +61,7 @@ version(GNU){
 } else version(D_InlineAsm_X86) {
     version = Naked_D_InlineAsm_X86;
 }
-version(LDC) {    
+version(LDC) {
     import ldc.intrinsics;
 }
 
@@ -201,7 +201,7 @@ class NotImplemented : Error
 }
 
 enum real E =          2.7182818284590452354L;  /** e */ // 0x1.5BF0A8B1_45769535_5FF5p+1L
-enum real LOG2T =      0x1.a934f0979a3715fcp+1; /** $(SUB log, 2)10 */ // 3.32193 fldl2t  
+enum real LOG2T =      0x1.a934f0979a3715fcp+1; /** $(SUB log, 2)10 */ // 3.32193 fldl2t
 enum real LOG2E =      0x1.71547652b82fe178p+0; /** $(SUB log, 2)e */ // 1.4427 fldl2e
 enum real LOG2 =       0x1.34413509f79fef32p-2; /** $(SUB log, 10)2 */ // 0.30103 fldlg2
 enum real LOG10E =     0.43429448190325182765;  /** $(SUB log, 10)e */
@@ -589,7 +589,7 @@ pure nothrow double atan2(double y, double x)
 }
 
 /// ditto
-pure nothrow float atan2(float y, float x) 
+pure nothrow float atan2(float y, float x)
 {
     return atan2(cast(real)y, cast(real)x);
 }
@@ -604,7 +604,7 @@ pure nothrow float atan2(float y, float x)
  */
 pure nothrow real cosh(real x)               {
     //  cosh = (exp(x)+exp(-x))/2.
-    // The naive implementation works correctly. 
+    // The naive implementation works correctly.
     real y = exp(x);
     return (y + 1.0/y) * 0.5;
 }
@@ -625,13 +625,13 @@ pure nothrow float cosh(float x)     { return cosh(cast(real)x); }
  */
 pure nothrow real sinh(real x)
 {
-    //  sinh(x) =  (exp(x)-exp(-x))/2;    
+    //  sinh(x) =  (exp(x)-exp(-x))/2;
     // Very large arguments could cause an overflow, but
     // the maximum value of x for which exp(x) + exp(-x)) != exp(x)
     // is x = 0.5 * (real.mant_dig) * LN2. // = 22.1807 for real80.
     if (fabs(x) > real.mant_dig * LN2) {
         return copysign(0.5 * exp(fabs(x)), x);
-    }    
+    }
     real y = expm1(x);
     return 0.5 * y / (y+1) * (y+2);
 }
@@ -654,7 +654,7 @@ pure nothrow real tanh(real x)
 {
     //  tanh(x) = (exp(x) - exp(-x))/(exp(x)+exp(-x))
     if (fabs(x) > real.mant_dig * LN2) {
-        return copysign(1, x);        
+        return copysign(1, x);
     }
     real y = expm1(2*x);
     return y / (y + 2);
@@ -745,7 +745,7 @@ pure nothrow real asinh(real x)
 {
     return (fabs(x) > 1 / real.epsilon)
        // beyond this point, x*x + 1 == x*x
-       ?  copysign(LN2 + log(fabs(x)), x)        
+       ?  copysign(LN2 + log(fabs(x)), x)
        // sqrt(x*x + 1) ==  1 + x * x / ( 1 + sqrt(x*x + 1) )
        : copysign(log1p(fabs(x) + x*x / (1 + sqrt(x*x + 1)) ), x);
 }
@@ -894,8 +894,8 @@ pure nothrow real exp(real x)
         // and exp2 are so similar).
         return exp2(LOG2E*x);
     } else {
-        return core.stdc.math.exp(x);        
-    }    
+        return core.stdc.math.exp(x);
+    }
 }
 /// ditto
 pure nothrow double exp(double x)             { return exp(cast(real)x); }
@@ -918,24 +918,24 @@ pure nothrow float exp(float x)               { return exp(cast(real)x); }
  *    $(TR $(TD $(NAN))        $(TD $(NAN))       )
  *  )
  */
-pure nothrow real expm1(real x) 
+pure nothrow real expm1(real x)
 {
     version(Naked_D_InlineAsm_X86) {
         enum { PARAMSIZE = (real.sizeof+3)&(0xFFFF_FFFC) } // always a multiple of 4
         asm {
             /*  expm1() for x87 80-bit reals, IEEE754-2008 conformant.
              * Author: Don Clugston.
-             * 
+             *
              *    expm1(x) = 2^^(rndint(y))* 2^^(y-rndint(y)) - 1 where y = LN2*x.
              *    = 2rndy * 2ym1 + 2rndy - 1, where 2rndy = 2^^(rndint(y))
              *     and 2ym1 = (2^^(y-rndint(y))-1).
              *    If 2rndy  < 0.5*real.epsilon, result is -1.
              *    Implementation is otherwise the same as for exp2()
              */
-            naked;        
+            naked;
             fld real ptr [ESP+4] ; // x
             mov AX, [ESP+4+8]; // AX = exponent and sign
-            sub ESP, 12+8; // Create scratch space on the stack 
+            sub ESP, 12+8; // Create scratch space on the stack
             // [ESP,ESP+2] = scratchint
             // [ESP+4..+6, +8..+10, +10] = scratchreal
             // set scratchreal mantissa = 1.0
@@ -945,7 +945,7 @@ pure nothrow real expm1(real x)
             cmp AX, 0x401D; // avoid InvalidException in fist
             jae L_extreme;
             fldl2e;
-            fmulp ST(1), ST; // y = x*log2(e)       
+            fmulp ST(1), ST; // y = x*log2(e)
             fist dword ptr [ESP]; // scratchint = rndint(y)
             fisub dword ptr [ESP]; // y - rndint(y)
             // and now set scratchreal exponent
@@ -954,26 +954,26 @@ pure nothrow real expm1(real x)
             jle short L_largenegative;
             cmp EAX,0x8000;
             jge short L_largepositive;
-            mov [ESP+8+8],AX;        
+            mov [ESP+8+8],AX;
             f2xm1; // 2ym1 = 2^^(y-rndint(y)) -1
             fld real ptr [ESP+8] ; // 2rndy = 2^^rndint(y)
             fmul ST(1), ST;  // ST=2rndy, ST(1)=2rndy*2ym1
             fld1;
             fsubp ST(1), ST; // ST = 2rndy-1, ST(1) = 2rndy * 2ym1 - 1
             faddp ST(1), ST; // ST = 2rndy * 2ym1 + 2rndy - 1
-            add ESP,12+8;        
+            add ESP,12+8;
             ret PARAMSIZE;
-        
+
 L_extreme:  // Extreme exponent. X is very large positive, very
             // large negative, infinity, or NaN.
             fxam;
             fstsw AX;
-            test AX, 0x0400; // NaN_or_zero, but we already know x!=0 
+            test AX, 0x0400; // NaN_or_zero, but we already know x!=0
             jz L_was_nan;  // if x is NaN, returns x
             test AX, 0x0200;
             jnz L_largenegative;
-L_largepositive:        
-            // Set scratchreal = real.max. 
+L_largepositive:
+            // Set scratchreal = real.max.
             // squaring it will create infinity, and set overflow flag.
             mov word  ptr [ESP+8+8], 0x7FFE;
             fstp ST(0), ST;
@@ -982,7 +982,7 @@ L_largepositive:
 L_was_nan:
             add ESP,12+8;
             ret PARAMSIZE;
-L_largenegative:        
+L_largenegative:
             fstp ST(0), ST;
             fld1;
             fchs; // return -1. Underflow flag is not set.
@@ -990,7 +990,7 @@ L_largenegative:
             ret PARAMSIZE;
         }
     } else {
-        return core.stdc.math.expm1(x);                
+        return core.stdc.math.expm1(x);
     }
 }
 
@@ -1006,30 +1006,30 @@ L_largenegative:
  *    $(TR $(TD $(NAN))        $(TD $(NAN))    )
  *  )
  */
-pure nothrow real exp2(real x) 
+pure nothrow real exp2(real x)
 {
     version(Naked_D_InlineAsm_X86) {
         enum { PARAMSIZE = (real.sizeof+3)&(0xFFFF_FFFC) } // always a multiple of 4
         asm {
             /*  exp2() for x87 80-bit reals, IEEE754-2008 conformant.
              * Author: Don Clugston.
-             * 
+             *
              * exp2(x) = 2^^(rndint(x))* 2^^(y-rndint(x))
              * The trick for high performance is to avoid the fscale(28cycles on core2),
              * frndint(19 cycles), leaving f2xm1(19 cycles) as the only slow instruction.
-             * 
+             *
              * We can do frndint by using fist. BUT we can't use it for huge numbers,
              * because it will set the Invalid Operation flag if overflow or NaN occurs.
              * Fortunately, whenever this happens the result would be zero or infinity.
-             * 
+             *
              * We can perform fscale by directly poking into the exponent. BUT this doesn't
              * work for the (very rare) cases where the result is subnormal. So we fall back
              * to the slow method in that case.
              */
-            naked;        
+            naked;
             fld real ptr [ESP+4] ; // x
             mov AX, [ESP+4+8]; // AX = exponent and sign
-            sub ESP, 12+8; // Create scratch space on the stack 
+            sub ESP, 12+8; // Create scratch space on the stack
             // [ESP,ESP+2] = scratchint
             // [ESP+4..+6, +8..+10, +10] = scratchreal
             // set scratchreal mantissa = 1.0
@@ -1046,43 +1046,43 @@ pure nothrow real exp2(real x)
             jle short L_subnormal;
             cmp EAX,0x8000;
             jge short L_overflow;
-            mov [ESP+8+8],AX;        
+            mov [ESP+8+8],AX;
 L_normal:
             f2xm1;
             fld1;
             faddp ST(1), ST; // 2^^(x-rndint(x))
             fld real ptr [ESP+8] ; // 2^^rndint(x)
-            add ESP,12+8;        
+            add ESP,12+8;
             fmulp ST(1), ST;
             ret PARAMSIZE;
 
 L_subnormal:
             // Result will be subnormal.
-            // In this rare case, the simple poking method doesn't work. 
+            // In this rare case, the simple poking method doesn't work.
             // The speed doesn't matter, so use the slow fscale method.
             fild dword ptr [ESP];  // scratchint
             fld1;
             fscale;
             fstp real ptr [ESP+8]; // scratchreal = 2^^scratchint
-            fstp ST(0),ST;         // drop scratchint        
+            fstp ST(0),ST;         // drop scratchint
             jmp L_normal;
-        
+
 L_extreme:  // Extreme exponent. X is very large positive, very
             // large negative, infinity, or NaN.
             fxam;
             fstsw AX;
-            test AX, 0x0400; // NaN_or_zero, but we already know x!=0 
+            test AX, 0x0400; // NaN_or_zero, but we already know x!=0
             jz L_was_nan;  // if x is NaN, returns x
             // set scratchreal = real.min_normal
             // squaring it will return 0, setting underflow flag
             mov word  ptr [ESP+8+8], 1;
             test AX, 0x0200;
             jnz L_waslargenegative;
-L_overflow:        
+L_overflow:
             // Set scratchreal = real.max.
             // squaring it will create infinity, and set overflow flag.
             mov word  ptr [ESP+8+8], 0x7FFE;
-L_waslargenegative:        
+L_waslargenegative:
             fstp ST(0), ST;
             fld real ptr [ESP+8];  // load scratchreal
             fmul ST(0), ST;        // square it, to create havoc!
@@ -1092,7 +1092,7 @@ L_was_nan:
         }
     } else {
         return core.stdc.math.exp2(x);
-    }    
+    }
 }
 
 unittest{
@@ -1103,16 +1103,16 @@ unittest{
 }
 
 unittest
-{    
+{
     FloatingPointControl ctrl;
     ctrl.disableExceptions(FloatingPointControl.allExceptions);
     ctrl.rounding = FloatingPointControl.roundToNearest;
-    
+
     // @@BUG@@: Non-immutable array literals are ridiculous.
     // Note that these are only valid for 80-bit reals: overflow will be different for 64-bit reals.
-    static const real [2][] exptestpoints = 
-    [ // x,            exp(x)    
-        [1.0L,           E                           ], 
+    static const real [2][] exptestpoints =
+    [ // x,            exp(x)
+        [1.0L,           E                           ],
         [0.5L,           0x1.A612_98E1_E069_BC97p+0L ],
         [3.0L,           E*E*E                       ],
         [0x1.1p13L,      0x1.29aeffefc8ec645p+12557L ], // near overflow
@@ -1125,7 +1125,7 @@ unittest
         [0x1p80L,        real.infinity               ], // far overflow
         [real.infinity,  real.infinity               ],
         [0x1.7p13L,      real.infinity               ]  // close overflow
-    ];    
+    ];
     real x;
     IeeeFlags f;
     for (int i=0; i<exptestpoints.length;++i) {
@@ -1141,30 +1141,30 @@ unittest
         assert(!f.invalid);
         assert(!f.divByZero);
     }
-    // Ideally, exp(0) would not set the inexact flag. 
+    // Ideally, exp(0) would not set the inexact flag.
     // Unfortunately, fldl2e sets it!
     // So it's not realistic to avoid setting it.
     assert(exp(0.0L) == 1.0);
-    
+
     // NaN propagation. Doesn't set flags, bcos was already NaN.
     resetIeeeFlags();
     x = exp(real.nan);
     f = ieeeFlags();
     assert(isIdentical(x,real.nan));
     assert(f.flags == 0);
-    
+
     resetIeeeFlags();
-    x = exp(-real.nan); 
+    x = exp(-real.nan);
     f = ieeeFlags;
     assert(isIdentical(x, -real.nan));
     assert(f.flags == 0);
-    
+
     x = exp(NaN(0x123));
     assert(isIdentical(x, NaN(0x123)));
-    
+
     // High resolution test
-    assert(exp(0.5L) == 0x1.A612_98E1_E069_BC97_2DFE_FAB6D_33Fp+0L);    
-    
+    assert(exp(0.5L) == 0x1.A612_98E1_E069_BC97_2DFE_FAB6D_33Fp+0L);
+
 }
 
 
@@ -1197,7 +1197,7 @@ unittest
     assert(expi(1.3e5L) == cos(1.3e5L) + sin(1.3e5L) * 1i);
     assert(expi(0.0L) == 1L + 0.0Li);
 }
-    
+
 /*********************************************************************
  * Separate floating point value into significand and exponent.
  *
@@ -1205,7 +1205,7 @@ unittest
  *      Calculate and return $(I x) and $(I exp) such that
  *      value =$(I x)*2$(SUP exp) and
  *      .5 $(LT)= |$(I x)| $(LT) 1.0
- *      
+ *
  *      $(I x) has same sign as value.
  *
  *      $(TABLE_SV
@@ -1249,7 +1249,7 @@ real frexp(real value, out int exp)
             exp = ex - F.EXPBIAS - real.mant_dig + 1;
             vu[F.EXPPOS_SHORT] = (0x8000 & vu[F.EXPPOS_SHORT]) | 0x3FFE;
         }
-    } else static if (real.mant_dig == 113) { // quadruple      
+    } else static if (real.mant_dig == 113) { // quadruple
         if (ex) { // If exponent is non-zero
             if (ex == F.EXPMASK) {   // infinity or NaN
                 if (vl[MANTISSA_LSB] |
@@ -1267,7 +1267,7 @@ real frexp(real value, out int exp)
                 vu[F.EXPPOS_SHORT] =
                     cast(ushort)((0x8000 & vu[F.EXPPOS_SHORT]) | 0x3FFE);
             }
-        } else if ((vl[MANTISSA_LSB] 
+        } else if ((vl[MANTISSA_LSB]
                        |(vl[MANTISSA_MSB] & 0x0000_FFFF_FFFF_FFFF)) == 0) {
             // value is +-0.0
             exp = 0;
@@ -1276,7 +1276,7 @@ real frexp(real value, out int exp)
             value *= F.RECIP_EPSILON;
             ex = vu[F.EXPPOS_SHORT] & F.EXPMASK;
             exp = ex - F.EXPBIAS - real.mant_dig + 1;
-            vu[F.EXPPOS_SHORT] = 
+            vu[F.EXPPOS_SHORT] =
                 cast(ushort)((0x8000 & vu[F.EXPPOS_SHORT]) | 0x3FFE);
         }
     } else static if (real.mant_dig==53) { // real is double
@@ -1302,7 +1302,7 @@ real frexp(real value, out int exp)
             value *= F.RECIP_EPSILON;
             ex = vu[F.EXPPOS_SHORT] & F.EXPMASK;
             exp = (ex - F.EXPBIAS)>>> 4 - real.mant_dig + 1;
-            vu[F.EXPPOS_SHORT] = 
+            vu[F.EXPPOS_SHORT] =
                 cast(ushort)((0x8000 & vu[F.EXPPOS_SHORT]) | 0x3FE0);
         }
     } else { //static if(real.mant_dig==106) // doubledouble
@@ -1395,7 +1395,7 @@ unittest {
     assert(n==0.5L);
     assert(x==-16383);
     assert(ldexp(n, x)==0x1p-16384L);
-    
+
 }
 
 /**************************************
@@ -1471,7 +1471,7 @@ pure nothrow real log1p(real x) {
     }
     else
     {
-        return core.stdc.math.log1pl(x); 
+        return core.stdc.math.log1pl(x);
     }
 }
 
@@ -1604,9 +1604,9 @@ real cbrt(real x)               { return core.stdc.math.cbrtl(x); }
 pure nothrow real hypot(real x, real y)
 {
     // Scale x and y to avoid underflow and overflow.
-    // If one is huge and the other tiny, return the larger. 
+    // If one is huge and the other tiny, return the larger.
     // If both are huge, avoid overflow by scaling by 1/sqrt(real.max/2).
-    // If both are tiny, avoid underflow by scaling by sqrt(real.min_normal*real.epsilon).         
+    // If both are tiny, avoid underflow by scaling by sqrt(real.min_normal*real.epsilon).
 
     enum real SQRTMIN = 0.5*sqrt(real.min_normal); // This is a power of 2.
     enum real SQRTMAX = 1.0L/SQRTMIN; // 2^^((max_exp)/2) = nextUp(sqrt(real.max))
@@ -1622,13 +1622,13 @@ pure nothrow real hypot(real x, real y)
         u = fabs(y);
         if (u == real.infinity) return u; // hypot(inf, nan) == inf
         if (v == real.infinity) return v; // hypot(nan, inf) == inf
-    }    
+    }
     // Now u >= v, or else one is NaN.
     if (v >= SQRTMAX*0.5)
     {
             // hypot(huge, huge) -- avoid overflow
         u *= SQRTMIN*0.5;
-        v *= SQRTMIN*0.5;    
+        v *= SQRTMIN*0.5;
         return sqrt(u*u + v*v) * SQRTMAX * 2.0;
     }
     if (u <= SQRTMIN)
@@ -1643,9 +1643,9 @@ pure nothrow real hypot(real x, real y)
     if (u * real.epsilon > v)
     {
         // hypot (huge, tiny) = huge
-        return u;    
+        return u;
     }
-    
+
     // both are in the normal range
     return sqrt(u*u + v*v);
 }
@@ -1872,9 +1872,9 @@ real remquo(real x, real y, out int n)  /// ditto
 
  These flags indicate that an exceptional floating-point condition has occurred.
  They indicate that a NaN or an infinity has been generated, that a result
- is inexact, or that a signalling NaN has been encountered. If floating-point 
+ is inexact, or that a signalling NaN has been encountered. If floating-point
  exceptions are enabled (unmasked), a hardware exception will be generated
- instead of setting these flags. 
+ instead of setting these flags.
 
  Example:
  ----
@@ -1945,7 +1945,7 @@ private:
                  // the SSE2 status register.
                  // Clear all irrelevant bits
                  and EAX, 0x03D;
-            }             
+            }
         } else version (PPC) {
             assert(0, "Not yet supported");
         } else {
@@ -1999,44 +1999,44 @@ IeeeFlags ieeeFlags()
 
 /** Control the Floating point hardware
 
-  Change the IEEE754 floating-point rounding mode and the floating-point 
+  Change the IEEE754 floating-point rounding mode and the floating-point
   hardware exceptions.
-  
-  By default, the rounding mode is roundToNearest and all hardware exceptions 
+
+  By default, the rounding mode is roundToNearest and all hardware exceptions
   are disabled. For most applications, debugging is easier if the $(I division
-  by zero), $(I overflow), and $(I invalid operation) exceptions are enabled. 
+  by zero), $(I overflow), and $(I invalid operation) exceptions are enabled.
   These three are combined into a $(I severeExceptions) value for convenience.
   Note in particular that if $(I invalidException) is enabled, a hardware trap
-  will be generated whenever an uninitialized floating-point variable is used. 
-  
+  will be generated whenever an uninitialized floating-point variable is used.
+
   All changes are temporary. The previous state is restored at the
   end of the scope.
 
-  
+
 Example:
  ----
   {
-    // Enable hardware exceptions for division by zero, overflow to infinity, 
+    // Enable hardware exceptions for division by zero, overflow to infinity,
     // invalid operations, and uninitialized floating-point variables.
-    
+
     FloatingPointControl fpctrl;
     fpctrl.enableExceptions(FloatingPointControl.severeExceptions);
-  
+
     double y = x*3.0; // will generate a hardware exception, if x is uninitialized.
-    // 
+    //
     fpctrl.rounding = FloatingPointControl.roundUp;
-    
+
     // The hardware exceptions will be disabled when leaving this scope.
     // The original rounding mode will also be restored.
   }
-    
+
  ----
-  
+
  */
 struct FloatingPointControl
 {
     alias uint RoundingMode;
-    
+
     /** IEEE rounding modes.
      * The default mode is roundToNearest.
      */
@@ -2060,13 +2060,13 @@ struct FloatingPointControl
         /// Severe = The overflow, division by zero, and invalid exceptions.
         severeExceptions   = overflowException | divByZeroException
                              | invalidException,
-        allExceptions      = severeExceptions | underflowException 
+        allExceptions      = severeExceptions | underflowException
                              | inexactException,
     };
-private:    
+private:
     enum ushort EXCEPTION_MASK = 0x3F;
     enum ushort ROUNDING_MASK = 0xC00;
-public:    
+public:
     /// Enable (unmask) specific hardware exceptions. Multiple exceptions may be ORed together.
     void enableExceptions(uint exceptions)
     {
@@ -2078,7 +2078,7 @@ public:
     {
         initialize();
         setControlState(getControlState() | (exceptions & EXCEPTION_MASK));
-    }    
+    }
     //// Change the floating-point hardware rounding mode
     void rounding(RoundingMode newMode)
     {
@@ -2103,7 +2103,7 @@ public:
     }
 private:
     ushort savedState;
-    
+
     bool initialized=false;
     void initialize()
     {
@@ -2138,25 +2138,25 @@ private:
         asm
         {
              fclex;
-             fldcw newState;       
+             fldcw newState;
         }
-    }   
+    }
 }
 
 unittest
 {
    {
         FloatingPointControl ctrl;
-        ctrl.enableExceptions(FloatingPointControl.divByZeroException 
+        ctrl.enableExceptions(FloatingPointControl.divByZeroException
                            | FloatingPointControl.overflowException);
-        assert(ctrl.enabledExceptions() == 
-            (FloatingPointControl.divByZeroException 
+        assert(ctrl.enabledExceptions() ==
+            (FloatingPointControl.divByZeroException
           | FloatingPointControl.overflowException));
-        
+
         ctrl.rounding = FloatingPointControl.roundUp;
         assert(FloatingPointControl.rounding == FloatingPointControl.roundUp);
     }
-    assert(FloatingPointControl.rounding 
+    assert(FloatingPointControl.rounding
        == FloatingPointControl.roundToNearest);
     assert(FloatingPointControl.enabledExceptions() ==0);
 }
@@ -2525,7 +2525,7 @@ pure nothrow real NaN(ulong payload)
                 *cast(ulong*)(6+cast(ubyte*)(&x)) = v;
             } else {
                 *cast(ulong*)(2+cast(ubyte*)(&x)) = v;
-            }        
+            }
         } else { // real80
             * cast(ulong *)(&x) = v;
         }
@@ -2840,7 +2840,7 @@ unittest {
 T nextafter(T)(T x, T y)
 {
     if (x==y) return y;
-    return ((y>x) ? nextUp(x) :  nextDown(x));     
+    return ((y>x) ? nextUp(x) :  nextDown(x));
 }
 
 unittest
@@ -2892,10 +2892,11 @@ pure nothrow real fma(real x, real y, real z) { return (x * y) + z; }
 /*******************************************************************
  * Compute the value of x $(SUP n), where n is an integer
  */
-pure nothrow F pow(F, G)(F x, G n) if (isFloatingPoint!(F) && isIntegral!(G))
+pure nothrow Unqual!F pow(F, G)(F x, G n)
+if (isFloatingPoint!(F) && isIntegral!(G))
 {
     real p = 1.0, v = void;
-    Unsigned!G m = n;
+    Unsigned!(Unqual!G) m = n;
     if (n < 0)
     {
         switch (n)
@@ -2938,6 +2939,35 @@ pure nothrow F pow(F, G)(F x, G n) if (isFloatingPoint!(F) && isIntegral!(G))
     return p;
 }
 
+unittest
+{
+    // Make sure it instantiates and works properly on immutable values and
+    // with various integer and float types.
+    immutable real x = 46;
+    immutable float xf = x;
+    immutable double xd = x;
+    immutable uint one = 1;
+    immutable ushort two = 2;
+    immutable ubyte three = 3;
+    immutable ulong eight = 8;
+
+    immutable int neg1 = -1;
+    immutable short neg2 = -2;
+    immutable byte neg3 = -3;
+    immutable long neg8 = -8;
+
+
+    assert(pow(x,0) == 1.0);
+    assert(pow(xd,one) == x);
+    assert(pow(xf,two) == x * x);
+    assert(pow(x,three) == x * x * x);
+    assert(pow(x,eight) == (x * x) * (x * x) * (x * x) * (x * x));
+
+    assert(pow(x, neg1) == 1 / x);
+    assert(pow(xd, neg2) == 1 / (x * x));
+    assert(pow(x, neg3) == 1 / (x * x * x));
+    assert(pow(xf, neg8) == 1 / ((x * x) * (x * x) * (x * x) * (x * x)));
+}
 
 /** Compute the value of an integer x, raised to the power of a positive
  * integer n.
@@ -2947,11 +2977,12 @@ pure nothrow F pow(F, G)(F x, G n) if (isFloatingPoint!(F) && isIntegral!(G))
  * regardless of the value of x.
  */
 
-pure nothrow typeof(F.init*G.init) pow(F, G)(F x, G n) if (isIntegral!(F) && isIntegral!(G))
+pure nothrow typeof(Unqual!(F).init * Unqual!(G).init) pow(F, G)(F x, G n)
+if (isIntegral!(F) && isIntegral!(G))
 {
     if (n<0) return x/0; // Only support positive powers
-    typeof(F.init*G.init) p, v = void;
-    G m = n;
+    typeof(return) p, v = void;
+    Unqual!G m = n;
 
     switch (m)
     {
@@ -2981,6 +3012,28 @@ pure nothrow typeof(F.init*G.init) pow(F, G)(F x, G n) if (isIntegral!(F) && isI
         break;
     }
     return p;
+}
+
+unittest
+{
+    immutable int one = 1;
+    immutable byte two = 2;
+    immutable ubyte three = 3;
+    immutable short four = 4;
+    immutable long ten = 10;
+
+    assert(pow(two, three) == 8);
+    assert(pow(two, ten) == 1024);
+    assert(pow(one, ten) == 1);
+    assert(pow(ten, four) == 10_000);
+    assert(pow(four, 10) == 1_048_576);
+    assert(pow(three, four) == 81);
+
+}
+
+/**Computes integer to floating point powers.*/
+real pow(I, F)(I x, F y) if(isIntegral!I && isFloatingPoint!F) {
+    return pow(cast(real) x, cast(Unqual!F) y);
 }
 
 /*********************************************
@@ -3026,120 +3079,163 @@ pure nothrow typeof(F.init*G.init) pow(F, G)(F x, G n) if (isIntegral!(F) && isI
  * )
  */
 
-F pow(F)(F x, F y) if (isFloatingPoint!(F))
+Unqual!(Largest!(F, G)) pow(F, G)(F x, G y)
+if (isFloatingPoint!(F) && isFloatingPoint!(G))
 {
-    version (linux) // C pow() often does not handle special values correctly
+    alias typeof(return) Float;
+
+    static Float impl(Float x, Float y)
     {
-        if (isNaN(y))
-            return y;
-
-        if (y == 0)
-            return 1;           // even if x is $(NAN)
-        if (isNaN(x) && y != 0)
-            return x;
-        if (isInfinity(y))
+        // C pow() often does not handle special values correctly
+        version (linux)
         {
-            if (fabs(x) > 1)
-            {
-                if (signbit(y))
-                    return +0.0;
-                else
-                    return F.infinity;
-            }
-            else if (fabs(x) == 1)
-            {
-                return F.nan;
-            }
-            else // < 1
-            {
-                if (signbit(y))
-                    return F.infinity;
-                else
-                    return +0.0;
-            }
-        }
-        if (isInfinity(x))
-        {
-            if (signbit(x))
-            {   long i;
+            if (isNaN(y))
+                return y;
 
-                i = cast(long)y;
-                if (y > 0)
+            if (y == 0)
+                return 1;           // even if x is $(NAN)
+            if (isNaN(x) && y != 0)
+                return x;
+            if (isInfinity(y))
+            {
+                if (fabs(x) > 1)
                 {
-                    if (i == y && i & 1)
-                        return -F.infinity;
+                    if (signbit(y))
+                        return +0.0;
                     else
                         return F.infinity;
                 }
-                else if (y < 0)
+                else if (fabs(x) == 1)
                 {
-                    if (i == y && i & 1)
-                        return -0.0;
+                    return F.nan;
+                }
+                else // < 1
+                {
+                    if (signbit(y))
+                        return F.infinity;
                     else
                         return +0.0;
                 }
             }
-            else
+            if (isInfinity(x))
             {
-                if (y > 0)
-                    return F.infinity;
-                else if (y < 0)
-                    return +0.0;
-            }
-        }
+                if (signbit(x))
+                {   long i;
 
-        if (x == 0.0)
-        {
-            if (signbit(x))
-            {   long i;
-
-                i = cast(long)y;
-                if (y > 0)
+                    i = cast(long)y;
+                    if (y > 0)
+                    {
+                        if (i == y && i & 1)
+                            return -F.infinity;
+                        else
+                            return F.infinity;
+                    }
+                    else if (y < 0)
+                    {
+                        if (i == y && i & 1)
+                            return -0.0;
+                        else
+                            return +0.0;
+                    }
+                }
+                else
                 {
-                    if (i == y && i & 1)
-                        return -0.0;
-                    else
+                    if (y > 0)
+                        return F.infinity;
+                    else if (y < 0)
                         return +0.0;
                 }
-                else if (y < 0)
+            }
+
+            if (x == 0.0)
+            {
+                if (signbit(x))
+                {   long i;
+
+                    i = cast(long)y;
+                    if (y > 0)
+                    {
+                        if (i == y && i & 1)
+                            return -0.0;
+                        else
+                            return +0.0;
+                    }
+                    else if (y < 0)
+                    {
+                        if (i == y && i & 1)
+                            return -F.infinity;
+                        else
+                            return F.infinity;
+                    }
+                }
+                else
                 {
-                    if (i == y && i & 1)
-                        return -F.infinity;
-                    else
+                    if (y > 0)
+                        return +0.0;
+                    else if (y < 0)
                         return F.infinity;
                 }
             }
-            else
-            {
-                if (y > 0)
-                    return +0.0;
-                else if (y < 0)
-                    return F.infinity;
-            }
         }
+    /*
+    version(INLINE_YL2X) {
+    return exp2(yl2x(y, x));
     }
-/*
-version(INLINE_YL2X) {
-return exp2(yl2x(y, x));
-}
-*/
-    return core.stdc.math.powl(x, y);
+    */
+        return core.stdc.math.powl(x, y);
+    }
+
+    return impl(x, y);
 }
 
 unittest
 {
-    real x = 46;
+    // Test all the special values.  These unittests can be run on Windows
+    // by temporarily changing the version(linux) to version(all).
+    immutable float zero = 0;
+    immutable real one = 1;
+    immutable double two = 2;
+    immutable float three = 3;
+    immutable float fnan = float.nan;
+    immutable double dnan = double.nan;
+    immutable real rnan = real.nan;
+    immutable dinf = double.infinity;
+    immutable rninf = -real.infinity;
 
-    assert(pow(x,0) == 1.0);
-    assert(pow(x,1) == x);
-    assert(pow(x,2) == x * x);
-    assert(pow(x,3) == x * x * x);
-    assert(pow(x,8) == (x * x) * (x * x) * (x * x) * (x * x));
-    
-    assert(pow(x, -1) == 1 / x);
-    assert(pow(x, -2) == 1 / (x * x));
-    assert(pow(x, -3) == 1 / (x * x * x));
-    assert(pow(x, -8) == 1 / ((x * x) * (x * x) * (x * x) * (x * x)));
+    assert(pow(fnan, zero) == 1);
+    assert(pow(dnan, zero) == 1);
+    assert(pow(rnan, zero) == 1);
+
+    assert(pow(two, dinf) == double.infinity);
+    assert(isIdentical(pow(0.2f, dinf), +0.0));
+    assert(pow(0.99999999L, rninf) == real.infinity);
+    assert(isIdentical(pow(1.000000001, rninf), +0.0));
+    assert(pow(dinf, 0.001) == dinf);
+    assert(isIdentical(pow(dinf, -0.001), +0.0));
+    assert(pow(rninf, 3.0L) == rninf);
+    assert(pow(rninf, 2.0L) == real.infinity);
+    assert(isIdentical(pow(rninf, -3.0), -0.0));
+    assert(isIdentical(pow(rninf, -2.0), +0.0));
+
+    assert(isNaN(pow(one, dinf)));
+    assert(isNaN(pow(-one, dinf)));
+    assert(isNaN(pow(-0.2, PI)));
+    assert(pow(0.0, -3.0) == double.infinity);
+    assert(pow(-0.0, -3.0) == -double.infinity);
+    assert(pow(0.0, -PI) == double.infinity);
+    assert(pow(-0.0, -PI) == double.infinity);
+    assert(isIdentical(pow(0.0, 5.0), 0.0));
+    assert(isIdentical(pow(-0.0, 5.0), -0.0));
+    assert(isIdentical(pow(0.0, 6.0), 0.0));
+    assert(isIdentical(pow(-0.0, 6.0), 0.0));
+
+    // Now, actual numbers.
+    assert(approxEqual(pow(two, three), 8.0));
+    assert(approxEqual(pow(two, -2.5), 0.1767767));
+
+    // Test integer to float power.
+    immutable uint twoI = 2;
+    assert(approxEqual(pow(twoI, three), 8.0));
 }
 
 /**************************************
@@ -3396,7 +3492,7 @@ public:
  * Evaluate polynomial A(x) = $(SUB a, 0) + $(SUB a, 1)x + $(SUB a, 2)$(POWER x,2)
  *                          + $(SUB a,3)$(POWER x,3); ...
  *
- * Uses Horner's rule A(x) = $(SUB a, 0) + x($(SUB a, 1) + x($(SUB a, 2) 
+ * Uses Horner's rule A(x) = $(SUB a, 0) + x($(SUB a, 1) + x($(SUB a, 2)
  *                         + x($(SUB a, 3) + ...)))
  * Params:
  *      A =     array of coefficients $(SUB a, 0), $(SUB a, 1), etc.
