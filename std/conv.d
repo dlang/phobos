@@ -1471,6 +1471,7 @@ if (isInputRange!Source && /*!isSomeString!Source && */isFloatingPoint!Target)
 
 unittest
 {
+    errno = 0;  // In case it was set by another unittest in a different module.
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     struct longdouble
     {
