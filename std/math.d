@@ -838,7 +838,7 @@ extern (C) real rndtonl(real x);
     real sqrt(real x);      /* intrinsic */ /// ditto
 }
 
-@trusted pure nothrow {  // Should be @safe.  See bugs 4328, 4330.
+@trusted pure nothrow {  // Should be @safe.  See bugs 4628, 4630.
     // Create explicit overloads for integer sqrts.  No ddoc for these because
     // hopefully a more elegant solution will eventually be found, so we don't
     // want people relying too heavily on the minutiae of this, for example,
