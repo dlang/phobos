@@ -836,7 +836,13 @@ string join(in char[] p1, in char[] p2, in char[][] more...)
         // more than two components present
         return join(join(p1, p2), more[0], more[1 .. $]);
     }
+
     // Focus on exactly two components
+    if (!p2.length)
+        return p1.idup;
+    if (!p1.length)
+        return p2.idup;
+
     version (Posix)
     {
         if (isabs(p2)) return p2.idup;
@@ -848,11 +854,6 @@ string join(in char[] p1, in char[] p2, in char[][] more...)
     }
     else version (Windows)
     { 
-        if (!p2.length)
-            return p1.idup;
-        if (!p1.length)
-            return p2.idup;
-
         string p;
         const(char)[] d1;
 
@@ -973,6 +974,9 @@ unittest
 
         assert(join("d","dmd","src") == "d\\dmd\\src");
     }
+
+    assert (join("", "foo") == "foo");
+    assert (join("foo", "") == "foo");
 }
 
 
