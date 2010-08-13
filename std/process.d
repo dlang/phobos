@@ -299,20 +299,6 @@ else version (Windows)
    ... use f ...
    ----
 */
-version (Posix) string shell(string cmd)
-{
-    File f;
-    f.popen(cmd, "r");
-    char[] line;
-    string result;
-    while (f.readln(line))
-    {
-        result ~= line;
-    }
-    f.close;
-    return result;
-}
-
 version (Windows) string shell(string cmd)
 {
     // Generate a random filename
@@ -326,6 +312,20 @@ version (Windows) string shell(string cmd)
     scope(exit) if (exists(filename)) remove(filename);
     errnoEnforce(system(cmd ~ "> " ~ filename) == 0);
     return readText(filename);
+}
+
+version (Posix) string shell(string cmd)
+{
+    File f;
+    f.popen(cmd, "r");
+    char[] line;
+    string result;
+    while (f.readln(line))
+    {
+        result ~= line;
+    }
+    f.close;
+    return result;
 }
 
 unittest
