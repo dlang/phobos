@@ -1896,7 +1896,7 @@ struct Cycle(R) if (isForwardRange!(R) && !isInfinite!(R))
         size_t _index;
         this(R input, size_t index = 0) { _original = input; _index = index; }
         /// Range primitive implementations.
-        @property ref ElementType!(R) front()
+        @property auto ref front()
         {
             return _original[_index % _original.length];
         }
@@ -1904,7 +1904,7 @@ struct Cycle(R) if (isForwardRange!(R) && !isInfinite!(R))
         enum bool empty = false;
         /// Ditto
         void popFront() { ++_index; }
-        ref ElementType!(R) opIndex(size_t n)
+        auto ref opIndex(size_t n)
         {
             return _original[(n + _index) % _original.length];
         }
@@ -1918,10 +1918,10 @@ struct Cycle(R) if (isForwardRange!(R) && !isInfinite!(R))
         R _original, _current;
         this(R input) { _original = input; _current = input.save; }
         /// Range primitive implementations.
-        @property ref ElementType!(R) front() { return _current.front; }
+        @property auto ref front() { return _current.front; }
         /// Ditto
         static if (isBidirectionalRange!(R))
-            @property ref ElementType!(R) back() { return _current.back; }
+            @property auto ref back() { return _current.back; }
         /// Ditto
         enum bool empty = false;
         /// Ditto
@@ -2016,7 +2016,7 @@ unittest
 
     foreach(DummyType; AllDummyRanges) {
         // Bug 4387
-        static if(isForwardRange!(DummyType) && DummyType.r == ReturnBy.Reference) {
+        static if(isForwardRange!(DummyType)) {
             DummyType dummy;
             auto cy = cycle(dummy);
             static assert(isForwardRange!(typeof(cy)));
