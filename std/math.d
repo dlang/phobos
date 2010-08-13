@@ -3061,7 +3061,7 @@ unittest
 }
 
 /**Computes integer to floating point powers.*/
-real pow(I, F)(I x, F y) if(isIntegral!I && isFloatingPoint!F) {
+nothrow real pow(I, F)(I x, F y) if(isIntegral!I && isFloatingPoint!F) {
     return pow(cast(real) x, cast(Unqual!F) y);
 }
 
@@ -3108,12 +3108,12 @@ real pow(I, F)(I x, F y) if(isIntegral!I && isFloatingPoint!F) {
  * )
  */
 
-Unqual!(Largest!(F, G)) pow(F, G)(F x, G y)
+nothrow Unqual!(Largest!(F, G)) pow(F, G)(F x, G y)
 if (isFloatingPoint!(F) && isFloatingPoint!(G))
 {
     alias typeof(return) Float;
 
-    static Float impl(Float x, Float y)
+    static Float impl(Float x, Float y) nothrow
     {
         // C pow() often does not handle special values correctly
         version (linux)
