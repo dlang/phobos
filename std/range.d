@@ -2014,6 +2014,12 @@ unittest
     assert(equal(take(cycle(a), 5), [ 1, 2, 3, 1, 2 ][]));
     static assert(isForwardRange!(typeof(c)));
 
+    // Make sure ref is getting propagated properly.
+    int[] nums = [1,2,3];
+    auto c2 = cycle(nums);
+    c2[3]++;
+    assert(nums[0] == 2);
+
     foreach(DummyType; AllDummyRanges) {
         // Bug 4387
         static if(isForwardRange!(DummyType)) {
@@ -2890,8 +2896,8 @@ assert(equals(ror, [ 2, 4 ][]));
 struct Transversal(RangeOfRanges,
         TransverseOptions opt = TransverseOptions.assumeJagged)
 {
-    alias typeof(RangeOfRanges.init.front().front()) ElementType;
 
+private:
     private void prime()
     {
         static if (opt == TransverseOptions.assumeJagged)
@@ -2938,7 +2944,7 @@ struct Transversal(RangeOfRanges,
     }
 
 /// Ditto
-    @property ref ElementType front()
+    @property auto ref front()
     {
         assert(!empty);
         return _input.front[_n];
@@ -2958,7 +2964,7 @@ struct Transversal(RangeOfRanges,
    Bidirectional primitives. They are offered if $(D
 isBidirectionalRange!RangeOfRanges).
  */
-        @property ref ElementType back()
+        @property auto ref back()
         {
             return _input.back[_n];
         }
@@ -2980,7 +2986,7 @@ isRandomAccessRange!RangeOfRanges && (opt ==
 TransverseOptions.assumeNotJagged || opt ==
 TransverseOptions.enforceNotJagged)).
  */
-        ref ElementType opIndex(size_t n)
+        auto ref opIndex(size_t n)
         {
             return _input[n][_n];
         }
@@ -3012,13 +3018,18 @@ unittest
     foreach (e; ror) assert(e == witness[i++]);
     assert(i == 2);
 
+    // Make sure ref is being propagated.
+    ror.front++;
+    assert(x[0][1] == 3);
+
     // Test w/o ref return.  Doesn't work due to bug 4404.
-//    alias DummyRange!(ReturnBy.Value, Length.Yes, RangeType.Random) D;
-//    auto drs = [D.init, D.init];
-//    foreach(num; 0..10) {
-//        auto t = transversal(drs, num);
-//        assert(equal(t, [num + 1, num + 1]));
-//  }
+    alias DummyRange!(ReturnBy.Value, Length.Yes, RangeType.Random) D;
+    auto drs = [D.init, D.init];
+    foreach(num; 0..10) {
+        auto t = transversal!(TransverseOptions.enforceNotJagged)(drs, num);
+        assert(t[0] == t[1]);
+        assert(t[1] == num + 1);
+  }
 }
 
 struct Transposed(RangeOfRanges)
