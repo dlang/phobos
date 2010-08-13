@@ -1001,6 +1001,15 @@ creal expi(real y)
             fxch ST(1), ST(0);
         }
     }
+    else version(D_InlineAsm_X86_64)
+    {
+        asm
+        {
+            fld y;
+            fsincos;
+            fxch ST(1), ST(0);
+        }
+    }
     else
     {
         return cos(y) + sin(y)*1i;
@@ -1356,6 +1365,13 @@ real scalbn(real x, int n)
             fscale;
             fstp ST(1), ST;
         }
+    } else version(D_InlineAsm_X86_64) {
+        asm {
+            fild n;
+            fld x;
+            fscale;
+            fstp ST(1), ST;
+        }
     } else {
         return std.c.math.scalbnl(x, n);
     }
@@ -1616,6 +1632,16 @@ long lrint(real x)
     version (Posix)
         return std.c.math.llrintl(x);
     else version(D_InlineAsm_X86)
+    {
+        long n;
+        asm
+        {
+            fld x;
+            fistp n;
+        }
+        return n;
+    }
+    else version(D_InlineAsm_X86_64)
     {
         long n;
         asm

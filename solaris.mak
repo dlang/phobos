@@ -12,12 +12,13 @@
 LIB=libphobos.a
 
 MAKEFILE=solaris.mak
+MODEL=32
 
-CFLAGS=-O -m32
-#CFLAGS=-g -m32
+CFLAGS=-O -m$(MODEL)
+#CFLAGS=-g -m$(MODEL)
 
-DFLAGS=-O -release -w
-#DFLAGS=-unittest -w
+DFLAGS=-O -release -w -m$(MODEL)
+#DFLAGS=-unittest -w -m$(MODEL)
 
 CC=gcc
 #DMD=/dmd/bin/dmd
@@ -29,7 +30,7 @@ DMD=dmd
 	$(CC) -c $(CFLAGS) $*.c
 
 .cpp.o:
-	g -c $(CFLAGS) $*.cpp
+	g++ -c $(CFLAGS) $*.cpp
 
 .d.o:
 	$(DMD) -c $(DFLAGS) $*.d
@@ -243,7 +244,7 @@ unittest :
 	./unittest
 
 cov : $(SRCS) $(LIB)
-	$(DMD) -cov -unittest -ofcov unittest.d $(SRCS) $(LIB)
+	$(DMD) -cov -unittest -ofcov -m$(MODEL) unittest.d $(SRCS) $(LIB)
 	./cov
 
 
@@ -253,13 +254,13 @@ $(GC_OBJS):
 #	cd internal/gc
 #	make -f $(MAKEFILE) dmgc.a
 #	cd ../..
-	make DMD=$(DMD) -C ./internal/gc -f $(MAKEFILE)
+	make DMD=$(DMD) MODEL=$(MODEL) -C ./internal/gc -f $(MAKEFILE)
 
 $(ZLIB_OBJS):
 #	cd etc/c/zlib
 #	make -f $(MAKEFILE)
 #	cd ../../..
-	make -C ./etc/c/zlib -f $(MAKEFILE)
+	make -C ./etc/c/zlib -f $(MAKEFILE) MODEL=$(MODEL)
 
 ###
 

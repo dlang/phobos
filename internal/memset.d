@@ -42,7 +42,7 @@ short *_memset16(short *p, short value, size_t count)
 
 int *_memset32(int *p, int value, size_t count)
 {
-version (X86)
+version (D_InlineAsm_X86)
 {
     asm
     {

@@ -12,12 +12,13 @@
 LIB=libphobos.a
 
 MAKEFILE=linux.mak
+MODEL=32
 
-CFLAGS=-O -m32
-#CFLAGS=-g -m32
+CFLAGS=-O -m$(MODEL)
+#CFLAGS=-g -m$(MODEL)
 
-DFLAGS=-O -release -w
-#DFLAGS=-unittest -w
+DFLAGS=-O -release -w -m$(MODEL)
+#DFLAGS=-unittest -w -m$(MODEL)
 
 CC=gcc
 #DMD=/dmd/bin/dmd
@@ -70,7 +71,7 @@ GC_OBJS= internal/gc/gc.o internal/gc/gcold.o internal/gc/gcx.o \
 SRC=	errno.c object.d unittest.d crc32.d gcstats.d
 
 SRC_STD= std/zlib.d std/zip.d std/stdint.d std/conv.d std/utf.d std/uri.d \
-	std/gc.d std/math.d std/string.d std/path.d std/date.d \
+	std/math.d std/string.d std/path.d std/date.d \
 	std/ctype.d std/file.d std/compiler.d std/system.d std/moduleinit.d \
 	std/outbuffer.d std/math2.d std/thread.d std/md5.d std/base64.d \
 	std/asserterror.d std/dateparse.d std/outofmemory.d std/mmfile.d \
@@ -201,7 +202,7 @@ SRC_GC= internal/gc/gc.d \
 	internal/gc/freebsd.mak \
 	internal/gc/solaris.mak
 
-ALLSRCS = $(SRC) $(SRC_STD) $(SRC_STD_C) $(SRC_TI) $(SRC_INTC) $(SRC_INT) $(SRC_STD_WIN) \
+ALLSRCS = $(SRC) $(SRC_STD) std/gc.d $(SRC_STD_C) $(SRC_TI) $(SRC_INTC) $(SRC_INT) $(SRC_STD_WIN) \
 	$(SRC_STD_C_WIN) $(SRC_STD_C_LINUX) $(SRC_ETC) $(SRC_ETC_C) \
 	$(SRC_ZLIB) $(SRC_GC) $(SRC_STD_C_FREEBSD) $(SRC_STD_C_SOLARIS) \
 	$(SRC_STD_C_POSIX)
@@ -228,11 +229,11 @@ $(LIB) : $(OBJS) $(GC_OBJS) $(ZLIB_OBJS) $(SRCS) $(MAKEFILE)
 	$(DMD) -lib -of$(LIB) $(DFLAGS) $(SRCS) $(OBJS) $(ZLIB_OBJS) $(GC_OBJS)
 
 unittest :
-	$(DMD) $(DFLAGS) -unittest -version=Unittest unittest.d $(SRCS) $(LIB)
+	$(DMD) $(DFLAGS) -unittest -version=Unittest unittest.d $(SRCS) $(LIB) -L-ldl
 	./unittest
 
 cov : $(SRCS) $(LIB)
-	$(DMD) -cov -unittest -ofcov unittest.d $(SRCS) $(LIB)
+	$(DMD) -cov -unittest -ofcov -m$(MODEL) unittest.d $(SRCS) $(LIB)
 	./cov
 
 
@@ -242,13 +243,13 @@ $(GC_OBJS):
 #	cd internal/gc
 #	make -f $(MAKEFILE) dmgc.a
 #	cd ../..
-	make DMD=$(DMD) -C ./internal/gc -f $(MAKEFILE)
+	make DMD=$(DMD) MODEL=$(MODEL) -C ./internal/gc -f $(MAKEFILE)
 
 $(ZLIB_OBJS):
 #	cd etc/c/zlib
 #	make -f $(MAKEFILE)
 #	cd ../../..
-	make -C ./etc/c/zlib -f $(MAKEFILE)
+	make -C ./etc/c/zlib -f $(MAKEFILE) MODEL=$(MODEL)
 
 ###
 

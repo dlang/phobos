@@ -1,11 +1,12 @@
 
 # makefile to build FreeBSD D garbage collector
 
+MODEL=32
 #DMD=../../../dmd
 DMD=dmd
-CFLAGS=-g -m32
+CFLAGS=-g -m$(MODEL)
 #DFLAGS=-unittest -g -release
-DFLAGS=-release -O -inline -I../..
+DFLAGS=-release -O -inline -m$(MODEL) -I../..
 #DFLAGS=-release -inline -O
 RM=rm -f
 CC=gcc
@@ -14,7 +15,7 @@ MAKEFILE=freebsd.mak
 OBJS= gc.o gcx.o gcbits.o gclinux.o gcold.o
 
 SRC= gc.d gcx.d gcbits.d win32.d gclinux.d gcold.d testgc.d \
-	win32.mak linux.mak osx.mak freebsd.mak solaris.mak
+	win32.mak osx.mak linux.mak freebsd.mak solaris.mak
 
 .SUFFIXES: .c .o .d
 
@@ -24,10 +25,10 @@ SRC= gc.d gcx.d gcbits.d win32.d gclinux.d gcold.d testgc.d \
 .d.o:
 	$(DMD) -c $(DFLAGS) $*
 
-targets : testgc dmgc.a
+targets : dmgc.a
 
 testgc : testgc.o $(OBJS) $(MAKEFILE)
-	$(DMD) -of$@ testgc.o gc.o gcx.o gcbits.o gclinux.o -g
+	$(DMD) -of$@ -m$(MODEL) testgc.o gc.o gcx.o gcbits.o gclinux.o -g
 
 testgc.o : testgc.d
 	$(DMD) -c $(DFLAGS) testgc.d

@@ -128,7 +128,70 @@ extern (C) void* __alloca(int nbytes)
     }
   }
   else version (D_InlineAsm_X86_64)
-        static assert(0);
+  {
+    asm
+    {
+        naked                   ;
+        mov     RDX,RCX         ;
+        mov     RAX,RDI         ; // get nbytes
+        add     RAX,15          ;
+        and     AL,0xF0         ; // round up to 16 byte boundary
+        jnz     Abegin          ;
+        mov     RAX,16          ; // allow zero bytes allocation
+    Abegin:
+        mov     RSI,RAX         ; // RSI = nbytes
+        neg     RAX             ;
+        add     RAX,RSP         ; // RAX is now what the new RSP will be.
+        jae     Aoverflow       ;
+    }
+    version (Win32)
+    {
+    asm
+    {
+        // We need to be careful about the guard page
+        // Thus, for every 4k page, touch it to cause the OS to load it in.
+        mov     RCX,RAX         ; // RCX is new location for stack
+        mov     RBX,RSI         ; // RBX is size to "grow" stack
+    L1:
+        test    [RCX+RBX],RBX   ; // bring in page
+        sub     RBX,0x1000      ; // next 4K page down
+        jae     L1              ; // if more pages
+        test    [RCX],RBX       ; // bring in last page
+    }
+    }
+    version (Unix)
+    {
+    asm
+    {
+        cmp     RAX,_pastdata   ;
+        jbe     Aoverflow       ; // Unlikely - ~2 Gbytes under UNIX
+    }
+    }
+    asm
+    {
+        // Copy down to [RSP] the temps on the stack.
+        // The number of temps is (RBP - RSP - locals).
+        mov     RCX,RBP         ;
+        sub     RCX,RSP         ;
+        sub     RCX,[RDX]       ; // RCX = number of temps (bytes) to move.
+        add     [RDX],RSI       ; // adjust locals by nbytes for next call to alloca()
+        mov     RSP,RAX         ; // Set up new stack pointer.
+        add     RAX,RCX         ; // Return value = RSP + temps.
+        mov     RDI,RSP         ; // Destination of copy of temps.
+        add     RSI,RSP         ; // Source of copy.
+        shr     RCX,3           ; // RCX to count of qwords in temps
+        rep                     ;
+        movsq                   ;
+        jmp     done            ;
+
+    Aoverflow:
+        // Overflowed the stack.  Return null
+        xor     RAX,RAX         ;
+
+    done:
+        ret                     ;
+    }
+  }
   else
         static assert(0);
 }

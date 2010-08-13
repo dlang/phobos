@@ -170,7 +170,7 @@ struct MD5_CTX
      */
     static uint ROTATE_LEFT(uint x, uint n)
     {
-        version (X86)
+        version (D_InlineAsm_X86)
         {
             asm
             {   naked                   ;

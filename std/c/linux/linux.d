@@ -546,21 +546,21 @@ extern(C)
 	// Removes.
 	void FD_CLR(int fd, fd_set* set)
 	{
-		btr(cast(uint*)&set.fds_bits.ptr[FDELT(fd)], cast(uint)(fd % NFDBITS));
+		btr(cast(size_t*)&set.fds_bits.ptr[FDELT(fd)], cast(size_t)(fd % NFDBITS));
 	}
 	
 	
 	// Tests.
 	int FD_ISSET(int fd, fd_set* set)
 	{
-		return bt(cast(uint*)&set.fds_bits.ptr[FDELT(fd)], cast(uint)(fd % NFDBITS));
+		return bt(cast(size_t*)&set.fds_bits.ptr[FDELT(fd)], cast(size_t)(fd % NFDBITS));
 	}
 	
 	
 	// Adds.
 	void FD_SET(int fd, fd_set* set)
 	{
-		bts(cast(uint*)&set.fds_bits.ptr[FDELT(fd)], cast(uint)(fd % NFDBITS));
+		bts(cast(size_t*)&set.fds_bits.ptr[FDELT(fd)], cast(size_t)(fd % NFDBITS));
 	}
 	
 	
@@ -575,6 +575,8 @@ extern (C)
 {
     /* From <dlfcn.h>
      * See http://www.opengroup.org/onlinepubs/007908799/xsh/dlsym.html
+     * To use these functions, you'll need to link in /usr/lib/libdl.a
+     * (compile/link with -L-ldl)
      */
 
     const int RTLD_NOW = 0x00002;	// Correct for Red Hat 8

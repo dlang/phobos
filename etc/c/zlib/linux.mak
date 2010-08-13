@@ -1,8 +1,9 @@
 # Makefile for zlib
 
+MODEL=32
 CC=gcc
 LD=link
-CFLAGS=-O -m32
+CFLAGS=-O -m$(MODEL)
 LDFLAGS=
 O=.o
 

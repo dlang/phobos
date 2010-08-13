@@ -1,10 +1,10 @@
 
 /* Trace dynamic profiler.
  * For use with the Digital Mars DMD compiler.
- * Copyright (C) 1995-2006 by Digital Mars
+ * Copyright (C) 1995-2010 by Digital Mars
  * All Rights Reserved
  * Written by Walter Bright
- * www.digitalmars.com
+ * http://www.digitalmars.com
  */
 
 module internal.trace;
@@ -840,9 +840,47 @@ void _trace_pro_n()
         popad                           ;
         ret                             ;
     }
-      else version (D_InlineAsm_X86_64)
-            static assert(0);
-      else
+    else version (D_InlineAsm_X86_64)
+    asm
+    {   naked                           ;
+	push	RAX			;
+	push	RCX			;
+	push	RDX			;
+	push	RSI			;
+	push	RDI			;
+	push	R8			;
+	push	R9			;
+	push	R10			;
+	push	R11			;
+        mov     RCX,9*8[RSP]            ;
+        xor     RAX,RAX                 ;
+        mov     AL,[RCX]                ;
+        cmp     AL,0xFF                 ;
+        jne     L1                      ;
+        cmp     byte ptr 1[RCX],0       ;
+        jne     L1                      ;
+        mov     AX,2[RCX]               ;
+        add     9*8[RSP],3              ;
+        add     RCX,3                   ;
+    L1: inc     RAX                     ;
+        inc     RCX                     ;
+        add     9*8[RSP],RAX            ;
+        dec     RAX                     ;
+	mov	RSI,RCX			;
+	mov	RDI,RAX			;
+        call    trace_pro               ;
+	pop	R11			;
+	pop	R10			;
+	pop	R8			;
+	pop	R9			;
+	pop	RDI			;
+	pop	RSI			;
+	pop	RDX			;
+	pop	RCX			;
+	pop	RAX			;
+        ret                             ;
+    }
+    else
             static assert(0);
   }
 }
@@ -890,8 +928,21 @@ void _trace_epi_n()
         ret     ;
     }
    }
-      else version (D_InlineAsm_X86_64)
-            static assert(0);
+   else version (D_InlineAsm_X86_64)
+   {
+    asm
+    {   naked   	;
+	push	RAX	;
+	push	RDX	;
+    }
+    trace_epi();
+    asm
+    {
+        pop	RDX	;
+        pop	RAX	;
+        ret     	;
+    }
+   }
       else
             static assert(0);
   }
@@ -906,13 +957,12 @@ version (Win32)
         export int QueryPerformanceFrequency(timer_t *);
     }
 }
-else version (X86)
+else version (D_InlineAsm_X86)
 {
     extern (D)
     {
         void QueryPerformanceCounter(timer_t* ctr)
         {
-          version (D_InlineAsm_X86)
             asm
             {   naked                   ;
                 mov       ECX,EAX       ;
@@ -921,10 +971,26 @@ else version (X86)
                 mov   4[ECX],EDX        ;
                 ret                     ;
             }
-          else version (D_InlineAsm_X86_64)
-                static assert(0);
-          else
-                static assert(0);
+        }
+
+        void QueryPerformanceFrequency(timer_t* freq)
+        {
+            *freq = 3579545;
+        }
+    }
+}
+else version (D_InlineAsm_X86_64)
+{
+    extern (D)
+    {
+        void QueryPerformanceCounter(timer_t* ctr)
+        {
+	    asm
+            {   naked                   ;
+                mov   [RDI],EAX         ;
+                mov   4[RDI],EDX        ;
+                ret                     ;
+            }
         }
 
         void QueryPerformanceFrequency(timer_t* freq)

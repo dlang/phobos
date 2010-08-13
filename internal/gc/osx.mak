@@ -1,11 +1,12 @@
 
 # makefile to build osx D garbage collector
 
+MODEL=32
 #DMD=../../../dmd
 DMD=dmd
-CFLAGS=-g -m32
+CFLAGS=-g -m$(MODEL)
 #DFLAGS=-unittest -g -release
-DFLAGS=-release -O -inline -I../..
+DFLAGS=-release -O -inline -m$(MODEL) -I../..
 #DFLAGS=-release -inline -O
 CC=gcc
 MAKEFILE=osx.mak
@@ -21,11 +22,10 @@ SRC= gc.d gcx.d gcbits.d win32.d gclinux.d gcosxc.c gcold.d testgc.d \
 .d.o:
 	$(DMD) -c $(DFLAGS) $*
 
-#targets : testgc dmgc.a
 targets : dmgc.a
 
 testgc : testgc.o $(OBJS) $(MAKEFILE)
-	$(DMD) -of$@ testgc.o gc.o gcx.o gcbits.o gclinux.o gcosxc.o -g
+	$(DMD) -of$@ -m$(MODEL) testgc.o gc.o gcx.o gcbits.o gclinux.o gcosxc.o -g
 
 testgc.o : testgc.d
 	$(DMD) -c $(DFLAGS) testgc.d

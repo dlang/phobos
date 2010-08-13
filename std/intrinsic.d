@@ -60,31 +60,31 @@ int bsf(uint v);
  *  bsf(x21) = 0<br>
  *  bsr(x21) = 5
  */
-int bsr(uint v);
+int bsr(size_t v);
 
 /**
  * Tests the bit.
  */
-int bt(in uint *p, uint bitnum);
+int bt(in size_t *p, size_t bitnum);
 
 /**
  * Tests and complements the bit.
  */
-int btc(uint *p, uint bitnum);
+int btc(size_t *p, size_t bitnum);
 
 /**
  * Tests and resets (sets to 0) the bit.
  */
-int btr(uint *p, uint bitnum);
+int btr(size_t *p, size_t bitnum);
 
 /**
  * Tests and sets the bit.
  * Params:
- * p = a non-NULL pointer to an array of uints.
+ * p = a non-NULL pointer to an array of size_ts.
  * index = a bit number, starting with bit 0 of p[0],
  * and progressing. It addresses bits like the expression:
 ---
-p[index / (uint.sizeof*8)] & (1 << (index & ((uint.sizeof*8) - 1)))
+p[index / (size_t.sizeof*8)] & (1 << (index & ((size_t.sizeof*8) - 1)))
 ---
  * Returns:
  *      A non-zero value if the bit was set, and a zero
@@ -97,7 +97,7 @@ import std.intrinsic;
 
 int main()
 {
-    uint array[2];
+    size_t array[2];
 
     array[0] = 2;
     array[1] = 0x100;
@@ -134,7 +134,7 @@ bt(array, 1) = -1
 array = [0]:x2, [1]:x100
 </pre>
  */
-int bts(uint *p, uint bitnum);
+int bts(size_t *p, size_t bitnum);
 
 
 /**

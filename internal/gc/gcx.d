@@ -1832,24 +1832,73 @@ struct Gcx
         void *sp;
         size_t result;
         version (D_InlineAsm_X86)
-            asm
-            {
-                pushad          ;
-                mov     sp[EBP],ESP     ;
-            }
-        else version (D_InlineAsm_X86_64)
-            asm
-            {
-                pushad          ;
-                mov     sp[EBP],ESP     ;
-            }
-        else
-            static assert(0);
-        result = fullcollect(sp);
-        asm
         {
-            popad               ;
+	    asm
+	    {
+		pushad              ;
+		mov sp[EBP],ESP     ;
+	    }
         }
+	else version (D_InlineAsm_X86_64)
+	{
+	    asm
+	    {
+		push RAX ;
+		push RBX ;
+		push RCX ;
+		push RDX ;
+		push RSI ;
+		push RDI ;
+		push RBP ;
+		push R8  ;
+		push R9  ;
+		push R10  ;
+		push R11  ;
+		push R12  ;
+		push R13  ;
+		push R14  ;
+		push R15  ;
+		push EAX ;   // 16 byte align the stack
+	    }
+	}
+	else
+	{
+	    static assert( false, "Architecture not supported." );
+	}
+        result = fullcollect(sp);
+	version (D_InlineAsm_X86)
+	{
+	    asm
+	    {
+		popad;
+	    }
+	}
+	else version (D_InlineAsm_X86_64)
+	{
+	    asm
+	    {
+		pop EAX ;   // 16 byte align the stack
+		pop R15  ;
+		pop R14  ;
+		pop R13  ;
+		pop R12  ;
+		pop R11  ;
+		pop R10  ;
+		pop R9  ;
+		pop R8  ;
+		pop RBP ;
+		pop RDI ;
+		pop RSI ;
+		pop RDX ;
+		pop RCX ;
+		pop RBX ;
+		pop RAX ;
+	    }
+	}
+	else
+	{
+	    static assert( false, "Architecture not supported." );
+	}
         return result;
     }
 
@@ -1986,15 +2035,11 @@ struct Gcx
             anychanges = 0;
             for (n = 0; n < npools; n++)
             {
-                uint *bbase;
-                uint *b;
-                uint *btop;
-
                 pool = pooltable[n];
 
-                bbase = pool.scan.base();
-                btop = bbase + pool.scan.nwords;
-                for (b = bbase; b < btop;)
+                auto bbase = pool.scan.base();
+                auto btop = bbase + pool.scan.nwords;
+                for (auto b = bbase; b < btop;)
                 {   Bins bin;
                     uint pn;
                     uint u;
@@ -2052,14 +2097,11 @@ struct Gcx
         size_t freedpages = 0;
         size_t freed = 0;
         for (n = 0; n < npools; n++)
-        {   uint pn;
-            uint ncommitted;
-            uint *bbase;
-
+        {
             pool = pooltable[n];
-            bbase = pool.mark.base();
-            ncommitted = pool.ncommitted;
-            for (pn = 0; pn < ncommitted; pn++, bbase += PAGESIZE / (32 * 16))
+            auto bbase = pool.mark.base();
+            auto ncommitted = pool.ncommitted;
+            for (auto pn = 0; pn < ncommitted; pn++, bbase += PAGESIZE / (32 * 16))
             {
                 Bins bin = cast(Bins)pool.pagetable[pn];
 
