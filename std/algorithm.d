@@ -5129,7 +5129,7 @@ void schwartzSort(alias transform, alias less = "a < b",
     {
         return binaryFun!(less)(a.at!(0), b.at!(0));
     }
-    sort!(myLess)(z);
+    sort!(myLess, ss)(z);
 }
 
 unittest
