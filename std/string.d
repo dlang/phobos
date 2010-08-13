@@ -2041,7 +2041,7 @@ unittest
  * Count up all instances of sub[] in s[].
  */
 
-size_t count(string s, string sub)
+size_t count(in char[] s, in char[] sub)
 {
     size_t i;
     int j;
