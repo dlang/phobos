@@ -2805,7 +2805,7 @@ struct FrontTransversal(RangeOfRanges,
     }
 
 /// Ditto
-    @property ref ElementType front()
+    @property auto ref front()
     {
         assert(!empty);
         return _input.front.front;
@@ -2825,7 +2825,7 @@ struct FrontTransversal(RangeOfRanges,
    Bidirectional primitives. They are offered if $(D
 isBidirectionalRange!RangeOfRanges).
  */
-        @property ref ElementType back()
+        @property auto ref back()
         {
             return _input.back.front;
         }
@@ -2848,7 +2848,7 @@ isRandomAccessRange!RangeOfRanges && (opt ==
 TransverseOptions.assumeNotJagged || opt ==
 TransverseOptions.enforceNotJagged)).
  */
-        ref ElementType opIndex(size_t n)
+        auto ref opIndex(size_t n)
         {
             return _input[n].front;
         }
@@ -2871,11 +2871,16 @@ FrontTransversal!(RangeOfRanges, opt) frontTransversal(
 
 unittest {
     foreach(DummyType; AllDummyRanges) {
-        static if(DummyType.r == ReturnBy.Reference) { // Bug 4403
-            auto dummies = [DummyType.init, DummyType.init];
-            auto ft = frontTransversal(dummies);
-            assert(equal(ft, [1, 1]));
-        }
+        auto dummies = [DummyType.init, DummyType.init];
+        auto ft = frontTransversal(dummies);
+        assert(equal(ft, [1, 1]));
+
+        static if(DummyType.r == ReturnBy.Reference) {{
+            // Test ref propagation.  Note the extra {}s to create a scope.
+            ft.front++;
+            scope(exit) ft.front--;
+            assert(dummies.front.front == 2);
+        }}
     }
 }
 
@@ -3022,7 +3027,7 @@ unittest
     ror.front++;
     assert(x[0][1] == 3);
 
-    // Test w/o ref return.  Doesn't work due to bug 4404.
+    // Test w/o ref return.
     alias DummyRange!(ReturnBy.Value, Length.Yes, RangeType.Random) D;
     auto drs = [D.init, D.init];
     foreach(num; 0..10) {
