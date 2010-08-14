@@ -113,6 +113,12 @@ enum dummyRanges = q{
                     return arr[index];
                 }
             }
+
+            typeof(this) opSlice(size_t lower, size_t upper) {
+                auto ret = this;
+                ret.arr = arr[lower..upper];
+                return ret;
+            }
         }
 
         static if(l == Length.Yes) {
@@ -1038,6 +1044,18 @@ is a random access range and if $(D R) defines $(D R.length).
         }
 
 /**
+Support slicing of the $(D Stride), if the underlying range supports this.
+*/
+    static if(hasSlicing!R && hasLength!R)
+        typeof(this) opSlice(size_t lower, size_t upper)
+        {
+            enforce(upper >= lower && upper <= length);
+            immutable translatedLower = lower * _n;
+            immutable translatedUpper = upper * _n - (_n - 1);
+            return typeof(this)(_input[translatedLower..translatedUpper], _n);
+        }
+
+/**
 Range primitive operation that returns the length of the
 range. Forwards to $(D _input.length) and is defined only if $(D
 hasLength!(R)).
@@ -1071,8 +1089,20 @@ unittest
     test(3, arr, [1, 4, 7, 10]);
     test(4, arr, [1, 5, 9]);
 
+    // Test slicing.
+    auto s1 = stride(arr, 1);
+    assert(equal(s1[1..4], [2, 3, 4]));
+    assert(s1[1..4].length == 3);
+    assert(equal(s1[1..5], [2, 3, 4, 5]));
+    assert(s1[1..5].length == 4);
+
+    auto s2 = stride(arr, 2);
+    assert(equal(s2[0..2], [1,3]));
+    assert(s2[0..2].length == 2);
+    assert(equal(s2[1..5], [3, 5, 7, 9]));
+    assert(s2[1..5].length == 4);
+
     foreach(DummyType; AllDummyRanges) {
-        // Doesn't work yet w/o ref returns, see DMD bug 3294 and 3894.
         DummyType dummyRange;
         dummyRange.reinit();
 
@@ -1098,6 +1128,8 @@ unittest
             assert(myStride[0] == 1);
             assert(myStride[1] == 5);
             assert(myStride[2] == 9);
+
+            static assert(hasSlicing!(typeof(myStride)));
         }
 
         static if(DummyType.r == ReturnBy.Reference) {
