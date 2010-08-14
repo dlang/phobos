@@ -1011,7 +1011,7 @@ Forwards to $(D _input.popFront).
 /**
 Forwards to $(D _input.front).
  */
-    @property ref ElementType!(R) front()
+    @property auto ref front()
     {
         return _input.front;
     }
@@ -1021,7 +1021,7 @@ Forwards to $(D _input.back) after getting rid of any slack items.
  */
     static if(isBidirectionalRange!(R) && hasLength!(R))
     {
-        @property ref ElementType!(R) back()
+        @property auto ref back()
         {
             return _input.back;
         }
@@ -1032,7 +1032,7 @@ Forwards to $(D _input[_input.length - n + 1]). Defined only if $(D R)
 is a random access range and if $(D R) defines $(D R.length).
  */
     static if (isRandomAccessRange!(R) && hasLength!(R))
-        ref ElementType!(R) opIndex(uint n)
+        auto ref opIndex(size_t n)
         {
             return _input[_n * n];
         }
@@ -1072,33 +1072,57 @@ unittest
     test(4, arr, [1, 5, 9]);
 
     foreach(DummyType; AllDummyRanges) {
+        // Doesn't work yet w/o ref returns, see DMD bug 3294 and 3894.
+        DummyType dummyRange;
+        dummyRange.reinit();
+
+        auto myStride = stride(dummyRange, 4);
+
+        // Should fail if no length and bidirectional b/c there's no way
+        // to know how much slack we have.
+        static if(hasLength!DummyType || !isBidirectionalRange!DummyType) {
+            static assert(propagatesRangeType!(typeof(myStride), DummyType));
+        }
+        assert(myStride.front == 1);
+        assert(equal(myStride, [1, 5, 9]));
+
+        static if(hasLength!DummyType) {
+            assert(myStride.length == 3);
+        }
+
+        static if(isBidirectionalRange!DummyType && hasLength!DummyType) {
+            assert(myStride.back == 9);
+        }
+
+        static if(isRandomAccessRange!DummyType && hasLength!DummyType) {
+            assert(myStride[0] == 1);
+            assert(myStride[1] == 5);
+            assert(myStride[2] == 9);
+        }
+
         static if(DummyType.r == ReturnBy.Reference) {
-            // Doesn't work yet w/o ref returns, see DMD bug 3294 and 3894.
-            DummyType dummyRange;
-            dummyRange.reinit();
+            // Make sure reference is propagated.
 
-            auto myStride = stride(dummyRange, 4);
-
-            // Should fail if no length and bidirectional b/c there's no way
-            // to know how much slack we have.
-            static if(hasLength!DummyType || !isBidirectionalRange!DummyType) {
-                static assert(propagatesRangeType!(typeof(myStride), DummyType));
-            }
-            assert(myStride.front == 1);
-            assert(equal(myStride, [1, 5, 9]));
-
-            static if(hasLength!DummyType) {
-                assert(myStride.length == 3);
+            {
+                myStride.front++;
+                scope(exit) myStride.front--;
+                assert(dummyRange.front == 2);
             }
 
             static if(isBidirectionalRange!DummyType && hasLength!DummyType) {
-                assert(myStride.back == 9);
-            }
+                {
+                    myStride.back++;
+                    scope(exit) myStride.back--;
+                    assert(dummyRange.back == 10);
+                }
 
-            static if(isRandomAccessRange!DummyType && hasLength!DummyType) {
-                assert(myStride[0] == 1);
-                assert(myStride[1] == 5);
-                assert(myStride[2] == 9);
+                static if(isRandomAccessRange!DummyType) {
+                    {
+                        myStride[1]++;
+                        scope(exit) myStride[1]--;
+                        assert(dummyRange[4] == 6);
+                    }
+                }
             }
         }
     }
