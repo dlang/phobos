@@ -2690,8 +2690,8 @@ struct Iota(N, S) if (isFloatingPoint!N && isNumeric!S) {
         enforce(upper >= lower && upper <= count);
 
         auto ret = this;
-        ret.start += lower * step;
-        ret.count = upper - lower + index;
+        ret.index += lower;
+        ret.count = upper - lower + ret.index;
         return ret;
     }
     /// Ditto
