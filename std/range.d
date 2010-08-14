@@ -2604,8 +2604,7 @@ struct Iota(N, S) if ((isIntegral!N || isPointer!N) && isIntegral!S) {
     /// Ditto
     typeof(this) opSlice(size_t lower, size_t upper)
     {
-        enforce(upper >= lower);
-        enforce(upper <= this.length);
+        enforce(upper >= lower && upper <= this.length);
 
         auto ret = this;
         ret.current += lower * step;
@@ -2678,7 +2677,7 @@ struct Iota(N, S) if (isFloatingPoint!N && isNumeric!S) {
     N opIndex(size_t n)
     {
         enforce(n < count);
-        return start + step * n;
+        return start + step * (n + index);
     }
     /// Ditto
     typeof(this) opSlice()
@@ -2688,17 +2687,17 @@ struct Iota(N, S) if (isFloatingPoint!N && isNumeric!S) {
     /// Ditto
     typeof(this) opSlice(size_t lower, size_t upper)
     {
-        enforce(upper >= lower);
+        enforce(upper >= lower && upper <= count);
 
         auto ret = this;
         ret.start += lower * step;
-        ret.count = upper - lower;
+        ret.count = upper - lower + index;
         return ret;
     }
     /// Ditto
     @property size_t length() const
     {
-        return count;
+        return count - index;
     }
 }
 
@@ -2706,8 +2705,18 @@ unittest
 {
     auto r = iota(0, 10, 1);
     assert(equal(r, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9][]));
+
     auto rSlice = r[2..8];
     assert(equal(rSlice, [2, 3, 4, 5, 6, 7]));
+
+    rSlice.popFront();
+    assert(rSlice[0] == rSlice.front);
+    assert(rSlice.front == 3);
+
+    rSlice.popBack();
+    assert(rSlice[rSlice.length - 1] == rSlice.back);
+    assert(rSlice.back == 6);
+
     rSlice = r[0..4];
     assert(equal(rSlice, [0, 1, 2, 3]));
 
@@ -2733,13 +2742,34 @@ unittest
     auto rf = iota(0.0, 0.5, 0.1);
     //foreach (e; rf) writeln(e);
     assert(approxEqual(rf, [0.0, 0.1, 0.2, 0.3, 0.4][]));
+    assert(rf.length == 5);
+
+    rf.popFront();
+    assert(rf.length == 4);
+
     auto rfSlice = rf[1..4];
-    assert(approxEqual(rfSlice, [0.1, 0.2, 0.3]));
+    assert(rfSlice.length == 3);
+    assert(approxEqual(rfSlice, [0.2, 0.3, 0.4]));
+
+    rfSlice.popFront();
+    assert(approxEqual(rfSlice[0], 0.3));
+
+    rf.popFront();
+    assert(rf.length == 3);
+
+    rfSlice = rf[1..3];
+    assert(rfSlice.length == 2);
+    assert(approxEqual(rfSlice, [0.3, 0.4]));
+    assert(approxEqual(rfSlice[0], 0.3));
 
     // With something just above 0.5
     rf = iota(0.0, nextUp(0.5), 0.1);
     //foreach (e; rf) writeln(e);
     assert(approxEqual(rf, [0.0, 0.1, 0.2, 0.3, 0.4, 0.5][]));
+    rf.popBack();
+    assert(rf[rf.length - 1] == rf.back);
+    assert(approxEqual(rf.back, 0.4));
+    assert(rf.length == 5);
 
     // going down
     rf = iota(0.0, -0.5, -0.1);
