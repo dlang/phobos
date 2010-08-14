@@ -2332,3 +2332,55 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
         StdioException();
     return buf.length;
 }
+
+
+/** Experimental network access via the File interface
+
+	Opens a TCP connection to the given host and port, then returns
+	a File struct with read and write access through the same interface
+	as any other file (meaning writef and the byLine ranges work!).
+
+	Authors:
+		Adam D. Ruppe
+
+	Bugs:
+		Only works on Linux
+*/
+version(linux) {
+	static import linux = std.c.linux.linux;
+	static import sock = std.c.linux.socket;
+
+	File openNetwork(string host, ushort port) {
+		sock.hostent* h;
+		sock.sockaddr_in addr;
+
+		h = sock.gethostbyname(std.string.toStringz(host));
+		if(h is null)
+			throw new StdioException("gethostbyname");
+
+		int s = sock.socket(sock.AF_INET, sock.SOCK_STREAM, 0);
+		if(s == -1)
+			throw new StdioException("socket");
+
+		scope(failure)
+			linux.close(s);
+
+		addr.sin_family = sock.AF_INET;
+		addr.sin_port = sock.htons(port);
+		std.c.string.memcpy(&addr.sin_addr.s_addr, h.h_addr, h.h_length);
+
+		if(sock.connect(s, cast(sock.sockaddr*) &addr, addr.sizeof) == -1)
+			throw new StdioException("Connect failed");
+
+		FILE* fp = enforce(fdopen(s, "w+".ptr));
+
+		File f;
+
+		auto imp = new File.Impl(fp, 1, host ~ ":" ~ to!string(port));
+
+		f.p = imp;
+
+		return f;
+	}
+
+}
