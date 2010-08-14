@@ -2347,40 +2347,34 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
 		Only works on Linux
 */
 version(linux) {
-	static import linux = std.c.linux.linux;
-	static import sock = std.c.linux.socket;
+    static import linux = std.c.linux.linux;
+    static import sock = std.c.linux.socket;
 
-	File openNetwork(string host, ushort port) {
-		sock.hostent* h;
-		sock.sockaddr_in addr;
+    File openNetwork(string host, ushort port) {
+        auto h = enforce( sock.gethostbyname(std.string.toStringz(host)),
+            new StdioException("gethostbyname"));
 
-		h = sock.gethostbyname(std.string.toStringz(host));
-		if(h is null)
-			throw new StdioException("gethostbyname");
+        int s = sock.socket(sock.AF_INET, sock.SOCK_STREAM, 0);
+        enforce(s != -1, new StdioException("socket"));
 
-		int s = sock.socket(sock.AF_INET, sock.SOCK_STREAM, 0);
-		if(s == -1)
-			throw new StdioException("socket");
+        scope(failure) {
+            linux.close(s); // want to make sure it doesn't dangle if something throws. Upon normal exit, the File struct's reference counting takes care of closing, so we don't need to worry about success
+        }
 
-		scope(failure)
-			linux.close(s);
+        sock.sockaddr_in addr;
 
-		addr.sin_family = sock.AF_INET;
-		addr.sin_port = sock.htons(port);
-		std.c.string.memcpy(&addr.sin_addr.s_addr, h.h_addr, h.h_length);
+        addr.sin_family = sock.AF_INET;
+        addr.sin_port = sock.htons(port);
+        std.c.string.memcpy(&addr.sin_addr.s_addr, h.h_addr, h.h_length);
 
-		if(sock.connect(s, cast(sock.sockaddr*) &addr, addr.sizeof) == -1)
-			throw new StdioException("Connect failed");
+        enforce(sock.connect(s, cast(sock.sockaddr*) &addr, addr.sizeof) != -1,
+            new StdioException("Connect failed"));
 
-		FILE* fp = enforce(fdopen(s, "w+".ptr));
+        FILE* fp = enforce(fdopen(s, "w+".ptr));
 
-		File f;
+        File f;
+        f.p = new File.Impl(fp, 1, host ~ ":" ~ to!string(port));
 
-		auto imp = new File.Impl(fp, 1, host ~ ":" ~ to!string(port));
-
-		f.p = imp;
-
-		return f;
-	}
-
+        return f;
+    }
 }
