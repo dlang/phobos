@@ -2987,6 +2987,18 @@ TransverseOptions.enforceNotJagged)).
         {
             return _input[n].front;
         }
+
+/**
+Slicing if offered if $(D RangeOfRanges) supports slicing and all the
+conditions for supporting indexing are met.
+*/
+        static if(hasSlicing!RangeOfRanges)
+        {
+            typeof(this) opSlice(size_t lower, size_t upper)
+            {
+                return typeof(this)(_input[lower..upper]);
+            }
+        }
     }
 
     auto opSlice() { return this; }
@@ -3006,9 +3018,20 @@ FrontTransversal!(RangeOfRanges, opt) frontTransversal(
 
 unittest {
     foreach(DummyType; AllDummyRanges) {
-        auto dummies = [DummyType.init, DummyType.init];
-        auto ft = frontTransversal(dummies);
-        assert(equal(ft, [1, 1]));
+        auto dummies =
+            [DummyType.init, DummyType.init, DummyType.init, DummyType.init];
+
+        foreach(i, ref elem; dummies) {
+            // Just violate the DummyRange abstraction to get what I want.
+            elem.arr = elem.arr[i..$ - (3 - i)];
+        }
+
+        auto ft = frontTransversal!(TransverseOptions.assumeNotJagged)(dummies);
+        assert(equal(ft, [1, 2, 3, 4]));
+
+        // Test slicing.
+        assert(equal(ft[0..2], [1, 2]));
+        assert(equal(ft[1..3], [2, 3]));
 
         static if(DummyType.r == ReturnBy.Reference) {{
             // Test ref propagation.  Note the extra {}s to create a scope.
@@ -3130,6 +3153,18 @@ TransverseOptions.enforceNotJagged)).
         {
             return _input[n][_n];
         }
+
+/**
+Slicing if offered if $(D RangeOfRanges) supports slicing and all the
+conditions for supporting indexing are met.
+*/
+        static if(hasSlicing!RangeOfRanges)
+        {
+            typeof(this) opSlice(size_t lower, size_t upper)
+            {
+                return typeof(this)(_input[lower..upper], _n);
+            }
+        }
     }
 
     auto opSlice() { return this; }
@@ -3169,7 +3204,13 @@ unittest
         auto t = transversal!(TransverseOptions.enforceNotJagged)(drs, num);
         assert(t[0] == t[1]);
         assert(t[1] == num + 1);
-  }
+    }
+
+    // Test slicing.
+    auto mat = [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]];
+    auto mat1 = transversal!(TransverseOptions.assumeNotJagged)(mat, 1)[1..3];
+    assert(mat1[0] == 6);
+    assert(mat1[1] == 10);
 }
 
 struct Transposed(RangeOfRanges)
