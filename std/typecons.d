@@ -53,7 +53,7 @@ Authors:   $(WEB erdani.org, Andrei Alexandrescu),
 module std.typecons;
 import core.memory, core.stdc.stdlib;
 import std.algorithm, std.array, std.conv, std.exception, std.metastrings,
-    std.stdio, std.traits, std.typetuple;
+    std.stdio, std.traits, std.typetuple, std.range;
 
 /**
 Encapsulates unique ownership of a resource.  Resource of type T is
@@ -751,9 +751,32 @@ template Rebindable(T) if (is(T == class) || is(T == interface) || isArray!(T))
     }
 }
 
+/**
+Convenience function for creating a $(D Rebindable) using automatic type
+inference.
+*/
+Rebindable!(T) rebindable(T)(T obj)
+if (is(T == class) || is(T == interface) || isArray!(T))
+{
+    typeof(return) ret;
+    ret = obj;
+    return ret;
+}
+
+/**
+This function simply returns the $(D Rebindable) object passed in.  It's useful
+in generic programming cases when a given object may be either a regular
+$(D class) or a $(D Rebindable).
+*/
+Rebindable!(T) rebindable(T)(Rebindable!(T) obj)
+{
+    return obj;
+}
+
 unittest
 {
-    class C { int foo() const { return 42; } }
+    interface CI { const int foo(); }
+    class C : CI { int foo() const { return 42; } }
     Rebindable!(C) obj0;
     static assert(is(typeof(obj0) == C));
 
@@ -790,6 +813,28 @@ unittest
     obj5c = obj5i;
     obj5i = obj5i;
     static assert(!__traits(compiles, obj5i = obj5c));
+
+    // Test the convenience functions.
+    auto obj5convenience = rebindable(obj5i);
+    assert(obj5convenience is obj5i);
+
+    auto obj6 = rebindable(new immutable(C));
+    static assert(is(typeof(obj6) == Rebindable!(immutable C)));
+    assert(obj6.foo == 42);
+
+    auto obj7 = rebindable(new C);
+    CI interface1 = obj7;
+    auto interfaceRebind1 = rebindable(interface1);
+    assert(interfaceRebind1.foo == 42);
+
+    const interface2 = interface1;
+    auto interfaceRebind2 = rebindable(interface2);
+    assert(interfaceRebind2.foo == 42);
+
+    auto arr = [1,2,3,4,5];
+    const arrConst = arr;
+    assert(rebindable(arr) == arr);
+    assert(rebindable(arrConst) == arr);
 }
 
 /**
