@@ -1507,7 +1507,7 @@ constructor is by calling the helper function $(D radial(input)).
     {
         auto mid = (input.length + 1) / 2;
         _low = input[0 .. mid];
-        _up = input[mid .. $];
+        _up = input[mid .. input.length];
     }
 
 /**
@@ -1521,7 +1521,7 @@ function $(D radial(input, startingPoint)).
     this(R input, size_t startingPoint)
     {
         _low = input[0 .. startingPoint + 1];
-        _up = input[startingPoint + 1 .. $];
+        _up = input[startingPoint + 1 .. input.length];
         if (_low.empty) _upIsActive = true;
     }
 
@@ -1578,7 +1578,7 @@ element.
 Range primitive operation that returns the currently iterated
 element. Throws if the range is empty.
  */
-    @property ref ElementType!(R) front()
+    @property auto ref front()
     {
         enforce(!empty, "Calling front() against an empty "
                 ~typeof(this).stringof);
@@ -1591,6 +1591,15 @@ element. Throws if the range is empty.
         }
         enforce(!_up.empty);
         return _up.front;
+    }
+
+///
+    typeof(this) save()
+    {
+        auto ret = this;
+        ret._low = _low.save;
+        ret._up = _up.save;
+        return ret;
     }
 }
 
@@ -1623,12 +1632,13 @@ unittest
     test([ 1, 2, 3, 4, 5, 6 ], [ 3, 4, 2, 5, 1, 6 ]);
     int[] a = [ 1, 2, 3, 4, 5 ];
     assert(equal(radial(a, 1), [ 2, 3, 1, 4, 5 ][]));
+    static assert(isForwardRange!(typeof(radial(a, 1))));
 
     // Test instantiation without lvalue elements.
 
     // Doesn't instantiate!
-    //DummyRange!(ReturnBy.Value, Length.Yes, RangeType.Random) dummy;
-    //assert(equal(radial(dummy, 4), [5, 6, 4, 7, 3, 8, 2, 9, 1]));
+    DummyRange!(ReturnBy.Value, Length.Yes, RangeType.Random) dummy;
+    assert(equal(radial(dummy, 4), [5, 6, 4, 7, 3, 8, 2, 9, 1, 10]));
 }
 
 /**
