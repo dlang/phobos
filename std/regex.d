@@ -1620,6 +1620,17 @@ void main()
         return this;
     }
 
+    /// Ditto
+    static if(isForwardRange!Range)
+    {
+        @property typeof(this) save()
+        {
+            auto ret = this;
+            ret.input = input.save;
+            return ret;
+        }
+    }
+
     unittest
     {
         // @@@BUG@@@ This doesn't work if a client module uses -unittest
@@ -1663,17 +1674,22 @@ void main()
             return this;
         }
 
-        bool empty()
+        @property bool empty()
         {
             return matches.empty;
         }
 
-        Range front()
+        @property Range front()
         {
             return input[matches[0].startIdx .. matches[0].endIdx];
         }
 
         void popFront() {  matches.popFront; }
+
+        @property typeof(this) save()
+        {
+            return this;
+        }
 
         @property size_t length()
         {
@@ -2726,6 +2742,8 @@ unittest
     // Created and placed in public domain by Don Clugston
     auto re = regex(`bc\x20r[\40]s`, "i");
     auto m = match("aBC r s", re);
+    static assert(isForwardRange!(typeof(m)));
+
     assert(m.pre=="a");
     assert(m.hit=="BC r s");
     auto m2 = match("7xxyxxx", regex(`^\d([a-z]{2})\D\1`));
@@ -2942,7 +2960,7 @@ struct Splitter(Range)
         return this;
     }
 
-    Range front()
+    @property Range front()
     {
         //write("[");scope(success) writeln("]");
         assert(!empty && _offset <= _match.pre.length
@@ -2950,7 +2968,7 @@ struct Splitter(Range)
         return _input[_offset .. min($, _match.pre.length)];
     }
 
-    bool empty()
+    @property bool empty()
     {
         return _offset > _input.length;
     }
@@ -2969,6 +2987,17 @@ struct Splitter(Range)
             // skip past the separator
             _offset = _match.pre.length + _match.hit.length;
             _match.popFront;
+        }
+    }
+
+    static if(isForwardRange!Range)
+    {
+        @property typeof(this) save()
+        {
+            auto ret = this;
+            ret._input = _input.save;
+            ret._match = _match.save;
+            return ret;
         }
     }
 }
