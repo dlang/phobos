@@ -1645,7 +1645,7 @@ assert(s[4] == 5);
 assert(equal(s, [ 1, 2, 3, 4, 5 ][]));
 ----
  */
-struct Take(R) if (isInputRange!(R) && !hasSlicing!(R))
+struct Take(R) if (isInputRange!(R) && (!hasSlicing!(R) || isNarrowString!(R)))
 {
     R original;
     private size_t _maxAvailable;
@@ -1751,19 +1751,21 @@ public:
 
 // This template simply aliases itself to R and is useful for consistency in
 // generic code.
-template Take(R) if(isInputRange!R && hasSlicing!R)
+template Take(R) if(isInputRange!R && hasSlicing!R && !isNarrowString!R)
 {
     alias R Take;
 }
 
 /// Ditto
-Take!(R) take(R)(R input, size_t n) if (isInputRange!R && !hasSlicing!R)
+Take!(R) take(R)(R input, size_t n)
+if (isInputRange!R && (!hasSlicing!R || isNarrowString!R))
 {
     return Take!(R)(input, n);
 }
 
 /// Ditto
-Take!(R) take(R)(R input, size_t n) if (isInputRange!R && hasSlicing!R)
+Take!(R) take(R)(R input, size_t n)
+if (isInputRange!R && hasSlicing!R && !isNarrowString!R)
 {
     static if (hasLength!R)
     {
@@ -1791,6 +1793,10 @@ unittest
     // Test fix for bug 4464.
     static assert(is(typeof(s) == Take!(int[])));
     static assert(is(typeof(s) == int[]));
+
+    // Test using narrow strings.
+    auto myStr = "This is a string.";
+    assert(equal(take(myStr, 7), "This is"));
 
     foreach(DummyType; AllDummyRanges) {
         DummyType dummy;
