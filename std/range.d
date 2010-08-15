@@ -1635,8 +1635,6 @@ unittest
     static assert(isForwardRange!(typeof(radial(a, 1))));
 
     // Test instantiation without lvalue elements.
-
-    // Doesn't instantiate!
     DummyRange!(ReturnBy.Value, Length.Yes, RangeType.Random) dummy;
     assert(equal(radial(dummy, 4), [5, 6, 4, 7, 3, 8, 2, 9, 1, 10]));
 }
@@ -2467,6 +2465,11 @@ struct Recurrence(alias fun, StateType, size_t stateSize)
         return _state[_n % stateSize];
     }
 
+    @property typeof(this) save()
+    {
+        return this;
+    }
+
     enum bool empty = false;
 }
 
@@ -2485,6 +2488,8 @@ recurrence(alias fun, State...)(State initial)
 unittest
 {
     auto fib = recurrence!("a[n-1] + a[n-2]")(1, 1);
+    static assert(isForwardRange!(typeof(fib)));
+
     int[] witness = [1, 1, 2, 3, 5, 8, 13, 21, 34, 55 ];
     //foreach (e; take(fib, 10)) writeln(e);
     assert(equal(take(fib, 10), witness));
@@ -2553,6 +2558,8 @@ public:
         this._cache = compute(this._state, ++this._n);
     }
 
+
+
     ElementType opIndex(size_t n)
     {
         //return ElementType.init;
@@ -2581,6 +2588,8 @@ unittest
 
     auto y = Sequence!("a.field[0] + n * a.field[1]", Tuple!(int, int))
         (tuple(0, 4));
+    static assert(isForwardRange!(typeof(y)));
+
     //@@BUG
     //auto y = sequence!("a.field[0] + n * a.field[1]")(0, 4);
     //foreach (e; take(y, 15))
@@ -2981,6 +2990,17 @@ struct FrontTransversal(RangeOfRanges,
         prime;
     }
 
+/// Ditto
+    static if(isForwardRange!RangeOfRanges)
+    {
+        @property typeof(this) save()
+        {
+            auto ret = this;
+            ret._input = _input.save;
+            return ret;
+        }
+    }
+
     static if (isBidirectionalRange!RangeOfRanges)
     {
 /**
@@ -3054,6 +3074,10 @@ unittest {
         }
 
         auto ft = frontTransversal!(TransverseOptions.assumeNotJagged)(dummies);
+        static if(isForwardRange!DummyType) {
+            static assert(isForwardRange!(typeof(ft)));
+        }
+
         assert(equal(ft, [1, 2, 3, 4]));
 
         // Test slicing.
@@ -3146,6 +3170,17 @@ private:
         assert(!empty);
         _input.popFront;
         prime;
+    }
+
+/// Ditto
+    static if(isForwardRange!RangeOfRanges)
+    {
+        @property typeof(this) save()
+        {
+            auto ret = this;
+            ret._input = _input.save;
+            return ret;
+        }
     }
 
     static if (isBidirectionalRange!RangeOfRanges)
