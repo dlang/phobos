@@ -267,9 +267,15 @@ $(D x0).
 /**
    Returns the current number in the random sequence.
 */
-    UIntType front()
+    @property UIntType front()
     {
         return _x;
+    }
+
+///
+    @property typeof(this) save()
+    {
+        return this;
     }
 
 /**
@@ -314,6 +320,8 @@ alias LinearCongruentialEngine!(uint, 48271, 0, 2147483647) MinstdRand;
 
 unittest
 {
+    static assert(isForwardRange!MinstdRand);
+
     // The correct numbers are taken from The Database of Integer Sequences
     // http://www.research.att.com/~njas/sequences/eisBTfry00128.txt
     auto checking0 = [
@@ -323,6 +331,7 @@ unittest
         823378840,143542612 ];
     //auto rnd0 = MinstdRand0(1);
     MinstdRand0 rnd0;
+
     foreach (e; checking0)
     {
         assert(rnd0.front == e);
@@ -483,10 +492,16 @@ Parameter for the generator.
 /**
    Returns the current random value.
  */
-    UIntType front()
+    @property UIntType front()
     {
         if (mti == size_t.max) seed();
         return _y;
+    }
+
+///
+    @property typeof(this) save()
+    {
+        return this;
     }
 
 /**
@@ -752,6 +767,8 @@ unittest
 unittest
 {
     auto gen = Mt19937(unpredictableSeed);
+    static assert(isForwardRange!(typeof(gen)));
+
     auto a = uniform(0, 1024, gen);
     assert(0 <= a && a <= 1024);
     auto b = uniform(0.0f, 1.0f, gen);
@@ -885,7 +902,7 @@ struct RandomCover(Range, Random)
             return (1 + _input.length) - _alreadyChosen;
         }
 
-    ref ElementType!(Range) front()
+    @property auto ref front()
     {
         return _input[_current];
     }
@@ -919,7 +936,15 @@ struct RandomCover(Range, Random)
         assert(false);
     }
 
-    bool empty() { return _alreadyChosen > _input.length; }
+    @property typeof(this) save()
+    {
+        auto ret = this;
+        ret._input = _input.save;
+        ret._rnd = _rnd.save;
+        return ret;
+    }
+
+    @property bool empty() { return _alreadyChosen > _input.length; }
 }
 
 /// Ditto
@@ -933,6 +958,8 @@ unittest
     int[] a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8 ];
     auto rnd = Random(unpredictableSeed);
     RandomCover!(int[], Random) rc = randomCover(a, rnd);
+    static assert(isForwardRange!(typeof(rc)));
+
     int[] b = new int[9];
     uint i;
     foreach (e; rc)
@@ -998,7 +1025,7 @@ Constructor.
 /**
    Range primitives.
 */
-    bool empty() const
+    @property bool empty() const
     {
         return _toSelect == 0;
     }
@@ -1018,6 +1045,14 @@ Constructor.
         --_toSelect;
         ++_index;
         prime;
+    }
+
+/// Ditto
+    @property typeof(this) save()
+    {
+        auto ret = this;
+        ret._input = _input.save;
+        return ret;
     }
 
 /// Ditto
@@ -1071,6 +1106,8 @@ RandomSample!R randomSample(R)(R r, size_t n) //if (hasLength!R) // @@@BUG@@@
 unittest
 {
     int[] a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ];
+    static assert(isForwardRange!(typeof(randomSample(a, 5))));
+
     //int[] a = [ 0, 1, 2 ];
     assert(randomSample(a, 5).length == 5);
     uint i;
