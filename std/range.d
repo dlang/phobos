@@ -1645,7 +1645,7 @@ assert(s[4] == 5);
 assert(equal(s, [ 1, 2, 3, 4, 5 ][]));
 ----
  */
-struct Take(R) if (isInputRange!(R))
+struct Take(R) if (isInputRange!(R) && !hasSlicing!(R))
 {
     R original;
     private size_t _maxAvailable;
@@ -1749,6 +1749,13 @@ public:
     }
 }
 
+// This template simply aliases itself to R and is useful for consistency in
+// generic code.
+template Take(R) if(isInputRange!R && hasSlicing!R)
+{
+    alias R Take;
+}
+
 /// Ditto
 Take!(R) take(R)(R input, size_t n) if (isInputRange!R && !hasSlicing!R)
 {
@@ -1756,7 +1763,7 @@ Take!(R) take(R)(R input, size_t n) if (isInputRange!R && !hasSlicing!R)
 }
 
 /// Ditto
-auto take(R)(R input, size_t n) if (isInputRange!R && hasSlicing!R)
+Take!(R) take(R)(R input, size_t n) if (isInputRange!R && hasSlicing!R)
 {
     static if (hasLength!R)
     {
@@ -1780,6 +1787,10 @@ unittest
     assert(s[4] == 5);
     assert(equal(s, [ 1, 2, 3, 4, 5 ][]));
     assert(equal(retro(s), [ 5, 4, 3, 2, 1 ][]));
+
+    // Test fix for bug 4464.
+    static assert(is(typeof(s) == Take!(int[])));
+    static assert(is(typeof(s) == int[]));
 
     foreach(DummyType; AllDummyRanges) {
         DummyType dummy;
