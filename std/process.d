@@ -457,7 +457,7 @@ version(MainTest)
 
 // This struct provides an AA-like interface for reading/writing
 // environment variables.
-struct Environment
+abstract final class Environment
 {
 static:
 
@@ -582,7 +582,7 @@ public:
 
 
     // Return all environment variables in an associative array.
-    static string[string] toAA()
+    string[string] toAA()
     {
         string[string] aa;
 
