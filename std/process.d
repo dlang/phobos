@@ -22,23 +22,53 @@ Distributed under the Boost Software License, Version 1.0.
 */
 module std.process;
 
-private import std.c.stdlib;
-private import std.c.string;
-private import std.conv;
-private import std.string;
-private import std.c.process;
-private import core.stdc.errno;
-private import std.exception;
+
+import core.stdc.stdlib;
+import core.stdc.errno;
+import std.c.process;
+import std.c.string;
+
+import std.conv;
+import std.exception;
+import std.stdio;
+import std.string;
+import std.typecons;
+
 version (Windows)
 {
     import std.array, std.format, std.random, std.file;
-    private import std.stdio : readln, fclose;
-    private import std.c.windows.windows:GetCurrentProcessId;
+    import core.sys.windows.windows;
+    import std.utf;
+    import std.windows.syserror;
 }
 version (Posix)
 {
-    private import std.stdio;
+    import core.sys.posix.stdlib;
 }
+
+
+// The following is needed for reading/writing environment variables.
+version(Posix)
+{
+    // Made available by the C runtime:
+    private extern(C) extern __gshared const char** environ;
+}
+version(Windows)
+{
+    // TODO: This should be in core.sys.windows.windows.
+    alias WCHAR* LPWCH;
+    extern(Windows)
+    {
+        LPWCH GetEnvironmentStringsW();
+        BOOL FreeEnvironmentStringsW(LPWCH lpszEnvironmentBlock);
+        DWORD GetEnvironmentVariableW(LPCWSTR lpName, LPWSTR lpBuffer,
+            DWORD nSize);
+        BOOL SetEnvironmentVariableW(LPCWSTR lpName, LPCWSTR lpValue);
+    }
+}
+
+
+
 
 /**
    Execute $(D command) in a _command shell.
@@ -421,3 +451,257 @@ version(MainTest)
 }
 
 /* ////////////////////////////////////////////////////////////////////////// */
+
+
+
+
+// This struct provides an AA-like interface for reading/writing
+// environment variables.
+struct Environment
+{
+static:
+
+private:
+    // Return the length of an environment variable (in number of
+    // wchars, including the null terminator), 0 if it doesn't exist.
+    version(Windows)
+    int varLength(LPCWSTR namez)
+    {
+        return GetEnvironmentVariableW(namez, null, 0);
+    }
+
+
+    // Retrieve the environment variable, or return false on failure.
+    bool getImpl(string name, out string value)
+    {
+        version(Posix)
+        {
+            const vz = core.sys.posix.stdlib.getenv(toStringz(name));
+            if (vz == null) return false;
+            auto v = vz[0 .. strlen(vz)];
+
+            // Cache the last call's result.
+            static string lastResult;
+            if (v != lastResult) lastResult = v.idup;
+            value = lastResult;
+            return true;
+        }
+
+        else version(Windows)
+        {
+            const namez = toUTF16z(name);
+            immutable len = varLength(namez);
+            if (len == 0) return false;
+            if (len == 1) return true;
+
+            auto buf = new WCHAR[len];
+            GetEnvironmentVariableW(namez, buf.ptr, buf.length);
+            value = toUTF8(buf[0 .. $-1]);
+            return true;
+        }
+
+        else static assert(0);
+    }
+
+
+
+public:
+    // Retrieve an environment variable, throw on failure.
+    string opIndex(string name)
+    {
+        string value;
+        enforce(getImpl(name, value), "Environment variable not found: "~name);
+        return value;
+    }
+
+
+
+    // Assign a value to an environment variable.  If the variable
+    // exists, it is overwritten.
+    string opIndexAssign(string value, string name)
+    {
+        version(Posix)
+        {
+            if (core.sys.posix.stdlib.setenv(toStringz(name),
+                toStringz(value), 1) != -1)
+            {
+                return value;
+            }
+
+            // The default errno error message is very uninformative
+            // in the most common case, so we handle it manually.
+            enforce(errno != EINVAL,
+                "Invalid environment variable name: '"~name~"'");
+            errnoEnforce(false,
+                "Failed to add environment variable");
+            assert(0);
+        }
+
+        else version(Windows)
+        {
+            enforce(
+                SetEnvironmentVariableW(toUTF16z(name), toUTF16z(value)),
+                sysErrorString(GetLastError())
+            );
+            return value;
+        }
+
+        else static assert(0);
+    }
+
+
+
+    // Remove an environment variable.  The function succeeds even
+    // if the variable isn't in the environment.
+    void remove(string name)
+    {
+        version(Posix)
+        {
+            core.sys.posix.stdlib.unsetenv(toStringz(name));
+        }
+
+        else version(Windows)
+        {
+            SetEnvironmentVariableW(toUTF16z(name), null);
+        }
+
+        else static assert(0);
+    }
+
+
+
+    // Same as opIndex, except return a default value if
+    // the variable doesn't exist.
+    string get(string name, string defaultValue = null)
+    {
+        string value;
+        auto found = getImpl(name, value);
+        return found ? value : defaultValue;
+    }
+
+
+
+    // Return all environment variables in an associative array.
+    static string[string] toAA()
+    {
+        string[string] aa;
+
+        version(Posix)
+        {
+            for (int i=0; environ[i] != null; ++i)
+            {
+                immutable varDef = to!string(environ[i]);
+                immutable eq = varDef.indexOf('=');
+                assert (eq >= 0);
+                
+                immutable name = varDef[0 .. eq];
+                immutable value = varDef[eq+1 .. $];
+
+                // In POSIX, environment variables may be defined more
+                // than once.  This is a security issue, which we avoid
+                // by checking whether the key already exists in the array.
+                // For more info:
+                // http://www.dwheeler.com/secure-programs/Secure-Programs-HOWTO/environment-variables.html
+                if (name !in aa)  aa[name] = value;
+            }
+        }
+
+        else version(Windows)
+        {
+            auto envBlock = GetEnvironmentStringsW();
+            enforce (envBlock, "Failed to retrieve environment variables.");
+            scope(exit) FreeEnvironmentStringsW(envBlock);
+
+            for (int i=0; envBlock[i] != '\0'; ++i)
+            {
+                auto start = i;
+                while (envBlock[i] != '=')
+                {
+                    assert (envBlock[i] != '\0');
+                    ++i;
+                }
+                immutable name = toUTF8(envBlock[start .. i]);
+
+                start = i+1;
+                while (envBlock[i] != '\0') ++i;
+                aa[name] = toUTF8(envBlock[start .. i]);
+            }
+        }
+
+        else static assert(0);
+
+        return aa;
+    }
+
+}
+
+
+
+
+/** Manipulates environment variables using an associative-array-like
+    interface.
+
+    Examples:
+    ---
+    // Return variable, or throw an exception if it doesn't exist.
+    auto path = environment["PATH"];
+
+    // Add/replace variable.
+    environment["foo"] = "bar";
+
+    // Remove variable.
+    environment.remove("foo");
+
+    // Return variable, or null if it doesn't exist.
+    auto foo = environment.get("foo");
+
+    // Return variable, or a default value if it doesn't exist.
+    auto foo = environment.get("foo", "default foo value");
+
+    // Return an associative array of type string[string] containing
+    // all the environment variables.
+    auto aa = environment.toAA();
+    ---
+*/
+//Environment environment;
+alias Environment environment;
+
+
+unittest
+{
+    // New variable
+    environment["std_process"] = "foo";
+    assert (environment["std_process"] == "foo");
+
+    // Set variable again
+    environment["std_process"] = "bar";
+    assert (environment["std_process"] == "bar");
+
+    // Remove variable
+    environment.remove("std_process");
+
+    // Remove again, should succeed
+    environment.remove("std_process");
+
+    // Throw on not found.
+    try { environment["std_process"]; assert(0); } catch(Exception e) { }
+
+    // get() without default value
+    assert (environment.get("std.process") == null);
+
+    // get() with default value
+    assert (environment.get("std_process", "baz") == "baz");
+
+    // Convert to associative array
+    auto aa = environment.toAA();
+    assert (aa.length > 0);
+    foreach (n, v; aa)
+    {
+        // Due to what seems to be a bug in the Wine cmd shell,
+        // sometimes there is an environment variable with an empty
+        // name, which GetEnvironmentVariable() refuses to retrieve.
+        version(Windows)  if (n.length == 0) continue;
+
+        assert (v == environment[n]);
+    }
+}
