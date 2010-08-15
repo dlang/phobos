@@ -1182,6 +1182,16 @@ public:
             _frontLength = _unComputed;
         }
     }
+
+    static if(isForwardRange!Range)
+    {
+        @property typeof(this) save()
+        {
+            auto ret = this;
+            ret._input = _input.save;
+            return ret;
+        }
+    }
 }
 
 /// Ditto
@@ -1201,6 +1211,8 @@ unittest
     assert(equal(splitter("hello  world", ' '), [ "hello", "", "world" ]));
     int[] a = [ 1, 2, 0, 0, 3, 0, 4, 5, 0 ];
     int[][] w = [ [1, 2], [], [3], [4, 5], [] ];
+    static assert(isForwardRange!(typeof(splitter(a, 0))));
+
     // foreach (x; splitter(a, 0)) {
     //     writeln("[", x, "]");
     // }
@@ -1318,6 +1330,16 @@ public:
         _frontLength = _frontLength.max;
     }
 
+    static if(isForwardRange!Range)
+    {
+        @property typeof(this) save()
+        {
+            auto ret = this;
+            ret._input = _input.save;
+            return ret;
+        }
+    }
+
 // Bidirectional functionality as suggested by Brad Roberts.
     static if (isBidirectionalRange!Range)
     {
@@ -1366,6 +1388,7 @@ unittest
     auto sp1 = splitter(s1, ", ");
     //foreach (e; sp1) writeln("[", e, "]");
     assert(equal(sp1, ["", "abc", "de", " fg", "hi", ""][]));
+    static assert(isForwardRange!(typeof(sp1)));
 
     int[] a = [ 1, 2, 0, 3, 0, 4, 5, 0 ];
     int[][] w = [ [1, 2], [3], [4, 5], [] ];
@@ -1481,6 +1504,16 @@ struct Splitter(alias isTerminator, Range,
             ++_end;
         }
     }
+
+    static if(isForwardRange!Range)
+    {
+        @property typeof(this) save()
+        {
+            auto ret = this;
+            ret._input = _input.save;
+            return ret;
+        }
+    }
 }
 
 Splitter!(isTerminator, Range)
@@ -1511,6 +1544,8 @@ unittest
             ["Mary", "has", "a", "little", "lamb."]);
     compare("", []);
     compare(" ", [""]);
+
+    static assert(isForwardRange!(typeof(splitter!"a == ' '"("ABC"))));
 }
 
 // joiner
@@ -1687,6 +1722,8 @@ unittest
     // scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] arr = [ 1, 2, 2, 2, 2, 3, 4, 4, 4, 5 ];
     auto r = uniq(arr);
+    static assert(isForwardRange!(typeof(r)));
+
     assert(equal(r, [ 1, 2, 3, 4, 5 ][]));
     assert(equal(retro(r), retro([ 1, 2, 3, 4, 5 ][])));
 
@@ -1792,6 +1829,7 @@ unittest
     int[] arr = [ 1, 2, 2, 2, 2, 3, 4, 4, 4, 5 ];
     assert(equal(group(arr), [ tuple(1, 1u), tuple(2, 4u), tuple(3, 1u),
                             tuple(4, 3u), tuple(5, 1u) ][]));
+    static assert(isForwardRange!(typeof(group(arr))));
 
     foreach(DummyType; AllDummyRanges) {
         DummyType d;
@@ -2696,8 +2734,8 @@ unittest
     //scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] a = [ 1, 2, 4, 7, 7, 2, 4, 7, 3, 5];
 
-    assert(isForwardRange!(typeof(a.until(7))));
-    assert(isForwardRange!(typeof(until!"a == 2"(a, OpenRight.no))));
+    static assert(isForwardRange!(typeof(a.until(7))));
+    static assert(isForwardRange!(typeof(until!"a == 2"(a, OpenRight.no))));
 
     assert(equal(a.until(7), [1, 2, 4][]));
     assert(equal(a.until(7, OpenRight.no), [1, 2, 4, 7][]));
@@ -6124,6 +6162,20 @@ public:
         assert(false);
     }
 
+    static if(allSatisfy!(isForwardRange, Rs))
+    {
+        @property typeof(this) save()
+        {
+            auto ret = this;
+            foreach(ti, elem; _r)
+            {
+                ret._r[ti] = elem.save;
+            }
+
+            return ret;
+        }
+    }
+
     static if (allSatisfy!(hasLength, Rs))
     {
         @property size_t length()
@@ -6156,6 +6208,8 @@ unittest
     assert(equal(setUnion(a, b), [0, 1, 1, 2, 2, 4, 4, 5, 7, 7, 8, 9][]));
     assert(equal(setUnion(a, c, b),
                     [0, 1, 1, 2, 2, 4, 4, 5, 7, 7, 8, 9, 10][]));
+
+    static assert(isForwardRange!(typeof(setUnion(a, b))));
 }
 
 /**
@@ -6234,6 +6288,20 @@ public:
         assert(!empty);
         return _input[0].front;
     }
+
+    static if(allSatisfy!(isForwardRange, Rs))
+    {
+        @property typeof(this) save()
+        {
+            auto ret = this;
+            foreach(ti, elem; _input)
+            {
+                ret._input[ti] = elem.save;
+            }
+
+            return ret;
+        }
+    }
 }
 
 /// Ditto
@@ -6253,6 +6321,8 @@ unittest
     //foreach (e; setIntersection(a, b, c)) writeln(e);
     assert(equal(setIntersection(a, b), [1, 2, 4, 7][]));
     assert(equal(setIntersection(a, a), a));
+
+    static assert(isForwardRange!(typeof(setIntersection(a, a))));
     // assert(equal(setIntersection(a, b, b, a), [1, 2, 4, 7][]));
     // assert(equal(setIntersection(a, b, c), [1, 4, 7][]));
     // assert(equal(setIntersection(a, c, b), [1, 4, 7][]));
@@ -6321,6 +6391,17 @@ public:
         return r1.front;
     }
 
+    static if(isForwardRange!R1 && isForwardRange!R2)
+    {
+        @property typeof(this) save()
+        {
+            auto ret = this;
+            ret.r1 = r1.save;
+            ret.r2 = r2.save;
+            return ret;
+        }
+    }
+
     bool empty() { return r1.empty; }
 }
 
@@ -6338,6 +6419,7 @@ unittest
     int[] b = [ 0, 1, 2, 4, 7, 8 ];
     //foreach (e; setDifference(a, b)) writeln(e);
     assert(equal(setDifference(a, b), [5, 9][]));
+    static assert(isForwardRange!(typeof(setDifference(a, b))));
 }
 
 /**
@@ -6418,6 +6500,17 @@ public:
         return r2.front;
     }
 
+    static if(isForwardRange!R1 && isForwardRange!R2)
+    {
+        @property typeof(this) save()
+        {
+            auto ret = this;
+            ret.r1 = r1.save;
+            ret.r2 = r2.save;
+            return ret;
+        }
+    }
+
     ref auto opSlice() { return this; }
 
     @property bool empty() { return r1.empty && r2.empty; }
@@ -6438,6 +6531,8 @@ unittest
     int[] b = [ 0, 1, 2, 4, 7, 8 ];
     //foreach (e; setSymmetricDifference(a, b)) writeln(e);
     assert(equal(setSymmetricDifference(a, b), [0, 5, 8, 9][]));
+
+    static assert(isForwardRange!(typeof(setSymmetricDifference(a, b))));
 }
 
 // Internal random array generators
