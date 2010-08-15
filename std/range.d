@@ -2590,7 +2590,7 @@ if(allSatisfy!(isInputRange, Ranges) && Ranges.length > 1)
 
 /// Ditto
 Range lockstep(StoppingPolicy s = StoppingPolicy.shortest, Range)
-(Range range) if(isInputRange(range))
+(Range range) if(isInputRange!(Range))
 {
     return range;
 }
@@ -2633,6 +2633,9 @@ unittest {
        foreach(a, b; ls) {}
        assert(0);
    } catch {}
+
+   // Just make sure 1-range case instantiates.
+   lockstep([1,2,3,4,5]);
 }
 
 /**
