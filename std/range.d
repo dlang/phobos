@@ -609,6 +609,21 @@ unittest
 }
 
 /**
+Tests whether $(D R) has lvalue elements.  These are defined as elements that
+can be passed by reference and have their address taken.
+*/
+template hasLvalueElements(R)
+{
+    enum bool hasLvalueElements =
+        is(typeof(&R.init.front()) == ElementType!(R)*);
+}
+
+unittest {
+    static assert(hasLvalueElements!(int[]));
+    static assert(!hasLvalueElements!(typeof(iota(3))));
+}
+
+/**
 Returns $(D true) if $(D R) has a $(D length) member that returns an
 integral type. $(D R) does not have to be a range. Note that $(D
 length) is an optional primitive as no range must implement it. Some
@@ -2413,6 +2428,213 @@ unittest
 //    }
 }
 
+/* CTFE function to generate opApply loop for Lockstep.*/
+private string lockstepApply(Ranges...)() if(Ranges.length > 0)
+{
+    // Since there's basically no way to make this code readable as-is, I've
+    // included formatting to make the generated code look "normal" when
+    // printed out via pragma(msg).
+    string ret = "int opApply(int delegate(";
+
+    foreach(ti, dummy; Ranges)
+    {
+        ret ~= "ref ElementType!(Ranges[" ~ to!string(ti) ~ "]), ";
+    }
+
+    // Remove trailing ,
+    ret = ret[0..$ - 2];
+    ret ~= ") dg) {\n";
+
+    ret ~= "\tint res;\n";
+
+    // For every range not offering ref return, declare a variable to statically
+    // copy to so we have lvalue access.
+    foreach(ti, Range; Ranges)
+    {
+        static if(!hasLvalueElements!Range) {
+            // Don't have lvalue access.
+            ret ~= "\tElementType!(Ranges[" ~ to!string(ti) ~ "]) front" ~
+                   to!string(ti) ~ ";\n";
+        }
+    }
+
+    ret ~= "\twhile(!someEmpty) {\n";
+
+    // Populate the dummy variables for everything that doesn't have lvalue
+    // elements.
+    foreach(ti, Range; Ranges)
+    {
+        static if(!hasLvalueElements!Range)
+        {
+            immutable tiString = to!string(ti);
+            ret ~= "\t\tfront" ~ tiString ~ " = ranges["
+                   ~ tiString ~ "].front;\n";
+        }
+    }
+
+
+    // Create code to call the delegate.
+    ret ~= "\t\tres = dg(";
+    foreach(ti, Range; Ranges)
+    {
+        static if(hasLvalueElements!Range)
+        {
+            ret ~= "ranges[" ~ to!string(ti) ~ "].front, ";
+        }
+        else
+        {
+            ret ~= "front" ~ to!string(ti) ~ ", ";
+        }
+    }
+
+    // Remove trailing ,
+    ret = ret[0..$ - 2];
+    ret ~= ");\n";
+    ret ~= "\t\tif(res) break;\n";
+    ret ~= "\t\tpopAll();\n";
+    ret ~= "\t}\n";
+    ret ~= "\treturn res;\n}";
+
+    return ret;
+}
+
+/**
+Iterate multiple ranges in lockstep using a $(D foreach) loop.  If only a single
+range is passed in, the $(D Lockstep) aliases itself away.  If the
+ranges are of different lengths and $(D s) == $(D StoppingPolicy.shortest)
+stop after the shortest range is empty.  If the ranges are of different
+lengths and $(D s) == $(D StoppingPolicy.requireSameLength), throw an
+exception.  $(D s) may not be $(D StoppingPolicy.longest), and passing this
+will be a compile time error.
+
+BUGS:  If a range does not offer lvalue access, but $(D ref) is used in the
+       $(D foreach) loop, it will be silently accepted but any modifications
+       to the variable will not be propagated to the underlying range.
+
+Examples:
+---
+auto arr1 = [1,2,3,4,5];
+auto arr2 = [6,7,8,9,10];
+
+foreach(ref a, ref b; lockstep(arr1, arr2))
+{
+   a += b;
+}
+
+assert(arr1 == [7,9,11,13,15]);
+---
+*/
+struct Lockstep(StoppingPolicy s, Ranges...)
+if(allSatisfy!(isInputRange, Ranges) && Ranges.length > 1)
+{
+private:
+    static assert(s != StoppingPolicy.longest,
+        "Can't use StoppingPolicy.longest with Lockstep.");
+    Ranges ranges;
+
+    bool someEmpty()
+    {
+        foreach(range; ranges)
+        {
+            if(range.empty) goto LEmpty;
+        }
+
+        return false;
+
+    LEmpty:
+        static if(s == StoppingPolicy.shortest)
+        {
+            return true;
+        }
+        else static if(s == StoppingPolicy.requireSameLength)
+        {
+            // Enforce that they're all empty.
+            foreach(range; ranges)
+            {
+                enforce(range.empty,
+                    "Not all ranges were the same length when using " ~
+                    "Lockstep with StoppingPolicy.requireSameLength.");
+            }
+
+            return true;
+        }
+    }
+
+    void popAll()
+    {
+        assert(!someEmpty);
+        foreach(ti, range; ranges)
+        {
+            ranges[ti].popFront();
+        }
+    }
+
+public:
+    mixin(lockstepApply!(Ranges)());
+}
+
+// For generic programming, make sure Lockstep!(Range) is well defined for a
+// single range.
+template Lockstep(StoppingPolicy s, Range)
+{
+    alias Range Lockstep;
+}
+
+/// Ditto
+Lockstep!(s, Ranges) lockstep(StoppingPolicy s = StoppingPolicy.shortest, Ranges...)
+(Ranges ranges)
+if(allSatisfy!(isInputRange, Ranges) && Ranges.length > 1)
+{
+    return Lockstep!(s, Ranges)(ranges);
+}
+
+/// Ditto
+Range lockstep(StoppingPolicy s = StoppingPolicy.shortest, Range)
+(Range range) if(isInputRange(range))
+{
+    return range;
+}
+
+unittest {
+    // The filters are to make these the lowest common forward denominator ranges,
+    // i.e. w/o ref return, random access, length, etc.
+    auto foo = filter!"a"([1,2,3,4,5]);
+    auto bar = [6f,7f,8f,9f,10f];
+
+    uint[] res1;
+    float[] res2;
+
+    foreach(a, ref b; lockstep(foo, bar)) {
+        res1 ~= a;
+        res2 ~= b;
+        b++;
+    }
+
+    assert(res1 == [1,2,3,4,5]);
+    assert(res2 == [6,7,8,9,10]);
+    assert(bar == [7f,8f,9f,10f,11f]);
+
+   // Doc example.
+   auto arr1 = [1,2,3,4,5];
+   auto arr2 = [6,7,8,9,10];
+
+   foreach(ref a, ref b; lockstep(arr1, arr2))
+   {
+       a += b;
+   }
+
+   assert(arr1 == [7,9,11,13,15]);
+
+   // Make sure StoppingPolicy.requireSameLength throws.
+   arr2.popBack;
+   auto ls = lockstep!(StoppingPolicy.requireSameLength)(arr1, arr2);
+
+   try {
+       foreach(a, b; ls) {}
+       assert(0);
+   } catch {}
+}
+
 /**
 Creates a mathematical sequence given the initial values and a
 recurrence function that computes the popFront value from the existing
@@ -3463,4 +3685,3 @@ unittest
     InputRange r;
     assert(moveFront(r) == 43);
 }
-
