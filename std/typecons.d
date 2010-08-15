@@ -434,6 +434,11 @@ assert(s.field[0] == "abc" && s.field[1] == 4.5);
         assert(s.field[0] == "abc" && s.field[1] == 4.5);
     }
 
+/**
+    The length of the tuple.
+*/
+enum length = field.length;
+
     static string toStringHeader = Tuple.stringof ~ "(";
     static string toStringFooter = ")";
     static string toStringSeparator = ", ";
@@ -463,6 +468,7 @@ unittest
 {
     {
         Tuple!(int, "a", int, "b") nosh;
+        static assert(nosh.length == 2);
         nosh.a = 5;
         nosh.b = 6;
         assert(nosh.a == 5);
@@ -470,6 +476,7 @@ unittest
     }
     {
         Tuple!(short, double) b;
+        static assert(b.length == 2);
         b.field[1] = 5;
         auto a = Tuple!(int, float)(b);
         assert(a.field[0] == 0 && a.field[1] == 5);
