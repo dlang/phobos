@@ -1659,7 +1659,16 @@ template CommonType(T...)
     static if (!T.length)
         alias void CommonType;
     else static if (T.length == 1)
-        alias T[0] CommonType;
+    {
+        static if(is(typeof(T[0])))
+        {
+            alias typeof(T[0]) CommonType;
+        }
+        else
+        {
+            alias T[0] CommonType;
+        }
+    }
     else static if (is(typeof(true ? T[0].init : T[1].init) U))
         alias CommonType!(U, T[2 .. $]) CommonType;
     else
@@ -1669,10 +1678,15 @@ template CommonType(T...)
 unittest
 {
     alias CommonType!(int, long, short) X;
-    assert(is(X == long));
+    static assert(is(X == long));
     alias CommonType!(char[], int, long, short) Y;
-    assert(is(Y == void), Y.stringof);
+    static assert(is(Y == void), Y.stringof);
+    static assert(is(CommonType!(3) == int));
+    static assert(is(CommonType!(double, 4, float) == double));
+    static assert(is(CommonType!(string, char[]) == const(char)[]));
+    static assert(is(CommonType!(3, 3U) == uint));
 }
+
 
 /**
  * Returns a tuple with all possible target types of an implicit
