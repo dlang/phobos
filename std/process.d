@@ -455,8 +455,33 @@ version(MainTest)
 
 
 
-// This struct provides an AA-like interface for reading/writing
-// environment variables.
+/** Manipulates environment variables using an associative-array-like
+    interface.
+
+    Examples:
+    ---
+    // Return variable, or throw an exception if it doesn't exist.
+    auto path = environment["PATH"];
+
+    // Add/replace variable.
+    environment["foo"] = "bar";
+
+    // Remove variable.
+    environment.remove("foo");
+
+    // Return variable, or null if it doesn't exist.
+    auto foo = environment.get("foo");
+
+    // Return variable, or a default value if it doesn't exist.
+    auto foo = environment.get("foo", "default foo value");
+
+    // Return an associative array of type string[string] containing
+    // all the environment variables.
+    auto aa = environment.toAA();
+    ---
+*/
+alias Environment environment;
+
 abstract final class Environment
 {
 static:
@@ -634,37 +659,6 @@ public:
     }
 
 }
-
-
-
-
-/** Manipulates environment variables using an associative-array-like
-    interface.
-
-    Examples:
-    ---
-    // Return variable, or throw an exception if it doesn't exist.
-    auto path = environment["PATH"];
-
-    // Add/replace variable.
-    environment["foo"] = "bar";
-
-    // Remove variable.
-    environment.remove("foo");
-
-    // Return variable, or null if it doesn't exist.
-    auto foo = environment.get("foo");
-
-    // Return variable, or a default value if it doesn't exist.
-    auto foo = environment.get("foo", "default foo value");
-
-    // Return an associative array of type string[string] containing
-    // all the environment variables.
-    auto aa = environment.toAA();
-    ---
-*/
-//Environment environment;
-alias Environment environment;
 
 
 unittest
