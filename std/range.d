@@ -2429,12 +2429,17 @@ unittest
 }
 
 /* CTFE function to generate opApply loop for Lockstep.*/
-private string lockstepApply(Ranges...)() if(Ranges.length > 0)
+private string lockstepApply(Ranges...)(bool withIndex) if(Ranges.length > 0)
 {
     // Since there's basically no way to make this code readable as-is, I've
     // included formatting to make the generated code look "normal" when
     // printed out via pragma(msg).
     string ret = "int opApply(int delegate(";
+
+    if(withIndex)
+    {
+        ret ~= "ref size_t, ";
+    }
 
     foreach(ti, dummy; Ranges)
     {
@@ -2446,6 +2451,11 @@ private string lockstepApply(Ranges...)() if(Ranges.length > 0)
     ret ~= ") dg) {\n";
 
     ret ~= "\tint res;\n";
+
+    if(withIndex)
+    {
+        ret ~= "\tsize_t index = 0;\n";
+    }
 
     // For every range not offering ref return, declare a variable to statically
     // copy to so we have lvalue access.
@@ -2475,6 +2485,12 @@ private string lockstepApply(Ranges...)() if(Ranges.length > 0)
 
     // Create code to call the delegate.
     ret ~= "\t\tres = dg(";
+    if(withIndex)
+    {
+        ret ~= "index, ";
+    }
+
+
     foreach(ti, Range; Ranges)
     {
         static if(hasLvalueElements!Range)
@@ -2492,6 +2508,12 @@ private string lockstepApply(Ranges...)() if(Ranges.length > 0)
     ret ~= ");\n";
     ret ~= "\t\tif(res) break;\n";
     ret ~= "\t\tpopAll();\n";
+
+    if(withIndex)
+    {
+        ret ~= "\t\tindex++;\n";
+    }
+
     ret ~= "\t}\n";
     ret ~= "\treturn res;\n}";
 
@@ -2522,6 +2544,11 @@ foreach(ref a, ref b; lockstep(arr1, arr2))
 }
 
 assert(arr1 == [7,9,11,13,15]);
+
+// Lockstep also supports iterating with an index variable:
+foreach(index, a, b; lockstep(arr1, arr2)) {
+    writefln("Index %s:  a = %s, b = %s", index, a, b);
+}
 ---
 */
 struct Lockstep(StoppingPolicy s, Ranges...)
@@ -2570,7 +2597,8 @@ private:
     }
 
 public:
-    mixin(lockstepApply!(Ranges)());
+    mixin(lockstepApply!(Ranges)(false));
+    mixin(lockstepApply!(Ranges)(true));
 }
 
 // For generic programming, make sure Lockstep!(Range) is well defined for a
@@ -2636,6 +2664,21 @@ unittest {
 
    // Just make sure 1-range case instantiates.
    lockstep([1,2,3,4,5]);
+
+   // Test with indexing.
+   res1 = null;
+   res2 = null;
+   size_t[] indices;
+   foreach(i, a, b; lockstep(foo, bar))
+   {
+       indices ~= i;
+       res1 ~= a;
+       res2 ~= b;
+   }
+
+   assert(indices == to!(size_t[])([0, 1, 2, 3, 4]));
+   assert(res1 == [1,2,3,4,5]);
+   assert(res2 == [7f,8f,9f,10f,11f]);
 }
 
 /**
