@@ -164,7 +164,7 @@ const(void)[] uncompress(const(void)[] srcbuf, uint destlen = 0u, int winbits = 
     etc.c.zlib.z_stream zs;
 
     destbuf = new ubyte[destlen];
-    
+
     zs.next_in = cast(ubyte*) srcbuf;
     zs.avail_in = srcbuf.length;
 
@@ -309,7 +309,7 @@ class Compress
     zs.avail_out = destbuf.length;
 
     if (zs.avail_in)
-        buf = cast(void[])zs.next_in[0 .. zs.avail_in] ~ buf;
+        buf = zs.next_in[0 .. zs.avail_in] ~ cast(ubyte[]) buf;
 
     zs.next_in = cast(ubyte*) buf.ptr;
     zs.avail_in = buf.length;
@@ -327,7 +327,7 @@ class Compress
      * Compress and return any remaining data.
      * The returned data should be appended to that returned by compress().
      * Params:
-     *  mode = one of the following: 
+     *  mode = one of the following:
      *      $(DL
             $(DT Z_SYNC_FLUSH )
             $(DD Syncs up flushing to the next byte boundary.
@@ -348,7 +348,7 @@ class Compress
     }
     body
     {
-    void[] destbuf;
+    ubyte[] destbuf;
     ubyte[512] tmpbuf = void;
     int err;
 
@@ -474,7 +474,7 @@ class UnCompress
     zs.avail_out = destbuf.length;
 
     if (zs.avail_in)
-        buf = cast(void[])zs.next_in[0 .. zs.avail_in] ~ buf;
+        buf = zs.next_in[0 .. zs.avail_in] ~ cast(ubyte[]) buf;
 
     zs.next_in = cast(ubyte*) buf;
     zs.avail_in = buf.length;
