@@ -302,7 +302,7 @@ class Compress
         zs.avail_out = destbuf.length;
 
         if (zs.avail_in)
-            buf = cast(void[])zs.next_in[0 .. zs.avail_in] ~ buf;
+            buf = zs.next_in[0 .. zs.avail_in] ~ cast(ubyte[]) buf;
 
         zs.next_in = cast(ubyte*) buf.ptr;
         zs.avail_in = buf.length;
@@ -341,7 +341,7 @@ class Compress
     }
     body
     {
-        void[] destbuf;
+        ubyte[] destbuf;
         ubyte[512] tmpbuf = void;
         int err;
 
@@ -467,7 +467,7 @@ class UnCompress
         zs.avail_out = destbuf.length;
 
         if (zs.avail_in)
-            buf = cast(void[])zs.next_in[0 .. zs.avail_in] ~ buf;
+            buf = zs.next_in[0 .. zs.avail_in] ~ buf;
 
         zs.next_in = cast(ubyte*) buf;
         zs.avail_in = buf.length;
