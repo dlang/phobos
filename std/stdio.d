@@ -82,6 +82,7 @@ version (DIGITAL_MARS_STDIO)
     alias setmode _setmode;
     enum _O_BINARY = 0x8000;
     int _fileno(FILE* f) { return f._file; }
+    alias _fileno fileno;
 }
 else version (GCC_IO)
 {
@@ -518,14 +519,39 @@ If the file is not opened, throws an exception. Otherwise, calls $(WEB
 cplusplus.com/reference/clibrary/cstdio/fseek.html, fseek) for the
 file handle. Throws on error.
  */
-    void seek(long offset, int origin = SEEK_SET)
+    void seek(ulong offset, int origin = SEEK_SET)
     {
         enforce(p && p.handle,
                 "Attempting to seek() in an unopened file");
-        // @@@ Dubious: why is fseek in std.c.stdio taking an int???
-        errnoEnforce(core.stdc.stdio.fseek(
-                    p.handle, to!int(offset), origin) == 0,
-                "Could not seek in file `"~p.name~"'");
+        if (offset <= int.max && origin == SEEK_SET)
+        {
+            errnoEnforce(core.stdc.stdio.fseek(
+                        p.handle, cast(int) offset, origin) == 0,
+                    "Could not seek in file `"~p.name~"'");
+        }
+        else
+        {
+            flush();
+            errnoEnforce(lseek64(fileno(), offset, origin) != ulong.max,
+                    text("Could not seek to offset ", offset,
+                            " in file `"~p.name~"'"));
+        }
+    }
+
+    unittest
+    {
+        auto f = File("deleteme", "w+");
+        scope(exit) { f.close(); std.file.remove("deleteme"); }
+        f.rawWrite("abcdefghijklmnopqrstuvwxyz");
+        f.seek(7);
+        assert(f.readln() == "hijklmnopqrstuvwxyz");
+        auto bigOffset = cast(ulong) int.max + 100;
+        f.seek(bigOffset);
+        assert(f.tell == bigOffset, text(f.tell));
+        // Uncomment the tests below only if you want to wait for a long time
+        // f.rawWrite("abcdefghijklmnopqrstuvwxyz");
+        // f.seek(-3, SEEK_END);
+        // assert(f.readln() == "xyz");
     }
 
 /**
@@ -533,11 +559,10 @@ If the file is not opened, throws an exception. Otherwise, calls $(WEB
 cplusplus.com/reference/clibrary/cstdio/ftell.html, ftell) for the
 managed file handle. Throws on error.
  */
-    ulong tell() const
+    @property ulong tell() const
     {
-        enforce(p && p.handle,
-                "Attempting to tell() in an unopened file");
-        immutable result = .ftell(cast(FILE*) p.handle);
+        enforce(isOpen, "Attempting to tell() in an unopened file");
+        immutable result = lseek64(fileno(), 0, SEEK_CUR);
         errnoEnforce(result != -1,
                 "Query ftell() failed for file `"~p.name~"'");
         return result;
@@ -817,11 +842,11 @@ Returns the $(D FILE*) corresponding to this object.
 /**
 Returns the file number corresponding to this object.
  */
-    version(Posix) int fileno() const
+    /*version(Posix) */int fileno() const
     {
         enforce(p && p.handle,
                 "Attempting to call fileno() on an unopened file");
-        return core.stdc.stdio.fileno(cast(FILE*) p.handle);
+        return .fileno(cast(FILE*) p.handle);
     }
 
 /**
@@ -2376,5 +2401,23 @@ version(linux) {
         f.p = new File.Impl(fp, 1, host ~ ":" ~ to!string(port));
 
         return f;
+    }
+}
+
+version (Windows)
+{
+    extern(C) ulong _lseeki64(int fd, ulong offset, int whence); 
+    alias _lseeki64 lseek64;
+}
+else
+{
+    import core.sys.posix.unistd : off_t, lseek;
+    static if (off_t.sizeof == 4)
+    {
+        extern(C) ulong lseek64(int fd, ulong offset, int whence); 
+    }
+    else
+    {
+        alias lseek lseek64; 
     }
 }
