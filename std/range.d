@@ -2706,7 +2706,7 @@ ranges are of different lengths and $(D s) == $(D StoppingPolicy.shortest)
 stop after the shortest range is empty.  If the ranges are of different
 lengths and $(D s) == $(D StoppingPolicy.requireSameLength), throw an
 exception.  $(D s) may not be $(D StoppingPolicy.longest), and passing this
-will be a compile time error.
+will throw an exception.
 
 BUGS:  If a range does not offer lvalue access, but $(D ref) is used in the
        $(D foreach) loop, it will be silently accepted but any modifications
@@ -2730,13 +2730,12 @@ foreach(index, a, b; lockstep(arr1, arr2)) {
 }
 ---
 */
-struct Lockstep(StoppingPolicy s, Ranges...)
-if(allSatisfy!(isInputRange, Ranges) && Ranges.length > 1)
+struct Lockstep(Ranges...)
+if(Ranges.length > 1 && allSatisfy!(isInputRange, Ranges))
 {
 private:
-    static assert(s != StoppingPolicy.longest,
-        "Can't use StoppingPolicy.longest with Lockstep.");
     Ranges ranges;
+    StoppingPolicy s;
 
     bool someEmpty()
     {
@@ -2748,11 +2747,11 @@ private:
         return false;
 
     LEmpty:
-        static if(s == StoppingPolicy.shortest)
+        if(s == StoppingPolicy.shortest)
         {
             return true;
         }
-        else static if(s == StoppingPolicy.requireSameLength)
+        else if(s == StoppingPolicy.requireSameLength)
         {
             // Enforce that they're all empty.
             foreach(range; ranges)
@@ -2763,6 +2762,10 @@ private:
             }
 
             return true;
+        }
+        else
+        {
+            assert(0);
         }
     }
 
@@ -2776,30 +2779,51 @@ private:
     }
 
 public:
+    this(Ranges ranges, StoppingPolicy s = StoppingPolicy.shortest)
+    {
+        this.ranges = ranges;
+        enforce(s != StoppingPolicy.longest,
+            "Can't use StoppingPolicy.Longest on Lockstep.");
+        this.s = s;
+    }
+
     mixin(lockstepApply!(Ranges)(false));
     mixin(lockstepApply!(Ranges)(true));
 }
 
 // For generic programming, make sure Lockstep!(Range) is well defined for a
 // single range.
-template Lockstep(StoppingPolicy s, Range)
+template Lockstep(Range)
 {
     alias Range Lockstep;
 }
 
 /// Ditto
-Lockstep!(s, Ranges) lockstep(StoppingPolicy s = StoppingPolicy.shortest, Ranges...)
-(Ranges ranges)
-if(allSatisfy!(isInputRange, Ranges) && Ranges.length > 1)
+Lockstep!(Ranges) lockstep(Ranges...)(Ranges ranges)
+if(allSatisfy!(isInputRange, Ranges))
 {
-    return Lockstep!(s, Ranges)(ranges);
+    static if(Ranges.length > 1)
+    {
+        return Lockstep!(Ranges)(ranges, StoppingPolicy.shortest);
+    }
+    else
+    {
+        return ranges[0];
+    }
 }
 
 /// Ditto
-Range lockstep(StoppingPolicy s = StoppingPolicy.shortest, Range)
-(Range range) if(isInputRange!(Range))
+Lockstep!(Ranges) lockstep(Ranges...)(Ranges ranges, StoppingPolicy s)
+if(allSatisfy!(isInputRange, Ranges))
 {
-    return range;
+    static if(Ranges.length > 1)
+    {
+        return Lockstep!(Ranges)(ranges, s);
+    }
+    else
+    {
+        return ranges[0];
+    }
 }
 
 unittest {
@@ -2834,15 +2858,16 @@ unittest {
 
    // Make sure StoppingPolicy.requireSameLength throws.
    arr2.popBack;
-   auto ls = lockstep!(StoppingPolicy.requireSameLength)(arr1, arr2);
+   auto ls = lockstep(arr1, arr2, StoppingPolicy.requireSameLength);
 
    try {
        foreach(a, b; ls) {}
        assert(0);
    } catch {}
 
-   // Just make sure 1-range case instantiates.
-   lockstep([1,2,3,4,5]);
+   // Just make sure 1-range case instantiates.  This hangs the compiler
+   // when no explicit stopping policy is specified due to Bug 4652.
+   auto stuff = lockstep([1,2,3,4,5], StoppingPolicy.shortest);
 
    // Test with indexing.
    res1 = null;
