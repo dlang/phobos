@@ -2175,6 +2175,14 @@ assert(b == [ "c", "b", "a" ]);
  */
 struct Zip(R...) if (R.length && allSatisfy!(isInputRange, R))
 {
+    // Works around weird syntactic ambiguity of taking the address of a ref
+    // return value vs. the address of the function.
+    private static T* addrOf(T)(ref T val)
+    {
+        return &val;
+    }
+
+    enum bool byPtr = allSatisfy!(hasLvalueElements, R);
     Tuple!(R) ranges;
     StoppingPolicy stoppingPolicy = StoppingPolicy.shortest;
 
@@ -2238,9 +2246,34 @@ Returns a proxy for the current iterated element.
     @property Proxy front()
     {
         Proxy result;
-        foreach (i, Unused; R)
+
+        static if(byPtr)
         {
-            result.ptrs.field[i] = &ranges.field[i].front;
+            foreach (i, Unused; R)
+            {
+                if(ranges.field[i].empty)
+                {
+                    result.ptrs.field[i] = null;
+                }
+                else
+                {
+                    result.ptrs.field[i] = addrOf(ranges.field[i].front);
+                }
+            }
+        }
+        else
+        {
+            foreach(i, Unused; R)
+            {
+                if(ranges.field[i].empty)
+                {
+                    result.available[i] = false;
+                }
+                else
+                {
+                    result.values.field[i] = ranges.field[i].front;
+                }
+            }
         }
         return result;
     }
@@ -2248,12 +2281,38 @@ Returns a proxy for the current iterated element.
 /**
 Returns a proxy for the rightmost element.
  */
+static if(allSatisfy!(isBidirectionalRange, R))
     @property Proxy back()
     {
         Proxy result;
-        foreach (i, Unused; R)
+
+        static if(byPtr)
         {
-            result.ptrs.field[i] = &ranges.field[i].back;
+            foreach (i, Unused; R)
+            {
+                if(ranges.field[i].empty)
+                {
+                    result.ptrs.field[i] = null;
+                }
+                else
+                {
+                    result.ptrs.field[i] = addrOf(ranges.field[i].back);
+                }
+            }
+        }
+        else
+        {
+            foreach(i, Unused; R)
+            {
+                if(ranges.field[i].empty)
+                {
+                    result.available[i] = false;
+                }
+                else
+                {
+                    result.values.field[i] = ranges.field[i].back;
+                }
+            }
         }
         return result;
     }
@@ -2272,6 +2331,7 @@ Advances to the popFront element in all controlled ranges.
 /**
 Calls $(D popBack) for all controlled ranges.
  */
+static if(allSatisfy!(isBidirectionalRange, R))
     void popBack()
     {
         foreach (i, Unused; R)
@@ -2325,18 +2385,30 @@ Proxy type returned by the access function.
 */
     struct Proxy
     {
-        template ElemPtr(Range)
+        static if(byPtr)
         {
-            alias std.range.ElementType!(Range)* ElemPtr;
+            template ElemPtr(Range)
+            {
+                alias std.range.ElementType!(Range)* ElemPtr;
+            }
+            Tuple!(staticMap!(ElemPtr, R)) ptrs;
         }
-        Tuple!(staticMap!(ElemPtr, R)) ptrs;
+        else
+        {
+            Tuple!(staticMap!(ElementType, R)) values;
+            bool[R.length] available = true;  // For hasAt.
+        }
 
 /**
 Returns the current element in the $(D i)th range.
  */
-        /*ref*/ std.range.ElementType!(R[i]) at(int i)()
+        auto ref std.range.ElementType!(R[i]) at(int i)()
         {
-            return *ptrs.field[i];
+            static if(byPtr) {
+                return *ptrs.field[i];
+            } else {
+                return values.field[i];
+            }
         }
 
 /**
@@ -2346,14 +2418,20 @@ the $(D StoppingPolicy.longest) policy.
  */
         bool hasAt(int i)()
         {
-            return *ptrs.field[i];
+            static if(byPtr) {
+                return ptrs.field[i] !is null;
+            } else {
+                return available[i];
+            }
         }
 
-        void proxySwap(Proxy rhs)
-        {
-            foreach (i, Unused; R)
+        static if(byPtr) {
+            void proxySwap(Proxy rhs)
             {
-                .swap(*ptrs.field[i], *rhs.ptrs.field[i]);
+                foreach (i, Unused; R)
+                {
+                    .swap(*ptrs.field[i], *rhs.ptrs.field[i]);
+                }
             }
         }
     }
@@ -2366,9 +2444,43 @@ ranges offer random access.
         Proxy opIndex(size_t n)
         {
             Proxy result;
-            foreach (i, Unused; R)
+
+            static if(byPtr)
             {
-                result.ptrs.field[i] = &ranges.field[i][n];
+                foreach (i, Range; R)
+                {
+                    // I think it's safe to assume that there will never be an
+                    // infinite range with lvalue elements.
+                    if(ranges.field[i].length <= n)
+                    {
+                        result.ptrs.field[i] = null;
+                    }
+                    else
+                    {
+                        result.ptrs.field[i] = addrOf(ranges.field[i][n]);
+                    }
+                }
+            }
+            else
+            {
+                foreach (i, Range; R)
+                {
+                    static if(isInfinite!(Range))
+                    {
+                        result.values.values[i] = ranges.field[i][n];
+                    }
+                    else
+                    {
+                        if(ranges.field[i].length <= n)
+                        {
+                            result.available[i] = false;
+                        }
+                        else
+                        {
+                            result.values.field[i] = ranges.field[i][n];
+                        }
+                    }
+                }
             }
             return result;
         }
@@ -2376,7 +2488,7 @@ ranges offer random access.
 
 /// Ditto
 Zip!(R) zip(R...)(R ranges)
-    //if (allSatisfy!(isInputRange, R))
+if (allSatisfy!(isInputRange, R))
 {
     return Zip!(R)(ranges);
 }
@@ -2410,12 +2522,49 @@ unittest
     {
         assert(e.at!(0) == e.at!(1));
     }
+
+    swap(a[0], a[1]);
     auto z = zip(a, b);
     swap(z.front(), z.back());
-    //@@@BUG@@@
-    //sort!("a.at!(0) < b.at!(0)")(zip(a, b));
+    sort!("a.at!(0) < b.at!(0)")(zip(a, b));
+    assert(a == [1, 2, 3]);
+    assert(b == [2., 1, 3]);
 
-// Horribly broken.  See bugs 4402, 3123
+    // Test stopping policies with both value and reference.
+    auto a1 = [1, 2];
+    auto a2 = [1, 2, 3];
+    auto stuff = tuple(tuple(a1, a2),
+                            tuple(filter!"a"(a1), filter!"a"(a2)));
+
+    foreach(t; stuff.expand) {
+        auto arr1 = t.field[0];
+        auto arr2 = t.field[1];
+        auto zShortest = zip(arr1, arr2);
+        assert(equal(map!"a.at!0"(zShortest), [1, 2]));
+        assert(equal(map!"a.at!1"(zShortest), [1, 2]));
+
+        try {
+            auto zSame = zip(StoppingPolicy.requireSameLength, arr1, arr2);
+            foreach(elem; zSame) {}
+            assert(0);
+        } catch { /* It's supposed to throw.*/ }
+
+        auto zLongest = zip(StoppingPolicy.requireSameLength, arr1, arr2);
+        assert(zLongest.front.hasAt!0);
+        assert(zLongest.front.hasAt!1);
+
+        zLongest.popFront();
+        zLongest.popFront();
+        assert(!zLongest.front.hasAt!0);
+        assert(zLongest.front.hasAt!1);
+    }
+
+
+    // These unittests pass, but make the compiler consume an absurd amount
+    // of RAM and time.  Therefore, they should only be run if explicitly
+    // uncommented when making changes to Zip.  Also, running them using
+    // make -fwin32.mak unittest makes the compiler completely run out of RAM.
+    // You need to test just this module.
 //    foreach(DummyType1; AllDummyRanges) {
 //        DummyType1 d1;
 //        foreach(DummyType2; AllDummyRanges) {
@@ -2424,6 +2573,36 @@ unittest
 //
 //            assert(equal(map!"a.at!0"(r), [1,2,3,4,5,6,7,8,9,10]));
 //            assert(equal(map!"a.at!1"(r), [1,2,3,4,5,6,7,8,9,10]));
+//
+//            static if(isForwardRange!DummyType1 && isForwardRange!DummyType2) {
+//                static assert(isForwardRange!(typeof(r)));
+//            }
+//
+//            static if(isBidirectionalRange!DummyType1 &&
+//                      isBidirectionalRange!DummyType2) {
+//                static assert(isBidirectionalRange!(typeof(r)));
+//            }
+//
+//            static if(isRandomAccessRange!DummyType1 &&
+//                      isRandomAccessRange!DummyType2) {
+//                static assert(isRandomAccessRange!(typeof(r)));
+//            }
+//
+//            // Make sure ref is properly propagated.
+//            static if(hasLvalueElements!DummyType1 && hasLvalueElements!DummyType2) {
+//
+//                {
+//                    r.front.at!0++;
+//                    scope(exit) r.front.at!0--;
+//                    assert(d1.front == 2);
+//                }
+//
+//                {
+//                    r.front.at!1++;
+//                    scope(exit) r.front.at!1--;
+//                    assert(d2.front == 2);
+//                }
+//            }
 //        }
 //    }
 }
