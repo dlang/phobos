@@ -1156,7 +1156,7 @@ public:
         assert(!empty);
         if (_frontLength == _unComputed)
         {
-            _frontLength = _input.indexOf(_separator);
+            _frontLength = indexOf(_input, _separator);
             if (_frontLength == -1) _frontLength = _input.length;
         }
         return _input[0 .. _frontLength];
@@ -1177,7 +1177,7 @@ public:
         }
         else
         {
-            _input = _input[_frontLength .. $];
+            _input = _input[_frontLength .. _input.length];
             skipOver(_input, _separator) || assert(false);
             _frontLength = _unComputed;
         }
@@ -1224,14 +1224,21 @@ unittest
     a = [ 0, 1 ];
     assert(equal(splitter(a, 0), [ [], [1] ][]));
 
-//    foreach(DummyType; AllDummyRanges) {  // Bug 4408
-//        DummyType d;
-//        auto s = splitter(d, 5);
-//        assert(equal(s, [[1,2,3,4], [6,7,8,9,10]]));
-//
-//        auto s2 = splitter(d, [4, 5]);
-//        assert(equal(s2, [[1,2,3], [6,7,8,9,10]]));
-//    }
+    foreach(DummyType; AllDummyRanges) {  // Bug 4408
+        static if(isRandomAccessRange!DummyType) {
+            static assert(isBidirectionalRange!DummyType);
+            DummyType d;
+            auto s = splitter(d, 5);
+            assert(equal(s.front, [1,2,3,4]));
+            s.popFront();
+            assert(equal(s.front, [6,7,8,9,10]));
+
+
+            auto s2 = splitter(d, [4, 5]);
+            assert(equal(s2.front, [1,2,3]));
+            assert(equal(s2.back, [6,7,8,9,10]));
+        }
+    }
 }
 
 /**
@@ -1430,7 +1437,7 @@ struct Splitter(alias isTerminator, Range,
         Slice = Select!(is(typeof(Range.init[0 .. 1])),
                 Range,
                 ElementType!(Range)[]))
-{
+if(!is(isTerminator)) {
     private Range _input;
     private size_t _end;
     private alias unaryFun!isTerminator _isTerminator;
@@ -1479,7 +1486,7 @@ struct Splitter(alias isTerminator, Range,
             return;
         }
         // Skip over existing word
-        _input = _input[_end .. $];
+        _input = _input[_end .. _input.length];
         // Skip terminator
         for (;;)
         {
@@ -1546,6 +1553,17 @@ unittest
     compare(" ", [""]);
 
     static assert(isForwardRange!(typeof(splitter!"a == ' '"("ABC"))));
+
+    foreach(DummyType; AllDummyRanges)
+    {
+        static if(isRandomAccessRange!DummyType)
+        {
+            auto rangeSplit = splitter!"a == 5"(DummyType.init);
+            assert(equal(rangeSplit.front, [1,2,3,4]));
+            rangeSplit.popFront();
+            assert(equal(rangeSplit.front, [6,7,8,9,10]));
+        }
+    }
 }
 
 // joiner
