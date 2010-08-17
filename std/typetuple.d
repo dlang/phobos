@@ -569,6 +569,33 @@ unittest
     static assert(allSatisfy!(isIntegral, int, long));
 }
 
+/**
+Evaluates to $(D F[T[0]] || F[T[1]] || ... || F[T[$ - 1]]).
+
+Example:
+----
+static assert(!anySatisfy!(isIntegral, string, double));
+static assert(anySatisfy!(isIntegral, int, double));
+----
+ */
+template anySatisfy(alias F, T...)
+{
+    static if (T.length == 1)
+    {
+        alias F!(T[0]) anySatisfy;
+    }
+    else
+    {
+        enum bool anySatisfy = F!(T[0]) || anySatisfy!(F, T[1 .. $]);
+    }
+}
+
+unittest
+{
+    static assert(!anySatisfy!(isIntegral, string, double));
+    static assert(anySatisfy!(isIntegral, int, double));
+}
+
 // : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : //
 private:
 
