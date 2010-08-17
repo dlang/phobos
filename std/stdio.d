@@ -526,9 +526,17 @@ file handle. Throws on error.
     void seek(long offset, int origin = SEEK_SET)
     {
         enforce(isOpen, "Attempting to seek() in an unopened file");
-        static assert(off_t.sizeof == 8);
-        errnoEnforce(fseeko(p.handle, offset, origin) == 0,
-                "Could not seek in file `"~p.name~"'");
+        version (Windows)
+        {
+            errnoEnforce(fseek(p.handle, to!int(offset), origin) == 0,
+                    "Could not seek in file `"~p.name~"'");
+        }
+        else
+        {
+            static assert(off_t.sizeof == 8);
+            errnoEnforce(fseeko(p.handle, offset, origin) == 0,
+                    "Could not seek in file `"~p.name~"'");
+        }
     }
 
     unittest
@@ -538,13 +546,21 @@ file handle. Throws on error.
         f.rawWrite("abcdefghijklmnopqrstuvwxyz");
         f.seek(7);
         assert(f.readln() == "hijklmnopqrstuvwxyz");
-        auto bigOffset = cast(ulong) int.max + 100;
-        f.seek(bigOffset);
-        assert(f.tell == bigOffset, text(f.tell));
-        // Uncomment the tests below only if you want to wait for a long time
-        // f.rawWrite("abcdefghijklmnopqrstuvwxyz");
-        // f.seek(-3, SEEK_END);
-        // assert(f.readln() == "xyz");
+        version (Windows)
+        {
+            // No test for large files yet
+        }
+        else
+        {
+            auto bigOffset = cast(ulong) int.max + 100;
+            f.seek(bigOffset);
+            assert(f.tell == bigOffset, text(f.tell));
+            // Uncomment the tests below only if you want to wait for
+            // a long time
+            // f.rawWrite("abcdefghijklmnopqrstuvwxyz");
+            // f.seek(-3, SEEK_END);
+            // assert(f.readln() == "xyz");
+        }
     }
 
 /**
@@ -555,7 +571,14 @@ managed file handle. Throws on error.
     @property ulong tell() const
     {
         enforce(isOpen, "Attempting to tell() in an unopened file");
-        immutable result = ftello(cast(FILE*) p.handle);
+        version (Windows)
+        {
+            immutable result = ftell(cast(FILE*) p.handle);
+        }
+        else
+        {
+            immutable result = ftello(cast(FILE*) p.handle);
+        }
         errnoEnforce(result != -1,
                 "Query ftell() failed for file `"~p.name~"'");
         return result;
@@ -2411,24 +2434,3 @@ version(linux) {
     }
 }
 
-version (Windows)
-{
-    extern(C) ulong _lseeki64(int fd, ulong offset, int whence);
-    extern(C) ulong _fseeki64(int fd, ulong offset, int whence);
-    alias _fseeki64 lseek64;
-    //extern(C) ulong ftell(FILE*);
-    //alias ftell ftello64;
-}
-else
-{
-    // import core.sys.posix.unistd : off_t, lseek;
-    // extern(C) ulong ftello(FILE*);
-    // static if (off_t.sizeof == 8)
-    // {
-    //     alias lseek lseek64;
-    // }
-    // else
-    // {
-    //     extern ulong lseek64(int fd, long offset, int whence);
-    // }
-}
