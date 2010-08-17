@@ -842,26 +842,63 @@ auto z = dice(70, 20, 10); // z is 0 70% of the time, 1 30% of the time,
                            // and 2 10% of the time
 ----
 */
+size_t dice(R, Num)(ref R rnd, Num[] proportions...)
+if(isNumeric!Num) {
+    return diceImpl(rnd, proportions);
+}
 
-size_t dice(R)(ref R rnd, double[] proportions...) {
-    immutable sum = reduce!("(assert(b >= 0), a + b)")(0.0, proportions);
+/// Ditto
+size_t dice(R, Range)(ref R rnd, Range proportions)
+if(isForwardRange!Range && isNumeric!(ElementType!Range) && !isArray!Range) {
+    return diceImpl(rnd, proportions);
+}
+
+/// Ditto
+size_t dice(Num)(Num[] proportions...)
+if(isNumeric!Num) {
+    return diceImpl(rndGen(), proportions);
+}
+
+/// Ditto
+size_t dice(Range)(Range proportions)
+if(isForwardRange!Range && isNumeric!(ElementType!Range) && !isArray!Range) {
+    return diceImpl(rndGen(), proportions);
+}
+
+private size_t diceImpl(R, Range)(ref R rnd, Range proportions)
+if(isForwardRange!Range && isNumeric!(ElementType!Range)) {
+    immutable sum = reduce!("(assert(b >= 0), a + b)")(0.0, proportions.save);
     enforce(sum > 0, "Proportions in a dice cannot sum to zero");
     immutable point = uniform(0.0, sum, rnd);
     assert(point < sum);
     auto mass = 0.0;
-    foreach (i, e; proportions) {
+
+    size_t i = 0;
+    foreach (e; proportions) {
         mass += e;
         if (point < mass) return i;
+        i++;
     }
     // this point should not be reached
     assert(false);
 }
+
+
 
 unittest {
     auto rnd = Random(unpredictableSeed);
     auto i = dice(rnd, 0.0, 100.0);
     assert(i == 1);
     i = dice(rnd, 100.0, 0.0);
+    assert(i == 0);
+
+    i = dice([100U, 0U]);
+    assert(i == 0);
+
+    i = dice(filter!"a >= 0"([100U, 0U]));
+    assert(i == 0);
+
+    i = dice(rnd, filter!"a >= 0"([100U, 0U]));
     assert(i == 0);
 }
 
