@@ -1217,14 +1217,28 @@ private:
     }
     enum bool allSameType = allSatisfy!(sameET, R);
 
+    static if(allSameType && allSatisfy!(hasLvalueElements, R))
+    {
+        alias ref RvalueElementType ElementType;
+
+        static ref RvalueElementType fixRef(ref RvalueElementType val)
+        {
+            return val;
+        }
+    }
+    else
+    {
+        alias RvalueElementType ElementType;
+
+        static RvalueElementType fixRef(RvalueElementType val)
+        {
+            return val;
+        }
+    }
+
     Tuple!(R) _input;
 
 public:
-    // This doesn't work yet
-    static if (allSameType)
-        alias ref RvalueElementType ElementType;
-    else
-        alias RvalueElementType ElementType;
 
     this(R input)
     {
@@ -1252,7 +1266,7 @@ public:
     }
 
     static if (allSatisfy!(isForwardRange, R))
-        ChainImpl save()
+        @property ChainImpl save()
         {
             auto result = ChainImpl();
             foreach (i, Unused; R)
@@ -1272,21 +1286,24 @@ public:
         }
     }
 
-    @property RvalueElementType front()
+    @property auto ref front()
     {
         foreach (i, Unused; R)
         {
             if (_input.field[i].empty) continue;
-            return _input.field[i].front;
+            return fixRef(_input.field[i].front);
         }
         assert(false);
     }
 
-    static if (allSatisfy!(hasAssignableElements, R))
+    static if (allSameType && allSatisfy!(hasAssignableElements, R))
     {
         // @@@BUG@@@
         //@property void front(T)(T v) if (is(T : RvalueElementType))
-        @property void front(RvalueElementType v)
+
+        // Return type must be auto due to extremely strange bug in DMD's
+        // function overloading.
+        @property auto front(RvalueElementType v)
         {
             foreach (i, Unused; R)
             {
@@ -1310,18 +1327,15 @@ public:
 
     static if (allSatisfy!(isBidirectionalRange, R))
     {
-        mixin(
-            ((allSameType && allSatisfy!(hasAssignableElements, R)) ? "ref " : "")~
-            q{ElementType back()
-                {
-                    foreach_reverse (i, Unused; R)
-                    {
-                        if (_input.field[i].empty) continue;
-                        return _input.field[i].back;
-                    }
-                    assert(false);
-                }
-            });
+        @property auto ref back()
+        {
+            foreach_reverse (i, Unused; R)
+            {
+                if (_input.field[i].empty) continue;
+                return fixRef(_input.field[i].back);
+            }
+            assert(false);
+        }
 
         void popBack()
         {
@@ -1330,6 +1344,22 @@ public:
                 if (_input.field[i].empty) continue;
                 _input.field[i].popBack;
                 return;
+            }
+        }
+
+        static if(allSameType && allSatisfy!(hasAssignableElements, R))
+        {
+            // Return type must be auto due to extremely strange bug in DMD's
+            // function overloading.
+            @property auto back(RvalueElementType v)
+            {
+                foreach_reverse (i, Unused; R)
+                {
+                    if (_input.field[i].empty) continue;
+                    _input.field[i].back = v;
+                    return;
+                }
+                assert(false);
             }
         }
     }
@@ -1347,29 +1377,26 @@ public:
 
     static if (allSatisfy!(isRandomAccessRange, R))
     {
-        mixin(
-            ((allSameType && allSatisfy!(hasAssignableElements, R)) ? "ref " : "")~
-            q{ElementType opIndex(uint index)
+        auto ref opIndex(size_t index)
+        {
+            foreach (i, Range; R)
+            {
+                static if(isInfinite!(Range))
                 {
-                    foreach (i, Range; R)
-                    {
-                        static if(isInfinite!(Range))
-                        {
-                            return _input.field[i][index];
-                        }
-                        else
-                        {
-                            immutable length = _input.field[i].length;
-                            if (index < length) return _input.field[i][index];
-                            index -= length;
-                        }
-                    }
-                    assert(false);
+                    return _input.field[i][index];
                 }
-            });
+                else
+                {
+                    immutable length = _input.field[i].length;
+                    if (index < length) return fixRef(_input.field[i][index]);
+                    index -= length;
+                }
+            }
+            assert(false);
+        }
 
         static if (allSameType && allSatisfy!(hasAssignableElements, R))
-        void opIndexAssign(ElementType v, uint index)
+        void opIndexAssign(ElementType v, size_t index)
         {
             foreach (i, Unused; R)
             {
@@ -1428,7 +1455,7 @@ public:
 }
 
 /// Ditto
-Chain!(R) chain(R...)(R input)
+Chain!(R) chain(R...)(R input) if(R.length > 0)
 {
     static if (input.length > 1)
         return Chain!(R)(input);
@@ -1509,6 +1536,15 @@ unittest
 //            static if(isRandomAccessRange!DummyType1 &&
 //                      isRandomAccessRange!DummyType2) {
 //                assert(myChain[0] == 1);
+//            }
+//
+//            static if(hasLvalueElements!DummyType1 && hasLvalueElements!DummyType2)
+//            {
+//                static assert(hasLvalueElements!(typeof(myChain)));
+//            }
+//            else
+//            {
+//                static assert(!hasLvalueElements!(typeof(myChain)));
 //            }
 //        }
 //    }
