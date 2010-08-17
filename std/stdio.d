@@ -39,6 +39,7 @@ version (linux)
 version (OSX)
 {
     version = GENERIC_IO;
+    //extern(C) FILE* fopen64(const char*, const char*);
     alias core.stdc.stdio.fopen fopen64;
 }
 
@@ -519,7 +520,7 @@ If the file is not opened, throws an exception. Otherwise, calls $(WEB
 cplusplus.com/reference/clibrary/cstdio/fseek.html, fseek) for the
 file handle. Throws on error.
  */
-    void seek(ulong offset, int origin = SEEK_SET)
+    void seek(long offset, int origin = SEEK_SET)
     {
         enforce(p && p.handle,
                 "Attempting to seek() in an unopened file");
@@ -562,6 +563,7 @@ managed file handle. Throws on error.
     @property ulong tell() const
     {
         enforce(isOpen, "Attempting to tell() in an unopened file");
+        (cast(File*)&this).flush();
         immutable result = lseek64(fileno(), 0, SEEK_CUR);
         errnoEnforce(result != -1,
                 "Query ftell() failed for file `"~p.name~"'");
@@ -2408,16 +2410,18 @@ version (Windows)
 {
     extern(C) ulong _lseeki64(int fd, ulong offset, int whence); 
     alias _lseeki64 lseek64;
+    //extern(C) ulong ftell(FILE*); 
+    //alias ftell ftello64;
 }
 else
 {
     import core.sys.posix.unistd : off_t, lseek;
-    static if (off_t.sizeof == 4)
+    static if (off_t.sizeof == 8)
     {
-        extern(C) ulong lseek64(int fd, ulong offset, int whence); 
+        alias lseek lseek64; 
     }
     else
     {
-        alias lseek lseek64; 
+        extern ulong lseek64(int fd, long offset, int whence); 
     }
 }
