@@ -177,24 +177,56 @@ int dmod(d_time n, d_time d)
     return cast(int)r;
 }
 
-int hourFromTime(d_time t)
+/********************************
+ * Calculates the hour from time.
+ *
+ * Params:
+ *      time = The time to compute the hour from.
+ * Returns:
+ *      The calculated hour, 0..23.
+ */
+int hourFromTime(d_time time)
 {
-    return dmod(floor(t, msPerHour), hoursPerDay);
+    return dmod(floor(time, msPerHour), hoursPerDay);
 }
 
-int minFromTime(d_time t)
+/********************************
+ * Calculates the minute from time.
+ *
+ * Params:
+ *      time = The time to compute the minute from.
+ * Returns:
+ *      The calculated minute, 0..59.
+ */
+int minFromTime(d_time time)
 {
-    return dmod(floor(t, msPerMinute), minutesPerHour);
+    return dmod(floor(time, msPerMinute), minutesPerHour);
 }
 
-int secFromTime(d_time t)
+/********************************
+ * Calculates the second from time.
+ *
+ * Params:
+ *      time = The time to compute the second from.
+ * Returns:
+ *      The calculated second, 0..59.
+ */
+int secFromTime(d_time time)
 {
-    return dmod(floor(t, ticksPerSecond), 60);
+    return dmod(floor(time, ticksPerSecond), 60);
 }
 
-int msFromTime(d_time t)
+/********************************
+ * Calculates the milisecond from time.
+ *
+ * Params:
+ *      time = The time to compute the milisecond from.
+ * Returns:
+ *      The calculated milisecond, 0..999.
+ */
+int msFromTime(d_time time)
 {
-    return dmod(t / (ticksPerSecond / 1000), 1000);
+    return dmod(time / (ticksPerSecond / 1000), 1000);
 }
 
 int timeWithinDay(d_time t)
@@ -224,17 +256,44 @@ unittest {
     assert(!leapYear(2100));
 }
 
-pure uint daysInYear(uint y)
+/********************************
+ * Calculates the number of days that exists in a year.
+ *
+ * Leap years have 366 days, while other years have 365.
+ *
+ * Params:
+ *      year = The year to compute the number of days from.
+ * Returns:
+ *      The number of days in the year, 365 or 366.
+ */
+pure uint daysInYear(uint year)
 {
-    return 365 + leapYear(y);
+    return (leapYear(year) ? 366 : 365);
 }
 
-pure int dayFromYear(int y)
+
+/********************************
+ * Calculates the number of days elapsed since 1 January 1970
+ * until 1 January of the given year.
+ *
+ * Params:
+ *      year = The year to compute the number of days from.
+ * Returns:
+ *      The number of days elapsed.
+ *
+ * Example:
+ * ----------
+ * writeln(dayFromYear(1970)); // writes '0'
+ * writeln(dayFromYear(1971)); // writes '365'
+ * writeln(dayFromYear(1972)); // writes '730'
+ * ----------
+ */
+pure int dayFromYear(int year)
 {
-    return cast(int) (365 * (y - 1970) +
-                floor((y - 1969), 4) -
-                floor((y - 1901), 100) +
-                floor((y - 1601), 400));
+    return cast(int) (365 * (year - 1970) +
+                floor((year - 1969), 4) -
+                floor((year - 1901), 100) +
+                floor((year - 1601), 400));
 }
 
 pure d_time timeFromYear(int y)
@@ -1150,4 +1209,3 @@ unittest
     auto r = benchmark!(f0, f2)(100);
     //writeln(r);
 }
-
