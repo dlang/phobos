@@ -74,6 +74,7 @@ endif
 ifeq ($(OS),win32wine)
 	CC = wine $(HOME)/dmc/bin/dmc.exe
 	DMD = wine $(HOME)/dmd2/windows/bin/dmd.exe
+	RUN = wine 
 else
 	ifeq ($(OS),win32remote)
 		DMD = ssh 206.125.170.138 "cd code/dmd/phobos && dmd"
@@ -86,6 +87,7 @@ else
 			CC = cc
 		endif
 	endif
+	RUN =
 endif
 
 # Set CFLAGS
@@ -118,7 +120,7 @@ else
 endif
 
 # Set LINKOPTS
-ifeq ($(OS),posix)
+ifeq (,$(findstring win,$(OS)))
 	LINKOPTS=-L-ldl -L-L$(ROOT)
 else
 	LINKOPTS=-L/co $(LIB)
@@ -229,7 +231,7 @@ $(ROOT)/unittest/%$(DOTEXE) : %.d $(LIB) $(ROOT)/emptymain.d
 # make the file very old so it builds and runs again if it fails
 	@touch -t 197001230123 $@
 # run unittest in its own directory
-	@$@
+	@$(RUN) $@
 # succeeded, render the file new again
 	@touch $@
 
