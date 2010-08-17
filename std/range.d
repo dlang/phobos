@@ -11,7 +11,7 @@ WIKI = Phobos/StdRange
 
 Copyright: Copyright Andrei Alexandrescu 2008-.
 License:   $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
-Authors:   $(WEB erdani.org, Andrei Alexandrescu)
+Authors:   $(WEB erdani.org, Andrei Alexandrescu), David Simcha
 */
 module std.range;
 
@@ -1217,10 +1217,14 @@ private:
     }
     enum bool allSameType = allSatisfy!(sameET, R);
 
+        // This doesn't work yet
+	    static if (allSameType)
+            alias ref RvalueElementType ElementType;
+ 	    else
+            alias RvalueElementType ElementType;
+
     static if(allSameType && allSatisfy!(hasLvalueElements, R))
     {
-        alias ref RvalueElementType ElementType;
-
         static ref RvalueElementType fixRef(ref RvalueElementType val)
         {
             return val;
@@ -1228,8 +1232,6 @@ private:
     }
     else
     {
-        alias RvalueElementType ElementType;
-
         static RvalueElementType fixRef(RvalueElementType val)
         {
             return val;
