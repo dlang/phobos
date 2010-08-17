@@ -1234,13 +1234,21 @@ public:
         }
     }
 
-    @property bool empty()
+    static if(anySatisfy!(isInfinite, R))
     {
-        foreach (i, Unused; R)
+        // Propagate infiniteness.
+        enum bool empty = false;
+    }
+    else
+    {
+        @property bool empty()
         {
-            if (!_input.field[i].empty) return false;
+            foreach (i, Unused; R)
+            {
+                if (!_input.field[i].empty) return false;
+            }
+            return true;
         }
-        return true;
     }
 
     static if (allSatisfy!(isForwardRange, R))
@@ -1343,11 +1351,18 @@ public:
             ((allSameType && allSatisfy!(hasAssignableElements, R)) ? "ref " : "")~
             q{ElementType opIndex(uint index)
                 {
-                    foreach (i, Unused; R)
+                    foreach (i, Range; R)
                     {
-                        immutable length = _input.field[i].length;
-                        if (index < length) return _input.field[i][index];
-                        index -= length;
+                        static if(isInfinite!(Range))
+                        {
+                            return _input.field[i][index];
+                        }
+                        else
+                        {
+                            immutable length = _input.field[i].length;
+                            if (index < length) return _input.field[i][index];
+                            index -= length;
+                        }
                     }
                     assert(false);
                 }
@@ -1456,6 +1471,15 @@ unittest
     // elements are mutable.
     auto c = chain( iota(0, 10), iota(0, 10) );
 
+    // Test the case where infinite ranges are present.
+    auto inf = chain([0,1,2][], cycle([4,5,6][]), [7,8,9][]); // infinite range
+    assert(inf[0] == 0);
+    assert(inf[3] == 4);
+    assert(inf[6] == 4);
+    assert(inf[7] == 5);
+    static assert(isInfinite!(typeof(inf)));
+
+
     // Check that chain at least instantiates and compiles with every possible
     // pair of DummyRange types, in either order.
 
@@ -1489,7 +1513,6 @@ unittest
 //        }
 //    }
 }
-
 /**
 Iterates a random-access range starting from a given point and
 progressively extending left and right from that point. If no initial
