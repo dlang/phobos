@@ -39,6 +39,11 @@ public import std.outofmemory;
 public import gcstats;
 public import std.thread;
 
+//version (X86)
+//    alias ulong array_t;
+//else
+    alias void[] array_t;
+
 version=GCCLASS;
 
 version (GCCLASS)
@@ -259,15 +264,15 @@ void _d_delclass(Object *p)
  */
 
 /* For when the array is initialized to 0 */
-ulong _d_newarrayT(TypeInfo ti, size_t length)
+array_t _d_newarrayT(TypeInfo ti, size_t length)
 {
     void *p;
-    ulong result;
+    array_t result;
     auto size = ti.next.tsize();                // array element size
 
     debug(PRINTF) printf("_d_newarrayT(length = x%x, size = %d)\n", length, size);
     if (length == 0 || size == 0)
-        result = 0;
+        result = array_t.init;
     else
     {
         version (D_InlineAsm_X86)
@@ -295,7 +300,7 @@ ulong _d_newarrayT(TypeInfo ti, size_t length)
         if (!(ti.next.flags() & 1))
             _gc.hasNoPointers(p);
         memset(p, 0, size);
-        result = cast(ulong)length + (cast(ulong)cast(uint)p << 32);
+        result = cast(array_t)p[0..length];
     }
     return result;
 
@@ -305,15 +310,15 @@ Loverflow:
 
 /* For when the array has a non-zero initializer.
  */
-ulong _d_newarrayiT(TypeInfo ti, size_t length)
+array_t _d_newarrayiT(TypeInfo ti, size_t length)
 {
-    ulong result;
+    array_t result;
     auto size = ti.next.tsize();                // array element size
 
     debug(PRINTF)
          printf("_d_newarrayiT(length = %d, size = %d)\n", length, size);
     if (length == 0 || size == 0)
-        result = 0;
+        result = array_t.init;
     else
     {
         auto initializer = ti.next.init();
@@ -363,7 +368,7 @@ ulong _d_newarrayiT(TypeInfo ti, size_t length)
             }
         }
         va_end(q);
-        result = cast(ulong)length + (cast(ulong)cast(uint)p << 32);
+        result = cast(array_t)p[0..length];
     }
     return result;
 
@@ -371,14 +376,14 @@ Loverflow:
     _d_OutOfMemory();
 }
 
-ulong _d_newarraymT(TypeInfo ti, int ndims, ...)
+array_t _d_newarraymT(TypeInfo ti, int ndims, ...)
 {
-    ulong result;
+    array_t result;
 
     //debug(PRINTF)
         //printf("_d_newarraymT(ndims = %d)\n", ndims);
     if (ndims == 0)
-        result = 0;
+        result = array_t.init;
     else
     {   va_list q;
         va_start!(int)(q, ndims);
@@ -406,7 +411,7 @@ ulong _d_newarraymT(TypeInfo ti, int ndims, ...)
         }
 
         size_t* pdim = cast(size_t *)q;
-        result = cast(ulong)foo(ti, pdim, ndims);
+        result = cast(typeof(result))foo(ti, pdim, ndims);
         //printf("result = %llx\n", result);
 
         version (none)
@@ -421,14 +426,14 @@ ulong _d_newarraymT(TypeInfo ti, int ndims, ...)
     return result;
 }
 
-ulong _d_newarraymiT(TypeInfo ti, int ndims, ...)
+array_t _d_newarraymiT(TypeInfo ti, int ndims, ...)
 {
-    ulong result;
+    array_t result;
 
     //debug(PRINTF)
         //printf("_d_newarraymi(size = %d, ndims = %d)\n", size, ndims);
     if (ndims == 0)
-        result = 0;
+        result = array_t.init;
     else
     {
         va_list q;
@@ -456,7 +461,7 @@ ulong _d_newarraymiT(TypeInfo ti, int ndims, ...)
         }
 
         size_t* pdim = cast(size_t *)q;
-        result = cast(ulong)foo(ti, pdim, ndims);
+        result = cast(typeof(result))foo(ti, pdim, ndims);
         //printf("result = %llx\n", result);
 
         version (none)
@@ -598,13 +603,17 @@ body
             }
         }
         else version (D_InlineAsm_X86_64)
+        {
+            size_t newsize = void;
+
             asm
             {
-                mov     RAX,size        ;
-                mul     RAX,length      ;
-                mov     size,RAX        ;
+                mov     RAX,newlength   ;
+                mul     RAX,sizeelem    ;
+                mov     newsize,RAX     ;
                 jc      Loverflow       ;
             }
+	}
         else
         {
             size_t newsize = sizeelem * newlength;
@@ -709,13 +718,17 @@ body
             }
         }
         else version (D_InlineAsm_X86_64)
+        {
+            size_t newsize = void;
+
             asm
             {
-                mov     RAX,size        ;
-                mul     RAX,length      ;
-                mov     size,RAX        ;
+                mov     RAX,newlength   ;
+                mul     RAX,sizeelem    ;
+                mov     newsize,RAX     ;
                 jc      Loverflow       ;
             }
+        }
         else
         {
             size_t newsize = sizeelem * newlength;
@@ -793,7 +806,7 @@ Loverflow:
  */
 
 extern (C)
-long _d_arrayappendT(TypeInfo ti, Array *px, byte[] y)
+array_t _d_arrayappendT(TypeInfo ti, Array *px, byte[] y)
 {
     auto sizeelem = ti.next.tsize();            // array element size
     auto cap = _gc.capacity(px.data);
@@ -821,7 +834,7 @@ long _d_arrayappendT(TypeInfo ti, Array *px, byte[] y)
   L1:
     px.length = newlength;
     memcpy(px.data + length * sizeelem, y.ptr, y.length * sizeelem);
-    return *cast(long*)px;
+    return *cast(array_t*)px;
 }
 
 size_t newCapacity(size_t newlength, size_t size)
@@ -1225,7 +1238,7 @@ struct Array2
 }
 
 extern (C)
-long _adDupT(TypeInfo ti, Array2 a)
+array_t _adDupT(TypeInfo ti, Array2 a)
     out (result)
     {
         auto sizeelem = ti.next.tsize();                // array element size
@@ -1245,7 +1258,7 @@ long _adDupT(TypeInfo ti, Array2 a)
             r.length = a.length;
             memcpy(r.ptr, a.ptr, size);
         }
-        return *cast(long*)(&r);
+        return *cast(array_t*)(&r);
     }
 
 unittest
