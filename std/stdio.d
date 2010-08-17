@@ -39,7 +39,8 @@ version (linux)
 version (OSX)
 {
     version = GENERIC_IO;
-    //extern(C) FILE* fopen64(const char*, const char*);
+    import core.sys.posix.stdio;
+    alias core.sys.posix.stdio.fileno fileno;
     alias core.stdc.stdio.fopen fopen64;
 }
 
@@ -522,21 +523,9 @@ file handle. Throws on error.
  */
     void seek(long offset, int origin = SEEK_SET)
     {
-        enforce(p && p.handle,
-                "Attempting to seek() in an unopened file");
-        if (offset <= int.max && origin == SEEK_SET)
-        {
-            errnoEnforce(core.stdc.stdio.fseek(
-                        p.handle, cast(int) offset, origin) == 0,
-                    "Could not seek in file `"~p.name~"'");
-        }
-        else
-        {
-            flush();
-            errnoEnforce(lseek64(fileno(), offset, origin) != ulong.max,
-                    text("Could not seek to offset ", offset,
-                            " in file `"~p.name~"'"));
-        }
+        enforce(isOpen, "Attempting to seek() in an unopened file");
+        errnoEnforce(fseeko(p.handle, offset, origin) == 0,
+                "Could not seek in file `"~p.name~"'");
     }
 
     unittest
@@ -563,11 +552,20 @@ managed file handle. Throws on error.
     @property ulong tell() const
     {
         enforce(isOpen, "Attempting to tell() in an unopened file");
-        (cast(File*)&this).flush();
-        immutable result = lseek64(fileno(), 0, SEEK_CUR);
+        immutable result = ftello(cast(FILE*) p.handle);
         errnoEnforce(result != -1,
                 "Query ftell() failed for file `"~p.name~"'");
         return result;
+    }
+
+    unittest
+    {
+        std.file.write("deleteme", "abcdefghijklmnopqrstuvwqxyz");
+        scope(exit) { std.file.remove("deleteme"); }
+        auto f = File("deleteme");
+        auto a = new ubyte[4];
+        f.rawRead(a);
+        assert(f.tell == 4, text(f.tell));
     }
 
 /**
@@ -846,8 +844,7 @@ Returns the file number corresponding to this object.
  */
     /*version(Posix) */int fileno() const
     {
-        enforce(p && p.handle,
-                "Attempting to call fileno() on an unopened file");
+        enforce(isOpen, "Attempting to call fileno() on an unopened file");
         return .fileno(cast(FILE*) p.handle);
     }
 
@@ -2409,19 +2406,21 @@ version(linux) {
 version (Windows)
 {
     extern(C) ulong _lseeki64(int fd, ulong offset, int whence); 
-    alias _lseeki64 lseek64;
+    extern(C) ulong _fseeki64(int fd, ulong offset, int whence); 
+    alias _fseeki64 lseek64;
     //extern(C) ulong ftell(FILE*); 
     //alias ftell ftello64;
 }
 else
 {
-    import core.sys.posix.unistd : off_t, lseek;
-    static if (off_t.sizeof == 8)
-    {
-        alias lseek lseek64; 
-    }
-    else
-    {
-        extern ulong lseek64(int fd, long offset, int whence); 
-    }
+    // import core.sys.posix.unistd : off_t, lseek;
+    // extern(C) ulong ftello(FILE*);
+    // static if (off_t.sizeof == 8)
+    // {
+    //     alias lseek lseek64; 
+    // }
+    // else
+    // {
+    //     extern ulong lseek64(int fd, long offset, int whence); 
+    // }
 }
