@@ -93,6 +93,8 @@ else version (GCC_IO)
      * http://gnu.org/software/libc/manual/html_node/I_002fO-on-Streams.html
      */
     private import core.sys.posix.stdio;
+    alias core.sys.posix.stdio.fileno fileno;
+
     extern (C)
     {
         int fputc_unlocked(int, _iobuf*);
@@ -524,6 +526,7 @@ file handle. Throws on error.
     void seek(long offset, int origin = SEEK_SET)
     {
         enforce(isOpen, "Attempting to seek() in an unopened file");
+        static assert(off_t.sizeof == 8);
         errnoEnforce(fseeko(p.handle, offset, origin) == 0,
                 "Could not seek in file `"~p.name~"'");
     }
@@ -1011,6 +1014,7 @@ $(D Range) that locks the file and allows fast writing to it.
 
         this(this)
         {
+            enforce(fps);
             FLOCK(fps);
         }
 
@@ -2382,7 +2386,11 @@ version(linux) {
         enforce(s != -1, new StdioException("socket"));
 
         scope(failure) {
-            linux.close(s); // want to make sure it doesn't dangle if something throws. Upon normal exit, the File struct's reference counting takes care of closing, so we don't need to worry about success
+            linux.close(s); // want to make sure it doesn't dangle if
+                            // something throws. Upon normal exit, the
+                            // File struct's reference counting takes
+                            // care of closing, so we don't need to
+                            // worry about success
         }
 
         sock.sockaddr_in addr;
@@ -2405,10 +2413,10 @@ version(linux) {
 
 version (Windows)
 {
-    extern(C) ulong _lseeki64(int fd, ulong offset, int whence); 
-    extern(C) ulong _fseeki64(int fd, ulong offset, int whence); 
+    extern(C) ulong _lseeki64(int fd, ulong offset, int whence);
+    extern(C) ulong _fseeki64(int fd, ulong offset, int whence);
     alias _fseeki64 lseek64;
-    //extern(C) ulong ftell(FILE*); 
+    //extern(C) ulong ftell(FILE*);
     //alias ftell ftello64;
 }
 else
@@ -2417,10 +2425,10 @@ else
     // extern(C) ulong ftello(FILE*);
     // static if (off_t.sizeof == 8)
     // {
-    //     alias lseek lseek64; 
+    //     alias lseek lseek64;
     // }
     // else
     // {
-    //     extern ulong lseek64(int fd, long offset, int whence); 
+    //     extern ulong lseek64(int fd, long offset, int whence);
     // }
 }
