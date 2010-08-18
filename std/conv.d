@@ -3949,4 +3949,5 @@ unittest
     Foo foo;
     auto voidArr = (cast(void*) &foo)[0..Foo.sizeof];
     emplace!Foo(voidArr, 2U);
+    assert(foo.num == 2);
 }
