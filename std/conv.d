@@ -3811,33 +3811,43 @@ T* emplace(T, Args...)(void[] chunk, Args args) if (!is(T == class))
         enforce(a % T.alignof == 0, new ConvError("misalignment"));
     auto result = cast(typeof(return)) chunk.ptr;
 
-    static void initialize(void * p)
+    void initialize()
     {
         static T i;
-        memcpy(p, &i, T.sizeof);
+        memcpy(chunk.ptr, &i, T.sizeof);
     }
 
-    static if (is(typeof(result.__ctor(args))))
-    {
-        // T defines a genuine constructor accepting args
-        // Go the classic route: write .init first, then call ctor
-        initialize(chunk.ptr);
-        result.__ctor(args);
-    }
-    else static if (Args.length == 1)
-    {
-        // T doesn't define a constructor, must be a primitive type
-        static if (is(typeof(result.opAssign(args))))
-        {
-            static init = T.init;
-            memcpy(p, &init, T.sizeof);
-        }
-        *result = args[0];
-    }
-    else static if (Args.length == 0)
+    static if (Args.length == 0)
     {
         // Just initialize the thing
-        initialize(chunk.ptr);
+        initialize();
+    }
+    else static if (is(T == struct))
+    {
+        static if (is(typeof(result.__ctor(args))))
+        {
+            // T defines a genuine constructor accepting args
+            // Go the classic route: write .init first, then call ctor
+            initialize();
+            result.__ctor(args);
+        }
+        else static if (is(typeof(T(args))))
+        {
+            // Struct without constructor that has one matching field for
+            // each argument
+            initialize();
+            *result = T(args);
+        }
+        else static if (Args.length == 1 && is(Args[0] : T))
+        {
+            initialize();
+            *result = args[0];
+        }
+    }
+    else static if (Args.length == 1 && is(Args[0] : T))
+    {
+        // Primitive type. Assignment is fine for initialization.
+        *result = args[0];
     }
     else
     {
@@ -3929,3 +3939,14 @@ unittest
     assert(equal(map!(to!int)(["42", "34", "345"]), [42, 34, 345]));
 }
 
+unittest
+{
+    struct Foo
+    {
+        uint num;
+    }
+
+    Foo foo;
+    auto voidArr = (cast(void*) &foo)[0..Foo.sizeof];
+    emplace!Foo(voidArr, 2U);
+}
