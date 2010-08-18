@@ -1129,6 +1129,16 @@ private:
     Separator _separator;
     enum size_t _unComputed = size_t.max - 1, _atEnd = size_t.max;
     size_t _frontLength = _unComputed;
+    size_t _backLength = _unComputed;
+
+    static if(isBidirectionalRange!Range)
+    {
+        static int lastIndexOf(Range haystack, Separator needle)
+        {
+            immutable index = indexOf(retro(haystack), needle);
+            return (index == -1) ? -1 : haystack.length - 1 - index;
+        }
+    }
 
 public:
     this(Range input, Separator separator)
@@ -1174,6 +1184,9 @@ public:
         {
             // no more input and need to fetch => done
             _frontLength = _atEnd;
+
+            // Probably don't need this, but just for consistency:
+            _backLength = _atEnd;
         }
         else
         {
@@ -1190,6 +1203,56 @@ public:
             auto ret = this;
             ret._input = _input.save;
             return ret;
+        }
+    }
+
+    static if(isBidirectionalRange!Range)
+    {
+        @property Range back()
+        {
+            assert(!empty);
+            if (_backLength == _unComputed)
+            {
+                immutable lastIndex = lastIndexOf(_input, _separator);
+                if(lastIndex == -1)
+                {
+                    _backLength = _input.length;
+                }
+                else
+                {
+                    _backLength = _input.length - lastIndex - 1;
+                }
+            }
+            return _input[_input.length - _backLength .. _input.length];
+        }
+
+        void popBack()
+        {
+            assert(!empty);
+            if (_backLength == _unComputed)
+            {
+                back;
+            }
+            assert(_backLength <= _input.length);
+            if (_backLength == _input.length)
+            {
+                // no more input and need to fetch => done
+                _frontLength = _atEnd;
+                _backLength = _atEnd;
+            }
+            else
+            {
+                _input = _input[0 .. _input.length - _backLength];
+                if(!_input.empty && _input.back == _separator)
+                {
+                    _input.popBack();
+                }
+                else
+                {
+                    assert(false);
+                }
+                _backLength = _unComputed;
+            }
         }
     }
 }
@@ -1224,14 +1287,39 @@ unittest
     a = [ 0, 1 ];
     assert(equal(splitter(a, 0), [ [], [1] ][]));
 
+    // Thoroughly exercise the bidirectional stuff.
+    auto str = "abc abcd abcde ab abcdefg abcdefghij ab ac ar an at ada";
+    assert(equal(
+        retro(splitter(str, 'a')),
+        retro(array(splitter(str, 'a')))
+    ));
+
+    // Test interleaving front and back.
+    auto split = splitter(str, 'a');
+    assert(split.front == "");
+    assert(split.back == "");
+    split.popBack();
+    assert(split.back == "d");
+    split.popFront();
+    assert(split.front == "bc ");
+    assert(split.back == "d");
+    split.popFront();
+    split.popBack();
+    assert(split.back == "t ");
+    split.popBack();
+    split.popBack();
+    split.popFront();
+    split.popFront();
+    assert(split.front == "b ");
+    assert(split.back == "r ");
+
     foreach(DummyType; AllDummyRanges) {  // Bug 4408
         static if(isRandomAccessRange!DummyType) {
             static assert(isBidirectionalRange!DummyType);
             DummyType d;
             auto s = splitter(d, 5);
             assert(equal(s.front, [1,2,3,4]));
-            s.popFront();
-            assert(equal(s.front, [6,7,8,9,10]));
+            assert(equal(s.back, [6,7,8,9,10]));
 
 
             auto s2 = splitter(d, [4, 5]);
