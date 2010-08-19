@@ -19,8 +19,10 @@ import std.algorithm, std.conv, std.encoding, std.exception, std.range,
 version(unittest) private import std.stdio;
 
 /**
-Returns a newly-allocated array consisting of a copy of the input
-range $(D r).
+Returns a newly-allocated dynamic array consisting of a copy of the input
+range, static array, dynamic array, or class or struct with an $(D opApply)
+function $(D r).  Note that narrow strings are handled
+as a special case in an overload.
 
 Example:
 
@@ -29,9 +31,10 @@ auto a = array([1, 2, 3, 4, 5][]);
 assert(a == [ 1, 2, 3, 4, 5 ]);
 ----
  */
-ElementType!Range[] array(Range)(Range r) if (isInputRange!Range)
+ForeachType!Range[] array(Range)(Range r)
+if (isIterable!Range && !isNarrowString!Range)
 {
-    alias ElementType!Range E;
+    alias ForeachType!Range E;
     static if (hasLength!Range)
     {
         if (r.empty) return null;
@@ -44,19 +47,21 @@ ElementType!Range[] array(Range)(Range r) if (isInputRange!Range)
         auto result = (cast(E*) enforce(GC.malloc(r.length * E.sizeof, blkInfo),
                 text("Out of memory while allocating an array of ", r.length,
                         " objects of type ", E.stringof)))[0 .. r.length];
-        foreach (ref e; result)
+        size_t i = 0;
+        foreach (e; r)
         {
             // hacky
-            static if (is(typeof(&e.opAssign)))
+            static if (is(typeof(e.opAssign(e))))
             {
                 // this should be in-place construction
-                new(&e) E(r.front);
+                auto voidArr = (cast(void*) (result.ptr + i))[0..E.sizeof];
+                emplace!E(voidArr, e);
             }
             else
             {
-                e = r.front;
+                result[i] = e;
             }
-            r.popFront;
+            i++;
         }
         return result;
     }
@@ -104,9 +109,56 @@ ElementType!Range[] array(Range)(Range r) if (isInputRange!Range)
     // return result[0 .. constructedElements];
 }
 
+/**
+Convert a narrow string to an array type that fully supports random access.
+This is handled as a special case and always returns a $(D dchar[]),
+$(D const(dchar)[]), or $(D immutable(dchar)[]) depending on the constness of
+the input.
+*/
+ElementType!String[] array(String)(String str) if(isNarrowString!String)
+{
+    static if(is(typeof(return) == immutable))
+    {
+        return to!(immutable(dchar)[])(str);
+    }
+    else static if(is(typeof(return) == const))
+    {
+        return to!(const(dchar)[])(str);
+    }
+    else
+    {
+        return to!(dchar[])(str);
+    }
+}
+
 version(unittest)
 {
     struct TestArray { int x; string toString() { return .to!string(x); } }
+
+    struct OpAssign
+    {
+        uint num;
+        this(uint num) { this.num = num; }
+
+        // Templating opAssign to make sure the bugs with opAssign being
+        // templated are fixed.
+        void opAssign(T)(T rhs) { this.num = rhs.num; }
+    }
+
+    struct OpApply
+    {
+        int opApply(int delegate(ref int) dg)
+        {
+            int res;
+            foreach(i; 0..10)
+            {
+                res = dg(i);
+                if(res) break;
+            }
+
+            return res;
+        }
+    }
 }
 
 unittest
@@ -130,6 +182,14 @@ unittest
     auto d = array([1., 2.2, 3][]);
     assert(is(typeof(d) == double[]));
     //writeln(d);
+
+    auto e = [OpAssign(1), OpAssign(2)];
+    auto f = array(e);
+    assert(e == f);
+
+    assert(array(OpApply.init) == [0,1,2,3,4,5,6,7,8,9]);
+    assert(array("ABC") == "ABC"d);
+    assert(array("ABC".dup) == "ABC"d.dup);
 }
 
 template IndexType(C : T[], T)
