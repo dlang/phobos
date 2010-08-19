@@ -2708,7 +2708,14 @@ private string lockstepApply(Ranges...)(bool withIndex) if(Ranges.length > 0)
         }
     }
 
-    ret ~= "\twhile(!someEmpty) {\n";
+    // Check for emptiness.
+    ret ~= "\twhile("; //someEmpty) {\n";
+    foreach(ti, Unused; Ranges) {
+        ret ~= "!ranges[" ~ to!string(ti) ~ "].empty && ";
+    }
+    // Strip trailing &&
+    ret = ret[0..$ - 4];
+    ret ~= ") {\n";
 
     // Populate the dummy variables for everything that doesn't have lvalue
     // elements.
@@ -2747,7 +2754,10 @@ private string lockstepApply(Ranges...)(bool withIndex) if(Ranges.length > 0)
     ret = ret[0..$ - 2];
     ret ~= ");\n";
     ret ~= "\t\tif(res) break;\n";
-    ret ~= "\t\tpopAll();\n";
+    foreach(ti, Range; Ranges)
+    {
+        ret ~= "\t\tranges[" ~ to!(string)(ti) ~ "].popFront();\n";
+    }
 
     if(withIndex)
     {
@@ -2755,6 +2765,7 @@ private string lockstepApply(Ranges...)(bool withIndex) if(Ranges.length > 0)
     }
 
     ret ~= "\t}\n";
+    ret ~= "\tif(s == StoppingPolicy.requireSameLength) enforceAllEmpty();\n";
     ret ~= "\treturn res;\n}";
 
     return ret;
@@ -2798,44 +2809,9 @@ private:
     Ranges ranges;
     StoppingPolicy s;
 
-    bool someEmpty()
-    {
-        foreach(range; ranges)
-        {
-            if(range.empty) goto LEmpty;
-        }
-
-        return false;
-
-    LEmpty:
-        if(s == StoppingPolicy.shortest)
-        {
-            return true;
-        }
-        else if(s == StoppingPolicy.requireSameLength)
-        {
-            // Enforce that they're all empty.
-            foreach(range; ranges)
-            {
-                enforce(range.empty,
-                    "Not all ranges were the same length when using " ~
-                    "Lockstep with StoppingPolicy.requireSameLength.");
-            }
-
-            return true;
-        }
-        else
-        {
-            assert(0);
-        }
-    }
-
-    void popAll()
-    {
-        assert(!someEmpty);
-        foreach(ti, range; ranges)
-        {
-            ranges[ti].popFront();
+    void enforceAllEmpty() {
+        foreach(range; ranges) {
+            enforce(range.empty);
         }
     }
 
@@ -2859,31 +2835,46 @@ template Lockstep(Range)
     alias Range Lockstep;
 }
 
-/// Ditto
-Lockstep!(Ranges) lockstep(Ranges...)(Ranges ranges)
-if(allSatisfy!(isInputRange, Ranges))
+version(ddoc)
 {
-    static if(Ranges.length > 1)
+    /// Ditto
+    Lockstep!(Ranges) lockstep(Ranges...)(Ranges ranges) { assert(0); }
+    /// Ditto
+    Lockstep!(Ranges) lockstep(Ranges...)(Ranges ranges, StoppingPolicy s)
     {
-        return Lockstep!(Ranges)(ranges, StoppingPolicy.shortest);
-    }
-    else
-    {
-        return ranges[0];
+        assert(0);
     }
 }
-
-/// Ditto
-Lockstep!(Ranges) lockstep(Ranges...)(Ranges ranges, StoppingPolicy s)
-if(allSatisfy!(isInputRange, Ranges))
+else
 {
-    static if(Ranges.length > 1)
+    // Work around DMD bugs 4676, 4652.
+    auto lockstep(Args...)(Args args)
+    if(allSatisfy!(isInputRange, Args) || (
+       allSatisfy!(isInputRange, Args[0..$ - 1]) &&
+       is(Args[$ - 1] == StoppingPolicy))
+    )
     {
-        return Lockstep!(Ranges)(ranges, s);
-    }
-    else
-    {
-        return ranges[0];
+        static if(is(Args[$ - 1] == StoppingPolicy))
+        {
+            alias args[0..$ - 1] ranges;
+            alias Args[0..$ - 1] Ranges;
+            alias args[$ - 1] stoppingPolicy;
+        }
+        else
+        {
+            alias Args Ranges;
+            alias args ranges;
+            auto stoppingPolicy = StoppingPolicy.shortest;
+        }
+
+        static if(Ranges.length > 1)
+        {
+            return Lockstep!(Ranges)(ranges, stoppingPolicy);
+        }
+        else
+        {
+            return ranges[0];
+        }
     }
 }
 
@@ -2944,6 +2935,10 @@ unittest {
    assert(indices == to!(size_t[])([0, 1, 2, 3, 4]));
    assert(res1 == [1,2,3,4,5]);
    assert(res2 == [7f,8f,9f,10f,11f]);
+
+   // Make sure we've worked around the relevant compiler bugs and this at least
+   // compiles w/ >2 ranges.
+   lockstep(foo, foo, foo);
 }
 
 /**
