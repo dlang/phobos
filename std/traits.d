@@ -2317,6 +2317,42 @@ unittest
 }
 
 /**
+ * Returns $(D true) if T can be iterated over using a $(D foreach) loop with
+ * a single loop variable of automatically inferred type, regardless of how
+ * the $(D foreach) loop is implemented.  This includes ranges, structs/classes
+ * that define $(D opApply) with a single loop variable, and builtin dynamic,
+ * static and associative arrays.
+ */
+template isIterable(T)
+{
+    static if (is(typeof({foreach(elem; T.init) {}}))) {
+        enum bool isIterable = true;
+    } else {
+        enum bool isIterable = false;
+    }
+}
+
+unittest {
+    struct OpApply
+    {
+        int opApply(int delegate(ref uint) dg) { assert(0); }
+    }
+
+    struct Range
+    {
+        uint front() { assert(0); }
+        void popFront() { assert(0); }
+        enum bool empty = false;
+    }
+
+    static assert(isIterable!(uint[]));
+    static assert(!isIterable!(uint));
+    static assert(isIterable!(OpApply));
+    static assert(isIterable!(uint[string]));
+    static assert(isIterable!(Range));
+}
+
+/**
  * Tells whether the tuple T is an expression tuple.
  */
 template isExpressionTuple(T ...)
@@ -2592,6 +2628,31 @@ unittest
     static assert(is(ModifyTypePreservingSTC!(Intify, shared(const real)) == shared(const int)));
 }
 version (unittest) private template Intify(T) { alias int Intify; }
+
+/**
+Returns the inferred type of the loop variable when a variable of type T
+is iterated over using a $(D foreach) loop with a single loop variable and
+automatically inferred return type.  Note that this may not be the same as
+$(D std.range.ElementType!(Range)) in the case of narrow strings, or if T
+has both opApply and a range interface.
+*/
+template ForeachType(T)
+{
+    alias ReturnType!(typeof(
+    {
+        foreach(elem; T.init) {
+            return elem;
+        }
+        assert(0);
+    })) ForeachType;
+}
+
+unittest
+{
+    static assert(is(ForeachType!(uint[]) == uint));
+    static assert(is(ForeachType!(string) == immutable(char)));
+    static assert(is(ForeachType!(string[string]) == string));
+}
 
 
 /**
