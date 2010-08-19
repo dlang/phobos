@@ -2690,6 +2690,8 @@ private string lockstepApply(Ranges...)(bool withIndex) if(Ranges.length > 0)
     ret = ret[0..$ - 2];
     ret ~= ") dg) {\n";
 
+    // Shallow copy _ranges to be consistent w/ regular foreach.
+    ret ~= "\tauto ranges = _ranges;\n";
     ret ~= "\tint res;\n";
 
     if(withIndex)
@@ -2765,7 +2767,7 @@ private string lockstepApply(Ranges...)(bool withIndex) if(Ranges.length > 0)
     }
 
     ret ~= "\t}\n";
-    ret ~= "\tif(s == StoppingPolicy.requireSameLength) enforceAllEmpty();\n";
+    ret ~= "\tif(_s == StoppingPolicy.requireSameLength) enforceAllEmpty();\n";
     ret ~= "\treturn res;\n}";
 
     return ret;
@@ -2806,11 +2808,11 @@ struct Lockstep(Ranges...)
 if(Ranges.length > 1 && allSatisfy!(isInputRange, Ranges))
 {
 private:
-    Ranges ranges;
-    StoppingPolicy s;
+    Ranges _ranges;
+    StoppingPolicy _s;
 
     void enforceAllEmpty() {
-        foreach(range; ranges) {
+        foreach(range; _ranges) {
             enforce(range.empty);
         }
     }
@@ -2818,10 +2820,10 @@ private:
 public:
     this(Ranges ranges, StoppingPolicy s = StoppingPolicy.shortest)
     {
-        this.ranges = ranges;
+        _ranges = ranges;
         enforce(s != StoppingPolicy.longest,
             "Can't use StoppingPolicy.Longest on Lockstep.");
-        this.s = s;
+        this._s = s;
     }
 
     mixin(lockstepApply!(Ranges)(false));
@@ -2883,19 +2885,22 @@ unittest {
     // i.e. w/o ref return, random access, length, etc.
     auto foo = filter!"a"([1,2,3,4,5]);
     auto bar = [6f,7f,8f,9f,10f];
+    auto l = lockstep(foo, bar);
 
-    uint[] res1;
-    float[] res2;
+    // Should work twice.  These are forward ranges with implicit save.
+    foreach(i; 0..2) {
+        uint[] res1;
+        float[] res2;
 
-    foreach(a, ref b; lockstep(foo, bar)) {
-        res1 ~= a;
-        res2 ~= b;
-        b++;
+        foreach(a, ref b; l) {
+            res1 ~= a;
+            res2 ~= b;
+        }
+
+        assert(res1 == [1,2,3,4,5]);
+        assert(res2 == [6,7,8,9,10]);
+        assert(bar == [6f,7f,8f,9f,10f]);
     }
-
-    assert(res1 == [1,2,3,4,5]);
-    assert(res2 == [6,7,8,9,10]);
-    assert(bar == [7f,8f,9f,10f,11f]);
 
    // Doc example.
    auto arr1 = [1,2,3,4,5];
@@ -2922,8 +2927,8 @@ unittest {
    auto stuff = lockstep([1,2,3,4,5], StoppingPolicy.shortest);
 
    // Test with indexing.
-   res1 = null;
-   res2 = null;
+   uint[] res1;
+   float[] res2;
    size_t[] indices;
    foreach(i, a, b; lockstep(foo, bar))
    {
@@ -2934,7 +2939,7 @@ unittest {
 
    assert(indices == to!(size_t[])([0, 1, 2, 3, 4]));
    assert(res1 == [1,2,3,4,5]);
-   assert(res2 == [7f,8f,9f,10f,11f]);
+   assert(res2 == [6f,7f,8f,9f,10f]);
 
    // Make sure we've worked around the relevant compiler bugs and this at least
    // compiles w/ >2 ranges.
