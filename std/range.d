@@ -984,10 +984,17 @@ Returns $(D this).
 /**
 Forwards to $(D _input.empty).
  */
+static if(isInfinite!R)
+{
+    enum bool empty = false;
+}
+else
+{
     @property bool empty()
     {
         return _input.empty;
     }
+}
 
 /**
 @@@
@@ -1116,6 +1123,9 @@ unittest
     assert(s2[0..2].length == 2);
     assert(equal(s2[1..5], [3, 5, 7, 9]));
     assert(s2[1..5].length == 4);
+
+    // Check for infiniteness propagation.
+    static assert(isInfinite!(typeof(stride(repeat(1), 3))));
 
     foreach(DummyType; AllDummyRanges) {
         DummyType dummyRange;
@@ -2264,29 +2274,39 @@ $(XREF range,zip) function.
 Returns $(D true) if the range is at end. The test depends on the
 stopping policy.
  */
-    bool empty()
+    static if(allSatisfy!(isInfinite, R))
     {
-        bool firstRangeIsEmpty = ranges.field[0].empty;
-        if (firstRangeIsEmpty && stoppingPolicy == StoppingPolicy.shortest)
-            return true;
-        foreach (i, Unused; R[1 .. $])
+        // BUG:  Doesn't propagate infiniteness if only some ranges are infinite
+        //       and s == StoppingPolicy.longest.  This isn't fixable in the
+        //       current design since StoppingPolicy is known only at runtime.
+        enum bool empty = false;
+    }
+    else
+    {
+        bool empty()
         {
-            switch (stoppingPolicy)
+            bool firstRangeIsEmpty = ranges.field[0].empty;
+            if (firstRangeIsEmpty && stoppingPolicy == StoppingPolicy.shortest)
+                return true;
+            foreach (i, Unused; R[1 .. $])
             {
-            case StoppingPolicy.shortest:
-                if (ranges.field[i + 1].empty) return true;
-                break;
-            case StoppingPolicy.longest:
-                if (!ranges.field[i + 1].empty) return false;
-                break;
-            default:
-                assert(stoppingPolicy == StoppingPolicy.requireSameLength);
-                enforce(firstRangeIsEmpty == ranges.field[i + 1].empty,
-                        "Inequal-length ranges passed to Zip");
-                break;
+                switch (stoppingPolicy)
+                {
+                case StoppingPolicy.shortest:
+                    if (ranges.field[i + 1].empty) return true;
+                    break;
+                case StoppingPolicy.longest:
+                    if (!ranges.field[i + 1].empty) return false;
+                    break;
+                default:
+                    assert(stoppingPolicy == StoppingPolicy.requireSameLength);
+                    enforce(firstRangeIsEmpty == ranges.field[i + 1].empty,
+                            "Inequal-length ranges passed to Zip");
+                    break;
+                }
             }
+            return firstRangeIsEmpty;
         }
-        return firstRangeIsEmpty;
     }
 
     static if (allSatisfy!(isForwardRange, R))
@@ -2510,15 +2530,21 @@ ranges offer random access.
             {
                 foreach (i, Range; R)
                 {
-                    // I think it's safe to assume that there will never be an
-                    // infinite range with lvalue elements.
-                    if(ranges.field[i].length <= n)
+                    static if(isInfinite!Range)
                     {
-                        result.ptrs.field[i] = null;
+                        result.ptrs.field[i] = addrOf(ranges.field[i][n]);
                     }
                     else
                     {
-                        result.ptrs.field[i] = addrOf(ranges.field[i][n]);
+
+                        if(ranges.field[i].length <= n)
+                        {
+                            result.ptrs.field[i] = null;
+                        }
+                        else
+                        {
+                            result.ptrs.field[i] = addrOf(ranges.field[i][n]);
+                        }
                     }
                 }
             }
@@ -2596,6 +2622,9 @@ unittest
     auto a2 = [1, 2, 3];
     auto stuff = tuple(tuple(a1, a2),
                             tuple(filter!"a"(a1), filter!"a"(a2)));
+
+    // Test infiniteness propagation.
+    static assert(isInfinite!(typeof(zip(repeat(1), repeat(1)))));
 
     foreach(t; stuff.expand) {
         auto arr1 = t.field[0];
@@ -3504,9 +3533,16 @@ struct FrontTransversal(RangeOfRanges,
 /**
    Forward range primitives.
 */
-    @property bool empty()
+    static if(isInfinite!RangeOfRanges)
     {
-        return _input.empty;
+        enum bool empty = false;
+    }
+    else
+    {
+        @property bool empty()
+        {
+            return _input.empty;
+        }
     }
 
 /// Ditto
@@ -3618,6 +3654,9 @@ unittest {
         assert(equal(ft[0..2], [1, 2]));
         assert(equal(ft[1..3], [2, 3]));
 
+        // Test infiniteness propagation.
+        static assert(isInfinite!(typeof(frontTransversal(repeat("foo")))));
+
         static if(DummyType.r == ReturnBy.Reference) {{
             // Test ref propagation.  Note the extra {}s to create a scope.
             ft.front++;
@@ -3686,9 +3725,16 @@ private:
 /**
    Forward range primitives.
 */
-    @property bool empty()
+    static if(isInfinite!(RangeOfRanges))
     {
-        return _input.empty;
+        enum bool empty = false;
+    }
+    else
+    {
+        @property bool empty()
+        {
+            return _input.empty;
+        }
     }
 
 /// Ditto
@@ -3801,6 +3847,8 @@ unittest
         assert(t[0] == t[1]);
         assert(t[1] == num + 1);
     }
+
+    static assert(isInfinite!(typeof(transversal(repeat([1,2,3]), 1))));
 
     // Test slicing.
     auto mat = [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]];
