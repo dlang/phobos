@@ -3954,7 +3954,7 @@ to its $(D .init) value).
  */
 ElementType!R moveFront(R)(R r)
 {
-    static if(is(typeof(&R.moveFront))) {
+    static if(is(typeof(&r.moveFront))) {
         return r.moveFront();
     } else static if(!hasPostblit!(ElementType!(R))) {
         return r.front;
@@ -3978,21 +3978,22 @@ unittest
 }
 
 /**
-Moves the front of $(D r) out and returns it. Leaves $(D r.front) in a
+Moves the back of $(D r) out and returns it. Leaves $(D r.back) in a
 destroyable state that does not allocate any resources (usually equal
 to its $(D .init) value).
  */
 ElementType!R moveBack(R)(R r)
-if (isBidirectionalRange!R && is(typeof(&(r.front())) == ElementType!R*))
 {
-    return move(r.back);
-}
-
-/// Ditto
-ElementType!R moveBack(R)(R r)
-if (isBidirectionalRange!R && is(typeof(&R.moveBack)))
-{
-    return r.moveBack();
+    static if(is(typeof(&r.moveBack))) {
+        return r.moveBack();
+    } else static if(!hasPostblit!(ElementType!(R))) {
+        return r.back;
+    } else static if(is(typeof(&r.back()) == ElementType!R*)) {
+        return move(r.back);
+    } else {
+        static assert(0,
+            "Cannot move back of a range with a postblit and an rvalue back.");
+    }
 }
 
 unittest
@@ -4018,16 +4019,17 @@ r.front) in a destroyable state that does not allocate any resources
 (usually equal to its $(D .init) value).
  */
 ElementType!R moveAt(R)(R r, size_t i)
-if (is(typeof(&r[i]) == ElementType!R*))
 {
-    return move(r[i]);
-}
-
-/// Ditto
-ElementType!R moveAt(R)(R r, size_t i)
-if (is(typeof(&R.moveAt)))
-{
-    return r.moveAt(i);
+    static if(is(typeof(&r.moveAt))) {
+        return r.moveAt(i);
+    } else static if(!hasPostblit!(ElementType!(R))) {
+        return r[i];
+    } else static if(is(typeof(&r[i]) == ElementType!R*)) {
+        return move(r[i]);
+    } else {
+        static assert(0,
+            "Cannot move element of a range with a postblit and rvalue elements.");
+    }
 }
 
 unittest
@@ -4044,4 +4046,17 @@ unittest
     }
     InputRange r;
     assert(moveFront(r) == 43);
+
+    foreach(DummyType; AllDummyRanges) {
+        auto d = DummyType.init;
+        assert(moveFront(d) == 1);
+
+        static if(isBidirectionalRange!DummyType) {
+            assert(moveBack(d) == 10);
+        }
+
+        static if(isRandomAccessRange!DummyType) {
+            assert(moveAt(d, 2) == 3);
+        }
+    }
 }
