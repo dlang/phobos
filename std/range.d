@@ -3179,7 +3179,8 @@ struct Iota(N, S) if ((isIntegral!N || isPointer!N) && isIntegral!S) {
     private S step;
     this(N current, N pastLast, S step)
     {
-        enforce(step != 0 && current != pastLast);
+        enforce((current <= pastLast && step > 0) ||
+                (current >= pastLast && step < 0));
         this.current = current;
         this.step = step;
         if (step > 0)
