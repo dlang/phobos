@@ -2703,7 +2703,7 @@ private string lockstepApply(Ranges...)(bool withIndex) if(Ranges.length > 0)
     // Since there's basically no way to make this code readable as-is, I've
     // included formatting to make the generated code look "normal" when
     // printed out via pragma(msg).
-    string ret = "int opApply(int delegate(";
+    string ret = "int opApply(scope int delegate(";
 
     if(withIndex)
     {
