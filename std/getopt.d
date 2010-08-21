@@ -428,7 +428,10 @@ void handleOption(R)(string option, R receiver, ref string[] args,
                 is(typeof(receiver) == delegate) &&
                 !is(typeof(receiver("", "")));
             if (!isDelegateWithLessThanTwoParameters && !val && !incremental) {
-                // eat the next argument too
+                // Eat the next argument too.  Check to make sure there's one
+                // to be eaten first, though.
+                enforce(i < args.length,
+                    "Missing value for argument " ~ a ~ ".");
                 val = args[i];
                 args = args[0 .. i] ~ args[i + 1 .. $];
             }
