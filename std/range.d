@@ -1773,7 +1773,7 @@ public:
         --_maxAvailable;
     }
 
-    @property ElementType front()
+    @property auto ref front()
     {
         enforce(_maxAvailable > 0,
                 "Attempting to fetch the front of an empty "
@@ -1782,8 +1782,9 @@ public:
     }
 
     static if (hasAssignableElements!R)
-        @property void front(ElementType v)
+        @property auto front(ElementType v)
         {
+            // This has to return auto instead of void because of Bug 4706.
             original.front = v;
         }
 
@@ -1817,22 +1818,32 @@ public:
             --_maxAvailable;
         }
 
-        mixin(
-            (byRef ? "ref " : "")~
-            q{/+auto ref+/ ElementType back()
-            {
-                return original[this.length - 1];
-            }});
+        @property auto ref back()
+        {
+            return original[this.length - 1];
+        }
 
-        mixin(
-            (byRef ? "ref " : "")~
-            q{/+auto ref+/ ElementType opIndex(size_t index)
+        auto ref opIndex(size_t index)
+        {
+            enforce(index < this.length,
+                "Attempting to index out of the bounds of a "
+                ~ Take.stringof);
+            return original[index];
+        }
+
+        static if(hasAssignableElements!R)
+        {
+            auto back(ElementType v)
             {
-                enforce(index < this.length,
-                    "Attempting to index out of the bounds of a "
-                    ~ Take.stringof);
-                return original[index];
-            }});
+                // This has to return auto instead of void because of Bug 4706.
+                original[this.length - 1] = v;
+            }
+
+            void opIndexAssign(ElementType v)
+            {
+                original[index] = v;
+            }
+        }
     }
 
     Take opSlice() { return this; }
