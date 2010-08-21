@@ -426,11 +426,11 @@ Example:
 @safe int sub(int a, int b) {return a-b;} 
 @trusted int mul(int a, int b) {return a*b;} 
 
-bool a = isUnsafe!(add);
+bool a = isSafe!(add);
 assert(a == false);
-bool b = isUnsafe!(sub);
+bool b = isSafe!(sub);
 assert(b == true);
-bool c = isUnsafe!(mul);
+bool c = isSafe!(mul);
 assert(c == true);
 --------------------
  */
