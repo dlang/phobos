@@ -430,6 +430,7 @@ unittest
 
     i = 0; assert(decode("\xEF\xBF\xBE"c, i) == cast(dchar) 0xFFFE);
     i = 0; assert(decode("\xEF\xBF\xBF"c, i) == cast(dchar) 0xFFFF);
+    i = 0;
     assert(expectError_( decode("\xED\xA0\x80"c, i) ));
     assert(expectError_( decode("\xED\xAD\xBF"c, i) ));
     assert(expectError_( decode("\xED\xAE\x80"c, i) ));
