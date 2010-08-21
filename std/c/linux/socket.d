@@ -24,7 +24,7 @@ extern(C):
 
 version (linux)
 {
-    alias int socklen_t;
+    alias uint socklen_t;
 
     enum: int
     {
@@ -303,12 +303,12 @@ int accept(int s, sockaddr* addr, int* addrlen);
 int shutdown(int s, int how);
 int getpeername(int s, sockaddr* name, int* namelen);
 int getsockname(int s, sockaddr* name, int* namelen);
-int send(int s, void* buf, int len, int flags);
-int sendto(int s, void* buf, int len, int flags, sockaddr* to, int tolen);
-int recv(int s, void* buf, int len, int flags);
-int recvfrom(int s, void* buf, int len, int flags, sockaddr* from, int* fromlen);
-int getsockopt(int s, int level, int optname, void* optval, int* optlen);
-int setsockopt(int s, int level, int optname, void* optval, int optlen);
+ssize_t send(int s, void* buf, size_t len, int flags);
+ssize_t sendto(int s, void* buf, size_t len, int flags, sockaddr* to, int tolen);
+ssize_t recv(int s, void* buf, size_t len, int flags);
+ssize_t recvfrom(int s, void* buf, size_t len, int flags, sockaddr* from, int* fromlen);
+int getsockopt(int s, int level, int optname, void* optval, socklen_t* optlen);
+int setsockopt(int s, int level, int optname, void* optval, socklen_t optlen);
 uint inet_addr(char* cp);
 char* inet_ntoa(in_addr ina);
 hostent* gethostbyname(char* name);

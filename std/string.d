@@ -284,7 +284,7 @@ unittest
  *      Index in s where c is found, -1 if not found.
  */
 
-int find(char[] s, dchar c)
+ptrdiff_t find(char[] s, dchar c)
 {
     if (c <= 0x7F)
     {   // Plain old ASCII
@@ -296,7 +296,7 @@ int find(char[] s, dchar c)
     }
 
     // c is a universal character
-    foreach (int i, dchar c2; s)
+    foreach (size_t i, dchar c2; s)
     {
         if (c == c2)
             return i;
@@ -308,9 +308,7 @@ unittest
 {
     debug(string) printf("string.find.unittest\n");
 
-    int i;
-
-    i = find(null, cast(dchar)'a');
+    auto i = find(null, cast(dchar)'a');
     assert(i == -1);
     i = find("def", cast(dchar)'a');
     assert(i == -1);
@@ -325,7 +323,7 @@ unittest
  * ditto
  */
 
-int ifind(char[] s, dchar c)
+ptrdiff_t ifind(char[] s, dchar c)
 {
     char* p;
 
@@ -333,7 +331,7 @@ int ifind(char[] s, dchar c)
     {   // Plain old ASCII
         char c1 = cast(char) std.ctype.tolower(c);
 
-        foreach (int i, char c2; s)
+        foreach (size_t i, char c2; s)
         {
             c2 = cast(char)std.ctype.tolower(c2);
             if (c1 == c2)
@@ -344,7 +342,7 @@ int ifind(char[] s, dchar c)
     {   // c is a universal character
         dchar c1 = std.uni.toUniLower(c);
 
-        foreach (int i, dchar c2; s)
+        foreach (size_t i, dchar c2; s)
         {
             c2 = std.uni.toUniLower(c2);
             if (c1 == c2)
@@ -358,9 +356,7 @@ unittest
 {
     debug(string) printf("string.ifind.unittest\n");
 
-    int i;
-
-    i = ifind(null, cast(dchar)'a');
+    auto i = ifind(null, cast(dchar)'a');
     assert(i == -1);
     i = ifind("def", cast(dchar)'a');
     assert(i == -1);
@@ -385,7 +381,7 @@ unittest
  * ditto
  */
 
-int rfind(char[] s, dchar c)
+ptrdiff_t rfind(char[] s, dchar c)
 {
     size_t i;
 
@@ -410,9 +406,7 @@ unittest
 {
     debug(string) printf("string.rfind.unittest\n");
 
-    int i;
-
-    i = rfind(null, cast(dchar)'a');
+    auto i = rfind(null, cast(dchar)'a');
     assert(i == -1);
     i = rfind("def", cast(dchar)'a');
     assert(i == -1);
@@ -426,7 +420,7 @@ unittest
  * ditto
  */
 
-int irfind(char[] s, dchar c)
+ptrdiff_t irfind(char[] s, dchar c)
 {
     size_t i;
 
@@ -468,9 +462,7 @@ unittest
 {
     debug(string) printf("string.irfind.unittest\n");
 
-    int i;
-
-    i = irfind(null, cast(dchar)'a');
+    auto i = irfind(null, cast(dchar)'a');
     assert(i == -1);
     i = irfind("def", cast(dchar)'a');
     assert(i == -1);
@@ -500,7 +492,7 @@ unittest
  *      Index in s where c is found, -1 if not found.
  */
 
-int find(char[] s, char[] sub)
+ptrdiff_t find(char[] s, char[] sub)
     out (result)
     {
         if (result == -1)
@@ -555,9 +547,7 @@ unittest
 {
     debug(string) printf("string.find.unittest\n");
 
-    int i;
-
-    i = find(null, "a");
+    auto i = find(null, "a");
     assert(i == -1);
     i = find("def", "a");
     assert(i == -1);
@@ -575,7 +565,7 @@ unittest
  * ditto
  */
 
-int ifind(char[] s, char[] sub)
+ptrdiff_t ifind(char[] s, char[] sub)
     out (result)
     {
         if (result == -1)
@@ -590,7 +580,7 @@ int ifind(char[] s, char[] sub)
     body
     {
         auto sublength = sub.length;
-        int i;
+        ptrdiff_t i;
 
         if (sublength == 0)
             return 0;
@@ -640,9 +630,7 @@ unittest
 {
     debug(string) printf("string.ifind.unittest\n");
 
-    int i;
-
-    i = ifind(null, "a");
+    auto i = ifind(null, "a");
     assert(i == -1);
     i = ifind("def", "a");
     assert(i == -1);
@@ -684,7 +672,7 @@ unittest
  * ditto
  */
 
-int rfind(char[] s, char[] sub)
+ptrdiff_t rfind(char[] s, char[] sub)
     out (result)
     {
         if (result == -1)
@@ -705,7 +693,7 @@ int rfind(char[] s, char[] sub)
         c = sub[0];
         if (sub.length == 1)
             return rfind(s, c);
-        for (int i = s.length - sub.length; i >= 0; i--)
+        for (ptrdiff_t i = s.length - sub.length; i >= 0; i--)
         {
             if (s[i] == c)
             {
@@ -718,10 +706,8 @@ int rfind(char[] s, char[] sub)
 
 unittest
 {
-    int i;
-
     debug(string) printf("string.rfind.unittest\n");
-    i = rfind("abcdefcdef", "c");
+    auto i = rfind("abcdefcdef", "c");
     assert(i == 6);
     i = rfind("abcdefcdef", "cd");
     assert(i == 6);
@@ -738,7 +724,7 @@ unittest
  * ditto
  */
 
-int irfind(char[] s, char[] sub)
+ptrdiff_t irfind(char[] s, char[] sub)
     out (result)
     {
         if (result == -1)
@@ -762,7 +748,7 @@ int irfind(char[] s, char[] sub)
         if (c <= 0x7F)
         {
             c = std.ctype.tolower(c);
-            for (int i = s.length - sub.length; i >= 0; i--)
+            for (ptrdiff_t i = s.length - sub.length; i >= 0; i--)
             {
                 if (std.ctype.tolower(s[i]) == c)
                 {
@@ -773,7 +759,7 @@ int irfind(char[] s, char[] sub)
         }
         else
         {
-            for (int i = s.length - sub.length; i >= 0; i--)
+            for (ptrdiff_t i = s.length - sub.length; i >= 0; i--)
             {
                 if (icmp(s[i .. i + sub.length], sub) == 0)
                     return i;
@@ -784,10 +770,8 @@ int irfind(char[] s, char[] sub)
 
 unittest
 {
-    int i;
-
     debug(string) printf("string.irfind.unittest\n");
-    i = irfind("abcdefCdef", "c");
+    auto i = irfind("abcdefCdef", "c");
     assert(i == 6);
     i = irfind("abcdefCdef", "cD");
     assert(i == 6);
@@ -1164,7 +1148,7 @@ char[] join(char[][] words, char[] sep)
         i = 0;
         while (true)
         {
-            uint wlen = words[i].length;
+            size_t wlen = words[i].length;
 
             result[j .. j + wlen] = words[i];
             j += wlen;
@@ -1299,7 +1283,7 @@ char[][] split(char[] s, char[] delim)
                 }
                 words.length = nwords;
 
-                int wordi = 0;
+                size_t wordi = 0;
                 i = 0;
                 while (true)
                 {
@@ -1371,11 +1355,10 @@ unittest
 
     char[] s = ",peter,paul,jerry,";
     char[][] words;
-    int i;
 
     words = split(s, ",");
     assert(words.length == 5);
-    i = cmp(words[0], "");
+    auto i = cmp(words[0], "");
     assert(i == 0);
     i = cmp(words[1], "peter");
     assert(i == 0);
@@ -1436,9 +1419,9 @@ unittest
 
 char[][] splitlines(char[] s)
 {
-    uint i;
-    uint istart;
-    uint nlines;
+    size_t i;
+    size_t istart;
+    size_t nlines;
     char[][] lines;
 
     nlines = 0;
@@ -1524,7 +1507,7 @@ unittest
 
 char[] stripl(char[] s)
 {
-    uint i;
+    size_t i;
 
     for (i = 0; i < s.length; i++)
     {
@@ -1536,7 +1519,7 @@ char[] stripl(char[] s)
 
 char[] stripr(char[] s) /// ditto
 {
-    uint i;
+    size_t i;
 
     for (i = s.length; i > 0; i--)
     {
@@ -1706,7 +1689,7 @@ char[] center(char[] s, int width)
     if (s.length >= width)
         return s;
     char[] r = new char[width];
-    int left = (width - s.length) / 2;
+    auto left = (width - s.length) / 2;
     r[0 .. left] = cast(char)' ';
     r[left .. left + s.length] = s;
     r[left + s.length .. width] = cast(char)' ';
@@ -1760,7 +1743,6 @@ char[] zfill(char[] s, int width)
 char[] replace(char[] s, char[] from, char[] to)
 {
     char[] p;
-    int i;
     size_t istart;
 
     //printf("replace('%.*s','%.*s','%.*s')\n", s, from, to);
@@ -1769,7 +1751,7 @@ char[] replace(char[] s, char[] from, char[] to)
     istart = 0;
     while (istart < s.length)
     {
-        i = find(s[istart .. s.length], from);
+        auto i = find(s[istart .. s.length], from);
         if (i == -1)
         {
             p ~= s[istart .. s.length];
@@ -1809,7 +1791,7 @@ char[] replaceSlice(char[] string, char[] slice, char[] replacement)
 in
 {
     // Verify that slice[] really is a slice of string[]
-    int so = cast(char*)slice - cast(char*)string;
+    ptrdiff_t so = cast(char*)slice - cast(char*)string;
     assert(so >= 0);
     //printf("string.length = %d, so = %d, slice.length = %d\n", string.length, so, slice.length);
     assert(string.length >= so + slice.length);
@@ -1817,7 +1799,7 @@ in
 body
 {
     char[] result;
-    int so = cast(char*)slice - cast(char*)string;
+    ptrdiff_t so = cast(char*)slice - cast(char*)string;
 
     result.length = string.length - slice.length + replacement.length;
 
@@ -1858,7 +1840,7 @@ body
     if (s.length == 0)
         return sub;
 
-    int newlength = s.length + sub.length;
+    auto newlength = s.length + sub.length;
     char[] result = new char[newlength];
 
     result[0 .. index] = s[0 .. index];
@@ -1902,7 +1884,7 @@ unittest
 size_t count(char[] s, char[] sub)
 {
     size_t i;
-    int j;
+    ptrdiff_t j;
     int count = 0;
 
     for (i = 0; i < s.length; i += j + sub.length)
@@ -1921,9 +1903,8 @@ unittest
 
     char[] s = "This is a fofofof list";
     char[] sub = "fof";
-    int i;
 
-    i = count(s, sub);
+    auto i = count(s, sub);
     assert(i == 2);
 }
 
@@ -1956,7 +1937,7 @@ char[] expandtabs(char[] string, int tabsize = 8)
                     result[i .. i + nspaces] = ' ';
                 }
                 else
-                {   int j = result.length;
+                {   auto j = result.length;
                     result.length = j + nspaces;
                     result[j .. j + nspaces] = ' ';
                 }
@@ -2052,8 +2033,8 @@ char[] entab(char[] string, int tabsize = 8)
                     if (!changes)
                         change();
 
-                    int j = result.length - nspaces;
-                    int ntabs = (((column - nspaces) % tabsize) + nspaces) / tabsize;
+                    auto j = result.length - nspaces;
+                    ptrdiff_t ntabs = (((column - nspaces) % tabsize) + nspaces) / tabsize;
                     result.length = j + ntabs;
                     result[j .. j + ntabs] = '\t';
                     nwhite += ntabs - nspaces;
@@ -2081,8 +2062,8 @@ char[] entab(char[] string, int tabsize = 8)
                     if (!changes)
                         change();
 
-                    int j = result.length - nspaces;
-                    int ntabs = (nspaces + tabsize - 1) / tabsize;
+                    auto j = result.length - nspaces;
+                    ptrdiff_t ntabs = (nspaces + tabsize - 1) / tabsize;
                     result.length = j + ntabs;
                     result[j .. j + ntabs] = '\t';
                     nwhite += ntabs - nspaces;
@@ -2182,7 +2163,7 @@ char[] maketrans(char[] from, char[] to)
     body
     {
         char[] t = new char[256];
-        int i;
+        size_t i;
 
         for (i = 0; i < t.length; i++)
             t[i] = cast(char)i;
@@ -2207,7 +2188,7 @@ char[] translate(char[] s, char[] transtab, char[] delchars)
     body
     {
         char[] r;
-        int count;
+        size_t count;
         bool[256] deltab;
 
         deltab[] = false;
@@ -3309,12 +3290,12 @@ unittest
 
 final bool isNumeric(in char[] s, in bool bAllowSep = false)
 {
-    int    iLen = s.length;
+    auto   iLen = s.length;
     bool   bDecimalPoint = false;
     bool   bExponent = false;
     bool   bComplex = false;
     char[] sx = std.string.tolower(s);
-    int    j  = 0;
+    size_t j  = 0;
     char   c;
 
     //writefln("isNumeric(char[], bool = false) called!");
@@ -3334,7 +3315,7 @@ final bool isNumeric(in char[] s, in bool bAllowSep = false)
     if (sx[0] == '-' || sx[0] == '+')
         j++;
 
-    for (int i = j; i < iLen; i++)
+    for (size_t i = j; i < iLen; i++)
     {
         c = sx[i];
 
@@ -3900,8 +3881,8 @@ char[] wrap(char[] s, int columns = 80, char[] firstindent = null,
         char[] indent = null, int tabsize = 8)
 {
     char[] result;
-    int col;
-    int spaces;
+    ptrdiff_t col;
+    ptrdiff_t spaces;
     bool inword;
     bool first = true;
     size_t wordstart;

@@ -38,6 +38,7 @@ module std.socket;
 
 private import std.string, std.stdint, std.c.string, std.c.stdlib;
 
+alias ptrdiff_t ssize_t;
 
 version(Posix)
 {
@@ -1125,7 +1126,8 @@ class Socket
         /// Property that indicates if this is a valid, alive socket.
         bool isAlive() // getter
         {
-                int type, typesize = type.sizeof;
+                int type;
+		socklen_t typesize = type.sizeof;
                 return !getsockopt(sock, SOL_SOCKET, SO_TYPE, cast(char*)&type, &typesize);
         }
 
@@ -1317,15 +1319,15 @@ class Socket
          * buffer space left, send waits.
          */
         //returns number of bytes actually sent, or -1 on error
-        int send(void[] buf, SocketFlags flags)
+        ssize_t send(void[] buf, SocketFlags flags)
         {
                 flags |= SocketFlags.NOSIGNAL;
-                int sent = .send(sock, buf.ptr, buf.length, cast(int)flags);
+                auto sent = .send(sock, buf.ptr, buf.length, cast(int)flags);
                 return sent;
         }
 
         /// ditto
-        int send(void[] buf)
+        ssize_t send(void[] buf)
         {
                 return send(buf, SocketFlags.NOSIGNAL);
         }
@@ -1333,15 +1335,15 @@ class Socket
         /**
          * Send data to a specific destination Address. If the destination address is not specified, a connection must have been made and that address is used. If the socket is blocking and there is no buffer space left, sendTo waits.
          */
-        int sendTo(void[] buf, SocketFlags flags, Address to)
+        ssize_t sendTo(void[] buf, SocketFlags flags, Address to)
         {
                 flags |= SocketFlags.NOSIGNAL;
-                int sent = .sendto(sock, buf.ptr, buf.length, cast(int)flags, to.name(), to.nameLen());
+                auto sent = .sendto(sock, buf.ptr, buf.length, cast(int)flags, to.name(), to.nameLen());
                 return sent;
         }
 
         /// ditto
-        int sendTo(void[] buf, Address to)
+        ssize_t sendTo(void[] buf, Address to)
         {
                 return sendTo(buf, SocketFlags.NONE, to);
         }
@@ -1349,17 +1351,17 @@ class Socket
 
         //assumes you connect()ed
         /// ditto
-        int sendTo(void[] buf, SocketFlags flags)
+        ssize_t sendTo(void[] buf, SocketFlags flags)
         {
                 flags |= SocketFlags.NOSIGNAL;
-                int sent = .sendto(sock, buf.ptr, buf.length, cast(int)flags, null, 0);
+                auto sent = .sendto(sock, buf.ptr, buf.length, cast(int)flags, null, 0);
                 return sent;
         }
 
 
         //assumes you connect()ed
         /// ditto
-        int sendTo(void[] buf)
+        ssize_t sendTo(void[] buf)
         {
                 return sendTo(buf, SocketFlags.NONE);
         }
@@ -1372,17 +1374,17 @@ class Socket
          * to be received.
          */
         //returns number of bytes actually received, 0 on connection closure, or -1 on error
-        int receive(void[] buf, SocketFlags flags)
+        ssize_t receive(void[] buf, SocketFlags flags)
         {
                 if(!buf.length) //return 0 and don't think the connection closed
                         return 0;
-                int read = .recv(sock, buf.ptr, buf.length, cast(int)flags);
+                auto read = .recv(sock, buf.ptr, buf.length, cast(int)flags);
                 // if(!read) //connection closed
                 return read;
         }
 
         /// ditto
-        int receive(void[] buf)
+        ssize_t receive(void[] buf)
         {
                 return receive(buf, SocketFlags.NONE);
         }
@@ -1394,13 +1396,13 @@ class Socket
          * Returns: the number of bytes actually received,
          * 0 if the remote side has closed the connection, or ERROR on failure.
          */
-        int receiveFrom(void[] buf, SocketFlags flags, out Address from)
+        ssize_t receiveFrom(void[] buf, SocketFlags flags, out Address from)
         {
                 if(!buf.length) //return 0 and don't think the connection closed
                         return 0;
                 from = newFamilyObject();
-                int nameLen = from.nameLen();
-                int read = .recvfrom(sock, buf.ptr, buf.length, cast(int)flags, from.name(), &nameLen);
+                auto nameLen = from.nameLen();
+                auto read = .recvfrom(sock, buf.ptr, buf.length, cast(int)flags, from.name(), &nameLen);
                 assert(from.addressFamily() == _family);
                 // if(!read) //connection closed
                 return read;
@@ -1408,7 +1410,7 @@ class Socket
 
 
         /// ditto
-        int receiveFrom(void[] buf, out Address from)
+        ssize_t receiveFrom(void[] buf, out Address from)
         {
                 return receiveFrom(buf, SocketFlags.NONE, from);
         }
@@ -1416,11 +1418,11 @@ class Socket
 
         //assumes you connect()ed
         /// ditto
-        int receiveFrom(void[] buf, SocketFlags flags)
+        ssize_t receiveFrom(void[] buf, SocketFlags flags)
         {
                 if(!buf.length) //return 0 and don't think the connection closed
                         return 0;
-                int read = .recvfrom(sock, buf.ptr, buf.length, cast(int)flags, null, null);
+                auto read = .recvfrom(sock, buf.ptr, buf.length, cast(int)flags, null, null);
                 // if(!read) //connection closed
                 return read;
         }
@@ -1428,7 +1430,7 @@ class Socket
 
         //assumes you connect()ed
         /// ditto
-        int receiveFrom(void[] buf)
+        ssize_t receiveFrom(void[] buf)
         {
                 return receiveFrom(buf, SocketFlags.NONE);
         }
@@ -1438,7 +1440,7 @@ class Socket
         //returns the length, in bytes, of the actual result - very different from getsockopt()
         int getOption(SocketOptionLevel level, SocketOption option, void[] result)
         {
-                int len = result.length;
+                socklen_t len = cast(socklen_t)result.length;
                 if(_SOCKET_ERROR == .getsockopt(sock, cast(int)level, cast(int)option, result.ptr, &len))
                         throw new SocketException("Unable to get socket option", _lasterr());
                 return len;
@@ -1462,7 +1464,7 @@ class Socket
         // Set a socket option.
         void setOption(SocketOptionLevel level, SocketOption option, void[] value)
         {
-                if(_SOCKET_ERROR == .setsockopt(sock, cast(int)level, cast(int)option, value.ptr, value.length))
+                if(_SOCKET_ERROR == .setsockopt(sock, cast(int)level, cast(int)option, value.ptr, cast(socklen_t)value.length))
                         throw new SocketException("Unable to set socket option", _lasterr());
         }
 

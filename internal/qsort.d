@@ -33,7 +33,7 @@ import std.outofmemory;
 
 struct Array
 {
-    int length;
+    size_t length;
     void *ptr;
 }
 
@@ -47,17 +47,16 @@ an array of large structures to be sorted, rather than an array of pointers to
 structures.  The default value is optimized for a high cost for compares. */
 
 
-extern (C) long _adSort(Array a, TypeInfo ti)
+extern (C) void[] _adSort(Array a, TypeInfo ti)
 {
   byte* base;
   byte*[40] stack;              // stack
   byte** sp;                    // stack pointer
   byte* i, j, limit;            // scan and limit pointers
-  uint thresh;                  // size of _maxspan elements in bytes
-  uint width = ti.tsize();
+  auto width = ti.tsize();
 
   base = cast(byte *)a.ptr;
-  thresh = _maxspan * width;             // init threshold
+  auto thresh = _maxspan * width;        // size of _maxspan elements in bytes
   sp = stack.ptr;                        // init stack pointer
   limit = base + a.length * width;       // pointer past end of array
   while (1)                              // repeat until done then return
@@ -127,7 +126,7 @@ extern (C) long _adSort(Array a, TypeInfo ti)
       limit = sp[1];
     }
     else                                // else stack empty, all done
-      return *cast(long*)(&a);
+      return *cast(void[]*)(&a);
   }
   assert(0);
 }

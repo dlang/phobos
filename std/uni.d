@@ -576,15 +576,11 @@ int isUniAlpha(dchar u)
     }
 
     // Binary search
-    uint mid;
-    uint low;
-    uint high;
-
-    low = 0;
-    high = table.length - 1;
+    size_t low = 0;
+    auto high = table.length - 1;
     while (cast(int)low <= cast(int)high)
     {
-        mid = (low + high) >> 1;
+        auto mid = (low + high) >> 1;
         if (u < table[mid][0])
             high = mid - 1;
         else if (u > table[mid][1])
@@ -596,7 +592,7 @@ int isUniAlpha(dchar u)
 Lisnot:
     debug
     {
-        for (int i = 0; i < table.length; i++)
+        for (size_t i = 0; i < table.length; i++)
         {
             assert(u < table[i][0] || u > table[i][1]);
         }
@@ -606,7 +602,7 @@ Lisnot:
 Lis:
     debug
     {
-        for (int i = 0; i < table.length; i++)
+        for (size_t i = 0; i < table.length; i++)
         {
             if (u >= table[i][0] && u <= table[i][1])
                 return 1;

@@ -66,12 +66,11 @@ const char[] array = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz012345
  * Returns the number of bytes needed to encode a string of length slen.
  */
 
-uint encodeLength(uint slen)
+size_t encodeLength(size_t slen)
 {
-        uint result;
-        result = slen / 3;
-        if(slen % 3)
-                result++;
+        auto result = slen / 3;
+        if (slen % 3)
+            result++;
         return result * 4;
 }
 
@@ -94,15 +93,14 @@ body
         if(!str.length)
                 return buf[0 .. 0];
 
-        uint stri;
-        uint strmax = str.length / 3;
-        uint strleft = str.length % 3;
+        size_t stri;
+        auto strmax = str.length / 3;
+        auto strleft = str.length % 3;
         uint x;
-        char* sp, bp;
 
-        bp = &buf[0];
-        sp = &str[0];
-        for(stri = 0; stri != strmax; stri++)
+        auto bp = &buf[0];
+        auto sp = &str[0];
+        for (stri = 0; stri != strmax; stri++)
         {
                 x = (sp[0] << 16) | (sp[1] << 8) | (sp[2]);
                 sp+= 3;
@@ -166,7 +164,7 @@ unittest
  * Returns the number of bytes needed to decode an encoded string of this
  * length.
  */
-uint decodeLength(uint elen)
+size_t decodeLength(size_t elen)
 {
         return elen / 4 * 3;
 }
@@ -224,14 +222,13 @@ body
         if(estr.length % 4)
                 throw new Base64Exception("Invalid encoded base64 string");
 
-        uint estri;
-        uint estrmax = estr.length / 4;
+        size_t estri;
+        auto estrmax = estr.length / 4;
         uint x;
-        char* sp, bp;
         char ch;
 
-        sp = &estr[0];
-        bp = &buf[0];
+        auto sp = &estr[0];
+        auto bp = &buf[0];
         for(estri = 0; estri != estrmax; estri++)
         {
                 x = arrayIndex(sp[0]) << 18 | arrayIndex(sp[1]) << 12;

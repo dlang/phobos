@@ -46,36 +46,29 @@ int _d_switch_string(char[][] table, char[] ca)
         assert(ca.length >= 0);
 
         // Make sure table[] is sorted correctly
-        int j;
-
-        for (j = 1; j < table.length; j++)
+        for (size_t j = 1; j < table.length; j++)
         {
-            int len1 = table[j - 1].length;
-            int len2 = table[j].length;
+            auto len1 = table[j - 1].length;
+            auto len2 = table[j].length;
 
             assert(len1 <= len2);
             if (len1 == len2)
             {
-                int ci;
-
-                ci = memcmp(table[j - 1].ptr, table[j].ptr, len1);
+                int ci = memcmp(table[j - 1].ptr, table[j].ptr, len1);
                 assert(ci < 0); // ci==0 means a duplicate
             }
         }
     }
     out (result)
     {
-        int i;
-        int cj;
-
         //printf("out _d_switch_string()\n");
         if (result == -1)
         {
             // Not found
-            for (i = 0; i < table.length; i++)
+            for (size_t i = 0; i < table.length; i++)
             {
                 if (table[i].length == ca.length)
-                {   cj = memcmp(table[i].ptr, ca.ptr, ca.length);
+                {   auto cj = memcmp(table[i].ptr, ca.ptr, ca.length);
                     assert(cj != 0);
                 }
             }
@@ -83,12 +76,12 @@ int _d_switch_string(char[][] table, char[] ca)
         else
         {
             assert(0 <= result && result < table.length);
-            for (i = 0; 1; i++)
+            for (size_t i = 0; 1; i++)
             {
                 assert(i < table.length);
                 if (table[i].length == ca.length)
                 {
-                    cj = memcmp(table[i].ptr, ca.ptr, ca.length);
+                    auto cj = memcmp(table[i].ptr, ca.ptr, ca.length);
                     if (cj == 0)
                     {
                         assert(i == result);
@@ -101,14 +94,8 @@ int _d_switch_string(char[][] table, char[] ca)
     body
     {
         //printf("body _d_switch_string(%.*s)\n", ca);
-        int low;
-        int high;
-        int mid;
-        int c;
-        char[] pca;
-
-        low = 0;
-        high = table.length;
+        size_t low = 0;
+        auto high = table.length;
 
         version (none)
         {
@@ -116,7 +103,7 @@ int _d_switch_string(char[][] table, char[] ca)
             printf("ca[] = '%s'\n", cast(char *)ca);
             for (mid = 0; mid < high; mid++)
             {
-                pca = table[mid];
+                auto pca = table[mid];
                 printf("table[%d] = %d, '%.*s'\n", mid, pca.length, pca);
             }
         }
@@ -128,14 +115,14 @@ int _d_switch_string(char[][] table, char[] ca)
             if (ca.length == 0)
                 return 0;
 
-            char c1 = ca[0];
+            auto c1 = ca[0];
 
             // Do binary search
             while (low < high)
             {
-                mid = (low + high) >> 1;
-                pca = table[mid];
-                c = ca.length - pca.length;
+                auto mid = (low + high) >> 1;
+                auto pca = table[mid];
+                int c = cast(int)(ca.length - pca.length);
                 if (c == 0)
                 {
                     c = cast(ubyte)c1 - cast(ubyte)pca[0];
@@ -144,7 +131,7 @@ int _d_switch_string(char[][] table, char[] ca)
                         c = memcmp(ca.ptr, pca.ptr, ca.length);
                         if (c == 0)
                         {   //printf("found %d\n", mid);
-                            return mid;
+                            return cast(int)mid;
                         }
                     }
                 }
@@ -185,36 +172,29 @@ int _d_switch_ustring(wchar[][] table, wchar[] ca)
         assert(ca.length >= 0);
 
         // Make sure table[] is sorted correctly
-        int j;
-
-        for (j = 1; j < table.length; j++)
+        for (size_t j = 1; j < table.length; j++)
         {
-            int len1 = table[j - 1].length;
-            int len2 = table[j].length;
+            auto len1 = table[j - 1].length;
+            auto len2 = table[j].length;
 
             assert(len1 <= len2);
             if (len1 == len2)
             {
-                int c;
-
-                c = memcmp(table[j - 1].ptr, table[j].ptr, len1 * wchar.sizeof);
+                auto c = memcmp(table[j - 1].ptr, table[j].ptr, len1 * wchar.sizeof);
                 assert(c < 0);  // c==0 means a duplicate
             }
         }
     }
     out (result)
     {
-        int i;
-        int c;
-
         //printf("out _d_switch_string()\n");
         if (result == -1)
         {
             // Not found
-            for (i = 0; i < table.length; i++)
+            for (size_t i = 0; i < table.length; i++)
             {
                 if (table[i].length == ca.length)
-                {   c = memcmp(table[i].ptr, ca.ptr, ca.length * wchar.sizeof);
+                {   auto c = memcmp(table[i].ptr, ca.ptr, ca.length * wchar.sizeof);
                     assert(c != 0);
                 }
             }
@@ -222,12 +202,12 @@ int _d_switch_ustring(wchar[][] table, wchar[] ca)
         else
         {
             assert(0 <= result && result < table.length);
-            for (i = 0; 1; i++)
+            for (size_t i = 0; 1; i++)
             {
                 assert(i < table.length);
                 if (table[i].length == ca.length)
                 {
-                    c = memcmp(table[i].ptr, ca.ptr, ca.length * wchar.sizeof);
+                    auto c = memcmp(table[i].ptr, ca.ptr, ca.length * wchar.sizeof);
                     if (c == 0)
                     {
                         assert(i == result);
@@ -240,21 +220,17 @@ int _d_switch_ustring(wchar[][] table, wchar[] ca)
     body
     {
         //printf("body _d_switch_ustring()\n");
-        int low;
-        int high;
-        int mid;
         int c;
-        wchar[] pca;
 
-        low = 0;
-        high = table.length;
+        size_t low = 0;
+        auto high = table.length;
 
     /*
         // Print table
         wprintf("ca[] = '%.*s'\n", ca);
-        for (mid = 0; mid < high; mid++)
+        for (size_t mid = 0; mid < high; mid++)
         {
-            pca = table[mid];
+            auto pca = table[mid];
             wprintf("table[%d] = %d, '%.*s'\n", mid, pca.length, pca);
         }
     */
@@ -262,15 +238,15 @@ int _d_switch_ustring(wchar[][] table, wchar[] ca)
         // Do binary search
         while (low < high)
         {
-            mid = (low + high) >> 1;
-            pca = table[mid];
-            c = ca.length - pca.length;
+            auto mid = (low + high) >> 1;
+            auto pca = table[mid];
+            c = cast(int)(ca.length - pca.length);
             if (c == 0)
             {
                 c = memcmp(ca.ptr, pca.ptr, ca.length * wchar.sizeof);
                 if (c == 0)
                 {   //printf("found %d\n", mid);
-                    return mid;
+                    return cast(int)mid;
                 }
             }
             if (c < 0)
@@ -310,36 +286,29 @@ int _d_switch_dstring(dchar[][] table, dchar[] ca)
         assert(ca.length >= 0);
 
         // Make sure table[] is sorted correctly
-        int j;
-
-        for (j = 1; j < table.length; j++)
+        for (size_t j = 1; j < table.length; j++)
         {
-            int len1 = table[j - 1].length;
-            int len2 = table[j].length;
+            auto len1 = table[j - 1].length;
+            auto len2 = table[j].length;
 
             assert(len1 <= len2);
             if (len1 == len2)
             {
-                int c;
-
-                c = memcmp(table[j - 1].ptr, table[j].ptr, len1 * dchar.sizeof);
+                auto c = memcmp(table[j - 1].ptr, table[j].ptr, len1 * dchar.sizeof);
                 assert(c < 0);  // c==0 means a duplicate
             }
         }
     }
     out (result)
     {
-        int i;
-        int c;
-
         //printf("out _d_switch_string()\n");
         if (result == -1)
         {
             // Not found
-            for (i = 0; i < table.length; i++)
+            for (size_t i = 0; i < table.length; i++)
             {
                 if (table[i].length == ca.length)
-                {   c = memcmp(table[i].ptr, ca.ptr, ca.length * dchar.sizeof);
+                {   auto c = memcmp(table[i].ptr, ca.ptr, ca.length * dchar.sizeof);
                     assert(c != 0);
                 }
             }
@@ -347,12 +316,12 @@ int _d_switch_dstring(dchar[][] table, dchar[] ca)
         else
         {
             assert(0 <= result && result < table.length);
-            for (i = 0; 1; i++)
+            for (size_t i = 0; 1; i++)
             {
                 assert(i < table.length);
                 if (table[i].length == ca.length)
                 {
-                    c = memcmp(table[i].ptr, ca.ptr, ca.length * dchar.sizeof);
+                    auto c = memcmp(table[i].ptr, ca.ptr, ca.length * dchar.sizeof);
                     if (c == 0)
                     {
                         assert(i == result);
@@ -365,21 +334,17 @@ int _d_switch_dstring(dchar[][] table, dchar[] ca)
     body
     {
         //printf("body _d_switch_ustring()\n");
-        int low;
-        int high;
-        int mid;
         int c;
-        dchar[] pca;
 
-        low = 0;
-        high = table.length;
+        size_t low = 0;
+        auto high = table.length;
 
     /*
         // Print table
         wprintf("ca[] = '%.*s'\n", ca);
-        for (mid = 0; mid < high; mid++)
+        for (size_t mid = 0; mid < high; mid++)
         {
-            pca = table[mid];
+            auto pca = table[mid];
             wprintf("table[%d] = %d, '%.*s'\n", mid, pca.length, pca);
         }
     */
@@ -387,15 +352,15 @@ int _d_switch_dstring(dchar[][] table, dchar[] ca)
         // Do binary search
         while (low < high)
         {
-            mid = (low + high) >> 1;
-            pca = table[mid];
-            c = ca.length - pca.length;
+            auto mid = (low + high) >> 1;
+            auto pca = table[mid];
+            c = cast(int)(ca.length - pca.length);
             if (c == 0)
             {
                 c = memcmp(ca.ptr, pca.ptr, ca.length * dchar.sizeof);
                 if (c == 0)
                 {   //printf("found %d\n", mid);
-                    return mid;
+                    return cast(int)mid;
                 }
             }
             if (c < 0)

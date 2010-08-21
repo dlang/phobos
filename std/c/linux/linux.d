@@ -259,8 +259,8 @@ extern (C)
 {
     int access(in char*, int);
     int open(in char*, int, ...);
-    int read(int, void*, int);
-    int write(int, in void*, int);
+    ssize_t read(int, void*, size_t);
+    ssize_t write(int, in void*, size_t);
     int close(int);
     int lseek(int, off_t, int);
     int fstat(int, struct_stat*);
@@ -269,7 +269,7 @@ extern (C)
     int chdir(in char*);
     int mkdir(in char*, int);
     int rmdir(in char*);
-    char* getcwd(char*, int);
+    char* getcwd(char*, size_t);
     int chmod(in char*, mode_t);
     int fork();
     int dup(int);

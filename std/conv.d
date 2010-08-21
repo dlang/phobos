@@ -99,7 +99,7 @@ private void conv_overflow(char[] s)
 
 int toInt(char[] s)
 {
-    int length = s.length;
+    auto length = s.length;
 
     if (!length)
         goto Lerr;
@@ -107,9 +107,9 @@ int toInt(char[] s)
     int sign = 0;
     int v = 0;
 
-    for (int i = 0; i < length; i++)
+    for (size_t i = 0; i < length; i++)
     {
-        char c = s[i];
+        auto c = s[i];
         if (c >= '0' && c <= '9')
         {
             if (v < int.max/10 || (v == int.max/10 && c + sign <= '7'))
@@ -224,16 +224,16 @@ unittest
 
 uint toUint(char[] s)
 {
-    int length = s.length;
+    auto length = s.length;
 
     if (!length)
         goto Lerr;
 
     uint v = 0;
 
-    for (int i = 0; i < length; i++)
+    for (size_t i = 0; i < length; i++)
     {
-        char c = s[i];
+        auto c = s[i];
         if (c >= '0' && c <= '9')
         {
             if (v < uint.max/10 || (v == uint.max/10 && c <= '5'))
@@ -319,7 +319,7 @@ unittest
 
 long toLong(char[] s)
 {
-    int length = s.length;
+    auto length = s.length;
 
     if (!length)
         goto Lerr;
@@ -327,9 +327,9 @@ long toLong(char[] s)
     int sign = 0;
     long v = 0;
 
-    for (int i = 0; i < length; i++)
+    for (size_t i = 0; i < length; i++)
     {
-        char c = s[i];
+        auto c = s[i];
         if (c >= '0' && c <= '9')
         {
             if (v < long.max/10 || (v == long.max/10 && c + sign <= '7'))
@@ -449,14 +449,14 @@ unittest
 
 ulong toUlong(char[] s)
 {
-    int length = s.length;
+    auto length = s.length;
 
     if (!length)
         goto Lerr;
 
     ulong v = 0;
 
-    for (int i = 0; i < length; i++)
+    for (size_t i = 0; i < length; i++)
     {
         char c = s[i];
         if (c >= '0' && c <= '9')
@@ -1482,7 +1482,7 @@ unittest
  */
 private bool getComplexStrings(in char[] s, out char[] s1, out char[] s2)
 {
-    int len = s.length;
+    auto len = s.length;
 
     if (!len)
         goto Lerr;
@@ -1496,7 +1496,7 @@ private bool getComplexStrings(in char[] s, out char[] s1, out char[] s2)
     }
 
     // Split the original string out into two strings.
-    for (int i = 1; i < len; i++)
+    for (size_t i = 1; i < len; i++)
         if ((s[i - 1] != 'e' && s[i - 1] != 'E') && s[i] == '+')
         {
             s1 = s[0..i];

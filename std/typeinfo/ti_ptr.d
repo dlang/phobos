@@ -17,7 +17,16 @@ class TypeInfo_P : TypeInfo
 
     int compare(void *p1, void *p2)
     {
-        return *cast(void* *)p1 - *cast(void* *)p2;
+	version (D_LP64)
+	{
+            long c = *cast(void* *)p1 - *cast(void* *)p2;
+	    if (c < 0)
+		return -1;
+	    else
+		return c != 0;
+	}
+	else
+	    return *cast(void* *)p1 - *cast(void* *)p2;
     }
 
     size_t tsize()
@@ -27,9 +36,7 @@ class TypeInfo_P : TypeInfo
 
     void swap(void *p1, void *p2)
     {
-        void* t;
-
-        t = *cast(void* *)p1;
+        auto t = *cast(void* *)p1;
         *cast(void* *)p1 = *cast(void* *)p2;
         *cast(void* *)p2 = t;
     }

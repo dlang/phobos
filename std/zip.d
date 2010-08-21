@@ -49,13 +49,13 @@ class ArchiveMember
     ushort compressionMethod;   /// Read/Write: 0 for compression, 8 for deflate
     std.date.DosFileTime time;  /// Read/Write: Last modified time of the member. It's in the DOS date/time format.
     uint crc32;                 /// Read Only: cyclic redundancy check (CRC) value
-    uint compressedSize;        /// Read Only: size of data of member in compressed form.
-    uint expandedSize;          /// Read Only: size of data of member in expanded form.
+    size_t compressedSize;      /// Read Only: size of data of member in compressed form.
+    size_t expandedSize;        /// Read Only: size of data of member in expanded form.
     ushort diskNumber;          /// Read Only: should be 0.
     ushort internalAttributes;  /// Read/Write
     uint externalAttributes;    /// Read/Write
 
-    private uint offset;
+    private size_t offset;
 
     /**
      * Read/Write: Usually the file name of the archive member; it is used to
@@ -96,7 +96,7 @@ class ArchiveMember
 class ZipArchive
 {
     ubyte[] data;       /// Read Only: array representing the entire contents of the archive.
-    uint endrecOffset;
+    size_t endrecOffset;
 
     uint diskNumber;    /// Read Only: 0 since multi-disk zip archives are not supported.
     uint diskStartDir;  /// Read Only: 0 since multi-disk zip archives are not supported.
@@ -163,15 +163,15 @@ class ZipArchive
      * Returns: array representing the entire archive.
      */
     void[] build()
-    {   uint i;
-        uint directoryOffset;
+    {   size_t i;
+        size_t directoryOffset;
 
         if (comment.length > 0xFFFF)
             throw new ZipException("archive comment longer than 65535");
 
         // Compress each member; compute size
-        uint archiveSize = 0;
-        uint directorySize = 0;
+        size_t archiveSize = 0;
+        size_t directorySize = 0;
         foreach (ArchiveMember de; directory)
         {
             de.expandedSize = de.expandedData.length;
@@ -215,8 +215,8 @@ class ZipArchive
             putUshort(i + 8,  de.compressionMethod);
             putUint  (i + 10, cast(uint)de.time);
             putUint  (i + 14, de.crc32);
-            putUint  (i + 18, de.compressedSize);
-            putUint  (i + 22, de.expandedData.length);
+            putUint  (i + 18, cast(uint)de.compressedSize);
+            putUint  (i + 22, cast(uint)de.expandedData.length);
             putUshort(i + 26, cast(ushort)de.name.length);
             putUshort(i + 28, cast(ushort)de.extra.length);
             i += 30;
@@ -241,15 +241,15 @@ class ZipArchive
             putUshort(i + 10, de.compressionMethod);
             putUint  (i + 12, cast(uint)de.time);
             putUint  (i + 16, de.crc32);
-            putUint  (i + 20, de.compressedSize);
-            putUint  (i + 24, de.expandedSize);
+            putUint  (i + 20, cast(uint)de.compressedSize);
+            putUint  (i + 24, cast(uint)de.expandedSize);
             putUshort(i + 28, cast(ushort)de.name.length);
             putUshort(i + 30, cast(ushort)de.extra.length);
             putUshort(i + 32, cast(ushort)de.comment.length);
             putUshort(i + 34, de.diskNumber);
             putUshort(i + 36, de.internalAttributes);
             putUint  (i + 38, de.externalAttributes);
-            putUint  (i + 42, de.offset);
+            putUint  (i + 42, cast(uint)de.offset);
             i += 46;
 
             data[i .. i + de.name.length] = cast(ubyte[])de.name[];
@@ -269,8 +269,8 @@ class ZipArchive
         putUshort(i + 6,  cast(ushort)diskStartDir);
         putUshort(i + 8,  cast(ushort)numEntries);
         putUshort(i + 10, cast(ushort)totalEntries);
-        putUint  (i + 12, directorySize);
-        putUint  (i + 16, directoryOffset);
+        putUint  (i + 12, cast(uint)directorySize);
+        putUint  (i + 16, cast(uint)directoryOffset);
         putUshort(i + 20, cast(ushort)comment.length);
         i += 22;
 
@@ -299,11 +299,11 @@ class ZipArchive
      */
 
     this(void[] buffer)
-    {   int iend;
-        int i;
-        int endcommentlength;
-        uint directorySize;
-        uint directoryOffset;
+    {   ptrdiff_t iend;
+        ptrdiff_t i;
+        ptrdiff_t endcommentlength;
+        size_t directorySize;
+        size_t directoryOffset;
 
         this.data = cast(ubyte[]) buffer;
 
@@ -431,8 +431,7 @@ class ZipArchive
         if (de.flags & 1)
             throw new ZipException("encryption not supported");
 
-        int i;
-        i = de.offset + 30 + namelen + extralen;
+        auto i = de.offset + 30 + namelen + extralen;
         if (i + de.compressedSize > endrecOffset)
             throw new ZipException("invalid directory entry 5");
 
@@ -459,7 +458,7 @@ class ZipArchive
 
     /* ============ Utility =================== */
 
-    ushort getUshort(int i)
+    ushort getUshort(size_t i)
     {
         version (LittleEndian)
         {
@@ -473,7 +472,7 @@ class ZipArchive
         }
     }
 
-    uint getUint(int i)
+    uint getUint(size_t i)
     {
         version (LittleEndian)
         {
@@ -485,7 +484,7 @@ class ZipArchive
         }
     }
 
-    void putUshort(int i, ushort us)
+    void putUshort(size_t i, ushort us)
     {
         version (LittleEndian)
         {
@@ -498,7 +497,7 @@ class ZipArchive
         }
     }
 
-    void putUint(int i, uint ui)
+    void putUint(size_t i, uint ui)
     {
         version (BigEndian)
         {
@@ -513,7 +512,7 @@ debug(print)
     void arrayPrint(ubyte[] array)
     {
         printf("array %p,%d\n", cast(void*)array, array.length);
-        for (int i = 0; i < array.length; i++)
+        for (size_t i = 0; i < array.length; i++)
         {
             printf("%02x ", array[i]);
             if (((i + 1) & 15) == 0)

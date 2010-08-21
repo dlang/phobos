@@ -977,16 +977,12 @@ unittest
 
 void write(string name, void[] buffer)
 {
-    int fd;
-    int numwritten;
-    char *namez;
-
-    namez = toStringz(name);
-    fd = std.c.posix.posix.open(namez, O_CREAT | O_WRONLY | O_TRUNC, 0660);
+    auto namez = toStringz(name);
+    auto fd = std.c.posix.posix.open(namez, O_CREAT | O_WRONLY | O_TRUNC, 0660);
     if (fd == -1)
         goto err;
 
-    numwritten = std.c.posix.posix.write(fd, buffer.ptr, buffer.length);
+    auto numwritten = std.c.posix.posix.write(fd, buffer.ptr, buffer.length);
     if (buffer.length != numwritten)
         goto err2;
 
@@ -1008,16 +1004,12 @@ err:
 
 void append(string name, void[] buffer)
 {
-    int fd;
-    int numwritten;
-    char *namez;
-
-    namez = toStringz(name);
-    fd = std.c.posix.posix.open(namez, O_APPEND | O_WRONLY | O_CREAT, 0660);
+    auto namez = toStringz(name);
+    auto fd = std.c.posix.posix.open(namez, O_APPEND | O_WRONLY | O_CREAT, 0660);
     if (fd == -1)
         goto err;
 
-    numwritten = std.c.posix.posix.write(fd, buffer.ptr, buffer.length);
+    auto numwritten = std.c.posix.posix.write(fd, buffer.ptr, buffer.length);
     if (buffer.length != numwritten)
         goto err2;
 
@@ -1504,7 +1496,7 @@ void copy(string from, string to)
         goto err2;
     }
 
-    int fdw = std.c.posix.posix.open(toz, O_CREAT | O_WRONLY | O_TRUNC, 0660);
+    auto fdw = std.c.posix.posix.open(toz, O_CREAT | O_WRONLY | O_TRUNC, 0660);
     if (fdw == -1)
     {
         //printf("\topen error, errno = %d\n",getErrno());
@@ -1512,7 +1504,7 @@ void copy(string from, string to)
     }
 
     size_t BUFSIZ = 4096 * 16;
-    void* buf = std.c.stdlib.malloc(BUFSIZ);
+    auto buf = std.c.stdlib.malloc(BUFSIZ);
     if (!buf)
     {   BUFSIZ = 4096;
         buf = std.c.stdlib.malloc(BUFSIZ);

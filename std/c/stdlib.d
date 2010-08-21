@@ -46,7 +46,7 @@ struct lldiv_t { long quot,rem; }
 
     int system(char *);
 
-    void *alloca(uint); ///
+    void *alloca(size_t); /// Allocate bytes on stack
 
     void *calloc(size_t, size_t);       ///
     void *malloc(size_t);       /// ditto

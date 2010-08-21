@@ -50,7 +50,7 @@ struct Array
  * reversed.
  */
 
-extern (C) long _adReverseChar(char[] a)
+extern (C) char[] _adReverseChar(char[] a)
 {
     if (a.length > 1)
     {
@@ -102,7 +102,7 @@ extern (C) long _adReverseChar(char[] a)
              */
             memcpy(tmp.ptr, hi, stridehi);
             memcpy(tmplo.ptr, lo, stridelo);
-            memmove(lo + stridehi, lo + stridelo , (hi - lo) - stridelo);
+            memmove(lo + stridehi, lo + stridelo , cast(size_t)((hi - lo) - stridelo));
             memcpy(lo, tmp.ptr, stridehi);
             memcpy(hi + stridehi - stridelo, tmplo.ptr, stridelo);
 
@@ -110,7 +110,7 @@ extern (C) long _adReverseChar(char[] a)
             hi = hi - 1 + (stridehi - stridelo);
         }
     }
-    return *cast(long*)(&a);
+    return a;
 }
 
 unittest
@@ -735,14 +735,13 @@ Unequal:
 }
 else
 {
-    int len;
     int c;
 
     //printf("adCmpChar()\n");
-    len = a1.length;
+    size_t len = a1.length;
     if (a2.length < len)
         len = a2.length;
-    c = string.memcmp(cast(char *)a1.ptr, cast(char *)a2.ptr, len);
+    c = std.c.string.memcmp(cast(char *)a1.ptr, cast(char *)a2.ptr, len);
     if (!c)
         c = cast(int)a1.length - cast(int)a2.length;
     return c;

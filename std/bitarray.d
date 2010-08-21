@@ -16,7 +16,7 @@ private import std.intrinsic;
 struct BitArray
 {
     size_t len;
-    uint* ptr;
+    size_t* ptr;
 
     size_t dim()
     {
@@ -86,7 +86,7 @@ struct BitArray
     {
         BitArray ba;
 
-        uint[] b = ptr[0 .. dim].dup;
+        auto b = ptr[0 .. dim].dup;
         ba.len = len;
         ba.ptr = b.ptr;
         return ba;
@@ -96,7 +96,6 @@ struct BitArray
     {
         BitArray a;
         BitArray b;
-        int i;
 
         debug(bitarray) printf("BitArray.dup.unittest\n");
 
@@ -104,7 +103,7 @@ struct BitArray
         a[0] = 1; a[1] = 0; a[2] = 1;
         b = a.dup;
         assert(b.length == 3);
-        for (i = 0; i < 3; i++)
+        for (int i = 0; i < 3; i++)
         {   debug(bitarray) printf("b[%d] = %d\n", i, b[i]);
             assert(b[i] == (((i ^ 1) & 1) ? true : false));
         }
@@ -287,23 +286,21 @@ struct BitArray
      */
 
     int opEquals(BitArray a2)
-    {   int i;
+    {   size_t i;
 
         if (this.length != a2.length)
             return 0;           // not equal
         byte *p1 = cast(byte*)this.ptr;
         byte *p2 = cast(byte*)a2.ptr;
-        uint n = this.length / 8;
+        auto n = this.length / 8;
         for (i = 0; i < n; i++)
         {
             if (p1[i] != p2[i])
                 return 0;               // not equal
         }
 
-        ubyte mask;
-
         n = this.length & 7;
-        mask = cast(ubyte)((1 << n) - 1);
+        auto mask = cast(ubyte)((1 << n) - 1);
         //printf("i = %d, n = %d, mask = %x, %x, %x\n", i, n, mask, p1[i], p2[i]);
         return (mask == 0) || (p1[i] & mask) == (p2[i] & mask);
     }
@@ -336,29 +333,36 @@ struct BitArray
 
     int opCmp(BitArray a2)
     {
-        uint len;
-        uint i;
+        size_t i;
 
-        len = this.length;
+        auto len = this.length;
         if (a2.length < len)
             len = a2.length;
-        ubyte* p1 = cast(ubyte*)this.ptr;
-        ubyte* p2 = cast(ubyte*)a2.ptr;
-        uint n = len / 8;
+        auto p1 = cast(ubyte*)this.ptr;
+        auto p2 = cast(ubyte*)a2.ptr;
+        auto n = len / 8;
         for (i = 0; i < n; i++)
         {
             if (p1[i] != p2[i])
                 break;          // not equal
         }
-        for (uint j = i * 8; j < len; j++)
-        {   ubyte mask = cast(ubyte)(1 << j);
-            int c;
+        for (auto j = i * 8; j < len; j++)
+        {   auto mask = cast(ubyte)(1 << j);
 
-            c = cast(int)(p1[i] & mask) - cast(int)(p2[i] & mask);
+            auto c = cast(int)(p1[i] & mask) - cast(int)(p2[i] & mask);
             if (c)
                 return c;
         }
-        return cast(int)this.len - cast(int)a2.length;
+	version (D_LP64)
+	{
+	    long c = this.len - a2.length;
+	    if (c < 0)
+		return -1;
+	    else
+		return c != 0;
+	}
+	else
+	    return cast(int)this.len - cast(int)a2.length;
     }
 
     unittest
@@ -875,9 +879,7 @@ struct BitArray
      */
     BitArray opCat(bool b)
     {
-        BitArray r;
-
-        r = this.dup;
+        auto r = this.dup;
         r.length = len + 1;
         r[len] = b;
         return r;

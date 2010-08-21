@@ -125,9 +125,9 @@ DHandlerTable *__eh_finddata(void *address)
  *   caller's EBP
  */
 
-uint __eh_find_caller(uint regbp, uint *pretaddr)
+size_t __eh_find_caller(size_t regbp, size_t *pretaddr)
 {
-    uint bp = *cast(uint *)regbp;
+    size_t bp = *cast(size_t *)regbp;
 
     if (bp)         // if not end of call chain
     {
@@ -137,7 +137,7 @@ uint __eh_find_caller(uint regbp, uint *pretaddr)
             // stack should grow to smaller values
             terminate();
 
-        *pretaddr = *cast(uint *)(regbp + int.sizeof);
+        *pretaddr = *cast(size_t *)(regbp + size_t.sizeof);
     }
     return bp;
 }
@@ -178,7 +178,7 @@ extern (Windows) void _d_throw(Object *h)
         DHandlerTable *handler_table;
         FuncTable *pfunc;
         DHandlerInfo *phi;
-        uint retaddr;
+        size_t retaddr;
         uint funcoffset;
         uint spoff;
         uint retoffset;

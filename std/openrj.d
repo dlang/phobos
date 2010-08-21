@@ -517,7 +517,7 @@ public:
     /**
      *
      */
-    uint numFields()
+    size_t numFields()
     {
         return m_fields.length;
     }
@@ -525,7 +525,7 @@ public:
     /**
      *
      */
-    uint length()
+    size_t length()
     {
         return numFields();
     }
@@ -753,7 +753,7 @@ private:
                     }
                     else
                     {
-                        int colon   =   find(nextLine, ':');
+                        auto colon   =   find(nextLine, ':');
 
                         if(-1 == colon)
                         {
@@ -892,7 +892,7 @@ public:
     /**
      *
      */
-    uint length()
+    size_t length()
     {
         return numRecords();
     }

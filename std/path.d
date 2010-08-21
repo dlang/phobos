@@ -352,7 +352,7 @@ string getDirName(string fullname)
     }
     body
     {
-        uint i;
+        size_t i;
 
         for (i = fullname.length; i > 0; i--)
         {
@@ -1100,7 +1100,7 @@ private string expandFromEnvironment(string path)
  * is joined to path[char_pos .. length] if char_pos is smaller
  * than length, otherwise path is not appended to c_path.
  */
-private string combineCPathWithDPath(char* c_path, string path, int char_pos)
+private string combineCPathWithDPath(char* c_path, string path, size_t char_pos)
 {
     assert(c_path != null);
     assert(path.length > 0);
@@ -1134,12 +1134,12 @@ private string expandFromDatabase(string path)
 
     // Extract username, searching for path separator.
     string username;
-    int last_char = find(path, sep[0]);
+    auto last_char = find(path, sep[0]);
 
     if (last_char == -1)
     {
         username = path[1 .. length] ~ '\0';
-        last_char = username.length + 1;
+        last_char = cast(int)(username.length + 1);
     }
     else
     {

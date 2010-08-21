@@ -36,14 +36,14 @@ module std.gcold;
 import gc;
 
 extern (C)
-ulong _d_newarrayi(size_t length, size_t size, ...)
+void[] _d_newarrayi(size_t length, size_t size, ...)
 {
     void *p;
-    ulong result;
+    void[] result;
 
     //debug(PRINTF) printf("_d_newarrayi(length = %d, size = %d)\n", length, size);
     if (length == 0 || size == 0)
-        result = 0;
+        result = null;
     else
     {
         //void* q = cast(void*)(&size + 1);     // pointer to initializer
@@ -69,20 +69,20 @@ ulong _d_newarrayi(size_t length, size_t size, ...)
             }
         }
         va_end(q);
-        result = cast(ulong)length + (cast(ulong)cast(uint)p << 32);
+	result = (cast(void*)p)[0 .. length];
     }
     return result;
 }
 
 extern (C)
-ulong _d_newarrayii(size_t length, size_t size, size_t isize ...)
+void[] _d_newarrayii(size_t length, size_t size, size_t isize ...)
 {
     void *p;
-    ulong result;
+    void[] result;
 
     //debug(PRINTF) printf("_d_newarrayii(length = %d, size = %d, isize = %d)\n", length, size, isize);
     if (length == 0 || size == 0)
-        result = 0;
+        result = null;
     else
     {
         //void* q = cast(void*)(&size + 1);     // pointer to initializer
@@ -109,20 +109,20 @@ ulong _d_newarrayii(size_t length, size_t size, size_t isize ...)
             }
         }
         va_end(q);
-        result = cast(ulong)length + (cast(ulong)cast(uint)p << 32);
+	result = (cast(void*)p)[0 .. length];
     }
     return result;
 }
 
 extern (C)
-ulong _d_newm(size_t size, int ndims, ...)
+void[] _d_newm(size_t size, int ndims, ...)
 {
-    ulong result;
+    void[] result;
 
     //debug(PRINTF)
         //printf("_d_newm(size = %d, ndims = %d)\n", size, ndims);
     if (size == 0 || ndims == 0)
-        result = 0;
+        result = null;
     else
     {   va_list q;
         va_start!(int)(q, ndims);
@@ -148,7 +148,7 @@ ulong _d_newm(size_t size, int ndims, ...)
         }
 
         size_t* pdim = cast(size_t *)q;
-        result = cast(ulong)foo(pdim, ndims);
+        result = foo(pdim, ndims);
         //printf("result = %llx\n", result);
 
         version (none)
@@ -164,14 +164,14 @@ ulong _d_newm(size_t size, int ndims, ...)
 }
 
 extern (C)
-ulong _d_newarraymi(size_t size, int ndims, ...)
+void[] _d_newarraymi(size_t size, int ndims, ...)
 {
-    ulong result;
+    void[] result;
 
     //debug(PRINTF)
         //printf("_d_newarraymi(size = %d, ndims = %d)\n", size, ndims);
     if (size == 0 || ndims == 0)
-        result = 0;
+        result = null;
     else
     {   void* pinit;            // pointer to initializer
         va_list q;
@@ -207,7 +207,7 @@ ulong _d_newarraymi(size_t size, int ndims, ...)
 
         size_t* pdim = cast(size_t *)q;
         pinit = pdim + ndims;
-        result = cast(ulong)foo(pdim, ndims);
+        result = foo(pdim, ndims);
         //printf("result = %llx\n", result);
 
         version (none)
@@ -229,20 +229,20 @@ ulong _d_newarraymi(size_t size, int ndims, ...)
  */
 
 extern (C)
-ulong _d_new(size_t length, size_t size)
+void[] _d_new(size_t length, size_t size)
 {
     void *p;
-    ulong result;
+    void[] result;
 
     debug(PRINTF) printf("_d_new(length = %d, size = %d)\n", length, size);
     if (length == 0 || size == 0)
-        result = 0;
+        result = null;
     else
     {
         p = _gc.malloc(length * size + 1);
         debug(PRINTF) printf(" p = %p\n", p);
         memset(p, 0, length * size);
-        result = cast(ulong)length + (cast(ulong)cast(uint)p << 32);
+	result = (cast(void*)p)[0 .. length];
     }
     return result;
 }
@@ -652,7 +652,7 @@ Loverflow:
 
 
 extern (C)
-long _d_arrayappend(Array *px, byte[] y, size_t size)
+void[] _d_arrayappend(Array *px, byte[] y, size_t size)
 {
 
     size_t cap = _gc.capacity(px.data);
@@ -667,7 +667,7 @@ long _d_arrayappend(Array *px, byte[] y, size_t size)
     }
     px.length = newlength;
     memcpy(px.data + length * size, y.ptr, y.length * size);
-    return *cast(long*)px;
+    return *cast(void[]*)px;
 }
 
 
@@ -750,29 +750,25 @@ body
 
 extern (C)
 byte[] _d_arraycatn(uint size, uint n, ...)
-{   byte[] a;
-    uint length;
-    byte[]* p;
-    uint i;
-    byte[] b;
+{
+    auto p = cast(byte[]*)(&n + 1);
 
-    p = cast(byte[]*)(&n + 1);
-
-    for (i = 0; i < n; i++)
+    size_t length = 0;
+    for (size_t i = 0; i < n; i++)
     {
-        b = *p++;
+        auto b = *p++;
         length += b.length;
     }
     if (!length)
         return null;
 
-    a = new byte[length * size];
+    auto a = new byte[length * size];
     p = cast(byte[]*)(&n + 1);
 
-    uint j = 0;
-    for (i = 0; i < n; i++)
+    size_t j = 0;
+    for (size_t i = 0; i < n; i++)
     {
-        b = *p++;
+        auto b = *p++;
         if (b.length)
         {
             memcpy(&a[j], b.ptr, b.length * size);
@@ -780,7 +776,7 @@ byte[] _d_arraycatn(uint size, uint n, ...)
         }
     }
 
-    *cast(int *)&a = length;    // jam length
+    *cast(size_t *)&a = length;    // jam length
     //a.length = length;
     return a;
 }
@@ -926,7 +922,7 @@ void* _d_arrayliteral(size_t size, size_t length, ...)
  * Support for array.dup property.
  */
 
-extern (C) long _adDup(Array2 a, int szelem)
+extern (C) void[] _adDup(Array2 a, int szelem)
     out (result)
     {
         assert(memcmp((*cast(Array2*)&result).ptr, a.ptr, a.length * szelem) == 0);
@@ -939,7 +935,7 @@ extern (C) long _adDup(Array2 a, int szelem)
         r.ptr = cast(void *) new byte[size];
         r.length = a.length;
         memcpy(r.ptr, a.ptr, size);
-        return *cast(long*)(&r);
+        return *cast(void[]*)(&r);
     }
 
 unittest

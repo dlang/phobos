@@ -231,8 +231,8 @@ struct MD5_CTX
      */
     void update(void[] input)
     {
-      uint i, index, partLen;
-      uint inputLen = input.length;
+      size_t i, index, partLen;
+      auto inputLen = input.length;
 
       /* Compute number of bytes mod 64 */
       index = (cast(uint)count >> 3) & (64 - 1);

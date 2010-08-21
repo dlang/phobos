@@ -502,7 +502,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
             //printf("flags = x%x\n", flags);
             int prepad = 0;
             int postpad = 0;
-            int padding = field_width - (strlen(prefix) + toUCSindex(s, s.length));
+            int padding = field_width - cast(int)(strlen(prefix) + toUCSindex(s, s.length));
             if (padding > 0)
             {
                 if (flags & FLdash)
@@ -571,7 +571,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
             }
             else
             {
-                int sl;
+                size_t sl;
                 char[] fbuf = tmpbuf;
                 char[12] format;
                 format[0] = '%';
@@ -595,10 +595,9 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
                 if (!(flags & FLprecision))
                     precision = -1;
                 while (1)
-                {   int n;
-
+                {
                     sl = fbuf.length;
-                    n = snprintf(fbuf.ptr, sl, format.ptr, field_width, precision, v);
+                    auto n = snprintf(fbuf.ptr, sl, format.ptr, field_width, precision, v);
                     //printf("format = '%s', n = %d\n", cast(char*)format, n);
                     if (n >= 0 && n < sl)
                     {   sl = n;
@@ -1015,7 +1014,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
             }
         }
 
-        int n = tmpbuf.length;
+        auto n = tmpbuf.length;
         char c;
         int hexoffset = uc ? ('A' - ('9' + 1)) : ('a' - ('9' + 1));
 
@@ -1029,7 +1028,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
         }
         if (tmpbuf.length - n < precision && precision < tmpbuf.length)
         {
-            int m = tmpbuf.length - precision;
+            auto m = tmpbuf.length - precision;
             tmpbuf[m .. n] = '0';
             n = m;
         }

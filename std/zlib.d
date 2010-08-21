@@ -59,7 +59,8 @@ class ZlibException : Exception
 
 uint adler32(uint adler, void[] buf)
 {
-    return etc.c.zlib.adler32(adler, cast(ubyte *)buf, buf.length);
+    assert(cast(uint)buf.length == buf.length);
+    return etc.c.zlib.adler32(adler, cast(ubyte *)buf, cast(uint)buf.length);
 }
 
 unittest
@@ -81,7 +82,8 @@ unittest
 
 uint crc32(uint crc, void[] buf)
 {
-    return etc.c.zlib.crc32(crc, cast(ubyte *)buf, buf.length);
+    assert(cast(uint)buf.length == buf.length);
+    return etc.c.zlib.crc32(crc, cast(ubyte *)buf, cast(uint)buf.length);
 }
 
 unittest
@@ -115,9 +117,9 @@ body
     ubyte[] destbuf;
     uint destlen;
 
-    destlen = srcbuf.length + ((srcbuf.length + 1023) / 1024) + 12;
+    destlen = cast(uint)(srcbuf.length + ((srcbuf.length + 1023) / 1024) + 12);
     destbuf = new ubyte[destlen];
-    err = etc.c.zlib.compress2(destbuf.ptr, &destlen, cast(ubyte *)srcbuf, srcbuf.length, level);
+    err = etc.c.zlib.compress2(destbuf.ptr, &destlen, cast(ubyte *)srcbuf, cast(uint)srcbuf.length, level);
     if (err)
     {   delete destbuf;
         throw new ZlibException(err);
@@ -144,7 +146,7 @@ void[] compress(void[] buf)
  * Returns: the decompressed data.
  */
 
-void[] uncompress(void[] srcbuf, uint destlen = 0u, int winbits = 15)
+void[] uncompress(void[] srcbuf, size_t destlen = 0u, int winbits = 15)
 {
     int err;
     ubyte[] destbuf;
@@ -159,10 +161,10 @@ void[] uncompress(void[] srcbuf, uint destlen = 0u, int winbits = 15)
         destbuf = new ubyte[destlen];
 
         zs.next_in = cast(ubyte*) srcbuf;
-        zs.avail_in = srcbuf.length;
+        zs.avail_in = cast(typeof(zs.avail_in))srcbuf.length;
 
         zs.next_out = destbuf.ptr;
-        zs.avail_out = destlen;
+        zs.avail_out = cast(typeof(zs.avail_in))destlen;
 
         err = etc.c.zlib.inflateInit2(&zs, winbits);
         if (err)
@@ -215,7 +217,7 @@ the quick brown fox jumps over the lazy dog\r
 void arrayPrint(ubyte[] array)
 {
     //printf("array %p,%d\n", (void*)array, array.length);
-    for (int i = 0; i < array.length; i++)
+    for (size_t i = 0; i < array.length; i++)
     {
         printf("%02x ", array[i]);
         if (((i + 1) & 15) == 0)
@@ -299,13 +301,13 @@ class Compress
 
         destbuf = new ubyte[zs.avail_in + buf.length];
         zs.next_out = destbuf.ptr;
-        zs.avail_out = destbuf.length;
+        zs.avail_out = cast(typeof(zs.avail_out))destbuf.length;
 
         if (zs.avail_in)
             buf = zs.next_in[0 .. zs.avail_in] ~ cast(ubyte[]) buf;
 
         zs.next_in = cast(ubyte*) buf.ptr;
-        zs.avail_in = buf.length;
+        zs.avail_in = cast(typeof(zs.avail_in))buf.length;
 
         err = deflate(&zs, Z_NO_FLUSH);
         if (err != Z_STREAM_END && err != Z_OK)
@@ -396,7 +398,7 @@ class UnCompress
     z_stream zs;
     int inited;
     int done;
-    uint destbufsize;
+    size_t destbufsize;
 
     void error(int err)
     {
@@ -464,13 +466,13 @@ class UnCompress
             destbufsize = buf.length * 2;
         destbuf = new ubyte[zs.avail_in * 2 + destbufsize];
         zs.next_out = destbuf.ptr;
-        zs.avail_out = destbuf.length;
+        zs.avail_out = cast(typeof(zs.avail_out))destbuf.length;
 
         if (zs.avail_in)
             buf = zs.next_in[0 .. zs.avail_in] ~ buf;
 
         zs.next_in = cast(ubyte*) buf;
-        zs.avail_in = buf.length;
+        zs.avail_in = cast(typeof(zs.avail_in))buf.length;
 
         err = inflate(&zs, Z_NO_FLUSH);
         if (err != Z_STREAM_END && err != Z_OK)
@@ -508,7 +510,7 @@ class UnCompress
       L1:
         destbuf = new ubyte[zs.avail_in * 2 + 100];
         zs.next_out = destbuf.ptr;
-        zs.avail_out = destbuf.length;
+        zs.avail_out = cast(typeof(zs.avail_out))destbuf.length;
 
         err = etc.c.zlib.inflate(&zs, Z_NO_FLUSH);
         if (err == Z_OK && zs.avail_out == 0)

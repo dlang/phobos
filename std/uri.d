@@ -92,27 +92,21 @@ static this()
 
 
 private char[] URI_Encode(dchar[] string, uint unescapedSet)
-{   uint len;
-    uint j;
-    uint k;
-    dchar V;
-    dchar C;
-
+{
     // result buffer
     char[50] buffer = void;
-    char* R;
-    uint Rlen;
-    uint Rsize; // alloc'd size
+    size_t Rlen;
+    size_t Rsize; // alloc'd size
 
-    len = string.length;
+    auto len = string.length;
 
-    R = buffer.ptr;
+    auto R = buffer.ptr;
     Rsize = buffer.length;
     Rlen = 0;
 
-    for (k = 0; k != len; k++)
+    for (size_t k = 0; k != len; k++)
     {
-        C = string[k];
+        auto C = string[k];
         // if (C in unescapedSet)
         if (C < uri_flags.length && uri_flags[C] & unescapedSet)
         {
@@ -135,9 +129,9 @@ private char[] URI_Encode(dchar[] string, uint unescapedSet)
         }
         else
         {   char[6] Octet;
-            uint L;
+            size_t L;
 
-            V = C;
+            auto V = C;
 
             // Transform V into octets
             if (V <= 0x7F)
@@ -206,7 +200,7 @@ private char[] URI_Encode(dchar[] string, uint unescapedSet)
                 R = R2;
             }
 
-            for (j = 0; j < L; j++)
+            for (size_t j = 0; j < L; j++)
             {
                 R[Rlen] = '%';
                 R[Rlen + 1] = hex2ascii[Octet[j] >> 4];
@@ -217,7 +211,7 @@ private char[] URI_Encode(dchar[] string, uint unescapedSet)
         }
     }
 
-    char[] result = new char[Rlen];
+    auto result = new char[Rlen];
     result[] = R[0..Rlen];
     return result;
 
@@ -233,25 +227,20 @@ uint ascii2hex(dchar c)
 }
 
 private dchar[] URI_Decode(char[] string, uint reservedSet)
-{   uint len;
-    uint j;
-    uint k;
+{
     uint V;
-    dchar C;
-    char* s;
 
     //printf("URI_Decode('%.*s')\n", string);
 
     // Result array, allocated on stack
     dchar* R;
-    uint Rlen;
-    uint Rsize; // alloc'd size
+    size_t Rlen = 0;
 
-    len = string.length;
-    s = string.ptr;
+    auto len = string.length;
+    auto s = string.ptr;
 
     // Preallocate result buffer R guaranteed to be large enough for result
-    Rsize = len;
+    auto Rsize = len;		// alloc'd size
     if (Rsize > 1024 / dchar.sizeof)
         R = (new dchar[Rsize]).ptr;
     else
@@ -259,24 +248,21 @@ private dchar[] URI_Decode(char[] string, uint reservedSet)
         if (!R)
             goto LthrowURIerror;
     }
-    Rlen = 0;
 
-    for (k = 0; k != len; k++)
-    {   char B;
-        uint start;
-
-        C = s[k];
+    for (size_t k = 0; k != len; k++)
+    {
+        dchar C = s[k];
         if (C != '%')
         {   R[Rlen] = C;
             Rlen++;
             continue;
         }
-        start = k;
+        auto start = k;
         if (k + 2 >= len)
             goto LthrowURIerror;
         if (!isxdigit(s[k + 1]) || !isxdigit(s[k + 2]))
             goto LthrowURIerror;
-        B = cast(char)((ascii2hex(s[k + 1]) << 4) + ascii2hex(s[k + 2]));
+        auto B = cast(char)((ascii2hex(s[k + 1]) << 4) + ascii2hex(s[k + 2]));
         k += 2;
         if ((B & 0x80) == 0)
         {
@@ -302,7 +288,7 @@ private dchar[] URI_Decode(char[] string, uint reservedSet)
 
             if (k + (3 * (n - 1)) >= len)
                 goto LthrowURIerror;
-            for (j = 1; j != n; j++)
+            for (uint j = 1; j != n; j++)
             {
                 k++;
                 if (s[k] != '%')
@@ -322,8 +308,8 @@ private dchar[] URI_Decode(char[] string, uint reservedSet)
         if (C < uri_flags.length && uri_flags[C] & reservedSet)
         {
             // R ~= s[start .. k + 1];
-            int width = (k + 1) - start;
-            for (int ii = 0; ii < width; ii++)
+            auto width = (k + 1) - start;
+            for (size_t ii = 0; ii < width; ii++)
                 R[Rlen + ii] = s[start + ii];
             Rlen += width;
         }
@@ -353,9 +339,7 @@ LthrowURIerror:
 
 char[] decode(char[] encodedURI)
 {
-    dchar[] s;
-
-    s = URI_Decode(encodedURI, URI_Reserved | URI_Hash);
+    auto s = URI_Decode(encodedURI, URI_Reserved | URI_Hash);
     return std.utf.toUTF8(s);
 }
 
@@ -366,9 +350,7 @@ char[] decode(char[] encodedURI)
 
 char[] decodeComponent(char[] encodedURIComponent)
 {
-    dchar[] s;
-
-    s = URI_Decode(encodedURIComponent, 0);
+    auto s = URI_Decode(encodedURIComponent, 0);
     return std.utf.toUTF8(s);
 }
 
@@ -379,9 +361,7 @@ char[] decodeComponent(char[] encodedURIComponent)
 
 char[] encode(char[] uri)
 {
-    dchar[] s;
-
-    s = std.utf.toUTF32(uri);
+    auto s = std.utf.toUTF32(uri);
     return URI_Encode(s, URI_Reserved | URI_Hash | URI_Alpha | URI_Digit | URI_Mark);
 }
 
@@ -392,9 +372,7 @@ char[] encode(char[] uri)
 
 char[] encodeComponent(char[] uriComponent)
 {
-    dchar[] s;
-
-    s = std.utf.toUTF32(uriComponent);
+    auto s = std.utf.toUTF32(uriComponent);
     return URI_Encode(s, URI_Alpha | URI_Digit | URI_Mark);
 }
 
@@ -402,8 +380,8 @@ unittest
 {
     debug(uri) printf("uri.encodeURI.unittest\n");
 
-    char[] s = "http://www.digitalmars.com/~fred/fred's RX.html#foo";
-    char[] t = "http://www.digitalmars.com/~fred/fred's%20RX.html#foo";
+    string s = "http://www.digitalmars.com/~fred/fred's RX.html#foo";
+    string t = "http://www.digitalmars.com/~fred/fred's%20RX.html#foo";
     char[] r;
 
     r = encode(s);
