@@ -481,7 +481,6 @@ assert(c == false);
 --------------------
  */
 template isUnsafe(alias FN)
-	if (isCallable!func)
 {
 	enum isUnsafe = !isSafe!FN;
 }
