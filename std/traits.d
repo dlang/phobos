@@ -402,6 +402,105 @@ unittest
 }
 
 
+private @safe void dummySafeFunc(alias FN)()
+{
+	alias ParameterTypeTuple!FN Params;
+	static if (Params.length)
+	{
+		Params args;
+		FN(args);
+	}
+	else
+	{
+		FN();
+	}
+}
+
+
+/**
+Checks the func that is @safe or @trusted
+
+Example:
+--------------------
+@system int add(int a, int b) {return a+b;} 
+@safe int sub(int a, int b) {return a-b;} 
+@trusted int mul(int a, int b) {return a*b;} 
+
+bool a = isUnsafe!(add);
+assert(a == false);
+bool b = isUnsafe!(sub);
+assert(b == true);
+bool c = isUnsafe!(mul);
+assert(c == true);
+--------------------
+ */
+template isSafe(alias FN)
+{
+    static if (is(typeof(FN) == function))
+    {
+        enum isSafe = (functionAttributes!(FN) == FunctionAttribute.SAFE
+                    || functionAttributes!(FN) == FunctionAttribute.TRUSTED);
+    }
+    else
+    {
+        enum isSafe = is(typeof({dummySafeFunc!FN();}()));
+    }
+}
+
+@safe
+unittest
+{
+    interface Set
+    {
+        int systemF() @system;
+        int trustedF() @trusted;
+        int safeF() @safe;
+    }
+    static assert(isSafe!((int a){}));
+    static assert(isSafe!(Set.safeF));
+    static assert(isSafe!(Set.trustedF));
+    static assert(!isSafe!(Set.systemF));
+}
+
+
+/**
+Checks the func that is @system
+
+Example:
+--------------------
+@system int add(int a, int b) {return a+b;} 
+@safe int sub(int a, int b) {return a-b;} 
+@trusted int mul(int a, int b) {return a*b;} 
+
+bool a = isUnsafe!(add);
+assert(a == true);
+bool b = isUnsafe!(sub);
+assert(b == false);
+bool c = isUnsafe!(mul);
+assert(c == false);
+--------------------
+ */
+template isUnsafe(alias FN)
+	if (isCallable!func)
+{
+	enum isUnsafe = !isSafe!FN;
+}
+
+@safe
+unittest
+{
+    interface Set
+    {
+        int systemF() @system;
+        int trustedF() @trusted;
+        int safeF() @safe;
+    }
+    static assert(!isUnsafe!((int a){}));
+    static assert(!isUnsafe!(Set.safeF));
+    static assert(!isUnsafe!(Set.trustedF));
+    static assert(isUnsafe!(Set.systemF));
+}
+
 /**
 Returns the calling convention of function as a string.
 
