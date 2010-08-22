@@ -834,16 +834,11 @@ is a random access range and if $(D R) defines $(D R.length).
  */
     static if (isRandomAccessRange!(R) && hasLength!(R))
     {
-        static if (byRef)
-            auto ref ElementType!R opIndex(uint n)
-            {
-                return _input[_input.length - n - 1];
-            }
-        else
-            ElementType!R opIndex(uint n)
-            {
-                return _input[_input.length - n - 1];
-            }
+        auto ref opIndex(size_t n)
+        {
+            return _input[_input.length - n - 1];
+        }
+
         static if (hasSlicing!R)
             typeof(this) opSlice(size_t a, size_t b)
             {
@@ -1021,7 +1016,7 @@ Forwards to $(D _input.popFront).
     static if (isBidirectionalRange!(R) && hasLength!(R))
         void popBack()
         {
-            enforce(_input.length >= _n);
+            assert(_input.length >= _n);
             static if (isRandomAccessRange!(R) && hasSlicing!(R))
             {
                 _input = _input[0 .. _input.length - _n];
@@ -1071,7 +1066,7 @@ Support slicing of the $(D Stride), if the underlying range supports this.
     static if(hasSlicing!R && hasLength!R)
         typeof(this) opSlice(size_t lower, size_t upper)
         {
-            enforce(upper >= lower && upper <= length);
+            assert(upper >= lower && upper <= length);
             immutable translatedLower = lower * _n;
             immutable translatedUpper = (upper == 0) ? 0 :
                                          (upper * _n - (_n - 1));
@@ -1230,11 +1225,11 @@ private:
     }
     enum bool allSameType = allSatisfy!(sameET, R);
 
-        // This doesn't work yet
-	    static if (allSameType)
-            alias ref RvalueElementType ElementType;
- 	    else
-            alias RvalueElementType ElementType;
+    // This doesn't work yet
+    static if (allSameType)
+        alias ref RvalueElementType ElementType;
+    else
+        alias RvalueElementType ElementType;
 
     static if(allSameType && allSatisfy!(hasLvalueElements, R))
     {
@@ -1316,8 +1311,7 @@ public:
         // @@@BUG@@@
         //@property void front(T)(T v) if (is(T : RvalueElementType))
 
-        // Return type must be auto due to extremely strange bug in DMD's
-        // function overloading.
+        // Return type must be auto due to Bug 4706.
         @property auto front(RvalueElementType v)
         {
             foreach (i, Unused; R)
@@ -1669,16 +1663,14 @@ element. Throws if the range is empty.
  */
     @property auto ref front()
     {
-        enforce(!empty, "Calling front() against an empty "
+        assert(!empty, "Calling front() against an empty "
                 ~typeof(this).stringof);
         if (!_upIsActive)
         {
-            // @@@ Damndest thing... removing the enforce below causes
-            // a segfault in release unittest
-            enforce(!_low.empty);
+            assert(!_low.empty);
             return _low.back;
         }
-        enforce(!_up.empty);
+        assert(!_up.empty);
         return _up.front;
     }
 
@@ -1769,7 +1761,7 @@ public:
 
     void popFront()
     {
-        enforce(_maxAvailable > 0,
+        assert(_maxAvailable > 0,
             "Attempting to popFront() past the end of a "
             ~ Take.stringof);
         original.popFront;
@@ -1778,7 +1770,7 @@ public:
 
     @property auto ref front()
     {
-        enforce(_maxAvailable > 0,
+        assert(_maxAvailable > 0,
                 "Attempting to fetch the front of an empty "
                 ~ Take.stringof);
         return original.front;
@@ -1815,7 +1807,7 @@ public:
     {
         void popBack()
         {
-            enforce(_maxAvailable > 0,
+            assert(_maxAvailable > 0,
                 "Attempting to popBack() past the beginning of a "
                 ~ Take.stringof);
             --_maxAvailable;
@@ -1828,7 +1820,7 @@ public:
 
         auto ref opIndex(size_t index)
         {
-            enforce(index < this.length,
+            assert(index < this.length,
                 "Attempting to index out of the bounds of a "
                 ~ Take.stringof);
             return original[index];
@@ -1842,7 +1834,7 @@ public:
                 original[this.length - 1] = v;
             }
 
-            void opIndexAssign(ElementType v)
+            void opIndexAssign(ElementType v, size_t index)
             {
                 original[index] = v;
             }
@@ -3273,7 +3265,7 @@ struct Iota(N, S) if ((isIntegral!N || isPointer!N) && isIntegral!S) {
     /// Ditto
     typeof(this) opSlice(size_t lower, size_t upper)
     {
-        enforce(upper >= lower && upper <= this.length);
+        assert(upper >= lower && upper <= this.length);
 
         auto ret = this;
         ret.current += lower * step;
@@ -3323,13 +3315,13 @@ struct Iota(N, S) if (isFloatingPoint!N && isNumeric!S) {
     /// Ditto
     void popFront()
     {
-        enforce(!empty);
+        assert(!empty);
         ++index;
     }
     /// Ditto
     @property N back()
     {
-        enforce(!empty);
+        assert(!empty);
         return start + step * (count - 1);
     }
     /// Ditto
@@ -3337,7 +3329,7 @@ struct Iota(N, S) if (isFloatingPoint!N && isNumeric!S) {
     /// Ditto
     void popBack()
     {
-        enforce(!empty);
+        assert(!empty);
         --count;
     }
     /// Ditto
@@ -3345,7 +3337,7 @@ struct Iota(N, S) if (isFloatingPoint!N && isNumeric!S) {
     /// Ditto
     N opIndex(size_t n)
     {
-        enforce(n < count);
+        assert(n < count);
         return start + step * (n + index);
     }
     /// Ditto
@@ -3356,7 +3348,7 @@ struct Iota(N, S) if (isFloatingPoint!N && isNumeric!S) {
     /// Ditto
     typeof(this) opSlice(size_t lower, size_t upper)
     {
-        enforce(upper >= lower && upper <= count);
+        assert(upper >= lower && upper <= count);
 
         auto ret = this;
         ret.index += lower;
@@ -3593,6 +3585,7 @@ isBidirectionalRange!RangeOfRanges).
  */
         @property auto ref back()
         {
+            assert(!empty);
             return _input.back.front;
         }
 /// Ditto
