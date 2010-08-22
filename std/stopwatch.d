@@ -841,24 +841,24 @@ unittest
 }
 
 
-/*******************************************************************************
- * Scope base measuring time.
- * 
- * When a value that is returned by this function is destroyed, FN will run.
- * FN is unaly function that requires Ticks.
- * 
- * Excample:
- *------------------------------------------------------------------------------
- *writeln("benchmark start!");
- *{
- *    auto mt = measureTime!((a){assert(a.seconds);});
- *    doSomething();
- *}
- *writeln("benchmark end!");
- *------------------------------------------------------------------------------
- */
 @safe
 {
+    /***************************************************************************
+     * Scope base measuring time.
+     * 
+     * When a value that is returned by this function is destroyed, FN will run.
+     * FN is unaly function that requires Ticks.
+     * 
+     * Excample:
+     *--------------------------------------------------------------------------
+     *writeln("benchmark start!");
+     *{
+     *    auto mt = measureTime!((a){assert(a.seconds);});
+     *    doSomething();
+     *}
+     *writeln("benchmark end!");
+     *--------------------------------------------------------------------------
+     */
     auto measureTime(alias func)()
         if (isSafe!func)
     {
