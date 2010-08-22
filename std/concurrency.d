@@ -405,6 +405,26 @@ void receive(T...)( T ops )
 }
 
 
+unittest
+{
+    assert( __traits( compiles,
+                      {
+                          receive( (Variant x) {} );
+                          receive( (int x) {}, (Variant x) {} );
+                      } ) );
+                       
+    assert( !__traits( compiles,
+                       {
+                           receive( (Variant x) {}, (int x) {} );
+                       } ) );
+
+    assert( !__traits( compiles,
+                       {
+                           receive( (int x) {}, (int x) {} );
+                       } ) );
+}
+
+
 private template receiveOnlyRet(T...)
 {
     static if( T.length == 1 )
@@ -444,6 +464,26 @@ bool receiveTimeout(T...)( long ms, T ops )
     checkops( ops );    
     static enum long TICKS_PER_MILLI = 10_000;
     return mbox.get( ms * TICKS_PER_MILLI, ops );
+}
+
+
+unittest
+{
+    assert( __traits( compiles,
+                      {
+                          receiveTimeout( 0, (Variant x) {} );
+                          receiveTimeout( 0, (int x) {}, (Variant x) {} );
+                      } ) );
+
+    assert( !__traits( compiles,
+                       {
+                           receiveTimeout( 0, (Variant x) {}, (int x) {} );
+                       } ) );
+                      
+    assert( !__traits( compiles,
+                       {
+                           receiveTimeout( 0, (int x) {}, (int x) {} );
+                       } ) );
 }
 
 
