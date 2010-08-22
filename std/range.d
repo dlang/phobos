@@ -1073,7 +1073,8 @@ Support slicing of the $(D Stride), if the underlying range supports this.
         {
             enforce(upper >= lower && upper <= length);
             immutable translatedLower = lower * _n;
-            immutable translatedUpper = upper * _n - (_n - 1);
+            immutable translatedUpper = (upper == 0) ? 0 :
+                                         (upper * _n - (_n - 1));
             return typeof(this)(_input[translatedLower..translatedUpper], _n);
         }
 
@@ -1117,12 +1118,14 @@ unittest
     assert(s1[1..4].length == 3);
     assert(equal(s1[1..5], [2, 3, 4, 5]));
     assert(s1[1..5].length == 4);
+    assert(s1[0..0].empty);
 
     auto s2 = stride(arr, 2);
     assert(equal(s2[0..2], [1,3]));
     assert(s2[0..2].length == 2);
     assert(equal(s2[1..5], [3, 5, 7, 9]));
     assert(s2[1..5].length == 4);
+    assert(s2[0..0].empty);
 
     // Check for infiniteness propagation.
     static assert(isInfinite!(typeof(stride(repeat(1), 3))));
