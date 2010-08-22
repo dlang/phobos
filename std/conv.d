@@ -1232,8 +1232,17 @@ if (isInputRange!Source && /*!isSomeString!Source && */isFloatingPoint!Target)
         default: {}
     }
 
-    const bool isHex = p.front == '0'
-        && (p.popFront(), p.front == 'x' || p.front == 'X');
+    bool isHex = p.front == '0';
+    if(isHex)
+    {
+        p.popFront();
+        if(p.empty)
+        {
+            return (sign) ? -0 : 0;
+        }
+
+        isHex = isHex && (p.front == 'x' || p.front == 'X');
+    }
 
     real ldval = 0.0;
     char dot = 0;                        /* if decimal point has been seen */
@@ -2288,6 +2297,9 @@ unittest
     f = to!float( ".456" );
     assert( f == .456f );
 
+    assert(to!float("0") == 0f);
+    assert(to!float("-0") == -0f);
+
     // min and max
     try
     {
@@ -2345,6 +2357,9 @@ unittest
     assert( d == .456 );
     d = to!double( "1.23456E+2" );
     assert( d == 1.23456E+2 );
+
+    assert(to!double("0") == 0.0);
+    assert(to!double("-0") == -0.0);
 
     // min and max
     try
@@ -2407,6 +2422,9 @@ unittest
     assert(feq(r,  1.23456e+2L));
     r = to!real(to!string(real.max / 2L));
     assert(to!string(r) == to!string(real.max / 2L));
+
+    assert(to!real("0") == 0.0L);
+    assert(to!real("-0") == -0.0L);
 
     // min and max
     try
