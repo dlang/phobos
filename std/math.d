@@ -434,7 +434,7 @@ trigerr:
 Lret:
     ;
     } else {
-        return stdc.math.tanl(x);
+        return core.stdc.math.tanl(x);
     }
 }
 
@@ -3656,7 +3656,7 @@ body
     }
     else
     {
-        int i = A.length - 1;
+        sizediff_t i = A.length - 1;
         real r = A[i];
         while (--i >= 0)
         {

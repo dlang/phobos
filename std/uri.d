@@ -80,7 +80,7 @@ shared static this()
 
 
 private string URI_Encode(dstring string, uint unescapedSet)
-{   uint len;
+{
     uint j;
     uint k;
     dchar V;
@@ -92,7 +92,7 @@ private string URI_Encode(dstring string, uint unescapedSet)
     uint Rlen;
     uint Rsize; // alloc'd size
 
-    len = string.length;
+    auto len = string.length;
 
     R = buffer.ptr;
     Rsize = buffer.length;
@@ -219,7 +219,7 @@ uint ascii2hex(dchar c)
 }
 
 private dstring URI_Decode(string string, uint reservedSet)
-{   uint len;
+{
     uint j;
     uint k;
     uint V;
@@ -230,13 +230,12 @@ private dstring URI_Decode(string string, uint reservedSet)
     // Result array, allocated on stack
     dchar* R;
     uint Rlen;
-    uint Rsize; // alloc'd size
 
-    len = string.length;
+    auto len = string.length;
     auto s = string.ptr;
 
     // Preallocate result buffer R guaranteed to be large enough for result
-    Rsize = len;
+    auto Rsize = len;
     if (Rsize > 1024 / dchar.sizeof)
     R = (new dchar[Rsize]).ptr;
     else

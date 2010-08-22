@@ -194,11 +194,14 @@ struct Box
         }
         else
         {
-            /* Use the name returned from toString, which might (but hopefully doesn't) include an allocation. */
+            /* Use the name returned from toString, which might (but
+             * hopefully doesn't) include an allocation. */
             switch (type.toString)
             {
                 case "bool": return TypeClass.Bool;
-                case "byte", "ubyte", "short", "ushort", "int", "uint", "long", "ulong": return TypeClass.Integer;
+                case "byte", "ubyte", "short", "ushort", "int", "uint",
+                    "long", "ulong":
+                    return TypeClass.Integer;
                 case "float", "real", "double": return TypeClass.Float;
                 case "cfloat", "cdouble", "creal": return TypeClass.Complex;
                 case "ifloat", "idouble", "ireal": return TypeClass.Imaginary;
@@ -279,6 +282,7 @@ struct Box
         TypeInfo[2] arguments;
         char[] str;
         void[] args = new void[(string).sizeof + data.length];
+        scope(exit) delete args;
         string format = "%s";
 
         arguments[0] = typeid(char[]);
@@ -292,7 +296,6 @@ struct Box
         args[0..(char[]).sizeof] = (cast(void*) &format)[0..(char[]).sizeof];
         args[(char[]).sizeof..$] = data;
         std.format.doFormat(&putc, arguments, args.ptr);
-        delete args;
 
         return assumeUnique(str);
     }

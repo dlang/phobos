@@ -4,7 +4,7 @@
  * Read/write data in the $(LINK2 http://www.info-_zip.org, zip archive) format.
  * Makes use of the etc.c.zlib compression library.
  *
- * Bugs: 
+ * Bugs:
  *      $(UL
  *      $(LI Multi-disk zips not supported.)
  *      $(LI Only Zip version 20 formats are supported.)
@@ -34,6 +34,7 @@ module std.zip;
 private import std.zlib;
 private import std.date;
 private import std.intrinsic;
+import std.conv;
 
 //debug=print;
 
@@ -183,7 +184,7 @@ class ZipArchive
         uint directorySize = 0;
         foreach (ArchiveMember de; directory)
         {
-            de.expandedSize = de.expandedData.length;
+            de.expandedSize = to!uint(de.expandedData.length);
             switch (de.compressionMethod)
             {
                 case 0:
@@ -198,7 +199,7 @@ class ZipArchive
                 default:
                     throw new ZipException("unsupported compression method");
             }
-            de.compressedSize = de.compressedData.length;
+            de.compressedSize = to!uint(de.compressedData.length);
             de.crc32 = std.zlib.crc32(0, cast(void[])de.expandedData);
 
             archiveSize += 30 + de.name.length +
@@ -225,7 +226,7 @@ class ZipArchive
             putUint  (i + 10, cast(uint)de.time);
             putUint  (i + 14, de.crc32);
             putUint  (i + 18, de.compressedSize);
-            putUint  (i + 22, de.expandedData.length);
+            putUint  (i + 22, to!uint(de.expandedData.length));
             putUshort(i + 26, cast(ushort)de.name.length);
             putUshort(i + 28, cast(ushort)de.extra.length);
             i += 30;
@@ -317,10 +318,10 @@ class ZipArchive
         this.data = cast(ubyte[]) buffer;
 
         // Find 'end record index' by searching backwards for signature
-        iend = data.length - 66000;
+        iend = to!uint(data.length) - 66000;
         if (iend < 0)
             iend = 0;
-        for (i = data.length - 22; 1; i--)
+        for (i = to!uint(data.length) - 22; 1; i--)
         {
             if (i < iend)
                 throw new ZipException("no end record");

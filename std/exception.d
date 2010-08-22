@@ -356,39 +356,6 @@ version(none) unittest
 }
 
 /**
-Passes the type system the information that $(D range) is already
-sorted by predicate $(D pred). No checking is performed; debug builds
-may insert checks randomly. To insert a check, see $(XREF algorithm,
-isSorted).
- */
-struct AssumeSorted(Range, alias pred = "a < b")
-{
-    /// Alias for $(D Range).
-    alias Range AssumeSorted;
-    /// The passed-in range.
-    Range assumeSorted;
-    /// The sorting predicate.
-    alias pred assumeSortedBy;
-}
-
-/// Ditto
-AssumeSorted!(Range, pred) assumeSorted(alias pred = "a < b", Range)
-(Range r)
-{
-    AssumeSorted!(Range, pred) result;
-    result.assumeSorted = r;
-    return result;
-}
-
-unittest
-{
-    static assert(is(AssumeSorted!(int[]).AssumeSorted == int[]));
-    int[] a = [ 1, 2 ];
-    auto b = assumeSorted(a);
-    assert(b.assumeSorted == a);
-}
-
-/**
 Returns $(D true) if $(D source)'s representation embeds a pointer
 that points to $(D target)'s representation or somewhere inside
 it. Note that evaluating $(D pointsTo(x, x)) checks whether $(D x) has

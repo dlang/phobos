@@ -800,8 +800,10 @@ private:
             static if (size_t.max == ulong.max)
             {
                 return p[7] + (p[8] << 8) + (p[9] << 16) + (p[10] << 24)
-                    + (p[11] << 32) + (p[12] << 40) + (p[13] << 48) +
-                    (p[14] << 56);
+                    + (cast(size_t) p[11] << 32UL)
+                    + (cast(size_t) p[12] << 40UL)
+                    + (cast(size_t) p[13] << 48UL)
+                    + (cast(size_t) p[14] << 56UL);
             }
         }
         assert(0);

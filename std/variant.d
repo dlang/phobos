@@ -730,7 +730,7 @@ public:
      * Computes the hash of the held value.
      */
 
-    uint toHash()
+    size_t toHash()
     {
         return type.getHash(&store);
     }

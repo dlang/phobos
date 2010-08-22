@@ -439,7 +439,7 @@ string decode(string s, DecodeMode mode=DecodeMode.LOOSE)
     if (mode == DecodeMode.NONE) return s;
 
     char[] buffer;
-    for (int i=0; i<s.length; ++i)
+    foreach (i; 0 .. s.length)
     {
         char c = s[i];
         if (c != '&')
@@ -823,9 +823,9 @@ class Element : Item
     override bool opEquals(Object o)
     {
         const element = toType!(const Element)(o);
-        uint len = items.length;
+        auto len = items.length;
         if (len != element.items.length) return false;
-        for (uint i=0; i<len; ++i)
+        foreach (i; 0 .. len)
         {
             if (!items[i].opEquals(element.items[i])) return false;
         }
@@ -944,7 +944,7 @@ class Element : Item
             if (isEmptyXML) return tag.toEmptyString;
 
             string buffer = tag.toStartString;
-            foreach(item;items) { buffer ~= item.toString; }
+            foreach (item;items) { buffer ~= item.toString; }
             buffer ~= tag.toEndString;
             return buffer;
         }
@@ -2070,8 +2070,8 @@ class ElementParser
      */
     const override string toString()
     {
-        int n = elementStart.length - s.length;
-        return elementStart[0..n];
+        assert(elementStart.length >= s.length);
+        return elementStart[0 .. elementStart.length - s.length];
     }
 
 }
@@ -2214,7 +2214,7 @@ private
         mixin Check!("Comment");
 
         try { checkLiteral("<!--",s); } catch(Err e) { fail(e); }
-        int n = s.indexOf("--");
+        sizediff_t n = s.indexOf("--");
         if (n == -1) fail("unterminated comment");
         s = s[n..$];
         try { checkLiteral("-->",s); } catch(Err e) { fail(e); }
@@ -2554,7 +2554,7 @@ private
     {
         // Deliberately no mixin Check here.
 
-        int n = s.indexOf(end);
+        auto n = s.indexOf(end);
         if (n == -1) throw new Err(s,"Unable to find terminating \""~end~"\"");
         s = s[n..$];
         checkLiteral(end,s);
@@ -2770,8 +2770,8 @@ class CheckException : XMLException
      * or specific error message
      */
     string msg;
-    uint line = 0; /// Line number at which parse failure occurred
-    uint column = 0; /// Column number at which parse failure occurred
+    size_t line = 0; /// Line number at which parse failure occurred
+    size_t column = 0; /// Column number at which parse failure occurred
 
     private this(string tail,string msg,Err err=null)
     {
@@ -2784,7 +2784,7 @@ class CheckException : XMLException
     private void complete(string entire)
     {
         string head = entire[0..$-tail.length];
-        int n = head.lastIndexOf('\n') + 1;
+        sizediff_t n = head.lastIndexOf('\n') + 1;
         line = head.count("\n") + 1;
         dstring t;
         transcode(head[n..$],t);
@@ -2820,7 +2820,7 @@ private
         return t;
     }
 
-    string chop(ref string s, int n)
+    string chop(ref string s, size_t n)
     {
         if (n == -1) n = s.length;
         string t = s[0..n];
@@ -2924,7 +2924,7 @@ private
     {
         while (table.length != 0)
         {
-            int m = (table.length >> 1) & ~1;
+            auto m = (table.length >> 1) & ~1;
             if (c < table[m])
             {
                 table = table[0..m];

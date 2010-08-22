@@ -8,7 +8,7 @@
  * on currently unsupported processors.
  * The X86 asm version is about 30 times faster than the D version(DMD).
  */
- 
+
 /*          Copyright Don Clugston 2008 - 2010.
  * Distributed under the Boost Software License, Version 1.0.
  *    (See accompanying file LICENSE_1_0.txt or copy at
@@ -18,8 +18,8 @@
 module std.internal.math.biguintnoasm;
 
 public:
-alias uint BigDigit; // A Bignum is an array of BigDigits. 
-    
+alias uint BigDigit; // A Bignum is an array of BigDigits.
+
     // Limits for when to switch between multiplication algorithms.
 enum : int { KARATSUBALIMIT = 10 }; // Minimum value for which Karatsuba is worthwhile.
 enum : int { KARATSUBASQUARELIMIT=12 }; // Minimum value for which square Karatsuba is worthwhile
@@ -71,13 +71,13 @@ unittest
     a[5] =0x44444444;
     carry = multibyteAddSub!('-')(a[0..12], a[0..12], b[0..12], 0);
     assert(a[11]==0);
-    for (int i=0; i<10; ++i) if (i!=5) assert(a[i]==0); 
-    
+    for (int i=0; i<10; ++i) if (i!=5) assert(a[i]==0);
+
     for (int q=3; q<36;++q) {
         for (int i=0; i<a.length; ++i)
         {
             a[i]=b[i]=c[i]=0;
-        }    
+        }
         a[q-2]=0x040000;
         b[q-2]=0x040000;
        carry = multibyteAddSub!('-')(a[0..q], a[0..q], b[0..q], 0);
@@ -97,8 +97,8 @@ uint multibyteIncrementAssign(char op)(uint[] dest, uint carry)
         ulong c = carry;
         c += dest[0];
         dest[0] = cast(uint)c;
-        if (c<=0xFFFF_FFFF) return 0; 
-        
+        if (c<=0xFFFF_FFFF) return 0;
+
         for (uint i = 1; i < dest.length; ++i) {
             ++dest[i];
             if (dest[i]!=0) return 0;
@@ -138,7 +138,7 @@ uint multibyteShl(uint [] dest, const(uint) [] src, uint numbits)
 void multibyteShr(uint [] dest, const(uint) [] src, uint numbits)
 {
     ulong c = 0;
-    for(int i=dest.length-1; i>=0; --i){
+    for(ptrdiff_t i=dest.length-1; i>=0; --i){
         c += (src[i] >>numbits) + (cast(ulong)(src[i]) << (64 - numbits));
         dest[i]= cast(uint)c;
         c >>>= 32;
@@ -147,7 +147,7 @@ void multibyteShr(uint [] dest, const(uint) [] src, uint numbits)
 
 unittest
 {
-    
+
     uint [] aa = [0x1222_2223, 0x4555_5556, 0x8999_999A, 0xBCCC_CCCD, 0xEEEE_EEEE];
     multibyteShr(aa[0..$-2], aa, 4);
 	assert(aa[0]==0x6122_2222 && aa[1]==0xA455_5555 && aa[2]==0x0899_9999);
@@ -155,12 +155,12 @@ unittest
 
     aa = [0x1222_2223, 0x4555_5556, 0x8999_999A, 0xBCCC_CCCD, 0xEEEE_EEEE];
     multibyteShr(aa[0..$-1], aa, 4);
-	assert(aa[0] == 0x6122_2222 && aa[1]==0xA455_5555 
+	assert(aa[0] == 0x6122_2222 && aa[1]==0xA455_5555
 	    && aa[2]==0xD899_9999 && aa[3]==0x0BCC_CCCC);
 
     aa = [0xF0FF_FFFF, 0x1222_2223, 0x4555_5556, 0x8999_999A, 0xBCCC_CCCD, 0xEEEE_EEEE];
     multibyteShl(aa[1..4], aa[1..$], 4);
-	assert(aa[0] == 0xF0FF_FFFF && aa[1] == 0x2222_2230 
+	assert(aa[0] == 0xF0FF_FFFF && aa[1] == 0x2222_2230
 	    && aa[2]==0x5555_5561 && aa[3]==0x9999_99A4 && aa[4]==0x0BCCC_CCCD);
 }
 
@@ -203,14 +203,14 @@ uint multibyteMulAdd(char op)(uint [] dest, const(uint)[] src, uint multiplier, 
             c += cast(ulong)multiplier * src[i];
             ulong t = cast(ulong)dest[i] - cast(uint)c;
             dest[i] = cast(uint)t;
-            c = cast(uint)((c>>32) - (t>>32));                
+            c = cast(uint)((c>>32) - (t>>32));
         }
     }
-    return cast(uint)c;    
+    return cast(uint)c;
 }
 
 unittest {
-    
+
     uint [] aa = [0xF0FF_FFFF, 0x1222_2223, 0x4555_5556, 0x8999_999A, 0xBCCC_CCCD, 0xEEEE_EEEE];
     uint [] bb = [0x1234_1234, 0xF0F0_F0F0, 0x00C0_C0C0, 0xF0F0_F0F0, 0xC0C0_C0C0];
     multibyteMulAdd!('+')(bb[1..$-1], aa[1..$-2], 16, 5);
@@ -220,9 +220,9 @@ unittest {
 }
 
 
-/** 
+/**
    Sets result = result[0..left.length] + left * right
-   
+
    It is defined in this way to allow cache-efficient multiplication.
    This function is equivalent to:
     ----
@@ -246,7 +246,7 @@ void multibyteMultiplyAccumulate(uint [] dest, const(uint)[] left, const(uint) [
 uint multibyteDivAssign(uint [] dest, uint divisor, uint overflow)
 {
     ulong c = cast(ulong)overflow;
-    for(int i = dest.length-1; i>=0; --i){
+    for(ptrdiff_t i = dest.length-1; i>=0; --i){
         c = (c<<32) + cast(ulong)(dest[i]);
         uint q = cast(uint)(c/divisor);
         c -= divisor * q;

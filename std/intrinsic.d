@@ -31,7 +31,7 @@ nothrow:
  *	The bit number of the first bit set.
  *	The return value is undefined if v is zero.
  */
-pure nothrow int bsf(uint v);
+pure nothrow int bsf(size_t v);
 
 /**
  * Scans the bits in v from the most significant bit
@@ -46,7 +46,7 @@ pure nothrow int bsf(uint v);
  * import std.intrinsic;
  *
  * int main()
- * {   
+ * {
  *     uint v;
  *     int x;
  *
@@ -56,7 +56,7 @@ pure nothrow int bsf(uint v);
  *     x = bsr(v);
  *     writefln("bsr(x%x) = %d", v, x);
  *     return 0;
- * } 
+ * }
  * ---
  * Output:
  *  bsf(x21) = 0<br>
@@ -67,7 +67,7 @@ pure nothrow int bsr(uint v);
 /**
  * Tests the bit.
  */
-pure nothrow int bt(in uint *p, uint bitnum);
+pure nothrow int bt(in uint *p, size_t bitnum);
 
 /**
  * Tests and complements the bit.
@@ -77,7 +77,7 @@ int btc(uint *p, uint bitnum);
 /**
  * Tests and resets (sets to 0) the bit.
  */
-int btr(uint *p, uint bitnum);
+int btr(uint *p, size_t bitnum);
 
 /**
  * Tests and sets the bit.
@@ -92,13 +92,13 @@ p[index / (uint.sizeof*8)] & (1 << (index & ((uint.sizeof*8) - 1)))
  * 	A non-zero value if the bit was set, and a zero
  *	if it was clear.
  *
- * Example: 
+ * Example:
  * ---
 import std.stdio;
 import std.intrinsic;
 
 int main()
-{   
+{
     uint array[2];
 
     array[0] = 2;
@@ -120,7 +120,7 @@ int main()
     writefln("array = [0]:x%x, [1]:x%x", array[0], array[1]);
 
     return 0;
-} 
+}
  * ---
  * Output:
 <pre>
@@ -136,7 +136,7 @@ bt(array, 1) = -1
 array = [0]:x2, [1]:x100
 </pre>
  */
-int bts(uint *p, uint bitnum);
+int bts(uint *p, size_t bitnum);
 
 
 /**

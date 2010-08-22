@@ -2523,10 +2523,10 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
         void putstr(const char[] s)
         {
             //printf("flags = x%x\n", flags);
-            int prepad = 0;
-            int postpad = 0;
-            int padding = field_width -
+            sizediff_t padding = field_width -
                 (strlen(prefix) + toUCSindex(s, s.length));
+            sizediff_t prepad = 0;
+            sizediff_t postpad = 0;
             if (padding > 0)
             {
                 if (flags & FLdash)
@@ -2595,7 +2595,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
             }
             else
             {
-                int sl;
+                sizediff_t sl;
                 char[] fbuf = tmpbuf;
                 char[12] format;
                 format[0] = '%';
@@ -3041,7 +3041,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
             }
         }
 
-        int n = tmpbuf.length;
+        sizediff_t n = tmpbuf.length;
         char c;
         int hexoffset = uc ? ('A' - ('9' + 1)) : ('a' - ('9' + 1));
 
@@ -3055,7 +3055,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
         }
         if (tmpbuf.length - n < precision && precision < tmpbuf.length)
         {
-            int m = tmpbuf.length - precision;
+            sizediff_t m = tmpbuf.length - precision;
             tmpbuf[m .. n] = '0';
             n = m;
         }

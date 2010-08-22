@@ -853,7 +853,7 @@ string join(in char[] p1, in char[] p2, in char[][] more...)
         return cast(string) (p1 ~ sep ~ p2);
     }
     else version (Windows)
-    { 
+    {
         string p;
         const(char)[] d1;
 
@@ -943,7 +943,7 @@ unittest
         p = join("d:", "bar");
         i = cmp(p, "d:bar");
         assert(i == 0);
-        
+
         p = join("d:\\", "bar");
         i = cmp(p, "d:\\bar");
         assert(i == 0);
@@ -1292,23 +1292,23 @@ unittest
         unsetenv("HOME");
         assert(expandTilde("~/") == "~/");
         assert(expandTilde("~") == "~");
-        
+
         // Testing when an environment variable is set.
         std.process.setenv("HOME", "dmd/test\0", 1);
         assert(expandTilde("~/") == "dmd/test/");
         assert(expandTilde("~") == "dmd/test");
-        
+
         // The same, but with a variable ending in a slash.
         std.process.setenv("HOME", "dmd/test/\0", 1);
         assert(expandTilde("~/") == "dmd/test/");
         assert(expandTilde("~") == "dmd/test");
-        
+
         // Recover original HOME variable before continuing.
         if (c_home)
             std.process.setenv("HOME", c_home, 1);
         else
             unsetenv("HOME");
-        
+
         // Test user expansion for root. Are there unices without /root?
         version (OSX)
             assert(expandTilde("~root") == "/var/root", expandTilde("~root"));
@@ -1349,7 +1349,7 @@ private string expandFromEnvironment(string path)
  * is joined to path[char_pos .. length] if char_pos is smaller
  * than length, otherwise path is not appended to c_path.
  */
-private string combineCPathWithDPath(char* c_path, string path, int char_pos)
+private string combineCPathWithDPath(char* c_path, string path, size_t char_pos)
 {
     assert(c_path != null);
     assert(path.length > 0);
@@ -1383,7 +1383,7 @@ private string expandFromDatabase(string path)
 
     // Extract username, searching for path separator.
     string username;
-    int last_char = indexOf(path, sep[0]);
+    auto last_char = indexOf(path, sep[0]);
 
     if (last_char == -1)
     {

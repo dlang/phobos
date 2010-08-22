@@ -93,7 +93,16 @@ int cmp(C1, C2)(in C1[] s1, in C2[] s2)
     {
         immutable len = min(s1.length, s2.length);
         immutable result = std.c.string.memcmp(s1.ptr, s2.ptr, len * C1.sizeof);
-        return result ? result : s1.length - s2.length;
+        static if (size_t.sizeof == int.sizeof)
+        {
+            return result ? result : s1.length - s2.length;
+        }
+        else
+        {
+            return result
+                ? result
+                : s1.length == s2.length ? 0 : s1.length > s2.length ? 1 : -1;
+        }
     }
     else
     {
@@ -140,7 +149,8 @@ unittest
  * ditto
  */
 
-int icmp(C1, C2)(in C1[] s1, in C2[] s2)
+sizediff_t
+icmp(C1, C2)(in C1[] s1, in C2[] s2)
 {
     size_t i1, i2;
     for (;;)
@@ -297,7 +307,8 @@ CaseSensitive.yes) means the searches are case sensitive.
 
 Returns: Index in $(D s) where $(D c) is found, -1 if not found.
  */
-int indexOf(Char)(in Char[] s, dchar c, CaseSensitive cs = CaseSensitive.yes)
+sizediff_t
+indexOf(Char)(in Char[] s, dchar c, CaseSensitive cs = CaseSensitive.yes)
 if (isSomeString!(Char[]))
 {
     if (cs == CaseSensitive.yes)
@@ -414,7 +425,8 @@ unittest
  * ditto
  */
 
-int lastIndexOf(in char[] s, dchar c, CaseSensitive cs = CaseSensitive.yes)
+ptrdiff_t lastIndexOf(in char[] s, dchar c,
+        CaseSensitive cs = CaseSensitive.yes)
 {
     if (cs == CaseSensitive.yes)
     {
@@ -528,7 +540,8 @@ Returns:
 Index in $(D s) where $(D sub) is found, $(D -1) if not found.
  */
 
-int indexOf(Char1, Char2)(in Char1[] s, in Char2[] sub,
+sizediff_t
+indexOf(Char1, Char2)(in Char1[] s, in Char2[] sub,
         CaseSensitive cs = CaseSensitive.yes)
 {
     if (cs == CaseSensitive.yes)
@@ -649,7 +662,8 @@ unittest
  * ditto
  */
 
-int lastIndexOf(in char[] s, in char[] sub, CaseSensitive cs = CaseSensitive.yes)
+ptrdiff_t lastIndexOf(in char[] s, in char[] sub,
+        CaseSensitive cs = CaseSensitive.yes)
 {
     if (cs == CaseSensitive.yes)
     {
@@ -660,7 +674,7 @@ int lastIndexOf(in char[] s, in char[] sub, CaseSensitive cs = CaseSensitive.yes
         c = sub[0];
         if (sub.length == 1)
             return lastIndexOf(s, c);
-        for (int i = s.length - sub.length; i >= 0; i--)
+        for (ptrdiff_t i = s.length - sub.length; i >= 0; i--)
         {
             if (s[i] == c)
             {
@@ -682,7 +696,7 @@ int lastIndexOf(in char[] s, in char[] sub, CaseSensitive cs = CaseSensitive.yes
         if (c <= 0x7F)
         {
             c = std.ctype.tolower(c);
-            for (int i = s.length - sub.length; i >= 0; i--)
+            for (ptrdiff_t i = s.length - sub.length; i >= 0; i--)
             {
                 if (std.ctype.tolower(s[i]) == c)
                 {
@@ -693,7 +707,7 @@ int lastIndexOf(in char[] s, in char[] sub, CaseSensitive cs = CaseSensitive.yes
         }
         else
         {
-            for (int i = s.length - sub.length; i >= 0; i--)
+            for (ptrdiff_t i = s.length - sub.length; i >= 0; i--)
             {
                 if (icmp(s[i .. i + sub.length], sub) == 0)
                     return i;
@@ -1817,10 +1831,10 @@ unittest
  * in field width chars wide.
  */
 
-string ljustify(string s, int width)
+string ljustify(string s, size_t width)
 {
     if (s.length >= width)
-    return s;
+        return s;
     char[] r = new char[width];
     r[0..s.length] = s;
     r[s.length .. width] = cast(char)' ';
@@ -1828,10 +1842,10 @@ string ljustify(string s, int width)
 }
 
 /// ditto
-string rjustify(string s, int width)
+string rjustify(string s, size_t width)
 {
     if (s.length >= width)
-    return s;
+        return s;
     char[] r = new char[width];
     r[0 .. width - s.length] = cast(char)' ';
     r[width - s.length .. width] = s;
@@ -1844,7 +1858,7 @@ string center(string s, int width)
     if (s.length >= width)
     return s;
     char[] r = new char[width];
-    int left = (width - s.length) / 2;
+    sizediff_t left = (width - s.length) / 2;
     r[0 .. left] = cast(char)' ';
     r[left .. left + s.length] = s;
     r[left + s.length .. width] = cast(char)' ';
@@ -1949,7 +1963,7 @@ string replaceSlice(string s, in string slice, in string replacement)
 in
 {
     // Verify that slice[] really is a slice of s[]
-    int so = cast(char*)slice - cast(char*)s;
+    ptrdiff_t so = cast(char*)slice - cast(char*)s;
     assert(so >= 0);
     //printf("s.length = %d, so = %d, slice.length = %d\n", s.length,
     //so, slice.length);
@@ -1958,7 +1972,7 @@ in
 body
 {
     char[] result;
-    int so = cast(char*)slice - cast(char*)s;
+    ptrdiff_t so = cast(char*)slice - cast(char*)s;
 
     result.length = s.length - slice.length + replacement.length;
 
@@ -2000,7 +2014,7 @@ body
     if (s.length == 0)
     return sub;
 
-    int newlength = s.length + sub.length;
+    auto newlength = s.length + sub.length;
     char[] result = new char[newlength];
 
     result[0 .. index] = s[0 .. index];
@@ -2044,7 +2058,7 @@ unittest
 size_t count(in char[] s, in char[] sub)
 {
     size_t i;
-    int j;
+    ptrdiff_t j;
     int count = 0;
 
     for (i = 0; i < s.length; i += j + sub.length)
@@ -2098,7 +2112,8 @@ string expandtabs(string str, int tabsize = 8)
             result[i .. i + nspaces] = ' ';
         }
         else
-        {   int j = result.length;
+        {
+            sizediff_t j = result.length;
             result.length = j + nspaces;
             result[j .. j + nspaces] = ' ';
         }
@@ -2194,7 +2209,7 @@ string entab(string s, int tabsize = 8)
             if (!changes)
             change();
 
-            int j = result.length - nspaces;
+            sizediff_t j = result.length - nspaces;
             int ntabs = (((column - nspaces) % tabsize) + nspaces) / tabsize;
             result.length = j + ntabs;
             result[j .. j + ntabs] = '\t';
@@ -2223,7 +2238,7 @@ string entab(string s, int tabsize = 8)
             if (!changes)
             change();
 
-            int j = result.length - nspaces;
+            auto j = result.length - nspaces;
             int ntabs = (nspaces + tabsize - 1) / tabsize;
             result.length = j + ntabs;
             result[j .. j + ntabs] = '\t';
@@ -3308,7 +3323,7 @@ unittest
 
 final bool isNumeric(string s, in bool bAllowSep = false)
 {
-    int    iLen = s.length;
+    sizediff_t iLen = s.length;
     bool   bDecimalPoint = false;
     bool   bExponent = false;
     bool   bComplex = false;
@@ -3901,7 +3916,6 @@ string wrap(string s, int columns = 80, string firstindent = null,
     string indent = null, int tabsize = 8)
 {
     char[] result;
-    int col;
     int spaces;
     bool inword;
     bool first = true;
@@ -3910,7 +3924,7 @@ string wrap(string s, int columns = 80, string firstindent = null,
     result.length = firstindent.length + s.length;
     result.length = firstindent.length;
     result[] = firstindent[];
-    col = column(result.idup, tabsize);
+    auto col = column(result.idup, tabsize);
     foreach (size_t i, dchar c; s)
     {
     if (iswhite(c))
@@ -4090,12 +4104,12 @@ unittest
 
 // For backwards compatibility
 
-deprecated int find(in char[] s, dchar c)
+deprecated auto find(in char[] s, dchar c)
 {
     return indexOf(s, c, CaseSensitive.yes);
 }
 
-deprecated int find(in char[] str, in char[] sub)
+deprecated auto find(in char[] str, in char[] sub)
 {
     return indexOf(str, sub, CaseSensitive.yes);
 }
@@ -4108,32 +4122,32 @@ unittest
     assert(find(a, b) == 1);
 }
 
-deprecated int ifind(in char[] s, dchar c)
+deprecated auto ifind(in char[] s, dchar c)
 {
     return indexOf(s, c, CaseSensitive.no);
 }
 
-deprecated int rfind(in char[] s, dchar c)
+deprecated auto rfind(in char[] s, dchar c)
 {
     return lastIndexOf(s, c, CaseSensitive.yes);
 }
 
-deprecated int irfind(in char[] s, dchar c)
+deprecated auto irfind(in char[] s, dchar c)
 {
     return lastIndexOf(s, c, CaseSensitive.no);
 }
 
-deprecated int ifind(in char[] s, in char[] c)
+deprecated auto ifind(in char[] s, in char[] c)
 {
     return indexOf(s, c, CaseSensitive.no);
 }
 
-deprecated int rfind(in char[] s, in char[] c)
+deprecated auto rfind(in char[] s, in char[] c)
 {
     return lastIndexOf(s, c, CaseSensitive.yes);
 }
 
-deprecated int irfind(in char[] s, in char[] c)
+deprecated auto irfind(in char[] s, in char[] c)
 {
     return lastIndexOf(s, c, CaseSensitive.no);
 }

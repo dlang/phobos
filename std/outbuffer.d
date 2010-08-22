@@ -66,7 +66,7 @@ class OutBuffer
      */
 
 
-    void reserve(uint nbytes)
+    void reserve(size_t nbytes)
         in
         {
             assert(offset + nbytes >= offset);
@@ -318,7 +318,7 @@ class OutBuffer
      * all data past index.
      */
 
-    void spread(uint index, uint nbytes)
+    void spread(size_t index, size_t nbytes)
         in
         {
             assert(index <= offset);

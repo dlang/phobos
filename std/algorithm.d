@@ -906,6 +906,14 @@ unittest
 }
 }
 
+unittest
+{
+    int x = 10;
+    int underX(int a) { return a < x; }
+    const(int)[] list = [ 1, 2, 10, 11, 3, 4 ];
+    assert(equal(filter!underX(list), [ 1, 2, 3, 4 ]));
+}
+
 // move
 /**
 Moves $(D source) into $(D target) via a destructive

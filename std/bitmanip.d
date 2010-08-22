@@ -2,7 +2,7 @@
 
 /**
 Bit-level manipulation facilities.
-   
+
 Macros:
 
 WIKI = StdBitarray
@@ -69,7 +69,7 @@ private template createAccessors(
         static if (is(T == bool))
         {
             static assert(len == 1);
-            enum result = 
+            enum result =
             // getter
                 "bool " ~ name ~ "() const { return "
                 ~"("~store~" & "~myToString!(maskAllElse)~") != 0;}\n"
@@ -86,7 +86,7 @@ private template createAccessors(
                 ~ myToString!(maskAllElse) ~ ") >>"
                 ~ myToString!(offset) ~ ";"
                 ~ (T.min < 0
-                   ? "if (result >= " ~ myToString!(signBitCheck) 
+                   ? "if (result >= " ~ myToString!(signBitCheck)
                    ~ ") result |= " ~ myToString!(extendSign) ~ ";"
                    : "")
                 ~ " return cast("~T.stringof~") result;}\n"
@@ -343,6 +343,7 @@ struct BitArray
     }
     body
     {
+        // Andrei: review for @@@64-bit@@@
         return cast(bool) bt(ptr, i);
     }
 
@@ -588,7 +589,7 @@ struct BitArray
             return 0;                // not equal
         byte *p1 = cast(byte*)this.ptr;
         byte *p2 = cast(byte*)a2.ptr;
-        uint n = this.length / 8;
+        auto n = this.length / 8;
         for (i = 0; i < n; i++)
         {
             if (p1[i] != p2[i])
@@ -631,15 +632,14 @@ struct BitArray
 
     int opCmp(BitArray a2)
     {
-        uint len;
         uint i;
 
-        len = this.length;
+        auto len = this.length;
         if (a2.length < len)
             len = a2.length;
         ubyte* p1 = cast(ubyte*)this.ptr;
         ubyte* p2 = cast(ubyte*)a2.ptr;
-        uint n = len / 8;
+        auto n = len / 8;
         for (i = 0; i < n; i++)
         {
             if (p1[i] != p2[i])

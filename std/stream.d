@@ -97,7 +97,7 @@ interface InputStream {
   /***
    * Read a block of data big enough to fill the given array buffer.
    *
-   * Returns: the actual number of bytes read. Unfilled bytes are not modified. 
+   * Returns: the actual number of bytes read. Unfilled bytes are not modified.
    */
   size_t read(ubyte[] buffer);
 
@@ -142,7 +142,7 @@ interface InputStream {
    *
    * The terminators are not included. The wchar version
    * is identical. The optional buffer parameter is filled (reallocating
-   * it if necessary) and a slice of the result is returned. 
+   * it if necessary) and a slice of the result is returned.
    */
   char[] readLine();
   char[] readLine(char[] result);	/// ditto
@@ -357,7 +357,7 @@ interface OutputStream {
 
 /***
  * Stream is the base abstract class from which the other stream classes derive.
- * 
+ *
  * Stream's byte order is the format native to the computer.
  *
  * Reading:
@@ -396,7 +396,7 @@ class Stream : InputStream, OutputStream {
 
   protected bool prevCr = false; /** For a non-seekable stream indicates that
 				  * the last readLine or readLineW ended on a
-				  * '\r' character. 
+				  * '\r' character.
 				  */
 
   this() {}
@@ -626,7 +626,7 @@ class Stream : InputStream, OutputStream {
     if (prevCr) {
       prevCr = false;
       c = getc();
-      if (c != '\n') 
+      if (c != '\n')
 	return c;
     }
     if (unget.length > 1) {
@@ -646,7 +646,7 @@ class Stream : InputStream, OutputStream {
     if (prevCr) {
       prevCr = false;
       c = getcw();
-      if (c != '\n') 
+      if (c != '\n')
 	return c;
     }
     if (unget.length > 1) {
@@ -1181,7 +1181,7 @@ class Stream : InputStream, OutputStream {
   // writes data with optional trailing newline
   OutputStream writefx(TypeInfo[] arguments, void* argptr, int newline=false) {
     doFormat(&doFormatCallback,arguments,argptr);
-    if (newline) 
+    if (newline)
       writeLine("");
     return this;
   }
@@ -1260,12 +1260,12 @@ class Stream : InputStream, OutputStream {
   }
 
   // returns true if end of stream is reached, false otherwise
-  bool eof() { 
+  bool eof() {
     // for unseekable streams we only know the end when we read it
     if (readEOF && !ungetAvailable())
       return true;
     else if (seekable)
-      return position() == size(); 
+      return position() == size();
     else
       return false;
   }
@@ -1397,7 +1397,7 @@ class FilterStream : Stream {
    *
    * Setting the source stream closes this stream before attaching the new
    * source. Attaching an open stream reopens this stream and resets the stream
-   * state. 
+   * state.
    */
   void source(Stream s) {
     close();
@@ -1435,7 +1435,7 @@ class FilterStream : Stream {
   }
 
   // close stream
-  override void close() { 
+  override void close() {
     if (isopen) {
       super.close();
       if (nestClose)
@@ -1464,10 +1464,10 @@ class FilterStream : Stream {
  */
 class BufferedStream : FilterStream {
   ubyte[] buffer;       // buffer, if any
-  uint bufferCurPos;    // current position in buffer
-  uint bufferLen;       // amount of data in buffer
+  size_t bufferCurPos;    // current position in buffer
+  size_t bufferLen;       // amount of data in buffer
   bool bufferDirty = false;
-  uint bufferSourcePos; // position in buffer of source stream position
+  size_t bufferSourcePos; // position in buffer of source stream position
   ulong streamPos;      // absolute position in source stream
 
   /* Example of relationship between fields:
@@ -1486,13 +1486,13 @@ class BufferedStream : FilterStream {
     assert(bufferLen <= buffer.length);
   }
 
-  const uint DefaultBufferSize = 8192;
+  const size_t DefaultBufferSize = 8192;
 
   /***
    * Create a buffered stream for the stream source with the buffer size
    * bufferSize.
    */
-  this(Stream source, uint bufferSize = DefaultBufferSize) {
+  this(Stream source, size_t bufferSize = DefaultBufferSize) {
     super(source);
     if (bufferSize)
       buffer = new ubyte[bufferSize];
@@ -1541,13 +1541,13 @@ class BufferedStream : FilterStream {
       streamPos += siz;
     } else {
       // read a new block into buffer
-      bufferLen = super.readBlock(buffer.ptr, buffer.length);
-      if (bufferLen < len) len = bufferLen;
-      outbuf[0 .. len] = buffer[0 .. len];
-      bufferSourcePos = bufferLen;
-      streamPos += bufferLen;
-      bufferCurPos = len;
-      readsize += len;
+        bufferLen = super.readBlock(buffer.ptr, buffer.length);
+        if (bufferLen < len) len = bufferLen;
+        outbuf[0 .. len] = buffer[0 .. len];
+        bufferSourcePos = bufferLen;
+        streamPos += bufferLen;
+        bufferCurPos = len;
+        readsize += len;
     }
 
   ExitRead:
@@ -1569,7 +1569,7 @@ class BufferedStream : FilterStream {
 	bufferLen = s.readBlock(buffer.ptr, buffer.length);
 	bufferSourcePos = bufferLen;
 	streamPos += bufferLen;
-	  
+
       } else if (len >= buffer.length) {
 	// buffer can't hold the data so write it directly and exit
 	writesize = s.writeBlock(buf,len);
@@ -1589,7 +1589,7 @@ class BufferedStream : FilterStream {
     }
 
     writesize = buffer.length - bufferCurPos;
-    if (writesize > 0) { 
+    if (writesize > 0) {
       // buffer can take some data
       buffer[bufferCurPos .. buffer.length] = buf[0 .. writesize];
       bufferCurPos = bufferLen = buffer.length;
@@ -1639,7 +1639,7 @@ class BufferedStream : FilterStream {
 
         L0:
           for(;;) {
-              uint start = bufferCurPos;
+              size_t start = bufferCurPos;
             L1:
               foreach(ubyte b; buffer[start .. bufferLen]) {
                   bufferCurPos++;
@@ -1919,7 +1919,7 @@ class File: Stream {
 
   /// Close the current file if it is open; otherwise it does nothing.
   override void close() {
-    if (isopen) { 
+    if (isopen) {
       super.close();
       if (hFile) {
 	version (Win32) {
@@ -2095,17 +2095,17 @@ class BufferedFile: BufferedStream {
 
   /// opens file in requested mode and buffer size
   this(string filename, FileMode mode = FileMode.In,
-       uint bufferSize = DefaultBufferSize) {
+       size_t bufferSize = DefaultBufferSize) {
     super(new File(filename,mode),bufferSize);
   }
 
   /// opens file for reading with requested buffer size
-  this(File file, uint bufferSize = DefaultBufferSize) {
+  this(File file, size_t bufferSize = DefaultBufferSize) {
     super(file,bufferSize);
   }
 
   /// opens existing handle; use with care!
-  this(HANDLE hFile, FileMode mode, uint buffersize) {
+  this(HANDLE hFile, FileMode mode, size_t buffersize) {
     super(new File(hFile,mode),buffersize);
   }
 
@@ -2174,7 +2174,7 @@ class BufferedFile: BufferedStream {
 
 }
 
-/// UTF byte-order-mark signatures 
+/// UTF byte-order-mark signatures
 enum BOM {
 	UTF8,		/// UTF-8
 	UTF16LE,	/// UTF-16 Little Endian
@@ -2184,13 +2184,13 @@ enum BOM {
 }
 
 private const int NBOMS = 5;
-immutable Endian[NBOMS] BOMEndian = 
-[ std.system.endian, 
+immutable Endian[NBOMS] BOMEndian =
+[ std.system.endian,
   Endian.LittleEndian, Endian.BigEndian,
   Endian.LittleEndian, Endian.BigEndian
   ];
 
-immutable ubyte[][NBOMS] ByteOrderMarks = 
+immutable ubyte[][NBOMS] ByteOrderMarks =
 [ [0xEF, 0xBB, 0xBF],
   [0xFF, 0xFE],
   [0xFE, 0xFF],
@@ -2255,7 +2255,7 @@ class EndianStream : FilterStream {
       if (j == bom.length) // found a match
 	result = i;
     }
-    int m = 0;
+    ssize_t m = 0;
     if (result != -1) {
       endian = BOMEndian[result]; // set stream endianness
       m = ByteOrderMarks[result].length;
@@ -2280,7 +2280,7 @@ class EndianStream : FilterStream {
    * Correct the byte order of buffer to match native endianness.
    * size must be even.
    */
-  final void fixBO(const(void)* buffer, uint size) {
+  final void fixBO(const(void)* buffer, size_t size) {
     if (endian != std.system.endian) {
       ubyte* startb = cast(ubyte*)buffer;
       uint* start = cast(uint*)buffer;
@@ -2307,7 +2307,7 @@ class EndianStream : FilterStream {
 	}
 	startb = cast(ubyte*)start;
 	ubyte* endb = cast(ubyte*)end;
-	int len = uint.sizeof - (startb - endb);
+	auto len = uint.sizeof - (startb - endb);
 	if (len > 0)
 	  fixBO(startb,len);
       }
@@ -2353,7 +2353,7 @@ class EndianStream : FilterStream {
     if (prevCr) {
       prevCr = false;
       c = getcw();
-      if (c != '\n') 
+      if (c != '\n')
 	return c;
     }
     if (unget.length > 1) {
@@ -2575,7 +2575,7 @@ class TArrayStream(Buffer): Stream {
   override size_t available () { return cast(size_t)(len - cur); }
 
   /// Get the current memory data in total.
-  ubyte[] data() { 
+  ubyte[] data() {
     if (len > size_t.max)
       throw new StreamException("Stream too big");
     const(void)[] res = buf[0 .. cast(size_t)len];
@@ -2670,7 +2670,7 @@ class MemoryStream: TArrayStream!(ubyte[]) {
     assert (str[0..13] == "100 345 hello", str[0 .. 13]);
     assert (m.available == 29);
     assert (m.position == 13);
-    
+
     MemoryStream m2;
     m.position = 3;
     m2 = new MemoryStream ();

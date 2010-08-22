@@ -376,10 +376,10 @@ private:
 }
 else
 {
-    char[] toString() { return "unknown CPU\n"; }
+    auto toString() { return "unknown CPU\n"; }
 
-    char[] vendor()             {return "unknown vendor"; }
-    char[] processor()          {return "unknown processor"; }
+    auto vendor()             {return "unknown vendor"; }
+    auto processor()          {return "unknown processor"; }
 
     bool mmx()                  {return false; }
     bool fxsr()                 {return false; }
