@@ -1,14 +1,14 @@
 /*******************************************************************************
  * Platform-independent high precision StopWatch.
- * 
+ *
  * This module provides StopWatch that uses performance counter.
  * On Windows, This uses QueryPerformanceCounter.
  * For Posix, This uses clock_gettime if available, gettimeofday otherwise.
- * 
+ *
  * But this has dispersion in accuracy by environment.
  * It is impossible to remove this dispersion. This depends on multi task
  * system for example overhead from change of the context switch of the thread.
- * 
+ *
  * License: $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors: Kato Shoichi
  */
@@ -32,7 +32,7 @@ else version (Posix)
 
 /*******************************************************************************
  * System clock time.
- * 
+ *
  * This type maintains the most high precision ticks of system clock in each
  * environment.
  * (For StopWatch)
@@ -40,22 +40,22 @@ else version (Posix)
 struct Ticks
 {
 @safe:// @@@BUG@@@ workaround for bug 4211
-    
-    
+
+
     /***************************************************************************
      * Ticks that is counted per 1[s].
-     * 
+     *
      * Confirm that it is not 0, to examine whether you can use Ticks.
      */
     static immutable long ticksPerSec;
-    
-    
+
+
     /***************************************************************************
      * Ticks when application begins.
      */
     static immutable Ticks appOrigin;
-    
-    
+
+
     @trusted
     shared static this()
     {
@@ -90,26 +90,26 @@ struct Ticks
             appOrigin = systime();
         }
     }
-    
-    
+
+
     unittest
     {
         assert(ticksPerSec);
     }
-    
-    
+
+
     /***************************************************************************
      * Unknown value for Ticks
-     * 
+     *
      * You can convert this value into number of seconds by dividing it
      * by ticksPerSec.
      */
     long value;
-    
-    
+
+
     /***************************************************************************
      * [s] as integer or real number
-     * 
+     *
      * Attention: This method truncate the number of digits after decimal point.
      */
     const
@@ -117,8 +117,8 @@ struct Ticks
     {
         return cast(T)(value/ticksPerSec);
     }
-    
-    
+
+
     /// ditto
     const
     T toSeconds(T)() if (isFloatingPoint!T)
@@ -127,21 +127,21 @@ struct Ticks
         long t = ticksPerSec;
         return value/cast(T)t;
     }
-    
-    
+
+
     /***************************************************************************
      * [s] as real number
      */
     @property alias toSeconds!real seconds;
-    
-    
+
+
     /***************************************************************************
      * [s] as integer
      */
     @property alias toSeconds!long sec;
-    
-    
-    
+
+
+
     unittest
     {
         auto t = Ticks(ticksPerSec);
@@ -159,8 +159,8 @@ struct Ticks
         t = Ticks(-ticksPerSec);
         assert(t.sec == -1);
     }
-    
-    
+
+
     /***************************************************************************
      * Create Ticks from [s] as integer
      */
@@ -168,8 +168,8 @@ struct Ticks
     {
         return Ticks(cast(long)(sec * ticksPerSec));
     }
-    
-    
+
+
     unittest
     {
         auto t = Ticks.fromSeconds(1000000);
@@ -179,8 +179,8 @@ struct Ticks
         t.value -= 1;
         assert(t.sec == 1999999);
     }
-    
-    
+
+
     /***************************************************************************
      * [ms] as integer or real number
      */
@@ -189,27 +189,27 @@ struct Ticks
     {
         return value/(ticksPerSec/1000);
     }
-    
-    
+
+
     /// ditto
     const
     T toMilliseconds(T)() if (isFloatingPoint!T)
     {
         return toSeconds!T * 1000;
     }
-    
+
     /***************************************************************************
      * [ms] as real number
      */
     @property alias toMilliseconds!real milliseconds;
-    
-    
+
+
     /***************************************************************************
      * [ms] as integer
      */
     @property alias toMilliseconds!long msec;
-    
-    
+
+
     /***************************************************************************
      * Create Ticks from [ms] as integer
      */
@@ -217,8 +217,8 @@ struct Ticks
     {
         return Ticks(msec*(ticksPerSec/1000));
     }
-    
-    
+
+
     unittest
     {
         auto t = Ticks.fromMilliseconds(1000000);
@@ -228,8 +228,8 @@ struct Ticks
         t.value -= 1;
         assert(t.msec == 1999999);
     }
-    
-    
+
+
     /***************************************************************************
      * [us] as integer or real number
      */
@@ -238,28 +238,28 @@ struct Ticks
     {
         return value/(ticksPerSec/1000/1000);
     }
-    
-    
+
+
     /// ditto
     const
     T toMicroseconds(T)() if (isFloatingPoint!T)
     {
         return toMilliseconds!T * 1000;
     }
-    
-    
+
+
     /***************************************************************************
      * [us] as real number
      */
     @property alias toMicroseconds!real microseconds;
-    
-    
+
+
     /***************************************************************************
      * [us] as integer
      */
     alias toMicroseconds!long usec;
-    
-    
+
+
     /***************************************************************************
      * Create Ticks from [us] as integer
      */
@@ -267,8 +267,8 @@ struct Ticks
     {
         return Ticks(usec*(ticksPerSec/1000/1000));
     }
-    
-    
+
+
     unittest
     {
         auto t = Ticks.fromMicroseconds(1000000);
@@ -278,11 +278,11 @@ struct Ticks
         t.value -= 1;
         assert(t.usec == 1999999);
     }
-    
-    
+
+
     /***************************************************************************
      * operator overroading "-=, +="
-     * 
+     *
      * BUG: This should be return "ref Ticks", but bug2460 prevents that.
      */
     void opOpAssign(string op)(in Ticks t) if (op == "+" || op == "-")
@@ -290,8 +290,8 @@ struct Ticks
         mixin("value "~op~"= t.value;");
         //return this;
     }
-    
-    
+
+
     unittest
     {
         Ticks a = systime(), b = systime();
@@ -300,8 +300,8 @@ struct Ticks
         b -= systime();
         assert(b.seconds <= 0);
     }
-    
-    
+
+
     /***************************************************************************
      * operator overroading "-, +"
      */
@@ -312,8 +312,8 @@ struct Ticks
         lhs.opOpAssign!op(t);
         return lhs;
     }
-    
-    
+
+
     unittest
     {
         auto a = systime();
@@ -321,8 +321,8 @@ struct Ticks
         assert((a + b).seconds > 0);
         assert((a - b).seconds <= 0);
     }
-    
-    
+
+
     /***************************************************************************
      * operator overroading "=="
      */
@@ -331,15 +331,15 @@ struct Ticks
     {
         return value == t.value;
     }
-    
-    
+
+
     unittest
     {
         auto t1 = systime();
         assert(t1 == t1);
     }
-    
-    
+
+
     /***************************************************************************
      * operator overroading "<, >, <=, >="
      */
@@ -348,8 +348,8 @@ struct Ticks
     {
         return value < t.value? -1: value == t.value ? 0 : 1;
     }
-    
-    
+
+
     unittest
     {
         auto t1 = systime();
@@ -357,8 +357,8 @@ struct Ticks
         assert(t1 <= t2);
         assert(t2 >= t1);
     }
-    
-    
+
+
     /***************************************************************************
      * operator overroading "*=, /="
      */
@@ -367,8 +367,8 @@ struct Ticks
     {
         mixin("value "~op~"= x;");
     }
-    
-    
+
+
     unittest
     {
         immutable t = systime();
@@ -389,8 +389,8 @@ struct Ticks
             assert(t2 < t1);
         }
     }
-    
-    
+
+
     /***************************************************************************
      * operator overroading "*", "/"
      */
@@ -401,8 +401,8 @@ struct Ticks
         lhs.opOpAssign!op(x);
         return lhs;
     }
-    
-    
+
+
     unittest
     {
         auto t = systime();
@@ -410,8 +410,8 @@ struct Ticks
         assert(t < t2);
         assert(t*3.5 > t2);
     }
-    
-    
+
+
     /***************************************************************************
      * operator overroading "/"
      */
@@ -420,8 +420,8 @@ struct Ticks
     {
         return value / cast(real)x.value;
     }
-    
-    
+
+
     unittest
     {
         auto t = systime();
@@ -438,7 +438,7 @@ enum autoStart = StopWatch.AutoStart.yes;
 
 /*******************************************************************************
  * StopWatch measures time highly precise as possible.
- * 
+ *
  * Usage is here:
  * Example:
  *------------------------------------------------------------------------------
@@ -470,23 +470,23 @@ struct StopWatch
 {
 @safe:// @@@BUG@@@ workaround for bug 4211
 private:
-    
-    
+
+
     // true if observing.
     bool m_FlagStarted = false;
-    
-    
+
+
     // Ticks at the time of StopWatch starting mesurement.
     Ticks m_TimeStart;
-    
-    
+
+
     // Ticks as total time of measurement.
     Ticks m_TimeMeasured;
-    
-    
+
+
 public:
-    
-    
+
+
     /***************************************************************************
      * Special type for constructor
      */
@@ -497,8 +497,8 @@ public:
         ///
         yes
     }
-    
-    
+
+
     /***************************************************************************
      * auto start with constructor
      */
@@ -509,15 +509,15 @@ public:
             start();
         }
     }
-    
-    
+
+
     unittest
     {
         auto sw = StopWatch(autoStart);
         sw.stop();
     }
-    
-    
+
+
     /***************************************************************************
      * Reset the time measurement.
      */
@@ -536,8 +536,8 @@ public:
         }
         m_TimeMeasured.value = 0;
     }
-    
-    
+
+
     unittest
     {
         StopWatch sw;
@@ -546,8 +546,8 @@ public:
         sw.reset();
         assert(sw.peek().seconds == 0);
     }
-    
-    
+
+
     /***************************************************************************
      * Start the time measurement.
      */
@@ -559,8 +559,8 @@ public:
         m_FlagStarted = true;
         m_TimeStart = systime();
     }
-    
-    
+
+
     unittest
     {
         StopWatch sw;
@@ -573,8 +573,8 @@ public:
         sw.stop();
         assert((t1 - sw.peek()).seconds <= 0);
     }
-    
-    
+
+
     /***************************************************************************
      * Stop the time measurement.
      */
@@ -585,8 +585,8 @@ public:
         m_FlagStarted = false;
         m_TimeMeasured += systime() - m_TimeStart;
     }
-    
-    
+
+
     unittest
     {
         StopWatch sw;
@@ -599,8 +599,8 @@ public:
         assert(!doublestop);
         assert((t1 - sw.peek()).seconds == 0);
     }
-    
-    
+
+
     /***************************************************************************
      * Peek Ticks of measured time.
      */
@@ -613,8 +613,8 @@ public:
         }
         return m_TimeMeasured;
     }
-    
-    
+
+
     unittest
     {
         StopWatch sw;
@@ -651,7 +651,7 @@ Ticks systime()
             timespec ts;
             errnoEnforce(clock_gettime(CLOCK_REALTIME, &ts) == 0,
                 "Failed in gettimeofday");
-            return Ticks(ts.tv_sec * Ticks.ticksPerSec + 
+            return Ticks(ts.tv_sec * Ticks.ticksPerSec +
                 ts.tv_nsec * Ticks.ticksPerSec / 1000 / 1000 / 1000);
         }
         else
@@ -707,11 +707,11 @@ immutable struct ComparingBenchmarkReturnValue
 @safe:
     private Ticks m_tmBase;
     private Ticks m_tmTarget;
-    
-    
+
+
     /***************************************************************************
      * Evaluation value
-     * 
+     *
      * This return the evaluation value of performance as the ratio that is
      * compared between BaseFunc's time and TargetFunc's time.
      * If performance is high, this returns a high value.
@@ -723,8 +723,8 @@ immutable struct ComparingBenchmarkReturnValue
         long t = m_tmTarget.value;
         return m_tmBase.value / cast(real)t;
     }
-    
-    
+
+
     /***************************************************************************
      * The time required of the target function
      */
@@ -733,8 +733,8 @@ immutable struct ComparingBenchmarkReturnValue
     {
         return m_tmTarget;
     }
-    
-    
+
+
     /***************************************************************************
      * The time required of the base function
      */
@@ -748,7 +748,7 @@ immutable struct ComparingBenchmarkReturnValue
 
 /*******************************************************************************
  * Benchmark with two functions comparing.
- * 
+ *
  * Excample:
  *------------------------------------------------------------------------------
  *void f1() {
@@ -778,13 +778,13 @@ ComparingBenchmarkReturnValue comparingBenchmark(
         baseFunc();
         sw.stop();
         b += sw.peek();
-        
+
         sw.reset();
         sw.start();
         targetFunc();
         sw.stop();
         t += sw.peek();
-        
+
     }
     return ComparingBenchmarkReturnValue(b,t);
 }
@@ -805,13 +805,13 @@ ComparingBenchmarkReturnValue comparingBenchmark(
         baseFunc();
         sw.stop();
         b += sw.peek();
-        
+
         sw.reset();
         sw.start();
         targetFunc();
         sw.stop();
         t += sw.peek();
-        
+
     }
     return ComparingBenchmarkReturnValue(b,t);
 }
@@ -845,10 +845,10 @@ unittest
 {
     /***************************************************************************
      * Scope base measuring time.
-     * 
+     *
      * When a value that is returned by this function is destroyed, FN will run.
      * FN is unaly function that requires Ticks.
-     * 
+     *
      * Excample:
      *--------------------------------------------------------------------------
      *writeln("benchmark start!");
@@ -905,7 +905,7 @@ unittest
 unittest
 {
     auto mt = measureTime!((a){assert(a.seconds);});
-    
+
     /+
     with (measureTime!((a){assert(a.seconds);}))
     {

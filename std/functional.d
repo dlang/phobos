@@ -453,13 +453,13 @@ template compose(fun...) { alias composeImpl!(fun).doIt compose; }
 // Implementation of compose
 template composeImpl(fun...)
 {
-	static if (fun.length == 1)
-	{
+        static if (fun.length == 1)
+        {
         static if (is(typeof(fun[0]) : string))
             alias unaryFun!(fun[0]) doIt;
         else
             alias fun[0] doIt;
-	}
+        }
     else static if (fun.length == 2)
     {
         // starch

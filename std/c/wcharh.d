@@ -4,7 +4,7 @@
  * Authors: Walter Bright, Digital Mars, www.digitalmars.com
  * License: Public Domain
  * Macros:
- *	WIKI=Phobos/StdCWchar
+ *      WIKI=Phobos/StdCWchar
  */
 
 module std.c.wcharh;

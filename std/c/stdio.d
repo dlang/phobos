@@ -4,7 +4,7 @@
  * Authors: Walter Bright, Digital Mars, http://www.digitalmars.com
  * License: Public Domain
  * Macros:
- *	WIKI=Phobos/StdCStdio
+ *      WIKI=Phobos/StdCStdio
  */
 
 
@@ -21,10 +21,10 @@ version (Win32)
 
     enum
     {
-	FHND_APPEND	= 0x04,
-	FHND_DEVICE	= 0x08,
-	FHND_TEXT	= 0x10,
-	FHND_BYTE	= 0x20,
-	FHND_WCHAR	= 0x40,
+        FHND_APPEND     = 0x04,
+        FHND_DEVICE     = 0x08,
+        FHND_TEXT       = 0x10,
+        FHND_BYTE       = 0x20,
+        FHND_WCHAR      = 0x40,
     }
 }

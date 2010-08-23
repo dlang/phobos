@@ -4,7 +4,7 @@
  * Authors: Walter Bright, Digital Mars, http://www.digitalmars.com
  * License: Public Domain
  * Macros:
- *	WIKI=Phobos/StdCStdlib
+ *      WIKI=Phobos/StdCStdlib
  */
 
 

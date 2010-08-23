@@ -4,7 +4,7 @@
  * Support UTF-8 on Windows 95, 98 and ME systems.
  *
  * Macros:
- *	WIKI = Phobos/StdWindowsCharset
+ *      WIKI = Phobos/StdWindowsCharset
  *
  * Copyright: Copyright Digital Mars 2005 - 2009.
  * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
@@ -34,7 +34,7 @@ private import std.string;
  *   2 - Mac
  *
  * Authors:
- *	yaneurao, Walter Bright, Stewart Gordon
+ *      yaneurao, Walter Bright, Stewart Gordon
  */
 
 const(char)* toMBSz(in char[] s, uint codePage = 0)
@@ -88,29 +88,29 @@ string fromMBSz(immutable(char)* s, int codePage = 0)
 
     for (c = s; *c != 0; c++)
     {
-	if (*c >= 0x80)
-	{
-	    wchar[] result;
-	    int readLen;
+        if (*c >= 0x80)
+        {
+            wchar[] result;
+            int readLen;
 
-	    result.length = MultiByteToWideChar(codePage, 0, s, -1, null, 0);
+            result.length = MultiByteToWideChar(codePage, 0, s, -1, null, 0);
 
-	    if (result.length)
-	    {
-		readLen = MultiByteToWideChar(codePage, 0, s, -1, result.ptr,
-			result.length);
-	    }
+            if (result.length)
+            {
+                readLen = MultiByteToWideChar(codePage, 0, s, -1, result.ptr,
+                        result.length);
+            }
 
-	    if (!readLen || readLen != result.length)
-	    {
-		throw new Exception("Couldn't convert string: " ~
-		    sysErrorString(GetLastError()));
-	    }
+            if (!readLen || readLen != result.length)
+            {
+                throw new Exception("Couldn't convert string: " ~
+                    sysErrorString(GetLastError()));
+            }
 
-	    return std.utf.toUTF8(result[0 .. result.length-1]); // omit trailing null
-	}
+            return std.utf.toUTF8(result[0 .. result.length-1]); // omit trailing null
+        }
     }
-    return s[0 .. c-s];		// string is ASCII, no conversion necessary
+    return s[0 .. c-s];         // string is ASCII, no conversion necessary
 }
 
 

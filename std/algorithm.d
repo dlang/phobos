@@ -163,18 +163,18 @@ struct Map(alias fun, Range) if (isInputRange!(Range))
         fillCache;
     }
 
-	static if (isInfinite!Range)
+        static if (isInfinite!Range)
     {
-		// Propagate infinite-ness.
-		enum bool empty = false;
-	}
+                // Propagate infinite-ness.
+                enum bool empty = false;
+        }
     else
     {
-		@property bool empty()
+                @property bool empty()
         {
-			return _input.empty;
-		}
-	}
+                        return _input.empty;
+                }
+        }
 
     void popFront()
     {
@@ -220,7 +220,7 @@ struct Map(alias fun, Range) if (isInputRange!(Range))
         }
     }
 
-	static if (isForwardRange!Range)
+        static if (isForwardRange!Range)
         @property Map save()
         {
             auto result = this;
@@ -300,19 +300,19 @@ unittest
     fibsSquares.popFront;
     assert(fibsSquares.front == 9);
 
-	auto repeatMap = map!"a"(repeat(1));
-	static assert(isInfinite!(typeof(repeatMap)));
+        auto repeatMap = map!"a"(repeat(1));
+        static assert(isInfinite!(typeof(repeatMap)));
 
-	auto intRange = map!"a"([1,2,3]);
-	static assert(isRandomAccessRange!(typeof(intRange)));
+        auto intRange = map!"a"([1,2,3]);
+        static assert(isRandomAccessRange!(typeof(intRange)));
 
     foreach(DummyType; AllDummyRanges) {
-	    DummyType d;
-	    auto m = map!"a * a"(d);
+            DummyType d;
+            auto m = map!"a * a"(d);
 
-	    static assert(propagatesRangeType!(typeof(m), DummyType));
-	    assert(equal(m, [1,4,9,16,25,36,49,64,81,100]));
-	}
+            static assert(propagatesRangeType!(typeof(m), DummyType));
+            assert(equal(m, [1,4,9,16,25,36,49,64,81,100]));
+        }
 }
 
 // reduce
@@ -864,28 +864,28 @@ unittest
     assert(equal(under10, [1, 3, 5][]));
     static assert(isForwardRange!(typeof(under10)));
 
-	auto infinite = filter!"a > 2"(repeat(3));
-	static assert(isInfinite!(typeof(infinite)));
-	static assert(isForwardRange!(typeof(infinite)));
+        auto infinite = filter!"a > 2"(repeat(3));
+        static assert(isInfinite!(typeof(infinite)));
+        static assert(isForwardRange!(typeof(infinite)));
 
     auto nums = [0,1,2,3,4];
     auto forward = filter!"a % 2 == 0"(nums);
     assert(equal(retro(forward), [4,2,0][])); // f is a bidirectional range
 
-	foreach(DummyType; AllDummyRanges) {
-	    DummyType d;
-	    auto f = filter!"a & 1"(d);
-	    assert(equal(f, [1,3,5,7,9]));
+        foreach(DummyType; AllDummyRanges) {
+            DummyType d;
+            auto f = filter!"a & 1"(d);
+            assert(equal(f, [1,3,5,7,9]));
 
-	    static if (isForwardRange!DummyType) {
-	        static assert(isForwardRange!(typeof(f)));
-	    }
+            static if (isForwardRange!DummyType) {
+                static assert(isForwardRange!(typeof(f)));
+            }
 
-	    static if (isBidirectionalRange!DummyType) {
-	        static assert(isBidirectionalRange!(typeof(f)));
-	        assert(equal(retro(f), [9,7,5,3,1]));
-	    }
-	}
+            static if (isBidirectionalRange!DummyType) {
+                static assert(isBidirectionalRange!(typeof(f)));
+                assert(equal(retro(f), [9,7,5,3,1]));
+            }
+        }
 
     // With delegates
     int x = 10;

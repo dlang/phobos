@@ -697,9 +697,9 @@ T toImpl(T, S)(S src) if (isArray!(S) && isArray!(T) && !isSomeString!(T)
     alias typeof(T.init[0]) E;
     auto result = new E[src.length];
     foreach (i, e; src) {
-	/* Temporarily cast to mutable type, so we can get it initialized,
-	 * this is ok because there are no other references to result[]
-	 */
+        /* Temporarily cast to mutable type, so we can get it initialized,
+         * this is ok because there are no other references to result[]
+         */
         cast()(result[i]) = to!(E)(e);
     }
     return result;
@@ -1127,29 +1127,29 @@ unittest
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     // @@@BUG@@@ the size of China
-	// foreach (i; 2..37) {
-	// 	assert(parse!int("0",i) == 0);
-	// 	assert(parse!int("1",i) == 1);
-	// 	assert(parse!byte("10",i) == i);
-	// }
-	foreach (i; 2..37) {
+        // foreach (i; 2..37) {
+        //      assert(parse!int("0",i) == 0);
+        //      assert(parse!int("1",i) == 1);
+        //      assert(parse!byte("10",i) == i);
+        // }
+        foreach (i; 2..37) {
         string s = "0";
-		assert(parse!int(s,i) == 0);
+                assert(parse!int(s,i) == 0);
         s = "1";
-		assert(parse!int(s,i) == 1);
+                assert(parse!int(s,i) == 1);
         s = "10";
-		assert(parse!byte(s,i) == i);
-	}
+                assert(parse!byte(s,i) == i);
+        }
     // Same @@@BUG@@@ as above
-	//assert(parse!int("0011001101101", 2) == 0b0011001101101);
-	// assert(parse!int("765",8) == 0765);
-	// assert(parse!int("fCDe",16) == 0xfcde);
+        //assert(parse!int("0011001101101", 2) == 0b0011001101101);
+        // assert(parse!int("765",8) == 0765);
+        // assert(parse!int("fCDe",16) == 0xfcde);
     auto s = "0011001101101";
-	assert(parse!int(s, 2) == 0b0011001101101);
+        assert(parse!int(s, 2) == 0b0011001101101);
     s = "765";
-	assert(parse!int(s, 8) == octal!765);
+        assert(parse!int(s, 8) == octal!765);
     s = "fCDe";
-	assert(parse!int(s, 16) == 0xfcde);
+        assert(parse!int(s, 16) == 0xfcde);
 }
 
 Target parse(Target, Source)(ref Source s)
@@ -3572,37 +3572,37 @@ Take a look at int.max and int.max+1 in octal and the logic for this
 function follows directly.
  */
 template octalFitsInInt(string octalNum) {
-	// note it is important to strip the literal of all
-	// non-numbers. kill the suffix and underscores lest they mess up
-	// the number of digits here that we depend on.
+        // note it is important to strip the literal of all
+        // non-numbers. kill the suffix and underscores lest they mess up
+        // the number of digits here that we depend on.
     enum bool octalFitsInInt = strippedOctalLiteral(octalNum).length < 11 ||
         strippedOctalLiteral(octalNum).length == 11 &&
         strippedOctalLiteral(octalNum)[0] == '1';
 }
 
 string strippedOctalLiteral(string original) {
-	string stripped;
-	foreach (c; original)
-		if (c >= '0' && c <= '7')
-			stripped ~= c;
-	return stripped;
+        string stripped;
+        foreach (c; original)
+                if (c >= '0' && c <= '7')
+                        stripped ~= c;
+        return stripped;
 }
 
 template literalIsLong(string num) {
-	static if (num.length > 1)
+        static if (num.length > 1)
         // can be xxL or xxLu according to spec
-		enum literalIsLong = (num[$-1] == 'L' || num[$-2] == 'L');
-	else
-		enum literalIsLong = false;
+                enum literalIsLong = (num[$-1] == 'L' || num[$-2] == 'L');
+        else
+                enum literalIsLong = false;
 }
 
 template literalIsUnsigned(string num) {
-	static if (num.length > 1)
+        static if (num.length > 1)
         // can be xxL or xxLu according to spec
-		enum literalIsUnsigned = (num[$-1] == 'u' || num[$-2] == 'u')
+                enum literalIsUnsigned = (num[$-1] == 'u' || num[$-2] == 'u')
             // both cases are allowed too
             || (num[$-1] == 'U' || num[$-2] == 'U');
-	else
+        else
         enum literalIsUnsigned = false;
 }
 
@@ -3633,25 +3633,25 @@ auto z = octal!"1_000_000u";
  */
 int octal(string num)()
 if((octalFitsInInt!(num) && !literalIsLong!(num)) && !literalIsUnsigned!(num)) {
-	return octal!(int, num);
+        return octal!(int, num);
 }
 
 /// Ditto
 long octal(string num)()
 if((!octalFitsInInt!(num) || literalIsLong!(num)) && !literalIsUnsigned!(num)) {
-	return octal!(long, num);
+        return octal!(long, num);
 }
 
 /// Ditto
 uint octal(string num)()
 if((octalFitsInInt!(num) && !literalIsLong!(num)) && literalIsUnsigned!(num)) {
-	return octal!(int, num);
+        return octal!(int, num);
 }
 
 /// Ditto
 ulong octal(string num)()
 if((!octalFitsInInt!(num) || literalIsLong!(num)) && literalIsUnsigned!(num)) {
-	return octal!(long, num);
+        return octal!(long, num);
 }
 
 /*
@@ -3661,54 +3661,54 @@ The format is specified in lex.html. The leading zero is allowed, but
 not required.
  */
 bool isOctalLiteralString(string num) {
-	if (num.length == 0)
-		return false;
+        if (num.length == 0)
+                return false;
 
-	// Must start with a number. To avoid confusion, literals that
+        // Must start with a number. To avoid confusion, literals that
     // start with a '0' are not allowed
     if (num[0] == '0' && num.length > 1)
         return false;
-	if (num[0] < '0' || num[0] > '7')
-		return false;
+        if (num[0] < '0' || num[0] > '7')
+                return false;
 
-	foreach (i, c; num) {
-		if ((c < '0' || c > '7') && c != '_') // not a legal character
-			if (i < num.length - 2)
-				return false;
-			else { // gotta check for those suffixes
-				if (c != 'U' && c != 'u' && c != 'L')
-					return false;
-				if (i != num.length - 1) {
+        foreach (i, c; num) {
+                if ((c < '0' || c > '7') && c != '_') // not a legal character
+                        if (i < num.length - 2)
+                                return false;
+                        else { // gotta check for those suffixes
+                                if (c != 'U' && c != 'u' && c != 'L')
+                                        return false;
+                                if (i != num.length - 1) {
                     // if we're not the last one, the next one must
                     // also be a suffix to be valid
-					char c2 = num[$-1];
-					if (c2 != 'U' && c2 != 'u' && c2 != 'L')
-						return false; // spam at the end of the string
-					if (c2 == c)
-						return false; // repeats are disallowed
-				}
-			}
-	}
+                                        char c2 = num[$-1];
+                                        if (c2 != 'U' && c2 != 'u' && c2 != 'L')
+                                                return false; // spam at the end of the string
+                                        if (c2 == c)
+                                                return false; // repeats are disallowed
+                                }
+                        }
+        }
 
-	return true;
+        return true;
 }
 
 /*
-	Returns true if the given compile time string is an octal literal.
+        Returns true if the given compile time string is an octal literal.
 */
 template isOctalLiteral(string num) {
-	enum bool isOctalLiteral = isOctalLiteralString(num);
+        enum bool isOctalLiteral = isOctalLiteralString(num);
 }
 
 /*
-	Takes a string, num, which is an octal literal, and returns its
-	value, in the type T specified.
+        Takes a string, num, which is an octal literal, and returns its
+        value, in the type T specified.
 
-	So:
+        So:
 
-	int a = octal!(int, "10");
+        int a = octal!(int, "10");
 
-	assert(a == 8);
+        assert(a == 8);
 */
 T octal(T, string num)() {
     static assert(isOctalLiteral!num, num ~ " is not a valid octal literal");
@@ -3718,13 +3718,13 @@ T octal(T, string num)() {
 
     for (int pos = num.length - 1; pos >= 0; pos--) {
         char s = num[pos];
-	if (s < '0' || s > '7') // we only care about digits; skip the rest
+        if (s < '0' || s > '7') // we only care about digits; skip the rest
         // safe to skip - this is checked out in the assert so these
         // are just suffixes
-		continue;
+                continue;
 
-	value += pow * (s - '0');
-	pow *= 8;
+        value += pow * (s - '0');
+        pow *= 8;
   }
 
   return value;
@@ -3732,17 +3732,17 @@ T octal(T, string num)() {
 
 /// Ditto
 template octal(alias s) if (isIntegral!(typeof(s))) {
-	enum auto octal = octal!(typeof(s), toStringNow!(s));
+        enum auto octal = octal!(typeof(s), toStringNow!(s));
 }
 
 unittest
 {
     debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
-	// ensure that you get the right types, even with embedded underscores
-	auto w = octal!"100_000_000_000";
-	static assert(!is(typeof(w) == int));
-	auto w2 = octal!"1_000_000_000";
-	static assert(is(typeof(w2) == int));
+        // ensure that you get the right types, even with embedded underscores
+        auto w = octal!"100_000_000_000";
+        static assert(!is(typeof(w) == int));
+        auto w2 = octal!"1_000_000_000";
+        static assert(is(typeof(w2) == int));
 
     static assert(octal!"45" == 37);
     static assert(octal!"0" == 0);
@@ -3825,7 +3825,7 @@ T* emplace(T, Args...)(void[] chunk, Args args) if (!is(T == class))
     enforce(chunk.length >= T.sizeof,
             new ConvError("emplace: target size too small"));
     auto a = cast(size_t) chunk.ptr;
-    version (OSX)	// for some reason, breaks on other platforms
+    version (OSX)       // for some reason, breaks on other platforms
         enforce(a % T.alignof == 0, new ConvError("misalignment"));
     auto result = cast(typeof(return)) chunk.ptr;
 

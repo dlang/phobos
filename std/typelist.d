@@ -1,7 +1,7 @@
 // Written in the D programming language.
 
 /**
- * This module defines a list of types $(D_PARAM TypeList) 
+ * This module defines a list of types $(D_PARAM TypeList)
  * and operations on $(D_PARAM TypeList)s.
  * Together they define a compile-time functional programming framework,
  * complete with lambdas, higher-order functions, and arbitrary data structures
@@ -16,7 +16,7 @@
  * template Synopsis(T...)
  * {
  *     alias TypeList!(T) list;
- * 
+ *
  *     template IsPtr(U) {
  *         static if (is(U foo: V*, V))
  *             enum IsPtr = true;
@@ -24,7 +24,7 @@
  *             enum IsPtr = false;
  *     }
  *     enum arePointers = All!(list, IsPtr);
- * 
+ *
  *     alias Map!(StripPtr, list) StripPointers;
  * }
  * static assert(is (Synopsis!(char**, void***).StripPointers.toTuple == TypeTuple!(char, void)));
@@ -53,7 +53,7 @@ version(unittest) {
  * To create an empty list use $(D TypeList!())
  *
  * $(D TypeList) efines several "methods":
- * 
+ *
  * $(D_PARAM toTuple), $(D_PARAM head), $(D_PARAM tail), $(D_PARAM length), $(D_PARAM isEmpty)
  *
  * Example:
@@ -94,7 +94,7 @@ unittest {
     static assert (is (TypeList!(void*, int).tail.toTuple == TypeTuple!(int)));
     static assert (is (TypeList!(int).tail.toTuple == TypeTuple!()));
     static assert (TypeList!(int).tail.isEmpty);
-    
+
     static assert (TypeList!(void*, int).length == 2);
     static assert (!TypeList!(void*, int).isEmpty);
     static assert (TypeList!().length == 0);
@@ -113,11 +113,11 @@ template AppendTypes(alias List, T...)
 }
 
 unittest {
-    static assert (is (AppendTypes!(TypeList!(void*, int), long, short).toTuple 
+    static assert (is (AppendTypes!(TypeList!(void*, int), long, short).toTuple
                        == TypeTuple!(void*, int, long, short)));
-    static assert (is (AppendTypes!(TypeList!(void*, int)).toTuple 
+    static assert (is (AppendTypes!(TypeList!(void*, int)).toTuple
                        == TypeTuple!(void*, int)));
-    static assert (AppendTypes!(TypeList!()).isEmpty); 
+    static assert (AppendTypes!(TypeList!()).isEmpty);
 }
 
 /**
@@ -129,11 +129,11 @@ template Append(alias Left, alias Right)
 }
 
 unittest {
-    static assert (is (Append!(TypeList!(void*, int), TypeList!(long, short)).toTuple 
+    static assert (is (Append!(TypeList!(void*, int), TypeList!(long, short)).toTuple
                        == TypeTuple!(void*, int, long, short)));
-    static assert (is (Append!(TypeList!(void*, int), TypeList!()).toTuple 
+    static assert (is (Append!(TypeList!(void*, int), TypeList!()).toTuple
                        == TypeTuple!(void*, int)));
-    static assert (Append!(TypeList!(), TypeList!()).isEmpty); 
+    static assert (Append!(TypeList!(), TypeList!()).isEmpty);
 }
 
 /**
@@ -148,12 +148,12 @@ template Cons(T, alias List)
 }
 
 unittest {
-    static assert (is (Cons!(long, TypeList!(void*, int)).toTuple 
+    static assert (is (Cons!(long, TypeList!(void*, int)).toTuple
                        == TypeTuple!(long, void*, int)));
-    static assert (is (Cons!(long, TypeList!(void*, int)).head 
+    static assert (is (Cons!(long, TypeList!(void*, int)).head
                        == long));
-    static assert (is (Cons!(int, TypeList!()).toTuple == TypeTuple!(int))); 
-    static assert (is (Cons!(char[], Cons!(int, TypeList!())).toTuple 
+    static assert (is (Cons!(int, TypeList!()).toTuple == TypeTuple!(int)));
+    static assert (is (Cons!(char[], Cons!(int, TypeList!())).toTuple
                     == TypeTuple!(char[], int)));
 }
 
@@ -231,8 +231,8 @@ unittest {
     static assert (is (Map!(MakePtr, void *, char) == TypeTuple!(void**, char*)));
 }
 
-/** 
- * Filters a type tuple using a predicate. 
+/**
+ * Filters a type tuple using a predicate.
  * Takes a predicate and a tuple and returns another tuple
 */
 template Filter(alias Pred, T...)
@@ -368,7 +368,7 @@ unittest {
 
 /** Combines two type predicates using logical OR.
  * The resulting predicate is callable through the field $(D apply)
- * 
+ *
  * Example:
  * ----
  * static assert(Or!(IsPointer, Not!(IsPointer).apply).apply!(int));
@@ -405,14 +405,14 @@ template Or(alias FList)
 
 unittest {
     static assert (Or!(
-        TypeFunList!(IsPointer, 
+        TypeFunList!(IsPointer,
                      TypeFunList!(Not!(IsPointer).apply)
                      )).apply!(int*));
 }
 
 /** Combines two type predicates using logical AND.
  * The resulting predicate is callable through the field $(D apply)
- * 
+ *
  * Example:
  * ----
  * static assert(!And!(IsPointer, Not!(IsPointer).apply).apply!(int));
@@ -449,7 +449,7 @@ template And(alias FList)
 
 unittest {
     static assert (!And!(
-        TypeFunList!(IsPointer, 
+        TypeFunList!(IsPointer,
                      TypeFunList!(Not!(IsPointer).apply)
                      )).apply!(int*));
 }

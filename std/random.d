@@ -652,24 +652,24 @@ if (is(CommonType!(T1, UniformRandomNumberGenerator) == void) &&
     alias Unqual!(CommonType!(T1, T2)) NumberType;
     NumberType _a, _b;
     static if (boundaries[0] == '(')
-	{
+        {
         static if (isIntegral!(NumberType) || is(Unqual!NumberType : dchar))
-		{
+                {
             _a = a;
-			_a++;
+                        _a++;
         }
-		else {
+                else {
             _a = nextafter(a, a.infinity);
-		}
+                }
     }
-	else
-	{
+        else
+        {
         _a = a;
-	}
+        }
     static if (boundaries[1] == ')')
         static if (isIntegral!(NumberType) || is(Unqual!NumberType : dchar))
         {
-		    _b = b;
+                    _b = b;
             static if (_b.min == 0)
             {
                 if (b == 0)
@@ -680,7 +680,7 @@ if (is(CommonType!(T1, UniformRandomNumberGenerator) == void) &&
                     _b++;
                 }
             }
-			_b--;
+                        _b--;
         }
         else
         {
@@ -750,18 +750,18 @@ unittest
         //writeln(x);
     }
 
-	foreach (i; 0 .. 20)
+        foreach (i; 0 .. 20)
     {
         auto x = uniform('a', 'z', gen);
         assert('a' <= x && x < 'z');
     }
 
-	foreach(i; 0 .. 20) {
-	    immutable ubyte a = 0;
-		immutable ubyte b = 15;
-	    auto x = uniform(a, b, gen);
-		assert(a <= x && x < b);
-	}
+        foreach(i; 0 .. 20) {
+            immutable ubyte a = 0;
+                immutable ubyte b = 15;
+            auto x = uniform(a, b, gen);
+                assert(a <= x && x < b);
+        }
 }
 
 unittest

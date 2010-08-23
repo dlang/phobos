@@ -45,7 +45,7 @@ struct protoent
     char* p_name;
     char** p_aliases;
     int32_t p_proto;
-} 
+}
 
 protoent* getprotobyname(in char* name);
 protoent* getprotobynumber(int number);

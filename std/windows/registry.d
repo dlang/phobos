@@ -78,13 +78,13 @@ class Win32Exception : Exception
 
     this(string message)
     {
-	super(msg);
+        super(msg);
     }
 
     this(string msg, int errnum)
     {
-	super(msg);
-	error = errnum;
+        super(msg);
+        error = errnum;
     }
 }
 
@@ -247,7 +247,7 @@ public enum REGSAM
     ,   KEY_CREATE_LINK         =   0x0020 //!< Permission to create a symbolic link
     ,   KEY_WOW64_32KEY         =   0x0200 //!< Enables a 64- or 32-bit application to open a 32-bit key
     ,   KEY_WOW64_64KEY         =   0x0100 //!< Enables a 64- or 32-bit application to open a 64-bit key
-    ,   KEY_WOW64_RES           =   0x0300 //!< 
+    ,   KEY_WOW64_RES           =   0x0300 //!<
     ,   KEY_READ                =   (   STANDARD_RIGHTS_READ
                                     |   KEY_QUERY_VALUE
                                     |   KEY_ENUMERATE_SUB_KEYS
@@ -274,7 +274,7 @@ public enum REGSAM
 /// \ingroup group_D_win32_reg
 public enum REG_VALUE_TYPE
 {
-        REG_UNKNOWN                     =   -1 //!< 
+        REG_UNKNOWN                     =   -1 //!<
     ,   REG_NONE                        =   0  //!< The null value type. (In practise this is treated as a zero-length binary array by the Win32 registry)
     ,   REG_SZ                          =   1  //!< A zero-terminated string
     ,   REG_EXPAND_SZ                   =   2  //!< A zero-terminated string containing expandable environment variable references
@@ -302,7 +302,7 @@ extern (C)
 
 extern (Windows)
 {
-    LONG    RegCreateKeyExA(in HKEY hkey, in LPCSTR lpSubKey, in Reserved 
+    LONG    RegCreateKeyExA(in HKEY hkey, in LPCSTR lpSubKey, in Reserved
                         ,   in Reserved , in DWORD dwOptions
                         ,   in REGSAM samDesired
                         ,   in LPSECURITY_ATTRIBUTES lpsa
@@ -310,18 +310,18 @@ extern (Windows)
     LONG    RegDeleteKeyA(in HKEY hkey, in LPCSTR lpSubKey);
     LONG    RegDeleteValueA(in HKEY hkey, in LPCSTR lpValueName);
     LONG    RegOpenKeyA(in HKEY hkey, in LPCSTR lpSubKey, out HKEY hkeyResult);
-    LONG    RegOpenKeyExA(  in HKEY hkey, in LPCSTR lpSubKey, in Reserved 
+    LONG    RegOpenKeyExA(  in HKEY hkey, in LPCSTR lpSubKey, in Reserved
                         ,   in REGSAM samDesired, out HKEY hkeyResult);
     LONG    RegCloseKey(in HKEY hkey);
     LONG    RegFlushKey(in HKEY hkey);
-    LONG    RegQueryValueExA(   in HKEY hkey, in LPCSTR lpValueName, in Reserved 
+    LONG    RegQueryValueExA(   in HKEY hkey, in LPCSTR lpValueName, in Reserved
                             ,   out REG_VALUE_TYPE type, in void *lpData
                             ,   ref DWORD cbData);
     LONG    RegEnumKeyExA(  in HKEY hkey, in DWORD dwIndex, in LPSTR lpName
                         ,   ref DWORD cchName, in Reserved , in LPSTR lpClass
                         ,   in LPDWORD cchClass, in FILETIME *ftLastWriteTime);
     LONG    RegEnumValueA(  in HKEY hkey, in DWORD dwIndex, in LPSTR lpValueName
-                        ,   ref DWORD cchValueName, in Reserved 
+                        ,   ref DWORD cchValueName, in Reserved
                         ,   in LPDWORD lpType, in void *lpData
                         ,   in LPDWORD lpcbData);
     LONG    RegQueryInfoKeyA(   in HKEY hkey, in LPSTR lpClass
@@ -333,7 +333,7 @@ extern (Windows)
                             ,   in LPDWORD lpcMaxValueLen
                             ,   in LPDWORD lpcbSecurityDescriptor
                             ,   in FILETIME *lpftLastWriteTime);
-    LONG    RegSetValueExA( in HKEY hkey, in LPCSTR lpSubKey, in Reserved 
+    LONG    RegSetValueExA( in HKEY hkey, in LPCSTR lpSubKey, in Reserved
                         ,   in REG_VALUE_TYPE type, in LPCVOID lpData
                         ,   in DWORD cbData);
 
@@ -549,7 +549,7 @@ body
     LONG    res;
 
     // The Registry API lies about the lengths of a very few sub-key lengths
-    // so we have to test to see if it whinges about more data, and provide 
+    // so we have to test to see if it whinges about more data, and provide
     // more if it does.
     for(;;)
     {
@@ -683,8 +683,8 @@ body
             case    REG_VALUE_TYPE.REG_SZ:
             case    REG_VALUE_TYPE.REG_EXPAND_SZ:
                 value = to!string(cast(char*)data);
-		if (value.ptr == cast(char*)&u.qw)
-		    value = value.idup;		// don't point into the stack
+                if (value.ptr == cast(char*)&u.qw)
+                    value = value.idup;         // don't point into the stack
                 break;
 version(LittleEndian)
 {
@@ -908,7 +908,7 @@ public:
     {
         super(message);
     }
-    /// \brief Creates an instance of the exception, with the given 
+    /// \brief Creates an instance of the exception, with the given
     ///
     /// \param message The message associated with the exception
     /// \param error The Win32 error number associated with the exception
@@ -988,7 +988,7 @@ private:
         Reg_CloseKey_(m_hkey);
 
         // Even though this is horried waste-of-cycles programming
-        // we're doing it here so that the 
+        // we're doing it here so that the
         m_hkey = null;
     }
 //@}
@@ -1098,7 +1098,7 @@ public:
             //
             // If the allocation of the memory for Key fails, the HKEY could be
             // lost. Hence, we catch such a failure by the finally, and release
-            // the HKEY there. If the creation of 
+            // the HKEY there. If the creation of
             try
             {
                 Key key =   new Key(hkey, name, disposition == REG_CREATED_NEW_KEY);
@@ -1116,7 +1116,7 @@ public:
             }
         }
     }
-    
+
     /// Returns the named sub-key of this key
     ///
     /// \param name The name of the subkey to create. May not be null
@@ -1132,7 +1132,7 @@ public:
     ///
     /// \param name The name of the subkey to aquire. If name is null (or the empty-string), then the called key is duplicated
     /// \param access The desired access; one of the REGSAM enumeration
-    /// \return The aquired key. 
+    /// \return The aquired key.
     /// \note This function never returns null. If a key corresponding to the requested name is not found, a RegistryException is thrown
     Key getKey(string name, REGSAM access)
     {
@@ -1157,7 +1157,7 @@ public:
             //
             // If the allocation of the memory for Key fails, the HKEY could be
             // lost. Hence, we catch such a failure by the finally, and release
-            // the HKEY there. If the creation of 
+            // the HKEY there. If the creation of
             try
             {
                 Key key =   new Key(hkey, name, false);
@@ -1179,7 +1179,7 @@ public:
     /// Returns the named sub-key of this key
     ///
     /// \param name The name of the subkey to aquire. If name is null (or the empty-string), then the called key is duplicated
-    /// \return The aquired key. 
+    /// \return The aquired key.
     /// \note This function never returns null. If a key corresponding to the requested name is not found, a RegistryException is thrown
     /// \note This function is equivalent to calling GetKey(name, REGSAM.KEY_READ), and returns a key with read/enum access
     Key getKey(string name)
@@ -1247,7 +1247,7 @@ public:
     {
         REG_VALUE_TYPE  type    =   _RVT_from_Endian(endian);
 
-        assert( type == REG_VALUE_TYPE.REG_DWORD_BIG_ENDIAN || 
+        assert( type == REG_VALUE_TYPE.REG_DWORD_BIG_ENDIAN ||
                 type == REG_VALUE_TYPE.REG_DWORD_LITTLE_ENDIAN);
 
         Reg_SetValueExA_(m_hkey, name, type, &value, value.sizeof);
@@ -1281,7 +1281,7 @@ public:
     /// \note If a value corresponding to the requested name is not found, a RegistryException is thrown
     void setValue(string name, string value, boolean asEXPAND_SZ)
     {
-        Reg_SetValueExA_(m_hkey, name, asEXPAND_SZ 
+        Reg_SetValueExA_(m_hkey, name, asEXPAND_SZ
                                             ? REG_VALUE_TYPE.REG_EXPAND_SZ
                                             : REG_VALUE_TYPE.REG_SZ, value.ptr
                         , value.length);
@@ -1305,7 +1305,7 @@ public:
 
         // Allocate
 
-	char[]  cs      =   new char[total];
+        char[]  cs      =   new char[total];
         int     base    =   0;
 
         // Slice the individual strings into the new array
@@ -1447,8 +1447,8 @@ public:
 
         return value;
  +/
-	// ExpandEnvironemntStrings():
-	//	http://msdn2.microsoft.com/en-us/library/ms724265.aspx
+        // ExpandEnvironemntStrings():
+        //      http://msdn2.microsoft.com/en-us/library/ms724265.aspx
         LPCSTR  lpSrc       =   toStringz(value);
         DWORD   cchRequired =   ExpandEnvironmentStringsA(lpSrc, null, 0);
         char[]  newValue    =   new char[cchRequired];
@@ -1458,7 +1458,7 @@ public:
             throw new Win32Exception("Failed to expand environment variables");
         }
 
-        return to!string(newValue.ptr);	// remove trailing 0
+        return to!string(newValue.ptr); // remove trailing 0
     }
 
     /// Obtains the current value as an array of strings
@@ -1854,7 +1854,7 @@ public:
         {
             DWORD   cchName;
 
-	    res     =   Reg_EnumKeyName_(hkey, index, sName, cchName);
+            res     =   Reg_EnumKeyName_(hkey, index, sName, cchName);
             assert(ERROR_MORE_DATA != res);
 
             if(ERROR_NO_MORE_ITEMS == res)
@@ -1996,7 +1996,7 @@ public:
         {
             DWORD   cchName =   1 + cchValueMaxLen;
 
-	    res = Reg_EnumValueName_(hkey, index, sName.ptr, cchName);
+            res = Reg_EnumValueName_(hkey, index, sName.ptr, cchName);
             if(ERROR_NO_MORE_ITEMS == res)
             {
                 // Enumeration complete
@@ -2121,7 +2121,7 @@ public:
         {
             DWORD   cchName =   1 + cchValueMaxLen;
 
-	    res = Reg_EnumValueName_(hkey, index, sName.ptr, cchName);
+            res = Reg_EnumValueName_(hkey, index, sName.ptr, cchName);
             if(ERROR_NO_MORE_ITEMS == res)
             {
                 // Enumeration complete

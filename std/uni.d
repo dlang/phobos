@@ -561,7 +561,7 @@ int isUniAlpha(dchar u)
             }
         }
     }
-    
+
     if (u < 0xAA)
     {
         if (u < 'A')

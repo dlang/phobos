@@ -14,30 +14,30 @@ extern (C)
 {
     extern __gshared
     {
-	void* __libc_stack_end;
-	int __data_start;
-	int _end;
-	int timezone;
+        void* __libc_stack_end;
+        int __data_start;
+        int _end;
+        int timezone;
 
-	void *_deh_beg;
-	void *_deh_end;
+        void *_deh_beg;
+        void *_deh_end;
     }
 }
 
-struct struct_stat64	// distinguish it from the stat() function
+struct struct_stat64    // distinguish it from the stat() function
 {
-    ulong st_dev;	/// device
+    ulong st_dev;       /// device
     uint __pad1;
-    uint st_ino;	/// file serial number
-    uint st_mode;	/// file mode
-    uint st_nlink;	/// link count
-    uint st_uid;	/// user ID of file's owner
-    uint st_gid;	/// user ID of group's owner
-    ulong st_rdev;	/// if device then device number
+    uint st_ino;        /// file serial number
+    uint st_mode;       /// file mode
+    uint st_nlink;      /// link count
+    uint st_uid;        /// user ID of file's owner
+    uint st_gid;        /// user ID of group's owner
+    ulong st_rdev;      /// if device then device number
     uint __pad2;
     align(4) ulong st_size;
-    int st_blksize;	/// optimal I/O block size
-    ulong st_blocks;	/// number of allocated 512 byte blocks
+    int st_blksize;     /// optimal I/O block size
+    ulong st_blocks;    /// number of allocated 512 byte blocks
     int st_atime;
     uint st_atimensec;
     int st_mtime;

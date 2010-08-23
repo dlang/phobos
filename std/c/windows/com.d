@@ -12,49 +12,49 @@ alias OLECHAR *LPCOLESTR;
 
 enum
 {
-	rmm = 23,	// OLE 2 version number info
-	rup = 639,
+        rmm = 23,       // OLE 2 version number info
+        rup = 639,
 }
 
 enum : int
 {
-	S_OK = 0,
-	S_FALSE = 0x00000001,
-	NOERROR = 0,
-	E_NOTIMPL     = cast(int)0x80004001,
-	E_NOINTERFACE = cast(int)0x80004002,
-	E_POINTER     = cast(int)0x80004003,
-	E_ABORT       = cast(int)0x80004004,
-	E_FAIL        = cast(int)0x80004005,
-	E_HANDLE      = cast(int)0x80070006,
-	CLASS_E_NOAGGREGATION = cast(int)0x80040110,
-	E_OUTOFMEMORY = cast(int)0x8007000E,
-	E_INVALIDARG  = cast(int)0x80070057,
-	E_UNEXPECTED  = cast(int)0x8000FFFF,
+        S_OK = 0,
+        S_FALSE = 0x00000001,
+        NOERROR = 0,
+        E_NOTIMPL     = cast(int)0x80004001,
+        E_NOINTERFACE = cast(int)0x80004002,
+        E_POINTER     = cast(int)0x80004003,
+        E_ABORT       = cast(int)0x80004004,
+        E_FAIL        = cast(int)0x80004005,
+        E_HANDLE      = cast(int)0x80070006,
+        CLASS_E_NOAGGREGATION = cast(int)0x80040110,
+        E_OUTOFMEMORY = cast(int)0x8007000E,
+        E_INVALIDARG  = cast(int)0x80070057,
+        E_UNEXPECTED  = cast(int)0x8000FFFF,
 }
 
 struct GUID {          // size is 16
     align(1):
-	DWORD Data1;
-	WORD  Data2;
-	WORD  Data3;
-	BYTE  Data4[8];
+        DWORD Data1;
+        WORD  Data2;
+        WORD  Data3;
+        BYTE  Data4[8];
 }
 
 enum
 {
-	CLSCTX_INPROC_SERVER	= 0x1,
-	CLSCTX_INPROC_HANDLER	= 0x2,
-	CLSCTX_LOCAL_SERVER	= 0x4,
-	CLSCTX_INPROC_SERVER16	= 0x8,
-	CLSCTX_REMOTE_SERVER	= 0x10,
-	CLSCTX_INPROC_HANDLER16	= 0x20,
-	CLSCTX_INPROC_SERVERX86	= 0x40,
-	CLSCTX_INPROC_HANDLERX86 = 0x80,
+        CLSCTX_INPROC_SERVER    = 0x1,
+        CLSCTX_INPROC_HANDLER   = 0x2,
+        CLSCTX_LOCAL_SERVER     = 0x4,
+        CLSCTX_INPROC_SERVER16  = 0x8,
+        CLSCTX_REMOTE_SERVER    = 0x10,
+        CLSCTX_INPROC_HANDLER16 = 0x20,
+        CLSCTX_INPROC_SERVERX86 = 0x40,
+        CLSCTX_INPROC_HANDLERX86 = 0x80,
 
-	CLSCTX_INPROC = (CLSCTX_INPROC_SERVER|CLSCTX_INPROC_HANDLER),
-	CLSCTX_ALL = (CLSCTX_INPROC_SERVER| CLSCTX_INPROC_HANDLER| CLSCTX_LOCAL_SERVER),
-	CLSCTX_SERVER = (CLSCTX_INPROC_SERVER|CLSCTX_LOCAL_SERVER),
+        CLSCTX_INPROC = (CLSCTX_INPROC_SERVER|CLSCTX_INPROC_HANDLER),
+        CLSCTX_ALL = (CLSCTX_INPROC_SERVER| CLSCTX_INPROC_HANDLER| CLSCTX_LOCAL_SERVER),
+        CLSCTX_SERVER = (CLSCTX_INPROC_SERVER|CLSCTX_LOCAL_SERVER),
 }
 
 alias const(GUID) IID;
@@ -208,41 +208,41 @@ class ComObject : IUnknown
 extern (System):
     HRESULT QueryInterface(const(IID)* riid, void** ppv)
     {
-	if (*riid == IID_IUnknown)
-	{
-	    *ppv = cast(void*)cast(IUnknown)this;
-	    AddRef();
-	    return S_OK;
-	}
-	else
-	{   *ppv = null;
-	    return E_NOINTERFACE;
-	}
+        if (*riid == IID_IUnknown)
+        {
+            *ppv = cast(void*)cast(IUnknown)this;
+            AddRef();
+            return S_OK;
+        }
+        else
+        {   *ppv = null;
+            return E_NOINTERFACE;
+        }
     }
 
     ULONG AddRef()
     {
-	return InterlockedIncrement(&count);
+        return InterlockedIncrement(&count);
     }
 
     ULONG Release()
     {
-	LONG lRef = InterlockedDecrement(&count);
-	if (lRef == 0)
-	{
-	    // free object
+        LONG lRef = InterlockedDecrement(&count);
+        if (lRef == 0)
+        {
+            // free object
 
-	    // If we delete this object, then the postinvariant called upon
-	    // return from Release() will fail.
-	    // Just let the GC reap it.
-	    //delete this;
+            // If we delete this object, then the postinvariant called upon
+            // return from Release() will fail.
+            // Just let the GC reap it.
+            //delete this;
 
-	    return 0;
-	}
-	return cast(ULONG)lRef;
+            return 0;
+        }
+        return cast(ULONG)lRef;
     }
 
-    LONG count = 0;		// object reference count
+    LONG count = 0;             // object reference count
 }
 
 }

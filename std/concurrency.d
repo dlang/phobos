@@ -106,7 +106,7 @@ private
             }
         }
     }
-    
+
     void checkops(T...)( T ops )
     {
         foreach( i, t1; T )
@@ -412,7 +412,7 @@ unittest
                           receive( (Variant x) {} );
                           receive( (int x) {}, (Variant x) {} );
                       } ) );
-                       
+
     assert( !__traits( compiles,
                        {
                            receive( (Variant x) {}, (int x) {} );
@@ -461,7 +461,7 @@ receiveOnlyRet!(T) receiveOnly(T...)()
  */
 bool receiveTimeout(T...)( long ms, T ops )
 {
-    checkops( ops );    
+    checkops( ops );
     static enum long TICKS_PER_MILLI = 10_000;
     return mbox.get( ms * TICKS_PER_MILLI, ops );
 }
@@ -479,7 +479,7 @@ unittest
                        {
                            receiveTimeout( 0, (Variant x) {}, (int x) {} );
                        } ) );
-                      
+
     assert( !__traits( compiles,
                        {
                            receiveTimeout( 0, (int x) {}, (int x) {} );

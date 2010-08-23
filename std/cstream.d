@@ -58,7 +58,7 @@ class CFile : Stream {
    * Ditto
    */
   void file(FILE* cfile) {
-    this.cfile = cfile; 
+    this.cfile = cfile;
     isopen = true;
   }
 
@@ -71,31 +71,31 @@ class CFile : Stream {
   /**
    * Ditto
    */
-  override void close() { 
+  override void close() {
     if (isopen)
-      fclose(cfile); 
-    isopen = readable = writeable = seekable = false; 
+      fclose(cfile);
+    isopen = readable = writeable = seekable = false;
   }
 
   /**
    * Ditto
    */
-  override bool eof() { 
-    return cast(bool)(readEOF || feof(cfile)); 
+  override bool eof() {
+    return cast(bool)(readEOF || feof(cfile));
   }
 
   /**
    * Ditto
    */
-  override char getc() { 
-    return cast(char)fgetc(cfile); 
+  override char getc() {
+    return cast(char)fgetc(cfile);
   }
 
   /**
    * Ditto
    */
-  override char ungetc(char c) { 
-    return cast(char)std.c.stdio.ungetc(c,cfile); 
+  override char ungetc(char c) {
+    return cast(char)std.c.stdio.ungetc(c,cfile);
   }
 
   /**

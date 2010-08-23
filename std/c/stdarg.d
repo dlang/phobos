@@ -4,7 +4,7 @@
  * Authors: Hauke Duden and Walter Bright, Digital Mars, www.digitalmars.com
  * License: Public Domain
  * Macros:
- *	WIKI=Phobos/StdCStdarg
+ *      WIKI=Phobos/StdCStdarg
  */
 
 /* This is for use with extern(C) variable argument lists. */

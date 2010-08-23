@@ -66,8 +66,8 @@ private import std.internal.math.biguintcore;
 struct BigInt
 {
 private:
-	BigUint data;     // BigInt adds signed arithmetic to BigUint.
-	bool sign = false;
+        BigUint data;     // BigInt adds signed arithmetic to BigUint.
+        bool sign = false;
 public:
     /// Construct a BigInt from a decimal or hexadecimal string.
     /// The number must be in the form of a D decimal or hex literal:

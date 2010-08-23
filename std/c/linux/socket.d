@@ -21,12 +21,12 @@ enum: int
     AF_APPLETALK =  5,
     PF_IPX =        AF_IPX,
     PF_APPLETALK =  AF_APPLETALK,
-} 
+}
 
 enum: int
 {
     SOCK_RDM =      4,
-} 
+}
 
 enum: int
 {
@@ -45,7 +45,7 @@ struct protoent
     char* p_name;
     char** p_aliases;
     int32_t p_proto;
-} 
+}
 
 protoent* getprotobyname(in char* name);
 protoent* getprotobynumber(int number);
@@ -94,7 +94,7 @@ enum: int
 }
 
 enum: int
-{   
+{
     IP_MULTICAST_LOOP =  34,
     IP_ADD_MEMBERSHIP =  35,
     IP_DROP_MEMBERSHIP = 36,

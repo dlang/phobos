@@ -40,12 +40,12 @@
  * Open-RJ mapping for the D standard library.
  *
  * Authors:
- *	Matthew Wilson
+ *      Matthew Wilson
  * References:
- *	$(LINK2 http://www.$(OPENRJ).org/, Open-RJ)
+ *      $(LINK2 http://www.$(OPENRJ).org/, Open-RJ)
  * Macros:
- *	WIKI=Phobos/StdOpenrj
- *	OPENRJ=openrj
+ *      WIKI=Phobos/StdOpenrj
+ *      OPENRJ=openrj
  */
 
 /* /////////////////////////////////////////////////////////////////////////////
@@ -153,7 +153,7 @@ public enum ORJ_FLAG
  */
 public string toString(ORJ_FLAG f)
 {
-    static const EnumString    strings[] = 
+    static const EnumString    strings[] =
     [
             {   ORJ_FLAG.ORDER_FIELDS,           "Arranges the fields in alphabetical order" }
         ,   {   ORJ_FLAG.ELIDE_BLANK_RECORDS,    "Causes blank records to be ignored"        }
@@ -181,7 +181,7 @@ public enum ORJRC
  */
 public string toString(ORJRC f)
 {
-    static const EnumString    strings[] = 
+    static const EnumString    strings[] =
     [
             {   ORJRC.SUCCESS,              "Operation was successful"                                      }
         ,   {   ORJRC.CANNOT_OPEN_JAR_FILE, "The given file does not exist, or cannot be accessed"          }
@@ -190,8 +190,8 @@ public string toString(ORJRC f)
         ,   {   ORJRC.BAD_FILE_READ,        "A read operation failed"                                       }
         ,   {   ORJRC.PARSE_ERROR,          "Parsing of the database file failed due to a syntax error"     }
         ,   {   ORJRC.INVALID_INDEX,        "An invalid index was specified"                                }
-        ,   {   ORJRC.UNEXPECTED,           "An unexpected condition was encountered"                       }   
-        ,   {   ORJRC.INVALID_CONTENT,      "The database file contained invalid content"                   }       
+        ,   {   ORJRC.UNEXPECTED,           "An unexpected condition was encountered"                       }
+        ,   {   ORJRC.INVALID_CONTENT,      "The database file contained invalid content"                   }
     ];
 
     return enum_to_string!(ORJRC)(strings, f);
@@ -212,7 +212,7 @@ public enum ORJ_PARSE_ERROR
  */
 public string toString(ORJ_PARSE_ERROR f)
 {
-    static const EnumString    strings[] = 
+    static const EnumString    strings[] =
     [
             {   ORJ_PARSE_ERROR.SUCCESS,                            "Parsing was successful"                                                        }
         ,   {   ORJ_PARSE_ERROR.RECORD_SEPARATOR_IN_CONTINUATION,   "A record separator was encountered during a content line continuation"         }
@@ -694,7 +694,7 @@ private:
         foreach(string ln; lines)
         {
             // Always strip trailing space
-	    auto line = stripr(ln);
+            auto line = stripr(ln);
 
             // Check that we don't start a continued line with a record separator
             if( bContinuing &&
@@ -784,7 +784,7 @@ private:
                 bContinuing =   false;
             }
 
-/+ // This is currently commented out as it seems unlikely to be sensible to 
+/+ // This is currently commented out as it seems unlikely to be sensible to
    // order the Fields globally. The reasoning is that if the Fields are used
    // globally then it's more likely that their ordering in the database source
    // is meaningful. If someone really needs an all-Fields array ordered, they

@@ -150,18 +150,18 @@ unittest
 
     uint [] aa = [0x1222_2223, 0x4555_5556, 0x8999_999A, 0xBCCC_CCCD, 0xEEEE_EEEE];
     multibyteShr(aa[0..$-2], aa, 4);
-	assert(aa[0]==0x6122_2222 && aa[1]==0xA455_5555 && aa[2]==0x0899_9999);
-	assert(aa[3]==0xBCCC_CCCD);
+        assert(aa[0]==0x6122_2222 && aa[1]==0xA455_5555 && aa[2]==0x0899_9999);
+        assert(aa[3]==0xBCCC_CCCD);
 
     aa = [0x1222_2223, 0x4555_5556, 0x8999_999A, 0xBCCC_CCCD, 0xEEEE_EEEE];
     multibyteShr(aa[0..$-1], aa, 4);
-	assert(aa[0] == 0x6122_2222 && aa[1]==0xA455_5555
-	    && aa[2]==0xD899_9999 && aa[3]==0x0BCC_CCCC);
+        assert(aa[0] == 0x6122_2222 && aa[1]==0xA455_5555
+            && aa[2]==0xD899_9999 && aa[3]==0x0BCC_CCCC);
 
     aa = [0xF0FF_FFFF, 0x1222_2223, 0x4555_5556, 0x8999_999A, 0xBCCC_CCCD, 0xEEEE_EEEE];
     multibyteShl(aa[1..4], aa[1..$], 4);
-	assert(aa[0] == 0xF0FF_FFFF && aa[1] == 0x2222_2230
-	    && aa[2]==0x5555_5561 && aa[3]==0x9999_99A4 && aa[4]==0x0BCCC_CCCD);
+        assert(aa[0] == 0xF0FF_FFFF && aa[1] == 0x2222_2230
+            && aa[2]==0x5555_5561 && aa[3]==0x9999_99A4 && aa[4]==0x0BCCC_CCCD);
 }
 
 /** dest[] = src[] * multiplier + carry.
@@ -183,7 +183,7 @@ unittest
 {
     uint [] aa = [0xF0FF_FFFF, 0x1222_2223, 0x4555_5556, 0x8999_999A, 0xBCCC_CCCD, 0xEEEE_EEEE];
     multibyteMul(aa[1..4], aa[1..4], 16, 0);
-	assert(aa[0] == 0xF0FF_FFFF && aa[1] == 0x2222_2230 && aa[2]==0x5555_5561 && aa[3]==0x9999_99A4 && aa[4]==0x0BCCC_CCCD);
+        assert(aa[0] == 0xF0FF_FFFF && aa[1] == 0x2222_2230 && aa[2]==0x5555_5561 && aa[3]==0x9999_99A4 && aa[4]==0x0BCCC_CCCD);
 }
 
 /**
@@ -214,9 +214,9 @@ unittest {
     uint [] aa = [0xF0FF_FFFF, 0x1222_2223, 0x4555_5556, 0x8999_999A, 0xBCCC_CCCD, 0xEEEE_EEEE];
     uint [] bb = [0x1234_1234, 0xF0F0_F0F0, 0x00C0_C0C0, 0xF0F0_F0F0, 0xC0C0_C0C0];
     multibyteMulAdd!('+')(bb[1..$-1], aa[1..$-2], 16, 5);
-	assert(bb[0] == 0x1234_1234 && bb[4] == 0xC0C0_C0C0);
+        assert(bb[0] == 0x1234_1234 && bb[4] == 0xC0C0_C0C0);
     assert(bb[1] == 0x2222_2230 + 0xF0F0_F0F0+5 && bb[2] == 0x5555_5561+0x00C0_C0C0+1
-	    && bb[3] == 0x9999_99A4+0xF0F0_F0F0 );
+            && bb[3] == 0x9999_99A4+0xF0F0_F0F0 );
 }
 
 
@@ -269,7 +269,7 @@ void multibyteAddDiagonalSquares(uint[] dest, const(uint)[] src)
 {
     ulong c = 0;
     for(int i = 0; i < src.length; ++i){
-		 // At this point, c is 0 or 1, since FFFF*FFFF+FFFF_FFFF = 1_0000_0000.
+                 // At this point, c is 0 or 1, since FFFF*FFFF+FFFF_FFFF = 1_0000_0000.
          c += cast(ulong)(src[i]) * src[i] + dest[2*i];
          dest[2*i] = cast(uint)c;
          c = (c>>=32) + dest[2*i+1];
@@ -283,20 +283,20 @@ void multibyteTriangleAccumulate(uint[] dest, const(uint)[] x)
 {
     // x[0]*x[1...$] + x[1]*x[2..$] + ... + x[$-2]x[$-1..$]
     dest[x.length] = multibyteMul(dest[1 .. x.length], x[1..$], x[0], 0);
-	if (x.length <4) {
-	    if (x.length ==3) {
+        if (x.length <4) {
+            if (x.length ==3) {
             ulong c = cast(ulong)(x[$-1]) * x[$-2]  + dest[2*x.length-3];
-	        dest[2*x.length-3] = cast(uint)c;
-	        c >>= 32;
-	        dest[2*x.length-2] = cast(uint)c;
+                dest[2*x.length-3] = cast(uint)c;
+                c >>= 32;
+                dest[2*x.length-2] = cast(uint)c;
         }
-	    return;
-	}
+            return;
+        }
     for (int i = 2; i < x.length-2; ++i) {
         dest[i-1+ x.length] = multibyteMulAdd!('+')(
              dest[i+i-1 .. i+x.length-1], x[i..$], x[i-1], 0);
     }
-	// Unroll the last two entries, to reduce loop overhead:
+        // Unroll the last two entries, to reduce loop overhead:
     ulong  c = cast(ulong)(x[$-3]) * x[$-2] + dest[2*x.length-5];
     dest[2*x.length-5] = cast(uint)c;
     c >>= 32;
@@ -304,9 +304,9 @@ void multibyteTriangleAccumulate(uint[] dest, const(uint)[] x)
     dest[2*x.length-4] = cast(uint)c;
     c >>= 32;
     c += cast(ulong)(x[$-1]) * x[$-2];
-	dest[2*x.length-3] = cast(uint)c;
-	c >>= 32;
-	dest[2*x.length-2] = cast(uint)c;
+        dest[2*x.length-3] = cast(uint)c;
+        c >>= 32;
+        dest[2*x.length-2] = cast(uint)c;
 }
 
 void multibyteSquare(BigDigit[] result, const(BigDigit) [] x)

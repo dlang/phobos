@@ -1317,7 +1317,7 @@ struct Array(T) if (!is(T : const(bool)))
         {
             if (elements <= capacity) return;
             immutable sz = elements * T.sizeof;
-            static if (hasIndirections!T)	// should use hasPointers instead
+            static if (hasIndirections!T)       // should use hasPointers instead
             {
                 /* Because of the transactional nature of this
                  * relative to the garbage collector, ensure no

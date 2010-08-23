@@ -1414,7 +1414,7 @@ size_t karatsubaRequiredBuffSize(size_t xlen)
 void mulKaratsuba(BigDigit [] result, const(BigDigit) [] x, const(BigDigit)[] y, BigDigit [] scratchbuff)
 {
     assert(x.length >= y.length);
-	  assert(result.length < uint.max, "Operands too large");
+          assert(result.length < uint.max, "Operands too large");
     assert(result.length == x.length + y.length);
     if (x.length <= KARATSUBALIMIT) {
         return mulSimple(result, x, y);
@@ -1512,7 +1512,7 @@ void squareKaratsuba(BigDigit [] result, BigDigit [] x, BigDigit [] scratchbuff)
 {
     // See mulKaratsuba for implementation comments.
     // Squaring is simpler, since it never gets asymmetric.
-	  assert(result.length < uint.max, "Operands too large");
+          assert(result.length < uint.max, "Operands too large");
     assert(result.length == 2*x.length);
     if (x.length <= KARATSUBASQUARELIMIT) {
         return squareSimple(result, x);

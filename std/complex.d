@@ -320,7 +320,7 @@ struct Complex(T)  if (isFloatingPoint!T)
 
 
     /** Convert the complex number to a string representation.
-    
+
         If a $(D sink) delegate is specified, the string is passed to it
         and this function returns $(D null).  Otherwise, this function
         returns the string representation directly.

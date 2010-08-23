@@ -4,7 +4,7 @@
  * Authors: Walter Bright, Digital Mars, www.digitalmars.com
  * License: Public Domain
  * Macros:
- *	WIKI=Phobos/StdCTime
+ *      WIKI=Phobos/StdCTime
  */
 
 module std.c.time;

@@ -2387,15 +2387,15 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
 
 /** Experimental network access via the File interface
 
-	Opens a TCP connection to the given host and port, then returns
-	a File struct with read and write access through the same interface
-	as any other file (meaning writef and the byLine ranges work!).
+        Opens a TCP connection to the given host and port, then returns
+        a File struct with read and write access through the same interface
+        as any other file (meaning writef and the byLine ranges work!).
 
-	Authors:
-		Adam D. Ruppe
+        Authors:
+                Adam D. Ruppe
 
-	Bugs:
-		Only works on Linux
+        Bugs:
+                Only works on Linux
 */
 version(linux) {
     static import linux = std.c.linux.linux;

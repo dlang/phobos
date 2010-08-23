@@ -9,13 +9,13 @@
  * module first (i.e. $(D std.file.isDir())).
  *
  * Macros:
- *	WIKI = Phobos/StdPath
+ *      WIKI = Phobos/StdPath
  *
  * Copyright: Copyright Digital Mars 2000 - 2009.
  * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
  * Authors:   $(WEB digitalmars.com, Walter Bright),
- *	      Grzegorz Adam Hankiewicz, Thomas K&uuml;hne,
- * 	      $(WEB erdani.org, Andrei Alexandrescu)
+ *            Grzegorz Adam Hankiewicz, Thomas K&uuml;hne,
+ *            $(WEB erdani.org, Andrei Alexandrescu)
  *
  *          Copyright Digital Mars 2000 - 2009.
  * Distributed under the Boost Software License, Version 1.0.
@@ -24,7 +24,7 @@
  */
 module std.path;
 
-//debug=path;		// uncomment to turn on debugging printf's
+//debug=path;           // uncomment to turn on debugging printf's
 //private import std.stdio;
 
 import std.array, std.conv, std.file, std.process, std.string, std.traits;
@@ -51,7 +51,7 @@ version(Windows)
     /** String used to separate lines, \r\n under Windows and \n
      * under Linux. */
     immutable char[2] linesep = "\r\n"; /// String used to separate lines.
-    immutable char[1] curdir = ".";	 /// String representing the current directory.
+    immutable char[1] curdir = ".";      /// String representing the current directory.
     immutable char[2] pardir = ".."; /// String representing the parent directory.
 }
 version(Posix)
@@ -68,18 +68,18 @@ version(Posix)
     /** String used to separate lines, \r\n under Windows and \n
      * under Linux. */
     immutable char[1] linesep = "\n";
-    immutable char[1] curdir = ".";	 /// String representing the current directory.
+    immutable char[1] curdir = ".";      /// String representing the current directory.
     immutable char[2] pardir = ".."; /// String representing the parent directory.
 }
 
 /*****************************
  * Compare file names.
  * Returns:
- *	<table border=1 cellpadding=4 cellspacing=0>
- *	<tr> <td> &lt; 0	<td> filename1 &lt; filename2
- *	<tr> <td> = 0	<td> filename1 == filename2
- *	<tr> <td> &gt; 0	<td> filename1 &gt; filename2
- *	</table>
+ *      <table border=1 cellpadding=4 cellspacing=0>
+ *      <tr> <td> &lt; 0        <td> filename1 &lt; filename2
+ *      <tr> <td> = 0   <td> filename1 == filename2
+ *      <tr> <td> &gt; 0        <td> filename1 &gt; filename2
+ *      </table>
  */
 
 version (Windows) alias std.string.icmp fcmp;
@@ -148,30 +148,30 @@ unittest
     string result;
 
     version (Windows)
-	result = getExt("d:\\path\\foo.bat");
+        result = getExt("d:\\path\\foo.bat");
     version (Posix)
-	result = getExt("/path/foo.bat");
+        result = getExt("/path/foo.bat");
     auto i = cmp(result, "bat");
     assert(i == 0);
 
     version (Windows)
-	result = getExt("d:\\path\\foo.");
+        result = getExt("d:\\path\\foo.");
     version (Posix)
-	result = getExt("d/path/foo.");
+        result = getExt("d/path/foo.");
     i = cmp(result, "");
     assert(i == 0);
 
     version (Windows)
-	result = getExt("d:\\path\\foo");
+        result = getExt("d:\\path\\foo");
     version (Posix)
-	result = getExt("d/path/foo");
+        result = getExt("d/path/foo");
     i = cmp(result, "");
     assert(i == 0);
 
     version (Windows)
-	result = getExt("d:\\path.bar\\foo");
+        result = getExt("d:\\path.bar\\foo");
     version (Posix)
-	result = getExt("/path.bar/foo");
+        result = getExt("/path.bar/foo");
 
     i = cmp(result, "");
     assert(i == 0);
@@ -248,9 +248,9 @@ unittest
 
     result = getName("d:\\path.two\\bar");
     version (Windows)
-	i = cmp(result, "");
+        i = cmp(result, "");
     version (Posix)
-	i = cmp(result, "d:\\path");
+        i = cmp(result, "d:\\path");
     assert(i == 0);
 }
 
@@ -326,22 +326,22 @@ unittest
     string result;
 
     version (Windows)
-	result = basename("d:\\path\\foo.bat");
+        result = basename("d:\\path\\foo.bat");
     version (Posix)
-	result = basename("/path/foo.bat");
+        result = basename("/path/foo.bat");
     //printf("result = '%.*s'\n", result);
     assert(result == "foo.bat");
 
     version (Windows)
-	result = basename("a\\b");
+        result = basename("a\\b");
     version (Posix)
-	result = basename("a/b");
+        result = basename("a/b");
     assert(result == "b");
 
     version (Windows)
-	result = basename("a\\b.cde", ".cde");
+        result = basename("a\\b.cde", ".cde");
     version (Posix)
-	result = basename("a/b.cde", ".cde");
+        result = basename("a/b.cde", ".cde");
     assert(result == "b");
 
     version (Windows)
@@ -649,11 +649,11 @@ string defaultExt(string filename, string ext)
     existing = getExt(filename);
     if (existing.length == 0)
     {
-	// Check for filename ending in '.'
-	if (filename.length && filename[filename.length - 1] == '.')
-	    filename ~= ext;
-	else
-	    filename = filename ~ "." ~ ext;
+        // Check for filename ending in '.'
+        if (filename.length && filename[filename.length - 1] == '.')
+            filename ~= ext;
+        else
+            filename = filename ~ "." ~ ext;
     }
     return filename;
 }
@@ -689,15 +689,15 @@ string addExt(string filename, string ext)
     existing = getExt(filename);
     if (existing.length == 0)
     {
-	// Check for filename ending in '.'
-	if (filename.length && filename[filename.length - 1] == '.')
-	    filename ~= ext;
-	else
-	    filename = filename ~ "." ~ ext;
+        // Check for filename ending in '.'
+        if (filename.length && filename[filename.length - 1] == '.')
+            filename ~= ext;
+        else
+            filename = filename ~ "." ~ ext;
     }
     else
     {
-	filename = filename[0 .. $ - existing.length] ~ ext;
+        filename = filename[0 .. $ - existing.length] ~ ext;
     }
     return filename;
 }
@@ -752,14 +752,14 @@ unittest
 
     version (Windows)
     {
-	assert(!isabs(r"relative\path"));
-	assert(isabs(r"\relative\path"));
-	assert(isabs(r"d:\absolute"));
+        assert(!isabs(r"relative\path"));
+        assert(isabs(r"\relative\path"));
+        assert(isabs(r"d:\absolute"));
     }
     version (Posix)
     {
-	assert(isabs("/home/user"));
-	assert(!isabs("foo"));
+        assert(isabs("/home/user"));
+        assert(!isabs("foo"));
     }
 }
 
@@ -903,38 +903,38 @@ unittest
 
     p = join("foo", "bar");
     version (Windows)
-	i = cmp(p, "foo\\bar");
+        i = cmp(p, "foo\\bar");
     version (Posix)
-	i = cmp(p, "foo/bar");
+        i = cmp(p, "foo/bar");
     assert(i == 0);
 
     version (Windows)
-    {	p = join("foo\\", "bar");
-	i = cmp(p, "foo\\bar");
+    {   p = join("foo\\", "bar");
+        i = cmp(p, "foo\\bar");
     }
     version (Posix)
-    {	p = join("foo/", "bar");
-	i = cmp(p, "foo/bar");
-    }
-    assert(i == 0);
-
-    version (Windows)
-    {	p = join("foo", "\\bar");
-	i = cmp(p, "\\bar");
-    }
-    version (Posix)
-    {	p = join("foo", "/bar");
-	i = cmp(p, "/bar");
+    {   p = join("foo/", "bar");
+        i = cmp(p, "foo/bar");
     }
     assert(i == 0);
 
     version (Windows)
-    {	p = join("foo\\", "\\bar");
-	i = cmp(p, "\\bar");
+    {   p = join("foo", "\\bar");
+        i = cmp(p, "\\bar");
     }
     version (Posix)
-    {	p = join("foo/", "/bar");
-	i = cmp(p, "/bar");
+    {   p = join("foo", "/bar");
+        i = cmp(p, "/bar");
+    }
+    assert(i == 0);
+
+    version (Windows)
+    {   p = join("foo\\", "\\bar");
+        i = cmp(p, "\\bar");
+    }
+    version (Posix)
+    {   p = join("foo/", "/bar");
+        i = cmp(p, "/bar");
     }
     assert(i == 0);
 
@@ -1079,91 +1079,91 @@ bool fncharmatch(dchar c1, dchar c2)
 bool fnmatch(in char[] filename, in char[] pattern)
     in
     {
-	// Verify that pattern[] is valid
-	bool inbracket = false;
-	foreach (i;  0 .. pattern.length)
-	{
-	    switch (pattern[i])
-	    {
-		case '[':
-		    assert(!inbracket);
-		    inbracket = true;
-		    break;
+        // Verify that pattern[] is valid
+        bool inbracket = false;
+        foreach (i;  0 .. pattern.length)
+        {
+            switch (pattern[i])
+            {
+                case '[':
+                    assert(!inbracket);
+                    inbracket = true;
+                    break;
 
-		case ']':
-		    assert(inbracket);
-		    inbracket = false;
-		    break;
+                case ']':
+                    assert(inbracket);
+                    inbracket = false;
+                    break;
 
-		default:
-		    break;
-	    }
-	}
+                default:
+                    break;
+            }
+        }
     }
     body
     {
-	char nc;
+        char nc;
         int not;
-	int anymatch;
-	int ni;       // ni == name index
-	foreach (pi; 0 .. pattern.length) // pi == pattern index
-	{
-	    char pc = pattern[pi]; // pc == pattern character
-	    switch (pc)
-	    {
-		case '*':
-		    if (pi + 1 == pattern.length)
-			return true;
-		    foreach (j; ni .. filename.length)
-		    {
-			if (fnmatch(filename[j .. filename.length],
+        int anymatch;
+        int ni;       // ni == name index
+        foreach (pi; 0 .. pattern.length) // pi == pattern index
+        {
+            char pc = pattern[pi]; // pc == pattern character
+            switch (pc)
+            {
+                case '*':
+                    if (pi + 1 == pattern.length)
+                        return true;
+                    foreach (j; ni .. filename.length)
+                    {
+                        if (fnmatch(filename[j .. filename.length],
                                         pattern[pi + 1 .. pattern.length]))
-			    return true;
-		    }
-		    return false;
+                            return true;
+                    }
+                    return false;
 
-		case '?':
-		    if (ni == filename.length)
+                case '?':
+                    if (ni == filename.length)
                         return false;
-		    ni++;
-		    break;
+                    ni++;
+                    break;
 
-		case '[':
-		    if (ni == filename.length)
-			return false;
-		    nc = filename[ni];
-		    ni++;
-		    not = 0;
-		    pi++;
-		    if (pattern[pi] == '!')
-		    {	not = 1;
-			pi++;
-		    }
-		    anymatch = 0;
-		    while (1)
-		    {
-			pc = pattern[pi];
-			if (pc == ']')
-			    break;
-			if (!anymatch && fncharmatch(nc, pc))
-			    anymatch = 1;
-			pi++;
-		    }
-		    if (!(anymatch ^ not))
-			return false;
-		    break;
+                case '[':
+                    if (ni == filename.length)
+                        return false;
+                    nc = filename[ni];
+                    ni++;
+                    not = 0;
+                    pi++;
+                    if (pattern[pi] == '!')
+                    {   not = 1;
+                        pi++;
+                    }
+                    anymatch = 0;
+                    while (1)
+                    {
+                        pc = pattern[pi];
+                        if (pc == ']')
+                            break;
+                        if (!anymatch && fncharmatch(nc, pc))
+                            anymatch = 1;
+                        pi++;
+                    }
+                    if (!(anymatch ^ not))
+                        return false;
+                    break;
 
-		default:
-		    if (ni == filename.length)
-			return false;
-		    nc = filename[ni];
-		    if (!fncharmatch(pc, nc))
-			return false;
-		    ni++;
-		    break;
-	    }
-	}
-	return ni >= filename.length;
+                default:
+                    if (ni == filename.length)
+                        return false;
+                    nc = filename[ni];
+                    if (!fncharmatch(pc, nc))
+                        return false;
+                    ni++;
+                    break;
+            }
+        }
+        return ni >= filename.length;
     }
 
 unittest
@@ -1171,9 +1171,9 @@ unittest
     debug(path) printf("path.fnmatch.unittest\n");
 
     version (Windows)
-	assert(fnmatch("foo", "Foo"));
+        assert(fnmatch("foo", "Foo"));
     version (Posix)
-	assert(!fnmatch("foo", "Foo"));
+        assert(!fnmatch("foo", "Foo"));
     assert(fnmatch("foo", "*"));
     assert(fnmatch("foo.bar", "*"));
     assert(fnmatch("foo.bar", "*.*"));
@@ -1285,7 +1285,7 @@ unittest
 
     version (Posix)
     {
-	// Retrieve the current home variable.
+        // Retrieve the current home variable.
         auto c_home = std.process.getenv("HOME");
 
         // Testing when there is no environment variable.
@@ -1360,14 +1360,14 @@ private string combineCPathWithDPath(char* c_path, string path, size_t char_pos)
 
     // Remove trailing path separator, if any
     if (end && c_path[end - 1] == sep[0])
-	end--;
+        end--;
 
     // Create our own copy, as lifetime of c_path is undocumented
     string cp = c_path[0 .. end].idup;
 
     // Do we append something from path?
     if (char_pos < path.length)
-	cp ~= path[char_pos .. $];
+        cp ~= path[char_pos .. $];
 
     return cp;
 }
@@ -1388,7 +1388,7 @@ private string expandFromDatabase(string path)
     if (last_char == -1)
     {
         username = path[1 .. $] ~ '\0';
-	last_char = username.length + 1;
+        last_char = username.length + 1;
     }
     else
     {
@@ -1403,29 +1403,29 @@ private string expandFromDatabase(string path)
 
     while (1)
     {
-	extra_memory = std.c.stdlib.malloc(extra_memory_size);
-	if (extra_memory == null)
-	    goto Lerror;
+        extra_memory = std.c.stdlib.malloc(extra_memory_size);
+        if (extra_memory == null)
+            goto Lerror;
 
-	// Obtain info from database.
-	passwd *verify;
-	setErrno(0);
-	if (getpwnam_r(cast(char*) username.ptr, &result, cast(char*) extra_memory, extra_memory_size,
-		&verify) == 0)
-	{
-	    // Failure if verify doesn't point at result.
-	    if (verify != &result)
-		// username is not found, so return path[]
-		goto Lnotfound;
-	    break;
-	}
+        // Obtain info from database.
+        passwd *verify;
+        setErrno(0);
+        if (getpwnam_r(cast(char*) username.ptr, &result, cast(char*) extra_memory, extra_memory_size,
+                &verify) == 0)
+        {
+            // Failure if verify doesn't point at result.
+            if (verify != &result)
+                // username is not found, so return path[]
+                goto Lnotfound;
+            break;
+        }
 
-	if (errno != ERANGE)
-	    goto Lerror;
+        if (errno != ERANGE)
+            goto Lerror;
 
-	// extra_memory isn't large enough
-	std.c.stdlib.free(extra_memory);
-	extra_memory_size *= 2;
+        // extra_memory isn't large enough
+        std.c.stdlib.free(extra_memory);
+        extra_memory_size *= 2;
     }
 
     path = combineCPathWithDPath(result.pw_dir, path, last_char);
@@ -1437,7 +1437,7 @@ Lnotfound:
 Lerror:
     // Errors are going to be caused by running out of memory
     if (extra_memory)
-	std.c.stdlib.free(extra_memory);
+        std.c.stdlib.free(extra_memory);
     onOutOfMemoryError();
     return null;
 }

@@ -618,7 +618,7 @@ public:
                 immutable varDef = to!string(environ[i]);
                 immutable eq = varDef.indexOf('=');
                 assert (eq >= 0);
-                
+
                 immutable name = varDef[0 .. eq];
                 immutable value = varDef[eq+1 .. $];
 

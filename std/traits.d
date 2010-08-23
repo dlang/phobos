@@ -404,16 +404,16 @@ unittest
 
 private @safe void dummySafeFunc(alias FN)()
 {
-	alias ParameterTypeTuple!FN Params;
-	static if (Params.length)
-	{
-		Params args;
-		FN(args);
-	}
-	else
-	{
-		FN();
-	}
+        alias ParameterTypeTuple!FN Params;
+        static if (Params.length)
+        {
+                Params args;
+                FN(args);
+        }
+        else
+        {
+                FN();
+        }
 }
 
 
@@ -422,9 +422,9 @@ Checks the func that is @safe or @trusted
 
 Example:
 --------------------
-@system int add(int a, int b) {return a+b;} 
-@safe int sub(int a, int b) {return a-b;} 
-@trusted int mul(int a, int b) {return a*b;} 
+@system int add(int a, int b) {return a+b;}
+@safe int sub(int a, int b) {return a-b;}
+@trusted int mul(int a, int b) {return a*b;}
 
 bool a = isSafe!(add);
 assert(a == false);
@@ -468,9 +468,9 @@ Checks the func that is @system
 
 Example:
 --------------------
-@system int add(int a, int b) {return a+b;} 
-@safe int sub(int a, int b) {return a-b;} 
-@trusted int mul(int a, int b) {return a*b;} 
+@system int add(int a, int b) {return a+b;}
+@safe int sub(int a, int b) {return a-b;}
+@trusted int mul(int a, int b) {return a*b;}
 
 bool a = isUnsafe!(add);
 assert(a == true);
@@ -482,7 +482,7 @@ assert(c == false);
  */
 template isUnsafe(alias FN)
 {
-	enum isUnsafe = !isSafe!FN;
+        enum isUnsafe = !isSafe!FN;
 }
 
 @safe
