@@ -38,7 +38,7 @@ struct BitArray
             if (newdim != olddim)
             {
                 // Create a fake array so we can use D's realloc machinery
-                uint[] b = ptr[0 .. olddim];
+                auto b = ptr[0 .. olddim];
                 b.length = newdim;              // realloc
                 ptr = b.ptr;
                 if (newdim & 31)
@@ -420,7 +420,7 @@ struct BitArray
     }
     body
     {
-        ptr = cast(uint*)v.ptr;
+        ptr = cast(typeof(ptr))v.ptr;
         len = numbits;
     }
 
