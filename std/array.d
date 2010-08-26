@@ -717,33 +717,25 @@ struct Appender(A : T[], T)
 
 /**
 Construct an appender with a given array.  Note that this does not copy the
-data, but appending to the array will copy the data, since Appender does not
-know if this data has valid data residing after it.  The initial capacity will
-be arr.length.
+data.  If the array has a larger capacity as determined by arr.capacity,
+it will be used by the appender.  After initializing an appender on an array,
+appending to the original array will reallocate.
 */
     this(T[] arr)
     {
-        // initialize to a given array, use length for capacity because we
-        // don't know where the memory came from, so we don't want to stomp on
-        // any surrounding data.
+        // initialize to a given array.
         _data = new Data;
         _data.arr = cast(Unqual!(T)[])arr;
+
+        // We want to use up as much of the block the array is in as possible.
+        // if we consume all the block that we can, then array appending is
+        // safe WRT built-in append, and we can use the entire block.
+        auto cap = arr.capacity;
+        if(cap > arr.length)
+            arr.length = cap;
+        // we assume no reallocation occurred
+        assert(arr.ptr is _data.arr.ptr);
         _data.capacity = arr.length;
-        /+
-            Note this doesn't work because the block attributes can be cached
-            in the LRU or the single-element cache of the GC.  Need to work on
-            this some more
-
-        if(arr.capacity)
-        {
-            // this is an appendable array.  Clear the appendable bit in the GC
-            // so it cannot be appended to outside this appender, then we will
-            // take over ownership of the array completely.
-            auto bi = GC.query(arr.ptr);
-            GC.setAttr(bi.base, bi.attr & ~GC.BlkAttr.APPENDABLE);
-            _data.capacity = (bi.base + bi.size - cast(void*)arr.ptr) / T.sizeof;
-        }+/
-
     }
 
 /**
