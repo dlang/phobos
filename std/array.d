@@ -16,6 +16,8 @@ import std.c.stdio;
 import core.memory;
 import std.algorithm, std.conv, std.encoding, std.exception, std.range,
     std.string, std.traits, std.typecons, std.utf;
+private import std.c.string : memcpy;
+private import std.intrinsic : bsr;
 version(unittest) private import std.stdio;
 
 /**
@@ -685,18 +687,18 @@ unittest
 
 /**
 Implements an output range that appends data to an array. This is
-recommended over $(D a ~= data) because it is more efficient.
+recommended over $(D a ~= data) when appending many elements because it is more
+efficient.
 
 Example:
 ----
-string arr;
-auto app = appender(&arr);
+auto app = appender!string();
 string b = "abcdefg";
 foreach (char c; b) app.put(c);
 assert(app.data == "abcdefg");
 
 int[] a = [ 1, 2 ];
-auto app2 = appender(&a);
+auto app2 = appender(a);
 app2.put(3);
 app2.put([ 4, 5, 6 ]);
 assert(app2.data == [ 1, 2, 3, 4, 5, 6 ]);
@@ -705,139 +707,81 @@ assert(app2.data == [ 1, 2, 3, 4, 5, 6 ]);
 
 struct Appender(A : T[], T)
 {
-private:
-    Unqual!(T)[] * pArray;
-
-    void allocateAndWriteCapacity()
+    private struct Data
     {
-        immutable chunkSize = GC.sizeOf(pArray.ptr);
-        immutable cap = chunkSize / T.sizeof;
-        immutable surplus = chunkSize - pArray.length * T.sizeof;
-        immutable capRepSize = cap < ubyte.max ? 1 : cap < ushort.max ? 3
-            : cap < uint.max ? 7 : 15;
-        if (surplus >= capRepSize)
-        {
-            // Enough room
-            writeCapacity(cap);
-        }
-        else
-        {
-            immutable len = pArray.length;
-            *pArray = (cast(Unqual!(T)*) GC.realloc(pArray.ptr,
-                            chunkSize + capRepSize))[0 .. len];
-            return allocateAndWriteCapacity();
-        }
+        size_t capacity;
+        Unqual!(T)[] arr;
     }
 
-    void writeCapacity(size_t cap)
-    {
-        assert(pArray);
-        assert(pArray.ptr);
-        auto p = cast(ubyte*) (pArray.ptr + pArray.length);
-        if (cap < ubyte.max)
-        {
-            *p = cast(ubyte) cap;
-        }
-        else if (cap < ushort.max)
-        {
-            *p++ = ubyte.max;
-            *p++ = cast(ubyte) cap;
-            *p++ = cast(ubyte) (cap >> 8);
-        }
-        else if (cap < uint.max)
-        {
-            *p++ = ubyte.max;
-            *p++ = ubyte.max;
-            *p++ = ubyte.max;
-            *p++ = cast(ubyte) cap;
-            *p++ = cast(ubyte) (cap >> 8);
-            *p++ = cast(ubyte) (cap >> 16);
-            *p++ = cast(ubyte) (cap >> 24);
-        }
-        else
-        {
-            static if (size_t.max == ulong.max)
-            {
-                *p++ = ubyte.max;
-                *p++ = ubyte.max;
-                *p++ = ubyte.max;
-                *p++ = ubyte.max;
-                *p++ = ubyte.max;
-                *p++ = ubyte.max;
-                *p++ = ubyte.max;
-                *p++ = cast(ubyte) cap;
-                *p++ = cast(ubyte) (cap >> 8);
-                *p++ = cast(ubyte) (cap >> 16);
-                *p++ = cast(ubyte) (cap >> 24);
-                *p++ = cast(ubyte) (cap >> 32L);
-                *p++ = cast(ubyte) (cap >> 40L);
-                *p++ = cast(ubyte) (cap >> 48L);
-                *p++ = cast(ubyte) (cap >> 56L);
-            }
-        }
-    }
+    private Data* _data;
 
-    size_t readCapacity()
-    {
-        assert(pArray);
-        assert(pArray.ptr);
-        auto p = cast(ubyte*) (pArray.ptr + pArray.length);
-        if (*p < ubyte.max)
-        {
-            return *p;
-        }
-        if (p[1] < ubyte.max && p[2] < ubyte.max)
-        {
-            return p[1] + (p[2] << 8);
-        }
-        if (p[3] < ubyte.max && p[4] < ubyte.max && p[5] < ubyte.max &&
-                p[6] < ubyte.max)
-        {
-            return p[3] + (p[4] << 8) + (p[5] << 16) + (p[6] << 24);
-        }
-        else
-        {
-            static if (size_t.max == ulong.max)
-            {
-                return p[7] + (p[8] << 8) + (p[9] << 16) + (p[10] << 24)
-                    + (cast(size_t) p[11] << 32UL)
-                    + (cast(size_t) p[12] << 40UL)
-                    + (cast(size_t) p[13] << 48UL)
-                    + (cast(size_t) p[14] << 56UL);
-            }
-        }
-        assert(0);
-    }
-
-public:
 /**
-Initialize an $(D Appender) with a pointer to an existing array. The
-$(D Appender) object will append to this array. If $(D null) is passed
-(or the default constructor gets called), the $(D Appender) object
-will allocate and use a new array.
- */
-    this(T[] * p)
+Construct an appender with a given array.  Note that this does not copy the
+data, but appending to the array will copy the data, since Appender does not
+know if this data has valid data residing after it.  The initial capacity will
+be arr.length.
+*/
+    this(T[] arr)
     {
-        pArray = cast(Unqual!(T)[] *) p;
-        if (!pArray) pArray = (new typeof(*pArray)[1]).ptr;
-        allocateAndWriteCapacity();
+        // initialize to a given array, use length for capacity because we
+        // don't know where the memory came from, so we don't want to stomp on
+        // any surrounding data.
+        _data = new Data;
+        _data.arr = cast(Unqual!(T)[])arr;
+        _data.capacity = arr.length;
+        /+
+            Note this doesn't work because the block attributes can be cached
+            in the LRU or the single-element cache of the GC.  Need to work on
+            this some more
+
+        if(arr.capacity)
+        {
+            // this is an appendable array.  Clear the appendable bit in the GC
+            // so it cannot be appended to outside this appender, then we will
+            // take over ownership of the array completely.
+            auto bi = GC.query(arr.ptr);
+            GC.setAttr(bi.base, bi.attr & ~GC.BlkAttr.APPENDABLE);
+            _data.capacity = (bi.base + bi.size - cast(void*)arr.ptr) / T.sizeof;
+        }+/
+
+    }
+
+/**
+Reserve at least newCapacity elements for appending.  Note that more elements
+may be reserved than requested.  If newCapacity < capacity, then nothing is
+done.
+*/
+    void reserve(size_t newCapacity)
+    {
+        if(!_data)
+            _data = new Data;
+        if(_data.capacity < newCapacity)
+        {
+            // need to increase capacity
+            auto bi = GC.qalloc(newCapacity * T.sizeof, (typeid(T[]).next.flags & 1) ? GC.BlkAttr.NO_SCAN : 0);
+            _data.capacity = bi.size / T.sizeof;
+            if(_data.arr.length)
+                memcpy(bi.base, _data.arr.ptr, _data.arr.length * T.sizeof);
+            _data.arr = (cast(Unqual!(T)*)bi.base)[0.._data.arr.length];
+        }
+    }
+
+/**
+Returns the capacity of the array (the maximum number of elements the
+managed array can accommodate before triggering a reallocation).  If any
+appending will reallocate, capacity returns 0.
+ */
+    @property size_t capacity()
+    {
+        return _data ? _data.capacity : 0;
     }
 
 /**
 Returns the managed array.
  */
-    T[] data()
+    @property T[] data()
     {
-        return cast(typeof(return)) (pArray ? *pArray : null);
-    }
-
-/**
-Returns the capacity of the array (the maximum number of elements the
-managed array can accommodate before triggering a reallocation).
- */
-    size_t capacity()
-    {
-        return pArray && pArray.ptr ? readCapacity() : 0;
+        return cast(typeof(return))(_data ? _data.arr : null);
     }
 
 /**
@@ -855,21 +799,50 @@ Appends one item to the managed array.
         }
         else
         {
-            if (!pArray) pArray = (new typeof(*pArray)[1]).ptr;
-            immutable len = pArray.length;
-            if (len < capacity)
+            if (!_data)
+                _data = new Data;
+            immutable len = _data.arr.length;
+            if (len >= _data.capacity)
             {
-                // Should do in-place construction here
-                pArray.ptr[len] = item;
-                *pArray = pArray.ptr[0 .. len + 1];
+                // Time to reallocate.
+                // We need to almost duplicate what's in druntime, except we
+                // have better access to the capacity field.
+                auto newlen = newCapacity(len + 1);
+                // first, try extending the current block
+                auto u = GC.extend(_data.arr.ptr, T.sizeof, (newlen - len) * T.sizeof);
+                if(u)
+                {
+                    // extend worked, update the capacity
+                    _data.capacity = u / T.sizeof;
+                    _data.arr = _data.arr.ptr[0..len + 1];
+                }
+                else
+                {
+                    // didn't work, must reallocate
+                    auto bi = GC.qalloc(newlen * T.sizeof, (typeid(T[]).next.flags & 1) ? GC.BlkAttr.NO_SCAN : 0);
+                    _data.capacity = bi.size / T.sizeof;
+                    if(len)
+                        memcpy(bi.base, _data.arr.ptr, len * T.sizeof);
+                    _data.arr = (cast(Unqual!(T)*)bi.base)[0..len + 1];
+                    // leave the old data, for safety reasons
+                }
             }
             else
             {
-                // Time to reallocate, do it and cache capacity
-                *pArray ~= item;
-                allocateAndWriteCapacity();
+                _data.arr = _data.arr.ptr[0 .. len + 1];
             }
+            _data.arr.ptr[len] = cast(Unqual!T)item;
         }
+    }
+
+    private static size_t newCapacity(size_t newlength)
+    {
+        long mult = 100 + (1000L) / (bsr(newlength * T.sizeof) + 1);
+        // limit to doubling the length, we don't want to grow too much
+        if(mult > 200)
+            mult = 200;
+        auto newext = cast(size_t)((newlength * mult + 99) / 100);
+        return newext > newlength ? newext : newlength;
     }
 
 /**
@@ -878,18 +851,34 @@ Appends an entire range to the managed array.
     void put(Range)(Range items) if (isForwardRange!Range
             && is(typeof(Appender.init.put(items.front))))
     {
-        static if (is(typeof(*pArray ~= items)))
+        // note, we disable this branch for appending one type of char to
+        // another because we can't trust the length portion.
+        static if (!(isSomeChar!T && isSomeChar!(ElementType!Range) &&
+                     !is(Range == Unqual!(T)[])) &&
+                   is(typeof(items.length) == size_t))
         {
-            if (!pArray) pArray = (new typeof(*pArray)[1]).ptr;
-            *pArray ~= items;
+            // make sure we have enough space, then add the items
+            immutable len = _data ? _data.arr.length : 0;
+            immutable newlen = len + items.length;
+            reserve(newlen);
+            _data.arr = _data.arr.ptr[0..newlen];
+            static if(is(typeof(_data.arr[] = items)))
+            {
+                _data.arr.ptr[len..newlen] = items;
+            }
+            else
+            {
+                for(size_t i = len; !items.empty; items.popFront(), ++i)
+                    _data.arr.ptr[i] = items.front;
+            }
         }
         else
         {
             //pragma(msg, Range.stringof);
             // Generic input range
-            for (; !items.empty; items.popFront)
+            for (; !items.empty; items.popFront())
             {
-                put(items.front());
+                put(items.front);
             }
         }
     }
@@ -899,9 +888,25 @@ Clears the managed array.
 */
     void clear()
     {
-        if (!pArray) return;
-        pArray.length = 0;
-        writeCapacity(GC.sizeOf(pArray.ptr) / T.sizeof);
+        if (_data)
+        {
+            _data.arr = _data.arr.ptr[0..0];
+        }
+    }
+
+/**
+Shrinks the managed array to the given length.  Passing in a length
+that's greater than the current array length throws an enforce exception.
+*/
+    void shrinkTo(size_t newlength)
+    {
+        if(_data)
+        {
+            enforce(newlength <= _data.arr.length);
+            _data.arr = _data.arr.ptr[0..newlength];
+        }
+        else
+            enforce(newlength == 0);
     }
 }
 
@@ -909,21 +914,29 @@ Clears the managed array.
 Convenience function that returns an $(D Appender!(T)) object
 initialized with $(D t).
  */
-Appender!(E[]) appender(A : E[], E)(A * array = null)
+Appender!(E[]) appender(A : E[], E)(A array = null)
 {
     return Appender!(E[])(array);
 }
 
 unittest
 {
-    auto arr = new char[0];
-    auto app = appender(&arr);
+    version(none)
+    {
+        auto arr = new char[0];
+        auto app = appender(&arr);
+    }
+    else
+        auto app = appender!(char[])();
     string b = "abcdefg";
     foreach (char c; b) app.put(c);
     assert(app.data == "abcdefg");
 
     int[] a = [ 1, 2 ];
-    auto app2 = appender(&a);
+    version(none)
+        auto app2 = appender(&a);
+    else
+        auto app2 = appender(a);
     assert(app2.data == [ 1, 2 ]);
     app2.put(3);
     app2.put([ 4, 5, 6 ][]);

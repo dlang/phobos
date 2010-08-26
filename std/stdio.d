@@ -2100,8 +2100,8 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
          * Read them and convert to chars.
          */
         static assert(wchar_t.sizeof == 2);
-        auto app = appender(&buf);
-        buf.length = 0;
+        auto app = appender(buf);
+        app.clear();
         for (int c = void; (c = FGETWC(fp)) != -1; )
         {
             if ((c & ~0x7F) == 0)
@@ -2121,11 +2121,13 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
                     }
                     c = ((c - 0xD7C0) << 10) + (c2 - 0xDC00);
                 }
-                std.utf.encode(buf, c);
+                //std.utf.encode(buf, c);
+                app.put(cast(dchar)c);
             }
         }
         if (ferror(fps))
             StdioException();
+        buf = app.data;
         return buf.length;
     }
 
@@ -2139,20 +2141,16 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
          * cases.
          */
       L1:
-        if(buf.ptr is null)
-        {
-            sz = 128;
-            auto p = cast(char*) GC.malloc(sz, GC.BlkAttr.NO_SCAN);
-            buf = p[0 .. 0];
-        } else {
-            buf.length = 0;
-        }
+        auto app = appender(buf);
+        app.clear();
+        if(app.capacity == 0)
+            app.reserve(128); // get at least 128 bytes available
 
-        auto app = appender(&buf);
         int c;
         while((c = FGETC(fp)) != -1) {
             app.put(cast(char) c);
-            if(buf[$ - 1] == terminator) {
+            if(c == terminator) {
+                buf = app.data;
                 return buf.length;
             }
 

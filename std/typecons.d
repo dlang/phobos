@@ -448,19 +448,18 @@ enum length = field.length;
  */
     string toString()
     {
-        char[] result;
-        auto app = appender(&result);
+        Appender!string app;
         app.put(toStringHeader);
         foreach (i, Unused; noStrings!(T).Result)
         {
-            static if (i > 0) result ~= toStringSeparator;
+            static if (i > 0) app.put(toStringSeparator);
             static if (is(typeof(to!string(field[i]))))
                 app.put(to!string(field[i]));
             else
                 app.put(typeof(field[i]).stringof);
         }
         app.put(toStringFooter);
-        return assumeUnique(result);
+        return app.data;
     }
 }
 

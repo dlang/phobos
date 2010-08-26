@@ -583,8 +583,7 @@ struct FormatSpec(Char)
 
     unittest
     {
-        string s;
-        auto w = appender(&s);
+        auto w = appender!string();
         auto f = FormatSpec("abc%sdef%sghi");
         f.writeUpToNextSpec(w);
         assert(w.data == "abc", w.data);
@@ -1366,8 +1365,7 @@ private void formatGeneric(Writer, D, Char)(Writer w, const(void)* arg,
 
 unittest
 {
-    string s;
-    auto w = appender(&s);
+    auto w = appender!string();
     int[] a = [ 1, 3, 2 ];
     formattedWrite(w, "testing %(%s & %) embedded", a);
     assert(w.data == "testing 1 & 3 & 2 embedded", w.data);
@@ -1429,8 +1427,7 @@ unittest
 unittest
 {
     // testing raw writes
-    string s;
-    auto w = appender(&s);
+    auto w = appender!string();
     uint a = 0x02030405;
     formattedWrite(w, "%+r", a);
     assert(w.data.length == 4 && w.data[0] == 2 && w.data[1] == 3

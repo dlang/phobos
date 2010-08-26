@@ -349,8 +349,8 @@ S encode(S)(S s, S buffer = null)
 {
     string r;
     size_t lastI;
-    if (buffer.length) buffer.length = 0;
-    Appender!S result;
+    auto result = appender(buffer);
+    result.clear();
 
     foreach (i, c; s)
     {
@@ -364,10 +364,6 @@ S encode(S)(S s, S buffer = null)
         default: continue;
         }
         // Replace with r
-        if (!result.data)
-        {
-            result = appender(&buffer);
-        }
         result.put(s[lastI .. i]);
         result.put(r);
         lastI = i + 1;

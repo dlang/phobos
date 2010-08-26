@@ -1419,7 +1419,7 @@ Select!(Types.length == 1, Types[0][], Tuple!(Types)[])
 slurp(Types...)(string filename, in char[] format)
 {
     typeof(return) result;
-    auto app = appender(&result);
+    auto app = appender!(typeof(return))();
     ElementType!(typeof(return)) toAdd;
     auto f = File(filename);
     scope(exit) f.close;
@@ -1431,7 +1431,7 @@ slurp(Types...)(string filename, in char[] format)
                         "'"));
         app.put(toAdd);
     }
-    return result;
+    return app.data;
 }
 
 unittest

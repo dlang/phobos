@@ -360,7 +360,7 @@ unittest
     void myprint(in char[] s) { writeln('[', s, ']'); }
     static assert(isOutputRange!(typeof(&myprint), char));
 
-    auto app = appender!string;
+    auto app = appender!string();
     string s;
     static assert(isOutputRange!(Appender!string, string));
 }
@@ -4473,14 +4473,13 @@ unittest {
     }
 
     // Test output range stuff.
-    uint[] outputArray;
-    auto app = appender(&outputArray);
+    auto app = appender!(uint[])();
     auto appWrapped = outputRangeObject!(uint, uint[])(app);
     static assert(is(typeof(appWrapped) : OutputRange!(uint[])));
     static assert(is(typeof(appWrapped) : OutputRange!(uint)));
 
     appWrapped.put(1);
     appWrapped.put([2, 3]);
-    assert(outputArray.length == 3);
-    assert(equal(outputArray, [1,2,3]));
+    assert(app.data.length == 3);
+    assert(equal(app.data, [1,2,3]));
 }
