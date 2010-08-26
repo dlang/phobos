@@ -875,30 +875,34 @@ Appends an entire range to the managed array.
         }
     }
 
+    // only allow overwriting data on non-immutable and non-const data
+    static if(!is(T == immutable) && !is(T == const))
+    {
 /**
 Clears the managed array.
 */
-    void clear()
-    {
-        if (_data)
+        void clear()
         {
-            _data.arr = _data.arr.ptr[0..0];
+            if (_data)
+            {
+                _data.arr = _data.arr.ptr[0..0];
+            }
         }
-    }
 
 /**
-Shrinks the managed array to the given length.  Passing in a length
-that's greater than the current array length throws an enforce exception.
+Shrinks the managed array to the given length.  Passing in a length that's
+greater than the current array length throws an enforce exception.
 */
-    void shrinkTo(size_t newlength)
-    {
-        if(_data)
+        void shrinkTo(size_t newlength)
         {
-            enforce(newlength <= _data.arr.length);
-            _data.arr = _data.arr.ptr[0..newlength];
+            if(_data)
+            {
+                enforce(newlength <= _data.arr.length);
+                _data.arr = _data.arr.ptr[0..newlength];
+            }
+            else
+                enforce(newlength == 0);
         }
-        else
-            enforce(newlength == 0);
     }
 }
 

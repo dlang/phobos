@@ -345,12 +345,11 @@ bool isExtender(dchar c)
  * writefln(encode("a > b")); // writes "a &gt; b"
  * --------------
  */
-S encode(S)(S s, S buffer = null)
+S encode(S)(S s)
 {
     string r;
     size_t lastI;
-    auto result = appender(buffer);
-    result.clear();
+    auto result = appender!string();
 
     foreach (i, c; s)
     {

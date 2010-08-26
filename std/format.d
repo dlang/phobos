@@ -583,7 +583,7 @@ struct FormatSpec(Char)
 
     unittest
     {
-        auto w = appender!string();
+        auto w = appender!(char[])();
         auto f = FormatSpec("abc%sdef%sghi");
         f.writeUpToNextSpec(w);
         assert(w.data == "abc", w.data);
@@ -1365,7 +1365,7 @@ private void formatGeneric(Writer, D, Char)(Writer w, const(void)* arg,
 
 unittest
 {
-    auto w = appender!string();
+    auto w = appender!(char[])();
     int[] a = [ 1, 3, 2 ];
     formattedWrite(w, "testing %(%s & %) embedded", a);
     assert(w.data == "testing 1 & 3 & 2 embedded", w.data);
@@ -1427,7 +1427,7 @@ unittest
 unittest
 {
     // testing raw writes
-    auto w = appender!string();
+    auto w = appender!(char[])();
     uint a = 0x02030405;
     formattedWrite(w, "%+r", a);
     assert(w.data.length == 4 && w.data[0] == 2 && w.data[1] == 3
@@ -1441,7 +1441,7 @@ unittest
 unittest
 {
     // testing positional parameters
-    auto w = appender!string();
+    auto w = appender!(char[])();
     formattedWrite(w,
             "Numbers %2$s and %1$s are reversed and %1$s%2$s repeated",
             42, 0);
@@ -1459,7 +1459,7 @@ unittest
 {
     debug(format) printf("std.format.format.unittest\n");
 
-    auto stream = appender!string();
+    auto stream = appender!(char[])();
     //goto here;
 
     formattedWrite(stream,
@@ -1921,7 +1921,7 @@ unittest
     //     writefln(b);
     // }
 
-    auto stream = appender!string();
+    auto stream = appender!(char[])();
     alias TypeTuple!(byte, ubyte, short, ushort, int, uint, long, ulong,
             float, double, real) AllNumerics;
     foreach (T; AllNumerics)
