@@ -29,6 +29,12 @@ version (DigitalMars) version (Windows)
     import std.c.stdio : __fhnd_info, FHND_WCHAR, FHND_TEXT;
 }
 
+version (Posix)
+{
+    import core.sys.posix.stdio;
+    alias core.sys.posix.stdio.fileno fileno;
+}
+
 version (linux)
 {
     // Specific to the way Gnu C does stdio
@@ -39,8 +45,6 @@ version (linux)
 version (OSX)
 {
     version = GENERIC_IO;
-    import core.sys.posix.stdio;
-    alias core.sys.posix.stdio.fileno fileno;
     alias core.stdc.stdio.fopen fopen64;
 }
 
@@ -92,9 +96,6 @@ else version (GCC_IO)
      * Gnu under-the-hood C I/O functions; see
      * http://gnu.org/software/libc/manual/html_node/I_002fO-on-Streams.html
      */
-    private import core.sys.posix.stdio;
-    alias core.sys.posix.stdio.fileno fileno;
-
     extern (C)
     {
         int fputc_unlocked(int, _iobuf*);
