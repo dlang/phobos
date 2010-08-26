@@ -19,7 +19,7 @@
 
 # Configurable stuff, usually from the command line
 #
-# OS can be posix, win32, win32remote, win32wine, or osx. If left
+# OS can be posix, win32, win32remote, win32wine, osx, or freebsd. If left
 # blank, the system will be determined by using uname
 
 ifeq (,$(OS))
@@ -30,7 +30,11 @@ ifeq (,$(OS))
         ifeq (Linux,$(OS))
             OS:=posix
         else
-            $(error Unrecognized or unsupported OS for uname: $(OS))
+            ifeq (FreeBSD,$(OS))
+                OS:=freebsd
+            else
+                $(error Unrecognized or unsupported OS for uname: $(OS))
+            endif
         endif
     endif
 endif
