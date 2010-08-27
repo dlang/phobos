@@ -24,6 +24,8 @@ CC=gcc
 #DMD=/dmd/bin/dmd
 DMD=dmd
 
+LIBNAME=libphobos
+
 .SUFFIXES: .c .o .cpp .d .asm
 
 .c.o:
@@ -244,6 +246,9 @@ cov : $(SRCS) $(LIB)
 	$(DMD) -cov -unittest -ofcov -m$(MODEL) unittest.d $(SRCS) $(LIB)
 	./cov
 
+dynamic : $(OBJS) $(GC_OBJS) $(ZLIB_OBJS) $(SRCS) $(MAKEFILE)
+	$(DMD) $(DFLAGS) -c -of$(LIBNAME).o $(SRCS) $(OBJS) $(ZLIB_OBJS) $(GC_OBJS)
+	$(CC) -dynamiclib $(LIBNAME).o -o $(LIBNAME).dylib -install_name @rpath/$(LIBNAME).dylib -lz -Xlinker -headerpad_max_install_names
 
 ###########################################################
 

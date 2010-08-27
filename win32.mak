@@ -238,7 +238,8 @@ SRC_INT=	\
 	internal\cmath2.d internal\obj.d internal\mars.h internal\aApply.d \
 	internal\aApplyR.d internal\object.d internal\trace.d internal\qsort2.d \
 	internal\arrayfloat.d internal\arraydouble.d internal\arrayreal.d \
-	internal\arraybyte.d internal\arrayshort.d internal\arrayint.d
+	internal\arraybyte.d internal\arrayshort.d internal\arrayint.d \
+	internal\dylib_fixes.c internal\images.d
 
 SRC_STD_WIN= std\windows\registry.d \
 	std\windows\iunknown.d std\windows\syserror.d std\windows\charset.d
@@ -249,7 +250,8 @@ SRC_STD_C_WIN= std\c\windows\windows.d std\c\windows\com.d \
 SRC_STD_C_LINUX= std\c\linux\linux.d std\c\linux\linuxextern.d \
 	std\c\linux\socket.d std\c\linux\pthread.d
 
-SRC_STD_C_OSX= std\c\osx\osx.d
+SRC_STD_C_OSX= std\c\osx\osx.d std\c\osx\mach\dyld.d std\c\osx\mach\getsect.d \
+	std\c\osx\mach\loader.d
 
 SRC_STD_C_FREEBSD= std\c\freebsd\freebsd.d \
 	std\c\freebsd\socket.d std\c\freebsd\pthread.d \
