@@ -2158,6 +2158,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
 
         if (ferror(fps))
             StdioException();
+        buf = app.data;
         return buf.length;
     }
     else
