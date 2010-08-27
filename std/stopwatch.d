@@ -445,7 +445,7 @@ enum AutoStart
 /*******************************************************************************
  * StopWatch's AutoStart flag
  */
-enum autoStart = StopWatch.AutoStart.yes;
+enum autoStart = AutoStart.yes;
 
 
 /*******************************************************************************
