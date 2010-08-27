@@ -3581,7 +3581,7 @@ template octalFitsInInt(string octalNum) {
 }
 
 string strippedOctalLiteral(string original) {
-        string stripped;
+        string stripped = "";
         foreach (c; original)
                 if (c >= '0' && c <= '7')
                         stripped ~= c;
