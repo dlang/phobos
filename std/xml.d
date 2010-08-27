@@ -349,7 +349,7 @@ S encode(S)(S s)
 {
     string r;
     size_t lastI;
-    auto result = appender!string();
+    auto result = appender!S();
 
     foreach (i, c; s)
     {
