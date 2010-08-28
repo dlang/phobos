@@ -26,6 +26,7 @@ module std.concurrency;
 
 public
 {
+    import core.atomic;
     import core.sync.barrier;
     import core.sync.condition;
     import core.sync.mutex;
