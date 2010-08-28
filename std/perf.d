@@ -32,7 +32,7 @@ module std.perf;
 /// performance counter instance, scoping its measurement interval by virtue of
 /// its supporting the RAII mechanism.
 
-auto class PerformanceCounterScope(T)
+scope class PerformanceCounterScope(T)
 {
     /// \name Construction
     /// @{
