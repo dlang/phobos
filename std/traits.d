@@ -1883,6 +1883,34 @@ unittest
     static assert(!isImplicitlyConvertible!(wchar, char));
 }
 
+/**
+Returns $(D true) iff a value of type $(D Rhs) can be assigned to a variable of
+type $(D Lhs).
+
+Examples:
+---
+static assert(isAssignable!(long, int));
+static assert(!isAssignable!(int, long));
+static assert(isAssignable!(const(char)[], string));
+static assert(!isAssignable!(string, char[]));
+---
+*/
+template isAssignable(Lhs, Rhs) {
+    enum bool isAssignable = is(typeof({
+        Lhs l;
+        Rhs r;
+        l = r;
+        return l;
+    }));
+}
+
+unittest {
+    static assert(isAssignable!(long, int));
+    static assert(!isAssignable!(int, long));
+    static assert(isAssignable!(const(char)[], string));
+    static assert(!isAssignable!(string, char[]));
+}
+
 
 /*
 Works like $(D isImplicitlyConvertible), except this cares only about storage
