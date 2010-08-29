@@ -887,7 +887,7 @@ unittest
         struct TMP
         {
             private StopWatch sw = void;
-            this(StopWatch.AutoStart as)
+            this(AutoStart as)
             {
                 sw = StopWatch(as);
             }
