@@ -3515,7 +3515,8 @@ unittest
 Pointer to string conversions prints the pointer as a $(D size_t) value.
  */
 T toImpl(T, S)(S value)
-if (isPointer!S && !isSomeChar!(typeof(*S.init)) && isSomeString!T)
+if (isPointer!S && (!is(typeof(*S.init)) || !isSomeChar!(typeof(*S.init)))
+    && isSomeString!T)
 {
     return to!T(cast(size_t) value, 16u);
 }
