@@ -392,50 +392,125 @@ auto stdev = sqrt(r.field[1] / a.length - avg * avg);
 template reduce(fun...)
 {
     auto reduce(Args...)(Args args)
-    if (Args.length > 0 && Args.length <= 2 && isInputRange!(Args[$ - 1]))
+    if (Args.length > 0 && Args.length <= 2 && isIterable!(Args[$ - 1]))
     {
-        static if (Args.length == 2)
+        static if(isInputRange!(Args[$ - 1]))
         {
-            alias args[0] seed;
-            alias args[1] r;
-            Unqual!(Args[0]) result = seed;
-            for (; !r.empty; r.popFront)
+            static if (Args.length == 2)
             {
-                static if (fun.length == 1)
+                alias args[0] seed;
+                alias args[1] r;
+                Unqual!(Args[0]) result = seed;
+                for (; !r.empty; r.popFront)
                 {
-                    result = binaryFun!(fun[0])(result, r.front);
-                }
-                else
-                {
-                    foreach (i, Unused; Args[0].Types)
+                    static if (fun.length == 1)
                     {
-                        result.field[i] = binaryFun!(fun[i])(result.field[i],
-                                r.front);
+                        result = binaryFun!(fun[0])(result, r.front);
+                    }
+                    else
+                    {
+                        foreach (i, Unused; Args[0].Types)
+                        {
+                            result.field[i] = binaryFun!(fun[i])(result.field[i],
+                                    r.front);
+                        }
                     }
                 }
-            }
-            return result;
-        }
-        else
-        {
-            alias args[0] r;
-            static if (fun.length == 1)
-            {
-                return reduce(r.front, (r.popFront(), r));
+                return result;
             }
             else
             {
-                static assert(fun.length > 1);
-                typeof(adjoin!(staticMap!(binaryFun, fun))(r.front, r.front))
-                    result = void;
-                foreach (i, T; result.Types)
+                alias args[0] r;
+                static if (fun.length == 1)
                 {
-                    auto p = (cast(void*) &result.field[i])
-                        [0 .. result.field[i].sizeof];
-                    emplace!T(p, r.front);
+                    return reduce(r.front, (r.popFront(), r));
                 }
-                r.popFront();
-                return reduce(result, r);
+                else
+                {
+                    static assert(fun.length > 1);
+                    typeof(adjoin!(staticMap!(binaryFun, fun))(r.front, r.front))
+                        result = void;
+                    foreach (i, T; result.Types)
+                    {
+                        auto p = (cast(void*) &result.field[i])
+                            [0 .. result.field[i].sizeof];
+                        emplace!T(p, r.front);
+                    }
+                    r.popFront();
+                    return reduce(result, r);
+                }
+            }
+        }
+        else
+        {   // opApply case.  Coded as a separate case because efficiently
+            // handling all of the small details like avoiding unnecessary
+            // copying, iterating by dchar over strings, and dealing with the
+            // no explicit start value case would become an unreadable mess
+            // if these were merged.
+            alias args[$ - 1] r;
+            alias Args[$ - 1] R;
+            alias ForeachType!R E;
+
+            static if(args.length == 2)
+            {
+                static if(fun.length == 1)
+                {
+                    auto result = Tuple!(Unqual!(Args[0]))(args[0]);
+                }
+                else
+                {
+                    Unqual!(Args[0]) result = args[0];
+                }
+
+                enum bool initialized = true;
+            }
+            else static if(fun.length == 1)
+            {
+                Tuple!(typeof(binaryFun!fun(E.init, E.init))) result = void;
+                bool initialized = false;
+            }
+            else
+            {
+                typeof(adjoin!(staticMap!(binaryFun, fun))(E.init, E.init))
+                    result = void;
+                bool initialized = false;
+            }
+
+            // For now, just iterate using ref to avoid unnecessary copying.
+            // When Bug 2443 is fixed, this may need to change.
+            foreach(ref elem; r)
+            {
+                if(initialized)
+                {
+                    foreach(i, T; result.Types)
+                    {
+                        result.field[i] =
+                            binaryFun!(fun[i])(result.field[i], elem);
+                    }
+                }
+                else
+                {
+                    static if(is(typeof(&initialized)))
+                    {
+                        initialized = true;
+                    }
+
+                    foreach (i, T; result.Types)
+                    {
+                        auto p = (cast(void*) &result.field[i])
+                            [0 .. result.field[i].sizeof];
+                        emplace!T(p, elem);
+                    }
+                }
+            }
+
+            static if(fun.length == 1)
+            {
+                return result.field[0];
+            }
+            else
+            {
+                return result;
             }
         }
     }
@@ -465,6 +540,28 @@ unittest
     // Stringize with commas
     string rep = reduce!("a ~ `, ` ~ to!(string)(b)")("", a);
     assert(rep[2 .. $] == "1, 2, 3, 4, 5", "["~rep[2 .. $]~"]");
+
+    // Test the opApply case.
+    struct OpApply
+    {
+        int opApply(int delegate(ref int) dg)
+        {
+            int res;
+            foreach(i; 0..100)
+            {
+                res = dg(i);
+                if(res) break;
+            }
+            return res;
+        }
+    }
+
+    OpApply oa;
+    auto hundredSum = reduce!"a + b"(iota(100));
+    assert(reduce!"a + b"(5, oa) == hundredSum + 5);
+    assert(reduce!"a + b"(oa) == hundredSum);
+    assert(reduce!("a + b", max)(oa) == tuple(hundredSum, 99));
+    assert(reduce!("a + b", max)(tuple(5, 0), oa) == tuple(hundredSum + 5, 99));
 }
 
 unittest
