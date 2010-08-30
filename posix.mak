@@ -51,7 +51,7 @@ STYLECSS_SRC = $(DOCSRC)/style.css
 STYLECSS_TGT = $(DOC_OUTPUT_DIR)/../style.css
 SRC_DOCUMENTABLES = phobos.d $(addsuffix .d,$(STD_MODULES))
 STDDOC = $(DOCSRC)/std.ddoc
-DDOCFLAGS=-version=ddoc -d -c -o- $(STDDOC)
+DDOCFLAGS=-version=ddoc -d -c -o- $(STDDOC) -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS)
 
 # Variable defined in an OS-dependent manner (see below)
 CC =
@@ -78,7 +78,7 @@ endif
 ifeq ($(OS),win32wine)
 	CC = wine $(HOME)/dmc/bin/dmc.exe
 	DMD = wine $(HOME)/dmd2/windows/bin/dmd.exe
-	RUN = wine 
+	RUN = wine
 else
 	ifeq ($(OS),win32remote)
 		DMD = ssh 206.125.170.138 "cd code/dmd/phobos && dmd"
