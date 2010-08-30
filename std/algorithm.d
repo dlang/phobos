@@ -420,6 +420,8 @@ template reduce(fun...)
             }
             else
             {
+                enforce(!args[$ - 1].empty,
+                    "Cannot reduce an empty range w/o an explicit seed value.");
                 alias args[0] r;
                 static if (fun.length == 1)
                 {
@@ -504,6 +506,9 @@ template reduce(fun...)
                 }
             }
 
+            enforce(initialized,
+                "Cannot reduce an empty iterable w/o an explicit seed value.");
+
             static if(fun.length == 1)
             {
                 return result.field[0];
@@ -544,9 +549,13 @@ unittest
     // Test the opApply case.
     struct OpApply
     {
+        bool actEmpty;
+
         int opApply(int delegate(ref int) dg)
         {
             int res;
+            if(actEmpty) return res;
+
             foreach(i; 0..100)
             {
                 res = dg(i);
@@ -562,6 +571,18 @@ unittest
     assert(reduce!"a + b"(oa) == hundredSum);
     assert(reduce!("a + b", max)(oa) == tuple(hundredSum, 99));
     assert(reduce!("a + b", max)(tuple(5, 0), oa) == tuple(hundredSum + 5, 99));
+
+    // Test for throwing on empty range plus no seed.
+    try {
+        reduce!"a + b"([1, 2][0..0]);
+        assert(0);
+    } catch(Exception) {}
+
+    oa.actEmpty = true;
+    try {
+        reduce!"a + b"(oa);
+        assert(0);
+    } catch(Exception) {}
 }
 
 unittest
