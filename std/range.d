@@ -3930,16 +3930,17 @@ unittest
     }
 }
 
-// Tests to see whether a struct has a postblit.  Hacky, probably needs to
-// be fixed if a new frontend is ever written.
-private template hasPostblit(R) {
-    static if(!is(R == struct)) {
+// Tests to see whether a struct has a postblit, or whether any of its
+// sub-objects do.  Hacky, probably needs to be fixed if a new frontend is ever
+// written.
+private template hasPostblit(S) {
+    static if(!is(S == struct)) {
         enum bool hasPostblit = false;
     } else {
         enum hasPostblit = is(typeof({
-            R r;
-            return &r.__postblit;
-        }));
+            S s;
+            return &s.__postblit;
+        })) || anySatisfy!(.hasPostblit, typeof(S.tupleof));
     }
 }
 
@@ -3948,10 +3949,18 @@ unittest {
         this(this) {}
     }
 
-    struct S2 {}
+    struct S2 {
+        uint num;
+    }
+
+    struct S3 {
+        uint num;
+        S s;
+    }
 
     static assert(hasPostblit!S);
     static assert(!hasPostblit!S2);
+    static assert(hasPostblit!S3);
 }
 
 /**
