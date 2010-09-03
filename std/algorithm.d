@@ -1187,6 +1187,14 @@ void swap(T)(ref T a, ref T b) if (!is(typeof(T.init.proxySwap(T.init))))
    }
    else
    {
+      // Temporary fix Bug 4789.  Wor around the fact that assigning a static
+      // array to itself doesn't work properly.
+      static if(isStaticArray!T) {
+          if(a.ptr is b.ptr) {
+              return;
+          }
+      }
+
       // For non-struct types, suffice to do the classic swap
       auto t = a;
       a = b;
