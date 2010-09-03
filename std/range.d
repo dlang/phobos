@@ -762,7 +762,7 @@ Iterates a bidirectional range backwards.
 Example:
 ----
 int[] a = [ 1, 2, 3, 4, 5 ];
-assert(equal(retro(a) == [ 5, 4, 3, 2, 1 ][]));
+assert(equal(retro(a), [ 5, 4, 3, 2, 1 ][]));
 ----
  */
 struct Retro(R) if (isBidirectionalRange!(R) && !isRetro!R)
@@ -928,7 +928,7 @@ moves by successive calls to $(D popFront).
 Example:
 ----
 int[] a = [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 ];
-assert(equal(stride(a, 3) == [ 1, 4, 7, 10 ][]));
+assert(equal(stride(a, 3), [ 1, 4, 7, 10 ][]));
 ----
  */
 struct Stride(R) if (isInputRange!(R))
@@ -1567,9 +1567,9 @@ range. Iteration spans the entire range.
 Example:
 ----
 int[] a = [ 1, 2, 3, 4, 5 ];
-assert(equal(radial(a) == [ 3, 2, 4, 1, 5 ][]));
+assert(equal(radial(a), [ 3, 4, 2, 5, 1 ][]));
 a = [ 1, 2, 3, 4 ];
-assert(equal(radial(a) == [ 2, 3, 1, 4 ][]));
+assert(equal(radial(a), [ 2, 3, 1, 4 ][]));
 ----
  */
 struct Radial(R) if (isRandomAccessRange!(R) && hasLength!(R))
@@ -3185,7 +3185,7 @@ r = iota(0, 11, 3);
 assert(equal(r, [0, 3, 6, 9][]));
 assert(r[2] == 6);
 auto rf = iota(0.0, 0.5, 0.1);
-assert(equal(rf, [0.0, 0.1, 0.2, 0.3, 0.4]));
+assert(approxEqual(rf, [0.0, 0.1, 0.2, 0.3, 0.4]));
 ----
  */
 Iota!(CommonType!(B, E), S) iota(B, E, S)(B begin, E end, S step)
