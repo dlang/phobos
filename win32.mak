@@ -148,6 +148,21 @@ SRCS= std\math.d std\stdio.d std\dateparse.d std\date.d std\uni.d std\string.d \
 
 
 DOCS=	$(DOC)\object.html \
+	$(DOC)\core_atomic.html \
+	$(DOC)\core_bitop.html \
+	$(DOC)\core_cpuid.html \
+	$(DOC)\core_exception.html \
+	$(DOC)\core_memory.html \
+	$(DOC)\core_runtime.html \
+	$(DOC)\core_thread.html \
+	$(DOC)\core_vararg.html \
+	$(DOC)\core_sync_barrier.html \
+	$(DOC)\core_sync_condition.html \
+	$(DOC)\core_sync_config.html \
+	$(DOC)\core_sync_exception.html \
+	$(DOC)\core_sync_mutex.html \
+	$(DOC)\core_sync_rwmutex.html \
+	$(DOC)\core_sync_semaphore.html \
 	$(DOC)\std_algorithm.html \
 	$(DOC)\std_array.html \
 	$(DOC)\std_base64.html \
@@ -568,6 +583,51 @@ $(DOC)\object.html : $(STDDOC) $(DRUNTIME)\src\object_.d
 
 $(DOC)\phobos.html : $(STDDOC) phobos.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\phobos.html $(STDDOC) phobos.d
+
+$(DOC)\core_atomic.html : $(STDDOC) $(DRUNTIME)\src\core\atomic.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\core_atomic.html $(STDDOC) $(DRUNTIME)\src\core\atomic.d -I$(DRUNTIME)\src\
+
+$(DOC)\core_bitop.html : $(STDDOC) $(DRUNTIME)\src\core\bitop.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\core_bitop.html $(STDDOC) $(DRUNTIME)\src\core\bitop.d -I$(DRUNTIME)\src\
+
+$(DOC)\core_cpuid.html : $(STDDOC) $(DRUNTIME)\src\core\cpuid.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\core_cpuid.html $(STDDOC) $(DRUNTIME)\src\core\cpuid.d -I$(DRUNTIME)\src\
+
+$(DOC)\core_exception.html : $(STDDOC) $(DRUNTIME)\src\core\exception.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\core_exception.html $(STDDOC) $(DRUNTIME)\src\core\exception.d -I$(DRUNTIME)\src\
+
+$(DOC)\core_memory.html : $(STDDOC) $(DRUNTIME)\src\core\memory.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\core_memory.html $(STDDOC) $(DRUNTIME)\src\core\memory.d -I$(DRUNTIME)\src\
+
+$(DOC)\core_runtime.html : $(STDDOC) $(DRUNTIME)\src\core\runtime.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\core_runtime.html $(STDDOC) $(DRUNTIME)\src\core\runtime.d -I$(DRUNTIME)\src\
+
+$(DOC)\core_thread.html : $(STDDOC) $(DRUNTIME)\src\core\thread.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\core_thread.html $(STDDOC) $(DRUNTIME)\src\core\thread.d -I$(DRUNTIME)\src\
+
+$(DOC)\core_vararg.html : $(STDDOC) $(DRUNTIME)\src\core\vararg.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\core_vararg.html $(STDDOC) $(DRUNTIME)\src\core\vararg.d -I$(DRUNTIME)\src\
+
+$(DOC)\core_sync_barrier.html : $(STDDOC) $(DRUNTIME)\src\core\sync\barrier.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\core_sync_barrier.html $(STDDOC) $(DRUNTIME)\src\core\sync\barrier.d -I$(DRUNTIME)\src\
+
+$(DOC)\core_sync_condition.html : $(STDDOC) $(DRUNTIME)\src\core\sync\condition.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\core_sync_condition.html $(STDDOC) $(DRUNTIME)\src\core\sync\condition.d -I$(DRUNTIME)\src\
+
+$(DOC)\core_sync_config.html : $(STDDOC) $(DRUNTIME)\src\core\sync\config.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\core_sync_config.html $(STDDOC) $(DRUNTIME)\src\core\sync\config.d -I$(DRUNTIME)\src\
+
+$(DOC)\core_sync_exception.html : $(STDDOC) $(DRUNTIME)\src\core\sync\exception.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\core_sync_exception.html $(STDDOC) $(DRUNTIME)\src\core\sync\exception.d -I$(DRUNTIME)\src\
+
+$(DOC)\core_sync_mutex.html : $(STDDOC) $(DRUNTIME)\src\core\sync\mutex.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\core_sync_mutex.html $(STDDOC) $(DRUNTIME)\src\core\sync\mutex.d -I$(DRUNTIME)\src\
+
+$(DOC)\core_sync_rwmutex.html : $(STDDOC) $(DRUNTIME)\src\core\sync\rwmutex.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\core_sync_rwmutex.html $(STDDOC) $(DRUNTIME)\src\core\sync\rwmutex.d -I$(DRUNTIME)\src\
+
+$(DOC)\core_sync_semaphore.html : $(STDDOC) $(DRUNTIME)\src\core\sync\semaphore.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\core_sync_semaphore.html $(STDDOC) $(DRUNTIME)\src\core\sync\semaphore.d -I$(DRUNTIME)\src\
 
 $(DOC)\std_algorithm.html : $(STDDOC) std\algorithm.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_algorithm.html $(STDDOC) std\algorithm.d
