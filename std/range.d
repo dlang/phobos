@@ -3930,39 +3930,6 @@ unittest
     }
 }
 
-// Tests to see whether a struct has a postblit, or whether any of its
-// sub-objects do.  Hacky, probably needs to be fixed if a new frontend is ever
-// written.
-private template hasPostblit(S) {
-    static if(!is(S == struct)) {
-        enum bool hasPostblit = false;
-    } else {
-        enum hasPostblit = is(typeof({
-            S s;
-            return &s.__postblit;
-        })) || anySatisfy!(.hasPostblit, typeof(S.tupleof));
-    }
-}
-
-unittest {
-    struct S {
-        this(this) {}
-    }
-
-    struct S2 {
-        uint num;
-    }
-
-    struct S3 {
-        uint num;
-        S s;
-    }
-
-    static assert(hasPostblit!S);
-    static assert(!hasPostblit!S2);
-    static assert(hasPostblit!S3);
-}
-
 /**
 Moves the front of $(D r) out and returns it. Leaves $(D r.front) in a
 destroyable state that does not allocate any resources (usually equal
@@ -3972,7 +3939,7 @@ ElementType!R moveFront(R)(R r)
 {
     static if(is(typeof(&r.moveFront))) {
         return r.moveFront();
-    } else static if(!hasPostblit!(ElementType!(R))) {
+    } else static if(!hasElaborateCopyConstructor!(ElementType!(R))) {
         return r.front;
     } else static if(is(typeof(&r.front()) == ElementType!R*)) {
         return move(r.front);
@@ -4002,7 +3969,7 @@ ElementType!R moveBack(R)(R r)
 {
     static if(is(typeof(&r.moveBack))) {
         return r.moveBack();
-    } else static if(!hasPostblit!(ElementType!(R))) {
+    } else static if(!hasElaborateCopyConstructor!(ElementType!(R))) {
         return r.back;
     } else static if(is(typeof(&r.back()) == ElementType!R*)) {
         return move(r.back);
@@ -4038,7 +4005,7 @@ ElementType!R moveAt(R)(R r, size_t i)
 {
     static if(is(typeof(&r.moveAt))) {
         return r.moveAt(i);
-    } else static if(!hasPostblit!(ElementType!(R))) {
+    } else static if(!hasElaborateCopyConstructor!(ElementType!(R))) {
         return r[i];
     } else static if(is(typeof(&r[i]) == ElementType!R*)) {
         return move(r[i]);

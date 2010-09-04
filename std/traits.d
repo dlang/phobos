@@ -1286,13 +1286,24 @@ unittest
 }
 
 /**
- True if a type defines an elaborate copy constructor. Elaborate copy
- constructors are introduced by defining $(D this(this)) for a $(D
- struct). (Non-struct types do not have elaborate copy constructors.)
+ True if $(D S) or any type embedded directly in the representation of $(D S)
+ defines an elaborate copy constructor. Elaborate copy constructors are
+ introduced by defining $(D this(this)) for a $(D struct). (Non-struct types
+ never have elaborate copy constructors.)
  */
-template hasElaborateCopyConstructor(T)
+template hasElaborateCopyConstructor(S)
 {
-    enum hasElaborateCopyConstructor = is(typeof(&T.__postblit));
+    static if(!is(S == struct))
+    {
+        enum bool hasElaborateCopyConstructor = false;
+    }
+    else
+    {
+        enum hasElaborateCopyConstructor = is(typeof({
+            S s;
+            return &s.__postblit;
+        })) || anySatisfy!(.hasElaborateCopyConstructor, typeof(S.tupleof));
+    }
 }
 
 unittest
@@ -1303,17 +1314,39 @@ unittest
         this(this) {}
     }
     static assert(hasElaborateCopyConstructor!S);
+
+    struct S2
+    {
+        uint num;
+    }
+
+    struct S3
+    {
+        uint num;
+        S s;
+    }
+
+    static assert(!hasElaborateCopyConstructor!S2);
+    static assert(hasElaborateCopyConstructor!S3);
 }
 
 /**
-   True if a type defines an elaborate assignmentq. Elaborate
-   assignments are introduced by defining $(D opAssign(typeof(this)))
-   or $(D opAssign(ref typeof(this))) for a $(D struct). (Non-struct
-   types do not have elaborate assignments.)
+   True if $(D S) or any type directly embedded in the representation of $(D S)
+   defines an elaborate assignmentq. Elaborate assignments are introduced by
+   defining $(D opAssign(typeof(this))) or $(D opAssign(ref typeof(this)))
+   for a $(D struct). (Non-struct types never have elaborate assignments.)
  */
-template hasElaborateAssign(T)
+template hasElaborateAssign(S)
 {
-    enum hasElaborateAssign = is(typeof(T.init.opAssign(T.init)));
+    static if(!is(S == struct))
+    {
+        enum bool hasElaborateAssign = false;
+    }
+    else
+    {
+        enum hasElaborateAssign = is(typeof(S.init.opAssign(S.init))) ||
+            anySatisfy!(.hasElaborateAssign, typeof(S.tupleof));
+    }
 }
 
 unittest
@@ -1325,6 +1358,8 @@ unittest
     static assert(hasElaborateAssign!S1);
     struct S2 { void opAssign(S1) {} }
     static assert(!hasElaborateAssign!S2);
+    struct S3 { S s; }
+    static assert(hasElaborateAssign!S3);
 }
 
 /**
