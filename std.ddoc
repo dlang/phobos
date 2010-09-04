@@ -168,6 +168,7 @@ NAVIGATION_PHOBOS=
 	$(LI <a href="std_date.html" title="Date and time functions">std.date</a>)
 	$(LI <a href="std_demangle.html" title="Demangle D names">std.demangle</a>)
 	$(LI <a href="std_encoding.html" title="Character and string encoding">std.encoding</a>)
+	$(LI <a href="std_exception.html" title="Exceptions and error handling">std.exception</a>)
 	$(LI <a href="std_file.html" title="Basic file operations">std.file</a>)
 	$(LI <a href="std_format.html" title="Formatted conversions of values to strings">std.format</a>)
 	$(LI <a href="std_functional.html" title="functional">std.functional</a>)
@@ -226,6 +227,24 @@ NAVIGATION_PHOBOS=
 	$(LI <a href="phobos.html#std_linux" title="Modules specific to Windows">std.linux</a>)
 	$(LI <a href="phobos.html#std_c_windows" title="C Windows API">std.c.windows</a>)
 	$(LI <a href="phobos.html#std_c_linux" title="C Linux API">std.c.linux</a>)
+    )
+    <h2><a href="phobos.html#core" title="D core modules">core</a></h2>
+    $(UL
+	$(LI <a href="core_atomic.html" title="Atomic operations">core.atomic</a>)
+	$(LI <a href="core_bitop.html" title="Bitwise operations">core.bitop</a>)
+	$(LI <a href="core_cpuid.html" title="CPU identification">core.cpuid</a>)
+	$(LI <a href="core_exception.html" title="Root of exception hierarchy">core.exception</a>)
+	$(LI <a href="core_memory.html" title="Interface to memory management">core.memory</a>)
+	$(LI <a href="core_runtime.html" title="Interface to D runtime library internals">core.runtime</a>)
+	$(LI <a href="core_thread.html" title="Thread management">core.thread</a>)
+	$(LI <a href="core_vararg.html" title="Variable function arguments">core.vararg</a>)
+	$(LI <a href="core_sync_barrier.html" title="Synchronizing progress of a group of threads">core.sync.barrier</a>)
+	$(LI <a href="core_sync_condition.html" title="Synchronized condition checking">core.sync.condition</a>)
+	$(LI <a href="core_sync_config.html" title="Stuff for core.sync">core.sync.config</a>)
+	$(LI <a href="core_sync_exception.html" title="SyncException">core.sync.exception</a>)
+	$(LI <a href="core_sync_mutex.html" title="Mutexes">core.sync.mutex</a>)
+	$(LI <a href="core_sync_rwmutex.html" title="R/W mutually exclusive access">core.sync.rwmutex</a>)
+	$(LI <a href="core_sync_semaphore.html" title="Semaphores">core.sync.semaphore</a>)
     )
 </div>
 
