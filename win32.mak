@@ -111,6 +111,7 @@ SRCS= std\math.d std\stdio.d std\dateparse.d std\date.d std\uni.d std\string.d \
 	std\boxer.d \
 	std\complex.d \
 	std\exception.d \
+	std\intrinsic.d \
 	std\process.d \
 	std\system.d \
 	std\encoding.d std\variant.d \
