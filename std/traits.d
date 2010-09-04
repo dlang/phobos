@@ -1227,7 +1227,8 @@ template hasIndirectionsImpl(T...)
     else
     {
         enum hasIndirectionsImpl = isPointer!(T[0]) || isDynamicArray!(T[0]) ||
-            is (T[0] : const(Object)) || hasIndirectionsImpl!(T[1 .. $]);
+            is (T[0] : const(Object)) || isAssociativeArray!(T[0]) ||
+            hasIndirectionsImpl!(T[1 .. $]);
     }
 }
 
@@ -1239,6 +1240,7 @@ unittest
     static assert(hasIndirections!(S2));
     struct S3 { int a; immutable Object b; }
     static assert(hasIndirections!(S3));
+    static assert(hasIndirections!(int[string]));
 }
 
 /**
