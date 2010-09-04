@@ -544,9 +544,6 @@ unittest
 
         ) FPTypes;
 
-    pragma(msg, " --- std.numeric(" ~ __LINE__.stringof ~ ") CustomFloat broken test ---");
-
-
     foreach (F; FPTypes)
     {
         auto x = F(0.125);
@@ -1243,7 +1240,7 @@ dotProduct(F1, F2)(in F1[] avector, in F2[] bvector)
     immutable n = avector.length;
     assert(n == bvector.length);
     auto avec = avector.ptr, bvec = bvector.ptr;
-    typeof(return) sum0 = 0.0, sum1 = 0.0;
+    typeof(return) sum0 = 0, sum1 = 0;
 
     const all_endp = avec + n;
     const smallblock_endp = avec + (n & ~3);
@@ -1290,6 +1287,7 @@ unittest
     double[] a = [ 1., 2., ];
     double[] b = [ 4., 6., ];
     assert(dotProduct(a, b) == 16);
+    assert(dotProduct([1, 3, -5], [4, -2, -1]) == 3);
 }
 
 /**
