@@ -782,9 +782,9 @@ unittest
 
 S tolower(S)(S s) if (isSomeString!S)
 {
-    foreach (i, dchar c; s)
+    foreach (i, dchar cOuter; s)
     {
-        if (!std.uni.isUniUpper(c)) continue;
+        if (!std.uni.isUniUpper(cOuter)) continue;
         auto result = s[0.. i].dup;
         foreach (dchar c; s[i .. $])
         {
@@ -912,6 +912,10 @@ unittest
     assert(s2 !is s1);
     tolowerInPlace(s3);
     assert(s3 == s2, s3);
+
+    // Test on wchar and dchar strings.
+    assert(tolower("Some String"w) == "some string"w);
+    assert(tolower("Some String"d) == "some string"d);
 }
 
 /************************************
