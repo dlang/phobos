@@ -303,7 +303,17 @@ void formattedWrite(Writer, Char, A...)(Writer w, in Char[] fmt, A args)
     foreach (i, arg; args)
     {
         funs[i] = &formatGeneric!(Writer, typeof(arg), Char);
-        argsAddresses[i] = &arg;
+
+        static if(hasAliasing!(typeof(arg)))
+        {
+            argsAddresses[i] = &arg;
+        }
+        else
+        {
+            // We can safely cast away shared because all data is either
+            // immutable or completely owned by this function.
+            argsAddresses[i] = cast(const(void*)) &arg;
+        }
     }
     // Are we already done with formats? Then just dump each parameter in turn
     uint currentArg = 0;
@@ -1415,6 +1425,12 @@ unittest
     stream = appender!string();
     formattedWrite(stream, "%s", map!"a*a"([2, 3, 5]));
     assert(stream.data == "[4, 9, 25]", stream.data);
+
+    // Test shared data.
+    stream = appender!string();
+    shared int s = 6;
+    formattedWrite(stream, "%s", s);
+    assert(stream.data == "6");
 }
 
 unittest
