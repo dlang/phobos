@@ -948,6 +948,8 @@ private template hasRawPointerImpl(T...)
             enum hasRawAliasing = !is(U == immutable);
         else static if (is(T[0] foo : U[], U) && !isStaticArray!(T[0]))
             enum hasRawAliasing = !is(U == immutable);
+        else static if (isAssociativeArray!(T[0]))
+            enum hasRawAliasing = !is(T[0] == immutable);
         else
             enum hasRawAliasing = false;
         enum result = hasRawAliasing || hasRawPointerImpl!(T[1 .. $]).result;
@@ -966,6 +968,8 @@ private template HasRawLocalPointerImpl(T...)
             enum hasRawLocalAliasing = !is(U == immutable) && !is(U == shared);
         else static if (is(T[0] foo : U[], U) && !isStaticArray!(T[0]))
             enum hasRawLocalAliasing = !is(U == immutable) && !is(U == shared);
+        else static if (isAssociativeArray!(T[0]))
+            enum hasRawLocalAliasing = !is(T[0] == immutable) && !is(T[0] == shared);
         else
             enum hasRawLocalAliasing = false;
         enum result = hasRawLocalAliasing || HasRawLocalPointerImpl!(T[1 .. $]).result;
@@ -1038,6 +1042,8 @@ unittest
     static assert(hasRawAliasing!(S10));
     struct S11 { S6 a; int b; }
     static assert(!hasRawAliasing!(S11));
+    static assert(hasRawAliasing!(int[string]));
+    static assert(!hasRawAliasing!(immutable(int[string])));
 }
 
 /*
@@ -1124,6 +1130,9 @@ unittest
     static assert(!hasRawLocalAliasing!(S15));
     struct S16 { S6 a; int b; }
     static assert(!hasRawLocalAliasing!(S16));
+    static assert(hasRawLocalAliasing!(int[string]));
+    static assert(!hasRawLocalAliasing!(shared(int[string])));
+    static assert(!hasRawLocalAliasing!(immutable(int[string])));
 }
 
 /*
@@ -1187,7 +1196,7 @@ Returns $(D true) if and only if $(D T)'s representation includes at
 least one of the following: $(OL $(LI a raw pointer $(D U*) and $(D U)
 is not immutable;) $(LI an array $(D U[]) and $(D U) is not
 immutable;) $(LI a reference to a class type $(D C) and $(D C) is not
-immutable.))
+immutable.) $(LI an associative array that is not immutable.))
 */
 
 template hasAliasing(T...)
@@ -1210,7 +1219,8 @@ unittest
 /**
 Returns $(D true) if and only if $(D T)'s representation includes at
 least one of the following: $(OL $(LI a raw pointer $(D U*);) $(LI an
-array $(D U[]);) $(LI a reference to a class type $(D C).))
+array $(D U[]);) $(LI a reference to a class type $(D C).)
+$(LI an associative array.))
  */
 
 template hasIndirections(T)
