@@ -317,29 +317,17 @@ Enumerated types are converted to strings as their symbolic names.
 T toImpl(T, S)(S s) if (is(S == enum) && isSomeString!(T)
         && !implicitlyConverts!(S, T))
 {
-    mixin (enumToStringImpl!(S).code);
-}
-
-// internal
-private template enumToStringImpl(Enum)
-{
-    template generate(alias members)
+    foreach (i, e; EnumMembers!S)
     {
-        static if (members.length)
-        {
-            enum m = members[0];
-            enum code =
-                "if (s == S." ~ m ~ ") return `" ~ m ~ "`;" ~
-                generate!(members[1 .. $]).code;
-        }
-        else
-        {
-            enum code = "throw new ConvError(`"
-                "There is no corresponding enum member name in " ~
-                Enum.stringof ~ "`);";
-        }
+        if (s == e)
+            return __traits(allMembers, S)[i];
     }
-    enum code = generate!([__traits(allMembers, Enum)]).code;
+
+    // Embed the actual value encountered into the error message.
+    static assert(!is(OriginalType!S == S));
+    OriginalType!S v = s;
+    throw new ConvError(
+        "value '" ~ to!string(v) ~ "' is not enumerated in " ~ S.stringof);
 }
 
 unittest
@@ -1155,30 +1143,16 @@ unittest
 Target parse(Target, Source)(ref Source s)
 if (isSomeString!Source && is(Target == enum))
 {
-    mixin(enumFromStringImpl!Target.code);
-}
-
-private template enumFromStringImpl(Enum)
-{
-    template generate(alias members)
+    // TODO: BUG4744
+    foreach (i, e; EnumMembers!Target)
     {
-        static if (members.length)
-        {
-            enum m = members[0];
-            enum code =
-                "if (s.length >= `"~m~"`.length && s[0 .. `"~m~"`.length] == `"
-                ~ m ~ "`) { s = s[`"~m~"`.length .. $]; return Target."
-                ~ m ~ "; }" ~
-                generate!(members[1 .. $]).code;
-        }
-        else
-        {
-            enum code = "throw new ConvError(`"
-                "There is no corresponding enum member value in " ~
-                Enum.stringof ~ "`);";
-        }
+        auto ident = __traits(allMembers, Target)[i];
+        if (s.skipOver(ident))
+            return e;
     }
-    enum code = generate!([__traits(allMembers, Enum)]).code;
+    throw new ConvError(
+        Target.stringof ~ " does not have a member named '"
+        ~ to!string(s) ~ "'");
 }
 
 unittest
@@ -1202,6 +1176,17 @@ unittest
     catch (ConvError e)
     {
     }
+}
+
+version (none)  // TODO: BUG4744
+unittest
+{
+    enum A { member1, member11, member111 }
+    assert(to!A("member1"  ) == A.member1  );
+    assert(to!A("member11" ) == A.member11 );
+    assert(to!A("member111") == A.member111);
+    auto s = "member1111";
+    assert(parse!A(s) == A.member111 && s == "1");
 }
 
 Target parse(Target, Source)(ref Source p)
