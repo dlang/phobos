@@ -1393,6 +1393,147 @@ unittest
     static assert(hasMember!(C2, "blah"));
 }
 
+
+/**
+Retrieves the members of an enumerated type $(D enum E).
+
+Params:
+ E = An enumerated type. $(D E) may have duplicated values.
+
+Returns:
+ Static tuple composed of the members of the enumerated type $(D E).
+ The members are arranged in the same order as declared in $(D E).
+
+Note:
+ Returned values are strictly typed with $(D E). Thus, the following code
+ does not work without the explicit cast:
+--------------------
+enum E : int { a, b, c }
+int[] abc = cast(int[]) [ EnumMembers!E ];
+--------------------
+ Cast is not necessary if the type of the variable is inferred. See the
+ example below.
+
+Examples:
+ Creating an array of enumerated values:
+--------------------
+enum Sqrts : real
+{
+    one   = 1,
+    two   = 1.41421,
+    three = 1.73205,
+}
+auto sqrts = [ EnumMembers!Sqrts ];
+assert(sqrts == [ Sqrts.one, Sqrts.two, Sqrts.three ]);
+--------------------
+
+ A generic function $(D rank(v)) in the following example uses this
+ template for finding a member $(D e) in an enumerated type $(D E).
+--------------------
+// Returns i if e is the i-th enumerator of E.
+size_t rank(E)(E e)
+    if (is(E == enum))
+{
+    foreach (i, member; EnumMembers!E)
+    {
+        if (e == member)
+            return i;
+    }
+    assert(0, "Not an enum member");
+}
+
+enum Mode
+{
+    read  = 1,
+    write = 2,
+    map   = 4,
+}
+assert(rank(Mode.read ) == 0);
+assert(rank(Mode.write) == 1);
+assert(rank(Mode.map  ) == 2);
+--------------------
+ */
+template EnumMembers(E)
+    if (is(E == enum))
+{
+    alias EnumSpecificMembers!(E, __traits(allMembers, E)) EnumMembers;
+}
+
+private template EnumSpecificMembers(Enum, names...)
+{
+    static if (names.length > 0)
+    {
+        alias TypeTuple!(
+                WithIdentifier!(names[0])
+                    .Symbolize!(__traits(getMember, Enum, names[0])),
+                EnumSpecificMembers!(Enum, names[1 .. $])
+            ) EnumSpecificMembers;
+    }
+    else
+    {
+        alias TypeTuple!() EnumSpecificMembers;
+    }
+}
+
+unittest
+{
+    enum A { a }
+    static assert([ EnumMembers!A ] == [ A.a ]);
+    enum B { a, b, c, d, e }
+    static assert([ EnumMembers!B ] == [ B.a, B.b, B.c, B.d, B.e ]);
+}
+
+unittest    // typed enums
+{
+    enum A : string { a = "alpha", b = "beta" }
+    static assert([ EnumMembers!A ] == [ A.a, A.b ]);
+
+    static struct S
+    {
+        int value;
+        int opCmp(S rhs) const nothrow { return value - rhs.value; }
+    }
+    enum B : S { a = S(1), b = S(2), c = S(3) }
+    static assert([ EnumMembers!B ] == [ B.a, B.b, B.c ]);
+}
+
+unittest    // duplicated values
+{
+    enum A
+    {
+        a = 0, b = 0,
+        c = 1, d = 1, e
+    }
+    static assert([ EnumMembers!A ] == [ A.a, A.b, A.c, A.d, A.e ]);
+}
+
+// Supply the specified identifier to an constant value.
+//
+// The identifier of each enum member will be exposed via this template
+// once the BUG4732 is fixed.
+//
+//   enum E { member }
+//   assert(__traits(identifier, EnumMembers!E[0]) == "member");
+//
+private template WithIdentifier(string ident)
+{
+    static if (ident == "Symbolize")
+    {
+        template Symbolize(alias value)
+        {
+            enum Symbolize = value;
+        }
+    }
+    else
+    {
+        mixin("template Symbolize(alias "~ ident ~")"
+             ~"{"
+                 ~"alias "~ ident ~" Symbolize;"
+             ~"}");
+    }
+}
+
+
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
 // Classes and Interfaces
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
