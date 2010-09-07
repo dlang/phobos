@@ -920,9 +920,9 @@ struct RefAppender(A : T[], T)
     }
 
 /**
-Construct a ref appender with a given array reference.  Note that this does not
-copy the data.  If the array has a larger capacity as determined by
-arr.capacity, it will be used by the appender.
+Construct a ref appender with a given array reference.  This does not copy the
+data.  If the array has a larger capacity as determined by arr.capacity, it
+will be used by the appender.  $(D RefAppender) assumes that arr is a non-null value.
 
 Note, do not use builtin appending (i.e. ~=) on the original array passed in
 until you are done with the appender, because calls to the appender override
@@ -930,8 +930,7 @@ those appends.
 */
     this(T[] *arr)
     {
-        if(arr !is null)
-            impl = Appender!(A, T)(*arr);
+        impl = Appender!(A, T)(*arr);
         this.arr = arr;
     }
 
@@ -987,9 +986,10 @@ unittest
 
 /**
 Convenience function that returns a $(D RefAppender!(A)) object
-initialized with $(D array).
+initialized with $(D array).  Don't use null for the array pointer, use the
+other version of appender instead.
  */
-RefAppender!(E[]) appender(A : E[]*, E)(A array = null)
+RefAppender!(E[]) appender(A : E[]*, E)(A array)
 {
     return RefAppender!(E[])(array);
 }
