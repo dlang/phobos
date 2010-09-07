@@ -907,8 +907,63 @@ greater than the current array length throws an enforce exception.
 }
 
 /**
-Convenience function that returns an $(D Appender!(T)) object
-initialized with $(D t).
+An appender that can update an array in-place.  It forwards all calls to an
+underlying appender implementation.  Any calls made to the appender also update
+the pointer to the original array passed in.
+*/
+struct RefAppender(A : T[], T)
+{
+    private
+    {
+        Appender!(A, T) impl;
+        T[] *arr;
+    }
+
+/**
+Construct a ref appender with a given array reference.  Note that this does not
+copy the data.  If the array has a larger capacity as determined by
+arr.capacity, it will be used by the appender.
+
+Note, do not use builtin appending (i.e. ~=) on the original array passed in
+until you are done with the appender, because calls to the appender override
+those appends.
+*/
+    this(T[] *arr)
+    {
+        if(arr !is null)
+            impl = Appender!(A, T)(*arr);
+        this.arr = arr;
+    }
+
+    auto opDispatch(string fn, Args...)(Args args) if (is(typeof(mixin("impl." ~ fn ~ "(args)"))))
+    {
+        // we do it this way because we can't cache a void return
+        scope(exit) *this.arr = impl.data;
+        mixin("return impl." ~ fn ~ "(args);");
+    }
+
+/**
+Returns the capacity of the array (the maximum number of elements the
+managed array can accommodate before triggering a reallocation).  If any
+appending will reallocate, capacity returns 0.
+ */
+    @property size_t capacity()
+    {
+        return impl.capacity;
+    }
+
+/**
+Returns the managed array.
+ */
+    @property T[] data()
+    {
+        return impl.data;
+    }
+}
+
+/**
+Convenience function that returns an $(D Appender!(A)) object
+initialized with $(D array).
  */
 Appender!(E[]) appender(A : E[], E)(A array = null)
 {
@@ -917,26 +972,45 @@ Appender!(E[]) appender(A : E[], E)(A array = null)
 
 unittest
 {
-    version(none)
-    {
-        auto arr = new char[0];
-        auto app = appender(&arr);
-    }
-    else
-        auto app = appender!(char[])();
+    auto app = appender!(char[])();
     string b = "abcdefg";
     foreach (char c; b) app.put(c);
     assert(app.data == "abcdefg");
 
     int[] a = [ 1, 2 ];
-    version(none)
-        auto app2 = appender(&a);
-    else
-        auto app2 = appender(a);
+    auto app2 = appender(a);
     assert(app2.data == [ 1, 2 ]);
     app2.put(3);
     app2.put([ 4, 5, 6 ][]);
     assert(app2.data == [ 1, 2, 3, 4, 5, 6 ]);
+}
+
+/**
+Convenience function that returns a $(D RefAppender!(A)) object
+initialized with $(D array).
+ */
+RefAppender!(E[]) appender(A : E[]*, E)(A array = null)
+{
+    return RefAppender!(E[])(array);
+}
+
+unittest
+{
+    auto arr = new char[0];
+    auto app = appender(&arr);
+    string b = "abcdefg";
+    foreach (char c; b) app.put(c);
+    assert(app.data == "abcdefg");
+    assert(arr == "abcdefg");
+
+    int[] a = [ 1, 2 ];
+    auto app2 = appender(&a);
+    assert(app2.data == [ 1, 2 ]);
+    assert(a == [ 1, 2 ]);
+    app2.put(3);
+    app2.put([ 4, 5, 6 ][]);
+    assert(app2.data == [ 1, 2, 3, 4, 5, 6 ]);
+    assert(a == [ 1, 2, 3, 4, 5, 6 ]);
 }
 
 /*
