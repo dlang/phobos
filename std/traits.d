@@ -1082,57 +1082,57 @@ static assert(!hasRawLocalAliasing!(S6));
 ----
 */
 
-private template hasRawLocalAliasing(T...)
+private template hasRawUnsharedAliasing(T...)
 {
-    enum hasRawLocalAliasing
+    enum hasRawUnsharedAliasing
         = HasRawLocalPointerImpl!(RepresentationTypeTuple!(T)).result;
 }
 
 unittest
 {
 // simple types
-    static assert(!hasRawLocalAliasing!(int));
-    static assert(hasRawLocalAliasing!(char*));
-    static assert(!hasRawLocalAliasing!(shared char*));
+    static assert(!hasRawUnsharedAliasing!(int));
+    static assert(hasRawUnsharedAliasing!(char*));
+    static assert(!hasRawUnsharedAliasing!(shared char*));
 // references aren't raw pointers
-    static assert(!hasRawLocalAliasing!(Object));
-    static assert(!hasRawLocalAliasing!(int));
+    static assert(!hasRawUnsharedAliasing!(Object));
+    static assert(!hasRawUnsharedAliasing!(int));
     struct S1 { int z; }
-    static assert(!hasRawLocalAliasing!(S1));
+    static assert(!hasRawUnsharedAliasing!(S1));
     struct S2 { int* z; }
-    static assert(hasRawLocalAliasing!(S2));
+    static assert(hasRawUnsharedAliasing!(S2));
     struct S3 { shared int* z; }
-    static assert(!hasRawLocalAliasing!(S3));
+    static assert(!hasRawUnsharedAliasing!(S3));
     struct S4 { int a; int* z; int c; }
-    static assert(hasRawLocalAliasing!(S4));
+    static assert(hasRawUnsharedAliasing!(S4));
     struct S5 { int a; shared int* z; int c; }
-    static assert(!hasRawLocalAliasing!(S5));
+    static assert(!hasRawUnsharedAliasing!(S5));
     struct S6 { int a; int z; int c; }
-    static assert(!hasRawLocalAliasing!(S6));
+    static assert(!hasRawUnsharedAliasing!(S6));
     struct S7 { int a; Object z; int c; }
-    static assert(!hasRawLocalAliasing!(S7));
+    static assert(!hasRawUnsharedAliasing!(S7));
     union S8 { int a; int b; }
-    static assert(!hasRawLocalAliasing!(S8));
+    static assert(!hasRawUnsharedAliasing!(S8));
     union S9 { int a; int * b; }
-    static assert(hasRawLocalAliasing!(S9));
+    static assert(hasRawUnsharedAliasing!(S9));
     union S10 { int a; shared int * b; }
-    static assert(!hasRawLocalAliasing!(S10));
+    static assert(!hasRawUnsharedAliasing!(S10));
     typedef int* S11;
-    static assert(hasRawLocalAliasing!(S11));
+    static assert(hasRawUnsharedAliasing!(S11));
     typedef shared int* S12;
-    static assert(hasRawLocalAliasing!(S12));
+    static assert(hasRawUnsharedAliasing!(S12));
     enum S13 { a };
-    static assert(!hasRawLocalAliasing!(S13));
+    static assert(!hasRawUnsharedAliasing!(S13));
     // indirect members
     struct S14 { S9 a; int b; }
-    static assert(hasRawLocalAliasing!(S14));
+    static assert(hasRawUnsharedAliasing!(S14));
     struct S15 { S10 a; int b; }
-    static assert(!hasRawLocalAliasing!(S15));
+    static assert(!hasRawUnsharedAliasing!(S15));
     struct S16 { S6 a; int b; }
-    static assert(!hasRawLocalAliasing!(S16));
-    static assert(hasRawLocalAliasing!(int[string]));
-    static assert(!hasRawLocalAliasing!(shared(int[string])));
-    static assert(!hasRawLocalAliasing!(immutable(int[string])));
+    static assert(!hasRawUnsharedAliasing!(S16));
+    static assert(hasRawUnsharedAliasing!(int[string]));
+    static assert(!hasRawUnsharedAliasing!(shared(int[string])));
+    static assert(!hasRawUnsharedAliasing!(immutable(int[string])));
 }
 
 /*
@@ -1168,26 +1168,26 @@ representation includes at least one non-immutable non-shared object
 reference.
 */
 
-private template hasLocalObjects(T...)
+private template hasUnsharedObjects(T...)
 {
     static if (T.length == 0)
     {
-        enum hasLocalObjects = false;
+        enum hasUnsharedObjects = false;
     }
     else static if (is(T[0] U == typedef))
     {
-        enum hasLocalObjects = hasLocalObjects!(U, T[1 .. $]);
+        enum hasUnsharedObjects = hasUnsharedObjects!(U, T[1 .. $]);
     }
     else static if (is(T[0] == struct))
     {
-        enum hasLocalObjects = hasLocalObjects!(
+        enum hasUnsharedObjects = hasUnsharedObjects!(
             RepresentationTypeTuple!(T[0]), T[1 .. $]);
     }
     else
     {
-        enum hasLocalObjects = (is(T[0] == class) &&
+        enum hasUnsharedObjects = (is(T[0] == class) &&
                                 !is(T[0] == immutable) && !is(T[0] == shared)) ||
-            hasLocalObjects!(T[1 .. $]);
+            hasUnsharedObjects!(T[1 .. $]);
     }
 }
 
@@ -1196,12 +1196,14 @@ Returns $(D true) if and only if $(D T)'s representation includes at
 least one of the following: $(OL $(LI a raw pointer $(D U*) and $(D U)
 is not immutable;) $(LI an array $(D U[]) and $(D U) is not
 immutable;) $(LI a reference to a class type $(D C) and $(D C) is not
-immutable.) $(LI an associative array that is not immutable.))
+immutable.) $(LI an associative array that is not immutable.)
+$(LI a delegate.))
 */
 
 template hasAliasing(T...)
 {
-    enum hasAliasing = hasRawAliasing!(T) || hasObjects!(T);
+    enum hasAliasing = hasRawAliasing!(T) || hasObjects!(T) ||
+        anySatisfy!(isDelegate, T);
 }
 
 unittest
@@ -1214,13 +1216,16 @@ unittest
     static assert(!hasAliasing!(S3));
     struct X { float[3] vals; }
     static assert(!hasAliasing!X);
+    static assert(hasAliasing!(uint[uint]));
+    static assert(!hasAliasing!(immutable(uint[uint])));
+    static assert(hasAliasing!(void delegate()));
 }
 
 /**
 Returns $(D true) if and only if $(D T)'s representation includes at
 least one of the following: $(OL $(LI a raw pointer $(D U*);) $(LI an
 array $(D U[]);) $(LI a reference to a class type $(D C).)
-$(LI an associative array.))
+$(LI an associative array.) $(LI a delegate.))
  */
 
 template hasIndirections(T)
@@ -1238,7 +1243,7 @@ template hasIndirectionsImpl(T...)
     {
         enum hasIndirectionsImpl = isPointer!(T[0]) || isDynamicArray!(T[0]) ||
             is (T[0] : const(Object)) || isAssociativeArray!(T[0]) ||
-            hasIndirectionsImpl!(T[1 .. $]);
+            isDelegate!(T[0]) || hasIndirectionsImpl!(T[1 .. $]);
     }
 }
 
@@ -1251,38 +1256,56 @@ unittest
     struct S3 { int a; immutable Object b; }
     static assert(hasIndirections!(S3));
     static assert(hasIndirections!(int[string]));
+    static assert(hasIndirections!(void delegate()));
 }
+
+// These are for backwards compatibility, are intentionally lacking ddoc,
+// and should eventually be deprecated.
+alias hasUnsharedAliasing hasLocalAliasing;
+alias hasRawUnsharedAliasing hasRawLocalAliasing;
+alias hasUnsharedObjects hasLocalObjects;
 
 /**
 Returns $(D true) if and only if $(D T)'s representation includes at
 least one of the following: $(OL $(LI a raw pointer $(D U*) and $(D U)
 is not immutable or shared;) $(LI an array $(D U[]) and $(D U) is not
 immutable or shared;) $(LI a reference to a class type $(D C) and
-$(D C) is not immutable or shared.))
+$(D C) is not immutable or shared.) $(LI an associative array that is not
+immutable or shared.) $(LI a delegate that is not shared.))
 */
 
-template hasLocalAliasing(T...)
+template hasUnsharedAliasing(T...)
 {
-    enum hasLocalAliasing = hasRawLocalAliasing!(T) || hasLocalObjects!(T);
+    enum hasUnsharedAliasing = hasRawUnsharedAliasing!(T) ||
+        anySatisfy!(unsharedDelegate, T) || hasUnsharedObjects!(T);
+}
+
+private template unsharedDelegate(T)
+{
+    enum bool unsharedDelegate = isDelegate!T && !is(T == shared);
 }
 
 unittest
 {
     struct S1 { int a; Object b; }
-    static assert(hasLocalAliasing!(S1));
+    static assert(hasUnsharedAliasing!(S1));
     struct S2 { string a; }
-    static assert(!hasLocalAliasing!(S2));
+    static assert(!hasUnsharedAliasing!(S2));
     struct S3 { int a; immutable Object b; }
-    static assert(!hasLocalAliasing!(S3));
+    static assert(!hasUnsharedAliasing!(S3));
 
     struct S4 { int a; shared Object b; }
-    static assert(!hasLocalAliasing!(S4));
+    static assert(!hasUnsharedAliasing!(S4));
     struct S5 { char[] a; }
-    static assert(hasLocalAliasing!(S5));
+    static assert(hasUnsharedAliasing!(S5));
     struct S6 { shared char[] b; }
-    static assert(!hasLocalAliasing!(S6));
+    static assert(!hasUnsharedAliasing!(S6));
     struct S7 { float[3] vals; }
-    static assert(!hasLocalAliasing!(S7));
+    static assert(!hasUnsharedAliasing!(S7));
+
+    static assert(hasUnsharedAliasing!(uint[uint]));
+    static assert(hasUnsharedAliasing!(void delegate()));
+    static assert(!hasUnsharedAliasing!(shared(void delegate())));
 }
 
 /**
@@ -2762,6 +2785,24 @@ unittest
     static assert(! isFunctionPointer!(bar));
 
     static assert(!isFunctionPointer!((int a) {}));
+}
+
+/**
+Detect whether $(D T) is a delegate.
+*/
+template isDelegate(T...)
+if(staticLength!T == 1)
+{
+    enum bool isDelegate = is(T[0] == delegate);
+}
+
+unittest
+{
+    static assert(isDelegate!(void delegate()));
+    static assert(isDelegate!(uint delegate(uint)));
+    static assert(isDelegate!(shared uint delegate(uint)));
+    static assert(!isDelegate!(uint));
+    static assert(!isDelegate!(void function()));
 }
 
 
