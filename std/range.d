@@ -16,13 +16,8 @@ Authors:   $(WEB erdani.org, Andrei Alexandrescu), David Simcha
 module std.range;
 
 public import std.array;
-import std.exception;
-import std.traits;
-import std.typecons;
-import std.typetuple;
-import std.algorithm;
-import std.functional;
-import std.conv;
+import std.algorithm, std.conv, std.exception,  std.functional, std.intrinsic,
+    std.random, std.traits, std.typecons, std.typetuple;
 
 // For testing only.  This code is included in a string literal to be included
 // in whatever module it's needed in, so that each module that uses it can be
@@ -2252,21 +2247,14 @@ assert(b == [ "c", "b", "a" ]);
  */
 struct Zip(R...) if (R.length && allSatisfy!(isInputRange, R))
 {
-    // Works around weird syntactic ambiguity of taking the address of a ref
-    // return value vs. the address of the function.
-    private static T* addrOf(T)(ref T val)
-    {
-        return &val;
-    }
-
-    enum bool byPtr = allSatisfy!(hasLvalueElements, R);
-    Tuple!(R) ranges;
+    Tuple!R ranges;
+    alias Tuple!(staticMap!(.ElementType, R)) ElementType;
     StoppingPolicy stoppingPolicy = StoppingPolicy.shortest;
 
 /**
-Builds an object. Usually this is invoked indirectly by using the
-$(XREF range,zip) function.
- */
+   Builds an object. Usually this is invoked indirectly by using the
+   $(XREF range,zip) function.
+*/
     this(R rs, StoppingPolicy s = StoppingPolicy.shortest)
     {
         stoppingPolicy = s;
@@ -2291,27 +2279,30 @@ stopping policy.
     {
         bool empty()
         {
-            bool firstRangeIsEmpty = ranges.field[0].empty;
-            if (firstRangeIsEmpty && stoppingPolicy == StoppingPolicy.shortest)
-                return true;
-            foreach (i, Unused; R[1 .. $])
+            final switch (stoppingPolicy)
             {
-                switch (stoppingPolicy)
-                {
                 case StoppingPolicy.shortest:
-                    if (ranges.field[i + 1].empty) return true;
+                    foreach (i, Unused; R)
+                    {
+                        if (ranges.field[i].empty) return true;
+                    }
                     break;
                 case StoppingPolicy.longest:
-                    if (!ranges.field[i + 1].empty) return false;
+                    foreach (i, Unused; R)
+                    {
+                        if (!ranges.field[i].empty) return false;
+                    }
                     break;
-                default:
-                    assert(stoppingPolicy == StoppingPolicy.requireSameLength);
-                    enforce(firstRangeIsEmpty == ranges.field[i + 1].empty,
-                            "Inequal-length ranges passed to Zip");
+                case StoppingPolicy.requireSameLength:
+                    foreach (i, Unused; R[1 .. $])
+                    {
+                        enforce(ranges.field[0].empty ==
+                                ranges.field[i + 1].empty,
+                                "Inequal-length ranges passed to Zip");
+                    }
                     break;
-                }
             }
-            return firstRangeIsEmpty;
+            return false;
         }
     }
 
@@ -2328,109 +2319,187 @@ stopping policy.
         }
 
 /**
-Returns a proxy for the current iterated element.
- */
-    @property Proxy front()
+   Returns the current iterated element.
+*/
+    @property ElementType front()
     {
-        Proxy result;
-
-        static if(byPtr)
+        ElementType result = void;
+        foreach (i, Unused; R)
         {
-            foreach (i, Unused; R)
+            if (!ranges.field[i].empty)
             {
-                if(ranges.field[i].empty)
-                {
-                    result.ptrs.field[i] = null;
-                }
-                else
-                {
-                    result.ptrs.field[i] = addrOf(ranges.field[i].front);
-                }
+                emplace(&result.field[i], ranges.field[i].front);
             }
-        }
-        else
-        {
-            foreach(i, Unused; R)
+            else
             {
-                if(ranges.field[i].empty)
-                {
-                    result.available[i] = false;
-                }
-                else
-                {
-                    result.values.field[i] = ranges.field[i].front;
-                }
+                emplace(&result.field[i]);
             }
         }
         return result;
     }
 
-/**
-Returns a proxy for the rightmost element.
- */
-static if(allSatisfy!(isBidirectionalRange, R))
-    @property Proxy back()
+    static if (allSatisfy!(hasAssignableElements, R))
     {
-        Proxy result;
-
-        static if(byPtr)
+/**
+   Sets the front of all iterated ranges.
+*/
+        @property void front(ElementType v)
         {
             foreach (i, Unused; R)
             {
-                if(ranges.field[i].empty)
+                if (!ranges.field[i].empty)
                 {
-                    result.ptrs.field[i] = null;
-                }
-                else
-                {
-                    result.ptrs.field[i] = addrOf(ranges.field[i].back);
+                    ranges.field[i].front = v.field[i];
                 }
             }
         }
-        else
+
+/**
+   Moves out the front.
+*/
+        ElementType moveFront()
         {
-            foreach(i, Unused; R)
+            ElementType result = void;
+            foreach (i, Unused; R)
             {
-                if(ranges.field[i].empty)
+                if (!ranges.field[i].empty)
                 {
-                    result.available[i] = false;
+                    emplace(&result.field[i], ranges.field[i].moveFront());
                 }
                 else
                 {
-                    result.values.field[i] = ranges.field[i].back;
+                    emplace(&result.field[i]);
                 }
             }
+            return result;
         }
-        return result;
     }
 
 /**
-Advances to the popFront element in all controlled ranges.
- */
+   Returns the rightmost element.
+*/
+    static if(allSatisfy!(isBidirectionalRange, R))
+    {
+        @property ElementType back()
+        {
+            ElementType result = void;
+            foreach (i, Unused; R)
+            {
+                if (!ranges.field[i].empty)
+                {
+                    emplace(&result.field[i], ranges.field[i].back);
+                }
+                else
+                {
+                    emplace(&result.field[i]);
+                }
+            }
+            return result;
+        }
+
+/**
+   Moves out the back.
+*/
+        static if (allSatisfy!(hasAssignableElements, R))
+        {
+            @property ElementType moveBack()
+            {
+                ElementType result = void;
+                foreach (i, Unused; R)
+                {
+                    if (!ranges.field[i].empty)
+                    {
+                        emplace(&result.field[i], ranges.field[i].moveBack());
+                    }
+                    else
+                    {
+                        emplace(&result.field[i]);
+                    }
+                }
+                return result;
+            }
+
+/**
+   Returns the current iterated element.
+*/
+            @property void back(ElementType v)
+            {
+                foreach (i, Unused; R)
+                {
+                    if (!ranges.field[i].empty)
+                    {
+                        ranges.field[i].front = v.field[i];
+                    }
+                }
+            }
+        }
+    }
+
+/**
+   Advances to the popFront element in all controlled ranges.
+*/
     void popFront()
     {
-        foreach (i, Unused; R)
+        final switch (stoppingPolicy)
         {
-            ranges.field[i].popFront;
+            case StoppingPolicy.shortest:
+                foreach (i, Unused; R)
+                {
+                    assert(!ranges.field[i].empty);
+                    ranges.field[i].popFront();
+                }
+                break;
+            case StoppingPolicy.longest:
+                foreach (i, Unused; R)
+                {
+                    if (!ranges.field[i].empty) ranges.field[i].popFront();
+                }
+                break;
+            case StoppingPolicy.requireSameLength:
+                foreach (i, Unused; R)
+                {
+                    enforce(!ranges.field[i].empty, "Invalid Zip object");
+                    ranges.field[i].popFront();
+                }
+                break;
         }
     }
 
+    static if(allSatisfy!(isBidirectionalRange, R))
 /**
-Calls $(D popBack) for all controlled ranges.
- */
-static if(allSatisfy!(isBidirectionalRange, R))
-    void popBack()
-    {
-        foreach (i, Unused; R)
+   Calls $(D popBack) for all controlled ranges.
+*/
+        void popBack()
         {
-            ranges.field[i].popBack;
+            final switch (stoppingPolicy)
+            {
+                case StoppingPolicy.shortest:
+                    foreach (i, Unused; R)
+                    {
+                        assert(!ranges.field[i].empty);
+                        ranges.field[i].popBack();
+                    }
+                    break;
+                case StoppingPolicy.longest:
+                    foreach (i, Unused; R)
+                    {
+                        if (!ranges.field[i].empty) ranges.field[i].popBack();
+                    }
+                    break;
+                case StoppingPolicy.requireSameLength:
+                    foreach (i, Unused; R)
+                    {
+                        enforce(!ranges.field[0].empty, "Invalid Zip object");
+                        ranges.field[i].popBack();
+                    }
+                    break;
+            }
         }
-    }
 
 /**
-Returns the length of this range. Defined only if all ranges define
-$(D length).
- */
+   Returns the length of this range. Defined only if all ranges define
+   $(D length).
+*/
     static if (allSatisfy!(hasLength, R))
         @property size_t length()
         {
@@ -2453,130 +2522,66 @@ $(D length).
         }
 
 /**
-Returns a slice of the range. Defined only if all range define
-slicing.
- */
+   Returns a slice of the range. Defined only if all range define
+   slicing.
+*/
     static if (allSatisfy!(hasSlicing, R))
-        Zip!(R) opSlice(size_t from, size_t to)
+        Zip opSlice(size_t from, size_t to)
         {
-            Zip!(R) result;
+            Zip result = void;
+            emplace(&result.stoppingPolicy, stoppingPolicy);
             foreach (i, Unused; R)
             {
-                result.ranges.field[i] = ranges.field[i][from .. to];
+                emplace(&result.ranges.field[i], ranges.field[i][from .. to]);
             }
             return result;
         }
 
-/**
-Proxy type returned by the access function.
-*/
-    struct Proxy
+    static if (allSatisfy!(isRandomAccessRange, R))
     {
-        static if(byPtr)
-        {
-            template ElemPtr(Range)
-            {
-                alias std.range.ElementType!(Range)* ElemPtr;
-            }
-            Tuple!(staticMap!(ElemPtr, R)) ptrs;
-        }
-        else
-        {
-            Tuple!(staticMap!(ElementType, R)) values;
-            bool[R.length] available = true;  // For hasAt.
-        }
-
 /**
-Returns the current element in the $(D i)th range.
- */
-        auto ref std.range.ElementType!(R[i]) at(int i)()
+   Returns the $(D n)th element in the composite range. Defined if all
+   ranges offer random access.
+*/
+        ElementType opIndex(size_t n)
         {
-            static if(byPtr) {
-                return *ptrs.field[i];
-            } else {
-                return values.field[i];
-            }
-        }
-
-/**
-Returns whether the current element exists in the $(D i)th range. This
-function returns $(D false) if e.g. one of the ranges has exhausted in
-the $(D StoppingPolicy.longest) policy.
- */
-        bool hasAt(int i)()
-        {
-            static if(byPtr) {
-                return ptrs.field[i] !is null;
-            } else {
-                return available[i];
-            }
-        }
-
-        static if(byPtr) {
-            void proxySwap(Proxy rhs)
+            ElementType result = void;
+            foreach (i, Range; R)
             {
-                foreach (i, Unused; R)
+                emplace(&result.field[i], ranges.field[i][n]);
+            }
+            return result;
+        }
+
+        static if (allSatisfy!(hasAssignableElements, R))
+        {
+/**
+   Assigns to the $(D n)th element in the composite range. Defined if
+   all ranges offer random access.
+ */
+            void opIndexAssign(ElementType v, size_t n)
+            {
+                foreach (i, Range; R)
                 {
-                    .swap(*ptrs.field[i], *rhs.ptrs.field[i]);
+                    ranges.field[i][n] = v.field[i];
                 }
+            }
+
+/**
+   Destructively reads the $(D n)th element in the composite
+   range. Defined if all ranges offer random access.
+ */
+            ElementType moveAt(size_t n)
+            {
+                ElementType result = void;
+                foreach (i, Range; R)
+                {
+                    emplace(&result.field[i], ranges.field[i].moveAt(n));
+                }
+                return result;
             }
         }
     }
-
-/**
-Returns the $(D n)th element in the composite range. Defined if all
-ranges offer random access.
- */
-    static if (allSatisfy!(isRandomAccessRange, R))
-        Proxy opIndex(size_t n)
-        {
-            Proxy result;
-
-            static if(byPtr)
-            {
-                foreach (i, Range; R)
-                {
-                    static if(isInfinite!Range)
-                    {
-                        result.ptrs.field[i] = addrOf(ranges.field[i][n]);
-                    }
-                    else
-                    {
-
-                        if(ranges.field[i].length <= n)
-                        {
-                            result.ptrs.field[i] = null;
-                        }
-                        else
-                        {
-                            result.ptrs.field[i] = addrOf(ranges.field[i][n]);
-                        }
-                    }
-                }
-            }
-            else
-            {
-                foreach (i, Range; R)
-                {
-                    static if(isInfinite!(Range))
-                    {
-                        result.values.values[i] = ranges.field[i][n];
-                    }
-                    else
-                    {
-                        if(ranges.field[i].length <= n)
-                        {
-                            result.available[i] = false;
-                        }
-                        else
-                        {
-                            result.values.field[i] = ranges.field[i][n];
-                        }
-                    }
-                }
-            }
-            return result;
-        }
 }
 
 /// Ditto
@@ -2587,8 +2592,7 @@ if (allSatisfy!(isInputRange, R))
 }
 
 /// Ditto
-Zip!(R) zip(R...)(StoppingPolicy sp, R ranges)
-    //if (allSatisfy!(isInputRange, R))
+Zip!(R) zip(R...)(StoppingPolicy sp, R ranges) if (allSatisfy!(isInputRange, R))
 {
     return Zip!(R)(ranges, sp);
 }
@@ -2613,13 +2617,13 @@ unittest
     float[] b = [ 1., 2, 3 ];
     foreach (e; zip(a, b))
     {
-        assert(e.at!(0) == e.at!(1));
+        assert(e.field[0] == e.field[1]);
     }
 
     swap(a[0], a[1]);
     auto z = zip(a, b);
-    swap(z.front(), z.back());
-    sort!("a.at!(0) < b.at!(0)")(zip(a, b));
+    //swap(z.front(), z.back());
+    sort!("a.field[0] < b.field[0]")(zip(a, b));
     assert(a == [1, 2, 3]);
     assert(b == [2., 1, 3]);
 
@@ -2636,8 +2640,8 @@ unittest
         auto arr1 = t.field[0];
         auto arr2 = t.field[1];
         auto zShortest = zip(arr1, arr2);
-        assert(equal(map!"a.at!0"(zShortest), [1, 2]));
-        assert(equal(map!"a.at!1"(zShortest), [1, 2]));
+        assert(equal(map!"a.field[0]"(zShortest), [1, 2]));
+        assert(equal(map!"a.field[1]"(zShortest), [1, 2]));
 
         try {
             auto zSame = zip(StoppingPolicy.requireSameLength, arr1, arr2);
@@ -2646,13 +2650,13 @@ unittest
         } catch { /* It's supposed to throw.*/ }
 
         auto zLongest = zip(StoppingPolicy.requireSameLength, arr1, arr2);
-        assert(zLongest.front.hasAt!0);
-        assert(zLongest.front.hasAt!1);
+        assert(!zLongest.ranges.field[0].empty);
+        assert(!zLongest.ranges.field[1].empty);
 
         zLongest.popFront();
         zLongest.popFront();
-        assert(!zLongest.front.hasAt!0);
-        assert(zLongest.front.hasAt!1);
+        assert(zLongest.ranges.field[0].empty);
+        assert(!zLongest.ranges.field[1].empty);
     }
 
 
@@ -4458,4 +4462,370 @@ unittest {
     appWrapped.put([2, 3]);
     assert(app.data.length == 3);
     assert(equal(app.data, [1,2,3]));
+}
+
+/**
+Represents a sorted random-access range. In addition to the regular
+range primitives, supports fast operations using binary search. To
+obtain a $(D SortedRange) from an unsorted range $(D r), use $(XREF
+algorithm, sort) which sorts $(D r) in place and returns the
+corresponding $(D SortedRange). To construct a $(D SortedRange) from a
+range $(D r) that is known to be already sorted, use $(D assumeSorted)
+described below.
+
+Example:
+
+----
+auto a = [ 1, 2, 3, 42, 52, 64 ];
+auto r = assumeSorted(a);
+assert(r.canFind(3));
+assert(!r.canFind(32));
+auto r1 = sort!"a > b"(a);
+assert(r1.canFind(3));
+assert(!r1.canFind(32));
+assert(r1.release() == [ 64, 52, 42, 3, 2, 1 ]);
+----
+
+$(D SortedRange) could accept ranges weaker than random-access, but it
+is unable to provide interesting functionality for them. Therefore,
+$(D SortedRange) is currently restricted to random-access ranges.
+
+No copy of the original range is ever made. If the underlying range is
+changed concurrently with its corresponding $(D SortedRange) in ways
+that break its sortedness, $(D SortedRange) will work erratically.
+
+Example:
+
+----
+auto a = [ 1, 2, 3, 42, 52, 64 ];
+auto r = assumeSorted(a);
+assert(r.canFind(42));
+swap(a[2], a[5]); // illegal to break sortedness of original range
+assert(!r.canFind(42)); // passes although it shouldn't
+----
+ */
+struct SortedRange(R, alias pred = "a < b") if (isRandomAccessRange!R)
+{
+    private R _input;
+
+    this(R input)
+    {
+        this._input = input;
+        debug
+        {
+            // Check the sortedness of the input
+            if (this._input.length < 2) return;
+            immutable size_t msb = bsr(this._input.length) + 1;
+            assert(msb > 0 && msb < this._input.length);
+            immutable step = this._input.length / msb;
+            immutable start = uniform(0, step);
+            auto st = stride(this._input, this._input.length / msb);
+            assert(isSorted!pred(st), text(st));
+        }
+    }
+
+    /// Range primitives.
+    @property bool empty() //const
+    {
+        return this._input.empty;
+    }
+
+    /// Ditto
+    @property typeof(this) save()
+    {
+        typeof(this) result;
+        result._input = this._input.save;
+        return result;
+    }
+
+    /// Ditto
+    @property ElementType!R front()
+    {
+        return this._input.front;
+    }
+
+    /// Ditto
+    void popFront()
+    {
+        this._input.popFront();
+    }
+
+    /// Ditto
+    @property ElementType!R back()
+    {
+        return this._input.back;
+    }
+
+    /// Ditto
+    void popBack()
+    {
+        this._input.popBack();
+    }
+
+    /// Ditto
+    ElementType!R opIndex(size_t i)
+    {
+        return this._input[i];
+    }
+
+    /// Ditto
+    typeof(this) opSlice(size_t a, size_t b)
+    {
+        typeof(this) result;
+        result._input = this._input[a .. b]; // skip checking
+        return result;
+    }
+
+    /// Ditto
+    @property size_t length() //const
+    {
+        return this._input.length;
+    }
+
+/**
+Releases the controlled range and returns it.
+ */
+    R release()
+    {
+        return move(this._input);
+    }
+
+// lowerBound
+/**
+   This function assumes that range $(D r) consists of a subrange $(D r1)
+   of elements $(D e1) for which $(D pred(e1, value)) is $(D true),
+   followed by a subrange $(D r2) of elements $(D e2) for which $(D
+   pred(e2, value)) is $(D false). Using this assumption, $(D lowerBound)
+   uses binary search to find $(D r1), i.e. the left subrange on which
+   $(D pred) is always $(D true). Performs $(BIGOH log(r.length))
+   evaluations of $(D pred).  The precondition is not verified because it
+   would deteriorate function's complexity. It is possible that the types
+   of $(D value) and $(D ElementType!(Range)) are different, if the
+   predicate accepts them. See also STL's $(WEB
+   sgi.com/tech/stl/lower_bound.html, lower_bound).
+
+   Precondition: $(D find!(not!(pred))(r, value).length +
+   find!(pred)(retro(r), value).length == r.length)
+
+   Example:
+   ----
+   int[] a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ];
+   auto p = lowerBound!("a < b")(a, 4);
+   assert(p == [ 0, 1, 2, 3 ]);
+   p = lowerBound(a, 4); // uses "a < b" by default
+   assert(p == [ 0, 1, 2, 3 ]);
+   ----
+*/
+    typeof(this) lowerBound(alias pred = "a < b", V)(V value)
+    {
+        auto first = 0, count = this._input.length;
+        while (count > 0)
+        {
+            immutable step = count / 2;
+            auto it = first + step;
+            if (binaryFun!(pred)(this._input[it], value))
+            {
+                first = it + 1;
+                count -= step + 1;
+            }
+            else
+            {
+                count = step;
+            }
+        }
+        return this[0 .. first];
+    }
+
+// upperBound
+/**
+   This function assumes that range $(D r) consists of a subrange $(D r1)
+   of elements $(D e1) for which $(D pred(value, e1)) is $(D false),
+   followed by a subrange $(D r2) of elements $(D e2) for which $(D
+   pred(value, e2)) is $(D true). (Note the differences in subrange
+   definition and argument order for $(D pred) compared to $(D
+   lowerBound).) Using this assumption, $(D upperBound) uses binary
+   search to find $(D r2), i.e. the right subrange on which $(D pred) is
+   always $(D true). Performs $(BIGOH log(r.length)) evaluations of $(D
+   pred).  The precondition is not verified because it would deteriorate
+   function's complexity. It is possible that the types of $(D value) and
+   $(D ElementType!(Range)) are different, if the predicate accepts
+   them. See also STL's $(WEB sgi.com/tech/stl/lower_bound.html,
+   upper_bound).
+
+   Precondition: $(D find!(pred)(r, value).length +
+   find!(not!(pred))(retro(r), value).length == r.length)
+
+   Example:
+   ----
+   auto a = [ 1, 2, 3, 3, 3, 4, 4, 5, 6 ];
+   auto p = upperBound(a, 3);
+   assert(p == begin(a) + 5);
+   ----
+*/
+    typeof(this) upperBound(V)(V value)
+    {
+        auto first = 0;
+        size_t count = length;
+        while (count > 0)
+        {
+            auto step = count / 2;
+            auto it = first + step;
+            if (!binaryFun!(pred)(value, this[it]))
+            {
+                first = it + 1;
+                count -= step + 1;
+            }
+            else count = step;
+        }
+        return this[first .. length];
+    }
+
+// equalRange
+/**
+   Assuming a range satisfying both preconditions for $(D
+   lowerBound!(pred)(r, value)) and $(D upperBound!(pred)(r, value)), the
+   call $(D equalRange!(pred)(r, v)) returns the subrange containing all
+   elements $(D e) for which both $(D pred(e, value)) and $(D pred(value,
+   e)) evaluate to $(D false). Performs $(BIGOH log(r.length))
+   evaluations of $(D pred). See also STL's $(WEB
+   sgi.com/tech/stl/equal_range.html, equal_range).
+
+   Precondition: $(D find!(not!(pred))(r, value).length +
+   find!(pred)(retro(r), value).length == r.length) && $(D find!(pred)(r,
+   value).length + find!(not!(pred))(retro(r), value).length == r.length)
+
+   Example:
+   ----
+   auto a = [ 1, 2, 3, 3, 3, 4, 4, 5, 6 ];
+   auto r = equalRange(a, 3);
+   assert(r == [ 3, 3, 3 ]);
+   ----
+*/
+    typeof(this) equalRange(V)(V value)
+    {
+        auto left = lowerBound(value);
+        auto right = this[left.length .. length].upperBound(value);
+        return this[left.length .. length - right.length];
+    }
+
+// canFind
+/**
+   Returns $(D true) if and only if $(D value) can be found in $(D
+   range), which is assumed to be sorted. Performs $(BIGOH log(r.length))
+   evaluations of $(D pred). See also STL's $(WEB
+   sgi.com/tech/stl/binary_search.html, binary_search).
+*/
+
+    bool canFind(V)(V value)
+    {
+        auto lb = this.lowerBound(value);
+        return lb.length < length &&
+            !binaryFun!pred(value, this[lb.length]);
+    }
+}
+
+// Doc examples
+unittest
+{
+    auto a = [ 1, 2, 3, 42, 52, 64 ];
+    auto r = assumeSorted(a);
+    assert(r.canFind(3));
+    assert(!r.canFind(32));
+    auto r1 = sort!"a > b"(a);
+    assert(r1.canFind(3));
+    assert(!r1.canFind(32));
+    assert(r1.release() == [ 64, 52, 42, 3, 2, 1 ]);
+}
+
+unittest
+{
+    auto a = [ 1, 2, 3, 42, 52, 64 ];
+    auto r = assumeSorted(a);
+    assert(r.canFind(42));
+    swap(a[2], a[5]); // illegal to break sortedness of original range
+    assert(!r.canFind(42)); // passes although it shouldn't
+}
+
+/**
+Assumes $(D r) is sorted by predicate $(D pred) and returns the
+corresponding $(D SortedRange!(pred, R)) having $(D r) as support. To
+keep the checking costs low, the cost is $(BIGOH(1)) in release mode
+(no checks for sortedness are performed). In debug mode, a few random
+elements of $(D r) are checked for sortedness. The size of the sample
+is proportional $(BIGOH log(r.length)). That way, checking has no
+effect on the complexity of subsequent operations specific to sorted
+ranges (such as binary search). The probability of an arbitrary
+unsorted range failing the test is very high (however, an
+almost-sorted range is likely to pass it). To check for sortedness at
+cost $(BIGOH n), use $(XREF algorithm, isSorted).
+ */
+auto assumeSorted(alias pred = "a < b", R)(R r) if (isRandomAccessRange!R)
+{
+    return SortedRange!(R, pred)(r);
+}
+
+unittest
+{
+    static assert(isRandomAccessRange!(SortedRange!(int[])));
+    // scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+    int[] a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ];
+    auto p = assumeSorted(a).lowerBound!("a < b")(4);
+    assert(equal(p, [0, 1, 2, 3]));
+    p = assumeSorted(a).lowerBound(5);
+    assert(equal(p, [0, 1, 2, 3, 4]));
+    p = assumeSorted(a).lowerBound!(q{a < b})(6);
+    assert(equal(p, [ 0, 1, 2, 3, 4, 5]));
+}
+
+unittest
+{
+    // scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+    int[] a = [ 1, 2, 3, 3, 3, 4, 4, 5, 6 ];
+    auto p = assumeSorted(a).upperBound(3);
+    assert(equal(p, [4, 4, 5, 6 ]));
+}
+
+unittest
+{
+    // scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+    int[] a = [ 1, 2, 3, 3, 3, 4, 4, 5, 6 ];
+    auto p = assumeSorted(a).equalRange(3);
+    assert(equal(p, [ 3, 3, 3 ]), text(p));
+    p = assumeSorted(a).equalRange(4);
+    assert(equal(p, [ 4, 4 ]), text(p));
+    p = assumeSorted(a).equalRange(2);
+    assert(equal(p, [ 2 ]));
+}
+
+unittest
+{
+    // scope(success) writeln("unittest @", __FILE__, ":",
+    // __LINE__, " done.");
+    int[] a = [ 1, 2, 3, 3, 3, 4, 4, 5, 6 ];
+    if (a.length)
+    {
+        auto b = a[a.length / 2];
+        //auto r = sort(a);
+        //assert(r.canFind(b));
+    }
+}
+
+unittest
+{
+    auto a = [ 5, 7, 34, 345, 677 ];
+    auto r = assumeSorted(a);
+    a = null;
+    r = assumeSorted(a);
+    a = [ 1 ];
+    r = assumeSorted(a);
+    bool ok = true;
+    try
+    {
+        auto r2 = assumeSorted([ 677, 345, 34, 7, 5 ]);
+        debug ok = false;
+    }
+    catch (Throwable)
+    {
+    }
+    assert(ok);
 }
