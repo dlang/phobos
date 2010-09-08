@@ -3882,6 +3882,20 @@ unittest
 
 // emplace
 /**
+Similar to $(D emplace) above, except it receives a pointer to an
+uninitialized object of type $(D T). This overload is useful for
+e.g. initializing member variables or stack variables defined with $(D
+T variable = void).
+
+Returns: A pointer to the newly constructed object.
+ */
+T* emplace(T, Args...)(T* chunk, Args args) if (!is(T == class))
+{
+    return emplace!T((cast(void*) chunk)[0 .. T.sizeof], args);
+}
+
+// emplace
+/**
 Given a raw memory area $(D chunk), constructs an object of $(D class)
 type $(D T) at that address. The constructor is passed the arguments
 $(D Args). The $(D chunk) must be as least as large as $(D T) needs
