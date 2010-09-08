@@ -3327,10 +3327,10 @@ Range findAdjacent(alias pred = "a == b", Range)(Range r)
     {
         for (ahead.popFront; !ahead.empty; r.popFront, ahead.popFront)
         {
-            if (binaryFun!(pred)(r.front, ahead.front)) break;
+            if (binaryFun!(pred)(r.front, ahead.front)) return r;
         }
     }
-    return r;
+    return ahead;
 }
 
 unittest
@@ -3341,6 +3341,16 @@ unittest
     assert(p == [10, 10, 9, 8, 8, 7, 8, 9 ]);
     p = findAdjacent!("a < b")(a);
     assert(p == [7, 8, 9]);
+    // empty
+    a = [];
+    p = findAdjacent(a);
+    assert(p.empty);
+    // not found
+    a = [ 1, 2, 3, 4, 5 ];
+    p = findAdjacent(a);
+    assert(p.empty);
+    p = findAdjacent!"a > b"(a);
+    assert(p.empty);
 }
 
 // findAmong
