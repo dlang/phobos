@@ -750,7 +750,7 @@ done.
         if(_data.capacity < newCapacity)
         {
             // need to increase capacity
-            auto bi = GC.qalloc(newCapacity * T.sizeof, (typeid(T[]).next.flags & 1) ? GC.BlkAttr.NO_SCAN : 0);
+            auto bi = GC.qalloc(newCapacity * T.sizeof, (typeid(T[]).next.flags & 1) ? 0 : GC.BlkAttr.NO_SCAN);
             _data.capacity = bi.size / T.sizeof;
             if(_data.arr.length)
                 memcpy(bi.base, _data.arr.ptr, _data.arr.length * T.sizeof);
@@ -811,7 +811,7 @@ Appends one item to the managed array.
                 else
                 {
                     // didn't work, must reallocate
-                    auto bi = GC.qalloc(newlen * T.sizeof, (typeid(T[]).next.flags & 1) ? GC.BlkAttr.NO_SCAN : 0);
+                    auto bi = GC.qalloc(newlen * T.sizeof, (typeid(T[]).next.flags & 1) ? 0 : GC.BlkAttr.NO_SCAN);
                     _data.capacity = bi.size / T.sizeof;
                     if(len)
                         memcpy(bi.base, _data.arr.ptr, len * T.sizeof);
