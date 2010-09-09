@@ -3192,20 +3192,20 @@ auto rf = iota(0.0, 0.5, 0.1);
 assert(approxEqual(rf, [0.0, 0.1, 0.2, 0.3, 0.4]));
 ----
  */
-Iota!(CommonType!(B, E), S) iota(B, E, S)(B begin, E end, S step)
+Iota!(CommonType!(Unqual!B, Unqual!E), S) iota(B, E, S)(B begin, E end, S step)
 if (is(typeof((E.init - B.init) + 1 * S.init)))
 {
-    return Iota!(CommonType!(B, E), S)(begin, end, step);
+    return Iota!(CommonType!(Unqual!B, Unqual!E), S)(begin, end, step);
 }
 
 /// Ditto
-Iota!(CommonType!(B, E), uint) iota(B, E)(B begin, E end)
+Iota!(CommonType!(Unqual!B, Unqual!E), uint) iota(B, E)(B begin, E end)
 {
     return iota(begin, end, 1u);
 }
 
 /// Ditto
-Iota!(E, uint) iota(E)(E end)
+Iota!(Unqual!E, uint) iota(E)(E end)
 {
     E begin = 0;
     return iota(begin, end, 1u);
