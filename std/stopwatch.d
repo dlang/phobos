@@ -901,7 +901,7 @@ unittest
 }
 
 
-@safe
+@system
 unittest
 {
     {
@@ -915,13 +915,4 @@ unittest
         // @@@BUG@@@ doesn't work yet.
     }
     +/
-}
-
-
-@system
-unittest
-{
-    {
-        auto mt = measureTime!((a){assert(a.seconds <>= 0);});
-    }
 }
