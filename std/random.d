@@ -814,7 +814,7 @@ void randomShuffle(Range, RandomGen = Random)(Range r,
 {
     foreach (i; 0 .. r.length)
     {
-        swap(r[i], r[i + uniform(0, r.length - i, gen)]);
+        swapAt(r, i, i + uniform(0, r.length - i, gen));
     }
 }
 
