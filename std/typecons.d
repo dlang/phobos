@@ -324,6 +324,13 @@ public:
     // @@@BUG 2800
     //alias field this;
 
+    // This mitigates breakage of old code now that std.range.Zip uses
+    // Tuple instead of the old Proxy.  It's intentionally lacking ddoc
+    // because it should eventually be deprecated.
+    auto at(size_t index)() {
+        return field[index];
+    }
+
 /**
    Default constructor.
  */
