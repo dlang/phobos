@@ -239,7 +239,7 @@ SRC_INT=	\
 	internal\aApplyR.d internal\object.d internal\trace.d internal\qsort2.d \
 	internal\arrayfloat.d internal\arraydouble.d internal\arrayreal.d \
 	internal\arraybyte.d internal\arrayshort.d internal\arrayint.d \
-	internal\dylib_fixes.c internal\images.d
+	internal\dylib_fixes.c internal\image.d
 
 SRC_STD_WIN= std\windows\registry.d \
 	std\windows\iunknown.d std\windows\syserror.d std\windows\charset.d
