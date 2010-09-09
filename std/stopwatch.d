@@ -901,10 +901,12 @@ unittest
 }
 
 
-@system
+@safe
 unittest
 {
-    auto mt = measureTime!((a){assert(a.seconds);});
+    {
+        auto mt = measureTime!((a){assert(a.seconds <>= 0);});
+    }
 
     /+
     with (measureTime!((a){assert(a.seconds);}))
@@ -913,4 +915,13 @@ unittest
         // @@@BUG@@@ doesn't work yet.
     }
     +/
+}
+
+
+@system
+unittest
+{
+    {
+        auto mt = measureTime!((a){assert(a.seconds <>= 0);});
+    }
 }
