@@ -10,6 +10,7 @@
  * Standard I/O functions that extend $(B std.c.stdio).
  * $(B std.c.stdio) is automatically imported when importing
  * $(B std.stdio).
+ * Source: $(PHOBOSSRC std/_stdio.d)
  * Macros:
  *      WIKI=Phobos/StdStdio
  */

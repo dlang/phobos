@@ -1,6 +1,7 @@
 // Written in the D programming language
 
 /**
+ * Source: $(PHOBOSSRC std/_math.d)
  * Macros:
  *      WIKI = Phobos/StdMath
  *
@@ -33,9 +34,9 @@
  * Authors:
  *      Walter Bright, Don Clugston
  * Copyright:
- *      Copyright (c) 2001-2005 by Digital Mars,
+ *      Copyright (c) 2001-2010 by Digital Mars,
  *      All Rights Reserved,
- *      www.digitalmars.com
+ *      http://www.digitalmars.com
  * License:
  *  This software is provided 'as-is', without any express or implied
  *  warranty. In no event will the authors be held liable for any damages
@@ -777,8 +778,8 @@ creal sqrt(creal z)
  *
  *  $(TABLE_SV
  *    $(TR $(TH x)             $(TH e$(SUP x)) )
- *    $(TD +$(INFIN))          $(TD +$(INFIN)) )
- *    $(TD -$(INFIN))          $(TD +0.0)      )
+ *    $(TR $(TD +$(INFIN))     $(TD +$(INFIN)) )
+ *    $(TR $(TD -$(INFIN))     $(TD +0.0)      )
  *    $(TR $(TD $(NAN))        $(TD $(NAN))    )
  *  )
  */
@@ -803,8 +804,8 @@ real exp(real x) {
  *  $(TABLE_SV
  *    $(TR $(TH x)             $(TH e$(SUP x)-1)  )
  *    $(TR $(TD $(PLUSMN)0.0)  $(TD $(PLUSMN)0.0) )
- *    $(TD +$(INFIN))          $(TD +$(INFIN))    )
- *    $(TD -$(INFIN))          $(TD -1.0)         )
+ *    $(TR $(TD +$(INFIN))     $(TD +$(INFIN))    )
+ *    $(TR $(TD -$(INFIN))     $(TD -1.0)         )
  *    $(TR $(TD $(NAN))        $(TD $(NAN))       )
  *  )
  */
@@ -888,9 +889,9 @@ L_largenegative:
  * Calculates 2$(SUP x).
  *
  *  $(TABLE_SV
- *    $(TR $(TH x)             $(TH exp2(x)    )
- *    $(TD +$(INFIN))          $(TD +$(INFIN)) )
- *    $(TD -$(INFIN))          $(TD +0.0)      )
+ *    $(TR $(TH x)             $(TH exp2(x))   )
+ *    $(TR $(TD +$(INFIN))     $(TD +$(INFIN)) )
+ *    $(TR $(TD -$(INFIN))     $(TD +0.0)      )
  *    $(TR $(TD $(NAN))        $(TD $(NAN))    )
  *  )
  */

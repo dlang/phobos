@@ -5,12 +5,13 @@
  * Object, which is the root of the class object hierarchy.
  *
  * This module is implicitly imported.
+ * Source: $(PHOBOSSRC internal/_object.d)
  * Macros:
  *      WIKI = Phobos/Object
  */
 
 /*
- *  Copyright (C) 2004-2007 by Digital Mars, www.digitalmars.com
+ *  Copyright (C) 2004-2010 by Digital Mars, http://www.digitalmars.com
  *  Written by Walter Bright
  *
  *  This software is provided 'as-is', without any express or implied

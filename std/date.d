@@ -2,23 +2,22 @@
 
 /**
  * Dates are represented in several formats. The date implementation
- * revolves around a central type, $(D d_time), from which other
+ * revolves around a central type, d_time, from which other
  * formats are converted to and from.  Dates are calculated using the
  * Gregorian calendar.
  *
- * References: $(WEB wikipedia.org/wiki/Gregorian_calendar, Gregorian
+ * References: $(LINK2 wikipedia.org/wiki/Gregorian_calendar, Gregorian
  * calendar (Wikipedia))
  *
+ * Source: $(PHOBOSSRC std/_date.d)
  * Macros: WIKI = Phobos/StdDate
  *
- * Copyright: Copyright Digital Mars 2000 - 2009.
- * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
- * Authors:   $(WEB digitalmars.com, Walter Bright)
- *
- *          Copyright Digital Mars 2000 - 2009.
- * Distributed under the Boost Software License, Version 1.0.
+ * Copyright: Copyright Digital Mars 2000 - 2010.
+ * License:
+ *    Distributed under the Boost Software License, Version 1.0.
  *    (See accompanying file LICENSE_1_0.txt or copy at
- *          http://www.boost.org/LICENSE_1_0.txt)
+ *          $(LINK2 http://www.boost.org/LICENSE_1_0.txt, Boost License 1.0))
+ * Authors:   Walter Bright
  */
 module std.date;
 

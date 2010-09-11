@@ -1,11 +1,12 @@
 /**
  * Encodes/decodes MIME base64 data.
  *
+ * Source: $(PHOBOSSRC std/_base64.d)
  * Macros:
  *      WIKI=Phobos/StdBase64
  * References:
- *      <a href="http://en.wikipedia.org/wiki/Base64">Wikipedia Base64</a>$(BR)
- *      <a href="http://www.ietf.org/rfc/rfc2045.txt">RFC 2045</a>$(BR)
+ *      $(LINK2 http://en.wikipedia.org/wiki/Base64, Wikipedia Base64)$(BR)
+ *      $(LINK2 http://www.ietf.org/rfc/rfc2045.txt, RFC 2045)$(BR)
  */
 
 
