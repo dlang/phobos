@@ -70,6 +70,11 @@ enum dummyRanges = q{
             @property ref uint front() {
                 return arr[0];
             }
+
+            @property void front(uint val) {
+                arr[0] = val;
+            }
+
         } else {
             @property uint front() {
                 return arr[0];
@@ -91,6 +96,11 @@ enum dummyRanges = q{
                 @property ref uint back() {
                     return arr[$ - 1];
                 }
+
+                @property void back(uint val) {
+                    arr[$ - 1] = val;
+                }
+
             } else {
                 @property uint back() {
                     return arr[$ - 1];
@@ -100,8 +110,12 @@ enum dummyRanges = q{
 
         static if(rt >= RangeType.Random) {
             static if(r == ReturnBy.Reference) {
-                @property ref uint opIndex(size_t index) {
+                ref uint opIndex(size_t index) {
                     return arr[index];
+                }
+
+                void opIndexAssign(uint val, size_t index) {
+                    arr[index] = val;
                 }
             } else {
                 @property uint opIndex(size_t index) {
@@ -766,6 +780,14 @@ private:
     R _input;
     enum bool byRef = is(typeof(&(R.init.front())));
 
+    static if(isRandomAccessRange!R && hasLength!R)
+    {
+        size_t retroIndex(size_t n)
+        {
+            return _input.length - n - 1;
+        }
+    }
+
 public:
     alias R Source;
 
@@ -801,28 +823,36 @@ Forwards to $(D _input.popFront).
         _input.popFront;
     }
 
-/// @@@UGLY@@@
 /**
 Forwards to $(D _input.back).
  */
-    mixin(
-        (byRef ? "ref " : "")~
-        q{ElementType!(R) front()
-            {
-                return _input.back;
-            }
-        });
+    @property auto ref front()
+    {
+        return _input.back;
+    }
 
 /**
 Forwards to $(D _input.front).
  */
-    mixin(
-        (byRef ? "ref " : "")~
-        q{ElementType!(R) back()
-            {
-                return _input.front;
-            }
-        });
+    @property auto ref back()
+    {
+        return _input.front;
+    }
+
+    static if(hasAssignableElements!R)
+    {
+        @property auto front(ElementType!R val)
+        {
+            _input.back = val;
+        }
+
+        @property auto back(ElementType!R val)
+        {
+            _input.front = val;
+        }
+    }
+
+
 /**
 Forwards to $(D _input[_input.length - n + 1]). Defined only if $(D R)
 is a random access range and if $(D R) defines $(D R.length).
@@ -831,7 +861,15 @@ is a random access range and if $(D R) defines $(D R.length).
     {
         auto ref opIndex(size_t n)
         {
-            return _input[_input.length - n - 1];
+            return _input[retroIndex(n)];
+        }
+
+        static if(hasAssignableElements!R)
+        {
+            void opIndexAssign(ElementType!R val, size_t n)
+            {
+                _input[retroIndex(n)] = val;
+            }
         }
 
         static if (hasSlicing!R)
@@ -903,12 +941,31 @@ unittest
                 assert(myRetro[0] == myRetro.front);
 
                 static if(DummyType.r == ReturnBy.Reference) {
-                    myRetro[9]++;
-                    assert(dummyRange[0] == 2);
-                    myRetro.front++;
-                    assert(myRetro.front == 11);
-                    myRetro.back++;
-                    assert(myRetro.back == 3);
+                    {
+                        myRetro[9]++;
+                        scope(exit) myRetro[9]--;
+                        assert(dummyRange[0] == 2);
+                        myRetro.front++;
+                        scope(exit) myRetro.front--;
+                        assert(myRetro.front == 11);
+                        myRetro.back++;
+                        scope(exit) myRetro.back--;
+                        assert(myRetro.back == 3);
+                    }
+
+                    {
+                        myRetro.front = 0xFF;
+                        scope(exit) myRetro.front = 10;
+                        assert(dummyRange.back == 0xFF);
+
+                        myRetro.back = 0xBB;
+                        scope(exit) myRetro.back = 1;
+                        assert(dummyRange.front == 0xBB);
+
+                        myRetro[1] = 11;
+                        scope(exit) myRetro[1] = 8;
+                        assert(dummyRange[8] == 11);
+                    }
                 }
             }
         }
