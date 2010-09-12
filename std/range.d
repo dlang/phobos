@@ -140,11 +140,9 @@ enum dummyRanges = q{
     enum dummyLength = 10;
 
     alias TypeTuple!(
-        DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Input),
         DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Forward),
         DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Bidirectional),
         DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Random),
-        DummyRange!(ReturnBy.Reference, Length.No, RangeType.Input),
         DummyRange!(ReturnBy.Reference, Length.No, RangeType.Forward),
         DummyRange!(ReturnBy.Reference, Length.No, RangeType.Bidirectional),
         DummyRange!(ReturnBy.Value, Length.Yes, RangeType.Input),
@@ -156,7 +154,6 @@ enum dummyRanges = q{
         DummyRange!(ReturnBy.Value, Length.No, RangeType.Bidirectional)
     ) AllDummyRanges;
 
-    alias TypeTuple!(1,2,3,4,5,6,7,8,9,0,11,12,13,14,15,16) DummyIndices;
 };
 
 version(unittest)
@@ -1031,17 +1028,33 @@ Returns $(D this).
 /**
 Forwards to $(D _input.empty).
  */
-static if(isInfinite!R)
-{
-    enum bool empty = false;
-}
-else
-{
-    @property bool empty()
+    static if(isInfinite!R)
     {
-        return _input.empty;
+        enum bool empty = false;
     }
-}
+    else
+    {
+        @property bool empty()
+        {
+            return _input.empty;
+        }
+    }
+
+/**
+Forwards to $(D _input.front).
+ */
+    @property auto ref front()
+    {
+        return _input.front;
+    }
+
+    static if(hasAssignableElements!R)
+    {
+        @property auto front(ElementType!R val)
+        {
+            _input.front = val;
+        }
+    }
 
 /**
 @@@
@@ -1084,14 +1097,6 @@ Forwards to $(D _input.popFront).
         }
 
 /**
-Forwards to $(D _input.front).
- */
-    @property auto ref front()
-    {
-        return _input.front;
-    }
-
-/**
 Forwards to $(D _input.back) after getting rid of any slack items.
  */
     static if(isBidirectionalRange!(R) && hasLength!(R))
@@ -1100,6 +1105,14 @@ Forwards to $(D _input.back) after getting rid of any slack items.
         {
             return _input.back;
         }
+
+        static if(hasAssignableElements!R)
+        {
+            @property auto back(ElementType!R val)
+            {
+                _input.back = val;
+            }
+        }
     }
 
 /**
@@ -1107,10 +1120,20 @@ Forwards to $(D _input[_input.length - n + 1]). Defined only if $(D R)
 is a random access range and if $(D R) defines $(D R.length).
  */
     static if (isRandomAccessRange!(R) && hasLength!(R))
+    {
         auto ref opIndex(size_t n)
         {
             return _input[_n * n];
         }
+
+        static if(hasAssignableElements!R)
+        {
+            void opIndexAssign(ElementType!R val, size_t n)
+            {
+                _input[_n * n] = val;
+            }
+        }
+    }
 
 /**
 Support slicing of the $(D Stride), if the underlying range supports this.
@@ -1215,12 +1238,22 @@ unittest
                 scope(exit) myStride.front--;
                 assert(dummyRange.front == 2);
             }
+            {
+                myStride.front = 4;
+                scope(exit) myStride.front = 1;
+                assert(dummyRange.front == 4);
+            }
 
             static if(isBidirectionalRange!DummyType && hasLength!DummyType) {
                 {
                     myStride.back++;
                     scope(exit) myStride.back--;
-                    assert(dummyRange.back == 10);
+                    assert(myStride.back == 10);
+                }
+                {
+                    myStride.back = 111;
+                    scope(exit) myStride.back = 9;
+                    assert(myStride.back == 111);
                 }
 
                 static if(isRandomAccessRange!DummyType) {
@@ -1228,6 +1261,11 @@ unittest
                         myStride[1]++;
                         scope(exit) myStride[1]--;
                         assert(dummyRange[4] == 6);
+                    }
+                    {
+                        myStride[1] = 55;
+                        scope(exit) myStride[1] = 5;
+                        assert(dummyRange[4] == 55);
                     }
                 }
             }
