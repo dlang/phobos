@@ -5,6 +5,7 @@ This module defines a few useful _range incarnations. Credit for some
 of the ideas in building this module goes to $(WEB
 fantascienza.net/leonardo/so/, Leonardo Maffi).
 
+Source: $(PHOBOSSRC std/_range.d)
 Macros:
 
 WIKI = Phobos/StdRange
