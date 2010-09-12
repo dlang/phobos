@@ -2459,7 +2459,7 @@ stopping policy.
             {
                 if (!ranges.field[i].empty)
                 {
-                    emplace(&result.field[i], ranges.field[i].moveFront());
+                    emplace(&result.field[i], .moveFront(ranges.field[i]));
                 }
                 else
                 {
@@ -2504,7 +2504,7 @@ stopping policy.
                 {
                     if (!ranges.field[i].empty)
                     {
-                        emplace(&result.field[i], ranges.field[i].moveBack());
+                        emplace(&result.field[i], .moveBack(ranges.field[i]));
                     }
                     else
                     {
@@ -2671,7 +2671,7 @@ stopping policy.
                 ElementType result = void;
                 foreach (i, Range; R)
                 {
-                    emplace(&result.field[i], ranges.field[i].moveAt(n));
+                    emplace(&result.field[i], .moveAt(ranges.field[i], n));
                 }
                 return result;
             }
@@ -2760,46 +2760,32 @@ unittest
     // uncommented when making changes to Zip.  Also, running them using
     // make -fwin32.mak unittest makes the compiler completely run out of RAM.
     // You need to test just this module.
-//    foreach(DummyType1; AllDummyRanges) {
-//        DummyType1 d1;
-//        foreach(DummyType2; AllDummyRanges) {
-//            DummyType2 d2;
-//            auto r = zip(d1, d2);
-//
-//            assert(equal(map!"a.at!0"(r), [1,2,3,4,5,6,7,8,9,10]));
-//            assert(equal(map!"a.at!1"(r), [1,2,3,4,5,6,7,8,9,10]));
-//
-//            static if(isForwardRange!DummyType1 && isForwardRange!DummyType2) {
-//                static assert(isForwardRange!(typeof(r)));
-//            }
-//
-//            static if(isBidirectionalRange!DummyType1 &&
-//                      isBidirectionalRange!DummyType2) {
-//                static assert(isBidirectionalRange!(typeof(r)));
-//            }
-//
-//            static if(isRandomAccessRange!DummyType1 &&
-//                      isRandomAccessRange!DummyType2) {
-//                static assert(isRandomAccessRange!(typeof(r)));
-//            }
-//
-//            // Make sure ref is properly propagated.
-//            static if(hasLvalueElements!DummyType1 && hasLvalueElements!DummyType2) {
-//
-//                {
-//                    r.front.at!0++;
-//                    scope(exit) r.front.at!0--;
-//                    assert(d1.front == 2);
-//                }
-//
-//                {
-//                    r.front.at!1++;
-//                    scope(exit) r.front.at!1--;
-//                    assert(d2.front == 2);
-//                }
-//            }
-//        }
-//    }
+    /+
+    foreach(DummyType1; AllDummyRanges) {
+        DummyType1 d1;
+        foreach(DummyType2; AllDummyRanges) {
+            DummyType2 d2;
+            auto r = zip(d1, d2);
+
+            assert(equal(map!"a.at!0"(r), [1,2,3,4,5,6,7,8,9,10]));
+            assert(equal(map!"a.at!1"(r), [1,2,3,4,5,6,7,8,9,10]));
+
+            static if(isForwardRange!DummyType1 && isForwardRange!DummyType2) {
+                static assert(isForwardRange!(typeof(r)));
+            }
+
+            static if(isBidirectionalRange!DummyType1 &&
+                      isBidirectionalRange!DummyType2) {
+                static assert(isBidirectionalRange!(typeof(r)));
+            }
+
+            static if(isRandomAccessRange!DummyType1 &&
+                      isRandomAccessRange!DummyType2) {
+                static assert(isRandomAccessRange!(typeof(r)));
+            }
+        }
+    }
+    +/
 }
 
 /* CTFE function to generate opApply loop for Lockstep.*/
