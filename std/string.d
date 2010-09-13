@@ -4108,12 +4108,12 @@ unittest
 
 // For backwards compatibility
 
-deprecated auto find(in char[] s, dchar c)
+deprecated size_t find(in char[] s, dchar c)
 {
     return indexOf(s, c, CaseSensitive.yes);
 }
 
-deprecated auto find(in char[] str, in char[] sub)
+deprecated size_t find(in char[] str, in char[] sub)
 {
     return indexOf(str, sub, CaseSensitive.yes);
 }
@@ -4126,32 +4126,32 @@ unittest
     assert(find(a, b) == 1);
 }
 
-deprecated auto ifind(in char[] s, dchar c)
+deprecated size_t ifind(in char[] s, dchar c)
 {
     return indexOf(s, c, CaseSensitive.no);
 }
 
-deprecated auto rfind(in char[] s, dchar c)
+deprecated size_t rfind(in char[] s, dchar c)
 {
     return lastIndexOf(s, c, CaseSensitive.yes);
 }
 
-deprecated auto irfind(in char[] s, dchar c)
+deprecated size_t irfind(in char[] s, dchar c)
 {
     return lastIndexOf(s, c, CaseSensitive.no);
 }
 
-deprecated auto ifind(in char[] s, in char[] c)
+deprecated size_t ifind(in char[] s, in char[] c)
 {
     return indexOf(s, c, CaseSensitive.no);
 }
 
-deprecated auto rfind(in char[] s, in char[] c)
+deprecated size_t rfind(in char[] s, in char[] c)
 {
     return lastIndexOf(s, c, CaseSensitive.yes);
 }
 
-deprecated auto irfind(in char[] s, in char[] c)
+deprecated size_t irfind(in char[] s, in char[] c)
 {
     return lastIndexOf(s, c, CaseSensitive.no);
 }
