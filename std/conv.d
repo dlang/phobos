@@ -106,42 +106,52 @@ auto b = to!(immutable(dchar)[])(a);
 assert(b == "abc"w);
 ----
  */
-T toImpl(T, S)(S s) if (!implicitlyConverts!(S, T) && isSomeString!(T)
-        && isSomeString!(S))
+T toImpl(T, S)(S s) if (!implicitlyConverts!(S, T) && isSomeString!T
+        && isInputRange!S && isSomeChar!(ElementType!S))
 {
-    // string-to-string conversion
-    static if (s[0].sizeof == T[0].sizeof) {
-        // same width, only qualifier conversion
-        enum tIsConst = is(T == const(char)[]) || is(T == const(wchar)[])
-            || is(T == const(dchar)[]);
-        enum tIsInvariant = is(T == immutable(char)[])
-            || is(T == immutable(wchar)[]) || is(T == immutable(dchar)[]);
-        static if (tIsConst) {
-            return s;
-        } else static if (tIsInvariant) {
-            // conversion (mutable|const) -> immutable
-            return s.idup;
+    static if (isSomeString!S)
+    {
+        // string-to-string conversion
+        static if (s[0].sizeof == T[0].sizeof) {
+            // same width, only qualifier conversion
+            enum tIsConst = is(T == const(char)[]) || is(T == const(wchar)[])
+                || is(T == const(dchar)[]);
+            enum tIsInvariant = is(T == immutable(char)[])
+                || is(T == immutable(wchar)[]) || is(T == immutable(dchar)[]);
+            static if (tIsConst) {
+                return s;
+            } else static if (tIsInvariant) {
+                // conversion (mutable|const) -> immutable
+                return s.idup;
+            } else {
+                // conversion (immutable|const) -> mutable
+                return s.dup;
+            }
         } else {
-            // conversion (immutable|const) -> mutable
-            return s.dup;
+            // width conversion
+            // we can cast because toUTFX always produces a fresh string
+            static if (T[0].sizeof == 1) {
+                return cast(T) toUTF8(s);
+            } else static if (T[0].sizeof == 2) {
+                return cast(T) toUTF16(s);
+            } else {
+                static assert(T[0].sizeof == 4);
+                return cast(T) toUTF32(s);
+            }
         }
-    } else {
-        // width conversion
-        // we can cast because toUTFX always produces a fresh string
-        static if (T[0].sizeof == 1) {
-            return cast(T) toUTF8(s);
-        } else static if (T[0].sizeof == 2) {
-            return cast(T) toUTF16(s);
-        } else {
-            static assert(T[0].sizeof == 4);
-            return cast(T) toUTF32(s);
-        }
+    }
+    else
+    {
+        Appender!T result;
+        result.put(s);
+        return result.data;
     }
 }
 
 unittest
 {
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__,
+            " succeeded.");
     alias TypeTuple!(char, wchar, dchar) Chars;
     foreach (LhsC; Chars)
     {
@@ -278,7 +288,8 @@ produces the list of fields.
  */
 T toImpl(T, S)(S s, in T left = S.stringof~"(", in T separator = ", ",
         in T right = ")")
-if (is(S == struct) && isSomeString!(T) && !is(typeof(&S.init.toString)))
+if (is(S == struct) && isSomeString!(T) && !is(typeof(&S.init.toString)) &&
+        !isInputRange!S)
 {
     Tuple!(FieldTypeTuple!(S)) * t = void;
     static if ((*t).sizeof == S.sizeof)
