@@ -2800,7 +2800,7 @@ stopping policy.
                 {
                     if (!ranges.field[i].empty)
                     {
-                        ranges.field[i].front = v.field[i];
+                        ranges.field[i].back = v.field[i];
                     }
                 }
             }
@@ -3066,6 +3066,15 @@ unittest
         }
     }
     +/
+}
+
+unittest
+{
+    auto a = [5,4,3,2,1];
+    auto b = [3,1,2,5,6];
+    auto z = zip(a, b);
+
+    sort!"a.field[0] < b.field[0]"(z);
 }
 
 /* CTFE function to generate opApply loop for Lockstep.*/
