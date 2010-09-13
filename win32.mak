@@ -115,7 +115,6 @@ SRCS= std\math.d std\stdio.d std\dateparse.d std\date.d std\uni.d std\string.d \
 	std\process.d \
 	std\system.d \
 	std\encoding.d std\variant.d \
-	std\stopwatch.d \
 	std\stream.d std\socket.d std\socketstream.d \
 	std\perf.d std\container.d std\conv.d \
 	std\zip.d std\cstream.d std\loader.d \
@@ -209,7 +208,6 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_socketstream.html \
 	$(DOC)\std_stdint.html \
 	$(DOC)\std_stdio.html \
-	$(DOC)\std_stopwatch.html \
 	$(DOC)\std_stream.html \
 	$(DOC)\std_string.html \
 	$(DOC)\std_system.html \
@@ -247,7 +245,7 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\container.d std\conv.d std\utf.d 
 	std\outbuffer.d std\md5.d std\base64.d \
 	std\dateparse.d std\mmfile.d \
 	std\intrinsic.d std\syserror.d \
-	std\regexp.d std\random.d std\stopwatch.d std\stream.d std\process.d \
+	std\regexp.d std\random.d std\stream.d std\process.d \
 	std\socket.d std\socketstream.d std\loader.d std\stdarg.d std\format.d \
 	std\stdio.d std\perf.d std\uni.d std\boxer.d \
 	std\cstream.d std\demangle.d \
@@ -471,9 +469,6 @@ socketstream.obj : std\socketstream.d
 
 stdio.obj : std\stdio.d
 	$(DMD) -c $(DFLAGS) std\stdio.d
-
-stopwatch.obj : std\stopwatch.d
-	$(DMD) -c $(DFLAGS) -d std\stopwatch.d
 
 stream.obj : std\stream.d
 	$(DMD) -c $(DFLAGS) -d std\stream.d
@@ -763,9 +758,6 @@ $(DOC)\std_stdint.html : $(STDDOC) std\stdint.d
 
 $(DOC)\std_stdio.html : $(STDDOC) std\stdio.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_stdio.html $(STDDOC) std\stdio.d
-
-$(DOC)\std_stopwatch.html : $(STDDOC) std\stopwatch.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_stopwatch.html -d $(STDDOC) std\stopwatch.d
 
 $(DOC)\std_stream.html : $(STDDOC) std\stream.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_stream.html -d $(STDDOC) std\stream.d
