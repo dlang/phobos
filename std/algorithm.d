@@ -4894,7 +4894,7 @@ Range partition(alias predicate,
             }
             else
             {
-                auto t1 = r.moveFront(), t2 = r.moveBack();
+                auto t1 = moveFront(r), t2 = moveBack(r);
                 r.front = t2;
                 r.back = t1;
             }
@@ -5315,8 +5315,8 @@ void swapAt(R)(R r, size_t i1, size_t i2)
     else
     {
         if (i1 == i2) return;
-        auto t1 = r.moveAt(i1);
-        auto t2 = r.moveAt(i2);
+        auto t1 = moveAt(r, i1);
+        auto t2 = moveAt(r, i2);
         r[i2] = t1;
         r[i1] = t2;
     }
