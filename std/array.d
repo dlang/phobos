@@ -840,7 +840,7 @@ Appends one item to the managed array.
 /**
 Appends an entire range to the managed array.
  */
-    void put(Range)(Range items) if (isForwardRange!Range
+    void put(Range)(Range items) if (isInputRange!Range
             && is(typeof(Appender.init.put(items.front))))
     {
         // note, we disable this branch for appending one type of char to
