@@ -79,7 +79,8 @@ private template implicitlyConverts(S, T)
 
 unittest
 {
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+    debug(conv) scope(success) writeln("unittest @",
+            __FILE__, ":", __LINE__, " succeeded.");
     assert(!implicitlyConverts!(const(char)[], string));
     assert(implicitlyConverts!(string, const(char)[]));
 }
@@ -102,7 +103,7 @@ combination of qualifiers (mutable, $(D const), or $(D immutable)).
 Example:
 ----
 char[] a = "abc";
-auto b = to!(immutable(dchar)[])(a);
+auto b = to!dstring(a);
 assert(b == "abc"w);
 ----
  */
@@ -181,56 +182,82 @@ converted by calling $(D to!T).
  */
 T toImpl(T, S)(S s, in T leftBracket = "[", in T separator = " ",
     in T rightBracket = "]")
-if (isSomeString!(T) && !isSomeString!(S) && isArray!(S))
+if (isSomeString!T && !isSomeChar!(ElementType!S) && isInputRange!S)
 {
     alias Unqual!(typeof(T.init[0])) Char;
-    // array-to-string conversion
-    static if (is(S == void[])
-            || is(S == const(void)[]) || is(S == immutable(void)[])) {
-        auto raw = cast(const(ubyte)[]) s;
-        enforce(raw.length % Char.sizeof == 0,
-                new ConvError("Alignment mismatch in converting a "
-                        ~ S.stringof ~ " to a "
-                        ~ T.stringof));
-        auto result = new Char[raw.length / Char.sizeof];
-        memcpy(result.ptr, s.ptr, s.length);
-        return cast(T) result;
-    } else {
-        auto result = appender!(Char[])();
-        result.put(leftBracket);
-        foreach (i, e; s) {
-            if (i) result.put(separator);
-            result.put(to!T(e));
+// array-to-string conversion
+    auto result = appender!(Char[])();
+    result.put(leftBracket);
+    bool first = true;
+    for (; !s.empty; s.popFront())
+    {
+        if (!first)
+        {
+            result.put(separator);
         }
-        result.put(rightBracket);
-        return cast(T) result.data;
+        else
+        {
+            first = false;
+        }
+        result.put(to!T(s.front));
     }
+    result.put(rightBracket);
+    return cast(T) result.data;
+}
+
+/*
+  Converting static arrays forwards to their dynamic counterparts.
+ */
+T toImpl(T, S)(ref S s)
+if (isStaticArray!S)
+{
+    return toImpl!(T, typeof(s[0])[])(s);
+}
+
+/*
+ Converting arrays of void
+*/
+T toImpl(T, S)(ref S s, in T leftBracket = "[", in T separator = " ",
+    in T rightBracket = "]")
+if (isSomeString!T && (is(S == void[]) || is(S == const(void)[]) ||
+                is(S == immutable(void)[])))
+{
+    alias Unqual!(typeof(T.init[0])) Char;
+    auto raw = cast(const(ubyte)[]) s;
+    enforce(raw.length % Char.sizeof == 0,
+            new ConvError("Alignment mismatch in converting a "
+                    ~ S.stringof ~ " to a "
+                    ~ T.stringof));
+    auto result = new Char[raw.length / Char.sizeof];
+    memcpy(result.ptr, s.ptr, s.length);
+    return cast(T) result;
 }
 
 unittest
 {
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+    debug(conv) scope(success) writeln("unittest @",
+            __FILE__, ":", __LINE__, " succeeded.");
     long[] b = [ 1, 3, 5 ];
     auto s = to!string(b);
-    //printf("%d, |%*s|\n", s.length, s.length, s.ptr);
+//printf("%d, |%*s|\n", s.length, s.length, s.ptr);
     assert(to!string(b) == "[1 3 5]", s);
     double[2] a = [ 1.5, 2.5 ];
-    //writeln(to!string(a));
+//writeln(to!string(a));
     assert(to!string(a) == "[1.5 2.5]");
 }
 
 /**
-Associative array to string conversion. The left bracket, key-value
-separator, element separator, and right bracket are configurable.
-Each element is printed by calling $(D to!T).
- */
+   Associative array to string conversion. The left bracket, key-value
+   separator, element separator, and right bracket are configurable.
+   Each element is printed by calling $(D to!T).
+*/
 T toImpl(T, S)(S s, in T leftBracket = "[", in T keyval = ":",
         in T separator = ", ", in T rightBracket = "]")
-if (isAssociativeArray!(S) && isSomeString!(T))
+if (isAssociativeArray!S && isSomeString!T)
 {
     alias Unqual!(typeof(T.init[0])) Char;
     auto result = appender!(Char[])();
-    // hash-to-string conversion
+// hash-to-string conversion
     result.put(leftBracket);
     bool first = true;
     foreach (k, v; s) {
@@ -245,11 +272,11 @@ if (isAssociativeArray!(S) && isSomeString!(T))
 }
 
 /**
-Object to string conversion calls $(D toString) against the object or
-returns $(D nullstr) if the object is null.
- */
+   Object to string conversion calls $(D toString) against the object or
+   returns $(D nullstr) if the object is null.
+*/
 T toImpl(T, S)(S s, in T nullstr = "null")
-if (is(S : Object) && isSomeString!(T))
+if (is(S : Object) && isSomeString!T)
 {
     if (!s) return nullstr;
     return to!(T)(s.toString);
@@ -266,11 +293,11 @@ unittest
 }
 
 /**
-Struct to string conversion calls $(D toString) against the struct if
-it is defined.
- */
+   Struct to string conversion calls $(D toString) against the struct if
+   it is defined.
+*/
 T toImpl(T, S)(S s)
-if (is(S == struct) && isSomeString!(T) && is(typeof(&S.init.toString)))
+if (is(S == struct) && isSomeString!T && is(typeof(&S.init.toString)))
 {
     return to!T(s.toString);
 }
@@ -283,12 +310,12 @@ unittest
 }
 
 /**
-For structs that do not define $(D toString), the conversion to string
-produces the list of fields.
- */
+   For structs that do not define $(D toString), the conversion to string
+   produces the list of fields.
+*/
 T toImpl(T, S)(S s, in T left = S.stringof~"(", in T separator = ", ",
         in T right = ")")
-if (is(S == struct) && isSomeString!(T) && !is(typeof(&S.init.toString)) &&
+if (is(S == struct) && isSomeString!T && !is(typeof(&S.init.toString)) &&
         !isInputRange!S)
 {
     Tuple!(FieldTypeTuple!(S)) * t = void;
@@ -378,7 +405,8 @@ if (is(S == typedef) && isSomeString!(T))
 
 unittest
 {
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+    debug(conv) scope(success) writeln("unittest @",
+            __FILE__, ":", __LINE__, " succeeded.");
     typedef double Km;
     Km km = 42;
     assert(to!string(km) == "Km(42)");
@@ -386,7 +414,8 @@ unittest
 
 unittest
 {
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+    debug(conv) scope(success) writeln("unittest @",
+            __FILE__, ":", __LINE__, " succeeded.");
     auto a = "abcx"w;
     const(void)[] b = a;
     assert(b.length == 8);
@@ -514,7 +543,8 @@ Macros: WIKI=Phobos/StdConv
 If the source type is implicitly convertible to the target type, $(D
 to) simply performs the implicit conversion.
  */
-Target toImpl(Target, Source)(Source value) if (implicitlyConverts!(Source, Target))
+Target toImpl(Target, Source)(Source value)
+if (implicitlyConverts!(Source, Target))
 {
     return value;
 }
@@ -530,7 +560,7 @@ unittest
 /**
 Boolean values are printed as $(D "true") or $(D "false").
  */
-T toImpl(T, S)(S b) if (is(Unqual!S == bool) && isSomeString!(T))
+T toImpl(T, S)(S b) if (is(Unqual!S == bool) && isSomeString!T)
 {
     return to!T(b ? "true" : "false");
 }
@@ -550,7 +580,7 @@ When the source is a wide string, it is first converted to a narrow
 string and then parsed.
  */
 T toImpl(T, S)(S value) if ((is(S : const(wchar)[]) || is(S : const(dchar)[]))
-        && !isSomeString!(T))
+        && !isSomeString!T)
 {
     // todo: improve performance
     return parseString!(T)(toUTF8(value));
@@ -559,7 +589,8 @@ T toImpl(T, S)(S value) if ((is(S : const(wchar)[]) || is(S : const(dchar)[]))
 /**
 When the source is a narrow string, normal text parsing occurs.
  */
-T toImpl(T, S)(S value) if (is(S : const(char)[]) && !isSomeString!(T))
+T toImpl(T, S)(S value) if (isDynamicArray!S &&
+        is(S : const(char)[]) && !isSomeString!T)
 {
     return parseString!(T)(value);
 }
@@ -690,7 +721,7 @@ private T parseString(T)(const(char)[] v)
 Array-to-array conversion (except when target is a string type)
 converts each element in turn by using $(D to).
  */
-T toImpl(T, S)(S src) if (isArray!(S) && isArray!(T) && !isSomeString!(T)
+T toImpl(T, S)(S src) if (isDynamicArray!(S) && isArray!(T) && !isSomeString!(T)
         && !implicitlyConverts!(S, T))
 {
     alias typeof(T.init[0]) E;
