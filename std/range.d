@@ -530,6 +530,38 @@ unittest
 }
 
 /**
+Returns $(D true) iff the range supports the $(D moveFront) primitive, as
+well as $(D moveBack) and $(D moveAt) if it's a bidirectional or random access
+range.  These may be explicitly implemented, or may work via the default
+behavior of the module level functions $(D moveFront) and friends.
+*/
+template hasMobileElements(R)
+{
+    enum bool hasMobileElements = is(typeof({
+        R r;
+        return moveFront(r);
+    })) && (!isBidirectionalRange!R || is(typeof({
+        R r;
+        return moveBack(r);
+    }))) && (!isRandomAccessRange!R || is(typeof({
+        R r;
+        return moveAt(r, 0);
+    })));
+
+}
+
+unittest {
+    static struct HasPostblit {
+        this(this) {}
+    }
+
+    auto nonMobile = map!"a"(repeat(HasPostblit.init));
+    static assert(!hasMobileElements!(typeof(nonMobile)));
+    static assert(hasMobileElements!(int[]));
+    static assert(hasMobileElements!(typeof(iota(1000))));
+}
+
+/**
 The element type of $(D R). $(D R) does not have to be a range. The
 element type is determined as the type yielded by $(D r.front) for an
 object $(D r) or type $(D R). For example, $(D ElementType!(T[])) is
@@ -805,12 +837,40 @@ Returns a copy of $(D this).
         return Retro(_input.save);
     }
 
+
+/**
+Forwards to $(D _input.back).
+ */
+    @property auto ref front()
+    {
+        return _input.back;
+    }
+
 /**
 Forwards to $(D _input.popBack).
- */
+*/
     void popFront()
     {
-        _input.popBack;
+        _input.popBack();
+    }
+
+/**
+Forwards to $(D moveBack(_input))
+*/
+    static if(is(typeof(.moveBack(_input))))
+    {
+        ElementType!R moveFront()
+        {
+            return .moveBack(_input);
+        }
+    }
+
+/**
+Forwards to $(D _input.front).
+ */
+    @property auto ref back()
+    {
+        return _input.front;
     }
 
 /**
@@ -822,21 +882,21 @@ Forwards to $(D _input.popFront).
     }
 
 /**
-Forwards to $(D _input.back).
- */
-    @property auto ref front()
+Forwards to $(D moveFront(_input)).
+*/
+    static if(is(typeof(.moveFront(_input))))
     {
-        return _input.back;
+        ElementType!R moveBack()
+        {
+            return .moveFront(_input);
+        }
     }
+
+
 
 /**
-Forwards to $(D _input.front).
- */
-    @property auto ref back()
-    {
-        return _input.front;
-    }
-
+Support for assignment.
+*/
     static if(hasAssignableElements!R)
     {
         @property auto front(ElementType!R val)
@@ -867,6 +927,14 @@ is a random access range and if $(D R) defines $(D R.length).
             void opIndexAssign(ElementType!R val, size_t n)
             {
                 _input[retroIndex(n)] = val;
+            }
+        }
+
+        static if(is(typeof(.moveAt(_input, 0))))
+        {
+            ElementType!R moveAt(size_t index)
+            {
+                return .moveAt(_input, retroIndex(index));
             }
         }
 
@@ -934,9 +1002,12 @@ unittest
             static assert(propagatesRangeType!(typeof(myRetro), DummyType));
             assert(myRetro.front == 10);
             assert(myRetro.back == 1);
+            assert(myRetro.moveFront() == 10);
+            assert(myRetro.moveBack() == 1);
 
             static if(isRandomAccessRange!DummyType && hasLength!DummyType) {
                 assert(myRetro[0] == myRetro.front);
+                assert(myRetro.moveAt(2) == 8);
 
                 static if(DummyType.r == ReturnBy.Reference) {
                     {
@@ -1049,6 +1120,19 @@ Forwards to $(D _input.front).
         return _input.front;
     }
 
+/**
+Forwards to $(D moveFront(_input)).
+*/
+    static if(is(typeof(.moveFront(_input))))
+    {
+        ElementType!R moveFront()
+        {
+            return .moveFront(_input);
+        }
+    }
+
+
+
     static if(hasAssignableElements!R)
     {
         @property auto front(ElementType!R val)
@@ -1107,6 +1191,17 @@ Forwards to $(D _input.back) after getting rid of any slack items.
             return _input.back;
         }
 
+        /**
+        Forwards to $(D moveBack(_input)).
+        */
+            static if(is(typeof(.moveBack(_input))))
+            {
+                ElementType!R moveBack()
+                {
+                    return .moveBack(_input);
+                }
+            }
+
         static if(hasAssignableElements!R)
         {
             @property auto back(ElementType!R val)
@@ -1125,6 +1220,17 @@ is a random access range and if $(D R) defines $(D R.length).
         auto ref opIndex(size_t n)
         {
             return _input[_n * n];
+        }
+
+        /**
+        Forwards to $(D moveAt(_input, n)).
+        */
+        static if(is(typeof(.moveAt(_input, 0))))
+        {
+            ElementType!R moveAt(size_t n)
+            {
+                return .moveAt(_input, _n * n);
+            }
         }
 
         static if(hasAssignableElements!R)
@@ -1213,6 +1319,7 @@ unittest
             static assert(propagatesRangeType!(typeof(myStride), DummyType));
         }
         assert(myStride.front == 1);
+        assert(myStride.moveFront() == 1);
         assert(equal(myStride, [1, 5, 9]));
 
         static if(hasLength!DummyType) {
@@ -1221,11 +1328,13 @@ unittest
 
         static if(isBidirectionalRange!DummyType && hasLength!DummyType) {
             assert(myStride.back == 9);
+            assert(myStride.moveBack() == 9);
         }
 
         static if(isRandomAccessRange!DummyType && hasLength!DummyType) {
             assert(myStride[0] == 1);
             assert(myStride[1] == 5);
+            assert(myStride.moveAt(1) == 5);
             assert(myStride[2] == 9);
 
             static assert(hasSlicing!(typeof(myStride)));
@@ -1310,10 +1419,11 @@ struct ChainImpl(R...)
 {
 private:
     alias CommonType!(staticMap!(.ElementType, R)) RvalueElementType;
-    template sameET(A)
+    private template sameET(A)
     {
         enum sameET = is(.ElementType!(A) == RvalueElementType);
     }
+
     enum bool allSameType = allSatisfy!(sameET, R);
 
     // This doesn't work yet
@@ -1415,14 +1525,17 @@ public:
         }
     }
 
-    RvalueElementType moveFront()
+    static if(allSatisfy!(hasMobileElements, R))
     {
-        foreach (i, Unused; R)
+        RvalueElementType moveFront()
         {
-            if (_input.field[i].empty) continue;
-            return .moveFront(_input.field[i]);
+            foreach (i, Unused; R)
+            {
+                if (_input.field[i].empty) continue;
+                return .moveFront(_input.field[i]);
+            }
+            assert(false);
         }
-        assert(false);
     }
 
     static if (allSatisfy!(isBidirectionalRange, R))
@@ -1444,6 +1557,19 @@ public:
                 if (_input.field[i].empty) continue;
                 _input.field[i].popBack;
                 return;
+            }
+        }
+
+        static if(allSatisfy!(hasMobileElements, R))
+        {
+            RvalueElementType moveBack()
+            {
+                foreach_reverse (i, Unused; R)
+                {
+                    if (_input.field[i].empty) continue;
+                    return .moveBack(_input.field[i]);
+                }
+                assert(false);
             }
         }
 
@@ -1495,18 +1621,46 @@ public:
             assert(false);
         }
 
+        static if(allSatisfy!(hasMobileElements, R))
+        {
+            RvalueElementType moveAt(size_t index)
+            {
+                foreach (i, Range; R)
+                {
+                    static if(isInfinite!(Range))
+                    {
+                        return .moveAt(_input.field[i], index);
+                    }
+                    else
+                    {
+                        immutable length = _input.field[i].length;
+                        if (index < length) return .moveAt(_input.field[i], index);
+                        index -= length;
+                    }
+                }
+                assert(false);
+            }
+        }
+
         static if (allSameType && allSatisfy!(hasAssignableElements, R))
         void opIndexAssign(ElementType v, size_t index)
         {
-            foreach (i, Unused; R)
+            foreach (i, Range; R)
             {
-                immutable length = _input.field[i].length;
-                if (index < length)
+                static if(isInfinite!(Range))
                 {
                     _input.field[i][index] = v;
-                    return;
                 }
-                index -= length;
+                else
+                {
+                    immutable length = _input.field[i].length;
+                    if (index < length)
+                    {
+                        _input.field[i][index] = v;
+                        return;
+                    }
+                    index -= length;
+                }
             }
             assert(false);
         }
@@ -1592,6 +1746,10 @@ unittest
         auto c = chain(foo, bar);
         c[3] = 42;
         assert(c[3] == 42);
+        assert(c.moveFront() == 1);
+        assert(c.moveBack() == 5);
+        assert(c.moveAt(4) == 5);
+        assert(c.moveAt(5) == 1);
     }
 
     // Make sure bug 3311 is fixed.  ChainImpl should compile even if not all
@@ -1612,43 +1770,45 @@ unittest
 
     // This test should be uncommented when DMD bug 4379 gets fixed, or if
     // you've made sure you've turned off -O.  (Bug 4379 is triggered by -O).
-//    foreach(DummyType1; AllDummyRanges) {
-//        DummyType1 dummy1;
-//        foreach(DummyType2; AllDummyRanges) {
-//            DummyType2 dummy2;
-//            auto myChain = chain(dummy1, dummy2);
-//
-//            static assert(
-//                propagatesRangeType!(typeof(myChain), DummyType1, DummyType2)
-//            );
-//
-//            assert(myChain.front == 1);
-//            foreach(i; 0..dummyLength) {
-//                myChain.popFront();
-//            }
-//            assert(myChain.front == 1);
-//
-//            static if(isBidirectionalRange!DummyType1 &&
-//                      isBidirectionalRange!DummyType2) {
-//                assert(myChain.back == 10);
-//            }
-//
-//            static if(isRandomAccessRange!DummyType1 &&
-//                      isRandomAccessRange!DummyType2) {
-//                assert(myChain[0] == 1);
-//            }
-//
-//            static if(hasLvalueElements!DummyType1 && hasLvalueElements!DummyType2)
-//            {
-//                static assert(hasLvalueElements!(typeof(myChain)));
-//            }
-//            else
-//            {
-//                static assert(!hasLvalueElements!(typeof(myChain)));
-//            }
-//        }
-//    }
+/+    foreach(DummyType1; AllDummyRanges) {
+        DummyType1 dummy1;
+        foreach(DummyType2; AllDummyRanges) {
+            DummyType2 dummy2;
+            auto myChain = chain(dummy1, dummy2);
+
+            static assert(
+                propagatesRangeType!(typeof(myChain), DummyType1, DummyType2)
+            );
+
+            assert(myChain.front == 1);
+            foreach(i; 0..dummyLength) {
+                myChain.popFront();
+            }
+            assert(myChain.front == 1);
+
+            static if(isBidirectionalRange!DummyType1 &&
+                      isBidirectionalRange!DummyType2) {
+                assert(myChain.back == 10);
+            }
+
+            static if(isRandomAccessRange!DummyType1 &&
+                      isRandomAccessRange!DummyType2) {
+                assert(myChain[0] == 1);
+            }
+
+            static if(hasLvalueElements!DummyType1 && hasLvalueElements!DummyType2)
+            {
+                static assert(hasLvalueElements!(typeof(myChain)));
+            }
+            else
+            {
+                static assert(!hasLvalueElements!(typeof(myChain)));
+            }
+        }
+    }
++/
 }
+
 /**
 Iterates a random-access range starting from a given point and
 progressively extending left and right from that point. If no initial
@@ -1766,6 +1926,40 @@ element. Throws if the range is empty.
     }
 
 ///
+    static if(hasMobileElements!R)
+    {
+        ElementType!R moveFront()
+        {
+            assert(!empty, "Calling front() against an empty "
+                    ~typeof(this).stringof);
+            if (!_upIsActive)
+            {
+                assert(!_low.empty);
+                return .moveBack(_low);
+            }
+            assert(!_up.empty);
+            return .moveFront(_up);
+        }
+    }
+
+///
+    static if(hasAssignableElements!R)
+    {
+        auto front(ElementType!R val)
+        {
+            assert(!empty, "Calling front() against an empty "
+                    ~typeof(this).stringof);
+            if (!_upIsActive)
+            {
+                assert(!_low.empty);
+                _low.back = val;
+            }
+            assert(!_up.empty);
+            _up.front = val;
+        }
+    }
+
+///
     typeof(this) save()
     {
         auto ret = this;
@@ -1805,6 +1999,14 @@ unittest
     int[] a = [ 1, 2, 3, 4, 5 ];
     assert(equal(radial(a, 1), [ 2, 3, 1, 4, 5 ][]));
     static assert(isForwardRange!(typeof(radial(a, 1))));
+
+    auto r = radial([1,2,3,4,5]);
+    for(auto rr = r.save; !rr.empty; rr.popFront())
+    {
+        assert(rr.front == rr.moveFront());
+    }
+    r.front = 5;
+    assert(r.front == 5);
 
     // Test instantiation without lvalue elements.
     DummyRange!(ReturnBy.Value, Length.Yes, RangeType.Random) dummy;
@@ -1874,9 +2076,12 @@ public:
             original.front = v;
         }
 
-    ElementType moveFront()
+    static if(hasMobileElements!R)
     {
-        return .moveFront(original);
+        ElementType moveFront()
+        {
+            return .moveFront(original);
+        }
     }
 
     static if (isInfinite!(R))
@@ -1928,6 +2133,22 @@ public:
             void opIndexAssign(ElementType v, size_t index)
             {
                 original[index] = v;
+            }
+        }
+
+        static if(hasMobileElements!R)
+        {
+            ElementType moveBack()
+            {
+                return .moveAt(original, this.length - 1);
+            }
+
+            ElementType moveAt(size_t index)
+            {
+                assert(index < this.length,
+                    "Attempting to index out of the bounds of a "
+                    ~ Take.stringof);
+                return .moveAt(original, index);
             }
         }
     }
@@ -1997,8 +2218,16 @@ unittest
         static if(isRandomAccessRange!DummyType) {
             static assert(isRandomAccessRange!T);
             assert(t[4] == 5);
+
+            assert(moveAt(t, 1) == t[1]);
+            assert(t.back == moveBack(t));
         } else static if(isForwardRange!DummyType) {
             static assert(isForwardRange!T);
+        }
+
+        for(auto tt = t; !tt.empty; tt.popFront())
+        {
+            assert(tt.front == moveFront(tt));
         }
 
         // Bidirectional ranges can't be propagated properly if they don't
@@ -2165,12 +2394,28 @@ struct Cycle(R) if (isForwardRange!(R) && !isInfinite!(R))
             return _original[_index % _original.length];
         }
         /// Ditto
+        static if(hasAssignableElements!R)
+        {
+            @property auto front(ElementType!R val)
+            {
+                _original[_index % _original.length] = val;
+            }
+        }
+        /// Ditto
         enum bool empty = false;
         /// Ditto
         void popFront() { ++_index; }
         auto ref opIndex(size_t n)
         {
             return _original[(n + _index) % _original.length];
+        }
+        /// Ditto
+        static if(hasAssignableElements!R)
+        {
+            auto opIndexAssign(ElementType!R val, size_t n)
+            {
+                _original[(n + _index) % _original.length] = val;
+            }
         }
         /// Ditto
         @property Cycle!(R) save() {
@@ -2183,6 +2428,14 @@ struct Cycle(R) if (isForwardRange!(R) && !isInfinite!(R))
         this(R input) { _original = input; _current = input.save; }
         /// Range primitive implementations.
         @property auto ref front() { return _current.front; }
+        /// Ditto
+        static if(hasAssignableElements!R)
+        {
+            @property auto front(ElementType!R val)
+            {
+                _current.front = val;
+            }
+        }
         /// Ditto
         static if (isBidirectionalRange!(R))
             @property auto ref back() { return _current.back; }
@@ -2285,13 +2538,30 @@ unittest
     assert(nums[0] == 2);
 
     foreach(DummyType; AllDummyRanges) {
-        // Bug 4387
         static if(isForwardRange!(DummyType)) {
             DummyType dummy;
             auto cy = cycle(dummy);
             static assert(isForwardRange!(typeof(cy)));
             auto t = take(cy, 20);
             assert(equal(t, [1,2,3,4,5,6,7,8,9,10,1,2,3,4,5,6,7,8,9,10]));
+
+            static if(hasAssignableElements!DummyType)
+            {
+                {
+                    cy.front = 66;
+                    scope(exit) cy.front = 1;
+                    assert(dummy.front == 66);
+                }
+
+                static if(isRandomAccessRange!DummyType)
+                {
+                    {
+                        cy[10] = 66;
+                        scope(exit) cy[10] = 1;
+                        assert(dummy.front == 66);
+                    }
+                }
+            }
         }
     }
 }
@@ -2449,10 +2719,13 @@ stopping policy.
                 }
             }
         }
+    }
 
 /**
    Moves out the front.
 */
+    static if(allSatisfy!(hasMobileElements, R))
+    {
         ElementType moveFront()
         {
             ElementType result = void;
@@ -2496,7 +2769,7 @@ stopping policy.
 /**
    Moves out the back.
 */
-        static if (allSatisfy!(hasAssignableElements, R))
+        static if (allSatisfy!(hasMobileElements, R))
         {
             @property ElementType moveBack()
             {
@@ -2514,10 +2787,13 @@ stopping policy.
                 }
                 return result;
             }
+        }
 
 /**
    Returns the current iterated element.
 */
+        static if(allSatisfy!(hasAssignableElements, R))
+        {
             @property void back(ElementType v)
             {
                 foreach (i, Unused; R)
@@ -2662,11 +2938,14 @@ stopping policy.
                     ranges.field[i][n] = v.field[i];
                 }
             }
+        }
 
 /**
    Destructively reads the $(D n)th element in the composite
    range. Defined if all ranges offer random access.
  */
+        static if(allSatisfy!(hasMobileElements, R))
+        {
             ElementType moveAt(size_t n)
             {
                 ElementType result = void;
@@ -3645,6 +3924,23 @@ struct FrontTransversal(RangeOfRanges,
     }
 
 /// Ditto
+    static if(hasMobileElements!(.ElementType!RangeOfRanges))
+    {
+        ElementType moveFront()
+        {
+            return .moveFront(_input.front);
+        }
+    }
+
+    static if(hasAssignableElements!(.ElementType!RangeOfRanges))
+    {
+        @property auto front(ElementType val)
+        {
+            _input.front.front = val;
+        }
+    }
+
+/// Ditto
     void popFront()
     {
         assert(!empty);
@@ -3681,6 +3977,23 @@ isBidirectionalRange!RangeOfRanges).
             _input.popBack;
             prime;
         }
+
+/// Ditto
+        static if(hasMobileElements!(.ElementType!RangeOfRanges))
+        {
+            ElementType moveBack()
+            {
+                return .moveFront(_input.back);
+            }
+        }
+
+        static if(hasAssignableElements!(.ElementType!RangeOfRanges))
+        {
+            @property auto back(ElementType val)
+            {
+                _input.back.front = val;
+            }
+        }
     }
 
     static if (isRandomAccessRange!RangeOfRanges &&
@@ -3696,6 +4009,23 @@ TransverseOptions.enforceNotJagged)).
         auto ref opIndex(size_t n)
         {
             return _input[n].front;
+        }
+
+/// Ditto
+        static if(hasMobileElements!(.ElementType!RangeOfRanges))
+        {
+            ElementType moveAt(size_t n)
+            {
+                return .moveFront(_input[n]);
+            }
+        }
+/// Ditto
+        static if(hasAssignableElements!(.ElementType!RangeOfRanges))
+        {
+            void opIndexAssign(ElementType val, size_t n)
+            {
+                _input[n].front = val;
+            }
         }
 
 /**
@@ -3747,15 +4077,39 @@ unittest {
         assert(equal(ft[0..2], [1, 2]));
         assert(equal(ft[1..3], [2, 3]));
 
+        assert(ft.front == ft.moveFront());
+        assert(ft.back == ft.moveBack());
+        assert(ft.moveAt(1) == ft[1]);
+
+
         // Test infiniteness propagation.
         static assert(isInfinite!(typeof(frontTransversal(repeat("foo")))));
 
-        static if(DummyType.r == ReturnBy.Reference) {{
-            // Test ref propagation.  Note the extra {}s to create a scope.
-            ft.front++;
-            scope(exit) ft.front--;
-            assert(dummies.front.front == 2);
-        }}
+        static if(DummyType.r == ReturnBy.Reference) {
+            {
+                ft.front++;
+                scope(exit) ft.front--;
+                assert(dummies.front.front == 2);
+            }
+
+            {
+                ft.front = 5;
+                scope(exit) ft.front = 1;
+                assert(dummies[0].front == 5);
+            }
+
+            {
+                ft.back = 88;
+                scope(exit) ft.back = 4;
+                assert(dummies.back.front == 88);
+            }
+
+            {
+                ft[1] = 99;
+                scope(exit) ft[1] = 2;
+                assert(dummies[1].front == 99);
+            }
+        }
     }
 }
 
@@ -3776,8 +4130,9 @@ assert(equals(ror, [ 2, 4 ][]));
 struct Transversal(RangeOfRanges,
         TransverseOptions opt = TransverseOptions.assumeJagged)
 {
+    private alias ElementType!RangeOfRanges InnerRange;
+    private alias ElementType!InnerRange E;
 
-private:
     private void prime()
     {
         static if (opt == TransverseOptions.assumeJagged)
@@ -3838,6 +4193,25 @@ private:
     }
 
 /// Ditto
+    static if(hasMobileElements!InnerRange)
+    {
+        E moveFront()
+        {
+            return .moveAt(_input.front, _n);
+        }
+    }
+
+/// Ditto
+    static if(hasAssignableElements!InnerRange)
+    {
+        @property auto front(E val)
+        {
+            _input.front[_n] = val;
+        }
+    }
+
+
+/// Ditto
     void popFront()
     {
         assert(!empty);
@@ -3866,12 +4240,33 @@ isBidirectionalRange!RangeOfRanges).
         {
             return _input.back[_n];
         }
+
+/// Ditto
         void popBack()
         {
             assert(!empty);
             _input.popBack;
             prime;
         }
+
+/// Ditto
+        static if(hasMobileElements!InnerRange)
+        {
+            E moveBack()
+            {
+                return .moveAt(_input.back, _n);
+            }
+        }
+
+/// Ditto
+        static if(hasAssignableElements!InnerRange)
+        {
+            @property auto back(E val)
+            {
+                _input.back[_n] = val;
+            }
+        }
+
     }
 
     static if (isRandomAccessRange!RangeOfRanges &&
@@ -3887,6 +4282,24 @@ TransverseOptions.enforceNotJagged)).
         auto ref opIndex(size_t n)
         {
             return _input[n][_n];
+        }
+
+/// Ditto
+        static if(hasMobileElements!InnerRange)
+        {
+            E moveAt(size_t n)
+            {
+                return .moveAt(_input[n], _n);
+            }
+        }
+
+/// Ditto
+        static if(hasAssignableElements!InnerRange)
+        {
+            void opIndexAssign(E val, size_t n)
+            {
+                _input[n][_n] = val;
+            }
         }
 
 /**
@@ -3922,15 +4335,36 @@ unittest
     int[][] x = new int[][2];
     x[0] = [ 1, 2 ];
     x[1] = [3, 4];
-    auto ror = transversal(x, 1);
+    auto ror = transversal!(TransverseOptions.assumeNotJagged)(x, 1);
     auto witness = [ 2, 4 ];
     uint i;
     foreach (e; ror) assert(e == witness[i++]);
     assert(i == 2);
 
-    // Make sure ref is being propagated.
-    ror.front++;
-    assert(x[0][1] == 3);
+    // Make sure ref, assign is being propagated.
+    {
+        ror.front++;
+        scope(exit) ror.front--;
+        assert(x[0][1] == 3);
+    }
+    {
+        ror.front = 5;
+        scope(exit) ror.front = 2;
+        assert(x[0][1] == 5);
+        assert(ror.moveFront == 5);
+    }
+    {
+        ror.back = 999;
+        scope(exit) ror.back = 4;
+        assert(x[1][1] == 999);
+        assert(ror.moveBack == 999);
+    }
+    {
+        ror[0] = 999;
+        scope(exit) ror[0] = 2;
+        assert(x[0][1] == 999);
+        assert(ror.moveAt(0) == 999);
+    }
 
     // Test w/o ref return.
     alias DummyRange!(ReturnBy.Value, Length.Yes, RangeType.Random) D;

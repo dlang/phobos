@@ -553,7 +553,11 @@ static assert(allSatisfy!(isIntegral, int, long));
  */
 template allSatisfy(alias F, T...)
 {
-    static if (T.length == 1)
+    static if (T.length == 0)
+    {
+        enum bool allSatisfy = true;
+    }
+    else static if (T.length == 1)
     {
         alias F!(T[0]) allSatisfy;
     }
@@ -580,7 +584,11 @@ static assert(anySatisfy!(isIntegral, int, double));
  */
 template anySatisfy(alias F, T...)
 {
-    static if (T.length == 1)
+    static if(T.length == 0)
+    {
+        enum bool anySatisfy = false;
+    }
+    else static if (T.length == 1)
     {
         alias F!(T[0]) anySatisfy;
     }
