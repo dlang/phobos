@@ -256,8 +256,6 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\container.d std\conv.d std\utf.d 
 	std\json.d std\xml.d std\encoding.d std\bigint.d std\concurrency.d \
 	std\range.d std\stdiobase.d \
 	std\regex.d std\datebase.d \
-	std\internal\math\biguintcore.d \
-	std\internal\math\biguintnoasm.d std\internal\math\biguintx86.d \
 	std\__fileinit.d std\gregorian.d std\exception.d
 
 SRC_STD_C= std\c\process.d std\c\stdlib.d std\c\time.d std\c\stdio.d \
