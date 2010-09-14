@@ -847,13 +847,11 @@ $(DOC)\std_c_wcharh.html : $(STDDOC) std\c\wcharh.d
 ######################################################
 
 zip : win32.mak posix.mak $(STDDOC) $(SRC) \
-	$(SRC_STD) $(SRC_STD_C) $(SRC_TI) $(SRC_INT) $(SRC_STD_WIN) \
-	$(SRC_STD_C_LINUX) $(SRC_STD_C_OSX) $(SRC_ETC) $(SRC_ETC_C) $(SRC_ZLIB) $(SRC_GC)
+	$(SRC_STD) $(SRC_STD_C) $(SRC_STD_WIN) \
+	$(SRC_STD_C_LINUX) $(SRC_STD_C_OSX) $(SRC_ETC) $(SRC_ETC_C) $(SRC_ZLIB)
 	del phobos.zip
 	zip32 -u phobos win32.mak posix.mak $(STDDOC)
 	zip32 -u phobos $(SRC)
-	zip32 -u phobos $(SRC_TI)
-	zip32 -u phobos $(SRC_INT)
 	zip32 -u phobos $(SRC_STD)
 	zip32 -u phobos $(SRC_STD_C)
 	zip32 -u phobos $(SRC_STD_WIN)
@@ -861,10 +859,8 @@ zip : win32.mak posix.mak $(STDDOC) $(SRC) \
 	zip32 -u phobos $(SRC_STD_C_LINUX)
 	zip32 -u phobos $(SRC_STD_C_OSX)
 	zip32 -u phobos $(SRC_STD_INTERNAL_MATH)
-	zip32 -u phobos $(SRC_ETC)
-	zip32 -u phobos $(SRC_ETC_C)
+	zip32 -u phobos $(SRC_ETC) $(SRC_ETC_C)
 	zip32 -u phobos $(SRC_ZLIB)
-	zip32 -u phobos $(SRC_GC)
 
 clean:
 	cd etc\c\zlib
