@@ -1085,6 +1085,7 @@ void formatValue(Writer, T, Char)(Writer w, T val,
         ref FormatSpec!Char f)
 if (isSomeString!T && !isStaticArray!T)
 {
+    enforce(f.spec == 's');
     auto s = val[0 .. f.precision < $ ? f.precision : $];
     if (!f.flDash)
     {
@@ -1242,7 +1243,14 @@ void formatValue(Writer, T, Char)(Writer w, T val,
 if (isPointer!T)
 {
     const void * p = val;
-    f.spec = 'X';
+    if (f.spec == 's')
+    {
+        f.spec = 'X';
+    }
+    else
+    {
+        enforce(f.spec == 'X' || f.spec == 'x');
+    }
     formatValue(w, cast(ulong) p, f);
 }
 
