@@ -41,35 +41,35 @@ version(Windows)
 
     /** String used to separate directory names in a path. Under
      *  Windows this is a backslash, under Linux a slash. */
-    immutable char[1] sep = "\\";
+    enum string sep = "\\";
     /** Alternate version of sep[] used in Windows (a slash). Under
      *  Linux this is empty. */
-    immutable char[1] altsep = "/";
+    enum string altsep = "/";
     /** Path separator string. A semi colon under Windows, a colon
      *  under Linux. */
-    immutable char[1] pathsep = ";";
+    enum string pathsep = ";";
     /** String used to separate lines, \r\n under Windows and \n
      * under Linux. */
-    immutable char[2] linesep = "\r\n"; /// String used to separate lines.
-    immutable char[1] curdir = ".";      /// String representing the current directory.
-    immutable char[2] pardir = ".."; /// String representing the parent directory.
+    enum string linesep = "\r\n";   /// String used to separate lines.
+    enum string curdir = ".";       /// String representing the current directory.
+    enum string pardir = "..";      /// String representing the parent directory.
 }
 version(Posix)
 {
     /** String used to separate directory names in a path. Under
      *  Windows this is a backslash, under Linux a slash. */
-    immutable char[1] sep = "/";
+    enum string sep = "/";
     /** Alternate version of sep[] used in Windows (a slash). Under
      *  Linux this is empty. */
-    immutable char[0] altsep;
+    enum string altsep = "";
     /** Path separator string. A semi colon under Windows, a colon
      *  under Linux. */
-    immutable char[1] pathsep = ":";
+    enum string pathsep = ":";
     /** String used to separate lines, \r\n under Windows and \n
      * under Linux. */
-    immutable char[1] linesep = "\n";
-    immutable char[1] curdir = ".";      /// String representing the current directory.
-    immutable char[2] pardir = ".."; /// String representing the parent directory.
+    enum string linesep = "\n";
+    enum string curdir = ".";       /// String representing the current directory.
+    enum string pardir = "..";      /// String representing the parent directory.
 }
 
 /*****************************
@@ -286,8 +286,9 @@ unittest
  * -----
  */
 
-String basename(String, ExtString = string)(String fullname, ExtString extension = null)
-    if (isSomeString!(String) && isSomeString!(ExtString))
+Char[] basename(Char, ExtChar = immutable(char))(
+        Char[] fullname, ExtChar[] extension = null)
+    if (isSomeChar!Char && isSomeChar!ExtChar)
 out (result)
 {
     assert(result.length <= fullname.length);
@@ -392,34 +393,41 @@ unittest
  * -----
  */
 
-String dirname(String)(String fullname)
-    if (isSomeString!(String))
+Char[] dirname(Char)(Char[] fullname)
+    if (isSomeChar!Char)
 {
-    Unqual!String s = fullname;
+    alias immutable(Char)[] ImmString;
+    Char[] s = fullname;
 
     version (Posix)
     {
-        enum immutable(String) sep    = .sep,
-                               curdir = .curdir;
+        enum ImmString    sep = .sep;
+        enum ImmString curdir = .curdir;
+
         for (; !s.empty; s.popBack)
         {
             if (s.endsWith(sep))
                 break;
         }
         if (s.empty)
-            return to!(String)(curdir);
+        {
+            return to!(Char[])(curdir);
+        }
 
         // remove excess non-root slashes: "/home//" --> "/home"
         while (s.length > sep.length && s.endsWith(sep))
+        {
             s.popBack;
+        }
         return s;
     }
     else version (Windows)
     {
-        enum immutable(String) sep    = .sep,
-                               altsep = .altsep,
-                               curdir = .curdir,
-                               drvsep = ":";
+        enum ImmString    sep = .sep;
+        enum ImmString altsep = .altsep;
+        enum ImmString curdir = .curdir;
+        enum ImmString drvsep = ":";
+
         bool foundSep;
         for (; !s.empty; s.popBack)
         {
@@ -431,10 +439,7 @@ String dirname(String)(String fullname)
         }
         if (!foundSep)
         {
-            if (s.empty)
-                return to!(String)(curdir);
-            else
-                return to!(String)(s ~ curdir); // cases like "C:."
+            return to!(Char[])(s.empty ? curdir : s ~ curdir);
         }
 
         // remove excess non-root separators: "C:\\" --> "C:\"
@@ -492,6 +497,16 @@ unittest
         assert(dirname(r"d:\path") == "d:\\");
         assert(dirname("d:foo.bat") == "d:.");
         assert(dirname("foo.bat") == ".");
+    }
+
+    {
+        // fixed-length strings
+        char[4] u = "abcd";
+        wchar[4] w = "abcd";
+        dchar[4] d = "abcd";
+        assert(dirname(u) == ".");
+        assert(dirname(w) == "."w);
+        assert(dirname(d) == "."d);
     }
 }
 
@@ -594,8 +609,7 @@ unittest // dirname + basename
  * -----
  */
 
-String getDrive(String)(String fullname) if (isSomeString!(String))
-// @@@ BUG 2799
+Char[] getDrive(Char)(Char[] fullname) if (isSomeChar!Char)
 // out(result)
 // {
 //     assert(result.length <= fullname.length);
