@@ -39,7 +39,7 @@ if (isIterable!Range && !isNarrowString!Range)
     alias ForeachType!Range E;
     static if (hasLength!Range)
     {
-        if (r.empty) return null;
+        if(r.length == 0) return null;
 
         // Determines whether the GC should scan the array.
         auto blkInfo = (typeid(E).flags & 1) ?
