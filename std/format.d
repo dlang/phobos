@@ -1249,12 +1249,35 @@ if (isPointer!T)
 /**
    Objects are formatted by calling $(D toString).
  */
-void formatValue(Writer, T, Char)(Writer w, T val,
-        ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
 if (is(T == class))
 {
     if (val is null) put(w, "null");
     else put(w, val.toString);
+}
+
+/**
+   Interfaces are formatted by casting to $(D Object) and then calling
+   $(D toString).
+ */
+void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
+if (is(T == interface))
+{
+    return formatValue(w, cast(Object) val, f);
+}
+
+unittest
+{
+    FormatSpec!char f;
+    auto a = appender!string();
+    interface Whatever {};
+    class C : Whatever
+    {
+        override @property string toString() { return "ab"; }
+    }
+    Whatever val = new C;
+    formatValue(a, val, f);
+    assert(a.data == "ab");
 }
 
 /**
