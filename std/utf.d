@@ -369,8 +369,11 @@ body
     return V;
 
   Lerr:
-    //printf("\ndecode: idx = %d, i = %d, length = %d s = \n'%.*s'\n%x\n'%.*s'\n", idx, i, s.length, s, s[i], s[i .. $]);
-    throw new UtfException("4invalid UTF-8 sequence", s[i]);
+    //printf("\ndecode: idx = %d, i = %d, length = %d s = \n'%.*s'\n%x\n"
+    //"'%.*s'\n", idx, i, s.length, s, s[i], s[i .. $]);
+    throw new UtfException(text("dchar decode(in char[], ref size_t): "
+                    "Invalid UTF-8 sequence ", cast(const ubyte[]) s,
+                    " around index ", i));
 }
 
 unittest
