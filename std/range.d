@@ -5137,14 +5137,12 @@ Releases the controlled range and returns it.
 
    Example:
    ----
-   int[] a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ];
-   auto p = lowerBound!("a < b")(a, 4);
-   assert(p == [ 0, 1, 2, 3 ]);
-   p = lowerBound(a, 4); // uses "a < b" by default
-   assert(p == [ 0, 1, 2, 3 ]);
+   auto a = assumeSorted([ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ]);
+   auto p = a.lowerBound(4);
+   assert(p.release == [ 0, 1, 2, 3 ]);
    ----
 */
-    typeof(this) lowerBound(alias pred = "a < b", V)(V value)
+    typeof(this) lowerBound(V)(V value)
     {
         auto first = 0, count = this._input.length;
         while (count > 0)
@@ -5185,9 +5183,9 @@ Releases the controlled range and returns it.
 
    Example:
    ----
-   auto a = [ 1, 2, 3, 3, 3, 4, 4, 5, 6 ];
-   auto p = upperBound(a, 3);
-   assert(p == begin(a) + 5);
+   auto a = assumeSorted([ 1, 2, 3, 3, 3, 4, 4, 5, 6 ]);
+   auto p = a.upperBound(3);
+   assert(p == [4, 4, 5, 6]);
    ----
 */
     typeof(this) upperBound(V)(V value)
@@ -5297,11 +5295,11 @@ unittest
     static assert(isRandomAccessRange!(SortedRange!(int[])));
     // scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ];
-    auto p = assumeSorted(a).lowerBound!("a < b")(4);
+    auto p = assumeSorted(a).lowerBound(4);
     assert(equal(p, [0, 1, 2, 3]));
     p = assumeSorted(a).lowerBound(5);
     assert(equal(p, [0, 1, 2, 3, 4]));
-    p = assumeSorted(a).lowerBound!(q{a < b})(6);
+    p = assumeSorted(a).lowerBound(6);
     assert(equal(p, [ 0, 1, 2, 3, 4, 5]));
 }
 

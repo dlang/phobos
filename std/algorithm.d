@@ -6147,6 +6147,57 @@ unittest
     assert(canFind!"a == 2"(a));
 }
 
+// Scheduled for deprecation.  Use std.range.SortedRange.canFind.
+bool canFindSorted(alias pred = "a < b", Range, V)(Range range, V value) {
+    pragma(msg, "std.algorithm.canFindSorted is scheduled for " ~
+        "deprecation.  Use std.range.SortedRange.canFind instead.");
+    return assumeSorted!pred(range).canFind!V(value);
+}
+
+unittest {
+    assert(canFindSorted([1,2,3,4,5], 4));
+    assert(!canFindSorted([1,2,3,4,5], 8));
+}
+
+// Scheduled for deprecation.  Use std.range.SortedRange.lowerBound.
+Range lowerBound(alias pred = "a < b", Range, V)(Range range, V value) {
+    pragma(msg, "std.algorithm.lowerBound is scheduled for " ~
+        "deprecation.  Use std.range.SortedRange.lowerBound instead.");
+    return assumeSorted!pred(range).lowerBound!V(value).release;
+}
+
+unittest {
+    int[] a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ];
+    auto p = lowerBound!("a < b")(a, 4);
+    assert(equal(p, [0, 1, 2, 3]));
+}
+
+// Scheduled for deprecation.  Use std.range.SortedRange.upperBound.
+Range upperBound(alias pred = "a < b", Range, V)(Range range, V value) {
+    pragma(msg, "std.algorithm.upperBound is scheduled for " ~
+        "deprecation.  Use std.range.SortedRange.upperBound instead.");
+    return assumeSorted!pred(range).upperBound!V(value).release;
+}
+
+unittest {
+    int[] a = [ 1, 2, 3, 3, 3, 4, 4, 5, 6 ];
+    auto p = upperBound(a, 3);
+    assert(equal(p, [4, 4, 5, 6 ]));
+}
+
+// Scheduled for deprecation.  Use std.range.SortedRange.equalRange.
+Range equalRange(alias pred = "a < b", Range, V)(Range range, V value) {
+    pragma(msg, "std.algorithm.equalRange is scheduled for " ~
+        "deprecation.  Use std.range.SortedRange.equalRange instead.");
+    return assumeSorted!pred(range).equalRange!V(value).release;
+}
+
+unittest {
+    auto a = [ 1, 2, 3, 3, 3, 4, 4, 5, 6 ];
+    auto r = equalRange(a, 3);
+    assert(r == [ 3, 3, 3 ]);
+}
+
 /**
 Copies the top $(D n) elements of the input range $(D source) into the
 random-access range $(D target), where $(D n =
