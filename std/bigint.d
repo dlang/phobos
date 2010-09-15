@@ -395,6 +395,6 @@ unittest {
     assert(BigInt(-0x1234_5678_9ABC_5A5AL).toLong() == -0x1234_5678_9ABC_5A5AL);
     assert(BigInt(0xF234_5678_9ABC_5A5AL).toLong() == long.max);
     assert(BigInt(-0x123456789ABCL).toInt() == -int.max);
-
+    assert((BigInt(-2) + BigInt(1)) == BigInt(-1));
 }
 }

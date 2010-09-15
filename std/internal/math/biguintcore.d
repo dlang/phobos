@@ -409,7 +409,9 @@ static BigUint addOrSubInt(Tulong)(BigUint x, Tulong y, bool wantSub, bool *sign
 static BigUint addOrSub(BigUint x, BigUint y, bool wantSub, bool *sign) {
     BigUint r;
     if (wantSub) { // perform a subtraction
-        r.data = sub(x.data, y.data, sign);
+        bool negative;
+        r.data = sub(x.data, y.data, &negative);
+        *sign ^= negative;
         if (r.isZero()) {
             *sign = false;
         }
