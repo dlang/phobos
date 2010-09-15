@@ -269,7 +269,9 @@ accepting an $(D E[]).))
  */
 void put(R, E)(ref R r, E e)
 {
-    static if (hasMember!(R, "put"))
+    static if (hasMember!(R, "put") ||
+    (isPointer!R && is(pointerTarget!R == struct) &&
+     hasMember!(pointerTarget!R, "put")))
     {
         // commit to using the "put" method
         static if (!isArray!R && is(typeof(r.put(e))))
@@ -370,6 +372,7 @@ unittest
     auto app = appender!string();
     string s;
     static assert(isOutputRange!(Appender!string, string));
+    static assert(isOutputRange!(Appender!string*, string));
 }
 
 /**

@@ -2654,6 +2654,19 @@ unittest
 }
 
 /**
+Returns the target type of a pointer.
+*/
+template pointerTarget(T : T*) {
+    alias T pointerTarget;
+}
+
+unittest {
+    static assert(is(pointerTarget!(int*) == int));
+    static assert(!is(pointerTarget!int));
+    static assert(is(pointerTarget!(long*) == long));
+}
+
+/**
  * Returns $(D true) if T can be iterated over using a $(D foreach) loop with
  * a single loop variable of automatically inferred type, regardless of how
  * the $(D foreach) loop is implemented.  This includes ranges, structs/classes
