@@ -1379,7 +1379,7 @@ class Socket
         }
 
         /// ditto
-        auto sendTo(const(void)[] buf, Address to)
+        Select!(size_t.sizeof > 4, long, int) sendTo(const(void)[] buf, Address to)
         {
                 return sendTo(buf, SocketFlags.NONE, to);
         }
@@ -1387,7 +1387,7 @@ class Socket
 
         //assumes you connect()ed
         /// ditto
-        auto sendTo(const(void)[] buf, SocketFlags flags)
+        Select!(size_t.sizeof > 4, long, int) sendTo(const(void)[] buf, SocketFlags flags)
         {
         flags |= SocketFlags.NOSIGNAL;
         return .sendto(sock, buf.ptr, buf.length, cast(int)flags, null, 0);
@@ -1396,7 +1396,7 @@ class Socket
 
         //assumes you connect()ed
         /// ditto
-        auto sendTo(const(void)[] buf)
+        Select!(size_t.sizeof > 4, long, int) sendTo(const(void)[] buf)
         {
                 return sendTo(buf, SocketFlags.NONE);
         }
