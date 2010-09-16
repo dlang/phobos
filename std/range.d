@@ -5046,7 +5046,7 @@ struct SortedRange(R, alias pred = "a < b") if (isRandomAccessRange!R)
             immutable size_t msb = bsr(this._input.length) + 1;
             assert(msb > 0 && msb <= this._input.length);
             immutable step = this._input.length / msb;
-            static Random gen;
+            static MinstdRand gen;
             immutable start = uniform(0, step, gen);
             auto st = stride(this._input, step);
             assert(isSorted!pred(st), text(st));
