@@ -5044,10 +5044,11 @@ struct SortedRange(R, alias pred = "a < b") if (isRandomAccessRange!R)
             // Check the sortedness of the input
             if (this._input.length < 2) return;
             immutable size_t msb = bsr(this._input.length) + 1;
-            assert(msb > 0 && msb < this._input.length);
+            assert(msb > 0 && msb <= this._input.length);
             immutable step = this._input.length / msb;
-            immutable start = uniform(0, step);
-            auto st = stride(this._input, this._input.length / msb);
+            static Random gen;
+            immutable start = uniform(0, step, gen);
+            auto st = stride(this._input, step);
             assert(isSorted!pred(st), text(st));
         }
     }
@@ -5261,6 +5262,19 @@ unittest
     assert(r1.canFind(3));
     assert(!r1.canFind(32));
     assert(r1.release() == [ 64, 52, 42, 3, 2, 1 ]);
+}
+
+unittest
+{
+    // Check for small arrays
+    int[] a;
+    auto r = assumeSorted(a);
+    a = [ 1 ];
+    r = assumeSorted(a);
+    a = [ 1, 2 ];
+    r = assumeSorted(a);
+    a = [ 1, 2, 3 ];
+    r = assumeSorted(a);
 }
 
 unittest
