@@ -944,7 +944,7 @@ private template hasRawPointerImpl(T...)
     }
     else
     {
-        static if (is(T[0] foo : U*, U))
+        static if (is(T[0] foo : U*, U) && !isFunctionPointer!(T[0]))
             enum hasRawAliasing = !is(U == immutable);
         else static if (is(T[0] foo : U[], U) && !isStaticArray!(T[0]))
             enum hasRawAliasing = !is(U == immutable);
@@ -964,7 +964,7 @@ private template HasRawLocalPointerImpl(T...)
     }
     else
     {
-        static if (is(T[0] foo : U*, U))
+        static if (is(T[0] foo : U*, U) && !isFunctionPointer!(T[0]))
             enum hasRawLocalAliasing = !is(U == immutable) && !is(U == shared);
         else static if (is(T[0] foo : U[], U) && !isStaticArray!(T[0]))
             enum hasRawLocalAliasing = !is(U == immutable) && !is(U == shared);
@@ -1157,8 +1157,8 @@ private template hasObjects(T...)
     }
     else
     {
-        enum hasObjects = (is(T[0] == class) && !is(T[0] == immutable)) ||
-            hasObjects!(T[1 .. $]);
+        enum hasObjects = ((is(T[0] == class) || is(T[0] == interface))
+            && !is(T[0] == immutable)) || hasObjects!(T[1 .. $]);
     }
 }
 
@@ -1185,7 +1185,7 @@ private template hasUnsharedObjects(T...)
     }
     else
     {
-        enum hasUnsharedObjects = (is(T[0] == class) &&
+        enum hasUnsharedObjects = ((is(T[0] == class) || is(T[0] == interface)) &&
                                 !is(T[0] == immutable) && !is(T[0] == shared)) ||
             hasUnsharedObjects!(T[1 .. $]);
     }
@@ -1195,8 +1195,8 @@ private template hasUnsharedObjects(T...)
 Returns $(D true) if and only if $(D T)'s representation includes at
 least one of the following: $(OL $(LI a raw pointer $(D U*) and $(D U)
 is not immutable;) $(LI an array $(D U[]) and $(D U) is not
-immutable;) $(LI a reference to a class type $(D C) and $(D C) is not
-immutable.) $(LI an associative array that is not immutable.)
+immutable;) $(LI a reference to a class or interface type $(D C) and $(D C) is
+not immutable.) $(LI an associative array that is not immutable.)
 $(LI a delegate.))
 */
 
@@ -1219,6 +1219,10 @@ unittest
     static assert(hasAliasing!(uint[uint]));
     static assert(!hasAliasing!(immutable(uint[uint])));
     static assert(hasAliasing!(void delegate()));
+    static assert(!hasAliasing!(void function()));
+
+    interface I;
+    static assert(hasAliasing!I);
 }
 
 /**
@@ -1239,11 +1243,16 @@ template hasIndirectionsImpl(T...)
     {
         enum hasIndirectionsImpl = false;
     }
+    else static if(isFunctionPointer!(T[0]))
+    {
+        enum hasIndirectionsImpl = hasIndirectionsImpl!(T[1 .. $]);
+    }
     else
     {
         enum hasIndirectionsImpl = isPointer!(T[0]) || isDynamicArray!(T[0]) ||
             is (T[0] : const(Object)) || isAssociativeArray!(T[0]) ||
-            isDelegate!(T[0]) || hasIndirectionsImpl!(T[1 .. $]);
+            isDelegate!(T[0]) || is(T[0] == interface)
+            || hasIndirectionsImpl!(T[1 .. $]);
     }
 }
 
@@ -1257,6 +1266,10 @@ unittest
     static assert(hasIndirections!(S3));
     static assert(hasIndirections!(int[string]));
     static assert(hasIndirections!(void delegate()));
+
+    interface I;
+    static assert(hasIndirections!I);
+    static assert(!hasIndirections!(void function()));
 }
 
 // These are for backwards compatibility, are intentionally lacking ddoc,
@@ -1306,6 +1319,10 @@ unittest
     static assert(hasUnsharedAliasing!(uint[uint]));
     static assert(hasUnsharedAliasing!(void delegate()));
     static assert(!hasUnsharedAliasing!(shared(void delegate())));
+    static assert(!hasUnsharedAliasing!(void function()));
+
+    interface I {}
+    static assert(hasUnsharedAliasing!I);
 }
 
 /**
