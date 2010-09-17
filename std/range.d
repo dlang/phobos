@@ -5036,6 +5036,11 @@ struct SortedRange(R, alias pred = "a < b") if (isRandomAccessRange!R)
 {
     private R _input;
 
+    // C'tor that skips checks.
+    private this(R input, int noCheckDummy) {
+        this._input = input;
+    }
+
     this(R input)
     {
         this._input = input;
@@ -5062,9 +5067,7 @@ struct SortedRange(R, alias pred = "a < b") if (isRandomAccessRange!R)
     /// Ditto
     @property typeof(this) save()
     {
-        typeof(this) result;
-        result._input = this._input.save;
-        return result;
+        return typeof(this)(this._input.save, 42);
     }
 
     /// Ditto
@@ -5100,9 +5103,7 @@ struct SortedRange(R, alias pred = "a < b") if (isRandomAccessRange!R)
     /// Ditto
     typeof(this) opSlice(size_t a, size_t b)
     {
-        typeof(this) result;
-        result._input = this._input[a .. b]; // skip checking
-        return result;
+        return typeof(this)(this._input[a..b], 42);
     }
 
     /// Ditto
@@ -5116,7 +5117,11 @@ Releases the controlled range and returns it.
  */
     R release()
     {
-        return move(this._input);
+        static if(is(typeof(move(this._input)))) {
+            return move(this._input);
+        } else {
+            return this._input;
+        }
     }
 
 // lowerBound
@@ -5280,7 +5285,7 @@ unittest
 unittest
 {
     auto a = [ 1, 2, 3, 42, 52, 64 ];
-    auto r = assumeSorted(a);
+    auto r = assumeSorted(cast(const) a);
     assert(r.canFind(42));
     swap(a[2], a[5]); // illegal to break sortedness of original range
     assert(!r.canFind(42)); // passes although it shouldn't
