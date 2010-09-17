@@ -526,18 +526,27 @@ static assert(is(T == TypeTuple!(int, int, int)));
  */
 template staticMap(alias F, T...)
 {
-    static if (T.length == 1)
+    static if (T.length == 0)
     {
-        alias F!(T[0]) staticMap;
+        alias TypeTuple!() staticMap;
     }
     else
     {
-        alias TypeTuple!(F!(T[0]), staticMap!(F, T[1 .. $])) staticMap;
+        alias TypeTuple!(F!(T[0]),
+                         staticMap!(F, T[1 .. $])) staticMap;
     }
 }
 
 unittest
 {
+    // empty
+    alias staticMap!(Unqual) Empty;
+    static assert(Empty.length == 0);
+
+    // single
+    alias staticMap!(Unqual, const int) Single;
+    static assert(is(Single == TypeTuple!int));
+
     alias staticMap!(Unqual, int, const int, immutable int) T;
     static assert(is(T == TypeTuple!(int, int, int)));
 }
