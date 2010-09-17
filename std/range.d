@@ -1058,7 +1058,7 @@ assert(equal(stride(a, 3), [ 1, 4, 7, 10 ][]));
 struct Stride(R) if (isInputRange!(R))
 {
 private:
-    R _input;
+    Unqual!R _input;
     size_t _n;
 
 public:
