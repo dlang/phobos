@@ -370,10 +370,10 @@ bool pointsTo(S, T)(ref S source, ref T target)
     }
     else static if (is(S == struct))
     {
-        foreach (i, subobj; source.tupleof)
+        foreach (i, Subobj; typeof(source.tupleof))
         {
-            static if (!isStaticArray!(typeof(subobj)))
-                if (pointsTo(subobj, target)) return true;
+            static if (!isStaticArray!(Subobj))
+                if (pointsTo(source.tupleof[i], target)) return true;
         }
         return false;
     }
@@ -413,6 +413,14 @@ unittest
     auto a8 = new double[][1];
     a8[0] = a7;
     assert(!pointsTo(a8[0], a8[0]));
+
+    // don't invoke postblit on subobjects
+    {
+        static struct NoCopy { this(this) { assert(0); } }
+        static struct Holder { NoCopy a, b, c; }
+        Holder h;
+        pointsTo(h, h);
+    }
 }
 
 /*********************
