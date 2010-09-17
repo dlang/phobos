@@ -691,10 +691,13 @@ unittest
     assert (aa.length > 0);
     foreach (n, v; aa)
     {
-        // Due to what seems to be a bug in the Wine cmd shell,
-        // sometimes there is an environment variable with an empty
-        // name, which GetEnvironmentVariable() refuses to retrieve.
-        version(Windows)  if (n.length == 0) continue;
+        // Wine has some bugs related to environment variables:
+        //  - Wine allows the existence of an env. variable with the name
+        //    "\0", but GetEnvironmentVariable refuses to retrieve it.
+        //  - If an env. variable has zero length, i.e. is "\0",
+        //    GetEnvironmentVariable should return 1.  Instead it returns
+        //    0, indicating the variable doesn't exist.
+        version(Windows)  if (n.length == 0 || v.length == 0) continue;
 
         assert (v == environment[n]);
     }
