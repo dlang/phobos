@@ -14,8 +14,8 @@ Synopsis:
 // value tuples
 alias Tuple!(float, "x", float, "y", float, "z") Coord;
 Coord c;
-c.field[1] = 1;   // access by index
-c.z = 1;          // access by given name
+c[1] = 1;       // access by index
+c.z = 1;        // access by given name
 alias Tuple!(string, string) DicEntry; // names can be omitted
 
 // enumerated values with conversions to and from strings
@@ -52,8 +52,8 @@ Authors:   $(WEB erdani.org, Andrei Alexandrescu),
  */
 module std.typecons;
 import core.memory, core.stdc.stdlib;
-import std.algorithm, std.array, std.conv, std.exception, std.metastrings,
-    std.stdio, std.traits, std.typetuple, std.range;
+import std.algorithm, std.array, std.conv, std.exception, std.format,
+    std.metastrings, std.stdio, std.traits, std.typetuple, std.range;
 
 /**
 Encapsulates unique ownership of a resource.  Resource of type T is
@@ -222,47 +222,14 @@ unittest
 }
 +/
 
-private template tupleFields(uint index, T...)
-{
-    static if (!T.length)
-    {
-        enum string tupleFields = "";
-    }
-    else
-    {
-        static if (is(typeof(T[1]) : string))
-        {
-            enum string tupleFields = "Types["~ToString!(index)~"] "~T[1]~"; "
-                ~ tupleFields!(index + 1, T[2 .. $]);
-        }
-        else
-        {
-            enum string tupleFields = "Types["~ToString!(index)~"] _"
-                ~ToString!(index)~"; "
-                ~ tupleFields!(index + 1, T[1 .. $]);
-        }
-    }
-}
-
-// Tuple
-private template noStrings(T...)
-{
-    template A(U...) { alias U A; }
-    static if (T.length == 0)
-        alias A!() Result;
-    else static if (is(typeof(T[0]) : string))
-        alias noStrings!(T[1 .. $]).Result Result;
-    else
-        alias A!(T[0], noStrings!(T[1 .. $]).Result) Result;
-}
 
 /**
 Tuple of values, for example $(D Tuple!(int, string)) is a record that
 stores an $(D int) and a $(D string). $(D Tuple) can be used to bundle
 values together, notably when returning multiple values from a
 function. If $(D obj) is a tuple, the individual members are
-accessible with the syntax $(D obj.field[0]) for the first field, $(D
-obj.field[1]) for the second, and so on.
+accessible with the syntax $(D obj[0]) for the first field, $(D obj[1])
+for the second, and so on.
 
 The choice of zero-based indexing instead of one-base indexing was
 motivated by the ability to use value tuples with various compile-time
@@ -274,11 +241,11 @@ Example:
 ----
 Tuple!(int, int) point;
 // assign coordinates
-point.field[0] = 5;
-point.field[1] = 6;
+point[0] = 5;
+point[1] = 6;
 // read coordinates
-auto x = point.field[0];
-auto y = point.field[1];
+auto x = point[0];
+auto y = point[1];
 ----
 
 Tuple members can be named. It is legal to mix named and unnamed
@@ -291,8 +258,8 @@ alias Tuple!(int, "index", string, "value") Entry;
 Entry e;
 e.index = 4;
 e.value = "Hello";
-assert(e.field[1] == "Hello");
-assert(e.field[0] == 4);
+assert(e[1] == "Hello");
+assert(e[0] == 4);
 ----
 
 Tuples with named fields are distinct types from tuples with unnamed
@@ -308,34 +275,108 @@ Tuple!(int, int) point2;
 assert(!is(typeof(point1) == typeof(point2))); // passes
 ----
 */
-struct Tuple(T...)
+struct Tuple(Specs...)
 {
+private:
+
+    // Parse (type,name) pairs (FieldSpecs) out of the specified
+    // arguments. Some fields would have name, others not.
+    template parseSpecs(Specs...)
+    {
+        static if (Specs.length == 0)
+        {
+            alias TypeTuple!() parseSpecs;
+        }
+        else static if (is(Specs[0]))
+        {
+            static if (is(typeof(Specs[1]) : string))
+            {
+                alias TypeTuple!(FieldSpec!(Specs[0 .. 2]),
+                                 parseSpecs!(Specs[2 .. $])) parseSpecs;
+            }
+            else
+            {
+                alias TypeTuple!(FieldSpec!(Specs[0]),
+                                 parseSpecs!(Specs[1 .. $])) parseSpecs;
+            }
+        }
+        else
+        {
+            static assert(0, "Attempted to instantiate Tuple with an "
+                            ~"invalid argument: "~ Specs[0].stringof);
+        }
+    }
+
+    template FieldSpec(T, string s = "")
+    {
+        alias T Type;
+        alias s name;
+    }
+
+    alias parseSpecs!Specs fieldSpecs;
+
+    // Used with staticMap.
+    template extractType(alias spec) { alias spec.Type extractType; }
+    template extractName(alias spec) { alias spec.name extractName; }
+
+    // Generates named fields as follows:
+    //    alias Identity!(field[0]) name_0;
+    //    alias Identity!(field[1]) name_1;
+    //      :
+    // NOTE: field[k] is an expression (which yields a symbol of a
+    //       variable) and can't be aliased directly.
+    static string injectNamedFields()
+    {
+        string decl = "";
+        foreach (i, name; staticMap!(extractName, fieldSpecs))
+        {
+            auto    field = text("Identity!(field[", i, "])");
+            auto numbered = text("_", i);
+            decl ~= text("alias ", field, " ", numbered, ";");
+            if (!name.empty)
+            {
+                decl ~= text("alias ", numbered, " ", name, ";");
+            }
+        }
+        return decl;
+    }
+
+    // Returns Specs for a subtuple this[from .. to] preserving field
+    // names if any.
+    template sliceSpecs(size_t from, size_t to)
+    {
+        alias staticMap!(expandSpec,
+                         fieldSpecs[from .. to]) sliceSpecs;
+    }
+
+    template expandSpec(alias spec)
+    {
+        static if (spec.name.empty)
+        {
+            alias TypeTuple!(spec.Type) expandSpec;
+        }
+        else
+        {
+            alias TypeTuple!(spec.Type, spec.name) expandSpec;
+        }
+    }
+
 public:
 /**
    The type of the tuple's components.
 */
-    alias noStrings!(T).Result Types;
-    union
-    {
-        Types field;
-        mixin(tupleFields!(0, T));
-    }
+    alias staticMap!(extractType, fieldSpecs) Types;
+
+    Types field;
+    mixin(injectNamedFields());
     alias field expand;
-    // @@@BUG 2800
-    //alias field this;
+    alias field this;
 
     // This mitigates breakage of old code now that std.range.Zip uses
     // Tuple instead of the old Proxy.  It's intentionally lacking ddoc
     // because it should eventually be deprecated.
     auto at(size_t index)() {
         return field[index];
-    }
-
-/**
-   Default constructor.
- */
-    this(U...)(U values) if (U.length == 0)
-    {
     }
 
 /**
@@ -355,9 +396,19 @@ public:
    must be implicitly assignable to the respective element of the
    target.
  */
-    this(V=void, U...)(Tuple!(U) another)
+    this(U)(U another) if (isTuple!U)
     {
-        static assert(U.length == Types.length);
+        static assert(field.length == another.field.length,
+                      "Length mismatch in attempting to construct a "
+                      ~ typeof(this).stringof ~" with a "~ U.stringof);
+        static if (is(Types == U.Types))
+        {
+            if (!__ctfe)
+            {
+                swap(this, another);
+                return;
+            }
+        }
         foreach (i, Unused; Types)
         {
             field[i] = another.field[i];
@@ -367,7 +418,7 @@ public:
 /**
    Comparison for equality.
  */
-    bool opEquals(T)(T rhs) if (is(typeof(T.field)))
+    bool opEquals(R)(R rhs) if (isTuple!R)
     {
         static assert(field.length == rhs.field.length,
                 "Length mismatch in attempting to compare a "
@@ -383,7 +434,7 @@ public:
 /**
    Comparison for ordering.
  */
-    int opCmp(T)(T rhs) if (is(typeof(T.field)))
+    int opCmp(R)(R rhs) if (isTuple!R)
     {
         static assert(field.length == rhs.field.length,
                 "Length mismatch in attempting to compare a "
@@ -399,18 +450,33 @@ public:
         return 0;
     }
 
-// Should really be opAssign, not assign
 /**
    Assignment from another tuple. Each element of the source must be
    implicitly assignable to the respective element of the target.
  */
-    void assign(U)(U rhs) if (is(typeof(U.init.field[0])))
+    void opAssign(R)(R rhs) if (isTuple!R)
     {
+        static assert(field.length == rhs.field.length,
+                      "Length mismatch in attempting to assign a "
+                     ~ R.stringof ~" to a "~ typeof(this).stringof);
+        // Do not swap; opAssign should be called on the fields.
         foreach (i, Unused; Types)
         {
             field[i] = rhs.field[i];
         }
     }
+
+    deprecated void assign(R)(R rhs) if (isTuple!R)
+    {
+        this = rhs;
+    }
+
+    // @@@BUG4424@@@ workaround
+    private mixin template _workaround4424()
+    {
+        @disable void opAssign(...) { assert(0); }
+    }
+    mixin _workaround4424;
 
 /**
    Takes a slice of the tuple.
@@ -419,14 +485,15 @@ public:
 
 ----
 Tuple!(int, string, float, double) a;
-a.field[1] = "abc";
-a.field[2] = 4.5;
+a[1] = "abc";
+a[2] = 4.5;
 auto s = a.slice!(1, 3);
 static assert(is(typeof(s) == Tuple!(string, float)));
-assert(s.field[0] == "abc" && s.field[1] == 4.5);
+assert(s[0] == "abc" && s[1] == 4.5);
 ----
  */
-    ref Tuple!(Types[from .. to]) slice(uint from, uint to)()
+    @property
+    ref Tuple!(sliceSpecs!(from, to)) slice(uint from, uint to)()
     {
         return *cast(typeof(return) *) &(field[from]);
     }
@@ -434,40 +501,44 @@ assert(s.field[0] == "abc" && s.field[1] == 4.5);
     unittest
     {
         .Tuple!(int, string, float, double) a;
-        a.field[1] = "abc";
-        a.field[2] = 4.5;
+        a[1] = "abc";
+        a[2] = 4.5;
         auto s = a.slice!(1, 3);
         static assert(is(typeof(s) == Tuple!(string, float)));
-        assert(s.field[0] == "abc" && s.field[1] == 4.5);
+        assert(s[0] == "abc" && s[1] == 4.5);
     }
 
 /**
-    The length of the tuple.
-*/
-enum length = field.length;
-
-    static string toStringHeader = Tuple.stringof ~ "(";
-    static string toStringFooter = ")";
-    static string toStringSeparator = ", ";
+   The length of the tuple.
+ */
+    enum length = field.length;
 
 /**
    Converts to string.
  */
     string toString()
     {
+        enum header = typeof(this).stringof ~ "(",
+             footer = ")",
+             separator = ", ";
         Appender!string app;
-        app.put(toStringHeader);
-        foreach (i, Unused; noStrings!(T).Result)
+        app.put(header);
+        foreach (i, Unused; Types)
         {
-            static if (i > 0) app.put(toStringSeparator);
-            static if (is(typeof(to!string(field[i]))))
-                app.put(to!string(field[i]));
-            else
-                app.put(typeof(field[i]).stringof);
+            static if (i > 0)
+            {
+                app.put(separator);
+            }
+            formattedWrite(app, "%s", field[i]);
         }
-        app.put(toStringFooter);
+        app.put(footer);
         return app.data;
     }
+}
+
+private template Identity(alias T)
+{
+    alias T Identity;
 }
 
 unittest
@@ -483,41 +554,122 @@ unittest
     {
         Tuple!(short, double) b;
         static assert(b.length == 2);
-        b.field[1] = 5;
+        b[1] = 5;
         auto a = Tuple!(int, float)(b);
-        assert(a.field[0] == 0 && a.field[1] == 5);
+        assert(a[0] == 0 && a[1] == 5);
         a = Tuple!(int, float)(1, 2);
-        assert(a.field[0] == 1 && a.field[1] == 2);
+        assert(a[0] == 1 && a[1] == 2);
         auto c = Tuple!(int, "a", double, "b")(a);
-        assert(c.field[0] == 1 && c.field[1] == 2);
+        assert(c[0] == 1 && c[1] == 2);
     }
-    Tuple!(int, int) nosh;
-    nosh.field[0] = 5;
-    assert(nosh.field[0] == 5);
-    // Tuple!(int, int) nosh1;
-    // assert(!is(typeof(nosh) == typeof(nosh1)));
-    assert(nosh.toString == "Tuple!(int,int)(5, 0)", nosh.toString);
-    Tuple!(int, short) yessh;
-    nosh.assign(yessh);
-
-    Tuple!(int, "a", float, "b") x;
-    static assert(x.a.offsetof == x.field[0].offsetof);
-    static assert(x.b.offsetof == x.field[1].offsetof);
-    x.b = 4.5;
-    x.a = 5;
-    assert(x.field[0] == 5 && x.field[1] == 4.5);
-    assert(x.a == 5 && x.b == 4.5);
-
+    {
+        Tuple!(int, int) nosh;
+        nosh[0] = 5;
+        assert(nosh[0] == 5);
+        // Tuple!(int, int) nosh1;
+        // assert(!is(typeof(nosh) == typeof(nosh1)));
+        assert(nosh.toString == "Tuple!(int,int)(5, 0)", nosh.toString);
+        Tuple!(int, short) yessh;
+        nosh = yessh;
+    }
+    {
+        Tuple!(int, "a", float, "b") x;
+        static assert(x.a.offsetof == x[0].offsetof);
+        static assert(x.b.offsetof == x[1].offsetof);
+        x.b = 4.5;
+        x.a = 5;
+        assert(x[0] == 5 && x[1] == 4.5);
+        assert(x.a == 5 && x.b == 4.5);
+    }
     {
         Tuple!(int, float) a, b;
-        a.field[0] = 5;
-        b.field[0] = 6;
+        a[0] = 5;
+        b[0] = 6;
         assert(a < b);
-        a.field[0] = 6;
-        b.field[0] = 6;
-        a.field[1] = 7;
-        b.field[1] = 6;
+        a[0] = 6;
+        b[0] = 6;
+        a[1] = 7;
+        b[1] = 6;
         assert(b < a);
+    }
+    // indexing
+    {
+        Tuple!(int, real, string) t;
+        static assert(is(typeof(t[0]) == int));
+        static assert(is(typeof(t[1]) == real));
+        static assert(is(typeof(t[2]) == string));
+        int* p0 = &t[0];
+        real* p1 = &t[1];
+        string* p2 = &t[2];
+        t[0] = 10;
+        t[1] = -200.0L;
+        t[2] = "tuple";
+        assert(*p0 == t[0]);
+        assert(*p1 == t[1]);
+        assert(*p2 == t[2]);
+    }
+    // slicing
+    {
+        Tuple!(int, "x", real, "y", double, "z", string) t;
+        t[0] = 10;
+        t[1] = 11;
+        t[2] = 12;
+        t[3] = "abc";
+        auto a = t.slice!(0, 3);
+        assert(a.length == 3);
+        assert(a.x == t.x);
+        assert(a.y == t.y);
+        assert(a.z == t.z);
+        auto b = t.slice!(2, 4);
+        assert(b.length == 2);
+        assert(b.z == t.z);
+        assert(b[1] == t[3]);
+    }
+    // nesting
+    {
+        Tuple!(Tuple!(int, real), Tuple!(string, "s")) t;
+        static assert(is(typeof(t[0]) == Tuple!(int, real)));
+        static assert(is(typeof(t[1]) == Tuple!(string, "s")));
+        static assert(is(typeof(t[0][0]) == int));
+        static assert(is(typeof(t[0][1]) == real));
+        static assert(is(typeof(t[1].s) == string));
+        t[0] = tuple(10, 20.0L);
+        t[1].s = "abc";
+        assert(t[0][0] == 10);
+        assert(t[0][1] == 20.0L);
+        assert(t[1].s == "abc");
+    }
+    // non-POD
+    {
+        static struct S
+        {
+            int count;
+            this(this) { ++count; }
+            ~this() { --count; }
+            void opAssign(S rhs) { count = rhs.count; }
+        }
+        Tuple!(S, S) ss;
+        Tuple!(S, S) ssCopy = ss;
+        assert(ssCopy[0].count == 1);
+        assert(ssCopy[1].count == 1);
+        ssCopy[1] = ssCopy[0];
+        assert(ssCopy[1].count == 2);
+    }
+    // bug 2800
+    {
+        static struct R
+        {
+            Tuple!(int, int) _front;
+            @property ref Tuple!(int, int) front() { return _front;  }
+            @property bool empty() { return _front[0] >= 10; }
+            void popFront() { ++_front[0]; }
+        }
+        foreach (a; R())
+        {
+            static assert(is(typeof(a) == Tuple!(int, int)));
+            assert(0 <= a[0] && a[0] < 10);
+            assert(a[1] == 0);
+        }
     }
 }
 
@@ -528,9 +680,9 @@ the arguments.
 Example:
 ----
 auto value = tuple(5, 6.7, "hello");
-assert(value.field[0] == 5);
-assert(value.field[1] == 6.7);
-assert(value.field[2] == "hello");
+assert(value[0] == 5);
+assert(value[1] == 6.7);
+assert(value[2] == "hello");
 ----
 */
 
@@ -539,6 +691,40 @@ Tuple!(T) tuple(T...)(T args)
     typeof(return) result;
     static if (T.length > 0) result.field = args;
     return result;
+}
+
+/**
+Returns $(D true) if and only if $(D T) is an instance of the
+$(D Tuple) struct template.
+ */
+template isTuple(T)
+{
+    static if (is(Unqual!T Unused : Tuple!Specs, Specs...))
+    {
+        enum isTuple = true;
+    }
+    else
+    {
+        enum isTuple = false;
+    }
+}
+
+unittest
+{
+    static assert(isTuple!(Tuple!()));
+    static assert(isTuple!(Tuple!(int)));
+    static assert(isTuple!(Tuple!(int, real, string)));
+    static assert(isTuple!(Tuple!(int, "x", real, "y")));
+    static assert(isTuple!(Tuple!(int, Tuple!(real), string)));
+
+    static assert(isTuple!(const Tuple!(int)));
+    static assert(isTuple!(immutable Tuple!(int)));
+
+    static assert(!isTuple!(int));
+    static assert(!isTuple!(const int));
+
+    struct S {}
+    static assert(!isTuple!(S));
 }
 
 
