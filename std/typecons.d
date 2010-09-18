@@ -474,7 +474,7 @@ public:
     // @@@BUG4424@@@ workaround
     private mixin template _workaround4424()
     {
-        @disable void opAssign(...) { assert(0); }
+        @disable void opAssign(typeof(this) );
     }
     mixin _workaround4424;
 
