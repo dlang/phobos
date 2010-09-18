@@ -3047,6 +3047,8 @@ unittest
     // Test infiniteness propagation.
     static assert(isInfinite!(typeof(zip(repeat(1), repeat(1)))));
 
+    alias Zip!(immutable int[], immutable float[]) FOO;
+
     foreach(t; stuff.expand) {
         auto arr1 = t.field[0];
         auto arr2 = t.field[1];

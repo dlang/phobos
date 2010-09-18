@@ -3933,7 +3933,9 @@ Returns: A pointer to the newly constructed object.
  */
 T* emplace(T, Args...)(T* chunk, Args args) if (!is(T == class))
 {
-    return emplace!T((cast(void*) chunk)[0 .. T.sizeof], args);
+    // Since we're treating the memory pointed to by chunk as a raw memory
+    // block, we need to cast away any qualifiers.
+    return cast(T*) emplace!(Unqual!T)((cast(void*) chunk)[0 .. T.sizeof], args);
 }
 
 // emplace
