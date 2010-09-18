@@ -183,13 +183,13 @@ $(EXTRA_MODULES_LINUX) $(EXTRA_MODULES_WIN32))
 
 # C files to be part of the build
 C_MODULES = $(addprefix etc/c/zlib/, adler32 compress crc32 deflate	\
-	gzio infback inffast inflate inftrees trees uncompr zutil)
+	gzclose gzlib gzread gzwrite infback inffast inflate inftrees trees uncompr zutil)
 C_FILES = $(addsuffix .c,$(C_MODULES))
 # C files that are not compiled (right now only zlib-related)
 C_EXTRAS = $(addprefix etc/c/zlib/, algorithm.txt ChangeLog crc32.h	\
 deflate.h example.c inffast.h inffixed.h inflate.h inftrees.h		\
 linux.mak minigzip.c osx.mak README trees.h win32.mak zconf.h		\
-zconf.in.h zlib.3 zlib.h zutil.h)
+gzguts.h zlib.3 zlib.h zutil.h)
 # Aggregate all C files over all OSs (this is for the zip file)
 ALL_C_FILES = $(C_FILES) $(C_EXTRAS)
 

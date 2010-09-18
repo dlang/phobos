@@ -281,38 +281,44 @@ SRC_ETC=
 
 SRC_ETC_C= etc\c\zlib.d
 
-SRC_ZLIB= etc\c\zlib\trees.h \
+SRC_ZLIB= \
+	etc\c\zlib\crc32.h \
+	etc\c\zlib\deflate.h \
+	etc\c\zlib\gzguts.h \
 	etc\c\zlib\inffixed.h \
 	etc\c\zlib\inffast.h \
-	etc\c\zlib\crc32.h \
-	etc\c\zlib\algorithm.txt \
-	etc\c\zlib\uncompr.c \
-	etc\c\zlib\compress.c \
-	etc\c\zlib\deflate.h \
 	etc\c\zlib\inftrees.h \
-	etc\c\zlib\infback.c \
-	etc\c\zlib\zutil.c \
-	etc\c\zlib\crc32.c \
 	etc\c\zlib\inflate.h \
-	etc\c\zlib\example.c \
-	etc\c\zlib\inffast.c \
-	etc\c\zlib\trees.c \
-	etc\c\zlib\inflate.c \
-	etc\c\zlib\gzio.c \
+	etc\c\zlib\trees.h \
 	etc\c\zlib\zconf.h \
-	etc\c\zlib\zconf.in.h \
-	etc\c\zlib\minigzip.c \
-	etc\c\zlib\deflate.c \
-	etc\c\zlib\inftrees.c \
-	etc\c\zlib\zutil.h \
-	etc\c\zlib\zlib.3 \
 	etc\c\zlib\zlib.h \
+	etc\c\zlib\zutil.h \
 	etc\c\zlib\adler32.c \
+	etc\c\zlib\compress.c \
+	etc\c\zlib\crc32.c \
+	etc\c\zlib\deflate.c \
+	etc\c\zlib\example.c \
+	etc\c\zlib\gzclose.c \
+	etc\c\zlib\gzlib.c \
+	etc\c\zlib\gzread.c \
+	etc\c\zlib\gzwrite.c \
+	etc\c\zlib\infback.c \
+	etc\c\zlib\inffast.c \
+	etc\c\zlib\inflate.c \
+	etc\c\zlib\inftrees.c \
+	etc\c\zlib\minigzip.c \
+	etc\c\zlib\trees.c \
+	etc\c\zlib\uncompr.c \
+	etc\c\zlib\zutil.c \
+	etc\c\zlib\algorithm.txt \
+	etc\c\zlib\zlib.3 \
 	etc\c\zlib\ChangeLog \
 	etc\c\zlib\README \
 	etc\c\zlib\win32.mak \
 	etc\c\zlib\linux.mak \
-	etc\c\zlib\osx.mak
+	etc\c\zlib\osx.mak \
+	etc\c\zlib\freebsd.mak \
+	etc\c\zlib\solaris.mak
 
 phobos.lib : $(OBJS) $(SRCS) \
 	etc\c\zlib\zlib.lib $(DRUNTIMELIB) win32.mak

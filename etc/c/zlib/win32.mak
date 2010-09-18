@@ -7,46 +7,65 @@ LDFLAGS=
 O=.obj
 
 # variables
-OBJS = adler32$(O) compress$(O) crc32$(O) gzio$(O) uncompr$(O) deflate$(O) \
-       trees$(O) zutil$(O) inflate$(O) infback$(O) inftrees$(O) inffast$(O)
+
+OBJS = adler32$(O) compress$(O) crc32$(O) deflate$(O) gzclose$(O) gzlib$(O) gzread$(O) \
+	gzwrite$(O) infback$(O) inffast$(O) inflate$(O) inftrees$(O) trees$(O) uncompr$(O) zutil$(O)
+
 
 all:  zlib.lib example.exe minigzip.exe
 
-adler32.obj: adler32.c zlib.h zconf.h
-	$(CC) -c $(cvarsdll) $(CFLAGS) $*.c
+adler32.obj: zutil.h zlib.h zconf.h
+	$(CC) -c $(CFLAGS) $*.c
 
-compress.obj: compress.c zlib.h zconf.h
-	$(CC) -c $(cvarsdll) $(CFLAGS) $*.c
+zutil.obj: zutil.h zlib.h zconf.h
+	$(CC) -c $(CFLAGS) $*.c
 
-crc32.obj: crc32.c zlib.h zconf.h
-	$(CC) -c $(cvarsdll) $(CFLAGS) $*.c
+gzclose.obj: zlib.h zconf.h gzguts.h
+	$(CC) -c $(CFLAGS) $*.c
 
-deflate.obj: deflate.c deflate.h zutil.h zlib.h zconf.h
-	$(CC) -c $(cvarsdll) $(CFLAGS) $*.c
+gzlib.obj: zlib.h zconf.h gzguts.h
+	$(CC) -c $(CFLAGS) $*.c
 
-gzio.obj: gzio.c zutil.h zlib.h zconf.h
-	$(CC) -c $(cvarsdll) $(CFLAGS) $*.c
+gzread.obj: zlib.h zconf.h gzguts.h
+	$(CC) -c $(CFLAGS) $*.c
 
-infback.obj: infback.c zlib.h zconf.h inftrees.h inflate.h inffast.h
-	$(CC) -c $(cvarsdll) $(CFLAGS) $*.c
+gzwrite.obj: zlib.h zconf.h gzguts.h
+	$(CC) -c $(CFLAGS) $*.c
 
-inflate.obj: inflate.c zlib.h zconf.h inftrees.h inflate.h inffast.h
-	$(CC) -c $(cvarsdll) $(CFLAGS) $*.c
+compress.obj: zlib.h zconf.h
+	$(CC) -c $(CFLAGS) $*.c
 
-inftrees.obj: inftrees.c zlib.h zconf.h inftrees.h
-	$(CC) -c $(cvarsdll) $(CFLAGS) $*.c
+example.obj: zlib.h zconf.h
+	$(CC) -c $(CFLAGS) $*.c
 
-inffast.obj: inffast.c zlib.h zconf.h inftrees.h inflate.h inffast.h
-	$(CC) -c $(cvarsdll) $(CFLAGS) $*.c
+minigzip.obj: zlib.h zconf.h
+	$(CC) -c $(CFLAGS) $*.c
 
-trees.obj: trees.c deflate.h zutil.h zlib.h zconf.h trees.h
-	$(CC) -c $(cvarsdll) $(CFLAGS) $*.c
+uncompr.obj: zlib.h zconf.h
+	$(CC) -c $(CFLAGS) $*.c
 
-uncompr.obj: uncompr.c zlib.h zconf.h
-	$(CC) -c $(cvarsdll) $(CFLAGS) $*.c
+crc32.obj: zutil.h zlib.h zconf.h crc32.h
+	$(CC) -c $(CFLAGS) $*.c
 
-zutil.obj: zutil.c zutil.h zlib.h zconf.h
-	$(CC) -c $(cvarsdll) $(CFLAGS) $*.c
+deflate.obj: deflate.h zutil.h zlib.h zconf.h
+	$(CC) -c $(CFLAGS) $*.c
+
+infback.obj: zutil.h zlib.h zconf.h inftrees.h inflate.h inffast.h inffixed.h
+	$(CC) -c $(CFLAGS) $*.c
+
+inflate.obj: zutil.h zlib.h zconf.h inftrees.h inflate.h inffast.h inffixed.h
+	$(CC) -c $(CFLAGS) $*.c
+
+inffast.obj: zutil.h zlib.h zconf.h inftrees.h inflate.h inffast.h
+	$(CC) -c $(CFLAGS) $*.c
+
+inftrees.obj: zutil.h zlib.h zconf.h inftrees.h
+	$(CC) -c $(CFLAGS) $*.c
+
+trees.obj: deflate.h zutil.h zlib.h zconf.h trees.h
+	$(CC) -c $(CFLAGS) $*.c
+
+
 
 example.obj: example.c zlib.h zconf.h
 	$(CC) -c $(cvarsdll) $(CFLAGS) $*.c
@@ -65,7 +84,7 @@ minigzip.exe: minigzip.obj zlib.lib
 
 test: example.exe minigzip.exe
 	example
-	echo hello world | minigzip | minigzip -d 
+	echo hello world | minigzip | minigzip -d
 
 clean:
 	del *.obj
