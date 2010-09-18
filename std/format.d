@@ -1297,15 +1297,27 @@ void formatValue(Writer, T, Char)(Writer w, T val,
 if (isAssociativeArray!T)
 {
     bool firstTime = true;
+    auto vf = f;
     foreach (ref k, v; val)
     {
         if (firstTime) firstTime = false;
         else put(w, ' ');
         formatValue(w, k, f);
         put(w, ':');
-        formatValue(w, v, f);
+        formatValue(w, v, vf);
     }
 }
+
+
+unittest
+{
+    FormatSpec!char f;
+    auto a = appender!string();
+    int[string] aa = ["aaa": 1, "bbb": 2, "ccc": 3];
+    formatValue(a, aa, f);
+    assert(a.data == "aaa:1 bbb:2 ccc:3");
+}
+
 
 /**
    Associative arrays are formatted by using $(D ':') and $(D ' ') as
