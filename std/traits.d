@@ -402,19 +402,20 @@ unittest
 }
 
 
-private @safe void dummySafeFunc(alias FN)()
+private @safe void dummySafeFunc(alias func)()
 {
-        alias ParameterTypeTuple!FN Params;
+        alias ParameterTypeTuple!func Params;
         static if (Params.length)
         {
                 Params args;
-                FN(args);
+                func(args);
         }
         else
         {
-                FN();
+                func();
         }
 }
+
 
 
 /**
@@ -434,18 +435,19 @@ bool c = isSafe!(mul);
 assert(c == true);
 --------------------
  */
-template isSafe(alias FN)
+template isSafe(alias func)
 {
-    static if (is(typeof(FN) == function))
+    static if (is(typeof(func) == function))
     {
-        enum isSafe = (functionAttributes!(FN) == FunctionAttribute.SAFE
-                    || functionAttributes!(FN) == FunctionAttribute.TRUSTED);
+        enum isSafe = (functionAttributes!(func) == FunctionAttribute.SAFE
+                    || functionAttributes!(func) == FunctionAttribute.TRUSTED);
     }
     else
     {
-        enum isSafe = is(typeof({dummySafeFunc!FN();}()));
+        enum isSafe = is(typeof({dummySafeFunc!func();}()));
     }
 }
+
 
 @safe
 unittest
@@ -464,6 +466,52 @@ unittest
 
 
 /**
+Checks the all functions are @safe or @trusted
+
+Example:
+--------------------
+@system int add(int a, int b) {return a+b;}
+@safe int sub(int a, int b) {return a-b;}
+@trusted int mul(int a, int b) {return a*b;}
+
+bool a = areAllSafe!(add, sub);
+assert(a == false);
+bool b = areAllSafe!(sub, mul);
+assert(b == true);
+--------------------
+ */
+template areAllSafe(funcs...)
+    if (funcs.length > 0)
+{
+    static if (funcs.length == 1)
+    {
+        enum areAllSafe = isSafe!(funcs[0]);
+    }
+    else static if (isSafe!(funcs[0]))
+    {
+        enum areAllSafe = areAllSafe!(funcs[1..$]);
+    }
+    else
+    {
+        enum areAllSafe = false;
+    }
+}
+
+
+@safe
+unittest
+{
+    interface Set
+    {
+        int systemF() @system;
+        int trustedF() @trusted;
+        int safeF() @safe;
+    }
+    static assert(areAllSafe!((int a){}, Set.safeF));
+    static assert(!areAllSafe!(Set.trustedF, Set.systemF));
+}
+
+/**
 Checks the func that is @system
 
 Example:
@@ -480,9 +528,9 @@ bool c = isUnsafe!(mul);
 assert(c == false);
 --------------------
  */
-template isUnsafe(alias FN)
+template isUnsafe(alias func)
 {
-        enum isUnsafe = !isSafe!FN;
+    enum isUnsafe = !isSafe!func;
 }
 
 @safe

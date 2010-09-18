@@ -714,6 +714,88 @@ unittest
 //###
 //##############################################################################
 //##############################################################################
+// workaround for bug4886
+@safe pure nothrow
+size_t lengthof(aliases...)()
+{
+    return aliases.length;
+}
+
+
+/*******************************************************************************
+ * Benchmarks code for speed assessment and comparison.
+ * 
+ * Params:
+ * 
+ * fun = aliases of callable objects (e.g. function names). Each should
+ * take no arguments.
+ * 
+ * times = The number of times each function is to be executed.
+ * 
+ * Returns:
+ * 
+ * An array of $(D n) $(D uint)s. Element at slot $(D i) contains the
+ * number of milliseconds spent in calling the $(D i)th function $(D
+ * times) times.
+ * 
+ * Examples:
+ *------------------------------------------------------------------------------
+ *int a;
+ *void f0() { }
+ *void f1() { auto b = a; }
+ *void f2() { auto b = to!(string)(a); }
+ *auto r = benchmark!(f0, f1, f2)(10_000_000);
+ *------------------------------------------------------------------------------
+ */
+@safe
+Ticks[lengthof!(fun)()] benchmark(fun...)(uint times)
+    if(areAllSafe!fun)
+{
+    Ticks[lengthof!(fun)()] result;
+    StopWatch sw;
+    sw.start();
+    foreach (i, Unused; fun)
+    {
+        sw.reset();
+        foreach (j; 0 .. times)
+        {
+            fun[i]();
+        }
+        result[i] = sw.peek();
+    }
+    return result;
+}
+
+
+@system
+Ticks[lengthof!(fun)()] benchmark(fun...)(uint times)
+    if(!areAllSafe!fun)
+{
+    Ticks[lengthof!(fun)()] result;
+    StopWatch sw;
+    sw.start();
+    foreach (i, Unused; fun)
+    {
+        sw.reset();
+        foreach (j; 0 .. times)
+        {
+            fun[i]();
+        }
+        result[i] = sw.peek();
+    }
+    return result;
+}
+
+
+unittest
+{
+    int a;
+    void f0() { }
+    //void f1() { auto b = to!(string)(a); }
+    void f2() { auto b = (a); }
+    auto r = benchmark!(f0, f2)(100);
+}
+
 
 /*******************************************************************************
  * Return value of benchmark with two functions comparing.
@@ -764,8 +846,12 @@ immutable struct ComparingBenchmarkResult
 
 /*******************************************************************************
  * Benchmark with two functions comparing.
- *
- * Excample:
+ * 
+ * Params:
+ * baseFunc   = The function to become the base of the speed.
+ * targetFunc = The function that wants to measure speed.
+ * times      = The number of times each function is to be executed.
+ * Examples:
  *------------------------------------------------------------------------------
  *void f1() {
  *    // ...
@@ -782,54 +868,22 @@ immutable struct ComparingBenchmarkResult
  */
 @safe
 ComparingBenchmarkResult comparingBenchmark(
-    alias baseFunc, alias targetFunc, int CNT = 0xfff)()
+    alias baseFunc, alias targetFunc, int times = 0xfff)()
     if (isSafe!baseFunc && isSafe!targetFunc)
 {
-    Ticks b, t;
-    StopWatch sw;
-    foreach (Unused; 0..CNT)
-    {
-        sw.reset();
-        sw.start();
-        baseFunc();
-        sw.stop();
-        b += sw.peek();
-
-        sw.reset();
-        sw.start();
-        targetFunc();
-        sw.stop();
-        t += sw.peek();
-
-    }
-    return ComparingBenchmarkResult(b,t);
+    auto t = benchmark!(baseFunc, targetFunc)(times);
+    return ComparingBenchmarkResult(t[0], t[1]);
 }
 
 
 /// ditto
 @system
 ComparingBenchmarkResult comparingBenchmark(
-    alias baseFunc, alias targetFunc, int CNT = 0xfff)()
+    alias baseFunc, alias targetFunc, int times = 0xfff)()
     if (!(isSafe!baseFunc && isSafe!targetFunc))
 {
-    Ticks b, t;
-    StopWatch sw;
-    foreach (Unused; 0..CNT)
-    {
-        sw.reset();
-        sw.start();
-        baseFunc();
-        sw.stop();
-        b += sw.peek();
-
-        sw.reset();
-        sw.start();
-        targetFunc();
-        sw.stop();
-        t += sw.peek();
-
-    }
-    return ComparingBenchmarkResult(b,t);
+    auto t = benchmark!(baseFunc, targetFunc)(times);
+    return ComparingBenchmarkResult(t[0], t[1]);
 }
 
 
@@ -870,10 +924,11 @@ version (D_Ddoc)
     /***************************************************************************
      * Scope base measuring time.
      *
-     * When a value that is returned by this function is destroyed, FN will run.
-     * FN is unaly function that requires Ticks.
+     * When a value that is returned by this function is destroyed,
+     * func will run.
+     * func is unaly function that requires Ticks.
      *
-     * Excample:
+     * Examples:
      *--------------------------------------------------------------------------
      *writeln("benchmark start!");
      *{
@@ -945,4 +1000,3 @@ unittest
     }
     +/
 }
- 
