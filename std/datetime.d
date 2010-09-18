@@ -1,18 +1,18 @@
 /*******************************************************************************
  * Platform-independent high precision StopWatch.
- *
- * This module provides StopWatch that uses performance counter.
- * On Windows, This uses QueryPerformanceCounter.
- * For Posix, This uses clock_gettime if available, gettimeofday otherwise.
- *
- * But this has dispersion in accuracy by environment.
- * It is impossible to remove this dispersion. This depends on multi task
- * system for example overhead from change of the context switch of the thread.
- *
+ * 
+ * This module provide:
+ * $(UL
+ *     $(LI StopWatch)
+ *     $(LI Benchmarks)
+ *     $(LI Some helper functions)
+ * )
+ * 
+ * 
  * License: $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors: Kato Shoichi
  */
-module std.stopwatch;
+module std.datetime;
 
 @safe:
 
@@ -29,6 +29,13 @@ else version (Posix)
     import core.sys.posix.sys.time;
 }
 
+//##############################################################################
+//##############################################################################
+//###
+//###   StopWatch
+//###
+//##############################################################################
+//##############################################################################
 
 /*******************************************************************************
  * System clock time.
@@ -451,6 +458,14 @@ enum autoStart = AutoStart.yes;
 /*******************************************************************************
  * StopWatch measures time highly precise as possible.
  *
+ * This class uses performance counter.
+ * On Windows, This uses QueryPerformanceCounter.
+ * For Posix, This uses clock_gettime if available, gettimeofday otherwise.
+ *
+ * But this has dispersion in accuracy by environment.
+ * It is impossible to remove this dispersion. This depends on multi task
+ * system for example overhead from change of the context switch of the thread.
+ *
  * Usage is here:
  * Example:
  *------------------------------------------------------------------------------
@@ -692,17 +707,18 @@ unittest
 }
 
 
-//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-// some helpers:
-//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-
+//##############################################################################
+//##############################################################################
+//###
+//###   Benchmarks
+//###
+//##############################################################################
+//##############################################################################
 
 /*******************************************************************************
  * Return value of benchmark with two functions comparing.
  */
-immutable struct ComparingBenchmarkReturnValue
+immutable struct ComparingBenchmarkResult
 {
 @safe:
     private Ticks m_tmBase;
@@ -765,7 +781,7 @@ immutable struct ComparingBenchmarkReturnValue
  *------------------------------------------------------------------------------
  */
 @safe
-ComparingBenchmarkReturnValue comparingBenchmark(
+ComparingBenchmarkResult comparingBenchmark(
     alias baseFunc, alias targetFunc, int CNT = 0xfff)()
     if (isSafe!baseFunc && isSafe!targetFunc)
 {
@@ -786,13 +802,13 @@ ComparingBenchmarkReturnValue comparingBenchmark(
         t += sw.peek();
 
     }
-    return ComparingBenchmarkReturnValue(b,t);
+    return ComparingBenchmarkResult(b,t);
 }
 
 
 /// ditto
 @system
-ComparingBenchmarkReturnValue comparingBenchmark(
+ComparingBenchmarkResult comparingBenchmark(
     alias baseFunc, alias targetFunc, int CNT = 0xfff)()
     if (!(isSafe!baseFunc && isSafe!targetFunc))
 {
@@ -813,7 +829,7 @@ ComparingBenchmarkReturnValue comparingBenchmark(
         t += sw.peek();
 
     }
-    return ComparingBenchmarkReturnValue(b,t);
+    return ComparingBenchmarkResult(b,t);
 }
 
 
@@ -840,8 +856,16 @@ unittest
     auto b2 = comparingBenchmark!(f1x, f2x, 1); // OK
 }
 
+//##############################################################################
+//##############################################################################
+//###
+//###   Helper functions
+//###
+//##############################################################################
+//##############################################################################
 
-@safe
+
+version (D_Ddoc)
 {
     /***************************************************************************
      * Scope base measuring time.
@@ -859,47 +883,52 @@ unittest
      *writeln("benchmark end!");
      *--------------------------------------------------------------------------
      */
-    auto measureTime(alias func)()
-        if (isSafe!func)
-    {
-        struct TMP
-        {
-            private StopWatch sw = void;
-            this(StopWatch.AutoStart as)
-            {
-                sw = StopWatch(as);
-            }
-            ~this()
-            {
-                unaryFun!(func)(sw.peek());
-            }
-        }
-        return TMP(autoStart);
-    }
+    TemporaryValue measureTime(alias func)();
 }
-
-@system
+else
 {
-    /// ditto
-    auto measureTime(alias func)()
-        if (!isSafe!func)
+    @safe
     {
-        struct TMP
+        auto measureTime(alias func)()
+            if (isSafe!func)
         {
-            private StopWatch sw = void;
-            this(AutoStart as)
+            struct TMP
             {
-                sw = StopWatch(as);
+                private StopWatch sw = void;
+                this(StopWatch.AutoStart as)
+                {
+                    sw = StopWatch(as);
+                }
+                ~this()
+                {
+                    unaryFun!(func)(sw.peek());
+                }
             }
-            ~this()
-            {
-                unaryFun!(func)(sw.peek());
-            }
+            return TMP(autoStart);
         }
-        return TMP(autoStart);
+    }
+    
+    @system
+    {
+        auto measureTime(alias func)()
+            if (!isSafe!func)
+        {
+            struct TMP
+            {
+                private StopWatch sw = void;
+                this(AutoStart as)
+                {
+                    sw = StopWatch(as);
+                }
+                ~this()
+                {
+                    unaryFun!(func)(sw.peek());
+                }
+            }
+            return TMP(autoStart);
+        }
     }
 }
-
 
 @system
 unittest
@@ -916,3 +945,4 @@ unittest
     }
     +/
 }
+ 

@@ -56,6 +56,8 @@ writefln("Time elapsed: %s msec", elapsedMsec);
 
 module std.perf;
 
+pragma(msg, "std.perf has been scheduled for deprecation. "
+            "Please use std.datetime instead.");
 
 version(Windows)
 {
@@ -894,3 +896,4 @@ else
 
     static assert(platform_not_supported);
 }
+ 

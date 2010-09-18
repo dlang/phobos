@@ -98,9 +98,9 @@ OBJS= Czlib.obj Dzlib.obj \
 
 #	ti_bit.obj ti_Abit.obj
 
-SRCS= std\math.d std\stdio.d std\dateparse.d std\date.d std\uni.d std\string.d \
-	std\base64.d std\md5.d std\xml.d std\bigint.d std\regexp.d \
-	std\compiler.d std\cpuid.d std\format.d std\demangle.d \
+SRCS= std\math.d std\stdio.d std\dateparse.d std\date.d std\datetime.d \
+	std\uni.d std\string.d std\base64.d std\md5.d std\xml.d std\bigint.d \
+	std\regexp.d std\compiler.d std\cpuid.d std\format.d std\demangle.d \
 	std\path.d std\file.d std\outbuffer.d std\utf.d std\uri.d \
 	std\ctype.d std\random.d std\mmfile.d \
 	std\algorithm.d std\array.d std\numeric.d std\functional.d \
@@ -179,6 +179,7 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_cstream.html \
 	$(DOC)\std_ctype.html \
 	$(DOC)\std_date.html \
+	$(DOC)\std_datetime.html \
 	$(DOC)\std_demangle.html \
 	$(DOC)\std_encoding.html \
 	$(DOC)\std_exception.html \
@@ -240,7 +241,7 @@ DOCS=	$(DOC)\object.html \
 SRC=	unittest.d crc32.d phobos.d
 
 SRC_STD= std\zlib.d std\zip.d std\stdint.d std\container.d std\conv.d std\utf.d std\uri.d \
-	std\math.d std\string.d std\path.d std\date.d \
+	std\math.d std\string.d std\path.d std\date.d std\datetime.d \
 	std\ctype.d std\file.d std\compiler.d std\system.d \
 	std\outbuffer.d std\md5.d std\base64.d \
 	std\dateparse.d std\mmfile.d \
@@ -401,6 +402,9 @@ date.obj : std\dateparse.d std\date.d
 
 dateparse.obj : std\dateparse.d std\date.d
 	$(DMD) -c $(DFLAGS) std\dateparse.d
+
+datetime.obj : std\datetime.d
+	$(DMD) -c $(DFLAGS) std\datetime.d
 
 demangle.obj : std\demangle.d
 	$(DMD) -c $(DFLAGS) std\demangle.d
@@ -679,6 +683,9 @@ $(DOC)\std_ctype.html : $(STDDOC) std\ctype.d
 $(DOC)\std_date.html : $(STDDOC) std\date.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_date.html $(STDDOC) std\date.d
 
+$(DOC)\std_datetime.html : $(STDDOC) std\datetime.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_datetime.html $(STDDOC) std\datetime.d
+
 $(DOC)\std_demangle.html : $(STDDOC) std\demangle.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_demangle.html $(STDDOC) std\demangle.d
 
@@ -911,3 +918,4 @@ svn:
 	$(CP) $(SRC_ZLIB) $(SVN)\etc\c\zlib
 
 
+  

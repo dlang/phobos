@@ -150,13 +150,13 @@ MAIN = $(ROOT)/emptymain.d
 # Stuff in std/
 STD_MODULES = $(addprefix std/, algorithm array base64 bigint bitmanip	\
         boxer compiler complex concurrency container contracts conv		\
-        cpuid cstream ctype date datebase dateparse demangle encoding	\
-        exception file format functional getopt gregorian intrinsic		\
-        json loader math md5 metastrings mmfile numeric outbuffer path	\
-        perf process random range regex regexp signals socket			\
-        socketstream stdint stdio stdiobase stream string syserror	\
-        system traits typecons typetuple uni uri utf variant xml zip	\
-        zlib)
+        cpuid cstream ctype date datetime datebase dateparse demangle	\
+        encoding exception file format functional getopt gregorian		\
+        intrinsic json loader math md5 metastrings mmfile numeric		\
+        outbuffer path perf process random range regex regexp signals	\
+        socket socketstream stdint stdio stdiobase stream string		\
+        syserror system traits typecons typetuple uni uri utf variant	\
+        xml zip zlib)
 
 # Other D modules that aren't under std/
 EXTRA_MODULES := $(addprefix std/c/, stdarg stdio) $(addprefix etc/c/,	\
@@ -290,3 +290,4 @@ html-upload : html
 html-upload-sshfs : html
 	scp $(DOC_OUTPUT_DIR)/* \
 		/ssh/erdani.com/home/sandandrei/erdani.com/d/phobos/
+ 
