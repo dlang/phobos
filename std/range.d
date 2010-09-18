@@ -807,9 +807,10 @@ int[] a = [ 1, 2, 3, 4, 5 ];
 assert(equal(retro(a), [ 5, 4, 3, 2, 1 ][]));
 ----
  */
-struct Retro(R) if (isBidirectionalRange!(R) && !isRetro!R)
+struct Retro(Range) if (isBidirectionalRange!(Unqual!Range) && !isRetro!Range)
 {
 private:
+    alias Unqual!Range R;
     R _input;
     enum bool byRef = is(typeof(&(R.init.front())));
 
@@ -944,7 +945,7 @@ is a random access range and if $(D R) defines $(D R.length).
         static if (hasSlicing!R)
             typeof(this) opSlice(size_t a, size_t b)
             {
-                return retro(_input[_input.length - b .. _input.length - a]);
+                return typeof(this)(_input[_input.length - b .. _input.length - a]);
             }
     }
 
@@ -966,7 +967,7 @@ template Retro(R) if (isRetro!R)
 }
 
 /// Ditto
-Retro!(R) retro(R)(R input) if (isBidirectionalRange!(R))
+Retro!(R) retro(R)(R input) if (isBidirectionalRange!(Unqual!R))
 {
     static if (isRetro!R)
         return input._input;
@@ -993,6 +994,10 @@ unittest
     test([ 1, 2, 3, 4 ], [ 4, 3, 2, 1 ]);
     test([ 1, 2, 3, 4, 5 ], [ 5, 4, 3, 2, 1 ]);
     test([ 1, 2, 3, 4, 5, 6 ], [ 6, 5, 4, 3, 2, 1 ]);
+
+   // static assert(is(Retro!(immutable int[])));
+   immutable foo = [1,2,3].idup;
+   retro(foo);
 
     foreach(DummyType; AllDummyRanges) {
         static if(!isBidirectionalRange!DummyType) {
@@ -1055,10 +1060,11 @@ int[] a = [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 ];
 assert(equal(stride(a, 3), [ 1, 4, 7, 10 ][]));
 ----
  */
-struct Stride(R) if (isInputRange!(R))
+struct Stride(Range) if (isInputRange!(Unqual!Range))
 {
 private:
-    Unqual!R _input;
+    alias Unqual!Range R;
+    R _input;
     size_t _n;
 
 public:
@@ -1272,7 +1278,7 @@ hasLength!(R)).
 
 /// Ditto
 Stride!(R) stride(R)(R input, size_t n)
-    if (isInputRange!(R))
+    if (isInputRange!(Unqual!R))
 {
     enforce(n > 0);
     return Stride!(R)(input, n);
@@ -1306,6 +1312,8 @@ unittest
     assert(equal(s2[1..5], [3, 5, 7, 9]));
     assert(s2[1..5].length == 4);
     assert(s2[0..0].empty);
+
+    static assert(is(Stride!(immutable int[])));
 
     // Check for infiniteness propagation.
     static assert(isInfinite!(typeof(stride(repeat(1), 3))));
@@ -1410,7 +1418,8 @@ assert(equal(s, [1, 2, 3, 4, 5, 6, 7][]));
 ----
  */
 
-template Chain(R...) if (allSatisfy!(isInputRange, R))
+template Chain(R...)
+if(allSatisfy!(isInputRange, staticMap!(Unqual, R)))
 {
     static if (R.length > 1)
         alias ChainImpl!(R) Chain;
@@ -1418,9 +1427,10 @@ template Chain(R...) if (allSatisfy!(isInputRange, R))
         alias R[0] Chain;
 }
 
-struct ChainImpl(R...)
+struct ChainImpl(Ranges...)
 {
 private:
+    alias staticMap!(Unqual, Ranges) R;
     alias CommonType!(staticMap!(.ElementType, R)) RvalueElementType;
     private template sameET(A)
     {
@@ -1767,6 +1777,8 @@ unittest
     assert(inf[7] == 5);
     static assert(isInfinite!(typeof(inf)));
 
+    static assert(is(Chain!(immutable int[], immutable float[])));
+
 
     // Check that chain at least instantiates and compiles with every possible
     // pair of DummyRange types, in either order.
@@ -1826,9 +1838,11 @@ a = [ 1, 2, 3, 4 ];
 assert(equal(radial(a), [ 2, 3, 1, 4 ][]));
 ----
  */
-struct Radial(R) if (isRandomAccessRange!(R) && hasLength!(R))
+struct Radial(Range)
+if(isRandomAccessRange!(Unqual!Range) && hasLength!(Unqual!Range))
 {
 private:
+    alias Unqual!Range R;
     R _low, _up;
     bool _upIsActive;
 
@@ -1974,14 +1988,14 @@ element. Throws if the range is empty.
 
 /// Ditto
 Radial!(R) radial(R)(R r)
-    if (isRandomAccessRange!(R) && hasLength!(R))
+    if (isRandomAccessRange!(Unqual!R) && hasLength!(Unqual!R))
 {
     return Radial!(R)(r);
 }
 
 /// Ditto
 Radial!(R) radial(R)(R r, size_t startingIndex)
-    if (isRandomAccessRange!(R) && hasLength!(R))
+    if (isRandomAccessRange!(Unqual!R) && hasLength!(Unqual!R))
 {
     return Radial!(R)(r, startingIndex);
 }
@@ -2014,6 +2028,8 @@ unittest
     // Test instantiation without lvalue elements.
     DummyRange!(ReturnBy.Value, Length.Yes, RangeType.Random) dummy;
     assert(equal(radial(dummy, 4), [5, 6, 4, 7, 3, 8, 2, 9, 1, 10]));
+
+    static assert(is(Radial!(immutable int[])));
 }
 
 /**
@@ -2030,8 +2046,11 @@ assert(s[4] == 5);
 assert(equal(s, [ 1, 2, 3, 4, 5 ][]));
 ----
  */
-struct Take(R) if (isInputRange!(R) && (!hasSlicing!(R) || isNarrowString!(R)))
+struct Take(Range)
+if(isInputRange!(Unqual!Range) &&
+(!hasSlicing!(Unqual!Range) || isNarrowString!(Unqual!Range)))
 {
+    alias Unqual!Range R;
     R original;
     private size_t _maxAvailable;
     enum bool byRef = is(typeof(&_input.front) == ElementType!(R)*);
@@ -2166,21 +2185,22 @@ public:
 
 // This template simply aliases itself to R and is useful for consistency in
 // generic code.
-template Take(R) if(isInputRange!R && hasSlicing!R && !isNarrowString!R)
+template Take(R)
+if(isInputRange!(Unqual!R) && hasSlicing!(Unqual!R) && !isNarrowString!(Unqual!R))
 {
     alias R Take;
 }
 
 /// Ditto
 Take!(R) take(R)(R input, size_t n)
-if (isInputRange!R && (!hasSlicing!R || isNarrowString!R))
+if(isInputRange!(Unqual!R) && (!hasSlicing!(Unqual!R) || isNarrowString!(Unqual!R)))
 {
     return Take!(R)(input, n);
 }
 
 /// Ditto
 Take!(R) take(R)(R input, size_t n)
-if (isInputRange!R && hasSlicing!R && !isNarrowString!R)
+if(isInputRange!(Unqual!R) && hasSlicing!(Unqual!R) && !isNarrowString!(Unqual!R))
 {
     static if (hasLength!R)
     {
@@ -2238,6 +2258,9 @@ unittest
 
         assert(equal(t, [1,2,3,4,5]));
     }
+
+    immutable myRepeat = repeat(1);
+    static assert(is(Take!(typeof(myRepeat))));
 }
 
 /**
@@ -2384,8 +2407,11 @@ assert(equal(take(cycle([1, 2][]), 5), [ 1, 2, 1, 2, 1 ][]));
 
 Tip: This is a great way to implement simple circular buffers.
  */
-struct Cycle(R) if (isForwardRange!(R) && !isInfinite!(R))
+struct Cycle(Range)
+if (isForwardRange!(Unqual!Range) && !isInfinite!(Unqual!Range))
 {
+    alias Unqual!Range R;
+
     static if (isRandomAccessRange!(R) && hasLength!(R))
     {
         R _original;
@@ -2462,7 +2488,7 @@ struct Cycle(R) if (isForwardRange!(R) && !isInfinite!(R))
 }
 
 /// Ditto
-template Cycle(R) if (isInfinite!(R))
+template Cycle(R) if(isInfinite!(R))
 {
     alias R Cycle;
 }
@@ -2499,13 +2525,15 @@ struct Cycle(R) if (isStaticArray!(R))
 }
 
 /// Ditto
-Cycle!(R) cycle(R)(R input) if (isForwardRange!(R) && !isInfinite!(R))
+Cycle!(R) cycle(R)(R input)
+if(isForwardRange!(Unqual!R) && !isInfinite!(Unqual!R))
 {
     return Cycle!(R)(input);
 }
 
 /// Ditto
-Cycle!(R) cycle(R)(R input, size_t index) if (isRandomAccessRange!(R) && !isInfinite!(R))
+Cycle!(R) cycle(R)(R input, size_t index)
+if(isRandomAccessRange!(Unqual!R) && !isInfinite!(Unqual!R))
 {
     return Cycle!(R)(input, index);
 }
@@ -2539,6 +2567,8 @@ unittest
     auto c2 = cycle(nums);
     c2[3]++;
     assert(nums[0] == 2);
+
+    static assert(is(Cycle!(immutable int[])));
 
     foreach(DummyType; AllDummyRanges) {
         static if(isForwardRange!(DummyType)) {
@@ -2614,8 +2644,10 @@ assert(a == [ 3, 2, 1 ]);
 assert(b == [ "c", "b", "a" ]);
 ----
  */
-struct Zip(R...) if (R.length && allSatisfy!(isInputRange, R))
+struct Zip(Ranges...)
+if(Ranges.length && allSatisfy!(isInputRange, staticMap!(Unqual, Ranges)))
 {
+    alias staticMap!(Unqual, Ranges) R;
     Tuple!R ranges;
     alias Tuple!(staticMap!(.ElementType, R)) ElementType;
     StoppingPolicy stoppingPolicy = StoppingPolicy.shortest;
@@ -2964,13 +2996,14 @@ stopping policy.
 
 /// Ditto
 Zip!(R) zip(R...)(R ranges)
-if (allSatisfy!(isInputRange, R))
+if (allSatisfy!(isInputRange, staticMap!(Unqual, R)))
 {
     return Zip!(R)(ranges);
 }
 
 /// Ditto
-Zip!(R) zip(R...)(StoppingPolicy sp, R ranges) if (allSatisfy!(isInputRange, R))
+Zip!(R) zip(R...)(StoppingPolicy sp, R ranges)
+if(allSatisfy!(isInputRange, staticMap!(Unqual, R)))
 {
     return Zip!(R)(ranges, sp);
 }
@@ -3036,6 +3069,9 @@ unittest
         assert(zLongest.ranges.field[0].empty);
         assert(!zLongest.ranges.field[1].empty);
     }
+
+    // Doesn't work yet.  Issues w/ emplace.
+    // static assert(is(Zip!(immutable int[], immutable float[])));
 
 
     // These unittests pass, but make the compiler consume an absurd amount
@@ -3117,7 +3153,7 @@ private string lockstepApply(Ranges...)(bool withIndex) if(Ranges.length > 0)
     {
         static if(!hasLvalueElements!Range) {
             // Don't have lvalue access.
-            ret ~= "\tElementType!(Ranges[" ~ to!string(ti) ~ "]) front" ~
+            ret ~= "\tElementType!(R[" ~ to!string(ti) ~ "]) front" ~
                    to!string(ti) ~ ";\n";
         }
     }
@@ -3217,10 +3253,11 @@ foreach(index, a, b; lockstep(arr1, arr2)) {
 ---
 */
 struct Lockstep(Ranges...)
-if(Ranges.length > 1 && allSatisfy!(isInputRange, Ranges))
+if(Ranges.length > 1 && allSatisfy!(isInputRange, staticMap!(Unqual, Ranges)))
 {
 private:
-    Ranges _ranges;
+    alias staticMap!(Unqual, Ranges) R;
+    R _ranges;
     StoppingPolicy _s;
 
     void enforceAllEmpty() {
@@ -3230,7 +3267,7 @@ private:
     }
 
 public:
-    this(Ranges ranges, StoppingPolicy s = StoppingPolicy.shortest)
+    this(R ranges, StoppingPolicy s = StoppingPolicy.shortest)
     {
         _ranges = ranges;
         enforce(s != StoppingPolicy.longest,
@@ -3296,7 +3333,7 @@ unittest {
     // The filters are to make these the lowest common forward denominator ranges,
     // i.e. w/o ref return, random access, length, etc.
     auto foo = filter!"a"([1,2,3,4,5]);
-    auto bar = [6f,7f,8f,9f,10f];
+    immutable bar = [6f,7f,8f,9f,10f].idup;
     auto l = lockstep(foo, bar);
 
     // Should work twice.  These are forward ranges with implicit save.
@@ -3870,9 +3907,10 @@ auto ror = frontTransversal(x);
 assert(equals(ror, [ 1, 3 ][]));
 ---
  */
-struct FrontTransversal(RangeOfRanges,
+struct FrontTransversal(Ror,
         TransverseOptions opt = TransverseOptions.assumeJagged)
 {
+    alias Unqual!(Ror) RangeOfRanges;
     alias typeof(RangeOfRanges.init.front().front()) ElementType;
 
     private void prime()
@@ -4069,6 +4107,8 @@ FrontTransversal!(RangeOfRanges, opt) frontTransversal(
 }
 
 unittest {
+    static assert(is(FrontTransversal!(immutable int[][])));
+
     foreach(DummyType; AllDummyRanges) {
         auto dummies =
             [DummyType.init, DummyType.init, DummyType.init, DummyType.init];
@@ -4139,9 +4179,10 @@ auto ror = transversal(x, 1);
 assert(equals(ror, [ 2, 4 ][]));
 ---
  */
-struct Transversal(RangeOfRanges,
+struct Transversal(Ror,
         TransverseOptions opt = TransverseOptions.assumeJagged)
 {
+    private alias Unqual!Ror RangeOfRanges;
     private alias ElementType!RangeOfRanges InnerRange;
     private alias ElementType!InnerRange E;
 
@@ -4352,6 +4393,8 @@ unittest
     uint i;
     foreach (e; ror) assert(e == witness[i++]);
     assert(i == 2);
+
+    static assert(is(Transversal!(immutable int[][])));
 
     // Make sure ref, assign is being propagated.
     {
@@ -4769,8 +4812,8 @@ class OutputRangeObject(R, E...) : staticMap!(OutputRange, E) {
 
 
 /**Returns the interface type that best matches $(D R).*/
-template MostDerivedInputRange(R) if(isInputRange!R) {
-    alias MostDerivedInputRangeImpl!(R).ret MostDerivedInputRange;
+template MostDerivedInputRange(R) if(isInputRange!(Unqual!R)) {
+    alias MostDerivedInputRangeImpl!(Unqual!R).ret MostDerivedInputRange;
 }
 
 private template MostDerivedInputRangeImpl(R) {
@@ -4809,9 +4852,11 @@ private template MostDerivedInputRangeImpl(R) {
  * all relevant range primitives in virtual functions.  If $(D R) is already
  * derived from the $(D InputRange) interface, aliases itself away.
  */
-template InputRangeObject(R) if(isInputRange!R) {
+template InputRangeObject(R) if(isInputRange!(Unqual!R)) {
     static if(is(R : InputRange!(ElementType!R))) {
         alias R InputRangeObject;
+    } else static if(!is(Unqual!R == R)) {
+        alias InputRangeObject!(Unqual!R) InputRangeObject;
     } else {
 
         ///
@@ -5032,14 +5077,11 @@ swap(a[2], a[5]); // illegal to break sortedness of original range
 assert(!r.canFind(42)); // passes although it shouldn't
 ----
  */
-struct SortedRange(R, alias pred = "a < b") if (isRandomAccessRange!R)
+struct SortedRange(Range, alias pred = "a < b")
+if(isRandomAccessRange!(Unqual!Range))
 {
+    alias Unqual!Range R;
     private R _input;
-
-    // C'tor that skips checks.
-    private this(R input, int noCheckDummy) {
-        this._input = input;
-    }
 
     this(R input)
     {
@@ -5067,7 +5109,9 @@ struct SortedRange(R, alias pred = "a < b") if (isRandomAccessRange!R)
     /// Ditto
     @property typeof(this) save()
     {
-        return typeof(this)(this._input.save, 42);
+        typeof(this) result;
+        result._input = this._input.save;
+        return result;
     }
 
     /// Ditto
@@ -5103,7 +5147,9 @@ struct SortedRange(R, alias pred = "a < b") if (isRandomAccessRange!R)
     /// Ditto
     typeof(this) opSlice(size_t a, size_t b)
     {
-        return typeof(this)(this._input[a..b], 42);
+        typeof(this) result;
+        result._input = this._input[a .. b]; // skip checking
+        return result;
     }
 
     /// Ditto
@@ -5117,11 +5163,7 @@ Releases the controlled range and returns it.
  */
     R release()
     {
-        static if(is(typeof(move(this._input)))) {
-            return move(this._input);
-        } else {
-            return this._input;
-        }
+        return move(this._input);
     }
 
 // lowerBound
@@ -5285,7 +5327,7 @@ unittest
 unittest
 {
     auto a = [ 1, 2, 3, 42, 52, 64 ];
-    auto r = assumeSorted(cast(const) a);
+    auto r = assumeSorted(a);
     assert(r.canFind(42));
     swap(a[2], a[5]); // illegal to break sortedness of original range
     assert(!r.canFind(42)); // passes although it shouldn't
@@ -5304,7 +5346,8 @@ unsorted range failing the test is very high (however, an
 almost-sorted range is likely to pass it). To check for sortedness at
 cost $(BIGOH n), use $(XREF algorithm, isSorted).
  */
-auto assumeSorted(alias pred = "a < b", R)(R r) if (isRandomAccessRange!R)
+auto assumeSorted(alias pred = "a < b", R)(R r)
+if(isRandomAccessRange!(Unqual!R))
 {
     return SortedRange!(R, pred)(r);
 }
