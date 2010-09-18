@@ -57,7 +57,7 @@ struct JSONValue {
 /**
  Parses a serialized string and returns a tree of JSON values.
 */
-JSONValue parseJSON(T)(in T json, int maxDepth = -1) if(isInputRange!T) {
+JSONValue parseJSON(T)(T json, int maxDepth = -1) if(isInputRange!T) {
         JSONValue root = void;
         root.type = JSON_TYPE.NULL;
 
@@ -427,7 +427,7 @@ unittest {
         // then use the resulting values tree to generate an identical
         // serialization, both the decoder and encoder works.
 
-        immutable jsons = [
+        auto jsons = [
                 `null`,
                 `true`,
                 `false`,

@@ -253,6 +253,10 @@ void main()
     return a;
 }
 
+private template notConst(T) {
+    enum notConst = !is(T == const) && !is(T == immutable);
+}
+
 /**
 Implements the range interface primitive $(D popFront) for built-in
 arrays. Due to the fact that nonmember functions can be called with
@@ -271,8 +275,10 @@ void main()
 ----
 */
 
-void popFront(T)(ref T[] a) if (!is(Unqual!T == char) && !is(Unqual!T == wchar))
+void popFront(A)(ref A a)
+if(!isNarrowString!A && isDynamicArray!A && notConst!A)
 {
+    alias typeof(A[0]) T;
     assert(a.length, "Attempting to popFront() past the end of an array of "
             ~ T.stringof);
     a = a[1 .. $];
@@ -285,10 +291,14 @@ unittest
     int[] a = [ 1, 2, 3 ];
     a.popFront;
     assert(a == [ 2, 3 ]);
+
+    static assert(!__traits(compiles, popFront!(immutable int[])));
 }
 
-void popFront(T)(ref T[] a) if (is(Unqual!T == char) || is(Unqual!T == wchar))
+void popFront(A)(ref A a)
+if(isNarrowString!A && notConst!A)
 {
+    alias typeof(a[0]) T;
     assert(a.length, "Attempting to popFront() past the end of an array of "
             ~ T.stringof);
     a = a[std.utf.stride(a, 0) .. $];
@@ -304,6 +314,8 @@ unittest
     assert(s2 == "hello");
     string s3 = "\u20AC100";
     //write(s3, '\n');
+
+    static assert(!__traits(compiles, popFront!(immutable string)));
 }
 
 /**
@@ -324,7 +336,8 @@ void main()
 ----
 */
 
-void popBack(T)(ref T[] a) if (!is(Unqual!T == char) && !is(Unqual!T == wchar))
+void popBack(A)(ref A a)
+if(isDynamicArray!A && !isNarrowString!A && notConst!A)
 {
     assert(a.length);
     a = a[0 .. $ - 1];
@@ -337,9 +350,12 @@ unittest
     int[] a = [ 1, 2, 3 ];
     a.popBack;
     assert(a == [ 1, 2 ]);
+
+    static assert(!__traits(compiles, popBack!(immutable int[])));
 }
 
-void popBack(T)(ref T[] a) if (is(Unqual!T == char))
+void popBack(A)(ref A a)
+if(is(A : const(char)[]) && notConst!A)
 {
     immutable n = a.length;
     const p = a.ptr + n;
@@ -376,9 +392,12 @@ unittest
     assert(c == cast(dchar)'\u2260');
     s3.popBack();
     assert(s3 == "");
+
+    static assert(!__traits(compiles, popBack!(immutable char[])));
 }
 
-void popBack(T)(ref T[] a) if (is(Unqual!T == wchar))
+void popBack(A)(ref A a)
+if(is(A : const(wchar)[]) && notConst!A)
 {
     assert(a.length);
     if (a.length == 1)
@@ -395,6 +414,8 @@ unittest
     wstring s = "hello\xE2\x89\xA0";
     s.popBack();
     assert(s == "hello");
+
+    static assert(!__traits(compiles, popBack!(immutable wchar[])));
 }
 
 /**
@@ -835,6 +856,13 @@ Appends one item to the managed array.
             mult = 200;
         auto newext = cast(size_t)((newlength * mult + 99) / 100);
         return newext > newlength ? newext : newlength;
+    }
+
+    // Const fixing hack.
+    void put(Range)(Range items)
+    if(isInputRange!(Unqual!Range) && !isInputRange!Range) {
+        alias put!(Unqual!Range) p;
+        p(items);
     }
 
 /**

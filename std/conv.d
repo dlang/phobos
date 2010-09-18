@@ -108,7 +108,7 @@ assert(b == "abc"w);
 ----
  */
 T toImpl(T, S)(S s) if (!implicitlyConverts!(S, T) && isSomeString!T
-        && isInputRange!S && isSomeChar!(ElementType!S))
+        && isInputRange!(Unqual!S) && isSomeChar!(ElementType!S))
 {
     static if (isSomeString!S)
     {
@@ -182,27 +182,33 @@ converted by calling $(D to!T).
  */
 T toImpl(T, S)(S s, in T leftBracket = "[", in T separator = " ",
     in T rightBracket = "]")
-if (isSomeString!T && !isSomeChar!(ElementType!S) && isInputRange!S)
+if (isSomeString!T && !isSomeChar!(ElementType!S) &&
+(isInputRange!S || isInputRange!(Unqual!S)))
 {
-    alias Unqual!(typeof(T.init[0])) Char;
-// array-to-string conversion
-    auto result = appender!(Char[])();
-    result.put(leftBracket);
-    bool first = true;
-    for (; !s.empty; s.popFront())
-    {
-        if (!first)
+    static if(!isInputRange!S) {
+        alias toImpl!(T, Unqual!S) ti;
+        return ti(s, leftBracket, separator, rightBracket);
+    } else {
+        alias Unqual!(typeof(T.init[0])) Char;
+    // array-to-string conversion
+        auto result = appender!(Char[])();
+        result.put(leftBracket);
+        bool first = true;
+        for (; !s.empty; s.popFront())
         {
-            result.put(separator);
+            if (!first)
+            {
+                result.put(separator);
+            }
+            else
+            {
+                first = false;
+            }
+            result.put(to!T(s.front));
         }
-        else
-        {
-            first = false;
-        }
-        result.put(to!T(s.front));
+        result.put(rightBracket);
+        return cast(T) result.data;
     }
-    result.put(rightBracket);
-    return cast(T) result.data;
 }
 
 /*

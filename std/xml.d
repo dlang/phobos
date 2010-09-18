@@ -125,7 +125,7 @@ import std.array;
 import std.string;
 import std.encoding;
 
-immutable cdata = "<![CDATA[";
+enum cdata = "<![CDATA[";
 
 /**
  * Returns true if the character is a character according to the XML standard

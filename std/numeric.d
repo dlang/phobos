@@ -2467,54 +2467,54 @@ void inverseFft(Ret, R)(R range, Ret buf) {
 
 unittest {
     // Test values from R.
-    const arr = [1,2,3,4,5,6,7,8];
-    const fft1 = fft(arr);
+    auto arr = [1,2,3,4,5,6,7,8];
+    auto fft1 = fft(arr);
     assert(approxEqual(map!"a.re"(fft1),
         [36.0, -4, -4, -4, -4, -4, -4, -4]));
     assert(approxEqual(map!"a.im"(fft1),
         [0, 9.6568, 4, 1.6568, 0, -1.6568, -4, -9.6568]));
 
     alias Complex!float C;
-    const arr2 = [C(1,2), C(3,4), C(5,6), C(7,8), C(9,10),
+    auto arr2 = [C(1,2), C(3,4), C(5,6), C(7,8), C(9,10),
         C(11,12), C(13,14), C(15,16)];
-    const fft2 = fft(arr2);
+    auto fft2 = fft(arr2);
     assert(approxEqual(map!"a.re"(fft2),
         [64.0, -27.3137, -16, -11.3137, -8, -4.6862, 0, 11.3137]));
     assert(approxEqual(map!"a.im"(fft2),
         [72, 11.3137, 0, -4.686, -8, -11.3137, -16, -27.3137]));
 
-    const inv1 = inverseFft(fft1);
+    auto inv1 = inverseFft(fft1);
     assert(approxEqual(map!"a.re"(inv1), arr));
     assert(reduce!max(map!"a.im"(inv1)) < 1e-10);
 
-    const inv2 = inverseFft(fft2);
+    auto inv2 = inverseFft(fft2);
     assert(approxEqual(map!"a.re"(inv2), map!"a.re"(arr2)));
     assert(approxEqual(map!"a.im"(inv2), map!"a.im"(arr2)));
 
     // FFTs of size 0, 1 and 2 are handled as special cases.  Test them here.
-    const ushort[] empty;
+    ushort[] empty;
     assert(fft(empty) == null);
     assert(inverseFft(fft(empty)) == null);
 
-    const real[] oneElem = [4.5L];
-    const oneFft = fft(oneElem);
+    real[] oneElem = [4.5L];
+    auto oneFft = fft(oneElem);
     assert(oneFft.length == 1);
     assert(oneFft[0].re == 4.5L);
     assert(oneFft[0].im == 0);
 
-    const oneInv = inverseFft(oneFft);
+    auto oneInv = inverseFft(oneFft);
     assert(oneInv.length == 1);
     assert(approxEqual(oneInv[0].re, 4.5));
     assert(approxEqual(oneInv[0].im, 0));
 
-    immutable long[2] twoElems = [8, 4];
-    const twoFft = fft(twoElems[]);
+    long[2] twoElems = [8, 4];
+    auto twoFft = fft(twoElems[]);
     assert(twoFft.length == 2);
     assert(approxEqual(twoFft[0].re, 12));
     assert(approxEqual(twoFft[0].im, 0));
     assert(approxEqual(twoFft[1].re, 4));
     assert(approxEqual(twoFft[1].im, 0));
-    const twoInv = inverseFft(twoFft);
+    auto twoInv = inverseFft(twoFft);
     assert(approxEqual(twoInv[0].re, 8));
     assert(approxEqual(twoInv[0].im, 0));
     assert(approxEqual(twoInv[1].re, 4));

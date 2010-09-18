@@ -111,14 +111,15 @@ template map(fun...)
     }
 }
 
-struct Map(alias fun, Range) if (isInputRange!(Range))
+struct Map(alias fun, Range) if (isInputRange!(Unqual!Range))
 {
+    alias Unqual!Range R;
     alias fun _fun;
-    alias typeof({ return _fun(.ElementType!(Range).init); }()) ElementType;
-    Unqual!Range _input;
+    alias typeof({ return _fun(.ElementType!(R).init); }()) ElementType;
+    R _input;
     Unqual!ElementType _cache;
 
-    static if (isBidirectionalRange!(Range))
+    static if (isBidirectionalRange!(R))
     {
     // Using a second cache would lead to at least 1 extra function evaluation
     // and wasted space when 99% of the time this range will only be iterated
@@ -152,29 +153,29 @@ struct Map(alias fun, Range) if (isInputRange!(Range))
     {
         if (!_input.empty) _cache = _fun(_input.front);
 
-        static if(isBidirectionalRange!(Range))
+        static if(isBidirectionalRange!(R))
         {
             cacheIsBack_ = false;
         }
     }
 
-    this(Range input)
+    this(R input)
     {
         _input = input;
         fillCache;
     }
 
-        static if (isInfinite!Range)
+    static if (isInfinite!R)
     {
-                // Propagate infinite-ness.
-                enum bool empty = false;
-        }
+        // Propagate infinite-ness.
+        enum bool empty = false;
+    }
     else
     {
-                @property bool empty()
+        @property bool empty()
         {
-                        return _input.empty;
-                }
+                return _input.empty;
+            }
         }
 
     void popFront()
@@ -185,7 +186,7 @@ struct Map(alias fun, Range) if (isInputRange!(Range))
 
     @property ElementType front()
     {
-        static if (isBidirectionalRange!(Range))
+        static if (isBidirectionalRange!(R))
         {
             if (cacheIsBack_)
             {
@@ -195,7 +196,7 @@ struct Map(alias fun, Range) if (isInputRange!(Range))
         return _cache;
     }
 
-    static if (isRandomAccessRange!Range)
+    static if (isRandomAccessRange!R)
     {
         ElementType opIndex(size_t index)
         {
@@ -213,7 +214,7 @@ struct Map(alias fun, Range) if (isInputRange!(Range))
         }
     }
 
-    static if (hasSlicing!(Range))
+    static if (hasSlicing!(R))
     {
         typeof(this) opSlice(size_t lowerBound, size_t upperBound)
         {
@@ -221,13 +222,13 @@ struct Map(alias fun, Range) if (isInputRange!(Range))
         }
     }
 
-        static if (isForwardRange!Range)
-        @property Map save()
-        {
-            auto result = this;
-            result._input = result._input.save;
-            return result;
-        }
+    static if (isForwardRange!R)
+    @property Map save()
+    {
+        auto result = this;
+        result._input = result._input.save;
+        return result;
+    }
 }
 
 unittest
@@ -850,11 +851,12 @@ filter(alias pred, Range)(Range rs)
     return typeof(return)(rs);
 }
 
-struct Filter(alias pred, Range) if (isInputRange!(Range))
+struct Filter(alias pred, Range) if (isInputRange!(Unqual!Range))
 {
-    Unqual!Range _input;
+    alias Unqual!Range R;
+    R _input;
 
-    this(Range r)
+    this(R r)
     {
         _input = r;
         while (!_input.empty && !pred(_input.front)) _input.popFront;
@@ -879,7 +881,7 @@ struct Filter(alias pred, Range) if (isInputRange!(Range))
         return _input.front;
     }
 
-    static if(isForwardRange!Range)
+    static if(isForwardRange!R)
     {
         @property typeof(this) save()
         {

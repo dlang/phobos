@@ -541,7 +541,7 @@ Index in $(D s) where $(D sub) is found, $(D -1) if not found.
  */
 
 sizediff_t
-indexOf(Char1, Char2)(in Char1[] s, in Char2[] sub,
+indexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
         CaseSensitive cs = CaseSensitive.yes)
 {
     if (cs == CaseSensitive.yes)

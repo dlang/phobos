@@ -3302,8 +3302,8 @@ else
 {
     // Work around DMD bugs 4676, 4652.
     auto lockstep(Args...)(Args args)
-    if(allSatisfy!(isInputRange, Args) || (
-       allSatisfy!(isInputRange, Args[0..$ - 1]) &&
+    if(allSatisfy!(isInputRange, staticMap!(Unqual, Args)) || (
+       allSatisfy!(isInputRange, staticMap!(Unqual, Args[0..$ - 1])) &&
        is(Args[$ - 1] == StoppingPolicy))
     )
     {
