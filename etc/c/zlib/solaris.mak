@@ -16,46 +16,62 @@ O=.o
 	$(DMD) -c $(DFLAGS) $*
 
 # variables
-OBJS = adler32$(O) compress$(O) crc32$(O) gzio$(O) uncompr$(O) deflate$(O) \
-       trees$(O) zutil$(O) inflate$(O) infback$(O) inftrees$(O) inffast$(O)
+OBJS = adler32$(O) compress$(O) crc32$(O) deflate$(O) gzclose$(O) gzlib$(O) gzread$(O) \
+	gzwrite$(O) infback$(O) inffast$(O) inflate$(O) inftrees$(O) trees$(O) uncompr$(O) zutil$(O)
 
 all:  zlib.a example minigzip
 
-adler32.o: adler32.c zlib.h zconf.h
-	$(CC) -c $(cvarsdll) $(CFLAGS) $*.c
+adler32.o: zutil.h zlib.h zconf.h
+	$(CC) -c $(CFLAGS) $*.c
 
-compress.o: compress.c zlib.h zconf.h
-	$(CC) -c $(cvarsdll) $(CFLAGS) $*.c
+zutil.o: zutil.h zlib.h zconf.h
+	$(CC) -c $(CFLAGS) $*.c
 
-crc32.o: crc32.c zlib.h zconf.h
-	$(CC) -c $(cvarsdll) $(CFLAGS) $*.c
+gzclose.o: zlib.h zconf.h gzguts.h
+	$(CC) -c $(CFLAGS) $*.c
 
-deflate.o: deflate.c deflate.h zutil.h zlib.h zconf.h
-	$(CC) -c $(cvarsdll) $(CFLAGS) $*.c
+gzlib.o: zlib.h zconf.h gzguts.h
+	$(CC) -c $(CFLAGS) $*.c
 
-gzio.o: gzio.c zutil.h zlib.h zconf.h
-	$(CC) -c $(cvarsdll) $(CFLAGS) $*.c
+gzread.o: zlib.h zconf.h gzguts.h
+	$(CC) -c $(CFLAGS) $*.c
 
-infback.o: infback.c zlib.h zconf.h inftrees.h inflate.h inffast.h
-	$(CC) -c $(cvarsdll) $(CFLAGS) $*.c
+gzwrite.o: zlib.h zconf.h gzguts.h
+	$(CC) -c $(CFLAGS) $*.c
 
-inflate.o: inflate.c zlib.h zconf.h inftrees.h inflate.h inffast.h
-	$(CC) -c $(cvarsdll) $(CFLAGS) $*.c
+compress.o: zlib.h zconf.h
+	$(CC) -c $(CFLAGS) $*.c
 
-inftrees.o: inftrees.c zlib.h zconf.h inftrees.h
-	$(CC) -c $(cvarsdll) $(CFLAGS) $*.c
+example.o: zlib.h zconf.h
+	$(CC) -c $(CFLAGS) $*.c
 
-inffast.o: inffast.c zlib.h zconf.h inftrees.h inflate.h inffast.h
-	$(CC) -c $(cvarsdll) $(CFLAGS) $*.c
+minigzip.o: zlib.h zconf.h
+	$(CC) -c $(CFLAGS) $*.c
 
-trees.o: trees.c deflate.h zutil.h zlib.h zconf.h trees.h
-	$(CC) -c $(cvarsdll) $(CFLAGS) $*.c
+uncompr.o: zlib.h zconf.h
+	$(CC) -c $(CFLAGS) $*.c
 
-uncompr.o: uncompr.c zlib.h zconf.h
-	$(CC) -c $(cvarsdll) $(CFLAGS) $*.c
+crc32.o: zutil.h zlib.h zconf.h crc32.h
+	$(CC) -c $(CFLAGS) $*.c
 
-zutil.o: zutil.c zutil.h zlib.h zconf.h
-	$(CC) -c $(cvarsdll) $(CFLAGS) $*.c
+deflate.o: deflate.h zutil.h zlib.h zconf.h
+	$(CC) -c $(CFLAGS) $*.c
+
+infback.o: zutil.h zlib.h zconf.h inftrees.h inflate.h inffast.h inffixed.h
+	$(CC) -c $(CFLAGS) $*.c
+
+inflate.o: zutil.h zlib.h zconf.h inftrees.h inflate.h inffast.h inffixed.h
+	$(CC) -c $(CFLAGS) $*.c
+
+inffast.o: zutil.h zlib.h zconf.h inftrees.h inflate.h inffast.h
+	$(CC) -c $(CFLAGS) $*.c
+
+inftrees.o: zutil.h zlib.h zconf.h inftrees.h
+	$(CC) -c $(CFLAGS) $*.c
+
+trees.o: deflate.h zutil.h zlib.h zconf.h trees.h
+	$(CC) -c $(CFLAGS) $*.c
+
 
 example.o: example.c zlib.h zconf.h
 	$(CC) -c $(cvarsdll) $(CFLAGS) $*.c
