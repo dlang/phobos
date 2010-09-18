@@ -401,15 +401,7 @@ public:
         static assert(field.length == another.field.length,
                       "Length mismatch in attempting to construct a "
                       ~ typeof(this).stringof ~" with a "~ U.stringof);
-        static if (is(Types == U.Types))
-        {
-            if (!__ctfe)
-            {
-                swap(this, another);
-                return;
-            }
-        }
-        foreach (i, Unused; Types)
+        foreach (i, T; Types)
         {
             field[i] = another.field[i];
         }
@@ -670,6 +662,18 @@ unittest
             assert(0 <= a[0] && a[0] < 10);
             assert(a[1] == 0);
         }
+    }
+    // Construction with compatible tuple
+    {
+        Tuple!(int, int) a;
+        a[0] = 10;
+        a[1] = 20;
+        Tuple!(double, "x", int, "y") b = a;
+        assert(b.x == 10);
+        assert(b.y == 20);
+        // incompatible
+        static assert(!__traits(compiles, Tuple!(string, real)(a)));
+        static assert(!__traits(compiles, Tuple!(string, real)(b)));
     }
 }
 
