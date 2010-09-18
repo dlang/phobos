@@ -333,7 +333,7 @@ private:
             auto    field = text("Identity!(field[", i, "])");
             auto numbered = text("_", i);
             decl ~= text("alias ", field, " ", numbered, ";");
-            if (!name.empty)
+            if (name.length != 0)
             {
                 decl ~= text("alias ", numbered, " ", name, ";");
             }
@@ -351,7 +351,7 @@ private:
 
     template expandSpec(alias spec)
     {
-        static if (spec.name.empty)
+        static if (spec.name.length == 0)
         {
             alias TypeTuple!(spec.Type) expandSpec;
         }
