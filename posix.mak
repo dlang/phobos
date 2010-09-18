@@ -290,4 +290,3 @@ html-upload : html
 html-upload-sshfs : html
 	scp $(DOC_OUTPUT_DIR)/* \
 		/ssh/erdani.com/home/sandandrei/erdani.com/d/phobos/
- 
