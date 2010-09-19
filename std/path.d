@@ -843,7 +843,7 @@ unittest
  * -----
  */
 
-string join(in char[] p1, in char[] p2, in char[][] more...)
+string join(const(char)[] p1, const(char)[] p2, const(char)[][] more...)
 {
     if (more.length)
     {
