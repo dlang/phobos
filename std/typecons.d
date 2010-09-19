@@ -490,16 +490,6 @@ assert(s[0] == "abc" && s[1] == 4.5);
         return *cast(typeof(return) *) &(field[from]);
     }
 
-    unittest
-    {
-        .Tuple!(int, string, float, double) a;
-        a[1] = "abc";
-        a[2] = 4.5;
-        auto s = a.slice!(1, 3);
-        static assert(is(typeof(s) == Tuple!(string, float)));
-        assert(s[0] == "abc" && s[1] == 4.5);
-    }
-
 /**
    The length of the tuple.
  */
@@ -547,25 +537,24 @@ unittest
         Tuple!(short, double) b;
         static assert(b.length == 2);
         b[1] = 5;
-        auto a = Tuple!(int, float)(b);
+        auto a = Tuple!(int, real)(b);
         assert(a[0] == 0 && a[1] == 5);
-        a = Tuple!(int, float)(1, 2);
+        a = Tuple!(int, real)(1, 2);
         assert(a[0] == 1 && a[1] == 2);
         auto c = Tuple!(int, "a", double, "b")(a);
         assert(c[0] == 1 && c[1] == 2);
     }
     {
-        Tuple!(int, int) nosh;
+        Tuple!(int, real) nosh;
         nosh[0] = 5;
-        assert(nosh[0] == 5);
-        // Tuple!(int, int) nosh1;
-        // assert(!is(typeof(nosh) == typeof(nosh1)));
-        assert(nosh.toString == "Tuple!(int,int)(5, 0)", nosh.toString);
-        Tuple!(int, short) yessh;
+        nosh[1] = 0;
+        assert(nosh[0] == 5 && nosh[1] == 0);
+        assert(nosh.toString == "Tuple!(int,real)(5, 0)", nosh.toString);
+        Tuple!(int, int) yessh;
         nosh = yessh;
     }
     {
-        Tuple!(int, "a", float, "b") x;
+        Tuple!(int, "a", double, "b") x;
         static assert(x.a.offsetof == x[0].offsetof);
         static assert(x.b.offsetof == x[1].offsetof);
         x.b = 4.5;
@@ -573,32 +562,17 @@ unittest
         assert(x[0] == 5 && x[1] == 4.5);
         assert(x.a == 5 && x.b == 4.5);
     }
-    {
-        Tuple!(int, float) a, b;
-        a[0] = 5;
-        b[0] = 6;
-        assert(a < b);
-        a[0] = 6;
-        b[0] = 6;
-        a[1] = 7;
-        b[1] = 6;
-        assert(b < a);
-    }
     // indexing
     {
-        Tuple!(int, real, string) t;
+        Tuple!(int, real) t;
         static assert(is(typeof(t[0]) == int));
         static assert(is(typeof(t[1]) == real));
-        static assert(is(typeof(t[2]) == string));
         int* p0 = &t[0];
         real* p1 = &t[1];
-        string* p2 = &t[2];
         t[0] = 10;
         t[1] = -200.0L;
-        t[2] = "tuple";
         assert(*p0 == t[0]);
         assert(*p1 == t[1]);
-        assert(*p2 == t[2]);
     }
     // slicing
     {
@@ -665,15 +639,14 @@ unittest
     }
     // Construction with compatible tuple
     {
-        Tuple!(int, int) a;
-        a[0] = 10;
-        a[1] = 20;
-        Tuple!(double, "x", int, "y") b = a;
-        assert(b.x == 10);
-        assert(b.y == 20);
+        Tuple!(int, int) x;
+        x[0] = 10;
+        x[1] = 20;
+        Tuple!(int, "a", double, "b") y = x;
+        assert(y.a == 10);
+        assert(y.b == 20);
         // incompatible
-        static assert(!__traits(compiles, Tuple!(string, real)(a)));
-        static assert(!__traits(compiles, Tuple!(string, real)(b)));
+        static assert(!__traits(compiles, Tuple!(int, int)(y)));
     }
 }
 
