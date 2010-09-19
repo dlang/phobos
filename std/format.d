@@ -1224,6 +1224,25 @@ if (isInputRange!T && !isSomeString!T && isSomeChar!(ElementType!T))
     }
 }
 
+void formatValue(Writer, T, Char)(Writer w, T val,
+        ref FormatSpec!Char f)
+if (!isInputRange!T && isDynamicArray!T && !is(const(T) == const(void[])))
+{
+    alias Unqual!T U;
+    static assert(isInputRange!U);
+    U unq = val;
+    formatValue(w, unq, f);
+}
+
+unittest
+{
+    FormatSpec!char f;
+    auto w = appender!string();
+    const short[] a = [1, 2, 3];
+    formatValue(w, a, f);
+    assert(w.data == "[1, 2, 3]");
+}
+
 /**
    $(D void[0]) is formatted as "[]".
  */
