@@ -1103,6 +1103,15 @@ if (isSomeString!T && !isStaticArray!T)
     }
 }
 
+unittest
+{
+    FormatSpec!char f;
+    auto w = appender!(string);
+    string s = "abc";
+    formatValue(w, s, f);
+    assert(w.data == "abc");
+}
+
 /**
    Input ranges are formatted like arrays.
  */
@@ -1226,7 +1235,8 @@ if (isInputRange!T && !isSomeString!T && isSomeChar!(ElementType!T))
 
 void formatValue(Writer, T, Char)(Writer w, T val,
         ref FormatSpec!Char f)
-if (!isInputRange!T && isDynamicArray!T && !is(const(T) == const(void[])))
+if (!isInputRange!T && isDynamicArray!T && !isSomeString!T &&
+    !is(const(T) == const(void[])))
 {
     alias Unqual!T U;
     static assert(isInputRange!U);
