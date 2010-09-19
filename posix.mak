@@ -125,9 +125,13 @@ endif
 
 # Set LINKOPTS
 ifeq (,$(findstring win,$(OS)))
-	LINKOPTS=-L-ldl -L-L$(ROOT)
+    ifeq (freebsd,$(OS))
+        LINKOPTS=-L-L$(ROOT)
+    else
+        LINKOPTS=-L-ldl -L-L$(ROOT)
+    endif
 else
-	LINKOPTS=-L/co $(LIB)
+    LINKOPTS=-L/co $(LIB)
 endif
 
 # Set DDOC, the documentation generator
