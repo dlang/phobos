@@ -87,7 +87,8 @@ private:
     }
 public:
     // Length in uints
-    size_t uintLength() {
+    size_t uintLength() pure const
+    {
         static if (BigDigit.sizeof == uint.sizeof) {
             return data.length;
         } else static if (BigDigit.sizeof == ulong.sizeof) {
@@ -95,7 +96,8 @@ public:
             ((data[$-1] & 0xFFFF_FFFF_0000_0000L) ? 1 : 0);
         }
     }
-    size_t ulongLength() {
+    size_t ulongLength() pure const
+    {
         static if (BigDigit.sizeof == uint.sizeof) {
             return (data.length + 1) >> 1;
         } else static if (BigDigit.sizeof == ulong.sizeof) {
@@ -104,7 +106,8 @@ public:
     }
 
     // The value at (cast(ulong[])data)[n]
-    ulong peekUlong(int n) {
+    ulong peekUlong(int n) pure const
+    {
         static if (BigDigit.sizeof == int.sizeof) {
             if (data.length == n*2 + 1) return data[n*2];
             version(LittleEndian) {
@@ -116,7 +119,8 @@ public:
             return data[n];
         }
     }
-    uint peekUint(int n) {
+    uint peekUint(int n) pure const
+    {
         static if (BigDigit.sizeof == int.sizeof) {
             return data[n];
         } else {
@@ -175,11 +179,13 @@ int opCmp(Tulong)(Tulong y) if (is (Tulong == ulong))
     return data[0] > ylo ? 1: -1;
 }
 
-bool opEquals(Tdummy = void)(ref const BigUint y) const {
+bool opEquals(Tdummy = void)(ref const BigUint y) pure const
+{
        return y.data[] == data[];
 }
 
-bool opEquals(Tdummy = void)(ulong y) const {
+bool opEquals(Tdummy = void)(ulong y) pure const 
+{
     if (data.length > 2)
         return false;
     uint ylo = cast(uint)(y & 0xFFFF_FFFF);
@@ -191,11 +197,13 @@ bool opEquals(Tdummy = void)(ulong y) const {
     return (data[0] == ylo);
 }
 
-bool isZero() const {
+bool isZero() pure const
+{
     return data.length == 1 && data[0] == 0;
 }
 
-size_t numBytes() const {
+size_t numBytes() pure const
+{
     return data.length * BigDigit.sizeof;
 }
 
