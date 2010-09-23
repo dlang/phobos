@@ -114,8 +114,9 @@ private
         {
             static assert( is( t1 == function ) || is( t1 == delegate ) );
             alias ParameterTypeTuple!(t1) a1;
+            alias ReturnType!(t1) r1;
 
-            static if( i < T.length - 1 )
+            static if( i < T.length - 1 && is( r1 == void ) )
             {
                 static assert( a1.length != 1 || !is( a1[0] == Variant ),
                                "function with arguments " ~ a1.stringof ~
@@ -299,7 +300,7 @@ Tid spawn(T...)( void function(T) fn, T args )
 {
     static assert( !hasLocalAliasing!(T),
                    "Aliases to mutable thread-local data not allowed." );
-    return spawn_( false, fn, args );
+    return _spawn( false, fn, args );
 }
 
 
@@ -323,14 +324,14 @@ Tid spawnLinked(T...)( void function(T) fn, T args )
 {
     static assert( !hasLocalAliasing!(T),
                    "Aliases to mutable thread-local data not allowed." );
-    return spawn_( true, fn, args );
+    return _spawn( true, fn, args );
 }
 
 
 /*
  *
  */
-private Tid spawn_(T...)( bool linked, void function(T) fn, T args )
+private Tid _spawn(T...)( bool linked, void function(T) fn, T args )
 {
     // TODO: MessageList and &exec should be shared.
     auto spawnTid = Tid( new MessageBox );
@@ -451,7 +452,7 @@ receiveOnlyRet!(T) receiveOnly(T...)()
                   throw new MessageMismatch;
               } );
     static if( T.length == 1 )
-        return ret.field[0];
+        return ret[0];
     else
         return ret;
 }
@@ -750,8 +751,6 @@ private
                 return false;
             }
 
-            bool ownerDead = false;
-
             bool onLinkDeadMsg( Variant data )
             {
                 alias Tuple!(Tid) Wrap;
@@ -766,21 +765,19 @@ private
                     assert( data.convertsTo!(Wrap*) );
                     auto wrap = data.get!(Wrap*);
                 }
-                if( bool* depends = (wrap.field[0] in links) )
+                if( bool* depends = (wrap[0] in links) )
                 {
-                    links.remove( wrap.field[0] );
-                    if( *depends )
+                    links.remove( wrap[0] );
+                    // Give the owner relationship precedence.
+                    if( *depends && wrap[0] != owner )
                     {
-                        if( wrap.field[0] == owner )
-                            owner = Tid.init;
-                        throw new LinkTerminated( wrap.field[0] );
+                        throw new LinkTerminated( wrap[0] );
                     }
-                    return false;
                 }
-                if( wrap.field[0] == owner )
+                if( wrap[0] == owner )
                 {
-                    ownerDead = true;
-                    return false;
+                    owner = Tid.init;
+                    throw new OwnerTerminated( wrap[0] );
                 }
                 return false;
             }
@@ -800,21 +797,30 @@ private
             {
                 for( auto range = list[]; !range.empty; )
                 {
+                    // Only the message handler will throw, so if this occurs
+                    // we can be certain that the message was handled.
+                    scope(failure) list.removeAt( range );
+
                     if( isControlMsg( range.front ) )
                     {
-                        scope(failure) list.removeAt( range );
                         if( onControlMsg( range.front ) )
+                        {
                             list.removeAt( range );
-                        else
-                            range.popFront();
+                            continue;
+                        }
+                        range.popFront();
                         continue;
                     }
-                    if( onStandardMsg( range.front ) )
+                    else
                     {
-                        list.removeAt( range );
-                        return true;
+                        if( onStandardMsg( range.front ) )
+                        {
+                            list.removeAt( range );
+                            return true;
+                        }
+                        range.popFront();
+                        continue;
                     }
-                    range.popFront();
                 }
                 return false;
             }
@@ -829,7 +835,7 @@ private
                     auto    range = list[];
                     Variant data  = range.front.data;
                     assert( data.convertsTo!(Wrap) );
-                    auto p = data.get!(Wrap).field[0];
+                    auto p = data.get!(Wrap)[0];
                     Message msg;
 
                     msg.data = p.data;
@@ -857,8 +863,6 @@ private
                     updateMsgCount();
                     while( m_sharedPty.empty && m_sharedBox.empty )
                     {
-                        if( ownerDead )
-                            onOwnerDead();
                         // NOTE: We're notifying all waiters here instead of just
                         //       a few because the onCrowding behavior may have
                         //       changed and we don't want to block sender threads
@@ -915,8 +919,8 @@ private
                     assert( data.convertsTo!(Wrap*) );
                     auto wrap = data.get!(Wrap*);
                 }
-                links.remove( wrap.field[0] );
-                if( wrap.field[0] == owner )
+                links.remove( wrap[0] );
+                if( wrap[0] == owner )
                     owner = Tid.init;
             }
 
@@ -958,43 +962,6 @@ private
         void updateMsgCount()
         {
             m_localMsgs = m_localBox.length;
-        }
-
-
-    private:
-        //////////////////////////////////////////////////////////////////////
-        // Routines for specific message types, no lock necessary.
-        //////////////////////////////////////////////////////////////////////
-
-
-        void onOwnerDead()
-        {
-            for( auto range = m_localBox[]; !range.empty; range.popFront() )
-            {
-                if( range.front.type == MsgType.linkDead )
-                {
-                    alias Tuple!(Tid) Wrap;
-
-                    static if( Variant.allowed!(Wrap) )
-                    {
-                        assert( range.front.data.convertsTo!(Wrap) );
-                        auto wrap = range.front.data.get!(Wrap);
-                    }
-                    else
-                    {
-                        assert( range.front.data.convertsTo!(Wrap*) );
-                        auto wrap = range.front.data.get!(Wrap*);
-                    }
-
-                    if( wrap.field[0] == owner )
-                    {
-                        m_localBox.removeAt( range );
-                        break;
-                    }
-                }
-            }
-            scope(failure) owner = Tid.init;
-            throw new OwnerTerminated( owner );
         }
 
 
@@ -1234,21 +1201,20 @@ version( unittest )
                  } );
         receive( (Tuple!(int, int) val)
                  {
-                     assert( val.field[0] == 42 &&
-                             val.field[1] == 86 );
+                     assert( val[0] == 42 &&
+                             val[1] == 86 );
                  } );
-        //receive( (Variant val) {} );
-        // receive( (string val)
-        //          {
-        //              if( "the quick brown fox" != val )
-        //                  return false;
-        //              return true;
-        //          },
-        //          (string val)
-        //          {
-        //              writefln( "got string: %s", val );
-        //              assert(0);
-        //          } );
+        receive( (Variant val) {} );
+        receive( (string val)
+                 {
+                     if( "the quick brown fox" != val )
+                         return false;
+                     return true;
+                 },
+                 (string val)
+                 {
+                     assert( false );
+                 } );
         send( tid, "done" );
     }
 
