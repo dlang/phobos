@@ -239,10 +239,10 @@ private:
 
 public:
     // @@@BUG Should be a constructor but template constructors don't work
-    private void initialize(String)(String pattern, string attributes)
-    {
-        compile(pattern, attributes);
-    }
+    // private void initialize(String)(String pattern, string attributes)
+    // {
+    //     compile(pattern, attributes);
+    // }
 
 /**
 Construct a $(D Regex) object. Compile pattern with $(D attributes)
@@ -291,11 +291,10 @@ Returns the number of parenthesized captures
 
     public void compile(String)(String pattern, string attributes)
     {
-        //printf("Regex.compile('%.*s', '%.*s')\n", pattern, attributes);
-
         this.attributes = 0;
         foreach (c; attributes)
-        {   REA att;
+        {
+            REA att;
 
             switch (c)
             {
@@ -321,9 +320,11 @@ Returns the number of parenthesized captures
         size_t p = 0;
         parseRegex(pattern, p, buf);
         if (p < pattern.length)
-        {       error("unmatched ')'");
+        {
+            error("unmatched ')'");
         }
-        optimize(buf);
+        // @@@ SKIPPING OPTIMIZATION SOLVES BUG 941 @@@
+        //optimize(buf);
         program = cast(immutable(ubyte)[]) buf.data;
         buf.data = null;
         delete buf;
@@ -339,7 +340,8 @@ Returns the number of parenthesized captures
 /* ==================== optimizer ======================= */
 
     void optimize(OutBuffer buf)
-    {   ubyte[] prog;
+    {
+        ubyte[] prog;
 
         debug(regex) printf("Regex.optimize()\n");
         prog = buf.toBytes();
@@ -416,7 +418,8 @@ Returns the number of parenthesized captures
         {
             assert(p <= pattern.length);
             if (p == pattern.length)
-            {   buf.write(REend);
+            {
+                buf.write(REend);
                 return 1;
             }
             switch (pattern[p])
@@ -447,7 +450,8 @@ Returns the number of parenthesized captures
     }
 
     int parsePiece(String)(in String pattern, ref size_t p, OutBuffer buf)
-    {   uint offset;
+    {
+        uint offset;
         uint len;
         uint n;
         uint m;
@@ -555,7 +559,8 @@ Returns the number of parenthesized captures
     }
 
     int parseAtom(String)(in String pattern, ref size_t p, OutBuffer buf)
-    {   ubyte op;
+    {
+        ubyte op;
         uint offset;
         E c;
 
@@ -731,6 +736,7 @@ Returns the number of parenthesized captures
             }
             if (c >= 0x80)
             {
+                debug(regex) printf("dchar\n");
                 // Convert to dchar opcode
                 op = (op == REchar) ? REdchar : REidchar;
                 buf.write(op);
@@ -988,7 +994,8 @@ Returns the number of parenthesized captures
 // point to one.
 
     bool starrchars(Range r, const(ubyte)[] prog)
-    {   E c;
+    {
+        E c;
         uint maxc;
         uint maxb;
         uint len;
@@ -997,7 +1004,9 @@ Returns the number of parenthesized captures
         uint m;
         const(ubyte)* pop;
 
-        //printf("Regex.starrchars(prog = %p, progend = %p)\n", prog, progend);
+        debug(regex)
+                 printf("Regex.starrchars(prog = %p, progend = %p)\n",
+                         prog.ptr, prog.ptr + prog.length);
         for (size_t i = 0; i < prog.length;)
         {
             switch (prog[i])
@@ -1355,8 +1364,16 @@ Returns the number of parenthesized captures
 
                 case REtestbit:
                     pu = cast(ushort *)&prog[pc + 1];
-                    printf("\tREtestbit %d, %d\n", pu[0], pu[1]);
+                    printf("\tREtestbit %d, %d: ", pu[0], pu[1]);
                     len = pu[1];
+                    {
+                        ubyte * b = cast(ubyte*)pu;
+                        foreach (i; 0 .. len)
+                        {
+                            writef(" %x", b[i]);
+                        }
+                        writeln();
+                    }
                     pc += 1 + 2 * ushort.sizeof + len;
                     break;
 
@@ -3384,4 +3401,32 @@ pragma(msg, " --- std.regex("~ __LINE__.stringof ~") broken test --- ");
     assert(t[1] == tuple(2, "defg"));
     assert(t[2] == tuple(3, "hijklm"));
 +/
+}
+
+unittest
+{
+    auto str = "foo";
+    string[] re_strs = [
+        r"^(a|b|)fo[oas]$",
+        r"^(a|o|)fo[oas]$",
+        r"^(a|)foo$",
+        r"^(a|)foo$",
+        r"^(h|)foo$",
+        r"(h|)foo",
+        r"(h|a|)fo[oas]",
+        r"^(a|b|)fo[o]$",
+        r"[abf][ops](o|oo|)(h|a|)",
+        r"(h|)[abf][ops](o|oo|)",
+        r"(c|)[abf][ops](o|oo|)"
+    ];
+
+    foreach (re_str; re_strs)
+    {
+        auto re = regex(re_str);
+        auto matches= match(str, re);
+        assert(!matches.empty);
+        // writefln("'%s' matches '%s' ? %s", str, re_str, !matches.empty);
+        // if (matches.empty)
+        //     re.printProgram();
+    }
 }

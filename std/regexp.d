@@ -920,7 +920,8 @@ private:
         if (p < pattern.length)
         {   error("unmatched ')'");
         }
-        optimize();
+        // @@@ SKIPPING OPTIMIZATION SOLVES BUG 941 @@@
+        //optimize();
         program = buf.data;
         buf.data = null;
         delete buf;
@@ -3359,4 +3360,37 @@ unittest
     auto sp2 = splitter(s1, pattern(", *"));
     //foreach (e; sp2) writeln("[", e, "]");
     assert(equal(sp2, ["", "abc", "de", "fg", "hi"][]));
+}
+
+unittest
+{
+    auto str= "foo";
+    string[] re_strs= [
+             r"^(h|a|)fo[oas]$",
+             r"^(a|b|)fo[oas]$",
+             r"^(a|)foo$",
+             r"(a|)foo",
+             r"^(h|)foo$",
+             r"(h|)foo",
+             r"(h|a|)fo[oas]",
+             r"^(a|b|)fo[o]$",
+             r"[abf][ops](o|oo|)(h|a|)",
+             r"(h|)[abf][ops](o|oo|)",
+             r"(c|)[abf][ops](o|oo|)"
+    ];
+
+    foreach (re_str; re_strs) {
+        auto re= new RegExp(re_str);
+        auto matches= cast(bool)re.test(str);
+        assert(matches);
+        //writefln("'%s' matches '%s' ? %s", str, re_str, matches);
+    }
+
+    for (char c='a'; c<='z'; ++c) {
+        auto re_str= "("~c~"|)foo";
+        auto re= new RegExp(re_str);
+        auto matches= cast(bool)re.test(str);
+        assert(matches);
+        //writefln("'%s' matches '%s' ? %s", str, re_str, matches);
+    }
 }
