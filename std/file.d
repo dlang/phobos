@@ -1,21 +1,19 @@
 // Written in the D programming language.
 
 /**
-Utilities for manipulating files and scanning directories.
+Utilities for manipulating files and scanning directories. Functions
+in this module handle files as a unit, e.g., read or write one _file
+at a time. For opening files and manipulating them via handles refer
+to module $(D $(LINK2 std_stdio.html,std.stdio)).
 
 Macros:
  WIKI = Phobos/StdFile
 
 Copyright: Copyright Digital Mars 2007 - 2009.
-License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+License:   $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   $(WEB digitalmars.com, Walter Bright),
            $(WEB erdani.org, Andrei Alexandrescu)
-
-         Copyright Digital Mars 2007 - 2009.
-Distributed under the Boost Software License, Version 1.0.
-   (See accompanying file LICENSE_1_0.txt or copy at
-         http://www.boost.org/LICENSE_1_0.txt)
-*/
+ */
 module std.file;
 
 import core.memory;
@@ -209,7 +207,21 @@ private T cenforce(T, string file = __FILE__, uint line = __LINE__)
  */
 
 /********************************************
-Read entire contents of file $(D name).
+Read entire contents of file $(D name) and returns it as an untyped
+array. If the file size is larger than $(D upTo), only $(D upTo)
+bytes are read.
+
+Example:
+
+----
+import std.file, std.stdio;
+void main()
+{
+   auto bytes = cast(ubyte[]) read("filename", 5);
+   if (bytes.length == 5)
+       writefln("The fifth byte of the file is 0x%x", bytes[4]);
+}
+----
 
 Returns: Untyped array of bytes _read.
 
@@ -338,8 +350,20 @@ unittest
 }
 
 /*********************************************
- * Write $(D buffer) to file $(D name).
- * Throws: $(D FileException) on error.
+Write $(D buffer) to file $(D name).
+Throws: $(D FileException) on error.
+
+Example:
+
+----
+import std.file;
+void main()
+{
+   int[] a = [ 0, 1, 1, 2, 3, 5, 8 ];
+   write("filename", a);
+   assert(cast(int[]) read("filename") == a);
+}
+----
  */
 
 version(Windows) void write(in char[] name, const void[] buffer)
@@ -366,8 +390,22 @@ version(Posix) void write(in char[] name, in void[] buffer)
 }
 
 /*********************************************
- * Append $(D buffer) to file $(D name).
- * Throws: $(D FileException) on error.
+Appends $(D buffer) to file $(D name).
+Throws: $(D FileException) on error.
+
+Example:
+
+----
+import std.file;
+void main()
+{
+   int[] a = [ 0, 1, 1, 2, 3, 5, 8 ];
+   write("filename", a);
+   int[] b = [ 13, 21 ];
+   append("filename", b);
+   assert(cast(int[]) read("filename") == a ~ b);
+}
+----
  */
 
 version(Windows) void append(in char[] name, in void[] buffer)
