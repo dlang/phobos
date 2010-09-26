@@ -469,9 +469,11 @@ unittest
 
 /**
 Returns $(D true) if $(D R) is a random-access range. A random-access
-range is a forward range that also offers the primitive $(D
-opIndex), OR an infinite input range that offers $(D opIndex). The
-following code should compile for any random-access range.
+range is a bidirectional range that also offers the primitive $(D
+opIndex), OR an infinite forward range that offers $(D opIndex). In
+either case, the range must either offer $(D length) or be
+infinite. The following code should compile for any random-access
+range.
 
 ----
 R r;
@@ -490,7 +492,7 @@ element in the range.))
 template isRandomAccessRange(R)
 {
     enum bool isRandomAccessRange =
-        (isBidirectionalRange!(R) || isInfinite!(R))
+        (isBidirectionalRange!R || isForwardRange!R && isInfinite!R)
         && is(typeof(R.init[1]))
         && !isNarrowString!R
         && (hasLength!R || isInfinite!R);
