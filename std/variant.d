@@ -988,14 +988,34 @@ public:
        If the $(D VariantN) contains an array, applies $(D dg) to each
        element of the array in turn. Otherwise, throws an exception.
      */
-    int opApply(Delegate)(scope Delegate dg)
+    int opApply(Delegate)(scope Delegate dg) if (is(Delegate == delegate))
     {
-        // @@@TODO@@@ make this much more general.
         alias ParameterTypeTuple!(Delegate)[0] A;
-        auto arr = get!(A[]);
-        foreach (ref e; arr)
+        if (type() == typeid(A[]))
         {
-            if (dg(e)) return 1;
+            auto arr = get!(A[]);
+            foreach (ref e; arr)
+            {
+                if (dg(e)) return 1;
+            }
+        }
+        else static if (is(A == VariantN))
+        {
+            foreach (i; 0 .. length)
+            {
+                // @@@TODO@@@: find a better way to not confuse
+                // clients who think they change values stored in the
+                // Variant when in fact they are only changing tmp.
+                auto tmp = this[i];
+                debug scope(exit) assert(tmp == this[i]);
+                if (dg(tmp)) return 1;
+            }
+        }
+        else
+        {
+            enforce(false, text("Variant type ", type(),
+                            " not iterable with values of type ",
+                            A.stringof));
         }
         return 0;
     }
