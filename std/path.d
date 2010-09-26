@@ -11,23 +11,19 @@
  * Macros:
  *      WIKI = Phobos/StdPath
  *
- * Copyright: Copyright Digital Mars 2000 - 2009.
- * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+ * Copyright: Copyright Digital Mars 2000-.
+ * License:   $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   $(WEB digitalmars.com, Walter Bright),
- *            Grzegorz Adam Hankiewicz, Thomas K&uuml;hne,
+ *            Grzegorz Adam Hankiewicz, Thomas K&uuml;hne, Bill Baxter,
  *            $(WEB erdani.org, Andrei Alexandrescu)
- *
- *          Copyright Digital Mars 2000 - 2009.
- * Distributed under the Boost Software License, Version 1.0.
- *    (See accompanying file LICENSE_1_0.txt or copy at
- *          http://www.boost.org/LICENSE_1_0.txt)
  */
 module std.path;
 
 //debug=path;           // uncomment to turn on debugging printf's
 //private import std.stdio;
 
-import std.array, std.conv, std.file, std.process, std.string, std.traits;
+import std.algorithm, std.array, std.conv, std.file, std.process, std.string,
+    std.traits;
 import core.stdc.errno, core.stdc.stdlib;
 
 version(Posix)
@@ -1089,105 +1085,132 @@ bool fncharmatch(dchar c1, dchar c2)
  * }
  * -----
  */
+bool fnmatch(const(char)[] filename, const(char)[] pattern)
+in
+{
+    // Verify that pattern[] is valid
+    assert(balancedParens(pattern, '[', ']', 0));
+    assert(balancedParens(pattern, '{', '}', 0));
+}
+body
+{
+	size_t ni; // current character in filename
 
-bool fnmatch(in char[] filename, in char[] pattern)
-    in
-    {
-        // Verify that pattern[] is valid
-        bool inbracket = false;
-        foreach (i;  0 .. pattern.length)
-        {
-            switch (pattern[i])
-            {
-                case '[':
-                    assert(!inbracket);
-                    inbracket = true;
-                    break;
-
-                case ']':
-                    assert(inbracket);
-                    inbracket = false;
-                    break;
-
-                default:
-                    break;
-            }
-        }
-    }
-    body
-    {
-        char nc;
-        int not;
-        int anymatch;
-        int ni;       // ni == name index
-        foreach (pi; 0 .. pattern.length) // pi == pattern index
-        {
-            char pc = pattern[pi]; // pc == pattern character
-            switch (pc)
-            {
-                case '*':
-                    if (pi + 1 == pattern.length)
+	foreach (pi; 0 .. pattern.length)
+	{
+	    char pc = pattern[pi];
+	    switch (pc)
+	    {
+            case '*':
+                if (pi + 1 == pattern.length)
+                    return true;
+                foreach (j; ni .. filename.length)
+                {
+                    if (fnmatch(filename[j .. filename.length],
+                                    pattern[pi + 1 .. pattern.length]))
                         return true;
-                    foreach (j; ni .. filename.length)
-                    {
-                        if (fnmatch(filename[j .. filename.length],
-                                        pattern[pi + 1 .. pattern.length]))
-                            return true;
-                    }
+                }
+                return false;
+
+            case '?':
+                if (ni == filename.length)
                     return false;
+                ni++;
+                break;
 
-                case '?':
-                    if (ni == filename.length)
-                        return false;
-                    ni++;
-                    break;
-
-                case '[':
-                    if (ni == filename.length)
-                        return false;
-                    nc = filename[ni];
-                    ni++;
-                    not = 0;
+            case '[': {
+                if (ni == filename.length)
+                    return false;
+                auto nc = filename[ni];
+                ni++;
+                auto not = false;
+                pi++;
+                if (pattern[pi] == '!')
+                {
+                    not = true;
                     pi++;
-                    if (pattern[pi] == '!')
-                    {   not = 1;
-                        pi++;
-                    }
-                    anymatch = 0;
-                    while (1)
+                }
+                auto anymatch = false;
+                while (1)
+                {
+                    pc = pattern[pi];
+                    if (pc == ']')
+                        break;
+                    if (!anymatch && fncharmatch(nc, pc))
+                        anymatch = true;
+                    pi++;
+                }
+                if (anymatch == not)
+                    return false;
+            }
+                break;
+
+            case '{': {
+                // find end of {} section
+                auto piRemain = pi;
+                for (; piRemain < pattern.length
+                         && pattern[piRemain] != '}'; piRemain++)
+                {}
+
+                if (piRemain < pattern.length) piRemain++;
+                pi++;
+
+                while (pi < pattern.length)
+                {
+                    auto pi0 = pi;
+                    pc = pattern[pi];
+                    // find end of current alternative
+                    for (; pi<pattern.length && pc!='}' && pc!=','; pi++)
                     {
                         pc = pattern[pi];
-                        if (pc == ']')
-                            break;
-                        if (!anymatch && fncharmatch(nc, pc))
-                            anymatch = 1;
+                    }
+
+                    if (pi0 == pi)
+                    {
+                        if (fnmatch(filename[ni..$], pattern[piRemain..$]))
+                        {
+                            return true;
+                        }
                         pi++;
                     }
-                    if (!(anymatch ^ not))
-                        return false;
-                    break;
-
-                default:
-                    if (ni == filename.length)
-                        return false;
-                    nc = filename[ni];
-                    if (!fncharmatch(pc, nc))
-                        return false;
-                    ni++;
-                    break;
+                    else
+                    {
+                        if (fnmatch(filename[ni..$],
+                                        pattern[pi0..pi-1]
+                                        ~ pattern[piRemain..$]))
+                        {
+                            return true;
+                        }
+                    }
+                    if (pc == '}')
+                    {
+                        break;
+                    }
+                }
             }
-        }
-        return ni >= filename.length;
-    }
+                return false;
+
+            default:
+                if (ni == filename.length)
+                    return false;
+                if (!fncharmatch(pc, filename[ni]))
+                    return false;
+                ni++;
+                break;
+	    }
+	}
+    assert(ni >= filename.length);
+	return ni == filename.length;
+}
 
 unittest
 {
     debug(path) printf("path.fnmatch.unittest\n");
 
-    version (Windows)
+    version (Win32)
         assert(fnmatch("foo", "Foo"));
-    version (Posix)
-        assert(!fnmatch("foo", "Foo"));
+    version (linux)
+	assert(!fnmatch("foo", "Foo"));
     assert(fnmatch("foo", "*"));
     assert(fnmatch("foo.bar", "*"));
     assert(fnmatch("foo.bar", "*.*"));
@@ -1205,6 +1228,24 @@ unittest
     assert(!fnmatch("foo.bar", "[gh]???bar"));
     assert(!fnmatch("foo.bar", "[!fg]*bar"));
     assert(!fnmatch("foo.bar", "[fg]???baz"));
+
+    assert(fnmatch("foo.bar", "{foo,bif}.bar"));
+    assert(fnmatch("bif.bar", "{foo,bif}.bar"));
+
+    assert(fnmatch("bar.foo", "bar.{foo,bif}"));
+    assert(fnmatch("bar.bif", "bar.{foo,bif}"));
+
+    assert(fnmatch("bar.fooz", "bar.{foo,bif}z"));
+    assert(fnmatch("bar.bifz", "bar.{foo,bif}z"));
+
+    assert(fnmatch("bar.foo", "bar.{biz,,baz}foo"));
+    assert(fnmatch("bar.foo", "bar.{biz,}foo"));
+    assert(fnmatch("bar.foo", "bar.{,biz}foo"));
+    assert(fnmatch("bar.foo", "bar.{}foo"));
+
+    assert(fnmatch("bar.foo", "bar.{ar,,fo}o"));
+    assert(fnmatch("bar.foo", "bar.{,ar,fo}o"));
+    assert(fnmatch("bar.o", "bar.{,ar,fo}o"));
 }
 
 /**
@@ -1397,7 +1438,7 @@ private string expandFromDatabase(string path)
 
     // Extract username, searching for path separator.
     string username;
-    auto last_char = indexOf(path, sep[0]);
+    auto last_char = std.algorithm.indexOf(path, sep[0]);
 
     if (last_char == -1)
     {
