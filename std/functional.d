@@ -246,10 +246,11 @@ unittest
    Binary predicate that reverses the order of arguments, e.g., given
    $(D pred(a, b)), returns $(D pred(b, a)).
 */
-template binaryRevertArgs(alias pred)
+template binaryReverseArgs(alias pred)
 {
     typeof({ ElementType1 a; ElementType2 b; return pred(b, a);}())
-    binaryRevertArgs(ElementType1, ElementType2)(ElementType1 a, ElementType2 b)
+    binaryReverseArgs(ElementType1, ElementType2)(ElementType1 a,
+            ElementType2 b)
     {
         return pred(b, a);
     }
@@ -257,13 +258,13 @@ template binaryRevertArgs(alias pred)
 
 unittest
 {
-    alias binaryRevertArgs!(binaryFun!("a < b")) gt;
+    alias binaryReverseArgs!(binaryFun!("a < b")) gt;
     assert(gt(2, 1) && !gt(1, 1));
     int x = 42;
     bool xyz(int a, int b) { return a * x < b / x; }
     auto foo = &xyz;
     foo(4, 5);
-    alias binaryRevertArgs!(foo) zyx;
+    alias binaryReverseArgs!(foo) zyx;
     assert(zyx(5, 4) == foo(4, 5));
 }
 
