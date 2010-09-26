@@ -919,6 +919,14 @@ string toUTF8(string s)
 
 /** ditto */
 
+string toUTF8(in char[] s)
+{
+    validate(s);
+    return s.idup;
+}
+
+/** ditto */
+
 string toUTF8(const(wchar)[] s)
 {
     char[] r;

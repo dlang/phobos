@@ -215,7 +215,7 @@ unittest
  * $(D s[]) must not contain embedded 0's.
  */
 
-const(char)* toStringz(const(char)[] s)
+immutable(char)* toStringz(const(char)[] s)
 in
 {
     // The assert below contradicts the unittests!
@@ -255,22 +255,29 @@ body
     copy = new char[s.length + 1];
     copy[0..s.length] = s;
     copy[s.length] = 0;
-    return copy.ptr;
+
+    return assumeUnique(copy).ptr;
 }
 
-// /// Ditto
-// const(char)* toStringz(immutable(char)[] s)
-// {
-//     /* Peek past end of s[], if it's 0, no conversion necessary.
-//      * Note that the compiler will put a 0 past the end of static
-//      * strings, and the storage allocator will put a 0 past the end
-//      * of newly allocated char[]'s.
-//      */
-//     immutable p = &s[0] + s.length;
-//     if (*p == 0)
-//         return s.ptr;
-//     return toStringz(cast(const char[]) s);
-// }
+/// Ditto
+immutable(char)* toStringz(string s)
+{
+    if (!s) return null;
+    /* Peek past end of s[], if it's 0, no conversion necessary.
+     * Note that the compiler will put a 0 past the end of static
+     * strings, and the storage allocator will put a 0 past the end
+     * of newly allocated char[]'s.
+     */
+    immutable p = s.ptr + s.length;
+    // Is p dereferenceable? A simple test: if the p points to an
+    // address multiple of 4, then conservatively assume the pointer
+    // might be pointing to a new block of memory, which might be
+    // unreadable. Otherwise, it's definitely pointing to valid
+    // memory.
+    if ((cast(size_t) p & 3) && *p == 0)
+        return s.ptr;
+    return toStringz(cast(const char[]) s);
+}
 
 unittest
 {
