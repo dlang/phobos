@@ -3480,7 +3480,7 @@ if (isInputRange!(Range) && is(typeof(r.front == lPar)))
     {
         if (r.front == lPar)
         {
-            if (count == maxNestingLevel) return false;
+            if (count > maxNestingLevel) return false;
             ++count;
         }
         else if (r.front == rPar)
@@ -3499,9 +3499,9 @@ unittest
     s = "1 + (2 * (3 + 1) / 2)";
     assert(balancedParens(s, '(', ')'));
     s = "1 + (2 * (3 + 1) / 2)";
-    assert(!balancedParens(s, '(', ')', 1));
+    assert(!balancedParens(s, '(', ')', 0));
     s = "1 + (2 * 3 + 1) / (2 - 5)";
-    assert(balancedParens(s, '(', ')', 1));
+    assert(balancedParens(s, '(', ')', 0));
 }
 
 // equal
