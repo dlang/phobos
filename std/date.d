@@ -22,9 +22,8 @@
  */
 module std.date;
 
-private import std.stdio;
-private import std.dateparse;
-import std.c.stdlib, std.conv, std.exception;
+import std.conv, std.datebase, std.dateparse, std.exception, std.stdio;
+import std.c.stdlib;
 
 /**
  * $(D d_time) is a signed arithmetic type giving the time elapsed
@@ -817,7 +816,6 @@ d_time parse(string s)
 extern(C) void std_date_static_this()
 {
     localTZA = getLocalTZA();
-    //printf("localTZA = %g, %g\n", localTZA, localTZA / msPerHour);
 }
 
 version (Win32)
