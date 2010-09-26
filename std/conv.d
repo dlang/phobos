@@ -180,17 +180,20 @@ Converts array (other than strings) to string. The left bracket,
 separator, and right bracket are configurable. Each element is
 converted by calling $(D to!T).
  */
-T toImpl(T, S)(S s, in T leftBracket = "[", in T separator = " ",
+T toImpl(T, S)(S s, in T leftBracket = "[", in T separator = ", ",
     in T rightBracket = "]")
 if (isSomeString!T && !isSomeChar!(ElementType!S) &&
 (isInputRange!S || isInputRange!(Unqual!S)))
 {
-    static if(!isInputRange!S) {
+    static if (!isInputRange!S)
+    {
         alias toImpl!(T, Unqual!S) ti;
         return ti(s, leftBracket, separator, rightBracket);
-    } else {
+    }
+    else
+    {
         alias Unqual!(typeof(T.init[0])) Char;
-    // array-to-string conversion
+        // array-to-string conversion
         auto result = appender!(Char[])();
         result.put(leftBracket);
         bool first = true;
@@ -246,10 +249,10 @@ unittest
     long[] b = [ 1, 3, 5 ];
     auto s = to!string(b);
 //printf("%d, |%*s|\n", s.length, s.length, s.ptr);
-    assert(to!string(b) == "[1 3 5]", s);
+    assert(to!string(b) == "[1, 3, 5]", s);
     double[2] a = [ 1.5, 2.5 ];
 //writeln(to!string(a));
-    assert(to!string(a) == "[1.5 2.5]");
+    assert(to!string(a) == "[1.5, 2.5]");
 }
 
 /**
@@ -956,7 +959,7 @@ unittest
     // test array to string conversion
     foreach (T ; AllNumerics) {
         auto a = [to!(T)(1), 2, 3];
-        assert(to!(string)(a) == "[1 2 3]");
+        assert(to!string(a) == "[1, 2, 3]");
     }
     // test enum to int conversion
     // enum Testing { Test1, Test2 };
