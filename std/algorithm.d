@@ -3450,6 +3450,60 @@ unittest
     assert(count!("a == 3")(a) == 2);
 }
 
+// balancedParens
+/**
+Checks whether $(D r) has "balanced parentheses", i.e. all instances
+of $(D lPar) are closed by corresponding instances of $(D rPar). The
+parameter $(D maxNestingLevel) controls the nesting level allowed. The
+most common uses are the default or $(D 0). In the latter case, no
+nesting is allowed.
+
+Example:
+----
+auto s = "1 + (2 * (3 + 1 / 2)";
+assert(!balancedParens(s, '(', ')'));
+s = "1 + (2 * (3 + 1) / 2)";
+assert(balancedParens(s, '(', ')'));
+s = "1 + (2 * (3 + 1) / 2)";
+assert(!balancedParens(s, '(', ')', 1));
+s = "1 + (2 * 3 + 1) / (2 - 5)";
+assert(balancedParens(s, '(', ')', 1));
+----
+*/
+
+bool balancedParens(Range, E)(Range r, E lPar, E rPar,
+        size_t maxNestingLevel = size_t.max)
+if (isInputRange!(Range) && is(typeof(r.front == lPar)))
+{
+    size_t count;
+    for (; !r.empty; r.popFront())
+    {
+        if (r.front == lPar)
+        {
+            if (count == maxNestingLevel) return false;
+            ++count;
+        }
+        else if (r.front == rPar)
+        {
+            if (!count) return false;
+            --count;
+        }
+    }
+    return count == 0;
+}
+
+unittest
+{
+    auto s = "1 + (2 * (3 + 1 / 2)";
+    assert(!balancedParens(s, '(', ')'));
+    s = "1 + (2 * (3 + 1) / 2)";
+    assert(balancedParens(s, '(', ')'));
+    s = "1 + (2 * (3 + 1) / 2)";
+    assert(!balancedParens(s, '(', ')', 1));
+    s = "1 + (2 * 3 + 1) / (2 - 5)";
+    assert(balancedParens(s, '(', ')', 1));
+}
+
 // equal
 /**
 Returns $(D true) if and only if the two ranges compare equal element
