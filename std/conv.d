@@ -1572,7 +1572,7 @@ string up one position.
  */
 Target parse(Target, Source)(ref Source s)
 if (isInputRange!Source && isSomeChar!(ElementType!Source) &&
-        isSomeChar!Target && Target.sizeof >= Source.sizeof)
+        isSomeChar!Target && Target.sizeof >= ElementType!Source.sizeof)
 {
     Target result = s.front;
     s.popFront();
