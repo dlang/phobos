@@ -948,7 +948,7 @@ version(Posix) struct DirEntry
     d_time _creationTime = d_time_nan;        /// time of file creation
     d_time _lastAccessTime = d_time_nan; /// time file was last accessed
     d_time _lastWriteTime = d_time_nan;        /// time file was last written to
-    ubyte d_type;
+    ubyte d_type = DT_UNKNOWN;
     struct_stat64 statbuf;
     bool didstat;                        // done lazy evaluation of stat()
 
@@ -960,13 +960,23 @@ version(Posix) struct DirEntry
         didstat = false;
     }
 
-    bool isdir() const
+    bool isdir()
     {
+        if (d_type == DT_UNKNOWN)
+        {
+            ensureStatDone();
+            return (statbuf.st_mode & S_IFMT) ==  S_IFDIR;
+        }
         return (d_type & DT_DIR) != 0;
     }
 
-    bool isfile() const
+    bool isfile()
     {
+        if (d_type == DT_UNKNOWN)
+        {
+            ensureStatDone();
+            return (statbuf.st_mode & S_IFMT) ==  S_IFREG;
+        }
         return (d_type & DT_REG) != 0;
     }
 
