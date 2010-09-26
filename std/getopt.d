@@ -33,10 +33,10 @@ module std.getopt;
 private import std.string, std.conv, std.traits, std.bitmanip,
     std.algorithm, std.ctype, std.exception;
 
-//version (unittest)
-//{
+version (unittest)
+{
     import std.stdio; // for testing only
-//}
+}
 
 /**
  Synopsis:
@@ -364,7 +364,7 @@ private void getoptImpl(T...)(ref string[] args,
         else
         {
             // it's an option string
-            auto option = to!(string)(opts[0]);
+            auto option = to!string(opts[0]);
             auto receiver = opts[1];
             bool incremental;
             // Handle options of the form --blah+
@@ -408,20 +408,36 @@ void handleOption(R)(string option, R receiver, ref string[] args,
             // first non-option is end of options
             break;
         }
+        // Unbundle bundled arguments if necessary
+        if (cfg.bundling && a.length > 2 && a[0] == optionChar &&
+                a[1] != optionChar)
+        {
+            string[] expanded;
+            foreach (dchar c; a[1 .. $])
+            {
+                expanded ~= text(optionChar, c);
+            }
+            args = args[0 .. i] ~ expanded ~ args[i + 1 .. $];
+            continue;
+        }
         string val;
         if (!optMatch(a, option, val, cfg))
         {
             ++i;
             continue;
         }
-        // found it; from here on, commit to eat args[i]
-        // (and potentially args[i + 1] too)
+        // found it
+        // from here on, commit to eat args[i]
+        // (and potentially args[i + 1] too, but that comes later)
         args = args[0 .. i] ~ args[i + 1 .. $];
 
-        static if (is(typeof(*receiver) == bool)) {
+        static if (is(typeof(*receiver) == bool))
+        {
             *receiver = true;
             break;
-        } else {
+        }
+        else
+        {
             // non-boolean option, which might include an argument
             //enum isDelegateWithOneParameter = is(typeof(receiver("")) : void);
             enum isDelegateWithLessThanTwoParameters =
@@ -524,10 +540,13 @@ private struct configuration
 private bool optMatch(string arg, string optPattern, ref string value,
     configuration cfg)
 {
+    //writeln("optMatch:\n  ", arg, "\n  ", optPattern, "\n  ", value);
+    //scope(success) writeln("optMatch result: ", value);
     if (!arg.length || arg[0] != optionChar) return false;
     // yank the leading '-'
     arg = arg[1 .. $];
     immutable isLong = arg.length > 1 && arg[0] == optionChar;
+    //writeln("isLong: ", isLong);
     // yank the second '-' if present
     if (isLong) arg = arg[1 .. $];
     immutable eqPos = std.string.indexOf(arg, assignChar);
@@ -554,12 +573,17 @@ private bool optMatch(string arg, string optPattern, ref string value,
     //writeln("Arg: ", arg, " pattern: ", optPattern, " value: ", value);
     // Split the option
     const variants = split(optPattern, "|");
-    foreach (v ; variants) {
+    foreach (v ; variants)
+    {
+        //writeln("Trying variant: ", v, " against ", arg);
         if (arg == v || !cfg.caseSensitive && toupper(arg) == toupper(v))
             return true;
         if (cfg.bundling && !isLong && v.length == 1
                 && std.string.indexOf(arg, v) >= 0)
+        {
+            //writeln("success");
             return true;
+        }
     }
     return false;
 }
@@ -687,3 +711,19 @@ unittest
     assert(foo && !bar && args[1] == "nonoption" && args[2] == "--zab");
 }
 
+unittest
+{
+    // From bugzilla 2142
+    bool f_linenum, f_filename;
+    string[] args = [ "", "-nl" ];
+    getopt
+        (
+            args,
+            std.getopt.config.bundling,
+            //std.getopt.config.caseSensitive,
+            "linenum|l", &f_linenum,
+            "filename|n", &f_filename
+        );
+    assert(f_linenum);
+    assert(f_filename);
+}
