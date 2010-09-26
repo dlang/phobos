@@ -1031,7 +1031,7 @@ assert(test == "");
  */
 
 Target parse(Target, Source)(ref Source s)
-if (isSomeChar!(ElementType!Source) && isIntegral!Target)
+if (isSomeChar!(ElementType!Source) && isIntegral!Target && !isSomeChar!Target)
 {
     static if (Target.sizeof < int.sizeof)
     {
@@ -1560,11 +1560,44 @@ unittest
 
 unittest
 {
-    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
+    debug(conv) scope(success) writeln("unittest @", __FILE__, ":", __LINE__,
+            " succeeded.");
     string s = "123";
     auto a = parse!int(s);
 }
 
+/**
+Parsing one character off a string returns the character and bumps the
+string up one position.
+ */
+Target parse(Target, Source)(ref Source s)
+if (isInputRange!Source && isSomeChar!(ElementType!Source) &&
+        isSomeChar!Target && Target.sizeof >= Source.sizeof)
+{
+    Target result = s.front;
+    s.popFront();
+    return result;
+}
+
+// Special case: okay so parse a char off a char[] or a wchar off a
+// wchar[]
+Target parse(Target, Source)(ref Source s)
+if (isSomeString!Source && is(Source : const(Target)[]))
+{
+    Target result = s[0];
+    s = s[1 .. $];
+    return result;
+}
+
+unittest
+{
+    string s = "aaa";
+    assert(parse!char(s) == 'a');
+    assert(s == "aa");
+    wstring s1 = "aaa";
+    assert(parse!wchar(s1) == 'a');
+    assert(s1 == "aa");
+}
 
 // string to bool conversions
 Target parse(Target, Source)(ref Source s)
