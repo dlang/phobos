@@ -64,11 +64,11 @@
  */
 module std.variant;
 
-import std.traits, std.c.string, std.typetuple, std.conv;
-version(unittest)
-{
+import std.traits, std.c.string, std.typetuple, std.conv, std.exception;
+// version(unittest)
+// {
     import std.exception, std.stdio;
-}
+//}
 
 private template maxSize(T...)
 {
@@ -251,7 +251,7 @@ private:
         // by the incoming TypeInfo
         static bool tryPutting(A* src, TypeInfo targetType, void* target)
         {
-            alias TypeTuple!(A, ImplicitConversionTargets!(A)) AllTypes;
+            alias TypeTuple!(A, ImplicitConversionTargets!A) AllTypes;
             foreach (T ; AllTypes)
             {
                 if (targetType != typeid(T) &&
@@ -663,8 +663,21 @@ public:
     {
         static if (isNumeric!(T))
         {
-            // maybe optimize this fella; handle ints separately
-            return to!(T)(get!(real));
+            if (convertsTo!real())
+            {
+                // maybe optimize this fella; handle ints separately
+                return to!T(get!real);
+            }
+            else if (convertsTo!(const(char)[]))
+            {
+                return to!T(get!(const(char)[]));
+            }
+            else
+            {
+                enforce(false, text("Type ", type(), " does not convert to ",
+                                typeid(T)));
+                assert(0);
+            }
         }
         else static if (is(T : Object))
         {
@@ -1395,4 +1408,11 @@ unittest
         assert(i == ++j);
     }
     assert(j == 4);
+}
+
+// test convertibility
+unittest
+{
+    auto v = Variant("abc".dup);
+    assert(v.convertsTo!(char[]));
 }

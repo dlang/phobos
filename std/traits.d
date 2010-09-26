@@ -2127,6 +2127,13 @@ template ImplicitConversionTargets(T)
             ImplicitConversionTargets;
     else static if(is(T : Object))
         alias TransitiveBaseTypeTuple!(T) ImplicitConversionTargets;
+    // @@@BUG@@@ this should work
+    // else static if (isDynamicArray!T && !is(typeof(T.init[0]) == const))
+    //     alias TypeTuple!(const(typeof(T.init[0]))[]) ImplicitConversionTargets;
+    else static if (is(T == char[]))
+        alias TypeTuple!(const(char)[]) ImplicitConversionTargets;
+    else static if (isDynamicArray!T && !is(typeof(T.init[0]) == const))
+        alias TypeTuple!(const(typeof(T.init[0]))[]) ImplicitConversionTargets;
     else static if (is(T : void*))
         alias TypeTuple!(void*) ImplicitConversionTargets;
     else
