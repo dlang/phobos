@@ -18,17 +18,6 @@ c[1] = 1;       // access by index
 c.z = 1;        // access by given name
 alias Tuple!(string, string) DicEntry; // names can be omitted
 
-// enumerated values with conversions to and from strings
-mixin(defineEnum!("Openmode", "READ", "WRITE", "READWRITE", "APPEND"));
-void foo()
-{
-    Openmode m = Openmode.READ;
-    string s = enumToString(m);
-    assert(s == "READ");
-    Openmode m1;
-    assert(enumFromString(s, m1) && m1 == m);
-}
-
 // Rebindable references to const and immutable objects
 void bar()
 {
@@ -824,7 +813,7 @@ mixin(defineEnum!("Abc", ubyte, "A", "B", "C", 255));
 In this case the generated $(D enum) will have a $(D ubyte)
 representation.  */
 
-template defineEnum(string name, T...)
+deprecated template defineEnum(string name, T...)
 {
     static if (is(typeof(cast(T[0]) T[0].init)))
         enum string defineEnum =
