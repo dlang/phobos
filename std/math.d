@@ -3726,7 +3726,10 @@ bool approxEqual(T, U, V)(T lhs, U rhs, V maxRelDiff, V maxAbsDiff = 1e-5)
             {
                 return fabs(lhs) <= maxAbsDiff;
             }
-            if (lhs == lhs.infinity && rhs == rhs.infinity) return true;
+            static if (is(typeof(lhs.infinity)) && is(typeof(rhs.infinity)))
+            {
+                if (lhs == lhs.infinity && rhs == rhs.infinity) return true;
+            }
             return fabs((lhs - rhs) / rhs) <= maxRelDiff
                 || maxAbsDiff != 0 && fabs(lhs - rhs) <= maxAbsDiff;
         }
