@@ -3581,12 +3581,24 @@ unittest
     //foreach (e; take(y, 15))
     {}//writeln(e);
 
-    auto odds = Sequence!("a.field[0] + n * a.field[1]", Tuple!(int, int))(tuple(1, 2));
+    auto odds = Sequence!("a.field[0] + n * a.field[1]", Tuple!(int, int))(
+        tuple(1, 2));
     for(int currentOdd = 1; currentOdd <= 21; currentOdd += 2) {
         assert(odds.front == odds[0]);
         assert(odds[0] == currentOdd);
         odds.popFront();
     }
+}
+
+unittest
+{
+    // documentation example
+    auto odds = sequence!("a[0] + n * a[1]")(1, 2);
+    assert(odds.front == 1);
+    odds.popFront();
+    assert(odds.front == 3);
+    odds.popFront();
+    assert(odds.front == 5);
 }
 
 /**
