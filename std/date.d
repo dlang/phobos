@@ -796,9 +796,8 @@ d_time parse(string s)
         Date dp;
         dp.parse(s);
         auto time = makeTime(dp.hour, dp.minute, dp.second, dp.ms);
-        if (dp.tzcorrection == int.min)
-            time -= localTZA;
-        else
+        // Assume UTC if no tzcorrection is set (runnable/testdate).
+        if (dp.tzcorrection != int.min)
         {
             time += cast(d_time)(dp.tzcorrection / 100) * msPerHour +
                     cast(d_time)(dp.tzcorrection % 100) * msPerMinute;
