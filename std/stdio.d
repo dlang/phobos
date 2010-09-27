@@ -409,18 +409,19 @@ referring to the same handle will see a closed file henceforth.
             --p.refs;
             p = null;
         }
-        if (p.isPipe)
+        version (Posix)
         {
-            // Ignore the result of the command
-            errnoEnforce(.pclose(p.handle) == 0,
-                    "Could not close pipe `"~p.name~"'");
+            if (p.isPipe)
+            {
+                // Ignore the result of the command
+                errnoEnforce(.pclose(p.handle) == 0,
+                        "Could not close pipe `"~p.name~"'");
+                return;
+            }
         }
-        else
-        {
-            //fprintf(std.c.stdio.stderr, ("Closing file `"~name~"`.\n\0").ptr);
-            errnoEnforce(.fclose(p.handle) == 0,
-                    "Could not close file `"~p.name~"'");
-        }
+        //fprintf(std.c.stdio.stderr, ("Closing file `"~name~"`.\n\0").ptr);
+        errnoEnforce(.fclose(p.handle) == 0,
+                "Could not close file `"~p.name~"'");
     }
 
 /**
