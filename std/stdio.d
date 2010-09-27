@@ -258,11 +258,13 @@ struct File
         FILE * handle = null;
         uint refs = uint.max / 2;
         string name = null;
-        this(FILE* h, uint r, string n)
+        bool isPipe;
+        this(FILE* h, uint r, string n, bool pipe = false)
         {
             handle = h;
             refs = r;
             name = n;
+            isPipe = pipe;
         }
     }
     private Impl * p;
@@ -335,7 +337,7 @@ opengroup.org/onlinepubs/007908799/xsh/_popen.html, _popen).
         detach;
         p = new Impl(errnoEnforce(.popen(command, stdioOpenmode),
                         "Cannot run command `"~command~"'"),
-                1, command);
+                1, command, true);
     }
 
 /** Returns $(D true) if the file is opened. */
@@ -407,9 +409,18 @@ referring to the same handle will see a closed file henceforth.
             --p.refs;
             p = null;
         }
-        //fprintf(std.c.stdio.stderr, ("Closing file `"~name~"`.\n\0").ptr);
-        errnoEnforce(.fclose(p.handle) == 0,
+        if (p.isPipe)
+        {
+            // Ignore the result of the command
+            errnoEnforce(.pclose(p.handle) == 0,
+                    "Could not close pipe `"~p.name~"'");
+        }
+        else
+        {
+            //fprintf(std.c.stdio.stderr, ("Closing file `"~name~"`.\n\0").ptr);
+            errnoEnforce(.fclose(p.handle) == 0,
                     "Could not close file `"~p.name~"'");
+        }
     }
 
 /**
