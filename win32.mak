@@ -98,7 +98,7 @@ OBJS= Czlib.obj Dzlib.obj \
 
 #	ti_bit.obj ti_Abit.obj
 
-SRCS= std\math.d std\stdio.d std\dateparse.d std\date.d std\datetime.d \
+SRCS_1 = std\math.d std\stdio.d std\dateparse.d std\date.d std\datetime.d \
 	std\uni.d std\string.d std\base64.d std\md5.d std\xml.d std\bigint.d \
 	std\regexp.d std\compiler.d std\cpuid.d std\format.d std\demangle.d \
 	std\path.d std\file.d std\outbuffer.d std\utf.d std\uri.d \
@@ -114,7 +114,9 @@ SRCS= std\math.d std\stdio.d std\dateparse.d std\date.d std\datetime.d \
 	std\intrinsic.d \
 	std\process.d \
 	std\system.d \
-	std\encoding.d std\variant.d \
+	std\encoding.d 
+	
+SRCS_2 = std\variant.d \
 	std\stream.d std\socket.d std\socketstream.d \
 	std\perf.d std\container.d std\conv.d \
 	std\zip.d std\cstream.d std\loader.d \
@@ -144,6 +146,9 @@ SRCS= std\math.d std\stdio.d std\dateparse.d std\date.d std\datetime.d \
 	std\windows\registry.d \
 	std\windows\syserror.d
 
+# The separation is a workaround for bug 4904 (optlink bug 3372).
+# See: http://lists.puremagic.com/pipermail/phobos/2010-September/002741.html
+SRCS = $(SRCS_1) $(SRCS_2)
 
 
 DOCS=	$(DOC)\object.html \
@@ -327,7 +332,9 @@ phobos.lib : $(OBJS) $(SRCS) \
 		etc\c\zlib\zlib.lib $(DRUNTIMELIB)
 
 unittest : $(SRCS) phobos.lib
-	$(DMD) $(UDFLAGS) -L/co -unittest unittest.d $(SRCS) phobos.lib
+	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest1.obj $(SRCS_1)
+	$(DMD) $(UDFLAGS) -L/co -unittest unittest.d $(SRCS_2) unittest1.obj \
+		etc\c\zlib\zlib.lib $(DRUNTIMELIB)
 	unittest
 
 #unittest : unittest.exe
@@ -879,7 +886,7 @@ clean:
 	cd ..\..\..
 	del $(OBJS)
 	del $(DOCS)
-	del unittest.obj unittest.map unittest.exe
+	del unittest1.obj unittest.obj unittest.map unittest.exe
 	del phobos.lib
 	del phobos.json
 
