@@ -582,6 +582,8 @@ class InternetHost
 
 unittest
 {
+    try
+    {
         InternetHost ih = new InternetHost;
         if (!ih.getHostByName("www.digitalmars.com"))
             return;             // don't fail if not connected to internet
@@ -603,6 +605,11 @@ unittest
         // {
         //      printf("aliases[%d] = %.*s\n", i, s);
         // }
+    }
+    catch (HostException e)
+    {
+        printf("std.socket HostException[1]: %.*s, %d\n", e.toString(), e.errorCode);
+    }
 }
 
 
@@ -791,8 +798,15 @@ class InternetAddress: Address
 
 unittest
 {
+    try
+    {
         InternetAddress ia = new InternetAddress("63.105.9.61", 80);
         assert(ia.toString() == "63.105.9.61:80");
+    }
+    catch (HostException e)
+    {
+        printf("std.socket HostException[2]: %.*s, %d\n", e.toString(), e.errorCode);
+    }
 }
 
 
