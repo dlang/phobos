@@ -1268,8 +1268,9 @@ if (isInputRange!Source && /*!isSomeString!Source && */isFloatingPoint!Target)
         default: {}
     }
 
-    bool isHex = p.front == '0';
-    if(isHex)
+    bool isHex = false;
+    bool startsWithZero = p.front == '0';
+    if(startsWithZero)
     {
         p.popFront();
         if(p.empty)
@@ -1277,7 +1278,7 @@ if (isInputRange!Source && /*!isSomeString!Source && */isFloatingPoint!Target)
             return (sign) ? -0 : 0;
         }
 
-        isHex = isHex && (p.front == 'x' || p.front == 'X');
+        isHex = p.front == 'x' || p.front == 'X';
     }
 
     real ldval = 0.0;
@@ -1403,7 +1404,7 @@ if (isInputRange!Source && /*!isSomeString!Source && */isFloatingPoint!Target)
     }
     else // not hex
     {
-        if (toupper(p.front) == 'N')
+        if (toupper(p.front) == 'N' && !startsWithZero)
         {
             // nan
             enforce((p.popFront(), !p.empty && toupper(p.front) == 'A')
@@ -1414,7 +1415,7 @@ if (isInputRange!Source && /*!isSomeString!Source && */isFloatingPoint!Target)
             return typeof(return).nan;
         }
 
-        bool sawDigits = false;
+        bool sawDigits = startsWithZero;
 
         while (!p.empty)
         {
@@ -1556,6 +1557,15 @@ unittest
     //     printf("%04x ", x.value[i]);
     // }
     // printf("\n");
+}
+
+// Unittest for bug 4959
+unittest
+{
+    auto s = "0 ";
+    auto x = parse!double(s);
+    assert(s == " ");
+    assert(x == 0.0);
 }
 
 unittest
