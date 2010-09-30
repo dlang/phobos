@@ -37,12 +37,9 @@ public
 private
 {
     import core.thread;
-    //import core.sync.condition;
-    //import core.sync.mutex;
     import std.algorithm;
     import std.exception;
     import std.range;
-    import std.stdio;
     import std.range;
     import std.traits;
     import std.typecons;
@@ -887,9 +884,9 @@ private
                 }
                 if( m_localPty.empty )
                 {
-                    bool ok = scan( arrived );
-                    m_localBox.put( arrived );
-                    if( ok ) return true;
+                    scope(exit) m_localBox.put( arrived );
+                    if( scan( arrived ) )
+                        return true;
                     else continue;
                 }
                 m_localBox.put( arrived );
