@@ -505,8 +505,15 @@ public:
             }
             else
             {
-                auto p = new T;
-                *p = rhs;
+                static if (__traits(compiles, {new T(rhs);}))
+                {
+                    auto p = new T(rhs);
+                }
+                else
+                {
+                    auto p = new T;
+                    *p = rhs;
+                }
                 memcpy(&store, &p, p.sizeof);
             }
             fptr = &handler!(T);
