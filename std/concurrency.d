@@ -643,6 +643,7 @@ private
                         {
                             m_sharedPty.put( msg );
                             m_putMsg.notify();
+                            return;
                         }
                         if( !mboxFull() || isControlMsg( msg ) )
                         {
