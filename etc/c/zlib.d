@@ -72,8 +72,8 @@ const ZLIB_VERNUM = 0x1230;
   crash even in case of corrupted input.
 */
 
-alias void* (*alloc_func) (void* opaque, uint items, uint size);
-alias void   (*free_func)  (void* opaque, void* address);
+alias void* function (void* opaque, uint items, uint size) alloc_func;
+alias void  function (void* opaque, void* address) free_func;
 
 struct z_stream
 {
