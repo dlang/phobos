@@ -908,10 +908,12 @@ template Rebindable(T) if (is(T == class) || is(T == interface) || isArray!(T))
             {
                 opAssign(initializer);
             }
-            alias original get;
-            T opDot() {
+
+            @property ref T get() {
                 return original;
             }
+
+            alias get this;
         }
     }
 }
