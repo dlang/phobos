@@ -840,15 +840,13 @@ auto r1 = filter!("cast(int) a != a")(chain(c, a, b));
 assert(r1 == [ 2.5 ]);
 ----
  */
-
-version (all)
+template filter(alias pred)
 {
-/* This is the older version. Too many problems with the newer one.
- */
-Filter!(unaryFun!(pred), Range)
-filter(alias pred, Range)(Range rs)
-{
-    return typeof(return)(rs);
+    Filter!(unaryFun!(pred), Range)
+    filter(Range)(Range rs)
+    {
+        return typeof(return)(rs);
+    }
 }
 
 struct Filter(alias pred, Range) if (isInputRange!(Unqual!Range))
@@ -907,133 +905,12 @@ unittest
     auto m = map!"a + 1"(filter!"a < 4"(arr));
 }
 
-}
-else
-{
-template filter(alias predicate)
-{
-    auto filter(Range)(Range rs) if (isInputRange!(Range))
-    {
-        alias unaryFun!predicate pred;
-
-        struct Filter
-        {
-            Range _input;
-
-            this(Range r)
-            {
-                _input = r;
-                while (!_input.empty && !pred(_input.front)) _input.popFront;
-                static if (isBidirectionalRange!Range) {
-                    while (!_input.empty && !pred(_input.back)) _input.popBack;
-                }
-
-            }
-
-            ref Filter opSlice()
-            {
-                return this;
-            }
-
-            static if (isInfinite!Range) {
-                enum bool empty = false;  // Propagate infiniteness.
-            } else {
-                bool empty() { return _input.empty; }
-            }
-
-            void popFront()
-            {
-                do
-                {
-                    _input.popFront;
-                } while (!_input.empty && !pred(_input.front));
-            }
-
-            ElementType!(Range) front()
-            {
-                return _input.front;
-            }
-
-            static if (isBidirectionalRange!Range) {
-                void popBack()
-                {
-                    do
-                    {
-                        _input.popBack;
-                    } while (!_input.empty && !pred(_input.back));
-                }
-
-                ElementType!(Range) back() { return _input.back;}
-            }
-
-
-            static if (isForwardRange!Range)
-            {
-                @property typeof(this) save()
-                {
-                    return typeof(this)(_input.save);
-                }
-            }
-        }
-
-        return Filter(rs);
-    }
-}
-
 unittest
 {
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
-    int[] a = [ 3, 4, 2 ];
-    auto r = filter!("a > 3")(a);
-    static assert(isForwardRange!(typeof(r)));
-    assert(equal(r, [ 4 ][]));
-
-    a = [ 1, 22, 3, 42, 5 ];
-    auto under10 = filter!("a < 10")(a);
-    assert(equal(under10, [1, 3, 5][]));
-    static assert(isForwardRange!(typeof(under10)));
-
-        auto infinite = filter!"a > 2"(repeat(3));
-        static assert(isInfinite!(typeof(infinite)));
-        static assert(isForwardRange!(typeof(infinite)));
-
-    auto nums = [0,1,2,3,4];
-    auto forward = filter!"a % 2 == 0"(nums);
-    assert(equal(retro(forward), [4,2,0][])); // f is a bidirectional range
-
-        foreach(DummyType; AllDummyRanges) {
-            DummyType d;
-            auto f = filter!"a & 1"(d);
-            assert(equal(f, [1,3,5,7,9]));
-
-            static if (isForwardRange!DummyType) {
-                static assert(isForwardRange!(typeof(f)));
-            }
-
-            static if (isBidirectionalRange!DummyType) {
-                static assert(isBidirectionalRange!(typeof(f)));
-                assert(equal(retro(f), [9,7,5,3,1]));
-            }
-        }
-
-    // With delegates
-    int x = 10;
-    int overX(int a) { return a > x; }
-    typeof(filter!overX(a)) getFilter()
-    {
-        return filter!overX(a);
-    }
-    auto r1 = getFilter();
-    assert(equal(r1, [22, 42]));
-
-    // With chain
-    assert(equal(filter!overX(chain(a, nums)), [22, 42]));
-
-    // With copying of inner struct Filter to Map
-    auto arr = [1,2,3,4,5];
-    auto m = map!"a + 1"(filter!"a < 4"(arr));
-}
+    assert(equal(compose!(map!"2 * a", filter!"a & 1")([1,2,3,4,5]),
+                    [2,6,10]));
+    assert(equal(pipe!(filter!"a & 1", map!"2 * a")([1,2,3,4,5]),
+            [2,6,10]));
 }
 
 unittest
