@@ -191,7 +191,7 @@ debug (LOGGING)
                 if (data[i].p == p)
                     return i;
             }
-            return ~0u;         // not found
+            return ~cast(size_t)0;         // not found
         }
 
 
@@ -331,7 +331,7 @@ class GC
         void *p = null;
         Bins bin;
 
-        //debug(PRINTF) printf("GC::malloc(size = %d, gcx = %p)\n", size, gcx);
+        //debug(PRINTF) printf("GC::mallocNoSync(size = %d, gcx = %p)\n", size, gcx);
         assert(gcx);
         //debug(PRINTF) printf("gcx.self = %x, pthread_self() = %x\n", gcx.self, pthread_self());
 
@@ -531,7 +531,7 @@ class GC
                                 if (i == pool.ncommitted)
                                 {
                                     auto u = pool.extendPages(pagenum + newsz - pool.ncommitted);
-                                    if (u == ~0u)
+                                    if (u == ~cast(typeof(u))0)
                                         break;
                                     i = pagenum + newsz;
                                     continue;
@@ -625,7 +625,7 @@ class GC
         else if (pagenum + psz + sz == pool.ncommitted)
         {
             auto u = pool.extendPages(minsz - sz);
-            if (u == ~0u)
+            if (u == ~cast(typeof(u))0)
                 return 0;
             sz = minsz;
         }
@@ -942,7 +942,7 @@ class GC
             return;
         }
 
-        //debug(PRINTF) printf("+GC.addRange(pbot = x%x, ptop = x%x)\n", pbot, ptop);
+        //debug(PRINTF) printf("+GC.addRange(pbot = %p, ptop = %p)\n", pbot, ptop);
         if (!thread_needLock())
         {
             gcx.addRange(pbot, ptop);
@@ -1188,8 +1188,8 @@ struct Range
 
 
 const uint binsize[B_MAX] = [ 16,32,64,128,256,512,1024,2048,4096 ];
-const uint notbinsize[B_MAX] = [ ~(16u-1),~(32u-1),~(64u-1),~(128u-1),~(256u-1),
-                                ~(512u-1),~(1024u-1),~(2048u-1),~(4096u-1) ];
+const size_t notbinsize[B_MAX] = [ ~(16-1),~(32-1),~(64-1),~(128-1),~(256-1),
+                                ~(512-1),~(1024-1),~(2048-1),~(4096-1) ];
 
 /* ============================ Gcx =============================== */
 
@@ -1389,6 +1389,7 @@ struct Gcx
      */
     void addRange(void *pbot, void *ptop)
     {
+	debug(PRINTF) printf("addRange(pbot = %p, ptop = %p)\n", pbot, ptop);
         debug(PRINTF) printf("Thread %x ", pthread_self());
         debug(PRINTF) printf("%x.Gcx::addRange(%x, %x), nranges = %d\n", this, pbot, ptop, nranges);
         if (nranges == rangedim)
@@ -1573,7 +1574,7 @@ struct Gcx
             {
                 pool = pooltable[n];
                 pn = pool.allocPages(npages);
-                if (pn != ~0u)
+                if (pn != ~cast(typeof(pn))0)
                     goto L1;
             }
 
@@ -1598,7 +1599,7 @@ struct Gcx
                         continue;
                     }
                     pn = pool.allocPages(npages);
-                    assert(pn != ~0u);
+                    assert(pn != ~cast(typeof(pn))0);
                     goto L1;
 
                 case 1:
@@ -1607,7 +1608,7 @@ struct Gcx
                     if (!pool)
                         goto Lnomemory;
                     pn = pool.allocPages(npages);
-                    assert(pn != ~0u);
+                    assert(pn != ~cast(typeof(pn))0);
                     goto L1;
 
                 case 2:
@@ -1713,18 +1714,18 @@ struct Gcx
      */
     int allocPage(Bins bin)
     {
+        //debug(PRINTF) printf("Gcx::allocPage(bin = %d)\n", bin);
         Pool *pool;
         uint n;
         uint pn;
         byte *p;
         byte *ptop;
 
-        //debug(PRINTF) printf("Gcx::allocPage(bin = %d)\n", bin);
         for (n = 0; n < npools; n++)
         {
             pool = pooltable[n];
             pn = pool.allocPages(1);
-            if (pn != ~0u)
+            if (pn != ~cast(typeof(pn))0)
                 goto L1;
         }
         return 0;               // failed
@@ -1768,7 +1769,7 @@ struct Gcx
             {
                 /* Skip page if we've already scanned it
                  */
-                if ((cast(size_t)p & ~(PAGESIZE-1)) == pageCache)
+                if ((cast(size_t)p & ~cast(size_t)(PAGESIZE-1)) == pageCache)
                     continue;
 
                 pool = findPool(p);
@@ -1801,7 +1802,7 @@ struct Gcx
                     }
 
                     if (bin >= B_PAGE)  // cache B_PAGE and B_PAGEPLUS lookups
-                        pageCache = cast(size_t)p & ~(PAGESIZE-1);
+                        pageCache = cast(size_t)p & ~cast(size_t)(PAGESIZE-1);
 
                     //debug(PRINTF) printf("\t\tmark(x%x) = %d\n", biti, pool.mark.test(biti));
                     if (!pool.mark.test(biti))
@@ -1990,7 +1991,7 @@ struct Gcx
                     version (Posix)
                     {
                         // The registers are already stored in the stack
-                        //printf("Thread: ESP = x%x, stackBottom = x%x, isSelf = %d\n", Thread.getESP(), t.stackBottom, t.isSelf());
+                        //printf("Thread: ESP = %p, stackBottom = %p, isSelf = %d\n", Thread.getESP(), t.stackBottom, t.isSelf());
                         if (t.isSelf())
                             t.stackTop = Thread.getESP();
 
@@ -2336,10 +2337,9 @@ struct Gcx
         void log_free(void *p)
         {
             //debug(PRINTF) printf("+log_free(%x)\n", p);
-            size_t i;
 
-            i = current.find(p);
-            if (i == ~0u)
+            auto i = current.find(p);
+            if (i == ~cast(typeof(i))0)
             {
                 debug(PRINTF) printf("free'ing unallocated memory %x\n", p);
             }
@@ -2358,10 +2358,8 @@ struct Gcx
             size_t used = 0;
             for (size_t i = 0; i < current.dim; i++)
             {
-                size_t j;
-
-                j = prev.find(current.data[i].p);
-                if (j == ~0u)
+                auto j = prev.find(current.data[i].p);
+                if (j == ~cast(typeof(j))0)
                     current.data[i].print();
                 else
                     used++;
@@ -2377,7 +2375,7 @@ struct Gcx
                 if (!findPool(current.data[i].parent))
                 {
                     j = prev.find(current.data[i].p);
-                    if (j == ~0u)
+                    if (j == ~cast(typeof(j))0)
                         debug(PRINTF) printf("N");
                     else
                         debug(PRINTF) printf(" ");;
@@ -2395,10 +2393,9 @@ struct Gcx
         void log_parent(void *p, void *parent)
         {
             //debug(PRINTF) printf("+log_parent()\n");
-            size_t i;
 
-            i = current.find(p);
-            if (i == ~0u)
+            auto i = current.find(p);
+            if (i == ~cast(typeof(i))0)
             {
                 debug(PRINTF) printf("parent'ing unallocated memory %x, parent = %x\n", p, parent);
                 Pool *pool;

@@ -546,7 +546,7 @@ class InternetHost
 unittest
 {
         InternetHost ih = new InternetHost;
-        assert(ih.getHostByName("www.digitalmars.com"));
+        assert(ih.getHostByName("www.google.com"));
         printf("addrList.length = %d\n", ih.addrList.length);
         assert(ih.addrList.length);
         InternetAddress ia = new InternetAddress(ih.addrList[0], InternetAddress.PORT_ANY);

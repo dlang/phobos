@@ -29,7 +29,7 @@ version(linux)
     /* from bits/pthreadtypes.h
     */
 
-    alias uint pthread_t;
+    alias size_t pthread_t;
     alias uint pthread_key_t;
     alias int pthread_once_t;
     alias int clockid_t;
