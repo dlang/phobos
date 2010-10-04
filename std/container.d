@@ -2531,7 +2531,7 @@ and $(D length == capacity), throws an exception.
      */
     size_t insert(ElementType!Store value)
     {
-        static if (is(_store.insertBack(value)))
+        static if (is(typeof(_store.insertBack(value))))
         {
             _payload.RefCounted.ensureInitialized();
             if (length == _store.length)
