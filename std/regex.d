@@ -2839,6 +2839,18 @@ unittest
     assert(replace("noon", regex("^n"), "[$&]") == "[n]oon");
 }
 
+// @@@BUG@@@ workaround for bug 5003
+private bool _dummyTest(Engine)(ref Engine r, size_t idx)
+{
+    return r.test(idx);
+}
+
+// @@@BUG@@@ workaround for bug 5003
+private ubyte _dummyAttributes(Engine)(ref Engine r)
+{
+    return r.attributes;
+}
+
 /*******************************************************
 Search string for matches with regular expression pattern with
 attributes.  Pass each match to function $(D fun).  Replace each match
@@ -2871,7 +2883,8 @@ Range replace(alias fun, Range, Regex)
     auto result = s;
     auto lastindex = 0;
     auto offset = 0;
-    while (r.test(lastindex))
+    // @@@BUG@@@ workaround for bug 5003
+    while (_dummyTest(r, lastindex))
     {
         auto so = r.pmatch[0].startIdx;
         auto eo = r.pmatch[0].endIdx;
@@ -2895,7 +2908,8 @@ Range replace(alias fun, Range, Regex)
         result = replaceSlice(result, result[offset + so .. offset + eo],
                 replacement);
 
-        if (rx.attributes & rx.REA.global)
+        // @@@BUG@@@ workaround for bug 5003
+        if (_dummyAttributes(rx) & rx.REA.global)
         {
             offset += replacement.length - (eo - so);
 
