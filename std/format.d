@@ -1289,6 +1289,8 @@ if (isPointer!T)
 void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
 if (is(T == class))
 {
+    // TODO: Change this once toString() works for shared objects.
+    static assert(!is(T == shared), "unable to format shared objects");
     if (val is null) put(w, "null");
     else put(w, val.toString);
 }

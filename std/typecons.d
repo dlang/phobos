@@ -500,7 +500,11 @@ assert(s[0] == "abc" && s[1] == 4.5);
             {
                 app.put(separator);
             }
-            formattedWrite(app, "%s", field[i]);
+            // TODO: Change this once toString() works for shared objects.
+            static if (is(Unused == class) && is(Unused == shared))
+                formattedWrite(app, "%s", field[i].stringof);
+            else
+                formattedWrite(app, "%s", field[i]);
         }
         app.put(footer);
         return app.data;
