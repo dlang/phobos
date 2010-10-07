@@ -775,7 +775,10 @@ private
                 if( wrap[0] == owner )
                 {
                     owner = Tid.init;
-                    throw new OwnerTerminated( wrap[0] );
+                    auto e = new OwnerTerminated( wrap[0] );
+                    if( onStandardMsg( Message( MsgType.standard, e ) ) )
+                        return true;
+                    throw e;
                 }
                 return false;
             }
@@ -803,8 +806,19 @@ private
                     {
                         if( onControlMsg( range.front ) )
                         {
+                            // Although the linkDead message is a control message,
+                            // it can be handled by the user.  Since the linkDead
+                            // message throws if not handled, if we get here then
+                            // it has been handled and we can return from receive.
+                            // This is a weird special case that will have to be
+                            // handled in a more general way if more are added.
+                            if( !isLinkDeadMsg( range.front ) )
+                            {
+                                list.removeAt( range );
+                                continue;
+                            }
                             list.removeAt( range );
-                            continue;
+                            return true;    
                         }
                         range.popFront();
                         continue;
@@ -979,6 +993,12 @@ private
         pure final bool isPriorityMsg( Message msg )
         {
             return msg.type == MsgType.priority;
+        }
+        
+        
+        pure final bool isLinkDeadMsg( Message msg )
+        {
+            return msg.type == MsgType.linkDead;
         }
 
 
