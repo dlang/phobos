@@ -720,14 +720,17 @@ private
                     }
                     else static if( Args.length == 1 && isTuple!(Args) )
                     {
-                        static if( is( ReturnType!(t) == bool ) )
+                        if( data.convertsTo!(Wrap) )
                         {
-                            return op( data.get!(Args) );
-                        }
-                        else
-                        {
-                            op( data.get!(Args) );
-                            return true;
+                            static if( is( ReturnType!(t) == bool ) )
+                            {
+                                return op( data.get!(Args) );
+                            }
+                            else
+                            {
+                                op( data.get!(Args) );
+                                return true;
+                            }
                         }
                     }
                     else
