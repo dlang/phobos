@@ -365,7 +365,10 @@ private:
                 *target = to!(string)(*zis);
                 break;
             }
-            else static if (is(typeof((*zis).toString)))
+            // TODO: The following test evaluates to true for shared objects.
+            //       Use __traits for now until this is sorted out.
+            // else static if (is(typeof((*zis).toString)))
+            else static if (__traits(compiles, {(*zis).toString;}))
             {
                 *target = (*zis).toString;
                 break;
@@ -501,7 +504,16 @@ public:
         {
             static if (T.sizeof <= size)
             {
-                memcpy(&store, &rhs, rhs.sizeof);
+                // If T is a class we're only copying the reference, so it
+                // should be safe to cast away shared so the memcpy will work.
+                //
+                // TODO: If a shared class has an atomic reference then using
+                //       an atomic load may be more correct.  Just make sure
+                //       to use the fastest approach for the load op.
+                static if (is(T == class) && is(T == shared))
+                    memcpy(&store, cast(const(void*)) &rhs, rhs.sizeof);
+                else
+                    memcpy(&store, &rhs, rhs.sizeof);
             }
             else
             {
