@@ -72,35 +72,65 @@ private
     {
         MsgType type;
         Variant data;
+        
+        this(T...)( MsgType t, T vals )
+            if( T.length < 1 )
+        {
+            static assert( false, "messages must contain at least one item" );
+        }
 
         this(T...)( MsgType t, T vals )
+            if( T.length == 1 )
+        {
+            type = t;
+            data = vals[0];
+        }
+
+        this(T...)( MsgType t, T vals )
+            if( T.length > 1 )
         {
             type = t;
             data = Tuple!(T)( vals );
         }
 
-        this(U=void, T...)( MsgType t, Tuple!(T) vals )
+        auto convertsTo(T...)()
         {
-            type = t;
-            data = vals;
+            static if( T.length == 1 )
+                return is( T[0] == Variant ) ||
+                       data.convertsTo!(T);
+            else
+                return data.convertsTo!(Tuple!(T));
         }
-    }
-
-    struct Priority
-    {
-        Variant   data;
-        Throwable fail;
-
-        this(T...)( T vals )
+        
+        auto get(T...)()
         {
-            data = Tuple!(T)( vals );
-            static if( T.length == 1 && is( T[0] : Throwable ) )
+            static if( T.length == 1 )
             {
-                fail = vals[0];
+                static if( is( T[0] == Variant ) )
+                    return data;
+                else
+                    return data.get!(T);
             }
             else
             {
-                fail = new PriorityMessageException!(T)( vals );
+                return data.get!(Tuple!(T));
+            }
+        }
+
+        auto map(Op)( Op op )
+        {
+            alias ParameterTypeTuple!(Op) Args;
+
+            static if( Args.length == 1 )
+            {
+                static if( is( Args[0] == Variant ) )
+                    return op( data );
+                else
+                    return op( data.get!(Args) );
+            }
+            else
+            {
+                return op( data.get!(Tuple!(Args)).expand );
             }
         }
     }
@@ -205,19 +235,15 @@ class LinkTerminated : Exception
 /**
  *
  */
-class PriorityMessageException(T...) : Exception
+class PriorityMessageException : Exception
 {
-    this( T vals )
+    this( Variant vals )
     {
         super( "Priority message" );
-        static if( T.length == 1 )
-             message       = vals;
-        else message.field = vals;
+        message = vals;
     }
 
-    static if( T.length == 1 )
-         T         message;
-    else Tuple!(T) message;
+    Variant message;
 }
 
 
@@ -371,7 +397,7 @@ void prioritySend(T...)( Tid tid, T vals )
 {
     static assert( !hasLocalAliasing!(T),
                    "Aliases to mutable thread-local data not allowed." );
-    _send( MsgType.priority, tid, Priority( vals ) );
+    _send( MsgType.priority, tid, vals );
 }
 
 
@@ -626,7 +652,7 @@ private
          * Throws:
          *  An exception if the queue is full and onCrowdingDoThis throws.
          */
-        final void put( Message msg )
+        final void put( ref Message msg )
         {
             synchronized( m_lock )
             {
@@ -696,92 +722,50 @@ private
                 enum timedWait = false;
             }
 
-            bool onStandardMsg( Message msg )
+            bool onStandardMsg( ref Message msg )
             {
-                Variant data = msg.data;
-
                 foreach( i, t; Ops )
                 {
                     alias ParameterTypeTuple!(t) Args;
-                    alias Tuple!(Args) Wrap;
                     auto op = ops[i];
-
-                    static if( is( Wrap == Tuple!(Variant) ) )
+                    
+                    if( msg.convertsTo!(Args) )
                     {
                         static if( is( ReturnType!(t) == bool ) )
                         {
-                            return op( data );
+                            return msg.map( op );
                         }
                         else
                         {
-                            op( data );
+                            msg.map( op );
                             return true;
-                        }
-                    }
-                    else static if( Args.length == 1 && isTuple!(Args) )
-                    {
-                        if( data.convertsTo!(Args) )
-                        {
-                            static if( is( ReturnType!(t) == bool ) )
-                            {
-                                return op( data.get!(Args) );
-                            }
-                            else
-                            {
-                                op( data.get!(Args) );
-                                return true;
-                            }
-                        }
-                    }
-                    else
-                    {
-                        if( data.convertsTo!(Wrap) )
-                        {
-                            static if( is( ReturnType!(t) == bool ) )
-                            {
-                                return op( data.get!(Wrap).expand );
-                            }
-                            else
-                            {
-                                op( data.get!(Wrap).expand );
-                                return true;
-                            }
                         }
                     }
                 }
                 return false;
             }
 
-            bool onLinkDeadMsg( Variant data )
+            bool onLinkDeadMsg( ref Message msg )
             {
-                alias Tuple!(Tid) Wrap;
+                assert( msg.convertsTo!(Tid) );
+                auto tid = msg.get!(Tid);
 
-                static if( Variant.allowed!(Wrap) )
+                if( bool* depends = (tid in links) )
                 {
-                    assert( data.convertsTo!(Wrap) );
-                    auto wrap = data.get!(Wrap);
-                }
-                else
-                {
-                    assert( data.convertsTo!(Wrap*) );
-                    auto wrap = data.get!(Wrap*);
-                }
-                if( bool* depends = (wrap[0] in links) )
-                {
-                    links.remove( wrap[0] );
+                    links.remove( tid );
                     // Give the owner relationship precedence.
-                    if( *depends && wrap[0] != owner )
+                    if( *depends && tid != owner )
                     {                        
-                        auto e = new LinkTerminated( wrap[0] );
+                        auto e = new LinkTerminated( tid );
                         if( onStandardMsg( Message( MsgType.standard, e ) ) )
                             return true;
                         throw e;
                     }
                 }
-                if( wrap[0] == owner )
+                if( tid == owner )
                 {
                     owner = Tid.init;
-                    auto e = new OwnerTerminated( wrap[0] );
+                    auto e = new OwnerTerminated( tid );
                     if( onStandardMsg( Message( MsgType.standard, e ) ) )
                         return true;
                     throw e;
@@ -789,12 +773,12 @@ private
                 return false;
             }
 
-            bool onControlMsg( Message msg )
+            bool onControlMsg( ref Message msg )
             {
                 switch( msg.type )
                 {
                 case MsgType.linkDead:
-                    return onLinkDeadMsg( msg.data );
+                    return onLinkDeadMsg( msg );
                 default:
                     return false;
                 }
@@ -846,23 +830,20 @@ private
 
             bool pty( ref ListT list )
             {
-                alias Tuple!(Priority) Wrap;
-
                 if( !list.empty )
                 {
-                    auto    range = list[];
-                    Variant data  = range.front.data;
-                    assert( data.convertsTo!(Wrap) );
-                    auto p = data.get!(Wrap)[0];
-                    Message msg;
+                    auto range = list[];
 
-                    msg.data = p.data;
-                    if( onStandardMsg( msg ) )
+                    if( onStandardMsg( range.front ) )
                     {
                         list.removeAt( range );
                         return true;
                     }
-                    throw p.fail;
+                    if( range.front.convertsTo!(Throwable) )
+                        throw range.front.get!(Throwable);
+                    else if( range.front.convertsTo!(shared(Throwable)) )
+                        throw range.front.get!(shared(Throwable));
+                    else throw new PriorityMessageException( range.front.data );
                 }
                 return false;
             }
@@ -923,22 +904,13 @@ private
          */
         final void close()
         {
-            void onLinkDeadMsg( Variant data )
+            void onLinkDeadMsg( ref Message msg )
             {
-                alias Tuple!(Tid) Wrap;
+                assert( msg.convertsTo!(Tid) );
+                auto tid = msg.get!(Tid);
 
-                static if( Variant.allowed!(Wrap) )
-                {
-                    assert( data.convertsTo!(Wrap) );
-                    auto wrap = data.get!(Wrap);
-                }
-                else
-                {
-                    assert( data.convertsTo!(Wrap*) );
-                    auto wrap = data.get!(Wrap*);
-                }
-                links.remove( wrap[0] );
-                if( wrap[0] == owner )
+                links.remove( tid );
+                if( tid == owner )
                     owner = Tid.init;
             }
 
@@ -947,7 +919,7 @@ private
                 for( auto range = list[]; !range.empty; range.popFront() )
                 {
                     if( range.front.type == MsgType.linkDead )
-                        onLinkDeadMsg( range.front.data );
+                        onLinkDeadMsg( range.front );
                 }
             }
 
@@ -989,20 +961,20 @@ private
         //////////////////////////////////////////////////////////////////////
 
 
-        pure final bool isControlMsg( Message msg )
+        pure final bool isControlMsg( ref Message msg )
         {
             return msg.type != MsgType.standard &&
                    msg.type != MsgType.priority;
         }
 
 
-        pure final bool isPriorityMsg( Message msg )
+        pure final bool isPriorityMsg( ref Message msg )
         {
             return msg.type == MsgType.priority;
         }
         
         
-        pure final bool isLinkDeadMsg( Message msg )
+        pure final bool isLinkDeadMsg( ref Message msg )
         {
             return msg.type == MsgType.linkDead;
         }
@@ -1053,12 +1025,12 @@ private
     {
         struct Range
         {
-            bool empty() const
+            @property bool empty() const
             {
                 return !m_prev.next;
             }
 
-            @property T front()
+            @property ref T front()
             {
                 enforce( m_prev.next );
                 return m_prev.next.val;
@@ -1239,7 +1211,7 @@ version( unittest )
                  {
                      assert( false );
                  } );
-        send( tid, "done" );
+        prioritySend( tid, "done" );
     }
 
 
