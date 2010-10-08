@@ -720,7 +720,7 @@ private
                     }
                     else static if( Args.length == 1 && isTuple!(Args) )
                     {
-                        if( data.convertsTo!(Wrap) )
+                        if( data.convertsTo!(Args) )
                         {
                             static if( is( ReturnType!(t) == bool ) )
                             {
