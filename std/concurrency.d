@@ -771,8 +771,11 @@ private
                     links.remove( wrap[0] );
                     // Give the owner relationship precedence.
                     if( *depends && wrap[0] != owner )
-                    {
-                        throw new LinkTerminated( wrap[0] );
+                    {                        
+                        auto e = new LinkTerminated( wrap[0] );
+                        if( onStandardMsg( Message( MsgType.standard, e ) ) )
+                            return true;
+                        throw e;
                     }
                 }
                 if( wrap[0] == owner )
