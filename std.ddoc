@@ -153,6 +153,7 @@ NAVIGATION_PHOBOS=
 	$(LI <a href="std_algorithm.html" title="General-purpose algorithms">std.algorithm</a>)
 	$(LI <a href="std_array.html" title="Array functions">std.array</a>)
 	$(LI <a href="std_base64.html" title="Encode/decode base64 format">std.base64</a>)
+	$(LI <a href="std_bigint.html" title="Arbitrary-precision ('bignum') arithmetic">std.bigint</a>)
 	$(LI <a href="std_bind.html" title="Function argument binding">std.bind</a>)
 	$(LI <a href="std_bitmanip.html" title="Bit-level manipulation">std.bitmanip</a>)
 	$(LI <a href="std_boxer.html" title="Box/unbox types">std.boxer</a>)

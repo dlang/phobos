@@ -124,6 +124,9 @@ D language compiler. Also, check out the
 	<dt><a href="std_base64.html"><b>std.base64</b></a>
 	<dd>Encode/decode base64 format.
 
+	<dt><a href="std_bigint.html"><b>std.bigint</b></a>
+	<dd>Arbitrary-precision ('bignum') arithmetic
+
 	<dt><a href="std_bind.html"><b>std.bind</b></a>
 	<dd>Bind function arguments.
 
