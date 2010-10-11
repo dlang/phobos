@@ -997,6 +997,59 @@ to this file. */
         // }
     }
 
+
+    /**
+     * Range that reads a chunk at a time.
+     */
+    struct ByChunk
+    {
+      private:
+        File    file_;
+        ubyte[] chunk_;
+ 
+ 
+      public:
+        this(File file, size_t size)
+        in
+        {
+            assert(size, "size must be larger than 0");
+        }
+        body
+        {
+            file_  = file;
+            chunk_ = new ubyte[](size);
+ 
+            popFront();
+        }
+ 
+
+        /// Range primitive operations.
+        @property
+        bool empty() const
+        {
+            return !file_.isOpen;
+        }
+ 
+
+        /// Ditto
+        @property
+        nothrow ubyte[] front()
+        {
+            return chunk_;
+        }
+ 
+
+        /// Ditto
+        void popFront()
+        {
+            enforce(!empty, "Cannot call popFront on empty range");
+ 
+            chunk_ = file_.rawRead(chunk_);
+            if (chunk_.length == 0)
+                file_.detach();
+        }
+    }
+
 /**
 Iterates through a file a chunk at a time by using $(D foreach).
 
@@ -1019,9 +1072,31 @@ always greater than zero).
 
 In case of an I/O error, an $(D StdioException) is thrown.
  */
-    chunks byChunk(size_t chunkSize)
+    ByChunk byChunk(size_t chunkSize)
     {
-        return chunks(this, chunkSize);
+        return ByChunk(this, chunkSize);
+    }
+
+    unittest
+    {
+        scope(failure) printf("Failed test at line %d\n", __LINE__);
+
+        std.file.write("testingByChunk", "asd\ndef\nasdf");
+
+        auto witness = ["asd\n", "def\n", "asdf" ];
+        auto f = File("testingByChunk");
+        scope(exit)
+        {
+            f.close;
+            assert(!f.isOpen);
+            std.file.remove("testingByChunk");
+        }
+
+        uint i;
+        foreach (chunk; f.byChunk(4))
+            assert(chunk == cast(ubyte[])witness[i++]);
+
+        assert(i == witness.length);
     }
 
 /**
