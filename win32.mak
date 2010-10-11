@@ -16,6 +16,7 @@
 
 CP=cp
 DIR=\dmd
+PHOBOSSVN=\svnproj\phobos1
 
 CFLAGS=-mn -6 -r
 #CFLAGS=-g -mn -6 -r
@@ -952,6 +953,11 @@ detab:
 	$(SRC_STDLINUX)
 # $(SRC_ETC) $(SRC_ETC_C) $(SRC_ZLIB) $(SRC_GC)
 
+tolf:
+	tolf freebsd.mak internal\gc\freebsd.mak etc\c\zlib\freebsd.mak
+
+svn:
+
 install:
 	$(CP) phobos.lib gcstub.obj $(DIR)\windows\lib
 	$(CP) $(MAKEFILES) phoboslicense.txt minit.obj std.ddoc $(DIR)\src\phobos
@@ -971,4 +977,27 @@ install:
 	$(CP) $(SRC_ETC_C) $(DIR)\src\phobos\etc\c
 	$(CP) $(SRC_ZLIB) $(DIR)\src\phobos\etc\c\zlib
 	$(CP) $(SRC_GC) $(DIR)\src\phobos\internal\gc
+
+################# Write to SVN ####################
+
+svn:	detab tolf svn2
+
+svn2:
+	$(CP) $(MAKEFILES) phoboslicense.txt minit.obj std.ddoc $(PHOBOSSVN)
+	$(CP) $(SRC) $(PHOBOSSVN)
+	$(CP) $(SRC_STD) $(PHOBOSSVN)\std
+	$(CP) $(SRC_STD_C) $(PHOBOSSVN)\std\c
+	$(CP) $(SRC_TI) $(PHOBOSSVN)\std\typeinfo
+	$(CP) $(SRC_INT) $(PHOBOSSVN)\internal
+	$(CP) $(SRC_STD_WIN) $(PHOBOSSVN)\std\windows
+	$(CP) $(SRC_STD_C_WIN) $(PHOBOSSVN)\std\c\windows
+	$(CP) $(SRC_STD_C_LINUX) $(PHOBOSSVN)\std\c\linux
+	$(CP) $(SRC_STD_C_OSX) $(PHOBOSSVN)\std\c\osx
+	$(CP) $(SRC_STD_C_FREEBSD) $(PHOBOSSVN)\std\c\freebsd
+	$(CP) $(SRC_STD_C_SOLARIS) $(PHOBOSSVN)\std\c\solaris
+	$(CP) $(SRC_STD_C_POSIX) $(PHOBOSSVN)\std\c\posix
+	$(CP) $(SRC_ETC) $(PHOBOSSVN)\etc
+	$(CP) $(SRC_ETC_C) $(PHOBOSSVN)\etc\c
+	$(CP) $(SRC_ZLIB) $(PHOBOSSVN)\etc\c\zlib
+	$(CP) $(SRC_GC) $(PHOBOSSVN)\internal\gc
 

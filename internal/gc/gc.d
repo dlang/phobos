@@ -385,12 +385,12 @@ array_t _d_newarraymT(TypeInfo ti, int ndims, ...)
     if (ndims == 0)
         result = array_t.init;
     else
-    {   va_list q;
-        va_start!(int)(q, ndims);
+    {   va_list ap;
+        va_start(ap, ndims);
 
-        void[] foo(TypeInfo ti, size_t* pdim, int ndims)
+        void[] foo(TypeInfo ti, va_list ap, int ndims)
         {
-            size_t dim = *pdim;
+	    size_t dim = va_arg!(int)(ap);
             void[] p;
 
             //printf("foo(ti = %p, ti.next = %p, dim = %d, ndims = %d\n", ti, ti.next, dim, ndims);
@@ -402,26 +402,27 @@ array_t _d_newarraymT(TypeInfo ti, int ndims, ...)
             else
             {
                 p = _gc.malloc(dim * (void[]).sizeof + 1)[0 .. dim];
+		va_list ap2;
+		va_copy(ap2, ap);
                 for (int i = 0; i < dim; i++)
                 {
-                    (cast(void[]*)p.ptr)[i] = foo(ti.next, pdim + 1, ndims - 1);
+                    (cast(void[]*)p.ptr)[i] = foo(ti.next, ap2, ndims - 1);
                 }
             }
             return p;
         }
 
-        size_t* pdim = cast(size_t *)q;
-        result = cast(typeof(result))foo(ti, pdim, ndims);
+        result = cast(typeof(result))foo(ti, ap, ndims);
         //printf("result = %llx\n", result);
 
         version (none)
         {
             for (int i = 0; i < ndims; i++)
             {
-                printf("index %d: %d\n", i, va_arg!(int)(q));
+                printf("index %d: %d\n", i, va_arg!(int)(ap));
             }
         }
-        va_end(q);
+        va_end(ap);
     }
     return result;
 }
@@ -436,12 +437,12 @@ array_t _d_newarraymiT(TypeInfo ti, int ndims, ...)
         result = array_t.init;
     else
     {
-        va_list q;
-        va_start!(int)(q, ndims);
+        va_list ap;
+        va_start(ap, ndims);
 
-        void[] foo(TypeInfo ti, size_t* pdim, int ndims)
+        void[] foo(TypeInfo ti, va_list ap, int ndims)
         {
-            size_t dim = *pdim;
+            size_t dim = va_arg!(int)(ap);
             void[] p;
 
             if (ndims == 1)
@@ -452,27 +453,27 @@ array_t _d_newarraymiT(TypeInfo ti, int ndims, ...)
             else
             {
                 p = _gc.malloc(dim * (void[]).sizeof + 1)[0 .. dim];
+		va_list ap2;
+		va_copy(ap2, ap);
                 for (int i = 0; i < dim; i++)
                 {
-                    (cast(void[]*)p.ptr)[i] = foo(ti.next, pdim + 1, ndims - 1);
+                    (cast(void[]*)p.ptr)[i] = foo(ti.next, ap2, ndims - 1);
                 }
             }
             return p;
         }
 
-        size_t* pdim = cast(size_t *)q;
-        result = cast(typeof(result))foo(ti, pdim, ndims);
+        result = cast(typeof(result))foo(ti, ap, ndims);
         //printf("result = %llx\n", result);
 
         version (none)
         {
             for (int i = 0; i < ndims; i++)
             {
-                printf("index %d: %d\n", i, va_arg!(int)(q));
-                printf("init = %d\n", va_arg!(int)(q));
+                printf("index %d: %d\n", i, va_arg!(int)(ap));
             }
         }
-        va_end(q);
+        va_end(ap);
     }
     return result;
 }

@@ -129,7 +129,7 @@ else version (linux)
     {
         align (1):
 
-	int	_flags;
+        int     _flags;
         char*   _read_ptr;
         char*   _read_end;
         char*   _read_base;

@@ -74,12 +74,6 @@ trees.o: deflate.h zutil.h zlib.h zconf.h trees.h
 	$(CC) -c $(CFLAGS) $*.c
 
 
-example.o: example.c zlib.h zconf.h
-	$(CC) -c $(cvarsdll) $(CFLAGS) $*.c
-
-minigzip.o: minigzip.c zlib.h zconf.h
-	$(CC) -c $(cvarsdll) $(CFLAGS) $*.c
-
 zlib.a: $(OBJS)
 	ar -r $@ $(OBJS)
 

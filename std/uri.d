@@ -240,7 +240,7 @@ private dchar[] URI_Decode(char[] string, uint reservedSet)
     auto s = string.ptr;
 
     // Preallocate result buffer R guaranteed to be large enough for result
-    auto Rsize = len;		// alloc'd size
+    auto Rsize = len;           // alloc'd size
     if (Rsize > 1024 / dchar.sizeof)
         R = (new dchar[Rsize]).ptr;
     else

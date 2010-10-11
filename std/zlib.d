@@ -570,7 +570,7 @@ unittest // by Dave
 
         // Alternate between more & less compressible
         foreach(inout char c; buf)
-	    c = cast(char)(' ' + (rand() % (idx % 2 ? 91 : 2)));
+            c = cast(char)(' ' + (rand() % (idx % 2 ? 91 : 2)));
 
         if(CompressThenUncompress(cast(ubyte[])buf)) {
             debug(zlib) printf("; Success.\n");
@@ -585,7 +585,7 @@ unittest // by Dave
 
         // Alternate between more & less compressible
         foreach(inout char c; buf)
-	    c = cast(char)(' ' + (rand() % (idx % 2 ? 91 : 10)));
+            c = cast(char)(' ' + (rand() % (idx % 2 ? 91 : 10)));
 
         if(CompressThenUncompress(cast(ubyte[])buf)) {
             debug(zlib) printf("; Success.\n");

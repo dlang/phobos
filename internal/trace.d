@@ -843,15 +843,15 @@ void _trace_pro_n()
     else version (D_InlineAsm_X86_64)
     asm
     {   naked                           ;
-	push	RAX			;
-	push	RCX			;
-	push	RDX			;
-	push	RSI			;
-	push	RDI			;
-	push	R8			;
-	push	R9			;
-	push	R10			;
-	push	R11			;
+        push    RAX                     ;
+        push    RCX                     ;
+        push    RDX                     ;
+        push    RSI                     ;
+        push    RDI                     ;
+        push    R8                      ;
+        push    R9                      ;
+        push    R10                     ;
+        push    R11                     ;
         mov     RCX,9*8[RSP]            ;
         xor     RAX,RAX                 ;
         mov     AL,[RCX]                ;
@@ -866,18 +866,18 @@ void _trace_pro_n()
         inc     RCX                     ;
         add     9*8[RSP],RAX            ;
         dec     RAX                     ;
-	mov	RSI,RCX			;
-	mov	RDI,RAX			;
+        mov     RSI,RCX                 ;
+        mov     RDI,RAX                 ;
         call    trace_pro               ;
-	pop	R11			;
-	pop	R10			;
-	pop	R8			;
-	pop	R9			;
-	pop	RDI			;
-	pop	RSI			;
-	pop	RDX			;
-	pop	RCX			;
-	pop	RAX			;
+        pop     R11                     ;
+        pop     R10                     ;
+        pop     R8                      ;
+        pop     R9                      ;
+        pop     RDI                     ;
+        pop     RSI                     ;
+        pop     RDX                     ;
+        pop     RCX                     ;
+        pop     RAX                     ;
         ret                             ;
     }
     else
@@ -931,16 +931,16 @@ void _trace_epi_n()
    else version (D_InlineAsm_X86_64)
    {
     asm
-    {   naked   	;
-	push	RAX	;
-	push	RDX	;
+    {   naked           ;
+        push    RAX     ;
+        push    RDX     ;
     }
     trace_epi();
     asm
     {
-        pop	RDX	;
-        pop	RAX	;
-        ret     	;
+        pop     RDX     ;
+        pop     RAX     ;
+        ret             ;
     }
    }
       else
@@ -985,7 +985,7 @@ else version (D_InlineAsm_X86_64)
     {
         void QueryPerformanceCounter(timer_t* ctr)
         {
-	    asm
+            asm
             {   naked                   ;
                 mov   [RDI],EAX         ;
                 mov   4[RDI],EDX        ;

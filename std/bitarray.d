@@ -353,16 +353,16 @@ struct BitArray
             if (c)
                 return c;
         }
-	version (D_LP64)
-	{
-	    long c = this.len - a2.length;
-	    if (c < 0)
-		return -1;
-	    else
-		return c != 0;
-	}
-	else
-	    return cast(int)this.len - cast(int)a2.length;
+        version (D_LP64)
+        {
+            long c = this.len - a2.length;
+            if (c < 0)
+                return -1;
+            else
+                return c != 0;
+        }
+        else
+            return cast(int)this.len - cast(int)a2.length;
     }
 
     unittest

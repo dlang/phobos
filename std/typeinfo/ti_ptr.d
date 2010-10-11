@@ -17,16 +17,16 @@ class TypeInfo_P : TypeInfo
 
     int compare(void *p1, void *p2)
     {
-	version (D_LP64)
-	{
+        version (D_LP64)
+        {
             long c = *cast(void* *)p1 - *cast(void* *)p2;
-	    if (c < 0)
-		return -1;
-	    else
-		return c != 0;
-	}
-	else
-	    return *cast(void* *)p1 - *cast(void* *)p2;
+            if (c < 0)
+                return -1;
+            else
+                return c != 0;
+        }
+        else
+            return *cast(void* *)p1 - *cast(void* *)p2;
     }
 
     size_t tsize()

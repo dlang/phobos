@@ -293,9 +293,9 @@ class OutBuffer
     void printf(string format, ...)
     {
         va_list ap;
-        ap = cast(va_list)&format;
-        ap += format.sizeof;
+        va_start(ap, format);
         vprintf(format, ap);
+        va_end(ap);
     }
 
     /*****************************************
