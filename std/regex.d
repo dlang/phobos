@@ -1523,7 +1523,7 @@ Regex!(Unqual!(typeof(String.init[0]))) regex(String)
 {
     static Tuple!(String, string) lastReq;
     static typeof(return) lastResult;
-    if (lastReq.field[0] == pattern && lastReq.field[1] == flags)
+    if (lastReq[0] == pattern && lastReq[1] == flags)
     {
         // cache hit
         return lastResult;
@@ -1531,8 +1531,8 @@ Regex!(Unqual!(typeof(String.init[0]))) regex(String)
 
     auto result = typeof(return)(pattern, flags);
 
-    lastReq.field[0] = cast(String) pattern.dup;
-    lastReq.field[1] = cast(string) flags.dup;
+    lastReq[0] = cast(String) pattern.dup;
+    lastReq[1] = cast(string) flags.dup;
     lastResult = result;
 
     return result;
@@ -3394,7 +3394,7 @@ template loadFile(Types...)
             Tuple!(Types) t;
             foreach (i, unused; t.field)
             {
-                t.field[i] = to!(typeof(t.field[i]))(match.captures[i + 1]);
+                t[i] = to!(typeof(t[i]))(match.captures[i + 1]);
             }
             result.put(t);
         }

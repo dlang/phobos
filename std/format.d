@@ -425,14 +425,12 @@ void formattedRead(R, Char, S...)(ref R r, const(Char)[] fmt, S args)
 
         skipUnstoredFields();
         alias typeof(*args[0]) A;
-        //@@@BUG 2725
-        //static if (is(A X == Tuple!(T), T))
-        static if (is(A.Types[0]))             // Is it a tuple?
+        static if (isTuple!A)
         {
             foreach (i, T; A.Types)
             {
                 //writeln("Parsing ", r, " with format ", fmt);
-                args[0].field[i] = unformatValue!(T)(r, spec);
+                (*args[0])[i] = unformatValue!(T)(r, spec);
                 skipUnstoredFields();
             }
         }
@@ -2206,11 +2204,11 @@ unittest
     Tuple!(int, float) t;
     line = "1 2.125".dup;
     formattedRead(line, "%d %g", &t);
-    assert(t.field[0] == 1 && t.field[1] == 2.125);
+    assert(t[0] == 1 && t[1] == 2.125);
 
     line = "1 7643 2.125".dup;
     formattedRead(line, "%s %*u %s", &t);
-    assert(t.field[0] == 1 && t.field[1] == 2.125);
+    assert(t[0] == 1 && t[1] == 2.125);
 }
 
 // Legacy implementation

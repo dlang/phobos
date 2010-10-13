@@ -84,7 +84,7 @@ Example:
 auto arr1 = [ 1, 2, 3, 4 ];
 foreach (e; map!("a + a", "a * a")(arr1))
 {
-    writeln(e.field[0], " ", e.field[1]);
+    writeln(e[0], " ", e[1]);
 }
 ----
 
@@ -274,8 +274,8 @@ unittest
     uint i;
     foreach (e; map!("a", "a * a")(arr1))
     {
-        assert(e.field[0] == ++i);
-        assert(e.field[1] == i * i);
+        assert(e[0] == ++i);
+        assert(e[1] == i * i);
     }
 
     // Test length.
@@ -380,16 +380,16 @@ double[] a = [ 3.0, 4, 7, 11, 3, 2, 5 ];
 // Compute minimum and maximum in one pass
 auto r = reduce!(min, max)(a);
 // The type of r is Tuple!(double, double)
-assert(r.field[0] == 2);  // minimum
-assert(r.field[1] == 11); // maximum
+assert(r[0] == 2);  // minimum
+assert(r[1] == 11); // maximum
 
 // Compute sum and sum of squares in one pass
 r = reduce!("a + b", "a + b * b")(tuple(0.0, 0.0), a);
-assert(r.field[0] == 35);  // sum
-assert(r.field[1] == 233); // sum of squares
+assert(r[0] == 35);  // sum
+assert(r[1] == 233); // sum of squares
 // Compute average and standard deviation from the above
-auto avg = r.field[0] / a.length;
-auto stdev = sqrt(r.field[1] / a.length - avg * avg);
+auto avg = r[0] / a.length;
+auto stdev = sqrt(r[1] / a.length - avg * avg);
 ----
  */
 
@@ -415,8 +415,7 @@ template reduce(fun...)
                     {
                         foreach (i, Unused; Args[0].Types)
                         {
-                            result.field[i] = binaryFun!(fun[i])(result.field[i],
-                                    r.front);
+                            result[i] = binaryFun!(fun[i])(result[i], r.front);
                         }
                     }
                 }
@@ -438,8 +437,7 @@ template reduce(fun...)
                         result = void;
                     foreach (i, T; result.Types)
                     {
-                        auto p = (cast(void*) &result.field[i])
-                            [0 .. result.field[i].sizeof];
+                        auto p = (cast(void*) &result[i])[0 .. result[i].sizeof];
                         emplace!T(p, r.front);
                     }
                     r.popFront();
@@ -490,8 +488,7 @@ template reduce(fun...)
                 {
                     foreach(i, T; result.Types)
                     {
-                        result.field[i] =
-                            binaryFun!(fun[i])(result.field[i], elem);
+                        result[i] = binaryFun!(fun[i])(result[i], elem);
                     }
                 }
                 else
@@ -503,8 +500,8 @@ template reduce(fun...)
 
                     foreach (i, T; result.Types)
                     {
-                        auto p = (cast(void*) &result.field[i])
-                            [0 .. result.field[i].sizeof];
+                        auto p = (cast(void*) &result[i])
+                            [0 .. result[i].sizeof];
                         emplace!T(p, elem);
                     }
                 }
@@ -515,7 +512,7 @@ template reduce(fun...)
 
             static if(fun.length == 1)
             {
-                return result.field[0];
+                return result[0];
             }
             else
             {
@@ -542,9 +539,9 @@ unittest
 
     // two funs
     auto r2 = reduce!("a + b", "a - b")(tuple(0., 0.), a);
-    assert(r2.field[0] == 7 && r2.field[1] == -7);
+    assert(r2[0] == 7 && r2[1] == -7);
     auto r3 = reduce!("a + b", "a - b")(a);
-    assert(r3.field[0] == 7 && r3.field[1] == -1);
+    assert(r3[0] == 7 && r3[1] == -1);
 
     a = [ 1, 2, 3, 4, 5 ];
     // Stringize with commas
@@ -1049,7 +1046,7 @@ unittest
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] a = [ 1, 2, 3, 4, 5 ];
     int[] b = new int[3];
-    assert(moveSome(a, b).field[0] is a[3 .. $]);
+    assert(moveSome(a, b)[0] is a[3 .. $]);
     assert(a[0 .. 3] == b);
     assert(a == [ 1, 2, 3, 4, 5 ]);
 }
@@ -1913,15 +1910,15 @@ struct Group(alias pred, R) if (isInputRange!R)
     {
         if (_input.empty)
         {
-            _current.field[1] = 0;
+            _current[1] = 0;
         }
         else
         {
             _current = tuple(_input.front, 1u);
             _input.popFront;
-            while (!_input.empty && comp(_current.field[0], _input.front))
+            while (!_input.empty && comp(_current[0], _input.front))
             {
-                ++_current.field[1];
+                ++_current[1];
                 _input.popFront;
             }
         }
@@ -1935,7 +1932,7 @@ struct Group(alias pred, R) if (isInputRange!R)
     {
         @property bool empty()
         {
-            return _current.field[1] == 0;
+            return _current[1] == 0;
         }
     }
 
@@ -3628,7 +3625,7 @@ unittest
     assert(minCount!("a > b")(a) == tuple(4, 2));
     int[][] b = [ [4], [2, 4], [4], [4] ];
     auto c = minCount!("a[0] < b[0]")(b);
-    assert(c == tuple([2, 4], 1), text(c.field[0]));
+    assert(c == tuple([2, 4], 1), text(c[0]));
 }
 
 // minPos
@@ -3687,8 +3684,8 @@ Example:
 int[]    x = [ 1,  5, 2, 7,   4, 3 ];
 double[] y = [ 1., 5, 2, 7.3, 4, 8 ];
 auto m = mismatch(x, y);
-assert(m.field[0] == begin(x) + 3);
-assert(m.field[1] == begin(y) + 3);
+assert(m[0] == begin(x) + 3);
+assert(m[1] == begin(y) + 3);
 ----
 */
 
@@ -3711,14 +3708,14 @@ unittest
     int[]    x = [ 1,  5, 2, 7,   4, 3 ];
     double[] y = [ 1., 5, 2, 7.3, 4, 8 ];
     auto m = mismatch(x, y);
-    assert(m.field[0] == [ 7, 4, 3 ]);
-    assert(m.field[1] == [ 7.3, 4, 8 ]);
+    assert(m[0] == [ 7, 4, 3 ]);
+    assert(m[1] == [ 7.3, 4, 8 ]);
 
     int[] a = [ 1, 2, 3 ];
     int[] b = [ 1, 2, 4, 5 ];
     auto mm = mismatch(a, b);
-    assert(mm.field[0] == [3]);
-    assert(mm.field[1] == [4, 5]);
+    assert(mm[0] == [3]);
+    assert(mm[1] == [4, 5]);
 }
 
 // levenshteinDistance
@@ -3907,8 +3904,8 @@ Example:
 ---
 string a = "Saturday", b = "Sunday";
 auto p = levenshteinDistanceAndPath(a, b);
-assert(p.field[0], 3);
-assert(equals(p.field[1], "nrrnsnnn"));
+assert(p[0], 3);
+assert(equals(p[1], "nrrnsnnn"));
 ---
 */
 Tuple!(size_t, EditOp[])
@@ -3937,7 +3934,7 @@ unittest
     // @@@BUG@@@
     //auto p = levenshteinDistanceAndPath(a, b);
     //writefln(p);
-    //assert(cast(string) p.field[1] == "nrrnsnnn", cast(string) p);
+    //assert(cast(string) p[1] == "nrrnsnnn", cast(string) p);
 }
 
 // copy
@@ -4026,7 +4023,7 @@ Example:
 int[] a = [ 100, 101, 102, 103 ];
 int[] b = [ 0, 1, 2, 3 ];
 auto c = swapRanges(a[1 .. 3], b[2 .. 4]);
-assert(c.at!(0).empty && c.at!(1).empty);
+assert(c[0].empty && c[1].empty);
 assert(a == [ 100, 2, 3, 103 ]);
 assert(b == [ 0, 1, 101, 102 ]);
 ----
@@ -4051,7 +4048,7 @@ unittest
     int[] a = [ 100, 101, 102, 103 ];
     int[] b = [ 0, 1, 2, 3 ];
     auto c = swapRanges(a[1 .. 3], b[2 .. 4]);
-    assert(c.field[0].empty && c.field[1].empty);
+    assert(c[0].empty && c[1].empty);
     assert(a == [ 100, 2, 3, 103 ]);
     assert(b == [ 0, 1, 101, 102 ]);
 }
@@ -4393,10 +4390,10 @@ Range remove
 (Range range, Offset offset)
 if (isBidirectionalRange!Range && hasLength!Range && s != SwapStrategy.stable)
 {
-    enum bool tupleLeft = is(typeof(offset[0].field[0]))
-        && is(typeof(offset[0].field[1]));
-    enum bool tupleRight = is(typeof(offset[$ - 1].field[0]))
-        && is(typeof(offset[$ - 1].field[1]));
+    enum bool tupleLeft = is(typeof(offset[0][0]))
+        && is(typeof(offset[0][1]));
+    enum bool tupleRight = is(typeof(offset[$ - 1][0]))
+        && is(typeof(offset[$ - 1][1]));
     static if (!tupleLeft)
     {
         alias offset[0] lStart;
@@ -4404,8 +4401,8 @@ if (isBidirectionalRange!Range && hasLength!Range && s != SwapStrategy.stable)
     }
     else
     {
-        auto lStart = offset[0].field[0];
-        auto lEnd = offset[0].field[1];
+        auto lStart = offset[0][0];
+        auto lEnd = offset[0][1];
     }
     static if (!tupleRight)
     {
@@ -4414,8 +4411,8 @@ if (isBidirectionalRange!Range && hasLength!Range && s != SwapStrategy.stable)
     }
     else
     {
-        auto rStart = offset[$ - 1].field[0];
-        auto rEnd = offset[$ - 1].field[1];
+        auto rStart = offset[$ - 1][0];
+        auto rEnd = offset[$ - 1][1];
     }
     // Begin. Test first to see if we need to remove the rightmost
     // element(s) in the range. In that case, life is simple - chop
@@ -4504,9 +4501,9 @@ if (isForwardRange!Range && !isBidirectionalRange!Range
     size_t pos;
     foreach (i; offset)
     {
-        static if (is(typeof(i.field[0])) && is(typeof(i.field[1])))
+        static if (is(typeof(i[0])) && is(typeof(i[1])))
         {
-            auto from = i.field[0], delta = i.field[1] - i.field[0];
+            auto from = i[0], delta = i[1] - i[0];
         }
         else
         {
@@ -5384,7 +5381,7 @@ void schwartzSort(alias transform, alias less = "a < b",
     alias typeof(z.front()) ProxyType;
     bool myLess(ProxyType a, ProxyType b)
     {
-        return binaryFun!(less)(a.field[0], b.field[0]);
+        return binaryFun!(less)(a[0], b[0]);
     }
     sort!(myLess, ss)(z);
 }
@@ -6927,8 +6924,7 @@ void largestPartialIntersectionWeighted
     alias ElementType!Range InfoType;
     bool heapComp(InfoType a, InfoType b)
     {
-        return weights[a.field[0]] * a.field[1] >
-            weights[b.field[0]] * b.field[1];
+        return weights[a[0]] * a[1] > weights[b[0]] * b[1];
     }
     topNCopy!heapComp(group(nWayUnion!less(ror)), tgt, sorted);
 }

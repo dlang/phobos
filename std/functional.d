@@ -340,7 +340,7 @@ static bool f1(int a) { return a != 0; }
 static int f2(int a) { return a / 2; }
 auto x = adjoin!(f1, f2)(5);
 assert(is(typeof(x) == Tuple!(bool, int)));
-assert(x._0 == true && x.field[1] == 2);
+assert(x[0] == true && x[1] == 2);
 ----
 */
 template adjoin(F...) if (F.length)
@@ -361,9 +361,8 @@ template adjoin(F...) if (F.length)
             Tuple!(Head, typeof(.adjoin!(F[1..$])(a)).Types) result = void;
             foreach (i, Unused; result.Types)
             {
-                auto store = (cast(void*) &result.field[i])
-                    [0 .. result.field[i].sizeof];
-                emplace!(typeof(result.field[i]))(store, F[i](a));
+                auto store = (cast(void*) &result[i])[0 .. result[i].sizeof];
+                emplace!(typeof(result[i]))(store, F[i](a));
             }
             return result;
         }
@@ -377,10 +376,10 @@ unittest
     static int F2(int a) { return a / 2; }
     auto x2 = adjoin!(F1, F2)(5);
     assert(is(typeof(x2) == Tuple!(bool, int)));
-    assert(x2.field[0] && x2.field[1] == 2);
+    assert(x2[0] && x2[1] == 2);
     auto x3 = adjoin!(F1, F2, F2)(5);
     assert(is(typeof(x3) == Tuple!(bool, int, int)));
-    assert(x3.field[0] && x3.field[1] == 2 && x3.field[2] == 2);
+    assert(x3[0] && x3[1] == 2 && x3[2] == 2);
 
     bool F4(int a) { return a != x1; }
     alias adjoin!(F4) eff4;

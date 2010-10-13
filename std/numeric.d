@@ -694,7 +694,7 @@ T findRoot(T, R)(R delegate(T) f, T a, T b)
 {
     auto r = findRoot(f, a, b, f(a), f(b), (T lo, T hi){ return false; });
     // Return the first value if it is smaller or NaN
-    return fabs(r.field[2]) !> fabs(r.field[3]) ? r.field[0] : r.field[1];
+    return fabs(r[2]) !> fabs(r[3]) ? r[0] : r[1];
 }
 
 /** Find root of a real function f(x) by bracketing, allowing the
@@ -984,8 +984,8 @@ unittest
         auto result = findRoot(f, x1, x2, f(x1), f(x2),
           (real lo, real hi) { return false; });
 
-        auto flo = f(result.field[0]);
-        auto fhi = f(result.field[1]);
+        auto flo = f(result[0]);
+        auto fhi = f(result[1]);
         if (flo!=0) {
             assert(oppositeSigns(flo, fhi));
         }

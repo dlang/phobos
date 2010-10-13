@@ -45,13 +45,6 @@ private
     import std.typecons;
     import std.typetuple;
 
-    template isTuple(T)
-    {
-       enum isTuple = __traits(compiles,
-                               { void f(X...)(Tuple!(X) t) {};
-                                 f(T.init); });
-    }
-
     template hasLocalAliasing(T...)
     {
         static if( !T.length )
