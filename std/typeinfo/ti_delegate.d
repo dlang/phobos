@@ -36,5 +36,17 @@ class TypeInfo_D : TypeInfo
     {
         return 1;
     }
+
+
+    size_t talign()
+    {
+        return dg.alignof;
+    }
+
+    version (X86_64) int argTypes(out TypeInfo arg1, out TypeInfo arg2)
+    {   arg1 = typeid(void*);
+        arg2 = typeid(void*);
+        return 0;
+    }
 }
 

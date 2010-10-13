@@ -376,7 +376,7 @@ Loverflow:
     _d_OutOfMemory();
 }
 
-array_t _d_newarraymT(TypeInfo ti, int ndims, ...)
+array_t _d_newarraymT(TypeInfo ti, size_t ndims, ...)
 {
     array_t result;
 
@@ -417,7 +417,7 @@ array_t _d_newarraymT(TypeInfo ti, int ndims, ...)
 
         version (none)
         {
-            for (int i = 0; i < ndims; i++)
+            for (size_t i = 0; i < ndims; i++)
             {
                 printf("index %d: %d\n", i, va_arg!(int)(ap));
             }
@@ -427,7 +427,7 @@ array_t _d_newarraymT(TypeInfo ti, int ndims, ...)
     return result;
 }
 
-array_t _d_newarraymiT(TypeInfo ti, int ndims, ...)
+array_t _d_newarraymiT(TypeInfo ti, size_t ndims, ...)
 {
     array_t result;
 
@@ -468,7 +468,7 @@ array_t _d_newarraymiT(TypeInfo ti, int ndims, ...)
 
         version (none)
         {
-            for (int i = 0; i < ndims; i++)
+            for (size_t i = 0; i < ndims; i++)
             {
                 printf("index %d: %d\n", i, va_arg!(int)(ap));
             }

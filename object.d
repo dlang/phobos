@@ -82,6 +82,8 @@ class TypeInfo
     uint flags();
     // 1:                       // has possible pointers into GC memory
     OffsetTypeInfo[] offTi();
+    size_t talign();
+    version (X86_64) int argTypes(out TypeInfo arg1, out TypeInfo arg2);
 }
 
 class TypeInfo_Typedef : TypeInfo
@@ -148,6 +150,13 @@ class TypeInfo_Struct : TypeInfo
     char[] function(void*) xtoString;
 
     uint m_flags;
+    uint m_align;
+
+    version (X86_64)
+    {
+        TypeInfo m_arg1;
+        TypeInfo m_arg2;
+    }
 }
 
 class TypeInfo_Tuple : TypeInfo

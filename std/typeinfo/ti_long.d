@@ -39,5 +39,10 @@ class TypeInfo_l : TypeInfo
         *cast(long *)p1 = *cast(long *)p2;
         *cast(long *)p2 = t;
     }
+
+    size_t talign()
+    {
+        return (long).alignof;
+    }
 }
 

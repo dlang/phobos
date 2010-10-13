@@ -63,5 +63,16 @@ class TypeInfo_r : TypeInfo
 
         return (cast(cdouble *)&r)[0 .. 1];
     }
+
+    size_t talign()
+    {
+        return (cdouble).alignof;
+    }
+
+    version (X86_64) int argTypes(out TypeInfo arg1, out TypeInfo arg2)
+    {   arg1 = typeid(double);
+        arg2 = typeid(double);
+        return 0;
+    }
 }
 

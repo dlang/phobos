@@ -62,5 +62,15 @@ class TypeInfo_q : TypeInfo
 
         return (cast(cfloat *)&r)[0 .. 1];
     }
+
+    size_t talign()
+    {
+        return cfloat.alignof;
+    }
+
+    version (X86_64) int argTypes(out TypeInfo arg1, out TypeInfo arg2)
+    {   arg1 = typeid(double);
+        return 0;
+    }
 }
 

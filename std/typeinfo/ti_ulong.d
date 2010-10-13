@@ -39,5 +39,10 @@ class TypeInfo_m : TypeInfo
         *cast(ulong *)p1 = *cast(ulong *)p2;
         *cast(ulong *)p2 = t;
     }
+
+    size_t talign()
+    {
+        return (ulong).alignof;
+    }
 }
 
