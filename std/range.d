@@ -1080,7 +1080,18 @@ Initializes the stride.
         static if (hasLength!(R))
         {
             auto slack = _input.length % _n;
-            if (slack) slack--;
+
+            if (slack)
+            {
+                slack--;
+            } else if(input.length > 0)
+            {
+                slack = min(n, input.length) - 1;
+            } else
+            {
+                slack = 0;
+            }
+
             if (!slack) return;
             static if (isRandomAccessRange!(R) && hasSlicing!(R))
             {
@@ -1172,15 +1183,19 @@ Forwards to $(D moveFront(_input)).
     }
 
 /**
-Forwards to $(D _input.popFront).
+Forwards to $(D _input.popBack).
  */
     static if (isBidirectionalRange!(R) && hasLength!(R))
         void popBack()
         {
-            assert(_input.length >= _n);
+            assert(_input.length >= 1);
             static if (isRandomAccessRange!(R) && hasSlicing!(R))
             {
-                _input = _input[0 .. _input.length - _n];
+                if(_input.length < _n) {
+                    _input = _input[0 .. 0];
+                } else {
+                    _input = _input[0 .. _input.length - _n];
+                }
             }
             else
             {
@@ -1314,6 +1329,13 @@ unittest
     assert(equal(s2[1..5], [3, 5, 7, 9]));
     assert(s2[1..5].length == 4);
     assert(s2[0..0].empty);
+
+    // Test fix for Bug 5035
+    auto m = [1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4]; // 3 rows, 4 columns
+    auto col = stride(m, 4);
+    assert(equal(col, [1, 1, 1]));
+    assert(equal(retro(col), [1, 1, 1]));
+
 
     static assert(is(Stride!(immutable int[])));
 
