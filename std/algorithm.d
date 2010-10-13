@@ -830,7 +830,7 @@ assert(small == [ 1, 2 ]);
 int[] a = [ 3, -2, 400 ];
 int[] b = [ 100, -101, 102 ];
 auto r = filter!("a > 0")(chain(a, b));
-assert(equals(r, [ 3, 400, 100, 102 ]));
+assert(equal(r, [ 3, 400, 100, 102 ]));
 // Mixing convertible types is fair game, too
 double[] c = [ 2.5, 3.0 ];
 auto r1 = filter!("cast(int) a != a")(chain(c, a, b));
@@ -3241,8 +3241,7 @@ Example:
 ----
 int[] a = [ -1, 0, 1, 2, 3, 4, 5 ];
 int[] b = [ 3, 1, 2 ];
-assert(findAmong(a, b) == begin(a) + 2);
-assert(findAmong(b, a) == begin(b));
+assert(findAmong(a, b) == a[2 .. $]);
 ----
 */
 Range1 findAmong(alias pred = "a == b", Range1, Range2)(
@@ -3684,8 +3683,8 @@ Example:
 int[]    x = [ 1,  5, 2, 7,   4, 3 ];
 double[] y = [ 1., 5, 2, 7.3, 4, 8 ];
 auto m = mismatch(x, y);
-assert(m[0] == begin(x) + 3);
-assert(m[1] == begin(y) + 3);
+assert(m[0] == x[3 .. $]);
+assert(m[1] == y[3 .. $]);
 ----
 */
 
@@ -3904,8 +3903,8 @@ Example:
 ---
 string a = "Saturday", b = "Sunday";
 auto p = levenshteinDistanceAndPath(a, b);
-assert(p[0], 3);
-assert(equals(p[1], "nrrnsnnn"));
+assert(p[0] == 3);
+assert(equal(p[1], "nrrnsnnn"));
 ---
 */
 Tuple!(size_t, EditOp[])
@@ -4153,15 +4152,6 @@ Returns:
 
 The number of elements brought to the front, i.e., the length of $(D
 back).
-
-Example:
-
-----
-auto arr = [4, 5, 6, 7, 1, 2, 3];
-auto p = rotate(arr, begin(arr) + 4);
-assert(p - begin(arr) == 3);
-assert(arr == [ 1, 2, 3, 4, 5, 6, 7 ]);
-----
 */
 size_t bringToFront(Range1, Range2)(Range1 front, Range2 back)
     if (isForwardRange!Range1 && isForwardRange!Range2)
@@ -4718,7 +4708,7 @@ If $(D ss == SwapStrategy.stable), $(D partition) preserves the
 relative ordering of all elements $(D a), $(D b) in $(D r) for which
 $(D pred(a) == pred(b)). If $(D ss == SwapStrategy.semistable), $(D
 partition) preserves the relative ordering of all elements $(D a), $(D
-b) in $(D begin(r) .. p) for which $(D pred(a) == pred(b)).
+b) in the left part of $(D r) for which $(D pred(a) == pred(b)).
 
 Example:
 
@@ -4726,34 +4716,34 @@ Example:
 auto Arr = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 auto arr = Arr.dup;
 static bool even(int a) { return (a & 1) == 0; }
-// Partition a such that even numbers come first
-auto p = partition!(even)(arr);
+// Partition arr such that even numbers come first
+auto r = partition!(even)(arr);
 // Now arr is separated in evens and odds.
 // Numbers may have become shuffled due to instability
-assert(p == arr.ptr + 5);
-assert(count!(even)(range(begin(arr), p)) == p - begin(arr));
-assert(find!(even)(range(p, end(arr))) == end(arr));
+assert(r == arr[5 .. $]);
+assert(count!(even)(arr[0 .. 5]) == 5);
+assert(find!(even)(r).empty);
 
 // Can also specify the predicate as a string.
 // Use 'a' as the predicate argument name
 arr[] = Arr[];
-p = partition!(q{(a & 1) == 0})(arr);
-assert(p == arr.ptr + 5);
+r = partition!(q{(a & 1) == 0})(arr);
+assert(r == arr[5 .. $]);
 
 // Now for a stable partition:
 arr[] = Arr[];
-p = partition!(q{(a & 1) == 0}, SwapStrategy.stable)(arr);
-// Now arr is [2 4 6 8 10 1 3 5 7 9], and p points to 1
-assert(arr == [2, 4, 6, 8, 10, 1, 3, 5, 7, 9] && p == arr.ptr + 5);
+r = partition!(q{(a & 1) == 0}, SwapStrategy.stable)(arr);
+// Now arr is [2 4 6 8 10 1 3 5 7 9], and r points to 1
+assert(arr == [2, 4, 6, 8, 10, 1, 3, 5, 7, 9] && r == arr[5 .. $]);
 
 // In case the predicate needs to hold its own state, use a delegate:
 arr[] = Arr[];
 int x = 3;
 // Put stuff greater than 3 on the left
 bool fun(int a) { return a > x; }
-p = partition!(fun, SwapStrategy.semistable)(arr);
-// Now arr is [4 5 6 7 8 9 10 2 3 1] and p points to 2
-assert(arr == [4, 5, 6, 7, 8, 9, 10, 2, 3, 1] && p == arr.ptr + 7);
+r = partition!(fun, SwapStrategy.semistable)(arr);
+// Now arr is [4 5 6 7 8 9 10 2 3 1] and r points to 2
+assert(arr == [4, 5, 6, 7, 8, 9, 10, 2, 3, 1] && r == arr[7 .. $]);
 ----
 */
 Range partition(alias predicate,
@@ -4835,18 +4825,15 @@ Range partition(alias predicate,
     }
 }
 
-unittest // partitionold
+unittest // partition
 {
     auto Arr = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
     auto arr = Arr.dup;
     static bool even(int a) { return (a & 1) == 0; }
-// Partitionold a such that even numbers come first
-    //auto p = partitionold!(even)(arr);
+// Partition a such that even numbers come first
     auto p1 = partition!(even)(arr);
 // Now arr is separated in evens and odds.
-    //assert(p == arr.ptr + 5);
     assert(p1 == arr[5 .. $], text(p1));
-    //assert(count!(even)(range(begin(arr), p)) == p - begin(arr));
     assert(count!(even)(arr[0 .. $ - p1.length]) == p1.length);
     assert(find!(even)(p1).empty);
 // Notice that numbers have become shuffled due to instability
@@ -4855,7 +4842,7 @@ unittest // partitionold
 // Use 'a' as the predicate argument name
     p1 = partition!(q{(a & 1) == 0})(arr);
     assert(p1 == arr[5 .. $]);
-// Same result as above. Now for a stable partitionold:
+// Same result as above. Now for a stable partition:
     arr[] = Arr[];
     p1 = partition!(q{(a & 1) == 0}, SwapStrategy.stable)(arr);
 // Now arr is [2 4 6 8 10 1 3 5 7 9], and p points to 1

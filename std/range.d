@@ -3942,7 +3942,7 @@ int[][] x = new int[][2];
 x[0] = [1, 2];
 x[1] = [3, 4];
 auto ror = frontTransversal(x);
-assert(equals(ror, [ 1, 3 ][]));
+assert(equal(ror, [ 1, 3 ][]));
 ---
  */
 struct FrontTransversal(Ror,
@@ -4214,7 +4214,7 @@ int[][] x = new int[][2];
 x[0] = [1, 2];
 x[1] = [3, 4];
 auto ror = transversal(x, 1);
-assert(equals(ror, [ 2, 4 ][]));
+assert(equal(ror, [ 2, 4 ][]));
 ---
  */
 struct Transversal(Ror,
