@@ -2216,8 +2216,17 @@ if(isInputRange!(Unqual!R) && hasSlicing!(Unqual!R) && !isNarrowString!(Unqual!R
 }
 
 /// Ditto
+R take(R)(R input, size_t n)
+if((isInputRange!(Unqual!R) && (!hasSlicing!(Unqual!R) || isNarrowString!(Unqual!R)))
+    && is (R T == Take!T))
+{
+    return R(input.original, min(n, input.maxLength));
+}
+
+/// Ditto
 Take!(R) take(R)(R input, size_t n)
-if(isInputRange!(Unqual!R) && (!hasSlicing!(Unqual!R) || isNarrowString!(Unqual!R)))
+if((isInputRange!(Unqual!R) && (!hasSlicing!(Unqual!R) || isNarrowString!(Unqual!R)))
+    && !is (R T == Take!T))
 {
     return Take!(R)(input, n);
 }
@@ -2255,7 +2264,16 @@ unittest
 
     // Test using narrow strings.
     auto myStr = "This is a string.";
-    assert(equal(take(myStr, 7), "This is"));
+    auto takeMyStr = take(myStr, 7);
+    assert(equal(takeMyStr, "This is"));
+
+    // Test fix for bug 5052.
+    auto takeMyStrAgain = take(takeMyStr, 4);
+    assert(equal(takeMyStrAgain, "This"));
+    static assert (is (typeof(takeMyStrAgain) == typeof(takeMyStr)));
+    takeMyStrAgain = take(takeMyStr, 10);
+    assert(equal(takeMyStrAgain, "This is"));
+    
 
     foreach(DummyType; AllDummyRanges) {
         DummyType dummy;
