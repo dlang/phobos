@@ -1119,6 +1119,21 @@ unittest
     assert(s2.y == [ 1, 2 ]);
 }
 
+void swapFront(R1, R2)(R1 r1, R2 r2)
+    if (isInputRange!R1 && isInputRange!R2)
+{
+    static if (is(typeof(swap(r1.front, r2.front))))
+    {
+        swap(r1.front, r2.front);
+    }
+    else
+    {
+        auto t1 = moveFront(r1), t2 = moveFront(r2);
+        r1.front = move(t2);
+        r2.front = move(t1);
+    }
+}
+
 // splitter
 /**
 Splits a range using an element as a separator. This can be used with
@@ -4119,14 +4134,15 @@ assert(arr == [ 1, 2, 3, 4, 5, 6, 7 ]);
 The $(D front) range may actually "step over" the $(D back)
 range. This is very useful with forward ranges that cannot compute
 comfortably right-bounded subranges like $(D arr[0 .. 4]) above. In
-the example below, $(D list1) is a right subrange of $(D list).
+the example below, $(D r2) is a right subrange of $(D r1).
 
 ----
 auto list = SList!(int)(4, 5, 6, 7, 1, 2, 3);
-auto list1 = list.drop(4);
-assert(equal(list1, [ 1, 2, 3 ][]));
-bringToFront(list, list1);
-assert(equal(list, [ 1, 2, 3, 4, 5, 6, 7 ][]));
+auto r1 = list[];
+auto r2 = list[]; popFrontN(r2, 4);
+assert(equal(r2, [ 1, 2, 3 ]));
+bringToFront(r1, r2);
+assert(equal(list[], [ 1, 2, 3, 4, 5, 6, 7 ]));
 ----
 
 Elements can be swapped across ranges of different types:
@@ -4134,9 +4150,9 @@ Elements can be swapped across ranges of different types:
 ----
 auto list = SList!(int)(4, 5, 6, 7);
 auto vec = [ 1, 2, 3 ];
-bringToFront(list, vec);
-assert(equal(list, [ 1, 2, 3, 4 ][]));
-assert(equal(vec, [ 5, 6, 7 ][]));
+bringToFront(list[], vec);
+assert(equal(list[], [ 1, 2, 3, 4 ]));
+assert(equal(vec, [ 5, 6, 7 ]));
 ----
 
 Performs $(BIGOH max(front.length, back.length)) evaluations of $(D
@@ -4154,100 +4170,147 @@ The number of elements brought to the front, i.e., the length of $(D
 back).
 */
 size_t bringToFront(Range1, Range2)(Range1 front, Range2 back)
-    if (isForwardRange!Range1 && isForwardRange!Range2)
+    if (isInputRange!Range1 && isForwardRange!Range2)
 {
     enum bool sameHeadExists = is(typeof(front.sameHead(back)));
     size_t result;
-    for (;;)
+    for (bool semidone; !front.empty && !back.empty; )
     {
-        if (back.empty || front.empty) return result;
         static if (sameHeadExists)
-            if (front.sameHead(back)) return result;
-
-        auto front2 = front.save;
-        auto back2 = back.save;
-
-        for (;;)
         {
-            // make progress for this pass through the loop
-            static if (is(typeof(swap(front2.front, back2.front))))
+            if (front.sameHead(back)) break; // shortcut
+        }
+        // Swap elements until front and/or back ends.
+        auto back0 = back.save;
+        size_t nswaps;
+        do
+        {
+            static if (sameHeadExists)
             {
-                swap(front2.front, back2.front);
+                // Detect the stepping-over condition.
+                if (front.sameHead(back0)) back0 = back.save;
+            }
+            swapFront(front, back);
+            ++nswaps;
+            front.popFront();
+            back.popFront();
+        }
+        while (!front.empty && !back.empty);
+
+        if (!semidone) result += nswaps;
+
+        // Now deal with the remaining elements.
+        if (back.empty)
+        {
+            if (front.empty) break;
+            // Right side was shorter, which means that we've brought
+            // all the back elements to the front.
+            semidone = true;
+            // Next pass: bringToFront(front, back0) to adjust the rest.
+            back = back0;
+        }
+        else
+        {
+            assert(front.empty);
+            // Left side was shorter. Let's step into the back.
+            static if (is(Range1 == Take!Range2))
+            {
+                front = take(back0, nswaps);
             }
             else
             {
-                auto t1 = moveFront(front2), t2 = moveFront(back2);
-                front2.front = move(t2);
-                back2.front = move(t1);
-            }
-
-            front2.popFront;
-            back2.popFront;
-            ++result;
-            bool leftShorter = front2.empty;
-            static if (sameHeadExists)
-                if (!leftShorter)
-                    leftShorter = front2.sameHead(back);
-            if (leftShorter)
-            {
-                // Left side was shorter than the right one
-                static if (is(Range1 == Range2))
-                {
-                    front = back;
-                    back = back2;
-                    break;
-                }
-                else
-                {
-                    return result + bringToFront(back, back2);
-                }
-            }
-            if (back2.empty)
-            {
-                // Right side was shorter than the left one
-                front = front2;
-                break;
-                ///*return*/ bringToFront(front2, back);
-                //return front2;
+                immutable subresult = bringToFront(take(back0, nswaps),
+                                                   back);
+                if (!semidone) result += subresult;
+                break; // done
             }
         }
     }
+    return result;
 }
 
 unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
-    // // doc example
-    int[] arr = [4, 5, 6, 7, 1, 2, 3];
-    // auto p = rotate(arr, arr.ptr + 4);
-    auto p = bringToFront(arr[0 .. 4], arr[4 .. $]);
-    //assert(p - arr.ptr == 3);
-    assert(arr == [ 1, 2, 3, 4, 5, 6, 7 ], text(arr));
-    //assert(p is arr[3 .. $], text(p));
+    // doc example
+    {
+        int[] arr = [4, 5, 6, 7, 1, 2, 3];
+        auto p = bringToFront(arr[0 .. 4], arr[4 .. $]);
+        assert(p == arr.length - 4);
+        assert(arr == [ 1, 2, 3, 4, 5, 6, 7 ], text(arr));
+    }
+    {
+        auto list = SList!(int)(4, 5, 6, 7, 1, 2, 3);
+        auto r1 = list[];
+        auto r2 = list[]; popFrontN(r2, 4);
+        assert(equal(r2, [ 1, 2, 3 ]));
+        bringToFront(r1, r2);
+        assert(equal(list[], [ 1, 2, 3, 4, 5, 6, 7 ]));
+    }
+    {
+        auto list = SList!(int)(4, 5, 6, 7);
+        auto vec = [ 1, 2, 3 ];
+        bringToFront(list[], vec);
+        assert(equal(list[], [ 1, 2, 3, 4 ]));
+        assert(equal(vec, [ 5, 6, 7 ]));
+    }
+    // a more elaborate test
+    {
+        auto rnd = Random(unpredictableSeed);
+        int[] a = new int[uniform(100, 200, rnd)];
+        int[] b = new int[uniform(100, 200, rnd)];
+        foreach (ref e; a) e = uniform(-100, 100, rnd);
+        foreach (ref e; b) e = uniform(-100, 100, rnd);
+        int[] c = a ~ b;
+        // writeln("a= ", a);
+        // writeln("b= ", b);
+        auto n = bringToFront(c[0 .. a.length], c[a.length .. $]);
+        //writeln("c= ", c);
+        assert(n == b.length);
+        assert(c == b ~ a, text(c, "\n", a, "\n", b));
+    }
+    // different types, moveFront, no sameHead
+    {
+        static struct R(T)
+        {
+            T[] data;
+            size_t i;
+            @property
+            {
+                R save() { return this; }
+                bool empty() { return i >= data.length; }
+                T front() { return data[i]; }
+                T front(real e) { return data[i] = cast(T) e; }
+                alias front moveFront;
+            }
+            void popFront() { ++i; }
+        }
+        auto a = R!int([1, 2, 3, 4, 5]);
+        auto b = R!real([6, 7, 8, 9]);
+        auto n = bringToFront(a, b);
+        assert(n == 4);
+        assert(a.data == [6, 7, 8, 9, 1]);
+        assert(b.data == [2, 3, 4, 5]);
+    }
+    // front steps over back
+    {
+        int[] arr, r1, r2;
 
-    // // The signature taking range and mid
-    arr[] = [4, 5, 6, 7, 1, 2, 3];
-    // p = rotate(arr, arr.ptr + 4);
-    p = bringToFront(arr[0 .. 4], arr[4 .. $]);
-    //assert(p - arr.ptr == 3);
-    //assert(p is arr[3 .. $]);
-    assert(arr == [ 1, 2, 3, 4, 5, 6, 7 ]);
+        // back is shorter
+        arr = [4, 5, 6, 7, 1, 2, 3];
+        r1 = arr;
+        r2 = arr[4 .. $];
+        bringToFront(r1, r2) == 3 || assert(0);
+        assert(equal(arr, [1, 2, 3, 4, 5, 6, 7]));
 
-    // // a more elaborate test
-    auto rnd = Random(unpredictableSeed);
-    int[] a = new int[uniform(100, 200, rnd)];
-    int[] b = new int[uniform(100, 200, rnd)];
-    foreach (ref e; a) e = uniform(-100, 100, rnd);
-    foreach (ref e; b) e = uniform(-100, 100, rnd);
-    int[] c = a ~ b;
-    // writeln("a= ", a);
-    // writeln("b= ", b);
-    auto n = bringToFront(c[0 .. a.length], c[a.length .. $]);
-    //writeln("c= ", c);
-    // assert(n == c.ptr + b.length);
-    //assert(n is c[b.length .. $]);
-    assert(c == b ~ a, text(c));
+        // front is shorter
+        arr = [5, 6, 7, 1, 2, 3, 4];
+        r1 = arr;
+        r2 = arr[3 .. $];
+        bringToFront(r1, r2) == 4 || assert(0);
+        assert(equal(arr, [1, 2, 3, 4, 5, 6, 7]));
+    }
 }
 
 // SwapStrategy

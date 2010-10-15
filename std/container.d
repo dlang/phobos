@@ -952,6 +952,11 @@ Defines the container's primary range, which embodies a forward range.
             enforce(_head);
             return move(_head._payload);
         }
+
+        bool sameHead(Range rhs)
+        {
+            return _head && _head == rhs._head;
+        }
     }
 
     unittest
