@@ -813,7 +813,30 @@ void mkdirRecurse(in char[] pathname)
         }
         mkdirRecurse(left);
     }
-    mkdir(pathname);
+    if (!basename(pathname).empty)
+    {
+        mkdir(pathname);
+    }
+}
+
+unittest
+{
+    // bug3570
+    {
+        immutable basepath = deleteme ~ "_dir";
+        version (Windows)
+        {
+            immutable path = basepath ~ `\fake\here\`;
+        }
+        else version (Posix)
+        {
+            immutable path = basepath ~ `/fake/here/`;
+        }
+        mkdirRecurse(path);
+        assert(exists(basepath) && isdir(basepath));
+        scope(exit) rmdirRecurse(basepath);
+        assert(exists(path) && isdir(path));
+    }
 }
 
 /****************************************************
