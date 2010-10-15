@@ -579,8 +579,8 @@ struct FormatSpec(Char)
             }
             // Doubled! Now print whatever we had, then update the
             // string and move on
-            put(writer, trailing[0 .. i]);
-            trailing = trailing[i + 1 .. $];
+            put(writer, trailing[0 .. i - 1]);
+            trailing = trailing[i .. $];
             i = 0;
         }
         // no format spec found
@@ -606,6 +606,15 @@ struct FormatSpec(Char)
         assert(w.data == "ab%cd%ef" && f.trailing == "g%%h%sij", w.data);
         f.writeUpToNextSpec(w);
         assert(w.data == "ab%cd%efg%h" && f.trailing == "ij");
+        // bug4775
+        f = FormatSpec("%%%s");
+        w.clear;
+        f.writeUpToNextSpec(w);
+        assert(w.data == "%" && f.trailing == "");
+        f = FormatSpec("%%%%%s%%");
+        w.clear;
+        while (f.writeUpToNextSpec(w)) continue;
+        assert(w.data == "%%%");
     }
 
     private void fillUp()
