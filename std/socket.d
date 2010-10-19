@@ -191,7 +191,7 @@ shared static this()
 }
 
 
-static ~this()
+shared static ~this()
 {
         version(Win32)
         {
@@ -535,12 +535,28 @@ class InternetHost
          */
         bool getHostByName(string name)
         {
-                hostent* he;
-                synchronized(this.classinfo) he = gethostbyname(toStringz(name));
-                if(!he)
+                version(Windows)
+                {
+                    // TODO gethostbyname is deprecated in windows, use getaddrinfo
+                    auto he = gethostbyname(toStringz(name));
+                    if(!he)
                         return false;
-                validHostent(he);
-                populate(he);
+                    validHostent(he);
+                    populate(he);
+                }
+                else
+                {
+                    // posix systems use global state for return value, so we
+                    // must synchronize across all threads
+                    synchronized(this.classinfo)
+                    {
+                        auto he = gethostbyname(toStringz(name));
+                        if(!he)
+                            return false;
+                        validHostent(he);
+                        populate(he);
+                    }
+                }
                 return true;
         }
 
@@ -551,12 +567,28 @@ class InternetHost
         bool getHostByAddr(uint addr)
         {
                 uint x = htonl(addr);
-                hostent* he;
-                synchronized(this.classinfo) he = gethostbyaddr(&x, 4, cast(int)AddressFamily.INET);
-                if(!he)
+                version(Windows)
+                {
+                    // TODO gethostbyaddr is deprecated in windows, use getnameinfo
+                    auto he = gethostbyaddr(&x, 4, cast(int)AddressFamily.INET);
+                    if(!he)
                         return false;
-                validHostent(he);
-                populate(he);
+                    validHostent(he);
+                    populate(he);
+                }
+                else
+                {
+                    // posix systems use global state for return value, so we
+                    // must synchronize across all threads
+                    synchronized(this.classinfo)
+                    {
+                        auto he = gethostbyaddr(&x, 4, cast(int)AddressFamily.INET);
+                        if(!he)
+                            return false;
+                        validHostent(he);
+                        populate(he);
+                    }
+                }
                 return true;
         }
 
@@ -569,12 +601,28 @@ class InternetHost
         bool getHostByAddr(string addr)
         {
                 uint x = inet_addr(std.string.toStringz(addr));
-                hostent* he;
-                synchronized(this.classinfo) he = gethostbyaddr(&x, 4, cast(int)AddressFamily.INET);
-                if(!he)
+                version(Windows)
+                {
+                    // TODO gethostbyaddr is deprecated in windows, use getnameinfo
+                    auto he = gethostbyaddr(&x, 4, cast(int)AddressFamily.INET);
+                    if(!he)
                         return false;
-                validHostent(he);
-                populate(he);
+                    validHostent(he);
+                    populate(he);
+                }
+                else
+                {
+                    // posix systems use global state for return value, so we
+                    // must synchronize across all threads
+                    synchronized(this.classinfo)
+                    {
+                        auto he = gethostbyaddr(&x, 4, cast(int)AddressFamily.INET);
+                        if(!he)
+                            return false;
+                        validHostent(he);
+                        populate(he);
+                    }
+                }
                 return true;
         }
 }
