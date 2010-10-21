@@ -74,7 +74,7 @@ private {
   import std.system;    // for Endian enumeration
   import std.intrinsic; // for bswap
   import std.utf;
-  import std.stdarg;
+  import std.c.stdarg;
 }
 
 version (Windows) {
@@ -226,7 +226,7 @@ interface InputStream {
    * file.readf("%d hello %f", &x, &y, "%s", &s);
    * --------------------------
    */
-  int vreadf(TypeInfo[] arguments, void* args);
+  int vreadf(TypeInfo[] arguments, va_list args);
   int readf(...); /// ditto
 
   /// Retrieve the number of bytes available for immediate reading.
@@ -336,6 +336,10 @@ interface OutputStream {
    * returning the number of bytes written.
    */
   size_t vprintf(char[] format, va_list args);
+
+  version (X86_64)
+  extern (C) size_t printf(char[] format, ...);
+  else
   size_t printf(char[] format, ...);    /// ditto
 
   /***
@@ -681,7 +685,7 @@ class Stream : InputStream, OutputStream {
     return c;
   }
 
-  int vreadf(TypeInfo[] arguments, void* args) {
+  int vreadf(TypeInfo[] arguments, va_list args) {
     string fmt;
     int j = 0;
     int count = 0, i = 0;
@@ -690,7 +694,7 @@ class Stream : InputStream, OutputStream {
       if (fmt.length == 0 || i == fmt.length) {
         i = 0;
         if (arguments[j] is typeid(char[])) {
-          fmt = va_arg!(string)(args);
+          va_arg(args,fmt);
           j++;
           continue;
         } else if (arguments[j] is typeid(int*) ||
@@ -816,28 +820,36 @@ class Stream : InputStream, OutputStream {
             if (neg)
               n = -n;
             if (arguments[j] is typeid(int*)) {
-              int* p = va_arg!(int*)(args);
+              int* p;
+              va_arg(args, p);
               *p = cast(int)n;
             } else if (arguments[j] is typeid(short*)) {
-              short* p = va_arg!(short*)(args);
+              short* p;
+              va_arg(args, p);
               *p = cast(short)n;
             } else if (arguments[j] is typeid(byte*)) {
-              byte* p = va_arg!(byte*)(args);
+              byte* p;
+              va_arg(args, p);
               *p = cast(byte)n;
             } else if (arguments[j] is typeid(long*)) {
-              long* p = va_arg!(long*)(args);
+              long* p;
+              va_arg(args, p);
               *p = n;
             } else if (arguments[j] is typeid(uint*)) {
-              uint* p = va_arg!(uint*)(args);
+              uint* p;
+              va_arg(args, p);
               *p = cast(uint)n;
             } else if (arguments[j] is typeid(ushort*)) {
-              ushort* p = va_arg!(ushort*)(args);
+              ushort* p;
+              va_arg(args, p);
               *p = cast(ushort)n;
             } else if (arguments[j] is typeid(ubyte*)) {
-              ubyte* p = va_arg!(ubyte*)(args);
+              ubyte* p;
+              va_arg(args, p);
               *p = cast(ubyte)n;
             } else if (arguments[j] is typeid(ulong*)) {
-              ulong* p = va_arg!(ulong*)(args);
+              ulong* p;
+              va_arg(args, p);
               *p = cast(ulong)n;
             }
             j++;
@@ -920,13 +932,16 @@ class Stream : InputStream, OutputStream {
             if (neg)
               n = -n;
             if (arguments[j] is typeid(float*)) {
-              float* p = va_arg!(float*)(args);
+              float* p;
+              va_arg(args, p);
               *p = n;
             } else if (arguments[j] is typeid(double*)) {
-              double* p = va_arg!(double*)(args);
+              double* p;
+              va_arg(args, p);
               *p = n;
             } else if (arguments[j] is typeid(real*)) {
-              real* p = va_arg!(real*)(args);
+              real* p;
+              va_arg(args, p);
               *p = n;
             }
             j++;
@@ -942,7 +957,7 @@ class Stream : InputStream, OutputStream {
           char[]* p;
           size_t strlen;
           if (arguments[j] is typeid(char[]*)) {
-            p = va_arg!(char[]*)(args);
+            va_arg(args, p);
             s = *p;
           }
           while (!iswhite(c) && c != char.init) {
@@ -960,13 +975,16 @@ class Stream : InputStream, OutputStream {
             *p = s;
           } else if (arguments[j] is typeid(char*)) {
             s ~= 0;
-            auto q = va_arg!(char*)(args);
+            char *q;
+            va_arg(args, q);
             q[0 .. s.length] = s[];
           } else if (arguments[j] is typeid(wchar[]*)) {
-            auto q = va_arg!(wchar[]*)(args);
+            wchar[]* q;
+            va_arg(args, q);
             *q = toUTF16(s);
           } else if (arguments[j] is typeid(dchar[]*)) {
-            auto q = va_arg!(dchar[]*)(args);
+            dchar[]* q;
+            va_arg(args, q);
             *q = toUTF32(s);
           }
           j++;
@@ -974,7 +992,8 @@ class Stream : InputStream, OutputStream {
         } break;
 
         case 'c': {     // character(s)
-          char* s = va_arg!(char*)(args);
+          char* s;
+          va_arg(args, s);
           if (width < 0)
             width = 1;
           else
@@ -992,7 +1011,8 @@ class Stream : InputStream, OutputStream {
         } break;
 
         case 'n': {     // number of chars read so far
-          int* p = va_arg!(int*)(args);
+          int* p;
+          va_arg(args, p);
           *p = count;
           j++;
           i++;
@@ -1018,7 +1038,7 @@ class Stream : InputStream, OutputStream {
   }
 
   int readf(...) {
-    return vreadf(_arguments, _argptr);
+    return vreadf(_arguments, cast(va_list)_argptr);
   }
 
   // returns estimated number of bytes available for immediate reading
@@ -1152,10 +1172,16 @@ class Stream : InputStream, OutputStream {
 
   // writes data to stream using printf() syntax,
   // returns number of bytes written
+  version (X86_64)
+  extern (C) size_t printf(char[] format, ...) {
+    va_list ap;
+    va_start(ap, __va_argsave);
+    return vprintf(format, ap);
+  }
+  else
   size_t printf(char[] format, ...) {
     va_list ap;
-    ap = cast(va_list) &format;
-    ap += format.sizeof;
+    va_start(ap, format);
     return vprintf(format, ap);
   }
 

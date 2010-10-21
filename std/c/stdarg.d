@@ -1,42 +1,222 @@
 
 /**
  * C's &lt;stdarg.h&gt;
- * Authors: Hauke Duden and Walter Bright, Digital Mars, www.digitalmars.com
+ * This is for use with extern(C) variable argument lists.
+ * Authors: Hauke Duden and Walter Bright, Digital Mars, http://www.digitalmars.com
  * License: Public Domain
+ * Source: $(PHOBOSSRC std/c/_stdarg.d)
  * Macros:
  *      WIKI=Phobos/StdCStdarg
  */
 
-/* This is for use with extern(C) variable argument lists. */
 
 module std.c.stdarg;
 
-alias void* va_list;
-
-template va_start(T)
+version (X86)
 {
-    void va_start(out va_list ap, inout T parmn)
+    /*********************
+     * The argument pointer type.
+     */
+    alias void* va_list;
+
+    /**********
+     * Initialize ap.
+     * For 32 bit code, parmn should be the last named parameter.
+     * For 64 bit code, parmn should be __va_argsave.
+     */
+    void va_start(T)(out va_list ap, inout T parmn)
     {
         ap = cast(va_list)(cast(void*)&parmn + ((T.sizeof + int.sizeof - 1) & ~(int.sizeof - 1)));
     }
-}
 
-template va_arg(T)
-{
-    T va_arg(inout va_list ap)
+    /************
+     * Retrieve and return the next value that is type T.
+     * Should use the other va_arg instead, as this won't work for 64 bit code.
+     */
+    T va_arg(T)(inout va_list ap)
     {
         T arg = *cast(T*)ap;
         ap = cast(va_list)(cast(void*)ap + ((T.sizeof + int.sizeof - 1) & ~(int.sizeof - 1)));
         return arg;
     }
+
+    /************
+     * Retrieve and return the next value that is type T.
+     * This is the preferred version.
+     */
+    void va_arg(T)(va_list ap, inout T parmn)
+    {
+        parmn = *cast(T*)ap;
+        ap = cast(va_list)(cast(void*)ap + ((T.sizeof + int.sizeof - 1) & ~(int.sizeof - 1)));
+    }
+
+    /***********************
+     * End use of ap.
+     */
+    void va_end(va_list ap)
+    {
+    }
+
+    void va_copy(out va_list dest, va_list src)
+    {
+        dest = src;
+    }
 }
-
-void va_end(va_list ap)
+else version (X86_64)
 {
+    // Layout of this struct must match __gnuc_va_list for C ABI compatibility
+    struct __va_list
+    {
+        uint offset_regs;
+        uint offset_fpregs;
+        void* stack_args;
+        void* reg_args;
+    }
 
+    struct __va_argsave_t
+    {
+        size_t[6] regs;   // RDI,RSI,RDX,RCX,R8,R9
+        real[8] fpregs;   // XMM0..XMM7
+        __va_list va;
+    }
+
+    /*
+     * Making it an array of 1 causes va_list to be passed as a pointer in
+     * function argument lists
+     */
+    alias __va_list* va_list;
+
+    void va_start(T)(out va_list ap, inout T parmn)
+    {
+        ap = &parmn.va;
+    }
+
+    void va_arg(T)(va_list ap, inout T parmn)
+    {
+        static if (is(T U == __argTypes))
+        {
+            static if (U.length == 0)
+            {   // Always passed in memory
+                // The arg may have more strict alignment than the stack
+                auto p = (cast(size_t)ap.stack_args + T.alignof - 1) & ~(T.alignof - 1);
+                ap.stack_args = cast(void*)(p + ((T.sizeof + size_t.sizeof - 1) & ~(size_t.sizeof - 1)));
+                parmn = *cast(T*)p;
+            }
+            else static if (U.length == 1)
+            {   // Arg is passed in one register
+                alias U[0] T1;
+                static if (is(T1 == double) || is(T1 == float))
+                {   // Passed in XMM register
+                    if (ap.offset_fpregs < (6 * 8 + 16 * 8))
+                    {
+                        parmn = *cast(T*)(ap.reg_args + ap.offset_fpregs);
+                        ap.offset_fpregs += 16;
+                    }
+                    else
+                    {
+                        parmn = *cast(T*)ap.stack_args;
+                        ap.stack_args += (T1.sizeof + size_t.sizeof - 1) & ~(size_t.sizeof - 1);
+                    }
+                }
+                else
+                {   // Passed in regular register
+                    if (ap.offset_regs < 6 * 8)
+                    {
+                        parmn = *cast(T*)(ap.reg_args + ap.offset_regs);
+                        ap.offset_regs += 8;
+                    }
+                    else
+                    {
+                        parmn = *cast(T*)ap.stack_args;
+                        ap.stack_args += 8;
+                    }
+                }
+            }
+            else static if (U.length == 2)
+            {   // Arg is passed in two registers
+                alias U[0] T1;
+                alias U[1] T2;
+
+                static if (is(T1 == double) || is(T1 == float))
+                {
+                    if (ap.offset_fpregs < (6 * 8 + 16 * 8))
+                    {
+                        *cast(T1*)&parmn = *cast(T1*)(ap.reg_args + ap.offset_fpregs);
+                        ap.offset_fpregs += 16;
+                    }
+                    else
+                    {
+                        *cast(T1*)&parmn = *cast(T1*)ap.stack_args;
+                        ap.stack_args += (T1.sizeof + size_t.sizeof - 1) & ~(size_t.sizeof - 1);
+                    }
+                }
+                else
+                {
+                    if (ap.offset_regs < 6 * 8)
+                    {
+                        *cast(T1*)&parmn = *cast(T1*)(ap.reg_args + ap.offset_regs);
+                        ap.offset_regs += 8;
+                    }
+                    else
+                    {
+                        *cast(T1*)&parmn = *cast(T1*)ap.stack_args;
+                        ap.stack_args += 8;
+                    }
+                }
+
+                static if (is(T2 == double) || is(T2 == float))
+                {
+                    if (ap.offset_fpregs < (6 * 8 + 16 * 8))
+                    {
+                        *cast(T2*)&parmn = *cast(T2*)(ap.reg_args + ap.offset_fpregs);
+                        ap.offset_fpregs += 16;
+                    }
+                    else
+                    {
+                        *cast(T2*)&parmn = *cast(T2*)ap.stack_args;
+                        ap.stack_args += (T2.sizeof + size_t.sizeof - 1) & ~(size_t.sizeof - 1);
+                    }
+                }
+                else
+                {
+                    ubyte* p = cast(ubyte*)&parmn + 8;
+                    ubyte* a = void;
+                    if (ap.offset_regs < 6 * 8)
+                    {
+                        a = cast(ubyte*)(ap.reg_args + ap.offset_regs);
+                        ap.offset_regs += 8;
+                    }
+                    else
+                    {
+                        a = cast(ubyte*)ap.stack_args;
+                        ap.stack_args += 8;
+                    }
+                    // Be careful not to go past the size of the actual argument
+                    const sz2 = T.sizeof - 8;
+                    p[0..sz2] = a[0..sz2];
+                }
+            }
+            else
+            {
+                static assert(0);
+            }
+        }
+        else
+        {
+            static assert(0, "not a valid argument type for va_arg");
+        }
+    }
+
+    void va_end(va_list ap)
+    {
+    }
+
+    void va_copy(out va_list dest, va_list src)
+    {
+        dest = src;
+    }
 }
-
-void va_copy(out va_list dest, va_list src)
+else
 {
-    dest = src;
+    static assert(0);
 }

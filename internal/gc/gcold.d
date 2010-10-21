@@ -48,7 +48,8 @@ void[] _d_newarrayi(size_t length, size_t size, ...)
     {
         //void* q = cast(void*)(&size + 1);     // pointer to initializer
         va_list q;
-        va_start!(size_t)(q, size);             // q is pointer to ... initializer
+        // q is pointer to ... initializer
+        version (X86_64) va_start(q, __va_argsave); else va_start(q, size);
         p = _gc.malloc(length * size + 1);
         debug(PRINTF) printf(" p = %p\n", p);
         if (size == 1)
@@ -87,7 +88,8 @@ void[] _d_newarrayii(size_t length, size_t size, size_t isize ...)
     {
         //void* q = cast(void*)(&size + 1);     // pointer to initializer
         va_list q;
-        va_start!(size_t)(q, isize);            // q is pointer to ... initializer
+        version (X86_64) va_start(q, __va_argsave); else va_start(q, isize);
+        // q is pointer to ... initializer
         size *= length;
         p = _gc.malloc(size * isize + 1);
         debug(PRINTF) printf(" p = %p\n", p);
@@ -125,7 +127,7 @@ void[] _d_newm(size_t size, int ndims, ...)
         result = null;
     else
     {   va_list q;
-        va_start!(int)(q, ndims);
+        version (X86_64) va_start(q, __va_argsave); else va_start(q, ndims);
 
         void[] foo(size_t* pdim, int ndims)
         {
@@ -175,7 +177,7 @@ void[] _d_newarraymi(size_t size, int ndims, ...)
     else
     {   void* pinit;            // pointer to initializer
         va_list q;
-        va_start!(int)(q, ndims);
+        version (X86_64) va_start(q, __va_argsave); else va_start(q, ndims);
 
         void[] foo(size_t* pdim, int ndims)
         {
@@ -388,7 +390,8 @@ body
         }
 
         va_list q;
-        va_start!(Array *)(q, p);       // q is pointer to initializer
+        version (X86_64) va_start(q, __va_argsave); else va_start(q, p);
+        // q is pointer to initializer
 
         if (newsize > size)
         {
@@ -619,7 +622,8 @@ body
         }
 
         va_list q;
-        va_start!(size_t)(q, initsize); // q is pointer to initializer
+        version (X86_64) va_start(q, __va_argsave); else va_start(q, initsize);
+        // q is pointer to initializer
 
         if (newsize > size)
         {
@@ -896,7 +900,7 @@ void* _d_arrayliteral(size_t size, size_t length, ...)
         *cast(size_t *)&result = length;        // jam length
 
         va_list q;
-        va_start!(size_t)(q, length);
+        version (X86_64) va_start(q, __va_argsave); else va_start(q, length);
 
         size_t stacksize = (size + int.sizeof - 1) & ~(int.sizeof - 1);
 

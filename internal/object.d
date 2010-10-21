@@ -598,7 +598,7 @@ class TypeInfo_Array : TypeInfo
 
     size_t talign()
     {
-        return value.talign();
+        return (void[]).alignof;
     }
 
     version (X86_64) int argTypes(out TypeInfo arg1, out TypeInfo arg2)
@@ -765,11 +765,6 @@ class TypeInfo_Function : TypeInfo
     }
 
     TypeInfo next;
-
-    version (X86_64) int argTypes(out TypeInfo arg1, out TypeInfo arg2)
-    {
-        return 0;
-    }
 }
 
 class TypeInfo_Delegate : TypeInfo

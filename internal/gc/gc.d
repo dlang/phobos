@@ -367,7 +367,6 @@ array_t _d_newarrayiT(TypeInfo ti, size_t length)
                 memcpy(p + u, q, isize);
             }
         }
-        va_end(q);
         result = cast(array_t)p[0..length];
     }
     return result;
@@ -386,11 +385,12 @@ array_t _d_newarraymT(TypeInfo ti, size_t ndims, ...)
         result = array_t.init;
     else
     {   va_list ap;
-        va_start(ap, ndims);
+        version (X86_64) va_start(ap, __va_argsave); else va_start(ap, ndims);
 
         void[] foo(TypeInfo ti, va_list ap, int ndims)
         {
-	    size_t dim = va_arg!(int)(ap);
+	    size_t dim;
+	    va_arg(ap, dim);
             void[] p;
 
             //printf("foo(ti = %p, ti.next = %p, dim = %d, ndims = %d\n", ti, ti.next, dim, ndims);
@@ -438,11 +438,12 @@ array_t _d_newarraymiT(TypeInfo ti, size_t ndims, ...)
     else
     {
         va_list ap;
-        va_start(ap, ndims);
+        version (X86_64) va_start(ap, __va_argsave); else va_start(ap, ndims);
 
         void[] foo(TypeInfo ti, va_list ap, int ndims)
         {
-            size_t dim = va_arg!(int)(ap);
+            size_t dim;
+	    va_arg(ap, dim);
             void[] p;
 
             if (ndims == 1)
@@ -1206,7 +1207,7 @@ void* _d_arrayliteralT(TypeInfo ti, size_t length, ...)
         }
 
         va_list q;
-        va_start!(size_t)(q, length);
+        version (X86_64) va_start(q, __va_argsave); else va_start(q, length);
 
         size_t stacksize = (sizeelem + int.sizeof - 1) & ~(int.sizeof - 1);
 
