@@ -102,7 +102,7 @@ public:
     ///
     this(T: long) (T x)
     {
-        data = data.init; // Workaround for compiler bug
+        data = data.init; // @@@: Workaround for compiler bug
         opAssign(x);
     }
 
@@ -129,11 +129,11 @@ public:
 
         static if (op=="+")
         {
-            data = BigUint.addOrSubInt(data, u, sign != (y<0), &sign);
+            data = BigUint.addOrSubInt(data, u, sign != (y<0), sign);
         }
         else static if (op=="-")
         {
-            data = BigUint.addOrSubInt(data, u, sign == (y<0), &sign);
+            data = BigUint.addOrSubInt(data, u, sign == (y<0), sign);
         }
         else static if (op=="*")
         {
@@ -213,7 +213,7 @@ public:
                 data = BigUint.div(data, y.data);
             }
         }
-        else static if (op=="%")
+        else static if (op == "%")
         {
             y.checkDivByZero();
             if (!isZero())
@@ -273,7 +273,7 @@ public:
         static if (op == "-")
         {
             r.sign = sign;
-            r.data = BigUint.addOrSubInt(data, u, sign == (y<0), &r.sign);
+            r.data = BigUint.addOrSubInt(data, u, sign == (y<0), r.sign);
             r.negate();
         }
         return r;
@@ -299,8 +299,8 @@ public:
             return cast(T)(y / data.peekUlong(0));
         }
     }
-
-    BigInt opUnary(string op)()
+	// const unary operations
+    BigInt opUnary(string op)() /*const*/ if (op=="+" || op=="-")
     {
        static if (op=="-")
        {
@@ -310,17 +310,21 @@ public:
         }
         else static if (op=="+")
            return this;
-        else static if (op=="++")
+	}
+
+	// non-const unary operations	
+    BigInt opUnary(string op)() if (op=="++" || op=="--")
+	{
+        static if (op=="++")
         {
-            data = BigUint.addOrSubInt(data, 1UL, false, &sign);
+            data = BigUint.addOrSubInt(data, 1UL, false, sign);
             return this;
         }
         else static if (op=="--")
         {
-            data = BigUint.addOrSubInt(data, 1UL, true, &sign);
+            data = BigUint.addOrSubInt(data, 1UL, true, sign);
             return this;
         }
-        else static assert(0, "Unary operation " ~ op ~ "BigInt is not supported");
     }
 
     ///
@@ -363,7 +367,7 @@ public:
           : long.max);
     }
     /// Returns the value of this BigInt as an int,
-    /// or +- long.max if outside the representable range.
+    /// or +- int.max if outside the representable range.
     long toInt() pure const
     {
         return (sign ? -1 : 1) *
@@ -373,13 +377,13 @@ public:
     }
     /// Number of significant uints which are used in storing this number.
     /// The absolute value of this BigInt is always < 2^^(32*uintLength)
-    size_t uintLength() pure const
+    @property size_t uintLength() pure const
     {
         return data.uintLength(); 
     }
     /// Number of significant ulongs which are used in storing this number.
     /// The absolute value of this BigInt is always < 2^^(64*ulongLength)
-    size_t ulongLength() pure const
+    @property size_t ulongLength() pure const
     {
         return data.ulongLength(); 
     }
@@ -473,6 +477,7 @@ unittest {
 
     assert(BigInt(-0x12345678).toInt() == -0x12345678);
     assert(BigInt(-0x12345678).toLong() == -0x12345678);
+    assert(BigInt(0x1234_5678_9ABC_5A5AL).ulongLength == 1); 
     assert(BigInt(0x1234_5678_9ABC_5A5AL).toLong() == 0x1234_5678_9ABC_5A5AL);
     assert(BigInt(-0x1234_5678_9ABC_5A5AL).toLong() == -0x1234_5678_9ABC_5A5AL);
     assert(BigInt(0xF234_5678_9ABC_5A5AL).toLong() == long.max);

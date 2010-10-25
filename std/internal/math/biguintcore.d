@@ -136,16 +136,28 @@ public:
         else if (u == 1) data = ONE;
         else if (u == 2) data = TWO;
         else if (u == 10) data = TEN;
-        else {
-            uint ulo = cast(uint)(u & 0xFFFF_FFFF);
-            uint uhi = cast(uint)(u >> 32);
-            if (uhi==0) {
-              data = new BigDigit[1];
-              data[0] = ulo;
-            } else {
-              data = new BigDigit[2];
-              data[0] = ulo;
-              data[1] = uhi;
+        else
+		{
+            static if (BigDigit.sizeof == int.sizeof)
+		    {
+                uint ulo = cast(uint)(u & 0xFFFF_FFFF);
+                uint uhi = cast(uint)(u >> 32);
+                if (uhi == 0)
+                {
+                  data = new BigDigit[1];
+                  data[0] = ulo;
+                }
+                else
+                {
+                  data = new BigDigit[2];
+                  data[0] = ulo;
+                  data[1] = uhi;
+                }
+		    }
+            else static if (BigDigit.sizeof == long.sizeof)
+            {
+                data = new BigDigit[1];
+                data[0] = u;
             }
         }
     }
@@ -381,7 +393,7 @@ BigUint opShl(Tulong)(Tulong y) if (is (Tulong == ulong))
 
 // If wantSub is false, return x + y, leaving sign unchanged
 // If wantSub is true, return abs(x - y), negating sign if x < y
-static BigUint addOrSubInt(Tulong)(BigUint x, Tulong y, bool wantSub, bool *sign)
+static BigUint addOrSubInt(Tulong)(const BigUint x, Tulong y, bool wantSub, ref bool sign)
     if (is(Tulong == ulong))
 {
     BigUint r;
@@ -394,7 +406,7 @@ static BigUint addOrSubInt(Tulong)(BigUint x, Tulong y, bool wantSub, bool *sign
             ulong d;
             if (xx <= y) {
                 d = y - xx;
-                *sign = !*sign;
+                sign = !sign;
             } else {
                 d = xx - y;
             }
@@ -404,7 +416,8 @@ static BigUint addOrSubInt(Tulong)(BigUint x, Tulong y, bool wantSub, bool *sign
             }
             r.data = new BigDigit[ d > uint.max ? 2: 1];
             r.data[0] = cast(uint)(d & 0xFFFF_FFFF);
-            if (d > uint.max) r.data[1] = cast(uint)(d>>32);
+            if (d > uint.max)
+				r.data[1] = cast(uint)(d>>32);
         }
     } else {
         r.data = addInt(x.data, y);
@@ -897,7 +910,7 @@ BigDigit [] add(BigDigit[] a, BigDigit [] b) {
 
 /**  return x + y
  */
-BigDigit [] addInt(BigDigit[] x, ulong y)
+BigDigit [] addInt(const BigDigit[] x, ulong y)
 {
     uint hi = cast(uint)(y >>> 32);
     uint lo = cast(uint)(y& 0xFFFF_FFFF);
@@ -917,7 +930,7 @@ BigDigit [] addInt(BigDigit[] x, ulong y)
 /** Return x - y.
  *  x must be greater than y.
  */
-BigDigit [] subInt(BigDigit[] x, ulong y)
+BigDigit [] subInt(const BigDigit[] x, ulong y)
 {
     uint hi = cast(uint)(y >>> 32);
     uint lo = cast(uint)(y & 0xFFFF_FFFF);
