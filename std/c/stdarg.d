@@ -44,10 +44,25 @@ version (X86)
      * Retrieve and return the next value that is type T.
      * This is the preferred version.
      */
-    void va_arg(T)(va_list ap, inout T parmn)
+    void va_arg(T)(inout va_list ap, inout T parmn)
     {
         parmn = *cast(T*)ap;
         ap = cast(va_list)(cast(void*)ap + ((T.sizeof + int.sizeof - 1) & ~(int.sizeof - 1)));
+    }
+
+    /*************
+     * Retrieve and store through parmn the next value that is of TypeInfo ti.
+     * Used when the static type is not known.
+     */
+    void va_arg()(inout va_list ap, TypeInfo ti, void* parmn)
+    {
+        // Wait until everyone updates to get TypeInfo.talign()
+        //auto talign = ti.talign();
+        //auto p = cast(void*)(cast(size_t)ap + talign - 1) & ~(talign - 1);
+        auto p = ap;
+        auto tsize = ti.tsize();
+        ap = cast(void*)(cast(size_t)p + ((tsize + size_t.sizeof - 1) & ~(size_t.sizeof - 1)));
+        parmn[0..tsize] = p[0..tsize];
     }
 
     /***********************
@@ -164,31 +179,31 @@ else version (X86_64)
                     }
                 }
 
+                auto p = cast(void*)&parmn + 8;
                 static if (is(T2 == double) || is(T2 == float))
                 {
                     if (ap.offset_fpregs < (6 * 8 + 16 * 8))
                     {
-                        *cast(T2*)&parmn = *cast(T2*)(ap.reg_args + ap.offset_fpregs);
+                        *cast(T2*)p = *cast(T2*)(ap.reg_args + ap.offset_fpregs);
                         ap.offset_fpregs += 16;
                     }
                     else
                     {
-                        *cast(T2*)&parmn = *cast(T2*)ap.stack_args;
+                        *cast(T2*)p = *cast(T2*)ap.stack_args;
                         ap.stack_args += (T2.sizeof + size_t.sizeof - 1) & ~(size_t.sizeof - 1);
                     }
                 }
                 else
                 {
-                    ubyte* p = cast(ubyte*)&parmn + 8;
-                    ubyte* a = void;
+                    void* a = void;
                     if (ap.offset_regs < 6 * 8)
                     {
-                        a = cast(ubyte*)(ap.reg_args + ap.offset_regs);
+                        a = ap.reg_args + ap.offset_regs;
                         ap.offset_regs += 8;
                     }
                     else
                     {
-                        a = cast(ubyte*)ap.stack_args;
+                        a = ap.stack_args;
                         ap.stack_args += 8;
                     }
                     // Be careful not to go past the size of the actual argument
@@ -204,6 +219,95 @@ else version (X86_64)
         else
         {
             static assert(0, "not a valid argument type for va_arg");
+        }
+    }
+
+    void va_arg()(va_list ap, TypeInfo ti, void* parmn)
+    {
+        TypeInfo arg1, arg2;
+        if (!ti.argTypes(arg1, arg2))
+        {
+            if (arg1)
+            {   // Arg is passed in one register
+                auto tsize = arg1.tsize();
+                void* p;
+                auto s = arg1.toString();
+                if (s == "double" || s == "float")
+                {   // Passed in XMM register
+                    if (ap.offset_fpregs < (6 * 8 + 16 * 8))
+                    {
+                        p = ap.reg_args + ap.offset_fpregs;
+                        ap.offset_fpregs += 16;
+                    }
+                    else
+                    {
+                        p = ap.stack_args;
+                        ap.stack_args += (tsize + size_t.sizeof - 1) & ~(size_t.sizeof - 1);
+                    }
+                }
+                else
+                {   // Passed in regular register
+                    if (ap.offset_regs < 6 * 8)
+                    {
+                        p = ap.reg_args + ap.offset_regs;
+                        ap.offset_regs += 8;
+                    }
+                    else
+                    {
+                        p = ap.stack_args;
+                        ap.stack_args += 8;
+                    }
+                }
+                parmn[0..tsize] = p[0..tsize];
+
+                if (arg2)
+                {
+                    parmn += 8;
+                    tsize = arg2.tsize();
+                    s = arg2.toString();
+                    static if (s == "double" || s == "float")
+                    {   // Passed in XMM register
+                        if (ap.offset_fpregs < (6 * 8 + 16 * 8))
+                        {
+                            p = ap.reg_args + ap.offset_fpregs;
+                            ap.offset_fpregs += 16;
+                        }
+                        else
+                        {
+                            p = ap.stack_args;
+                            ap.stack_args += (tsize + size_t.sizeof - 1) & ~(size_t.sizeof - 1);
+                        }
+                    }
+                    else
+                    {   // Passed in regular register
+                        if (ap.offset_regs < 6 * 8)
+                        {
+                            p = ap.reg_args + ap.offset_regs;
+                            ap.offset_regs += 8;
+                        }
+                        else
+                        {
+                            p = ap.stack_args;
+                            ap.stack_args += 8;
+                        }
+                    }
+                    tsize = ti.tsize() - 8;
+                    parmn[0..tsize] = p[0..tsize];
+                }
+            }
+            else
+            {   // Always passed in memory
+                // The arg may have more strict alignment than the stack
+                auto talign = ti.talign();
+                auto tsize = ti.tsize();
+                auto p = cast(void*)(cast(size_t)ap.stack_args + talign - 1) & ~(talign - 1);
+                ap.stack_args = cast(void*)(cast(size_t)p + ((tsize + size_t.sizeof - 1) & ~(size_t.sizeof - 1)));
+                parmn[0..tsize] = p[0..tsize];
+            }
+        }
+        else
+        {
+            assert(0, "not a valid argument type for va_arg");
         }
     }
 

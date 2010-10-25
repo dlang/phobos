@@ -6,7 +6,7 @@
  */
 
 /*
- *  Copyright (C) 2000-2008 by Digital Mars, http://www.digitalmars.com
+ *  Copyright (C) 2000-2010 by Digital Mars, http://www.digitalmars.com
  *  Written by Walter Bright
  *
  *  This software is provided 'as-is', without any express or implied
@@ -69,6 +69,8 @@ struct aaA
     aaA *left;
     aaA *right;
     hash_t hash;
+    version (X86_64)
+        size_t padto16;         // don't always need it, but have to change API to fix it
     /* key   */
     /* value */
 }
@@ -96,7 +98,11 @@ struct AA
 
 size_t aligntsize(size_t tsize)
 {
-    return (tsize + size_t.sizeof - 1) & ~(size_t.sizeof - 1);
+    version (X86_64)
+        // Size of key needed to align value on 16 bytes
+        return (tsize + 15) & ~(15);
+    else
+        return (tsize + size_t.sizeof - 1) & ~(size_t.sizeof - 1);
 }
 
 extern (C):
@@ -399,7 +405,7 @@ void* _aaInX(AA aa, TypeInfo keyti, void* pkey)
 
 void _aaDel(AA aa, TypeInfo keyti, ...)
 {
-    return _aaDel(aa, keyti, cast(void *)(&keyti + 1));
+    return _aaDelX(aa, keyti, cast(void *)(&keyti + 1));
 }
 
 void _aaDelX(AA aa, TypeInfo keyti, void* pkey)
@@ -848,16 +854,19 @@ BB* _d_assocarrayliteralT(TypeInfo_AssociativeArray ti, size_t length, ...)
         auto len = prime_list[i];
         result.b = new aaA*[len];
 
-        size_t keystacksize   = (keysize   + int.sizeof - 1) & ~(int.sizeof - 1);
-        size_t valuestacksize = (valuesize + int.sizeof - 1) & ~(int.sizeof - 1);
+        size_t keystacksize   = (keysize   + size_t.sizeof - 1) & ~(size_t.sizeof - 1);
+        size_t valuestacksize = (valuesize + size_t.sizeof - 1) & ~(size_t.sizeof - 1);
 
         size_t keytsize = aligntsize(keysize);
 
+        aaA* ne;
         for (size_t j = 0; j < length; j++)
-        {   void* pkey = q;
-            q += keystacksize;
-            void* pvalue = q;
-            q += valuestacksize;
+        {
+            if (!ne)
+                ne = cast(aaA *) cast(void*) new void[aaA.sizeof + keytsize + valuesize];
+            void* pkey = ne + 1;
+            va_arg(q, keyti, pkey);
+            //q += keystacksize;
             aaA* e;
 
             auto key_hash = keyti.getHash(pkey);
@@ -871,10 +880,12 @@ BB* _d_assocarrayliteralT(TypeInfo_AssociativeArray ti, size_t length, ...)
                 {
                     // Not found, create new elem
                     //printf("create new one\n");
-                    e = cast(aaA *) cast(void*) new void[aaA.sizeof + keytsize + valuesize];
-                    memcpy(e + 1, pkey, keysize);
+                    //e = cast(aaA *) cast(void*) new void[aaA.sizeof + keytsize + valuesize];
+                    //memcpy(e + 1, pkey, keysize);
+                    e = ne;
                     e.hash = key_hash;
                     *pe = e;
+                    ne = null;
                     result.nodes++;
                     break;
                 }
@@ -888,9 +899,12 @@ BB* _d_assocarrayliteralT(TypeInfo_AssociativeArray ti, size_t length, ...)
                 else
                     pe = (key_hash < e.hash) ? &e.left : &e.right;
             }
-            memcpy(cast(void *)(e + 1) + keytsize, pvalue, valuesize);
+            //memcpy(cast(void *)(e + 1) + keytsize, q, valuesize);
+            //q += valuestacksize;
+            va_arg(q, ti.next, cast(void *)(e + 1) + keytsize);
         }
-
+        if (ne)
+            delete ne;
         va_end(q);
     }
     return result;
