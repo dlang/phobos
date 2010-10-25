@@ -2,16 +2,20 @@
  * Implementation of exception handling support routines for Posix.
  *
  * Copyright: Copyright Digital Mars 2000 - 2010.
- * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
- * Authors:   Walter Bright
- *
- *          Copyright Digital Mars 2000 - 2009.
+ * License:
  * Distributed under the Boost Software License, Version 1.0.
  *    (See accompanying file LICENSE_1_0.txt or copy at
- *          http://www.boost.org/LICENSE_1_0.txt)
+ *          $(LINK http://www.boost.org/LICENSE_1_0.txt))
+ * Authors:   Walter Bright
  */
 
-// Exception handling support for linux
+/* deh.c is Windows only. It is in C because it interacts with all the complex Windows header
+ * definitions for Windows SEH that have not been ported to D. D's eh mechanism on Windows is
+ * layered on top of Windows SEH.
+ *
+ * For other platforms, deh2.d is used instead, as D uses its own invented exception handling
+ * mechanism. (It is not compatible with the C++ eh ELF mechanism.)
+ */
 
 //debug=1;
 
@@ -134,10 +138,20 @@ size_t __eh_find_caller(size_t regbp, size_t *pretaddr)
 }
 
 /***********************************
- * Throw a D object.
+ * Deprecated because of Bugzilla 4398,
+ * keep for the moment for backwards compatibility.
  */
 
 extern (Windows) void _d_throw(Object *h)
+{
+    _d_throwc(h);
+}
+
+/***********************************
+ * Throw a D object.
+ */
+
+extern (C) void _d_throwc(Object *h)
 {
     size_t regebp;
 

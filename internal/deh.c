@@ -1,9 +1,18 @@
 //
-// Copyright (c) 1999-2003 by Digital Mars, www.digitalmars.com
+// Copyright (c) 1999-2010 by Digital Mars, http://www.digitalmars.com
 // All Rights Reserved
 // Written by Walter Bright
 
 // Exception handling support
+
+/* deh.c is Windows only. It is in C because it interacts with all the complex Windows header
+ * definitions for Windows SEH that have not been ported to D. D's eh mechanism on Windows is
+ * layered on top of Windows SEH.
+ *
+ * For other platforms, deh2.d is used instead, as D uses its own invented exception handling
+ * mechanism. (It is not compatible with the C++ eh ELF mechanism.)
+ */
+
 
 #include        <stdio.h>
 #include        <string.h>
@@ -214,13 +223,18 @@ int _d_exception_filter(struct _EXCEPTION_POINTERS *eptrs,
  * Throw a D object.
  */
 
-void __stdcall _d_throw(Object *h)
+void _d_throwc(Object *h)
 {
     //printf("_d_throw(h = %p, &h = %p)\n", h, &h);
     //printf("\tvptr = %p\n", *(void **)h);
     RaiseException(STATUS_DIGITAL_MARS_D_EXCEPTION,
                    EXCEPTION_NONCONTINUABLE,
                    1, (DWORD *)&h);
+}
+
+void __stdcall _d_throw(Object *h)
+{
+    _d_throwc(h);
 }
 
 /***********************************
