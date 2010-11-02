@@ -34,7 +34,7 @@ import std.exception;  // enforce
 import std.range;      // isInputRange, isOutputRange, isForwardRange, ElementType, hasLength
 import std.traits;     // isArray
 
-version(unittest) import std.algorithm, std.range, std.conv, std.file, std.stdio;
+version(unittest) import std.algorithm, std.conv, std.file, std.stdio;
 
 
 /**
@@ -59,7 +59,7 @@ alias Base64Impl!('-', '_') Base64URL;
  * -----
  *
  * NOTE:
- *  encoded-string does't have padding character if set Padding parameter to NoPadding.
+ *  encoded-string doesn't have padding character if set Padding parameter to NoPadding.
  */
 template Base64Impl(char Map62th, char Map63th, char Padding = '=')
 {
@@ -242,7 +242,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
         }
 
         // @@@BUG@@@ Workaround for DbC problem. See comment on 'out'.
-        assert(bufptr - buffer.ptr == encodeLength(srcLen), "The length of result is different from Base64");
+        version (unittest) assert(bufptr - buffer.ptr == encodeLength(srcLen), "The length of result is different from Base64");
 
         // encode method can't assume buffer length. So, slice needed.
         return buffer[0..bufptr - buffer.ptr];
@@ -387,7 +387,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
         }
 
         // @@@BUG@@@ Workaround for DbC problem.
-        assert(pcount == encodeLength(srcLen), "The number of put is different from the length of Base64");
+        version (unittest) assert(pcount == encodeLength(srcLen), "The number of put is different from the length of Base64");
 
         return pcount;
     }
@@ -744,7 +744,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
      *  the decoded string that slices buffer.
      *
      * Throws:
-     *  AssertError if $(D_PARAM source) has character outside base-alphabet.
+     *  an Exception if $(D_PARAM source) has character outside base-alphabet.
      */
     @trusted
     pure ubyte[] decode(R1, R2)(in R1 source, R2 buffer) if (isArray!R1 && is(ElementType!R1 : dchar) &&
@@ -873,7 +873,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
         }
 
         // @@@BUG@@@ Workaround for DbC problem.
-        assert((bufptr - buffer.ptr) >= (decodeLength(srcLen) - 2), "The length of result is smaller than expected length");
+        version (unittest) assert((bufptr - buffer.ptr) >= (decodeLength(srcLen) - 2), "The length of result is smaller than expected length");
 
         return buffer[0..bufptr - buffer.ptr];
     }
@@ -893,7 +893,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
      *  the number of calling put.
      *
      * Throws:
-     *  AssertError if $(D_PARAM source) has character outside base-alphabet.
+     *  an Exception if $(D_PARAM source) has character outside base-alphabet.
      */
     size_t decode(R1, R2)(in R1 source, R2 range) if (isArray!R1 && is(ElementType!R1 : dchar) &&
                                                       !is(R2 == ubyte[]) && isOutputRange!(R2, ubyte))
@@ -1024,14 +1024,14 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
         }
 
         // @@@BUG@@@ Workaround for DbC problem.
-        assert(pcount >= (decodeLength(srcLen) - 2), "The length of result is smaller than expected length");
+        version (unittest) assert(pcount >= (decodeLength(srcLen) - 2), "The length of result is smaller than expected length");
 
         return pcount;
     }
 
 
     /**
-     * Decodes $(D_PARAM source) to new buffer.
+     * Decodes $(D_PARAM source) into new buffer.
      *
      * Shortcut to decode(source, buffer) function.
      */
@@ -1348,17 +1348,21 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
     pure int decodeChar()(char chr)
     {
         immutable val = DecodeMap[chr];
+
+        // enforce can't be a pure function, so I use trivial check.
         if (val == 0 && chr != 'A')
-            assert(false, "Invalid character: " ~ chr);
+            throw new Exception("Invalid character: " ~ chr);
 
         return val;
     }
 
+
     @safe
     pure int decodeChar()(dchar chr)
     {
+        // See above comment.
         if (chr > 0x7f)
-            assert(false, "Base64-encoded character must be single byte");
+            throw new Exception("Base64-encoded character must be a single byte");
 
         return decodeChar(cast(char)chr);
     }
@@ -1414,6 +1418,11 @@ unittest
         assert(Base64.decode(Base64.encode(tv["foob"]))   == tv["foob"]);
         assert(Base64.decode(Base64.encode(tv["fooba"]))  == tv["fooba"]);
         assert(Base64.decode(Base64.encode(tv["foobar"])) == tv["foobar"]);
+
+        try {
+            Base64.decode("ab|c");
+            assert(false);
+        } catch (Exception e) {}
     }
 
     { // No padding
