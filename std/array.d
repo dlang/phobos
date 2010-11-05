@@ -276,7 +276,7 @@ void main()
 */
 
 void popFront(A)(ref A a)
-if(!isNarrowString!A && isDynamicArray!A && notConst!A)
+if(!isNarrowString!A && isDynamicArray!A && notConst!A && !is(A == void[]))
 {
     alias typeof(A[0]) T;
     assert(a.length, "Attempting to popFront() past the end of an array of "
@@ -337,7 +337,7 @@ void main()
 */
 
 void popBack(A)(ref A a)
-if(isDynamicArray!A && !isNarrowString!A && notConst!A)
+if(isDynamicArray!A && !isNarrowString!A && notConst!A && !is(A == void[]))
 {
     assert(a.length);
     a = a[0 .. $ - 1];
@@ -434,7 +434,8 @@ void main()
 }
 ----
 */
-ref typeof(A[0]) front(A)(A a) if (is(typeof(A[0])) && !isNarrowString!A)
+ref typeof(A[0]) front(A)(A a)
+if (is(typeof(A[0])) && !isNarrowString!A && !is(typeof(A[0]) : const(void)))
 {
     assert(a.length, "Attempting to fetch the front of an empty array");
     return a[0];
@@ -469,7 +470,8 @@ void main()
 ----
 */
 ref typeof(A.init[0]) back(A)(A a)
-if (is(typeof(A.init[0])) && !isNarrowString!A)
+if (is(typeof(A.init[0])) && !isNarrowString!A
+    && !is(typeof(A.init[0]) : const(void)))
 {
     // @@@BUG@@@ The assert below crashes the unittest due to a bug in
     //   the compiler
