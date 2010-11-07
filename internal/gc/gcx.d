@@ -1389,7 +1389,7 @@ struct Gcx
      */
     void addRange(void *pbot, void *ptop)
     {
-	debug(PRINTF) printf("addRange(pbot = %p, ptop = %p)\n", pbot, ptop);
+        debug(PRINTF) printf("addRange(pbot = %p, ptop = %p)\n", pbot, ptop);
         debug(PRINTF) printf("Thread %x ", pthread_self());
         debug(PRINTF) printf("%x.Gcx::addRange(%x, %x), nranges = %d\n", this, pbot, ptop, nranges);
         if (nranges == rangedim)
@@ -1834,72 +1834,72 @@ struct Gcx
         size_t result;
         version (D_InlineAsm_X86)
         {
-	    asm
-	    {
-		pushad              ;
-		mov sp[EBP],ESP     ;
-	    }
+            asm
+            {
+                pushad              ;
+                mov sp[EBP],ESP     ;
+            }
         }
-	else version (D_InlineAsm_X86_64)
-	{
-	    asm
-	    {
-		push RAX ;
-		push RBX ;
-		push RCX ;
-		push RDX ;
-		push RSI ;
-		push RDI ;
-		push RBP ;
-		push R8  ;
-		push R9  ;
-		push R10  ;
-		push R11  ;
-		push R12  ;
-		push R13  ;
-		push R14  ;
-		push R15  ;
-		push EAX ;   // 16 byte align the stack
-	    }
-	}
-	else
-	{
-	    static assert( false, "Architecture not supported." );
-	}
+        else version (D_InlineAsm_X86_64)
+        {
+            asm
+            {
+                push RAX ;
+                push RBX ;
+                push RCX ;
+                push RDX ;
+                push RSI ;
+                push RDI ;
+                push RBP ;
+                push R8  ;
+                push R9  ;
+                push R10  ;
+                push R11  ;
+                push R12  ;
+                push R13  ;
+                push R14  ;
+                push R15  ;
+                push EAX ;   // 16 byte align the stack
+            }
+        }
+        else
+        {
+            static assert( false, "Architecture not supported." );
+        }
         result = fullcollect(sp);
-	version (D_InlineAsm_X86)
-	{
-	    asm
-	    {
-		popad;
-	    }
-	}
-	else version (D_InlineAsm_X86_64)
-	{
-	    asm
-	    {
-		pop EAX ;   // 16 byte align the stack
-		pop R15  ;
-		pop R14  ;
-		pop R13  ;
-		pop R12  ;
-		pop R11  ;
-		pop R10  ;
-		pop R9  ;
-		pop R8  ;
-		pop RBP ;
-		pop RDI ;
-		pop RSI ;
-		pop RDX ;
-		pop RCX ;
-		pop RBX ;
-		pop RAX ;
-	    }
-	}
-	else
-	{
-	    static assert( false, "Architecture not supported." );
-	}
+        version (D_InlineAsm_X86)
+        {
+            asm
+            {
+                popad;
+            }
+        }
+        else version (D_InlineAsm_X86_64)
+        {
+            asm
+            {
+                pop EAX ;   // 16 byte align the stack
+                pop R15  ;
+                pop R14  ;
+                pop R13  ;
+                pop R12  ;
+                pop R11  ;
+                pop R10  ;
+                pop R9  ;
+                pop R8  ;
+                pop RBP ;
+                pop RDI ;
+                pop RSI ;
+                pop RDX ;
+                pop RCX ;
+                pop RBX ;
+                pop RAX ;
+            }
+        }
+        else
+        {
+            static assert( false, "Architecture not supported." );
+        }
         return result;
     }
 

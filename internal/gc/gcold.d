@@ -74,7 +74,7 @@ void[] _d_newarrayi(size_t length, size_t size, ...)
             }
         }
         va_end(q);
-	result = (cast(void*)p)[0 .. length];
+        result = (cast(void*)p)[0 .. length];
     }
     return result;
 }
@@ -115,7 +115,7 @@ void[] _d_newarrayii(size_t length, size_t size, size_t isize ...)
             }
         }
         va_end(q);
-	result = (cast(void*)p)[0 .. length];
+        result = (cast(void*)p)[0 .. length];
     }
     return result;
 }
@@ -248,7 +248,7 @@ void[] _d_new(size_t length, size_t size)
         p = _gc.malloc(length * size + 1);
         debug(PRINTF) printf(" p = %p\n", p);
         memset(p, 0, length * size);
-	result = (cast(void*)p)[0 .. length];
+        result = (cast(void*)p)[0 .. length];
     }
     return result;
 }

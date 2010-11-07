@@ -956,8 +956,6 @@ detab:
 tolf:
 	tolf freebsd.mak internal\gc\freebsd.mak etc\c\zlib\freebsd.mak
 
-svn:
-
 install:
 	$(CP) phobos.lib gcstub.obj $(DIR)\windows\lib
 	$(CP) $(MAKEFILES) phoboslicense.txt minit.obj std.ddoc $(DIR)\src\phobos
