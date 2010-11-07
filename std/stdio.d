@@ -26,6 +26,7 @@ import std.gc;
 import std.c.stdlib;
 import std.c.string;
 import std.c.stddef;
+import std.c.stdarg;
 
 
 version (DigitalMars)

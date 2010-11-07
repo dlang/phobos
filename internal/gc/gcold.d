@@ -31,9 +31,13 @@
 
 module std.gcold;
 
+version (X86)
+{
+
 //debug = PRINTF;
 
 import gc;
+import std.c.stdarg;
 
 extern (C)
 void[] _d_newarrayi(size_t length, size_t size, ...)
@@ -999,5 +1003,5 @@ unittest
 }
 }
 
-
+}
 

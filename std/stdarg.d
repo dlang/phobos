@@ -8,15 +8,21 @@
 
 module std.stdarg;
 
-alias void* va_list;
-
-template va_arg(T)
+version (X86)
 {
-    T va_arg(inout va_list _argptr)
+    alias void* va_list;
+
+    template va_arg(T)
     {
-        T arg = *cast(T*)_argptr;
-        _argptr = _argptr + ((T.sizeof + int.sizeof - 1) & ~(int.sizeof - 1));
-        return arg;
+        T va_arg(inout va_list _argptr)
+        {
+            T arg = *cast(T*)_argptr;
+            _argptr = _argptr + ((T.sizeof + int.sizeof - 1) & ~(int.sizeof - 1));
+            return arg;
+        }
     }
 }
-
+else
+{
+    public import std.c.stdarg;
+}

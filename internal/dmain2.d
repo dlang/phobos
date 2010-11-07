@@ -145,8 +145,8 @@ extern (C) int main(size_t argc, char **argv)
                 o.print();
             }
             else
-            {
-                fprintf(stderr, "Error: %.*s\n", o.toString());
+            {   auto s = o.toString();
+                fprintf(stderr, "Error: %.*s\n", s.length, s.ptr);
             }
             exit(EXIT_FAILURE);
         }

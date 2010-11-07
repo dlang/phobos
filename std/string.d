@@ -38,7 +38,8 @@ private import std.uni;
 private import std.array;
 private import std.format;
 private import std.ctype;
-private import std.stdarg;
+private import std.c.stdarg;
+//private import std.stdarg;
 
 extern (C)
 {
@@ -2678,7 +2679,7 @@ char[] sformat(char[] s, ...)
         }
     }
 
-    std.format.doFormat(&putc, _arguments, _argptr);
+    std.format.doFormat(&putc, _arguments, cast(va_list)_argptr);
     return s[0 .. i];
 }
 
@@ -3448,11 +3449,20 @@ bool isNumeric(TypeInfo[] _arguments, va_list _argptr)
         return false;
 
     if (_arguments[0] == typeid(char[]))
-        return isNumeric(va_arg!(char[])(_argptr));
+    {   char[] ss;
+        va_arg(_argptr, ss);
+        return isNumeric(ss);
+    }
     else if (_arguments[0] == typeid(wchar[]))
-        return isNumeric(std.utf.toUTF8(va_arg!(wchar[])(_argptr)));
+    {   wchar[] ww;
+        va_arg(_argptr, ww);
+        return isNumeric(std.utf.toUTF8(ww));
+    }
     else if (_arguments[0] == typeid(dchar[]))
-        return isNumeric(std.utf.toUTF8(va_arg!(dchar[])(_argptr)));
+    {   dchar[] dd;
+        va_arg(_argptr, dd);
+        return isNumeric(std.utf.toUTF8(dd));
+    }
     else if (_arguments[0] == typeid(real))
         return true;
     else if (_arguments[0] == typeid(double))
@@ -3474,13 +3484,13 @@ bool isNumeric(TypeInfo[] _arguments, va_list _argptr)
     else if (_arguments[0] == typeid(ubyte))
     {
        s.length = 1;
-       s[0]= va_arg!(ubyte)(_argptr);
+       va_arg(_argptr, s[0]);
        return isNumeric(cast(char[])s);
     }
     else if (_arguments[0] == typeid(byte))
     {
        s.length = 1;
-       s[0] = va_arg!(char)(_argptr);
+       va_arg(_argptr, s[0]);
        return isNumeric(cast(char[])s);
     }
     else if (_arguments[0] == typeid(ireal))
@@ -3498,19 +3508,19 @@ bool isNumeric(TypeInfo[] _arguments, va_list _argptr)
     else if (_arguments[0] == typeid(char))
     {
         s.length = 1;
-        s[0] = va_arg!(char)(_argptr);
+        va_arg(_argptr, s[0]);
         return isNumeric(s);
     }
     else if (_arguments[0] == typeid(wchar))
     {
         ws.length = 1;
-        ws[0] = va_arg!(wchar)(_argptr);
+        va_arg(_argptr, ws[0]);
         return isNumeric(std.utf.toUTF8(ws));
     }
     else if (_arguments[0] == typeid(dchar))
     {
         ds.length =  1;
-        ds[0] = va_arg!(dchar)(_argptr);
+        va_arg(_argptr, ds[0]);
         return isNumeric(std.utf.toUTF8(ds));
     }
     //else if (_arguments[0] == typeid(cent))

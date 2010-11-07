@@ -402,10 +402,18 @@ array_t _d_newarraymT(TypeInfo ti, size_t ndims, ...)
             else
             {
                 p = _gc.malloc(dim * (void[]).sizeof + 1)[0 .. dim];
-		va_list ap2;
-		va_copy(ap2, ap);
-                for (int i = 0; i < dim; i++)
+		version (X86)
+		{
+		    va_list ap2;
+		    va_copy(ap2, ap);
+		}
+                for (size_t i = 0; i < dim; i++)
                 {
+		    version (X86_64)
+		    {
+			__va_list argsave = *cast(__va_list*)ap;
+			va_list ap2 = &argsave;
+		    }
                     (cast(void[]*)p.ptr)[i] = foo(ti.next, ap2, ndims - 1);
                 }
             }
@@ -454,10 +462,18 @@ array_t _d_newarraymiT(TypeInfo ti, size_t ndims, ...)
             else
             {
                 p = _gc.malloc(dim * (void[]).sizeof + 1)[0 .. dim];
-		va_list ap2;
-		va_copy(ap2, ap);
+		version (X86)
+		{
+		    va_list ap2;
+		    va_copy(ap2, ap);
+		}
                 for (int i = 0; i < dim; i++)
                 {
+		    version (X86_64)
+		    {
+			__va_list argsave = *cast(__va_list*)ap;
+			va_list ap2 = &argsave;
+		    }
                     (cast(void[]*)p.ptr)[i] = foo(ti.next, ap2, ndims - 1);
                 }
             }
@@ -940,11 +956,20 @@ byte[] _d_arrayappendcT(TypeInfo ti, inout byte[] x, ...)
         memcpy(newdata, x.ptr, length * sizeelem);
         (cast(void **)(&x))[1] = newdata;
     }
-  L1:
-    byte *argp = cast(byte *)(&ti + 2);
 
+  L1:
     *cast(size_t *)&x = newlength;
-    x.ptr[length * sizeelem .. newsize] = argp[0 .. sizeelem];
+    version (X86)
+    {
+	byte *argp = cast(byte *)(&ti + 2);
+	x.ptr[length * sizeelem .. newsize] = argp[0 .. sizeelem];
+    }
+    else
+    {
+	va_list ap;
+	va_start(ap, __va_argsave);
+	va_arg(ap, ti.next, cast(void*)x.ptr + length * sizeelem);
+    }
     assert((cast(size_t)x.ptr & 15) == 0);
     assert(_gc.capacity(x.ptr) > x.length * sizeelem);
     return x;
@@ -1150,37 +1175,69 @@ body
 
 extern (C)
 byte[] _d_arraycatnT(TypeInfo ti, uint n, ...)
-{   void* a;
+{
     size_t length;
-    byte[]* p;
-    uint i;
-    byte[] b;
     auto sizeelem = ti.next.tsize();            // array element size
 
-    p = cast(byte[]*)(&n + 1);
-
-    for (i = 0; i < n; i++)
+    version (X86)
     {
-        b = *p++;
-        length += b.length;
+	auto p = cast(byte[]*)(&n + 1);
+	for (uint i = 0; i < n; i++)
+	{
+	    byte[] b = *p++;
+	    length += b.length;
+	}
     }
+    else
+    {
+	__va_list argsave = __va_argsave.va;
+	va_list ap;
+	va_start(ap, __va_argsave);
+	for (uint i = 0; i < n; i++)
+	{
+	    byte[] b;
+	    va_arg(ap, b);
+	    length += b.length;
+	}
+	va_end(ap);
+    }
+
     if (!length)
         return null;
 
-    a = _gc.malloc(length * sizeelem);
+    auto a = _gc.malloc(length * sizeelem);
     if (!(ti.next.flags() & 1))
         _gc.hasNoPointers(a);
-    p = cast(byte[]*)(&n + 1);
 
-    uint j = 0;
-    for (i = 0; i < n; i++)
+    version (X86)
     {
-        b = *p++;
-        if (b.length)
-        {
-            memcpy(a + j, b.ptr, b.length * sizeelem);
-            j += b.length * sizeelem;
-        }
+	p = cast(byte[]*)(&n + 1);
+	size_t j = 0;
+	for (uint i = 0; i < n; i++)
+	{
+	    byte[] b = *p++;
+	    if (b.length)
+	    {
+		memcpy(a + j, b.ptr, b.length * sizeelem);
+		j += b.length * sizeelem;
+	    }
+	}
+    }
+    else
+    {
+	va_list ap2 = &argsave;
+	size_t j = 0;
+	for (uint i = 0; i < n; i++)
+	{
+	    byte[] b;
+	    va_arg(ap2, b);
+	    if (b.length)
+	    {
+		memcpy(a + j, b.ptr, b.length * sizeelem);
+		j += b.length * sizeelem;
+	    }
+	}
+	va_end(ap2);
     }
 
     byte[] result;
@@ -1206,25 +1263,36 @@ void* _d_arrayliteralT(TypeInfo ti, size_t length, ...)
             _gc.hasNoPointers(result);
         }
 
-        va_list q;
-        version (X86_64) va_start(q, __va_argsave); else va_start(q, length);
+	version (X86)
+	{
+	    va_list ap;
+	    va_start(ap, length);
 
-        size_t stacksize = (sizeelem + int.sizeof - 1) & ~(int.sizeof - 1);
+	    size_t stacksize = (sizeelem + int.sizeof - 1) & ~(int.sizeof - 1);
 
-        if (stacksize == sizeelem)
-        {
-            memcpy(result, q, length * sizeelem);
-        }
-        else
-        {
-            for (size_t i = 0; i < length; i++)
-            {
-                memcpy(result + i * sizeelem, q, sizeelem);
-                q += stacksize;
-            }
-        }
-
-        va_end(q);
+	    if (stacksize == sizeelem)
+	    {
+		memcpy(result, ap, length * sizeelem);
+	    }
+	    else
+	    {
+		for (size_t i = 0; i < length; i++)
+		{
+		    memcpy(result + i * sizeelem, ap, sizeelem);
+		    ap += stacksize;
+		}
+	    }
+	    va_end(ap);
+	}
+	else
+	{   va_list ap;
+	    va_start(ap, __va_argsave);
+	    for (size_t i = 0; i < length; i++)
+	    {
+		va_arg(ap, ti.next, result + i * sizeelem);
+	    }
+	    va_end(ap);
+	}
     }
     return result;
 }

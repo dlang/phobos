@@ -45,7 +45,7 @@ static size_t[] prime_list = [
  * Although DMD will return types of Array in registers,
  * gcc will not, so we instead use a 'long'.
  */
-alias long ArrayRet_t;
+alias void[] ArrayRet_t;
 
 struct Array
 {
@@ -499,7 +499,7 @@ ArrayRet_t _aaKeys(AA aa, size_t keysize)
     {
         auto len = _aaLen(aa);
         if (!len)
-            return 0;
+            return null;
         auto res = cast(byte[])new void[len * keysize];
         size_t resi = 0;
         foreach (e; aa.a.b)

@@ -82,8 +82,8 @@ else version (X86_64)
     // Layout of this struct must match __gnuc_va_list for C ABI compatibility
     struct __va_list
     {
-        uint offset_regs;
-        uint offset_fpregs;
+        uint offset_regs = 6 * 8;            // no regs
+        uint offset_fpregs = 6 * 8 + 8 * 16; // no fp regs
         void* stack_args;
         void* reg_args;
     }
@@ -99,18 +99,25 @@ else version (X86_64)
      * Making it an array of 1 causes va_list to be passed as a pointer in
      * function argument lists
      */
-    alias __va_list* va_list;
+    alias void* va_list;
 
     void va_start(T)(out va_list ap, inout T parmn)
     {
         ap = &parmn.va;
     }
 
-    void va_arg(T)(va_list ap, inout T parmn)
+    T va_arg(T)(va_list ap)
+    {   T a;
+        va_arg(ap, a);
+        return a;
+    }
+
+    void va_arg(T)(va_list apx, inout T parmn)
     {
+        __va_list* ap = cast(__va_list*)apx;
         static if (is(T U == __argTypes))
         {
-            static if (U.length == 0)
+            static if (U.length == 0 || T.sizeof > 16 || U[0].sizeof > 8)
             {   // Always passed in memory
                 // The arg may have more strict alignment than the stack
                 auto p = (cast(size_t)ap.stack_args + T.alignof - 1) & ~(T.alignof - 1);
@@ -135,15 +142,16 @@ else version (X86_64)
                 }
                 else
                 {   // Passed in regular register
-                    if (ap.offset_regs < 6 * 8)
+                    if (ap.offset_regs < 6 * 8 && T.sizeof <= 8)
                     {
                         parmn = *cast(T*)(ap.reg_args + ap.offset_regs);
                         ap.offset_regs += 8;
                     }
                     else
                     {
-                        parmn = *cast(T*)ap.stack_args;
-                        ap.stack_args += 8;
+                        auto p = (cast(size_t)ap.stack_args + T.alignof - 1) & ~(T.alignof - 1);
+                        ap.stack_args = cast(void*)(p + ((T.sizeof + size_t.sizeof - 1) & ~(size_t.sizeof - 1)));
+                        parmn = *cast(T*)p;
                     }
                 }
             }
@@ -167,7 +175,7 @@ else version (X86_64)
                 }
                 else
                 {
-                    if (ap.offset_regs < 6 * 8)
+                    if (ap.offset_regs < 6 * 8 && T1.sizeof <= 8)
                     {
                         *cast(T1*)&parmn = *cast(T1*)(ap.reg_args + ap.offset_regs);
                         ap.offset_regs += 8;
@@ -196,7 +204,7 @@ else version (X86_64)
                 else
                 {
                     void* a = void;
-                    if (ap.offset_regs < 6 * 8)
+                    if (ap.offset_regs < 6 * 8 && T2.sizeof <= 8)
                     {
                         a = ap.reg_args + ap.offset_regs;
                         ap.offset_regs += 8;
@@ -222,12 +230,13 @@ else version (X86_64)
         }
     }
 
-    void va_arg()(va_list ap, TypeInfo ti, void* parmn)
+    void va_arg()(va_list apx, TypeInfo ti, void* parmn)
     {
+        __va_list* ap = cast(__va_list*)apx;
         TypeInfo arg1, arg2;
         if (!ti.argTypes(arg1, arg2))
         {
-            if (arg1)
+            if (arg1 && arg1.tsize() <= 8)
             {   // Arg is passed in one register
                 auto tsize = arg1.tsize();
                 void* p;
@@ -265,7 +274,7 @@ else version (X86_64)
                     parmn += 8;
                     tsize = arg2.tsize();
                     s = arg2.toString();
-                    static if (s == "double" || s == "float")
+                    if (s == "double" || s == "float")
                     {   // Passed in XMM register
                         if (ap.offset_fpregs < (6 * 8 + 16 * 8))
                         {
@@ -300,7 +309,7 @@ else version (X86_64)
                 // The arg may have more strict alignment than the stack
                 auto talign = ti.talign();
                 auto tsize = ti.tsize();
-                auto p = cast(void*)(cast(size_t)ap.stack_args + talign - 1) & ~(talign - 1);
+                auto p = cast(void*)((cast(size_t)ap.stack_args + talign - 1) & ~(talign - 1));
                 ap.stack_args = cast(void*)(cast(size_t)p + ((tsize + size_t.sizeof - 1) & ~(size_t.sizeof - 1)));
                 parmn[0..tsize] = p[0..tsize];
             }

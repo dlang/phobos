@@ -444,7 +444,6 @@ int x = 27;
 formattedPrint("The answer is %s:", x, 6);
 ------------------------
  */
-
 void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
 {   int j;
     TypeInfo ti;
@@ -623,6 +622,10 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
           return m;
         }
 
+        /* p = pointer to the first element in the array
+         * len = number of elements in the array
+         * valti = type of the elements
+         */
         void putArray(void* p, size_t len, TypeInfo valti)
         {
           //printf("\nputArray(len = %u), tsize = %u\n", len, valti.tsize());
@@ -633,12 +636,18 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
           auto tiSave = ti;
           auto mSave = m;
           ti = valti;
-          //printf("\n%.*s\n", valti.classinfo.name);
+          //printf("\nvalti = %.*s\n", valti.classinfo.name.length, valti.classinfo.name.ptr);
           m = getMan(valti);
           while (len--)
           {
             //doFormat(putc, (&valti)[0 .. 1], p);
-            argptr = p;
+            version (X86)
+                argptr = p;
+            else
+            {   __va_list va;
+                va.stack_args = p;
+                argptr = &va;
+            }
             formatArg('s');
 
             p += tsize;
@@ -663,21 +672,42 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
           {
             if (comma) putc(',');
             comma = true;
-            // the key comes before the value
-            ubyte* key = &fakevalue - long.sizeof;
+            void *pkey = &fakevalue;
+            version (X86)
+                pkey -= long.sizeof;
+            else
+                pkey -= 16;
 
-            //doFormat(putc, (&keyti)[0..1], key);
-            argptr = key;
+            // the key comes before the value
+            auto keysize = keyti.tsize();
+            version (X86)
+                auto keysizet = (keysize + size_t.sizeof - 1) & ~(size_t.sizeof - 1);
+            else
+                auto keysizet = (keysize + 15) & ~(15);
+
+            void* pvalue = pkey + keysizet;
+
+            //doFormat(putc, (&keyti)[0..1], pkey);
+            version (X86)
+                argptr = pkey;
+            else
+            {   __va_list va;
+                va.stack_args = pkey;
+                argptr = &va;
+            }
             ti = keyti;
             m = getMan(keyti);
             formatArg('s');
 
             putc(':');
-            auto keysize = keyti.tsize;
-            keysize = (keysize + 3) & ~3;
-            ubyte* value = key + keysize;
-            //doFormat(putc, (&valti)[0..1], value);
-            argptr = value;
+            //doFormat(putc, (&valti)[0..1], pvalue);
+            version (X86)
+                argptr = pvalue;
+            else
+            {   __va_list va2;
+                va2.stack_args = pvalue;
+                argptr = &va2;
+            }
             ti = valti;
             m = getMan(valti);
             formatArg('s');
@@ -826,7 +856,10 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
                 goto Lcomplex;
 
             case Mangle.Tsarray:
-                putArray(argptr, (cast(TypeInfo_StaticArray)ti).len, (cast(TypeInfo_StaticArray)ti).next);
+                version (X86)
+                    putArray(argptr, (cast(TypeInfo_StaticArray)ti).len, (cast(TypeInfo_StaticArray)ti).next);
+                else
+                    putArray((cast(__va_list*)argptr).stack_args, (cast(TypeInfo_StaticArray)ti).len, (cast(TypeInfo_StaticArray)ti).next);
                 return;
 
             case Mangle.Tarray:
@@ -1055,7 +1088,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
 
     for (j = 0; j < arguments.length; )
     {   ti = arguments[j++];
-        //printf("test1: '%.*s' %d\n", ti.classinfo.name, ti.classinfo.name.length);
+        //printf("arg[%d]: '%.*s' %d\n", j, ti.classinfo.name.length, ti.classinfo.name.ptr, ti.classinfo.name.length);
         //ti.print();
 
         flags = 0;
@@ -1540,6 +1573,7 @@ unittest
     r = std.string.format("%s", aa.values);
     assert(r == "[[h,e,l,l,o],[b,e,t,t,y]]");
     r = std.string.format("%s", aa);
+printf("r = %.*s\n", r.length, r.ptr);
     assert(r == "[3:[h,e,l,l,o],4:[b,e,t,t,y]]");
 
     static const dchar[] ds = ['a','b'];
