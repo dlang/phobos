@@ -1231,6 +1231,10 @@ deprecated uint rand()
     return hiword;
 }
 
+// disabling because it's commented out anyways, and this causes a cyclic
+// dependency with std.encoding.
+version(none)
+{
 shared static this()
 {
     ulong s;
@@ -1255,6 +1259,7 @@ shared static this()
         }
     }
     //rand_seed(cast(uint) s, cast(uint)(s >> 32));
+}
 }
 
 deprecated
