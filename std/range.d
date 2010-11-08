@@ -2273,7 +2273,7 @@ unittest
     static assert (is (typeof(takeMyStrAgain) == typeof(takeMyStr)));
     takeMyStrAgain = take(takeMyStr, 10);
     assert(equal(takeMyStrAgain, "This is"));
-    
+
 
     foreach(DummyType; AllDummyRanges) {
         DummyType dummy;
@@ -4935,7 +4935,7 @@ template InputRangeObject(R) if(isInputRange!(Unqual!R)) {
 
             static if(isForwardRange!R) {
                 @property typeof(this) save() {
-                    return new typeof(this)(_range);
+                    return new typeof(this)(_range.save);
                 }
             }
 
@@ -5029,7 +5029,11 @@ template InputRangeObject(R) if(isInputRange!(Unqual!R)) {
 
 /**Convenience function for creating a $(D InputRangeObject) of the proper type.*/
 InputRangeObject!R inputRangeObject(R)(R range) if(isInputRange!R) {
-    return new InputRangeObject!R(range);
+    static if(is(R : InputRange!(ElementType!R))) {
+        return range;
+    } else {
+        return new InputRangeObject!R(range);
+    }
 }
 
 /**Convenience function for creating a $(D OutputRangeObject) with a base range
@@ -5070,6 +5074,8 @@ unittest {
 
     foreach(elem; arrWrapped) {}
     foreach(i, elem; arrWrapped) {}
+
+    assert(inputRangeObject(arrWrapped) is arrWrapped);
 
     foreach(DummyType; AllDummyRanges) {
         auto d = DummyType.init;
