@@ -402,7 +402,7 @@ sizediff_t rfind(string s, RegExp pattern)
 
 unittest
 {
-    int i;
+    sizediff_t i;
 
     debug(regexp) printf("regexp.rfind.unittest\n");
     i = rfind("abcdefcdef", RegExp("c"));
@@ -451,7 +451,7 @@ rfind(string s, string pattern, string attributes = null)
 
 unittest
 {
-    int i;
+    sizediff_t i;
 
     debug(regexp) printf("regexp.rfind.unittest\n");
     i = rfind("abcdefcdef", "c");

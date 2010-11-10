@@ -2407,7 +2407,7 @@ struct Repeat(T)
     /// Ditto
     @property Repeat!(T) save() { return this; }
     /// Ditto
-    ref T opIndex(uint) { return _value; }
+    ref T opIndex(size_t) { return _value; }
 }
 
 /// Ditto
@@ -3481,7 +3481,10 @@ struct Recurrence(alias fun, StateType, size_t stateSize)
 
     void popFront()
     {
-        _state[_n % stateSize] = binaryFun!(fun, "a", "n")(
+        // The cast here is reasonable because fun may cause integer
+        // promotion, but needs to return a StateType to make its operation
+        // closed.  Therefore, we have no other choice.
+        _state[_n % stateSize] = cast(StateType) binaryFun!(fun, "a", "n")(
             cycle(_state), _n + stateSize);
         ++_n;
     }
@@ -3555,7 +3558,7 @@ struct Sequence(alias fun, State)
 {
 private:
     alias binaryFun!(fun, "a", "n") compute;
-    alias typeof(compute(State.init, 1u)) ElementType;
+    alias typeof(compute(State.init, cast(size_t) 1)) ElementType;
     State _state;
     size_t _n;
     ElementType _cache;
@@ -3725,7 +3728,9 @@ struct Iota(N, S) if ((isIntegral!N || isPointer!N) && isIntegral!S) {
     /// Ditto
     N opIndex(size_t n)
     {
-        return current + step * n;
+        // Just cast to N here because doing so gives overflow behavior
+        // consistent with calling popFront() n times.
+        return cast(N) (current + step * n);
     }
     /// Ditto
     typeof(this) opSlice()
@@ -5254,7 +5259,7 @@ Releases the controlled range and returns it.
 */
     typeof(this) lowerBound(V)(V value)
     {
-        auto first = 0, count = this._input.length;
+        size_t first = 0, count = this._input.length;
         while (count > 0)
         {
             immutable step = count / 2;
@@ -5300,7 +5305,7 @@ Releases the controlled range and returns it.
 */
     typeof(this) upperBound(V)(V value)
     {
-        auto first = 0;
+        size_t first = 0;
         size_t count = length;
         while (count > 0)
         {

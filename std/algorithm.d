@@ -1172,7 +1172,7 @@ private:
 
     static if(isBidirectionalRange!Range)
     {
-        static int lastIndexOf(Range haystack, Separator needle)
+        static sizediff_t lastIndexOf(Range haystack, Separator needle)
         {
             immutable index = indexOf(retro(haystack), needle);
             return (index == -1) ? -1 : haystack.length - 1 - index;
@@ -2431,7 +2431,7 @@ if (Ranges.length > 1 && allSatisfy!(isForwardRange, Ranges))
 {
     for (;; haystack.popFront)
     {
-        auto r = startsWith!pred(haystack, needles);
+        size_t r = startsWith!pred(haystack, needles);
         if (r || haystack.empty)
         {
             return tuple(haystack, r);
@@ -2515,10 +2515,10 @@ struct BoyerMooreFinder(alias pred, Range)
 {
 private:
     size_t skip[];
-    int[ElementType!(Range)] occ;
+    sizediff_t[ElementType!(Range)] occ;
     Range needle;
 
-    int occurrence(ElementType!(Range) c)
+    sizediff_t occurrence(ElementType!(Range) c)
     {
         auto p = c in occ;
         return p ? *p : -1;
@@ -2535,8 +2535,8 @@ is ignored.
     static bool needlematch(R)(R needle,
                               size_t portion, size_t offset)
     {
-        int virtual_begin = needle.length - offset - portion;
-        int ignore = 0;
+        sizediff_t virtual_begin = needle.length - offset - portion;
+        sizediff_t ignore = 0;
         if (virtual_begin < 0) {
             ignore = -virtual_begin;
             virtual_begin = 0;
@@ -3815,7 +3815,7 @@ struct Levenshtein(Range, alias equals, CostType = size_t)
     EditOp[] path()
     {
         EditOp[] result;
-        uint i = rows - 1, j = cols - 1;
+        size_t i = rows - 1, j = cols - 1;
         // restore the path
         while (i || j) {
             auto cIns = j == 0 ? CostType.max : _matrix[i][j - 1];
@@ -3850,9 +3850,9 @@ private:
         _insertionIncrement = 1,
         _substitutionIncrement = 1;
     CostType[][] _matrix;
-    uint rows, cols;
+    size_t rows, cols;
 
-    void AllocMatrix(uint r, uint c) {
+    void AllocMatrix(size_t r, size_t c) {
         rows = r;
         cols = c;
         if (!_matrix || _matrix.length < r || _matrix[0].length < c) {
@@ -3906,7 +3906,7 @@ size_t levenshteinDistance(alias equals = "a == b", Range1, Range2)
     (Range1 s, Range2 t)
     if (isForwardRange!(Range1) && isForwardRange!(Range2))
 {
-    Levenshtein!(Range1, binaryFun!(equals), uint) lev;
+    Levenshtein!(Range1, binaryFun!(equals), size_t) lev;
     return lev.distance(s, t);
 }
 
@@ -5036,7 +5036,7 @@ unittest
     //scope(failure) writeln(stderr, "Failure testing algorithm");
     //auto v = ([ 25, 7, 9, 2, 0, 5, 21 ]).dup;
     int[] v = [ 7, 6, 5, 4, 3, 2, 1, 0 ];
-    auto n = 3;
+    sizediff_t n = 3;
     topN!("a < b")(v, n);
     assert(reduce!max(v[0 .. n]) <= v[n]);
     assert(reduce!min(v[n + 1 .. $]) >= v[n]);
@@ -6224,11 +6224,11 @@ unittest
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     auto r = Random(unpredictableSeed);
-    int[] a = new int[uniform(1, 1000, r)];
+    sizediff_t[] a = new sizediff_t[uniform(1, 1000, r)];
     foreach (i, ref e; a) e = i;
     randomShuffle(a, r);
     auto n = uniform(0, a.length, r);
-    int[] b = new int[n];
+    sizediff_t[] b = new sizediff_t[n];
     topNCopy!(binaryFun!("a < b"))(a, b, SortOutput.yes);
     assert(isSorted!(binaryFun!("a < b"))(b));
 }

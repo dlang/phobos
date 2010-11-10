@@ -314,7 +314,7 @@ Generally a container may define several types of ranges.
             assert(0);
         }
         /// Ditto
-        void opIndexAssign(T value, uint i)
+        void opIndexAssign(T value, size_t i)
         {
             assert(0);
         }
@@ -2775,7 +2775,7 @@ struct Array(T) if (is(T == bool))
             return _outer[_a + i];
         }
         /// Ditto
-        void opIndexAssign(T value, uint i)
+        void opIndexAssign(T value, size_t i)
         {
             _outer[_a + i] = value;
         }

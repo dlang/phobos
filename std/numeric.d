@@ -1835,7 +1835,7 @@ time and computes all matches of length 1.
         size_t iMin = size_t.max, jMin = size_t.max,
             iMax = 0, jMax = 0;
         /* initialize */
-        Tuple!(uint, uint) * k0;
+        Tuple!(size_t, size_t) * k0;
         size_t k0len;
         scope(exit) free(k0);
         currentValue = 0;

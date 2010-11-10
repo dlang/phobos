@@ -184,7 +184,7 @@ private:
             apply }
 
     // state
-    int function(OpID selector, ubyte[size]* store, void* data) fptr
+    sizediff_t function(OpID selector, ubyte[size]* store, void* data) fptr
         = &handler!(void);
     union
     {
@@ -196,7 +196,7 @@ private:
 
     // internals
     // Handler for an uninitialized value
-    static int handler(A : void)(OpID selector, ubyte[size]*, void* parm)
+    static sizediff_t handler(A : void)(OpID selector, ubyte[size]*, void* parm)
     {
         switch (selector)
         {
@@ -231,7 +231,7 @@ private:
     }
 
     // Handler for all of a type's operations
-    static int handler(A)(OpID selector, ubyte[size]* pStore, void* parm)
+    static sizediff_t handler(A)(OpID selector, ubyte[size]* pStore, void* parm)
     {
         static A* getPtr(void* untyped)
         {
@@ -751,11 +751,13 @@ public:
         else
             auto temp = Variant(rhs);
         auto result = fptr(OpID.compare, &store, &temp);
-        if (result == int.min)
+        if (result == sizediff_t.min)
         {
             throw new VariantException(type, temp.type);
         }
-        return result;
+
+        assert(result >= -1 && result <= 1);  // Should be true for opCmp.
+        return cast(int) result;
     }
 
     /**

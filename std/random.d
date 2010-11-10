@@ -952,7 +952,7 @@ struct RandomCover(Range, Random)
             ++_alreadyChosen; // means we're done
             return;
         }
-        uint k = _input.length - _alreadyChosen;
+        size_t k = _input.length - _alreadyChosen;
         uint i;
         foreach (e; _input)
         {
