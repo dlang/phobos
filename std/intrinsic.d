@@ -62,7 +62,7 @@ pure nothrow int bsf(size_t v);
  *  bsf(x21) = 0<br>
  *  bsr(x21) = 5
  */
-pure nothrow int bsr(uint v);
+pure nothrow int bsr(size_t v);
 
 /**
  * Tests the bit.

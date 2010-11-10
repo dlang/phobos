@@ -2682,7 +2682,7 @@ returns the smallest $(D n) such that after $(D n) calls to $(D
 haystack.popFront), $(D haystack.startsWith!pred(needle)). If no such
 number could be found, return $(D -1).
  */
-int indexOf(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
+sizediff_t indexOf(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
 if (is(typeof(startsWith!pred(haystack, needle))))
 {
     static if (isNarrowString!R1)

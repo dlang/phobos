@@ -949,12 +949,12 @@ if (isIntegral!T)
     // write left pad; write sign; write 0x or 0X; write digits;
     //   write right pad
     // Writing left pad
-    int spacesToPrint =
+    sizediff_t spacesToPrint =
         f.width // start with the minimum width
         - digits.length  // take away digits to print
         - (forcedPrefix != 0) // take away the sign if any
         - (base == 16 && f.flHash && arg ? 2 : 0); // 0x or 0X
-    const int delta = f.precision - digits.length;
+    const sizediff_t delta = f.precision - digits.length;
     if (delta > 0) spacesToPrint -= delta;
     //writeln(spacesToPrint);
     if (spacesToPrint > 0) // need to do some padding
@@ -980,7 +980,7 @@ if (isIntegral!T)
     // write the digits
     if (arg || f.precision)
     {
-        int zerosToPrint = f.precision - digits.length;
+        sizediff_t zerosToPrint = f.precision - digits.length;
         foreach (i ; 0 .. zerosToPrint) put(w, '0');
         put(w, digits);
     }
