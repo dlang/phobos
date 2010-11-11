@@ -19,12 +19,12 @@ version (Win32)
 {
 
 private import std.c.windows.windows;
-private import std.file;
+shared bool useWfuncs = true;
 
 shared static this()
 {
     // Win 95, 98, ME do not implement the W functions
-    std.file.useWfuncs = (GetVersion() < 0x80000000);
+    useWfuncs = (GetVersion() < 0x80000000);
 }
 
 }

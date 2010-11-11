@@ -25,7 +25,7 @@ import core.stdc.stdio, core.stdc.stdlib, core.stdc.string,
 version (Win32)
 {
     import core.sys.windows.windows, std.windows.charset,
-        std.windows.syserror, std.__fileinit;
+        std.windows.syserror, std.__fileinit : useWfuncs;
 /*
  * Since Win 9x does not support the "W" API's, first convert
  * to wchar, then convert to multibyte using the current code
@@ -33,7 +33,6 @@ version (Win32)
  * (Thanks to yaneurao for this)
  */
     version(Windows) alias std.windows.charset.toMBSz toMBSz;
-    shared bool useWfuncs = true;        // initialized in std.__fileinit
 }
 version (Posix)
 {
