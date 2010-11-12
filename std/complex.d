@@ -35,22 +35,25 @@ struct Complex(T)  if (isFloatingPoint!T)
     T im;
 
 
+@safe pure nothrow  // The following functions depend only on std.math.
+{
+    
     /** Calculate the absolute value (or modulus) of the number. */
-    @property T abs() const nothrow
+    @property T abs() const
     {
         return hypot(re, im);
     }
 
 
     /** Calculate the argument (or phase) of the number. */
-    @property T arg() const nothrow
+    @property T arg() const
     {
         return atan2(im, re);
     }
 
 
     /** Return the complex conjugate of the number. */
-    @property Complex conj() const nothrow
+    @property Complex conj() const
     {
         return Complex(re, -im);
     }
@@ -64,7 +67,7 @@ struct Complex(T)  if (isFloatingPoint!T)
 
 
     // this = complex
-    Complex opAssign(R : T)(Complex!R z) nothrow
+    Complex opAssign(R : T)(Complex!R z)
     {
         re = z.re;
         im = z.im;
@@ -73,7 +76,7 @@ struct Complex(T)  if (isFloatingPoint!T)
 
 
     // this = numeric
-    Complex opAssign(R : T)(R r) nothrow
+    Complex opAssign(R : T)(R r)
     {
         re = r;
         im = 0;
@@ -87,14 +90,14 @@ struct Complex(T)  if (isFloatingPoint!T)
 
 
     // this == complex
-    bool opEquals(R : T)(Complex!R z) const nothrow
+    bool opEquals(R : T)(Complex!R z) const
     {
         return re == z.re && im == z.im;
     }
 
 
     // this == numeric
-    bool opEquals(R : T)(R r) const nothrow
+    bool opEquals(R : T)(R r) const
     {
         return re == r && im == 0;
     }
@@ -105,7 +108,7 @@ struct Complex(T)  if (isFloatingPoint!T)
 
 
     // +complex
-    Complex opUnary(string op)() const nothrow
+    Complex opUnary(string op)() const
         if (op == "+")
     {
         return this;
@@ -113,7 +116,7 @@ struct Complex(T)  if (isFloatingPoint!T)
 
 
     // -complex
-    Complex opUnary(string op)() const nothrow
+    Complex opUnary(string op)() const
         if (op == "-")
     {
         return Complex(-re, -im);
@@ -125,8 +128,7 @@ struct Complex(T)  if (isFloatingPoint!T)
 
 
     // complex op complex
-    Complex!(CommonType!(T,R)) opBinary(string op, R)(Complex!R z)
-        const nothrow
+    Complex!(CommonType!(T,R)) opBinary(string op, R)(Complex!R z) const
     {
         alias typeof(return) C;
         auto w = C(this.re, this.im);
@@ -135,8 +137,7 @@ struct Complex(T)  if (isFloatingPoint!T)
 
 
     // complex op numeric
-    Complex!(CommonType!(T,R)) opBinary(string op, R)(R r)
-        const nothrow
+    Complex!(CommonType!(T,R)) opBinary(string op, R)(R r) const
         if (isNumeric!R)
     {
         alias typeof(return) C;
@@ -146,8 +147,7 @@ struct Complex(T)  if (isFloatingPoint!T)
 
 
     // numeric + complex,  numeric * complex
-    Complex!(CommonType!(T, R)) opBinaryRight(string op, R)(R r)
-        const nothrow
+    Complex!(CommonType!(T, R)) opBinaryRight(string op, R)(R r) const
         if ((op == "+" || op == "*") && (isNumeric!R))
     {
         return opBinary!(op)(r);
@@ -155,8 +155,7 @@ struct Complex(T)  if (isFloatingPoint!T)
 
 
     // numeric - complex
-    Complex!(CommonType!(T, R)) opBinaryRight(string op, R)(R r)
-        const nothrow
+    Complex!(CommonType!(T, R)) opBinaryRight(string op, R)(R r) const
         if (op == "-" && isNumeric!R)
     {
         return Complex(r - re, -im);
@@ -164,8 +163,7 @@ struct Complex(T)  if (isFloatingPoint!T)
 
 
     // numeric / complex
-    Complex!(CommonType!(T, R)) opBinaryRight(string op, R)(R r)
-        const nothrow
+    Complex!(CommonType!(T, R)) opBinaryRight(string op, R)(R r) const
         if (op == "/" && isNumeric!R)
     {
         typeof(return) w;
@@ -197,7 +195,7 @@ struct Complex(T)  if (isFloatingPoint!T)
 
 
     // complex += complex,  complex -= complex
-    Complex opOpAssign(string op, C)(C z) nothrow
+    Complex opOpAssign(string op, C)(C z)
         if ((op == "+" || op == "-") && is(C R == Complex!R))
     {
         mixin ("re "~op~"= z.re;");
@@ -207,7 +205,7 @@ struct Complex(T)  if (isFloatingPoint!T)
 
 
     // complex *= complex
-    Complex opOpAssign(string op, C)(C z) nothrow
+    Complex opOpAssign(string op, C)(C z)
         if (op == "*" && is(C R == Complex!R))
     {
         auto temp = re*z.re - im*z.im;
@@ -218,7 +216,7 @@ struct Complex(T)  if (isFloatingPoint!T)
 
 
     // complex /= complex
-    Complex opOpAssign(string op, C)(C z) nothrow
+    Complex opOpAssign(string op, C)(C z)
         if (op == "/" && is(C R == Complex!R))
     {
         if (fabs(z.re) < fabs(z.im))
@@ -244,7 +242,7 @@ struct Complex(T)  if (isFloatingPoint!T)
 
 
     // complex ^^= complex
-    Complex opOpAssign(string op, C)(C z) nothrow
+    Complex opOpAssign(string op, C)(C z)
         if (op == "^^" && is(C R == Complex!R))
     {
         FPTemporary!T r = abs;
@@ -259,7 +257,7 @@ struct Complex(T)  if (isFloatingPoint!T)
 
 
     // complex += numeric,  complex -= numeric
-    Complex opOpAssign(string op, U : T)(U a) nothrow
+    Complex opOpAssign(string op, U : T)(U a)
         if (op == "+" || op == "-")
     {
         mixin ("re "~op~"= a;");
@@ -268,7 +266,7 @@ struct Complex(T)  if (isFloatingPoint!T)
 
 
     // complex *= numeric,  complex /= numeric
-    Complex opOpAssign(string op, U : T)(U a) nothrow
+    Complex opOpAssign(string op, U : T)(U a)
         if (op == "*" || op == "/")
     {
         mixin ("re "~op~"= a;");
@@ -278,7 +276,7 @@ struct Complex(T)  if (isFloatingPoint!T)
 
 
     // complex ^^= real
-    Complex opOpAssign(string op, R)(R r) nothrow
+    Complex opOpAssign(string op, R)(R r)
         if (op == "^^" && isFloatingPoint!R)
     {
         FPTemporary!T ab = abs^^r;
@@ -290,7 +288,7 @@ struct Complex(T)  if (isFloatingPoint!T)
 
 
     // complex ^^= int
-    Complex opOpAssign(string op, U)(U i) nothrow
+    Complex opOpAssign(string op, U)(U i)
         if (op == "^^" && isIntegral!U)
     {
         switch (i)
@@ -316,6 +314,7 @@ struct Complex(T)  if (isFloatingPoint!T)
         return this;
     }
 
+} // @safe pure nothrow
 
 
 
@@ -552,7 +551,7 @@ unittest
 
 /** Construct a complex number given its absolute value and argument. */
 Complex!(CommonType!(T, U)) fromPolar(T, U)(T modulus, U argument)
-    pure nothrow
+    @safe pure nothrow
 {
     return Complex!(CommonType!(T,U))
         (modulus*cos(argument), modulus*sin(argument));
