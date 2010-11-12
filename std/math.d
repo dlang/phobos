@@ -1883,7 +1883,7 @@ real trunc(real x) @trusted nothrow { return core.stdc.math.truncl(x); }
  */
 real remainder(real x, real y) @trusted nothrow { return core.stdc.math.remainderl(x, y); }
 
-real remquo(real x, real y, out int n) @safe nothrow  /// ditto
+real remquo(real x, real y, out int n) @trusted nothrow  /// ditto
 {
     version (Posix)
         return core.stdc.math.remquol(x, y, &n);
