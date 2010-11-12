@@ -70,7 +70,7 @@ version(LDC) {
 }
 
 version(DigitalMars){
-    version=INLINE_YL2X;        // x87 has opcodes for these
+    version = INLINE_YL2X;        // x87 has opcodes for these
 }
 
 version (X86){
@@ -195,14 +195,6 @@ else
 }
 
 public:
-
-class NotImplemented : Error
-{
-    this(string msg)
-    {
-        super(msg ~ " not implemented");
-    }
-}
 
 enum real E =          2.7182818284590452354L;  /** e */ // 0x1.5BF0A8B1_45769535_5FF5p+1L
 enum real LOG2T =      0x1.a934f0979a3715fcp+1; /** $(SUB log, 2)10 */ // 3.32193 fldl2t
@@ -333,7 +325,7 @@ real cos(real x) @safe pure nothrow;       /* intrinsic */
  *      Results are undefined if |x| >= $(POWER 2,64).
  */
 
-real sin(real x) @safe pure nothrow ;       /* intrinsic */
+real sin(real x) @safe pure nothrow;       /* intrinsic */
 
 
 /***********************************
@@ -511,7 +503,7 @@ real acos(real x) @safe pure nothrow
 /// ditto
 double acos(double x) @safe pure nothrow { return acos(cast(real)x); }
 /// ditto
-float acos(float x)@safe pure nothrow  { return acos(cast(real)x); }
+float acos(float x) @safe pure nothrow  { return acos(cast(real)x); }
 
 /***************
  * Calculates the arc sine of x,
@@ -785,13 +777,13 @@ unittest
  *    $(SV  -$(INFIN), -0)
  * )
  */
-pure nothrow real atanh(real x) @safe pure nothrow
+real atanh(real x) @safe pure nothrow
 {
     // log( (1+x)/(1-x) ) == log ( 1 + (2*x)/(1-x) )
     return  0.5 * log1p( 2 * x / (1 - x) );
 }
 /// ditto
-pure nothrow double atanh(double x) @safe pure nothrow { return atanh(cast(real)x); }
+double atanh(double x) @safe pure nothrow { return atanh(cast(real)x); }
 /// ditto
 float atanh(float x) @safe pure nothrow { return atanh(cast(real)x); }
 
@@ -1246,7 +1238,7 @@ unittest
  *      $(TR $(TD $(PLUSMN)$(NAN)) $(TD $(PLUSMN)$(NAN)) $(TD int.min))
  *      )
  */
-real frexp(real value, out int exp) @trusted pure
+real frexp(real value, out int exp) @trusted pure nothrow
 {
     ushort* vu = cast(ushort*)&value;
     long* vl = cast(long*)&value;
@@ -1336,7 +1328,7 @@ real frexp(real value, out int exp) @trusted pure
                 cast(ushort)((0x8000 & vu[F.EXPPOS_SHORT]) | 0x3FE0);
         }
     } else { //static if(real.mant_dig==106) // doubledouble
-        throw new NotImplemented("frexp");
+        assert (0, "frexp not implemented");
     }
     return value;
 }
@@ -1404,7 +1396,7 @@ unittest
  *      $(TR $(TD $(NAN))            $(TD FP_ILOGBNAN) $(TD no))
  *      )
  */
-int ilogb(real x)               { return core.stdc.math.ilogbl(x); }
+int ilogb(real x)  @trusted nothrow    { return core.stdc.math.ilogbl(x); }
 
 alias core.stdc.math.FP_ILOGB0   FP_ILOGB0;
 alias core.stdc.math.FP_ILOGBNAN FP_ILOGBNAN;
@@ -1539,7 +1531,7 @@ real log2(real x) @safe pure nothrow
  *      $(TR $(TD $(PLUSMN)0.0)      $(TD -$(INFIN)) $(TD yes) )
  *      )
  */
-real logb(real x)               { return core.stdc.math.logbl(x); }
+real logb(real x) @trusted nothrow    { return core.stdc.math.logbl(x); }
 
 /************************************
  * Calculates the remainder from the calculation x/y.
@@ -1555,7 +1547,7 @@ real logb(real x)               { return core.stdc.math.logbl(x); }
  *  $(TR $(TD !=$(PLUSMNINF)) $(TD $(PLUSMNINF))  $(TD x)            $(TD no))
  * )
  */
-real modf(real x, ref real y) { return core.stdc.math.modfl(x,&y); }
+real modf(real x, ref real y) @trusted nothrow { return core.stdc.math.modfl(x,&y); }
 
 /*************************************
  * Efficiently calculates x * 2$(SUP n).
@@ -1569,7 +1561,7 @@ real modf(real x, ref real y) { return core.stdc.math.modfl(x,&y); }
  *      $(TR $(TD $(PLUSMN)0.0)      $(TD $(PLUSMN)0.0) )
  *      )
  */
-real scalbn(real x, int n)
+real scalbn(real x, int n) @trusted nothrow
 {
     version(D_InlineAsm_X86) {
         // scalbnl is not supported on DMD-Windows, so use asm.
@@ -1598,7 +1590,7 @@ unittest {
  *      $(TR $(TD $(PLUSMN)$(INFIN)) $(TD $(PLUSMN)$(INFIN)) $(TD no) )
  *      )
  */
-real cbrt(real x)               { return core.stdc.math.cbrtl(x); }
+real cbrt(real x) @trusted nothrow    { return core.stdc.math.cbrtl(x); }
 
 
 /*******************************
@@ -1718,14 +1710,14 @@ unittest
  *
  * <img src="erf.gif" alt="error function">
  */
-real erf(real x)                { return core.stdc.math.erfl(x); }
+real erf(real x)  @trusted nothrow   { return core.stdc.math.erfl(x); }
 
 /**********************************
  * Returns the complementary error function of x, which is 1 - erf(x).
  *
  * <img src="erfc.gif" alt="complementary error function">
  */
-real erfc(real x)               { return core.stdc.math.erfcl(x); }
+real erfc(real x)  @trusted nothrow  { return core.stdc.math.erfcl(x); }
 
 /***********************************
  * Natural logarithm of gamma function.
@@ -1742,7 +1734,7 @@ real erfc(real x)               { return core.stdc.math.erfcl(x); }
  *      $(TR $(TD $(PLUSMN)$(INFIN)) $(TD +$(INFIN)) $(TD no))
  *      )
  */
-real lgamma(real x)
+real lgamma(real x) @trusted nothrow
 {
     return core.stdc.math.lgammal(x);
 
@@ -1773,7 +1765,7 @@ real lgamma(real x)
  *      $(LINK http://en.wikipedia.org/wiki/Gamma_function),
  *      $(LINK http://www.netlib.org/cephes/ldoubdoc.html#gamma)
  */
-real tgamma(real x)
+real tgamma(real x) @trusted nothrow
 {
     return core.stdc.math.tgammal(x);
 
@@ -1784,13 +1776,13 @@ real tgamma(real x)
  * Returns the value of x rounded upward to the next integer
  * (toward positive infinity).
  */
-real ceil(real x)               { return core.stdc.math.ceill(x); }
+real ceil(real x)  @trusted nothrow    { return core.stdc.math.ceill(x); }
 
 /**************************************
  * Returns the value of x rounded downward to the next integer
  * (toward negative infinity).
  */
-real floor(real x)              { return core.stdc.math.floorl(x); }
+real floor(real x) @trusted nothrow    { return core.stdc.math.floorl(x); }
 
 /******************************************
  * Rounds x to the nearest integer value, using the current rounding
@@ -1799,7 +1791,7 @@ real floor(real x)              { return core.stdc.math.floorl(x); }
  * Unlike the rint functions, nearbyint does not raise the
  * FE_INEXACT exception.
  */
-real nearbyint(real x) { return core.stdc.math.nearbyintl(x); }
+real nearbyint(real x) @trusted nothrow { return core.stdc.math.nearbyintl(x); }
 
 /**********************************
  * Rounds x to the nearest integer value, using the current rounding
@@ -1821,7 +1813,7 @@ real rint(real x) @safe pure nothrow;      /* intrinsic */
  * If using the default rounding mode (ties round to even integers)
  * lrint(4.5) == 4, lrint(5.5)==6.
  */
-long lrint(real x)
+long lrint(real x) @trusted nothrow
 {
     version (Posix)
         return core.stdc.math.llrintl(x);
@@ -1836,7 +1828,7 @@ long lrint(real x)
         return n;
     }
     else
-        throw new NotImplemented("lrint");
+        assert (0, "lrint not implemented");
 }
 
 /*******************************************
@@ -1844,7 +1836,7 @@ long lrint(real x)
  * If the fractional part of x is exactly 0.5, the return value is rounded to
  * the even integer.
  */
-real round(real x) { return core.stdc.math.roundl(x); }
+real round(real x) @trusted nothrow { return core.stdc.math.roundl(x); }
 
 /**********************************************
  * Return the value of x rounded to the nearest integer.
@@ -1852,12 +1844,12 @@ real round(real x) { return core.stdc.math.roundl(x); }
  * If the fractional part of x is exactly 0.5, the return value is rounded
  * away from zero.
  */
-long lround(real x)
+long lround(real x) @trusted nothrow
 {
     version (Posix)
         return core.stdc.math.llroundl(x);
     else
-        throw new NotImplemented("lround");
+        assert (0, "lround not implemented");
 }
 
 /****************************************************
@@ -1865,7 +1857,7 @@ long lround(real x)
  *
  * This is also known as "chop" rounding.
  */
-real trunc(real x) { return core.stdc.math.truncl(x); }
+real trunc(real x) @trusted nothrow { return core.stdc.math.truncl(x); }
 
 /****************************************************
  * Calculate the remainder x REM y, following IEC 60559.
@@ -1889,14 +1881,14 @@ real trunc(real x) { return core.stdc.math.truncl(x); }
  *
  * Note: remquo not supported on windows
  */
-real remainder(real x, real y) { return core.stdc.math.remainderl(x, y); }
+real remainder(real x, real y) @trusted nothrow { return core.stdc.math.remainderl(x, y); }
 
-real remquo(real x, real y, out int n)  /// ditto
+real remquo(real x, real y, out int n) @safe nothrow  /// ditto
 {
     version (Posix)
         return core.stdc.math.remquol(x, y, &n);
     else
-        throw new NotImplemented("remquo");
+        assert (0, "remquo not implemented");
 }
 
 /** IEEE exception status flags ('sticky bits')
