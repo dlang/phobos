@@ -54,8 +54,8 @@ shared static this()
 
 private:
 // Limits for when to switch between algorithms.
-__gshared int CACHELIMIT;   // Half the size of the data cache.
-__gshared int FASTDIVLIMIT; // crossover to recursive division
+immutable int CACHELIMIT;   // Half the size of the data cache.
+immutable int FASTDIVLIMIT; // crossover to recursive division
 
 
 // These constants are used by shift operations
@@ -790,7 +790,7 @@ T intpow(T)(T x, ulong n)
 int highestPowerBelowUintMax(uint x)
 {
      assert(x>1);
-     static const ubyte [22] maxpwr = [ 31, 20, 15, 13, 12, 11, 10, 10, 9, 9,
+     static immutable ubyte [22] maxpwr = [ 31, 20, 15, 13, 12, 11, 10, 10, 9, 9,
                                           8, 8, 8, 8, 7, 7, 7, 7, 7, 7, 7, 7];
      if (x<24) return maxpwr[x-2];
      if (x<41) return 6;
@@ -805,7 +805,7 @@ int highestPowerBelowUintMax(uint x)
 int highestPowerBelowUlongMax(uint x)
 {
      assert(x>1);
-     static const ubyte [39] maxpwr = [ 63, 40, 31, 27, 24, 22, 21, 20, 19, 18,
+     static immutable ubyte [39] maxpwr = [ 63, 40, 31, 27, 24, 22, 21, 20, 19, 18,
                                          17, 17, 16, 16, 15, 15, 15, 15, 14, 14,
                                          14, 14, 13, 13, 13, 13, 13, 13, 13, 12,
                                          12, 12, 12, 12, 12, 12, 12, 12, 12];
@@ -1667,7 +1667,7 @@ void itoaZeroPadded(char[] output, uint value, int radix = 10) {
 
 void toHexZeroPadded(char[] output, uint value) {
     ptrdiff_t x = output.length - 1;
-    static string hexDigits = "0123456789ABCDEF";
+    static immutable string hexDigits = "0123456789ABCDEF";
     for( ; x>=0; --x) {
         output[x] = hexDigits[value & 0xF];
         value >>= 4;
@@ -1773,8 +1773,10 @@ void blockDivMod(BigDigit [] quotient, BigDigit [] u, in BigDigit [] v)
 
 version(unittest)
 {
-
     import std.c.stdio;
+}
+
+unittest{
 
     void printBiguint(uint [] data)
     {
@@ -1787,9 +1789,6 @@ version(unittest)
         printf("%.*s\n", data.toDecimalString(0));
     }
 
-}
-
-unittest{
     uint [] a, b;
     a = new uint[43];
     b = new uint[179];
