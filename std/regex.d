@@ -387,7 +387,7 @@ Returns the number of parenthesized captures
             case REgoto:
             {
                 auto bitbuf = new OutBuffer;
-                auto r = new Range(bitbuf);
+                auto r = Range(bitbuf);
                 size_t offset = i;
                 if (starrchars(r, prog[i .. prog.length]))
                 {
@@ -755,7 +755,7 @@ Returns the number of parenthesized captures
         return 1;
     }
 
-    class Range
+    struct Range
     {
         uint maxc;
         uint maxb;
@@ -821,7 +821,7 @@ Returns the number of parenthesized captures
         offset = buf.offset;
         buf.write(cast(uint)0);         // reserve space for length
         buf.reserve(128 / 8);
-        auto r = new Range(buf);
+        auto r = Range(buf);
         if (op == REnotbit)
             r.setbit2(0);
         switch (pattern[p])
@@ -994,7 +994,7 @@ Returns the number of parenthesized captures
 // Return 1 if success, 0 if we can't build a filter or if there is no
 // point to one.
 
-    bool starrchars(Range r, const(ubyte)[] prog)
+    bool starrchars(ref Range r, const(ubyte)[] prog)
     {
         E c;
         uint maxc;
