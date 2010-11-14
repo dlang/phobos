@@ -326,7 +326,7 @@ unittest
  *
  */
 
-immutable(T)[] assumeUnique(T)(ref T[] array)
+immutable(T)[] assumeUnique(T)(ref T[] array) @safe pure nothrow
 {
     auto result = cast(immutable(T)[]) array;
     array = null;
@@ -340,7 +340,7 @@ unittest
     assert(is(typeof(arr1) == immutable(int)[]) && arr == null);
 }
 
-immutable(T[U]) assumeUnique(T, U)(ref T[U] array)
+immutable(T[U]) assumeUnique(T, U)(ref T[U] array) @safe pure nothrow
 {
     auto result = cast(immutable(T[U])) array;
     array = null;
