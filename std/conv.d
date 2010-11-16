@@ -30,7 +30,7 @@ import std.metastrings;
 /**
  * Thrown on conversion errors.
  */
-class ConvError : Error
+class ConvException : Exception
 {
     this(string s)
     {
@@ -38,9 +38,11 @@ class ConvError : Error
     }
 }
 
+deprecated alias ConvException ConvError;   /// ditto
+
 private void convError(S, T, string f = __FILE__, uint ln = __LINE__)(S source)
 {
-    throw new ConvError(cast(string)
+    throw new ConvException(cast(string)
             ("std.conv("~to!string(ln)
                     ~"): Can't convert value `"~to!(string)(source)~"' of type "
                     ~S.stringof~" to type "~T.stringof));
@@ -48,7 +50,7 @@ private void convError(S, T, string f = __FILE__, uint ln = __LINE__)(S source)
 
 private void convError(S, T, string f = __FILE__, uint ln = __LINE__)(S source, int radix)
 {
-    throw new ConvError(cast(string)
+    throw new ConvException(cast(string)
             ("std.conv("~to!string(ln)
                     ~"): Can't convert value `"~to!(string)(source)~"' of type "
                     ~S.stringof~" base "~to!(string)(radix)~" to type "~T.stringof));
@@ -57,7 +59,7 @@ private void convError(S, T, string f = __FILE__, uint ln = __LINE__)(S source, 
 /**
  * Thrown on conversion overflow errors.
  */
-class ConvOverflowError : ConvError
+class ConvOverflowException : ConvException
 {
     this(string s)
     {
@@ -67,9 +69,11 @@ class ConvOverflowError : ConvError
     // pure
     static void raise(string s)
     {
-        throw new ConvOverflowError(s);
+        throw new ConvOverflowException(s);
     }
 }
+
+deprecated alias ConvOverflowException ConvOverflowError;   /// ditto
 
 private template implicitlyConverts(S, T)
 {
@@ -234,7 +238,7 @@ if (isSomeString!T && (is(S == void[]) || is(S == const(void)[]) ||
     alias Unqual!(typeof(T.init[0])) Char;
     auto raw = cast(const(ubyte)[]) s;
     enforce(raw.length % Char.sizeof == 0,
-            new ConvError("Alignment mismatch in converting a "
+            new ConvException("Alignment mismatch in converting a "
                     ~ S.stringof ~ " to a "
                     ~ T.stringof));
     auto result = new Char[raw.length / Char.sizeof];
@@ -373,7 +377,7 @@ T toImpl(T, S)(S s) if (is(S == enum) && isSomeString!(T)
     // Embed the actual value encountered into the error message.
     static assert(!is(OriginalType!S == S));
     OriginalType!S v = s;
-    throw new ConvError(
+    throw new ConvException(
         "value '" ~ to!string(v) ~ "' is not enumerated in " ~ S.stringof);
 }
 
@@ -395,7 +399,7 @@ unittest
         to!string(cast(E) (E.max + 1));
         assert(0);
     }
-    catch (ConvError e)
+    catch (ConvException e)
     {
     }
 }
@@ -440,7 +444,7 @@ deduced and the target type must be specified, for example the
 expression $(D_PARAM to!(int)(42.0)) converts the number 42 from
 $(D_PARAM double) to $(D_PARAM int). The conversion is "safe", i.e.,
 it checks for overflow; $(D_PARAM to!(int)(4.2e10)) would throw the
-$(D_PARAM ConvOverflowError) exception. Overflow checks are only
+$(D_PARAM ConvOverflowException) exception. Overflow checks are only
 inserted when necessary, e.g., $(D_PARAM to!(double)(42)) does not do
 any checking because any int fits in a double.
 
@@ -463,7 +467,7 @@ Examples:
 int a = 420;
 auto b = to!(long)(a); // same as long b = a;
 auto c = to!(byte)(a / 10); // fine, c = 42
-auto d = to!(byte)(a); // throw ConvOverflowError
+auto d = to!(byte)(a); // throw ConvOverflowException
 double e = 4.2e6;
 auto f = to!(int)(e); // f == 4200000
 e = -3.14;
@@ -624,7 +628,7 @@ T toImpl(T, S)(S value) if (is(S : Object) && is(T : Object))
     auto result = cast(T) value;
     if (!result && value)
     {
-        throw new ConvError("Cannot convert object of static type "
+        throw new ConvException("Cannot convert object of static type "
                 ~S.classinfo.name~" and dynamic type "~value.classinfo.name
                 ~" to type "~T.classinfo.name);
     }
@@ -644,7 +648,7 @@ unittest
         to!(B)(a3);
         assert(false);
     }
-    catch (ConvError e)
+    catch (ConvException e)
     {
         //writeln(e);
     }
@@ -705,11 +709,11 @@ if (!implicitlyConverts!(S, T)
             static assert(tSmallest < 0);
             immutable good = value >= tSmallest;
         }
-        if (!good) ConvOverflowError.raise("Conversion negative overflow");
+        if (!good) ConvOverflowException.raise("Conversion negative overflow");
     }
     static if (S.max > T.max) {
         // possible overflow
-        if (value > T.max) ConvOverflowError.raise("Conversion overflow");
+        if (value > T.max) ConvOverflowException.raise("Conversion overflow");
     }
     return cast(T) value;
 }
@@ -836,26 +840,26 @@ private void testFloatingToIntegral(Floating, Integral)() {
         assert(is(typeof(b) == Integral) && b == -42);
     } else {
         // no go for unsigned types
-        assert(convFails!(Floating, Integral, ConvOverflowError)(a));
+        assert(convFails!(Floating, Integral, ConvOverflowException)(a));
     }
     // convert to the smallest integral value
     a = 0.0 + Integral.min;
     static if (Integral.min < 0) {
         a = -a; // -Integral.min not representable as an Integral
-        assert(convFails!(Floating, Integral, ConvOverflowError)(a)
+        assert(convFails!(Floating, Integral, ConvOverflowException)(a)
                 || Floating.sizeof <= Integral.sizeof);
     }
     a = 0.0 + Integral.min;
     assert(to!(Integral)(a) == Integral.min);
     --a; // no more representable as an Integral
-    assert(convFails!(Floating, Integral, ConvOverflowError)(a)
+    assert(convFails!(Floating, Integral, ConvOverflowException)(a)
             || Floating.sizeof <= Integral.sizeof);
     a = 0.0 + Integral.max;
 //   fwritefln(stderr, "%s a=%g, %s conv=%s", Floating.stringof, a,
 //             Integral.stringof, to!(Integral)(a));
     assert(to!(Integral)(a) == Integral.max || Floating.sizeof <= Integral.sizeof);
     ++a; // no more representable as an Integral
-    assert(convFails!(Floating, Integral, ConvOverflowError)(a)
+    assert(convFails!(Floating, Integral, ConvOverflowException)(a)
             || Floating.sizeof <= Integral.sizeof);
     // convert a value with a fractional part
     a = 3.14;
@@ -1014,12 +1018,12 @@ unittest
             assert(roundTo!Int(Int.min - 0.4L) == Int.min);
             assert(roundTo!Int(Int.max + 0.4L) == Int.max);
         }
-        catch (ConvOverflowError e)
+        catch (ConvOverflowException e)
         {
             assert(0);
         }
-        try { roundTo!Int(Int.min - 0.5L); assert(0); } catch (ConvOverflowError e) {}
-        try { roundTo!Int(Int.max + 0.5L); assert(0); } catch (ConvOverflowError e) {}
+        try { roundTo!Int(Int.min - 0.5L); assert(0); } catch (ConvOverflowException e) {}
+        try { roundTo!Int(Int.max + 0.5L); assert(0); } catch (ConvOverflowException e) {}
     }
 }
 
@@ -1120,7 +1124,7 @@ if (isSomeChar!(ElementType!Source) && isIntegral!Target && !isSomeChar!Target)
         }
         return v;
       Loverflow:
-        ConvOverflowError.raise("Overflow in integral conversion");
+        ConvOverflowException.raise("Overflow in integral conversion");
       Lerr:
         convError!(Source, Target)(s);
         return 0;
@@ -1172,7 +1176,7 @@ body
     s = s[i .. $];
     return v;
 Loverflow:
-    ConvOverflowError.raise("Overflow in integral conversion");
+    ConvOverflowException.raise("Overflow in integral conversion");
 Lerr:
     convError!(Source, Target)(s, radix);
     return 0;
@@ -1217,7 +1221,7 @@ if (isSomeString!Source && is(Target == enum))
         if (s.skipOver(ident))
             return e;
     }
-    throw new ConvError(
+    throw new ConvException(
         Target.stringof ~ " does not have a member named '"
         ~ to!string(s) ~ "'");
 }
@@ -1240,7 +1244,7 @@ unittest
         to!E("d");
         assert(0);
     }
-    catch (ConvError e)
+    catch (ConvException e)
     {
     }
 }
@@ -1271,7 +1275,7 @@ if (isInputRange!Source && /*!isSomeString!Source && */isFloatingPoint!Target)
     for (;;)
     {
         enforce(!p.empty,
-                new ConvError("error converting input to floating point"));
+                new ConvException("error converting input to floating point"));
         if (!isspace(p.front)) break;
         p.popFront();
     }
@@ -1280,7 +1284,7 @@ if (isInputRange!Source && /*!isSomeString!Source && */isFloatingPoint!Target)
     {
         case '-': sign++; goto case '+';
         case '+': p.popFront(); enforce(!p.empty,
-                new ConvError("error converting input to floating point"));
+                new ConvException("error converting input to floating point"));
         default: {}
     }
 
@@ -1366,9 +1370,9 @@ if (isInputRange!Source && /*!isSomeString!Source && */isFloatingPoint!Target)
         }
 
         enforce(anydigits,
-                new ConvError("Error converting input to floating point"));
+                new ConvException("Error converting input to floating point"));
         enforce(!p.empty && (p.front == 'p' || p.front == 'P'),
-                new ConvError("Floating point parsing: exponent is required"));
+                new ConvException("Floating point parsing: exponent is required"));
         char sexp;
         int e;
 
@@ -1379,7 +1383,7 @@ if (isInputRange!Source && /*!isSomeString!Source && */isFloatingPoint!Target)
             switch (p.front)
             {   case '-':    sexp++;
                 case '+':    p.popFront(); enforce(!p.empty,
-                        new ConvError("Error converting input"
+                        new ConvException("Error converting input"
                                 " to floating point"));
                 default: {}
             }
@@ -1396,7 +1400,7 @@ if (isInputRange!Source && /*!isSomeString!Source && */isFloatingPoint!Target)
             ndigits = 1;
         }
         exp += (sexp) ? -e : e;
-        enforce(ndigits, new ConvError("Error converting input"
+        enforce(ndigits, new ConvException("Error converting input"
                         " to floating point"));
 
         if (msdec)
@@ -1425,7 +1429,7 @@ if (isInputRange!Source && /*!isSomeString!Source && */isFloatingPoint!Target)
             // nan
             enforce((p.popFront(), !p.empty && toupper(p.front) == 'A')
                     && (p.popFront(), !p.empty && toupper(p.front) == 'N'),
-                   new ConvError("error converting input to floating point"));
+                   new ConvException("error converting input to floating point"));
             // skip past the last 'n'
             p.popFront();
             return typeof(return).nan;
@@ -1464,7 +1468,7 @@ if (isInputRange!Source && /*!isSomeString!Source && */isFloatingPoint!Target)
                 break;
             }
         }
-        enforce(sawDigits, new ConvError("no digits seen"));
+        enforce(sawDigits, new ConvException("no digits seen"));
     }
     if (!p.empty && (p.front == 'e' || p.front == 'E'))
     {
@@ -1473,7 +1477,7 @@ if (isInputRange!Source && /*!isSomeString!Source && */isFloatingPoint!Target)
 
         sexp = 0;
         p.popFront();
-        enforce(!p.empty, new ConvError("Unexpected end of input"));
+        enforce(!p.empty, new ConvException("Unexpected end of input"));
         switch (p.front)
         {   case '-':    sexp++;
             case '+':    p.popFront();
@@ -1491,7 +1495,7 @@ if (isInputRange!Source && /*!isSomeString!Source && */isFloatingPoint!Target)
             sawDigits = 1;
         }
         exp += (sexp) ? -e : e;
-        enforce(sawDigits, new ConvError("No digits seen."));
+        enforce(sawDigits, new ConvException("No digits seen."));
     }
 
     ldval = msdec;
@@ -1517,7 +1521,7 @@ if (isInputRange!Source && /*!isSomeString!Source && */isFloatingPoint!Target)
             while (exp <= -pow)
             {
                 ldval *= negtab[u];
-                enforce(ldval != 0, new ConvError("Range error"));
+                enforce(ldval != 0, new ConvException("Range error"));
                 exp += pow;
             }
             pow >>= 1;
@@ -1525,7 +1529,7 @@ if (isInputRange!Source && /*!isSomeString!Source && */isFloatingPoint!Target)
         }
     }
   L6: // if overflow occurred
-    enforce(ldval != core.stdc.math.HUGE_VAL, new ConvError("Range error"));
+    enforce(ldval != core.stdc.math.HUGE_VAL, new ConvException("Range error"));
 
   L1:
     return (sign) ? -ldval : ldval;
@@ -1669,7 +1673,7 @@ if (isSomeString!Source && is(Target == typedef))
 //         auto result = cast(N) v;
 //         if (result != v)
 //         {
-//             ConvError.raise!(S, N)(s);
+//             ConvException.raise!(S, N)(s);
 //         }
 //         return result;
 //     }
@@ -1727,9 +1731,9 @@ if (isSomeString!Source && is(Target == typedef))
 //         return v;
 //       Loverflow:
 //         assert(false);
-//         //ConvOverflowError.raise(to!string(s));
+//         //ConvOverflowException.raise(to!string(s));
 //       Lerr:
-//         ConvError.raise!(S, N)(s);
+//         ConvException.raise!(S, N)(s);
 //         return 0;
 //     }
 // }
@@ -1794,7 +1798,7 @@ unittest
             i = to!int(errors[j]);
             //printf("i = %d\n", i);
         }
-        catch (Error e)
+        catch (Exception e)
         {
             debug(conv) writeln(e);
             i = 3;
@@ -1858,7 +1862,7 @@ unittest
             i = to!uint(errors[j]);
             //printf("i = %d\n", i);
         }
-        catch (Error e)
+        catch (Exception e)
         {
             debug(conv) writeln(e);
             i = 3;
@@ -1933,7 +1937,7 @@ unittest
             i = to!long(errors[j]);
             //printf("l = %d\n", i);
         }
-        catch (Error e)
+        catch (Exception e)
         {
             debug(conv) writeln(e);
             i = 3;
@@ -2005,7 +2009,7 @@ unittest
             i = to!ulong(errors[j]);
             //printf("i = %d\n", i);
         }
-        catch (Error e)
+        catch (Exception e)
         {
             debug(conv) writeln(e);
             i = 3;
@@ -2073,7 +2077,7 @@ unittest
         {
             i = to!short(errors[j]);
         }
-        catch (Error e)
+        catch (Exception e)
         {
             debug(conv) writeln(e);
             i = 3;
@@ -2138,7 +2142,7 @@ unittest
             i = to!ushort(errors[j]);
             debug(conv) printf("i = %d\n", i);
         }
-        catch (Error e)
+        catch (Exception e)
         {
             debug(conv) writeln(e);
             i = 3;
@@ -2208,7 +2212,7 @@ unittest
             i = to!byte(errors[j]);
             debug(conv) printf("i = %d\n", i);
         }
-        catch (Error e)
+        catch (Exception e)
         {
             debug(conv) writeln(e);
             i = 3;
@@ -2273,7 +2277,7 @@ unittest
             i = to!ubyte(errors[j]);
             debug(conv) printf("i = %d\n", i);
         }
-        catch (Error e)
+        catch (Exception e)
         {
             debug(conv) writeln(e);
             i = 3;
@@ -2298,7 +2302,7 @@ unittest
         to!bool("maybe");
         assert (false);
     }
-    catch (ConvError e) { }
+    catch (ConvException e) { }
 
     auto t = "TrueType";
     assert (parse!bool(t) == true);
@@ -2314,7 +2318,7 @@ unittest
         parse!bool(m);
         assert (false);
     }
-    catch (ConvError e)
+    catch (ConvException e)
     {
         assert (m == "maybe");  // m shouldn't change on failure
     }
@@ -2364,7 +2368,7 @@ unittest
 //     s = s[endptr - sz .. $];
 //     return f;
 //   Lerr:
-//     ConvError.raise!(S[], F)(s);
+//     ConvException.raise!(S[], F)(s);
 //     assert(0);
 // }
 
@@ -2404,7 +2408,7 @@ unittest
         f = to!float("3.40282e+38");
         assert(to!string(f) == to!string(3.40282e+38));
     }
-    catch (ConvError e) // strtof() bug on some platforms
+    catch (ConvException e) // strtof() bug on some platforms
     {
         printf(" --- std.conv(%u) broken test ---\n", cast(uint) __LINE__);
         printf("   (%.*s)\n", e.msg);
@@ -2419,7 +2423,7 @@ unittest
     {
         to!float("\x00");
     }
-    catch (ConvError e)
+    catch (ConvException e)
     {
         ok = true;
     }
@@ -2466,7 +2470,7 @@ unittest
         assert(to!string(d) == to!string(1.79769e+308));
         assert(to!string(d) == to!string(double.max));
     }
-    catch (ConvError e) // strtod() bug on some platforms
+    catch (ConvException e) // strtod() bug on some platforms
     {
         printf(" --- std.conv(%u) broken test ---\n", cast(uint) __LINE__);
         printf("   (%.*s)\n", e.msg);
@@ -2482,7 +2486,7 @@ unittest
     {
         to!double("\x00");
     }
-    catch (ConvError e)
+    catch (ConvException e)
     {
         ok = true;
     }
@@ -2529,7 +2533,7 @@ unittest
         r = to!real(to!string(real.max));
         assert(to!string(r) == to!string(real.max));
     }
-    catch (ConvError e) // strtold() bug on some platforms
+    catch (ConvException e) // strtold() bug on some platforms
     {
         printf(" --- std.conv(%u) broken test ---\n", cast(uint) __LINE__);
         printf("   (%.*s)\n", e.msg);
@@ -2549,7 +2553,7 @@ unittest
     {
         to!real("\x00");
     }
-    catch (ConvError e)
+    catch (ConvException e)
     {
         ok = true;
     }
@@ -2977,7 +2981,7 @@ private bool getComplexStrings(in string s, out string s1, out string s2)
 
   Lerr:
     // Display the original string in the error message.
-    throw new ConvError("getComplexStrings() \"" ~ s ~ "\"" ~ " s1=\""
+    throw new ConvException("getComplexStrings() \"" ~ s ~ "\"" ~ " s1=\""
             ~ s1 ~ "\"" ~ " s2=\"" ~ s2 ~ "\"");
 }
 
@@ -3328,7 +3332,7 @@ T toImpl(T, S)(S r) if (is(Unqual!S == creal) && isSomeString!(T))
 T toImpl(T, S)(S value, uint radix)
 if (isIntegral!(Unqual!S) && !is(Unqual!S == ulong) && isSomeString!(T))
 {
-    enforce(radix >= 2 && radix <= 36, new ConvError("Radix error"));
+    enforce(radix >= 2 && radix <= 36, new ConvException("Radix error"));
     if (radix == 10)
         return to!string(value);     // handle signed cases only for radix 10
     return to!string(cast(ulong) value, radix);
@@ -3919,10 +3923,10 @@ Returns: A pointer to the newly constructed object.
 T* emplace(T, Args...)(void[] chunk, Args args) if (!is(T == class))
 {
     enforce(chunk.length >= T.sizeof,
-            new ConvError("emplace: target size too small"));
+            new ConvException("emplace: target size too small"));
     auto a = cast(size_t) chunk.ptr;
     version (OSX)       // for some reason, breaks on other platforms
-        enforce(a % T.alignof == 0, new ConvError("misalignment"));
+        enforce(a % T.alignof == 0, new ConvException("misalignment"));
     auto result = cast(typeof(return)) chunk.ptr;
 
     void initialize()
@@ -4023,7 +4027,7 @@ Returns: A pointer to the newly constructed object.
 T emplace(T, Args...)(void[] chunk, Args args) if (is(T == class))
 {
     enforce(chunk.length >= __traits(classInstanceSize, T),
-           new ConvError("emplace: chunk size too small"));
+           new ConvException("emplace: chunk size too small"));
     auto a = cast(size_t) chunk.ptr;
     enforce(a % T.alignof == 0, text(a, " vs. ", T.alignof));
     auto result = cast(typeof(return)) chunk.ptr;
