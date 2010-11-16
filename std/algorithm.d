@@ -1148,7 +1148,7 @@ with two empty elements.
 
 Example:
 ---
-assert(equal(splitter("hello  world", ' ') == [ "hello", "", "world" ]));
+assert(equal(splitter("hello  world", ' '), [ "hello", "", "world" ]));
 int[] a = [ 1, 2, 0, 0, 3, 0, 4, 5, 0 ];
 int[][] w = [ [1, 2], [], [3], [4, 5] ];
 assert(equal(splitter(a, 0), w));
