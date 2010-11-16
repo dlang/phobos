@@ -1045,7 +1045,7 @@ private:
     {
         int i = test(string);
         if (i)
-            i = pmatch[0].rm_so != 0;
+            i = pmatch[0].rm_so;
         else
             i = -1;         // no match
         return i;
