@@ -1415,7 +1415,7 @@ void formatValue(Writer, T, Char)(Writer w, T val,
         ref FormatSpec!Char f)
 if (is(T == struct) && !isInputRange!T)
 {
-    static if (is(typeof(val.toString() == string)))
+    static if (is(typeof(val.toString()) S) && isSomeString!S)
     {
         put(w, val.toString());
     }
@@ -1423,6 +1423,22 @@ if (is(T == struct) && !isInputRange!T)
     {
         put(w, T.stringof);
     }
+}
+
+unittest
+{
+    // bug 4638
+    struct U8  {  string toString() { return "blah"; } }
+    struct U16 { wstring toString() { return "blah"; } }
+    struct U32 { dstring toString() { return "blah"; } }
+
+    FormatSpec!char f;
+    auto w = appender!string();
+
+    formatValue(w, U8(), f);
+    formatValue(w, U16(), f);
+    formatValue(w, U32(), f);
+    assert(w.data() == "blahblahblah");
 }
 
 /**
