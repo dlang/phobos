@@ -1125,6 +1125,21 @@ unittest
  */
 void formatValue(Writer, T, Char)(Writer w, T val,
         ref FormatSpec!Char f)
+if (isInputRange!T && !isSomeString!T)
+{
+    static if (is(T == class) || is(T == interface) || isPointer!T)
+    {
+        if (val is null)
+        {
+            put(w, "null");
+            return;
+        }
+    }
+    formatRange(w, val, f);
+}
+
+private void formatRange(Writer, T, Char)(Writer w, T val,
+        ref FormatSpec!Char f)
 if (isInputRange!T && !isSomeChar!(ElementType!T))
 {
     auto arr = val;
@@ -1201,9 +1216,9 @@ if (isInputRange!T && !isSomeChar!(ElementType!T))
     }
 }
 
-void formatValue(Writer, T, Char)(Writer w, T val,
+private void formatRange(Writer, T, Char)(Writer w, T val,
         ref FormatSpec!Char f)
-if (isInputRange!T && !isSomeString!T && isSomeChar!(ElementType!T))
+if (isInputRange!T && isSomeChar!(ElementType!T))
 {
     if (!f.flDash)
     {
@@ -1261,6 +1276,40 @@ unittest
     assert(w.data == "[1, 2, 3]");
 }
 
+unittest
+{
+    FormatSpec!char f;
+    auto w = appender!(char[])();
+
+    // class range (issue 5154)
+    auto c = inputRangeObject([1,2,3,4]);
+    w.clear();
+    formatValue(w, c, f);
+    assert(w.data == "[1, 2, 3, 4]");
+    assert(c.empty);
+
+    // interface
+    InputRange!int i = inputRangeObject([1,2,3,4]);
+    w.clear();
+    formatValue(w, i, f);
+    assert(w.data == "[1, 2, 3, 4]");
+    assert(i.empty);
+
+    // pointer
+    auto r = retro([1,2,3,4]);
+    w.clear();
+    formatValue(w, &r, f);
+    assert(w.data == "[4, 3, 2, 1]");
+    assert(r.empty);
+
+    // null
+    c = null;
+    w.clear();
+    formatValue(w, c, f);
+    assert(w.data == "null");
+    assert(r.empty);
+}
+
 /**
    $(D void[0]) is formatted as "[]".
  */
@@ -1277,7 +1326,7 @@ if (is(D == void[0]))
  */
 void formatValue(Writer, T, Char)(Writer w, T val,
         ref FormatSpec!Char f)
-if (isPointer!T)
+if (isPointer!T && !isInputRange!T)
 {
     const void * p = val;
     if (f.spec == 's')
@@ -1295,7 +1344,7 @@ if (isPointer!T)
    Objects are formatted by calling $(D toString).
  */
 void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
-if (is(T == class))
+if (is(T == class) && !isInputRange!T)
 {
     // TODO: Change this once toString() works for shared objects.
     static assert(!is(T == shared), "unable to format shared objects");
@@ -1308,7 +1357,7 @@ if (is(T == class))
    $(D toString).
  */
 void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
-if (is(T == interface))
+if (is(T == interface) && !isInputRange!T)
 {
     return formatValue(w, cast(Object) val, f);
 }
