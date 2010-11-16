@@ -989,7 +989,7 @@ template roundTo(Target) {
     Target roundTo(Source)(Source value) {
         static assert(isFloatingPoint!Source);
         static assert(isIntegral!Target);
-        return to!(Target)(value + (value < 0 ? -0.5 : 0.5));
+        return to!(Target)(trunc(value + (value < 0 ? -0.5L : 0.5L)));
     }
 }
 
@@ -1005,6 +1005,22 @@ unittest
     assert(roundTo!(int)(-3.5) == -4);
     assert(roundTo!(int)(-3.999) == -4);
     assert(roundTo!(const int)(to!(const double)(-3.999)) == -4);
+
+    // boundary values
+    foreach (Int; TypeTuple!(byte, ubyte, short, ushort, int, uint))
+    {
+        try
+        {
+            assert(roundTo!Int(Int.min - 0.4L) == Int.min);
+            assert(roundTo!Int(Int.max + 0.4L) == Int.max);
+        }
+        catch (ConvOverflowError e)
+        {
+            assert(0);
+        }
+        try { roundTo!Int(Int.min - 0.5L); assert(0); } catch (ConvOverflowError e) {}
+        try { roundTo!Int(Int.max + 0.5L); assert(0); } catch (ConvOverflowError e) {}
+    }
 }
 
 /***************************************************************
