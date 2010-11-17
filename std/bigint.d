@@ -12,6 +12,9 @@
  * )
  *
  * For very large numbers, consider using the $(WEB gmplib.org, GMP library) instead.
+ *
+ * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+ * Authors:   Don Clugston
  */
 /*          Copyright Don Clugston 2008 - 2010.
  * Distributed under the Boost Software License, Version 1.0.
