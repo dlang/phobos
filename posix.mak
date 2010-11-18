@@ -156,16 +156,16 @@ STD_MODULES = $(addprefix std/, algorithm array base64 bigint bitmanip	\
         boxer compiler complex concurrency container contracts conv		\
         cpuid cstream ctype date datetime datebase dateparse demangle	\
         encoding exception file format functional getopt gregorian		\
-        intrinsic json loader math md5 metastrings mmfile numeric		\
-        outbuffer path perf process random range regex regexp signals	\
-        socket socketstream stdint stdio stdiobase stream string		\
-        syserror system traits typecons typetuple uni uri utf variant	\
-        xml zip zlib)
+        intrinsic json loader math mathspecial md5 metastrings mmfile   \
+        numeric outbuffer path perf process random range regex regexp   \
+        signals socket socketstream stdint stdio stdiobase stream       \
+        string syserror system traits typecons typetuple uni uri utf    \
+        variant	xml zip zlib)
 
 # Other D modules that aren't under std/
 EXTRA_MODULES := $(addprefix std/c/, stdarg stdio) $(addprefix etc/c/,	\
         zlib) $(addprefix std/internal/math/, biguintcore biguintnoasm  \
-        biguintx86)
+        biguintx86 gammafunction errorfunction)
 
 # OS-specific D modules
 EXTRA_MODULES_LINUX := $(addprefix std/c/linux/, linux socket)

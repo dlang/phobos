@@ -180,6 +180,7 @@ NAVIGATION_PHOBOS=
 	$(LI <a href="std_iterator.html" title="Defines iterators and ranges">std.iterator</a>)
 	$(LI <a href="std_json.html" title="JSON reader">std.json</a>)
 	$(LI <a href="std_math.html" title="the usual math functions">std.math</a>)
+	$(LI <a href="std_mathspecial.html" title="mathematical special functions">std.mathspecial</a>)
 	$(LI <a href="std_md5.html" title="Compute MD5 digests">std.md5</a>)
 	$(LI <a href="std_metastrings.html" title="Metaprogramming with strings">std.metastrings</a>)
 	$(LI <a href="std_mmfile.html" title="Memory mapped files">std.mmfile</a>)

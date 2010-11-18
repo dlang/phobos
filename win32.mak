@@ -127,8 +127,10 @@ SRCS_2 = std\variant.d \
 	std\stdint.d \
 	std\json.d \
 	std\gregorian.d \
+    std\mathspecial.d \
 	std\internal\math\biguintcore.d \
 	std\internal\math\biguintnoasm.d std\internal\math\biguintx86.d \
+    std\internal\math\gammafunction.d std\internal\math\errorfunction.d \
 	crc32.d \
 	std\c\process.d \
 	std\c\stdarg.d \
@@ -197,6 +199,7 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_intrinsic.html \
 	$(DOC)\std_json.html \
 	$(DOC)\std_math.html \
+	$(DOC)\std_mathspecial.html \
 	$(DOC)\std_md5.html \
 	$(DOC)\std_metastrings.html \
 	$(DOC)\std_mmfile.html \
@@ -257,7 +260,7 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\container.d std\conv.d std\utf.d 
 	std\cstream.d std\demangle.d \
 	std\signals.d std\cpuid.d std\typetuple.d std\traits.d std\bind.d \
 	std\metastrings.d std\contracts.d std\getopt.d \
-	std\variant.d std\numeric.d std\bitmanip.d std\complex.d \
+	std\variant.d std\numeric.d std\bitmanip.d std\complex.d std\mathspecial.d \
 	std\functional.d std\algorithm.d std\array.d std\typecons.d \
 	std\json.d std\xml.d std\encoding.d std\bigint.d std\concurrency.d \
 	std\range.d std\stdiobase.d \
@@ -281,7 +284,9 @@ SRC_STD_C_LINUX= std\c\linux\linux.d \
 SRC_STD_C_OSX= std\c\osx\socket.d
 
 SRC_STD_INTERNAL_MATH= std\internal\math\biguintcore.d \
-	std\internal\math\biguintnoasm.d std\internal\math\biguintx86.d
+	std\internal\math\biguintnoasm.d std\internal\math\biguintx86.d \
+    std\internal\math\gammafunction.d std\internal\math\errorfunction.d
+    
 
 SRC_ETC=
 
@@ -443,6 +448,9 @@ loader.obj : std\loader.d
 math.obj : std\math.d
 	$(DMD) -c $(DFLAGS) std\math.d
 
+mathspecial.obj : std\mathspecial.d
+	$(DMD) -c $(DFLAGS) std\mathspecial.d
+
 md5.obj : std\md5.d
 	$(DMD) -c $(DFLAGS) -inline std\md5.d
 
@@ -541,7 +549,12 @@ biguintnoasm.obj : std\internal\math\biguintnoasm.d
 
 biguintx86.obj : std\internal\math\biguintx86.d
 	$(DMD) -c $(DFLAGS) std\internal\math\biguintx86.d
+    
+gammafunction.obj : std\internal\math\gammafunction.d
+	$(DMD) -c $(DFLAGS) std\internal\math\gammafunction.d
 
+errorfunction.obj : std\internal\math\errorfunction.d
+	$(DMD) -c $(DFLAGS) std\internal\math\errorfunction.d
 
 ### std\windows
 
@@ -725,6 +738,9 @@ $(DOC)\std_json.html : $(STDDOC) std\json.d
 
 $(DOC)\std_math.html : $(STDDOC) std\math.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_math.html $(STDDOC) std\math.d
+
+$(DOC)\std_mathspecial.html : $(STDDOC) std\mathspecial.d
+	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_mathspecial.html $(STDDOC) std\mathspecial.d
 
 $(DOC)\std_md5.html : $(STDDOC) std\md5.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_md5.html $(STDDOC) std\md5.d
