@@ -1060,35 +1060,38 @@ Preconditions:
 $(D !pointsTo(lhs, lhs) && !pointsTo(lhs, rhs) && !pointsTo(rhs, lhs)
 && !pointsTo(rhs, rhs))
  */
-void swap(T)(ref T a, ref T b) if (!is(typeof(T.init.proxySwap(T.init))))
+void swap(T)(ref T lhs, ref T rhs) @trusted pure nothrow
+if (!is(typeof(T.init.proxySwap(T.init))))
 {
-   static if (is(T == struct))
-   {
-      // For structs, move memory directly
-      // First check for undue aliasing
-      assert(!pointsTo(a, b) && !pointsTo(b, a)
-         && !pointsTo(a, a) && !pointsTo(b, b));
-      // Swap bits
-      ubyte[T.sizeof] t = void;
-      memcpy(&t, &a, T.sizeof);
-      memcpy(&a, &b, T.sizeof);
-      memcpy(&b, &t, T.sizeof);
-   }
-   else
-   {
-      // Temporary fix Bug 4789.  Wor around the fact that assigning a static
-      // array to itself doesn't work properly.
-      static if(isStaticArray!T) {
-          if(a.ptr is b.ptr) {
-              return;
-          }
-      }
+    static if (hasElaborateAssign!T)
+    {
+        // For structs with non-trivial assignment, move memory directly
+        // First check for undue aliasing
+        assert(!pointsTo(lhs, rhs) && !pointsTo(rhs, lhs)
+            && !pointsTo(lhs, lhs) && !pointsTo(rhs, rhs));
+        // Swap bits
+        ubyte[T.sizeof] t = void;
+        auto a = (cast(ubyte*) &lhs)[0 .. T.sizeof];
+        auto b = (cast(ubyte*) &rhs)[0 .. T.sizeof];
+        t[] = a[];
+        a[] = b[];
+        b[] = t[];
+    }
+    else
+    {
+        // Temporary fix Bug 4789.  Wor around the fact that assigning a static
+        // array to itself doesn't work properly.
+        static if(isStaticArray!T) {
+            if(lhs.ptr is rhs.ptr) {
+                return;
+            }
+        }
 
-      // For non-struct types, suffice to do the classic swap
-      auto t = a;
-      a = b;
-      b = t;
-   }
+        // For non-struct types, suffice to do the classic swap
+        auto tmp = lhs;
+        lhs = rhs;
+        rhs = tmp;
+    }
 }
 
 // Not yet documented
@@ -1117,6 +1120,33 @@ unittest
     assert(s2.x == 0);
     assert(s2.c == 'z');
     assert(s2.y == [ 1, 2 ]);
+}
+
+unittest
+{
+    struct NoCopy
+    {
+        this(this) { assert(0); }
+        int n;
+        string s;
+    }
+    NoCopy nc1, nc2;
+    nc1.n = 127; nc1.s = "abc";
+    nc2.n = 513; nc2.s = "uvwxyz";
+    swap(nc1, nc2);
+    assert(nc1.n == 513 && nc1.s == "uvwxyz");
+    assert(nc2.n == 127 && nc2.s == "abc");
+
+    struct NoCopyHolder
+    {
+        NoCopy noCopy;
+    }
+    NoCopyHolder h1, h2;
+    h1.noCopy.n = 31; h1.noCopy.s = "abc";
+    h2.noCopy.n = 65; h2.noCopy.s = null;
+    swap(h1, h2);
+    assert(h1.noCopy.n == 65 && h1.noCopy.s == null);
+    assert(h2.noCopy.n == 31 && h2.noCopy.s == "abc");
 }
 
 void swapFront(R1, R2)(R1 r1, R2 r2)
