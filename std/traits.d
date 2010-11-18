@@ -2774,6 +2774,27 @@ unittest {
     static assert(isIterable!(Range));
 }
 
+/*
+ * Returns true if T is not const or immutable.  Note that isMutable is true for
+ * string, or immutable(char)[], because the 'head' is mutable.
+ */
+template isMutable(T)
+{
+    enum isMutable = !is(T == const) && !is(T == immutable);
+}
+
+unittest
+{
+    static assert(isMutable!int);
+    static assert(isMutable!string);
+    static assert(isMutable!(shared int));
+    static assert(isMutable!(shared const(int)[]));
+
+    static assert(!isMutable!(const int));
+    static assert(!isMutable!(shared(const int)));
+    static assert(!isMutable!(immutable string));
+}
+
 /**
  * Tells whether the tuple T is an expression tuple.
  */

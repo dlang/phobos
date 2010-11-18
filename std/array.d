@@ -256,10 +256,6 @@ void main()
     return a;
 }
 
-private template notConst(T) {
-    enum notConst = !is(T == const) && !is(T == immutable);
-}
-
 /**
 Implements the range interface primitive $(D popFront) for built-in
 arrays. Due to the fact that nonmember functions can be called with
@@ -279,7 +275,7 @@ void main()
 */
 
 void popFront(A)(ref A a)
-if(!isNarrowString!A && isDynamicArray!A && notConst!A && !is(A == void[]))
+if(!isNarrowString!A && isDynamicArray!A && isMutable!A && !is(A == void[]))
 {
     alias typeof(A[0]) T;
     assert(a.length, "Attempting to popFront() past the end of an array of "
@@ -299,7 +295,7 @@ unittest
 }
 
 void popFront(A)(ref A a)
-if(isNarrowString!A && notConst!A)
+if(isNarrowString!A && isMutable!A)
 {
     alias typeof(a[0]) T;
     assert(a.length, "Attempting to popFront() past the end of an array of "
@@ -340,7 +336,7 @@ void main()
 */
 
 void popBack(A)(ref A a)
-if(isDynamicArray!A && !isNarrowString!A && notConst!A && !is(A == void[]))
+if(isDynamicArray!A && !isNarrowString!A && isMutable!A && !is(A == void[]))
 {
     assert(a.length);
     a = a[0 .. $ - 1];
@@ -358,7 +354,7 @@ unittest
 }
 
 void popBack(A)(ref A a)
-if(is(A : const(char)[]) && notConst!A)
+if(is(A : const(char)[]) && isMutable!A)
 {
     immutable n = a.length;
     const p = a.ptr + n;
@@ -400,7 +396,7 @@ unittest
 }
 
 void popBack(A)(ref A a)
-if(is(A : const(wchar)[]) && notConst!A)
+if(is(A : const(wchar)[]) && isMutable!A)
 {
     assert(a.length);
     if (a.length == 1)

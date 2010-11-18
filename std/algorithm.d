@@ -1061,7 +1061,7 @@ $(D !pointsTo(lhs, lhs) && !pointsTo(lhs, rhs) && !pointsTo(rhs, lhs)
 && !pointsTo(rhs, rhs))
  */
 void swap(T)(ref T lhs, ref T rhs) @trusted pure nothrow
-if (!is(typeof(T.init.proxySwap(T.init))))
+if (isMutable!T && !is(typeof(T.init.proxySwap(T.init))))
 {
     static if (hasElaborateAssign!T)
     {
@@ -1120,6 +1120,9 @@ unittest
     assert(s2.x == 0);
     assert(s2.c == 'z');
     assert(s2.y == [ 1, 2 ]);
+
+    immutable int imm1, imm2;
+    static assert(!__traits(compiles, swap(imm1, imm2)));
 }
 
 unittest
@@ -1147,6 +1150,9 @@ unittest
     swap(h1, h2);
     assert(h1.noCopy.n == 65 && h1.noCopy.s == null);
     assert(h2.noCopy.n == 31 && h2.noCopy.s == "abc");
+
+    const NoCopy const1, const2;
+    static assert(!__traits(compiles, swap(const1, const2)));
 }
 
 void swapFront(R1, R2)(R1 r1, R2 r2)
