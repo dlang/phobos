@@ -1808,11 +1808,9 @@ real rint(real x) @safe pure nothrow;      /* intrinsic */
  * If using the default rounding mode (ties round to even integers)
  * lrint(4.5) == 4, lrint(5.5)==6.
  */
-long lrint(real x) @trusted nothrow
+long lrint(real x) @trusted pure nothrow
 {
-    version (Posix)
-        return core.stdc.math.llrintl(x);
-    else version(D_InlineAsm_X86)
+    version(D_InlineAsm_X86)
     {
         long n;
         asm
@@ -1821,9 +1819,9 @@ long lrint(real x) @trusted nothrow
             fistp n;
         }
         return n;
+    } else {
+        return core.stdc.math.llrintl(x);
     }
-    else
-        assert (0, "lrint not implemented");
 }
 
 /*******************************************
