@@ -222,7 +222,10 @@ void main()
 ----
  */
 
-@property bool empty(T)(in T[] a) { return !a.length; }
+@property bool empty(T)(in T[] a) @safe pure nothrow
+{
+    return !a.length;
+}
 
 unittest
 {
@@ -248,7 +251,7 @@ void main()
 ----
  */
 
-@property T[] save(T)(T[] a)
+@property T[] save(T)(T[] a) @safe pure nothrow
 {
     return a;
 }
@@ -540,13 +543,15 @@ int[] b = a[1 .. 3];
 assert(overlap(a, b) == [ 11, 12 ]);
 b = b.dup;
 // overlap disappears even though the content is the same
-assert(isEmpty(overlap(a, b)));
+assert(overlap(a, b).empty);
 ----
 */
-T[] overlap(T)(T[] r1, T[] r2)
+T[] overlap(T)(T[] r1, T[] r2) @trusted pure nothrow
 {
+    T* max(T* a, T* b) nothrow { return a > b ? a : b; }
+    T* min(T* a, T* b) nothrow { return a < b ? a : b; }
     auto b = max(r1.ptr, r2.ptr);
-    auto e = min(&(r1.ptr[r1.length - 1]) + 1, &(r2.ptr[r2.length - 1]) + 1);
+    auto e = min(r1.ptr + r1.length, r2.ptr + r2.length);
     return b < e ? b[0 .. e - b] : null;
 }
 
@@ -556,6 +561,13 @@ unittest
     int[] b = a[1 .. 3];
     a[1] = 100;
     assert(overlap(a, b) == [ 100, 12 ]);
+
+    assert(overlap(a, a[0 .. 2]) is a[0 .. 2]);
+    assert(overlap(a, a[3 .. 5]) is a[3 .. 5]);
+    assert(overlap(a[0 .. 2], a) is a[0 .. 2]);
+    assert(overlap(a[3 .. 5], a) is a[3 .. 5]);
+
+    assert(overlap(a, b.dup).empty);
 }
 
 /**
