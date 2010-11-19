@@ -1406,16 +1406,49 @@ unittest
     assert(a.data == "aaa:1 bbb:2 ccc:3");
 }
 
+// @@@ BUG @@@
+// Workaround for a closure scoped destruction problem.
+struct WriterSink(Writer)
+{
+    Writer* w;
+    void sink(const(char)[] s) { put(*w, s); }
+}
+
 
 /**
-   Associative arrays are formatted by using $(D ':') and $(D ' ') as
-   separators.
+   Structs are formatted using by calling toString member function
+   of the struct. toString must have one of the following signatures:
+   ---
+   void toString(void delegate(const(char)[]) sink, FormatSpec fmt);
+   void toString(void delegate(const(char)[]) sink, string fmt);
+   ---
+
  */
 void formatValue(Writer, T, Char)(Writer w, T val,
         ref FormatSpec!Char f)
 if (is(T == struct) && !isInputRange!T)
 {
-    static if (is(typeof(val.toString()) S) && isSomeString!S)
+    alias void delegate(const (char)[]) SinkType;
+    static if (is(typeof(val.toString(SinkType, f))))
+    {   // Support toString( delegate(const(char)[]) sink, FormatSpec)
+        WriterSink!(Writer) sinker;
+        sinker.w = &w;
+        string outbuff = "";
+        void sink(const(char)[] s) { outbuff ~= s; }
+        val.toString(&sink, f);
+        put (w, outbuff);        
+    }
+    else static if (is(typeof(val.toString(SinkType, "s"))))
+    {   // Support toString( delegate(const(char)[]) sink, string fmt)
+        WriterSink!(Writer) sinker;
+        sinker.w = &w;
+        // @@@ BUG @@@
+        // Need to recreate the entire format string, eg "%.16f" rather than
+        // just "%f"
+        string fmt = "%" ~ f.spec;
+        val.toString(&sinker.sink, fmt);
+    }
+    else static if (is(typeof(val.toString()) S) && isSomeString!S)
     {
         put(w, val.toString());
     }
