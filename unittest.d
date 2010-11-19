@@ -32,6 +32,7 @@ public import std.getopt;
 public import std.intrinsic;
 public import std.loader;
 public import std.math;
+public import std.mathspecial;
 public import std.md5;
 public import std.metastrings;
 public import std.mmfile;
@@ -109,8 +110,8 @@ version (all)
     assert(x[1] == 3);
     assert(x[2] == 45);
 
-    std.math.tgamma(3);
-    std.math.lgamma(3);
+    std.math.sin(3.0);
+    std.mathspecial.gamma(6.2);
 
     std.demangle.demangle("hello");
 
