@@ -87,7 +87,7 @@ void setMerge(bool flag)
 extern (C) void _d_cover_register(string filename, BitArray valid, uint[] data)
 {
     //printf("_d_cover_register()\n");
-    //printf("\tfilename = '%.*s'\n", filename);
+    //printf("\tfilename = '%.*s'\n", filename.length, filename.ptr);
 
     Cover c;
     c.filename = filename;
@@ -103,7 +103,7 @@ static ~this()
 
     foreach (Cover c; gdata)
     {
-        //printf("filename = '%.*s'\n", c.filename);
+        //printf("filename = '%.*s'\n", c.filename.length, c.filename.ptr);
 
         // Generate source file name
         string srcfilename = std.path.join(srcpath, c.filename);

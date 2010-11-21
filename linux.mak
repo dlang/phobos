@@ -59,7 +59,7 @@ ALLMAKEFILES= \
 	win32.mak linux.mak osx.mak freebsd.mak solaris.mak
 
 ZLIB_OBJS = etc/c/zlib/adler32.o etc/c/zlib/compress.o \
-	etc/c/zlib/crc32.o etc/c/zlib/gzio.o \
+	etc/c/zlib/crc32.o \
 	etc/c/zlib/uncompr.o etc/c/zlib/deflate.o \
 	etc/c/zlib/trees.o etc/c/zlib/zutil.o \
 	etc/c/zlib/inflate.o etc/c/zlib/infback.o \
