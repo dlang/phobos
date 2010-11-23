@@ -252,8 +252,10 @@ unittest {
 
     // Test some high-precision values (50 decimal digits)
     real SQRT_PI = 1.77245385090551602729816748334114518279754945612238L;
+    
 
     assert(feqrel(gamma(0.5L), SQRT_PI) == real.mant_dig);
+    assert(feqrel(gamma(17.25L), 4.224986665692703551570937158682064589938e13L) >= real.mant_dig-4);
 
     assert(feqrel(gamma(1.0 / 3.L),  2.67893853470774763365569294097467764412868937795730L) >= real.mant_dig-2);
     assert(feqrel(gamma(0.25L),
@@ -746,7 +748,7 @@ newt:
         x = xt;
         if ( fabs(d/x) < (128.0L * real.epsilon) )
             goto done;
-        }
+    }
     /* Did not converge.  */
     dithresh = 256.0L * real.epsilon;
     goto ihalve;
@@ -762,32 +764,33 @@ done:
 }
 
 unittest { // also tested by the normal distribution
-  // check NaN propagation
-  assert(isIdentical(betaIncomplete(NaN(0xABC),2,3), NaN(0xABC)));
-  assert(isIdentical(betaIncomplete(7,NaN(0xABC),3), NaN(0xABC)));
-  assert(isIdentical(betaIncomplete(7,15,NaN(0xABC)), NaN(0xABC)));
-  assert(isIdentical(betaIncompleteInv(NaN(0xABC),1,17), NaN(0xABC)));
-  assert(isIdentical(betaIncompleteInv(2,NaN(0xABC),8), NaN(0xABC)));
-  assert(isIdentical(betaIncompleteInv(2,3, NaN(0xABC)), NaN(0xABC)));
+    // check NaN propagation
+    assert(isIdentical(betaIncomplete(NaN(0xABC),2,3), NaN(0xABC)));
+    assert(isIdentical(betaIncomplete(7,NaN(0xABC),3), NaN(0xABC)));
+    assert(isIdentical(betaIncomplete(7,15,NaN(0xABC)), NaN(0xABC)));
+    assert(isIdentical(betaIncompleteInv(NaN(0xABC),1,17), NaN(0xABC)));
+    assert(isIdentical(betaIncompleteInv(2,NaN(0xABC),8), NaN(0xABC)));
+    assert(isIdentical(betaIncompleteInv(2,3, NaN(0xABC)), NaN(0xABC)));
 
-  assert(isNaN(betaIncomplete(-1, 2, 3)));
+    assert(isNaN(betaIncomplete(-1, 2, 3)));
 
-  assert(betaIncomplete(1, 2, 0)==0);
-  assert(betaIncomplete(1, 2, 1)==1);
-  assert(isNaN(betaIncomplete(1, 2, 3)));
-  assert(betaIncompleteInv(1, 1, 0)==0);
-  assert(betaIncompleteInv(1, 1, 1)==1);
+    assert(betaIncomplete(1, 2, 0)==0);
+    assert(betaIncomplete(1, 2, 1)==1);
+    assert(isNaN(betaIncomplete(1, 2, 3)));
+    assert(betaIncompleteInv(1, 1, 0)==0);
+    assert(betaIncompleteInv(1, 1, 1)==1);
 
-  // Test some values against Microsoft Excel 2003.
-
-  assert(fabs(betaIncomplete(8, 10, 0.2) - 0.010_934_315_236_957_2L) < 0.000_000_000_5);
-  assert(fabs(betaIncomplete(2, 2.5, 0.9) - 0.989_722_597_604_107L) < 0.000_000_000_000_5);
-  assert(fabs(betaIncomplete(1000, 800, 0.5) - 1.17914088832798E-06L) < 0.000_000_05e-6);
-
-  assert(fabs(betaIncomplete(0.0001, 10000, 0.0001) - 0.999978059369989L) < 0.000_000_000_05);
-
-  assert(fabs(betaIncompleteInv(5, 10, 0.2) - 0.229121208190918L) < 0.000_000_5L);
-  assert(fabs(betaIncompleteInv(4, 7, 0.8) - 0.483657360076904L) < 0.000_000_5L);
+    // Test against Mathematica   betaRegularized[z,a,b]
+    // These arbitrary points are chosen to give good code coverage.
+    assert(feqrel(betaIncomplete(8, 10, 0.2), 0.010_934_315_234_099_2L) >=  real.mant_dig - 4);
+    assert(feqrel(betaIncomplete(2, 2.5, 0.9),0.989_722_597_604_452_767_171_003_59L) >= real.mant_dig - 1 );
+    assert(feqrel(betaIncomplete(1000, 800, 0.5), 1.179140859734704555102808541457164E-06L) >= real.mant_dig - 12 );
+    assert(feqrel(betaIncomplete(0.0001, 10000, 0.0001),0.999978059362107134278786L) >= real.mant_dig - 18 );
+    assert(betaIncomplete(0.01, 327726.7, 0.545113) == 1.0);
+    assert(feqrel(betaIncompleteInv(8, 10, 0.010_934_315_234_099_2L), 0.2L) >= real.mant_dig - 1);
+    assert(feqrel(betaIncomplete(0.01, 498.437, 0.0121433),0.99999664562033077636065L) >= real.mant_dig - 1);
+    assert(feqrel(betaIncompleteInv(5, 10, 0.2000002972865658842), 0.229121208190918L) >= real.mant_dig - 3);
+    assert(feqrel(betaIncompleteInv(4, 7, 0.8000002209179505L), 0.483657360076904L) >= real.mant_dig - 3);    
 
     // Coverage tests. I don't have correct values for these tests, but
     // these values cover most of the code, so they are useful for
@@ -796,21 +799,12 @@ unittest { // also tested by the normal distribution
     // half the code in this function is unnecessary; there is potential for
     // significant improvement over the original CEPHES code.
 
-// Excel 2003 gives clearly erroneous results (betadist>1) when a and x are tiny and b is huge.
-// The correct results are for these next tests are unknown.
-
-//    real testpoint1 = betaIncomplete(1e-10, 5e20, 8e-21);
-//    assert(testpoint1 == 0x1.ffff_ffff_c906_404cp-1L);
-
-    assert(betaIncomplete(0.01, 327726.7, 0.545113) == 1.0);
     assert(betaIncompleteInv(0.01, 8e-48, 5.45464e-20)==1-real.epsilon);
     assert(betaIncompleteInv(0.01, 8e-48, 9e-26)==1-real.epsilon);
 
-    assert(betaIncomplete(0.01, 498.437, 0.0121433) == 0x1.ffff_8f72_19197402p-1);
-    assert(1- betaIncomplete(0.01, 328222, 4.0375e-5) == 0x1.5f62926b4p-30);
-
     // Beware: a one-bit change in pow() changes almost all digits in the result!
     assert(feqrel(betaIncompleteInv(0x1.b3d151fbba0eb18p+1, 1.2265e-19, 2.44859e-18),0x1.c0110c8531d0952cp-1L) > 10);
+    // WolframAlpha crashes attempting to calculate this
     assert(betaIncompleteInv(0x1.ff1275ae5b939bcap-41, 4.6713e18, 0.0813601)==0x1.f97749d90c7adba8p-63);
     real a1 = 3.40483;
     assert(betaIncompleteInv(a1, 4.0640301659679627772e19L, 0.545113)== 0x1.ba8c08108aaf5d14p-109);
@@ -821,7 +815,10 @@ unittest { // also tested by the normal distribution
     // This is a situation where the series expansion fails to converge
     assert( isNaN(betaIncompleteInv(0.12167, 4.0640301659679627772e19L, 0.0813601)));
     // This next result is almost certainly erroneous.
+    // Mathematica states: "(cannot be determined by current methods)"
     assert(betaIncomplete(1.16251e20, 2.18e39, 5.45e-20)==-real.infinity);
+    // WolframAlpha gives no result for this, though indicates that it approximately 1.0 - 1.3e-9
+    assert(1- betaIncomplete(0.01, 328222, 4.0375e-5) == 0x1.5f62926b4p-30);
 }
 
 
@@ -1384,21 +1381,21 @@ done:
     return y;
 }
 
-version(unittest) import std.c.stdio;
+version(unittest) import core.stdc.stdio;
 unittest {
     // Exact values
     assert(digamma(1)== -EULERGAMMA);
-    assert(feqrel(digamma(0.25), -PI/2 - 3* LN2 - EULERGAMMA)>=real.mant_dig-7);
-    assert(feqrel(digamma(1.0L/6), -PI/2 *sqrt(3.0L) - 2* LN2 -1.5*log(3.0L) - EULERGAMMA)>=real.mant_dig-7);
+    assert(feqrel(digamma(0.25), -PI/2 - 3* LN2 - EULERGAMMA) >= real.mant_dig-7);
+    assert(feqrel(digamma(1.0L/6), -PI/2 *sqrt(3.0L) - 2* LN2 -1.5*log(3.0L) - EULERGAMMA) >= real.mant_dig-7);
     assert(digamma(-5)!<>0);    
-    assert(feqrel(digamma(2.5), -EULERGAMMA - 2*LN2 + 2.0 + 2.0L/3)>=real.mant_dig-9);
+    assert(feqrel(digamma(2.5), -EULERGAMMA - 2*LN2 + 2.0 + 2.0L/3) >= real.mant_dig-9);
     assert(isIdentical(digamma(NaN(0xABC)), NaN(0xABC)));
     
     for (int k=1; k<40; ++k) {
         real y=0;
         for (int u=k; u>=1; --u) {
-            y+= 1.0L/u;
+            y += 1.0L/u;
         }
-        assert(feqrel(digamma(k+1),-EULERGAMMA + y) >=real.mant_dig-2);
+        assert(feqrel(digamma(k+1), -EULERGAMMA + y) >= real.mant_dig-2);
     }
 }
