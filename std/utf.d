@@ -135,7 +135,7 @@ unittest
 }
 
 
-@safe pure nothrow
+@safe pure
 {
 
 private immutable ubyte[256] UTF8stride =
@@ -162,19 +162,23 @@ private immutable ubyte[256] UTF8stride =
  * stride() returns the length of a UTF-8 sequence starting at index $(D_PARAM i)
  * in string $(D_PARAM s).
  * Returns:
- *  The number of bytes in the UTF-8 sequence or
- *  0xFF meaning s[i] is not the start of of UTF-8 sequence.
+ *  The number of bytes in the UTF-8 sequence.
+ * Throws:
+ *  UtfException if s[i] is not the start of the UTF-8 sequence.
  */
 uint stride(in char[] s, size_t i)
 {
-    return UTF8stride[s[i]];
+    immutable result = UTF8stride[s[i]];
+    if (result == 0xFF)
+        throw new UtfException("Not the start of the UTF-8 sequence");
+    return result;
 }
 
 /**
  * stride() returns the length of a UTF-16 sequence starting at index $(D_PARAM i)
  * in string $(D_PARAM s).
  */
-uint stride(in wchar[] s, size_t i)
+nothrow uint stride(in wchar[] s, size_t i)
 {
     immutable uint u = s[i];
     return 1 + (u >= 0xD800 && u <= 0xDBFF);
@@ -185,12 +189,12 @@ uint stride(in wchar[] s, size_t i)
  * in string $(D_PARAM s).
  * Returns: The return value will always be 1.
  */
-uint stride(in dchar[] s, size_t i)
+nothrow uint stride(in dchar[] s, size_t i)
 {
     return 1;
 }
 
-}  // stride functions are @safe, pure and nothrow
+}  // stride functions are @safe and pure
 
 
 @safe pure
