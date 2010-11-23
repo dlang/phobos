@@ -17,38 +17,30 @@
  * Macros:
  *  WIKI = Phobos/StdUtf
  *
- * Copyright: Copyright Digital Mars 2000 - 2009.
+ * Copyright: Copyright Digital Mars 2000 - 2010.
  * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
  * Authors:   $(WEB digitalmars.com, Walter Bright)
  *
- *          Copyright Digital Mars 2000 - 2009.
+ *          Copyright Digital Mars 2000 - 2010.
  * Distributed under the Boost Software License, Version 1.0.
  *    (See accompanying file LICENSE_1_0.txt or copy at
  *          http://www.boost.org/LICENSE_1_0.txt)
  */
 module std.utf;
 
-import std.conv, std.exception, std.range, std.traits, std.typecons;
+import std.conv;       // to, assumeUnique
+import std.exception;  // enforce, assumeUnique
+import std.range;      // walkLength
+import std.traits;     // isSomeChar, isSomeString
 
-//debug=utf;        // uncomment to turn on debugging printf's
+//debug=utf;           // uncomment to turn on debugging printf's
 
 debug (utf) import core.stdc.stdio : printf;
 
-deprecated class UtfError : Error
-{
-    size_t idx; // index in string of where error occurred
-
-    this(string s, size_t i)
-    {
-        idx = i;
-        super(s);
-    }
-}
 
 /**********************************
  * Exception class that is thrown upon any errors.
  */
-
 class UtfException : Exception
 {
     //size_t idx;   /// index in string of where error occurred
@@ -65,6 +57,7 @@ class UtfException : Exception
     override string toString()
     {
         string result;
+
         if (len > 0)
         {
             result = "Invalid UTF sequence:";
@@ -77,22 +70,28 @@ class UtfException : Exception
                 result ~= " - ";
             result ~= super.msg;
         }
+
         return result;
     }
 }
 
 // For unittests
-version (unittest) private bool expectError_(lazy void expr)
+version (unittest) private
 {
-    try
+    @trusted
+    bool expectError_(lazy void expr)
     {
-        expr;
+        try
+        {
+            expr();
+        }
+        catch (UtfException e)
+        {
+            return true;
+        }
+
+        return false;
     }
-    catch (UtfException e)
-    {
-        return true;
-    }
-    return false;
 }
 
 
@@ -105,8 +104,8 @@ version (unittest) private bool expectError_(lazy void expr)
  *
  * Returns: true if it is, false if not.
  */
-
-bool isValidDchar(dchar c)
+@safe
+pure nothrow bool isValidDchar(dchar c)
 {
     /* Note: FFFE and FFFF are specifically permitted by the
      * Unicode standard for application internal use, but are not
@@ -115,7 +114,7 @@ bool isValidDchar(dchar c)
      */
 
     return c < 0xD800 ||
-    (c > 0xDFFF && c <= 0x10FFFF /*&& c != 0xFFFE && c != 0xFFFF*/);
+          (c > 0xDFFF && c <= 0x10FFFF /*&& c != 0xFFFE && c != 0xFFFF*/);
 }
 
 unittest
@@ -135,6 +134,9 @@ unittest
     assert(!isValidDchar(cast(dchar)0x110000));
 }
 
+
+@safe pure nothrow
+{
 
 private immutable ubyte[256] UTF8stride =
 [
@@ -157,25 +159,21 @@ private immutable ubyte[256] UTF8stride =
 ];
 
 /**
- * stride() returns the length of a UTF-8 sequence starting at index i
- * in string s.
+ * stride() returns the length of a UTF-8 sequence starting at index $(D_PARAM i)
+ * in string $(D_PARAM s).
  * Returns:
  *  The number of bytes in the UTF-8 sequence or
  *  0xFF meaning s[i] is not the start of of UTF-8 sequence.
  */
-
 uint stride(in char[] s, size_t i)
 {
-    immutable result = UTF8stride[s[i]];
-    assert(result > 0 && result <= 6);
-    return result;
+    return UTF8stride[s[i]];
 }
 
 /**
- * stride() returns the length of a UTF-16 sequence starting at index i
- * in string s.
+ * stride() returns the length of a UTF-16 sequence starting at index $(D_PARAM i)
+ * in string $(D_PARAM s).
  */
-
 uint stride(in wchar[] s, size_t i)
 {
     immutable uint u = s[i];
@@ -183,22 +181,26 @@ uint stride(in wchar[] s, size_t i)
 }
 
 /**
- * stride() returns the length of a UTF-32 sequence starting at index i
- * in string s.
+ * stride() returns the length of a UTF-32 sequence starting at index $(D_PARAM i)
+ * in string $(D_PARAM s).
  * Returns: The return value will always be 1.
  */
-
 uint stride(in dchar[] s, size_t i)
 {
     return 1;
 }
 
-/*******************************************
- * Given an index i into an array of characters s[],
- * and assuming that index i is at the start of a UTF character,
- * determine the number of UCS characters up to that index i.
- */
+}  // stride functions are @safe, pure and nothrow
 
+
+@safe pure
+{
+
+/*******************************************
+ * Given an index $(D_PARAM i) into an array of characters $(D_PARAM s[]),
+ * and assuming that index $(D_PARAM i) is at the start of a UTF character,
+ * determine the number of UCS characters up to that index $(D_PARAM i).
+ */
 size_t toUCSindex(in char[] s, size_t i)
 {
     size_t n;
@@ -213,11 +215,11 @@ size_t toUCSindex(in char[] s, size_t i)
     {
         throw new UtfException("1invalid UTF-8 sequence");
     }
+
     return n;
 }
 
-/** ditto */
-
+/// ditto
 size_t toUCSindex(in wchar[] s, size_t i)
 {
     size_t n;
@@ -225,70 +227,77 @@ size_t toUCSindex(in wchar[] s, size_t i)
 
     for (j = 0; j < i; )
     {
-    j += stride(s, j);
-    n++;
+        j += stride(s, j);
+        n++;
     }
     if (j > i)
     {
-    throw new UtfException("2invalid UTF-16 sequence");
+        throw new UtfException("2invalid UTF-16 sequence");
     }
+
     return n;
 }
 
-/** ditto */
-
-size_t toUCSindex(in dchar[] s, size_t i)
+/// ditto
+nothrow size_t toUCSindex(in dchar[] s, size_t i)
 {
     return i;
 }
 
-/******************************************
- * Given a UCS index n into an array of characters s[], return the UTF index.
- */
 
+/******************************************
+ * Given a UCS index $(D_PARAM n) into an array of characters $(D_PARAM s[]),
+ * return the UTF index.
+ */
 size_t toUTFindex(in char[] s, size_t n)
 {
     size_t i;
 
     while (n--)
     {
-    uint j = UTF8stride[s[i]];
-    if (j == 0xFF)
-        throw new UtfException("3invalid UTF-8 sequence ", s[i]);
-    i += j;
+        uint j = UTF8stride[s[i]];
+        if (j == 0xFF)
+            throw new UtfException("3invalid UTF-8 sequence ", s[i]);
+        i += j;
     }
+
     return i;
 }
 
-/** ditto */
-
-size_t toUTFindex(in wchar[] s, size_t n)
+/// ditto
+nothrow size_t toUTFindex(in wchar[] s, size_t n)
 {
     size_t i;
 
     while (n--)
-    {   wchar u = s[i];
+    {
+        wchar u = s[i];
 
-    i += 1 + (u >= 0xD800 && u <= 0xDBFF);
+        i += 1 + (u >= 0xD800 && u <= 0xDBFF);
     }
+
     return i;
 }
 
-/** ditto */
-
-size_t toUTFindex(in dchar[] s, size_t n)
+/// ditto
+nothrow size_t toUTFindex(in dchar[] s, size_t n)
 {
     return n;
 }
 
+}  // toUTF and toUCS index functions are @safe and pure
+
+
 /* =================== Decode ======================= */
 
-/***************
- * Decodes and returns character starting at s[idx]. idx is advanced past the
- * decoded character. If the character is not well formed, a UtfException is
- * thrown and idx remains unchanged.
- */
+@trusted  // I think those functions should be @safe and pure.
+{
 
+/***************
+ * Decodes and returns character starting at s[idx]. $(D_PARAM idx) is
+ * advanced past the decoded character. If the character is not well formed,
+ * a $(D UtfException) is thrown and $(D_PARAM idx) remains unchanged.
+ */
 dchar decode(in char[] s, ref size_t idx)
 out (result)
 {
@@ -342,10 +351,10 @@ body
          */
         auto u2 = s[i + 1];
         if ((u & 0xFE) == 0xC0 ||
-                (u == 0xE0 && (u2 & 0xE0) == 0x80) ||
-                (u == 0xF0 && (u2 & 0xF0) == 0x80) ||
-                (u == 0xF8 && (u2 & 0xF8) == 0x80) ||
-                (u == 0xFC && (u2 & 0xFC) == 0x80))
+            (u == 0xE0 && (u2 & 0xE0) == 0x80) ||
+            (u == 0xF0 && (u2 & 0xF0) == 0x80) ||
+            (u == 0xF8 && (u2 & 0xF8) == 0x80) ||
+            (u == 0xFC && (u2 & 0xFC) == 0x80))
             goto Lerr;          // overlong combination
 
         foreach (j; 1 .. n)
@@ -361,7 +370,7 @@ body
     }
     else
     {
-        V = cast(dchar) u;
+        V = cast(dchar)u;
         i++;
     }
 
@@ -372,12 +381,13 @@ body
     //printf("\ndecode: idx = %d, i = %d, length = %d s = \n'%.*s'\n%x\n"
     //"'%.*s'\n", idx, i, s.length, s, s[i], s[i .. $]);
     throw new UtfException(text("dchar decode(in char[], ref size_t): "
-                    "Invalid UTF-8 sequence ", cast(const ubyte[]) s,
+                    "Invalid UTF-8 sequence ", cast(const ubyte[])s,
                     " around index ", i));
 }
 
 unittest
-{   size_t i;
+{
+    size_t i;
     dchar c;
 
     debug(utf) printf("utf.decode.unittest\n");
@@ -403,29 +413,30 @@ unittest
     assert(c == cast(dchar)'\u2260');
     assert(i == 3);
 
-    static string[] s4 =
-    [   "\xE2\x89",     // too short
-    "\xC0\x8A",
-    "\xE0\x80\x8A",
-    "\xF0\x80\x80\x8A",
-    "\xF8\x80\x80\x80\x8A",
-    "\xFC\x80\x80\x80\x80\x8A",
+    static string[] s4 = [
+        "\xE2\x89",     // too short
+        "\xC0\x8A",
+        "\xE0\x80\x8A",
+        "\xF0\x80\x80\x8A",
+        "\xF8\x80\x80\x80\x8A",
+        "\xFC\x80\x80\x80\x80\x8A",
     ];
 
     for (int j = 0; j < s4.length; j++)
     {
-    try
-    {
-        i = 0;
-        c = decode(s4[j], i);
-        assert(0);
-    }
-    catch (UtfException u)
-    {
-        i = 23;
-        delete u;
-    }
-    assert(i == 23);
+        try
+        {
+            i = 0;
+            c = decode(s4[j], i);
+            assert(0);
+        }
+        catch (UtfException u)
+        {
+            i = 23;
+            delete u;
+        }
+
+        assert(i == 23);
     }
 }
 
@@ -433,8 +444,8 @@ unittest
 {
     size_t i;
 
-    i = 0; assert(decode("\xEF\xBF\xBE"c, i) == cast(dchar) 0xFFFE);
-    i = 0; assert(decode("\xEF\xBF\xBF"c, i) == cast(dchar) 0xFFFF);
+    i = 0; assert(decode("\xEF\xBF\xBE"c, i) == cast(dchar)0xFFFE);
+    i = 0; assert(decode("\xEF\xBF\xBF"c, i) == cast(dchar)0xFFFF);
     i = 0;
     assert(expectError_( decode("\xED\xA0\x80"c, i) ));
     assert(expectError_( decode("\xED\xAD\xBF"c, i) ));
@@ -445,9 +456,7 @@ unittest
     assert(expectError_( decode("\xED\xBF\xBF"c, i) ));
 }
 
-
-/** ditto */
-
+/// ditto
 dchar decode(in wchar[] s, ref size_t idx)
 out (result)
 {
@@ -463,23 +472,28 @@ body
     uint u = s[i];
 
     if (u & ~0x7F)
-    {   if (u >= 0xD800 && u <= 0xDBFF)
-        {   uint u2;
+    {
+        if (u >= 0xD800 && u <= 0xDBFF)
+        {
+            uint u2;
 
             if (i + 1 == s.length)
-            {   msg = "surrogate UTF-16 high value past end of string";
+            {
+                msg = "surrogate UTF-16 high value past end of string";
                 goto Lerr;
             }
             u2 = s[i + 1];
             if (u2 < 0xDC00 || u2 > 0xDFFF)
-            {   msg = "surrogate UTF-16 low value out of range";
+            {
+                msg = "surrogate UTF-16 low value out of range";
                 goto Lerr;
             }
             u = ((u - 0xD7C0) << 10) + (u2 - 0xDC00);
             i += 2;
         }
         else if (u >= 0xDC00 && u <= 0xDFFF)
-        {   msg = "unpaired surrogate UTF-16 value";
+        {
+            msg = "unpaired surrogate UTF-16 value";
             goto Lerr;
         }
         else
@@ -503,13 +517,12 @@ unittest
 {
     size_t i;
 
-    i = 0; assert(decode([ cast(wchar) 0xFFFE ], i) == cast(dchar) 0xFFFE && i == 1);
-    i = 0; assert(decode([ cast(wchar) 0xFFFF ], i) == cast(dchar) 0xFFFF && i == 1);
+    i = 0; assert(decode([ cast(wchar)0xFFFE ], i) == cast(dchar)0xFFFE && i == 1);
+    i = 0; assert(decode([ cast(wchar)0xFFFF ], i) == cast(dchar)0xFFFF && i == 1);
 }
 
 
-/** ditto */
-
+/// ditto
 dchar decode(in dchar[] s, ref size_t idx)
 {
     enforce(idx < s.length, "Attempted to decode past the end of a string");
@@ -526,20 +539,25 @@ dchar decode(in dchar[] s, ref size_t idx)
     throw new UtfException("5invalid UTF-32 value", c);
 }
 
+}  // Decode functions are @trusted
+
+
 /* =================== Encode ======================= */
 
-/*******************************
-Encodes character $(D c) into fixed-size array $(D s). Returns the
-actual length of the encoded character (a number between 1 and 4 for
-$(D char[4]) buffers, and between 1 and 2 for $(D wchar[2]) buffers).
- */
+@safe pure
+{
 
-size_t encode(ref char[4] buf, in dchar c)
+/*******************************
+ * Encodes character $(D_PARAM c) into fixed-size array $(D_PARAM s).
+ * Returns the actual length of the encoded character (a number between 1 and
+ * 4 for $(D char[4]) buffers, and between 1 and 2 for $(D wchar[2]) buffers).
+ */
+size_t encode(ref char[4] buf, dchar c)
 {
     if (c <= 0x7F)
     {
         assert(isValidDchar(c));
-        buf[0] = cast(char) c;
+        buf[0] = cast(char)c;
         return 1;
     }
     if (c <= 0x7FF)
@@ -552,8 +570,8 @@ size_t encode(ref char[4] buf, in dchar c)
     if (c <= 0xFFFF)
     {
         if (0xD800 <= c && c <= 0xDFFF)
-            throw new UtfException(
-                "encoding a surrogate code point in UTF-8", c);
+            throw new UtfException("encoding a surrogate code point in UTF-8", c);
+
         assert(isValidDchar(c));
         buf[0] = cast(char)(0xE0 | (c >> 12));
         buf[1] = cast(char)(0x80 | ((c >> 6) & 0x3F));
@@ -571,8 +589,7 @@ size_t encode(ref char[4] buf, in dchar c)
     }
 
     assert(!isValidDchar(c));
-    throw new UtfException(
-        "encoding an invalid code point in UTF-8", c);
+    throw new UtfException("encoding an invalid code point in UTF-8", c);
 }
 
 unittest
@@ -591,11 +608,11 @@ unittest
     assert(encode(buf, '\U00010000') == 4 && buf[0 .. 4] == "\U00010000");
     assert(encode(buf, '\U0010FFFF') == 4 && buf[0 .. 4] == "\U0010FFFF");
 
-    assert(expectError_( encode(buf, cast(dchar) 0xD800) ));
-    assert(expectError_( encode(buf, cast(dchar) 0xDBFF) ));
-    assert(expectError_( encode(buf, cast(dchar) 0xDC00) ));
-    assert(expectError_( encode(buf, cast(dchar) 0xDFFF) ));
-    assert(expectError_( encode(buf, cast(dchar) 0x110000) ));
+    assert(expectError_( encode(buf, cast(dchar)0xD800) ));
+    assert(expectError_( encode(buf, cast(dchar)0xDBFF) ));
+    assert(expectError_( encode(buf, cast(dchar)0xDC00) ));
+    assert(expectError_( encode(buf, cast(dchar)0xDFFF) ));
+    assert(expectError_( encode(buf, cast(dchar)0x110000) ));
 }
 
 
@@ -605,23 +622,22 @@ size_t encode(ref wchar[2] buf, dchar c)
     if (c <= 0xFFFF)
     {
         if (0xD800 <= c && c <= 0xDFFF)
-            throw new UtfException(
-                "encoding an isolated surrogate code point in UTF-16", c);
+            throw new UtfException("encoding an isolated surrogate code point in UTF-16", c);
+
         assert(isValidDchar(c));
-        buf[0] = cast(wchar) c;
+        buf[0] = cast(wchar)c;
         return 1;
     }
     if (c <= 0x10FFFF)
     {
         assert(isValidDchar(c));
-        buf[0] = cast(wchar) ((((c - 0x10000) >> 10) & 0x3FF) + 0xD800);
-        buf[1] = cast(wchar) (((c - 0x10000) & 0x3FF) + 0xDC00);
+        buf[0] = cast(wchar)((((c - 0x10000) >> 10) & 0x3FF) + 0xD800);
+        buf[1] = cast(wchar)(((c - 0x10000) & 0x3FF) + 0xDC00);
         return 2;
     }
 
     assert(!isValidDchar(c));
-    throw new UtfException(
-        "encoding an invalid code point in UTF-16", c);
+    throw new UtfException("encoding an invalid code point in UTF-16", c);
 }
 
 unittest
@@ -636,18 +652,17 @@ unittest
     assert(encode(buf, '\U00010000') == 2 && buf[0 .. 2] == "\U00010000");
     assert(encode(buf, '\U0010FFFF') == 2 && buf[0 .. 2] == "\U0010FFFF");
 
-    assert(expectError_( encode(buf, cast(dchar) 0xD800) ));
-    assert(expectError_( encode(buf, cast(dchar) 0xDBFF) ));
-    assert(expectError_( encode(buf, cast(dchar) 0xDC00) ));
-    assert(expectError_( encode(buf, cast(dchar) 0xDFFF) ));
-    assert(expectError_( encode(buf, cast(dchar) 0x110000) ));
+    assert(expectError_( encode(buf, cast(dchar)0xD800) ));
+    assert(expectError_( encode(buf, cast(dchar)0xDBFF) ));
+    assert(expectError_( encode(buf, cast(dchar)0xDC00) ));
+    assert(expectError_( encode(buf, cast(dchar)0xDFFF) ));
+    assert(expectError_( encode(buf, cast(dchar)0x110000) ));
 }
 
 
 /*******************************
- * Encodes character c and appends it to array s[].
+ * Encodes character $(D_PARAM c) and appends it to array $(D_PARAM s[]).
  */
-
 void encode(ref char[] s, dchar c)
 {
     char[] r = s;
@@ -655,7 +670,7 @@ void encode(ref char[] s, dchar c)
     if (c <= 0x7F)
     {
         assert(isValidDchar(c));
-        r ~= cast(char) c;
+        r ~= cast(char)c;
     }
     else
     {
@@ -672,8 +687,8 @@ void encode(ref char[] s, dchar c)
         else if (c <= 0xFFFF)
         {
             if (0xD800 <= c && c <= 0xDFFF)
-                throw new UtfException(
-                    "encoding a surrogate code point in UTF-8", c);
+                throw new UtfException("encoding a surrogate code point in UTF-8", c);
+
             assert(isValidDchar(c));
             buf[0] = cast(char)(0xE0 | (c >> 12));
             buf[1] = cast(char)(0x80 | ((c >> 6) & 0x3F));
@@ -692,8 +707,7 @@ void encode(ref char[] s, dchar c)
         else
         {
             assert(!isValidDchar(c));
-            throw new UtfException(
-                "encoding an invalid code point in UTF-8", c);
+            throw new UtfException("encoding an invalid code point in UTF-8", c);
         }
         r ~= buf[0 .. L];
     }
@@ -735,16 +749,14 @@ unittest
     encode(buf, '\U00010000'); assert(buf[21 .. $] == "\U00010000");
     encode(buf, '\U0010FFFF'); assert(buf[25 .. $] == "\U0010FFFF");
 
-    assert(expectError_( encode(buf, cast(dchar) 0xD800) ));
-    assert(expectError_( encode(buf, cast(dchar) 0xDBFF) ));
-    assert(expectError_( encode(buf, cast(dchar) 0xDC00) ));
-    assert(expectError_( encode(buf, cast(dchar) 0xDFFF) ));
-    assert(expectError_( encode(buf, cast(dchar) 0x110000) ));
+    assert(expectError_( encode(buf, cast(dchar)0xD800) ));
+    assert(expectError_( encode(buf, cast(dchar)0xDBFF) ));
+    assert(expectError_( encode(buf, cast(dchar)0xDC00) ));
+    assert(expectError_( encode(buf, cast(dchar)0xDFFF) ));
+    assert(expectError_( encode(buf, cast(dchar)0x110000) ));
 }
 
-
-/** ditto */
-
+/// ditto
 void encode(ref wchar[] s, dchar c)
 {
     wchar[] r = s;
@@ -752,26 +764,26 @@ void encode(ref wchar[] s, dchar c)
     if (c <= 0xFFFF)
     {
         if (0xD800 <= c && c <= 0xDFFF)
-            throw new UtfException(
-                "encoding an isolated surrogate code point in UTF-16", c);
+            throw new UtfException("encoding an isolated surrogate code point in UTF-16", c);
+
         assert(isValidDchar(c));
-        r ~= cast(wchar) c;
+        r ~= cast(wchar)c;
     }
     else if (c <= 0x10FFFF)
     {
         wchar[2] buf;
 
         assert(isValidDchar(c));
-        buf[0] = cast(wchar) ((((c - 0x10000) >> 10) & 0x3FF) + 0xD800);
-        buf[1] = cast(wchar) (((c - 0x10000) & 0x3FF) + 0xDC00);
+        buf[0] = cast(wchar)((((c - 0x10000) >> 10) & 0x3FF) + 0xD800);
+        buf[1] = cast(wchar)(((c - 0x10000) & 0x3FF) + 0xDC00);
         r ~= buf;
     }
     else
     {
         assert(!isValidDchar(c));
-        throw new UtfException(
-            "encoding an invalid code point in UTF-16", c);
+        throw new UtfException("encoding an invalid code point in UTF-16", c);
     }
+
     s = r;
 }
 
@@ -787,21 +799,19 @@ unittest
     encode(buf, '\U00010000'); assert(buf[5 .. $] == "\U00010000");
     encode(buf, '\U0010FFFF'); assert(buf[7 .. $] == "\U0010FFFF");
 
-    assert(expectError_( encode(buf, cast(dchar) 0xD800) ));
-    assert(expectError_( encode(buf, cast(dchar) 0xDBFF) ));
-    assert(expectError_( encode(buf, cast(dchar) 0xDC00) ));
-    assert(expectError_( encode(buf, cast(dchar) 0xDFFF) ));
-    assert(expectError_( encode(buf, cast(dchar) 0x110000) ));
+    assert(expectError_( encode(buf, cast(dchar)0xD800) ));
+    assert(expectError_( encode(buf, cast(dchar)0xDBFF) ));
+    assert(expectError_( encode(buf, cast(dchar)0xDC00) ));
+    assert(expectError_( encode(buf, cast(dchar)0xDFFF) ));
+    assert(expectError_( encode(buf, cast(dchar)0x110000) ));
 }
 
-
-/** ditto */
-
+/// ditto
 void encode(ref dchar[] s, dchar c)
 {
     if ((0xD800 <= c && c <= 0xDFFF) || 0x10FFFF < c)
-        throw new UtfException(
-            "encoding an invalid code point in UTF-32", c);
+        throw new UtfException("encoding an invalid code point in UTF-32", c);
+
     assert(isValidDchar(c));
     s ~= c;
 }
@@ -817,20 +827,22 @@ unittest
     encode(buf, 0xFFFF ); assert(buf[4] == 0xFFFF);
     encode(buf, '\U0010FFFF'); assert(buf[5] == '\U0010FFFF');
 
-    assert(expectError_( encode(buf, cast(dchar) 0xD800) ));
-    assert(expectError_( encode(buf, cast(dchar) 0xDBFF) ));
-    assert(expectError_( encode(buf, cast(dchar) 0xDC00) ));
-    assert(expectError_( encode(buf, cast(dchar) 0xDFFF) ));
-    assert(expectError_( encode(buf, cast(dchar) 0x110000) ));
+    assert(expectError_( encode(buf, cast(dchar)0xD800) ));
+    assert(expectError_( encode(buf, cast(dchar)0xDBFF) ));
+    assert(expectError_( encode(buf, cast(dchar)0xDC00) ));
+    assert(expectError_( encode(buf, cast(dchar)0xDFFF) ));
+    assert(expectError_( encode(buf, cast(dchar)0x110000) ));
 }
+
+}  // Encode functions are @safe and pure
 
 
 /**
-Returns the code length of $(D c) in the encoding using $(D C) as a
-code point. The code is returned in character count, not in bytes.
+ * Returns the code length of $(D_PARAM c) in the encoding using $(D_PARAM C)
+ * as a code point. The code is returned in character count, not in bytes.
  */
-
-ubyte codeLength(C)(dchar c)
+@safe
+pure nothrow ubyte codeLength(C)(dchar c)
 {
     static if (C.sizeof == 1)
     {
@@ -843,7 +855,7 @@ ubyte codeLength(C)(dchar c)
     }
     else static if (C.sizeof == 2)
     {
-    return c <= 0xFFFF ? 1 : 2;
+        return c <= 0xFFFF ? 1 : 2;
     }
     else
     {
@@ -852,15 +864,16 @@ ubyte codeLength(C)(dchar c)
     }
 }
 
+
 /* =================== Validation ======================= */
 
 /***********************************
-Checks to see if string is well formed or not. $(D S) can be an array
- of $(D char), $(D wchar), or $(D dchar). Throws a $(D UtfException)
- if it is not. Use to check all untrusted input for correctness.
+ * Checks to see if string is well formed or not. $(D S) can be an array
+ * of $(D char), $(D wchar), or $(D dchar). Throws a $(D UtfException)
+ * if it is not. Use to check all untrusted input for correctness.
  */
-
-void validate(S)(in S s)
+@safe
+void validate(S)(in S s) if (isSomeString!S)
 {
     immutable len = s.length;
     for (size_t i = 0; i < len; )
@@ -869,145 +882,142 @@ void validate(S)(in S s)
     }
 }
 
+
 /* =================== Conversion to UTF8 ======================= */
 
-char[] toUTF8(out char[4] buf, dchar c)
-    in
-    {
-        assert(isValidDchar(c));
-    }
-    body
-    {
-        if (c <= 0x7F)
-        {
-            buf[0] = cast(char) c;
-            return buf[0 .. 1];
-        }
-        else if (c <= 0x7FF)
-        {
-            buf[0] = cast(char)(0xC0 | (c >> 6));
-            buf[1] = cast(char)(0x80 | (c & 0x3F));
-            return buf[0 .. 2];
-        }
-        else if (c <= 0xFFFF)
-        {
-            buf[0] = cast(char)(0xE0 | (c >> 12));
-            buf[1] = cast(char)(0x80 | ((c >> 6) & 0x3F));
-            buf[2] = cast(char)(0x80 | (c & 0x3F));
-            return buf[0 .. 3];
-        }
-        else if (c <= 0x10FFFF)
-        {
-            buf[0] = cast(char)(0xF0 | (c >> 18));
-            buf[1] = cast(char)(0x80 | ((c >> 12) & 0x3F));
-            buf[2] = cast(char)(0x80 | ((c >> 6) & 0x3F));
-            buf[3] = cast(char)(0x80 | (c & 0x3F));
-            return buf[0 .. 4];
-        }
-        assert(0);
-    }
-
-/*******************
- * Encodes string s into UTF-8 and returns the encoded string.
- */
-
-string toUTF8(string s)
+@trusted
 {
-    validate(s);
-    return s;
+
+char[] toUTF8(out char[4] buf, dchar c)
+in
+{
+    assert(isValidDchar(c));
+}
+body
+{
+    if (c <= 0x7F)
+    {
+        buf[0] = cast(char)c;
+        return buf[0 .. 1];
+    }
+    else if (c <= 0x7FF)
+    {
+        buf[0] = cast(char)(0xC0 | (c >> 6));
+        buf[1] = cast(char)(0x80 | (c & 0x3F));
+        return buf[0 .. 2];
+    }
+    else if (c <= 0xFFFF)
+    {
+        buf[0] = cast(char)(0xE0 | (c >> 12));
+        buf[1] = cast(char)(0x80 | ((c >> 6) & 0x3F));
+        buf[2] = cast(char)(0x80 | (c & 0x3F));
+        return buf[0 .. 3];
+    }
+    else if (c <= 0x10FFFF)
+    {
+        buf[0] = cast(char)(0xF0 | (c >> 18));
+        buf[1] = cast(char)(0x80 | ((c >> 12) & 0x3F));
+        buf[2] = cast(char)(0x80 | ((c >> 6) & 0x3F));
+        buf[3] = cast(char)(0x80 | (c & 0x3F));
+        return buf[0 .. 4];
+    }
+
+    assert(0);
 }
 
-/** ditto */
 
+/*******************
+ * Encodes string $(D_PARAM s) into UTF-8 and returns the encoded string.
+ */
 string toUTF8(in char[] s)
 {
     validate(s);
     return s.idup;
 }
 
-/** ditto */
-
-string toUTF8(const(wchar)[] s)
+/// ditto
+string toUTF8(in wchar[] s)
 {
     char[] r;
     size_t i;
     size_t slen = s.length;
 
     r.length = slen;
-
     for (i = 0; i < slen; i++)
-    {   wchar c = s[i];
-
-    if (c <= 0x7F)
-        r[i] = cast(char)c;     // fast path for ascii
-    else
     {
-        r.length = i;
-        while (i < slen)
-            encode(r, decode(s, i));
-        break;
-    }
-    }
-    return assumeUnique(r);
-}
+        wchar c = s[i];
 
-/** ditto */
-
-string toUTF8(const(dchar)[] s)
-{
-    char[] r;
-    size_t i;
-    size_t slen = s.length;
-
-    r.length = slen;
-
-    for (i = 0; i < slen; i++)
-    {   dchar c = s[i];
-
-    if (c <= 0x7F)
-        r[i] = cast(char)c;     // fast path for ascii
-    else
-    {
-        r.length = i;
-        foreach (dchar d; s[i .. slen])
+        if (c <= 0x7F)
+            r[i] = cast(char)c;     // fast path for ascii
+        else
         {
-        encode(r, d);
+            r.length = i;
+            while (i < slen)
+                encode(r, decode(s, i));
+            break;
         }
-        break;
     }
-    }
-    return assumeUnique(r);
+
+    return r.assumeUnique();
 }
+
+/// ditto
+pure string toUTF8(in dchar[] s)
+{
+    char[] r;
+    size_t i;
+    size_t slen = s.length;
+
+    r.length = slen;
+    for (i = 0; i < slen; i++)
+    {
+        dchar c = s[i];
+
+        if (c <= 0x7F)
+            r[i] = cast(char)c;     // fast path for ascii
+        else
+        {
+            r.length = i;
+            foreach (dchar d; s[i .. slen])
+            {
+                encode(r, d);
+            }
+            break;
+        }
+    }
+
+    return r.assumeUnique();
+}
+
 
 /* =================== Conversion to UTF16 ======================= */
 
-wchar[] toUTF16(ref wchar[2] buf, dchar c)
-    in
-    {
+pure wchar[] toUTF16(ref wchar[2] buf, dchar c)
+in
+{
     assert(isValidDchar(c));
-    }
-    body
-    {
+}
+body
+{
     if (c <= 0xFFFF)
     {
-        buf[0] = cast(wchar) c;
+        buf[0] = cast(wchar)c;
         return buf[0 .. 1];
     }
     else
     {
-        buf[0] = cast(wchar) ((((c - 0x10000) >> 10) & 0x3FF) + 0xD800);
-        buf[1] = cast(wchar) (((c - 0x10000) & 0x3FF) + 0xDC00);
+        buf[0] = cast(wchar)((((c - 0x10000) >> 10) & 0x3FF) + 0xD800);
+        buf[1] = cast(wchar)(((c - 0x10000) & 0x3FF) + 0xDC00);
         return buf[0 .. 2];
     }
-    }
+}
 
 /****************
- * Encodes string s into UTF-16 and returns the encoded string.
+ * Encodes string $(D_PARAM s) into UTF-16 and returns the encoded string.
  * toUTF16z() is suitable for calling the 'W' functions in the Win32 API that take
  * an LPWSTR or LPCWSTR argument.
  */
-
-wstring toUTF16(const(char)[] s)
+wstring toUTF16(in char[] s)
 {
     wchar[] r;
     size_t slen = s.length;
@@ -1028,11 +1038,11 @@ wstring toUTF16(const(char)[] s)
             encode(r, c);
         }
     }
-    return cast(wstring) r; // ok because r is unique
+
+    return r.assumeUnique();  // ok because r is unique
 }
 
-/** ditto */
-
+/// ditto
 const(wchar)* toUTF16z(in char[] s)
 {
     wchar[] r;
@@ -1042,33 +1052,32 @@ const(wchar)* toUTF16z(in char[] s)
     r.length = 0;
     for (size_t i = 0; i < slen; )
     {
-    dchar c = s[i];
-    if (c <= 0x7F)
-    {
-        i++;
-        r ~= cast(wchar)c;
-    }
-    else
-    {
-        c = decode(s, i);
-        encode(r, c);
-    }
+        dchar c = s[i];
+        if (c <= 0x7F)
+        {
+            i++;
+            r ~= cast(wchar)c;
+        }
+        else
+        {
+            c = decode(s, i);
+            encode(r, c);
+        }
     }
     r ~= "\000";
+
     return r.ptr;
 }
 
-/** ditto */
-
-wstring toUTF16(wstring s)
+/// ditto
+wstring toUTF16(in wchar[] s)
 {
     validate(s);
-    return s;
+    return s.idup;
 }
 
-/** ditto */
-
-wstring toUTF16(const(dchar)[] s)
+/// ditto
+pure wstring toUTF16(in dchar[] s)
 {
     wchar[] r;
     size_t slen = s.length;
@@ -1077,18 +1086,19 @@ wstring toUTF16(const(dchar)[] s)
     r.length = 0;
     for (size_t i = 0; i < slen; i++)
     {
-    encode(r, s[i]);
+        encode(r, s[i]);
     }
-    return cast(wstring) r; // ok because r is unique
+
+    return r.assumeUnique();  // ok because r is unique
 }
+
 
 /* =================== Conversion to UTF32 ======================= */
 
 /*****
- * Encodes string s into UTF-32 and returns the encoded string.
+ * Encodes string $(D_PARAM s) into UTF-32 and returns the encoded string.
  */
-
-dstring toUTF32(const(char)[] s)
+dstring toUTF32(in char[] s)
 {
     dchar[] r;
     size_t slen = s.length;
@@ -1097,19 +1107,19 @@ dstring toUTF32(const(char)[] s)
     r.length = slen;        // r[] will never be longer than s[]
     for (size_t i = 0; i < slen; )
     {
-    dchar c = s[i];
-    if (c >= 0x80)
-        c = decode(s, i);
-    else
-        i++;        // c is ascii, no need for decode
-    r[j++] = c;
+        dchar c = s[i];
+        if (c >= 0x80)
+            c = decode(s, i);
+        else
+            i++;        // c is ascii, no need for decode
+        r[j++] = c;
     }
-    return cast(dstring) r[0 .. j]; // legit because it's unique
+
+    return r[0 .. j].assumeUnique(); // legit because it's unique
 }
 
-/** ditto */
-
-dstring toUTF32(const(wchar)[] s)
+/// ditto
+dstring toUTF32(in wchar[] s)
 {
     dchar[] r;
     size_t slen = s.length;
@@ -1118,23 +1128,26 @@ dstring toUTF32(const(wchar)[] s)
     r.length = slen;        // r[] will never be longer than s[]
     for (size_t i = 0; i < slen; )
     {
-    dchar c = s[i];
-    if (c >= 0x80)
-        c = decode(s, i);
-    else
-        i++;        // c is ascii, no need for decode
-    r[j++] = c;
+        dchar c = s[i];
+        if (c >= 0x80)
+            c = decode(s, i);
+        else
+            i++;        // c is ascii, no need for decode
+        r[j++] = c;
     }
-    return cast(dstring) r[0 .. j]; // legit because it's unique
+
+    return r[0 .. j].assumeUnique();  // legit because it's unique
 }
 
-/** ditto */
-
-dstring toUTF32(dstring s)
+/// ditto
+dstring toUTF32(in dchar[] s)
 {
     validate(s);
-    return s;
+    return s.idup;
 }
+
+} // Convert functions are @safe
+
 
 /* ================================ tests ================================== */
 
@@ -1198,28 +1211,37 @@ unittest
     assert(w == "he\U0010AAAAllo");
 }
 
+
 /**
-Returns the total number of code points encoded in a string.
-
-The input to this function MUST be validly encoded.
-
-Supercedes: This function supercedes $(D std.utf.toUCSindex()).
-
-Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
-
-Params:
-s = the string to be counted
+ * Returns the total number of code points encoded in a string.
+ *
+ * The input to this function MUST be validly encoded.
+ *
+ * Supercedes: This function supercedes $(D std.utf.toUCSindex()).
+ *
+ * Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
+ *
+ * Params:
+ *  s = the string to be counted
  */
-size_t count(E)(const(E)[] s) if (isSomeChar!E && E.sizeof < 4)
+@trusted
+size_t count(E)(const(E)[] s) if (isSomeChar!E)
 {
-    return walkLength(s);
-//     size_t result = 0;
-//     while (!s.empty)
-//     {
-//         ++result;
-//         s.popFront();
-//     }
-//     return result;
+    static if (E.sizeof < 4)
+    {
+        return walkLength(s);
+        //size_t result = 0;
+        //while (!s.empty)
+        //{
+        //    ++result;
+        //    s.popFront();
+        //}
+        //return result;
+    }
+    else
+    {
+        return s.length;
+    }
 }
 
 unittest
