@@ -1,7 +1,11 @@
 ﻿// Written in the D programming language.
 
 /**
- * Elementary mathematical functions.
+ * Elementary mathematical functions
+ *
+ * Contains the elementary mathematical functions (powers, roots, 
+ * and trignometric functions), and low-level floating-point operations.
+ * Mathematical special functions are available in std.mathspecial.
  *
  * The functionality closely follows the IEEE754-2008 standard for
  * floating-point arithmetic, including the use of camelCase names rather
@@ -10,6 +14,11 @@
  *
  * Unlike C, there is no global 'errno' variable. Consequently, almost all of
  * these functions are pure nothrow.
+ *
+ * Status:
+ * The gamma and error functions have been superceded by improved versions in
+ * std.mathspecial. They will be officially deprecated in std.math in DMD2.055.
+ * The semantics and names of feqrel and approxEqual will be revised.
  *
  * Macros:
  *      WIKI = Phobos/StdMath
@@ -46,10 +55,8 @@
  */
 module std.math;
 
-//debug=math;           // uncomment to turn on debugging printf's
-
-import core.stdc.math, core.stdc.stdio;
-import std.range, std.stdio, std.string, std.traits;
+import core.stdc.math;
+import std.range, std.traits;
 
 version(unittest) {
     import std.typetuple;
