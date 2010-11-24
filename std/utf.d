@@ -548,7 +548,7 @@ dchar decode(in dchar[] s, ref size_t idx)
 
 /* =================== Encode ======================= */
 
-@safe pure
+@safe // pure  @@@NOTE@@@ unittest is a function. Currently, unittest is affected by applying attributes.
 {
 
 /*******************************
@@ -556,7 +556,7 @@ dchar decode(in dchar[] s, ref size_t idx)
  * Returns the actual length of the encoded character (a number between 1 and
  * 4 for $(D char[4]) buffers, and between 1 and 2 for $(D wchar[2]) buffers).
  */
-size_t encode(ref char[4] buf, dchar c)
+pure size_t encode(ref char[4] buf, dchar c)
 {
     if (c <= 0x7F)
     {
@@ -621,7 +621,7 @@ unittest
 
 
 /// Ditto
-size_t encode(ref wchar[2] buf, dchar c)
+pure size_t encode(ref wchar[2] buf, dchar c)
 {
     if (c <= 0xFFFF)
     {
@@ -667,7 +667,7 @@ unittest
 /*******************************
  * Encodes character $(D_PARAM c) and appends it to array $(D_PARAM s[]).
  */
-void encode(ref char[] s, dchar c)
+pure void encode(ref char[] s, dchar c)
 {
     char[] r = s;
 
@@ -761,7 +761,7 @@ unittest
 }
 
 /// ditto
-void encode(ref wchar[] s, dchar c)
+pure void encode(ref wchar[] s, dchar c)
 {
     wchar[] r = s;
 
@@ -811,7 +811,7 @@ unittest
 }
 
 /// ditto
-void encode(ref dchar[] s, dchar c)
+pure void encode(ref dchar[] s, dchar c)
 {
     if ((0xD800 <= c && c <= 0xDFFF) || 0x10FFFF < c)
         throw new UtfException("encoding an invalid code point in UTF-32", c);
