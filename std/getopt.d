@@ -152,7 +152,7 @@ getopt(args, "tune", &tuningParms);
 
 Invoking the program with e.g. "--tune=alpha=0.5 --tune beta=0.6" will
 set $(D tuningParms) to [ "alpha" : 0.5, "beta" : 0.6 ].)  In general,
-keys and values can be of any parsable types.
+keys and values can be of any parsable types.)
 
 $(LI $(I Delegate options.) An option can be bound to a delegate with
 the signature $(D void delegate()), $(D void delegate(string option))
@@ -260,7 +260,7 @@ $(B "Short" versus "long" options)
 
 Traditionally, programs accepted single-letter options preceded by
 only one dash (e.g. $(D -t)). $(D getopt) accepts such parameters
-seamlessly. When used with a double-dash (e.g. $(D --t), a
+seamlessly. When used with a double-dash (e.g. $(D --t)), a
 single-letter option behaves the same as a multi-letter option. When
 used with a single dash, a single-letter option is accepted. If the
 option has a parameter, that must be "stuck" to the option without
