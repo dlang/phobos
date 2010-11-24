@@ -33,11 +33,12 @@ Macros:
 Copyright: Copyright Tomas Lindquist Olsen 2007 - 2009.
 License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
 Authors:   Tomas Lindquist Olsen &lt;tomas@famolsen.dk&gt;
-
-         Copyright Tomas Lindquist Olsen 2007 - 2009.
-Distributed under the Boost Software License, Version 1.0.
-   (See accompanying file LICENSE_1_0.txt or copy at
-         http://www.boost.org/LICENSE_1_0.txt)
+*/
+/*
+ *          Copyright Tomas Lindquist Olsen 2007 - 2009.
+ * Distributed under the Boost Software License, Version 1.0.
+ *    (See accompanying file LICENSE_1_0.txt or copy at
+ *          http://www.boost.org/LICENSE_1_0.txt)
  */
 module std.cpuid;
 

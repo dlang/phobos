@@ -22,7 +22,8 @@ Credits:   This module and its documentation are inspired by Perl's $(WEB
                    D's $(D getopt) is simpler than its Perl counterpart because $(D
                    getopt) infers the expected parameter types from the static types of
                    the passed-in pointers.
-
+*/
+/*
          Copyright Andrei Alexandrescu 2008 - 2009.
 Distributed under the Boost Software License, Version 1.0.
    (See accompanying file LICENSE_1_0.txt or copy at
