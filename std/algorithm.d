@@ -3344,6 +3344,15 @@ unittest
     int[] a = [ 1, 2, 4, 3, 2, 5, 3, 2, 4 ];
     assert(count(a, 2) == 3, text(count(a, 2)));
     assert(count!("a > b")(a, 2) == 5, text(count!("a > b")(a, 2)));
+
+    // check strings
+    assert(count("日本語")  == 3);
+    assert(count("日本語"w) == 3);
+    assert(count("日本語"d) == 3);
+
+    assert(count!("a == '日'")("日本語")  == 1);
+    assert(count!("a == '本'")("日本語"w) == 1);
+    assert(count!("a == '語'")("日本語"d) == 1);
 }
 
 /**
@@ -3356,12 +3365,12 @@ int[] a = [ 1, 2, 4, 3, 2, 5, 3, 2, 4 ];
 assert(count!("a > 1")(a) == 8);
 ----
 */
-size_t count(alias pred, Range)(Range r) if (isInputRange!(Range))
+size_t count(alias pred = "true", Range)(Range r) if (isInputRange!(Range))
 {
     size_t result;
-    foreach (e; r)
+    for (; !r.empty; r.popFront())
     {
-        if (unaryFun!(pred)(e)) ++result;
+        if (unaryFun!pred(r.front)) ++result;
     }
     return result;
 }
@@ -5467,7 +5476,7 @@ void schwartzSort(alias transform, alias less = "a < b",
     alias typeof(z.front()) ProxyType;
     bool myLess(ProxyType a, ProxyType b)
     {
-        return binaryFun!(less)(a[0], b[0]);
+        return binaryFun!less(a[0], b[0]);
     }
     sort!(myLess, ss)(z);
 }
