@@ -25,7 +25,7 @@
 module std.internal.math.errorfunction;
 import std.math;
 
-private {        
+private {
 immutable real EXP_2  = 0.13533528323661269189L; /* exp(-2) */
 enum real SQRT2PI = 2.50662827463100050242E0L; // sqrt(2pi)
 
@@ -40,19 +40,18 @@ T rationalPoly(T)(T x, const(T) [] numerator, const(T) [] denominator) pure noth
 }
 
 
-
 private {
-    
+
 /* erfc(x) = exp(-x^2) P(1/x)/Q(1/x)
    1/8 <= 1/x <= 1
    Peak relative error 5.8e-21  */
-immutable real [] P = [ -0x1.30dfa809b3cc6676p-17, 0x1.38637cd0913c0288p+18,
+immutable real [10] P = [ -0x1.30dfa809b3cc6676p-17, 0x1.38637cd0913c0288p+18,
    0x1.2f015e047b4476bp+22, 0x1.24726f46aa9ab08p+25, 0x1.64b13c6395dc9c26p+27,
    0x1.294c93046ad55b5p+29, 0x1.5962a82f92576dap+30, 0x1.11a709299faba04ap+31,
    0x1.11028065b087be46p+31, 0x1.0d8ef40735b097ep+30
 ];
 
-immutable real [] Q = [ 0x1.14d8e2a72dec49f4p+19, 0x1.0c880ff467626e1p+23,
+immutable real [11] Q = [ 0x1.14d8e2a72dec49f4p+19, 0x1.0c880ff467626e1p+23,
    0x1.04417ef060b58996p+26, 0x1.404e61ba86df4ebap+28, 0x1.0f81887bc82b873ap+30,
    0x1.4552a5e39fb49322p+31, 0x1.11779a0ceb2a01cep+32, 0x1.3544dd691b5b1d5cp+32,
    0x1.a91781f12251f02ep+31, 0x1.0d8ef3da605a1c86p+30, 1.0
@@ -62,11 +61,11 @@ immutable real [] Q = [ 0x1.14d8e2a72dec49f4p+19, 0x1.0c880ff467626e1p+23,
 /* erfc(x) = exp(-x^2) 1/x R(1/x^2) / S(1/x^2)
    1/128 <= 1/x < 1/8
    Peak relative error 1.9e-21  */
-immutable real [] R = [ 0x1.b9f6d8b78e22459ep-6, 0x1.1b84686b0a4ea43ap-1,
+immutable real [5] R = [ 0x1.b9f6d8b78e22459ep-6, 0x1.1b84686b0a4ea43ap-1,
    0x1.b8f6aebe96000c2ap+1, 0x1.cb1dbedac27c8ec2p+2, 0x1.cf885f8f572a4c14p+1
 ];
 
-immutable real [] S = [
+immutable real [6] S = [
    0x1.87ae3cae5f65eb5ep-5, 0x1.01616f266f306d08p+0, 0x1.a4abe0411eed6c22p+2,
    0x1.eac9ce3da600abaap+3, 0x1.5752a9ac2faebbccp+3, 1.0
 ];
@@ -74,12 +73,12 @@ immutable real [] S = [
 /* erf(x)  = x P(x^2)/Q(x^2)
    0 <= x <= 1
    Peak relative error 7.6e-23  */
-immutable real [] T = [ 0x1.0da01654d757888cp+20, 0x1.2eb7497bc8b4f4acp+17,
+immutable real [7] T = [ 0x1.0da01654d757888cp+20, 0x1.2eb7497bc8b4f4acp+17,
    0x1.79078c19530f72a8p+15, 0x1.4eaf2126c0b2c23p+11, 0x1.1f2ea81c9d272a2ep+8,
-   0x1.59ca6e2d866e625p+2, 0x1.c188e0b67435faf4p-4 
+   0x1.59ca6e2d866e625p+2, 0x1.c188e0b67435faf4p-4
 ];
 
-immutable real [] U = [ 0x1.dde6025c395ae34ep+19, 0x1.c4bc8b6235df35aap+18,
+immutable real [7] U = [ 0x1.dde6025c395ae34ep+19, 0x1.c4bc8b6235df35aap+18,
    0x1.8465900e88b6903ap+16, 0x1.855877093959ffdp+13, 0x1.e5c44395625ee358p+9,
    0x1.6a0fed103f1c68a6p+5, 1.0
 ];
@@ -355,44 +354,52 @@ in {
 }
 body
 {
-immutable real[] P0 = [ -0x1.758f4d969484bfdcp-7, 0x1.53cee17a59259dd2p-3,
+static immutable real[8] P0 =
+[ -0x1.758f4d969484bfdcp-7, 0x1.53cee17a59259dd2p-3,
    -0x1.ea01e4400a9427a2p-1,  0x1.61f7504a0105341ap+1, -0x1.09475a594d0399f6p+2,
     0x1.7c59e7a0df99e3e2p+1, -0x1.87a81da52edcdf14p-1,  0x1.1fb149fd3f83600cp-7
 ];
 
-immutable real[] Q0 = [ -0x1.64b92ae791e64bb2p-7, 0x1.7585c7d597298286p-3,
+static immutable real[8] Q0 =
+[ -0x1.64b92ae791e64bb2p-7, 0x1.7585c7d597298286p-3,
    -0x1.40011be4f7591ce6p+0, 0x1.1fc067d8430a425ep+2, -0x1.21008ffb1e7ccdf2p+3,
    0x1.3d1581cf9bc12fccp+3, -0x1.53723a89fd8f083cp+2, 1.0
 ];
 
-immutable real[] P1 = [ 0x1.20ceea49ea142f12p-13, 0x1.cbe8a7267aea80bp-7,
+static immutable real[10] P1 =
+[ 0x1.20ceea49ea142f12p-13, 0x1.cbe8a7267aea80bp-7,
    0x1.79fea765aa787c48p-2, 0x1.d1f59faa1f4c4864p+1, 0x1.1c22e426a013bb96p+4,
    0x1.a8675a0c51ef3202p+5, 0x1.75782c4f83614164p+6, 0x1.7a2f3d90948f1666p+6,
    0x1.5cd116ee4c088c3ap+5, 0x1.1361e3eb6e3cc20ap+2
 ];
 
-immutable real[] Q1 = [ 0x1.3a4ce1406cea98fap-13, 0x1.f45332623335cda2p-7,
+static immutable real[10] Q1 =
+[ 0x1.3a4ce1406cea98fap-13, 0x1.f45332623335cda2p-7,
    0x1.98f28bbd4b98db1p-2, 0x1.ec3b24f9c698091cp+1, 0x1.1cc56ecda7cf58e4p+4,
    0x1.92c6f7376bf8c058p+5, 0x1.4154c25aa47519b4p+6, 0x1.1b321d3b927849eap+6,
    0x1.403a5f5a4ce7b202p+4, 1.0
 ];
 
-immutable real[] P2 = [ 0x1.8c124a850116a6d8p-21, 0x1.534abda3c2fb90bap-13, 
+static immutable real[8] P2 =
+[ 0x1.8c124a850116a6d8p-21, 0x1.534abda3c2fb90bap-13,
    0x1.29a055ec93a4718cp-7, 0x1.6468e98aad6dd474p-3, 0x1.3dab2ef4c67a601cp+0,
    0x1.e1fb3a1e70c67464p+1, 0x1.b6cce8035ff57b02p+2, 0x1.9f4c9e749ff35f62p+1
 ];
 
-immutable real[] Q2 = [ 0x1.af03f4fc0655e006p-21, 0x1.713192048d11fb2p-13,
+static immutable real[8] Q2 =
+[ 0x1.af03f4fc0655e006p-21, 0x1.713192048d11fb2p-13,
    0x1.4357e5bbf5fef536p-7, 0x1.7fdac8749985d43cp-3, 0x1.4a080c813a2d8e84p+0,
    0x1.c3a4b423cdb41bdap+1, 0x1.8160694e24b5557ap+2, 1.0
 ];
 
-immutable real[] P3 = [ -0x1.55da447ae3806168p-34, -0x1.145635641f8778a6p-24,
+static immutable real[8] P3 =
+[ -0x1.55da447ae3806168p-34, -0x1.145635641f8778a6p-24,
  -0x1.abf46d6b48040128p-17, -0x1.7da550945da790fcp-11, -0x1.aa0b2a31157775fap-8,
    0x1.b11d97522eed26bcp-3, 0x1.1106d22f9ae89238p+1, 0x1.029a358e1e630f64p+1
 ];
 
-immutable real[] Q3 = [ -0x1.74022dd5523e6f84p-34, -0x1.2cb60d61e29ee836p-24,
+static immutable real[8] Q3 =
+[ -0x1.74022dd5523e6f84p-34, -0x1.2cb60d61e29ee836p-24,
    -0x1.d19e6ec03a85e556p-17, -0x1.9ea2a7b4422f6502p-11, -0x1.c54b1e852f107162p-8,
    0x1.e05268dd3c07989ep-3, 0x1.239c6aff14afbf82p+1, 1.0
 ];
