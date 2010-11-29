@@ -804,10 +804,11 @@ unittest { // also tested by the normal distribution
 
     // Beware: a one-bit change in pow() changes almost all digits in the result!
     assert(feqrel(betaIncompleteInv(0x1.b3d151fbba0eb18p+1, 1.2265e-19, 2.44859e-18),0x1.c0110c8531d0952cp-1L) > 10);
-    // This next case uncovered a difference in the FYL2X instruction
-    // between Intel and AMD processors.
+    // This next case uncovered a one-bit difference in the FYL2X instruction
+    // between Intel and AMD processors. This difference gets magnified by 2^^38.
     // WolframAlpha crashes attempting to calculate this.
-    assert(feqrel(betaIncompleteInv(0x1.ff1275ae5b939bcap-41, 4.6713e18, 0.0813601), 0x1.f97749d90c7adba8p-63L)>=real.mant_dig - 1);
+    assert(feqrel(betaIncompleteInv(0x1.ff1275ae5b939bcap-41, 4.6713e18, 0.0813601),
+        0x1.f97749d90c7adba8p-63L) >= real.mant_dig - 39);
     real a1 = 3.40483;
     assert(betaIncompleteInv(a1, 4.0640301659679627772e19L, 0.545113)== 0x1.ba8c08108aaf5d14p-109);
     real b1 = 2.82847e-25;
