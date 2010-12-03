@@ -1241,7 +1241,7 @@ byte[] _d_arraycatnT(TypeInfo ti, uint n, ...)
     }
 
     byte[] result;
-    *cast(int *)&result = length;       // jam length
+    *cast(size_t *)&result = length;       // jam length
     (cast(void **)&result)[1] = a;      // jam ptr
     return result;
 }

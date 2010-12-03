@@ -2,6 +2,7 @@
 module std.switcherr;
 
 import std.stdio;
+import std.c.stdio;
 
 class SwitchError : Error
 {
@@ -16,7 +17,7 @@ class SwitchError : Error
         this.filename = filename;
 
         char[] buffer = new char[17 + filename.length + linnum.sizeof * 3 + 1];
-        int len = sprintf(buffer.ptr, "Switch Default %.*s(%u)", filename, linnum);
+        int len = sprintf(buffer.ptr, "Switch Default %.*s(%u)", filename.length, filename.ptr, linnum);
         super(buffer[0..len]);
     }
 
@@ -41,7 +42,7 @@ class SwitchError : Error
 
 extern (C) static void _d_switch_error(char[] filename, uint line)
 {
-    //printf("_d_switch_error(%s, %d)\n", cast(char *)filename, line);
+    //printf("_d_switch_error(%.*s, %d)\n", filename.length, filename.ptr, line);
     SwitchError a = new SwitchError(filename, line);
     //printf("assertion %p created\n", a);
     throw a;

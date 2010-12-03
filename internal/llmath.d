@@ -572,7 +572,33 @@ ulong __LDBLULLNG()
             ret                                 ;
         }
       else version (D_InlineAsm_X86_64)
-            assert(0);
+        asm
+        {   naked                               ;
+            sub         RSP,16                  ;
+            fld         real ptr adjust         ;
+            fcomp                               ;
+            fstsw       AX                      ;
+            fstcw       8[RSP]                  ;
+            fldcw       roundTo0                ;
+            sahf                                ;
+            jae         L1                      ;
+            fld         real ptr adjust         ;
+            fsubp       ST(1), ST               ;
+            fistp       qword ptr [RSP]         ;
+            pop         RAX                     ;
+            fldcw       [RSP]                   ;
+            add         RSP,8                   ;
+            mov         RCX,0x8000_0000         ;
+            shl         RCX,32                  ;
+            add         RAX,RCX                 ;
+            ret                                 ;
+        L1:                                     ;
+            fistp       qword ptr [RSP]         ;
+            pop         RAX                     ;
+            fldcw       [RSP]                   ;
+            add         RSP,8                   ;
+            ret                                 ;
+        }
       else
             static assert(0);
     }

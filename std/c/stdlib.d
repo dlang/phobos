@@ -92,3 +92,6 @@ int mbtowc(wchar_t *pwc, char *s, size_t n);    /// ditto
 int wctomb(char *s, wchar_t wc);        /// ditto
 size_t mbstowcs(wchar_t *pwcs, char *s, size_t n);      /// ditto
 size_t wcstombs(char *s, wchar_t *pwcs, size_t n);      /// ditto
+
+version (linux)
+    const int RAND_MAX = 2147483647;
