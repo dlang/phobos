@@ -31,7 +31,7 @@ nothrow:
  *      The bit number of the first bit set.
  *      The return value is undefined if v is zero.
  */
-pure nothrow int bsf(size_t v);
+pure int bsf(size_t v);
 
 /**
  * Scans the bits in v from the most significant bit
@@ -62,22 +62,22 @@ pure nothrow int bsf(size_t v);
  *  bsf(x21) = 0<br>
  *  bsr(x21) = 5
  */
-pure nothrow int bsr(size_t v);
+pure int bsr(size_t v);
 
 /**
  * Tests the bit.
  */
-pure nothrow int bt(in size_t *p, size_t bitnum);
+pure int bt(in size_t* p, size_t bitnum);
 
 /**
  * Tests and complements the bit.
  */
-int btc(size_t *p, size_t bitnum);
+int btc(size_t* p, size_t bitnum);
 
 /**
  * Tests and resets (sets to 0) the bit.
  */
-int btr(size_t *p, size_t bitnum);
+int btr(size_t* p, size_t bitnum);
 
 /**
  * Tests and sets the bit.
@@ -136,13 +136,13 @@ bt(array, 1) = -1
 array = [0]:x2, [1]:x100
 </pre>
  */
-int bts(size_t *p, size_t bitnum);
+int bts(size_t* p, size_t bitnum);
 
 
 /**
  * Swaps bytes in a 4 byte uint end-to-end, i.e. byte 0 becomes
-        byte 3, byte 1 becomes byte 2, byte 2 becomes byte 1, byte 3
-        becomes byte 0.
+ * byte 3, byte 1 becomes byte 2, byte 2 becomes byte 1, byte 3
+ * becomes byte 0.
  */
 pure uint bswap(uint v);
 
@@ -150,7 +150,7 @@ pure uint bswap(uint v);
 /**
  * Reads I/O port at port_address.
  */
-ubyte  inp(uint port_address);
+ubyte inp(uint port_address);
 
 /**
  * ditto
@@ -160,13 +160,13 @@ ushort inpw(uint port_address);
 /**
  * ditto
  */
-uint   inpl(uint port_address);
+uint inpl(uint port_address);
 
 
 /**
  * Writes and returns value to I/O port at port_address.
  */
-ubyte  outp(uint port_address, ubyte value);
+ubyte outp(uint port_address, ubyte value);
 
 /**
  * ditto
@@ -176,6 +176,6 @@ ushort outpw(uint port_address, ushort value);
 /**
  * ditto
  */
-uint   outpl(uint port_address, uint value);
+uint outpl(uint port_address, uint value);
 
 
