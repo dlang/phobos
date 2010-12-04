@@ -59,6 +59,7 @@ DMD =
 DDOC =
 CFLAGS =
 DFLAGS =
+MODEL = 32
 
 # BUILD can be debug or release, but is unset by default; recursive
 # invocation will set it. See the debug and release targets below.
@@ -96,7 +97,7 @@ endif
 
 # Set CFLAGS
 ifeq ($(CC),cc)
-	CFLAGS += -m32
+	CFLAGS += -m$(MODEL)
 	ifeq ($(BUILD),debug)
 		CFLAGS += -g
 	else
@@ -105,11 +106,11 @@ ifeq ($(CC),cc)
 endif
 
 # Set DFLAGS
-DFLAGS := -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS)
+DFLAGS := -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS) -w -d -m$(MODEL)
 ifeq ($(BUILD),debug)
-	DFLAGS += -w -g -debug -d
+	DFLAGS += -g -debug
 else
-	DFLAGS += -w -O -release -nofloat -d
+	DFLAGS += -O -release -nofloat
 endif
 
 # Set DOTOBJ and DOTEXE

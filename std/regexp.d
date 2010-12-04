@@ -1041,9 +1041,9 @@ private:
  *  index of match if successful, -1 if not found
  */
 
-    public int find(string string)
+    public size_t find(string string)
     {
-        int i = test(string);
+        size_t i = test(string);
         if (i)
             i = pmatch[0].rm_so;
         else
@@ -2487,7 +2487,7 @@ private:
                     base = &buf.data[u2];
                     maxb = b + 1;
                     //bits = (cast(bit*)this.base)[0 .. maxc + 1];
-                    bits.ptr = cast(uint*)this.base;
+                    bits.ptr = cast(size_t*)this.base;
                 }
                 bits.len = maxc + 1;
             }

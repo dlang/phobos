@@ -296,11 +296,17 @@ unittest
 struct BitArray
 {
     size_t len;
-    uint* ptr;
+    size_t* ptr;
+version(X86)
+    enum bitsPerSizeT = 32;
+else version(X86_64)
+    enum bitsPerSizeT = 64;
+else
+    static assert(false, "unknown platform");
 
     const size_t dim()
     {
-        return (len + 31) / 32;
+        return (len + (bitsPerSizeT-1)) / bitsPerSizeT;
     }
 
     @property
@@ -315,17 +321,17 @@ struct BitArray
             if (newlen != len)
             {
                 size_t olddim = dim();
-                size_t newdim = (newlen + 31) / 32;
+                size_t newdim = (newlen + (bitsPerSizeT-1)) / bitsPerSizeT;
 
                 if (newdim != olddim)
                 {
                     // Create a fake array so we can use D's realloc machinery
-                    uint[] b = ptr[0 .. olddim];
+                    auto b = ptr[0 .. olddim];
                     b.length = newdim;                // realloc
                     ptr = b.ptr;
-                    if (newdim & 31)
+                    if (newdim & (bitsPerSizeT-1))
                     {   // Set any pad bits to 0
-                        ptr[newdim - 1] &= ~(~0 << (newdim & 31));
+                        ptr[newdim - 1] &= ~(~0 << (newdim & (bitsPerSizeT-1)));
                     }
                 }
 
@@ -383,7 +389,7 @@ struct BitArray
     {
         BitArray ba;
 
-        uint[] b = ptr[0 .. dim].dup;
+        auto b = ptr[0 .. dim].dup;
         ba.len = len;
         ba.ptr = b.ptr;
         return ba;
@@ -712,7 +718,7 @@ struct BitArray
     }
     body
     {
-        ptr = cast(uint*)v.ptr;
+        ptr = cast(size_t*)v.ptr;
         len = numbits;
     }
 
@@ -773,8 +779,8 @@ struct BitArray
         result.length = len;
         for (size_t i = 0; i < dim; i++)
             result.ptr[i] = ~this.ptr[i];
-        if (len & 31)
-            result.ptr[dim - 1] &= ~(~0 << (len & 31));
+        if (len & (bitsPerSizeT-1))
+            result.ptr[dim - 1] &= ~(~0 << (len & (bitsPerSizeT-1)));
         return result;
     }
 
