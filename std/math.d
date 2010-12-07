@@ -62,11 +62,6 @@ version(unittest) {
     import std.typetuple;
 }
 
-version(GNU){
-    // GDC can't actually do inline asm.
-} else version(D_InlineAsm_X86) {
-    version = Naked_D_InlineAsm_X86;
-}
 version(LDC) {
     import ldc.intrinsics;
 }
@@ -394,7 +389,7 @@ unittest{
 
 real tan(real x) @trusted pure nothrow 
 {
-    version(Naked_D_InlineAsm_X86) {
+    version(D_InlineAsm_X86) {
     asm
     {
         fld     x[EBP]                  ; // load theta
@@ -911,7 +906,7 @@ creal sqrt(creal z) @safe pure nothrow
  */
 real exp(real x) @safe pure nothrow
 {
-    version(Naked_D_InlineAsm_X86)
+    version(D_InlineAsm_X86)
     {
         //  e^^x = 2^^(LOG2E*x)
         // (This is valid because the overflow & underflow limits for exp
@@ -944,7 +939,7 @@ float exp(float x)  @safe pure nothrow   { return exp(cast(real)x); }
  */
 real expm1(real x) @trusted pure nothrow
 {
-    version(Naked_D_InlineAsm_X86) {
+    version(D_InlineAsm_X86) {
         enum { PARAMSIZE = (real.sizeof+3)&(0xFFFF_FFFC) } // always a multiple of 4
         asm {
             /*  expm1() for x87 80-bit reals, IEEE754-2008 conformant.
@@ -1032,7 +1027,7 @@ L_largenegative:
  */
 real exp2(real x) @trusted pure nothrow
 {
-    version(Naked_D_InlineAsm_X86) {
+    version(D_InlineAsm_X86) {
         enum { PARAMSIZE = (real.sizeof+3)&(0xFFFF_FFFC) } // always a multiple of 4
         asm {
             /*  exp2() for x87 80-bit reals, IEEE754-2008 conformant.
