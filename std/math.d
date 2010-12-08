@@ -422,6 +422,8 @@ trigerr:
 
 Lret:
     ;
+    } else version(D_InlineAsm_X86_64) {
+        assert(false, "not implemented");
     } else {
         return core.stdc.math.tanl(x);
     }
@@ -568,6 +570,10 @@ real atan2(real y, real x) @trusted pure nothrow
             fld x;
             fpatan;
         }
+    }
+    else version(D_InlineAsm_X86_64)
+    {
+        assert(false, "not implemented");
     }
     else
     {
@@ -912,6 +918,13 @@ real exp(real x) @safe pure nothrow
         // (This is valid because the overflow & underflow limits for exp
         // and exp2 are so similar).
         return exp2(LOG2E*x);
+    }
+    else version(D_InlineAsm_X86_64)
+    {
+        //  e^^x = 2^^(LOG2E*x)
+        // (This is valid because the overflow & underflow limits for exp
+        // and exp2 are so similar).
+        return exp2(LOG2E*x);
     } else {
         return core.stdc.math.exp(x);
     }
@@ -1008,6 +1021,8 @@ L_largenegative:
             add ESP,12+8;
             ret PARAMSIZE;
         }
+    } else version(D_InlineAsm_X86_64) {
+        assert(false, "not implemented");
     } else {
         return core.stdc.math.expm1(x);
     }
@@ -1109,6 +1124,8 @@ L_was_nan:
             add ESP,12+8;
             ret PARAMSIZE;
         }
+    } else version(D_InlineAsm_X86_64) {
+        assert(false, "not implemented");
     } else {
         return core.stdc.math.exp2(x);
     }
@@ -1821,6 +1838,8 @@ long lrint(real x) @trusted pure nothrow
             fistp n;
         }
         return n;
+    } else version(D_InlineAsm_X86_64) {
+        assert(false, "not implemented");
     } else {
         return core.stdc.math.llrintl(x);
     }
