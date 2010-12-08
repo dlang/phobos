@@ -1965,8 +1965,6 @@ private:
                  // Clear all irrelevant bits
                  and EAX, 0x03D;
             }
-        } else version (PPC) {
-            assert(0, "Not yet supported");
         } else version (SPARC) {
            /*
                int retval;
@@ -1974,7 +1972,8 @@ private:
                return retval;
             */
            assert(0, "Not yet supported");
-        }
+        } else
+            assert(0, "Not yet supported");
     }
     static void resetIeeeFlags()
     {
@@ -2148,18 +2147,18 @@ private:
     // Read from the control register
     static ushort getControlState()
     {
-        short cont;
         version (D_InlineAsm_X86)
         {
+            short cont;
             asm
             {
                 xor EAX, EAX;
                 fstcw cont;
             }
+            return cont;
         }
         else
             assert(0, "Not yet supported");
-        return cont;
     }
     // Set the control register
     static void setControlState(ushort newState)
