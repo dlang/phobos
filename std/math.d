@@ -1952,7 +1952,8 @@ private:
             DIVBYZERO_MASK = 0x040,
             INVALID_MASK   = 0x200
         }
-    }
+    } else
+        static assert(0, "Not implemented");
 private:
     static uint getIeeeFlags()
     {
@@ -2134,30 +2135,45 @@ private:
     // Clear all pending exceptions
     static void clearExceptions()
     {
-        asm
+        version (D_InlineAsm_X86)
         {
-            fclex;
+            asm
+            {
+                fclex;
+            }
         }
+        else
+            assert(0, "Not yet supported");
     }
     // Read from the control register
     static ushort getControlState()
     {
         short cont;
-        asm
+        version (D_InlineAsm_X86)
         {
-            xor EAX, EAX;
-            fstcw cont;
+            asm
+            {
+                xor EAX, EAX;
+                fstcw cont;
+            }
         }
+        else
+            assert(0, "Not yet supported");
         return cont;
     }
     // Set the control register
     static void setControlState(ushort newState)
     {
-        asm
+        version (D_InlineAsm_X86)
         {
-             fclex;
-             fldcw newState;
+            asm
+            {
+                 fclex;
+                 fldcw newState;
+            }
         }
+        else
+            assert(0, "Not yet supported");
     }
 }
 
