@@ -1943,7 +1943,7 @@ private:
             DIVBYZERO_MASK = 0x020,
             INVALID_MASK   = 0xF80 // PowerPC has five types of invalid exceptions.
         }
-    } else version(Sparc) { // SPARC FSR is a 32bit register
+    } else version(SPARC) { // SPARC FSR is a 32bit register
              //(64 bits for Sparc 7 & 8, but high 32 bits are uninteresting).
         enum : int {
             INEXACT_MASK   = 0x020,
@@ -1966,8 +1966,8 @@ private:
             }
         } else version (PPC) {
             assert(0, "Not yet supported");
-        } else {
-           /*   SPARC:
+        } else version (SPARC) {
+           /*
                int retval;
                asm { st %fsr, retval; }
                return retval;
