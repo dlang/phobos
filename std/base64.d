@@ -123,7 +123,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
      */
     @trusted
     pure char[] encode(R1, R2)(in R1 source, R2 buffer) if (isArray!R1 && is(ElementType!R1 : ubyte) &&
-                                                            is(R2 == char[]) && isOutputRange!(R2, char))
+                                                            is(R2 == char[]))
     in
     {
         assert(buffer.length >= encodeLength(source.length), "Insufficient buffer for encoding");
@@ -185,7 +185,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
      */
     char[] encode(R1, R2)(R1 source, R2 buffer) if (!isArray!R1 && isInputRange!R1 &&
                                                     is(ElementType!R1 : ubyte) && hasLength!R1 &&
-                                                    is(R2 == char[]) && isOutputRange!(R2, char))
+                                                    is(R2 == char[]))
     in
     {
         assert(buffer.length >= encodeLength(source.length), "Insufficient buffer for encoding");
@@ -263,7 +263,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
      *  the number of calling put.
      */
     size_t encode(R1, R2)(in R1 source, R2 range) if (isArray!R1 && is(ElementType!R1 : ubyte) &&
-                                                      !is(R2 == char[]) && isOutputRange!(R2, char))
+                                                      !is(R2 == char[]))
     out(result)
     {
         assert(result == encodeLength(source.length), "The number of put is different from the length of Base64");

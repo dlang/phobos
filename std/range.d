@@ -282,6 +282,11 @@ void put(R, E)(ref R r, E e)
         {
             r.put((&e)[0..1]);
         }
+        else
+        {
+            static assert(false,
+                    "Cannot put a "~E.stringof~" into a "~R.stringof);
+        }
     }
     else
     {
@@ -296,6 +301,11 @@ void put(R, E)(ref R r, E e)
             else static if (isInputRange!E && is(typeof(put(r, e.front))))
             {
                 for (; !e.empty; e.popFront()) put(r, e.front);
+            }
+            else
+            {
+                static assert(false,
+                        "Cannot put a "~E.stringof~" into a "~R.stringof);
             }
         }
         else
@@ -354,6 +364,30 @@ unittest
     put(r, 'a');
 }
 
+unittest
+{
+    int[] a = new int[10];
+    static assert(!__traits(compiles, put(a, 1.0L)));
+    static assert( __traits(compiles, put(a, 1)));
+    /*
+     * a[0] = 65;       // OK
+     * a[0] = 'A';      // OK
+     * a[0] = "ABC"[0]; // OK
+     * put(a, "ABC");   // OK
+     */
+    static assert( __traits(compiles, put(a, "ABC")));
+}
+
+unittest
+{
+    char[] a = new char[10];
+    static assert(!__traits(compiles, put(a, 1.0L)));
+    static assert(!__traits(compiles, put(a, 1)));
+    // char[] is NOT output range.
+    static assert(!__traits(compiles, put(a, 'a')));
+    static assert(!__traits(compiles, put(a, "ABC")));
+}
+
 /**
 Returns $(D true) if $(D R) is an output range for elements of type
 $(D E). An output range can be defined functionally as a range that
@@ -371,8 +405,14 @@ unittest
 
     auto app = appender!string();
     string s;
-    static assert(isOutputRange!(Appender!string, string));
-    static assert(isOutputRange!(Appender!string*, string));
+    static assert( isOutputRange!(Appender!string, string));
+    static assert( isOutputRange!(Appender!string*, string));
+    static assert(!isOutputRange!(Appender!string, int));
+    static assert(!isOutputRange!(char[], char));
+    static assert(!isOutputRange!(wchar[], wchar));
+    static assert( isOutputRange!(dchar[], char));
+    static assert( isOutputRange!(dchar[], wchar));
+    static assert( isOutputRange!(dchar[], dchar));
 }
 
 /**
