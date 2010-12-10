@@ -282,6 +282,11 @@ void put(R, E)(ref R r, E e)
         {
             r.put((&e)[0..1]);
         }
+        else
+        {
+            static assert(false,
+                    "Cannot put a "~E.stringof~" into a "~R.stringof);
+        }
     }
     else
     {
@@ -296,6 +301,11 @@ void put(R, E)(ref R r, E e)
             else static if (isInputRange!E && is(typeof(put(r, e.front))))
             {
                 for (; !e.empty; e.popFront()) put(r, e.front);
+            }
+            else
+            {
+                static assert(false,
+                        "Cannot put a "~E.stringof~" into a "~R.stringof);
             }
         }
         else
