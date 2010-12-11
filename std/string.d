@@ -212,7 +212,7 @@ deprecated char* toCharz(char[] s)
 char* toStringz(char[] s)
     in
     {
-        assert(memchr(s.ptr, 0, s.length) == null);
+        //assert(memchr(s.ptr, 0, s.length) == null);
     }
     out (result)
     {

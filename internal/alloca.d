@@ -144,7 +144,7 @@ extern (C) void* __alloca(int nbytes)
         add     RAX,RSP         ; // RAX is now what the new RSP will be.
         jae     Aoverflow       ;
     }
-    version (Win32)
+    version (Win64)
     {
     asm
     {

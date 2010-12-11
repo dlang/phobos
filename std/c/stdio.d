@@ -525,8 +525,8 @@ wchar_t  getwchar_t()           { return fgetwc(stdin); }
 ///
 wchar_t  putwchar_t(wchar_t c)  { return fputwc(c,stdout); }
 ///
-wchar_t  getwc(FILE *fp)        { return fgetwc(fp); }
+wchar_t  getwc(FILE *fp); //        { return fgetwc(fp); }
 ///
-wchar_t  putwc(wchar_t c, FILE *fp)     { return fputwc(c, fp); }
+wchar_t  putwc(wchar_t c, FILE *fp); //     { return fputwc(c, fp); }
 
 int fwide(FILE* fp, int mode);  ///

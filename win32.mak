@@ -86,6 +86,9 @@ SRCS= std\math.d std\stdio.d std\dateparse.d std\date.d std\uni.d std\string.d \
 	std\cover.d \
 	std\file.d \
 	std\math2.d \
+	std\intrinsic.d \
+	std\stdint.d \
+	std\stdarg.d \
 	internal\aaA.d internal\adi.d \
 	internal\aApply.d internal\aApplyR.d internal\memset.d \
 	internal\arraycast.d internal\arraycat.d \
@@ -94,7 +97,12 @@ SRCS= std\math.d std\stdio.d std\dateparse.d std\date.d std\uni.d std\string.d \
 	internal\arrayfloat.d internal\arraydouble.d internal\arrayreal.d \
 	internal\arraybyte.d internal\arrayshort.d internal\arrayint.d \
 	etc\gamma.d \
+	std\c\math.d \
 	std\c\stdarg.d \
+	std\c\stddef.d \
+	std\c\stdio.d \
+	std\c\stdlib.d \
+	std\c\string.d \
 	std\c\windows\com.d \
 	std\c\windows\stat.d \
 	std\c\windows\windows.d \
@@ -341,7 +349,7 @@ unittest : $(SRCS) phobos.lib
 #       dmc unittest.obj -g
 
 cov : $(SRCS) phobos.lib
-	$(DMD) -cov -unittest -ofcov.exe unittest.d $(SRCS) phobos.lib
+	$(DMD) -cov -unittest -ofcov.exe unittest.d -version=Unittest $(SRCS) phobos.lib
 	cov
 
 html : $(DOCS)

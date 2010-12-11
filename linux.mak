@@ -237,7 +237,7 @@ unittest :
 	./unittest
 
 cov : $(SRCS) $(LIB)
-	$(DMD) -cov -unittest -ofcov -m$(MODEL) unittest.d $(SRCS) $(LIB)
+	$(DMD) -m$(MODEL) -cov -unittest -version=Unittest -ofcov unittest.d $(SRCS) $(LIB) -L-ldl
 	./cov
 
 
