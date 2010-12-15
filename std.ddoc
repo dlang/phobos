@@ -177,7 +177,6 @@ NAVIGATION_PHOBOS=
 	$(LI <a href="std_getopt.html" title="Command line options">std.getopt</a>)
 	$(LI <a href="std_gregorian.html" title="Gregorian Calendar">std.gregorian</a>)
 	$(LI <a href="std_intrinsic.html" title="Compiler built in intrinsic functions">std.intrinsic</a>)
-	$(LI <a href="std_iterator.html" title="Defines iterators and ranges">std.iterator</a>)
 	$(LI <a href="std_json.html" title="JSON reader">std.json</a>)
 	$(LI <a href="std_math.html" title="the usual math functions">std.math</a>)
 	$(LI <a href="std_mathspecial.html" title="mathematical special functions">std.mathspecial</a>)
@@ -276,13 +275,17 @@ GLOSSARY = $(LINK2 ../glossary.html#$0, $0)
 
 DDOC_PSYMBOL = <a name="$0"></a>$(U $0)
 DDOC_DECL  = $(DT <div class="d_decl">$0</div>)
-XREF = <a href=std_$1.html#$2>std.$1.$2</a>
+XREF = <a href="std_$1.html#$2">$(D std.$1.$2)</a>
 BUGZILLA = $(LINK2 http://d.puremagic.com/issues/show_bug.cgi?id=$0, Bugzilla $0)
+PRE = <pre>$0</pre>
 PHOBOSSRC=$(LINK2 http://www.dsource.org/projects/phobos/browser/trunk/phobos/$0, $0)
-DRUNTIMESRC=$(LINK2 http://www.dsource.org/projects/phobos/browser/trunk/phobos/$0, $0)
+DRUNTIMESRC=$(LINK2 http://www.dsource.org/projects/druntime/browser/trunk/src/$0, $0)
 
-BOOKTABLE = <table cellspacing=0 cellpadding=5 class=book><caption>$1</caption>$2</table>
-
+BOOKTABLE = <table cellspacing=0 cellpadding=5 valign=top class=book><caption>$1</caption>$2</table>
+TABLE = <table cellspacing=0 cellpadding=5><caption>$1</caption>$2</table>
+TD = <td valign=top>$0</td>
+TDNW = <td valign=top>$0</td>
+SUB = <sub>$0</sub>
 
 COPYRIGHT= Copyright &copy; 1999-$(YEAR) by Digital Mars, All Rights Reserved
 
