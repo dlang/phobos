@@ -340,10 +340,10 @@ real __U64_LDBL()
       else version (D_InlineAsm_X86_64)
         asm
         {   naked                               ;
-            push        RDX                     ;
+            push        RAX                     ;
             and         dword ptr 4[RSP], 0x7FFFFFFF    ;
             fild        qword ptr [RSP]         ;
-            test        RDX,RDX                 ;
+            test        RAX,RAX                 ;
             jns         L1                      ;
             fld         real ptr adjust         ;
             faddp       ST(1), ST               ;
@@ -370,7 +370,14 @@ ulong __ULLNGDBL()
         ret                                     ;
     }
   else version (D_InlineAsm_X86_64)
-        assert(0);
+    asm
+    {   naked                                   ;
+        call __U64_LDBL                         ;
+        sub  RSP,8                              ;
+        fstp double ptr [RSP]                   ;
+        pop  RAX                                ;
+        ret                                     ;
+    }
   else
         static assert(0);
 }
