@@ -5209,7 +5209,10 @@ sort(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
     static if (is(typeof(lessFun(r.front, r.front)) == bool))
     {
         sortImpl!(lessFun, ss)(r);
-        assert(isSorted!lessFun(r), text(Range.stringof, ": ", r));
+        static if(is(typeof(text(r))))
+            assert(isSorted!lessFun(r), text(Range.stringof, ": ", r));
+        else
+            assert(isSorted!lessFun(r), text(Range.stringof, ": <unable to print elements>"));
     }
     else
     {
