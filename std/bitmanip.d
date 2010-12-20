@@ -24,13 +24,17 @@ module std.bitmanip;
 
 private import std.intrinsic;
 
-private template myToString(ulong n, string suffix = n > uint.max ? "UL" : "U")
-{
-    static if (n < 10)
-        enum myToString = cast(char) (n + '0') ~ suffix;
+string myToStringx(ulong n)
+{   enum s = "0123456789";
+    if (n < 10)
+	return s[cast(size_t)n..cast(size_t)n+1];
     else
-        enum myToString = .myToString!(n / 10, "")
-            ~ .myToString!(n % 10, "") ~ suffix;
+	return myToStringx(n / 10) ~ myToStringx(n % 10);
+}
+
+string myToString(ulong n)
+{
+    return myToStringx(n) ~ (n > uint.max ? "UL" : "U");
 }
 
 private template createAccessors(
@@ -73,22 +77,22 @@ private template createAccessors(
             enum result =
             // getter
                 "bool " ~ name ~ "() const { return "
-                ~"("~store~" & "~myToString!(maskAllElse)~") != 0;}\n"
+                ~"("~store~" & "~myToString(maskAllElse)~") != 0;}\n"
             // setter
                 ~"void " ~ name ~ "(bool v){"
-                ~"if (v) "~store~" |= "~myToString!(maskAllElse)~";"
-                ~"else "~store~" &= ~"~myToString!(maskAllElse)~";}\n";
+                ~"if (v) "~store~" |= "~myToString(maskAllElse)~";"
+                ~"else "~store~" &= ~"~myToString(maskAllElse)~";}\n";
         }
         else
         {
             // getter
             enum result = T.stringof~" "~name~"() const { auto result = "
                 "("~store~" & "
-                ~ myToString!(maskAllElse) ~ ") >>"
-                ~ myToString!(offset) ~ ";"
+                ~ myToString(maskAllElse) ~ ") >>"
+                ~ myToString(offset) ~ ";"
                 ~ (T.min < 0
-                   ? "if (result >= " ~ myToString!(signBitCheck)
-                   ~ ") result |= " ~ myToString!(extendSign) ~ ";"
+                   ? "if (result >= " ~ myToString(signBitCheck)
+                   ~ ") result |= " ~ myToString(extendSign) ~ ";"
                    : "")
                 ~ " return cast("~T.stringof~") result;}\n"
             // setter
@@ -96,14 +100,14 @@ private template createAccessors(
                 ~"assert(v >= "~name~"_min); "
                 ~"assert(v <= "~name~"_max); "
                 ~store~" = cast(typeof("~store~"))"
-                " (("~store~" & ~"~myToString!(maskAllElse)~")"
-                " | ((cast(typeof("~store~")) v << "~myToString!(offset)~")"
-                " & "~myToString!(maskAllElse)~"));}\n"
+                " (("~store~" & ~"~myToString(maskAllElse)~")"
+                " | ((cast(typeof("~store~")) v << "~myToString(offset)~")"
+                " & "~myToString(maskAllElse)~"));}\n"
             // constants
                 ~"enum "~T.stringof~" "~name~"_min = cast("~T.stringof~")"
-                ~myToString!(minVal)~"; "
+                ~myToString(minVal)~"; "
                 ~" enum "~T.stringof~" "~name~"_max = cast("~T.stringof~")"
-                ~myToString!(maxVal)~"; ";
+                ~myToString(maxVal)~"; ";
         }
     }
 }
