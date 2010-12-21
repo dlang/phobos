@@ -950,8 +950,35 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
             {   TypeInfo_Struct tis = cast(TypeInfo_Struct)ti;
                 if (tis.xtoString is null)
                     throw new FormatError("Can't convert " ~ tis.toString() ~ " to string: \"string toString()\" not defined");
-                s = tis.xtoString(argptr);
-                argptr += (tis.tsize() + 3) & ~3;
+                version (X86)
+                {   s = tis.xtoString(argptr);
+                    argptr += (tis.tsize() + 3) & ~3;
+                }
+                else version (X86_64)
+                {
+                    void[32] parmn = void; // place to copy struct if passed in regs
+                    void* p;
+                    auto tsize = tis.tsize();
+                    TypeInfo arg1, arg2;
+                    if (!tis.argTypes(arg1, arg2))      // if could be passed in regs
+                    {   assert(tsize <= parmn.length);
+                        p = parmn.ptr;
+                        va_arg(argptr, tis, p);
+                    }
+                    else
+                    {   /* Avoid making a copy of the struct; take advantage of
+                         * it always being passed in memory
+                         */
+                        // The arg may have more strict alignment than the stack
+                        auto talign = tis.talign();
+                        __va_list* ap = cast(__va_list*)argptr;
+                        p = cast(void*)((cast(size_t)ap.stack_args + talign - 1) & ~(talign - 1));
+                        ap.stack_args = cast(void*)(cast(size_t)p + ((tsize + size_t.sizeof - 1) & ~(size_t.sizeof - 1)));
+                    }
+                    s = tis.xtoString(p);
+                }
+                else
+                     static assert(0);
                 goto Lputstr;
             }
 
