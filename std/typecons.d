@@ -44,6 +44,8 @@ import core.memory, core.stdc.stdlib;
 import std.algorithm, std.array, std.conv, std.exception, std.format,
     std.metastrings, std.stdio, std.traits, std.typetuple, std.range;
 
+version(unittest) import core.vararg;
+
 /**
 Encapsulates unique ownership of a resource.  Resource of type T is
 deleted at the end of the scope, unless it is transferred.  The

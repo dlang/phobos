@@ -27,10 +27,10 @@ module std.string;
 //debug=string;     // uncomment to turn on debugging printf's
 
 private import core.exception : onRangeError;
-import core.stdc.stdio, core.stdc.stdlib,
+import core.vararg, core.stdc.stdio, core.stdc.stdlib,
     core.stdc.string, std.algorithm, std.array,
     std.conv, std.ctype, std.encoding, std.exception, std.format,
-    std.metastrings, std.range, std.regex, std.stdarg, std.stdio, std.traits,
+    std.metastrings, std.range, std.regex, std.stdio, std.traits,
     std.typetuple, std.uni, std.utf;
 
 public import std.algorithm : startsWith, endsWith;

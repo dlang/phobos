@@ -1057,7 +1057,7 @@ private:
     {
         debug(regexp) printf("regexp.find.unittest()\n");
 
-        int i;
+        size_t i;
         RegExp r = new RegExp("abc", null);
         i = r.find("xabcy");
         assert(i == 1);
@@ -2160,7 +2160,7 @@ public bool test(string s)
 
     int parsePiece()
     {
-        uint offset;
+        size_t offset;
         uint len;
         uint n;
         uint m;
@@ -2248,7 +2248,7 @@ public bool test(string s)
             {   op = REnmq; // minimal munch version
                 p++;
             }
-            len = buf.offset - offset;
+            len = cast(uint)(buf.offset - offset);
             buf.spread(offset, 1 + uint.sizeof * 3);
             buf.data[offset] = op;
             uint* puint = cast(uint *)&buf.data[offset + 1];
@@ -2269,7 +2269,7 @@ public bool test(string s)
 
     int parseAtom()
     {   ubyte op;
-        uint offset;
+        size_t offset;
         rchar c;
 
         //printf("parseAtom() '%.*s'\n", pattern[p .. pattern.length]);
@@ -2508,7 +2508,7 @@ private:
         int c2;
         uint i;
         uint cmax;
-        uint offset;
+        size_t offset;
 
         cmax = 0x7F;
         p++;

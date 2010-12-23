@@ -24,7 +24,6 @@
 
 module std.stream;
 
-import std.conv;
 
 /* Class structure:
  *  InputStream       interface for reading
@@ -72,11 +71,12 @@ enum SeekPos {
 }
 
 private {
+  import std.conv;
   import std.format;
   import std.system;    // for Endian enumeration
   import std.intrinsic; // for bswap
   import std.utf;
-  import std.stdarg;
+  import core.vararg;
 }
 
 version (Windows) {

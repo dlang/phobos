@@ -21,6 +21,7 @@
  */
 module std.traits;
 import std.typetuple;
+import core.vararg;
 
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
 // Functions

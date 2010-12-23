@@ -75,6 +75,7 @@ a = boxArray(arg_types, arg_data);
  */
 module std.boxer;
 
+import core.vararg;
 private import std.format;
 private import std.string;
 private import std.utf;

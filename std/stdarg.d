@@ -14,15 +14,7 @@
  */
 module std.stdarg;
 
-alias void* va_list;
+pragma(msg, "std.stdarg is deprecated.  You should import core.vararg instead.");
 
-template va_arg(T)
-{
-    T va_arg(ref va_list _argptr)
-    {
-        T arg = *cast(T*)_argptr;
-        _argptr = _argptr + ((T.sizeof + int.sizeof - 1) & ~(int.sizeof - 1));
-        return arg;
-    }
-}
+public import core.vararg;
 

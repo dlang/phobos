@@ -579,7 +579,7 @@ else
     {
         debug(bitarray) printf("BitArray.sort.unittest\n");
 
-        __gshared uint x = 0b1100011000;
+        __gshared size_t x = 0b1100011000;
         __gshared BitArray ba = { 10, &x };
         ba.sort;
         for (size_t i = 0; i < 6; i++)
@@ -768,7 +768,7 @@ else
         BitArray a; a.init(ba);
         void[] v = cast(void[])a;
 
-        assert(v.length == a.dim * uint.sizeof);
+        assert(v.length == a.dim * size_t.sizeof);
     }
 
     /***************************************

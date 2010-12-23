@@ -38,7 +38,7 @@ private
 class OutBuffer
 {
     ubyte data[];
-    uint offset;
+    size_t offset;
 
     invariant()
     {
@@ -190,7 +190,7 @@ class OutBuffer
      * Append nbytes of 0 to the internal buffer.
      */
 
-    void fill0(uint nbytes)
+    void fill0(size_t nbytes)
     {
         reserve(nbytes);
         data[offset .. offset + nbytes] = 0;
@@ -201,7 +201,7 @@ class OutBuffer
      * 0-fill to align on power of 2 boundary.
      */
 
-    void alignSize(uint alignsize)
+    void alignSize(size_t alignsize)
     in
     {
         assert(alignsize && (alignsize & (alignsize - 1)) == 0);
@@ -211,9 +211,8 @@ class OutBuffer
         assert((offset & (alignsize - 1)) == 0);
     }
     body
-    {   uint nbytes;
-
-        nbytes = offset & (alignsize - 1);
+    {
+        auto nbytes = offset & (alignsize - 1);
         if (nbytes)
             fill0(alignsize - nbytes);
     }
@@ -235,7 +234,7 @@ class OutBuffer
     void align4()
     {
         if (offset & 3)
-        {   uint nbytes = (4 - offset) & 3;
+        {   auto nbytes = (4 - offset) & 3;
             fill0(nbytes);
         }
     }
@@ -257,13 +256,11 @@ class OutBuffer
     void vprintf(string format, va_list args)
     {
         char[128] buffer;
-        char* p;
-        uint psize;
         int count;
 
         auto f = toStringz(format);
-        p = buffer.ptr;
-        psize = buffer.length;
+        auto p = buffer.ptr;
+        auto psize = buffer.length;
         for (;;)
         {
             version(Win32)
@@ -328,7 +325,7 @@ class OutBuffer
             reserve(nbytes);
 
             // This is an overlapping copy - should use memmove()
-            for (uint i = offset; i > index; )
+            for (size_t i = offset; i > index; )
             {
                 --i;
                 data[i + nbytes] = data[i];

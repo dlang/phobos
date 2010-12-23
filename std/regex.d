@@ -453,7 +453,7 @@ Returns the number of parenthesized captures
 
     int parsePiece(String)(in String pattern, ref size_t p, OutBuffer buf)
     {
-        uint offset;
+        size_t offset;
         uint len;
         uint n;
         uint m;
@@ -541,7 +541,7 @@ Returns the number of parenthesized captures
             {   op = REnmq;     // minimal munch version
                 p++;
             }
-            len = buf.offset - offset;
+            len = cast(uint)(buf.offset - offset);
             buf.spread(offset, 1 + uint.sizeof * 3);
             buf.data[offset] = op;
             uint* puint = cast(uint *)&buf.data[offset + 1];
@@ -563,7 +563,7 @@ Returns the number of parenthesized captures
     int parseAtom(String)(in String pattern, ref size_t p, OutBuffer buf)
     {
         ubyte op;
-        uint offset;
+        size_t offset;
         E c;
 
         //printf("parseAtom() '%.*s'\n", pattern[p .. pattern.length]);
@@ -786,7 +786,7 @@ Returns the number of parenthesized captures
                 base = &buf.data[u2];
                 maxb = b + 1;
                 //bits = (cast(bit*)this.base)[0 .. maxc + 1];
-                bits.ptr = cast(uint*)this.base;
+                bits.ptr = cast(size_t*)this.base;
             }
             bits.len = maxc + 1;
         }
@@ -805,7 +805,7 @@ Returns the number of parenthesized captures
         int c;
         int c2;
         uint i;
-        uint offset;
+        size_t offset;
 
         uint cmax = 0x7F;
         p++;

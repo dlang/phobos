@@ -20,7 +20,7 @@ module std.format;
 
 import core.stdc.stdio, core.stdc.stdlib, core.stdc.string;
 import std.algorithm, std.array, std.bitmanip, std.conv,
-    std.ctype, std.exception, std.functional, std.range, std.stdarg,
+    std.ctype, std.exception, std.functional, std.range, core.vararg,
     std.string, std.system, std.traits, std.typecons, std.typetuple,
     std.utf;
 version(unittest) {
@@ -2867,6 +2867,10 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
           return m;
         }
 
+        /* p = pointer to the first element in the array 
+         * len = number of elements in the array 
+         * valti = type of the elements 
+         */
         void putArray(void* p, size_t len, TypeInfo valti)
         {
           //printf("\nputArray(len = %u), tsize = %u\n", len, valti.tsize());
@@ -2882,7 +2886,16 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
           while (len--)
           {
             //doFormat(putc, (&valti)[0 .. 1], p);
-            argptr = p;
+            version(X86)
+                argptr = p;
+            else version(X86_64)
+            {
+                __va_list va; 
+                va.stack_args = p; 
+                argptr = &va;
+            }
+            else
+                static assert(false, "unsupported platform");
             formatArg('s');
 
             p += tsize;
@@ -2907,21 +2920,44 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
             {
                 if (comma) putc(',');
                 comma = true;
-                // the key comes before the value
-                ubyte* key = &fakevalue - long.sizeof;
+                void *pkey = &fakevalue; 
+                version (X86) 
+                    pkey -= long.sizeof; 
+                else version(X86_64)
+                    pkey -= 16;
+                else static assert(false, "unsupported platform");
 
-                //doFormat(putc, (&keyti)[0..1], key);
-                argptr = key;
+                // the key comes before the value
+                auto keysize = keyti.tsize;
+                version (X86) 
+                    auto keysizet = (keysize + size_t.sizeof - 1) & ~(size_t.sizeof - 1); 
+                else 
+                    auto keysizet = (keysize + 15) & ~(15); 
+                
+                void* pvalue = pkey + keysizet; 
+                
+                //doFormat(putc, (&keyti)[0..1], pkey); 
+                version (X86) 
+                    argptr = pkey; 
+                else 
+                {   __va_list va; 
+                    va.stack_args = pkey; 
+                    argptr = &va; 
+                }
                 ti = keyti;
                 m = getMan(keyti);
                 formatArg('s');
 
                 putc(':');
-                auto keysize = keyti.tsize;
-                keysize = (keysize + 3) & ~3;
-                ubyte* value = key + keysize;
-                //doFormat(putc, (&valti)[0..1], value);
-                argptr = value;
+                //doFormat(putc, (&valti)[0..1], pvalue);
+                version (X86) 
+                    argptr = pvalue; 
+                else 
+                {   __va_list va2; 
+                    va2.stack_args = pvalue; 
+                    argptr = &va2; 
+                }
+
                 ti = valti;
                 m = getMan(valti);
                 formatArg('s');
@@ -3070,8 +3106,10 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
                 goto Lcomplex;
 
             case Mangle.Tsarray:
-                putArray(argptr, (cast(TypeInfo_StaticArray)ti).len,
-                        (cast(TypeInfo_StaticArray)ti).next);
+                version (X86) 
+                    putArray(argptr, (cast(TypeInfo_StaticArray)ti).len, (cast(TypeInfo_StaticArray)ti).next); 
+                else 
+                    putArray((cast(__va_list*)argptr).stack_args, (cast(TypeInfo_StaticArray)ti).len, (cast(TypeInfo_StaticArray)ti).next);
                 return;
 
             case Mangle.Tarray:
@@ -3163,8 +3201,36 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
                 if (tis.xtoString is null)
                     throw new FormatError("Can't convert " ~ tis.toString()
                             ~ " to string: \"string toString()\" not defined");
-                s = tis.xtoString(argptr);
-                argptr += (tis.tsize() + 3) & ~3;
+                version(X86)
+                {
+                    s = tis.xtoString(argptr);
+                    argptr += (tis.tsize() + 3) & ~3;
+                }
+                else version (X86_64) 
+                { 
+                    void[32] parmn = void; // place to copy struct if passed in regs 
+                    void* p; 
+                    auto tsize = tis.tsize(); 
+                    TypeInfo arg1, arg2; 
+                    if (!tis.argTypes(arg1, arg2))      // if could be passed in regs 
+                    {   assert(tsize <= parmn.length); 
+                        p = parmn.ptr; 
+                        va_arg(argptr, tis, p); 
+                    } 
+                    else 
+                    {   /* Avoid making a copy of the struct; take advantage of 
+                         * it always being passed in memory 
+                         */ 
+                        // The arg may have more strict alignment than the stack 
+                        auto talign = tis.talign(); 
+                        __va_list* ap = cast(__va_list*)argptr; 
+                        p = cast(void*)((cast(size_t)ap.stack_args + talign - 1) & ~(talign - 1)); 
+                        ap.stack_args = cast(void*)(cast(size_t)p + ((tsize + size_t.sizeof - 1) & ~(size_t.sizeof - 1))); 
+                    } 
+                    s = tis.xtoString(p); 
+                } 
+                else 
+                     static assert(0); 
                 goto Lputstr;
             }
 
@@ -3301,8 +3367,8 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
     for (int j = 0; j < arguments.length; )
     {
         ti = arguments[j++];
-        //printf("test1: '%.*s' %d\n", ti.classinfo.name,
-        //ti.classinfo.name.length); ti.print();
+        //printf("arg[%d]: '%.*s' %d\n", j, ti.classinfo.name.length, ti.classinfo.name.ptr, ti.classinfo.name.length);
+        //ti.print();
 
         flags = 0;
         precision = 0;

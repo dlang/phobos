@@ -233,6 +233,49 @@ $(ROOT)/%$(DOTOBJ) : %.c
 $(LIB) : $(OBJS) $(ALL_D_FILES) $(DRUNTIME)
 	$(DMD) $(DFLAGS) -lib -of$@ $(DRUNTIME) $(D_FILES) $(OBJS)
 
+ifeq ($(MODEL),64)
+DISABLED_TESTS =        \
+	std/algorithm   \
+	std/base64      \
+	std/boxer       \
+	std/complex     \
+	std/concurrency \
+	std/conv        \
+	std/datetime    \
+	std/demangle    \
+	std/file        \
+	std/format      \
+	std/math        \
+	std/mathspecial \
+	std/mmfile      \
+	std/numeric     \
+	std/outbuffer   \
+	std/random      \
+	std/range       \
+	std/regex       \
+	std/regexp      \
+	std/signals     \
+	std/stdio       \
+	std/stream      \
+	std/string      \
+	std/uri         \
+	std/variant     \
+	std/zlib        \
+	std/internal/math/biguintcore   \
+	std/internal/math/biguintnoasm  \
+	std/internal/math/gammafunction \
+	std/internal/math/errorfunction
+
+DISABLED_OPT_TESTS = \
+	std/date        \
+	std/encoding    \
+	std/getopt      \
+	std/utf
+
+$(addprefix $(ROOT)/unittest/,$(DISABLED_TESTS) $(DISABLED_OPT_TESTS)) :
+	@echo Testing $@ - disabled
+endif
+
 $(ROOT)/unittest/%$(DOTEXE) : %.d $(LIB) $(ROOT)/emptymain.d
 	@echo Testing $@
 	@$(DMD) $(DFLAGS) -unittest $(LINKOPTS) $(subst /,$(PATHSEP),"-of$@") \
