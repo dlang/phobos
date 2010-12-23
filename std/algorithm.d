@@ -117,52 +117,23 @@ struct Map(alias fun, Range) if (isInputRange!(Unqual!Range))
     alias fun _fun;
     alias typeof({ return _fun(.ElementType!(R).init); }()) ElementType;
     R _input;
-    Unqual!ElementType _cache;
 
     static if (isBidirectionalRange!(R))
     {
-    // Using a second cache would lead to at least 1 extra function evaluation
-    // and wasted space when 99% of the time this range will only be iterated
-    // over in the forward direction.  Use a bool to determine whether cache
-    // is front or back instead.
-        bool cacheIsBack_;
-
-        private void fillCacheBack()
-        {
-            if (!_input.empty) _cache = _fun(_input.back);
-            cacheIsBack_ = true;
-        }
-
         @property ElementType back()
         {
-            if (!cacheIsBack_)
-            {
-                fillCacheBack();
-            }
-            return _cache;
+            return _fun(_input.back);
         }
 
         void popBack()
         {
-            _input.popBack;
-            fillCacheBack();
-        }
-    }
-
-    private void fillCache()
-    {
-        if (!_input.empty) _cache = _fun(_input.front);
-
-        static if(isBidirectionalRange!(R))
-        {
-            cacheIsBack_ = false;
+            _input.popBack();
         }
     }
 
     this(R input)
     {
         _input = input;
-        fillCache;
     }
 
     static if (isInfinite!R)
@@ -180,20 +151,12 @@ struct Map(alias fun, Range) if (isInputRange!(Unqual!Range))
 
     void popFront()
     {
-        _input.popFront;
-        fillCache();
+        _input.popFront();
     }
 
     @property ElementType front()
     {
-        static if (isBidirectionalRange!(R))
-        {
-            if (cacheIsBack_)
-            {
-                fillCache();
-            }
-        }
-        return _cache;
+        return _fun(_input.front);
     }
 
     static if (isRandomAccessRange!R)
