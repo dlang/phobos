@@ -115,7 +115,7 @@ struct Map(alias fun, Range) if (isInputRange!(Unqual!Range))
 {
     alias Unqual!Range R;
     alias fun _fun;
-    alias typeof({ return _fun(.ElementType!(R).init); }()) ElementType;
+    alias typeof(fun(.ElementType!R.init)) ElementType;
     R _input;
 
     static if (isBidirectionalRange!(R))
@@ -145,9 +145,9 @@ struct Map(alias fun, Range) if (isInputRange!(Unqual!Range))
     {
         @property bool empty()
         {
-                return _input.empty;
-            }
+            return _input.empty;
         }
+    }
 
     void popFront()
     {

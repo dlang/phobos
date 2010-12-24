@@ -1272,20 +1272,24 @@ if (isInputRange!Source && /*!isSomeString!Source && */isFloatingPoint!Target)
     // static immutable string infinity = "infinity";
     // static immutable string nans = "nans";
 
+    ConvException bailOut(string f = __FILE__, size_t n = __LINE__)
+        (string msg = null) {
+        if (!msg) msg = "Floating point conversion error";
+        return new ConvException(text(f, ":", n, ": ", msg, " for input \"", p, "\"."));
+    }
+
     for (;;)
     {
-        enforce(!p.empty,
-                new ConvException("error converting input to floating point"));
+        enforce(!p.empty, bailOut());
         if (!isspace(p.front)) break;
         p.popFront();
     }
     char sign = 0;                       /* indicating +                 */
     switch (p.front)
     {
-        case '-': sign++; goto case '+';
-        case '+': p.popFront(); enforce(!p.empty,
-                new ConvException("error converting input to floating point"));
-        default: {}
+    case '-': sign++; goto case '+';
+    case '+': p.popFront(); enforce(!p.empty, bailOut());
+    default: {}
     }
 
     bool isHex = false;
@@ -1369,10 +1373,9 @@ if (isInputRange!Source && /*!isSomeString!Source && */isFloatingPoint!Target)
             }
         }
 
-        enforce(anydigits,
-                new ConvException("Error converting input to floating point"));
+        enforce(anydigits, bailOut());
         enforce(!p.empty && (p.front == 'p' || p.front == 'P'),
-                new ConvException("Floating point parsing: exponent is required"));
+                bailOut("Floating point parsing: exponent is required"));
         char sexp;
         int e;
 

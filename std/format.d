@@ -18,9 +18,9 @@ module std.format;
 
 //debug=format;                // uncomment to turn on debugging printf's
 
-import core.stdc.stdio, core.stdc.stdlib, core.stdc.string;
+import core.stdc.stdio, core.stdc.stdlib, core.stdc.string, core.vararg;
 import std.algorithm, std.array, std.bitmanip, std.conv,
-    std.ctype, std.exception, std.functional, std.range, core.vararg,
+    std.ctype, std.exception, std.functional, std.math, std.range, 
     std.string, std.system, std.traits, std.typecons, std.typetuple,
     std.utf;
 version(unittest) {
@@ -401,13 +401,14 @@ formattedRead(s, "%s!%s:%s", &a, &b, &c);
 assert(a == "hello" && b == 124 && c == 34.5);
 ----
  */
-void formattedRead(R, Char, S...)(ref R r, const(Char)[] fmt, S args)
+uint formattedRead(R, Char, S...)(ref R r, const(Char)[] fmt, S args)
 {
     auto spec = FormatSpec!Char(fmt);
     static if (!S.length)
     {
         spec.readUpToNextSpec(r);
         enforce(spec.trailing.empty);
+        return 0;
     }
     else
     {
@@ -425,6 +426,11 @@ void formattedRead(R, Char, S...)(ref R r, const(Char)[] fmt, S args)
         }
 
         skipUnstoredFields();
+        if (r.empty)
+        {
+            // Input is empty, nothing to read
+            return 0;
+        }
         alias typeof(*args[0]) A;
         static if (isTuple!A)
         {
@@ -439,8 +445,19 @@ void formattedRead(R, Char, S...)(ref R r, const(Char)[] fmt, S args)
         {
             *args[0] = unformatValue!(A)(r, spec);
         }
-        return formattedRead(r, spec.trailing, args[1 .. $]);
+        return 1 + formattedRead(r, spec.trailing, args[1 .. $]);
     }
+}
+
+unittest
+{
+    string s = " 1.2 3.4 ";
+    double x, y, z;
+    assert(formattedRead(s, " %s %s %s ", &x, &y, &z) == 2);
+    assert(s.empty);
+    assert(x == 1.2);
+    assert(y == 3.4);
+    assert(isnan(z));
 }
 
 /**

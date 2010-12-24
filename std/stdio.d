@@ -547,7 +547,7 @@ file handle. Throws on error.
         }
         else
         {
-            static assert(off_t.sizeof == 8);
+            //static assert(off_t.sizeof == 8);
             errnoEnforce(fseeko(p.handle, offset, origin) == 0,
                     "Could not seek in file `"~p.name~"'");
         }
@@ -823,12 +823,11 @@ with every line.  */
         }
     }
 
-    size_t readf(Data...)(in char[] format, Data data)
+    uint readf(Data...)(in char[] format, Data data)
     {
         assert(isOpen);
         auto input = LockingTextReader(this);
-        formattedRead(input, format, data);
-        return 1;
+        return formattedRead(input, format, data);
     }
 
     unittest
@@ -1620,7 +1619,7 @@ unittest
 /**
  * Formatted read one line from stdin.
  */
-void readf(A...)(in char[] format, A args)
+uint readf(A...)(in char[] format, A args)
 {
     return stdin.readf(format, args);
 }
