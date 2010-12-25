@@ -1111,7 +1111,8 @@ void formatValue(Writer, T, Char)(Writer w, T val,
 if (isSomeString!T && !isStaticArray!T)
 {
     enforce(f.spec == 's');
-    auto s = val[0 .. f.precision < $ ? f.precision : $];
+    StringTypeOf!T val2 = val;		// for `alias this`
+    auto s = val2[0 .. f.precision < $ ? f.precision : $];
     if (!f.flDash)
     {
         // right align
@@ -1361,7 +1362,7 @@ if (isPointer!T && !isInputRange!T)
    Objects are formatted by calling $(D toString).
  */
 void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
-if (is(T == class) && !isInputRange!T)
+if (!isSomeString!T && is(T == class) && !isInputRange!T)
 {
     // TODO: Change this once toString() works for shared objects.
     static assert(!is(T == shared), "unable to format shared objects");

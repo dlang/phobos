@@ -3091,6 +3091,18 @@ unittest
 }
 version (unittest) private template Intify(T) { alias int Intify; }
 
+/*
+*/
+template StringTypeOf(T) if (isSomeString!T)
+{
+	static if (is(T : const(char[])))
+		alias string StringTypeOf;
+	else static if (is(T : const(wchar[])))
+		alias wstring StringTypeOf;
+	else
+		alias dstring StringTypeOf;
+}
+
 /**
 Returns the inferred type of the loop variable when a variable of type T
 is iterated over using a $(D foreach) loop with a single loop variable and
