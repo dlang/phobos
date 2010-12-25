@@ -3095,12 +3095,75 @@ version (unittest) private template Intify(T) { alias int Intify; }
 */
 template StringTypeOf(T) if (isSomeString!T)
 {
-	static if (is(T : const(char[])))
-		alias string StringTypeOf;
-	else static if (is(T : const(wchar[])))
-		alias wstring StringTypeOf;
-	else
-		alias dstring StringTypeOf;
+    static if (is(T == class) || is(T == struct))
+    {
+        static if (is(T : const(char[])))
+        {
+            static if (is(T : char[]))
+                alias char[] StringTypeOf;
+            else static if (is(T : immutable(char[])))
+                alias immutable(char)[] StringTypeOf;
+            else
+                alias const(char)[] StringTypeOf;
+        }
+        else static if (is(T : const(wchar[])))
+        {
+            static if (is(T : wchar[]))
+                alias wchar[] StringTypeOf;
+            else static if (is(T : immutable(wchar[])))
+                alias immutable(wchar)[] StringTypeOf;
+            else
+                alias const(wchar)[] StringTypeOf;
+        }
+        else
+        {
+            static if (is(T : dchar[]))
+                alias dchar[] StringTypeOf;
+            else static if (is(T : immutable(dchar[])))
+                alias immutable(dchar)[] StringTypeOf;
+            else
+                alias const(dchar)[] StringTypeOf;
+        }
+    }
+    else
+    {
+        alias T StringTypeOf;
+    }
+}
+unittest
+{
+    class C(Char, int n)
+    {
+        static if (n==0) Char[]            val;
+        static if (n==1) const(Char)[]     val;
+        static if (n==2) const(Char[])     val;
+        static if (n==3) immutable(Char)[] val;
+        static if (n==4) immutable(Char[]) val;
+        alias val this;
+    }
+    struct S(Char, int n)
+    {
+        static if (n==0) Char[]            val;
+        static if (n==1) const(Char)[]     val;
+        static if (n==2) const(Char[])     val;
+        static if (n==3) immutable(Char)[] val;
+        static if (n==4) immutable(Char[]) val;
+        alias val this;
+    }
+    foreach (Char; TypeTuple!(char, wchar, dchar))
+    {
+        static assert(is(StringTypeOf!(C!(Char, 0)) == Char[]));
+        static assert(is(StringTypeOf!(C!(Char, 1)) == const(Char)[]));
+        static assert(is(StringTypeOf!(C!(Char, 2)) == const(Char)[]));     // cannot get exact string type
+        static assert(is(StringTypeOf!(C!(Char, 3)) == immutable(Char)[]));
+        static assert(is(StringTypeOf!(C!(Char, 4)) == immutable(Char)[])); // cannot get exact string type
+        
+        static assert(is(StringTypeOf!(S!(Char, 0)) == Char[]));
+        static assert(is(StringTypeOf!(S!(Char, 1)) == const(Char)[]));
+        static assert(is(StringTypeOf!(S!(Char, 2)) == const(Char)[]));     // cannot get exact string type
+        static assert(is(StringTypeOf!(S!(Char, 3)) == immutable(Char)[]));
+        static assert(is(StringTypeOf!(S!(Char, 4)) == immutable(Char)[])); // cannot get exact string type
+    }
 }
 
 /**
