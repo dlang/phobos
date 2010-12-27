@@ -782,11 +782,24 @@ done.
         if(_data.capacity < newCapacity)
         {
             // need to increase capacity
-            auto bi = GC.qalloc(newCapacity * T.sizeof, (typeid(T[]).next.flags & 1) ? 0 : GC.BlkAttr.NO_SCAN);
-            _data.capacity = bi.size / T.sizeof;
-            if(_data.arr.length)
-                memcpy(bi.base, _data.arr.ptr, _data.arr.length * T.sizeof);
-            _data.arr = (cast(Unqual!(T)*)bi.base)[0.._data.arr.length];
+            immutable len = _data.arr.length;
+            immutable growsize = (newCapacity - len) * T.sizeof;
+            auto u = GC.extend(_data.arr.ptr, growsize, growsize);
+            if(u)
+            {
+                // extend worked, update the capacity
+                _data.capacity = u / T.sizeof;
+            }
+            else
+            {
+                // didn't work, must reallocate
+                auto bi = GC.qalloc(newCapacity * T.sizeof, (typeid(T[]).next.flags & 1) ? 0 : GC.BlkAttr.NO_SCAN);
+                _data.capacity = bi.size / T.sizeof;
+                if(len)
+                    memcpy(bi.base, _data.arr.ptr, len * T.sizeof);
+                _data.arr = (cast(Unqual!(T)*)bi.base)[0..len];
+                // leave the old data, for safety reasons
+            }
         }
     }
 
