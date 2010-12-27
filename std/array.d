@@ -808,6 +808,49 @@ Returns the managed array.
         return cast(typeof(return))(_data ? _data.arr : null);
     }
 
+    // ensure we can add nelems elements, resizing as necessary
+    private void ensureAddable(size_t nelems)
+    {
+        if(!_data)
+            _data = new Data;
+        immutable len = _data.arr.length;
+        immutable reqlen = len + nelems;
+        if (reqlen > _data.capacity)
+        {
+            // Time to reallocate.
+            // We need to almost duplicate what's in druntime, except we
+            // have better access to the capacity field.
+            auto newlen = newCapacity(reqlen);
+            // first, try extending the current block
+            auto u = GC.extend(_data.arr.ptr, nelems * T.sizeof, (newlen - len) * T.sizeof);
+            if(u)
+            {
+                // extend worked, update the capacity
+                _data.capacity = u / T.sizeof;
+            }
+            else
+            {
+                // didn't work, must reallocate
+                auto bi = GC.qalloc(newlen * T.sizeof, (typeid(T[]).next.flags & 1) ? 0 : GC.BlkAttr.NO_SCAN);
+                _data.capacity = bi.size / T.sizeof;
+                if(len)
+                    memcpy(bi.base, _data.arr.ptr, len * T.sizeof);
+                _data.arr = (cast(Unqual!(T)*)bi.base)[0..len];
+                // leave the old data, for safety reasons
+            }
+        }
+    }
+
+    private static size_t newCapacity(size_t newlength)
+    {
+        long mult = 100 + (1000L) / (bsr(newlength * T.sizeof) + 1);
+        // limit to doubling the length, we don't want to grow too much
+        if(mult > 200)
+            mult = 200;
+        auto newext = cast(size_t)((newlength * mult + 99) / 100);
+        return newext > newlength ? newext : newlength;
+    }
+
 /**
 Appends one item to the managed array.
  */
@@ -823,50 +866,11 @@ Appends one item to the managed array.
         }
         else
         {
-            if (!_data)
-                _data = new Data;
+            ensureAddable(1);
             immutable len = _data.arr.length;
-            if (len >= _data.capacity)
-            {
-                // Time to reallocate.
-                // We need to almost duplicate what's in druntime, except we
-                // have better access to the capacity field.
-                auto newlen = newCapacity(len + 1);
-                // first, try extending the current block
-                auto u = GC.extend(_data.arr.ptr, T.sizeof, (newlen - len) * T.sizeof);
-                if(u)
-                {
-                    // extend worked, update the capacity
-                    _data.capacity = u / T.sizeof;
-                    _data.arr = _data.arr.ptr[0..len + 1];
-                }
-                else
-                {
-                    // didn't work, must reallocate
-                    auto bi = GC.qalloc(newlen * T.sizeof, (typeid(T[]).next.flags & 1) ? 0 : GC.BlkAttr.NO_SCAN);
-                    _data.capacity = bi.size / T.sizeof;
-                    if(len)
-                        memcpy(bi.base, _data.arr.ptr, len * T.sizeof);
-                    _data.arr = (cast(Unqual!(T)*)bi.base)[0..len + 1];
-                    // leave the old data, for safety reasons
-                }
-            }
-            else
-            {
-                _data.arr = _data.arr.ptr[0 .. len + 1];
-            }
             _data.arr.ptr[len] = cast(Unqual!T)item;
+            _data.arr = _data.arr.ptr[0 .. len + 1];
         }
-    }
-
-    private static size_t newCapacity(size_t newlength)
-    {
-        long mult = 100 + (1000L) / (bsr(newlength * T.sizeof) + 1);
-        // limit to doubling the length, we don't want to grow too much
-        if(mult > 200)
-            mult = 200;
-        auto newext = cast(size_t)((newlength * mult + 99) / 100);
-        return newext > newlength ? newext : newlength;
     }
 
     // Const fixing hack.
@@ -888,10 +892,22 @@ Appends an entire range to the managed array.
                      !is(Range == Unqual!(T)[])) &&
                    is(typeof(items.length) == size_t))
         {
+            // optimization -- if this type is something other than a string,
+            // and we are adding exactly one element, call the version for one
+            // element.
+            static if(!isSomeChar!T)
+            {
+                if(items.length == 1)
+                {
+                    put(items.front);
+                    return;
+                }
+            }
+
             // make sure we have enough space, then add the items
-            immutable len = _data ? _data.arr.length : 0;
+            ensureAddable(items.length);
+            immutable len = _data.arr.length;
             immutable newlen = len + items.length;
-            reserve(newlen);
             _data.arr = _data.arr.ptr[0..newlen];
             static if(is(typeof(_data.arr[] = items)))
             {
@@ -900,7 +916,7 @@ Appends an entire range to the managed array.
             else
             {
                 for(size_t i = len; !items.empty; items.popFront(), ++i)
-                    _data.arr.ptr[i] = items.front;
+                    _data.arr.ptr[i] = cast(Unqual!T)items.front;
             }
         }
         else
