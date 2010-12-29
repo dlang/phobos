@@ -115,7 +115,9 @@ struct Map(alias fun, Range) if (isInputRange!(Unqual!Range))
 {
     alias Unqual!Range R;
     alias fun _fun;
-    alias typeof(fun(.ElementType!R.init)) ElementType;
+    // Uncomment this to reveal a @@@BUG@@@ in the compiler
+    //alias typeof(fun(.ElementType!R.init)) ElementType;
+    alias typeof({ return fun(.ElementType!R.init); }()) ElementType;
     R _input;
 
     static if (isBidirectionalRange!(R))
