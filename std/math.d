@@ -76,6 +76,8 @@ version(GNU){
     // GDC can't actually do inline asm.
 } else version(D_InlineAsm_X86) {
     version = Naked_D_InlineAsm_X86;
+} else version(D_InlineAsm_X86_64) {
+    version = Naked_D_InlineAsm_X86_64;
 } else version(LDC) {
     import ldc.intrinsics;
     version(X86)
@@ -789,6 +791,8 @@ real exp(real x) {
    // (This is valid because the overflow & underflow limits for exp
    // and exp2 are so similar).
     return exp2(LOG2E*x);
+    } else version(Naked_D_InlineAsm_X86_64) {
+        return exp2(LOG2E*x);
     } else {
         return std.c.math.exp(x);
     }

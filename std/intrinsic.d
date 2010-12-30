@@ -29,7 +29,7 @@ module std.intrinsic;
  *      The bit number of the first bit set.
  *      The return value is undefined if v is zero.
  */
-int bsf(uint v);
+int bsf(size_t v);
 
 /**
  * Scans the bits in v from the most significant bit
