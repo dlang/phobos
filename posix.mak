@@ -242,7 +242,6 @@ DISABLED_TESTS =        \
 	std/concurrency \
 	std/conv        \
 	std/datetime    \
-	std/demangle    \
 	std/file        \
 	std/format      \
 	std/math        \
