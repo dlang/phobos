@@ -20,6 +20,7 @@
  * std.mathspecial. They will be officially deprecated in std.math in DMD2.055.
  * The semantics and names of feqrel and approxEqual will be revised.
  *
+ * Source: $(PHOBOSSRC std/_math.d)
  * Macros:
  *      WIKI = Phobos/StdMath
  *
@@ -77,6 +78,14 @@ version (X86){
 version (X86_64){
     version = X86_Any;
 }
+
+version(D_InlineAsm_X86){
+    version = InlineAsm_X86_Any;
+}
+else version(D_InlineAsm_X86_64){
+    version = InlineAsm_X86_Any;
+}
+
 
 
 
@@ -390,9 +399,18 @@ unittest{
 real tan(real x) @trusted pure nothrow 
 {
     version(D_InlineAsm_X86) {
+        asm
+        {
+            fld     x[EBP]                  ; // load theta
+        } 
+    } else version(D_InlineAsm_X86_64) {
+        asm {
+            fld     x[RBP]                  ; // load theta
+        }
+    }
+    version(InlineAsm_X86_Any) {
     asm
     {
-        fld     x[EBP]                  ; // load theta
         fxam                            ; // test for oddball values
         fstsw   AX                      ;
         sahf                            ;
@@ -422,8 +440,6 @@ trigerr:
 
 Lret:
     ;
-    } else version(D_InlineAsm_X86_64) {
-        assert(false, "not implemented");
     } else {
         return core.stdc.math.tanl(x);
     }
@@ -563,17 +579,13 @@ float atan(float x)  @safe pure nothrow { return atan(cast(real)x); }
  */
 real atan2(real y, real x) @trusted pure nothrow
 {
-    version(D_InlineAsm_X86)
+    version(InlineAsm_X86_Any)
     {
         asm {
             fld y;
             fld x;
             fpatan;
         }
-    }
-    else version(D_InlineAsm_X86_64)
-    {
-        assert(false, "not implemented");
     }
     else
     {
@@ -1213,7 +1225,7 @@ unittest
  */
 creal expi(real y) @trusted pure nothrow
 {
-    version(D_InlineAsm_X86)
+    version(InlineAsm_X86_Any)
     {
         asm
         {
@@ -1577,7 +1589,7 @@ real modf(real x, ref real y) @trusted nothrow { return core.stdc.math.modfl(x,&
  */
 real scalbn(real x, int n) @trusted nothrow
 {
-    version(D_InlineAsm_X86) {
+    version(InlineAsm_X86_Any) {
         // scalbnl is not supported on DMD-Windows, so use asm.
         asm {
             fild n;
@@ -1829,7 +1841,7 @@ real rint(real x) @safe pure nothrow;      /* intrinsic */
  */
 long lrint(real x) @trusted pure nothrow
 {
-    version(D_InlineAsm_X86)
+    version(InlineAsm_X86_Any)
     {
         long n;
         asm
@@ -1838,8 +1850,6 @@ long lrint(real x) @trusted pure nothrow
             fistp n;
         }
         return n;
-    } else version(D_InlineAsm_X86_64) {
-        assert(false, "not implemented");
     } else {
         return core.stdc.math.llrintl(x);
     }
@@ -1984,6 +1994,14 @@ private:
                  // Clear all irrelevant bits
                  and EAX, 0x03D;
             }
+        } else version(D_InlineAsm_X86_64) {
+            asm {
+                 fstsw AX;
+                 // NOTE: If compiler supports SSE2, need to OR the result with
+                 // the SSE2 status register.
+                 // Clear all irrelevant bits
+                 and RAX, 0x03D;
+            }
         } else version (SPARC) {
            /*
                int retval;
@@ -1996,7 +2014,7 @@ private:
     }
     static void resetIeeeFlags()
     {
-        version(D_InlineAsm_X86) {
+        version(InlineAsm_X86_Any) {
             asm {
                 fnclex;
             }
@@ -2153,7 +2171,7 @@ private:
     // Clear all pending exceptions
     static void clearExceptions()
     {
-        version (D_InlineAsm_X86)
+        version (InlineAsm_X86_Any)
         {
             asm
             {
@@ -2176,13 +2194,24 @@ private:
             }
             return cont;
         }
+        else 
+        version (D_InlineAsm_X86_64)
+        {
+            short cont;
+            asm
+            {
+                xor RAX, RAX;
+                fstcw cont;
+            }
+            return cont;
+        }
         else
             assert(0, "Not yet supported");
     }
     // Set the control register
     static void setControlState(ushort newState)
     {
-        version (D_InlineAsm_X86)
+        version (InlineAsm_X86_Any)
         {
             asm
             {
