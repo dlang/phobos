@@ -799,8 +799,8 @@ class TypeInfo_Delegate : TypeInfo
     }
 
     version (X86_64) int argTypes(out TypeInfo arg1, out TypeInfo arg2)
-    {   arg1 = typeid(void*);
-        arg2 = typeid(void*);
+    {   //arg1 = typeid(void*);
+        //arg2 = typeid(void*);
         return 0;
     }
 }
