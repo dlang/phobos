@@ -145,7 +145,7 @@ else version (linux)
         _iobuf* _chain;
         int     _fileno;
         int     _blksize;
-        int     _old_offset;
+        size_t  _old_offset;
         ushort  _cur_column;
         byte    _vtable_offset;
         char[1] _shortbuf;

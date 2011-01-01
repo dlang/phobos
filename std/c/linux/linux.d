@@ -16,6 +16,10 @@ else version (Solaris)
 {
     public import std.c.solaris.solaris;
 }
+else version (OSX)
+{
+    public import std.c.osx.osx;
+}
 else
 {
 public import std.c.linux.linuxextern;
@@ -23,47 +27,41 @@ public import std.c.linux.pthread;
 
 private import std.c.stdio;
 
-version (OSX)
-{
-    alias int time_t;
-    alias int __time_t;
-    alias int pid_t;
-    alias long off_t;
-    alias long blkcnt_t;
-    alias int blksize_t;
-    alias int dev_t;
-    alias uint gid_t;
-    alias uint id_t;
-    alias ulong ino64_t;
-    alias uint ino_t;
-    alias ushort mode_t;
-    alias ushort nlink_t;
-    alias uint uid_t;
-    alias uint fsblkcnt_t;
-    alias uint fsfilcnt_t;
-
-    struct timespec
-    {
-	time_t tv_sec;
-	int tv_nsec;
-    }
-}
-
 version (linux)
 {
-    alias int __time_t;
+    version (X86)
+    {
+	alias int __time_t;
+	alias int off_t;
+	alias uint ino_t;
+
+	struct timespec
+	{
+	    __time_t tv_sec;    /* seconds   */
+	    int tv_nsec;        /* nanosecs. */
+	}
+    }
+    else version (X86_64)
+    {
+	alias long __time_t;
+	alias long off_t;
+	alias ulong ino_t;
+
+	struct timespec
+	{
+	    __time_t tv_sec;    /* seconds   */
+	    long tv_nsec;       /* nanosecs. */
+	}
+    }
+    else
+	static assert(0);
     alias int pid_t;
-    alias int off_t;
     alias uint mode_t;
+    alias long off64_t;
+    alias ulong ino64_t;
 
     alias uint uid_t;
     alias uint gid_t;
-
-    struct timespec
-    {
-        __time_t tv_sec;    /* seconds   */
-        int tv_nsec;        /* nanosecs. */
-    }
 }
 
 static if (size_t.sizeof == 4)
@@ -112,34 +110,6 @@ version(linux)
     }
 }
 
-version(OSX)
-{
-    enum : int
-    {
-        SIGABRT   = 6,
-        SIGALRM   = 14,
-        SIGBUS    = 10,
-        SIGCHLD   = 20,
-        SIGCONT   = 19,
-        SIGFPE    = 8,
-        SIGHUP    = 1,
-        SIGILL    = 4,
-        SIGINT    = 2,
-        SIGKILL   = 9,
-        SIGPIPE   = 13,
-        SIGQUIT   = 3,
-        SIGSEGV   = 11,
-        SIGSTOP   = 17,
-        SIGTERM   = 15,
-        SIGTSTP   = 18,
-        SIGTTIN   = 21,
-        SIGTTOU   = 22,
-        SIGUSR1   = 30,
-        SIGUSR2   = 31,
-        SIGURG    = 16,
-    }
-}
-
 
 version (linux)
 {
@@ -156,86 +126,64 @@ enum
 }
 }
 
-version (OSX)
-{
-enum
-{
-    O_RDONLY = 0,
-    O_WRONLY = 1,
-    O_RDWR = 2,
-
-    O_CREAT = 0x200,
-    O_EXCL  = 0x800,
-    O_TRUNC = 0x400,
-    O_APPEND = 8,
-    O_NONBLOCK = 4,
-    O_SYNC = 0x80,
-    O_SHLOCK = 0x10,
-    O_EXLOCK = 0x20,
-    O_ASYNC = 0x40,
-    O_NOFOLLOW = 0x100,
-    O_EVTONLY = 0x8000,
-    O_NOCTTY = 0x20000,
-    O_DIRECTORY = 0x100000,
-    O_SYMLINK   = 0x200000,
-}
-}
 
 version (linux)
 {
-    struct struct_stat	// distinguish it from the stat() function
+    version (X86)
     {
-	ulong st_dev;	/// device
-	ushort __pad1;
-	uint st_ino;	/// file serial number
-	uint st_mode;	/// file mode
-	uint st_nlink;	/// link count
-	uint st_uid;	/// user ID of file's owner
-	uint st_gid;	/// user ID of group's owner
-	ulong st_rdev;	/// if device then device number
-	ushort __pad2;
-	int st_size;	/// file size in bytes
-	int st_blksize;	/// optimal I/O block size
-	int st_blocks;	/// number of allocated 512 byte blocks
-	int st_atime;
-	uint st_atimensec;
-	int st_mtime;
-	uint st_mtimensec;
-	int st_ctime;
-	uint st_ctimensec;
+	struct struct_stat	// distinguish it from the stat() function
+	{
+	    ulong st_dev;	/// device
+	    ushort __pad1;
+	    uint st_ino;	/// file serial number
+	    uint st_mode;	/// file mode
+	    uint st_nlink;	/// link count
+	    uint st_uid;	/// user ID of file's owner
+	    uint st_gid;	/// user ID of group's owner
+	    ulong st_rdev;	/// if device then device number
+	    ushort __pad2;
+	    int st_size;	/// file size in bytes
+	    int st_blksize;	/// optimal I/O block size
+	    int st_blocks;	/// number of allocated 512 byte blocks
+	    int st_atime;
+	    uint st_atimensec;
+	    int st_mtime;
+	    uint st_mtimensec;
+	    int st_ctime;
+	    uint st_ctimensec;
 
-	uint __unused4;
-	uint __unused5;
+	    uint __unused4;
+	    uint __unused5;
+	}
+	static assert(struct_stat.sizeof == 88);
     }
-}
-version (OSX)
-{
-    struct struct_stat
+    else version (X86_64)
     {
-	dev_t st_dev;
-	ino_t st_ino;
-	mode_t st_mode;
-	nlink_t st_nlink;
-	uid_t st_uid;
-	gid_t st_gid;
-	dev_t st_rdev;
-	timespec st_atimespec;
-	timespec st_mtimespec;
-	timespec st_ctimespec;
-	off_t st_size;
-	blkcnt_t st_blocks;
-	blksize_t st_blksize;
-	uint st_flags;
-	uint st_gen;
-	int st_lspare;
-	long st_qspare[2];
+	struct struct_stat
+	{
+	    ulong st_dev;
+	    ulong st_ino;
+	    ulong st_nlink;
+	    uint  st_mode;
+	    uint  st_uid;
+	    uint  st_gid;
+	    int   __pad0;
+	    ulong st_rdev;
+	    long  st_size;
+	    long  st_blksize;
+	    long  st_blocks;
+	    long  st_atime;
+	    ulong st_atimensec;
+	    long  st_mtime;
+	    ulong st_mtimensec;
+	    long  st_ctime;
+	    ulong st_ctimensec;
+	    long[3]  __unused;
+	}
+	static assert(struct_stat.sizeof == 144);
     }
-}
-
-unittest
-{
-    version (linux) assert(struct_stat.sizeof == 88);
-    version (OSX)   assert(struct_stat.sizeof == 96);
+    else
+	static assert(0);
 }
 
 enum : int
@@ -384,31 +332,6 @@ version (linux)
     }
 }
 
-version (OSX)
-{
-    enum
-    {	MAP_SHARED	= 1,
-	MAP_PRIVATE	= 2,
-	MAP_FIXED	= 0x10,
-	MAP_FILE	= 0,
-	MAP_ANON	= 0x1000,
-	MAP_NORESERVE	= 0x40,
-
-	MAP_RENAME	= 0x20,
-	MAP_RESERVED0080 = 0x80,
-	MAP_NOEXTEND	= 0x100,
-	MAP_HASSEMAPHORE = 0x200,
-	MAP_NOCACHE	= 0x400,
-    }
-
-    // Values for msync()
-
-    enum
-    {	MS_ASYNC	= 1,
-	MS_INVALIDATE	= 2,
-	MS_SYNC		= 0x10,
-    }
-}
 
 // Values for mlockall()
 
@@ -656,11 +579,7 @@ extern (C)
     /* from semaphore.h
      */
 
-  version (OSX)
-  {
-    alias int sem_t;
-  }
-  else version (linux)
+  version (linux)
   {
     struct sem_t
     {
