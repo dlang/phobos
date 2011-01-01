@@ -167,7 +167,7 @@ static void trace_place(Symbol *s, uint count)
         uint u;
 
         //printf("\t%.*s\t%u\n", s.Sident, count);
-        fprintf(fpdef,"\t%.*s\n", s.Sident);
+        fprintf(fpdef,"\t%.*s\n", s.Sident.length, s.Sident.ptr);
         s.Sflags |= SFvisited;
 
         // Compute number of items in array
@@ -191,7 +191,7 @@ static void trace_place(Symbol *s, uint count)
         qsort(base, num, (SymPair *).sizeof, &sympair_cmp);
 
         //for (u = 0; u < num; u++)
-            //printf("\t\t%.*s\t%u\n", base[u].sym.Sident, base[u].count);
+            //printf("\t\t%.*s\t%u\n", base[u].sym.Sident.length, base[u].sym.Sident.ptr, base[u].count);
 
         // Place symbols
         for (u = 0; u < num; u++)
@@ -245,13 +245,13 @@ static void trace_report(Symbol* s)
         count = 0;
         for (sp = s.Sfanin; sp; sp = sp.next)
         {
-            fprintf(fplog,"\t%5d\t%.*s\n", sp.count, sp.sym.Sident);
+            fprintf(fplog,"\t%5d\t%.*s\n", sp.count, sp.sym.Sident.length, sp.sym.Sident.ptr);
             count += sp.count;
         }
-        fprintf(fplog,"%.*s\t%u\t%lld\t%lld\n",s.Sident,count,s.totaltime,s.functime);
+        fprintf(fplog,"%.*s\t%u\t%lld\t%lld\n",s.Sident.length,s.Sident.ptr,count,s.totaltime,s.functime);
         for (sp = s.Sfanout; sp; sp = sp.next)
         {
-            fprintf(fplog,"\t%5d\t%.*s\n",sp.count,sp.sym.Sident);
+            fprintf(fplog,"\t%5d\t%.*s\n",sp.count,sp.sym.Sident.length, sp.sym.Sident.ptr);
         }
         s = s.Sr;
     }
@@ -866,9 +866,10 @@ void _trace_pro_n()
         inc     RCX                     ;
         add     9*8[RSP],RAX            ;
         dec     RAX                     ;
-        mov     RSI,RCX                 ;
-        mov     RDI,RAX                 ;
+        push    RCX                     ;
+        push    RAX                     ;
         call    trace_pro               ;
+        add     RSP,16                  ;
         pop     R11                     ;
         pop     R10                     ;
         pop     R8                      ;
@@ -987,6 +988,7 @@ else version (D_InlineAsm_X86_64)
         {
             asm
             {   naked                   ;
+                rdtsc                   ;
                 mov   [RDI],EAX         ;
                 mov   4[RDI],EDX        ;
                 ret                     ;
