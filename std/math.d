@@ -1034,7 +1034,75 @@ L_largenegative:
             ret PARAMSIZE;
         }
     } else version(D_InlineAsm_X86_64) {
-        assert(false, "not implemented");
+        enum { PARAMSIZE = real.sizeof } 
+        asm
+        { 
+            /*  expm1() for x87 80-bit reals, IEEE754-2008 conformant. 
+             * Author: Don Clugston. 
+             * 
+             *    expm1(x) = 2^(rndint(y))* 2^(y-rndint(y)) - 1 where y = LN2*x. 
+             *    = 2rndy * 2ym1 + 2rndy - 1, where 2rndy = 2^(rndint(y)) 
+             *     and 2ym1 = (2^(y-rndint(y))-1). 
+             *    If 2rndy  < 0.5*real.epsilon, result is -1. 
+             *    Implementation is otherwise the same as for exp2() 
+             */ 
+            naked; 
+            fld real ptr [RSP+8] ; // x 
+            mov AX, [RSP+8+8]; // AX = exponent and sign 
+            sub RSP, 24;       // Create scratch space on the stack 
+            // [RSP,RSP+2] = scratchint 
+            // [RSP+4..+6, +8..+10, +10] = scratchreal 
+            // set scratchreal mantissa = 1.0 
+            mov dword ptr [RSP+8], 0; 
+            mov dword ptr [RSP+8+4], 0x80000000; 
+            and AX, 0x7FFF; // drop sign bit 
+            cmp AX, 0x401D; // avoid InvalidException in fist 
+            jae L_extreme; 
+            fldl2e; 
+            fmul ; // y = x*log2(e) 
+            fist dword ptr [RSP]; // scratchint = rndint(y) 
+            fisub dword ptr [RSP]; // y - rndint(y) 
+            // and now set scratchreal exponent 
+            mov EAX, [RSP]; 
+            add EAX, 0x3fff; 
+            jle short L_largenegative; 
+            cmp EAX,0x8000; 
+            jge short L_largepositive; 
+            mov [RSP+8+8],AX; 
+            f2xm1; // 2^(y-rndint(y)) -1 
+            fld real ptr [RSP+8] ; // 2^rndint(y) 
+            fmul ST(1), ST; 
+            fld1; 
+            fsubp ST(1), ST; 
+            fadd; 
+            add RSP,24; 
+            ret PARAMSIZE; 
+           
+L_extreme: // Extreme exponent. X is very large positive, very 
+            // large negative, infinity, or NaN. 
+            fxam; 
+            fstsw AX; 
+            test AX, 0x0400; // NaN_or_zero, but we already know x!=0 
+            jz L_was_nan;  // if x is NaN, returns x 
+            test AX, 0x0200; 
+            jnz L_largenegative; 
+L_largepositive: 
+            // Set scratchreal = real.max. 
+            // squaring it will create infinity, and set overflow flag. 
+            mov word  ptr [RSP+8+8], 0x7FFE; 
+            fstp ST(0), ST; 
+            fld real ptr [RSP+8];  // load scratchreal 
+            fmul ST(0), ST;        // square it, to create havoc! 
+L_was_nan: 
+            add RSP,24; 
+            ret PARAMSIZE; 
+L_largenegative: 
+            fstp ST(0), ST; 
+            fld1; 
+            fchs; // return -1. Underflow flag is not set. 
+            add RSP,24; 
+            ret PARAMSIZE; 
+        } 
     } else {
         return core.stdc.math.expm1(x);
     }
@@ -1137,7 +1205,87 @@ L_was_nan:
             ret PARAMSIZE;
         }
     } else version(D_InlineAsm_X86_64) {
-        assert(false, "not implemented");
+        enum { PARAMSIZE = real.sizeof } 
+        asm { 
+            /*  exp2() for x87 80-bit reals, IEEE754-2008 conformant. 
+             * Author: Don Clugston. 
+             * 
+             * exp2(x) = 2^(rndint(x))* 2^(y-rndint(x)) 
+             * The trick for high performance is to avoid the fscale(28cycles on core2), 
+             * frndint(19 cycles), leaving f2xm1(19 cycles) as the only slow instruction. 
+             * 
+             * We can do frndint by using fist. BUT we can't use it for huge numbers, 
+             * because it will set the Invalid Operation flag is overflow or NaN occurs. 
+             * Fortunately, whenever this happens the result would be zero or infinity. 
+             * 
+             * We can perform fscale by directly poking into the exponent. BUT this doesn't 
+             * work for the (very rare) cases where the result is subnormal. So we fall back 
+             * to the slow method in that case. 
+             */ 
+            naked; 
+            fld real ptr [RSP+8] ; // x 
+            mov AX, [RSP+8+8]; // AX = exponent and sign 
+            sub RSP, 24; // Create scratch space on the stack 
+            // [RSP,RSP+2] = scratchint 
+            // [RSP+4..+6, +8..+10, +10] = scratchreal 
+            // set scratchreal mantissa = 1.0 
+            mov dword ptr [RSP+8], 0; 
+            mov dword ptr [RSP+8+4], 0x80000000; 
+            and AX, 0x7FFF; // drop sign bit 
+            cmp AX, 0x401D; // avoid InvalidException in fist 
+            jae L_extreme; 
+            fist dword ptr [RSP]; // scratchint = rndint(x) 
+            fisub dword ptr [RSP]; // x - rndint(x) 
+            // and now set scratchreal exponent 
+            mov EAX, [RSP]; 
+            add EAX, 0x3fff; 
+            jle short L_subnormal; 
+            cmp EAX,0x8000; 
+            jge short L_overflow; 
+            mov [RSP+8+8],AX; 
+L_normal: 
+            f2xm1; 
+            fld1; 
+            fadd; // 2^(x-rndint(x)) 
+            fld real ptr [RSP+8] ; // 2^rndint(x) 
+            add RSP,24; 
+            fmulp ST(1), ST; 
+            ret PARAMSIZE; 
+     
+L_subnormal: 
+            // Result will be subnormal. 
+            // In this rare case, the simple poking method doesn't work. 
+            // The speed doesn't matter, so use the slow fscale method. 
+            fild dword ptr [RSP];  // scratchint 
+            fld1; 
+            fscale; 
+            fstp real ptr [RSP+8]; // scratchreal = 2^scratchint 
+            fstp ST(0),ST;         // drop scratchint 
+            jmp L_normal; 
+     
+L_extreme: // Extreme exponent. X is very large positive, very 
+            // large negative, infinity, or NaN. 
+            fxam; 
+            fstsw AX; 
+            test AX, 0x0400; // NaN_or_zero, but we already know x!=0 
+            jz L_was_nan;  // if x is NaN, returns x 
+            // set scratchreal = real.min 
+            // squaring it will return 0, setting underflow flag 
+            mov word  ptr [RSP+8+8], 1; 
+            test AX, 0x0200; 
+            jnz L_waslargenegative; 
+L_overflow: 
+            // Set scratchreal = real.max. 
+            // squaring it will create infinity, and set overflow flag. 
+            mov word  ptr [RSP+8+8], 0x7FFE; 
+L_waslargenegative: 
+            fstp ST(0), ST; 
+            fld real ptr [RSP+8];  // load scratchreal 
+            fmul ST(0), ST;        // square it, to create havoc! 
+L_was_nan: 
+            add RSP,24; 
+            ret PARAMSIZE; 
+        } 
     } else {
         return core.stdc.math.exp2(x);
     }
