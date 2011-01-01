@@ -2,6 +2,7 @@
 /*
  * Placed in public domain.
  * Written by Hauke Duden and Walter Bright
+ * Source: $(PHOBOSSRC std/_stdarg.d)
  */
 
 /* This is for use with variable argument lists with extern(D) linkage. */

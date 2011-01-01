@@ -1,4 +1,7 @@
 
+/**
+ * Source: $(PHOBOSSRC std/_math.d)
+ */
 module std.array;
 
 private import std.c.stdio;

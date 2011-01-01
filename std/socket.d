@@ -30,6 +30,7 @@
  * Notes: For Win32 systems, link with ws2_32.lib.
  * Example: See /dmd/samples/d/listener.d.
  * Authors: Christopher E. Miller
+ * Source: $(PHOBOSSRC std/_socket.d)
  * Macros:
  *      WIKI=Phobos/StdSocket
  */

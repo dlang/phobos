@@ -26,6 +26,7 @@
  * The garbage collector normally works behind the scenes without needing any
  * specific interaction. These functions are for advanced applications that
  * benefit from tuning the operation of the collector.
+ * Source: $(PHOBOSSRC std/_gc.d)
  * Macros:
  *      WIKI=Phobos/StdGc
  */

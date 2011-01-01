@@ -12,6 +12,7 @@
  * in supporting documentation.  Author makes no representations about
  * the suitability of this software for any purpose. It is provided
  * "as is" without express or implied warranty.
+ * Source: $(PHOBOSSRC std/_math2.d)
  */
 
 module std.math2;

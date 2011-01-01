@@ -7,6 +7,7 @@
  *      $(LINK2 http://www.boost.org/libs/bind/bind.html, boost::bind)
  * Authors: Tomasz Stachowiak
  * Date: November 28, 2006
+ * Source: $(PHOBOSSRC std/_bind.d)
  * Macros:
  *      WIKI = Phobos/StdBind
  * Copyright:

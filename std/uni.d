@@ -10,6 +10,7 @@
 /**
  * Simple Unicode character classification functions.
  * For ASCII classification, see $(LINK2 std_ctype.html, std.ctype).
+ * Source: $(PHOBOSSRC std/_uni.d)
  * Macros:
  *      WIKI=Phobos/StdUni
  * References:

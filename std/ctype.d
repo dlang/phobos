@@ -10,6 +10,7 @@
  * References:
  *      $(LINK2 http://www.digitalmars.com/d/ascii-table.html, ASCII Table),
  *      $(LINK2 http://en.wikipedia.org/wiki/Ascii, Wikipedia)
+ * Source: $(PHOBOSSRC std/_ctype.d)
  * Macros:
  *      WIKI=Phobos/StdCtype
  */

@@ -29,6 +29,7 @@ COPYRIGHT:      Public Domain
 
  * BUGS:        Only works on x86 CPUs
  *
+ * Source: $(PHOBOSSRC std/_cpuid.d)
  * Macros:
  *      WIKI = Phobos/StdCpuid
  *      COPYRIGHT = Public Domain

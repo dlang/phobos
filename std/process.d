@@ -27,6 +27,7 @@
  */
 
 /**
+ * Source: $(PHOBOSSRC std/_process.d)
  * Macros:
  *      WIKI=Phobos/StdProcess
  */

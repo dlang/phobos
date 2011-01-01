@@ -58,6 +58,7 @@ a = boxArray(arg_types, arg_data);
  *      $(LI $(BUGZILLA 309))
  *      $(LI $(BUGZILLA 1968))
  *      )
+ * Source: $(PHOBOSSRC std/_boxer.d)
  * Macros:
  *      WIKI=Phobos/StdBoxer
  */

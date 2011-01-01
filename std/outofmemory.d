@@ -1,4 +1,5 @@
 /**
+ * Source: $(PHOBOSSRC std/_outofmemory.d)
  * Macros:
  *      WIKI=Phobos/StdOutOfMemory
  * Copyright:

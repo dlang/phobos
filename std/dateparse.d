@@ -21,6 +21,9 @@
  *     distribution.
  */
 
+/**
+ * Source: $(PHOBOSSRC std/_dateparse.d)
+ */
 
 module std.dateparse;
 

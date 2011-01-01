@@ -5,6 +5,7 @@
  * Templates with which to extract information about
  * types at compile time.
  *
+ * Source: $(PHOBOSSRC std/_traits.d)
  * Macros:
  *      WIKI = Phobos/StdTraits
  * Copyright:

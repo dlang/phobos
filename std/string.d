@@ -12,6 +12,7 @@
  * original string (or slices of it) can be returned. If any modifications
  * are done, the returned string is a copy.
  *
+ * Source: $(PHOBOSSRC std/_string.d)
  * Macros:
  *      WIKI = Phobos/StdString
  * Copyright:

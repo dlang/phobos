@@ -41,6 +41,7 @@
  *      Matthew Wilson
  * References:
  *      $(LINK2 http://www.$(OPENRJ).org/, Open-RJ)
+ * Source: $(PHOBOSSRC std/_openrj.d)
  * Macros:
  *      WIKI=Phobos/StdOpenrj
  *      OPENRJ=openrj

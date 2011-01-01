@@ -4,6 +4,7 @@
  * Information about the target operating system, environment, and CPU
  * Authors: Walter Bright, http://www.digitalmars.com
  * License: Public Domain
+ * Source: $(PHOBOSSRC std/_system.d)
  * Macros:
  *      WIKI = Phobos/StdSystem
  */

@@ -5,6 +5,7 @@
  * Both std.c.stdio and std.stream are publicly imported by std.cstream.
  * Authors: Ben Hinkle
  * License: Public Domain
+ * Source: $(PHOBOSSRC std/_cstream.d)
  * Macros:
  *      WIKI=Phobos/StdCstream
  */

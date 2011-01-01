@@ -111,8 +111,9 @@
         <td>the largest unsigned integral type
         </table>
 
- * Authors: Walter Bright, www.digitalmars.com
+ * Authors: Walter Bright, http://www.digitalmars.com
  * License: Public Domain
+ * Source: $(PHOBOSSRC std/_stdint.d)
  * Macros:
  *      WIKI=Phobos/StdStdint
  */

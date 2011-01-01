@@ -3,6 +3,10 @@
 // Written by Walter Bright
 // Convert Win32 error code to string
 
+/**
+ * Source: $(PHOBOSSRC std/_syserror.d)
+ */
+
 module std.syserror;
 
 // Deprecated - instead use std.windows.syserror.sysErrorString()

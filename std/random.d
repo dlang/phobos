@@ -1,6 +1,7 @@
 // Written in the D programming language
 
 /**
+ * Source: $(PHOBOSSRC std/_random.d)
  * Macros:
  *      WIKI = Phobos/StdRandom
  */

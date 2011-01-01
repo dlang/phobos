@@ -1,6 +1,7 @@
 // Written in the D programming language
 
 /**
+ * Source: $(PHOBOSSRC std/_stream.d)
  * Macros:
  *      WIKI = Phobos/StdStream
  */

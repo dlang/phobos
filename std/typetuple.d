@@ -14,6 +14,7 @@
  *      $(LINK2 http://www.amazon.com/exec/obidos/ASIN/0201704315/ref=ase_classicempire/102-2957199-2585768,
  *              Modern C++ Design),
  *       Andrei Alexandrescu (Addison-Wesley Professional, 2001)
+ * Source: $(PHOBOSSRC std/_typetuple.d)
  * Macros:
  *      WIKI = Phobos/StdTypeTuple
  * Copyright:

@@ -94,6 +94,7 @@
  *
  * References:
  *      $(LINK2 http://en.wikipedia.org/wiki/Regular_expressions, Wikipedia)
+ * Source: $(PHOBOSSRC std/_regexp.d)
  * Macros:
  *      WIKI = StdRegexp
  *      DOLLAR = $

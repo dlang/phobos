@@ -1,5 +1,9 @@
 // Written in the D programming language
 
+/**
+ * Source: $(PHOBOSSRC std/_moduleinit.d)
+ */
+
 module std.moduleinit;
 
 //debug = 1;

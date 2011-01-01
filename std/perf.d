@@ -15,15 +15,16 @@
  * Copyright (C) 2004 by Digital Mars
  * All Rights Reserved
  * Written by Matthew Wilson
- * www.digitalmars.com
+ * http://www.digitalmars.com
  * License for redistribution is by either the Artistic License in artistic.txt,
  * or the LGPL
  *
  * ////////////////////////////////////////////////////////////////////////// */
 
 
-/** \file std/perf.d This file contains platform-independent performance classes */
-
+/** \file std/perf.d This file contains platform-independent performance classes
+ * Source: $(PHOBOSSRC std/_math.d)
+ */
 module std.perf;
 
 /// \brief Performance counter scope class generating template

@@ -45,6 +45,7 @@ $(I UnsignedInteger):
     $(I DecimalDigit)
     $(I DecimalDigit) $(I UnsignedInteger)
  * </pre>
+ * Source: $(PHOBOSSRC std/_conv.d)
  * Macros:
  *      WIKI=Phobos/StdConv
  */

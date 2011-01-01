@@ -5,6 +5,7 @@
  * This module implements the workhorse functionality for string and
  * I/O formatting.  It's comparable to C99's vsprintf().
  *
+ * Source: $(PHOBOSSRC std/_format.d)
  * Macros:
  *      WIKI = Phobos/StdFormat
  */

@@ -1,5 +1,6 @@
 
 /**
+ * Source: $(PHOBOSSRC std/_compiler.d)
  * Macros:
  *      WIKI = Phobos/StdCompiler
  */

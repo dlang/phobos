@@ -4,6 +4,7 @@
 /**
  * Templates with which to do compile time manipulation of strings.
  *
+ * Source: $(PHOBOSSRC std/_metastrings.d)
  * Macros:
  *      WIKI = Phobos/StdMetastrings
  * Copyright:

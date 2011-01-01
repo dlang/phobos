@@ -3,6 +3,7 @@
 /**
  * Boilerplate:
  *      $(std_boilerplate.html)
+ * Source: $(PHOBOSSRC std/_outbuffer.d)
  * Macros:
  *      WIKI = Phobos/StdOutbuffer
  * Copyright:

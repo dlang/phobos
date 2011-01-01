@@ -16,6 +16,7 @@
  *      $(LI $(BUGZILLA 2138))
  *      )
  *
+ * Source: $(PHOBOSSRC std/_zip.d)
  * Macros:
  *      WIKI = Phobos/StdZip
  */

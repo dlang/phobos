@@ -6,6 +6,7 @@
  * License:
  *      Public Domain
  *
+ * Source: $(PHOBOSSRC std/_zlib.d)
  * Macros:
  *      WIKI = Phobos/StdZlib
  */

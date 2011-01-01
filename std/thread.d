@@ -30,6 +30,7 @@
  * has a unique instance of class $(B Thread) associated with it.
  * It is important to use the $(B Thread) class to create and manage
  * threads as the garbage collector needs to know about all the threads.
+ * Source: $(PHOBOSSRC std/_thread.d)
  * Macros:
  *      WIKI=Phobos/StdThread
  */

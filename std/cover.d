@@ -28,6 +28,7 @@
  *      $(LI the execution counters are 32 bits in size, and can overflow)
  *      $(LI inline asm statements are not counted)
  *      )
+ * Source: $(PHOBOSSRC std/_cover.d)
  * Macros:
  *      WIKI = Phobos/StdCover
  */

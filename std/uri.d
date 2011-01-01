@@ -32,6 +32,7 @@
  * See_Also:
  *      $(LINK2 http://www.ietf.org/rfc/rfc3986.txt, RFC 3986)<br>
  *      $(LINK2 http://en.wikipedia.org/wiki/Uniform_resource_identifier, Wikipedia)
+ * Source: $(PHOBOSSRC std/_uri.d)
  * Macros:
  *      WIKI = Phobos/StdUri
  */

@@ -45,6 +45,7 @@
  *
  *      Not safe for multiple threads operating on the same signals
  *      or slots.
+ * Source: $(PHOBOSSRC std/_signals.d)
  * Macros:
  *      WIKI = Phobos/StdSignals
  *      SIGNALS=signals

@@ -24,6 +24,7 @@
 
 /**
  * This module provides OS specific helper function for threads support
+ * Source: $(PHOBOSSRC std/_thread_helper.d)
  */
 
 module std.thread_helper;

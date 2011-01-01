@@ -1,4 +1,8 @@
 
+/**
+ * Source: $(PHOBOSSRC std/_switcherr.d)
+ */
+
 module std.switcherr;
 
 import std.stdio;

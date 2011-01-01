@@ -25,6 +25,7 @@
 
 /**
  * Read and write memory mapped files.
+ * Source: $(PHOBOSSRC std/_mmfile.d)
  * Macros:
  *      WIKI=Phobos/StdMmfile
  */

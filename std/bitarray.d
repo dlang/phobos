@@ -1,4 +1,5 @@
 /***********************
+ * Source: $(PHOBOSSRC std/_bitarray.d)
  * Macros:
  *      WIKI = StdBitarray
  */

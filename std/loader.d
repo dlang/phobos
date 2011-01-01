@@ -38,6 +38,7 @@
 
 /** \file D/std/loader.d This file contains the \c D standard library
  * executable module loader library, and the ExeModule class.
+ * Source: $(PHOBOSSRC std/_loader.d)
  */
 
 /* ////////////////////////////////////////////////////////////////////////// */
