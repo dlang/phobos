@@ -1,15 +1,8 @@
 // Written in the D programming language.
 
 /**
- * This module is a set of types and functions for converting any object (value
- * or heap) into a generic box type, allowing the user to pass that object
- * around without knowing what's in the box, and then allowing him to recover
- * the value afterwards.
- *
- * WARNING:
- *
- * This module is being phased out. You may want to use $(LINK2
- * std_variant.html,std.variant) for new code.
+ * $(RED This module has been deprecated. You may want to use $(LINK2
+ * std_variant.html,std.variant) for new code.)
  *
  * Example:
 ---
