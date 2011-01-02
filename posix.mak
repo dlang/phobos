@@ -154,14 +154,14 @@ MAIN = $(ROOT)/emptymain.d
 
 # Stuff in std/
 STD_MODULES = $(addprefix std/, algorithm array base64 bigint bitmanip	\
-        boxer compiler complex concurrency container contracts conv		\
-        cpuid cstream ctype date datetime datebase dateparse demangle	\
+        compiler complex concurrency container contracts conv cpuid		\
+        cstream ctype date datetime datebase dateparse demangle			\
         encoding exception file format functional getopt gregorian		\
-        intrinsic json loader math mathspecial md5 metastrings mmfile   \
-        numeric outbuffer path perf process random range regex regexp   \
-        signals socket socketstream stdint stdio stdiobase stream       \
-        string syserror system traits typecons typetuple uni uri utf    \
-        variant	xml zip zlib)
+        intrinsic json loader math mathspecial md5 metastrings mmfile	\
+        numeric outbuffer path perf process random range regex regexp	\
+        signals socket socketstream stdint stdio stdiobase stream		\
+        string syserror system traits typecons typetuple uni uri utf	\
+        variant xml zip zlib)
 
 # Other D modules that aren't under std/
 EXTRA_MODULES := $(addprefix std/c/, stdarg stdio) $(addprefix etc/c/,	\
@@ -237,7 +237,6 @@ ifeq ($(MODEL),64)
 DISABLED_TESTS =        \
 	std/algorithm   \
 	std/base64      \
-	std/boxer       \
 	std/complex     \
 	std/concurrency \
 	std/conv        \
