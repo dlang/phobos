@@ -439,7 +439,8 @@ public:
    Assignment from another tuple. Each element of the source must be
    implicitly assignable to the respective element of the target.
  */
-    void opAssign(R)(R rhs) if (isTuple!R)
+    void opAssign(R)(R rhs)
+        if (isTuple!R && allSatisfy!(isIdentityAssignable, Types))
     {
         static assert(field.length == rhs.field.length,
                       "Length mismatch in attempting to assign a "
@@ -524,6 +525,11 @@ private template Identity(alias T)
     alias T Identity;
 }
 
+template isIdentityAssignable(T)
+{
+    enum isIdentityAssignable = isAssignable!(T, T);
+}
+
 unittest
 {
     {
@@ -550,7 +556,7 @@ unittest
         nosh[0] = 5;
         nosh[1] = 0;
         assert(nosh[0] == 5 && nosh[1] == 0);
-        assert(nosh.toString == "Tuple!(int,real)(5, 0)", nosh.toString);
+        assert(nosh.toString() == "Tuple!(int,real)(5, 0)", nosh.toString());
         Tuple!(int, int) yessh;
         nosh = yessh;
     }
@@ -559,7 +565,7 @@ unittest
         t[0] = 10;
         t[1] = "str";
         assert(t[0] == 10 && t[1] == "str");
-        assert(t.toString == `Tuple!(int,string)(10, "str")`, t.toString);
+        assert(t.toString() == `Tuple!(int,string)(10, "str")`, t.toString());
     }
     {
         Tuple!(int, "a", double, "b") x;
@@ -718,93 +724,6 @@ unittest
 }
 
 
-private template enumValuesImpl(string name, BaseType, long index, T...)
-{
-    static if (name.length)
-    {
-        enum string enumValuesImpl = "enum "~name~" : "~BaseType.stringof
-            ~" { "~enumValuesImpl!("", BaseType, index, T)~"}\n";
-    }
-    else
-    {
-        static if (!T.length)
-        {
-            enum string enumValuesImpl = "";
-        }
-        else
-        {
-            static if (T.length == 1
-                       || T.length > 1 && is(typeof(T[1]) : string))
-            {
-                enum string enumValuesImpl =  T[0]~" = "~ToString!(index)~", "
-                    ~enumValuesImpl!("", BaseType, index + 1, T[1 .. $]);
-            }
-            else
-            {
-                enum string enumValuesImpl = T[0]~" = "~ToString!(T[1])~", "
-                    ~enumValuesImpl!("", BaseType, T[1] + 1, T[2 .. $]);
-            }
-        }
-    }
-}
-
-private template enumParserImpl(string name, bool first, T...)
-{
-    static if (first)
-    {
-        enum string enumParserImpl = "bool enumFromString(string s, ref "
-            ~name~" v) {\n"
-            ~enumParserImpl!(name, false, T)
-            ~"return false;\n}\n";
-    }
-    else
-    {
-        static if (T.length)
-            enum string enumParserImpl =
-                "if (s == `"~T[0]~"`) return (v = "~name~"."~T[0]~"), true;\n"
-                ~enumParserImpl!(name, false, T[1 .. $]);
-        else
-            enum string enumParserImpl = "";
-    }
-}
-
-private template enumPrinterImpl(string name, bool first, T...)
-{
-    static if (first)
-    {
-        enum string enumPrinterImpl = "string enumToString("~name~" v) {\n"
-            ~enumPrinterImpl!(name, false, T)~"\n}\n";
-    }
-    else
-    {
-        static if (T.length)
-            enum string enumPrinterImpl =
-                "if (v == "~name~"."~T[0]~") return `"~T[0]~"`;\n"
-                ~enumPrinterImpl!(name, false, T[1 .. $]);
-        else
-            enum string enumPrinterImpl = "return null;";
-    }
-}
-
-private template ValueTuple(T...)
-{
-    alias T ValueTuple;
-}
-
-private template StringsOnly(T...)
-{
-    static if (T.length == 1)
-        static if (is(typeof(T[0]) : string))
-            alias ValueTuple!(T[0]) StringsOnly;
-        else
-            alias ValueTuple!() StringsOnly;
-    else
-        static if (is(typeof(T[0]) : string))
-            alias ValueTuple!(T[0], StringsOnly!(T[1 .. $])) StringsOnly;
-        else
-            alias ValueTuple!(StringsOnly!(T[1 .. $])) StringsOnly;
-}
-
 /**
 Defines truly named enumerated values with parsing and stringizing
 primitives.
@@ -840,10 +759,99 @@ representation.  */
 deprecated template defineEnum(string name, T...)
 {
     static if (is(typeof(cast(T[0]) T[0].init)))
+    {
+        template enumValuesImpl(string name, BaseType, long index, T...)
+        {
+            static if (name.length)
+            {
+                enum string enumValuesImpl = "enum "~name~" : "~BaseType.stringof
+                    ~" { "~enumValuesImpl!("", BaseType, index, T)~"}\n";
+            }
+            else
+            {
+                static if (!T.length)
+                {
+                    enum string enumValuesImpl = "";
+                }
+                else
+                {
+                    static if (T.length == 1
+                               || T.length > 1 && is(typeof(T[1]) : string))
+                    {
+                        enum string enumValuesImpl =  T[0]~" = "~ToString!(index)~", "
+                            ~enumValuesImpl!("", BaseType, index + 1, T[1 .. $]);
+                    }
+                    else
+                    {
+                        enum string enumValuesImpl = T[0]~" = "~ToString!(T[1])~", "
+                            ~enumValuesImpl!("", BaseType, T[1] + 1, T[2 .. $]);
+                    }
+                }
+            }
+        }
+
+        template enumParserImpl(string name, bool first, T...)
+        {
+            static if (first)
+            {
+                enum string enumParserImpl = "bool enumFromString(string s, ref "
+                    ~name~" v) {\n"
+                    ~enumParserImpl!(name, false, T)
+                    ~"return false;\n}\n";
+            }
+            else
+            {
+                static if (T.length)
+                    enum string enumParserImpl =
+                        "if (s == `"~T[0]~"`) return (v = "~name~"."~T[0]~"), true;\n"
+                        ~enumParserImpl!(name, false, T[1 .. $]);
+                else
+                    enum string enumParserImpl = "";
+            }
+        }
+
+        template enumPrinterImpl(string name, bool first, T...)
+        {
+            static if (first)
+            {
+                enum string enumPrinterImpl = "string enumToString("~name~" v) {\n"
+                    ~enumPrinterImpl!(name, false, T)~"\n}\n";
+            }
+            else
+            {
+                static if (T.length)
+                    enum string enumPrinterImpl =
+                        "if (v == "~name~"."~T[0]~") return `"~T[0]~"`;\n"
+                        ~enumPrinterImpl!(name, false, T[1 .. $]);
+                else
+                    enum string enumPrinterImpl = "return null;";
+            }
+        }
+
+        template StringsOnly(T...)
+        {
+            template ValueTuple(T...)
+            {
+                alias T ValueTuple;
+            }
+
+            static if (T.length == 1)
+                static if (is(typeof(T[0]) : string))
+                    alias ValueTuple!(T[0]) StringsOnly;
+                else
+                    alias ValueTuple!() StringsOnly;
+            else
+                static if (is(typeof(T[0]) : string))
+                    alias ValueTuple!(T[0], StringsOnly!(T[1 .. $])) StringsOnly;
+                else
+                    alias ValueTuple!(StringsOnly!(T[1 .. $])) StringsOnly;
+        }
+
         enum string defineEnum =
             enumValuesImpl!(name, T[0], 0, T[1 .. $])
             ~ enumParserImpl!(name, true, StringsOnly!(T[1 .. $]))
             ~ enumPrinterImpl!(name, true, StringsOnly!(T[1 .. $]));
+    }
     else
         alias defineEnum!(name, int, T) defineEnum;
 }
@@ -973,7 +981,10 @@ Rebindable!(T) rebindable(T)(Rebindable!(T) obj)
 unittest
 {
     interface CI { const int foo(); }
-    class C : CI { int foo() const { return 42; } }
+    class C : CI {
+      int foo() const { return 42; }
+      @property int bar() const { return 23; }
+    }
     Rebindable!(C) obj0;
     static assert(is(typeof(obj0) == C));
 
@@ -992,7 +1003,8 @@ unittest
     assert(obj1.get !is null);
 
     // test opDot
-    assert(obj2.foo == 42);
+    assert(obj2.foo() == 42);
+    assert(obj2.bar == 23);
 
     interface I { final int foo() const { return 42; } }
     Rebindable!(I) obj3;
@@ -1017,16 +1029,16 @@ unittest
 
     auto obj6 = rebindable(new immutable(C));
     static assert(is(typeof(obj6) == Rebindable!(immutable C)));
-    assert(obj6.foo == 42);
+    assert(obj6.foo() == 42);
 
     auto obj7 = rebindable(new C);
     CI interface1 = obj7;
     auto interfaceRebind1 = rebindable(interface1);
-    assert(interfaceRebind1.foo == 42);
+    assert(interfaceRebind1.foo() == 42);
 
     const interface2 = interface1;
     auto interfaceRebind2 = rebindable(interface2);
-    assert(interfaceRebind2.foo == 42);
+    assert(interfaceRebind2.foo() == 42);
 
     auto arr = [1,2,3,4,5];
     const arrConst = arr;
@@ -1108,7 +1120,7 @@ struct Ref(T)
     this(ref T value) { _p = &value; }
     ref T opDot() { return *_p; }
     /*ref*/ T opImplicitCastTo() { return *_p; }
-    ref T value() { return *_p; }
+    @property ref T value() { return *_p; }
 
     void opAssign(T value)
     {
@@ -1156,7 +1168,7 @@ struct Nullable(T)
 /**
 Constructor initializing $(D this) with $(D value).
  */
-    this(T value)
+    this()(T value)
     {
         _value = value;
         _isNull = false;
@@ -1165,7 +1177,7 @@ Constructor initializing $(D this) with $(D value).
 /**
 Returns $(D true) if and only if $(D this) is in the null state.
  */
-    @property bool isNull() const
+    @property bool isNull() const pure nothrow @safe
     {
         return _isNull;
     }
@@ -1173,17 +1185,24 @@ Returns $(D true) if and only if $(D this) is in the null state.
 /**
 Forces $(D this) to the null state.
  */
-    void nullify()
+    void nullify()()
     {
         clear(_value);
         _isNull = true;
     }
 
+    //@@@BUG4424@@@
+    private mixin template _workaround4424()
+    {
+        @disable void opAssign(ref const Nullable);
+    }
+    mixin _workaround4424;
+
 /**
 Assigns $(D value) to the internally-held state. If the assignment
 succeeds, $(D this) becomes non-null.
  */
-    void opAssign(T value)
+    void opAssign()(T value)
     {
         _value = value;
         _isNull = false;
@@ -1194,14 +1213,7 @@ Gets the value. Throws an exception if $(D this) is in the null
 state. This function is also called for the implicit conversion to $(D
 T).
  */
-    @property ref T get()
-    {
-        enforce(!isNull);
-        return _value;
-    }
-    //@@@BUG3748@@@: inout does not work properly.
-    //               need to define a separate 'const' version
-    @property ref const(T) get() const
+    @property ref inout(T) get() inout pure @safe
     {
         enforce(!isNull);
         return _value;
@@ -1222,14 +1234,15 @@ unittest
     a = 5;
     assert(!a.isNull);
     assert(a == 5);
-    //@@@BUG5188@@@
-    //assert(a != 3);
+    assert(a != 3);
     assert(a.get != 3);
     a.nullify();
     assert(a.isNull);
     a = 3;
     assert(a == 3);
     a *= 6;
+    assert(a == 18);
+    a = a;
     assert(a == 18);
     a.nullify();
     assertThrown(a += 2);
@@ -1260,13 +1273,43 @@ unittest
     assert(s.isNull);
     s = S(6);
     assert(s == S(6));
-    //@@@BUG5188@@@
-    //assert(s != S(0));
+    assert(s != S(0));
     assert(s.get != S(0));
     s.x = 9190;
     assert(s.x == 9190);
     s.nullify();
     assertThrown(s.x = 9441);
+}
+unittest
+{
+    // Ensure Nullable can be used in pure/nothrow/@safe environment.
+    function() pure nothrow @safe
+    {
+        Nullable!int n;
+        assert(n.isNull);
+        n = 4;
+        assert(!n.isNull);
+        try { assert(n == 4); } catch (Exception) { assert(false); }
+        n.nullify();
+        assert(n.isNull);
+    }();
+}
+unittest
+{
+    // Ensure Nullable can be used when the value is not pure/nothrow/@safe
+    static struct S
+    {
+        int x;
+        this(this) @system {}
+    }
+
+    Nullable!S s;
+    assert(s.isNull);
+    s = S(5);
+    assert(!s.isNull);
+    assert(s.x == 5);
+    s.nullify();
+    assert(s.isNull);
 }
 
 /**
@@ -1283,7 +1326,7 @@ struct Nullable(T, T nullValue)
 /**
 Constructor initializing $(D this) with $(D value).
  */
-    this(T value)
+    this()(T value)
     {
         _value = value;
     }
@@ -1291,7 +1334,7 @@ Constructor initializing $(D this) with $(D value).
 /**
 Returns $(D true) if and only if $(D this) is in the null state.
  */
-    @property bool isNull() const
+    @property bool isNull()() const
     {
         return _value == nullValue;
     }
@@ -1299,7 +1342,7 @@ Returns $(D true) if and only if $(D this) is in the null state.
 /**
 Forces $(D this) to the null state.
  */
-    void nullify()
+    void nullify()()
     {
         _value = nullValue;
     }
@@ -1308,7 +1351,7 @@ Forces $(D this) to the null state.
 Assigns $(D value) to the internally-held state. No null checks are
 made.
  */
-    void opAssign(T value)
+    void opAssign()(T value)
     {
         _value = value;
     }
@@ -1318,13 +1361,7 @@ Gets the value. Throws an exception if $(D this) is in the null
 state. This function is also called for the implicit conversion to $(D
 T).
  */
-    @property ref T get()
-    {
-        enforce(!isNull);
-        return _value;
-    }
-    //@@@BUG3748@@@
-    @property ref const(T) get() const
+    @property ref inout(T) get()() inout
     {
         enforce(!isNull);
         return _value;
@@ -1366,6 +1403,39 @@ unittest
     a.nullify();
     assert(f(a) == 42);
 }
+unittest
+{
+    // Ensure Nullable can be used in pure/nothrow/@safe environment.
+    function() pure nothrow @safe
+    {
+        Nullable!(int, int.min) n;
+        pragma(msg, typeof(&n.get!()));
+
+        assert(n.isNull);
+        n = 4;
+        assert(!n.isNull);
+        try { assert(n == 4); } catch (Exception) { assert(false); }
+        n.nullify();
+        assert(n.isNull);
+    }();
+}
+unittest
+{
+    // Ensure Nullable can be used when the value is not pure/nothrow/@safe
+    static struct S
+    {
+        int x;
+        bool opEquals(const S s) const @system { return s.x == x; }
+    }
+
+    Nullable!(S, S(711)) s;
+    assert(s.isNull);
+    s = S(5);
+    assert(!s.isNull);
+    assert(s.x == 5);
+    s.nullify();
+    assert(s.isNull);
+}
 
 /**
 Just like $(D Nullable!T), except that the object refers to a value
@@ -1380,7 +1450,7 @@ struct NullableRef(T)
 /**
 Constructor binding $(D this) with $(D value).
  */
-    this(T * value)
+    this(T * value) pure nothrow @safe
     {
         _value = value;
     }
@@ -1388,7 +1458,7 @@ Constructor binding $(D this) with $(D value).
 /**
 Binds the internal state to $(D value).
  */
-    void bind(T * value)
+    void bind(T * value) pure nothrow @safe
     {
         _value = value;
     }
@@ -1396,7 +1466,7 @@ Binds the internal state to $(D value).
 /**
 Returns $(D true) if and only if $(D this) is in the null state.
  */
-    @property bool isNull() const
+    @property bool isNull() const pure nothrow @safe
     {
         return _value is null;
     }
@@ -1404,7 +1474,7 @@ Returns $(D true) if and only if $(D this) is in the null state.
 /**
 Forces $(D this) to the null state.
  */
-    void nullify()
+    void nullify() pure nothrow @safe
     {
         _value = null;
     }
@@ -1412,7 +1482,7 @@ Forces $(D this) to the null state.
 /**
 Assigns $(D value) to the internally-held state.
  */
-    void opAssign(T value)
+    void opAssign()(T value)
     {
         enforce(_value);
         *_value = value;
@@ -1423,13 +1493,7 @@ Gets the value. Throws an exception if $(D this) is in the null
 state. This function is also called for the implicit conversion to $(D
 T).
  */
-    @property ref T get()
-    {
-        enforce(!isNull);
-        return *_value;
-    }
-    //@@@BUG3748@@@
-    @property ref const(T) get() const
+    @property ref inout(T) get()() inout
     {
         enforce(!isNull);
         return *_value;
@@ -1473,6 +1537,52 @@ unittest
     assert(f(a) == 5);
     a.nullify();
     assert(f(a) == 42);
+}
+unittest
+{
+    // Ensure NullableRef can be used in pure/nothrow/@safe environment.
+    function() pure nothrow @safe
+    {
+        auto storage = new int;
+        *storage = 19902;
+        NullableRef!int n;
+        assert(n.isNull);
+        n.bind(storage);
+        assert(!n.isNull);
+        try
+        {
+            assert(n == 19902);
+            n = 2294;
+            assert(n == 2294);
+        }
+        catch (Exception)
+        {
+            assert(false);
+        }
+        assert(*storage == 2294);
+        n.nullify();
+        assert(n.isNull);
+    }();
+}
+unittest
+{
+    // Ensure NullableRef can be used when the value is not pure/nothrow/@safe
+    static struct S
+    {
+        int x;
+        this(this) @system {}
+        bool opEquals(const S s) const @system { return s.x == x; }
+    }
+
+    auto storage = S(5);
+
+    NullableRef!S s;
+    assert(s.isNull);
+    s.bind(&storage);
+    assert(!s.isNull);
+    assert(s.x == 5);
+    s.nullify();
+    assert(s.isNull);
 }
 
 /**
@@ -1736,45 +1846,40 @@ private static:
     // this would be deprecated by std.typelist.Filter
     template staticFilter(alias pred, lst...)
     {
-        alias staticFilterImpl!(pred, lst).result staticFilter;
-    }
-    template staticFilterImpl(alias pred, lst...)
-    {
         static if (lst.length > 0)
         {
-            alias staticFilterImpl!(pred, lst[1 .. $]).result tail;
+            alias staticFilter!(pred, lst[1 .. $]) tail;
             //
-            static if (true && pred!(lst[0]))
-                alias TypeTuple!(lst[0], tail) result;
+            static if (pred!(lst[0]))
+                alias TypeTuple!(lst[0], tail) staticFilter;
             else
-                alias tail result;
+                alias tail staticFilter;
         }
         else
-            alias TypeTuple!() result;
+            alias TypeTuple!() staticFilter;
     }
 
     // Returns function overload sets in the class C, filtered with pred.
     template enumerateOverloads(C, alias pred)
     {
-        alias enumerateOverloadsImpl!(C, pred, traits_allMembers!(C)).result
-                enumerateOverloads;
-    }
-    template enumerateOverloadsImpl(C, alias pred, names...)
-    {
-        static if (names.length > 0)
+        template Impl(names...)
         {
-            alias staticFilter!(pred, MemberFunctionsTuple!(C, ""~names[0])) methods;
-            alias enumerateOverloadsImpl!(C, pred, names[1 .. $]).result next;
+            static if (names.length > 0)
+            {
+                alias staticFilter!(pred, MemberFunctionsTuple!(C, names[0])) methods;
+                alias Impl!(names[1 .. $]) next;
 
-            static if (methods.length > 0)
-                alias TypeTuple!(OverloadSet!(""~names[0], methods), next) result;
+                static if (methods.length > 0)
+                    alias TypeTuple!(OverloadSet!(names[0], methods), next) Impl;
+                else
+                    alias next Impl;
+            }
             else
-                alias next result;
+                alias TypeTuple!() Impl;
         }
-        else
-            alias TypeTuple!() result;
-    }
 
+        alias Impl!(__traits(allMembers, C)) enumerateOverloads;
+    }
 
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
     // Target functions
@@ -2211,7 +2316,7 @@ private static:
                     functionLinkage!(func),
                     returnType,
                     realName,
-                    ""~generateParameters!(myFuncInfo, func),
+                    generateParameters!(myFuncInfo, func)(),
                     postAtts, storageClass );
         }
 
@@ -2615,6 +2720,12 @@ unittest
     }
 }
 
+unittest
+{
+    RefCounted!int p1, p2;
+    swap(p1, p2);
+}
+
 // 6606
 unittest
 {
@@ -2629,6 +2740,261 @@ unittest
 
     alias RefCounted!S SRC;
 }
+
+/**
+Make proxy for $(D a).
+
+Example:
+----
+struct MyInt
+{
+    private int value;
+    mixin Proxy!value;
+
+    this(int n){ value = n; }
+}
+
+MyInt n = 10;
+
+// Enable operations that original type has.
+++n;
+assert(n == 11);
+assert(n * 2 == 22);
+
+void func(int n) { }
+
+// Disable implicit conversions to original type.
+//int x = n;
+//func(n);
+----
+ */
+mixin template Proxy(alias a)
+{
+    auto ref opEquals(this X, B)(auto ref B b) { return a == b; }
+
+    auto ref opCmp(this X, B)(auto ref B b)
+        if (!is(typeof(a.opCmp(b))) || !is(typeof(b.opCmp(a))))
+    {
+        static if (is(typeof(a.opCmp(b))))
+            return a.opCmp(b);
+        else static if (is(typeof(b.opCmp(a))))
+            return -b.opCmp(a);
+        else
+            return a < b ? -1 : a > b ? +1 : 0;
+    }
+
+    auto ref opCall(this X, Args...)(auto ref Args args) { return a(args); }
+
+    auto ref opCast(T, this X)() { return cast(T)a; }
+
+    auto ref opIndex(this X, D...)(auto ref D i)               { return a[i]; }
+    auto ref opSlice(this X      )()                           { return a[]; }
+    auto ref opSlice(this X, B, E)(auto ref B b, auto ref E e) { return a[b..e]; }
+
+    auto ref opUnary     (string op, this X      )()                           { return mixin(op~"a"); }
+    auto ref opIndexUnary(string op, this X, D...)(auto ref D i)               { return mixin(op~"a[i]"); }
+    auto ref opSliceUnary(string op, this X      )()                           { return mixin(op~"a[]"); }
+    auto ref opSliceUnary(string op, this X, B, E)(auto ref B b, auto ref E e) { return mixin(op~"a[b..e]"); }
+
+    auto ref opBinary     (string op, this X, B)(auto ref B b) { return mixin("a "~op~" b"); }
+    auto ref opBinaryRight(string op, this X, B)(auto ref B b) { return mixin("b "~op~" a"); }
+
+    auto ref opAssign     (this X, V      )(auto ref V v)                             { return a       = v; }
+    auto ref opIndexAssign(this X, V, D...)(auto ref V v, auto ref D i)               { return a[i]    = v; }
+    auto ref opSliceAssign(this X, V      )(auto ref V v)                             { return a[]     = v; }
+    auto ref opSliceAssign(this X, V, B, E)(auto ref V v, auto ref B b, auto ref E e) { return a[b..e] = v; }
+
+    auto ref opOpAssign     (string op, this X, V      )(auto ref V v)                             { return mixin("a "      ~op~"= v"); }
+    auto ref opIndexOpAssign(string op, this X, V, D...)(auto ref V v, auto ref D i)               { return mixin("a[i] "   ~op~"= v"); }
+    auto ref opSliceOpAssign(string op, this X, V      )(auto ref V v)                             { return mixin("a[] "    ~op~"= v"); }
+    auto ref opSliceOpAssign(string op, this X, V, B, E)(auto ref V v, auto ref B b, auto ref E e) { return mixin("a[b..e] "~op~"= v"); }
+
+    template opDispatch(string name)
+    {
+        static if (is(typeof(__traits(getMember, a, name)) == function))
+        {
+            // non template function
+            auto ref opDispatch(this X, Args...)(Args args) { return mixin("a."~name~"(args)"); }
+        }
+        else static if (is(typeof(mixin("a."~name))) || __traits(getOverloads, a, name).length != 0)
+        {
+            // field or property function
+            @property auto ref opDispatch(this X)()                { return mixin("a."~name);        }
+            @property auto ref opDispatch(this X, V)(auto ref V v) { return mixin("a."~name~" = v"); }
+        }
+        else
+        {
+            // member template
+            template opDispatch(T...)
+            {
+                auto ref opDispatch(this X, Args...)(Args args){ return mixin("a."~name~"!T(args)"); }
+            }
+        }
+    }
+}
+unittest
+{
+    static struct MyInt
+    {
+        private int value;
+        mixin Proxy!value;
+        this(int n){ value = n; }
+    }
+
+    MyInt m = 10;
+    static assert(!__traits(compiles, { int x = m; }));
+    static assert(!__traits(compiles, { void func(int n){} func(m); }));
+    assert(m == 10);
+    assert(m != 20);
+    assert(m < 20);
+    assert(+m == 10);
+    assert(-m == -10);
+    assert(++m == 11);
+    assert(m++ == 11); assert(m == 12);
+    assert(--m == 11);
+    assert(m-- == 11); assert(m == 10);
+    assert(cast(double)m == 10.0);
+    assert(m + 10 == 20);
+    assert(m - 5 == 5);
+    assert(m * 20 == 200);
+    assert(m / 2 == 5);
+    assert(10 + m == 20);
+    assert(15 - m == 5);
+    assert(20 * m == 200);
+    assert(50 / m == 5);
+    m = 20; assert(m == 20);
+}
+unittest
+{
+    static struct MyArray
+    {
+        private int[] value;
+        mixin Proxy!value;
+        this(int[] arr){ value = arr; }
+    }
+
+    MyArray a = [1,2,3,4];
+    assert(a == [1,2,3,4]);
+    assert(a != [5,6,7,8]);
+    assert(+a[0]    == 1);
+    version (LittleEndian)
+        assert(cast(ulong[])a == [0x0000_0002_0000_0001, 0x0000_0004_0000_0003]);
+    else
+        assert(cast(ulong[])a == [0x0000_0001_0000_0002, 0x0000_0003_0000_0004]);
+    assert(a ~ [10,11] == [1,2,3,4,10,11]);
+    assert(a[0]    == 1);
+    //assert(a[]     == [1,2,3,4]);
+    //assert(a[2..4] == [3,4]);
+    a = [5,6,7,8];  assert(a == [5,6,7,8]);
+    a[0]     = 0;   assert(a == [0,6,7,8]);
+    a[]      = 1;   assert(a == [1,1,1,1]);
+    a[0..3]  = 2;   assert(a == [2,2,2,1]);
+    a[0]    += 2;   assert(a == [4,2,2,1]);
+    a[]     *= 2;   assert(a == [8,4,4,2]);
+    a[0..2] /= 2;   assert(a == [4,2,4,2]);
+}
+unittest
+{
+    class Foo
+    {
+        int field;
+
+        @property const int val1(){ return field; }
+        @property void val1(int n){ field = n; }
+
+        @property ref int val2(){ return field; }
+
+        const int func(int x, int y){ return x; }
+
+        T opCast(T)(){ return T.init; }
+
+        T tempfunc(T)() { return T.init; }
+    }
+    class Hoge
+    {
+        Foo foo;
+        mixin Proxy!foo;
+        this(Foo f) { foo = f; }
+    }
+
+    auto h = new Hoge(new Foo());
+    int n;
+
+    // field
+    h.field = 1;            // lhs of assign
+    n = h.field;            // rhs of assign
+    assert(h.field == 1);   // lhs of BinExp
+    assert(1 == h.field);   // rhs of BinExp
+    assert(n == 1);
+
+    // getter/setter property function
+    h.val1 = 4;
+    n = h.val1;
+    assert(h.val1 == 4);
+    assert(4 == h.val1);
+    assert(n == 4);
+
+    // ref getter property function
+    h.val2 = 8;
+    n = h.val2;
+    assert(h.val2 == 8);
+    assert(8 == h.val2);
+    assert(n == 8);
+
+    // member function
+    assert(h.func(2,4) == 2);
+
+    // bug5896 test
+    assert(h.opCast!int() == 0);
+    assert(cast(int)h == 0);
+    immutable(Hoge) ih = new immutable(Hoge)(new Foo());
+    static assert(!__traits(compiles, ih.opCast!int()));
+    static assert(!__traits(compiles, cast(int)ih));
+
+    // template member function
+    assert(h.tempfunc!int() == 0);
+
+    //assert(h.TempFunc2!int.tempfunc2!double("a") == tuple(0, double.nan, "a"));
+}
+
+/**
+Library typedef.
+ */
+template Typedef(T)
+{
+    alias .Typedef!(T, T.init) Typedef;
+}
+
+/// ditto
+struct Typedef(T, T init, string cookie=null)
+{
+    private T Typedef_payload = init;
+
+    this(T init)
+    {
+        Typedef_payload = init;
+    }
+
+    mixin Proxy!Typedef_payload;
+}
+
+unittest
+{
+    Typedef!int x = 10;
+    static assert(!__traits(compiles, { int y = x; }));
+    static assert(!__traits(compiles, { long z = x; }));
+
+    Typedef!int y = 10;
+    assert(x == y);
+
+    Typedef!(float, 1.0) z; // specifies the init
+    assert(z == 1.0);
+
+    alias Typedef!(int, 0, "dollar") Dollar;
+    alias Typedef!(int, 0, "yen") Yen;
+    static assert(!is(Dollar == Yen));
+}
+
 
 /**
 Allocates a $(D class) object right inside the current scope,
@@ -2652,36 +3018,22 @@ unittest
 @system Scoped!T scoped(T, Args...)(Args args) if (is(T == class))
 {
     Scoped!T result;
-
-    static if (Args.length == 0)
-    {
-        result.Scoped_store[] = typeid(T).init[];
-        static if (is(typeof(T.init.__ctor())))
-        {
-            result.Scoped_payload.__ctor();
-        }
-    }
-    else
-    {
-        emplace!T(cast(void[]) result.Scoped_store, args);
-    }
-
+    emplace!(Unqual!T)(cast(void[])result.Scoped_store, args);
     return result;
 }
 
 private struct Scoped(T)
 {
     private byte[__traits(classInstanceSize, T)] Scoped_store = void;
-    @property T Scoped_payload()
+    @property inout(T) Scoped_payload() inout
     {
-        return cast(T) (Scoped_store.ptr);
+        return cast(inout(T))(Scoped_store.ptr);
     }
     alias Scoped_payload this;
 
     @disable this(this)
     {
-        writeln("Illegal call to Scoped this(this)");
-        assert(false);
+        assert(false, "Illegal call to Scoped this(this)");
     }
 
     ~this()
@@ -2742,7 +3094,7 @@ unittest
     class A { int x = 1; this(int y) { x = y; } ~this() {} }
     auto a1 = scoped!A(5);
     assert(a1.x == 5);
-    auto a2 = scoped!A();
+    auto a2 = scoped!A(42);
     a1.x = 42;
     a2.x = 53;
     assert(a1.x == 42);
@@ -2753,7 +3105,7 @@ unittest
     class A { static bool dead; ~this() { dead = true; } }
     class B : A { static bool dead; ~this() { dead = true; } }
     {
-        auto b = scoped!B;
+        auto b = scoped!B();
     }
     assert(B.dead, "asdasd");
     assert(A.dead, "asdasd");
@@ -2770,7 +3122,7 @@ unittest
         bool check() { return this is a; }
     }
 
-    auto a1 = scoped!A;
+    auto a1 = scoped!A();
     assert(a1.check());
 
     auto a2 = scoped!A(1);
@@ -2801,6 +3153,41 @@ unittest
     A.sdtor = 0;
     scope(exit) assert(A.sdtor == 0);
     auto abob = scoped!ABob();
+}
+
+unittest
+{
+    static class A { this(int) {} }
+    static assert(!__traits(compiles, scoped!A()));
+}
+
+unittest
+{
+    static class A { @property inout(int) foo() inout { return 1; } }
+
+    auto a1 = scoped!A();
+    assert(a1.foo == 1);
+    static assert(is(typeof(a1.foo) == int));
+
+    auto a2 = scoped!(const(A))();
+    assert(a2.foo == 1);
+    static assert(is(typeof(a2.foo) == const(int)));
+
+    auto a3 = scoped!(immutable(A))();
+    assert(a3.foo == 1);
+    static assert(is(typeof(a3.foo) == immutable(int)));
+
+    const c1 = scoped!A();
+    assert(c1.foo == 1);
+    static assert(is(typeof(c1.foo) == const(int)));
+
+    const c2 = scoped!(const(A))();
+    assert(c2.foo == 1);
+    static assert(is(typeof(c2.foo) == const(int)));
+
+    const c3 = scoped!(immutable(A))();
+    assert(c3.foo == 1);
+    static assert(is(typeof(c3.foo) == immutable(int)));
 }
 
 /**
@@ -2879,16 +3266,20 @@ Flag!"encryption".no).
 */
 struct Yes
 {
-    static auto @property opDispatch(string name)() { return
-    Flag!name.yes; }
+    template opDispatch(string name)
+    {
+        enum opDispatch = Flag!name.yes;
+    }
 }
 //template yes(string name) { enum Flag!name yes = Flag!name.yes; }
 
 /// Ditto
 struct No
 {
-    static auto @property opDispatch(string name)() { return
-    Flag!name.no; }
+    template opDispatch(string name)
+    {
+        enum opDispatch = Flag!name.no;
+    }
 }
 //template no(string name) { enum Flag!name no = Flag!name.no; }
 

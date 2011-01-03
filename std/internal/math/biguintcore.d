@@ -56,8 +56,8 @@ shared static this()
 
 private:
 // Limits for when to switch between algorithms.
-immutable int CACHELIMIT;   // Half the size of the data cache.
-immutable int FASTDIVLIMIT; // crossover to recursive division
+immutable size_t CACHELIMIT;   // Half the size of the data cache.
+immutable size_t FASTDIVLIMIT; // crossover to recursive division
 
 
 // These constants are used by shift operations

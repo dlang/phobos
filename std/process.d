@@ -21,6 +21,7 @@ module std.process;
 
 
 import core.stdc.stdlib;
+import std.c.stdlib;
 import core.stdc.errno;
 import core.thread;
 import std.c.process;
@@ -109,8 +110,10 @@ int system(string command)
     if (status == -1) return status;
     version (Posix)
         return (status & 0x0000ff00) >>> 8;
-    else
+    else version (Windows)
         return status;
+    else
+        static assert(0, "system not implemented for this OS.");
 }
 
 private void toAStringz(in string[] a, const(char)**az)
@@ -152,10 +155,12 @@ int spawnvp(int mode, string pathname, string[] argv)
     {
         return _spawnvp(mode, toStringz(pathname), argv_);
     }
-    else
+    else version (Windows)
     {
         return std.c.process.spawnvp(mode, toStringz(pathname), argv_);
     }
+    else
+        static assert(0, "spawnvp not implemented for this OS.");
 }
 
 version (Posix)
@@ -277,7 +282,7 @@ version(Posix)
     {
         // No, so must traverse PATHs, looking for first match
         string[]    envPaths    =   std.string.split(
-            to!string(std.c.stdlib.getenv("PATH")), ":");
+            to!string(core.stdc.stdlib.getenv("PATH")), ":");
         int         iRet        =   0;
 
         // Note: if any call to execve() succeeds, this process will cease
@@ -343,33 +348,37 @@ alias core.thread.getpid getpid;
    ... use f ...
    ----
 */
-version (Windows) string shell(string cmd)
+string shell(string cmd)
 {
-    // Generate a random filename
-    auto a = appender!string();
-    foreach (ref e; 0 .. 8)
+    version(Windows)
     {
-        formattedWrite(a, "%x", rndGen.front);
-        rndGen.popFront;
+        // Generate a random filename
+        auto a = appender!string();
+        foreach (ref e; 0 .. 8)
+        {
+            formattedWrite(a, "%x", rndGen.front);
+            rndGen.popFront();
+        }
+        auto filename = a.data;
+        scope(exit) if (exists(filename)) remove(filename);
+        errnoEnforce(system(cmd ~ "> " ~ filename) == 0);
+        return readText(filename);
     }
-    auto filename = a.data;
-    scope(exit) if (exists(filename)) remove(filename);
-    errnoEnforce(system(cmd ~ "> " ~ filename) == 0);
-    return readText(filename);
-}
-
-version (Posix) string shell(string cmd)
-{
-    File f;
-    f.popen(cmd, "r");
-    char[] line;
-    string result;
-    while (f.readln(line))
+    else version(Posix)
     {
-        result ~= line;
+        File f;
+        f.popen(cmd, "r");
+        char[] line;
+        string result;
+        while (f.readln(line))
+        {
+            result ~= line;
+        }
+        f.close();
+        return result;
     }
-    f.close;
-    return result;
+    else
+        static assert(0, "shell not implemented for this OS.");
 }
 
 unittest
@@ -388,7 +397,7 @@ string getenv(in char[] name)
 {
     // Cache the last call's result
     static string lastResult;
-    auto p = std.c.stdlib.getenv(toStringz(name));
+    auto p = core.stdc.stdlib.getenv(toStringz(name));
     if (!p) return null;
     auto value = p[0 .. strlen(p)];
     if (value == lastResult) return lastResult;
@@ -401,8 +410,8 @@ value was written, or the variable was already present and $(D
 overwrite) is false, returns normally. Otherwise, it throws an
 exception. Calls $(LINK2 std_c_stdlib.html#_setenv,
 std.c.stdlib._setenv) internally. */
-
-version(Posix) void setenv(in char[] name, in char[] value, bool overwrite)
+version(StdDdoc) void setenv(in char[] name, in char[] value, bool overwrite);
+else version(Posix) void setenv(in char[] name, in char[] value, bool overwrite)
 {
     errnoEnforce(
         std.c.stdlib.setenv(toStringz(name), toStringz(value), overwrite) == 0);
@@ -411,8 +420,8 @@ version(Posix) void setenv(in char[] name, in char[] value, bool overwrite)
 /**
 Removes variable $(D name) from the environment. Calls $(LINK2
 std_c_stdlib.html#_unsetenv, std.c.stdlib._unsetenv) internally. */
-
-version(Posix) void unsetenv(in char[] name)
+version(StdDdoc) void unsetenv(in char[] name);
+else version(Posix) void unsetenv(in char[] name)
 {
     errnoEnforce(std.c.stdlib.unsetenv(toStringz(name)) == 0);
 }

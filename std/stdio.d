@@ -16,12 +16,14 @@ Authors:   $(WEB digitalmars.com, Walter Bright),
 module std.stdio;
 
 public import core.stdc.stdio;
+static import std.c.stdio;
 import std.stdiobase;
 import core.stdc.errno, core.stdc.stddef, core.stdc.stdlib, core.memory,
     core.stdc.string, core.stdc.wchar_;
 import std.algorithm, std.array, std.conv, std.exception, std.format,
-    std.file, std.range, std.string, std.traits, std.typecons,
+    std.range, std.string, std.traits, std.typecons,
     std.typetuple, std.utf;
+version(unittest) import std.file;
 
 version (DigitalMars) version (Windows)
 {
@@ -171,7 +173,7 @@ public:
         assert(f.isOpen);
         file = f;
         this.format = format;
-        popFront; // prime the range
+        popFront(); // prime the range
     }
 
     /// Range primitive implementations.
@@ -193,7 +195,7 @@ public:
         file.readln(line);
         if (!line.length)
         {
-            file.detach;
+            file.detach();
         }
         else
         {
@@ -292,7 +294,7 @@ object refers to it anymore.
     ~this()
     {
         if (!p) return;
-        if (p.refs == 1) close;
+        if (p.refs == 1) close();
         else --p.refs;
     }
 
@@ -322,7 +324,7 @@ Throws exception in case of error.
  */
     void open(string name, in char[] stdioOpenmode = "rb")
     {
-        detach;
+        detach();
         auto another = File(name, stdioOpenmode);
         swap(this, another);
     }
@@ -334,7 +336,7 @@ opengroup.org/onlinepubs/007908799/xsh/_popen.html, _popen).
  */
     version(Posix) void popen(string command, in char[] stdioOpenmode = "r")
     {
-        detach;
+        detach();
         p = new Impl(errnoEnforce(.popen(command, stdioOpenmode),
                         "Cannot run command `"~command~"'"),
                 1, command, true);
@@ -381,7 +383,7 @@ and throws if that fails.
     {
         if (!p) return;
         // @@@BUG
-        //if (p.refs == 1) close;
+        //if (p.refs == 1) close();
         p = null;
     }
 
@@ -414,7 +416,7 @@ referring to the same handle will see a closed file henceforth.
             if (p.isPipe)
             {
                 // Ignore the result of the command
-                errnoEnforce(.pclose(p.handle) == 0,
+                errnoEnforce(.pclose(p.handle) != -1,
                         "Could not close pipe `"~p.name~"'");
                 return;
             }
@@ -450,9 +452,14 @@ file handle and throws on error.
 /**
 If the file is not opened, throws an exception. Otherwise, calls $(WEB
 cplusplus.com/reference/clibrary/cstdio/fread.html, fread) for the
-file handle and throws on error.
+file handle and throws on error. The number of items to read and the size of
+each item is inferred from the size and type of the input array, respectively.
 
-$(D rawRead) always read in binary mode on Windows.
+Returns: The slice of $(D buffer) containing the data that was actually read.
+This will be shorter than $(D buffer) if EOF was reached before the buffer
+could be filled.
+
+$(D rawRead) always reads in binary mode on Windows.
  */
     T[] rawRead(T)(T[] buffer)
     {
@@ -478,9 +485,10 @@ $(D rawRead) always read in binary mode on Windows.
 
     unittest
     {
-        std.file.write("deleteme", "\r\n\n\r\n");
-        scope(exit) std.file.remove("deleteme");
-        auto f = File("deleteme", "r");
+        auto deleteme = testFilename();
+        std.file.write(deleteme, "\r\n\n\r\n");
+        scope(exit) std.file.remove(deleteme);
+        auto f = File(deleteme, "r");
         auto buf = f.rawRead(new char[5]);
         f.close();
         assert(buf == "\r\n\n\r\n");
@@ -492,10 +500,12 @@ $(D rawRead) always read in binary mode on Windows.
 
 /**
 If the file is not opened, throws an exception. Otherwise, calls $(WEB
-cplusplus.com/reference/clibrary/cstdio/fwrite.html, fwrite) for the
-file handle and throws on error.
+cplusplus.com/reference/clibrary/cstdio/fwrite.html, fwrite) for the file
+handle and throws on error. The number of items to write and the size of each
+item is inferred from the size and type of the input array, respectively. An
+error is thrown if the buffer could not be written in its entirety.
 
-$(D rawWrite) always write in binary mode on Windows.
+$(D rawWrite) always writes in binary mode on Windows.
  */
     void rawWrite(T)(in T[] buffer)
     {
@@ -525,11 +535,12 @@ $(D rawWrite) always write in binary mode on Windows.
 
     unittest
     {
-        auto f = File("deleteme", "w");
-        scope(exit) std.file.remove("deleteme");
+        auto deleteme = testFilename();
+        auto f = File(deleteme, "w");
+        scope(exit) std.file.remove(deleteme);
         f.rawWrite("\r\n\n\r\n");
         f.close();
-        assert(std.file.read("deleteme") == "\r\n\n\r\n");
+        assert(std.file.read(deleteme) == "\r\n\n\r\n");
     }
 
 /**
@@ -555,8 +566,9 @@ file handle. Throws on error.
 
     unittest
     {
-        auto f = File("deleteme", "w+");
-        scope(exit) { f.close(); std.file.remove("deleteme"); }
+        auto deleteme = testFilename();
+        auto f = File(deleteme, "w+");
+        scope(exit) { f.close(); std.file.remove(deleteme); }
         f.rawWrite("abcdefghijklmnopqrstuvwxyz");
         f.seek(7);
         assert(f.readln() == "hijklmnopqrstuvwxyz");
@@ -600,9 +612,10 @@ managed file handle. Throws on error.
 
     unittest
     {
-        std.file.write("deleteme", "abcdefghijklmnopqrstuvwqxyz");
-        scope(exit) { std.file.remove("deleteme"); }
-        auto f = File("deleteme");
+        auto deleteme = testFilename();
+        std.file.write(deleteme, "abcdefghijklmnopqrstuvwqxyz");
+        scope(exit) { std.file.remove(deleteme); }
+        auto f = File(deleteme);
         auto a = new ubyte[4];
         f.rawRead(a);
         assert(f.tell == 4, text(f.tell));
@@ -648,7 +661,7 @@ If the file is not opened, throws an exception. Otherwise, writes its
 arguments in text format to the file. */
     void write(S...)(S args)
     {
-        auto w = lockingTextWriter();
+        auto w = lockingTextWriter;
         foreach (arg; args)
         {
             alias typeof(arg) A;
@@ -705,7 +718,7 @@ first argument. */
         assert(p.handle);
         static assert(S.length>0, errorMessage);
         static assert(isSomeString!(S[0]), errorMessage);
-        auto w = lockingTextWriter();
+        auto w = lockingTextWriter;
         std.format.formattedWrite(w, args);
     }
 
@@ -737,7 +750,8 @@ resized as necessary.
 Returns:
 0 for end of file, otherwise number of characters read
 
-Throws: $(D StdioException) on error
+Throws: $(D StdioException) on I/O error, or $(D UnicodeException) on Unicode
+conversion error.
 
 Example:
 ---
@@ -766,12 +780,13 @@ with every line.  */
 
     unittest
     {
-        std.file.write("deleteme", "hello\nworld\n");
-        scope(exit) std.file.remove("deleteme");
+        auto deleteme = testFilename();
+        std.file.write(deleteme, "hello\nworld\n");
+        scope(exit) std.file.remove(deleteme);
         foreach (C; Tuple!(char, wchar, dchar).Types)
         {
             auto witness = [ "hello\n", "world\n" ];
-            auto f = File("deleteme");
+            auto f = File(deleteme);
             uint i = 0;
             immutable(C)[] buf;
             while ((buf = f.readln!(typeof(buf))()).length)
@@ -828,10 +843,11 @@ with every line.  */
 
     unittest
     {
-        std.file.write("deleteme", "hello\n\rworld\nhow\n\rare ya");
+        auto deleteme = testFilename();
+        std.file.write(deleteme, "hello\n\rworld\nhow\n\rare ya");
         auto witness = [ "hello\n\r", "world\nhow\n\r", "are ya" ];
-        scope(exit) std.file.remove("deleteme");
-        auto f = File("deleteme");
+        scope(exit) std.file.remove(deleteme);
+        auto f = File(deleteme);
         uint i = 0;
         char[] buf;
         while (f.readln(buf, "\n\r"))
@@ -841,6 +857,11 @@ with every line.  */
         }
     }
 
+    /**
+     * Read data from the file according to the specified
+     * $(LINK2 std_format.html#format-string, format specifier) using
+     * $(XREF format,formattedRead).
+     */
     uint readf(Data...)(in char[] format, Data data)
     {
         assert(isOpen);
@@ -850,10 +871,11 @@ with every line.  */
 
     unittest
     {
-        std.file.write("deleteme", "hello\nworld\n");
-        scope(exit) std.file.remove("deleteme");
+        auto deleteme = testFilename();
+        std.file.write(deleteme, "hello\nworld\n");
+        scope(exit) std.file.remove(deleteme);
         string s;
-        auto f = File("deleteme");
+        auto f = File(deleteme);
         f.readf("%s\n", &s);
         assert(s == "hello", "["~s~"]");
     }
@@ -863,7 +885,7 @@ with every line.  */
  cplusplus.com/reference/clibrary/cstdio/_tmpfile.html, _tmpfile). */
     static File tmpfile()
     {
-        auto h = errnoEnforce(core.stdc.stdio.tmpfile,
+        auto h = errnoEnforce(core.stdc.stdio.tmpfile(),
                 "Could not create temporary file with tmpfile()");
         File result = void;
         result.p = new Impl(h, 1, null);
@@ -893,7 +915,7 @@ Returns the $(D FILE*) corresponding to this object.
 
     unittest
     {
-        assert(stdout.getFP == std.c.stdio.stdout);
+        assert(stdout.getFP() == std.c.stdio.stdout);
     }
 
 /**
@@ -925,13 +947,30 @@ Range that reads one line at a time. */
         }
 
         /// Range primitive implementations.
-        bool empty() const
+        @property bool empty() const
         {
-            return !file.isOpen;
+            if (line !is null) return false;
+            if (!file.isOpen) return true;
+
+            // First read ever, must make sure stream is not empty. We
+            // do so by reading a character and putting it back. Doing
+            // so is guaranteed to work on all files opened in all
+            // buffering modes. Although we internally mutate the
+            // state of the file, we restore everything, which
+            // justifies the cast.
+            auto mutableFP = (cast(File*) &file).getFP();
+            auto c = fgetc(mutableFP);
+            if (c == -1)
+            {
+                return true;
+            }
+            ungetc(c, mutableFP) == c
+                || assert(false, "Bug in cstdlib implementation");
+            return false;
         }
 
         /// Ditto
-        Char[] front()
+        @property Char[] front()
         {
             if (line is null) popFront();
             return line;
@@ -940,14 +979,19 @@ Range that reads one line at a time. */
         /// Ditto
         void popFront()
         {
-            enforce(file.isOpen);
+            assert(file.isOpen);
+            assumeSafeAppend(line);
             file.readln(line, terminator);
-            assert(line !is null, "Bug in File.readln");
-            if (!line.length)
-                file.detach;
+            if (line.empty)
+            {
+                file.detach();
+                line = null;
+            }
             else if (keepTerminator == KeepTerminator.no
                     && std.algorithm.endsWith(line, terminator))
-                line.length = line.length - 1;
+            {
+                line = line.ptr[0 .. line.length - 1];
+            }
         }
     }
 
@@ -965,29 +1009,45 @@ to this file. */
     {
         //printf("Entering test at line %d\n", __LINE__);
         scope(failure) printf("Failed test at line %d\n", __LINE__);
-        std.file.write("testingByLine", "asd\ndef\nasdf");
-        scope(success) std.file.remove("testingByLine");
+        auto deleteme = testFilename();
+        std.file.write(deleteme, "");
+        scope(success) std.file.remove(deleteme);
 
-        auto witness = [ "asd", "def", "asdf" ];
-        uint i;
-        auto f = File("testingByLine");
-        scope(exit)
-        {
-            f.close;
-            assert(!f.isOpen);
-        }
+        // Test empty file
+        auto f = File(deleteme);
         foreach (line; f.byLine())
         {
-            assert(line == witness[i++]);
+            assert(false);
         }
-        assert(i == witness.length);
-        i = 0;
-        f.rewind;
-        foreach (line; f.byLine(KeepTerminator.yes))
+        f.close();
+
+        void test(string txt, string[] witness,
+                KeepTerminator kt = KeepTerminator.no)
         {
-            assert(line == witness[i++] ~ '\n' || i == witness.length);
+            uint i;
+            std.file.write(deleteme, txt);
+            auto f = File(deleteme);
+            scope(exit)
+            {
+                f.close();
+                assert(!f.isOpen);
+            }
+            foreach (line; f.byLine(kt))
+            {
+                assert(line == witness[i++]);
+            }
+            assert(i == witness.length, text(i, " != ", witness.length));
         }
-        assert(i == witness.length);
+
+        test("", null);
+        test("\n", [ "" ]);
+        test("asd\ndef\nasdf", [ "asd", "def", "asdf" ]);
+        test("asd\ndef\nasdf\n", [ "asd", "def", "asdf" ]);
+
+        test("", null, KeepTerminator.yes);
+        test("\n", [ "\n" ], KeepTerminator.yes);
+        test("asd\ndef\nasdf", [ "asd\n", "def\n", "asdf" ], KeepTerminator.yes);
+        test("asd\ndef\nasdf\n", [ "asd\n", "def\n", "asdf\n" ], KeepTerminator.yes);
     }
 
     template byRecord(Fields...)
@@ -1000,11 +1060,13 @@ to this file. */
 
     unittest
     {
+        // auto deleteme = testFilename();
+        // rndGen.popFront();
         // scope(failure) printf("Failed test at line %d\n", __LINE__);
-        // std.file.write("deleteme", "1 2\n4 1\n5 100");
-        // scope(exit) std.file.remove("deleteme");
-        // File f = File("deleteme");
-        // scope(exit) f.close;
+        // std.file.write(deleteme, "1 2\n4 1\n5 100");
+        // scope(exit) std.file.remove(deleteme);
+        // File f = File(deleteme);
+        // scope(exit) f.close();
         // auto t = [ tuple(1, 2), tuple(4, 1), tuple(5, 100) ];
         // uint i;
         // foreach (e; f.byRecord!(int, int)("%s %s"))
@@ -1098,15 +1160,16 @@ In case of an I/O error, an $(D StdioException) is thrown.
     {
         scope(failure) printf("Failed test at line %d\n", __LINE__);
 
-        std.file.write("testingByChunk", "asd\ndef\nasdf");
+        auto deleteme = testFilename();
+        std.file.write(deleteme, "asd\ndef\nasdf");
 
         auto witness = ["asd\n", "def\n", "asdf" ];
-        auto f = File("testingByChunk");
+        auto f = File(deleteme);
         scope(exit)
         {
-            f.close;
+            f.close();
             assert(!f.isOpen);
-            std.file.remove("testingByChunk");
+            std.file.remove(deleteme);
         }
 
         uint i;
@@ -1254,7 +1317,7 @@ $(D Range) that locks the file and allows fast writing to it.
     }
 
 /// Convenience function.
-    LockingTextWriter lockingTextWriter()
+    @property LockingTextWriter lockingTextWriter()
     {
         return LockingTextWriter(this);
     }
@@ -1272,9 +1335,10 @@ $(D Range) that locks the file and allows fast writing to it.
 
 unittest
 {
-    scope(exit) collectException(std.file.remove("deleteme"));
-    std.file.write("deleteme", "1 2 3");
-    auto f = File("deleteme");
+    auto deleteme = testFilename();
+    scope(exit) collectException(std.file.remove(deleteme));
+    std.file.write(deleteme, "1 2 3");
+    auto f = File(deleteme);
     assert(f.size == 5);
     assert(f.tell == 0);
 }
@@ -1326,7 +1390,7 @@ struct LockingTextReader
         return false;
     }
 
-    dchar front()
+    @property dchar front()
     {
         enforce(!empty);
         return _crt;
@@ -1350,9 +1414,12 @@ struct LockingTextReader
 
 unittest
 {
-    std.file.write("deleteme", "1 2 3");
+    static assert(isInputRange!LockingTextReader);
+    auto deleteme = testFilename();
+    std.file.write(deleteme, "1 2 3");
+    scope(exit) std.file.remove(deleteme);
     int x, y;
-    auto f = File("deleteme");
+    auto f = File(deleteme);
     f.readf("%s ", &x);
     assert(x == 1);
     f.readf("%d ", &x);
@@ -1456,21 +1523,21 @@ unittest
     //printf("Entering test at line %d\n", __LINE__);
     scope(failure) printf("Failed test at line %d\n", __LINE__);
     void[] buf;
-    write(buf);
+    if (false) write(buf);
     // test write
-    string file = "dmd-build-test.deleteme.txt";
-    auto f = File(file, "w");
-//    scope(exit) { std.file.remove(file); }
-     f.write("Hello, ",  "world number ", 42, "!");
-     f.close;
-     assert(cast(char[]) std.file.read(file) == "Hello, world number 42!");
+    auto deleteme = testFilename();
+    auto f = File(deleteme, "w");
+    f.write("Hello, ",  "world number ", 42, "!");
+    f.close();
+    scope(exit) { std.file.remove(deleteme); }
+    assert(cast(char[]) std.file.read(deleteme) == "Hello, world number 42!");
     // // test write on stdout
     //auto saveStdout = stdout;
     //scope(exit) stdout = saveStdout;
     //stdout.open(file, "w");
     Object obj;
     //write("Hello, ",  "world number ", 42, "! ", obj);
-    //stdout.close;
+    //stdout.close();
     // auto result = cast(char[]) std.file.read(file);
     // assert(result == "Hello, world number 42! null", result);
 }
@@ -1516,28 +1583,28 @@ unittest
         //printf("Entering test at line %d\n", __LINE__);
     scope(failure) printf("Failed test at line %d\n", __LINE__);
     // test writeln
-    string file = "dmd-build-test.deleteme.txt";
-    auto f = File(file, "w");
-    scope(exit) { std.file.remove(file); }
+    auto deleteme = testFilename();
+    auto f = File(deleteme, "w");
+    scope(exit) { std.file.remove(deleteme); }
     f.writeln("Hello, ",  "world number ", 42, "!");
-    f.close;
+    f.close();
     version (Windows)
-        assert(cast(char[]) std.file.read(file) ==
+        assert(cast(char[]) std.file.read(deleteme) ==
                 "Hello, world number 42!\r\n");
     else
-        assert(cast(char[]) std.file.read(file) ==
+        assert(cast(char[]) std.file.read(deleteme) ==
                 "Hello, world number 42!\n");
     // test writeln on stdout
     auto saveStdout = stdout;
     scope(exit) stdout = saveStdout;
-    stdout.open(file, "w");
+    stdout.open(deleteme, "w");
     writeln("Hello, ",  "world number ", 42, "!");
-    stdout.close;
+    stdout.close();
     version (Windows)
-        assert(cast(char[]) std.file.read(file) ==
+        assert(cast(char[]) std.file.read(deleteme) ==
                 "Hello, world number 42!\r\n");
     else
-        assert(cast(char[]) std.file.read(file) ==
+        assert(cast(char[]) std.file.read(deleteme) ==
                 "Hello, world number 42!\n");
 }
 
@@ -1593,19 +1660,19 @@ unittest
     //printf("Entering test at line %d\n", __LINE__);
     scope(failure) printf("Failed test at line %d\n", __LINE__);
     // test writef
-    string file = "dmd-build-test.deleteme.txt";
-    auto f = File(file, "w");
-    scope(exit) { std.file.remove(file); }
+    auto deleteme = testFilename();
+    auto f = File(deleteme, "w");
+    scope(exit) { std.file.remove(deleteme); }
     f.writef("Hello, %s world number %s!", "nice", 42);
-    f.close;
-    assert(cast(char[]) std.file.read(file) ==  "Hello, nice world number 42!");
+    f.close();
+    assert(cast(char[]) std.file.read(deleteme) ==  "Hello, nice world number 42!");
     // test write on stdout
     auto saveStdout = stdout;
     scope(exit) stdout = saveStdout;
-    stdout.open(file, "w");
+    stdout.open(deleteme, "w");
     writef("Hello, %s world number %s!", "nice", 42);
-    stdout.close;
-    assert(cast(char[]) std.file.read(file) == "Hello, nice world number 42!");
+    stdout.close();
+    assert(cast(char[]) std.file.read(deleteme) == "Hello, nice world number 42!");
 }
 
 /***********************************
@@ -1621,18 +1688,18 @@ unittest
         //printf("Entering test at line %d\n", __LINE__);
     scope(failure) printf("Failed test at line %d\n", __LINE__);
     // test writefln
-    string file = "dmd-build-test.deleteme.txt";
-    auto f = File(file, "w");
-    scope(exit) { std.file.remove(file); }
+    auto deleteme = testFilename();
+    auto f = File(deleteme, "w");
+    scope(exit) { std.file.remove(deleteme); }
     f.writefln("Hello, %s world number %s!", "nice", 42);
-    f.close;
+    f.close();
     version (Windows)
-        assert(cast(char[]) std.file.read(file) ==
+        assert(cast(char[]) std.file.read(deleteme) ==
                 "Hello, nice world number 42!\r\n");
     else
-        assert(cast(char[]) std.file.read(file) ==
+        assert(cast(char[]) std.file.read(deleteme) ==
                 "Hello, nice world number 42!\n",
-                cast(char[]) std.file.read(file));
+                cast(char[]) std.file.read(deleteme));
     // test write on stdout
     // auto saveStdout = stdout;
     // scope(exit) stdout = saveStdout;
@@ -1645,7 +1712,7 @@ unittest
     //     F b = a % 2;
     //     writeln(b);
     // }
-    // stdout.close;
+    // stdout.close();
     // auto read = cast(char[]) std.file.read(file);
     // version (Windows)
     //     assert(read == "Hello, nice world number 42!\r\n1\r\n1\r\n1\r\n", read);
@@ -1654,7 +1721,9 @@ unittest
 }
 
 /**
- * Formatted read one line from stdin.
+ * Read data from $(D stdin) according to the specified
+ * $(LINK2 std_format.html#format-string, format specifier) using
+ * $(XREF format,formattedRead).
  */
 uint readf(A...)(in char[] format, A args)
 {
@@ -1902,24 +1971,24 @@ unittest
 {
         //printf("Entering test at line %d\n", __LINE__);
     scope(failure) printf("Failed test at line %d\n", __LINE__);
-    string file = "dmd-build-test.deleteme.txt";
-    scope(exit) { std.file.remove(file); }
+    auto deleteme = testFilename();
+    scope(exit) { std.file.remove(deleteme); }
     alias TypeTuple!(string, wstring, dstring,
                      char[], wchar[], dchar[])
         TestedWith;
     foreach (T; TestedWith) {
         // test looping with an empty file
-        std.file.write(file, "");
-        auto f = File(file, "r");
+        std.file.write(deleteme, "");
+        auto f = File(deleteme, "r");
         foreach (T line; lines(f))
         {
             assert(false);
         }
-        f.close;
+        f.close();
 
         // test looping with a file with three lines
-        std.file.write(file, "Line one\nline two\nline three\n");
-        f.open(file, "r");
+        std.file.write(deleteme, "Line one\nline two\nline three\n");
+        f.open(deleteme, "r");
         uint i = 0;
         foreach (T line; lines(f))
         {
@@ -1929,11 +1998,11 @@ unittest
             else assert(false);
             ++i;
         }
-        f.close;
+        f.close();
 
         // test looping with a file with three lines, last without a newline
-        std.file.write(file, "Line one\nline two\nline three");
-        f.open(file, "r");
+        std.file.write(deleteme, "Line one\nline two\nline three");
+        f.open(deleteme, "r");
         i = 0;
         foreach (T line; lines(f))
         {
@@ -1943,7 +2012,7 @@ unittest
             else assert(false);
             ++i;
         }
-        f.close;
+        f.close();
     }
 
     // test with ubyte[] inputs
@@ -1952,17 +2021,17 @@ unittest
     alias TypeTuple!(immutable(ubyte)[], ubyte[]) TestedWith2;
     foreach (T; TestedWith2) {
         // test looping with an empty file
-        std.file.write(file, "");
-        auto f = File(file, "r");
+        std.file.write(deleteme, "");
+        auto f = File(deleteme, "r");
         foreach (T line; lines(f))
         {
             assert(false);
         }
-        f.close;
+        f.close();
 
         // test looping with a file with three lines
-        std.file.write(file, "Line one\nline two\nline three\n");
-        f.open(file, "r");
+        std.file.write(deleteme, "Line one\nline two\nline three\n");
+        f.open(deleteme, "r");
         uint i = 0;
         foreach (T line; lines(f))
         {
@@ -1973,11 +2042,11 @@ unittest
             else assert(false);
             ++i;
         }
-        f.close;
+        f.close();
 
         // test looping with a file with three lines, last without a newline
-        std.file.write(file, "Line one\nline two\nline three");
-        f.open(file, "r");
+        std.file.write(deleteme, "Line one\nline two\nline three");
+        f.open(deleteme, "r");
         i = 0;
         foreach (T line; lines(f))
         {
@@ -1987,7 +2056,7 @@ unittest
             else assert(false);
             ++i;
         }
-        f.close;
+        f.close();
 
     }
 
@@ -1995,8 +2064,8 @@ unittest
     {
         // test looping with a file with three lines, last without a newline
         // using a counter too this time
-        std.file.write(file, "Line one\nline two\nline three");
-        auto f = File(file, "r");
+        std.file.write(deleteme, "Line one\nline two\nline three");
+        auto f = File(deleteme, "r");
         uint i = 0;
         foreach (ulong j, T line; lines(f))
         {
@@ -2006,7 +2075,7 @@ unittest
             else assert(false);
             ++i;
         }
-        f.close;
+        f.close();
     }
 }
 
@@ -2096,20 +2165,20 @@ unittest
 {
         //printf("Entering test at line %d\n", __LINE__);
     scope(failure) printf("Failed test at line %d\n", __LINE__);
-    string file = "dmd-build-test.deleteme.txt";
-    scope(exit) { std.file.remove(file); }
+    auto deleteme = testFilename();
+    scope(exit) { std.file.remove(deleteme); }
     // test looping with an empty file
-    std.file.write(file, "");
-    auto f = File(file, "r");
+    std.file.write(deleteme, "");
+    auto f = File(deleteme, "r");
     foreach (ubyte[] line; chunks(f, 4))
     {
         assert(false);
     }
-    f.close;
+    f.close();
 
     // test looping with a file with three lines
-    std.file.write(file, "Line one\nline two\nline three\n");
-    f = File(file, "r");
+    std.file.write(deleteme, "Line one\nline two\nline three\n");
+    f = File(deleteme, "r");
     uint i = 0;
     foreach (ubyte[] line; chunks(f, 3))
     {
@@ -2119,7 +2188,7 @@ unittest
         else break;
         ++i;
     }
-    f.close;
+    f.close();
 }
 
 /*********************
@@ -2132,7 +2201,7 @@ class StdioException : Exception
 
 /**
 Initialize with a message and an error code. */
-    this(string message, uint e = .getErrno)
+    this(string message, uint e = .getErrno())
     {
         errno = e;
         version (Posix)
@@ -2165,7 +2234,7 @@ Initialize with a message and an error code. */
 /// ditto
     static void opCall()
     {
-        throw new StdioException(null, .getErrno);
+        throw new StdioException(null, .getErrno());
     }
 }
 
@@ -2196,11 +2265,12 @@ __gshared
 unittest
 {
     scope(failure) printf("Failed test at line %d\n", __LINE__);
-    std.file.write("deleteme", "1 2\n4 1\n5 100");
-    scope(exit) std.file.remove("deleteme");
+    auto deleteme = testFilename();
+    std.file.write(deleteme, "1 2\n4 1\n5 100");
+    scope(exit) std.file.remove(deleteme);
     {
-        File f = File("deleteme");
-        scope(exit) f.close;
+        File f = File(deleteme);
+        scope(exit) f.close();
         auto t = [ tuple(1, 2), tuple(4, 1), tuple(5, 100) ];
         uint i;
         foreach (e; f.byRecord!(int, int)("%s %s"))
@@ -2501,13 +2571,35 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator = '\n')
     }
 
     // Narrow stream
-    buf.length = 0;
+    // First, fill the existing buffer
+    for (size_t bufPos = 0; bufPos < buf.length; )
+    {
+        immutable c = FGETC(fp);
+        if (c == -1)
+        {
+            buf.length = bufPos;
+            goto endGame;
+        }
+        buf.ptr[bufPos++] = cast(char) c;
+        if (c == terminator)
+        {
+            // No need to test for errors in file
+            buf.length = bufPos;
+            return bufPos;
+        }
+    }
+    // Then, append to it
     for (int c; (c = FGETC(fp)) != -1; )
     {
         buf ~= cast(char)c;
         if (c == terminator)
-            break;
+        {
+            // No need to test for errors in file
+            return buf.length;
+        }
     }
+
+  endGame:
     if (ferror(fps))
         StdioException();
     return buf.length;
@@ -2563,3 +2655,8 @@ version(linux) {
     }
 }
 
+version(unittest) string testFilename(string file = __FILE__, size_t line = __LINE__)
+{
+    import std.path;
+    return text("deleteme.", baseName(file), ".", line);
+}

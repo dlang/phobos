@@ -157,42 +157,41 @@ void[] uncompress(void[] srcbuf, size_t destlen = 0u, int winbits = 15)
     if (!destlen)
         destlen = srcbuf.length * 2 + 1;
 
-    while (1)
+    etc.c.zlib.z_stream zs;
+    zs.next_in = cast(typeof(zs.next_in)) srcbuf;
+    zs.avail_in = to!uint(srcbuf.length);
+    err = etc.c.zlib.inflateInit2(&zs, winbits);
+    if (err)
     {
-        etc.c.zlib.z_stream zs;
+        throw new ZlibException(err);
+    }
 
-        destbuf = new ubyte[destlen];
+    size_t olddestlen = 0u;
 
-        zs.next_in = cast(ubyte*) srcbuf;
-        zs.avail_in = to!uint(srcbuf.length);
+    loop:
+    while (true)
+    {
+        destbuf.length = destlen;
+        zs.next_out = cast(typeof(zs.next_out)) &destbuf[olddestlen];
+        zs.avail_out = to!uint(destlen - olddestlen);
+        olddestlen = destlen;
 
-        zs.next_out = destbuf.ptr;
-        zs.avail_out = cast(typeof(zs.avail_out))destlen;
-
-        err = etc.c.zlib.inflateInit2(&zs, winbits);
-        if (err)
-        {   delete destbuf;
-            throw new ZlibException(err);
-        }
         err = etc.c.zlib.inflate(&zs, Z_NO_FLUSH);
         switch (err)
         {
             case Z_OK:
-                etc.c.zlib.inflateEnd(&zs);
                 destlen = destbuf.length * 2;
-                continue;
+                continue loop;
 
             case Z_STREAM_END:
                 destbuf.length = zs.total_out;
                 err = etc.c.zlib.inflateEnd(&zs);
                 if (err != Z_OK)
-                    goto Lerr;
+                    throw new ZlibException(err);
                 return destbuf;
 
             default:
                 etc.c.zlib.inflateEnd(&zs);
-            Lerr:
-                delete destbuf;
                 throw new ZlibException(err);
         }
     }
@@ -213,6 +212,19 @@ the quick brown fox jumps over the lazy dog\r
     //arrayPrint(dst);
     result = cast(ubyte[])uncompress(cast(void[])dst);
     //arrayPrint(result);
+    assert(result == src);
+}
+
+unittest
+{
+    ubyte[] src = new ubyte[1000000];
+    ubyte[] dst;
+    ubyte[] result;
+
+    src[] = 0x80;
+    dst = cast(ubyte[])compress(cast(void[])src);
+    assert(dst.length*2 + 1 < src.length);
+    result = cast(ubyte[])uncompress(cast(void[])dst);
     assert(result == src);
 }
 
@@ -319,7 +331,7 @@ class Compress
         if (zs.avail_in)
             buf = zs.next_in[0 .. zs.avail_in] ~ cast(ubyte[]) buf;
 
-        zs.next_in = cast(ubyte*) buf.ptr;
+        zs.next_in = cast(typeof(zs.next_in)) buf.ptr;
         zs.avail_in = to!uint(buf.length);
 
         err = deflate(&zs, Z_NO_FLUSH);
@@ -472,11 +484,11 @@ class UnCompress
 
         if (!inited)
         {
-	    int windowBits = 15;
-	    if(format == HeaderFormat.gzip)
-	        windowBits += 16;
+        int windowBits = 15;
+        if(format == HeaderFormat.gzip)
+            windowBits += 16;
             else if(format == HeaderFormat.determineFromData)
-	        windowBits += 32;
+            windowBits += 32;
 
             err = inflateInit2(&zs, windowBits);
             if (err)
@@ -565,21 +577,21 @@ private import std.random;
 
 unittest // by Dave
 {
-    debug(zlib) printf("std.zlib.unittest\n");
+    debug(zlib) writeln("std.zlib.unittest");
 
     bool CompressThenUncompress (ubyte[] src)
     {
       try {
         ubyte[] dst = cast(ubyte[])std.zlib.compress(cast(void[])src);
         double ratio = (dst.length / cast(double)src.length);
-        debug(zlib) writef("src.length:  ", src.length, ", dst: ", dst.length, ", Ratio = ", ratio);
+        debug(zlib) writef("src.length: %1$d, dst: %2$d, Ratio = %3$f", src.length, dst.length, ratio);
         ubyte[] uncompressedBuf;
         uncompressedBuf = cast(ubyte[])std.zlib.uncompress(cast(void[])dst);
         assert(src.length == uncompressedBuf.length);
         assert(src == uncompressedBuf);
       }
       catch {
-        debug(zlib) writefln(" ... Exception thrown when src.length = ", src.length, ".");
+        debug(zlib) writefln(" ... Exception thrown when src.length = %1$d.", src.length);
         return false;
       }
       return true;
@@ -595,7 +607,7 @@ unittest // by Dave
             c = cast(char) (' ' + (uniform(0, idx % 2 ? 91 : 2)));
 
         if(CompressThenUncompress(cast(ubyte[])buf)) {
-            debug(zlib) printf("; Success.\n");
+            debug(zlib) writeln("; Success.");
         } else {
             return;
         }
@@ -610,13 +622,13 @@ unittest // by Dave
             c = cast(char) (' ' + (uniform(0, idx % 2 ? 91 : 10)));
 
         if(CompressThenUncompress(cast(ubyte[])buf)) {
-            debug(zlib) printf("; Success.\n");
+            debug(zlib) writefln("; Success.");
         } else {
             return;
         }
     }
 
-    debug(zlib) printf("PASSED std.zlib.unittest\n");
+    debug(zlib) writefln("PASSED std.zlib.unittest");
 }
 
 

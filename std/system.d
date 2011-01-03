@@ -21,7 +21,7 @@ immutable
         Note:
             This is for cases where you need a value representing the OS at
             runtime. If you're doing something which should compile differently
-            on different OSes, then please use $(D version(Win32)),
+            on different OSes, then please use $(D version(Windows)),
             $(D version(linux)), etc.
 
         See_Also:
@@ -30,6 +30,7 @@ immutable
     enum OS
     {
         win32 = 1, /// Microsoft 32 bit Windows systems
+        win64,     /// Microsoft 64 bit Windows systems
         linux,     /// All Linux Systems
         osx,       /// Mac OS X
         freeBSD,   /// FreeBSD
@@ -39,6 +40,7 @@ immutable
 
     /// The OS that the program was compiled for.
     version(Win32)        OS os = OS.win32;
+    else version(Win64)   OS os = OS.win64;
     else version(linux)   OS os = OS.linux;
     else version(OSX)     OS os = OS.osx;
     else version(FreeBSD) OS os = OS.freeBSD;

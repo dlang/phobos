@@ -75,7 +75,7 @@ MAKEFILE:=$(lastword $(MAKEFILE_LIST))
 
 # Set DRUNTIME name and full path
 ifeq (,$(findstring win,$(OS)))
-	DRUNTIME = $(DRUNTIME_PATH)/lib/libdruntime.a
+	DRUNTIME = $(DRUNTIME_PATH)/lib/libdruntime-$(OS)$(MODEL).a
 else
 	DRUNTIME = $(DRUNTIME_PATH)/lib/druntime.lib
 endif
@@ -111,7 +111,7 @@ ifeq ($(CC),cc)
 endif
 
 # Set DFLAGS
-DFLAGS := -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS) -w -d -m$(MODEL)
+DFLAGS := -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS) -w -d -property -m$(MODEL)
 ifeq ($(BUILD),debug)
 	DFLAGS += -g -debug
 else
@@ -141,7 +141,7 @@ else
 endif
 
 # Set DDOC, the documentation generator
-DDOC=dmd
+DDOC=$(DMD)
 
 # Set LIB, the ultimate target
 ifeq (,$(findstring win,$(OS)))
@@ -156,15 +156,16 @@ MAIN = $(ROOT)/emptymain.d
 # Stuff in std/
 STD_MODULES = $(addprefix std/, algorithm array ascii base64			\
         benchmark bigint bitmanip compiler complex concurrency			\
-        container contracts conv cpuid cstream ctype date datetime		\
-        datebase dateparse demangle encoding exception file format		\
-        functional getopt gregorian json loader math mathspecial md5	\
-        metastrings mmfile numeric outbuffer parallelism path perf		\
-        process random range regex regexp signals socket socketstream	\
-        stdint stdio stdiobase stream string syserror system traits		\
-        typecons typetuple uni uri utf variant xml zip zlib)
+        container contracts conv cpuid cstream ctype csv date			\
+        datetime datebase dateparse demangle encoding exception file	\
+        format functional getopt gregorian json loader math				\
+        mathspecial md5 metastrings mmfile numeric outbuffer			\
+        parallelism path perf process random range regex regexp			\
+        signals socket socketstream stdint stdio stdiobase stream		\
+        string syserror system traits typecons typetuple uni uri utf	\
+        variant xml zip zlib)
 
-STD_NET_MODULES = $(addprefix std/net/, isemail)
+STD_NET_MODULES = $(addprefix std/net/, isemail curl)
 
 # OS-specific D modules
 EXTRA_MODULES_LINUX := $(addprefix std/c/linux/, linux socket)
@@ -179,23 +180,24 @@ else
 endif
 
 # Other D modules that aren't under std/
-EXTRA_DOCUMENTABLES += $(addprefix etc/c/,curl zlib) $(addprefix		\
+EXTRA_DOCUMENTABLES += $(addprefix etc/c/,curl sqlite3 zlib) $(addprefix	\
 std/c/, fenv locale math process stdarg stddef stdio stdlib string	\
 time wcharh)
 EXTRA_MODULES += $(EXTRA_DOCUMENTABLES) $(addprefix			\
 	std/internal/math/, biguintcore biguintnoasm biguintx86	\
-	gammafunction errorfunction) std/internal/processinit
+	gammafunction errorfunction) $(addprefix std/internal/, \
+	processinit uni uni_tab)
 
 # Aggregate all D modules relevant to this build
 D_MODULES = crc32 $(STD_MODULES) $(EXTRA_MODULES) $(STD_NET_MODULES)
 # Add the .d suffix to the module names
 D_FILES = $(addsuffix .d,$(D_MODULES))
 # Aggregate all D modules over all OSs (this is for the zip file)
-ALL_D_FILES = $(addsuffix .d,crc32 $(STD_MODULES) $(EXTRA_MODULES)	\
+ALL_D_FILES = $(addsuffix .d, $(D_MODULES) \
 $(EXTRA_MODULES_LINUX) $(EXTRA_MODULES_OSX) $(EXTRA_MODULES_FREEBSD) $(EXTRA_MODULES_WIN32)) \
-	std/stdarg.d std/bind.d std/internal/windows/advapi32.d std/__fileinit.d \
+	std/stdarg.d std/bind.d std/internal/windows/advapi32.d \
 	std/windows/registry.d std/c/linux/pthread.d std/c/linux/termios.d \
-	std/c/linux/tipc.d std/net/isemail.d
+	std/c/linux/tipc.d std/net/isemail.d std/net/curl.d
 
 # C files to be part of the build
 C_MODULES = $(addprefix etc/c/zlib/, adler32 compress crc32 deflate	\
@@ -244,20 +246,14 @@ $(ROOT)/%$(DOTOBJ) : %.c
 $(LIB) : $(OBJS) $(ALL_D_FILES) $(DRUNTIME)
 	$(DMD) $(DFLAGS) -lib -of$@ $(DRUNTIME) $(D_FILES) $(OBJS)
 
-ifeq ($(MODEL),64)
-DISABLED_TESTS += std/conv
-# not reduced yet. I hate reducing this file
-# passes on debug, segv on release
-
-DISABLED_TESTS += std/format
-# Still not passing, time to pull out the next issue.
-
-DISABLED_TESTS += std/math
-# seems to infinite loop, need to reduce
+ifeq (osx,$(OS))
+# Build fat library that combines the 32 bit and the 64 bit libraries
+libphobos2.a : generated/osx/release/32/libphobos2.a generated/osx/release/64/libphobos2.a
+	lipo generated/osx/release/32/libphobos2.a generated/osx/release/64/libphobos2.a -create -output generated/osx/release/libphobos2.a
+endif
 
 $(addprefix $(ROOT)/unittest/,$(DISABLED_TESTS)) :
 	@echo Testing $@ - disabled
-endif
 
 $(ROOT)/unittest/%$(DOTEXE) : %.d $(LIB) $(ROOT)/emptymain.d
 	@echo Testing $@
@@ -290,7 +286,7 @@ install : release
 	sudo cp $(LIB) /usr/lib/
 
 $(DRUNTIME) :
-	$(MAKE) -C $(DRUNTIME_PATH) -f posix.mak
+	$(MAKE) -C $(DRUNTIME_PATH) -f posix.mak MODEL=$(MODEL)
 
 ###########################################################
 # html documentation
@@ -336,3 +332,4 @@ html_consolidated :
 	$(MAKE) DOC_OUTPUT_DIR=$(BIGDOC_OUTPUT_DIR) STDDOC=$(BIGSTDDOC) html -j 8
 	cat $(DOCSRC)/std_consolidated_header.html $(BIGHTMLS)	\
 	$(DOCSRC)/std_consolidated_footer.html > $(DOC_OUTPUT_DIR)/std_consolidated.html
+

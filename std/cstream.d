@@ -53,12 +53,12 @@ class CFile : Stream {
    * Property to get or set the underlying file for this stream.
    * Setting the file marks the stream as open.
    */
-  FILE* file() { return cfile; }
+  @property FILE* file() { return cfile; }
 
   /**
    * Ditto
    */
-  void file(FILE* cfile) {
+  @property void file(FILE* cfile) {
     this.cfile = cfile;
     isopen = true;
   }
@@ -96,7 +96,7 @@ class CFile : Stream {
    * Ditto
    */
   override char ungetc(char c) {
-    return cast(char)std.c.stdio.ungetc(c,cfile);
+    return cast(char).std.c.stdio.ungetc(c,cfile);
   }
 
   /**
@@ -153,7 +153,7 @@ class CFile : Stream {
     file.writeString("Hello, world!");
     file.write(i);
     // string#1 + string#2 + int should give exacly that
-    version (Win32)
+    version (Windows)
         assert(file.position() == 19 + 13 + 4);
     version (Posix)
         assert(file.position() == 18 + 13 + 4);
@@ -168,18 +168,18 @@ class CFile : Stream {
     auto exp = "Testing stream.d:";
     assert(line[0] == 'T');
     assert(line.length == exp.length);
-    assert(!std.string.cmp(line, "Testing stream.d:"));
+    assert(!.std.string.cmp(line, "Testing stream.d:"));
     // jump over "Hello, "
     file.seek(7, SeekPos.Current);
-    version (Win32)
+    version (Windows)
       assert(file.position() == 19 + 7);
     version (Posix)
       assert(file.position() == 18 + 7);
-    assert(!std.string.cmp(file.readString(6), "world!"));
+    assert(!.std.string.cmp(file.readString(6), "world!"));
     i = 0; file.read(i);
     assert(i == 666);
     // string#1 + string#2 + int should give exacly that
-    version (Win32)
+    version (Windows)
       assert(file.position() == 19 + 13 + 4);
     version (Posix)
       assert(file.position() == 18 + 13 + 4);
