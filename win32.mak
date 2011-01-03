@@ -108,7 +108,6 @@ SRCS_1 = std\math.d std\stdio.d std\dateparse.d std\date.d std\datetime.d \
 	std\metastrings.d std\contracts.d std\getopt.d \
 	std\signals.d std\typetuple.d std\traits.d std\bind.d \
 	std\bitmanip.d std\typecons.d \
-	std\boxer.d \
 	std\complex.d \
 	std\exception.d \
 	std\intrinsic.d \
@@ -175,7 +174,6 @@ DOCS=	$(DOC)\object.html \
 	$(DOC)\std_bigint.html \
 	$(DOC)\std_bind.html \
 	$(DOC)\std_bitmanip.html \
-	$(DOC)\std_boxer.html \
 	$(DOC)\std_concurrency.html \
 	$(DOC)\std_compiler.html \
 	$(DOC)\std_complex.html \
@@ -256,7 +254,7 @@ SRC_STD= std\zlib.d std\zip.d std\stdint.d std\container.d std\conv.d std\utf.d 
 	std\intrinsic.d std\syserror.d \
 	std\regexp.d std\random.d std\stream.d std\process.d \
 	std\socket.d std\socketstream.d std\loader.d std\stdarg.d std\format.d \
-	std\stdio.d std\perf.d std\uni.d std\boxer.d \
+	std\stdio.d std\perf.d std\uni.d \
 	std\cstream.d std\demangle.d \
 	std\signals.d std\cpuid.d std\typetuple.d std\traits.d std\bind.d \
 	std\metastrings.d std\contracts.d std\getopt.d \
@@ -378,9 +376,6 @@ bind.obj : std\bind.d
 
 bitmanip.obj : std\bitmanip.d
 	$(DMD) -c $(DFLAGS) std\bitmanip.d
-
-boxer.obj : std\boxer.d
-	$(DMD) -c $(DFLAGS) std\boxer.d
 
 concurrency.obj : std\concurrency.d
 	$(DMD) -c $(DFLAGS) std\concurrency.d
@@ -669,9 +664,6 @@ $(DOC)\std_bind.html : $(STDDOC) std\bind.d
 
 $(DOC)\std_bitmanip.html : $(STDDOC) std\bitmanip.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_bitmanip.html $(STDDOC) std\bitmanip.d
-
-$(DOC)\std_boxer.html : $(STDDOC) std\boxer.d
-	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_boxer.html $(STDDOC) std\boxer.d
 
 $(DOC)\std_concurrency.html : $(STDDOC) std\concurrency.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_concurrency.html $(STDDOC) std\concurrency.d
