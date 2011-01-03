@@ -19,7 +19,8 @@
  *    (See accompanying file LICENSE_1_0.txt or copy at
  *          http://www.boost.org/LICENSE_1_0.txt)
  */
-deprecated module std.bind;
+module std.bind;
+deprecated:
 
 import std.string : stdFormat = format;
 import std.traits;
