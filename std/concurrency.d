@@ -163,18 +163,23 @@ private
 
 static this()
 {
-    mbox = new MessageBox;
+    // NOTE: thisTid will construct a new MessageBox if one doesn't exist,
+    //       which should only be true of the main thread and threads created
+    //       via core.thread instead of spawn.
 }
 
 
 static ~this()
 {
-    mbox.close();
-    auto me = thisTid;
-    foreach( tid; links.keys )
-        _send( MsgType.linkDead, tid, me );
-    if( owner != Tid.init )
-        _send( MsgType.linkDead, owner, me );
+    if( mbox !is null )
+    {
+        mbox.close();
+        auto me = thisTid;
+        foreach( tid; links.keys )
+            _send( MsgType.linkDead, tid, me );
+        if( owner != Tid.init )
+            _send( MsgType.linkDead, owner, me );
+    }
 }
 
 
@@ -289,6 +294,9 @@ private:
  */
 @property Tid thisTid()
 {
+    if( mbox )
+        return Tid( mbox );
+    mbox = new MessageBox;
     return Tid( mbox );
 }
 
