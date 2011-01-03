@@ -874,7 +874,6 @@ unittest
     under10.front() = 4;
     assert(equal(under10, [4, 3, 5][]));
     under10.front() = 40;
-    writeln(under10);
     assert(equal(under10, [40, 3, 5][]));
     under10.front() = 1;
 
@@ -942,6 +941,99 @@ unittest
     int underX(int a) { return a < x; }
     const(int)[] list = [ 1, 2, 10, 11, 3, 4 ];
     assert(equal(filter!underX(list), [ 1, 2, 3, 4 ]));
+}
+
+// filterBidirectional
+/**
+ * Similar to $(D filter), except it defines a bidirectional
+ * range. There is a speed disadvantage - the constructor spends time
+ * finding the last element in the range that satisfies the filtering
+ * condition (in addition to finding the first one). The advantage is
+ * that the filtered range can be spanned from both directions. Also,
+ * $(XREF range, retro) can be applied against the filtered range.
+ *
+Example:
+----
+int[] arr = [ 1, 2, 3, 4, 5 ];
+auto small = filterBidirectional!("a < 3")(arr);
+assert(small.back == 2);
+assert(equal(small, [ 1, 2 ]));
+assert(equal(retro(small), [ 2, 1 ]));
+// In combination with chain() to span multiple ranges
+int[] a = [ 3, -2, 400 ];
+int[] b = [ 100, -101, 102 ];
+auto r = filterBidirectional!("a > 0")(chain(a, b));
+assert(r.back == 102);
+----
+ */
+template filterBidirectional(alias pred)
+{
+    FilterBidirectional!(unaryFun!(pred), Range)
+    filterBidirectional(Range)(Range rs)
+    {
+        return typeof(return)(rs);
+    }
+}
+
+struct FilterBidirectional(alias pred, Range) if (isBidirectionalRange!(Unqual!Range))
+{
+    alias Unqual!Range R;
+    R _input;
+
+    this(R r)
+    {
+        _input = r;
+        while (!_input.empty && !pred(_input.front)) _input.popFront();
+        while (!_input.empty && !pred(_input.back)) _input.popBack();
+    }
+
+    @property bool empty() { return _input.empty; }
+
+    void popFront()
+    {
+        do
+        {
+            _input.popFront;
+        } while (!_input.empty && !pred(_input.front));
+    }
+
+    @property auto ref front()
+    {
+        return _input.front;
+    }
+
+    void popBack()
+    {
+        do
+        {
+            _input.popBack;
+        } while (!_input.empty && !pred(_input.back));
+    }
+
+    @property auto ref back()
+    {
+        return _input.back;
+    }
+
+    @property typeof(this) save()
+    {
+        return typeof(this)(_input);
+    }
+}
+
+unittest
+{
+    int[] arr = [ 1, 2, 3, 4, 5 ];
+    auto small = filterBidirectional!("a < 3")(arr);
+    static assert(isBidirectionalRange!(typeof(small)));
+    assert(small.back == 2);
+    assert(equal(small, [ 1, 2 ]));
+    assert(equal(retro(small), [ 2, 1 ]));
+    // In combination with chain() to span multiple ranges
+    int[] a = [ 3, -2, 400 ];
+    int[] b = [ 100, -101, 102 ];
+    auto r = filterBidirectional!("a > 0")(chain(a, b));
+    assert(r.back == 102);
 }
 
 // move
