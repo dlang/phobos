@@ -15,7 +15,6 @@
  */
 public import std.base64;
 public import std.bind;
-public import std.boxer;
 public import std.compiler;
 public import std.concurrency;
 public import std.contracts;
@@ -89,8 +88,6 @@ version (all)
 
     ubyte[16] buf;
     std.md5.sum(buf,"");
-
-    Box abox;
 
     creal c = 3.0 + 4.0i;
     c = sqrt(c);
