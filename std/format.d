@@ -2759,7 +2759,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
 
         void putstr(const char[] s)
         {
-            //printf("flags = x%x\n", flags);
+            //printf("putstr: s = %.*s, flags = x%x\n", s.length, s.ptr, flags);
             sizediff_t padding = field_width -
                 (strlen(prefix) + toUCSindex(s, s.length));
             sizediff_t prepad = 0;
@@ -2899,7 +2899,7 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
           auto tiSave = ti;
           auto mSave = m;
           ti = valti;
-          //printf("\n%.*s\n", valti.classinfo.name);
+          //printf("\n%.*s\n", valti.classinfo.name.length, valti.classinfo.name.ptr);
           m = getMan(valti);
           while (len--)
           {
