@@ -827,7 +827,15 @@ struct Filter(alias pred, Range) if (isInputRange!(Unqual!Range))
         return this;
     }
 
-    bool empty() { return _input.empty; }
+    static if (isInfinite!Range)
+    {
+        enum bool empty = false;
+    }
+    else
+    {
+        @property bool empty() { return _input.empty; }
+    }
+
     void popFront()
     {
         do
@@ -836,7 +844,7 @@ struct Filter(alias pred, Range) if (isInputRange!(Unqual!Range))
         } while (!_input.empty && !pred(_input.front));
     }
 
-    ElementType!(Range) front()
+    @property auto ref front()
     {
         return _input.front;
     }
@@ -848,6 +856,59 @@ struct Filter(alias pred, Range) if (isInputRange!(Unqual!Range))
             return typeof(this)(_input);
         }
     }
+}
+
+unittest
+{
+    debug(std_algorithm) scope(success)
+        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+    int[] a = [ 3, 4, 2 ];
+    auto r = filter!("a > 3")(a);
+    static assert(isForwardRange!(typeof(r)));
+    assert(equal(r, [ 4 ][]));
+
+    a = [ 1, 22, 3, 42, 5 ];
+    auto under10 = filter!("a < 10")(a);
+    assert(equal(under10, [1, 3, 5][]));
+    static assert(isForwardRange!(typeof(under10)));
+    under10.front() = 4;
+    assert(equal(under10, [4, 3, 5][]));
+    under10.front() = 40;
+    writeln(under10);
+    assert(equal(under10, [40, 3, 5][]));
+    under10.front() = 1;
+
+    auto infinite = filter!"a > 2"(repeat(3));
+    static assert(isInfinite!(typeof(infinite)));
+    static assert(isForwardRange!(typeof(infinite)));
+    
+    foreach(DummyType; AllDummyRanges) {
+        DummyType d;
+        auto f = filter!"a & 1"(d);
+        assert(equal(f, [1,3,5,7,9]));
+        
+        static if (isForwardRange!DummyType) {
+            static assert(isForwardRange!(typeof(f)));
+        }
+    }
+    
+    // With delegates
+    int x = 10;
+    int overX(int a) { return a > x; }
+    typeof(filter!overX(a)) getFilter()
+    {
+        return filter!overX(a);
+    }
+    auto r1 = getFilter();
+    assert(equal(r1, [22, 42]));
+    
+    // With chain
+    auto nums = [0,1,2,3,4];
+    assert(equal(filter!overX(chain(a, nums)), [22, 42]));
+    
+    // With copying of inner struct Filter to Map
+    auto arr = [1,2,3,4,5];
+    auto m = map!"a + 1"(filter!"a < 4"(arr));
 }
 
 unittest
@@ -905,9 +966,9 @@ void move(T)(ref T source, ref T target)
         // and bitblast source over it
         static if (is(typeof(target.__dtor()))) target.__dtor();
         memcpy(&target, &source, T.sizeof);
-        // If the source defines a destructor, we must obliterate the
-        // object in order to avoid double freeing
-        static if (is(typeof(source.__dtor())))
+        // If the source defines a destructor or a postblit hook, we must obliterate the
+        // object in order to avoid double freeing and undue aliasing
+        static if (is(typeof(source.__dtor())) || is(typeof(source.__postblit())))
         {
             static T empty;
             memcpy(&source, &empty, T.sizeof);
