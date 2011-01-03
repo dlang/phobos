@@ -122,7 +122,6 @@
 */
 
 module std.regexp;
-deprecated:
 
 //debug = regexp;       // uncomment to turn on debugging printf's
 
