@@ -697,7 +697,7 @@ class TypeInfo_StaticArray : TypeInfo
     }
 
     version (X86_64) int argTypes(out TypeInfo arg1, out TypeInfo arg2)
-    {   //arg1 = typeid(void*);
+    {   arg1 = typeid(void*);
         return 0;
     }
 }
