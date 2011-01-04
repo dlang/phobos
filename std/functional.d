@@ -8,7 +8,7 @@ Macros:
 WIKI = Phobos/StdFunctional
 
 Copyright: Copyright Andrei Alexandrescu 2008 - 2009.
-License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+License:   $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   $(WEB erdani.org, Andrei Alexandrescu)
 */
 /*
@@ -500,7 +500,6 @@ template composeImpl(fun...)
 int[] a = pipe!(readText, split, map!(to!(int)))("file.txt");
 ----
  */
-
 template pipe(fun...)
 {
     alias compose!(Reverse!(fun)) pipe;
@@ -508,20 +507,146 @@ template pipe(fun...)
 
 unittest
 {
-    // string foo(int a) { return to!(string)(a); }
-    // int bar(string a) { return to!(int)(a) + 1; }
-    // double baz(int a) { return a + 0.5; }
-    // assert(compose!(baz, bar, foo)(1) == 2.5);
-    // assert(pipe!(foo, bar, baz)(1) == 2.5);
+    string foo(int a) { return to!(string)(a); }
+    int bar(string a) { return to!(int)(a) + 1; }
+    double baz(int a) { return a + 0.5; }
+    assert(compose!(baz, bar, foo)(1) == 2.5);
+    assert(pipe!(foo, bar, baz)(1) == 2.5);
 
-    // assert(compose!(baz, `to!(int)(a) + 1`, foo)(1) == 2.5);
-    // assert(compose!(baz, bar)("1"[]) == 2.5);
+    assert(compose!(baz, `to!(int)(a) + 1`, foo)(1) == 2.5);
+    assert(compose!(baz, bar)("1"[]) == 2.5);
 
-    // @@@BUG@@@
-    //assert(compose!(baz, bar)("1") == 2.5);
+    assert(compose!(baz, bar)("1") == 2.5);
 
     // @@@BUG@@@
     //assert(compose!(`a + 0.5`, `to!(int)(a) + 1`, foo)(1) == 2.5);
+}
+
+/**
+ * $(LUCKY Memoizes) a function so as to avoid repeated
+ * computation. The memoization structure is a hash table keyed by a
+ * tuple of the function's arguments. There is a speed gain if the
+ * function is repeatedly called with the same arguments and is more
+ * expensive than a hash table lookup.
+
+Example:
+----
+double transmogrify(int a, string b)
+{
+   ... expensive computation ...
+}
+alias memoize!transmogrify fastTransmogrify;
+unittest
+{
+    auto slow = transmogrify(2, "hello");
+    auto fast = fastTransmogrify(2, "hello");
+    assert(slow == fast);
+}
+----
+
+Technically the memoized function should be pure because $(D memoize) assumes it will
+always return the same result for a given tuple of arguments. However, $(D memoize) does not
+enforce that because sometimes it
+is useful to memoize an impure function, too.
+  
+To _memoize a recursive function, simply insert the memoized call in lieu of the plain recursive call.
+For example, to transform the exponential-time Fibonacci implementation into a linear-time computation:
+
+Example:
+----
+ulong fib(ulong n)
+{
+    alias memoize!fib mfib;
+    return n < 2 ? 1 : mfib(n - 2) + mfib(n - 1);
+}
+...
+assert(fib(10) == 89);
+----
+
+To improve the speed of the factorial function, 
+
+Example:
+----
+ulong fact(ulong n)
+{
+    alias memoize!fact mfact;
+    return n < 2 ? 1 : n * mfact(n - 1);
+}
+...
+assert(fact(10) == 3628800);
+----
+
+This memoizes all values of $(D fact) up to the largest argument. To only cache the final
+result, move $(D memoize) outside the function as shown below.
+
+Example:
+----
+ulong factImpl(ulong n)
+{
+    return n < 2 ? 1 : n * mfact(n - 1);
+}
+alias memoize!factImpl fact;
+...
+assert(fact(10) == 3628800);
+----
+
+The $(D maxSize) parameter is a cutoff for the cache size. If upon a miss the length of the hash
+table is found to be $(D maxSize), the table is simply cleared.
+
+Example:
+----
+// Memoize no more than 128 values of transmogrify
+alias memoize!(transmogrify, 128) fastTransmogrify;
+----
+*/
+template memoize(alias fun, uint maxSize = uint.max)
+{
+    ReturnType!fun memoize(ParameterTypeTuple!fun args)
+    {
+        static ReturnType!fun[Tuple!(typeof(args))] memo;
+        auto t = tuple(args);
+        auto p = t in memo;
+        if (p) return *p;
+        static if (maxSize != uint.max)
+        {
+            if (memo.length >= maxSize) memo = null;
+        }
+        auto r = fun(args);
+        //writeln("Inserting result ", typeof(r).stringof, "(", r, ") for parameters ", t);
+        memo[t] = r;
+        return r;
+    }
+}
+
+unittest
+{
+    alias memoize!(function double(double x) { return sqrt(x); }) msqrt;
+    auto y = msqrt(2.0);
+    assert(y == msqrt(2.0));
+    y = msqrt(4.0);
+    assert(y == sqrt(4.0));
+    
+    // alias memoize!rgb2cmyk mrgb2cmyk;
+    // auto z = mrgb2cmyk([43, 56, 76]);
+    // assert(z == mrgb2cmyk([43, 56, 76]));
+
+    //alias memoize!fib mfib;
+
+    static ulong fib(ulong n)
+    {
+        alias memoize!fib mfib;
+        return n < 2 ? 1 : mfib(n - 2) + mfib(n - 1);
+    }
+
+    auto z = fib(10);
+    assert(z == 89);
+
+    static ulong fact(ulong n)
+    {
+        alias memoize!fact mfact;
+        return n < 2 ? 1 : n * mfact(n - 1);
+    }
+    assert(fact(10) == 3628800);
 }
 
 private struct DelegateFaker(F) {
@@ -570,11 +695,12 @@ private struct DelegateFaker(F) {
             .generateFunction!("FuncInfo_doIt", "doIt", F) );
 }
 
-/**Convert a callable to a delegate with the same parameter list and
+/**
+ * Convert a callable to a delegate with the same parameter list and
  * return type, avoiding heap allocations and use of auxiliary storage.
  *
  * Examples:
- * ---
+ * ----
  * void doStuff() {
  *     writeln("Hello, world.");
  * }
@@ -585,7 +711,7 @@ private struct DelegateFaker(F) {
  *
  * auto delegateToPass = toDelegate(&doStuff);
  * runDelegate(delegateToPass);  // Calls doStuff, prints "Hello, world."
- * ---
+ * ----
  *
  * BUGS:
  * $(UL
@@ -593,8 +719,8 @@ private struct DelegateFaker(F) {
  *   $(LI Ignores C-style / D-style variadic arguments.)
  * )
  */
-auto toDelegate(F)(auto ref F fp) if (isCallable!(F)) {
-
+auto toDelegate(F)(auto ref F fp) if (isCallable!(F))
+{
     static if (is(F == delegate))
     {
         return fp;
@@ -726,3 +852,4 @@ unittest {
         static assert(! is(typeof(dg_xtrnC) == typeof(dg_xtrnD)));
     }
 }
+
