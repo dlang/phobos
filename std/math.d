@@ -1034,7 +1034,6 @@ L_largenegative:
             ret PARAMSIZE;
         }
     } else version(D_InlineAsm_X86_64) {
-        enum { PARAMSIZE = real.sizeof } 
         asm
         { 
             /*  expm1() for x87 80-bit reals, IEEE754-2008 conformant. 
@@ -1076,7 +1075,7 @@ L_largenegative:
             fsubp ST(1), ST; 
             fadd; 
             add RSP,24; 
-            ret PARAMSIZE; 
+            ret; 
            
 L_extreme: // Extreme exponent. X is very large positive, very 
             // large negative, infinity, or NaN. 
@@ -1095,13 +1094,14 @@ L_largepositive:
             fmul ST(0), ST;        // square it, to create havoc! 
 L_was_nan: 
             add RSP,24; 
-            ret PARAMSIZE; 
+            ret;
+            
 L_largenegative: 
             fstp ST(0), ST; 
             fld1; 
             fchs; // return -1. Underflow flag is not set. 
             add RSP,24; 
-            ret PARAMSIZE; 
+            ret; 
         } 
     } else {
         return core.stdc.math.expm1(x);
@@ -1205,7 +1205,6 @@ L_was_nan:
             ret PARAMSIZE;
         }
     } else version(D_InlineAsm_X86_64) {
-        enum { PARAMSIZE = real.sizeof } 
         asm { 
             /*  exp2() for x87 80-bit reals, IEEE754-2008 conformant. 
              * Author: Don Clugston. 
@@ -1250,7 +1249,7 @@ L_normal:
             fld real ptr [RSP+8] ; // 2^rndint(x) 
             add RSP,24; 
             fmulp ST(1), ST; 
-            ret PARAMSIZE; 
+            ret; 
      
 L_subnormal: 
             // Result will be subnormal. 
@@ -1284,7 +1283,7 @@ L_waslargenegative:
             fmul ST(0), ST;        // square it, to create havoc! 
 L_was_nan: 
             add RSP,24; 
-            ret PARAMSIZE; 
+            ret;
         } 
     } else {
         return core.stdc.math.exp2(x);
