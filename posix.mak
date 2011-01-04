@@ -267,6 +267,7 @@ DISABLED_TESTS =        \
 DISABLED_OPT_TESTS = \
 	std/date        \
 	std/encoding    \
+	std/functional  \
 	std/getopt      \
 	std/utf
 
@@ -276,8 +277,7 @@ endif
 
 $(ROOT)/unittest/%$(DOTEXE) : %.d $(LIB) $(ROOT)/emptymain.d
 	@echo Testing $@
-	@$(DMD) $(DFLAGS) -unittest $(LINKOPTS) $(subst /,$(PATHSEP),"-of$@") \
-	 	$(ROOT)/emptymain.d $<
+	@$(DMD) $(DFLAGS) -unittest $(LINKOPTS) $(subst /,$(PATHSEP),"-of$@") $(ROOT)/emptymain.d $<
 # make the file very old so it builds and runs again if it fails
 	@touch -t 197001230123 $@
 # run unittest in its own directory
