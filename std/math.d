@@ -1090,7 +1090,6 @@ L_was_nan:
       }
     }
     else version(Naked_D_InlineAsm_X86_64) {
-      enum { PARAMSIZE = real.sizeof }
       asm {
         /*  exp2() for x87 80-bit reals, IEEE754-2008 conformant.
          * Author: Don Clugston.
@@ -1135,7 +1134,7 @@ L_normal:
         fld real ptr [RSP+8] ; // 2^rndint(x)
         add RSP,24;
         fmulp ST(1), ST;
-        ret PARAMSIZE;
+        ret;
 
 L_subnormal:
         // Result will be subnormal.
@@ -1169,7 +1168,7 @@ L_waslargenegative:
         fmul ST(0), ST;        // square it, to create havoc!
 L_was_nan:
         add RSP,24;
-        ret PARAMSIZE;
+        ret;
       }
     } else {
         return std.c.math.exp2(x);
