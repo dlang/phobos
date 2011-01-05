@@ -44,6 +44,8 @@ version (linux)
     else version (X86_64)
     {
 	alias long __time_t;
+	alias uint __useconds_t;
+	alias long __suseconds_t;
 	alias long off_t;
 	alias ulong ino_t;
 
@@ -250,8 +252,14 @@ extern (C)
 
 struct timeval
 {
-    int tv_sec;
-    int tv_usec;
+    version (X86)
+    {	int tv_sec;
+	int tv_usec;
+    }
+    else version (X86_64)
+    {	__time_t tv_sec;
+	__suseconds_t tv_usec;
+    }
 }
 
 struct struct_timezone
