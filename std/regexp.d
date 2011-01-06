@@ -1177,7 +1177,7 @@ public int test(char[] string, ptrdiff_t startindex)
     size_t si;
 
     input = string;
-    debug (regexp) printf("RegExp.test(input[] = '%.*s', startindex = %d)\n", input, startindex);
+    debug (regexp) printf("RegExp.test(input[] = '%.*s', startindex = %d)\n", input.length, input.ptr, startindex);
     pmatch[0].rm_so = 0;
     pmatch[0].rm_eo = 0;
     if (startindex < 0 || startindex > input.length)
@@ -1296,15 +1296,15 @@ void printProgram(ubyte[] prog)
 
             case REstring:
                 len = *cast(uint *)&prog[pc + 1];
-                printf("\tREstring x%x, '%.*s'\n", len,
-                        (&prog[pc + 1 + uint.sizeof])[0 .. len]);
+                printf("\tREstring x%x, '%.*s'\n", len, len,
+                        (&prog[pc + 1 + uint.sizeof]));
                 pc += 1 + uint.sizeof + len * rchar.sizeof;
                 break;
 
             case REistring:
                 len = *cast(uint *)&prog[pc + 1];
-                printf("\tREistring x%x, '%.*s'\n", len,
-                        (&prog[pc + 1 + uint.sizeof])[0 .. len]);
+                printf("\tREistring x%x, '%.*s'\n", len, len,
+                        (&prog[pc + 1 + uint.sizeof]));
                 pc += 1 + uint.sizeof + len * rchar.sizeof;
                 break;
 
@@ -1381,7 +1381,7 @@ void printProgram(ubyte[] prog)
                 n = puint[1];
                 m = puint[2];
                 printf("\tREnm%.*s len=%d, n=%u, m=%u, pc=>%d\n",
-                    (prog[pc] == REnmq) ? "q" : " ",
+                    1, (prog[pc] == REnmq) ? "q".ptr : " ".ptr,
                     len, n, m, pc + 1 + uint.sizeof * 3 + len);
                 pc += 1 + uint.sizeof * 3;
                 break;
@@ -1994,7 +1994,7 @@ int parseRegexp()
     uint len1;
     uint len2;
 
-    //printf("parseRegexp() '%.*s'\n", pattern[p .. pattern.length]);
+    //printf("parseRegexp() '%.*s'\n", pattern[p .. pattern.length].length, pattern[p .. pattern.length].ptr);
     auto offset = buf.offset;
     for (;;)
     {
@@ -2038,7 +2038,7 @@ int parsePiece()
     ubyte op;
     auto plength = pattern.length;
 
-    //printf("parsePiece() '%.*s'\n", pattern[p .. pattern.length]);
+    //printf("parsePiece() '%.*s'\n", pattern[p .. pattern.length].length, pattern[p .. pattern.length].ptr);
     auto offset = buf.offset;
     parseAtom();
     if (p == plength)
@@ -2143,7 +2143,7 @@ int parseAtom()
     size_t offset;
     rchar c;
 
-    //printf("parseAtom() '%.*s'\n", pattern[p .. pattern.length]);
+    //printf("parseAtom() '%.*s'\n", pattern[p .. pattern.length].length, pattern[p .. pattern.length].ptr);
     if (p < pattern.length)
     {
         c = pattern[p];
@@ -2301,7 +2301,7 @@ int parseAtom()
                         debug(regexp) printf("writing string len %d, c = '%c', pattern[p] = '%c'\n", len+1, c, pattern[p]);
                         buf.reserve(5 + (1 + len) * rchar.sizeof);
                         buf.write((attributes & REA.ignoreCase) ? REistring : REstring);
-                        buf.write(len + 1);
+                        buf.write(cast(uint)(len + 1));
                         buf.write(c);
                         buf.write(pattern[p .. p + len]);
                         p = q;
@@ -2568,7 +2568,7 @@ Lerr:
 void error(char[] msg)
 {
     errors++;
-    debug(regexp) printf("error: %.*s\n", msg);
+    debug(regexp) printf("error: %.*s\n", msg.length, msg.ptr);
 //assert(0);
 //*(char*)0=0;
     throw new RegExpException(msg);
