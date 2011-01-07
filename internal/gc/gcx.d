@@ -105,8 +105,6 @@ private bool thread_needLock()
 
 alias GC gc_t;
 
-extern (C) void xxxx();
-
 /* ======================= Leak Detector =========================== */
 
 
@@ -174,14 +172,14 @@ debug (LOGGING)
 
         void push(Log log)
         {
-	    //printf("%p.push(%p) dim = %d\n", this, log.p, cast(int)dim);
+            //printf("%p.push(%p) dim = %d\n", this, log.p, cast(int)dim);
             reserve(1);
             data[dim++] = log;
         }
 
         void remove(size_t i)
         {
-	    //printf("%p.remove(%d)\n", this, cast(int)i);
+            //printf("%p.remove(%d)\n", this, cast(int)i);
             cstring.memmove(data + i, data + i + 1, (dim - i) * Log.sizeof);
             dim--;
         }
@@ -189,10 +187,10 @@ debug (LOGGING)
 
         size_t find(void *p)
         {
-	    //printf("%p.find(%p) dim = %d\n", this, p, cast(int)dim);
+            //printf("%p.find(%p) dim = %d\n", this, p, cast(int)dim);
             for (size_t i = 0; i < dim; i++)
             {
-		//printf("\tdata[%d] = %p\n", cast(int)i, data[i].p);
+                //printf("\tdata[%d] = %p\n", cast(int)i, data[i].p);
                 if (data[i].p == p)
                     return i;
             }

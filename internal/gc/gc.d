@@ -1287,35 +1287,35 @@ void* _d_arrayliteralT(TypeInfo ti, size_t length, ...)
         else
         {   va_list ap;
             va_start(ap, __va_argsave);
-	    TypeInfo tis = cast(TypeInfo_StaticArray)ti.next;
-	    if (tis)
-	    {
-		/* Special handling for static arrays because we put their contents
-		 * on the stack, which isn't the ABI for D1 static arrays.
-		 * (It is for D2, though.)
-		 * The code here is ripped from std.c.stdarg, and initializes
-		 * assuming the data is always passed on the stack.
-		 */
-		__va_list* vap = cast(__va_list*)ap;
-		auto talign = tis.talign();
-		auto tsize = tis.tsize();
-		for (size_t i = 0; i < length; i++)
-		{
-		    //va_arg(ap, ti.next, result + i * sizeelem);
+            TypeInfo tis = cast(TypeInfo_StaticArray)ti.next;
+            if (tis)
+            {
+                /* Special handling for static arrays because we put their contents
+                 * on the stack, which isn't the ABI for D1 static arrays.
+                 * (It is for D2, though.)
+                 * The code here is ripped from std.c.stdarg, and initializes
+                 * assuming the data is always passed on the stack.
+                 */
+                __va_list* vap = cast(__va_list*)ap;
+                auto talign = tis.talign();
+                auto tsize = tis.tsize();
+                for (size_t i = 0; i < length; i++)
+                {
+                    //va_arg(ap, ti.next, result + i * sizeelem);
 
-		    void* parmn = result + i * sizeelem;
-		    auto p = cast(void*)((cast(size_t)vap.stack_args + talign - 1) & ~(talign - 1));
-		    vap.stack_args = cast(void*)(cast(size_t)p + ((tsize + size_t.sizeof - 1) & ~(size_t.sizeof - 1)));
-		    parmn[0..tsize] = p[0..tsize];
-		}
-	    }
-	    else
-	    {
-		for (size_t i = 0; i < length; i++)
-		{
-		    va_arg(ap, ti.next, result + i * sizeelem);
-		}
-	    }
+                    void* parmn = result + i * sizeelem;
+                    auto p = cast(void*)((cast(size_t)vap.stack_args + talign - 1) & ~(talign - 1));
+                    vap.stack_args = cast(void*)(cast(size_t)p + ((tsize + size_t.sizeof - 1) & ~(size_t.sizeof - 1)));
+                    parmn[0..tsize] = p[0..tsize];
+                }
+            }
+            else
+            {
+                for (size_t i = 0; i < length; i++)
+                {
+                    va_arg(ap, ti.next, result + i * sizeelem);
+                }
+            }
             va_end(ap);
         }
     }
