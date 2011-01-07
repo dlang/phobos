@@ -105,6 +105,7 @@ private bool thread_needLock()
 
 alias GC gc_t;
 
+extern (C) void xxxx();
 
 /* ======================= Leak Detector =========================== */
 
@@ -121,7 +122,7 @@ debug (LOGGING)
 
         void print()
         {
-            printf("    p = %x, size = %d, parent = %x ", p, size, parent);
+            printf("    p = %p, size = %d, parent = %p ", p, size, parent);
             if (file)
             {
                 printf("%s(%u)", file, line);
@@ -133,8 +134,8 @@ debug (LOGGING)
 
     struct LogArray
     {
-        size_t dim;
         size_t allocdim;
+        size_t dim;
         Log *data;
 
         void Dtor()
@@ -173,12 +174,14 @@ debug (LOGGING)
 
         void push(Log log)
         {
+	    //printf("%p.push(%p) dim = %d\n", this, log.p, cast(int)dim);
             reserve(1);
             data[dim++] = log;
         }
 
         void remove(size_t i)
         {
+	    //printf("%p.remove(%d)\n", this, cast(int)i);
             cstring.memmove(data + i, data + i + 1, (dim - i) * Log.sizeof);
             dim--;
         }
@@ -186,8 +189,10 @@ debug (LOGGING)
 
         size_t find(void *p)
         {
+	    //printf("%p.find(%p) dim = %d\n", this, p, cast(int)dim);
             for (size_t i = 0; i < dim; i++)
             {
+		//printf("\tdata[%d] = %p\n", cast(int)i, data[i].p);
                 if (data[i].p == p)
                     return i;
             }
@@ -387,7 +392,7 @@ class GC
             // Return next item from free list
             gcx.bucket[bin] = (cast(List *)p).next;
             cstring.memset(p + size, 0, binsize[bin] - size);
-            //debug(PRINTF) printf("\tmalloc => %x\n", p);
+            //debug(PRINTF) printf("\tmalloc => %p\n", p);
             debug (MEMSTOMP) cstring.memset(p, 0xF0, size);
         }
         else
@@ -436,7 +441,7 @@ class GC
 
         void *p = mallocNoSync(size);
         if (p)
-        {   //debug(PRINTF) printf("calloc: %x len %d\n", p, len);
+        {   //debug(PRINTF) printf("calloc: %p len %d\n", p, len);
             cstring.memset(p, 0, size);
         }
         return p;
@@ -478,7 +483,7 @@ class GC
         {   void *p2;
             size_t psize;
 
-            //debug(PRINTF) printf("GC::realloc(p = %x, size = %u)\n", p, size);
+            //debug(PRINTF) printf("GC::realloc(p = %p, size = %u)\n", p, size);
             version (SENTINEL)
             {
                 sentinel_Invariant(p);
@@ -591,7 +596,7 @@ class GC
     }
     body
     {
-        //debug(PRINTF) printf("GC::extend(p = %x, minsize = %u, maxsize = %u)\n", p, minsize, maxsize);
+        //debug(PRINTF) printf("GC::extend(p = %p, minsize = %u, maxsize = %u)\n", p, minsize, maxsize);
         version (SENTINEL)
         {
             return 0;
@@ -851,7 +856,7 @@ class GC
             //p = (void *)((uint *)p + 4);
             if (p > gcx.stackBottom)
             {
-                //debug(PRINTF) printf("setStackBottom(%x)\n", p);
+                //debug(PRINTF) printf("setStackBottom(%p)\n", p);
                 gcx.stackBottom = p;
             }
         }
@@ -860,7 +865,7 @@ class GC
             //p = (void *)((uint *)p - 4);
             if (p < gcx.stackBottom)
             {
-                //debug(PRINTF) printf("setStackBottom(%x)\n", p);
+                //debug(PRINTF) printf("setStackBottom(%p)\n", p);
                 gcx.stackBottom = cast(char *)p;
             }
         }
@@ -1130,7 +1135,7 @@ class GC
             //debug(PRINTF) printf("bin %d\n", n);
             for (List *list = gcx.bucket[n]; list; list = list.next)
             {
-                //debug(PRINTF) printf("\tlist %x\n", list);
+                //debug(PRINTF) printf("\tlist %p\n", list);
                 flsize += binsize[n];
             }
         }
@@ -1390,8 +1395,8 @@ struct Gcx
     void addRange(void *pbot, void *ptop)
     {
         debug(PRINTF) printf("addRange(pbot = %p, ptop = %p)\n", pbot, ptop);
-        debug(PRINTF) printf("Thread %x ", pthread_self());
-        debug(PRINTF) printf("%x.Gcx::addRange(%x, %x), nranges = %d\n", this, pbot, ptop, nranges);
+        //debug(PRINTF) printf("Thread %x ", pthread_self());
+        debug(PRINTF) printf("%p.Gcx::addRange(%p, %p), nranges = %d\n", this, pbot, ptop, cast(int)nranges);
         if (nranges == rangedim)
         {
             size_t newdim = rangedim * 2 + 16;
@@ -1418,8 +1423,8 @@ struct Gcx
      */
     void removeRange(void *pbot)
     {
-        debug(PRINTF) printf("Thread %x ", pthread_self());
-        debug(PRINTF) printf("%x.Gcx.removeRange(%x), nranges = %d\n", this, pbot, nranges);
+        //debug(PRINTF) printf("Thread %x ", pthread_self());
+        debug(PRINTF) printf("%p.Gcx.removeRange(%p), nranges = %d\n", this, pbot, cast(int)nranges);
         for (size_t i = nranges; i--;)
         {
             if (ranges[i].pbot == pbot)
@@ -1623,7 +1628,7 @@ struct Gcx
         p = pool.baseAddr + pn * PAGESIZE;
         cstring.memset(cast(char *)p + size, 0, npages * PAGESIZE - size);
         debug (MEMSTOMP) cstring.memset(p, 0xF1, size);
-        //debug(PRINTF) printf("\tp = %x\n", p);
+        //debug(PRINTF) printf("\tp = %p\n", p);
         return p;
 
       Lnomemory:
@@ -1764,7 +1769,7 @@ struct Gcx
             Pool *pool;
             byte *p = cast(byte *)(*p1);
 
-            //if (log) debug(PRINTF) printf("\tmark %x\n", p);
+            //if (log) debug(PRINTF) printf("\t%p mark %p\n", p1, p);
             if (p >= minAddr && p < maxAddr)
             {
                 /* Skip page if we've already scanned it
@@ -1780,7 +1785,7 @@ struct Gcx
                     uint pn = offset / PAGESIZE;
                     Bins bin = cast(Bins)pool.pagetable[pn];
 
-                    //debug(PRINTF) printf("\t\tfound pool %x, base=%x, pn = %d, bin = %d, biti = x%x\n", pool, pool.baseAddr, pn, bin, biti);
+                    //debug(PRINTF) printf("\t\tfound pool %p, base=%p, pn = %d, bin = %d, biti = x%x\n", pool, pool.baseAddr, pn, bin, biti);
 
                     // Adjust bit to be at start of allocated memory block
                     if (bin <= B_PAGE)
@@ -1804,10 +1809,10 @@ struct Gcx
                     if (bin >= B_PAGE)  // cache B_PAGE and B_PAGEPLUS lookups
                         pageCache = cast(size_t)p & ~cast(size_t)(PAGESIZE-1);
 
-                    //debug(PRINTF) printf("\t\tmark(x%x) = %d\n", biti, pool.mark.test(biti));
+                    //debug(PRINTF) printf("\t\tmark(x%x) = %llx\n", biti, pool.mark.test(biti));
                     if (!pool.mark.test(biti))
                     {
-                        //if (log) debug(PRINTF) printf("\t\tmarking %x\n", p);
+                        //if (log) debug(PRINTF) printf("\t\tmarking %p\n", p);
                         pool.mark.set(biti);
                         if (!pool.noscan.test(biti))
                         {
@@ -1967,7 +1972,7 @@ struct Gcx
                         {
                             assert(0);
                         }
-                        debug (PRINTF) printf("mt scan stack bot = %x, top = %x\n", context.Esp, t.stackBottom);
+                        debug (PRINTF) printf("mt scan stack bot = %p, top = %p\n", context.Esp, t.stackBottom);
                         mark(cast(void *)context.Esp, t.stackBottom);
                         mark(&context.Edi, &context.Eip);
                     }
@@ -1983,7 +1988,7 @@ struct Gcx
                         {
                             assert(0);
                         }
-                        debug (PRINTF) printf("mt scan stack bot = %x, top = %x\n", state.esp, t.stackBottom);
+                        debug (PRINTF) printf("mt scan stack bot = %p, top = %p\n", state.esp, t.stackBottom);
 
                         mark(cast(void *)state.esp, t.stackBottom);
                         mark(&state.eax, &state.esp);
@@ -2008,7 +2013,7 @@ struct Gcx
             if (!noStack)
             {
                 // Scan stack for main thread
-                debug(PRINTF) printf(" scan stack bot = %x, top = %x\n", stackTop, stackBottom);
+                debug(PRINTF) printf(" scan stack bot = %p, top = %p\n", stackTop, stackBottom);
                 version (STACKGROWSDOWN)
                     mark(stackTop, stackBottom);
                 else
@@ -2025,7 +2030,7 @@ struct Gcx
         //log++;
         for (n = 0; n < nranges; n++)
         {
-            debug(COLLECT_PRINTF) printf("\t%x .. %x\n", ranges[n].pbot, ranges[n].ptop);
+            debug(COLLECT_PRINTF) printf("\t%p .. %p\n", ranges[n].pbot, ranges[n].ptop);
             mark(ranges[n].pbot, ranges[n].ptop);
         }
         //log--;
@@ -2044,17 +2049,16 @@ struct Gcx
                 {   Bins bin;
                     uint pn;
                     uint u;
-                    uint bitm;
                     byte *o;
 
-                    bitm = *b;
+                    auto bitm = *b;
                     if (!bitm)
                     {   b++;
                         continue;
                     }
                     *b = 0;
 
-                    o = pool.baseAddr + (b - bbase) * 32 * 16;
+                    o = pool.baseAddr + (b - bbase) * (typeof(bitm).sizeof*8) * 16;
                     if (!(bitm & 0xFFFF))
                     {
                         bitm >>= 16;
@@ -2130,7 +2134,7 @@ struct Gcx
                                 rt_finalize(cast(List *)sentinel_add(p), false);
 
                             List *list = cast(List *)p;
-                            //debug(PRINTF) printf("\tcollecting %x\n", list);
+                            //debug(PRINTF) printf("\tcollecting %p\n", list);
                             log_free(sentinel_add(list));
 
                             debug (MEMSTOMP) cstring.memset(p, 0xF3, size);
@@ -2153,7 +2157,7 @@ struct Gcx
                                 rt_finalize(cast(List *)sentinel_add(p), false);
 
                             List *list = cast(List *)p;
-                            debug(PRINTF) printf("\tcollecting %x\n", list);
+                            debug(PRINTF) printf("\tcollecting %p\n", list);
                             log_free(sentinel_add(list));
 
                             debug (MEMSTOMP) cstring.memset(p, 0xF3, size);
@@ -2173,7 +2177,7 @@ struct Gcx
                         if (pool.finals.nbits && pool.finals.testClear(biti))
                             rt_finalize(sentinel_add(p), false);
 
-                        debug(COLLECT_PRINTF) printf("\tcollecting big %x\n", p);
+                        debug(COLLECT_PRINTF) printf("\tcollecting big %p\n", p);
                         log_free(sentinel_add(p));
                         pool.pagetable[pn] = B_FREE;
                         freedpages++;
@@ -2317,7 +2321,7 @@ struct Gcx
 
         void log_malloc(void *p, size_t size)
         {
-            //debug(PRINTF) printf("+log_malloc(p = %x, size = %d)\n", p, size);
+            debug(PRINTF) printf("+log_malloc(p = %p, size = %d)\n", p, cast(int)size);
             Log log;
 
             log.p = p;
@@ -2336,12 +2340,12 @@ struct Gcx
 
         void log_free(void *p)
         {
-            //debug(PRINTF) printf("+log_free(%x)\n", p);
+            //debug(PRINTF) printf("+log_free(%p)\n", p);
 
             auto i = current.find(p);
             if (i == ~cast(typeof(i))0)
             {
-                debug(PRINTF) printf("free'ing unallocated memory %x\n", p);
+                debug(PRINTF) printf("free'ing unallocated memory %p\n", p);
             }
             else
                 current.remove(i);
@@ -2397,7 +2401,7 @@ struct Gcx
             auto i = current.find(p);
             if (i == ~cast(typeof(i))0)
             {
-                debug(PRINTF) printf("parent'ing unallocated memory %x, parent = %x\n", p, parent);
+                debug(PRINTF) printf("parent'ing unallocated memory %p, parent = %p\n", p, parent);
                 Pool *pool;
                 pool = findPool(p);
                 assert(pool);

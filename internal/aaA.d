@@ -665,7 +665,32 @@ BB* _d_assocarrayliteralT(TypeInfo_AssociativeArray ti, size_t length, ...)
             }
             //memcpy(cast(void *)(e + 1) + keytsize, q, valuesize);
             //q += valuestacksize;
-            va_arg(q, ti.next, cast(void *)(e + 1) + keytsize);
+            version (X86)
+                va_arg(q, ti.next, cast(void *)(e + 1) + keytsize);
+            else
+            {
+                TypeInfo tis = cast(TypeInfo_StaticArray)ti.next;
+                if (tis)
+                {
+                    /* Special handling for static arrays because we put their contents
+                     * on the stack, which isn't the ABI for D1 static arrays.
+                     * (It is for D2, though.)
+                     * The code here is ripped from std.c.stdarg, and initializes
+                     * assuming the data is always passed on the stack.
+                     */
+                    __va_list* vap = cast(__va_list*)q;
+                    auto talign = tis.talign();
+                    auto tsize = tis.tsize();
+                    void* parmn = cast(void *)(e + 1) + keytsize;
+                    auto p = cast(void*)((cast(size_t)vap.stack_args + talign - 1) & ~(talign - 1));
+                    vap.stack_args = cast(void*)(cast(size_t)p + ((tsize + size_t.sizeof - 1) & ~(size_t.sizeof - 1)));
+                    parmn[0..tsize] = p[0..tsize];
+                }
+                else
+                {
+                    va_arg(q, ti.next, cast(void *)(e + 1) + keytsize);
+                }
+            }
         }
         if (ne)
             delete ne;
