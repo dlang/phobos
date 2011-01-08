@@ -56,7 +56,7 @@ test.obj : test.d
 test.exe : test.obj phobos.lib
 	$(DMD) test.obj -g -L/map
 
-OBJS= deh.obj complex.obj gcstats.obj \
+OBJS= complex.obj gcstats.obj \
 	critical.obj object.obj monitor.obj \
 	crc32.obj \
 	Czlib.obj Dzlib.obj process.obj \
@@ -96,6 +96,7 @@ SRCS= std\math.d std\stdio.d std\dateparse.d std\date.d std\uni.d std\string.d \
 	internal\dmain2.d internal\cast.d internal\obj.d \
 	internal\arrayfloat.d internal\arraydouble.d internal\arrayreal.d \
 	internal\arraybyte.d internal\arrayshort.d internal\arrayint.d \
+    internal\deh.d \
 	etc\gamma.d \
 	std\c\math.d \
 	std\c\stdarg.d \
@@ -240,7 +241,7 @@ SRC_TI=	\
 
 SRC_INT=	\
 	internal\switch.d internal\complex.c internal\critical.c \
-	internal\minit.asm internal\alloca.d internal\llmath.d internal\deh.c \
+	internal\minit.asm internal\alloca.d internal\llmath.d internal\deh.d \
 	internal\arraycat.d internal\invariant.d internal\monitor.c \
 	internal\memset.d internal\arraycast.d internal\aaA.d internal\adi.d \
 	internal\dmain2.d internal\cast.d internal\qsort.d internal\deh2.d \
@@ -397,8 +398,8 @@ complex.obj : internal\complex.c
 critical.obj : internal\critical.c
 	$(CC) -c $(CFLAGS) internal\critical.c
 
-deh.obj : internal\mars.h internal\deh.c
-	$(CC) -c $(CFLAGS) internal\deh.c
+deh.obj : internal\deh.d
+	$(DMD) -c $(DFLAGS) internal\deh.d
 
 dmain2.obj : internal\dmain2.d
 	$(DMD) -c $(DFLAGS) internal\dmain2.d

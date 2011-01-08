@@ -113,7 +113,7 @@ SRC_TI=	\
 
 SRC_INTC=	\
 	internal/complex.c internal/critical.c \
-	internal/minit.asm internal/deh.c \
+	internal/minit.asm \
 	internal/monitor.c \
 	internal/mars.h
 

@@ -146,7 +146,7 @@ SRC_TI=	\
 
 SRC_INT=	\
 	internal/switch.d internal/complex.c internal/critical.c \
-	internal/minit.asm internal/alloca.d internal/llmath.d internal/deh.c \
+	internal/minit.asm internal/alloca.d internal/llmath.d internal/deh.d \
 	internal/arraycat.d internal/invariant.d internal/monitor.c \
 	internal/memset.d internal/arraycast.d internal/aaA.d internal/adi.d \
 	internal/dmain2.d internal/cast.d internal/qsort.d internal/deh2.d \
