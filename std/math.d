@@ -2023,6 +2023,13 @@ long lround(real x) @trusted nothrow
         assert (0, "lround not implemented");
 }
 
+unittest
+{
+    assert(lround(0.49) == 0);
+    assert(lround(0.5) == 1);
+    assert(lround(1.5) == 2);
+}
+
 /****************************************************
  * Returns the integer portion of x, dropping the fractional portion.
  *
@@ -3973,6 +3980,13 @@ unittest
     float[] arr1 = [ 1.0, 2.0, 3.0 ];
     double[] arr2 = [ 1.001, 1.999, 3 ];
     assert(approxEqual(arr1, arr2));
+
+    real num = real.infinity;
+    assert(num == real.infinity);  // Passes.
+    assert(approxEqual(num, real.infinity));  // Fails.
+    num = -real.infinity;
+    assert(num == -real.infinity);  // Passes.
+    assert(approxEqual(num, -real.infinity));  // Fails.
 }
 
 // Included for backwards compatibility with Phobos1
