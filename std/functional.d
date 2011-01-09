@@ -316,6 +316,17 @@ template curry(alias fun, alias arg)
     }
 }
 
+private auto add(A, B)(A x, B y)
+{
+    return x + y;
+}
+
+unittest
+{
+    alias curry!(add, 5) add5;
+    assert(add5(6) == 11);
+}
+
 unittest
 {
     // static int f1(int a, int b) { return a + b; }
