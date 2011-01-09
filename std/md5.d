@@ -58,7 +58,7 @@ void MDFile(char[] filename)
     else
     {
         context.start();
-        while ((len = fread(buffer, 1, buffer.sizeof, file)) != 0)
+        while ((len = fread(buffer.ptr, 1, buffer.sizeof, file)) != 0)
             context.update(buffer[0 .. len]);
         context.finish(digest);
         fclose(file);
