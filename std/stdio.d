@@ -1254,6 +1254,7 @@ $(D Range) that locks the file and allows fast writing to it.
 
 unittest
 {
+    scope(exit) collectException(std.file.remove("deleteme"));
     std.file.write("deleteme", "1 2 3");
     auto f = File("deleteme");
     assert(f.size == 5);
