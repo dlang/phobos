@@ -1260,6 +1260,12 @@ unittest
     assert(parse!A(s) == A.member111 && s == "1");
 }
 
+unittest
+{
+    assert(to!float("inf") == float.infinity);
+    assert(to!float("-inf") == -float.infinity);
+}
+
 Target parse(Target, Source)(ref Source p)
 if (isInputRange!Source && /*!isSomeString!Source && */isFloatingPoint!Target)
 {
@@ -1287,8 +1293,25 @@ if (isInputRange!Source && /*!isSomeString!Source && */isFloatingPoint!Target)
     char sign = 0;                       /* indicating +                 */
     switch (p.front)
     {
-    case '-': sign++; goto case '+';
-    case '+': p.popFront(); enforce(!p.empty, bailOut());
+    case '-':
+        sign++;
+        p.popFront();
+        if (tolower(p.front) == 'i') goto case 'i';
+        enforce(!p.empty, bailOut());
+        break;
+    case '+':
+        p.popFront();
+        enforce(!p.empty, bailOut());
+        break;
+    case 'i': case 'I':
+        p.popFront();
+        if (tolower(p.front) == 'n' &&
+                (p.popFront(), tolower(p.front) == 'f') &&
+                (p.popFront(), p.empty))
+        {
+            // 'inf'
+            return sign ? -Target.infinity : Target.infinity;
+        }
     default: {}
     }
 
@@ -3272,7 +3295,7 @@ T toImpl(T, S)(S d) if (is(Unqual!S == double) && isSomeString!(T))
 }
 
 /// $(D real) to all string types.
-T toImpl(T, S)(S r) if (is(Unqual!S == real) && isSomeString!(T))
+T toImpl(T, S)(S r) if (is(Unqual!S == real) && isSomeString!T)
 {
     char[20] buffer;
     int len = sprintf(buffer.ptr, "%Lg", r);
