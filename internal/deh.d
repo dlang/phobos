@@ -11,7 +11,7 @@
  * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
  * Authors:   Walter Bright
  */
- 
+
 /*          Copyright Digital Mars 1999 - 2010.
  * Distributed under the Boost Software License, Version 1.0.
  *    (See accompanying file LICENSE_1_0.txt or copy at
@@ -51,66 +51,66 @@ void RaiseException(DWORD, DWORD, DWORD, void *);
 
 // used in EXCEPTION_RECORD
 enum : DWORD {
-	STATUS_WAIT_0                      = 0,
-	STATUS_ABANDONED_WAIT_0            = 0x00000080,
-	STATUS_USER_APC                    = 0x000000C0,
-	STATUS_TIMEOUT                     = 0x00000102,
-	STATUS_PENDING                     = 0x00000103,
+        STATUS_WAIT_0                      = 0,
+        STATUS_ABANDONED_WAIT_0            = 0x00000080,
+        STATUS_USER_APC                    = 0x000000C0,
+        STATUS_TIMEOUT                     = 0x00000102,
+        STATUS_PENDING                     = 0x00000103,
 
-	STATUS_SEGMENT_NOTIFICATION        = 0x40000005,
-	STATUS_GUARD_PAGE_VIOLATION        = 0x80000001,
-	STATUS_DATATYPE_MISALIGNMENT       = 0x80000002,
-	STATUS_BREAKPOINT                  = 0x80000003,
-	STATUS_SINGLE_STEP                 = 0x80000004,
+        STATUS_SEGMENT_NOTIFICATION        = 0x40000005,
+        STATUS_GUARD_PAGE_VIOLATION        = 0x80000001,
+        STATUS_DATATYPE_MISALIGNMENT       = 0x80000002,
+        STATUS_BREAKPOINT                  = 0x80000003,
+        STATUS_SINGLE_STEP                 = 0x80000004,
 
-	STATUS_ACCESS_VIOLATION            = 0xC0000005,
-	STATUS_IN_PAGE_ERROR               = 0xC0000006,
-	STATUS_INVALID_HANDLE              = 0xC0000008,
+        STATUS_ACCESS_VIOLATION            = 0xC0000005,
+        STATUS_IN_PAGE_ERROR               = 0xC0000006,
+        STATUS_INVALID_HANDLE              = 0xC0000008,
 
-	STATUS_NO_MEMORY                   = 0xC0000017,
-	STATUS_ILLEGAL_INSTRUCTION         = 0xC000001D,
-	STATUS_NONCONTINUABLE_EXCEPTION    = 0xC0000025,
-	STATUS_INVALID_DISPOSITION         = 0xC0000026,
-	STATUS_ARRAY_BOUNDS_EXCEEDED       = 0xC000008C,
-	STATUS_FLOAT_DENORMAL_OPERAND      = 0xC000008D,
-	STATUS_FLOAT_DIVIDE_BY_ZERO        = 0xC000008E,
-	STATUS_FLOAT_INEXACT_RESULT        = 0xC000008F,
-	STATUS_FLOAT_INVALID_OPERATION     = 0xC0000090,
-	STATUS_FLOAT_OVERFLOW              = 0xC0000091,
-	STATUS_FLOAT_STACK_CHECK           = 0xC0000092,
-	STATUS_FLOAT_UNDERFLOW             = 0xC0000093,
-	STATUS_INTEGER_DIVIDE_BY_ZERO      = 0xC0000094,
-	STATUS_INTEGER_OVERFLOW            = 0xC0000095,
-	STATUS_PRIVILEGED_INSTRUCTION      = 0xC0000096,
-	STATUS_STACK_OVERFLOW              = 0xC00000FD,
-	STATUS_CONTROL_C_EXIT              = 0xC000013A,
-	STATUS_DLL_INIT_FAILED             = 0xC0000142,
-	STATUS_DLL_INIT_FAILED_LOGOFF      = 0xC000026B,
+        STATUS_NO_MEMORY                   = 0xC0000017,
+        STATUS_ILLEGAL_INSTRUCTION         = 0xC000001D,
+        STATUS_NONCONTINUABLE_EXCEPTION    = 0xC0000025,
+        STATUS_INVALID_DISPOSITION         = 0xC0000026,
+        STATUS_ARRAY_BOUNDS_EXCEEDED       = 0xC000008C,
+        STATUS_FLOAT_DENORMAL_OPERAND      = 0xC000008D,
+        STATUS_FLOAT_DIVIDE_BY_ZERO        = 0xC000008E,
+        STATUS_FLOAT_INEXACT_RESULT        = 0xC000008F,
+        STATUS_FLOAT_INVALID_OPERATION     = 0xC0000090,
+        STATUS_FLOAT_OVERFLOW              = 0xC0000091,
+        STATUS_FLOAT_STACK_CHECK           = 0xC0000092,
+        STATUS_FLOAT_UNDERFLOW             = 0xC0000093,
+        STATUS_INTEGER_DIVIDE_BY_ZERO      = 0xC0000094,
+        STATUS_INTEGER_OVERFLOW            = 0xC0000095,
+        STATUS_PRIVILEGED_INSTRUCTION      = 0xC0000096,
+        STATUS_STACK_OVERFLOW              = 0xC00000FD,
+        STATUS_CONTROL_C_EXIT              = 0xC000013A,
+        STATUS_DLL_INIT_FAILED             = 0xC0000142,
+        STATUS_DLL_INIT_FAILED_LOGOFF      = 0xC000026B,
 
-	CONTROL_C_EXIT                     = STATUS_CONTROL_C_EXIT,
+        CONTROL_C_EXIT                     = STATUS_CONTROL_C_EXIT,
 
-	EXCEPTION_ACCESS_VIOLATION         = STATUS_ACCESS_VIOLATION,
-	EXCEPTION_DATATYPE_MISALIGNMENT    = STATUS_DATATYPE_MISALIGNMENT,
-	EXCEPTION_BREAKPOINT               = STATUS_BREAKPOINT,
-	EXCEPTION_SINGLE_STEP              = STATUS_SINGLE_STEP,
-	EXCEPTION_ARRAY_BOUNDS_EXCEEDED    = STATUS_ARRAY_BOUNDS_EXCEEDED,
-	EXCEPTION_FLT_DENORMAL_OPERAND     = STATUS_FLOAT_DENORMAL_OPERAND,
-	EXCEPTION_FLT_DIVIDE_BY_ZERO       = STATUS_FLOAT_DIVIDE_BY_ZERO,
-	EXCEPTION_FLT_INEXACT_RESULT       = STATUS_FLOAT_INEXACT_RESULT,
-	EXCEPTION_FLT_INVALID_OPERATION    = STATUS_FLOAT_INVALID_OPERATION,
-	EXCEPTION_FLT_OVERFLOW             = STATUS_FLOAT_OVERFLOW,
-	EXCEPTION_FLT_STACK_CHECK          = STATUS_FLOAT_STACK_CHECK,
-	EXCEPTION_FLT_UNDERFLOW            = STATUS_FLOAT_UNDERFLOW,
-	EXCEPTION_INT_DIVIDE_BY_ZERO       = STATUS_INTEGER_DIVIDE_BY_ZERO,
-	EXCEPTION_INT_OVERFLOW             = STATUS_INTEGER_OVERFLOW,
-	EXCEPTION_PRIV_INSTRUCTION         = STATUS_PRIVILEGED_INSTRUCTION,
-	EXCEPTION_IN_PAGE_ERROR            = STATUS_IN_PAGE_ERROR,
-	EXCEPTION_ILLEGAL_INSTRUCTION      = STATUS_ILLEGAL_INSTRUCTION,
-	EXCEPTION_NONCONTINUABLE_EXCEPTION = STATUS_NONCONTINUABLE_EXCEPTION,
-	EXCEPTION_STACK_OVERFLOW           = STATUS_STACK_OVERFLOW,
-	EXCEPTION_INVALID_DISPOSITION      = STATUS_INVALID_DISPOSITION,
-	EXCEPTION_GUARD_PAGE               = STATUS_GUARD_PAGE_VIOLATION,
-	EXCEPTION_INVALID_HANDLE           = STATUS_INVALID_HANDLE
+        EXCEPTION_ACCESS_VIOLATION         = STATUS_ACCESS_VIOLATION,
+        EXCEPTION_DATATYPE_MISALIGNMENT    = STATUS_DATATYPE_MISALIGNMENT,
+        EXCEPTION_BREAKPOINT               = STATUS_BREAKPOINT,
+        EXCEPTION_SINGLE_STEP              = STATUS_SINGLE_STEP,
+        EXCEPTION_ARRAY_BOUNDS_EXCEEDED    = STATUS_ARRAY_BOUNDS_EXCEEDED,
+        EXCEPTION_FLT_DENORMAL_OPERAND     = STATUS_FLOAT_DENORMAL_OPERAND,
+        EXCEPTION_FLT_DIVIDE_BY_ZERO       = STATUS_FLOAT_DIVIDE_BY_ZERO,
+        EXCEPTION_FLT_INEXACT_RESULT       = STATUS_FLOAT_INEXACT_RESULT,
+        EXCEPTION_FLT_INVALID_OPERATION    = STATUS_FLOAT_INVALID_OPERATION,
+        EXCEPTION_FLT_OVERFLOW             = STATUS_FLOAT_OVERFLOW,
+        EXCEPTION_FLT_STACK_CHECK          = STATUS_FLOAT_STACK_CHECK,
+        EXCEPTION_FLT_UNDERFLOW            = STATUS_FLOAT_UNDERFLOW,
+        EXCEPTION_INT_DIVIDE_BY_ZERO       = STATUS_INTEGER_DIVIDE_BY_ZERO,
+        EXCEPTION_INT_OVERFLOW             = STATUS_INTEGER_OVERFLOW,
+        EXCEPTION_PRIV_INSTRUCTION         = STATUS_PRIVILEGED_INSTRUCTION,
+        EXCEPTION_IN_PAGE_ERROR            = STATUS_IN_PAGE_ERROR,
+        EXCEPTION_ILLEGAL_INSTRUCTION      = STATUS_ILLEGAL_INSTRUCTION,
+        EXCEPTION_NONCONTINUABLE_EXCEPTION = STATUS_NONCONTINUABLE_EXCEPTION,
+        EXCEPTION_STACK_OVERFLOW           = STATUS_STACK_OVERFLOW,
+        EXCEPTION_INVALID_DISPOSITION      = STATUS_INVALID_DISPOSITION,
+        EXCEPTION_GUARD_PAGE               = STATUS_GUARD_PAGE_VIOLATION,
+        EXCEPTION_INVALID_HANDLE           = STATUS_INVALID_HANDLE
 }
 
 enum { MAXIMUM_SUPPORTED_EXTENSION = 512 }
@@ -160,18 +160,18 @@ struct CONTEXT {
 alias CONTEXT* PCONTEXT, LPCONTEXT;
 
 struct EXCEPTION_RECORD {
-	DWORD ExceptionCode;
-	DWORD ExceptionFlags;
-	EXCEPTION_RECORD* ExceptionRecord;
-	void * ExceptionAddress;
-	DWORD NumberParameters;
-	DWORD[EXCEPTION_MAXIMUM_PARAMETERS] ExceptionInformation;
+        DWORD ExceptionCode;
+        DWORD ExceptionFlags;
+        EXCEPTION_RECORD* ExceptionRecord;
+        void * ExceptionAddress;
+        DWORD NumberParameters;
+        DWORD[EXCEPTION_MAXIMUM_PARAMETERS] ExceptionInformation;
 }
 alias EXCEPTION_RECORD* PEXCEPTION_RECORD, LPEXCEPTION_RECORD;
 
 struct EXCEPTION_POINTERS {
-	PEXCEPTION_RECORD ExceptionRecord;
-	PCONTEXT          ContextRecord;
+        PEXCEPTION_RECORD ExceptionRecord;
+        PCONTEXT          ContextRecord;
 }
 alias EXCEPTION_POINTERS* PEXCEPTION_POINTERS, LPEXCEPTION_POINTERS;
 
@@ -192,7 +192,7 @@ extern(Windows)
 void RtlUnwind(void *targetFrame, void *targetIp, EXCEPTION_RECORD *pExceptRec, void *valueForEAX);
 
 extern(C)
-{ 
+{
 extern DWORD _except_list; // This is just FS:[0]
 }
 
@@ -212,7 +212,7 @@ These thunks are of the form:
       MOV     EAX, &scope_table
       JMP     __d_framehandler
 FS:[0] contains a singly linked list of all active handlers (they'll all be
-thunks). The list is created on the stack. 
+thunks). The list is created on the stack.
 At the end of this list is _except_handler3, a function in the DMC library.
 It may be unnecessary. I think it is included for compatibility with MSVC
 exceptions? The function below is useful for debugging.
@@ -272,7 +272,7 @@ each function which uses exceptions.
 
 extern(C)
 {
-    alias 
+    alias
     EXCEPTION_DISPOSITION function (
             EXCEPTION_RECORD *exceptionRecord,
             DEstablisherFrame *frame,
@@ -401,10 +401,10 @@ EXCEPTION_DISPOSITION _d_framehandler(
                         // Initialize catch variable
                         regebp = cast(int)&frame.ebp;              // EBP for this frame
                         *cast(Object *)(regebp + (pcb.bpoffset)) = pti;
-                        
+
                         // Have system call all finally blocks in intervening frames
                         _d_global_unwind(frame, exceptionRecord);
-                        
+
                         // Call all the finally blocks skipped in this frame
                         _d_local_unwind(handlerTable, frame, ndx, &searchCollisionExceptionHandler);
 
@@ -554,7 +554,7 @@ Object _d_translate_se_to_d_exception(EXCEPTION_RECORD *exceptionRecord)
         case STATUS_INVALID_DISPOSITION:
         case STATUS_NONCONTINUABLE_EXCEPTION:
         case STATUS_SINGLE_STEP:
-		case DBG_CONTROL_C: // only when a debugger is attached
+                case DBG_CONTROL_C: // only when a debugger is attached
         // In DMC, but not in Microsoft docs
         case STATUS_GUARD_PAGE_VIOLATION:
         case STATUS_INVALID_HANDLE:
@@ -595,9 +595,9 @@ EXCEPTION_DISPOSITION searchCollisionExceptionHandler(
             CONTEXT *context,
             void *dispatcherContext)
 {
-    if (!(exceptionRecord.ExceptionFlags & EXCEPTION_UNWIND)) 
+    if (!(exceptionRecord.ExceptionFlags & EXCEPTION_UNWIND))
         return EXCEPTION_DISPOSITION.ExceptionContinueSearch;
-    
+
     // An exception has been thrown during unwinding.
     // It happened during the SEARCH phase.
     // We need to cancel the original search pass, so we'll restart from 'frame'.
@@ -612,9 +612,9 @@ EXCEPTION_DISPOSITION unwindCollisionExceptionHandler(
             CONTEXT *context,
             void *dispatcherContext)
 {
-    if (!(exceptionRecord.ExceptionFlags & EXCEPTION_UNWIND)) 
+    if (!(exceptionRecord.ExceptionFlags & EXCEPTION_UNWIND))
         return EXCEPTION_DISPOSITION.ExceptionContinueSearch;
-    
+
     // An exception has been thrown during unwinding.
     // It happened during the UNWIND phase.
     // We need to cancel the unwind pass, AND we need to cancel the search
@@ -674,7 +674,7 @@ void _d_local_unwind(DHandlerTable *handler_table,
     }
 }
 
-/+ According to http://www.microsoft.com/msj/0197/exception/exception.aspx, 
+/+ According to http://www.microsoft.com/msj/0197/exception/exception.aspx,
 global unwind is just a thin wrapper around RtlUnwind.
 __global_unwind(void * pRegistFrame)
  {
@@ -708,11 +708,11 @@ int _d_global_unwind(DEstablisherFrame *pFrame, EXCEPTION_RECORD *eRecord)
         call RtlUnwind;
  __unwind_exit:
         pop EBP;
-        pop	EDI;
-        pop	ESI;
-        pop	EBX;
+        pop     EDI;
+        pop     ESI;
+        pop     EBX;
         pop ECX;
-        mov	ESP,EBP;
+        mov     ESP,EBP;
         pop EBP;
         ret;
     }

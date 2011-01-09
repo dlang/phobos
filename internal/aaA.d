@@ -590,6 +590,8 @@ body
  * length pairs of key/value pairs.
  */
 
+version (X86)
+{
 extern (C)
 BB* _d_assocarrayliteralT(TypeInfo_AssociativeArray ti, size_t length, ...)
 {
@@ -698,7 +700,7 @@ BB* _d_assocarrayliteralT(TypeInfo_AssociativeArray ti, size_t length, ...)
     }
     return result;
 }
-
+}
 
 extern (C)
 BB* _d_assocarrayliteralTX(TypeInfo_AssociativeArray ti, void[] keys, void[] values)

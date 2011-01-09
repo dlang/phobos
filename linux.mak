@@ -9,7 +9,7 @@
 #	make unittest
 #		Build libphobos.a, build and run unit tests
 
-LIB=libphobos.a
+LIB=lib$(MODEL)/libphobos.a
 
 MAKEFILE=linux.mak
 MODEL=32

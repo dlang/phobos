@@ -56,7 +56,7 @@ test.obj : test.d
 test.exe : test.obj phobos.lib
 	$(DMD) test.obj -g -L/map
 
-OBJS= complex.obj gcstats.obj \
+OBJS= deh.obj complex.obj gcstats.obj \
 	critical.obj object.obj monitor.obj \
 	crc32.obj \
 	Czlib.obj Dzlib.obj process.obj \
@@ -96,7 +96,6 @@ SRCS= std\math.d std\stdio.d std\dateparse.d std\date.d std\uni.d std\string.d \
 	internal\dmain2.d internal\cast.d internal\obj.d \
 	internal\arrayfloat.d internal\arraydouble.d internal\arrayreal.d \
 	internal\arraybyte.d internal\arrayshort.d internal\arrayint.d \
-    internal\deh.d \
 	etc\gamma.d \
 	std\c\math.d \
 	std\c\stdarg.d \
