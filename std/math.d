@@ -2027,9 +2027,12 @@ version(Posix)
 {
 unittest
 {
-    assert(lround(0.49) == 0);
-    assert(lround(0.5) == 1);
-    assert(lround(1.5) == 2);
+    version(Posix)
+    {
+        assert(lround(0.49) == 0);
+        assert(lround(0.5) == 1);
+        assert(lround(1.5) == 2);
+    }
 }
 }
 
