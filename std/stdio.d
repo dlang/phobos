@@ -1240,6 +1240,24 @@ $(D Range) that locks the file and allows fast writing to it.
     {
         return LockingTextWriter(this);
     }
+
+/// Get the size of the file, ulong.max if file is not searchable, but still throws if an actual error occurs.
+    @property ulong size()
+    {
+        ulong pos = void;
+        if (collectException(pos = tell)) return ulong.max;
+        scope(exit) seek(pos);
+        seek(0, SEEK_END);
+        return tell;
+    }
+}
+
+unittest
+{
+    std.file.write("deleteme", "1 2 3");
+    auto f = File("deleteme");
+    assert(f.size == 5);
+    assert(f.tell == 0);
 }
 
 struct LockingTextReader
@@ -1627,7 +1645,7 @@ uint readf(A...)(in char[] format, A args)
 unittest
 {
     float f;
-    if (false) readf("%s", &f);
+    if (false) uint x = readf("%s", &f);
 }
 
 /**********************************
