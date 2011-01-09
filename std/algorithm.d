@@ -3225,6 +3225,35 @@ unittest {
     assert(skipOver(s1, "Hell") && s1 == "o world");
 }
 
+/* (Not yet documented.)
+Consume all elements from $(D r) that are equal to one of the elements
+$(D es).
+ */
+void skipAll(alias pred = "a == b", R, Es...)(ref R r, Es es)
+//if (is(typeof(binaryFun!pred(r1.front, es[0]))))
+{
+  loop:
+    for (; !r.empty; r.popFront())
+    {
+        foreach (i, E; Es)
+        {
+            if (binaryFun!pred(r.front, es[i]))
+            {
+                continue loop;
+            }
+        }
+        break;
+    }
+}
+
+unittest
+{
+    //scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+    auto s1 = "Hello world";
+    skipAll(s1, 'H', 'e');
+    assert(s1 == "llo world");
+}
+
 /**
 The reciprocal of $(D startsWith).
 
