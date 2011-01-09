@@ -272,7 +272,7 @@ struct BitArray
     {
         debug(bitarray) printf("BitArray.sort.unittest\n");
 
-        static uint x = 0b1100011000;
+        static size_t x = 0b1100011000;
         static BitArray ba = { 10, &x };
         ba.sort;
         for (size_t i = 0; i < 6; i++)
