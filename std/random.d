@@ -588,10 +588,12 @@ struct XorshiftEngine(UIntType, UIntType bits, UIntType a, UIntType b, UIntType 
 
 
   public:
-    /**
-     * Always $(D false) (random generators are infinite ranges).
-     */
+    /// Always $(D false) (random generators are infinite ranges).
     enum empty = false;
+    /// Smallest generated value.
+    enum UIntType min = 0;
+    /// Largest generated value.
+    enum UIntType max = UIntType.max;
 
 
   private:
