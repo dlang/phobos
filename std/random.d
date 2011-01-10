@@ -727,9 +727,22 @@ struct XorshiftEngine(UIntType, UIntType bits, UIntType a, UIntType b, UIntType 
     @safe
     static nothrow void sanitizeSeeds(ref UIntType[Size] seeds)
     {
-        foreach (i, ref seed; seeds) {
-            if (seed == 0)
-                seed = i;
+        for (uint i; i < seeds.length; i++) {
+            if (seeds[i] == 0)
+                seeds[i] = i + 1;
+        }
+    }
+
+
+    unittest
+    {
+        static if (Size  ==  4)  // Other bits too
+        {
+            UIntType[Size] seeds = [1, 0, 0, 4];
+
+            sanitizeSeeds(seeds);
+
+            assert(seeds == [1, 2, 3, 4]);
         }
     }
 }
