@@ -42,10 +42,11 @@ WIKI = Phobos/StdRandom
 Copyright: Copyright Andrei Alexandrescu 2008 - 2009.
 License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
 Authors:   $(WEB erdani.org, Andrei Alexandrescu)
+           Masahiro Nakagawa (Xorshift randome generator)
 Credits:   The entire random number library architecture is derived from the
            excellent $(WEB open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2461.pdf, C++0X)
            random number facility proposed by Jens Maurer and contributed to by
-           researchers at the Fermi laboratory.
+           researchers at the Fermi laboratory(excluding Xorshift).
 */
 /*
          Copyright Andrei Alexandrescu 2008 - 2009.
@@ -57,6 +58,9 @@ module std.random;
 
 import std.algorithm, std.c.time, std.conv, std.date, std.exception, std.math,
     std.numeric, std.process, std.range, std.stdio, std.traits, core.thread;
+
+version(unittest) import std.typetuple;
+
 
 // Segments of the code in this file Copyright (c) 1997 by Rick Booth
 // From "Inner Loops" by Rick Booth, Addison-Wesley
@@ -560,6 +564,223 @@ unittest
     }
     assert(a != b);
 }
+
+
+/**
+ * Xorshift generator using 32bit algorithm.
+ *
+ * Implemented according to $(WEB www.jstatsoft.org/v08/i14/paper, Xorshift RNGs).
+ *
+ * $(BOOKTABLE $(TEXTWITHCOMMAS Supporting bits are below, $(D bits) means second parameter of XorshiftEngine.),
+ *  $(TR $(TH bits) $(TH period))
+ *  $(TR $(TD 32)   $(TD 2^32 - 1))
+ *  $(TR $(TD 64)   $(TD 2^64 - 1))
+ *  $(TR $(TD 96)   $(TD 2^96 - 1))
+ *  $(TR $(TD 128)  $(TD 2^128 - 1))
+ *  $(TR $(TD 160)  $(TD 2^160 - 1))
+ *  $(TR $(TD 192)  $(TD 2^192 - 2^32))
+ * )
+ */
+struct XorshiftEngine(UIntType, UIntType bits, UIntType a, UIntType b, UIntType c)
+{
+    static assert(bits == 32 || bits == 64 || bits == 96 || bits == 128 || bits == 160 || bits == 192,
+                  "Supporting bits are 32, 64, 96, 128, 160 and 192. " ~ to!string(bits) ~ " is not supported.");
+
+
+  public:
+    /**
+     * Always $(D false) (random generators are infinite ranges).
+     */
+    enum empty = false;
+
+
+  private:
+    enum Size = bits / 32;
+
+    static if (bits == 32) {
+        UIntType[Size] seeds_ = [2463534242];
+    } else static if (bits == 64) {
+        UIntType[Size] seeds_ = [123456789, 362436069];
+    } else static if (bits == 96) {
+        UIntType[Size] seeds_ = [123456789, 362436069, 521288629];
+    } else static if (bits == 128) {
+        UIntType[Size] seeds_ = [123456789, 362436069, 521288629, 88675123];
+    } else static if (bits == 160) {
+        UIntType[Size] seeds_ = [123456789, 362436069, 521288629, 88675123, 5783321];
+    } else { // 192bits
+        UIntType[Size] seeds_ = [123456789, 362436069, 521288629, 88675123, 5783321, 6615241];
+        UIntType       value_;
+    }
+
+
+  public:
+    /**
+     * Constructs a $(D XorshiftEngine) generator seeded with $(D_PARAM x0).
+     */
+    @safe
+    this(UIntType x0)
+    {
+        seed(x0);
+    }
+
+
+    /**
+     * (Re)seeds the generator.
+     */
+    @safe
+    nothrow void seed(UIntType x0)
+    {
+        // Initialization routine from MersenneTwisterEngine.
+        foreach (i, e; seeds_)
+            seeds_[i] = x0 = cast(UIntType)(1812433253U * (x0 ^ (x0 >> 30)) + i + 1);
+
+        // All seeds must not be 0.
+        sanitizeSeeds(seeds_);
+
+        popFront();
+    }
+
+
+    /**
+     * Returns the current number in the random sequence.
+     */
+    @property @safe
+    nothrow UIntType front()
+    {
+        static if (bits == 192) {
+            return value_;
+        } else {
+            return seeds_[Size - 1];
+        }
+    }
+
+
+    /**
+     * Advances the random sequence.
+     */
+    @safe
+    nothrow void popFront()
+    {
+        UIntType temp;
+
+        static if (bits == 32) {
+            temp      = seeds_[0] ^ (seeds_[0] << a);
+            temp      = temp >> b;
+            seeds_[0] = temp ^ (temp << c);
+        } else static if (bits == 64) {
+            temp      = seeds_[0] ^ (seeds_[0] << a);
+            seeds_[0] = seeds_[1];
+            seeds_[1] = seeds_[1] ^ (seeds_[1] >> c) ^ temp ^ (temp >> b);
+        } else static if (bits == 96) {
+            temp      = seeds_[0] ^ (seeds_[0] << a);
+            seeds_[0] = seeds_[1];
+            seeds_[1] = seeds_[2];
+            seeds_[2] = seeds_[2] ^ (seeds_[2] >> c) ^ temp ^ (temp >> b);
+        } else static if (bits == 128){
+            temp      = seeds_[0] ^ (seeds_[0] << a);
+            seeds_[0] = seeds_[1];
+            seeds_[1] = seeds_[2];
+            seeds_[2] = seeds_[3];
+            seeds_[3] = seeds_[3] ^ (seeds_[3] >> c) ^ temp ^ (temp >> b);
+        } else static if (bits == 160){
+            temp      = seeds_[0] ^ (seeds_[0] >> a);
+            seeds_[0] = seeds_[1];
+            seeds_[1] = seeds_[2];
+            seeds_[2] = seeds_[3];
+            seeds_[3] = seeds_[4];
+            seeds_[4] = seeds_[4] ^ (seeds_[4] >> c) ^ temp ^ (temp >> b);
+        } else { // 192bits
+            temp      = seeds_[0] ^ (seeds_[0] >> a);
+            seeds_[0] = seeds_[1];
+            seeds_[1] = seeds_[2];
+            seeds_[2] = seeds_[3];
+            seeds_[3] = seeds_[4];
+            seeds_[4] = seeds_[4] ^ (seeds_[4] << c) ^ temp ^ (temp << b);
+            value_    = seeds_[4] + (seeds_[5] += 362437);
+        }
+    }
+
+
+    /**
+     * Captures a range state.
+     */
+    @property
+    typeof(this) save()
+    {
+        return this;
+    }
+
+
+    /**
+     * Compares against $(D_PARAM rhs) for equality.
+     */
+    @safe
+    nothrow bool opEquals(ref const XorshiftEngine rhs) const
+    {
+        return seeds_ == rhs.seeds_;
+    }
+
+
+  private:
+    @safe
+    static nothrow void sanitizeSeeds(ref UIntType[Size] seeds)
+    {
+        foreach (i, ref seed; seeds) {
+            if (seed == 0)
+                seed = i;
+        }
+    }
+}
+
+
+/**
+ * Define $(D XorshiftEngine) generators with well-chosen parameters. See each bits examples of "Xorshift RNGs".
+ * $(D Xorshift) is a Xorshift128's alias because 128bits implementation is mostly used.
+ *
+ * Example:
+ * -----
+ * // Seed with a constant
+ * auto rnd = Xorshift(1);
+ * auto num = rnd.front;  // same for each run
+ *
+ * // Seed with an unpredictable value
+ * rnd.seed(unpredictableSeed());
+ * num = rnd.front; // different across runs
+ * -----
+ */
+alias XorshiftEngine!(uint, 32,  13, 17, 5)  Xorshift32;
+alias XorshiftEngine!(uint, 64,  10, 13, 10) Xorshift64;   /// ditto
+alias XorshiftEngine!(uint, 96,  10, 5,  26) Xorshift96;   /// ditto
+alias XorshiftEngine!(uint, 128, 11, 8,  19) Xorshift128;  /// ditto
+alias XorshiftEngine!(uint, 160, 2,  1,  4)  Xorshift160;  /// ditto
+alias XorshiftEngine!(uint, 192, 2,  1,  4)  Xorshift192;  /// ditto
+alias Xorshift128 Xorshift;                                /// ditto
+
+
+unittest
+{
+    static assert(isForwardRange!Xorshift);
+
+    // Result from reference implementation.
+    auto checking = [
+        [2463534242UL, 267649, 551450, 53765, 108832, 215250, 435468, 860211, 660133, 263375],
+        [362436069UL, 2113136921, 19051112, 3010520417, 951284840, 1213972223, 3173832558, 2611145638, 2515869689, 2245824891],
+        [521288629UL, 1950277231, 185954712, 1582725458, 3580567609, 2303633688, 2394948066, 4108622809, 1116800180, 3357585673],
+        [88675123UL, 3701687786, 458299110, 2500872618, 3633119408, 516391518, 2377269574, 2599949379, 717229868, 137866584],
+        [5783321UL, 93724048, 491642011, 136638118, 246438988, 238186808, 140181925, 533680092, 285770921, 462053907],
+        [0UL, 246875399, 3690007200, 1264581005, 3906711041, 1866187943, 2481925219, 2464530826, 1604040631, 3653403911]
+    ];
+
+    foreach (I, Type; TypeTuple!(Xorshift32, Xorshift64, Xorshift96, Xorshift128, Xorshift160, Xorshift192)) {
+        Type rnd;
+
+        foreach (e; checking[I]) {
+            assert(rnd.front == e);
+            rnd.popFront();
+        }
+    }
+}
+
 
 /**
 A "good" seed for initializing random number engines. Initializing
