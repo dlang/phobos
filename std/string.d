@@ -1908,11 +1908,12 @@ S zfill(S)(S s, int width) if (isSomeString!S)
  * Replace occurrences of from[] with to[] in s[].
  */
 
-S replace(S)(S s, S from, S to)
+C1[] replace(C1, C2, C3)(C1[] s, C2[] from, C3[] to)
+if (isSomeChar!C1 && isSomeChar!C2 && isSomeChar!C3)
 {
     if (from.length == 0) return s;
 
-    Unqual!(typeof(s[0]))[] p;
+    typeof(s.dup) p;
     for (size_t istart; istart < s.length; )
     {
         immutable i = indexOf(s[istart .. s.length], from);
@@ -1930,7 +1931,7 @@ S replace(S)(S s, S from, S to)
         p ~= to;
         istart += i + from.length;
     }
-    return cast(S) p;
+    return cast(C1[]) p;
 }
 
 unittest
