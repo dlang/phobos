@@ -909,7 +909,7 @@ unittest
     debug(path) printf("path.join.unittest\n");
 
     string p;
-    int i;
+    sizediff_t i;
 
     p = join("foo", "bar");
     version (Windows)
