@@ -166,7 +166,7 @@ void[] uncompress(void[] srcbuf, size_t destlen = 0u, int winbits = 15)
         zs.avail_in = to!uint(srcbuf.length);
 
         zs.next_out = destbuf.ptr;
-        zs.avail_out = destlen;
+        zs.avail_out = cast(typeof(zs.avail_out))destlen;
 
         err = etc.c.zlib.inflateInit2(&zs, winbits);
         if (err)
