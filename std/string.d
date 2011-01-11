@@ -88,37 +88,20 @@ $(TR $(TD > 0)  $(TD $(D s1 > s2)))
 )
 */
 
-int cmp(C1, C2)(in C1[] s1, in C2[] s2)
+sizediff_t cmp(C1, C2)(in C1[] s1, in C2[] s2)
 {
-    static int toZeroOne(sizediff_t num)
-    {
-        if(num > 0) return 1;
-        if(num < 0) return -1;
-        return 0;
-    }
-
     static if (C1.sizeof == C2.sizeof)
     {
         immutable len = min(s1.length, s2.length);
         immutable result = std.c.string.memcmp(s1.ptr, s2.ptr, len * C1.sizeof);
-        static if (size_t.sizeof == int.sizeof)
-        {
             return result ? result : s1.length - s2.length;
-        }
-        else
-        {
-            return result
-                ? result
-                : s1.length == s2.length ? 0 : s1.length > s2.length ? 1 : -1;
-        }
     }
     else
     {
-        size_t i1, i2;
-        for (;;)
+        for (size_t i1, i2;;)
         {
-            if (i1 == s1.length) return toZeroOne(i2 - s2.length);
-            if (i2 == s2.length) return toZeroOne(s1.length - i1);
+            if (i1 == s1.length) return i2 - s2.length;
+            if (i2 == s2.length) return s1.length - i1;
             immutable c1 = std.utf.decode(s1, i1),
                 c2 = std.utf.decode(s2, i2);
             if (c1 != c2) return cast(int) c1 - cast(int) c2;
