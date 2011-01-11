@@ -164,7 +164,7 @@ enum
         Z_FULL_FLUSH    = 3,
         Z_FINISH        = 4,
         Z_BLOCK         = 5,
-	Z_TREES		= 6,
+        Z_TREES         = 6,
 }
 /* Allowed flush values; see deflate() and inflate() below for details */
 

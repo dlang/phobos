@@ -210,7 +210,7 @@ the quick brown fox jumps over the lazy dog\r
 /+
 void arrayPrint(ubyte[] array)
 {
-    //printf("array %p,%d\n", (void*)array, array.length);
+    //printf("array %p,%d\n", cast(void*)array, array.length);
     for (size_t i = 0; i < array.length; i++)
     {
         printf("%02x ", array[i]);
