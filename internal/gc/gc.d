@@ -999,16 +999,16 @@ byte[] _d_arrayappendcT(TypeInfo ti, inout byte[] x, ...)
 }
 
 /**************************************
- * Extend an array by 1 element.
+ * Extend an array by n elements.
  * Caller must initialize that element.
  */
 extern (C)
-byte[] _d_arrayappendcTX(TypeInfo ti, inout byte[] x)
+byte[] _d_arrayappendcTX(TypeInfo ti, inout byte[] x, size_t n)
 {
     auto sizeelem = ti.next.tsize();            // array element size
     auto cap = _gc.capacity(x.ptr);
     auto length = x.length;
-    auto newlength = length + 1;
+    auto newlength = length + n;
     auto newsize = newlength * sizeelem;
 
     assert(cap == 0 || length * sizeelem <= cap);
