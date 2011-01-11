@@ -94,7 +94,11 @@ int cmp(C1, C2)(in C1[] s1, in C2[] s2)
     {
         immutable len = min(s1.length, s2.length);
         immutable result = std.c.string.memcmp(s1.ptr, s2.ptr, len * C1.sizeof);
-        return result ? result : s1.length > s2.length ? 1 : s1.length < s2.length ? -1 : 0;
+        if (result) return result;
+        static if (s1.length.sizeof == int.sizeof)
+            return s1.length - s2.length;
+        else
+            return s1.length > s2.length ? 1 : s1.length < s2.length ? -1 : 0;
     }
     else
     {
@@ -147,7 +151,11 @@ int icmp(C1, C2)(in C1[] s1, in C2[] s2) if (isSomeChar!C1 && isSomeChar!C2)
         dchar c1 = toUniLower(e[0]), c2 = toUniLower(e[1]);
         if (c1 != c2) return cast(int) c1 - cast(int) c2;
     }
-    return s1.length > s2.length ? 1 : s1.length < s2.length ? -1 : 0;
+
+    static if (s1.length.sizeof == int.sizeof)
+        return s1.length - s2.length;
+    else
+        return s1.length > s2.length ? 1 : s1.length < s2.length ? -1 : 0;
 }
 
 unittest
