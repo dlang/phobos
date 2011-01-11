@@ -2318,12 +2318,13 @@ if (isForwardRange!R1 && isForwardRange!R2
         && is(typeof(binaryFun!pred(haystack.front, needle.front)) : bool)
         && !isRandomAccessRange!R1)
 {
-    static if (pred == "a == b" && isSomeString!R1 && isSomeString!R2
+    static if (is(typeof(pred == "a == b")) && pred == "a == b" && isSomeString!R1 && isSomeString!R2
             && haystack[0].sizeof == needle[0].sizeof)
     {
+        //return cast(R1) find(representation(haystack), representation(needle));
         // Specialization for simple string search
         alias Select!(haystack[0].sizeof == 1, ubyte[],
-                Select!((ElementType!R1).sizeof == 2, ushort[], uint[]))
+                Select!(haystack[0].sizeof == 2, ushort[], uint[]))
             Representation;
         // Will use the array specialization
         return cast(R1) .find!(pred, Representation, Representation)
@@ -2461,8 +2462,9 @@ unittest
     assert(find([ 1, 2, 1, 2, 3, 3 ], SList!int(2, 3)[]) == [ 2, 3, 3 ]);
 }
 
-// Internally used by some find() overloads above
-private R1 simpleMindedFind(alias pred, R1, R2)(R1 haystack, R2 needle)
+// Internally used by some find() overloads above. Can't make it
+// private due to bugs in the compiler.
+/*private*/ R1 simpleMindedFind(alias pred, R1, R2)(R1 haystack, R2 needle)
 {
     enum estimateNeedleLength = hasLength!R1 && !hasLength!R2;
 
