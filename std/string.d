@@ -88,13 +88,13 @@ $(TR $(TD > 0)  $(TD $(D s1 > s2)))
 )
 */
 
-sizediff_t cmp(C1, C2)(in C1[] s1, in C2[] s2)
+int cmp(C1, C2)(in C1[] s1, in C2[] s2)
 {
     static if (C1.sizeof == C2.sizeof)
     {
         immutable len = min(s1.length, s2.length);
         immutable result = std.c.string.memcmp(s1.ptr, s2.ptr, len * C1.sizeof);
-            return result ? result : s1.length - s2.length;
+        return result ? result : s1.length > s2.length ? 1 : s1.length < s2.length ? -1 : 0;
     }
     else
     {
@@ -140,8 +140,7 @@ unittest
  * ditto
  */
 
-sizediff_t
-icmp(C1, C2)(in C1[] s1, in C2[] s2) if (isSomeChar!C1 && isSomeChar!C2)
+int icmp(C1, C2)(in C1[] s1, in C2[] s2) if (isSomeChar!C1 && isSomeChar!C2)
 {
     foreach (e; zip(s1, s2))
     {
