@@ -114,13 +114,9 @@ in
 }
 body
 {
-    int err;
-    ubyte[] destbuf;
-    uint destlen;
-
-    destlen = cast(uint)(srcbuf.length + ((srcbuf.length + 1023) / 1024) + 12);
-    destbuf = new ubyte[destlen];
-    err = etc.c.zlib.compress2(destbuf.ptr, &destlen, cast(ubyte *)srcbuf, cast(uint)srcbuf.length, level);
+    auto destlen = srcbuf.length + ((srcbuf.length + 1023) / 1024) + 12;
+    auto destbuf = new ubyte[destlen];
+    auto err = etc.c.zlib.compress2(destbuf.ptr, &destlen, cast(ubyte *)srcbuf.ptr, srcbuf.length, level);
     if (err)
     {   delete destbuf;
         throw new ZlibException(err);
@@ -149,9 +145,6 @@ void[] compress(void[] buf)
 
 void[] uncompress(void[] srcbuf, size_t destlen = 0u, int winbits = 15)
 {
-    int err;
-    ubyte[] destbuf;
-
     if (!destlen)
         destlen = srcbuf.length * 2 + 1;
 
@@ -159,7 +152,7 @@ void[] uncompress(void[] srcbuf, size_t destlen = 0u, int winbits = 15)
     {
         etc.c.zlib.z_stream zs;
 
-        destbuf = new ubyte[destlen];
+        auto destbuf = new ubyte[destlen];
 
         zs.next_in = cast(ubyte*) srcbuf;
         zs.avail_in = cast(typeof(zs.avail_in))srcbuf.length;
@@ -167,7 +160,7 @@ void[] uncompress(void[] srcbuf, size_t destlen = 0u, int winbits = 15)
         zs.next_out = destbuf.ptr;
         zs.avail_out = cast(typeof(zs.avail_in))destlen;
 
-        err = etc.c.zlib.inflateInit2(&zs, winbits);
+        auto err = etc.c.zlib.inflateInit2(&zs, winbits);
         if (err)
         {   delete destbuf;
             throw new ZlibException(err);
@@ -286,21 +279,19 @@ class Compress
      * returned from successive calls to this should be concatenated together.
      */
     void[] compress(void[] buf)
-    {   int err;
-        ubyte[] destbuf;
-
+    {
         if (buf.length == 0)
             return null;
 
         if (!inited)
         {
-            err = deflateInit(&zs, level);
+            auto err = deflateInit(&zs, level);
             if (err)
                 error(err);
             inited = 1;
         }
 
-        destbuf = new ubyte[zs.avail_in + buf.length];
+        auto destbuf = new ubyte[zs.avail_in + buf.length];
         zs.next_out = destbuf.ptr;
         zs.avail_out = cast(typeof(zs.avail_out))destbuf.length;
 
@@ -310,7 +301,7 @@ class Compress
         zs.next_in = cast(ubyte*) buf.ptr;
         zs.avail_in = cast(typeof(zs.avail_in))buf.length;
 
-        err = deflate(&zs, Z_NO_FLUSH);
+        auto err = deflate(&zs, Z_NO_FLUSH);
         if (err != Z_STREAM_END && err != Z_OK)
         {   delete destbuf;
             error(err);
@@ -449,15 +440,13 @@ class UnCompress
         assert(!done);
     }
     body
-    {   int err;
-        ubyte[] destbuf;
-
+    {
         if (buf.length == 0)
             return null;
 
         if (!inited)
         {
-            err = inflateInit(&zs);
+            auto err = inflateInit(&zs);
             if (err)
                 error(err);
             inited = 1;
@@ -465,7 +454,7 @@ class UnCompress
 
         if (!destbufsize)
             destbufsize = buf.length * 2;
-        destbuf = new ubyte[zs.avail_in * 2 + destbufsize];
+        auto destbuf = new ubyte[zs.avail_in * 2 + destbufsize];
         zs.next_out = destbuf.ptr;
         zs.avail_out = cast(typeof(zs.avail_out))destbuf.length;
 
@@ -475,7 +464,7 @@ class UnCompress
         zs.next_in = cast(ubyte*) buf;
         zs.avail_in = cast(typeof(zs.avail_in))buf.length;
 
-        err = inflate(&zs, Z_NO_FLUSH);
+        auto err = inflate(&zs, Z_NO_FLUSH);
         if (err != Z_STREAM_END && err != Z_OK)
         {   delete destbuf;
             error(err);
@@ -502,7 +491,6 @@ class UnCompress
     {
         ubyte[] extra;
         ubyte[] destbuf;
-        int err;
 
         done = 1;
         if (!inited)
@@ -513,7 +501,7 @@ class UnCompress
         zs.next_out = destbuf.ptr;
         zs.avail_out = cast(typeof(zs.avail_out))destbuf.length;
 
-        err = etc.c.zlib.inflate(&zs, Z_NO_FLUSH);
+        auto err = etc.c.zlib.inflate(&zs, Z_NO_FLUSH);
         if (err == Z_OK && zs.avail_out == 0)
         {
             extra ~= destbuf;

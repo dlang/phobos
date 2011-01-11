@@ -79,11 +79,11 @@ struct z_stream
 {
     ubyte    *next_in;  /* next input byte */
     uint     avail_in;  /* number of bytes available at next_in */
-    uint     total_in;  /* total nb of input bytes read so far */
+    size_t   total_in;  /* total nb of input bytes read so far */
 
     ubyte    *next_out; /* next output byte should be put there */
     uint     avail_out; /* remaining free space at next_out */
-    uint     total_out; /* total nb of bytes output so far */
+    size_t   total_out; /* total nb of bytes output so far */
 
     char     *msg;      /* last error message, NULL if no error */
     void*    state;     /* not visible by applications */
@@ -93,8 +93,8 @@ struct z_stream
     void*      opaque;  /* private data object passed to zalloc and zfree */
 
     int    data_type;  /* best guess about the data type: binary or text */
-    uint   adler;      /* adler32 value of the uncompressed data */
-    uint   reserved;   /* reserved for future use */
+    size_t adler;      /* adler32 value of the uncompressed data */
+    size_t reserved;   /* reserved for future use */
 }
 
 alias z_stream* z_streamp;
@@ -163,7 +163,8 @@ enum
         Z_SYNC_FLUSH    = 2,
         Z_FULL_FLUSH    = 3,
         Z_FINISH        = 4,
-        Z_BLOCK         = 5
+        Z_BLOCK         = 5,
+	Z_TREES		= 6,
 }
 /* Allowed flush values; see deflate() and inflate() below for details */
 
@@ -706,7 +707,7 @@ int deflateTune(z_streamp strm, int good_length, int max_lazy, int nice_length,
    returns Z_OK on success, or Z_STREAM_ERROR for an invalid deflate stream.
  */
 
-int deflateBound(z_streamp strm, uint sourceLen);
+int deflateBound(z_streamp strm, size_t sourceLen);
 /*
      deflateBound() returns an upper bound on the compressed size after
    deflation of sourceLen bytes.  It must be called after deflateInit()
@@ -1013,9 +1014,9 @@ uint zlibCompileFlags();
 */
 
 int compress(ubyte* dest,
-             uint* destLen,
+             size_t* destLen,
              ubyte* source,
-             uint sourceLen);
+             size_t sourceLen);
 /*
      Compresses the source buffer into the destination buffer.  sourceLen is
    the byte length of the source buffer. Upon entry, destLen is the total
@@ -1030,9 +1031,9 @@ int compress(ubyte* dest,
 */
 
 int compress2(ubyte* dest,
-              uint* destLen,
+              size_t* destLen,
               ubyte* source,
-              uint sourceLen,
+              size_t sourceLen,
               int level);
 /*
      Compresses the source buffer into the destination buffer. The level
@@ -1047,7 +1048,7 @@ int compress2(ubyte* dest,
    Z_STREAM_ERROR if the level parameter is invalid.
 */
 
-uint compressBound(uint sourceLen);
+size_t compressBound(size_t sourceLen);
 /*
      compressBound() returns an upper bound on the compressed size after
    compress() or compress2() on sourceLen bytes.  It would be used before
@@ -1055,9 +1056,9 @@ uint compressBound(uint sourceLen);
 */
 
 int uncompress(ubyte* dest,
-               uint* destLen,
+               size_t* destLen,
                ubyte* source,
-               uint sourceLen);
+               size_t sourceLen);
 /*
      Decompresses the source buffer into the destination buffer.  sourceLen is
    the byte length of the source buffer. Upon entry, destLen is the total
