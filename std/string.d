@@ -147,7 +147,7 @@ int icmp(C1, C2)(in C1[] s1, in C2[] s2) if (isSomeChar!C1 && isSomeChar!C2)
         dchar c1 = toUniLower(e[0]), c2 = toUniLower(e[1]);
         if (c1 != c2) return cast(int) c1 - cast(int) c2;
     }
-    return s1.length - s2.length;
+    return s1.length > s2.length ? 1 : s1.length < s2.length ? -1 : 0;
 }
 
 unittest
