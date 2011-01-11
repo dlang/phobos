@@ -29,6 +29,7 @@ else version (Posix)
     import core.sys.posix.sys.time;
 }
 
+
 //##############################################################################
 //##############################################################################
 //###
@@ -36,6 +37,7 @@ else version (Posix)
 //###
 //##############################################################################
 //##############################################################################
+
 
 /*******************************************************************************
  * System clock time.
@@ -75,7 +77,7 @@ struct Ticks
         }
         else version (Posix)
         {
-            static if (is(typeof({ auto fp = &clock_gettime; })))
+            static if (is(typeof(clock_gettime)==function))
             {
                 timespec ts;
                 if ( clock_getres(CLOCK_REALTIME, &ts) != 0)
@@ -661,7 +663,7 @@ Ticks systime()
     }
     else version (Posix)
     {
-        static if (is(typeof({auto f = &clock_gettime;})))
+        static if (is(typeof(clock_gettime)==function))
         {
             timespec ts;
             errnoEnforce(clock_gettime(CLOCK_REALTIME, &ts) == 0,
@@ -766,7 +768,7 @@ Ticks[lengthof!(fun)()] benchmark(fun...)(uint times)
     return result;
 }
 
-
+/// ditto
 @system
 Ticks[lengthof!(fun)()] benchmark(fun...)(uint times)
     if(!areAllSafe!fun)
@@ -910,6 +912,7 @@ unittest
     auto b2 = comparingBenchmark!(f1x, f2x, 1); // OK
 }
 
+
 //##############################################################################
 //##############################################################################
 //###
@@ -939,6 +942,10 @@ version (D_Ddoc)
      *--------------------------------------------------------------------------
      */
     TemporaryValue measureTime(alias func)();
+    
+    
+    // for -unittest -D
+    alias void* TemporaryValue;
 }
 else
 {
@@ -984,6 +991,7 @@ else
         }
     }
 }
+
 
 @system
 unittest
