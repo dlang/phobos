@@ -4139,7 +4139,6 @@ unittest
     //lev.deletionIncrement = 2;
     //lev.insertionIncrement = 100;
     string a = "Saturday", b = "Sunday";
-    // @@@BUG@@@
     auto p = levenshteinDistanceAndPath(a, b);
     assert(cast(string) p[1] == "nrrnsnnn");
 }
