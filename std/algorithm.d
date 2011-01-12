@@ -4121,7 +4121,7 @@ levenshteinDistanceAndPath(alias equals = "a == b", Range1, Range2)
     (Range1 s, Range2 t)
     if (isForwardRange!(Range1) && isForwardRange!(Range2))
 {
-    Levenshtein!(Range, binaryFun!(equals)) lev;
+    Levenshtein!(Range1, binaryFun!(equals)) lev;
     auto d = lev.distance(s, t);
     return tuple(d, lev.path);
 }
@@ -4140,9 +4140,8 @@ unittest
     //lev.insertionIncrement = 100;
     string a = "Saturday", b = "Sunday";
     // @@@BUG@@@
-    //auto p = levenshteinDistanceAndPath(a, b);
-    //writefln(p);
-    //assert(cast(string) p[1] == "nrrnsnnn", cast(string) p);
+    auto p = levenshteinDistanceAndPath(a, b);
+    assert(cast(string) p[1] == "nrrnsnnn");
 }
 
 // copy
