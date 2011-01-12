@@ -156,7 +156,7 @@ JSONValue parseJSON(T)(T json, int maxDepth = -1) if(isInputRange!T) {
                                 foreach_reverse(i; 0 .. 4) {
                                         auto hex = toupper(getChar());
                                         if(!isxdigit(hex)) error("Expecting hex character");
-                                        val += (isdigit(hex) ? hex - '0' : hex - 'A') << (4 * i);
+                                        val += (isdigit(hex) ? hex - '0' : hex - ('A' - 10)) << (4 * i);
                                 }
                                 char[4] buf = void;
                                 str.put(toUTF8(buf, val));
@@ -461,4 +461,12 @@ unittest {
                         writefln(text(json, "\n", e.toString()));
                 }
         }
+
+        // Should be able to correctly interpret unicode entities
+        val = parseJSON(`"\u003C\u003E"`);
+        assert(toJSON(&val) == "\"\&lt;\&gt;\"");
+        val = parseJSON(`"\u0391\u0392\u0393"`);
+        assert(toJSON(&val) == "\"\&Alpha;\&Beta;\&Gamma;\"");
+        val = parseJSON(`"\u2660\u2666"`);
+        assert(toJSON(&val) == "\"\&spades;\&diams;\"");
 }
