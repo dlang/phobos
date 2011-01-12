@@ -148,6 +148,9 @@ D language compiler. Also, check out the
 	<dt><a href="std_date.html"><b>std.date</b></a>
 	<dd>Date and time functions. Support locales.
 
+	<dt><a href="std_datetime.html"><b>std.datetime</b></a>
+	<dd>Date and time-related types and functions.
+
 	<dt><a href="std_file.html"><b>std.file</b></a>
 	<dd>Basic file operations like read, write, append.
 

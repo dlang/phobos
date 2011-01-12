@@ -167,6 +167,7 @@ NAVIGATION_PHOBOS=
 	$(LI <a href="std_cpuid.html" title="CPU identification">std.cpuid</a>)
 	$(LI <a href="std_ctype.html" title="Simple character classification">std.ctype</a>)
 	$(LI <a href="std_date.html" title="Date and time functions">std.date</a>)
+	$(LI <a href="std_datetime.html" title="Date and time-related types and functions">std.datetime</a>)
 	$(LI <a href="std_demangle.html" title="Demangle D names">std.demangle</a>)
 	$(LI <a href="std_encoding.html" title="Character and string encoding">std.encoding</a>)
 	$(LI <a href="std_exception.html" title="Exceptions and error handling">std.exception</a>)
