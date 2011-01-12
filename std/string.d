@@ -104,8 +104,8 @@ int cmp(C1, C2)(in C1[] s1, in C2[] s2)
     {
         for (size_t i1, i2;;)
         {
-            if (i1 == s1.length) return i2 - s2.length;
-            if (i2 == s2.length) return s1.length - i1;
+            if (i1 == s1.length) return i2 > s2.length ? 1 : i2 < s2.length ? -1 : 0;
+            if (i2 == s2.length) return s1.length > i1 ? 1 : s1.length < i1 ? -1 : 0;
             immutable c1 = std.utf.decode(s1, i1),
                 c2 = std.utf.decode(s2, i2);
             if (c1 != c2) return cast(int) c1 - cast(int) c2;
@@ -2105,7 +2105,7 @@ S expandtabs(S)(S str, size_t tabsize = 8) if (isSomeString!S)
     bool changes = false;
     Unqual!(typeof(str[0]))[] result;
     int column;
-    int nspaces;
+    size_t nspaces;
 
     foreach (size_t i, dchar c; str)
     {
@@ -2197,7 +2197,7 @@ S entab(S)(S s, size_t tabsize = 8)
 
     int nspaces = 0;
     int nwhite = 0;
-    int column = 0;         // column number
+    size_t column = 0;         // column number
 
     foreach (size_t i, dchar c; s)
     {
@@ -2221,7 +2221,7 @@ S entab(S)(S s, size_t tabsize = 8)
                     change();
 
                 sizediff_t j = result.length - nspaces;
-                int ntabs = (((column - nspaces) % tabsize) + nspaces) / tabsize;
+                auto ntabs = (((column - nspaces) % tabsize) + nspaces) / tabsize;
                 result.length = j + ntabs;
                 result[j .. j + ntabs] = '\t';
                 nwhite += ntabs - nspaces;
@@ -2250,7 +2250,7 @@ S entab(S)(S s, size_t tabsize = 8)
                     change();
 
                 auto j = result.length - nspaces;
-                int ntabs = (nspaces + tabsize - 1) / tabsize;
+                auto ntabs = (nspaces + tabsize - 1) / tabsize;
                 result.length = j + ntabs;
                 result[j .. j + ntabs] = '\t';
                 nwhite += ntabs - nspaces;

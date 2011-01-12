@@ -255,7 +255,6 @@ DISABLED_TESTS =        \
 	std/signals     \
 	std/stdio       \
 	std/stream      \
-	std/string      \
 	std/uri         \
 	std/variant     \
 	std/zlib        \
