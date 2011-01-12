@@ -30209,7 +30209,7 @@ version(Windows)
             which is highly unlikely to happen given that SysTime.max is in 29,228 A.D.
             and the maximum SYSTEMTIME is in 30,827 A.D.
       +/
-    SysTime SYSTEMTIMEToSysTime(const SYSTEMTIME* st, immutable TimeZone tz = LocalTime()) pure
+    SysTime SYSTEMTIMEToSysTime(const SYSTEMTIME* st, immutable TimeZone tz = LocalTime())
     {
         const max = SysTime.max;
 
@@ -30252,7 +30252,7 @@ version(Windows)
         }
 
         auto dt = DateTime(st.wYear, st.wMonth, st.wDay,
-                           st.wHour, st.wMinue, st.wSecond);
+                           st.wHour, st.wMinute, st.wSecond);
 
         return SysTime(dt, FracSec.from!"msecs"(st.wMilliseconds), tz);
     }
@@ -30262,7 +30262,7 @@ version(Windows)
         auto sysTime = Clock.currTime(UTC());
         SYSTEMTIME st = void;
         GetSystemTime(&st);
-        auto converted = SYSTEMTIMEToSystemTime(&st);
+        auto converted = SYSTEMTIMEToSysTime(&st);
 
         assertPred!"<="(sysTime, converted);
         assertPred!"<="(converted - sysTime, dur!"msecs"(10));
@@ -30285,7 +30285,7 @@ version(Windows)
             DateTimeException if the given SysTime will not fit in a SYSTEMTIME.
             This will only happen if the SysTime's date is prior to 1601 A.D.
       +/
-    void SysTimeToSYSTEMTIME(in SysTime sysTime, SYSTEMTIME* st) pure
+    void SysTimeToSYSTEMTIME(in SysTime sysTime, SYSTEMTIME* st)
     {
         immutable dt = cast(DateTime)sysTime;
 
@@ -30299,7 +30299,7 @@ version(Windows)
         st.wHour = dt.hour;
         st.wMinute = dt.minute;
         st.wSecond = dt.second;
-        st.wMilliseconds = sysTime.fracSec.msecs;
+        st.wMilliseconds = cast(ushort)sysTime.fracSec.msecs;
     }
 
     unittest
@@ -30318,7 +30318,7 @@ version(Windows)
         assertPred!"=="(st.wHour, result.wHour);
         assertPred!"=="(st.wMinute, result.wMinute);
         assertPred!"=="(st.wSecond, result.wSecond);
-        assertPred!"=="(st.wMillisecond, result.wMillisecond);
+        assertPred!"=="(st.wMilliseconds, result.wMilliseconds);
     }
 
 
@@ -30334,7 +30334,7 @@ version(Windows)
             DateTimeException if the given FILETIME will not fit in a SysTime or
             if the FILETIME cannot be converted to a SYSTEMTIME.
       +/
-    SysTime FILETIMEToSysTime(const FILETIME* ft, immutable TimeZone tz = LocalTime()) pure
+    SysTime FILETIMEToSysTime(const FILETIME* ft, immutable TimeZone tz = LocalTime())
     {
         SYSTEMTIME st = void;
 
@@ -30374,13 +30374,13 @@ version(Windows)
         Throws:
             DateTimeException if the given SysTime will not fit in a FILETIME.
       +/
-    void SysTimeToFILETIME(SysTime sysTime, FILETIME* ft) pure
+    void SysTimeToFILETIME(SysTime sysTime, FILETIME* ft)
     {
         sysTime.timezone = UTC();
         immutable dt = cast(DateTime)sysTime;
 
         SYSTEMTIME st = void;
-        SysTimeToSYSTEMTIME(sysTime, st);
+        SysTimeToSYSTEMTIME(sysTime, &st);
 
         SystemTimeToFileTime(&st, ft);
     }
@@ -30397,8 +30397,8 @@ version(Windows)
         FILETIME result = void;
         SysTimeToFILETIME(sysTime, &result);
 
-        assertPred!"=="(ft.dwLowDateTime, result.fwLowDateTime);
-        assertPred!"=="(ft.dwHighDateTime, result.fwHighDateTime);
+        assertPred!"=="(ft.dwLowDateTime, result.dwLowDateTime);
+        assertPred!"=="(ft.dwHighDateTime, result.dwHighDateTime);
     }
 }
 else version(D_Ddoc)
@@ -30422,7 +30422,7 @@ else version(D_Ddoc)
             which is highly unlikely to happen given that SysTime.max is in 29,228 A.D.
             and the maximum SYSTEMTIME is in 30,827 A.D.
       +/
-    SysTime SYSTEMTIMEToSysTime(const SYSTEMTIME* st, immutable TimeZone tz = LocalTime()) pure
+    SysTime SYSTEMTIMEToSysTime(const SYSTEMTIME* st, immutable TimeZone tz = LocalTime())
     {
         assert(0, "No implementation. Function exists only for DDoc generation");
     }
