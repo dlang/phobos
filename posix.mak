@@ -262,14 +262,7 @@ DISABLED_TESTS =        \
 	std/internal/math/gammafunction \
 	std/internal/math/errorfunction
 
-DISABLED_OPT_TESTS = \
-	std/date        \
-	std/encoding    \
-	std/functional  \
-	std/getopt      \
-	std/utf
-
-$(addprefix $(ROOT)/unittest/,$(DISABLED_TESTS) $(DISABLED_OPT_TESTS)) :
+$(addprefix $(ROOT)/unittest/,$(DISABLED_TESTS)) :
 	@echo Testing $@ - disabled
 endif
 
