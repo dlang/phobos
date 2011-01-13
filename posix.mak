@@ -236,7 +236,6 @@ $(LIB) : $(OBJS) $(ALL_D_FILES) $(DRUNTIME)
 ifeq ($(MODEL),64)
 DISABLED_TESTS =        \
 	std/algorithm   \
-	std/base64      \
 	std/complex     \
 	std/concurrency \
 	std/conv        \
