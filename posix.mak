@@ -246,7 +246,6 @@ DISABLED_TESTS =        \
 	std/mathspecial \
 	std/mmfile      \
 	std/numeric     \
-	std/outbuffer   \
 	std/random      \
 	std/range       \
 	std/regex       \

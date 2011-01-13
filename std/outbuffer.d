@@ -302,6 +302,15 @@ class OutBuffer
      * Append output of C's printf() to internal buffer.
      */
 
+    version (X86_64)
+    extern (C) void printf(string format, ...)
+    {
+        va_list ap;
+        va_start(ap, __va_argsave);
+        vprintf(format, ap);
+        va_end(ap);
+    }
+    else
     void printf(string format, ...)
     {
         va_list ap;
@@ -347,6 +356,7 @@ unittest
     buf.write(cast(byte)0x20);
     buf.write("world"[]);
     buf.printf(" %d", 6);
-    //printf("buf = '%.*s'\n", buf.toString());
+    //auto s = buf.toString();
+    //printf("buf = '%.*s'\n", s.length, s.ptr);
     assert(cmp(buf.toString(), "hello world 6") == 0);
 }
