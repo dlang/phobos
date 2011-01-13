@@ -29888,8 +29888,8 @@ public:
         immutable unixTimeC = core.stdc.time.time(null);
         immutable diff = unixTimeC - unixTimeD;
 
-        assertPred!">="(diff, 0);
-        assertPred!"<="(diff, 1);
+        assertPred!">="(diff, -2);
+        assertPred!"<="(diff, 2);
     }
 
 
