@@ -467,7 +467,7 @@ struct BitArray
         BitArray a; a.init(ba);
         void[] v = cast(void[])a;
 
-        assert(v.length == a.dim * uint.sizeof);
+        assert(v.length == a.dim * size_t.sizeof);
     }
 
     /***************************************
