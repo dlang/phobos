@@ -827,14 +827,30 @@ void doFormat(void delegate(dchar) putc, TypeInfo[] arguments, va_list argptr)
             case Mangle.Tfloat:
             case Mangle.Tifloat:
                 if (fc == 'x' || fc == 'X')
-                    goto Luint;
+                {
+                    version (X86_64)
+                    {   float f = va_arg!(float)(argptr);
+                        vnumber = *cast(uint*)&f;
+                        goto Lnumber;
+                    }
+                    else
+                        goto Luint;
+                }
                 vreal = va_arg!(float)(argptr);
                 goto Lreal;
 
             case Mangle.Tdouble:
             case Mangle.Tidouble:
                 if (fc == 'x' || fc == 'X')
-                    goto Lulong;
+                {
+                    version (X86_64)
+                    {   double d = va_arg!(double)(argptr);
+                        vnumber = *cast(ulong*)&d;
+                        goto Lnumber;
+                    }
+                    else
+                        goto Lulong;
+                }
                 vreal = va_arg!(double)(argptr);
                 goto Lreal;
 

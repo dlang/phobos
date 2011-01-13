@@ -70,8 +70,8 @@ class TypeInfo_r : TypeInfo
     }
 
     version (X86_64) int argTypes(out TypeInfo arg1, out TypeInfo arg2)
-    {   arg1 = typeid(double);
-        arg2 = typeid(double);
+    {   //arg1 = typeid(double);
+        //arg2 = typeid(double);
         return 0;
     }
 }
