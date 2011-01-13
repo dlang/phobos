@@ -266,31 +266,31 @@ struct Box
         if (type is null)
             return "<empty box>";
 
-        version (X86)
+        TypeInfo[2] arguments;
+        char[] string;
+        void[] args = new void[(char[]).sizeof + data.length];
+        char[] format = "%s";
+
+        arguments[0] = typeid(char[]);
+        arguments[1] = type;
+
+        void putc(dchar ch)
         {
-            TypeInfo[2] arguments;
-            char[] string;
-            void[] args = new void[(char[]).sizeof + data.length];
-            char[] format = "%s";
+            std.utf.encode(string, ch);
+        }
 
-            arguments[0] = typeid(char[]);
-            arguments[1] = type;
-
-            void putc(dchar ch)
-            {
-                std.utf.encode(string, ch);
-            }
-
-            args[0..(char[]).sizeof] = (cast(void*) &format)[0..(char[]).sizeof];
-            args[(char[]).sizeof..length] = data;
-            std.format.doFormat(&putc, arguments, args.ptr);
-            delete args;
-
-            return string;
+        args[0..(char[]).sizeof] = (cast(void*) &format)[0..(char[]).sizeof];
+        args[(char[]).sizeof..length] = data;
+        version (X86_64)
+        {   __va_list va;
+            va.stack_args = args.ptr;
+            std.format.doFormat(&putc, arguments, &va);
         }
         else
-        {   assert(0);  // not implemented
-        }
+            std.format.doFormat(&putc, arguments, args.ptr);
+        delete args;
+
+        return string;
     }
 
     private bool opEqualsInternal(Box other, bool inverted)
@@ -473,7 +473,7 @@ body
 /** Return the length of an argument in bytes. */
 private size_t argumentLength(size_t baseLength)
 {
-    return (baseLength + int.sizeof - 1) & ~(int.sizeof - 1);
+    return (baseLength + size_t.sizeof - 1) & ~(size_t.sizeof - 1);
 }
 
 /**
@@ -855,10 +855,10 @@ unittest
     assert (a < b);
 
     /* Check that toString works properly. */
-    version (X86) assert (b.toString == "32");
+    assert (b.toString == "32");
 
     /* Assert that unboxable works. */
-    version (X86) assert (unboxable!(char[])(box("foobar")));
+    assert (unboxable!(char[])(box("foobar")));
 
     /* Assert that we can cast from int to byte. */
     assert (unboxTest!(byte)(b) == 32);
