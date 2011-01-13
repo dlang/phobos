@@ -85,6 +85,10 @@ auto restoredTime = SysTime.fromISOExtendedString(timeString);
 +/
 module std.datetime;
 
+//Temporary.
+version(Posix)
+{
+
 public import core.time;
 
 import core.exception;
@@ -15718,8 +15722,24 @@ assert(st6 == SysTime(DateTime(2010, 1, 1, 0, 0, 59)));
         assertPred!"=="(SysTime(DateTime(0, 12, 31, 12, 30, 33)) - SysTime(DateTime(1, 1, 1, 0, 0, 0)), dur!"seconds"(-41367));
         assertPred!"=="(SysTime(DateTime(1, 1, 1, 0, 0, 0)) - SysTime(DateTime(0, 12, 31, 12, 30, 33)), dur!"seconds"(41367));
 
-        assertPred!"=="(SysTime(DateTime(1, 1, 1, 0, 0, 0)) - SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)), dur!"hnsecs"(1));
-        assertPred!"=="(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)) - SysTime(DateTime(1, 1, 1, 0, 0, 0)), dur!"hnsecs"(-1));
+        assertPred!"=="(SysTime(DateTime(1, 1, 1, 0, 0, 0)) - SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)),
+                        dur!"hnsecs"(1));
+        assertPred!"=="(SysTime(DateTime(0, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999)) - SysTime(DateTime(1, 1, 1, 0, 0, 0)),
+                        dur!"hnsecs"(-1));
+
+        auto tz = TimeZone.getTimeZone("America/Los_Angeles");
+
+        assertPred!"=="(SysTime(DateTime(2011, 1, 13, 8, 17, 2), FracSec.from!"msecs"(296), tz) -
+                        SysTime(DateTime(2011, 1, 13, 8, 17, 2), FracSec.from!"msecs"(296), tz),
+                        dur!"hnsecs"(0));
+
+        assertPred!"=="(SysTime(DateTime(2011, 1, 13, 8, 17, 2), FracSec.from!"msecs"(296), tz) -
+                        SysTime(DateTime(2011, 1, 13, 8, 17, 2), FracSec.from!"msecs"(296), UTC()),
+                        dur!"hours"(8));
+
+        assertPred!"=="(SysTime(DateTime(2011, 1, 13, 8, 17, 2), FracSec.from!"msecs"(296), UTC()) -
+                        SysTime(DateTime(2011, 1, 13, 8, 17, 2), FracSec.from!"msecs"(296), tz),
+                        dur!"hours"(-8));
 
         auto st = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
@@ -16889,6 +16909,9 @@ assert(!SysTime(DateTime(-2010, 1, 1, 2, 2, 2)).isAD);
         assertPred!"=="(cast(DateTime)SysTime(DateTime(-1999, 7, 6, 12, 10, 9)), DateTime(-1999, 7, 6, 12, 10, 9));
         assertPred!"=="(cast(DateTime)SysTime(DateTime(-2000, 12, 31, 13, 11, 10)), DateTime(-2000, 12, 31, 13, 11, 10));
         assertPred!"=="(cast(DateTime)SysTime(DateTime(-2001, 1, 1, 14, 12, 11)), DateTime(-2001, 1, 1, 14, 12, 11));
+
+        assertPred!"=="(cast(DateTime)SysTime(DateTime(2011, 1, 13, 8, 17, 2), FracSec.from!"msecs"(296), LocalTime()),
+                        DateTime(2011, 1, 13, 8, 17, 2));
 
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
@@ -29078,8 +29101,10 @@ private:
             utcTime.wHour = utcDateTime.hour;
             utcTime.wMinute = utcDateTime.minute;
             utcTime.wSecond = utcDateTime.second;
+            utcTime.wMilliseconds = 0;
 
-            SystemTimeToTzSpecificLocalTime(cast(TIME_ZONE_INFORMATION*)tzInfo, &utcTime, &otherTime);
+            immutable result = SystemTimeToTzSpecificLocalTime(cast(TIME_ZONE_INFORMATION*)tzInfo, &utcTime, &otherTime);
+            assert(result);
 
             immutable otherDateTime = DateTime(otherTime.wYear,
                                                otherTime.wMonth,
@@ -29098,8 +29123,7 @@ private:
             return false;
         }
         catch(Exception e)
-            assert(0, e.toString());
-            //assert(0, "DateTime's constructor threw.");
+            assert(0, "DateTime's constructor threw.");
     }
 
     unittest
@@ -29858,12 +29882,14 @@ public:
 
     unittest
     {
-        //Verify that currTime() at least gives a time
-        //which isn't way off in the past (like if the
-        //conversions between epochs in currStdTime() was off).
-        assert(currTime > SysTime(Date(2010, 11, 1)));
-
         assert(currTime(UTC()).timezone is UTC());
+
+        immutable unixTimeD = currTime().toUnixTime();
+        immutable unixTimeC = core.stdc.time.time(null);
+        immutable diff = unixTimeC - unixTimeD;
+
+        assertPred!">="(diff, 0);
+        assertPred!"<="(diff, 1);
     }
 
 
@@ -32826,4 +32852,6 @@ template isPrintable(T...)
     {
         enum isPrintable = isPrintable!(T[0]) && isPrintable!(T[1 .. $]);
     }
+}
+
 }
