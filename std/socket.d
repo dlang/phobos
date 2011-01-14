@@ -1320,7 +1320,7 @@ class Socket
                                 newSocket._blocking = _blocking; //inherits blocking mode
                         newSocket._family = _family; //same family
                 }
-                catch(Object o)
+                catch(Throwable o)
                 {
                         _close(newsock);
                         throw o;
