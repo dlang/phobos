@@ -920,7 +920,7 @@ L_largenegative:
         ret PARAMSIZE;
       }
     }
-    else version(Naked_D_InlineAsm_X86) {
+    else version(Naked_D_InlineAsm_X86_64) {
       enum { PARAMSIZE = real.sizeof }
       asm {
         /*  expm1() for x87 80-bit reals, IEEE754-2008 conformant.
