@@ -127,10 +127,10 @@ import core.sys.posix.sys.time;
 version(unittest)
 {
 import std.c.string;
+import std.stdio;
 }
 
 alias std.string.indexOf indexOf;
-alias std.math.abs abs;
 
 
 //Note: There various functions which void as their return type and ref of the
@@ -12108,9 +12108,9 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
     /++
         Returns a time_t which represents this SysTime.
 
-        If time_t is 32 bits, rather than 64, and the result can't fit in a 32-bit value, then the
-        closest value that can be held in 32 bits will be used (so time_t.max if it goes over or time_t.min
-        if it goes under).
+        If time_t is 32 bits, rather than 64, and the result can't fit in a 32-bit
+        value, then the closest value that can be held in 32 bits will be used
+        (so time_t.max if it goes over or time_t.min if it goes under).
       +/
     time_t toUnixTime() const pure nothrow
     {
@@ -12130,6 +12130,55 @@ assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
             assertPred!"=="(SysTime(DateTime(1969, 12, 31, 23, 59, 59), FracSec.from!"usecs"(999_999), UTC()).toUnixTime, 0);
             assertPred!"=="(SysTime(DateTime(1969, 12, 31, 23, 59, 59), FracSec.from!"msecs"(999), UTC()).toUnixTime, 0);
             assertPred!"=="(SysTime(DateTime(1969, 12, 31, 23, 59, 59), UTC()).toUnixTime, -1);
+        }
+    }
+
+
+    /++
+        Returns a timeval which represents this SysTime.
+
+        If time_t is 32 bits, rather than 64, and the result can't fit in a 32-bit
+        value, then the closest value that can be held in 32 bits will be used
+        for tv_sec. (so time_t.max if it goes over or time_t.min if it goes under).
+      +/
+    timeval toTimeVal() const pure nothrow
+    {
+        immutable tv_sec = toUnixTime();
+
+        immutable fracHNSecs = removeUnitsFromHNSecs!"seconds"(_stdTime - 621355968000000000L);
+        immutable tv_usec = cast(int)convert!("hnsecs", "usecs")(fracHNSecs);
+
+        return timeval(tv_sec, tv_usec);
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            assert(SysTime(DateTime(1970, 1, 1), UTC()).toTimeVal() == timeval(0, 0));
+            assert(SysTime(DateTime(1970, 1, 1), FracSec.from!"hnsecs"(9), UTC()).toTimeVal() == timeval(0, 0));
+            assert(SysTime(DateTime(1970, 1, 1), FracSec.from!"hnsecs"(10), UTC()).toTimeVal() == timeval(0, 1));
+            assert(SysTime(DateTime(1970, 1, 1), FracSec.from!"usecs"(7), UTC()).toTimeVal() == timeval(0, 7));
+
+            assert(SysTime(DateTime(1970, 1, 1, 0, 0, 1), UTC()).toTimeVal() == timeval(1, 0));
+            assert(SysTime(DateTime(1970, 1, 1, 0, 0, 1), FracSec.from!"hnsecs"(9), UTC()).toTimeVal() == timeval(1, 0));
+            assert(SysTime(DateTime(1970, 1, 1, 0, 0, 1), FracSec.from!"hnsecs"(10), UTC()).toTimeVal() == timeval(1, 1));
+            assert(SysTime(DateTime(1970, 1, 1, 0, 0, 1), FracSec.from!"usecs"(7), UTC()).toTimeVal() == timeval(1, 7));
+
+            assert(SysTime(DateTime(1969, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_999), UTC()).toTimeVal() ==
+                   timeval(0, 0));
+            assert(SysTime(DateTime(1969, 12, 31, 23, 59, 59), FracSec.from!"hnsecs"(9_999_990), UTC()).toTimeVal() ==
+                   timeval(0, -1));
+
+            assert(SysTime(DateTime(1969, 12, 31, 23, 59, 59), FracSec.from!"usecs"(999_999), UTC()).toTimeVal() ==
+                   timeval(0, -1));
+            assert(SysTime(DateTime(1969, 12, 31, 23, 59, 59), FracSec.from!"usecs"(999), UTC()).toTimeVal() ==
+                   timeval(0, -999_001));
+            assert(SysTime(DateTime(1969, 12, 31, 23, 59, 59), FracSec.from!"msecs"(999), UTC()).toTimeVal() ==
+                   timeval(0, -1000));
+            assert(SysTime(DateTime(1969, 12, 31, 23, 59, 59), UTC()).toTimeVal() == timeval(-1, 0));
+            assert(SysTime(DateTime(1969, 12, 31, 23, 59, 58), FracSec.from!"usecs"(17), UTC()).toTimeVal() ==
+                   timeval(-1, -999_983));
         }
     }
 
@@ -28286,7 +28335,8 @@ public:
       +/
     this(int utcOffset, string stdName = "") immutable
     {
-        enforce(abs(utcOffset) < 1440, new DateTimeException("Offset from UTC must be within range (-24:00 - 24:00)."));
+        //FIXME This probably needs to be changed to something like (-12 - 13).
+        enforce(std.math.abs(utcOffset) < 1440, new DateTimeException("Offset from UTC must be within range (-24:00 - 24:00)."));
 
         super("", stdName, "");
 
@@ -28326,7 +28376,7 @@ private:
       +/
     static string toISOString(int utcOffset)
     {
-        immutable absOffset = abs(utcOffset);
+        immutable absOffset = std.math.abs(utcOffset);
         enforce(absOffset < 1440, new DateTimeException("Offset from UTC must be within range (-24:00 - 24:00)."));
 
         immutable hours = convert!("minutes", "hours")(absOffset);
@@ -28727,9 +28777,9 @@ assert(tz.dstName == "PDT");
         enforce(tzDatabaseDir.isdir, new DateTimeException(format("%s is not a directory.", tzDatabaseDir)));
 
         version(Posix)
-            auto file = tzDatabaseDir ~ sep ~ name;
+            auto file = tzDatabaseDir ~ name;
         else version(Windows)
-            auto file = tzDatabaseDir ~ sep ~ replace(strip(name), "/", sep);
+            auto file = tzDatabaseDir ~ replace(strip(name), "/", sep);
 
         enforce(file.exists, new DateTimeException(format("File %s does not exist.", file)));
         enforce(file.isfile, new DateTimeException(format("%s is not a file.", file)));
@@ -29087,24 +29137,33 @@ assert(tz.dstName == "PDT");
                         assertPred!"=="(to!string(ourTimeInfo.tm_zone), to!string(osTimeInfo.tm_zone));
                     }
 
-                    auto leapTZ = PosixTimeZone.getTimeZone("right/America/Los_Angeles");
+                    //Apparently, right/ does not exist on Mac OS X. I don't know whether
+                    //or not it exists on FreeBSD. It's rather pointless normally, since
+                    //the Posix standard requires that leap seconds be ignored, so it does
+                    //make some sense that right/ wouldn't be there, but since PosixTimeZone
+                    //_does_ use leap seconds if the time zone file does, we'll test that
+                    //functionality if the appropriate files exist.
+                    if((defaultTZDatabaseDir ~ "right/America/Los_Angeles").exists())
+                    {
+                        auto leapTZ = PosixTimeZone.getTimeZone("right/America/Los_Angeles");
 
-                    assert(leapTZ.name == "right/America/Los_Angeles");
-                    assert(leapTZ.stdName == "PST");
-                    assert(leapTZ.dstName == "PDT");
-                    assert(leapTZ.hasDST);
+                        assert(leapTZ.name == "right/America/Los_Angeles");
+                        assert(leapTZ.stdName == "PST");
+                        assert(leapTZ.dstName == "PDT");
+                        assert(leapTZ.hasDST);
 
-                    auto leapSTD = SysTime(std.stdTime, leapTZ);
-                    auto leapDST = SysTime(dst.stdTime, leapTZ);
+                        auto leapSTD = SysTime(std.stdTime, leapTZ);
+                        auto leapDST = SysTime(dst.stdTime, leapTZ);
 
-                    assert(!leapSTD.dstInEffect);
-                    assert(leapDST.dstInEffect);
+                        assert(!leapSTD.dstInEffect);
+                        assert(leapDST.dstInEffect);
 
-                    assertPred!"=="(leapSTD.stdTime, std.stdTime);
-                    assertPred!"=="(leapDST.stdTime, dst.stdTime);
+                        assertPred!"=="(leapSTD.stdTime, std.stdTime);
+                        assertPred!"=="(leapDST.stdTime, dst.stdTime);
 
-                    assertPred!"=="(leapSTD.adjTime - convert!("seconds", "hnsecs")(24), std.adjTime);
-                    assertPred!"=="(leapDST.adjTime - convert!("seconds", "hnsecs")(24), dst.adjTime);
+                        assertPred!"=="(leapSTD.adjTime - convert!("seconds", "hnsecs")(24), std.adjTime);
+                        assertPred!"=="(leapDST.adjTime - convert!("seconds", "hnsecs")(24), dst.adjTime);
+                    }
                 }
 
                 //Test for "Europe/Paris".
@@ -29161,24 +29220,33 @@ assert(tz.dstName == "PDT");
                         assertPred!"=="(to!string(ourTimeInfo.tm_zone), to!string(osTimeInfo.tm_zone));
                     }
 
-                    auto leapTZ = PosixTimeZone.getTimeZone("right/Europe/Paris");
+                    //Apparently, right/ does not exist on Mac OS X. I don't know whether
+                    //or not it exists on FreeBSD. It's rather pointless normally, since
+                    //the Posix standard requires that leap seconds be ignored, so it does
+                    //make some sense that right/ wouldn't be there, but since PosixTimeZone
+                    //_does_ use leap seconds if the time zone file does, we'll test that
+                    //functionality if the appropriate files exist.
+                    if((defaultTZDatabaseDir ~ "right/America/Europe/Paris").exists())
+                    {
+                        auto leapTZ = PosixTimeZone.getTimeZone("right/Europe/Paris");
 
-                    assert(leapTZ.name == "right/Europe/Paris");
-                    assert(leapTZ.stdName == "CET");
-                    assert(leapTZ.dstName == "CEST");
-                    assert(leapTZ.hasDST);
+                        assert(leapTZ.name == "right/Europe/Paris");
+                        assert(leapTZ.stdName == "CET");
+                        assert(leapTZ.dstName == "CEST");
+                        assert(leapTZ.hasDST);
 
-                    auto leapSTD = SysTime(std.stdTime, leapTZ);
-                    auto leapDST = SysTime(dst.stdTime, leapTZ);
+                        auto leapSTD = SysTime(std.stdTime, leapTZ);
+                        auto leapDST = SysTime(dst.stdTime, leapTZ);
 
-                    assert(!leapSTD.dstInEffect);
-                    assert(leapDST.dstInEffect);
+                        assert(!leapSTD.dstInEffect);
+                        assert(leapDST.dstInEffect);
 
-                    assertPred!"=="(leapSTD.stdTime, std.stdTime);
-                    assertPred!"=="(leapDST.stdTime, dst.stdTime);
+                        assertPred!"=="(leapSTD.stdTime, std.stdTime);
+                        assertPred!"=="(leapDST.stdTime, dst.stdTime);
 
-                    assertPred!"=="(leapSTD.adjTime - convert!("seconds", "hnsecs")(24), std.adjTime);
-                    assertPred!"=="(leapDST.adjTime - convert!("seconds", "hnsecs")(24), dst.adjTime);
+                        assertPred!"=="(leapSTD.adjTime - convert!("seconds", "hnsecs")(24), std.adjTime);
+                        assertPred!"=="(leapDST.adjTime - convert!("seconds", "hnsecs")(24), dst.adjTime);
+                    }
                 }
 
                 //Test for "UTC".
@@ -29235,26 +29303,37 @@ assert(tz.dstName == "PDT");
                         assertPred!"=="(to!string(ourTimeInfo.tm_zone), to!string(osTimeInfo.tm_zone));
                     }
 
-                    auto leapTZ = PosixTimeZone.getTimeZone("right/UTC");
+                    //Apparently, right/ does not exist on Mac OS X. I don't know whether
+                    //or not it exists on FreeBSD. It's rather pointless normally, since
+                    //the Posix standard requires that leap seconds be ignored, so it does
+                    //make some sense that right/ wouldn't be there, but since PosixTimeZone
+                    //_does_ use leap seconds if the time zone file does, we'll test that
+                    //functionality if the appropriate files exist.
+                    if((defaultTZDatabaseDir ~ "right/UTC").exists())
+                    {
+                        auto leapTZ = PosixTimeZone.getTimeZone("right/UTC");
 
-                    assert(leapTZ.name == "right/UTC");
-                    assert(leapTZ.stdName == "UTC");
-                    assert(leapTZ.dstName == "UTC");
-                    assert(!leapTZ.hasDST);
+                        assert(leapTZ.name == "right/UTC");
+                        assert(leapTZ.stdName == "UTC");
+                        assert(leapTZ.dstName == "UTC");
+                        assert(!leapTZ.hasDST);
 
-                    auto leapSTD = SysTime(std.stdTime, leapTZ);
-                    auto leapDST = SysTime(dst.stdTime, leapTZ);
+                        auto leapSTD = SysTime(std.stdTime, leapTZ);
+                        auto leapDST = SysTime(dst.stdTime, leapTZ);
 
-                    assert(!leapSTD.dstInEffect);
-                    assert(!leapDST.dstInEffect);
+                        assert(!leapSTD.dstInEffect);
+                        assert(!leapDST.dstInEffect);
 
-                    assertPred!"=="(leapSTD.stdTime, std.stdTime);
-                    assertPred!"=="(leapDST.stdTime, dst.stdTime);
+                        assertPred!"=="(leapSTD.stdTime, std.stdTime);
+                        assertPred!"=="(leapDST.stdTime, dst.stdTime);
 
-                    assertPred!"=="(leapSTD.adjTime - convert!("seconds", "hnsecs")(24), std.adjTime);
-                    assertPred!"=="(leapDST.adjTime - convert!("seconds", "hnsecs")(24), dst.adjTime);
+                        assertPred!"=="(leapSTD.adjTime - convert!("seconds", "hnsecs")(24), std.adjTime);
+                        assertPred!"=="(leapDST.adjTime - convert!("seconds", "hnsecs")(24), dst.adjTime);
+                    }
                 }
             }
+
+            assertThrown!DateTimeException(PosixTimeZone.getTimeZone("hello_world"));
         }
     }
 
@@ -30956,6 +31035,34 @@ private:
 //==============================================================================
 
 /++
+    Returns the absolute value of a duration.
+ +/
+D abs(D)(D duration)
+    if(is(Unqual!D == Duration) ||
+       is(Unqual!D == TickDuration))
+{
+    static if(is(Unqual!D == Duration))
+        return dur!"hnsecs"(std.math.abs(duration.total!"hnsecs"()));
+    else static if(is(Unqual!D == TickDuration))
+        return TickDuration(std.math.abs(duration.length));
+    else
+        static assert(0);
+}
+
+unittest
+{
+    version(testStdDateTime)
+    {
+        assertPred!"=="(abs(dur!"msecs"(5)), dur!"msecs"(5));
+        assertPred!"=="(abs(dur!"msecs"(-5)), dur!"msecs"(5));
+
+        assertPred!"=="(abs(TickDuration(17)), TickDuration(17));
+        assertPred!"=="(abs(TickDuration(-17)), TickDuration(17));
+    }
+}
+
+
+/++
     Whether the given type defines all of the necessary functions for it to
     function as a time point.
   +/
@@ -31131,23 +31238,23 @@ unittest
   +/
 time_t stdTimeToUnixTime(long stdTime) pure nothrow
 {
-    immutable hnsecsAtUnixTimeEpoch = convert!("hnsecs", "seconds")(stdTime - 621355968000000000L);
+    immutable unixTime = convert!("hnsecs", "seconds")(stdTime - 621355968000000000L);
 
     static if(time_t.sizeof >= long.sizeof)
-        return cast(time_t)hnsecsAtUnixTimeEpoch;
+        return cast(time_t)unixTime;
     else
     {
-        if(hnsecsAtUnixTimeEpoch > 0)
+        if(unixTime > 0)
         {
-            if(hnsecsAtUnixTimeEpoch > time_t.max)
+            if(unixTime > time_t.max)
                 return time_t.max;
-            return cast(time_t)hnsecsAtUnixTimeEpoch;
+            return cast(time_t)unixTime;
         }
 
-        if(hnsecsAtUnixTimeEpoch < time_t.min)
+        if(unixTime < time_t.min)
             return time_t.min;
 
-        return cast(time_t)hnsecsAtUnixTimeEpoch;
+        return cast(time_t)unixTime;
     }
 }
 
@@ -31239,8 +31346,8 @@ version(Windows)
             GetSystemTime(&st);
             auto converted = SYSTEMTIMEToSysTime(&st, UTC());
 
-            assertPred!"<="(abs((converted - sysTime).total!"seconds"()),
-                            2);
+            assertPred!"<="(abs((converted - sysTime)),
+                            dur!"seconds"(2));
         }
     }
 
@@ -31248,25 +31355,25 @@ version(Windows)
     /++
         On Windows, this converts a SysTime to a SYSTEMTIME struct.
 
-        The SYSTEMTIME will be set using the given SysTime's time zone, so
-        if you want the SYSTEMTIME to be in UTC, set the SysTime's time zone
-        to UTC.
+        The SYSTEMTIME which is returned will be set using the given SysTime's
+        time zone, so if you want the SYSTEMTIME to be in UTC, set the SysTime's
+        time zone to UTC.
 
         Params:
             sysTime = The SysTime to convert.
-            st      = The SYSTEMTIME struct to fill in with the date and
-                      time from sysTime.
 
         Throws:
             DateTimeException if the given SysTime will not fit in a SYSTEMTIME.
             This will only happen if the SysTime's date is prior to 1601 A.D.
       +/
-    void SysTimeToSYSTEMTIME(in SysTime sysTime, SYSTEMTIME* st)
+    SYSTEMTIME SysTimeToSYSTEMTIME(in SysTime sysTime)
     {
         immutable dt = cast(DateTime)sysTime;
 
         if(dt.year < 1601)
             throw new DateTimeException("SYSTEMTIME cannot hold dates prior to the year 1601.");
+
+        SYSTEMTIME st;
 
         st.wYear = dt.year;
         st.wMonth = dt.month;
@@ -31276,6 +31383,8 @@ version(Windows)
         st.wMinute = dt.minute;
         st.wSecond = dt.second;
         st.wMilliseconds = cast(ushort)sysTime.fracSec.msecs;
+
+        return st;
     }
 
     unittest
@@ -31286,8 +31395,7 @@ version(Windows)
             GetSystemTime(&st);
             auto sysTime = SYSTEMTIMEToSysTime(&st, UTC());
 
-            SYSTEMTIME result = void;
-            SysTimeToSYSTEMTIME(sysTime, &result);
+            SYSTEMTIME result = SysTimeToSYSTEMTIME(sysTime);
 
             assertPred!"=="(st.wYear, result.wYear);
             assertPred!"=="(st.wMonth, result.wMonth);
@@ -31339,8 +31447,8 @@ version(Windows)
 
             auto converted = FILETIMEToSysTime(&ft);
 
-            assertPred!"<="(abs((converted - sysTime).total!"seconds"()),
-                            2);
+            assertPred!"<="(abs((converted - sysTime)),
+                            dur!"seconds"(2));
         }
     }
 
@@ -31348,23 +31456,22 @@ version(Windows)
     /++
         On Windows, this converts a SysTime to a FILETIME struct.
 
+        FILETIMEs are always in UTC.
+
         Params:
             sysTime = The SysTime to convert.
-            ft      = The FILETIME struct to fill in with the date and
-                      time from sysTime.
 
         Throws:
             DateTimeException if the given SysTime will not fit in a FILETIME.
       +/
-    void SysTimeToFILETIME(SysTime sysTime, FILETIME* ft)
+    FILETIME SysTimeToFILETIME(SysTime sysTime)
     {
-        sysTime.timezone = UTC();
-        immutable dt = cast(DateTime)sysTime;
+        SYSTEMTIME st = SysTimeToSYSTEMTIME(sysTime.toUTC());
 
-        SYSTEMTIME st = void;
-        SysTimeToSYSTEMTIME(sysTime, &st);
+        FILETIME ft = void;
+        SystemTimeToFileTime(&st, &ft);
 
-        SystemTimeToFileTime(&st, ft);
+        return ft;
     }
 
     unittest
@@ -31378,8 +31485,7 @@ version(Windows)
             SystemTimeToFileTime(&st, &ft);
             auto sysTime = FILETIMEToSysTime(&ft, UTC());
 
-            FILETIME result = void;
-            SysTimeToFILETIME(sysTime, &result);
+            FILETIME result = SysTimeToFILETIME(sysTime);
 
             assertPred!"=="(ft.dwLowDateTime, result.dwLowDateTime);
             assertPred!"=="(ft.dwHighDateTime, result.dwHighDateTime);
@@ -31416,20 +31522,18 @@ else version(D_Ddoc)
     /++
         On Windows, this converts a SysTime to a SYSTEMTIME struct.
 
-        The SYSTEMTIME will be set using the given SysTime's time zone, so
-        if you want the SYSTEMTIME to be in UTC, set the SysTime's time zone
-        to UTC.
+        The SYSTEMTIME which is returned will be set using the given SysTime's
+        time zone, so if you want the SYSTEMTIME to be in UTC, set the SysTime's
+        time zone to UTC.
 
         Params:
             sysTime = The SysTime to convert.
-            st      = The SYSTEMTIME struct to fill in with the date and
-                      time from sysTime.
 
         Throws:
             DateTimeException if the given SysTime will not fit in a SYSTEMTIME.
             This will only happen if the SysTime's date is prior to 1601 A.D.
       +/
-    void SysTimeToSYSTEMTIME(in SysTime sysTime, SYSTEMTIME* st) pure
+    SYSTEMTIME SysTimeToSYSTEMTIME(in SysTime sysTime)
     {
         assert(0, "No implementation. Function exists only for DDoc generation");
     }
@@ -31447,7 +31551,7 @@ else version(D_Ddoc)
             DateTimeException if the given FILETIME will not fit in a SysTime or
             if the FILETIME cannot be converted to a SYSTEMTIME.
       +/
-    SysTime FILETIMEToSysTime(const FILETIME* ft, immutable TimeZone tz = LocalTime()) pure
+    SysTime FILETIMEToSysTime(const FILETIME* ft, immutable TimeZone tz = LocalTime())
     {
         assert(0, "No implementation. Function exists only for DDoc generation");
     }
@@ -31456,15 +31560,15 @@ else version(D_Ddoc)
     /++
         On Windows, this converts a SysTime to a FILETIME struct.
 
+        FILETIMEs are always in UTC.
+
         Params:
             sysTime = The SysTime to convert.
-            ft      = The FILETIME struct to fill in with the date and
-                      time from sysTime.
 
         Throws:
             DateTimeException if the given SysTime will not fit in a FILETIME.
       +/
-    void SysTimeToFILETIME(SysTime sysTime, FILETIME* ft) pure
+    FILETIME SysTimeToFILETIME(SysTime sysTime)
     {
         assert(0, "No implementation. Function exists only for DDoc generation");
     }
