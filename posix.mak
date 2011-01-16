@@ -39,16 +39,22 @@ ifeq (,$(OS))
     endif
 endif
 
+# For now, 32 bit is the default model
+ifeq (,$(MODEL))
+	MODEL:=32
+endif
+
 # Configurable stuff that's rarely edited
 DRUNTIME_PATH = ../druntime
 ZIPFILE = phobos.zip
 ROOT_OF_THEM_ALL = generated
-ROOT = $(ROOT_OF_THEM_ALL)/$(OS)/$(BUILD)
+ROOT = $(ROOT_OF_THEM_ALL)/$(OS)/$(BUILD)/$(MODEL)
 # Documentation-related stuff
 DOCSRC = ../docsrc
-DOC_OUTPUT_DIR = ../web/2.0/phobos
+WEBSITE_DIR = ../web/2.0
+DOC_OUTPUT_DIR = $(WEBSITE_DIR)/phobos
 STYLECSS_SRC = $(DOCSRC)/style.css
-STYLECSS_TGT = $(DOC_OUTPUT_DIR)/../style.css
+STYLECSS_TGT = $(WEBSITE_DIR)/style.css
 SRC_DOCUMENTABLES = phobos.d $(addsuffix .d,$(STD_MODULES))
 STDDOC = $(DOCSRC)/std.ddoc
 DDOCFLAGS=-version=ddoc -d -c -o- $(STDDOC) -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS)
@@ -59,7 +65,6 @@ DMD =
 DDOC =
 CFLAGS =
 DFLAGS =
-MODEL = 32
 
 # BUILD can be debug or release, but is unset by default; recursive
 # invocation will set it. See the debug and release targets below.
@@ -210,12 +215,12 @@ ifeq ($(BUILD),)
 # self-invocations. So the targets in this branch are accessible to
 # end users.
 release :
-	$(MAKE) --no-print-directory -f $(MAKEFILE) OS=$(OS) BUILD=release
+	$(MAKE) --no-print-directory -f $(MAKEFILE) OS=$(OS) MODEL=$(MODEL) BUILD=release
 debug :
-	$(MAKE) --no-print-directory -f $(MAKEFILE) OS=$(OS) BUILD=debug
+	$(MAKE) --no-print-directory -f $(MAKEFILE) OS=$(OS) MODEL=$(MODEL) BUILD=debug
 unittest :
-	$(MAKE) --no-print-directory -f $(MAKEFILE) OS=$(OS) BUILD=debug unittest
-	$(MAKE) --no-print-directory -f $(MAKEFILE) OS=$(OS) BUILD=release unittest
+	$(MAKE) --no-print-directory -f $(MAKEFILE) OS=$(OS) MODEL=$(MODEL) BUILD=debug unittest
+	$(MAKE) --no-print-directory -f $(MAKEFILE) OS=$(OS) MODEL=$(MODEL) BUILD=release unittest
 else
 # This branch is normally taken in recursive builds. All we need to do
 # is set the default build to $(BUILD) (which is either debug or
@@ -261,13 +266,20 @@ DISABLED_TESTS =        \
 	std/internal/math/gammafunction \
 	std/internal/math/errorfunction
 
-$(addprefix $(ROOT)/unittest/,$(DISABLED_TESTS)) :
+DISABLED_OPT_TESTS = \
+	std/date        \
+	std/encoding    \
+	std/getopt      \
+	std/utf
+
+$(addprefix $(ROOT)/unittest/,$(DISABLED_TESTS) $(DISABLED_OPT_TESTS)) :
 	@echo Testing $@ - disabled
 endif
 
 $(ROOT)/unittest/%$(DOTEXE) : %.d $(LIB) $(ROOT)/emptymain.d
 	@echo Testing $@
-	@$(DMD) $(DFLAGS) -unittest $(LINKOPTS) $(subst /,$(PATHSEP),"-of$@") $(ROOT)/emptymain.d $<
+	@$(DMD) $(DFLAGS) -unittest $(LINKOPTS) $(subst /,$(PATHSEP),"-of$@") \
+	 	$(ROOT)/emptymain.d $<
 # make the file very old so it builds and runs again if it fails
 	@touch -t 197001230123 $@
 # run unittest in its own directory
@@ -319,10 +331,5 @@ html : $(addprefix $(DOC_OUTPUT_DIR)/, $(subst /,_,$(subst .d,.html,	\
 	$(SRC_DOCUMENTABLES)))) $(STYLECSS_TGT)
 	@$(MAKE) -f $(DOCSRC)/linux.mak -C $(DOCSRC) --no-print-directory
 
-html-upload : html
-	scp $(DOC_OUTPUT_DIR)/* erdani.com:erdani.com/d/phobos/
-#	scp $(DOC_OUTPUT_DIR)/* d-programming@digitalmars.com:data/
-
-html-upload-sshfs : html
-	scp $(DOC_OUTPUT_DIR)/* \
-		/ssh/erdani.com/home/sandandrei/erdani.com/d/phobos/
+rsync-cutting-edge : html
+	rsync -avz $(DOC_OUTPUT_DIR)/ d-programming@digitalmars.com:data/cutting-edge/phobos/
