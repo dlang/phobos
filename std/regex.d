@@ -275,7 +275,7 @@ Throws: $(D Exception) if there are any compilation errors.
             msg = ree.toString();
             //writefln("message: %s", ree);
         }
-        assert(std.algorithm.indexOf(msg, "unrecognized attribute") >= 0);
+        assert(std.algorithm.countUntil(msg, "unrecognized attribute") >= 0);
     }
 
 /**
