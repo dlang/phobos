@@ -1328,7 +1328,7 @@ private:
     {
         static sizediff_t lastIndexOf(Range haystack, Separator needle)
         {
-            immutable index = indexOf(retro(haystack), needle);
+            immutable index = countUntil(retro(haystack), needle);
             return (index == -1) ? -1 : haystack.length - 1 - index;
         }
     }
@@ -1359,7 +1359,7 @@ public:
         assert(!empty);
         if (_frontLength == _unComputed)
         {
-            _frontLength = indexOf(_input, _separator);
+            _frontLength = countUntil(_input, _separator);
             if (_frontLength == -1) _frontLength = _input.length;
         }
         return _input[0 .. _frontLength];
@@ -2833,36 +2833,37 @@ unittest
 
 // findSkip
 /**
- * Similar to $(D find), except returns the balance of $(D haystack)
- * just after the found range. If $(D needle) is not found, returns a
- * tuple with an empty range and $(D false). Otherwise, returns the
- * portion of $(D haystack) starting right after the first occurrence
- * of $(D needle).
+ * If $(D needle) occurs in $(D haystack), positions $(D haystack)
+ * right after the first occurrence of $(D needle) and returns $(D
+ * true). Otherwise, leaves $(D haystack) as is and returns $(D
+ * false).
  *
  * Example:
 ----
-assert(findSkip("abcdef", "cd").balance == "ef");
-assert(findSkip("abcdef", "cxd").balance == null);
-assert(findSkip("abcdef", "cxd") == tuple("", false));
+string s = "abcdef";
+assert(findSkip("abcdef", "cd") && s == "ef");
+s = "abcdef";
+assert(!findSkip("abcdef", "cxd") && s == "abcdef");
+assert(findSkip("abcdef", "def") && s.empty);
 ----
  */
-Tuple!(R1, "balance", bool, "found")
-findSkip(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
+bool findSkip(alias pred = "a == b", R1, R2)(ref R1 haystack, R2 needle)
 if (isForwardRange!R1 && isForwardRange!R2
         && is(typeof(binaryFun!pred(haystack.front, needle.front))))
 {
     static if (isSomeString!R1 && isSomeString!R2 || isRandomAccessRange!R1 && hasLength!R2)
     {
-        haystack = find!pred(haystack, needle);
-        if (haystack.empty) return typeof(return)(haystack, false);
-        return typeof(return)(haystack[needle.length .. haystack.length], true);
+        auto iter = find!pred(haystack, needle);
+        if (iter.empty) return false;
+        haystack = iter[needle.length .. iter.length];
+        return true;
     }
     else
     {
         if (needle.empty)
         {
             // The empty range is always found
-            return typeof(return)(haystack, true);
+            return true;
         }
         
         enum estimateNeedleLength = hasLength!R1 && !hasLength!R2;
@@ -2875,11 +2876,11 @@ if (isForwardRange!R1 && isForwardRange!R2
                 immutable size_t estimatedNeedleLength = needle.length;
         }
 
-        bool haystackTooShort()
+        bool haystackTooShort(R1 r)
         {
             static if (hasLength!R1)
             {
-                return haystack.length < estimatedNeedleLength;
+                return r.length < estimatedNeedleLength;
             }
             else
             {
@@ -2887,29 +2888,36 @@ if (isForwardRange!R1 && isForwardRange!R2
             }
         }
 
+        auto iter = haystack.save;
       searching:
-        for (;; haystack.popFront())
+        for (;; iter.popFront())
         {
-            if (haystackTooShort())
+            if (haystackTooShort(iter))
             {
                 // Failed search
                 static if (hasLength!R1)
                 {
-                    static if (is(typeof(haystack[haystack.length ..
-                                                    haystack.length]) : R1))
-                        return tuple(haystack[haystack.length .. haystack.length], false);
+                    static if (is(typeof(iter[iter.length .. iter.length])
+                                    : R1))
+                    {
+                        haystack = iter[iter.length .. iter.length];
+                    }
                     else
-                        return tuple(R1.init, false);
+                    {
+                        haystack = haystack.init;
+                    }
+                    return false;
                 }
                 else
                 {
-                    assert(haystack.empty);
-                    return typeof(return)(haystack, false);
+                    assert(iter.empty);
+                    haystack = iter;
+                    return false;
                 }
             }
             static if (estimateNeedleLength)
                 size_t matchLength = 0;
-            auto h = haystack.save;
+            auto h = iter.save;
             for (auto n = needle.save;
                  !n.empty;
                  h.popFront(), n.popFront())
@@ -2928,17 +2936,21 @@ if (isForwardRange!R1 && isForwardRange!R2
                     ++matchLength;
             }
             // Found
-            return typeof(return)(h, true);
+            haystack = h;
+            return true;
         }
-        return typeof(return)(haystack, false);
+        return false;
     }
 }
 
 unittest
 {
-    assert(findSkip("abcdef", "cd").balance == "ef");
-    assert(findSkip("abcdef", "cxd").balance == null);
-    assert(findSkip("abcdef", "cxd") == tuple("", false));
+    string s = "abcdef";
+    assert(findSkip(s, "cd") && s == "ef");
+    s = "abcdef";
+    assert(!findSkip(s, "cxd") && s == "abcdef");
+    s = "abcdef";
+    assert(findSkip(s, "def") && s.empty);
 }
 
 /**
@@ -2948,7 +2960,7 @@ returns the smallest $(D n) such that after $(D n) calls to $(D
 haystack.popFront), $(D haystack.startsWith!pred(needle)). If no such
 number could be found, return $(D -1).
  */
-sizediff_t indexOf(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
+sizediff_t countUntil(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
 if (is(typeof(startsWith!pred(haystack, needle))))
 {
     static if (isNarrowString!R1)
@@ -2972,6 +2984,19 @@ if (is(typeof(startsWith!pred(haystack, needle))))
         }
     }
     return -1;
+}
+
+/**
+ * Same as $(D countUntil). This symbol has been scheduled for
+ * deprecation because it is easily confused with the homonym function
+ * in $(D std.string).
+ */
+sizediff_t indexOf(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
+if (is(typeof(startsWith!pred(haystack, needle))))
+{
+    pragma(msg, "std.algorithm.indexOf has been scheduled for deprecation."
+            " You may want to use std.algorithm.countUntil instead.");
+    return countUntil!pred(haystack, needle);
 }
 
 /**
@@ -3633,11 +3658,8 @@ if (isInputRange!R1 && isForwardRange!R2 && is(typeof(binaryFun!pred(haystack, n
 {
     enforce(!needle.empty, "Cannot count occurrences of an empty range");
     size_t result;
-    for (;; ++result)
+    for (; findSkip!pred(haystack, needle); ++result)
     {
-        auto r = findSkip!pred(haystack, needle);
-        if (!r.found) break;
-        haystack = r.balance;
     }
     return result;
 }
@@ -6474,22 +6496,11 @@ bool canFindSorted(alias pred = "a < b", Range, V)(Range range, V value) {
     return assumeSorted!pred(range).canFind!V(value);
 }
 
-unittest {
-    assert(canFindSorted([1,2,3,4,5], 4));
-    assert(!canFindSorted([1,2,3,4,5], 8));
-}
-
 // Scheduled for deprecation.  Use std.range.SortedRange.lowerBound.
 Range lowerBound(alias pred = "a < b", Range, V)(Range range, V value) {
     pragma(msg, "std.algorithm.lowerBound is scheduled for " ~
         "deprecation.  Use std.range.SortedRange.lowerBound instead.");
     return assumeSorted!pred(range).lowerBound!V(value).release;
-}
-
-unittest {
-    int[] a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ];
-    auto p = lowerBound!("a < b")(a, 4);
-    assert(equal(p, [0, 1, 2, 3]));
 }
 
 // Scheduled for deprecation.  Use std.range.SortedRange.upperBound.
@@ -6499,23 +6510,11 @@ Range upperBound(alias pred = "a < b", Range, V)(Range range, V value) {
     return assumeSorted!pred(range).upperBound!V(value).release;
 }
 
-unittest {
-    int[] a = [ 1, 2, 3, 3, 3, 4, 4, 5, 6 ];
-    auto p = upperBound(a, 3);
-    assert(equal(p, [4, 4, 5, 6 ]));
-}
-
 // Scheduled for deprecation.  Use std.range.SortedRange.equalRange.
 Range equalRange(alias pred = "a < b", Range, V)(Range range, V value) {
     pragma(msg, "std.algorithm.equalRange is scheduled for " ~
         "deprecation.  Use std.range.SortedRange.equalRange instead.");
     return assumeSorted!pred(range).equalRange!V(value).release;
-}
-
-unittest {
-    auto a = [ 1, 2, 3, 3, 3, 4, 4, 5, 6 ];
-    auto r = equalRange(a, 3);
-    assert(r == [ 3, 3, 3 ]);
 }
 
 /**

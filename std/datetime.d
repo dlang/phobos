@@ -28642,7 +28642,7 @@ public:
             //Okay, casting is a hack, but indexOf shouldn't be changing it, and it would be
             //too inefficient to have to keep duping it every time we have to calculate the time.
             //Hopefully, indexOf will properly support immutable ranges at some point.
-            auto found = std.algorithm.indexOf!"b < a.timeT"(cast(Transition[])_transitions, unixTime);
+            auto found = std.algorithm.countUntil!"b < a.timeT"(cast(Transition[])_transitions, unixTime);
 
             if(found == -1)
                 return _transitions.back.ttInfo.isDST;
@@ -28678,7 +28678,7 @@ public:
             //Okay, casting is a hack, but indexOf shouldn't be changing it, and it would be
             //too inefficient to have to keep duping it every time we have to calculate the time.
             //Hopefully, indexOf will properly support immutable ranges at some point.
-            auto found = std.algorithm.indexOf!"b < a.timeT"(cast(Transition[])_transitions, unixTime);
+            auto found = std.algorithm.countUntil!"b < a.timeT"(cast(Transition[])_transitions, unixTime);
 
             if(found == -1)
                 return stdTime + convert!("seconds", "hnsecs")(_transitions.back.ttInfo.utcOffset + leapSecs);
@@ -28715,7 +28715,7 @@ public:
             //Okay, casting is a hack, but indexOf shouldn't be changing it, and it would be
             //too inefficient to have to keep duping it every time we have to calculate the time.
             //Hopefully, indexOf will properly support immutable ranges at some point.
-            auto found = std.algorithm.indexOf!"b < a.timeT"(cast(Transition[])_transitions, unixTime);
+            auto found = std.algorithm.countUntil!"b < a.timeT"(cast(Transition[])_transitions, unixTime);
 
             if(found == -1)
                 return adjTime - convert!("seconds", "hnsecs")(_transitions.back.ttInfo.utcOffset + leapSecs);
@@ -29668,7 +29668,7 @@ private:
             //Okay, casting is a hack, but indexOf shouldn't be changing it, and it would be
             //too inefficient to have to keep duping it every time we have to calculate the time.
             //Hopefully, indexOf will properly support immutable ranges at some point.
-            auto found = std.algorithm.indexOf!"b < a.timeT"(cast(LeapSecond[])_leapSeconds, unixTime);
+            auto found = std.algorithm.countUntil!"b < a.timeT"(cast(LeapSecond[])_leapSeconds, unixTime);
 
             if(found == -1)
                 return _leapSeconds.back.total;
@@ -31684,8 +31684,8 @@ bool validTimeUnits(string[] units...)
 int cmpTimeUnits(string lhs, string rhs)
 {
     auto tstrings = timeStrings.dup;
-    immutable indexOfLHS = std.algorithm.indexOf(tstrings, lhs);
-    immutable indexOfRHS = std.algorithm.indexOf(tstrings, rhs);
+    immutable indexOfLHS = std.algorithm.countUntil(tstrings, lhs);
+    immutable indexOfRHS = std.algorithm.countUntil(tstrings, rhs);
 
     enforce(indexOfLHS != -1, format("%s is not a valid TimeString", lhs));
     enforce(indexOfRHS != -1, format("%s is not a valid TimeString", rhs));
@@ -31749,8 +31749,8 @@ template CmpTimeUnits(string lhs, string rhs)
 private int cmpTimeUnitsCTFE(string lhs, string rhs)
 {
     auto tstrings = timeStrings.dup;
-    immutable indexOfLHS = std.algorithm.indexOf(tstrings, lhs);
-    immutable indexOfRHS = std.algorithm.indexOf(tstrings, rhs);
+    immutable indexOfLHS = std.algorithm.countUntil(tstrings, lhs);
+    immutable indexOfRHS = std.algorithm.countUntil(tstrings, rhs);
 
     if(indexOfLHS < indexOfRHS)
         return -1;
@@ -32763,7 +32763,7 @@ template nextSmallerTimeUnits(string units)
     if(validTimeUnits(units) &&
        timeStrings.front != units)
 {
-    enum nextSmallerTimeUnits = timeStrings[std.algorithm.indexOf(timeStrings.dup, units) - 1];
+    enum nextSmallerTimeUnits = timeStrings[std.algorithm.countUntil(timeStrings.dup, units) - 1];
 }
 
 unittest
@@ -32800,7 +32800,7 @@ template nextLargerTimeUnits(string units)
     if(validTimeUnits(units) &&
        timeStrings.back != units)
 {
-    enum nextLargerTimeUnits = timeStrings[std.algorithm.indexOf(timeStrings.dup, units) + 1];
+    enum nextLargerTimeUnits = timeStrings[std.algorithm.countUntil(timeStrings.dup, units) + 1];
 }
 
 unittest

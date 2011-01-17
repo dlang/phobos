@@ -1438,7 +1438,7 @@ private string expandFromDatabase(string path)
 
     // Extract username, searching for path separator.
     string username;
-    auto last_char = std.algorithm.indexOf(path, sep[0]);
+    auto last_char = std.algorithm.countUntil(path, sep[0]);
 
     if (last_char == -1)
     {
