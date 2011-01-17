@@ -3808,6 +3808,117 @@ unittest
     assert(equal!(approxEqual)(b, c));
 }
 
+// cmp
+/**********************************
+Performs three-way lexicographical comparison on two input ranges
+according to predicate $(D pred). Iterating $(D r1) and $(D r2) in
+lockstep, $(D cmp) compares each element $(D e1) of $(D r1) with the
+corresponding element $(D e2) in $(D r2). If $(D binaryFun!pred(e1,
+e2)), $(D cmp) returns a negative value. If $(D binaryFun!pred(e2,
+e1)), $(D cmp) returns a positive value. If one of the ranges has been
+finished, $(D cmp) returns a negative value if $(D r1) has fewer
+elements than $(D r2), a positive value if $(D r1) has more elements
+than $(D r2), and $(D 0) if the ranges have the same number of
+elements.
+
+If the ranges are strings, $(D cmp) performs UTF decoding
+appropriately and compares the ranges one code point at a time.
+*/
+
+int cmp(alias pred = "a < b", R1, R2)(R1 r1, R2 r2)
+if (isInputRange!R1 && isInputRange!R2 && !(isSomeString!R1 && isSomeString!R2))
+{
+    for (;; r1.popFront(), r2.popFront())
+    {
+        if (r1.empty) return -r2.empty;
+        if (r2.empty) return r1.empty;
+        auto a = r1.front, b = r2.front;
+        if (binaryFun!pred(a, b)) return -1;
+        if (binaryFun!pred(b, a)) return 1;
+    }
+}
+
+// Specialization for strings (for speed purposes)
+int cmp(alias pred = "a < b", R1, R2)(R1 r1, R2 r2) if (isSomeString!R1 && isSomeString!R2)
+{
+    enum isLessThan = is(pred : string) && pred == "a < b";
+    // For speed only
+    static int threeWay(size_t a, size_t b)
+    {
+        static if (size_t.sizeof == int.sizeof && isLessThan)
+            return a - b;
+        else
+            return binaryFun!pred(b, a) ? 1 : binaryFun!pred(a, b) ? -1 : 0;
+    }
+    // For speed only
+    // @@@BUG@@@ overloading should be allowed for nested functions
+    static int threeWayInt(int a, int b)
+    {
+        static if (isLessThan)
+            return a - b;
+        else
+            return binaryFun!pred(b, a) ? 1 : binaryFun!pred(a, b) ? -1 : 0;
+    }
+    
+    static if (typeof(r1[0]).sizeof == typeof(r2[0]).sizeof && isLessThan)
+    {
+        static if (typeof(r1[0]).sizeof == 1)
+        {
+            immutable len = min(r1.length, r2.length);
+            immutable result = std.c.string.memcmp(r1.ptr, r2.ptr, len);
+            if (result) return result;
+        }
+        else
+        {
+            auto p1 = r1.ptr, p2 = r2.ptr,
+                pEnd = p1 + min(r1.length, r2.length);
+            for (; p1 != pEnd; ++p1, ++p2)
+            {
+                if (*p1 != *p2) return threeWayInt(cast(int) *p1, cast(int) *p2);
+            }
+        }
+        return threeWay(r1.length, r2.length);
+    }
+    else
+    {
+        for (size_t i1, i2;;)
+        {
+            if (i1 == r1.length) return threeWay(i2, r2.length);
+            if (i2 == r2.length) return threeWay(r1.length, i1);
+            immutable c1 = std.utf.decode(r1, i1),
+                c2 = std.utf.decode(r2, i2);
+            if (c1 != c2) return threeWayInt(cast(int) c1, cast(int) c2);
+        }
+    }
+}
+
+unittest
+{
+    int result;
+
+    debug(string) printf("string.cmp.unittest\n");
+    result = cmp("abc", "abc");
+    assert(result == 0);
+    //    result = cmp(null, null);
+    //    assert(result == 0);
+    result = cmp("", "");
+    assert(result == 0);
+    result = cmp("abc", "abcd");
+    assert(result < 0);
+    result = cmp("abcd", "abc");
+    assert(result > 0);
+    result = cmp("abc"d, "abd");
+    assert(result < 0);
+    result = cmp("bbc", "abc"w);
+    assert(result > 0);
+    result = cmp("aaa", "aaaa"d);
+    assert(result < 0);
+    result = cmp("aaaa", "aaa"d);
+    assert(result > 0);
+    result = cmp("aaa", "aaa"d);
+    assert(result == 0);
+}
+
 // MinType
 template MinType(T...)
 {

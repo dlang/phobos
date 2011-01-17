@@ -30,8 +30,8 @@ private import core.exception : onRangeError;
 import core.vararg, core.stdc.stdio, core.stdc.stdlib,
     core.stdc.string, std.algorithm, std.array,
     std.conv, std.ctype, std.encoding, std.exception, std.format,
-    std.metastrings, std.range, std.regex, std.stdio, std.traits,
-    std.typetuple, std.uni, std.utf;
+    std.functional, std.metastrings, std.range, std.regex, std.stdio,
+    std.traits, std.typetuple, std.uni, std.utf;
 
 public import std.algorithm : startsWith, endsWith;
 
@@ -78,78 +78,45 @@ bool iswhite(dchar c)
 }
 
 /**********************************
-Compare two strings. $(D _cmp) is case sensitive, $(D icmp) is case
-insensitive.
+Compare two ranges of characters lexicographically. $(D _cmp) is case
+sensitive, $(D icmp) is case insensitive. $(D cmp) is aliased from
+$(XREF algorithm, _cmp). $(D icmp) works like $(D cmp) but converts
+both characters to lowercase prior to applying $(D pred). Technically
+$(D icmp(r1, r2)) is equivalent to $(D cmp!"toUniLower(a) <
+toUniLower(b)"(r1, r2)).
 
-$(BOOKTABLE Returns:,
-$(TR $(TD < 0)  $(TD $(D s1 < s2)))
-$(TR $(TD = 0)  $(TD $(D s1 == s2)))
-$(TR $(TD > 0)  $(TD $(D s1 > s2)))
+Returns (for $(D pred = "a < b")):
+
+$(BOOKTABLE,
+$(TR $(TD $(D < 0))  $(TD $(D s1 < s2) ))
+$(TR $(TD $(D = 0))  $(TD $(D s1 == s2)))
+$(TR $(TD $(D > 0))  $(TD $(D s1 > s2)))
 )
-*/
 
-int cmp(C1, C2)(in C1[] s1, in C2[] s2)
-{
-    static if (C1.sizeof == C2.sizeof)
-    {
-        immutable len = min(s1.length, s2.length);
-        immutable result = std.c.string.memcmp(s1.ptr, s2.ptr, len * C1.sizeof);
-        if (result) return result;
-        static if (s1.length.sizeof == int.sizeof)
-            return s1.length - s2.length;
-        else
-            return s1.length > s2.length ? 1 : s1.length < s2.length ? -1 : 0;
-    }
-    else
-    {
-        for (size_t i1, i2;;)
-        {
-            if (i1 == s1.length) return i2 > s2.length ? 1 : i2 < s2.length ? -1 : 0;
-            if (i2 == s2.length) return s1.length > i1 ? 1 : s1.length < i1 ? -1 : 0;
-            immutable c1 = std.utf.decode(s1, i1),
-                c2 = std.utf.decode(s2, i2);
-            if (c1 != c2) return cast(int) c1 - cast(int) c2;
-        }
-    }
-}
+ */
 
-unittest
-{
-    int result;
-
-    debug(string) printf("string.cmp.unittest\n");
-    result = cmp("abc", "abc");
-    assert(result == 0);
-    //    result = cmp(null, null);
-    //    assert(result == 0);
-    result = cmp("", "");
-    assert(result == 0);
-    result = cmp("abc", "abcd");
-    assert(result < 0);
-    result = cmp("abcd", "abc");
-    assert(result > 0);
-    result = cmp("abc"d, "abd");
-    assert(result < 0);
-    result = cmp("bbc", "abc"w);
-    assert(result > 0);
-    result = cmp("aaa", "aaaa"d);
-    assert(result < 0);
-    result = cmp("aaaa", "aaa"d);
-    assert(result > 0);
-    result = cmp("aaa", "aaa"d);
-    assert(result == 0);
-}
+alias std.algorithm.cmp cmp;
 
 /*********************************
  * ditto
  */
 
-int icmp(C1, C2)(in C1[] s1, in C2[] s2) if (isSomeChar!C1 && isSomeChar!C2)
+int icmp(alias pred = "a < b", S1, S2)(S1 s1, S2 s2)
+if (is(Unqual!(ElementType!S1) == dchar) && is(Unqual!(ElementType!S2) == dchar))
 {
+    enum isLessThan = is(pred : string) && pred == "a < b";
     foreach (e; zip(s1, s2))
     {
         dchar c1 = toUniLower(e[0]), c2 = toUniLower(e[1]);
-        if (c1 != c2) return cast(int) c1 - cast(int) c2;
+        static if (isLessThan)
+        {
+            if (c1 != c2) return cast(int) c1 - cast(int) c2;
+        }
+        else
+        {
+            if (binaryFun!pred(c1, c2)) return -1;
+            if (binaryFun!pred(c2, c1)) return 1;
+        }
     }
 
     static if (s1.length.sizeof == int.sizeof)
