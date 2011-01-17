@@ -2460,17 +2460,23 @@ unittest
 }
 
 /**
-Replicates $(D value) exactly $(D n) times. Equivalent to $(D
+Repeats $(D value) exactly $(D n) times. Equivalent to $(D
 take(repeat(value), n)).
  */
-Take!(Repeat!(T)) replicate(T)(T value, size_t n)
+Take!(Repeat!T) repeat(T)(T value, size_t n)
 {
     return take(repeat(value), n);
 }
 
+/// Equivalent to $(D repeat(value, n)). Scheduled for deprecation.
+Take!(Repeat!T) replicate(T)(T value, size_t n)
+{
+    return repeat(value, n);
+}
+
 unittest
 {
-    enforce(equal(replicate(5, 4), [ 5, 5, 5, 5 ][]));
+    enforce(equal(repeat(5, 4), [ 5, 5, 5, 5 ][]));
 }
 
 /**
@@ -2559,24 +2565,23 @@ if (isForwardRange!(Unqual!Range) && !isInfinite!(Unqual!Range))
             if (_current.empty) _current = _original;
         }
 
-        @property Cycle!(R) save() {
-            Cycle!(R) ret;
+        @property Cycle!R save() {
+            Cycle!R ret;
             ret._original = this._original.save;
             ret._current =  this._current.save;
             return ret;
         }
-
     }
 }
 
 /// Ditto
-template Cycle(R) if(isInfinite!(R))
+template Cycle(R) if (isInfinite!R)
 {
     alias R Cycle;
 }
 
 /// Ditto
-struct Cycle(R) if (isStaticArray!(R))
+struct Cycle(R) if (isStaticArray!R)
 {
     private alias typeof(R[0]) ElementType;
     private ElementType* _ptr;
@@ -2607,17 +2612,17 @@ struct Cycle(R) if (isStaticArray!(R))
 }
 
 /// Ditto
-Cycle!(R) cycle(R)(R input)
-if(isForwardRange!(Unqual!R) && !isInfinite!(Unqual!R))
+Cycle!R cycle(R)(R input)
+if (isForwardRange!(Unqual!R) && !isInfinite!(Unqual!R))
 {
     return Cycle!(R)(input);
 }
 
 /// Ditto
-Cycle!(R) cycle(R)(R input, size_t index)
-if(isRandomAccessRange!(Unqual!R) && !isInfinite!(Unqual!R))
+Cycle!R cycle(R)(R input, size_t index)
+if (isRandomAccessRange!(Unqual!R) && !isInfinite!(Unqual!R))
 {
-    return Cycle!(R)(input, index);
+    return Cycle!R(input, index);
 }
 
 /// Ditto

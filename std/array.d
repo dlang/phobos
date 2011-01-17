@@ -19,7 +19,7 @@ import std.algorithm, std.conv, std.encoding, std.exception, std.range,
     std.string, std.traits, std.typecons, std.utf;
 private import std.c.string : memcpy;
 private import std.intrinsic : bsr;
-version(unittest) private import std.stdio;
+version(unittest) private import std.stdio, std.typetuple;
 
 /**
 Returns a newly-allocated dynamic array consisting of a copy of the input
@@ -77,39 +77,6 @@ if (isIterable!Range && !isNarrowString!Range)
         }
         return a.data;
     }
-    // // 2. Initialize the memory
-    // size_t constructedElements = 0;
-    // scope(failure)
-    // {
-    //     // Deconstruct only what was constructed
-    //     foreach_reverse (i; 0 .. constructedElements)
-    //     {
-    //         try
-    //         {
-    //             //result[i].~E();
-    //         }
-    //         catch (Exception e)
-    //         {
-    //         }
-    //     }
-    //     // free the entire array
-    //     std.gc.realloc(result, 0);
-    // }
-    // foreach (src; elements)
-    // {
-    //     static if (is(typeof(new(result + constructedElements) E(src))))
-    //     {
-    //         new(result + constructedElements) E(src);
-    //     }
-    //     else
-    //     {
-    //         result[constructedElements] = src;
-    //     }
-    //     ++constructedElements;
-    // }
-    // // 3. Success constructing all elements, type the array and return it
-    // setTypeInfo(typeid(E), result);
-    // return result[0 .. constructedElements];
 }
 
 /**
@@ -193,17 +160,6 @@ unittest
     assert(array(OpApply.init) == [0,1,2,3,4,5,6,7,8,9]);
     assert(array("ABC") == "ABC"d);
     assert(array("ABC".dup) == "ABC"d.dup);
-}
-
-template IndexType(C : T[], T)
-{
-    alias size_t IndexType;
-}
-
-unittest
-{
-    static assert(is(IndexType!(double[]) == size_t));
-    static assert(!is(IndexType!(double) == size_t));
 }
 
 /**
@@ -628,41 +584,149 @@ bool sameHead(T)(in T[] lhs, in T[] rhs)
     return lhs.ptr == rhs.ptr;
 }
 
-/**
-Erases elements from $(D array) with indices ranging from $(D from)
-(inclusive) to $(D to) (exclusive).
+/********************************************
+ * Return an array that consists of $(D s) (which must be an input
+ * range) repeated $(D n) times.
  */
-// void erase(T)(ref T[] array, size_t from, size_t to)
-// {
-//     immutable newLength = array.length - (to - from);
-//     foreach (i; to .. array.length)
-//     {
-//         move(array[i], array[from++]);
-//     }
-//     array.length = newLength;
-// }
 
-// unittest
-// {
-//     int[] a = [1, 2, 3, 4, 5];
-//     erase(a, 1u, 3u);
-//     assert(a == [1, 4, 5]);
-// }
+S multiply(S)(S s, size_t n) if (isSomeString!S)
+{
+    if (n == 0)
+        return S.init;
+    if (n == 1)
+        return s;
+    auto r = new Unqual!(typeof(s[0]))[n * s.length];
+    if (s.length == 1)
+        r[] = s[0];
+    else
+    {
+        auto len = s.length;
+        for (size_t i = 0; i < n * len; i += len)
+        {
+            r[i .. i + len] = s[];
+        }
+    }
+    return cast(S) r;
+}
 
-/**
-Erases element from $(D array) at index $(D from).
+ElementType!S[] multiply(S)(S s, size_t n)
+if (isInputRange!S && !isSomeString!S)
+{
+    if (n == 0)
+        return null;
+    static if (hasLength!S)
+    {
+        auto r = new Unqual!(typeof(s[0]))[n * s.length];
+        if (s.length == 1)
+            r[] = s[0];
+        else
+        {
+            auto len = s.length;
+            immutable nlen = n * len;
+            for (size_t i = 0; i < nlen; i += len)
+            {
+                copy(s, r[i .. i + len]);
+            }
+        }
+        return cast(typeof(return)) r;
+    }
+    else
+    {
+        Appender!(ElementType!S) a;
+        for (; !s.empty; s.popFront())
+        {
+            a.put(s.front);
+        }
+        return a.data;
+    }
+}
+
+unittest
+{
+    debug(string) printf("array.repeat.unittest\n");
+
+    foreach (S; TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[]))
+    {
+        S s;
+
+        s = multiply(to!S("1234"), 0);
+        assert(s is null);
+        s = multiply(to!S("1234"), 1);
+        assert(cmp(s, "1234") == 0);
+        s = multiply(to!S("1234"), 2);
+        assert(cmp(s, "12341234") == 0);
+        s = multiply(to!S("1"), 4);
+        assert(cmp(s, "1111") == 0);
+        s = multiply(cast(S) null, 4);
+        assert(s is null);
+    }
+
+    int[] a = [ 1, 2, 3 ];
+    assert(multiply(a, 3) == [1, 2, 3, 1, 2, 3, 1, 2, 3]);
+}
+
+/********************************************
+ * Concatenate all the ranges in $(D ror) together into one array;
+ * use $(D sep) as the separator.
  */
-// void erase(T)(ref T[] array, size_t from)
-// {
-//     erase(array, from, from + 1);
-// }
 
-// unittest
-// {
-//     int[] a = [1, 2, 3, 4, 5];
-//     erase(a, 2u);
-//     assert(a == [1, 2, 4, 5]);
-// }
+ElementType!RoR join(RoR, R)(RoR ror, R sep)
+if (isInputRange!RoR && isInputRange!(typeof(ror.front))
+        && !(isSomeString!(typeof(ror.front)) && isSomeString!R))
+{
+    return copy(joiner(ror, sep), appender!(ElementType!RoR)()).data;
+}
+
+// Specialization for strings
+typeof(RoR.init[0]) join(RoR, R)(RoR words, R sep)
+if (isSomeString!(typeof(words[0])) && isSomeString!R)
+{
+    if (!words.length) return null;
+    auto sep2 = to!(typeof(return))(sep);
+    immutable seplen = sep2.length;
+    size_t len = (words.length - 1) * seplen;
+
+    foreach (i; 0 .. words.length)
+        len += words[i].length;
+
+    auto result = new Unqual!(typeof(words.front[0]))[len];
+
+    size_t j;
+    foreach (i; 0 .. words.length)
+    {
+        if (i > 0)
+        {
+            result[j .. j + seplen] = sep2;
+            j += seplen;
+        }
+        immutable wlen = words[i].length;
+        result[j .. j + wlen] = words[i];
+        j += wlen;
+    }
+    assert(j == len);
+    return cast(typeof(return)) result;
+}
+
+unittest
+{
+    debug(std_array) printf("array.join.unittest\n");
+
+    string word1 = "peter";
+    string word2 = "paul";
+    string word3 = "jerry";
+    string[3] words;
+    string r;
+    int i;
+
+    words[0] = word1;
+    words[1] = word2;
+    words[2] = word3;
+    r = join(words[], ",");
+    i = cmp(r, "peter,paul,jerry");
+    assert(i == 0, text(i));
+
+    assert(join([[1, 2], [41, 42]], [5, 6]) == [1, 2, 5, 6, 41, 42]);
+}
 
 /**
 Replaces elements from $(D array) with indices ranging from $(D from)
@@ -703,8 +767,6 @@ void replace(T, Range)(ref T[] array, size_t from, size_t to, Range stuff)
 {
     replace(array, from, to, cast(T[])[]);
 }
-
-
 
 unittest
 {

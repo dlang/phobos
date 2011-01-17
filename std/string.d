@@ -172,7 +172,8 @@ unittest
 
 /*********************************
  * Convert array of chars $(D s[]) to a C-style 0-terminated string.
- * $(D s[]) must not contain embedded 0's.
+ * $(D s[]) must not contain embedded 0's. If $(D s) is $(D null) or
+ * empty, a string containing only $(D '\0') is returned.
  */
 
 immutable(char)* toStringz(const(char)[] s)
@@ -194,8 +195,6 @@ out (result)
 }
 body
 {
-    char[] copy;
-
     /+ Unfortunately, this isn't reliable.
      We could make this work if string literals are put
      in read-only memory and we test if s[] is pointing into
@@ -212,7 +211,7 @@ body
      +/
 
     // Need to make a copy
-    copy = new char[s.length + 1];
+    auto copy = new char[s.length + 1];
     copy[0..s.length] = s;
     copy[s.length] = 0;
 
@@ -222,7 +221,7 @@ body
 /// Ditto
 immutable(char)* toStringz(string s)
 {
-    if (!s) return null;
+    if (s.empty) return "".ptr;
     /* Peek past end of s[], if it's 0, no conversion necessary.
      * Note that the compiler will put a 0 past the end of static
      * strings, and the storage allocator will put a 0 past the end
@@ -359,12 +358,10 @@ unittest
 {
     debug(string) printf("string.indexOf.unittest\n");
 
-    sizediff_t i;
-
     foreach (S; TypeTuple!(string, wstring, dstring))
     {
         S s = null;
-        i = indexOf(s, cast(dchar)'a', CaseSensitive.no);
+        auto i = indexOf(s, cast(dchar)'a', CaseSensitive.no);
         assert(i == -1);
         i = indexOf("def", cast(dchar)'a', CaseSensitive.no);
         assert(i == -1);
@@ -765,46 +762,6 @@ S tolower(S)(S s) if (isSomeString!S)
         return cast(S) result;
     }
     return s;
-/*
-    foreach (i; 0 .. s.length)
-    {
-        auto c = s[i];
-        if ('A' <= c && c <= 'Z')
-        {
-            if (!changed)
-            {
-                r = s.dup;
-                changed = 1;
-            }
-            r[i] = cast(Unqual!Char) (c + ('a' - 'A'));
-        }
-        else if (c > 0x7F)
-        {
-            foreach (size_t j, dchar dc; s[i .. $])
-            {
-                if (std.uni.isUniUpper(dc))
-                {
-                    dc = std.uni.toUniLower(dc);
-                    if (!changed)
-                    {
-                        r = s[0 .. i + j].dup;
-                        changed = 2;
-                    }
-                }
-                if (changed)
-                {
-                    if (changed == 1)
-                    {   r = r[0 .. i + j];
-                        changed = 2;
-                    }
-                    std.utf.encode(r, dc);
-                }
-            }
-            break;
-        }
-    }
-    return changed ? cast(S) r : s;
-*/
 }
 
 /**
@@ -1137,7 +1094,7 @@ unittest
 S repeat(S)(S s, size_t n)
 {
     if (n == 0)
-        return null;
+        return S.init;
     if (n == 1)
         return s;
     auto r = new Unqual!(typeof(s[0]))[n * s.length];
@@ -1175,58 +1132,10 @@ unittest
     }
 }
 
-
-/********************************************
- * Concatenate all the strings in words[] together into one
- * string; use sep[] as the separator.
+/**
+ * Alias for std.array.join
  */
-
-S join(S, S2)(in S[] words, S2 sep) if (isSomeString!S && isSomeString!S2)
-{
-    if (!words.length) return null;
-    immutable seplen = sep.length;
-    size_t len = (words.length - 1) * seplen;
-
-    foreach (i; 0 .. words.length)
-        len += words[i].length;
-
-    auto result = new Unqual!(typeof(words[0][0]))[len];
-
-    size_t j;
-    foreach (i; 0 .. words.length)
-    {
-        if (i > 0)
-        {
-            result[j .. j + seplen] = sep;
-            j += seplen;
-        }
-        immutable wlen = words[i].length;
-        result[j .. j + wlen] = words[i];
-        j += wlen;
-    }
-    assert(j == len);
-    return cast(S) result;
-}
-
-unittest
-{
-    debug(string) printf("string.join.unittest\n");
-
-    string word1 = "peter";
-    string word2 = "paul";
-    string word3 = "jerry";
-    string[3] words;
-    string r;
-    int i;
-
-    words[0] = word1;
-    words[1] = word2;
-    words[2] = word3;
-    r = join(words, ",");
-    i = cmp(r, "peter,paul,jerry");
-    assert(i == 0, text(i));
-}
-
+alias std.array.join join;
 
 /**************************************
 Split $(D s[]) into an array of words, using whitespace as delimiter.

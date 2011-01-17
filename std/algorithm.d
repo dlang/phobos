@@ -1853,10 +1853,18 @@ unittest
 
 // joiner
 /**
-Lazily joins a range of ranges with a separator. The range of ranges
+Lazily joins a range of ranges with a separator. The separator itself
+is a range.
 
 Example:
 ----
+assert(equal(joiner([""], "xyz"), ""));
+assert(equal(joiner(["", ""], "xyz"), "xyz"));
+assert(equal(joiner(["", "abc"], "xyz"), "xyzabc"));
+assert(equal(joiner(["abc", ""], "xyz"), "abcxyz"));
+assert(equal(joiner(["abc", "def"], "xyz"), "abcxyzdef"));
+assert(equal(joiner(["Mary", "has", "a", "little", "lamb"], "..."),
+  "Mary...has...a...little...lamb"));
 ----
  */
 auto joiner(Range, Separator)(Range r, Separator sep)
