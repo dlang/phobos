@@ -2068,19 +2068,7 @@ unittest
  * Count up all instances of sub[] in s[].
  */
 
-size_t count(S)(S s, S sub) if (isSomeString!S)
-{
-    size_t count = 0;
-    for (size_t i = 0; i < s.length; )
-    {
-        immutable j = indexOf(s[i .. s.length], sub);
-        if (j == -1)
-            break;
-        count++;
-        i += j + sub.length;
-    }
-    return count;
-}
+alias std.algorithm.count count;
 
 unittest
 {

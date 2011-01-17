@@ -2831,6 +2831,116 @@ unittest
     assert(find!(pred)(a) == a);
 }
 
+// findSkip
+/**
+ * Similar to $(D find), except returns the balance of $(D haystack)
+ * just after the found range. If $(D needle) is not found, returns a
+ * tuple with an empty range and $(D false). Otherwise, returns the
+ * portion of $(D haystack) starting right after the first occurrence
+ * of $(D needle).
+ *
+ * Example:
+----
+assert(findSkip("abcdef", "cd").balance == "ef");
+assert(findSkip("abcdef", "cxd").balance == null);
+assert(findSkip("abcdef", "cxd") == tuple("", false));
+----
+ */
+Tuple!(R1, "balance", bool, "found")
+findSkip(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
+if (isForwardRange!R1 && isForwardRange!R2
+        && is(typeof(binaryFun!pred(haystack.front, needle.front))))
+{
+    static if (isSomeString!R1 && isSomeString!R2 || isRandomAccessRange!R1 && hasLength!R2)
+    {
+        haystack = find!pred(haystack, needle);
+        if (haystack.empty) return typeof(return)(haystack, false);
+        return typeof(return)(haystack[needle.length .. haystack.length], true);
+    }
+    else
+    {
+        if (needle.empty)
+        {
+            // The empty range is always found
+            return typeof(return)(haystack, true);
+        }
+        
+        enum estimateNeedleLength = hasLength!R1 && !hasLength!R2;
+
+        static if (hasLength!R1)
+        {
+            static if (hasLength!R2)
+                size_t estimatedNeedleLength = 0;
+            else
+                immutable size_t estimatedNeedleLength = needle.length;
+        }
+
+        bool haystackTooShort()
+        {
+            static if (hasLength!R1)
+            {
+                return haystack.length < estimatedNeedleLength;
+            }
+            else
+            {
+                return haystack.empty;
+            }
+        }
+
+      searching:
+        for (;; haystack.popFront())
+        {
+            if (haystackTooShort())
+            {
+                // Failed search
+                static if (hasLength!R1)
+                {
+                    static if (is(typeof(haystack[haystack.length ..
+                                                    haystack.length]) : R1))
+                        return tuple(haystack[haystack.length .. haystack.length], false);
+                    else
+                        return tuple(R1.init, false);
+                }
+                else
+                {
+                    assert(haystack.empty);
+                    return typeof(return)(haystack, false);
+                }
+            }
+            static if (estimateNeedleLength)
+                size_t matchLength = 0;
+            auto h = haystack.save;
+            for (auto n = needle.save;
+                 !n.empty;
+                 h.popFront(), n.popFront())
+            {
+                if (h.empty || !binaryFun!pred(h.front, n.front))
+                {
+                    // Failed searching n in h
+                    static if (estimateNeedleLength)
+                    {
+                        if (estimatedNeedleLength < matchLength)
+                            estimatedNeedleLength = matchLength;
+                    }
+                    continue searching;
+                }
+                static if (estimateNeedleLength)
+                    ++matchLength;
+            }
+            // Found
+            return typeof(return)(h, true);
+        }
+        return typeof(return)(haystack, false);
+    }
+}
+
+unittest
+{
+    assert(findSkip("abcdef", "cd").balance == "ef");
+    assert(findSkip("abcdef", "cxd").balance == null);
+    assert(findSkip("abcdef", "cxd") == tuple("", false));
+}
+
 /**
 If $(D haystack) supports slicing, returns the smallest number $(D n)
 such that $(D haystack[n .. $].startsWith!pred(needle)). Oherwise,
@@ -3281,7 +3391,7 @@ if (isInputRange!(Range) && Ranges.length > 0
     alias doesThisEnd lhs;
     alias withOneOfThese rhs;
     // Special  case for two arrays
-    static if (Ranges.length == 1 && isArray!(Range) && isArray!(Ranges[0])
+    static if (Ranges.length == 1 && isArray!Range && isArray!(Ranges[0])
             && is(typeof(binaryFun!(pred)(lhs[0], rhs[0][0]))))
     {
         if (lhs.length < rhs[0].length) return 0;
@@ -3480,9 +3590,9 @@ assert(count!("a > b")(a, 2) == 5);
 */
 
 size_t count(alias pred = "a == b", Range, E)(Range r, E value)
-    if (isInputRange!(Range))
+if (isInputRange!Range && is(typeof(binaryFun!pred(r.front, value)) == bool))
 {
-    bool pred2(ElementType!(Range) a) { return binaryFun!(pred)(a, value); }
+    bool pred2(ElementType!(Range) a) { return binaryFun!pred(a, value); }
     return count!(pred2)(r);
 }
 
@@ -3502,6 +3612,41 @@ unittest
     assert(count!("a == '日'")("日本語")  == 1);
     assert(count!("a == '本'")("日本語"w) == 1);
     assert(count!("a == '語'")("日本語"d) == 1);
+}
+
+/**
+ * Returns the number of times $(D needle) occurs in $(D
+ * haystack). Throws an exception if $(D needle.empty), as the _count
+ * of the empty range in any range would be infinite. Overlapped
+ * counts are not considered, for example $(D count("aaa", "aa")) is
+ * $(D 1), not $(D 2).
+ *
+ * Example:
+----
+assert(count("abcadfabf", "ab") == 2);
+assert(count("ababab", "abab") == 1);
+assert(count("ababab", "abx") == 0);
+----
+ */
+size_t count(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
+if (isInputRange!R1 && isForwardRange!R2 && is(typeof(binaryFun!pred(haystack, needle)) == bool))
+{
+    enforce(!needle.empty, "Cannot count occurrences of an empty range");
+    size_t result;
+    for (;; ++result)
+    {
+        auto r = findSkip!pred(haystack, needle);
+        if (!r.found) break;
+        haystack = r.balance;
+    }
+    return result;
+}
+
+unittest
+{
+    assert(count("abcadfabf", "ab") == 2);
+    assert(count("ababab", "abab") == 1);
+    assert(count("ababab", "abx") == 0);
 }
 
 /**
