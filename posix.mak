@@ -256,13 +256,9 @@ DISABLED_TESTS =        \
 	std/signals     \
 	std/stdio       \
 	std/stream      \
-	std/uri         \
 	std/variant     \
 	std/zlib        \
-	std/internal/math/biguintcore   \
-	std/internal/math/biguintnoasm  \
-	std/internal/math/gammafunction \
-	std/internal/math/errorfunction
+	std/internal/math/biguintnoasm
 
 $(addprefix $(ROOT)/unittest/,$(DISABLED_TESTS)) : 
 	@echo Testing $@ - disabled
