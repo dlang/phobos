@@ -253,8 +253,6 @@ DISABLED_TESTS =        \
 	std/numeric     \
 	std/random      \
 	std/range       \
-	std/regex       \
-	std/regexp      \
 	std/signals     \
 	std/stdio       \
 	std/stream      \
