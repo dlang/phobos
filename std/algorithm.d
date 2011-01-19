@@ -47,7 +47,7 @@ module std.algorithm;
 //debug = std_algorithm;
 
 import std.c.string;
-import std.array, std.container, std.conv, std.date, std.exception,
+import std.array, std.container, std.conv, std.exception,
     std.functional, std.math, std.metastrings, std.range, std.string,
     std.traits, std.typecons, std.typetuple, std.stdio;
 

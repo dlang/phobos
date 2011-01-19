@@ -31,9 +31,9 @@
  */
 module std.zip;
 
-private import std.zlib;
-private import std.date;
-private import std.intrinsic;
+import std.zlib;
+import std.datetime;
+import std.intrinsic;
 import std.conv;
 
 //debug=print;
@@ -53,17 +53,17 @@ class ZipException : Exception
  */
 class ArchiveMember
 {
-    ushort madeVersion = 20;    /// Read Only
-    ushort extractVersion = 20; /// Read Only
-    ushort flags;               /// Read/Write: normally set to 0
-    ushort compressionMethod;   /// Read/Write: 0 for compression, 8 for deflate
-    std.date.DosFileTime time;  /// Read/Write: Last modified time of the member. It's in the DOS date/time format.
-    uint crc32;                 /// Read Only: cyclic redundancy check (CRC) value
-    uint compressedSize;        /// Read Only: size of data of member in compressed form.
-    uint expandedSize;          /// Read Only: size of data of member in expanded form.
-    ushort diskNumber;          /// Read Only: should be 0.
-    ushort internalAttributes;  /// Read/Write
-    uint externalAttributes;    /// Read/Write
+    ushort madeVersion = 20;       /// Read Only
+    ushort extractVersion = 20;    /// Read Only
+    ushort flags;                  /// Read/Write: normally set to 0
+    ushort compressionMethod;      /// Read/Write: 0 for compression, 8 for deflate
+    std.datetime.DosFileTime time; /// Read/Write: Last modified time of the member. It's in the DOS date/time format.
+    uint crc32;                    /// Read Only: cyclic redundancy check (CRC) value
+    uint compressedSize;           /// Read Only: size of data of member in compressed form.
+    uint expandedSize;             /// Read Only: size of data of member in expanded form.
+    ushort diskNumber;             /// Read Only: should be 0.
+    ushort internalAttributes;     /// Read/Write
+    uint externalAttributes;       /// Read/Write
 
     private uint offset;
 

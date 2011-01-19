@@ -1,6 +1,8 @@
 // Written in the D programming language.
 
 /**
+ * $(RED Scheduled for deprecation. Please use std.datetime instead.)
+ *
  * Dates are represented in several formats. The date implementation
  * revolves around a central type, $(D d_time), from which other
  * formats are converted to and from.  Dates are calculated using the
@@ -24,6 +26,9 @@ module std.date;
 
 import std.conv, std.datebase, std.dateparse, std.exception, std.stdio;
 import std.c.stdlib;
+
+pragma(msg, "std.date and std.dateparse have been scheduled for deprecation. "
+            "Please use std.datetime instead.");
 
 /**
  * $(D d_time) is a signed arithmetic type giving the time elapsed

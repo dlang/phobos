@@ -28774,7 +28774,7 @@ assert(tz.dstName == "PDT");
         name = strip(name);
 
         enforce(tzDatabaseDir.exists, new DateTimeException(format("Directory %s does not exist.", tzDatabaseDir)));
-        enforce(tzDatabaseDir.isdir, new DateTimeException(format("%s is not a directory.", tzDatabaseDir)));
+        enforce(tzDatabaseDir.isDir, new DateTimeException(format("%s is not a directory.", tzDatabaseDir)));
 
         version(Posix)
             auto file = tzDatabaseDir ~ name;
@@ -28782,7 +28782,7 @@ assert(tz.dstName == "PDT");
             auto file = tzDatabaseDir ~ replace(strip(name), "/", sep);
 
         enforce(file.exists, new DateTimeException(format("File %s does not exist.", file)));
-        enforce(file.isfile, new DateTimeException(format("%s is not a file.", file)));
+        enforce(file.isFile, new DateTimeException(format("%s is not a file.", file)));
 
         auto tzFile = File(file);
         immutable gmtZone = file.canFind("GMT");
@@ -29363,21 +29363,22 @@ assert(tz.dstName == "PDT");
             tzDatabaseDir ~= sep;
 
         enforce(tzDatabaseDir.exists, new DateTimeException(format("Directory %s does not exist.", tzDatabaseDir)));
-        enforce(tzDatabaseDir.isdir, new DateTimeException(format("%s is not a directory.", tzDatabaseDir)));
+        enforce(tzDatabaseDir.isDir, new DateTimeException(format("%s is not a directory.", tzDatabaseDir)));
 
         auto timezones = appender!(string[])();
 
         foreach(DirEntry dentry; dirEntries(tzDatabaseDir, SpanMode.depth))
         {
-            if(dentry.isfile)
+            if(dentry.isFile)
             {
                 auto tzName = dentry.name[tzDatabaseDir.length .. $];
 
-                if(!tzName.getExt().empty())
+                if(!tzName.getExt().empty() ||
+                   !tzName.startsWith(subname) ||
+                   tzName == "+VERSION")
+                {
                     continue;
-
-                if(!tzName.startsWith(subname))
-                    continue;
+                }
 
                 timezones.put(tzName);
             }
@@ -29415,7 +29416,7 @@ assert(tz.dstName == "PDT");
 
                 foreach(DirEntry dentry; dirEntries(defaultTZDatabaseDir, SpanMode.depth))
                 {
-                    if(dentry.isfile)
+                    if(dentry.isFile)
                     {
                         auto tzName = dentry.name[defaultTZDatabaseDir.length .. $];
 
@@ -31033,6 +31034,62 @@ private:
 //==============================================================================
 // Section with public helper functions and templates.
 //==============================================================================
+
+/++
+    $(RED Scheduled for deprecation. This is only here to help
+          transition code which uses std.date to using std.datetime.)
+
+    Returns a d_time for the given SysTime.
+ +/
+long sysTimeToDTime(in SysTime sysTime)
+{
+    return convert!("hnsecs", "msecs")(sysTime.stdTime - 621355968000000000L);
+}
+
+unittest
+{
+    assertPred!"=="(sysTimeToDTime(SysTime(DateTime(1970, 1, 1), UTC())),
+                    0);
+    assertPred!"=="(sysTimeToDTime(SysTime(DateTime(1970, 1, 1), FracSec.from!"msecs"(1), UTC())),
+                    1);
+    assertPred!"=="(sysTimeToDTime(SysTime(DateTime(1969, 12, 31, 23, 59, 59), FracSec.from!"msecs"(999), UTC())),
+                    -1);
+
+    assertPred!"=="(sysTimeToDTime(SysTime(DateTime(1970, 1, 2), UTC())),
+                    86_400_000);
+    assertPred!"=="(sysTimeToDTime(SysTime(DateTime(1969, 12, 31), UTC())),
+                    -86_400_000);
+}
+
+
+/++
+    $(RED Scheduled for deprecation. This is only here to help
+          transition code which uses std.date to using std.datetime.)
+
+    Returns a SysTime for the given d_time.
+ +/
+SysTime dTimeToSysTime(long dTime, immutable TimeZone tz = null)
+{
+    immutable hnsecs = convert!("msecs", "hnsecs")(dTime) + 621355968000000000L;
+
+    return SysTime(hnsecs, tz);
+}
+
+unittest
+{
+    assertPred!"=="(dTimeToSysTime(0),
+                    SysTime(DateTime(1970, 1, 1), UTC()));
+    assertPred!"=="(dTimeToSysTime(1),
+                    SysTime(DateTime(1970, 1, 1), FracSec.from!"msecs"(1), UTC()));
+    assertPred!"=="(dTimeToSysTime(-1),
+                    SysTime(DateTime(1969, 12, 31, 23, 59, 59), FracSec.from!"msecs"(999), UTC()));
+
+    assertPred!"=="(dTimeToSysTime(86_400_000),
+                    SysTime(DateTime(1970, 1, 2), UTC()));
+    assertPred!"=="(dTimeToSysTime(-86_400_000),
+                    SysTime(DateTime(1969, 12, 31), UTC()));
+}
+
 
 /++
     Returns the absolute value of a duration.

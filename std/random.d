@@ -56,8 +56,9 @@ Distributed under the Boost Software License, Version 1.0.
 */
 module std.random;
 
-import std.algorithm, std.c.time, std.conv, std.date, std.exception, std.math,
-    std.numeric, std.process, std.range, std.stdio, std.traits, core.thread;
+import std.algorithm, std.c.time, std.conv, std.datetime, std.exception,
+       std.math, std.numeric, std.process, std.range, std.stdio, std.traits,
+       core.thread;
 
 version(unittest) import std.typetuple;
 
@@ -817,11 +818,11 @@ uint unpredictableSeed()
     static MinstdRand0 rand;
     if (!seeded) {
         uint threadID = cast(uint) cast(void*) Thread.getThis();
-        rand.seed((getpid + threadID) ^ cast(uint) getUTCtime);
+        rand.seed((getpid + threadID) ^ cast(uint) Clock.currSystemTick().length);
         seeded = true;
     }
     rand.popFront;
-    return cast(uint) (getUTCtime ^ rand.front);
+    return cast(uint) (Clock.currSystemTick().length ^ rand.front);
 }
 
 unittest

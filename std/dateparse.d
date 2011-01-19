@@ -1,6 +1,8 @@
 // Written in the D programming language.
 
 /**
+ * $(RED Scheduled for deprecation. Please use std.datetime instead.)
+ *
  * dateparse module.
  *
  * Copyright: Copyright Digital Mars 2000 - 2009.
