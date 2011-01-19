@@ -248,7 +248,6 @@ DISABLED_TESTS =        \
 	std/file        \
 	std/format      \
 	std/math        \
-	std/mathspecial \
 	std/mmfile      \
 	std/numeric     \
 	std/random      \
