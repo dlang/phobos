@@ -389,7 +389,7 @@ unittest
  * ditto
  */
 
-ptrdiff_t lastIndexOf(Char)(const(Char)[] s, dchar c,
+sizediff_t lastIndexOf(Char)(const(Char)[] s, dchar c,
         CaseSensitive cs = CaseSensitive.yes)
 {
     if (cs == CaseSensitive.yes)
@@ -627,7 +627,7 @@ unittest
  * ditto
  */
 
-ptrdiff_t lastIndexOf(Char1, Char2)(in Char1[] s, in Char2[] sub,
+sizediff_t lastIndexOf(Char1, Char2)(in Char1[] s, in Char2[] sub,
         CaseSensitive cs = CaseSensitive.yes) if (isSomeChar!Char1 && isSomeChar!Char2)
 {
     if (cs == CaseSensitive.yes)
@@ -1088,27 +1088,12 @@ unittest
 }
 
 /********************************************
- * Return a string that consists of s[] repeated n times.
+ * Repeat $(D s) for $(D n) times. This function is scheduled for
+ * deprecation - use $(XREF array, replicate) instead.
  */
-
 S repeat(S)(S s, size_t n)
 {
-    if (n == 0)
-        return S.init;
-    if (n == 1)
-        return s;
-    auto r = new Unqual!(typeof(s[0]))[n * s.length];
-    if (s.length == 1)
-        r[] = s[0];
-    else
-    {
-        auto len = s.length;
-        for (size_t i = 0; i < n * len; i += len)
-        {
-            r[i .. i + len] = s[];
-        }
-    }
-    return cast(S) r;
+    return std.array.replicate(s, n);
 }
 
 unittest
@@ -1137,166 +1122,10 @@ unittest
  */
 alias std.array.join join;
 
-/**************************************
-Split $(D s[]) into an array of words, using whitespace as delimiter.
+/**
+ * Alias for std.array.split
  */
-
-S[] split(S)(S s) if (isSomeString!S)
-{
-    size_t istart;
-    bool inword = false;
-    S[] result;
-
-    foreach (i; 0 .. s.length)
-    {
-        switch (s[i])
-        {
-        case ' ':
-        case '\t':
-        case '\f':
-        case '\r':
-        case '\n':
-        case '\v':
-            if (inword)
-            {
-                result ~= s[istart .. i];
-                inword = false;
-            }
-            break;
-
-        default:
-            if (!inword)
-            {
-                istart = i;
-                inword = true;
-            }
-            break;
-        }
-    }
-    if (inword)
-        result ~= s[istart .. $];
-    return result;
-}
-
-unittest
-{
-    foreach (S; TypeTuple!(string, wstring, dstring))
-    {
-        debug(string) printf("string.split1\n");
-
-        S s = " peter paul\tjerry ";
-        S[] words;
-        int i;
-
-        words = split(s);
-        assert(words.length == 3);
-        i = cmp(words[0], "peter");
-        assert(i == 0);
-        i = cmp(words[1], "paul");
-        assert(i == 0);
-        i = cmp(words[2], "jerry");
-        assert(i == 0);
-    }
-}
-
-auto splitter(String)(String s) if (isSomeString!String)
-{
-    //return std.regex.splitter(s, regex("[ \t\n\r]+"));
-    return std.algorithm.splitter!isspace(s);
-}
-
-unittest
-{
-    auto a = " a     bcd   ef gh ";
-    //foreach (e; splitter(a)) writeln("[", e, "]");
-    assert(equal(splitter(a), ["", "a", "bcd", "ef", "gh"][]));
-    a = "";
-    assert(splitter(a).empty);
-}
-
-/**************************************
- * Split s[] into an array of words,
- * using delim[] as the delimiter.
- */
-
-Unqual!(S1)[] split(S1, S2)(S1 s, S2 delim)
-        if (isSomeString!S1 && isSomeString!S2)
-{
-    Unqual!(S1) us = s;
-    auto app = appender!(Unqual!(S1)[])();
-    foreach (word; std.algorithm.splitter(us, delim))
-    {
-        app.put(word);
-    }
-    return app.data;
-}
-
-unittest
-{
-    debug(string) printf("string.split2\n");
-    foreach (S; TypeTuple!(string, wstring, dstring,
-                    immutable(string), immutable(wstring), immutable(dstring),
-                    char[], wchar[], dchar[],
-                    const(char)[], const(wchar)[], const(dchar)[]))
-    {
-        S s = to!S(",peter,paul,jerry,");
-        int i;
-
-        auto words = split(s, ",");
-        assert(words.length == 5, text(words.length));
-        i = cmp(words[0], "");
-        assert(i == 0);
-        i = cmp(words[1], "peter");
-        assert(i == 0);
-        i = cmp(words[2], "paul");
-        assert(i == 0);
-        i = cmp(words[3], "jerry");
-        assert(i == 0);
-        i = cmp(words[4], "");
-        assert(i == 0);
-
-        auto s1 = s[0 .. s.length - 1];   // lop off trailing ','
-        words = split(s1, ",");
-        assert(words.length == 4);
-        i = cmp(words[3], "jerry");
-        assert(i == 0);
-
-        auto s2 = s1[1 .. s1.length];   // lop off leading ','
-        words = split(s2, ",");
-        assert(words.length == 3);
-        i = cmp(words[0], "peter");
-        assert(i == 0);
-
-        auto s3 = to!S(",,peter,,paul,,jerry,,");
-
-        words = split(s3, ",,");
-        //printf("words.length = %d\n", words.length);
-        assert(words.length == 5);
-        i = cmp(words[0], "");
-        assert(i == 0);
-        i = cmp(words[1], "peter");
-        assert(i == 0);
-        i = cmp(words[2], "paul");
-        assert(i == 0);
-        i = cmp(words[3], "jerry");
-        assert(i == 0);
-        i = cmp(words[4], "");
-        assert(i == 0);
-
-        auto s4 = s3[0 .. s3.length - 2];    // lop off trailing ',,'
-        words = split(s4, ",,");
-        assert(words.length == 4);
-        i = cmp(words[3], "jerry");
-        assert(i == 0);
-
-        auto s5 = s4[2 .. s4.length];    // lop off leading ',,'
-        words = split(s5, ",,");
-        assert(words.length == 3);
-        i = cmp(words[0], "peter");
-        assert(i == 0);
-    }
-}
-
+alias std.array.split split;
 
 /**************************************
  * Split s[] into an array of lines,
@@ -1674,11 +1503,8 @@ unittest
 /***********************************************
  * Returns s[] sans trailing character, if there is one.
  * If last two characters are CR-LF, then both are removed.
- *
- * Deprecated: use s.popBack() instead.
  */
-
-deprecated S chop(S)(S s) if (isSomeString!S)
+S chop(S)(S s) if (isSomeString!S)
 {
     auto len = s.length;
     if (!len) return s;

@@ -269,19 +269,20 @@ unittest
     fibsSquares.popFront;
     assert(fibsSquares.front == 9);
 
-        auto repeatMap = map!"a"(repeat(1));
-        static assert(isInfinite!(typeof(repeatMap)));
+    auto repeatMap = map!"a"(repeat(1));
+    static assert(isInfinite!(typeof(repeatMap)));
+    
+    auto intRange = map!"a"([1,2,3]);
+    static assert(isRandomAccessRange!(typeof(intRange)));
+    
+    foreach(DummyType; AllDummyRanges)
+    {
+        DummyType d;
+        auto m = map!"a * a"(d);
 
-        auto intRange = map!"a"([1,2,3]);
-        static assert(isRandomAccessRange!(typeof(intRange)));
-
-    foreach(DummyType; AllDummyRanges) {
-            DummyType d;
-            auto m = map!"a * a"(d);
-
-            static assert(propagatesRangeType!(typeof(m), DummyType));
-            assert(equal(m, [1,4,9,16,25,36,49,64,81,100]));
-        }
+        static assert(propagatesRangeType!(typeof(m), DummyType));
+        assert(equal(m, [1,4,9,16,25,36,49,64,81,100]));
+    }
 }
 
 // reduce
@@ -1453,9 +1454,9 @@ public:
 /// Ditto
 Splitter!(Range, Separator)
 splitter(Range, Separator)(Range r, Separator s)
-if (is(typeof(ElementType!(Range).init == ElementType!(Separator).init))
+if (is(typeof(ElementType!Range.init == ElementType!Separator.init))
        ||
-    is(typeof(ElementType!(Range).init == Separator.init))
+    is(typeof(ElementType!Range.init == Separator.init))
     )
 {
     return typeof(return)(r, s);
@@ -1528,7 +1529,7 @@ Splits a range using another range as a separator. This can be used
 with any range type, but is most popular with string types.
  */
 struct Splitter(Range, Separator)
-    if (is(typeof(Range.init.front == Separator.init.front)))
+if (is(typeof(Range.init.front == Separator.init.front) : bool))
 {
 private:
     Range _input;
@@ -1721,7 +1722,8 @@ struct Splitter(alias isTerminator, Range,
         Slice = Select!(is(typeof(Range.init[0 .. 1])),
                 Range,
                 ElementType!(Range)[]))
-if(!is(isTerminator)) {
+if(!is(isTerminator))
+{
     private Range _input;
     private size_t _end;
     private alias unaryFun!isTerminator _isTerminator;
@@ -1867,25 +1869,87 @@ assert(equal(joiner(["Mary", "has", "a", "little", "lamb"], "..."),
   "Mary...has...a...little...lamb"));
 ----
  */
-auto joiner(Range, Separator)(Range r, Separator sep)
+auto joiner(RoR, Separator)(RoR r, Separator sep)
+if (isForwardRange!RoR && isInputRange!(ElementType!RoR)
+        && isForwardRange!Separator
+        && is(ElementType!Separator : ElementType!(ElementType!RoR)))
 {
-    struct Result
+    static struct Result
     {
-    private:
-        Range _items;
-        Separator _sep, _currentSep;
-    public:
-        @property bool empty()
+        private RoR _items;
+        private ElementType!RoR _current;
+        private Separator _sep, _currentSep;
+
+        private void useSeparator()
         {
-            return _items.empty;
+            assert(_currentSep.empty && _current.empty,
+                    "joiner: internal error");
+            if (_sep.empty)
+            {
+                // Advance to the next range in the
+                // input
+                //_items.popFront();
+                for (;; _items.popFront())
+                {
+                    if (_items.empty) return;
+                    if (!_items.front.empty) break;
+                }
+                _current = _items.front;
+                _items.popFront();
+            }
+            else
+            {
+                // Must make sure something is coming after the
+                // separator - it's a separator, not a terminator!
+                if (_items.empty) return;
+                _currentSep = _sep.save;
+                assert(!_currentSep.empty);
+            }
         }
-        @property ElementType!(ElementType!Range) front()
+
+        private void useItem()
         {
-            assert(!empty);
+            assert(_currentSep.empty && _current.empty,
+                    "joiner: internal error");
+            // Use the input
+            if (_items.empty) return;
+            _current = _items.front;
+            _items.popFront();
+            if (!_current.empty)
+            {
+                return;
+            }
+            // No data in the current item - toggle to use the
+            // separator
+            useSeparator();
+        }
+        
+        this(RoR items, Separator sep)
+        {
+            _items = items;
+            _sep = sep;
+            useItem();
+            // We need the separator if the input has at least two
+            // elements
+            if (_current.empty && _items.empty)
+            {
+                // Vacate the whole thing
+                _currentSep = _currentSep.init;
+            }
+        }
+
+        @property auto empty()
+        {
+            return _current.empty && _currentSep.empty;
+        }
+        
+        @property ElementType!(ElementType!RoR) front()
+        {
             if (!_currentSep.empty) return _currentSep.front;
-            if (!_items.front.empty) return _items.front.front;
-            assert(false);
+            assert(!_current.empty);
+            return _current.front;
         }
+        
         void popFront()
         {
             assert(!empty);
@@ -1893,47 +1957,33 @@ auto joiner(Range, Separator)(Range r, Separator sep)
             if (!_currentSep.empty)
             {
                 _currentSep.popFront();
-                if (_currentSep.empty)
-                {
-                    // Explore the next item in the range
-                    if (_items.front.empty)
-                    {
-                        // Null item, will write a new separator
-                        _items.popFront();
-                        if (!_items.empty)
-                        {
-                            _currentSep = _sep.save;
-                        }
-                    }
-                }
+                if (!_currentSep.empty) return;
+                useItem();
             }
             else
             {
                 // we're using the range
-                assert(!_items.empty && !_items.front.empty);
-                _items.front.popFront();
-                if (_items.front.empty)
-                {
-                    _items.popFront();
-                    if (!_items.empty)
-                    {
-                        _currentSep = _sep.save;
-                    }
-                }
+                _current.popFront();
+                if (!_current.empty) return;
+                useSeparator();
             }
-            assert(empty || !_currentSep.empty || !_items.front.empty);
+            // We need to re-prime the range
         }
-    }
-    auto result = Result(r, sep);
-    if (!r.empty && r.front.empty)
-    {
-        result._items.popFront();
-        if (!result.empty)
+
+        static if (isForwardRange!RoR && isForwardRange!(ElementType!RoR))
         {
-            result._currentSep = result._sep.save;
+            @property auto save()
+            {
+                Result copy;
+                copy._items = _items.save;
+                copy._current = _current.save;
+                copy._sep = _sep.save;
+                copy._currentSep = _currentSep.save;
+                return copy;
+            }
         }
     }
-    return result;
+    return Result(r, sep);
 }
 
 unittest
@@ -1941,14 +1991,90 @@ unittest
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     static assert(isInputRange!(typeof(joiner([""], ""))));
-    static assert(!isForwardRange!(typeof(joiner([""], ""))));
-    assert(equal(joiner([""], "xyz"), ""));
-    assert(equal(joiner(["", ""], "xyz"), "xyz"));
+    static assert(isForwardRange!(typeof(joiner([""], ""))));
+    assert(equal(joiner([""], "xyz"), ""), text(joiner([""], "xyz")));
+    assert(equal(joiner(["", ""], "xyz"), "xyz"), text(joiner(["", ""], "xyz")));
     assert(equal(joiner(["", "abc"], "xyz"), "xyzabc"));
     assert(equal(joiner(["abc", ""], "xyz"), "abcxyz"));
     assert(equal(joiner(["abc", "def"], "xyz"), "abcxyzdef"));
     assert(equal(joiner(["Mary", "has", "a", "little", "lamb"], "..."),
                     "Mary...has...a...little...lamb"));
+}
+
+auto joiner(RoR)(RoR r)
+if (isInputRange!RoR && isInputRange!(ElementType!RoR))
+{
+    static struct Result
+    {
+    private:
+        RoR _items;
+        ElementType!RoR _current;
+        void prime()
+        {
+            for (;; _items.popFront())
+            {
+                if (_items.empty) return;
+                if (!_items.front.empty) break;
+            }
+            _current = _items.front;
+            _items.popFront();
+        }
+    public:
+        this(RoR r)
+        {
+            _items = r;
+            prime();
+        }
+        static if (isInfinite!(ElementType!RoR))
+        {
+            enum bool empty = false;
+        }
+        else
+        {
+            @property auto empty()
+            {
+                return _current.empty;
+            }
+        }
+        @property auto ref front()
+        {
+            assert(!empty);
+            return _current.front;
+        }
+        void popFront()
+        {
+            assert(!_current.empty);
+            _current.popFront();
+            if (_current.empty) prime();
+        }
+        static if (isForwardRange!RoR && isForwardRange!(ElementType!RoR))
+        {
+            @property auto save()
+            {
+                Result copy;
+                copy._items = _items.save;
+                copy._current = _current.save;
+                return copy;
+            }
+        }
+    }
+    return Result(r);
+}
+
+unittest
+{
+    debug(std_algorithm) scope(success)
+        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+    static assert(isInputRange!(typeof(joiner([""]))));
+    static assert(isForwardRange!(typeof(joiner([""]))));
+    assert(equal(joiner([""]), ""));
+    assert(equal(joiner(["", ""]), ""));
+    assert(equal(joiner(["", "abc"]), "abc"));
+    assert(equal(joiner(["abc", ""]), "abc"));
+    assert(equal(joiner(["abc", "def"]), "abcdef"));
+    assert(equal(joiner(["Mary", "has", "a", "little", "lamb"]),
+                    "Maryhasalittlelamb"));
+    assert(equal(joiner(std.range.repeat("abc", 3)), "abcabcabc"));
 }
 
 // uniq

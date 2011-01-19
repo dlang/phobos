@@ -635,6 +635,34 @@ unittest
 }
 
 /**
+The encoding element type of $(D R). For narrow strings ($(D char[]),
+$(D wchar[]) and their qualified variants including $(D string) and
+$(D wstring)), $(D ElementEncodingType) is the character type of the
+string. For all other ranges, $(D ElementEncodingType) is the same as
+$(D ElementType).
+ */
+template ElementEncodingType(R)
+{
+    static if (isNarrowString!R)
+        alias typeof(R.init[0]) ElementEncodingType;
+    else
+        alias ElementType!R ElementEncodingType;
+}
+
+unittest
+{
+    enum XYZ : string { a = "foo" };
+    auto x = front(XYZ.a);
+    static assert(is(ElementType!(XYZ) : dchar));
+    immutable char[3] a = "abc";
+    static assert(is(ElementType!(typeof(a)) : dchar));
+    int[] i;
+    static assert(is(ElementType!(typeof(i)) : int));
+    void[] buf;
+    static assert(is(ElementType!(typeof(buf)) : void));
+}
+
+/**
 Returns $(D true) if $(D R) is a forward range and has swappable
 elements. The following code should compile for any random-access
 range.
@@ -2122,11 +2150,6 @@ if(isInputRange!(Unqual!Range) &&
 public:
     alias R Source;
 
-    static if (byRef)
-        alias ref .ElementType!(R) ElementType;
-    else
-        alias .ElementType!(R) ElementType;
-
     @property bool empty()
     {
         return _maxAvailable == 0 || original.empty;
@@ -2156,7 +2179,7 @@ public:
     }
 
     static if (hasAssignableElements!R)
-        @property auto front(ElementType v)
+        @property auto front(ElementType!R v)
         {
             // This has to return auto instead of void because of Bug 4706.
             original.front = v;
@@ -2164,7 +2187,7 @@ public:
 
     static if(hasMobileElements!R)
     {
-        ElementType moveFront()
+        auto moveFront()
         {
             return .moveFront(original);
         }
@@ -2210,13 +2233,13 @@ public:
 
         static if(hasAssignableElements!R)
         {
-            auto back(ElementType v)
+            auto back(ElementType!R v)
             {
                 // This has to return auto instead of void because of Bug 4706.
                 original[this.length - 1] = v;
             }
 
-            void opIndexAssign(ElementType v, size_t index)
+            void opIndexAssign(ElementType!R v, size_t index)
             {
                 original[index] = v;
             }
@@ -2224,12 +2247,12 @@ public:
 
         static if(hasMobileElements!R)
         {
-            ElementType moveBack()
+            auto moveBack()
             {
                 return .moveAt(original, this.length - 1);
             }
 
-            ElementType moveAt(size_t index)
+            auto moveAt(size_t index)
             {
                 assert(index < this.length,
                     "Attempting to index out of the bounds of a "
@@ -2435,9 +2458,9 @@ struct Repeat(T)
 {
     private T _value;
     /// Range primitive implementations.
-    @property ref T front() { return _value; }
+    @property T front() { return _value; }
     /// Ditto
-    @property ref T back() { return _value; }
+    @property T back() { return _value; }
     /// Ditto
     enum bool empty = false;
     /// Ditto
@@ -2445,9 +2468,9 @@ struct Repeat(T)
     /// Ditto
     void popBack() {}
     /// Ditto
-    @property Repeat!(T) save() { return this; }
+    @property Repeat!T save() { return this; }
     /// Ditto
-    ref T opIndex(size_t) { return _value; }
+    T opIndex(size_t) { return _value; }
 }
 
 /// Ditto
