@@ -28,12 +28,12 @@ module std.string;
 
 private import core.exception : onRangeError;
 import core.vararg, core.stdc.stdio, core.stdc.stdlib,
-    core.stdc.string, std.algorithm, std.array,
+    core.stdc.string, std.algorithm,
     std.conv, std.ctype, std.encoding, std.exception, std.format,
     std.functional, std.metastrings, std.range, std.regex, std.stdio,
     std.traits, std.typetuple, std.uni, std.utf;
-
 public import std.algorithm : startsWith, endsWith;
+public import std.array : join, split;
 
 version(Windows) extern (C)
     {
@@ -1117,16 +1117,6 @@ unittest
     }
 }
 
-/**
- * Alias for std.array.join
- */
-alias std.array.join join;
-
-/**
- * Alias for std.array.split
- */
-alias std.array.split split;
-
 /**************************************
  * Split s[] into an array of lines,
  * using CR, LF, or CR-LF as the delimiter.
@@ -1229,50 +1219,6 @@ unittest
     assert(strip("1") == "1");
 }
 
-/+
- * Returns $(D_PARAM true) if and only if the array $(D_PARAM longer)
- * starts with array $(D_PARAM shorter).
- */
-bool startsWith(A1, A2)(A1 longer, A2 shorter)
-{
-    static if (isSomeString!(A1) && isSomeString!(A2))
-    {
-        // UTF-informed comparison
-        // find the largest character of the two
-        static if (longer[0].sizeof > shorter[0].sizeof)
-        {
-            alias typeof(longer[0]) Char;
-            foreach (Char c; shorter)
-            {
-                if (longer.empty || longer.front != c) return false;
-                longer.popFront;
-            }
-            return true;
-        }
-        else static if (longer[0].sizeof < shorter[0].sizeof)
-        {
-            alias typeof(shorter[0]) Char;
-            foreach (Char c; longer)
-            {
-                if (shorter.empty) return true;
-                if (shorter.front != c) return false;
-                shorter.popFront;
-            }
-            return shorter.empty;
-        }
-        else
-        {
-            return longer.length >= shorter.length
-                && longer[0 .. shorter.length] == shorter;
-        }
-    }
-    else
-    {
-        // raw element-by-element comparison
-        return std.algorithm.startsWith(longer, shorter) == 1;
-    }
-}+/
-
 // Too slow for release mode
 debug unittest
 {
@@ -1309,52 +1255,6 @@ debug unittest
         }
     }
 }
-
-/+
- * Returns $(D_PARAM true) if and only if the array $(D_PARAM longer)
- * ends with array $(D_PARAM shorter).
- */
-bool endsWith(A1, A2)(A1 longer, A2 shorter)
-{
-    // different element types, etc.
-    static if (isSomeString!(A1) && isSomeString!(A2))
-    {
-        // UTF-informed comparison
-        // find the largest character of the two
-        static if (longer[0].sizeof > shorter[0].sizeof)
-        {
-            alias typeof(longer[0]) Char;
-            foreach_reverse (Char c; shorter)
-            {
-                if (longer.empty) return false;
-                if (longer.back != c) return false;
-                longer.popBack;
-            }
-            return true;
-        }
-        else static if (longer[0].sizeof < shorter[0].sizeof)
-        {
-            alias typeof(shorter[0]) Char;
-            foreach_reverse (Char c; longer)
-            {
-                if (shorter.empty) return true;
-                if (shorter.back != c) return false;
-                shorter.popBack;
-            }
-            return shorter.empty;
-        }
-        else
-        {
-            return longer.length >= shorter.length
-                && longer[$ - shorter.length .. $] == shorter;
-        }
-    }
-    else
-    {
-        //assert(0);
-        return std.algorithm.endsWith(longer, shorter) == 1;
-    }
-}+/
 
 // Too slow for release mode
 debug unittest
@@ -1613,107 +1513,9 @@ S zfill(S)(S s, int width) if (isSomeString!S)
     return cast(S) r;
 }
 
-/********************************************
- * Replace occurrences of from[] with to[] in s[].
- */
-
-C1[] replace(C1, C2, C3)(C1[] s, C2[] from, C3[] to)
-if (isSomeChar!C1 && isSomeChar!C2 && isSomeChar!C3)
-{
-    if (from.length == 0) return s;
-
-    typeof(s.dup) p;
-    for (size_t istart; istart < s.length; )
-    {
-        immutable i = indexOf(s[istart .. s.length], from);
-        if (i == -1)
-        {
-            if (istart == 0)
-            {
-                // Never found, so just return s
-                return s;
-            }
-            p ~= s[istart .. s.length];
-            break;
-        }
-        p ~= s[istart .. istart + i];
-        p ~= to;
-        istart += i + from.length;
-    }
-    return cast(C1[]) p;
-}
-
-unittest
-{
-    debug(string) printf("string.replace.unittest\n");
-
-    alias TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[])
-        TestTypes;
-
-    foreach (S; TestTypes)
-    {
-        auto s = to!S("This is a foo foo list");
-        auto from = to!S("foo");
-        auto into = to!S("silly");
-        S r;
-        int i;
-        
-        r = replace(s, from, into);
-        i = cmp(r, "This is a silly silly list");
-        assert(i == 0);
-        
-        r = replace(s, to!S(""), into);
-        i = cmp(r, "This is a foo foo list");
-        assert(i == 0);
-
-        assert(replace(r, to!S("won't find this"), to!S("whatever")) is r);
-    }
-}
-
-/*****************************
- * Return a _string that is s[] with slice[] replaced by replacement[].
- */
-
-S replaceSlice(S)(S s, in S slice, in S replacement)
-in
-{
-    // Verify that slice[] really is a slice of s[]
-    ptrdiff_t so = cast(char*)slice.ptr - cast(char*)s.ptr;
-    assert(so >= 0);
-    //printf("s.length = %d, so = %d, slice.length = %d\n", s.length,
-    //so, slice.length);
-    assert(s.length >= so + slice.length);
-}
-body
-{
-    Unqual!(typeof(s[0]))[] result;
-    ptrdiff_t so = cast(char*)slice - cast(char*)s;
-
-    result.length = s.length - slice.length + replacement.length;
-
-    result[0 .. so] = s[0 .. so];
-    result[so .. so + replacement.length] = replacement;
-    result[so + replacement.length .. result.length] =
-        s[so + slice.length .. s.length];
-    
-    return cast(S) result;
-}
-
-unittest
-{
-    debug(string) printf("string.replaceSlice.unittest\n");
-
-    string s = "hello";
-    string slice = s[2 .. 4];
-
-    auto r = replaceSlice(s, slice, "bar");
-    int i;
-    i = cmp(r, "hebaro");
-    assert(i == 0);
-}
-
 /**********************************************
- * Insert sub[] into s[] at location index.
+ * Insert sub[] into s[] at location index. Scheduled for deprecation
+ * - use $(XREF array, _insert) instead.
  */
 
 S insert(S)(S s, size_t index, S sub)
@@ -1723,19 +1525,8 @@ in
 }
 body
 {
-    if (sub.length == 0)
-        return s;
-
-    if (s.length == 0)
-        return sub;
-
-    auto newlength = s.length + sub.length;
-    auto result = new Unqual!(typeof(s[0]))[newlength];
-
-    result[0 .. index] = s[0 .. index];
-    result[index .. index + sub.length] = sub;
-    result[index + sub.length .. newlength] = s[index .. s.length];
-    return cast(S) result;
+    std.array.insert(s, index, sub);
+    return s;
 }
 
 unittest
@@ -1783,7 +1574,6 @@ unittest
     i = count(s, sub);
     assert(i == 2);
 }
-
 
 /************************************************
  * Replace tabs with the appropriate number of spaces.

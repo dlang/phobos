@@ -16,7 +16,7 @@ module std.dateparse;
 
 private
 {
-    import std.string;
+    import std.algorithm, std.string;
     import std.c.stdlib;
     import std.date;
 }
@@ -401,7 +401,7 @@ private:
         // one.
         for (uint i = 0; i < dateidtab.length; i++)
         {
-            if (std.string.cmp(dateidtab[i].name, buf) == 0)
+            if (cmp(dateidtab[i].name, buf) == 0)
             {
                 number = dateidtab[i].value;
                 return dateidtab[i].tok;

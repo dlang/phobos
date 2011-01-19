@@ -130,6 +130,7 @@ private
     import core.stdc.stdio;
     import core.stdc.stdlib;
     import core.stdc.string;
+    import std.array;
     import std.stdio;
     import std.string;
     import std.ctype;
@@ -265,7 +266,7 @@ string sub(string s, string pattern, string delegate(RegExp) dg, string attribut
                         pattern.length,     pattern.ptr,
                         slice.length,       slice.ptr,
                         replacement.length, replacement.ptr);
-            result = std.string.replace(result,slice,replacement);
+            result = replace(result,slice,replacement);
             break;
         }
 
@@ -1150,7 +1151,7 @@ private:
 
             string replacement = replace(format);
 
-            // Optimize by using std.string.replace if possible - Dave Fladebo
+            // Optimize by using replace if possible - Dave Fladebo
             string slice = result[offset + so .. offset + eo];
             if (attributes & REA.global &&      // global, so replace all
                     !(attributes & REA.ignoreCase) &&   // not ignoring case
@@ -1164,7 +1165,7 @@ private:
                     printf("pattern: %.*s, slice: %.*s, format: %.*s, replacement: %.*s\n",
                             pattern.length, pattern.ptr, sss.length, sss.ptr, format.length, format.ptr, replacement.length, replacement.ptr);
                 }
-                result = std.string.replace(result,slice,replacement);
+                result = std.array.replace(result,slice,replacement);
                 break;
             }
 

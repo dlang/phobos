@@ -474,7 +474,7 @@ unittest
 Inserts $(D stuff) in $(D container) at position $(D pos).
  */
 void insert(T, Range)(ref T[] array, size_t pos, Range stuff)
-if (isInputRange!Range && is(ElementType!Range : T))
+if (isInputRange!Range && is(ElementEncodingType!Range : T))
 {
     static if (hasLength!Range)
     {
@@ -852,6 +852,96 @@ unittest
     assert(a == [1, 3, 4, 5]);
     replace(a, 1u, 2u, null);
     assert(a == [1, 4, 5]);
+}
+
+/********************************************
+ * Replace occurrences of from[] with to[] in s[].
+ */
+C1[] replace(C1, C2, C3)(C1[] s, C2[] from, C3[] to)
+//if (is(typeof(s[0] == from[0])) && is(typeof(to[0]) : C1))
+{
+    if (from.length == 0) return s;
+    typeof(s.dup) p;
+
+    for (;;)
+    {
+        auto s1 = std.algorithm.find(s, from);
+        if (!s1.length)
+        {
+            if (p is null) return s;
+            p ~= s;
+            break;
+        }
+        p ~= s[0 .. s.length - s1.length];
+        p ~= to;
+        s = s1[from.length .. $];
+    }
+
+    return cast(C1[]) p;
+}
+
+unittest
+{
+    debug(string) printf("string.replace.unittest\n");
+
+    alias TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[])
+        TestTypes;
+
+    foreach (S; TestTypes)
+    {
+        auto s = to!S("This is a foo foo list");
+        auto from = to!S("foo");
+        auto into = to!S("silly");
+        S r;
+        int i;
+        
+        r = replace(s, from, into);
+        i = cmp(r, "This is a silly silly list");
+        assert(i == 0);
+        
+        r = replace(s, to!S(""), into);
+        i = cmp(r, "This is a foo foo list");
+        assert(i == 0);
+
+        assert(replace(r, to!S("won't find this"), to!S("whatever")) is r);
+    }
+}
+
+/*****************************
+ * Return an array that is $(D s[]) with $(D slice[]) replaced by $(D
+ * replacement[]).
+ */
+
+T[] replaceSlice(T)(T[] s, in T[] slice, in T[] replacement)
+in
+{
+    // Verify that slice[] really is a slice of s[]
+    assert(overlap(s, slice) is slice);
+}
+body
+{
+    auto result = new Unqual!(typeof(s[0]))[
+        s.length - slice.length + replacement.length];
+    immutable so = slice.ptr - s.ptr;
+    result[0 .. so] = s[0 .. so];
+    result[so .. so + replacement.length] = replacement;
+    result[so + replacement.length .. result.length] =
+        s[so + slice.length .. s.length];
+    
+    return cast(T[]) result;
+}
+
+unittest
+{
+    debug(std_array) printf("array.replaceSlice.unittest\n");
+
+    string s = "hello";
+    string slice = s[2 .. 4];
+
+    auto r = replaceSlice(s, slice, "bar");
+    int i;
+    i = cmp(r, "hebaro");
+    assert(i == 0);
 }
 
 /**
