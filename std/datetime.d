@@ -76,7 +76,7 @@ auto restoredTime = SysTime.fromISOExtendedString(timeString);
 
     See_Also:
         <a href="http://en.wikipedia.org/wiki/ISO_8601">ISO 8601</a>
-        <a href="http://en.wikipedia.org/wiki/Tz_database">Wikipedia entry on TZ database</a>
+        <a href="http://en.wikipedia.org/wiki/Tz_database">Wikipedia entry on TZ Database</a>
         <a href="http://en.wikipedia.org/wiki/List_of_tz_database_time_zones">List of Time Zones</a>
 
     Copyright: Copyright 2010
@@ -131,7 +131,6 @@ import std.stdio;
 }
 
 alias std.string.indexOf indexOf;
-
 
 //Note: There various functions which void as their return type and ref of the
 //      struct type which they're in as a commented out return type. Ideally,
@@ -10046,7 +10045,7 @@ private:
     TimeZone, and the local time zone will be used).
 
     If you care about using time zones other than local time or UTC, you can use
-    PosixTimeZone on Posix systems (or on Windows, if you provide the TZ database
+    PosixTimeZone on Posix systems (or on Windows, if you provide the TZ Database
     files), and you can use WindowsTimeZone on Windows systems. The time in SysTime
     is kept internally in hnsecs from midnight, January 1st, 1 A.D. UTC. So, you
     never get conversion errors when changing the time zone of a SysTime (since,
@@ -27476,11 +27475,11 @@ abstract class TimeZone
 public:
 
     /++
-        The name of the time zone per the TZ database. This is the name used to
+        The name of the time zone per the TZ Database. This is the name used to
         get a TimeZone by name with TimeZone.getTimeZone().
 
         See_Also:
-            <a href="http://en.wikipedia.org/wiki/Tz_database">Wikipedia entry on TZ database</a>
+            <a href="http://en.wikipedia.org/wiki/Tz_database">Wikipedia entry on TZ Database</a>
             <a href="http://en.wikipedia.org/wiki/List_of_tz_database_time_zones">List of Time Zones</a>
       +/
     @property string name() const nothrow
@@ -27558,19 +27557,25 @@ public:
 
 
     /++
-        Returns a TimeZone with the give name per the TZ database.
+        Returns a TimeZone with the give name per the TZ Database.
 
         This returns a PosixTimeZone on Posix systems and a WindowsTimeZone on
         Windows systems. If you want a PosixTimeZone on Windows, then call
         $(D PosixTimeZone.getTimeZone()) directly and give it the location of
-        the TZ database time zone files on disk.
+        the TZ Database time zone files on disk.
+
+        On Windows, the given TZ Database name is converted to the corresponding time
+        zone name on Windows prior to calling WindowsTimeZone.getTimeZone(). So, this
+        function allows you to use the same time zone names on both Windows and
+        Posix systems.
 
         See_Also:
-            <a href="http://en.wikipedia.org/wiki/Tz_database">Wikipedia entry on TZ database</a>
+            <a href="http://en.wikipedia.org/wiki/Tz_database">Wikipedia entry on TZ Database</a>
             <a href="http://en.wikipedia.org/wiki/List_of_tz_database_time_zones">List of Time Zones</a>
+            <a href="http://unicode.org/repos/cldr-tmp/trunk/diff/supplemental/zone_tzid.html">Windows <-> TZ Database Name Conversion Table</a>
 
         Params:
-            name = The TZ database name of the time zone that you're looking for.
+            name = The TZ Database name of the time zone that you're looking for.
 
         Throws:
             DateTimeException if the given time zone could not be found.
@@ -27585,7 +27590,7 @@ auto tz = TimeZone.getTimeZone("America/Los_Angeles");
         version(Posix)
             return PosixTimeZone.getTimeZone(name);
         else version(Windows)
-            return WindowsTimeZone.getTimeZone(name);
+            return WindowsTimeZone.getTimeZone(tzDatabaseNameToWindowsTZName(name));
     }
 
     unittest
@@ -27606,6 +27611,11 @@ auto tz = TimeZone.getTimeZone("America/Los_Angeles");
         if you pass in "America" as the sub-name, then only the time zones which
         begin with "America" will be returned.
 
+        On Windows, this function will convert the Windows time zone names to
+        the corresponding TZ Database names with windowsTZNameToTZDatabaseName().
+        If you want the actual Windows time zone names, use
+        WindowsTimeZone.getInstalledTZNames() directly.
+
         Params:
             subname = The first part of the time zones that you want.
 
@@ -27618,7 +27628,40 @@ auto tz = TimeZone.getTimeZone("America/Los_Angeles");
         version(Posix)
             return PosixTimeZone.getInstalledTZNames(subname);
         else version(Windows)
-            return WindowsTimeZone.getInstalledTZNames(subname);
+        {
+            auto windowsNames = WindowsTimeZone.getInstalledTZNames();
+            auto retval = appender!(string[])();
+
+            foreach(winName; windowsNames)
+            {
+                auto tzName = windowsTZNameToTZDatabaseName(winName);
+
+                if(tzName.startsWith(subname))
+                    retval.put(tzName);
+            }
+
+            sort(retval.data);
+
+            return retval.data;
+        }
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            static void testPZSuccess(string tzName)
+            {
+                scope(failure) writefln("TZName which threw: %s", tzName);
+
+                TimeZone.getTimeZone(tzName);
+            }
+
+            auto tzNames = getInstalledTZNames();
+
+            foreach(tzName; tzNames)
+                assertNotThrown!DateTimeException(testPZSuccess(tzName));
+        }
     }
 
 
@@ -27626,7 +27669,7 @@ private:
 
     /++
         Params:
-            name    = The TZ database name for the time zone.
+            name    = The TZ Database name for the time zone.
             stdName = The abbreviation for the time zone during std time.
             dstName = The abbreviation for the time zone during DST.
       +/
@@ -27682,17 +27725,17 @@ public:
     version(D_Ddoc)
     {
     /++
-        The name of the time zone per the TZ database. This is the name used to
+        The name of the time zone per the TZ Database. This is the name used to
         get a TimeZone by name with $(D TimeZone.getTimeZone()).
 
         Note that this always returns the empty string. This is because time
         zones cannot be uniquely identified by the attributes given by the OS
         (such as the stdName and dstName), and neither Posix systems nor
-        Windows systems provide an easy way to get the TZ database name of
+        Windows systems provide an easy way to get the TZ Database name of
         the local time zone.
 
         See_Also:
-            <a href="http://en.wikipedia.org/wiki/Tz_database">Wikipedia entry on TZ database</a>
+            <a href="http://en.wikipedia.org/wiki/Tz_database">Wikipedia entry on TZ Database</a>
             <a href="http://en.wikipedia.org/wiki/List_of_tz_database_time_zones">List of Time Zones</a>
       +/
     @property override string name() const nothrow
@@ -28242,8 +28285,8 @@ private:
 
     $(D name) and $(D dstName) are always the empty string since this time zone
     has no DST and while it may be meant to represent a time zone which is in
-    the TZ database, obviously it's not likely to be following the exact rules
-    of any of the time zones in the TZ database, so it makes no sense to set it.
+    the TZ Database, obviously it's not likely to be following the exact rules
+    of any of the time zones in the TZ Database, so it makes no sense to set it.
   +/
 final class SimpleTimeZone : TimeZone
 {
@@ -28565,24 +28608,24 @@ private:
 
 
 /++
-    Represents a time zone from a TZ database time zone file. Files from the TZ
+    Represents a time zone from a TZ Database time zone file. Files from the TZ
     database are how Posix systems hold their time zone information. Unfortunately,
-    Windows does not use the TZ database, though it does name its time zones
-    using the TZ database names. You can, however, use PosixTimeZone (which reads
-    its information from the TZ database files on disk) on Windows if you provide
-    the TZ database files
-    ( <a href="ftp://elsie.nci.nih.gov/pub/">Repository with the TZ database files (tzdata)</a> )
+    Windows does not use the TZ Database, though it does name its time zones
+    using the TZ Database names. You can, however, use PosixTimeZone (which reads
+    its information from the TZ Database files on disk) on Windows if you provide
+    the TZ Database files
+    ( <a href="ftp://elsie.nci.nih.gov/pub/">Repository with the TZ Database files (tzdata)</a> )
     yourself and tell $(D PosixTimeZone.getTimeZone()) where the directory holding
     them is.
 
-    TZ database files hold DST transitions for a large interval of the time
-    covered by time_t. So, barring errors in the information in the TZ database
+    TZ Database files hold DST transitions for a large interval of the time
+    covered by time_t. So, barring errors in the information in the TZ Database
     files, it will use the correct DST rules for any date. Windows, on the other
     hand, maintains only the current DST rules, so historical dates will use the
     current DST rules (and therefore potentially be incorrect). So, if you want
     the DST rules that you use to be more accurate, or if you're looking for your
     program to act consistently on both Posix and Windows systems, then, as
-    mentioned above, you'll need to include the TZ database files with your program
+    mentioned above, you'll need to include the TZ Database files with your program
     and give $(D PosixTimeZone.getTimeZone()) the directory on disk where they
     are located.
 
@@ -28601,7 +28644,7 @@ private:
         *not* take leap seconds into account even though they're in the file).
 
     See_Also:
-        <a href="http://en.wikipedia.org/wiki/Tz_database">Wikipedia entry on TZ database</a>
+        <a href="http://en.wikipedia.org/wiki/Tz_database">Wikipedia entry on TZ Database</a>
         <a href="http://en.wikipedia.org/wiki/List_of_tz_database_time_zones">List of Time Zones</a>
   +/
 final class PosixTimeZone : TimeZone
@@ -28730,33 +28773,33 @@ public:
 
 
     version(Posix)
-        /// The default directory where the TZ database files are. It's empty for Windows, since Windows doesn't have them.
+        /// The default directory where the TZ Database files are. It's empty for Windows, since Windows doesn't have them.
         enum defaultTZDatabaseDir = "/usr/share/zoneinfo/";
     else version(Windows)
-        /// The default directory where the TZ database files are. It's empty for Windows, since Windows doesn't have them.
+        /// The default directory where the TZ Database files are. It's empty for Windows, since Windows doesn't have them.
         enum defaultTZDatabaseDir = "";
 
 
     /++
-        Returns a TimeZone with the give name per the TZ database. The time zone
-        information is fetched from the TZ database time zone files in the given
+        Returns a TimeZone with the give name per the TZ Database. The time zone
+        information is fetched from the TZ Database time zone files in the given
         directory.
 
         See_Also:
-            <a href="http://en.wikipedia.org/wiki/Tz_database">Wikipedia entry on TZ database</a>
+            <a href="http://en.wikipedia.org/wiki/Tz_database">Wikipedia entry on TZ Database</a>
             <a href="http://en.wikipedia.org/wiki/List_of_tz_database_time_zones">List of Time Zones</a>
 
         Params:
-            name          = The TZ database name of the time zone that you're
+            name          = The TZ Database name of the time zone that you're
                             looking for.
-            tzDatabaseDir = The directory where the TZ database files are located.
+            tzDatabaseDir = The directory where the TZ Database files are located.
                             Because these files are not located on Windows systems,
                             you will need to provide them yourself and give their
                             location here if you wish to use PosixTimeZones.
 
         Throws:
             DateTimeException if the given time zone could not be found or
-            FileException if the TZ database file could not be opened.
+            FileException if the TZ Database file could not be opened.
 
         Examples:
 --------------------
@@ -29740,22 +29783,22 @@ struct REG_TZI_FORMAT
 
 /++
     Represents a time zone from the Windows registry. Unfortunately, Windows
-    does not use the TZ database, though it does name its time zones using the
-    TZ database names. You can, however, use PosixTimeZone (which reads its
-    information from the TZ database files on disk) on Windows if you provide
-    the TZ database files
-    ( <a href="ftp://elsie.nci.nih.gov/pub/">Repository with the TZ database files (tzdata)</a> )
+    does not use the TZ Database, though it does name its time zones using the
+    TZ Database names. You can, however, use PosixTimeZone (which reads its
+    information from the TZ Database files on disk) on Windows if you provide
+    the TZ Database files
+    ( <a href="ftp://elsie.nci.nih.gov/pub/">Repository with the TZ Database files (tzdata)</a> )
     yourself and tell $(D PosixTimeZone.getTimeZone()) where the directory
     holding them is.
 
-    TZ database files hold DST transitions for a large interval of the time
-    covered by time_t. So, barring errors in the information in the TZ database
+    TZ Database files hold DST transitions for a large interval of the time
+    covered by time_t. So, barring errors in the information in the TZ Database
     files, it will use the correct DST rules for any date. Windows, on the other
     hand, maintains only the current DST rules, so historical dates will use
     the current DST rules (and therefore potentially be incorrect). So, if you
     want the DST rules that you use to be more accurate, or if you're looking for
     your program to act consistently on both Posix and Windows systems, then, as
-    mentioned above, you'll need to include the TZ database files with your
+    mentioned above, you'll need to include the TZ Database files with your
     program and give $(D PosixTimeZone.getTimeZone()) the directory on disk
     where they are located.
 
@@ -29828,22 +29871,25 @@ public:
 
 
     /++
-        Returns a TimeZone with the give name per the TZ database. The time zone
-        information is fetched from the Windows registry.
+        Returns a TimeZone with the given time zone name which follews Windows' time zone naming
+        conventions. The time zone information is fetched from the Windows registry.
+
+        If you want to use the TZ Database name, then either use tzDatabaseNameToWindowsTZName() to
+        convert the name or use TimeZone.getTimeZone(), which will call this function with the
+        converted time zone name.
 
         See_Also:
-            <a href="http://en.wikipedia.org/wiki/Tz_database">Wikipedia entry on TZ database</a>
-            <a href="http://en.wikipedia.org/wiki/List_of_tz_database_time_zones">List of Time Zones</a>
+            <a href="http://unicode.org/repos/cldr-tmp/trunk/diff/supplemental/zone_tzid.html">Windows <-> TZ Database Name Conversion Table</a>
 
         Params:
-            name = The TZ database name of the time zone that you're looking for.
+            name = The Windows time zone name of the time zone that you're looking for.
 
         Throws:
             DateTimeException if the given time zone could not be found.
 
         Examples:
 --------------------
-auto tz = TimeZone.getTimeZone("America/Los_Angeles");
+auto tz = TimeZone.getTimeZone("Pacific Standard Time");
 --------------------
       +/
     static immutable(WindowsTimeZone) getTimeZone(string name)
@@ -29881,63 +29927,58 @@ auto tz = TimeZone.getTimeZone("America/Los_Angeles");
                         return RegQueryValueExA(tzKey, name.ptr, null, null, cast(ubyte*)strVal.ptr, &strValLen) == ERROR_SUCCESS;
                     }
 
-                    if(queryStringValue("Display\0"))
+                    if(to!string(keyName.ptr) == name)
                     {
-                        auto displayName = to!string(strVal.ptr);
-
-                        if(displayName == name)
+                        if(queryStringValue("Std\0"))
                         {
-                            if(queryStringValue("Std\0"))
+                            //Cannot use to!wstring(char*), probably due to bug http://d.puremagic.com/issues/show_bug.cgi?id=5016
+                            static wstring conv(char* cstr, size_t strValLen)
                             {
-                                //Cannot use to!wstring(char*), probably due to bug http://d.puremagic.com/issues/show_bug.cgi?id=5016
-                                static wstring conv(char* cstr, size_t strValLen)
+                                cstr[strValLen - 1] = '\0';
+
+                                string retval;
+
+                                for(;; ++cstr)
                                 {
-                                    cstr[strValLen - 1] = '\0';
+                                    if(*cstr == '\0')
+                                        break;
 
-                                    string retval;
-
-                                    for(;; ++cstr)
-                                    {
-                                        if(*cstr == '\0')
-                                            break;
-
-                                        retval ~= *cstr;
-                                    }
-
-                                    return to!wstring(retval);
+                                    retval ~= *cstr;
                                 }
 
-                                //auto stdName = to!wstring(strVal.ptr);
-                                auto stdName = conv(strVal.ptr, strValLen);
+                                return to!wstring(retval);
+                            }
 
-                                if(queryStringValue("Dlt\0"))
+                            //auto stdName = to!wstring(strVal.ptr);
+                            auto stdName = conv(strVal.ptr, strValLen);
+
+                            if(queryStringValue("Dlt\0"))
+                            {
+                                //auto dstName = to!wstring(strVal.ptr);
+                                auto dstName = conv(strVal.ptr, strValLen);
+
+                                enum tzi = "TZI\0";
+                                REG_TZI_FORMAT binVal;
+                                auto binValLen = REG_TZI_FORMAT.sizeof;
+
+                                if(RegQueryValueExA(tzKey, tzi.ptr, null, null, cast(ubyte*)&binVal, &binValLen) == ERROR_SUCCESS)
                                 {
-                                    //auto dstName = to!wstring(strVal.ptr);
-                                    auto dstName = conv(strVal.ptr, strValLen);
+                                    TIME_ZONE_INFORMATION tzInfo;
 
-                                    enum tzi = "TZI\0";
-                                    REG_TZI_FORMAT binVal;
-                                    auto binValLen = REG_TZI_FORMAT.sizeof;
+                                    auto stdNameLen = stdName.length > 32 ? 32 : stdName.length;
+                                    auto dstNameLen = dstName.length > 32 ? 32 : dstName.length;
 
-                                    if(RegQueryValueExA(tzKey, tzi.ptr, null, null, cast(ubyte*)&binVal, &binValLen) == ERROR_SUCCESS)
-                                    {
-                                        TIME_ZONE_INFORMATION tzInfo;
+                                    tzInfo.Bias = binVal.Bias;
+                                    tzInfo.StandardName[0 .. stdNameLen] = stdName[0 .. stdNameLen];
+                                    tzInfo.StandardName[stdNameLen .. $] = '\0';
+                                    tzInfo.StandardDate = binVal.StandardDate;
+                                    tzInfo.StandardBias = binVal.StandardBias;
+                                    tzInfo.DaylightName[0 .. dstNameLen] = dstName[0 .. dstNameLen];
+                                    tzInfo.DaylightName[dstNameLen .. $] = '\0';
+                                    tzInfo.DaylightDate = binVal.DaylightDate;
+                                    tzInfo.DaylightBias = binVal.DaylightBias;
 
-                                        auto stdNameLen = stdName.length > 32 ? 32 : stdName.length;
-                                        auto dstNameLen = dstName.length > 32 ? 32 : dstName.length;
-
-                                        tzInfo.Bias = binVal.Bias;
-                                        tzInfo.StandardName[0 .. stdNameLen] = stdName[0 .. stdNameLen];
-                                        tzInfo.StandardName[stdNameLen .. $] = '\0';
-                                        tzInfo.StandardDate = binVal.StandardDate;
-                                        tzInfo.StandardBias = binVal.StandardBias;
-                                        tzInfo.DaylightName[0 .. dstNameLen] = dstName[0 .. dstNameLen];
-                                        tzInfo.DaylightName[dstNameLen .. $] = '\0';
-                                        tzInfo.DaylightDate = binVal.DaylightDate;
-                                        tzInfo.DaylightBias = binVal.DaylightBias;
-
-                                        return new WindowsTimeZone(name, tzInfo);
-                                    }
+                                    return new WindowsTimeZone(name, tzInfo);
                                 }
                             }
                         }
@@ -29954,7 +29995,7 @@ auto tz = TimeZone.getTimeZone("America/Los_Angeles");
         version(testStdDateTime)
         {
             //Verify Example.
-            auto tz = TimeZone.getTimeZone("America/Los_Angeles");
+            auto tz = WindowsTimeZone.getTimeZone("Pacific Standard Time");
         }
     }
 
@@ -29962,22 +30003,17 @@ auto tz = TimeZone.getTimeZone("America/Los_Angeles");
     /++
         Returns a list of the names of the time zones installed on the system.
 
-        You can provide a sub-name to narrow down the list of time zones (which
-        will likely be in the thousands if you get them all). For example,
-        if you pass in "America" as the sub-name, then only the time zones which
-        begin with "America" will be returned.
-
         Params:
             subname = The first part of the time zones that you want.
 
         Throws:
             DateTimeException if it fails to read the registry.
       +/
-    static string[] getInstalledTZNames(string subname = "")
+    static string[] getInstalledTZNames()
     {
         auto timezones = appender!(string[])();
 
-        auto keyStr = "Software\\Microsoft\\Windows NT\\CurrentVersion\\Time Zones\0";
+        auto keyStr = "Software\\Microsoft\\Windows NT\\CurrentVersion\\Time Zones";
         HKEY baseKey;
 
         {
@@ -29995,30 +30031,7 @@ auto tz = TimeZone.getTimeZone("America/Los_Angeles");
             ++index, nameLen = keyName.length)
         {
             if(result == ERROR_SUCCESS)
-            {
-                HKEY tzKey;
-                if(RegOpenKeyExA(baseKey, keyName.ptr, 0, KEY_READ, &tzKey) == ERROR_SUCCESS)
-                {
-                    scope(exit) RegCloseKey(tzKey);
-                    char[1024] strVal;
-                    auto strValLen = strVal.length;
-
-                    bool queryStringValue(string name, size_t lineNum = __LINE__)
-                    {
-                        strValLen = strVal.length;
-
-                        return RegQueryValueExA(tzKey, name.ptr, null, null, cast(ubyte*)strVal.ptr, &strValLen) == ERROR_SUCCESS;
-                    }
-
-                    if(queryStringValue("Display\0"))
-                    {
-                        auto displayName = to!string(strVal.ptr);
-
-                        if(displayName.startsWith(subname))
-                            timezones.put(displayName);
-                    }
-                }
-            }
+                timezones.put(to!string(keyName.ptr));
         }
 
         sort(timezones.data);
@@ -30030,7 +30043,17 @@ auto tz = TimeZone.getTimeZone("America/Los_Angeles");
     {
         version(testStdDateTime)
         {
-            WindowsTimeZone.getInstalledTZNames();
+            static void testWTZSuccess(string tzName)
+            {
+                scope(failure) writefln("TZName which threw: %s", tzName);
+
+                WindowsTimeZone.getTimeZone(tzName);
+            }
+
+            auto tzNames = getInstalledTZNames();
+
+            foreach(tzName; tzNames)
+                assertNotThrown!DateTimeException(testWTZSuccess(tzName));
         }
     }
 
@@ -30230,22 +30253,22 @@ else version(D_Ddoc)
 
 /++
     Represents a time zone from the Windows registry. Unfortunately, Windows
-    does not use the TZ database, though it does name its time zones using the
-    TZ database names. You can, however, use PosixTimeZone (which reads its
-    information from the TZ database files on disk) on Windows if you provide
-    the TZ database files
-    ( <a href="ftp://elsie.nci.nih.gov/pub/">Repository with the TZ database files (tzdata)</a> )
+    does not use the TZ Database, though it does name its time zones using the
+    TZ Database names. You can, however, use PosixTimeZone (which reads its
+    information from the TZ Database files on disk) on Windows if you provide
+    the TZ Database files
+    ( <a href="ftp://elsie.nci.nih.gov/pub/">Repository with the TZ Database files (tzdata)</a> )
     yourself and tell $(D PosixTimeZone.getTimeZone()) where the directory
     holding them is.
 
-    TZ database files hold DST transitions for a large interval of the time
-    covered by time_t. So, barring errors in the information in the TZ database
+    TZ Database files hold DST transitions for a large interval of the time
+    covered by time_t. So, barring errors in the information in the TZ Database
     files, it will use the correct DST rules for any date. Windows, on the other
     hand, maintains only the current DST rules, so historical dates will use
     the current DST rules (and therefore potentially be incorrect). So, if you
     want the DST rules that you use to be more accurate, or if you're looking for
     your program to act consistently on both Posix and Windows systems, then, as
-    mentioned above, you'll need to include the TZ database files with your
+    mentioned above, you'll need to include the TZ Database files with your
     program and give $(D PosixTimeZone.getTimeZone()) the directory on disk
     where they are located.
 
@@ -30318,15 +30341,15 @@ public:
 
 
     /++
-        Returns a TimeZone with the give name per the TZ database. The time zone
+        Returns a TimeZone with the give name per the TZ Database. The time zone
         information is fetched from the Windows registry.
 
         See_Also:
-            <a href="http://en.wikipedia.org/wiki/Tz_database">Wikipedia entry on TZ database</a>
+            <a href="http://en.wikipedia.org/wiki/Tz_database">Wikipedia entry on TZ Database</a>
             <a href="http://en.wikipedia.org/wiki/List_of_tz_database_time_zones">List of Time Zones</a>
 
         Params:
-            name = The TZ database name of the time zone that you're looking for.
+            name = The TZ Database name of the time zone that you're looking for.
 
         Throws:
             DateTimeException if the given time zone could not be found.
@@ -30344,16 +30367,8 @@ auto tz = TimeZone.getTimeZone("America/Los_Angeles");
 
     /++
         Returns a list of the names of the time zones installed on the system.
-
-        You can provide a sub-name to narrow down the list of time zones (which
-        will likely be in the thousands if you get them all). For example,
-        if you pass in "America" as the sub-name, then only the time zones which
-        begin with "America" will be returned.
-
-        Params:
-            subname = The first part of the time zones that you want.
       +/
-    static string[] getInstalledTZNames(string subname = "")
+    static string[] getInstalledTZNames()
     {
         assert(0, "No implementation. Function exists only for DDoc generation");
     }
@@ -30435,6 +30450,300 @@ else version(D_Ddoc)
     void clearTZEnvVar()
     {
         assert(0, "No implementation. Function exists only for DDoc generation");
+    }
+}
+
+
+/++
+    Converts the given TZ Database name to the corresponding Windows time zone name.
+
+    Note that in a few cases, a TZ Dabatase name corresponds to two different Windows
+    time zone names. So, while in most cases converting from one to the other and
+    back again will result in the same time zone name that you started with, in a few
+    cases, you will get a different name.
+
+    Also, there are far more TZ Database names than Windows time zones, so some of the
+    more exotic TZ Database names don't have corresponding Windows time zone names.
+
+    See_Also:
+        <a href="http://unicode.org/repos/cldr-tmp/trunk/diff/supplemental/zone_tzid.html">Windows <-> TZ Database Name Conversion Table</a>
+
+    Params:
+        tzName = The TZ Database name to convert.
+
+    Throws:
+        DateTimeException if the given tzName cannot be converted.
+  +/
+string tzDatabaseNameToWindowsTZName(string tzName)
+{
+    switch(tzName)
+    {
+        case "Australia/Darwin": return "AUS Central Standard Time";
+        case "Australia/Sydney": return "AUS Eastern Standard Time";
+        case "Asia/Kabul": return "Afghanistan Standard Time";
+        case "America/Anchorage": return "Alaskan Standard Time";
+        case "Asia/Riyadh": return "Arab Standard Time";
+        case "Asia/Dubai": return "Arabian Standard Time";
+        case "Asia/Baghdad": return "Arabic Standard Time";
+        case "America/Buenos_Aires": return "Argentina Standard Time";
+        case "Asia/Yerevan": return "Armenian Standard Time";
+        case "America/Halifax": return "Atlantic Standard Time";
+        case "Asia/Baku": return "Azerbaijan Standard Time";
+        case "Atlantic/Azores": return "Azores Standard Time";
+        case "Asia/Dhaka": return "Bangladesh Standard Time";
+        case "America/Regina": return "Canada Central Standard Time";
+        case "Atlantic/Cape_Verde": return "Cape Verde Standard Time";
+        //case "Asia/Yerevan": return "Caucasus Standard Time";
+        case "Australia/Adelaide": return "Cen. Australia Standard Time";
+        case "America/Guatemala": return "Central America Standard Time";
+        case "Asia/Almaty": return "Central Asia Standard Time";
+        case "America/Cuiaba": return "Central Brazilian Standard Time";
+        case "Europe/Budapest": return "Central Europe Standard Time";
+        case "Europe/Warsaw": return "Central European Standard Time";
+        case "Pacific/Guadalcanal": return "Central Pacific Standard Time";
+        case "America/Chicago": return "Central Standard Time";
+        case "America/Mexico_City": return "Central Standard Time (Mexico)";
+        case "Asia/Shanghai": return "China Standard Time";
+        case "Etc/GMT+12": return "Dateline Standard Time";
+        case "Africa/Nairobi": return "E. Africa Standard Time";
+        case "Australia/Brisbane": return "E. Australia Standard Time";
+        case "Europe/Minsk": return "E. Europe Standard Time";
+        case "America/Sao_Paulo": return "E. South America Standard Time";
+        case "America/New_York": return "Eastern Standard Time";
+        case "Africa/Cairo": return "Egypt Standard Time";
+        case "Asia/Yekaterinburg": return "Ekaterinburg Standard Time";
+        case "Europe/Kiev": return "FLE Standard Time";
+        case "Pacific/Fiji": return "Fiji Standard Time";
+        case "Europe/London": return "GMT Standard Time";
+        case "Europe/Istanbul": return "GTB Standard Time";
+        case "Asia/Tbilisi": return "Georgian Standard Time";
+        case "America/Godthab": return "Greenland Standard Time";
+        case "Atlantic/Reykjavik": return "Greenwich Standard Time";
+        case "Pacific/Honolulu": return "Hawaiian Standard Time";
+        case "Asia/Calcutta": return "India Standard Time";
+        case "Asia/Tehran": return "Iran Standard Time";
+        case "Asia/Jerusalem": return "Israel Standard Time";
+        case "Asia/Amman": return "Jordan Standard Time";
+        case "Asia/Kamchatka": return "Kamchatka Standard Time";
+        case "Asia/Seoul": return "Korea Standard Time";
+        case "Indian/Mauritius": return "Mauritius Standard Time";
+        //case "America/Mexico_City": return "Mexico Standard Time";
+        case "America/Chihuahua": return "Mexico Standard Time 2";
+        case "Etc/GMT+2": return "Mid-Atlantic Standard Time";
+        case "Asia/Beirut": return "Middle East Standard Time";
+        case "America/Montevideo": return "Montevideo Standard Time";
+        case "Africa/Casablanca": return "Morocco Standard Time";
+        case "America/Denver": return "Mountain Standard Time";
+        //case "America/Chihuahua": return "Mountain Standard Time (Mexico)";
+        case "Asia/Rangoon": return "Myanmar Standard Time";
+        case "Asia/Novosibirsk": return "N. Central Asia Standard Time";
+        case "Africa/Windhoek": return "Namibia Standard Time";
+        case "Asia/Katmandu": return "Nepal Standard Time";
+        case "Pacific/Auckland": return "New Zealand Standard Time";
+        case "America/St_Johns": return "Newfoundland Standard Time";
+        case "Asia/Irkutsk": return "North Asia East Standard Time";
+        case "Asia/Krasnoyarsk": return "North Asia Standard Time";
+        case "America/Santiago": return "Pacific SA Standard Time";
+        case "America/Los_Angeles": return "Pacific Standard Time";
+        case "America/Santa_Isabel": return "Pacific Standard Time (Mexico)";
+        case "Asia/Karachi": return "Pakistan Standard Time";
+        case "America/Asuncion": return "Paraguay Standard Time";
+        case "Europe/Paris": return "Romance Standard Time";
+        case "Europe/Moscow": return "Russian Standard Time";
+        case "America/Cayenne": return "SA Eastern Standard Time";
+        case "America/Bogota": return "SA Pacific Standard Time";
+        case "America/La_Paz": return "SA Western Standard Time";
+        case "Asia/Bangkok": return "SE Asia Standard Time";
+        case "Pacific/Apia": return "Samoa Standard Time";
+        case "Asia/Singapore": return "Singapore Standard Time";
+        case "Africa/Johannesburg": return "South Africa Standard Time";
+        case "Asia/Colombo": return "Sri Lanka Standard Time";
+        case "Asia/Damascus": return "Syria Standard Time";
+        case "Asia/Taipei": return "Taipei Standard Time";
+        case "Australia/Hobart": return "Tasmania Standard Time";
+        case "Asia/Tokyo": return "Tokyo Standard Time";
+        case "Pacific/Tongatapu": return "Tonga Standard Time";
+        case "Etc/GMT+5": return "US Eastern Standard Time";
+        case "America/Phoenix": return "US Mountain Standard Time";
+        case "Etc/GMT": return "UTC";
+        case "Etc/GMT-12": return "UTC+12";
+        //case "Etc/GMT+2": return "UTC-02";
+        case "Etc/GMT+11": return "UTC-11";
+        case "Asia/Ulaanbaatar": return "Ulaanbaatar Standard Time";
+        case "America/Caracas": return "Venezuela Standard Time";
+        case "Asia/Vladivostok": return "Vladivostok Standard Time";
+        case "Australia/Perth": return "W. Australia Standard Time";
+        case "Africa/Lagos": return "W. Central Africa Standard Time";
+        case "Europe/Berlin": return "W. Europe Standard Time";
+        case "Asia/Tashkent": return "West Asia Standard Time";
+        case "Pacific/Port_Moresby": return "West Pacific Standard Time";
+        case "Asia/Yakutsk": return "Yakutsk Standard Time";
+        default:
+            throw new DateTimeException(format("Could not find Windows time zone name for: %s.", tzName));
+    }
+}
+
+unittest
+{
+    version(testStdDateTime)
+    {
+        version(Windows)
+        {
+            static void testTZSuccess(string tzName)
+            {
+                scope(failure) writefln("TZName which threw: %s", tzName);
+
+                tzDatabaseNameToWindowsTZName(tzName);
+            }
+
+            auto timeZones = TimeZone.getInstalledTZNames();
+
+            foreach(tzname; timeZones)
+                assertNotThrown!DateTimeException(testTZSuccess(tzname));
+        }
+    }
+}
+
+
+/++
+    Converts the given Windows time zone name to a corresponding TZ Database name.
+
+    See_Also:
+        <a href="http://unicode.org/repos/cldr-tmp/trunk/diff/supplemental/zone_tzid.html">Windows <-> TZ Database Name Conversion Table</a>
+
+    Params:
+        tzName = The TZ Database name to convert.
+
+    Throws:
+        DateTimeException if the given tzName cannot be converted.
+  +/
+string windowsTZNameToTZDatabaseName(string tzName)
+{
+    switch(tzName)
+    {
+        case "AUS Central Standard Time": return "Australia/Darwin";
+        case "AUS Eastern Standard Time": return "Australia/Sydney";
+        case "Afghanistan Standard Time": return "Asia/Kabul";
+        case "Alaskan Standard Time": return "America/Anchorage";
+        case "Arab Standard Time": return "Asia/Riyadh";
+        case "Arabian Standard Time": return "Asia/Dubai";
+        case "Arabic Standard Time": return "Asia/Baghdad";
+        case "Argentina Standard Time": return "America/Buenos_Aires";
+        case "Armenian Standard Time": return "Asia/Yerevan";
+        case "Atlantic Standard Time": return "America/Halifax";
+        case "Azerbaijan Standard Time": return "Asia/Baku";
+        case "Azores Standard Time": return "Atlantic/Azores";
+        case "Bangladesh Standard Time": return "Asia/Dhaka";
+        case "Canada Central Standard Time": return "America/Regina";
+        case "Cape Verde Standard Time": return "Atlantic/Cape_Verde";
+        case "Caucasus Standard Time": return "Asia/Yerevan";
+        case "Cen. Australia Standard Time": return "Australia/Adelaide";
+        case "Central America Standard Time": return "America/Guatemala";
+        case "Central Asia Standard Time": return "Asia/Almaty";
+        case "Central Brazilian Standard Time": return "America/Cuiaba";
+        case "Central Europe Standard Time": return "Europe/Budapest";
+        case "Central European Standard Time": return "Europe/Warsaw";
+        case "Central Pacific Standard Time": return "Pacific/Guadalcanal";
+        case "Central Standard Time": return "America/Chicago";
+        case "Central Standard Time (Mexico)": return "America/Mexico_City";
+        case "China Standard Time": return "Asia/Shanghai";
+        case "Dateline Standard Time": return "Etc/GMT+12";
+        case "E. Africa Standard Time": return "Africa/Nairobi";
+        case "E. Australia Standard Time": return "Australia/Brisbane";
+        case "E. Europe Standard Time": return "Europe/Minsk";
+        case "E. South America Standard Time": return "America/Sao_Paulo";
+        case "Eastern Standard Time": return "America/New_York";
+        case "Egypt Standard Time": return "Africa/Cairo";
+        case "Ekaterinburg Standard Time": return "Asia/Yekaterinburg";
+        case "FLE Standard Time": return "Europe/Kiev";
+        case "Fiji Standard Time": return "Pacific/Fiji";
+        case "GMT Standard Time": return "Europe/London";
+        case "GTB Standard Time": return "Europe/Istanbul";
+        case "Georgian Standard Time": return "Asia/Tbilisi";
+        case "Greenland Standard Time": return "America/Godthab";
+        case "Greenwich Standard Time": return "Atlantic/Reykjavik";
+        case "Hawaiian Standard Time": return "Pacific/Honolulu";
+        case "India Standard Time": return "Asia/Calcutta";
+        case "Iran Standard Time": return "Asia/Tehran";
+        case "Israel Standard Time": return "Asia/Jerusalem";
+        case "Jordan Standard Time": return "Asia/Amman";
+        case "Kamchatka Standard Time": return "Asia/Kamchatka";
+        case "Korea Standard Time": return "Asia/Seoul";
+        case "Mauritius Standard Time": return "Indian/Mauritius";
+        case "Mexico Standard Time": return "America/Mexico_City";
+        case "Mexico Standard Time 2": return "America/Chihuahua";
+        case "Mid-Atlantic Standard Time": return "Etc/GMT+2";
+        case "Middle East Standard Time": return "Asia/Beirut";
+        case "Montevideo Standard Time": return "America/Montevideo";
+        case "Morocco Standard Time": return "Africa/Casablanca";
+        case "Mountain Standard Time": return "America/Denver";
+        case "Mountain Standard Time (Mexico)": return "America/Chihuahua";
+        case "Myanmar Standard Time": return "Asia/Rangoon";
+        case "N. Central Asia Standard Time": return "Asia/Novosibirsk";
+        case "Namibia Standard Time": return "Africa/Windhoek";
+        case "Nepal Standard Time": return "Asia/Katmandu";
+        case "New Zealand Standard Time": return "Pacific/Auckland";
+        case "Newfoundland Standard Time": return "America/St_Johns";
+        case "North Asia East Standard Time": return "Asia/Irkutsk";
+        case "North Asia Standard Time": return "Asia/Krasnoyarsk";
+        case "Pacific SA Standard Time": return "America/Santiago";
+        case "Pacific Standard Time": return "America/Los_Angeles";
+        case "Pacific Standard Time (Mexico)": return "America/Santa_Isabel";
+        case "Pakistan Standard Time": return "Asia/Karachi";
+        case "Paraguay Standard Time": return "America/Asuncion";
+        case "Romance Standard Time": return "Europe/Paris";
+        case "Russian Standard Time": return "Europe/Moscow";
+        case "SA Eastern Standard Time": return "America/Cayenne";
+        case "SA Pacific Standard Time": return "America/Bogota";
+        case "SA Western Standard Time": return "America/La_Paz";
+        case "SE Asia Standard Time": return "Asia/Bangkok";
+        case "Samoa Standard Time": return "Pacific/Apia";
+        case "Singapore Standard Time": return "Asia/Singapore";
+        case "South Africa Standard Time": return "Africa/Johannesburg";
+        case "Sri Lanka Standard Time": return "Asia/Colombo";
+        case "Syria Standard Time": return "Asia/Damascus";
+        case "Taipei Standard Time": return "Asia/Taipei";
+        case "Tasmania Standard Time": return "Australia/Hobart";
+        case "Tokyo Standard Time": return "Asia/Tokyo";
+        case "Tonga Standard Time": return "Pacific/Tongatapu";
+        case "US Eastern Standard Time": return "Etc/GMT+5";
+        case "US Mountain Standard Time": return "America/Phoenix";
+        case "UTC": return "Etc/GMT";
+        case "UTC+12": return "Etc/GMT-12";
+        case "UTC-02": return "Etc/GMT+2";
+        case "UTC-11": return "Etc/GMT+11";
+        case "Ulaanbaatar Standard Time": return "Asia/Ulaanbaatar";
+        case "Venezuela Standard Time": return "America/Caracas";
+        case "Vladivostok Standard Time": return "Asia/Vladivostok";
+        case "W. Australia Standard Time": return "Australia/Perth";
+        case "W. Central Africa Standard Time": return "Africa/Lagos";
+        case "W. Europe Standard Time": return "Europe/Berlin";
+        case "West Asia Standard Time": return "Asia/Tashkent";
+        case "West Pacific Standard Time": return "Pacific/Port_Moresby";
+        case "Yakutsk Standard Time": return "Asia/Yakutsk";
+        default:
+            throw new DateTimeException(format("Could not find TZ Database name for: %s.", tzName));
+    }
+}
+
+unittest
+{
+    version(testStdDateTime)
+    {
+        version(Windows)
+        {
+            static void testTZSuccess(string tzName)
+            {
+                scope(failure) writefln("TZName which threw: %s", tzName);
+
+                windowsTZNameToTZDatabaseName(tzName);
+            }
+
+            auto timeZones = WindowsTimeZone.getInstalledTZNames();
+
+            foreach(tzname; timeZones)
+                assertNotThrown!DateTimeException(testTZSuccess(tzname));
+        }
     }
 }
 
