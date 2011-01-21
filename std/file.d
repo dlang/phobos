@@ -1183,6 +1183,12 @@ else
         {
             return getAttributes(name);
         }
+        else version(OSX)
+        {
+            struct_stat64 lstatbuf = void;
+            cenforce(stat64(toStringz(name), &lstatbuf) == 0, name);
+            return lstatbuf.st_mode;
+        }
         else version(Posix)
         {
             struct_stat64 lstatbuf = void;
@@ -1507,6 +1513,9 @@ unittest
 
             assert(getAttributes(fakeSymFile) == getLinkAttributes(fakeSymFile));
         }
+    }
+    else version(OSX)
+    {
     }
     else version(Posix)
     {
@@ -2370,8 +2379,16 @@ else version(Posix)
 
             struct_stat64 statbuf = void;
 
-            enforce(lstat64(toStringz(_name), &statbuf) == 0,
-                    "Failed to stat file `" ~ _name ~ "'");
+            version (OSX)
+            {
+                enforce(stat64(toStringz(_name), &statbuf) == 0,
+                        "Failed to stat file `" ~ _name ~ "'");
+            }
+            else
+            {
+                enforce(lstat64(toStringz(_name), &statbuf) == 0,
+                        "Failed to stat file `" ~ _name ~ "'");
+            }
 
             _lstatMode = statbuf.st_mode;
 
@@ -2413,6 +2430,9 @@ unittest
             assert(!de.isDir);
             assert(!de.isSymLink);
         }
+    }
+    else version(OSX)
+    {
     }
     else version(Posix)
     {
@@ -2741,6 +2761,10 @@ version(Windows) unittest
 
 version(Posix) unittest
 {
+    version(OSX)
+    {
+    }
+    else
     {
         auto d = "/tmp/deleteme/a/b/c/d/e/f/g";
         enforce(collectException(mkdir(d)));
@@ -2750,9 +2774,8 @@ version(Posix) unittest
         enforce(exists(d));
         rmdirRecurse("/tmp/deleteme");
         enforce(!exists("/tmp/deleteme"));
-    }
-    {
-        auto d = "/tmp/deleteme/a/b/c/d/e/f/g";
+
+        d = "/tmp/deleteme/a/b/c/d/e/f/g";
         mkdirRecurse(d);
         std.process.system("ln -sf /tmp/deleteme/a/b/c /tmp/deleteme/link");
         rmdirRecurse("/tmp/deleteme");
@@ -3113,7 +3136,7 @@ unittest
 }
 
 //Test dirEntry with a symlink to a directory.
-version(Posix) unittest
+version(linux) unittest
 {
     auto before = Clock.currTime();
     Thread.sleep(dur!"seconds"(1));
@@ -3157,7 +3180,7 @@ version(Posix) unittest
 }
 
 //Test dirEntry with a symlink to a file.
-version(Posix) unittest
+version(linux) unittest
 {
     auto before = Clock.currTime();
     Thread.sleep(dur!"seconds"(1));
