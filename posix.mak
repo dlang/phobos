@@ -320,3 +320,4 @@ html : $(addprefix $(DOC_OUTPUT_DIR)/, $(subst /,_,$(subst .d,.html,	\
 
 rsync-cutting-edge : html
 	rsync -avz $(DOC_OUTPUT_DIR)/ d-programming@digitalmars.com:data/cutting-edge/phobos/
+	rsync -avz $(WEBSITE_DIR)/ d-programming@digitalmars.com:data/cutting-edge/
