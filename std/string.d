@@ -1,38 +1,69 @@
 // Written in the D programming language.
 
 /**
-   String handling functions. Objects of types $(D _string), $(D
-   wstring), and $(D dstring) are value types and cannot be mutated
-   element-by-element. For using mutation during building strings, use
-   $(D char[]), $(D wchar[]), or $(D dchar[]). The $(D *_string) types
-   are preferable because they don't exhibit undesired aliasing, thus
-   making code more robust.
+String handling functions. Objects of types $(D _string), $(D
+wstring), and $(D dstring) are value types and cannot be mutated
+element-by-element. For using mutation during building strings, use
+$(D char[]), $(D wchar[]), or $(D dchar[]). The $(D *_string) types
+are preferable because they don't exhibit undesired aliasing, thus
+making code more robust.
 
-   Macros:
-   WIKI = Phobos/StdString
+Macros: WIKI = Phobos/StdString
 
-   Copyright: Copyright Digital Mars 2007 - 2009.
-   License:   <a href="http:                                   //www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
-   Authors:   $(WEB digitalmars.com, Walter Bright),
-   $(WEB erdani.org, Andrei Alexandrescu)
-*/
-/*
-  Copyright Digital Mars 2007 - 2009.
-  Distributed under the Boost Software License, Version 1.0.
-  (See accompanying file LICENSE_1_0.txt or copy at
-  http:                                              //www.boost.org/LICENSE_1_0.txt)
+Copyright: Copyright Digital Mars 2007-.
+
+License: $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
+
+Authors: $(WEB digitalmars.com, Walter Bright), $(WEB erdani.org,
+Andrei Alexandrescu)
+     
+$(B $(RED IMPORTANT NOTE:)) Beginning with version 2.052, the
+following symbols have been generalized beyond strings and moved to
+different modules. This action was prompted by the fact that
+generalized routines belong better in other places, although they
+still work for strings as expected. In order to use moved symbols, you
+will need to import the respective modules as follows:
+
+$(BOOKTABLE ,
+
+$(TR $(TH Symbol) $(TH Comment))
+
+$(TR $(TD $(D cmp)) $(TD Moved to $(XREF algorithm, cmp) and
+generalized to work for all input ranges and accept a custom
+predicate.))
+
+$(TR $(TD $(D count)) $(TD Moved to $(XREF algorithm, count) and
+generalized to accept a custom predicate.))
+
+$(TR $(TD $(D replace)) $(TD Moved to $(XREF array, replace).))
+
+$(TR $(TD $(D ByCodeUnit)) $(TD Removed.))
+
+$(TR $(TD $(D insert)) $(TD Use $(XREF array, insert) instead.))
+
+$(TR $(TD $(D join)) $(TD Use $(XREF array, join) instead.))
+
+$(TR $(TD $(D repeat)) $(TD Use $(XREF array, replicate) instead.))
+
+$(TR $(TD $(D replace)) $(TD Use $(XREF array, replace) instead.))
+
+$(TR $(TD $(D replaceSlice)) $(TD Use $(XREF array, replace) instead.))
+
+$(TR $(TD $(D split)) $(TD Use $(XREF array, split) instead.))
+)
+   
 */
 module std.string;
 
 //debug=string;                 // uncomment to turn on debugging printf's
 
-private import core.exception : onRangeError;
+import core.exception : onRangeError;
 import core.vararg, core.stdc.stdio, core.stdc.stdlib,
-    core.stdc.string, std.algorithm,
+    core.stdc.string/*, std.algorithm*/,
     std.conv, std.ctype, std.encoding, std.exception, std.format,
     std.functional, std.metastrings, std.range, std.regex, std.stdio,
     std.traits, std.typetuple, std.uni, std.utf;
-public import std.algorithm : startsWith, endsWith;
+public import std.algorithm : startsWith, endsWith, cmp, count;
 public import std.array : join, split;
 
 version(Windows) extern (C)
@@ -93,12 +124,6 @@ $(TR $(TD $(D = 0))  $(TD $(D s1 == s2)))
 $(TR $(TD $(D > 0))  $(TD $(D s1 > s2)))
 )
 
- */
-
-alias std.algorithm.cmp cmp;
-
-/*********************************
- * ditto
  */
 
 int icmp(alias pred = "a < b", S1, S2)(S1 s1, S2 s2)
@@ -1555,24 +1580,6 @@ unittest
     r = insert("abcd", 0, cast(string) null);
     i = cmp(r, "abcd");
     assert(i == 0);
-}
-
-/***********************************************
- * Count up all instances of sub[] in s[].
- */
-
-alias std.algorithm.count count;
-
-unittest
-{
-    debug(string) printf("string.count.unittest\n");
-
-    string s = "This is a fofofof list";
-    string sub = "fof";
-    size_t i;
-
-    i = count(s, sub);
-    assert(i == 2);
 }
 
 /************************************************

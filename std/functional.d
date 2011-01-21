@@ -278,9 +278,9 @@ string a = "   Hello, world!";
 assert(find!(not!isspace)(a) == "Hello, world!");
 ----
  */
-template not(alias pred)
+template not(alias pred) if (is(typeof(!unaryFun!pred(args))))
 {
-    bool not(T...)(T args) { return !pred(args); }
+    auto not(T...)(T args) { return !binaryFun!pred(args); }
 }
 
 /**

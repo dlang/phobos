@@ -5,6 +5,8 @@ Copyright: Copyright Andrei Alexandrescu 2008-.
 License:   $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
 Authors:   $(WEB erdani.org, Andrei Alexandrescu)
+
+Functions and types that manipulate built-in arrays.  
 */
 module std.array;
 
@@ -190,12 +192,14 @@ assert(b is a);
 Implements the range interface primitive $(D popFront) for built-in
 arrays. Due to the fact that nonmember functions can be called with
 the first argument using the dot notation, $(D array.popFront) is
-equivalent to $(D popFront(array)).
+equivalent to $(D popFront(array)). For $(GLOSSARY narrow strings),
+$(D popFront) automaticaly advances to the next $(GLOSSARY code
+point).
 
 Example:
 ----
 int[] a = [ 1, 2, 3 ];
-a.popFront;
+a.popFront();
 assert(a == [ 2, 3 ]);
 ----
 */
@@ -217,6 +221,7 @@ unittest
     static assert(!__traits(compiles, popFront!(void[])));
 }
 
+// Specialization for narrow strings
 void popFront(A)(ref A a)
 if (isNarrowString!A && isMutable!A)
 {
@@ -243,7 +248,8 @@ unittest
 Implements the range interface primitive $(D popBack) for built-in
 arrays. Due to the fact that nonmember functions can be called with
 the first argument using the dot notation, $(D array.popBack) is
-equivalent to $(D popBack(array)).
+equivalent to $(D popBack(array)). For $(GLOSSARY narrow strings), $(D
+popFront) automaticaly eliminates the last $(GLOSSARY code point).
 
 
 Example:
@@ -270,6 +276,7 @@ unittest
     static assert(!__traits(compiles, popBack!(void[])));
 }
 
+// Specialization for arrays of char
 @trusted void popBack(A)(ref A a)
 if (is(A : const(char)[]) && isMutable!A)
 {
@@ -311,6 +318,7 @@ unittest
     static assert(!__traits(compiles, popBack!(immutable char[])));
 }
 
+// Specialization for arrays of wchar
 @trusted void popBack(A)(ref A a)
 if (is(A : const(wchar)[]) && isMutable!A)
 {
@@ -338,7 +346,9 @@ unittest
 Implements the range interface primitive $(D front) for built-in
 arrays. Due to the fact that nonmember functions can be called with
 the first argument using the dot notation, $(D array.front) is
-equivalent to $(D front(array)).
+equivalent to $(D front(array)). For $(GLOSSARY narrow strings), $(D
+front) automaticaly returns the first $(GLOSSARY code point) as a $(D
+dchar).
 
 
 Example:
@@ -373,7 +383,9 @@ unittest
 Implements the range interface primitive $(D back) for built-in
 arrays. Due to the fact that nonmember functions can be called with
 the first argument using the dot notation, $(D array.back) is
-equivalent to $(D back(array)).
+equivalent to $(D back(array)). For $(GLOSSARY narrow strings), $(D
+back) automaticaly returns the last $(GLOSSARY code point) as a $(D
+dchar).
 
 Example:
 ----
@@ -381,9 +393,7 @@ int[] a = [ 1, 2, 3 ];
 assert(a.back == 3);
 ----
 */
-ref typeof(A.init[0]) back(A)(A a)
-if (isDynamicArray!A && !isNarrowString!A
-        && !is(typeof(A.init[0]) : const(void)))
+ref T back(T)(T[] a) if (!isNarrowString!(T[]))
 {
     assert(a.length, "Attempting to fetch the back of an empty array");
     return a[$ - 1];
@@ -397,36 +407,35 @@ unittest
     assert(a.back == 7);
 }
 
+// Specialization for strings
 dchar back(A)(A a)
 if (isDynamicArray!A && isNarrowString!A)
 {
-    assert(a.length, "Attempting to fetch the back of an empty array");
     auto n = a.length;
     const p = a.ptr + n;
     if (n >= 1 && (p[-1] & 0b1100_0000) != 0b1000_0000)
     {
         --n;
-        return decode(a, n);
     }
     else if (n >= 2 && (p[-2] & 0b1100_0000) != 0b1000_0000)
     {
         n -= 2;
-        return decode(a, n);
     }
     else if (n >= 3 && (p[-3] & 0b1100_0000) != 0b1000_0000)
     {
         n -= 3;
-        return decode(a, n);
     }
     else if (n >= 4 && (p[-4] & 0b1100_0000) != 0b1000_0000)
     {
         n -= 4;
-        return decode(a, n);
     }
     else
     {
-        throw new UtfException("Invalid UTF character at end of string");
+        throw new UtfException(a.length
+                ? "Invalid UTF character at end of string"
+                : "Attempting to fetch the back of an empty array");
     }
+    return decode(a, n);
 }
 
 // overlap
@@ -448,8 +457,8 @@ assert(overlap(a, b).empty);
 */
 T[] overlap(T)(T[] r1, T[] r2) @trusted pure nothrow
 {
-    T* max(T* a, T* b) nothrow { return a > b ? a : b; }
-    T* min(T* a, T* b) nothrow { return a < b ? a : b; }
+    static T* max(T* a, T* b) nothrow { return a > b ? a : b; }
+    static T* min(T* a, T* b) nothrow { return a < b ? a : b; }
     auto b = max(r1.ptr, r2.ptr);
     auto e = min(r1.ptr + r1.length, r2.ptr + r2.length);
     return b < e ? b[0 .. e - b] : null;
@@ -471,18 +480,14 @@ unittest
 }
 
 /**
-Inserts $(D stuff) in $(D container) at position $(D pos).
+Inserts $(D stuff) (which must be an input range or a single item) in
+$(D array) at position $(D pos).
  */
 void insert(T, Range)(ref T[] array, size_t pos, Range stuff)
 if (isInputRange!Range && is(ElementEncodingType!Range : T))
 {
     static if (hasLength!Range)
     {
-        // @@@BUG 2130@@@
-        // immutable
-        //     size_t delta = toInsert.length,
-        //     size_t oldLength = array.length,
-        //     size_t newLength = oldLength + delta;
         immutable
             delta = stuff.length,
             oldLength = array.length,
@@ -535,10 +540,12 @@ pure bool sameHead(T)(in T[] lhs, in T[] rhs)
 }
 
 /********************************************
- * Return an array that consists of $(D s) (which must be an input
- * range) repeated $(D n) times.
+Returns an array that consists of $(D s) (which must be an input
+range) repeated $(D n) times. This function allocates, fills, and
+returns a new array. For a lazy version, refer to $(XREF
+range,repeat).
  */
-S replicate(S)(S s, size_t n) if (isSomeString!S)
+S replicate(S)(S s, size_t n) if (isDynamicArray!S)
 {
     // Optimization for return join(std.range.repeat(s, n));
     if (n == 0)
@@ -550,8 +557,8 @@ S replicate(S)(S s, size_t n) if (isSomeString!S)
         r[] = s[0];
     else
     {
-        auto len = s.length;
-        for (size_t i = 0; i < n * len; i += len)
+        immutable len = s.length, nlen = n * len;
+        for (size_t i = 0; i < nlen; i += len)
         {
             r[i .. i + len] = s[];
         }
@@ -560,7 +567,7 @@ S replicate(S)(S s, size_t n) if (isSomeString!S)
 }
 
 ElementType!S[] replicate(S)(S s, size_t n)
-if (isInputRange!S && !isSomeString!S)
+if (isInputRange!S && !isDynamicArray!S)
 {
     return join(std.range.repeat(s, n));
 }
@@ -590,7 +597,9 @@ unittest
 }
 
 /**************************************
-Split $(D s[]) into an array of words, using whitespace as delimiter.
+Split the string $(D s) into an array of words, using whitespace as
+delimiter. Runs of whitespace are merged together (no empty words are
+produced).
  */
 
 S[] split(S)(S s) if (isSomeString!S)
@@ -629,22 +638,21 @@ unittest
     foreach (S; TypeTuple!(string, wstring, dstring))
     {
         debug(string) printf("string.split1\n");
-
-        S s = " peter paul\tjerry ";
-        S[] words;
-        int i;
-
-        words = split(s);
-        assert(words.length == 3);
-        i = cmp(words[0], "peter");
-        assert(i == 0);
-        i = cmp(words[1], "paul");
-        assert(i == 0);
-        i = cmp(words[2], "jerry");
-        assert(i == 0);
+        S s = " \t\npeter paul\tjerry \n";
+        assert(equal(split(s), [ to!S("peter"), to!S("paul"), to!S("jerry") ]));
     }
 }
 
+/**
+Splits a string by whitespace.
+
+Example:
+
+---- 
+auto a = " a     bcd   ef gh ";
+assert(equal(splitter(a), ["", "a", "bcd", "ef", "gh"][]));
+----
+ */
 auto splitter(String)(String s) if (isSomeString!String)
 {
     return std.algorithm.splitter!isspace(s);
@@ -659,7 +667,7 @@ unittest
 }
 
 /**************************************
- * Split $(D r) into an array, using $(D delim) as the delimiter.
+ * Splits $(D s) into an array, using $(D delim) as the delimiter.
  */
 Unqual!(S1)[] split(S1, S2)(S1 s, S2 delim)
 if (isForwardRange!(Unqual!S1) && isForwardRange!S2)
@@ -810,7 +818,7 @@ Replaces elements from $(D array) with indices ranging from $(D from)
 (inclusive) to $(D to) (exclusive) with the range $(D stuff). Expands
 or shrinks the array as needed.
  */
-void replace(T, Range)(ref T[] array, size_t from, size_t to, Range stuff)
+void replaceInPlace(T, Range)(ref T[] array, size_t from, size_t to, Range stuff)
 if (isDynamicArray!Range && is(ElementType!Range : T))
 {
     if (overlap(array, stuff))
@@ -837,52 +845,45 @@ if (isDynamicArray!Range && is(ElementType!Range : T))
     }
 }
 
-void replace(T, Range)(ref T[] array, size_t from, size_t to, Range stuff)
-    if (!is(ElementType!Range == T) && is(Unqual!Range == void*))
-{
-    replace(array, from, to, cast(T[])[]);
-}
-
 unittest
 {
     int[] a = [1, 4, 5];
-    replace(a, 1u, 2u, [2, 3, 4]);
+    replaceInPlace(a, 1u, 2u, [2, 3, 4]);
     assert(a == [1, 2, 3, 4, 5]);
-    replace(a, 1u, 2u, cast(int[])[]);
+    replaceInPlace(a, 1u, 2u, cast(int[])[]);
     assert(a == [1, 3, 4, 5]);
-    replace(a, 1u, 2u, null);
-    assert(a == [1, 4, 5]);
 }
 
 /********************************************
- * Replace occurrences of from[] with to[] in s[].
+ * Replace occurrences of $(D from) with $(D to) in $(D a). Returns a
+ * new array.
  */
-C1[] replace(C1, C2, C3)(C1[] s, C2[] from, C3[] to)
-//if (is(typeof(s[0] == from[0])) && is(typeof(to[0]) : C1))
+R1 replace(R1, R2, R3)(R1 subject, R2 from, R3 to)
+if (isDynamicArray!R1 && isForwardRange!R2 && isForwardRange!R3)
 {
-    if (from.length == 0) return s;
-    typeof(s.dup) p;
+    if (from.empty) return subject;
+    auto app = appender!R1();
 
     for (;;)
     {
-        auto s1 = std.algorithm.find(s, from);
-        if (!s1.length)
+        auto balance = std.algorithm.find(subject, from.save);
+        if (balance.empty)
         {
-            if (p is null) return s;
-            p ~= s;
+            if (app.data.empty) return subject;
+            app.put(subject);
             break;
         }
-        p ~= s[0 .. s.length - s1.length];
-        p ~= to;
-        s = s1[from.length .. $];
+        app.put(subject[0 .. subject.length - balance.length]);
+        app.put(to.save);
+        subject = balance[from.length .. $];
     }
 
-    return cast(C1[]) p;
+    return app.data;
 }
 
 unittest
 {
-    debug(string) printf("string.replace.unittest\n");
+    debug(string) printf("array.replace.unittest\n");
 
     alias TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[])
         TestTypes;
@@ -908,8 +909,8 @@ unittest
 }
 
 /*****************************
- * Return an array that is $(D s[]) with $(D slice[]) replaced by $(D
- * replacement[]).
+Return an array that is $(D s) with $(D slice) replaced by $(D
+replacement[]).
  */
 
 T[] replaceSlice(T)(T[] s, in T[] slice, in T[] replacement)
@@ -1020,7 +1021,8 @@ done.
             else
             {
                 // didn't work, must reallocate
-                auto bi = GC.qalloc(newCapacity * T.sizeof, (typeid(T[]).next.flags & 1) ? 0 : GC.BlkAttr.NO_SCAN);
+                auto bi = GC.qalloc(newCapacity * T.sizeof,
+                        (typeid(T[]).next.flags & 1) ? 0 : GC.BlkAttr.NO_SCAN);
                 _data.capacity = bi.size / T.sizeof;
                 if(len)
                     memcpy(bi.base, _data.arr.ptr, len * T.sizeof);
@@ -1071,7 +1073,8 @@ Returns the managed array.
             else
             {
                 // didn't work, must reallocate
-                auto bi = GC.qalloc(newlen * T.sizeof, (typeid(T[]).next.flags & 1) ? 0 : GC.BlkAttr.NO_SCAN);
+                auto bi = GC.qalloc(newlen * T.sizeof,
+                        (typeid(T[]).next.flags & 1) ? 0 : GC.BlkAttr.NO_SCAN);
                 _data.capacity = bi.size / T.sizeof;
                 if(len)
                     memcpy(bi.base, _data.arr.ptr, len * T.sizeof);

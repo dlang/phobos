@@ -80,7 +80,7 @@ version(Posix)
 
 version (Windows) alias std.string.icmp fcmp;
 
-version (Posix) alias std.string.cmp fcmp;
+version (Posix) alias std.algorithm.cmp fcmp;
 
 /**************************
  * Extracts the extension from a filename or path.

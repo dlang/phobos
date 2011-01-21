@@ -805,10 +805,9 @@ assert(r1 == [ 2.5 ]);
  */
 template filter(alias pred)
 {
-    Filter!(unaryFun!(pred), Range)
-    filter(Range)(Range rs)
+    auto filter(Range)(Range rs)
     {
-        return typeof(return)(rs);
+        return Filter!(unaryFun!(pred), Range)(rs);
     }
 }
 
@@ -1790,7 +1789,7 @@ if(!is(isTerminator))
             _input.popFront();
         }
         assert(!_input.empty && !_isTerminator(_input.front));
-        // Prime _end
+        // Prepare _end
         _end = 1;
         while (_end < _input.length && !_isTerminator(_input[_end]))
         {
@@ -1967,7 +1966,6 @@ if (isForwardRange!RoR && isInputRange!(ElementType!RoR)
                 if (!_current.empty) return;
                 useSeparator();
             }
-            // We need to re-prime the range
         }
 
         static if (isForwardRange!RoR && isForwardRange!(ElementType!RoR))
@@ -2009,7 +2007,7 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
     private:
         RoR _items;
         ElementType!RoR _current;
-        void prime()
+        void prepare()
         {
             for (;; _items.popFront())
             {
@@ -2023,7 +2021,7 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
         this(RoR r)
         {
             _items = r;
-            prime();
+            prepare();
         }
         static if (isInfinite!(ElementType!RoR))
         {
@@ -2045,7 +2043,7 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
         {
             assert(!_current.empty);
             _current.popFront();
-            if (_current.empty) prime();
+            if (_current.empty) prepare();
         }
         static if (isForwardRange!RoR && isForwardRange!(ElementType!RoR))
         {
@@ -2565,7 +2563,7 @@ if (isRandomAccessRange!R1 && isForwardRange!R2 && !isBidirectionalRange!R2
     }
     else
     {
-        // Prime the search with needle's first element
+        // Prepare the search with needle's first element
         if (needle.empty) return haystack;
         haystack = .find!pred(haystack, needle.front);
         if (haystack.empty) return haystack;
@@ -3200,7 +3198,7 @@ struct Until(alias pred, Range, Sentinel) if (isInputRange!Range)
         static if (is(Sentinel == void))
             return unaryFun!pred(_input.front);
         else
-            return binaryFun!pred(_input.front, _sentinel);
+            return startsWith!pred(_input, _sentinel);
     }
 
     void popFront()
@@ -3274,6 +3272,7 @@ unittest
     static assert(isForwardRange!(typeof(until!"a == 2"(a, OpenRight.no))));
 
     assert(equal(a.until(7), [1, 2, 4][]));
+    assert(equal(a.until([7, 2]), [1, 2, 4, 7][]));
     assert(equal(a.until(7, OpenRight.no), [1, 2, 4, 7][]));
     assert(equal(until!"a == 2"(a, OpenRight.no), [1, 2][]));
 }
@@ -3736,18 +3735,33 @@ unittest
 
 // count
 /**
-Counts the number of elements $(D x) in $(D r) for which $(D pred(x,
-value)) is $(D true). $(D pred) defaults to equality. Performs $(BIGOH
-r.length) evaluations of $(D pred).
+The first version counts the number of elements $(D x) in $(D r) for
+which $(D pred(x, value)) is $(D true). $(D pred) defaults to
+equality. Performs $(BIGOH r.length) evaluations of $(D pred).
+
+The second version returns the number of times $(D needle) occurs in
+$(D haystack). Throws an exception if $(D needle.empty), as the _count
+of the empty range in any range would be infinite. Overlapped counts
+are not considered, for example $(D count("aaa", "aa")) is $(D 1), not
+$(D 2).
+
+The third version counts the elements for which $(D pred(x)) is $(D
+true). Performs $(BIGOH r.length) evaluations of $(D pred).
 
 Example:
 ----
+// count elements in range
 int[] a = [ 1, 2, 4, 3, 2, 5, 3, 2, 4 ];
 assert(count(a, 2) == 3);
 assert(count!("a > b")(a, 2) == 5);
+// count range in range
+assert(count("abcadfabf", "ab") == 2);
+assert(count("ababab", "abab") == 1);
+assert(count("ababab", "abx") == 0);
+// count predicate in range
+assert(count!("a > 1")(a) == 8);
 ----
 */
-
 size_t count(alias pred = "a == b", Range, E)(Range r, E value)
 if (isInputRange!Range && is(typeof(binaryFun!pred(r.front, value)) == bool))
 {
@@ -3773,20 +3787,15 @@ unittest
     assert(count!("a == '語'")("日本語"d) == 1);
 }
 
-/**
- * Returns the number of times $(D needle) occurs in $(D
- * haystack). Throws an exception if $(D needle.empty), as the _count
- * of the empty range in any range would be infinite. Overlapped
- * counts are not considered, for example $(D count("aaa", "aa")) is
- * $(D 1), not $(D 2).
- *
- * Example:
-----
-assert(count("abcadfabf", "ab") == 2);
-assert(count("ababab", "abab") == 1);
-assert(count("ababab", "abx") == 0);
-----
- */
+unittest
+{
+    debug(std_algorithm) printf("algorithm.count.unittest\n");
+    string s = "This is a fofofof list";
+    string sub = "fof";
+    assert(count(s, sub) == 2);
+}
+
+/// Ditto
 size_t count(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
 if (isInputRange!R1 && isForwardRange!R2 && is(typeof(binaryFun!pred(haystack, needle)) == bool))
 {
@@ -3805,16 +3814,7 @@ unittest
     assert(count("ababab", "abx") == 0);
 }
 
-/**
-Counts the number of elements $(D x) in $(D r) for which $(D pred(x))
-is $(D true). Performs $(BIGOH r.length) evaluations of $(D pred).
-
-Example:
-----
-int[] a = [ 1, 2, 4, 3, 2, 5, 3, 2, 4 ];
-assert(count!("a > 1")(a) == 8);
-----
-*/
+/// Ditto
 size_t count(alias pred = "true", Range)(Range r) if (isInputRange!(Range))
 {
     size_t result;
@@ -5045,7 +5045,8 @@ cases.))
 Range remove
 (SwapStrategy s = SwapStrategy.stable, Range, Offset...)
 (Range range, Offset offset)
-if (isBidirectionalRange!Range && hasLength!Range && s != SwapStrategy.stable)
+if (isBidirectionalRange!Range && hasLength!Range && s != SwapStrategy.stable
+    && Offset.length >= 1)
 {
     enum bool tupleLeft = is(typeof(offset[0][0]))
         && is(typeof(offset[0][1]));
@@ -5150,8 +5151,9 @@ if (isBidirectionalRange!Range && hasLength!Range && s != SwapStrategy.stable)
 Range remove
 (SwapStrategy s = SwapStrategy.stable, Range, Offset...)
 (Range range, Offset offset)
-if (isForwardRange!Range && !isBidirectionalRange!Range
-        || !hasLength!Range || s == SwapStrategy.stable)
+if ((isForwardRange!Range && !isBidirectionalRange!Range
+                || !hasLength!Range || s == SwapStrategy.stable)
+        && Offset.length >= 1)
 {
     auto result = range;
     auto src = range, tgt = range;
