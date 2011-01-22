@@ -818,7 +818,7 @@ Replaces elements from $(D array) with indices ranging from $(D from)
 (inclusive) to $(D to) (exclusive) with the range $(D stuff). Expands
 or shrinks the array as needed.
  */
-void replaceInPlace(T, Range)(ref T[] array, size_t from, size_t to, Range stuff)
+void replace(T, Range)(ref T[] array, size_t from, size_t to, Range stuff)
 if (isDynamicArray!Range && is(ElementType!Range : T))
 {
     if (overlap(array, stuff))
@@ -848,9 +848,9 @@ if (isDynamicArray!Range && is(ElementType!Range : T))
 unittest
 {
     int[] a = [1, 4, 5];
-    replaceInPlace(a, 1u, 2u, [2, 3, 4]);
+    replace(a, 1u, 2u, [2, 3, 4]);
     assert(a == [1, 2, 3, 4, 5]);
-    replaceInPlace(a, 1u, 2u, cast(int[])[]);
+    replace(a, 1u, 2u, cast(int[])[]);
     assert(a == [1, 3, 4, 5]);
 }
 
