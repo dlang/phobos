@@ -496,7 +496,7 @@ struct FormatSpec(Char)
        $(D ubyte.max). ($(D 0) means not used).
     */
     ubyte index;
-    version(ddoc) {
+    version(D_Ddoc) {
         /**
          The format specifier contained a $(D '-') ($(D printf)
          compatibility).
@@ -2283,6 +2283,23 @@ if (isIntegral!T && isInputRange!Range)
     if (std.algorithm.find("dsu", spec.spec).length)
     {
         return parse!T(input);
+    }
+    assert(0, "Parsing spec '"~spec.spec~"' not implemented.");
+}
+
+/**
+ * Reads one character.
+ */
+T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
+if (isSomeChar!T && isInputRange!Range)
+{
+    enforce(std.algorithm.find("cdosuxX", spec.spec).length,
+            text("Wrong character type specifier: `", spec.spec, "'"));
+    if (spec.spec == 's')
+    {
+        auto result = to!T(input.front);
+        input.popFront();
+        return result;
     }
     assert(0, "Parsing spec '"~spec.spec~"' not implemented.");
 }
