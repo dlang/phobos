@@ -278,9 +278,18 @@ string a = "   Hello, world!";
 assert(find!(not!isspace)(a) == "Hello, world!");
 ----
  */
-template not(alias pred) if (is(typeof(!unaryFun!pred(args))))
+template not(alias pred)
 {
-    auto not(T...)(T args) { return !binaryFun!pred(args); }
+    auto not(T...)(T args)
+    if (is(typeof(!unaryFun!pred(args))) || is(typeof(!binaryFun!pred(args))))
+    {
+        static if (T.length == 1)
+            return !unaryFun!pred(args);
+        else static if (T.length == 2)
+            return !binaryFun!pred(args);
+        else
+            static assert(false, "not unimplemented for multiple arguments");
+    }
 }
 
 /**

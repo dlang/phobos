@@ -5521,6 +5521,12 @@ unittest
     assert(!r.canFind(42)); // passes although it shouldn't
 }
 
+unittest
+{
+    immutable(int)[] arr = [ 1, 2, 3 ];
+    auto s = assumeSorted(arr);
+}
+
 /**
 Assumes $(D r) is sorted by predicate $(D pred) and returns the
 corresponding $(D SortedRange!(pred, R)) having $(D r) as support. To
@@ -5535,7 +5541,7 @@ almost-sorted range is likely to pass it). To check for sortedness at
 cost $(BIGOH n), use $(XREF algorithm, isSorted).
  */
 auto assumeSorted(alias pred = "a < b", R)(R r)
-if(isRandomAccessRange!(Unqual!R))
+if (isRandomAccessRange!(Unqual!R))
 {
     return SortedRange!(R, pred)(r);
 }

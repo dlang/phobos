@@ -6203,28 +6203,12 @@ assert(isSorted!("a > b")(arr));
 */
 bool isSorted(alias less = "a < b", Range)(Range r) if (isForwardRange!(Range))
 {
-    // @@@TODO: make this work with findAdjacent
-    if (r.empty) return true;
-    static if (is(ElementType!(Range) == const))
+    // @@@BUG@@@ Should work with inlined predicate
+    bool pred(ElementType!Range a, ElementType!Range b)
     {
-        auto ahead = r;
-        for (ahead.popFront; !ahead.empty; r.popFront, ahead.popFront)
-        {
-            if (binaryFun!(less)(ahead.front, r.front)) return false;
-        }
+        return binaryFun!less(b, a);
     }
-    else
-    {
-        // cache the last element so we avoid calling r.front twice
-        auto last = r.front;
-        for (r.popFront; !r.empty; r.popFront)
-        {
-            auto popFront = r.front;
-            if (binaryFun!(less)(popFront, last)) return false;
-            move(popFront, last);
-        }
-    }
-    return true;
+    return findAdjacent!pred(r).empty;
 }
 
 // makeIndex
