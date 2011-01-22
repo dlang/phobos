@@ -145,73 +145,81 @@ version (Posix)
 }
 // }}}
 
-/***********************************
- * Exception thrown for file I/O errors.
- */
 
+/++
+    Exception thrown for file I/O errors.
+ +/
 class FileException : Exception
 {
-/**
-OS error code.
- */
+    /++
+        OS error code.
+     +/
     immutable uint errno;
 
-/**
-Constructor taking the name of the file where error happened and a
-message describing the error.
- */
-    this(in char[] name, in char[] message)
+    /++
+        Constructor which takes an error message.
+
+        Params:
+            name = Name of file for which the error occurred.
+            msg  = Message describing the error.
+            file = The file where the error occurred.
+            line = The line where the error occurred.
+     +/
+    this(in char[] name, in char[] msg, string file = __FILE__, size_t line = __LINE__)
     {
-        super(text(name, ": ", message));
+        if(msg.empty)
+            super(name.idup, file, line);
+        else
+            super(text(name, ": ", msg), file, line);
+
         errno = 0;
     }
 
-    this(in char[] name, in char[] message, string sourceFile, int sourceLine)
-    {
-        super(text(name, ": ", message), sourceFile, sourceLine);
-        errno = 0;
-    }
+    /++
+        Constructor which takes the error number ($(LUCKY GetLastError)
+        in Windows, $(D_PARAM getErrno) in Posix).
 
-/**
-Constructor taking the name of the file where error happened and the
-error number ($(LUCKY GetLastError) in Windows, $(D getErrno) in
-Posix).
- */
-    version(Windows) this(in char[] name, uint errno = GetLastError)
+        Params:
+            name = Name of file for which the error occurred.
+            msg  = Message describing the error.
+            file = The file where the error occurred.
+            line = The line where the error occurred.
+     +/
+    version(Windows) this(in char[] name,
+                          uint errno = GetLastError,
+                          string file = __FILE__,
+                          size_t line = __LINE__)
     {
-        this(name, sysErrorString(errno));
+        this(name, sysErrorString(errno), file, line);
         this.errno = errno;
     }
 
-    version(Posix) this(in char[] name, uint errno = .getErrno)
+    /++
+        Constructor which takes the error number ($(LUCKY GetLastError)
+        in Windows, $(D_PARAM getErrno) in Posix).
+
+        Params:
+            name = Name of file for which the error occurred.
+            msg  = Message describing the error.
+            file = The file where the error occurred.
+            line = The line where the error occurred.
+     +/
+    version(Posix) this(in char[] name,
+                        uint errno = .getErrno,
+                        string file = __FILE__,
+                        size_t line = __LINE__)
     {
         auto s = strerror(errno);
-        this(name, to!string(s));
-        this.errno = errno;
-    }
-
-    version(Windows) this(in char[] name, string sourceFile, int sourceLine,
-        uint errno = GetLastError)
-    {
-        this(name, sysErrorString(errno), sourceFile, sourceLine);
-        this.errno = errno;
-    }
-
-    version(Posix) this(in char[] name, string sourceFile, int sourceLine,
-        uint errno = .getErrno)
-    {
-        auto s = strerror(errno);
-        this(name, to!string(s), sourceFile, sourceLine);
+        this(name, to!string(s), file, line);
         this.errno = errno;
     }
 }
 
-private T cenforce(T, string file = __FILE__, uint line = __LINE__)
-(T condition, lazy const(char)[] name)
+private T cenforce(T)(T condition, lazy const(char)[] name, string file = __FILE__, size_t line = __LINE__)
 {
     if (!condition)
     {
-        throw new FileException(name, file, line);
+        throw new FileException(name, "", file, line);
     }
     return condition;
 }
@@ -632,7 +640,7 @@ else
 version(D_Ddoc)
 {
     /++
-        $(YELLOW This function is Windows-Only.)
+        $(BLUE This function is Windows-Only.)
 
         Get creation/access/modified times of file $(D name).
 
@@ -656,7 +664,7 @@ version(D_Ddoc)
 
 
     /++
-        $(YELLOW This function is Posix-Only.)
+        $(BLUE This function is Posix-Only.)
 
         Get file status change time, acces time, and modification times
         of file $(D name).
@@ -775,9 +783,9 @@ else version(Posix)
             out SysTime fileModificationTime)
     {
         struct_stat64 statbuf = void;
-        
+
         cenforce(stat64(toStringz(name), &statbuf) == 0, name);
-        
+
         fileStatusChangeTime = SysTime(unixTimeToStdTime(statbuf.st_ctime));
         fileAccessTime = SysTime(unixTimeToStdTime(statbuf.st_atime));
         fileModificationTime = SysTime(unixTimeToStdTime(statbuf.st_mtime));
@@ -786,10 +794,10 @@ else version(Posix)
     unittest
     {
         auto currTime = Clock.currTime();
-        
+
         write(deleteme, "a");
         scope(exit) { assert(exists(deleteme)); remove(deleteme); }
-        
+
         SysTime statusChangedTime1 = void;
         SysTime accessTime1 = void;
         SysTime modificationTime1 = void;
@@ -1066,7 +1074,7 @@ unittest
  st_mode) value which is part of the $(D stat struct) gotten by
  calling the $(WEB en.wikipedia.org/wiki/Stat_%28Unix%29, $(D stat))
  function.
- 
+
  On Posix systems, if the given file is a symbolic link, then
  attributes are the attributes of the file pointed to by the symbolic
  link.
@@ -1794,7 +1802,7 @@ assert(!de2.isFile);
         @property d_time creationTime() const;
 
         /++
-            $(YELLOW This function is Windows-Only.)
+            $(BLUE This function is Windows-Only.)
 
             Returns the creation time of the file represented by this DirEntry.
           +/
@@ -1802,7 +1810,7 @@ assert(!de2.isFile);
 
 
         /++
-            $(YELLOW This function is Posix-Only.)
+            $(BLUE This function is Posix-Only.)
 
             Returns the last time that the status of file represented by this DirEntry
             was changed (i.e. owner, group, link count, mode, etc.).
@@ -1837,7 +1845,7 @@ assert(!de2.isFile);
             Returns the time that the file represented by this DirEntry was last modified.
           +/
         @property SysTime timeLastModified();
-        
+
         /++
             Returns the attributes of the file represented by this DirEntry.
 
@@ -1851,7 +1859,7 @@ assert(!de2.isFile);
             then attributes are the attributes of the file pointed to by the symbolic link.
           +/
         @property uint attributes();
-        
+
         /++
             On Posix systems, if the file represented by this DirEntry is a symbolic link,
             then linkAttributes are the attributes of the symbolic link itself. Otherwise,
@@ -1862,9 +1870,11 @@ assert(!de2.isFile);
             with symbolic links.
           +/
         @property uint linkAttributes();
-        
+
+        version(Windows) alias void* struct_stat64;
+
         /++
-            $(YELLOW This function is Posix-Only.)
+            $(BLUE This function is Posix-Only.)
 
             The stat struct gotten from calling stat.
           +/
@@ -2458,16 +2468,18 @@ version(Posix) void copy(in char[] from, in char[] to)
 
 version(D_Ddoc)
 {
-    /*************************
+    /++
         $(RED Scheduled for deprecation. Please use the version which takes
               std.datetime.SysTime instead).
 
-        Set access/modified times of file $(D name).
-        Throws: $(D FileException) on error.
-     */
+        Set access/modified times of file $(D_PARAM name).
+
+        Throws:
+            $(D_PARAM FileException) on error.
+     +/
     void setTimes(in char[] name, d_time fta, d_time ftm);
 }
-version(Windows)
+else
 {
     void setTimes(C)(in C[] name, d_time fta, d_time ftm)
         if(is(Unqual!C == char))

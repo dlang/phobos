@@ -5,12 +5,13 @@
 
     This module provides:
     $(UL
-        $(LI Types to represent points in time: SysTime, Date, TimeOfDay, and DateTime.)
+        $(LI Types to represent points in time: $(D_PARAM SysTime), $(D_PARAM Date),
+             $(D_PARAM TimeOfDay), and $(D_PARAM DateTime).)
         $(LI Types to represent durations of time.)
         $(LI Types to represent intervals of time.)
         $(LI Types to represent ranges over intervals of time.)
-        $(LI Types to represent time zones (used by SysTime).)
-        $(LI A platform-independent, high precision stop watch type: StopWatch)
+        $(LI Types to represent time zones (used by $(D_PARAM SysTime)).)
+        $(LI A platform-independent, high precision stop watch type: $(D_PARAM StopWatch))
         $(LI Benchmarking functions.)
         $(LI Various helper functions.)
     )
@@ -35,20 +36,21 @@
     can be gotten from time intervals, so range-based operations may be done on a
     series of time points.
 
-    The types that the typical user is most likely to be interested in are Date
-    (if they want dates but don't care about time), DateTime (if they want dates
-    and times but don't care about time zones), SysTime (if they want the date
+    The types that the typical user is most likely to be interested in are $(D_PARAM Date)
+    (if they want dates but don't care about time), $(D_PARAM DateTime) (if they want dates
+    and times but don't care about time zones), $(D_PARAM SysTime) (if they want the date
     and time from the OS and/or do care about time zones), and StopWatch (a
-    platform-independent, high precision stop watch). Date and DateTime are
-    optimized for calendar-based operations, while SysTime is designed for dealing
-    with time from the OS. Check out their specific documentation for more details.
+    platform-independent, high precision stop watch). $(D_PARAM Date) and $(D_PARAM DateTime)
+    are optimized for calendar-based operations, while $(D_PARAM SysTime) is designed
+    for dealing with time from the OS. Check out their specific documentation for
+    more details.
 
-    To get the current time, use $(D Clock.currTime()). It will return the current
-    time as a SysTime. If you want to print it, simple $(D toString()) will do,
-    but if you use one of $(D toISOString()), $(D toISOExtendedString()), or
-    $(D toSimpleString()), you can use the corresponding $(D fromISOString()),
-    $(D fromISOExtendedString()), or $(D fromISOExtendedString()) to create a
-    $(D SysTime) from the string.
+    To get the current time, use $(D_PARAM Clock.currTime(. It will return the current
+    time as a $(D_PARAM SysTime). If you want to print it, simple $(D_PARAM toString) will do,
+    but if you use one of $(D_PARAM toISOString), $(D_PARAM toISOExtendedString), or
+    $(D_PARAM toSimpleString), you can use the corresponding $(D_PARAM fromISOString),
+    $(D_PARAM fromISOExtendedString), or $(D_PARAM fromISOExtendedString) to create a
+    $(D_PARAM SysTime) from the string.
 
     Examples:
 --------------------
@@ -68,19 +70,19 @@ auto restoredTime = SysTime.fromISOExtendedString(timeString);
 
     Note:
         core.time is publicly imported by std.datetime, so if you're using
-        std.datetime, you don't need to import core.time. Also, DateTimeException
+        std.datetime, you don't need to import core.time. Also, $(D_PARAM DateTimeException)
         is an alias for core.time's TimeException, so you don't need to worry
         about core.time functions and std.datetime functions throwing a different
         type of exception (except in the rare case that they throw something other
-        than TimeException or DateTimeException).
+        than $(D_PARAM TimeException) or $(D_PARAM DateTimeException)).
 
     See_Also:
-        <a href="http://en.wikipedia.org/wiki/ISO_8601">ISO 8601</a>
-        <a href="http://en.wikipedia.org/wiki/Tz_database">Wikipedia entry on TZ Database</a>
-        <a href="http://en.wikipedia.org/wiki/List_of_tz_database_time_zones">List of Time Zones</a>
+        $(WEB en.wikipedia.org/wiki/ISO_8601, ISO 8601)
+        $(WEB en.wikipedia.org/wiki/Tz_database, Wikipedia entry on TZ Database)
+        $(WEB en.wikipedia.org/wiki/List_of_tz_database_time_zones, List of Time Zones)
 
     Copyright: Copyright 2010
-    License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+    License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
     Authors:   Jonathan M Davis and Kato Shoichi
 +/
 module std.datetime;
@@ -305,9755 +307,178 @@ immutable string[] timeStrings = ["hnsecs", "usecs", "msecs", "seconds", "minute
 
 
 //==============================================================================
-// Section with time points.
+// Section with other types.
 //==============================================================================
 
 /++
-    Represents a date in the Proleptic Gregorian Calendar ranging from 32,768 B.C.
-    to 32,767 A.D. Positive years are A.D. Non-positive years are B.C.
-
-    Year, month, and day are kept separately internally so that Date is optimized for
-    calendar operations.
-
-    Date uses the Proleptic Gregorian Calendar, so it assumes the Gregorian leap year
-    calculations for its entire length. And, as per ISO 8601, it also treats 1 B.C. as
-    year 0, so 1 B.C. is 0, 2 B.C. is -1, etc. Use $(D yearBC) if want B.C. as a positive
-    integer with 1 B.C. being the year prior to 1 A.D.
-
-    Year 0 is a leap year.
- +/
-struct Date
-{
-public:
-
-    /++
-        Throws:
-            DateTimeException if the resulting Date would not be valid.
-
-        Params:
-            year  = Year of the Gregorian Calendar. Positive values are A.D.
-                    Non-positive values are B.C. with year 0 being the year
-                    prior to 1 A.D.
-            month = Month of the year.
-            day   = Day of the month.
-     +/
-    this(int year, int month, int day) pure
-    {
-        enforceValid!"months"(cast(Month)month);
-        enforceValid!"days"(year, cast(Month)month, day);
-
-        _year  = cast(short)year;
-        _month = cast(Month)month;
-        _day   = cast(ubyte)day;
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            assertPred!"=="(Date(1, 1, 1), Date.init);
-
-            static void testDate(in Date date, int year, int month, int day, size_t line = __LINE__)
-            {
-                assertPred!"=="(date._year, year, "", __FILE__, line);
-                assertPred!"=="(date._month, month, "", __FILE__, line);
-                assertPred!"=="(date._day, day, "", __FILE__, line);
-            }
-
-            testDate(Date(1999, 1 , 1), 1999, Month.jan, 1);
-            testDate(Date(1999, 7 , 1), 1999, Month.jul, 1);
-            testDate(Date(1999, 7 , 6), 1999, Month.jul, 6);
-
-            //Test A.D.
-            assertThrown!DateTimeException(Date(1, 0, 1));
-            assertThrown!DateTimeException(Date(1, 1, 0));
-            assertThrown!DateTimeException(Date(1999, 13, 1));
-            assertThrown!DateTimeException(Date(1999, 1, 32));
-            assertThrown!DateTimeException(Date(1999, 2, 29));
-            assertThrown!DateTimeException(Date(2000, 2, 30));
-            assertThrown!DateTimeException(Date(1999, 3, 32));
-            assertThrown!DateTimeException(Date(1999, 4, 31));
-            assertThrown!DateTimeException(Date(1999, 5, 32));
-            assertThrown!DateTimeException(Date(1999, 6, 31));
-            assertThrown!DateTimeException(Date(1999, 7, 32));
-            assertThrown!DateTimeException(Date(1999, 8, 32));
-            assertThrown!DateTimeException(Date(1999, 9, 31));
-            assertThrown!DateTimeException(Date(1999, 10, 32));
-            assertThrown!DateTimeException(Date(1999, 11, 31));
-            assertThrown!DateTimeException(Date(1999, 12, 32));
-
-            assertNotThrown!DateTimeException(Date(1999, 1, 31));
-            assertNotThrown!DateTimeException(Date(1999, 2, 28));
-            assertNotThrown!DateTimeException(Date(2000, 2, 29));
-            assertNotThrown!DateTimeException(Date(1999, 3, 31));
-            assertNotThrown!DateTimeException(Date(1999, 4, 30));
-            assertNotThrown!DateTimeException(Date(1999, 5, 31));
-            assertNotThrown!DateTimeException(Date(1999, 6, 30));
-            assertNotThrown!DateTimeException(Date(1999, 7, 31));
-            assertNotThrown!DateTimeException(Date(1999, 8, 31));
-            assertNotThrown!DateTimeException(Date(1999, 9, 30));
-            assertNotThrown!DateTimeException(Date(1999, 10, 31));
-            assertNotThrown!DateTimeException(Date(1999, 11, 30));
-            assertNotThrown!DateTimeException(Date(1999, 12, 31));
-
-            //Test B.C.
-            assertNotThrown!DateTimeException(Date(0, 1, 1));
-            assertNotThrown!DateTimeException(Date(-1, 1, 1));
-            assertNotThrown!DateTimeException(Date(-1, 12, 31));
-            assertNotThrown!DateTimeException(Date(-1, 2, 28));
-            assertNotThrown!DateTimeException(Date(-4, 2, 29));
-
-            assertThrown!DateTimeException(Date(-1, 2, 29));
-            assertThrown!DateTimeException(Date(-2, 2, 29));
-            assertThrown!DateTimeException(Date(-3, 2, 29));
-            }
-    }
-
-
-    /++
-        Params:
-            day = The Xth day of the Gregorian Calendar that the constructed Date
-                  will be for.
-     +/
-    this(int day) pure nothrow
-    {
-        if(day > 0)
-        {
-            int years = (day / daysIn400Years) * 400 + 1;
-            day %= daysIn400Years;
-
-            years += (day / daysIn100Years) * 100;
-            day %= daysIn100Years;
-
-            years += (day / daysIn4Years) * 4;
-            day %= daysIn4Years;
-
-            years += day / daysInYear;
-            day %= daysInYear;
-
-            if(day == 0)
-            {
-                _year = cast(short)(years - 1);
-                _month = Month.dec;
-                _day = 31;
-            }
-            else
-            {
-                _year = cast(short)years;
-
-                try
-                    dayOfYear = day;
-                catch(Exception e)
-                    assert(0, "dayOfYear assignment threw.");
-            }
-        }
-        else if(day <= 0 && -day < daysInLeapYear)
-        {
-            _year = 0;
-
-            try
-                dayOfYear = (daysInLeapYear + day);
-            catch(Exception e)
-                assert(0, "dayOfYear assignment threw.");
-        }
-        else
-        {
-            day += daysInLeapYear - 1;
-            int years = (day / daysIn400Years) * 400 - 1;
-            day %= daysIn400Years;
-
-            years += (day / daysIn100Years) * 100;
-            day %= daysIn100Years;
-
-            years += (day / daysIn4Years) * 4;
-            day %= daysIn4Years;
-
-            years += day / daysInYear;
-            day %= daysInYear;
-
-            if(day == 0)
-            {
-                _year = cast(short)(years + 1);
-                _month = Month.jan;
-                _day = 1;
-            }
-            else
-            {
-                _year = cast(short)years;
-                immutable newDoY = (yearIsLeapYear(_year) ? daysInLeapYear : daysInYear) + day + 1;
-
-                try
-                    dayOfYear = newDoY;
-                catch(Exception e)
-                    assert(0, "dayOfYear assignment threw.");
-            }
-        }
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            //Test A.D.
-            assertPred!"=="(Date(1), Date(1, 1, 1));
-            assertPred!"=="(Date(2), Date(1, 1, 2));
-            assertPred!"=="(Date(32), Date(1, 2, 1));
-            assertPred!"=="(Date(366), Date(2, 1, 1));
-            assertPred!"=="(Date(731), Date(3, 1, 1));
-            assertPred!"=="(Date(1096), Date(4, 1, 1));
-            assertPred!"=="(Date(1462), Date(5, 1, 1));
-            assertPred!"=="(Date(17_898), Date(50, 1, 1));
-            assertPred!"=="(Date(35_065), Date(97, 1, 1));
-            assertPred!"=="(Date(36_160), Date(100, 1, 1));
-            assertPred!"=="(Date(36_525), Date(101, 1, 1));
-            assertPred!"=="(Date(37_986), Date(105, 1, 1));
-            assertPred!"=="(Date(72_684), Date(200, 1, 1));
-            assertPred!"=="(Date(73_049), Date(201, 1, 1));
-            assertPred!"=="(Date(109_208), Date(300, 1, 1));
-            assertPred!"=="(Date(109_573), Date(301, 1, 1));
-            assertPred!"=="(Date(145_732), Date(400, 1, 1));
-            assertPred!"=="(Date(146_098), Date(401, 1, 1));
-            assertPred!"=="(Date(182_257), Date(500, 1, 1));
-            assertPred!"=="(Date(182_622), Date(501, 1, 1));
-            assertPred!"=="(Date(364_878), Date(1000, 1, 1));
-            assertPred!"=="(Date(365_243), Date(1001, 1, 1));
-            assertPred!"=="(Date(584_023), Date(1600, 1, 1));
-            assertPred!"=="(Date(584_389), Date(1601, 1, 1));
-            assertPred!"=="(Date(693_596), Date(1900, 1, 1));
-            assertPred!"=="(Date(693_961), Date(1901, 1, 1));
-            assertPred!"=="(Date(729_755), Date(1999, 1, 1));
-            assertPred!"=="(Date(730_120), Date(2000, 1, 1));
-            assertPred!"=="(Date(730_486), Date(2001, 1, 1));
-
-            assertPred!"=="(Date(733_773), Date(2010, 1, 1));
-            assertPred!"=="(Date(733_803), Date(2010, 1, 31));
-            assertPred!"=="(Date(733_804), Date(2010, 2, 1));
-            assertPred!"=="(Date(733_831), Date(2010, 2, 28));
-            assertPred!"=="(Date(733_832), Date(2010, 3, 1));
-            assertPred!"=="(Date(733_862), Date(2010, 3, 31));
-            assertPred!"=="(Date(733_863), Date(2010, 4, 1));
-            assertPred!"=="(Date(733_892), Date(2010, 4, 30));
-            assertPred!"=="(Date(733_893), Date(2010, 5, 1));
-            assertPred!"=="(Date(733_923), Date(2010, 5, 31));
-            assertPred!"=="(Date(733_924), Date(2010, 6, 1));
-            assertPred!"=="(Date(733_953), Date(2010, 6, 30));
-            assertPred!"=="(Date(733_954), Date(2010, 7, 1));
-            assertPred!"=="(Date(733_984), Date(2010, 7, 31));
-            assertPred!"=="(Date(733_985), Date(2010, 8, 1));
-            assertPred!"=="(Date(734_015), Date(2010, 8, 31));
-            assertPred!"=="(Date(734_016), Date(2010, 9, 1));
-            assertPred!"=="(Date(734_045), Date(2010, 9, 30));
-            assertPred!"=="(Date(734_046), Date(2010, 10, 1));
-            assertPred!"=="(Date(734_076), Date(2010, 10, 31));
-            assertPred!"=="(Date(734_077), Date(2010, 11, 1));
-            assertPred!"=="(Date(734_106), Date(2010, 11, 30));
-            assertPred!"=="(Date(734_107), Date(2010, 12, 1));
-            assertPred!"=="(Date(734_137), Date(2010, 12, 31));
-
-            assertPred!"=="(Date(734_534), Date(2012, 2, 1));
-            assertPred!"=="(Date(734_561), Date(2012, 2, 28));
-            assertPred!"=="(Date(734_562), Date(2012, 2, 29));
-            assertPred!"=="(Date(734_563), Date(2012, 3, 1));
-
-            assertPred!"=="(Date(734_534),  Date(2012, 2, 1));
-
-            assertPred!"=="(Date(734_561), Date(2012, 2, 28));
-            assertPred!"=="(Date(734_562), Date(2012, 2, 29));
-            assertPred!"=="(Date(734_563), Date(2012, 3, 1));
-
-            //Test B.C.
-            assertPred!"=="(Date(0), Date(0, 12, 31));
-            assertPred!"=="(Date(-1), Date(0, 12, 30));
-            assertPred!"=="(Date(-30), Date(0, 12, 1));
-            assertPred!"=="(Date(-31), Date(0, 11, 30));
-
-            assertPred!"=="(Date(-366), Date(-1, 12, 31));
-            assertPred!"=="(Date(-367), Date(-1, 12, 30));
-            assertPred!"=="(Date(-730), Date(-1, 1, 1));
-            assertPred!"=="(Date(-731), Date(-2, 12, 31));
-            assertPred!"=="(Date(-1095), Date(-2, 1, 1));
-            assertPred!"=="(Date(-1096), Date(-3, 12, 31));
-            assertPred!"=="(Date(-1460), Date(-3, 1, 1));
-            assertPred!"=="(Date(-1461), Date(-4, 12, 31));
-            assertPred!"=="(Date(-1826), Date(-4, 1, 1));
-            assertPred!"=="(Date(-1827), Date(-5, 12, 31));
-            assertPred!"=="(Date(-2191), Date(-5, 1, 1));
-            assertPred!"=="(Date(-3652), Date(-9, 1, 1));
-
-            assertPred!"=="(Date(-18_262), Date(-49, 1, 1));
-            assertPred!"=="(Date(-18_627), Date(-50, 1, 1));
-            assertPred!"=="(Date(-35_794), Date(-97, 1, 1));
-            assertPred!"=="(Date(-36_160), Date(-99, 12, 31));
-            assertPred!"=="(Date(-36_524), Date(-99, 1, 1));
-            assertPred!"=="(Date(-36_889), Date(-100, 1, 1));
-            assertPred!"=="(Date(-37_254), Date(-101, 1, 1));
-            assertPred!"=="(Date(-38_715), Date(-105, 1, 1));
-            assertPred!"=="(Date(-73_413), Date(-200, 1, 1));
-            assertPred!"=="(Date(-73_778), Date(-201, 1, 1));
-            assertPred!"=="(Date(-109_937), Date(-300, 1, 1));
-            assertPred!"=="(Date(-110_302), Date(-301, 1, 1));
-            assertPred!"=="(Date(-146_097), Date(-400, 12, 31));
-            assertPred!"=="(Date(-146_462), Date(-400, 1, 1));
-            assertPred!"=="(Date(-146_827), Date(-401, 1, 1));
-            assertPred!"=="(Date(-182_621), Date(-499, 1, 1));
-            assertPred!"=="(Date(-182_986), Date(-500, 1, 1));
-            assertPred!"=="(Date(-183_351), Date(-501, 1, 1));
-            assertPred!"=="(Date(-365_607), Date(-1000, 1, 1));
-            assertPred!"=="(Date(-365_972), Date(-1001, 1, 1));
-            assertPred!"=="(Date(-584_387), Date(-1599, 1, 1));
-            assertPred!"=="(Date(-584_388), Date(-1600, 12, 31));
-            assertPred!"=="(Date(-584_753), Date(-1600, 1, 1));
-            assertPred!"=="(Date(-585_118), Date(-1601, 1, 1));
-            assertPred!"=="(Date(-694_325), Date(-1900, 1, 1));
-            assertPred!"=="(Date(-694_690), Date(-1901, 1, 1));
-            assertPred!"=="(Date(-730_484), Date(-1999, 1, 1));
-            assertPred!"=="(Date(-730_485), Date(-2000, 12, 31));
-            assertPred!"=="(Date(-730_850), Date(-2000, 1, 1));
-            assertPred!"=="(Date(-731_215), Date(-2001, 1, 1));
-
-            assertPred!"=="(Date(-734_502), Date(-2010, 1, 1));
-            assertPred!"=="(Date(-734_472), Date(-2010, 1, 31));
-            assertPred!"=="(Date(-734_471), Date(-2010, 2, 1));
-            assertPred!"=="(Date(-734_444), Date(-2010, 2, 28));
-            assertPred!"=="(Date(-734_443), Date(-2010, 3, 1));
-            assertPred!"=="(Date(-734_413), Date(-2010, 3, 31));
-            assertPred!"=="(Date(-734_412), Date(-2010, 4, 1));
-            assertPred!"=="(Date(-734_383), Date(-2010, 4, 30));
-            assertPred!"=="(Date(-734_382), Date(-2010, 5, 1));
-            assertPred!"=="(Date(-734_352), Date(-2010, 5, 31));
-            assertPred!"=="(Date(-734_351), Date(-2010, 6, 1));
-            assertPred!"=="(Date(-734_322), Date(-2010, 6, 30));
-            assertPred!"=="(Date(-734_321), Date(-2010, 7, 1));
-            assertPred!"=="(Date(-734_291), Date(-2010, 7, 31));
-            assertPred!"=="(Date(-734_290), Date(-2010, 8, 1));
-            assertPred!"=="(Date(-734_260), Date(-2010, 8, 31));
-            assertPred!"=="(Date(-734_259), Date(-2010, 9, 1));
-            assertPred!"=="(Date(-734_230), Date(-2010, 9, 30));
-            assertPred!"=="(Date(-734_229), Date(-2010, 10, 1));
-            assertPred!"=="(Date(-734_199), Date(-2010, 10, 31));
-            assertPred!"=="(Date(-734_198), Date(-2010, 11, 1));
-            assertPred!"=="(Date(-734_169), Date(-2010, 11, 30));
-            assertPred!"=="(Date(-734_168), Date(-2010, 12, 1));
-            assertPred!"=="(Date(-734_138), Date(-2010, 12, 31));
-
-            assertPred!"=="(Date(-735_202), Date(-2012, 2, 1));
-            assertPred!"=="(Date(-735_175), Date(-2012, 2, 28));
-            assertPred!"=="(Date(-735_174), Date(-2012, 2, 29));
-            assertPred!"=="(Date(-735_173), Date(-2012, 3, 1));
-
-            assertPred!"=="(Date(-1_373_427), Date(-3760, 9, 7)); //Start of the Hebrew Calendar
-        }
-    }
-
-
-    /++
-        Compares this Date with the given Date.
-
-        Returns:
-            $(TABLE
-            $(TR $(TD this &lt; rhs) $(TD &lt; 0))
-            $(TR $(TD this == rhs) $(TD 0))
-            $(TR $(TD this &gt; rhs) $(TD &gt; 0))
-            )
-     +/
-    int opCmp(in Date rhs) const pure nothrow
-    {
-        if(_year < rhs._year)
-            return -1;
-        if(_year > rhs._year)
-            return 1;
-
-        if(_month < rhs._month)
-            return -1;
-        if(_month > rhs._month)
-            return 1;
-
-        if(_day < rhs._day)
-            return -1;
-        if(_day > rhs._day)
-            return 1;
-
-        return 0;
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            //Test A.D.
-            assertPred!("opCmp", "==")(Date(1, 1, 1), Date.init);
-
-            assertPred!("opCmp", "==")(Date(1999, 1, 1), Date(1999, 1, 1));
-            assertPred!("opCmp", "==")(Date(1, 7, 1), Date(1, 7, 1));
-            assertPred!("opCmp", "==")(Date(1, 1, 6), Date(1, 1, 6));
-
-            assertPred!("opCmp", "==")(Date(1999, 7, 1), Date(1999, 7, 1));
-            assertPred!("opCmp", "==")(Date(1999, 7, 6), Date(1999, 7, 6));
-
-            assertPred!("opCmp", "==")(Date(1, 7, 6), Date(1, 7, 6));
-
-            assertPred!("opCmp", "<")(Date(1999, 7, 6), Date(2000, 7, 6));
-            assertPred!("opCmp", ">")(Date(2000, 7, 6), Date(1999, 7, 6));
-            assertPred!("opCmp", "<")(Date(1999, 7, 6), Date(1999, 8, 6));
-            assertPred!("opCmp", ">")(Date(1999, 8, 6), Date(1999, 7, 6));
-            assertPred!("opCmp", "<")(Date(1999, 7, 6), Date(1999, 7, 7));
-            assertPred!("opCmp", ">")(Date(1999, 7, 7), Date(1999, 7, 6));
-
-            assertPred!("opCmp", "<")(Date(1999, 8, 7), Date(2000, 7, 6));
-            assertPred!("opCmp", ">")(Date(2000, 8, 6), Date(1999, 7, 7));
-            assertPred!("opCmp", "<")(Date(1999, 7, 7), Date(2000, 7, 6));
-            assertPred!("opCmp", ">")(Date(2000, 7, 6), Date(1999, 7, 7));
-            assertPred!("opCmp", "<")(Date(1999, 7, 7), Date(1999, 8, 6));
-            assertPred!("opCmp", ">")(Date(1999, 8, 6), Date(1999, 7, 7));
-
-            //Test B.C.
-            assertPred!("opCmp", "==")(Date(0, 1, 1), Date(0, 1, 1));
-            assertPred!("opCmp", "==")(Date(-1, 1, 1), Date(-1, 1, 1));
-            assertPred!("opCmp", "==")(Date(-1, 7, 1), Date(-1, 7, 1));
-            assertPred!("opCmp", "==")(Date(-1, 1, 6), Date(-1, 1, 6));
-
-            assertPred!("opCmp", "==")(Date(-1999, 7, 1), Date(-1999, 7, 1));
-            assertPred!("opCmp", "==")(Date(-1999, 7, 6), Date(-1999, 7, 6));
-
-            assertPred!("opCmp", "==")(Date(-1, 7, 6), Date(-1, 7, 6));
-
-            assertPred!("opCmp", "<")(Date(-2000, 7, 6), Date(-1999, 7, 6));
-            assertPred!("opCmp", ">")(Date(-1999, 7, 6), Date(-2000, 7, 6));
-            assertPred!("opCmp", "<")(Date(-1999, 7, 6), Date(-1999, 8, 6));
-            assertPred!("opCmp", ">")(Date(-1999, 8, 6), Date(-1999, 7, 6));
-            assertPred!("opCmp", "<")(Date(-1999, 7, 6), Date(-1999, 7, 7));
-            assertPred!("opCmp", ">")(Date(-1999, 7, 7), Date(-1999, 7, 6));
-
-            assertPred!("opCmp", "<")(Date(-2000, 8, 6), Date(-1999, 7, 7));
-            assertPred!("opCmp", ">")(Date(-1999, 8, 7), Date(-2000, 7, 6));
-            assertPred!("opCmp", "<")(Date(-2000, 7, 6), Date(-1999, 7, 7));
-            assertPred!("opCmp", ">")(Date(-1999, 7, 7), Date(-2000, 7, 6));
-            assertPred!("opCmp", "<")(Date(-1999, 7, 7), Date(-1999, 8, 6));
-            assertPred!("opCmp", ">")(Date(-1999, 8, 6), Date(-1999, 7, 7));
-
-            //Test Both
-            assertPred!("opCmp", "<")(Date(-1999, 7, 6), Date(1999, 7, 6));
-            assertPred!("opCmp", ">")(Date(1999, 7, 6), Date(-1999, 7, 6));
-
-            assertPred!("opCmp", "<")(Date(-1999, 8, 6), Date(1999, 7, 6));
-            assertPred!("opCmp", ">")(Date(1999, 7, 6), Date(-1999, 8, 6));
-
-            assertPred!("opCmp", "<")(Date(-1999, 7, 7), Date(1999, 7, 6));
-            assertPred!("opCmp", ">")(Date(1999, 7, 6), Date(-1999, 7, 7));
-
-            assertPred!("opCmp", "<")(Date(-1999, 8, 7), Date(1999, 7, 6));
-            assertPred!("opCmp", ">")(Date(1999, 7, 6), Date(-1999, 8, 7));
-
-            assertPred!("opCmp", "<")(Date(-1999, 8, 6), Date(1999, 6, 6));
-            assertPred!("opCmp", ">")(Date(1999, 6, 8), Date(-1999, 7, 6));
-
-            auto date = Date(1999, 7, 6);
-            const cdate = Date(1999, 7, 6);
-            immutable idate = Date(1999, 7, 6);
-            static assert(__traits(compiles, date.opCmp(date)));
-            static assert(__traits(compiles, date.opCmp(cdate)));
-            static assert(__traits(compiles, date.opCmp(idate)));
-            static assert(__traits(compiles, cdate.opCmp(date)));
-            static assert(__traits(compiles, cdate.opCmp(cdate)));
-            static assert(__traits(compiles, cdate.opCmp(idate)));
-            static assert(__traits(compiles, idate.opCmp(date)));
-            static assert(__traits(compiles, idate.opCmp(cdate)));
-            static assert(__traits(compiles, idate.opCmp(idate)));
-        }
-    }
-
-
-    /++
-        Year of the Gregorian Calendar. Positive numbers are A.D. Non-positive
-        are B.C.
-
-        Examples:
---------------------
-assert(Date(1999, 7, 6).year == 1999);
-assert(Date(2010, 10, 4).year == 2010);
-assert(Date(-7, 4, 5).year == -7);
---------------------
-     +/
-    @property short year() const pure nothrow
-    {
-        return _year;
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            assertPred!"=="(Date.init.year, 1);
-            assertPred!"=="(Date(1999, 7, 6).year, 1999);
-            assertPred!"=="(Date(-1999, 7, 6).year, -1999);
-
-            const cdate = Date(1999, 7, 6);
-            immutable idate = Date(1999, 7, 6);
-            static assert(__traits(compiles, cdate.year == 1999));
-            static assert(__traits(compiles, idate.year == 1999));
-
-            //Verify Examples.
-            assert(Date(1999, 7, 6).year == 1999);
-            assert(Date(2010, 10, 4).year == 2010);
-            assert(Date(-7, 4, 5).year == -7);
-        }
-    }
-
-    /++
-        Year of the Gregorian Calendar. Positive numbers are A.D. Non-positive
-        are B.C.
-
-        Params:
-            year = The year to set this Date's year to.
-
-        Throws:
-            DateTimeException if the new year is not a leap year and the resulting
-            date would be on February 29th.
-     +/
-    @property void year(int year) pure
-    {
-        enforceValid!"days"(year, _month, _day);
-        _year = cast(short)year;
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            static void testDateInvalid(Date date, int year)
-            {
-                date.year = year;
-            }
-
-            static void testDate(Date date, int year, in Date expected, size_t line = __LINE__)
-            {
-                date.year = year;
-                assertPred!"=="(date, expected, "", __FILE__, line);
-            }
-
-            assertThrown!DateTimeException(testDateInvalid(Date(4, 2, 29), 1));
-
-            testDate(Date(1, 1, 1), 1999, Date(1999, 1, 1));
-            testDate(Date(1, 1, 1), 0, Date(0, 1, 1));
-            testDate(Date(1, 1, 1), -1999, Date(-1999, 1, 1));
-
-            const cdate = Date(1999, 7, 6);
-            immutable idate = Date(1999, 7, 6);
-            static assert(!__traits(compiles, cdate.year = 1999));
-            static assert(!__traits(compiles, idate.year = 1999));
-
-            //Verify Examples.
-            assert(Date(1999, 7, 6).year == 1999);
-            assert(Date(2010, 10, 4).year == 2010);
-            assert(Date(-7, 4, 5).year == -7);
-        }
-    }
-
-
-    /++
-        Year B.C. of the Gregorian Calendar counting year 0 as 1 B.C.
-
-        Throws:
-            DateTimeException if $(D isAD) is true.
-
-        Examples:
---------------------
-assert(Date(0, 1, 1).yearBC == 1);
-assert(Date(-1, 1, 1).yearBC == 2);
-assert(Date(-100, 1, 1).yearBC == 101);
---------------------
-     +/
-    @property ushort yearBC() const pure
-    {
-        if(isAD)
-            throw new DateTimeException("Year " ~ numToString(_year) ~ " is A.D.");
-            //Once format is pure, this would be a better error message.
-            //throw new DateTimeException(format("%s is A.D.", this));
-
-        return cast(ushort)((_year * -1) + 1);
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            assertThrown!DateTimeException((in Date date){date.yearBC;}(Date(1, 1, 1)));
-
-            auto date = Date(0, 7, 6);
-            const cdate = Date(0, 7, 6);
-            immutable idate = Date(0, 7, 6);
-            static assert(__traits(compiles, date.yearBC));
-            static assert(__traits(compiles, cdate.yearBC));
-            static assert(__traits(compiles, idate.yearBC));
-
-            //Verify Examples.
-            assert(Date(0, 1, 1).yearBC == 1);
-            assert(Date(-1, 1, 1).yearBC == 2);
-            assert(Date(-100, 1, 1).yearBC == 101);
-        }
-    }
-
-
-    /++
-        Year B.C. of the Gregorian Calendar counting year 0 as 1 B.C.
-
-        Params:
-            year = The year B.C. to set this Date's year to.
-
-        Throws:
-            DateTimeException if a non-positive value is given.
-
-        Examples:
---------------------
-auto date = Date(2010, 1, 1);
-date.yearBC = 1;
-assert(date == Date(0, 1, 1));
-
-date.yearBC = 10;
-assert(date == Date(-9, 1, 1));
---------------------
-     +/
-    @property void yearBC(int year) pure
-    {
-        if(year <= 0)
-            throw new DateTimeException("The given year is not a year B.C.");
-
-        _year = cast(short)((year - 1) * -1);
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            assertThrown!DateTimeException((Date date){date.yearBC = -1;}(Date(1, 1, 1)));
-
-            {
-                auto date = Date(0, 7, 6);
-                const cdate = Date(0, 7, 6);
-                immutable idate = Date(0, 7, 6);
-                static assert(__traits(compiles, date.yearBC = 7));
-                static assert(!__traits(compiles, cdate.yearBC = 7));
-                static assert(!__traits(compiles, idate.yearBC = 7));
-            }
-
-            //Verify Examples.
-            {
-                auto date = Date(2010, 1, 1);
-                date.yearBC = 1;
-                assert(date == Date(0, 1, 1));
-
-                date.yearBC = 10;
-                assert(date == Date(-9, 1, 1));
-            }
-        }
-    }
-
-
-    /++
-        Month of a Gregorian Year.
-
-        Examples:
---------------------
-assert(Date(1999, 7, 6).month == 7);
-assert(Date(2010, 10, 4).month == 10);
-assert(Date(-7, 4, 5).month == 4);
---------------------
-     +/
-    @property Month month() const pure nothrow
-    {
-        return _month;
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            assertPred!"=="(Date.init.month, 1);
-            assertPred!"=="(Date(1999, 7, 6).month, 7);
-            assertPred!"=="(Date(-1999, 7, 6).month, 7);
-
-            const cdate = Date(1999, 7, 6);
-            immutable idate = Date(1999, 7, 6);
-            static assert(__traits(compiles, cdate.month == 7));
-            static assert(__traits(compiles, idate.month == 7));
-
-            //Verify Examples.
-            assert(Date(1999, 7, 6).month == 7);
-            assert(Date(2010, 10, 4).month == 10);
-            assert(Date(-7, 4, 5).month == 4);
-        }
-    }
-
-    /++
-        Month of a Gregorian Year.
-
-        Params:
-            month = The month to set this Date's month to.
-
-        Throws:
-            DateTimeException if the given month is not a valid month or if
-            the current day would not be valid in the given month.
-     +/
-    @property void month(Month month) pure
-    {
-        enforceValid!"months"(month);
-        enforceValid!"days"(_year, month, _day);
-        _month = cast(Month)month;
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            static void testDate(Date date, Month month, in Date expected = Date.init, size_t line = __LINE__)
-            {
-                date.month = month;
-                assert(expected != Date.init);
-                assertPred!"=="(date, expected, "", __FILE__, line);
-            }
-
-            assertThrown!DateTimeException(testDate(Date(1, 1, 1), cast(Month)0));
-            assertThrown!DateTimeException(testDate(Date(1, 1, 1), cast(Month)13));
-            assertThrown!DateTimeException(testDate(Date(1, 1, 29), cast(Month)2));
-            assertThrown!DateTimeException(testDate(Date(0, 1, 30), cast(Month)2));
-
-            testDate(Date(1, 1, 1), cast(Month)7, Date(1, 7, 1));
-            testDate(Date(-1, 1, 1), cast(Month)7, Date(-1, 7, 1));
-
-            const cdate = Date(1999, 7, 6);
-            immutable idate = Date(1999, 7, 6);
-            static assert(!__traits(compiles, cdate.month = 7));
-            static assert(!__traits(compiles, idate.month = 7));
-        }
-    }
-
-
-    /++
-        Day of a Gregorian Month.
-
-        Examples:
---------------------
-assert(Date(1999, 7, 6).day == 6);
-assert(Date(2010, 10, 4).day == 4);
-assert(Date(-7, 4, 5).day == 5);
---------------------
-     +/
-    @property ubyte day() const pure nothrow
-    {
-        return _day;
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            assertPred!"=="(Date.init.day, 1);
-            assertPred!"=="(Date(1999, 7, 6).day, 6);
-            assertPred!"=="(Date(-1999, 7, 6).day, 6);
-
-            const cdate = Date(1999, 7, 6);
-            immutable idate = Date(1999, 7, 6);
-            static assert(__traits(compiles, cdate.day == 6));
-            static assert(__traits(compiles, idate.day == 6));
-
-            //Verify Examples.
-            assert(Date(1999, 7, 6).day == 6);
-            assert(Date(2010, 10, 4).day == 4);
-            assert(Date(-7, 4, 5).day == 5);
-        }
-    }
-
-    /++
-        Day of a Gregorian Month.
-
-        Params:
-            day = The day of the month to set this Date's day to.
-
-        Throws:
-            DateTimeException if the given day is not a valid day of the current month.
-     +/
-    @property void day(int day) pure
-    {
-        enforceValid!"days"(_year, _month, day);
-        _day = cast(ubyte)day;
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            static void testDate(Date date, int day)
-            {
-                date.day = day;
-            }
-
-            //Test A.D.
-            assertThrown!DateTimeException(testDate(Date(1, 1, 1), 0));
-            assertThrown!DateTimeException(testDate(Date(1, 1, 1), 32));
-            assertThrown!DateTimeException(testDate(Date(1, 2, 1), 29));
-            assertThrown!DateTimeException(testDate(Date(4, 2, 1), 30));
-            assertThrown!DateTimeException(testDate(Date(1, 3, 1), 32));
-            assertThrown!DateTimeException(testDate(Date(1, 4, 1), 31));
-            assertThrown!DateTimeException(testDate(Date(1, 5, 1), 32));
-            assertThrown!DateTimeException(testDate(Date(1, 6, 1), 31));
-            assertThrown!DateTimeException(testDate(Date(1, 7, 1), 32));
-            assertThrown!DateTimeException(testDate(Date(1, 8, 1), 32));
-            assertThrown!DateTimeException(testDate(Date(1, 9, 1), 31));
-            assertThrown!DateTimeException(testDate(Date(1, 10, 1), 32));
-            assertThrown!DateTimeException(testDate(Date(1, 11, 1), 31));
-            assertThrown!DateTimeException(testDate(Date(1, 12, 1), 32));
-
-            assertNotThrown!DateTimeException(testDate(Date(1, 1, 1), 31));
-            assertNotThrown!DateTimeException(testDate(Date(1, 2, 1), 28));
-            assertNotThrown!DateTimeException(testDate(Date(4, 2, 1), 29));
-            assertNotThrown!DateTimeException(testDate(Date(1, 3, 1), 31));
-            assertNotThrown!DateTimeException(testDate(Date(1, 4, 1), 30));
-            assertNotThrown!DateTimeException(testDate(Date(1, 5, 1), 31));
-            assertNotThrown!DateTimeException(testDate(Date(1, 6, 1), 30));
-            assertNotThrown!DateTimeException(testDate(Date(1, 7, 1), 31));
-            assertNotThrown!DateTimeException(testDate(Date(1, 8, 1), 31));
-            assertNotThrown!DateTimeException(testDate(Date(1, 9, 1), 30));
-            assertNotThrown!DateTimeException(testDate(Date(1, 10, 1), 31));
-            assertNotThrown!DateTimeException(testDate(Date(1, 11, 1), 30));
-            assertNotThrown!DateTimeException(testDate(Date(1, 12, 1), 31));
-
-            {
-                auto date = Date(1, 1, 1);
-                date.day = 6;
-                assertPred!"=="(date, Date(1, 1, 6));
-            }
-
-            //Test B.C.
-            assertThrown!DateTimeException(testDate(Date(-1, 1, 1), 0));
-            assertThrown!DateTimeException(testDate(Date(-1, 1, 1), 32));
-            assertThrown!DateTimeException(testDate(Date(-1, 2, 1), 29));
-            assertThrown!DateTimeException(testDate(Date(0, 2, 1), 30));
-            assertThrown!DateTimeException(testDate(Date(-1, 3, 1), 32));
-            assertThrown!DateTimeException(testDate(Date(-1, 4, 1), 31));
-            assertThrown!DateTimeException(testDate(Date(-1, 5, 1), 32));
-            assertThrown!DateTimeException(testDate(Date(-1, 6, 1), 31));
-            assertThrown!DateTimeException(testDate(Date(-1, 7, 1), 32));
-            assertThrown!DateTimeException(testDate(Date(-1, 8, 1), 32));
-            assertThrown!DateTimeException(testDate(Date(-1, 9, 1), 31));
-            assertThrown!DateTimeException(testDate(Date(-1, 10, 1), 32));
-            assertThrown!DateTimeException(testDate(Date(-1, 11, 1), 31));
-            assertThrown!DateTimeException(testDate(Date(-1, 12, 1), 32));
-
-            assertNotThrown!DateTimeException(testDate(Date(-1, 1, 1), 31));
-            assertNotThrown!DateTimeException(testDate(Date(-1, 2, 1), 28));
-            assertNotThrown!DateTimeException(testDate(Date(0, 2, 1), 29));
-            assertNotThrown!DateTimeException(testDate(Date(-1, 3, 1), 31));
-            assertNotThrown!DateTimeException(testDate(Date(-1, 4, 1), 30));
-            assertNotThrown!DateTimeException(testDate(Date(-1, 5, 1), 31));
-            assertNotThrown!DateTimeException(testDate(Date(-1, 6, 1), 30));
-            assertNotThrown!DateTimeException(testDate(Date(-1, 7, 1), 31));
-            assertNotThrown!DateTimeException(testDate(Date(-1, 8, 1), 31));
-            assertNotThrown!DateTimeException(testDate(Date(-1, 9, 1), 30));
-            assertNotThrown!DateTimeException(testDate(Date(-1, 10, 1), 31));
-            assertNotThrown!DateTimeException(testDate(Date(-1, 11, 1), 30));
-            assertNotThrown!DateTimeException(testDate(Date(-1, 12, 1), 31));
-
-            {
-                auto date = Date(-1, 1, 1);
-                date.day = 6;
-                assertPred!"=="(date, Date(-1, 1, 6));
-            }
-
-            const cdate = Date(1999, 7, 6);
-            immutable idate = Date(1999, 7, 6);
-            static assert(!__traits(compiles, cdate.day = 6));
-            static assert(!__traits(compiles, idate.day = 6));
-        }
-    }
-
-
-    /++
-        Adds the given number of years to this Date. A negative number will subtract.
-
-        Note that if day overflow is allowed, and the date is Febuary 29th of a
-        leap year, and the new year is not a leap year, then the date is shifted
-        to March 1st. If day overflow is not allowed, then the date is shifted to
-        February 28th.
-
-        Params:
-            years         = The number of years to add to this Date.
-            allowOverflow = Whether the days should be allowed to overflow, causing
-                            the month to increment.
-
-        Examples:
---------------------
-auto date1 = Date(2010, 1, 1);
-date1.add!"years"(1);
-assert(date1 == Date(2011, 1, 1));
-
-auto date2 = Date(2010, 1, 1);
-date2.add!"years"(-1);
-assert(date2 == Date(2009, 1, 1));
-
-auto date3 = Date(2000, 2, 29);
-date3.add!"years"(1);
-assert(date3 == Date(2001, 3, 1));
-
-auto date4 = Date(2000, 2, 29);
-date4.add!"years"(1, AllowDayOverflow.no);
-assert(date4 == Date(2001, 2, 28));
---------------------
-      +/
-    /+ref Date+/ void add(string units)(long years, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) pure nothrow
-        if(units == "years")
-    {
-        immutable newYear = _year + years;
-
-        _year += years;
-
-        if(_month == Month.feb && _day == 29 && !yearIsLeapYear(_year))
-        {
-            if(allowOverflow == AllowDayOverflow.yes)
-            {
-                _month = Month.mar;
-                _day = 1;
-            }
-            else
-                _day = 28;
-        }
-    }
-
-    //Test add!"years"() with AllowDayOverlow.yes
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            //Test A.D.
-            {
-                auto date = Date(1999, 7, 6);
-                date.add!"years"(7);
-                assertPred!"=="(date, Date(2006, 7, 6));
-                date.add!"years"(-9);
-                assertPred!"=="(date, Date(1997, 7, 6));
-            }
-
-            {
-                auto date = Date(1999, 2, 28);
-                date.add!"years"(1);
-                assertPred!"=="(date, Date(2000, 2, 28));
-            }
-
-            {
-                auto date = Date(2000, 2, 29);
-                date.add!"years"(-1);
-                assertPred!"=="(date, Date(1999, 3, 1));
-            }
-
-            //Test B.C.
-            {
-                auto date = Date(-1999, 7, 6);
-                date.add!"years"(-7);
-                assertPred!"=="(date, Date(-2006, 7, 6));
-                date.add!"years"(9);
-                assertPred!"=="(date, Date(-1997, 7, 6));
-            }
-
-            {
-                auto date = Date(-1999, 2, 28);
-                date.add!"years"(-1);
-                assertPred!"=="(date, Date(-2000, 2, 28));
-            }
-
-            {
-                auto date = Date(-2000, 2, 29);
-                date.add!"years"(1);
-                assertPred!"=="(date, Date(-1999, 3, 1));
-            }
-
-            //Test Both
-            {
-                auto date = Date(4, 7, 6);
-                date.add!"years"(-5);
-                assertPred!"=="(date, Date(-1, 7, 6));
-                date.add!"years"(5);
-                assertPred!"=="(date, Date(4, 7, 6));
-            }
-
-            {
-                auto date = Date(-4, 7, 6);
-                date.add!"years"(5);
-                assertPred!"=="(date, Date(1, 7, 6));
-                date.add!"years"(-5);
-                assertPred!"=="(date, Date(-4, 7, 6));
-            }
-
-            {
-                auto date = Date(4, 7, 6);
-                date.add!"years"(-8);
-                assertPred!"=="(date, Date(-4, 7, 6));
-                date.add!"years"(8);
-                assertPred!"=="(date, Date(4, 7, 6));
-            }
-
-            {
-                auto date = Date(-4, 7, 6);
-                date.add!"years"(8);
-                assertPred!"=="(date, Date(4, 7, 6));
-                date.add!"years"(-8);
-                assertPred!"=="(date, Date(-4, 7, 6));
-            }
-
-            {
-                auto date = Date(-4, 2, 29);
-                date.add!"years"(5);
-                assertPred!"=="(date, Date(1, 3, 1));
-            }
-
-            {
-                auto date = Date(4, 2, 29);
-                date.add!"years"(-5);
-                assertPred!"=="(date, Date(-1, 3, 1));
-            }
-
-            const cdate = Date(1999, 7, 6);
-            immutable idate = Date(1999, 7, 6);
-            static assert(!__traits(compiles, cdate.add!"years"(7)));
-            static assert(!__traits(compiles, idate.add!"years"(7)));
-
-            //Verify Examples.
-            auto date1 = Date(2010, 1, 1);
-            date1.add!"years"(1);
-            assert(date1 == Date(2011, 1, 1));
-
-            auto date2 = Date(2010, 1, 1);
-            date2.add!"years"(-1);
-            assert(date2 == Date(2009, 1, 1));
-
-            auto date3 = Date(2000, 2, 29);
-            date3.add!"years"(1);
-            assert(date3 == Date(2001, 3, 1));
-
-            auto date4 = Date(2000, 2, 29);
-            date4.add!"years"(1, AllowDayOverflow.no);
-            assert(date4 == Date(2001, 2, 28));
-        }
-    }
-
-    //Test add!"years"() with AllowDayOverlow.no
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            //Test A.D.
-            {
-                auto date = Date(1999, 7, 6);
-                date.add!"years"(7, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(2006, 7, 6));
-                date.add!"years"(-9, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(1997, 7, 6));
-            }
-
-            {
-                auto date = Date(1999, 2, 28);
-                date.add!"years"(1, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(2000, 2, 28));
-            }
-
-            {
-                auto date = Date(2000, 2, 29);
-                date.add!"years"(-1, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(1999, 2, 28));
-            }
-
-            //Test B.C.
-            {
-                auto date = Date(-1999, 7, 6);
-                date.add!"years"(-7, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(-2006, 7, 6));
-                date.add!"years"(9, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(-1997, 7, 6));
-            }
-
-            {
-                auto date = Date(-1999, 2, 28);
-                date.add!"years"(-1, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(-2000, 2, 28));
-            }
-
-            {
-                auto date = Date(-2000, 2, 29);
-                date.add!"years"(1, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(-1999, 2, 28));
-            }
-
-            //Test Both
-            {
-                auto date = Date(4, 7, 6);
-                date.add!"years"(-5, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(-1, 7, 6));
-                date.add!"years"(5, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(4, 7, 6));
-            }
-
-            {
-                auto date = Date(-4, 7, 6);
-                date.add!"years"(5, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(1, 7, 6));
-                date.add!"years"(-5, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(-4, 7, 6));
-            }
-
-            {
-                auto date = Date(4, 7, 6);
-                date.add!"years"(-8, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(-4, 7, 6));
-                date.add!"years"(8, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(4, 7, 6));
-            }
-
-            {
-                auto date = Date(-4, 7, 6);
-                date.add!"years"(8, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(4, 7, 6));
-                date.add!"years"(-8, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(-4, 7, 6));
-            }
-
-            {
-                auto date = Date(-4, 2, 29);
-                date.add!"years"(5, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(1, 2, 28));
-            }
-
-            {
-                auto date = Date(4, 2, 29);
-                date.add!"years"(-5, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(-1, 2, 28));
-            }
-        }
-    }
-
-
-    /++
-        Adds the given number of months to this Date. A negative number will subtract.
-
-        The year will be adjusted along with the month if the number of months added
-        (or subtracted) would overflow (or underflow) the current year.
-
-        Note that if day overflow is allowed, and the date with the adjusted month
-        overflows the number of days in the new month, then the month will be
-        incremented by one, and the days set to the number of days overflowed.
-        (e.g. if the day were 31 and the new month were June, then the month would
-        be incremented to July, and the new day would be 1). If day overflow is
-        not allowed, then the day will be set to the last valid day in the month
-        (e.g. June 31st would become June 30th).
-
-        Params:
-            months        = The number of months to add to this Date.
-            allowOverflow = Whether the days should be allowed to overflow, causing
-                            the month to increment.
-
-        Examples:
---------------------
-auto date1 = Date(2010, 1, 1);
-date1.add!"months"(1);
-assert(date1 == Date(2010, 2, 1));
-
-auto date2 = Date(2010, 1, 1);
-date2.add!"months"(-1);
-assert(date2 == Date(2009, 12, 1));
-
-auto date3 = Date(1999, 1, 29);
-date3.add!"months"(1);
-assert(date3 == Date(1999, 3, 1));
-
-auto date4 = Date(1999, 1, 29);
-date4.add!"months"(1, AllowDayOverflow.no);
-assert(date4 == Date(1999, 2, 28));
---------------------
-      +/
-    /+ref Date+/ void add(string units)(long months, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) pure nothrow
-        if(units == "months")
-    {
-        auto years = months / 12;
-        months %= 12;
-        auto newMonth = _month + months;
-
-        if(months < 0)
-        {
-            if(newMonth < 1)
-            {
-                newMonth += 12;
-                --years;
-            }
-        }
-        else if(newMonth > 12)
-        {
-            newMonth -= 12;
-            ++years;
-        }
-
-        _year += years;
-        _month = cast(Month)newMonth;
-
-        immutable currMaxDay = maxDay(_year, _month);
-        immutable overflow = _day - currMaxDay;
-
-        if(overflow > 0)
-        {
-            if(allowOverflow == AllowDayOverflow.yes)
-            {
-                ++_month;
-                _day = cast(ubyte)overflow;
-            }
-            else
-                _day = cast(ubyte)currMaxDay;
-        }
-    }
-
-    //Test add!"months"() with AllowDayOverlow.yes
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            //Test A.D.
-            {
-                auto date = Date(1999, 7, 6);
-                date.add!"months"(3);
-                assertPred!"=="(date, Date(1999, 10, 6));
-                date.add!"months"(-4);
-                assertPred!"=="(date, Date(1999, 6, 6));
-            }
-
-            {
-                auto date = Date(1999, 7, 6);
-                date.add!"months"(6);
-                assertPred!"=="(date, Date(2000, 1, 6));
-                date.add!"months"(-6);
-                assertPred!"=="(date, Date(1999, 7, 6));
-            }
-
-            {
-                auto date = Date(1999, 7, 6);
-                date.add!"months"(27);
-                assertPred!"=="(date, Date(2001, 10, 6));
-                date.add!"months"(-28);
-                assertPred!"=="(date, Date(1999, 6, 6));
-            }
-
-            {
-                auto date = Date(1999, 5, 31);
-                date.add!"months"(1);
-                assertPred!"=="(date, Date(1999, 7, 1));
-            }
-
-            {
-                auto date = Date(1999, 5, 31);
-                date.add!"months"(-1);
-                assertPred!"=="(date, Date(1999, 5, 1));
-            }
-
-            {
-                auto date = Date(1999, 2, 28);
-                date.add!"months"(12);
-                assertPred!"=="(date, Date(2000, 2, 28));
-            }
-
-            {
-                auto date = Date(2000, 2, 29);
-                date.add!"months"(12);
-                assertPred!"=="(date, Date(2001, 3, 1));
-            }
-
-            {
-                auto date = Date(1999, 7, 31);
-                date.add!"months"(1);
-                assertPred!"=="(date, Date(1999, 8, 31));
-                date.add!"months"(1);
-                assertPred!"=="(date, Date(1999, 10, 1));
-            }
-
-            {
-                auto date = Date(1998, 8, 31);
-                date.add!"months"(13);
-                assertPred!"=="(date, Date(1999, 10, 1));
-                date.add!"months"(-13);
-                assertPred!"=="(date, Date(1998, 9, 1));
-            }
-
-            {
-                auto date = Date(1997, 12, 31);
-                date.add!"months"(13);
-                assertPred!"=="(date, Date(1999, 1, 31));
-                date.add!"months"(-13);
-                assertPred!"=="(date, Date(1997, 12, 31));
-            }
-
-            {
-                auto date = Date(1997, 12, 31);
-                date.add!"months"(14);
-                assertPred!"=="(date, Date(1999, 3, 3));
-                date.add!"months"(-14);
-                assertPred!"=="(date, Date(1998, 1, 3));
-            }
-
-            {
-                auto date = Date(1998, 12, 31);
-                date.add!"months"(14);
-                assertPred!"=="(date, Date(2000, 3, 2));
-                date.add!"months"(-14);
-                assertPred!"=="(date, Date(1999, 1, 2));
-            }
-
-            {
-                auto date = Date(1999, 12, 31);
-                date.add!"months"(14);
-                assertPred!"=="(date, Date(2001, 3, 3));
-                date.add!"months"(-14);
-                assertPred!"=="(date, Date(2000, 1, 3));
-            }
-
-            //Test B.C.
-            {
-                auto date = Date(-1999, 7, 6);
-                date.add!"months"(3);
-                assertPred!"=="(date, Date(-1999, 10, 6));
-                date.add!"months"(-4);
-                assertPred!"=="(date, Date(-1999, 6, 6));
-            }
-
-            {
-                auto date = Date(-1999, 7, 6);
-                date.add!"months"(6);
-                assertPred!"=="(date, Date(-1998, 1, 6));
-                date.add!"months"(-6);
-                assertPred!"=="(date, Date(-1999, 7, 6));
-            }
-
-            {
-                auto date = Date(-1999, 7, 6);
-                date.add!"months"(-27);
-                assertPred!"=="(date, Date(-2001, 4, 6));
-                date.add!"months"(28);
-                assertPred!"=="(date, Date(-1999, 8, 6));
-            }
-
-            {
-                auto date = Date(-1999, 5, 31);
-                date.add!"months"(1);
-                assertPred!"=="(date, Date(-1999, 7, 1));
-            }
-
-            {
-                auto date = Date(-1999, 5, 31);
-                date.add!"months"(-1);
-                assertPred!"=="(date, Date(-1999, 5, 1));
-            }
-
-            {
-                auto date = Date(-1999, 2, 28);
-                date.add!"months"(-12);
-                assertPred!"=="(date, Date(-2000, 2, 28));
-            }
-
-            {
-                auto date = Date(-2000, 2, 29);
-                date.add!"months"(-12);
-                assertPred!"=="(date, Date(-2001, 3, 1));
-            }
-
-            {
-                auto date = Date(-1999, 7, 31);
-                date.add!"months"(1);
-                assertPred!"=="(date, Date(-1999, 8, 31));
-                date.add!"months"(1);
-                assertPred!"=="(date, Date(-1999, 10, 1));
-            }
-
-            {
-                auto date = Date(-1998, 8, 31);
-                date.add!"months"(13);
-                assertPred!"=="(date, Date(-1997, 10, 1));
-                date.add!"months"(-13);
-                assertPred!"=="(date, Date(-1998, 9, 1));
-            }
-
-            {
-                auto date = Date(-1997, 12, 31);
-                date.add!"months"(13);
-                assertPred!"=="(date, Date(-1995, 1, 31));
-                date.add!"months"(-13);
-                assertPred!"=="(date, Date(-1997, 12, 31));
-            }
-
-            {
-                auto date = Date(-1997, 12, 31);
-                date.add!"months"(14);
-                assertPred!"=="(date, Date(-1995, 3, 3));
-                date.add!"months"(-14);
-                assertPred!"=="(date, Date(-1996, 1, 3));
-            }
-
-            {
-                auto date = Date(-2002, 12, 31);
-                date.add!"months"(14);
-                assertPred!"=="(date, Date(-2000, 3, 2));
-                date.add!"months"(-14);
-                assertPred!"=="(date, Date(-2001, 1, 2));
-            }
-
-            {
-                auto date = Date(-2001, 12, 31);
-                date.add!"months"(14);
-                assertPred!"=="(date, Date(-1999, 3, 3));
-                date.add!"months"(-14);
-                assertPred!"=="(date, Date(-2000, 1, 3));
-            }
-
-            //Test Both
-            {
-                auto date = Date(1, 1, 1);
-                date.add!"months"(-1);
-                assertPred!"=="(date, Date(0, 12, 1));
-                date.add!"months"(1);
-                assertPred!"=="(date, Date(1, 1, 1));
-            }
-
-            {
-                auto date = Date(4, 1, 1);
-                date.add!"months"(-48);
-                assertPred!"=="(date, Date(0, 1, 1));
-                date.add!"months"(48);
-                assertPred!"=="(date, Date(4, 1, 1));
-            }
-
-            {
-                auto date = Date(4, 3, 31);
-                date.add!"months"(-49);
-                assertPred!"=="(date, Date(0, 3, 2));
-                date.add!"months"(49);
-                assertPred!"=="(date, Date(4, 4, 2));
-            }
-
-            {
-                auto date = Date(4, 3, 31);
-                date.add!"months"(-85);
-                assertPred!"=="(date, Date(-3, 3, 3));
-                date.add!"months"(85);
-                assertPred!"=="(date, Date(4, 4, 3));
-            }
-
-            const cdate = Date(1999, 7, 6);
-            immutable idate = Date(1999, 7, 6);
-            static assert(!__traits(compiles, cdate.add!"months"(3)));
-            static assert(!__traits(compiles, idate.add!"months"(3)));
-
-            //Verify Examples.
-            auto date1 = Date(2010, 1, 1);
-            date1.add!"months"(1);
-            assert(date1 == Date(2010, 2, 1));
-
-            auto date2 = Date(2010, 1, 1);
-            date2.add!"months"(-1);
-            assert(date2 == Date(2009, 12, 1));
-
-            auto date3 = Date(1999, 1, 29);
-            date3.add!"months"(1);
-            assert(date3 == Date(1999, 3, 1));
-
-            auto date4 = Date(1999, 1, 29);
-            date4.add!"months"(1, AllowDayOverflow.no);
-            assert(date4 == Date(1999, 2, 28));
-        }
-    }
-
-    //Test add!"months"() with AllowDayOverlow.no
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            //Test A.D.
-            {
-                auto date = Date(1999, 7, 6);
-                date.add!"months"(3, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(1999, 10, 6));
-                date.add!"months"(-4, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(1999, 6, 6));
-            }
-
-            {
-                auto date = Date(1999, 7, 6);
-                date.add!"months"(6, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(2000, 1, 6));
-                date.add!"months"(-6, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(1999, 7, 6));
-            }
-
-            {
-                auto date = Date(1999, 7, 6);
-                date.add!"months"(27, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(2001, 10, 6));
-                date.add!"months"(-28, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(1999, 6, 6));
-            }
-
-            {
-                auto date = Date(1999, 5, 31);
-                date.add!"months"(1, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(1999, 6, 30));
-            }
-
-            {
-                auto date = Date(1999, 5, 31);
-                date.add!"months"(-1, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(1999, 4, 30));
-            }
-
-            {
-                auto date = Date(1999, 2, 28);
-                date.add!"months"(12, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(2000, 2, 28));
-            }
-
-            {
-                auto date = Date(2000, 2, 29);
-                date.add!"months"(12, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(2001, 2, 28));
-            }
-
-            {
-                auto date = Date(1999, 7, 31);
-                date.add!"months"(1, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(1999, 8, 31));
-                date.add!"months"(1, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(1999, 9, 30));
-            }
-
-            {
-                auto date = Date(1998, 8, 31);
-                date.add!"months"(13, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(1999, 9, 30));
-                date.add!"months"(-13, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(1998, 8, 30));
-            }
-
-            {
-                auto date = Date(1997, 12, 31);
-                date.add!"months"(13, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(1999, 1, 31));
-                date.add!"months"(-13, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(1997, 12, 31));
-            }
-
-            {
-                auto date = Date(1997, 12, 31);
-                date.add!"months"(14, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(1999, 2, 28));
-                date.add!"months"(-14, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(1997, 12, 28));
-            }
-
-            {
-                auto date = Date(1998, 12, 31);
-                date.add!"months"(14, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(2000, 2, 29));
-                date.add!"months"(-14, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(1998, 12, 29));
-            }
-
-            {
-                auto date = Date(1999, 12, 31);
-                date.add!"months"(14, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(2001, 2, 28));
-                date.add!"months"(-14, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(1999, 12, 28));
-            }
-
-            //Test B.C.
-            {
-                auto date = Date(-1999, 7, 6);
-                date.add!"months"(3, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(-1999, 10, 6));
-                date.add!"months"(-4, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(-1999, 6, 6));
-            }
-
-            {
-                auto date = Date(-1999, 7, 6);
-                date.add!"months"(6, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(-1998, 1, 6));
-                date.add!"months"(-6, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(-1999, 7, 6));
-            }
-
-            {
-                auto date = Date(-1999, 7, 6);
-                date.add!"months"(-27, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(-2001, 4, 6));
-                date.add!"months"(28, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(-1999, 8, 6));
-            }
-
-            {
-                auto date = Date(-1999, 5, 31);
-                date.add!"months"(1, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(-1999, 6, 30));
-            }
-
-            {
-                auto date = Date(-1999, 5, 31);
-                date.add!"months"(-1, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(-1999, 4, 30));
-            }
-
-            {
-                auto date = Date(-1999, 2, 28);
-                date.add!"months"(-12, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(-2000, 2, 28));
-            }
-
-            {
-                auto date = Date(-2000, 2, 29);
-                date.add!"months"(-12, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(-2001, 2, 28));
-            }
-
-            {
-                auto date = Date(-1999, 7, 31);
-                date.add!"months"(1, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(-1999, 8, 31));
-                date.add!"months"(1, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(-1999, 9, 30));
-            }
-
-            {
-                auto date = Date(-1998, 8, 31);
-                date.add!"months"(13, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(-1997, 9, 30));
-                date.add!"months"(-13, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(-1998, 8, 30));
-            }
-
-            {
-                auto date = Date(-1997, 12, 31);
-                date.add!"months"(13, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(-1995, 1, 31));
-                date.add!"months"(-13, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(-1997, 12, 31));
-            }
-
-            {
-                auto date = Date(-1997, 12, 31);
-                date.add!"months"(14, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(-1995, 2, 28));
-                date.add!"months"(-14, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(-1997, 12, 28));
-            }
-
-            {
-                auto date = Date(-2002, 12, 31);
-                date.add!"months"(14, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(-2000, 2, 29));
-                date.add!"months"(-14, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(-2002, 12, 29));
-            }
-
-            {
-                auto date = Date(-2001, 12, 31);
-                date.add!"months"(14, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(-1999, 2, 28));
-                date.add!"months"(-14, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(-2001, 12, 28));
-            }
-
-            //Test Both
-            {
-                auto date = Date(1, 1, 1);
-                date.add!"months"(-1, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(0, 12, 1));
-                date.add!"months"(1, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(1, 1, 1));
-            }
-
-            {
-                auto date = Date(4, 1, 1);
-                date.add!"months"(-48, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(0, 1, 1));
-                date.add!"months"(48, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(4, 1, 1));
-            }
-
-            {
-                auto date = Date(4, 3, 31);
-                date.add!"months"(-49, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(0, 2, 29));
-                date.add!"months"(49, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(4, 3, 29));
-            }
-
-            {
-                auto date = Date(4, 3, 31);
-                date.add!"months"(-85, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(-3, 2, 28));
-                date.add!"months"(85, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(4, 3, 28));
-            }
-        }
-    }
-
-
-    /++
-        Adds the given number of years to this Date. A negative number will subtract.
-
-        For years, because they are the largest unit in Date, there is no difference
-        between adding or rolling.
-
-        Params:
-            years         = The number of years to add to this Date.
-            allowOverflow = Whether the days should be allowed to overflow, causing
-                            the month to increment.
-      +/
-    /+ref Date+/ void roll(string units)(long years, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) pure nothrow
-        if(units == "years")
-    {
-        add!"years"(years, allowOverflow);
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            const cdate = Date(1999, 7, 6);
-            immutable idate = Date(1999, 7, 6);
-            static assert(!__traits(compiles, cdate.roll!"years"(3)));
-            static assert(!__traits(compiles, idate.rolYears(3)));
-        }
-    }
-
-
-    /++
-        Adds the given number of months to this Date. A negative number will subtract.
-
-        The difference between rolling and adding is that rolling does not affect
-        larger units. So, if you roll the Date 12 months, you get the exact same
-        Date. However, the days can still be affected due to the differing number
-        of days in each month.
-
-        Params:
-            months        = The number of months to add to this Date.
-            allowOverflow = Whether the days should be allowed to overflow, causing
-                            the month to increment.
-
-        Examples:
---------------------
-auto date1 = Date(2010, 1, 1);
-date1.roll!"months"(1);
-assert(date1 == Date(2010, 2, 1));
-
-auto date2 = Date(2010, 1, 1);
-date2.roll!"months"(-1);
-assert(date2 == Date(2010, 12, 1));
-
-auto date3 = Date(1999, 1, 29);
-date3.roll!"months"(1);
-assert(date3 == Date(1999, 3, 1));
-
-auto date4 = Date(1999, 1, 29);
-date4.roll!"months"(1, AllowDayOverflow.no);
-assert(date4 == Date(1999, 2, 28));
---------------------
-      +/
-    /+ref Date+/ void roll(string units)(long months, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) pure nothrow
-        if(units == "months")
-    {
-        months %= 12;
-        auto newMonth = _month + months;
-
-        if(months < 0)
-        {
-            if(newMonth < 1)
-                newMonth += 12;
-        }
-        else
-        {
-            if(newMonth > 12)
-                newMonth -= 12;
-        }
-
-        _month = cast(Month)newMonth;
-
-        immutable currMaxDay = maxDay(_year, _month);
-        immutable overflow = _day - currMaxDay;
-
-        if(overflow > 0)
-        {
-            if(allowOverflow == AllowDayOverflow.yes)
-            {
-                ++_month;
-                _day = cast(ubyte)overflow;
-            }
-            else
-                _day = cast(ubyte)currMaxDay;
-        }
-    }
-
-    //Test roll!"months"() with AllowDayOverlow.yes
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            //Test A.D.
-            {
-                auto date = Date(1999, 7, 6);
-                date.roll!"months"(3);
-                assertPred!"=="(date, Date(1999, 10, 6));
-                date.roll!"months"(-4);
-                assertPred!"=="(date, Date(1999, 6, 6));
-            }
-
-            {
-                auto date = Date(1999, 7, 6);
-                date.roll!"months"(6);
-                assertPred!"=="(date, Date(1999, 1, 6));
-                date.roll!"months"(-6);
-                assertPred!"=="(date, Date(1999, 7, 6));
-            }
-
-            {
-                auto date = Date(1999, 7, 6);
-                date.roll!"months"(27);
-                assertPred!"=="(date, Date(1999, 10, 6));
-                date.roll!"months"(-28);
-                assertPred!"=="(date, Date(1999, 6, 6));
-            }
-
-            {
-                auto date = Date(1999, 5, 31);
-                date.roll!"months"(1);
-                assertPred!"=="(date, Date(1999, 7, 1));
-            }
-
-            {
-                auto date = Date(1999, 5, 31);
-                date.roll!"months"(-1);
-                assertPred!"=="(date, Date(1999, 5, 1));
-            }
-
-            {
-                auto date = Date(1999, 2, 28);
-                date.roll!"months"(12);
-                assertPred!"=="(date, Date(1999, 2, 28));
-            }
-
-            {
-                auto date = Date(2000, 2, 29);
-                date.roll!"months"(12);
-                assertPred!"=="(date, Date(2000, 2, 29));
-            }
-
-            {
-                auto date = Date(1999, 7, 31);
-                date.roll!"months"(1);
-                assertPred!"=="(date, Date(1999, 8, 31));
-                date.roll!"months"(1);
-                assertPred!"=="(date, Date(1999, 10, 1));
-            }
-
-            {
-                auto date = Date(1998, 8, 31);
-                date.roll!"months"(13);
-                assertPred!"=="(date, Date(1998, 10, 1));
-                date.roll!"months"(-13);
-                assertPred!"=="(date, Date(1998, 9, 1));
-            }
-
-            {
-                auto date = Date(1997, 12, 31);
-                date.roll!"months"(13);
-                assertPred!"=="(date, Date(1997, 1, 31));
-                date.roll!"months"(-13);
-                assertPred!"=="(date, Date(1997, 12, 31));
-            }
-
-            {
-                auto date = Date(1997, 12, 31);
-                date.roll!"months"(14);
-                assertPred!"=="(date, Date(1997, 3, 3));
-                date.roll!"months"(-14);
-                assertPred!"=="(date, Date(1997, 1, 3));
-            }
-
-            {
-                auto date = Date(1998, 12, 31);
-                date.roll!"months"(14);
-                assertPred!"=="(date, Date(1998, 3, 3));
-                date.roll!"months"(-14);
-                assertPred!"=="(date, Date(1998, 1, 3));
-            }
-
-            {
-                auto date = Date(1999, 12, 31);
-                date.roll!"months"(14);
-                assertPred!"=="(date, Date(1999, 3, 3));
-                date.roll!"months"(-14);
-                assertPred!"=="(date, Date(1999, 1, 3));
-            }
-
-            //Test B.C.
-            {
-                auto date = Date(-1999, 7, 6);
-                date.roll!"months"(3);
-                assertPred!"=="(date, Date(-1999, 10, 6));
-                date.roll!"months"(-4);
-                assertPred!"=="(date, Date(-1999, 6, 6));
-            }
-
-            {
-                auto date = Date(-1999, 7, 6);
-                date.roll!"months"(6);
-                assertPred!"=="(date, Date(-1999, 1, 6));
-                date.roll!"months"(-6);
-                assertPred!"=="(date, Date(-1999, 7, 6));
-            }
-
-            {
-                auto date = Date(-1999, 7, 6);
-                date.roll!"months"(-27);
-                assertPred!"=="(date, Date(-1999, 4, 6));
-                date.roll!"months"(28);
-                assertPred!"=="(date, Date(-1999, 8, 6));
-            }
-
-            {
-                auto date = Date(-1999, 5, 31);
-                date.roll!"months"(1);
-                assertPred!"=="(date, Date(-1999, 7, 1));
-            }
-
-            {
-                auto date = Date(-1999, 5, 31);
-                date.roll!"months"(-1);
-                assertPred!"=="(date, Date(-1999, 5, 1));
-            }
-
-            {
-                auto date = Date(-1999, 2, 28);
-                date.roll!"months"(-12);
-                assertPred!"=="(date, Date(-1999, 2, 28));
-            }
-
-            {
-                auto date = Date(-2000, 2, 29);
-                date.roll!"months"(-12);
-                assertPred!"=="(date, Date(-2000, 2, 29));
-            }
-
-            {
-                auto date = Date(-1999, 7, 31);
-                date.roll!"months"(1);
-                assertPred!"=="(date, Date(-1999, 8, 31));
-                date.roll!"months"(1);
-                assertPred!"=="(date, Date(-1999, 10, 1));
-            }
-
-            {
-                auto date = Date(-1998, 8, 31);
-                date.roll!"months"(13);
-                assertPred!"=="(date, Date(-1998, 10, 1));
-                date.roll!"months"(-13);
-                assertPred!"=="(date, Date(-1998, 9, 1));
-            }
-
-            {
-                auto date = Date(-1997, 12, 31);
-                date.roll!"months"(13);
-                assertPred!"=="(date, Date(-1997, 1, 31));
-                date.roll!"months"(-13);
-                assertPred!"=="(date, Date(-1997, 12, 31));
-            }
-
-            {
-                auto date = Date(-1997, 12, 31);
-                date.roll!"months"(14);
-                assertPred!"=="(date, Date(-1997, 3, 3));
-                date.roll!"months"(-14);
-                assertPred!"=="(date, Date(-1997, 1, 3));
-            }
-
-            {
-                auto date = Date(-2002, 12, 31);
-                date.roll!"months"(14);
-                assertPred!"=="(date, Date(-2002, 3, 3));
-                date.roll!"months"(-14);
-                assertPred!"=="(date, Date(-2002, 1, 3));
-            }
-
-            {
-                auto date = Date(-2001, 12, 31);
-                date.roll!"months"(14);
-                assertPred!"=="(date, Date(-2001, 3, 3));
-                date.roll!"months"(-14);
-                assertPred!"=="(date, Date(-2001, 1, 3));
-            }
-
-            //Test Both
-            {
-                auto date = Date(1, 1, 1);
-                date.roll!"months"(-1);
-                assertPred!"=="(date, Date(1, 12, 1));
-                date.roll!"months"(1);
-                assertPred!"=="(date, Date(1, 1, 1));
-            }
-
-            {
-                auto date = Date(4, 1, 1);
-                date.roll!"months"(-48);
-                assertPred!"=="(date, Date(4, 1, 1));
-                date.roll!"months"(48);
-                assertPred!"=="(date, Date(4, 1, 1));
-            }
-
-            {
-                auto date = Date(4, 3, 31);
-                date.roll!"months"(-49);
-                assertPred!"=="(date, Date(4, 3, 2));
-                date.roll!"months"(49);
-                assertPred!"=="(date, Date(4, 4, 2));
-            }
-
-            {
-                auto date = Date(4, 3, 31);
-                date.roll!"months"(-85);
-                assertPred!"=="(date, Date(4, 3, 2));
-                date.roll!"months"(85);
-                assertPred!"=="(date, Date(4, 4, 2));
-            }
-
-            {
-                auto date = Date(-1, 1, 1);
-                date.roll!"months"(-1);
-                assertPred!"=="(date, Date(-1, 12, 1));
-                date.roll!"months"(1);
-                assertPred!"=="(date, Date(-1, 1, 1));
-            }
-
-            {
-                auto date = Date(-4, 1, 1);
-                date.roll!"months"(-48);
-                assertPred!"=="(date, Date(-4, 1, 1));
-                date.roll!"months"(48);
-                assertPred!"=="(date, Date(-4, 1, 1));
-            }
-
-            {
-                auto date = Date(-4, 3, 31);
-                date.roll!"months"(-49);
-                assertPred!"=="(date, Date(-4, 3, 2));
-                date.roll!"months"(49);
-                assertPred!"=="(date, Date(-4, 4, 2));
-            }
-
-            {
-                auto date = Date(-4, 3, 31);
-                date.roll!"months"(-85);
-                assertPred!"=="(date, Date(-4, 3, 2));
-                date.roll!"months"(85);
-                assertPred!"=="(date, Date(-4, 4, 2));
-            }
-
-            const cdate = Date(1999, 7, 6);
-            immutable idate = Date(1999, 7, 6);
-            static assert(!__traits(compiles, cdate.roll!"months"(3)));
-            static assert(!__traits(compiles, idate.roll!"months"(3)));
-
-            //Verify Examples.
-            auto date1 = Date(2010, 1, 1);
-            date1.roll!"months"(1);
-            assert(date1 == Date(2010, 2, 1));
-
-            auto date2 = Date(2010, 1, 1);
-            date2.roll!"months"(-1);
-            assert(date2 == Date(2010, 12, 1));
-
-            auto date3 = Date(1999, 1, 29);
-            date3.roll!"months"(1);
-            assert(date3 == Date(1999, 3, 1));
-
-            auto date4 = Date(1999, 1, 29);
-            date4.roll!"months"(1, AllowDayOverflow.no);
-            assert(date4 == Date(1999, 2, 28));
-        }
-    }
-
-    //Test roll!"months"() with AllowDayOverlow.no
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            //Test A.D.
-            {
-                auto date = Date(1999, 7, 6);
-                date.roll!"months"(3, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(1999, 10, 6));
-                date.roll!"months"(-4, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(1999, 6, 6));
-            }
-
-            {
-                auto date = Date(1999, 7, 6);
-                date.roll!"months"(6, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(1999, 1, 6));
-                date.roll!"months"(-6, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(1999, 7, 6));
-            }
-
-            {
-                auto date = Date(1999, 7, 6);
-                date.roll!"months"(27, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(1999, 10, 6));
-                date.roll!"months"(-28, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(1999, 6, 6));
-            }
-
-            {
-                auto date = Date(1999, 5, 31);
-                date.roll!"months"(1, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(1999, 6, 30));
-            }
-
-            {
-                auto date = Date(1999, 5, 31);
-                date.roll!"months"(-1, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(1999, 4, 30));
-            }
-
-            {
-                auto date = Date(1999, 2, 28);
-                date.roll!"months"(12, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(1999, 2, 28));
-            }
-
-            {
-                auto date = Date(2000, 2, 29);
-                date.roll!"months"(12, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(2000, 2, 29));
-            }
-
-            {
-                auto date = Date(1999, 7, 31);
-                date.roll!"months"(1, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(1999, 8, 31));
-                date.roll!"months"(1, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(1999, 9, 30));
-            }
-
-            {
-                auto date = Date(1998, 8, 31);
-                date.roll!"months"(13, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(1998, 9, 30));
-                date.roll!"months"(-13, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(1998, 8, 30));
-            }
-
-            {
-                auto date = Date(1997, 12, 31);
-                date.roll!"months"(13, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(1997, 1, 31));
-                date.roll!"months"(-13, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(1997, 12, 31));
-            }
-
-            {
-                auto date = Date(1997, 12, 31);
-                date.roll!"months"(14, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(1997, 2, 28));
-                date.roll!"months"(-14, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(1997, 12, 28));
-            }
-
-            {
-                auto date = Date(1998, 12, 31);
-                date.roll!"months"(14, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(1998, 2, 28));
-                date.roll!"months"(-14, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(1998, 12, 28));
-            }
-
-            {
-                auto date = Date(1999, 12, 31);
-                date.roll!"months"(14, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(1999, 2, 28));
-                date.roll!"months"(-14, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(1999, 12, 28));
-            }
-
-            //Test B.C.
-            {
-                auto date = Date(-1999, 7, 6);
-                date.roll!"months"(3, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(-1999, 10, 6));
-                date.roll!"months"(-4, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(-1999, 6, 6));
-            }
-
-            {
-                auto date = Date(-1999, 7, 6);
-                date.roll!"months"(6, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(-1999, 1, 6));
-                date.roll!"months"(-6, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(-1999, 7, 6));
-            }
-
-            {
-                auto date = Date(-1999, 7, 6);
-                date.roll!"months"(-27, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(-1999, 4, 6));
-                date.roll!"months"(28, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(-1999, 8, 6));
-            }
-
-            {
-                auto date = Date(-1999, 5, 31);
-                date.roll!"months"(1, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(-1999, 6, 30));
-            }
-
-            {
-                auto date = Date(-1999, 5, 31);
-                date.roll!"months"(-1, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(-1999, 4, 30));
-            }
-
-            {
-                auto date = Date(-1999, 2, 28);
-                date.roll!"months"(-12, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(-1999, 2, 28));
-            }
-
-            {
-                auto date = Date(-2000, 2, 29);
-                date.roll!"months"(-12, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(-2000, 2, 29));
-            }
-
-            {
-                auto date = Date(-1999, 7, 31);
-                date.roll!"months"(1, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(-1999, 8, 31));
-                date.roll!"months"(1, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(-1999, 9, 30));
-            }
-
-            {
-                auto date = Date(-1998, 8, 31);
-                date.roll!"months"(13, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(-1998, 9, 30));
-                date.roll!"months"(-13, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(-1998, 8, 30));
-            }
-
-            {
-                auto date = Date(-1997, 12, 31);
-                date.roll!"months"(13, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(-1997, 1, 31));
-                date.roll!"months"(-13, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(-1997, 12, 31));
-            }
-
-            {
-                auto date = Date(-1997, 12, 31);
-                date.roll!"months"(14, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(-1997, 2, 28));
-                date.roll!"months"(-14, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(-1997, 12, 28));
-            }
-
-            {
-                auto date = Date(-2002, 12, 31);
-                date.roll!"months"(14, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(-2002, 2, 28));
-                date.roll!"months"(-14, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(-2002, 12, 28));
-            }
-
-            {
-                auto date = Date(-2001, 12, 31);
-                date.roll!"months"(14, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(-2001, 2, 28));
-                date.roll!"months"(-14, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(-2001, 12, 28));
-            }
-
-            //Test Both
-            {
-                auto date = Date(1, 1, 1);
-                date.roll!"months"(-1, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(1, 12, 1));
-                date.roll!"months"(1, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(1, 1, 1));
-            }
-
-            {
-                auto date = Date(4, 1, 1);
-                date.roll!"months"(-48, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(4, 1, 1));
-                date.roll!"months"(48, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(4, 1, 1));
-            }
-
-            {
-                auto date = Date(4, 3, 31);
-                date.roll!"months"(-49, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(4, 2, 29));
-                date.roll!"months"(49, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(4, 3, 29));
-            }
-
-            {
-                auto date = Date(4, 3, 31);
-                date.roll!"months"(-85, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(4, 2, 29));
-                date.roll!"months"(85, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(4, 3, 29));
-            }
-
-            {
-                auto date = Date(-1, 1, 1);
-                date.roll!"months"(-1, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(-1, 12, 1));
-                date.roll!"months"(1, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(-1, 1, 1));
-            }
-
-            {
-                auto date = Date(-4, 1, 1);
-                date.roll!"months"(-48, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(-4, 1, 1));
-                date.roll!"months"(48, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(-4, 1, 1));
-            }
-
-            {
-                auto date = Date(-4, 3, 31);
-                date.roll!"months"(-49, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(-4, 2, 29));
-                date.roll!"months"(49, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(-4, 3, 29));
-            }
-
-            {
-                auto date = Date(-4, 3, 31);
-                date.roll!"months"(-85, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(-4, 2, 29));
-                date.roll!"months"(85, AllowDayOverflow.no);
-                assertPred!"=="(date, Date(-4, 3, 29));
-            }
-        }
-    }
-
-
-    /++
-        Adds the given number of days to this Date. A negative number will subtract.
-
-        The difference between rolling and adding is that rolling does not affect
-        larger units. So, if you roll the Date one year's worth of days, then you
-        get the exact same Date.
-
-        Note that there is no $(D add!"days"()) because you can add days to a Date by
-        adding a duration to it.
-
-        Params:
-            days = The number of days to add to this Date.
-
-        Examples:
---------------------
-auto date = Date(2010, 1, 1);
-date.roll!"days"(1);
-assert(date == Date(2010, 1, 2));
-date.roll!"days"(365);
-assert(date == Date(2010, 1, 26));
-date.roll!"days"(-32);
-assert(date == Date(2010, 1, 25));
---------------------
-      +/
-    /+ref Date+/ void roll(string units)(long days) pure nothrow
-        if(units == "days")
-    {
-        immutable limit = maxDay(_year, _month);
-        days %= limit;
-        auto newDay = _day + days;
-
-        if(days < 0)
-        {
-            if(newDay < 1)
-                newDay += limit;
-        }
-        else if(newDay > limit)
-            newDay -= limit;
-
-        _day = cast(ubyte)newDay;
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            //Test A.D.
-            {
-                auto date = Date(1999, 2, 28);
-                date.roll!"days"(1);
-                assertPred!"=="(date, Date(1999, 2, 1));
-                date.roll!"days"(-1);
-                assertPred!"=="(date, Date(1999, 2, 28));
-            }
-
-            {
-                auto date = Date(2000, 2, 28);
-                date.roll!"days"(1);
-                assertPred!"=="(date, Date(2000, 2, 29));
-                date.roll!"days"(1);
-                assertPred!"=="(date, Date(2000, 2, 1));
-                date.roll!"days"(-1);
-                assertPred!"=="(date, Date(2000, 2, 29));
-            }
-
-            {
-                auto date = Date(1999, 6, 30);
-                date.roll!"days"(1);
-                assertPred!"=="(date, Date(1999, 6, 1));
-                date.roll!"days"(-1);
-                assertPred!"=="(date, Date(1999, 6, 30));
-            }
-
-            {
-                auto date = Date(1999, 7, 31);
-                date.roll!"days"(1);
-                assertPred!"=="(date, Date(1999, 7, 1));
-                date.roll!"days"(-1);
-                assertPred!"=="(date, Date(1999, 7, 31));
-            }
-
-            {
-                auto date = Date(1999, 1, 1);
-                date.roll!"days"(-1);
-                assertPred!"=="(date, Date(1999, 1, 31));
-                date.roll!"days"(1);
-                assertPred!"=="(date, Date(1999, 1, 1));
-            }
-
-            {
-                auto date = Date(1999, 7, 6);
-                date.roll!"days"(9);
-                assertPred!"=="(date, Date(1999, 7, 15));
-                date.roll!"days"(-11);
-                assertPred!"=="(date, Date(1999, 7, 4));
-                date.roll!"days"(30);
-                assertPred!"=="(date, Date(1999, 7, 3));
-                date.roll!"days"(-3);
-                assertPred!"=="(date, Date(1999, 7, 31));
-            }
-
-            {
-                auto date = Date(1999, 7, 6);
-                date.roll!"days"(365);
-                assertPred!"=="(date, Date(1999, 7, 30));
-                date.roll!"days"(-365);
-                assertPred!"=="(date, Date(1999, 7, 6));
-                date.roll!"days"(366);
-                assertPred!"=="(date, Date(1999, 7, 31));
-                date.roll!"days"(730);
-                assertPred!"=="(date, Date(1999, 7, 17));
-                date.roll!"days"(-1096);
-                assertPred!"=="(date, Date(1999, 7, 6));
-            }
-
-            {
-                auto date = Date(1999, 2, 6);
-                date.roll!"days"(365);
-                assertPred!"=="(date, Date(1999, 2, 7));
-                date.roll!"days"(-365);
-                assertPred!"=="(date, Date(1999, 2, 6));
-                date.roll!"days"(366);
-                assertPred!"=="(date, Date(1999, 2, 8));
-                date.roll!"days"(730);
-                assertPred!"=="(date, Date(1999, 2, 10));
-                date.roll!"days"(-1096);
-                assertPred!"=="(date, Date(1999, 2, 6));
-            }
-
-            //Test B.C.
-            {
-                auto date = Date(-1999, 2, 28);
-                date.roll!"days"(1);
-                assertPred!"=="(date, Date(-1999, 2, 1));
-                date.roll!"days"(-1);
-                assertPred!"=="(date, Date(-1999, 2, 28));
-            }
-
-            {
-                auto date = Date(-2000, 2, 28);
-                date.roll!"days"(1);
-                assertPred!"=="(date, Date(-2000, 2, 29));
-                date.roll!"days"(1);
-                assertPred!"=="(date, Date(-2000, 2, 1));
-                date.roll!"days"(-1);
-                assertPred!"=="(date, Date(-2000, 2, 29));
-            }
-
-            {
-                auto date = Date(-1999, 6, 30);
-                date.roll!"days"(1);
-                assertPred!"=="(date, Date(-1999, 6, 1));
-                date.roll!"days"(-1);
-                assertPred!"=="(date, Date(-1999, 6, 30));
-            }
-
-            {
-                auto date = Date(-1999, 7, 31);
-                date.roll!"days"(1);
-                assertPred!"=="(date, Date(-1999, 7, 1));
-                date.roll!"days"(-1);
-                assertPred!"=="(date, Date(-1999, 7, 31));
-            }
-
-            {
-                auto date = Date(-1999, 1, 1);
-                date.roll!"days"(-1);
-                assertPred!"=="(date, Date(-1999, 1, 31));
-                date.roll!"days"(1);
-                assertPred!"=="(date, Date(-1999, 1, 1));
-            }
-
-            {
-                auto date = Date(-1999, 7, 6);
-                date.roll!"days"(9);
-                assertPred!"=="(date, Date(-1999, 7, 15));
-                date.roll!"days"(-11);
-                assertPred!"=="(date, Date(-1999, 7, 4));
-                date.roll!"days"(30);
-                assertPred!"=="(date, Date(-1999, 7, 3));
-                date.roll!"days"(-3);
-                assertPred!"=="(date, Date(-1999, 7, 31));
-            }
-
-            {
-                auto date = Date(-1999, 7, 6);
-                date.roll!"days"(365);
-                assertPred!"=="(date, Date(-1999, 7, 30));
-                date.roll!"days"(-365);
-                assertPred!"=="(date, Date(-1999, 7, 6));
-                date.roll!"days"(366);
-                assertPred!"=="(date, Date(-1999, 7, 31));
-                date.roll!"days"(730);
-                assertPred!"=="(date, Date(-1999, 7, 17));
-                date.roll!"days"(-1096);
-                assertPred!"=="(date, Date(-1999, 7, 6));
-            }
-
-            //Test Both
-            {
-                auto date = Date(1, 7, 6);
-                date.roll!"days"(-365);
-                assertPred!"=="(date, Date(1, 7, 13));
-                date.roll!"days"(365);
-                assertPred!"=="(date, Date(1, 7, 6));
-                date.roll!"days"(-731);
-                assertPred!"=="(date, Date(1, 7, 19));
-                date.roll!"days"(730);
-                assertPred!"=="(date, Date(1, 7, 5));
-            }
-
-            {
-                auto date = Date(0, 7, 6);
-                date.roll!"days"(-365);
-                assertPred!"=="(date, Date(0, 7, 13));
-                date.roll!"days"(365);
-                assertPred!"=="(date, Date(0, 7, 6));
-                date.roll!"days"(-731);
-                assertPred!"=="(date, Date(0, 7, 19));
-                date.roll!"days"(730);
-                assertPred!"=="(date, Date(0, 7, 5));
-            }
-
-            const cdate = Date(1999, 7, 6);
-            immutable idate = Date(1999, 7, 6);
-            static assert(!__traits(compiles, cdate.roll!"days"(12)));
-            static assert(!__traits(compiles, idate.roll!"days"(12)));
-
-            //Verify Examples.
-            auto date = Date(2010, 1, 1);
-            date.roll!"days"(1);
-            assert(date == Date(2010, 1, 2));
-            date.roll!"days"(365);
-            assert(date == Date(2010, 1, 26));
-            date.roll!"days"(-32);
-            assert(date == Date(2010, 1, 25));
-        }
-    }
-
-
-    /++
-        Gives the result of adding or subtracting a duration from this Date.
-
-        The legal types of arithmetic for Date using this operator are
-
-        $(TABLE
-        $(TR $(TD Date) $(TD +) $(TD duration) $(TD -->) $(TD Date))
-        $(TR $(TD Date) $(TD -) $(TD duration) $(TD -->) $(TD Date))
-        )
-
-        Params:
-            duration = The duration to add to or subtract from this Date.
-      +/
-    Date opBinary(string op, D)(in D duration) const pure nothrow
-        if((op == "+" || op == "-") &&
-           (is(Unqual!D == Duration) ||
-            is(Unqual!D == TickDuration)))
-    {
-        Date retval = this;
-
-        static if(is(Unqual!D == Duration))
-            immutable days = duration.total!"days";
-        else static if(is(Unqual!D == TickDuration))
-            immutable days = convert!("hnsecs", "days")(duration.hnsecs);
-
-        //Ideally, this would just be
-        //return retval.addDays(unaryFun!(op ~ "a")(days));
-        //But there isn't currently a pure version of unaryFun!().
-
-        static if(op == "+")
-            immutable signedDays = days;
-        else static if(op == "-")
-            immutable signedDays = -days;
-        else
-            static assert(0);
-
-        return retval.addDays(signedDays);
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            auto date = Date(1999, 7, 6);
-
-            assertPred!"=="(date + dur!"weeks"(7), Date(1999, 8, 24));
-            assertPred!"=="(date + dur!"weeks"(-7), Date(1999, 5, 18));
-            assertPred!"=="(date + dur!"days"(7), Date(1999, 7, 13));
-            assertPred!"=="(date + dur!"days"(-7), Date(1999, 6, 29));
-
-            assertPred!"=="(date + dur!"hours"(24), Date(1999, 7, 7));
-            assertPred!"=="(date + dur!"hours"(-24), Date(1999, 7, 5));
-            assertPred!"=="(date + dur!"minutes"(1440), Date(1999, 7, 7));
-            assertPred!"=="(date + dur!"minutes"(-1440), Date(1999, 7, 5));
-            assertPred!"=="(date + dur!"seconds"(86_400), Date(1999, 7, 7));
-            assertPred!"=="(date + dur!"seconds"(-86_400), Date(1999, 7, 5));
-            assertPred!"=="(date + dur!"msecs"(86_400_000), Date(1999, 7, 7));
-            assertPred!"=="(date + dur!"msecs"(-86_400_000), Date(1999, 7, 5));
-            assertPred!"=="(date + dur!"usecs"(86_400_000_000), Date(1999, 7, 7));
-            assertPred!"=="(date + dur!"usecs"(-86_400_000_000), Date(1999, 7, 5));
-            assertPred!"=="(date + dur!"hnsecs"(864_000_000_000), Date(1999, 7, 7));
-            assertPred!"=="(date + dur!"hnsecs"(-864_000_000_000), Date(1999, 7, 5));
-
-            //This probably only runs in cases where gettimeofday() is used, but it's
-            //hard to do this test correctly with variable ticksPerSec.
-            if(TickDuration.ticksPerSec == 1_000_000)
-            {
-                assertPred!"=="(date + TickDuration.from!"usecs"(86_400_000_000), Date(1999, 7, 7));
-                assertPred!"=="(date + TickDuration.from!"usecs"(-86_400_000_000), Date(1999, 7, 5));
-            }
-
-            assertPred!"=="(date - dur!"weeks"(-7), Date(1999, 8, 24));
-            assertPred!"=="(date - dur!"weeks"(7), Date(1999, 5, 18));
-            assertPred!"=="(date - dur!"days"(-7), Date(1999, 7, 13));
-            assertPred!"=="(date - dur!"days"(7), Date(1999, 6, 29));
-
-            assertPred!"=="(date - dur!"hours"(-24), Date(1999, 7, 7));
-            assertPred!"=="(date - dur!"hours"(24), Date(1999, 7, 5));
-            assertPred!"=="(date - dur!"minutes"(-1440), Date(1999, 7, 7));
-            assertPred!"=="(date - dur!"minutes"(1440), Date(1999, 7, 5));
-            assertPred!"=="(date - dur!"seconds"(-86_400), Date(1999, 7, 7));
-            assertPred!"=="(date - dur!"seconds"(86_400), Date(1999, 7, 5));
-            assertPred!"=="(date - dur!"msecs"(-86_400_000), Date(1999, 7, 7));
-            assertPred!"=="(date - dur!"msecs"(86_400_000), Date(1999, 7, 5));
-            assertPred!"=="(date - dur!"usecs"(-86_400_000_000), Date(1999, 7, 7));
-            assertPred!"=="(date - dur!"usecs"(86_400_000_000), Date(1999, 7, 5));
-            assertPred!"=="(date - dur!"hnsecs"(-864_000_000_000), Date(1999, 7, 7));
-            assertPred!"=="(date - dur!"hnsecs"(864_000_000_000), Date(1999, 7, 5));
-
-            //This probably only runs in cases where gettimeofday() is used, but it's
-            //hard to do this test correctly with variable ticksPerSec.
-            if(TickDuration.ticksPerSec == 1_000_000)
-            {
-                assertPred!"=="(date - TickDuration.from!"usecs"(-86_400_000_000), Date(1999, 7, 7));
-                assertPred!"=="(date - TickDuration.from!"usecs"(86_400_000_000), Date(1999, 7, 5));
-            }
-
-            auto duration = dur!"days"(12);
-            const cdate = Date(1999, 7, 6);
-            immutable idate = Date(1999, 7, 6);
-            static assert(__traits(compiles, date + duration));
-            static assert(__traits(compiles, cdate + duration));
-            static assert(__traits(compiles, idate + duration));
-
-            static assert(__traits(compiles, date - duration));
-            static assert(__traits(compiles, cdate - duration));
-            static assert(__traits(compiles, idate - duration));
-        }
-    }
-
-
-    /++
-        Gives the result of adding or subtracting a duration from this Date, as
-        well as assigning the result to this Date.
-
-        The legal types of arithmetic for Date using this operator are
-
-        $(TABLE
-        $(TR $(TD Date) $(TD +) $(TD duration) $(TD -->) $(TD Date))
-        $(TR $(TD Date) $(TD -) $(TD duration) $(TD -->) $(TD Date))
-        )
-
-        Params:
-            duration = The duration to add to or subtract from this Date.
-      +/
-    /+ref+/ Date opOpAssign(string op, D)(in D duration) pure nothrow
-        if((op == "+" || op == "-") &&
-           (is(Unqual!D == Duration) ||
-            is(Unqual!D == TickDuration)))
-    {
-        static if(is(Unqual!D == Duration))
-            immutable days = duration.total!"days";
-        else static if(is(Unqual!D == TickDuration))
-            immutable days = convert!("hnsecs", "days")(duration.hnsecs);
-
-        //Ideally, this would just be
-        //return addDays(unaryFun!(op ~ "a")(days));
-        //But there isn't currently a pure version of unaryFun!().
-
-        static if(op == "+")
-            immutable signedDays = days;
-        else static if(op == "-")
-            immutable signedDays = -days;
-        else
-            static assert(0);
-
-        return addDays(signedDays);
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            assertPred!"+="(Date(1999, 7, 6), dur!"weeks"(7), Date(1999, 8, 24));
-            assertPred!"+="(Date(1999, 7, 6), dur!"weeks"(-7), Date(1999, 5, 18));
-            assertPred!"+="(Date(1999, 7, 6), dur!"days"(7), Date(1999, 7, 13));
-            assertPred!"+="(Date(1999, 7, 6), dur!"days"(-7), Date(1999, 6, 29));
-
-            assertPred!"+="(Date(1999, 7, 6), dur!"hours"(24), Date(1999, 7, 7));
-            assertPred!"+="(Date(1999, 7, 6), dur!"hours"(-24), Date(1999, 7, 5));
-            assertPred!"+="(Date(1999, 7, 6), dur!"minutes"(1440), Date(1999, 7, 7));
-            assertPred!"+="(Date(1999, 7, 6), dur!"minutes"(-1440), Date(1999, 7, 5));
-            assertPred!"+="(Date(1999, 7, 6), dur!"seconds"(86_400), Date(1999, 7, 7));
-            assertPred!"+="(Date(1999, 7, 6), dur!"seconds"(-86_400), Date(1999, 7, 5));
-            assertPred!"+="(Date(1999, 7, 6), dur!"msecs"(86_400_000), Date(1999, 7, 7));
-            assertPred!"+="(Date(1999, 7, 6), dur!"msecs"(-86_400_000), Date(1999, 7, 5));
-            assertPred!"+="(Date(1999, 7, 6), dur!"usecs"(86_400_000_000), Date(1999, 7, 7));
-            assertPred!"+="(Date(1999, 7, 6), dur!"usecs"(-86_400_000_000), Date(1999, 7, 5));
-            assertPred!"+="(Date(1999, 7, 6), dur!"hnsecs"(864_000_000_000), Date(1999, 7, 7));
-            assertPred!"+="(Date(1999, 7, 6), dur!"hnsecs"(-864_000_000_000), Date(1999, 7, 5));
-
-            assertPred!"-="(Date(1999, 7, 6), dur!"weeks"(-7), Date(1999, 8, 24));
-            assertPred!"-="(Date(1999, 7, 6), dur!"weeks"(7), Date(1999, 5, 18));
-            assertPred!"-="(Date(1999, 7, 6), dur!"days"(-7), Date(1999, 7, 13));
-            assertPred!"-="(Date(1999, 7, 6), dur!"days"(7), Date(1999, 6, 29));
-
-            assertPred!"-="(Date(1999, 7, 6), dur!"hours"(-24), Date(1999, 7, 7));
-            assertPred!"-="(Date(1999, 7, 6), dur!"hours"(24), Date(1999, 7, 5));
-            assertPred!"-="(Date(1999, 7, 6), dur!"minutes"(-1440), Date(1999, 7, 7));
-            assertPred!"-="(Date(1999, 7, 6), dur!"minutes"(1440), Date(1999, 7, 5));
-            assertPred!"-="(Date(1999, 7, 6), dur!"seconds"(-86_400), Date(1999, 7, 7));
-            assertPred!"-="(Date(1999, 7, 6), dur!"seconds"(86_400), Date(1999, 7, 5));
-            assertPred!"-="(Date(1999, 7, 6), dur!"msecs"(-86_400_000), Date(1999, 7, 7));
-            assertPred!"-="(Date(1999, 7, 6), dur!"msecs"(86_400_000), Date(1999, 7, 5));
-            assertPred!"-="(Date(1999, 7, 6), dur!"usecs"(-86_400_000_000), Date(1999, 7, 7));
-            assertPred!"-="(Date(1999, 7, 6), dur!"usecs"(86_400_000_000), Date(1999, 7, 5));
-            assertPred!"-="(Date(1999, 7, 6), dur!"hnsecs"(-864_000_000_000), Date(1999, 7, 7));
-            assertPred!"-="(Date(1999, 7, 6), dur!"hnsecs"(864_000_000_000), Date(1999, 7, 5));
-
-            auto duration = dur!"days"(12);
-            auto date = Date(1999, 7, 6);
-            const cdate = Date(1999, 7, 6);
-            immutable idate = Date(1999, 7, 6);
-            static assert(__traits(compiles, date += duration));
-            static assert(!__traits(compiles, cdate += duration));
-            static assert(!__traits(compiles, idate += duration));
-
-            static assert(__traits(compiles, date -= duration));
-            static assert(!__traits(compiles, cdate -= duration));
-            static assert(!__traits(compiles, idate -= duration));
-        }
-    }
-
-
-    /++
-        Gives the difference between two Dates.
-
-        The legal types of arithmetic for Date using this operator are
-
-        $(TABLE
-        $(TR $(TD Date) $(TD -) $(TD Date) $(TD -->) $(TD duration))
-        )
-      +/
-    Duration opBinary(string op)(in Date rhs) const pure nothrow
-        if(op == "-")
-    {
-        return dur!"days"(this.dayOfGregorianCal - rhs.dayOfGregorianCal);
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            auto date = Date(1999, 7, 6);
-
-            assertPred!"=="(Date(1999, 7, 6) - Date(1998, 7, 6), dur!"days"(365));
-            assertPred!"=="(Date(1998, 7, 6) - Date(1999, 7, 6), dur!"days"(-365));
-            assertPred!"=="(Date(1999, 6, 6) - Date(1999, 5, 6), dur!"days"(31));
-            assertPred!"=="(Date(1999, 5, 6) - Date(1999, 6, 6), dur!"days"(-31));
-            assertPred!"=="(Date(1999, 1, 1) - Date(1998, 12, 31), dur!"days"(1));
-            assertPred!"=="(Date(1998, 12, 31) - Date(1999, 1, 1), dur!"days"(-1));
-
-            const cdate = Date(1999, 7, 6);
-            immutable idate = Date(1999, 7, 6);
-            static assert(__traits(compiles, date - date));
-            static assert(__traits(compiles, cdate - date));
-            static assert(__traits(compiles, idate - date));
-
-            static assert(__traits(compiles, date - cdate));
-            static assert(__traits(compiles, cdate - cdate));
-            static assert(__traits(compiles, idate - cdate));
-
-            static assert(__traits(compiles, date - idate));
-            static assert(__traits(compiles, cdate - idate));
-            static assert(__traits(compiles, idate - idate));
-        }
-    }
-
-
-    /++
-        Returns the difference between the two Dates in months.
-
-        You can get the difference in years by subtracting the year property
-        of two Dates, and you can get the difference in days or weeks by
-        subtracting the Dates themselves and using the Duration that results,
-        but because you cannot convert between months and smaller units without
-        a specific date (which Durations don't have), you cannot get the difference
-        in months without doing some math using both the year and month properties,
-        so this is a convenience function for getting the difference in months.
-
-        Note that the number of days in the months or how far into the month either
-        date is is irrelevant. It is the difference in the month property combined
-        with the difference in years * 12. So, for instance, December 31st and
-        January 1st are one month apart just as December 1st and January 31st are
-        one month apart.
-
-        Params:
-            rhs = The Date to subtract from this one.
-
-        Examples:
---------------------
-assert(Date(1999, 2, 1).diffMonths(Date(1999, 1, 31)) == 1);
-assert(Date(1999, 1, 31).diffMonths(Date(1999, 2, 1)) == -1);
-assert(Date(1999, 3, 1).diffMonths(Date(1999, 1, 1)) == 2);
-assert(Date(1999, 1, 1).diffMonths(Date(1999, 3, 31)) == -2);
---------------------
-      +/
-    int diffMonths(in Date rhs) const pure nothrow
-    {
-        immutable yearDiff = _year - rhs._year;
-        immutable monthDiff = _month - rhs._month;
-
-        return yearDiff * 12 + monthDiff;
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            auto date = Date(1999, 7, 6);
-
-            //Test A.D.
-            assertPred!"=="(date.diffMonths(Date(1998, 6, 5)), 13);
-            assertPred!"=="(date.diffMonths(Date(1998, 7, 5)), 12);
-            assertPred!"=="(date.diffMonths(Date(1998, 8, 5)), 11);
-            assertPred!"=="(date.diffMonths(Date(1998, 9, 5)), 10);
-            assertPred!"=="(date.diffMonths(Date(1998, 10, 5)), 9);
-            assertPred!"=="(date.diffMonths(Date(1998, 11, 5)), 8);
-            assertPred!"=="(date.diffMonths(Date(1998, 12, 5)), 7);
-            assertPred!"=="(date.diffMonths(Date(1999, 1, 5)), 6);
-            assertPred!"=="(date.diffMonths(Date(1999, 2, 6)), 5);
-            assertPred!"=="(date.diffMonths(Date(1999, 3, 6)), 4);
-            assertPred!"=="(date.diffMonths(Date(1999, 4, 6)), 3);
-            assertPred!"=="(date.diffMonths(Date(1999, 5, 6)), 2);
-            assertPred!"=="(date.diffMonths(Date(1999, 6, 6)), 1);
-            assertPred!"=="(date.diffMonths(date), 0);
-            assertPred!"=="(date.diffMonths(Date(1999, 8, 6)), -1);
-            assertPred!"=="(date.diffMonths(Date(1999, 9, 6)), -2);
-            assertPred!"=="(date.diffMonths(Date(1999, 10, 6)), -3);
-            assertPred!"=="(date.diffMonths(Date(1999, 11, 6)), -4);
-            assertPred!"=="(date.diffMonths(Date(1999, 12, 6)), -5);
-            assertPred!"=="(date.diffMonths(Date(2000, 1, 6)), -6);
-            assertPred!"=="(date.diffMonths(Date(2000, 2, 6)), -7);
-            assertPred!"=="(date.diffMonths(Date(2000, 3, 6)), -8);
-            assertPred!"=="(date.diffMonths(Date(2000, 4, 6)), -9);
-            assertPred!"=="(date.diffMonths(Date(2000, 5, 6)), -10);
-            assertPred!"=="(date.diffMonths(Date(2000, 6, 6)), -11);
-            assertPred!"=="(date.diffMonths(Date(2000, 7, 6)), -12);
-            assertPred!"=="(date.diffMonths(Date(2000, 8, 6)), -13);
-
-            assertPred!"=="(Date(1998, 6, 5).diffMonths(date), -13);
-            assertPred!"=="(Date(1998, 7, 5).diffMonths(date), -12);
-            assertPred!"=="(Date(1998, 8, 5).diffMonths(date), -11);
-            assertPred!"=="(Date(1998, 9, 5).diffMonths(date), -10);
-            assertPred!"=="(Date(1998, 10, 5).diffMonths(date), -9);
-            assertPred!"=="(Date(1998, 11, 5).diffMonths(date), -8);
-            assertPred!"=="(Date(1998, 12, 5).diffMonths(date), -7);
-            assertPred!"=="(Date(1999, 1, 5).diffMonths(date), -6);
-            assertPred!"=="(Date(1999, 2, 6).diffMonths(date), -5);
-            assertPred!"=="(Date(1999, 3, 6).diffMonths(date), -4);
-            assertPred!"=="(Date(1999, 4, 6).diffMonths(date), -3);
-            assertPred!"=="(Date(1999, 5, 6).diffMonths(date), -2);
-            assertPred!"=="(Date(1999, 6, 6).diffMonths(date), -1);
-            assertPred!"=="(Date(1999, 8, 6).diffMonths(date), 1);
-            assertPred!"=="(Date(1999, 9, 6).diffMonths(date), 2);
-            assertPred!"=="(Date(1999, 10, 6).diffMonths(date), 3);
-            assertPred!"=="(Date(1999, 11, 6).diffMonths(date), 4);
-            assertPred!"=="(Date(1999, 12, 6).diffMonths(date), 5);
-            assertPred!"=="(Date(2000, 1, 6).diffMonths(date), 6);
-            assertPred!"=="(Date(2000, 2, 6).diffMonths(date), 7);
-            assertPred!"=="(Date(2000, 3, 6).diffMonths(date), 8);
-            assertPred!"=="(Date(2000, 4, 6).diffMonths(date), 9);
-            assertPred!"=="(Date(2000, 5, 6).diffMonths(date), 10);
-            assertPred!"=="(Date(2000, 6, 6).diffMonths(date), 11);
-            assertPred!"=="(Date(2000, 7, 6).diffMonths(date), 12);
-            assertPred!"=="(Date(2000, 8, 6).diffMonths(date), 13);
-
-            assertPred!"=="(date.diffMonths(Date(1999, 6, 30)), 1);
-            assertPred!"=="(date.diffMonths(Date(1999, 7, 1)), 0);
-            assertPred!"=="(date.diffMonths(Date(1999, 7, 6)), 0);
-            assertPred!"=="(date.diffMonths(Date(1999, 7, 11)), 0);
-            assertPred!"=="(date.diffMonths(Date(1999, 7, 16)), 0);
-            assertPred!"=="(date.diffMonths(Date(1999, 7, 21)), 0);
-            assertPred!"=="(date.diffMonths(Date(1999, 7, 26)), 0);
-            assertPred!"=="(date.diffMonths(Date(1999, 7, 31)), 0);
-            assertPred!"=="(date.diffMonths(Date(1999, 8, 1)), -1);
-
-            assertPred!"=="(date.diffMonths(Date(1990, 6, 30)), 109);
-            assertPred!"=="(date.diffMonths(Date(1990, 7, 1)), 108);
-            assertPred!"=="(date.diffMonths(Date(1990, 7, 6)), 108);
-            assertPred!"=="(date.diffMonths(Date(1990, 7, 11)), 108);
-            assertPred!"=="(date.diffMonths(Date(1990, 7, 16)), 108);
-            assertPred!"=="(date.diffMonths(Date(1990, 7, 21)), 108);
-            assertPred!"=="(date.diffMonths(Date(1990, 7, 26)), 108);
-            assertPred!"=="(date.diffMonths(Date(1990, 7, 31)), 108);
-            assertPred!"=="(date.diffMonths(Date(1990, 8, 1)), 107);
-
-            assertPred!"=="(Date(1999, 6, 30).diffMonths(date), -1);
-            assertPred!"=="(Date(1999, 7, 1).diffMonths(date), 0);
-            assertPred!"=="(Date(1999, 7, 6).diffMonths(date), 0);
-            assertPred!"=="(Date(1999, 7, 11).diffMonths(date), 0);
-            assertPred!"=="(Date(1999, 7, 16).diffMonths(date), 0);
-            assertPred!"=="(Date(1999, 7, 21).diffMonths(date), 0);
-            assertPred!"=="(Date(1999, 7, 26).diffMonths(date), 0);
-            assertPred!"=="(Date(1999, 7, 31).diffMonths(date), 0);
-            assertPred!"=="(Date(1999, 8, 1).diffMonths(date), 1);
-
-            assertPred!"=="(Date(1990, 6, 30).diffMonths(date), -109);
-            assertPred!"=="(Date(1990, 7, 1).diffMonths(date), -108);
-            assertPred!"=="(Date(1990, 7, 6).diffMonths(date), -108);
-            assertPred!"=="(Date(1990, 7, 11).diffMonths(date), -108);
-            assertPred!"=="(Date(1990, 7, 16).diffMonths(date), -108);
-            assertPred!"=="(Date(1990, 7, 21).diffMonths(date), -108);
-            assertPred!"=="(Date(1990, 7, 26).diffMonths(date), -108);
-            assertPred!"=="(Date(1990, 7, 31).diffMonths(date), -108);
-            assertPred!"=="(Date(1990, 8, 1).diffMonths(date), -107);
-
-            //Test B.C.
-            auto dateBC = Date(-1999, 7, 6);
-
-            assertPred!"=="(dateBC.diffMonths(Date(-2000, 6, 5)), 13);
-            assertPred!"=="(dateBC.diffMonths(Date(-2000, 7, 5)), 12);
-            assertPred!"=="(dateBC.diffMonths(Date(-2000, 8, 5)), 11);
-            assertPred!"=="(dateBC.diffMonths(Date(-2000, 9, 5)), 10);
-            assertPred!"=="(dateBC.diffMonths(Date(-2000, 10, 5)), 9);
-            assertPred!"=="(dateBC.diffMonths(Date(-2000, 11, 5)), 8);
-            assertPred!"=="(dateBC.diffMonths(Date(-2000, 12, 5)), 7);
-            assertPred!"=="(dateBC.diffMonths(Date(-1999, 1, 5)), 6);
-            assertPred!"=="(dateBC.diffMonths(Date(-1999, 2, 6)), 5);
-            assertPred!"=="(dateBC.diffMonths(Date(-1999, 3, 6)), 4);
-            assertPred!"=="(dateBC.diffMonths(Date(-1999, 4, 6)), 3);
-            assertPred!"=="(dateBC.diffMonths(Date(-1999, 5, 6)), 2);
-            assertPred!"=="(dateBC.diffMonths(Date(-1999, 6, 6)), 1);
-            assertPred!"=="(dateBC.diffMonths(dateBC), 0);
-            assertPred!"=="(dateBC.diffMonths(Date(-1999, 8, 6)), -1);
-            assertPred!"=="(dateBC.diffMonths(Date(-1999, 9, 6)), -2);
-            assertPred!"=="(dateBC.diffMonths(Date(-1999, 10, 6)), -3);
-            assertPred!"=="(dateBC.diffMonths(Date(-1999, 11, 6)), -4);
-            assertPred!"=="(dateBC.diffMonths(Date(-1999, 12, 6)), -5);
-            assertPred!"=="(dateBC.diffMonths(Date(-1998, 1, 6)), -6);
-            assertPred!"=="(dateBC.diffMonths(Date(-1998, 2, 6)), -7);
-            assertPred!"=="(dateBC.diffMonths(Date(-1998, 3, 6)), -8);
-            assertPred!"=="(dateBC.diffMonths(Date(-1998, 4, 6)), -9);
-            assertPred!"=="(dateBC.diffMonths(Date(-1998, 5, 6)), -10);
-            assertPred!"=="(dateBC.diffMonths(Date(-1998, 6, 6)), -11);
-            assertPred!"=="(dateBC.diffMonths(Date(-1998, 7, 6)), -12);
-            assertPred!"=="(dateBC.diffMonths(Date(-1998, 8, 6)), -13);
-
-            assertPred!"=="(Date(-2000, 6, 5).diffMonths(dateBC), -13);
-            assertPred!"=="(Date(-2000, 7, 5).diffMonths(dateBC), -12);
-            assertPred!"=="(Date(-2000, 8, 5).diffMonths(dateBC), -11);
-            assertPred!"=="(Date(-2000, 9, 5).diffMonths(dateBC), -10);
-            assertPred!"=="(Date(-2000, 10, 5).diffMonths(dateBC), -9);
-            assertPred!"=="(Date(-2000, 11, 5).diffMonths(dateBC), -8);
-            assertPred!"=="(Date(-2000, 12, 5).diffMonths(dateBC), -7);
-            assertPred!"=="(Date(-1999, 1, 5).diffMonths(dateBC), -6);
-            assertPred!"=="(Date(-1999, 2, 6).diffMonths(dateBC), -5);
-            assertPred!"=="(Date(-1999, 3, 6).diffMonths(dateBC), -4);
-            assertPred!"=="(Date(-1999, 4, 6).diffMonths(dateBC), -3);
-            assertPred!"=="(Date(-1999, 5, 6).diffMonths(dateBC), -2);
-            assertPred!"=="(Date(-1999, 6, 6).diffMonths(dateBC), -1);
-            assertPred!"=="(Date(-1999, 8, 6).diffMonths(dateBC), 1);
-            assertPred!"=="(Date(-1999, 9, 6).diffMonths(dateBC), 2);
-            assertPred!"=="(Date(-1999, 10, 6).diffMonths(dateBC), 3);
-            assertPred!"=="(Date(-1999, 11, 6).diffMonths(dateBC), 4);
-            assertPred!"=="(Date(-1999, 12, 6).diffMonths(dateBC), 5);
-            assertPred!"=="(Date(-1998, 1, 6).diffMonths(dateBC), 6);
-            assertPred!"=="(Date(-1998, 2, 6).diffMonths(dateBC), 7);
-            assertPred!"=="(Date(-1998, 3, 6).diffMonths(dateBC), 8);
-            assertPred!"=="(Date(-1998, 4, 6).diffMonths(dateBC), 9);
-            assertPred!"=="(Date(-1998, 5, 6).diffMonths(dateBC), 10);
-            assertPred!"=="(Date(-1998, 6, 6).diffMonths(dateBC), 11);
-            assertPred!"=="(Date(-1998, 7, 6).diffMonths(dateBC), 12);
-            assertPred!"=="(Date(-1998, 8, 6).diffMonths(dateBC), 13);
-
-            assertPred!"=="(dateBC.diffMonths(Date(-1999, 6, 30)), 1);
-            assertPred!"=="(dateBC.diffMonths(Date(-1999, 7, 1)), 0);
-            assertPred!"=="(dateBC.diffMonths(Date(-1999, 7, 6)), 0);
-            assertPred!"=="(dateBC.diffMonths(Date(-1999, 7, 11)), 0);
-            assertPred!"=="(dateBC.diffMonths(Date(-1999, 7, 16)), 0);
-            assertPred!"=="(dateBC.diffMonths(Date(-1999, 7, 21)), 0);
-            assertPred!"=="(dateBC.diffMonths(Date(-1999, 7, 26)), 0);
-            assertPred!"=="(dateBC.diffMonths(Date(-1999, 7, 31)), 0);
-            assertPred!"=="(dateBC.diffMonths(Date(-1999, 8, 1)), -1);
-
-            assertPred!"=="(dateBC.diffMonths(Date(-2008, 6, 30)), 109);
-            assertPred!"=="(dateBC.diffMonths(Date(-2008, 7, 1)), 108);
-            assertPred!"=="(dateBC.diffMonths(Date(-2008, 7, 6)), 108);
-            assertPred!"=="(dateBC.diffMonths(Date(-2008, 7, 11)), 108);
-            assertPred!"=="(dateBC.diffMonths(Date(-2008, 7, 16)), 108);
-            assertPred!"=="(dateBC.diffMonths(Date(-2008, 7, 21)), 108);
-            assertPred!"=="(dateBC.diffMonths(Date(-2008, 7, 26)), 108);
-            assertPred!"=="(dateBC.diffMonths(Date(-2008, 7, 31)), 108);
-            assertPred!"=="(dateBC.diffMonths(Date(-2008, 8, 1)), 107);
-
-            assertPred!"=="(Date(-1999, 6, 30).diffMonths(dateBC), -1);
-            assertPred!"=="(Date(-1999, 7, 1).diffMonths(dateBC), 0);
-            assertPred!"=="(Date(-1999, 7, 6).diffMonths(dateBC), 0);
-            assertPred!"=="(Date(-1999, 7, 11).diffMonths(dateBC), 0);
-            assertPred!"=="(Date(-1999, 7, 16).diffMonths(dateBC), 0);
-            assertPred!"=="(Date(-1999, 7, 21).diffMonths(dateBC), 0);
-            assertPred!"=="(Date(-1999, 7, 26).diffMonths(dateBC), 0);
-            assertPred!"=="(Date(-1999, 7, 31).diffMonths(dateBC), 0);
-            assertPred!"=="(Date(-1999, 8, 1).diffMonths(dateBC), 1);
-
-            assertPred!"=="(Date(-2008, 6, 30).diffMonths(dateBC), -109);
-            assertPred!"=="(Date(-2008, 7, 1).diffMonths(dateBC), -108);
-            assertPred!"=="(Date(-2008, 7, 6).diffMonths(dateBC), -108);
-            assertPred!"=="(Date(-2008, 7, 11).diffMonths(dateBC), -108);
-            assertPred!"=="(Date(-2008, 7, 16).diffMonths(dateBC), -108);
-            assertPred!"=="(Date(-2008, 7, 21).diffMonths(dateBC), -108);
-            assertPred!"=="(Date(-2008, 7, 26).diffMonths(dateBC), -108);
-            assertPred!"=="(Date(-2008, 7, 31).diffMonths(dateBC), -108);
-            assertPred!"=="(Date(-2008, 8, 1).diffMonths(dateBC), -107);
-
-            //Test Both
-            assertPred!"=="(Date(3, 3, 3).diffMonths(Date(-5, 5, 5)), 94);
-            assertPred!"=="(Date(-5, 5, 5).diffMonths(Date(3, 3, 3)), -94);
-
-            const cdate = Date(1999, 7, 6);
-            immutable idate = Date(1999, 7, 6);
-            static assert(__traits(compiles, date.diffMonths(date)));
-            static assert(__traits(compiles, cdate.diffMonths(date)));
-            static assert(__traits(compiles, idate.diffMonths(date)));
-
-            static assert(__traits(compiles, date.diffMonths(cdate)));
-            static assert(__traits(compiles, cdate.diffMonths(cdate)));
-            static assert(__traits(compiles, idate.diffMonths(cdate)));
-
-            static assert(__traits(compiles, date.diffMonths(idate)));
-            static assert(__traits(compiles, cdate.diffMonths(idate)));
-            static assert(__traits(compiles, idate.diffMonths(idate)));
-
-            //Verify Examples.
-            assert(Date(1999, 2, 1).diffMonths(Date(1999, 1, 31)) == 1);
-            assert(Date(1999, 1, 31).diffMonths(Date(1999, 2, 1)) == -1);
-            assert(Date(1999, 3, 1).diffMonths(Date(1999, 1, 1)) == 2);
-            assert(Date(1999, 1, 1).diffMonths(Date(1999, 3, 31)) == -2);
-        }
-    }
-
-
-    /++
-        Whether this Date is in a leap year.
-     +/
-    @property bool isLeapYear() const pure nothrow
-    {
-        return yearIsLeapYear(_year);
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            auto date = Date(1999, 7, 6);
-            const cdate = Date(1999, 7, 6);
-            immutable idate = Date(1999, 7, 6);
-            static assert(!__traits(compiles, date.isLeapYear = true));
-            static assert(!__traits(compiles, cdate.isLeapYear = true));
-            static assert(!__traits(compiles, idate.isLeapYear = true));
-        }
-    }
-
-
-    /++
-        Day of the week this Date is on.
-      +/
-    @property DayOfWeek dayOfWeek() const pure nothrow
-    {
-        return getDayOfWeek(dayOfGregorianCal);
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            const cdate = Date(1999, 7, 6);
-            immutable idate = Date(1999, 7, 6);
-            static assert(__traits(compiles, cdate.dayOfWeek == DayOfWeek.sun));
-            static assert(!__traits(compiles, cdate.dayOfWeek = DayOfWeek.sun));
-            static assert(__traits(compiles, idate.dayOfWeek == DayOfWeek.sun));
-            static assert(!__traits(compiles, idate.dayOfWeek = DayOfWeek.sun));
-        }
-    }
-
-
-    /++
-        Day of the year this Date is on.
-
-        Examples:
---------------------
-assert(Date(1999, 1, 1).dayOfYear == 1);
-assert(Date(1999, 12, 31).dayOfYear == 365);
-assert(Date(2000, 12, 31).dayOfYear == 366);
---------------------
-      +/
-    @property ushort dayOfYear() const pure nothrow
-    {
-        switch(_month)
-        {
-            case Month.jan:
-                return _day;
-            case Month.feb:
-                return cast(ushort)(31 + _day);
-            case Month.mar:
-                return cast(ushort)((isLeapYear ? 60 : 59) + _day);
-            case Month.apr:
-                return cast(ushort)((isLeapYear ? 91 : 90) + _day);
-            case Month.may:
-                return cast(ushort)((isLeapYear ? 121 : 120) + _day);
-            case Month.jun:
-                return cast(ushort)((isLeapYear ? 152 : 151) + _day);
-            case Month.jul:
-                return cast(ushort)((isLeapYear ? 182 : 181) + _day);
-            case Month.aug:
-                return cast(ushort)((isLeapYear ? 213 : 212) + _day);
-            case Month.sep:
-                return cast(ushort)((isLeapYear ? 244 : 243) + _day);
-            case Month.oct:
-                return cast(ushort)((isLeapYear ? 274 : 273) + _day);
-            case Month.nov:
-                return cast(ushort)((isLeapYear ? 305 : 304) + _day);
-            case Month.dec:
-                return cast(ushort)((isLeapYear ? 335 : 334) + _day);
-            default:
-                assert(0, "Invalid month.");
-        }
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            //Test A.D.
-            assertPred!"=="(Date(1999, 1, 1).dayOfYear, 1);
-            assertPred!"=="(Date(1999, 1, 2).dayOfYear, 2);
-            assertPred!"=="(Date(1999, 1, 3).dayOfYear, 3);
-            assertPred!"=="(Date(1999, 1, 31).dayOfYear, 31);
-            assertPred!"=="(Date(1999, 2, 1).dayOfYear, 32);
-            assertPred!"=="(Date(1999, 2, 28).dayOfYear, 59);
-            assertPred!"=="(Date(1999, 3, 1).dayOfYear, 60);
-            assertPred!"=="(Date(1999, 3, 31).dayOfYear, 90);
-            assertPred!"=="(Date(1999, 4, 1).dayOfYear, 91);
-            assertPred!"=="(Date(1999, 4, 30).dayOfYear, 120);
-            assertPred!"=="(Date(1999, 5, 1).dayOfYear, 121);
-            assertPred!"=="(Date(1999, 5, 31).dayOfYear, 151);
-            assertPred!"=="(Date(1999, 6, 1).dayOfYear, 152);
-            assertPred!"=="(Date(1999, 6, 30).dayOfYear, 181);
-            assertPred!"=="(Date(1999, 7, 1).dayOfYear, 182);
-            assertPred!"=="(Date(1999, 7, 31).dayOfYear, 212);
-            assertPred!"=="(Date(1999, 8, 1).dayOfYear, 213);
-            assertPred!"=="(Date(1999, 8, 31).dayOfYear, 243);
-            assertPred!"=="(Date(1999, 9, 1).dayOfYear, 244);
-            assertPred!"=="(Date(1999, 9, 30).dayOfYear, 273);
-            assertPred!"=="(Date(1999, 10, 1).dayOfYear, 274);
-            assertPred!"=="(Date(1999, 10, 31).dayOfYear, 304);
-            assertPred!"=="(Date(1999, 11, 1).dayOfYear, 305);
-            assertPred!"=="(Date(1999, 11, 30).dayOfYear, 334);
-            assertPred!"=="(Date(1999, 12, 1).dayOfYear, 335);
-            assertPred!"=="(Date(1999, 12, 31).dayOfYear, 365);
-
-            assertPred!"=="(Date(2000, 1, 1).dayOfYear, 1);
-            assertPred!"=="(Date(2000, 2, 1).dayOfYear, 32);
-            assertPred!"=="(Date(2000, 2, 29).dayOfYear, 60);
-            assertPred!"=="(Date(2000, 3, 1).dayOfYear, 61);
-            assertPred!"=="(Date(2000, 3, 31).dayOfYear, 91);
-            assertPred!"=="(Date(2000, 4, 1).dayOfYear, 92);
-            assertPred!"=="(Date(2000, 4, 30).dayOfYear, 121);
-            assertPred!"=="(Date(2000, 5, 1).dayOfYear, 122);
-            assertPred!"=="(Date(2000, 5, 31).dayOfYear, 152);
-            assertPred!"=="(Date(2000, 6, 1).dayOfYear, 153);
-            assertPred!"=="(Date(2000, 6, 30).dayOfYear, 182);
-            assertPred!"=="(Date(2000, 7, 1).dayOfYear, 183);
-            assertPred!"=="(Date(2000, 7, 31).dayOfYear, 213);
-            assertPred!"=="(Date(2000, 8, 1).dayOfYear, 214);
-            assertPred!"=="(Date(2000, 8, 31).dayOfYear, 244);
-            assertPred!"=="(Date(2000, 9, 1).dayOfYear, 245);
-            assertPred!"=="(Date(2000, 9, 30).dayOfYear, 274);
-            assertPred!"=="(Date(2000, 10, 1).dayOfYear, 275);
-            assertPred!"=="(Date(2000, 10, 31).dayOfYear, 305);
-            assertPred!"=="(Date(2000, 11, 1).dayOfYear, 306);
-            assertPred!"=="(Date(2000, 11, 30).dayOfYear, 335);
-            assertPred!"=="(Date(2000, 12, 1).dayOfYear, 336);
-            assertPred!"=="(Date(2000, 12, 31).dayOfYear, 366);
-
-            //Test B.C.
-            assertPred!"=="(Date(0, 1, 1).dayOfYear, 1);
-            assertPred!"=="(Date(0, 12, 31).dayOfYear, 366);
-            assertPred!"=="(Date(1, 1, 1).dayOfYear, 1);
-            assertPred!"=="(Date(1, 12, 31).dayOfYear, 365);
-            assertPred!"=="(Date(-1, 1, 1).dayOfYear, 1);
-            assertPred!"=="(Date(-1, 12, 31).dayOfYear, 365);
-            assertPred!"=="(Date(4, 1, 1).dayOfYear, 1);
-            assertPred!"=="(Date(4, 12, 31).dayOfYear, 366);
-
-            const cdate = Date(1999, 7, 6);
-            immutable idate = Date(1999, 7, 6);
-            static assert(__traits(compiles, cdate.dayOfYear == 187));
-            static assert(__traits(compiles, idate.dayOfYear == 187));
-
-            //Verify Examples.
-            assert(Date(1999, 1, 1).dayOfYear == 1);
-            assert(Date(1999, 12, 31).dayOfYear == 365);
-            assert(Date(2000, 12, 31).dayOfYear == 366);
-        }
-    }
-
-    /++
-        Day of the year.
-
-        Params:
-            day = The day of the year to set which day of the year this Date is on.
-
-        Throws:
-            DateTimeException if the given day is an invalid day of the year.
-      +/
-    @property void dayOfYear(int day) pure
-    {
-        if(isLeapYear)
-        {
-            if(day <= 0 || day > daysInLeapYear)
-                throw new DateTimeException("Invalid day of the year.");
-
-            switch(day)
-            {
-                case 1: .. case 31:
-                {
-                    _month = Month.jan;
-                    _day = cast(ubyte)day;
-                    break;
-                }
-                case 32: .. case 60:
-                 {
-                    _month = Month.feb;
-                    _day = cast(ubyte)(day - 31);
-                    break;
-                 }
-                case 61: .. case 91:
-                {
-                    _month = Month.mar;
-                    _day = cast(ubyte)(day - 60);
-                    break;
-                }
-                case 92: .. case 121:
-                {
-                    _month = Month.apr;
-                    _day = cast(ubyte)(day - 91);
-                    break;
-                }
-                case 122: .. case 152:
-                {
-                    _month = Month.may;
-                    _day = cast(ubyte)(day - 121);
-                    break;
-                }
-                case 153: .. case 182:
-                {
-                    _month = Month.jun;
-                    _day = cast(ubyte)(day - 152);
-                    break;
-                }
-                case 183: .. case 213:
-                {
-                    _month = Month.jul;
-                    _day = cast(ubyte)(day - 182);
-                    break;
-                }
-                case 214: .. case 244:
-                {
-                    _month = Month.aug;
-                    _day = cast(ubyte)(day - 213);
-                    break;
-                }
-                case 245: .. case 274:
-                {
-                    _month = Month.sep;
-                    _day = cast(ubyte)(day - 244);
-                    break;
-                }
-                case 275: .. case 305:
-                {
-                    _month = Month.oct;
-                    _day = cast(ubyte)(day - 274);
-                    break;
-                }
-                case 306: .. case 335:
-                {
-                    _month = Month.nov;
-                    _day = cast(ubyte)(day - 305);
-                    break;
-                }
-                case 336: .. case 366:
-                {
-                    _month = Month.dec;
-                    _day = cast(ubyte)(day - 335);
-                    break;
-                }
-                default:
-                    assert(0, "Invalid day of the year.");
-            }
-        }
-        else
-        {
-            if(day <= 0 || day > daysInYear)
-                throw new DateTimeException("Invalid day of the year.");
-
-            switch(day)
-            {
-                case 1: .. case 31:
-                {
-                    _month = Month.jan;
-                    _day = cast(ubyte)day;
-                    break;
-                }
-                case 32: .. case 59:
-                 {
-                    _month = Month.feb;
-                    _day = cast(ubyte)(day - 31);
-                    break;
-                 }
-                case 60: .. case 90:
-                {
-                    _month = Month.mar;
-                    _day = cast(ubyte)(day - 59);
-                    break;
-                }
-                case 91: .. case 120:
-                {
-                    _month = Month.apr;
-                    _day = cast(ubyte)(day - 90);
-                    break;
-                }
-                case 121: .. case 151:
-                {
-                    _month = Month.may;
-                    _day = cast(ubyte)(day - 120);
-                    break;
-                }
-                case 152: .. case 181:
-                {
-                    _month = Month.jun;
-                    _day = cast(ubyte)(day - 151);
-                    break;
-                }
-                case 182: .. case 212:
-                {
-                    _month = Month.jul;
-                    _day = cast(ubyte)(day - 181);
-                    break;
-                }
-                case 213: .. case 243:
-                {
-                    _month = Month.aug;
-                    _day = cast(ubyte)(day - 212);
-                    break;
-                }
-                case 244: .. case 273:
-                {
-                    _month = Month.sep;
-                    _day = cast(ubyte)(day - 243);
-                    break;
-                }
-                case 274: .. case 304:
-                {
-                    _month = Month.oct;
-                    _day = cast(ubyte)(day - 273);
-                    break;
-                }
-                case 305: .. case 334:
-                {
-                    _month = Month.nov;
-                    _day = cast(ubyte)(day - 304);
-                    break;
-                }
-                case 335: .. case 365:
-                {
-                    _month = Month.dec;
-                    _day = cast(ubyte)(day - 334);
-                    break;
-                }
-                default:
-                    assert(0, "Invalid day of the year.");
-            }
-        }
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            auto date = Date(1999, 1, 1);
-
-            void testFunc(int day, int expectedMonth, int expectedDay, size_t line = __LINE__)
-            {
-                date.dayOfYear = day;
-                assertPred!"=="(date.month, expectedMonth, "", __FILE__, line);
-                assertPred!"=="(date.day, expectedDay, "", __FILE__, line);
-            }
-
-            //Test A.D.
-            testFunc(1, 1, 1);
-            testFunc(2, 1, 2);
-            testFunc(3, 1, 3);
-            testFunc(31, 1, 31);
-
-            testFunc(32, 2, 1);
-            testFunc(59, 2, 28);
-            testFunc(60, 3, 1);
-            testFunc(90, 3, 31);
-            testFunc(91, 4, 1);
-            testFunc(120, 4, 30);
-            testFunc(121, 5, 1);
-            testFunc(151, 5, 31);
-            testFunc(152, 6, 1);
-            testFunc(181, 6, 30);
-            testFunc(182, 7, 1);
-            testFunc(212, 7, 31);
-            testFunc(213, 8, 1);
-            testFunc(243, 8, 31);
-            testFunc(244, 9, 1);
-            testFunc(273, 9, 30);
-            testFunc(274, 10, 1);
-            testFunc(304, 10, 31);
-            testFunc(305, 11, 1);
-            testFunc(334, 11, 30);
-            testFunc(335, 12, 1);
-            testFunc(365, 12, 31);
-
-            date.year = 2000;
-            testFunc(1, 1, 1);
-            testFunc(32, 2, 1);
-            testFunc(60, 2, 29);
-            testFunc(61, 3, 1);
-            testFunc(91, 3, 31);
-            testFunc(92, 4, 1);
-            testFunc(121, 4, 30);
-            testFunc(122, 5, 1);
-            testFunc(152, 5, 31);
-            testFunc(153, 6, 1);
-            testFunc(182, 6, 30);
-            testFunc(183, 7, 1);
-            testFunc(213, 7, 31);
-            testFunc(214, 8, 1);
-            testFunc(244, 8, 31);
-            testFunc(245, 9, 1);
-            testFunc(274, 9, 30);
-            testFunc(275, 10, 1);
-            testFunc(305, 10, 31);
-            testFunc(306, 11, 1);
-            testFunc(335, 11, 30);
-            testFunc(336, 12, 1);
-            testFunc(366, 12, 31);
-
-            //Test B.C.
-            date.year = 0;
-            testFunc(1, 1, 1);
-            testFunc(32, 2, 1);
-            testFunc(60, 2, 29);
-            testFunc(61, 3, 1);
-            testFunc(91, 3, 31);
-            testFunc(92, 4, 1);
-            testFunc(121, 4, 30);
-            testFunc(122, 5, 1);
-            testFunc(152, 5, 31);
-            testFunc(153, 6, 1);
-            testFunc(182, 6, 30);
-            testFunc(183, 7, 1);
-            testFunc(213, 7, 31);
-            testFunc(214, 8, 1);
-            testFunc(244, 8, 31);
-            testFunc(245, 9, 1);
-            testFunc(274, 9, 30);
-            testFunc(275, 10, 1);
-            testFunc(305, 10, 31);
-            testFunc(306, 11, 1);
-            testFunc(335, 11, 30);
-            testFunc(336, 12, 1);
-            testFunc(366, 12, 31);
-
-            date.year = -1;
-            testFunc(1, 1, 1);
-            testFunc(2, 1, 2);
-            testFunc(3, 1, 3);
-            testFunc(31, 1, 31);
-
-            testFunc(32, 2, 1);
-            testFunc(59, 2, 28);
-            testFunc(60, 3, 1);
-            testFunc(90, 3, 31);
-            testFunc(91, 4, 1);
-            testFunc(120, 4, 30);
-            testFunc(121, 5, 1);
-            testFunc(151, 5, 31);
-            testFunc(152, 6, 1);
-            testFunc(181, 6, 30);
-            testFunc(182, 7, 1);
-            testFunc(212, 7, 31);
-            testFunc(213, 8, 1);
-            testFunc(243, 8, 31);
-            testFunc(244, 9, 1);
-            testFunc(273, 9, 30);
-            testFunc(274, 10, 1);
-            testFunc(304, 10, 31);
-            testFunc(305, 11, 1);
-            testFunc(334, 11, 30);
-            testFunc(335, 12, 1);
-            testFunc(365, 12, 31);
-
-            const cdate = Date(1999, 7, 6);
-            immutable idate = Date(1999, 7, 6);
-            static assert(!__traits(compiles, cdate.dayOfYear = 187));
-            static assert(!__traits(compiles, idate.dayOfYear = 187));
-        }
-    }
-
-
-    /++
-        The Xth day of the Gregorian Calendar that this Date is on.
-
-        Examples:
---------------------
-assert(Date(1, 1, 1).dayOfGregorianCal == 1);
-assert(Date(1, 12, 31).dayOfGregorianCal == 365);
-assert(Date(2, 1, 1).dayOfGregorianCal == 366);
-
-assert(Date(0, 12, 31).dayOfGregorianCal == 0);
-assert(Date(0, 1, 1).dayOfGregorianCal == -365);
-assert(Date(-1, 12, 31).dayOfGregorianCal == -366);
-
-assert(Date(2000, 1, 1).dayOfGregorianCal == 730_120);
-assert(Date(2010, 12, 31).dayOfGregorianCal == 734_137);
---------------------
-     +/
-    @property int dayOfGregorianCal() const pure nothrow
-    {
-        if(isAD)
-        {
-            if(_year == 1)
-                return dayOfYear;
-
-            int years = _year - 1;
-            auto days = (years / 400) * daysIn400Years;
-            years %= 400;
-
-            days += (years / 100) * daysIn100Years;
-            years %= 100;
-
-            days += (years / 4) * daysIn4Years;
-            years %= 4;
-
-            days += years * daysInYear;
-
-            days += dayOfYear;
-
-            return days;
-        }
-        else if(_year == 0)
-            return dayOfYear - daysInLeapYear;
-        else
-        {
-            int years = _year;
-            auto days = (years / 400) * daysIn400Years;
-            years %= 400;
-
-            days += (years / 100) * daysIn100Years;
-            years %= 100;
-
-            days += (years / 4) * daysIn4Years;
-            years %= 4;
-
-            if(years < 0)
-            {
-                days -= daysInLeapYear;
-                ++years;
-
-                days += years * daysInYear;
-
-                days -= daysInYear - dayOfYear;
-            }
-            else
-                days -= daysInLeapYear - dayOfYear;
-
-            return days;
-        }
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            //Test A.D.
-            assertPred!"=="(Date(1, 1, 1).dayOfGregorianCal, 1);
-            assertPred!"=="(Date(1, 1, 2).dayOfGregorianCal, 2);
-            assertPred!"=="(Date(1, 2, 1).dayOfGregorianCal, 32);
-            assertPred!"=="(Date(2, 1, 1).dayOfGregorianCal, 366);
-            assertPred!"=="(Date(3, 1, 1).dayOfGregorianCal, 731);
-            assertPred!"=="(Date(4, 1, 1).dayOfGregorianCal, 1096);
-            assertPred!"=="(Date(5, 1, 1).dayOfGregorianCal, 1462);
-            assertPred!"=="(Date(50, 1, 1).dayOfGregorianCal, 17_898);
-            assertPred!"=="(Date(97, 1, 1).dayOfGregorianCal, 35_065);
-            assertPred!"=="(Date(100, 1, 1).dayOfGregorianCal, 36_160);
-            assertPred!"=="(Date(101, 1, 1).dayOfGregorianCal, 36_525);
-            assertPred!"=="(Date(105, 1, 1).dayOfGregorianCal, 37_986);
-            assertPred!"=="(Date(200, 1, 1).dayOfGregorianCal, 72_684);
-            assertPred!"=="(Date(201, 1, 1).dayOfGregorianCal, 73_049);
-            assertPred!"=="(Date(300, 1, 1).dayOfGregorianCal, 109_208);
-            assertPred!"=="(Date(301, 1, 1).dayOfGregorianCal, 109_573);
-            assertPred!"=="(Date(400, 1, 1).dayOfGregorianCal, 145_732);
-            assertPred!"=="(Date(401, 1, 1).dayOfGregorianCal, 146_098);
-            assertPred!"=="(Date(500, 1, 1).dayOfGregorianCal, 182_257);
-            assertPred!"=="(Date(501, 1, 1).dayOfGregorianCal, 182_622);
-            assertPred!"=="(Date(1000, 1, 1).dayOfGregorianCal, 364_878);
-            assertPred!"=="(Date(1001, 1, 1).dayOfGregorianCal, 365_243);
-            assertPred!"=="(Date(1600, 1, 1).dayOfGregorianCal, 584_023);
-            assertPred!"=="(Date(1601, 1, 1).dayOfGregorianCal, 584_389);
-            assertPred!"=="(Date(1900, 1, 1).dayOfGregorianCal, 693_596);
-            assertPred!"=="(Date(1901, 1, 1).dayOfGregorianCal, 693_961);
-            assertPred!"=="(Date(1945, 11, 12).dayOfGregorianCal, 710_347);
-            assertPred!"=="(Date(1999, 1, 1).dayOfGregorianCal, 729_755);
-            assertPred!"=="(Date(2000, 1, 1).dayOfGregorianCal, 730_120);
-            assertPred!"=="(Date(2001, 1, 1).dayOfGregorianCal, 730_486);
-
-            assertPred!"=="(Date(2010, 1, 1).dayOfGregorianCal, 733_773);
-            assertPred!"=="(Date(2010, 1, 31).dayOfGregorianCal, 733_803);
-            assertPred!"=="(Date(2010, 2, 1).dayOfGregorianCal, 733_804);
-            assertPred!"=="(Date(2010, 2, 28).dayOfGregorianCal, 733_831);
-            assertPred!"=="(Date(2010, 3, 1).dayOfGregorianCal, 733_832);
-            assertPred!"=="(Date(2010, 3, 31).dayOfGregorianCal, 733_862);
-            assertPred!"=="(Date(2010, 4, 1).dayOfGregorianCal, 733_863);
-            assertPred!"=="(Date(2010, 4, 30).dayOfGregorianCal, 733_892);
-            assertPred!"=="(Date(2010, 5, 1).dayOfGregorianCal, 733_893);
-            assertPred!"=="(Date(2010, 5, 31).dayOfGregorianCal, 733_923);
-            assertPred!"=="(Date(2010, 6, 1).dayOfGregorianCal, 733_924);
-            assertPred!"=="(Date(2010, 6, 30).dayOfGregorianCal, 733_953);
-            assertPred!"=="(Date(2010, 7, 1).dayOfGregorianCal, 733_954);
-            assertPred!"=="(Date(2010, 7, 31).dayOfGregorianCal, 733_984);
-            assertPred!"=="(Date(2010, 8, 1).dayOfGregorianCal, 733_985);
-            assertPred!"=="(Date(2010, 8, 31).dayOfGregorianCal, 734_015);
-            assertPred!"=="(Date(2010, 9, 1).dayOfGregorianCal, 734_016);
-            assertPred!"=="(Date(2010, 9, 30).dayOfGregorianCal, 734_045);
-            assertPred!"=="(Date(2010, 10, 1).dayOfGregorianCal, 734_046);
-            assertPred!"=="(Date(2010, 10, 31).dayOfGregorianCal, 734_076);
-            assertPred!"=="(Date(2010, 11, 1).dayOfGregorianCal, 734_077);
-            assertPred!"=="(Date(2010, 11, 30).dayOfGregorianCal, 734_106);
-            assertPred!"=="(Date(2010, 12, 1).dayOfGregorianCal, 734_107);
-            assertPred!"=="(Date(2010, 12, 31).dayOfGregorianCal, 734_137);
-
-            assertPred!"=="(Date(2012, 2, 1).dayOfGregorianCal, 734_534);
-            assertPred!"=="(Date(2012, 2, 28).dayOfGregorianCal, 734_561);
-            assertPred!"=="(Date(2012, 2, 29).dayOfGregorianCal, 734_562);
-            assertPred!"=="(Date(2012, 3, 1).dayOfGregorianCal, 734_563);
-
-            //Test B.C.
-            assertPred!"=="(Date(0, 12, 31).dayOfGregorianCal, 0);
-            assertPred!"=="(Date(0, 12, 30).dayOfGregorianCal, -1);
-            assertPred!"=="(Date(0, 12, 1).dayOfGregorianCal, -30);
-            assertPred!"=="(Date(0, 11, 30).dayOfGregorianCal, -31);
-
-            assertPred!"=="(Date(-1, 12, 31).dayOfGregorianCal, -366);
-            assertPred!"=="(Date(-1, 12, 30).dayOfGregorianCal, -367);
-            assertPred!"=="(Date(-1, 1, 1).dayOfGregorianCal, -730);
-            assertPred!"=="(Date(-2, 12, 31).dayOfGregorianCal, -731);
-            assertPred!"=="(Date(-2, 1, 1).dayOfGregorianCal, -1095);
-            assertPred!"=="(Date(-3, 12, 31).dayOfGregorianCal, -1096);
-            assertPred!"=="(Date(-3, 1, 1).dayOfGregorianCal, -1460);
-            assertPred!"=="(Date(-4, 12, 31).dayOfGregorianCal, -1461);
-            assertPred!"=="(Date(-4, 1, 1).dayOfGregorianCal, -1826);
-            assertPred!"=="(Date(-5, 12, 31).dayOfGregorianCal, -1827);
-            assertPred!"=="(Date(-5, 1, 1).dayOfGregorianCal, -2191);
-            assertPred!"=="(Date(-9, 1, 1).dayOfGregorianCal, -3652);
-
-            assertPred!"=="(Date(-49, 1, 1).dayOfGregorianCal, -18_262);
-            assertPred!"=="(Date(-50, 1, 1).dayOfGregorianCal, -18_627);
-            assertPred!"=="(Date(-97, 1, 1).dayOfGregorianCal, -35_794);
-            assertPred!"=="(Date(-99, 12, 31).dayOfGregorianCal, -36_160);
-            assertPred!"=="(Date(-99, 1, 1).dayOfGregorianCal, -36_524);
-            assertPred!"=="(Date(-100, 1, 1).dayOfGregorianCal, -36_889);
-            assertPred!"=="(Date(-101, 1, 1).dayOfGregorianCal, -37_254);
-            assertPred!"=="(Date(-105, 1, 1).dayOfGregorianCal, -38_715);
-            assertPred!"=="(Date(-200, 1, 1).dayOfGregorianCal, -73_413);
-            assertPred!"=="(Date(-201, 1, 1).dayOfGregorianCal, -73_778);
-            assertPred!"=="(Date(-300, 1, 1).dayOfGregorianCal, -109_937);
-            assertPred!"=="(Date(-301, 1, 1).dayOfGregorianCal, -110_302);
-            assertPred!"=="(Date(-400, 12, 31).dayOfGregorianCal, -146_097);
-            assertPred!"=="(Date(-400, 1, 1).dayOfGregorianCal, -146_462);
-            assertPred!"=="(Date(-401, 1, 1).dayOfGregorianCal, -146_827);
-            assertPred!"=="(Date(-499, 1, 1).dayOfGregorianCal, -182_621);
-            assertPred!"=="(Date(-500, 1, 1).dayOfGregorianCal, -182_986);
-            assertPred!"=="(Date(-501, 1, 1).dayOfGregorianCal, -183_351);
-            assertPred!"=="(Date(-1000, 1, 1).dayOfGregorianCal, -365_607);
-            assertPred!"=="(Date(-1001, 1, 1).dayOfGregorianCal, -365_972);
-            assertPred!"=="(Date(-1599, 1, 1).dayOfGregorianCal, -584_387);
-            assertPred!"=="(Date(-1600, 12, 31).dayOfGregorianCal, -584_388);
-            assertPred!"=="(Date(-1600, 1, 1).dayOfGregorianCal, -584_753);
-            assertPred!"=="(Date(-1601, 1, 1).dayOfGregorianCal, -585_118);
-            assertPred!"=="(Date(-1900, 1, 1).dayOfGregorianCal, -694_325);
-            assertPred!"=="(Date(-1901, 1, 1).dayOfGregorianCal, -694_690);
-            assertPred!"=="(Date(-1999, 1, 1).dayOfGregorianCal, -730_484);
-            assertPred!"=="(Date(-2000, 12, 31).dayOfGregorianCal, -730_485);
-            assertPred!"=="(Date(-2000, 1, 1).dayOfGregorianCal, -730_850);
-            assertPred!"=="(Date(-2001, 1, 1).dayOfGregorianCal, -731_215);
-
-            assertPred!"=="(Date(-2010, 1, 1).dayOfGregorianCal, -734_502);
-            assertPred!"=="(Date(-2010, 1, 31).dayOfGregorianCal, -734_472);
-            assertPred!"=="(Date(-2010, 2, 1).dayOfGregorianCal, -734_471);
-            assertPred!"=="(Date(-2010, 2, 28).dayOfGregorianCal, -734_444);
-            assertPred!"=="(Date(-2010, 3, 1).dayOfGregorianCal, -734_443);
-            assertPred!"=="(Date(-2010, 3, 31).dayOfGregorianCal, -734_413);
-            assertPred!"=="(Date(-2010, 4, 1).dayOfGregorianCal, -734_412);
-            assertPred!"=="(Date(-2010, 4, 30).dayOfGregorianCal, -734_383);
-            assertPred!"=="(Date(-2010, 5, 1).dayOfGregorianCal, -734_382);
-            assertPred!"=="(Date(-2010, 5, 31).dayOfGregorianCal, -734_352);
-            assertPred!"=="(Date(-2010, 6, 1).dayOfGregorianCal, -734_351);
-            assertPred!"=="(Date(-2010, 6, 30).dayOfGregorianCal, -734_322);
-            assertPred!"=="(Date(-2010, 7, 1).dayOfGregorianCal, -734_321);
-            assertPred!"=="(Date(-2010, 7, 31).dayOfGregorianCal, -734_291);
-            assertPred!"=="(Date(-2010, 8, 1).dayOfGregorianCal, -734_290);
-            assertPred!"=="(Date(-2010, 8, 31).dayOfGregorianCal, -734_260);
-            assertPred!"=="(Date(-2010, 9, 1).dayOfGregorianCal, -734_259);
-            assertPred!"=="(Date(-2010, 9, 30).dayOfGregorianCal, -734_230);
-            assertPred!"=="(Date(-2010, 10, 1).dayOfGregorianCal, -734_229);
-            assertPred!"=="(Date(-2010, 10, 31).dayOfGregorianCal, -734_199);
-            assertPred!"=="(Date(-2010, 11, 1).dayOfGregorianCal, -734_198);
-            assertPred!"=="(Date(-2010, 11, 30).dayOfGregorianCal, -734_169);
-            assertPred!"=="(Date(-2010, 12, 1).dayOfGregorianCal, -734_168);
-            assertPred!"=="(Date(-2010, 12, 31).dayOfGregorianCal, -734_138);
-
-            assertPred!"=="(Date(-2012, 2, 1).dayOfGregorianCal, -735_202);
-            assertPred!"=="(Date(-2012, 2, 28).dayOfGregorianCal, -735_175);
-            assertPred!"=="(Date(-2012, 2, 29).dayOfGregorianCal, -735_174);
-            assertPred!"=="(Date(-2012, 3, 1).dayOfGregorianCal, -735_173);
-
-            assertPred!"=="(Date(-3760, 9, 7).dayOfGregorianCal, -1_373_427); //Start of Hebrew Calendar
-
-            auto date = Date(1999, 7, 6);
-            const cdate = Date(1999, 7, 6);
-            immutable idate = Date(1999, 7, 6);
-            static assert(__traits(compiles, date.dayOfGregorianCal));
-            static assert(__traits(compiles, cdate.dayOfGregorianCal));
-            static assert(__traits(compiles, idate.dayOfGregorianCal));
-
-            //Verify Examples.
-            assert(Date(1, 1, 1).dayOfGregorianCal == 1);
-            assert(Date(1, 12, 31).dayOfGregorianCal == 365);
-            assert(Date(2, 1, 1).dayOfGregorianCal == 366);
-
-            assert(Date(0, 12, 31).dayOfGregorianCal == 0);
-            assert(Date(0, 1, 1).dayOfGregorianCal == -365);
-            assert(Date(-1, 12, 31).dayOfGregorianCal == -366);
-
-            assert(Date(2000, 1, 1).dayOfGregorianCal == 730_120);
-            assert(Date(2010, 12, 31).dayOfGregorianCal == 734_137);
-        }
-    }
-
-    /++
-        The Xth day of the Gregorian Calendar that this Date is on.
-
-        Params:
-            day = The day of the Gregorian Calendar to set this Date to.
-
-        Examples:
---------------------
-auto date = Date.init;
-date.dayOfGregorianCal = 1;
-assert(date == Date(1, 1, 1));
-
-date.dayOfGregorianCal = 365;
-assert(date == Date(1, 12, 31));
-
-date.dayOfGregorianCal = 366;
-assert(date == Date(2, 1, 1));
-
-date.dayOfGregorianCal = 0;
-assert(date == Date(0, 12, 31));
-
-date.dayOfGregorianCal = -365;
-assert(date == Date(-0, 1, 1));
-
-date.dayOfGregorianCal = -366;
-assert(date == Date(-1, 12, 31));
-
-date.dayOfGregorianCal = 730_120;
-assert(date == Date(2000, 1, 1));
-
-date.dayOfGregorianCal = 734_137;
-assert(date == Date(2010, 12, 31));
---------------------
-     +/
-    @property void dayOfGregorianCal(int day) pure nothrow
-    {
-        this = Date(day);
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            {
-                auto date = Date(1999, 7, 6);
-                const cdate = Date(1999, 7, 6);
-                immutable idate = Date(1999, 7, 6);
-                static assert(__traits(compiles, date.dayOfGregorianCal = 187));
-                static assert(!__traits(compiles, cdate.dayOfGregorianCal = 187));
-                static assert(!__traits(compiles, idate.dayOfGregorianCal = 187));
-            }
-
-            //Verify Examples.
-            {
-                auto date = Date.init;
-                date.dayOfGregorianCal = 1;
-                assert(date == Date(1, 1, 1));
-
-                date.dayOfGregorianCal = 365;
-                assert(date == Date(1, 12, 31));
-
-                date.dayOfGregorianCal = 366;
-                assert(date == Date(2, 1, 1));
-
-                date.dayOfGregorianCal = 0;
-                assert(date == Date(0, 12, 31));
-
-                date.dayOfGregorianCal = -365;
-                assert(date == Date(-0, 1, 1));
-
-                date.dayOfGregorianCal = -366;
-                assert(date == Date(-1, 12, 31));
-
-                date.dayOfGregorianCal = 730_120;
-                assert(date == Date(2000, 1, 1));
-
-                date.dayOfGregorianCal = 734_137;
-                assert(date == Date(2010, 12, 31));
-            }
-        }
-    }
-
-
-    /++
-        The ISO 8601 week of the year that this Date is in.
-
-        See_Also:
-            <a href="http://en.wikipedia.org/wiki/ISO_week_date">ISO Week Date</a>
-      +/
-    @property ubyte isoWeek() const pure nothrow
-    {
-        immutable weekday = dayOfWeek;
-        immutable adjustedWeekday = weekday == DayOfWeek.sun ? 7 : weekday;
-        immutable week = (dayOfYear - adjustedWeekday + 10) / 7;
-
-        try
-        {
-            if(week == 53)
-            {
-                switch(Date(_year + 1, 1, 1).dayOfWeek)
-                {
-                    case DayOfWeek.mon:
-                    case DayOfWeek.tue:
-                    case DayOfWeek.wed:
-                    case DayOfWeek.thu:
-                        return 1;
-                    case DayOfWeek.fri:
-                    case DayOfWeek.sat:
-                    case DayOfWeek.sun:
-                        return 53;
-                    default:
-                        assert(0, "Invalid ISO Week");
-                }
-            }
-            else if(week > 0)
-                return cast(ubyte)week;
-            else
-                return Date(_year - 1, 12, 31).isoWeek;
-        }
-        catch(Exception e)
-            assert(0, "Date's constructor threw.");
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            //Test A.D.
-            assertPred!"=="(Date(2009, 12, 28).isoWeek, 53);
-            assertPred!"=="(Date(2009, 12, 29).isoWeek, 53);
-            assertPred!"=="(Date(2009, 12, 30).isoWeek, 53);
-            assertPred!"=="(Date(2009, 12, 31).isoWeek, 53);
-            assertPred!"=="(Date(2010, 1, 1).isoWeek, 53);
-            assertPred!"=="(Date(2010, 1, 2).isoWeek, 53);
-            assertPred!"=="(Date(2010, 1, 3).isoWeek, 53);
-            assertPred!"=="(Date(2010, 1, 4).isoWeek, 1);
-            assertPred!"=="(Date(2010, 1, 5).isoWeek, 1);
-            assertPred!"=="(Date(2010, 1, 6).isoWeek, 1);
-            assertPred!"=="(Date(2010, 1, 7).isoWeek, 1);
-            assertPred!"=="(Date(2010, 1, 8).isoWeek, 1);
-            assertPred!"=="(Date(2010, 1, 9).isoWeek, 1);
-            assertPred!"=="(Date(2010, 1, 10).isoWeek, 1);
-            assertPred!"=="(Date(2010, 1, 11).isoWeek, 2);
-            assertPred!"=="(Date(2010, 12, 31).isoWeek, 52);
-
-            assertPred!"=="(Date(2004, 12, 26).isoWeek, 52);
-            assertPred!"=="(Date(2004, 12, 27).isoWeek, 53);
-            assertPred!"=="(Date(2004, 12, 28).isoWeek, 53);
-            assertPred!"=="(Date(2004, 12, 29).isoWeek, 53);
-            assertPred!"=="(Date(2004, 12, 30).isoWeek, 53);
-            assertPred!"=="(Date(2004, 12, 31).isoWeek, 53);
-            assertPred!"=="(Date(2005, 1, 1).isoWeek, 53);
-            assertPred!"=="(Date(2005, 1, 2).isoWeek, 53);
-
-            assertPred!"=="(Date(2005, 12, 31).isoWeek, 52);
-            assertPred!"=="(Date(2007, 1, 1).isoWeek, 1);
-
-            assertPred!"=="(Date(2007, 12, 30).isoWeek, 52);
-            assertPred!"=="(Date(2007, 12, 31).isoWeek, 1);
-            assertPred!"=="(Date(2008, 1, 1).isoWeek, 1);
-
-            assertPred!"=="(Date(2008, 12, 28).isoWeek, 52);
-            assertPred!"=="(Date(2008, 12, 29).isoWeek, 1);
-            assertPred!"=="(Date(2008, 12, 30).isoWeek, 1);
-            assertPred!"=="(Date(2008, 12, 31).isoWeek, 1);
-            assertPred!"=="(Date(2009, 1, 1).isoWeek, 1);
-            assertPred!"=="(Date(2009, 1, 2).isoWeek, 1);
-            assertPred!"=="(Date(2009, 1, 3).isoWeek, 1);
-            assertPred!"=="(Date(2009, 1, 4).isoWeek, 1);
-
-            //Test B.C.
-            //The algorithm should work identically for both A.D. and B.C. since
-            //it doesn't really take the year into account, so B.C. testing
-            //probably isn't really needed.
-            assertPred!"=="(Date(0, 12, 31).isoWeek, 52);
-            assertPred!"=="(Date(0, 1, 4).isoWeek, 1);
-            assertPred!"=="(Date(0, 1, 1).isoWeek, 52);
-
-            const cdate = Date(1999, 7, 6);
-            immutable idate = Date(1999, 7, 6);
-            static assert(__traits(compiles, cdate.isoWeek == 3));
-            static assert(!__traits(compiles, cdate.isoWeek = 3));
-            static assert(__traits(compiles, idate.isoWeek == 3));
-            static assert(!__traits(compiles, idate.isoWeek = 3));
-        }
-    }
-
-
-    /++
-        Date for the last day in the month that this Date is in.
-
-        Examples:
---------------------
-assert(Date(1999, 1, 6).endOfMonth == Date(1999, 1, 31));
-assert(Date(1999, 2, 7).endOfMonth == Date(1999, 2, 28));
-assert(Date(2000, 2, 7).endOfMonth == Date(1999, 2, 29));
-assert(Date(2000, 6, 4).endOfMonth == Date(1999, 6, 30));
---------------------
-      +/
-    @property Date endOfMonth() const pure nothrow
-    {
-        try
-            return Date(_year, _month, maxDay(_year, _month));
-        catch(Exception e)
-            assert(0, "Date's constructor threw.");
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            //Test A.D.
-            assertPred!"=="(Date(1999, 1, 1).endOfMonth, Date(1999, 1, 31));
-            assertPred!"=="(Date(1999, 2, 1).endOfMonth, Date(1999, 2, 28));
-            assertPred!"=="(Date(2000, 2, 1).endOfMonth, Date(2000, 2, 29));
-            assertPred!"=="(Date(1999, 3, 1).endOfMonth, Date(1999, 3, 31));
-            assertPred!"=="(Date(1999, 4, 1).endOfMonth, Date(1999, 4, 30));
-            assertPred!"=="(Date(1999, 5, 1).endOfMonth, Date(1999, 5, 31));
-            assertPred!"=="(Date(1999, 6, 1).endOfMonth, Date(1999, 6, 30));
-            assertPred!"=="(Date(1999, 7, 1).endOfMonth, Date(1999, 7, 31));
-            assertPred!"=="(Date(1999, 8, 1).endOfMonth, Date(1999, 8, 31));
-            assertPred!"=="(Date(1999, 9, 1).endOfMonth, Date(1999, 9, 30));
-            assertPred!"=="(Date(1999, 10, 1).endOfMonth, Date(1999, 10, 31));
-            assertPred!"=="(Date(1999, 11, 1).endOfMonth, Date(1999, 11, 30));
-            assertPred!"=="(Date(1999, 12, 1).endOfMonth, Date(1999, 12, 31));
-
-            //Test B.C.
-            assertPred!"=="(Date(-1999, 1, 1).endOfMonth, Date(-1999, 1, 31));
-            assertPred!"=="(Date(-1999, 2, 1).endOfMonth, Date(-1999, 2, 28));
-            assertPred!"=="(Date(-2000, 2, 1).endOfMonth, Date(-2000, 2, 29));
-            assertPred!"=="(Date(-1999, 3, 1).endOfMonth, Date(-1999, 3, 31));
-            assertPred!"=="(Date(-1999, 4, 1).endOfMonth, Date(-1999, 4, 30));
-            assertPred!"=="(Date(-1999, 5, 1).endOfMonth, Date(-1999, 5, 31));
-            assertPred!"=="(Date(-1999, 6, 1).endOfMonth, Date(-1999, 6, 30));
-            assertPred!"=="(Date(-1999, 7, 1).endOfMonth, Date(-1999, 7, 31));
-            assertPred!"=="(Date(-1999, 8, 1).endOfMonth, Date(-1999, 8, 31));
-            assertPred!"=="(Date(-1999, 9, 1).endOfMonth, Date(-1999, 9, 30));
-            assertPred!"=="(Date(-1999, 10, 1).endOfMonth, Date(-1999, 10, 31));
-            assertPred!"=="(Date(-1999, 11, 1).endOfMonth, Date(-1999, 11, 30));
-            assertPred!"=="(Date(-1999, 12, 1).endOfMonth, Date(-1999, 12, 31));
-
-            const cdate = Date(1999, 7, 6);
-            immutable idate = Date(1999, 7, 6);
-            static assert(!__traits(compiles, cdate.endOfMonth = Date(1999, 7, 30)));
-            static assert(!__traits(compiles, idate.endOfMonth = Date(1999, 7, 30)));
-
-            //Verify Examples.
-            assert(Date(1999, 1, 6).endOfMonth == Date(1999, 1, 31));
-            assert(Date(1999, 2, 7).endOfMonth == Date(1999, 2, 28));
-            assert(Date(2000, 2, 7).endOfMonth == Date(2000, 2, 29));
-            assert(Date(2000, 6, 4).endOfMonth == Date(2000, 6, 30));
-        }
-    }
-
-
-    /++
-        The last day in the month that this Date is in.
-
-        Examples:
---------------------
-assert(Date(1999, 1, 6).endOfMonthDay == 31);
-assert(Date(1999, 2, 7).endOfMonthDay == 28);
-assert(Date(2000, 2, 7).endOfMonthDay == 29);
-assert(Date(2000, 6, 4).endOfMonthDay == 30);
---------------------
-      +/
-    @property ubyte endOfMonthDay() const pure nothrow
-    {
-        return maxDay(_year, _month);
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            //Test A.D.
-            assertPred!"=="(Date(1999, 1, 1).endOfMonthDay, 31);
-            assertPred!"=="(Date(1999, 2, 1).endOfMonthDay, 28);
-            assertPred!"=="(Date(2000, 2, 1).endOfMonthDay, 29);
-            assertPred!"=="(Date(1999, 3, 1).endOfMonthDay, 31);
-            assertPred!"=="(Date(1999, 4, 1).endOfMonthDay, 30);
-            assertPred!"=="(Date(1999, 5, 1).endOfMonthDay, 31);
-            assertPred!"=="(Date(1999, 6, 1).endOfMonthDay, 30);
-            assertPred!"=="(Date(1999, 7, 1).endOfMonthDay, 31);
-            assertPred!"=="(Date(1999, 8, 1).endOfMonthDay, 31);
-            assertPred!"=="(Date(1999, 9, 1).endOfMonthDay, 30);
-            assertPred!"=="(Date(1999, 10, 1).endOfMonthDay, 31);
-            assertPred!"=="(Date(1999, 11, 1).endOfMonthDay, 30);
-            assertPred!"=="(Date(1999, 12, 1).endOfMonthDay, 31);
-
-            //Test B.C.
-            assertPred!"=="(Date(-1999, 1, 1).endOfMonthDay, 31);
-            assertPred!"=="(Date(-1999, 2, 1).endOfMonthDay, 28);
-            assertPred!"=="(Date(-2000, 2, 1).endOfMonthDay, 29);
-            assertPred!"=="(Date(-1999, 3, 1).endOfMonthDay, 31);
-            assertPred!"=="(Date(-1999, 4, 1).endOfMonthDay, 30);
-            assertPred!"=="(Date(-1999, 5, 1).endOfMonthDay, 31);
-            assertPred!"=="(Date(-1999, 6, 1).endOfMonthDay, 30);
-            assertPred!"=="(Date(-1999, 7, 1).endOfMonthDay, 31);
-            assertPred!"=="(Date(-1999, 8, 1).endOfMonthDay, 31);
-            assertPred!"=="(Date(-1999, 9, 1).endOfMonthDay, 30);
-            assertPred!"=="(Date(-1999, 10, 1).endOfMonthDay, 31);
-            assertPred!"=="(Date(-1999, 11, 1).endOfMonthDay, 30);
-            assertPred!"=="(Date(-1999, 12, 1).endOfMonthDay, 31);
-
-            const cdate = Date(1999, 7, 6);
-            immutable idate = Date(1999, 7, 6);
-            static assert(!__traits(compiles, cdate.endOfMonthDay = 30));
-            static assert(!__traits(compiles, idate.endOfMonthDay = 30));
-
-            //Verify Examples.
-            assert(Date(1999, 1, 6).endOfMonthDay == 31);
-            assert(Date(1999, 2, 7).endOfMonthDay == 28);
-            assert(Date(2000, 2, 7).endOfMonthDay == 29);
-            assert(Date(2000, 6, 4).endOfMonthDay == 30);
-        }
-    }
-
-
-    /++
-        Whether the current year is a date in A.D.
-
-        Examples:
---------------------
-assert(Date(1, 1, 1).isAD);
-assert(Date(2010, 12, 31).isAD);
-assert(!Date(0, 12, 31).isAD);
-assert(!Date(-2010, 1, 1).isAD);
---------------------
-      +/
-    @property bool isAD() const pure nothrow
-    {
-        return _year > 0;
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            assert(Date(2010, 7, 4).isAD);
-            assert(Date(1, 1, 1).isAD);
-            assert(!Date(0, 1, 1).isAD);
-            assert(!Date(-1, 1, 1).isAD);
-            assert(!Date(-2010, 7, 4).isAD);
-
-            const cdate = Date(1999, 7, 6);
-            immutable idate = Date(1999, 7, 6);
-            static assert(__traits(compiles, cdate.isAD));
-            static assert(__traits(compiles, idate.isAD));
-
-            //Verify Examples.
-            assert(Date(1, 1, 1).isAD);
-            assert(Date(2010, 12, 31).isAD);
-            assert(!Date(0, 12, 31).isAD);
-            assert(!Date(-2010, 1, 1).isAD);
-        }
-    }
-
-
-    /++
-        The julian day for this Date at noon (since the julian day changes at noon).
-      +/
-    @property long julianDay() const pure nothrow
-    {
-        return dayOfGregorianCal + 1_721_425;
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            assertPred!"=="(Date(-4713, 11, 24).julianDay, 0);
-            assertPred!"=="(Date(0, 12, 31).julianDay, 1_721_425);
-            assertPred!"=="(Date(1, 1, 1).julianDay, 1_721_426);
-            assertPred!"=="(Date(1582, 10, 15).julianDay, 2_299_161);
-            assertPred!"=="(Date(1858, 11, 17).julianDay, 2_400_001);
-            assertPred!"=="(Date(1982, 1, 4).julianDay, 2_444_974);
-            assertPred!"=="(Date(1996, 3, 31).julianDay, 2_450_174);
-            assertPred!"=="(Date(2010, 8, 24).julianDay, 2_455_433);
-
-            const cdate = Date(1999, 7, 6);
-            immutable idate = Date(1999, 7, 6);
-            static assert(__traits(compiles, cdate.julianDay));
-            static assert(__traits(compiles, idate.julianDay));
-        }
-    }
-
-
-    /++
-        The modified julian day for any time on this Date (since, the modified
-        julian day changes at midnight).
-      +/
-    @property long modJulianDay() const pure nothrow
-    {
-        return julianDay - 2_400_001;
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            assertPred!"=="(Date(1858, 11, 17).modJulianDay, 0);
-            assertPred!"=="(Date(2010, 8, 24).modJulianDay, 55_432);
-
-            const cdate = Date(1999, 7, 6);
-            immutable idate = Date(1999, 7, 6);
-            static assert(__traits(compiles, cdate.modJulianDay));
-            static assert(__traits(compiles, idate.modJulianDay));
-        }
-    }
-
-
-    /++
-        Converts this Date to a string with the format YYYYMMDD.
-
-        Examples:
---------------------
-assert(Date(2010, 7, 4).toISOString() == "20100704");
-assert(Date(1998, 12, 25).toISOString() == "19981225");
-assert(Date(0, 1, 5).toISOString() == "00000105");
-assert(Date(-4, 1, 5).toISOString() == "-00040105");
---------------------
-      +/
-    string toISOString() const nothrow
-    {
-        try
-        {
-            if(_year >= 0)
-            {
-                if(_year < 10_000)
-                    return format("%04d%02d%02d", _year, _month, _day);
-                else
-                    return format("+%05d%02d%02d", _year, _month, _day);
-            }
-            else if(_year > -10_000)
-                return format("%05d%02d%02d", _year, _month, _day);
-            else
-                return format("%06d%02d%02d", _year, _month, _day);
-        }
-        catch(Exception e)
-            assert(0, "format() threw.");
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            //Test A.D.
-            assertPred!"=="(Date(9, 12, 4).toISOString(), "00091204");
-            assertPred!"=="(Date(99, 12, 4).toISOString(), "00991204");
-            assertPred!"=="(Date(999, 12, 4).toISOString(), "09991204");
-            assertPred!"=="(Date(9999, 7, 4).toISOString(), "99990704");
-            assertPred!"=="(Date(10000, 10, 20).toISOString(), "+100001020");
-
-            //Test B.C.
-            assertPred!"=="(Date(0, 12, 4).toISOString(), "00001204");
-            assertPred!"=="(Date(-9, 12, 4).toISOString(), "-00091204");
-            assertPred!"=="(Date(-99, 12, 4).toISOString(), "-00991204");
-            assertPred!"=="(Date(-999, 12, 4).toISOString(), "-09991204");
-            assertPred!"=="(Date(-9999, 7, 4).toISOString(), "-99990704");
-            assertPred!"=="(Date(-10000, 10, 20).toISOString(), "-100001020");
-
-            const cdate = Date(1999, 7, 6);
-            immutable idate = Date(1999, 7, 6);
-            static assert(__traits(compiles, cdate.toISOString()));
-            static assert(__traits(compiles, idate.toISOString()));
-
-            //Verify Examples.
-            assert(Date(2010, 7, 4).toISOString() == "20100704");
-            assert(Date(1998, 12, 25).toISOString() == "19981225");
-            assert(Date(0, 1, 5).toISOString() == "00000105");
-            assert(Date(-4, 1, 5).toISOString() == "-00040105");
-        }
-    }
-
-    /++
-        Converts this Date to a string with the format YYYY-MM-DD.
-
-        Examples:
---------------------
-assert(Date(2010, 7, 4).toISOExtendedString() == "2010-07-04");
-assert(Date(1998, 12, 25).toISOExtendedString() == "1998-12-25");
-assert(Date(0, 1, 5).toISOExtendedString() == "0000-01-05");
-assert(Date(-4, 1, 5).toISOExtendedString() == "-0004-01-05");
---------------------
-      +/
-    string toISOExtendedString() const nothrow
-    {
-        try
-        {
-            if(_year >= 0)
-            {
-                if(_year < 10_000)
-                    return format("%04d-%02d-%02d", _year, _month, _day);
-                else
-                    return format("+%05d-%02d-%02d", _year, _month, _day);
-            }
-            else if(_year > -10_000)
-                return format("%05d-%02d-%02d", _year, _month, _day);
-            else
-                return format("%06d-%02d-%02d", _year, _month, _day);
-        }
-        catch(Exception e)
-            assert(0, "format() threw.");
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            //Test A.D.
-            assertPred!"=="(Date(9, 12, 4).toISOExtendedString(), "0009-12-04");
-            assertPred!"=="(Date(99, 12, 4).toISOExtendedString(), "0099-12-04");
-            assertPred!"=="(Date(999, 12, 4).toISOExtendedString(), "0999-12-04");
-            assertPred!"=="(Date(9999, 7, 4).toISOExtendedString(), "9999-07-04");
-            assertPred!"=="(Date(10000, 10, 20).toISOExtendedString(), "+10000-10-20");
-
-            //Test B.C.
-            assertPred!"=="(Date(0, 12, 4).toISOExtendedString(), "0000-12-04");
-            assertPred!"=="(Date(-9, 12, 4).toISOExtendedString(), "-0009-12-04");
-            assertPred!"=="(Date(-99, 12, 4).toISOExtendedString(), "-0099-12-04");
-            assertPred!"=="(Date(-999, 12, 4).toISOExtendedString(), "-0999-12-04");
-            assertPred!"=="(Date(-9999, 7, 4).toISOExtendedString(), "-9999-07-04");
-            assertPred!"=="(Date(-10000, 10, 20).toISOExtendedString(), "-10000-10-20");
-
-            const cdate = Date(1999, 7, 6);
-            immutable idate = Date(1999, 7, 6);
-            static assert(__traits(compiles, cdate.toISOExtendedString()));
-            static assert(__traits(compiles, idate.toISOExtendedString()));
-
-            //Verify Examples.
-            assert(Date(2010, 7, 4).toISOExtendedString() == "2010-07-04");
-            assert(Date(1998, 12, 25).toISOExtendedString() == "1998-12-25");
-            assert(Date(0, 1, 5).toISOExtendedString() == "0000-01-05");
-            assert(Date(-4, 1, 5).toISOExtendedString() == "-0004-01-05");
-        }
-    }
-
-    /++
-        Converts this Date to a string with the format YYYY-Mon-DD.
-
-        Examples:
---------------------
-assert(Date(2010, 7, 4).toSimpleString() == "2010-Jul-04");
-assert(Date(1998, 12, 25).toSimpleString() == "1998-Dec-25");
-assert(Date(0, 1, 5).toSimpleString() == "0000-Jan-05");
-assert(Date(-4, 1, 5).toSimpleString() == "-0004-Jan-05");
---------------------
-      +/
-    string toSimpleString() const nothrow
-    {
-        try
-        {
-            if(_year >= 0)
-            {
-                if(_year < 10_000)
-                    return format("%04d-%s-%02d", _year, monthToString(_month, false), _day);
-                else
-                    return format("+%05d-%s-%02d", _year, monthToString(_month, false), _day);
-            }
-            else if(_year > -10_000)
-                return format("%05d-%s-%02d", _year, monthToString(_month, false), _day);
-            else
-                return format("%06d-%s-%02d", _year, monthToString(_month, false), _day);
-        }
-        catch(Exception e)
-            assert(0, "format() threw.");
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            //Test A.D.
-            assertPred!"=="(Date(9, 12, 4).toSimpleString(), "0009-Dec-04");
-            assertPred!"=="(Date(99, 12, 4).toSimpleString(), "0099-Dec-04");
-            assertPred!"=="(Date(999, 12, 4).toSimpleString(), "0999-Dec-04");
-            assertPred!"=="(Date(9999, 7, 4).toSimpleString(), "9999-Jul-04");
-            assertPred!"=="(Date(10000, 10, 20).toSimpleString(), "+10000-Oct-20");
-
-            //Test B.C.
-            assertPred!"=="(Date(0, 12, 4).toSimpleString(), "0000-Dec-04");
-            assertPred!"=="(Date(-9, 12, 4).toSimpleString(), "-0009-Dec-04");
-            assertPred!"=="(Date(-99, 12, 4).toSimpleString(), "-0099-Dec-04");
-            assertPred!"=="(Date(-999, 12, 4).toSimpleString(), "-0999-Dec-04");
-            assertPred!"=="(Date(-9999, 7, 4).toSimpleString(), "-9999-Jul-04");
-            assertPred!"=="(Date(-10000, 10, 20).toSimpleString(), "-10000-Oct-20");
-
-            const cdate = Date(1999, 7, 6);
-            immutable idate = Date(1999, 7, 6);
-            static assert(__traits(compiles, cdate.toSimpleString()));
-            static assert(__traits(compiles, idate.toSimpleString()));
-
-            //Verify Examples.
-            assert(Date(2010, 7, 4).toSimpleString() == "2010-Jul-04");
-            assert(Date(1998, 12, 25).toSimpleString() == "1998-Dec-25");
-            assert(Date(0, 1, 5).toSimpleString() == "0000-Jan-05");
-            assert(Date(-4, 1, 5).toSimpleString() == "-0004-Jan-05");
-        }
-    }
-
-    //TODO Add a function which returns a string in a user-specified format.
-
-
-    /+
-        Converts this Date to a string.
-      +/
-    //Due to bug http://d.puremagic.com/issues/show_bug.cgi?id=3715 , we can't
-    //have versions of toString() with extra modifiers, so we define one version
-    //with modifiers and one without.
-    string toString()
-    {
-        return toSimpleString();
-    }
-
-    /++
-        Converts this Date to a string.
-      +/
-    //Due to bug http://d.puremagic.com/issues/show_bug.cgi?id=3715 , we can't
-    //have versions of toString() with extra modifiers, so we define one version
-    //with modifiers and one without.
-    string toString() const nothrow
-    {
-        return toSimpleString();
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            auto date = Date(1999, 7, 6);
-            const cdate = Date(1999, 7, 6);
-            immutable idate = Date(1999, 7, 6);
-            static assert(__traits(compiles, date.toString()));
-            static assert(__traits(compiles, cdate.toString()));
-            static assert(__traits(compiles, idate.toString()));
-        }
-    }
-
-
-    /++
-        Creates a Date from a string with the format YYYYMMDD. Whitespace is
-        stripped from the given string.
-
-        Params:
-            isoString = A string formatted in the ISO format for dates.
-
-        Throws:
-            DateTimeException if the given string is not in the ISO format or if
-            the resulting Date would not be valid.
-
-        Examples:
---------------------
-assert(Date.fromISOString("20100704") == Date(2010, 7, 4));
-assert(Date.fromISOString("19981225") == Date(1998, 12, 25));
-assert(Date.fromISOString("00000105") == Date(0, 1, 5));
-assert(Date.fromISOString("-00040105") == Date(-4, 1, 5));
-assert(Date.fromISOString(" 20100704 ") == Date(2010, 7, 4));
---------------------
-      +/
-    static Date fromISOString(S)(in S isoString)
-        if(isSomeString!S)
-    {
-        auto dstr = to!dstring(strip(isoString));
-
-        enforce(dstr.length >= 8, new DateTimeException(format("Invalid ISO String: %s", isoString)));
-
-        auto day = dstr[$-2 .. $];
-        auto month = dstr[$-4 .. $-2];
-        auto year = dstr[0 .. $-4];
-
-        enforce(!canFind!((dchar c){return !isdigit(c);})(day), new DateTimeException(format("Invalid ISO String: %s", isoString)));
-        enforce(!canFind!((dchar c){return !isdigit(c);})(month), new DateTimeException(format("Invalid ISO String: %s", isoString)));
-
-        if(year.length > 4)
-        {
-            enforce(year.startsWith("-") || year.startsWith("+"), new DateTimeException(format("Invalid ISO String: %s", isoString)));
-            enforce(!canFind!((dchar c){return !isdigit(c);})(year[1..$]), new DateTimeException(format("Invalid ISO String: %s", isoString)));
-        }
-        else
-            enforce(!canFind!((dchar c){return !isdigit(c);})(year), new DateTimeException(format("Invalid ISO String: %s", isoString)));
-
-        return Date(to!short(year), to!ubyte(month), to!ubyte(day));
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            assertThrown!DateTimeException(Date.fromISOString(""));
-            assertThrown!DateTimeException(Date.fromISOString("990704"));
-            assertThrown!DateTimeException(Date.fromISOString("0100704"));
-            assertThrown!DateTimeException(Date.fromISOString("2010070"));
-            assertThrown!DateTimeException(Date.fromISOString("2010070 "));
-            assertThrown!DateTimeException(Date.fromISOString("120100704"));
-            assertThrown!DateTimeException(Date.fromISOString("-0100704"));
-            assertThrown!DateTimeException(Date.fromISOString("+0100704"));
-            assertThrown!DateTimeException(Date.fromISOString("2010070a"));
-            assertThrown!DateTimeException(Date.fromISOString("20100a04"));
-            assertThrown!DateTimeException(Date.fromISOString("2010a704"));
-
-            assertThrown!DateTimeException(Date.fromISOString("99-07-04"));
-            assertThrown!DateTimeException(Date.fromISOString("010-07-04"));
-            assertThrown!DateTimeException(Date.fromISOString("2010-07-0"));
-            assertThrown!DateTimeException(Date.fromISOString("2010-07-0 "));
-            assertThrown!DateTimeException(Date.fromISOString("12010-07-04"));
-            assertThrown!DateTimeException(Date.fromISOString("-010-07-04"));
-            assertThrown!DateTimeException(Date.fromISOString("+010-07-04"));
-            assertThrown!DateTimeException(Date.fromISOString("2010-07-0a"));
-            assertThrown!DateTimeException(Date.fromISOString("2010-0a-04"));
-            assertThrown!DateTimeException(Date.fromISOString("2010-a7-04"));
-            assertThrown!DateTimeException(Date.fromISOString("2010/07/04"));
-            assertThrown!DateTimeException(Date.fromISOString("2010/7/04"));
-            assertThrown!DateTimeException(Date.fromISOString("2010/7/4"));
-            assertThrown!DateTimeException(Date.fromISOString("2010/07/4"));
-            assertThrown!DateTimeException(Date.fromISOString("2010-7-04"));
-            assertThrown!DateTimeException(Date.fromISOString("2010-7-4"));
-            assertThrown!DateTimeException(Date.fromISOString("2010-07-4"));
-
-            assertThrown!DateTimeException(Date.fromISOString("99Jul04"));
-            assertThrown!DateTimeException(Date.fromISOString("010Jul04"));
-            assertThrown!DateTimeException(Date.fromISOString("2010Jul0"));
-            assertThrown!DateTimeException(Date.fromISOString("2010Jul0 "));
-            assertThrown!DateTimeException(Date.fromISOString("12010Jul04"));
-            assertThrown!DateTimeException(Date.fromISOString("-010Jul04"));
-            assertThrown!DateTimeException(Date.fromISOString("+010Jul04"));
-            assertThrown!DateTimeException(Date.fromISOString("2010Jul0a"));
-            assertThrown!DateTimeException(Date.fromISOString("2010Jua04"));
-            assertThrown!DateTimeException(Date.fromISOString("2010aul04"));
-
-            assertThrown!DateTimeException(Date.fromISOString("99-Jul-04"));
-            assertThrown!DateTimeException(Date.fromISOString("010-Jul-04"));
-            assertThrown!DateTimeException(Date.fromISOString("2010-Jul-0"));
-            assertThrown!DateTimeException(Date.fromISOString("2010-Jul-0 "));
-            assertThrown!DateTimeException(Date.fromISOString("12010-Jul-04"));
-            assertThrown!DateTimeException(Date.fromISOString("-010-Jul-04"));
-            assertThrown!DateTimeException(Date.fromISOString("+010-Jul-04"));
-            assertThrown!DateTimeException(Date.fromISOString("2010-Jul-0a"));
-            assertThrown!DateTimeException(Date.fromISOString("2010-Jua-04"));
-            assertThrown!DateTimeException(Date.fromISOString("2010-Jal-04"));
-            assertThrown!DateTimeException(Date.fromISOString("2010-aul-04"));
-
-            assertThrown!DateTimeException(Date.fromISOString("2010-07-04"));
-            assertThrown!DateTimeException(Date.fromISOString("2010-Jul-04"));
-
-            assertPred!"=="(Date.fromISOString("19990706"), Date(1999, 7, 6));
-            assertPred!"=="(Date.fromISOString("-19990706"), Date(-1999, 7, 6));
-            assertPred!"=="(Date.fromISOString("+019990706"), Date(1999, 7, 6));
-            assertPred!"=="(Date.fromISOString("19990706 "), Date(1999, 7, 6));
-            assertPred!"=="(Date.fromISOString(" 19990706"), Date(1999, 7, 6));
-            assertPred!"=="(Date.fromISOString(" 19990706 "), Date(1999, 7, 6));
-
-            //Verify Examples.
-            assert(Date.fromISOString("20100704") == Date(2010, 7, 4));
-            assert(Date.fromISOString("19981225") == Date(1998, 12, 25));
-            assert(Date.fromISOString("00000105") == Date(0, 1, 5));
-            assert(Date.fromISOString("-00040105") == Date(-4, 1, 5));
-            assert(Date.fromISOString(" 20100704 ") == Date(2010, 7, 4));
-        }
-    }
-
-
-    /++
-        Creates a Date from a string with the format YYYY-MM-DD. Whitespace is
-        stripped from the given string.
-
-        Params:
-            isoExtString = A string formatted in the ISO Extended format for
-                           dates.
-
-        Throws:
-            DateTimeException if the given string is not in the ISO Extended
-            format or if the resulting Date would not be valid.
-
-        Examples:
---------------------
-assert(Date.fromISOExtendedString("2010-07-04") == Date(2010, 7, 4));
-assert(Date.fromISOExtendedString("1998-12-25") == Date(1998, 12, 25));
-assert(Date.fromISOExtendedString("0000-01-05") == Date(0, 1, 5));
-assert(Date.fromISOExtendedString("-0004-01-05") == Date(-4, 1, 5));
-assert(Date.fromISOExtendedString(" 2010-07-04 ") == Date(2010, 7, 4));
---------------------
-      +/
-    static Date fromISOExtendedString(S)(in S isoExtString)
-        if(isSomeString!(S))
-    {
-        auto dstr = to!dstring(strip(isoExtString));
-
-        enforce(dstr.length >= 10, new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
-
-        auto day = dstr[$-2 .. $];
-        auto month = dstr[$-5 .. $-3];
-        auto year = dstr[0 .. $-6];
-
-        enforce(dstr[$-3] == '-', new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
-        enforce(dstr[$-6] == '-', new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
-        enforce(!canFind!((dchar c){return !isdigit(c);})(day), new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
-        enforce(!canFind!((dchar c){return !isdigit(c);})(month), new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
-
-        if(year.length > 4)
-        {
-            enforce(year.startsWith("-") || year.startsWith("+"), new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
-            enforce(!canFind!((dchar c){return !isdigit(c);})(year[1..$]), new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
-        }
-        else
-            enforce(!canFind!((dchar c){return !isdigit(c);})(year), new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
-
-        return Date(to!short(year), to!ubyte(month), to!ubyte(day));
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            assertThrown!DateTimeException(Date.fromISOExtendedString(""));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("990704"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("0100704"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010070"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010070 "));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("120100704"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("-0100704"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("+0100704"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010070a"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("20100a04"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010a704"));
-
-            assertThrown!DateTimeException(Date.fromISOExtendedString("99-07-04"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("010-07-04"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010-07-0"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010-07-0 "));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("12010-07-04"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("-010-07-04"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("+010-07-04"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010-07-0a"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010-0a-04"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010-a7-04"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010/07/04"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010/7/04"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010/7/4"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010/07/4"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010-7-04"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010-7-4"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010-07-4"));
-
-            assertThrown!DateTimeException(Date.fromISOExtendedString("99Jul04"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("010Jul04"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010Jul0"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010-Jul-0 "));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("12010Jul04"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("-010Jul04"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("+010Jul04"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010Jul0a"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010Jua04"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010aul04"));
-
-            assertThrown!DateTimeException(Date.fromISOExtendedString("99-Jul-04"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("010-Jul-04"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010-Jul-0"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010Jul0 "));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("12010-Jul-04"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("-010-Jul-04"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("+010-Jul-04"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010-Jul-0a"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010-Jua-04"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010-Jal-04"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010-aul-04"));
-
-            assertThrown!DateTimeException(Date.fromISOExtendedString("20100704"));
-            assertThrown!DateTimeException(Date.fromISOExtendedString("2010-Jul-04"));
-
-            assertPred!"=="(Date.fromISOExtendedString("1999-07-06"), Date(1999, 7, 6));
-            assertPred!"=="(Date.fromISOExtendedString("-1999-07-06"), Date(-1999, 7, 6));
-            assertPred!"=="(Date.fromISOExtendedString("+01999-07-06"), Date(1999, 7, 6));
-            assertPred!"=="(Date.fromISOExtendedString("1999-07-06 "), Date(1999, 7, 6));
-            assertPred!"=="(Date.fromISOExtendedString(" 1999-07-06"), Date(1999, 7, 6));
-            assertPred!"=="(Date.fromISOExtendedString(" 1999-07-06 "), Date(1999, 7, 6));
-
-            //Verify Examples.
-            assert(Date.fromISOExtendedString("2010-07-04") == Date(2010, 7, 4));
-            assert(Date.fromISOExtendedString("1998-12-25") == Date(1998, 12, 25));
-            assert(Date.fromISOExtendedString("0000-01-05") == Date(0, 1, 5));
-            assert(Date.fromISOExtendedString("-0004-01-05") == Date(-4, 1, 5));
-            assert(Date.fromISOExtendedString(" 2010-07-04 ") == Date(2010, 7, 4));
-        }
-    }
-
-
-    /++
-        Creates a Date from a string with the format YYYY-Mon-DD. Whitespace is
-        stripped from the given string.
-
-        Params:
-            simpleString = A string formatted in the way that toSimpleString()
-                           formats dates.
-
-        Throws:
-            DateTimeException if the given string is not in the correct format or
-            if the resulting Date would not be valid.
-
-        Examples:
---------------------
-assert(Date.fromSimpleString("2010-Jul-04") == Date(2010, 7, 4));
-assert(Date.fromSimpleString("1998-Dec-25") == Date(1998, 12, 25));
-assert(Date.fromSimpleString("0000-Jan-05") == Date(0, 1, 5));
-assert(Date.fromSimpleString("-0004-Jan-05") == Date(-4, 1, 5));
-assert(Date.fromSimpleString(" 2010-Jul-04 ") == Date(2010, 7, 4));
---------------------
-      +/
-    static Date fromSimpleString(S)(in S simpleString)
-        if(isSomeString!(S))
-    {
-        auto dstr = to!dstring(strip(simpleString));
-
-        enforce(dstr.length >= 11, new DateTimeException(format("Invalid string format: %s", simpleString)));
-
-        auto day = dstr[$-2 .. $];
-        auto month = monthFromString(to!string(dstr[$-6 .. $-3]));
-        auto year = dstr[0 .. $-7];
-
-        enforce(dstr[$-3] == '-', new DateTimeException(format("Invalid string format: %s", simpleString)));
-        enforce(dstr[$-7] == '-', new DateTimeException(format("Invalid string format: %s", simpleString)));
-        enforce(!canFind!((dchar c){return !isdigit(c);})(day), new DateTimeException(format("Invalid string format: %s", simpleString)));
-
-        if(year.length > 4)
-        {
-            enforce(year.startsWith("-") || year.startsWith("+"), new DateTimeException(format("Invalid string format: %s", simpleString)));
-            enforce(!canFind!((dchar c){return !isdigit(c);})(year[1..$]), new DateTimeException(format("Invalid string format: %s", simpleString)));
-        }
-        else
-            enforce(!canFind!((dchar c){return !isdigit(c);})(year), new DateTimeException(format("Invalid string format: %s", simpleString)));
-
-        return Date(to!short(year), month, to!ubyte(day));
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            assertThrown!DateTimeException(Date.fromSimpleString(""));
-            assertThrown!DateTimeException(Date.fromSimpleString("990704"));
-            assertThrown!DateTimeException(Date.fromSimpleString("0100704"));
-            assertThrown!DateTimeException(Date.fromSimpleString("2010070"));
-            assertThrown!DateTimeException(Date.fromSimpleString("2010070 "));
-            assertThrown!DateTimeException(Date.fromSimpleString("120100704"));
-            assertThrown!DateTimeException(Date.fromSimpleString("-0100704"));
-            assertThrown!DateTimeException(Date.fromSimpleString("+0100704"));
-            assertThrown!DateTimeException(Date.fromSimpleString("2010070a"));
-            assertThrown!DateTimeException(Date.fromSimpleString("20100a04"));
-            assertThrown!DateTimeException(Date.fromSimpleString("2010a704"));
-
-            assertThrown!DateTimeException(Date.fromSimpleString("99-07-04"));
-            assertThrown!DateTimeException(Date.fromSimpleString("010-07-04"));
-            assertThrown!DateTimeException(Date.fromSimpleString("2010-07-0"));
-            assertThrown!DateTimeException(Date.fromSimpleString("2010-07-0 "));
-            assertThrown!DateTimeException(Date.fromSimpleString("12010-07-04"));
-            assertThrown!DateTimeException(Date.fromSimpleString("-010-07-04"));
-            assertThrown!DateTimeException(Date.fromSimpleString("+010-07-04"));
-            assertThrown!DateTimeException(Date.fromSimpleString("2010-07-0a"));
-            assertThrown!DateTimeException(Date.fromSimpleString("2010-0a-04"));
-            assertThrown!DateTimeException(Date.fromSimpleString("2010-a7-04"));
-            assertThrown!DateTimeException(Date.fromSimpleString("2010/07/04"));
-            assertThrown!DateTimeException(Date.fromSimpleString("2010/7/04"));
-            assertThrown!DateTimeException(Date.fromSimpleString("2010/7/4"));
-            assertThrown!DateTimeException(Date.fromSimpleString("2010/07/4"));
-            assertThrown!DateTimeException(Date.fromSimpleString("2010-7-04"));
-            assertThrown!DateTimeException(Date.fromSimpleString("2010-7-4"));
-            assertThrown!DateTimeException(Date.fromSimpleString("2010-07-4"));
-
-            assertThrown!DateTimeException(Date.fromSimpleString("99Jul04"));
-            assertThrown!DateTimeException(Date.fromSimpleString("010Jul04"));
-            assertThrown!DateTimeException(Date.fromSimpleString("2010Jul0"));
-            assertThrown!DateTimeException(Date.fromSimpleString("2010Jul0 "));
-            assertThrown!DateTimeException(Date.fromSimpleString("12010Jul04"));
-            assertThrown!DateTimeException(Date.fromSimpleString("-010Jul04"));
-            assertThrown!DateTimeException(Date.fromSimpleString("+010Jul04"));
-            assertThrown!DateTimeException(Date.fromSimpleString("2010Jul0a"));
-            assertThrown!DateTimeException(Date.fromSimpleString("2010Jua04"));
-            assertThrown!DateTimeException(Date.fromSimpleString("2010aul04"));
-
-            assertThrown!DateTimeException(Date.fromSimpleString("99-Jul-04"));
-            assertThrown!DateTimeException(Date.fromSimpleString("010-Jul-04"));
-            assertThrown!DateTimeException(Date.fromSimpleString("2010-Jul-0"));
-            assertThrown!DateTimeException(Date.fromSimpleString("2010-Jul-0 "));
-            assertThrown!DateTimeException(Date.fromSimpleString("12010-Jul-04"));
-            assertThrown!DateTimeException(Date.fromSimpleString("-010-Jul-04"));
-            assertThrown!DateTimeException(Date.fromSimpleString("+010-Jul-04"));
-            assertThrown!DateTimeException(Date.fromSimpleString("2010-Jul-0a"));
-            assertThrown!DateTimeException(Date.fromSimpleString("2010-Jua-04"));
-            assertThrown!DateTimeException(Date.fromSimpleString("2010-Jal-04"));
-            assertThrown!DateTimeException(Date.fromSimpleString("2010-aul-04"));
-
-            assertThrown!DateTimeException(Date.fromSimpleString("20100704"));
-            assertThrown!DateTimeException(Date.fromSimpleString("2010-07-04"));
-
-            assertPred!"=="(Date.fromSimpleString("1999-Jul-06"), Date(1999, 7, 6));
-            assertPred!"=="(Date.fromSimpleString("-1999-Jul-06"), Date(-1999, 7, 6));
-            assertPred!"=="(Date.fromSimpleString("+01999-Jul-06"), Date(1999, 7, 6));
-            assertPred!"=="(Date.fromSimpleString("1999-Jul-06 "), Date(1999, 7, 6));
-            assertPred!"=="(Date.fromSimpleString(" 1999-Jul-06"), Date(1999, 7, 6));
-            assertPred!"=="(Date.fromSimpleString(" 1999-Jul-06 "), Date(1999, 7, 6));
-
-            //Verify Examples.
-            assert(Date.fromSimpleString("2010-Jul-04") == Date(2010, 7, 4));
-            assert(Date.fromSimpleString("1998-Dec-25") == Date(1998, 12, 25));
-            assert(Date.fromSimpleString("0000-Jan-05") == Date(0, 1, 5));
-            assert(Date.fromSimpleString("-0004-Jan-05") == Date(-4, 1, 5));
-            assert(Date.fromSimpleString(" 2010-Jul-04 ") == Date(2010, 7, 4));
-        }
-    }
-
-
-    //TODO Add function which takes a user-specified time format and produces a Date
-
-    //TODO Add function which takes pretty much any time-string and produces a Date
-    //     Obviously, it will be less efficient, and it probably won't manage _every_
-    //     possible date format, but a smart conversion function would be nice.
-
-
-    /++
-        Returns the Date farthest in the past which is representable by Date.
-      +/
-    @property static Date min() pure nothrow
-    {
-        auto date = Date.init;
-        date._year = short.min;
-        date._month = Month.jan;
-        date._day = 1;
-
-        return date;
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            assert(Date.min.year < 0);
-            assert(Date.min < Date.max);
-        }
-    }
-
-
-    /++
-        Returns the Date farthest in the future which is representable by Date.
-      +/
-    @property static Date max() pure nothrow
-    {
-        auto date = Date.init;
-        date._year = short.max;
-        date._month = Month.dec;
-        date._day = 31;
-
-        return date;
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            assert(Date.max.year > 0);
-            assert(Date.max > Date.min);
-        }
-    }
-
-
-private:
-
-    /++
-        Whether the given values form a valid date.
-
-        Params:
-            year  = The year to test.
-            month = The month of the Gregorian Calendar to test.
-            day   = The day of the month to test.
-     +/
-    static bool _valid(int year, int month, int day) pure nothrow
-    {
-        if(!valid!"months"(month))
-            return false;
-
-        return valid!"days"(year, month, day);
-    }
-
-    /++
-        Adds the given number of days to this Date. A negative number will subtract.
-
-        The month will be adjusted along with the day if the number of days added
-        (or subtracted) would overflow (or underflow) the current month. The year
-        will be adjusted along with the month if the increase (or decrease) to the
-        month would cause it to overflow (or underflow) the current year.
-
-        addDays(numDays) is effectively equivalent to date.dayOfGregorianCal = date.dayOfGregorianCal + days.
-
-        Params:
-            days = The number of days to add to this Date.
-      +/
-    ref Date addDays(long days) pure nothrow
-    {
-        dayOfGregorianCal = cast(int)(dayOfGregorianCal + days);
-
-        return this;
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            //Test A.D.
-            {
-                auto date = Date(1999, 2, 28);
-                date.addDays(1);
-                assertPred!"=="(date, Date(1999, 3, 1));
-                date.addDays(-1);
-                assertPred!"=="(date, Date(1999, 2, 28));
-            }
-
-            {
-                auto date = Date(2000, 2, 28);
-                date.addDays(1);
-                assertPred!"=="(date, Date(2000, 2, 29));
-                date.addDays(1);
-                assertPred!"=="(date, Date(2000, 3, 1));
-                date.addDays(-1);
-                assertPred!"=="(date, Date(2000, 2, 29));
-            }
-
-            {
-                auto date = Date(1999, 6, 30);
-                date.addDays(1);
-                assertPred!"=="(date, Date(1999, 7, 1));
-                date.addDays(-1);
-                assertPred!"=="(date, Date(1999, 6, 30));
-            }
-
-            {
-                auto date = Date(1999, 7, 31);
-                date.addDays(1);
-                assertPred!"=="(date, Date(1999, 8, 1));
-                date.addDays(-1);
-                assertPred!"=="(date, Date(1999, 7, 31));
-            }
-
-            {
-                auto date = Date(1999, 1, 1);
-                date.addDays(-1);
-                assertPred!"=="(date, Date(1998, 12, 31));
-                date.addDays(1);
-                assertPred!"=="(date, Date(1999, 1, 1));
-            }
-
-            {
-                auto date = Date(1999, 7, 6);
-                date.addDays(9);
-                assertPred!"=="(date, Date(1999, 7, 15));
-                date.addDays(-11);
-                assertPred!"=="(date, Date(1999, 7, 4));
-                date.addDays(30);
-                assertPred!"=="(date, Date(1999, 8, 3));
-                date.addDays(-3);
-                assertPred!"=="(date, Date(1999, 7, 31));
-            }
-
-            {
-                auto date = Date(1999, 7, 6);
-                date.addDays(365);
-                assertPred!"=="(date, Date(2000, 7, 5));
-                date.addDays(-365);
-                assertPred!"=="(date, Date(1999, 7, 6));
-                date.addDays(366);
-                assertPred!"=="(date, Date(2000, 7, 6));
-                date.addDays(730);
-                assertPred!"=="(date, Date(2002, 7, 6));
-                date.addDays(-1096);
-                assertPred!"=="(date, Date(1999, 7, 6));
-            }
-
-            //Test B.C.
-            {
-                auto date = Date(-1999, 2, 28);
-                date.addDays(1);
-                assertPred!"=="(date, Date(-1999, 3, 1));
-                date.addDays(-1);
-                assertPred!"=="(date, Date(-1999, 2, 28));
-            }
-
-            {
-                auto date = Date(-2000, 2, 28);
-                date.addDays(1);
-                assertPred!"=="(date, Date(-2000, 2, 29));
-                date.addDays(1);
-                assertPred!"=="(date, Date(-2000, 3, 1));
-                date.addDays(-1);
-                assertPred!"=="(date, Date(-2000, 2, 29));
-            }
-
-            {
-                auto date = Date(-1999, 6, 30);
-                date.addDays(1);
-                assertPred!"=="(date, Date(-1999, 7, 1));
-                date.addDays(-1);
-                assertPred!"=="(date, Date(-1999, 6, 30));
-            }
-
-            {
-                auto date = Date(-1999, 7, 31);
-                date.addDays(1);
-                assertPred!"=="(date, Date(-1999, 8, 1));
-                date.addDays(-1);
-                assertPred!"=="(date, Date(-1999, 7, 31));
-            }
-
-            {
-                auto date = Date(-1999, 1, 1);
-                date.addDays(-1);
-                assertPred!"=="(date, Date(-2000, 12, 31));
-                date.addDays(1);
-                assertPred!"=="(date, Date(-1999, 1, 1));
-            }
-
-            {
-                auto date = Date(-1999, 7, 6);
-                date.addDays(9);
-                assertPred!"=="(date, Date(-1999, 7, 15));
-                date.addDays(-11);
-                assertPred!"=="(date, Date(-1999, 7, 4));
-                date.addDays(30);
-                assertPred!"=="(date, Date(-1999, 8, 3));
-                date.addDays(-3);
-            }
-
-            {
-                auto date = Date(-1999, 7, 6);
-                date.addDays(365);
-                assertPred!"=="(date, Date(-1998, 7, 6));
-                date.addDays(-365);
-                assertPred!"=="(date, Date(-1999, 7, 6));
-                date.addDays(366);
-                assertPred!"=="(date, Date(-1998, 7, 7));
-                date.addDays(730);
-                assertPred!"=="(date, Date(-1996, 7, 6));
-                date.addDays(-1096);
-                assertPred!"=="(date, Date(-1999, 7, 6));
-            }
-
-            //Test Both
-            {
-                auto date = Date(1, 7, 6);
-                date.addDays(-365);
-                assertPred!"=="(date, Date(0, 7, 6));
-                date.addDays(365);
-                assertPred!"=="(date, Date(1, 7, 6));
-                date.addDays(-731);
-                assertPred!"=="(date, Date(-1, 7, 6));
-                date.addDays(730);
-                assertPred!"=="(date, Date(1, 7, 5));
-            }
-
-            const cdate = Date(1999, 7, 6);
-            immutable idate = Date(1999, 7, 6);
-            static assert(!__traits(compiles, cdate.addDays(12)));
-            static assert(!__traits(compiles, idate.addDays(12)));
-        }
-    }
-
-
-    pure invariant()
-    {
-        assert(valid!"months"(_month), "Invariant Failure: year [" ~
-                                       numToString(_year) ~
-                                       "] month [" ~
-                                       numToString(_month) ~
-                                       "] day [" ~
-                                       numToString(_day) ~
-                                       "]");
-        assert(valid!"days"(_year, _month, _day), "Invariant Failure: year [" ~
-                                                  numToString(_year) ~
-                                                  "] month [" ~
-                                                  numToString(_month) ~
-                                                  "] day [" ~
-                                                  numToString(_day) ~
-                                                  "]");
-    }
-
-
-    short _year  = 1;
-    Month _month = Month.jan;
-    ubyte _day   = 1;
-}
-
-
-
-/++
-    Represents a time of day with hours, minutes, and seconds. It uses 24 hour time.
-+/
-struct TimeOfDay
-{
-public:
-
-    /++
-        Params:
-            hour   = Hour of the day [0 - 24$(RPAREN).
-            minute = Minute of the hour [0 - 60$(RPAREN).
-            second = Second of the minute [0 - 60$(RPAREN).
-
-        Throws:
-            DateTimeException if the resulting TimeOfDay would be not be valid.
-     +/
-    this(int hour, int minute, int second = 0) pure
-    {
-        enforceValid!"hours"(hour);
-        enforceValid!"minutes"(minute);
-        enforceValid!"seconds"(second);
-
-        _hour   = cast(ubyte)hour;
-        _minute = cast(ubyte)minute;
-        _second = cast(ubyte)second;
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            assert(TimeOfDay(0, 0) == TimeOfDay.init);
-
-            {
-                auto tod = TimeOfDay(0, 0);
-                assertPred!"=="(tod._hour, 0);
-                assertPred!"=="(tod._minute, 0);
-                assertPred!"=="(tod._second, 0);
-            }
-
-            {
-                auto tod = TimeOfDay(12, 30, 33);
-                assertPred!"=="(tod._hour, 12);
-                assertPred!"=="(tod._minute, 30);
-                assertPred!"=="(tod._second, 33);
-            }
-
-            {
-                auto tod = TimeOfDay(23, 59, 59);
-                assertPred!"=="(tod._hour, 23);
-                assertPred!"=="(tod._minute, 59);
-                assertPred!"=="(tod._second, 59);
-            }
-
-            assertThrown!DateTimeException(TimeOfDay(24, 0, 0));
-            assertThrown!DateTimeException(TimeOfDay(0, 60, 0));
-            assertThrown!DateTimeException(TimeOfDay(0, 0, 60));
-        }
-    }
-
-
-    /++
-        Compares this TimeOfDay with the given TimeOfDay.
-
-        Returns:
-            $(TABLE
-            $(TR $(TD this &lt; rhs) $(TD &lt; 0))
-            $(TR $(TD this == rhs) $(TD 0))
-            $(TR $(TD this &gt; rhs) $(TD &gt; 0))
-            )
-     +/
-    int opCmp(in TimeOfDay rhs) const pure nothrow
-    {
-        if(_hour < rhs._hour)
-            return -1;
-        if(_hour > rhs._hour)
-            return 1;
-
-        if(_minute < rhs._minute)
-            return -1;
-        if(_minute > rhs._minute)
-            return 1;
-
-        if(_second < rhs._second)
-            return -1;
-        if(_second > rhs._second)
-            return 1;
-
-        return 0;
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            assertPred!("opCmp", "==")(TimeOfDay(0, 0, 0), TimeOfDay.init);
-
-            assertPred!("opCmp", "==")(TimeOfDay(0, 0, 0), TimeOfDay(0, 0, 0));
-            assertPred!("opCmp", "==")(TimeOfDay(12, 0, 0), TimeOfDay(12, 0, 0));
-            assertPred!("opCmp", "==")(TimeOfDay(0, 30, 0), TimeOfDay(0, 30, 0));
-            assertPred!("opCmp", "==")(TimeOfDay(0, 0, 33), TimeOfDay(0, 0, 33));
-
-            assertPred!("opCmp", "==")(TimeOfDay(12, 30, 0), TimeOfDay(12, 30, 0));
-            assertPred!("opCmp", "==")(TimeOfDay(12, 30, 33), TimeOfDay(12, 30, 33));
-
-            assertPred!("opCmp", "==")(TimeOfDay(0, 30, 33), TimeOfDay(0, 30, 33));
-            assertPred!("opCmp", "==")(TimeOfDay(0, 0, 33), TimeOfDay(0, 0, 33));
-
-            assertPred!("opCmp", "<")(TimeOfDay(12, 30, 33), TimeOfDay(13, 30, 33));
-            assertPred!("opCmp", ">")(TimeOfDay(13, 30, 33), TimeOfDay(12, 30, 33));
-            assertPred!("opCmp", "<")(TimeOfDay(12, 30, 33), TimeOfDay(12, 31, 33));
-            assertPred!("opCmp", ">")(TimeOfDay(12, 31, 33), TimeOfDay(12, 30, 33));
-            assertPred!("opCmp", "<")(TimeOfDay(12, 30, 33), TimeOfDay(12, 30, 34));
-            assertPred!("opCmp", ">")(TimeOfDay(12, 30, 34), TimeOfDay(12, 30, 33));
-
-            assertPred!("opCmp", ">")(TimeOfDay(13, 30, 33), TimeOfDay(12, 30, 34));
-            assertPred!("opCmp", "<")(TimeOfDay(12, 30, 34), TimeOfDay(13, 30, 33));
-            assertPred!("opCmp", ">")(TimeOfDay(13, 30, 33), TimeOfDay(12, 31, 33));
-            assertPred!("opCmp", "<")(TimeOfDay(12, 31, 33), TimeOfDay(13, 30, 33));
-
-            assertPred!("opCmp", ">")(TimeOfDay(12, 31, 33), TimeOfDay(12, 30, 34));
-            assertPred!("opCmp", "<")(TimeOfDay(12, 30, 34), TimeOfDay(12, 31, 33));
-
-            const ctod = TimeOfDay(12, 30, 33);
-            immutable itod = TimeOfDay(12, 30, 33);
-            static assert(__traits(compiles, ctod.opCmp(itod)));
-            static assert(__traits(compiles, itod.opCmp(ctod)));
-        }
-    }
-
-
-    /++
-        Hours passed midnight.
-     +/
-    @property ubyte hour() const pure nothrow
-    {
-        return _hour;
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            assertPred!"=="(TimeOfDay.init.hour, 0);
-            assertPred!"=="(TimeOfDay(12, 0, 0).hour, 12);
-
-            const ctod = TimeOfDay(12, 0, 0);
-            immutable itod = TimeOfDay(12, 0, 0);
-            static assert(__traits(compiles, ctod.hour == 12));
-            static assert(__traits(compiles, itod.hour == 12));
-        }
-    }
-
-
-    /++
-        Hours passed midnight.
-
-        Params:
-            hour = The hour of the day to set this TimeOfDay's hour to.
-
-        Throws:
-            DateTimeException if the given hour would result in an invalid TimeOfDay.
-     +/
-    @property void hour(int hour) pure
-    {
-        enforceValid!"hours"(hour);
-        _hour = cast(ubyte)hour;
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            assertThrown!DateTimeException((){TimeOfDay(0, 0, 0).hour = 24;}());
-
-            auto tod = TimeOfDay(0, 0, 0);
-            tod.hour = 12;
-            assertPred!"=="(tod, TimeOfDay(12, 0, 0));
-
-            const ctod = TimeOfDay(0, 0, 0);
-            immutable itod = TimeOfDay(0, 0, 0);
-            static assert(!__traits(compiles, ctod.hour = 12));
-            static assert(!__traits(compiles, itod.hour = 12));
-        }
-    }
-
-
-    /++
-        Minutes passed the hour.
-     +/
-    @property ubyte minute() const pure nothrow
-    {
-        return _minute;
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            assertPred!"=="(TimeOfDay.init.minute, 0);
-            assertPred!"=="(TimeOfDay(0, 30, 0).minute, 30);
-
-            const ctod = TimeOfDay(0, 30, 0);
-            immutable itod = TimeOfDay(0, 30, 0);
-            static assert(__traits(compiles, ctod.minute == 30));
-            static assert(__traits(compiles, itod.minute == 30));
-        }
-    }
-
-
-    /++
-        Minutes passed the hour.
-
-        Params:
-            minute = The minute to set this TimeOfDay's minute to.
-
-        Throws:
-            DateTimeException if the given minute would result in an invalid TimeOfDay.
-     +/
-    @property void minute(int minute) pure
-    {
-        enforceValid!"minutes"(minute);
-        _minute = cast(ubyte)minute;
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            assertThrown!DateTimeException((){TimeOfDay(0, 0, 0).minute = 60;}());
-
-            auto tod = TimeOfDay(0, 0, 0);
-            tod.minute = 30;
-            assertPred!"=="(tod, TimeOfDay(0, 30, 0));
-
-            const ctod = TimeOfDay(0, 0, 0);
-            immutable itod = TimeOfDay(0, 0, 0);
-            static assert(!__traits(compiles, ctod.minute = 30));
-            static assert(!__traits(compiles, itod.minute = 30));
-        }
-    }
-
-
-    /++
-        Seconds passed the minute.
-     +/
-    @property ubyte second() const pure nothrow
-    {
-        return _second;
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            assertPred!"=="(TimeOfDay.init.second, 0);
-            assertPred!"=="(TimeOfDay(0, 0, 33).second, 33);
-
-            const ctod = TimeOfDay(0, 0, 33);
-            immutable itod = TimeOfDay(0, 0, 33);
-            static assert(__traits(compiles, ctod.second == 33));
-            static assert(__traits(compiles, itod.second == 33));
-        }
-    }
-
-
-    /++
-        Seconds passed the minute.
-
-        Params:
-            second = The second to set this TimeOfDay's second to.
-
-        Throws:
-            DateTimeException if the given second would result in an invalid TimeOfDay.
-     +/
-    @property void second(int second) pure
-    {
-        enforceValid!"seconds"(second);
-        _second = cast(ubyte)second;
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            assertThrown!DateTimeException((){TimeOfDay(0, 0, 0).second = 60;}());
-
-            auto tod = TimeOfDay(0, 0, 0);
-            tod.second = 33;
-            assertPred!"=="(tod, TimeOfDay(0, 0, 33));
-
-            const ctod = TimeOfDay(0, 0, 0);
-            immutable itod = TimeOfDay(0, 0, 0);
-            static assert(!__traits(compiles, ctod.second = 33));
-            static assert(!__traits(compiles, itod.second = 33));
-        }
-    }
-
-
-    /++
-        Adds the given number of hours to this TimeOfDay. A negative number will
-        subtract.
-
-        For hours, because they are the largest unit in TimeOfDay, there is no
-        difference between adding or rolling.
-
-        Note that TimeOfDay has no $(D add!()) function because you can add to a
-        TimeOfDay by adding a duration to it.
-
-        Params:
-            hours = The number of hours to add to this TimeOfDay.
-
-        Examples:
---------------------
-auto tod1 = TimeOfDay(7, 12, 0);
-tod1.roll!"hours"(1);
-assert(tod1 == TimeOfDay(8, 12, 0));
-
-auto tod2 = TimeOfDay(7, 12, 0);
-tod2.roll!"hours"(-1);
-assert(tod2 == TimeOfDay(6, 12, 0));
-
-auto tod3 = TimeOfDay(23, 0, 0);
-tod3.roll!"hours"(1);
-assert(tod3 == TimeOfDay(0, 0, 0));
-
-auto tod4 = TimeOfDay(0, 0, 0);
-tod4.roll!"hours"(-1);
-assert(tod4 == TimeOfDay(23, 0, 0));
---------------------
-      +/
-    /+ref TimeOfDay+/ void roll(string units)(long hours) pure nothrow
-        if(units == "hours")
-    {
-        this += dur!"hours"(hours);
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            const ctod = TimeOfDay(0, 0, 0);
-            immutable itod = TimeOfDay(0, 0, 0);
-            static assert(!__traits(compiles, ctod.roll!"hours"(53)));
-            static assert(!__traits(compiles, itod.roll!"hours"(53)));
-
-            //Verify Examples.
-            auto tod1 = TimeOfDay(7, 12, 0);
-            tod1.roll!"hours"(1);
-            assert(tod1 == TimeOfDay(8, 12, 0));
-
-            auto tod2 = TimeOfDay(7, 12, 0);
-            tod2.roll!"hours"(-1);
-            assert(tod2 == TimeOfDay(6, 12, 0));
-
-            auto tod3 = TimeOfDay(23, 0, 0);
-            tod3.roll!"hours"(1);
-            assert(tod3 == TimeOfDay(0, 0, 0));
-
-            auto tod4 = TimeOfDay(0, 0, 0);
-            tod4.roll!"hours"(-1);
-            assert(tod4 == TimeOfDay(23, 0, 0));
-        }
-    }
-
-
-    /++
-        Add minutes to the time of day. Negative values will subtract.
-
-        The difference between rolling and adding is that rolling does not affect
-        larger units. So, if you roll the TimeOfDay 60 minutes, you get the exact
-        same TimeOfDay.
-
-        Note that TimeOfDay has no $(D add!()) function because you can add to a
-        TimeOfDay by adding a duration to it.
-
-        Params:
-            minutes = The number of Minutes to add to this TimeOfDay.
-
-        Examples:
---------------------
-auto tod1 = TimeOfDay(7, 12, 0);
-tod1.roll!"minutes"(1);
-assert(tod1 == TimeOfDay(7, 13, 0));
-
-auto tod2 = TimeOfDay(7, 12, 0);
-tod2.roll!"minutes"(-1);
-assert(tod2 == TimeOfDay(7, 11, 0));
-
-auto tod3 = TimeOfDay(23, 59, 0);
-tod3.roll!"minutes"(1);
-assert(tod3 == TimeOfDay(23, 0, 0));
-
-auto tod4 = TimeOfDay(0, 0, 0);
-tod4.roll!"minutes"(-1);
-assert(tod4 == TimeOfDay(0, 59, 0));
-
-auto tod5 = TimeOfDay(7, 32, 12);
-tod5.roll!"seconds"(1);
-assert(tod5 == TimeOfDay(7, 32, 13));
-
-auto tod6 = TimeOfDay(7, 32, 12);
-tod6.roll!"seconds"(-1);
-assert(tod6 == TimeOfDay(7, 32, 11));
-
-auto tod7 = TimeOfDay(23, 59, 59);
-tod7.roll!"seconds"(1);
-assert(tod7 == TimeOfDay(23, 59, 0));
-
-auto tod8 = TimeOfDay(0, 0, 0);
-tod8.roll!"seconds"(-1);
-assert(tod8 == TimeOfDay(0, 0, 59));
---------------------
-      +/
-    /+ref TimeOfDay+/ void roll(string units)(long value) pure nothrow
-        if(units == "minutes" ||
-           units == "seconds")
-    {
-        static if(units == "minutes")
-            enum memberVarStr = "minute";
-        else static if(units == "seconds")
-            enum memberVarStr = "second";
-        else
-            static assert(0);
-
-        value %= 60;
-        mixin("auto newVal = cast(ubyte)(_" ~ memberVarStr ~ ") + value;");
-
-        if(value < 0)
-        {
-            if(newVal < 0)
-                newVal += 60;
-        }
-        else if(newVal >= 60)
-            newVal -= 60;
-
-        mixin("_" ~ memberVarStr ~ " = cast(ubyte)newVal;");
-    }
-
-    //Test roll!"minutes"().
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            static void testTOD(TimeOfDay orig, int minutes, in TimeOfDay expected, size_t line = __LINE__)
-            {
-                orig.roll!"minutes"(minutes);
-                assertPred!"=="(orig, expected, "", __FILE__, line);
-            }
-
-            testTOD(TimeOfDay(12, 30, 33), 0, TimeOfDay(12, 30, 33));
-            testTOD(TimeOfDay(12, 30, 33), 1, TimeOfDay(12, 31, 33));
-            testTOD(TimeOfDay(12, 30, 33), 2, TimeOfDay(12, 32, 33));
-            testTOD(TimeOfDay(12, 30, 33), 3, TimeOfDay(12, 33, 33));
-            testTOD(TimeOfDay(12, 30, 33), 4, TimeOfDay(12, 34, 33));
-            testTOD(TimeOfDay(12, 30, 33), 5, TimeOfDay(12, 35, 33));
-            testTOD(TimeOfDay(12, 30, 33), 10, TimeOfDay(12, 40, 33));
-            testTOD(TimeOfDay(12, 30, 33), 15, TimeOfDay(12, 45, 33));
-            testTOD(TimeOfDay(12, 30, 33), 29, TimeOfDay(12, 59, 33));
-            testTOD(TimeOfDay(12, 30, 33), 30, TimeOfDay(12, 0, 33));
-            testTOD(TimeOfDay(12, 30, 33), 45, TimeOfDay(12, 15, 33));
-            testTOD(TimeOfDay(12, 30, 33), 60, TimeOfDay(12, 30, 33));
-            testTOD(TimeOfDay(12, 30, 33), 75, TimeOfDay(12, 45, 33));
-            testTOD(TimeOfDay(12, 30, 33), 90, TimeOfDay(12, 0, 33));
-            testTOD(TimeOfDay(12, 30, 33), 100, TimeOfDay(12, 10, 33));
-
-            testTOD(TimeOfDay(12, 30, 33), 689, TimeOfDay(12, 59, 33));
-            testTOD(TimeOfDay(12, 30, 33), 690, TimeOfDay(12, 0, 33));
-            testTOD(TimeOfDay(12, 30, 33), 691, TimeOfDay(12, 1, 33));
-            testTOD(TimeOfDay(12, 30, 33), 960, TimeOfDay(12, 30, 33));
-            testTOD(TimeOfDay(12, 30, 33), 1439, TimeOfDay(12, 29, 33));
-            testTOD(TimeOfDay(12, 30, 33), 1440, TimeOfDay(12, 30, 33));
-            testTOD(TimeOfDay(12, 30, 33), 1441, TimeOfDay(12, 31, 33));
-            testTOD(TimeOfDay(12, 30, 33), 2880, TimeOfDay(12, 30, 33));
-
-            testTOD(TimeOfDay(12, 30, 33), -1, TimeOfDay(12, 29, 33));
-            testTOD(TimeOfDay(12, 30, 33), -2, TimeOfDay(12, 28, 33));
-            testTOD(TimeOfDay(12, 30, 33), -3, TimeOfDay(12, 27, 33));
-            testTOD(TimeOfDay(12, 30, 33), -4, TimeOfDay(12, 26, 33));
-            testTOD(TimeOfDay(12, 30, 33), -5, TimeOfDay(12, 25, 33));
-            testTOD(TimeOfDay(12, 30, 33), -10, TimeOfDay(12, 20, 33));
-            testTOD(TimeOfDay(12, 30, 33), -15, TimeOfDay(12, 15, 33));
-            testTOD(TimeOfDay(12, 30, 33), -29, TimeOfDay(12, 1, 33));
-            testTOD(TimeOfDay(12, 30, 33), -30, TimeOfDay(12, 0, 33));
-            testTOD(TimeOfDay(12, 30, 33), -45, TimeOfDay(12, 45, 33));
-            testTOD(TimeOfDay(12, 30, 33), -60, TimeOfDay(12, 30, 33));
-            testTOD(TimeOfDay(12, 30, 33), -75, TimeOfDay(12, 15, 33));
-            testTOD(TimeOfDay(12, 30, 33), -90, TimeOfDay(12, 0, 33));
-            testTOD(TimeOfDay(12, 30, 33), -100, TimeOfDay(12, 50, 33));
-
-            testTOD(TimeOfDay(12, 30, 33), -749, TimeOfDay(12, 1, 33));
-            testTOD(TimeOfDay(12, 30, 33), -750, TimeOfDay(12, 0, 33));
-            testTOD(TimeOfDay(12, 30, 33), -751, TimeOfDay(12, 59, 33));
-            testTOD(TimeOfDay(12, 30, 33), -960, TimeOfDay(12, 30, 33));
-            testTOD(TimeOfDay(12, 30, 33), -1439, TimeOfDay(12, 31, 33));
-            testTOD(TimeOfDay(12, 30, 33), -1440, TimeOfDay(12, 30, 33));
-            testTOD(TimeOfDay(12, 30, 33), -1441, TimeOfDay(12, 29, 33));
-            testTOD(TimeOfDay(12, 30, 33), -2880, TimeOfDay(12, 30, 33));
-
-            testTOD(TimeOfDay(12, 0, 33), 1, TimeOfDay(12, 1, 33));
-            testTOD(TimeOfDay(12, 0, 33), 0, TimeOfDay(12, 0, 33));
-            testTOD(TimeOfDay(12, 0, 33), -1, TimeOfDay(12, 59, 33));
-
-            testTOD(TimeOfDay(11, 59, 33), 1, TimeOfDay(11, 0, 33));
-            testTOD(TimeOfDay(11, 59, 33), 0, TimeOfDay(11, 59, 33));
-            testTOD(TimeOfDay(11, 59, 33), -1, TimeOfDay(11, 58, 33));
-
-            testTOD(TimeOfDay(0, 0, 33), 1, TimeOfDay(0, 1, 33));
-            testTOD(TimeOfDay(0, 0, 33), 0, TimeOfDay(0, 0, 33));
-            testTOD(TimeOfDay(0, 0, 33), -1, TimeOfDay(0, 59, 33));
-
-            testTOD(TimeOfDay(23, 59, 33), 1, TimeOfDay(23, 0, 33));
-            testTOD(TimeOfDay(23, 59, 33), 0, TimeOfDay(23, 59, 33));
-            testTOD(TimeOfDay(23, 59, 33), -1, TimeOfDay(23, 58, 33));
-
-            const ctod = TimeOfDay(0, 0, 0);
-            immutable itod = TimeOfDay(0, 0, 0);
-            static assert(!__traits(compiles, ctod.roll!"minutes"(7)));
-            static assert(!__traits(compiles, itod.roll!"minutes"(7)));
-
-            //Verify Examples.
-            auto tod1 = TimeOfDay(7, 12, 0);
-            tod1.roll!"minutes"(1);
-            assert(tod1 == TimeOfDay(7, 13, 0));
-
-            auto tod2 = TimeOfDay(7, 12, 0);
-            tod2.roll!"minutes"(-1);
-            assert(tod2 == TimeOfDay(7, 11, 0));
-
-            auto tod3 = TimeOfDay(23, 59, 0);
-            tod3.roll!"minutes"(1);
-            assert(tod3 == TimeOfDay(23, 0, 0));
-
-            auto tod4 = TimeOfDay(0, 0, 0);
-            tod4.roll!"minutes"(-1);
-            assert(tod4 == TimeOfDay(0, 59, 0));
-
-            auto tod5 = TimeOfDay(7, 32, 12);
-            tod5.roll!"seconds"(1);
-            assert(tod5 == TimeOfDay(7, 32, 13));
-
-            auto tod6 = TimeOfDay(7, 32, 12);
-            tod6.roll!"seconds"(-1);
-            assert(tod6 == TimeOfDay(7, 32, 11));
-
-            auto tod7 = TimeOfDay(23, 59, 59);
-            tod7.roll!"seconds"(1);
-            assert(tod7 == TimeOfDay(23, 59, 0));
-
-            auto tod8 = TimeOfDay(0, 0, 0);
-            tod8.roll!"seconds"(-1);
-            assert(tod8 == TimeOfDay(0, 0, 59));
-        }
-    }
-
-    //Test roll!"seconds"().
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            static void testTOD(TimeOfDay orig, int seconds, in TimeOfDay expected, size_t line = __LINE__)
-            {
-                orig.roll!"seconds"(seconds);
-                assertPred!"=="(orig, expected, "", __FILE__, line);
-            }
-
-            testTOD(TimeOfDay(12, 30, 33), 0, TimeOfDay(12, 30, 33));
-            testTOD(TimeOfDay(12, 30, 33), 1, TimeOfDay(12, 30, 34));
-            testTOD(TimeOfDay(12, 30, 33), 2, TimeOfDay(12, 30, 35));
-            testTOD(TimeOfDay(12, 30, 33), 3, TimeOfDay(12, 30, 36));
-            testTOD(TimeOfDay(12, 30, 33), 4, TimeOfDay(12, 30, 37));
-            testTOD(TimeOfDay(12, 30, 33), 5, TimeOfDay(12, 30, 38));
-            testTOD(TimeOfDay(12, 30, 33), 10, TimeOfDay(12, 30, 43));
-            testTOD(TimeOfDay(12, 30, 33), 15, TimeOfDay(12, 30, 48));
-            testTOD(TimeOfDay(12, 30, 33), 26, TimeOfDay(12, 30, 59));
-            testTOD(TimeOfDay(12, 30, 33), 27, TimeOfDay(12, 30, 0));
-            testTOD(TimeOfDay(12, 30, 33), 30, TimeOfDay(12, 30, 3));
-            testTOD(TimeOfDay(12, 30, 33), 59, TimeOfDay(12, 30, 32));
-            testTOD(TimeOfDay(12, 30, 33), 60, TimeOfDay(12, 30, 33));
-            testTOD(TimeOfDay(12, 30, 33), 61, TimeOfDay(12, 30, 34));
-
-            testTOD(TimeOfDay(12, 30, 33), 1766, TimeOfDay(12, 30, 59));
-            testTOD(TimeOfDay(12, 30, 33), 1767, TimeOfDay(12, 30, 0));
-            testTOD(TimeOfDay(12, 30, 33), 1768, TimeOfDay(12, 30, 1));
-            testTOD(TimeOfDay(12, 30, 33), 2007, TimeOfDay(12, 30, 0));
-            testTOD(TimeOfDay(12, 30, 33), 3599, TimeOfDay(12, 30, 32));
-            testTOD(TimeOfDay(12, 30, 33), 3600, TimeOfDay(12, 30, 33));
-            testTOD(TimeOfDay(12, 30, 33), 3601, TimeOfDay(12, 30, 34));
-            testTOD(TimeOfDay(12, 30, 33), 7200, TimeOfDay(12, 30, 33));
-
-            testTOD(TimeOfDay(12, 30, 33), -1, TimeOfDay(12, 30, 32));
-            testTOD(TimeOfDay(12, 30, 33), -2, TimeOfDay(12, 30, 31));
-            testTOD(TimeOfDay(12, 30, 33), -3, TimeOfDay(12, 30, 30));
-            testTOD(TimeOfDay(12, 30, 33), -4, TimeOfDay(12, 30, 29));
-            testTOD(TimeOfDay(12, 30, 33), -5, TimeOfDay(12, 30, 28));
-            testTOD(TimeOfDay(12, 30, 33), -10, TimeOfDay(12, 30, 23));
-            testTOD(TimeOfDay(12, 30, 33), -15, TimeOfDay(12, 30, 18));
-            testTOD(TimeOfDay(12, 30, 33), -33, TimeOfDay(12, 30, 0));
-            testTOD(TimeOfDay(12, 30, 33), -34, TimeOfDay(12, 30, 59));
-            testTOD(TimeOfDay(12, 30, 33), -35, TimeOfDay(12, 30, 58));
-            testTOD(TimeOfDay(12, 30, 33), -59, TimeOfDay(12, 30, 34));
-            testTOD(TimeOfDay(12, 30, 33), -60, TimeOfDay(12, 30, 33));
-            testTOD(TimeOfDay(12, 30, 33), -61, TimeOfDay(12, 30, 32));
-
-            testTOD(TimeOfDay(12, 30, 0), 1, TimeOfDay(12, 30, 1));
-            testTOD(TimeOfDay(12, 30, 0), 0, TimeOfDay(12, 30, 0));
-            testTOD(TimeOfDay(12, 30, 0), -1, TimeOfDay(12, 30, 59));
-
-            testTOD(TimeOfDay(12, 0, 0), 1, TimeOfDay(12, 0, 1));
-            testTOD(TimeOfDay(12, 0, 0), 0, TimeOfDay(12, 0, 0));
-            testTOD(TimeOfDay(12, 0, 0), -1, TimeOfDay(12, 0, 59));
-
-            testTOD(TimeOfDay(0, 0, 0), 1, TimeOfDay(0, 0, 1));
-            testTOD(TimeOfDay(0, 0, 0), 0, TimeOfDay(0, 0, 0));
-            testTOD(TimeOfDay(0, 0, 0), -1, TimeOfDay(0, 0, 59));
-
-            testTOD(TimeOfDay(23, 59, 59), 1, TimeOfDay(23, 59, 0));
-            testTOD(TimeOfDay(23, 59, 59), 0, TimeOfDay(23, 59, 59));
-            testTOD(TimeOfDay(23, 59, 59), -1, TimeOfDay(23, 59, 58));
-
-            const ctod = TimeOfDay(0, 0, 0);
-            immutable itod = TimeOfDay(0, 0, 0);
-            static assert(!__traits(compiles, ctod.roll!"seconds"(7)));
-            static assert(!__traits(compiles, itod.roll!"seconds"(7)));
-        }
-    }
-
-
-    /++
-        Gives the result of adding or subtracting a duration from this TimeOfDay.
-
-        The legal types of arithmetic for TimeOfDay using this operator are
-
-        $(TABLE
-        $(TR $(TD TimeOfDay) $(TD +) $(TD duration) $(TD -->) $(TD TimeOfDay))
-        $(TR $(TD TimeOfDay) $(TD -) $(TD duration) $(TD -->) $(TD TimeOfDay))
-        )
-
-        Params:
-            duration = The duration to add to or subtract from this Date.
-      +/
-    TimeOfDay opBinary(string op, D)(in D duration) const pure nothrow
-        if((op == "+" || op == "-") &&
-           (is(Unqual!D == Duration) ||
-            is(Unqual!D == TickDuration)))
-    {
-        TimeOfDay retval = this;
-
-        static if(is(Unqual!D == Duration))
-            immutable hnsecs = duration.total!"hnsecs";
-        else static if(is(Unqual!D == TickDuration))
-            immutable hnsecs = duration.hnsecs;
-
-        //Ideally, this would just be
-        //return retval.addSeconds(convert!("hnsecs", "seconds")(unaryFun!(op ~ "a")(hnsecs)));
-        //But there isn't currently a pure version of unaryFun!().
-
-        static if(op == "+")
-            immutable signedHNSecs = hnsecs;
-        else static if(op == "-")
-            immutable signedHNSecs = -hnsecs;
-        else
-            static assert(0);
-
-        return retval.addSeconds(convert!("hnsecs", "seconds")(signedHNSecs));
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            auto tod = TimeOfDay(12, 30, 33);
-
-            assertPred!"=="(tod + dur!"hours"(7), TimeOfDay(19, 30, 33));
-            assertPred!"=="(tod + dur!"hours"(-7), TimeOfDay(5, 30, 33));
-            assertPred!"=="(tod + dur!"minutes"(7), TimeOfDay(12, 37, 33));
-            assertPred!"=="(tod + dur!"minutes"(-7), TimeOfDay(12, 23, 33));
-            assertPred!"=="(tod + dur!"seconds"(7), TimeOfDay(12, 30, 40));
-            assertPred!"=="(tod + dur!"seconds"(-7), TimeOfDay(12, 30, 26));
-
-            assertPred!"=="(tod + dur!"msecs"(7000), TimeOfDay(12, 30, 40));
-            assertPred!"=="(tod + dur!"msecs"(-7000), TimeOfDay(12, 30, 26));
-            assertPred!"=="(tod + dur!"usecs"(7_000_000), TimeOfDay(12, 30, 40));
-            assertPred!"=="(tod + dur!"usecs"(-7_000_000), TimeOfDay(12, 30, 26));
-            assertPred!"=="(tod + dur!"hnsecs"(70_000_000), TimeOfDay(12, 30, 40));
-            assertPred!"=="(tod + dur!"hnsecs"(-70_000_000), TimeOfDay(12, 30, 26));
-
-            //This probably only runs in cases where gettimeofday() is used, but it's
-            //hard to do this test correctly with variable ticksPerSec.
-            if(TickDuration.ticksPerSec == 1_000_000)
-            {
-                assertPred!"=="(tod + TickDuration.from!"usecs"(7_000_000), TimeOfDay(12, 30, 40));
-                assertPred!"=="(tod + TickDuration.from!"usecs"(-7_000_000), TimeOfDay(12, 30, 26));
-            }
-
-            assertPred!"=="(tod - dur!"hours"(-7), TimeOfDay(19, 30, 33));
-            assertPred!"=="(tod - dur!"hours"(7), TimeOfDay(5, 30, 33));
-            assertPred!"=="(tod - dur!"minutes"(-7), TimeOfDay(12, 37, 33));
-            assertPred!"=="(tod - dur!"minutes"(7), TimeOfDay(12, 23, 33));
-            assertPred!"=="(tod - dur!"seconds"(-7), TimeOfDay(12, 30, 40));
-            assertPred!"=="(tod - dur!"seconds"(7), TimeOfDay(12, 30, 26));
-
-            assertPred!"=="(tod - dur!"msecs"(-7000), TimeOfDay(12, 30, 40));
-            assertPred!"=="(tod - dur!"msecs"(7000), TimeOfDay(12, 30, 26));
-            assertPred!"=="(tod - dur!"usecs"(-7_000_000), TimeOfDay(12, 30, 40));
-            assertPred!"=="(tod - dur!"usecs"(7_000_000), TimeOfDay(12, 30, 26));
-            assertPred!"=="(tod - dur!"hnsecs"(-70_000_000), TimeOfDay(12, 30, 40));
-            assertPred!"=="(tod - dur!"hnsecs"(70_000_000), TimeOfDay(12, 30, 26));
-
-            //This probably only runs in cases where gettimeofday() is used, but it's
-            //hard to do this test correctly with variable ticksPerSec.
-            if(TickDuration.ticksPerSec == 1_000_000)
-            {
-                assertPred!"=="(tod - TickDuration.from!"usecs"(-7_000_000), TimeOfDay(12, 30, 40));
-                assertPred!"=="(tod - TickDuration.from!"usecs"(7_000_000), TimeOfDay(12, 30, 26));
-            }
-
-            auto duration = dur!"hours"(11);
-            const ctod = TimeOfDay(12, 33, 30);
-            immutable itod = TimeOfDay(12, 33, 30);
-            static assert(__traits(compiles, tod + duration));
-            static assert(__traits(compiles, ctod + duration));
-            static assert(__traits(compiles, itod + duration));
-
-            static assert(__traits(compiles, tod - duration));
-            static assert(__traits(compiles, ctod - duration));
-            static assert(__traits(compiles, itod - duration));
-        }
-    }
-
-
-    /++
-        Gives the result of adding or subtracting a duration from this TimeOfDay,
-        as well as assigning the result to this TimeOfDay.
-
-        The legal types of arithmetic for TimeOfDay using this operator are
-
-        $(TABLE
-        $(TR $(TD TimeOfDay) $(TD +) $(TD duration) $(TD -->) $(TD TimeOfDay))
-        $(TR $(TD TimeOfDay) $(TD -) $(TD duration) $(TD -->) $(TD TimeOfDay))
-        )
-
-        Params:
-            duration = The duration to add to or subtract from this TimeOfDay.
-      +/
-    /+ref+/ TimeOfDay opOpAssign(string op, D)(in D duration) pure nothrow
-        if((op == "+" || op == "-") &&
-           (is(Unqual!D == Duration) ||
-            is(Unqual!D == TickDuration)))
-    {
-        static if(is(Unqual!D == Duration))
-            immutable hnsecs = duration.total!"hnsecs";
-        else static if(is(Unqual!D == TickDuration))
-            immutable hnsecs = duration.hnsecs;
-
-        //Ideally, this would just be
-        //return addSeconds(convert!("hnsecs", "seconds")(unaryFun!(op ~ "a")(hnsecs)));
-        //But there isn't currently a pure version of unaryFun!().
-
-        static if(op == "+")
-            immutable signedHNSecs = hnsecs;
-        else static if(op == "-")
-            immutable signedHNSecs = -hnsecs;
-        else
-            static assert(0);
-
-        return addSeconds(convert!("hnsecs", "seconds")(signedHNSecs));
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            auto duration = dur!"hours"(12);
-
-            assertPred!"+="(TimeOfDay(12, 30, 33), dur!"hours"(7), TimeOfDay(19, 30, 33));
-            assertPred!"+="(TimeOfDay(12, 30, 33), dur!"hours"(-7), TimeOfDay(5, 30, 33));
-            assertPred!"+="(TimeOfDay(12, 30, 33), dur!"minutes"(7), TimeOfDay(12, 37, 33));
-            assertPred!"+="(TimeOfDay(12, 30, 33), dur!"minutes"(-7), TimeOfDay(12, 23, 33));
-            assertPred!"+="(TimeOfDay(12, 30, 33), dur!"seconds"(7), TimeOfDay(12, 30, 40));
-            assertPred!"+="(TimeOfDay(12, 30, 33), dur!"seconds"(-7), TimeOfDay(12, 30, 26));
-
-            assertPred!"+="(TimeOfDay(12, 30, 33), dur!"msecs"(7000), TimeOfDay(12, 30, 40));
-            assertPred!"+="(TimeOfDay(12, 30, 33), dur!"msecs"(-7000), TimeOfDay(12, 30, 26));
-            assertPred!"+="(TimeOfDay(12, 30, 33), dur!"usecs"(7_000_000), TimeOfDay(12, 30, 40));
-            assertPred!"+="(TimeOfDay(12, 30, 33), dur!"usecs"(-7_000_000), TimeOfDay(12, 30, 26));
-            assertPred!"+="(TimeOfDay(12, 30, 33), dur!"hnsecs"(70_000_000), TimeOfDay(12, 30, 40));
-            assertPred!"+="(TimeOfDay(12, 30, 33), dur!"hnsecs"(-70_000_000), TimeOfDay(12, 30, 26));
-
-            assertPred!"-="(TimeOfDay(12, 30, 33), dur!"hours"(-7), TimeOfDay(19, 30, 33));
-            assertPred!"-="(TimeOfDay(12, 30, 33), dur!"hours"(7), TimeOfDay(5, 30, 33));
-            assertPred!"-="(TimeOfDay(12, 30, 33), dur!"minutes"(-7), TimeOfDay(12, 37, 33));
-            assertPred!"-="(TimeOfDay(12, 30, 33), dur!"minutes"(7), TimeOfDay(12, 23, 33));
-            assertPred!"-="(TimeOfDay(12, 30, 33), dur!"seconds"(-7), TimeOfDay(12, 30, 40));
-            assertPred!"-="(TimeOfDay(12, 30, 33), dur!"seconds"(7), TimeOfDay(12, 30, 26));
-
-            assertPred!"-="(TimeOfDay(12, 30, 33), dur!"msecs"(-7000), TimeOfDay(12, 30, 40));
-            assertPred!"-="(TimeOfDay(12, 30, 33), dur!"msecs"(7000), TimeOfDay(12, 30, 26));
-            assertPred!"-="(TimeOfDay(12, 30, 33), dur!"usecs"(-7_000_000), TimeOfDay(12, 30, 40));
-            assertPred!"-="(TimeOfDay(12, 30, 33), dur!"usecs"(7_000_000), TimeOfDay(12, 30, 26));
-            assertPred!"-="(TimeOfDay(12, 30, 33), dur!"hnsecs"(-70_000_000), TimeOfDay(12, 30, 40));
-            assertPred!"-="(TimeOfDay(12, 30, 33), dur!"hnsecs"(70_000_000), TimeOfDay(12, 30, 26));
-
-            const ctod = TimeOfDay(12, 33, 30);
-            immutable itod = TimeOfDay(12, 33, 30);
-            static assert(!__traits(compiles, ctod += duration));
-            static assert(!__traits(compiles, itod += duration));
-            static assert(!__traits(compiles, ctod -= duration));
-            static assert(!__traits(compiles, itod -= duration));
-        }
-    }
-
-
-    /++
-        Gives the difference between two TimeOfDays.
-
-        The legal types of arithmetic for TimeOfDay using this operator are
-
-        $(TABLE
-        $(TR $(TD TimeOfDay) $(TD -) $(TD TimeOfDay) $(TD -->) $(TD duration))
-        )
-
-        Params:
-            rhs = The TimeOfDay to subtract from this one.
-      +/
-    Duration opBinary(string op)(in TimeOfDay rhs) const pure nothrow
-        if(op == "-")
-    {
-        immutable lhsSec = _hour * 3600 + _minute * 60 + _second;
-        immutable rhsSec = rhs._hour * 3600 + rhs._minute * 60 + rhs._second;
-
-        return dur!"seconds"(lhsSec - rhsSec);
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            auto tod = TimeOfDay(12, 30, 33);
-
-            assertPred!"=="(TimeOfDay(7, 12, 52) - TimeOfDay(12, 30, 33), dur!"seconds"(-19_061));
-            assertPred!"=="(TimeOfDay(12, 30, 33) - TimeOfDay(7, 12, 52), dur!"seconds"(19_061));
-            assertPred!"=="(TimeOfDay(12, 30, 33) - TimeOfDay(14, 30, 33), dur!"seconds"(-7200));
-            assertPred!"=="(TimeOfDay(14, 30, 33) - TimeOfDay(12, 30, 33), dur!"seconds"(7200));
-            assertPred!"=="(TimeOfDay(12, 30, 33) - TimeOfDay(12, 34, 33), dur!"seconds"(-240));
-            assertPred!"=="(TimeOfDay(12, 34, 33) - TimeOfDay(12, 30, 33), dur!"seconds"(240));
-            assertPred!"=="(TimeOfDay(12, 30, 33) - TimeOfDay(12, 30, 34), dur!"seconds"(-1));
-            assertPred!"=="(TimeOfDay(12, 30, 34) - TimeOfDay(12, 30, 33), dur!"seconds"(1));
-
-            const ctod = TimeOfDay(12, 30, 33);
-            immutable itod = TimeOfDay(12, 30, 33);
-            static assert(__traits(compiles, tod - tod));
-            static assert(__traits(compiles, ctod - tod));
-            static assert(__traits(compiles, itod - tod));
-
-            static assert(__traits(compiles, tod - ctod));
-            static assert(__traits(compiles, ctod - ctod));
-            static assert(__traits(compiles, itod - ctod));
-
-            static assert(__traits(compiles, tod - itod));
-            static assert(__traits(compiles, ctod - itod));
-            static assert(__traits(compiles, itod - itod));
-        }
-    }
-
-
-    /++
-        Converts this TimeOfDay to a string with the format HHMMSS.
-
-        Examples:
---------------------
-assert(TimeOfDay(0, 0, 0).toISOString() == "000000");
-assert(TimeOfDay(12, 30, 33).toISOString() == "123033");
---------------------
-      +/
-    string toISOString() const nothrow
-    {
-        try
-            return format("%02d%02d%02d", _hour, _minute, _second);
-        catch(Exception e)
-            assert(0, "format() threw.");
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            auto tod = TimeOfDay(12, 30, 33);
-            const ctod = TimeOfDay(12, 30, 33);
-            immutable itod = TimeOfDay(12, 30, 33);
-            static assert(__traits(compiles, tod.toISOString()));
-            static assert(__traits(compiles, ctod.toISOString()));
-            static assert(__traits(compiles, itod.toISOString()));
-
-            //Verify Examples.
-            assert(TimeOfDay(0, 0, 0).toISOString() == "000000");
-            assert(TimeOfDay(12, 30, 33).toISOString() == "123033");
-        }
-    }
-
-
-    /++
-        Converts this TimeOfDay to a string with the format HH:MM:SS.
-
-        Examples:
---------------------
-assert(TimeOfDay(0, 0, 0).toISOExtendedString() == "000000");
-assert(TimeOfDay(12, 30, 33).toISOExtendedString() == "123033");
---------------------
-      +/
-    string toISOExtendedString() const nothrow
-    {
-        try
-            return format("%02d:%02d:%02d", _hour, _minute, _second);
-        catch(Exception e)
-            assert(0, "format() threw.");
-    }
-
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            auto tod = TimeOfDay(12, 30, 33);
-            const ctod = TimeOfDay(12, 30, 33);
-            immutable itod = TimeOfDay(12, 30, 33);
-            static assert(__traits(compiles, tod.toISOExtendedString()));
-            static assert(__traits(compiles, ctod.toISOExtendedString()));
-            static assert(__traits(compiles, itod.toISOExtendedString()));
-
-            //Verify Examples.
-            assert(TimeOfDay(0, 0, 0).toISOExtendedString() == "00:00:00");
-            assert(TimeOfDay(12, 30, 33).toISOExtendedString() == "12:30:33");
-        }
-    }
-
-
-    /+
-        Converts this TimeOfDay to a string.
-      +/
-    //Due to bug http://d.puremagic.com/issues/show_bug.cgi?id=3715 , we can't
-    //have versions of toString() with extra modifiers, so we define one version
-    //with modifiers and one without.
-    string toString()
-    {
-        return toISOExtendedString();
-    }
-
-
-    /++
-        Converts this TimeOfDay to a string.
-      +/
-    //Due to bug http://d.puremagic.com/issues/show_bug.cgi?id=3715 , we can't
-    //have versions of toString() with extra modifiers, so we define one version
-    //with modifiers and one without.
-    string toString() const nothrow
-    {
-        return toISOExtendedString();
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            auto tod = TimeOfDay(12, 30, 33);
-            const ctod = TimeOfDay(12, 30, 33);
-            immutable itod = TimeOfDay(12, 30, 33);
-            static assert(__traits(compiles, tod.toString()));
-            static assert(__traits(compiles, ctod.toString()));
-            static assert(__traits(compiles, itod.toString()));
-        }
-    }
-
-    //TODO Add a function which returns a string in a user-specified format.
-
-
-
-    /++
-        Creates a TimeOfDay from a string with the format HHMMSS. Whitespace is
-        stripped from the given string.
-
-        Params:
-            isoString = A string formatted in the ISO format for times.
-
-        Throws:
-            DateTimeException if the given string is not in the ISO format or if
-            the resulting TimeOfDay would not be valid.
-
-        Examples:
---------------------
-assert(TimeOfDay.fromISOString("000000") == TimeOfDay(0, 0, 0));
-assert(TimeOfDay.fromISOString("123033") == TimeOfDay(12, 30, 33));
-assert(TimeOfDay.fromISOString(" 123033 ") == TimeOfDay(12, 30, 33));
---------------------
-      +/
-    static TimeOfDay fromISOString(S)(in S isoString)
-        if(isSomeString!S)
-    {
-        auto dstr = to!dstring(strip(isoString));
-
-        enforce(dstr.length == 6, new DateTimeException(format("Invalid ISO String: %s", isoString)));
-
-        auto hours = dstr[0 .. 2];
-        auto minutes = dstr[2 .. 4];
-        auto seconds = dstr[4 .. $];
-
-        enforce(!canFind!((dchar c){return !isdigit(c);})(hours), new DateTimeException(format("Invalid ISO String: %s", isoString)));
-        enforce(!canFind!((dchar c){return !isdigit(c);})(minutes), new DateTimeException(format("Invalid ISO String: %s", isoString)));
-        enforce(!canFind!((dchar c){return !isdigit(c);})(seconds), new DateTimeException(format("Invalid ISO String: %s", isoString)));
-
-        return TimeOfDay(to!int(hours), to!int(minutes), to!int(seconds));
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            assertThrown!DateTimeException(TimeOfDay.fromISOString(""));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("0"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("00"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("000"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("0000"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("00000"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("13033"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("1277"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("12707"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("12070"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("12303a"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("1230a3"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("123a33"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("12a033"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("1a0033"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("a20033"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("1200330"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("0120033"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("-120033"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("+120033"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("120033am"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("120033pm"));
-
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("0::"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString(":0:"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("::0"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("0:0:0"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("0:0:00"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("0:00:0"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("00:0:0"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("00:00:0"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("00:0:00"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("13:0:33"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("12:7:7"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("12:7:07"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("12:07:0"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("12:30:3a"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("12:30:a3"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("12:3a:33"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("12:a0:33"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("1a:00:33"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("a2:00:33"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("12:003:30"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("120:03:30"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("012:00:33"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("01:200:33"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("-12:00:33"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("+12:00:33"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("12:00:33am"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("12:00:33pm"));
-
-            assertThrown!DateTimeException(TimeOfDay.fromISOString("12:00:33"));
-
-            assertPred!"=="(TimeOfDay.fromISOString("011217"), TimeOfDay(1, 12, 17));
-            assertPred!"=="(TimeOfDay.fromISOString("001412"), TimeOfDay(0, 14, 12));
-            assertPred!"=="(TimeOfDay.fromISOString("000007"), TimeOfDay(0, 0, 7));
-            assertPred!"=="(TimeOfDay.fromISOString("011217 "), TimeOfDay(1, 12, 17));
-            assertPred!"=="(TimeOfDay.fromISOString(" 011217"), TimeOfDay(1, 12, 17));
-            assertPred!"=="(TimeOfDay.fromISOString(" 011217 "), TimeOfDay(1, 12, 17));
-
-            //Verify Examples.
-            assert(TimeOfDay.fromISOString("000000") == TimeOfDay(0, 0, 0));
-            assert(TimeOfDay.fromISOString("123033") == TimeOfDay(12, 30, 33));
-            assert(TimeOfDay.fromISOString(" 123033 ") == TimeOfDay(12, 30, 33));
-        }
-    }
-
-
-    /++
-        Creates a TimeOfDay from a string with the format HH:MM:SS. Whitespace is
-        stripped from the given string.
-
-        Params:
-            isoString = A string formatted in the ISO Extended format for times.
-
-        Throws:
-            DateTimeException if the given string is not in the ISO Extended
-            format or if the resulting TimeOfDay would not be valid.
-
-        Examples:
---------------------
-assert(TimeOfDay.fromISOExtendedString("00:00:00") == TimeOfDay(0, 0, 0));
-assert(TimeOfDay.fromISOExtendedString("12:30:33") == TimeOfDay(12, 30, 33));
-assert(TimeOfDay.fromISOExtendedString(" 12:30:33 ") == TimeOfDay(12, 30, 33));
---------------------
-      +/
-    static TimeOfDay fromISOExtendedString(S)(in S isoExtString)
-        if(isSomeString!S)
-    {
-        auto dstr = to!dstring(strip(isoExtString));
-
-        enforce(dstr.length == 8, new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
-
-        auto hours = dstr[0 .. 2];
-        auto minutes = dstr[3 .. 5];
-        auto seconds = dstr[6 .. $];
-
-        enforce(dstr[2] == ':', new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
-        enforce(dstr[5] == ':', new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
-        enforce(!canFind!((dchar c){return !isdigit(c);})(hours), new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
-        enforce(!canFind!((dchar c){return !isdigit(c);})(minutes), new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
-        enforce(!canFind!((dchar c){return !isdigit(c);})(seconds), new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
-
-        return TimeOfDay(to!int(hours), to!int(minutes), to!int(seconds));
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString(""));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("0"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("00"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("000"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("0000"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("00000"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("13033"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("1277"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("12707"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("12070"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("12303a"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("1230a3"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("123a33"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("12a033"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("1a0033"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("a20033"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("1200330"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("0120033"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("-120033"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("+120033"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("120033am"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("120033pm"));
-
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("0::"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString(":0:"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("::0"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("0:0:0"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("0:0:00"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("0:00:0"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("00:0:0"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("00:00:0"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("00:0:00"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("13:0:33"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("12:7:7"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("12:7:07"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("12:07:0"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("12:30:3a"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("12:30:a3"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("12:3a:33"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("12:a0:33"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("1a:00:33"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("a2:00:33"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("12:003:30"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("120:03:30"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("012:00:33"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("01:200:33"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("-12:00:33"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("+12:00:33"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("12:00:33am"));
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("12:00:33pm"));
-
-            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("120033"));
-
-            assertPred!"=="(TimeOfDay.fromISOExtendedString("01:12:17"), TimeOfDay(1, 12, 17));
-            assertPred!"=="(TimeOfDay.fromISOExtendedString("00:14:12"), TimeOfDay(0, 14, 12));
-            assertPred!"=="(TimeOfDay.fromISOExtendedString("00:00:07"), TimeOfDay(0, 0, 7));
-            assertPred!"=="(TimeOfDay.fromISOExtendedString("01:12:17 "), TimeOfDay(1, 12, 17));
-            assertPred!"=="(TimeOfDay.fromISOExtendedString(" 01:12:17"), TimeOfDay(1, 12, 17));
-            assertPred!"=="(TimeOfDay.fromISOExtendedString(" 01:12:17 "), TimeOfDay(1, 12, 17));
-
-            //Verify Examples.
-            assert(TimeOfDay.fromISOExtendedString("00:00:00") == TimeOfDay(0, 0, 0));
-            assert(TimeOfDay.fromISOExtendedString("12:30:33") == TimeOfDay(12, 30, 33));
-            assert(TimeOfDay.fromISOExtendedString(" 12:30:33 ") == TimeOfDay(12, 30, 33));
-        }
-    }
-
-
-    //TODO Add function which takes a user-specified time format and produces a TimeOfDay
-
-    //TODO Add function which takes pretty much any time-string and produces a TimeOfDay
-    //     Obviously, it will be less efficient, and it probably won't manage _every_
-    //     possible date format, but a smart conversion function would be nice.
-
-
-    /++
-        Returns midnight.
-      +/
-    @property static TimeOfDay min() pure nothrow
-    {
-        return TimeOfDay.init;
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            assert(TimeOfDay.min.hour == 0);
-            assert(TimeOfDay.min.minute == 0);
-            assert(TimeOfDay.min.second == 0);
-            assert(TimeOfDay.min < TimeOfDay.max);
-        }
-    }
-
-
-    /++
-        Returns one second short of midnight.
-      +/
-    @property static TimeOfDay max() pure nothrow
-    {
-        auto tod = TimeOfDay.init;
-        tod._hour = maxHour;
-        tod._minute = maxMinute;
-        tod._second = maxSecond;
-
-        return tod;
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            assert(TimeOfDay.max.hour == 23);
-            assert(TimeOfDay.max.minute == 59);
-            assert(TimeOfDay.max.second == 59);
-            assert(TimeOfDay.max > TimeOfDay.min);
-        }
-    }
-
-
-private:
-
-    /++
-        Add seconds to the time of day. Negative values will subtract. If the
-        number of seconds overflows (or underflows), then the seconds will wrap,
-        increasing (or decreasing) the number of minutes accordingly. If the
-        number of minutes overflows (or underflows), then the minutes will wrap.
-        If the number of minutes overflows(or underflows), then the hour will
-        wrap. (e.g. adding 90 seconds to 23:59:00 would result in 00:00:30).
-
-        Params:
-            seconds = The number of seconds to add to this TimeOfDay.
-      +/
-    ref TimeOfDay addSeconds(long seconds) pure nothrow
-    {
-        long hnsecs = convert!("seconds", "hnsecs")(seconds);
-        hnsecs += convert!("hours", "hnsecs")(_hour);
-        hnsecs += convert!("minutes", "hnsecs")(_minute);
-        hnsecs += convert!("seconds", "hnsecs")(_second);
-
-        hnsecs %= convert!("days", "hnsecs")(1);
-
-        if(hnsecs < 0)
-            hnsecs += convert!("days", "hnsecs")(1);
-
-        immutable newHours = splitUnitsFromHNSecs!"hours"(hnsecs);
-        immutable newMinutes = splitUnitsFromHNSecs!"minutes"(hnsecs);
-        immutable newSeconds = splitUnitsFromHNSecs!"seconds"(hnsecs);
-
-        _hour = cast(ubyte)newHours;
-        _minute = cast(ubyte)newMinutes;
-        _second = cast(ubyte)newSeconds;
-
-        return this;
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            static void testTOD(TimeOfDay orig, int seconds, in TimeOfDay expected, size_t line = __LINE__)
-            {
-                orig.addSeconds(seconds);
-                assertPred!"=="(orig, expected, "", __FILE__, line);
-            }
-
-            testTOD(TimeOfDay(12, 30, 33), 0, TimeOfDay(12, 30, 33));
-            testTOD(TimeOfDay(12, 30, 33), 1, TimeOfDay(12, 30, 34));
-            testTOD(TimeOfDay(12, 30, 33), 2, TimeOfDay(12, 30, 35));
-            testTOD(TimeOfDay(12, 30, 33), 3, TimeOfDay(12, 30, 36));
-            testTOD(TimeOfDay(12, 30, 33), 4, TimeOfDay(12, 30, 37));
-            testTOD(TimeOfDay(12, 30, 33), 5, TimeOfDay(12, 30, 38));
-            testTOD(TimeOfDay(12, 30, 33), 10, TimeOfDay(12, 30, 43));
-            testTOD(TimeOfDay(12, 30, 33), 15, TimeOfDay(12, 30, 48));
-            testTOD(TimeOfDay(12, 30, 33), 26, TimeOfDay(12, 30, 59));
-            testTOD(TimeOfDay(12, 30, 33), 27, TimeOfDay(12, 31, 0));
-            testTOD(TimeOfDay(12, 30, 33), 30, TimeOfDay(12, 31, 3));
-            testTOD(TimeOfDay(12, 30, 33), 59, TimeOfDay(12, 31, 32));
-            testTOD(TimeOfDay(12, 30, 33), 60, TimeOfDay(12, 31, 33));
-            testTOD(TimeOfDay(12, 30, 33), 61, TimeOfDay(12, 31, 34));
-
-            testTOD(TimeOfDay(12, 30, 33), 1766, TimeOfDay(12, 59, 59));
-            testTOD(TimeOfDay(12, 30, 33), 1767, TimeOfDay(13, 0, 0));
-            testTOD(TimeOfDay(12, 30, 33), 1768, TimeOfDay(13, 0, 1));
-            testTOD(TimeOfDay(12, 30, 33), 2007, TimeOfDay(13, 4, 0));
-            testTOD(TimeOfDay(12, 30, 33), 3599, TimeOfDay(13, 30, 32));
-            testTOD(TimeOfDay(12, 30, 33), 3600, TimeOfDay(13, 30, 33));
-            testTOD(TimeOfDay(12, 30, 33), 3601, TimeOfDay(13, 30, 34));
-            testTOD(TimeOfDay(12, 30, 33), 7200, TimeOfDay(14, 30, 33));
-
-            testTOD(TimeOfDay(12, 30, 33), -1, TimeOfDay(12, 30, 32));
-            testTOD(TimeOfDay(12, 30, 33), -2, TimeOfDay(12, 30, 31));
-            testTOD(TimeOfDay(12, 30, 33), -3, TimeOfDay(12, 30, 30));
-            testTOD(TimeOfDay(12, 30, 33), -4, TimeOfDay(12, 30, 29));
-            testTOD(TimeOfDay(12, 30, 33), -5, TimeOfDay(12, 30, 28));
-            testTOD(TimeOfDay(12, 30, 33), -10, TimeOfDay(12, 30, 23));
-            testTOD(TimeOfDay(12, 30, 33), -15, TimeOfDay(12, 30, 18));
-            testTOD(TimeOfDay(12, 30, 33), -33, TimeOfDay(12, 30, 0));
-            testTOD(TimeOfDay(12, 30, 33), -34, TimeOfDay(12, 29, 59));
-            testTOD(TimeOfDay(12, 30, 33), -35, TimeOfDay(12, 29, 58));
-            testTOD(TimeOfDay(12, 30, 33), -59, TimeOfDay(12, 29, 34));
-            testTOD(TimeOfDay(12, 30, 33), -60, TimeOfDay(12, 29, 33));
-            testTOD(TimeOfDay(12, 30, 33), -61, TimeOfDay(12, 29, 32));
-
-            testTOD(TimeOfDay(12, 30, 33), -1833, TimeOfDay(12, 0, 0));
-            testTOD(TimeOfDay(12, 30, 33), -1834, TimeOfDay(11, 59, 59));
-            testTOD(TimeOfDay(12, 30, 33), -3600, TimeOfDay(11, 30, 33));
-            testTOD(TimeOfDay(12, 30, 33), -3601, TimeOfDay(11, 30, 32));
-            testTOD(TimeOfDay(12, 30, 33), -5134, TimeOfDay(11, 4, 59));
-            testTOD(TimeOfDay(12, 30, 33), -7200, TimeOfDay(10, 30, 33));
-
-            testTOD(TimeOfDay(12, 30, 0), 1, TimeOfDay(12, 30, 1));
-            testTOD(TimeOfDay(12, 30, 0), 0, TimeOfDay(12, 30, 0));
-            testTOD(TimeOfDay(12, 30, 0), -1, TimeOfDay(12, 29, 59));
-
-            testTOD(TimeOfDay(12, 0, 0), 1, TimeOfDay(12, 0, 1));
-            testTOD(TimeOfDay(12, 0, 0), 0, TimeOfDay(12, 0, 0));
-            testTOD(TimeOfDay(12, 0, 0), -1, TimeOfDay(11, 59, 59));
-
-            testTOD(TimeOfDay(0, 0, 0), 1, TimeOfDay(0, 0, 1));
-            testTOD(TimeOfDay(0, 0, 0), 0, TimeOfDay(0, 0, 0));
-            testTOD(TimeOfDay(0, 0, 0), -1, TimeOfDay(23, 59, 59));
-
-            testTOD(TimeOfDay(23, 59, 59), 1, TimeOfDay(0, 0, 0));
-            testTOD(TimeOfDay(23, 59, 59), 0, TimeOfDay(23, 59, 59));
-            testTOD(TimeOfDay(23, 59, 59), -1, TimeOfDay(23, 59, 58));
-
-            const ctod = TimeOfDay(0, 0, 0);
-            immutable itod = TimeOfDay(0, 0, 0);
-            static assert(!__traits(compiles, ctod.addSeconds(7)));
-            static assert(!__traits(compiles, itod.addSeconds(7)));
-        }
-    }
-
-
-    /++
-        Whether the given values form a valid TimeOfDay
-     +/
-    static bool _valid(int hour, int minute, int second) pure nothrow
-    {
-        return valid!"hours"(hour) && valid!"minutes"(minute) && valid!"seconds"(second);
-    }
-
-
-    pure invariant()
-    {
-        assert(_valid(_hour, _minute, _second),
-               "Invariant Failure: hour [" ~
-               numToString(_hour) ~
-               "] minute [" ~
-               numToString(_minute) ~
-               "] second [" ~
-               numToString(_second) ~
-               "]");
-    }
-
-    ubyte _hour;
-    ubyte _minute;
-    ubyte _second;
-
-    enum ubyte maxHour   = 24 - 1;
-    enum ubyte maxMinute = 60 - 1;
-    enum ubyte maxSecond = 60 - 1;
-}
-
-
-/++
-   Combines Date and TimeOfDay structs to give you an object which holds both
-   the date and the time. It is optimized for calendar operations and has no
-   concept of time zone. If you want an object which is optimized for time
-   operations based on the system time, then use SysTime. SysTime has a concept
-   of time zone and has much higher precision (hnsecs). DateTime is intended
-   primarily for calendar-based uses rather than precise time operations.
+    Exception type used by std.datetime.
   +/
-struct DateTime
+alias TimeException DateTimeException;
+
+
+/++
+    Effectively a namespace to make it clear where its methods are getting
+    their time from. It cannot be instantiated.
+ +/
+final class Clock
 {
 public:
 
     /++
-        Params:
-            date = The date portion of DateTime.
-            tod  = The time portion of DateTime.
+        Returns the current time in the local timezone.
       +/
-    this(in Date date, in TimeOfDay tod = TimeOfDay.init) pure nothrow
+    static SysTime currTime(immutable TimeZone tz = LocalTime())
     {
-        _date = date;
-        _tod = tod;
+        return SysTime(currStdTime, tz);
     }
 
     unittest
     {
-        version(testStdDateTime)
+        version(enableWindowsTest)
         {
-            {
-                auto dt = DateTime.init;
-                assertPred!"=="(dt._date, Date.init);
-                assertPred!"=="(dt._tod, TimeOfDay.init);
-            }
+            assert(currTime(UTC()).timezone is UTC());
 
-            {
-                auto dt = DateTime(Date(1999, 7 ,6));
-                assertPred!"=="(dt._date, Date(1999, 7, 6));
-                assertPred!"=="(dt._tod, TimeOfDay.init);
-            }
+            immutable unixTimeD = currTime().toUnixTime();
+            immutable unixTimeC = core.stdc.time.time(null);
+            immutable diff = unixTimeC - unixTimeD;
 
-            {
-                auto dt = DateTime(Date(1999, 7 ,6), TimeOfDay(12, 30, 33));
-                assertPred!"=="(dt._date, Date(1999, 7, 6));
-                assertPred!"=="(dt._tod, TimeOfDay(12, 30, 33));
-            }
+            assertPred!">="(diff, -2);
+            assertPred!"<="(diff, 2);
         }
     }
 
 
     /++
-        Params:
-            year   = The year portion of the date.
-            month  = The month portion of the date.
-            day    = The day portion of the date.
-            hour   = The hour portion of the time;
-            minute = The minute portion of the time;
-            second = The second portion of the time;
-      +/
-    this(int year, int month, int day,
-         int hour = 0, int minute = 0, int second = 0) pure
-    {
-        _date = Date(year, month, day);
-        _tod = TimeOfDay(hour, minute, second);
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            {
-                auto dt = DateTime(1999, 7 ,6);
-                assertPred!"=="(dt._date, Date(1999, 7, 6));
-                assertPred!"=="(dt._tod, TimeOfDay.init);
-            }
-
-            {
-                auto dt = DateTime(1999, 7 ,6, 12, 30, 33);
-                assertPred!"=="(dt._date, Date(1999, 7, 6));
-                assertPred!"=="(dt._tod, TimeOfDay(12, 30, 33));
-            }
-        }
-    }
-
-
-    /++
-        Compares this DateTime with the given DateTime.
-
-        Returns:
-            $(TABLE
-            $(TR $(TD this &lt; rhs) $(TD &lt; 0))
-            $(TR $(TD this == rhs) $(TD 0))
-            $(TR $(TD this &gt; rhs) $(TD &gt; 0))
-            )
-     +/
-    int opCmp(in DateTime rhs) const pure nothrow
-    {
-        immutable dateResult = _date.opCmp(rhs._date);
-
-        if(dateResult != 0)
-            return dateResult;
-
-        return _tod.opCmp(rhs._tod);
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            //Test A.D.
-            assertPred!("opCmp", "==")(DateTime(Date.init, TimeOfDay.init), DateTime.init);
-
-            assertPred!("opCmp", "==")(DateTime(Date(1999, 1, 1)), DateTime(Date(1999, 1, 1)));
-            assertPred!("opCmp", "==")(DateTime(Date(1, 7, 1)), DateTime(Date(1, 7, 1)));
-            assertPred!("opCmp", "==")(DateTime(Date(1, 1, 6)), DateTime(Date(1, 1, 6)));
-
-            assertPred!("opCmp", "==")(DateTime(Date(1999, 7, 1)), DateTime(Date(1999, 7, 1)));
-            assertPred!("opCmp", "==")(DateTime(Date(1999, 7, 6)), DateTime(Date(1999, 7, 6)));
-
-            assertPred!("opCmp", "==")(DateTime(Date(1, 7, 6)), DateTime(Date(1, 7, 6)));
-
-            assertPred!("opCmp", "<")(DateTime(Date(1999, 7, 6)), DateTime(Date(2000, 7, 6)));
-            assertPred!("opCmp", ">")(DateTime(Date(2000, 7, 6)), DateTime(Date(1999, 7, 6)));
-            assertPred!("opCmp", "<")(DateTime(Date(1999, 7, 6)), DateTime(Date(1999, 8, 6)));
-            assertPred!("opCmp", ">")(DateTime(Date(1999, 8, 6)), DateTime(Date(1999, 7, 6)));
-            assertPred!("opCmp", "<")(DateTime(Date(1999, 7, 6)), DateTime(Date(1999, 7, 7)));
-            assertPred!("opCmp", ">")(DateTime(Date(1999, 7, 7)), DateTime(Date(1999, 7, 6)));
-
-            assertPred!("opCmp", "<")(DateTime(Date(1999, 8, 7)), DateTime(Date(2000, 7, 6)));
-            assertPred!("opCmp", ">")(DateTime(Date(2000, 8, 6)), DateTime(Date(1999, 7, 7)));
-            assertPred!("opCmp", "<")(DateTime(Date(1999, 7, 7)), DateTime(Date(2000, 7, 6)));
-            assertPred!("opCmp", ">")(DateTime(Date(2000, 7, 6)), DateTime(Date(1999, 7, 7)));
-            assertPred!("opCmp", "<")(DateTime(Date(1999, 7, 7)), DateTime(Date(1999, 8, 6)));
-            assertPred!("opCmp", ">")(DateTime(Date(1999, 8, 6)), DateTime(Date(1999, 7, 7)));
-
-
-            assertPred!("opCmp", "==")(DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 0)),
-                                       DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 0)));
-            assertPred!("opCmp", "==")(DateTime(Date(1999, 7, 6), TimeOfDay(12, 0, 0)),
-                                       DateTime(Date(1999, 7, 6), TimeOfDay(12, 0, 0)));
-            assertPred!("opCmp", "==")(DateTime(Date(1999, 7, 6), TimeOfDay(0, 30, 0)),
-                                       DateTime(Date(1999, 7, 6), TimeOfDay(0, 30, 0)));
-            assertPred!("opCmp", "==")(DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 33)),
-                                       DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 33)));
-
-            assertPred!("opCmp", "==")(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 0)),
-                                       DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 0)));
-            assertPred!("opCmp", "==")(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)),
-                                       DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
-
-            assertPred!("opCmp", "==")(DateTime(Date(1999, 7, 6), TimeOfDay(0, 30, 33)),
-                                       DateTime(Date(1999, 7, 6), TimeOfDay(0, 30, 33)));
-            assertPred!("opCmp", "==")(DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 33)),
-                                       DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 33)));
-
-            assertPred!("opCmp", "<")(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)),
-                                      DateTime(Date(1999, 7, 6), TimeOfDay(13, 30, 33)));
-            assertPred!("opCmp", ">")(DateTime(Date(1999, 7, 6), TimeOfDay(13, 30, 33)),
-                                      DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
-            assertPred!("opCmp", "<")(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)),
-                                      DateTime(Date(1999, 7, 6), TimeOfDay(12, 31, 33)));
-            assertPred!("opCmp", ">")(DateTime(Date(1999, 7, 6), TimeOfDay(12, 31, 33)),
-                                      DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
-            assertPred!("opCmp", "<")(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)),
-                                      DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 34)));
-            assertPred!("opCmp", ">")(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 34)),
-                                      DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
-
-            assertPred!("opCmp", ">")(DateTime(Date(1999, 7, 6), TimeOfDay(13, 30, 33)),
-                                      DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 34)));
-            assertPred!("opCmp", "<")(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 34)),
-                                      DateTime(Date(1999, 7, 6), TimeOfDay(13, 30, 33)));
-            assertPred!("opCmp", ">")(DateTime(Date(1999, 7, 6), TimeOfDay(13, 30, 33)),
-                                      DateTime(Date(1999, 7, 6), TimeOfDay(12, 31, 33)));
-            assertPred!("opCmp", "<")(DateTime(Date(1999, 7, 6), TimeOfDay(12, 31, 33)),
-                                      DateTime(Date(1999, 7, 6), TimeOfDay(13, 30, 33)));
-
-            assertPred!("opCmp", ">")(DateTime(Date(1999, 7, 6), TimeOfDay(12, 31, 33)),
-                                      DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 34)));
-            assertPred!("opCmp", "<")(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 34)),
-                                      DateTime(Date(1999, 7, 6), TimeOfDay(12, 31, 33)));
-
-            assertPred!("opCmp", "<")(DateTime(Date(1999, 7, 6), TimeOfDay(13, 30, 33)),
-                                      DateTime(Date(2000, 7, 6), TimeOfDay(12, 30, 33)));
-            assertPred!("opCmp", ">")(DateTime(Date(2000, 7, 6), TimeOfDay(12, 30, 33)),
-                                      DateTime(Date(1999, 7, 6), TimeOfDay(13, 30, 33)));
-            assertPred!("opCmp", "<")(DateTime(Date(1999, 7, 6), TimeOfDay(12, 31, 33)),
-                                      DateTime(Date(2000, 7, 6), TimeOfDay(12, 30, 33)));
-            assertPred!("opCmp", ">")(DateTime(Date(2000, 7, 6), TimeOfDay(12, 30, 33)),
-                                      DateTime(Date(1999, 7, 6), TimeOfDay(12, 31, 33)));
-            assertPred!("opCmp", "<")(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 34)),
-                                      DateTime(Date(2000, 7, 6), TimeOfDay(12, 30, 33)));
-            assertPred!("opCmp", ">")(DateTime(Date(2000, 7, 6), TimeOfDay(12, 30, 33)),
-                                      DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 34)));
-
-            assertPred!("opCmp", "<")(DateTime(Date(1999, 7, 6), TimeOfDay(13, 30, 33)),
-                                      DateTime(Date(1999, 8, 6), TimeOfDay(12, 30, 33)));
-            assertPred!("opCmp", ">")(DateTime(Date(1999, 8, 6), TimeOfDay(12, 30, 33)),
-                                      DateTime(Date(1999, 7, 6), TimeOfDay(13, 30, 33)));
-            assertPred!("opCmp", "<")(DateTime(Date(1999, 7, 6), TimeOfDay(12, 31, 33)),
-                                      DateTime(Date(1999, 8, 6), TimeOfDay(12, 30, 33)));
-            assertPred!("opCmp", ">")(DateTime(Date(1999, 8, 6), TimeOfDay(12, 30, 33)),
-                                      DateTime(Date(1999, 7, 6), TimeOfDay(12, 31, 33)));
-            assertPred!("opCmp", "<")(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 34)),
-                                      DateTime(Date(1999, 8, 6), TimeOfDay(12, 30, 33)));
-            assertPred!("opCmp", ">")(DateTime(Date(1999, 8, 6), TimeOfDay(12, 30, 33)),
-                                      DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 34)));
-
-            assertPred!("opCmp", "<")(DateTime(Date(1999, 7, 6), TimeOfDay(13, 30, 33)),
-                                      DateTime(Date(1999, 7, 7), TimeOfDay(12, 30, 33)));
-            assertPred!("opCmp", ">")(DateTime(Date(1999, 7, 7), TimeOfDay(12, 30, 33)),
-                                      DateTime(Date(1999, 7, 6), TimeOfDay(13, 30, 33)));
-            assertPred!("opCmp", "<")(DateTime(Date(1999, 7, 6), TimeOfDay(12, 31, 33)),
-                                      DateTime(Date(1999, 7, 7), TimeOfDay(12, 31, 33)));
-            assertPred!("opCmp", ">")(DateTime(Date(1999, 7, 7), TimeOfDay(12, 30, 33)),
-                                      DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
-            assertPred!("opCmp", "<")(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 34)),
-                                      DateTime(Date(1999, 7, 7), TimeOfDay(12, 30, 33)));
-            assertPred!("opCmp", ">")(DateTime(Date(1999, 7, 7), TimeOfDay(12, 30, 33)),
-                                      DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 34)));
-
-            //Test B.C.
-            assertPred!("opCmp", "==")(DateTime(Date(-1, 1, 1), TimeOfDay(12, 30, 33)),
-                                       DateTime(Date(-1, 1, 1), TimeOfDay(12, 30, 33)));
-            assertPred!("opCmp", "==")(DateTime(Date(-1, 7, 1), TimeOfDay(12, 30, 33)),
-                                       DateTime(Date(-1, 7, 1), TimeOfDay(12, 30, 33)));
-            assertPred!("opCmp", "==")(DateTime(Date(-1, 1, 6), TimeOfDay(12, 30, 33)),
-                                       DateTime(Date(-1, 1, 6), TimeOfDay(12, 30, 33)));
-
-            assertPred!("opCmp", "==")(DateTime(Date(-1999, 7, 1), TimeOfDay(12, 30, 33)),
-                                       DateTime(Date(-1999, 7, 1), TimeOfDay(12, 30, 33)));
-            assertPred!("opCmp", "==")(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)),
-                                       DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
-
-            assertPred!("opCmp", "==")(DateTime(Date(-1, 7, 6), TimeOfDay(12, 30, 33)),
-                                       DateTime(Date(-1, 7, 6), TimeOfDay(12, 30, 33)));
-
-            assertPred!("opCmp", "<")(DateTime(Date(-2000, 7, 6), TimeOfDay(12, 30, 33)),
-                                      DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
-            assertPred!("opCmp", ">")(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)),
-                                      DateTime(Date(-2000, 7, 6), TimeOfDay(12, 30, 33)));
-            assertPred!("opCmp", "<")(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)),
-                                      DateTime(Date(-1999, 8, 6), TimeOfDay(12, 30, 33)));
-            assertPred!("opCmp", ">")(DateTime(Date(-1999, 8, 6), TimeOfDay(12, 30, 33)),
-                                      DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
-            assertPred!("opCmp", "<")(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)),
-                                      DateTime(Date(-1999, 7, 7), TimeOfDay(12, 30, 33)));
-            assertPred!("opCmp", ">")(DateTime(Date(-1999, 7, 7), TimeOfDay(12, 30, 33)),
-                                      DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
-
-            assertPred!("opCmp", "<")(DateTime(Date(-2000, 8, 6), TimeOfDay(12, 30, 33)),
-                                      DateTime(Date(-1999, 7, 7), TimeOfDay(12, 30, 33)));
-            assertPred!("opCmp", ">")(DateTime(Date(-1999, 8, 7), TimeOfDay(12, 30, 33)),
-                                      DateTime(Date(-2000, 7, 6), TimeOfDay(12, 30, 33)));
-            assertPred!("opCmp", "<")(DateTime(Date(-2000, 7, 6), TimeOfDay(12, 30, 33)),
-                                      DateTime(Date(-1999, 7, 7), TimeOfDay(12, 30, 33)));
-            assertPred!("opCmp", ">")(DateTime(Date(-1999, 7, 7), TimeOfDay(12, 30, 33)),
-                                      DateTime(Date(-2000, 7, 6), TimeOfDay(12, 30, 33)));
-            assertPred!("opCmp", "<")(DateTime(Date(-1999, 7, 7), TimeOfDay(12, 30, 33)),
-                                      DateTime(Date(-1999, 8, 6), TimeOfDay(12, 30, 33)));
-            assertPred!("opCmp", ">")(DateTime(Date(-1999, 8, 6), TimeOfDay(12, 30, 33)),
-                                      DateTime(Date(-1999, 7, 7), TimeOfDay(12, 30, 33)));
-
-            //Test Both
-            assertPred!("opCmp", "<")(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)),
-                                      DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
-            assertPred!("opCmp", ">")(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)),
-                                      DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
-
-            assertPred!("opCmp", "<")(DateTime(Date(-1999, 8, 6), TimeOfDay(12, 30, 33)),
-                                      DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
-            assertPred!("opCmp", ">")(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)),
-                                      DateTime(Date(-1999, 8, 6), TimeOfDay(12, 30, 33)));
-
-            assertPred!("opCmp", "<")(DateTime(Date(-1999, 7, 7), TimeOfDay(12, 30, 33)),
-                                      DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
-            assertPred!("opCmp", ">")(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)),
-                                      DateTime(Date(-1999, 7, 7), TimeOfDay(12, 30, 33)));
-
-            assertPred!("opCmp", "<")(DateTime(Date(-1999, 8, 7), TimeOfDay(12, 30, 33)),
-                                      DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
-            assertPred!("opCmp", ">")(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)),
-                                      DateTime(Date(-1999, 8, 7), TimeOfDay(12, 30, 33)));
-
-            assertPred!("opCmp", "<")(DateTime(Date(-1999, 8, 6), TimeOfDay(12, 30, 33)),
-                                      DateTime(Date(1999, 6, 6), TimeOfDay(12, 30, 33)));
-            assertPred!("opCmp", ">")(DateTime(Date(1999, 6, 8), TimeOfDay(12, 30, 33)),
-                                      DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
-
-            auto dt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 33, 30));
-            const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 33, 30));
-            immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 33, 30));
-            static assert(__traits(compiles, dt.opCmp(dt)));
-            static assert(__traits(compiles, dt.opCmp(cdt)));
-            static assert(__traits(compiles, dt.opCmp(idt)));
-            static assert(__traits(compiles, cdt.opCmp(dt)));
-            static assert(__traits(compiles, cdt.opCmp(cdt)));
-            static assert(__traits(compiles, cdt.opCmp(idt)));
-            static assert(__traits(compiles, idt.opCmp(dt)));
-            static assert(__traits(compiles, idt.opCmp(cdt)));
-            static assert(__traits(compiles, idt.opCmp(idt)));
-        }
-    }
-
-
-    /++
-        The date portion of DateTime.
-      +/
-    @property Date date() const pure nothrow
-    {
-        return _date;
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            {
-                auto dt = DateTime.init;
-                assertPred!"=="(dt.date, Date.init);
-            }
-
-            {
-                auto dt = DateTime(Date(1999, 7, 6));
-                assertPred!"=="(dt.date, Date(1999, 7, 6));
-            }
-
-            const cdt = DateTime(1999, 7, 6);
-            immutable idt = DateTime(1999, 7, 6);
-            static assert(__traits(compiles, cdt.date == Date(2010, 1, 1)));
-            static assert(__traits(compiles, idt.date == Date(2010, 1, 1)));
-        }
-    }
-
-
-    /++
-        The date portion of DateTime.
-
-        Params:
-            date = The Date to set this DateTime's date portion to.
-      +/
-    @property void date(in Date date) pure nothrow
-    {
-        _date = date;
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            auto dt = DateTime.init;
-            dt.date = Date(1999, 7, 6);
-            assertPred!"=="(dt._date, Date(1999, 7, 6));
-            assertPred!"=="(dt._tod, TimeOfDay.init);
-
-            const cdt = DateTime(1999, 7, 6);
-            immutable idt = DateTime(1999, 7, 6);
-            static assert(!__traits(compiles, cdt.date = Date(2010, 1, 1)));
-            static assert(!__traits(compiles, idt.date = Date(2010, 1, 1)));
-        }
-    }
-
-
-    /++
-        The time portion of DateTime.
-      +/
-    @property TimeOfDay timeOfDay() const pure nothrow
-    {
-        return _tod;
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            {
-                auto dt = DateTime.init;
-                assertPred!"=="(dt.timeOfDay, TimeOfDay.init);
-            }
-
-            {
-                auto dt = DateTime(Date.init, TimeOfDay(12, 30, 33));
-                assertPred!"=="(dt.timeOfDay, TimeOfDay(12, 30, 33));
-            }
-
-            const cdt = DateTime(1999, 7, 6, 12, 30, 33);
-            immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
-            static assert(__traits(compiles, cdt.timeOfDay == TimeOfDay(12, 30, 33)));
-            static assert(__traits(compiles, idt.timeOfDay == TimeOfDay(12, 30, 33)));
-        }
-    }
-
-
-    /++
-        The time portion of DateTime.
-
-        Params:
-            tod = The TimeOfDay to set this DateTime's time portion to.
-      +/
-    @property void timeOfDay(in TimeOfDay tod) pure nothrow
-    {
-        _tod = tod;
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            auto dt = DateTime.init;
-            dt.timeOfDay = TimeOfDay(12, 30, 33);
-            assertPred!"=="(dt._date, date.init);
-            assertPred!"=="(dt._tod, TimeOfDay(12, 30, 33));
-
-            const cdt = DateTime(1999, 7, 6, 12, 30, 33);
-            immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
-            static assert(!__traits(compiles, cdt.timeOfDay = TimeOfDay(12, 30, 33)));
-            static assert(!__traits(compiles, idt.timeOfDay = TimeOfDay(12, 30, 33)));
-        }
-    }
-
-
-    /++
-        Year of the Gregorian Calendar. Positive numbers are A.D. Non-positive
-        are B.C.
-     +/
-    @property short year() const pure nothrow
-    {
-        return _date.year;
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            assertPred!"=="(Date.init.year, 1);
-            assertPred!"=="(Date(1999, 7, 6).year, 1999);
-            assertPred!"=="(Date(-1999, 7, 6).year, -1999);
-
-            const cdt = DateTime(1999, 7, 6, 12, 30, 33);
-            immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
-            static assert(__traits(compiles, idt.year));
-            static assert(__traits(compiles, idt.year));
-        }
-    }
-
-
-    /++
-        Year of the Gregorian Calendar. Positive numbers are A.D. Non-positive
-        are B.C.
-
-        Params:
-            year = The year to set this DateTime's year to.
+        Returns the number of hnsecs since midnight, January 1st, 1 A.D. for the
+        current time.
 
         Throws:
-            DateTimeException if the new year is not a leap year and if the
-            resulting date would be on February 29th.
-
-        Examples:
---------------------
-assert(DateTime(Date(1999, 7, 6), TimeOfDay(9, 7, 5)).year == 1999);
-assert(DateTime(Date(2010, 10, 4), TimeOfDay(0, 0, 30)).year == 2010);
-assert(DateTime(Date(-7, 4, 5), TimeOfDay(7, 45, 2)).year == -7);
---------------------
-     +/
-    @property void year(int year) pure
+            ErrnoException (on Posix) or Exception (on Windows) if it fails to
+            get the time of day.
+      +/
+    @trusted
+    static @property long currStdTime()
     {
-        _date.year = year;
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
+        version(Windows)
         {
-            static void testDT(DateTime dt, int year, in DateTime expected, size_t line = __LINE__)
+            //FILETIME represents hnsecs from midnight, January 1st, 1601.
+            enum hnsecsFrom1601 = 504_911_232_000_000_000L;
+
+            FILETIME fileTime;
+
+            GetSystemTimeAsFileTime(&fileTime);
+
+            ulong tempHNSecs = fileTime.dwHighDateTime;
+            tempHNSecs <<= 32;
+            tempHNSecs |= fileTime.dwLowDateTime;
+
+            return cast(long)tempHNSecs + hnsecsFrom1601;
+        }
+        else version(Posix)
+        {
+            enum hnsecsToUnixEpoch = 621_355_968_000_000_000L;
+
+            static if(is(typeof(clock_gettime)))
             {
-                dt.year = year;
-                assertPred!"=="(dt, expected, "", __FILE__, line);
+                timespec ts;
+
+                if(clock_gettime(CLOCK_REALTIME, &ts) != 0)
+                    throw new TimeException("Failed in clock_gettime().");
+
+                return convert!("seconds", "hnsecs")(ts.tv_sec) +
+                       ts.tv_nsec / 100 +
+                       hnsecsToUnixEpoch;
             }
+            else
+            {
+                timeval tv;
 
-            testDT(DateTime(Date(1, 1, 1), TimeOfDay(12, 30, 33)), 1999, DateTime(Date(1999, 1, 1), TimeOfDay(12, 30, 33)));
-            testDT(DateTime(Date(1, 1, 1), TimeOfDay(12, 30, 33)), 0, DateTime(Date(0, 1, 1), TimeOfDay(12, 30, 33)));
-            testDT(DateTime(Date(1, 1, 1), TimeOfDay(12, 30, 33)), -1999, DateTime(Date(-1999, 1, 1), TimeOfDay(12, 30, 33)));
+                if(gettimeofday(&tv, null) != 0)
+                    throw new TimeException("Failed in gettimeofday().");
 
-            const cdt = DateTime(1999, 7, 6, 12, 30, 33);
-            immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
-            static assert(!__traits(compiles, cdt.year = 7));
-            static assert(!__traits(compiles, idt.year = 7));
-
-            //Verify Examples.
-            assert(DateTime(Date(1999, 7, 6), TimeOfDay(9, 7, 5)).year == 1999);
-            assert(DateTime(Date(2010, 10, 4), TimeOfDay(0, 0, 30)).year == 2010);
-            assert(DateTime(Date(-7, 4, 5), TimeOfDay(7, 45, 2)).year == -7);
+                return convert!("seconds", "hnsecs")(tv.tv_sec) +
+                       convert!("usecs", "hnsecs")(tv.tv_usec) +
+                       hnsecsToUnixEpoch;
+            }
         }
     }
 
 
     /++
-        Year B.C. of the Gregorian Calendar counting year 0 as 1 B.C.
+        The current system tick. The number of ticks per second varies from
+        system to system. This uses a monotonic clock, so it's intended for
+        precision timing by comparing relative time values, not for getting
+        the current system time.
+
+        Warning:
+            On some systems, the monotonic clock may stop counting when
+            the computer goes to sleep or hibernates. So, the monotonic
+            clock could be off if that occurs. This is known to happen
+            on Mac OS X. It has not been tested whether it occurs on
+            either Windows or on Linux.
 
         Throws:
-            DateTimeException if $(D isAD) is true.
-
-        Examples:
---------------------
-assert(DateTime(Date(0, 1, 1), TimeOfDay(12, 30, 33)).yearBC == 1);
-assert(DateTime(Date(-1, 1, 1), TimeOfDay(10, 7, 2)).yearBC == 2);
-assert(DateTime(Date(-100, 1, 1), TimeOfDay(4, 59, 0)).yearBC == 101);
---------------------
-     +/
-    @property short yearBC() const pure
+            TimeException if it fails to get the time.
+      +/
+    @safe
+    static @property TickDuration currSystemTick()
     {
-        return _date.yearBC;
+        return TickDuration.currSystemTick();
     }
 
     unittest
     {
         version(testStdDateTime)
         {
-            assertThrown!DateTimeException((in DateTime dt){dt.yearBC;}(DateTime(Date(1, 1, 1))));
-
-            auto dt = DateTime(1999, 7, 6, 12, 30, 33);
-            const cdt = DateTime(1999, 7, 6, 12, 30, 33);
-            immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
-            static assert(__traits(compiles, dt.yearBC = 12));
-            static assert(!__traits(compiles, cdt.yearBC = 12));
-            static assert(!__traits(compiles, idt.yearBC = 12));
-
-            //Verify Examples.
-            assert(DateTime(Date(0, 1, 1), TimeOfDay(12, 30, 33)).yearBC == 1);
-            assert(DateTime(Date(-1, 1, 1), TimeOfDay(10, 7, 2)).yearBC == 2);
-            assert(DateTime(Date(-100, 1, 1), TimeOfDay(4, 59, 0)).yearBC == 101);
+            auto t = Clock.currSystemTick;
+            assert(t.length > 0);
         }
     }
 
 
     /++
-        Year B.C. of the Gregorian Calendar counting year 0 as 1 B.C.
+        The current number of system ticks since the application started.
+        The number of ticks per second varies from system to system.
+        This uses a monotonic clock.
 
-        Params:
-            year = The year B.C. to set this DateTime's year to.
+        Warning:
+            On some systems, the monotonic clock may stop counting when
+            the computer goes to sleep or hibernates. So, the monotonic
+            clock could be off if that occurs. This is known to happen
+            on Mac OS X. It has not been tested whether it occurs on
+            either Windows or on Linux.
 
         Throws:
-            DateTimeException if a non-positive value is given.
-
-        Examples:
---------------------
-auto dt = DateTime(Date(2010, 1, 1), TimeOfDay(7, 30, 0));
-dt.yearBC = 1;
-assert(dt == DateTime(Date(0, 1, 1), TimeOfDay(7, 30, 0)));
-
-dt.yearBC = 10;
-assert(dt == DateTime(Date(-9, 1, 1), TimeOfDay(7, 30, 0)));
---------------------
-     +/
-    @property void yearBC(int year) pure
-    {
-        _date.yearBC = year;
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            assertThrown!DateTimeException((DateTime dt){dt.yearBC = -1;}(DateTime(Date(1, 1, 1))));
-
-            {
-                auto dt = DateTime(1999, 7, 6, 12, 30, 33);
-                const cdt = DateTime(1999, 7, 6, 12, 30, 33);
-                immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
-                static assert(__traits(compiles, dt.yearBC = 12));
-                static assert(!__traits(compiles, cdt.yearBC = 12));
-                static assert(!__traits(compiles, idt.yearBC = 12));
-            }
-
-            //Verify Examples.
-            {
-                auto dt = DateTime(Date(2010, 1, 1), TimeOfDay(7, 30, 0));
-                dt.yearBC = 1;
-                assert(dt == DateTime(Date(0, 1, 1), TimeOfDay(7, 30, 0)));
-
-                dt.yearBC = 10;
-                assert(dt == DateTime(Date(-9, 1, 1), TimeOfDay(7, 30, 0)));
-            }
-        }
-    }
-
-
-    /++
-        Month of a Gregorian Year.
-
-        Examples:
---------------------
-assert(DateTime(Date(1999, 7, 6), TimeOfDay(9, 7, 5)).month == 7);
-assert(DateTime(Date(2010, 10, 4), TimeOfDay(0, 0, 30)).month == 10);
-assert(DateTime(Date(-7, 4, 5), TimeOfDay(7, 45, 2)).month == 4);
---------------------
-     +/
-    @property Month month() const pure nothrow
-    {
-        return _date.month;
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            assertPred!"=="(DateTime.init.month, 1);
-            assertPred!"=="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)).month, 7);
-            assertPred!"=="(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)).month, 7);
-
-            const cdt = DateTime(1999, 7, 6, 12, 30, 33);
-            immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
-            static assert(__traits(compiles, cdt.month));
-            static assert(__traits(compiles, idt.month));
-
-            //Verify Examples.
-            assert(DateTime(Date(1999, 7, 6), TimeOfDay(9, 7, 5)).month == 7);
-            assert(DateTime(Date(2010, 10, 4), TimeOfDay(0, 0, 30)).month == 10);
-            assert(DateTime(Date(-7, 4, 5), TimeOfDay(7, 45, 2)).month == 4);
-        }
-    }
-
-
-    /++
-        Month of a Gregorian Year.
-
-        Params:
-            month = The month to set this DateTime's month to.
-
-        Throws:
-            DateTimeException if the given month is not a valid month.
-     +/
-    @property void month(Month month) pure
-    {
-        _date.month = month;
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            static void testDT(DateTime dt, Month month, in DateTime expected = DateTime.init, size_t line = __LINE__)
-            {
-                dt.month = month;
-                assert(expected != DateTime.init);
-                assertPred!"=="(dt, expected, "", __FILE__, line);
-            }
-
-            assertThrown!DateTimeException(testDT(DateTime(Date(1, 1, 1), TimeOfDay(12, 30, 33)), cast(Month)0));
-            assertThrown!DateTimeException(testDT(DateTime(Date(1, 1, 1), TimeOfDay(12, 30, 33)), cast(Month)13));
-
-            testDT(DateTime(Date(1, 1, 1), TimeOfDay(12, 30, 33)), cast(Month)7, DateTime(Date(1, 7, 1), TimeOfDay(12, 30, 33)));
-            testDT(DateTime(Date(-1, 1, 1), TimeOfDay(12, 30, 33)), cast(Month)7, DateTime(Date(-1, 7, 1), TimeOfDay(12, 30, 33)));
-
-            const cdt = DateTime(1999, 7, 6, 12, 30, 33);
-            immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
-            static assert(!__traits(compiles, cdt.month = 12));
-            static assert(!__traits(compiles, idt.month = 12));
-        }
-    }
-
-
-    /++
-        Day of a Gregorian Month.
-
-        Examples:
---------------------
-assert(DateTime(Date(1999, 7, 6), TimeOfDay(9, 7, 5)).day == 6);
-assert(DateTime(Date(2010, 10, 4), TimeOfDay(0, 0, 30)).day == 4);
-assert(DateTime(Date(-7, 4, 5), TimeOfDay(7, 45, 2)).day == 5);
---------------------
-     +/
-    @property ubyte day() const pure nothrow
-    {
-        return _date.day;
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            assertPred!"=="(DateTime.init.day, 1);
-            assertPred!"=="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)).day, 6);
-            assertPred!"=="(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)).day, 6);
-
-            const cdt = DateTime(1999, 7, 6, 12, 30, 33);
-            immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
-            static assert(__traits(compiles, cdt.day));
-            static assert(__traits(compiles, idt.day));
-
-            //Verify Examples.
-            assert(DateTime(Date(1999, 7, 6), TimeOfDay(9, 7, 5)).day == 6);
-            assert(DateTime(Date(2010, 10, 4), TimeOfDay(0, 0, 30)).day == 4);
-            assert(DateTime(Date(-7, 4, 5), TimeOfDay(7, 45, 2)).day == 5);
-        }
-    }
-
-
-    /++
-        Day of a Gregorian Month.
-
-        Params:
-            day = The day of the month to set this DateTime's day to.
-
-        Throws:
-            DateTimeException if the given day is not a valid day of the current month.
-     +/
-    @property void day(int day) pure
-    {
-        _date.day = day;
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            static void testDT(DateTime dt, int day)
-            {
-                dt.day = day;
-            }
-
-            //Test A.D.
-            assertThrown!DateTimeException(testDT(DateTime(Date(1, 1, 1)), 0));
-            assertThrown!DateTimeException(testDT(DateTime(Date(1, 1, 1)), 32));
-            assertThrown!DateTimeException(testDT(DateTime(Date(1, 2, 1)), 29));
-            assertThrown!DateTimeException(testDT(DateTime(Date(4, 2, 1)), 30));
-            assertThrown!DateTimeException(testDT(DateTime(Date(1, 3, 1)), 32));
-            assertThrown!DateTimeException(testDT(DateTime(Date(1, 4, 1)), 31));
-            assertThrown!DateTimeException(testDT(DateTime(Date(1, 5, 1)), 32));
-            assertThrown!DateTimeException(testDT(DateTime(Date(1, 6, 1)), 31));
-            assertThrown!DateTimeException(testDT(DateTime(Date(1, 7, 1)), 32));
-            assertThrown!DateTimeException(testDT(DateTime(Date(1, 8, 1)), 32));
-            assertThrown!DateTimeException(testDT(DateTime(Date(1, 9, 1)), 31));
-            assertThrown!DateTimeException(testDT(DateTime(Date(1, 10, 1)), 32));
-            assertThrown!DateTimeException(testDT(DateTime(Date(1, 11, 1)), 31));
-            assertThrown!DateTimeException(testDT(DateTime(Date(1, 12, 1)), 32));
-
-            assertNotThrown!DateTimeException(testDT(DateTime(Date(1, 1, 1)), 31));
-            assertNotThrown!DateTimeException(testDT(DateTime(Date(1, 2, 1)), 28));
-            assertNotThrown!DateTimeException(testDT(DateTime(Date(4, 2, 1)), 29));
-            assertNotThrown!DateTimeException(testDT(DateTime(Date(1, 3, 1)), 31));
-            assertNotThrown!DateTimeException(testDT(DateTime(Date(1, 4, 1)), 30));
-            assertNotThrown!DateTimeException(testDT(DateTime(Date(1, 5, 1)), 31));
-            assertNotThrown!DateTimeException(testDT(DateTime(Date(1, 6, 1)), 30));
-            assertNotThrown!DateTimeException(testDT(DateTime(Date(1, 7, 1)), 31));
-            assertNotThrown!DateTimeException(testDT(DateTime(Date(1, 8, 1)), 31));
-            assertNotThrown!DateTimeException(testDT(DateTime(Date(1, 9, 1)), 30));
-            assertNotThrown!DateTimeException(testDT(DateTime(Date(1, 10, 1)), 31));
-            assertNotThrown!DateTimeException(testDT(DateTime(Date(1, 11, 1)), 30));
-            assertNotThrown!DateTimeException(testDT(DateTime(Date(1, 12, 1)), 31));
-
-            {
-                auto dt = DateTime(Date(1, 1, 1), TimeOfDay(7, 12, 22));
-                dt.day = 6;
-                assertPred!"=="(dt, DateTime(Date(1, 1, 6), TimeOfDay(7, 12, 22)));
-            }
-
-            //Test B.C.
-            assertThrown!DateTimeException(testDT(DateTime(Date(-1, 1, 1)), 0));
-            assertThrown!DateTimeException(testDT(DateTime(Date(-1, 1, 1)), 32));
-            assertThrown!DateTimeException(testDT(DateTime(Date(-1, 2, 1)), 29));
-            assertThrown!DateTimeException(testDT(DateTime(Date(0, 2, 1)), 30));
-            assertThrown!DateTimeException(testDT(DateTime(Date(-1, 3, 1)), 32));
-            assertThrown!DateTimeException(testDT(DateTime(Date(-1, 4, 1)), 31));
-            assertThrown!DateTimeException(testDT(DateTime(Date(-1, 5, 1)), 32));
-            assertThrown!DateTimeException(testDT(DateTime(Date(-1, 6, 1)), 31));
-            assertThrown!DateTimeException(testDT(DateTime(Date(-1, 7, 1)), 32));
-            assertThrown!DateTimeException(testDT(DateTime(Date(-1, 8, 1)), 32));
-            assertThrown!DateTimeException(testDT(DateTime(Date(-1, 9, 1)), 31));
-            assertThrown!DateTimeException(testDT(DateTime(Date(-1, 10, 1)), 32));
-            assertThrown!DateTimeException(testDT(DateTime(Date(-1, 11, 1)), 31));
-            assertThrown!DateTimeException(testDT(DateTime(Date(-1, 12, 1)), 32));
-
-            assertNotThrown!DateTimeException(testDT(DateTime(Date(-1, 1, 1)), 31));
-            assertNotThrown!DateTimeException(testDT(DateTime(Date(-1, 2, 1)), 28));
-            assertNotThrown!DateTimeException(testDT(DateTime(Date(0, 2, 1)), 29));
-            assertNotThrown!DateTimeException(testDT(DateTime(Date(-1, 3, 1)), 31));
-            assertNotThrown!DateTimeException(testDT(DateTime(Date(-1, 4, 1)), 30));
-            assertNotThrown!DateTimeException(testDT(DateTime(Date(-1, 5, 1)), 31));
-            assertNotThrown!DateTimeException(testDT(DateTime(Date(-1, 6, 1)), 30));
-            assertNotThrown!DateTimeException(testDT(DateTime(Date(-1, 7, 1)), 31));
-            assertNotThrown!DateTimeException(testDT(DateTime(Date(-1, 8, 1)), 31));
-            assertNotThrown!DateTimeException(testDT(DateTime(Date(-1, 9, 1)), 30));
-            assertNotThrown!DateTimeException(testDT(DateTime(Date(-1, 10, 1)), 31));
-            assertNotThrown!DateTimeException(testDT(DateTime(Date(-1, 11, 1)), 30));
-            assertNotThrown!DateTimeException(testDT(DateTime(Date(-1, 12, 1)), 31));
-
-            auto dt = DateTime(Date(-1, 1, 1), TimeOfDay(7, 12, 22));
-            dt.day = 6;
-            assertPred!"=="(dt, DateTime(Date(-1, 1, 6), TimeOfDay(7, 12, 22)));
-
-            const cdt = DateTime(1999, 7, 6, 12, 30, 33);
-            immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
-            static assert(!__traits(compiles, cdt.day = 27));
-            static assert(!__traits(compiles, idt.day = 27));
-        }
-    }
-
-
-    /++
-        Hours passed midnight.
-     +/
-    @property ubyte hour() const pure nothrow
-    {
-        return _tod.hour;
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            assertPred!"=="(DateTime.init.hour, 0);
-            assertPred!"=="(DateTime(Date.init, TimeOfDay(12, 0, 0)).hour, 12);
-
-            const cdt = DateTime(1999, 7, 6, 12, 30, 33);
-            immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
-            static assert(__traits(compiles, cdt.hour));
-            static assert(__traits(compiles, idt.hour));
-        }
-    }
-
-
-    /++
-        Hours passed midnight.
-
-        Params:
-            hour = The hour of the day to set this DateTime's hour to.
-
-        Throws:
-            DateTimeException if the given hour would result in an invalid
-            DateTime.
-     +/
-    @property void hour(int hour) pure
-    {
-        _tod.hour = hour;
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            assertThrown!DateTimeException((){DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 0)).hour = 24;}());
-
-            auto dt = DateTime.init;
-            dt.hour = 12;
-            assertPred!"=="(dt, DateTime(1, 1, 1, 12, 0, 0));
-
-            const cdt = DateTime(1999, 7, 6, 12, 30, 33);
-            immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
-            static assert(!__traits(compiles, cdt.hour = 27));
-            static assert(!__traits(compiles, idt.hour = 27));
-        }
-    }
-
-
-    /++
-        Minutes passed the hour.
-     +/
-    @property ubyte minute() const pure nothrow
-    {
-        return _tod.minute;
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            assertPred!"=="(DateTime.init.minute, 0);
-            assertPred!"=="(DateTime(1, 1, 1, 0, 30, 0).minute, 30);
-
-            const cdt = DateTime(1999, 7, 6, 12, 30, 33);
-            immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
-            static assert(__traits(compiles, cdt.minute));
-            static assert(__traits(compiles, idt.minute));
-        }
-    }
-
-
-    /++
-        Minutes passed the hour.
-
-        Params:
-            minute = The minute to set this DateTime's minute to.
-
-        Throws:
-            DateTimeException if the given minute would result in an invalid
-            DateTime.
-     +/
-    @property void minute(int minute) pure
-    {
-        _tod.minute = minute;
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            assertThrown!DateTimeException((){DateTime.init.minute = 60;}());
-
-            auto dt = DateTime.init;
-            dt.minute = 30;
-            assertPred!"=="(dt, DateTime(1, 1, 1, 0, 30, 0));
-
-            const cdt = DateTime(1999, 7, 6, 12, 30, 33);
-            immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
-            static assert(!__traits(compiles, cdt.minute = 27));
-            static assert(!__traits(compiles, idt.minute = 27));
-        }
-    }
-
-
-    /++
-        Seconds passed the minute.
-     +/
-    @property ubyte second() const pure nothrow
-    {
-        return _tod.second;
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            assertPred!"=="(DateTime.init.second, 0);
-            assertPred!"=="(DateTime(1, 1, 1, 0, 0, 33).second, 33);
-
-            const cdt = DateTime(1999, 7, 6, 12, 30, 33);
-            immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
-            static assert(__traits(compiles, cdt.second));
-            static assert(__traits(compiles, idt.second));
-        }
-    }
-
-
-    /++
-        Seconds passed the minute.
-
-        Params
-            second = The second to set this DateTime's second to.
-
-        Throws:
-            DateTimeException if the given seconds would result in an invalid
-            DateTime.
-     +/
-    @property void second(int second) pure
-    {
-        _tod.second = second;
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            assertThrown!DateTimeException((){DateTime.init.second = 60;}());
-
-            auto dt = DateTime.init;
-            dt.second = 33;
-            assertPred!"=="(dt, DateTime(1, 1, 1, 0, 0, 33));
-
-            const cdt = DateTime(1999, 7, 6, 12, 30, 33);
-            immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
-            static assert(!__traits(compiles, cdt.second = 27));
-            static assert(!__traits(compiles, idt.second = 27));
-        }
-    }
-
-
-    /++
-        Adds the given number of years or months to this DateTime. A negative
-        number will subtract.
-
-        Note that if day overflow is allowed, and the date with the adjusted
-        year/month overflows the number of days in the new month, then the month
-        will be incremented by one, and the days set to the number of days overflowed.
-        (e.g. if the day were 31 and the new month were June, then the month would
-        be incremented to July, and the new day would be 1). If day overflow is
-        not allowed, then the day will be set to the last valid day in the month
-        (e.g. June 31st would become June 30th).
-
-        Params:
-            units         = The type of units to add ("years" or "months").
-            value         = The number of months or years to add to this DateTime.
-            allowOverflow = Whether the days should be allowed to overflow, causing
-                            the month to increment.
-
-        Examples:
---------------------
-auto dt1 = DateTime(Date(2010, 1, 1), TimeOfDay(12, 30, 33));
-dt1.add!"months"(11);
-assert(dt1 == DateTime(Date(2010, 12, 1), TimeOfDay(12, 30, 33)));
-
-auto dt2 = DateTime(Date(2010, 1, 1), TimeOfDay(12, 30, 33));
-dt2.add!"months"(-11);
-assert(dt2 == DateTime(Date(2009, 2, 1), TimeOfDay(12, 30, 33)));
-
-auto dt3 = DateTime(Date(2000, 2, 29), TimeOfDay(12, 30, 33));
-dt3.add!"years"(1);
-assert(dt3 == DateTime(Date(2001, 3, 1), TimeOfDay(12, 30, 33)));
-
-auto dt4 = DateTime(Date(2000, 2, 29), TimeOfDay(12, 30, 33));
-dt4.add!"years"(1, AllowDayOverflow.no);
-assert(dt4 == DateTime(Date(2001, 2, 28), TimeOfDay(12, 30, 33)));
---------------------
+            ErrnoException (on Posix) or Exception (on Windows) if it fails to
+            get the time of day.
       +/
-    /+ref DateTime+/ void add(string units)(long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) pure nothrow
-        if(units == "years" ||
-           units == "months")
+    @safe
+    static @property TickDuration currAppTick()
     {
-        _date.add!units(value, allowOverflow);
+        return currSystemTick - TickDuration.appOrigin;
     }
 
     unittest
     {
         version(testStdDateTime)
         {
-            const cdt = DateTime(1999, 7, 6, 12, 30, 33);
-            immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
-            static assert(!__traits(compiles, cdt.add!"years"(4)));
-            static assert(!__traits(compiles, idt.add!"years"(4)));
-            static assert(!__traits(compiles, cdt.add!"months"(4)));
-            static assert(!__traits(compiles, idt.add!"months"(4)));
-
-            //Verify Examples.
-            auto dt1 = DateTime(Date(2010, 1, 1), TimeOfDay(12, 30, 33));
-            dt1.add!"months"(11);
-            assert(dt1 == DateTime(Date(2010, 12, 1), TimeOfDay(12, 30, 33)));
-
-            auto dt2 = DateTime(Date(2010, 1, 1), TimeOfDay(12, 30, 33));
-            dt2.add!"months"(-11);
-            assert(dt2 == DateTime(Date(2009, 2, 1), TimeOfDay(12, 30, 33)));
-
-            auto dt3 = DateTime(Date(2000, 2, 29), TimeOfDay(12, 30, 33));
-            dt3.add!"years"(1);
-            assert(dt3 == DateTime(Date(2001, 3, 1), TimeOfDay(12, 30, 33)));
-
-            auto dt4 = DateTime(Date(2000, 2, 29), TimeOfDay(12, 30, 33));
-            dt4.add!"years"(1, AllowDayOverflow.no);
-            assert(dt4 == DateTime(Date(2001, 2, 28), TimeOfDay(12, 30, 33)));
-        }
-    }
-
-
-    /++
-        Adds the given number of years or months this DateTime. A negative
-        number will subtract.
-
-        The difference between rolling and adding is that rolling does not
-        affect larger units. So, if you roll the DateTime 12 months, you get
-        the exact same Date. However, the days can still be affected due to
-        the differing number of days in each month.
-
-        Params:
-            units         = The units to roll.
-            value         = The number of units to add to this DateTime.
-            allowOverflow = Whether the days should be allowed to overflow, causing the month to increment.
-
-        Examples:
---------------------
-auto dt1 = DateTime(Date(2010, 1, 1), TimeOfDay(12, 33, 33));
-dt1.roll!"years"(1);
-assert(dt1 == DateTime(Date(2011, 1, 1), TimeOfDay(12, 33, 33)));
-
-auto dt2 = DateTime(Date(2010, 1, 1), TimeOfDay(12, 33, 33));
-dt2.roll!"months"(-12);
-assert(dt2 == DateTime(Date(2010, 1, 1), TimeOfDay(12, 33, 33)));
-
-auto dt3 = DateTime(Date(1999, 1, 29), TimeOfDay(12, 33, 33));
-dt3.roll!"months"(1);
-assert(dt3 == DateTime(Date(1999, 3, 1), TimeOfDay(12, 33, 33)));
-
-auto dt4 = DateTime(Date(1999, 1, 29), TimeOfDay(12, 33, 33));
-dt4.roll!"months"(1, AllowDayOverflow.no);
-assert(dt4 == DateTime(Date(1999, 2, 28), TimeOfDay(12, 33, 33)));
---------------------
-      +/
-    /+ref DateTime+/ void roll(string units)(long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) pure nothrow
-        if(units == "years" ||
-           units == "months")
-    {
-        _date.roll!units(value, allowOverflow);
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            const cdt = DateTime(1999, 7, 6, 12, 30, 33);
-            immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
-            static assert(!__traits(compiles, cdt.roll!"years"(4)));
-            static assert(!__traits(compiles, idt.roll!"years"(4)));
-            static assert(!__traits(compiles, cdt.roll!"months"(4)));
-            static assert(!__traits(compiles, idt.roll!"months"(4)));
-            static assert(!__traits(compiles, cdt.roll!"days"(4)));
-            static assert(!__traits(compiles, idt.roll!"days"(4)));
-
-            //Verify Examples
-            auto dt1 = DateTime(Date(2010, 1, 1), TimeOfDay(12, 33, 33));
-            dt1.roll!"years"(1);
-            assert(dt1 == DateTime(Date(2011, 1, 1), TimeOfDay(12, 33, 33)));
-
-            auto dt2 = DateTime(Date(2010, 1, 1), TimeOfDay(12, 33, 33));
-            dt2.roll!"months"(-12);
-            assert(dt2 == DateTime(Date(2010, 1, 1), TimeOfDay(12, 33, 33)));
-
-            auto dt3 = DateTime(Date(1999, 1, 29), TimeOfDay(12, 33, 33));
-            dt3.roll!"months"(1);
-            assert(dt3 == DateTime(Date(1999, 3, 1), TimeOfDay(12, 33, 33)));
-
-            auto dt4 = DateTime(Date(1999, 1, 29), TimeOfDay(12, 33, 33));
-            dt4.roll!"months"(1, AllowDayOverflow.no);
-            assert(dt4 == DateTime(Date(1999, 2, 28), TimeOfDay(12, 33, 33)));
-        }
-    }
-
-
-    /++
-        Adds the given number of days this DateTime. A negative number will subtract.
-
-        The difference between rolling and adding is that rolling does not affect
-        larger units. So, if you roll the Date one year's worth of days, then you
-        get the exact same Date.
-
-        Note that there is no $(D add!"days"()) because you can add days to a DateTime
-        by adding a duration to it.
-
-        Params:
-            days  = The number of days to add to this DateTime.
-
-        Examples:
---------------------
-auto dt = DateTime(Date(2010, 1, 1), TimeOfDay(11, 23, 12));
-dt.roll!"days"(1);
-assert(dt == DateTime(Date(2010, 1, 2), TimeOfDay(11, 23, 12)));
-dt.roll!"days"(365);
-assert(dt == DateTime(Date(2010, 1, 26), TimeOfDay(11, 23, 12)));
-dt.roll!"days"(-32);
-assert(dt == DateTime(Date(2010, 1, 25), TimeOfDay(11, 23, 12)));
---------------------
-      +/
-    /+ref DateTime+/ void roll(string units)(long days) pure nothrow
-        if(units == "days")
-    {
-        _date.roll!"days"(days);
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            const cdt = DateTime(1999, 7, 6, 12, 30, 33);
-            immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
-            static assert(!__traits(compiles, cdt.roll!"days"(4)));
-            static assert(!__traits(compiles, idt.roll!"days"(4)));
-
-            //Verify Examples.
-            auto dt = DateTime(Date(2010, 1, 1), TimeOfDay(11, 23, 12));
-            dt.roll!"days"(1);
-            assert(dt == DateTime(Date(2010, 1, 2), TimeOfDay(11, 23, 12)));
-            dt.roll!"days"(365);
-            assert(dt == DateTime(Date(2010, 1, 26), TimeOfDay(11, 23, 12)));
-            dt.roll!"days"(-32);
-            assert(dt == DateTime(Date(2010, 1, 25), TimeOfDay(11, 23, 12)));
-        }
-    }
-
-
-    /++
-        Add the given number of the given units to the time of day. Negative
-        values will subtract.
-
-        The difference between rolling and adding is that rolling does not
-        affect larger units. So, if you roll the DateTime 24 hours, you get
-        the exact same DateTime.
-
-        Note that there is no $(D add!"hours"()), $(D add!"minutes"()), or
-        $(D add!"seconds"()) function because you can add them to a DateTime by
-        adding a duration to it.
-
-        Params:
-            units = The units to roll.
-            value = The number of units to add to this DateTime.
-
-        Examples:
---------------------
-auto dt1 = DateTime(Date(2010, 7, 4), TimeOfDay(12, 0, 0));
-dt1.roll!"hours"(1);
-assert(dt1 == DateTime(Date(2010, 7, 4), TimeOfDay(13, 0, 0)));
-
-auto dt2 = DateTime(Date(2010, 2, 12), TimeOfDay(12, 0, 0));
-dt2.roll!"hours"(-1);
-assert(dt2 == DateTime(Date(2010, 2, 12), TimeOfDay(11, 0, 0)));
-
-auto dt3 = DateTime(Date(2009, 12, 31), TimeOfDay(23, 0, 0));
-dt3.roll!"hours"(1);
-assert(dt3 == DateTime(Date(2009, 12, 31), TimeOfDay(0, 0, 0)));
-
-auto dt4 = DateTime(Date(2010, 1, 1), TimeOfDay(0, 0, 0));
-dt4.roll!"hours"(-1);
-assert(dt4 == DateTime(Date(2010, 1, 1), TimeOfDay(23, 0, 0)));
---------------------
-      +/
-    /+ref DateTime+/ void roll(string units)(long value) pure nothrow
-        if(units == "hours" ||
-           units == "minutes" ||
-           units == "seconds")
-    {
-        _tod.roll!units(value);
-    }
-
-    //Test roll!"hours"().
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            static void testDT(DateTime orig, int hours, in DateTime expected, size_t line = __LINE__)
-            {
-                orig.roll!"hours"(hours);
-                assertPred!"=="(orig, expected, "", __FILE__, line);
-            }
-
-            //Test A.D.
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 0, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 1, DateTime(Date(1999, 7, 6), TimeOfDay(13, 30, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 2, DateTime(Date(1999, 7, 6), TimeOfDay(14, 30, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 3, DateTime(Date(1999, 7, 6), TimeOfDay(15, 30, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 4, DateTime(Date(1999, 7, 6), TimeOfDay(16, 30, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 5, DateTime(Date(1999, 7, 6), TimeOfDay(17, 30, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 6, DateTime(Date(1999, 7, 6), TimeOfDay(18, 30, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 7, DateTime(Date(1999, 7, 6), TimeOfDay(19, 30, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 8, DateTime(Date(1999, 7, 6), TimeOfDay(20, 30, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 9, DateTime(Date(1999, 7, 6), TimeOfDay(21, 30, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 10, DateTime(Date(1999, 7, 6), TimeOfDay(22, 30, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 11, DateTime(Date(1999, 7, 6), TimeOfDay(23, 30, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 12, DateTime(Date(1999, 7, 6), TimeOfDay(0, 30, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 13, DateTime(Date(1999, 7, 6), TimeOfDay(1, 30, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 14, DateTime(Date(1999, 7, 6), TimeOfDay(2, 30, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 15, DateTime(Date(1999, 7, 6), TimeOfDay(3, 30, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 16, DateTime(Date(1999, 7, 6), TimeOfDay(4, 30, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 17, DateTime(Date(1999, 7, 6), TimeOfDay(5, 30, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 18, DateTime(Date(1999, 7, 6), TimeOfDay(6, 30, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 19, DateTime(Date(1999, 7, 6), TimeOfDay(7, 30, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 20, DateTime(Date(1999, 7, 6), TimeOfDay(8, 30, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 21, DateTime(Date(1999, 7, 6), TimeOfDay(9, 30, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 22, DateTime(Date(1999, 7, 6), TimeOfDay(10, 30, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 23, DateTime(Date(1999, 7, 6), TimeOfDay(11, 30, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 24, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 25, DateTime(Date(1999, 7, 6), TimeOfDay(13, 30, 33)));
-
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -1, DateTime(Date(1999, 7, 6), TimeOfDay(11, 30, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -2, DateTime(Date(1999, 7, 6), TimeOfDay(10, 30, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -3, DateTime(Date(1999, 7, 6), TimeOfDay(9, 30, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -4, DateTime(Date(1999, 7, 6), TimeOfDay(8, 30, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -5, DateTime(Date(1999, 7, 6), TimeOfDay(7, 30, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -6, DateTime(Date(1999, 7, 6), TimeOfDay(6, 30, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -7, DateTime(Date(1999, 7, 6), TimeOfDay(5, 30, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -8, DateTime(Date(1999, 7, 6), TimeOfDay(4, 30, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -9, DateTime(Date(1999, 7, 6), TimeOfDay(3, 30, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -10, DateTime(Date(1999, 7, 6), TimeOfDay(2, 30, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -11, DateTime(Date(1999, 7, 6), TimeOfDay(1, 30, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -12, DateTime(Date(1999, 7, 6), TimeOfDay(0, 30, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -13, DateTime(Date(1999, 7, 6), TimeOfDay(23, 30, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -14, DateTime(Date(1999, 7, 6), TimeOfDay(22, 30, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -15, DateTime(Date(1999, 7, 6), TimeOfDay(21, 30, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -16, DateTime(Date(1999, 7, 6), TimeOfDay(20, 30, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -17, DateTime(Date(1999, 7, 6), TimeOfDay(19, 30, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -18, DateTime(Date(1999, 7, 6), TimeOfDay(18, 30, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -19, DateTime(Date(1999, 7, 6), TimeOfDay(17, 30, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -20, DateTime(Date(1999, 7, 6), TimeOfDay(16, 30, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -21, DateTime(Date(1999, 7, 6), TimeOfDay(15, 30, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -22, DateTime(Date(1999, 7, 6), TimeOfDay(14, 30, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -23, DateTime(Date(1999, 7, 6), TimeOfDay(13, 30, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -24, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -25, DateTime(Date(1999, 7, 6), TimeOfDay(11, 30, 33)));
-
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(0, 30, 33)), 1, DateTime(Date(1999, 7, 6), TimeOfDay(1, 30, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(0, 30, 33)), 0, DateTime(Date(1999, 7, 6), TimeOfDay(0, 30, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(0, 30, 33)), -1, DateTime(Date(1999, 7, 6), TimeOfDay(23, 30, 33)));
-
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(23, 30, 33)), 1, DateTime(Date(1999, 7, 6), TimeOfDay(0, 30, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(23, 30, 33)), 0, DateTime(Date(1999, 7, 6), TimeOfDay(23, 30, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(23, 30, 33)), -1, DateTime(Date(1999, 7, 6), TimeOfDay(22, 30, 33)));
-
-            testDT(DateTime(Date(1999, 7, 31), TimeOfDay(23, 30, 33)), 1, DateTime(Date(1999, 7, 31), TimeOfDay(0, 30, 33)));
-            testDT(DateTime(Date(1999, 8, 1), TimeOfDay(0, 30, 33)), -1, DateTime(Date(1999, 8, 1), TimeOfDay(23, 30, 33)));
-
-            testDT(DateTime(Date(1999, 12, 31), TimeOfDay(23, 30, 33)), 1, DateTime(Date(1999, 12, 31), TimeOfDay(0, 30, 33)));
-            testDT(DateTime(Date(2000, 1, 1), TimeOfDay(0, 30, 33)), -1, DateTime(Date(2000, 1, 1), TimeOfDay(23, 30, 33)));
-
-            testDT(DateTime(Date(1999, 2, 28), TimeOfDay(23, 30, 33)), 25, DateTime(Date(1999, 2, 28), TimeOfDay(0, 30, 33)));
-            testDT(DateTime(Date(1999, 3, 2), TimeOfDay(0, 30, 33)), -25, DateTime(Date(1999, 3, 2), TimeOfDay(23, 30, 33)));
-
-            testDT(DateTime(Date(2000, 2, 28), TimeOfDay(23, 30, 33)), 25, DateTime(Date(2000, 2, 28), TimeOfDay(0, 30, 33)));
-            testDT(DateTime(Date(2000, 3, 1), TimeOfDay(0, 30, 33)), -25, DateTime(Date(2000, 3, 1), TimeOfDay(23, 30, 33)));
-
-            //Test B.C.
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 0, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 1, DateTime(Date(-1999, 7, 6), TimeOfDay(13, 30, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 2, DateTime(Date(-1999, 7, 6), TimeOfDay(14, 30, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 3, DateTime(Date(-1999, 7, 6), TimeOfDay(15, 30, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 4, DateTime(Date(-1999, 7, 6), TimeOfDay(16, 30, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 5, DateTime(Date(-1999, 7, 6), TimeOfDay(17, 30, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 6, DateTime(Date(-1999, 7, 6), TimeOfDay(18, 30, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 7, DateTime(Date(-1999, 7, 6), TimeOfDay(19, 30, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 8, DateTime(Date(-1999, 7, 6), TimeOfDay(20, 30, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 9, DateTime(Date(-1999, 7, 6), TimeOfDay(21, 30, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 10, DateTime(Date(-1999, 7, 6), TimeOfDay(22, 30, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 11, DateTime(Date(-1999, 7, 6), TimeOfDay(23, 30, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 12, DateTime(Date(-1999, 7, 6), TimeOfDay(0, 30, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 13, DateTime(Date(-1999, 7, 6), TimeOfDay(1, 30, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 14, DateTime(Date(-1999, 7, 6), TimeOfDay(2, 30, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 15, DateTime(Date(-1999, 7, 6), TimeOfDay(3, 30, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 16, DateTime(Date(-1999, 7, 6), TimeOfDay(4, 30, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 17, DateTime(Date(-1999, 7, 6), TimeOfDay(5, 30, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 18, DateTime(Date(-1999, 7, 6), TimeOfDay(6, 30, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 19, DateTime(Date(-1999, 7, 6), TimeOfDay(7, 30, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 20, DateTime(Date(-1999, 7, 6), TimeOfDay(8, 30, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 21, DateTime(Date(-1999, 7, 6), TimeOfDay(9, 30, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 22, DateTime(Date(-1999, 7, 6), TimeOfDay(10, 30, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 23, DateTime(Date(-1999, 7, 6), TimeOfDay(11, 30, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 24, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 25, DateTime(Date(-1999, 7, 6), TimeOfDay(13, 30, 33)));
-
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -1, DateTime(Date(-1999, 7, 6), TimeOfDay(11, 30, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -2, DateTime(Date(-1999, 7, 6), TimeOfDay(10, 30, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -3, DateTime(Date(-1999, 7, 6), TimeOfDay(9, 30, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -4, DateTime(Date(-1999, 7, 6), TimeOfDay(8, 30, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -5, DateTime(Date(-1999, 7, 6), TimeOfDay(7, 30, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -6, DateTime(Date(-1999, 7, 6), TimeOfDay(6, 30, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -7, DateTime(Date(-1999, 7, 6), TimeOfDay(5, 30, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -8, DateTime(Date(-1999, 7, 6), TimeOfDay(4, 30, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -9, DateTime(Date(-1999, 7, 6), TimeOfDay(3, 30, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -10, DateTime(Date(-1999, 7, 6), TimeOfDay(2, 30, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -11, DateTime(Date(-1999, 7, 6), TimeOfDay(1, 30, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -12, DateTime(Date(-1999, 7, 6), TimeOfDay(0, 30, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -13, DateTime(Date(-1999, 7, 6), TimeOfDay(23, 30, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -14, DateTime(Date(-1999, 7, 6), TimeOfDay(22, 30, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -15, DateTime(Date(-1999, 7, 6), TimeOfDay(21, 30, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -16, DateTime(Date(-1999, 7, 6), TimeOfDay(20, 30, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -17, DateTime(Date(-1999, 7, 6), TimeOfDay(19, 30, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -18, DateTime(Date(-1999, 7, 6), TimeOfDay(18, 30, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -19, DateTime(Date(-1999, 7, 6), TimeOfDay(17, 30, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -20, DateTime(Date(-1999, 7, 6), TimeOfDay(16, 30, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -21, DateTime(Date(-1999, 7, 6), TimeOfDay(15, 30, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -22, DateTime(Date(-1999, 7, 6), TimeOfDay(14, 30, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -23, DateTime(Date(-1999, 7, 6), TimeOfDay(13, 30, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -24, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -25, DateTime(Date(-1999, 7, 6), TimeOfDay(11, 30, 33)));
-
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(0, 30, 33)), 1, DateTime(Date(-1999, 7, 6), TimeOfDay(1, 30, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(0, 30, 33)), 0, DateTime(Date(-1999, 7, 6), TimeOfDay(0, 30, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(0, 30, 33)), -1, DateTime(Date(-1999, 7, 6), TimeOfDay(23, 30, 33)));
-
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(23, 30, 33)), 1, DateTime(Date(-1999, 7, 6), TimeOfDay(0, 30, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(23, 30, 33)), 0, DateTime(Date(-1999, 7, 6), TimeOfDay(23, 30, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(23, 30, 33)), -1, DateTime(Date(-1999, 7, 6), TimeOfDay(22, 30, 33)));
-
-            testDT(DateTime(Date(-1999, 7, 31), TimeOfDay(23, 30, 33)), 1, DateTime(Date(-1999, 7, 31), TimeOfDay(0, 30, 33)));
-            testDT(DateTime(Date(-1999, 8, 1), TimeOfDay(0, 30, 33)), -1, DateTime(Date(-1999, 8, 1), TimeOfDay(23, 30, 33)));
-
-            testDT(DateTime(Date(-2001, 12, 31), TimeOfDay(23, 30, 33)), 1, DateTime(Date(-2001, 12, 31), TimeOfDay(0, 30, 33)));
-            testDT(DateTime(Date(-2000, 1, 1), TimeOfDay(0, 30, 33)), -1, DateTime(Date(-2000, 1, 1), TimeOfDay(23, 30, 33)));
-
-            testDT(DateTime(Date(-2001, 2, 28), TimeOfDay(23, 30, 33)), 25, DateTime(Date(-2001, 2, 28), TimeOfDay(0, 30, 33)));
-            testDT(DateTime(Date(-2001, 3, 2), TimeOfDay(0, 30, 33)), -25, DateTime(Date(-2001, 3, 2), TimeOfDay(23, 30, 33)));
-
-            testDT(DateTime(Date(-2000, 2, 28), TimeOfDay(23, 30, 33)), 25, DateTime(Date(-2000, 2, 28), TimeOfDay(0, 30, 33)));
-            testDT(DateTime(Date(-2000, 3, 1), TimeOfDay(0, 30, 33)), -25, DateTime(Date(-2000, 3, 1), TimeOfDay(23, 30, 33)));
-
-            //Test Both
-            testDT(DateTime(Date(-1, 1, 1), TimeOfDay(11, 30, 33)), 17_546, DateTime(Date(-1, 1, 1), TimeOfDay(13, 30, 33)));
-            testDT(DateTime(Date(1, 1, 1), TimeOfDay(13, 30, 33)), -17_546, DateTime(Date(1, 1, 1), TimeOfDay(11, 30, 33)));
-
-            const cdt = DateTime(1999, 7, 6, 12, 30, 33);
-            immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
-            static assert(!__traits(compiles, cdt.roll!"hours"(4)));
-            static assert(!__traits(compiles, idt.roll!"hours"(4)));
-
-            //Verify Examples.
-            auto dt1 = DateTime(Date(2010, 7, 4), TimeOfDay(12, 0, 0));
-            dt1.roll!"hours"(1);
-            assert(dt1 == DateTime(Date(2010, 7, 4), TimeOfDay(13, 0, 0)));
-
-            auto dt2 = DateTime(Date(2010, 2, 12), TimeOfDay(12, 0, 0));
-            dt2.roll!"hours"(-1);
-            assert(dt2 == DateTime(Date(2010, 2, 12), TimeOfDay(11, 0, 0)));
-
-            auto dt3 = DateTime(Date(2009, 12, 31), TimeOfDay(23, 0, 0));
-            dt3.roll!"hours"(1);
-            assert(dt3 == DateTime(Date(2009, 12, 31), TimeOfDay(0, 0, 0)));
-
-            auto dt4 = DateTime(Date(2010, 1, 1), TimeOfDay(0, 0, 0));
-            dt4.roll!"hours"(-1);
-            assert(dt4 == DateTime(Date(2010, 1, 1), TimeOfDay(23, 0, 0)));
-        }
-    }
-
-    //Test roll!"minutes"().
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            static void testDT(DateTime orig, int minutes, in DateTime expected, size_t line = __LINE__)
-            {
-                orig.roll!"minutes"(minutes);
-                assertPred!"=="(orig, expected, "", __FILE__, line);
-            }
-
-            //Test A.D.
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 0, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 1, DateTime(Date(1999, 7, 6), TimeOfDay(12, 31, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 2, DateTime(Date(1999, 7, 6), TimeOfDay(12, 32, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 3, DateTime(Date(1999, 7, 6), TimeOfDay(12, 33, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 4, DateTime(Date(1999, 7, 6), TimeOfDay(12, 34, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 5, DateTime(Date(1999, 7, 6), TimeOfDay(12, 35, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 10, DateTime(Date(1999, 7, 6), TimeOfDay(12, 40, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 15, DateTime(Date(1999, 7, 6), TimeOfDay(12, 45, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 29, DateTime(Date(1999, 7, 6), TimeOfDay(12, 59, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 30, DateTime(Date(1999, 7, 6), TimeOfDay(12, 0, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 45, DateTime(Date(1999, 7, 6), TimeOfDay(12, 15, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 60, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 75, DateTime(Date(1999, 7, 6), TimeOfDay(12, 45, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 90, DateTime(Date(1999, 7, 6), TimeOfDay(12, 0, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 100, DateTime(Date(1999, 7, 6), TimeOfDay(12, 10, 33)));
-
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 689, DateTime(Date(1999, 7, 6), TimeOfDay(12, 59, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 690, DateTime(Date(1999, 7, 6), TimeOfDay(12, 0, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 691, DateTime(Date(1999, 7, 6), TimeOfDay(12, 1, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 960, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 1439, DateTime(Date(1999, 7, 6), TimeOfDay(12, 29, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 1440, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 1441, DateTime(Date(1999, 7, 6), TimeOfDay(12, 31, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 2880, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
-
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -1, DateTime(Date(1999, 7, 6), TimeOfDay(12, 29, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -2, DateTime(Date(1999, 7, 6), TimeOfDay(12, 28, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -3, DateTime(Date(1999, 7, 6), TimeOfDay(12, 27, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -4, DateTime(Date(1999, 7, 6), TimeOfDay(12, 26, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -5, DateTime(Date(1999, 7, 6), TimeOfDay(12, 25, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -10, DateTime(Date(1999, 7, 6), TimeOfDay(12, 20, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -15, DateTime(Date(1999, 7, 6), TimeOfDay(12, 15, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -29, DateTime(Date(1999, 7, 6), TimeOfDay(12, 1, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -30, DateTime(Date(1999, 7, 6), TimeOfDay(12, 0, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -45, DateTime(Date(1999, 7, 6), TimeOfDay(12, 45, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -60, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -75, DateTime(Date(1999, 7, 6), TimeOfDay(12, 15, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -90, DateTime(Date(1999, 7, 6), TimeOfDay(12, 0, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -100, DateTime(Date(1999, 7, 6), TimeOfDay(12, 50, 33)));
-
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -749, DateTime(Date(1999, 7, 6), TimeOfDay(12, 1, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -750, DateTime(Date(1999, 7, 6), TimeOfDay(12, 0, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -751, DateTime(Date(1999, 7, 6), TimeOfDay(12, 59, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -960, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -1439, DateTime(Date(1999, 7, 6), TimeOfDay(12, 31, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -1440, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -1441, DateTime(Date(1999, 7, 6), TimeOfDay(12, 29, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -2880, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
-
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 0, 33)), 1, DateTime(Date(1999, 7, 6), TimeOfDay(12, 1, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 0, 33)), 0, DateTime(Date(1999, 7, 6), TimeOfDay(12, 0, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 0, 33)), -1, DateTime(Date(1999, 7, 6), TimeOfDay(12, 59, 33)));
-
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(11, 59, 33)), 1, DateTime(Date(1999, 7, 6), TimeOfDay(11, 0, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(11, 59, 33)), 0, DateTime(Date(1999, 7, 6), TimeOfDay(11, 59, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(11, 59, 33)), -1, DateTime(Date(1999, 7, 6), TimeOfDay(11, 58, 33)));
-
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 33)), 1, DateTime(Date(1999, 7, 6), TimeOfDay(0, 1, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 33)), 0, DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 33)), -1, DateTime(Date(1999, 7, 6), TimeOfDay(0, 59, 33)));
-
-            testDT(DateTime(Date(1999, 7, 5), TimeOfDay(23, 59, 33)), 1, DateTime(Date(1999, 7, 5), TimeOfDay(23, 0, 33)));
-            testDT(DateTime(Date(1999, 7, 5), TimeOfDay(23, 59, 33)), 0, DateTime(Date(1999, 7, 5), TimeOfDay(23, 59, 33)));
-            testDT(DateTime(Date(1999, 7, 5), TimeOfDay(23, 59, 33)), -1, DateTime(Date(1999, 7, 5), TimeOfDay(23, 58, 33)));
-
-            testDT(DateTime(Date(1998, 12, 31), TimeOfDay(23, 59, 33)), 1, DateTime(Date(1998, 12, 31), TimeOfDay(23, 0, 33)));
-            testDT(DateTime(Date(1998, 12, 31), TimeOfDay(23, 59, 33)), 0, DateTime(Date(1998, 12, 31), TimeOfDay(23, 59, 33)));
-            testDT(DateTime(Date(1998, 12, 31), TimeOfDay(23, 59, 33)), -1, DateTime(Date(1998, 12, 31), TimeOfDay(23, 58, 33)));
-
-            //Test B.C.
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 0, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 1, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 31, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 2, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 32, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 3, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 33, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 4, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 34, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 5, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 35, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 10, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 40, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 15, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 45, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 29, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 59, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 30, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 0, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 45, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 15, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 60, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 75, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 45, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 90, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 0, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 100, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 10, 33)));
-
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 689, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 59, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 690, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 0, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 691, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 1, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 960, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 1439, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 29, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 1440, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 1441, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 31, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 2880, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
-
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -1, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 29, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -2, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 28, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -3, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 27, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -4, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 26, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -5, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 25, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -10, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 20, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -15, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 15, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -29, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 1, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -30, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 0, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -45, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 45, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -60, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -75, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 15, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -90, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 0, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -100, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 50, 33)));
-
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -749, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 1, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -750, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 0, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -751, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 59, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -960, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -1439, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 31, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -1440, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -1441, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 29, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -2880, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
-
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 0, 33)), 1, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 1, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 0, 33)), 0, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 0, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 0, 33)), -1, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 59, 33)));
-
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(11, 59, 33)), 1, DateTime(Date(-1999, 7, 6), TimeOfDay(11, 0, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(11, 59, 33)), 0, DateTime(Date(-1999, 7, 6), TimeOfDay(11, 59, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(11, 59, 33)), -1, DateTime(Date(-1999, 7, 6), TimeOfDay(11, 58, 33)));
-
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(0, 0, 33)), 1, DateTime(Date(-1999, 7, 6), TimeOfDay(0, 1, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(0, 0, 33)), 0, DateTime(Date(-1999, 7, 6), TimeOfDay(0, 0, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(0, 0, 33)), -1, DateTime(Date(-1999, 7, 6), TimeOfDay(0, 59, 33)));
-
-            testDT(DateTime(Date(-1999, 7, 5), TimeOfDay(23, 59, 33)), 1, DateTime(Date(-1999, 7, 5), TimeOfDay(23, 0, 33)));
-            testDT(DateTime(Date(-1999, 7, 5), TimeOfDay(23, 59, 33)), 0, DateTime(Date(-1999, 7, 5), TimeOfDay(23, 59, 33)));
-            testDT(DateTime(Date(-1999, 7, 5), TimeOfDay(23, 59, 33)), -1, DateTime(Date(-1999, 7, 5), TimeOfDay(23, 58, 33)));
-
-            testDT(DateTime(Date(-2000, 12, 31), TimeOfDay(23, 59, 33)), 1, DateTime(Date(-2000, 12, 31), TimeOfDay(23, 0, 33)));
-            testDT(DateTime(Date(-2000, 12, 31), TimeOfDay(23, 59, 33)), 0, DateTime(Date(-2000, 12, 31), TimeOfDay(23, 59, 33)));
-            testDT(DateTime(Date(-2000, 12, 31), TimeOfDay(23, 59, 33)), -1, DateTime(Date(-2000, 12, 31), TimeOfDay(23, 58, 33)));
-
-            //Test Both
-            testDT(DateTime(Date(1, 1, 1), TimeOfDay(0, 0, 0)), -1, DateTime(Date(1, 1, 1), TimeOfDay(0, 59, 0)));
-            testDT(DateTime(Date(0, 12, 31), TimeOfDay(23, 59, 0)), 1, DateTime(Date(0, 12, 31), TimeOfDay(23, 0, 0)));
-
-            testDT(DateTime(Date(0, 1, 1), TimeOfDay(0, 0, 0)), -1, DateTime(Date(0, 1, 1), TimeOfDay(0, 59, 0)));
-            testDT(DateTime(Date(-1, 12, 31), TimeOfDay(23, 59, 0)), 1, DateTime(Date(-1, 12, 31), TimeOfDay(23, 0, 0)));
-
-            testDT(DateTime(Date(-1, 1, 1), TimeOfDay(11, 30, 33)), 1_052_760, DateTime(Date(-1, 1, 1), TimeOfDay(11, 30, 33)));
-            testDT(DateTime(Date(1, 1, 1), TimeOfDay(13, 30, 33)), -1_052_760, DateTime(Date(1, 1, 1), TimeOfDay(13, 30, 33)));
-
-            testDT(DateTime(Date(-1, 1, 1), TimeOfDay(11, 30, 33)), 1_052_782, DateTime(Date(-1, 1, 1), TimeOfDay(11, 52, 33)));
-            testDT(DateTime(Date(1, 1, 1), TimeOfDay(13, 52, 33)), -1_052_782, DateTime(Date(1, 1, 1), TimeOfDay(13, 30, 33)));
-
-            const cdt = DateTime(1999, 7, 6, 12, 30, 33);
-            immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
-            static assert(!__traits(compiles, cdt.roll!"minutes"(4)));
-            static assert(!__traits(compiles, idt.roll!"minutes"(4)));
-        }
-    }
-
-    //Test roll!"seconds"().
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            static void testDT(DateTime orig, int seconds, in DateTime expected, size_t line = __LINE__)
-            {
-                orig.roll!"seconds"(seconds);
-                assertPred!"=="(orig, expected, "", __FILE__, line);
-            }
-
-            //Test A.D.
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 0, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 1, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 34)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 2, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 35)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 3, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 36)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 4, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 37)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 5, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 38)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 10, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 43)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 15, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 48)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 26, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 59)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 27, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 0)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 30, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 3)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 59, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 32)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 60, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 61, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 34)));
-
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 1766, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 59)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 1767, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 0)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 1768, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 1)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 2007, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 0)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 3599, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 32)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 3600, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 3601, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 34)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 7200, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
-
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -1, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 32)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -2, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 31)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -3, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 30)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -4, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 29)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -5, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 28)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -10, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 23)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -15, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 18)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -33, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 0)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -34, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 59)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -35, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 58)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -59, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 34)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -60, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -61, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 32)));
-
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 0)), 1, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 1)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 0)), 0, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 0)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 0)), -1, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 59)));
-
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 0, 0)), 1, DateTime(Date(1999, 7, 6), TimeOfDay(12, 0, 1)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 0, 0)), 0, DateTime(Date(1999, 7, 6), TimeOfDay(12, 0, 0)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 0, 0)), -1, DateTime(Date(1999, 7, 6), TimeOfDay(12, 0, 59)));
-
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 0)), 1, DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 1)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 0)), 0, DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 0)));
-            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 0)), -1, DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 59)));
-
-            testDT(DateTime(Date(1999, 7, 5), TimeOfDay(23, 59, 59)), 1, DateTime(Date(1999, 7, 5), TimeOfDay(23, 59, 0)));
-            testDT(DateTime(Date(1999, 7, 5), TimeOfDay(23, 59, 59)), 0, DateTime(Date(1999, 7, 5), TimeOfDay(23, 59, 59)));
-            testDT(DateTime(Date(1999, 7, 5), TimeOfDay(23, 59, 59)), -1, DateTime(Date(1999, 7, 5), TimeOfDay(23, 59, 58)));
-
-            testDT(DateTime(Date(1998, 12, 31), TimeOfDay(23, 59, 59)), 1, DateTime(Date(1998, 12, 31), TimeOfDay(23, 59, 0)));
-            testDT(DateTime(Date(1998, 12, 31), TimeOfDay(23, 59, 59)), 0, DateTime(Date(1998, 12, 31), TimeOfDay(23, 59, 59)));
-            testDT(DateTime(Date(1998, 12, 31), TimeOfDay(23, 59, 59)), -1, DateTime(Date(1998, 12, 31), TimeOfDay(23, 59, 58)));
-
-            //Test B.C.
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 0, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 1, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 34)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 2, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 35)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 3, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 36)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 4, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 37)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 5, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 38)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 10, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 43)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 15, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 48)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 26, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 59)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 27, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 0)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 30, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 3)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 59, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 32)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 60, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 61, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 34)));
-
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 1766, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 59)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 1767, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 0)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 1768, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 1)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 2007, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 0)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 3599, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 32)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 3600, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 3601, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 34)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 7200, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
-
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -1, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 32)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -2, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 31)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -3, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 30)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -4, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 29)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -5, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 28)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -10, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 23)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -15, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 18)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -33, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 0)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -34, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 59)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -35, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 58)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -59, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 34)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -60, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -61, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 32)));
-
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 0)), 1, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 1)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 0)), 0, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 0)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 0)), -1, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 59)));
-
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 0, 0)), 1, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 0, 1)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 0, 0)), 0, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 0, 0)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 0, 0)), -1, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 0, 59)));
-
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(0, 0, 0)), 1, DateTime(Date(-1999, 7, 6), TimeOfDay(0, 0, 1)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(0, 0, 0)), 0, DateTime(Date(-1999, 7, 6), TimeOfDay(0, 0, 0)));
-            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(0, 0, 0)), -1, DateTime(Date(-1999, 7, 6), TimeOfDay(0, 0, 59)));
-
-            testDT(DateTime(Date(-1999, 7, 5), TimeOfDay(23, 59, 59)), 1, DateTime(Date(-1999, 7, 5), TimeOfDay(23, 59, 0)));
-            testDT(DateTime(Date(-1999, 7, 5), TimeOfDay(23, 59, 59)), 0, DateTime(Date(-1999, 7, 5), TimeOfDay(23, 59, 59)));
-            testDT(DateTime(Date(-1999, 7, 5), TimeOfDay(23, 59, 59)), -1, DateTime(Date(-1999, 7, 5), TimeOfDay(23, 59, 58)));
-
-            testDT(DateTime(Date(-2000, 12, 31), TimeOfDay(23, 59, 59)), 1, DateTime(Date(-2000, 12, 31), TimeOfDay(23, 59, 0)));
-            testDT(DateTime(Date(-2000, 12, 31), TimeOfDay(23, 59, 59)), 0, DateTime(Date(-2000, 12, 31), TimeOfDay(23, 59, 59)));
-            testDT(DateTime(Date(-2000, 12, 31), TimeOfDay(23, 59, 59)), -1, DateTime(Date(-2000, 12, 31), TimeOfDay(23, 59, 58)));
-
-            //Test Both
-            testDT(DateTime(Date(1, 1, 1), TimeOfDay(0, 0, 0)), -1, DateTime(Date(1, 1, 1), TimeOfDay(0, 0, 59)));
-            testDT(DateTime(Date(0, 12, 31), TimeOfDay(23, 59, 59)), 1, DateTime(Date(0, 12, 31), TimeOfDay(23, 59, 0)));
-
-            testDT(DateTime(Date(0, 1, 1), TimeOfDay(0, 0, 0)), -1, DateTime(Date(0, 1, 1), TimeOfDay(0, 0, 59)));
-            testDT(DateTime(Date(-1, 12, 31), TimeOfDay(23, 59, 59)), 1, DateTime(Date(-1, 12, 31), TimeOfDay(23, 59, 0)));
-
-            testDT(DateTime(Date(-1, 1, 1), TimeOfDay(11, 30, 33)), 63_165_600L, DateTime(Date(-1, 1, 1), TimeOfDay(11, 30, 33)));
-            testDT(DateTime(Date(1, 1, 1), TimeOfDay(13, 30, 33)), -63_165_600L, DateTime(Date(1, 1, 1), TimeOfDay(13, 30, 33)));
-
-            testDT(DateTime(Date(-1, 1, 1), TimeOfDay(11, 30, 33)), 63_165_617L, DateTime(Date(-1, 1, 1), TimeOfDay(11, 30, 50)));
-            testDT(DateTime(Date(1, 1, 1), TimeOfDay(13, 30, 50)), -63_165_617L, DateTime(Date(1, 1, 1), TimeOfDay(13, 30, 33)));
-
-            const cdt = DateTime(1999, 7, 6, 12, 30, 33);
-            immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
-            static assert(!__traits(compiles, cdt.roll!"seconds"(4)));
-            static assert(!__traits(compiles, idt.roll!"seconds"(4)));
-        }
-    }
-
-
-    /++
-        Gives the result of adding or subtracting a duration from this DateTime.
-
-        The legal types of arithmetic for DateTime using this operator are
-
-        $(TABLE
-        $(TR $(TD DateTime) $(TD +) $(TD duration) $(TD -->) $(TD DateTime))
-        $(TR $(TD DateTime) $(TD -) $(TD duration) $(TD -->) $(TD DateTime))
-        )
-
-        Params:
-            duration = The duration to add to or subtract from this DateTime.
-      +/
-    DateTime opBinary(string op, D)(in D duration) const pure nothrow
-        if((op == "+" || op == "-") &&
-           (is(Unqual!D == Duration) ||
-            is(Unqual!D == TickDuration)))
-    {
-        DateTime retval = this;
-
-        static if(is(Unqual!D == Duration))
-            immutable hnsecs = duration.total!"hnsecs";
-        else static if(is(Unqual!D == TickDuration))
-            immutable hnsecs = duration.hnsecs;
-
-        //Ideally, this would just be
-        //return retval.addSeconds(convert!("hnsecs", "seconds")(unaryFun!(op ~ "a")(hnsecs)));
-        //But there isn't currently a pure version of unaryFun!().
-
-        static if(op == "+")
-            immutable signedHNSecs = hnsecs;
-        else static if(op == "-")
-            immutable signedHNSecs = -hnsecs;
-        else
-            static assert(0);
-
-        return retval.addSeconds(convert!("hnsecs", "seconds")(signedHNSecs));
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            auto dt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
-
-            assertPred!"=="(dt + dur!"weeks"(7), DateTime(Date(1999, 8, 24), TimeOfDay(12, 30, 33)));
-            assertPred!"=="(dt + dur!"weeks"(-7), DateTime(Date(1999, 5, 18), TimeOfDay(12, 30, 33)));
-            assertPred!"=="(dt + dur!"days"(7), DateTime(Date(1999, 7, 13), TimeOfDay(12, 30, 33)));
-            assertPred!"=="(dt + dur!"days"(-7), DateTime(Date(1999, 6, 29), TimeOfDay(12, 30, 33)));
-
-            assertPred!"=="(dt + dur!"hours"(7), DateTime(Date(1999, 7, 6), TimeOfDay(19, 30, 33)));
-            assertPred!"=="(dt + dur!"hours"(-7), DateTime(Date(1999, 7, 6), TimeOfDay(5, 30, 33)));
-            assertPred!"=="(dt + dur!"minutes"(7), DateTime(Date(1999, 7, 6), TimeOfDay(12, 37, 33)));
-            assertPred!"=="(dt + dur!"minutes"(-7), DateTime(Date(1999, 7, 6), TimeOfDay(12, 23, 33)));
-            assertPred!"=="(dt + dur!"seconds"(7), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
-            assertPred!"=="(dt + dur!"seconds"(-7), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
-            assertPred!"=="(dt + dur!"msecs"(7_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
-            assertPred!"=="(dt + dur!"msecs"(-7_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
-            assertPred!"=="(dt + dur!"usecs"(7_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
-            assertPred!"=="(dt + dur!"usecs"(-7_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
-            assertPred!"=="(dt + dur!"hnsecs"(70_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
-            assertPred!"=="(dt + dur!"hnsecs"(-70_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
-
-            //This probably only runs in cases where gettimeofday() is used, but it's
-            //hard to do this test correctly with variable ticksPerSec.
-            if(TickDuration.ticksPerSec == 1_000_000)
-            {
-                assertPred!"=="(dt + TickDuration.from!"usecs"(7_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
-                assertPred!"=="(dt + TickDuration.from!"usecs"(-7_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
-            }
-
-            assertPred!"=="(dt - dur!"weeks"(-7), DateTime(Date(1999, 8, 24), TimeOfDay(12, 30, 33)));
-            assertPred!"=="(dt - dur!"weeks"(7), DateTime(Date(1999, 5, 18), TimeOfDay(12, 30, 33)));
-            assertPred!"=="(dt - dur!"days"(-7), DateTime(Date(1999, 7, 13), TimeOfDay(12, 30, 33)));
-            assertPred!"=="(dt - dur!"days"(7), DateTime(Date(1999, 6, 29), TimeOfDay(12, 30, 33)));
-
-            assertPred!"=="(dt - dur!"hours"(-7), DateTime(Date(1999, 7, 6), TimeOfDay(19, 30, 33)));
-            assertPred!"=="(dt - dur!"hours"(7), DateTime(Date(1999, 7, 6), TimeOfDay(5, 30, 33)));
-            assertPred!"=="(dt - dur!"minutes"(-7), DateTime(Date(1999, 7, 6), TimeOfDay(12, 37, 33)));
-            assertPred!"=="(dt - dur!"minutes"(7), DateTime(Date(1999, 7, 6), TimeOfDay(12, 23, 33)));
-            assertPred!"=="(dt - dur!"seconds"(-7), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
-            assertPred!"=="(dt - dur!"seconds"(7), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
-            assertPred!"=="(dt - dur!"msecs"(-7_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
-            assertPred!"=="(dt - dur!"msecs"(7_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
-            assertPred!"=="(dt - dur!"usecs"(-7_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
-            assertPred!"=="(dt - dur!"usecs"(7_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
-            assertPred!"=="(dt - dur!"hnsecs"(-70_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
-            assertPred!"=="(dt - dur!"hnsecs"(70_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
-
-            //This probably only runs in cases where gettimeofday() is used, but it's
-            //hard to do this test correctly with variable ticksPerSec.
-            if(TickDuration.ticksPerSec == 1_000_000)
-            {
-                assertPred!"=="(dt - TickDuration.from!"usecs"(-7_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
-                assertPred!"=="(dt - TickDuration.from!"usecs"(7_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
-            }
-
-            auto duration = dur!"seconds"(12);
-            const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
-            immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
-            static assert(__traits(compiles, cdt + duration));
-            static assert(__traits(compiles, idt + duration));
-            static assert(__traits(compiles, cdt - duration));
-            static assert(__traits(compiles, idt - duration));
-        }
-    }
-
-
-    /++
-        Gives the result of adding or subtracting a duration from this DateTime,
-        as well as assigning the result to this DateTime.
-
-        The legal types of arithmetic for DateTime using this operator are
-
-        $(TABLE
-        $(TR $(TD DateTime) $(TD +) $(TD duration) $(TD -->) $(TD DateTime))
-        $(TR $(TD DateTime) $(TD -) $(TD duration) $(TD -->) $(TD DateTime))
-        )
-
-        Params:
-            duration = The duration to add to or subtract from this DateTime.
-      +/
-    /+ref+/ DateTime opOpAssign(string op, D)(in D duration) pure nothrow
-        if((op == "+" || op == "-") &&
-           (is(Unqual!D == Duration) ||
-            is(Unqual!D == TickDuration)))
-    {
-        DateTime retval = this;
-
-        static if(is(Unqual!D == Duration))
-            immutable hnsecs = duration.total!"hnsecs";
-        else static if(is(Unqual!D == TickDuration))
-            immutable hnsecs = duration.hnsecs;
-
-        //Ideally, this would just be
-       //return addSeconds(convert!("hnsecs", "seconds")(unaryFun!(op ~ "a")(hnsecs)));
-        //But there isn't currently a pure version of unaryFun!().
-
-        static if(op == "+")
-            immutable signedHNSecs = hnsecs;
-        else static if(op == "-")
-            immutable signedHNSecs = -hnsecs;
-        else
-            static assert(0);
-
-        return addSeconds(convert!("hnsecs", "seconds")(signedHNSecs));
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            assertPred!"+="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"weeks"(7), DateTime(Date(1999, 8, 24), TimeOfDay(12, 30, 33)));
-            assertPred!"+="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"weeks"(-7), DateTime(Date(1999, 5, 18), TimeOfDay(12, 30, 33)));
-            assertPred!"+="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"days"(7), DateTime(Date(1999, 7, 13), TimeOfDay(12, 30, 33)));
-            assertPred!"+="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"days"(-7), DateTime(Date(1999, 6, 29), TimeOfDay(12, 30, 33)));
-
-            assertPred!"+="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"hours"(7), DateTime(Date(1999, 7, 6), TimeOfDay(19, 30, 33)));
-            assertPred!"+="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"hours"(-7), DateTime(Date(1999, 7, 6), TimeOfDay(5, 30, 33)));
-            assertPred!"+="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"minutes"(7), DateTime(Date(1999, 7, 6), TimeOfDay(12, 37, 33)));
-            assertPred!"+="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"minutes"(-7), DateTime(Date(1999, 7, 6), TimeOfDay(12, 23, 33)));
-            assertPred!"+="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"seconds"(7), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
-            assertPred!"+="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"seconds"(-7), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
-            assertPred!"+="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"msecs"(7_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
-            assertPred!"+="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"msecs"(-7_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
-            assertPred!"+="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"usecs"(7_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
-            assertPred!"+="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"usecs"(-7_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
-            assertPred!"+="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"hnsecs"(70_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
-            assertPred!"+="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"hnsecs"(-70_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
-
-            assertPred!"-="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"weeks"(-7), DateTime(Date(1999, 8, 24), TimeOfDay(12, 30, 33)));
-            assertPred!"-="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"weeks"(7), DateTime(Date(1999, 5, 18), TimeOfDay(12, 30, 33)));
-            assertPred!"-="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"days"(-7), DateTime(Date(1999, 7, 13), TimeOfDay(12, 30, 33)));
-            assertPred!"-="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"days"(7), DateTime(Date(1999, 6, 29), TimeOfDay(12, 30, 33)));
-
-            assertPred!"-="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"hours"(-7), DateTime(Date(1999, 7, 6), TimeOfDay(19, 30, 33)));
-            assertPred!"-="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"hours"(7), DateTime(Date(1999, 7, 6), TimeOfDay(5, 30, 33)));
-            assertPred!"-="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"minutes"(-7), DateTime(Date(1999, 7, 6), TimeOfDay(12, 37, 33)));
-            assertPred!"-="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"minutes"(7), DateTime(Date(1999, 7, 6), TimeOfDay(12, 23, 33)));
-            assertPred!"-="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"seconds"(-7), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
-            assertPred!"-="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"seconds"(7), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
-            assertPred!"-="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"msecs"(-7_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
-            assertPred!"-="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"msecs"(7_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
-            assertPred!"-="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"usecs"(-7_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
-            assertPred!"-="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"usecs"(7_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
-            assertPred!"-="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"hnsecs"(-70_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
-            assertPred!"-="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"hnsecs"(70_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
-
-            auto duration = dur!"seconds"(12);
-            const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
-            immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
-            static assert(!__traits(compiles, cdt += duration));
-            static assert(!__traits(compiles, idt += duration));
-            static assert(!__traits(compiles, cdt -= duration));
-            static assert(!__traits(compiles, idt -= duration));
-        }
-    }
-
-
-    /++
-        Gives the difference between two DateTimes.
-
-        The legal types of arithmetic for DateTime using this operator are
-
-        $(TABLE
-        $(TR $(TD DateTime) $(TD -) $(TD DateTime) $(TD -->) $(TD duration))
-        )
-      +/
-    Duration opBinary(string op)(in DateTime rhs) const pure nothrow
-        if(op == "-")
-    {
-        immutable dateResult = _date - rhs.date;
-        immutable todResult = _tod - rhs._tod;
-
-        return dur!"hnsecs"(dateResult.total!"hnsecs" + todResult.total!"hnsecs");
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            auto dt = DateTime(1999, 7, 6, 12, 30, 33);
-
-            assertPred!"=="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) -
-                         DateTime(Date(1998, 7, 6), TimeOfDay(12, 30, 33)),
-                        dur!"seconds"(31_536_000));
-            assertPred!"=="(DateTime(Date(1998, 7, 6), TimeOfDay(12, 30, 33)) -
-                         DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)),
-                        dur!"seconds"(-31_536_000));
-
-            assertPred!"=="(DateTime(Date(1999, 8, 6), TimeOfDay(12, 30, 33)) -
-                         DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)),
-                        dur!"seconds"(26_78_400));
-            assertPred!"=="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) -
-                         DateTime(Date(1999, 8, 6), TimeOfDay(12, 30, 33)),
-                        dur!"seconds"(-26_78_400));
-
-            assertPred!"=="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) -
-                         DateTime(Date(1999, 7, 5), TimeOfDay(12, 30, 33)),
-                        dur!"seconds"(86_400));
-            assertPred!"=="(DateTime(Date(1999, 7, 5), TimeOfDay(12, 30, 33)) -
-                         DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)),
-                        dur!"seconds"(-86_400));
-
-            assertPred!"=="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) -
-                         DateTime(Date(1999, 7, 6), TimeOfDay(11, 30, 33)),
-                        dur!"seconds"(3600));
-            assertPred!"=="(DateTime(Date(1999, 7, 6), TimeOfDay(11, 30, 33)) -
-                         DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)),
-                        dur!"seconds"(-3600));
-
-            assertPred!"=="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 31, 33)) -
-                         DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)),
-                        dur!"seconds"(60));
-            assertPred!"=="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) -
-                         DateTime(Date(1999, 7, 6), TimeOfDay(12, 31, 33)),
-                        dur!"seconds"(-60));
-
-            assertPred!"=="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 34)) -
-                         DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)),
-                        dur!"seconds"(1));
-            assertPred!"=="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) -
-                         DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 34)),
-                        dur!"seconds"(-1));
-
-            assertPred!"=="(DateTime(1, 1, 1, 12, 30, 33) - DateTime(1, 1, 1, 0, 0, 0), dur!"seconds"(45033));
-            assertPred!"=="(DateTime(1, 1, 1, 0, 0, 0) - DateTime(1, 1, 1, 12, 30, 33), dur!"seconds"(-45033));
-            assertPred!"=="(DateTime(0, 12, 31, 12, 30, 33) - DateTime(1, 1, 1, 0, 0, 0), dur!"seconds"(-41367));
-            assertPred!"=="(DateTime(1, 1, 1, 0, 0, 0) - DateTime(0, 12, 31, 12, 30, 33), dur!"seconds"(41367));
-
-            const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
-            immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
-            static assert(__traits(compiles, dt - dt));
-            static assert(__traits(compiles, cdt - dt));
-            static assert(__traits(compiles, idt - dt));
-
-            static assert(__traits(compiles, dt - cdt));
-            static assert(__traits(compiles, cdt - cdt));
-            static assert(__traits(compiles, idt - cdt));
-
-            static assert(__traits(compiles, dt - idt));
-            static assert(__traits(compiles, cdt - idt));
-            static assert(__traits(compiles, idt - idt));
-        }
-    }
-
-
-    /++
-        Returns the difference between the two DateTimes in months.
-
-        You can get the difference in years by subtracting the year property
-        of two DateTimes, and you can get the difference in days or weeks by
-        subtracting the DateTimes themselves and using the Duration that results,
-        but because you cannot convert between months and smaller units without
-        a specific date (which Durations don't have), you cannot get the difference
-        in months without doing some math using both the year and month properties,
-        so this is a convenience function for getting the difference in months.
-
-        Note that the number of days in the months or how far into the month either
-        date is is irrelevant. It is the difference in the month property combined
-        with the difference in years * 12. So, for instance, December 31st and
-        January 1st are one month apart just as December 1st and January 31st are
-        one month apart.
-
-        Params:
-            rhs = The DateTime to subtract from this one.
-
-        Examples:
---------------------
-assert(DateTime(1999, 2, 1, 12, 2, 3).diffMonths(DateTime(1999, 1, 31, 23, 59, 59)) == 1);
-assert(DateTime(1999, 1, 31, 0, 0, 0).diffMonths(DateTime(1999, 2, 1, 12, 3, 42)) == -1);
-assert(DateTime(1999, 3, 1, 5, 30, 0).diffMonths(DateTime(1999, 1, 1, 2, 4, 7)) == 2);
-assert(DateTime(1999, 1, 1, 7, 2, 4).diffMonths(DateTime(1999, 3, 31, 0, 30, 58)) == -2);
---------------------
-      +/
-    int diffMonths(in DateTime rhs) const pure nothrow
-    {
-        return _date.diffMonths(rhs._date);
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            auto dt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
-            const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
-            immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
-            static assert(__traits(compiles, dt.diffMonths(dt)));
-            static assert(__traits(compiles, cdt.diffMonths(dt)));
-            static assert(__traits(compiles, idt.diffMonths(dt)));
-
-            static assert(__traits(compiles, dt.diffMonths(cdt)));
-            static assert(__traits(compiles, cdt.diffMonths(cdt)));
-            static assert(__traits(compiles, idt.diffMonths(cdt)));
-
-            static assert(__traits(compiles, dt.diffMonths(idt)));
-            static assert(__traits(compiles, cdt.diffMonths(idt)));
-            static assert(__traits(compiles, idt.diffMonths(idt)));
-
-            //Verify Examples.
-            assert(DateTime(1999, 2, 1, 12, 2, 3).diffMonths(DateTime(1999, 1, 31, 23, 59, 59)) == 1);
-            assert(DateTime(1999, 1, 31, 0, 0, 0).diffMonths(DateTime(1999, 2, 1, 12, 3, 42)) == -1);
-            assert(DateTime(1999, 3, 1, 5, 30, 0).diffMonths(DateTime(1999, 1, 1, 2, 4, 7)) == 2);
-            assert(DateTime(1999, 1, 1, 7, 2, 4).diffMonths(DateTime(1999, 3, 31, 0, 30, 58)) == -2);
-        }
-    }
-
-
-    /++
-        Whether this DateTime is in a leap year.
-     +/
-    @property bool isLeapYear() const pure nothrow
-    {
-        return _date.isLeapYear;
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            auto dt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
-            const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
-            immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
-            static assert(__traits(compiles, dt.isLeapYear));
-            static assert(__traits(compiles, cdt.isLeapYear));
-            static assert(__traits(compiles, idt.isLeapYear));
-        }
-    }
-
-
-    /++
-        Day of the week this DateTime is on.
-      +/
-    @property DayOfWeek dayOfWeek() const pure nothrow
-    {
-        return _date.dayOfWeek;
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            auto dt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
-            const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
-            immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
-            static assert(__traits(compiles, dt.dayOfWeek));
-            static assert(__traits(compiles, cdt.dayOfWeek));
-            static assert(__traits(compiles, idt.dayOfWeek));
-        }
-    }
-
-
-    /++
-        Day of the year this DateTime is on.
-
-        Examples:
---------------------
-assert(DateTime(Date(1999, 1, 1), TimeOfDay(12, 22, 7)).dayOfYear == 1);
-assert(DateTime(Date(1999, 12, 31), TimeOfDay(7, 2, 59)).dayOfYear == 365);
-assert(DateTime(Date(2000, 12, 31), TimeOfDay(21, 20, 0)).dayOfYear == 366);
---------------------
-      +/
-    @property ushort dayOfYear() const pure nothrow
-    {
-        return _date.dayOfYear;
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            auto dt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
-            const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
-            immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
-            static assert(__traits(compiles, dt.dayOfYear));
-            static assert(__traits(compiles, cdt.dayOfYear));
-            static assert(__traits(compiles, idt.dayOfYear));
-
-            //Verify Examples.
-            assert(DateTime(Date(1999, 1, 1), TimeOfDay(12, 22, 7)).dayOfYear == 1);
-            assert(DateTime(Date(1999, 12, 31), TimeOfDay(7, 2, 59)).dayOfYear == 365);
-            assert(DateTime(Date(2000, 12, 31), TimeOfDay(21, 20, 0)).dayOfYear == 366);
-        }
-    }
-
-
-    /++
-        Day of the year.
-
-        Params:
-            day = The day of the year to set which day of the year this DateTime is on.
-      +/
-    @property void dayOfYear(int day) pure
-    {
-        _date.dayOfYear = day;
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            auto dt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
-            const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
-            immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
-            static assert(__traits(compiles, dt.dayOfYear = 12));
-            static assert(!__traits(compiles, cdt.dayOfYear = 12));
-            static assert(!__traits(compiles, idt.dayOfYear = 12));
-        }
-    }
-
-
-    /++
-        The Xth day of the Gregorian Calendar that this DateTime is on.
-
-        Examples:
---------------------
-assert(DateTime(Date(1, 1, 1), TimeOfDay(0, 0, 0)).dayOfGregorianCal == 1);
-assert(DateTime(Date(1, 12, 31), TimeOfDay(23, 59, 59)).dayOfGregorianCal == 365);
-assert(DateTime(Date(2, 1, 1), TimeOfDay(2, 2, 2)).dayOfGregorianCal == 366);
-
-assert(DateTime(Date(0, 12, 31), TimeOfDay(7, 7, 7)).dayOfGregorianCal == 0);
-assert(DateTime(Date(0, 1, 1), TimeOfDay(19, 30, 0)).dayOfGregorianCal == -365);
-assert(DateTime(Date(-1, 12, 31), TimeOfDay(4, 7, 0)).dayOfGregorianCal == -366);
-
-assert(DateTime(Date(2000, 1, 1), TimeOfDay(9, 30, 20)).dayOfGregorianCal == 730_120);
-assert(DateTime(Date(2010, 12, 31), TimeOfDay(15, 45, 50)).dayOfGregorianCal == 734_137);
---------------------
-     +/
-    @property int dayOfGregorianCal() const pure nothrow
-    {
-        return _date.dayOfGregorianCal;
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
-            immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
-            static assert(__traits(compiles, cdt.dayOfGregorianCal));
-            static assert(__traits(compiles, idt.dayOfGregorianCal));
-
-            //Verify Examples.
-            assert(DateTime(Date(1, 1, 1), TimeOfDay(0, 0, 0)).dayOfGregorianCal == 1);
-            assert(DateTime(Date(1, 12, 31), TimeOfDay(23, 59, 59)).dayOfGregorianCal == 365);
-            assert(DateTime(Date(2, 1, 1), TimeOfDay(2, 2, 2)).dayOfGregorianCal == 366);
-
-            assert(DateTime(Date(0, 12, 31), TimeOfDay(7, 7, 7)).dayOfGregorianCal == 0);
-            assert(DateTime(Date(0, 1, 1), TimeOfDay(19, 30, 0)).dayOfGregorianCal == -365);
-            assert(DateTime(Date(-1, 12, 31), TimeOfDay(4, 7, 0)).dayOfGregorianCal == -366);
-
-            assert(DateTime(Date(2000, 1, 1), TimeOfDay(9, 30, 20)).dayOfGregorianCal == 730_120);
-            assert(DateTime(Date(2010, 12, 31), TimeOfDay(15, 45, 50)).dayOfGregorianCal == 734_137);
-        }
-    }
-
-
-    /++
-        The Xth day of the Gregorian Calendar that this DateTime is on. Setting
-        this property does not affect the time portion of DateTime.
-
-        Params:
-            days = The day of the Gregorian Calendar to set this DateTime to.
-
-        Examples:
---------------------
-auto dt = DateTime(Date.init, TimeOfDay(12, 0, 0));
-dt.dayOfGregorianCal = 1;
-assert(dt == DateTime(Date(1, 1, 1), TimeOfDay(12, 0, 0)));
-
-dt.dayOfGregorianCal = 365;
-assert(dt == DateTime(Date(1, 12, 31), TimeOfDay(12, 0, 0)));
-
-dt.dayOfGregorianCal = 366;
-assert(dt == DateTime(Date(2, 1, 1), TimeOfDay(12, 0, 0)));
-
-dt.dayOfGregorianCal = 0;
-assert(dt == DateTime(Date(0, 12, 31), TimeOfDay(12, 0, 0)));
-
-dt.dayOfGregorianCal = -365;
-assert(dt == DateTime(Date(-0, 1, 1), TimeOfDay(12, 0, 0)));
-
-dt.dayOfGregorianCal = -366;
-assert(dt == DateTime(Date(-1, 12, 31), TimeOfDay(12, 0, 0)));
-
-dt.dayOfGregorianCal = 730_120;
-assert(dt == DateTime(Date(2000, 1, 1), TimeOfDay(12, 0, 0)));
-
-dt.dayOfGregorianCal = 734_137;
-assert(dt == DateTime(Date(2010, 12, 31), TimeOfDay(12, 0, 0)));
---------------------
-     +/
-    @property void dayOfGregorianCal(int days) pure nothrow
-    {
-        _date.dayOfGregorianCal = days;
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
-            immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
-            static assert(!__traits(compiles, cdt.dayOfGregorianCal = 7));
-            static assert(!__traits(compiles, idt.dayOfGregorianCal = 7));
-
-            //Verify Examples.
-            auto dt = DateTime(Date.init, TimeOfDay(12, 0, 0));
-            dt.dayOfGregorianCal = 1;
-            assert(dt == DateTime(Date(1, 1, 1), TimeOfDay(12, 0, 0)));
-
-            dt.dayOfGregorianCal = 365;
-            assert(dt == DateTime(Date(1, 12, 31), TimeOfDay(12, 0, 0)));
-
-            dt.dayOfGregorianCal = 366;
-            assert(dt == DateTime(Date(2, 1, 1), TimeOfDay(12, 0, 0)));
-
-            dt.dayOfGregorianCal = 0;
-            assert(dt == DateTime(Date(0, 12, 31), TimeOfDay(12, 0, 0)));
-
-            dt.dayOfGregorianCal = -365;
-            assert(dt == DateTime(Date(-0, 1, 1), TimeOfDay(12, 0, 0)));
-
-            dt.dayOfGregorianCal = -366;
-            assert(dt == DateTime(Date(-1, 12, 31), TimeOfDay(12, 0, 0)));
-
-            dt.dayOfGregorianCal = 730_120;
-            assert(dt == DateTime(Date(2000, 1, 1), TimeOfDay(12, 0, 0)));
-
-            dt.dayOfGregorianCal = 734_137;
-            assert(dt == DateTime(Date(2010, 12, 31), TimeOfDay(12, 0, 0)));
-        }
-    }
-
-
-    /++
-        The ISO 8601 week of the year that this DateTime is in.
-
-        See_Also:
-            <a href="http://en.wikipedia.org/wiki/ISO_week_date">ISO Week Date</a>
-      +/
-    @property ubyte isoWeek() const pure nothrow
-    {
-        return _date.isoWeek;
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            auto dt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
-            const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
-            immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
-            static assert(__traits(compiles, dt.isoWeek));
-            static assert(__traits(compiles, cdt.isoWeek));
-            static assert(__traits(compiles, idt.isoWeek));
-        }
-    }
-
-
-    /++
-        DateTime for the last day in the month that this DateTime is in.
-        The time portion of endOfMonth is always 23:59:59.
-
-        Examples:
---------------------
-assert(DateTime(Date(1999, 1, 6), TimeOfDay(0, 0, 0)).endOfMonth == DateTime(Date(1999, 1, 31), TimeOfDay(23, 59, 59)));
-assert(DateTime(Date(1999, 2, 7), TimeOfDay(19, 30, 0)).endOfMonth == DateTime(Date(1999, 2, 28), TimeOfDay(23, 59, 59)));
-assert(DateTime(Date(2000, 2, 7), TimeOfDay(5, 12, 27)).endOfMonth == DateTime(Date(2000, 2, 29), TimeOfDay(23, 59, 59)));
-assert(DateTime(Date(2000, 6, 4), TimeOfDay(12, 22, 9)).endOfMonth == DateTime(Date(2000, 6, 30), TimeOfDay(23, 59, 59)));
---------------------
-      +/
-    @property DateTime endOfMonth() const pure nothrow
-    {
-        try
-            return DateTime(_date.endOfMonth, TimeOfDay(23, 59, 59));
-        catch(Exception e)
-            assert(0, "DateTime constructor threw.");
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            //Test A.D.
-            assertPred!"=="(DateTime(1999, 1, 1, 0, 13, 26).endOfMonth, DateTime(1999, 1, 31, 23, 59, 59));
-            assertPred!"=="(DateTime(1999, 2, 1, 1, 14, 27).endOfMonth, DateTime(1999, 2, 28, 23, 59, 59));
-            assertPred!"=="(DateTime(2000, 2, 1, 2, 15, 28).endOfMonth, DateTime(2000, 2, 29, 23, 59, 59));
-            assertPred!"=="(DateTime(1999, 3, 1, 3, 16, 29).endOfMonth, DateTime(1999, 3, 31, 23, 59, 59));
-            assertPred!"=="(DateTime(1999, 4, 1, 4, 17, 30).endOfMonth, DateTime(1999, 4, 30, 23, 59, 59));
-            assertPred!"=="(DateTime(1999, 5, 1, 5, 18, 31).endOfMonth, DateTime(1999, 5, 31, 23, 59, 59));
-            assertPred!"=="(DateTime(1999, 6, 1, 6, 19, 32).endOfMonth, DateTime(1999, 6, 30, 23, 59, 59));
-            assertPred!"=="(DateTime(1999, 7, 1, 7, 20, 33).endOfMonth, DateTime(1999, 7, 31, 23, 59, 59));
-            assertPred!"=="(DateTime(1999, 8, 1, 8, 21, 34).endOfMonth, DateTime(1999, 8, 31, 23, 59, 59));
-            assertPred!"=="(DateTime(1999, 9, 1, 9, 22, 35).endOfMonth, DateTime(1999, 9, 30, 23, 59, 59));
-            assertPred!"=="(DateTime(1999, 10, 1, 10, 23, 36).endOfMonth, DateTime(1999, 10, 31, 23, 59, 59));
-            assertPred!"=="(DateTime(1999, 11, 1, 11, 24, 37).endOfMonth, DateTime(1999, 11, 30, 23, 59, 59));
-            assertPred!"=="(DateTime(1999, 12, 1, 12, 25, 38).endOfMonth, DateTime(1999, 12, 31, 23, 59, 59));
-
-            //Test B.C.
-            assertPred!"=="(DateTime(-1999, 1, 1, 0, 13, 26).endOfMonth, DateTime(-1999, 1, 31, 23, 59, 59));
-            assertPred!"=="(DateTime(-1999, 2, 1, 1, 14, 27).endOfMonth, DateTime(-1999, 2, 28, 23, 59, 59));
-            assertPred!"=="(DateTime(-2000, 2, 1, 2, 15, 28).endOfMonth, DateTime(-2000, 2, 29, 23, 59, 59));
-            assertPred!"=="(DateTime(-1999, 3, 1, 3, 16, 29).endOfMonth, DateTime(-1999, 3, 31, 23, 59, 59));
-            assertPred!"=="(DateTime(-1999, 4, 1, 4, 17, 30).endOfMonth, DateTime(-1999, 4, 30, 23, 59, 59));
-            assertPred!"=="(DateTime(-1999, 5, 1, 5, 18, 31).endOfMonth, DateTime(-1999, 5, 31, 23, 59, 59));
-            assertPred!"=="(DateTime(-1999, 6, 1, 6, 19, 32).endOfMonth, DateTime(-1999, 6, 30, 23, 59, 59));
-            assertPred!"=="(DateTime(-1999, 7, 1, 7, 20, 33).endOfMonth, DateTime(-1999, 7, 31, 23, 59, 59));
-            assertPred!"=="(DateTime(-1999, 8, 1, 8, 21, 34).endOfMonth, DateTime(-1999, 8, 31, 23, 59, 59));
-            assertPred!"=="(DateTime(-1999, 9, 1, 9, 22, 35).endOfMonth, DateTime(-1999, 9, 30, 23, 59, 59));
-            assertPred!"=="(DateTime(-1999, 10, 1, 10, 23, 36).endOfMonth, DateTime(-1999, 10, 31, 23, 59, 59));
-            assertPred!"=="(DateTime(-1999, 11, 1, 11, 24, 37).endOfMonth, DateTime(-1999, 11, 30, 23, 59, 59));
-            assertPred!"=="(DateTime(-1999, 12, 1, 12, 25, 38).endOfMonth, DateTime(-1999, 12, 31, 23, 59, 59));
-
-            const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
-            immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
-            static assert(__traits(compiles, cdt.endOfMonth));
-            static assert(__traits(compiles, idt.endOfMonth));
-
-            //Verify Examples.
-            assert(DateTime(Date(1999, 1, 6), TimeOfDay(0, 0, 0)).endOfMonth == DateTime(Date(1999, 1, 31), TimeOfDay(23, 59, 59)));
-            assert(DateTime(Date(1999, 2, 7), TimeOfDay(19, 30, 0)).endOfMonth == DateTime(Date(1999, 2, 28), TimeOfDay(23, 59, 59)));
-            assert(DateTime(Date(2000, 2, 7), TimeOfDay(5, 12, 27)).endOfMonth == DateTime(Date(2000, 2, 29), TimeOfDay(23, 59, 59)));
-            assert(DateTime(Date(2000, 6, 4), TimeOfDay(12, 22, 9)).endOfMonth == DateTime(Date(2000, 6, 30), TimeOfDay(23, 59, 59)));
-        }
-    }
-
-
-    /++
-        The last day in the month that this DateTime is in.
-
-        Examples:
---------------------
-assert(DateTime(Date(1999, 1, 6), TimeOfDay(0, 0, 0)).endOfMonthDay == 31);
-assert(DateTime(Date(1999, 2, 7), TimeOfDay(19, 30, 0)).endOfMonthDay == 28);
-assert(DateTime(Date(2000, 2, 7), TimeOfDay(5, 12, 27)).endOfMonthDay == 29);
-assert(DateTime(Date(2000, 6, 4), TimeOfDay(12, 22, 9)).endOfMonthDay == 30);
---------------------
-      +/
-    @property ubyte endOfMonthDay() const pure nothrow
-    {
-        return _date.endOfMonthDay;
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
-            immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
-            static assert(__traits(compiles, cdt.endOfMonthDay));
-            static assert(__traits(compiles, idt.endOfMonthDay));
-
-            //Verify Examples.
-            assert(DateTime(Date(1999, 1, 6), TimeOfDay(0, 0, 0)).endOfMonthDay == 31);
-            assert(DateTime(Date(1999, 2, 7), TimeOfDay(19, 30, 0)).endOfMonthDay == 28);
-            assert(DateTime(Date(2000, 2, 7), TimeOfDay(5, 12, 27)).endOfMonthDay == 29);
-            assert(DateTime(Date(2000, 6, 4), TimeOfDay(12, 22, 9)).endOfMonthDay == 30);
-        }
-    }
-
-
-    /++
-        Whether the current year is a date in A.D.
-
-        Examples:
---------------------
-assert(DateTime(Date(1, 1, 1), TimeOfDay(12, 7, 0)).isAD);
-assert(DateTime(Date(2010, 12, 31), TimeOfDay(0, 0, 0)).isAD);
-assert(!DateTime(Date(0, 12, 31), TimeOfDay(23, 59, 59)).isAD);
-assert(!DateTime(Date(-2010, 1, 1), TimeOfDay(2, 2, 2)).isAD);
---------------------
-      +/
-    @property bool isAD() const pure nothrow
-    {
-        return _date.isAD;
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
-            immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
-            static assert(__traits(compiles, cdt.isAD));
-            static assert(__traits(compiles, idt.isAD));
-
-            //Verify Examples.
-            assert(DateTime(Date(1, 1, 1), TimeOfDay(12, 7, 0)).isAD);
-            assert(DateTime(Date(2010, 12, 31), TimeOfDay(0, 0, 0)).isAD);
-            assert(!DateTime(Date(0, 12, 31), TimeOfDay(23, 59, 59)).isAD);
-            assert(!DateTime(Date(-2010, 1, 1), TimeOfDay(2, 2, 2)).isAD);
-        }
-    }
-
-
-    /++
-        The julian day for this DateTime at the given time. For example,
-        prior to noon, 1996-03-31 would be the julian day number 2_450_173,
-        so this function returns 2_450_173, while from noon onward, it the
-        julian day number would be 2_450_174, so this function returns 2_450_174.
-      +/
-    @property long julianDay() const pure nothrow
-    {
-        if(_tod._hour < 12)
-            return _date.julianDay - 1;
-        else
-            return _date.julianDay;
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            assertPred!"=="(DateTime(Date(-4713, 11, 24), TimeOfDay(0, 0, 0)).julianDay, -1);
-            assertPred!"=="(DateTime(Date(-4713, 11, 24), TimeOfDay(12, 0, 0)).julianDay, 0);
-
-            assertPred!"=="(DateTime(Date(0, 12, 31), TimeOfDay(0, 0, 0)).julianDay, 1_721_424);
-            assertPred!"=="(DateTime(Date(0, 12, 31), TimeOfDay(12, 0, 0)).julianDay, 1_721_425);
-
-            assertPred!"=="(DateTime(Date(1, 1, 1), TimeOfDay(0, 0, 0)).julianDay, 1_721_425);
-            assertPred!"=="(DateTime(Date(1, 1, 1), TimeOfDay(12, 0, 0)).julianDay, 1_721_426);
-
-            assertPred!"=="(DateTime(Date(1582, 10, 15), TimeOfDay(0, 0, 0)).julianDay, 2_299_160);
-            assertPred!"=="(DateTime(Date(1582, 10, 15), TimeOfDay(12, 0, 0)).julianDay, 2_299_161);
-
-            assertPred!"=="(DateTime(Date(1858, 11, 17), TimeOfDay(0, 0, 0)).julianDay, 2_400_000);
-            assertPred!"=="(DateTime(Date(1858, 11, 17), TimeOfDay(12, 0, 0)).julianDay, 2_400_001);
-
-            assertPred!"=="(DateTime(Date(1982, 1, 4), TimeOfDay(0, 0, 0)).julianDay, 2_444_973);
-            assertPred!"=="(DateTime(Date(1982, 1, 4), TimeOfDay(12, 0, 0)).julianDay, 2_444_974);
-
-            assertPred!"=="(DateTime(Date(1996, 3, 31), TimeOfDay(0, 0, 0)).julianDay, 2_450_173);
-            assertPred!"=="(DateTime(Date(1996, 3, 31), TimeOfDay(12, 0, 0)).julianDay, 2_450_174);
-
-            assertPred!"=="(DateTime(Date(2010, 8, 24), TimeOfDay(0, 0, 0)).julianDay, 2_455_432);
-            assertPred!"=="(DateTime(Date(2010, 8, 24), TimeOfDay(12, 0, 0)).julianDay, 2_455_433);
-
-            const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
-            immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
-            static assert(__traits(compiles, cdt.julianDay));
-            static assert(__traits(compiles, idt.julianDay));
-        }
-    }
-
-
-    /++
-        The modified julian day for any time on this Date (since, the modified
-        julian day changes at midnight).
-      +/
-    @property long modJulianDay() const pure nothrow
-    {
-        return _date.modJulianDay;
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            assertPred!"=="(DateTime(Date(1858, 11, 17), TimeOfDay(0, 0, 0)).modJulianDay, 0);
-            assertPred!"=="(DateTime(Date(1858, 11, 17), TimeOfDay(12, 0, 0)).modJulianDay, 0);
-
-            assertPred!"=="(DateTime(Date(2010, 8, 24), TimeOfDay(0, 0, 0)).modJulianDay, 55_432);
-            assertPred!"=="(DateTime(Date(2010, 8, 24), TimeOfDay(12, 0, 0)).modJulianDay, 55_432);
-
-            const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
-            immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
-            static assert(__traits(compiles, cdt.modJulianDay));
-            static assert(__traits(compiles, idt.modJulianDay));
-        }
-    }
-
-
-    /++
-        Converts this DateTime to a string with the format YYYYMMDDTHHMMSS.
-
-        Examples:
---------------------
-assert(DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)).toISOString() == "20100704T070612");
-assert(DateTime(Date(1998, 12, 25), TimeOfDay(2, 15, 0)).toISOString() == "19981225T021500");
-assert(DateTime(Date(0, 1, 5), TimeOfDay(23, 9, 59)).toISOString() == "00000105T230959");
-assert(DateTime(Date(-4, 1, 5), TimeOfDay(0, 0, 2)).toISOString() == "-00040105T000002");
---------------------
-      +/
-    string toISOString() const nothrow
-    {
-        try
-            return format("%sT%s", _date.toISOString(), _tod.toISOString());
-        catch(Exception e)
-            assert(0, "format() threw.");
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            //Test A.D.
-            assertPred!"=="(DateTime(Date(9, 12, 4), TimeOfDay(0, 0, 0)).toISOString(), "00091204T000000");
-            assertPred!"=="(DateTime(Date(99, 12, 4), TimeOfDay(5, 6, 12)).toISOString(), "00991204T050612");
-            assertPred!"=="(DateTime(Date(999, 12, 4), TimeOfDay(13, 44, 59)).toISOString(), "09991204T134459");
-            assertPred!"=="(DateTime(Date(9999, 7, 4), TimeOfDay(23, 59, 59)).toISOString(), "99990704T235959");
-            assertPred!"=="(DateTime(Date(10000, 10, 20), TimeOfDay(1, 1, 1)).toISOString(), "+100001020T010101");
-
-            //Test B.C.
-            assertPred!"=="(DateTime(Date(0, 12, 4), TimeOfDay(0, 12, 4)).toISOString(), "00001204T001204");
-            assertPred!"=="(DateTime(Date(-9, 12, 4), TimeOfDay(0, 0, 0)).toISOString(), "-00091204T000000");
-            assertPred!"=="(DateTime(Date(-99, 12, 4), TimeOfDay(5, 6, 12)).toISOString(), "-00991204T050612");
-            assertPred!"=="(DateTime(Date(-999, 12, 4), TimeOfDay(13, 44, 59)).toISOString(), "-09991204T134459");
-            assertPred!"=="(DateTime(Date(-9999, 7, 4), TimeOfDay(23, 59, 59)).toISOString(), "-99990704T235959");
-            assertPred!"=="(DateTime(Date(-10000, 10, 20), TimeOfDay(1, 1, 1)).toISOString(), "-100001020T010101");
-
-            const cdt = DateTime(1999, 7, 6, 12, 30, 33);
-            immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
-            static assert(__traits(compiles, cdt.toISOString()));
-            static assert(__traits(compiles, idt.toISOString()));
-
-            //Verify Examples.
-            assert(DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)).toISOString() == "20100704T070612");
-            assert(DateTime(Date(1998, 12, 25), TimeOfDay(2, 15, 0)).toISOString() == "19981225T021500");
-            assert(DateTime(Date(0, 1, 5), TimeOfDay(23, 9, 59)).toISOString() == "00000105T230959");
-            assert(DateTime(Date(-4, 1, 5), TimeOfDay(0, 0, 2)).toISOString() == "-00040105T000002");
-        }
-    }
-
-
-    /++
-        Converts this DateTime to a string with the format YYYY-MM-DDTHH:MM:SS.
-
-        Examples:
---------------------
-assert(DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)).toISOExtendedString() == "2010-07-04T07:06:12");
-assert(DateTime(Date(1998, 12, 25), TimeOfDay(2, 15, 0)).toISOExtendedString() == "1998-12-25T02:15:00");
-assert(DateTime(Date(0, 1, 5), TimeOfDay(23, 9, 59)).toISOExtendedString() == "0000-01-05T23:09:59");
-assert(DateTime(Date(-4, 1, 5), TimeOfDay(0, 0, 2)).toISOExtendedString() == "-0004-01-05T00:00:02");
---------------------
-      +/
-    string toISOExtendedString() const nothrow
-    {
-        try
-            return format("%sT%s", _date.toISOExtendedString(), _tod.toISOExtendedString());
-        catch(Exception e)
-            assert(0, "format() threw.");
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            //Test A.D.
-            assertPred!"=="(DateTime(Date(9, 12, 4), TimeOfDay(0, 0, 0)).toISOExtendedString(), "0009-12-04T00:00:00");
-            assertPred!"=="(DateTime(Date(99, 12, 4), TimeOfDay(5, 6, 12)).toISOExtendedString(), "0099-12-04T05:06:12");
-            assertPred!"=="(DateTime(Date(999, 12, 4), TimeOfDay(13, 44, 59)).toISOExtendedString(), "0999-12-04T13:44:59");
-            assertPred!"=="(DateTime(Date(9999, 7, 4), TimeOfDay(23, 59, 59)).toISOExtendedString(), "9999-07-04T23:59:59");
-            assertPred!"=="(DateTime(Date(10000, 10, 20), TimeOfDay(1, 1, 1)).toISOExtendedString(), "+10000-10-20T01:01:01");
-
-            //Test B.C.
-            assertPred!"=="(DateTime(Date(0, 12, 4), TimeOfDay(0, 12, 4)).toISOExtendedString(), "0000-12-04T00:12:04");
-            assertPred!"=="(DateTime(Date(-9, 12, 4), TimeOfDay(0, 0, 0)).toISOExtendedString(), "-0009-12-04T00:00:00");
-            assertPred!"=="(DateTime(Date(-99, 12, 4), TimeOfDay(5, 6, 12)).toISOExtendedString(), "-0099-12-04T05:06:12");
-            assertPred!"=="(DateTime(Date(-999, 12, 4), TimeOfDay(13, 44, 59)).toISOExtendedString(), "-0999-12-04T13:44:59");
-            assertPred!"=="(DateTime(Date(-9999, 7, 4), TimeOfDay(23, 59, 59)).toISOExtendedString(), "-9999-07-04T23:59:59");
-            assertPred!"=="(DateTime(Date(-10000, 10, 20), TimeOfDay(1, 1, 1)).toISOExtendedString(), "-10000-10-20T01:01:01");
-
-            const cdt = DateTime(1999, 7, 6, 12, 30, 33);
-            immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
-            static assert(__traits(compiles, cdt.toISOExtendedString()));
-            static assert(__traits(compiles, idt.toISOExtendedString()));
-
-            //Verify Examples.
-            assert(DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)).toISOExtendedString() == "2010-07-04T07:06:12");
-            assert(DateTime(Date(1998, 12, 25), TimeOfDay(2, 15, 0)).toISOExtendedString() == "1998-12-25T02:15:00");
-            assert(DateTime(Date(0, 1, 5), TimeOfDay(23, 9, 59)).toISOExtendedString() == "0000-01-05T23:09:59");
-            assert(DateTime(Date(-4, 1, 5), TimeOfDay(0, 0, 2)).toISOExtendedString() == "-0004-01-05T00:00:02");
-        }
-    }
-
-    /++
-        Converts this DateTime to a string with the format YYYY-Mon-DD HH:MM:SS.
-
-        Examples:
---------------------
-assert(DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)).toSimpleString() == "2010-Jul-04 07:06:12");
-assert(DateTime(Date(1998, 12, 25), TimeOfDay(2, 15, 0)).toSimpleString() == "1998-Dec-25 02:15:00");
-assert(DateTime(Date(0, 1, 5), TimeOfDay(23, 9, 59)).toSimpleString() == "0000-Jan-05 23:09:59");
-assert(DateTime(Dte(-4, 1, 5), TimeOfDay(0, 0, 2)).toSimpleString() == "-0004-Jan-05 00:00:02");
---------------------
-      +/
-    string toSimpleString() const nothrow
-    {
-        try
-            return format("%s %s", _date.toSimpleString(), _tod.toString());
-        catch(Exception e)
-            assert(0, "format() threw.");
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            //Test A.D.
-            assertPred!"=="(DateTime(Date(9, 12, 4), TimeOfDay(0, 0, 0)).toSimpleString(), "0009-Dec-04 00:00:00");
-            assertPred!"=="(DateTime(Date(99, 12, 4), TimeOfDay(5, 6, 12)).toSimpleString(), "0099-Dec-04 05:06:12");
-            assertPred!"=="(DateTime(Date(999, 12, 4), TimeOfDay(13, 44, 59)).toSimpleString(), "0999-Dec-04 13:44:59");
-            assertPred!"=="(DateTime(Date(9999, 7, 4), TimeOfDay(23, 59, 59)).toSimpleString(), "9999-Jul-04 23:59:59");
-            assertPred!"=="(DateTime(Date(10000, 10, 20), TimeOfDay(1, 1, 1)).toSimpleString(), "+10000-Oct-20 01:01:01");
-
-            //Test B.C.
-            assertPred!"=="(DateTime(Date(0, 12, 4), TimeOfDay(0, 12, 4)).toSimpleString(), "0000-Dec-04 00:12:04");
-            assertPred!"=="(DateTime(Date(-9, 12, 4), TimeOfDay(0, 0, 0)).toSimpleString(), "-0009-Dec-04 00:00:00");
-            assertPred!"=="(DateTime(Date(-99, 12, 4), TimeOfDay(5, 6, 12)).toSimpleString(), "-0099-Dec-04 05:06:12");
-            assertPred!"=="(DateTime(Date(-999, 12, 4), TimeOfDay(13, 44, 59)).toSimpleString(), "-0999-Dec-04 13:44:59");
-            assertPred!"=="(DateTime(Date(-9999, 7, 4), TimeOfDay(23, 59, 59)).toSimpleString(), "-9999-Jul-04 23:59:59");
-            assertPred!"=="(DateTime(Date(-10000, 10, 20), TimeOfDay(1, 1, 1)).toSimpleString(), "-10000-Oct-20 01:01:01");
-
-            const cdt = DateTime(1999, 7, 6, 12, 30, 33);
-            immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
-            static assert(__traits(compiles, cdt.toSimpleString()));
-            static assert(__traits(compiles, idt.toSimpleString()));
-
-            //Verify Examples.
-            assert(DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)).toSimpleString() == "2010-Jul-04 07:06:12");
-            assert(DateTime(Date(1998, 12, 25), TimeOfDay(2, 15, 0)).toSimpleString() == "1998-Dec-25 02:15:00");
-            assert(DateTime(Date(0, 1, 5), TimeOfDay(23, 9, 59)).toSimpleString() == "0000-Jan-05 23:09:59");
-            assert(DateTime(Date(-4, 1, 5), TimeOfDay(0, 0, 2)).toSimpleString() == "-0004-Jan-05 00:00:02");
-        }
-    }
-
-
-    /+
-        Converts this DateTime to a string.
-      +/
-    //Due to bug http://d.puremagic.com/issues/show_bug.cgi?id=3715 , we can't
-    //have versions of toString() with extra modifiers, so we define one version
-    //with modifiers and one without.
-    string toString()
-    {
-        return toSimpleString();
-    }
-
-    /++
-        Converts this DateTime to a string.
-      +/
-    //Due to bug http://d.puremagic.com/issues/show_bug.cgi?id=3715 , we can't
-    //have versions of toString() with extra modifiers, so we define one version
-    //with modifiers and one without.
-    string toString() const nothrow
-    {
-        return toSimpleString();
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            auto dt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
-            const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
-            immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
-            static assert(__traits(compiles, dt.toString()));
-            static assert(__traits(compiles, cdt.toString()));
-            static assert(__traits(compiles, idt.toString()));
-        }
-    }
-
-
-
-    /++
-        Creates a DateTime from a string with the format YYYYMMDDTHHMMSS.
-        Whitespace is stripped from the given string.
-
-        Params:
-            isoString = A string formatted in the ISO format for dates and times.
-
-        Throws:
-            DateTimeException if the given string is not in the ISO format or if
-            the resulting DateTime would not be valid.
-
-        Examples:
---------------------
-assert(DateTime.fromISOString("20100704T070612") == DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
-assert(DateTime.fromISOString("19981225T021500") == DateTime(Date(1998, 12, 25), TimeOfDay(2, 15, 0)));
-assert(DateTime.fromISOString("00000105T230959") == DateTime(Date(0, 1, 5), TimeOfDay(23, 9, 59)));
-assert(DateTime.fromISOString("-00040105T000002") == DateTime(Date(-4, 1, 5), TimeOfDay(0, 0, 2)));
-assert(DateTime.fromISOString(" 20100704T070612 ") == DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
---------------------
-      +/
-    static DateTime fromISOString(S)(in S isoString)
-        if(isSomeString!S)
-    {
-        immutable dstr = to!dstring(strip(isoString));
-
-        enforce(dstr.length >= 15, new DateTimeException(format("Invalid ISO String: %s", isoString)));
-        auto t = dstr.indexOf('T');
-
-        enforce(t != -1, new DateTimeException(format("Invalid ISO String: %s", isoString)));
-
-        immutable date = Date.fromISOString(dstr[0..t]);
-        immutable tod = TimeOfDay.fromISOString(dstr[t+1 .. $]);
-
-        return DateTime(date, tod);
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            assertThrown!DateTimeException(DateTime.fromISOString(""));
-            assertThrown!DateTimeException(DateTime.fromISOString("20100704000000"));
-            assertThrown!DateTimeException(DateTime.fromISOString("20100704 000000"));
-            assertThrown!DateTimeException(DateTime.fromISOString("20100704t000000"));
-            assertThrown!DateTimeException(DateTime.fromISOString("20100704T000000."));
-            assertThrown!DateTimeException(DateTime.fromISOString("20100704T000000.0"));
-
-            assertThrown!DateTimeException(DateTime.fromISOString("2010-07-0400:00:00"));
-            assertThrown!DateTimeException(DateTime.fromISOString("2010-07-04 00:00:00"));
-            assertThrown!DateTimeException(DateTime.fromISOString("2010-07-04t00:00:00"));
-            assertThrown!DateTimeException(DateTime.fromISOString("2010-07-04T00:00:00."));
-            assertThrown!DateTimeException(DateTime.fromISOString("2010-07-04T00:00:00.0"));
-
-            assertThrown!DateTimeException(DateTime.fromISOString("2010-Jul-0400:00:00"));
-            assertThrown!DateTimeException(DateTime.fromISOString("2010-Jul-04 00:00:00"));
-            assertThrown!DateTimeException(DateTime.fromISOString("2010-Jul-04t00:00:00"));
-            assertThrown!DateTimeException(DateTime.fromISOString("2010-Jul-04T00:00:00"));
-            assertThrown!DateTimeException(DateTime.fromISOString("2010-Jul-04 00:00:00."));
-            assertThrown!DateTimeException(DateTime.fromISOString("2010-Jul-04 00:00:00.0"));
-
-            assertThrown!DateTimeException(DateTime.fromISOString("2010-12-22T172201"));
-            assertThrown!DateTimeException(DateTime.fromISOString("2010-Dec-22 17:22:01"));
-
-            assertPred!"=="(DateTime.fromISOString("20101222T172201"), DateTime(Date(2010, 12, 22), TimeOfDay(17, 22, 01)));
-            assertPred!"=="(DateTime.fromISOString("19990706T123033"), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
-            assertPred!"=="(DateTime.fromISOString("-19990706T123033"), DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
-            assertPred!"=="(DateTime.fromISOString("+019990706T123033"), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
-            assertPred!"=="(DateTime.fromISOString("19990706T123033 "), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
-            assertPred!"=="(DateTime.fromISOString(" 19990706T123033"), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
-            assertPred!"=="(DateTime.fromISOString(" 19990706T123033 "), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
-
-            //Verify Examples.
-            assert(DateTime.fromISOString("20100704T070612") == DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
-            assert(DateTime.fromISOString("19981225T021500") == DateTime(Date(1998, 12, 25), TimeOfDay(2, 15, 0)));
-            assert(DateTime.fromISOString("00000105T230959") == DateTime(Date(0, 1, 5), TimeOfDay(23, 9, 59)));
-            assert(DateTime.fromISOString("-00040105T000002") == DateTime(Date(-4, 1, 5), TimeOfDay(0, 0, 2)));
-            assert(DateTime.fromISOString(" 20100704T070612 ") == DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
-        }
-    }
-
-
-    /++
-        Creates a DateTime from a string with the format YYYY-MM-DDTHH:MM:SS.
-        Whitespace is stripped from the given string.
-
-        Params:
-            isoString = A string formatted in the ISO Extended format for dates
-                        and times.
-
-        Throws:
-            DateTimeException if the given string is not in the ISO Extended
-            format or if the resulting DateTime would not be valid.
-
-        Examples:
---------------------
-assert(DateTime.fromISOExtendedString("2010-07-04T07:06:12") ==
-       DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
-assert(DateTime.fromISOExtendedString("1998-12-25T02:15:00") ==
-       DateTime(Date(1998, 12, 25), TimeOfDay(2, 15, 0)));
-assert(DateTime.fromISOExtendedString("0000-01-05T23:09:59") ==
-       DateTime(Date(0, 1, 5), TimeOfDay(23, 9, 59)));
-assert(DateTime.fromISOExtendedString("-0004-01-05T00:00:02") ==
-       DateTime(Date(-4, 1, 5), TimeOfDay(0, 0, 2)));
-assert(DateTime.fromISOExtendedString(" 2010-07-04T07:06:12 ") ==
-       DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
---------------------
-      +/
-    static DateTime fromISOExtendedString(S)(in S isoExtString)
-        if(isSomeString!(S))
-    {
-        immutable dstr = to!dstring(strip(isoExtString));
-
-        enforce(dstr.length >= 15, new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
-        auto t = dstr.indexOf('T');
-
-        enforce(t != -1, new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
-
-        immutable date = Date.fromISOExtendedString(dstr[0..t]);
-        immutable tod = TimeOfDay.fromISOExtendedString(dstr[t+1 .. $]);
-
-        return DateTime(date, tod);
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            assertThrown!DateTimeException(DateTime.fromISOExtendedString(""));
-            assertThrown!DateTimeException(DateTime.fromISOExtendedString("20100704000000"));
-            assertThrown!DateTimeException(DateTime.fromISOExtendedString("20100704 000000"));
-            assertThrown!DateTimeException(DateTime.fromISOExtendedString("20100704t000000"));
-            assertThrown!DateTimeException(DateTime.fromISOExtendedString("20100704T000000."));
-            assertThrown!DateTimeException(DateTime.fromISOExtendedString("20100704T000000.0"));
-
-            assertThrown!DateTimeException(DateTime.fromISOExtendedString("2010-07:0400:00:00"));
-            assertThrown!DateTimeException(DateTime.fromISOExtendedString("2010-07-04 00:00:00"));
-            assertThrown!DateTimeException(DateTime.fromISOExtendedString("2010-07-04 00:00:00"));
-            assertThrown!DateTimeException(DateTime.fromISOExtendedString("2010-07-04t00:00:00"));
-            assertThrown!DateTimeException(DateTime.fromISOExtendedString("2010-07-04T00:00:00."));
-            assertThrown!DateTimeException(DateTime.fromISOExtendedString("2010-07-04T00:00:00.0"));
-
-            assertThrown!DateTimeException(DateTime.fromISOExtendedString("2010-Jul-0400:00:00"));
-            assertThrown!DateTimeException(DateTime.fromISOExtendedString("2010-Jul-04t00:00:00"));
-            assertThrown!DateTimeException(DateTime.fromISOExtendedString("2010-Jul-04 00:00:00."));
-            assertThrown!DateTimeException(DateTime.fromISOExtendedString("2010-Jul-04 00:00:00.0"));
-
-            assertThrown!DateTimeException(DateTime.fromISOExtendedString("20101222T172201"));
-            assertThrown!DateTimeException(DateTime.fromISOExtendedString("2010-Dec-22 17:22:01"));
-
-            assertPred!"=="(DateTime.fromISOExtendedString("2010-12-22T17:22:01"), DateTime(Date(2010, 12, 22), TimeOfDay(17, 22, 01)));
-            assertPred!"=="(DateTime.fromISOExtendedString("1999-07-06T12:30:33"), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
-            assertPred!"=="(DateTime.fromISOExtendedString("-1999-07-06T12:30:33"), DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
-            assertPred!"=="(DateTime.fromISOExtendedString("+01999-07-06T12:30:33"), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
-            assertPred!"=="(DateTime.fromISOExtendedString("1999-07-06T12:30:33 "), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
-            assertPred!"=="(DateTime.fromISOExtendedString(" 1999-07-06T12:30:33"), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
-            assertPred!"=="(DateTime.fromISOExtendedString(" 1999-07-06T12:30:33 "), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
-
-            //Verify Examples.
-            assert(DateTime.fromISOExtendedString("2010-07-04T07:06:12") == DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
-            assert(DateTime.fromISOExtendedString("1998-12-25T02:15:00") == DateTime(Date(1998, 12, 25), TimeOfDay(2, 15, 0)));
-            assert(DateTime.fromISOExtendedString("0000-01-05T23:09:59") == DateTime(Date(0, 1, 5), TimeOfDay(23, 9, 59)));
-            assert(DateTime.fromISOExtendedString("-0004-01-05T00:00:02") == DateTime(Date(-4, 1, 5), TimeOfDay(0, 0, 2)));
-            assert(DateTime.fromISOExtendedString(" 2010-07-04T07:06:12 ") == DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
-        }
-    }
-
-
-    /++
-        Creates a DateTime from a string with the format YYYY-Mon-DD HH:MM:SS.
-        Whitespace is stripped from the given string.
-
-        Params:
-            simpleString = A string formatted in the way that toSimpleString()
-                           formats dates and times.
-
-        Throws:
-            DateTimeException if the given string is not in the correct format or if
-            the resulting DateTime would not be valid.
-
-        Examples:
---------------------
-assert(DateTime.fromSimpleString("2010-Jul-04 07:06:12") ==
-       DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
-assert(DateTime.fromSimpleString("1998-Dec-25 02:15:00") ==
-       DateTime(Date(1998, 12, 25), TimeOfDay(2, 15, 0)));
-assert(DateTime.fromSimpleString("0000-Jan-05 23:09:59") ==
-       DateTime(Date(0, 1, 5), TimeOfDay(23, 9, 59)));
-assert(DateTime.fromSimpleString("-0004-Jan-05 00:00:02") ==
-       DateTime(Date(-4, 1, 5), TimeOfDay(0, 0, 2)));
-assert(DateTime.fromSimpleString(" 2010-Jul-04 07:06:12 ") ==
-       DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
---------------------
-      +/
-    static DateTime fromSimpleString(S)(in S simpleString)
-        if(isSomeString!(S))
-    {
-        immutable dstr = to!dstring(strip(simpleString));
-
-        enforce(dstr.length >= 15, new DateTimeException(format("Invalid string format: %s", simpleString)));
-        auto t = dstr.indexOf(' ');
-
-        enforce(t != -1, new DateTimeException(format("Invalid string format: %s", simpleString)));
-
-        immutable date = Date.fromSimpleString(dstr[0..t]);
-        immutable tod = TimeOfDay.fromISOExtendedString(dstr[t+1 .. $]);
-
-        return DateTime(date, tod);
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            assertThrown!DateTimeException(DateTime.fromISOString(""));
-            assertThrown!DateTimeException(DateTime.fromISOString("20100704000000"));
-            assertThrown!DateTimeException(DateTime.fromISOString("20100704 000000"));
-            assertThrown!DateTimeException(DateTime.fromISOString("20100704t000000"));
-            assertThrown!DateTimeException(DateTime.fromISOString("20100704T000000."));
-            assertThrown!DateTimeException(DateTime.fromISOString("20100704T000000.0"));
-
-            assertThrown!DateTimeException(DateTime.fromISOString("2010-07-0400:00:00"));
-            assertThrown!DateTimeException(DateTime.fromISOString("2010-07-04 00:00:00"));
-            assertThrown!DateTimeException(DateTime.fromISOString("2010-07-04t00:00:00"));
-            assertThrown!DateTimeException(DateTime.fromISOString("2010-07-04T00:00:00."));
-            assertThrown!DateTimeException(DateTime.fromISOString("2010-07-04T00:00:00.0"));
-
-            assertThrown!DateTimeException(DateTime.fromISOString("2010-Jul-0400:00:00"));
-            assertThrown!DateTimeException(DateTime.fromISOString("2010-Jul-04 00:00:00"));
-            assertThrown!DateTimeException(DateTime.fromISOString("2010-Jul-04t00:00:00"));
-            assertThrown!DateTimeException(DateTime.fromISOString("2010-Jul-04T00:00:00"));
-            assertThrown!DateTimeException(DateTime.fromISOString("2010-Jul-04 00:00:00."));
-            assertThrown!DateTimeException(DateTime.fromISOString("2010-Jul-04 00:00:00.0"));
-
-            assertThrown!DateTimeException(DateTime.fromSimpleString("20101222T172201"));
-            assertThrown!DateTimeException(DateTime.fromSimpleString("2010-12-22T172201"));
-
-            assertPred!"=="(DateTime.fromSimpleString("2010-Dec-22 17:22:01"), DateTime(Date(2010, 12, 22), TimeOfDay(17, 22, 01)));
-            assertPred!"=="(DateTime.fromSimpleString("1999-Jul-06 12:30:33"), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
-            assertPred!"=="(DateTime.fromSimpleString("-1999-Jul-06 12:30:33"), DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
-            assertPred!"=="(DateTime.fromSimpleString("+01999-Jul-06 12:30:33"), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
-            assertPred!"=="(DateTime.fromSimpleString("1999-Jul-06 12:30:33 "), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
-            assertPred!"=="(DateTime.fromSimpleString(" 1999-Jul-06 12:30:33"), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
-            assertPred!"=="(DateTime.fromSimpleString(" 1999-Jul-06 12:30:33 "), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
-
-            //Verify Examples.
-            assert(DateTime.fromSimpleString("2010-Jul-04 07:06:12") == DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
-            assert(DateTime.fromSimpleString("1998-Dec-25 02:15:00") == DateTime(Date(1998, 12, 25), TimeOfDay(2, 15, 0)));
-            assert(DateTime.fromSimpleString("0000-Jan-05 23:09:59") == DateTime(Date(0, 1, 5), TimeOfDay(23, 9, 59)));
-            assert(DateTime.fromSimpleString("-0004-Jan-05 00:00:02") == DateTime(Date(-4, 1, 5), TimeOfDay(0, 0, 2)));
-            assert(DateTime.fromSimpleString(" 2010-Jul-04 07:06:12 ") == DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
-        }
-    }
-
-
-    //TODO Add function which takes a user-specified time format and produces a DateTime
-
-    //TODO Add function which takes pretty much any time-string and produces a DateTime
-    //     Obviously, it will be less efficient, and it probably won't manage _every_
-    //     possible date format, but a smart conversion function would be nice.
-
-
-    /++
-        Returns the DateTime farthest in the past which is representable by DateTime.
-      +/
-    @property static DateTime min() pure nothrow
-    out(result)
-    {
-        assert(result._date == Date.min);
-        assert(result._tod == TimeOfDay.min);
-    }
-    body
-    {
-        auto dt = DateTime.init;
-        dt._date._year = short.min;
-        dt._date._month = Month.jan;
-        dt._date._day = 1;
-
-        return dt;
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            assert(DateTime.min.year < 0);
-            assert(DateTime.min < DateTime.max);
-        }
-    }
-
-
-    /++
-        Returns the DateTime farthest in the future which is representable by DateTime.
-      +/
-    @property static DateTime max() pure nothrow
-    out(result)
-    {
-        assert(result._date == Date.max);
-        assert(result._tod == TimeOfDay.max);
-    }
-    body
-    {
-        auto dt = DateTime.init;
-        dt._date._year = short.max;
-        dt._date._month = Month.dec;
-        dt._date._day = 31;
-        dt._tod._hour = TimeOfDay.maxHour;
-        dt._tod._minute = TimeOfDay.maxMinute;
-        dt._tod._second = TimeOfDay.maxSecond;
-
-        return dt;
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            assert(DateTime.max.year > 0);
-            assert(DateTime.max > DateTime.min);
+            auto a = Clock.currSystemTick;
+            auto b = Clock.currAppTick;
+            assert(a.length);
+            assert(a != b);
         }
     }
 
 
 private:
 
-    /++
-        Add seconds to the time of day. Negative values will subtract. If the
-        number of seconds overflows (or underflows), then the seconds will wrap,
-        increasing (or decreasing) the number of minutes accordingly. The
-        same goes for any larger units.
-
-        Params:
-            seconds = The number of seconds to add to this DateTime.
-      +/
-    ref DateTime addSeconds(long seconds) pure nothrow
-    {
-        long hnsecs = convert!("seconds", "hnsecs")(seconds);
-        hnsecs += convert!("hours", "hnsecs")(_tod._hour);
-        hnsecs += convert!("minutes", "hnsecs")(_tod._minute);
-        hnsecs += convert!("seconds", "hnsecs")(_tod._second);
-
-        auto days = splitUnitsFromHNSecs!"days"(hnsecs);
-
-        if(hnsecs < 0)
-        {
-            hnsecs += convert!("days", "hnsecs")(1);
-            --days;
-        }
-
-        _date.addDays(days);
-
-        immutable newHours = splitUnitsFromHNSecs!"hours"(hnsecs);
-        immutable newMinutes = splitUnitsFromHNSecs!"minutes"(hnsecs);
-        immutable newSeconds = splitUnitsFromHNSecs!"seconds"(hnsecs);
-
-        _tod._hour = cast(ubyte)newHours;
-        _tod._minute = cast(ubyte)newMinutes;
-        _tod._second = cast(ubyte)newSeconds;
-
-        return this;
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            static void testDT(DateTime orig, int seconds, in DateTime expected, size_t line = __LINE__)
-            {
-                orig.addSeconds(seconds);
-                assertPred!"=="(orig, expected, "", __FILE__, line);
-            }
-
-            //Test A.D.
-            testDT(DateTime(1999, 7, 6, 12, 30, 33), 0, DateTime(1999, 7, 6, 12, 30, 33));
-            testDT(DateTime(1999, 7, 6, 12, 30, 33), 1, DateTime(1999, 7, 6, 12, 30, 34));
-            testDT(DateTime(1999, 7, 6, 12, 30, 33), 2, DateTime(1999, 7, 6, 12, 30, 35));
-            testDT(DateTime(1999, 7, 6, 12, 30, 33), 3, DateTime(1999, 7, 6, 12, 30, 36));
-            testDT(DateTime(1999, 7, 6, 12, 30, 33), 4, DateTime(1999, 7, 6, 12, 30, 37));
-            testDT(DateTime(1999, 7, 6, 12, 30, 33), 5, DateTime(1999, 7, 6, 12, 30, 38));
-            testDT(DateTime(1999, 7, 6, 12, 30, 33), 10, DateTime(1999, 7, 6, 12, 30, 43));
-            testDT(DateTime(1999, 7, 6, 12, 30, 33), 15, DateTime(1999, 7, 6, 12, 30, 48));
-            testDT(DateTime(1999, 7, 6, 12, 30, 33), 26, DateTime(1999, 7, 6, 12, 30, 59));
-            testDT(DateTime(1999, 7, 6, 12, 30, 33), 27, DateTime(1999, 7, 6, 12, 31, 0));
-            testDT(DateTime(1999, 7, 6, 12, 30, 33), 30, DateTime(1999, 7, 6, 12, 31, 3));
-            testDT(DateTime(1999, 7, 6, 12, 30, 33), 59, DateTime(1999, 7, 6, 12, 31, 32));
-            testDT(DateTime(1999, 7, 6, 12, 30, 33), 60, DateTime(1999, 7, 6, 12, 31, 33));
-            testDT(DateTime(1999, 7, 6, 12, 30, 33), 61, DateTime(1999, 7, 6, 12, 31, 34));
-
-            testDT(DateTime(1999, 7, 6, 12, 30, 33), 1766, DateTime(1999, 7, 6, 12, 59, 59));
-            testDT(DateTime(1999, 7, 6, 12, 30, 33), 1767, DateTime(1999, 7, 6, 13, 0, 0));
-            testDT(DateTime(1999, 7, 6, 12, 30, 33), 1768, DateTime(1999, 7, 6, 13, 0, 1));
-            testDT(DateTime(1999, 7, 6, 12, 30, 33), 2007, DateTime(1999, 7, 6, 13, 4, 0));
-            testDT(DateTime(1999, 7, 6, 12, 30, 33), 3599, DateTime(1999, 7, 6, 13, 30, 32));
-            testDT(DateTime(1999, 7, 6, 12, 30, 33), 3600, DateTime(1999, 7, 6, 13, 30, 33));
-            testDT(DateTime(1999, 7, 6, 12, 30, 33), 3601, DateTime(1999, 7, 6, 13, 30, 34));
-            testDT(DateTime(1999, 7, 6, 12, 30, 33), 7200, DateTime(1999, 7, 6, 14, 30, 33));
-            testDT(DateTime(1999, 7, 6, 23, 0, 0), 432_123, DateTime(1999, 7, 11, 23, 2, 3));
-
-            testDT(DateTime(1999, 7, 6, 12, 30, 33), -1, DateTime(1999, 7, 6, 12, 30, 32));
-            testDT(DateTime(1999, 7, 6, 12, 30, 33), -2, DateTime(1999, 7, 6, 12, 30, 31));
-            testDT(DateTime(1999, 7, 6, 12, 30, 33), -3, DateTime(1999, 7, 6, 12, 30, 30));
-            testDT(DateTime(1999, 7, 6, 12, 30, 33), -4, DateTime(1999, 7, 6, 12, 30, 29));
-            testDT(DateTime(1999, 7, 6, 12, 30, 33), -5, DateTime(1999, 7, 6, 12, 30, 28));
-            testDT(DateTime(1999, 7, 6, 12, 30, 33), -10, DateTime(1999, 7, 6, 12, 30, 23));
-            testDT(DateTime(1999, 7, 6, 12, 30, 33), -15, DateTime(1999, 7, 6, 12, 30, 18));
-            testDT(DateTime(1999, 7, 6, 12, 30, 33), -33, DateTime(1999, 7, 6, 12, 30, 0));
-            testDT(DateTime(1999, 7, 6, 12, 30, 33), -34, DateTime(1999, 7, 6, 12, 29, 59));
-            testDT(DateTime(1999, 7, 6, 12, 30, 33), -35, DateTime(1999, 7, 6, 12, 29, 58));
-            testDT(DateTime(1999, 7, 6, 12, 30, 33), -59, DateTime(1999, 7, 6, 12, 29, 34));
-            testDT(DateTime(1999, 7, 6, 12, 30, 33), -60, DateTime(1999, 7, 6, 12, 29, 33));
-            testDT(DateTime(1999, 7, 6, 12, 30, 33), -61, DateTime(1999, 7, 6, 12, 29, 32));
-
-            testDT(DateTime(1999, 7, 6, 12, 30, 33), -1833, DateTime(1999, 7, 6, 12, 0, 0));
-            testDT(DateTime(1999, 7, 6, 12, 30, 33), -1834, DateTime(1999, 7, 6, 11, 59, 59));
-            testDT(DateTime(1999, 7, 6, 12, 30, 33), -3600, DateTime(1999, 7, 6, 11, 30, 33));
-            testDT(DateTime(1999, 7, 6, 12, 30, 33), -3601, DateTime(1999, 7, 6, 11, 30, 32));
-            testDT(DateTime(1999, 7, 6, 12, 30, 33), -5134, DateTime(1999, 7, 6, 11, 4, 59));
-            testDT(DateTime(1999, 7, 6, 23, 0, 0), -432_123, DateTime(1999, 7, 1, 22, 57, 57));
-
-            testDT(DateTime(1999, 7, 6, 12, 30, 0), 1, DateTime(1999, 7, 6, 12, 30, 1));
-            testDT(DateTime(1999, 7, 6, 12, 30, 0), 0, DateTime(1999, 7, 6, 12, 30, 0));
-            testDT(DateTime(1999, 7, 6, 12, 30, 0), -1, DateTime(1999, 7, 6, 12, 29, 59));
-
-            testDT(DateTime(1999, 7, 6, 12, 0, 0), 1, DateTime(1999, 7, 6, 12, 0, 1));
-            testDT(DateTime(1999, 7, 6, 12, 0, 0), 0, DateTime(1999, 7, 6, 12, 0, 0));
-            testDT(DateTime(1999, 7, 6, 12, 0, 0), -1, DateTime(1999, 7, 6, 11, 59, 59));
-
-            testDT(DateTime(1999, 7, 6, 0, 0, 0), 1, DateTime(1999, 7, 6, 0, 0, 1));
-            testDT(DateTime(1999, 7, 6, 0, 0, 0), 0, DateTime(1999, 7, 6, 0, 0, 0));
-            testDT(DateTime(1999, 7, 6, 0, 0, 0), -1, DateTime(1999, 7, 5, 23, 59, 59));
-
-            testDT(DateTime(1999, 7, 5, 23, 59, 59), 1, DateTime(1999, 7, 6, 0, 0, 0));
-            testDT(DateTime(1999, 7, 5, 23, 59, 59), 0, DateTime(1999, 7, 5, 23, 59, 59));
-            testDT(DateTime(1999, 7, 5, 23, 59, 59), -1, DateTime(1999, 7, 5, 23, 59, 58));
-
-            testDT(DateTime(1998, 12, 31, 23, 59, 59), 1, DateTime(1999, 1, 1, 0, 0, 0));
-            testDT(DateTime(1998, 12, 31, 23, 59, 59), 0, DateTime(1998, 12, 31, 23, 59, 59));
-            testDT(DateTime(1998, 12, 31, 23, 59, 59), -1, DateTime(1998, 12, 31, 23, 59, 58));
-
-            testDT(DateTime(1998, 1, 1, 0, 0, 0), 1, DateTime(1998, 1, 1, 0, 0, 1));
-            testDT(DateTime(1998, 1, 1, 0, 0, 0), 0, DateTime(1998, 1, 1, 0, 0, 0));
-            testDT(DateTime(1998, 1, 1, 0, 0, 0), -1, DateTime(1997, 12, 31, 23, 59, 59));
-
-            //Test B.C.
-            testDT(DateTime(-1999, 7, 6, 12, 30, 33), 0, DateTime(-1999, 7, 6, 12, 30, 33));
-            testDT(DateTime(-1999, 7, 6, 12, 30, 33), 1, DateTime(-1999, 7, 6, 12, 30, 34));
-            testDT(DateTime(-1999, 7, 6, 12, 30, 33), 2, DateTime(-1999, 7, 6, 12, 30, 35));
-            testDT(DateTime(-1999, 7, 6, 12, 30, 33), 3, DateTime(-1999, 7, 6, 12, 30, 36));
-            testDT(DateTime(-1999, 7, 6, 12, 30, 33), 4, DateTime(-1999, 7, 6, 12, 30, 37));
-            testDT(DateTime(-1999, 7, 6, 12, 30, 33), 5, DateTime(-1999, 7, 6, 12, 30, 38));
-            testDT(DateTime(-1999, 7, 6, 12, 30, 33), 10, DateTime(-1999, 7, 6, 12, 30, 43));
-            testDT(DateTime(-1999, 7, 6, 12, 30, 33), 15, DateTime(-1999, 7, 6, 12, 30, 48));
-            testDT(DateTime(-1999, 7, 6, 12, 30, 33), 26, DateTime(-1999, 7, 6, 12, 30, 59));
-            testDT(DateTime(-1999, 7, 6, 12, 30, 33), 27, DateTime(-1999, 7, 6, 12, 31, 0));
-            testDT(DateTime(-1999, 7, 6, 12, 30, 33), 30, DateTime(-1999, 7, 6, 12, 31, 3));
-            testDT(DateTime(-1999, 7, 6, 12, 30, 33), 59, DateTime(-1999, 7, 6, 12, 31, 32));
-            testDT(DateTime(-1999, 7, 6, 12, 30, 33), 60, DateTime(-1999, 7, 6, 12, 31, 33));
-            testDT(DateTime(-1999, 7, 6, 12, 30, 33), 61, DateTime(-1999, 7, 6, 12, 31, 34));
-
-            testDT(DateTime(-1999, 7, 6, 12, 30, 33), 1766, DateTime(-1999, 7, 6, 12, 59, 59));
-            testDT(DateTime(-1999, 7, 6, 12, 30, 33), 1767, DateTime(-1999, 7, 6, 13, 0, 0));
-            testDT(DateTime(-1999, 7, 6, 12, 30, 33), 1768, DateTime(-1999, 7, 6, 13, 0, 1));
-            testDT(DateTime(-1999, 7, 6, 12, 30, 33), 2007, DateTime(-1999, 7, 6, 13, 4, 0));
-            testDT(DateTime(-1999, 7, 6, 12, 30, 33), 3599, DateTime(-1999, 7, 6, 13, 30, 32));
-            testDT(DateTime(-1999, 7, 6, 12, 30, 33), 3600, DateTime(-1999, 7, 6, 13, 30, 33));
-            testDT(DateTime(-1999, 7, 6, 12, 30, 33), 3601, DateTime(-1999, 7, 6, 13, 30, 34));
-            testDT(DateTime(-1999, 7, 6, 12, 30, 33), 7200, DateTime(-1999, 7, 6, 14, 30, 33));
-            testDT(DateTime(-1999, 7, 6, 23, 0, 0), 432_123, DateTime(-1999, 7, 11, 23, 2, 3));
-
-            testDT(DateTime(-1999, 7, 6, 12, 30, 33), -1, DateTime(-1999, 7, 6, 12, 30, 32));
-            testDT(DateTime(-1999, 7, 6, 12, 30, 33), -2, DateTime(-1999, 7, 6, 12, 30, 31));
-            testDT(DateTime(-1999, 7, 6, 12, 30, 33), -3, DateTime(-1999, 7, 6, 12, 30, 30));
-            testDT(DateTime(-1999, 7, 6, 12, 30, 33), -4, DateTime(-1999, 7, 6, 12, 30, 29));
-            testDT(DateTime(-1999, 7, 6, 12, 30, 33), -5, DateTime(-1999, 7, 6, 12, 30, 28));
-            testDT(DateTime(-1999, 7, 6, 12, 30, 33), -10, DateTime(-1999, 7, 6, 12, 30, 23));
-            testDT(DateTime(-1999, 7, 6, 12, 30, 33), -15, DateTime(-1999, 7, 6, 12, 30, 18));
-            testDT(DateTime(-1999, 7, 6, 12, 30, 33), -33, DateTime(-1999, 7, 6, 12, 30, 0));
-            testDT(DateTime(-1999, 7, 6, 12, 30, 33), -34, DateTime(-1999, 7, 6, 12, 29, 59));
-            testDT(DateTime(-1999, 7, 6, 12, 30, 33), -35, DateTime(-1999, 7, 6, 12, 29, 58));
-            testDT(DateTime(-1999, 7, 6, 12, 30, 33), -59, DateTime(-1999, 7, 6, 12, 29, 34));
-            testDT(DateTime(-1999, 7, 6, 12, 30, 33), -60, DateTime(-1999, 7, 6, 12, 29, 33));
-            testDT(DateTime(-1999, 7, 6, 12, 30, 33), -61, DateTime(-1999, 7, 6, 12, 29, 32));
-
-            testDT(DateTime(-1999, 7, 6, 12, 30, 33), -1833, DateTime(-1999, 7, 6, 12, 0, 0));
-            testDT(DateTime(-1999, 7, 6, 12, 30, 33), -1834, DateTime(-1999, 7, 6, 11, 59, 59));
-            testDT(DateTime(-1999, 7, 6, 12, 30, 33), -3600, DateTime(-1999, 7, 6, 11, 30, 33));
-            testDT(DateTime(-1999, 7, 6, 12, 30, 33), -3601, DateTime(-1999, 7, 6, 11, 30, 32));
-            testDT(DateTime(-1999, 7, 6, 12, 30, 33), -5134, DateTime(-1999, 7, 6, 11, 4, 59));
-            testDT(DateTime(-1999, 7, 6, 12, 30, 33), -7200, DateTime(-1999, 7, 6, 10, 30, 33));
-            testDT(DateTime(-1999, 7, 6, 23, 0, 0), -432_123, DateTime(-1999, 7, 1, 22, 57, 57));
-
-            testDT(DateTime(-1999, 7, 6, 12, 30, 0), 1, DateTime(-1999, 7, 6, 12, 30, 1));
-            testDT(DateTime(-1999, 7, 6, 12, 30, 0), 0, DateTime(-1999, 7, 6, 12, 30, 0));
-            testDT(DateTime(-1999, 7, 6, 12, 30, 0), -1, DateTime(-1999, 7, 6, 12, 29, 59));
-
-            testDT(DateTime(-1999, 7, 6, 12, 0, 0), 1, DateTime(-1999, 7, 6, 12, 0, 1));
-            testDT(DateTime(-1999, 7, 6, 12, 0, 0), 0, DateTime(-1999, 7, 6, 12, 0, 0));
-            testDT(DateTime(-1999, 7, 6, 12, 0, 0), -1, DateTime(-1999, 7, 6, 11, 59, 59));
-
-            testDT(DateTime(-1999, 7, 6, 0, 0, 0), 1, DateTime(-1999, 7, 6, 0, 0, 1));
-            testDT(DateTime(-1999, 7, 6, 0, 0, 0), 0, DateTime(-1999, 7, 6, 0, 0, 0));
-            testDT(DateTime(-1999, 7, 6, 0, 0, 0), -1, DateTime(-1999, 7, 5, 23, 59, 59));
-
-            testDT(DateTime(-1999, 7, 5, 23, 59, 59), 1, DateTime(-1999, 7, 6, 0, 0, 0));
-            testDT(DateTime(-1999, 7, 5, 23, 59, 59), 0, DateTime(-1999, 7, 5, 23, 59, 59));
-            testDT(DateTime(-1999, 7, 5, 23, 59, 59), -1, DateTime(-1999, 7, 5, 23, 59, 58));
-
-            testDT(DateTime(-2000, 12, 31, 23, 59, 59), 1, DateTime(-1999, 1, 1, 0, 0, 0));
-            testDT(DateTime(-2000, 12, 31, 23, 59, 59), 0, DateTime(-2000, 12, 31, 23, 59, 59));
-            testDT(DateTime(-2000, 12, 31, 23, 59, 59), -1, DateTime(-2000, 12, 31, 23, 59, 58));
-
-            testDT(DateTime(-2000, 1, 1, 0, 0, 0), 1, DateTime(-2000, 1, 1, 0, 0, 1));
-            testDT(DateTime(-2000, 1, 1, 0, 0, 0), 0, DateTime(-2000, 1, 1, 0, 0, 0));
-            testDT(DateTime(-2000, 1, 1, 0, 0, 0), -1, DateTime(-2001, 12, 31, 23, 59, 59));
-
-            //Test Both
-            testDT(DateTime(1, 1, 1, 0, 0, 0), -1, DateTime(0, 12, 31, 23, 59, 59));
-            testDT(DateTime(0, 12, 31, 23, 59, 59), 1, DateTime(1, 1, 1, 0, 0, 0));
-
-            testDT(DateTime(0, 1, 1, 0, 0, 0), -1, DateTime(-1, 12, 31, 23, 59, 59));
-            testDT(DateTime(-1, 12, 31, 23, 59, 59), 1, DateTime(0, 1, 1, 0, 0, 0));
-
-            testDT(DateTime(-1, 1, 1, 11, 30, 33), 63_165_600L, DateTime(1, 1, 1, 13, 30, 33));
-            testDT(DateTime(1, 1, 1, 13, 30, 33), -63_165_600L, DateTime(-1, 1, 1, 11, 30, 33));
-
-            testDT(DateTime(-1, 1, 1, 11, 30, 33), 63_165_617L, DateTime(1, 1, 1, 13, 30, 50));
-            testDT(DateTime(1, 1, 1, 13, 30, 50), -63_165_617L, DateTime(-1, 1, 1, 11, 30, 33));
-
-            const cdt = DateTime(1999, 7, 6, 12, 30, 33);
-            immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
-            static assert(!__traits(compiles, cdt.addSeconds(4)));
-            static assert(!__traits(compiles, idt.addSeconds(4)));
-        }
-    }
-
-
-    Date      _date;
-    TimeOfDay _tod;
+    @disable this() {}
 }
 
+
+//==============================================================================
+// Section with time points.
+//==============================================================================
 
 
 /++
@@ -17162,7 +7587,7 @@ assert(st == SysTime(DateTime(2010, 12, 31, 12, 0, 0)));
         The ISO 8601 week of the year that this SysTime is in.
 
         See_Also:
-            <a href="http://en.wikipedia.org/wiki/ISO_week_date">ISO Week Date</a>
+            $(WEB en.wikipedia.org/wiki/ISO_week_date, ISO Week Date</a>
       +/
     @property ubyte isoWeek() const nothrow
     {
@@ -18668,6 +9093,9753 @@ private:
 
     long  _stdTime;
     DTRebindable!(immutable TimeZone) _timezone;
+}
+
+
+/++
+    Represents a date in the Proleptic Gregorian Calendar ranging from 32,768 B.C.
+    to 32,767 A.D. Positive years are A.D. Non-positive years are B.C.
+
+    Year, month, and day are kept separately internally so that Date is optimized for
+    calendar operations.
+
+    Date uses the Proleptic Gregorian Calendar, so it assumes the Gregorian leap year
+    calculations for its entire length. And, as per ISO 8601, it also treats 1 B.C. as
+    year 0, so 1 B.C. is 0, 2 B.C. is -1, etc. Use $(D yearBC) if want B.C. as a positive
+    integer with 1 B.C. being the year prior to 1 A.D.
+
+    Year 0 is a leap year.
+ +/
+struct Date
+{
+public:
+
+    /++
+        Throws:
+            DateTimeException if the resulting Date would not be valid.
+
+        Params:
+            year  = Year of the Gregorian Calendar. Positive values are A.D.
+                    Non-positive values are B.C. with year 0 being the year
+                    prior to 1 A.D.
+            month = Month of the year.
+            day   = Day of the month.
+     +/
+    this(int year, int month, int day) pure
+    {
+        enforceValid!"months"(cast(Month)month);
+        enforceValid!"days"(year, cast(Month)month, day);
+
+        _year  = cast(short)year;
+        _month = cast(Month)month;
+        _day   = cast(ubyte)day;
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            assertPred!"=="(Date(1, 1, 1), Date.init);
+
+            static void testDate(in Date date, int year, int month, int day, size_t line = __LINE__)
+            {
+                assertPred!"=="(date._year, year, "", __FILE__, line);
+                assertPred!"=="(date._month, month, "", __FILE__, line);
+                assertPred!"=="(date._day, day, "", __FILE__, line);
+            }
+
+            testDate(Date(1999, 1 , 1), 1999, Month.jan, 1);
+            testDate(Date(1999, 7 , 1), 1999, Month.jul, 1);
+            testDate(Date(1999, 7 , 6), 1999, Month.jul, 6);
+
+            //Test A.D.
+            assertThrown!DateTimeException(Date(1, 0, 1));
+            assertThrown!DateTimeException(Date(1, 1, 0));
+            assertThrown!DateTimeException(Date(1999, 13, 1));
+            assertThrown!DateTimeException(Date(1999, 1, 32));
+            assertThrown!DateTimeException(Date(1999, 2, 29));
+            assertThrown!DateTimeException(Date(2000, 2, 30));
+            assertThrown!DateTimeException(Date(1999, 3, 32));
+            assertThrown!DateTimeException(Date(1999, 4, 31));
+            assertThrown!DateTimeException(Date(1999, 5, 32));
+            assertThrown!DateTimeException(Date(1999, 6, 31));
+            assertThrown!DateTimeException(Date(1999, 7, 32));
+            assertThrown!DateTimeException(Date(1999, 8, 32));
+            assertThrown!DateTimeException(Date(1999, 9, 31));
+            assertThrown!DateTimeException(Date(1999, 10, 32));
+            assertThrown!DateTimeException(Date(1999, 11, 31));
+            assertThrown!DateTimeException(Date(1999, 12, 32));
+
+            assertNotThrown!DateTimeException(Date(1999, 1, 31));
+            assertNotThrown!DateTimeException(Date(1999, 2, 28));
+            assertNotThrown!DateTimeException(Date(2000, 2, 29));
+            assertNotThrown!DateTimeException(Date(1999, 3, 31));
+            assertNotThrown!DateTimeException(Date(1999, 4, 30));
+            assertNotThrown!DateTimeException(Date(1999, 5, 31));
+            assertNotThrown!DateTimeException(Date(1999, 6, 30));
+            assertNotThrown!DateTimeException(Date(1999, 7, 31));
+            assertNotThrown!DateTimeException(Date(1999, 8, 31));
+            assertNotThrown!DateTimeException(Date(1999, 9, 30));
+            assertNotThrown!DateTimeException(Date(1999, 10, 31));
+            assertNotThrown!DateTimeException(Date(1999, 11, 30));
+            assertNotThrown!DateTimeException(Date(1999, 12, 31));
+
+            //Test B.C.
+            assertNotThrown!DateTimeException(Date(0, 1, 1));
+            assertNotThrown!DateTimeException(Date(-1, 1, 1));
+            assertNotThrown!DateTimeException(Date(-1, 12, 31));
+            assertNotThrown!DateTimeException(Date(-1, 2, 28));
+            assertNotThrown!DateTimeException(Date(-4, 2, 29));
+
+            assertThrown!DateTimeException(Date(-1, 2, 29));
+            assertThrown!DateTimeException(Date(-2, 2, 29));
+            assertThrown!DateTimeException(Date(-3, 2, 29));
+            }
+    }
+
+
+    /++
+        Params:
+            day = The Xth day of the Gregorian Calendar that the constructed Date
+                  will be for.
+     +/
+    this(int day) pure nothrow
+    {
+        if(day > 0)
+        {
+            int years = (day / daysIn400Years) * 400 + 1;
+            day %= daysIn400Years;
+
+            years += (day / daysIn100Years) * 100;
+            day %= daysIn100Years;
+
+            years += (day / daysIn4Years) * 4;
+            day %= daysIn4Years;
+
+            years += day / daysInYear;
+            day %= daysInYear;
+
+            if(day == 0)
+            {
+                _year = cast(short)(years - 1);
+                _month = Month.dec;
+                _day = 31;
+            }
+            else
+            {
+                _year = cast(short)years;
+
+                try
+                    dayOfYear = day;
+                catch(Exception e)
+                    assert(0, "dayOfYear assignment threw.");
+            }
+        }
+        else if(day <= 0 && -day < daysInLeapYear)
+        {
+            _year = 0;
+
+            try
+                dayOfYear = (daysInLeapYear + day);
+            catch(Exception e)
+                assert(0, "dayOfYear assignment threw.");
+        }
+        else
+        {
+            day += daysInLeapYear - 1;
+            int years = (day / daysIn400Years) * 400 - 1;
+            day %= daysIn400Years;
+
+            years += (day / daysIn100Years) * 100;
+            day %= daysIn100Years;
+
+            years += (day / daysIn4Years) * 4;
+            day %= daysIn4Years;
+
+            years += day / daysInYear;
+            day %= daysInYear;
+
+            if(day == 0)
+            {
+                _year = cast(short)(years + 1);
+                _month = Month.jan;
+                _day = 1;
+            }
+            else
+            {
+                _year = cast(short)years;
+                immutable newDoY = (yearIsLeapYear(_year) ? daysInLeapYear : daysInYear) + day + 1;
+
+                try
+                    dayOfYear = newDoY;
+                catch(Exception e)
+                    assert(0, "dayOfYear assignment threw.");
+            }
+        }
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            //Test A.D.
+            assertPred!"=="(Date(1), Date(1, 1, 1));
+            assertPred!"=="(Date(2), Date(1, 1, 2));
+            assertPred!"=="(Date(32), Date(1, 2, 1));
+            assertPred!"=="(Date(366), Date(2, 1, 1));
+            assertPred!"=="(Date(731), Date(3, 1, 1));
+            assertPred!"=="(Date(1096), Date(4, 1, 1));
+            assertPred!"=="(Date(1462), Date(5, 1, 1));
+            assertPred!"=="(Date(17_898), Date(50, 1, 1));
+            assertPred!"=="(Date(35_065), Date(97, 1, 1));
+            assertPred!"=="(Date(36_160), Date(100, 1, 1));
+            assertPred!"=="(Date(36_525), Date(101, 1, 1));
+            assertPred!"=="(Date(37_986), Date(105, 1, 1));
+            assertPred!"=="(Date(72_684), Date(200, 1, 1));
+            assertPred!"=="(Date(73_049), Date(201, 1, 1));
+            assertPred!"=="(Date(109_208), Date(300, 1, 1));
+            assertPred!"=="(Date(109_573), Date(301, 1, 1));
+            assertPred!"=="(Date(145_732), Date(400, 1, 1));
+            assertPred!"=="(Date(146_098), Date(401, 1, 1));
+            assertPred!"=="(Date(182_257), Date(500, 1, 1));
+            assertPred!"=="(Date(182_622), Date(501, 1, 1));
+            assertPred!"=="(Date(364_878), Date(1000, 1, 1));
+            assertPred!"=="(Date(365_243), Date(1001, 1, 1));
+            assertPred!"=="(Date(584_023), Date(1600, 1, 1));
+            assertPred!"=="(Date(584_389), Date(1601, 1, 1));
+            assertPred!"=="(Date(693_596), Date(1900, 1, 1));
+            assertPred!"=="(Date(693_961), Date(1901, 1, 1));
+            assertPred!"=="(Date(729_755), Date(1999, 1, 1));
+            assertPred!"=="(Date(730_120), Date(2000, 1, 1));
+            assertPred!"=="(Date(730_486), Date(2001, 1, 1));
+
+            assertPred!"=="(Date(733_773), Date(2010, 1, 1));
+            assertPred!"=="(Date(733_803), Date(2010, 1, 31));
+            assertPred!"=="(Date(733_804), Date(2010, 2, 1));
+            assertPred!"=="(Date(733_831), Date(2010, 2, 28));
+            assertPred!"=="(Date(733_832), Date(2010, 3, 1));
+            assertPred!"=="(Date(733_862), Date(2010, 3, 31));
+            assertPred!"=="(Date(733_863), Date(2010, 4, 1));
+            assertPred!"=="(Date(733_892), Date(2010, 4, 30));
+            assertPred!"=="(Date(733_893), Date(2010, 5, 1));
+            assertPred!"=="(Date(733_923), Date(2010, 5, 31));
+            assertPred!"=="(Date(733_924), Date(2010, 6, 1));
+            assertPred!"=="(Date(733_953), Date(2010, 6, 30));
+            assertPred!"=="(Date(733_954), Date(2010, 7, 1));
+            assertPred!"=="(Date(733_984), Date(2010, 7, 31));
+            assertPred!"=="(Date(733_985), Date(2010, 8, 1));
+            assertPred!"=="(Date(734_015), Date(2010, 8, 31));
+            assertPred!"=="(Date(734_016), Date(2010, 9, 1));
+            assertPred!"=="(Date(734_045), Date(2010, 9, 30));
+            assertPred!"=="(Date(734_046), Date(2010, 10, 1));
+            assertPred!"=="(Date(734_076), Date(2010, 10, 31));
+            assertPred!"=="(Date(734_077), Date(2010, 11, 1));
+            assertPred!"=="(Date(734_106), Date(2010, 11, 30));
+            assertPred!"=="(Date(734_107), Date(2010, 12, 1));
+            assertPred!"=="(Date(734_137), Date(2010, 12, 31));
+
+            assertPred!"=="(Date(734_534), Date(2012, 2, 1));
+            assertPred!"=="(Date(734_561), Date(2012, 2, 28));
+            assertPred!"=="(Date(734_562), Date(2012, 2, 29));
+            assertPred!"=="(Date(734_563), Date(2012, 3, 1));
+
+            assertPred!"=="(Date(734_534),  Date(2012, 2, 1));
+
+            assertPred!"=="(Date(734_561), Date(2012, 2, 28));
+            assertPred!"=="(Date(734_562), Date(2012, 2, 29));
+            assertPred!"=="(Date(734_563), Date(2012, 3, 1));
+
+            //Test B.C.
+            assertPred!"=="(Date(0), Date(0, 12, 31));
+            assertPred!"=="(Date(-1), Date(0, 12, 30));
+            assertPred!"=="(Date(-30), Date(0, 12, 1));
+            assertPred!"=="(Date(-31), Date(0, 11, 30));
+
+            assertPred!"=="(Date(-366), Date(-1, 12, 31));
+            assertPred!"=="(Date(-367), Date(-1, 12, 30));
+            assertPred!"=="(Date(-730), Date(-1, 1, 1));
+            assertPred!"=="(Date(-731), Date(-2, 12, 31));
+            assertPred!"=="(Date(-1095), Date(-2, 1, 1));
+            assertPred!"=="(Date(-1096), Date(-3, 12, 31));
+            assertPred!"=="(Date(-1460), Date(-3, 1, 1));
+            assertPred!"=="(Date(-1461), Date(-4, 12, 31));
+            assertPred!"=="(Date(-1826), Date(-4, 1, 1));
+            assertPred!"=="(Date(-1827), Date(-5, 12, 31));
+            assertPred!"=="(Date(-2191), Date(-5, 1, 1));
+            assertPred!"=="(Date(-3652), Date(-9, 1, 1));
+
+            assertPred!"=="(Date(-18_262), Date(-49, 1, 1));
+            assertPred!"=="(Date(-18_627), Date(-50, 1, 1));
+            assertPred!"=="(Date(-35_794), Date(-97, 1, 1));
+            assertPred!"=="(Date(-36_160), Date(-99, 12, 31));
+            assertPred!"=="(Date(-36_524), Date(-99, 1, 1));
+            assertPred!"=="(Date(-36_889), Date(-100, 1, 1));
+            assertPred!"=="(Date(-37_254), Date(-101, 1, 1));
+            assertPred!"=="(Date(-38_715), Date(-105, 1, 1));
+            assertPred!"=="(Date(-73_413), Date(-200, 1, 1));
+            assertPred!"=="(Date(-73_778), Date(-201, 1, 1));
+            assertPred!"=="(Date(-109_937), Date(-300, 1, 1));
+            assertPred!"=="(Date(-110_302), Date(-301, 1, 1));
+            assertPred!"=="(Date(-146_097), Date(-400, 12, 31));
+            assertPred!"=="(Date(-146_462), Date(-400, 1, 1));
+            assertPred!"=="(Date(-146_827), Date(-401, 1, 1));
+            assertPred!"=="(Date(-182_621), Date(-499, 1, 1));
+            assertPred!"=="(Date(-182_986), Date(-500, 1, 1));
+            assertPred!"=="(Date(-183_351), Date(-501, 1, 1));
+            assertPred!"=="(Date(-365_607), Date(-1000, 1, 1));
+            assertPred!"=="(Date(-365_972), Date(-1001, 1, 1));
+            assertPred!"=="(Date(-584_387), Date(-1599, 1, 1));
+            assertPred!"=="(Date(-584_388), Date(-1600, 12, 31));
+            assertPred!"=="(Date(-584_753), Date(-1600, 1, 1));
+            assertPred!"=="(Date(-585_118), Date(-1601, 1, 1));
+            assertPred!"=="(Date(-694_325), Date(-1900, 1, 1));
+            assertPred!"=="(Date(-694_690), Date(-1901, 1, 1));
+            assertPred!"=="(Date(-730_484), Date(-1999, 1, 1));
+            assertPred!"=="(Date(-730_485), Date(-2000, 12, 31));
+            assertPred!"=="(Date(-730_850), Date(-2000, 1, 1));
+            assertPred!"=="(Date(-731_215), Date(-2001, 1, 1));
+
+            assertPred!"=="(Date(-734_502), Date(-2010, 1, 1));
+            assertPred!"=="(Date(-734_472), Date(-2010, 1, 31));
+            assertPred!"=="(Date(-734_471), Date(-2010, 2, 1));
+            assertPred!"=="(Date(-734_444), Date(-2010, 2, 28));
+            assertPred!"=="(Date(-734_443), Date(-2010, 3, 1));
+            assertPred!"=="(Date(-734_413), Date(-2010, 3, 31));
+            assertPred!"=="(Date(-734_412), Date(-2010, 4, 1));
+            assertPred!"=="(Date(-734_383), Date(-2010, 4, 30));
+            assertPred!"=="(Date(-734_382), Date(-2010, 5, 1));
+            assertPred!"=="(Date(-734_352), Date(-2010, 5, 31));
+            assertPred!"=="(Date(-734_351), Date(-2010, 6, 1));
+            assertPred!"=="(Date(-734_322), Date(-2010, 6, 30));
+            assertPred!"=="(Date(-734_321), Date(-2010, 7, 1));
+            assertPred!"=="(Date(-734_291), Date(-2010, 7, 31));
+            assertPred!"=="(Date(-734_290), Date(-2010, 8, 1));
+            assertPred!"=="(Date(-734_260), Date(-2010, 8, 31));
+            assertPred!"=="(Date(-734_259), Date(-2010, 9, 1));
+            assertPred!"=="(Date(-734_230), Date(-2010, 9, 30));
+            assertPred!"=="(Date(-734_229), Date(-2010, 10, 1));
+            assertPred!"=="(Date(-734_199), Date(-2010, 10, 31));
+            assertPred!"=="(Date(-734_198), Date(-2010, 11, 1));
+            assertPred!"=="(Date(-734_169), Date(-2010, 11, 30));
+            assertPred!"=="(Date(-734_168), Date(-2010, 12, 1));
+            assertPred!"=="(Date(-734_138), Date(-2010, 12, 31));
+
+            assertPred!"=="(Date(-735_202), Date(-2012, 2, 1));
+            assertPred!"=="(Date(-735_175), Date(-2012, 2, 28));
+            assertPred!"=="(Date(-735_174), Date(-2012, 2, 29));
+            assertPred!"=="(Date(-735_173), Date(-2012, 3, 1));
+
+            assertPred!"=="(Date(-1_373_427), Date(-3760, 9, 7)); //Start of the Hebrew Calendar
+        }
+    }
+
+
+    /++
+        Compares this Date with the given Date.
+
+        Returns:
+            $(TABLE
+            $(TR $(TD this &lt; rhs) $(TD &lt; 0))
+            $(TR $(TD this == rhs) $(TD 0))
+            $(TR $(TD this &gt; rhs) $(TD &gt; 0))
+            )
+     +/
+    int opCmp(in Date rhs) const pure nothrow
+    {
+        if(_year < rhs._year)
+            return -1;
+        if(_year > rhs._year)
+            return 1;
+
+        if(_month < rhs._month)
+            return -1;
+        if(_month > rhs._month)
+            return 1;
+
+        if(_day < rhs._day)
+            return -1;
+        if(_day > rhs._day)
+            return 1;
+
+        return 0;
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            //Test A.D.
+            assertPred!("opCmp", "==")(Date(1, 1, 1), Date.init);
+
+            assertPred!("opCmp", "==")(Date(1999, 1, 1), Date(1999, 1, 1));
+            assertPred!("opCmp", "==")(Date(1, 7, 1), Date(1, 7, 1));
+            assertPred!("opCmp", "==")(Date(1, 1, 6), Date(1, 1, 6));
+
+            assertPred!("opCmp", "==")(Date(1999, 7, 1), Date(1999, 7, 1));
+            assertPred!("opCmp", "==")(Date(1999, 7, 6), Date(1999, 7, 6));
+
+            assertPred!("opCmp", "==")(Date(1, 7, 6), Date(1, 7, 6));
+
+            assertPred!("opCmp", "<")(Date(1999, 7, 6), Date(2000, 7, 6));
+            assertPred!("opCmp", ">")(Date(2000, 7, 6), Date(1999, 7, 6));
+            assertPred!("opCmp", "<")(Date(1999, 7, 6), Date(1999, 8, 6));
+            assertPred!("opCmp", ">")(Date(1999, 8, 6), Date(1999, 7, 6));
+            assertPred!("opCmp", "<")(Date(1999, 7, 6), Date(1999, 7, 7));
+            assertPred!("opCmp", ">")(Date(1999, 7, 7), Date(1999, 7, 6));
+
+            assertPred!("opCmp", "<")(Date(1999, 8, 7), Date(2000, 7, 6));
+            assertPred!("opCmp", ">")(Date(2000, 8, 6), Date(1999, 7, 7));
+            assertPred!("opCmp", "<")(Date(1999, 7, 7), Date(2000, 7, 6));
+            assertPred!("opCmp", ">")(Date(2000, 7, 6), Date(1999, 7, 7));
+            assertPred!("opCmp", "<")(Date(1999, 7, 7), Date(1999, 8, 6));
+            assertPred!("opCmp", ">")(Date(1999, 8, 6), Date(1999, 7, 7));
+
+            //Test B.C.
+            assertPred!("opCmp", "==")(Date(0, 1, 1), Date(0, 1, 1));
+            assertPred!("opCmp", "==")(Date(-1, 1, 1), Date(-1, 1, 1));
+            assertPred!("opCmp", "==")(Date(-1, 7, 1), Date(-1, 7, 1));
+            assertPred!("opCmp", "==")(Date(-1, 1, 6), Date(-1, 1, 6));
+
+            assertPred!("opCmp", "==")(Date(-1999, 7, 1), Date(-1999, 7, 1));
+            assertPred!("opCmp", "==")(Date(-1999, 7, 6), Date(-1999, 7, 6));
+
+            assertPred!("opCmp", "==")(Date(-1, 7, 6), Date(-1, 7, 6));
+
+            assertPred!("opCmp", "<")(Date(-2000, 7, 6), Date(-1999, 7, 6));
+            assertPred!("opCmp", ">")(Date(-1999, 7, 6), Date(-2000, 7, 6));
+            assertPred!("opCmp", "<")(Date(-1999, 7, 6), Date(-1999, 8, 6));
+            assertPred!("opCmp", ">")(Date(-1999, 8, 6), Date(-1999, 7, 6));
+            assertPred!("opCmp", "<")(Date(-1999, 7, 6), Date(-1999, 7, 7));
+            assertPred!("opCmp", ">")(Date(-1999, 7, 7), Date(-1999, 7, 6));
+
+            assertPred!("opCmp", "<")(Date(-2000, 8, 6), Date(-1999, 7, 7));
+            assertPred!("opCmp", ">")(Date(-1999, 8, 7), Date(-2000, 7, 6));
+            assertPred!("opCmp", "<")(Date(-2000, 7, 6), Date(-1999, 7, 7));
+            assertPred!("opCmp", ">")(Date(-1999, 7, 7), Date(-2000, 7, 6));
+            assertPred!("opCmp", "<")(Date(-1999, 7, 7), Date(-1999, 8, 6));
+            assertPred!("opCmp", ">")(Date(-1999, 8, 6), Date(-1999, 7, 7));
+
+            //Test Both
+            assertPred!("opCmp", "<")(Date(-1999, 7, 6), Date(1999, 7, 6));
+            assertPred!("opCmp", ">")(Date(1999, 7, 6), Date(-1999, 7, 6));
+
+            assertPred!("opCmp", "<")(Date(-1999, 8, 6), Date(1999, 7, 6));
+            assertPred!("opCmp", ">")(Date(1999, 7, 6), Date(-1999, 8, 6));
+
+            assertPred!("opCmp", "<")(Date(-1999, 7, 7), Date(1999, 7, 6));
+            assertPred!("opCmp", ">")(Date(1999, 7, 6), Date(-1999, 7, 7));
+
+            assertPred!("opCmp", "<")(Date(-1999, 8, 7), Date(1999, 7, 6));
+            assertPred!("opCmp", ">")(Date(1999, 7, 6), Date(-1999, 8, 7));
+
+            assertPred!("opCmp", "<")(Date(-1999, 8, 6), Date(1999, 6, 6));
+            assertPred!("opCmp", ">")(Date(1999, 6, 8), Date(-1999, 7, 6));
+
+            auto date = Date(1999, 7, 6);
+            const cdate = Date(1999, 7, 6);
+            immutable idate = Date(1999, 7, 6);
+            static assert(__traits(compiles, date.opCmp(date)));
+            static assert(__traits(compiles, date.opCmp(cdate)));
+            static assert(__traits(compiles, date.opCmp(idate)));
+            static assert(__traits(compiles, cdate.opCmp(date)));
+            static assert(__traits(compiles, cdate.opCmp(cdate)));
+            static assert(__traits(compiles, cdate.opCmp(idate)));
+            static assert(__traits(compiles, idate.opCmp(date)));
+            static assert(__traits(compiles, idate.opCmp(cdate)));
+            static assert(__traits(compiles, idate.opCmp(idate)));
+        }
+    }
+
+
+    /++
+        Year of the Gregorian Calendar. Positive numbers are A.D. Non-positive
+        are B.C.
+
+        Examples:
+--------------------
+assert(Date(1999, 7, 6).year == 1999);
+assert(Date(2010, 10, 4).year == 2010);
+assert(Date(-7, 4, 5).year == -7);
+--------------------
+     +/
+    @property short year() const pure nothrow
+    {
+        return _year;
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            assertPred!"=="(Date.init.year, 1);
+            assertPred!"=="(Date(1999, 7, 6).year, 1999);
+            assertPred!"=="(Date(-1999, 7, 6).year, -1999);
+
+            const cdate = Date(1999, 7, 6);
+            immutable idate = Date(1999, 7, 6);
+            static assert(__traits(compiles, cdate.year == 1999));
+            static assert(__traits(compiles, idate.year == 1999));
+
+            //Verify Examples.
+            assert(Date(1999, 7, 6).year == 1999);
+            assert(Date(2010, 10, 4).year == 2010);
+            assert(Date(-7, 4, 5).year == -7);
+        }
+    }
+
+    /++
+        Year of the Gregorian Calendar. Positive numbers are A.D. Non-positive
+        are B.C.
+
+        Params:
+            year = The year to set this Date's year to.
+
+        Throws:
+            DateTimeException if the new year is not a leap year and the resulting
+            date would be on February 29th.
+     +/
+    @property void year(int year) pure
+    {
+        enforceValid!"days"(year, _month, _day);
+        _year = cast(short)year;
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            static void testDateInvalid(Date date, int year)
+            {
+                date.year = year;
+            }
+
+            static void testDate(Date date, int year, in Date expected, size_t line = __LINE__)
+            {
+                date.year = year;
+                assertPred!"=="(date, expected, "", __FILE__, line);
+            }
+
+            assertThrown!DateTimeException(testDateInvalid(Date(4, 2, 29), 1));
+
+            testDate(Date(1, 1, 1), 1999, Date(1999, 1, 1));
+            testDate(Date(1, 1, 1), 0, Date(0, 1, 1));
+            testDate(Date(1, 1, 1), -1999, Date(-1999, 1, 1));
+
+            const cdate = Date(1999, 7, 6);
+            immutable idate = Date(1999, 7, 6);
+            static assert(!__traits(compiles, cdate.year = 1999));
+            static assert(!__traits(compiles, idate.year = 1999));
+
+            //Verify Examples.
+            assert(Date(1999, 7, 6).year == 1999);
+            assert(Date(2010, 10, 4).year == 2010);
+            assert(Date(-7, 4, 5).year == -7);
+        }
+    }
+
+
+    /++
+        Year B.C. of the Gregorian Calendar counting year 0 as 1 B.C.
+
+        Throws:
+            DateTimeException if $(D isAD) is true.
+
+        Examples:
+--------------------
+assert(Date(0, 1, 1).yearBC == 1);
+assert(Date(-1, 1, 1).yearBC == 2);
+assert(Date(-100, 1, 1).yearBC == 101);
+--------------------
+     +/
+    @property ushort yearBC() const pure
+    {
+        if(isAD)
+            throw new DateTimeException("Year " ~ numToString(_year) ~ " is A.D.");
+            //Once format is pure, this would be a better error message.
+            //throw new DateTimeException(format("%s is A.D.", this));
+
+        return cast(ushort)((_year * -1) + 1);
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            assertThrown!DateTimeException((in Date date){date.yearBC;}(Date(1, 1, 1)));
+
+            auto date = Date(0, 7, 6);
+            const cdate = Date(0, 7, 6);
+            immutable idate = Date(0, 7, 6);
+            static assert(__traits(compiles, date.yearBC));
+            static assert(__traits(compiles, cdate.yearBC));
+            static assert(__traits(compiles, idate.yearBC));
+
+            //Verify Examples.
+            assert(Date(0, 1, 1).yearBC == 1);
+            assert(Date(-1, 1, 1).yearBC == 2);
+            assert(Date(-100, 1, 1).yearBC == 101);
+        }
+    }
+
+
+    /++
+        Year B.C. of the Gregorian Calendar counting year 0 as 1 B.C.
+
+        Params:
+            year = The year B.C. to set this Date's year to.
+
+        Throws:
+            DateTimeException if a non-positive value is given.
+
+        Examples:
+--------------------
+auto date = Date(2010, 1, 1);
+date.yearBC = 1;
+assert(date == Date(0, 1, 1));
+
+date.yearBC = 10;
+assert(date == Date(-9, 1, 1));
+--------------------
+     +/
+    @property void yearBC(int year) pure
+    {
+        if(year <= 0)
+            throw new DateTimeException("The given year is not a year B.C.");
+
+        _year = cast(short)((year - 1) * -1);
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            assertThrown!DateTimeException((Date date){date.yearBC = -1;}(Date(1, 1, 1)));
+
+            {
+                auto date = Date(0, 7, 6);
+                const cdate = Date(0, 7, 6);
+                immutable idate = Date(0, 7, 6);
+                static assert(__traits(compiles, date.yearBC = 7));
+                static assert(!__traits(compiles, cdate.yearBC = 7));
+                static assert(!__traits(compiles, idate.yearBC = 7));
+            }
+
+            //Verify Examples.
+            {
+                auto date = Date(2010, 1, 1);
+                date.yearBC = 1;
+                assert(date == Date(0, 1, 1));
+
+                date.yearBC = 10;
+                assert(date == Date(-9, 1, 1));
+            }
+        }
+    }
+
+
+    /++
+        Month of a Gregorian Year.
+
+        Examples:
+--------------------
+assert(Date(1999, 7, 6).month == 7);
+assert(Date(2010, 10, 4).month == 10);
+assert(Date(-7, 4, 5).month == 4);
+--------------------
+     +/
+    @property Month month() const pure nothrow
+    {
+        return _month;
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            assertPred!"=="(Date.init.month, 1);
+            assertPred!"=="(Date(1999, 7, 6).month, 7);
+            assertPred!"=="(Date(-1999, 7, 6).month, 7);
+
+            const cdate = Date(1999, 7, 6);
+            immutable idate = Date(1999, 7, 6);
+            static assert(__traits(compiles, cdate.month == 7));
+            static assert(__traits(compiles, idate.month == 7));
+
+            //Verify Examples.
+            assert(Date(1999, 7, 6).month == 7);
+            assert(Date(2010, 10, 4).month == 10);
+            assert(Date(-7, 4, 5).month == 4);
+        }
+    }
+
+    /++
+        Month of a Gregorian Year.
+
+        Params:
+            month = The month to set this Date's month to.
+
+        Throws:
+            DateTimeException if the given month is not a valid month or if
+            the current day would not be valid in the given month.
+     +/
+    @property void month(Month month) pure
+    {
+        enforceValid!"months"(month);
+        enforceValid!"days"(_year, month, _day);
+        _month = cast(Month)month;
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            static void testDate(Date date, Month month, in Date expected = Date.init, size_t line = __LINE__)
+            {
+                date.month = month;
+                assert(expected != Date.init);
+                assertPred!"=="(date, expected, "", __FILE__, line);
+            }
+
+            assertThrown!DateTimeException(testDate(Date(1, 1, 1), cast(Month)0));
+            assertThrown!DateTimeException(testDate(Date(1, 1, 1), cast(Month)13));
+            assertThrown!DateTimeException(testDate(Date(1, 1, 29), cast(Month)2));
+            assertThrown!DateTimeException(testDate(Date(0, 1, 30), cast(Month)2));
+
+            testDate(Date(1, 1, 1), cast(Month)7, Date(1, 7, 1));
+            testDate(Date(-1, 1, 1), cast(Month)7, Date(-1, 7, 1));
+
+            const cdate = Date(1999, 7, 6);
+            immutable idate = Date(1999, 7, 6);
+            static assert(!__traits(compiles, cdate.month = 7));
+            static assert(!__traits(compiles, idate.month = 7));
+        }
+    }
+
+
+    /++
+        Day of a Gregorian Month.
+
+        Examples:
+--------------------
+assert(Date(1999, 7, 6).day == 6);
+assert(Date(2010, 10, 4).day == 4);
+assert(Date(-7, 4, 5).day == 5);
+--------------------
+     +/
+    @property ubyte day() const pure nothrow
+    {
+        return _day;
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            assertPred!"=="(Date.init.day, 1);
+            assertPred!"=="(Date(1999, 7, 6).day, 6);
+            assertPred!"=="(Date(-1999, 7, 6).day, 6);
+
+            const cdate = Date(1999, 7, 6);
+            immutable idate = Date(1999, 7, 6);
+            static assert(__traits(compiles, cdate.day == 6));
+            static assert(__traits(compiles, idate.day == 6));
+
+            //Verify Examples.
+            assert(Date(1999, 7, 6).day == 6);
+            assert(Date(2010, 10, 4).day == 4);
+            assert(Date(-7, 4, 5).day == 5);
+        }
+    }
+
+    /++
+        Day of a Gregorian Month.
+
+        Params:
+            day = The day of the month to set this Date's day to.
+
+        Throws:
+            DateTimeException if the given day is not a valid day of the current month.
+     +/
+    @property void day(int day) pure
+    {
+        enforceValid!"days"(_year, _month, day);
+        _day = cast(ubyte)day;
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            static void testDate(Date date, int day)
+            {
+                date.day = day;
+            }
+
+            //Test A.D.
+            assertThrown!DateTimeException(testDate(Date(1, 1, 1), 0));
+            assertThrown!DateTimeException(testDate(Date(1, 1, 1), 32));
+            assertThrown!DateTimeException(testDate(Date(1, 2, 1), 29));
+            assertThrown!DateTimeException(testDate(Date(4, 2, 1), 30));
+            assertThrown!DateTimeException(testDate(Date(1, 3, 1), 32));
+            assertThrown!DateTimeException(testDate(Date(1, 4, 1), 31));
+            assertThrown!DateTimeException(testDate(Date(1, 5, 1), 32));
+            assertThrown!DateTimeException(testDate(Date(1, 6, 1), 31));
+            assertThrown!DateTimeException(testDate(Date(1, 7, 1), 32));
+            assertThrown!DateTimeException(testDate(Date(1, 8, 1), 32));
+            assertThrown!DateTimeException(testDate(Date(1, 9, 1), 31));
+            assertThrown!DateTimeException(testDate(Date(1, 10, 1), 32));
+            assertThrown!DateTimeException(testDate(Date(1, 11, 1), 31));
+            assertThrown!DateTimeException(testDate(Date(1, 12, 1), 32));
+
+            assertNotThrown!DateTimeException(testDate(Date(1, 1, 1), 31));
+            assertNotThrown!DateTimeException(testDate(Date(1, 2, 1), 28));
+            assertNotThrown!DateTimeException(testDate(Date(4, 2, 1), 29));
+            assertNotThrown!DateTimeException(testDate(Date(1, 3, 1), 31));
+            assertNotThrown!DateTimeException(testDate(Date(1, 4, 1), 30));
+            assertNotThrown!DateTimeException(testDate(Date(1, 5, 1), 31));
+            assertNotThrown!DateTimeException(testDate(Date(1, 6, 1), 30));
+            assertNotThrown!DateTimeException(testDate(Date(1, 7, 1), 31));
+            assertNotThrown!DateTimeException(testDate(Date(1, 8, 1), 31));
+            assertNotThrown!DateTimeException(testDate(Date(1, 9, 1), 30));
+            assertNotThrown!DateTimeException(testDate(Date(1, 10, 1), 31));
+            assertNotThrown!DateTimeException(testDate(Date(1, 11, 1), 30));
+            assertNotThrown!DateTimeException(testDate(Date(1, 12, 1), 31));
+
+            {
+                auto date = Date(1, 1, 1);
+                date.day = 6;
+                assertPred!"=="(date, Date(1, 1, 6));
+            }
+
+            //Test B.C.
+            assertThrown!DateTimeException(testDate(Date(-1, 1, 1), 0));
+            assertThrown!DateTimeException(testDate(Date(-1, 1, 1), 32));
+            assertThrown!DateTimeException(testDate(Date(-1, 2, 1), 29));
+            assertThrown!DateTimeException(testDate(Date(0, 2, 1), 30));
+            assertThrown!DateTimeException(testDate(Date(-1, 3, 1), 32));
+            assertThrown!DateTimeException(testDate(Date(-1, 4, 1), 31));
+            assertThrown!DateTimeException(testDate(Date(-1, 5, 1), 32));
+            assertThrown!DateTimeException(testDate(Date(-1, 6, 1), 31));
+            assertThrown!DateTimeException(testDate(Date(-1, 7, 1), 32));
+            assertThrown!DateTimeException(testDate(Date(-1, 8, 1), 32));
+            assertThrown!DateTimeException(testDate(Date(-1, 9, 1), 31));
+            assertThrown!DateTimeException(testDate(Date(-1, 10, 1), 32));
+            assertThrown!DateTimeException(testDate(Date(-1, 11, 1), 31));
+            assertThrown!DateTimeException(testDate(Date(-1, 12, 1), 32));
+
+            assertNotThrown!DateTimeException(testDate(Date(-1, 1, 1), 31));
+            assertNotThrown!DateTimeException(testDate(Date(-1, 2, 1), 28));
+            assertNotThrown!DateTimeException(testDate(Date(0, 2, 1), 29));
+            assertNotThrown!DateTimeException(testDate(Date(-1, 3, 1), 31));
+            assertNotThrown!DateTimeException(testDate(Date(-1, 4, 1), 30));
+            assertNotThrown!DateTimeException(testDate(Date(-1, 5, 1), 31));
+            assertNotThrown!DateTimeException(testDate(Date(-1, 6, 1), 30));
+            assertNotThrown!DateTimeException(testDate(Date(-1, 7, 1), 31));
+            assertNotThrown!DateTimeException(testDate(Date(-1, 8, 1), 31));
+            assertNotThrown!DateTimeException(testDate(Date(-1, 9, 1), 30));
+            assertNotThrown!DateTimeException(testDate(Date(-1, 10, 1), 31));
+            assertNotThrown!DateTimeException(testDate(Date(-1, 11, 1), 30));
+            assertNotThrown!DateTimeException(testDate(Date(-1, 12, 1), 31));
+
+            {
+                auto date = Date(-1, 1, 1);
+                date.day = 6;
+                assertPred!"=="(date, Date(-1, 1, 6));
+            }
+
+            const cdate = Date(1999, 7, 6);
+            immutable idate = Date(1999, 7, 6);
+            static assert(!__traits(compiles, cdate.day = 6));
+            static assert(!__traits(compiles, idate.day = 6));
+        }
+    }
+
+
+    /++
+        Adds the given number of years to this Date. A negative number will subtract.
+
+        Note that if day overflow is allowed, and the date is Febuary 29th of a
+        leap year, and the new year is not a leap year, then the date is shifted
+        to March 1st. If day overflow is not allowed, then the date is shifted to
+        February 28th.
+
+        Params:
+            years         = The number of years to add to this Date.
+            allowOverflow = Whether the days should be allowed to overflow, causing
+                            the month to increment.
+
+        Examples:
+--------------------
+auto date1 = Date(2010, 1, 1);
+date1.add!"years"(1);
+assert(date1 == Date(2011, 1, 1));
+
+auto date2 = Date(2010, 1, 1);
+date2.add!"years"(-1);
+assert(date2 == Date(2009, 1, 1));
+
+auto date3 = Date(2000, 2, 29);
+date3.add!"years"(1);
+assert(date3 == Date(2001, 3, 1));
+
+auto date4 = Date(2000, 2, 29);
+date4.add!"years"(1, AllowDayOverflow.no);
+assert(date4 == Date(2001, 2, 28));
+--------------------
+      +/
+    /+ref Date+/ void add(string units)(long years, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) pure nothrow
+        if(units == "years")
+    {
+        immutable newYear = _year + years;
+
+        _year += years;
+
+        if(_month == Month.feb && _day == 29 && !yearIsLeapYear(_year))
+        {
+            if(allowOverflow == AllowDayOverflow.yes)
+            {
+                _month = Month.mar;
+                _day = 1;
+            }
+            else
+                _day = 28;
+        }
+    }
+
+    //Test add!"years"() with AllowDayOverlow.yes
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            //Test A.D.
+            {
+                auto date = Date(1999, 7, 6);
+                date.add!"years"(7);
+                assertPred!"=="(date, Date(2006, 7, 6));
+                date.add!"years"(-9);
+                assertPred!"=="(date, Date(1997, 7, 6));
+            }
+
+            {
+                auto date = Date(1999, 2, 28);
+                date.add!"years"(1);
+                assertPred!"=="(date, Date(2000, 2, 28));
+            }
+
+            {
+                auto date = Date(2000, 2, 29);
+                date.add!"years"(-1);
+                assertPred!"=="(date, Date(1999, 3, 1));
+            }
+
+            //Test B.C.
+            {
+                auto date = Date(-1999, 7, 6);
+                date.add!"years"(-7);
+                assertPred!"=="(date, Date(-2006, 7, 6));
+                date.add!"years"(9);
+                assertPred!"=="(date, Date(-1997, 7, 6));
+            }
+
+            {
+                auto date = Date(-1999, 2, 28);
+                date.add!"years"(-1);
+                assertPred!"=="(date, Date(-2000, 2, 28));
+            }
+
+            {
+                auto date = Date(-2000, 2, 29);
+                date.add!"years"(1);
+                assertPred!"=="(date, Date(-1999, 3, 1));
+            }
+
+            //Test Both
+            {
+                auto date = Date(4, 7, 6);
+                date.add!"years"(-5);
+                assertPred!"=="(date, Date(-1, 7, 6));
+                date.add!"years"(5);
+                assertPred!"=="(date, Date(4, 7, 6));
+            }
+
+            {
+                auto date = Date(-4, 7, 6);
+                date.add!"years"(5);
+                assertPred!"=="(date, Date(1, 7, 6));
+                date.add!"years"(-5);
+                assertPred!"=="(date, Date(-4, 7, 6));
+            }
+
+            {
+                auto date = Date(4, 7, 6);
+                date.add!"years"(-8);
+                assertPred!"=="(date, Date(-4, 7, 6));
+                date.add!"years"(8);
+                assertPred!"=="(date, Date(4, 7, 6));
+            }
+
+            {
+                auto date = Date(-4, 7, 6);
+                date.add!"years"(8);
+                assertPred!"=="(date, Date(4, 7, 6));
+                date.add!"years"(-8);
+                assertPred!"=="(date, Date(-4, 7, 6));
+            }
+
+            {
+                auto date = Date(-4, 2, 29);
+                date.add!"years"(5);
+                assertPred!"=="(date, Date(1, 3, 1));
+            }
+
+            {
+                auto date = Date(4, 2, 29);
+                date.add!"years"(-5);
+                assertPred!"=="(date, Date(-1, 3, 1));
+            }
+
+            const cdate = Date(1999, 7, 6);
+            immutable idate = Date(1999, 7, 6);
+            static assert(!__traits(compiles, cdate.add!"years"(7)));
+            static assert(!__traits(compiles, idate.add!"years"(7)));
+
+            //Verify Examples.
+            auto date1 = Date(2010, 1, 1);
+            date1.add!"years"(1);
+            assert(date1 == Date(2011, 1, 1));
+
+            auto date2 = Date(2010, 1, 1);
+            date2.add!"years"(-1);
+            assert(date2 == Date(2009, 1, 1));
+
+            auto date3 = Date(2000, 2, 29);
+            date3.add!"years"(1);
+            assert(date3 == Date(2001, 3, 1));
+
+            auto date4 = Date(2000, 2, 29);
+            date4.add!"years"(1, AllowDayOverflow.no);
+            assert(date4 == Date(2001, 2, 28));
+        }
+    }
+
+    //Test add!"years"() with AllowDayOverlow.no
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            //Test A.D.
+            {
+                auto date = Date(1999, 7, 6);
+                date.add!"years"(7, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(2006, 7, 6));
+                date.add!"years"(-9, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(1997, 7, 6));
+            }
+
+            {
+                auto date = Date(1999, 2, 28);
+                date.add!"years"(1, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(2000, 2, 28));
+            }
+
+            {
+                auto date = Date(2000, 2, 29);
+                date.add!"years"(-1, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(1999, 2, 28));
+            }
+
+            //Test B.C.
+            {
+                auto date = Date(-1999, 7, 6);
+                date.add!"years"(-7, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(-2006, 7, 6));
+                date.add!"years"(9, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(-1997, 7, 6));
+            }
+
+            {
+                auto date = Date(-1999, 2, 28);
+                date.add!"years"(-1, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(-2000, 2, 28));
+            }
+
+            {
+                auto date = Date(-2000, 2, 29);
+                date.add!"years"(1, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(-1999, 2, 28));
+            }
+
+            //Test Both
+            {
+                auto date = Date(4, 7, 6);
+                date.add!"years"(-5, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(-1, 7, 6));
+                date.add!"years"(5, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(4, 7, 6));
+            }
+
+            {
+                auto date = Date(-4, 7, 6);
+                date.add!"years"(5, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(1, 7, 6));
+                date.add!"years"(-5, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(-4, 7, 6));
+            }
+
+            {
+                auto date = Date(4, 7, 6);
+                date.add!"years"(-8, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(-4, 7, 6));
+                date.add!"years"(8, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(4, 7, 6));
+            }
+
+            {
+                auto date = Date(-4, 7, 6);
+                date.add!"years"(8, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(4, 7, 6));
+                date.add!"years"(-8, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(-4, 7, 6));
+            }
+
+            {
+                auto date = Date(-4, 2, 29);
+                date.add!"years"(5, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(1, 2, 28));
+            }
+
+            {
+                auto date = Date(4, 2, 29);
+                date.add!"years"(-5, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(-1, 2, 28));
+            }
+        }
+    }
+
+
+    /++
+        Adds the given number of months to this Date. A negative number will subtract.
+
+        The year will be adjusted along with the month if the number of months added
+        (or subtracted) would overflow (or underflow) the current year.
+
+        Note that if day overflow is allowed, and the date with the adjusted month
+        overflows the number of days in the new month, then the month will be
+        incremented by one, and the days set to the number of days overflowed.
+        (e.g. if the day were 31 and the new month were June, then the month would
+        be incremented to July, and the new day would be 1). If day overflow is
+        not allowed, then the day will be set to the last valid day in the month
+        (e.g. June 31st would become June 30th).
+
+        Params:
+            months        = The number of months to add to this Date.
+            allowOverflow = Whether the days should be allowed to overflow, causing
+                            the month to increment.
+
+        Examples:
+--------------------
+auto date1 = Date(2010, 1, 1);
+date1.add!"months"(1);
+assert(date1 == Date(2010, 2, 1));
+
+auto date2 = Date(2010, 1, 1);
+date2.add!"months"(-1);
+assert(date2 == Date(2009, 12, 1));
+
+auto date3 = Date(1999, 1, 29);
+date3.add!"months"(1);
+assert(date3 == Date(1999, 3, 1));
+
+auto date4 = Date(1999, 1, 29);
+date4.add!"months"(1, AllowDayOverflow.no);
+assert(date4 == Date(1999, 2, 28));
+--------------------
+      +/
+    /+ref Date+/ void add(string units)(long months, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) pure nothrow
+        if(units == "months")
+    {
+        auto years = months / 12;
+        months %= 12;
+        auto newMonth = _month + months;
+
+        if(months < 0)
+        {
+            if(newMonth < 1)
+            {
+                newMonth += 12;
+                --years;
+            }
+        }
+        else if(newMonth > 12)
+        {
+            newMonth -= 12;
+            ++years;
+        }
+
+        _year += years;
+        _month = cast(Month)newMonth;
+
+        immutable currMaxDay = maxDay(_year, _month);
+        immutable overflow = _day - currMaxDay;
+
+        if(overflow > 0)
+        {
+            if(allowOverflow == AllowDayOverflow.yes)
+            {
+                ++_month;
+                _day = cast(ubyte)overflow;
+            }
+            else
+                _day = cast(ubyte)currMaxDay;
+        }
+    }
+
+    //Test add!"months"() with AllowDayOverlow.yes
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            //Test A.D.
+            {
+                auto date = Date(1999, 7, 6);
+                date.add!"months"(3);
+                assertPred!"=="(date, Date(1999, 10, 6));
+                date.add!"months"(-4);
+                assertPred!"=="(date, Date(1999, 6, 6));
+            }
+
+            {
+                auto date = Date(1999, 7, 6);
+                date.add!"months"(6);
+                assertPred!"=="(date, Date(2000, 1, 6));
+                date.add!"months"(-6);
+                assertPred!"=="(date, Date(1999, 7, 6));
+            }
+
+            {
+                auto date = Date(1999, 7, 6);
+                date.add!"months"(27);
+                assertPred!"=="(date, Date(2001, 10, 6));
+                date.add!"months"(-28);
+                assertPred!"=="(date, Date(1999, 6, 6));
+            }
+
+            {
+                auto date = Date(1999, 5, 31);
+                date.add!"months"(1);
+                assertPred!"=="(date, Date(1999, 7, 1));
+            }
+
+            {
+                auto date = Date(1999, 5, 31);
+                date.add!"months"(-1);
+                assertPred!"=="(date, Date(1999, 5, 1));
+            }
+
+            {
+                auto date = Date(1999, 2, 28);
+                date.add!"months"(12);
+                assertPred!"=="(date, Date(2000, 2, 28));
+            }
+
+            {
+                auto date = Date(2000, 2, 29);
+                date.add!"months"(12);
+                assertPred!"=="(date, Date(2001, 3, 1));
+            }
+
+            {
+                auto date = Date(1999, 7, 31);
+                date.add!"months"(1);
+                assertPred!"=="(date, Date(1999, 8, 31));
+                date.add!"months"(1);
+                assertPred!"=="(date, Date(1999, 10, 1));
+            }
+
+            {
+                auto date = Date(1998, 8, 31);
+                date.add!"months"(13);
+                assertPred!"=="(date, Date(1999, 10, 1));
+                date.add!"months"(-13);
+                assertPred!"=="(date, Date(1998, 9, 1));
+            }
+
+            {
+                auto date = Date(1997, 12, 31);
+                date.add!"months"(13);
+                assertPred!"=="(date, Date(1999, 1, 31));
+                date.add!"months"(-13);
+                assertPred!"=="(date, Date(1997, 12, 31));
+            }
+
+            {
+                auto date = Date(1997, 12, 31);
+                date.add!"months"(14);
+                assertPred!"=="(date, Date(1999, 3, 3));
+                date.add!"months"(-14);
+                assertPred!"=="(date, Date(1998, 1, 3));
+            }
+
+            {
+                auto date = Date(1998, 12, 31);
+                date.add!"months"(14);
+                assertPred!"=="(date, Date(2000, 3, 2));
+                date.add!"months"(-14);
+                assertPred!"=="(date, Date(1999, 1, 2));
+            }
+
+            {
+                auto date = Date(1999, 12, 31);
+                date.add!"months"(14);
+                assertPred!"=="(date, Date(2001, 3, 3));
+                date.add!"months"(-14);
+                assertPred!"=="(date, Date(2000, 1, 3));
+            }
+
+            //Test B.C.
+            {
+                auto date = Date(-1999, 7, 6);
+                date.add!"months"(3);
+                assertPred!"=="(date, Date(-1999, 10, 6));
+                date.add!"months"(-4);
+                assertPred!"=="(date, Date(-1999, 6, 6));
+            }
+
+            {
+                auto date = Date(-1999, 7, 6);
+                date.add!"months"(6);
+                assertPred!"=="(date, Date(-1998, 1, 6));
+                date.add!"months"(-6);
+                assertPred!"=="(date, Date(-1999, 7, 6));
+            }
+
+            {
+                auto date = Date(-1999, 7, 6);
+                date.add!"months"(-27);
+                assertPred!"=="(date, Date(-2001, 4, 6));
+                date.add!"months"(28);
+                assertPred!"=="(date, Date(-1999, 8, 6));
+            }
+
+            {
+                auto date = Date(-1999, 5, 31);
+                date.add!"months"(1);
+                assertPred!"=="(date, Date(-1999, 7, 1));
+            }
+
+            {
+                auto date = Date(-1999, 5, 31);
+                date.add!"months"(-1);
+                assertPred!"=="(date, Date(-1999, 5, 1));
+            }
+
+            {
+                auto date = Date(-1999, 2, 28);
+                date.add!"months"(-12);
+                assertPred!"=="(date, Date(-2000, 2, 28));
+            }
+
+            {
+                auto date = Date(-2000, 2, 29);
+                date.add!"months"(-12);
+                assertPred!"=="(date, Date(-2001, 3, 1));
+            }
+
+            {
+                auto date = Date(-1999, 7, 31);
+                date.add!"months"(1);
+                assertPred!"=="(date, Date(-1999, 8, 31));
+                date.add!"months"(1);
+                assertPred!"=="(date, Date(-1999, 10, 1));
+            }
+
+            {
+                auto date = Date(-1998, 8, 31);
+                date.add!"months"(13);
+                assertPred!"=="(date, Date(-1997, 10, 1));
+                date.add!"months"(-13);
+                assertPred!"=="(date, Date(-1998, 9, 1));
+            }
+
+            {
+                auto date = Date(-1997, 12, 31);
+                date.add!"months"(13);
+                assertPred!"=="(date, Date(-1995, 1, 31));
+                date.add!"months"(-13);
+                assertPred!"=="(date, Date(-1997, 12, 31));
+            }
+
+            {
+                auto date = Date(-1997, 12, 31);
+                date.add!"months"(14);
+                assertPred!"=="(date, Date(-1995, 3, 3));
+                date.add!"months"(-14);
+                assertPred!"=="(date, Date(-1996, 1, 3));
+            }
+
+            {
+                auto date = Date(-2002, 12, 31);
+                date.add!"months"(14);
+                assertPred!"=="(date, Date(-2000, 3, 2));
+                date.add!"months"(-14);
+                assertPred!"=="(date, Date(-2001, 1, 2));
+            }
+
+            {
+                auto date = Date(-2001, 12, 31);
+                date.add!"months"(14);
+                assertPred!"=="(date, Date(-1999, 3, 3));
+                date.add!"months"(-14);
+                assertPred!"=="(date, Date(-2000, 1, 3));
+            }
+
+            //Test Both
+            {
+                auto date = Date(1, 1, 1);
+                date.add!"months"(-1);
+                assertPred!"=="(date, Date(0, 12, 1));
+                date.add!"months"(1);
+                assertPred!"=="(date, Date(1, 1, 1));
+            }
+
+            {
+                auto date = Date(4, 1, 1);
+                date.add!"months"(-48);
+                assertPred!"=="(date, Date(0, 1, 1));
+                date.add!"months"(48);
+                assertPred!"=="(date, Date(4, 1, 1));
+            }
+
+            {
+                auto date = Date(4, 3, 31);
+                date.add!"months"(-49);
+                assertPred!"=="(date, Date(0, 3, 2));
+                date.add!"months"(49);
+                assertPred!"=="(date, Date(4, 4, 2));
+            }
+
+            {
+                auto date = Date(4, 3, 31);
+                date.add!"months"(-85);
+                assertPred!"=="(date, Date(-3, 3, 3));
+                date.add!"months"(85);
+                assertPred!"=="(date, Date(4, 4, 3));
+            }
+
+            const cdate = Date(1999, 7, 6);
+            immutable idate = Date(1999, 7, 6);
+            static assert(!__traits(compiles, cdate.add!"months"(3)));
+            static assert(!__traits(compiles, idate.add!"months"(3)));
+
+            //Verify Examples.
+            auto date1 = Date(2010, 1, 1);
+            date1.add!"months"(1);
+            assert(date1 == Date(2010, 2, 1));
+
+            auto date2 = Date(2010, 1, 1);
+            date2.add!"months"(-1);
+            assert(date2 == Date(2009, 12, 1));
+
+            auto date3 = Date(1999, 1, 29);
+            date3.add!"months"(1);
+            assert(date3 == Date(1999, 3, 1));
+
+            auto date4 = Date(1999, 1, 29);
+            date4.add!"months"(1, AllowDayOverflow.no);
+            assert(date4 == Date(1999, 2, 28));
+        }
+    }
+
+    //Test add!"months"() with AllowDayOverlow.no
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            //Test A.D.
+            {
+                auto date = Date(1999, 7, 6);
+                date.add!"months"(3, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(1999, 10, 6));
+                date.add!"months"(-4, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(1999, 6, 6));
+            }
+
+            {
+                auto date = Date(1999, 7, 6);
+                date.add!"months"(6, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(2000, 1, 6));
+                date.add!"months"(-6, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(1999, 7, 6));
+            }
+
+            {
+                auto date = Date(1999, 7, 6);
+                date.add!"months"(27, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(2001, 10, 6));
+                date.add!"months"(-28, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(1999, 6, 6));
+            }
+
+            {
+                auto date = Date(1999, 5, 31);
+                date.add!"months"(1, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(1999, 6, 30));
+            }
+
+            {
+                auto date = Date(1999, 5, 31);
+                date.add!"months"(-1, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(1999, 4, 30));
+            }
+
+            {
+                auto date = Date(1999, 2, 28);
+                date.add!"months"(12, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(2000, 2, 28));
+            }
+
+            {
+                auto date = Date(2000, 2, 29);
+                date.add!"months"(12, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(2001, 2, 28));
+            }
+
+            {
+                auto date = Date(1999, 7, 31);
+                date.add!"months"(1, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(1999, 8, 31));
+                date.add!"months"(1, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(1999, 9, 30));
+            }
+
+            {
+                auto date = Date(1998, 8, 31);
+                date.add!"months"(13, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(1999, 9, 30));
+                date.add!"months"(-13, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(1998, 8, 30));
+            }
+
+            {
+                auto date = Date(1997, 12, 31);
+                date.add!"months"(13, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(1999, 1, 31));
+                date.add!"months"(-13, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(1997, 12, 31));
+            }
+
+            {
+                auto date = Date(1997, 12, 31);
+                date.add!"months"(14, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(1999, 2, 28));
+                date.add!"months"(-14, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(1997, 12, 28));
+            }
+
+            {
+                auto date = Date(1998, 12, 31);
+                date.add!"months"(14, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(2000, 2, 29));
+                date.add!"months"(-14, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(1998, 12, 29));
+            }
+
+            {
+                auto date = Date(1999, 12, 31);
+                date.add!"months"(14, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(2001, 2, 28));
+                date.add!"months"(-14, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(1999, 12, 28));
+            }
+
+            //Test B.C.
+            {
+                auto date = Date(-1999, 7, 6);
+                date.add!"months"(3, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(-1999, 10, 6));
+                date.add!"months"(-4, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(-1999, 6, 6));
+            }
+
+            {
+                auto date = Date(-1999, 7, 6);
+                date.add!"months"(6, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(-1998, 1, 6));
+                date.add!"months"(-6, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(-1999, 7, 6));
+            }
+
+            {
+                auto date = Date(-1999, 7, 6);
+                date.add!"months"(-27, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(-2001, 4, 6));
+                date.add!"months"(28, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(-1999, 8, 6));
+            }
+
+            {
+                auto date = Date(-1999, 5, 31);
+                date.add!"months"(1, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(-1999, 6, 30));
+            }
+
+            {
+                auto date = Date(-1999, 5, 31);
+                date.add!"months"(-1, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(-1999, 4, 30));
+            }
+
+            {
+                auto date = Date(-1999, 2, 28);
+                date.add!"months"(-12, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(-2000, 2, 28));
+            }
+
+            {
+                auto date = Date(-2000, 2, 29);
+                date.add!"months"(-12, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(-2001, 2, 28));
+            }
+
+            {
+                auto date = Date(-1999, 7, 31);
+                date.add!"months"(1, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(-1999, 8, 31));
+                date.add!"months"(1, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(-1999, 9, 30));
+            }
+
+            {
+                auto date = Date(-1998, 8, 31);
+                date.add!"months"(13, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(-1997, 9, 30));
+                date.add!"months"(-13, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(-1998, 8, 30));
+            }
+
+            {
+                auto date = Date(-1997, 12, 31);
+                date.add!"months"(13, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(-1995, 1, 31));
+                date.add!"months"(-13, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(-1997, 12, 31));
+            }
+
+            {
+                auto date = Date(-1997, 12, 31);
+                date.add!"months"(14, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(-1995, 2, 28));
+                date.add!"months"(-14, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(-1997, 12, 28));
+            }
+
+            {
+                auto date = Date(-2002, 12, 31);
+                date.add!"months"(14, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(-2000, 2, 29));
+                date.add!"months"(-14, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(-2002, 12, 29));
+            }
+
+            {
+                auto date = Date(-2001, 12, 31);
+                date.add!"months"(14, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(-1999, 2, 28));
+                date.add!"months"(-14, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(-2001, 12, 28));
+            }
+
+            //Test Both
+            {
+                auto date = Date(1, 1, 1);
+                date.add!"months"(-1, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(0, 12, 1));
+                date.add!"months"(1, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(1, 1, 1));
+            }
+
+            {
+                auto date = Date(4, 1, 1);
+                date.add!"months"(-48, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(0, 1, 1));
+                date.add!"months"(48, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(4, 1, 1));
+            }
+
+            {
+                auto date = Date(4, 3, 31);
+                date.add!"months"(-49, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(0, 2, 29));
+                date.add!"months"(49, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(4, 3, 29));
+            }
+
+            {
+                auto date = Date(4, 3, 31);
+                date.add!"months"(-85, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(-3, 2, 28));
+                date.add!"months"(85, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(4, 3, 28));
+            }
+        }
+    }
+
+
+    /++
+        Adds the given number of years to this Date. A negative number will subtract.
+
+        For years, because they are the largest unit in Date, there is no difference
+        between adding or rolling.
+
+        Params:
+            years         = The number of years to add to this Date.
+            allowOverflow = Whether the days should be allowed to overflow, causing
+                            the month to increment.
+      +/
+    /+ref Date+/ void roll(string units)(long years, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) pure nothrow
+        if(units == "years")
+    {
+        add!"years"(years, allowOverflow);
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            const cdate = Date(1999, 7, 6);
+            immutable idate = Date(1999, 7, 6);
+            static assert(!__traits(compiles, cdate.roll!"years"(3)));
+            static assert(!__traits(compiles, idate.rolYears(3)));
+        }
+    }
+
+
+    /++
+        Adds the given number of months to this Date. A negative number will subtract.
+
+        The difference between rolling and adding is that rolling does not affect
+        larger units. So, if you roll the Date 12 months, you get the exact same
+        Date. However, the days can still be affected due to the differing number
+        of days in each month.
+
+        Params:
+            months        = The number of months to add to this Date.
+            allowOverflow = Whether the days should be allowed to overflow, causing
+                            the month to increment.
+
+        Examples:
+--------------------
+auto date1 = Date(2010, 1, 1);
+date1.roll!"months"(1);
+assert(date1 == Date(2010, 2, 1));
+
+auto date2 = Date(2010, 1, 1);
+date2.roll!"months"(-1);
+assert(date2 == Date(2010, 12, 1));
+
+auto date3 = Date(1999, 1, 29);
+date3.roll!"months"(1);
+assert(date3 == Date(1999, 3, 1));
+
+auto date4 = Date(1999, 1, 29);
+date4.roll!"months"(1, AllowDayOverflow.no);
+assert(date4 == Date(1999, 2, 28));
+--------------------
+      +/
+    /+ref Date+/ void roll(string units)(long months, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) pure nothrow
+        if(units == "months")
+    {
+        months %= 12;
+        auto newMonth = _month + months;
+
+        if(months < 0)
+        {
+            if(newMonth < 1)
+                newMonth += 12;
+        }
+        else
+        {
+            if(newMonth > 12)
+                newMonth -= 12;
+        }
+
+        _month = cast(Month)newMonth;
+
+        immutable currMaxDay = maxDay(_year, _month);
+        immutable overflow = _day - currMaxDay;
+
+        if(overflow > 0)
+        {
+            if(allowOverflow == AllowDayOverflow.yes)
+            {
+                ++_month;
+                _day = cast(ubyte)overflow;
+            }
+            else
+                _day = cast(ubyte)currMaxDay;
+        }
+    }
+
+    //Test roll!"months"() with AllowDayOverlow.yes
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            //Test A.D.
+            {
+                auto date = Date(1999, 7, 6);
+                date.roll!"months"(3);
+                assertPred!"=="(date, Date(1999, 10, 6));
+                date.roll!"months"(-4);
+                assertPred!"=="(date, Date(1999, 6, 6));
+            }
+
+            {
+                auto date = Date(1999, 7, 6);
+                date.roll!"months"(6);
+                assertPred!"=="(date, Date(1999, 1, 6));
+                date.roll!"months"(-6);
+                assertPred!"=="(date, Date(1999, 7, 6));
+            }
+
+            {
+                auto date = Date(1999, 7, 6);
+                date.roll!"months"(27);
+                assertPred!"=="(date, Date(1999, 10, 6));
+                date.roll!"months"(-28);
+                assertPred!"=="(date, Date(1999, 6, 6));
+            }
+
+            {
+                auto date = Date(1999, 5, 31);
+                date.roll!"months"(1);
+                assertPred!"=="(date, Date(1999, 7, 1));
+            }
+
+            {
+                auto date = Date(1999, 5, 31);
+                date.roll!"months"(-1);
+                assertPred!"=="(date, Date(1999, 5, 1));
+            }
+
+            {
+                auto date = Date(1999, 2, 28);
+                date.roll!"months"(12);
+                assertPred!"=="(date, Date(1999, 2, 28));
+            }
+
+            {
+                auto date = Date(2000, 2, 29);
+                date.roll!"months"(12);
+                assertPred!"=="(date, Date(2000, 2, 29));
+            }
+
+            {
+                auto date = Date(1999, 7, 31);
+                date.roll!"months"(1);
+                assertPred!"=="(date, Date(1999, 8, 31));
+                date.roll!"months"(1);
+                assertPred!"=="(date, Date(1999, 10, 1));
+            }
+
+            {
+                auto date = Date(1998, 8, 31);
+                date.roll!"months"(13);
+                assertPred!"=="(date, Date(1998, 10, 1));
+                date.roll!"months"(-13);
+                assertPred!"=="(date, Date(1998, 9, 1));
+            }
+
+            {
+                auto date = Date(1997, 12, 31);
+                date.roll!"months"(13);
+                assertPred!"=="(date, Date(1997, 1, 31));
+                date.roll!"months"(-13);
+                assertPred!"=="(date, Date(1997, 12, 31));
+            }
+
+            {
+                auto date = Date(1997, 12, 31);
+                date.roll!"months"(14);
+                assertPred!"=="(date, Date(1997, 3, 3));
+                date.roll!"months"(-14);
+                assertPred!"=="(date, Date(1997, 1, 3));
+            }
+
+            {
+                auto date = Date(1998, 12, 31);
+                date.roll!"months"(14);
+                assertPred!"=="(date, Date(1998, 3, 3));
+                date.roll!"months"(-14);
+                assertPred!"=="(date, Date(1998, 1, 3));
+            }
+
+            {
+                auto date = Date(1999, 12, 31);
+                date.roll!"months"(14);
+                assertPred!"=="(date, Date(1999, 3, 3));
+                date.roll!"months"(-14);
+                assertPred!"=="(date, Date(1999, 1, 3));
+            }
+
+            //Test B.C.
+            {
+                auto date = Date(-1999, 7, 6);
+                date.roll!"months"(3);
+                assertPred!"=="(date, Date(-1999, 10, 6));
+                date.roll!"months"(-4);
+                assertPred!"=="(date, Date(-1999, 6, 6));
+            }
+
+            {
+                auto date = Date(-1999, 7, 6);
+                date.roll!"months"(6);
+                assertPred!"=="(date, Date(-1999, 1, 6));
+                date.roll!"months"(-6);
+                assertPred!"=="(date, Date(-1999, 7, 6));
+            }
+
+            {
+                auto date = Date(-1999, 7, 6);
+                date.roll!"months"(-27);
+                assertPred!"=="(date, Date(-1999, 4, 6));
+                date.roll!"months"(28);
+                assertPred!"=="(date, Date(-1999, 8, 6));
+            }
+
+            {
+                auto date = Date(-1999, 5, 31);
+                date.roll!"months"(1);
+                assertPred!"=="(date, Date(-1999, 7, 1));
+            }
+
+            {
+                auto date = Date(-1999, 5, 31);
+                date.roll!"months"(-1);
+                assertPred!"=="(date, Date(-1999, 5, 1));
+            }
+
+            {
+                auto date = Date(-1999, 2, 28);
+                date.roll!"months"(-12);
+                assertPred!"=="(date, Date(-1999, 2, 28));
+            }
+
+            {
+                auto date = Date(-2000, 2, 29);
+                date.roll!"months"(-12);
+                assertPred!"=="(date, Date(-2000, 2, 29));
+            }
+
+            {
+                auto date = Date(-1999, 7, 31);
+                date.roll!"months"(1);
+                assertPred!"=="(date, Date(-1999, 8, 31));
+                date.roll!"months"(1);
+                assertPred!"=="(date, Date(-1999, 10, 1));
+            }
+
+            {
+                auto date = Date(-1998, 8, 31);
+                date.roll!"months"(13);
+                assertPred!"=="(date, Date(-1998, 10, 1));
+                date.roll!"months"(-13);
+                assertPred!"=="(date, Date(-1998, 9, 1));
+            }
+
+            {
+                auto date = Date(-1997, 12, 31);
+                date.roll!"months"(13);
+                assertPred!"=="(date, Date(-1997, 1, 31));
+                date.roll!"months"(-13);
+                assertPred!"=="(date, Date(-1997, 12, 31));
+            }
+
+            {
+                auto date = Date(-1997, 12, 31);
+                date.roll!"months"(14);
+                assertPred!"=="(date, Date(-1997, 3, 3));
+                date.roll!"months"(-14);
+                assertPred!"=="(date, Date(-1997, 1, 3));
+            }
+
+            {
+                auto date = Date(-2002, 12, 31);
+                date.roll!"months"(14);
+                assertPred!"=="(date, Date(-2002, 3, 3));
+                date.roll!"months"(-14);
+                assertPred!"=="(date, Date(-2002, 1, 3));
+            }
+
+            {
+                auto date = Date(-2001, 12, 31);
+                date.roll!"months"(14);
+                assertPred!"=="(date, Date(-2001, 3, 3));
+                date.roll!"months"(-14);
+                assertPred!"=="(date, Date(-2001, 1, 3));
+            }
+
+            //Test Both
+            {
+                auto date = Date(1, 1, 1);
+                date.roll!"months"(-1);
+                assertPred!"=="(date, Date(1, 12, 1));
+                date.roll!"months"(1);
+                assertPred!"=="(date, Date(1, 1, 1));
+            }
+
+            {
+                auto date = Date(4, 1, 1);
+                date.roll!"months"(-48);
+                assertPred!"=="(date, Date(4, 1, 1));
+                date.roll!"months"(48);
+                assertPred!"=="(date, Date(4, 1, 1));
+            }
+
+            {
+                auto date = Date(4, 3, 31);
+                date.roll!"months"(-49);
+                assertPred!"=="(date, Date(4, 3, 2));
+                date.roll!"months"(49);
+                assertPred!"=="(date, Date(4, 4, 2));
+            }
+
+            {
+                auto date = Date(4, 3, 31);
+                date.roll!"months"(-85);
+                assertPred!"=="(date, Date(4, 3, 2));
+                date.roll!"months"(85);
+                assertPred!"=="(date, Date(4, 4, 2));
+            }
+
+            {
+                auto date = Date(-1, 1, 1);
+                date.roll!"months"(-1);
+                assertPred!"=="(date, Date(-1, 12, 1));
+                date.roll!"months"(1);
+                assertPred!"=="(date, Date(-1, 1, 1));
+            }
+
+            {
+                auto date = Date(-4, 1, 1);
+                date.roll!"months"(-48);
+                assertPred!"=="(date, Date(-4, 1, 1));
+                date.roll!"months"(48);
+                assertPred!"=="(date, Date(-4, 1, 1));
+            }
+
+            {
+                auto date = Date(-4, 3, 31);
+                date.roll!"months"(-49);
+                assertPred!"=="(date, Date(-4, 3, 2));
+                date.roll!"months"(49);
+                assertPred!"=="(date, Date(-4, 4, 2));
+            }
+
+            {
+                auto date = Date(-4, 3, 31);
+                date.roll!"months"(-85);
+                assertPred!"=="(date, Date(-4, 3, 2));
+                date.roll!"months"(85);
+                assertPred!"=="(date, Date(-4, 4, 2));
+            }
+
+            const cdate = Date(1999, 7, 6);
+            immutable idate = Date(1999, 7, 6);
+            static assert(!__traits(compiles, cdate.roll!"months"(3)));
+            static assert(!__traits(compiles, idate.roll!"months"(3)));
+
+            //Verify Examples.
+            auto date1 = Date(2010, 1, 1);
+            date1.roll!"months"(1);
+            assert(date1 == Date(2010, 2, 1));
+
+            auto date2 = Date(2010, 1, 1);
+            date2.roll!"months"(-1);
+            assert(date2 == Date(2010, 12, 1));
+
+            auto date3 = Date(1999, 1, 29);
+            date3.roll!"months"(1);
+            assert(date3 == Date(1999, 3, 1));
+
+            auto date4 = Date(1999, 1, 29);
+            date4.roll!"months"(1, AllowDayOverflow.no);
+            assert(date4 == Date(1999, 2, 28));
+        }
+    }
+
+    //Test roll!"months"() with AllowDayOverlow.no
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            //Test A.D.
+            {
+                auto date = Date(1999, 7, 6);
+                date.roll!"months"(3, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(1999, 10, 6));
+                date.roll!"months"(-4, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(1999, 6, 6));
+            }
+
+            {
+                auto date = Date(1999, 7, 6);
+                date.roll!"months"(6, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(1999, 1, 6));
+                date.roll!"months"(-6, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(1999, 7, 6));
+            }
+
+            {
+                auto date = Date(1999, 7, 6);
+                date.roll!"months"(27, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(1999, 10, 6));
+                date.roll!"months"(-28, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(1999, 6, 6));
+            }
+
+            {
+                auto date = Date(1999, 5, 31);
+                date.roll!"months"(1, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(1999, 6, 30));
+            }
+
+            {
+                auto date = Date(1999, 5, 31);
+                date.roll!"months"(-1, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(1999, 4, 30));
+            }
+
+            {
+                auto date = Date(1999, 2, 28);
+                date.roll!"months"(12, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(1999, 2, 28));
+            }
+
+            {
+                auto date = Date(2000, 2, 29);
+                date.roll!"months"(12, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(2000, 2, 29));
+            }
+
+            {
+                auto date = Date(1999, 7, 31);
+                date.roll!"months"(1, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(1999, 8, 31));
+                date.roll!"months"(1, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(1999, 9, 30));
+            }
+
+            {
+                auto date = Date(1998, 8, 31);
+                date.roll!"months"(13, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(1998, 9, 30));
+                date.roll!"months"(-13, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(1998, 8, 30));
+            }
+
+            {
+                auto date = Date(1997, 12, 31);
+                date.roll!"months"(13, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(1997, 1, 31));
+                date.roll!"months"(-13, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(1997, 12, 31));
+            }
+
+            {
+                auto date = Date(1997, 12, 31);
+                date.roll!"months"(14, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(1997, 2, 28));
+                date.roll!"months"(-14, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(1997, 12, 28));
+            }
+
+            {
+                auto date = Date(1998, 12, 31);
+                date.roll!"months"(14, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(1998, 2, 28));
+                date.roll!"months"(-14, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(1998, 12, 28));
+            }
+
+            {
+                auto date = Date(1999, 12, 31);
+                date.roll!"months"(14, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(1999, 2, 28));
+                date.roll!"months"(-14, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(1999, 12, 28));
+            }
+
+            //Test B.C.
+            {
+                auto date = Date(-1999, 7, 6);
+                date.roll!"months"(3, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(-1999, 10, 6));
+                date.roll!"months"(-4, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(-1999, 6, 6));
+            }
+
+            {
+                auto date = Date(-1999, 7, 6);
+                date.roll!"months"(6, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(-1999, 1, 6));
+                date.roll!"months"(-6, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(-1999, 7, 6));
+            }
+
+            {
+                auto date = Date(-1999, 7, 6);
+                date.roll!"months"(-27, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(-1999, 4, 6));
+                date.roll!"months"(28, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(-1999, 8, 6));
+            }
+
+            {
+                auto date = Date(-1999, 5, 31);
+                date.roll!"months"(1, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(-1999, 6, 30));
+            }
+
+            {
+                auto date = Date(-1999, 5, 31);
+                date.roll!"months"(-1, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(-1999, 4, 30));
+            }
+
+            {
+                auto date = Date(-1999, 2, 28);
+                date.roll!"months"(-12, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(-1999, 2, 28));
+            }
+
+            {
+                auto date = Date(-2000, 2, 29);
+                date.roll!"months"(-12, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(-2000, 2, 29));
+            }
+
+            {
+                auto date = Date(-1999, 7, 31);
+                date.roll!"months"(1, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(-1999, 8, 31));
+                date.roll!"months"(1, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(-1999, 9, 30));
+            }
+
+            {
+                auto date = Date(-1998, 8, 31);
+                date.roll!"months"(13, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(-1998, 9, 30));
+                date.roll!"months"(-13, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(-1998, 8, 30));
+            }
+
+            {
+                auto date = Date(-1997, 12, 31);
+                date.roll!"months"(13, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(-1997, 1, 31));
+                date.roll!"months"(-13, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(-1997, 12, 31));
+            }
+
+            {
+                auto date = Date(-1997, 12, 31);
+                date.roll!"months"(14, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(-1997, 2, 28));
+                date.roll!"months"(-14, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(-1997, 12, 28));
+            }
+
+            {
+                auto date = Date(-2002, 12, 31);
+                date.roll!"months"(14, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(-2002, 2, 28));
+                date.roll!"months"(-14, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(-2002, 12, 28));
+            }
+
+            {
+                auto date = Date(-2001, 12, 31);
+                date.roll!"months"(14, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(-2001, 2, 28));
+                date.roll!"months"(-14, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(-2001, 12, 28));
+            }
+
+            //Test Both
+            {
+                auto date = Date(1, 1, 1);
+                date.roll!"months"(-1, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(1, 12, 1));
+                date.roll!"months"(1, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(1, 1, 1));
+            }
+
+            {
+                auto date = Date(4, 1, 1);
+                date.roll!"months"(-48, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(4, 1, 1));
+                date.roll!"months"(48, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(4, 1, 1));
+            }
+
+            {
+                auto date = Date(4, 3, 31);
+                date.roll!"months"(-49, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(4, 2, 29));
+                date.roll!"months"(49, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(4, 3, 29));
+            }
+
+            {
+                auto date = Date(4, 3, 31);
+                date.roll!"months"(-85, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(4, 2, 29));
+                date.roll!"months"(85, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(4, 3, 29));
+            }
+
+            {
+                auto date = Date(-1, 1, 1);
+                date.roll!"months"(-1, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(-1, 12, 1));
+                date.roll!"months"(1, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(-1, 1, 1));
+            }
+
+            {
+                auto date = Date(-4, 1, 1);
+                date.roll!"months"(-48, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(-4, 1, 1));
+                date.roll!"months"(48, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(-4, 1, 1));
+            }
+
+            {
+                auto date = Date(-4, 3, 31);
+                date.roll!"months"(-49, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(-4, 2, 29));
+                date.roll!"months"(49, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(-4, 3, 29));
+            }
+
+            {
+                auto date = Date(-4, 3, 31);
+                date.roll!"months"(-85, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(-4, 2, 29));
+                date.roll!"months"(85, AllowDayOverflow.no);
+                assertPred!"=="(date, Date(-4, 3, 29));
+            }
+        }
+    }
+
+
+    /++
+        Adds the given number of days to this Date. A negative number will subtract.
+
+        The difference between rolling and adding is that rolling does not affect
+        larger units. So, if you roll the Date one year's worth of days, then you
+        get the exact same Date.
+
+        Note that there is no $(D add!"days"()) because you can add days to a Date by
+        adding a duration to it.
+
+        Params:
+            days = The number of days to add to this Date.
+
+        Examples:
+--------------------
+auto date = Date(2010, 1, 1);
+date.roll!"days"(1);
+assert(date == Date(2010, 1, 2));
+date.roll!"days"(365);
+assert(date == Date(2010, 1, 26));
+date.roll!"days"(-32);
+assert(date == Date(2010, 1, 25));
+--------------------
+      +/
+    /+ref Date+/ void roll(string units)(long days) pure nothrow
+        if(units == "days")
+    {
+        immutable limit = maxDay(_year, _month);
+        days %= limit;
+        auto newDay = _day + days;
+
+        if(days < 0)
+        {
+            if(newDay < 1)
+                newDay += limit;
+        }
+        else if(newDay > limit)
+            newDay -= limit;
+
+        _day = cast(ubyte)newDay;
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            //Test A.D.
+            {
+                auto date = Date(1999, 2, 28);
+                date.roll!"days"(1);
+                assertPred!"=="(date, Date(1999, 2, 1));
+                date.roll!"days"(-1);
+                assertPred!"=="(date, Date(1999, 2, 28));
+            }
+
+            {
+                auto date = Date(2000, 2, 28);
+                date.roll!"days"(1);
+                assertPred!"=="(date, Date(2000, 2, 29));
+                date.roll!"days"(1);
+                assertPred!"=="(date, Date(2000, 2, 1));
+                date.roll!"days"(-1);
+                assertPred!"=="(date, Date(2000, 2, 29));
+            }
+
+            {
+                auto date = Date(1999, 6, 30);
+                date.roll!"days"(1);
+                assertPred!"=="(date, Date(1999, 6, 1));
+                date.roll!"days"(-1);
+                assertPred!"=="(date, Date(1999, 6, 30));
+            }
+
+            {
+                auto date = Date(1999, 7, 31);
+                date.roll!"days"(1);
+                assertPred!"=="(date, Date(1999, 7, 1));
+                date.roll!"days"(-1);
+                assertPred!"=="(date, Date(1999, 7, 31));
+            }
+
+            {
+                auto date = Date(1999, 1, 1);
+                date.roll!"days"(-1);
+                assertPred!"=="(date, Date(1999, 1, 31));
+                date.roll!"days"(1);
+                assertPred!"=="(date, Date(1999, 1, 1));
+            }
+
+            {
+                auto date = Date(1999, 7, 6);
+                date.roll!"days"(9);
+                assertPred!"=="(date, Date(1999, 7, 15));
+                date.roll!"days"(-11);
+                assertPred!"=="(date, Date(1999, 7, 4));
+                date.roll!"days"(30);
+                assertPred!"=="(date, Date(1999, 7, 3));
+                date.roll!"days"(-3);
+                assertPred!"=="(date, Date(1999, 7, 31));
+            }
+
+            {
+                auto date = Date(1999, 7, 6);
+                date.roll!"days"(365);
+                assertPred!"=="(date, Date(1999, 7, 30));
+                date.roll!"days"(-365);
+                assertPred!"=="(date, Date(1999, 7, 6));
+                date.roll!"days"(366);
+                assertPred!"=="(date, Date(1999, 7, 31));
+                date.roll!"days"(730);
+                assertPred!"=="(date, Date(1999, 7, 17));
+                date.roll!"days"(-1096);
+                assertPred!"=="(date, Date(1999, 7, 6));
+            }
+
+            {
+                auto date = Date(1999, 2, 6);
+                date.roll!"days"(365);
+                assertPred!"=="(date, Date(1999, 2, 7));
+                date.roll!"days"(-365);
+                assertPred!"=="(date, Date(1999, 2, 6));
+                date.roll!"days"(366);
+                assertPred!"=="(date, Date(1999, 2, 8));
+                date.roll!"days"(730);
+                assertPred!"=="(date, Date(1999, 2, 10));
+                date.roll!"days"(-1096);
+                assertPred!"=="(date, Date(1999, 2, 6));
+            }
+
+            //Test B.C.
+            {
+                auto date = Date(-1999, 2, 28);
+                date.roll!"days"(1);
+                assertPred!"=="(date, Date(-1999, 2, 1));
+                date.roll!"days"(-1);
+                assertPred!"=="(date, Date(-1999, 2, 28));
+            }
+
+            {
+                auto date = Date(-2000, 2, 28);
+                date.roll!"days"(1);
+                assertPred!"=="(date, Date(-2000, 2, 29));
+                date.roll!"days"(1);
+                assertPred!"=="(date, Date(-2000, 2, 1));
+                date.roll!"days"(-1);
+                assertPred!"=="(date, Date(-2000, 2, 29));
+            }
+
+            {
+                auto date = Date(-1999, 6, 30);
+                date.roll!"days"(1);
+                assertPred!"=="(date, Date(-1999, 6, 1));
+                date.roll!"days"(-1);
+                assertPred!"=="(date, Date(-1999, 6, 30));
+            }
+
+            {
+                auto date = Date(-1999, 7, 31);
+                date.roll!"days"(1);
+                assertPred!"=="(date, Date(-1999, 7, 1));
+                date.roll!"days"(-1);
+                assertPred!"=="(date, Date(-1999, 7, 31));
+            }
+
+            {
+                auto date = Date(-1999, 1, 1);
+                date.roll!"days"(-1);
+                assertPred!"=="(date, Date(-1999, 1, 31));
+                date.roll!"days"(1);
+                assertPred!"=="(date, Date(-1999, 1, 1));
+            }
+
+            {
+                auto date = Date(-1999, 7, 6);
+                date.roll!"days"(9);
+                assertPred!"=="(date, Date(-1999, 7, 15));
+                date.roll!"days"(-11);
+                assertPred!"=="(date, Date(-1999, 7, 4));
+                date.roll!"days"(30);
+                assertPred!"=="(date, Date(-1999, 7, 3));
+                date.roll!"days"(-3);
+                assertPred!"=="(date, Date(-1999, 7, 31));
+            }
+
+            {
+                auto date = Date(-1999, 7, 6);
+                date.roll!"days"(365);
+                assertPred!"=="(date, Date(-1999, 7, 30));
+                date.roll!"days"(-365);
+                assertPred!"=="(date, Date(-1999, 7, 6));
+                date.roll!"days"(366);
+                assertPred!"=="(date, Date(-1999, 7, 31));
+                date.roll!"days"(730);
+                assertPred!"=="(date, Date(-1999, 7, 17));
+                date.roll!"days"(-1096);
+                assertPred!"=="(date, Date(-1999, 7, 6));
+            }
+
+            //Test Both
+            {
+                auto date = Date(1, 7, 6);
+                date.roll!"days"(-365);
+                assertPred!"=="(date, Date(1, 7, 13));
+                date.roll!"days"(365);
+                assertPred!"=="(date, Date(1, 7, 6));
+                date.roll!"days"(-731);
+                assertPred!"=="(date, Date(1, 7, 19));
+                date.roll!"days"(730);
+                assertPred!"=="(date, Date(1, 7, 5));
+            }
+
+            {
+                auto date = Date(0, 7, 6);
+                date.roll!"days"(-365);
+                assertPred!"=="(date, Date(0, 7, 13));
+                date.roll!"days"(365);
+                assertPred!"=="(date, Date(0, 7, 6));
+                date.roll!"days"(-731);
+                assertPred!"=="(date, Date(0, 7, 19));
+                date.roll!"days"(730);
+                assertPred!"=="(date, Date(0, 7, 5));
+            }
+
+            const cdate = Date(1999, 7, 6);
+            immutable idate = Date(1999, 7, 6);
+            static assert(!__traits(compiles, cdate.roll!"days"(12)));
+            static assert(!__traits(compiles, idate.roll!"days"(12)));
+
+            //Verify Examples.
+            auto date = Date(2010, 1, 1);
+            date.roll!"days"(1);
+            assert(date == Date(2010, 1, 2));
+            date.roll!"days"(365);
+            assert(date == Date(2010, 1, 26));
+            date.roll!"days"(-32);
+            assert(date == Date(2010, 1, 25));
+        }
+    }
+
+
+    /++
+        Gives the result of adding or subtracting a duration from this Date.
+
+        The legal types of arithmetic for Date using this operator are
+
+        $(TABLE
+        $(TR $(TD Date) $(TD +) $(TD duration) $(TD -->) $(TD Date))
+        $(TR $(TD Date) $(TD -) $(TD duration) $(TD -->) $(TD Date))
+        )
+
+        Params:
+            duration = The duration to add to or subtract from this Date.
+      +/
+    Date opBinary(string op, D)(in D duration) const pure nothrow
+        if((op == "+" || op == "-") &&
+           (is(Unqual!D == Duration) ||
+            is(Unqual!D == TickDuration)))
+    {
+        Date retval = this;
+
+        static if(is(Unqual!D == Duration))
+            immutable days = duration.total!"days";
+        else static if(is(Unqual!D == TickDuration))
+            immutable days = convert!("hnsecs", "days")(duration.hnsecs);
+
+        //Ideally, this would just be
+        //return retval.addDays(unaryFun!(op ~ "a")(days));
+        //But there isn't currently a pure version of unaryFun!().
+
+        static if(op == "+")
+            immutable signedDays = days;
+        else static if(op == "-")
+            immutable signedDays = -days;
+        else
+            static assert(0);
+
+        return retval.addDays(signedDays);
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            auto date = Date(1999, 7, 6);
+
+            assertPred!"=="(date + dur!"weeks"(7), Date(1999, 8, 24));
+            assertPred!"=="(date + dur!"weeks"(-7), Date(1999, 5, 18));
+            assertPred!"=="(date + dur!"days"(7), Date(1999, 7, 13));
+            assertPred!"=="(date + dur!"days"(-7), Date(1999, 6, 29));
+
+            assertPred!"=="(date + dur!"hours"(24), Date(1999, 7, 7));
+            assertPred!"=="(date + dur!"hours"(-24), Date(1999, 7, 5));
+            assertPred!"=="(date + dur!"minutes"(1440), Date(1999, 7, 7));
+            assertPred!"=="(date + dur!"minutes"(-1440), Date(1999, 7, 5));
+            assertPred!"=="(date + dur!"seconds"(86_400), Date(1999, 7, 7));
+            assertPred!"=="(date + dur!"seconds"(-86_400), Date(1999, 7, 5));
+            assertPred!"=="(date + dur!"msecs"(86_400_000), Date(1999, 7, 7));
+            assertPred!"=="(date + dur!"msecs"(-86_400_000), Date(1999, 7, 5));
+            assertPred!"=="(date + dur!"usecs"(86_400_000_000), Date(1999, 7, 7));
+            assertPred!"=="(date + dur!"usecs"(-86_400_000_000), Date(1999, 7, 5));
+            assertPred!"=="(date + dur!"hnsecs"(864_000_000_000), Date(1999, 7, 7));
+            assertPred!"=="(date + dur!"hnsecs"(-864_000_000_000), Date(1999, 7, 5));
+
+            //This probably only runs in cases where gettimeofday() is used, but it's
+            //hard to do this test correctly with variable ticksPerSec.
+            if(TickDuration.ticksPerSec == 1_000_000)
+            {
+                assertPred!"=="(date + TickDuration.from!"usecs"(86_400_000_000), Date(1999, 7, 7));
+                assertPred!"=="(date + TickDuration.from!"usecs"(-86_400_000_000), Date(1999, 7, 5));
+            }
+
+            assertPred!"=="(date - dur!"weeks"(-7), Date(1999, 8, 24));
+            assertPred!"=="(date - dur!"weeks"(7), Date(1999, 5, 18));
+            assertPred!"=="(date - dur!"days"(-7), Date(1999, 7, 13));
+            assertPred!"=="(date - dur!"days"(7), Date(1999, 6, 29));
+
+            assertPred!"=="(date - dur!"hours"(-24), Date(1999, 7, 7));
+            assertPred!"=="(date - dur!"hours"(24), Date(1999, 7, 5));
+            assertPred!"=="(date - dur!"minutes"(-1440), Date(1999, 7, 7));
+            assertPred!"=="(date - dur!"minutes"(1440), Date(1999, 7, 5));
+            assertPred!"=="(date - dur!"seconds"(-86_400), Date(1999, 7, 7));
+            assertPred!"=="(date - dur!"seconds"(86_400), Date(1999, 7, 5));
+            assertPred!"=="(date - dur!"msecs"(-86_400_000), Date(1999, 7, 7));
+            assertPred!"=="(date - dur!"msecs"(86_400_000), Date(1999, 7, 5));
+            assertPred!"=="(date - dur!"usecs"(-86_400_000_000), Date(1999, 7, 7));
+            assertPred!"=="(date - dur!"usecs"(86_400_000_000), Date(1999, 7, 5));
+            assertPred!"=="(date - dur!"hnsecs"(-864_000_000_000), Date(1999, 7, 7));
+            assertPred!"=="(date - dur!"hnsecs"(864_000_000_000), Date(1999, 7, 5));
+
+            //This probably only runs in cases where gettimeofday() is used, but it's
+            //hard to do this test correctly with variable ticksPerSec.
+            if(TickDuration.ticksPerSec == 1_000_000)
+            {
+                assertPred!"=="(date - TickDuration.from!"usecs"(-86_400_000_000), Date(1999, 7, 7));
+                assertPred!"=="(date - TickDuration.from!"usecs"(86_400_000_000), Date(1999, 7, 5));
+            }
+
+            auto duration = dur!"days"(12);
+            const cdate = Date(1999, 7, 6);
+            immutable idate = Date(1999, 7, 6);
+            static assert(__traits(compiles, date + duration));
+            static assert(__traits(compiles, cdate + duration));
+            static assert(__traits(compiles, idate + duration));
+
+            static assert(__traits(compiles, date - duration));
+            static assert(__traits(compiles, cdate - duration));
+            static assert(__traits(compiles, idate - duration));
+        }
+    }
+
+
+    /++
+        Gives the result of adding or subtracting a duration from this Date, as
+        well as assigning the result to this Date.
+
+        The legal types of arithmetic for Date using this operator are
+
+        $(TABLE
+        $(TR $(TD Date) $(TD +) $(TD duration) $(TD -->) $(TD Date))
+        $(TR $(TD Date) $(TD -) $(TD duration) $(TD -->) $(TD Date))
+        )
+
+        Params:
+            duration = The duration to add to or subtract from this Date.
+      +/
+    /+ref+/ Date opOpAssign(string op, D)(in D duration) pure nothrow
+        if((op == "+" || op == "-") &&
+           (is(Unqual!D == Duration) ||
+            is(Unqual!D == TickDuration)))
+    {
+        static if(is(Unqual!D == Duration))
+            immutable days = duration.total!"days";
+        else static if(is(Unqual!D == TickDuration))
+            immutable days = convert!("hnsecs", "days")(duration.hnsecs);
+
+        //Ideally, this would just be
+        //return addDays(unaryFun!(op ~ "a")(days));
+        //But there isn't currently a pure version of unaryFun!().
+
+        static if(op == "+")
+            immutable signedDays = days;
+        else static if(op == "-")
+            immutable signedDays = -days;
+        else
+            static assert(0);
+
+        return addDays(signedDays);
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            assertPred!"+="(Date(1999, 7, 6), dur!"weeks"(7), Date(1999, 8, 24));
+            assertPred!"+="(Date(1999, 7, 6), dur!"weeks"(-7), Date(1999, 5, 18));
+            assertPred!"+="(Date(1999, 7, 6), dur!"days"(7), Date(1999, 7, 13));
+            assertPred!"+="(Date(1999, 7, 6), dur!"days"(-7), Date(1999, 6, 29));
+
+            assertPred!"+="(Date(1999, 7, 6), dur!"hours"(24), Date(1999, 7, 7));
+            assertPred!"+="(Date(1999, 7, 6), dur!"hours"(-24), Date(1999, 7, 5));
+            assertPred!"+="(Date(1999, 7, 6), dur!"minutes"(1440), Date(1999, 7, 7));
+            assertPred!"+="(Date(1999, 7, 6), dur!"minutes"(-1440), Date(1999, 7, 5));
+            assertPred!"+="(Date(1999, 7, 6), dur!"seconds"(86_400), Date(1999, 7, 7));
+            assertPred!"+="(Date(1999, 7, 6), dur!"seconds"(-86_400), Date(1999, 7, 5));
+            assertPred!"+="(Date(1999, 7, 6), dur!"msecs"(86_400_000), Date(1999, 7, 7));
+            assertPred!"+="(Date(1999, 7, 6), dur!"msecs"(-86_400_000), Date(1999, 7, 5));
+            assertPred!"+="(Date(1999, 7, 6), dur!"usecs"(86_400_000_000), Date(1999, 7, 7));
+            assertPred!"+="(Date(1999, 7, 6), dur!"usecs"(-86_400_000_000), Date(1999, 7, 5));
+            assertPred!"+="(Date(1999, 7, 6), dur!"hnsecs"(864_000_000_000), Date(1999, 7, 7));
+            assertPred!"+="(Date(1999, 7, 6), dur!"hnsecs"(-864_000_000_000), Date(1999, 7, 5));
+
+            assertPred!"-="(Date(1999, 7, 6), dur!"weeks"(-7), Date(1999, 8, 24));
+            assertPred!"-="(Date(1999, 7, 6), dur!"weeks"(7), Date(1999, 5, 18));
+            assertPred!"-="(Date(1999, 7, 6), dur!"days"(-7), Date(1999, 7, 13));
+            assertPred!"-="(Date(1999, 7, 6), dur!"days"(7), Date(1999, 6, 29));
+
+            assertPred!"-="(Date(1999, 7, 6), dur!"hours"(-24), Date(1999, 7, 7));
+            assertPred!"-="(Date(1999, 7, 6), dur!"hours"(24), Date(1999, 7, 5));
+            assertPred!"-="(Date(1999, 7, 6), dur!"minutes"(-1440), Date(1999, 7, 7));
+            assertPred!"-="(Date(1999, 7, 6), dur!"minutes"(1440), Date(1999, 7, 5));
+            assertPred!"-="(Date(1999, 7, 6), dur!"seconds"(-86_400), Date(1999, 7, 7));
+            assertPred!"-="(Date(1999, 7, 6), dur!"seconds"(86_400), Date(1999, 7, 5));
+            assertPred!"-="(Date(1999, 7, 6), dur!"msecs"(-86_400_000), Date(1999, 7, 7));
+            assertPred!"-="(Date(1999, 7, 6), dur!"msecs"(86_400_000), Date(1999, 7, 5));
+            assertPred!"-="(Date(1999, 7, 6), dur!"usecs"(-86_400_000_000), Date(1999, 7, 7));
+            assertPred!"-="(Date(1999, 7, 6), dur!"usecs"(86_400_000_000), Date(1999, 7, 5));
+            assertPred!"-="(Date(1999, 7, 6), dur!"hnsecs"(-864_000_000_000), Date(1999, 7, 7));
+            assertPred!"-="(Date(1999, 7, 6), dur!"hnsecs"(864_000_000_000), Date(1999, 7, 5));
+
+            auto duration = dur!"days"(12);
+            auto date = Date(1999, 7, 6);
+            const cdate = Date(1999, 7, 6);
+            immutable idate = Date(1999, 7, 6);
+            static assert(__traits(compiles, date += duration));
+            static assert(!__traits(compiles, cdate += duration));
+            static assert(!__traits(compiles, idate += duration));
+
+            static assert(__traits(compiles, date -= duration));
+            static assert(!__traits(compiles, cdate -= duration));
+            static assert(!__traits(compiles, idate -= duration));
+        }
+    }
+
+
+    /++
+        Gives the difference between two Dates.
+
+        The legal types of arithmetic for Date using this operator are
+
+        $(TABLE
+        $(TR $(TD Date) $(TD -) $(TD Date) $(TD -->) $(TD duration))
+        )
+      +/
+    Duration opBinary(string op)(in Date rhs) const pure nothrow
+        if(op == "-")
+    {
+        return dur!"days"(this.dayOfGregorianCal - rhs.dayOfGregorianCal);
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            auto date = Date(1999, 7, 6);
+
+            assertPred!"=="(Date(1999, 7, 6) - Date(1998, 7, 6), dur!"days"(365));
+            assertPred!"=="(Date(1998, 7, 6) - Date(1999, 7, 6), dur!"days"(-365));
+            assertPred!"=="(Date(1999, 6, 6) - Date(1999, 5, 6), dur!"days"(31));
+            assertPred!"=="(Date(1999, 5, 6) - Date(1999, 6, 6), dur!"days"(-31));
+            assertPred!"=="(Date(1999, 1, 1) - Date(1998, 12, 31), dur!"days"(1));
+            assertPred!"=="(Date(1998, 12, 31) - Date(1999, 1, 1), dur!"days"(-1));
+
+            const cdate = Date(1999, 7, 6);
+            immutable idate = Date(1999, 7, 6);
+            static assert(__traits(compiles, date - date));
+            static assert(__traits(compiles, cdate - date));
+            static assert(__traits(compiles, idate - date));
+
+            static assert(__traits(compiles, date - cdate));
+            static assert(__traits(compiles, cdate - cdate));
+            static assert(__traits(compiles, idate - cdate));
+
+            static assert(__traits(compiles, date - idate));
+            static assert(__traits(compiles, cdate - idate));
+            static assert(__traits(compiles, idate - idate));
+        }
+    }
+
+
+    /++
+        Returns the difference between the two Dates in months.
+
+        You can get the difference in years by subtracting the year property
+        of two Dates, and you can get the difference in days or weeks by
+        subtracting the Dates themselves and using the Duration that results,
+        but because you cannot convert between months and smaller units without
+        a specific date (which Durations don't have), you cannot get the difference
+        in months without doing some math using both the year and month properties,
+        so this is a convenience function for getting the difference in months.
+
+        Note that the number of days in the months or how far into the month either
+        date is is irrelevant. It is the difference in the month property combined
+        with the difference in years * 12. So, for instance, December 31st and
+        January 1st are one month apart just as December 1st and January 31st are
+        one month apart.
+
+        Params:
+            rhs = The Date to subtract from this one.
+
+        Examples:
+--------------------
+assert(Date(1999, 2, 1).diffMonths(Date(1999, 1, 31)) == 1);
+assert(Date(1999, 1, 31).diffMonths(Date(1999, 2, 1)) == -1);
+assert(Date(1999, 3, 1).diffMonths(Date(1999, 1, 1)) == 2);
+assert(Date(1999, 1, 1).diffMonths(Date(1999, 3, 31)) == -2);
+--------------------
+      +/
+    int diffMonths(in Date rhs) const pure nothrow
+    {
+        immutable yearDiff = _year - rhs._year;
+        immutable monthDiff = _month - rhs._month;
+
+        return yearDiff * 12 + monthDiff;
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            auto date = Date(1999, 7, 6);
+
+            //Test A.D.
+            assertPred!"=="(date.diffMonths(Date(1998, 6, 5)), 13);
+            assertPred!"=="(date.diffMonths(Date(1998, 7, 5)), 12);
+            assertPred!"=="(date.diffMonths(Date(1998, 8, 5)), 11);
+            assertPred!"=="(date.diffMonths(Date(1998, 9, 5)), 10);
+            assertPred!"=="(date.diffMonths(Date(1998, 10, 5)), 9);
+            assertPred!"=="(date.diffMonths(Date(1998, 11, 5)), 8);
+            assertPred!"=="(date.diffMonths(Date(1998, 12, 5)), 7);
+            assertPred!"=="(date.diffMonths(Date(1999, 1, 5)), 6);
+            assertPred!"=="(date.diffMonths(Date(1999, 2, 6)), 5);
+            assertPred!"=="(date.diffMonths(Date(1999, 3, 6)), 4);
+            assertPred!"=="(date.diffMonths(Date(1999, 4, 6)), 3);
+            assertPred!"=="(date.diffMonths(Date(1999, 5, 6)), 2);
+            assertPred!"=="(date.diffMonths(Date(1999, 6, 6)), 1);
+            assertPred!"=="(date.diffMonths(date), 0);
+            assertPred!"=="(date.diffMonths(Date(1999, 8, 6)), -1);
+            assertPred!"=="(date.diffMonths(Date(1999, 9, 6)), -2);
+            assertPred!"=="(date.diffMonths(Date(1999, 10, 6)), -3);
+            assertPred!"=="(date.diffMonths(Date(1999, 11, 6)), -4);
+            assertPred!"=="(date.diffMonths(Date(1999, 12, 6)), -5);
+            assertPred!"=="(date.diffMonths(Date(2000, 1, 6)), -6);
+            assertPred!"=="(date.diffMonths(Date(2000, 2, 6)), -7);
+            assertPred!"=="(date.diffMonths(Date(2000, 3, 6)), -8);
+            assertPred!"=="(date.diffMonths(Date(2000, 4, 6)), -9);
+            assertPred!"=="(date.diffMonths(Date(2000, 5, 6)), -10);
+            assertPred!"=="(date.diffMonths(Date(2000, 6, 6)), -11);
+            assertPred!"=="(date.diffMonths(Date(2000, 7, 6)), -12);
+            assertPred!"=="(date.diffMonths(Date(2000, 8, 6)), -13);
+
+            assertPred!"=="(Date(1998, 6, 5).diffMonths(date), -13);
+            assertPred!"=="(Date(1998, 7, 5).diffMonths(date), -12);
+            assertPred!"=="(Date(1998, 8, 5).diffMonths(date), -11);
+            assertPred!"=="(Date(1998, 9, 5).diffMonths(date), -10);
+            assertPred!"=="(Date(1998, 10, 5).diffMonths(date), -9);
+            assertPred!"=="(Date(1998, 11, 5).diffMonths(date), -8);
+            assertPred!"=="(Date(1998, 12, 5).diffMonths(date), -7);
+            assertPred!"=="(Date(1999, 1, 5).diffMonths(date), -6);
+            assertPred!"=="(Date(1999, 2, 6).diffMonths(date), -5);
+            assertPred!"=="(Date(1999, 3, 6).diffMonths(date), -4);
+            assertPred!"=="(Date(1999, 4, 6).diffMonths(date), -3);
+            assertPred!"=="(Date(1999, 5, 6).diffMonths(date), -2);
+            assertPred!"=="(Date(1999, 6, 6).diffMonths(date), -1);
+            assertPred!"=="(Date(1999, 8, 6).diffMonths(date), 1);
+            assertPred!"=="(Date(1999, 9, 6).diffMonths(date), 2);
+            assertPred!"=="(Date(1999, 10, 6).diffMonths(date), 3);
+            assertPred!"=="(Date(1999, 11, 6).diffMonths(date), 4);
+            assertPred!"=="(Date(1999, 12, 6).diffMonths(date), 5);
+            assertPred!"=="(Date(2000, 1, 6).diffMonths(date), 6);
+            assertPred!"=="(Date(2000, 2, 6).diffMonths(date), 7);
+            assertPred!"=="(Date(2000, 3, 6).diffMonths(date), 8);
+            assertPred!"=="(Date(2000, 4, 6).diffMonths(date), 9);
+            assertPred!"=="(Date(2000, 5, 6).diffMonths(date), 10);
+            assertPred!"=="(Date(2000, 6, 6).diffMonths(date), 11);
+            assertPred!"=="(Date(2000, 7, 6).diffMonths(date), 12);
+            assertPred!"=="(Date(2000, 8, 6).diffMonths(date), 13);
+
+            assertPred!"=="(date.diffMonths(Date(1999, 6, 30)), 1);
+            assertPred!"=="(date.diffMonths(Date(1999, 7, 1)), 0);
+            assertPred!"=="(date.diffMonths(Date(1999, 7, 6)), 0);
+            assertPred!"=="(date.diffMonths(Date(1999, 7, 11)), 0);
+            assertPred!"=="(date.diffMonths(Date(1999, 7, 16)), 0);
+            assertPred!"=="(date.diffMonths(Date(1999, 7, 21)), 0);
+            assertPred!"=="(date.diffMonths(Date(1999, 7, 26)), 0);
+            assertPred!"=="(date.diffMonths(Date(1999, 7, 31)), 0);
+            assertPred!"=="(date.diffMonths(Date(1999, 8, 1)), -1);
+
+            assertPred!"=="(date.diffMonths(Date(1990, 6, 30)), 109);
+            assertPred!"=="(date.diffMonths(Date(1990, 7, 1)), 108);
+            assertPred!"=="(date.diffMonths(Date(1990, 7, 6)), 108);
+            assertPred!"=="(date.diffMonths(Date(1990, 7, 11)), 108);
+            assertPred!"=="(date.diffMonths(Date(1990, 7, 16)), 108);
+            assertPred!"=="(date.diffMonths(Date(1990, 7, 21)), 108);
+            assertPred!"=="(date.diffMonths(Date(1990, 7, 26)), 108);
+            assertPred!"=="(date.diffMonths(Date(1990, 7, 31)), 108);
+            assertPred!"=="(date.diffMonths(Date(1990, 8, 1)), 107);
+
+            assertPred!"=="(Date(1999, 6, 30).diffMonths(date), -1);
+            assertPred!"=="(Date(1999, 7, 1).diffMonths(date), 0);
+            assertPred!"=="(Date(1999, 7, 6).diffMonths(date), 0);
+            assertPred!"=="(Date(1999, 7, 11).diffMonths(date), 0);
+            assertPred!"=="(Date(1999, 7, 16).diffMonths(date), 0);
+            assertPred!"=="(Date(1999, 7, 21).diffMonths(date), 0);
+            assertPred!"=="(Date(1999, 7, 26).diffMonths(date), 0);
+            assertPred!"=="(Date(1999, 7, 31).diffMonths(date), 0);
+            assertPred!"=="(Date(1999, 8, 1).diffMonths(date), 1);
+
+            assertPred!"=="(Date(1990, 6, 30).diffMonths(date), -109);
+            assertPred!"=="(Date(1990, 7, 1).diffMonths(date), -108);
+            assertPred!"=="(Date(1990, 7, 6).diffMonths(date), -108);
+            assertPred!"=="(Date(1990, 7, 11).diffMonths(date), -108);
+            assertPred!"=="(Date(1990, 7, 16).diffMonths(date), -108);
+            assertPred!"=="(Date(1990, 7, 21).diffMonths(date), -108);
+            assertPred!"=="(Date(1990, 7, 26).diffMonths(date), -108);
+            assertPred!"=="(Date(1990, 7, 31).diffMonths(date), -108);
+            assertPred!"=="(Date(1990, 8, 1).diffMonths(date), -107);
+
+            //Test B.C.
+            auto dateBC = Date(-1999, 7, 6);
+
+            assertPred!"=="(dateBC.diffMonths(Date(-2000, 6, 5)), 13);
+            assertPred!"=="(dateBC.diffMonths(Date(-2000, 7, 5)), 12);
+            assertPred!"=="(dateBC.diffMonths(Date(-2000, 8, 5)), 11);
+            assertPred!"=="(dateBC.diffMonths(Date(-2000, 9, 5)), 10);
+            assertPred!"=="(dateBC.diffMonths(Date(-2000, 10, 5)), 9);
+            assertPred!"=="(dateBC.diffMonths(Date(-2000, 11, 5)), 8);
+            assertPred!"=="(dateBC.diffMonths(Date(-2000, 12, 5)), 7);
+            assertPred!"=="(dateBC.diffMonths(Date(-1999, 1, 5)), 6);
+            assertPred!"=="(dateBC.diffMonths(Date(-1999, 2, 6)), 5);
+            assertPred!"=="(dateBC.diffMonths(Date(-1999, 3, 6)), 4);
+            assertPred!"=="(dateBC.diffMonths(Date(-1999, 4, 6)), 3);
+            assertPred!"=="(dateBC.diffMonths(Date(-1999, 5, 6)), 2);
+            assertPred!"=="(dateBC.diffMonths(Date(-1999, 6, 6)), 1);
+            assertPred!"=="(dateBC.diffMonths(dateBC), 0);
+            assertPred!"=="(dateBC.diffMonths(Date(-1999, 8, 6)), -1);
+            assertPred!"=="(dateBC.diffMonths(Date(-1999, 9, 6)), -2);
+            assertPred!"=="(dateBC.diffMonths(Date(-1999, 10, 6)), -3);
+            assertPred!"=="(dateBC.diffMonths(Date(-1999, 11, 6)), -4);
+            assertPred!"=="(dateBC.diffMonths(Date(-1999, 12, 6)), -5);
+            assertPred!"=="(dateBC.diffMonths(Date(-1998, 1, 6)), -6);
+            assertPred!"=="(dateBC.diffMonths(Date(-1998, 2, 6)), -7);
+            assertPred!"=="(dateBC.diffMonths(Date(-1998, 3, 6)), -8);
+            assertPred!"=="(dateBC.diffMonths(Date(-1998, 4, 6)), -9);
+            assertPred!"=="(dateBC.diffMonths(Date(-1998, 5, 6)), -10);
+            assertPred!"=="(dateBC.diffMonths(Date(-1998, 6, 6)), -11);
+            assertPred!"=="(dateBC.diffMonths(Date(-1998, 7, 6)), -12);
+            assertPred!"=="(dateBC.diffMonths(Date(-1998, 8, 6)), -13);
+
+            assertPred!"=="(Date(-2000, 6, 5).diffMonths(dateBC), -13);
+            assertPred!"=="(Date(-2000, 7, 5).diffMonths(dateBC), -12);
+            assertPred!"=="(Date(-2000, 8, 5).diffMonths(dateBC), -11);
+            assertPred!"=="(Date(-2000, 9, 5).diffMonths(dateBC), -10);
+            assertPred!"=="(Date(-2000, 10, 5).diffMonths(dateBC), -9);
+            assertPred!"=="(Date(-2000, 11, 5).diffMonths(dateBC), -8);
+            assertPred!"=="(Date(-2000, 12, 5).diffMonths(dateBC), -7);
+            assertPred!"=="(Date(-1999, 1, 5).diffMonths(dateBC), -6);
+            assertPred!"=="(Date(-1999, 2, 6).diffMonths(dateBC), -5);
+            assertPred!"=="(Date(-1999, 3, 6).diffMonths(dateBC), -4);
+            assertPred!"=="(Date(-1999, 4, 6).diffMonths(dateBC), -3);
+            assertPred!"=="(Date(-1999, 5, 6).diffMonths(dateBC), -2);
+            assertPred!"=="(Date(-1999, 6, 6).diffMonths(dateBC), -1);
+            assertPred!"=="(Date(-1999, 8, 6).diffMonths(dateBC), 1);
+            assertPred!"=="(Date(-1999, 9, 6).diffMonths(dateBC), 2);
+            assertPred!"=="(Date(-1999, 10, 6).diffMonths(dateBC), 3);
+            assertPred!"=="(Date(-1999, 11, 6).diffMonths(dateBC), 4);
+            assertPred!"=="(Date(-1999, 12, 6).diffMonths(dateBC), 5);
+            assertPred!"=="(Date(-1998, 1, 6).diffMonths(dateBC), 6);
+            assertPred!"=="(Date(-1998, 2, 6).diffMonths(dateBC), 7);
+            assertPred!"=="(Date(-1998, 3, 6).diffMonths(dateBC), 8);
+            assertPred!"=="(Date(-1998, 4, 6).diffMonths(dateBC), 9);
+            assertPred!"=="(Date(-1998, 5, 6).diffMonths(dateBC), 10);
+            assertPred!"=="(Date(-1998, 6, 6).diffMonths(dateBC), 11);
+            assertPred!"=="(Date(-1998, 7, 6).diffMonths(dateBC), 12);
+            assertPred!"=="(Date(-1998, 8, 6).diffMonths(dateBC), 13);
+
+            assertPred!"=="(dateBC.diffMonths(Date(-1999, 6, 30)), 1);
+            assertPred!"=="(dateBC.diffMonths(Date(-1999, 7, 1)), 0);
+            assertPred!"=="(dateBC.diffMonths(Date(-1999, 7, 6)), 0);
+            assertPred!"=="(dateBC.diffMonths(Date(-1999, 7, 11)), 0);
+            assertPred!"=="(dateBC.diffMonths(Date(-1999, 7, 16)), 0);
+            assertPred!"=="(dateBC.diffMonths(Date(-1999, 7, 21)), 0);
+            assertPred!"=="(dateBC.diffMonths(Date(-1999, 7, 26)), 0);
+            assertPred!"=="(dateBC.diffMonths(Date(-1999, 7, 31)), 0);
+            assertPred!"=="(dateBC.diffMonths(Date(-1999, 8, 1)), -1);
+
+            assertPred!"=="(dateBC.diffMonths(Date(-2008, 6, 30)), 109);
+            assertPred!"=="(dateBC.diffMonths(Date(-2008, 7, 1)), 108);
+            assertPred!"=="(dateBC.diffMonths(Date(-2008, 7, 6)), 108);
+            assertPred!"=="(dateBC.diffMonths(Date(-2008, 7, 11)), 108);
+            assertPred!"=="(dateBC.diffMonths(Date(-2008, 7, 16)), 108);
+            assertPred!"=="(dateBC.diffMonths(Date(-2008, 7, 21)), 108);
+            assertPred!"=="(dateBC.diffMonths(Date(-2008, 7, 26)), 108);
+            assertPred!"=="(dateBC.diffMonths(Date(-2008, 7, 31)), 108);
+            assertPred!"=="(dateBC.diffMonths(Date(-2008, 8, 1)), 107);
+
+            assertPred!"=="(Date(-1999, 6, 30).diffMonths(dateBC), -1);
+            assertPred!"=="(Date(-1999, 7, 1).diffMonths(dateBC), 0);
+            assertPred!"=="(Date(-1999, 7, 6).diffMonths(dateBC), 0);
+            assertPred!"=="(Date(-1999, 7, 11).diffMonths(dateBC), 0);
+            assertPred!"=="(Date(-1999, 7, 16).diffMonths(dateBC), 0);
+            assertPred!"=="(Date(-1999, 7, 21).diffMonths(dateBC), 0);
+            assertPred!"=="(Date(-1999, 7, 26).diffMonths(dateBC), 0);
+            assertPred!"=="(Date(-1999, 7, 31).diffMonths(dateBC), 0);
+            assertPred!"=="(Date(-1999, 8, 1).diffMonths(dateBC), 1);
+
+            assertPred!"=="(Date(-2008, 6, 30).diffMonths(dateBC), -109);
+            assertPred!"=="(Date(-2008, 7, 1).diffMonths(dateBC), -108);
+            assertPred!"=="(Date(-2008, 7, 6).diffMonths(dateBC), -108);
+            assertPred!"=="(Date(-2008, 7, 11).diffMonths(dateBC), -108);
+            assertPred!"=="(Date(-2008, 7, 16).diffMonths(dateBC), -108);
+            assertPred!"=="(Date(-2008, 7, 21).diffMonths(dateBC), -108);
+            assertPred!"=="(Date(-2008, 7, 26).diffMonths(dateBC), -108);
+            assertPred!"=="(Date(-2008, 7, 31).diffMonths(dateBC), -108);
+            assertPred!"=="(Date(-2008, 8, 1).diffMonths(dateBC), -107);
+
+            //Test Both
+            assertPred!"=="(Date(3, 3, 3).diffMonths(Date(-5, 5, 5)), 94);
+            assertPred!"=="(Date(-5, 5, 5).diffMonths(Date(3, 3, 3)), -94);
+
+            const cdate = Date(1999, 7, 6);
+            immutable idate = Date(1999, 7, 6);
+            static assert(__traits(compiles, date.diffMonths(date)));
+            static assert(__traits(compiles, cdate.diffMonths(date)));
+            static assert(__traits(compiles, idate.diffMonths(date)));
+
+            static assert(__traits(compiles, date.diffMonths(cdate)));
+            static assert(__traits(compiles, cdate.diffMonths(cdate)));
+            static assert(__traits(compiles, idate.diffMonths(cdate)));
+
+            static assert(__traits(compiles, date.diffMonths(idate)));
+            static assert(__traits(compiles, cdate.diffMonths(idate)));
+            static assert(__traits(compiles, idate.diffMonths(idate)));
+
+            //Verify Examples.
+            assert(Date(1999, 2, 1).diffMonths(Date(1999, 1, 31)) == 1);
+            assert(Date(1999, 1, 31).diffMonths(Date(1999, 2, 1)) == -1);
+            assert(Date(1999, 3, 1).diffMonths(Date(1999, 1, 1)) == 2);
+            assert(Date(1999, 1, 1).diffMonths(Date(1999, 3, 31)) == -2);
+        }
+    }
+
+
+    /++
+        Whether this Date is in a leap year.
+     +/
+    @property bool isLeapYear() const pure nothrow
+    {
+        return yearIsLeapYear(_year);
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            auto date = Date(1999, 7, 6);
+            const cdate = Date(1999, 7, 6);
+            immutable idate = Date(1999, 7, 6);
+            static assert(!__traits(compiles, date.isLeapYear = true));
+            static assert(!__traits(compiles, cdate.isLeapYear = true));
+            static assert(!__traits(compiles, idate.isLeapYear = true));
+        }
+    }
+
+
+    /++
+        Day of the week this Date is on.
+      +/
+    @property DayOfWeek dayOfWeek() const pure nothrow
+    {
+        return getDayOfWeek(dayOfGregorianCal);
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            const cdate = Date(1999, 7, 6);
+            immutable idate = Date(1999, 7, 6);
+            static assert(__traits(compiles, cdate.dayOfWeek == DayOfWeek.sun));
+            static assert(!__traits(compiles, cdate.dayOfWeek = DayOfWeek.sun));
+            static assert(__traits(compiles, idate.dayOfWeek == DayOfWeek.sun));
+            static assert(!__traits(compiles, idate.dayOfWeek = DayOfWeek.sun));
+        }
+    }
+
+
+    /++
+        Day of the year this Date is on.
+
+        Examples:
+--------------------
+assert(Date(1999, 1, 1).dayOfYear == 1);
+assert(Date(1999, 12, 31).dayOfYear == 365);
+assert(Date(2000, 12, 31).dayOfYear == 366);
+--------------------
+      +/
+    @property ushort dayOfYear() const pure nothrow
+    {
+        switch(_month)
+        {
+            case Month.jan:
+                return _day;
+            case Month.feb:
+                return cast(ushort)(31 + _day);
+            case Month.mar:
+                return cast(ushort)((isLeapYear ? 60 : 59) + _day);
+            case Month.apr:
+                return cast(ushort)((isLeapYear ? 91 : 90) + _day);
+            case Month.may:
+                return cast(ushort)((isLeapYear ? 121 : 120) + _day);
+            case Month.jun:
+                return cast(ushort)((isLeapYear ? 152 : 151) + _day);
+            case Month.jul:
+                return cast(ushort)((isLeapYear ? 182 : 181) + _day);
+            case Month.aug:
+                return cast(ushort)((isLeapYear ? 213 : 212) + _day);
+            case Month.sep:
+                return cast(ushort)((isLeapYear ? 244 : 243) + _day);
+            case Month.oct:
+                return cast(ushort)((isLeapYear ? 274 : 273) + _day);
+            case Month.nov:
+                return cast(ushort)((isLeapYear ? 305 : 304) + _day);
+            case Month.dec:
+                return cast(ushort)((isLeapYear ? 335 : 334) + _day);
+            default:
+                assert(0, "Invalid month.");
+        }
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            //Test A.D.
+            assertPred!"=="(Date(1999, 1, 1).dayOfYear, 1);
+            assertPred!"=="(Date(1999, 1, 2).dayOfYear, 2);
+            assertPred!"=="(Date(1999, 1, 3).dayOfYear, 3);
+            assertPred!"=="(Date(1999, 1, 31).dayOfYear, 31);
+            assertPred!"=="(Date(1999, 2, 1).dayOfYear, 32);
+            assertPred!"=="(Date(1999, 2, 28).dayOfYear, 59);
+            assertPred!"=="(Date(1999, 3, 1).dayOfYear, 60);
+            assertPred!"=="(Date(1999, 3, 31).dayOfYear, 90);
+            assertPred!"=="(Date(1999, 4, 1).dayOfYear, 91);
+            assertPred!"=="(Date(1999, 4, 30).dayOfYear, 120);
+            assertPred!"=="(Date(1999, 5, 1).dayOfYear, 121);
+            assertPred!"=="(Date(1999, 5, 31).dayOfYear, 151);
+            assertPred!"=="(Date(1999, 6, 1).dayOfYear, 152);
+            assertPred!"=="(Date(1999, 6, 30).dayOfYear, 181);
+            assertPred!"=="(Date(1999, 7, 1).dayOfYear, 182);
+            assertPred!"=="(Date(1999, 7, 31).dayOfYear, 212);
+            assertPred!"=="(Date(1999, 8, 1).dayOfYear, 213);
+            assertPred!"=="(Date(1999, 8, 31).dayOfYear, 243);
+            assertPred!"=="(Date(1999, 9, 1).dayOfYear, 244);
+            assertPred!"=="(Date(1999, 9, 30).dayOfYear, 273);
+            assertPred!"=="(Date(1999, 10, 1).dayOfYear, 274);
+            assertPred!"=="(Date(1999, 10, 31).dayOfYear, 304);
+            assertPred!"=="(Date(1999, 11, 1).dayOfYear, 305);
+            assertPred!"=="(Date(1999, 11, 30).dayOfYear, 334);
+            assertPred!"=="(Date(1999, 12, 1).dayOfYear, 335);
+            assertPred!"=="(Date(1999, 12, 31).dayOfYear, 365);
+
+            assertPred!"=="(Date(2000, 1, 1).dayOfYear, 1);
+            assertPred!"=="(Date(2000, 2, 1).dayOfYear, 32);
+            assertPred!"=="(Date(2000, 2, 29).dayOfYear, 60);
+            assertPred!"=="(Date(2000, 3, 1).dayOfYear, 61);
+            assertPred!"=="(Date(2000, 3, 31).dayOfYear, 91);
+            assertPred!"=="(Date(2000, 4, 1).dayOfYear, 92);
+            assertPred!"=="(Date(2000, 4, 30).dayOfYear, 121);
+            assertPred!"=="(Date(2000, 5, 1).dayOfYear, 122);
+            assertPred!"=="(Date(2000, 5, 31).dayOfYear, 152);
+            assertPred!"=="(Date(2000, 6, 1).dayOfYear, 153);
+            assertPred!"=="(Date(2000, 6, 30).dayOfYear, 182);
+            assertPred!"=="(Date(2000, 7, 1).dayOfYear, 183);
+            assertPred!"=="(Date(2000, 7, 31).dayOfYear, 213);
+            assertPred!"=="(Date(2000, 8, 1).dayOfYear, 214);
+            assertPred!"=="(Date(2000, 8, 31).dayOfYear, 244);
+            assertPred!"=="(Date(2000, 9, 1).dayOfYear, 245);
+            assertPred!"=="(Date(2000, 9, 30).dayOfYear, 274);
+            assertPred!"=="(Date(2000, 10, 1).dayOfYear, 275);
+            assertPred!"=="(Date(2000, 10, 31).dayOfYear, 305);
+            assertPred!"=="(Date(2000, 11, 1).dayOfYear, 306);
+            assertPred!"=="(Date(2000, 11, 30).dayOfYear, 335);
+            assertPred!"=="(Date(2000, 12, 1).dayOfYear, 336);
+            assertPred!"=="(Date(2000, 12, 31).dayOfYear, 366);
+
+            //Test B.C.
+            assertPred!"=="(Date(0, 1, 1).dayOfYear, 1);
+            assertPred!"=="(Date(0, 12, 31).dayOfYear, 366);
+            assertPred!"=="(Date(1, 1, 1).dayOfYear, 1);
+            assertPred!"=="(Date(1, 12, 31).dayOfYear, 365);
+            assertPred!"=="(Date(-1, 1, 1).dayOfYear, 1);
+            assertPred!"=="(Date(-1, 12, 31).dayOfYear, 365);
+            assertPred!"=="(Date(4, 1, 1).dayOfYear, 1);
+            assertPred!"=="(Date(4, 12, 31).dayOfYear, 366);
+
+            const cdate = Date(1999, 7, 6);
+            immutable idate = Date(1999, 7, 6);
+            static assert(__traits(compiles, cdate.dayOfYear == 187));
+            static assert(__traits(compiles, idate.dayOfYear == 187));
+
+            //Verify Examples.
+            assert(Date(1999, 1, 1).dayOfYear == 1);
+            assert(Date(1999, 12, 31).dayOfYear == 365);
+            assert(Date(2000, 12, 31).dayOfYear == 366);
+        }
+    }
+
+    /++
+        Day of the year.
+
+        Params:
+            day = The day of the year to set which day of the year this Date is on.
+
+        Throws:
+            DateTimeException if the given day is an invalid day of the year.
+      +/
+    @property void dayOfYear(int day) pure
+    {
+        if(isLeapYear)
+        {
+            if(day <= 0 || day > daysInLeapYear)
+                throw new DateTimeException("Invalid day of the year.");
+
+            switch(day)
+            {
+                case 1: .. case 31:
+                {
+                    _month = Month.jan;
+                    _day = cast(ubyte)day;
+                    break;
+                }
+                case 32: .. case 60:
+                 {
+                    _month = Month.feb;
+                    _day = cast(ubyte)(day - 31);
+                    break;
+                 }
+                case 61: .. case 91:
+                {
+                    _month = Month.mar;
+                    _day = cast(ubyte)(day - 60);
+                    break;
+                }
+                case 92: .. case 121:
+                {
+                    _month = Month.apr;
+                    _day = cast(ubyte)(day - 91);
+                    break;
+                }
+                case 122: .. case 152:
+                {
+                    _month = Month.may;
+                    _day = cast(ubyte)(day - 121);
+                    break;
+                }
+                case 153: .. case 182:
+                {
+                    _month = Month.jun;
+                    _day = cast(ubyte)(day - 152);
+                    break;
+                }
+                case 183: .. case 213:
+                {
+                    _month = Month.jul;
+                    _day = cast(ubyte)(day - 182);
+                    break;
+                }
+                case 214: .. case 244:
+                {
+                    _month = Month.aug;
+                    _day = cast(ubyte)(day - 213);
+                    break;
+                }
+                case 245: .. case 274:
+                {
+                    _month = Month.sep;
+                    _day = cast(ubyte)(day - 244);
+                    break;
+                }
+                case 275: .. case 305:
+                {
+                    _month = Month.oct;
+                    _day = cast(ubyte)(day - 274);
+                    break;
+                }
+                case 306: .. case 335:
+                {
+                    _month = Month.nov;
+                    _day = cast(ubyte)(day - 305);
+                    break;
+                }
+                case 336: .. case 366:
+                {
+                    _month = Month.dec;
+                    _day = cast(ubyte)(day - 335);
+                    break;
+                }
+                default:
+                    assert(0, "Invalid day of the year.");
+            }
+        }
+        else
+        {
+            if(day <= 0 || day > daysInYear)
+                throw new DateTimeException("Invalid day of the year.");
+
+            switch(day)
+            {
+                case 1: .. case 31:
+                {
+                    _month = Month.jan;
+                    _day = cast(ubyte)day;
+                    break;
+                }
+                case 32: .. case 59:
+                 {
+                    _month = Month.feb;
+                    _day = cast(ubyte)(day - 31);
+                    break;
+                 }
+                case 60: .. case 90:
+                {
+                    _month = Month.mar;
+                    _day = cast(ubyte)(day - 59);
+                    break;
+                }
+                case 91: .. case 120:
+                {
+                    _month = Month.apr;
+                    _day = cast(ubyte)(day - 90);
+                    break;
+                }
+                case 121: .. case 151:
+                {
+                    _month = Month.may;
+                    _day = cast(ubyte)(day - 120);
+                    break;
+                }
+                case 152: .. case 181:
+                {
+                    _month = Month.jun;
+                    _day = cast(ubyte)(day - 151);
+                    break;
+                }
+                case 182: .. case 212:
+                {
+                    _month = Month.jul;
+                    _day = cast(ubyte)(day - 181);
+                    break;
+                }
+                case 213: .. case 243:
+                {
+                    _month = Month.aug;
+                    _day = cast(ubyte)(day - 212);
+                    break;
+                }
+                case 244: .. case 273:
+                {
+                    _month = Month.sep;
+                    _day = cast(ubyte)(day - 243);
+                    break;
+                }
+                case 274: .. case 304:
+                {
+                    _month = Month.oct;
+                    _day = cast(ubyte)(day - 273);
+                    break;
+                }
+                case 305: .. case 334:
+                {
+                    _month = Month.nov;
+                    _day = cast(ubyte)(day - 304);
+                    break;
+                }
+                case 335: .. case 365:
+                {
+                    _month = Month.dec;
+                    _day = cast(ubyte)(day - 334);
+                    break;
+                }
+                default:
+                    assert(0, "Invalid day of the year.");
+            }
+        }
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            auto date = Date(1999, 1, 1);
+
+            void testFunc(int day, int expectedMonth, int expectedDay, size_t line = __LINE__)
+            {
+                date.dayOfYear = day;
+                assertPred!"=="(date.month, expectedMonth, "", __FILE__, line);
+                assertPred!"=="(date.day, expectedDay, "", __FILE__, line);
+            }
+
+            //Test A.D.
+            testFunc(1, 1, 1);
+            testFunc(2, 1, 2);
+            testFunc(3, 1, 3);
+            testFunc(31, 1, 31);
+
+            testFunc(32, 2, 1);
+            testFunc(59, 2, 28);
+            testFunc(60, 3, 1);
+            testFunc(90, 3, 31);
+            testFunc(91, 4, 1);
+            testFunc(120, 4, 30);
+            testFunc(121, 5, 1);
+            testFunc(151, 5, 31);
+            testFunc(152, 6, 1);
+            testFunc(181, 6, 30);
+            testFunc(182, 7, 1);
+            testFunc(212, 7, 31);
+            testFunc(213, 8, 1);
+            testFunc(243, 8, 31);
+            testFunc(244, 9, 1);
+            testFunc(273, 9, 30);
+            testFunc(274, 10, 1);
+            testFunc(304, 10, 31);
+            testFunc(305, 11, 1);
+            testFunc(334, 11, 30);
+            testFunc(335, 12, 1);
+            testFunc(365, 12, 31);
+
+            date.year = 2000;
+            testFunc(1, 1, 1);
+            testFunc(32, 2, 1);
+            testFunc(60, 2, 29);
+            testFunc(61, 3, 1);
+            testFunc(91, 3, 31);
+            testFunc(92, 4, 1);
+            testFunc(121, 4, 30);
+            testFunc(122, 5, 1);
+            testFunc(152, 5, 31);
+            testFunc(153, 6, 1);
+            testFunc(182, 6, 30);
+            testFunc(183, 7, 1);
+            testFunc(213, 7, 31);
+            testFunc(214, 8, 1);
+            testFunc(244, 8, 31);
+            testFunc(245, 9, 1);
+            testFunc(274, 9, 30);
+            testFunc(275, 10, 1);
+            testFunc(305, 10, 31);
+            testFunc(306, 11, 1);
+            testFunc(335, 11, 30);
+            testFunc(336, 12, 1);
+            testFunc(366, 12, 31);
+
+            //Test B.C.
+            date.year = 0;
+            testFunc(1, 1, 1);
+            testFunc(32, 2, 1);
+            testFunc(60, 2, 29);
+            testFunc(61, 3, 1);
+            testFunc(91, 3, 31);
+            testFunc(92, 4, 1);
+            testFunc(121, 4, 30);
+            testFunc(122, 5, 1);
+            testFunc(152, 5, 31);
+            testFunc(153, 6, 1);
+            testFunc(182, 6, 30);
+            testFunc(183, 7, 1);
+            testFunc(213, 7, 31);
+            testFunc(214, 8, 1);
+            testFunc(244, 8, 31);
+            testFunc(245, 9, 1);
+            testFunc(274, 9, 30);
+            testFunc(275, 10, 1);
+            testFunc(305, 10, 31);
+            testFunc(306, 11, 1);
+            testFunc(335, 11, 30);
+            testFunc(336, 12, 1);
+            testFunc(366, 12, 31);
+
+            date.year = -1;
+            testFunc(1, 1, 1);
+            testFunc(2, 1, 2);
+            testFunc(3, 1, 3);
+            testFunc(31, 1, 31);
+
+            testFunc(32, 2, 1);
+            testFunc(59, 2, 28);
+            testFunc(60, 3, 1);
+            testFunc(90, 3, 31);
+            testFunc(91, 4, 1);
+            testFunc(120, 4, 30);
+            testFunc(121, 5, 1);
+            testFunc(151, 5, 31);
+            testFunc(152, 6, 1);
+            testFunc(181, 6, 30);
+            testFunc(182, 7, 1);
+            testFunc(212, 7, 31);
+            testFunc(213, 8, 1);
+            testFunc(243, 8, 31);
+            testFunc(244, 9, 1);
+            testFunc(273, 9, 30);
+            testFunc(274, 10, 1);
+            testFunc(304, 10, 31);
+            testFunc(305, 11, 1);
+            testFunc(334, 11, 30);
+            testFunc(335, 12, 1);
+            testFunc(365, 12, 31);
+
+            const cdate = Date(1999, 7, 6);
+            immutable idate = Date(1999, 7, 6);
+            static assert(!__traits(compiles, cdate.dayOfYear = 187));
+            static assert(!__traits(compiles, idate.dayOfYear = 187));
+        }
+    }
+
+
+    /++
+        The Xth day of the Gregorian Calendar that this Date is on.
+
+        Examples:
+--------------------
+assert(Date(1, 1, 1).dayOfGregorianCal == 1);
+assert(Date(1, 12, 31).dayOfGregorianCal == 365);
+assert(Date(2, 1, 1).dayOfGregorianCal == 366);
+
+assert(Date(0, 12, 31).dayOfGregorianCal == 0);
+assert(Date(0, 1, 1).dayOfGregorianCal == -365);
+assert(Date(-1, 12, 31).dayOfGregorianCal == -366);
+
+assert(Date(2000, 1, 1).dayOfGregorianCal == 730_120);
+assert(Date(2010, 12, 31).dayOfGregorianCal == 734_137);
+--------------------
+     +/
+    @property int dayOfGregorianCal() const pure nothrow
+    {
+        if(isAD)
+        {
+            if(_year == 1)
+                return dayOfYear;
+
+            int years = _year - 1;
+            auto days = (years / 400) * daysIn400Years;
+            years %= 400;
+
+            days += (years / 100) * daysIn100Years;
+            years %= 100;
+
+            days += (years / 4) * daysIn4Years;
+            years %= 4;
+
+            days += years * daysInYear;
+
+            days += dayOfYear;
+
+            return days;
+        }
+        else if(_year == 0)
+            return dayOfYear - daysInLeapYear;
+        else
+        {
+            int years = _year;
+            auto days = (years / 400) * daysIn400Years;
+            years %= 400;
+
+            days += (years / 100) * daysIn100Years;
+            years %= 100;
+
+            days += (years / 4) * daysIn4Years;
+            years %= 4;
+
+            if(years < 0)
+            {
+                days -= daysInLeapYear;
+                ++years;
+
+                days += years * daysInYear;
+
+                days -= daysInYear - dayOfYear;
+            }
+            else
+                days -= daysInLeapYear - dayOfYear;
+
+            return days;
+        }
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            //Test A.D.
+            assertPred!"=="(Date(1, 1, 1).dayOfGregorianCal, 1);
+            assertPred!"=="(Date(1, 1, 2).dayOfGregorianCal, 2);
+            assertPred!"=="(Date(1, 2, 1).dayOfGregorianCal, 32);
+            assertPred!"=="(Date(2, 1, 1).dayOfGregorianCal, 366);
+            assertPred!"=="(Date(3, 1, 1).dayOfGregorianCal, 731);
+            assertPred!"=="(Date(4, 1, 1).dayOfGregorianCal, 1096);
+            assertPred!"=="(Date(5, 1, 1).dayOfGregorianCal, 1462);
+            assertPred!"=="(Date(50, 1, 1).dayOfGregorianCal, 17_898);
+            assertPred!"=="(Date(97, 1, 1).dayOfGregorianCal, 35_065);
+            assertPred!"=="(Date(100, 1, 1).dayOfGregorianCal, 36_160);
+            assertPred!"=="(Date(101, 1, 1).dayOfGregorianCal, 36_525);
+            assertPred!"=="(Date(105, 1, 1).dayOfGregorianCal, 37_986);
+            assertPred!"=="(Date(200, 1, 1).dayOfGregorianCal, 72_684);
+            assertPred!"=="(Date(201, 1, 1).dayOfGregorianCal, 73_049);
+            assertPred!"=="(Date(300, 1, 1).dayOfGregorianCal, 109_208);
+            assertPred!"=="(Date(301, 1, 1).dayOfGregorianCal, 109_573);
+            assertPred!"=="(Date(400, 1, 1).dayOfGregorianCal, 145_732);
+            assertPred!"=="(Date(401, 1, 1).dayOfGregorianCal, 146_098);
+            assertPred!"=="(Date(500, 1, 1).dayOfGregorianCal, 182_257);
+            assertPred!"=="(Date(501, 1, 1).dayOfGregorianCal, 182_622);
+            assertPred!"=="(Date(1000, 1, 1).dayOfGregorianCal, 364_878);
+            assertPred!"=="(Date(1001, 1, 1).dayOfGregorianCal, 365_243);
+            assertPred!"=="(Date(1600, 1, 1).dayOfGregorianCal, 584_023);
+            assertPred!"=="(Date(1601, 1, 1).dayOfGregorianCal, 584_389);
+            assertPred!"=="(Date(1900, 1, 1).dayOfGregorianCal, 693_596);
+            assertPred!"=="(Date(1901, 1, 1).dayOfGregorianCal, 693_961);
+            assertPred!"=="(Date(1945, 11, 12).dayOfGregorianCal, 710_347);
+            assertPred!"=="(Date(1999, 1, 1).dayOfGregorianCal, 729_755);
+            assertPred!"=="(Date(2000, 1, 1).dayOfGregorianCal, 730_120);
+            assertPred!"=="(Date(2001, 1, 1).dayOfGregorianCal, 730_486);
+
+            assertPred!"=="(Date(2010, 1, 1).dayOfGregorianCal, 733_773);
+            assertPred!"=="(Date(2010, 1, 31).dayOfGregorianCal, 733_803);
+            assertPred!"=="(Date(2010, 2, 1).dayOfGregorianCal, 733_804);
+            assertPred!"=="(Date(2010, 2, 28).dayOfGregorianCal, 733_831);
+            assertPred!"=="(Date(2010, 3, 1).dayOfGregorianCal, 733_832);
+            assertPred!"=="(Date(2010, 3, 31).dayOfGregorianCal, 733_862);
+            assertPred!"=="(Date(2010, 4, 1).dayOfGregorianCal, 733_863);
+            assertPred!"=="(Date(2010, 4, 30).dayOfGregorianCal, 733_892);
+            assertPred!"=="(Date(2010, 5, 1).dayOfGregorianCal, 733_893);
+            assertPred!"=="(Date(2010, 5, 31).dayOfGregorianCal, 733_923);
+            assertPred!"=="(Date(2010, 6, 1).dayOfGregorianCal, 733_924);
+            assertPred!"=="(Date(2010, 6, 30).dayOfGregorianCal, 733_953);
+            assertPred!"=="(Date(2010, 7, 1).dayOfGregorianCal, 733_954);
+            assertPred!"=="(Date(2010, 7, 31).dayOfGregorianCal, 733_984);
+            assertPred!"=="(Date(2010, 8, 1).dayOfGregorianCal, 733_985);
+            assertPred!"=="(Date(2010, 8, 31).dayOfGregorianCal, 734_015);
+            assertPred!"=="(Date(2010, 9, 1).dayOfGregorianCal, 734_016);
+            assertPred!"=="(Date(2010, 9, 30).dayOfGregorianCal, 734_045);
+            assertPred!"=="(Date(2010, 10, 1).dayOfGregorianCal, 734_046);
+            assertPred!"=="(Date(2010, 10, 31).dayOfGregorianCal, 734_076);
+            assertPred!"=="(Date(2010, 11, 1).dayOfGregorianCal, 734_077);
+            assertPred!"=="(Date(2010, 11, 30).dayOfGregorianCal, 734_106);
+            assertPred!"=="(Date(2010, 12, 1).dayOfGregorianCal, 734_107);
+            assertPred!"=="(Date(2010, 12, 31).dayOfGregorianCal, 734_137);
+
+            assertPred!"=="(Date(2012, 2, 1).dayOfGregorianCal, 734_534);
+            assertPred!"=="(Date(2012, 2, 28).dayOfGregorianCal, 734_561);
+            assertPred!"=="(Date(2012, 2, 29).dayOfGregorianCal, 734_562);
+            assertPred!"=="(Date(2012, 3, 1).dayOfGregorianCal, 734_563);
+
+            //Test B.C.
+            assertPred!"=="(Date(0, 12, 31).dayOfGregorianCal, 0);
+            assertPred!"=="(Date(0, 12, 30).dayOfGregorianCal, -1);
+            assertPred!"=="(Date(0, 12, 1).dayOfGregorianCal, -30);
+            assertPred!"=="(Date(0, 11, 30).dayOfGregorianCal, -31);
+
+            assertPred!"=="(Date(-1, 12, 31).dayOfGregorianCal, -366);
+            assertPred!"=="(Date(-1, 12, 30).dayOfGregorianCal, -367);
+            assertPred!"=="(Date(-1, 1, 1).dayOfGregorianCal, -730);
+            assertPred!"=="(Date(-2, 12, 31).dayOfGregorianCal, -731);
+            assertPred!"=="(Date(-2, 1, 1).dayOfGregorianCal, -1095);
+            assertPred!"=="(Date(-3, 12, 31).dayOfGregorianCal, -1096);
+            assertPred!"=="(Date(-3, 1, 1).dayOfGregorianCal, -1460);
+            assertPred!"=="(Date(-4, 12, 31).dayOfGregorianCal, -1461);
+            assertPred!"=="(Date(-4, 1, 1).dayOfGregorianCal, -1826);
+            assertPred!"=="(Date(-5, 12, 31).dayOfGregorianCal, -1827);
+            assertPred!"=="(Date(-5, 1, 1).dayOfGregorianCal, -2191);
+            assertPred!"=="(Date(-9, 1, 1).dayOfGregorianCal, -3652);
+
+            assertPred!"=="(Date(-49, 1, 1).dayOfGregorianCal, -18_262);
+            assertPred!"=="(Date(-50, 1, 1).dayOfGregorianCal, -18_627);
+            assertPred!"=="(Date(-97, 1, 1).dayOfGregorianCal, -35_794);
+            assertPred!"=="(Date(-99, 12, 31).dayOfGregorianCal, -36_160);
+            assertPred!"=="(Date(-99, 1, 1).dayOfGregorianCal, -36_524);
+            assertPred!"=="(Date(-100, 1, 1).dayOfGregorianCal, -36_889);
+            assertPred!"=="(Date(-101, 1, 1).dayOfGregorianCal, -37_254);
+            assertPred!"=="(Date(-105, 1, 1).dayOfGregorianCal, -38_715);
+            assertPred!"=="(Date(-200, 1, 1).dayOfGregorianCal, -73_413);
+            assertPred!"=="(Date(-201, 1, 1).dayOfGregorianCal, -73_778);
+            assertPred!"=="(Date(-300, 1, 1).dayOfGregorianCal, -109_937);
+            assertPred!"=="(Date(-301, 1, 1).dayOfGregorianCal, -110_302);
+            assertPred!"=="(Date(-400, 12, 31).dayOfGregorianCal, -146_097);
+            assertPred!"=="(Date(-400, 1, 1).dayOfGregorianCal, -146_462);
+            assertPred!"=="(Date(-401, 1, 1).dayOfGregorianCal, -146_827);
+            assertPred!"=="(Date(-499, 1, 1).dayOfGregorianCal, -182_621);
+            assertPred!"=="(Date(-500, 1, 1).dayOfGregorianCal, -182_986);
+            assertPred!"=="(Date(-501, 1, 1).dayOfGregorianCal, -183_351);
+            assertPred!"=="(Date(-1000, 1, 1).dayOfGregorianCal, -365_607);
+            assertPred!"=="(Date(-1001, 1, 1).dayOfGregorianCal, -365_972);
+            assertPred!"=="(Date(-1599, 1, 1).dayOfGregorianCal, -584_387);
+            assertPred!"=="(Date(-1600, 12, 31).dayOfGregorianCal, -584_388);
+            assertPred!"=="(Date(-1600, 1, 1).dayOfGregorianCal, -584_753);
+            assertPred!"=="(Date(-1601, 1, 1).dayOfGregorianCal, -585_118);
+            assertPred!"=="(Date(-1900, 1, 1).dayOfGregorianCal, -694_325);
+            assertPred!"=="(Date(-1901, 1, 1).dayOfGregorianCal, -694_690);
+            assertPred!"=="(Date(-1999, 1, 1).dayOfGregorianCal, -730_484);
+            assertPred!"=="(Date(-2000, 12, 31).dayOfGregorianCal, -730_485);
+            assertPred!"=="(Date(-2000, 1, 1).dayOfGregorianCal, -730_850);
+            assertPred!"=="(Date(-2001, 1, 1).dayOfGregorianCal, -731_215);
+
+            assertPred!"=="(Date(-2010, 1, 1).dayOfGregorianCal, -734_502);
+            assertPred!"=="(Date(-2010, 1, 31).dayOfGregorianCal, -734_472);
+            assertPred!"=="(Date(-2010, 2, 1).dayOfGregorianCal, -734_471);
+            assertPred!"=="(Date(-2010, 2, 28).dayOfGregorianCal, -734_444);
+            assertPred!"=="(Date(-2010, 3, 1).dayOfGregorianCal, -734_443);
+            assertPred!"=="(Date(-2010, 3, 31).dayOfGregorianCal, -734_413);
+            assertPred!"=="(Date(-2010, 4, 1).dayOfGregorianCal, -734_412);
+            assertPred!"=="(Date(-2010, 4, 30).dayOfGregorianCal, -734_383);
+            assertPred!"=="(Date(-2010, 5, 1).dayOfGregorianCal, -734_382);
+            assertPred!"=="(Date(-2010, 5, 31).dayOfGregorianCal, -734_352);
+            assertPred!"=="(Date(-2010, 6, 1).dayOfGregorianCal, -734_351);
+            assertPred!"=="(Date(-2010, 6, 30).dayOfGregorianCal, -734_322);
+            assertPred!"=="(Date(-2010, 7, 1).dayOfGregorianCal, -734_321);
+            assertPred!"=="(Date(-2010, 7, 31).dayOfGregorianCal, -734_291);
+            assertPred!"=="(Date(-2010, 8, 1).dayOfGregorianCal, -734_290);
+            assertPred!"=="(Date(-2010, 8, 31).dayOfGregorianCal, -734_260);
+            assertPred!"=="(Date(-2010, 9, 1).dayOfGregorianCal, -734_259);
+            assertPred!"=="(Date(-2010, 9, 30).dayOfGregorianCal, -734_230);
+            assertPred!"=="(Date(-2010, 10, 1).dayOfGregorianCal, -734_229);
+            assertPred!"=="(Date(-2010, 10, 31).dayOfGregorianCal, -734_199);
+            assertPred!"=="(Date(-2010, 11, 1).dayOfGregorianCal, -734_198);
+            assertPred!"=="(Date(-2010, 11, 30).dayOfGregorianCal, -734_169);
+            assertPred!"=="(Date(-2010, 12, 1).dayOfGregorianCal, -734_168);
+            assertPred!"=="(Date(-2010, 12, 31).dayOfGregorianCal, -734_138);
+
+            assertPred!"=="(Date(-2012, 2, 1).dayOfGregorianCal, -735_202);
+            assertPred!"=="(Date(-2012, 2, 28).dayOfGregorianCal, -735_175);
+            assertPred!"=="(Date(-2012, 2, 29).dayOfGregorianCal, -735_174);
+            assertPred!"=="(Date(-2012, 3, 1).dayOfGregorianCal, -735_173);
+
+            assertPred!"=="(Date(-3760, 9, 7).dayOfGregorianCal, -1_373_427); //Start of Hebrew Calendar
+
+            auto date = Date(1999, 7, 6);
+            const cdate = Date(1999, 7, 6);
+            immutable idate = Date(1999, 7, 6);
+            static assert(__traits(compiles, date.dayOfGregorianCal));
+            static assert(__traits(compiles, cdate.dayOfGregorianCal));
+            static assert(__traits(compiles, idate.dayOfGregorianCal));
+
+            //Verify Examples.
+            assert(Date(1, 1, 1).dayOfGregorianCal == 1);
+            assert(Date(1, 12, 31).dayOfGregorianCal == 365);
+            assert(Date(2, 1, 1).dayOfGregorianCal == 366);
+
+            assert(Date(0, 12, 31).dayOfGregorianCal == 0);
+            assert(Date(0, 1, 1).dayOfGregorianCal == -365);
+            assert(Date(-1, 12, 31).dayOfGregorianCal == -366);
+
+            assert(Date(2000, 1, 1).dayOfGregorianCal == 730_120);
+            assert(Date(2010, 12, 31).dayOfGregorianCal == 734_137);
+        }
+    }
+
+    /++
+        The Xth day of the Gregorian Calendar that this Date is on.
+
+        Params:
+            day = The day of the Gregorian Calendar to set this Date to.
+
+        Examples:
+--------------------
+auto date = Date.init;
+date.dayOfGregorianCal = 1;
+assert(date == Date(1, 1, 1));
+
+date.dayOfGregorianCal = 365;
+assert(date == Date(1, 12, 31));
+
+date.dayOfGregorianCal = 366;
+assert(date == Date(2, 1, 1));
+
+date.dayOfGregorianCal = 0;
+assert(date == Date(0, 12, 31));
+
+date.dayOfGregorianCal = -365;
+assert(date == Date(-0, 1, 1));
+
+date.dayOfGregorianCal = -366;
+assert(date == Date(-1, 12, 31));
+
+date.dayOfGregorianCal = 730_120;
+assert(date == Date(2000, 1, 1));
+
+date.dayOfGregorianCal = 734_137;
+assert(date == Date(2010, 12, 31));
+--------------------
+     +/
+    @property void dayOfGregorianCal(int day) pure nothrow
+    {
+        this = Date(day);
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            {
+                auto date = Date(1999, 7, 6);
+                const cdate = Date(1999, 7, 6);
+                immutable idate = Date(1999, 7, 6);
+                static assert(__traits(compiles, date.dayOfGregorianCal = 187));
+                static assert(!__traits(compiles, cdate.dayOfGregorianCal = 187));
+                static assert(!__traits(compiles, idate.dayOfGregorianCal = 187));
+            }
+
+            //Verify Examples.
+            {
+                auto date = Date.init;
+                date.dayOfGregorianCal = 1;
+                assert(date == Date(1, 1, 1));
+
+                date.dayOfGregorianCal = 365;
+                assert(date == Date(1, 12, 31));
+
+                date.dayOfGregorianCal = 366;
+                assert(date == Date(2, 1, 1));
+
+                date.dayOfGregorianCal = 0;
+                assert(date == Date(0, 12, 31));
+
+                date.dayOfGregorianCal = -365;
+                assert(date == Date(-0, 1, 1));
+
+                date.dayOfGregorianCal = -366;
+                assert(date == Date(-1, 12, 31));
+
+                date.dayOfGregorianCal = 730_120;
+                assert(date == Date(2000, 1, 1));
+
+                date.dayOfGregorianCal = 734_137;
+                assert(date == Date(2010, 12, 31));
+            }
+        }
+    }
+
+
+    /++
+        The ISO 8601 week of the year that this Date is in.
+
+        See_Also:
+            $(WEB en.wikipedia.org/wiki/ISO_week_date, ISO Week Date)
+      +/
+    @property ubyte isoWeek() const pure nothrow
+    {
+        immutable weekday = dayOfWeek;
+        immutable adjustedWeekday = weekday == DayOfWeek.sun ? 7 : weekday;
+        immutable week = (dayOfYear - adjustedWeekday + 10) / 7;
+
+        try
+        {
+            if(week == 53)
+            {
+                switch(Date(_year + 1, 1, 1).dayOfWeek)
+                {
+                    case DayOfWeek.mon:
+                    case DayOfWeek.tue:
+                    case DayOfWeek.wed:
+                    case DayOfWeek.thu:
+                        return 1;
+                    case DayOfWeek.fri:
+                    case DayOfWeek.sat:
+                    case DayOfWeek.sun:
+                        return 53;
+                    default:
+                        assert(0, "Invalid ISO Week");
+                }
+            }
+            else if(week > 0)
+                return cast(ubyte)week;
+            else
+                return Date(_year - 1, 12, 31).isoWeek;
+        }
+        catch(Exception e)
+            assert(0, "Date's constructor threw.");
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            //Test A.D.
+            assertPred!"=="(Date(2009, 12, 28).isoWeek, 53);
+            assertPred!"=="(Date(2009, 12, 29).isoWeek, 53);
+            assertPred!"=="(Date(2009, 12, 30).isoWeek, 53);
+            assertPred!"=="(Date(2009, 12, 31).isoWeek, 53);
+            assertPred!"=="(Date(2010, 1, 1).isoWeek, 53);
+            assertPred!"=="(Date(2010, 1, 2).isoWeek, 53);
+            assertPred!"=="(Date(2010, 1, 3).isoWeek, 53);
+            assertPred!"=="(Date(2010, 1, 4).isoWeek, 1);
+            assertPred!"=="(Date(2010, 1, 5).isoWeek, 1);
+            assertPred!"=="(Date(2010, 1, 6).isoWeek, 1);
+            assertPred!"=="(Date(2010, 1, 7).isoWeek, 1);
+            assertPred!"=="(Date(2010, 1, 8).isoWeek, 1);
+            assertPred!"=="(Date(2010, 1, 9).isoWeek, 1);
+            assertPred!"=="(Date(2010, 1, 10).isoWeek, 1);
+            assertPred!"=="(Date(2010, 1, 11).isoWeek, 2);
+            assertPred!"=="(Date(2010, 12, 31).isoWeek, 52);
+
+            assertPred!"=="(Date(2004, 12, 26).isoWeek, 52);
+            assertPred!"=="(Date(2004, 12, 27).isoWeek, 53);
+            assertPred!"=="(Date(2004, 12, 28).isoWeek, 53);
+            assertPred!"=="(Date(2004, 12, 29).isoWeek, 53);
+            assertPred!"=="(Date(2004, 12, 30).isoWeek, 53);
+            assertPred!"=="(Date(2004, 12, 31).isoWeek, 53);
+            assertPred!"=="(Date(2005, 1, 1).isoWeek, 53);
+            assertPred!"=="(Date(2005, 1, 2).isoWeek, 53);
+
+            assertPred!"=="(Date(2005, 12, 31).isoWeek, 52);
+            assertPred!"=="(Date(2007, 1, 1).isoWeek, 1);
+
+            assertPred!"=="(Date(2007, 12, 30).isoWeek, 52);
+            assertPred!"=="(Date(2007, 12, 31).isoWeek, 1);
+            assertPred!"=="(Date(2008, 1, 1).isoWeek, 1);
+
+            assertPred!"=="(Date(2008, 12, 28).isoWeek, 52);
+            assertPred!"=="(Date(2008, 12, 29).isoWeek, 1);
+            assertPred!"=="(Date(2008, 12, 30).isoWeek, 1);
+            assertPred!"=="(Date(2008, 12, 31).isoWeek, 1);
+            assertPred!"=="(Date(2009, 1, 1).isoWeek, 1);
+            assertPred!"=="(Date(2009, 1, 2).isoWeek, 1);
+            assertPred!"=="(Date(2009, 1, 3).isoWeek, 1);
+            assertPred!"=="(Date(2009, 1, 4).isoWeek, 1);
+
+            //Test B.C.
+            //The algorithm should work identically for both A.D. and B.C. since
+            //it doesn't really take the year into account, so B.C. testing
+            //probably isn't really needed.
+            assertPred!"=="(Date(0, 12, 31).isoWeek, 52);
+            assertPred!"=="(Date(0, 1, 4).isoWeek, 1);
+            assertPred!"=="(Date(0, 1, 1).isoWeek, 52);
+
+            const cdate = Date(1999, 7, 6);
+            immutable idate = Date(1999, 7, 6);
+            static assert(__traits(compiles, cdate.isoWeek == 3));
+            static assert(!__traits(compiles, cdate.isoWeek = 3));
+            static assert(__traits(compiles, idate.isoWeek == 3));
+            static assert(!__traits(compiles, idate.isoWeek = 3));
+        }
+    }
+
+
+    /++
+        Date for the last day in the month that this Date is in.
+
+        Examples:
+--------------------
+assert(Date(1999, 1, 6).endOfMonth == Date(1999, 1, 31));
+assert(Date(1999, 2, 7).endOfMonth == Date(1999, 2, 28));
+assert(Date(2000, 2, 7).endOfMonth == Date(1999, 2, 29));
+assert(Date(2000, 6, 4).endOfMonth == Date(1999, 6, 30));
+--------------------
+      +/
+    @property Date endOfMonth() const pure nothrow
+    {
+        try
+            return Date(_year, _month, maxDay(_year, _month));
+        catch(Exception e)
+            assert(0, "Date's constructor threw.");
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            //Test A.D.
+            assertPred!"=="(Date(1999, 1, 1).endOfMonth, Date(1999, 1, 31));
+            assertPred!"=="(Date(1999, 2, 1).endOfMonth, Date(1999, 2, 28));
+            assertPred!"=="(Date(2000, 2, 1).endOfMonth, Date(2000, 2, 29));
+            assertPred!"=="(Date(1999, 3, 1).endOfMonth, Date(1999, 3, 31));
+            assertPred!"=="(Date(1999, 4, 1).endOfMonth, Date(1999, 4, 30));
+            assertPred!"=="(Date(1999, 5, 1).endOfMonth, Date(1999, 5, 31));
+            assertPred!"=="(Date(1999, 6, 1).endOfMonth, Date(1999, 6, 30));
+            assertPred!"=="(Date(1999, 7, 1).endOfMonth, Date(1999, 7, 31));
+            assertPred!"=="(Date(1999, 8, 1).endOfMonth, Date(1999, 8, 31));
+            assertPred!"=="(Date(1999, 9, 1).endOfMonth, Date(1999, 9, 30));
+            assertPred!"=="(Date(1999, 10, 1).endOfMonth, Date(1999, 10, 31));
+            assertPred!"=="(Date(1999, 11, 1).endOfMonth, Date(1999, 11, 30));
+            assertPred!"=="(Date(1999, 12, 1).endOfMonth, Date(1999, 12, 31));
+
+            //Test B.C.
+            assertPred!"=="(Date(-1999, 1, 1).endOfMonth, Date(-1999, 1, 31));
+            assertPred!"=="(Date(-1999, 2, 1).endOfMonth, Date(-1999, 2, 28));
+            assertPred!"=="(Date(-2000, 2, 1).endOfMonth, Date(-2000, 2, 29));
+            assertPred!"=="(Date(-1999, 3, 1).endOfMonth, Date(-1999, 3, 31));
+            assertPred!"=="(Date(-1999, 4, 1).endOfMonth, Date(-1999, 4, 30));
+            assertPred!"=="(Date(-1999, 5, 1).endOfMonth, Date(-1999, 5, 31));
+            assertPred!"=="(Date(-1999, 6, 1).endOfMonth, Date(-1999, 6, 30));
+            assertPred!"=="(Date(-1999, 7, 1).endOfMonth, Date(-1999, 7, 31));
+            assertPred!"=="(Date(-1999, 8, 1).endOfMonth, Date(-1999, 8, 31));
+            assertPred!"=="(Date(-1999, 9, 1).endOfMonth, Date(-1999, 9, 30));
+            assertPred!"=="(Date(-1999, 10, 1).endOfMonth, Date(-1999, 10, 31));
+            assertPred!"=="(Date(-1999, 11, 1).endOfMonth, Date(-1999, 11, 30));
+            assertPred!"=="(Date(-1999, 12, 1).endOfMonth, Date(-1999, 12, 31));
+
+            const cdate = Date(1999, 7, 6);
+            immutable idate = Date(1999, 7, 6);
+            static assert(!__traits(compiles, cdate.endOfMonth = Date(1999, 7, 30)));
+            static assert(!__traits(compiles, idate.endOfMonth = Date(1999, 7, 30)));
+
+            //Verify Examples.
+            assert(Date(1999, 1, 6).endOfMonth == Date(1999, 1, 31));
+            assert(Date(1999, 2, 7).endOfMonth == Date(1999, 2, 28));
+            assert(Date(2000, 2, 7).endOfMonth == Date(2000, 2, 29));
+            assert(Date(2000, 6, 4).endOfMonth == Date(2000, 6, 30));
+        }
+    }
+
+
+    /++
+        The last day in the month that this Date is in.
+
+        Examples:
+--------------------
+assert(Date(1999, 1, 6).endOfMonthDay == 31);
+assert(Date(1999, 2, 7).endOfMonthDay == 28);
+assert(Date(2000, 2, 7).endOfMonthDay == 29);
+assert(Date(2000, 6, 4).endOfMonthDay == 30);
+--------------------
+      +/
+    @property ubyte endOfMonthDay() const pure nothrow
+    {
+        return maxDay(_year, _month);
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            //Test A.D.
+            assertPred!"=="(Date(1999, 1, 1).endOfMonthDay, 31);
+            assertPred!"=="(Date(1999, 2, 1).endOfMonthDay, 28);
+            assertPred!"=="(Date(2000, 2, 1).endOfMonthDay, 29);
+            assertPred!"=="(Date(1999, 3, 1).endOfMonthDay, 31);
+            assertPred!"=="(Date(1999, 4, 1).endOfMonthDay, 30);
+            assertPred!"=="(Date(1999, 5, 1).endOfMonthDay, 31);
+            assertPred!"=="(Date(1999, 6, 1).endOfMonthDay, 30);
+            assertPred!"=="(Date(1999, 7, 1).endOfMonthDay, 31);
+            assertPred!"=="(Date(1999, 8, 1).endOfMonthDay, 31);
+            assertPred!"=="(Date(1999, 9, 1).endOfMonthDay, 30);
+            assertPred!"=="(Date(1999, 10, 1).endOfMonthDay, 31);
+            assertPred!"=="(Date(1999, 11, 1).endOfMonthDay, 30);
+            assertPred!"=="(Date(1999, 12, 1).endOfMonthDay, 31);
+
+            //Test B.C.
+            assertPred!"=="(Date(-1999, 1, 1).endOfMonthDay, 31);
+            assertPred!"=="(Date(-1999, 2, 1).endOfMonthDay, 28);
+            assertPred!"=="(Date(-2000, 2, 1).endOfMonthDay, 29);
+            assertPred!"=="(Date(-1999, 3, 1).endOfMonthDay, 31);
+            assertPred!"=="(Date(-1999, 4, 1).endOfMonthDay, 30);
+            assertPred!"=="(Date(-1999, 5, 1).endOfMonthDay, 31);
+            assertPred!"=="(Date(-1999, 6, 1).endOfMonthDay, 30);
+            assertPred!"=="(Date(-1999, 7, 1).endOfMonthDay, 31);
+            assertPred!"=="(Date(-1999, 8, 1).endOfMonthDay, 31);
+            assertPred!"=="(Date(-1999, 9, 1).endOfMonthDay, 30);
+            assertPred!"=="(Date(-1999, 10, 1).endOfMonthDay, 31);
+            assertPred!"=="(Date(-1999, 11, 1).endOfMonthDay, 30);
+            assertPred!"=="(Date(-1999, 12, 1).endOfMonthDay, 31);
+
+            const cdate = Date(1999, 7, 6);
+            immutable idate = Date(1999, 7, 6);
+            static assert(!__traits(compiles, cdate.endOfMonthDay = 30));
+            static assert(!__traits(compiles, idate.endOfMonthDay = 30));
+
+            //Verify Examples.
+            assert(Date(1999, 1, 6).endOfMonthDay == 31);
+            assert(Date(1999, 2, 7).endOfMonthDay == 28);
+            assert(Date(2000, 2, 7).endOfMonthDay == 29);
+            assert(Date(2000, 6, 4).endOfMonthDay == 30);
+        }
+    }
+
+
+    /++
+        Whether the current year is a date in A.D.
+
+        Examples:
+--------------------
+assert(Date(1, 1, 1).isAD);
+assert(Date(2010, 12, 31).isAD);
+assert(!Date(0, 12, 31).isAD);
+assert(!Date(-2010, 1, 1).isAD);
+--------------------
+      +/
+    @property bool isAD() const pure nothrow
+    {
+        return _year > 0;
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            assert(Date(2010, 7, 4).isAD);
+            assert(Date(1, 1, 1).isAD);
+            assert(!Date(0, 1, 1).isAD);
+            assert(!Date(-1, 1, 1).isAD);
+            assert(!Date(-2010, 7, 4).isAD);
+
+            const cdate = Date(1999, 7, 6);
+            immutable idate = Date(1999, 7, 6);
+            static assert(__traits(compiles, cdate.isAD));
+            static assert(__traits(compiles, idate.isAD));
+
+            //Verify Examples.
+            assert(Date(1, 1, 1).isAD);
+            assert(Date(2010, 12, 31).isAD);
+            assert(!Date(0, 12, 31).isAD);
+            assert(!Date(-2010, 1, 1).isAD);
+        }
+    }
+
+
+    /++
+        The julian day for this Date at noon (since the julian day changes at noon).
+      +/
+    @property long julianDay() const pure nothrow
+    {
+        return dayOfGregorianCal + 1_721_425;
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            assertPred!"=="(Date(-4713, 11, 24).julianDay, 0);
+            assertPred!"=="(Date(0, 12, 31).julianDay, 1_721_425);
+            assertPred!"=="(Date(1, 1, 1).julianDay, 1_721_426);
+            assertPred!"=="(Date(1582, 10, 15).julianDay, 2_299_161);
+            assertPred!"=="(Date(1858, 11, 17).julianDay, 2_400_001);
+            assertPred!"=="(Date(1982, 1, 4).julianDay, 2_444_974);
+            assertPred!"=="(Date(1996, 3, 31).julianDay, 2_450_174);
+            assertPred!"=="(Date(2010, 8, 24).julianDay, 2_455_433);
+
+            const cdate = Date(1999, 7, 6);
+            immutable idate = Date(1999, 7, 6);
+            static assert(__traits(compiles, cdate.julianDay));
+            static assert(__traits(compiles, idate.julianDay));
+        }
+    }
+
+
+    /++
+        The modified julian day for any time on this Date (since, the modified
+        julian day changes at midnight).
+      +/
+    @property long modJulianDay() const pure nothrow
+    {
+        return julianDay - 2_400_001;
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            assertPred!"=="(Date(1858, 11, 17).modJulianDay, 0);
+            assertPred!"=="(Date(2010, 8, 24).modJulianDay, 55_432);
+
+            const cdate = Date(1999, 7, 6);
+            immutable idate = Date(1999, 7, 6);
+            static assert(__traits(compiles, cdate.modJulianDay));
+            static assert(__traits(compiles, idate.modJulianDay));
+        }
+    }
+
+
+    /++
+        Converts this Date to a string with the format YYYYMMDD.
+
+        Examples:
+--------------------
+assert(Date(2010, 7, 4).toISOString() == "20100704");
+assert(Date(1998, 12, 25).toISOString() == "19981225");
+assert(Date(0, 1, 5).toISOString() == "00000105");
+assert(Date(-4, 1, 5).toISOString() == "-00040105");
+--------------------
+      +/
+    string toISOString() const nothrow
+    {
+        try
+        {
+            if(_year >= 0)
+            {
+                if(_year < 10_000)
+                    return format("%04d%02d%02d", _year, _month, _day);
+                else
+                    return format("+%05d%02d%02d", _year, _month, _day);
+            }
+            else if(_year > -10_000)
+                return format("%05d%02d%02d", _year, _month, _day);
+            else
+                return format("%06d%02d%02d", _year, _month, _day);
+        }
+        catch(Exception e)
+            assert(0, "format() threw.");
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            //Test A.D.
+            assertPred!"=="(Date(9, 12, 4).toISOString(), "00091204");
+            assertPred!"=="(Date(99, 12, 4).toISOString(), "00991204");
+            assertPred!"=="(Date(999, 12, 4).toISOString(), "09991204");
+            assertPred!"=="(Date(9999, 7, 4).toISOString(), "99990704");
+            assertPred!"=="(Date(10000, 10, 20).toISOString(), "+100001020");
+
+            //Test B.C.
+            assertPred!"=="(Date(0, 12, 4).toISOString(), "00001204");
+            assertPred!"=="(Date(-9, 12, 4).toISOString(), "-00091204");
+            assertPred!"=="(Date(-99, 12, 4).toISOString(), "-00991204");
+            assertPred!"=="(Date(-999, 12, 4).toISOString(), "-09991204");
+            assertPred!"=="(Date(-9999, 7, 4).toISOString(), "-99990704");
+            assertPred!"=="(Date(-10000, 10, 20).toISOString(), "-100001020");
+
+            const cdate = Date(1999, 7, 6);
+            immutable idate = Date(1999, 7, 6);
+            static assert(__traits(compiles, cdate.toISOString()));
+            static assert(__traits(compiles, idate.toISOString()));
+
+            //Verify Examples.
+            assert(Date(2010, 7, 4).toISOString() == "20100704");
+            assert(Date(1998, 12, 25).toISOString() == "19981225");
+            assert(Date(0, 1, 5).toISOString() == "00000105");
+            assert(Date(-4, 1, 5).toISOString() == "-00040105");
+        }
+    }
+
+    /++
+        Converts this Date to a string with the format YYYY-MM-DD.
+
+        Examples:
+--------------------
+assert(Date(2010, 7, 4).toISOExtendedString() == "2010-07-04");
+assert(Date(1998, 12, 25).toISOExtendedString() == "1998-12-25");
+assert(Date(0, 1, 5).toISOExtendedString() == "0000-01-05");
+assert(Date(-4, 1, 5).toISOExtendedString() == "-0004-01-05");
+--------------------
+      +/
+    string toISOExtendedString() const nothrow
+    {
+        try
+        {
+            if(_year >= 0)
+            {
+                if(_year < 10_000)
+                    return format("%04d-%02d-%02d", _year, _month, _day);
+                else
+                    return format("+%05d-%02d-%02d", _year, _month, _day);
+            }
+            else if(_year > -10_000)
+                return format("%05d-%02d-%02d", _year, _month, _day);
+            else
+                return format("%06d-%02d-%02d", _year, _month, _day);
+        }
+        catch(Exception e)
+            assert(0, "format() threw.");
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            //Test A.D.
+            assertPred!"=="(Date(9, 12, 4).toISOExtendedString(), "0009-12-04");
+            assertPred!"=="(Date(99, 12, 4).toISOExtendedString(), "0099-12-04");
+            assertPred!"=="(Date(999, 12, 4).toISOExtendedString(), "0999-12-04");
+            assertPred!"=="(Date(9999, 7, 4).toISOExtendedString(), "9999-07-04");
+            assertPred!"=="(Date(10000, 10, 20).toISOExtendedString(), "+10000-10-20");
+
+            //Test B.C.
+            assertPred!"=="(Date(0, 12, 4).toISOExtendedString(), "0000-12-04");
+            assertPred!"=="(Date(-9, 12, 4).toISOExtendedString(), "-0009-12-04");
+            assertPred!"=="(Date(-99, 12, 4).toISOExtendedString(), "-0099-12-04");
+            assertPred!"=="(Date(-999, 12, 4).toISOExtendedString(), "-0999-12-04");
+            assertPred!"=="(Date(-9999, 7, 4).toISOExtendedString(), "-9999-07-04");
+            assertPred!"=="(Date(-10000, 10, 20).toISOExtendedString(), "-10000-10-20");
+
+            const cdate = Date(1999, 7, 6);
+            immutable idate = Date(1999, 7, 6);
+            static assert(__traits(compiles, cdate.toISOExtendedString()));
+            static assert(__traits(compiles, idate.toISOExtendedString()));
+
+            //Verify Examples.
+            assert(Date(2010, 7, 4).toISOExtendedString() == "2010-07-04");
+            assert(Date(1998, 12, 25).toISOExtendedString() == "1998-12-25");
+            assert(Date(0, 1, 5).toISOExtendedString() == "0000-01-05");
+            assert(Date(-4, 1, 5).toISOExtendedString() == "-0004-01-05");
+        }
+    }
+
+    /++
+        Converts this Date to a string with the format YYYY-Mon-DD.
+
+        Examples:
+--------------------
+assert(Date(2010, 7, 4).toSimpleString() == "2010-Jul-04");
+assert(Date(1998, 12, 25).toSimpleString() == "1998-Dec-25");
+assert(Date(0, 1, 5).toSimpleString() == "0000-Jan-05");
+assert(Date(-4, 1, 5).toSimpleString() == "-0004-Jan-05");
+--------------------
+      +/
+    string toSimpleString() const nothrow
+    {
+        try
+        {
+            if(_year >= 0)
+            {
+                if(_year < 10_000)
+                    return format("%04d-%s-%02d", _year, monthToString(_month, false), _day);
+                else
+                    return format("+%05d-%s-%02d", _year, monthToString(_month, false), _day);
+            }
+            else if(_year > -10_000)
+                return format("%05d-%s-%02d", _year, monthToString(_month, false), _day);
+            else
+                return format("%06d-%s-%02d", _year, monthToString(_month, false), _day);
+        }
+        catch(Exception e)
+            assert(0, "format() threw.");
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            //Test A.D.
+            assertPred!"=="(Date(9, 12, 4).toSimpleString(), "0009-Dec-04");
+            assertPred!"=="(Date(99, 12, 4).toSimpleString(), "0099-Dec-04");
+            assertPred!"=="(Date(999, 12, 4).toSimpleString(), "0999-Dec-04");
+            assertPred!"=="(Date(9999, 7, 4).toSimpleString(), "9999-Jul-04");
+            assertPred!"=="(Date(10000, 10, 20).toSimpleString(), "+10000-Oct-20");
+
+            //Test B.C.
+            assertPred!"=="(Date(0, 12, 4).toSimpleString(), "0000-Dec-04");
+            assertPred!"=="(Date(-9, 12, 4).toSimpleString(), "-0009-Dec-04");
+            assertPred!"=="(Date(-99, 12, 4).toSimpleString(), "-0099-Dec-04");
+            assertPred!"=="(Date(-999, 12, 4).toSimpleString(), "-0999-Dec-04");
+            assertPred!"=="(Date(-9999, 7, 4).toSimpleString(), "-9999-Jul-04");
+            assertPred!"=="(Date(-10000, 10, 20).toSimpleString(), "-10000-Oct-20");
+
+            const cdate = Date(1999, 7, 6);
+            immutable idate = Date(1999, 7, 6);
+            static assert(__traits(compiles, cdate.toSimpleString()));
+            static assert(__traits(compiles, idate.toSimpleString()));
+
+            //Verify Examples.
+            assert(Date(2010, 7, 4).toSimpleString() == "2010-Jul-04");
+            assert(Date(1998, 12, 25).toSimpleString() == "1998-Dec-25");
+            assert(Date(0, 1, 5).toSimpleString() == "0000-Jan-05");
+            assert(Date(-4, 1, 5).toSimpleString() == "-0004-Jan-05");
+        }
+    }
+
+    //TODO Add a function which returns a string in a user-specified format.
+
+
+    /+
+        Converts this Date to a string.
+      +/
+    //Due to bug http://d.puremagic.com/issues/show_bug.cgi?id=3715 , we can't
+    //have versions of toString() with extra modifiers, so we define one version
+    //with modifiers and one without.
+    string toString()
+    {
+        return toSimpleString();
+    }
+
+    /++
+        Converts this Date to a string.
+      +/
+    //Due to bug http://d.puremagic.com/issues/show_bug.cgi?id=3715 , we can't
+    //have versions of toString() with extra modifiers, so we define one version
+    //with modifiers and one without.
+    string toString() const nothrow
+    {
+        return toSimpleString();
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            auto date = Date(1999, 7, 6);
+            const cdate = Date(1999, 7, 6);
+            immutable idate = Date(1999, 7, 6);
+            static assert(__traits(compiles, date.toString()));
+            static assert(__traits(compiles, cdate.toString()));
+            static assert(__traits(compiles, idate.toString()));
+        }
+    }
+
+
+    /++
+        Creates a Date from a string with the format YYYYMMDD. Whitespace is
+        stripped from the given string.
+
+        Params:
+            isoString = A string formatted in the ISO format for dates.
+
+        Throws:
+            DateTimeException if the given string is not in the ISO format or if
+            the resulting Date would not be valid.
+
+        Examples:
+--------------------
+assert(Date.fromISOString("20100704") == Date(2010, 7, 4));
+assert(Date.fromISOString("19981225") == Date(1998, 12, 25));
+assert(Date.fromISOString("00000105") == Date(0, 1, 5));
+assert(Date.fromISOString("-00040105") == Date(-4, 1, 5));
+assert(Date.fromISOString(" 20100704 ") == Date(2010, 7, 4));
+--------------------
+      +/
+    static Date fromISOString(S)(in S isoString)
+        if(isSomeString!S)
+    {
+        auto dstr = to!dstring(strip(isoString));
+
+        enforce(dstr.length >= 8, new DateTimeException(format("Invalid ISO String: %s", isoString)));
+
+        auto day = dstr[$-2 .. $];
+        auto month = dstr[$-4 .. $-2];
+        auto year = dstr[0 .. $-4];
+
+        enforce(!canFind!((dchar c){return !isdigit(c);})(day), new DateTimeException(format("Invalid ISO String: %s", isoString)));
+        enforce(!canFind!((dchar c){return !isdigit(c);})(month), new DateTimeException(format("Invalid ISO String: %s", isoString)));
+
+        if(year.length > 4)
+        {
+            enforce(year.startsWith("-") || year.startsWith("+"), new DateTimeException(format("Invalid ISO String: %s", isoString)));
+            enforce(!canFind!((dchar c){return !isdigit(c);})(year[1..$]), new DateTimeException(format("Invalid ISO String: %s", isoString)));
+        }
+        else
+            enforce(!canFind!((dchar c){return !isdigit(c);})(year), new DateTimeException(format("Invalid ISO String: %s", isoString)));
+
+        return Date(to!short(year), to!ubyte(month), to!ubyte(day));
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            assertThrown!DateTimeException(Date.fromISOString(""));
+            assertThrown!DateTimeException(Date.fromISOString("990704"));
+            assertThrown!DateTimeException(Date.fromISOString("0100704"));
+            assertThrown!DateTimeException(Date.fromISOString("2010070"));
+            assertThrown!DateTimeException(Date.fromISOString("2010070 "));
+            assertThrown!DateTimeException(Date.fromISOString("120100704"));
+            assertThrown!DateTimeException(Date.fromISOString("-0100704"));
+            assertThrown!DateTimeException(Date.fromISOString("+0100704"));
+            assertThrown!DateTimeException(Date.fromISOString("2010070a"));
+            assertThrown!DateTimeException(Date.fromISOString("20100a04"));
+            assertThrown!DateTimeException(Date.fromISOString("2010a704"));
+
+            assertThrown!DateTimeException(Date.fromISOString("99-07-04"));
+            assertThrown!DateTimeException(Date.fromISOString("010-07-04"));
+            assertThrown!DateTimeException(Date.fromISOString("2010-07-0"));
+            assertThrown!DateTimeException(Date.fromISOString("2010-07-0 "));
+            assertThrown!DateTimeException(Date.fromISOString("12010-07-04"));
+            assertThrown!DateTimeException(Date.fromISOString("-010-07-04"));
+            assertThrown!DateTimeException(Date.fromISOString("+010-07-04"));
+            assertThrown!DateTimeException(Date.fromISOString("2010-07-0a"));
+            assertThrown!DateTimeException(Date.fromISOString("2010-0a-04"));
+            assertThrown!DateTimeException(Date.fromISOString("2010-a7-04"));
+            assertThrown!DateTimeException(Date.fromISOString("2010/07/04"));
+            assertThrown!DateTimeException(Date.fromISOString("2010/7/04"));
+            assertThrown!DateTimeException(Date.fromISOString("2010/7/4"));
+            assertThrown!DateTimeException(Date.fromISOString("2010/07/4"));
+            assertThrown!DateTimeException(Date.fromISOString("2010-7-04"));
+            assertThrown!DateTimeException(Date.fromISOString("2010-7-4"));
+            assertThrown!DateTimeException(Date.fromISOString("2010-07-4"));
+
+            assertThrown!DateTimeException(Date.fromISOString("99Jul04"));
+            assertThrown!DateTimeException(Date.fromISOString("010Jul04"));
+            assertThrown!DateTimeException(Date.fromISOString("2010Jul0"));
+            assertThrown!DateTimeException(Date.fromISOString("2010Jul0 "));
+            assertThrown!DateTimeException(Date.fromISOString("12010Jul04"));
+            assertThrown!DateTimeException(Date.fromISOString("-010Jul04"));
+            assertThrown!DateTimeException(Date.fromISOString("+010Jul04"));
+            assertThrown!DateTimeException(Date.fromISOString("2010Jul0a"));
+            assertThrown!DateTimeException(Date.fromISOString("2010Jua04"));
+            assertThrown!DateTimeException(Date.fromISOString("2010aul04"));
+
+            assertThrown!DateTimeException(Date.fromISOString("99-Jul-04"));
+            assertThrown!DateTimeException(Date.fromISOString("010-Jul-04"));
+            assertThrown!DateTimeException(Date.fromISOString("2010-Jul-0"));
+            assertThrown!DateTimeException(Date.fromISOString("2010-Jul-0 "));
+            assertThrown!DateTimeException(Date.fromISOString("12010-Jul-04"));
+            assertThrown!DateTimeException(Date.fromISOString("-010-Jul-04"));
+            assertThrown!DateTimeException(Date.fromISOString("+010-Jul-04"));
+            assertThrown!DateTimeException(Date.fromISOString("2010-Jul-0a"));
+            assertThrown!DateTimeException(Date.fromISOString("2010-Jua-04"));
+            assertThrown!DateTimeException(Date.fromISOString("2010-Jal-04"));
+            assertThrown!DateTimeException(Date.fromISOString("2010-aul-04"));
+
+            assertThrown!DateTimeException(Date.fromISOString("2010-07-04"));
+            assertThrown!DateTimeException(Date.fromISOString("2010-Jul-04"));
+
+            assertPred!"=="(Date.fromISOString("19990706"), Date(1999, 7, 6));
+            assertPred!"=="(Date.fromISOString("-19990706"), Date(-1999, 7, 6));
+            assertPred!"=="(Date.fromISOString("+019990706"), Date(1999, 7, 6));
+            assertPred!"=="(Date.fromISOString("19990706 "), Date(1999, 7, 6));
+            assertPred!"=="(Date.fromISOString(" 19990706"), Date(1999, 7, 6));
+            assertPred!"=="(Date.fromISOString(" 19990706 "), Date(1999, 7, 6));
+
+            //Verify Examples.
+            assert(Date.fromISOString("20100704") == Date(2010, 7, 4));
+            assert(Date.fromISOString("19981225") == Date(1998, 12, 25));
+            assert(Date.fromISOString("00000105") == Date(0, 1, 5));
+            assert(Date.fromISOString("-00040105") == Date(-4, 1, 5));
+            assert(Date.fromISOString(" 20100704 ") == Date(2010, 7, 4));
+        }
+    }
+
+
+    /++
+        Creates a Date from a string with the format YYYY-MM-DD. Whitespace is
+        stripped from the given string.
+
+        Params:
+            isoExtString = A string formatted in the ISO Extended format for
+                           dates.
+
+        Throws:
+            DateTimeException if the given string is not in the ISO Extended
+            format or if the resulting Date would not be valid.
+
+        Examples:
+--------------------
+assert(Date.fromISOExtendedString("2010-07-04") == Date(2010, 7, 4));
+assert(Date.fromISOExtendedString("1998-12-25") == Date(1998, 12, 25));
+assert(Date.fromISOExtendedString("0000-01-05") == Date(0, 1, 5));
+assert(Date.fromISOExtendedString("-0004-01-05") == Date(-4, 1, 5));
+assert(Date.fromISOExtendedString(" 2010-07-04 ") == Date(2010, 7, 4));
+--------------------
+      +/
+    static Date fromISOExtendedString(S)(in S isoExtString)
+        if(isSomeString!(S))
+    {
+        auto dstr = to!dstring(strip(isoExtString));
+
+        enforce(dstr.length >= 10, new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
+
+        auto day = dstr[$-2 .. $];
+        auto month = dstr[$-5 .. $-3];
+        auto year = dstr[0 .. $-6];
+
+        enforce(dstr[$-3] == '-', new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
+        enforce(dstr[$-6] == '-', new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
+        enforce(!canFind!((dchar c){return !isdigit(c);})(day), new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
+        enforce(!canFind!((dchar c){return !isdigit(c);})(month), new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
+
+        if(year.length > 4)
+        {
+            enforce(year.startsWith("-") || year.startsWith("+"), new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
+            enforce(!canFind!((dchar c){return !isdigit(c);})(year[1..$]), new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
+        }
+        else
+            enforce(!canFind!((dchar c){return !isdigit(c);})(year), new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
+
+        return Date(to!short(year), to!ubyte(month), to!ubyte(day));
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            assertThrown!DateTimeException(Date.fromISOExtendedString(""));
+            assertThrown!DateTimeException(Date.fromISOExtendedString("990704"));
+            assertThrown!DateTimeException(Date.fromISOExtendedString("0100704"));
+            assertThrown!DateTimeException(Date.fromISOExtendedString("2010070"));
+            assertThrown!DateTimeException(Date.fromISOExtendedString("2010070 "));
+            assertThrown!DateTimeException(Date.fromISOExtendedString("120100704"));
+            assertThrown!DateTimeException(Date.fromISOExtendedString("-0100704"));
+            assertThrown!DateTimeException(Date.fromISOExtendedString("+0100704"));
+            assertThrown!DateTimeException(Date.fromISOExtendedString("2010070a"));
+            assertThrown!DateTimeException(Date.fromISOExtendedString("20100a04"));
+            assertThrown!DateTimeException(Date.fromISOExtendedString("2010a704"));
+
+            assertThrown!DateTimeException(Date.fromISOExtendedString("99-07-04"));
+            assertThrown!DateTimeException(Date.fromISOExtendedString("010-07-04"));
+            assertThrown!DateTimeException(Date.fromISOExtendedString("2010-07-0"));
+            assertThrown!DateTimeException(Date.fromISOExtendedString("2010-07-0 "));
+            assertThrown!DateTimeException(Date.fromISOExtendedString("12010-07-04"));
+            assertThrown!DateTimeException(Date.fromISOExtendedString("-010-07-04"));
+            assertThrown!DateTimeException(Date.fromISOExtendedString("+010-07-04"));
+            assertThrown!DateTimeException(Date.fromISOExtendedString("2010-07-0a"));
+            assertThrown!DateTimeException(Date.fromISOExtendedString("2010-0a-04"));
+            assertThrown!DateTimeException(Date.fromISOExtendedString("2010-a7-04"));
+            assertThrown!DateTimeException(Date.fromISOExtendedString("2010/07/04"));
+            assertThrown!DateTimeException(Date.fromISOExtendedString("2010/7/04"));
+            assertThrown!DateTimeException(Date.fromISOExtendedString("2010/7/4"));
+            assertThrown!DateTimeException(Date.fromISOExtendedString("2010/07/4"));
+            assertThrown!DateTimeException(Date.fromISOExtendedString("2010-7-04"));
+            assertThrown!DateTimeException(Date.fromISOExtendedString("2010-7-4"));
+            assertThrown!DateTimeException(Date.fromISOExtendedString("2010-07-4"));
+
+            assertThrown!DateTimeException(Date.fromISOExtendedString("99Jul04"));
+            assertThrown!DateTimeException(Date.fromISOExtendedString("010Jul04"));
+            assertThrown!DateTimeException(Date.fromISOExtendedString("2010Jul0"));
+            assertThrown!DateTimeException(Date.fromISOExtendedString("2010-Jul-0 "));
+            assertThrown!DateTimeException(Date.fromISOExtendedString("12010Jul04"));
+            assertThrown!DateTimeException(Date.fromISOExtendedString("-010Jul04"));
+            assertThrown!DateTimeException(Date.fromISOExtendedString("+010Jul04"));
+            assertThrown!DateTimeException(Date.fromISOExtendedString("2010Jul0a"));
+            assertThrown!DateTimeException(Date.fromISOExtendedString("2010Jua04"));
+            assertThrown!DateTimeException(Date.fromISOExtendedString("2010aul04"));
+
+            assertThrown!DateTimeException(Date.fromISOExtendedString("99-Jul-04"));
+            assertThrown!DateTimeException(Date.fromISOExtendedString("010-Jul-04"));
+            assertThrown!DateTimeException(Date.fromISOExtendedString("2010-Jul-0"));
+            assertThrown!DateTimeException(Date.fromISOExtendedString("2010Jul0 "));
+            assertThrown!DateTimeException(Date.fromISOExtendedString("12010-Jul-04"));
+            assertThrown!DateTimeException(Date.fromISOExtendedString("-010-Jul-04"));
+            assertThrown!DateTimeException(Date.fromISOExtendedString("+010-Jul-04"));
+            assertThrown!DateTimeException(Date.fromISOExtendedString("2010-Jul-0a"));
+            assertThrown!DateTimeException(Date.fromISOExtendedString("2010-Jua-04"));
+            assertThrown!DateTimeException(Date.fromISOExtendedString("2010-Jal-04"));
+            assertThrown!DateTimeException(Date.fromISOExtendedString("2010-aul-04"));
+
+            assertThrown!DateTimeException(Date.fromISOExtendedString("20100704"));
+            assertThrown!DateTimeException(Date.fromISOExtendedString("2010-Jul-04"));
+
+            assertPred!"=="(Date.fromISOExtendedString("1999-07-06"), Date(1999, 7, 6));
+            assertPred!"=="(Date.fromISOExtendedString("-1999-07-06"), Date(-1999, 7, 6));
+            assertPred!"=="(Date.fromISOExtendedString("+01999-07-06"), Date(1999, 7, 6));
+            assertPred!"=="(Date.fromISOExtendedString("1999-07-06 "), Date(1999, 7, 6));
+            assertPred!"=="(Date.fromISOExtendedString(" 1999-07-06"), Date(1999, 7, 6));
+            assertPred!"=="(Date.fromISOExtendedString(" 1999-07-06 "), Date(1999, 7, 6));
+
+            //Verify Examples.
+            assert(Date.fromISOExtendedString("2010-07-04") == Date(2010, 7, 4));
+            assert(Date.fromISOExtendedString("1998-12-25") == Date(1998, 12, 25));
+            assert(Date.fromISOExtendedString("0000-01-05") == Date(0, 1, 5));
+            assert(Date.fromISOExtendedString("-0004-01-05") == Date(-4, 1, 5));
+            assert(Date.fromISOExtendedString(" 2010-07-04 ") == Date(2010, 7, 4));
+        }
+    }
+
+
+    /++
+        Creates a Date from a string with the format YYYY-Mon-DD. Whitespace is
+        stripped from the given string.
+
+        Params:
+            simpleString = A string formatted in the way that toSimpleString()
+                           formats dates.
+
+        Throws:
+            DateTimeException if the given string is not in the correct format or
+            if the resulting Date would not be valid.
+
+        Examples:
+--------------------
+assert(Date.fromSimpleString("2010-Jul-04") == Date(2010, 7, 4));
+assert(Date.fromSimpleString("1998-Dec-25") == Date(1998, 12, 25));
+assert(Date.fromSimpleString("0000-Jan-05") == Date(0, 1, 5));
+assert(Date.fromSimpleString("-0004-Jan-05") == Date(-4, 1, 5));
+assert(Date.fromSimpleString(" 2010-Jul-04 ") == Date(2010, 7, 4));
+--------------------
+      +/
+    static Date fromSimpleString(S)(in S simpleString)
+        if(isSomeString!(S))
+    {
+        auto dstr = to!dstring(strip(simpleString));
+
+        enforce(dstr.length >= 11, new DateTimeException(format("Invalid string format: %s", simpleString)));
+
+        auto day = dstr[$-2 .. $];
+        auto month = monthFromString(to!string(dstr[$-6 .. $-3]));
+        auto year = dstr[0 .. $-7];
+
+        enforce(dstr[$-3] == '-', new DateTimeException(format("Invalid string format: %s", simpleString)));
+        enforce(dstr[$-7] == '-', new DateTimeException(format("Invalid string format: %s", simpleString)));
+        enforce(!canFind!((dchar c){return !isdigit(c);})(day), new DateTimeException(format("Invalid string format: %s", simpleString)));
+
+        if(year.length > 4)
+        {
+            enforce(year.startsWith("-") || year.startsWith("+"), new DateTimeException(format("Invalid string format: %s", simpleString)));
+            enforce(!canFind!((dchar c){return !isdigit(c);})(year[1..$]), new DateTimeException(format("Invalid string format: %s", simpleString)));
+        }
+        else
+            enforce(!canFind!((dchar c){return !isdigit(c);})(year), new DateTimeException(format("Invalid string format: %s", simpleString)));
+
+        return Date(to!short(year), month, to!ubyte(day));
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            assertThrown!DateTimeException(Date.fromSimpleString(""));
+            assertThrown!DateTimeException(Date.fromSimpleString("990704"));
+            assertThrown!DateTimeException(Date.fromSimpleString("0100704"));
+            assertThrown!DateTimeException(Date.fromSimpleString("2010070"));
+            assertThrown!DateTimeException(Date.fromSimpleString("2010070 "));
+            assertThrown!DateTimeException(Date.fromSimpleString("120100704"));
+            assertThrown!DateTimeException(Date.fromSimpleString("-0100704"));
+            assertThrown!DateTimeException(Date.fromSimpleString("+0100704"));
+            assertThrown!DateTimeException(Date.fromSimpleString("2010070a"));
+            assertThrown!DateTimeException(Date.fromSimpleString("20100a04"));
+            assertThrown!DateTimeException(Date.fromSimpleString("2010a704"));
+
+            assertThrown!DateTimeException(Date.fromSimpleString("99-07-04"));
+            assertThrown!DateTimeException(Date.fromSimpleString("010-07-04"));
+            assertThrown!DateTimeException(Date.fromSimpleString("2010-07-0"));
+            assertThrown!DateTimeException(Date.fromSimpleString("2010-07-0 "));
+            assertThrown!DateTimeException(Date.fromSimpleString("12010-07-04"));
+            assertThrown!DateTimeException(Date.fromSimpleString("-010-07-04"));
+            assertThrown!DateTimeException(Date.fromSimpleString("+010-07-04"));
+            assertThrown!DateTimeException(Date.fromSimpleString("2010-07-0a"));
+            assertThrown!DateTimeException(Date.fromSimpleString("2010-0a-04"));
+            assertThrown!DateTimeException(Date.fromSimpleString("2010-a7-04"));
+            assertThrown!DateTimeException(Date.fromSimpleString("2010/07/04"));
+            assertThrown!DateTimeException(Date.fromSimpleString("2010/7/04"));
+            assertThrown!DateTimeException(Date.fromSimpleString("2010/7/4"));
+            assertThrown!DateTimeException(Date.fromSimpleString("2010/07/4"));
+            assertThrown!DateTimeException(Date.fromSimpleString("2010-7-04"));
+            assertThrown!DateTimeException(Date.fromSimpleString("2010-7-4"));
+            assertThrown!DateTimeException(Date.fromSimpleString("2010-07-4"));
+
+            assertThrown!DateTimeException(Date.fromSimpleString("99Jul04"));
+            assertThrown!DateTimeException(Date.fromSimpleString("010Jul04"));
+            assertThrown!DateTimeException(Date.fromSimpleString("2010Jul0"));
+            assertThrown!DateTimeException(Date.fromSimpleString("2010Jul0 "));
+            assertThrown!DateTimeException(Date.fromSimpleString("12010Jul04"));
+            assertThrown!DateTimeException(Date.fromSimpleString("-010Jul04"));
+            assertThrown!DateTimeException(Date.fromSimpleString("+010Jul04"));
+            assertThrown!DateTimeException(Date.fromSimpleString("2010Jul0a"));
+            assertThrown!DateTimeException(Date.fromSimpleString("2010Jua04"));
+            assertThrown!DateTimeException(Date.fromSimpleString("2010aul04"));
+
+            assertThrown!DateTimeException(Date.fromSimpleString("99-Jul-04"));
+            assertThrown!DateTimeException(Date.fromSimpleString("010-Jul-04"));
+            assertThrown!DateTimeException(Date.fromSimpleString("2010-Jul-0"));
+            assertThrown!DateTimeException(Date.fromSimpleString("2010-Jul-0 "));
+            assertThrown!DateTimeException(Date.fromSimpleString("12010-Jul-04"));
+            assertThrown!DateTimeException(Date.fromSimpleString("-010-Jul-04"));
+            assertThrown!DateTimeException(Date.fromSimpleString("+010-Jul-04"));
+            assertThrown!DateTimeException(Date.fromSimpleString("2010-Jul-0a"));
+            assertThrown!DateTimeException(Date.fromSimpleString("2010-Jua-04"));
+            assertThrown!DateTimeException(Date.fromSimpleString("2010-Jal-04"));
+            assertThrown!DateTimeException(Date.fromSimpleString("2010-aul-04"));
+
+            assertThrown!DateTimeException(Date.fromSimpleString("20100704"));
+            assertThrown!DateTimeException(Date.fromSimpleString("2010-07-04"));
+
+            assertPred!"=="(Date.fromSimpleString("1999-Jul-06"), Date(1999, 7, 6));
+            assertPred!"=="(Date.fromSimpleString("-1999-Jul-06"), Date(-1999, 7, 6));
+            assertPred!"=="(Date.fromSimpleString("+01999-Jul-06"), Date(1999, 7, 6));
+            assertPred!"=="(Date.fromSimpleString("1999-Jul-06 "), Date(1999, 7, 6));
+            assertPred!"=="(Date.fromSimpleString(" 1999-Jul-06"), Date(1999, 7, 6));
+            assertPred!"=="(Date.fromSimpleString(" 1999-Jul-06 "), Date(1999, 7, 6));
+
+            //Verify Examples.
+            assert(Date.fromSimpleString("2010-Jul-04") == Date(2010, 7, 4));
+            assert(Date.fromSimpleString("1998-Dec-25") == Date(1998, 12, 25));
+            assert(Date.fromSimpleString("0000-Jan-05") == Date(0, 1, 5));
+            assert(Date.fromSimpleString("-0004-Jan-05") == Date(-4, 1, 5));
+            assert(Date.fromSimpleString(" 2010-Jul-04 ") == Date(2010, 7, 4));
+        }
+    }
+
+
+    //TODO Add function which takes a user-specified time format and produces a Date
+
+    //TODO Add function which takes pretty much any time-string and produces a Date
+    //     Obviously, it will be less efficient, and it probably won't manage _every_
+    //     possible date format, but a smart conversion function would be nice.
+
+
+    /++
+        Returns the Date farthest in the past which is representable by Date.
+      +/
+    @property static Date min() pure nothrow
+    {
+        auto date = Date.init;
+        date._year = short.min;
+        date._month = Month.jan;
+        date._day = 1;
+
+        return date;
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            assert(Date.min.year < 0);
+            assert(Date.min < Date.max);
+        }
+    }
+
+
+    /++
+        Returns the Date farthest in the future which is representable by Date.
+      +/
+    @property static Date max() pure nothrow
+    {
+        auto date = Date.init;
+        date._year = short.max;
+        date._month = Month.dec;
+        date._day = 31;
+
+        return date;
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            assert(Date.max.year > 0);
+            assert(Date.max > Date.min);
+        }
+    }
+
+
+private:
+
+    /++
+        Whether the given values form a valid date.
+
+        Params:
+            year  = The year to test.
+            month = The month of the Gregorian Calendar to test.
+            day   = The day of the month to test.
+     +/
+    static bool _valid(int year, int month, int day) pure nothrow
+    {
+        if(!valid!"months"(month))
+            return false;
+
+        return valid!"days"(year, month, day);
+    }
+
+    /++
+        Adds the given number of days to this Date. A negative number will subtract.
+
+        The month will be adjusted along with the day if the number of days added
+        (or subtracted) would overflow (or underflow) the current month. The year
+        will be adjusted along with the month if the increase (or decrease) to the
+        month would cause it to overflow (or underflow) the current year.
+
+        addDays(numDays) is effectively equivalent to date.dayOfGregorianCal = date.dayOfGregorianCal + days.
+
+        Params:
+            days = The number of days to add to this Date.
+      +/
+    ref Date addDays(long days) pure nothrow
+    {
+        dayOfGregorianCal = cast(int)(dayOfGregorianCal + days);
+
+        return this;
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            //Test A.D.
+            {
+                auto date = Date(1999, 2, 28);
+                date.addDays(1);
+                assertPred!"=="(date, Date(1999, 3, 1));
+                date.addDays(-1);
+                assertPred!"=="(date, Date(1999, 2, 28));
+            }
+
+            {
+                auto date = Date(2000, 2, 28);
+                date.addDays(1);
+                assertPred!"=="(date, Date(2000, 2, 29));
+                date.addDays(1);
+                assertPred!"=="(date, Date(2000, 3, 1));
+                date.addDays(-1);
+                assertPred!"=="(date, Date(2000, 2, 29));
+            }
+
+            {
+                auto date = Date(1999, 6, 30);
+                date.addDays(1);
+                assertPred!"=="(date, Date(1999, 7, 1));
+                date.addDays(-1);
+                assertPred!"=="(date, Date(1999, 6, 30));
+            }
+
+            {
+                auto date = Date(1999, 7, 31);
+                date.addDays(1);
+                assertPred!"=="(date, Date(1999, 8, 1));
+                date.addDays(-1);
+                assertPred!"=="(date, Date(1999, 7, 31));
+            }
+
+            {
+                auto date = Date(1999, 1, 1);
+                date.addDays(-1);
+                assertPred!"=="(date, Date(1998, 12, 31));
+                date.addDays(1);
+                assertPred!"=="(date, Date(1999, 1, 1));
+            }
+
+            {
+                auto date = Date(1999, 7, 6);
+                date.addDays(9);
+                assertPred!"=="(date, Date(1999, 7, 15));
+                date.addDays(-11);
+                assertPred!"=="(date, Date(1999, 7, 4));
+                date.addDays(30);
+                assertPred!"=="(date, Date(1999, 8, 3));
+                date.addDays(-3);
+                assertPred!"=="(date, Date(1999, 7, 31));
+            }
+
+            {
+                auto date = Date(1999, 7, 6);
+                date.addDays(365);
+                assertPred!"=="(date, Date(2000, 7, 5));
+                date.addDays(-365);
+                assertPred!"=="(date, Date(1999, 7, 6));
+                date.addDays(366);
+                assertPred!"=="(date, Date(2000, 7, 6));
+                date.addDays(730);
+                assertPred!"=="(date, Date(2002, 7, 6));
+                date.addDays(-1096);
+                assertPred!"=="(date, Date(1999, 7, 6));
+            }
+
+            //Test B.C.
+            {
+                auto date = Date(-1999, 2, 28);
+                date.addDays(1);
+                assertPred!"=="(date, Date(-1999, 3, 1));
+                date.addDays(-1);
+                assertPred!"=="(date, Date(-1999, 2, 28));
+            }
+
+            {
+                auto date = Date(-2000, 2, 28);
+                date.addDays(1);
+                assertPred!"=="(date, Date(-2000, 2, 29));
+                date.addDays(1);
+                assertPred!"=="(date, Date(-2000, 3, 1));
+                date.addDays(-1);
+                assertPred!"=="(date, Date(-2000, 2, 29));
+            }
+
+            {
+                auto date = Date(-1999, 6, 30);
+                date.addDays(1);
+                assertPred!"=="(date, Date(-1999, 7, 1));
+                date.addDays(-1);
+                assertPred!"=="(date, Date(-1999, 6, 30));
+            }
+
+            {
+                auto date = Date(-1999, 7, 31);
+                date.addDays(1);
+                assertPred!"=="(date, Date(-1999, 8, 1));
+                date.addDays(-1);
+                assertPred!"=="(date, Date(-1999, 7, 31));
+            }
+
+            {
+                auto date = Date(-1999, 1, 1);
+                date.addDays(-1);
+                assertPred!"=="(date, Date(-2000, 12, 31));
+                date.addDays(1);
+                assertPred!"=="(date, Date(-1999, 1, 1));
+            }
+
+            {
+                auto date = Date(-1999, 7, 6);
+                date.addDays(9);
+                assertPred!"=="(date, Date(-1999, 7, 15));
+                date.addDays(-11);
+                assertPred!"=="(date, Date(-1999, 7, 4));
+                date.addDays(30);
+                assertPred!"=="(date, Date(-1999, 8, 3));
+                date.addDays(-3);
+            }
+
+            {
+                auto date = Date(-1999, 7, 6);
+                date.addDays(365);
+                assertPred!"=="(date, Date(-1998, 7, 6));
+                date.addDays(-365);
+                assertPred!"=="(date, Date(-1999, 7, 6));
+                date.addDays(366);
+                assertPred!"=="(date, Date(-1998, 7, 7));
+                date.addDays(730);
+                assertPred!"=="(date, Date(-1996, 7, 6));
+                date.addDays(-1096);
+                assertPred!"=="(date, Date(-1999, 7, 6));
+            }
+
+            //Test Both
+            {
+                auto date = Date(1, 7, 6);
+                date.addDays(-365);
+                assertPred!"=="(date, Date(0, 7, 6));
+                date.addDays(365);
+                assertPred!"=="(date, Date(1, 7, 6));
+                date.addDays(-731);
+                assertPred!"=="(date, Date(-1, 7, 6));
+                date.addDays(730);
+                assertPred!"=="(date, Date(1, 7, 5));
+            }
+
+            const cdate = Date(1999, 7, 6);
+            immutable idate = Date(1999, 7, 6);
+            static assert(!__traits(compiles, cdate.addDays(12)));
+            static assert(!__traits(compiles, idate.addDays(12)));
+        }
+    }
+
+
+    pure invariant()
+    {
+        assert(valid!"months"(_month), "Invariant Failure: year [" ~
+                                       numToString(_year) ~
+                                       "] month [" ~
+                                       numToString(_month) ~
+                                       "] day [" ~
+                                       numToString(_day) ~
+                                       "]");
+        assert(valid!"days"(_year, _month, _day), "Invariant Failure: year [" ~
+                                                  numToString(_year) ~
+                                                  "] month [" ~
+                                                  numToString(_month) ~
+                                                  "] day [" ~
+                                                  numToString(_day) ~
+                                                  "]");
+    }
+
+
+    short _year  = 1;
+    Month _month = Month.jan;
+    ubyte _day   = 1;
+}
+
+
+
+/++
+    Represents a time of day with hours, minutes, and seconds. It uses 24 hour time.
++/
+struct TimeOfDay
+{
+public:
+
+    /++
+        Params:
+            hour   = Hour of the day [0 - 24$(RPAREN).
+            minute = Minute of the hour [0 - 60$(RPAREN).
+            second = Second of the minute [0 - 60$(RPAREN).
+
+        Throws:
+            DateTimeException if the resulting TimeOfDay would be not be valid.
+     +/
+    this(int hour, int minute, int second = 0) pure
+    {
+        enforceValid!"hours"(hour);
+        enforceValid!"minutes"(minute);
+        enforceValid!"seconds"(second);
+
+        _hour   = cast(ubyte)hour;
+        _minute = cast(ubyte)minute;
+        _second = cast(ubyte)second;
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            assert(TimeOfDay(0, 0) == TimeOfDay.init);
+
+            {
+                auto tod = TimeOfDay(0, 0);
+                assertPred!"=="(tod._hour, 0);
+                assertPred!"=="(tod._minute, 0);
+                assertPred!"=="(tod._second, 0);
+            }
+
+            {
+                auto tod = TimeOfDay(12, 30, 33);
+                assertPred!"=="(tod._hour, 12);
+                assertPred!"=="(tod._minute, 30);
+                assertPred!"=="(tod._second, 33);
+            }
+
+            {
+                auto tod = TimeOfDay(23, 59, 59);
+                assertPred!"=="(tod._hour, 23);
+                assertPred!"=="(tod._minute, 59);
+                assertPred!"=="(tod._second, 59);
+            }
+
+            assertThrown!DateTimeException(TimeOfDay(24, 0, 0));
+            assertThrown!DateTimeException(TimeOfDay(0, 60, 0));
+            assertThrown!DateTimeException(TimeOfDay(0, 0, 60));
+        }
+    }
+
+
+    /++
+        Compares this TimeOfDay with the given TimeOfDay.
+
+        Returns:
+            $(TABLE
+            $(TR $(TD this &lt; rhs) $(TD &lt; 0))
+            $(TR $(TD this == rhs) $(TD 0))
+            $(TR $(TD this &gt; rhs) $(TD &gt; 0))
+            )
+     +/
+    int opCmp(in TimeOfDay rhs) const pure nothrow
+    {
+        if(_hour < rhs._hour)
+            return -1;
+        if(_hour > rhs._hour)
+            return 1;
+
+        if(_minute < rhs._minute)
+            return -1;
+        if(_minute > rhs._minute)
+            return 1;
+
+        if(_second < rhs._second)
+            return -1;
+        if(_second > rhs._second)
+            return 1;
+
+        return 0;
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            assertPred!("opCmp", "==")(TimeOfDay(0, 0, 0), TimeOfDay.init);
+
+            assertPred!("opCmp", "==")(TimeOfDay(0, 0, 0), TimeOfDay(0, 0, 0));
+            assertPred!("opCmp", "==")(TimeOfDay(12, 0, 0), TimeOfDay(12, 0, 0));
+            assertPred!("opCmp", "==")(TimeOfDay(0, 30, 0), TimeOfDay(0, 30, 0));
+            assertPred!("opCmp", "==")(TimeOfDay(0, 0, 33), TimeOfDay(0, 0, 33));
+
+            assertPred!("opCmp", "==")(TimeOfDay(12, 30, 0), TimeOfDay(12, 30, 0));
+            assertPred!("opCmp", "==")(TimeOfDay(12, 30, 33), TimeOfDay(12, 30, 33));
+
+            assertPred!("opCmp", "==")(TimeOfDay(0, 30, 33), TimeOfDay(0, 30, 33));
+            assertPred!("opCmp", "==")(TimeOfDay(0, 0, 33), TimeOfDay(0, 0, 33));
+
+            assertPred!("opCmp", "<")(TimeOfDay(12, 30, 33), TimeOfDay(13, 30, 33));
+            assertPred!("opCmp", ">")(TimeOfDay(13, 30, 33), TimeOfDay(12, 30, 33));
+            assertPred!("opCmp", "<")(TimeOfDay(12, 30, 33), TimeOfDay(12, 31, 33));
+            assertPred!("opCmp", ">")(TimeOfDay(12, 31, 33), TimeOfDay(12, 30, 33));
+            assertPred!("opCmp", "<")(TimeOfDay(12, 30, 33), TimeOfDay(12, 30, 34));
+            assertPred!("opCmp", ">")(TimeOfDay(12, 30, 34), TimeOfDay(12, 30, 33));
+
+            assertPred!("opCmp", ">")(TimeOfDay(13, 30, 33), TimeOfDay(12, 30, 34));
+            assertPred!("opCmp", "<")(TimeOfDay(12, 30, 34), TimeOfDay(13, 30, 33));
+            assertPred!("opCmp", ">")(TimeOfDay(13, 30, 33), TimeOfDay(12, 31, 33));
+            assertPred!("opCmp", "<")(TimeOfDay(12, 31, 33), TimeOfDay(13, 30, 33));
+
+            assertPred!("opCmp", ">")(TimeOfDay(12, 31, 33), TimeOfDay(12, 30, 34));
+            assertPred!("opCmp", "<")(TimeOfDay(12, 30, 34), TimeOfDay(12, 31, 33));
+
+            const ctod = TimeOfDay(12, 30, 33);
+            immutable itod = TimeOfDay(12, 30, 33);
+            static assert(__traits(compiles, ctod.opCmp(itod)));
+            static assert(__traits(compiles, itod.opCmp(ctod)));
+        }
+    }
+
+
+    /++
+        Hours passed midnight.
+     +/
+    @property ubyte hour() const pure nothrow
+    {
+        return _hour;
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            assertPred!"=="(TimeOfDay.init.hour, 0);
+            assertPred!"=="(TimeOfDay(12, 0, 0).hour, 12);
+
+            const ctod = TimeOfDay(12, 0, 0);
+            immutable itod = TimeOfDay(12, 0, 0);
+            static assert(__traits(compiles, ctod.hour == 12));
+            static assert(__traits(compiles, itod.hour == 12));
+        }
+    }
+
+
+    /++
+        Hours passed midnight.
+
+        Params:
+            hour = The hour of the day to set this TimeOfDay's hour to.
+
+        Throws:
+            DateTimeException if the given hour would result in an invalid TimeOfDay.
+     +/
+    @property void hour(int hour) pure
+    {
+        enforceValid!"hours"(hour);
+        _hour = cast(ubyte)hour;
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            assertThrown!DateTimeException((){TimeOfDay(0, 0, 0).hour = 24;}());
+
+            auto tod = TimeOfDay(0, 0, 0);
+            tod.hour = 12;
+            assertPred!"=="(tod, TimeOfDay(12, 0, 0));
+
+            const ctod = TimeOfDay(0, 0, 0);
+            immutable itod = TimeOfDay(0, 0, 0);
+            static assert(!__traits(compiles, ctod.hour = 12));
+            static assert(!__traits(compiles, itod.hour = 12));
+        }
+    }
+
+
+    /++
+        Minutes passed the hour.
+     +/
+    @property ubyte minute() const pure nothrow
+    {
+        return _minute;
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            assertPred!"=="(TimeOfDay.init.minute, 0);
+            assertPred!"=="(TimeOfDay(0, 30, 0).minute, 30);
+
+            const ctod = TimeOfDay(0, 30, 0);
+            immutable itod = TimeOfDay(0, 30, 0);
+            static assert(__traits(compiles, ctod.minute == 30));
+            static assert(__traits(compiles, itod.minute == 30));
+        }
+    }
+
+
+    /++
+        Minutes passed the hour.
+
+        Params:
+            minute = The minute to set this TimeOfDay's minute to.
+
+        Throws:
+            DateTimeException if the given minute would result in an invalid TimeOfDay.
+     +/
+    @property void minute(int minute) pure
+    {
+        enforceValid!"minutes"(minute);
+        _minute = cast(ubyte)minute;
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            assertThrown!DateTimeException((){TimeOfDay(0, 0, 0).minute = 60;}());
+
+            auto tod = TimeOfDay(0, 0, 0);
+            tod.minute = 30;
+            assertPred!"=="(tod, TimeOfDay(0, 30, 0));
+
+            const ctod = TimeOfDay(0, 0, 0);
+            immutable itod = TimeOfDay(0, 0, 0);
+            static assert(!__traits(compiles, ctod.minute = 30));
+            static assert(!__traits(compiles, itod.minute = 30));
+        }
+    }
+
+
+    /++
+        Seconds passed the minute.
+     +/
+    @property ubyte second() const pure nothrow
+    {
+        return _second;
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            assertPred!"=="(TimeOfDay.init.second, 0);
+            assertPred!"=="(TimeOfDay(0, 0, 33).second, 33);
+
+            const ctod = TimeOfDay(0, 0, 33);
+            immutable itod = TimeOfDay(0, 0, 33);
+            static assert(__traits(compiles, ctod.second == 33));
+            static assert(__traits(compiles, itod.second == 33));
+        }
+    }
+
+
+    /++
+        Seconds passed the minute.
+
+        Params:
+            second = The second to set this TimeOfDay's second to.
+
+        Throws:
+            DateTimeException if the given second would result in an invalid TimeOfDay.
+     +/
+    @property void second(int second) pure
+    {
+        enforceValid!"seconds"(second);
+        _second = cast(ubyte)second;
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            assertThrown!DateTimeException((){TimeOfDay(0, 0, 0).second = 60;}());
+
+            auto tod = TimeOfDay(0, 0, 0);
+            tod.second = 33;
+            assertPred!"=="(tod, TimeOfDay(0, 0, 33));
+
+            const ctod = TimeOfDay(0, 0, 0);
+            immutable itod = TimeOfDay(0, 0, 0);
+            static assert(!__traits(compiles, ctod.second = 33));
+            static assert(!__traits(compiles, itod.second = 33));
+        }
+    }
+
+
+    /++
+        Adds the given number of hours to this TimeOfDay. A negative number will
+        subtract.
+
+        For hours, because they are the largest unit in TimeOfDay, there is no
+        difference between adding or rolling.
+
+        Note that TimeOfDay has no $(D add!()) function because you can add to a
+        TimeOfDay by adding a duration to it.
+
+        Params:
+            hours = The number of hours to add to this TimeOfDay.
+
+        Examples:
+--------------------
+auto tod1 = TimeOfDay(7, 12, 0);
+tod1.roll!"hours"(1);
+assert(tod1 == TimeOfDay(8, 12, 0));
+
+auto tod2 = TimeOfDay(7, 12, 0);
+tod2.roll!"hours"(-1);
+assert(tod2 == TimeOfDay(6, 12, 0));
+
+auto tod3 = TimeOfDay(23, 0, 0);
+tod3.roll!"hours"(1);
+assert(tod3 == TimeOfDay(0, 0, 0));
+
+auto tod4 = TimeOfDay(0, 0, 0);
+tod4.roll!"hours"(-1);
+assert(tod4 == TimeOfDay(23, 0, 0));
+--------------------
+      +/
+    /+ref TimeOfDay+/ void roll(string units)(long hours) pure nothrow
+        if(units == "hours")
+    {
+        this += dur!"hours"(hours);
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            const ctod = TimeOfDay(0, 0, 0);
+            immutable itod = TimeOfDay(0, 0, 0);
+            static assert(!__traits(compiles, ctod.roll!"hours"(53)));
+            static assert(!__traits(compiles, itod.roll!"hours"(53)));
+
+            //Verify Examples.
+            auto tod1 = TimeOfDay(7, 12, 0);
+            tod1.roll!"hours"(1);
+            assert(tod1 == TimeOfDay(8, 12, 0));
+
+            auto tod2 = TimeOfDay(7, 12, 0);
+            tod2.roll!"hours"(-1);
+            assert(tod2 == TimeOfDay(6, 12, 0));
+
+            auto tod3 = TimeOfDay(23, 0, 0);
+            tod3.roll!"hours"(1);
+            assert(tod3 == TimeOfDay(0, 0, 0));
+
+            auto tod4 = TimeOfDay(0, 0, 0);
+            tod4.roll!"hours"(-1);
+            assert(tod4 == TimeOfDay(23, 0, 0));
+        }
+    }
+
+
+    /++
+        Add minutes to the time of day. Negative values will subtract.
+
+        The difference between rolling and adding is that rolling does not affect
+        larger units. So, if you roll the TimeOfDay 60 minutes, you get the exact
+        same TimeOfDay.
+
+        Note that TimeOfDay has no $(D add!()) function because you can add to a
+        TimeOfDay by adding a duration to it.
+
+        Params:
+            minutes = The number of Minutes to add to this TimeOfDay.
+
+        Examples:
+--------------------
+auto tod1 = TimeOfDay(7, 12, 0);
+tod1.roll!"minutes"(1);
+assert(tod1 == TimeOfDay(7, 13, 0));
+
+auto tod2 = TimeOfDay(7, 12, 0);
+tod2.roll!"minutes"(-1);
+assert(tod2 == TimeOfDay(7, 11, 0));
+
+auto tod3 = TimeOfDay(23, 59, 0);
+tod3.roll!"minutes"(1);
+assert(tod3 == TimeOfDay(23, 0, 0));
+
+auto tod4 = TimeOfDay(0, 0, 0);
+tod4.roll!"minutes"(-1);
+assert(tod4 == TimeOfDay(0, 59, 0));
+
+auto tod5 = TimeOfDay(7, 32, 12);
+tod5.roll!"seconds"(1);
+assert(tod5 == TimeOfDay(7, 32, 13));
+
+auto tod6 = TimeOfDay(7, 32, 12);
+tod6.roll!"seconds"(-1);
+assert(tod6 == TimeOfDay(7, 32, 11));
+
+auto tod7 = TimeOfDay(23, 59, 59);
+tod7.roll!"seconds"(1);
+assert(tod7 == TimeOfDay(23, 59, 0));
+
+auto tod8 = TimeOfDay(0, 0, 0);
+tod8.roll!"seconds"(-1);
+assert(tod8 == TimeOfDay(0, 0, 59));
+--------------------
+      +/
+    /+ref TimeOfDay+/ void roll(string units)(long value) pure nothrow
+        if(units == "minutes" ||
+           units == "seconds")
+    {
+        static if(units == "minutes")
+            enum memberVarStr = "minute";
+        else static if(units == "seconds")
+            enum memberVarStr = "second";
+        else
+            static assert(0);
+
+        value %= 60;
+        mixin("auto newVal = cast(ubyte)(_" ~ memberVarStr ~ ") + value;");
+
+        if(value < 0)
+        {
+            if(newVal < 0)
+                newVal += 60;
+        }
+        else if(newVal >= 60)
+            newVal -= 60;
+
+        mixin("_" ~ memberVarStr ~ " = cast(ubyte)newVal;");
+    }
+
+    //Test roll!"minutes"().
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            static void testTOD(TimeOfDay orig, int minutes, in TimeOfDay expected, size_t line = __LINE__)
+            {
+                orig.roll!"minutes"(minutes);
+                assertPred!"=="(orig, expected, "", __FILE__, line);
+            }
+
+            testTOD(TimeOfDay(12, 30, 33), 0, TimeOfDay(12, 30, 33));
+            testTOD(TimeOfDay(12, 30, 33), 1, TimeOfDay(12, 31, 33));
+            testTOD(TimeOfDay(12, 30, 33), 2, TimeOfDay(12, 32, 33));
+            testTOD(TimeOfDay(12, 30, 33), 3, TimeOfDay(12, 33, 33));
+            testTOD(TimeOfDay(12, 30, 33), 4, TimeOfDay(12, 34, 33));
+            testTOD(TimeOfDay(12, 30, 33), 5, TimeOfDay(12, 35, 33));
+            testTOD(TimeOfDay(12, 30, 33), 10, TimeOfDay(12, 40, 33));
+            testTOD(TimeOfDay(12, 30, 33), 15, TimeOfDay(12, 45, 33));
+            testTOD(TimeOfDay(12, 30, 33), 29, TimeOfDay(12, 59, 33));
+            testTOD(TimeOfDay(12, 30, 33), 30, TimeOfDay(12, 0, 33));
+            testTOD(TimeOfDay(12, 30, 33), 45, TimeOfDay(12, 15, 33));
+            testTOD(TimeOfDay(12, 30, 33), 60, TimeOfDay(12, 30, 33));
+            testTOD(TimeOfDay(12, 30, 33), 75, TimeOfDay(12, 45, 33));
+            testTOD(TimeOfDay(12, 30, 33), 90, TimeOfDay(12, 0, 33));
+            testTOD(TimeOfDay(12, 30, 33), 100, TimeOfDay(12, 10, 33));
+
+            testTOD(TimeOfDay(12, 30, 33), 689, TimeOfDay(12, 59, 33));
+            testTOD(TimeOfDay(12, 30, 33), 690, TimeOfDay(12, 0, 33));
+            testTOD(TimeOfDay(12, 30, 33), 691, TimeOfDay(12, 1, 33));
+            testTOD(TimeOfDay(12, 30, 33), 960, TimeOfDay(12, 30, 33));
+            testTOD(TimeOfDay(12, 30, 33), 1439, TimeOfDay(12, 29, 33));
+            testTOD(TimeOfDay(12, 30, 33), 1440, TimeOfDay(12, 30, 33));
+            testTOD(TimeOfDay(12, 30, 33), 1441, TimeOfDay(12, 31, 33));
+            testTOD(TimeOfDay(12, 30, 33), 2880, TimeOfDay(12, 30, 33));
+
+            testTOD(TimeOfDay(12, 30, 33), -1, TimeOfDay(12, 29, 33));
+            testTOD(TimeOfDay(12, 30, 33), -2, TimeOfDay(12, 28, 33));
+            testTOD(TimeOfDay(12, 30, 33), -3, TimeOfDay(12, 27, 33));
+            testTOD(TimeOfDay(12, 30, 33), -4, TimeOfDay(12, 26, 33));
+            testTOD(TimeOfDay(12, 30, 33), -5, TimeOfDay(12, 25, 33));
+            testTOD(TimeOfDay(12, 30, 33), -10, TimeOfDay(12, 20, 33));
+            testTOD(TimeOfDay(12, 30, 33), -15, TimeOfDay(12, 15, 33));
+            testTOD(TimeOfDay(12, 30, 33), -29, TimeOfDay(12, 1, 33));
+            testTOD(TimeOfDay(12, 30, 33), -30, TimeOfDay(12, 0, 33));
+            testTOD(TimeOfDay(12, 30, 33), -45, TimeOfDay(12, 45, 33));
+            testTOD(TimeOfDay(12, 30, 33), -60, TimeOfDay(12, 30, 33));
+            testTOD(TimeOfDay(12, 30, 33), -75, TimeOfDay(12, 15, 33));
+            testTOD(TimeOfDay(12, 30, 33), -90, TimeOfDay(12, 0, 33));
+            testTOD(TimeOfDay(12, 30, 33), -100, TimeOfDay(12, 50, 33));
+
+            testTOD(TimeOfDay(12, 30, 33), -749, TimeOfDay(12, 1, 33));
+            testTOD(TimeOfDay(12, 30, 33), -750, TimeOfDay(12, 0, 33));
+            testTOD(TimeOfDay(12, 30, 33), -751, TimeOfDay(12, 59, 33));
+            testTOD(TimeOfDay(12, 30, 33), -960, TimeOfDay(12, 30, 33));
+            testTOD(TimeOfDay(12, 30, 33), -1439, TimeOfDay(12, 31, 33));
+            testTOD(TimeOfDay(12, 30, 33), -1440, TimeOfDay(12, 30, 33));
+            testTOD(TimeOfDay(12, 30, 33), -1441, TimeOfDay(12, 29, 33));
+            testTOD(TimeOfDay(12, 30, 33), -2880, TimeOfDay(12, 30, 33));
+
+            testTOD(TimeOfDay(12, 0, 33), 1, TimeOfDay(12, 1, 33));
+            testTOD(TimeOfDay(12, 0, 33), 0, TimeOfDay(12, 0, 33));
+            testTOD(TimeOfDay(12, 0, 33), -1, TimeOfDay(12, 59, 33));
+
+            testTOD(TimeOfDay(11, 59, 33), 1, TimeOfDay(11, 0, 33));
+            testTOD(TimeOfDay(11, 59, 33), 0, TimeOfDay(11, 59, 33));
+            testTOD(TimeOfDay(11, 59, 33), -1, TimeOfDay(11, 58, 33));
+
+            testTOD(TimeOfDay(0, 0, 33), 1, TimeOfDay(0, 1, 33));
+            testTOD(TimeOfDay(0, 0, 33), 0, TimeOfDay(0, 0, 33));
+            testTOD(TimeOfDay(0, 0, 33), -1, TimeOfDay(0, 59, 33));
+
+            testTOD(TimeOfDay(23, 59, 33), 1, TimeOfDay(23, 0, 33));
+            testTOD(TimeOfDay(23, 59, 33), 0, TimeOfDay(23, 59, 33));
+            testTOD(TimeOfDay(23, 59, 33), -1, TimeOfDay(23, 58, 33));
+
+            const ctod = TimeOfDay(0, 0, 0);
+            immutable itod = TimeOfDay(0, 0, 0);
+            static assert(!__traits(compiles, ctod.roll!"minutes"(7)));
+            static assert(!__traits(compiles, itod.roll!"minutes"(7)));
+
+            //Verify Examples.
+            auto tod1 = TimeOfDay(7, 12, 0);
+            tod1.roll!"minutes"(1);
+            assert(tod1 == TimeOfDay(7, 13, 0));
+
+            auto tod2 = TimeOfDay(7, 12, 0);
+            tod2.roll!"minutes"(-1);
+            assert(tod2 == TimeOfDay(7, 11, 0));
+
+            auto tod3 = TimeOfDay(23, 59, 0);
+            tod3.roll!"minutes"(1);
+            assert(tod3 == TimeOfDay(23, 0, 0));
+
+            auto tod4 = TimeOfDay(0, 0, 0);
+            tod4.roll!"minutes"(-1);
+            assert(tod4 == TimeOfDay(0, 59, 0));
+
+            auto tod5 = TimeOfDay(7, 32, 12);
+            tod5.roll!"seconds"(1);
+            assert(tod5 == TimeOfDay(7, 32, 13));
+
+            auto tod6 = TimeOfDay(7, 32, 12);
+            tod6.roll!"seconds"(-1);
+            assert(tod6 == TimeOfDay(7, 32, 11));
+
+            auto tod7 = TimeOfDay(23, 59, 59);
+            tod7.roll!"seconds"(1);
+            assert(tod7 == TimeOfDay(23, 59, 0));
+
+            auto tod8 = TimeOfDay(0, 0, 0);
+            tod8.roll!"seconds"(-1);
+            assert(tod8 == TimeOfDay(0, 0, 59));
+        }
+    }
+
+    //Test roll!"seconds"().
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            static void testTOD(TimeOfDay orig, int seconds, in TimeOfDay expected, size_t line = __LINE__)
+            {
+                orig.roll!"seconds"(seconds);
+                assertPred!"=="(orig, expected, "", __FILE__, line);
+            }
+
+            testTOD(TimeOfDay(12, 30, 33), 0, TimeOfDay(12, 30, 33));
+            testTOD(TimeOfDay(12, 30, 33), 1, TimeOfDay(12, 30, 34));
+            testTOD(TimeOfDay(12, 30, 33), 2, TimeOfDay(12, 30, 35));
+            testTOD(TimeOfDay(12, 30, 33), 3, TimeOfDay(12, 30, 36));
+            testTOD(TimeOfDay(12, 30, 33), 4, TimeOfDay(12, 30, 37));
+            testTOD(TimeOfDay(12, 30, 33), 5, TimeOfDay(12, 30, 38));
+            testTOD(TimeOfDay(12, 30, 33), 10, TimeOfDay(12, 30, 43));
+            testTOD(TimeOfDay(12, 30, 33), 15, TimeOfDay(12, 30, 48));
+            testTOD(TimeOfDay(12, 30, 33), 26, TimeOfDay(12, 30, 59));
+            testTOD(TimeOfDay(12, 30, 33), 27, TimeOfDay(12, 30, 0));
+            testTOD(TimeOfDay(12, 30, 33), 30, TimeOfDay(12, 30, 3));
+            testTOD(TimeOfDay(12, 30, 33), 59, TimeOfDay(12, 30, 32));
+            testTOD(TimeOfDay(12, 30, 33), 60, TimeOfDay(12, 30, 33));
+            testTOD(TimeOfDay(12, 30, 33), 61, TimeOfDay(12, 30, 34));
+
+            testTOD(TimeOfDay(12, 30, 33), 1766, TimeOfDay(12, 30, 59));
+            testTOD(TimeOfDay(12, 30, 33), 1767, TimeOfDay(12, 30, 0));
+            testTOD(TimeOfDay(12, 30, 33), 1768, TimeOfDay(12, 30, 1));
+            testTOD(TimeOfDay(12, 30, 33), 2007, TimeOfDay(12, 30, 0));
+            testTOD(TimeOfDay(12, 30, 33), 3599, TimeOfDay(12, 30, 32));
+            testTOD(TimeOfDay(12, 30, 33), 3600, TimeOfDay(12, 30, 33));
+            testTOD(TimeOfDay(12, 30, 33), 3601, TimeOfDay(12, 30, 34));
+            testTOD(TimeOfDay(12, 30, 33), 7200, TimeOfDay(12, 30, 33));
+
+            testTOD(TimeOfDay(12, 30, 33), -1, TimeOfDay(12, 30, 32));
+            testTOD(TimeOfDay(12, 30, 33), -2, TimeOfDay(12, 30, 31));
+            testTOD(TimeOfDay(12, 30, 33), -3, TimeOfDay(12, 30, 30));
+            testTOD(TimeOfDay(12, 30, 33), -4, TimeOfDay(12, 30, 29));
+            testTOD(TimeOfDay(12, 30, 33), -5, TimeOfDay(12, 30, 28));
+            testTOD(TimeOfDay(12, 30, 33), -10, TimeOfDay(12, 30, 23));
+            testTOD(TimeOfDay(12, 30, 33), -15, TimeOfDay(12, 30, 18));
+            testTOD(TimeOfDay(12, 30, 33), -33, TimeOfDay(12, 30, 0));
+            testTOD(TimeOfDay(12, 30, 33), -34, TimeOfDay(12, 30, 59));
+            testTOD(TimeOfDay(12, 30, 33), -35, TimeOfDay(12, 30, 58));
+            testTOD(TimeOfDay(12, 30, 33), -59, TimeOfDay(12, 30, 34));
+            testTOD(TimeOfDay(12, 30, 33), -60, TimeOfDay(12, 30, 33));
+            testTOD(TimeOfDay(12, 30, 33), -61, TimeOfDay(12, 30, 32));
+
+            testTOD(TimeOfDay(12, 30, 0), 1, TimeOfDay(12, 30, 1));
+            testTOD(TimeOfDay(12, 30, 0), 0, TimeOfDay(12, 30, 0));
+            testTOD(TimeOfDay(12, 30, 0), -1, TimeOfDay(12, 30, 59));
+
+            testTOD(TimeOfDay(12, 0, 0), 1, TimeOfDay(12, 0, 1));
+            testTOD(TimeOfDay(12, 0, 0), 0, TimeOfDay(12, 0, 0));
+            testTOD(TimeOfDay(12, 0, 0), -1, TimeOfDay(12, 0, 59));
+
+            testTOD(TimeOfDay(0, 0, 0), 1, TimeOfDay(0, 0, 1));
+            testTOD(TimeOfDay(0, 0, 0), 0, TimeOfDay(0, 0, 0));
+            testTOD(TimeOfDay(0, 0, 0), -1, TimeOfDay(0, 0, 59));
+
+            testTOD(TimeOfDay(23, 59, 59), 1, TimeOfDay(23, 59, 0));
+            testTOD(TimeOfDay(23, 59, 59), 0, TimeOfDay(23, 59, 59));
+            testTOD(TimeOfDay(23, 59, 59), -1, TimeOfDay(23, 59, 58));
+
+            const ctod = TimeOfDay(0, 0, 0);
+            immutable itod = TimeOfDay(0, 0, 0);
+            static assert(!__traits(compiles, ctod.roll!"seconds"(7)));
+            static assert(!__traits(compiles, itod.roll!"seconds"(7)));
+        }
+    }
+
+
+    /++
+        Gives the result of adding or subtracting a duration from this TimeOfDay.
+
+        The legal types of arithmetic for TimeOfDay using this operator are
+
+        $(TABLE
+        $(TR $(TD TimeOfDay) $(TD +) $(TD duration) $(TD -->) $(TD TimeOfDay))
+        $(TR $(TD TimeOfDay) $(TD -) $(TD duration) $(TD -->) $(TD TimeOfDay))
+        )
+
+        Params:
+            duration = The duration to add to or subtract from this Date.
+      +/
+    TimeOfDay opBinary(string op, D)(in D duration) const pure nothrow
+        if((op == "+" || op == "-") &&
+           (is(Unqual!D == Duration) ||
+            is(Unqual!D == TickDuration)))
+    {
+        TimeOfDay retval = this;
+
+        static if(is(Unqual!D == Duration))
+            immutable hnsecs = duration.total!"hnsecs";
+        else static if(is(Unqual!D == TickDuration))
+            immutable hnsecs = duration.hnsecs;
+
+        //Ideally, this would just be
+        //return retval.addSeconds(convert!("hnsecs", "seconds")(unaryFun!(op ~ "a")(hnsecs)));
+        //But there isn't currently a pure version of unaryFun!().
+
+        static if(op == "+")
+            immutable signedHNSecs = hnsecs;
+        else static if(op == "-")
+            immutable signedHNSecs = -hnsecs;
+        else
+            static assert(0);
+
+        return retval.addSeconds(convert!("hnsecs", "seconds")(signedHNSecs));
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            auto tod = TimeOfDay(12, 30, 33);
+
+            assertPred!"=="(tod + dur!"hours"(7), TimeOfDay(19, 30, 33));
+            assertPred!"=="(tod + dur!"hours"(-7), TimeOfDay(5, 30, 33));
+            assertPred!"=="(tod + dur!"minutes"(7), TimeOfDay(12, 37, 33));
+            assertPred!"=="(tod + dur!"minutes"(-7), TimeOfDay(12, 23, 33));
+            assertPred!"=="(tod + dur!"seconds"(7), TimeOfDay(12, 30, 40));
+            assertPred!"=="(tod + dur!"seconds"(-7), TimeOfDay(12, 30, 26));
+
+            assertPred!"=="(tod + dur!"msecs"(7000), TimeOfDay(12, 30, 40));
+            assertPred!"=="(tod + dur!"msecs"(-7000), TimeOfDay(12, 30, 26));
+            assertPred!"=="(tod + dur!"usecs"(7_000_000), TimeOfDay(12, 30, 40));
+            assertPred!"=="(tod + dur!"usecs"(-7_000_000), TimeOfDay(12, 30, 26));
+            assertPred!"=="(tod + dur!"hnsecs"(70_000_000), TimeOfDay(12, 30, 40));
+            assertPred!"=="(tod + dur!"hnsecs"(-70_000_000), TimeOfDay(12, 30, 26));
+
+            //This probably only runs in cases where gettimeofday() is used, but it's
+            //hard to do this test correctly with variable ticksPerSec.
+            if(TickDuration.ticksPerSec == 1_000_000)
+            {
+                assertPred!"=="(tod + TickDuration.from!"usecs"(7_000_000), TimeOfDay(12, 30, 40));
+                assertPred!"=="(tod + TickDuration.from!"usecs"(-7_000_000), TimeOfDay(12, 30, 26));
+            }
+
+            assertPred!"=="(tod - dur!"hours"(-7), TimeOfDay(19, 30, 33));
+            assertPred!"=="(tod - dur!"hours"(7), TimeOfDay(5, 30, 33));
+            assertPred!"=="(tod - dur!"minutes"(-7), TimeOfDay(12, 37, 33));
+            assertPred!"=="(tod - dur!"minutes"(7), TimeOfDay(12, 23, 33));
+            assertPred!"=="(tod - dur!"seconds"(-7), TimeOfDay(12, 30, 40));
+            assertPred!"=="(tod - dur!"seconds"(7), TimeOfDay(12, 30, 26));
+
+            assertPred!"=="(tod - dur!"msecs"(-7000), TimeOfDay(12, 30, 40));
+            assertPred!"=="(tod - dur!"msecs"(7000), TimeOfDay(12, 30, 26));
+            assertPred!"=="(tod - dur!"usecs"(-7_000_000), TimeOfDay(12, 30, 40));
+            assertPred!"=="(tod - dur!"usecs"(7_000_000), TimeOfDay(12, 30, 26));
+            assertPred!"=="(tod - dur!"hnsecs"(-70_000_000), TimeOfDay(12, 30, 40));
+            assertPred!"=="(tod - dur!"hnsecs"(70_000_000), TimeOfDay(12, 30, 26));
+
+            //This probably only runs in cases where gettimeofday() is used, but it's
+            //hard to do this test correctly with variable ticksPerSec.
+            if(TickDuration.ticksPerSec == 1_000_000)
+            {
+                assertPred!"=="(tod - TickDuration.from!"usecs"(-7_000_000), TimeOfDay(12, 30, 40));
+                assertPred!"=="(tod - TickDuration.from!"usecs"(7_000_000), TimeOfDay(12, 30, 26));
+            }
+
+            auto duration = dur!"hours"(11);
+            const ctod = TimeOfDay(12, 33, 30);
+            immutable itod = TimeOfDay(12, 33, 30);
+            static assert(__traits(compiles, tod + duration));
+            static assert(__traits(compiles, ctod + duration));
+            static assert(__traits(compiles, itod + duration));
+
+            static assert(__traits(compiles, tod - duration));
+            static assert(__traits(compiles, ctod - duration));
+            static assert(__traits(compiles, itod - duration));
+        }
+    }
+
+
+    /++
+        Gives the result of adding or subtracting a duration from this TimeOfDay,
+        as well as assigning the result to this TimeOfDay.
+
+        The legal types of arithmetic for TimeOfDay using this operator are
+
+        $(TABLE
+        $(TR $(TD TimeOfDay) $(TD +) $(TD duration) $(TD -->) $(TD TimeOfDay))
+        $(TR $(TD TimeOfDay) $(TD -) $(TD duration) $(TD -->) $(TD TimeOfDay))
+        )
+
+        Params:
+            duration = The duration to add to or subtract from this TimeOfDay.
+      +/
+    /+ref+/ TimeOfDay opOpAssign(string op, D)(in D duration) pure nothrow
+        if((op == "+" || op == "-") &&
+           (is(Unqual!D == Duration) ||
+            is(Unqual!D == TickDuration)))
+    {
+        static if(is(Unqual!D == Duration))
+            immutable hnsecs = duration.total!"hnsecs";
+        else static if(is(Unqual!D == TickDuration))
+            immutable hnsecs = duration.hnsecs;
+
+        //Ideally, this would just be
+        //return addSeconds(convert!("hnsecs", "seconds")(unaryFun!(op ~ "a")(hnsecs)));
+        //But there isn't currently a pure version of unaryFun!().
+
+        static if(op == "+")
+            immutable signedHNSecs = hnsecs;
+        else static if(op == "-")
+            immutable signedHNSecs = -hnsecs;
+        else
+            static assert(0);
+
+        return addSeconds(convert!("hnsecs", "seconds")(signedHNSecs));
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            auto duration = dur!"hours"(12);
+
+            assertPred!"+="(TimeOfDay(12, 30, 33), dur!"hours"(7), TimeOfDay(19, 30, 33));
+            assertPred!"+="(TimeOfDay(12, 30, 33), dur!"hours"(-7), TimeOfDay(5, 30, 33));
+            assertPred!"+="(TimeOfDay(12, 30, 33), dur!"minutes"(7), TimeOfDay(12, 37, 33));
+            assertPred!"+="(TimeOfDay(12, 30, 33), dur!"minutes"(-7), TimeOfDay(12, 23, 33));
+            assertPred!"+="(TimeOfDay(12, 30, 33), dur!"seconds"(7), TimeOfDay(12, 30, 40));
+            assertPred!"+="(TimeOfDay(12, 30, 33), dur!"seconds"(-7), TimeOfDay(12, 30, 26));
+
+            assertPred!"+="(TimeOfDay(12, 30, 33), dur!"msecs"(7000), TimeOfDay(12, 30, 40));
+            assertPred!"+="(TimeOfDay(12, 30, 33), dur!"msecs"(-7000), TimeOfDay(12, 30, 26));
+            assertPred!"+="(TimeOfDay(12, 30, 33), dur!"usecs"(7_000_000), TimeOfDay(12, 30, 40));
+            assertPred!"+="(TimeOfDay(12, 30, 33), dur!"usecs"(-7_000_000), TimeOfDay(12, 30, 26));
+            assertPred!"+="(TimeOfDay(12, 30, 33), dur!"hnsecs"(70_000_000), TimeOfDay(12, 30, 40));
+            assertPred!"+="(TimeOfDay(12, 30, 33), dur!"hnsecs"(-70_000_000), TimeOfDay(12, 30, 26));
+
+            assertPred!"-="(TimeOfDay(12, 30, 33), dur!"hours"(-7), TimeOfDay(19, 30, 33));
+            assertPred!"-="(TimeOfDay(12, 30, 33), dur!"hours"(7), TimeOfDay(5, 30, 33));
+            assertPred!"-="(TimeOfDay(12, 30, 33), dur!"minutes"(-7), TimeOfDay(12, 37, 33));
+            assertPred!"-="(TimeOfDay(12, 30, 33), dur!"minutes"(7), TimeOfDay(12, 23, 33));
+            assertPred!"-="(TimeOfDay(12, 30, 33), dur!"seconds"(-7), TimeOfDay(12, 30, 40));
+            assertPred!"-="(TimeOfDay(12, 30, 33), dur!"seconds"(7), TimeOfDay(12, 30, 26));
+
+            assertPred!"-="(TimeOfDay(12, 30, 33), dur!"msecs"(-7000), TimeOfDay(12, 30, 40));
+            assertPred!"-="(TimeOfDay(12, 30, 33), dur!"msecs"(7000), TimeOfDay(12, 30, 26));
+            assertPred!"-="(TimeOfDay(12, 30, 33), dur!"usecs"(-7_000_000), TimeOfDay(12, 30, 40));
+            assertPred!"-="(TimeOfDay(12, 30, 33), dur!"usecs"(7_000_000), TimeOfDay(12, 30, 26));
+            assertPred!"-="(TimeOfDay(12, 30, 33), dur!"hnsecs"(-70_000_000), TimeOfDay(12, 30, 40));
+            assertPred!"-="(TimeOfDay(12, 30, 33), dur!"hnsecs"(70_000_000), TimeOfDay(12, 30, 26));
+
+            const ctod = TimeOfDay(12, 33, 30);
+            immutable itod = TimeOfDay(12, 33, 30);
+            static assert(!__traits(compiles, ctod += duration));
+            static assert(!__traits(compiles, itod += duration));
+            static assert(!__traits(compiles, ctod -= duration));
+            static assert(!__traits(compiles, itod -= duration));
+        }
+    }
+
+
+    /++
+        Gives the difference between two TimeOfDays.
+
+        The legal types of arithmetic for TimeOfDay using this operator are
+
+        $(TABLE
+        $(TR $(TD TimeOfDay) $(TD -) $(TD TimeOfDay) $(TD -->) $(TD duration))
+        )
+
+        Params:
+            rhs = The TimeOfDay to subtract from this one.
+      +/
+    Duration opBinary(string op)(in TimeOfDay rhs) const pure nothrow
+        if(op == "-")
+    {
+        immutable lhsSec = _hour * 3600 + _minute * 60 + _second;
+        immutable rhsSec = rhs._hour * 3600 + rhs._minute * 60 + rhs._second;
+
+        return dur!"seconds"(lhsSec - rhsSec);
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            auto tod = TimeOfDay(12, 30, 33);
+
+            assertPred!"=="(TimeOfDay(7, 12, 52) - TimeOfDay(12, 30, 33), dur!"seconds"(-19_061));
+            assertPred!"=="(TimeOfDay(12, 30, 33) - TimeOfDay(7, 12, 52), dur!"seconds"(19_061));
+            assertPred!"=="(TimeOfDay(12, 30, 33) - TimeOfDay(14, 30, 33), dur!"seconds"(-7200));
+            assertPred!"=="(TimeOfDay(14, 30, 33) - TimeOfDay(12, 30, 33), dur!"seconds"(7200));
+            assertPred!"=="(TimeOfDay(12, 30, 33) - TimeOfDay(12, 34, 33), dur!"seconds"(-240));
+            assertPred!"=="(TimeOfDay(12, 34, 33) - TimeOfDay(12, 30, 33), dur!"seconds"(240));
+            assertPred!"=="(TimeOfDay(12, 30, 33) - TimeOfDay(12, 30, 34), dur!"seconds"(-1));
+            assertPred!"=="(TimeOfDay(12, 30, 34) - TimeOfDay(12, 30, 33), dur!"seconds"(1));
+
+            const ctod = TimeOfDay(12, 30, 33);
+            immutable itod = TimeOfDay(12, 30, 33);
+            static assert(__traits(compiles, tod - tod));
+            static assert(__traits(compiles, ctod - tod));
+            static assert(__traits(compiles, itod - tod));
+
+            static assert(__traits(compiles, tod - ctod));
+            static assert(__traits(compiles, ctod - ctod));
+            static assert(__traits(compiles, itod - ctod));
+
+            static assert(__traits(compiles, tod - itod));
+            static assert(__traits(compiles, ctod - itod));
+            static assert(__traits(compiles, itod - itod));
+        }
+    }
+
+
+    /++
+        Converts this TimeOfDay to a string with the format HHMMSS.
+
+        Examples:
+--------------------
+assert(TimeOfDay(0, 0, 0).toISOString() == "000000");
+assert(TimeOfDay(12, 30, 33).toISOString() == "123033");
+--------------------
+      +/
+    string toISOString() const nothrow
+    {
+        try
+            return format("%02d%02d%02d", _hour, _minute, _second);
+        catch(Exception e)
+            assert(0, "format() threw.");
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            auto tod = TimeOfDay(12, 30, 33);
+            const ctod = TimeOfDay(12, 30, 33);
+            immutable itod = TimeOfDay(12, 30, 33);
+            static assert(__traits(compiles, tod.toISOString()));
+            static assert(__traits(compiles, ctod.toISOString()));
+            static assert(__traits(compiles, itod.toISOString()));
+
+            //Verify Examples.
+            assert(TimeOfDay(0, 0, 0).toISOString() == "000000");
+            assert(TimeOfDay(12, 30, 33).toISOString() == "123033");
+        }
+    }
+
+
+    /++
+        Converts this TimeOfDay to a string with the format HH:MM:SS.
+
+        Examples:
+--------------------
+assert(TimeOfDay(0, 0, 0).toISOExtendedString() == "000000");
+assert(TimeOfDay(12, 30, 33).toISOExtendedString() == "123033");
+--------------------
+      +/
+    string toISOExtendedString() const nothrow
+    {
+        try
+            return format("%02d:%02d:%02d", _hour, _minute, _second);
+        catch(Exception e)
+            assert(0, "format() threw.");
+    }
+
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            auto tod = TimeOfDay(12, 30, 33);
+            const ctod = TimeOfDay(12, 30, 33);
+            immutable itod = TimeOfDay(12, 30, 33);
+            static assert(__traits(compiles, tod.toISOExtendedString()));
+            static assert(__traits(compiles, ctod.toISOExtendedString()));
+            static assert(__traits(compiles, itod.toISOExtendedString()));
+
+            //Verify Examples.
+            assert(TimeOfDay(0, 0, 0).toISOExtendedString() == "00:00:00");
+            assert(TimeOfDay(12, 30, 33).toISOExtendedString() == "12:30:33");
+        }
+    }
+
+
+    /+
+        Converts this TimeOfDay to a string.
+      +/
+    //Due to bug http://d.puremagic.com/issues/show_bug.cgi?id=3715 , we can't
+    //have versions of toString() with extra modifiers, so we define one version
+    //with modifiers and one without.
+    string toString()
+    {
+        return toISOExtendedString();
+    }
+
+
+    /++
+        Converts this TimeOfDay to a string.
+      +/
+    //Due to bug http://d.puremagic.com/issues/show_bug.cgi?id=3715 , we can't
+    //have versions of toString() with extra modifiers, so we define one version
+    //with modifiers and one without.
+    string toString() const nothrow
+    {
+        return toISOExtendedString();
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            auto tod = TimeOfDay(12, 30, 33);
+            const ctod = TimeOfDay(12, 30, 33);
+            immutable itod = TimeOfDay(12, 30, 33);
+            static assert(__traits(compiles, tod.toString()));
+            static assert(__traits(compiles, ctod.toString()));
+            static assert(__traits(compiles, itod.toString()));
+        }
+    }
+
+    //TODO Add a function which returns a string in a user-specified format.
+
+
+
+    /++
+        Creates a TimeOfDay from a string with the format HHMMSS. Whitespace is
+        stripped from the given string.
+
+        Params:
+            isoString = A string formatted in the ISO format for times.
+
+        Throws:
+            DateTimeException if the given string is not in the ISO format or if
+            the resulting TimeOfDay would not be valid.
+
+        Examples:
+--------------------
+assert(TimeOfDay.fromISOString("000000") == TimeOfDay(0, 0, 0));
+assert(TimeOfDay.fromISOString("123033") == TimeOfDay(12, 30, 33));
+assert(TimeOfDay.fromISOString(" 123033 ") == TimeOfDay(12, 30, 33));
+--------------------
+      +/
+    static TimeOfDay fromISOString(S)(in S isoString)
+        if(isSomeString!S)
+    {
+        auto dstr = to!dstring(strip(isoString));
+
+        enforce(dstr.length == 6, new DateTimeException(format("Invalid ISO String: %s", isoString)));
+
+        auto hours = dstr[0 .. 2];
+        auto minutes = dstr[2 .. 4];
+        auto seconds = dstr[4 .. $];
+
+        enforce(!canFind!((dchar c){return !isdigit(c);})(hours), new DateTimeException(format("Invalid ISO String: %s", isoString)));
+        enforce(!canFind!((dchar c){return !isdigit(c);})(minutes), new DateTimeException(format("Invalid ISO String: %s", isoString)));
+        enforce(!canFind!((dchar c){return !isdigit(c);})(seconds), new DateTimeException(format("Invalid ISO String: %s", isoString)));
+
+        return TimeOfDay(to!int(hours), to!int(minutes), to!int(seconds));
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            assertThrown!DateTimeException(TimeOfDay.fromISOString(""));
+            assertThrown!DateTimeException(TimeOfDay.fromISOString("0"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOString("00"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOString("000"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOString("0000"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOString("00000"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOString("13033"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOString("1277"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOString("12707"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOString("12070"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOString("12303a"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOString("1230a3"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOString("123a33"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOString("12a033"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOString("1a0033"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOString("a20033"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOString("1200330"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOString("0120033"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOString("-120033"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOString("+120033"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOString("120033am"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOString("120033pm"));
+
+            assertThrown!DateTimeException(TimeOfDay.fromISOString("0::"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOString(":0:"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOString("::0"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOString("0:0:0"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOString("0:0:00"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOString("0:00:0"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOString("00:0:0"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOString("00:00:0"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOString("00:0:00"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOString("13:0:33"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOString("12:7:7"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOString("12:7:07"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOString("12:07:0"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOString("12:30:3a"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOString("12:30:a3"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOString("12:3a:33"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOString("12:a0:33"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOString("1a:00:33"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOString("a2:00:33"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOString("12:003:30"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOString("120:03:30"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOString("012:00:33"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOString("01:200:33"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOString("-12:00:33"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOString("+12:00:33"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOString("12:00:33am"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOString("12:00:33pm"));
+
+            assertThrown!DateTimeException(TimeOfDay.fromISOString("12:00:33"));
+
+            assertPred!"=="(TimeOfDay.fromISOString("011217"), TimeOfDay(1, 12, 17));
+            assertPred!"=="(TimeOfDay.fromISOString("001412"), TimeOfDay(0, 14, 12));
+            assertPred!"=="(TimeOfDay.fromISOString("000007"), TimeOfDay(0, 0, 7));
+            assertPred!"=="(TimeOfDay.fromISOString("011217 "), TimeOfDay(1, 12, 17));
+            assertPred!"=="(TimeOfDay.fromISOString(" 011217"), TimeOfDay(1, 12, 17));
+            assertPred!"=="(TimeOfDay.fromISOString(" 011217 "), TimeOfDay(1, 12, 17));
+
+            //Verify Examples.
+            assert(TimeOfDay.fromISOString("000000") == TimeOfDay(0, 0, 0));
+            assert(TimeOfDay.fromISOString("123033") == TimeOfDay(12, 30, 33));
+            assert(TimeOfDay.fromISOString(" 123033 ") == TimeOfDay(12, 30, 33));
+        }
+    }
+
+
+    /++
+        Creates a TimeOfDay from a string with the format HH:MM:SS. Whitespace is
+        stripped from the given string.
+
+        Params:
+            isoString = A string formatted in the ISO Extended format for times.
+
+        Throws:
+            DateTimeException if the given string is not in the ISO Extended
+            format or if the resulting TimeOfDay would not be valid.
+
+        Examples:
+--------------------
+assert(TimeOfDay.fromISOExtendedString("00:00:00") == TimeOfDay(0, 0, 0));
+assert(TimeOfDay.fromISOExtendedString("12:30:33") == TimeOfDay(12, 30, 33));
+assert(TimeOfDay.fromISOExtendedString(" 12:30:33 ") == TimeOfDay(12, 30, 33));
+--------------------
+      +/
+    static TimeOfDay fromISOExtendedString(S)(in S isoExtString)
+        if(isSomeString!S)
+    {
+        auto dstr = to!dstring(strip(isoExtString));
+
+        enforce(dstr.length == 8, new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
+
+        auto hours = dstr[0 .. 2];
+        auto minutes = dstr[3 .. 5];
+        auto seconds = dstr[6 .. $];
+
+        enforce(dstr[2] == ':', new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
+        enforce(dstr[5] == ':', new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
+        enforce(!canFind!((dchar c){return !isdigit(c);})(hours), new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
+        enforce(!canFind!((dchar c){return !isdigit(c);})(minutes), new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
+        enforce(!canFind!((dchar c){return !isdigit(c);})(seconds), new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
+
+        return TimeOfDay(to!int(hours), to!int(minutes), to!int(seconds));
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString(""));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("0"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("00"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("000"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("0000"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("00000"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("13033"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("1277"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("12707"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("12070"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("12303a"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("1230a3"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("123a33"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("12a033"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("1a0033"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("a20033"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("1200330"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("0120033"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("-120033"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("+120033"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("120033am"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("120033pm"));
+
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("0::"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString(":0:"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("::0"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("0:0:0"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("0:0:00"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("0:00:0"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("00:0:0"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("00:00:0"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("00:0:00"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("13:0:33"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("12:7:7"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("12:7:07"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("12:07:0"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("12:30:3a"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("12:30:a3"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("12:3a:33"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("12:a0:33"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("1a:00:33"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("a2:00:33"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("12:003:30"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("120:03:30"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("012:00:33"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("01:200:33"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("-12:00:33"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("+12:00:33"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("12:00:33am"));
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("12:00:33pm"));
+
+            assertThrown!DateTimeException(TimeOfDay.fromISOExtendedString("120033"));
+
+            assertPred!"=="(TimeOfDay.fromISOExtendedString("01:12:17"), TimeOfDay(1, 12, 17));
+            assertPred!"=="(TimeOfDay.fromISOExtendedString("00:14:12"), TimeOfDay(0, 14, 12));
+            assertPred!"=="(TimeOfDay.fromISOExtendedString("00:00:07"), TimeOfDay(0, 0, 7));
+            assertPred!"=="(TimeOfDay.fromISOExtendedString("01:12:17 "), TimeOfDay(1, 12, 17));
+            assertPred!"=="(TimeOfDay.fromISOExtendedString(" 01:12:17"), TimeOfDay(1, 12, 17));
+            assertPred!"=="(TimeOfDay.fromISOExtendedString(" 01:12:17 "), TimeOfDay(1, 12, 17));
+
+            //Verify Examples.
+            assert(TimeOfDay.fromISOExtendedString("00:00:00") == TimeOfDay(0, 0, 0));
+            assert(TimeOfDay.fromISOExtendedString("12:30:33") == TimeOfDay(12, 30, 33));
+            assert(TimeOfDay.fromISOExtendedString(" 12:30:33 ") == TimeOfDay(12, 30, 33));
+        }
+    }
+
+
+    //TODO Add function which takes a user-specified time format and produces a TimeOfDay
+
+    //TODO Add function which takes pretty much any time-string and produces a TimeOfDay
+    //     Obviously, it will be less efficient, and it probably won't manage _every_
+    //     possible date format, but a smart conversion function would be nice.
+
+
+    /++
+        Returns midnight.
+      +/
+    @property static TimeOfDay min() pure nothrow
+    {
+        return TimeOfDay.init;
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            assert(TimeOfDay.min.hour == 0);
+            assert(TimeOfDay.min.minute == 0);
+            assert(TimeOfDay.min.second == 0);
+            assert(TimeOfDay.min < TimeOfDay.max);
+        }
+    }
+
+
+    /++
+        Returns one second short of midnight.
+      +/
+    @property static TimeOfDay max() pure nothrow
+    {
+        auto tod = TimeOfDay.init;
+        tod._hour = maxHour;
+        tod._minute = maxMinute;
+        tod._second = maxSecond;
+
+        return tod;
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            assert(TimeOfDay.max.hour == 23);
+            assert(TimeOfDay.max.minute == 59);
+            assert(TimeOfDay.max.second == 59);
+            assert(TimeOfDay.max > TimeOfDay.min);
+        }
+    }
+
+
+private:
+
+    /++
+        Add seconds to the time of day. Negative values will subtract. If the
+        number of seconds overflows (or underflows), then the seconds will wrap,
+        increasing (or decreasing) the number of minutes accordingly. If the
+        number of minutes overflows (or underflows), then the minutes will wrap.
+        If the number of minutes overflows(or underflows), then the hour will
+        wrap. (e.g. adding 90 seconds to 23:59:00 would result in 00:00:30).
+
+        Params:
+            seconds = The number of seconds to add to this TimeOfDay.
+      +/
+    ref TimeOfDay addSeconds(long seconds) pure nothrow
+    {
+        long hnsecs = convert!("seconds", "hnsecs")(seconds);
+        hnsecs += convert!("hours", "hnsecs")(_hour);
+        hnsecs += convert!("minutes", "hnsecs")(_minute);
+        hnsecs += convert!("seconds", "hnsecs")(_second);
+
+        hnsecs %= convert!("days", "hnsecs")(1);
+
+        if(hnsecs < 0)
+            hnsecs += convert!("days", "hnsecs")(1);
+
+        immutable newHours = splitUnitsFromHNSecs!"hours"(hnsecs);
+        immutable newMinutes = splitUnitsFromHNSecs!"minutes"(hnsecs);
+        immutable newSeconds = splitUnitsFromHNSecs!"seconds"(hnsecs);
+
+        _hour = cast(ubyte)newHours;
+        _minute = cast(ubyte)newMinutes;
+        _second = cast(ubyte)newSeconds;
+
+        return this;
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            static void testTOD(TimeOfDay orig, int seconds, in TimeOfDay expected, size_t line = __LINE__)
+            {
+                orig.addSeconds(seconds);
+                assertPred!"=="(orig, expected, "", __FILE__, line);
+            }
+
+            testTOD(TimeOfDay(12, 30, 33), 0, TimeOfDay(12, 30, 33));
+            testTOD(TimeOfDay(12, 30, 33), 1, TimeOfDay(12, 30, 34));
+            testTOD(TimeOfDay(12, 30, 33), 2, TimeOfDay(12, 30, 35));
+            testTOD(TimeOfDay(12, 30, 33), 3, TimeOfDay(12, 30, 36));
+            testTOD(TimeOfDay(12, 30, 33), 4, TimeOfDay(12, 30, 37));
+            testTOD(TimeOfDay(12, 30, 33), 5, TimeOfDay(12, 30, 38));
+            testTOD(TimeOfDay(12, 30, 33), 10, TimeOfDay(12, 30, 43));
+            testTOD(TimeOfDay(12, 30, 33), 15, TimeOfDay(12, 30, 48));
+            testTOD(TimeOfDay(12, 30, 33), 26, TimeOfDay(12, 30, 59));
+            testTOD(TimeOfDay(12, 30, 33), 27, TimeOfDay(12, 31, 0));
+            testTOD(TimeOfDay(12, 30, 33), 30, TimeOfDay(12, 31, 3));
+            testTOD(TimeOfDay(12, 30, 33), 59, TimeOfDay(12, 31, 32));
+            testTOD(TimeOfDay(12, 30, 33), 60, TimeOfDay(12, 31, 33));
+            testTOD(TimeOfDay(12, 30, 33), 61, TimeOfDay(12, 31, 34));
+
+            testTOD(TimeOfDay(12, 30, 33), 1766, TimeOfDay(12, 59, 59));
+            testTOD(TimeOfDay(12, 30, 33), 1767, TimeOfDay(13, 0, 0));
+            testTOD(TimeOfDay(12, 30, 33), 1768, TimeOfDay(13, 0, 1));
+            testTOD(TimeOfDay(12, 30, 33), 2007, TimeOfDay(13, 4, 0));
+            testTOD(TimeOfDay(12, 30, 33), 3599, TimeOfDay(13, 30, 32));
+            testTOD(TimeOfDay(12, 30, 33), 3600, TimeOfDay(13, 30, 33));
+            testTOD(TimeOfDay(12, 30, 33), 3601, TimeOfDay(13, 30, 34));
+            testTOD(TimeOfDay(12, 30, 33), 7200, TimeOfDay(14, 30, 33));
+
+            testTOD(TimeOfDay(12, 30, 33), -1, TimeOfDay(12, 30, 32));
+            testTOD(TimeOfDay(12, 30, 33), -2, TimeOfDay(12, 30, 31));
+            testTOD(TimeOfDay(12, 30, 33), -3, TimeOfDay(12, 30, 30));
+            testTOD(TimeOfDay(12, 30, 33), -4, TimeOfDay(12, 30, 29));
+            testTOD(TimeOfDay(12, 30, 33), -5, TimeOfDay(12, 30, 28));
+            testTOD(TimeOfDay(12, 30, 33), -10, TimeOfDay(12, 30, 23));
+            testTOD(TimeOfDay(12, 30, 33), -15, TimeOfDay(12, 30, 18));
+            testTOD(TimeOfDay(12, 30, 33), -33, TimeOfDay(12, 30, 0));
+            testTOD(TimeOfDay(12, 30, 33), -34, TimeOfDay(12, 29, 59));
+            testTOD(TimeOfDay(12, 30, 33), -35, TimeOfDay(12, 29, 58));
+            testTOD(TimeOfDay(12, 30, 33), -59, TimeOfDay(12, 29, 34));
+            testTOD(TimeOfDay(12, 30, 33), -60, TimeOfDay(12, 29, 33));
+            testTOD(TimeOfDay(12, 30, 33), -61, TimeOfDay(12, 29, 32));
+
+            testTOD(TimeOfDay(12, 30, 33), -1833, TimeOfDay(12, 0, 0));
+            testTOD(TimeOfDay(12, 30, 33), -1834, TimeOfDay(11, 59, 59));
+            testTOD(TimeOfDay(12, 30, 33), -3600, TimeOfDay(11, 30, 33));
+            testTOD(TimeOfDay(12, 30, 33), -3601, TimeOfDay(11, 30, 32));
+            testTOD(TimeOfDay(12, 30, 33), -5134, TimeOfDay(11, 4, 59));
+            testTOD(TimeOfDay(12, 30, 33), -7200, TimeOfDay(10, 30, 33));
+
+            testTOD(TimeOfDay(12, 30, 0), 1, TimeOfDay(12, 30, 1));
+            testTOD(TimeOfDay(12, 30, 0), 0, TimeOfDay(12, 30, 0));
+            testTOD(TimeOfDay(12, 30, 0), -1, TimeOfDay(12, 29, 59));
+
+            testTOD(TimeOfDay(12, 0, 0), 1, TimeOfDay(12, 0, 1));
+            testTOD(TimeOfDay(12, 0, 0), 0, TimeOfDay(12, 0, 0));
+            testTOD(TimeOfDay(12, 0, 0), -1, TimeOfDay(11, 59, 59));
+
+            testTOD(TimeOfDay(0, 0, 0), 1, TimeOfDay(0, 0, 1));
+            testTOD(TimeOfDay(0, 0, 0), 0, TimeOfDay(0, 0, 0));
+            testTOD(TimeOfDay(0, 0, 0), -1, TimeOfDay(23, 59, 59));
+
+            testTOD(TimeOfDay(23, 59, 59), 1, TimeOfDay(0, 0, 0));
+            testTOD(TimeOfDay(23, 59, 59), 0, TimeOfDay(23, 59, 59));
+            testTOD(TimeOfDay(23, 59, 59), -1, TimeOfDay(23, 59, 58));
+
+            const ctod = TimeOfDay(0, 0, 0);
+            immutable itod = TimeOfDay(0, 0, 0);
+            static assert(!__traits(compiles, ctod.addSeconds(7)));
+            static assert(!__traits(compiles, itod.addSeconds(7)));
+        }
+    }
+
+
+    /++
+        Whether the given values form a valid TimeOfDay
+     +/
+    static bool _valid(int hour, int minute, int second) pure nothrow
+    {
+        return valid!"hours"(hour) && valid!"minutes"(minute) && valid!"seconds"(second);
+    }
+
+
+    pure invariant()
+    {
+        assert(_valid(_hour, _minute, _second),
+               "Invariant Failure: hour [" ~
+               numToString(_hour) ~
+               "] minute [" ~
+               numToString(_minute) ~
+               "] second [" ~
+               numToString(_second) ~
+               "]");
+    }
+
+    ubyte _hour;
+    ubyte _minute;
+    ubyte _second;
+
+    enum ubyte maxHour   = 24 - 1;
+    enum ubyte maxMinute = 60 - 1;
+    enum ubyte maxSecond = 60 - 1;
+}
+
+
+/++
+   Combines Date and TimeOfDay structs to give you an object which holds both
+   the date and the time. It is optimized for calendar operations and has no
+   concept of time zone. If you want an object which is optimized for time
+   operations based on the system time, then use SysTime. SysTime has a concept
+   of time zone and has much higher precision (hnsecs). DateTime is intended
+   primarily for calendar-based uses rather than precise time operations.
+  +/
+struct DateTime
+{
+public:
+
+    /++
+        Params:
+            date = The date portion of DateTime.
+            tod  = The time portion of DateTime.
+      +/
+    this(in Date date, in TimeOfDay tod = TimeOfDay.init) pure nothrow
+    {
+        _date = date;
+        _tod = tod;
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            {
+                auto dt = DateTime.init;
+                assertPred!"=="(dt._date, Date.init);
+                assertPred!"=="(dt._tod, TimeOfDay.init);
+            }
+
+            {
+                auto dt = DateTime(Date(1999, 7 ,6));
+                assertPred!"=="(dt._date, Date(1999, 7, 6));
+                assertPred!"=="(dt._tod, TimeOfDay.init);
+            }
+
+            {
+                auto dt = DateTime(Date(1999, 7 ,6), TimeOfDay(12, 30, 33));
+                assertPred!"=="(dt._date, Date(1999, 7, 6));
+                assertPred!"=="(dt._tod, TimeOfDay(12, 30, 33));
+            }
+        }
+    }
+
+
+    /++
+        Params:
+            year   = The year portion of the date.
+            month  = The month portion of the date.
+            day    = The day portion of the date.
+            hour   = The hour portion of the time;
+            minute = The minute portion of the time;
+            second = The second portion of the time;
+      +/
+    this(int year, int month, int day,
+         int hour = 0, int minute = 0, int second = 0) pure
+    {
+        _date = Date(year, month, day);
+        _tod = TimeOfDay(hour, minute, second);
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            {
+                auto dt = DateTime(1999, 7 ,6);
+                assertPred!"=="(dt._date, Date(1999, 7, 6));
+                assertPred!"=="(dt._tod, TimeOfDay.init);
+            }
+
+            {
+                auto dt = DateTime(1999, 7 ,6, 12, 30, 33);
+                assertPred!"=="(dt._date, Date(1999, 7, 6));
+                assertPred!"=="(dt._tod, TimeOfDay(12, 30, 33));
+            }
+        }
+    }
+
+
+    /++
+        Compares this DateTime with the given DateTime.
+
+        Returns:
+            $(TABLE
+            $(TR $(TD this &lt; rhs) $(TD &lt; 0))
+            $(TR $(TD this == rhs) $(TD 0))
+            $(TR $(TD this &gt; rhs) $(TD &gt; 0))
+            )
+     +/
+    int opCmp(in DateTime rhs) const pure nothrow
+    {
+        immutable dateResult = _date.opCmp(rhs._date);
+
+        if(dateResult != 0)
+            return dateResult;
+
+        return _tod.opCmp(rhs._tod);
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            //Test A.D.
+            assertPred!("opCmp", "==")(DateTime(Date.init, TimeOfDay.init), DateTime.init);
+
+            assertPred!("opCmp", "==")(DateTime(Date(1999, 1, 1)), DateTime(Date(1999, 1, 1)));
+            assertPred!("opCmp", "==")(DateTime(Date(1, 7, 1)), DateTime(Date(1, 7, 1)));
+            assertPred!("opCmp", "==")(DateTime(Date(1, 1, 6)), DateTime(Date(1, 1, 6)));
+
+            assertPred!("opCmp", "==")(DateTime(Date(1999, 7, 1)), DateTime(Date(1999, 7, 1)));
+            assertPred!("opCmp", "==")(DateTime(Date(1999, 7, 6)), DateTime(Date(1999, 7, 6)));
+
+            assertPred!("opCmp", "==")(DateTime(Date(1, 7, 6)), DateTime(Date(1, 7, 6)));
+
+            assertPred!("opCmp", "<")(DateTime(Date(1999, 7, 6)), DateTime(Date(2000, 7, 6)));
+            assertPred!("opCmp", ">")(DateTime(Date(2000, 7, 6)), DateTime(Date(1999, 7, 6)));
+            assertPred!("opCmp", "<")(DateTime(Date(1999, 7, 6)), DateTime(Date(1999, 8, 6)));
+            assertPred!("opCmp", ">")(DateTime(Date(1999, 8, 6)), DateTime(Date(1999, 7, 6)));
+            assertPred!("opCmp", "<")(DateTime(Date(1999, 7, 6)), DateTime(Date(1999, 7, 7)));
+            assertPred!("opCmp", ">")(DateTime(Date(1999, 7, 7)), DateTime(Date(1999, 7, 6)));
+
+            assertPred!("opCmp", "<")(DateTime(Date(1999, 8, 7)), DateTime(Date(2000, 7, 6)));
+            assertPred!("opCmp", ">")(DateTime(Date(2000, 8, 6)), DateTime(Date(1999, 7, 7)));
+            assertPred!("opCmp", "<")(DateTime(Date(1999, 7, 7)), DateTime(Date(2000, 7, 6)));
+            assertPred!("opCmp", ">")(DateTime(Date(2000, 7, 6)), DateTime(Date(1999, 7, 7)));
+            assertPred!("opCmp", "<")(DateTime(Date(1999, 7, 7)), DateTime(Date(1999, 8, 6)));
+            assertPred!("opCmp", ">")(DateTime(Date(1999, 8, 6)), DateTime(Date(1999, 7, 7)));
+
+
+            assertPred!("opCmp", "==")(DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 0)),
+                                       DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 0)));
+            assertPred!("opCmp", "==")(DateTime(Date(1999, 7, 6), TimeOfDay(12, 0, 0)),
+                                       DateTime(Date(1999, 7, 6), TimeOfDay(12, 0, 0)));
+            assertPred!("opCmp", "==")(DateTime(Date(1999, 7, 6), TimeOfDay(0, 30, 0)),
+                                       DateTime(Date(1999, 7, 6), TimeOfDay(0, 30, 0)));
+            assertPred!("opCmp", "==")(DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 33)),
+                                       DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 33)));
+
+            assertPred!("opCmp", "==")(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 0)),
+                                       DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 0)));
+            assertPred!("opCmp", "==")(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)),
+                                       DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+
+            assertPred!("opCmp", "==")(DateTime(Date(1999, 7, 6), TimeOfDay(0, 30, 33)),
+                                       DateTime(Date(1999, 7, 6), TimeOfDay(0, 30, 33)));
+            assertPred!("opCmp", "==")(DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 33)),
+                                       DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 33)));
+
+            assertPred!("opCmp", "<")(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)),
+                                      DateTime(Date(1999, 7, 6), TimeOfDay(13, 30, 33)));
+            assertPred!("opCmp", ">")(DateTime(Date(1999, 7, 6), TimeOfDay(13, 30, 33)),
+                                      DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+            assertPred!("opCmp", "<")(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)),
+                                      DateTime(Date(1999, 7, 6), TimeOfDay(12, 31, 33)));
+            assertPred!("opCmp", ">")(DateTime(Date(1999, 7, 6), TimeOfDay(12, 31, 33)),
+                                      DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+            assertPred!("opCmp", "<")(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)),
+                                      DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 34)));
+            assertPred!("opCmp", ">")(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 34)),
+                                      DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+
+            assertPred!("opCmp", ">")(DateTime(Date(1999, 7, 6), TimeOfDay(13, 30, 33)),
+                                      DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 34)));
+            assertPred!("opCmp", "<")(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 34)),
+                                      DateTime(Date(1999, 7, 6), TimeOfDay(13, 30, 33)));
+            assertPred!("opCmp", ">")(DateTime(Date(1999, 7, 6), TimeOfDay(13, 30, 33)),
+                                      DateTime(Date(1999, 7, 6), TimeOfDay(12, 31, 33)));
+            assertPred!("opCmp", "<")(DateTime(Date(1999, 7, 6), TimeOfDay(12, 31, 33)),
+                                      DateTime(Date(1999, 7, 6), TimeOfDay(13, 30, 33)));
+
+            assertPred!("opCmp", ">")(DateTime(Date(1999, 7, 6), TimeOfDay(12, 31, 33)),
+                                      DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 34)));
+            assertPred!("opCmp", "<")(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 34)),
+                                      DateTime(Date(1999, 7, 6), TimeOfDay(12, 31, 33)));
+
+            assertPred!("opCmp", "<")(DateTime(Date(1999, 7, 6), TimeOfDay(13, 30, 33)),
+                                      DateTime(Date(2000, 7, 6), TimeOfDay(12, 30, 33)));
+            assertPred!("opCmp", ">")(DateTime(Date(2000, 7, 6), TimeOfDay(12, 30, 33)),
+                                      DateTime(Date(1999, 7, 6), TimeOfDay(13, 30, 33)));
+            assertPred!("opCmp", "<")(DateTime(Date(1999, 7, 6), TimeOfDay(12, 31, 33)),
+                                      DateTime(Date(2000, 7, 6), TimeOfDay(12, 30, 33)));
+            assertPred!("opCmp", ">")(DateTime(Date(2000, 7, 6), TimeOfDay(12, 30, 33)),
+                                      DateTime(Date(1999, 7, 6), TimeOfDay(12, 31, 33)));
+            assertPred!("opCmp", "<")(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 34)),
+                                      DateTime(Date(2000, 7, 6), TimeOfDay(12, 30, 33)));
+            assertPred!("opCmp", ">")(DateTime(Date(2000, 7, 6), TimeOfDay(12, 30, 33)),
+                                      DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 34)));
+
+            assertPred!("opCmp", "<")(DateTime(Date(1999, 7, 6), TimeOfDay(13, 30, 33)),
+                                      DateTime(Date(1999, 8, 6), TimeOfDay(12, 30, 33)));
+            assertPred!("opCmp", ">")(DateTime(Date(1999, 8, 6), TimeOfDay(12, 30, 33)),
+                                      DateTime(Date(1999, 7, 6), TimeOfDay(13, 30, 33)));
+            assertPred!("opCmp", "<")(DateTime(Date(1999, 7, 6), TimeOfDay(12, 31, 33)),
+                                      DateTime(Date(1999, 8, 6), TimeOfDay(12, 30, 33)));
+            assertPred!("opCmp", ">")(DateTime(Date(1999, 8, 6), TimeOfDay(12, 30, 33)),
+                                      DateTime(Date(1999, 7, 6), TimeOfDay(12, 31, 33)));
+            assertPred!("opCmp", "<")(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 34)),
+                                      DateTime(Date(1999, 8, 6), TimeOfDay(12, 30, 33)));
+            assertPred!("opCmp", ">")(DateTime(Date(1999, 8, 6), TimeOfDay(12, 30, 33)),
+                                      DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 34)));
+
+            assertPred!("opCmp", "<")(DateTime(Date(1999, 7, 6), TimeOfDay(13, 30, 33)),
+                                      DateTime(Date(1999, 7, 7), TimeOfDay(12, 30, 33)));
+            assertPred!("opCmp", ">")(DateTime(Date(1999, 7, 7), TimeOfDay(12, 30, 33)),
+                                      DateTime(Date(1999, 7, 6), TimeOfDay(13, 30, 33)));
+            assertPred!("opCmp", "<")(DateTime(Date(1999, 7, 6), TimeOfDay(12, 31, 33)),
+                                      DateTime(Date(1999, 7, 7), TimeOfDay(12, 31, 33)));
+            assertPred!("opCmp", ">")(DateTime(Date(1999, 7, 7), TimeOfDay(12, 30, 33)),
+                                      DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+            assertPred!("opCmp", "<")(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 34)),
+                                      DateTime(Date(1999, 7, 7), TimeOfDay(12, 30, 33)));
+            assertPred!("opCmp", ">")(DateTime(Date(1999, 7, 7), TimeOfDay(12, 30, 33)),
+                                      DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 34)));
+
+            //Test B.C.
+            assertPred!("opCmp", "==")(DateTime(Date(-1, 1, 1), TimeOfDay(12, 30, 33)),
+                                       DateTime(Date(-1, 1, 1), TimeOfDay(12, 30, 33)));
+            assertPred!("opCmp", "==")(DateTime(Date(-1, 7, 1), TimeOfDay(12, 30, 33)),
+                                       DateTime(Date(-1, 7, 1), TimeOfDay(12, 30, 33)));
+            assertPred!("opCmp", "==")(DateTime(Date(-1, 1, 6), TimeOfDay(12, 30, 33)),
+                                       DateTime(Date(-1, 1, 6), TimeOfDay(12, 30, 33)));
+
+            assertPred!("opCmp", "==")(DateTime(Date(-1999, 7, 1), TimeOfDay(12, 30, 33)),
+                                       DateTime(Date(-1999, 7, 1), TimeOfDay(12, 30, 33)));
+            assertPred!("opCmp", "==")(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)),
+                                       DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
+
+            assertPred!("opCmp", "==")(DateTime(Date(-1, 7, 6), TimeOfDay(12, 30, 33)),
+                                       DateTime(Date(-1, 7, 6), TimeOfDay(12, 30, 33)));
+
+            assertPred!("opCmp", "<")(DateTime(Date(-2000, 7, 6), TimeOfDay(12, 30, 33)),
+                                      DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
+            assertPred!("opCmp", ">")(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)),
+                                      DateTime(Date(-2000, 7, 6), TimeOfDay(12, 30, 33)));
+            assertPred!("opCmp", "<")(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)),
+                                      DateTime(Date(-1999, 8, 6), TimeOfDay(12, 30, 33)));
+            assertPred!("opCmp", ">")(DateTime(Date(-1999, 8, 6), TimeOfDay(12, 30, 33)),
+                                      DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
+            assertPred!("opCmp", "<")(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)),
+                                      DateTime(Date(-1999, 7, 7), TimeOfDay(12, 30, 33)));
+            assertPred!("opCmp", ">")(DateTime(Date(-1999, 7, 7), TimeOfDay(12, 30, 33)),
+                                      DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
+
+            assertPred!("opCmp", "<")(DateTime(Date(-2000, 8, 6), TimeOfDay(12, 30, 33)),
+                                      DateTime(Date(-1999, 7, 7), TimeOfDay(12, 30, 33)));
+            assertPred!("opCmp", ">")(DateTime(Date(-1999, 8, 7), TimeOfDay(12, 30, 33)),
+                                      DateTime(Date(-2000, 7, 6), TimeOfDay(12, 30, 33)));
+            assertPred!("opCmp", "<")(DateTime(Date(-2000, 7, 6), TimeOfDay(12, 30, 33)),
+                                      DateTime(Date(-1999, 7, 7), TimeOfDay(12, 30, 33)));
+            assertPred!("opCmp", ">")(DateTime(Date(-1999, 7, 7), TimeOfDay(12, 30, 33)),
+                                      DateTime(Date(-2000, 7, 6), TimeOfDay(12, 30, 33)));
+            assertPred!("opCmp", "<")(DateTime(Date(-1999, 7, 7), TimeOfDay(12, 30, 33)),
+                                      DateTime(Date(-1999, 8, 6), TimeOfDay(12, 30, 33)));
+            assertPred!("opCmp", ">")(DateTime(Date(-1999, 8, 6), TimeOfDay(12, 30, 33)),
+                                      DateTime(Date(-1999, 7, 7), TimeOfDay(12, 30, 33)));
+
+            //Test Both
+            assertPred!("opCmp", "<")(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)),
+                                      DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+            assertPred!("opCmp", ">")(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)),
+                                      DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
+
+            assertPred!("opCmp", "<")(DateTime(Date(-1999, 8, 6), TimeOfDay(12, 30, 33)),
+                                      DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+            assertPred!("opCmp", ">")(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)),
+                                      DateTime(Date(-1999, 8, 6), TimeOfDay(12, 30, 33)));
+
+            assertPred!("opCmp", "<")(DateTime(Date(-1999, 7, 7), TimeOfDay(12, 30, 33)),
+                                      DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+            assertPred!("opCmp", ">")(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)),
+                                      DateTime(Date(-1999, 7, 7), TimeOfDay(12, 30, 33)));
+
+            assertPred!("opCmp", "<")(DateTime(Date(-1999, 8, 7), TimeOfDay(12, 30, 33)),
+                                      DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+            assertPred!("opCmp", ">")(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)),
+                                      DateTime(Date(-1999, 8, 7), TimeOfDay(12, 30, 33)));
+
+            assertPred!("opCmp", "<")(DateTime(Date(-1999, 8, 6), TimeOfDay(12, 30, 33)),
+                                      DateTime(Date(1999, 6, 6), TimeOfDay(12, 30, 33)));
+            assertPred!("opCmp", ">")(DateTime(Date(1999, 6, 8), TimeOfDay(12, 30, 33)),
+                                      DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
+
+            auto dt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 33, 30));
+            const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 33, 30));
+            immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 33, 30));
+            static assert(__traits(compiles, dt.opCmp(dt)));
+            static assert(__traits(compiles, dt.opCmp(cdt)));
+            static assert(__traits(compiles, dt.opCmp(idt)));
+            static assert(__traits(compiles, cdt.opCmp(dt)));
+            static assert(__traits(compiles, cdt.opCmp(cdt)));
+            static assert(__traits(compiles, cdt.opCmp(idt)));
+            static assert(__traits(compiles, idt.opCmp(dt)));
+            static assert(__traits(compiles, idt.opCmp(cdt)));
+            static assert(__traits(compiles, idt.opCmp(idt)));
+        }
+    }
+
+
+    /++
+        The date portion of DateTime.
+      +/
+    @property Date date() const pure nothrow
+    {
+        return _date;
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            {
+                auto dt = DateTime.init;
+                assertPred!"=="(dt.date, Date.init);
+            }
+
+            {
+                auto dt = DateTime(Date(1999, 7, 6));
+                assertPred!"=="(dt.date, Date(1999, 7, 6));
+            }
+
+            const cdt = DateTime(1999, 7, 6);
+            immutable idt = DateTime(1999, 7, 6);
+            static assert(__traits(compiles, cdt.date == Date(2010, 1, 1)));
+            static assert(__traits(compiles, idt.date == Date(2010, 1, 1)));
+        }
+    }
+
+
+    /++
+        The date portion of DateTime.
+
+        Params:
+            date = The Date to set this DateTime's date portion to.
+      +/
+    @property void date(in Date date) pure nothrow
+    {
+        _date = date;
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            auto dt = DateTime.init;
+            dt.date = Date(1999, 7, 6);
+            assertPred!"=="(dt._date, Date(1999, 7, 6));
+            assertPred!"=="(dt._tod, TimeOfDay.init);
+
+            const cdt = DateTime(1999, 7, 6);
+            immutable idt = DateTime(1999, 7, 6);
+            static assert(!__traits(compiles, cdt.date = Date(2010, 1, 1)));
+            static assert(!__traits(compiles, idt.date = Date(2010, 1, 1)));
+        }
+    }
+
+
+    /++
+        The time portion of DateTime.
+      +/
+    @property TimeOfDay timeOfDay() const pure nothrow
+    {
+        return _tod;
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            {
+                auto dt = DateTime.init;
+                assertPred!"=="(dt.timeOfDay, TimeOfDay.init);
+            }
+
+            {
+                auto dt = DateTime(Date.init, TimeOfDay(12, 30, 33));
+                assertPred!"=="(dt.timeOfDay, TimeOfDay(12, 30, 33));
+            }
+
+            const cdt = DateTime(1999, 7, 6, 12, 30, 33);
+            immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
+            static assert(__traits(compiles, cdt.timeOfDay == TimeOfDay(12, 30, 33)));
+            static assert(__traits(compiles, idt.timeOfDay == TimeOfDay(12, 30, 33)));
+        }
+    }
+
+
+    /++
+        The time portion of DateTime.
+
+        Params:
+            tod = The TimeOfDay to set this DateTime's time portion to.
+      +/
+    @property void timeOfDay(in TimeOfDay tod) pure nothrow
+    {
+        _tod = tod;
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            auto dt = DateTime.init;
+            dt.timeOfDay = TimeOfDay(12, 30, 33);
+            assertPred!"=="(dt._date, date.init);
+            assertPred!"=="(dt._tod, TimeOfDay(12, 30, 33));
+
+            const cdt = DateTime(1999, 7, 6, 12, 30, 33);
+            immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
+            static assert(!__traits(compiles, cdt.timeOfDay = TimeOfDay(12, 30, 33)));
+            static assert(!__traits(compiles, idt.timeOfDay = TimeOfDay(12, 30, 33)));
+        }
+    }
+
+
+    /++
+        Year of the Gregorian Calendar. Positive numbers are A.D. Non-positive
+        are B.C.
+     +/
+    @property short year() const pure nothrow
+    {
+        return _date.year;
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            assertPred!"=="(Date.init.year, 1);
+            assertPred!"=="(Date(1999, 7, 6).year, 1999);
+            assertPred!"=="(Date(-1999, 7, 6).year, -1999);
+
+            const cdt = DateTime(1999, 7, 6, 12, 30, 33);
+            immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
+            static assert(__traits(compiles, idt.year));
+            static assert(__traits(compiles, idt.year));
+        }
+    }
+
+
+    /++
+        Year of the Gregorian Calendar. Positive numbers are A.D. Non-positive
+        are B.C.
+
+        Params:
+            year = The year to set this DateTime's year to.
+
+        Throws:
+            DateTimeException if the new year is not a leap year and if the
+            resulting date would be on February 29th.
+
+        Examples:
+--------------------
+assert(DateTime(Date(1999, 7, 6), TimeOfDay(9, 7, 5)).year == 1999);
+assert(DateTime(Date(2010, 10, 4), TimeOfDay(0, 0, 30)).year == 2010);
+assert(DateTime(Date(-7, 4, 5), TimeOfDay(7, 45, 2)).year == -7);
+--------------------
+     +/
+    @property void year(int year) pure
+    {
+        _date.year = year;
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            static void testDT(DateTime dt, int year, in DateTime expected, size_t line = __LINE__)
+            {
+                dt.year = year;
+                assertPred!"=="(dt, expected, "", __FILE__, line);
+            }
+
+            testDT(DateTime(Date(1, 1, 1), TimeOfDay(12, 30, 33)), 1999, DateTime(Date(1999, 1, 1), TimeOfDay(12, 30, 33)));
+            testDT(DateTime(Date(1, 1, 1), TimeOfDay(12, 30, 33)), 0, DateTime(Date(0, 1, 1), TimeOfDay(12, 30, 33)));
+            testDT(DateTime(Date(1, 1, 1), TimeOfDay(12, 30, 33)), -1999, DateTime(Date(-1999, 1, 1), TimeOfDay(12, 30, 33)));
+
+            const cdt = DateTime(1999, 7, 6, 12, 30, 33);
+            immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
+            static assert(!__traits(compiles, cdt.year = 7));
+            static assert(!__traits(compiles, idt.year = 7));
+
+            //Verify Examples.
+            assert(DateTime(Date(1999, 7, 6), TimeOfDay(9, 7, 5)).year == 1999);
+            assert(DateTime(Date(2010, 10, 4), TimeOfDay(0, 0, 30)).year == 2010);
+            assert(DateTime(Date(-7, 4, 5), TimeOfDay(7, 45, 2)).year == -7);
+        }
+    }
+
+
+    /++
+        Year B.C. of the Gregorian Calendar counting year 0 as 1 B.C.
+
+        Throws:
+            DateTimeException if $(D isAD) is true.
+
+        Examples:
+--------------------
+assert(DateTime(Date(0, 1, 1), TimeOfDay(12, 30, 33)).yearBC == 1);
+assert(DateTime(Date(-1, 1, 1), TimeOfDay(10, 7, 2)).yearBC == 2);
+assert(DateTime(Date(-100, 1, 1), TimeOfDay(4, 59, 0)).yearBC == 101);
+--------------------
+     +/
+    @property short yearBC() const pure
+    {
+        return _date.yearBC;
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            assertThrown!DateTimeException((in DateTime dt){dt.yearBC;}(DateTime(Date(1, 1, 1))));
+
+            auto dt = DateTime(1999, 7, 6, 12, 30, 33);
+            const cdt = DateTime(1999, 7, 6, 12, 30, 33);
+            immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
+            static assert(__traits(compiles, dt.yearBC = 12));
+            static assert(!__traits(compiles, cdt.yearBC = 12));
+            static assert(!__traits(compiles, idt.yearBC = 12));
+
+            //Verify Examples.
+            assert(DateTime(Date(0, 1, 1), TimeOfDay(12, 30, 33)).yearBC == 1);
+            assert(DateTime(Date(-1, 1, 1), TimeOfDay(10, 7, 2)).yearBC == 2);
+            assert(DateTime(Date(-100, 1, 1), TimeOfDay(4, 59, 0)).yearBC == 101);
+        }
+    }
+
+
+    /++
+        Year B.C. of the Gregorian Calendar counting year 0 as 1 B.C.
+
+        Params:
+            year = The year B.C. to set this DateTime's year to.
+
+        Throws:
+            DateTimeException if a non-positive value is given.
+
+        Examples:
+--------------------
+auto dt = DateTime(Date(2010, 1, 1), TimeOfDay(7, 30, 0));
+dt.yearBC = 1;
+assert(dt == DateTime(Date(0, 1, 1), TimeOfDay(7, 30, 0)));
+
+dt.yearBC = 10;
+assert(dt == DateTime(Date(-9, 1, 1), TimeOfDay(7, 30, 0)));
+--------------------
+     +/
+    @property void yearBC(int year) pure
+    {
+        _date.yearBC = year;
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            assertThrown!DateTimeException((DateTime dt){dt.yearBC = -1;}(DateTime(Date(1, 1, 1))));
+
+            {
+                auto dt = DateTime(1999, 7, 6, 12, 30, 33);
+                const cdt = DateTime(1999, 7, 6, 12, 30, 33);
+                immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
+                static assert(__traits(compiles, dt.yearBC = 12));
+                static assert(!__traits(compiles, cdt.yearBC = 12));
+                static assert(!__traits(compiles, idt.yearBC = 12));
+            }
+
+            //Verify Examples.
+            {
+                auto dt = DateTime(Date(2010, 1, 1), TimeOfDay(7, 30, 0));
+                dt.yearBC = 1;
+                assert(dt == DateTime(Date(0, 1, 1), TimeOfDay(7, 30, 0)));
+
+                dt.yearBC = 10;
+                assert(dt == DateTime(Date(-9, 1, 1), TimeOfDay(7, 30, 0)));
+            }
+        }
+    }
+
+
+    /++
+        Month of a Gregorian Year.
+
+        Examples:
+--------------------
+assert(DateTime(Date(1999, 7, 6), TimeOfDay(9, 7, 5)).month == 7);
+assert(DateTime(Date(2010, 10, 4), TimeOfDay(0, 0, 30)).month == 10);
+assert(DateTime(Date(-7, 4, 5), TimeOfDay(7, 45, 2)).month == 4);
+--------------------
+     +/
+    @property Month month() const pure nothrow
+    {
+        return _date.month;
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            assertPred!"=="(DateTime.init.month, 1);
+            assertPred!"=="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)).month, 7);
+            assertPred!"=="(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)).month, 7);
+
+            const cdt = DateTime(1999, 7, 6, 12, 30, 33);
+            immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
+            static assert(__traits(compiles, cdt.month));
+            static assert(__traits(compiles, idt.month));
+
+            //Verify Examples.
+            assert(DateTime(Date(1999, 7, 6), TimeOfDay(9, 7, 5)).month == 7);
+            assert(DateTime(Date(2010, 10, 4), TimeOfDay(0, 0, 30)).month == 10);
+            assert(DateTime(Date(-7, 4, 5), TimeOfDay(7, 45, 2)).month == 4);
+        }
+    }
+
+
+    /++
+        Month of a Gregorian Year.
+
+        Params:
+            month = The month to set this DateTime's month to.
+
+        Throws:
+            DateTimeException if the given month is not a valid month.
+     +/
+    @property void month(Month month) pure
+    {
+        _date.month = month;
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            static void testDT(DateTime dt, Month month, in DateTime expected = DateTime.init, size_t line = __LINE__)
+            {
+                dt.month = month;
+                assert(expected != DateTime.init);
+                assertPred!"=="(dt, expected, "", __FILE__, line);
+            }
+
+            assertThrown!DateTimeException(testDT(DateTime(Date(1, 1, 1), TimeOfDay(12, 30, 33)), cast(Month)0));
+            assertThrown!DateTimeException(testDT(DateTime(Date(1, 1, 1), TimeOfDay(12, 30, 33)), cast(Month)13));
+
+            testDT(DateTime(Date(1, 1, 1), TimeOfDay(12, 30, 33)), cast(Month)7, DateTime(Date(1, 7, 1), TimeOfDay(12, 30, 33)));
+            testDT(DateTime(Date(-1, 1, 1), TimeOfDay(12, 30, 33)), cast(Month)7, DateTime(Date(-1, 7, 1), TimeOfDay(12, 30, 33)));
+
+            const cdt = DateTime(1999, 7, 6, 12, 30, 33);
+            immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
+            static assert(!__traits(compiles, cdt.month = 12));
+            static assert(!__traits(compiles, idt.month = 12));
+        }
+    }
+
+
+    /++
+        Day of a Gregorian Month.
+
+        Examples:
+--------------------
+assert(DateTime(Date(1999, 7, 6), TimeOfDay(9, 7, 5)).day == 6);
+assert(DateTime(Date(2010, 10, 4), TimeOfDay(0, 0, 30)).day == 4);
+assert(DateTime(Date(-7, 4, 5), TimeOfDay(7, 45, 2)).day == 5);
+--------------------
+     +/
+    @property ubyte day() const pure nothrow
+    {
+        return _date.day;
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            assertPred!"=="(DateTime.init.day, 1);
+            assertPred!"=="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)).day, 6);
+            assertPred!"=="(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)).day, 6);
+
+            const cdt = DateTime(1999, 7, 6, 12, 30, 33);
+            immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
+            static assert(__traits(compiles, cdt.day));
+            static assert(__traits(compiles, idt.day));
+
+            //Verify Examples.
+            assert(DateTime(Date(1999, 7, 6), TimeOfDay(9, 7, 5)).day == 6);
+            assert(DateTime(Date(2010, 10, 4), TimeOfDay(0, 0, 30)).day == 4);
+            assert(DateTime(Date(-7, 4, 5), TimeOfDay(7, 45, 2)).day == 5);
+        }
+    }
+
+
+    /++
+        Day of a Gregorian Month.
+
+        Params:
+            day = The day of the month to set this DateTime's day to.
+
+        Throws:
+            DateTimeException if the given day is not a valid day of the current month.
+     +/
+    @property void day(int day) pure
+    {
+        _date.day = day;
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            static void testDT(DateTime dt, int day)
+            {
+                dt.day = day;
+            }
+
+            //Test A.D.
+            assertThrown!DateTimeException(testDT(DateTime(Date(1, 1, 1)), 0));
+            assertThrown!DateTimeException(testDT(DateTime(Date(1, 1, 1)), 32));
+            assertThrown!DateTimeException(testDT(DateTime(Date(1, 2, 1)), 29));
+            assertThrown!DateTimeException(testDT(DateTime(Date(4, 2, 1)), 30));
+            assertThrown!DateTimeException(testDT(DateTime(Date(1, 3, 1)), 32));
+            assertThrown!DateTimeException(testDT(DateTime(Date(1, 4, 1)), 31));
+            assertThrown!DateTimeException(testDT(DateTime(Date(1, 5, 1)), 32));
+            assertThrown!DateTimeException(testDT(DateTime(Date(1, 6, 1)), 31));
+            assertThrown!DateTimeException(testDT(DateTime(Date(1, 7, 1)), 32));
+            assertThrown!DateTimeException(testDT(DateTime(Date(1, 8, 1)), 32));
+            assertThrown!DateTimeException(testDT(DateTime(Date(1, 9, 1)), 31));
+            assertThrown!DateTimeException(testDT(DateTime(Date(1, 10, 1)), 32));
+            assertThrown!DateTimeException(testDT(DateTime(Date(1, 11, 1)), 31));
+            assertThrown!DateTimeException(testDT(DateTime(Date(1, 12, 1)), 32));
+
+            assertNotThrown!DateTimeException(testDT(DateTime(Date(1, 1, 1)), 31));
+            assertNotThrown!DateTimeException(testDT(DateTime(Date(1, 2, 1)), 28));
+            assertNotThrown!DateTimeException(testDT(DateTime(Date(4, 2, 1)), 29));
+            assertNotThrown!DateTimeException(testDT(DateTime(Date(1, 3, 1)), 31));
+            assertNotThrown!DateTimeException(testDT(DateTime(Date(1, 4, 1)), 30));
+            assertNotThrown!DateTimeException(testDT(DateTime(Date(1, 5, 1)), 31));
+            assertNotThrown!DateTimeException(testDT(DateTime(Date(1, 6, 1)), 30));
+            assertNotThrown!DateTimeException(testDT(DateTime(Date(1, 7, 1)), 31));
+            assertNotThrown!DateTimeException(testDT(DateTime(Date(1, 8, 1)), 31));
+            assertNotThrown!DateTimeException(testDT(DateTime(Date(1, 9, 1)), 30));
+            assertNotThrown!DateTimeException(testDT(DateTime(Date(1, 10, 1)), 31));
+            assertNotThrown!DateTimeException(testDT(DateTime(Date(1, 11, 1)), 30));
+            assertNotThrown!DateTimeException(testDT(DateTime(Date(1, 12, 1)), 31));
+
+            {
+                auto dt = DateTime(Date(1, 1, 1), TimeOfDay(7, 12, 22));
+                dt.day = 6;
+                assertPred!"=="(dt, DateTime(Date(1, 1, 6), TimeOfDay(7, 12, 22)));
+            }
+
+            //Test B.C.
+            assertThrown!DateTimeException(testDT(DateTime(Date(-1, 1, 1)), 0));
+            assertThrown!DateTimeException(testDT(DateTime(Date(-1, 1, 1)), 32));
+            assertThrown!DateTimeException(testDT(DateTime(Date(-1, 2, 1)), 29));
+            assertThrown!DateTimeException(testDT(DateTime(Date(0, 2, 1)), 30));
+            assertThrown!DateTimeException(testDT(DateTime(Date(-1, 3, 1)), 32));
+            assertThrown!DateTimeException(testDT(DateTime(Date(-1, 4, 1)), 31));
+            assertThrown!DateTimeException(testDT(DateTime(Date(-1, 5, 1)), 32));
+            assertThrown!DateTimeException(testDT(DateTime(Date(-1, 6, 1)), 31));
+            assertThrown!DateTimeException(testDT(DateTime(Date(-1, 7, 1)), 32));
+            assertThrown!DateTimeException(testDT(DateTime(Date(-1, 8, 1)), 32));
+            assertThrown!DateTimeException(testDT(DateTime(Date(-1, 9, 1)), 31));
+            assertThrown!DateTimeException(testDT(DateTime(Date(-1, 10, 1)), 32));
+            assertThrown!DateTimeException(testDT(DateTime(Date(-1, 11, 1)), 31));
+            assertThrown!DateTimeException(testDT(DateTime(Date(-1, 12, 1)), 32));
+
+            assertNotThrown!DateTimeException(testDT(DateTime(Date(-1, 1, 1)), 31));
+            assertNotThrown!DateTimeException(testDT(DateTime(Date(-1, 2, 1)), 28));
+            assertNotThrown!DateTimeException(testDT(DateTime(Date(0, 2, 1)), 29));
+            assertNotThrown!DateTimeException(testDT(DateTime(Date(-1, 3, 1)), 31));
+            assertNotThrown!DateTimeException(testDT(DateTime(Date(-1, 4, 1)), 30));
+            assertNotThrown!DateTimeException(testDT(DateTime(Date(-1, 5, 1)), 31));
+            assertNotThrown!DateTimeException(testDT(DateTime(Date(-1, 6, 1)), 30));
+            assertNotThrown!DateTimeException(testDT(DateTime(Date(-1, 7, 1)), 31));
+            assertNotThrown!DateTimeException(testDT(DateTime(Date(-1, 8, 1)), 31));
+            assertNotThrown!DateTimeException(testDT(DateTime(Date(-1, 9, 1)), 30));
+            assertNotThrown!DateTimeException(testDT(DateTime(Date(-1, 10, 1)), 31));
+            assertNotThrown!DateTimeException(testDT(DateTime(Date(-1, 11, 1)), 30));
+            assertNotThrown!DateTimeException(testDT(DateTime(Date(-1, 12, 1)), 31));
+
+            auto dt = DateTime(Date(-1, 1, 1), TimeOfDay(7, 12, 22));
+            dt.day = 6;
+            assertPred!"=="(dt, DateTime(Date(-1, 1, 6), TimeOfDay(7, 12, 22)));
+
+            const cdt = DateTime(1999, 7, 6, 12, 30, 33);
+            immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
+            static assert(!__traits(compiles, cdt.day = 27));
+            static assert(!__traits(compiles, idt.day = 27));
+        }
+    }
+
+
+    /++
+        Hours passed midnight.
+     +/
+    @property ubyte hour() const pure nothrow
+    {
+        return _tod.hour;
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            assertPred!"=="(DateTime.init.hour, 0);
+            assertPred!"=="(DateTime(Date.init, TimeOfDay(12, 0, 0)).hour, 12);
+
+            const cdt = DateTime(1999, 7, 6, 12, 30, 33);
+            immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
+            static assert(__traits(compiles, cdt.hour));
+            static assert(__traits(compiles, idt.hour));
+        }
+    }
+
+
+    /++
+        Hours passed midnight.
+
+        Params:
+            hour = The hour of the day to set this DateTime's hour to.
+
+        Throws:
+            DateTimeException if the given hour would result in an invalid
+            DateTime.
+     +/
+    @property void hour(int hour) pure
+    {
+        _tod.hour = hour;
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            assertThrown!DateTimeException((){DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 0)).hour = 24;}());
+
+            auto dt = DateTime.init;
+            dt.hour = 12;
+            assertPred!"=="(dt, DateTime(1, 1, 1, 12, 0, 0));
+
+            const cdt = DateTime(1999, 7, 6, 12, 30, 33);
+            immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
+            static assert(!__traits(compiles, cdt.hour = 27));
+            static assert(!__traits(compiles, idt.hour = 27));
+        }
+    }
+
+
+    /++
+        Minutes passed the hour.
+     +/
+    @property ubyte minute() const pure nothrow
+    {
+        return _tod.minute;
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            assertPred!"=="(DateTime.init.minute, 0);
+            assertPred!"=="(DateTime(1, 1, 1, 0, 30, 0).minute, 30);
+
+            const cdt = DateTime(1999, 7, 6, 12, 30, 33);
+            immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
+            static assert(__traits(compiles, cdt.minute));
+            static assert(__traits(compiles, idt.minute));
+        }
+    }
+
+
+    /++
+        Minutes passed the hour.
+
+        Params:
+            minute = The minute to set this DateTime's minute to.
+
+        Throws:
+            DateTimeException if the given minute would result in an invalid
+            DateTime.
+     +/
+    @property void minute(int minute) pure
+    {
+        _tod.minute = minute;
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            assertThrown!DateTimeException((){DateTime.init.minute = 60;}());
+
+            auto dt = DateTime.init;
+            dt.minute = 30;
+            assertPred!"=="(dt, DateTime(1, 1, 1, 0, 30, 0));
+
+            const cdt = DateTime(1999, 7, 6, 12, 30, 33);
+            immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
+            static assert(!__traits(compiles, cdt.minute = 27));
+            static assert(!__traits(compiles, idt.minute = 27));
+        }
+    }
+
+
+    /++
+        Seconds passed the minute.
+     +/
+    @property ubyte second() const pure nothrow
+    {
+        return _tod.second;
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            assertPred!"=="(DateTime.init.second, 0);
+            assertPred!"=="(DateTime(1, 1, 1, 0, 0, 33).second, 33);
+
+            const cdt = DateTime(1999, 7, 6, 12, 30, 33);
+            immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
+            static assert(__traits(compiles, cdt.second));
+            static assert(__traits(compiles, idt.second));
+        }
+    }
+
+
+    /++
+        Seconds passed the minute.
+
+        Params
+            second = The second to set this DateTime's second to.
+
+        Throws:
+            DateTimeException if the given seconds would result in an invalid
+            DateTime.
+     +/
+    @property void second(int second) pure
+    {
+        _tod.second = second;
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            assertThrown!DateTimeException((){DateTime.init.second = 60;}());
+
+            auto dt = DateTime.init;
+            dt.second = 33;
+            assertPred!"=="(dt, DateTime(1, 1, 1, 0, 0, 33));
+
+            const cdt = DateTime(1999, 7, 6, 12, 30, 33);
+            immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
+            static assert(!__traits(compiles, cdt.second = 27));
+            static assert(!__traits(compiles, idt.second = 27));
+        }
+    }
+
+
+    /++
+        Adds the given number of years or months to this DateTime. A negative
+        number will subtract.
+
+        Note that if day overflow is allowed, and the date with the adjusted
+        year/month overflows the number of days in the new month, then the month
+        will be incremented by one, and the days set to the number of days overflowed.
+        (e.g. if the day were 31 and the new month were June, then the month would
+        be incremented to July, and the new day would be 1). If day overflow is
+        not allowed, then the day will be set to the last valid day in the month
+        (e.g. June 31st would become June 30th).
+
+        Params:
+            units         = The type of units to add ("years" or "months").
+            value         = The number of months or years to add to this DateTime.
+            allowOverflow = Whether the days should be allowed to overflow, causing
+                            the month to increment.
+
+        Examples:
+--------------------
+auto dt1 = DateTime(Date(2010, 1, 1), TimeOfDay(12, 30, 33));
+dt1.add!"months"(11);
+assert(dt1 == DateTime(Date(2010, 12, 1), TimeOfDay(12, 30, 33)));
+
+auto dt2 = DateTime(Date(2010, 1, 1), TimeOfDay(12, 30, 33));
+dt2.add!"months"(-11);
+assert(dt2 == DateTime(Date(2009, 2, 1), TimeOfDay(12, 30, 33)));
+
+auto dt3 = DateTime(Date(2000, 2, 29), TimeOfDay(12, 30, 33));
+dt3.add!"years"(1);
+assert(dt3 == DateTime(Date(2001, 3, 1), TimeOfDay(12, 30, 33)));
+
+auto dt4 = DateTime(Date(2000, 2, 29), TimeOfDay(12, 30, 33));
+dt4.add!"years"(1, AllowDayOverflow.no);
+assert(dt4 == DateTime(Date(2001, 2, 28), TimeOfDay(12, 30, 33)));
+--------------------
+      +/
+    /+ref DateTime+/ void add(string units)(long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) pure nothrow
+        if(units == "years" ||
+           units == "months")
+    {
+        _date.add!units(value, allowOverflow);
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            const cdt = DateTime(1999, 7, 6, 12, 30, 33);
+            immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
+            static assert(!__traits(compiles, cdt.add!"years"(4)));
+            static assert(!__traits(compiles, idt.add!"years"(4)));
+            static assert(!__traits(compiles, cdt.add!"months"(4)));
+            static assert(!__traits(compiles, idt.add!"months"(4)));
+
+            //Verify Examples.
+            auto dt1 = DateTime(Date(2010, 1, 1), TimeOfDay(12, 30, 33));
+            dt1.add!"months"(11);
+            assert(dt1 == DateTime(Date(2010, 12, 1), TimeOfDay(12, 30, 33)));
+
+            auto dt2 = DateTime(Date(2010, 1, 1), TimeOfDay(12, 30, 33));
+            dt2.add!"months"(-11);
+            assert(dt2 == DateTime(Date(2009, 2, 1), TimeOfDay(12, 30, 33)));
+
+            auto dt3 = DateTime(Date(2000, 2, 29), TimeOfDay(12, 30, 33));
+            dt3.add!"years"(1);
+            assert(dt3 == DateTime(Date(2001, 3, 1), TimeOfDay(12, 30, 33)));
+
+            auto dt4 = DateTime(Date(2000, 2, 29), TimeOfDay(12, 30, 33));
+            dt4.add!"years"(1, AllowDayOverflow.no);
+            assert(dt4 == DateTime(Date(2001, 2, 28), TimeOfDay(12, 30, 33)));
+        }
+    }
+
+
+    /++
+        Adds the given number of years or months this DateTime. A negative
+        number will subtract.
+
+        The difference between rolling and adding is that rolling does not
+        affect larger units. So, if you roll the DateTime 12 months, you get
+        the exact same Date. However, the days can still be affected due to
+        the differing number of days in each month.
+
+        Params:
+            units         = The units to roll.
+            value         = The number of units to add to this DateTime.
+            allowOverflow = Whether the days should be allowed to overflow, causing the month to increment.
+
+        Examples:
+--------------------
+auto dt1 = DateTime(Date(2010, 1, 1), TimeOfDay(12, 33, 33));
+dt1.roll!"years"(1);
+assert(dt1 == DateTime(Date(2011, 1, 1), TimeOfDay(12, 33, 33)));
+
+auto dt2 = DateTime(Date(2010, 1, 1), TimeOfDay(12, 33, 33));
+dt2.roll!"months"(-12);
+assert(dt2 == DateTime(Date(2010, 1, 1), TimeOfDay(12, 33, 33)));
+
+auto dt3 = DateTime(Date(1999, 1, 29), TimeOfDay(12, 33, 33));
+dt3.roll!"months"(1);
+assert(dt3 == DateTime(Date(1999, 3, 1), TimeOfDay(12, 33, 33)));
+
+auto dt4 = DateTime(Date(1999, 1, 29), TimeOfDay(12, 33, 33));
+dt4.roll!"months"(1, AllowDayOverflow.no);
+assert(dt4 == DateTime(Date(1999, 2, 28), TimeOfDay(12, 33, 33)));
+--------------------
+      +/
+    /+ref DateTime+/ void roll(string units)(long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) pure nothrow
+        if(units == "years" ||
+           units == "months")
+    {
+        _date.roll!units(value, allowOverflow);
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            const cdt = DateTime(1999, 7, 6, 12, 30, 33);
+            immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
+            static assert(!__traits(compiles, cdt.roll!"years"(4)));
+            static assert(!__traits(compiles, idt.roll!"years"(4)));
+            static assert(!__traits(compiles, cdt.roll!"months"(4)));
+            static assert(!__traits(compiles, idt.roll!"months"(4)));
+            static assert(!__traits(compiles, cdt.roll!"days"(4)));
+            static assert(!__traits(compiles, idt.roll!"days"(4)));
+
+            //Verify Examples
+            auto dt1 = DateTime(Date(2010, 1, 1), TimeOfDay(12, 33, 33));
+            dt1.roll!"years"(1);
+            assert(dt1 == DateTime(Date(2011, 1, 1), TimeOfDay(12, 33, 33)));
+
+            auto dt2 = DateTime(Date(2010, 1, 1), TimeOfDay(12, 33, 33));
+            dt2.roll!"months"(-12);
+            assert(dt2 == DateTime(Date(2010, 1, 1), TimeOfDay(12, 33, 33)));
+
+            auto dt3 = DateTime(Date(1999, 1, 29), TimeOfDay(12, 33, 33));
+            dt3.roll!"months"(1);
+            assert(dt3 == DateTime(Date(1999, 3, 1), TimeOfDay(12, 33, 33)));
+
+            auto dt4 = DateTime(Date(1999, 1, 29), TimeOfDay(12, 33, 33));
+            dt4.roll!"months"(1, AllowDayOverflow.no);
+            assert(dt4 == DateTime(Date(1999, 2, 28), TimeOfDay(12, 33, 33)));
+        }
+    }
+
+
+    /++
+        Adds the given number of days this DateTime. A negative number will subtract.
+
+        The difference between rolling and adding is that rolling does not affect
+        larger units. So, if you roll the Date one year's worth of days, then you
+        get the exact same Date.
+
+        Note that there is no $(D add!"days"()) because you can add days to a DateTime
+        by adding a duration to it.
+
+        Params:
+            days  = The number of days to add to this DateTime.
+
+        Examples:
+--------------------
+auto dt = DateTime(Date(2010, 1, 1), TimeOfDay(11, 23, 12));
+dt.roll!"days"(1);
+assert(dt == DateTime(Date(2010, 1, 2), TimeOfDay(11, 23, 12)));
+dt.roll!"days"(365);
+assert(dt == DateTime(Date(2010, 1, 26), TimeOfDay(11, 23, 12)));
+dt.roll!"days"(-32);
+assert(dt == DateTime(Date(2010, 1, 25), TimeOfDay(11, 23, 12)));
+--------------------
+      +/
+    /+ref DateTime+/ void roll(string units)(long days) pure nothrow
+        if(units == "days")
+    {
+        _date.roll!"days"(days);
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            const cdt = DateTime(1999, 7, 6, 12, 30, 33);
+            immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
+            static assert(!__traits(compiles, cdt.roll!"days"(4)));
+            static assert(!__traits(compiles, idt.roll!"days"(4)));
+
+            //Verify Examples.
+            auto dt = DateTime(Date(2010, 1, 1), TimeOfDay(11, 23, 12));
+            dt.roll!"days"(1);
+            assert(dt == DateTime(Date(2010, 1, 2), TimeOfDay(11, 23, 12)));
+            dt.roll!"days"(365);
+            assert(dt == DateTime(Date(2010, 1, 26), TimeOfDay(11, 23, 12)));
+            dt.roll!"days"(-32);
+            assert(dt == DateTime(Date(2010, 1, 25), TimeOfDay(11, 23, 12)));
+        }
+    }
+
+
+    /++
+        Add the given number of the given units to the time of day. Negative
+        values will subtract.
+
+        The difference between rolling and adding is that rolling does not
+        affect larger units. So, if you roll the DateTime 24 hours, you get
+        the exact same DateTime.
+
+        Note that there is no $(D add!"hours"()), $(D add!"minutes"()), or
+        $(D add!"seconds"()) function because you can add them to a DateTime by
+        adding a duration to it.
+
+        Params:
+            units = The units to roll.
+            value = The number of units to add to this DateTime.
+
+        Examples:
+--------------------
+auto dt1 = DateTime(Date(2010, 7, 4), TimeOfDay(12, 0, 0));
+dt1.roll!"hours"(1);
+assert(dt1 == DateTime(Date(2010, 7, 4), TimeOfDay(13, 0, 0)));
+
+auto dt2 = DateTime(Date(2010, 2, 12), TimeOfDay(12, 0, 0));
+dt2.roll!"hours"(-1);
+assert(dt2 == DateTime(Date(2010, 2, 12), TimeOfDay(11, 0, 0)));
+
+auto dt3 = DateTime(Date(2009, 12, 31), TimeOfDay(23, 0, 0));
+dt3.roll!"hours"(1);
+assert(dt3 == DateTime(Date(2009, 12, 31), TimeOfDay(0, 0, 0)));
+
+auto dt4 = DateTime(Date(2010, 1, 1), TimeOfDay(0, 0, 0));
+dt4.roll!"hours"(-1);
+assert(dt4 == DateTime(Date(2010, 1, 1), TimeOfDay(23, 0, 0)));
+--------------------
+      +/
+    /+ref DateTime+/ void roll(string units)(long value) pure nothrow
+        if(units == "hours" ||
+           units == "minutes" ||
+           units == "seconds")
+    {
+        _tod.roll!units(value);
+    }
+
+    //Test roll!"hours"().
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            static void testDT(DateTime orig, int hours, in DateTime expected, size_t line = __LINE__)
+            {
+                orig.roll!"hours"(hours);
+                assertPred!"=="(orig, expected, "", __FILE__, line);
+            }
+
+            //Test A.D.
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 0, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 1, DateTime(Date(1999, 7, 6), TimeOfDay(13, 30, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 2, DateTime(Date(1999, 7, 6), TimeOfDay(14, 30, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 3, DateTime(Date(1999, 7, 6), TimeOfDay(15, 30, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 4, DateTime(Date(1999, 7, 6), TimeOfDay(16, 30, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 5, DateTime(Date(1999, 7, 6), TimeOfDay(17, 30, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 6, DateTime(Date(1999, 7, 6), TimeOfDay(18, 30, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 7, DateTime(Date(1999, 7, 6), TimeOfDay(19, 30, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 8, DateTime(Date(1999, 7, 6), TimeOfDay(20, 30, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 9, DateTime(Date(1999, 7, 6), TimeOfDay(21, 30, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 10, DateTime(Date(1999, 7, 6), TimeOfDay(22, 30, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 11, DateTime(Date(1999, 7, 6), TimeOfDay(23, 30, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 12, DateTime(Date(1999, 7, 6), TimeOfDay(0, 30, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 13, DateTime(Date(1999, 7, 6), TimeOfDay(1, 30, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 14, DateTime(Date(1999, 7, 6), TimeOfDay(2, 30, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 15, DateTime(Date(1999, 7, 6), TimeOfDay(3, 30, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 16, DateTime(Date(1999, 7, 6), TimeOfDay(4, 30, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 17, DateTime(Date(1999, 7, 6), TimeOfDay(5, 30, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 18, DateTime(Date(1999, 7, 6), TimeOfDay(6, 30, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 19, DateTime(Date(1999, 7, 6), TimeOfDay(7, 30, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 20, DateTime(Date(1999, 7, 6), TimeOfDay(8, 30, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 21, DateTime(Date(1999, 7, 6), TimeOfDay(9, 30, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 22, DateTime(Date(1999, 7, 6), TimeOfDay(10, 30, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 23, DateTime(Date(1999, 7, 6), TimeOfDay(11, 30, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 24, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 25, DateTime(Date(1999, 7, 6), TimeOfDay(13, 30, 33)));
+
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -1, DateTime(Date(1999, 7, 6), TimeOfDay(11, 30, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -2, DateTime(Date(1999, 7, 6), TimeOfDay(10, 30, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -3, DateTime(Date(1999, 7, 6), TimeOfDay(9, 30, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -4, DateTime(Date(1999, 7, 6), TimeOfDay(8, 30, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -5, DateTime(Date(1999, 7, 6), TimeOfDay(7, 30, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -6, DateTime(Date(1999, 7, 6), TimeOfDay(6, 30, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -7, DateTime(Date(1999, 7, 6), TimeOfDay(5, 30, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -8, DateTime(Date(1999, 7, 6), TimeOfDay(4, 30, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -9, DateTime(Date(1999, 7, 6), TimeOfDay(3, 30, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -10, DateTime(Date(1999, 7, 6), TimeOfDay(2, 30, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -11, DateTime(Date(1999, 7, 6), TimeOfDay(1, 30, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -12, DateTime(Date(1999, 7, 6), TimeOfDay(0, 30, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -13, DateTime(Date(1999, 7, 6), TimeOfDay(23, 30, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -14, DateTime(Date(1999, 7, 6), TimeOfDay(22, 30, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -15, DateTime(Date(1999, 7, 6), TimeOfDay(21, 30, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -16, DateTime(Date(1999, 7, 6), TimeOfDay(20, 30, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -17, DateTime(Date(1999, 7, 6), TimeOfDay(19, 30, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -18, DateTime(Date(1999, 7, 6), TimeOfDay(18, 30, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -19, DateTime(Date(1999, 7, 6), TimeOfDay(17, 30, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -20, DateTime(Date(1999, 7, 6), TimeOfDay(16, 30, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -21, DateTime(Date(1999, 7, 6), TimeOfDay(15, 30, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -22, DateTime(Date(1999, 7, 6), TimeOfDay(14, 30, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -23, DateTime(Date(1999, 7, 6), TimeOfDay(13, 30, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -24, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -25, DateTime(Date(1999, 7, 6), TimeOfDay(11, 30, 33)));
+
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(0, 30, 33)), 1, DateTime(Date(1999, 7, 6), TimeOfDay(1, 30, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(0, 30, 33)), 0, DateTime(Date(1999, 7, 6), TimeOfDay(0, 30, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(0, 30, 33)), -1, DateTime(Date(1999, 7, 6), TimeOfDay(23, 30, 33)));
+
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(23, 30, 33)), 1, DateTime(Date(1999, 7, 6), TimeOfDay(0, 30, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(23, 30, 33)), 0, DateTime(Date(1999, 7, 6), TimeOfDay(23, 30, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(23, 30, 33)), -1, DateTime(Date(1999, 7, 6), TimeOfDay(22, 30, 33)));
+
+            testDT(DateTime(Date(1999, 7, 31), TimeOfDay(23, 30, 33)), 1, DateTime(Date(1999, 7, 31), TimeOfDay(0, 30, 33)));
+            testDT(DateTime(Date(1999, 8, 1), TimeOfDay(0, 30, 33)), -1, DateTime(Date(1999, 8, 1), TimeOfDay(23, 30, 33)));
+
+            testDT(DateTime(Date(1999, 12, 31), TimeOfDay(23, 30, 33)), 1, DateTime(Date(1999, 12, 31), TimeOfDay(0, 30, 33)));
+            testDT(DateTime(Date(2000, 1, 1), TimeOfDay(0, 30, 33)), -1, DateTime(Date(2000, 1, 1), TimeOfDay(23, 30, 33)));
+
+            testDT(DateTime(Date(1999, 2, 28), TimeOfDay(23, 30, 33)), 25, DateTime(Date(1999, 2, 28), TimeOfDay(0, 30, 33)));
+            testDT(DateTime(Date(1999, 3, 2), TimeOfDay(0, 30, 33)), -25, DateTime(Date(1999, 3, 2), TimeOfDay(23, 30, 33)));
+
+            testDT(DateTime(Date(2000, 2, 28), TimeOfDay(23, 30, 33)), 25, DateTime(Date(2000, 2, 28), TimeOfDay(0, 30, 33)));
+            testDT(DateTime(Date(2000, 3, 1), TimeOfDay(0, 30, 33)), -25, DateTime(Date(2000, 3, 1), TimeOfDay(23, 30, 33)));
+
+            //Test B.C.
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 0, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 1, DateTime(Date(-1999, 7, 6), TimeOfDay(13, 30, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 2, DateTime(Date(-1999, 7, 6), TimeOfDay(14, 30, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 3, DateTime(Date(-1999, 7, 6), TimeOfDay(15, 30, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 4, DateTime(Date(-1999, 7, 6), TimeOfDay(16, 30, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 5, DateTime(Date(-1999, 7, 6), TimeOfDay(17, 30, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 6, DateTime(Date(-1999, 7, 6), TimeOfDay(18, 30, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 7, DateTime(Date(-1999, 7, 6), TimeOfDay(19, 30, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 8, DateTime(Date(-1999, 7, 6), TimeOfDay(20, 30, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 9, DateTime(Date(-1999, 7, 6), TimeOfDay(21, 30, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 10, DateTime(Date(-1999, 7, 6), TimeOfDay(22, 30, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 11, DateTime(Date(-1999, 7, 6), TimeOfDay(23, 30, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 12, DateTime(Date(-1999, 7, 6), TimeOfDay(0, 30, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 13, DateTime(Date(-1999, 7, 6), TimeOfDay(1, 30, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 14, DateTime(Date(-1999, 7, 6), TimeOfDay(2, 30, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 15, DateTime(Date(-1999, 7, 6), TimeOfDay(3, 30, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 16, DateTime(Date(-1999, 7, 6), TimeOfDay(4, 30, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 17, DateTime(Date(-1999, 7, 6), TimeOfDay(5, 30, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 18, DateTime(Date(-1999, 7, 6), TimeOfDay(6, 30, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 19, DateTime(Date(-1999, 7, 6), TimeOfDay(7, 30, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 20, DateTime(Date(-1999, 7, 6), TimeOfDay(8, 30, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 21, DateTime(Date(-1999, 7, 6), TimeOfDay(9, 30, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 22, DateTime(Date(-1999, 7, 6), TimeOfDay(10, 30, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 23, DateTime(Date(-1999, 7, 6), TimeOfDay(11, 30, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 24, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 25, DateTime(Date(-1999, 7, 6), TimeOfDay(13, 30, 33)));
+
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -1, DateTime(Date(-1999, 7, 6), TimeOfDay(11, 30, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -2, DateTime(Date(-1999, 7, 6), TimeOfDay(10, 30, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -3, DateTime(Date(-1999, 7, 6), TimeOfDay(9, 30, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -4, DateTime(Date(-1999, 7, 6), TimeOfDay(8, 30, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -5, DateTime(Date(-1999, 7, 6), TimeOfDay(7, 30, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -6, DateTime(Date(-1999, 7, 6), TimeOfDay(6, 30, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -7, DateTime(Date(-1999, 7, 6), TimeOfDay(5, 30, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -8, DateTime(Date(-1999, 7, 6), TimeOfDay(4, 30, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -9, DateTime(Date(-1999, 7, 6), TimeOfDay(3, 30, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -10, DateTime(Date(-1999, 7, 6), TimeOfDay(2, 30, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -11, DateTime(Date(-1999, 7, 6), TimeOfDay(1, 30, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -12, DateTime(Date(-1999, 7, 6), TimeOfDay(0, 30, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -13, DateTime(Date(-1999, 7, 6), TimeOfDay(23, 30, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -14, DateTime(Date(-1999, 7, 6), TimeOfDay(22, 30, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -15, DateTime(Date(-1999, 7, 6), TimeOfDay(21, 30, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -16, DateTime(Date(-1999, 7, 6), TimeOfDay(20, 30, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -17, DateTime(Date(-1999, 7, 6), TimeOfDay(19, 30, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -18, DateTime(Date(-1999, 7, 6), TimeOfDay(18, 30, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -19, DateTime(Date(-1999, 7, 6), TimeOfDay(17, 30, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -20, DateTime(Date(-1999, 7, 6), TimeOfDay(16, 30, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -21, DateTime(Date(-1999, 7, 6), TimeOfDay(15, 30, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -22, DateTime(Date(-1999, 7, 6), TimeOfDay(14, 30, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -23, DateTime(Date(-1999, 7, 6), TimeOfDay(13, 30, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -24, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -25, DateTime(Date(-1999, 7, 6), TimeOfDay(11, 30, 33)));
+
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(0, 30, 33)), 1, DateTime(Date(-1999, 7, 6), TimeOfDay(1, 30, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(0, 30, 33)), 0, DateTime(Date(-1999, 7, 6), TimeOfDay(0, 30, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(0, 30, 33)), -1, DateTime(Date(-1999, 7, 6), TimeOfDay(23, 30, 33)));
+
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(23, 30, 33)), 1, DateTime(Date(-1999, 7, 6), TimeOfDay(0, 30, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(23, 30, 33)), 0, DateTime(Date(-1999, 7, 6), TimeOfDay(23, 30, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(23, 30, 33)), -1, DateTime(Date(-1999, 7, 6), TimeOfDay(22, 30, 33)));
+
+            testDT(DateTime(Date(-1999, 7, 31), TimeOfDay(23, 30, 33)), 1, DateTime(Date(-1999, 7, 31), TimeOfDay(0, 30, 33)));
+            testDT(DateTime(Date(-1999, 8, 1), TimeOfDay(0, 30, 33)), -1, DateTime(Date(-1999, 8, 1), TimeOfDay(23, 30, 33)));
+
+            testDT(DateTime(Date(-2001, 12, 31), TimeOfDay(23, 30, 33)), 1, DateTime(Date(-2001, 12, 31), TimeOfDay(0, 30, 33)));
+            testDT(DateTime(Date(-2000, 1, 1), TimeOfDay(0, 30, 33)), -1, DateTime(Date(-2000, 1, 1), TimeOfDay(23, 30, 33)));
+
+            testDT(DateTime(Date(-2001, 2, 28), TimeOfDay(23, 30, 33)), 25, DateTime(Date(-2001, 2, 28), TimeOfDay(0, 30, 33)));
+            testDT(DateTime(Date(-2001, 3, 2), TimeOfDay(0, 30, 33)), -25, DateTime(Date(-2001, 3, 2), TimeOfDay(23, 30, 33)));
+
+            testDT(DateTime(Date(-2000, 2, 28), TimeOfDay(23, 30, 33)), 25, DateTime(Date(-2000, 2, 28), TimeOfDay(0, 30, 33)));
+            testDT(DateTime(Date(-2000, 3, 1), TimeOfDay(0, 30, 33)), -25, DateTime(Date(-2000, 3, 1), TimeOfDay(23, 30, 33)));
+
+            //Test Both
+            testDT(DateTime(Date(-1, 1, 1), TimeOfDay(11, 30, 33)), 17_546, DateTime(Date(-1, 1, 1), TimeOfDay(13, 30, 33)));
+            testDT(DateTime(Date(1, 1, 1), TimeOfDay(13, 30, 33)), -17_546, DateTime(Date(1, 1, 1), TimeOfDay(11, 30, 33)));
+
+            const cdt = DateTime(1999, 7, 6, 12, 30, 33);
+            immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
+            static assert(!__traits(compiles, cdt.roll!"hours"(4)));
+            static assert(!__traits(compiles, idt.roll!"hours"(4)));
+
+            //Verify Examples.
+            auto dt1 = DateTime(Date(2010, 7, 4), TimeOfDay(12, 0, 0));
+            dt1.roll!"hours"(1);
+            assert(dt1 == DateTime(Date(2010, 7, 4), TimeOfDay(13, 0, 0)));
+
+            auto dt2 = DateTime(Date(2010, 2, 12), TimeOfDay(12, 0, 0));
+            dt2.roll!"hours"(-1);
+            assert(dt2 == DateTime(Date(2010, 2, 12), TimeOfDay(11, 0, 0)));
+
+            auto dt3 = DateTime(Date(2009, 12, 31), TimeOfDay(23, 0, 0));
+            dt3.roll!"hours"(1);
+            assert(dt3 == DateTime(Date(2009, 12, 31), TimeOfDay(0, 0, 0)));
+
+            auto dt4 = DateTime(Date(2010, 1, 1), TimeOfDay(0, 0, 0));
+            dt4.roll!"hours"(-1);
+            assert(dt4 == DateTime(Date(2010, 1, 1), TimeOfDay(23, 0, 0)));
+        }
+    }
+
+    //Test roll!"minutes"().
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            static void testDT(DateTime orig, int minutes, in DateTime expected, size_t line = __LINE__)
+            {
+                orig.roll!"minutes"(minutes);
+                assertPred!"=="(orig, expected, "", __FILE__, line);
+            }
+
+            //Test A.D.
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 0, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 1, DateTime(Date(1999, 7, 6), TimeOfDay(12, 31, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 2, DateTime(Date(1999, 7, 6), TimeOfDay(12, 32, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 3, DateTime(Date(1999, 7, 6), TimeOfDay(12, 33, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 4, DateTime(Date(1999, 7, 6), TimeOfDay(12, 34, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 5, DateTime(Date(1999, 7, 6), TimeOfDay(12, 35, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 10, DateTime(Date(1999, 7, 6), TimeOfDay(12, 40, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 15, DateTime(Date(1999, 7, 6), TimeOfDay(12, 45, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 29, DateTime(Date(1999, 7, 6), TimeOfDay(12, 59, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 30, DateTime(Date(1999, 7, 6), TimeOfDay(12, 0, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 45, DateTime(Date(1999, 7, 6), TimeOfDay(12, 15, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 60, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 75, DateTime(Date(1999, 7, 6), TimeOfDay(12, 45, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 90, DateTime(Date(1999, 7, 6), TimeOfDay(12, 0, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 100, DateTime(Date(1999, 7, 6), TimeOfDay(12, 10, 33)));
+
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 689, DateTime(Date(1999, 7, 6), TimeOfDay(12, 59, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 690, DateTime(Date(1999, 7, 6), TimeOfDay(12, 0, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 691, DateTime(Date(1999, 7, 6), TimeOfDay(12, 1, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 960, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 1439, DateTime(Date(1999, 7, 6), TimeOfDay(12, 29, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 1440, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 1441, DateTime(Date(1999, 7, 6), TimeOfDay(12, 31, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 2880, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -1, DateTime(Date(1999, 7, 6), TimeOfDay(12, 29, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -2, DateTime(Date(1999, 7, 6), TimeOfDay(12, 28, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -3, DateTime(Date(1999, 7, 6), TimeOfDay(12, 27, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -4, DateTime(Date(1999, 7, 6), TimeOfDay(12, 26, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -5, DateTime(Date(1999, 7, 6), TimeOfDay(12, 25, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -10, DateTime(Date(1999, 7, 6), TimeOfDay(12, 20, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -15, DateTime(Date(1999, 7, 6), TimeOfDay(12, 15, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -29, DateTime(Date(1999, 7, 6), TimeOfDay(12, 1, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -30, DateTime(Date(1999, 7, 6), TimeOfDay(12, 0, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -45, DateTime(Date(1999, 7, 6), TimeOfDay(12, 45, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -60, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -75, DateTime(Date(1999, 7, 6), TimeOfDay(12, 15, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -90, DateTime(Date(1999, 7, 6), TimeOfDay(12, 0, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -100, DateTime(Date(1999, 7, 6), TimeOfDay(12, 50, 33)));
+
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -749, DateTime(Date(1999, 7, 6), TimeOfDay(12, 1, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -750, DateTime(Date(1999, 7, 6), TimeOfDay(12, 0, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -751, DateTime(Date(1999, 7, 6), TimeOfDay(12, 59, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -960, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -1439, DateTime(Date(1999, 7, 6), TimeOfDay(12, 31, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -1440, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -1441, DateTime(Date(1999, 7, 6), TimeOfDay(12, 29, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -2880, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 0, 33)), 1, DateTime(Date(1999, 7, 6), TimeOfDay(12, 1, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 0, 33)), 0, DateTime(Date(1999, 7, 6), TimeOfDay(12, 0, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 0, 33)), -1, DateTime(Date(1999, 7, 6), TimeOfDay(12, 59, 33)));
+
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(11, 59, 33)), 1, DateTime(Date(1999, 7, 6), TimeOfDay(11, 0, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(11, 59, 33)), 0, DateTime(Date(1999, 7, 6), TimeOfDay(11, 59, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(11, 59, 33)), -1, DateTime(Date(1999, 7, 6), TimeOfDay(11, 58, 33)));
+
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 33)), 1, DateTime(Date(1999, 7, 6), TimeOfDay(0, 1, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 33)), 0, DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 33)), -1, DateTime(Date(1999, 7, 6), TimeOfDay(0, 59, 33)));
+
+            testDT(DateTime(Date(1999, 7, 5), TimeOfDay(23, 59, 33)), 1, DateTime(Date(1999, 7, 5), TimeOfDay(23, 0, 33)));
+            testDT(DateTime(Date(1999, 7, 5), TimeOfDay(23, 59, 33)), 0, DateTime(Date(1999, 7, 5), TimeOfDay(23, 59, 33)));
+            testDT(DateTime(Date(1999, 7, 5), TimeOfDay(23, 59, 33)), -1, DateTime(Date(1999, 7, 5), TimeOfDay(23, 58, 33)));
+
+            testDT(DateTime(Date(1998, 12, 31), TimeOfDay(23, 59, 33)), 1, DateTime(Date(1998, 12, 31), TimeOfDay(23, 0, 33)));
+            testDT(DateTime(Date(1998, 12, 31), TimeOfDay(23, 59, 33)), 0, DateTime(Date(1998, 12, 31), TimeOfDay(23, 59, 33)));
+            testDT(DateTime(Date(1998, 12, 31), TimeOfDay(23, 59, 33)), -1, DateTime(Date(1998, 12, 31), TimeOfDay(23, 58, 33)));
+
+            //Test B.C.
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 0, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 1, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 31, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 2, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 32, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 3, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 33, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 4, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 34, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 5, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 35, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 10, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 40, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 15, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 45, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 29, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 59, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 30, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 0, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 45, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 15, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 60, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 75, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 45, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 90, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 0, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 100, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 10, 33)));
+
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 689, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 59, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 690, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 0, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 691, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 1, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 960, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 1439, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 29, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 1440, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 1441, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 31, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 2880, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
+
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -1, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 29, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -2, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 28, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -3, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 27, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -4, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 26, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -5, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 25, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -10, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 20, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -15, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 15, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -29, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 1, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -30, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 0, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -45, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 45, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -60, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -75, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 15, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -90, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 0, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -100, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 50, 33)));
+
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -749, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 1, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -750, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 0, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -751, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 59, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -960, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -1439, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 31, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -1440, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -1441, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 29, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -2880, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
+
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 0, 33)), 1, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 1, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 0, 33)), 0, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 0, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 0, 33)), -1, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 59, 33)));
+
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(11, 59, 33)), 1, DateTime(Date(-1999, 7, 6), TimeOfDay(11, 0, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(11, 59, 33)), 0, DateTime(Date(-1999, 7, 6), TimeOfDay(11, 59, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(11, 59, 33)), -1, DateTime(Date(-1999, 7, 6), TimeOfDay(11, 58, 33)));
+
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(0, 0, 33)), 1, DateTime(Date(-1999, 7, 6), TimeOfDay(0, 1, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(0, 0, 33)), 0, DateTime(Date(-1999, 7, 6), TimeOfDay(0, 0, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(0, 0, 33)), -1, DateTime(Date(-1999, 7, 6), TimeOfDay(0, 59, 33)));
+
+            testDT(DateTime(Date(-1999, 7, 5), TimeOfDay(23, 59, 33)), 1, DateTime(Date(-1999, 7, 5), TimeOfDay(23, 0, 33)));
+            testDT(DateTime(Date(-1999, 7, 5), TimeOfDay(23, 59, 33)), 0, DateTime(Date(-1999, 7, 5), TimeOfDay(23, 59, 33)));
+            testDT(DateTime(Date(-1999, 7, 5), TimeOfDay(23, 59, 33)), -1, DateTime(Date(-1999, 7, 5), TimeOfDay(23, 58, 33)));
+
+            testDT(DateTime(Date(-2000, 12, 31), TimeOfDay(23, 59, 33)), 1, DateTime(Date(-2000, 12, 31), TimeOfDay(23, 0, 33)));
+            testDT(DateTime(Date(-2000, 12, 31), TimeOfDay(23, 59, 33)), 0, DateTime(Date(-2000, 12, 31), TimeOfDay(23, 59, 33)));
+            testDT(DateTime(Date(-2000, 12, 31), TimeOfDay(23, 59, 33)), -1, DateTime(Date(-2000, 12, 31), TimeOfDay(23, 58, 33)));
+
+            //Test Both
+            testDT(DateTime(Date(1, 1, 1), TimeOfDay(0, 0, 0)), -1, DateTime(Date(1, 1, 1), TimeOfDay(0, 59, 0)));
+            testDT(DateTime(Date(0, 12, 31), TimeOfDay(23, 59, 0)), 1, DateTime(Date(0, 12, 31), TimeOfDay(23, 0, 0)));
+
+            testDT(DateTime(Date(0, 1, 1), TimeOfDay(0, 0, 0)), -1, DateTime(Date(0, 1, 1), TimeOfDay(0, 59, 0)));
+            testDT(DateTime(Date(-1, 12, 31), TimeOfDay(23, 59, 0)), 1, DateTime(Date(-1, 12, 31), TimeOfDay(23, 0, 0)));
+
+            testDT(DateTime(Date(-1, 1, 1), TimeOfDay(11, 30, 33)), 1_052_760, DateTime(Date(-1, 1, 1), TimeOfDay(11, 30, 33)));
+            testDT(DateTime(Date(1, 1, 1), TimeOfDay(13, 30, 33)), -1_052_760, DateTime(Date(1, 1, 1), TimeOfDay(13, 30, 33)));
+
+            testDT(DateTime(Date(-1, 1, 1), TimeOfDay(11, 30, 33)), 1_052_782, DateTime(Date(-1, 1, 1), TimeOfDay(11, 52, 33)));
+            testDT(DateTime(Date(1, 1, 1), TimeOfDay(13, 52, 33)), -1_052_782, DateTime(Date(1, 1, 1), TimeOfDay(13, 30, 33)));
+
+            const cdt = DateTime(1999, 7, 6, 12, 30, 33);
+            immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
+            static assert(!__traits(compiles, cdt.roll!"minutes"(4)));
+            static assert(!__traits(compiles, idt.roll!"minutes"(4)));
+        }
+    }
+
+    //Test roll!"seconds"().
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            static void testDT(DateTime orig, int seconds, in DateTime expected, size_t line = __LINE__)
+            {
+                orig.roll!"seconds"(seconds);
+                assertPred!"=="(orig, expected, "", __FILE__, line);
+            }
+
+            //Test A.D.
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 0, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 1, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 34)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 2, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 35)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 3, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 36)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 4, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 37)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 5, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 38)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 10, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 43)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 15, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 48)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 26, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 59)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 27, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 0)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 30, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 3)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 59, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 32)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 60, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 61, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 34)));
+
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 1766, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 59)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 1767, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 0)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 1768, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 1)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 2007, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 0)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 3599, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 32)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 3600, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 3601, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 34)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), 7200, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -1, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 32)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -2, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 31)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -3, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 30)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -4, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 29)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -5, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 28)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -10, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 23)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -15, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 18)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -33, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 0)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -34, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 59)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -35, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 58)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -59, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 34)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -60, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), -61, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 32)));
+
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 0)), 1, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 1)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 0)), 0, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 0)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 0)), -1, DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 59)));
+
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 0, 0)), 1, DateTime(Date(1999, 7, 6), TimeOfDay(12, 0, 1)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 0, 0)), 0, DateTime(Date(1999, 7, 6), TimeOfDay(12, 0, 0)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(12, 0, 0)), -1, DateTime(Date(1999, 7, 6), TimeOfDay(12, 0, 59)));
+
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 0)), 1, DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 1)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 0)), 0, DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 0)));
+            testDT(DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 0)), -1, DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 59)));
+
+            testDT(DateTime(Date(1999, 7, 5), TimeOfDay(23, 59, 59)), 1, DateTime(Date(1999, 7, 5), TimeOfDay(23, 59, 0)));
+            testDT(DateTime(Date(1999, 7, 5), TimeOfDay(23, 59, 59)), 0, DateTime(Date(1999, 7, 5), TimeOfDay(23, 59, 59)));
+            testDT(DateTime(Date(1999, 7, 5), TimeOfDay(23, 59, 59)), -1, DateTime(Date(1999, 7, 5), TimeOfDay(23, 59, 58)));
+
+            testDT(DateTime(Date(1998, 12, 31), TimeOfDay(23, 59, 59)), 1, DateTime(Date(1998, 12, 31), TimeOfDay(23, 59, 0)));
+            testDT(DateTime(Date(1998, 12, 31), TimeOfDay(23, 59, 59)), 0, DateTime(Date(1998, 12, 31), TimeOfDay(23, 59, 59)));
+            testDT(DateTime(Date(1998, 12, 31), TimeOfDay(23, 59, 59)), -1, DateTime(Date(1998, 12, 31), TimeOfDay(23, 59, 58)));
+
+            //Test B.C.
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 0, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 1, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 34)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 2, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 35)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 3, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 36)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 4, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 37)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 5, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 38)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 10, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 43)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 15, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 48)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 26, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 59)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 27, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 0)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 30, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 3)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 59, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 32)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 60, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 61, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 34)));
+
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 1766, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 59)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 1767, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 0)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 1768, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 1)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 2007, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 0)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 3599, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 32)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 3600, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 3601, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 34)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), 7200, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
+
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -1, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 32)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -2, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 31)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -3, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 30)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -4, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 29)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -5, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 28)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -10, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 23)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -15, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 18)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -33, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 0)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -34, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 59)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -35, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 58)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -59, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 34)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -60, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)), -61, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 32)));
+
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 0)), 1, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 1)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 0)), 0, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 0)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 0)), -1, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 59)));
+
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 0, 0)), 1, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 0, 1)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 0, 0)), 0, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 0, 0)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(12, 0, 0)), -1, DateTime(Date(-1999, 7, 6), TimeOfDay(12, 0, 59)));
+
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(0, 0, 0)), 1, DateTime(Date(-1999, 7, 6), TimeOfDay(0, 0, 1)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(0, 0, 0)), 0, DateTime(Date(-1999, 7, 6), TimeOfDay(0, 0, 0)));
+            testDT(DateTime(Date(-1999, 7, 6), TimeOfDay(0, 0, 0)), -1, DateTime(Date(-1999, 7, 6), TimeOfDay(0, 0, 59)));
+
+            testDT(DateTime(Date(-1999, 7, 5), TimeOfDay(23, 59, 59)), 1, DateTime(Date(-1999, 7, 5), TimeOfDay(23, 59, 0)));
+            testDT(DateTime(Date(-1999, 7, 5), TimeOfDay(23, 59, 59)), 0, DateTime(Date(-1999, 7, 5), TimeOfDay(23, 59, 59)));
+            testDT(DateTime(Date(-1999, 7, 5), TimeOfDay(23, 59, 59)), -1, DateTime(Date(-1999, 7, 5), TimeOfDay(23, 59, 58)));
+
+            testDT(DateTime(Date(-2000, 12, 31), TimeOfDay(23, 59, 59)), 1, DateTime(Date(-2000, 12, 31), TimeOfDay(23, 59, 0)));
+            testDT(DateTime(Date(-2000, 12, 31), TimeOfDay(23, 59, 59)), 0, DateTime(Date(-2000, 12, 31), TimeOfDay(23, 59, 59)));
+            testDT(DateTime(Date(-2000, 12, 31), TimeOfDay(23, 59, 59)), -1, DateTime(Date(-2000, 12, 31), TimeOfDay(23, 59, 58)));
+
+            //Test Both
+            testDT(DateTime(Date(1, 1, 1), TimeOfDay(0, 0, 0)), -1, DateTime(Date(1, 1, 1), TimeOfDay(0, 0, 59)));
+            testDT(DateTime(Date(0, 12, 31), TimeOfDay(23, 59, 59)), 1, DateTime(Date(0, 12, 31), TimeOfDay(23, 59, 0)));
+
+            testDT(DateTime(Date(0, 1, 1), TimeOfDay(0, 0, 0)), -1, DateTime(Date(0, 1, 1), TimeOfDay(0, 0, 59)));
+            testDT(DateTime(Date(-1, 12, 31), TimeOfDay(23, 59, 59)), 1, DateTime(Date(-1, 12, 31), TimeOfDay(23, 59, 0)));
+
+            testDT(DateTime(Date(-1, 1, 1), TimeOfDay(11, 30, 33)), 63_165_600L, DateTime(Date(-1, 1, 1), TimeOfDay(11, 30, 33)));
+            testDT(DateTime(Date(1, 1, 1), TimeOfDay(13, 30, 33)), -63_165_600L, DateTime(Date(1, 1, 1), TimeOfDay(13, 30, 33)));
+
+            testDT(DateTime(Date(-1, 1, 1), TimeOfDay(11, 30, 33)), 63_165_617L, DateTime(Date(-1, 1, 1), TimeOfDay(11, 30, 50)));
+            testDT(DateTime(Date(1, 1, 1), TimeOfDay(13, 30, 50)), -63_165_617L, DateTime(Date(1, 1, 1), TimeOfDay(13, 30, 33)));
+
+            const cdt = DateTime(1999, 7, 6, 12, 30, 33);
+            immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
+            static assert(!__traits(compiles, cdt.roll!"seconds"(4)));
+            static assert(!__traits(compiles, idt.roll!"seconds"(4)));
+        }
+    }
+
+
+    /++
+        Gives the result of adding or subtracting a duration from this DateTime.
+
+        The legal types of arithmetic for DateTime using this operator are
+
+        $(TABLE
+        $(TR $(TD DateTime) $(TD +) $(TD duration) $(TD -->) $(TD DateTime))
+        $(TR $(TD DateTime) $(TD -) $(TD duration) $(TD -->) $(TD DateTime))
+        )
+
+        Params:
+            duration = The duration to add to or subtract from this DateTime.
+      +/
+    DateTime opBinary(string op, D)(in D duration) const pure nothrow
+        if((op == "+" || op == "-") &&
+           (is(Unqual!D == Duration) ||
+            is(Unqual!D == TickDuration)))
+    {
+        DateTime retval = this;
+
+        static if(is(Unqual!D == Duration))
+            immutable hnsecs = duration.total!"hnsecs";
+        else static if(is(Unqual!D == TickDuration))
+            immutable hnsecs = duration.hnsecs;
+
+        //Ideally, this would just be
+        //return retval.addSeconds(convert!("hnsecs", "seconds")(unaryFun!(op ~ "a")(hnsecs)));
+        //But there isn't currently a pure version of unaryFun!().
+
+        static if(op == "+")
+            immutable signedHNSecs = hnsecs;
+        else static if(op == "-")
+            immutable signedHNSecs = -hnsecs;
+        else
+            static assert(0);
+
+        return retval.addSeconds(convert!("hnsecs", "seconds")(signedHNSecs));
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            auto dt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
+
+            assertPred!"=="(dt + dur!"weeks"(7), DateTime(Date(1999, 8, 24), TimeOfDay(12, 30, 33)));
+            assertPred!"=="(dt + dur!"weeks"(-7), DateTime(Date(1999, 5, 18), TimeOfDay(12, 30, 33)));
+            assertPred!"=="(dt + dur!"days"(7), DateTime(Date(1999, 7, 13), TimeOfDay(12, 30, 33)));
+            assertPred!"=="(dt + dur!"days"(-7), DateTime(Date(1999, 6, 29), TimeOfDay(12, 30, 33)));
+
+            assertPred!"=="(dt + dur!"hours"(7), DateTime(Date(1999, 7, 6), TimeOfDay(19, 30, 33)));
+            assertPred!"=="(dt + dur!"hours"(-7), DateTime(Date(1999, 7, 6), TimeOfDay(5, 30, 33)));
+            assertPred!"=="(dt + dur!"minutes"(7), DateTime(Date(1999, 7, 6), TimeOfDay(12, 37, 33)));
+            assertPred!"=="(dt + dur!"minutes"(-7), DateTime(Date(1999, 7, 6), TimeOfDay(12, 23, 33)));
+            assertPred!"=="(dt + dur!"seconds"(7), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
+            assertPred!"=="(dt + dur!"seconds"(-7), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
+            assertPred!"=="(dt + dur!"msecs"(7_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
+            assertPred!"=="(dt + dur!"msecs"(-7_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
+            assertPred!"=="(dt + dur!"usecs"(7_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
+            assertPred!"=="(dt + dur!"usecs"(-7_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
+            assertPred!"=="(dt + dur!"hnsecs"(70_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
+            assertPred!"=="(dt + dur!"hnsecs"(-70_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
+
+            //This probably only runs in cases where gettimeofday() is used, but it's
+            //hard to do this test correctly with variable ticksPerSec.
+            if(TickDuration.ticksPerSec == 1_000_000)
+            {
+                assertPred!"=="(dt + TickDuration.from!"usecs"(7_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
+                assertPred!"=="(dt + TickDuration.from!"usecs"(-7_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
+            }
+
+            assertPred!"=="(dt - dur!"weeks"(-7), DateTime(Date(1999, 8, 24), TimeOfDay(12, 30, 33)));
+            assertPred!"=="(dt - dur!"weeks"(7), DateTime(Date(1999, 5, 18), TimeOfDay(12, 30, 33)));
+            assertPred!"=="(dt - dur!"days"(-7), DateTime(Date(1999, 7, 13), TimeOfDay(12, 30, 33)));
+            assertPred!"=="(dt - dur!"days"(7), DateTime(Date(1999, 6, 29), TimeOfDay(12, 30, 33)));
+
+            assertPred!"=="(dt - dur!"hours"(-7), DateTime(Date(1999, 7, 6), TimeOfDay(19, 30, 33)));
+            assertPred!"=="(dt - dur!"hours"(7), DateTime(Date(1999, 7, 6), TimeOfDay(5, 30, 33)));
+            assertPred!"=="(dt - dur!"minutes"(-7), DateTime(Date(1999, 7, 6), TimeOfDay(12, 37, 33)));
+            assertPred!"=="(dt - dur!"minutes"(7), DateTime(Date(1999, 7, 6), TimeOfDay(12, 23, 33)));
+            assertPred!"=="(dt - dur!"seconds"(-7), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
+            assertPred!"=="(dt - dur!"seconds"(7), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
+            assertPred!"=="(dt - dur!"msecs"(-7_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
+            assertPred!"=="(dt - dur!"msecs"(7_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
+            assertPred!"=="(dt - dur!"usecs"(-7_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
+            assertPred!"=="(dt - dur!"usecs"(7_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
+            assertPred!"=="(dt - dur!"hnsecs"(-70_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
+            assertPred!"=="(dt - dur!"hnsecs"(70_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
+
+            //This probably only runs in cases where gettimeofday() is used, but it's
+            //hard to do this test correctly with variable ticksPerSec.
+            if(TickDuration.ticksPerSec == 1_000_000)
+            {
+                assertPred!"=="(dt - TickDuration.from!"usecs"(-7_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
+                assertPred!"=="(dt - TickDuration.from!"usecs"(7_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
+            }
+
+            auto duration = dur!"seconds"(12);
+            const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
+            immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
+            static assert(__traits(compiles, cdt + duration));
+            static assert(__traits(compiles, idt + duration));
+            static assert(__traits(compiles, cdt - duration));
+            static assert(__traits(compiles, idt - duration));
+        }
+    }
+
+
+    /++
+        Gives the result of adding or subtracting a duration from this DateTime,
+        as well as assigning the result to this DateTime.
+
+        The legal types of arithmetic for DateTime using this operator are
+
+        $(TABLE
+        $(TR $(TD DateTime) $(TD +) $(TD duration) $(TD -->) $(TD DateTime))
+        $(TR $(TD DateTime) $(TD -) $(TD duration) $(TD -->) $(TD DateTime))
+        )
+
+        Params:
+            duration = The duration to add to or subtract from this DateTime.
+      +/
+    /+ref+/ DateTime opOpAssign(string op, D)(in D duration) pure nothrow
+        if((op == "+" || op == "-") &&
+           (is(Unqual!D == Duration) ||
+            is(Unqual!D == TickDuration)))
+    {
+        DateTime retval = this;
+
+        static if(is(Unqual!D == Duration))
+            immutable hnsecs = duration.total!"hnsecs";
+        else static if(is(Unqual!D == TickDuration))
+            immutable hnsecs = duration.hnsecs;
+
+        //Ideally, this would just be
+       //return addSeconds(convert!("hnsecs", "seconds")(unaryFun!(op ~ "a")(hnsecs)));
+        //But there isn't currently a pure version of unaryFun!().
+
+        static if(op == "+")
+            immutable signedHNSecs = hnsecs;
+        else static if(op == "-")
+            immutable signedHNSecs = -hnsecs;
+        else
+            static assert(0);
+
+        return addSeconds(convert!("hnsecs", "seconds")(signedHNSecs));
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            assertPred!"+="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"weeks"(7), DateTime(Date(1999, 8, 24), TimeOfDay(12, 30, 33)));
+            assertPred!"+="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"weeks"(-7), DateTime(Date(1999, 5, 18), TimeOfDay(12, 30, 33)));
+            assertPred!"+="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"days"(7), DateTime(Date(1999, 7, 13), TimeOfDay(12, 30, 33)));
+            assertPred!"+="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"days"(-7), DateTime(Date(1999, 6, 29), TimeOfDay(12, 30, 33)));
+
+            assertPred!"+="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"hours"(7), DateTime(Date(1999, 7, 6), TimeOfDay(19, 30, 33)));
+            assertPred!"+="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"hours"(-7), DateTime(Date(1999, 7, 6), TimeOfDay(5, 30, 33)));
+            assertPred!"+="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"minutes"(7), DateTime(Date(1999, 7, 6), TimeOfDay(12, 37, 33)));
+            assertPred!"+="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"minutes"(-7), DateTime(Date(1999, 7, 6), TimeOfDay(12, 23, 33)));
+            assertPred!"+="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"seconds"(7), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
+            assertPred!"+="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"seconds"(-7), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
+            assertPred!"+="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"msecs"(7_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
+            assertPred!"+="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"msecs"(-7_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
+            assertPred!"+="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"usecs"(7_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
+            assertPred!"+="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"usecs"(-7_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
+            assertPred!"+="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"hnsecs"(70_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
+            assertPred!"+="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"hnsecs"(-70_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
+
+            assertPred!"-="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"weeks"(-7), DateTime(Date(1999, 8, 24), TimeOfDay(12, 30, 33)));
+            assertPred!"-="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"weeks"(7), DateTime(Date(1999, 5, 18), TimeOfDay(12, 30, 33)));
+            assertPred!"-="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"days"(-7), DateTime(Date(1999, 7, 13), TimeOfDay(12, 30, 33)));
+            assertPred!"-="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"days"(7), DateTime(Date(1999, 6, 29), TimeOfDay(12, 30, 33)));
+
+            assertPred!"-="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"hours"(-7), DateTime(Date(1999, 7, 6), TimeOfDay(19, 30, 33)));
+            assertPred!"-="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"hours"(7), DateTime(Date(1999, 7, 6), TimeOfDay(5, 30, 33)));
+            assertPred!"-="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"minutes"(-7), DateTime(Date(1999, 7, 6), TimeOfDay(12, 37, 33)));
+            assertPred!"-="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"minutes"(7), DateTime(Date(1999, 7, 6), TimeOfDay(12, 23, 33)));
+            assertPred!"-="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"seconds"(-7), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
+            assertPred!"-="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"seconds"(7), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
+            assertPred!"-="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"msecs"(-7_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
+            assertPred!"-="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"msecs"(7_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
+            assertPred!"-="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"usecs"(-7_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
+            assertPred!"-="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"usecs"(7_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
+            assertPred!"-="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"hnsecs"(-70_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
+            assertPred!"-="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)), dur!"hnsecs"(70_000_000), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
+
+            auto duration = dur!"seconds"(12);
+            const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
+            immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
+            static assert(!__traits(compiles, cdt += duration));
+            static assert(!__traits(compiles, idt += duration));
+            static assert(!__traits(compiles, cdt -= duration));
+            static assert(!__traits(compiles, idt -= duration));
+        }
+    }
+
+
+    /++
+        Gives the difference between two DateTimes.
+
+        The legal types of arithmetic for DateTime using this operator are
+
+        $(TABLE
+        $(TR $(TD DateTime) $(TD -) $(TD DateTime) $(TD -->) $(TD duration))
+        )
+      +/
+    Duration opBinary(string op)(in DateTime rhs) const pure nothrow
+        if(op == "-")
+    {
+        immutable dateResult = _date - rhs.date;
+        immutable todResult = _tod - rhs._tod;
+
+        return dur!"hnsecs"(dateResult.total!"hnsecs" + todResult.total!"hnsecs");
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            auto dt = DateTime(1999, 7, 6, 12, 30, 33);
+
+            assertPred!"=="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) -
+                         DateTime(Date(1998, 7, 6), TimeOfDay(12, 30, 33)),
+                        dur!"seconds"(31_536_000));
+            assertPred!"=="(DateTime(Date(1998, 7, 6), TimeOfDay(12, 30, 33)) -
+                         DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)),
+                        dur!"seconds"(-31_536_000));
+
+            assertPred!"=="(DateTime(Date(1999, 8, 6), TimeOfDay(12, 30, 33)) -
+                         DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)),
+                        dur!"seconds"(26_78_400));
+            assertPred!"=="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) -
+                         DateTime(Date(1999, 8, 6), TimeOfDay(12, 30, 33)),
+                        dur!"seconds"(-26_78_400));
+
+            assertPred!"=="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) -
+                         DateTime(Date(1999, 7, 5), TimeOfDay(12, 30, 33)),
+                        dur!"seconds"(86_400));
+            assertPred!"=="(DateTime(Date(1999, 7, 5), TimeOfDay(12, 30, 33)) -
+                         DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)),
+                        dur!"seconds"(-86_400));
+
+            assertPred!"=="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) -
+                         DateTime(Date(1999, 7, 6), TimeOfDay(11, 30, 33)),
+                        dur!"seconds"(3600));
+            assertPred!"=="(DateTime(Date(1999, 7, 6), TimeOfDay(11, 30, 33)) -
+                         DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)),
+                        dur!"seconds"(-3600));
+
+            assertPred!"=="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 31, 33)) -
+                         DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)),
+                        dur!"seconds"(60));
+            assertPred!"=="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) -
+                         DateTime(Date(1999, 7, 6), TimeOfDay(12, 31, 33)),
+                        dur!"seconds"(-60));
+
+            assertPred!"=="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 34)) -
+                         DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)),
+                        dur!"seconds"(1));
+            assertPred!"=="(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) -
+                         DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 34)),
+                        dur!"seconds"(-1));
+
+            assertPred!"=="(DateTime(1, 1, 1, 12, 30, 33) - DateTime(1, 1, 1, 0, 0, 0), dur!"seconds"(45033));
+            assertPred!"=="(DateTime(1, 1, 1, 0, 0, 0) - DateTime(1, 1, 1, 12, 30, 33), dur!"seconds"(-45033));
+            assertPred!"=="(DateTime(0, 12, 31, 12, 30, 33) - DateTime(1, 1, 1, 0, 0, 0), dur!"seconds"(-41367));
+            assertPred!"=="(DateTime(1, 1, 1, 0, 0, 0) - DateTime(0, 12, 31, 12, 30, 33), dur!"seconds"(41367));
+
+            const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
+            immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
+            static assert(__traits(compiles, dt - dt));
+            static assert(__traits(compiles, cdt - dt));
+            static assert(__traits(compiles, idt - dt));
+
+            static assert(__traits(compiles, dt - cdt));
+            static assert(__traits(compiles, cdt - cdt));
+            static assert(__traits(compiles, idt - cdt));
+
+            static assert(__traits(compiles, dt - idt));
+            static assert(__traits(compiles, cdt - idt));
+            static assert(__traits(compiles, idt - idt));
+        }
+    }
+
+
+    /++
+        Returns the difference between the two DateTimes in months.
+
+        You can get the difference in years by subtracting the year property
+        of two DateTimes, and you can get the difference in days or weeks by
+        subtracting the DateTimes themselves and using the Duration that results,
+        but because you cannot convert between months and smaller units without
+        a specific date (which Durations don't have), you cannot get the difference
+        in months without doing some math using both the year and month properties,
+        so this is a convenience function for getting the difference in months.
+
+        Note that the number of days in the months or how far into the month either
+        date is is irrelevant. It is the difference in the month property combined
+        with the difference in years * 12. So, for instance, December 31st and
+        January 1st are one month apart just as December 1st and January 31st are
+        one month apart.
+
+        Params:
+            rhs = The DateTime to subtract from this one.
+
+        Examples:
+--------------------
+assert(DateTime(1999, 2, 1, 12, 2, 3).diffMonths(DateTime(1999, 1, 31, 23, 59, 59)) == 1);
+assert(DateTime(1999, 1, 31, 0, 0, 0).diffMonths(DateTime(1999, 2, 1, 12, 3, 42)) == -1);
+assert(DateTime(1999, 3, 1, 5, 30, 0).diffMonths(DateTime(1999, 1, 1, 2, 4, 7)) == 2);
+assert(DateTime(1999, 1, 1, 7, 2, 4).diffMonths(DateTime(1999, 3, 31, 0, 30, 58)) == -2);
+--------------------
+      +/
+    int diffMonths(in DateTime rhs) const pure nothrow
+    {
+        return _date.diffMonths(rhs._date);
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            auto dt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
+            const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
+            immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
+            static assert(__traits(compiles, dt.diffMonths(dt)));
+            static assert(__traits(compiles, cdt.diffMonths(dt)));
+            static assert(__traits(compiles, idt.diffMonths(dt)));
+
+            static assert(__traits(compiles, dt.diffMonths(cdt)));
+            static assert(__traits(compiles, cdt.diffMonths(cdt)));
+            static assert(__traits(compiles, idt.diffMonths(cdt)));
+
+            static assert(__traits(compiles, dt.diffMonths(idt)));
+            static assert(__traits(compiles, cdt.diffMonths(idt)));
+            static assert(__traits(compiles, idt.diffMonths(idt)));
+
+            //Verify Examples.
+            assert(DateTime(1999, 2, 1, 12, 2, 3).diffMonths(DateTime(1999, 1, 31, 23, 59, 59)) == 1);
+            assert(DateTime(1999, 1, 31, 0, 0, 0).diffMonths(DateTime(1999, 2, 1, 12, 3, 42)) == -1);
+            assert(DateTime(1999, 3, 1, 5, 30, 0).diffMonths(DateTime(1999, 1, 1, 2, 4, 7)) == 2);
+            assert(DateTime(1999, 1, 1, 7, 2, 4).diffMonths(DateTime(1999, 3, 31, 0, 30, 58)) == -2);
+        }
+    }
+
+
+    /++
+        Whether this DateTime is in a leap year.
+     +/
+    @property bool isLeapYear() const pure nothrow
+    {
+        return _date.isLeapYear;
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            auto dt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
+            const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
+            immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
+            static assert(__traits(compiles, dt.isLeapYear));
+            static assert(__traits(compiles, cdt.isLeapYear));
+            static assert(__traits(compiles, idt.isLeapYear));
+        }
+    }
+
+
+    /++
+        Day of the week this DateTime is on.
+      +/
+    @property DayOfWeek dayOfWeek() const pure nothrow
+    {
+        return _date.dayOfWeek;
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            auto dt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
+            const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
+            immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
+            static assert(__traits(compiles, dt.dayOfWeek));
+            static assert(__traits(compiles, cdt.dayOfWeek));
+            static assert(__traits(compiles, idt.dayOfWeek));
+        }
+    }
+
+
+    /++
+        Day of the year this DateTime is on.
+
+        Examples:
+--------------------
+assert(DateTime(Date(1999, 1, 1), TimeOfDay(12, 22, 7)).dayOfYear == 1);
+assert(DateTime(Date(1999, 12, 31), TimeOfDay(7, 2, 59)).dayOfYear == 365);
+assert(DateTime(Date(2000, 12, 31), TimeOfDay(21, 20, 0)).dayOfYear == 366);
+--------------------
+      +/
+    @property ushort dayOfYear() const pure nothrow
+    {
+        return _date.dayOfYear;
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            auto dt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
+            const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
+            immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
+            static assert(__traits(compiles, dt.dayOfYear));
+            static assert(__traits(compiles, cdt.dayOfYear));
+            static assert(__traits(compiles, idt.dayOfYear));
+
+            //Verify Examples.
+            assert(DateTime(Date(1999, 1, 1), TimeOfDay(12, 22, 7)).dayOfYear == 1);
+            assert(DateTime(Date(1999, 12, 31), TimeOfDay(7, 2, 59)).dayOfYear == 365);
+            assert(DateTime(Date(2000, 12, 31), TimeOfDay(21, 20, 0)).dayOfYear == 366);
+        }
+    }
+
+
+    /++
+        Day of the year.
+
+        Params:
+            day = The day of the year to set which day of the year this DateTime is on.
+      +/
+    @property void dayOfYear(int day) pure
+    {
+        _date.dayOfYear = day;
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            auto dt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
+            const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
+            immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
+            static assert(__traits(compiles, dt.dayOfYear = 12));
+            static assert(!__traits(compiles, cdt.dayOfYear = 12));
+            static assert(!__traits(compiles, idt.dayOfYear = 12));
+        }
+    }
+
+
+    /++
+        The Xth day of the Gregorian Calendar that this DateTime is on.
+
+        Examples:
+--------------------
+assert(DateTime(Date(1, 1, 1), TimeOfDay(0, 0, 0)).dayOfGregorianCal == 1);
+assert(DateTime(Date(1, 12, 31), TimeOfDay(23, 59, 59)).dayOfGregorianCal == 365);
+assert(DateTime(Date(2, 1, 1), TimeOfDay(2, 2, 2)).dayOfGregorianCal == 366);
+
+assert(DateTime(Date(0, 12, 31), TimeOfDay(7, 7, 7)).dayOfGregorianCal == 0);
+assert(DateTime(Date(0, 1, 1), TimeOfDay(19, 30, 0)).dayOfGregorianCal == -365);
+assert(DateTime(Date(-1, 12, 31), TimeOfDay(4, 7, 0)).dayOfGregorianCal == -366);
+
+assert(DateTime(Date(2000, 1, 1), TimeOfDay(9, 30, 20)).dayOfGregorianCal == 730_120);
+assert(DateTime(Date(2010, 12, 31), TimeOfDay(15, 45, 50)).dayOfGregorianCal == 734_137);
+--------------------
+     +/
+    @property int dayOfGregorianCal() const pure nothrow
+    {
+        return _date.dayOfGregorianCal;
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
+            immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
+            static assert(__traits(compiles, cdt.dayOfGregorianCal));
+            static assert(__traits(compiles, idt.dayOfGregorianCal));
+
+            //Verify Examples.
+            assert(DateTime(Date(1, 1, 1), TimeOfDay(0, 0, 0)).dayOfGregorianCal == 1);
+            assert(DateTime(Date(1, 12, 31), TimeOfDay(23, 59, 59)).dayOfGregorianCal == 365);
+            assert(DateTime(Date(2, 1, 1), TimeOfDay(2, 2, 2)).dayOfGregorianCal == 366);
+
+            assert(DateTime(Date(0, 12, 31), TimeOfDay(7, 7, 7)).dayOfGregorianCal == 0);
+            assert(DateTime(Date(0, 1, 1), TimeOfDay(19, 30, 0)).dayOfGregorianCal == -365);
+            assert(DateTime(Date(-1, 12, 31), TimeOfDay(4, 7, 0)).dayOfGregorianCal == -366);
+
+            assert(DateTime(Date(2000, 1, 1), TimeOfDay(9, 30, 20)).dayOfGregorianCal == 730_120);
+            assert(DateTime(Date(2010, 12, 31), TimeOfDay(15, 45, 50)).dayOfGregorianCal == 734_137);
+        }
+    }
+
+
+    /++
+        The Xth day of the Gregorian Calendar that this DateTime is on. Setting
+        this property does not affect the time portion of DateTime.
+
+        Params:
+            days = The day of the Gregorian Calendar to set this DateTime to.
+
+        Examples:
+--------------------
+auto dt = DateTime(Date.init, TimeOfDay(12, 0, 0));
+dt.dayOfGregorianCal = 1;
+assert(dt == DateTime(Date(1, 1, 1), TimeOfDay(12, 0, 0)));
+
+dt.dayOfGregorianCal = 365;
+assert(dt == DateTime(Date(1, 12, 31), TimeOfDay(12, 0, 0)));
+
+dt.dayOfGregorianCal = 366;
+assert(dt == DateTime(Date(2, 1, 1), TimeOfDay(12, 0, 0)));
+
+dt.dayOfGregorianCal = 0;
+assert(dt == DateTime(Date(0, 12, 31), TimeOfDay(12, 0, 0)));
+
+dt.dayOfGregorianCal = -365;
+assert(dt == DateTime(Date(-0, 1, 1), TimeOfDay(12, 0, 0)));
+
+dt.dayOfGregorianCal = -366;
+assert(dt == DateTime(Date(-1, 12, 31), TimeOfDay(12, 0, 0)));
+
+dt.dayOfGregorianCal = 730_120;
+assert(dt == DateTime(Date(2000, 1, 1), TimeOfDay(12, 0, 0)));
+
+dt.dayOfGregorianCal = 734_137;
+assert(dt == DateTime(Date(2010, 12, 31), TimeOfDay(12, 0, 0)));
+--------------------
+     +/
+    @property void dayOfGregorianCal(int days) pure nothrow
+    {
+        _date.dayOfGregorianCal = days;
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
+            immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
+            static assert(!__traits(compiles, cdt.dayOfGregorianCal = 7));
+            static assert(!__traits(compiles, idt.dayOfGregorianCal = 7));
+
+            //Verify Examples.
+            auto dt = DateTime(Date.init, TimeOfDay(12, 0, 0));
+            dt.dayOfGregorianCal = 1;
+            assert(dt == DateTime(Date(1, 1, 1), TimeOfDay(12, 0, 0)));
+
+            dt.dayOfGregorianCal = 365;
+            assert(dt == DateTime(Date(1, 12, 31), TimeOfDay(12, 0, 0)));
+
+            dt.dayOfGregorianCal = 366;
+            assert(dt == DateTime(Date(2, 1, 1), TimeOfDay(12, 0, 0)));
+
+            dt.dayOfGregorianCal = 0;
+            assert(dt == DateTime(Date(0, 12, 31), TimeOfDay(12, 0, 0)));
+
+            dt.dayOfGregorianCal = -365;
+            assert(dt == DateTime(Date(-0, 1, 1), TimeOfDay(12, 0, 0)));
+
+            dt.dayOfGregorianCal = -366;
+            assert(dt == DateTime(Date(-1, 12, 31), TimeOfDay(12, 0, 0)));
+
+            dt.dayOfGregorianCal = 730_120;
+            assert(dt == DateTime(Date(2000, 1, 1), TimeOfDay(12, 0, 0)));
+
+            dt.dayOfGregorianCal = 734_137;
+            assert(dt == DateTime(Date(2010, 12, 31), TimeOfDay(12, 0, 0)));
+        }
+    }
+
+
+    /++
+        The ISO 8601 week of the year that this DateTime is in.
+
+        See_Also:
+            $(WEB en.wikipedia.org/wiki/ISO_week_date, ISO Week Date)
+      +/
+    @property ubyte isoWeek() const pure nothrow
+    {
+        return _date.isoWeek;
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            auto dt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
+            const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
+            immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
+            static assert(__traits(compiles, dt.isoWeek));
+            static assert(__traits(compiles, cdt.isoWeek));
+            static assert(__traits(compiles, idt.isoWeek));
+        }
+    }
+
+
+    /++
+        DateTime for the last day in the month that this DateTime is in.
+        The time portion of endOfMonth is always 23:59:59.
+
+        Examples:
+--------------------
+assert(DateTime(Date(1999, 1, 6), TimeOfDay(0, 0, 0)).endOfMonth == DateTime(Date(1999, 1, 31), TimeOfDay(23, 59, 59)));
+assert(DateTime(Date(1999, 2, 7), TimeOfDay(19, 30, 0)).endOfMonth == DateTime(Date(1999, 2, 28), TimeOfDay(23, 59, 59)));
+assert(DateTime(Date(2000, 2, 7), TimeOfDay(5, 12, 27)).endOfMonth == DateTime(Date(2000, 2, 29), TimeOfDay(23, 59, 59)));
+assert(DateTime(Date(2000, 6, 4), TimeOfDay(12, 22, 9)).endOfMonth == DateTime(Date(2000, 6, 30), TimeOfDay(23, 59, 59)));
+--------------------
+      +/
+    @property DateTime endOfMonth() const pure nothrow
+    {
+        try
+            return DateTime(_date.endOfMonth, TimeOfDay(23, 59, 59));
+        catch(Exception e)
+            assert(0, "DateTime constructor threw.");
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            //Test A.D.
+            assertPred!"=="(DateTime(1999, 1, 1, 0, 13, 26).endOfMonth, DateTime(1999, 1, 31, 23, 59, 59));
+            assertPred!"=="(DateTime(1999, 2, 1, 1, 14, 27).endOfMonth, DateTime(1999, 2, 28, 23, 59, 59));
+            assertPred!"=="(DateTime(2000, 2, 1, 2, 15, 28).endOfMonth, DateTime(2000, 2, 29, 23, 59, 59));
+            assertPred!"=="(DateTime(1999, 3, 1, 3, 16, 29).endOfMonth, DateTime(1999, 3, 31, 23, 59, 59));
+            assertPred!"=="(DateTime(1999, 4, 1, 4, 17, 30).endOfMonth, DateTime(1999, 4, 30, 23, 59, 59));
+            assertPred!"=="(DateTime(1999, 5, 1, 5, 18, 31).endOfMonth, DateTime(1999, 5, 31, 23, 59, 59));
+            assertPred!"=="(DateTime(1999, 6, 1, 6, 19, 32).endOfMonth, DateTime(1999, 6, 30, 23, 59, 59));
+            assertPred!"=="(DateTime(1999, 7, 1, 7, 20, 33).endOfMonth, DateTime(1999, 7, 31, 23, 59, 59));
+            assertPred!"=="(DateTime(1999, 8, 1, 8, 21, 34).endOfMonth, DateTime(1999, 8, 31, 23, 59, 59));
+            assertPred!"=="(DateTime(1999, 9, 1, 9, 22, 35).endOfMonth, DateTime(1999, 9, 30, 23, 59, 59));
+            assertPred!"=="(DateTime(1999, 10, 1, 10, 23, 36).endOfMonth, DateTime(1999, 10, 31, 23, 59, 59));
+            assertPred!"=="(DateTime(1999, 11, 1, 11, 24, 37).endOfMonth, DateTime(1999, 11, 30, 23, 59, 59));
+            assertPred!"=="(DateTime(1999, 12, 1, 12, 25, 38).endOfMonth, DateTime(1999, 12, 31, 23, 59, 59));
+
+            //Test B.C.
+            assertPred!"=="(DateTime(-1999, 1, 1, 0, 13, 26).endOfMonth, DateTime(-1999, 1, 31, 23, 59, 59));
+            assertPred!"=="(DateTime(-1999, 2, 1, 1, 14, 27).endOfMonth, DateTime(-1999, 2, 28, 23, 59, 59));
+            assertPred!"=="(DateTime(-2000, 2, 1, 2, 15, 28).endOfMonth, DateTime(-2000, 2, 29, 23, 59, 59));
+            assertPred!"=="(DateTime(-1999, 3, 1, 3, 16, 29).endOfMonth, DateTime(-1999, 3, 31, 23, 59, 59));
+            assertPred!"=="(DateTime(-1999, 4, 1, 4, 17, 30).endOfMonth, DateTime(-1999, 4, 30, 23, 59, 59));
+            assertPred!"=="(DateTime(-1999, 5, 1, 5, 18, 31).endOfMonth, DateTime(-1999, 5, 31, 23, 59, 59));
+            assertPred!"=="(DateTime(-1999, 6, 1, 6, 19, 32).endOfMonth, DateTime(-1999, 6, 30, 23, 59, 59));
+            assertPred!"=="(DateTime(-1999, 7, 1, 7, 20, 33).endOfMonth, DateTime(-1999, 7, 31, 23, 59, 59));
+            assertPred!"=="(DateTime(-1999, 8, 1, 8, 21, 34).endOfMonth, DateTime(-1999, 8, 31, 23, 59, 59));
+            assertPred!"=="(DateTime(-1999, 9, 1, 9, 22, 35).endOfMonth, DateTime(-1999, 9, 30, 23, 59, 59));
+            assertPred!"=="(DateTime(-1999, 10, 1, 10, 23, 36).endOfMonth, DateTime(-1999, 10, 31, 23, 59, 59));
+            assertPred!"=="(DateTime(-1999, 11, 1, 11, 24, 37).endOfMonth, DateTime(-1999, 11, 30, 23, 59, 59));
+            assertPred!"=="(DateTime(-1999, 12, 1, 12, 25, 38).endOfMonth, DateTime(-1999, 12, 31, 23, 59, 59));
+
+            const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
+            immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
+            static assert(__traits(compiles, cdt.endOfMonth));
+            static assert(__traits(compiles, idt.endOfMonth));
+
+            //Verify Examples.
+            assert(DateTime(Date(1999, 1, 6), TimeOfDay(0, 0, 0)).endOfMonth == DateTime(Date(1999, 1, 31), TimeOfDay(23, 59, 59)));
+            assert(DateTime(Date(1999, 2, 7), TimeOfDay(19, 30, 0)).endOfMonth == DateTime(Date(1999, 2, 28), TimeOfDay(23, 59, 59)));
+            assert(DateTime(Date(2000, 2, 7), TimeOfDay(5, 12, 27)).endOfMonth == DateTime(Date(2000, 2, 29), TimeOfDay(23, 59, 59)));
+            assert(DateTime(Date(2000, 6, 4), TimeOfDay(12, 22, 9)).endOfMonth == DateTime(Date(2000, 6, 30), TimeOfDay(23, 59, 59)));
+        }
+    }
+
+
+    /++
+        The last day in the month that this DateTime is in.
+
+        Examples:
+--------------------
+assert(DateTime(Date(1999, 1, 6), TimeOfDay(0, 0, 0)).endOfMonthDay == 31);
+assert(DateTime(Date(1999, 2, 7), TimeOfDay(19, 30, 0)).endOfMonthDay == 28);
+assert(DateTime(Date(2000, 2, 7), TimeOfDay(5, 12, 27)).endOfMonthDay == 29);
+assert(DateTime(Date(2000, 6, 4), TimeOfDay(12, 22, 9)).endOfMonthDay == 30);
+--------------------
+      +/
+    @property ubyte endOfMonthDay() const pure nothrow
+    {
+        return _date.endOfMonthDay;
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
+            immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
+            static assert(__traits(compiles, cdt.endOfMonthDay));
+            static assert(__traits(compiles, idt.endOfMonthDay));
+
+            //Verify Examples.
+            assert(DateTime(Date(1999, 1, 6), TimeOfDay(0, 0, 0)).endOfMonthDay == 31);
+            assert(DateTime(Date(1999, 2, 7), TimeOfDay(19, 30, 0)).endOfMonthDay == 28);
+            assert(DateTime(Date(2000, 2, 7), TimeOfDay(5, 12, 27)).endOfMonthDay == 29);
+            assert(DateTime(Date(2000, 6, 4), TimeOfDay(12, 22, 9)).endOfMonthDay == 30);
+        }
+    }
+
+
+    /++
+        Whether the current year is a date in A.D.
+
+        Examples:
+--------------------
+assert(DateTime(Date(1, 1, 1), TimeOfDay(12, 7, 0)).isAD);
+assert(DateTime(Date(2010, 12, 31), TimeOfDay(0, 0, 0)).isAD);
+assert(!DateTime(Date(0, 12, 31), TimeOfDay(23, 59, 59)).isAD);
+assert(!DateTime(Date(-2010, 1, 1), TimeOfDay(2, 2, 2)).isAD);
+--------------------
+      +/
+    @property bool isAD() const pure nothrow
+    {
+        return _date.isAD;
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
+            immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
+            static assert(__traits(compiles, cdt.isAD));
+            static assert(__traits(compiles, idt.isAD));
+
+            //Verify Examples.
+            assert(DateTime(Date(1, 1, 1), TimeOfDay(12, 7, 0)).isAD);
+            assert(DateTime(Date(2010, 12, 31), TimeOfDay(0, 0, 0)).isAD);
+            assert(!DateTime(Date(0, 12, 31), TimeOfDay(23, 59, 59)).isAD);
+            assert(!DateTime(Date(-2010, 1, 1), TimeOfDay(2, 2, 2)).isAD);
+        }
+    }
+
+
+    /++
+        The julian day for this DateTime at the given time. For example,
+        prior to noon, 1996-03-31 would be the julian day number 2_450_173,
+        so this function returns 2_450_173, while from noon onward, it the
+        julian day number would be 2_450_174, so this function returns 2_450_174.
+      +/
+    @property long julianDay() const pure nothrow
+    {
+        if(_tod._hour < 12)
+            return _date.julianDay - 1;
+        else
+            return _date.julianDay;
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            assertPred!"=="(DateTime(Date(-4713, 11, 24), TimeOfDay(0, 0, 0)).julianDay, -1);
+            assertPred!"=="(DateTime(Date(-4713, 11, 24), TimeOfDay(12, 0, 0)).julianDay, 0);
+
+            assertPred!"=="(DateTime(Date(0, 12, 31), TimeOfDay(0, 0, 0)).julianDay, 1_721_424);
+            assertPred!"=="(DateTime(Date(0, 12, 31), TimeOfDay(12, 0, 0)).julianDay, 1_721_425);
+
+            assertPred!"=="(DateTime(Date(1, 1, 1), TimeOfDay(0, 0, 0)).julianDay, 1_721_425);
+            assertPred!"=="(DateTime(Date(1, 1, 1), TimeOfDay(12, 0, 0)).julianDay, 1_721_426);
+
+            assertPred!"=="(DateTime(Date(1582, 10, 15), TimeOfDay(0, 0, 0)).julianDay, 2_299_160);
+            assertPred!"=="(DateTime(Date(1582, 10, 15), TimeOfDay(12, 0, 0)).julianDay, 2_299_161);
+
+            assertPred!"=="(DateTime(Date(1858, 11, 17), TimeOfDay(0, 0, 0)).julianDay, 2_400_000);
+            assertPred!"=="(DateTime(Date(1858, 11, 17), TimeOfDay(12, 0, 0)).julianDay, 2_400_001);
+
+            assertPred!"=="(DateTime(Date(1982, 1, 4), TimeOfDay(0, 0, 0)).julianDay, 2_444_973);
+            assertPred!"=="(DateTime(Date(1982, 1, 4), TimeOfDay(12, 0, 0)).julianDay, 2_444_974);
+
+            assertPred!"=="(DateTime(Date(1996, 3, 31), TimeOfDay(0, 0, 0)).julianDay, 2_450_173);
+            assertPred!"=="(DateTime(Date(1996, 3, 31), TimeOfDay(12, 0, 0)).julianDay, 2_450_174);
+
+            assertPred!"=="(DateTime(Date(2010, 8, 24), TimeOfDay(0, 0, 0)).julianDay, 2_455_432);
+            assertPred!"=="(DateTime(Date(2010, 8, 24), TimeOfDay(12, 0, 0)).julianDay, 2_455_433);
+
+            const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
+            immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
+            static assert(__traits(compiles, cdt.julianDay));
+            static assert(__traits(compiles, idt.julianDay));
+        }
+    }
+
+
+    /++
+        The modified julian day for any time on this Date (since, the modified
+        julian day changes at midnight).
+      +/
+    @property long modJulianDay() const pure nothrow
+    {
+        return _date.modJulianDay;
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            assertPred!"=="(DateTime(Date(1858, 11, 17), TimeOfDay(0, 0, 0)).modJulianDay, 0);
+            assertPred!"=="(DateTime(Date(1858, 11, 17), TimeOfDay(12, 0, 0)).modJulianDay, 0);
+
+            assertPred!"=="(DateTime(Date(2010, 8, 24), TimeOfDay(0, 0, 0)).modJulianDay, 55_432);
+            assertPred!"=="(DateTime(Date(2010, 8, 24), TimeOfDay(12, 0, 0)).modJulianDay, 55_432);
+
+            const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
+            immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
+            static assert(__traits(compiles, cdt.modJulianDay));
+            static assert(__traits(compiles, idt.modJulianDay));
+        }
+    }
+
+
+    /++
+        Converts this DateTime to a string with the format YYYYMMDDTHHMMSS.
+
+        Examples:
+--------------------
+assert(DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)).toISOString() == "20100704T070612");
+assert(DateTime(Date(1998, 12, 25), TimeOfDay(2, 15, 0)).toISOString() == "19981225T021500");
+assert(DateTime(Date(0, 1, 5), TimeOfDay(23, 9, 59)).toISOString() == "00000105T230959");
+assert(DateTime(Date(-4, 1, 5), TimeOfDay(0, 0, 2)).toISOString() == "-00040105T000002");
+--------------------
+      +/
+    string toISOString() const nothrow
+    {
+        try
+            return format("%sT%s", _date.toISOString(), _tod.toISOString());
+        catch(Exception e)
+            assert(0, "format() threw.");
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            //Test A.D.
+            assertPred!"=="(DateTime(Date(9, 12, 4), TimeOfDay(0, 0, 0)).toISOString(), "00091204T000000");
+            assertPred!"=="(DateTime(Date(99, 12, 4), TimeOfDay(5, 6, 12)).toISOString(), "00991204T050612");
+            assertPred!"=="(DateTime(Date(999, 12, 4), TimeOfDay(13, 44, 59)).toISOString(), "09991204T134459");
+            assertPred!"=="(DateTime(Date(9999, 7, 4), TimeOfDay(23, 59, 59)).toISOString(), "99990704T235959");
+            assertPred!"=="(DateTime(Date(10000, 10, 20), TimeOfDay(1, 1, 1)).toISOString(), "+100001020T010101");
+
+            //Test B.C.
+            assertPred!"=="(DateTime(Date(0, 12, 4), TimeOfDay(0, 12, 4)).toISOString(), "00001204T001204");
+            assertPred!"=="(DateTime(Date(-9, 12, 4), TimeOfDay(0, 0, 0)).toISOString(), "-00091204T000000");
+            assertPred!"=="(DateTime(Date(-99, 12, 4), TimeOfDay(5, 6, 12)).toISOString(), "-00991204T050612");
+            assertPred!"=="(DateTime(Date(-999, 12, 4), TimeOfDay(13, 44, 59)).toISOString(), "-09991204T134459");
+            assertPred!"=="(DateTime(Date(-9999, 7, 4), TimeOfDay(23, 59, 59)).toISOString(), "-99990704T235959");
+            assertPred!"=="(DateTime(Date(-10000, 10, 20), TimeOfDay(1, 1, 1)).toISOString(), "-100001020T010101");
+
+            const cdt = DateTime(1999, 7, 6, 12, 30, 33);
+            immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
+            static assert(__traits(compiles, cdt.toISOString()));
+            static assert(__traits(compiles, idt.toISOString()));
+
+            //Verify Examples.
+            assert(DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)).toISOString() == "20100704T070612");
+            assert(DateTime(Date(1998, 12, 25), TimeOfDay(2, 15, 0)).toISOString() == "19981225T021500");
+            assert(DateTime(Date(0, 1, 5), TimeOfDay(23, 9, 59)).toISOString() == "00000105T230959");
+            assert(DateTime(Date(-4, 1, 5), TimeOfDay(0, 0, 2)).toISOString() == "-00040105T000002");
+        }
+    }
+
+
+    /++
+        Converts this DateTime to a string with the format YYYY-MM-DDTHH:MM:SS.
+
+        Examples:
+--------------------
+assert(DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)).toISOExtendedString() == "2010-07-04T07:06:12");
+assert(DateTime(Date(1998, 12, 25), TimeOfDay(2, 15, 0)).toISOExtendedString() == "1998-12-25T02:15:00");
+assert(DateTime(Date(0, 1, 5), TimeOfDay(23, 9, 59)).toISOExtendedString() == "0000-01-05T23:09:59");
+assert(DateTime(Date(-4, 1, 5), TimeOfDay(0, 0, 2)).toISOExtendedString() == "-0004-01-05T00:00:02");
+--------------------
+      +/
+    string toISOExtendedString() const nothrow
+    {
+        try
+            return format("%sT%s", _date.toISOExtendedString(), _tod.toISOExtendedString());
+        catch(Exception e)
+            assert(0, "format() threw.");
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            //Test A.D.
+            assertPred!"=="(DateTime(Date(9, 12, 4), TimeOfDay(0, 0, 0)).toISOExtendedString(), "0009-12-04T00:00:00");
+            assertPred!"=="(DateTime(Date(99, 12, 4), TimeOfDay(5, 6, 12)).toISOExtendedString(), "0099-12-04T05:06:12");
+            assertPred!"=="(DateTime(Date(999, 12, 4), TimeOfDay(13, 44, 59)).toISOExtendedString(), "0999-12-04T13:44:59");
+            assertPred!"=="(DateTime(Date(9999, 7, 4), TimeOfDay(23, 59, 59)).toISOExtendedString(), "9999-07-04T23:59:59");
+            assertPred!"=="(DateTime(Date(10000, 10, 20), TimeOfDay(1, 1, 1)).toISOExtendedString(), "+10000-10-20T01:01:01");
+
+            //Test B.C.
+            assertPred!"=="(DateTime(Date(0, 12, 4), TimeOfDay(0, 12, 4)).toISOExtendedString(), "0000-12-04T00:12:04");
+            assertPred!"=="(DateTime(Date(-9, 12, 4), TimeOfDay(0, 0, 0)).toISOExtendedString(), "-0009-12-04T00:00:00");
+            assertPred!"=="(DateTime(Date(-99, 12, 4), TimeOfDay(5, 6, 12)).toISOExtendedString(), "-0099-12-04T05:06:12");
+            assertPred!"=="(DateTime(Date(-999, 12, 4), TimeOfDay(13, 44, 59)).toISOExtendedString(), "-0999-12-04T13:44:59");
+            assertPred!"=="(DateTime(Date(-9999, 7, 4), TimeOfDay(23, 59, 59)).toISOExtendedString(), "-9999-07-04T23:59:59");
+            assertPred!"=="(DateTime(Date(-10000, 10, 20), TimeOfDay(1, 1, 1)).toISOExtendedString(), "-10000-10-20T01:01:01");
+
+            const cdt = DateTime(1999, 7, 6, 12, 30, 33);
+            immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
+            static assert(__traits(compiles, cdt.toISOExtendedString()));
+            static assert(__traits(compiles, idt.toISOExtendedString()));
+
+            //Verify Examples.
+            assert(DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)).toISOExtendedString() == "2010-07-04T07:06:12");
+            assert(DateTime(Date(1998, 12, 25), TimeOfDay(2, 15, 0)).toISOExtendedString() == "1998-12-25T02:15:00");
+            assert(DateTime(Date(0, 1, 5), TimeOfDay(23, 9, 59)).toISOExtendedString() == "0000-01-05T23:09:59");
+            assert(DateTime(Date(-4, 1, 5), TimeOfDay(0, 0, 2)).toISOExtendedString() == "-0004-01-05T00:00:02");
+        }
+    }
+
+    /++
+        Converts this DateTime to a string with the format YYYY-Mon-DD HH:MM:SS.
+
+        Examples:
+--------------------
+assert(DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)).toSimpleString() == "2010-Jul-04 07:06:12");
+assert(DateTime(Date(1998, 12, 25), TimeOfDay(2, 15, 0)).toSimpleString() == "1998-Dec-25 02:15:00");
+assert(DateTime(Date(0, 1, 5), TimeOfDay(23, 9, 59)).toSimpleString() == "0000-Jan-05 23:09:59");
+assert(DateTime(Dte(-4, 1, 5), TimeOfDay(0, 0, 2)).toSimpleString() == "-0004-Jan-05 00:00:02");
+--------------------
+      +/
+    string toSimpleString() const nothrow
+    {
+        try
+            return format("%s %s", _date.toSimpleString(), _tod.toString());
+        catch(Exception e)
+            assert(0, "format() threw.");
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            //Test A.D.
+            assertPred!"=="(DateTime(Date(9, 12, 4), TimeOfDay(0, 0, 0)).toSimpleString(), "0009-Dec-04 00:00:00");
+            assertPred!"=="(DateTime(Date(99, 12, 4), TimeOfDay(5, 6, 12)).toSimpleString(), "0099-Dec-04 05:06:12");
+            assertPred!"=="(DateTime(Date(999, 12, 4), TimeOfDay(13, 44, 59)).toSimpleString(), "0999-Dec-04 13:44:59");
+            assertPred!"=="(DateTime(Date(9999, 7, 4), TimeOfDay(23, 59, 59)).toSimpleString(), "9999-Jul-04 23:59:59");
+            assertPred!"=="(DateTime(Date(10000, 10, 20), TimeOfDay(1, 1, 1)).toSimpleString(), "+10000-Oct-20 01:01:01");
+
+            //Test B.C.
+            assertPred!"=="(DateTime(Date(0, 12, 4), TimeOfDay(0, 12, 4)).toSimpleString(), "0000-Dec-04 00:12:04");
+            assertPred!"=="(DateTime(Date(-9, 12, 4), TimeOfDay(0, 0, 0)).toSimpleString(), "-0009-Dec-04 00:00:00");
+            assertPred!"=="(DateTime(Date(-99, 12, 4), TimeOfDay(5, 6, 12)).toSimpleString(), "-0099-Dec-04 05:06:12");
+            assertPred!"=="(DateTime(Date(-999, 12, 4), TimeOfDay(13, 44, 59)).toSimpleString(), "-0999-Dec-04 13:44:59");
+            assertPred!"=="(DateTime(Date(-9999, 7, 4), TimeOfDay(23, 59, 59)).toSimpleString(), "-9999-Jul-04 23:59:59");
+            assertPred!"=="(DateTime(Date(-10000, 10, 20), TimeOfDay(1, 1, 1)).toSimpleString(), "-10000-Oct-20 01:01:01");
+
+            const cdt = DateTime(1999, 7, 6, 12, 30, 33);
+            immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
+            static assert(__traits(compiles, cdt.toSimpleString()));
+            static assert(__traits(compiles, idt.toSimpleString()));
+
+            //Verify Examples.
+            assert(DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)).toSimpleString() == "2010-Jul-04 07:06:12");
+            assert(DateTime(Date(1998, 12, 25), TimeOfDay(2, 15, 0)).toSimpleString() == "1998-Dec-25 02:15:00");
+            assert(DateTime(Date(0, 1, 5), TimeOfDay(23, 9, 59)).toSimpleString() == "0000-Jan-05 23:09:59");
+            assert(DateTime(Date(-4, 1, 5), TimeOfDay(0, 0, 2)).toSimpleString() == "-0004-Jan-05 00:00:02");
+        }
+    }
+
+
+    /+
+        Converts this DateTime to a string.
+      +/
+    //Due to bug http://d.puremagic.com/issues/show_bug.cgi?id=3715 , we can't
+    //have versions of toString() with extra modifiers, so we define one version
+    //with modifiers and one without.
+    string toString()
+    {
+        return toSimpleString();
+    }
+
+    /++
+        Converts this DateTime to a string.
+      +/
+    //Due to bug http://d.puremagic.com/issues/show_bug.cgi?id=3715 , we can't
+    //have versions of toString() with extra modifiers, so we define one version
+    //with modifiers and one without.
+    string toString() const nothrow
+    {
+        return toSimpleString();
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            auto dt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
+            const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
+            immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
+            static assert(__traits(compiles, dt.toString()));
+            static assert(__traits(compiles, cdt.toString()));
+            static assert(__traits(compiles, idt.toString()));
+        }
+    }
+
+
+
+    /++
+        Creates a DateTime from a string with the format YYYYMMDDTHHMMSS.
+        Whitespace is stripped from the given string.
+
+        Params:
+            isoString = A string formatted in the ISO format for dates and times.
+
+        Throws:
+            DateTimeException if the given string is not in the ISO format or if
+            the resulting DateTime would not be valid.
+
+        Examples:
+--------------------
+assert(DateTime.fromISOString("20100704T070612") == DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
+assert(DateTime.fromISOString("19981225T021500") == DateTime(Date(1998, 12, 25), TimeOfDay(2, 15, 0)));
+assert(DateTime.fromISOString("00000105T230959") == DateTime(Date(0, 1, 5), TimeOfDay(23, 9, 59)));
+assert(DateTime.fromISOString("-00040105T000002") == DateTime(Date(-4, 1, 5), TimeOfDay(0, 0, 2)));
+assert(DateTime.fromISOString(" 20100704T070612 ") == DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
+--------------------
+      +/
+    static DateTime fromISOString(S)(in S isoString)
+        if(isSomeString!S)
+    {
+        immutable dstr = to!dstring(strip(isoString));
+
+        enforce(dstr.length >= 15, new DateTimeException(format("Invalid ISO String: %s", isoString)));
+        auto t = dstr.indexOf('T');
+
+        enforce(t != -1, new DateTimeException(format("Invalid ISO String: %s", isoString)));
+
+        immutable date = Date.fromISOString(dstr[0..t]);
+        immutable tod = TimeOfDay.fromISOString(dstr[t+1 .. $]);
+
+        return DateTime(date, tod);
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            assertThrown!DateTimeException(DateTime.fromISOString(""));
+            assertThrown!DateTimeException(DateTime.fromISOString("20100704000000"));
+            assertThrown!DateTimeException(DateTime.fromISOString("20100704 000000"));
+            assertThrown!DateTimeException(DateTime.fromISOString("20100704t000000"));
+            assertThrown!DateTimeException(DateTime.fromISOString("20100704T000000."));
+            assertThrown!DateTimeException(DateTime.fromISOString("20100704T000000.0"));
+
+            assertThrown!DateTimeException(DateTime.fromISOString("2010-07-0400:00:00"));
+            assertThrown!DateTimeException(DateTime.fromISOString("2010-07-04 00:00:00"));
+            assertThrown!DateTimeException(DateTime.fromISOString("2010-07-04t00:00:00"));
+            assertThrown!DateTimeException(DateTime.fromISOString("2010-07-04T00:00:00."));
+            assertThrown!DateTimeException(DateTime.fromISOString("2010-07-04T00:00:00.0"));
+
+            assertThrown!DateTimeException(DateTime.fromISOString("2010-Jul-0400:00:00"));
+            assertThrown!DateTimeException(DateTime.fromISOString("2010-Jul-04 00:00:00"));
+            assertThrown!DateTimeException(DateTime.fromISOString("2010-Jul-04t00:00:00"));
+            assertThrown!DateTimeException(DateTime.fromISOString("2010-Jul-04T00:00:00"));
+            assertThrown!DateTimeException(DateTime.fromISOString("2010-Jul-04 00:00:00."));
+            assertThrown!DateTimeException(DateTime.fromISOString("2010-Jul-04 00:00:00.0"));
+
+            assertThrown!DateTimeException(DateTime.fromISOString("2010-12-22T172201"));
+            assertThrown!DateTimeException(DateTime.fromISOString("2010-Dec-22 17:22:01"));
+
+            assertPred!"=="(DateTime.fromISOString("20101222T172201"), DateTime(Date(2010, 12, 22), TimeOfDay(17, 22, 01)));
+            assertPred!"=="(DateTime.fromISOString("19990706T123033"), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+            assertPred!"=="(DateTime.fromISOString("-19990706T123033"), DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
+            assertPred!"=="(DateTime.fromISOString("+019990706T123033"), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+            assertPred!"=="(DateTime.fromISOString("19990706T123033 "), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+            assertPred!"=="(DateTime.fromISOString(" 19990706T123033"), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+            assertPred!"=="(DateTime.fromISOString(" 19990706T123033 "), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+
+            //Verify Examples.
+            assert(DateTime.fromISOString("20100704T070612") == DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
+            assert(DateTime.fromISOString("19981225T021500") == DateTime(Date(1998, 12, 25), TimeOfDay(2, 15, 0)));
+            assert(DateTime.fromISOString("00000105T230959") == DateTime(Date(0, 1, 5), TimeOfDay(23, 9, 59)));
+            assert(DateTime.fromISOString("-00040105T000002") == DateTime(Date(-4, 1, 5), TimeOfDay(0, 0, 2)));
+            assert(DateTime.fromISOString(" 20100704T070612 ") == DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
+        }
+    }
+
+
+    /++
+        Creates a DateTime from a string with the format YYYY-MM-DDTHH:MM:SS.
+        Whitespace is stripped from the given string.
+
+        Params:
+            isoString = A string formatted in the ISO Extended format for dates
+                        and times.
+
+        Throws:
+            DateTimeException if the given string is not in the ISO Extended
+            format or if the resulting DateTime would not be valid.
+
+        Examples:
+--------------------
+assert(DateTime.fromISOExtendedString("2010-07-04T07:06:12") ==
+       DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
+assert(DateTime.fromISOExtendedString("1998-12-25T02:15:00") ==
+       DateTime(Date(1998, 12, 25), TimeOfDay(2, 15, 0)));
+assert(DateTime.fromISOExtendedString("0000-01-05T23:09:59") ==
+       DateTime(Date(0, 1, 5), TimeOfDay(23, 9, 59)));
+assert(DateTime.fromISOExtendedString("-0004-01-05T00:00:02") ==
+       DateTime(Date(-4, 1, 5), TimeOfDay(0, 0, 2)));
+assert(DateTime.fromISOExtendedString(" 2010-07-04T07:06:12 ") ==
+       DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
+--------------------
+      +/
+    static DateTime fromISOExtendedString(S)(in S isoExtString)
+        if(isSomeString!(S))
+    {
+        immutable dstr = to!dstring(strip(isoExtString));
+
+        enforce(dstr.length >= 15, new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
+        auto t = dstr.indexOf('T');
+
+        enforce(t != -1, new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
+
+        immutable date = Date.fromISOExtendedString(dstr[0..t]);
+        immutable tod = TimeOfDay.fromISOExtendedString(dstr[t+1 .. $]);
+
+        return DateTime(date, tod);
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            assertThrown!DateTimeException(DateTime.fromISOExtendedString(""));
+            assertThrown!DateTimeException(DateTime.fromISOExtendedString("20100704000000"));
+            assertThrown!DateTimeException(DateTime.fromISOExtendedString("20100704 000000"));
+            assertThrown!DateTimeException(DateTime.fromISOExtendedString("20100704t000000"));
+            assertThrown!DateTimeException(DateTime.fromISOExtendedString("20100704T000000."));
+            assertThrown!DateTimeException(DateTime.fromISOExtendedString("20100704T000000.0"));
+
+            assertThrown!DateTimeException(DateTime.fromISOExtendedString("2010-07:0400:00:00"));
+            assertThrown!DateTimeException(DateTime.fromISOExtendedString("2010-07-04 00:00:00"));
+            assertThrown!DateTimeException(DateTime.fromISOExtendedString("2010-07-04 00:00:00"));
+            assertThrown!DateTimeException(DateTime.fromISOExtendedString("2010-07-04t00:00:00"));
+            assertThrown!DateTimeException(DateTime.fromISOExtendedString("2010-07-04T00:00:00."));
+            assertThrown!DateTimeException(DateTime.fromISOExtendedString("2010-07-04T00:00:00.0"));
+
+            assertThrown!DateTimeException(DateTime.fromISOExtendedString("2010-Jul-0400:00:00"));
+            assertThrown!DateTimeException(DateTime.fromISOExtendedString("2010-Jul-04t00:00:00"));
+            assertThrown!DateTimeException(DateTime.fromISOExtendedString("2010-Jul-04 00:00:00."));
+            assertThrown!DateTimeException(DateTime.fromISOExtendedString("2010-Jul-04 00:00:00.0"));
+
+            assertThrown!DateTimeException(DateTime.fromISOExtendedString("20101222T172201"));
+            assertThrown!DateTimeException(DateTime.fromISOExtendedString("2010-Dec-22 17:22:01"));
+
+            assertPred!"=="(DateTime.fromISOExtendedString("2010-12-22T17:22:01"), DateTime(Date(2010, 12, 22), TimeOfDay(17, 22, 01)));
+            assertPred!"=="(DateTime.fromISOExtendedString("1999-07-06T12:30:33"), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+            assertPred!"=="(DateTime.fromISOExtendedString("-1999-07-06T12:30:33"), DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
+            assertPred!"=="(DateTime.fromISOExtendedString("+01999-07-06T12:30:33"), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+            assertPred!"=="(DateTime.fromISOExtendedString("1999-07-06T12:30:33 "), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+            assertPred!"=="(DateTime.fromISOExtendedString(" 1999-07-06T12:30:33"), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+            assertPred!"=="(DateTime.fromISOExtendedString(" 1999-07-06T12:30:33 "), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+
+            //Verify Examples.
+            assert(DateTime.fromISOExtendedString("2010-07-04T07:06:12") == DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
+            assert(DateTime.fromISOExtendedString("1998-12-25T02:15:00") == DateTime(Date(1998, 12, 25), TimeOfDay(2, 15, 0)));
+            assert(DateTime.fromISOExtendedString("0000-01-05T23:09:59") == DateTime(Date(0, 1, 5), TimeOfDay(23, 9, 59)));
+            assert(DateTime.fromISOExtendedString("-0004-01-05T00:00:02") == DateTime(Date(-4, 1, 5), TimeOfDay(0, 0, 2)));
+            assert(DateTime.fromISOExtendedString(" 2010-07-04T07:06:12 ") == DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
+        }
+    }
+
+
+    /++
+        Creates a DateTime from a string with the format YYYY-Mon-DD HH:MM:SS.
+        Whitespace is stripped from the given string.
+
+        Params:
+            simpleString = A string formatted in the way that toSimpleString()
+                           formats dates and times.
+
+        Throws:
+            DateTimeException if the given string is not in the correct format or if
+            the resulting DateTime would not be valid.
+
+        Examples:
+--------------------
+assert(DateTime.fromSimpleString("2010-Jul-04 07:06:12") ==
+       DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
+assert(DateTime.fromSimpleString("1998-Dec-25 02:15:00") ==
+       DateTime(Date(1998, 12, 25), TimeOfDay(2, 15, 0)));
+assert(DateTime.fromSimpleString("0000-Jan-05 23:09:59") ==
+       DateTime(Date(0, 1, 5), TimeOfDay(23, 9, 59)));
+assert(DateTime.fromSimpleString("-0004-Jan-05 00:00:02") ==
+       DateTime(Date(-4, 1, 5), TimeOfDay(0, 0, 2)));
+assert(DateTime.fromSimpleString(" 2010-Jul-04 07:06:12 ") ==
+       DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
+--------------------
+      +/
+    static DateTime fromSimpleString(S)(in S simpleString)
+        if(isSomeString!(S))
+    {
+        immutable dstr = to!dstring(strip(simpleString));
+
+        enforce(dstr.length >= 15, new DateTimeException(format("Invalid string format: %s", simpleString)));
+        auto t = dstr.indexOf(' ');
+
+        enforce(t != -1, new DateTimeException(format("Invalid string format: %s", simpleString)));
+
+        immutable date = Date.fromSimpleString(dstr[0..t]);
+        immutable tod = TimeOfDay.fromISOExtendedString(dstr[t+1 .. $]);
+
+        return DateTime(date, tod);
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            assertThrown!DateTimeException(DateTime.fromISOString(""));
+            assertThrown!DateTimeException(DateTime.fromISOString("20100704000000"));
+            assertThrown!DateTimeException(DateTime.fromISOString("20100704 000000"));
+            assertThrown!DateTimeException(DateTime.fromISOString("20100704t000000"));
+            assertThrown!DateTimeException(DateTime.fromISOString("20100704T000000."));
+            assertThrown!DateTimeException(DateTime.fromISOString("20100704T000000.0"));
+
+            assertThrown!DateTimeException(DateTime.fromISOString("2010-07-0400:00:00"));
+            assertThrown!DateTimeException(DateTime.fromISOString("2010-07-04 00:00:00"));
+            assertThrown!DateTimeException(DateTime.fromISOString("2010-07-04t00:00:00"));
+            assertThrown!DateTimeException(DateTime.fromISOString("2010-07-04T00:00:00."));
+            assertThrown!DateTimeException(DateTime.fromISOString("2010-07-04T00:00:00.0"));
+
+            assertThrown!DateTimeException(DateTime.fromISOString("2010-Jul-0400:00:00"));
+            assertThrown!DateTimeException(DateTime.fromISOString("2010-Jul-04 00:00:00"));
+            assertThrown!DateTimeException(DateTime.fromISOString("2010-Jul-04t00:00:00"));
+            assertThrown!DateTimeException(DateTime.fromISOString("2010-Jul-04T00:00:00"));
+            assertThrown!DateTimeException(DateTime.fromISOString("2010-Jul-04 00:00:00."));
+            assertThrown!DateTimeException(DateTime.fromISOString("2010-Jul-04 00:00:00.0"));
+
+            assertThrown!DateTimeException(DateTime.fromSimpleString("20101222T172201"));
+            assertThrown!DateTimeException(DateTime.fromSimpleString("2010-12-22T172201"));
+
+            assertPred!"=="(DateTime.fromSimpleString("2010-Dec-22 17:22:01"), DateTime(Date(2010, 12, 22), TimeOfDay(17, 22, 01)));
+            assertPred!"=="(DateTime.fromSimpleString("1999-Jul-06 12:30:33"), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+            assertPred!"=="(DateTime.fromSimpleString("-1999-Jul-06 12:30:33"), DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
+            assertPred!"=="(DateTime.fromSimpleString("+01999-Jul-06 12:30:33"), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+            assertPred!"=="(DateTime.fromSimpleString("1999-Jul-06 12:30:33 "), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+            assertPred!"=="(DateTime.fromSimpleString(" 1999-Jul-06 12:30:33"), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+            assertPred!"=="(DateTime.fromSimpleString(" 1999-Jul-06 12:30:33 "), DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+
+            //Verify Examples.
+            assert(DateTime.fromSimpleString("2010-Jul-04 07:06:12") == DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
+            assert(DateTime.fromSimpleString("1998-Dec-25 02:15:00") == DateTime(Date(1998, 12, 25), TimeOfDay(2, 15, 0)));
+            assert(DateTime.fromSimpleString("0000-Jan-05 23:09:59") == DateTime(Date(0, 1, 5), TimeOfDay(23, 9, 59)));
+            assert(DateTime.fromSimpleString("-0004-Jan-05 00:00:02") == DateTime(Date(-4, 1, 5), TimeOfDay(0, 0, 2)));
+            assert(DateTime.fromSimpleString(" 2010-Jul-04 07:06:12 ") == DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
+        }
+    }
+
+
+    //TODO Add function which takes a user-specified time format and produces a DateTime
+
+    //TODO Add function which takes pretty much any time-string and produces a DateTime
+    //     Obviously, it will be less efficient, and it probably won't manage _every_
+    //     possible date format, but a smart conversion function would be nice.
+
+
+    /++
+        Returns the DateTime farthest in the past which is representable by DateTime.
+      +/
+    @property static DateTime min() pure nothrow
+    out(result)
+    {
+        assert(result._date == Date.min);
+        assert(result._tod == TimeOfDay.min);
+    }
+    body
+    {
+        auto dt = DateTime.init;
+        dt._date._year = short.min;
+        dt._date._month = Month.jan;
+        dt._date._day = 1;
+
+        return dt;
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            assert(DateTime.min.year < 0);
+            assert(DateTime.min < DateTime.max);
+        }
+    }
+
+
+    /++
+        Returns the DateTime farthest in the future which is representable by DateTime.
+      +/
+    @property static DateTime max() pure nothrow
+    out(result)
+    {
+        assert(result._date == Date.max);
+        assert(result._tod == TimeOfDay.max);
+    }
+    body
+    {
+        auto dt = DateTime.init;
+        dt._date._year = short.max;
+        dt._date._month = Month.dec;
+        dt._date._day = 31;
+        dt._tod._hour = TimeOfDay.maxHour;
+        dt._tod._minute = TimeOfDay.maxMinute;
+        dt._tod._second = TimeOfDay.maxSecond;
+
+        return dt;
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            assert(DateTime.max.year > 0);
+            assert(DateTime.max > DateTime.min);
+        }
+    }
+
+
+private:
+
+    /++
+        Add seconds to the time of day. Negative values will subtract. If the
+        number of seconds overflows (or underflows), then the seconds will wrap,
+        increasing (or decreasing) the number of minutes accordingly. The
+        same goes for any larger units.
+
+        Params:
+            seconds = The number of seconds to add to this DateTime.
+      +/
+    ref DateTime addSeconds(long seconds) pure nothrow
+    {
+        long hnsecs = convert!("seconds", "hnsecs")(seconds);
+        hnsecs += convert!("hours", "hnsecs")(_tod._hour);
+        hnsecs += convert!("minutes", "hnsecs")(_tod._minute);
+        hnsecs += convert!("seconds", "hnsecs")(_tod._second);
+
+        auto days = splitUnitsFromHNSecs!"days"(hnsecs);
+
+        if(hnsecs < 0)
+        {
+            hnsecs += convert!("days", "hnsecs")(1);
+            --days;
+        }
+
+        _date.addDays(days);
+
+        immutable newHours = splitUnitsFromHNSecs!"hours"(hnsecs);
+        immutable newMinutes = splitUnitsFromHNSecs!"minutes"(hnsecs);
+        immutable newSeconds = splitUnitsFromHNSecs!"seconds"(hnsecs);
+
+        _tod._hour = cast(ubyte)newHours;
+        _tod._minute = cast(ubyte)newMinutes;
+        _tod._second = cast(ubyte)newSeconds;
+
+        return this;
+    }
+
+    unittest
+    {
+        version(testStdDateTime)
+        {
+            static void testDT(DateTime orig, int seconds, in DateTime expected, size_t line = __LINE__)
+            {
+                orig.addSeconds(seconds);
+                assertPred!"=="(orig, expected, "", __FILE__, line);
+            }
+
+            //Test A.D.
+            testDT(DateTime(1999, 7, 6, 12, 30, 33), 0, DateTime(1999, 7, 6, 12, 30, 33));
+            testDT(DateTime(1999, 7, 6, 12, 30, 33), 1, DateTime(1999, 7, 6, 12, 30, 34));
+            testDT(DateTime(1999, 7, 6, 12, 30, 33), 2, DateTime(1999, 7, 6, 12, 30, 35));
+            testDT(DateTime(1999, 7, 6, 12, 30, 33), 3, DateTime(1999, 7, 6, 12, 30, 36));
+            testDT(DateTime(1999, 7, 6, 12, 30, 33), 4, DateTime(1999, 7, 6, 12, 30, 37));
+            testDT(DateTime(1999, 7, 6, 12, 30, 33), 5, DateTime(1999, 7, 6, 12, 30, 38));
+            testDT(DateTime(1999, 7, 6, 12, 30, 33), 10, DateTime(1999, 7, 6, 12, 30, 43));
+            testDT(DateTime(1999, 7, 6, 12, 30, 33), 15, DateTime(1999, 7, 6, 12, 30, 48));
+            testDT(DateTime(1999, 7, 6, 12, 30, 33), 26, DateTime(1999, 7, 6, 12, 30, 59));
+            testDT(DateTime(1999, 7, 6, 12, 30, 33), 27, DateTime(1999, 7, 6, 12, 31, 0));
+            testDT(DateTime(1999, 7, 6, 12, 30, 33), 30, DateTime(1999, 7, 6, 12, 31, 3));
+            testDT(DateTime(1999, 7, 6, 12, 30, 33), 59, DateTime(1999, 7, 6, 12, 31, 32));
+            testDT(DateTime(1999, 7, 6, 12, 30, 33), 60, DateTime(1999, 7, 6, 12, 31, 33));
+            testDT(DateTime(1999, 7, 6, 12, 30, 33), 61, DateTime(1999, 7, 6, 12, 31, 34));
+
+            testDT(DateTime(1999, 7, 6, 12, 30, 33), 1766, DateTime(1999, 7, 6, 12, 59, 59));
+            testDT(DateTime(1999, 7, 6, 12, 30, 33), 1767, DateTime(1999, 7, 6, 13, 0, 0));
+            testDT(DateTime(1999, 7, 6, 12, 30, 33), 1768, DateTime(1999, 7, 6, 13, 0, 1));
+            testDT(DateTime(1999, 7, 6, 12, 30, 33), 2007, DateTime(1999, 7, 6, 13, 4, 0));
+            testDT(DateTime(1999, 7, 6, 12, 30, 33), 3599, DateTime(1999, 7, 6, 13, 30, 32));
+            testDT(DateTime(1999, 7, 6, 12, 30, 33), 3600, DateTime(1999, 7, 6, 13, 30, 33));
+            testDT(DateTime(1999, 7, 6, 12, 30, 33), 3601, DateTime(1999, 7, 6, 13, 30, 34));
+            testDT(DateTime(1999, 7, 6, 12, 30, 33), 7200, DateTime(1999, 7, 6, 14, 30, 33));
+            testDT(DateTime(1999, 7, 6, 23, 0, 0), 432_123, DateTime(1999, 7, 11, 23, 2, 3));
+
+            testDT(DateTime(1999, 7, 6, 12, 30, 33), -1, DateTime(1999, 7, 6, 12, 30, 32));
+            testDT(DateTime(1999, 7, 6, 12, 30, 33), -2, DateTime(1999, 7, 6, 12, 30, 31));
+            testDT(DateTime(1999, 7, 6, 12, 30, 33), -3, DateTime(1999, 7, 6, 12, 30, 30));
+            testDT(DateTime(1999, 7, 6, 12, 30, 33), -4, DateTime(1999, 7, 6, 12, 30, 29));
+            testDT(DateTime(1999, 7, 6, 12, 30, 33), -5, DateTime(1999, 7, 6, 12, 30, 28));
+            testDT(DateTime(1999, 7, 6, 12, 30, 33), -10, DateTime(1999, 7, 6, 12, 30, 23));
+            testDT(DateTime(1999, 7, 6, 12, 30, 33), -15, DateTime(1999, 7, 6, 12, 30, 18));
+            testDT(DateTime(1999, 7, 6, 12, 30, 33), -33, DateTime(1999, 7, 6, 12, 30, 0));
+            testDT(DateTime(1999, 7, 6, 12, 30, 33), -34, DateTime(1999, 7, 6, 12, 29, 59));
+            testDT(DateTime(1999, 7, 6, 12, 30, 33), -35, DateTime(1999, 7, 6, 12, 29, 58));
+            testDT(DateTime(1999, 7, 6, 12, 30, 33), -59, DateTime(1999, 7, 6, 12, 29, 34));
+            testDT(DateTime(1999, 7, 6, 12, 30, 33), -60, DateTime(1999, 7, 6, 12, 29, 33));
+            testDT(DateTime(1999, 7, 6, 12, 30, 33), -61, DateTime(1999, 7, 6, 12, 29, 32));
+
+            testDT(DateTime(1999, 7, 6, 12, 30, 33), -1833, DateTime(1999, 7, 6, 12, 0, 0));
+            testDT(DateTime(1999, 7, 6, 12, 30, 33), -1834, DateTime(1999, 7, 6, 11, 59, 59));
+            testDT(DateTime(1999, 7, 6, 12, 30, 33), -3600, DateTime(1999, 7, 6, 11, 30, 33));
+            testDT(DateTime(1999, 7, 6, 12, 30, 33), -3601, DateTime(1999, 7, 6, 11, 30, 32));
+            testDT(DateTime(1999, 7, 6, 12, 30, 33), -5134, DateTime(1999, 7, 6, 11, 4, 59));
+            testDT(DateTime(1999, 7, 6, 23, 0, 0), -432_123, DateTime(1999, 7, 1, 22, 57, 57));
+
+            testDT(DateTime(1999, 7, 6, 12, 30, 0), 1, DateTime(1999, 7, 6, 12, 30, 1));
+            testDT(DateTime(1999, 7, 6, 12, 30, 0), 0, DateTime(1999, 7, 6, 12, 30, 0));
+            testDT(DateTime(1999, 7, 6, 12, 30, 0), -1, DateTime(1999, 7, 6, 12, 29, 59));
+
+            testDT(DateTime(1999, 7, 6, 12, 0, 0), 1, DateTime(1999, 7, 6, 12, 0, 1));
+            testDT(DateTime(1999, 7, 6, 12, 0, 0), 0, DateTime(1999, 7, 6, 12, 0, 0));
+            testDT(DateTime(1999, 7, 6, 12, 0, 0), -1, DateTime(1999, 7, 6, 11, 59, 59));
+
+            testDT(DateTime(1999, 7, 6, 0, 0, 0), 1, DateTime(1999, 7, 6, 0, 0, 1));
+            testDT(DateTime(1999, 7, 6, 0, 0, 0), 0, DateTime(1999, 7, 6, 0, 0, 0));
+            testDT(DateTime(1999, 7, 6, 0, 0, 0), -1, DateTime(1999, 7, 5, 23, 59, 59));
+
+            testDT(DateTime(1999, 7, 5, 23, 59, 59), 1, DateTime(1999, 7, 6, 0, 0, 0));
+            testDT(DateTime(1999, 7, 5, 23, 59, 59), 0, DateTime(1999, 7, 5, 23, 59, 59));
+            testDT(DateTime(1999, 7, 5, 23, 59, 59), -1, DateTime(1999, 7, 5, 23, 59, 58));
+
+            testDT(DateTime(1998, 12, 31, 23, 59, 59), 1, DateTime(1999, 1, 1, 0, 0, 0));
+            testDT(DateTime(1998, 12, 31, 23, 59, 59), 0, DateTime(1998, 12, 31, 23, 59, 59));
+            testDT(DateTime(1998, 12, 31, 23, 59, 59), -1, DateTime(1998, 12, 31, 23, 59, 58));
+
+            testDT(DateTime(1998, 1, 1, 0, 0, 0), 1, DateTime(1998, 1, 1, 0, 0, 1));
+            testDT(DateTime(1998, 1, 1, 0, 0, 0), 0, DateTime(1998, 1, 1, 0, 0, 0));
+            testDT(DateTime(1998, 1, 1, 0, 0, 0), -1, DateTime(1997, 12, 31, 23, 59, 59));
+
+            //Test B.C.
+            testDT(DateTime(-1999, 7, 6, 12, 30, 33), 0, DateTime(-1999, 7, 6, 12, 30, 33));
+            testDT(DateTime(-1999, 7, 6, 12, 30, 33), 1, DateTime(-1999, 7, 6, 12, 30, 34));
+            testDT(DateTime(-1999, 7, 6, 12, 30, 33), 2, DateTime(-1999, 7, 6, 12, 30, 35));
+            testDT(DateTime(-1999, 7, 6, 12, 30, 33), 3, DateTime(-1999, 7, 6, 12, 30, 36));
+            testDT(DateTime(-1999, 7, 6, 12, 30, 33), 4, DateTime(-1999, 7, 6, 12, 30, 37));
+            testDT(DateTime(-1999, 7, 6, 12, 30, 33), 5, DateTime(-1999, 7, 6, 12, 30, 38));
+            testDT(DateTime(-1999, 7, 6, 12, 30, 33), 10, DateTime(-1999, 7, 6, 12, 30, 43));
+            testDT(DateTime(-1999, 7, 6, 12, 30, 33), 15, DateTime(-1999, 7, 6, 12, 30, 48));
+            testDT(DateTime(-1999, 7, 6, 12, 30, 33), 26, DateTime(-1999, 7, 6, 12, 30, 59));
+            testDT(DateTime(-1999, 7, 6, 12, 30, 33), 27, DateTime(-1999, 7, 6, 12, 31, 0));
+            testDT(DateTime(-1999, 7, 6, 12, 30, 33), 30, DateTime(-1999, 7, 6, 12, 31, 3));
+            testDT(DateTime(-1999, 7, 6, 12, 30, 33), 59, DateTime(-1999, 7, 6, 12, 31, 32));
+            testDT(DateTime(-1999, 7, 6, 12, 30, 33), 60, DateTime(-1999, 7, 6, 12, 31, 33));
+            testDT(DateTime(-1999, 7, 6, 12, 30, 33), 61, DateTime(-1999, 7, 6, 12, 31, 34));
+
+            testDT(DateTime(-1999, 7, 6, 12, 30, 33), 1766, DateTime(-1999, 7, 6, 12, 59, 59));
+            testDT(DateTime(-1999, 7, 6, 12, 30, 33), 1767, DateTime(-1999, 7, 6, 13, 0, 0));
+            testDT(DateTime(-1999, 7, 6, 12, 30, 33), 1768, DateTime(-1999, 7, 6, 13, 0, 1));
+            testDT(DateTime(-1999, 7, 6, 12, 30, 33), 2007, DateTime(-1999, 7, 6, 13, 4, 0));
+            testDT(DateTime(-1999, 7, 6, 12, 30, 33), 3599, DateTime(-1999, 7, 6, 13, 30, 32));
+            testDT(DateTime(-1999, 7, 6, 12, 30, 33), 3600, DateTime(-1999, 7, 6, 13, 30, 33));
+            testDT(DateTime(-1999, 7, 6, 12, 30, 33), 3601, DateTime(-1999, 7, 6, 13, 30, 34));
+            testDT(DateTime(-1999, 7, 6, 12, 30, 33), 7200, DateTime(-1999, 7, 6, 14, 30, 33));
+            testDT(DateTime(-1999, 7, 6, 23, 0, 0), 432_123, DateTime(-1999, 7, 11, 23, 2, 3));
+
+            testDT(DateTime(-1999, 7, 6, 12, 30, 33), -1, DateTime(-1999, 7, 6, 12, 30, 32));
+            testDT(DateTime(-1999, 7, 6, 12, 30, 33), -2, DateTime(-1999, 7, 6, 12, 30, 31));
+            testDT(DateTime(-1999, 7, 6, 12, 30, 33), -3, DateTime(-1999, 7, 6, 12, 30, 30));
+            testDT(DateTime(-1999, 7, 6, 12, 30, 33), -4, DateTime(-1999, 7, 6, 12, 30, 29));
+            testDT(DateTime(-1999, 7, 6, 12, 30, 33), -5, DateTime(-1999, 7, 6, 12, 30, 28));
+            testDT(DateTime(-1999, 7, 6, 12, 30, 33), -10, DateTime(-1999, 7, 6, 12, 30, 23));
+            testDT(DateTime(-1999, 7, 6, 12, 30, 33), -15, DateTime(-1999, 7, 6, 12, 30, 18));
+            testDT(DateTime(-1999, 7, 6, 12, 30, 33), -33, DateTime(-1999, 7, 6, 12, 30, 0));
+            testDT(DateTime(-1999, 7, 6, 12, 30, 33), -34, DateTime(-1999, 7, 6, 12, 29, 59));
+            testDT(DateTime(-1999, 7, 6, 12, 30, 33), -35, DateTime(-1999, 7, 6, 12, 29, 58));
+            testDT(DateTime(-1999, 7, 6, 12, 30, 33), -59, DateTime(-1999, 7, 6, 12, 29, 34));
+            testDT(DateTime(-1999, 7, 6, 12, 30, 33), -60, DateTime(-1999, 7, 6, 12, 29, 33));
+            testDT(DateTime(-1999, 7, 6, 12, 30, 33), -61, DateTime(-1999, 7, 6, 12, 29, 32));
+
+            testDT(DateTime(-1999, 7, 6, 12, 30, 33), -1833, DateTime(-1999, 7, 6, 12, 0, 0));
+            testDT(DateTime(-1999, 7, 6, 12, 30, 33), -1834, DateTime(-1999, 7, 6, 11, 59, 59));
+            testDT(DateTime(-1999, 7, 6, 12, 30, 33), -3600, DateTime(-1999, 7, 6, 11, 30, 33));
+            testDT(DateTime(-1999, 7, 6, 12, 30, 33), -3601, DateTime(-1999, 7, 6, 11, 30, 32));
+            testDT(DateTime(-1999, 7, 6, 12, 30, 33), -5134, DateTime(-1999, 7, 6, 11, 4, 59));
+            testDT(DateTime(-1999, 7, 6, 12, 30, 33), -7200, DateTime(-1999, 7, 6, 10, 30, 33));
+            testDT(DateTime(-1999, 7, 6, 23, 0, 0), -432_123, DateTime(-1999, 7, 1, 22, 57, 57));
+
+            testDT(DateTime(-1999, 7, 6, 12, 30, 0), 1, DateTime(-1999, 7, 6, 12, 30, 1));
+            testDT(DateTime(-1999, 7, 6, 12, 30, 0), 0, DateTime(-1999, 7, 6, 12, 30, 0));
+            testDT(DateTime(-1999, 7, 6, 12, 30, 0), -1, DateTime(-1999, 7, 6, 12, 29, 59));
+
+            testDT(DateTime(-1999, 7, 6, 12, 0, 0), 1, DateTime(-1999, 7, 6, 12, 0, 1));
+            testDT(DateTime(-1999, 7, 6, 12, 0, 0), 0, DateTime(-1999, 7, 6, 12, 0, 0));
+            testDT(DateTime(-1999, 7, 6, 12, 0, 0), -1, DateTime(-1999, 7, 6, 11, 59, 59));
+
+            testDT(DateTime(-1999, 7, 6, 0, 0, 0), 1, DateTime(-1999, 7, 6, 0, 0, 1));
+            testDT(DateTime(-1999, 7, 6, 0, 0, 0), 0, DateTime(-1999, 7, 6, 0, 0, 0));
+            testDT(DateTime(-1999, 7, 6, 0, 0, 0), -1, DateTime(-1999, 7, 5, 23, 59, 59));
+
+            testDT(DateTime(-1999, 7, 5, 23, 59, 59), 1, DateTime(-1999, 7, 6, 0, 0, 0));
+            testDT(DateTime(-1999, 7, 5, 23, 59, 59), 0, DateTime(-1999, 7, 5, 23, 59, 59));
+            testDT(DateTime(-1999, 7, 5, 23, 59, 59), -1, DateTime(-1999, 7, 5, 23, 59, 58));
+
+            testDT(DateTime(-2000, 12, 31, 23, 59, 59), 1, DateTime(-1999, 1, 1, 0, 0, 0));
+            testDT(DateTime(-2000, 12, 31, 23, 59, 59), 0, DateTime(-2000, 12, 31, 23, 59, 59));
+            testDT(DateTime(-2000, 12, 31, 23, 59, 59), -1, DateTime(-2000, 12, 31, 23, 59, 58));
+
+            testDT(DateTime(-2000, 1, 1, 0, 0, 0), 1, DateTime(-2000, 1, 1, 0, 0, 1));
+            testDT(DateTime(-2000, 1, 1, 0, 0, 0), 0, DateTime(-2000, 1, 1, 0, 0, 0));
+            testDT(DateTime(-2000, 1, 1, 0, 0, 0), -1, DateTime(-2001, 12, 31, 23, 59, 59));
+
+            //Test Both
+            testDT(DateTime(1, 1, 1, 0, 0, 0), -1, DateTime(0, 12, 31, 23, 59, 59));
+            testDT(DateTime(0, 12, 31, 23, 59, 59), 1, DateTime(1, 1, 1, 0, 0, 0));
+
+            testDT(DateTime(0, 1, 1, 0, 0, 0), -1, DateTime(-1, 12, 31, 23, 59, 59));
+            testDT(DateTime(-1, 12, 31, 23, 59, 59), 1, DateTime(0, 1, 1, 0, 0, 0));
+
+            testDT(DateTime(-1, 1, 1, 11, 30, 33), 63_165_600L, DateTime(1, 1, 1, 13, 30, 33));
+            testDT(DateTime(1, 1, 1, 13, 30, 33), -63_165_600L, DateTime(-1, 1, 1, 11, 30, 33));
+
+            testDT(DateTime(-1, 1, 1, 11, 30, 33), 63_165_617L, DateTime(1, 1, 1, 13, 30, 50));
+            testDT(DateTime(1, 1, 1, 13, 30, 50), -63_165_617L, DateTime(-1, 1, 1, 11, 30, 33));
+
+            const cdt = DateTime(1999, 7, 6, 12, 30, 33);
+            immutable idt = DateTime(1999, 7, 6, 12, 30, 33);
+            static assert(!__traits(compiles, cdt.addSeconds(4)));
+            static assert(!__traits(compiles, idt.addSeconds(4)));
+        }
+    }
+
+
+    Date      _date;
+    TimeOfDay _tod;
 }
 
 
@@ -27515,8 +27687,8 @@ public:
         get a TimeZone by name with TimeZone.getTimeZone().
 
         See_Also:
-            <a href="http://en.wikipedia.org/wiki/Tz_database">Wikipedia entry on TZ Database</a>
-            <a href="http://en.wikipedia.org/wiki/List_of_tz_database_time_zones">List of Time Zones</a>
+            $(WEB en.wikipedia.org/wiki/Tz_database, Wikipedia entry on TZ Database)
+            $(WEB en.wikipedia.org/wiki/List_of_tz_database_time_zones, List of Time Zones)
       +/
     @property string name() const nothrow
     {
@@ -27606,9 +27778,9 @@ public:
         Posix systems.
 
         See_Also:
-            <a href="http://en.wikipedia.org/wiki/Tz_database">Wikipedia entry on TZ Database</a>
-            <a href="http://en.wikipedia.org/wiki/List_of_tz_database_time_zones">List of Time Zones</a>
-            <a href="http://unicode.org/repos/cldr-tmp/trunk/diff/supplemental/zone_tzid.html">Windows <-> TZ Database Name Conversion Table</a>
+            $(WEB en.wikipedia.org/wiki/Tz_database, Wikipedia entry on TZ Database)
+            $(WEB en.wikipedia.org/wiki/List_of_tz_database_time_zones, List of Time Zones)
+            $(WEB unicode.org/repos/cldr-tmp/trunk/diff/supplemental/zone_tzid.html, Windows <-> TZ Database Name Conversion Table)
 
         Params:
             name = The TZ Database name of the time zone that you're looking for.
@@ -27760,24 +27932,21 @@ public:
 
     version(D_Ddoc)
     {
-    /++
-        The name of the time zone per the TZ Database. This is the name used to
-        get a TimeZone by name with $(D TimeZone.getTimeZone()).
+        /++
+            The name of the time zone per the TZ Database. This is the name used to
+            get a TimeZone by name with $(D TimeZone.getTimeZone()).
 
-        Note that this always returns the empty string. This is because time
-        zones cannot be uniquely identified by the attributes given by the OS
-        (such as the stdName and dstName), and neither Posix systems nor
-        Windows systems provide an easy way to get the TZ Database name of
-        the local time zone.
+            Note that this always returns the empty string. This is because time
+            zones cannot be uniquely identified by the attributes given by the OS
+            (such as the stdName and dstName), and neither Posix systems nor
+            Windows systems provide an easy way to get the TZ Database name of
+            the local time zone.
 
-        See_Also:
-            <a href="http://en.wikipedia.org/wiki/Tz_database">Wikipedia entry on TZ Database</a>
-            <a href="http://en.wikipedia.org/wiki/List_of_tz_database_time_zones">List of Time Zones</a>
-      +/
-    @property override string name() const nothrow
-    {
-        return super.name;
-    }
+            See_Also:
+                $(WEB en.wikipedia.org/wiki/Tz_database, Wikipedia entry on TZ Database)
+                $(WEB en.wikipedia.org/wiki/List_of_tz_database_time_zones, List of Time Zones)
+          +/
+        @property override string name() const nothrow;
     }
 
 
@@ -28650,7 +28819,7 @@ private:
     using the TZ Database names. You can, however, use PosixTimeZone (which reads
     its information from the TZ Database files on disk) on Windows if you provide
     the TZ Database files
-    ( <a href="ftp://elsie.nci.nih.gov/pub/">Repository with the TZ Database files (tzdata)</a> )
+    ( $(WEB elsie.nci.nih.gov/pub/, Repository with the TZ Database files (tzdata)) )
     yourself and tell $(D PosixTimeZone.getTimeZone()) where the directory holding
     them is.
 
@@ -28680,8 +28849,8 @@ private:
         *not* take leap seconds into account even though they're in the file).
 
     See_Also:
-        <a href="http://en.wikipedia.org/wiki/Tz_database">Wikipedia entry on TZ Database</a>
-        <a href="http://en.wikipedia.org/wiki/List_of_tz_database_time_zones">List of Time Zones</a>
+        $(WEB en.wikipedia.org/wiki/Tz_database, Wikipedia entry on TZ Database</a>
+        $(WEB en.wikipedia.org/wiki/List_of_tz_database_time_zones, List of Time Zones</a>
   +/
 final class PosixTimeZone : TimeZone
 {
@@ -28822,8 +28991,8 @@ public:
         directory.
 
         See_Also:
-            <a href="http://en.wikipedia.org/wiki/Tz_database">Wikipedia entry on TZ Database</a>
-            <a href="http://en.wikipedia.org/wiki/List_of_tz_database_time_zones">List of Time Zones</a>
+            $(WEB en.wikipedia.org/wiki/Tz_database, Wikipedia entry on TZ Database)
+            $(WEB en.wikipedia.org/wiki/List_of_tz_database_time_zones, List of Time Zones)
 
         Params:
             name          = The TZ Database name of the time zone that you're
@@ -29798,639 +29967,544 @@ private:
 
 
 
-version(Windows)
+version(D_Ddoc)
 {
 
-//Should be in core.sys.windows.windows, but for some reason it isn't.
-extern(Windows)
-{
-export LONG RegQueryValueExA(HKEY hKey, LPCSTR name, LPDWORD reserved, LPDWORD type, LPBYTE data, LPDWORD count);
-
-struct REG_TZI_FORMAT
-{
-    LONG Bias;
-    LONG StandardBias;
-    LONG DaylightBias;
-    SYSTEMTIME StandardDate;
-    SYSTEMTIME DaylightDate;
-}
-
-}
-
-/++
-    Represents a time zone from the Windows registry. Unfortunately, Windows
-    does not use the TZ Database, though it does name its time zones using the
-    TZ Database names. You can, however, use PosixTimeZone (which reads its
-    information from the TZ Database files on disk) on Windows if you provide
-    the TZ Database files
-    ( <a href="ftp://elsie.nci.nih.gov/pub/">Repository with the TZ Database files (tzdata)</a> )
-    yourself and tell $(D PosixTimeZone.getTimeZone()) where the directory
-    holding them is.
-
-    TZ Database files hold DST transitions for a large interval of the time
-    covered by time_t. So, barring errors in the information in the TZ Database
-    files, it will use the correct DST rules for any date. Windows, on the other
-    hand, maintains only the current DST rules, so historical dates will use
-    the current DST rules (and therefore potentially be incorrect). So, if you
-    want the DST rules that you use to be more accurate, or if you're looking for
-    your program to act consistently on both Posix and Windows systems, then, as
-    mentioned above, you'll need to include the TZ Database files with your
-    program and give $(D PosixTimeZone.getTimeZone()) the directory on disk
-    where they are located.
-
-    However, if all you care about is whether current times use the correct DST
-    rules, or if you don't care whether the DST rules are historically accurate,
-    then you can just use WindowsTimeZone on Windows. WindowsTimeZone does not
-    exist on Posix systems.
-
-    To get a WindowsTimeZone, either call $(D WindowsTimeZone.getTimeZone()) or
-    call $(D TimeZone.getTimeZone()) (which will give you a PosixTimeZone on Posix
-    systems and a WindowsTimeZone on Windows systems).
-  +/
-final class WindowsTimeZone : TimeZone
-{
-public:
-
     /++
-        Whether this time zone has Daylight Savings Time at any point in time. Note that for some time zone types
-        it may not have DST for current dates but will still return true for hasDST because the time zone did at some
-        point have DST.
+        Represents a time zone from the Windows registry. Unfortunately, Windows
+        does not use the TZ Database, though it does name its time zones using the
+        TZ Database names. You can, however, use PosixTimeZone (which reads its
+        information from the TZ Database files on disk) on Windows if you provide
+        the TZ Database files
+        ( <a href="ftp://elsie.nci.nih.gov/pub/">Repository with the TZ Database files (tzdata)</a> )
+        yourself and tell $(D PosixTimeZone.getTimeZone()) where the directory
+        holding them is.
+
+        TZ Database files hold DST transitions for a large interval of the time
+        covered by time_t. So, barring errors in the information in the TZ Database
+        files, it will use the correct DST rules for any date. Windows, on the other
+        hand, maintains only the current DST rules, so historical dates will use
+        the current DST rules (and therefore potentially be incorrect). So, if you
+        want the DST rules that you use to be more accurate, or if you're looking for
+        your program to act consistently on both Posix and Windows systems, then, as
+        mentioned above, you'll need to include the TZ Database files with your
+        program and give $(D PosixTimeZone.getTimeZone()) the directory on disk
+        where they are located.
+
+        However, if all you care about is whether current times use the correct DST
+        rules, or if you don't care whether the DST rules are historically accurate,
+        then you can just use WindowsTimeZone on Windows. WindowsTimeZone does not
+        exist on Posix systems.
+
+        To get a WindowsTimeZone, either call $(D WindowsTimeZone.getTimeZone()) or
+        call $(D TimeZone.getTimeZone()) (which will give you a PosixTimeZone on Posix
+        systems and a WindowsTimeZone on Windows systems).
       +/
-    @property override bool hasDST() const nothrow
+    final class WindowsTimeZone : TimeZone
     {
-        return _tzInfo.DaylightDate.wMonth != 0;
-    }
+    public:
+
+        /++
+            Whether this time zone has Daylight Savings Time at any point in time.
+            Note that for some time zone types it may not have DST for current dates
+            but will still return true for hasDST because the time zone did at some
+            point have DST.
+          +/
+        @property override bool hasDST() const nothrow;
 
 
-    /++
-        Takes the number of hecto-nanoseconds (100 ns) since midnight, January
-        1st, 1 A.D. in UTC time (i.e. std time) and returns whether DST is in
-        effect in this time zone at the given point in time.
+        /++
+            Takes the number of hecto-nanoseconds (100 ns) since midnight, January
+            1st, 1 A.D. in UTC time (i.e. std time) and returns whether DST is in
+            effect in this time zone at the given point in time.
 
-        Params:
-            stdTime = The UTC time that needs to be checked for DST in this time
-                      zone.
-      +/
-    override bool dstInEffect(long stdTime) const nothrow
-    {
-        return _dstInEffect(&_tzInfo, stdTime);
-    }
+            Params:
+                stdTime = The UTC time that needs to be checked for DST in this
+                          time zone.
+          +/
+        override bool dstInEffect(long stdTime) const nothrow;
 
 
-    /++
-        Takes the number of hecto-nanoseconds (100 ns) since midnight, January
-        1st, 1 A.D. in UTC time (i.e. std time) and converts it to this time
-        zone's time.
+        /++
+            Takes the number of hecto-nanoseconds (100 ns) since midnight, January
+            1st, 1 A.D. in UTC time (i.e. std time) and converts it to this time
+            zone's time.
 
-        Params:
-            stdTime = The UTC time that needs to be adjusted to this time zone's time.
-      +/
-    override long utcToTZ(long stdTime) const nothrow
-    {
-        return _utcToTZ(&_tzInfo, stdTime, hasDST);
-    }
+            Params:
+                stdTime = The UTC time that needs to be adjusted to this time zone's time.
+          +/
+        override long utcToTZ(long stdTime) const nothrow;
 
 
-    /++
-        Takes the number of hecto-nanoseconds (100 ns) since midnight, January
-        1st, 1 A.D. in this time zone's time and converts it to UTC
-        (i.e. std time).
+        /++
+            Takes the number of hecto-nanoseconds (100 ns) since midnight, January
+            1st, 1 A.D. in this time zone's time and converts it to UTC
+            (i.e. std time).
 
-        Params:
-            adjTime = The time in this time zone that needs to be adjusted to
-                      UTC time.
-      +/
-    override long tzToUTC(long adjTime) const nothrow
-    {
-        return _tzToUTC(&_tzInfo, adjTime, hasDST);
-    }
+            Params:
+                adjTime = The time in this time zone that needs to be adjusted to UTC time.
+          +/
+        override long tzToUTC(long adjTime) const nothrow;
 
 
-    /++
-        Returns a TimeZone with the given time zone name which follews Windows' time zone naming
-        conventions. The time zone information is fetched from the Windows registry.
+        /++
+            Returns a TimeZone with the give name per the TZ Database. The time zone
+            information is fetched from the Windows registry.
 
-        If you want to use the TZ Database name, then either use tzDatabaseNameToWindowsTZName() to
-        convert the name or use TimeZone.getTimeZone(), which will call this function with the
-        converted time zone name.
+            See_Also:
+                $(WEB en.wikipedia.org/wiki/Tz_database, Wikipedia entry on TZ Database)
+                $(WEB en.wikipedia.org/wiki/List_of_tz_database_time_zones, List of Time Zones)
 
-        See_Also:
-            <a href="http://unicode.org/repos/cldr-tmp/trunk/diff/supplemental/zone_tzid.html">Windows <-> TZ Database Name Conversion Table</a>
+            Params:
+                name = The TZ Database name of the time zone that you're looking for.
 
-        Params:
-            name = The Windows time zone name of the time zone that you're looking for.
+            Throws:
+                DateTimeException if the given time zone could not be found.
 
-        Throws:
-            DateTimeException if the given time zone could not be found.
+            Examples:
+    --------------------
+    auto tz = TimeZone.getTimeZone("America/Los_Angeles");
+    --------------------
+          +/
+        static immutable(WindowsTimeZone) getTimeZone(string name);
 
-        Examples:
---------------------
-auto tz = TimeZone.getTimeZone("Pacific Standard Time");
---------------------
-      +/
-    static immutable(WindowsTimeZone) getTimeZone(string name)
-    {
-        auto keyStr = "Software\\Microsoft\\Windows NT\\CurrentVersion\\Time Zones\0";
-        HKEY baseKey;
 
+        /++
+            Returns a list of the names of the time zones installed on the system.
+          +/
+        static string[] getInstalledTZNames();
+
+    private:
+
+        static bool _dstInEffect(const TIME_ZONE_INFORMATION* tzInfo, long stdTime) nothrow;
+        static long _utcToTZ(const TIME_ZONE_INFORMATION* tzInfo, long stdTime, bool hasDST) nothrow;
+        static long _tzToUTC(const TIME_ZONE_INFORMATION* tzInfo, long adjTime, bool hasDST) nothrow;
+
+        this() immutable pure
         {
-            auto result = RegOpenKeyExA(HKEY_LOCAL_MACHINE, keyStr.ptr, 0, KEY_READ, &baseKey);
-            if(result != ERROR_SUCCESS)
-                throw new DateTimeException(format("Failed to open registry. Error: %s", result));
+            super("", "", "");
         }
-        scope(exit) RegCloseKey(baseKey);
+    }
 
-        char[1024] keyName;
-        auto nameLen = keyName.length;
-        int result;
-        for(DWORD index = 0;
-            (result = RegEnumKeyExA(baseKey, index, keyName.ptr, &nameLen, null, null, null, null)) != ERROR_NO_MORE_ITEMS;
-            ++index, nameLen = keyName.length)
+}
+else version(Windows)
+{
+
+    //Should be in core.sys.windows.windows, but for some reason it isn't.
+    extern(Windows)
+    {
+    export LONG RegQueryValueExA(HKEY hKey, LPCSTR name, LPDWORD reserved, LPDWORD type, LPBYTE data, LPDWORD count);
+
+    struct REG_TZI_FORMAT
+    {
+        LONG Bias;
+        LONG StandardBias;
+        LONG DaylightBias;
+        SYSTEMTIME StandardDate;
+        SYSTEMTIME DaylightDate;
+    }
+
+    }
+
+    final class WindowsTimeZone : TimeZone
+    {
+    public:
+
+        @property override bool hasDST() const nothrow
         {
-            if(result == ERROR_SUCCESS)
+            return _tzInfo.DaylightDate.wMonth != 0;
+        }
+
+
+        override bool dstInEffect(long stdTime) const nothrow
+        {
+            return _dstInEffect(&_tzInfo, stdTime);
+        }
+
+
+        override long utcToTZ(long stdTime) const nothrow
+        {
+            return _utcToTZ(&_tzInfo, stdTime, hasDST);
+        }
+
+
+        override long tzToUTC(long adjTime) const nothrow
+        {
+            return _tzToUTC(&_tzInfo, adjTime, hasDST);
+        }
+
+
+        static immutable(WindowsTimeZone) getTimeZone(string name)
+        {
+            auto keyStr = "Software\\Microsoft\\Windows NT\\CurrentVersion\\Time Zones\0";
+            HKEY baseKey;
+
             {
-                HKEY tzKey;
-                if(RegOpenKeyExA(baseKey, keyName.ptr, 0, KEY_READ, &tzKey) == ERROR_SUCCESS)
+                auto result = RegOpenKeyExA(HKEY_LOCAL_MACHINE, keyStr.ptr, 0, KEY_READ, &baseKey);
+                if(result != ERROR_SUCCESS)
+                    throw new DateTimeException(format("Failed to open registry. Error: %s", result));
+            }
+            scope(exit) RegCloseKey(baseKey);
+
+            char[1024] keyName;
+            auto nameLen = keyName.length;
+            int result;
+            for(DWORD index = 0;
+                (result = RegEnumKeyExA(baseKey, index, keyName.ptr, &nameLen, null, null, null, null)) != ERROR_NO_MORE_ITEMS;
+                ++index, nameLen = keyName.length)
+            {
+                if(result == ERROR_SUCCESS)
                 {
-                    scope(exit) RegCloseKey(tzKey);
-                    char[1024] strVal;
-                    auto strValLen = strVal.length;
-
-                    bool queryStringValue(string name, size_t lineNum = __LINE__)
+                    HKEY tzKey;
+                    if(RegOpenKeyExA(baseKey, keyName.ptr, 0, KEY_READ, &tzKey) == ERROR_SUCCESS)
                     {
-                        strValLen = strVal.length;
+                        scope(exit) RegCloseKey(tzKey);
+                        char[1024] strVal;
+                        auto strValLen = strVal.length;
 
-                        return RegQueryValueExA(tzKey, name.ptr, null, null, cast(ubyte*)strVal.ptr, &strValLen) == ERROR_SUCCESS;
-                    }
-
-                    if(to!string(keyName.ptr) == name)
-                    {
-                        if(queryStringValue("Std\0"))
+                        bool queryStringValue(string name, size_t lineNum = __LINE__)
                         {
-                            //Cannot use to!wstring(char*), probably due to bug http://d.puremagic.com/issues/show_bug.cgi?id=5016
-                            static wstring conv(char* cstr, size_t strValLen)
+                            strValLen = strVal.length;
+
+                            return RegQueryValueExA(tzKey, name.ptr, null, null, cast(ubyte*)strVal.ptr, &strValLen) == ERROR_SUCCESS;
+                        }
+
+                        if(to!string(keyName.ptr) == name)
+                        {
+                            if(queryStringValue("Std\0"))
                             {
-                                cstr[strValLen - 1] = '\0';
-
-                                string retval;
-
-                                for(;; ++cstr)
+                                //Cannot use to!wstring(char*), probably due to bug http://d.puremagic.com/issues/show_bug.cgi?id=5016
+                                static wstring conv(char* cstr, size_t strValLen)
                                 {
-                                    if(*cstr == '\0')
-                                        break;
+                                    cstr[strValLen - 1] = '\0';
 
-                                    retval ~= *cstr;
+                                    string retval;
+
+                                    for(;; ++cstr)
+                                    {
+                                        if(*cstr == '\0')
+                                            break;
+
+                                        retval ~= *cstr;
+                                    }
+
+                                    return to!wstring(retval);
                                 }
 
-                                return to!wstring(retval);
-                            }
+                                //auto stdName = to!wstring(strVal.ptr);
+                                auto stdName = conv(strVal.ptr, strValLen);
 
-                            //auto stdName = to!wstring(strVal.ptr);
-                            auto stdName = conv(strVal.ptr, strValLen);
-
-                            if(queryStringValue("Dlt\0"))
-                            {
-                                //auto dstName = to!wstring(strVal.ptr);
-                                auto dstName = conv(strVal.ptr, strValLen);
-
-                                enum tzi = "TZI\0";
-                                REG_TZI_FORMAT binVal;
-                                auto binValLen = REG_TZI_FORMAT.sizeof;
-
-                                if(RegQueryValueExA(tzKey, tzi.ptr, null, null, cast(ubyte*)&binVal, &binValLen) == ERROR_SUCCESS)
+                                if(queryStringValue("Dlt\0"))
                                 {
-                                    TIME_ZONE_INFORMATION tzInfo;
+                                    //auto dstName = to!wstring(strVal.ptr);
+                                    auto dstName = conv(strVal.ptr, strValLen);
 
-                                    auto stdNameLen = stdName.length > 32 ? 32 : stdName.length;
-                                    auto dstNameLen = dstName.length > 32 ? 32 : dstName.length;
+                                    enum tzi = "TZI\0";
+                                    REG_TZI_FORMAT binVal;
+                                    auto binValLen = REG_TZI_FORMAT.sizeof;
 
-                                    tzInfo.Bias = binVal.Bias;
-                                    tzInfo.StandardName[0 .. stdNameLen] = stdName[0 .. stdNameLen];
-                                    tzInfo.StandardName[stdNameLen .. $] = '\0';
-                                    tzInfo.StandardDate = binVal.StandardDate;
-                                    tzInfo.StandardBias = binVal.StandardBias;
-                                    tzInfo.DaylightName[0 .. dstNameLen] = dstName[0 .. dstNameLen];
-                                    tzInfo.DaylightName[dstNameLen .. $] = '\0';
-                                    tzInfo.DaylightDate = binVal.DaylightDate;
-                                    tzInfo.DaylightBias = binVal.DaylightBias;
+                                    if(RegQueryValueExA(tzKey, tzi.ptr, null, null, cast(ubyte*)&binVal, &binValLen) == ERROR_SUCCESS)
+                                    {
+                                        TIME_ZONE_INFORMATION tzInfo;
 
-                                    return new WindowsTimeZone(name, tzInfo);
+                                        auto stdNameLen = stdName.length > 32 ? 32 : stdName.length;
+                                        auto dstNameLen = dstName.length > 32 ? 32 : dstName.length;
+
+                                        tzInfo.Bias = binVal.Bias;
+                                        tzInfo.StandardName[0 .. stdNameLen] = stdName[0 .. stdNameLen];
+                                        tzInfo.StandardName[stdNameLen .. $] = '\0';
+                                        tzInfo.StandardDate = binVal.StandardDate;
+                                        tzInfo.StandardBias = binVal.StandardBias;
+                                        tzInfo.DaylightName[0 .. dstNameLen] = dstName[0 .. dstNameLen];
+                                        tzInfo.DaylightName[dstNameLen .. $] = '\0';
+                                        tzInfo.DaylightDate = binVal.DaylightDate;
+                                        tzInfo.DaylightBias = binVal.DaylightBias;
+
+                                        return new WindowsTimeZone(name, tzInfo);
+                                    }
                                 }
                             }
                         }
                     }
                 }
             }
+
+            throw new DateTimeException(format("Failed to find time zone: %s", name));
         }
 
-        throw new DateTimeException(format("Failed to find time zone: %s", name));
-    }
-
-    unittest
-    {
-        version(enableWindowsTest)
+        unittest
         {
-            //Verify Example.
-            auto tz = WindowsTimeZone.getTimeZone("Pacific Standard Time");
-        }
-    }
-
-
-    /++
-        Returns a list of the names of the time zones installed on the system.
-
-        Params:
-            subname = The first part of the time zones that you want.
-
-        Throws:
-            DateTimeException if it fails to read the registry.
-      +/
-    static string[] getInstalledTZNames()
-    {
-        auto timezones = appender!(string[])();
-
-        auto keyStr = "Software\\Microsoft\\Windows NT\\CurrentVersion\\Time Zones";
-        HKEY baseKey;
-
-        {
-            auto result = RegOpenKeyExA(HKEY_LOCAL_MACHINE, keyStr.ptr, 0, KEY_READ, &baseKey);
-            if(result != ERROR_SUCCESS)
-                throw new DateTimeException(format("Failed to open registry. Error: %s", result));
-        }
-        scope(exit) RegCloseKey(baseKey);
-
-        char[1024] keyName;
-        auto nameLen = keyName.length;
-        int result;
-        for(DWORD index = 0;
-            (result = RegEnumKeyExA(baseKey, index, keyName.ptr, &nameLen, null, null, null, null)) != ERROR_NO_MORE_ITEMS;
-            ++index, nameLen = keyName.length)
-        {
-            if(result == ERROR_SUCCESS)
-                timezones.put(to!string(keyName.ptr));
-        }
-
-        sort(timezones.data);
-
-        return timezones.data;
-    }
-
-    unittest
-    {
-        version(enableWindowsTest)
-        {
-            static void testWTZSuccess(string tzName)
+            version(enableWindowsTest)
             {
-                scope(failure) writefln("TZName which threw: %s", tzName);
+                //Verify Example.
+                auto tz = WindowsTimeZone.getTimeZone("Pacific Standard Time");
+            }
+        }
 
-                WindowsTimeZone.getTimeZone(tzName);
+
+        static string[] getInstalledTZNames()
+        {
+            auto timezones = appender!(string[])();
+
+            auto keyStr = "Software\\Microsoft\\Windows NT\\CurrentVersion\\Time Zones";
+            HKEY baseKey;
+
+            {
+                auto result = RegOpenKeyExA(HKEY_LOCAL_MACHINE, keyStr.ptr, 0, KEY_READ, &baseKey);
+                if(result != ERROR_SUCCESS)
+                    throw new DateTimeException(format("Failed to open registry. Error: %s", result));
+            }
+            scope(exit) RegCloseKey(baseKey);
+
+            char[1024] keyName;
+            auto nameLen = keyName.length;
+            int result;
+            for(DWORD index = 0;
+                (result = RegEnumKeyExA(baseKey, index, keyName.ptr, &nameLen, null, null, null, null)) != ERROR_NO_MORE_ITEMS;
+                ++index, nameLen = keyName.length)
+            {
+                if(result == ERROR_SUCCESS)
+                    timezones.put(to!string(keyName.ptr));
             }
 
-            auto tzNames = getInstalledTZNames();
+            sort(timezones.data);
 
-            foreach(tzName; tzNames)
-                assertNotThrown!DateTimeException(testWTZSuccess(tzName));
+            return timezones.data;
         }
-    }
 
-
-private:
-
-    static bool _dstInEffect(const TIME_ZONE_INFORMATION* tzInfo, long stdTime) nothrow
-    {
-        try
+        unittest
         {
-            if(tzInfo.DaylightDate.wMonth == 0)
-                return false;
-
-            auto utcDateTime = cast(DateTime)SysTime(stdTime, UTC());
-
-            //The limits of what SystemTimeToTZSpecificLocalTime() will accept.
-            if(utcDateTime.year < 1601)
+            version(enableWindowsTest)
             {
-                if(utcDateTime.month == Month.feb && utcDateTime.day == 29)
-                    utcDateTime.day = 28;
+                static void testWTZSuccess(string tzName)
+                {
+                    scope(failure) writefln("TZName which threw: %s", tzName);
 
-                utcDateTime.year = 1601;
+                    WindowsTimeZone.getTimeZone(tzName);
+                }
+
+                auto tzNames = getInstalledTZNames();
+
+                foreach(tzName; tzNames)
+                    assertNotThrown!DateTimeException(testWTZSuccess(tzName));
             }
-            else if(utcDateTime.year > 30_827)
-            {
-                if(utcDateTime.month == Month.feb && utcDateTime.day == 29)
-                    utcDateTime.day = 28;
-
-                utcDateTime.year = 30_827;
-            }
-
-            //SystemTimeToTZSpecificLocalTime() doesn't act correctly at the beginning
-            //or end of the year (bleh). Unless some bizarre time zone changes
-            //DST on January 1st or December 31st, this should fix the problem.
-            if(utcDateTime.month == Month.jan)
-            {
-                if(utcDateTime.day == 1)
-                    utcDateTime.day = 2;
-            }
-            else if(utcDateTime.month == Month.dec && utcDateTime.day == 31)
-                utcDateTime.day = 30;
-
-            SYSTEMTIME utcTime = void;
-            SYSTEMTIME otherTime = void;
-
-            utcTime.wYear = utcDateTime.year;
-            utcTime.wMonth = utcDateTime.month;
-            utcTime.wDay = utcDateTime.day;
-            utcTime.wHour = utcDateTime.hour;
-            utcTime.wMinute = utcDateTime.minute;
-            utcTime.wSecond = utcDateTime.second;
-            utcTime.wMilliseconds = 0;
-
-            immutable result = SystemTimeToTzSpecificLocalTime(cast(TIME_ZONE_INFORMATION*)tzInfo, &utcTime, &otherTime);
-            assert(result);
-
-            immutable otherDateTime = DateTime(otherTime.wYear,
-                                               otherTime.wMonth,
-                                               otherTime.wDay,
-                                               otherTime.wHour,
-                                               otherTime.wMinute,
-                                               otherTime.wSecond);
-            immutable diff = utcDateTime - otherDateTime;
-            immutable minutes = diff.total!"minutes"() - tzInfo.Bias;
-
-            if(minutes == tzInfo.DaylightBias)
-                return true;
-
-            assert(minutes == tzInfo.StandardBias);
-
-            return false;
         }
-        catch(Exception e)
-            assert(0, "DateTime's constructor threw.");
-    }
-
-    unittest
-    {
-        version(enableWindowsTest)
-        {
-            TIME_ZONE_INFORMATION tzInfo;
-            GetTimeZoneInformation(&tzInfo);
-
-            WindowsTimeZone._dstInEffect(&tzInfo, SysTime(DateTime(1600, 1, 1)).stdTime);
-            WindowsTimeZone._dstInEffect(&tzInfo, SysTime(DateTime(1601, 1, 1)).stdTime);
-            WindowsTimeZone._dstInEffect(&tzInfo, SysTime(DateTime(30_827, 1, 1)).stdTime);
-            WindowsTimeZone._dstInEffect(&tzInfo, SysTime(DateTime(30_828, 1, 1)).stdTime);
-        }
-    }
 
 
-    static long _utcToTZ(const TIME_ZONE_INFORMATION* tzInfo, long stdTime, bool hasDST) nothrow
-    {
-        if(hasDST && WindowsTimeZone._dstInEffect(tzInfo, stdTime))
-            return stdTime - convert!("minutes", "hnsecs")(tzInfo.Bias + tzInfo.DaylightBias);
+    private:
 
-        return stdTime - convert!("minutes", "hnsecs")(tzInfo.Bias + tzInfo.StandardBias);
-    }
-
-
-    static long _tzToUTC(const TIME_ZONE_INFORMATION* tzInfo, long adjTime, bool hasDST) nothrow
-    {
-        if(hasDST)
+        static bool _dstInEffect(const TIME_ZONE_INFORMATION* tzInfo, long stdTime) nothrow
         {
             try
             {
-                auto localTime = cast(DateTime)SysTime(adjTime, UTC());
+                if(tzInfo.DaylightDate.wMonth == 0)
+                    return false;
 
-                DateTime getTransitionTime(const ref SYSTEMTIME transition)
+                auto utcDateTime = cast(DateTime)SysTime(stdTime, UTC());
+
+                //The limits of what SystemTimeToTZSpecificLocalTime() will accept.
+                if(utcDateTime.year < 1601)
                 {
-                    DateTime switchDate;
+                    if(utcDateTime.month == Month.feb && utcDateTime.day == 29)
+                        utcDateTime.day = 28;
 
-                    if(transition.wYear == 0)
-                        switchDate.year = localTime.year;
-                    else
-                        switchDate.year = transition.wYear;
+                    utcDateTime.year = 1601;
+                }
+                else if(utcDateTime.year > 30_827)
+                {
+                    if(utcDateTime.month == Month.feb && utcDateTime.day == 29)
+                        utcDateTime.day = 28;
 
-                    switchDate.month = cast(Month)transition.wMonth;
-
-                    DayOfWeek dow = cast(DayOfWeek)transition.wDayOfWeek;
-                    int occurrence = transition.wDay;
-
-                    if(occurrence < 5)
-                    {
-                        Date date = localTime.date;
-
-                        date.day = 1;
-                        date.day = cast(int)(date.day + daysToDayOfWeek(date.dayOfWeek, dow) + convert!("weeks", "days")(occurrence - 1));
-                        switchDate.day = date.day;
-                    }
-                    else
-                    {
-                        Date date = localTime.date.endOfMonth;
-
-                        switchDate.day = date.day - daysToDayOfWeek(dow, date.dayOfWeek);
-                    }
-
-                    switchDate.hour = transition.wHour;
-                    switchDate.minute = transition.wMinute;
-
-                    return switchDate;
+                    utcDateTime.year = 30_827;
                 }
 
-                auto stdSwitch = getTransitionTime(tzInfo.StandardDate);
-                auto dstSwitch = getTransitionTime(tzInfo.DaylightDate);
+                //SystemTimeToTZSpecificLocalTime() doesn't act correctly at the beginning
+                //or end of the year (bleh). Unless some bizarre time zone changes
+                //DST on January 1st or December 31st, this should fix the problem.
+                if(utcDateTime.month == Month.jan)
+                {
+                    if(utcDateTime.day == 1)
+                        utcDateTime.day = 2;
+                }
+                else if(utcDateTime.month == Month.dec && utcDateTime.day == 31)
+                    utcDateTime.day = 30;
 
-                bool isDST = false;
+                SYSTEMTIME utcTime = void;
+                SYSTEMTIME otherTime = void;
 
-                if(localTime < stdSwitch)
-                    isDST = localTime < dstSwitch ? stdSwitch < dstSwitch : true;
-                else
-                    isDST = localTime < dstSwitch ? false : dstSwitch > stdSwitch;
+                utcTime.wYear = utcDateTime.year;
+                utcTime.wMonth = utcDateTime.month;
+                utcTime.wDay = utcDateTime.day;
+                utcTime.wHour = utcDateTime.hour;
+                utcTime.wMinute = utcDateTime.minute;
+                utcTime.wSecond = utcDateTime.second;
+                utcTime.wMilliseconds = 0;
 
-                if(isDST)
-                    return adjTime + convert!("minutes", "hnsecs")(tzInfo.Bias + tzInfo.DaylightBias);
+                immutable result = SystemTimeToTzSpecificLocalTime(cast(TIME_ZONE_INFORMATION*)tzInfo, &utcTime, &otherTime);
+                assert(result);
+
+                immutable otherDateTime = DateTime(otherTime.wYear,
+                                                   otherTime.wMonth,
+                                                   otherTime.wDay,
+                                                   otherTime.wHour,
+                                                   otherTime.wMinute,
+                                                   otherTime.wSecond);
+                immutable diff = utcDateTime - otherDateTime;
+                immutable minutes = diff.total!"minutes"() - tzInfo.Bias;
+
+                if(minutes == tzInfo.DaylightBias)
+                    return true;
+
+                assert(minutes == tzInfo.StandardBias);
+
+                return false;
             }
             catch(Exception e)
-                assert(0, "SysTime's constructor threw.");
+                assert(0, "DateTime's constructor threw.");
         }
 
-        return adjTime + convert!("minutes", "hnsecs")(tzInfo.Bias + tzInfo.StandardBias);
-    }
-
-
-    this(string name, TIME_ZONE_INFORMATION tzInfo) immutable
-    {
-        //Cannot use to!string(wchar*), probably due to bug http://d.puremagic.com/issues/show_bug.cgi?id=5016
-        static string conv(wchar* wcstr)
+        unittest
         {
-            wcstr[31] = '\0';
-            wstring retval;
-
-            for(;; ++wcstr)
+            version(enableWindowsTest)
             {
-                if(*wcstr == '\0')
-                    break;
+                TIME_ZONE_INFORMATION tzInfo;
+                GetTimeZoneInformation(&tzInfo);
 
-                retval ~= *wcstr;
+                WindowsTimeZone._dstInEffect(&tzInfo, SysTime(DateTime(1600, 1, 1)).stdTime);
+                WindowsTimeZone._dstInEffect(&tzInfo, SysTime(DateTime(1601, 1, 1)).stdTime);
+                WindowsTimeZone._dstInEffect(&tzInfo, SysTime(DateTime(30_827, 1, 1)).stdTime);
+                WindowsTimeZone._dstInEffect(&tzInfo, SysTime(DateTime(30_828, 1, 1)).stdTime);
+            }
+        }
+
+
+        static long _utcToTZ(const TIME_ZONE_INFORMATION* tzInfo, long stdTime, bool hasDST) nothrow
+        {
+            if(hasDST && WindowsTimeZone._dstInEffect(tzInfo, stdTime))
+                return stdTime - convert!("minutes", "hnsecs")(tzInfo.Bias + tzInfo.DaylightBias);
+
+            return stdTime - convert!("minutes", "hnsecs")(tzInfo.Bias + tzInfo.StandardBias);
+        }
+
+
+        static long _tzToUTC(const TIME_ZONE_INFORMATION* tzInfo, long adjTime, bool hasDST) nothrow
+        {
+            if(hasDST)
+            {
+                try
+                {
+                    auto localTime = cast(DateTime)SysTime(adjTime, UTC());
+
+                    DateTime getTransitionTime(const ref SYSTEMTIME transition)
+                    {
+                        DateTime switchDate;
+
+                        if(transition.wYear == 0)
+                            switchDate.year = localTime.year;
+                        else
+                            switchDate.year = transition.wYear;
+
+                        switchDate.month = cast(Month)transition.wMonth;
+
+                        DayOfWeek dow = cast(DayOfWeek)transition.wDayOfWeek;
+                        int occurrence = transition.wDay;
+
+                        if(occurrence < 5)
+                        {
+                            Date date = localTime.date;
+
+                            date.day = 1;
+                            date.day = cast(int)(date.day + daysToDayOfWeek(date.dayOfWeek, dow) + convert!("weeks", "days")(occurrence - 1));
+                            switchDate.day = date.day;
+                        }
+                        else
+                        {
+                            Date date = localTime.date.endOfMonth;
+
+                            switchDate.day = date.day - daysToDayOfWeek(dow, date.dayOfWeek);
+                        }
+
+                        switchDate.hour = transition.wHour;
+                        switchDate.minute = transition.wMinute;
+
+                        return switchDate;
+                    }
+
+                    auto stdSwitch = getTransitionTime(tzInfo.StandardDate);
+                    auto dstSwitch = getTransitionTime(tzInfo.DaylightDate);
+
+                    bool isDST = false;
+
+                    if(localTime < stdSwitch)
+                        isDST = localTime < dstSwitch ? stdSwitch < dstSwitch : true;
+                    else
+                        isDST = localTime < dstSwitch ? false : dstSwitch > stdSwitch;
+
+                    if(isDST)
+                        return adjTime + convert!("minutes", "hnsecs")(tzInfo.Bias + tzInfo.DaylightBias);
+                }
+                catch(Exception e)
+                    assert(0, "SysTime's constructor threw.");
             }
 
-            return to!string(retval);
+            return adjTime + convert!("minutes", "hnsecs")(tzInfo.Bias + tzInfo.StandardBias);
         }
 
-        //super(name, to!string(tzInfo.StandardName.ptr), to!string(tzInfo.DaylightName.ptr));
-        super(name, conv(tzInfo.StandardName.ptr), conv(tzInfo.DaylightName.ptr));
 
-        _tzInfo = tzInfo;
-    }
+        this(string name, TIME_ZONE_INFORMATION tzInfo) immutable
+        {
+            //Cannot use to!string(wchar*), probably due to bug http://d.puremagic.com/issues/show_bug.cgi?id=5016
+            static string conv(wchar* wcstr)
+            {
+                wcstr[31] = '\0';
+                wstring retval;
 
+                for(;; ++wcstr)
+                {
+                    if(*wcstr == '\0')
+                        break;
 
-    TIME_ZONE_INFORMATION _tzInfo;
-}
+                    retval ~= *wcstr;
+                }
 
-}
-else version(D_Ddoc)
-{
+                return to!string(retval);
+            }
 
-/++
-    Represents a time zone from the Windows registry. Unfortunately, Windows
-    does not use the TZ Database, though it does name its time zones using the
-    TZ Database names. You can, however, use PosixTimeZone (which reads its
-    information from the TZ Database files on disk) on Windows if you provide
-    the TZ Database files
-    ( <a href="ftp://elsie.nci.nih.gov/pub/">Repository with the TZ Database files (tzdata)</a> )
-    yourself and tell $(D PosixTimeZone.getTimeZone()) where the directory
-    holding them is.
+            //super(name, to!string(tzInfo.StandardName.ptr), to!string(tzInfo.DaylightName.ptr));
+            super(name, conv(tzInfo.StandardName.ptr), conv(tzInfo.DaylightName.ptr));
 
-    TZ Database files hold DST transitions for a large interval of the time
-    covered by time_t. So, barring errors in the information in the TZ Database
-    files, it will use the correct DST rules for any date. Windows, on the other
-    hand, maintains only the current DST rules, so historical dates will use
-    the current DST rules (and therefore potentially be incorrect). So, if you
-    want the DST rules that you use to be more accurate, or if you're looking for
-    your program to act consistently on both Posix and Windows systems, then, as
-    mentioned above, you'll need to include the TZ Database files with your
-    program and give $(D PosixTimeZone.getTimeZone()) the directory on disk
-    where they are located.
-
-    However, if all you care about is whether current times use the correct DST
-    rules, or if you don't care whether the DST rules are historically accurate,
-    then you can just use WindowsTimeZone on Windows. WindowsTimeZone does not
-    exist on Posix systems.
-
-    To get a WindowsTimeZone, either call $(D WindowsTimeZone.getTimeZone()) or
-    call $(D TimeZone.getTimeZone()) (which will give you a PosixTimeZone on Posix
-    systems and a WindowsTimeZone on Windows systems).
-  +/
-final class WindowsTimeZone : TimeZone
-{
-public:
-
-    /++
-        Whether this time zone has Daylight Savings Time at any point in time.
-        Note that for some time zone types it may not have DST for current dates
-        but will still return true for hasDST because the time zone did at some
-        point have DST.
-      +/
-    @property override bool hasDST() const nothrow
-    {
-        assert(0, "No implementation. Function exists only for DDoc generation");
-    }
+            _tzInfo = tzInfo;
+        }
 
 
-    /++
-        Takes the number of hecto-nanoseconds (100 ns) since midnight, January
-        1st, 1 A.D. in UTC time (i.e. std time) and returns whether DST is in
-        effect in this time zone at the given point in time.
-
-        Params:
-            stdTime = The UTC time that needs to be checked for DST in this
-                      time zone.
-      +/
-    override bool dstInEffect(long stdTime) const nothrow
-    {
-        assert(0, "No implementation. Function exists only for DDoc generation");
-    }
-
-
-    /++
-        Takes the number of hecto-nanoseconds (100 ns) since midnight, January
-        1st, 1 A.D. in UTC time (i.e. std time) and converts it to this time
-        zone's time.
-
-        Params:
-            stdTime = The UTC time that needs to be adjusted to this time zone's time.
-      +/
-    override long utcToTZ(long stdTime) const nothrow
-    {
-        assert(0, "No implementation. Function exists only for DDoc generation");
-    }
-
-
-    /++
-        Takes the number of hecto-nanoseconds (100 ns) since midnight, January
-        1st, 1 A.D. in this time zone's time and converts it to UTC
-        (i.e. std time).
-
-        Params:
-            adjTime = The time in this time zone that needs to be adjusted to UTC time.
-      +/
-    override long tzToUTC(long adjTime) const nothrow
-    {
-        assert(0, "No implementation. Function exists only for DDoc generation");
-    }
-
-
-    /++
-        Returns a TimeZone with the give name per the TZ Database. The time zone
-        information is fetched from the Windows registry.
-
-        See_Also:
-            <a href="http://en.wikipedia.org/wiki/Tz_database">Wikipedia entry on TZ Database</a>
-            <a href="http://en.wikipedia.org/wiki/List_of_tz_database_time_zones">List of Time Zones</a>
-
-        Params:
-            name = The TZ Database name of the time zone that you're looking for.
-
-        Throws:
-            DateTimeException if the given time zone could not be found.
-
-        Examples:
---------------------
-auto tz = TimeZone.getTimeZone("America/Los_Angeles");
---------------------
-      +/
-    static immutable(WindowsTimeZone) getTimeZone(string name)
-    {
-        assert(0, "No implementation. Function exists only for DDoc generation");
-    }
-
-
-    /++
-        Returns a list of the names of the time zones installed on the system.
-      +/
-    static string[] getInstalledTZNames()
-    {
-        assert(0, "No implementation. Function exists only for DDoc generation");
-    }
-
-
-private:
-
-    this() immutable pure
-    {
-        super("", "", "");
-        assert(0, "No implementation. Function exists only for DDoc generation");
+        TIME_ZONE_INFORMATION _tzInfo;
     }
 }
 
-}
 
-
-version(Posix)
+version(D_Ddoc)
 {
     /++
+        $(BLUE This function is Posix-Only.)
+
         Allows you to set the local time zone on Posix systems with the TZ
         database name by setting the TZ environment variable.
 
         Unfortunately, there is no way to do it on Windows using the TZ
         database name, so this function only exists on Posix systems.
       +/
+    void setTZEnvVar(string tzDatabaseName);
+
+
+    /++
+        $(BLUE This function is Posix-Only.)
+
+        Clears the TZ environment variable.
+      +/
+    void clearTZEnvVar();
+}
+else version(Posix)
+{
     void setTZEnvVar(string tzDatabaseName) nothrow
     {
         try
@@ -30445,11 +30519,6 @@ version(Posix)
     }
 
 
-    /++
-        Clears the TZ environment variable.
-
-        Only on Posix.
-      +/
     void clearTZEnvVar() nothrow
     {
         try
@@ -30461,31 +30530,6 @@ version(Posix)
         }
         catch(Exception e)
             assert(0, "to!(char[]) threw when it shouldn't have.");
-    }
-}
-else version(D_Ddoc)
-{
-    /++
-        Allows you to set the local time zone on Posix systems with the TZ
-        database name by setting the TZ environment variable.
-
-        Unfortunately, there is no way to do it on Windows using the TZ
-        database name, so this function only exists on Posix systems.
-      +/
-    void setTZEnvVar(string tzDatabaseName)
-    {
-        assert(0, "No implementation. Function exists only for DDoc generation");
-    }
-
-
-    /++
-        Clears the TZ environment variable.
-
-        Only on Posix.
-      +/
-    void clearTZEnvVar()
-    {
-        assert(0, "No implementation. Function exists only for DDoc generation");
     }
 }
 
@@ -30502,7 +30546,7 @@ else version(D_Ddoc)
     more exotic TZ Database names don't have corresponding Windows time zone names.
 
     See_Also:
-        <a href="http://unicode.org/repos/cldr-tmp/trunk/diff/supplemental/zone_tzid.html">Windows <-> TZ Database Name Conversion Table</a>
+        $(WEB unicode.org/repos/cldr-tmp/trunk/diff/supplemental/zone_tzid.html, Windows <-> TZ Database Name Conversion Table)
 
     Params:
         tzName = The TZ Database name to convert.
@@ -30642,7 +30686,7 @@ unittest
     Converts the given Windows time zone name to a corresponding TZ Database name.
 
     See_Also:
-        <a href="http://unicode.org/repos/cldr-tmp/trunk/diff/supplemental/zone_tzid.html">Windows <-> TZ Database Name Conversion Table</a>
+        $(WEB unicode.org/repos/cldr-tmp/trunk/diff/supplemental/zone_tzid.html, Windows <-> TZ Database Name Conversion Table)
 
     Params:
         tzName = The TZ Database name to convert.
@@ -31206,176 +31250,6 @@ unittest
 
 
 //==============================================================================
-// Section with other types.
-//==============================================================================
-
-/++
-    Exception type used by std.datetime.
-  +/
-alias TimeException DateTimeException;
-
-
-/++
-    Effectively a namespace to make it clear where its methods are getting
-    their time from. It cannot be instantiated.
- +/
-final class Clock
-{
-public:
-
-    /++
-        Returns the current time in the local timezone.
-      +/
-    static SysTime currTime(immutable TimeZone tz = LocalTime())
-    {
-        return SysTime(currStdTime, tz);
-    }
-
-    unittest
-    {
-        version(enableWindowsTest)
-        {
-            assert(currTime(UTC()).timezone is UTC());
-
-            immutable unixTimeD = currTime().toUnixTime();
-            immutable unixTimeC = core.stdc.time.time(null);
-            immutable diff = unixTimeC - unixTimeD;
-
-            assertPred!">="(diff, -2);
-            assertPred!"<="(diff, 2);
-        }
-    }
-
-
-    /++
-        Returns the number of hnsecs since midnight, January 1st, 1 A.D. for the
-        current time.
-
-        Throws:
-            ErrnoException (on Posix) or Exception (on Windows) if it fails to
-            get the time of day.
-      +/
-    @trusted
-    static @property long currStdTime()
-    {
-        version(Windows)
-        {
-            //FILETIME represents hnsecs from midnight, January 1st, 1601.
-            enum hnsecsFrom1601 = 504_911_232_000_000_000L;
-
-            FILETIME fileTime;
-
-            GetSystemTimeAsFileTime(&fileTime);
-
-            ulong tempHNSecs = fileTime.dwHighDateTime;
-            tempHNSecs <<= 32;
-            tempHNSecs |= fileTime.dwLowDateTime;
-
-            return cast(long)tempHNSecs + hnsecsFrom1601;
-        }
-        else version(Posix)
-        {
-            enum hnsecsToUnixEpoch = 621_355_968_000_000_000L;
-
-            static if(is(typeof(clock_gettime)))
-            {
-                timespec ts;
-
-                if(clock_gettime(CLOCK_REALTIME, &ts) != 0)
-                    throw new TimeException("Failed in clock_gettime().");
-
-                return convert!("seconds", "hnsecs")(ts.tv_sec) +
-                       ts.tv_nsec / 100 +
-                       hnsecsToUnixEpoch;
-            }
-            else
-            {
-                timeval tv;
-
-                if(gettimeofday(&tv, null) != 0)
-                    throw new TimeException("Failed in gettimeofday().");
-
-                return convert!("seconds", "hnsecs")(tv.tv_sec) +
-                       convert!("usecs", "hnsecs")(tv.tv_usec) +
-                       hnsecsToUnixEpoch;
-            }
-        }
-    }
-
-
-    /++
-        The current system tick. The number of ticks per second varies from
-        system to system. This uses a monotonic clock, so it's intended for
-        precision timing by comparing relative time values, not for getting
-        the current system time.
-
-        Warning:
-            On some systems, the monotonic clock may stop counting when
-            the computer goes to sleep or hibernates. So, the monotonic
-            clock could be off if that occurs. This is known to happen
-            on Mac OS X. It has not been tested whether it occurs on
-            either Windows or on Linux.
-
-        Throws:
-            TimeException if it fails to get the time.
-      +/
-    @safe
-    static @property TickDuration currSystemTick()
-    {
-        return TickDuration.currSystemTick();
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            auto t = Clock.currSystemTick;
-            assert(t.length > 0);
-        }
-    }
-
-
-    /++
-        The current number of system ticks since the application started.
-        The number of ticks per second varies from system to system.
-        This uses a monotonic clock.
-
-        Warning:
-            On some systems, the monotonic clock may stop counting when
-            the computer goes to sleep or hibernates. So, the monotonic
-            clock could be off if that occurs. This is known to happen
-            on Mac OS X. It has not been tested whether it occurs on
-            either Windows or on Linux.
-
-        Throws:
-            ErrnoException (on Posix) or Exception (on Windows) if it fails to
-            get the time of day.
-      +/
-    @safe
-    static @property TickDuration currAppTick()
-    {
-        return currSystemTick - TickDuration.appOrigin;
-    }
-
-    unittest
-    {
-        version(testStdDateTime)
-        {
-            auto a = Clock.currSystemTick;
-            auto b = Clock.currAppTick;
-            assert(a.length);
-            assert(a != b);
-        }
-    }
-
-
-private:
-
-    @disable this() {}
-}
-
-
-//==============================================================================
 // Section with public helper functions and templates.
 //==============================================================================
 
@@ -31674,8 +31548,18 @@ unittest
 }
 
 
-version(Windows)
+version(D_Ddoc)
 {
+    version(Windows)
+    {
+    }
+    else
+    {
+        //These types don't exist outside of Windows.
+        alias void* SYSTEMTIME;
+        alias void* FILETIME;
+    }
+
     /++
         On Windows, this converts a SYSTEMTIME struct to a SysTime.
 
@@ -31691,6 +31575,56 @@ version(Windows)
             which is highly unlikely to happen given that SysTime.max is in 29,228 A.D.
             and the maximum SYSTEMTIME is in 30,827 A.D.
       +/
+    SysTime SYSTEMTIMEToSysTime(const SYSTEMTIME* st, immutable TimeZone tz = LocalTime());
+
+
+    /++
+        On Windows, this converts a SysTime to a SYSTEMTIME struct.
+
+        The SYSTEMTIME which is returned will be set using the given SysTime's
+        time zone, so if you want the SYSTEMTIME to be in UTC, set the SysTime's
+        time zone to UTC.
+
+        Params:
+            sysTime = The SysTime to convert.
+
+        Throws:
+            DateTimeException if the given SysTime will not fit in a SYSTEMTIME.
+            This will only happen if the SysTime's date is prior to 1601 A.D.
+      +/
+    SYSTEMTIME SysTimeToSYSTEMTIME(in SysTime sysTime);
+
+
+    /++
+        On Windows, this converts a FILETIME struct to a SysTime.
+
+        Params:
+            ft = The FILETIME struct to convert.
+            tz = The time zone that the SysTime will be in (FILETIMEs are
+                 in UTC).
+
+        Throws:
+            DateTimeException if the given FILETIME will not fit in a SysTime or
+            if the FILETIME cannot be converted to a SYSTEMTIME.
+      +/
+    SysTime FILETIMEToSysTime(const FILETIME* ft, immutable TimeZone tz = LocalTime());
+
+
+    /++
+        On Windows, this converts a SysTime to a FILETIME struct.
+
+        FILETIMEs are always in UTC.
+
+        Params:
+            sysTime = The SysTime to convert.
+
+        Throws:
+            DateTimeException if the given SysTime will not fit in a FILETIME.
+      +/
+    FILETIME SysTimeToFILETIME(SysTime sysTime);
+}
+else version(Windows)
+{
     SysTime SYSTEMTIMEToSysTime(const SYSTEMTIME* st, immutable TimeZone tz = LocalTime())
     {
         const max = SysTime.max;
@@ -31754,20 +31688,6 @@ version(Windows)
     }
 
 
-    /++
-        On Windows, this converts a SysTime to a SYSTEMTIME struct.
-
-        The SYSTEMTIME which is returned will be set using the given SysTime's
-        time zone, so if you want the SYSTEMTIME to be in UTC, set the SysTime's
-        time zone to UTC.
-
-        Params:
-            sysTime = The SysTime to convert.
-
-        Throws:
-            DateTimeException if the given SysTime will not fit in a SYSTEMTIME.
-            This will only happen if the SysTime's date is prior to 1601 A.D.
-      +/
     SYSTEMTIME SysTimeToSYSTEMTIME(in SysTime sysTime)
     {
         immutable dt = cast(DateTime)sysTime;
@@ -31811,18 +31731,6 @@ version(Windows)
     }
 
 
-    /++
-        On Windows, this converts a FILETIME struct to a SysTime.
-
-        Params:
-            ft = The FILETIME struct to convert.
-            tz = The time zone that the SysTime will be in (FILETIMEs are
-                 in UTC).
-
-        Throws:
-            DateTimeException if the given FILETIME will not fit in a SysTime or
-            if the FILETIME cannot be converted to a SYSTEMTIME.
-      +/
     SysTime FILETIMEToSysTime(const FILETIME* ft, immutable TimeZone tz = LocalTime())
     {
         SYSTEMTIME st = void;
@@ -31855,17 +31763,6 @@ version(Windows)
     }
 
 
-    /++
-        On Windows, this converts a SysTime to a FILETIME struct.
-
-        FILETIMEs are always in UTC.
-
-        Params:
-            sysTime = The SysTime to convert.
-
-        Throws:
-            DateTimeException if the given SysTime will not fit in a FILETIME.
-      +/
     FILETIME SysTimeToFILETIME(SysTime sysTime)
     {
         SYSTEMTIME st = SysTimeToSYSTEMTIME(sysTime.toUTC());
@@ -31892,87 +31789,6 @@ version(Windows)
             assertPred!"=="(ft.dwLowDateTime, result.dwLowDateTime);
             assertPred!"=="(ft.dwHighDateTime, result.dwHighDateTime);
         }
-    }
-}
-else version(D_Ddoc)
-{
-    //These types don't exist outside of Windows.
-    alias int SYSTEMTIME;
-    alias int FILETIME;
-
-    /++
-        On Windows, this converts a SYSTEMTIME struct to a SysTime.
-
-        Params:
-            st = The SYSTEMTIME struct to convert.
-            tz = The time zone that the time in the SYSTEMTIME struct
-                 is assumed to be (if the SYSTEMTIME was supplied by a
-                 Windows system call, the SYSTEMTIME will either be in
-                 local time or UTC, depending on the call).
-
-        Throws:
-            DateTimeException if the given SYSTEMTIME will not fit in a SysTime,
-            which is highly unlikely to happen given that SysTime.max is in 29,228 A.D.
-            and the maximum SYSTEMTIME is in 30,827 A.D.
-      +/
-    SysTime SYSTEMTIMEToSysTime(const SYSTEMTIME* st, immutable TimeZone tz = LocalTime())
-    {
-        assert(0, "No implementation. Function exists only for DDoc generation");
-    }
-
-
-    /++
-        On Windows, this converts a SysTime to a SYSTEMTIME struct.
-
-        The SYSTEMTIME which is returned will be set using the given SysTime's
-        time zone, so if you want the SYSTEMTIME to be in UTC, set the SysTime's
-        time zone to UTC.
-
-        Params:
-            sysTime = The SysTime to convert.
-
-        Throws:
-            DateTimeException if the given SysTime will not fit in a SYSTEMTIME.
-            This will only happen if the SysTime's date is prior to 1601 A.D.
-      +/
-    SYSTEMTIME SysTimeToSYSTEMTIME(in SysTime sysTime)
-    {
-        assert(0, "No implementation. Function exists only for DDoc generation");
-    }
-
-
-    /++
-        On Windows, this converts a FILETIME struct to a SysTime.
-
-        Params:
-            ft = The FILETIME struct to convert.
-            tz = The time zone that the SysTime will be in (FILETIMEs are
-                 in UTC).
-
-        Throws:
-            DateTimeException if the given FILETIME will not fit in a SysTime or
-            if the FILETIME cannot be converted to a SYSTEMTIME.
-      +/
-    SysTime FILETIMEToSysTime(const FILETIME* ft, immutable TimeZone tz = LocalTime())
-    {
-        assert(0, "No implementation. Function exists only for DDoc generation");
-    }
-
-
-    /++
-        On Windows, this converts a SysTime to a FILETIME struct.
-
-        FILETIMEs are always in UTC.
-
-        Params:
-            sysTime = The SysTime to convert.
-
-        Throws:
-            DateTimeException if the given SysTime will not fit in a FILETIME.
-      +/
-    FILETIME SysTimeToFILETIME(SysTime sysTime)
-    {
-        assert(0, "No implementation. Function exists only for DDoc generation");
     }
 }
 
