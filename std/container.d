@@ -2003,7 +2003,7 @@ Complexity: $(BIGOH log(n)).
         static if (is(T == struct))
         {
             // Destroy this guy
-            clear(_data._payload[$ - 1]);
+            .clear(_data._payload[$ - 1]);
         }
         _data._payload = _data._payload[0 .. $ - 1];
     }
@@ -2031,7 +2031,7 @@ Complexity: $(BIGOH howMany).
             // Destroy this guy
             foreach (ref e; _data._payload[$ - howMany .. $])
             {
-                clear(e);
+                .clear(e);
             }
         }
         _data._payload = _data._payload[0 .. $ - howMany];
@@ -4761,4 +4761,13 @@ unittest
     RedBlackTree!short rt4;
     RedBlackTree!ubyte rt5;
     RedBlackTree!byte rt6;
+}
+
+version(unittest) struct UnittestMe {
+  int a;
+}
+
+unittest
+{
+    auto c = Array!UnittestMe();
 }

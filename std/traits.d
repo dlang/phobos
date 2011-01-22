@@ -1452,6 +1452,37 @@ unittest
 }
 
 /**
+   True if $(D S) or any type directly embedded in the representation
+   of $(D S) defines an elaborate destructor. Elaborate destructors
+   are introduced by defining $(D ~this()) for a $(D
+   struct). (Non-struct types never have elaborate destructors, even
+   though classes may define $(D ~this()).)
+ */
+template hasElaborateDestructor(S)
+{
+    static if(!is(S == struct))
+    {
+        enum bool hasElaborateDestructor = false;
+    }
+    else
+    {
+        enum hasElaborateDestructor = is(typeof({S s; return &s.__dtor;}))
+            || anySatisfy!(.hasElaborateDestructor, typeof(S.tupleof));
+    }
+}
+
+unittest
+{
+    static assert(!hasElaborateDestructor!int);
+    static struct S1 { }
+    static assert(!hasElaborateDestructor!S1);
+    static struct S2 { ~this() {} }
+    static assert(hasElaborateDestructor!S2);
+    static struct S3 { S2 field; }
+    static assert(hasElaborateDestructor!S3);
+}
+
+/**
    Yields $(D true) if and only if $(D T) is a $(D struct) or a $(D
    class) that defines a symbol called $(D name).
  */
