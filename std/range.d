@@ -2369,6 +2369,59 @@ unittest
 }
 
 /**
+Similar to $(XREF range,take), but assumes the length of $(D range) is
+at least $(D n). As such, the result of $(D takeExactly(range, n))
+always defines the $(D length) property (and initializea it to $(D n))
+even when $(D range) itself does not define $(D length).
+
+If $(D R) is a random-access range, the result of $(D takeExactly) is
+$(D R) as well because $(D takeExactly) simply returns a slice of $(D
+range). Otherwise if $(D R) is an input range, the type of the result
+is an input range with length. Finally, if $(D R) is a forward range
+(including bidirectional), the type of the result is a forward range.
+ */
+auto takeExactly(R)(R range, size_t n)
+if (isInputRange!R && !isRandomAccessRange!R)
+{
+    static struct Result
+    {
+        private R _input;
+        private size_t _n;
+
+        @property bool empty() const { return !_n; }
+        @property auto ref front()
+        {
+            assert(_n > 0, "front() on an empty " ~ Result.stringof);
+            return _input.front();
+        }
+        void popFront() { _input.popFront(); --_n; }
+        size_t length() const { return _n; }
+
+        static if (isForwardRange!R)
+            auto save() { return this; }
+    }
+
+    return Result(range, n);
+}
+
+auto takeExactly(R)(R range, size_t n)
+if (isRandomAccessRange!R)
+{
+    return range[0 .. n];
+}
+
+unittest
+{
+    auto a = [ 1, 2, 3, 4, 5 ];
+    auto b = takeExactly(a, 3);
+    assert(equal(b, [1, 2, 3]));
+    // assert(b.length == 3);
+    // assert(b.front == 1);
+    // assert(b.back == 3);
+    // b[1]++;
+}
+
+/**
 Eagerly advances $(D r) itself (not a copy) $(D n) times (by calling
 $(D r.popFront) $(D n) times). The pass of $(D r) into $(D popFrontN)
 is by reference, so the original range is affected. Completes in
@@ -3398,7 +3451,7 @@ template Lockstep(Range)
     alias Range Lockstep;
 }
 
-version(ddoc)
+version(D_Ddoc)
 {
     /// Ditto
     Lockstep!(Ranges) lockstep(Ranges...)(Ranges ranges) { assert(0); }

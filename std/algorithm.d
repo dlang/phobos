@@ -2073,6 +2073,12 @@ unittest
     assert(equal(joiner(["Mary", "has", "a", "little", "lamb"]),
                     "Maryhasalittlelamb"));
     assert(equal(joiner(std.range.repeat("abc", 3)), "abcabcabc"));
+
+    // joiner allows in-place mutation!
+    auto a = [ [1, 2, 3], [42, 43] ];
+    auto j = joiner(a);
+    j.front() = 44;
+    assert(a == [ [44, 2, 3], [42, 43] ]);
 }
 
 // uniq
@@ -2983,96 +2989,11 @@ bool findSkip(alias pred = "a == b", R1, R2)(ref R1 haystack, R2 needle)
 if (isForwardRange!R1 && isForwardRange!R2
         && is(typeof(binaryFun!pred(haystack.front, needle.front))))
 {
-    static if (isSomeString!R1 && isSomeString!R2 || isRandomAccessRange!R1 && hasLength!R2)
-    {
-        auto iter = find!pred(haystack, needle);
-        if (iter.empty) return false;
-        haystack = iter[needle.length .. iter.length];
-        return true;
-    }
-    else
-    {
-        if (needle.empty)
-        {
-            // The empty range is always found
-            return true;
-        }
-        
-        enum estimateNeedleLength = hasLength!R1 && !hasLength!R2;
-
-        static if (hasLength!R1)
-        {
-            static if (hasLength!R2)
-                size_t estimatedNeedleLength = 0;
-            else
-                immutable size_t estimatedNeedleLength = needle.length;
-        }
-
-        bool haystackTooShort(R1 r)
-        {
-            static if (hasLength!R1)
-            {
-                return r.length < estimatedNeedleLength;
-            }
-            else
-            {
-                return haystack.empty;
-            }
-        }
-
-        auto iter = haystack.save;
-      searching:
-        for (;; iter.popFront())
-        {
-            if (haystackTooShort(iter))
-            {
-                // Failed search
-                static if (hasLength!R1)
-                {
-                    static if (is(typeof(iter[iter.length .. iter.length])
-                                    : R1))
-                    {
-                        haystack = iter[iter.length .. iter.length];
-                    }
-                    else
-                    {
-                        haystack = haystack.init;
-                    }
-                    return false;
-                }
-                else
-                {
-                    assert(iter.empty);
-                    haystack = iter;
-                    return false;
-                }
-            }
-            static if (estimateNeedleLength)
-                size_t matchLength = 0;
-            auto h = iter.save;
-            for (auto n = needle.save;
-                 !n.empty;
-                 h.popFront(), n.popFront())
-            {
-                if (h.empty || !binaryFun!pred(h.front, n.front))
-                {
-                    // Failed searching n in h
-                    static if (estimateNeedleLength)
-                    {
-                        if (estimatedNeedleLength < matchLength)
-                            estimatedNeedleLength = matchLength;
-                    }
-                    continue searching;
-                }
-                static if (estimateNeedleLength)
-                    ++matchLength;
-            }
-            // Found
-            haystack = h;
-            return true;
-        }
-        return false;
-    }
+    auto parts = findParts!pred(haystack, needle);
+    if (parts[1].empty) return false;
+    // found
+    haystack = parts[2];
+    return true;
 }
 
 unittest
@@ -3083,6 +3004,85 @@ unittest
     assert(!findSkip(s, "cxd") && s == "abcdef");
     s = "abcdef";
     assert(findSkip(s, "def") && s.empty);
+}
+
+/**
+Given a $(D haystack) and a $(D needle), returns a tuple $(D result)
+containing three ranges: $(D result[0]) is the portion of $(D
+haystack) before $(D needle), $(D result[1]) is the portion of $(D
+haystack) that matches $(D needle), and $(D result[2]) is the portion
+of $(D haystack) after the match.
+ 
+If $(D haystack) is a random-access range, all three components of the
+tuple have the same type as $(D haystack). Otherwise, $(D haystack)
+must be a forward range and the type of $(D result[0]) and $(D
+result[1]) is the same as $(XREF range,takeExactly).
+
+Example:
+----
+auto a = [ 1, 2, 3, 4, 5, 6, 7, 8 ];
+auto r = findParts(a, [9, 1]);
+assert(r[0] == a);
+assert(r[1].empty);
+assert(r[2].empty);
+r = findParts(a, [3]);
+assert(r[0] == a[0 .. 2]);
+assert(r[1] == a[2 .. 3]);
+assert(r[2] == a[3 .. $]);
+----
+ */
+auto findParts(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
+if (isForwardRange!R1 && isForwardRange!R2)
+{
+    static if (isSomeString!R1 && isSomeString!R2
+            || isRandomAccessRange!R1 && hasLength!R2)
+    {
+        auto balance = find!pred(haystack, needle);
+        immutable pos1 = haystack.length - balance.length;
+        immutable pos2 = balance.length ? pos1 + needle.length : pos1;
+        return tuple(haystack[0 .. pos1],
+                haystack[pos1 .. pos2],
+                haystack[pos2 .. haystack.length]);
+    }
+    else
+    {
+        auto original = haystack.save;
+        auto h = haystack.save;
+        auto n = needle.save;
+        size_t pos1, pos2;
+        while (!n.empty && !h.empty)
+        {
+            if (binaryFun!pred(h.front, n.front))
+            {
+                h.popFront();
+                n.popFront();
+                ++pos2;
+            }
+            else
+            {
+                haystack.popFront();
+                n = needle.save;
+                h = haystack.save;
+                pos2 = ++pos1;
+            }
+        }
+        return tuple(takeExactly(original, pos1),
+                takeExactly(haystack, pos2),
+                h);
+    }
+}
+
+unittest
+{
+    auto a = [ 1, 2, 3, 4, 5, 6, 7, 8 ];
+    auto r = findParts(a, [9, 1]);
+    assert(equal(r[0], a));
+    assert(r[1].empty);
+    assert(r[2].empty);
+    r = findParts(a, [3]);
+    assert(r[0] == a[0 .. 2]);
+    assert(r[1] == a[2 .. 3]);
+    assert(r[2] == a[3 .. $]);
 }
 
 /**
