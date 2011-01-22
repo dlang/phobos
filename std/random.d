@@ -876,7 +876,7 @@ auto a = uniform(0, 1024, gen);
 auto a = uniform(0.0f, 1.0f, gen);
 ----
  */
-version(ddoc)
+version(D_Ddoc)
     CommonType!(T1, T2) uniform(string boundaries = "[$(RPAREN)",
             T1, T2, UniformRandomNumberGenerator)
         (T1 a, T2 b, ref UniformRandomNumberGenerator urng);
@@ -962,7 +962,7 @@ if (is(CommonType!(T1, UniformRandomNumberGenerator) == void) &&
 /**
 As above, but uses the default generator $(D rndGen).
  */
-version(ddoc)
+version(D_Ddoc)
     CommonType!(T1, T2) uniform(string boundaries = "[$(RPAREN)", T1, T2)
         (T1 a, T2 b)  if (!is(CommonType!(T1, T2) == void));
 else

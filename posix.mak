@@ -57,7 +57,7 @@ STYLECSS_SRC = $(DOCSRC)/style.css
 STYLECSS_TGT = $(WEBSITE_DIR)/style.css
 SRC_DOCUMENTABLES = phobos.d $(addsuffix .d,$(STD_MODULES))
 STDDOC = $(DOCSRC)/std.ddoc
-DDOCFLAGS=-version=ddoc -d -c -o- $(STDDOC) -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS)
+DDOCFLAGS=-d -c -o- $(STDDOC) -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS)
 
 # Variable defined in an OS-dependent manner (see below)
 CC =
