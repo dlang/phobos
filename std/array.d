@@ -173,7 +173,8 @@ unittest
 Implements the range interface primitive $(D save) for built-in
 arrays. Due to the fact that nonmember functions can be called with
 the first argument using the dot notation, $(D array.save) is
-equivalent to $(D save(array)).
+equivalent to $(D save(array)). The function does not duplicate the
+content of the array, it simply returns its argument.
 
 Example:
 ----
@@ -855,11 +856,12 @@ unittest
 }
 
 /********************************************
- * Replace occurrences of $(D from) with $(D to) in $(D a). Returns a
- * new array.
+Replace occurrences of $(D from) with $(D to) in $(D a). Returns a new
+array without changing the contents of $(D subject).
  */
 R1 replace(R1, R2, R3)(R1 subject, R2 from, R3 to)
-if (isDynamicArray!R1 && isForwardRange!R2 && isForwardRange!R3)
+if (isDynamicArray!R1 && isForwardRange!R2 && isForwardRange!R3
+        && (hasLength!R3 || isSomeString!R3))
 {
     if (from.empty) return subject;
     auto app = appender!R1();
@@ -884,6 +886,51 @@ if (isDynamicArray!R1 && isForwardRange!R2 && isForwardRange!R3)
 unittest
 {
     debug(string) printf("array.replace.unittest\n");
+
+    alias TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[])
+        TestTypes;
+
+    foreach (S; TestTypes)
+    {
+        auto s = to!S("This is a foo foo list");
+        auto from = to!S("foo");
+        auto into = to!S("silly");
+        S r;
+        int i;
+        
+        r = replace(s, from, into);
+        i = cmp(r, "This is a silly silly list");
+        assert(i == 0);
+        
+        r = replace(s, to!S(""), into);
+        i = cmp(r, "This is a foo foo list");
+        assert(i == 0);
+
+        assert(replace(r, to!S("won't find this"), to!S("whatever")) is r);
+    }
+}
+
+/********************************************
+Replaces the first occurrence of $(D from) with $(D to) in $(D
+a). Returns a new array without changing the contents of $(D subject).
+ */
+R1 replaceFirst(R1, R2, R3)(R1 subject, R2 from, R3 to)
+if (isDynamicArray!R1 && isForwardRange!R2 && isInputRange!R3)
+{
+    if (from.empty) return subject;
+    auto balance = std.algorithm.find(subject, from.save);
+    if (balance.empty) return subject;
+    auto app = appender!R1();
+    app.put(subject[0 .. subject.length - balance.length]);
+    app.put(to.save);
+    subject = balance[from.length .. $];
+
+    return app.data;
+}
+
+unittest
+{
+    debug(string) printf("array.replaceFirst.unittest\n");
 
     alias TypeTuple!(string, wstring, dstring, char[], wchar[], dchar[])
         TestTypes;
