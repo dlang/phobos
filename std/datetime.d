@@ -30076,6 +30076,10 @@ version(D_Ddoc)
 
     private:
 
+        version(Windows) {}
+        else
+            alias void* TIME_ZONE_INFORMATION;
+
         static bool _dstInEffect(const TIME_ZONE_INFORMATION* tzInfo, long stdTime) nothrow;
         static long _utcToTZ(const TIME_ZONE_INFORMATION* tzInfo, long stdTime, bool hasDST) nothrow;
         static long _tzToUTC(const TIME_ZONE_INFORMATION* tzInfo, long adjTime, bool hasDST) nothrow;
@@ -31550,12 +31554,9 @@ unittest
 
 version(D_Ddoc)
 {
-    version(Windows)
-    {
-    }
+    version(Windows) {}
     else
     {
-        //These types don't exist outside of Windows.
         alias void* SYSTEMTIME;
         alias void* FILETIME;
     }
