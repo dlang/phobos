@@ -179,6 +179,13 @@ unittest
     }
 }
 
+unittest
+{
+    char[4] test = ['a', 'b', 'c', 'd'];
+    static assert(!isInputRange!(Unqual!(char[4])));
+    assert(to!string(test) == test);
+}
+
 /**
 Converts array (other than strings) to string. The left bracket,
 separator, and right bracket are configurable. Each element is
@@ -725,6 +732,21 @@ unittest
     assert(to!char(a) == ' ');
     a = 300;
     assert(collectException(to!char(a)));
+
+    dchar from0 = 'A';
+    char to0 = to!(char)(from0);
+
+    wchar from1 = 'A';
+    char to1 = to!(char)(from1);
+
+    char from2 = 'A';
+    char to2 = to!(char)(from2);
+
+    char from3 = 'A';
+    wchar to3 = to!(wchar)(from3);
+
+    char from4 = 'A';
+    dchar to4 = to!(dchar)(from4);
 }
 
 private T parseString(T)(const(char)[] v)
@@ -3345,7 +3367,7 @@ unittest
 }
 
 /// C-style strings
-T toImpl(T, S)(S s) if (is(S : const(char)*) && isSomeString!(T))
+T toImpl(T, S)(S s) if (isPointer!S && is(S : const(char)*) && isSomeString!T)
 {
     return s ? cast(T) s[0 .. strlen(s)].dup : cast(string)null;
 }

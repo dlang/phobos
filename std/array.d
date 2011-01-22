@@ -222,9 +222,10 @@ unittest
     static assert(!__traits(compiles, popFront!(void[])));
 }
 
-// Specialization for narrow strings
+// Specialization for narrow strings. The necessity of
+// !isStaticArray!A suggests a compiler @@@BUG@@@.
 void popFront(A)(ref A a)
-if (isNarrowString!A && isMutable!A)
+if (isNarrowString!A && isMutable!A && !isStaticArray!A)
 {
     assert(a.length, "Attempting to popFront() past the end of an array of "
             ~ typeof(a[0]).stringof);
