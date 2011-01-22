@@ -7,12 +7,12 @@ at a time. For opening files and manipulating them via handles refer
 to module $(D $(LINK2 std_stdio.html,std.stdio)).
 
 Macros:
- WIKI = Phobos/StdFile
+WIKI = Phobos/StdFile
 
 Copyright: Copyright Digital Mars 2007 - 2009.
 License:   $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   $(WEB digitalmars.com, Walter Bright),
-           $(WEB erdani.org, Andrei Alexandrescu)
+           $(WEB erdani.org, Andrei Alexandrescu),
            Jonathan M Davis
  */
 module std.file;
@@ -23,6 +23,7 @@ import core.stdc.stdio, core.stdc.stdlib, core.stdc.string,
        std.datetime, std.exception, std.format, std.path, std.process,
        std.range, std.regexp, std.stdio, std.string, std.traits, std.typecons,
        std.typetuple, std.utf;
+
 version (Win32)
 {
     import core.sys.windows.windows, std.windows.charset,
@@ -560,19 +561,13 @@ unittest
 /*************************
  * $(RED Scheduled for deprecation. Please use getTimesWin (for Windows)
  *       or getTimesPosix (for Posix) instead.)
- *
- * Get creation/access/modified times of file $(D name).
- * Throws: $(D FileException) on error.
  */
 version(D_Ddoc)
 {
     void getTimes(in char[] name,
-                  out d_time ftc,
-                  out d_time fta,
-                  out d_time ftm)
-    {
-        assert(0, "No implementation. Function exists only for DDoc generation");
-    }
+            out d_time ftc,
+            out d_time fta,
+            out d_time ftm);
 }
 else version(Windows)
 {
@@ -655,12 +650,9 @@ version(D_Ddoc)
             $(D FileException) on error.
      +/
     void getTimesWin(in char[] name,
-                     out SysTime fileCreationTime,
-                     out SysTime fileAccessTime,
-                     out SysTime fileModificationTime)
-    {
-        assert(0, "No implementation. Function exists only for DDoc generation");
-    }
+            out SysTime fileCreationTime,
+            out SysTime fileAccessTime,
+            out SysTime fileModificationTime);
 
 
     /++
@@ -685,16 +677,7 @@ version(D_Ddoc)
     version(Posix) void getTimesPosix(in char[] name,
                                       out SysTime fileStatusChangeTime,
                                       out SysTime fileAccessTime,
-                                      out SysTime fileModificationTime)
-    {
-        struct_stat64 statbuf = void;
-
-        cenforce(stat64(toStringz(name), &statbuf) == 0, name);
-
-        ftc = SysTime(unixTimeToStdTime(statbuf.st_ctime));
-        fta = SysTime(unixTimeToStdTime(statbuf.st_atime));
-        ftm = SysTime(unixTimeToStdTime(statbuf.st_mtime));
-    }
+            out SysTime fileModificationTime);
 }
 else version(Windows)
 {
@@ -786,15 +769,15 @@ else version(Windows)
 }
 else version(Posix)
 {
-    version(Posix) void getTimesPosix(in char[] name,
-                                      out SysTime fileStatusChangeTime,
-                                      out SysTime fileAccessTime,
-                                      out SysTime fileModificationTime)
+    void getTimesPosix(in char[] name,
+            out SysTime fileStatusChangeTime,
+            out SysTime fileAccessTime,
+            out SysTime fileModificationTime)
     {
         struct_stat64 statbuf = void;
-
+        
         cenforce(stat64(toStringz(name), &statbuf) == 0, name);
-
+        
         fileStatusChangeTime = SysTime(unixTimeToStdTime(statbuf.st_ctime));
         fileAccessTime = SysTime(unixTimeToStdTime(statbuf.st_atime));
         fileModificationTime = SysTime(unixTimeToStdTime(statbuf.st_mtime));
@@ -802,56 +785,53 @@ else version(Posix)
 
     unittest
     {
-        version(Posix)
+        auto currTime = Clock.currTime();
+        
+        write(deleteme, "a");
+        scope(exit) { assert(exists(deleteme)); remove(deleteme); }
+        
+        SysTime statusChangedTime1 = void;
+        SysTime accessTime1 = void;
+        SysTime modificationTime1 = void;
+
+        getTimesPosix(deleteme, statusChangedTime1, accessTime1, modificationTime1);
+
+        enum leeway = dur!"seconds"(2);
+
         {
-            auto currTime = Clock.currTime();
+            auto diffc = statusChangedTime1 - currTime;
+            auto diffa = accessTime1 - currTime;
+            auto diffm = modificationTime1 - currTime;
 
-            write(deleteme, "a");
-            scope(exit) { assert(exists(deleteme)); remove(deleteme); }
-
-            SysTime statusChangedTime1 = void;
-            SysTime accessTime1 = void;
-            SysTime modificationTime1 = void;
-
-            getTimesPosix(deleteme, statusChangedTime1, accessTime1, modificationTime1);
-
-            enum leeway = dur!"seconds"(2);
-
-            {
-                auto diffc = statusChangedTime1 - currTime;
-                auto diffa = accessTime1 - currTime;
-                auto diffm = modificationTime1 - currTime;
-
-                assert(abs(diffc) <= leeway);
-                assert(abs(diffa) <= leeway);
-                assert(abs(diffm) <= leeway);
-            }
-
-            Thread.sleep(dur!"seconds"(1));
-
-            currTime = Clock.currTime();
-            write(deleteme, "b");
-
-            SysTime statusChangedTime2 = void;
-            SysTime accessTime2 = void;
-            SysTime modificationTime2 = void;
-
-            getTimesPosix(deleteme, statusChangedTime2, accessTime2, modificationTime2);
-
-            {
-                auto diffc = statusChangedTime2 - currTime;
-                auto diffa = accessTime2 - currTime;
-                auto diffm = modificationTime2 - currTime;
-
-                assert(abs(diffc) <= leeway);
-                assert(abs(diffa) <= leeway);
-                assert(abs(diffm) <= leeway);
-            }
-
-            assert(statusChangedTime1 <= statusChangedTime2);
-            assert(accessTime1 <= accessTime2);
-            assert(modificationTime1 <= modificationTime2);
+            assert(abs(diffc) <= leeway);
+            assert(abs(diffa) <= leeway);
+            assert(abs(diffm) <= leeway);
         }
+
+        Thread.sleep(dur!"seconds"(1));
+
+        currTime = Clock.currTime();
+        write(deleteme, "b");
+
+        SysTime statusChangedTime2 = void;
+        SysTime accessTime2 = void;
+        SysTime modificationTime2 = void;
+
+        getTimesPosix(deleteme, statusChangedTime2, accessTime2, modificationTime2);
+
+        {
+            auto diffc = statusChangedTime2 - currTime;
+            auto diffa = accessTime2 - currTime;
+            auto diffm = modificationTime2 - currTime;
+
+            assert(abs(diffc) <= leeway);
+            assert(abs(diffa) <= leeway);
+            assert(abs(diffm) <= leeway);
+        }
+
+        assert(statusChangedTime1 <= statusChangedTime2);
+        assert(accessTime1 <= accessTime2);
+            assert(modificationTime1 <= modificationTime2);
     }
 }
 else
@@ -861,17 +841,10 @@ else
 version(D_Ddoc)
 {
     /++
-        $(RED Scheduled for deprecation. Please use timeLastModified instead.)
-
-        Returns the time that the given file was last modified.
-
-        Throws:
-            FileException if the given file does not exist.
+     $(RED Scheduled for deprecation. Please use
+     $(XREF file,timeLastModified) instead.)
      +/
-    d_time lastModified(in char[] name)
-    {
-        assert(0, "No implementation. Function exists only for DDoc generation");
-    }
+    d_time lastModified(in char[] name);
 }
 else
 {
@@ -903,36 +876,8 @@ version(D_Ddoc)
 {
     /++
         $(RED Scheduled for deprecation. Please use timeLastModified instead.)
-
-        Returns the time that the given file was last modified. If the file
-        does not exist, returns $(D returnIfMissing).
-
-        A frequent usage pattern occurs in build automation tools such as
-        $(WEB gnu.org/software/make, make) or $(WEB
-        en.wikipedia.org/wiki/Apache_Ant, ant). To check whether file $(D
-        target) must be rebuilt from file $(D source) (i.e., $(D target) is
-        older than $(D source) or does not exist), use the comparison
-        below. The code throws a $(D FileException) if $(D source) does not
-        exist (as it should). On the other hand, the $(D d_time.min) default
-        makes a non-existing $(D target) seem infinitely old so the test
-        correctly prompts building it.
-
-Examples:
---------------------
-if(lastModified(source) >= lastModified(target, d_time.min))
-{
-    // must (re)build
-}
-else
-{
-    // target is up-to-date
-}
---------------------
     +/
-    d_time lastModified(in char[] name, d_time returnIfMissing)
-    {
-        assert(0, "No implementation. Function exists only for DDoc generation");
-    }
+    d_time lastModified(in char[] name, d_time returnIfMissing);
 }
 else version(Windows)
 {
@@ -972,12 +917,11 @@ unittest
     //assert(lastModified("deleteme") > lastModified(__FILE__));
 }
 
-
 /++
-    Returns the time that the given file was last modified.
+Returns the time that the given file was last modified.
 
-    Throws:
-        FileException if the given file does not exist.
+Throws:
+$(D FileException) if the given file does not exist.
 +/
 SysTime timeLastModified(in char[] name)
 {
@@ -1113,19 +1057,22 @@ unittest
 
 
 /++
-    Returns the attributes of the given file.
+ Returns the attributes of the given file.
 
-    Note that the file attributes on Windows and Posix systems are completely
-    different. On, Windows, they're what is returned by GetFileAttributes
-    <a href="http://msdn.microsoft.com/en-us/library/aa364944(v=vs.85).aspx">GetFileAttributes</a>.
-    Whereas, an Posix systems, they're the st_mode value which is part of the
-    stat struct gotten by calling stat.
+ Note that the file attributes on Windows and Posix systems are
+ completely different. On Windows, they're what is returned by $(WEB
+ msdn.microsoft.com/en-us/library/aa364944(v=vs.85).aspx,
+ GetFileAttributes), whereas on Posix systems, they're the $(LUCKY
+ st_mode) value which is part of the $(D stat struct) gotten by
+ calling the $(WEB en.wikipedia.org/wiki/Stat_%28Unix%29, $(D stat))
+ function.
+ 
+ On Posix systems, if the given file is a symbolic link, then
+ attributes are the attributes of the file pointed to by the symbolic
+ link.
 
-    On Posix systems, if the given file is a symbolic link, then attributes are the
-    attributes of the file pointed to by the symbolic link.
-
-    Params:
-        name = The file to get the attributes of.
+ Params:
+ name = The file to get the attributes of.
   +/
 uint getAttributes(in char[] name)
 {
@@ -1170,10 +1117,7 @@ version(D_Ddoc)
         Throws:
             FileException on error.
      +/
-    uint getLinkAttributes(in char[] name)
-    {
-        assert(0, "No implementation. Function exists only for DDoc generation");
-    }
+    uint getLinkAttributes(in char[] name);
 }
 else
 {
@@ -1317,8 +1261,6 @@ unittest
 
 /++
     $(RED Scheduled for deprecation. Please use isDir instead.)
-
-    Same is isDir.
  +/
 alias isDir isdir;
 
@@ -1754,6 +1696,7 @@ version(D_Ddoc)
       +/
     struct DirEntry
     {
+        void _init(T...)(T);
     public:
 
         /++
@@ -1768,10 +1711,7 @@ auto de2 = dirEntry("/usr/share/include");
 assert(de2.name == "/usr/share/include");
 --------------------
           +/
-        @property string name() const
-        {
-            assert(0, "No implementation. Function exists only for DDoc generation");
-        }
+        @property string name() const;
 
 
         /++
@@ -1786,11 +1726,7 @@ auto de2 = dirEntry("/usr/share/include");
 assert(de2.isDir);
 --------------------
           +/
-        @property bool isDir()
-        {
-            assert(0, "No implementation. Function exists only for DDoc generation");
-        }
-
+        @property bool isDir();
 
         /++
             $(RED Scheduled for deprecation. Please use isDir instead.)
@@ -1822,11 +1758,7 @@ auto de2 = dirEntry("/usr/share/include");
 assert(!de2.isFile);
 --------------------
           +/
-        @property bool isFile()
-        {
-            assert(0, "No implementation. Function exists only for DDoc generation");
-        }
-
+        @property bool isFile();
 
         /++
             $(RED Scheduled for deprecation. Please use isFile instead.)
@@ -1835,27 +1767,18 @@ assert(!de2.isFile);
           +/
         alias isFile isfile;
 
-
         /++
             Returns whether the file represented by this DirEntry is a symbol link.
 
             Always return false on Windows. It exists on Windows so that you don't
             have to special-case code for Windows when dealing with symbolic links.
           +/
-        @property bool isSymLink()
-        {
-            assert(0, "No implementation. Function exists only for DDoc generation");
-        }
-
+        @property bool isSymLink();
 
         /++
             Returns the size of the the file represented by this DirEntry in bytes.
           +/
-        @property ulong size()
-        {
-            assert(0, "No implementation. Function exists only for DDoc generation");
-        }
-
+        @property ulong size();
 
         /++
             $(RED Scheduled for deprecation. Please use timeCreated instead.)
@@ -1868,21 +1791,14 @@ assert(!de2.isFile);
                   has incorrectly been the time that the file's status status last changed.
                   If you want that value, use timeStatusChanged.)
           +/
-        @property d_time creationTime() const
-        {
-            assert(0, "No implementation. Function exists only for DDoc generation");
-        }
-
+        @property d_time creationTime() const;
 
         /++
             $(YELLOW This function is Windows-Only.)
 
             Returns the creation time of the file represented by this DirEntry.
           +/
-        @property SysTime timeCreated() const
-        {
-            return _timeCreated;
-        }
+        @property SysTime timeCreated() const;
 
 
         /++
@@ -1891,11 +1807,7 @@ assert(!de2.isFile);
             Returns the last time that the status of file represented by this DirEntry
             was changed (i.e. owner, group, link count, mode, etc.).
           +/
-        @property SysTime timeStatusChanged()
-        {
-            assert(0, "No implementation. Function exists only for DDoc generation");
-        }
-
+        @property SysTime timeStatusChanged();
 
         /++
             $(RED Scheduled for deprecation. Please use timeLastAccessed instead.)
@@ -1906,12 +1818,7 @@ assert(!de2.isFile);
             for performance reasons), so there's a good chance that lastAccessTime will
             return the same value as lastWriteTime.
           +/
-        @property d_time lastAccessTime()
-        {
-            assert(0, "No implementation. Function exists only for DDoc generation");
-        }
-
-
+        @property d_time lastAccessTime();
         /++
             Returns the time that the file represented by this DirEntry was last accessed.
 
@@ -1919,31 +1826,18 @@ assert(!de2.isFile);
             for performance reasons), so there's a good chance that timeLastAccessed will
             return the same value as timeLastModified.
           +/
-        @property SysTime timeLastAccessed()
-        {
-            assert(0, "No implementation. Function exists only for DDoc generation");
-        }
-
-
+        @property SysTime timeLastAccessed();
         /++
             $(RED Scheduled for deprecation. Please use timeLastAccessed instead.)
 
             Returns the time that the file represented by this DirEntry was last modified.
           +/
-        @property d_time lastWriteTime()
-        {
-            assert(0, "No implementation. Function exists only for DDoc generation");
-        }
-
-
+        @property d_time lastWriteTime();
         /++
             Returns the time that the file represented by this DirEntry was last modified.
           +/
-        @property SysTime timeLastModified()
-        {
-            assert(0, "No implementation. Function exists only for DDoc generation");
-        }
-
+        @property SysTime timeLastModified();
+        
         /++
             Returns the attributes of the file represented by this DirEntry.
 
@@ -1956,12 +1850,8 @@ assert(!de2.isFile);
             On Posix systems, if the file represented by this DirEntry is a symbolic link,
             then attributes are the attributes of the file pointed to by the symbolic link.
           +/
-        @property uint attributes()
-        {
-            assert(0, "No implementation. Function exists only for DDoc generation");
-        }
-
-
+        @property uint attributes();
+        
         /++
             On Posix systems, if the file represented by this DirEntry is a symbolic link,
             then linkAttributes are the attributes of the symbolic link itself. Otherwise,
@@ -1971,21 +1861,14 @@ assert(!de2.isFile);
             Windows so that you don't have to special-case code for Windows when dealing
             with symbolic links.
           +/
-        @property uint linkAttributes()
-        {
-            assert(0, "No implementation. Function exists only for DDoc generation");
-        }
-
-
+        @property uint linkAttributes();
+        
         /++
             $(YELLOW This function is Posix-Only.)
 
             The stat struct gotten from calling stat.
           +/
-        @property struct_stat64 statBuf()
-        {
-            assert(0, "No implementation. Function exists only for DDoc generation");
-        }
+        @property struct_stat64 statBuf();
     }
 }
 else version(Windows)
@@ -2409,7 +2292,9 @@ else version(Posix)
     }
 }
 else
+{
     static assert(0, "Unsupported/Unknown OS");
+}
 
 unittest
 {
@@ -2580,10 +2465,7 @@ version(D_Ddoc)
         Set access/modified times of file $(D name).
         Throws: $(D FileException) on error.
      */
-    void setTimes(in char[] name, d_time fta, d_time ftm)
-    {
-        assert(0, "No implementation. Function exists only for DDoc generation");
-    }
+    void setTimes(in char[] name, d_time fta, d_time ftm);
 }
 version(Windows)
 {
@@ -2642,10 +2524,7 @@ version(D_Ddoc)
      +/
     void setTimes(in char[] name,
                   SysTime fileAccessTime,
-                  SysTime fileModificationTime)
-    {
-        assert(0, "No implementation. Function exists only for DDoc generation");
-    }
+            SysTime fileModificationTime);
 }
 else
 {
