@@ -697,7 +697,8 @@ fit in the narrower type.
  */
 T toImpl(T, S)(S value)
 if (!implicitlyConverts!(S, T)
-        && std.traits.isNumeric!(S) && std.traits.isNumeric!(T))
+        && (isNumeric!S || isSomeChar!S)
+        && (isNumeric!T || isSomeChar!T))
 {
     enum sSmallest = mostNegative!(S);
     enum tSmallest = mostNegative!(T);
@@ -716,6 +717,14 @@ if (!implicitlyConverts!(S, T)
         if (value > T.max) ConvOverflowException.raise("Conversion overflow");
     }
     return cast(T) value;
+}
+
+unittest
+{
+    dchar a = ' ';
+    assert(to!char(a) == ' ');
+    a = 300;
+    assert(collectException(to!char(a)));
 }
 
 private T parseString(T)(const(char)[] v)
@@ -3920,7 +3929,7 @@ T octal(T, string num)() {
 
 /// Ditto
 template octal(alias s) if (isIntegral!(typeof(s))) {
-        enum auto octal = octal!(typeof(s), toStringNow!(s));
+    enum auto octal = octal!(typeof(s), toStringNow!(s));
 }
 
 unittest

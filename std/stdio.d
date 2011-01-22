@@ -1647,6 +1647,11 @@ unittest
 {
     float f;
     if (false) uint x = readf("%s", &f);
+
+    char a;
+    wchar b;
+    dchar c;
+    if (false) readf("%s %s %s", &a,&b,&c);
 }
 
 /**********************************
