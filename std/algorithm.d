@@ -2989,7 +2989,7 @@ bool findSkip(alias pred = "a == b", R1, R2)(ref R1 haystack, R2 needle)
 if (isForwardRange!R1 && isForwardRange!R2
         && is(typeof(binaryFun!pred(haystack.front, needle.front))))
 {
-    auto parts = findParts!pred(haystack, needle);
+    auto parts = findSplit!pred(haystack, needle);
     if (parts[1].empty) return false;
     // found
     haystack = parts[2];
@@ -3007,12 +3007,30 @@ unittest
 }
 
 /**
-Given a $(D haystack) and a $(D needle), returns a tuple $(D result)
-containing three ranges: $(D result[0]) is the portion of $(D
-haystack) before $(D needle), $(D result[1]) is the portion of $(D
-haystack) that matches $(D needle), and $(D result[2]) is the portion
-of $(D haystack) after the match.
+These functions find the first occurrence of $(D needle) in $(D
+haystack) and then split $(D haystack) as follows.
+
+$(D findSplit) returns a tuple $(D result) containing $(I three)
+ranges. $(D result[0]) is the portion of $(D haystack) before $(D
+needle), $(D result[1]) is the portion of $(D haystack) that matches
+$(D needle), and $(D result[2]) is the portion of $(D haystack) after
+the match.
  
+$(D findSplitBefore) returns a tuple $(D result) containing two
+ranges. $(D result[0]) is the portion of $(D haystack) before $(D
+needle), and $(D result[1]) is the balance of $(D haystack) starting
+with the match. If $(D needle) was not found, $(D result[0])
+comprehends $(D haystack) entirely and $(D result[1]) is empty.
+
+$(D findSplitAfter) returns a tuple $(D result) containing two ranges.
+$(D result[0]) is the portion of $(D haystack) up to and including the
+match, and $(D result[1]) is the balance of $(D haystack) starting
+after the match. If $(D needle) was not found, $(D result[0]) is empty
+and $(D result[1]) is $(D haystack).
+
+In all cases, the concatenation of the returned ranges spans the
+entire $(D haystack).
+
 If $(D haystack) is a random-access range, all three components of the
 tuple have the same type as $(D haystack). Otherwise, $(D haystack)
 must be a forward range and the type of $(D result[0]) and $(D
@@ -3021,17 +3039,23 @@ result[1]) is the same as $(XREF range,takeExactly).
 Example:
 ----
 auto a = [ 1, 2, 3, 4, 5, 6, 7, 8 ];
-auto r = findParts(a, [9, 1]);
+auto r = findSplit(a, [9, 1]);
 assert(r[0] == a);
 assert(r[1].empty);
 assert(r[2].empty);
-r = findParts(a, [3]);
+r = findSplit(a, [ 3, 4 ]);
 assert(r[0] == a[0 .. 2]);
-assert(r[1] == a[2 .. 3]);
-assert(r[2] == a[3 .. $]);
+assert(r[1] == a[2 .. 4]);
+assert(r[2] == a[4 .. $]);
+auto r1 = findSplitBefore(a, [ 7, 8 ]);
+assert(r1[0] == a[0 .. 6]);
+assert(r1[1] == a[6 .. $]);
+auto r1 = findSplitAfter(a, [ 7, 8 ]);
+assert(r1[0] == a);
+assert(r1[1].empty);
 ----
  */
-auto findParts(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
+auto findSplit(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
 if (isForwardRange!R1 && isForwardRange!R2)
 {
     static if (isSomeString!R1 && isSomeString!R2
@@ -3039,7 +3063,7 @@ if (isForwardRange!R1 && isForwardRange!R2)
     {
         auto balance = find!pred(haystack, needle);
         immutable pos1 = haystack.length - balance.length;
-        immutable pos2 = balance.length ? pos1 + needle.length : pos1;
+        immutable pos2 = balance.empty ? pos1 : pos1 + needle.length;
         return tuple(haystack[0 .. pos1],
                 haystack[pos1 .. pos2],
                 haystack[pos2 .. haystack.length]);
@@ -3067,22 +3091,142 @@ if (isForwardRange!R1 && isForwardRange!R2)
             }
         }
         return tuple(takeExactly(original, pos1),
-                takeExactly(haystack, pos2),
+                takeExactly(haystack, pos2 - pos1),
                 h);
+    }
+}
+
+/// Ditto
+auto findSplitBefore(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
+if (isForwardRange!R1 && isForwardRange!R2)
+{
+    static if (isSomeString!R1 && isSomeString!R2
+            || isRandomAccessRange!R1 && hasLength!R2)
+    {
+        auto balance = find!pred(haystack, needle);
+        immutable pos = haystack.length - balance.length;
+        return tuple(haystack[0 .. pos], haystack[pos .. haystack.length]);
+    }
+    else
+    {
+        auto original = haystack.save;
+        auto h = haystack.save;
+        auto n = needle.save;
+        size_t pos;
+        while (!n.empty && !h.empty)
+        {
+            if (binaryFun!pred(h.front, n.front))
+            {
+                h.popFront();
+                n.popFront();
+            }
+            else
+            {
+                haystack.popFront();
+                n = needle.save;
+                h = haystack.save;
+                ++pos;
+            }
+        }
+        return tuple(takeExactly(original, pos), haystack);
+    }
+}
+
+/// Ditto
+auto findSplitAfter(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
+if (isForwardRange!R1 && isForwardRange!R2)
+{
+    static if (isSomeString!R1 && isSomeString!R2
+            || isRandomAccessRange!R1 && hasLength!R2)
+    {
+        auto balance = find!pred(haystack, needle);
+        immutable pos = balance.empty ? 0 : haystack.length - balance.length + needle.length;
+        return tuple(haystack[0 .. pos], haystack[pos .. haystack.length]);
+    }
+    else
+    {
+        auto original = haystack.save;
+        auto h = haystack.save;
+        auto n = needle.save;
+        size_t pos1, pos2;
+        while (!n.empty)
+        {
+            if (h.empty)
+            {
+                // Failed search
+                return tuple(takeExactly(original, 0), original);
+            }
+            if (binaryFun!pred(h.front, n.front))
+            {
+                h.popFront();
+                n.popFront();
+                ++pos2;
+            }
+            else
+            {
+                haystack.popFront();
+                n = needle.save;
+                h = haystack.save;
+                pos2 = ++pos1;
+            }
+        }
+        return tuple(takeExactly(original, pos2), h);
     }
 }
 
 unittest
 {
     auto a = [ 1, 2, 3, 4, 5, 6, 7, 8 ];
-    auto r = findParts(a, [9, 1]);
-    assert(equal(r[0], a));
+    auto r = findSplit(a, [9, 1]);
+    assert(r[0] == a);
     assert(r[1].empty);
     assert(r[2].empty);
-    r = findParts(a, [3]);
+    r = findSplit(a, [3]);
     assert(r[0] == a[0 .. 2]);
     assert(r[1] == a[2 .. 3]);
     assert(r[2] == a[3 .. $]);
+
+    auto r1 = findSplitBefore(a, [9, 1]);
+    assert(r1[0] == a);
+    assert(r1[1].empty);
+    r1 = findSplitBefore(a, [3, 4]);
+    assert(r1[0] == a[0 .. 2]);
+    assert(r1[1] == a[2 .. $]);
+
+    r1 = findSplitAfter(a, [9, 1]);
+    assert(r1[0].empty);
+    assert(r1[1] == a);
+    r1 = findSplitAfter(a, [3, 4]);
+    assert(r1[0] == a[0 .. 4]);
+    assert(r1[1] == a[4 .. $]);
+}
+
+unittest
+{
+    auto a = [ 1, 2, 3, 4, 5, 6, 7, 8 ];
+    auto fwd = filter!"a > 0"(a);
+    auto r = findSplit(fwd, [9, 1]);
+    assert(equal(r[0], a));
+    assert(r[1].empty);
+    assert(r[2].empty);
+    r = findSplit(fwd, [3]);
+    assert(equal(r[0],  a[0 .. 2]));
+    assert(equal(r[1], a[2 .. 3]));
+    assert(equal(r[2], a[3 .. $]));
+    
+    auto r1 = findSplitBefore(fwd, [9, 1]);
+    assert(equal(r1[0], a));
+    assert(r1[1].empty);
+    r1 = findSplitBefore(fwd, [3, 4]);
+    assert(equal(r1[0], a[0 .. 2]));
+    assert(equal(r1[1], a[2 .. $]));
+
+    r1 = findSplitAfter(fwd, [9, 1]);
+    assert(r1[0].empty);
+    assert(equal(r1[1], a));
+    r1 = findSplitAfter(fwd, [3, 4]);
+    assert(equal(r1[0], a[0 .. 4]));
+    assert(equal(r1[1], a[4 .. $]));
 }
 
 /**
