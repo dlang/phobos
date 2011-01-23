@@ -114,28 +114,57 @@ version (Posix)
     }
     else
     {
-        struct struct_stat64        // distinguish it from the stat() function
+        version(X86)
         {
-            ulong st_dev;        /// device
-            uint __pad1;
-            uint st_ino;        /// file serial number
-            uint st_mode;        /// file mode
-            uint st_nlink;        /// link count
-            uint st_uid;        /// user ID of file's owner
-            uint st_gid;        /// user ID of group's owner
-            ulong st_rdev;        /// if device then device number
-            uint __pad2;
-            align(4) ulong st_size;
-            int st_blksize;        /// optimal I/O block size
-            ulong st_blocks;        /// number of allocated 512 byte blocks
-            int st_atime;
-            uint st_atimensec;
-            int st_mtime;
-            uint st_mtimensec;
-            int st_ctime;
-            uint st_ctimensec;
+            struct struct_stat64        // distinguish it from the stat() function
+            {
+                ulong st_dev;        /// device
+                uint __pad1;
+                uint st_ino;        /// file serial number
+                uint st_mode;        /// file mode
+                uint st_nlink;        /// link count
+                uint st_uid;        /// user ID of file's owner
+                uint st_gid;        /// user ID of group's owner
+                ulong st_rdev;        /// if device then device number
+                uint __pad2;
+                align(4) ulong st_size;
+                int st_blksize;        /// optimal I/O block size
+                ulong st_blocks;        /// number of allocated 512 byte blocks
+                int st_atime;
+                uint st_atimensec;
+                int st_mtime;
+                uint st_mtimensec;
+                int st_ctime;
+                uint st_ctimensec;
 
-            ulong st_ino64;
+                ulong st_ino64;
+            }
+            static assert(struct_stat64.sizeof == 88);
+        }   
+        else version (X86_64)
+        {
+            struct struct_stat64
+            {
+                ulong st_dev;
+                ulong st_ino;
+                ulong st_nlink;
+                uint  st_mode;
+                uint  st_uid;
+                uint  st_gid;
+                int   __pad0;
+                ulong st_rdev;
+                long  st_size;
+                long  st_blksize;
+                long  st_blocks;
+                long  st_atime;
+                ulong st_atimensec;
+                long  st_mtime;
+                ulong st_mtimensec;
+                long  st_ctime;
+                ulong st_ctimensec;
+                long[3]  __unused;
+            }
+            static assert(struct_stat64.sizeof == 144);
         }
 
         extern(C) int fstat64(int, struct_stat64*);
