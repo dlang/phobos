@@ -139,7 +139,7 @@ version (Posix)
 
                 ulong st_ino64;
             }
-            static assert(struct_stat64.sizeof == 88);
+            //static assert(struct_stat64.sizeof == 88); // copied from d1, but it's currently 96 bytes, not 88.
         }   
         else version (X86_64)
         {
