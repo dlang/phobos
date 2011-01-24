@@ -132,7 +132,7 @@ ifeq (,$(findstring win,$(OS)))
     ifeq (freebsd,$(OS))
         LINKOPTS=-L-L$(ROOT)
     else
-        LINKOPTS=-L-ldl -L-L$(ROOT)
+        LINKOPTS=-L-lrt -L-ldl -L-L$(ROOT)
     endif
 else
     LINKOPTS=-L/co $(LIB)
