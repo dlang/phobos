@@ -878,11 +878,29 @@ assert(R.length == 4
 ----
 */
 
-template RepresentationTypeTuple(T...)
+template RepresentationTypeTuple(T)
+{
+    static if (is(T == struct) || is(T == union) || is(T == class))
+    {
+        alias RepresentationTypeTupleImpl!(FieldTypeTuple!T)
+            RepresentationTypeTuple;
+    }
+    else static if (is(T U == typedef))
+    {
+        alias RepresentationTypeTuple!U RepresentationTypeTuple;
+    }
+    else
+    {
+        alias RepresentationTypeTupleImpl!T
+            RepresentationTypeTuple;
+    }
+}
+
+private template RepresentationTypeTupleImpl(T...)
 {
     static if (T.length == 0)
     {
-        alias TypeTuple!() RepresentationTypeTuple;
+        alias TypeTuple!() RepresentationTypeTupleImpl;
     }
     else
     {
@@ -890,19 +908,19 @@ template RepresentationTypeTuple(T...)
 // @@@BUG@@@ this should work
 //             alias .RepresentationTypes!(T[0].tupleof)
 //                 RepresentationTypes;
-            alias .RepresentationTypeTuple!(FieldTypeTuple!(T[0]),
+            alias .RepresentationTypeTupleImpl!(FieldTypeTuple!(T[0]),
                                             T[1 .. $])
-                RepresentationTypeTuple;
+                RepresentationTypeTupleImpl;
         else static if (is(T[0] U == typedef))
         {
-            alias .RepresentationTypeTuple!(FieldTypeTuple!(U),
+            alias .RepresentationTypeTupleImpl!(FieldTypeTuple!(U),
                                             T[1 .. $])
-                RepresentationTypeTuple;
+                RepresentationTypeTupleImpl;
         }
         else
         {
-            alias TypeTuple!(T[0], RepresentationTypeTuple!(T[1 .. $]))
-                RepresentationTypeTuple;
+            alias TypeTuple!(T[0], RepresentationTypeTupleImpl!(T[1 .. $]))
+                RepresentationTypeTupleImpl;
         }
     }
 }
@@ -925,6 +943,10 @@ unittest
     assert(R.length == 4
            && is(R[0] == char[]) && is(R[1] == int)
            && is(R[2] == float) && is(R[3] == S11*));
+
+    class C { int a; float b; }
+    alias RepresentationTypeTuple!C R1;
+    static assert(R1.length == 2 && is(R1[0] == int) && is(R1[1] == float));
 }
 
 /*
@@ -1057,7 +1079,7 @@ static assert(hasRawAliasing!(S4));
 private template hasRawAliasing(T...)
 {
     enum hasRawAliasing
-        = hasRawPointerImpl!(RepresentationTypeTuple!(T)).result;
+        = hasRawPointerImpl!(RepresentationTypeTuple!T).result;
 }
 
 unittest
