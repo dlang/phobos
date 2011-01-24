@@ -313,13 +313,16 @@ private:
             {
                 // cool! Same type!
                 auto rhsPA = getPtr(&rhsP.store);
-                if (*rhsPA == *zis)
+                static if (is(typeof(A.init == A.init)))
                 {
-                    return 0;
-                }
-                static if (is(typeof(A.init < A.init)))
-                {
-                    return *zis < *rhsPA ? -1 : 1;
+                    if (*rhsPA == *zis)
+                    {
+                        return 0;
+                    }
+                    static if (is(typeof(A.init < A.init)))
+                    {
+                        return *zis < *rhsPA ? -1 : 1;
+                    }
                 }
                 else
                 {
@@ -343,13 +346,16 @@ private:
             {
                 // cool! Now temp has rhs in my type!
                 auto rhsPA = getPtr(&temp.store);
-                if (*rhsPA == *zis)
+                static if (is(typeof(A.init == A.init)))
                 {
-                    return 0;
-                }
-                static if (is(typeof(A.init < A.init)))
-                {
-                    return *zis < *rhsPA ? -1 : 1;
+                    if (*rhsPA == *zis)
+                    {
+                        return 0;
+                    }
+                    static if (is(typeof(A.init < A.init)))
+                    {
+                        return *zis < *rhsPA ? -1 : 1;
+                    }
                 }
                 else
                 {
@@ -1456,4 +1462,20 @@ unittest
 {
     auto v = Variant("abc".dup);
     assert(v.convertsTo!(char[]));
+}
+
+// http://d.puremagic.com/issues/show_bug.cgi?id=5424
+unittest
+{
+    interface A {
+        void func1();
+    }
+    static class AC: A {
+        void func1() {
+        }
+    }
+
+    A a = new AC();
+    a.func1();
+    Variant b = Variant(a);
 }
