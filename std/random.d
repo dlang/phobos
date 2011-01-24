@@ -818,7 +818,7 @@ uint unpredictableSeed()
     static MinstdRand0 rand;
     if (!seeded) {
         uint threadID = cast(uint) cast(void*) Thread.getThis();
-        rand.seed((getpid + threadID) ^ cast(uint) Clock.currSystemTick().length);
+        rand.seed((thisProcessID + threadID) ^ cast(uint) Clock.currSystemTick().length);
         seeded = true;
     }
     rand.popFront;

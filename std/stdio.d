@@ -253,7 +253,7 @@ Hello, Jimmy!
  */
 struct File
 {
-    private struct Impl
+    package struct Impl
     {
         FILE * handle = null;
         uint refs = uint.max / 2;
@@ -267,7 +267,7 @@ struct File
             isPipe = pipe;
         }
     }
-    private Impl * p;
+    package Impl * p;
 
 /**
 Constructor taking the name of the file to open and the open mode

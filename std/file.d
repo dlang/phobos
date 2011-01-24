@@ -380,7 +380,7 @@ decoding error.
 Example:
 
 ----
-enforce(system("echo abc>deleteme") == 0);
+enforce(execute("echo abc>deleteme") == 0);
 scope(exit) remove("deleteme");
 enforce(chomp(readText("deleteme")) == "abc");
 ----
@@ -2697,7 +2697,7 @@ version(Posix) unittest
 
         d = "/tmp/deleteme/a/b/c/d/e/f/g";
         mkdirRecurse(d);
-        std.process.system("ln -sf /tmp/deleteme/a/b/c /tmp/deleteme/link");
+        std.process.execute("ln -sf /tmp/deleteme/a/b/c /tmp/deleteme/link");
         rmdirRecurse("/tmp/deleteme");
         enforce(!exists("/tmp/deleteme"));
     }
@@ -2907,11 +2907,11 @@ unittest
 {
     version (linux)
     {
-        assert(std.process.system("mkdir --parents dmd-testing") == 0);
-        scope(exit) std.process.system("rm -rf dmd-testing");
-        assert(std.process.system("mkdir --parents dmd-testing/somedir") == 0);
-        assert(std.process.system("touch dmd-testing/somefile") == 0);
-        assert(std.process.system("touch dmd-testing/somedir/somedeepfile")
+        assert(std.process.execute("mkdir --parents dmd-testing").status == 0);
+        scope(exit) std.process.execute("rm -rf dmd-testing");
+        assert(std.process.execute("mkdir --parents dmd-testing/somedir").status == 0);
+        assert(std.process.execute("touch dmd-testing/somefile").status == 0);
+        assert(std.process.execute("touch dmd-testing/somedir/somedeepfile").status
                 == 0);
         foreach (string name; dirEntries("dmd-testing", SpanMode.shallow))
         {
