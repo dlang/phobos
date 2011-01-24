@@ -1081,7 +1081,7 @@ unittest
     { /* broken */ }
     else
     {   r = toReal(toString(real.max / 2L));
-        assert(toString(r) == toString(real.max / 2L));M`bB
+        assert(toString(r) == toString(real.max / 2L));
     }
 
     // min and max
