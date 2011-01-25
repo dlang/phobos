@@ -276,7 +276,7 @@ real erf(real x)
 
 /** Complementary error function
  *
- * erfc(x) = 1 - erf(x) 
+ * erfc(x) = 1 - erf(x)
  *         = 2/ $(SQRT)($(PI))
  *     $(INTEGRATE x, $(INFIN)) exp( - $(POWER t, 2)) dt
  *
