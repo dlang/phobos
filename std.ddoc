@@ -239,6 +239,7 @@ NAVIGATION_PHOBOS=
 	$(LI <a href="core_memory.html" title="Interface to memory management">core.memory</a>)
 	$(LI <a href="core_runtime.html" title="Interface to D runtime library internals">core.runtime</a>)
 	$(LI <a href="core_thread.html" title="Thread management">core.thread</a>)
+	$(LI <a href="core_time.html" title="Core time functionality">core.time</a>)
 	$(LI <a href="core_vararg.html" title="Variable function arguments">core.vararg</a>)
 	$(LI <a href="core_sync_barrier.html" title="Synchronizing progress of a group of threads">core.sync.barrier</a>)
 	$(LI <a href="core_sync_condition.html" title="Synchronized condition checking">core.sync.condition</a>)
