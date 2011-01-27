@@ -5243,13 +5243,65 @@ unittest {
 }
 
 /**
+   Policy used with the searching primitives $(D lowerBound), $(D
+   upperBound), and $(D equalRange) of $(XREF range,SortedRange)
+   below.
+ */
+enum SearchPolicy
+{
+    /**
+       Searches with a step that is grows linearly (1, 2, 3,...)
+       leading to a quadratic search schedule (indexes tried are 0, 1,
+       3, 5, 8, 12, 17, 23,...) Once the search overshoots its target,
+       the remaining interval is searched using binary search. The
+       search is completed in $(BIGOH sqrt(n)) time. Use it when you
+       are reasonably confident that the value is around the beginning
+       of the range.
+    */
+    trot,
+        
+    /**
+       Performs a $(LUCKY galloping search algorithm), i.e. searches
+       with a step that doubles every time, (1, 2, 4, 8, ...)  leading
+       to an exponential search schedule (indexes tried are 0, 1, 2,
+       4, 8, 16, 32,...) Once the search overshoots its target, the
+       remaining interval is searched using binary search. A value is
+       found in $(BIGOH log(n)) time.
+    */
+        gallop,
+        
+    /**
+       Searches using a classic interval halving policy. The search
+       starts in the middle of the range, and each search step cuts
+       the range in half. This policy finds a value in $(BIGOH log(n))
+       time but is less cache friendly than $(D gallop) for large
+       ranges. The $(D binarySearch) policy is used as the last step
+       of $(D trot), $(D gallop), $(D trotBackwards), and $(D
+       gallopBackwards) strategies.
+    */
+        binarySearch,
+        
+    /**
+       Similar to $(D trot) but starts backwards. Use it when
+       confident that the value is around the end of the range.
+    */
+        trotBackwards,
+        
+    /**
+       Similar to $(D gallop) but starts backwards. Use it when
+       confident that the value is around the end of the range.
+    */
+        gallopBackwards
+}
+
+/**
 Represents a sorted random-access range. In addition to the regular
 range primitives, supports fast operations using binary search. To
 obtain a $(D SortedRange) from an unsorted range $(D r), use $(XREF
 algorithm, sort) which sorts $(D r) in place and returns the
 corresponding $(D SortedRange). To construct a $(D SortedRange) from a
-range $(D r) that is known to be already sorted, use $(D assumeSorted)
-described below.
+range $(D r) that is known to be already sorted, use $(XREF
+range,assumeSorted) described below.
 
 Example:
 
@@ -5278,17 +5330,27 @@ Example:
 auto a = [ 1, 2, 3, 42, 52, 64 ];
 auto r = assumeSorted(a);
 assert(r.canFind(42));
-swap(a[2], a[5]); // illegal to break sortedness of original range
+swap(a[3], a[5]); // illegal to break sortedness of original range
 assert(!r.canFind(42)); // passes although it shouldn't
 ----
  */
 struct SortedRange(Range, alias pred = "a < b")
-if(isRandomAccessRange!(Unqual!Range))
+if (isRandomAccessRange!Range)
 {
-    alias Unqual!Range R;
-    private R _input;
+    private alias binaryFun!pred predFun;
+    private bool geq(L, R)(L lhs, R rhs)
+    {
+        return !predFun(lhs, rhs);
+    }
+    private bool gt(L, R)(L lhs, R rhs)
+    {
+        return predFun(rhs, lhs);
+    }
+    private Range _input;
 
-    this(R input)
+    // Undocummented because a clearer way to invoke is by calling
+    // assumeSorted.
+    this(Range input)
     {
         this._input = input;
         debug
@@ -5312,97 +5374,78 @@ if(isRandomAccessRange!(Unqual!Range))
     }
 
     /// Ditto
-    @property typeof(this) save()
+    @property auto save()
     {
+        // Avoid the constructor
         typeof(this) result;
-        result._input = this._input.save;
+        result._input = _input.save;
         return result;
     }
 
     /// Ditto
-    @property ElementType!R front()
+    @property auto front()
     {
-        return this._input.front;
+        return _input.front;
     }
 
     /// Ditto
     void popFront()
     {
-        this._input.popFront();
+        _input.popFront();
     }
 
     /// Ditto
-    @property ElementType!R back()
+    @property auto back()
     {
-        return this._input.back;
+        return _input.back;
     }
 
     /// Ditto
     void popBack()
     {
-        this._input.popBack();
+        _input.popBack();
     }
 
     /// Ditto
-    ElementType!R opIndex(size_t i)
+    auto opIndex(size_t i)
     {
-        return this._input[i];
+        return _input[i];
     }
 
     /// Ditto
-    typeof(this) opSlice(size_t a, size_t b)
+    auto opSlice(size_t a, size_t b)
     {
+        assert(a <= b);
         typeof(this) result;
-        result._input = this._input[a .. b]; // skip checking
+        result._input = _input[a .. b]; // skip checking
         return result;
     }
 
     /// Ditto
     @property size_t length() //const
     {
-        return this._input.length;
+        return _input.length;
     }
 
 /**
 Releases the controlled range and returns it.
  */
-    R release()
+    auto release()
     {
-        return move(this._input);
+        return move(_input);
     }
 
-// lowerBound
-/**
-   This function assumes that range $(D r) consists of a subrange $(D r1)
-   of elements $(D e1) for which $(D pred(e1, value)) is $(D true),
-   followed by a subrange $(D r2) of elements $(D e2) for which $(D
-   pred(e2, value)) is $(D false). Using this assumption, $(D lowerBound)
-   uses binary search to find $(D r1), i.e. the left subrange on which
-   $(D pred) is always $(D true). Performs $(BIGOH log(r.length))
-   evaluations of $(D pred).  The precondition is not verified because it
-   would deteriorate function's complexity. It is possible that the types
-   of $(D value) and $(D ElementType!(Range)) are different, if the
-   predicate accepts them. See also STL's $(WEB
-   sgi.com/tech/stl/lower_bound.html, lower_bound).
-
-   Precondition: $(D find!(not!(pred))(r, value).length +
-   find!(pred)(retro(r), value).length == r.length)
-
-   Example:
-   ----
-   auto a = assumeSorted([ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ]);
-   auto p = a.lowerBound(4);
-   assert(p.release == [ 0, 1, 2, 3 ]);
-   ----
-*/
-    typeof(this) lowerBound(V)(V value)
+    // Assuming a predicate "test" that returns 0 for a left portion
+    // of the range and then 1 for the rest, returns the index at
+    // which the first 1 appears. Used internally by the search routines.
+    private size_t getTransitionIndex(SearchPolicy sp, alias test, V)(V v)
+    if (sp == SearchPolicy.binarySearch)
     {
-        size_t first = 0, count = this._input.length;
+        size_t first = 0, count = _input.length;
         while (count > 0)
         {
-            immutable step = count / 2;
-            auto it = first + step;
-            if (binaryFun!(pred)(this._input[it], value))
+            immutable step = count / 2, it = first + step;
+            if (!test(_input[it], v))
             {
                 first = it + 1;
                 count -= step + 1;
@@ -5412,95 +5455,273 @@ Releases the controlled range and returns it.
                 count = step;
             }
         }
-        return this[0 .. first];
+        return first;
+    }
+
+    // Specialization for trot and gallop
+    private size_t getTransitionIndex(SearchPolicy sp, alias test, V)(V v)
+    if (sp == SearchPolicy.trot || sp == SearchPolicy.gallop)
+    {
+        if (empty || test(front, v)) return 0;
+        immutable count = length;
+        if (count == 1) return 1;
+        size_t below = 0, above = 1, step = 2;
+        while (!test(_input[above], v))
+        {
+            // Still too small, update below and increase gait
+            below = above;
+            immutable next = above + step;
+            if (next >= count)
+            {
+                // Overshot - the next step took us beyond the end. So
+                // now adjust next and simply exit the loop to do the
+                // binary search thingie.
+                above = count;
+                break;
+            }
+            // Still in business, increase step and continue
+            above = next;
+            static if (sp == SearchPolicy.trot)
+                ++step;
+            else
+                step <<= 1;
+        }
+        return below + this[below .. above].getTransitionIndex!(
+            SearchPolicy.binarySearch, test, V)(v);
+    }
+
+    // Specialization for trotBackwards and gallopBackwards
+    private size_t getTransitionIndex(SearchPolicy sp, alias test, V)(V v)
+    if (sp == SearchPolicy.trotBackwards || sp == SearchPolicy.gallopBackwards)
+    {
+        immutable count = length;
+        if (empty || !test(back, v)) return count;
+        if (count == 1) return 0;
+        size_t below = count - 2, above = count - 1, step = 2;
+        while (test(_input[below], v))
+        {
+            // Still too large, update above and increase gait
+            above = below;
+            if (below < step)
+            {
+                // Overshot - the next step took us beyond the end. So
+                // now adjust next and simply fall through to do the
+                // binary search thingie.
+                below = 0;
+                break;
+            }
+            // Still in business, increase step and continue
+            below -= step;
+            static if (sp == SearchPolicy.trot)
+                ++step;
+            else
+                step <<= 1;
+        }
+        return below + this[below .. above].getTransitionIndex!(
+            SearchPolicy.binarySearch, test, V)(v);
+    }
+
+// lowerBound
+/**
+This function uses binary search with policy $(D sp) to find the
+largest left subrange on which $(D pred(x, value)) is $(D true) for
+all $(D x) (e.g., if $(D pred) is "less than", returns the portion of
+the range with elements strictly smaller than $(D value)). The search
+schedule and its complexity are documented in $(XREF
+range,SearchPolicy).  See also STL's $(WEB
+sgi.com/tech/stl/lower_bound.html, lower_bound).
+
+Example:
+----
+auto a = assumeSorted([ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ]);
+auto p = a.lowerBound(4);
+assert(equal(p, [ 0, 1, 2, 3 ]));
+----
+*/
+    auto lowerBound(SearchPolicy sp = SearchPolicy.binarySearch, V)(V value)
+    if (is(V : ElementType!Range))
+    {
+        ElementType!Range v = value;
+        return this[0 .. getTransitionIndex!(sp, geq)(v)];
     }
 
 // upperBound
 /**
-   This function assumes that range $(D r) consists of a subrange $(D r1)
-   of elements $(D e1) for which $(D pred(value, e1)) is $(D false),
-   followed by a subrange $(D r2) of elements $(D e2) for which $(D
-   pred(value, e2)) is $(D true). (Note the differences in subrange
-   definition and argument order for $(D pred) compared to $(D
-   lowerBound).) Using this assumption, $(D upperBound) uses binary
-   search to find $(D r2), i.e. the right subrange on which $(D pred) is
-   always $(D true). Performs $(BIGOH log(r.length)) evaluations of $(D
-   pred).  The precondition is not verified because it would deteriorate
-   function's complexity. It is possible that the types of $(D value) and
-   $(D ElementType!(Range)) are different, if the predicate accepts
-   them. See also STL's $(WEB sgi.com/tech/stl/lower_bound.html,
-   upper_bound).
+This function uses binary search with policy $(D sp) to find the
+largest right subrange on which $(D pred(value, x)) is $(D true) for
+all $(D x) (e.g., if $(D pred) is "less than", returns the portion of
+the range with elements strictly greater than $(D value)). The search
+schedule and its complexity are documented in $(XREF
+range,SearchPolicy).  See also STL's $(WEB
+sgi.com/tech/stl/lower_bound.html,upper_bound).
 
-   Precondition: $(D find!(pred)(r, value).length +
-   find!(not!(pred))(retro(r), value).length == r.length)
-
-   Example:
-   ----
-   auto a = assumeSorted([ 1, 2, 3, 3, 3, 4, 4, 5, 6 ]);
-   auto p = a.upperBound(3);
-   assert(p == [4, 4, 5, 6]);
-   ----
+Example:
+----
+auto a = assumeSorted([ 1, 2, 3, 3, 3, 4, 4, 5, 6 ]);
+auto p = a.upperBound(3);
+assert(equal(p, [4, 4, 5, 6]));
+----
 */
-    typeof(this) upperBound(V)(V value)
+    auto upperBound(SearchPolicy sp = SearchPolicy.binarySearch, V)(V value)
+    if (is(V : ElementType!Range))
     {
-        size_t first = 0;
-        size_t count = length;
-        while (count > 0)
-        {
-            auto step = count / 2;
-            auto it = first + step;
-            if (!binaryFun!(pred)(value, this[it]))
-            {
-                first = it + 1;
-                count -= step + 1;
-            }
-            else count = step;
-        }
-        return this[first .. length];
+        ElementType!Range v = value;
+        return this[getTransitionIndex!(sp, gt)(v) .. length];
     }
 
 // equalRange
 /**
-   Assuming a range satisfying both preconditions for $(D
-   lowerBound!(pred)(r, value)) and $(D upperBound!(pred)(r, value)), the
-   call $(D equalRange!(pred)(r, v)) returns the subrange containing all
-   elements $(D e) for which both $(D pred(e, value)) and $(D pred(value,
-   e)) evaluate to $(D false). Performs $(BIGOH log(r.length))
-   evaluations of $(D pred). See also STL's $(WEB
-   sgi.com/tech/stl/equal_range.html, equal_range).
+Returns the subrange containing all elements $(D e) for which both $(D
+pred(e, value)) and $(D pred(value, e)) evaluate to $(D false) (e.g.,
+if $(D pred) is "less than", returns the portion of the range with
+elements equal to $(D value)). Uses a classic binary search with
+interval halving until it finds a value that satisfies the condition,
+then uses $(D SearchPolicy.gallopBackwards) to find the left boundary
+and $(D SearchPolicy.gallop) to find the right boundary. These
+policies are justified by the fact that the two boundaries are likely
+to be near the first found value (i.e., equal ranges are relatively
+small). Completes the entire search in $(BIGOH log(n)) time. See also
+STL's $(WEB sgi.com/tech/stl/equal_range.html, equal_range).
 
-   Precondition: $(D find!(not!(pred))(r, value).length +
-   find!(pred)(retro(r), value).length == r.length) && $(D find!(pred)(r,
-   value).length + find!(not!(pred))(retro(r), value).length == r.length)
-
-   Example:
-   ----
-   auto a = [ 1, 2, 3, 3, 3, 4, 4, 5, 6 ];
-   auto r = equalRange(a, 3);
-   assert(r == [ 3, 3, 3 ]);
-   ----
+Example:
+----
+auto a = [ 1, 2, 3, 3, 3, 4, 4, 5, 6 ];
+auto r = equalRange(a, 3);
+assert(equal(r, [ 3, 3, 3 ]));
+----
 */
-    typeof(this) equalRange(V)(V value)
+    auto equalRange(V)(V value) if (is(V : ElementType!Range))
     {
-        auto left = lowerBound(value);
-        auto right = this[left.length .. length].upperBound(value);
-        return this[left.length .. length - right.length];
+        size_t first = 0, count = _input.length;
+        while (count > 0)
+        {
+            immutable step = count / 2;
+            auto it = first + step;
+            if (predFun(_input[it], value))
+            {
+                // Less than value, bump left bound up
+                first = it + 1;
+                count -= step + 1;
+            }
+            else if (predFun(value, _input[it]))
+            {
+                // Greater than value, chop count
+                count = step;
+            }
+            else
+            {
+                // Equal to value, do binary searches in the
+                // leftover portions
+                // Gallop towards the left end as it's likely nearby
+                immutable left = first
+                    + this[first .. it]
+                    .lowerBound!(SearchPolicy.gallopBackwards)(value).length;
+                first += count;
+                // Gallop towards the right end as it's likely nearby
+                immutable right = first
+                    - this[it + 1 .. first]
+                    .upperBound!(SearchPolicy.gallop)(value).length;
+                return this[left .. right];
+            }
+        }
+        return this.init;
     }
 
-// canFind
+// trisect
 /**
-   Returns $(D true) if and only if $(D value) can be found in $(D
-   range), which is assumed to be sorted. Performs $(BIGOH log(r.length))
-   evaluations of $(D pred). See also STL's $(WEB
-   sgi.com/tech/stl/binary_search.html, binary_search).
-*/
+Returns a tuple $(D r) such that $(D r[0]) is the same as the result
+of $(D lowerBound(value)), $(D r[1]) is the same as the result of $(D
+equalRange(value)), and $(D r[2]) is the same as the result of $(D
+upperBound(value)). The call is faster than computing all three
+separately. Uses a search schedule similar to $(D
+equalRange). Completes the entire search in $(BIGOH log(n)) time.
 
-    bool canFind(V)(V value)
+Example:
+----
+auto a = [ 1, 2, 3, 3, 3, 4, 4, 5, 6 ];
+auto r = assumeSorted(a).trisect(3);
+assert(equal(r[0], [ 1, 2 ]));
+assert(equal(r[1], [ 3, 3, 3 ]));
+assert(equal(r[2], [ 4, 4, 5, 6 ]));
+----
+*/
+    auto trisect(V)(V value) if (is(V : ElementType!Range))
     {
-        auto lb = this.lowerBound(value);
-        return lb.length < length &&
-            !binaryFun!pred(value, this[lb.length]);
+        size_t first = 0, count = _input.length;
+        while (count > 0)
+        {
+            immutable step = count / 2;
+            auto it = first + step;
+            if (predFun(_input[it], value))
+            {
+                // Less than value, bump left bound up
+                first = it + 1;
+                count -= step + 1;
+            }
+            else if (predFun(value, _input[it]))
+            {
+                // Greater than value, chop count
+                count = step;
+            }
+            else
+            {
+                // Equal to value, do binary searches in the
+                // leftover portions
+                // Gallop towards the left end as it's likely nearby
+                immutable left = first
+                    + this[first .. it]
+                    .lowerBound!(SearchPolicy.gallopBackwards)(value).length;
+                first += count;
+                // Gallop towards the right end as it's likely nearby
+                immutable right = first
+                    - this[it + 1 .. first]
+                    .upperBound!(SearchPolicy.gallop)(value).length;
+                return tuple(this[0 .. left], this[left .. right],
+                        this[right .. length]);
+            }
+        }
+        // No equal element was found
+        return tuple(this[0 .. first], this.init, this[first .. length]);
     }
+
+// contains
+/**
+Returns $(D true) if and only if $(D value) can be found in $(D
+range), which is assumed to be sorted. Performs $(BIGOH log(r.length))
+evaluations of $(D pred). See also STL's $(WEB
+sgi.com/tech/stl/binary_search.html, binary_search).
+ */
+
+    bool contains(V)(V value)
+    {
+        size_t first = 0, count = _input.length;
+        while (count > 0)
+        {
+            immutable step = count / 2, it = first + step;
+            if (predFun(_input[it], value))
+            {
+                // Less than value, bump left bound up
+                first = it + 1;
+                count -= step + 1;
+            }
+            else if (predFun(value, _input[it]))
+            {
+                // Greater than value, chop count
+                count = step;
+            }
+            else
+            {
+                // Found!!!
+                return true;
+            }
+        }
+        return false;
+    }
+
+/**
+ * Deprecated alias for $(D contains).
+ */
+    alias contains canFind;
 }
 
 // Doc examples
@@ -5514,6 +5735,56 @@ unittest
     assert(r1.canFind(3));
     assert(!r1.canFind(32));
     assert(r1.release() == [ 64, 52, 42, 3, 2, 1 ]);
+}
+
+unittest
+{
+    auto a = [ 10, 20, 30, 30, 30, 40, 40, 50, 60 ];
+    auto r = assumeSorted(a).trisect(30);
+    assert(equal(r[0], [ 10, 20 ]));
+    assert(equal(r[1], [ 30, 30, 30 ]));
+    assert(equal(r[2], [ 40, 40, 50, 60 ]));
+
+    r = assumeSorted(a).trisect(35);
+    assert(equal(r[0], [ 10, 20, 30, 30, 30 ]));
+    assert(r[1].empty);
+    assert(equal(r[2], [ 40, 40, 50, 60 ]));
+}
+
+unittest
+{
+    static void test(SearchPolicy pol)()
+    {
+        auto a = [ 1, 2, 3, 42, 52, 64 ];
+        auto r = assumeSorted(a);
+        //writeln(r.lowerBound(42));
+        assert(equal(r.lowerBound(42), [1, 2, 3]));
+        //writeln(r.gallopLowerBound(42));
+        
+        assert(equal(r.lowerBound!(pol)(42), [1, 2, 3]));
+        assert(equal(r.lowerBound!(pol)(41), [1, 2, 3]));
+        assert(equal(r.lowerBound!(pol)(43), [1, 2, 3, 42]));
+        assert(equal(r.lowerBound!(pol)(51), [1, 2, 3, 42]));
+        assert(equal(r.lowerBound!(pol)(3), [1, 2]));
+        assert(equal(r.lowerBound!(pol)(55), [1, 2, 3, 42, 52]));
+        assert(equal(r.lowerBound!(pol)(420), a));
+        assert(equal(r.lowerBound!(pol)(0), a[0 .. 0]));
+
+        assert(equal(r.upperBound!(pol)(42), [52, 64]));
+        assert(equal(r.upperBound!(pol)(41), [42, 52, 64]));
+        assert(equal(r.upperBound!(pol)(43), [52, 64]));
+        assert(equal(r.upperBound!(pol)(51), [52, 64]));
+        assert(equal(r.upperBound!(pol)(53), [64]));
+        assert(equal(r.upperBound!(pol)(55), [64]));
+        assert(equal(r.upperBound!(pol)(420), a[0 .. 0]));
+        assert(equal(r.upperBound!(pol)(0), a));
+    }
+
+    test!(SearchPolicy.trot)();
+    test!(SearchPolicy.gallop)();
+    test!(SearchPolicy.trotBackwards)();
+    test!(SearchPolicy.gallopBackwards)();
+    test!(SearchPolicy.binarySearch)();    
 }
 
 unittest
@@ -5534,7 +5805,7 @@ unittest
     auto a = [ 1, 2, 3, 42, 52, 64 ];
     auto r = assumeSorted(a);
     assert(r.canFind(42));
-    swap(a[2], a[5]); // illegal to break sortedness of original range
+    swap(a[3], a[5]); // illegal to break sortedness of original range
     assert(!r.canFind(42)); // passes although it shouldn't
 }
 
@@ -5560,7 +5831,7 @@ cost $(BIGOH n), use $(XREF algorithm, isSorted).
 auto assumeSorted(alias pred = "a < b", R)(R r)
 if (isRandomAccessRange!(Unqual!R))
 {
-    return SortedRange!(R, pred)(r);
+    return SortedRange!(Unqual!R, pred)(r);
 }
 
 unittest
@@ -5594,6 +5865,10 @@ unittest
     assert(equal(p, [ 4, 4 ]), text(p));
     p = assumeSorted(a).equalRange(2);
     assert(equal(p, [ 2 ]));
+    p = assumeSorted(a).equalRange(0);
+    assert(p.empty);
+    p = assumeSorted(a).equalRange(7);
+    assert(p.empty);
 }
 
 unittest
