@@ -551,10 +551,11 @@ unittest
         printf("addrList.length = %d\n", ih.addrList.length);
         assert(ih.addrList.length);
         InternetAddress ia = new InternetAddress(ih.addrList[0], InternetAddress.PORT_ANY);
-        printf("IP address = %.*s\nname = %.*s\n", ia.toAddrString(), ih.name);
+        auto sa = ia.toAddrString();
+        printf("IP address = %.*s\nname = %.*s\n", sa.length, sa.ptr, ih.name.length, ih.name.ptr);
         foreach(int i, string s; ih.aliases)
         {
-                printf("aliases[%d] = %.*s\n", i, s);
+                printf("aliases[%d] = %.*s\n", i, s.length, s.ptr);
         }
 
         printf("---\n");
@@ -562,10 +563,10 @@ unittest
         // Sometimes the following line fails on Windows, don't know why
         //assert(ih.getHostByAddr(ih.addrList[0]));
 
-        printf("name = %.*s\n", ih.name);
+        printf("name = %.*s\n", ih.name.length, ih.name.ptr);
         foreach(int i, string s; ih.aliases)
         {
-                printf("aliases[%d] = %.*s\n", i, s);
+                printf("aliases[%d] = %.*s\n", i, s.length, s.ptr);
         }
 }
 
