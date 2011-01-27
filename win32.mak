@@ -958,11 +958,20 @@ cleanhtml:
 detab:
 	detab $(SRC) \
 	$(SRC_STD) $(SRC_STD_C) $(SRC_TI) $(SRC_INT) $(SRC_STD_WIN) \
-	$(SRC_STDLINUX)
+	$(SRC_STDLINUX) $(SRC_STD_C_OSX) $(SRC_STD_C_SOLARIS)
 # $(SRC_ETC) $(SRC_ETC_C) $(SRC_ZLIB) $(SRC_GC)
 
 tolf:
-	tolf freebsd.mak internal\gc\freebsd.mak etc\c\zlib\freebsd.mak
+	tolf freebsd.mak \
+	internal\gc\freebsd.mak \
+	internal\gc\osx.mak \
+	internal\gc\solaris.mak \
+	etc\c\zlib\freebsd.mak \
+	etc\c\zlib\osx.mak \
+	etc\c\zlib\solaris.mak \
+	$(SRC) \
+	$(SRC_STD) $(SRC_STD_C) $(SRC_TI) $(SRC_INT) $(SRC_STD_WIN) \
+	$(SRC_STDLINUX) $(SRC_STD_C_OSX) $(SRC_STD_C_SOLARIS)
 
 install:
 	$(CP) phobos.lib gcstub.obj $(DIR)\windows\lib

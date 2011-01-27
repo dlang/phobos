@@ -102,24 +102,24 @@ enum
     O_NOLINKS = 0x40000,
 }
 
-struct struct_stat	// distinguish it from the stat() function
+struct struct_stat      // distinguish it from the stat() function
 {
-    ulong st_dev;	/// device
-    ulong st_ino;	/// file serial number
-    uint st_mode;	/// file mode
-    uint st_nlink;	/// link count
-    uint st_uid;	/// user ID of file's owner
-    uint st_gid;	/// user ID of group's owner
-    ulong st_rdev;	/// if device then device number
-    int st_size;	/// file size in bytes
+    ulong st_dev;       /// device
+    ulong st_ino;       /// file serial number
+    uint st_mode;       /// file mode
+    uint st_nlink;      /// link count
+    uint st_uid;        /// user ID of file's owner
+    uint st_gid;        /// user ID of group's owner
+    ulong st_rdev;      /// if device then device number
+    int st_size;        /// file size in bytes
     int st_atime;
     int st_atimensec;
     int st_mtime;
     int st_mtimensec;
     int st_ctime;
     int st_ctimensec;
-    int st_blksize;	/// optimal I/O block size
-    long st_blocks;	/// number of allocated 512 byte blocks
+    int st_blksize;     /// optimal I/O block size
+    long st_blocks;     /// number of allocated 512 byte blocks
 
     char[16] st_fstype;
 }
@@ -242,53 +242,53 @@ extern (C)
 
 enum
 {
-	PROT_NONE	= 0,
-	PROT_READ	= 1,
-	PROT_WRITE	= 2,
-	PROT_EXEC	= 4,
+        PROT_NONE       = 0,
+        PROT_READ       = 1,
+        PROT_WRITE      = 2,
+        PROT_EXEC       = 4,
 }
 
 // Memory mapping sharing types
 
 enum
-{   MAP_SHARED	= 1,
-    MAP_PRIVATE	= 2,
-    MAP_TYPE	= 0x0F,
-    MAP_FIXED	= 0x10,
+{   MAP_SHARED  = 1,
+    MAP_PRIVATE = 2,
+    MAP_TYPE    = 0x0F,
+    MAP_FIXED   = 0x10,
     // MAP_FILE is not in mmap.h on Solaris, but is supposed to work.
-    MAP_FILE	= 0,
-    MAP_ANONYMOUS	= 0x100,
-    MAP_ANON	= 0x100,
-    MAP_ALIGN	= 0x200,
-    MAP_TEXT	= 0x400,
-    MAP_INITDATA	= 0x800,
+    MAP_FILE    = 0,
+    MAP_ANONYMOUS       = 0x100,
+    MAP_ANON    = 0x100,
+    MAP_ALIGN   = 0x200,
+    MAP_TEXT    = 0x400,
+    MAP_INITDATA        = 0x800,
 }
 
 // Values for msync()
 
 enum
-{   MS_ASYNC	= 1,
-    MS_INVALIDATE	= 2,
-    MS_SYNC		= 4,
+{   MS_ASYNC    = 1,
+    MS_INVALIDATE       = 2,
+    MS_SYNC             = 4,
 }
 
 // Values for mlockall()
 
 enum
 {
-	MCL_CURRENT	= 1,
-	MCL_FUTURE	= 2,
+        MCL_CURRENT     = 1,
+        MCL_FUTURE      = 2,
 }
 
 // Values for madvise
 
 enum
-{	MADV_NORMAL	= 0,
-	MADV_RANDOM	= 1,
-	MADV_SEQUENTIAL	= 2,
-	MADV_WILLNEED	= 3,
-	MADV_DONTNEED	= 4,
-	MADV_FREE	= 5,
+{       MADV_NORMAL     = 0,
+        MADV_RANDOM     = 1,
+        MADV_SEQUENTIAL = 2,
+        MADV_WILLNEED   = 3,
+        MADV_DONTNEED   = 4,
+        MADV_FREE       = 5,
 }
 
 extern (C)
@@ -313,38 +313,38 @@ extern(C)
 {
     enum
     {
-	DT_UNKNOWN = 0,
-	DT_FIFO = 1,
-	DT_CHR = 2,
-	DT_DIR = 4,
-	DT_BLK = 6,
-	DT_REG = 8,
-	DT_LNK = 10,
-	DT_SOCK = 12,
-	DT_WHT = 14,
+        DT_UNKNOWN = 0,
+        DT_FIFO = 1,
+        DT_CHR = 2,
+        DT_DIR = 4,
+        DT_BLK = 6,
+        DT_REG = 8,
+        DT_LNK = 10,
+        DT_SOCK = 12,
+        DT_WHT = 14,
     }
 
     struct dirent
     {
-	uint d_ino;
-	off_t d_off;
-	ushort d_reclen;
-	char[256] d_name;
+        uint d_ino;
+        off_t d_off;
+        ushort d_reclen;
+        char[256] d_name;
     }
 
     struct dirent64
     {
-	ulong d_ino;
-	long d_off;
-	ushort d_reclen;
-	char[256] d_name;
+        ulong d_ino;
+        long d_off;
+        ushort d_reclen;
+        char[256] d_name;
     }
 
     struct DIR
     {
-	// Managed by OS.
+        // Managed by OS.
     }
-    
+
     DIR* opendir(in char* name);
     int closedir(DIR* dir);
     dirent* readdir(DIR* dir);
@@ -356,70 +356,70 @@ extern(C)
 
 extern(C)
 {
-	private import std.intrinsic;
-	
-	
-	int select(int nfds, fd_set* readfds, fd_set* writefds, fd_set* errorfds, timeval* timeout);
-	int fcntl(int s, int f, ...);
-	
-	
-	enum
-	{
-		EINTR = 4,
-		EINPROGRESS = 150,
-	}
-	
-	// Use select_large_fdset for > 1024 on Solaris.  64bit uses 65536.
-	const uint FD_SETSIZE = 1024;
-	//const uint NFDBITS = 8 * int.sizeof; // DMD 0.110: 8 * (int).sizeof is not an expression
-	const int NFDBITS = 32;
-	
-	
-	struct fd_set
-	{
-		int[FD_SETSIZE / NFDBITS] fds_bits;
-		alias fds_bits __fds_bits;
-	}
-	
-	
-	int FDELT(int d)
-	{
-		return d / NFDBITS;
-	}
-	
-	
-	int FDMASK(int d)
-	{
-		return 1 << (d % NFDBITS);
-	}
-	
-	
-	// Removes.
-	void FD_CLR(int fd, fd_set* set)
-	{
-		btr(cast(uint*)&set.fds_bits.ptr[FDELT(fd)], cast(uint)(fd % NFDBITS));
-	}
-	
-	
-	// Tests.
-	int FD_ISSET(int fd, fd_set* set)
-	{
-		return bt(cast(uint*)&set.fds_bits.ptr[FDELT(fd)], cast(uint)(fd % NFDBITS));
-	}
-	
-	
-	// Adds.
-	void FD_SET(int fd, fd_set* set)
-	{
-		bts(cast(uint*)&set.fds_bits.ptr[FDELT(fd)], cast(uint)(fd % NFDBITS));
-	}
-	
-	
-	// Resets to zero.
-	void FD_ZERO(fd_set* set)
-	{
-		set.fds_bits[] = 0;
-	}
+        private import std.intrinsic;
+
+
+        int select(int nfds, fd_set* readfds, fd_set* writefds, fd_set* errorfds, timeval* timeout);
+        int fcntl(int s, int f, ...);
+
+
+        enum
+        {
+                EINTR = 4,
+                EINPROGRESS = 150,
+        }
+
+        // Use select_large_fdset for > 1024 on Solaris.  64bit uses 65536.
+        const uint FD_SETSIZE = 1024;
+        //const uint NFDBITS = 8 * int.sizeof; // DMD 0.110: 8 * (int).sizeof is not an expression
+        const int NFDBITS = 32;
+
+
+        struct fd_set
+        {
+                int[FD_SETSIZE / NFDBITS] fds_bits;
+                alias fds_bits __fds_bits;
+        }
+
+
+        int FDELT(int d)
+        {
+                return d / NFDBITS;
+        }
+
+
+        int FDMASK(int d)
+        {
+                return 1 << (d % NFDBITS);
+        }
+
+
+        // Removes.
+        void FD_CLR(int fd, fd_set* set)
+        {
+                btr(cast(uint*)&set.fds_bits.ptr[FDELT(fd)], cast(uint)(fd % NFDBITS));
+        }
+
+
+        // Tests.
+        int FD_ISSET(int fd, fd_set* set)
+        {
+                return bt(cast(uint*)&set.fds_bits.ptr[FDELT(fd)], cast(uint)(fd % NFDBITS));
+        }
+
+
+        // Adds.
+        void FD_SET(int fd, fd_set* set)
+        {
+                bts(cast(uint*)&set.fds_bits.ptr[FDELT(fd)], cast(uint)(fd % NFDBITS));
+        }
+
+
+        // Resets to zero.
+        void FD_ZERO(fd_set* set)
+        {
+                set.fds_bits[] = 0;
+        }
 }
 
 extern (C)
@@ -443,15 +443,15 @@ extern (C)
 
     struct passwd
     {
-	char *pw_name;
-	char *pw_passwd;
-	uid_t pw_uid;
-	gid_t pw_gid;
-	char *pw_age;
-	char *pw_comment;
-	char *pw_gecos;
-	char *pw_dir;
-	char *pw_shell;
+        char *pw_name;
+        char *pw_passwd;
+        uid_t pw_uid;
+        gid_t pw_gid;
+        char *pw_age;
+        char *pw_comment;
+        char *pw_gecos;
+        char *pw_dir;
+        char *pw_shell;
     }
 
     int getpwnam_r(char*, passwd*, void*, size_t, passwd**);
@@ -482,7 +482,7 @@ extern (C)
 
     struct sigset_t
     {
-	uint[_SIGSET_NWORDS] __sigbits;
+        uint[_SIGSET_NWORDS] __sigbits;
     }
 
     alias sigset_t __sigset;
@@ -490,14 +490,14 @@ extern (C)
 
     struct sigaction_t
     {
-	int sa_flags;
-	union
-	{
-	    __sighandler_t sa_handler;
-	    __sigaction_t sa_sigaction;
-	}
-	sigset_t sa_mask;
-	int sa_resv[2];
+        int sa_flags;
+        union
+        {
+            __sighandler_t sa_handler;
+            __sigaction_t sa_sigaction;
+        }
+        sigset_t sa_mask;
+        int sa_resv[2];
     }
 
     int sigfillset(sigset_t *);
@@ -514,11 +514,11 @@ extern (C)
 
     struct sem_t
     {
-	uint sem_count;
-	ushort sem_type;
-	ushort sem_magic;
-	ulong[3] sem_pad1;
-	ulong[2] sem_pad2;
+        uint sem_count;
+        ushort sem_type;
+        ushort sem_magic;
+        ulong[3] sem_pad1;
+        ulong[2] sem_pad2;
     }
 
     int sem_init(sem_t*, int, uint);
@@ -536,8 +536,8 @@ extern (C)
 
     struct utimbuf
     {
-	__time_t actime;
-	__time_t modtime;
+        __time_t actime;
+        __time_t modtime;
     }
 
     int utime(in char* filename, in utimbuf* buf);
@@ -547,13 +547,13 @@ extern (C)
 {
     extern
     {
-	void* __libc_stack_end;
-	int __data_start;
-	int _end;
-	int timezone;
+        void* __libc_stack_end;
+        int __data_start;
+        int _end;
+        int timezone;
 
-	void *_deh_beg;
-	void *_deh_end;
+        void *_deh_beg;
+        void *_deh_end;
     }
 }
 

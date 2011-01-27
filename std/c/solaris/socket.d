@@ -1,6 +1,6 @@
 /*
-	Written by Christopher E. Miller
-	Placed into public domain.
+        Written by Christopher E. Miller
+        Placed into public domain.
 */
 
 
@@ -24,7 +24,7 @@ enum: int
     AF_APPLETALK =  16,
     AF_INET6 =      26,
     // ...
-    
+
     PF_UNSPEC =     AF_UNSPEC,
     PF_UNIX =       AF_UNIX,
     PF_INET =       AF_INET,
@@ -59,7 +59,7 @@ enum: int
     IP_MULTICAST_LOOP =  0x12,
     IP_ADD_MEMBERSHIP =  0x13,
     IP_DROP_MEMBERSHIP = 0x14,
-    
+
     // netinet6/in6.h
     //IPV6_ADDRFORM =        1,
     IPV6_PKTINFO =         0xb,
@@ -104,7 +104,7 @@ enum: int
     SHUT_RDWR =  2,
 }
 
-enum: int	// Not defined on Solaris, but that's okay.
+enum: int       // Not defined on Solaris, but that's okay.
 {
     SD_RECEIVE =  SHUT_RD,
     SD_SEND =     SHUT_WR,
@@ -114,8 +114,8 @@ enum: int	// Not defined on Solaris, but that's okay.
 alias ushort sa_family_t;
 struct sockaddr
 {
-    sa_family_t sa_family;               
-    ubyte[14] sa_data;             
+    sa_family_t sa_family;
+    ubyte[14] sa_data;
 }
 
 alias uint in_addr_t;
@@ -144,7 +144,7 @@ struct sockaddr_in6
 // netdb.h
 struct addrinfo
 {
-    int ai_flags; 
+    int ai_flags;
     int ai_family;
     int ai_socktype;
     int ai_protocol;
@@ -189,176 +189,176 @@ int getnameinfo(sockaddr* sa, socklen_t salen, char* node, socklen_t nodelen, ch
 
 struct linger
 {
-	int l_onoff;
-	int l_linger;
+        int l_onoff;
+        int l_linger;
 }
 
 // netdb.h
 struct protoent
 {
-	char* p_name;
-	char** p_aliases;
-	int p_proto;
+        char* p_name;
+        char** p_aliases;
+        int p_proto;
 }
 
 // netdb.h
 struct servent
 {
-	char* s_name;
-	char** s_aliases;
-	int s_port;
-	char* s_proto;
+        char* s_name;
+        char** s_aliases;
+        int s_port;
+        char* s_proto;
 }
 
 
 version(BigEndian)
 {
-	ushort htons(ushort x)
-	{
-		return x;
-	}
-	
-	
-	uint htonl(uint x)
-	{
-		return x;
-	}
+        ushort htons(ushort x)
+        {
+                return x;
+        }
+
+
+        uint htonl(uint x)
+        {
+                return x;
+        }
 }
 else version(LittleEndian)
 {
-	private import std.intrinsic;
-	
-	
-	ushort htons(ushort x)
-	{
-		return cast(ushort)((x >> 8) | (x << 8));
-	}
+        private import std.intrinsic;
 
 
-	uint htonl(uint x)
-	{
-		return bswap(x);
-	}
+        ushort htons(ushort x)
+        {
+                return cast(ushort)((x >> 8) | (x << 8));
+        }
+
+
+        uint htonl(uint x)
+        {
+                return bswap(x);
+        }
 }
 else
 {
-	static assert(0);
+        static assert(0);
 }
 
 
 ushort ntohs(ushort x)
 {
-	return htons(x);
+        return htons(x);
 }
 
 
 uint ntohl(uint x)
 {
-	return htonl(x);
+        return htonl(x);
 }
 
 
 enum: int
 {
-	SOCK_STREAM =     2,
-	SOCK_DGRAM =      1,
-	SOCK_RAW =        4,
-	SOCK_RDM =        5,
-	SOCK_SEQPACKET =  6,
+        SOCK_STREAM =     2,
+        SOCK_DGRAM =      1,
+        SOCK_RAW =        4,
+        SOCK_RDM =        5,
+        SOCK_SEQPACKET =  6,
 }
 
 
 // netinet/in.h
 enum: int
 {
-	IPPROTO_IP =    0,
-	IPPROTO_ICMP =  1,
-	IPPROTO_IGMP =  2,
-	IPPROTO_GGP =   3,
-	IPPROTO_TCP =   6,
-	IPPROTO_PUP =   12,
-	IPPROTO_UDP =   17,
-	IPPROTO_IDP =   22,
-	IPPROTO_IPV6 =  41,
-	IPPROTO_ND =    77,
-	IPPROTO_RAW =   255,
-	
-	IPPROTO_MAX =   256,
+        IPPROTO_IP =    0,
+        IPPROTO_ICMP =  1,
+        IPPROTO_IGMP =  2,
+        IPPROTO_GGP =   3,
+        IPPROTO_TCP =   6,
+        IPPROTO_PUP =   12,
+        IPPROTO_UDP =   17,
+        IPPROTO_IDP =   22,
+        IPPROTO_IPV6 =  41,
+        IPPROTO_ND =    77,
+        IPPROTO_RAW =   255,
+
+        IPPROTO_MAX =   256,
 }
 
 
 enum: uint
 {
-	INADDR_ANY =        0,
-	INADDR_LOOPBACK =   0x7F000001,
-	INADDR_BROADCAST =  0xFFFFFFFF,
-	INADDR_NONE =       0xFFFFFFFF,
-	ADDR_ANY =          INADDR_ANY,
+        INADDR_ANY =        0,
+        INADDR_LOOPBACK =   0x7F000001,
+        INADDR_BROADCAST =  0xFFFFFFFF,
+        INADDR_NONE =       0xFFFFFFFF,
+        ADDR_ANY =          INADDR_ANY,
 }
 
 
 // netdb.h
 enum: int
 {
-	AI_PASSIVE = 0x8,
-	AI_CANONNAME = 0x10,
-	AI_NUMERICHOST = 0x20,
-	AI_NUMERICSERV = 0x40,
+        AI_PASSIVE = 0x8,
+        AI_CANONNAME = 0x10,
+        AI_NUMERICHOST = 0x20,
+        AI_NUMERICSERV = 0x40,
 }
 
 
 union in_addr
 {
-	private union _S_un_t
-	{
-		private struct _S_un_b_t
-		{
-			uint8_t s_b1, s_b2, s_b3, s_b4;
-		}
-		_S_un_b_t S_un_b;
-		
-		private struct _S_un_w_t
-		{
-			ushort s_w1, s_w2;
-		}
-		_S_un_w_t S_un_w;
-		
-		uint S_addr;
-	}
-	_S_un_t S_un;
-	
-	uint s_addr;
-	
-	struct
-	{
-		uint8_t s_net, s_host;
-		
-		union
-		{
-			ushort s_imp;
-			
-			struct
-			{
-				uint8_t s_lh, s_impno;
-			}
-		}
-	}
+        private union _S_un_t
+        {
+                private struct _S_un_b_t
+                {
+                        uint8_t s_b1, s_b2, s_b3, s_b4;
+                }
+                _S_un_b_t S_un_b;
+
+                private struct _S_un_w_t
+                {
+                        ushort s_w1, s_w2;
+                }
+                _S_un_w_t S_un_w;
+
+                uint S_addr;
+        }
+        _S_un_t S_un;
+
+        uint s_addr;
+
+        struct
+        {
+                uint8_t s_net, s_host;
+
+                union
+                {
+                        ushort s_imp;
+
+                        struct
+                        {
+                                uint8_t s_lh, s_impno;
+                        }
+                }
+        }
 }
 
 
 union in6_addr
 {
-	private union _in6_u_t
-	{
-		uint8_t[16] u6_addr8;
-		ushort[8] u6_addr16;
-		uint[4] u6_addr32;
-	}
-	_in6_u_t in6_u;
-	
-	uint8_t[16] s6_addr8;
-	ushort[8] s6_addr16;
-	uint[4] s6_addr32;
+        private union _in6_u_t
+        {
+                uint8_t[16] u6_addr8;
+                ushort[8] u6_addr16;
+                uint[4] u6_addr32;
+        }
+        _in6_u_t in6_u;
+
+        uint8_t[16] s6_addr8;
+        ushort[8] s6_addr16;
+        uint[4] s6_addr32;
 }
 
 
@@ -366,21 +366,21 @@ const in6_addr IN6ADDR_ANY = { s6_addr8: [0] };
 const in6_addr IN6ADDR_LOOPBACK = { s6_addr8: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1] };
 //alias IN6ADDR_ANY IN6ADDR_ANY_INIT;
 //alias IN6ADDR_LOOPBACK IN6ADDR_LOOPBACK_INIT;
-	
+
 const uint INET_ADDRSTRLEN = 16;
 const uint INET6_ADDRSTRLEN = 46;
 
 // netdb.h
 struct hostent
 {
-	char* h_name;
-	char** h_aliases;
-	int h_addrtype;
-	int h_length;
-	char** h_addr_list;
+        char* h_name;
+        char** h_aliases;
+        int h_addrtype;
+        int h_length;
+        char** h_addr_list;
 
-	char* h_addr()
-	{
-		return h_addr_list[0];
-	}
+        char* h_addr()
+        {
+                return h_addr_list[0];
+        }
 }

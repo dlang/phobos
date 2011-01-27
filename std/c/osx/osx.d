@@ -220,61 +220,61 @@ extern (C)
 
 enum
 {
-	PROT_NONE	= 0,
-	PROT_READ	= 1,
-	PROT_WRITE	= 2,
-	PROT_EXEC	= 4,
+        PROT_NONE       = 0,
+        PROT_READ       = 1,
+        PROT_WRITE      = 2,
+        PROT_EXEC       = 4,
 }
 
 // Memory mapping sharing types
 
 
 enum
-{   MAP_SHARED	= 1,
-    MAP_PRIVATE	= 2,
-    MAP_FIXED	= 0x10,
-    MAP_FILE	= 0,
-    MAP_ANON	= 0x1000,
-    MAP_NORESERVE	= 0x40,
+{   MAP_SHARED  = 1,
+    MAP_PRIVATE = 2,
+    MAP_FIXED   = 0x10,
+    MAP_FILE    = 0,
+    MAP_ANON    = 0x1000,
+    MAP_NORESERVE       = 0x40,
 
-    MAP_RENAME	= 0x20,
+    MAP_RENAME  = 0x20,
     MAP_RESERVED0080 = 0x80,
-    MAP_NOEXTEND	= 0x100,
+    MAP_NOEXTEND        = 0x100,
     MAP_HASSEMAPHORE = 0x200,
-    MAP_NOCACHE	= 0x400,
+    MAP_NOCACHE = 0x400,
 }
 
 // Values for msync()
 
 enum
-{   MS_ASYNC	= 1,
-    MS_INVALIDATE	= 2,
-    MS_SYNC		= 0x10,
+{   MS_ASYNC    = 1,
+    MS_INVALIDATE       = 2,
+    MS_SYNC             = 0x10,
 }
 
 // Values for mlockall()
 
 enum
 {
-	MCL_CURRENT	= 1,
-	MCL_FUTURE	= 2,
+        MCL_CURRENT     = 1,
+        MCL_FUTURE      = 2,
 }
 
 // Values for mremap()
 
 enum
 {
-	MREMAP_MAYMOVE	= 1,
+        MREMAP_MAYMOVE  = 1,
 }
 
 // Values for madvise
 
 enum
-{	MADV_NORMAL	= 0,
-	MADV_RANDOM	= 1,
-	MADV_SEQUENTIAL	= 2,
-	MADV_WILLNEED	= 3,
-	MADV_DONTNEED	= 4,
+{       MADV_NORMAL     = 0,
+        MADV_RANDOM     = 1,
+        MADV_SEQUENTIAL = 2,
+        MADV_WILLNEED   = 3,
+        MADV_DONTNEED   = 4,
 }
 
 extern (C)
@@ -302,40 +302,40 @@ extern(C)
 
     enum
     {
-	DT_UNKNOWN = 0,
-	DT_FIFO = 1,
-	DT_CHR = 2,
-	DT_DIR = 4,
-	DT_BLK = 6,
-	DT_REG = 8,
-	DT_LNK = 10,
-	DT_SOCK = 12,
-	DT_WHT = 14,
+        DT_UNKNOWN = 0,
+        DT_FIFO = 1,
+        DT_CHR = 2,
+        DT_DIR = 4,
+        DT_BLK = 6,
+        DT_REG = 8,
+        DT_LNK = 10,
+        DT_SOCK = 12,
+        DT_WHT = 14,
     }
 
     struct dirent
     {
-	uint d_ino;		// this is int on some linuxes
-	off_t d_off;
-	ushort d_reclen;
-	ubyte d_type;		// this field isn't there on some linuxes
-	char[256] d_name;
+        uint d_ino;             // this is int on some linuxes
+        off_t d_off;
+        ushort d_reclen;
+        ubyte d_type;           // this field isn't there on some linuxes
+        char[256] d_name;
     }
 
     struct dirent64
     {
-	ulong d_ino;
-	long d_off;
-	ushort d_reclen;
-	ubyte d_type;
-	char[256] d_name;
+        ulong d_ino;
+        long d_off;
+        ushort d_reclen;
+        ubyte d_type;
+        char[256] d_name;
     }
 
     struct DIR
     {
-	// Managed by OS.
+        // Managed by OS.
     }
-    
+
     DIR* opendir(in char* name);
     int closedir(DIR* dir);
     dirent* readdir(DIR* dir);
@@ -347,70 +347,70 @@ extern(C)
 
 extern(C)
 {
-	private import std.intrinsic;
-	
-	
-	int select(int nfds, fd_set* readfds, fd_set* writefds, fd_set* errorfds, timeval* timeout);
-	int fcntl(int s, int f, ...);
-	
-	
-	enum
-	{
-		EINTR = 4,
-		EINPROGRESS = 115,
-	}
-	
-	
-	const uint FD_SETSIZE = 1024;
-	//const uint NFDBITS = 8 * int.sizeof; // DMD 0.110: 8 * (int).sizeof is not an expression
-	const int NFDBITS = 32;
-	
-	
-	struct fd_set
-	{
-		int[FD_SETSIZE / NFDBITS] fds_bits;
-		alias fds_bits __fds_bits;
-	}
-	
-	
-	int FDELT(int d)
-	{
-		return d / NFDBITS;
-	}
-	
-	
-	int FDMASK(int d)
-	{
-		return 1 << (d % NFDBITS);
-	}
-	
-	
-	// Removes.
-	void FD_CLR(int fd, fd_set* set)
-	{
-		btr(cast(size_t*)&set.fds_bits.ptr[FDELT(fd)], cast(size_t)(fd % NFDBITS));
-	}
-	
-	
-	// Tests.
-	int FD_ISSET(int fd, fd_set* set)
-	{
-		return bt(cast(size_t*)&set.fds_bits.ptr[FDELT(fd)], cast(size_t)(fd % NFDBITS));
-	}
-	
-	
-	// Adds.
-	void FD_SET(int fd, fd_set* set)
-	{
-		bts(cast(size_t*)&set.fds_bits.ptr[FDELT(fd)], cast(size_t)(fd % NFDBITS));
-	}
-	
-	
-	// Resets to zero.
-	void FD_ZERO(fd_set* set)
-	{
-		set.fds_bits[] = 0;
-	}
+        private import std.intrinsic;
+
+
+        int select(int nfds, fd_set* readfds, fd_set* writefds, fd_set* errorfds, timeval* timeout);
+        int fcntl(int s, int f, ...);
+
+
+        enum
+        {
+                EINTR = 4,
+                EINPROGRESS = 115,
+        }
+
+
+        const uint FD_SETSIZE = 1024;
+        //const uint NFDBITS = 8 * int.sizeof; // DMD 0.110: 8 * (int).sizeof is not an expression
+        const int NFDBITS = 32;
+
+
+        struct fd_set
+        {
+                int[FD_SETSIZE / NFDBITS] fds_bits;
+                alias fds_bits __fds_bits;
+        }
+
+
+        int FDELT(int d)
+        {
+                return d / NFDBITS;
+        }
+
+
+        int FDMASK(int d)
+        {
+                return 1 << (d % NFDBITS);
+        }
+
+
+        // Removes.
+        void FD_CLR(int fd, fd_set* set)
+        {
+                btr(cast(size_t*)&set.fds_bits.ptr[FDELT(fd)], cast(size_t)(fd % NFDBITS));
+        }
+
+
+        // Tests.
+        int FD_ISSET(int fd, fd_set* set)
+        {
+                return bt(cast(size_t*)&set.fds_bits.ptr[FDELT(fd)], cast(size_t)(fd % NFDBITS));
+        }
+
+
+        // Adds.
+        void FD_SET(int fd, fd_set* set)
+        {
+                bts(cast(size_t*)&set.fds_bits.ptr[FDELT(fd)], cast(size_t)(fd % NFDBITS));
+        }
+
+
+        // Resets to zero.
+        void FD_ZERO(fd_set* set)
+        {
+                set.fds_bits[] = 0;
+        }
 }
 
 extern (C)
@@ -421,7 +421,7 @@ extern (C)
      * (compile/link with -L-ldl)
      */
 
-    const int RTLD_NOW = 0x00002;	// Correct for Red Hat 8
+    const int RTLD_NOW = 0x00002;       // Correct for Red Hat 8
 
     void* dlopen(in char* file, int mode);
     int   dlclose(void* handle);
@@ -436,13 +436,13 @@ extern (C)
 
     struct passwd
     {
-	char *pw_name;
-	char *pw_passwd;
-	uid_t pw_uid;
-	gid_t pw_gid;
-	char *pw_gecos;
-	char *pw_dir;
-	char *pw_shell;
+        char *pw_name;
+        char *pw_passwd;
+        uid_t pw_uid;
+        gid_t pw_gid;
+        char *pw_gecos;
+        char *pw_dir;
+        char *pw_shell;
     }
 
     int getpwnam_r(char*, passwd*, void*, size_t, passwd**);
@@ -488,8 +488,8 @@ extern (C)
 
     struct utimbuf
     {
-	__time_t actime;
-	__time_t modtime;
+        __time_t actime;
+        __time_t modtime;
     }
 
     int utime(char* filename, utimbuf* buf);
