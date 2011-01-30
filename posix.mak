@@ -50,11 +50,9 @@ ZIPFILE = phobos.zip
 ROOT_OF_THEM_ALL = generated
 ROOT = $(ROOT_OF_THEM_ALL)/$(OS)/$(BUILD)/$(MODEL)
 # Documentation-related stuff
-DOCSRC = ../docsrc
-WEBSITE_DIR = ../web/2.0
-DOC_OUTPUT_DIR = $(WEBSITE_DIR)/phobos
-STYLECSS_SRC = $(DOCSRC)/style.css
-STYLECSS_TGT = $(WEBSITE_DIR)/style.css
+DOCSRC = ../d-programming-language.org
+WEBSITE_DIR = ../web
+DOC_OUTPUT_DIR = $(WEBSITE_DIR)/phobos-prerelease
 SRC_DOCUMENTABLES = phobos.d $(addsuffix .d,$(STD_MODULES))
 STDDOC = $(DOCSRC)/std.ddoc
 DDOCFLAGS=-m$(MODEL) -d -c -o- $(STDDOC) -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS)
@@ -142,7 +140,7 @@ endif
 
 # Set DDOC, the documentation generator
 ifeq ($(OS),linux)
-    DDOC=wine dmd
+    DDOC=dmd
 else
     DDOC=dmd
 endif
@@ -309,15 +307,12 @@ $(DOC_OUTPUT_DIR)/std_c_%.html : std/c/%.d $(STDDOC)
 	$(DDOC) $(DDOCFLAGS) -Df$@ $<
 
 $(DOC_OUTPUT_DIR)/std_c_linux_%.html : std/c/linux/%.d $(STDDOC)
-	wine dmd $(DDOCFLAGS) -Df$@ $<
-
-$(STYLECSS_TGT) : $(STYLECSS_SRC)
-	cp $< $@
+	$(DDOC) $(DDOCFLAGS) -Df$@ $<
 
 html : $(addprefix $(DOC_OUTPUT_DIR)/, $(subst /,_,$(subst .d,.html,	\
 	$(SRC_DOCUMENTABLES)))) $(STYLECSS_TGT)
-	@$(MAKE) -f $(DOCSRC)/linux.mak -C $(DOCSRC) --no-print-directory
+#	@$(MAKE) -f $(DOCSRC)/linux.mak -C $(DOCSRC) --no-print-directory
 
-rsync-cutting-edge : html
-	rsync -avz $(DOC_OUTPUT_DIR)/ d-programming@digitalmars.com:data/cutting-edge/phobos/
-	rsync -avz $(WEBSITE_DIR)/ d-programming@digitalmars.com:data/cutting-edge/
+rsync-prerelease : html
+	rsync -avz $(DOC_OUTPUT_DIR)/ d-programming@digitalmars.com:data/phobos-prerelease/
+	rsync -avz $(WEBSITE_DIR)/ d-programming@digitalmars.com:data/phobos-prerelase/
