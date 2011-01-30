@@ -955,7 +955,7 @@ unittest
 
     Rebindable!(const(C)) obj1;
     static assert(is(typeof(obj1.get) == const(C)), typeof(obj1.get).stringof);
-    static assert(is(typeof(obj1.stripped) == C));
+    static assert(is(typeof(obj1.stripped) == const(C)ref));
     obj1 = new C;
     assert(obj1.get !is null);
     obj1 = new const(C);
@@ -963,7 +963,7 @@ unittest
 
     Rebindable!(immutable(C)) obj2;
     static assert(is(typeof(obj2.get) == immutable(C)));
-    static assert(is(typeof(obj2.stripped) == C));
+    static assert(is(typeof(obj2.stripped) == immutable(C)ref));
     obj2 = new immutable(C);
     assert(obj1.get !is null);
 
@@ -976,7 +976,7 @@ unittest
 
     Rebindable!(const I) obj4;
     static assert(is(typeof(obj4.get) == const I));
-    static assert(is(typeof(obj4.stripped) == I));
+    static assert(is(typeof(obj4.stripped) == const(I)ref));
     static assert(is(typeof(obj4.foo()) == int));
     obj4 = new class I {};
 
