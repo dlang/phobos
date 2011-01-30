@@ -2873,7 +2873,7 @@ stopping policy.
                     {
                         if (!ranges[i].empty) return false;
                     }
-                    break;
+                    return true;
                 case StoppingPolicy.requireSameLength:
                     foreach (i, Unused; R[1 .. $])
                     {
