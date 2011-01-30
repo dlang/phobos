@@ -139,11 +139,7 @@ else
 endif
 
 # Set DDOC, the documentation generator
-ifeq ($(OS),linux)
-    DDOC=dmd
-else
-    DDOC=dmd
-endif
+DDOC=dmd
 
 # Set LIB, the ultimate target
 ifeq (,$(findstring win,$(OS)))
