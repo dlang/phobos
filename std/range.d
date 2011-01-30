@@ -3218,14 +3218,14 @@ unittest
     assert(a == [1, 2, 3]);
     assert(b == [2., 1, 3]);
 
+    // Test infiniteness propagation.
+    static assert(isInfinite!(typeof(zip(repeat(1), repeat(1)))));
+
     // Test stopping policies with both value and reference.
     auto a1 = [1, 2];
     auto a2 = [1, 2, 3];
     auto stuff = tuple(tuple(a1, a2),
                             tuple(filter!"a"(a1), filter!"a"(a2)));
-
-    // Test infiniteness propagation.
-    static assert(isInfinite!(typeof(zip(repeat(1), repeat(1)))));
 
     alias Zip!(immutable int[], immutable float[]) FOO;
 
