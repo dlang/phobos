@@ -238,21 +238,15 @@ ifeq ($(MODEL),64)
 DISABLED_TESTS =        \
 	std/algorithm   \
 	std/complex     \
-	std/concurrency \
 	std/conv        \
 	std/datetime    \
 	std/file        \
 	std/format      \
 	std/math        \
-	std/mmfile      \
 	std/numeric     \
 	std/random      \
 	std/range       \
-	std/signals     \
-	std/stdio       \
-	std/stream      \
 	std/variant     \
-	std/zlib        \
 	std/internal/math/biguintnoasm
 
 $(addprefix $(ROOT)/unittest/,$(DISABLED_TESTS)) : 
