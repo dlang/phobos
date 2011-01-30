@@ -3242,14 +3242,18 @@ unittest
             assert(0);
         } catch { /* It's supposed to throw.*/ }
 
-        auto zLongest = zip(StoppingPolicy.requireSameLength, arr1, arr2);
+        auto zLongest = zip(StoppingPolicy.longest, arr1, arr2);
         assert(!zLongest.ranges[0].empty);
         assert(!zLongest.ranges[1].empty);
 
         zLongest.popFront();
         zLongest.popFront();
+        assert(!zLongest.empty);
         assert(zLongest.ranges[0].empty);
         assert(!zLongest.ranges[1].empty);
+
+        zLongest.popFront();
+        assert(zLongest.empty);
     }
 
     // Doesn't work yet.  Issues w/ emplace.
