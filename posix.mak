@@ -246,7 +246,6 @@ DISABLED_TESTS =        \
 	std/numeric     \
 	std/random      \
 	std/range       \
-	std/variant     \
 	std/internal/math/biguintnoasm
 
 $(addprefix $(ROOT)/unittest/,$(DISABLED_TESTS)) : 
