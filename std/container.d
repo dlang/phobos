@@ -8,7 +8,7 @@ WIKI = Phobos/StdContainer
 TEXTWITHCOMMAS = $0
 LEADINGROW = <tr style=leadingrow bgcolor=#E4E9EF><td colspan=3><b><em>$0</em></b></td></tr>
 
-Copyright: Red-black tree code copyright (C) 2008- by Steven Schveighoffer. Other code 
+Copyright: Red-black tree code copyright (C) 2008- by Steven Schveighoffer. Other code
 copyright 2010- Andrei Alexandrescu. All rights reserved by the respective holders.
 
 License: Distributed under the Boost Software License, Version 1.0.
@@ -1659,16 +1659,34 @@ Defines the container's primary range, which is a random-access range.
             return _outer[_a];
         }
 
+        @property T back()
+        {
+            enforce(!empty);
+            return _outer[_b - 1];
+        }
+
         @property void front(T value)
         {
             enforce(!empty);
             _outer[_a] = move(value);
         }
 
+        @property void back(T value)
+        {
+            enforce(!empty);
+            _outer[_b - 1] = move(value);
+        }
+
         void popFront()
         {
             enforce(!empty);
             ++_a;
+        }
+
+        void popBack()
+        {
+            enforce(!empty);
+            --_b;
         }
 
         T moveFront()
@@ -1704,10 +1722,19 @@ Defines the container's primary range, which is a random-access range.
             _outer[i] = value;
         }
 
+        typeof(this) opSlice(size_t a, size_t b)
+        {
+            return typeof(this)(_outer, a + _a, b + _a);
+        }
+
         void opIndexOpAssign(string op)(T value, size_t i)
         {
             enforce(_outer && _a + i < _b && _b <= _outer._payload.length);
             mixin("_outer._payload.ptr[_a + i] "~op~"= value;");
+        }
+
+        @property size_t length() const {
+            return _b - _a;
         }
     }
 
@@ -2278,6 +2305,23 @@ unittest
     //writeln(a.length);
     //foreach (e; a) writeln(e);
     assert(a == Array!int(0, 1, 2, 3, 6, 7, 8));
+}
+
+// Give the Range object some testing.
+unittest
+{
+    auto a = Array!int(0, 1, 2, 3, 4, 5, 6)[];
+    auto b = Array!int(6, 5, 4, 3, 2, 1, 0)[];
+    alias typeof(a) A;
+
+    static assert(isRandomAccessRange!A);
+    static assert(hasSlicing!A);
+    static assert(hasAssignableElements!A);
+    static assert(hasMobileElements!A);
+
+    assert(equal(retro(b), a));
+    assert(a.length == 7);
+    assert(equal(a[1..4], [1, 2, 3]));
 }
 
 // BinaryHeap
@@ -3567,8 +3611,8 @@ struct RBNode(V)
     //      T         L
     //     / \       / \
     //    L   R     a   T
-    //   / \           / \ 
-    //  a   b         b   R 
+    //   / \           / \
+    //  a   b         b   R
     //
     /**
      * Rotate right.  This performs the following operations:
@@ -3610,8 +3654,8 @@ struct RBNode(V)
     //      T           R
     //     / \         / \
     //    L   R       T   b
-    //       / \     / \ 
-    //      a   b   L   a 
+    //       / \     / \
+    //      a   b   L   a
     //
     /**
      * Rotate left.  This performs the following operations:
@@ -4052,7 +4096,7 @@ struct RBNode(V)
  * value.
  *
  * Note that less should produce a strict ordering.  That is, for two unequal
- * elements $(D a) and $(D b), $(D less(a, b) == !less(b, a)). $(D less(a, a)) should 
+ * elements $(D a) and $(D b), $(D less(a, b) == !less(b, a)). $(D less(a, a)) should
  * always equal $(D false).
  *
  * If $(D allowDuplicates) is set to $(D true), then inserting the same element more than
@@ -4587,7 +4631,7 @@ if (is(typeof(less(T.init, T.init)) == bool) || is(typeof(less) == string))
                 result = cur;
                 cur = cur.left;
             }
-                
+
         }
         return result;
     }

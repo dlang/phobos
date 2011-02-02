@@ -50,11 +50,9 @@ ZIPFILE = phobos.zip
 ROOT_OF_THEM_ALL = generated
 ROOT = $(ROOT_OF_THEM_ALL)/$(OS)/$(BUILD)/$(MODEL)
 # Documentation-related stuff
-DOCSRC = ../docsrc
-WEBSITE_DIR = ../web/2.0
-DOC_OUTPUT_DIR = $(WEBSITE_DIR)/phobos
-STYLECSS_SRC = $(DOCSRC)/style.css
-STYLECSS_TGT = $(WEBSITE_DIR)/style.css
+DOCSRC = ../d-programming-language.org
+WEBSITE_DIR = ../web
+DOC_OUTPUT_DIR = $(WEBSITE_DIR)/phobos-prerelease
 SRC_DOCUMENTABLES = phobos.d $(addsuffix .d,$(STD_MODULES))
 STDDOC = $(DOCSRC)/std.ddoc
 DDOCFLAGS=-m$(MODEL) -d -c -o- $(STDDOC) -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS)
@@ -141,11 +139,7 @@ else
 endif
 
 # Set DDOC, the documentation generator
-ifeq ($(OS),linux)
-    DDOC=wine dmd
-else
-    DDOC=dmd
-endif
+DDOC=dmd
 
 # Set LIB, the ultimate target
 ifeq (,$(findstring win,$(OS)))
@@ -175,6 +169,8 @@ EXTRA_MODULES := $(addprefix std/c/, stdarg stdio) $(addprefix etc/c/,	\
 
 # OS-specific D modules
 EXTRA_MODULES_LINUX := $(addprefix std/c/linux/, linux socket)
+EXTRA_MODULES_OSX := $(addprefix std/c/osx/, socket)
+EXTRA_MODULES_FREEBSD := $(addprefix std/c/freebsd/, socket)
 EXTRA_MODULES_WIN32 := $(addprefix std/c/windows/, com stat windows		\
 		winsock) $(addprefix std/windows/, charset iunknown syserror)
 ifeq (,$(findstring win,$(OS)))
@@ -189,7 +185,7 @@ D_MODULES = crc32 $(STD_MODULES) $(EXTRA_MODULES)
 D_FILES = $(addsuffix .d,$(D_MODULES))
 # Aggregate all D modules over all OSs (this is for the zip file)
 ALL_D_FILES = $(addsuffix .d,crc32 $(STD_MODULES) $(EXTRA_MODULES)	\
-$(EXTRA_MODULES_LINUX) $(EXTRA_MODULES_WIN32))
+$(EXTRA_MODULES_LINUX) $(EXTRA_MODULES_OSX) $(EXTRA_MODULES_FREEBSD) $(EXTRA_MODULES_WIN32))
 
 # C files to be part of the build
 C_MODULES = $(addprefix etc/c/zlib/, adler32 compress crc32 deflate	\
@@ -242,21 +238,14 @@ ifeq ($(MODEL),64)
 DISABLED_TESTS =        \
 	std/algorithm   \
 	std/complex     \
-	std/concurrency \
 	std/conv        \
 	std/datetime    \
 	std/file        \
 	std/format      \
 	std/math        \
-	std/mmfile      \
 	std/numeric     \
 	std/random      \
 	std/range       \
-	std/signals     \
-	std/stdio       \
-	std/stream      \
-	std/variant     \
-	std/zlib        \
 	std/internal/math/biguintnoasm
 
 $(addprefix $(ROOT)/unittest/,$(DISABLED_TESTS)) : 
@@ -309,15 +298,12 @@ $(DOC_OUTPUT_DIR)/std_c_%.html : std/c/%.d $(STDDOC)
 	$(DDOC) $(DDOCFLAGS) -Df$@ $<
 
 $(DOC_OUTPUT_DIR)/std_c_linux_%.html : std/c/linux/%.d $(STDDOC)
-	wine dmd $(DDOCFLAGS) -Df$@ $<
-
-$(STYLECSS_TGT) : $(STYLECSS_SRC)
-	cp $< $@
+	$(DDOC) $(DDOCFLAGS) -Df$@ $<
 
 html : $(addprefix $(DOC_OUTPUT_DIR)/, $(subst /,_,$(subst .d,.html,	\
 	$(SRC_DOCUMENTABLES)))) $(STYLECSS_TGT)
-	@$(MAKE) -f $(DOCSRC)/linux.mak -C $(DOCSRC) --no-print-directory
+#	@$(MAKE) -f $(DOCSRC)/linux.mak -C $(DOCSRC) --no-print-directory
 
-rsync-cutting-edge : html
-	rsync -avz $(DOC_OUTPUT_DIR)/ d-programming@digitalmars.com:data/cutting-edge/phobos/
-	rsync -avz $(WEBSITE_DIR)/ d-programming@digitalmars.com:data/cutting-edge/
+rsync-prerelease : html
+	rsync -avz $(DOC_OUTPUT_DIR)/ d-programming@digitalmars.com:data/phobos-prerelease/
+	rsync -avz $(WEBSITE_DIR)/ d-programming@digitalmars.com:data/phobos-prerelase/
