@@ -281,6 +281,8 @@ SRC_STD_C_LINUX= std\c\linux\linux.d \
 
 SRC_STD_C_OSX= std\c\osx\socket.d
 
+SRC_STD_C_FREEBSD= std\c\freebsd\socket.d
+
 SRC_STD_INTERNAL_MATH= std\internal\math\biguintcore.d \
 	std\internal\math\biguintnoasm.d std\internal\math\biguintx86.d \
     std\internal\math\gammafunction.d std\internal\math\errorfunction.d
@@ -874,7 +876,8 @@ $(DOC)\std_c_wcharh.html : $(STDDOC) std\c\wcharh.d
 
 zip : win32.mak posix.mak $(STDDOC) $(SRC) \
 	$(SRC_STD) $(SRC_STD_C) $(SRC_STD_WIN) \
-	$(SRC_STD_C_LINUX) $(SRC_STD_C_OSX) $(SRC_ETC) $(SRC_ETC_C) $(SRC_ZLIB)
+	$(SRC_STD_C_WIN) $(SRC_STD_C_LINUX) $(SRC_STD_C_OSX) $(SRC_STD_C_FREEBSD) \
+	$(SRC_ETC) $(SRC_ETC_C) $(SRC_ZLIB)
 	del phobos.zip
 	zip32 -u phobos win32.mak posix.mak $(STDDOC)
 	zip32 -u phobos $(SRC)
@@ -884,6 +887,7 @@ zip : win32.mak posix.mak $(STDDOC) $(SRC) \
 	zip32 -u phobos $(SRC_STD_C_WIN)
 	zip32 -u phobos $(SRC_STD_C_LINUX)
 	zip32 -u phobos $(SRC_STD_C_OSX)
+	zip32 -u phobos $(SRC_STD_C_FREEBSD)
 	zip32 -u phobos $(SRC_STD_INTERNAL_MATH)
 	zip32 -u phobos $(SRC_ETC) $(SRC_ETC_C)
 	zip32 -u phobos $(SRC_ZLIB)
@@ -912,6 +916,7 @@ install:
 	$(CP) $(SRC_STD_C_WIN) $(DIR)\src\phobos\std\c\windows
 	$(CP) $(SRC_STD_C_LINUX) $(DIR)\src\phobos\std\c\linux
 	$(CP) $(SRC_STD_C_OSX) $(DIR)\src\phobos\std\c\osx
+	$(CP) $(SRC_STD_C_FREEBSD) $(DIR)\src\phobos\std\c\freebsd
 	$(CP) $(SRC_STD_INTERNAL_MATH) $(DIR)\src\phobos\std\internal\math
 	#$(CP) $(SRC_ETC) $(DIR)\src\phobos\etc
 	$(CP) $(SRC_ETC_C) $(DIR)\src\phobos\etc\c
@@ -927,6 +932,7 @@ svn:
 	$(CP) $(SRC_STD_C_WIN) $(SVN)\std\c\windows
 	$(CP) $(SRC_STD_C_LINUX) $(SVN)\std\c\linux
 	$(CP) $(SRC_STD_C_OSX) $(SVN)\std\c\osx
+	$(CP) $(SRC_STD_C_FREEBSD) $(SVN)\std\c\freebsd
 	$(CP) $(SRC_STD_INTERNAL_MATH) $(SVN)\std\internal\math
 	#$(CP) $(SRC_ETC) $(SVN)\etc
 	$(CP) $(SRC_ETC_C) $(SVN)\etc\c
