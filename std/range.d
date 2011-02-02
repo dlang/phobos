@@ -2125,6 +2125,13 @@ unittest
     static assert(is(Radial!(immutable int[])));
 }
 
+// Detect whether T can be sliced safely, i.e. whether it
+// a) can be sliced, and b) is not a narrow string.
+private template isSafelySlicable(T)
+{
+    enum isSafelySlicable = hasSlicing!T && !isNarrowString!T;
+}
+
 /**
 Lazily takes only up to $(D n) elements of a range. This is
 particulary useful when using with infinite ranges. If the range
@@ -2140,8 +2147,8 @@ assert(equal(s, [ 1, 2, 3, 4, 5 ][]));
 ----
  */
 struct Take(Range)
-if(isInputRange!(Unqual!Range) &&
-(!hasSlicing!(Unqual!Range) || isNarrowString!(Unqual!Range)))
+if(isInputRange!(Unqual!Range) && !isSafelySlicable!(Unqual!Range)
+    && !is(Unqual!Range T == Take!T))
 {
     alias Unqual!Range R;
     R original;
@@ -2271,33 +2278,23 @@ public:
     }
 }
 
-// This template simply aliases itself to R and is useful for consistency in
-// generic code.
-template Take(R)
-if(isInputRange!(Unqual!R) && hasSlicing!(Unqual!R) && !isNarrowString!(Unqual!R))
-{
-    alias R Take;
-}
-
-/// Ditto
-R take(R)(R input, size_t n)
-if((isInputRange!(Unqual!R) && (!hasSlicing!(Unqual!R) || isNarrowString!(Unqual!R)))
-    && is (R T == Take!T))
-{
-    return R(input.original, min(n, input.maxLength));
-}
-
 /// Ditto
 Take!(R) take(R)(R input, size_t n)
-if((isInputRange!(Unqual!R) && (!hasSlicing!(Unqual!R) || isNarrowString!(Unqual!R)))
-    && !is (R T == Take!T))
+if(isInputRange!(Unqual!R) && !isSafelySlicable!(Unqual!R)
+    && !is(Unqual!R T == Take!T))
 {
     return Take!(R)(input, n);
 }
 
-/// Ditto
+// For the case when R can be safely sliced.
+template Take(R)
+if(isInputRange!(Unqual!R) && isSafelySlicable!(Unqual!R))
+{
+    alias typeof(R[0 .. 1]) Take;
+}
+
 Take!(R) take(R)(R input, size_t n)
-if(isInputRange!(Unqual!R) && hasSlicing!(Unqual!R) && !isNarrowString!(Unqual!R))
+if(isInputRange!(Unqual!R) && isSafelySlicable!(Unqual!R))
 {
     static if (hasLength!R)
     {
@@ -2311,6 +2308,21 @@ if(isInputRange!(Unqual!R) && hasSlicing!(Unqual!R) && !isNarrowString!(Unqual!R
                 "Nonsensical finite range with slicing but no length");
         return input[0 .. n];
     }
+}
+
+// For the case when R is a Take struct
+template Take(R)
+if(isInputRange!(Unqual!R) && !isSafelySlicable!(Unqual!R)
+    && is(Unqual!R T == Take!T))
+{
+    alias R Take;
+}
+
+Take!(R) take(R)(R input, size_t n)
+if(isInputRange!(Unqual!R) && !isSafelySlicable!(Unqual!R)
+    && is(Unqual!R T == Take!T))
+{
+    return R(input.original, min(n, input.maxLength));
 }
 
 unittest
@@ -2367,6 +2379,23 @@ unittest
 
     immutable myRepeat = repeat(1);
     static assert(is(Take!(typeof(myRepeat))));
+}
+
+unittest
+{
+    // Check that one can declare variables of all Take types,
+    // and that they match the return type of the corresponding
+    // take().  (See issue 4464.)
+    int[] r1;
+    Take!(int[]) t1;
+    t1 = take(r1, 1);
+
+    string r2;
+    Take!string t2;
+    t2 = take(r2, 1);
+
+    Take!(Take!string) t3;
+    t3 = take(t2, 1);
 }
 
 /**
