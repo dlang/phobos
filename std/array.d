@@ -484,6 +484,13 @@ unittest
 /**
 Inserts $(D stuff) (which must be an input range or a single item) in
 $(D array) at position $(D pos).
+
+Example:
+---
+int[] a = [ 1, 2, 3, 4 ];
+a.insert(2, [ 1, 2 ]);    
+assert(a == [ 1, 2, 1, 2, 3, 4 ]);
+---
  */
 void insert(T, Range)(ref T[] array, size_t pos, Range stuff)
 if (isInputRange!Range && is(ElementEncodingType!Range : T))
@@ -819,6 +826,13 @@ unittest
 Replaces elements from $(D array) with indices ranging from $(D from)
 (inclusive) to $(D to) (exclusive) with the range $(D stuff). Expands
 or shrinks the array as needed.
+
+Example:
+---
+int[] a = [ 1, 2, 3, 4 ];
+a.replace(1, 3, [ 9, 9, 9 ]);
+assert(a == [ 1, 9, 9, 9, 4 ]);
+---
  */
 void replace(T, Range)(ref T[] array, size_t from, size_t to, Range stuff)
 if (isDynamicArray!Range && is(ElementType!Range : T))
