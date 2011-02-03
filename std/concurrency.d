@@ -471,6 +471,14 @@ receiveOnlyRet!(T) receiveOnly(T...)()
                   static if( T.length )
                       ret.field = val;
               },
+              ( LinkTerminated e )
+              {
+                  throw e;
+              },
+              ( OwnerTerminated e )
+              {
+                  throw e;
+              },
               ( Variant val )
               {
                   throw new MessageMismatch;
