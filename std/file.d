@@ -111,6 +111,7 @@ version (Posix)
         alias core.sys.posix.sys.stat.stat_t struct_stat64;
         alias core.sys.posix.sys.stat.fstat  fstat64;
         alias core.sys.posix.sys.stat.stat   stat64;
+        alias core.sys.posix.sys.stat.lstat  lstat64;
     }
     else
     {
