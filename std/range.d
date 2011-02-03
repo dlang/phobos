@@ -207,7 +207,7 @@ $(UL $(LI $(D r.empty) returns $(D false) iff there is more data
 available in the range.)  $(LI $(D r.front) returns the current element
 in the range. It may return by value or by reference. Calling $(D
 r.front) is allowed only if calling $(D r.empty) has, or would have,
-returned $(D false).) $(LI $(D r.popFront) advances to the popFront element in
+returned $(D false).) $(LI $(D r.popFront) advances to the next element in
 the range. Calling $(D r.popFront) is allowed only if calling $(D r.empty)
 has, or would have, returned $(D false).))
  */
@@ -3052,7 +3052,7 @@ stopping policy.
     }
 
 /**
-   Advances to the popFront element in all controlled ranges.
+   Advances to the next element in all controlled ranges.
 */
     void popFront()
     {
@@ -3612,7 +3612,7 @@ unittest {
 
 /**
 Creates a mathematical sequence given the initial values and a
-recurrence function that computes the popFront value from the existing
+recurrence function that computes the next value from the existing
 values. The sequence comes in the form of an infinite forward
 range. The type $(D Recurrence) itself is seldom used directly; most
 often, recurrences are obtained by calling the function $(D
@@ -3622,7 +3622,7 @@ When calling $(D recurrence), the function that computes the next
 value is specified as a template argument, and the initial values in
 the recurrence are passed as regular arguments. For example, in a
 Fibonacci sequence, there are two initial values (and therefore a
-state size of 2) because computing the popFront Fibonacci value needs the
+state size of 2) because computing the next Fibonacci value needs the
 past two values.
 
 If the function is passed in string form, the state has name $(D "a")

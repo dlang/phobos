@@ -791,7 +791,7 @@ Example:
 int[] arr = [ 1, 2, 3, 4, 5 ];
 // Sum all elements
 auto small = filter!("a < 3")(arr);
-assert(small == [ 1, 2 ]);
+assert(equal(small, [ 1, 2 ]));
 // In combination with chain() to span multiple ranges
 int[] a = [ 3, -2, 400 ];
 int[] b = [ 100, -101, 102 ];
@@ -800,7 +800,7 @@ assert(equal(r, [ 3, 400, 100, 102 ]));
 // Mixing convertible types is fair game, too
 double[] c = [ 2.5, 3.0 ];
 auto r1 = filter!("cast(int) a != a")(chain(c, a, b));
-assert(r1 == [ 2.5 ]);
+assert(equal(r1, [ 2.5 ]));
 ----
  */
 template filter(alias pred)
@@ -5366,7 +5366,7 @@ unittest
 
 /**
 Reduces the length of the bidirectional range $(D range) by only
-keeping elements that satisfy $(D pred). If $(s =
+keeping elements that satisfy $(D pred). If $(D s =
 SwapStrategy.unstable), elements are moved from the right end of the
 range over the elements to eliminate. If $(D s = SwapStrategy.stable)
 (the default), elements are moved progressively to front such that
