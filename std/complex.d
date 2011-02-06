@@ -6,6 +6,7 @@
     Authors:    Lars Tandle Kyllingstad
     Copyright:  Copyright (c) 2010, Lars T. Kyllingstad.
     License:    $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0)
+    Source:     $(PHOBOSSRC std/_complex.d)
 */
 module std.complex;
 

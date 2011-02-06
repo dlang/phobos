@@ -16,6 +16,8 @@ License: $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
 Authors: $(WEB digitalmars.com, Walter Bright), $(WEB erdani.org,
 Andrei Alexandrescu)
+
+Source:    $(PHOBOSSRC std/_string.d)
      
 $(B $(RED IMPORTANT NOTE:)) Beginning with version 2.052, the
 following symbols have been generalized beyond strings and moved to

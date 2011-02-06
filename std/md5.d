@@ -20,6 +20,8 @@
  * References:
  *      $(LINK2 http://en.wikipedia.org/wiki/Md5, Wikipedia on MD5)
  *
+ * Source: $(PHOBOSSRC std/_md5.d)
+ *
  * Macros:
  *      WIKI = Phobos/StdMd5
  */

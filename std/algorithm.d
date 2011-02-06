@@ -34,6 +34,7 @@ sort!("a > b")(a);  // predicate as string
 sort(a);            // no predicate, "a < b" is implicit
 ----
 
+Source: $(PHOBOSSRC std/_algorithm.d)
 Macros:
 WIKI = Phobos/StdAlgorithm
 

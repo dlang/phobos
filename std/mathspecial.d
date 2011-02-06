@@ -52,6 +52,7 @@
  *            Copyright (C) 1994 Stephen L. Moshier (moshier@world.std.com).
  * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
  * Authors:   Stephen L. Moshier (original C code). Conversion to D by Don Clugston
+ * Source:    $(PHOBOSSRC std/_mathspecial.d)
  */
 module std.mathspecial;
 public import std.math;

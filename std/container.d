@@ -3,6 +3,7 @@
 /**
 Defines generic _containers.
 
+Source: $(PHOBOSSRC std/_container.d)
 Macros:
 WIKI = Phobos/StdContainer
 TEXTWITHCOMMAS = $0
