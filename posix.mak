@@ -235,18 +235,25 @@ $(LIB) : $(OBJS) $(ALL_D_FILES) $(DRUNTIME)
 	$(DMD) $(DFLAGS) -lib -of$@ $(DRUNTIME) $(D_FILES) $(OBJS)
 
 ifeq ($(MODEL),64)
-DISABLED_TESTS =        \
-	std/algorithm   \
-	std/complex     \
-	std/conv        \
-	std/datetime    \
-	std/file        \
-	std/format      \
-	std/math        \
-	std/numeric     \
-	std/random      \
-	std/range       \
-	std/internal/math/biguintnoasm
+DISABLED_TESTS += std/conv
+# not reduced yet. I hate reducing this file
+# passes on debug, segv on release
+
+DISABLED_TESTS += std/file
+# something stat related
+
+DISABLED_TESTS += std/format
+# Still not passing, time to pull out the next issue.
+
+DISABLED_TESTS += std/math
+# seems to infinite loop, need to reduce
+
+DISABLED_TESTS += std/numeric
+# passes debug, fails release
+# sent a FFT based problem to walter.
+
+DISABLED_TESTS += std/random
+DISABLED_TESTS += std/internal/math/biguintnoasm
 
 $(addprefix $(ROOT)/unittest/,$(DISABLED_TESTS)) : 
 	@echo Testing $@ - disabled
