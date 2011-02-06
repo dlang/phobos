@@ -280,8 +280,8 @@ DDOC_DECL  = $(DT <div class="d_decl">$0</div>)
 XREF = <a href="std_$1.html#$2">$(D std.$1.$2)</a>
 BUGZILLA = $(LINK2 http://d.puremagic.com/issues/show_bug.cgi?id=$0, Bugzilla $0)
 PRE = <pre>$0</pre>
-PHOBOSSRC=$(LINK2 http://www.dsource.org/projects/phobos/browser/trunk/phobos/$0, $0)
-DRUNTIMESRC=$(LINK2 http://www.dsource.org/projects/druntime/browser/trunk/src/$0, $0)
+PHOBOSSRC=$(LINK2 https://github.com/D-Programming-Language/phobos/blob/master/$0, $0)
+DRUNTIMESRC=$(LINK2 https://github.com/D-Programming-Language/phobos/blob/master/$0, $0)
 
 BOOKTABLE = <table cellspacing=0 cellpadding=5 valign=top class=book><caption>$1</caption>$2</table>
 TABLE = <table cellspacing=0 cellpadding=5><caption>$1</caption>$2</table>
