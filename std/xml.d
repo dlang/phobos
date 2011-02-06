@@ -113,6 +113,7 @@ Macros:
 Copyright: Copyright Janice Caron 2008 - 2009.
 License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
 Authors:   Janice Caron
+Source:    $(PHOBOSSRC std/_xml.d)
 */
 /*
          Copyright Janice Caron 2008 - 2009.

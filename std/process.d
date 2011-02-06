@@ -14,6 +14,7 @@ Copyright: Copyright Digital Mars 2007 - 2009.
 License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
 Authors:   $(WEB digitalmars.com, Walter Bright),
            $(WEB erdani.org, Andrei Alexandrescu)
+Source:    $(PHOBOSSRC std/_process.d)
 */
 /*
          Copyright Digital Mars 2007 - 2009.

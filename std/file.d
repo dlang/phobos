@@ -9,11 +9,12 @@ to module $(D $(LINK2 std_stdio.html,std.stdio)).
 Macros:
 WIKI = Phobos/StdFile
 
-Copyright: Copyright Digital Mars 2007 - 2009.
+Copyright: Copyright Digital Mars 2007 - 2011.
 License:   $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   $(WEB digitalmars.com, Walter Bright),
            $(WEB erdani.org, Andrei Alexandrescu),
            Jonathan M Davis
+Source:    $(PHOBOSSRC std/_file.d)
  */
 module std.file;
 

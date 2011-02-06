@@ -9,6 +9,7 @@
  * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
  * Authors:   $(WEB digitalmars.com, Walter Bright),
  *            Matthew Wilson
+ * Source:    $(PHOBOSSRC std/_mmfile.d)
  */
 /*          Copyright Digital Mars 2004 - 2009.
  * Distributed under the Boost Software License, Version 1.0.

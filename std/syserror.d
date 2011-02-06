@@ -1,7 +1,12 @@
 // Written in the D programming language
 // Placed in public domain.
 // Written by Walter Bright
-// Convert Win32 error code to string
+
+/**
+ Convert Win32 error code to string
+
+ Source:    $(PHOBOSSRC std/_syserror.d)
+*/
 
 module std.syserror;
 

@@ -1,12 +1,14 @@
 // Written in the D programming language.
 /**
+Functions and types that manipulate built-in arrays.  
+
 Copyright: Copyright Andrei Alexandrescu 2008-.
 
 License:   $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
 Authors:   $(WEB erdani.org, Andrei Alexandrescu)
 
-Functions and types that manipulate built-in arrays.  
+Source: $(PHOBOSSRC std/_array.d)
 */
 module std.array;
 

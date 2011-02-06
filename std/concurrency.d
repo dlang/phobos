@@ -15,6 +15,7 @@
  * Copyright: Copyright Sean Kelly 2009 - 2010.
  * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
  * Authors:   Sean Kelly
+ * Source:    $(PHOBOSSRC std/_concurrency.d)
  */
 /*          Copyright Sean Kelly 2009 - 2010.
  * Distributed under the Boost Software License, Version 1.0.

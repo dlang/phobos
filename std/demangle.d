@@ -10,6 +10,7 @@
  * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
  * Authors:   $(WEB digitalmars.com, Walter Bright),
  *                        Thomas Kuehne, Frits van Bommel
+ * Source:    $(PHOBOSSRC std/_demangle.d)
  */
 /*
  *          Copyright Digital Mars 2000 - 2009.

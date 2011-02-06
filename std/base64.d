@@ -27,6 +27,7 @@
  * Copyright: Masahiro Nakagawa 2010-.
  * License:   $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   Masahiro Nakagawa, Daniel Murphy (Single value Encoder and Decoder)
+ * Source:    $(PHOBOSSRC std/_base64.d)
  */
 module std.base64;
 

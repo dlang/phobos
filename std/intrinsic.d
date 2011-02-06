@@ -16,6 +16,7 @@
  * Copyright: Public Domain
  * License:   Public Domain
  * Authors:   Walter Bright
+ * Source:    $(PHOBOSSRC std/_intrinsic.d)
  * Macros:
  *      WIKI=Phobos/StdIntrinsic
  */
