@@ -2247,7 +2247,11 @@ private
 
         try
         {
-            checkXMLDecl(s);
+            /* The XML declaration is optional
+             * http://www.w3.org/TR/2008/REC-xml-20081126/#NT-prolog
+             */
+            opt!(checkXMLDecl)(s);
+
             star!(checkMisc)(s);
             opt!(seq!(checkDocTypeDecl,star!(checkMisc)))(s);
         }
