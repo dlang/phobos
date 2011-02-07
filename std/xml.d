@@ -946,7 +946,7 @@ class Element : Item
             return buffer;
         }
 
-        override bool isEmptyXML() { return false; } /// Returns false always
+        override bool isEmptyXML() { return items.length == 0; }
     }
 }
 
