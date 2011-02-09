@@ -208,7 +208,7 @@ $(UL $(LI $(D r.empty) returns $(D false) iff there is more data
 available in the range.)  $(LI $(D r.front) returns the current element
 in the range. It may return by value or by reference. Calling $(D
 r.front) is allowed only if calling $(D r.empty) has, or would have,
-returned $(D false).) $(LI $(D r.popFront) advances to the popFront element in
+returned $(D false).) $(LI $(D r.popFront) advances to the next element in
 the range. Calling $(D r.popFront) is allowed only if calling $(D r.empty)
 has, or would have, returned $(D false).))
  */
@@ -2126,6 +2126,13 @@ unittest
     static assert(is(Radial!(immutable int[])));
 }
 
+// Detect whether T can be sliced safely, i.e. whether it
+// a) can be sliced, and b) is not a narrow string.
+private template isSafelySlicable(T)
+{
+    enum isSafelySlicable = hasSlicing!T && !isNarrowString!T;
+}
+
 /**
 Lazily takes only up to $(D n) elements of a range. This is
 particulary useful when using with infinite ranges. If the range
@@ -2141,8 +2148,8 @@ assert(equal(s, [ 1, 2, 3, 4, 5 ][]));
 ----
  */
 struct Take(Range)
-if(isInputRange!(Unqual!Range) &&
-(!hasSlicing!(Unqual!Range) || isNarrowString!(Unqual!Range)))
+if(isInputRange!(Unqual!Range) && !isSafelySlicable!(Unqual!Range)
+    && !is(Unqual!Range T == Take!T))
 {
     alias Unqual!Range R;
     R original;
@@ -2272,33 +2279,23 @@ public:
     }
 }
 
-// This template simply aliases itself to R and is useful for consistency in
-// generic code.
-template Take(R)
-if(isInputRange!(Unqual!R) && hasSlicing!(Unqual!R) && !isNarrowString!(Unqual!R))
-{
-    alias R Take;
-}
-
-/// Ditto
-R take(R)(R input, size_t n)
-if((isInputRange!(Unqual!R) && (!hasSlicing!(Unqual!R) || isNarrowString!(Unqual!R)))
-    && is (R T == Take!T))
-{
-    return R(input.original, min(n, input.maxLength));
-}
-
 /// Ditto
 Take!(R) take(R)(R input, size_t n)
-if((isInputRange!(Unqual!R) && (!hasSlicing!(Unqual!R) || isNarrowString!(Unqual!R)))
-    && !is (R T == Take!T))
+if(isInputRange!(Unqual!R) && !isSafelySlicable!(Unqual!R)
+    && !is(Unqual!R T == Take!T))
 {
     return Take!(R)(input, n);
 }
 
-/// Ditto
+// For the case when R can be safely sliced.
+template Take(R)
+if(isInputRange!(Unqual!R) && isSafelySlicable!(Unqual!R))
+{
+    alias typeof(R[0 .. 1]) Take;
+}
+
 Take!(R) take(R)(R input, size_t n)
-if(isInputRange!(Unqual!R) && hasSlicing!(Unqual!R) && !isNarrowString!(Unqual!R))
+if(isInputRange!(Unqual!R) && isSafelySlicable!(Unqual!R))
 {
     static if (hasLength!R)
     {
@@ -2312,6 +2309,21 @@ if(isInputRange!(Unqual!R) && hasSlicing!(Unqual!R) && !isNarrowString!(Unqual!R
                 "Nonsensical finite range with slicing but no length");
         return input[0 .. n];
     }
+}
+
+// For the case when R is a Take struct
+template Take(R)
+if(isInputRange!(Unqual!R) && !isSafelySlicable!(Unqual!R)
+    && is(Unqual!R T == Take!T))
+{
+    alias R Take;
+}
+
+Take!(R) take(R)(R input, size_t n)
+if(isInputRange!(Unqual!R) && !isSafelySlicable!(Unqual!R)
+    && is(Unqual!R T == Take!T))
+{
+    return R(input.original, min(n, input.maxLength));
 }
 
 unittest
@@ -2368,6 +2380,23 @@ unittest
 
     immutable myRepeat = repeat(1);
     static assert(is(Take!(typeof(myRepeat))));
+}
+
+unittest
+{
+    // Check that one can declare variables of all Take types,
+    // and that they match the return type of the corresponding
+    // take().  (See issue 4464.)
+    int[] r1;
+    Take!(int[]) t1;
+    t1 = take(r1, 1);
+
+    string r2;
+    Take!string t2;
+    t2 = take(r2, 1);
+
+    Take!(Take!string) t3;
+    t3 = take(t2, 1);
 }
 
 /**
@@ -3024,7 +3053,7 @@ stopping policy.
     }
 
 /**
-   Advances to the popFront element in all controlled ranges.
+   Advances to the next element in all controlled ranges.
 */
     void popFront()
     {
@@ -3584,7 +3613,7 @@ unittest {
 
 /**
 Creates a mathematical sequence given the initial values and a
-recurrence function that computes the popFront value from the existing
+recurrence function that computes the next value from the existing
 values. The sequence comes in the form of an infinite forward
 range. The type $(D Recurrence) itself is seldom used directly; most
 often, recurrences are obtained by calling the function $(D
@@ -3594,7 +3623,7 @@ When calling $(D recurrence), the function that computes the next
 value is specified as a template argument, and the initial values in
 the recurrence are passed as regular arguments. For example, in a
 Fibonacci sequence, there are two initial values (and therefore a
-state size of 2) because computing the popFront Fibonacci value needs the
+state size of 2) because computing the next Fibonacci value needs the
 past two values.
 
 If the function is passed in string form, the state has name $(D "a")
